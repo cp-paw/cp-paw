@@ -908,7 +908,7 @@ CONTAINS
       CALL NLOGN(N,XA,WW,NP) 
       CL=0.25D0*DEX/DBLE(NP)
       DO I=1,NH 
-        G(2*I-1)=CL*REAL(XA(I)) 
+        G(2*I-1)=CL*REAL(XA(I),kind=8) 
         G(2*I)  =CL*AIMAG(XA(I)) 
       ENDDO
       RETURN 
@@ -983,7 +983,7 @@ CONTAINS
         AA=AA*BB 
       ENDDO
       DO I=1,NP
-        G(I)=REAL(XA(I))
+        G(I)=REAL(XA(I),kind=8)
       ENDDO
       RETURN
       END SUBROUTINE BTLARGEG

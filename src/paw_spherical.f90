@@ -87,7 +87,7 @@
           LMM=LM0+M
           LMP=LM0-M
           SVAR=FAC*YLM(LMM)*SQ2
-          YLM(LMP)=SVAR*REAL(EIMPHI)
+          YLM(LMP)=SVAR*REAL(EIMPHI,kind=8)
           YLM(LMM)=SVAR*AIMAG(EIMPHI)
         ENDDO
       ENDDO
