@@ -1825,6 +1825,8 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       logical(4),parameter  :: tpr=.false.
 !     ******************************************************************
       NDIMD=NDIM**2
+      denmat(:,:,:)=0.d0
+      denmati=0.d0
 !
 !     ==================================================================
 !     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==

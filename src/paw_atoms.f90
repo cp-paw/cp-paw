@@ -1884,8 +1884,8 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !     ******************************************************************
       CALL ERROR$MSG('ROUTINE MARKED FOR DELETION')
       CALL ERROR$STOP('ATOMLIST$LATTICE')
-      RBAS_(:,:)=RBAS(:,:)
-      CALL CELL$GETR8A('T0',9,RBAS_)
+!     RBAS_(:,:)=RBAS(:,:)
+!     CALL CELL$GETR8A('T0',9,RBAS_)
       RETURN
       END
 !
