@@ -222,8 +222,8 @@
 !     ==  ADD CORRECTION TO POTENTIAL                                 ==
 !     ==================================================================
       IF(TISOLATE) THEN
-        E=ET
         RHOB=0.D0
+        E=ET
         DO IAT=1,NAT
           DO I=1,3
             FORCE(I,IAT)=FORCE(I,IAT)+FORCET(I,IAT)

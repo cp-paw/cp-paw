@@ -645,6 +645,8 @@ PRINT*,'WGHT',WGHT
          DATA_=SPINCHA    
        ELSE IF(ID_.EQ.'TOTCHA') THEN
          DATA_=TOTCHA-SUMOFZ
+       ELSE IF(ID_.EQ.'-MU*N') THEN
+         DATA_=TOTPOT*(TOTCHA-SUMOFZ)
        ELSE IF(ID_.EQ.'FMAX') THEN
          DATA_=FMAX
        ELSE IF(ID_.EQ.'EKIN') THEN
@@ -818,6 +820,7 @@ PRINT*,'WGHT',WGHT
           CALL ERROR$STOP('DYNOCC$READ')
         END IF
         READ(NFIL)NB1,NKPT1,NSPIN1
+        start=(nb1.ne.nb).or.(nkpt1.ne.nb).or.(nspin1.ne.nspin)
         ALLOCATE(TMP0(NB1,NKPT1,NSPIN1))
         ALLOCATE(TMPM(NB1,NKPT1,NSPIN1))
         READ(NFIL)TMP0(:,:,:)
@@ -852,6 +855,12 @@ PRINT*,'WGHT',WGHT
 !     ==================================================================
       CALL MPE$BROADCAST(1,X0)
       CALL MPE$BROADCAST(1,XM)
+!     ==================================================================
+!     == if states have changed the electron count can change as well
+!     == therefore restart occupations
+!     ==================================================================
+      CALL MPE$BROADCAST(1,START)
+      if(start) return
 !
 !     ==================================================================
 !     ==  RESET THERMODYNAMIC VARIABLES                               ==

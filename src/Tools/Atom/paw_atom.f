@@ -4098,6 +4098,7 @@ print*,'emin ',emin,'emax',emax
         enddo
         write(nfil,*)' '
       enddo
+!      write(nfil,*) aepot(:)      
       CALL FILEHANDLER$CLOSE('TEST')
       DEALLOCATE(PSIARR)
       DEALLOCATE(PSIb)

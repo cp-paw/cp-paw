@@ -471,6 +471,9 @@
 !     ==  PROPAGATE UNIT CELL                                         ==
 !     ==================================================================
       CALL CELL$PROPAGATE()
+      CALL CELL$GETR8('EPOT',SVAR)
+      CALL ENERGYLIST$set('CELLOSTAT POTENTIAL',SVAR)     
+      CALL ENERGYLIST$ADD('CONSTANT ENERGY',SVAR)
 ! 
 !     ==================================================================
 !     ==  PROPAGATE WAVE FUNCTIONS                                    ==
@@ -484,7 +487,7 @@
       CALL DYNOCC$PROPAGATE()
       CALL DYNOCC$GETR8('EPOT',SVAR)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
-      
+      CALL ENERGYLIST$SET('ELECTRONIC HEAT',SVAR)
 ! 
 !     ==================================================================
 !     ==  PROPAGATE THERMOSTAT FOR THE NUCLEI                         ==
@@ -514,12 +517,6 @@
         CALL THERMOSTAT$SETR8('EKIN(SYSTEM)',EKIN)
         CALL THERMOSTAT$PROPAGATE()
       END IF
-!
-!     ==================================================================
-!     ==================================================================
-!     ==  APPLY CONSTRAINTS                                           ==
-!     ==================================================================
-!     ==================================================================
 !
 !     ==================================================================
 !     ==================================================================
@@ -553,17 +550,12 @@
 !     == UNIT CELL                                                    ==
 !     ==================================================================
       CALL CELL$GETR8('EKIN',EKIN)
-      CALL CELL$GETR8('EPOT',SVAR)
       CALL ENERGYLIST$set('CELLOSTAT KINETIC',EKIN)     
-      CALL ENERGYLIST$set('CELLOSTAT POTENTIAL',SVAR)     
-      CALL ENERGYLIST$ADD('CONSTANT ENERGY',SVAR+EKIN)
+      CALL ENERGYLIST$ADD('CONSTANT ENERGY',EKIN)
 !
 !     ==================================================================
 !     == OCCUPATIONS                                                  ==
 !     ==================================================================
-      CALL DYNOCC$GETR8('HEAT',SVAR)
-      CALL ENERGYLIST$SET('ELECTRONIC HEAT',SVAR)
-      CALL ENERGYLIST$ADD('CONSTANT ENERGY',SVAR)
       CALL DYNOCC$GETR8('EKIN',SVAR)
       CALL ENERGYLIST$SET('OCCUPATION KINETIC ENERGY',SVAR)
       CALL ENERGYLIST$ADD('CONSTANT ENERGY',SVAR)

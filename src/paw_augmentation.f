@@ -317,6 +317,8 @@ END MODULE AUGMENTATION_MODULE
           ENDDO
         ENDDO
       END IF
+
+!for soft-core iterate from here ...
 !
 !     ==================================================================
 !     ==  CALCULATE 1-CENTER CHARGE DENSITY                           ==
@@ -331,7 +333,7 @@ END MODULE AUGMENTATION_MODULE
       ENDDO
 !     
 !     ================================================================
-!     ==  ADD CORE CHARGE DENSITY                                   ==
+!     ==  evaluate multipole moments                                ==
 !     ================================================================
       CALL AUGMENTATION_QLM(R1,DEX,NR,NR,LMRX &
      &                   ,AEZ,AECORE,PSCORE,AERHO,PSRHO,QLM)
@@ -339,6 +341,9 @@ END MODULE AUGMENTATION_MODULE
 !     ================================================================
 !     ==  SEND DENSITIES TO HYPERFINE-PARAMETER OBJECT              ==
 !     ================================================================
+!move this part to the end of the routine
+!take care however that the first call takes the pseudodensity
+! without pseudo core!
       ALLOCATE(AEPOT(NR,LMRX,1))   ! USED AS AUXILIARY VARIABLE
       CALL HYPERFINE$SET1CRHO('PS','TOT',IAT,R1,DEX,NR,NR,LMRX,PSRHO)
       AEPOT(:,:,1)=AERHO(:,:,1)
@@ -451,6 +456,8 @@ END MODULE AUGMENTATION_MODULE
       ENDDO
       DEALLOCATE(AEPOT1)
       DEALLOCATE(PSPOT1)
+!
+!calculate new soft-core density here
 !     
       IF(TPR) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -1307,13 +1314,13 @@ END MODULE AUGMENTATION_MODULE
       XEXP=DEXP(DEX)
       SVAR=-2.D0*PI*RHOB/3.D0*DSQRT(4.D0*PI)
       RI=R1/XEXP
-print*,'severe warning from augmentation_addbackground'
+!print*,'severe warning from augmentation_addbackground'
       DO IR=1,NR
         RI=RI*XEXP
         RI2=RI*RI
         SVAR1=SVAR*RI2
-WORK(IR)=SVAR1*RHO(IR)
-!       WORK(IR)=SVAR1*RHO(IR)*ri2
+!WORK(IR)=SVAR1*RHO(IR)
+        WORK(IR)=SVAR1*RHO(IR)*ri2
         POT(IR)=POT(IR)+SVAR1
       ENDDO
       CALL RADIAL$INTEGRAL(R1,DEX,NR,WORK,EB)
