@@ -1365,6 +1365,7 @@ END MODULE RANDOM_MODULE
 !#ELIF DEFINED(CPPVAR_BLAS_ATLAS)
 !      CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
 #ELSE
+      c(:,:)=(0.d0,0.d0)
       CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
 #ENDIF
       RETURN
@@ -1450,6 +1451,7 @@ END MODULE RANDOM_MODULE
       CALL ZGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'C',OPERATOR,LEN1,LEN1,N,LEN2)
 #ELSE 
 !     == operator=matmul(psi1,transpose(psi2))
+      operator(:,:)=(0.d0,0.d0)
       CALL ZGEMM('N','C',LEN1,LEN2,N,(1.D0,0.D0) &
      &          ,PSI1(:,:),LEN1,PSI2(:,:),LEN2,(0.D0,0.D0),OPERATOR,LEN1)
 #ENDIF
@@ -1532,6 +1534,7 @@ END MODULE RANDOM_MODULE
 #IF DEFINED(CPPVAR_BLAS_ESSL)
         CALL ZGEMUL(PSI1,LEN,'C',PSI2,LEN,'N',OVERLAP,N1,N1,LEN,N2)
 #ELSE 
+        overlap(:,:)=(0.d0,0.d0)
         CALL ZGEMM('C','N',N1,N2,LEN,(1.D0,0.D0),PSI1,LEN,PSI2,LEN &
      &            ,(0.D0,0.D0),OVERLAP,N1)
 #endif
