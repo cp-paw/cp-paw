@@ -171,7 +171,6 @@
       ELSE
         WRITE(*,FMT='("MOLECULAR OUTPUT PRODUCED")')
       END IF
-      call filehandler$closeall
       WRITE(*,FMT='("======= TASK FINISHED ========")')
       STOP
       END

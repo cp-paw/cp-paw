@@ -102,13 +102,13 @@ END MODULE GRAPHICS_MODULE
         IDENSITYPTR=0
         IPOTPTR=0
         IWAVEPTR=VAL
-        TINI=.TRUE.
+        tini=.true.
 !
       ELSE IF(ID.EQ.'IDENSITY') THEN 
         IWAVEPTR=0
         IPOTPTR=0
         IDENSITYPTR=VAL
-        TINI=.TRUE.
+        tini=.true.
 !
       ELSE IF(ID.EQ.'IB') THEN 
         IF(IWAVEPTR.EQ.0) THEN
@@ -207,7 +207,7 @@ END MODULE GRAPHICS_MODULE
         IWAVEPTR=0
         IPOTPTR=0
         IF(TPOT)IPOTPTR=1
-        TINI=.TRUE.
+        tini=.true.
 !
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -342,7 +342,7 @@ END MODULE GRAPHICS_MODULE
       INTEGER(4),ALLOCATABLE :: IBMIN(:,:),IBMAX(:,:)
       REAL(8)   ,ALLOCATABLE :: EB(:,:,:) !(NB,NKPT,NSPIN) E-EXPECTATIONV.
       REAL(8)   ,ALLOCATABLE :: EIGVAL(:,:,:) !(NB,NKPT,NSPIN) E-EIGENVALUES
-      REAL(8)                :: EMIN,EMAX
+      real(8)                :: emin,emax
 !     ******************************************************************
       IF(.NOT.TINI) RETURN
                               CALL TRACE$PUSH('GRAPHICS$PLOT')
@@ -350,12 +350,12 @@ END MODULE GRAPHICS_MODULE
 !     ==================================================================
 !     == PLOT POTENTIAL                                               ==
 !     ==================================================================
-      IF(TPOT) THEN
+      IF(TPOT) then
         FILE=POTPLOT%FILE
         TITLE=POTPLOT%TITLE
         DR=POTPLOT%DR
         CALL GRAPHICS_CREATEPOT(FILE,TITLE,DR)
-      END IF
+      end if
 !
 !     ==================================================================
 !     == PLOT WAVE FUNCTIONS                                          ==
@@ -385,8 +385,8 @@ END MODULE GRAPHICS_MODULE
       ALLOCATE(EIGVAL(NB,NKPT,NSPIN))
       DO ISPIN=1,NSPIN
         DO IKPT=1,NKPT
-          CALL WAVES$GETR8A('<PSI|H|PSI>',NB,EB(:,IKPT,ISPIN))
-          CALL WAVES$GETR8A('EIGVAL',NB,EIGVAL(:,IKPT,ISPIN))
+          CALL WAVES$GETR8A('<PSI|H|PSI>',NB,Eb(:,IKPT,ISPIN))
+          CALL WAVES$GETR8A('EIGVAL',NB,Eigval(:,IKPT,ISPIN))
         ENDDO
       ENDDO
 !
@@ -400,8 +400,8 @@ END MODULE GRAPHICS_MODULE
         TCORE=DENSITYPLOT(I)%TCORE
         SELECTOR=DENSITYPLOT(I)%SELECTOR
         IF(SELECTOR.EQ.'EMINMAX') THEN
-	  EMIN=DENSITYPLOT(I)%EMIN
-	  EMAX=DENSITYPLOT(I)%EMAX
+	  emin=DENSITYPLOT(I)%emin
+	  emax=DENSITYPLOT(I)%emax
           IBMIN(:,:)=NB
           IBMAX(:,:)=1
           DO ISPIN=1,NSPIN
@@ -532,7 +532,7 @@ END MODULE GRAPHICS_MODULE
       CALL CELL$GETR8A('T(0)',9,RBAS)
       CALL GBASS(RBAS,GBAS,DET)
       FACT=NINT(((DET/DR**3)/REAL(NR1*NR2*NR3,KIND=8))**(1./3.))
-      FACT=MAX(1,FACT)
+      fact=max(1,fact)
 !
 !     =================================================================
 !     ==  GET GENERIC FROM SETUPS OBJECT                             ==
@@ -570,7 +570,7 @@ END MODULE GRAPHICS_MODULE
       ALLOCATE(Z(NAT))
       ALLOCATE(Q(NAT))
       DO IAT=1,NAT
-CALL TRACE$PASS('MARKE 3')
+call trace$pass('marke 3')
         CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
@@ -684,9 +684,9 @@ CALL TRACE$PASS('MARKE 3')
       INTEGER(4)                :: IAT,ISP,LN,ISPIN,IKPT,IB
       REAL(8)                   :: FAC,SPINFAC
       INTEGER(4)                :: NFIL
-      REAL(8)      ,ALLOCATABLE :: AECORE(:)
-      REAL(8)                   :: SVAR,XEXP,RI
-      INTEGER(4)                :: I
+      real(8)      ,allocatable :: aecore(:)
+      real(8)                   :: svar,xexp,ri
+      integer(4)                :: i
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_DENSITYPLOT')
       CALL MPE$QUERY(NTASKNUM,NTASKID)
@@ -728,7 +728,7 @@ CALL TRACE$PASS('MARKE 3')
       CALL CELL$GETR8A('T(0)',9,RBAS)
       CALL GBASS(RBAS,GBAS,DET)
       FACT=NINT(((DET/DR**3)/REAL(NR1*NR2*NR3,KIND=8))**(1./3.))
-      FACT=MAX(1,FACT)
+      fact=max(1,fact)
 !     
 !     ================================================================
 !     ==  PSEUDO WAVE FUNCTIONS/DENSITIES                           ==
@@ -754,7 +754,7 @@ CALL TRACE$PASS('MARKE 3')
 !     ==  EXPAND TO A FINER R-GRID                                  ==
 !     ================================================================
       ALLOCATE(WAVEBIG(FACT*NR1,FACT*NR2,FACT*NR3))
-      IF(FACT.EQ.1) THEN
+      if(fact.EQ.1) THEN
         CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WAVEBIG)
       ELSE
         ALLOCATE(WORK1(NR1,NR2,NR3))
@@ -822,14 +822,14 @@ CALL TRACE$PASS('MARKE 3')
 !     ================================================================
 !     ==  ADD CORE CHARGE DENSITY                                   ==
 !     ================================================================
-        IF (TCORE.AND.(.NOT.(TYPE.EQ.'SPIN'))) THEN
-          ALLOCATE(AECORE(NR))
-          CALL SETUP$AECORE(ISP,NR,AECORE)
-          IF(TYPE.EQ.'UP'.OR.TYPE.EQ.'DOWN') AECORE(:)=0.5D0*AECORE(:)
+        if (tcore.and.type.eq.(.not.spin)) then
+          allocate(aecore(NR))
+          call setup$aecore(isp,nr,aecore)
+          if(type.eq.'up'.or.type.eq.'down') aecore(:)=0.5d0*aecore(:)
           CALL GRAPHICS_RHOLTOR(RBAS,FACT*NR1,FACT*NR2,FACT*NR3 &
     &           ,1,FACT*NR1,WAVEBIG,POS(:,IAT),R1,DEX,NR,1,AECORE)
-          DEALLOCATE(AECORE)
-        END IF
+          deallocate(aecore)
+        end if
         DEALLOCATE(DRHOL)
         DEALLOCATE(LOX)
         DEALLOCATE(AEPHI)
@@ -1349,7 +1349,7 @@ CALL TRACE$PASS('MARKE 3')
       CALL CELL$GETR8A('T(0)',9,RBAS)
       CALL GBASS(RBAS,GBAS,DET)
       FACT=NINT(((DET/DR**3)/REAL(NR1*NR2*NR3,KIND=8))**(1./3.))
-      FACT=MAX(1,FACT)
+      fact=max(1,fact)
 !
 !     ==================================================================
 !     ==  EXPAND GRID BY FACT AND UNPARALLELIZE                       ==

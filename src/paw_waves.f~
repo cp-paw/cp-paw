@@ -257,7 +257,7 @@ END MODULE WAVES_MODULE
 !     ELSE IF(ID.EQ.'<PSI|H|PSI>') THEN
 !
 !     ================================================================
-!     ==  ENERGY EIGENVALUES                                        ==
+!     ==  energy expectations values of the one-partcle states      ==
 !     ==  NOTE: IKPT,ISPIN MUST BE SET ON LINKEDLIST                ==
 !     ================================================================
       ELSE IF(ID.EQ.'EIGVAL') THEN
@@ -277,10 +277,10 @@ END MODULE WAVES_MODULE
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('WAVES$GETR8A')
         END IF
-        VAL(:)=THIS%Eigval(:)
+        VAL(:)=THIS%EXPECTVAL(:)
 !
 !     ================================================================
-!     ==  energy expectations values of the one-partcle states      ==
+!     ==  ENERGY EIGENVALUES                                        ==
 !     ==  NOTE: IKPT,ISPIN MUST BE SET ON LINKEDLIST                ==
 !     ================================================================
       ELSE IF(ID.EQ.'<PSI|H|PSI>') THEN
@@ -300,7 +300,7 @@ END MODULE WAVES_MODULE
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('WAVES$GETR8A')
         END IF
-        VAL(:)=THIS%EXPECTVAL(:)
+        VAL(:)=THIS%EIGVAL(:)
 !
 !     ================================================================
 !     ==  REAL SPACE PS WAVE FUNCTION                               ==

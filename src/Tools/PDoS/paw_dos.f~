@@ -248,22 +248,22 @@ END MODULE SPINDIR_MODULE
 !     ==================================================================
       WRITE(NFILO,*)'**** PROJECTED CHARGE ANALYSIS ****'
       IF(NSPIN.EQ.1) THEN
-        WRITE(NFILO,*)'  PROJECTED ON                        ALL        S         P         D'
+        WRITE(NFILO,*)'  PROJECTED ON                    ALL        S         P         D'
         DO IAT=1,NAT
           L1=MIN(3,1+MAXVAL(LOX(:,ISPECIES(IAT))))
-          WRITE(NFILO,FMT='(2X,"CHARGE [-E] IN ATOM ",A10,":",4F10.3)') ATOMID(IAT),&
+          WRITE(NFILO,FMT='(2X,"CHARGE [-E] IN ATOM ",A6,":",4F10.3)') ATOMID(IAT),&
      &         SUM(ANGWGHT(:,1,IAT)),(ANGWGHT(IDIR,1,IAT),IDIR=1,L1)
         END DO
       ELSE
-        WRITE(NFILO,*)'  PROJECTED ON                        ALL        S         P         D'
+        WRITE(NFILO,*)'  PROJECTED ON                     ALL        S         P         D'
         DO IAT=1,NAT
           L1=MIN(3,1+MAXVAL(LOX(:,ISPECIES(IAT))))
-          WRITE(NFILO,FMT='(2X,"CHARGE [-E] IN ATOM   ",A10,":",4F10.3)') ATOMID(IAT),&
+          WRITE(NFILO,FMT='(2X,"CHARGE [-E] IN ATOM   ",A6,":",4F10.3)') ATOMID(IAT),&
      &         SUM(ANGWGHT(:,:,IAT)),(ANGWGHT(IDIR,1,IAT)+ANGWGHT(IDIR,2,IAT),IDIR=1,L1)
         END DO
         DO IAT=1,NAT
           L1=MIN(3,1+MAXVAL(LOX(:,ISPECIES(IAT))))
-          WRITE(NFILO,FMT='(2X,"SPIN [HBAR/2] IN ATOM ",A10,":",4F10.3)') ATOMID(IAT),&
+          WRITE(NFILO,FMT='(2X,"SPIN [HBAR/2] IN ATOM ",A6,":",4F10.3)') ATOMID(IAT),&
      &         SUM(ANGWGHT(:,1,IAT))-SUM(ANGWGHT(:,2,IAT)),(ANGWGHT(IDIR,1,IAT)- &
      &                        ANGWGHT(IDIR,2,IAT),IDIR=1,L1)
         END DO
@@ -276,16 +276,16 @@ END MODULE SPINDIR_MODULE
       IF(NDIM.EQ.2) THEN
         TOTALSPIN(:)=0.D0
         WRITE(NFILO,*)'**** SPIN ANALYSIS ****'
-        WRITE(NFILO,*)'  SPIN [HBAR/2] PROJECTED ON        X         Y         Z      TOTAL'
+        WRITE(NFILO,*)'  SPIN [HBAR/2] PROJECTED ON    X         Y         Z      TOTAL'
         DO IAT=1,NAT
-          WRITE(NFILO,FMT='(2X," SPIN OF ATOM:",A14,5F10.3)') ATOMID(IAT)&
+          WRITE(NFILO,FMT='(2X," SPIN OF ATOM:",A10,5F10.3)') ATOMID(IAT)&
      &         ,SPIN(1,IAT),SPIN(2,IAT),SPIN(3,IAT),SQRT(SPIN(1,IAT)**2+&
      &         SPIN(2,IAT)**2+SPIN(3,IAT)**2)
           DO IDIR=1,3
             TOTALSPIN(IDIR)=TOTALSPIN(IDIR)+SPIN(IDIR,IAT)
           END DO
         END DO
-        WRITE(NFILO,FMT='(2X," TOTAL PROJECTED SPIN:      ",4F10.3)') &
+        WRITE(NFILO,FMT='(2X," TOTAL PROJECTED SPIN:  ",4F10.3)') &
      &         TOTALSPIN(1),TOTALSPIN(2),TOTALSPIN(3),SQRT(TOTALSPIN(1)**2+&
      &         TOTALSPIN(2)**2+TOTALSPIN(3)**2)
 !
@@ -1384,7 +1384,6 @@ END MODULE READCNTL_MODULE
                 CSVAR2=CSVAR2+CONJG(ORBITAL2(IPRO))*STATE%VEC(IDIM,IPRO,IB)
               ENDDO                      
             ENDDO
-!Johannes:  SET(IB,IKPT,ISPIN)=REAL(CONJG(CSVAR1)*CSVAR2)
             SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+REAL(CONJG(CSVAR1)*CSVAR2)
           ENDDO
         ENDDO
@@ -1653,7 +1652,7 @@ END MODULE READCNTL_MODULE
 !         == FROM THE MAX OCCUPATION, WHIHC MAY BE INCORRECT
           WGHTX=WKPT(IKPT)
           DO IB=1,NB
-            X=(EIG(IB,IKPT,ISPIN)-EMIN)/DE+1.d0
+            X=(EIG(IB,IKPT,ISPIN)-EMIN)/DE
             IE1=INT(X)
             IE2=IE1+1
             W2=(X-DBLE(IE1))
@@ -1774,10 +1773,10 @@ END MODULE READCNTL_MODULE
       DO IE=1,NE
         E=EMIN+(EMAX-EMIN)*DBLE(IE-1)/DBLE(NE-1)
         IF(NSPIN.EQ.1) THEN
-          WRITE(NFIL,FMT='(F11.5,4F11.5)') &
+          WRITE(NFIL,FMT='(F10.5,4F10.5)') &
      &          E/EV,DOS(IE,1,1),NOS(IE,1,1),DOS(IE,1,2),NOS(IE,1,2)
         ELSE
-          WRITE(NFIL,FMT='(F11.5,8F11.5)') &
+          WRITE(NFIL,FMT='(F10.5,8F10.5)') &
      &        E/EV,DOS(IE,1,1),NOS(IE,1,1) &
      &        ,-DOS(IE,2,1),-NOS(IE,2,1),DOS(IE,1,2),NOS(IE,1,2),&
      &         -DOS(IE,2,2),-NOS(IE,2,2)

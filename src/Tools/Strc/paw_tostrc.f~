@@ -2,16 +2,15 @@
       PROGRAM PAW_STRC
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-      IMPLICIT none
+      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       TYPE(LL_TYPE)               :: LL_STRC
       INTEGER(4)                  :: NFIL
-      INteGER(4)                  :: NFILSTRC,nfilpdb
+      INteGER(4)                  :: NFILSTRC
       CHARACTER(128)              :: ROOTNAME     ! COMMON ROOT OF THE FILENAMES
       CHARACTER(128)              :: OBJECTNAME
       LOGICAL                     :: TCHK
       CHARACTER(32)               :: STRING
       logical(4)                  :: tcrystal
-      INTEGER(4)                  :: i
       CALL LINKEDLIST$NEW(LL_STRC)
 !
 !     ==================================================================

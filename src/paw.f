@@ -104,6 +104,7 @@
 !     ******************************************************************
                               CALL TRACE$PUSH('PAW')
                               CALL TIMING$CLOCKON('INITIALIZATION')
+      call stopit$setstarttime
 !
 !     ==================================================================
 !     ====  READ CONTROL INPUT DATA FILE "CNTL"                     ====
@@ -635,10 +636,14 @@ MODULE STOPIT_MODULE
 !**   A) CREATE A PREDEFINED EXITfILE                                 ** 
 !**   B) BY THE CODE BY SETTINg TSTOP EXPLICITELY                     ** 
 !**                                                                   ** 
+use clock_module 
+!use clock_module , only : date_time,(.later.)
 LOGICAL(4)     :: TSTOP=.FALSE.   ! INITIATE SOFT-KILL
 LOGICAL(4)     :: DISTRIBUTED=.FALSE. ! TSTOP=TRUE ON ALL NODES
 LOGICAL(4)     :: TNOTIFY=.TRUE.  ! NOTIFICATION ABOUT STOP REQUIRED
 LOGICAL(4)     :: EXITFILEREMOVED
+integer(4)     :: runtime=-1         ! runtime in seconds
+type(date_time) :: starttime
 END MODULE STOPIT_MODULE
 !
 !     ..................................................................
@@ -653,6 +658,26 @@ END MODULE STOPIT_MODULE
 !     ****************************************************************** 
       IF(TRIM(ID_).EQ.'STOP') THEN
         TSTOP=VAL_
+      ELSE
+        CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID_',ID_)
+        CALL ERROR$STOP('STOPIT$SETL4')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE STOPIT$SETI4(ID_,VAL_)
+!     ****************************************************************** 
+!     **  STOPIT$SET                                                  ** 
+!     ****************************************************************** 
+      USE STOPIT_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN):: ID_
+      integer(4)  ,INTENT(IN) :: VAL_
+!     ****************************************************************** 
+      IF(TRIM(ID_).EQ.'runtime') THEN 
+        runtime=val_    ! runtime in seconds
       ELSE
         CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID_',ID_)
@@ -701,6 +726,22 @@ END MODULE STOPIT_MODULE
       END
 !
 !     ...................................................STOPIT.........
+      SUBROUTINE STOPIT$setstarttime
+!     ****************************************************************** 
+!     **  STOPIT_UPDATE                                               ** 
+!     **                                                              ** 
+!     **  TESTS WHETHER TSTOP HAS BECOME TRUE IN THE MEANWHILE        ** 
+!     **                                                              ** 
+!     ****************************************************************** 
+      USE STOPIT_MODULE
+      USE MPE_MODULE
+      IMPLICIT NONE
+      call clock$now(starttime)
+      return
+      end
+
+!
+!     ...................................................STOPIT.........
       SUBROUTINE STOPIT_UPDATE
 !     ****************************************************************** 
 !     **  STOPIT_UPDATE                                               ** 
@@ -717,6 +758,8 @@ END MODULE STOPIT_MODULE
       CHARACTER(256) :: EXITFILE=' '
       CHARACTER(264) :: CMD
       INTEGER(4)     :: NTASKS,THISTASK
+      type(date_time) :: endtime,now
+      integer(4)      :: isvar
 !     ****************************************************************** 
       CALL MPE$QUERY(NTASKS,THISTASK)
 !
@@ -756,6 +799,31 @@ END MODULE STOPIT_MODULE
         EXITFILEREMOVED=.TRUE.
       END IF
 
+!     ==================================================================
+!     ==  CHECK WHETHER TSTOP=T FOR ANY TASK                          ==
+!     ==================================================================
+      if(runtime.gt.0) then
+        endtime=starttime
+        isvar=runtime
+        endtime%second=endtime%second+isvar
+!
+        isvar=int(endtime%second/60)
+        endtime%second=endtime%second-isvar*60
+        endtime%minute=endtime%minute+isvar
+!
+        isvar=int(endtime%minute/60)
+        endtime%minute=endtime%minute-isvar*60
+        endtime%hour=endtime%hour+isvar
+!
+        isvar=int(endtime%minute/24)
+        endtime%hour=endtime%hour-isvar*24
+        endtime%day=endtime%day+isvar
+!
+!       Warning! THis choice stops at the last second of the current month!!!!!!!
+        call clock$now(now)
+        if(now.later.endtime) tstop=.true.
+      end if
+!
 !     ==================================================================
 !     ==  CHECK WHETHER TSTOP=T FOR ANY TASK                          ==
 !     ==================================================================
