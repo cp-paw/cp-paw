@@ -1,0 +1,49 @@
+!PCNTL
+
+  !FILES
+    !FILE ID='xyz' NAME='optimized.xyz' !END
+  !END
+
+  !GENERIC
+    TRACE=F
+    TOL=0.0001
+    NSTEPS=5000
+  !END
+comment='sd more than 50000 (Epot: 1.25089  Fmax: 0.00028) dyn: 3074 (Epot: 1.24467 Fmax: 0.00016)'
+  !OUTPUT
+     PRINTATOMS=F
+     PRINTBONDS=F
+     WARNFF=F
+     XYZOUT=T
+  !END
+
+  !xFREEZEONLY 
+     COMMENT='this block has no effect as long as moveonly is present'
+     !ATOM NAME='MO1' !END
+     !ATOM PART='FE' !END
+  !END
+
+  !xMOVEONLY
+     !ATOM_OFF PART='H_nh' !END
+     !ATOM NAME='N_nh41' !END
+     !ATOM NAME='H_nh43' !END
+     !ATOM NAME='H_nh44' !END
+     !ATOM NAME='H_nh45' !END
+  !END
+
+!END
+!EOB
+
+as default freeze is fals for all atoms, however here it is made most easy to set
+freeze true for any atom, i.e. to freeze the atoms
+
+if the FREEZE keyword is resent in the strc-file it overwrites everything for this atom
+
+
+
+
+
+
+
+
+

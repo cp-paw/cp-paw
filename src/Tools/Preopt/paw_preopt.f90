@@ -81,8 +81,8 @@ END MODULE POPT_MODULE
 
       CALL REPORT_START
 
-!      CALL MM_MINIMIZE_dynamic
-      CALL MM_MINIMIZE_cg
+      CALL MM_MINIMIZE_dynamic
+!      CALL MM_MINIMIZE_cg
 
       CALL REPORT_END
 
@@ -532,7 +532,7 @@ END MODULE READ_MODULE
         CALL CLASSICAL$SETR8A('QEL',NAT,CHARGE)
         CALL CLASSICAL$SETCHA('TYPE',NAT,FFTYPE)
         CALL CLASSICAL$SETL4A('TFREEZE',NAT,TFREEZE)
-        CALL CLASSICAL$SETCHA('NAME',NAT,ATOM(1:NAT)%NAME)
+        CALL CLASSICAL$SETCHA('ATOMNAME',NAT,ATOM(1:NAT)%NAME)
 !
 !       ================================================================
 !       ==  SEND BOND INFORMATION TO CLASSICAL OBJECT                 ==
@@ -825,7 +825,7 @@ END MODULE READ_MODULE
 !     **                                                              **
 !     ******************************************************************
       USE POPT_MODULE
-      USE TESTPOT_MODULE
+!      USE TESTPOT_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       REAL(8)               :: TOLI=1.D-5
