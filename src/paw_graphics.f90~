@@ -63,10 +63,10 @@ COMPLEX(8),ALLOCATABLE    :: PWPOT(:)
 REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)
 REAL(8)   ,ALLOCATABLE    :: PS1CPOT(:,:,:)
 INTEGER(4)                :: LMRXX=0    !INITIALLY NOT SET
-INTEGER(4)                :: NRX=0
-INTEGER(4)                :: NGL=0
-INTEGER(4)                :: NWAVE=0
-INTEGER(4)                :: NDENSITY=0
+INTEGER(4)                :: NRX
+INTEGER(4)                :: NGL
+INTEGER(4)                :: NWAVE
+INTEGER(4)                :: NDENSITY
 LOGICAL(4)                :: TPOT=.FALSE.
 END MODULE GRAPHICS_MODULE
 !
@@ -1236,23 +1236,19 @@ CALL TRACE$PASS('MARKE 3')
 !     ********************************************************************
       USE GRAPHICS_MODULE
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(IN) :: NGL_
-      COMPLEX(8)  ,INTENT(IN) :: VHARTREE(NGL_)
+      CHARACTER(32),INTENT(IN) :: ID
+      INTEGER(4)   ,INTENT(IN) :: NGL_
+      COMPLEX(8)   ,INTENT(IN) :: VHARTREE(NGL_)
+      CHARACTER(32)            :: TYPE
+      INTEGER(4)               :: IPIC
+      INTEGER(4)               :: NPICS
 !     ********************************************************************
       IF(.NOT.TINI) RETURN
       IF(.NOT.TWAKE) RETURN
       IF(.NOT.TPOT) RETURN
-      IF(NGL.NE.0.AND.NGL.NE.NGL_) THEN
-        CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-        CALL ERROR$I4VAL('NGL',NGL)
-        CALL ERROR$I4VAL('NGL_',NGL_)
-        CALL ERROR$STOP('GRAPHICS$SETPWPOT')
-      END IF
       NGL=NGL_
       IF(.NOT.ALLOCATED(PWPOT)) THEN
         ALLOCATE(PWPOT(NGL))
-      else 
       END IF
       PWPOT(:)=VHARTREE(:)
       RETURN

@@ -1419,24 +1419,16 @@ CALL TIMING$CLOCKON('W:FORCE')
               ALLOCATE(DO1(LNX,LNX))
               CALL SETUP$1COVERLAP(ISP,LNX,DO1)
               ALLOCATE(DEDPROJ(NDIM,NBH,LMNX))
-!peb030920start
               ALLOCATE(DH1(LMNX,LMNX,NDIM**2))
-              if(ndim.eq.1)
-                DH1(:,:,:)=DH(1:LMNX,1:LMNX,ispin,IAT)
+              if(ndim.eq.1) then
+                DH1(:,:,1)=DH(1:LMNX,1:LMNX,ispin,IAT)
               else 
                 DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
               end if
-              CALL WAVES_DEDPROJ(NDIM,NDIM**2,NBH,NB,LNX,MAP%LOX(1,ISP),LMNX &
+              CALL WAVES_DEDPROJ(NDIM,NBH,NB,LNX,MAP%LOX(1,ISP),LMNX &
      &                       ,OCC(1,IKPT,ISPIN) &
      &                       ,THIS%PROJ(1,1,IPRO),DH1,DO1 &
      &                       ,THIS%RLAM0,DEDPROJ)
-!             ALLOCATE(DH1(LMNX,LMNX,NDIMD))
-!             DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
-!             CALL WAVES_DEDPROJ(NDIM,NDIMD,NBH,NB,LNX,MAP%LOX(1,ISP),LMNX &
-!    &                       ,OCC(1,IKPT,ISPIN) &
-!    &                       ,THIS%PROJ(1,1,IPRO),DH1,DO1 &
-!    &                       ,THIS%RLAM0,DEDPROJ)
-!peb030920end
               DEALLOCATE(DH1)
               DEALLOCATE(DO1)
 !             == |DEDPRO>=|PSPSI>DEDPROJ ===============================
@@ -1498,8 +1490,15 @@ CALL TIMING$CLOCKON('W:HPSI.2')
           DO IAT=1,NAT
             ISP=MAP%ISP(IAT)
             LMNX=MAP%LMNX(ISP)
-            CALL WAVES_HPROJ(LMNXX,NDIMD,DH(1,1,ISPIN,IAT) &
-      &              ,NDIM,NBH,LMNX,THIS%PROJ(1,1,IPRO),HPROJ(1,1,IPRO))
+            ALLOCATE(DH1(LMNX,LMNX,NDIM**2))
+            if(ndim.eq.1) then
+              DH1(:,:,1)=DH(1:LMNX,1:LMNX,ispin,IAT)
+            else 
+              DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
+            end if
+            CALL WAVES_HPROJ(NDIM,NBH,LMNX &
+     &                      ,dh1,THIS%PROJ(1,1,IPRO),HPROJ(1,1,IPRO))
+            deallocate(dh1)
             IPRO=IPRO+LMNX
           ENDDO
 CALL TIMING$CLOCKOFF('W:HPSI.2')
@@ -1632,18 +1631,16 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES_HPROJ(LMNXX,NDIMD,DH,NDIM,NB,LMNX,PROJ,HPROJ)
+      SUBROUTINE WAVES_HPROJ(NDIM,NB,LMNX,dh,PROJ,HPROJ)
 !     ******************************************************************
 !     **                                                              **
 !     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
       USE WAVES_MODULE, ONLY : MAP_TYPE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: LMNXX
-      INTEGER(4),INTENT(IN)  :: NDIMD
-      REAL(8)   ,INTENT(IN)  :: DH(LMNXX,LMNXX,NDIMD)
       INTEGER(4),INTENT(IN)  :: NDIM
       INTEGER(4),INTENT(IN)  :: NB
       INTEGER(4),INTENT(IN)  :: LMNX
+      REAL(8)   ,INTENT(IN)  :: DH(LMNX,LMNX,NDIM**2)
       COMPLEX(8),INTENT(IN)  :: PROJ(NDIM,NB,LMNX)
       COMPLEX(8),INTENT(OUT) :: HPROJ(NDIM,NB,LMNX)
       INTEGER(4)             :: IB
@@ -2419,7 +2416,7 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       END
 !
 !     .....................................................NLSMX........
-      SUBROUTINE WAVES_DEDPROJ(NDIM,NDIMD,NBH,NB,LNX,LOX,LMNX,OCC &
+      SUBROUTINE WAVES_DEDPROJ(NDIM,NBH,NB,LNX,LOX,LMNX,OCC &
      &                       ,PROJ,DH,DO,EPS,DEDPROJ)
 !     ******************************************************************
 !     **                                                              **
@@ -2430,13 +2427,12 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
 !     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: NDIM      ! #(SPINOR COMPONENTS)
-      INTEGER(4),INTENT(IN)   :: NDIMD     ! #(SPINOR COMPONENTS)
       INTEGER(4),INTENT(IN)   :: NB        ! #(BANDS)
       INTEGER(4),INTENT(IN)   :: NBH       ! #(WAVE FUNCTIONS)
       INTEGER(4),INTENT(IN)   :: LMNX      ! #(PROJECTORS ON THIS SITE)
       REAL(8)   ,INTENT(IN)   :: OCC(NB)   ! OCCUPATIONS
       COMPLEX(8),INTENT(IN)   :: PROJ(NDIM,NBH,LMNX) ! <P|PSI>
-      REAL(8)   ,INTENT(IN)   :: DH(LMNX,LMNX,NDIMD) ! DE/DD
+      REAL(8)   ,INTENT(IN)   :: DH(LMNX,LMNX,NDIM**2) ! DE/DD
       INTEGER(4),INTENT(IN)   :: LNX
       INTEGER(4),INTENT(IN)   :: LOX(LNX)
       REAL(8)   ,INTENT(IN)   :: DO(LNX,LNX) ! DO/DD
@@ -2470,7 +2466,7 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
 !     ==================================================================
 !     ==  HPROJ = DH<P|PSI>                                           ==
 !     ==================================================================
-      CALL WAVES_HPROJ(LMNX,NDIMD,DH,NDIM,NBH,LMNX,PROJ,DEDPROJ)
+      CALL WAVES_HPROJ(NDIM,NBH,LMNX,dh,PROJ,DEDPROJ)
 !
 !     ==================================================================
 !     ==  HPROJ = DH<P|PSI>*F                                         ==

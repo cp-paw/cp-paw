@@ -679,6 +679,108 @@ CONTAINS
       RETURN
       END SUBROUTINE LLIST_ADDPTR
 END MODULE LLIST_MODULE
+!!$!
+!!$!...............................................................
+!!$!module linkedlist_transferch_module
+!!$!public LINKEDLIST_TRANSFERCHTO1
+!!$!public LINKEDLIST_TRANSFERCHfrom1
+!!$!INTERFACE LINKEDLIST_TRANSFERCHTO1
+!!$!  MODULE PROCEDURE LINKEDLIST_TRANSFERCHSCALTO1
+!!$!  MODULE PROCEDURE LINKEDLIST_TRANSFERCHARRTO1
+!!$!END INTERFACE 
+!!$!contains
+!!$!
+!!$!     ..................................................................
+!!$      SUBROUTINE linkedlist_TRANSFERCHscalTO1(FROMSIZE,FROM,NTO,TO)
+!!$      INTEGER(4)  ,INTENT(IN)   :: FROMSIZE ! not used
+!!$      CHARACTER(*),INTENT(IN)   :: FROM
+!!$      INTEGER(4)  ,INTENT(IN)   :: NTO
+!!$      CHARACTER(1),INTENT(OUT)  :: TO(NTO)
+!!$      INTEGER(4)                :: I,J,IJ
+!!$      INTEGER(4)                :: FROMLEN
+!!$!     ******************************************************************
+!!$      if(fromsize.ne.1) then
+!!$        call error$stop('linkedlist_TRANSFERCHscalTO1')
+!!$      end if
+!!$      FROMLEN=LEN(FROM)
+!!$      IJ=0
+!!$      DO J=1,FROMLEN
+!!$        IJ=IJ+1
+!!$        TO(IJ)=FROM(J:J)
+!!$      ENDDO
+!!$      DO I=IJ+1,NTO
+!!$        TO(I)=' '
+!!$      ENDDO
+!!$      RETURN
+!!$      END SUBROUTINE linkedlist_TRANSFERCHscalTO1
+!!$!
+!!$!     ..................................................................
+!!$      SUBROUTINE linkedlist_TRANSFERCHarrTO1(FROMSIZE,FROM,NTO,TO)
+!!$      INTEGER(4)  ,INTENT(IN)   :: NTO
+!!$      INTEGER(4)  ,INTENT(IN)   :: FROMSIZE
+!!$      CHARACTER(*),INTENT(IN)   :: FROM(FROMSIZE)
+!!$      CHARACTER(1),INTENT(OUT)  :: TO(NTO)
+!!$      INTEGER(4)                :: I,J,IJ
+!!$      INTEGER(4)                :: FROMLEN
+!!$!     ******************************************************************
+!!$      FROMLEN=LEN(FROM)
+!!$      IJ=0
+!!$      DO I=1,FROMSIZE
+!!$        DO J=1,FROMLEN
+!!$          IJ=IJ+1
+!!$          TO(IJ)=FROM(I)(J:J)
+!!$        ENDDO
+!!$      ENDDO
+!!$      DO I=IJ+1,NTO
+!!$        TO(I)=' '
+!!$      ENDDO
+!!$      RETURN
+!!$      END SUBROUTINE linkedlist_TRANSFERCHarrTO1
+!!$!end module linkedlist_transferch_module
+!
+!     ..................................................................
+      SUBROUTINE linkedlist_TRANSFERCHTO1(FROMSIZE,FROM,NTO,TO)
+      INTEGER(4)  ,INTENT(IN)   :: NTO
+      INTEGER(4)  ,INTENT(IN)   :: FROMSIZE
+      CHARACTER(*),INTENT(IN)   :: FROM(FROMSIZE)
+      CHARACTER(1),INTENT(OUT)  :: TO(NTO)
+      INTEGER(4)                :: I,J,IJ
+      INTEGER(4)                :: FROMLEN
+!     ******************************************************************
+      FROMLEN=LEN(FROM)
+      IJ=0
+      DO I=1,FROMSIZE
+        DO J=1,FROMLEN
+          IJ=IJ+1
+          TO(IJ)=FROM(I)(J:J)
+        ENDDO
+      ENDDO
+      DO I=IJ+1,NTO
+        TO(I)=' '
+      ENDDO
+      RETURN
+      END SUBROUTINE linkedlist_TRANSFERCHTO1
+!
+!     ..................................................................
+      SUBROUTINE linkedlist_TRANSFERCHfrom1(nfrom,from,tosize,to)
+      INTEGER(4)  ,INTENT(IN)   :: Nfrom
+      INTEGER(4)  ,INTENT(IN)   :: toSIZE
+      CHARACTER(*),INTENT(out)  :: to(toSIZE)
+      CHARACTER(1),INTENT(in)   :: from(Nfrom)
+      INTEGER(4)                :: I,J,IJ
+      INTEGER(4)                :: toLEN
+!     ******************************************************************
+      TOLEN=LEN(TO)
+      IJ=0
+      DO I=1,TOSIZE
+        TO(I)=' '
+        DO J=1,TOLEN
+          IJ=IJ+1
+          TO(I)(J:J)=FROM(IJ)
+        ENDDO
+      ENDDO
+      RETURN
+      END SUBROUTINE linkedlist_TRANSFERCHfrom1
 !
 !.......................................................................
 !***********************************************************************
@@ -1750,50 +1852,6 @@ CONTAINS
       RETURN
       END SUBROUTINE LINKEDLIST$CONVERT
 END MODULE LINKEDLIST_MODULE
-!
-!     ..................................................................
-      SUBROUTINE linkedlist_TRANSFERCHTO1(FROMSIZE,FROM,NTO,TO)
-      INTEGER(4)  ,INTENT(IN)   :: NTO
-      INTEGER(4)  ,INTENT(IN)   :: FROMSIZE
-      CHARACTER(*),INTENT(IN)   :: FROM(FROMSIZE)
-      CHARACTER(1),INTENT(OUT)  :: TO(NTO)
-      INTEGER(4)                :: I,J,IJ
-      INTEGER(4)                :: FROMLEN
-!     ******************************************************************
-      FROMLEN=LEN(FROM)
-      IJ=0
-      DO I=1,FROMSIZE
-        DO J=1,FROMLEN
-          IJ=IJ+1
-          TO(IJ)=FROM(I)(J:J)
-        ENDDO
-      ENDDO
-      DO I=IJ+1,NTO
-        TO(I)=' '
-      ENDDO
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE linkedlist_TRANSFERCHfrom1(nfrom,from,tosize,to)
-      INTEGER(4)  ,INTENT(IN)   :: Nfrom
-      INTEGER(4)  ,INTENT(IN)   :: toSIZE
-      CHARACTER(*),INTENT(out)  :: to(toSIZE)
-      CHARACTER(1),INTENT(in)   :: from(Nfrom)
-      INTEGER(4)                :: I,J,IJ
-      INTEGER(4)                :: toLEN
-!     ******************************************************************
-      TOLEN=LEN(TO)
-      IJ=0
-      DO I=1,TOSIZE
-        TO(I)=' '
-        DO J=1,TOLEN
-          IJ=IJ+1
-          TO(I)(J:J)=FROM(IJ)
-        ENDDO
-      ENDDO
-      RETURN
-      END
 !
 !.......................................................................
 MODULE BUFFER_MODULE
