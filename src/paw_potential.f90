@@ -886,7 +886,7 @@ WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
             FORCE1(I)=FORCE1(I)+SVAR*GVEC(I,IG)
           ENDDO
 !         == STRESSES =================================================
-          SVAR1=-REAL(CONJG(VTEMP(IG))*DPSCORG(IG,ISP)*EIGR(IG))/(G2(IG)+TINY)
+          SVAR1=-REAL(CONJG(VTEMP(IG))*DPSCORG(IG,ISP)*EIGR(IG),kind=8)/(G2(IG)+TINY)
           DO I=1,3
             DO J=1,3
               STRESS1(I,J)=STRESS1(I,J)+GVEC(I,IG)*GVEC(J,IG)*SVAR1
@@ -1121,7 +1121,7 @@ WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
 !     ==  ADD BACKGROUND                                              ==
 !     ==================================================================
       IF(NGAMMA.NE.0) THEN
-        RHOB=-REAL(RHO2(NGAMMA))
+        RHOB=-REAL(RHO2(NGAMMA),kind=8)
 PRINT*,'RHOB  FROM VOFRHO_HARTREE',RHOB*GWEIGHT
 PRINT*,'Q(RHO) FROM VOFRHO_HARTREE',RHO(NGAMMA)*GWEIGHT
 PRINT*,'Q(RHO2) FROM VOFRHO_HARTREE',RHO2(NGAMMA)*GWEIGHT
@@ -1147,10 +1147,10 @@ CSVAR=CSVAR+0.5D0*CONJG(RHO2(IG))*VG(IG)
           POT(IG)=POT(IG)+VG(IG)
         END IF
       ENDDO
-      EHARTREE=REAL(CSUM)
-PRINT*,'PURE HARTREE ENERGY ',REAL(CSVAR)*2.D0*GWEIGHT
-PRINT*,'RHO*POT ',REAL(CSUM-CSVAR)*2.D0*GWEIGHT
-PRINT*,'STRESS PREDICTED ',-REAL(CSVAR)*2.D0*GWEIGHT/3.D0-REAL(CSUM-CSVAR)*2.D0*GWEIGHT
+      EHARTREE=REAL(CSUM,kind=8)
+PRINT*,'PURE HARTREE ENERGY ',REAL(CSVAR,kind=8)*2.D0*GWEIGHT
+PRINT*,'RHO*POT ',REAL(CSUM-CSVAR,kind=8)*2.D0*GWEIGHT
+PRINT*,'STRESS PREDICTED ',-REAL(CSVAR,kind=8)*2.D0*GWEIGHT/3.D0-REAL(CSUM-CSVAR,kind=8)*2.D0*GWEIGHT
 !
 !     == NOW TAKE CARE OF STRESSES =====================================
 !     == INTEGRATION WEIGHT IS DONE LATER ==============================
@@ -1227,7 +1227,7 @@ STRESSC=0.D0
           IF(IG.EQ.NGAMMA) THEN
             CSVAR0=(G0(IG,ISP)*CONJG(VG(IG))+V0(IG,ISP)*CONJG(RHO2(IG)))
             CSVAR=CSVAR0*CFAC(1)*YLMOFG(1,IG)*EIGR(IG)
-            VQLM(1,IAT)=VQLM(1,IAT)-0.5D0*REAL(CSVAR)
+            VQLM(1,IAT)=VQLM(1,IAT)-0.5D0*REAL(CSVAR,kind=8)
           END IF
 !         == MULTIPOLE POTENTIALS ======================================
           AVAL=( G0(IG,ISP)*CONJG(VG(IG)) + V0(IG,ISP)*CONJG(RHO2(IG)) )
@@ -1235,7 +1235,7 @@ STRESSC=0.D0
           CSUM=0.D0
           DO LM=1,LMRX(ISP)
             CSVAR=CFAC(LM)*YLMOFG(LM,IG)
-            VQLM(LM,IAT)=VQLM(LM,IAT)+REAL(CSVAR*AVAL)
+            VQLM(LM,IAT)=VQLM(LM,IAT)+REAL(CSVAR*AVAL,kind=8)
             CSUM=CSUM   + QLM(LM,IAT)*CSVAR
           ENDDO
 !         == FORCES ====================================================
@@ -1252,15 +1252,15 @@ STRESSC=0.D0
             BVAL=DG0(IG,ISP)*CONJG(VG(IG))+DV0(IG,ISP)*CONJG(RHO2(IG)) 
             BVAL=BVAL*EIGR(IG)
             DVAL=DVBARG(IG,ISP)*Y0*EIGR(IG)*CONJG(RHO2(IG))
-            SVAR=REAL(DVAL+BVAL*CSUM)/(G2(IG)+TINY)
+            SVAR=REAL(DVAL+BVAL*CSUM,kind=8)/(G2(IG)+TINY)
             DO I=1,3
               DO J=1,3
-                STRESS(I,J)=STRESS(I,J)- REAL(PT(I,J)*AVAL) &
+                STRESS(I,J)=STRESS(I,J)- REAL(PT(I,J)*AVAL,kind=8) &
      &                                 - GVEC(I,IG)*GVEC(J,IG)*SVAR
 !
-                STRESSA(I,J)=STRESSA(I,J)- REAL(PT(I,J)*AVAL) 
-                STRESSB(I,J)=STRESSB(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(DVAL)/(G2(IG)+TINY)
-                STRESSC(I,J)=STRESSC(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(BVAL*CSUM)/(G2(IG)+TINY)
+                STRESSA(I,J)=STRESSA(I,J)- REAL(PT(I,J)*AVAL,kind=8) 
+                STRESSB(I,J)=STRESSB(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(DVAL,kind=8)/(G2(IG)+TINY)
+                STRESSC(I,J)=STRESSC(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(BVAL*CSUM,kind=8)/(G2(IG)+TINY)
               ENDDO
             ENDDO
             PT(:,:)=0.D0  ! RESET FOR NEXT G-VECTOR
