@@ -729,6 +729,22 @@ END MODULE SETUP_MODULE
       DEALLOCATE(DWORK)
 !
       DEALLOCATE(IWORK)
+
+!!$print*,'=============================================================='
+!!$print*,'psz  ',this%psz
+!!$print*,'aez  ',this%aez
+!!$print*,'rcsm ',this%rcsm
+!!$print*,'lnx  ',this%lnx
+!!$print*,'lox  ',this%lox
+!!$print*,'pro  ',this%pro
+!!$print*,'aephi',this%aephi
+!!$print*,'psphi',this%psphi
+!!$print*,'vadd ',this%vadd
+!!$print*,'pscore',this%pscore
+!!$print*,'aecore',this%aecore
+!!$print*,'dover',this%dover
+!!$print*,'dtkin',this%dtkin
+!call error$stop('forced stop in setup')
 !     
 !     ==================================================================
 !     == SET VALUES BEYOND A CERTAIN RADIUS EXACTLY TO ZERO           ==

@@ -675,8 +675,8 @@ END MODULE STOPIT_MODULE
       CHARACTER(*),INTENT(IN):: ID_
       integer(4)  ,INTENT(IN) :: VAL_
 !     ****************************************************************** 
-      IF(TRIM(ID_).EQ.'runtime') THEN 
-        runtime=val_    ! runtime in seconds
+      IF(TRIM(ID_).EQ.'RUNTIME') THEN 
+        RUNTIME=VAL_    ! RUNTIME IN SECONDS
       ELSE
         CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID_',ID_)
@@ -814,7 +814,7 @@ END MODULE STOPIT_MODULE
         endtime%minute=endtime%minute-isvar*60
         endtime%hour=endtime%hour+isvar
 !
-        isvar=int(endtime%minute/24)
+        isvar=int(endtime%hour/24)
         endtime%hour=endtime%hour-isvar*24
         endtime%day=endtime%day+isvar
 !
