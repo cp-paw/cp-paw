@@ -97,8 +97,18 @@ chosen.
 \begin{itemize}
 \item in paw\_augmentation there is still a ``severe warning'' for
 calculating the background charge. 
+\item Offcenter wave function mass for spinor wave functions and
+offdiagonal mass for occupations with spin-polarisation.
+\item For the cell dynamics we need the retoring force for the plane
+wave coinvergence.
+\end{itemize}
+%==========================================================================
+\section{Done}
+%==========================================================================
+\begin{itemize}
 \item after removing the source blas and lapack routines the linker
-could not resolve the following references
+could not resolve the following references. Solution do not use the
+lapack from atlas but the source version.
 
 \begin{verbatim}
 /usr/absoft/lib/libfio.a(lowlevel.o): In function `_temp_file':

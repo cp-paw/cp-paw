@@ -24,11 +24,13 @@
 CPP="/usr/bin/cpp -P"       # use cpp auf linux
 #  gnu make 
 GNUMAKE=/usr/bin/gmake       # use make auf linux
+# specify architecture for which Atlas blas has been tuned
+ATLASSPEC=Linux_ATHLON/ 
+#
 #  Libraries (FFTW, ATLAS-Blas, MPI) are located in directory LIBDIR
-LIBDIR=/home/blo/Tree/Libraries/Packages
+LIBDIR=${PAWDIR}/../Libraries/Packages
 FFTWDIR=${LIBDIR}/fftw-2.1.3/
 ATLASDIR=${LIBDIR}/ATLAS/
-ATLASSPEC=Linux_ATHLON/ 
 MPIDIR=${LIBDIR}/mpich-1.2.1/
 #################################################################
 ##  set compiler flags                                         ##
@@ -64,7 +66,7 @@ ALP_COMPILE_N="${ALP_COMPILE_N} -convert ibm"
 ALP_COMPILE_G="${ALP_COMPILE_N} -g3 -ladebug -C -assume gfullpath -check overflow -check underflow"
 ALP_COMPILE_O="${ALP_COMPILE_N} -O3  -math_library fast -inline speed" 
 ALP_COMPILE_N="${ALP_COMPILE_N} -math_library accurate"
-ALP_LINK="fort -bmaxdata:0x70000000 -bloadmap:loadmap -qextchk " 
+ALP_LINK="fort "
 ## Absoft compiler for linux
 ABS_COMPILE_N="f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_"
 #ABS_COMPILE_G="${ABS_COMPILE_N} -g -Rb -Rs " 
@@ -222,24 +224,24 @@ case "$ARCH" in
     FEXT=f
     case "$OPT" in
       G)
-        OBJDIR=${OBJDIR}dbg/
-        PAWX=${EXEDIR}paw_dbg.x
+        OBJDIR=${OBJDIR}/dbg/
+        PAWX=${EXEDIR}/paw_dbg.x
         F90PP="${F90PP} -archxlf -DCPPVARIABLE_XLF"
         COMPILE=${XLF_COMPILE_G}
         LINK=${XLF_LINK}
         OPTRM="file " 
       ;;
       N)
-        OBJDIR=${OBJDIR}none/
-        PAWX=${EXEDIR}paw.x
+        OBJDIR=${OBJDIR}/none/
+        PAWX=${EXEDIR}/paw.x
         F90PP="${F90PP} -archxlf -DCPPVARIABLE_XLF"
         COMPILE=$XLF_COMPILE_N
         LINK=${XLF_LINK}
         OPTRM="rm " 
       ;;
       NP)
-        OBJDIR=${OBJDIR}none/
-        PAWX=${EXEDIR}ppaw.x
+        OBJDIR=${OBJDIR}/none/
+        PAWX=${EXEDIR}/ppaw.x
         F90PP="${F90PP} -archxlf -DCPPVARIABLE_XLF -DCPPVARIABLE_PARALLEL"
         COMPILE=$XLF_COMPILE_NP
         LINK=${XLF_LINK}
@@ -247,16 +249,16 @@ case "$ARCH" in
         PARALLEL=T
       ;;
       O)
-        OBJDIR=${OBJDIR}fast/
-        PAWX=${EXEDIR}paw_fast.x
+        OBJDIR=${OBJDIR}/fast/
+        PAWX=${EXEDIR}/paw_fast.x
         F90PP="${F90PP} -archxlf -DCPPVARIABLE_XLF"
         COMPILE=$XLF_COMPILE_O
         LINK=${XLF_LINK}
         OPTRM="file " 
       ;;
       OP)
-        OBJDIR=${OBJDIR}fast/
-        PAWX=${EXEDIR}ppaw_fast.x
+        OBJDIR=${OBJDIR}/fast/
+        PAWX=${EXEDIR}/ppaw_fast.x
         F90PP="${F90PP} -archxlf -DCPPVARIABLE_XLF -DCPPVARIABLE_PARALLEL"
         COMPILE=$XLF_COMPILE_OP
         LINK=${XLF_LINK}
@@ -280,24 +282,24 @@ case "$ARCH" in
     FEXT=f90
     case "$OPT" in
       G)
-        OBJDIR=${OBJDIR}dbg/
-        PAWX=${EXEDIR}paw_dbg.x
+        OBJDIR=${OBJDIR}/dbg/
+        PAWX=${EXEDIR}/paw_dbg.x
         F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC"
         COMPILE=${ALP_COMPILE_G}
         LINK=${ALP_LINK}
         OPTRM="file "
       ;;
       N)
-        OBJDIR=${OBJDIR}none/
-        PAWX=${EXEDIR}paw.x
+        OBJDIR=${OBJDIR}/none/
+        PAWX=${EXEDIR}/paw.x
         F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC"
         COMPILE=$ALP_COMPILE_N
         LINK=${ALP_LINK}
         OPTRM="rm " 
       ;;
       NP)
-        OBJDIR=${OBJDIR}none/
-        PAWX=${EXEDIR}ppaw.x
+        OBJDIR=${OBJDIR}/none/
+        PAWX=${EXEDIR}/ppaw.x
         F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC  -DCPPVARIABLE_PARALLEL"
         COMPILE=$ALP_COMPILE_NP
         LINK=${ALP_LINK}
@@ -305,16 +307,16 @@ case "$ARCH" in
         PARALLEL=T
       ;;
       O)
-        OBJDIR=${OBJDIR}fast/
-        PAWX=${EXEDIR}paw_fast.x
+        OBJDIR=${OBJDIR}/fast/
+        PAWX=${EXEDIR}/paw_fast.x
         F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC"
         COMPILE=$ALP_COMPILE_O
         LINK=${ALP_LINK}
         OPTRM="rm " 
       ;;
       OP)
-        OBJDIR=${OBJDIR}fast/
-        PAWX=${EXEDIR}ppaw_fast.x
+        OBJDIR=${OBJDIR}/fast/
+        PAWX=${EXEDIR}/ppaw_fast.x
         F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC  -DCPPVARIABLE_PARALLEL"
         COMPILE=$ALP_COMPILE_OP
         LINK=${ALP_LINK}
@@ -328,7 +330,7 @@ case "$ARCH" in
     esac
     COMPILE="${COMPILE} -L${OBJDIR} -module ${OBJDIR} -I${OBJDIR}"
     LINK="${LINK} -I${OBJDIR} -L${OBJDIR}"
-    LLIBS="-lblas -llapack"
+    LLIBS="-lcxml"
     COMPILE77="${COMPILE}"
     ;;
   #========================================================================
@@ -336,27 +338,26 @@ case "$ARCH" in
   #========================================================================
   abs)
     FEXT=f90
+    F90PP="${F90PP} -archabs -DCPPVARIABLE_ABS"
     case "$OPT" in
       G)
-        OBJDIR=${OBJDIR}dbg/
-        PAWX=${EXEDIR}paw_dbg.x
-        F90PP="${F90PP} -archabs -DCPPVARIABLE_ABS"
+        OBJDIR=${OBJDIR}/dbg/
+        PAWX=${EXEDIR}/paw_dbg.x
         COMPILE=${ABS_COMPILE_G}
         LINK=${ABS_LINK}
         OPTRM="file "
       ;;
       N)
-        OBJDIR=${OBJDIR}none/
-        PAWX=${EXEDIR}paw.x
-        F90PP="${F90PP} -archabs -DCPPVARIABLE_ABS"
+        OBJDIR=${OBJDIR}/none/
+        PAWX=${EXEDIR}/paw.x
         COMPILE=$ABS_COMPILE_N
         LINK=${ABS_LINK}
         OPTRM="rm " 
       ;;
       NP)
-        OBJDIR=${OBJDIR}none/
-        PAWX=${EXEDIR}ppaw.x
-        F90PP="${F90PP} -archdec -DCPPVARIABLE_ABS  -DCPPVARIABLE_PARALLEL"
+        OBJDIR=${OBJDIR}/none/
+        PAWX=${EXEDIR}/ppaw.x
+        F90PP="${F90PP} -DCPPVARIABLE_PARALLEL"
         COMPILE=$ABS_COMPILE_NP
 	LLIBS="$LLIBS -L${MPIDIR}/lib/ -lmpich -lfmpich "
         LINK=${ABS_LINK}
@@ -364,17 +365,16 @@ case "$ARCH" in
         PARALLEL=T
       ;;
       O)
-        OBJDIR=${OBJDIR}fast/
-        PAWX=${EXEDIR}paw_fast.x
-        F90PP="${F90PP} -archdec -DCPPVARIABLE_ABS"
+        OBJDIR=${OBJDIR}/fast/
+        PAWX=${EXEDIR}/paw_fast.x
         COMPILE=$ABS_COMPILE_O
         LINK=${ABS_LINK}
         OPTRM="rm " 
       ;;
       OP)
-        OBJDIR=${OBJDIR}fast/
-        PAWX=${EXEDIR}ppaw_fast.x
-        F90PP="${F90PP} -archdec -DCPPVARIABLE_ABS -DCPPVARIABLE_PARALLEL"
+        OBJDIR=${OBJDIR}/fast/
+        PAWX=${EXEDIR}/ppaw_fast.x
+        F90PP="${F90PP} -DCPPVARIABLE_PARALLEL"
         COMPILE=$ABS_COMPILE_OP
 	LLIBS="$LLIBS -L${MPIDIR}/lib/ -lmpich -lfmpich "
         LINK=${ABS_LINK}
@@ -388,7 +388,7 @@ case "$ARCH" in
     esac
     COMPILE="${COMPILE} -L${OBJDIR}  -I${OBJDIR} -p${OBJDIR} "
     LINK="${LINK} -I${OBJDIR} -L${OBJDIR}"
-    LLIBS="$LLIBS -lU77" # absoft suuport library
+    LLIBS="$LLIBS -lU77" # absoft support library
 #   ==  fftw ===============================================
     LLIBS="$LLIBS -lfftw "
     LINK="${LINK} -L${FFTWDIR}/fftw/.libs "
@@ -398,56 +398,53 @@ case "$ARCH" in
 #   xerbla.o is a c-code required for atlas blas routine   
     LINK="${LINK} -L${ATLASDIR}/lib/${ATLASSPEC}"
 #   Attention! the order in which the libraries are supplied is critical!!!
-    LLIBS="$LLIBS -llapack -lf77blas -latlas"
+    LLIBS="$LLIBS -llapack -lf77blas -latlas -lpaw"
     cp ${ATLASDIR}/interfaces/blas/F77/src/${ATLASSPEC}/xerbla.o ${OBJDIR}/
     COMPILE77="${COMPILE}"
 #   ==  MPI ==============================================
     cp ${MPIDIR}/include/mpif.h ${OBJDIR}/MPIF90.H
-#   cp ${LIBDIR}/xerbla.o ${OBJDIR}/
     ;;
   #========================================================================
   #==  Portland group compiler                                           ==
   #========================================================================
   pgi)
     FEXT=f90
+    F90PP="${F90PP} -archpgi -DCPPVARIABLE_PGI"
     case "$OPT" in
       G)
-        OBJDIR=${OBJDIR}dbg/
-        PAWX=${EXEDIR}paw_dbg.x
-        F90PP="${F90PP} -archpgi -D#PGI"
+        OBJDIR=${OBJDIR}/dbg/
+        PAWX=${EXEDIR}/paw_dbg.x
         COMPILE=${ABS_COMPILE_G}
         LINK=${ABS_LINK}
         OPTRM="file "
       ;;
       N)
-        OBJDIR=${OBJDIR}none/
-        PAWX=${EXEDIR}paw.x
-        F90PP="${F90PP} -archpgi -D#PGI"
+        OBJDIR=${OBJDIR}/none/
+        PAWX=${EXEDIR}/paw.x
         COMPILE=$ABS_COMPILE_N
         LINK=${ABS_LINK}
         OPTRM="rm " 
       ;;
       NP)
-        OBJDIR=${OBJDIR}none/
-        PAWX=${EXEDIR}ppaw.x
-        F90PP="${F90PP} -archpgi -DCPPVARIABLE_PGI  -DCPPVARIABLE_PARALLEL"
+        OBJDIR=${OBJDIR}/none/
+        PAWX=${EXEDIR}/ppaw.x
+        F90PP="${F90PP} -DCPPVARIABLE_PARALLEL"
         COMPILE=$ABS_COMPILE_NP
         LINK=${ABS_LINK}
         OPTRM="rm " 
         PARALLEL=T
       ;;
       O)
-        OBJDIR=${OBJDIR}fast/
-        PAWX=${EXEDIR}paw_fast.x
-        F90PP="${F90PP} -archpgi -DCPPVARIABLE_PGI"
+        OBJDIR=${OBJDIR}/fast/
+        PAWX=${EXEDIR}/paw_fast.x
         COMPILE=$ABS_COMPILE_O
         LINK=${ABS_LINK}
         OPTRM="rm " 
       ;;
       OP)
-        OBJDIR=${OBJDIR}fast/
-        PAWX=${EXEDIR}ppaw_fast.x
-        F90PP="${F90PP} -archpgi -DCPPVARIABLE_PGI  -DCPPVARIABLE_PARALLEL"
+        OBJDIR=${OBJDIR}/fast/
+        PAWX=${EXEDIR}/ppaw_fast.x
+        F90PP="${F90PP} -DCPPVARIABLE_PARALLEL"
         COMPILE=$ABS_COMPILE_OP
         LINK=${ABS_LINK}
         OPTRM="rm " 
@@ -482,7 +479,7 @@ echo ......making executable........
 #=====  compile  =========================================
 export SRCDIR OBJDIR PAWX F90PP COMPILE COMPILE77 FEXT LINK ALLDEP OPTRM LLIBS PARALLEL
 typeset -i RC
-${GNUMAKE} -f ${PAWDIR}/paw.mk ${PAWDIR}F90PP/f90pp_tmplts.x 
+${GNUMAKE} -f ${PAWDIR}/paw.mk ${PAWDIR}/F90PP/f90pp_tmplts.x 
 ${GNUMAKE} -f ${PAWDIR}/paw.mk ${PAWX} ; RC=$?
 #################################################################
 ##  error handling  and close down                             ##

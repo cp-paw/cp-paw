@@ -1,0 +1,45 @@
+#!/bin/bash
+ATLASSPEC=Linux_ATHLON/ 
+#
+#  Libraries (FFTW, ATLAS-Blas, MPI) are located in directory LIBDIR
+LIBDIR=${PAWDIR}/../Libraries/Packages
+FFTWDIR=${LIBDIR}/fftw-2.1.3/
+ATLASDIR=${LIBDIR}/ATLAS/
+MPIDIR=${LIBDIR}/mpich-1.2.1/
+OBJDIR=${PAWDIR}/Objects/dbg
+ATOMSRCDIR=${PAWDIR}/Atom/Source
+#
+F90PP="${PAWDIR}/F90PP/f90pp -archabs -DCPPVARIABLE_ABS"
+MODDIR=${OBJDIR}
+COMPILE="f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_"
+COMPILE="${COMPILE} -g -Rs -L${OBJDIR}  -I${OBJDIR} -p${OBJDIR}"
+LINK="f90 -I${OBJDIR} -L${OBJDIR}"
+LLIBS="-lU77 -lpaw"
+#   ==  fftw ===============================================
+LINK="${LINK} -L${FFTWDIR}/fftw/.libs "
+LLIBS="$LLIBS -lfftw "
+#   ==  ATlas blas ======
+#   the source library lapack is used instead of the one supplied by atlas
+LINK="${LINK} -L${ATLASDIR}/lib/${ATLASSPEC}"
+#   Attention! the order in which the libraries are supplied is critical!!!
+LLIBS="$LLIBS -llapack -lf77blas -latlas"
+#===========================================
+$F90PP ${ATOMSRCDIR}/paw_diffgl.f > ${OBJDIR}/paw_diffgl_d.f90 
+${COMPILE} ${FFLAGS} -o${OBJDIR}/paw_diffgl.o ${OBJDIR}/paw_diffgl_d.f90
+$F90PP ${ATOMSRCDIR}/paw_atom.f  > ${OBJDIR}/paw_atom_d.f90
+${COMPILE} ${FFLAGS} -o${OBJDIR}/paw_atom.o ${OBJDIR}/paw_atom_d.f90
+echo linking...
+${LINK} -v ${LLIBS} -o${PAWDIR}/X/paw_atom.x ${OBJDIR}/paw_atom.o ${OBJDIR}/paw_diffgl.o ${LLIBS}
+exit
+
+
+
+
+
+
+
+
+
+
+
+

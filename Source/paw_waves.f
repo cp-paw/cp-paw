@@ -5538,6 +5538,8 @@ PRINT*,'ITER ',ITER,DIGAM
             ENDDO
             IF(THISTASK.EQ.1) THEN
               WRITE(NFIL)THIS%EIGVAL(IB1),VEC
+print*,'e ',this%eigval(ib1)
+write(*,fmt='(10f10.5)')vec
             END IF
           ENDDO
           DEALLOCATE(VECTOR1)

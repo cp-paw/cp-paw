@@ -53,30 +53,6 @@ REAL(8)   ,ALLOCATABLE :: XK(:,:) !(3,NKPT)
 REAL(8)   ,ALLOCATABLE :: WKPT(:) !(NKPT)
 CONTAINS
 !      .................................................................
-       SUBROUTINE XOFOCC(OCC,X)
-       IMPLICIT NONE
-       REAL(8),INTENT(IN) :: OCC
-       REAL(8),INTENT(OUT):: X
-       REAL(8)            :: X1,X3,OCC1
-!      *****************************************************************
-       IF(OCC.LT.0.D0.OR.OCC.GT.FMAX) THEN
-         CALL ERROR$MSG('OCCUPATION MUST BE BETWEEN ZERO AND FMAX')
-         CALL ERROR$STOP('XOFOCC IN MODULE DYNOCC')
-       END IF
-       OCC1=OCC/FMAX
-       CALL CUBPOLYNOMROOT(-OCC1,0.D0,3.D0,-2.D0,X1,X,X3)
-       RETURN
-       END SUBROUTINE XOFOCC
-!      .................................................................
-       SUBROUTINE OCCOFX(X,OCC)
-       IMPLICIT NONE
-       REAL(8),INTENT(IN) :: X
-       REAL(8),INTENT(OUT):: OCC
-!      *****************************************************************
-       OCC=X*X*(3.D0-2.D0*X)*FMAX
-       RETURN
-       END SUBROUTINE OCCOFX
-!      .................................................................
        SUBROUTINE CUBPOLYNOMROOT(A0_,A1_,A2_,A3_,X1,X2,X3)
 !      **                                                             **
 !      **  SEARCHES THE THREE ZEROS OF THE 3RD ORDER POLYNOMIAL       **
@@ -86,7 +62,7 @@ CONTAINS
 !      **  SEE "NUMERICAL RECIPES"; CAMBRIDGE UNIVERSITY PRESS        **
 !      **     SECTION 5.5 QUADRATIC AND CUBIC EQUATIONS, P 145        **
 !      **                                                             **
-!      **  attention not all rooots ar evaluated                      **
+!      **  ATTENTION NOT ALL ROOOTS AR EVALUATED                      **
 !      *****************************************************************
        IMPLICIT NONE
        REAL(8)   ,INTENT(IN) :: A0_,A1_,A2_,A3_
@@ -94,8 +70,13 @@ CONTAINS
        REAL(8)               :: A0,A1,A2,A3
        REAL(8)               :: Q,R,Q3,Q3MR2,THETA,SVAR
        REAL(8)               :: PI
-       logical(4),parameter  :: ttest=.false.
+       LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
 !      *****************************************************************
+       CALL CUBNEWTONRAPHSON(A0_,A1_,A2_,A3_,X1)
+       X2=X1
+       X3=X1
+       RETURN
+!      =================================================================
        PI=4.D0*DATAN(1.D0)
        A3=1.D0
        A2=A2_/A3_
@@ -132,20 +113,20 @@ CONTAINS
        X1=X1-SVAR
        X2=X2-SVAR
        X3=X3-SVAR
-       if(ttest) then
-         svar=abs(a0_+x1*(a1_+x1*(a2_+x1*a3_)))
-         if(svar.gt.1.d-8) then
-           call error$stop('cubpolynomroot1')
-         endif
-         svar=abs(a0_+x2*(a1_+x2*(a2_+x2*a3_)))
-         if(svar.gt.1.d-8) then
-           call error$stop('cubpolynomroot2')
-         endif
-         svar=abs(a0_+x3*(a1_+x3*(a2_+x3*a3_)))
-         if(svar.gt.1.d-8) then
-           call error$stop('cubpolynomroot3')
-         endif
-       end if
+       IF(TTEST) THEN
+         SVAR=ABS(A0_+X1*(A1_+X1*(A2_+X1*A3_)))
+         IF(SVAR.GT.1.D-8) THEN
+           CALL ERROR$STOP('CUBPOLYNOMROOT1')
+         ENDIF
+         SVAR=ABS(A0_+X2*(A1_+X2*(A2_+X2*A3_)))
+         IF(SVAR.GT.1.D-8) THEN
+           CALL ERROR$STOP('CUBPOLYNOMROOT2')
+         ENDIF
+         SVAR=ABS(A0_+X3*(A1_+X3*(A2_+X3*A3_)))
+         IF(SVAR.GT.1.D-8) THEN
+           CALL ERROR$STOP('CUBPOLYNOMROOT3')
+         ENDIF
+       END IF
        RETURN
        END SUBROUTINE CUBPOLYNOMROOT
 !      .................................................................
@@ -159,7 +140,7 @@ CONTAINS
        IMPLICIT NONE
        REAL(8)   ,INTENT(IN) :: A0,A1,A2,A3
        REAL(8)   ,INTENT(OUT):: X1
-       REAL(8)               :: VAL,DER,svar
+       REAL(8)               :: VAL,DER,SVAR
        INTEGER(4),PARAMETER  :: NITER=1000
        INTEGER(4)            :: ITER
        REAL(8)   ,PARAMETER  :: TOL=1.D-8
@@ -173,10 +154,108 @@ CONTAINS
          X1=X1+SVAR
        ENDDO
        CALL ERROR$MSG('LOOP NOT CONVERGED')
-       CALL ERROR$STOP('CUBNEWTONRAPHSON(dynocc_module)')
+       CALL ERROR$STOP('CUBNEWTONRAPHSON(DYNOCC_MODULE)')
        RETURN
        END SUBROUTINE CUBNEWTONRAPHSON
 END MODULE DYNOCC_MODULE
+!
+!      .................................................................
+       SUBROUTINE DYNOCC_FOFX(X,F,DF)
+!      **                                                             **
+!      **  EVALUATES THE OCCUPATIONS FROM THE DYNAMICAL VARIABLES     **
+!      **  OCC(X)=3X^2-2X^3  A CUBE POLYNOM                          **
+!      **  WITH A MIN AT (0,0) AND A MAX AT (1,1)                    **
+!      **  OCCOFX IS MADE PERIODIC SO THAT THE OCCUPATIONS ARE       **
+!      **  STRICTLY BETWEEN ZERO AND ONE                             **
+!      **                                                             **
+!      *****************************************************************
+       IMPLICIT NONE
+       REAL(8),INTENT(IN) :: X
+       REAL(8),INTENT(OUT):: F
+       REAL(8),INTENT(OUT):: DF
+       LOGICAL(4),SAVE    :: TNEW=.TRUE.
+       REAL(8)   ,SAVE    :: XMIN,XMAX
+       REAL(8)            :: X1
+       REAL(8)            :: DI
+!      *****************************************************************
+       IF(TNEW) THEN
+         XMIN=0.5D0-DSQRT(0.75D0)
+         XMAX=0.5D0+DSQRT(0.75D0)
+         TNEW=.FALSE.
+       END IF
+       DI=(X-XMIN)/(XMAX-XMIN)
+       DI=DI-INT(DI)
+       IF(DI.LT.0.D0) DI=DI+1.D0
+       X1=XMIN+DI*(XMAX-XMIN)
+       F=X1*X1*(3.D0-2.D0*X1)
+       DF=6.D0*X1*(1.D0-X1)
+       RETURN
+       END 
+!
+!      .................................................................
+       SUBROUTINE DYNOCC_SOFX(X,S,DS)
+!      **                                                             **
+!      **  EVALUATES THE ENTROPY FROM THE DYNAMICAL VARIABLES         **
+!      **                                                             **
+!      **  REMARK: ASSUMTION IS THAT F(X) APPROACHES  THE VALUES      **
+!      **          0 AND ONE QUADRATICALLY             ]              **
+!      **                                                             **
+!      *****************************************************************
+       IMPLICIT NONE
+       REAL(8),INTENT(IN)  :: X
+       REAL(8),INTENT(OUT) :: S
+       REAL(8),INTENT(OUT) :: DS
+       REAL(8)             :: F
+       REAL(8)             :: DF
+!      *****************************************************************
+       CALL DYNOCC_FOFX(X,F,DF)
+       IF(F.EQ.0.D0.OR.F.EQ.1.D0) THEN
+         S=0.D0
+         DS=0.D0
+         RETURN
+       END IF
+       S=F*LOG(F)+(1.D0-F)*LOG(1.D0-F)
+       DS=(LOG(F)-LOG(1.D0-F))*DF
+       RETURN
+       END
+!
+!      .................................................................
+       SUBROUTINE DYNOCC_XOFF(F,X,DX)
+!      **                                                             **
+!      **  EVALUATES THE OCCUPATIONS FROM THE DYNAMICAL VARIABLES     **
+!      **                                                             **
+!      **  REMARK: THERE ARE SEVERAL SOLUTIONS. THIS ROUTINE          **
+!      **          SELECTS THE ONE IN THE INTERVAL [0,1]              **
+!      **                                                             **
+!      *****************************************************************
+       IMPLICIT NONE
+       REAL(8)   ,INTENT(IN) :: F
+       REAL(8)   ,INTENT(OUT):: X
+       REAL(8)   ,INTENT(OUT):: DX
+       INTEGER(4),PARAMETER  :: NITER=100
+       REAL(8)   ,SAVE       :: TOL=1.D-12
+       REAL(8)   ,PARAMETER  :: DFMIN=1.D-3
+       INTEGER(4)            :: ITER
+       REAL(8)               :: FI,DF
+!      *****************************************************************
+       IF(F.LT.0.D0.OR.F.GT.1.D0) THEN
+         CALL ERROR$MSG('OCCUPATIONS MUST LIE BETWEEN ZERO AND ONE')
+         CALL ERROR$STOP('DYNOCC_XOFF')
+       END IF
+       X=0.5D0
+       DO ITER=1,100
+         CALL DYNOCC_FOFX(X,FI,DF)
+         IF(ABS(DF).LT.DFMIN) THEN
+           DF=DFMIN
+           IF(DF.LT.0.D0) DF=-DFMIN
+         END IF  
+         DX=(F-FI)/DF
+         IF(ABS(DX).LT.TOL) EXIT
+         X=X+DX
+       ENDDO
+       DX=1/DF
+       RETURN
+       END 
 !      .................................................................
        SUBROUTINE DYNOCC$TEST
        INTEGER(4),PARAMETER :: NB=5
@@ -187,9 +266,9 @@ END MODULE DYNOCC_MODULE
        REAL(8)              :: WGHT(NB,NKPT,NSPIN)
        REAL(8)   ,PARAMETER :: SUMOFZ=5.D0
        REAL(8)              :: FMAX=1.D0
-       REAL(8)              :: MASS=1.d+4
+       REAL(8)              :: MASS=1.D+4
        REAL(8)              :: DELTAT=10.
-       REAL(8)              :: fric=1.d-3
+       REAL(8)              :: FRIC=1.D-3
        REAL(8)              :: TEMP=1.D-3
        INTEGER(4),PARAMETER :: NITER=1000
        INTEGER(4)           :: IB,IKPT,ISPIN,ITER
@@ -198,13 +277,13 @@ END MODULE DYNOCC_MODULE
        REAL(8)              :: EKIN
        REAL(8)              :: EPOT
        REAL(8)              :: EBAND
-       REAL(8)              :: xk(3,nkpt)
+       REAL(8)              :: XK(3,NKPT)
 !      ******************************************************************
        CALL FILEHANDLER$UNIT('PROT',NFILO)
-       fmax=2.d0/real(nspin,kind=8)
+       FMAX=2.D0/REAL(NSPIN,KIND=8)
        DO IKPT=1,NKPT
          WKPT=1.D0/REAL(NKPT,KIND=8)
-         xk(:,ikpt)=0.d0
+         XK(:,IKPT)=0.D0
        ENDDO
        DO ISPIN=1,NSPIN
          DO IKPT=1,NKPT
@@ -219,17 +298,17 @@ END MODULE DYNOCC_MODULE
        CALL DYNOCC$SETR8('SUMOFZ',SUMOFZ)
        CALL DYNOCC$SETR8('MASS',MASS)
        CALL DYNOCC$SETR8('TIMESTEP',DELTAT)
-       CALL DYNOCC$SETR8('TEMP',1.d0)
-       CALL DYNOCC$SETL4('FIXQ',.true.)
-       CALL DYNOCC$SETL4('FIXS',.true.)
+       CALL DYNOCC$SETR8('TEMP',1.D0)
+       CALL DYNOCC$SETL4('FIXQ',.TRUE.)
+       CALL DYNOCC$SETL4('FIXS',.TRUE.)
        CALL DYNOCC$CREATE(NB,NKPT,NSPIN)
 !REMARK WHY IS XK NEEDED?
        CALL DYNOCC$SETR8A('EPSILON',NB*NKPT*NSPIN,EPSILON)
        CALL DYNOCC$INIOCC
        CALL DYNOCC$SETR8('TEMP',TEMP)
        CALL DYNOCC$REPORT(NFILO)
-       CALL DYNOCC$SETR8('FRICTION',fric)
-       WRITE(NFILO,FMT='(A10,4a15)')'ITER','ECONS','EKIN','EPOT','EBAND'
+       CALL DYNOCC$SETR8('FRICTION',FRIC)
+       WRITE(NFILO,FMT='(A10,4A15)')'ITER','ECONS','EKIN','EPOT','EBAND'
        DO ITER=1,NITER
          CALL DYNOCC$SETR8A('EPSILON',NB*NKPT*NSPIN,EPSILON)
          CALL DYNOCC$PROPAGATE
@@ -250,7 +329,7 @@ END MODULE DYNOCC_MODULE
          CALL DYNOCC$SWITCH
        ENDDO
        CALL DYNOCC$REPORT(NFILO)
-print*,'wght',wght
+PRINT*,'WGHT',WGHT
        RETURN
        END
 
@@ -558,7 +637,7 @@ print*,'wght',wght
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
        REAL(8)     ,INTENT(OUT):: DATA_
-       REAL(8)                 :: SPEED,SVAR,SUM
+       REAL(8)                 :: SPEED,SVAR,DSVAR,SUM
        INTEGER(4)              :: IB,IKPT,ISPIN,IND
 !      *****************************************************************
        IF(ID_.EQ.'SPIN') THEN
@@ -584,16 +663,12 @@ print*,'wght',wght
          DO ISPIN=1,NSPIN
            DO IKPT=1,NKPT
              DO IB=1,NB
-               SVAR=X0(IB,IKPT,ISPIN)
-               SVAR=SVAR**2*(3.D0-2.D0*SVAR)
-               SVAR=MAX(SVAR,1.D-6)
-               SVAR=MIN(SVAR,1.D0-1.D-6)
-               SVAR=SVAR*DLOG(SVAR)+(1.D0-SVAR)*DLOG(1.D0-SVAR)
+               CALL DYNOCC_SOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
                SUM=SUM+SVAR*WKPT(IKPT)
              ENDDO
            ENDDO
          ENDDO
-         DATA_=TEMP*Sum*FMAX
+         DATA_=TEMP*SUM*FMAX
        ELSE IF(ID_.EQ.'TEMP') THEN
          DATA_=TEMP
        ELSE
@@ -613,7 +688,7 @@ print*,'wght',wght
        CHARACTER(*),INTENT(IN) :: ID
        INTEGER(4)  ,INTENT(IN) :: LEN
        REAL(8)     ,INTENT(OUT):: VAL(LEN)
-       REAL(8)                 :: SPEED,SVAR,SUM
+       REAL(8)                 :: SPEED,SVAR,DSVAR,SUM
        INTEGER(4)              :: IB,IKPT,ISPIN,IND,I
 !      *****************************************************************
 !
@@ -659,8 +734,7 @@ print*,'wght',wght
            DO IKPT=1,NKPT
              DO IB=1,NB
                IND=IND+1
-               SVAR=X0(IB,IKPT,ISPIN)
-               SVAR=SVAR**2*(3.D0-2.D0*SVAR)
+               CALL DYNOCC_FOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
                VAL(IND)=SVAR*FMAX*WKPT(IKPT)
              ENDDO
            ENDDO
@@ -720,7 +794,7 @@ print*,'wght',wght
       INTEGER(4)                     :: NB1,NKPT1,NSPIN1
       INTEGER(4)                     :: NTASKS,ITASK
       INTEGER(4)                     :: ISPIN,IKPT,IB
-      REAL(8)                        :: SVAR
+      REAL(8)                        :: SVAR,DSVAR
 !     ******************************************************************
                           CALL TRACE$PUSH('DYNOCC$READ')
       TCHK=.NOT.START
@@ -748,9 +822,9 @@ print*,'wght',wght
         READ(NFIL)TMP0(:,:,:)
         READ(NFIL)TMPM(:,:,:)
 !
-!       ==================================================================
-!       == DISCARD SUPERFLOUS DATA AND MAP INTO ARRAY                   ==
-!       ==================================================================
+!       ================================================================
+!       == DISCARD SUPERFLOUS DATA AND MAP INTO ARRAY                 ==
+!       ================================================================
         NB1=MIN(NB1,NB)
         NKPT1=MIN(NKPT1,NKPT)
         NSPIN1=MIN(NSPIN1,NSPIN)
@@ -759,9 +833,9 @@ print*,'wght',wght
         DEALLOCATE(TMP0)
         DEALLOCATE(TMPM)
 !
-!       ==================================================================
-!       == AUGMENT MISSING DATA                                         ==
-!       ==================================================================
+!       ================================================================
+!       == AUGMENT MISSING DATA                                       ==
+!       ================================================================
         DO IKPT=NKPT1+1,NKPT
           X0(:,IKPT,:)=X0(:,1,:)
           XM(:,IKPT,:)=XM(:,1,:)
@@ -772,25 +846,25 @@ print*,'wght',wght
         END IF
       END IF
 !
-!     ====================================================================
-!     ==  BROADCAST                                                     ==
-!     ====================================================================
+!     ==================================================================
+!     ==  BROADCAST                                                   ==
+!     ==================================================================
       CALL MPE$BROADCAST(1,X0)
       CALL MPE$BROADCAST(1,XM)
 !
-!     ====================================================================
-!     ==  RESET THERMODYNAMIC VARIABLES                                 ==
-!     ====================================================================
+!     ==================================================================
+!     ==  RESET THERMODYNAMIC VARIABLES                               ==
+!     ==================================================================
       IF(NSPIN.EQ.1) THEN
         SPINCHA=0.D0
       ELSE
         SPINCHA=0.D0
         DO IKPT=1,NKPT
           DO IB=1,NB
-            CALL OCCOFX(X0(IB,IKPT,1),SVAR)
-            SPINCHA=SPINCHA+SVAR
-            CALL OCCOFX(X0(IB,IKPT,2),SVAR)
-            SPINCHA=SPINCHA-SVAR*WKPT(IKPT)
+            CALL DYNOCC_FOFX(X0(IB,IKPT,1),SVAR,DSVAR)
+            SPINCHA=SPINCHA+FMAX*SVAR*WKPT(IKPT)
+            CALL DYNOCC_FOFX(X0(IB,IKPT,2),SVAR,DSVAR)
+            SPINCHA=SPINCHA-FMAX*SVAR*WKPT(IKPT)
           ENDDO
         ENDDO        
       END IF
@@ -798,8 +872,8 @@ print*,'wght',wght
       DO ISPIN=1,NSPIN
         DO IKPT=1,NKPT
           DO IB=1,NB
-            CALL OCCOFX(X0(IB,IKPT,ISPIN),SVAR)
-            TOTCHA=TOTCHA+SVAR*WKPT(IKPT)
+            CALL DYNOCC_FOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
+            TOTCHA=TOTCHA+SVAR*FMAX*WKPT(IKPT)
           ENDDO
         ENDDO        
       ENDDO
@@ -964,6 +1038,7 @@ print*,'wght',wght
        INTEGER(4)             :: ISPINDEG
        REAL(8)                :: EMERMN
        REAL(8)                :: SIGMA
+       REAL(8)                :: DSVAR
 !      *****************************************************************
        IF(TINI.AND.(.NOT.START)) RETURN
                                   CALL TRACE$PUSH('DYNOCC$INIOCC')
@@ -985,7 +1060,7 @@ PRINT*,'INITIALIZE OCCUPATIONS USING EIGENVALUES'
                DO ISPIN=1,NSPIN
                  SIGMA=DBLE(3-2*ISPIN)
                  CALL DYNOCC_MERMIN(NB,NKPT,1,NB,NKPT,1 &
-     &              ,0.5d0*(TOTCHA+SIGMA*SPINCHA),ISPINDEG,TEMP &
+     &              ,0.5D0*(TOTCHA+SIGMA*SPINCHA),ISPINDEG,TEMP &
      &              ,WKPT,EPSILON(:,:,ISPIN),X0(:,:,ISPIN),TOTPOT,EMERMN)
                ENDDO
              ELSE 
@@ -993,7 +1068,7 @@ PRINT*,'INITIALIZE OCCUPATIONS USING EIGENVALUES'
                  SIGMA=DBLE(3-2*ISPIN)
                  EPSILON(:,:,ISPIN)=EPSILON(:,:,ISPIN)+SPINPOT*SIGMA
                  CALL DYNOCC_MERMIN(NB,NKPT,1,NB,NKPT,1 &
-     &             ,0.5d0*(TOTCHA+SIGMA*SPINCHA),ISPINDEG,TEMP &
+     &             ,0.5D0*(TOTCHA+SIGMA*SPINCHA),ISPINDEG,TEMP &
      &             ,WKPT,EPSILON(:,:,ISPIN),X0(:,:,ISPIN),TOTPOT,EMERMN)
                  EPSILON(:,:,ISPIN)=EPSILON(:,:,ISPIN)-SPINPOT*SIGMA
                ENDDO
@@ -1006,16 +1081,16 @@ PRINT*,'INITIALIZE OCCUPATIONS USING EIGENVALUES'
            IF(.NOT.TFIXSPIN) THEN
              DO ISPIN=1,NSPIN
                SIGMA=DBLE(3-2*ISPIN)
-               do ikpt=1,nkpt
-                 do ib=1,nb
+               DO IKPT=1,NKPT
+                 DO IB=1,NB
                    SVAR=(EPSILON(IB,IKPT,ISPIN)-(TOTPOT+SIGMA*SPINPOT))/TEMP
                    IF(DABS(SVAR).LT.55.D0) THEN
                      X0(IB,IKPT,ISPIN)=1.D0/(1.D0+DEXP(SVAR))
                    ELSE
                      X0(IB,IKPT,ISPIN)=0.5D0*(1.D0+DSIGN(1.D0,SVAR))
                    END IF
-                 enddo
-               enddo
+                 ENDDO
+               ENDDO
              ENDDO
              X0(:,:,:)=X0(:,:,:)*2.D0/DBLE(NSPIN)
            ELSE 
@@ -1026,8 +1101,8 @@ PRINT*,'INITIALIZE OCCUPATIONS USING EIGENVALUES'
          DO ISPIN=1,NSPIN
            DO IKPT=1,NKPT
              DO IB=1,NB
-               SVAR=X0(IB,IKPT,ISPIN)
-               CALL XOFOCC(SVAR,X0(IB,IKPT,ISPIN))
+               SVAR=X0(IB,IKPT,ISPIN)/FMAX
+               CALL DYNOCC_XOFF(SVAR,X0(IB,IKPT,ISPIN),DSVAR)
              ENDDO
            ENDDO
          ENDDO
@@ -1055,14 +1130,8 @@ PRINT*,'INITIALIZE OCCUPATIONS WITHOUT EIGENVALUES'
              ELSE IF(SVAR.LE.0.D0) THEN
                X0(IB,:,ISPIN)=0.D0
              ELSE
-               CALL CUBPOLYNOMROOT(-SVAR,0.D0,3.D0,-2.D0,X1,X2,X3)
-               IF(ABS(X1-0.5D0).LT.MIN(ABS(X2-0.5D0),ABS(X3-0.5D0))) THEN
-                 X0(IB,:,ISPIN)=X1
-               ELSE IF(ABS(X2-0.5D0).LT.MIN(ABS(X3-0.5D0),ABS(X1-0.5D0))) THEN
-                 X0(IB,:,ISPIN)=X2
-               ELSE IF(ABS(X3-0.5D0).LT.MIN(ABS(X1-0.5D0),ABS(X2-0.5D0))) THEN
-                 X0(IB,:,ISPIN)=X3
-               END IF
+               call dynocc_xoff(svar,x1,dsvar)
+               X0(IB,:,ISPIN)=X1
                SVAR=0.D0
              END IF
            ENDDO
@@ -1086,7 +1155,7 @@ PRINT*,'INITIALIZE OCCUPATIONS WITHOUT EIGENVALUES'
        IMPLICIT NONE
        INTEGER(4),INTENT(IN) :: IB_,IKPT_,ISPIN_
        REAL(8)   ,INTENT(IN) :: OCC_
-       REAL(8)               :: SVAR
+       REAL(8)               :: SVAR,DSVAR
 !      *****************************************************************
        IF(IB_.GT.NB.OR.IKPT_.GT.NKPT.OR.ISPIN_.GT.NSPIN) THEN
          CALL ERROR$MSG('DIMENSIONS EXCEEDED')
@@ -1102,16 +1171,16 @@ PRINT*,'INITIALIZE OCCUPATIONS WITHOUT EIGENVALUES'
 !      =================================================================
 !      ==  ADJUST TOTCHA AND SPINCHA                                  ==
 !      =================================================================
-       CALL OCCOFX(X0(IB_,IKPT_,ISPIN_),SVAR)
-       TOTCHA=TOTCHA+OCC_-SVAR
+       CALL DYNOCC_FOFX(X0(IB_,IKPT_,ISPIN_),SVAR,DSVAR)
+       TOTCHA=TOTCHA+OCC_-SVAR*FMAX
        IF(NSPIN.EQ.2) THEN
-         SPINCHA=SPINCHA+(OCC_-SVAR)*DBLE(3-2*ISPIN_)
+         SPINCHA=SPINCHA+(OCC_-SVAR*FMAX)*DBLE(3-2*ISPIN_)
        END IF
 !
 !      =================================================================
 !      ==  RESET OCCUPATIONS                                          ==
 !      =================================================================
-       CALL XOFOCC(OCC_,SVAR)
+       CALL DYNOCC_XOFF(OCC_/FMAX,SVAR,DSVAR)
        X0(IB_,IKPT_,ISPIN_)=SVAR
        XM(IB_,IKPT_,ISPIN_)=SVAR
        RETURN 
@@ -1156,7 +1225,7 @@ PRINT*,'INITIALIZE OCCUPATIONS WITHOUT EIGENVALUES'
        END
 !
 !      .................................................................
-       SUBROUTINE DYNOCC$PROPAGATE
+       SUBROUTINE DYNOCC$PROPAGATE()
 !      *****************************************************************
 !      **                                                             **
 !      *****************************************************************
@@ -1165,8 +1234,9 @@ PRINT*,'INITIALIZE OCCUPATIONS WITHOUT EIGENVALUES'
        REAL(8)   ,PARAMETER :: TOL=1.D-10
        REAL(8)   ,PARAMETER :: DSMALL=1.D-5
        REAL(8)              :: FX(NB,NKPT,NSPIN)
+       REAL(8)              :: XBAR(NB,NKPT,NSPIN)
        INTEGER(4)           :: ISPIN,IKPT,IB
-       REAL(8)              :: SVAR,OCC,DOCCDX,FORCE
+       REAL(8)              :: SVAR,OCC,DOCCDX,FORCE,DSVAR
        REAL(8)              :: SVAR1,SVAR2,SVAR3
        REAL(8)              :: X1,X2,X3
        REAL(8)              :: XMAX
@@ -1178,6 +1248,10 @@ PRINT*,'INITIALIZE OCCUPATIONS WITHOUT EIGENVALUES'
        LOGICAL(4)           :: TMPSIDOT2
        INTEGER(4)           :: ISVAR
 REAL(8)::EV
+       LOGICAL(4)           :: TCONV
+       REAL(8)              :: QTOL=1.D-5
+       INTEGER(4),PARAMETER :: NITER=1000
+       INTEGER(4)           :: ITER
 !      *****************************************************************
        IF(.NOT.TDYN) RETURN
                               CALL TRACE$PUSH('DYNOCC$PROPAGATE')
@@ -1197,7 +1271,7 @@ REAL(8)::EV
 !      ==  AVOID ESCAPING OCCUPATIONS BY IMPOSING PERIODIC            ==
 !      ==  BOUNDARY CONDISTIONS AT XMIN AND XMAX                      ==
 !      ==  EVERY PASS THROUGH THE BOUNDARY X IS STOPPED               ==
-!      ==  f(x)=3x^2-2x^3=0.5 for x=0.5+-sqrt(3/4)                    ==
+!      ==  F(X)=3X^2-2X^3=0.5 FOR X=0.5+-SQRT(3/4)                    ==
 !      =================================================================
        XMIN=0.5D0-DSQRT(0.75D0)
        XMAX=0.5D0+DSQRT(0.75D0)
@@ -1205,10 +1279,10 @@ REAL(8)::EV
          DO IKPT=1,NKPT
            DO IB=1,NB
              SVAR=(X0(IB,IKPT,ISPIN)-XMIN)/(XMAX-XMIN)
-             if(svar.gt.0.d0) cycle
-             if(svar.lt.1.d0) cycle
+             IF(SVAR.GT.0.D0) CYCLE
+             IF(SVAR.LT.1.D0) CYCLE
              ISVAR=INT(SVAR+100.D0)-100
-             SVAR=(XMAX-XMIN)*real(ISVAR,kind=8)
+             SVAR=(XMAX-XMIN)*REAL(ISVAR,KIND=8)
              X0(IB,IKPT,ISPIN)=X0(IB,IKPT,ISPIN)-SVAR
              XM(IB,IKPT,ISPIN)=XM(IB,IKPT,ISPIN)-SVAR
            ENDDO
@@ -1221,15 +1295,15 @@ REAL(8)::EV
        DO ISPIN=1,NSPIN
          DO IKPT=1,NKPT
            DO IB=1,NB
-             svar=0.5d0*abs(x0(ib,ikpt,ispin)-xm(ib,ikpt,ispin))
-             if(svar.gt.1.d-6) cycle ! no correction if nonzero velocity 
-             IF(ABS(X0(IB,IKPT,ISPIN)).LT.DSMALL**2) then
+             SVAR=0.5D0*ABS(X0(IB,IKPT,ISPIN)-XM(IB,IKPT,ISPIN))
+             IF(SVAR.GT.1.D-6) CYCLE ! NO CORRECTION IF NONZERO VELOCITY 
+             IF(ABS(X0(IB,IKPT,ISPIN)).LT.DSMALL**2) THEN
                X0(IB,IKPT,ISPIN)=DSMALL
-               Xm(IB,IKPT,ISPIN)=DSMALL
-             else IF(ABS(X0(IB,IKPT,ISPIN)-1.D0).LT.DSMALL**2) then
+               XM(IB,IKPT,ISPIN)=DSMALL
+             ELSE IF(ABS(X0(IB,IKPT,ISPIN)-1.D0).LT.DSMALL**2) THEN
                X0(IB,IKPT,ISPIN)=1.D0-DSMALL
-               Xm(IB,IKPT,ISPIN)=1.D0-DSMALL
-             end if
+               XM(IB,IKPT,ISPIN)=1.D0-DSMALL
+             END IF
            ENDDO
          ENDDO
        ENDDO
@@ -1244,24 +1318,22 @@ REAL(8)::EV
 !
 !      =================================================================
 !      ==  CALCULATE FORCE ON X                                       ==
+!      ==  remark:  the factor fmax is not used because the same term ==
+!      ==         appears also in the kinetic energy                  ==
 !      =================================================================
        DO ISPIN=1,NSPIN 
          SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
            DO IB=1,NB
-             SVAR=X0(IB,IKPT,ISPIN)
-             OCC=SVAR**2*(3.D0-2.D0*SVAR)
-             DOCCDX=6.D0*SVAR*(1.D0-SVAR)
-!
 !            == FORCE FROM BANDS AND CHEMICAL POTENTIAL ===============
-             FORCE=-EPSILON(IB,IKPT,ISPIN)+TOTPOT+SIGMA*SPINPOT
-             IF(TMPSIDOT2) FORCE=FORCE-MPSIDOT2(IB,IKPT,ISPIN)
-             FX(IB,IKPT,ISPIN)=FORCE*DOCCDX 
+             CALL DYNOCC_FOFX(X0(IB,IKPT,ISPIN),OCC,DOCCDX)
+             FORCE=-EPSILON(IB,IKPT,ISPIN)*DOCCDX
+!            FORCE=FORCE+(TOTPOT+SIGMA*SPINPOT)*DOCCDX
+             IF(TMPSIDOT2) FORCE=FORCE+MPSIDOT2(IB,IKPT,ISPIN)*DOCCDX
+             FX(IB,IKPT,ISPIN)=FORCE
 !            == FORCE FROM BANDS AND CHEMICAL POTENTIAL ===============
-             IF(OCC.GT.0.D0.AND.OCC.LT.1.D0) THEN
-               FORCE=-TEMP*(LOG(OCC)-LOG(1.D0-OCC))*DOCCDX
-               FX(IB,IKPT,ISPIN)=FX(IB,IKPT,ISPIN)+FORCE
-             END IF
+             CALL DYNOCC_SOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
+             FX(IB,IKPT,ISPIN)=FX(IB,IKPT,ISPIN)-TEMP*DSVAR
            ENDDO
          ENDDO
        ENDDO
@@ -1269,28 +1341,30 @@ REAL(8)::EV
 !      =================================================================
 !      ==  PROPAGATE X WITOUT CONSTRAINTS                             ==
 !      =================================================================
+!       SVAR1=2.D0/(1.D0+ANNEX)
+!       SVAR2=1.D0-SVAR1
+!       SVAR3=(SVAR1/2.D0)*DELTAT**2/MX
+!       XP(:,:,:)=SVAR1*X0(:,:,:)+SVAR2*XM(:,:,:)+SVAR3*FX(:,:,:)
+!
+!      =================================================================
+!      ==  PROPAGATE X WITOUT CONSTRAINTS                             ==
+!      ==  CONSTRAINT FORCE fx                                        ==
+!      ==  XP=Xbar+FX*(TOTPOT+SIGMA*SPINpOT)                          ==
+!      =================================================================
        SVAR1=2.D0/(1.D0+ANNEX)
        SVAR2=1.D0-SVAR1
        SVAR3=(SVAR1/2.D0)*DELTAT**2/MX
-       XP(:,:,:)=SVAR1*X0(:,:,:)+SVAR2*XM(:,:,:)+SVAR3*FX(:,:,:)
-!print*,'severe warning from dynocc$propagate: fudge'
-!return
-!CALL CONSTANTS$GET('EV',EV)
-!WRITE(*,FMT='("XM ",10F10.5)')XM
-!WRITE(*,FMT='("X0 ",10F10.5)')X0
-!WRITE(*,FMT='("XP ",10F10.5)')XP
-!WRITE(*,FMT='("EPSILON",10F10.5)')EPSILON/EV
-!WRITE(*,FMT='("MPSIDOT2",10F10.5)')MPSIDOT2/EV
-!
-!      =================================================================
-!      ==  CONSTRAINT FORCE                                           ==
-!      ==  XP=XP+FX*(DTOTPOT+SIGMA*DSPINTOT)                          ==
-!      =================================================================
        DO ISPIN=1,NSPIN
+         SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
            DO IB=1,NB
-             SVAR=X0(IB,IKPT,ISPIN)
-             FX(IB,IKPT,ISPIN)=6.D0*SVAR*(1.D0-SVAR)*SVAR3
+             xbar(ib,ikpt,ispin)=svar1*x0(ib,ikpt,ispin) &
+       &                        +svar2*xm(ib,ikpt,ispin) &
+       &                        +svar3*fx(ib,ikpt,ispin)
+             CALL DYNOCC_FOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
+             FX(IB,IKPT,ISPIN)=DSVAR*SVAR3
+!            XBAR(IB,IKPT,ISPIN)=XP(IB,IKPT,ISPIN) &
+!      &           -FX(IB,IKPT,ISPIN)*(TOTPOT+SIGMA*SPINPOT)
            ENDDO
          ENDDO
        ENDDO
@@ -1298,121 +1372,87 @@ REAL(8)::EV
 !      =================================================================
 !      ==  APPLY CONSTRAINTS                                          ==
 !      =================================================================
-       Q0=0.D0 ; S0=0.D0
-       Q1=0.D0 ; S1=0.D0
-       Q2=0.D0 ; S2=0.D0
-       Q3=0.D0 ; S3=0.D0
-       DO ISPIN=1,NSPIN
-         SIGMA=DBLE(3-2*ISPIN)
-         DO IKPT=1,NKPT
-           DO IB=1,NB
-             FORCE=FX(IB,IKPT,ISPIN)
-             SVAR=XP(IB,IKPT,ISPIN)
-             SVAR1=SVAR**2*(3.D0-2.D0*SVAR)      *FMAX*WKPT(IKPT)
-             Q0=Q0+SVAR1 ;  S0=S0+SVAR1*SIGMA
-             SVAR1=6.D0*SVAR*(1.D0-SVAR)*FORCE   *FMAX*WKPT(IKPT)
-             Q1=Q1+SVAR1 ;  S1=S1+SVAR1*SIGMA
-             SVAR1=3.D0*(1.D0-2.D0*SVAR)*FORCE**2*FMAX*WKPT(IKPT)
-             Q2=Q2+SVAR1 ;  S2=S2+SVAR1*SIGMA
-             SVAR1=-2.D0*FORCE**3                *FMAX*WKPT(IKPT)
-             Q3=Q3+SVAR1 ;  S3=S3+SVAR1*SIGMA
+       DO ITER=1,NITER
+!        == EVALUATE Q(X)=Q0+Q1*FX*ALPHA;  S(X)=Q0+S1*FX*BETA ==========
+         Q0=0.d0
+         S0=0.d0
+         Q1=0.D0 
+         S1=0.D0
+         DO ISPIN=1,NSPIN
+           SIGMA=DBLE(3-2*ISPIN)
+           DO IKPT=1,NKPT
+             DO IB=1,NB
+               force=FX(IB,IKPT,ISPIN)
+               XP(IB,IKPT,ISPIN)=XBAR(IB,IKPT,ISPIN) &
+     &                         +(TOTPOT+SIGMA*SPINPOT)*force
+               CALL DYNOCC_FOFX(XP(IB,IKPT,ISPIN),SVAR,DSVAR)
+               SVAR1=SVAR*FMAX*WKPT(IKPT)
+               Q0=Q0+SVAR1 
+               S0=S0+SVAR1*SIGMA
+               SVAR1=DSVAR*FMAX*WKPT(IKPT)*force
+               Q1=Q1+SVAR1 
+               S1=S1+SVAR1*SIGMA
+              ENDDO
            ENDDO
          ENDDO
-       ENDDO
-       SVAR=1.D0
-       Q0=Q0*SVAR-TOTCHA ; S0=S0*SVAR-SPINCHA
-       Q1=Q1*SVAR        ; S1=S1*SVAR
-       Q2=Q2*SVAR        ; S2=S2*SVAR
-       Q3=Q3*SVAR        ; S3=S3*SVAR
-!      PRINT*,'DYNOCC Q:',Q0,Q1,Q2,Q3
-!      PRINT*,'DYNOCC S:',S0,S1,S2,S3
 !
-!      == FIND ZERO OF (SUM0+SUM1*X+SUM2*X**2+SUM3*X**3)-TOTCHA  =======
-       IF(TFIXTOT.AND.TFIXSPIN) THEN
-         CALL CUBPOLYNOMROOT(Q0+S0,Q1+S1,Q2+S2,Q3+S3,X1,X2,X3)
-         IF(DABS(X1).LE.MIN(DABS(X2),DABS(X3))) THEN
-           DTOTPOT=X1
-         ELSE IF(DABS(X2).LE.MIN(DABS(X1),DABS(X3))) THEN
-           DTOTPOT=X2
-         ELSE IF(DABS(X3).LE.MIN(DABS(X1),DABS(X2))) THEN
-           DTOTPOT=X3
+!        == CHECK CONVERGENCE ==========================================
+         TCONV=.TRUE.
+         if(tfixtot) TCONV=TCONV.AND.(abs(Q0-totcha).lT.QTOL) 
+         if(tfixspin)TCONV=TCONV.AND.(abs(S0-spincha).lT.QTOL)
+         IF(TCONV) EXIT
+!        ===============================================================
+!        == FIND ZERO OF LINARIZED Q(X)-TOTCHA; S(X)-SPINCHA ===========
+!        ==  q0+q1*dtotpot+s1*dspinpot=0                              ==
+!        ==  s0+s1*dtotpot+q1*dspinpot=0                              ==
+!        ===============================================================
+         IF(TFIXTOT.AND.TFIXSPIN) THEN
+!           DTOTPOT=-(Q0+S0)/(Q1+S1)
+!           IF(DABS(Q0+S0).LT.TOL)DTOTPOT=0.D0
+!           DSPINPOT=-(Q0-S0)/(Q1-S1)
+!           IF(DABS(Q0-S0).LT.TOL)DSPINPOT=0.D0
+!           SVARxsxb=0.5D0*(DTOTPOT+DSPINPOT)
+!           DSPINPOT=0.5D0*(DTOTPOT-DSPINPOT)
+!           DTOTPOT=SVAR
+           totpot =totpot -(+q1*(q0-totcha)-s1*(s0-spincha))/(q1**2-s1**2)
+           spinpot=spinpot-(-s1*(q0-totcha)+q1*(s0-spincha))/(q1**2-s1**2)
+         ELSE IF(TFIXTOT.AND.(.NOT.TFIXSPIN)) THEN
+           TOTPOT=totpot-Q0/Q1
+!           IF(DABS(Q0).LT.TOL)DTOTPOT=0.D0
+!           DSPINPOT=0.D0
+         ELSE IF((.NOT.TFIXTOT).AND.TFIXSPIN) THEN
+            SPINPOT=spinpot-S0/q1
+!           IF(DABS(S0).LT.TOL)DSPINPOT=0.D0
+!           DTOTPOT=0.D0
+         ELSE IF((.NOT.TFIXTOT).AND.(.NOT. TFIXSPIN)) THEN
+!           DTOTPOT =0.D0
+!           DSPINPOT=0.D0
          END IF
-         IF(DABS(Q0+S0).LT.TOL)DTOTPOT=0.D0
-         CALL CUBPOLYNOMROOT(Q0-S0,Q1-S1,Q2-S2,Q3-S3,X1,X2,X3)
-         IF(DABS(X1).LE.MIN(DABS(X2),DABS(X3))) THEN
-           DSPINPOT=X1
-         ELSE IF(DABS(X2).LE.MIN(DABS(X1),DABS(X3))) THEN
-           DSPINPOT=X2
-         ELSE IF(DABS(X3).LE.MIN(DABS(X1),DABS(X2))) THEN
-           DSPINPOT=X3
-         END IF
-         IF(DABS(Q0-S0).LT.TOL)DSPINPOT=0.D0
-         SVAR=0.5D0*(DTOTPOT+DSPINPOT)
-         DSPINPOT=0.5D0*(DTOTPOT-DSPINPOT)
-         DTOTPOT=SVAR
-       ELSE IF(TFIXTOT.AND.(.NOT.TFIXSPIN)) THEN
-         CALL CUBPOLYNOMROOT(Q0,Q1,Q2,Q3,X1,X2,X3)
-         IF(DABS(X1).LE.MIN(DABS(X2),DABS(X3))) THEN
-           DTOTPOT=X1
-         ELSE IF(DABS(X2).LE.MIN(DABS(X1),DABS(X3))) THEN
-           DTOTPOT=X2
-         ELSE IF(DABS(X3).LE.MIN(DABS(X1),DABS(X2))) THEN
-           DTOTPOT=X3
-         END IF
-         IF(DABS(Q0).LT.TOL)DTOTPOT=0.D0
-         DSPINPOT=0.D0
-       ELSE IF((.NOT.TFIXTOT).AND.TFIXSPIN) THEN
-         CALL CUBPOLYNOMROOT(S0,Q1,S2,Q3,X1,X2,X3)
-         IF(DABS(X1).LE.MIN(DABS(X2),DABS(X3))) THEN
-           DSPINPOT=X1
-         ELSE IF(DABS(X2).LE.MIN(DABS(X1),DABS(X3))) THEN
-           DSPINPOT=X2
-         ELSE IF(DABS(X3).LE.MIN(DABS(X1),DABS(X2))) THEN
-           DSPINPOT=X3
-         END IF
-         IF(DABS(S0).LT.TOL)DSPINPOT=0.D0
-         DTOTPOT=0.D0
-       ELSE IF((.NOT.TFIXTOT).AND.(.NOT. TFIXSPIN)) THEN
-         DTOTPOT =0.D0
-         DSPINPOT=0.D0
-       END IF
-!      PRINT*,'DYNOCC X1,X2,X3 ',X1,X2,X3
-!       
-       Q0=0.D0 ; S0=0.D0
-       DO ISPIN=1,NSPIN
-         SIGMA=DBLE(3-2*ISPIN)
-         X1=DTOTPOT+SIGMA*DSPINPOT
-         DO IKPT=1,NKPT
-           DO IB=1,NB
-             XP(IB,IKPT,ISPIN)=XP(IB,IKPT,ISPIN)+FX(IB,IKPT,ISPIN)*X1
-             SVAR=XP(IB,IKPT,ISPIN)
-             SVAR1=SVAR**2*(3.D0-2.D0*SVAR)
-             Q0=Q0+SVAR1       *FMAX*WKPT(IKPT)
-             S0=S0+SVAR1*SIGMA *FMAX*WKPT(IKPT)
-           ENDDO
-         ENDDO
+!        == UPDATE CHEMICAL POTENTIALS =================================
+!         IF(TFIXTOT) THEN
+!           TOTPOT=TOTPOT+DTOTPOT
+!         ELSE
+!           TOTCHA=Q0
+!         END IF
+!         IF(TFIXSPIN) THEN
+!           SPINPOT=SPINPOT+DSPINPOT
+!         ELSE
+!           SPINCHA=S0
+!         END IF
        ENDDO
+       IF(.NOT.TCONV) THEN
+         CALL ERROR$MSG('LOOP NOT CONVERGED') 
+         CALL ERROR$R8VAL('DEVIATION TOTAL CHARGE',Q0)
+         CALL ERROR$R8VAL('DEVIATION TOTAL SPIN',S0)
+         CALL ERROR$STOP('DYNOCC$PROPAGATE')
+       END IF
+       if(.not.tfixtot)totcha=q0
+       if(.not.tfixspin)spincha=q0
 !
 !      =================================================================
 !      == ADJUST CHEMICAL POTENTIALS AND CHARGES                      ==
 !      == AND TEST CHARGE AND SPIN CONSERVATION                       ==
 !      =================================================================
-       IF(TFIXTOT) THEN
-         IF(DABS(Q0-TOTCHA).GT.1.D-6) THEN
-           PRINT*,'WARNING! TOTAL CHARGE NOT CONSERVED',Q0
-         END IF
-         TOTPOT=TOTPOT+DTOTPOT
-       ELSE
-         TOTCHA=Q0
-       END IF
-       IF(TFIXSPIN) THEN
-         IF(DABS(S0-SPINCHA).GT.1.D-6) THEN
-           PRINT*,'WARNING! TOTAL SPIN NOT CONSERVED',S0
-         END IF
-         SPINPOT=SPINPOT+DSPINPOT
-       ELSE
-         SPINCHA=S0
-       END IF
 !
 PRINT*,'SPIN   ',SPINCHA,' SPINPOT ',SPINPOT
 PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT

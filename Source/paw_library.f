@@ -21,8 +21,8 @@
 !    IT ASSUMES THE ESSL LIBRARY TO BE LINKED
 !    IT USES XLF SPECIFIC SUPPORT ROUTINES AND LANGUAGE EXTENSIONS
 #DEFINE CPPVAR_ESSL 
-#DEFINE CPPVAR_XLFsup
-#DEFINE CPPVAR_XLFext
+#DEFINE CPPVAR_XLFSUP
+#DEFINE CPPVAR_XLFEXT
 #DEFINE CPPVAR_GETRUSAGE
 !#UNDEFINE EXLICITERF
 
@@ -35,7 +35,7 @@
 #ELSE
 !=============== FREE ENVIRONMENT ===== =================================
 ! MAKES NO ASSUMPTIONS ABOUT THE ENVIRONMENT
-#DEFINE CPPVAR_FFTpack
+#DEFINE CPPVAR_FFTPACK
 
 #ENDIF 
 
@@ -95,10 +95,10 @@
       REAL(4)                :: TARRAY(2) ! ELAPSED USER/SYSTEM TIME
       REAL(4)                :: TOTAL
 !     ******************************************************************
-#IF DEFINED(CPPVAR_XLFsup)
+#IF DEFINED(CPPVAR_XLFSUP)
       CALL TIMES(NTIME)     !XLF
 #ELIF DEFINED(CPPVAR_U77)
-      TOTAL=ETIME(TARRAY)   ! FROM ABSOFT SUPPORT LIBRARY libU77.a
+      TOTAL=ETIME(TARRAY)   ! FROM ABSOFT SUPPORT LIBRARY LIBU77.A
       NTIME=NINT(100*TOTAL)
 #ELSE 
       NTIME=0
@@ -111,7 +111,7 @@
 !     **                                                             **
 !     **  PROVIDES INFORMATION  ON THE USAGE OF SYSTEM RESOURCES     **
 !     **                                                             **
-!     **  uses standard c-library routine getrusage                  **
+!     **  USES STANDARD C-LIBRARY ROUTINE GETRUSAGE                  **
 !     **                                                             **
 !     **                                                             **
 !     **                                                             **
@@ -145,25 +145,25 @@
       REAL(8)                  :: CPUTIME
       EXTERNAL GETRUSAGE
 !     ******************************************************************
-      usg%UTIME=(/0,0/)
-      usg%STIME=(/0,0/)
-      usg%MAXRSS=0     
-      usg%IXRSS=0      
-      usg%IDRSS=0      
-      usg%ISRSS=0      
-      usg%MINFLT=0     
-      usg%MAJFLT=0     
-      usg%NSWAP=0      
-      usg%INBLOCK=0    
-      usg%OUBLOCK=0    
-      usg%MSGSND=0     
-      usg%MSGRCV=0     
-      usg%NSIGNALS=0   
-      usg%NVCSW=0      
-      usg%NIVCSW=0     
+      USG%UTIME=(/0,0/)
+      USG%STIME=(/0,0/)
+      USG%MAXRSS=0     
+      USG%IXRSS=0      
+      USG%IDRSS=0      
+      USG%ISRSS=0      
+      USG%MINFLT=0     
+      USG%MAJFLT=0     
+      USG%NSWAP=0      
+      USG%INBLOCK=0    
+      USG%OUBLOCK=0    
+      USG%MSGSND=0     
+      USG%MSGRCV=0     
+      USG%NSIGNALS=0   
+      USG%NVCSW=0      
+      USG%NIVCSW=0     
 !     ==================================================================
 !     ==================================================================
-#IF DEFined(CPPVAR_GETRUSAGE)
+#IF DEFINED(CPPVAR_GETRUSAGE)
       RC=GETRUSAGE(%VAL(0),USG)    ! C-ROUTINE
       IF(RC.NE.0) THEN
         CALL ERROR$MSG('ERROR CALLING MYGETRUSAGE')
@@ -193,7 +193,7 @@
       END IF
       RETURN
       END
-#IF DEFined(Cppvar_xlfext)
+#IF DEFINED(CPPVAR_XLFEXT)
 !     ..................................................................
       SUBROUTINE LIB$ERFR8(X,Y)
 !     ******************************************************************
@@ -204,7 +204,7 @@
       REAL(8),INTENT(IN) :: X
       REAL(8),INTENT(OUT):: Y
 !     ******************************************************************
-      Y=dERF(X) 
+      Y=DERF(X) 
       RETURN
       END
 !
@@ -216,187 +216,187 @@
 !     ******************************************************************
       REAL(8),INTENT(IN) :: X
       REAL(8),INTENT(OUT):: Y
-      REAL(8), EXTERNAL :: dERFC
+      REAL(8), EXTERNAL :: DERFC
 !     ******************************************************************
-      Y=dERFC(X)
+      Y=DERFC(X)
       RETURN
       END
 #ELSE
 !
 !     ..................................................................
-      subroutine lib$erfr8(x,y)
+      SUBROUTINE LIB$ERFR8(X,Y)
 !     ******************************************************************
-!     **  Copyright(C) 1996 Takuya OOURA                              **
-!     **  (email: ooura@mmm.t.u-tokyo.ac.jp).                         **
-!     **  You may use, copy, modify this code for any purpose and     **
-!     **  without fee. You may distribute this ORIGINAL package.        **
+!     **  COPYRIGHT(C) 1996 TAKUYA OOURA                              **
+!     **  (EMAIL: OOURA@MMM.T.U-TOKYO.AC.JP).                         **
+!     **  YOU MAY USE, COPY, MODIFY THIS CODE FOR ANY PURPOSE AND     **
+!     **  WITHOUT FEE. YOU MAY DISTRIBUTE THIS ORIGINAL PACKAGE.        **
 !     ******************************************************************
-      implicit none
-      real(8),intent(in) :: x
-      real(8),intent(out):: y
-      real(8)            :: w
-      real(8)            :: t
-      integer(4)         :: k,i
-      real(8)            :: a(0:64)
-      real(8)            :: b(0:64)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: X
+      REAL(8),INTENT(OUT):: Y
+      REAL(8)            :: W
+      REAL(8)            :: T
+      INTEGER(4)         :: K,I
+      REAL(8)            :: A(0:64)
+      REAL(8)            :: B(0:64)
 !     ******************************************************************
-      data (a(i), i = 0, 12) / &
-     &    0.00000000005958930743d0, -0.00000000113739022964d0, &
-     &    0.00000001466005199839d0, -0.00000016350354461960d0, &
-     &    0.00000164610044809620d0, -0.00001492559551950604d0, &
-     &    0.00012055331122299265d0, -0.00085483269811296660d0, &
-     &    0.00522397762482322257d0, -0.02686617064507733420d0, &
-     &    0.11283791670954881569d0, -0.37612638903183748117d0, &
-     &    1.12837916709551257377d0 / 
-      data (a(i), i = 13, 25) /                                &
-     &    0.00000000002372510631d0, -0.00000000045493253732d0, &
-     &    0.00000000590362766598d0, -0.00000006642090827576d0, &
-     &    0.00000067595634268133d0, -0.00000621188515924000d0, &
-     &    0.00005103883009709690d0, -0.00037015410692956173d0, &
-     &    0.00233307631218880978d0, -0.01254988477182192210d0, &
-     &    0.05657061146827041994d0, -0.21379664776456006580d0, &
-     &    0.84270079294971486929d0 / 
-      data (a(i), i = 26, 38) /                                &
-     &    0.00000000000949905026d0, -0.00000000018310229805d0, &
-     &    0.00000000239463074000d0, -0.00000002721444369609d0, &
-     &    0.00000028045522331686d0, -0.00000261830022482897d0, &
-     &    0.00002195455056768781d0, -0.00016358986921372656d0, &
-     &    0.00107052153564110318d0, -0.00608284718113590151d0, &
-     &    0.02986978465246258244d0, -0.13055593046562267625d0, &
-     &    0.67493323603965504676d0 / 
-      data (a(i), i = 39, 51) /                                &
-     &    0.00000000000382722073d0, -0.00000000007421598602d0, &
-     &    0.00000000097930574080d0, -0.00000001126008898854d0, &
-     &    0.00000011775134830784d0, -0.00000111992758382650d0, &
-     &    0.00000962023443095201d0, -0.00007404402135070773d0, &
-     &    0.00050689993654144881d0, -0.00307553051439272889d0, &
-     &    0.01668977892553165586d0, -0.08548534594781312114d0, &
-     &    0.56909076642393639985d0 / 
-      data (a(i), i = 52, 64) /                                &
-     &    0.00000000000155296588d0, -0.00000000003032205868d0, &
-     &    0.00000000040424830707d0, -0.00000000471135111493d0, &
-     &    0.00000005011915876293d0, -0.00000048722516178974d0, &
-     &    0.00000430683284629395d0, -0.00003445026145385764d0, &
-     &    0.00024879276133931664d0, -0.00162940941748079288d0, &
-     &    0.00988786373932350462d0, -0.05962426839442303805d0, &
-     &    0.49766113250947636708d0 / 
-      data (b(i), i = 0, 12) /                                 &
-     &   -0.00000000029734388465d0,  0.00000000269776334046d0, &
-     &   -0.00000000640788827665d0, -0.00000001667820132100d0, & 
-     &   -0.00000021854388148686d0,  0.00000266246030457984d0, &
-     &    0.00001612722157047886d0, -0.00025616361025506629d0, &
-     &    0.00015380842432375365d0,  0.00815533022524927908d0, &
-     &   -0.01402283663896319337d0, -0.19746892495383021487d0, & 
-     &    0.71511720328842845913d0 / 
-      data (b(i), i = 13, 25) /                                 &
-     &   -0.00000000001951073787d0, -0.00000000032302692214d0,  &
-     &    0.00000000522461866919d0,  0.00000000342940918551d0,  &
-     &   -0.00000035772874310272d0,  0.00000019999935792654d0,  &
-     &    0.00002687044575042908d0, -0.00011843240273775776d0,  &
-     &   -0.00080991728956032271d0,  0.00661062970502241174d0,  &
-     &    0.00909530922354827295d0, -0.20160072778491013140d0,  &
-     &    0.51169696718727644908d0 / 
-      data (b(i), i = 26, 38) /                                 &
-     &    0.00000000003147682272d0, -0.00000000048465972408d0,  &
-     &    0.00000000063675740242d0,  0.00000003377623323271d0,  &
-     &   -0.00000015451139637086d0, -0.00000203340624738438d0,  &
-     &    0.00001947204525295057d0,  0.00002854147231653228d0,  &
-     &   -0.00101565063152200272d0,  0.00271187003520095655d0,  &
-     &    0.02328095035422810727d0, -0.16725021123116877197d0,  &
-     &    0.32490054966649436974d0 / 
-      data (b(i), i = 39, 51) /                                &
-     &    0.00000000002319363370d0, -0.00000000006303206648d0, & 
-     &   -0.00000000264888267434d0,  0.00000002050708040581d0, & 
-     &    0.00000011371857327578d0, -0.00000211211337219663d0, & 
-     &    0.00000368797328322935d0,  0.00009823686253424796d0, & 
-     &   -0.00065860243990455368d0, -0.00075285814895230877d0, & 
-     &    0.02585434424202960464d0, -0.11637092784486193258d0, & 
-     &    0.18267336775296612024d0 / 
-      data (b(i), i = 52, 64) /                                &
-     &   -0.00000000000367789363d0,  0.00000000020876046746d0, & 
-     &   -0.00000000193319027226d0, -0.00000000435953392472d0, & 
-     &    0.00000018006992266137d0, -0.00000078441223763969d0, & 
-     &   -0.00000675407647949153d0,  0.00008428418334440096d0, & 
-     &   -0.00017604388937031815d0, -0.00239729611435071610d0, & 
-     &    0.02064129023876022970d0, -0.06905562880005864105d0, & 
-     &    0.09084526782065478489d0 / 
-      w = abs(x)
-      if (w .lt. 2.2d0) then
-          t = w * w
-          k = int(t)
-          t = t - real(k,8)
-          k = k * 13
-          y = (((((((((((( a(k    )*t + a(k+ 1)) * t + &
-     &        a(k+ 2))*t + a(k+ 3))*t + a(k+ 4)) * t + &
-     &        a(k+ 5))*t + a(k+ 6))*t + a(k+ 7)) * t + &
-     &        a(k+ 8))*t + a(k+ 9))*t + a(k+10)) * t + &
-     &        a(k+11))*t + a(k+12))*w
-      else if (w .lt. 6.9d0) then
-          k = int(w)
-          t = w - real(k,8)
-          k = 13 * (k - 2)
-          y = (((((((((((b(k) * t + b(k + 1)) * t + &
-     &        b(k + 2)) * t + b(k + 3)) * t + b(k + 4)) * t + &
-     &        b(k + 5)) * t + b(k + 6)) * t + b(k + 7)) * t + &
-     &        b(k + 8)) * t + b(k + 9)) * t + b(k + 10)) * t + &
-     &        b(k + 11)) * t + b(k + 12)
-          y = y * y
-          y = y * y
-          y = y * y
-          y = 1 - y * y
-      else
-          y = 1
-      end if
-      if(x.lt.0) y=-y
-      return
-      end
+      DATA (A(I), I = 0, 12) / &
+     &    0.00000000005958930743D0, -0.00000000113739022964D0, &
+     &    0.00000001466005199839D0, -0.00000016350354461960D0, &
+     &    0.00000164610044809620D0, -0.00001492559551950604D0, &
+     &    0.00012055331122299265D0, -0.00085483269811296660D0, &
+     &    0.00522397762482322257D0, -0.02686617064507733420D0, &
+     &    0.11283791670954881569D0, -0.37612638903183748117D0, &
+     &    1.12837916709551257377D0 / 
+      DATA (A(I), I = 13, 25) /                                &
+     &    0.00000000002372510631D0, -0.00000000045493253732D0, &
+     &    0.00000000590362766598D0, -0.00000006642090827576D0, &
+     &    0.00000067595634268133D0, -0.00000621188515924000D0, &
+     &    0.00005103883009709690D0, -0.00037015410692956173D0, &
+     &    0.00233307631218880978D0, -0.01254988477182192210D0, &
+     &    0.05657061146827041994D0, -0.21379664776456006580D0, &
+     &    0.84270079294971486929D0 / 
+      DATA (A(I), I = 26, 38) /                                &
+     &    0.00000000000949905026D0, -0.00000000018310229805D0, &
+     &    0.00000000239463074000D0, -0.00000002721444369609D0, &
+     &    0.00000028045522331686D0, -0.00000261830022482897D0, &
+     &    0.00002195455056768781D0, -0.00016358986921372656D0, &
+     &    0.00107052153564110318D0, -0.00608284718113590151D0, &
+     &    0.02986978465246258244D0, -0.13055593046562267625D0, &
+     &    0.67493323603965504676D0 / 
+      DATA (A(I), I = 39, 51) /                                &
+     &    0.00000000000382722073D0, -0.00000000007421598602D0, &
+     &    0.00000000097930574080D0, -0.00000001126008898854D0, &
+     &    0.00000011775134830784D0, -0.00000111992758382650D0, &
+     &    0.00000962023443095201D0, -0.00007404402135070773D0, &
+     &    0.00050689993654144881D0, -0.00307553051439272889D0, &
+     &    0.01668977892553165586D0, -0.08548534594781312114D0, &
+     &    0.56909076642393639985D0 / 
+      DATA (A(I), I = 52, 64) /                                &
+     &    0.00000000000155296588D0, -0.00000000003032205868D0, &
+     &    0.00000000040424830707D0, -0.00000000471135111493D0, &
+     &    0.00000005011915876293D0, -0.00000048722516178974D0, &
+     &    0.00000430683284629395D0, -0.00003445026145385764D0, &
+     &    0.00024879276133931664D0, -0.00162940941748079288D0, &
+     &    0.00988786373932350462D0, -0.05962426839442303805D0, &
+     &    0.49766113250947636708D0 / 
+      DATA (B(I), I = 0, 12) /                                 &
+     &   -0.00000000029734388465D0,  0.00000000269776334046D0, &
+     &   -0.00000000640788827665D0, -0.00000001667820132100D0, & 
+     &   -0.00000021854388148686D0,  0.00000266246030457984D0, &
+     &    0.00001612722157047886D0, -0.00025616361025506629D0, &
+     &    0.00015380842432375365D0,  0.00815533022524927908D0, &
+     &   -0.01402283663896319337D0, -0.19746892495383021487D0, & 
+     &    0.71511720328842845913D0 / 
+      DATA (B(I), I = 13, 25) /                                 &
+     &   -0.00000000001951073787D0, -0.00000000032302692214D0,  &
+     &    0.00000000522461866919D0,  0.00000000342940918551D0,  &
+     &   -0.00000035772874310272D0,  0.00000019999935792654D0,  &
+     &    0.00002687044575042908D0, -0.00011843240273775776D0,  &
+     &   -0.00080991728956032271D0,  0.00661062970502241174D0,  &
+     &    0.00909530922354827295D0, -0.20160072778491013140D0,  &
+     &    0.51169696718727644908D0 / 
+      DATA (B(I), I = 26, 38) /                                 &
+     &    0.00000000003147682272D0, -0.00000000048465972408D0,  &
+     &    0.00000000063675740242D0,  0.00000003377623323271D0,  &
+     &   -0.00000015451139637086D0, -0.00000203340624738438D0,  &
+     &    0.00001947204525295057D0,  0.00002854147231653228D0,  &
+     &   -0.00101565063152200272D0,  0.00271187003520095655D0,  &
+     &    0.02328095035422810727D0, -0.16725021123116877197D0,  &
+     &    0.32490054966649436974D0 / 
+      DATA (B(I), I = 39, 51) /                                &
+     &    0.00000000002319363370D0, -0.00000000006303206648D0, & 
+     &   -0.00000000264888267434D0,  0.00000002050708040581D0, & 
+     &    0.00000011371857327578D0, -0.00000211211337219663D0, & 
+     &    0.00000368797328322935D0,  0.00009823686253424796D0, & 
+     &   -0.00065860243990455368D0, -0.00075285814895230877D0, & 
+     &    0.02585434424202960464D0, -0.11637092784486193258D0, & 
+     &    0.18267336775296612024D0 / 
+      DATA (B(I), I = 52, 64) /                                &
+     &   -0.00000000000367789363D0,  0.00000000020876046746D0, & 
+     &   -0.00000000193319027226D0, -0.00000000435953392472D0, & 
+     &    0.00000018006992266137D0, -0.00000078441223763969D0, & 
+     &   -0.00000675407647949153D0,  0.00008428418334440096D0, & 
+     &   -0.00017604388937031815D0, -0.00239729611435071610D0, & 
+     &    0.02064129023876022970D0, -0.06905562880005864105D0, & 
+     &    0.09084526782065478489D0 / 
+      W = ABS(X)
+      IF (W .LT. 2.2D0) THEN
+          T = W * W
+          K = INT(T)
+          T = T - REAL(K,8)
+          K = K * 13
+          Y = (((((((((((( A(K    )*T + A(K+ 1)) * T + &
+     &        A(K+ 2))*T + A(K+ 3))*T + A(K+ 4)) * T + &
+     &        A(K+ 5))*T + A(K+ 6))*T + A(K+ 7)) * T + &
+     &        A(K+ 8))*T + A(K+ 9))*T + A(K+10)) * T + &
+     &        A(K+11))*T + A(K+12))*W
+      ELSE IF (W .LT. 6.9D0) THEN
+          K = INT(W)
+          T = W - REAL(K,8)
+          K = 13 * (K - 2)
+          Y = (((((((((((B(K) * T + B(K + 1)) * T + &
+     &        B(K + 2)) * T + B(K + 3)) * T + B(K + 4)) * T + &
+     &        B(K + 5)) * T + B(K + 6)) * T + B(K + 7)) * T + &
+     &        B(K + 8)) * T + B(K + 9)) * T + B(K + 10)) * T + &
+     &        B(K + 11)) * T + B(K + 12)
+          Y = Y * Y
+          Y = Y * Y
+          Y = Y * Y
+          Y = 1 - Y * Y
+      ELSE
+          Y = 1
+      END IF
+      IF(X.LT.0) Y=-Y
+      RETURN
+      END
 !     .......................................................................
-      subroutine lib$erfcr8(x,y)
-!     **  Copyright(C) 1996 Takuya OOURA                              **
-!     **  (email: ooura@mmm.t.u-tokyo.ac.jp).                         **
-!     **  You may use, copy, modify this code for any purpose and     **
-!     **  without fee. You may distribute this ORIGINAL package.        **
-      implicit none
-      real(8),intent(in) :: x
-      real(8),intent(out):: y
-      real(8)     ,parameter :: pa  = 3.97886080735226000d+00
-      real(8)     ,parameter :: p0  = 2.75374741597376782d-01
-      real(8)     ,parameter :: p1  = 4.90165080585318424d-01 
-      real(8)     ,parameter :: p2  = 7.74368199119538609d-01 
-      real(8)     ,parameter :: p3  = 1.07925515155856677d+00 
-      real(8)     ,parameter :: p4  = 1.31314653831023098d+00 
-      real(8)     ,parameter :: p5  = 1.37040217682338167d+00 
-      real(8)     ,parameter :: p6  = 1.18902982909273333d+00 
-      real(8)     ,parameter :: p7  = 8.05276408752910567d-01 
-      real(8)     ,parameter :: p8  = 3.57524274449531043d-01 
-      real(8)     ,parameter :: p9  = 1.66207924969367356d-02 
-      real(8)     ,parameter :: p10 =-1.19463959964325415d-01 
-      real(8)     ,parameter :: p11 =-8.38864557023001992d-02
-      real(8)     ,parameter :: p12 = 2.49367200053503304d-03 
-      real(8)     ,parameter :: p13 = 3.90976845588484035d-02 
-      real(8)     ,parameter :: p14 = 1.61315329733252248d-02 
-      real(8)     ,parameter :: p15 =-1.33823644533460069d-02 
-      real(8)     ,parameter :: p16 =-1.27223813782122755d-02 
-      real(8)     ,parameter :: p17 = 3.83335126264887303d-03 
-      real(8)     ,parameter :: p18 = 7.73672528313526668d-03 
-      real(8)     ,parameter :: p19 =-8.70779635317295828d-04 
-      real(8)     ,parameter :: p20 =-3.96385097360513500d-03 
-      real(8)     ,parameter :: p21 = 1.19314022838340944d-04 
-      real(8)     ,parameter :: p22 = 1.27109764952614092d-03
-      real(8)                :: t,u
+      SUBROUTINE LIB$ERFCR8(X,Y)
+!     **  COPYRIGHT(C) 1996 TAKUYA OOURA                              **
+!     **  (EMAIL: OOURA@MMM.T.U-TOKYO.AC.JP).                         **
+!     **  YOU MAY USE, COPY, MODIFY THIS CODE FOR ANY PURPOSE AND     **
+!     **  WITHOUT FEE. YOU MAY DISTRIBUTE THIS ORIGINAL PACKAGE.        **
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: X
+      REAL(8),INTENT(OUT):: Y
+      REAL(8)     ,PARAMETER :: PA  = 3.97886080735226000D+00
+      REAL(8)     ,PARAMETER :: P0  = 2.75374741597376782D-01
+      REAL(8)     ,PARAMETER :: P1  = 4.90165080585318424D-01 
+      REAL(8)     ,PARAMETER :: P2  = 7.74368199119538609D-01 
+      REAL(8)     ,PARAMETER :: P3  = 1.07925515155856677D+00 
+      REAL(8)     ,PARAMETER :: P4  = 1.31314653831023098D+00 
+      REAL(8)     ,PARAMETER :: P5  = 1.37040217682338167D+00 
+      REAL(8)     ,PARAMETER :: P6  = 1.18902982909273333D+00 
+      REAL(8)     ,PARAMETER :: P7  = 8.05276408752910567D-01 
+      REAL(8)     ,PARAMETER :: P8  = 3.57524274449531043D-01 
+      REAL(8)     ,PARAMETER :: P9  = 1.66207924969367356D-02 
+      REAL(8)     ,PARAMETER :: P10 =-1.19463959964325415D-01 
+      REAL(8)     ,PARAMETER :: P11 =-8.38864557023001992D-02
+      REAL(8)     ,PARAMETER :: P12 = 2.49367200053503304D-03 
+      REAL(8)     ,PARAMETER :: P13 = 3.90976845588484035D-02 
+      REAL(8)     ,PARAMETER :: P14 = 1.61315329733252248D-02 
+      REAL(8)     ,PARAMETER :: P15 =-1.33823644533460069D-02 
+      REAL(8)     ,PARAMETER :: P16 =-1.27223813782122755D-02 
+      REAL(8)     ,PARAMETER :: P17 = 3.83335126264887303D-03 
+      REAL(8)     ,PARAMETER :: P18 = 7.73672528313526668D-03 
+      REAL(8)     ,PARAMETER :: P19 =-8.70779635317295828D-04 
+      REAL(8)     ,PARAMETER :: P20 =-3.96385097360513500D-03 
+      REAL(8)     ,PARAMETER :: P21 = 1.19314022838340944D-04 
+      REAL(8)     ,PARAMETER :: P22 = 1.27109764952614092D-03
+      REAL(8)                :: T,U
 !     **********************************************************
-      t = pa / (pa + abs(x))
-      u = t - 0.5d0
-      y = (((((((((p22 * u + p21) * u + p20) * u + &
-     &    p19) * u + p18) * u + p17) * u + p16) * u + &
-     &    p15) * u + p14) * u + p13) * u + p12 
-      y = ((((((((((((y * u + p11) * u + p10) * u + &
-     &    p9) * u + p8) * u + p7) * u + p6) * u + p5) * u + &
-     &    p4) * u + p3) * u + p2) * u + p1) * u + p0) * t * &
-     &    exp(-x * x)
-      if (x .lt. 0) y = 2 - y
-      return
-      end
+      T = PA / (PA + ABS(X))
+      U = T - 0.5D0
+      Y = (((((((((P22 * U + P21) * U + P20) * U + &
+     &    P19) * U + P18) * U + P17) * U + P16) * U + &
+     &    P15) * U + P14) * U + P13) * U + P12 
+      Y = ((((((((((((Y * U + P11) * U + P10) * U + &
+     &    P9) * U + P8) * U + P7) * U + P6) * U + P5) * U + &
+     &    P4) * U + P3) * U + P2) * U + P1) * U + P0) * T * &
+     &    EXP(-X * X)
+      IF (X .LT. 0) Y = 2 - Y
+      RETURN
+      END
 #ENDIF
 !
 !
@@ -414,7 +414,7 @@ END MODULE RANDOM_MODULE
 !     ..................................................................
       SUBROUTINE LIB$RANDOM(X)
 !     ****************************************************************** 
-!     **  returns a random number                                     **
+!     **  RETURNS A RANDOM NUMBER                                     **
 !     ******************************************************************
       USE RANDOM_MODULE
       IMPLICIT NONE
@@ -462,7 +462,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: NAUX
       REAL(8)               :: AUX(100*N)
       INTEGER(4)            :: I,J
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       REAL(8)               :: RCOND
       REAL(8)               :: DET(2)
 #ELSE 
@@ -476,11 +476,11 @@ END MODULE RANDOM_MODULE
           AINV(I,J)=A(I,J)
         ENDDO
       ENDDO
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       CALL DGEICD(AINV,N,N,0,RCOND,DET,AUX,NAUX) !ESSL
 #ELSE 
-      CALL DGETRF(N,N,AINV,N,IPIV,INFO) !lapack
-      CALL DGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !lapack
+      CALL DGETRF(N,N,AINV,N,IPIV,INFO) !LAPACK
+      CALL DGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !LAPACK
 #ENDIF
       RETURN
       END
@@ -504,7 +504,7 @@ END MODULE RANDOM_MODULE
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-#if defined(cppvar_essl)
+#IF DEFINED(CPPVAR_ESSL)
       INTERFACE
         SUBROUTINE EINFO(ICODE,INF1,INF2) !ESSL ERROR HANDLING ROUTINE
         INTEGER                       :: ICODE
@@ -512,14 +512,14 @@ END MODULE RANDOM_MODULE
         INTEGER ,INTENT(OUT),OPTIONAL :: INF2
         END SUBROUTINE EINFO
       END INTERFACE
-#endif
+#ENDIF
       LOGICAL(4) ,PARAMETER :: TESSLERR=.FALSE.
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: H(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
       REAL(8)   ,INTENT(OUT):: U(N,N)
       REAL(8)               :: WORK1((N*(N+1))/2)
-#if defined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       REAL(8)               :: WORK2(2*N)
 #ELSE
       REAL(8)               :: WORK2(3*N)
@@ -527,7 +527,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: K,I,J
       CHARACTER(8)          :: SAV2101
       INTEGER(4)            :: I1,I2
-      integer(4)            :: INFO
+      INTEGER(4)            :: INFO
 !     ******************************************************************
 !
 !     ==================================================================
@@ -544,7 +544,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       IF(TESSLERR) THEN
         CALL EINFO(0)
         CALL ERRSAV(2101,SAV2101)
@@ -566,7 +566,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == ESSL ERROR HANDLING                                          ==
 !     ==================================================================
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
  400  CONTINUE
       CALL ERROR$MSG('DIAGONALIZATION NOT CONVERGED')
       IF(TESSLERR) THEN
@@ -614,12 +614,12 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT):: E(N)
       COMPLEX(8),INTENT(OUT):: U(N,N)
       COMPLEX(8)            :: WORK1((N*(N+1))/2)
-#if defined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       REAL(8)               :: RWORK(4*N)
-#else
+#ELSE
       COMPLEX(8)            :: CWORK(2*N)
       REAL(8)               :: RWORK(3*N)
-#endif
+#ENDIF
       INTEGER(4)            :: K,I,J
       CHARACTER(8)          :: SAV2101
       INTEGER(4)            :: I1,I2
@@ -648,15 +648,15 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       IF(TESSLERR) THEN
         CALL EINFO(0)
         CALL ERRSAV(2101,SAV2101)
         CALL ERRSET(2101,255,0,0,0,2101)
       END IF
-      CALL ZHPEV(1,WORK1,E,U,N,N,RWORK,4*N)  !essl
+      CALL ZHPEV(1,WORK1,E,U,N,N,RWORK,4*N)  !ESSL
 #ELSE
-      CALL ZHPEV('V','L',N,WORK1,E,U,N,CWORK,RWORK,INFO) !lapack
+      CALL ZHPEV('V','L',N,WORK1,E,U,N,CWORK,RWORK,INFO) !LAPACK
       IF(INFO.NE.0) THEN
         CALL ERROR$MSG('DIAGONALIZATION NOT CONVERGED')
         CALL ERROR$STOP('DIAG')
@@ -692,7 +692,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == ESSL ERROR HANDLING                                          ==
 !     ==================================================================
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
  400  CONTINUE
       CALL ERROR$MSG('DIAGONALIZATION NOT CONVERGED')
       IF(TESSLERR) THEN
@@ -718,10 +718,10 @@ END MODULE RANDOM_MODULE
 !     **  PACKAGES THE ESSL ROUTINE DCFT                              **
 !     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                     **
 !     **                                                              **
-!     **  use fftw as standard                                        **
-!     **  use fftessl if essl is installed                            **
-!     **  use fftpack as backup if c-routines cannot be linked or     **
-!     **      fftw is not available                                   **
+!     **  USE FFTW AS STANDARD                                        **
+!     **  USE FFTESSL IF ESSL IS INSTALLED                            **
+!     **  USE FFTPACK AS BACKUP IF C-ROUTINES CANNOT BE LINKED OR     **
+!     **      FFTW IS NOT AVAILABLE                                   **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
@@ -731,20 +731,20 @@ END MODULE RANDOM_MODULE
       COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
 !     *******************************************************************
-#IF DEFined(CPPVAR_ESSL)
-      call LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
-#ELIF defined(CPPVAR_FFTW)
+#IF DEFINED(CPPVAR_ESSL)
+      CALL LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
+#ELIF DEFINED(CPPVAR_FFTW)
       CALL LIB_FFTW(DIR,LEN,NFFT,X,Y)
-#elif defined(cppvar_fftpack)
-      CALL LIB_FFTpack(DIR,LEN,NFFT,X,Y)
-#else
-      call error$msg('no fft package selected during compilation')
-      call error$stop('LIB$FFTC8')
+#ELIF DEFINED(CPPVAR_FFTPACK)
+      CALL LIB_FFTPACK(DIR,LEN,NFFT,X,Y)
+#ELSE
+      CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
+      CALL ERROR$STOP('LIB$FFTC8')
 #ENDIF
       RETURN
       END
 !
-#IF DEFined(CPPVAR_FFTW)
+#IF DEFINED(CPPVAR_FFTW)
 !     ..................................................................
       SUBROUTINE LIB_FFTW(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -829,7 +829,7 @@ END MODULE RANDOM_MODULE
 #ENDIF
 !
 !DCFT:  1-D FFT P765
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
 !     ..................................................................
       SUBROUTINE LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -856,7 +856,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)  ,SAVE       :: NFFTSAVE=0
       INTEGER(4)  ,SAVE       :: ISIGN
       REAL(8)     ,SAVE       :: SCALE
-      INTEGER(4)              :: IFFT,i
+      INTEGER(4)              :: IFFT,I
 !     ******************************************************************
 !  
 !     ==================================================================
@@ -895,9 +895,9 @@ END MODULE RANDOM_MODULE
 #ENDIF
 !
 !DCFT:  1-D FFT P765
-#if defined(cppvar_fftpack)
+#IF DEFINED(CPPVAR_FFTPACK)
 !     ..................................................................
-      SUBROUTINE LIB_FFTpack(DIR,LEN,NFFT,X,Y)                  
+      SUBROUTINE LIB_FFTPACK(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
 !     **  1-D FFT                                                     **
 !     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
@@ -916,13 +916,13 @@ END MODULE RANDOM_MODULE
       INTEGER(4)  ,PARAMETER  :: NAUX2=200
       REAL(8)     ,SAVE       :: AUX2(NAUX2)
       INTEGER(4)  ,SAVE       :: IAUX(30)
-      real(8)                 :: sequence(2*len)
+      REAL(8)                 :: SEQUENCE(2*LEN)
       CHARACTER(4),SAVE       :: DIRSAVE=''
       INTEGER(4)  ,SAVE       :: LENSAVE=0
       INTEGER(4)  ,SAVE       :: NFFTSAVE=0
       INTEGER(4)  ,SAVE       :: ISIGN
       REAL(8)     ,SAVE       :: SCALE
-      INTEGER(4)              :: IFFT,i
+      INTEGER(4)              :: IFFT,I
 !     ******************************************************************
 !  
 !     ==================================================================
@@ -939,7 +939,7 @@ END MODULE RANDOM_MODULE
           CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
           CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
           CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('lib_fftpack')
+          CALL ERROR$STOP('LIB_FFTPACK')
         END IF
         DIRSAVE=DIR
         LENSAVE=LEN
@@ -963,7 +963,7 @@ END MODULE RANDOM_MODULE
             SEQUENCE(2*I-1)= REAL(X(I,IFFT))
             SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
           ENDDO
-          CALL CFFTF(LEN,sequence,AUX2,IAUX)
+          CALL CFFTF(LEN,SEQUENCE,AUX2,IAUX)
           DO I=1,LEN
             Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I))*SCALE
           ENDDO
@@ -974,7 +974,7 @@ END MODULE RANDOM_MODULE
             SEQUENCE(2*I-1)= REAL(X(I,IFFT))
             SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
           ENDDO
-          CALL CFFTB(LEN,sequence,AUX2,IAUX)
+          CALL CFFTB(LEN,SEQUENCE,AUX2,IAUX)
           DO I=1,LEN
             Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I))*SCALE
           ENDDO
@@ -982,7 +982,7 @@ END MODULE RANDOM_MODULE
       END IF
       RETURN
       END
-#endif
+#ENDIF
 !
 !     ...................................................FESSL..........
       SUBROUTINE LIB$FFTADJUSTGRD(NR)
@@ -1003,8 +1003,8 @@ END MODULE RANDOM_MODULE
 !     ******************************************************************
       IF (TINIT) THEN
         TINIT=.FALSE.
-#IF DEFined(CPPVAR_ESSL)
-!       == allowed length for the ESSL FFT =============================
+#IF DEFINED(CPPVAR_ESSL)
+!       == ALLOWED LENGTH FOR THE ESSL FFT =============================
         COUNT=0
         OUTER: DO H=1,25
           DO I=0,2
@@ -1021,7 +1021,7 @@ END MODULE RANDOM_MODULE
             ENDDO
           ENDDO
         ENDDO OUTER
-#ELIF defined(CPPVAR_FFTW)
+#ELIF DEFINED(CPPVAR_FFTW)
         COUNT=0
         OUTER: DO H=1,25
           DO I=0,2
@@ -1039,8 +1039,8 @@ END MODULE RANDOM_MODULE
           ENDDO
         ENDDO OUTER
 #ELSE
-!       == the general length has been removed because passf and passb
-!       == do not work
+!       == THE GENERAL LENGTH HAS BEEN REMOVED BECAUSE PASSF AND PASSB
+!       == DO NOT WORK
         COUNT=0
         OUTER: DO H=1,25
           DO I=0,4
@@ -1053,7 +1053,7 @@ END MODULE RANDOM_MODULE
             ENDDO
           ENDDO
         ENDDO OUTER
-#endif
+#ENDIF
         DO I=1,COUNT
           DO J=I+1,COUNT
             IF(IFR(I).GT.IFR(J)) THEN
@@ -1085,7 +1085,37 @@ END MODULE RANDOM_MODULE
 !     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
 !     **                                                              **
 !     **    USES THE 3D FFTW ROUTINES                                 **
-!     **                                        Clemens Foerst, 2001  **
+!     **                                        CLEMENS FOERST, 2001  **
+!     ******************************************************************
+      IMPLICIT NONE
+      CHARACTER(4)            :: DIR
+      INTEGER(4)              :: N1,N2,N3
+      COMPLEX(8)              :: X(N1,N2,N3)
+      COMPLEX(8)              :: Y(N1,N2,N3)
+!     ******************************************************************
+#IF DEFINED(CPPVAR_ESSL)
+      CALL LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
+#ELIF DEFINED(CPPVAR_FFTW)
+      CALL LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
+!#ELIF DEFINED(CPPVAR_FFTPACK)
+!      CALL LIB_3DFFTPACK(DIR,LEN,NFFT,X,Y)
+#ELSE
+      CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
+      CALL ERROR$STOP('LIB$3DFFTC8')
+#ENDIF
+      RETURN
+      END
+#IF DEFINED(CPPVAR_FFTW)
+!
+!     ..................................................................
+      SUBROUTINE LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
+!     ******************************************************************
+!     **  3-D FFT                                                     **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
+!     **                                                              **
+!     **    USES THE 3D FFTW ROUTINES                                 **
+!     **                                        CLEMENS FOERST, 2001  **
 !     ******************************************************************
       IMPLICIT NONE
       CHARACTER(4)            :: DIR
@@ -1093,10 +1123,10 @@ END MODULE RANDOM_MODULE
       INTEGER(4)              :: N1,N2,N3
       COMPLEX(8)              :: X(N1,N2,N3)
       COMPLEX(8)              :: Y(N1,N2,N3)
-      INTEGER(4)              :: plan
-      INTEGER(4)  ,SAVE       :: np=0
-      INTEGER(4),parameter    :: npx=10
-      INTEGER(4)  ,SAVE       :: plans(npx,4)
+      INTEGER(4)              :: PLAN
+      INTEGER(4)  ,SAVE       :: NP=0
+      INTEGER(4),PARAMETER    :: NPX=10
+      INTEGER(4)  ,SAVE       :: PLANS(NPX,4)
       REAL(8)     ,SAVE       :: SCALE
       INTEGER(4)  ,SAVE       :: DIMSAVE(3)=0
       CHARACTER(4),SAVE       :: DIRSAVE=''
@@ -1108,8 +1138,8 @@ END MODULE RANDOM_MODULE
       DIM(1)=N1
       DIM(2)=N2
       DIM(3)=N3
-      IF(DIM(1).NE.DImSAVE(1).OR.DIm(2).NE.DImSAVE(2).OR. &
-     &  DIm(3).NE.DImSAVE(3).OR.DIr.NE.DIrSAVE) THEN
+      IF(DIM(1).NE.DIMSAVE(1).OR.DIM(2).NE.DIMSAVE(2).OR. &
+     &  DIM(3).NE.DIMSAVE(3).OR.DIR.NE.DIRSAVE) THEN
         IF (DIR.EQ.'GTOR') THEN
           ISIGN=1
         ELSE IF (DIR.EQ.'RTOG') THEN
@@ -1137,7 +1167,7 @@ END MODULE RANDOM_MODULE
           WRITE(*,*) '3D-FFTW CREATE PLAN FOR: ', ISIGN,DIM
           NP=NP+1
           IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
-          call fftwnd_f77_create_plan(PLAN,3,DIM,isign,FFTW_ESTIMATE)
+          CALL FFTWND_F77_CREATE_PLAN(PLAN,3,DIM,ISIGN,FFTW_ESTIMATE)
           PLANS(NP,1:3)=ISIGN*DIM
           PLANS(NP,4)=PLAN
         END IF
@@ -1149,11 +1179,128 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     ==  NOW PERFORM FFT                                             ==
 !     ==================================================================
-      call fftwnd_f77_one(plan,X,Y)
+      CALL FFTWND_F77_ONE(PLAN,X,Y)
       IF (DIR.EQ.'RTOG') Y=Y*SCALE
       RETURN
       END
-
+!
+#ELIF DEFINED(CPPVAR_ESSL)
+!     ..................................................................
+      SUBROUTINE LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
+!     ******************************************************************
+!     **  3-D FFT                                                     **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
+!     **                                                              **
+!     **    USES THE 3D FFT ROUTINE OF ESSL DCFT3                     **
+!     **                                        PETER BLOECHL, 2001   **
+!     ******************************************************************
+!     **    NOT TESTED                                                **
+      IMPLICIT NONE
+      CHARACTER(4)            :: DIR
+      INTEGER(4)              :: DIM(3)
+      INTEGER(4)              :: N1,N2,N3
+      COMPLEX(8)              :: X(N1,N2,N3)
+      COMPLEX(8)              :: Y(N1,N2,N3)
+      INTEGER(4)              :: NAUX       
+      REAL(8)   ,ALLOCATABLE  :: AUX(:)
+      INTEGER(4)              :: ISIGN
+      REAL(8)                 :: SCALE
+      INTEGER(4)              :: S,PSI,LAMBDA
+!     ******************************************************************
+      NAUX=60000
+      IF(N1.GT.2048) NAUX=NAUX+4.56*N1
+      IF(N3.LT.252) THEN
+        IF(N2.GE.252) THEN
+          S=MIN(64,N1)
+          LAMBDA=(2*N2+256)*(S+4.56)
+          NAUX=NAUX+LAMBDA
+        END IF
+      ELSE
+        IF(N2.GE.252) THEN
+          S=MIN(64,N1*N2)
+          PSI=(2*N3+256)*(S+4.56)
+          NAUX=NAUX+PSI
+        ELSE
+          S=MIN(64,N1*N2)
+          PSI=(2*N3+256)*(S+4.56)
+          S=MIN(64,N1)
+          LAMBDA=(2*N2+256)*(S+4.56)
+          NAUX=NAUX+MAX(PSI,LAMBDA)
+        END IF
+      END IF
+      IF (DIR.EQ.'GTOR') THEN
+        ISIGN=1
+        SCALE=1.D0
+      ELSE IF (DIR.EQ.'RTOG') THEN
+        ISIGN=-1
+        SCALE=1.D0/REAL(N1*N2*N3,KIND=8)
+      ELSE
+        CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+        CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+        CALL ERROR$CHVAL('DIR',TRIM(DIR))
+        CALL ERROR$STOP('3D-FFTW')
+      END IF
+      ALLOCATE(AUX(NAUX))
+      CALL DCFT3(X,N1,N1*N2,Y,N1,N1*N2,N1,N2,N3,ISIGN,SCALE,AUX,NAUX)
+      DEALLOCATE(AUX(NAUX))
+      RETURN
+      END
+#ELIF DEFINED(CPPVAR_FFTPACK)
+!
+!     ..................................................................
+      SUBROUTINE LIB_3DFFTPACK(DIR,N1,N2,N3,X,Y)
+!     ******************************************************************
+!     **  3-D FFT                                                     **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
+!     **                                                              **
+!     **    USES THE 3D FFT ROUTINE OF ESSL DCFT3                     **
+!     **                                        PETER BLOECHL, 2001   **
+!     ******************************************************************
+!     **    NOT TESTED                                                **
+      IMPLICIT NONE
+      CHARACTER(4)            :: DIR
+      INTEGER(4)              :: DIM(3)
+      INTEGER(4)              :: N1,N2,N3
+      COMPLEX(8)              :: X(N1,N2,N3)
+      COMPLEX(8)              :: Y(N1,N2,N3)
+      COMPLEX(8)              :: WORK1(N1*N2*N3),WORK2(N1*N2*N3)
+      INTEGER(4)              :: I,J,K,IND
+!     ******************************************************************
+      CALL LIB_FFTPACK(DIR,N1,N2*N3,X,WORK2)
+      IND=0
+      DO K=1,N3
+        DO J=1,N2
+          DO I=1,N1
+            IND=IND+1
+            WORK1(J+N2*(K-1+N1*(I-1)))=WORK2(IND)
+          ENDDO
+        ENDDO
+      ENDDO
+      CALL LIB_FFTPACK(DIR,N2,N1*N3,WORK1,WORK2)
+      IND=0
+      DO I=1,N1
+        DO K=1,N3
+          DO J=1,N2
+            IND=IND+1
+            WORK1(K+N3*(I-1+N1*(J-1)))=WORK2(IND)
+          ENDDO
+        ENDDO
+      ENDDO
+      CALL LIB_FFTPACK(DIR,N3,N1*N2,WORK1,WORK2)
+      IND=0
+      DO J=1,N2
+        DO I=1,N1
+          DO K=1,N3
+            IND=IND+1
+            Y(I,J,K)=WORK2(IND)
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
+#ENDIF
 !
 !DGEMUL: MATRIX MULTIPLICATION P441
 !     ..................................................................
@@ -1169,12 +1316,12 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(IN) :: B(M,L)
       REAL(8)   ,INTENT(OUT):: C(N,L)
       CHARACTER(8),PARAMETER:: LIB='ESSL'
-      real(8)     ,PARAMETER:: ONE=1.D0
-      real(8)     ,PARAMETER:: ZERO=0.D0
+      REAL(8)     ,PARAMETER:: ONE=1.D0
+      REAL(8)     ,PARAMETER:: ZERO=0.D0
 !     ******************************************************************
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       CALL DGEMUL(A,N,'N',B,M,'N',C,N,N,M,L)
-#ELif defined(CPPVAR_ATLAS)
+#ELIF DEFINED(CPPVAR_ATLAS)
       CALL DGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
 #ELSE
       C=MATMUL(A,B)
@@ -1199,11 +1346,11 @@ END MODULE RANDOM_MODULE
       COMPLEX(8)  ,PARAMETER:: ONE=(1.D0,0.D0)
       COMPLEX(8)  ,PARAMETER:: ZERO=(0.D0,0.D0)
 !     ******************************************************************
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       CALL ZGEMUL(A,N,'N',B,M,'N',C,N,N,M,L)
-#ELif defined(CPPVAR_ATLAS)
+#ELIF DEFINED(CPPVAR_ATLAS)
       CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
-#else
+#ELSE
       C=MATMUL(A,B)
 #ENDIF
       RETURN
@@ -1230,7 +1377,7 @@ END MODULE RANDOM_MODULE
       COMPLEX(8),ALLOCATABLE  :: WORK(:,:)
       INTEGER(4)              :: I,J,K
 !     ******************************************************************
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       IF(TID) THEN
         ALLOCATE(WORK(N,M))
         WORK=A
@@ -1324,7 +1471,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: I,J,K
       COMPLEX(8)            :: SUM
 !     ******************************************************************
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       CALL ZGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'C',OPERATOR,LEN1,LEN1,N,LEN2)
 #ELSE 
       DO I=1,LEN1
@@ -1362,7 +1509,7 @@ END MODULE RANDOM_MODULE
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTR8')
       END IF
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       IF(TID) THEN
 !       ==  OVERLAP(I,J) = 0.D0*OVERLAP+1.D0*SUM_K:PSI1(K,I)*PSI1(K,J) =
         CALL DSYRK('U','T',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
@@ -1423,7 +1570,7 @@ END MODULE RANDOM_MODULE
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTC8')
       END IF
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       IF(TID) THEN
         CALL ZHERK('U','C',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
         DO I=1,N1
@@ -1476,13 +1623,13 @@ END MODULE RANDOM_MODULE
       INTEGER(4)               :: I
       CHARACTER(8),PARAMETER   :: LIB='ESSL'
 !     ******************************************************************
-#if defined(Cppvar_essl)
+#IF DEFINED(CPPVAR_ESSL)
         CALL ZAXPY(N,FAC,X,1,Y,1)
 #ELSE
         DO I=1,N
           X(I)=X(I)+FAC*Y(I)
         ENDDO
-#endif
+#ENDIF
       RETURN
       END
 !
@@ -1502,7 +1649,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)               :: I
       CHARACTER(8),PARAMETER   :: LIB='ESSL'
 !     ******************************************************************
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       IF(FAC.EQ.1.D0) THEN
         CALL DAXPY(N,FAC,X,1,Y,1)
       ELSE IF(FAC.EQ.-1.D0) THEN
@@ -1563,7 +1710,7 @@ END MODULE RANDOM_MODULE
         ALLOCATE(AFACT(N,N))
         ALLOCATE(IPVT(N)) 
         AFACT=A
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
         CALL DGEF(AFACT,N,N,IPVT)
         X=B
         CALL DGES(AFACT,N,N,IPVT,X,0)
@@ -1576,7 +1723,7 @@ END MODULE RANDOM_MODULE
         DEALLOCATE(IPVT)
       ELSE   !SINGULAR VALUE DECOMPOSITION
         NM=MAX(1,MAX(N,M))
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
         ALLOCATE(AFACT(NM,M))
         ALLOCATE(BFACT(N,NEQ))
         AFACT(1:N,:)=A
@@ -1632,7 +1779,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)              :: IHELP
       INTEGER(4)              :: I,J
 !     ******************************************************************
-#IF DEFined(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_ESSL)
       CALL ISORT(X,1,N)
 #ELSE
       DO I=1,N-1
@@ -1649,15 +1796,15 @@ END MODULE RANDOM_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE lib$GETHOSTNAME(HOSTNAME)
+      SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
 !     *********************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
 !     *********************************************************************
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
 !     *********************************************************************
-#IF DEFined(CPPVAR_XLFsup)
-      RC=HOSTNM_(HOSTNAME)    ! xlf support library
+#IF DEFINED(CPPVAR_XLFSUP)
+      RC=HOSTNM_(HOSTNAME)    ! XLF SUPPORT LIBRARY
       IF(RC.NE.0)HOSTNAME='UNKNOWN'
 #ELSE
       HOSTNAME='UNKNOWN'
@@ -1667,16 +1814,16 @@ END MODULE RANDOM_MODULE
       END
 !
 !     ......................................................................
-      SUBROUTINE lib$FLUSHFILE(N)
+      SUBROUTINE LIB$FLUSHFILE(N)
 !     *********************************************************************
 !     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N     **
 !     *********************************************************************
       INTEGER(4),INTENT(IN) :: N
 !     *********************************************************************
-#IF DEFined(CPPVAR_XLFsup)
-      CALL FLUSH_(N)  ! xlf uspport library
-#ELif defined(CPPVAR_U77)
-      CALL FLUSH(N) ! from absoft support library (underscore)
+#IF DEFINED(CPPVAR_XLFSUP)
+      CALL FLUSH_(N)  ! XLF USPPORT LIBRARY
+#ELIF DEFINED(CPPVAR_U77)
+      CALL FLUSH(N) ! FROM ABSOFT SUPPORT LIBRARY (UNDERSCORE)
 #ENDIF
       RETURN
       END 
@@ -1736,7 +1883,7 @@ END MODULE RANDOM_MODULE
       DO K=1,NM1
         KP1=K+1
 !       ==  FIND L = PIVOT INDEX ======================================
-        L=IDAMAX(N-K+1,A(K,K),1) + K-1  !idamax<-blas library
+        L=IDAMAX(N-K+1,A(K,K),1) + K-1  !IDAMAX<-BLAS LIBRARY
         IPVT(K)=L
 !       == ZERO PIVOT IMPLIES THIS COLUMN ALREADY TRIANGULARIZED ======
         IF(A(L,K).NE.0.0D0) THEN
@@ -1862,8 +2009,8 @@ END MODULE RANDOM_MODULE
       END IF
       RETURN
       END
-#endif
-#if defined(cppvar_fftpack)
+#ENDIF
+#IF DEFINED(CPPVAR_FFTPACK)
 !
 !     ..................................................................
       SUBROUTINE CFFTB(N,C,WA,IFAC)
@@ -1874,7 +2021,7 @@ END MODULE RANDOM_MODULE
 !     ** FROM ITS FOURIER COEFFICIENTS.                               **
 !     **                                                              **
 !     **  THE TRANSFORM IS NOT NORMALIZED. TO OBTAIN A NORMALIZED     **
-!     **  TRANSFORM THE OUTPUT of CFFTF! MUST BE DIVIDED BY N.        **
+!     **  TRANSFORM THE OUTPUT OF CFFTF! MUST BE DIVIDED BY N.        **
 !     **  OTHERWISE A CALL OF CFFTF FOLLOWED BY A CALL OF CFFTB       **
 !     **  WILL MULTIPLY THE SEQUENCE BY N.                            **
 !     **                                                              **
@@ -2095,21 +2242,21 @@ END MODULE RANDOM_MODULE
 !     **  CFFTI INITIALIZES THE ARRAY WSAVE WHICH IS USED IN BOTH     **
 !     **  CFFTF AND CFFTB. THE PRIME FACTORIZATION OF N TOGETHER WITH **
 !     **  A TABULATION OF THE TRIGONOMETRIC FUNCTIONS ARE COMPUTED    **
-!     **  AND STORED IN wa and ifac.                                  **
+!     **  AND STORED IN WA AND IFAC.                                  **
 !     **                                                              **
 !     **  THE ARRAYS WA,IFAC CONTAIN INITIALIZATION CALCULATIONS      **
 !     **  WHICH MUST NOT BE DESTROYED BETWEEN CALLS                   **
 !     **  OF SUBROUTINE CFFTF OR CFFTB                                **
 !     **                                                              **
-!     ** ifac contains (1) the length of the transform,               **
-!     **               (2) the number of factors and                  **
-!     **           and (3,nf+2) nf factors                            **
+!     ** IFAC CONTAINS (1) THE LENGTH OF THE TRANSFORM,               **
+!     **               (2) THE NUMBER OF FACTORS AND                  **
+!     **           AND (3,NF+2) NF FACTORS                            **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: N        ! length of the fourier transform
-      INTEGER(4),INTENT(OUT) :: IFAC(30) ! prime factorization
-      REAL(8)   ,INTENT(OUT) :: WA(2*n)  ! trigonometric functions
+      INTEGER(4),INTENT(IN)  :: N        ! LENGTH OF THE FOURIER TRANSFORM
+      INTEGER(4),INTENT(OUT) :: IFAC(30) ! PRIME FACTORIZATION
+      REAL(8)   ,INTENT(OUT) :: WA(2*N)  ! TRIGONOMETRIC FUNCTIONS
       INTEGER(4),PARAMETER   :: NTRYH(4)=(/3,4,2,5/)
       INTEGER(4)             :: NL,NF,NQ,NR
       INTEGER(4)             :: NTRY,IB,L1,IP,LD,L2,IDO,IDOT,IPM,I1
@@ -2136,7 +2283,7 @@ END MODULE RANDOM_MODULE
 !     __  CHECK IF PRIME NUMBER IS A FACTOR_____________________________
       NQ = NL/NTRY
       NR = NL-NTRY*NQ
-      IF(NR.NE.0) GOTO 101 ! if ntry is not a factor PICK A larger prime
+      IF(NR.NE.0) GOTO 101 ! IF NTRY IS NOT A FACTOR PICK A LARGER PRIME
 !     __NEW FACTOR FOUND, ADD TO ARRAY IFAC_____________________________
       NF = NF+1
       IF(NF.GT.13) THEN
@@ -2443,7 +2590,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4),INTENT(IN) :: IDO
       INTEGER(4),INTENT(IN) :: L1
       REAL(8)   ,INTENT(IN) :: CC(IDO,4,L1)
-      REAL(8)   ,INTENt(OUT):: CH(IDO,L1,4)
+      REAL(8)   ,INTENT(OUT):: CH(IDO,L1,4)
       REAL(8)   ,INTENT(IN) :: WA1(IDO)
       REAL(8)   ,INTENT(IN) :: WA2(IDO)
       REAL(8)   ,INTENT(IN) :: WA3(IDO)
@@ -3022,7 +3169,7 @@ END MODULE RANDOM_MODULE
       END IF
       RETURN
       END
-#endif
+#ENDIF
 
 
 
