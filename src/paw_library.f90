@@ -771,7 +771,7 @@ END MODULE RANDOM_MODULE
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      INCLUDE 'FFTW_F77.I'
+      INCLUDE 'fftw_f77.i'
       CHARACTER(*),INTENT(IN) :: DIR
       INTEGER(4)  ,INTENT(IN) :: LEN
       INTEGER(4)  ,INTENT(IN) :: NFFT
