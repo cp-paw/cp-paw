@@ -1758,7 +1758,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
        real(8)                  :: work(nb,nkpt)
        real(8)                  :: ev
 !      *****************************************************************
-                                  CALL TRACE$PUSH('DYNOCC$INIOCC')
+                                  CALL TRACE$PUSH('DYNOCC_INIOCCBYENERGY')
        X0(:,:,:)=0.D0
        ISPINDEG=NINT(FMAX)
 !
@@ -1869,7 +1869,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
       INTEGER(4)             :: IBI
       REAL(8)                :: FMAX         ! #(ELECTRONS PER STATE) 1 OR 2
 !     ******************************************************************
-                           CALL TRACE$PUSH('MERMIN')
+                           CALL TRACE$PUSH('DYNOCC_MERMIN')
 !
       IF(ISPINDEG.NE.1.AND.ISPINDEG.NE.2.D0) THEN
         CALL ERROR$MSG('SPIN-DEGENERACY CAN BE EITHER ONE OR TWO')
@@ -1881,7 +1881,11 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
 !     ==  ESTIMATE CHEMICAL POTENTIAL BY AVERAGING THE ONE-PARTICLE   ==
 !     ==  ENERGIES OF THE HIGHEST OCCUPIED BAND                       ==
 !     ==================================================================
-      IB=INT(TOTCHA*FMAX)  
+      IB=INT(TOTCHA/FMAX)  
+      IF(IB.GE.NBANDS) THEN
+        CALL ERROR$MSG('TO FEW BANDS FOR THE NUMBER OF ELECTRONS')
+        CALL ERROR$STOP('DYNOCC_MERMIN')
+      END IF
       IB=MAX(IB,1)
       I=0
       CHMPOT=0.D0
