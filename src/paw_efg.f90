@@ -524,7 +524,7 @@ if(ttest)ALLOCATE(WORK(6,NG));WORK=0.D0
 !             == svar damps out high frequency oscillations of the potential 
               SVAR1=1.D0/(1.D0+DEXP(GLEN+3.D0-GMAX))  !MAY NOT BE A GOOD CHOICE
 IF(TTEST) SVAR1=1.D0
-              SVAR1=-2.D0*REAL(EXP(+CI*GR)*VOFG(IG))*SVAR1
+              SVAR1=-2.D0*REAL(EXP(+CI*GR)*VOFG(IG),kind=8)*SVAR1
               SVAR2=G(1,IG)*SVAR1
               V(1,1)=V(1,1)+G(1,IG)*SVAR2
               V(2,1)=V(2,1)+G(2,IG)*SVAR2
@@ -649,13 +649,13 @@ END IF
             DO IG=1,NG
               GR=R(1)*G(1,IG)+R(2)*G(2,IG)+R(3)*G(3,IG)
 !             __ 2 FROM ADDING COMPLEX CONJUGATE
-              RHO0=RHO0+2.D0*REAL(EXP(+CI*GR)*RHOG(IG))
+              RHO0=RHO0+2.D0*REAL(EXP(+CI*GR)*RHOG(IG),kind=8)
             ENDDO
 !           __ SUBTRACT DOUBLE COUNTING OF THE GAMMA POINT____
 !error! assumption that gamma point resides on first element incorrect
 !remark: use parameter ngamma if possible
             IF(G(1,1)**2+G(2,1)**2+G(3,1)**2.LT.1.D-6) THEN
-              RHO0=RHO0-REAL(RHOG(1))
+              RHO0=RHO0-REAL(RHOG(1),kind=8)
             END IF
             IF(IDENT_.EQ.'SPIN') THEN             
               CALL LINKEDLIST$SET(LL_HPRFN,'PSRHOSPW',0,RHO0)
@@ -682,7 +682,7 @@ END IF
               GR=R(1)*G(1,IG)+R(2)*G(2,IG)+R(3)*G(3,IG)
               G2=G(1,IG)**2+G(2,IG)**2+G(3,IG)**2
 !             __ 2 FROM ADDING COMPLEX CONJUGATE
-              SVAR1=FAC*REAL(EXP(+CI*GR)*RHOG(IG))/G2
+              SVAR1=FAC*REAL(EXP(+CI*GR)*RHOG(IG),kind=8)/G2
               SVAR2=G(1,IG)*SVAR1
               V(1,1)=V(1,1)+G(1,IG)*SVAR2
               V(2,1)=V(2,1)+G(2,IG)*SVAR2
@@ -1142,12 +1142,12 @@ END IF
       RHO0=0.D0
       FAC=1.D0/(1.D0+RTH/R2)
       DO I=1,4
-        SVAR=DLAM+REAL(I)
+        SVAR=DLAM+REAL(I,kind=8)
         CI(I)=CI(I)*(R2/RTH)**SVAR/(SVAR*(1.D0+R2/RTH)**2)
         SUM=CI(I)
         DO J=1,100
-          CI(I)=CI(I)*FAC/(1.D0+SVAR/REAL(J))
-          SUM=SUM+REAL(J+1)*CI(I)
+          CI(I)=CI(I)*FAC/(1.D0+SVAR/REAL(J,kind=8))
+          SUM=SUM+REAL(J+1,kind=8)*CI(I)
         ENDDO
         RHO0=RHO0+SUM
       ENDDO
