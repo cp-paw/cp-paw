@@ -3617,8 +3617,8 @@ PRINT*,'WARNING! CODE FUDGED'
       INTEGER(4)      :: IWAVE,ir
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('SETUPO',NFIL)
-      WRITE(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F15.12)') &
-     &                 R1,DEX,NR,NWAVE,PSZ,AEZ,RCSMALL
+      WRITE(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F15.12,i5)') &
+     &                 R1,DEX,NR,NWAVE,PSZ,AEZ,RCSMALL,nc
       WRITE(NFIL,FMT='(14I5)')LPHI(:)
       WRITE(NFIL,FMT='(SP,5E14.8)')VHAT(:)
 !     ====  AECORE = CORE CHARGE DENSITY  ==============================
@@ -3637,7 +3637,19 @@ PRINT*,'WARNING! CODE FUDGED'
 !     ==================================================================
 !     == all electron potential for 
 !     ==================================================================
-      WRITE(NFIL,FMT='(SP,5E14.8)')aepot(:)
+      WRITE(NFIL,FMT='(SP,5E14.8)')AEPOT(:)
+
+!     ==================================================================
+!     == AE CORE PARTIAL WAVES
+!     ==================================================================
+! SANTOS040616 begin
+      WRITE(NFIL,FMT='(14I5)')LB(1:NC)      ! main angular momentum
+      WRITE(NFIL,FMT='(SP,5E14.8)')FB(1:NC) ! occupations
+      WRITE(NFIL,FMT='(SP,5E14.8)')EB(1:NC) ! one-particle energies
+      DO IWAVE=1,NC
+        WRITE(NFIL,FMT='(SP,5E14.8)')AEPSI(:,1,IWAVE)
+      ENDDO
+! SANTOS040616 END
       CALL FILEHANDLER$CLOSE('SETUPO')
       RETURN
       END
