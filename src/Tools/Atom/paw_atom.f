@@ -368,6 +368,11 @@ END MODULE PROJECTION
       CALL TRACE$PASS('AFTER ALLELECTRONATOM')
 !
 !     ==================================================================
+!     ==  output atomic densities for tb calculations (Thieme,Mueller)==
+!     ==================================================================nn
+!      call tbtest
+!
+!     ==================================================================
 !     ==  CALCULATE LOCAL PSEUDO POTENTIAL                            ==
 !     ==================================================================
       CALL VTILDE(LL_CNTL)
@@ -1849,6 +1854,7 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
       CONTAINS
 !       ................................................................
         SUBROUTINE TEST(R1,DEX,NR,L,E,PHI,RMT,POT)
+        USE SCHRGL_INTERFACE_MODULE,ONLY: AEBOUNDSTATE,SCHROEDER
         REAL(8)   ,INTENT(IN) :: R1
         REAL(8)   ,INTENT(IN) :: DEX
         INTEGER(4),INTENT(IN) :: NR
@@ -3613,6 +3619,8 @@ PRINT*,'WARNING! CODE FUDGED'
         WRITE(NFIL,FMT='(SP,5E14.8)')AEPHI(:,1,IWAVE)
         WRITE(NFIL,FMT='(SP,5E14.8)')PSPHI(:,1,IWAVE)
       ENDDO
+!     ==================================================================
+      WRITE(NFIL,FMT='(SP,5E14.8)')aepot(:)
       CALL FILEHANDLER$CLOSE('SETUPO')
       RETURN
       END
@@ -4000,7 +4008,100 @@ PRINT*,'WARNING! CODE FUDGED'
       ENDDO
       RETURN
       END
-
+!
+!     .........................................................
+      subroutine tbtest()
+      use grid
+      use aeatom
+      USE PERIODICTABLE_MODULE, ONLY : PERIODICTABLE$GET
+      real(8)                :: emin=-100.d0
+      real(8)                :: emax=+400.d0
+      integer(4)             :: ne=30
+      real(8)                :: rcov
+      integer(4),parameter   :: l=0
+      real(8)                :: e
+      real(8)                :: refpsi(nr,3)
+      real(8)                :: aux(nr)
+      real(8)   ,allocatable :: psiarr(:,:)
+      integer(4)             :: ie
+      integer(4)             :: ir
+      integer(4)             :: nfil
+      integer(4),parameter   :: np=60
+      real(8)                :: rp(np)
+      real(8)                :: svar
+      real(8)   ,allocatable :: psib(:,:)
+     
+!     *********************************************************
+!
+!     =========================================================
+!     == calculate wave functions                            ==
+!     =========================================================
+      CALL FILEHANDLER$SETFILE('TEST',.FALSE.,'TEST.DAT')
+      CALL FILEHANDLER$SETSPECIFICATION('TEST','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('TEST','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('TEST','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('TEST','FORM','FORMATTED')
+!
+!     =========================================================
+!     == define radial grid                                  ==
+!     =========================================================
+      CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
+      IRlast=INT(1.D0+DLOG(rcov/R1)/DEX)+4
+print*,'aez',aez,rcov,irlast
+      do ir=1,np
+        rp(ir)=rcov/real(np-1)*real(ir-1)
+      enddo
+!
+!     =========================================================
+!     == calculate wave functions                            ==
+!     =========================================================
+      ALLOCATE(PSIARR(np,NE))
+print*,'emin ',emin,'emax',emax
+      DO IE=1,NE
+        e=emin+(emax-emin)*real(ie-1)/real(ne-1)
+        CALL SCHROEDER(.TRUE.,.TRUE.,R1,DEX,NR,L,E,AEZ &
+     &              ,IRlast,0.d0,AEPOT,REFPSI,AUX)
+!       CALL XPHASESHIFT(R1,DEX,NR,RPHASE,REFPSI,PHASEAE(IE,L+1))
+        do ir=1,np
+          call radial$value(r1,dex,nr,refpsi(1,1),rp(ir),psiarr(ir,ie))
+        enddo
+        svar=1.d0/psiarr(1,ie)
+        psiarr(:,ie)=psiarr(:,ie)*svar
+      ENDDO
+!
+!     =========================================================
+!     == subtract out  first bound state                     ==
+!     =========================================================
+      ALLOCATE(PSIb(np,1))
+      e=-0.5d0
+      CALL SCHROEDER(.TRUE.,.TRUE.,R1,DEX,NR,L,E,AEZ &
+     &              ,IRlast,0.d0,AEPOT,REFPSI,AUX)
+      do ir=1,np
+        call radial$value(r1,dex,nr,refpsi(1,1),rp(ir),psib(ir,1))
+      enddo
+      svar=1.d0/psib(1,1)
+      psib(:,1)=psib(:,1)*svar
+      do ie=1,ne
+!        psiarr(:,ie)=psiarr(:,ie)-psib(:,1)
+      enddo
+!
+!     =========================================================
+!     == printout                                            ==
+!     =========================================================
+      CALL FILEHANDLER$UNIT('TEST',NFIL)
+      do ie=1,ne
+        e=emin+(emax-emin)*real(ie-1)/real(ne-1)
+        do ir=1,np
+          write(nfil,*)rp(ir),e,psiarr(ir,ie)
+        enddo
+        write(nfil,*)' '
+      enddo
+      CALL FILEHANDLER$CLOSE('TEST')
+      DEALLOCATE(PSIARR)
+      DEALLOCATE(PSIb)
+      STOP
+      return
+      end
 
 
 

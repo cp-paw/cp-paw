@@ -228,8 +228,8 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)                   :: TOLATE
       INTEGER(4)                   :: MAXTIM(3)
       CHARACTER(256)               :: VERSIONTEXT
-      CHARACTER(256)               :: CNTLNAME
-      CHARACTER(256)               :: ROOTNAME
+      CHARACTER(512)               :: CNTLNAME
+      CHARACTER(512)               :: ROOTNAME
       CHARACTER(5)                 :: CH5SVAR
       LOGICAL(4)                   :: TEQ
       LOGICAL(4)                   :: TPR=.FALSE.
@@ -953,7 +953,7 @@ Print*,'ilda ',ilda
       IF(.NOT.TCHK) THEN
          EMASSCG2=0.5D0*(10.D0/(2.D0*PI))**2*DT**2/EMASS
          CALL LINKEDLIST$SET(LL_CNTL,'MPSICG2',0,EMASSCG2)
-         CALL LINKEDLIST$SET(LL_CNTL,'MPSICG2',0,0.d0)
+!        CALL LINKEDLIST$SET(LL_CNTL,'MPSICG2',0,0.d0)
       END IF
       CALL LINKEDLIST$CONVERT(LL_CNTL,'MPSICG2',1,'R(8)')
       CALL LINKEDLIST$GET(LL_CNTL,'MPSICG2',1,EMASSCG2)

@@ -1,0 +1,14 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:795: checking for gmake
+configure:1089: checking for cpp
+configure:1199: checking for f90
+configure:1322: checking for /home/ptpb/Tree/Archive/PAW_current/lib/fftw-intel
+configure:1322: checking for /home/ptpb/Tree/Archive/PAW_current/lib/fftw-intel/fftw/.libs/libfftw.a
+configure:1427: checking for /home/ptpb/Tree/Archive/PAW_current/lib/ATLAS
+configure:1427: checking for /home/ptpb/Tree/Archive/PAW_current/lib/ATLAS/lib/Linux_PIII/libf77blas.a
+configure:1427: checking for /home/ptpb/Tree/Archive/PAW_current/lib/ATLAS/lib/Linux_PIII/libatlas.a
+configure:1647: checking for /home/ptpb/Tree/Archive/PAW_current/lib/mpich-intel
+configure:1647: checking for /home/ptpb/Tree/Archive/PAW_current/lib/mpich-intel/lib/libmpich.a
+configure:1647: checking for /home/ptpb/Tree/Archive/PAW_current/lib/mpich-intel/lib/libfmpich.a

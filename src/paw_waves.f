@@ -1401,7 +1401,8 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
             DHUPUP=DH(LMN1,LMN2,1)+DH(LMN1,LMN2,4)
             DHDNDN=DH(LMN1,LMN2,1)-DH(LMN1,LMN2,4)
 !           == HERE, DH=DH/DD AND NOT CONJG(DE/DD) !! 
-            DHUPDN=CMPLX(DH(LMN1,LMN2,2),DH(LMN1,LMN2,3),8)
+!jsc+PEB    DHUPDN=CMPLX(DH(LMN1,LMN2,2),DH(LMN1,LMN2,3),8)
+            DHUPDN=CMPLX(DH(LMN1,LMN2,2),-DH(LMN1,LMN2,3),8)
             DHDNUP=CONJG(DHUPDN)
             DO IB=1,NB
               HPROJ(1,IB,LMN1)=HPROJ(1,IB,LMN1) &
@@ -4837,7 +4838,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     IMPLICIT NONE
       REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
       REAL(8)   ,PARAMETER     :: DSMALL = 1.D-12
-      INTEGER(4),PARAMETER     :: MAX    = 100
+      INTEGER(4),PARAMETER     :: MAX    = 200
       INTEGER(4),INTENT(IN)    :: NB
       REAL(8)   ,INTENT(IN)    :: OCC(NB)
       REAL(8)   ,INTENT(INOUT) :: LAMBDA(NB,NB)
@@ -5384,6 +5385,7 @@ PRINT*,'ITER ',ITER,DIGAM
       CALL REPORT$TITLE(NFIL,'WAVE FUNCTIONS')
       CALL WAVES_SELECTWV(1,1)
       CALL REPORT$I4VAL(NFIL,'NUMBER OF BANDS',THIS%NB,' ')
+
       CALL REPORT$I4VAL(NFIL,'NUMBER OF K-POINTS',NKPT,' ')
       CALL REPORT$I4VAL(NFIL,'NUMBER OF SPINS',NSPIN,' ')
       CALL REPORT$I4VAL(NFIL,'NUMBER OF SPINOR COMPONENTS',NDIM,' ')
@@ -5421,7 +5423,7 @@ PRINT*,'ITER ',ITER,DIGAM
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES$WRITEPDOS(NFIL)
+      SUBROUTINE WAVES$WRITEPDOS
 !     ******************************************************************
 !     **  WAVES$GET                                                   **
 !     **  GET                                                         **
@@ -5429,7 +5431,7 @@ PRINT*,'ITER ',ITER,DIGAM
       USE WAVES_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: NFIL
+      INTEGER(4)             :: NFIL
       REAL(8)   ,ALLOCATABLE :: VAL(:,:)
       REAL(8)   ,ALLOCATABLE :: DER(:,:)
       REAL(8)   ,ALLOCATABLE :: OV(:,:,:)
@@ -5457,6 +5459,10 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)             :: IB1,IB2,IBH,LN1,LN2,IDIM,IKPT,ISPIN,IPRO
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:)
       CHARACTER(16),ALLOCATABLE :: ATOMID(:)
+      real(8)                :: svar      
+      character(32)          :: flag='011004'
+      integer(4)             :: nbx
+      REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES$WRITEPDOS')
       IF(.NOT.THAMILTON) THEN
@@ -5483,7 +5489,9 @@ PRINT*,'ITER ',ITER,DIGAM
       CALL PDOS$SETI4A('LOX',LNXX*NSP,MAP%LOX)
       CALL PDOS$SETI4A('ISPECIES',NAT,MAP%ISP)
       IF(THISTASK.EQ.1) THEN
-        WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX
+        CALL FILEHANDLER$UNIT('PDOS',NFIL)
+        REWIND NFIL
+        WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,flag
         WRITE(NFIL)MAP%LNX(:),MAP%LOX(:,:),MAP%ISP(:)
       END IF
 !
@@ -5518,8 +5526,8 @@ PRINT*,'ITER ',ITER,DIGAM
       CALL SETUP$GETR8('R1',R1)
       CALL SETUP$GETR8('DEX',DEX)
       XEXP=EXP(DEX)
-      OV(:,:,:)=0.D0
       DO ISP=1,NSP
+        OV(:,:,:)=0.D0
         CALL SETUP$ISELECT(ISP)
         LNX=MAP%LNX(ISP)
         LOX=MAP%LOX(:,ISP)
@@ -5563,6 +5571,9 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ==================================================================
 !     ==  NOW WRITE PROJECTIONS                                       ==
 !     ==================================================================
+      CALL DYNOCC$GETI4('NB',NBx)
+      ALLOCATE(OCC(NBx,NKPT,NSPIN))
+      CALL DYNOCC$GETR8A('OCC',NBx*NKPT*NSPIN,OCC)
       ALLOCATE(XK(3,NKPT))
       CALL DYNOCC$GETR8A('XK',3*NKPT,XK)
       CALL PDOS$SETR8A('XK',3*NKPT,XK)
@@ -5630,9 +5641,13 @@ PRINT*,'ITER ',ITER,DIGAM
               ENDDO
             ENDDO
             IF(THISTASK.EQ.1) THEN
-              WRITE(NFIL)THIS%EIGVAL(IB1),VEC
-!print*,'e ',this%eigval(ib1)
-!write(*,fmt='(10f10.5)')vec
+              IF(FLAG.EQ.'011004') THEN
+                WRITE(NFIL)THIS%EIGVAL(IB1),OCC(IB1,IKPT,ISPIN),VEC
+              ELSE
+                WRITE(NFIL)THIS%EIGVAL(IB1),VEC
+              END IF
+!PRINT*,'E ',THIS%EIGVAL(IB1)
+!WRITE(*,FMT='(10F10.5)')VEC
             END IF
           ENDDO
           DEALLOCATE(VECTOR1)
@@ -5641,6 +5656,11 @@ PRINT*,'ITER ',ITER,DIGAM
       DEALLOCATE(XK)
       DEALLOCATE(VEC)
       DEALLOCATE(R)
+      deallocate(occ)
+      IF(THISTASK.EQ.1) THEN
+        CALL LIB$FLUSHFILE(NFIL)
+        CALL FILEHANDLER$CLOSE('PDOS')
+      END IF
                              CALL TRACE$POP
       RETURN
       END

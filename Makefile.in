@@ -172,7 +172,7 @@ parallel:
 	${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
 #
 parallel_new:
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${PARALLELDIR}; \
+	ALLDEP=T; export ALLDEP=T; cd ${OBJDIR}/${PARALLELDIR}; \
 	${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
 #
 # THE PAW TOOLS

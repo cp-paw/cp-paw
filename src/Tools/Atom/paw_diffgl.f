@@ -511,7 +511,7 @@ exit
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
-      USE SCHRGL_INTERFACE_MODULE,ONLY:AEBOUNDSTATE
+      USE SCHRGL_INTERFACE_MODULE,ONLY:AEBOUNDSTATE,SCHROEDER
       IMPLICIT NONE
       logical(4),parameter    :: tpr=.false.
       REAL(8),   PARAMETER    :: ITERX=200

@@ -292,7 +292,95 @@
       END
 !
 !     .....................................................INTRAD.......
-      SUBROUTINE RADIAL$INTEGRAL1(R1,DEX,NR,F1,r,RES)
+      SUBROUTINE RADIAL$INTEGRAL1(R1,DEX,NR,F1,RAD,VAL)
+!     ******************************************************************
+!     **                                                              **
+!     **   SUM could be done faster                                   **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: R1
+      REAL(8)   ,INTENT(IN) :: DEX
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: F1(NR)
+      REAL(8)   ,INTENT(IN) :: RAD
+      REAL(8)   ,INTENT(OUT):: VAL
+      REAL(8)   ,PARAMETER  :: C0=-31.D0/48.D0
+      REAL(8)   ,PARAMETER  :: C1=+11.D0/48.D0
+      REAL(8)   ,PARAMETER  :: C2= -5.D0/48.D0
+      REAL(8)   ,PARAMETER  :: C3= +1.D0/48.D0
+      REAL(8)               :: F(NR),G(NR)
+      INTEGER(4)            :: IR,iint
+      REAL(8)               :: R2,R3
+      REAL(8)               :: S21,S31,SUM0,END1
+      REAL(8)               :: A,B,C,RINT(4),GINT(4)
+      REAL(8)               :: RI,XEXP,STEP
+!     ******************************************************************
+      IF(NR.LT.10) THEN
+        CALL ERROR$MSG('NUMBER OF MESHPOINTS SMALLLER THAN 10')
+        CALL ERROR$STOP('RADIAL$INTEGRATE')
+      END IF
+      F(:)=F1(:)
+      XEXP=DEXP(DEX)
+!     ==================================================================
+!     ==  INTEGRATE FROM ZERO TO THE FIRST GRID-POINT                 ==
+!     ==  EXTRAPOLATION BY A POLYNOMIAL OF 2. ORDER (QUADRATIC)       ==
+!     ==================================================================
+      R2=R1*XEXP
+      R3=R2*XEXP
+      S21=(F(2)-F(1))/(R2-R1)
+      S31=(F(3)-F(1))/(R3-R1)
+      C=(S21-S31)/(R2-R3)
+      B=S21-C*(R1+R2)
+      A=F(1)-B*R1-C*R1**2
+      SUM0 = ( A*R1 + .5D0*B*R1**2 + 1.D0/3.D0*C*R1**3 ) / DEX
+!     ==================================================================
+!     ==  TRANSFORMATION ONTO LINEAR GRID                             ==
+!     ==================================================================
+      RI=R1/XEXP
+      DO IR=1,NR
+        RI=RI*XEXP
+        F(IR)=F(IR)*DEX*RI
+      ENDDO
+!     ==================================================================
+!     ==  SUMMATION                                                   ==
+!     ==================================================================
+      END1=C0*F(1)+C1*F(2)+C2*F(3)+C3*F(4)
+      G(1)=F(1)+SUM0+END1
+      DO IR=2,NR
+        G(IR)=G(IR-1)+F(IR)
+      ENDDO
+!     ==================================================================
+!     ==  FIX ENDPOINT                                                ==
+!     ==================================================================
+      DO IR=4,NR
+        G(IR)=G(IR)+C0*F(IR)+C1*F(IR-1)+C2*F(IR-2)+C3*F(IR-3)
+      ENDDO
+!     ==================================================================
+!     ==  FIX FIRST SEVEN GRID POINTS                                 ==
+!     ==================================================================
+      IF(NR.GE.6) THEN
+        DO IR=1,3
+          G(IR)=G(IR)-F(IR) &
+     &             -(C0*F(IR)+C1*F(IR+1)+C2*F(IR+2)+C3*F(IR+3))
+        ENDDO
+      ELSE
+        DO IR=1,3
+          G(IR)=G(IR)-0.5D0*F(IR)
+        ENDDO
+      END IF
+
+      IR=MIN(INT(LOG(RAD/R1)/DEX),NR-3)
+      DO iint=1,4
+        RINT(iint)=r1*DEXP((IR-1+iint-1)*DEX)
+        GINT(iint)=G(IR-1+iint)
+      END DO
+      CALL RADIAL_INTERPOLATE(4,RINT,GINT,RAD,VAL)      
+      RETURN
+      END
+!
+!     .....................................................INTRAD.......
+      SUBROUTINE RADIAL$INTEGRAL2(R1,DEX,NR,F1,r,RES)
 !     ******************************************************************
 !     **                                                              **
 !     **  INTEGRATES THE RADIAL FUNCTION F(R) FROM 0 TO GRID POINT NR **
@@ -332,6 +420,8 @@
       REAL(8)               :: RI,XEXP,STEP
       real(8)               :: rp(4),val(4)
 !     ******************************************************************
+call error$MSG('ROUTINE MARKED FOR DELETION')
+CALL ERROR$STOP('RADIAL$INTEGRAL2')
       IF(NR.LT.10) THEN
         CALL ERROR$MSG('NUMBER OF MESHPOINTS SMALLLER THAN 10')
         CALL ERROR$STOP('INTGRL')
@@ -371,6 +461,7 @@
       ENDDO
       IR1=0
       RP=R1*EXP(DEX*REAL(IR1-1,KIND=8))/XEXP
+      val(:)=0.d0
       DO IR=I1,I1+3
         IR1=IR1+1
         RI=RI*XEXP

@@ -100,7 +100,7 @@
       ALLOCATE(Q(NAT))
       ALLOCATE(NN(8,NAT))
       DO IAT=1,NAT
-        READ(NFIL,FMT='(I4,X,A5,3F10.5,X,8I4,F8.3)') &
+        READ(NFIL,FMT='(I4,1X,A5,3F10.5,1X,8I4,F8.3)') &
      &           ISVAR,NAME(IAT),R(:,IAT),NN(:,IAT),Q(IAT)
        i=iachar(name(iat)(2:2))
        if(i.ge.48.and.i.le.57) then

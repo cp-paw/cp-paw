@@ -78,7 +78,7 @@
       END IF
 !
 !     ==================================================================
-!     ==  READ THERMOSTAT FOR THE ATOMS                               ==
+!     ==  READ TIMESTEP                                               ==
 !     ==================================================================
       CALL TIMESTEP$READ(NFIL,NFILO,TCHK)
       CALL TIMESTEP$GETR8('DELTAT',DELTAT)

@@ -1501,7 +1501,8 @@ END MODULE SETUP_MODULE
 !     ******************************************************************
                               CALL TRACE$PUSH('INPOT$LNX')
       REWIND NFIL
-      READ(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F20.15,I5)')R1,DEX,NR,LNX
+      READ(NFIL,FMT='(F15.10,F10.5,2I4)')R1,DEX,NR,LNX
+!     READ(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F20.15,I5)')R1,DEX,NR,LNX
                               CALL TRACE$POP
       RETURN
       END

@@ -1,0 +1,50 @@
+#
+# PARAMETER FILE FOR LINUX/INTEL
+#
+#________________________________architecture (arbitrary name)
+ARCH="intel"
+#
+#________________________________F90 compiler
+COMPILER="f90"
+#
+#________________________________F77 compiler
+F77COMPILER="f90"
+#
+#________________________________F90 compiler flags 
+FLAGS="-c -YEXT_NAMES=LCS -YEXT_SFX=_"
+#
+#________________________________F77 compiler flags
+F77FLAGS="-c -YEXT_NAMES=LCS -YEXT_SFX=_"
+#
+#________________________________F90 compiler optimization flags
+OPTIMIZE="-B100 -O"
+#
+#________________________________F77 compiler optimization flags
+F77OPTIMIZE="-B100 -O"
+#
+#________________________________F90 compiler debug flags
+DEBUG="-g -Rs"
+#
+#________________________________F77 compiler debug flags
+F77DEBUG="-g -Rs"
+#
+#________________________________flags for linking 
+LFLAGS=""
+#
+#________________________________search directories for linking (sequential)
+LLINK=" -L/fiji/clemens/PAW/lib/fftw-intel/fftw/.libs/ -L/fiji/clemens/PAW/lib/ATLAS/lib/Linux_ATHLON"
+#
+#________________________________search directories for linking (parallel)
+PLLINK="-L/fiji/clemens/PAW/lib/fftw-intel/fftw/.libs/ -L/fiji/clemens/PAW/lib/ATLAS/lib/Linux_ATHLON -L/fiji/clemens/PAW/lib/mpich-intel/lib"
+#
+#________________________________external libraries (sequential)
+LIBS="-lU77 -lm  -lfftw -llapack -lf77blas -latlas"
+#
+#________________________________external libraries (parallel)
+PLIBS="-lU77 -lm  -lfftw -llapack -lf77blas -latlas -lfmpich -lmpich"
+#
+#________________________________preprocessor variables
+CPPVAR="-DCPPVAR_U77 -DCPPVAR_FFT_FFTW"
+#
+#________________________________file extension
+FEXT="f90"

@@ -47,28 +47,12 @@ they are run. Users do not need to have \texttt{autoconf} installed!
 
 \section{mini-HOWTO}
 
-\begin{itemize}
-\item Get the source code (see page~\pageref{sub:pre})
-\item Unpack the distribution: \texttt{tar -xvzf PAW\_YYYYMMDD.tar.gz} (see page~\pageref{sub:unpack})
-\item Provide external libraries -- if desired (see pages~\pageref{sub:libs} and~\pageref{sec:libs})
-\item Configure your system. This can be done automatically on Linux and AIX
-architectures (invoke \texttt{./configure}; see page~\pageref{sub:auto}) or alternatively by the use of
-parameter files (use \texttt{./configure --with-parmfile=...}; see page~\pageref{sub:parms})
-\item Build the binaries by invoking \texttt{make all\_new}
-\item Have fun!
-\end{itemize}
-
-
-\section{Going into detail}
-
 \subsubsection*{Prerequisites}
-\label{sub:pre}
 
 Before starting to compile the \PAW\ code you must ensure, that one of the
-supported compilers (Absoft \texttt{f90}, Compaq \texttt{fort} (\texttt{f90} on
-TruUNIX) or IBM \texttt{xlf90}), the GNU C Preprocessor \texttt{cpp} and the
-GNU \texttt{make} (\texttt{gmake} on IBM! The IBM make will crash when
-interpreting the Makefiles) tool~\cite{make} are installed on your system.
+supported compilers (Absoft \texttt{f90}, Compaq \texttt{fort} (\texttt{f90} on TruUNIX) or IBM
+\texttt{xlf90}), the GNU C Preprocessor \texttt{cpp} and the GNU \texttt{make}
+(\texttt{gmake} on IBM) tool~\cite{make} are installed on your system.
 
 The \PAW\ source code is distributed as a gnu-zipped tarball
 (\texttt{PAW\_YYYYMMDD.tar.gz} or \texttt{.tgz}), the atomic setups are found
@@ -76,18 +60,11 @@ The \PAW\ source code is distributed as a gnu-zipped tarball
 not part of the distribution but can also be supplied.
 
 \subsubsection*{Unpack the Distribution}
-\label{sub:unpack}
-Change into the directory, where the \PAW\ directory shall be located.  A sort
-of standard procedure would be to have one directory which includes all the
-\PAW\ distributions, e.g. \texttt{Archive\_PAW} in your home directory.  There
-you unpack the source code.  The reason for that is the fact that new versions
-are released on a regular basis. Nevertheless it may be reasonable to keep
-older distributions.  We use the \texttt{Archive\_PAW} in order to have just
-one main \PAW\ directory.  Later you might also want to install the external
-libraries there.
-
-
-As a first step you have to change to your e.g. \texttt{Archive\_PAW} directory and unpack the tarball by typing
+Change into the directory, where the \PAW\ directory shall be located. 
+\begin{verbatim}
+cd DIRECTORYNAME
+\end{verbatim}
+ Unpack the tarball by typing
 \begin{verbatim}
 tar -xvzf PAW_YYYYMMDD.tar.gz
 \end{verbatim}
@@ -115,7 +92,6 @@ drwxrwxr-x   5 clemens  atp          4096 Jul 14 11:01 src/
 \end{verbatim}
 
 \subsubsection*{Use External Libraries?}
-\label{sub:libs}
 The next step concerns the libraries.  In principle the sequential \PAW-Code can be
 compiled completely standalone, which means, that no external ($\equiv$ not
 part of the \PAW-src directory) libraries have to be linked.  By specifying
@@ -137,15 +113,13 @@ care of the include files.  Mind that the code looks for \texttt{MPIF90.H} and
 \texttt{FFTW\_F77.I} (uppercase!) as MPI and FFTW include file respectively.  The latter is
 of course only needed, when FFTW is used as FFT library.
 
-No parallel compilation will be possible unless an MPI(CH) distribution is
-specified or installed in the default path (see section~\ref{sec:libs}).  In
-any case, the script will create a \texttt{Makefile.parallel} to allow expert
-users to make changes -- without those, one will get an error during
-compilation.
+Concerning Intel compatibel and Alpha hardware, no parallel compilation will be possible
+unless an MPICH distribution is specified or installed in the default path (see
+section~\ref{sec:libs}).  In any case, the script will create a \texttt{Makefile.parallel}
+to allow expert users to make changes -- without those, one will get an error during compilation.
 
 
 \subsubsection*{Automatical Configuration under Linux and AIX}
-\label{sub:auto}
 Invoking
 \begin{verbatim}
 ./configure
@@ -203,11 +177,10 @@ the ones listed above.  If you want to eliminate or change one of the default
 options, have a look in section~\ref{sec:hack}.
 
 \subsubsection*{Manual Configuration}
-\label{sub:parms}
 
 If, for some reason, the automatical configuration does not work on your
-hardware -- e.g. you are using TruUNIX for Alphas or you want to override one of the default compiler flags,
-which cannot be done by command line options to the
+hardware -- e.g. you are using TruUNIX for Alphas or you want to use special
+compiler flags which cannot be set by command line options to the
 \texttt{configure}-script -- the alternative way to configure is via parameter
 files.  
 
@@ -273,6 +246,8 @@ subdirectory out of \texttt{intel, alpha} and \texttt{ibm}.  This
 distinction is made to be able to use one \PAW\ directory to compile for
 different architectures.
 
+Have fun!
+
 
 \section{Using External Libraries}
 \label{sec:libs}
@@ -284,37 +259,29 @@ mkdir lib
 \end{verbatim}
 This does not imply, that everybody is supposed to have the libraries there and recompile them for every new distribution.  
 
-The ususal way would be to install them in some central directory (e.g. the
-previously mentioned \texttt{Archive\_PAW}) and make a link from the
-\texttt{lib} directory to the various root directions of the library distributions.  Default are \texttt{ATLAS},
+The ususal way would be to install them in some central directory and make a link from the
+\texttt{lib} directory to the various libraries.  Default are \texttt{ATLAS},
 \texttt{fftw-intel} and \texttt{fftw-alpha} as well as \texttt{mpich-intel} and
-\texttt{mpich-alpha}.  Change to the \texttt{lib} directory and type for
-example
+\texttt{mpich-alpha}.  Change to the \texttt{lib} directory and type for example
 \begin{verbatim}
 ln -s /home/clemens/lib/mpich-1.2.1 mpich-intel
 \end{verbatim}
 to set a link from the actual directory to
-\texttt{mpich-intel}.  Once created, this link directory can be copied using \texttt{cp -a} into every new distribution. The \texttt{-a} option preserves links.
-
-
-Alternatively one could specify the root direcories of the
-library distributions by using the following command line options for the
+\texttt{mpich-intel}. Alternatively one could specify the direcories of the
+external libraries by using the following command line options for the
 \texttt{configure} script:
 \begin{verbatim}
 --with-mpichdir=...
 --with-atlasdir=...
 --with-fftwdir=...
 \end{verbatim}
-where \ldots\ are replaced by the the directory (e.g. \texttt{/home/clemens/mpich-1.2.1}).  
+where \ldots\ are replaced by the the directory (e.g. \texttt{/home/clemens/mpich-1.2.1})
 
 Tarballs of the libraries are distributed together with
 the \PAW-Code or can alternatively be found at~\cite{mpich,atlas,fftw}.
 Unpack them and proceed as stated in the following subsections.  Of course
 you are free to choose other parameters -- this is just the way we do it.
 
-If you want to use precompiled external libraries which are not arranged in the
-initial directory structure of the distribution, you will have to specify the
-directory of the libraries (\texttt{lib*.a}) in the parameter file.
 
 \subsection{ATLAS}
 
@@ -523,8 +490,8 @@ description of the problem and the output of the \texttt{configure}-script and \
 CPPVAR_FFT_PACK           use internal FFT routines
 CPPVAR_FFT_FFTW           use FFTW FFT routines
 CPPVAR_FFT_ESSL           use ESSL FFT routines
-CPPVAR_BLAS_ESSL          use ESSL syntax for BLAS/LAPACK calls 
-CPPVAR_SUPPORT_XLF        xlf support routines exist 
+CPPVAR_BLAS_ESSL          use ESSL as numerical library
+CPPVAR_SUPPORT_XLF        xlf support routines exist
 CPPVAR_USAGE_EXIST        getrusage exists
 CPPVAR_LANGEXT_XLF        use xlf language extensions
 CPPVAR_U77                U77 library exists

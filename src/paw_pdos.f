@@ -31,6 +31,9 @@
       REAL(8)                :: R1,DEX
 !     ******************************************************************
                               CALL TRACE$PUSH('STATEANALYSIS')
+call error$msg('routine marked for deletion')
+call error$stop('STATEANALYSIS')
+!
       IF(.NOT.ALLOCATED(FNL)) THEN
         CALL ERROR$MSG('FNL NOT SET')
         CALL ERROR$STOP('STATEANALYSIS')
@@ -141,6 +144,8 @@
       REAL(8)   ,INTENT(IN) :: FNL_(NAT_,NB_,LMNXX_,NKPT_,NSPIN_)
       INTEGER(4)            :: ISPIN,IKPT,LMN,IB,IAT
 !     ******************************************************************
+call error$msg('routine marked for deletion')
+call error$stop('STATEANALYSIS$SETPROJECTIONS')
       NAT=NAT_
       NB=NB_
       LMNXX=LMNXX_
@@ -225,6 +230,8 @@
       INTEGER(4)             :: NTASKS,THISTASK
 !     ******************************************************************
                               CALL TRACE$PUSH('PDOS')
+call error$msg('routine marked for deletion')
+call error$stop('pdos')
 !
 !     ==================================================================
 !     ==  CALCULATE PARTIAL WAVE AMPLITUDES                           ==
@@ -248,6 +255,7 @@
       CALL MPE$QUERY(NTASKS,THISTASK)
       IF(TAMPFUL.AND.(THISTASK.EQ.1)) THEN
         CALL FILEHANDLER$UNIT('PDOS',NFIL)
+        REWIND NFIL
         WRITE(NFIL,FMT='(4I5)')NAT,NB,NKPT,NSPIN
         DO IAT=1,NAT
           ISP=ISPECIES(IAT)
@@ -435,6 +443,8 @@
       INTEGER(4)            :: ISPIN,IKPT,IB,IAT,ISP
 !     ******************************************************************
                               CALL TRACE$PUSH('PDOS_WOFL')
+call error$msg('routine marked for deletion')
+call error$stop('STATEANALYSIS_wofl')
 !
 !     ==================================================================
 !     ==  CALCULATE OVERLAP MATRIX OF AE PARTIAL WAVES                ==
@@ -506,6 +516,8 @@
       REAL(8)               :: SVAR
       REAL(8)               :: VAL
 !     ******************************************************************
+call error$msg('routine marked for deletion')
+call error$stop('pdos_state')
 !
 !     ==================================================================
 !     == TRANSFORM FNL ON EIGENSTATE                                  ==
@@ -622,6 +634,8 @@
       REAL(8)               :: RI
       REAL(8)               :: VAL1,VAL2
 !     ******************************************************************
+call error$msg('routine marked for deletion')
+call error$stop('STATEANALYSIS_overcov')
       XEXP=DEXP(DEX)
       DO ISP=1,NSP
         IZ=NINT(AEZ(ISP))

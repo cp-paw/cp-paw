@@ -1135,8 +1135,8 @@ PRINT*,'STRESS PREDICTED ',-REAL(CSVAR)*2.D0*GWEIGHT/3.D0-REAL(CSUM-CSVAR)*2.D0*
 !
 !     == NOW TAKE CARE OF STRESSES =====================================
 !     == INTEGRATION WEIGHT IS DONE LATER ==============================
+      STRESS(:,:)=0.D0
       IF(TSTRESS) THEN
-        STRESS(:,:)=0.D0
         DO IG=1,NGL
           IF(IG.NE.NGAMMA) THEN         
             SVAR=VG(IG)*CONJG(RHO2(IG))

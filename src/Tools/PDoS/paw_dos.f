@@ -71,6 +71,8 @@
       CALL PDOS$GETI4('NPRO',NPRO)
       ALLOCATE(NBARR(NKPT,NSPIN))
       CALL PDOS$GETI4A('NB',nkpt*nspin,nbarr)
+print*,'nspin',nspin
+print*,'nbarr',nbarr
       NB=MAXVAL(NBARR)
       DEALLOCATE(NBARR)
       LENG=NPRO

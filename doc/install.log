@@ -1,4 +1,4 @@
-This is TeX, Version 3.14159 (Web2C 7.3.1) (format=latex 2000.7.29)  25 JUL 2001 11:56
+This is TeX, Version 3.14159 (Web2C 7.3.1) (format=latex 2000.7.29)  22 JUL 2001 10:13
 **install.tex
 (install.tex
 LaTeX2e <1999/12/01> patch level 1
@@ -113,23 +113,26 @@ LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
 (Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 33.
  [1
 
-] [2] [3] [4] [5] [6]
-LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <10> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 357.
- [7]
-LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <12> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 450.
+] [2] [3]
 
-[8] [9] [10
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[4] [5]
+LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <10> not available
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 324.
+ [6]
+LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <12> not available
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 417.
+ [7] [8] [9
 
 ] (install.aux) ) 
 Here is how much of TeX's memory you used:
- 586 strings out of 25901
- 7346 string characters out of 197578
- 53029 words of memory out of 384000
- 3556 multiletter control sequences out of 10000+15000
+ 581 strings out of 25901
+ 7294 string characters out of 197578
+ 54029 words of memory out of 384000
+ 3551 multiletter control sequences out of 10000+15000
  11040 words of font info for 40 fonts, out of 400000 for 1000
  14 hyphenation exceptions out of 1000
- 24i,9n,20p,361b,306s stack positions out of 300i,100n,500p,50000b,4000s
+ 24i,9n,20p,361b,382s stack positions out of 300i,100n,500p,50000b,4000s
 
-Output written on install.dvi (10 pages, 31024 bytes).
+Output written on install.dvi (9 pages, 28848 bytes).

@@ -1321,7 +1321,7 @@ WORK(IR)=SVAR1*RHO(IR)
       END
 !
 !     ..................................................................
-      SUBROUTINE AUGMENTATION_EXPECT(R1,DEX,NR,NSPIN,LNX,LOX,LMNX,LMRX &
+      SUBROUTINE AUGMENTATION_EXPECT(R1,DEX,NR,NDIMD,LNX,LOX,LMNX,LMRX &
      &           ,AEPOT,PSPOT,AEPHI,PSPHI,DATH)
 !     ******************************************************************
 !     **                                                              **
@@ -1333,16 +1333,16 @@ WORK(IR)=SVAR1*RHO(IR)
       REAL(8)   ,INTENT(IN) :: R1
       REAL(8)   ,INTENT(IN) :: DEX
       INTEGER(4),INTENT(IN) :: NR
-      INTEGER(4),INTENT(IN) :: NSPIN
+      INTEGER(4),INTENT(IN) :: NDIMD
       INTEGER(4),INTENT(IN) :: LMRX
       INTEGER(4),INTENT(IN) :: LNX
       INTEGER(4),INTENT(IN) :: LOX(LNX)
       INTEGER(4),INTENT(IN) :: LMNX
-      REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRX,NSPIN)
-      REAL(8)   ,INTENT(IN) :: PSPOT(NR,LMRX,NSPIN)
+      REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRX,NDIMD)
+      REAL(8)   ,INTENT(IN) :: PSPOT(NR,LMRX,NDIMD)
       REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX)
       REAL(8)   ,INTENT(IN) :: PSPHI(NR,LNX)
-      REAL(8)   ,INTENT(OUT):: DATH(LMNX,LMNX,NSPIN)
+      REAL(8)   ,INTENT(OUT):: DATH(LMNX,LMNX,NDIMD)
       INTEGER(4)            :: LMN1,LMN2
       INTEGER(4)            :: LN1,LN2
       INTEGER(4)            :: LM1,LM2,LM3
@@ -1350,8 +1350,8 @@ WORK(IR)=SVAR1*RHO(IR)
       INTEGER(4)            :: IM1,IM2
       INTEGER(4)            :: ISPIN
       INTEGER(4)            :: IR
-      REAL(8)               :: AEDMU(NR,NSPIN)
-      REAL(8)               :: PSDMU(NR,NSPIN)
+      REAL(8)               :: AEDMU(NR,NDIMD)
+      REAL(8)               :: PSDMU(NR,NDIMD)
       REAL(8)               :: DWORK1(NR)
       REAL(8)               :: CG
       REAL(8)               :: SVAR
@@ -1381,7 +1381,7 @@ WORK(IR)=SVAR1*RHO(IR)
               DO LM3=1,LMRX
                 CALL CLEBSCH(LM1,LM2,LM3,CG)
                 IF(CG.NE.0.D0) THEN
-                  DO ISPIN=1,NSPIN
+                  DO ISPIN=1,NDIMD
                     DO IR=1,NR
                       AEDMU(IR,ISPIN)=AEDMU(IR,ISPIN) &
      &                               +CG*AEPOT(IR,LM3,ISPIN)
@@ -1395,7 +1395,7 @@ WORK(IR)=SVAR1*RHO(IR)
 !             ==========================================================
 !             ==  PERFORM NOW THE INTEGRATION                         ==
 !             ==========================================================
-              DO ISPIN=1,NSPIN
+              DO ISPIN=1,NDIMD
                 RI=R1/XEXP
                 DO IR=1,NR
                   RI=RI*XEXP

@@ -1,7 +1,4 @@
-#
-#
-SHELL=/bin/sh
-#
+#########################################################################
 #########################################################################
 ##                                                                     ##
 ##  make an paw executable and a paw library using gmake               ##
@@ -70,24 +67,22 @@ MAKE=@MAKE@
 #
 ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
   MODE = _p
-  LLIBS=@LLIBSPARALLEL@
-  LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} @LLINKPARALLEL@
-  F90PPOPT=-DCPPVARIABLE_PARALLEL @CPPVAR@ -arch=${ARCH}
+  LLIBS=@LLIBS@ @LLIBSPARALLEL@
+  LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} @LLINK@ @LLINKPARALLEL@
+  F90PPOPT=-DCPPVARIABLE_PARALLEL @CPPVAR@ -arch ${ARCH}
   #
   # MPIF90.H is an include file for the MPICH-library
   # for parallel compilation, this file has to be copied into
   # the object directory
   #
   ifneq (${ARCH},@xlf90ARCH@)
-    ifneq (${MPICHDIR},notset)
-      MPICHINCLUDE=cp ${MPICHDIR}/include/mpif.h ${OBJDIR}/mpif90.h
-    endif
+    MPICHINCLUDE=cp ${MPICHDIR}/include/mpif.h ${OBJDIR}/mpif90.h
   endif
 else
   MODE = _s
   LLIBS=@LLIBS@ 
   LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} @LLINK@ 
-  F90PPOPT=@CPPVAR@ -arch=${ARCH}
+  F90PPOPT=@CPPVAR@ -arch ${ARCH}
 endif
 #
 # out of the file src/paw_mpelib.f a parallel _p and
@@ -125,6 +120,11 @@ PAWLIB= ${OBJDIR}/libpaw.a#
 #
 default: ${PAWX}
 #
+clean:
+	rm -f config.* 
+	rm -f Makefile 
+	rm -f Makefile.[^i]*
+#
 # THE PAW BINARIES
 #
 all: debug none fast parallel tools
@@ -144,36 +144,28 @@ all_new: debug_new none_new fast_new parallel tools
 tools: 	 atom tra wave grab pdos converttra cleantra strc tostrc
 #
 none:   
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${NONEDIR}
+	export ALLDEP=F; cd ${OBJDIR}/${NONEDIR}; make -f ${PAWDIR}/Makefile.${NONEDIR}
 #
 none_new:
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${NONEDIR}
+	export ALLDEP=T; cd ${OBJDIR}/${NONEDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${NONEDIR}
 #
 fast:   
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${FASTDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
+	export ALLDEP=F; cd ${OBJDIR}/${FASTDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
 #
 fast_new:   
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${FASTDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
+	export ALLDEP=T; cd ${OBJDIR}/${FASTDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
 #
 debug:  
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${DEBUGDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
+	export ALLDEP=F; cd ${OBJDIR}/${DEBUGDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
 #
 debug_new:  
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${DEBUGDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
+	export ALLDEP=T; cd ${OBJDIR}/${DEBUGDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
 #
 parallel:
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${PARALLELDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
+	export ALLDEP=F; cd ${OBJDIR}/${PARALLELDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
 #
 parallel_new:
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${PARALLELDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
+	export ALLDEP=T; cd ${OBJDIR}/${PARALLELDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
 #
 # THE PAW TOOLS
 #

@@ -106,7 +106,9 @@
 !     **  SUBROUTINES USED: TIMES (STANDARD C LIBRARY)                **
 !     ******************************************************************
       INTEGER(4),INTENT(OUT) :: NTIME(4)
+#IF DEFINED(CPPVAR_USAGE_EXIST)
       REAL(4)   ,EXTERNAL    :: ETIME     ! TOTAL ELAPSED TIME
+#ENDIF
       REAL(4)                :: TARRAY(2) ! ELAPSED USER/SYSTEM TIME
       REAL(4)                :: TOTAL
 !     ******************************************************************
@@ -158,7 +160,9 @@
       INTEGER(4)               :: GETRUSAGE
       INTEGER(4)               :: RC
       REAL(8)                  :: CPUTIME
+#IF DEFINED(CPPVAR_USAGE_EXIST)
       EXTERNAL GETRUSAGE
+#ENDIF
 !     ******************************************************************
       USG%UTIME=(/0,0/)
       USG%STIME=(/0,0/)

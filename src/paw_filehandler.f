@@ -35,7 +35,7 @@ MODULE  FILEHANDLER_MODULE
 IMPLICIT NONE                                                 
 TYPE FILE_TYPE                                                
   CHARACTER(32) :: ID         ! INTERNAL IDENTIFIER
-  CHARACTER(128):: NAME       ! FILENAME
+  CHARACTER(512):: NAME       ! FILENAME
   INTEGER(4)    :: UNIT       ! FORTRAN UNIT
   LOGICAL(4)    :: OPEN       ! A UNIT IS ASSIGNED TO THE FILE
   LOGICAL(4)    :: USED       ! A FILE HAS BEEN OPENED
@@ -49,7 +49,7 @@ INTEGER(4)                   :: NFILMAX=0
 INTEGER(4)      ,PARAMETER   :: NFILMAXDEFAULT=20
 INTEGER(4)      ,PARAMETER   :: NFILMAXINCREMENT=10
 INTEGER(4)                   :: LASTFILE=0
-CHARACTER(128)                :: BARENAME=' '
+CHARACTER(512)               :: BARENAME=' '
 !***********************************************************************
 CONTAINS
 !       ..................................................................     
@@ -370,7 +370,7 @@ CONTAINS
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: UNIT_
       LOGICAL(4)            :: TCHK
-      CHARACTER(256)        :: STRING
+      CHARACTER(512)        :: STRING
 !     ******************************************************************
       INQUIRE(UNIT=UNIT_,OPENED=TCHK,NAME=STRING)
       IF(TCHK) THEN

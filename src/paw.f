@@ -577,7 +577,7 @@
       END IF
 !
 !     ==================================================================
-!     ==  PROPAGATE THERMOSTAT FOR THE WAVE FUNCTIONS                 ==
+!     ==  collect energy of wave function thermostat                  ==
 !     ==================================================================
       CALL THERMOSTAT$SELECT('WAVES')
       CALL THERMOSTAT$GETL4('ON',TCHK)
@@ -1068,8 +1068,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     ==================================================================
                               CALL TRACE$PASS('BEFORE STATEANALYSIS')
       IF(TPRINT) THEN
-        CALL FILEHANDLER$UNIT('PDOS',NFIL)
-        CALL WAVES$WRITEPDOS(NFIL)
+        CALL WAVES$WRITEPDOS
         CALL ATOMLIST$REPORT(NFILO)
         CALL QMMM$REPORT(NFILO)
       ENDIF
@@ -1087,7 +1086,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       IF(TPRINT) THEN
         WRITE(NFILO,FMT='()')
         CALL DYNOCC$GETL4('DYN',TCHK) 
-        call waves$getl4('safeortho',tchk1)
+        CALL WAVES$GETL4('SAFEORTHO',TCHK1)
         IF(TCHK.or. tchk1) THEN
           CALL DYNOCC$REPORT(NFILO)
         ELSE

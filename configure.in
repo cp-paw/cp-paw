@@ -170,6 +170,9 @@ AC_ARG_WITH(make,--with-make=LOCATION\
 AC_ARG_WITH(cpp,--with-cpp=LOCATION\
        the location of the GNU C Preprocessor (if not in path),
             CPPPATH=$withval,CPPPATH=notset)
+AC_ARG_WITH(cppoptions,--with-cppoptions=OPTIONS\
+ options for the GNU C Preprocessor,
+            CPPOPT=$withval,CPPOPT="")
 AC_ARG_WITH(cflags,--with-cflags=FLAGS\
        specify additional compiler flags,
             USERFLAGS=$withval)
@@ -216,6 +219,7 @@ fi
 if test "$CPP" = "notset"; then
    AC_MSG_ERROR(GNU C-Compatible Compiler Preprocessor is not found)
 fi
+CPP="$CPP $CPPOPT"
 #
 # check, if parameter file is specified
 # if yes get the values:
@@ -471,7 +475,7 @@ if test "$PARMFILE" != notset; then
       fi   
     fi
   fi
-
+  LLIBS="$LLIBS $USERLIBS"
   #
   # Check for MPICH
   #
@@ -514,6 +518,7 @@ if test "$PARMFILE" != notset; then
     fi  
   fi
 fi  
+LLIBSPARALLEL="$LLIBSPARALLEL $USERLIBS"
 #
 # introduction of PARALLELNAME to avoid problems
 # with Makefile.* generation when PARALLELDIR=fast
@@ -527,6 +532,9 @@ fi
 # Definition of variables to be substituted in the *.in files
 #   There the synax is @VARIABLE@
 #
+#ATTENTION CHANGE!!!!
+#CPP="$CPP -traditional"
+
 AC_SUBST(PAWDIR)
 AC_SUBST(COMPILE)
 AC_SUBST(COMPILE77)
@@ -623,6 +631,8 @@ AC_MSG_RESULT(-------------------------------------)
 AC_MSG_RESULT(printing out of summary              )
 AC_MSG_RESULT(-------------------------------------)
 AC_MSG_RESULT(architecture                   : $ARCH)
+AC_MSG_RESULT(CPP command                    : $CPP)
+AC_MSG_RESULT(MAKE command                   : $MAKE)
 AC_MSG_RESULT(F90 compile command            : $COMPILE)
 AC_MSG_RESULT(F77 compile command            : $COMPILE77)
 AC_MSG_RESULT(F90 optimize options           : $OPTIMIZE)
