@@ -1172,7 +1172,7 @@ END MODULE PLANEWAVE_MODULE
       ISTART=1
       SVAR=G2A(ISTART)
       DO IG=2,NG
-        IF(ABS(G2A(IG)-SVAR).LT.1.D-3.AND.IG.NE.NG) CYCLE
+        IF(ABS(G2A(IG)-SVAR).LT.1.D-5.AND.IG.NE.NG) CYCLE
         ISTOP=IG-1
         if(ig.eq.NG)istop=ng
         DO I=ISTART,ISTOP
@@ -1196,8 +1196,8 @@ END MODULE PLANEWAVE_MODULE
             END IF
           END DO
         END DO
-        IF(I.EQ.NG) EXIT
-        ISTART=I+1
+        IF(ISTOP.EQ.NG) EXIT
+        ISTART=ISTOP+1
         SVAR=G2A(ISTART)
       ENDDO
       RETURN

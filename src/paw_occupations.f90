@@ -1265,6 +1265,7 @@ REAL(8)::EV
        REAL(8)              :: QTOL=1.D-10
        INTEGER(4),PARAMETER :: NITER=1000
        INTEGER(4)           :: ITER
+integer(4) :: ntasks,thistask
 !      *****************************************************************
        IF(.NOT.TDYN) then 
          xp(:,:,:)=x0(:,:,:)
@@ -1436,7 +1437,7 @@ REAL(8)::EV
 !           IF(DABS(Q0).LT.TOL)DTOTPOT=0.D0
 !           DSPINPOT=0.D0
          ELSE IF((.NOT.TFIXTOT).AND.TFIXSPIN) THEN
-            SPINPOT=SPINPOT-(S0-SPINCHA)/Q1
+            SPINPOT=SPINPOT-(S0-SPINCHA)/S1
 !           IF(DABS(S0).LT.TOL)DSPINPOT=0.D0
 !           DTOTPOT=0.D0
          ELSE IF((.NOT.TFIXTOT).AND.(.NOT. TFIXSPIN)) THEN
@@ -1454,7 +1455,8 @@ REAL(8)::EV
 !         ELSE
 !           SPINCHA=S0
 !         END IF
-PRINT*,'DYNOCC ',TFIXTOT,TFIXSPIN,Q0,S0,TOTCHA,SPINCHA,TOTPOT,SPINPOT
+CALL MPE$QUERY(NTASKS,THISTASK)
+WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,Q0-TOTCHA,TOTPOT,SPINPOT
        ENDDO
        IF(.NOT.TCONV) THEN
          CALL ERROR$MSG('LOOP NOT CONVERGED') 
