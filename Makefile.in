@@ -418,7 +418,7 @@ ${OBJDIR}/libblas.a : ${SRCDIR}/Libs/blas.f
 #__compile fftpack routines________________________________________________
 ${OBJDIR}/libfftpack.a : ${SRCDIR}/Libs/fftpack.f
 	${BINDIR}/f90pp ${F90PPOPT} ${SRCDIR}/Libs/fftpack.f > ${OBJDIR}/fftpack_d.${FEXT}
-	${COMPILE} -o ${OBJDIR}/fftpack.o ${OBJDIR}/fftpack_d.f90
+	${COMPILE} -o ${OBJDIR}/fftpack.o ${OBJDIR}/fftpack_d.${FEXT}
 	ar -ru ${OBJDIR}/libfftpack.a ${OBJDIR}/fftpack.o
 	${OPTRM} ${OBJDIR}/fftpack.o
 #
