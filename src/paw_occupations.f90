@@ -1265,6 +1265,8 @@ REAL(8)::EV
        REAL(8)              :: QTOL=1.D-10
        INTEGER(4),PARAMETER :: NITER=1000
        INTEGER(4)           :: ITER
+       integer(4)           :: nfilo
+       real(8)              :: sum
 integer(4) :: ntasks,thistask
 integer(4) :: count = 0
 !      *****************************************************************
@@ -1327,6 +1329,31 @@ close(10)
        TMPSIDOT2=ALLOCATED(MPSIDOT2)
 !      IF(TMPSIDOT2) PRINT*,'MPSIDOT2',MPSIDOT2
 !      IF(TMPSIDOT2) PRINT*,'E+MPSIDOT2',EPSILON+MPSIDOT2
+!
+!      =================================================================
+!      ==  TEST FOR FIXED OCCUPATIONS:                                ==
+!      ==  IF ALL OCCUPATIONS ARE ZERO OR ONE, THE FORCES VANISH      ==
+!      ==  THEREFORE THE DYNAMICS CANNOT START HERE. AS REMEDY THE    ==
+!      ==  OCCUPATIONS ARE RESET TO THE FERMI DISTRIBUTION FUNCTION   ==
+!      =================================================================
+       SUM=0.D0
+       DO ISPIN=1,NSPIN
+         DO IKPT=1,NKPT
+           DO IB=1,NB
+             SVAR=X0(IB,IKPT,ISPIN)
+             SUM=SUM+(SVAR*(1.D0-SVAR))**2
+           ENDDO
+         ENDDO
+       ENDDO
+       SUM=SQRT(SUM/REAL(NSPIN*NKPT*NB,KIND=8))
+       IF(SUM.LE.DSMALL) THEN
+         CALL FILEHANDLER$UNIT('PROT',NFILO)
+         WRITE(NFILO,FMT='("WARNING: OCCUPATIONS RESET TO FERMI DISTRIBUTION")')
+         CALL DYNOCC_INIOCCBYENERGY(NB,NKPT,NSPIN,FMAX &
+&          ,TEMP,TFIXTOT,TOTCHA,TOTPOT,TFIXSPIN,SPINCHA,SPINPOT &
+&          ,WKPT,EPSILON,X0)
+          XM(:,:,:)=X0(:,:,:)
+       END IF
 !
 !      =================================================================
 !      ==  AVOID ESCAPING OCCUPATIONS BY IMPOSING PERIODIC            ==
