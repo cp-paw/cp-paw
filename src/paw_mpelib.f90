@@ -422,7 +422,7 @@ CONTAINS
 !     ******************************************************************
       fromtaskstd=fromtask
       tagstd=tag
-      CALL MPI_RECV(VAL,<SIZE>,<MPI_TYPE>,FROMTASK-1,TAG &
+      CALL MPI_RECV(VAL,<SIZE>,<MPI_TYPE>,FROMTASKstd-1,TAGstd &
      &               ,MPI_COMM_WORLD,STAT,IERR)        
 #ELSE
       CALL ERROR$MSG('MPE$RECEIVE MUST NOT BE CALLED IN SCALAR MODE')
@@ -455,7 +455,7 @@ CONTAINS
 !     ******************************************************************
       fromtaskstd=fromtask
       tagstd=tag
-      CALL MPI_RECV(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,FROMTASK-1,TAG &
+      CALL MPI_RECV(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,FROMTASKstd-1,TAGstd &
      &               ,MPI_COMM_WORLD,STAT,IERR)        
 #ELSE
       VAL(:)=' '
@@ -488,7 +488,7 @@ CONTAINS
 !     ******************************************************************
       fromtaskstd=fromtask
       tagstd=tag
-      CALL MPI_RECV(VAL,LEN(VAL),MPI_CHARACTER,FROMTASK-1,TAG &
+      CALL MPI_RECV(VAL,LEN(VAL),MPI_CHARACTER,FROMTASKstd-1,TAGstd &
      &               ,MPI_COMM_WORLD,STAT,IERR)        
 #ELSE
       VAL=' '
@@ -611,13 +611,15 @@ CONTAINS
       INTEGER(4),INTENT(IN) :: TOTASK
       <TYPE>    ,INTENT(IN) :: INVAL<RANK>
       <TYPE>    ,INTENT(OUT):: OUTVAL<RANK+1>
+      INTEGER               :: totaskstd
       INTEGER               :: LENG
       INTEGER               :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
+        totaskstd=totask
         LENG=<SIZE>
         CALL MPI_GATHER(INVAL,LENG,<MPI_TYPE>,OUTVAL,LENG,<MPI_TYPE> &
-     &                 ,TOTASK-1,MPI_COMM_WORLD,IERR)
+     &                 ,TOTASKstd-1,MPI_COMM_WORLD,IERR)
 #ELSE
         OUTVAL<RANK,1>=INVAL<RANK>
 #ENDIF
@@ -793,7 +795,7 @@ END MODULE MPE_GATHER_MODULE
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
       sizestd=size
-      CALL MPI_ALLTOALL(INVAL,SIZE,MPI_BYTE,OUTVAL,SIZE &
+      CALL MPI_ALLTOALL(INVAL,SIZEstd,MPI_BYTE,OUTVAL,SIZEstd &
      &                  ,MPI_BYTE,MPI_COMM_WORLD,IERR)
 #ELSE
       OUTVAL(:)=INVAL(:)
