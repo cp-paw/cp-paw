@@ -1,0 +1,102 @@
+#!/bin/sh
+set +x
+#=============================================================
+#==                                                         ==
+#==  name: f90pp                                            ==
+#==                                                         ==
+#==  purpose: fortran90 preprocessor                        ==
+#==    1) expands templates                                 ==
+#==    2) replaces dollar signs in subroutine names         ==
+#==       to conform with fortran90 standard                ==
+#==    3) remove xlf compiler options when required         ==
+#==    4) lowercase cpp directives                          ==
+#==    5) run c-preprocessor cpp                            ==
+#==                                                         ==
+#==  options                                                ==
+#==    -arch name                                           ==
+#==       adapt transformations to the compiler             ==
+#==       name can be "xlf", "dec", "absoft"                ==
+#==       use dec if you are using a different compiler     ==
+#==    -Dname                                               ==
+#==       directive for the cpp preprocessor                ==
+#==                                                         ==
+#==  remark                                                 ==
+#==     1) change the path of the cpp preprocessor          ==
+#==                                                         ==
+#=============================================================
+#
+# The following block of variables is defined by the
+# configure script
+#
+PAWDIR="@PAWDIR@"
+BINDIR="@BINDIR@"
+SRCDIR="@SRCDIR@"
+ARCH="@ARCH@"
+CPP="@CPP@"
+CPPVAR="@CPPVAR@"
+f90ARCH="@f90ARCH@"
+fortARCH="@fortARCH@"
+xlf90ARCH="@xlf90ARCH@"
+#
+# process command line arguments
+#
+typeset -i NOPTIONS="$#"
+set -A OPTIONS -- "$@"
+TEMPLATES=T
+while (( $# )); do
+  case "$1" in
+    -notemplates)           # use this option to transform f90pp_tmplts.f
+     TEMPLATES="F"
+     shift
+     ;;
+    -parallel)           # use this option to transform f90pp_tmplts.f
+     CPPVAR="$CPPVAR -DCPPVARIABLE_PARALLEL"
+     shift
+     ;;
+   -*)
+    echo "\n unknown option $1 in f90pp"
+    exit 1
+    ;;
+   *)
+    ARG=$1
+    break
+    ;;
+  esac
+done
+#
+#
+#=========================================================================
+#== define the c-processor                                              ==
+#=========================================================================
+# -C does not remove C-comment lines (starting //)
+# -P Preprocesses input without producing line control information for the next pass of the C compiler.
+# -DName[=Definition] Defines Name as in a #define directive. The default Definition is 1.
+case $ARCH in
+  $xlf90ARCH) CPP="$CPP -P -C" ;;
+  *) CPP="$CPP -P -C" ;;
+esac
+CPP="$CPP $CPPVAR"
+#
+#=========================================================================
+#== define the transformations required                                 ==
+#=========================================================================
+#remove compiler directives for compilers other than the IBM xlf
+DO1="${BINDIR}/${ARCH}/f90pp_tmplts.x"
+#sed /^@/d removes all lines beginning with @
+case "$ARCH" in
+  ${xlf90ARCH}) DO2="cat" ;;
+             *)   DO2="sed /^@/d" ;;    # remove xlf compiler options
+esac
+# make directives for the c-preprocessor lowercase
+DO3="sed -f ${SRCDIR}/F90PP/f90pp.sed"
+#
+#=========================================================================
+# execute the chain of transformations and send result to standard output
+#=========================================================================
+case "$TEMPLATES" in
+  F) $DO3 < $ARG ;;    # d only those transformations required for f90pp_tmplts.f
+  *) $DO1 < $ARG | $DO2 | $DO3 | $CPP ;;
+esac
+exit 0
+
+
