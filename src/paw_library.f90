@@ -276,7 +276,7 @@
       IF (W .LT. 2.2D0) THEN
           T = W * W
           K = INT(T)
-          T = T - REAL(K,8)
+          T = T - REAL(K,kind=8)
           K = K * 13
           Y = (((((((((((( A(K    )*T + A(K+ 1)) * T + &
      &        A(K+ 2))*T + A(K+ 3))*T + A(K+ 4)) * T + &
@@ -285,7 +285,7 @@
      &        A(K+11))*T + A(K+12))*W
       ELSE IF (W .LT. 6.9D0) THEN
           K = INT(W)
-          T = W - REAL(K,8)
+          T = W - REAL(K,kind=8)
           K = 13 * (K - 2)
           Y = (((((((((((B(K) * T + B(K + 1)) * T + &
      &        B(K + 2)) * T + B(K + 3)) * T + B(K + 4)) * T + &
@@ -372,7 +372,7 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT) :: X
 !     ******************************************************************
       SEED=MODULO(RANFAC1*SEED,RANFAC2)
-      X=REAL(SEED,8)/REAL(RANFAC2,8)
+      X=REAL(SEED,kind=8)/REAL(RANFAC2,kind=8)
 !     == CHOICE EXPLICIT CPPVARIABLE_XLF RNG
 !     CALL RANDOM_NUMBER(Y)
       RETURN
@@ -974,7 +974,7 @@ END MODULE RANDOM_MODULE
       IF(ISIGN.EQ.1) THEN
         DO IFFT=1,NFFT
           DO I=1,LEN
-            SEQUENCE(2*I-1)= REAL(X(I,IFFT))
+            SEQUENCE(2*I-1)= REAL(X(I,IFFT),kind=8)
             SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
           ENDDO
           CALL CFFTF(LEN,SEQUENCE,AUX2,IAUX)
@@ -985,7 +985,7 @@ END MODULE RANDOM_MODULE
       ELSE
         DO IFFT=1,NFFT
           DO I=1,LEN
-            SEQUENCE(2*I-1)= REAL(X(I,IFFT))
+            SEQUENCE(2*I-1)= REAL(X(I,IFFT),kind=8)
             SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
           ENDDO
           CALL CFFTB(LEN,SEQUENCE,AUX2,IAUX)

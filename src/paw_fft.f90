@@ -1875,12 +1875,12 @@ END MODULE PLANEWAVE_MODULE
 !         ==============================================================
           IF(IFFT+1.LE.NFFT) THEN
             DO IR=1,NRL
-              FOFR(IR,IFFT)  =REAL(FOFR1(IR))
+              FOFR(IR,IFFT)  =REAL(FOFR1(IR),kind=8)
               FOFR(IR,IFFT+1)=AIMAG(FOFR1(IR))
             ENDDO
           ELSE
             DO IR=1,NRL
-              FOFR(IR,IFFT)=REAL(FOFR1(IR))
+              FOFR(IR,IFFT)=REAL(FOFR1(IR),kind=8)
             ENDDO
           END IF
         ENDDO

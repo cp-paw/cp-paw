@@ -317,9 +317,9 @@
 !     ==  DEFINE GGAMMA,RHOGAMMA                                      ==
 !     ==================================================================
       IF(NGAMMA.NE.0) THEN
-        RHOGAMMA=REAL(RHO(NGAMMA))
+        RHOGAMMA=REAL(RHO(NGAMMA),kind=8)
         DO I=1,NAT*NFCT
-           GGAMMA(I)=REAL(F(NGAMMA,I))
+           GGAMMA(I)=REAL(F(NGAMMA,I),kind=8)
         ENDDO
       ELSE
         RHOGAMMA=0.D0
@@ -857,7 +857,7 @@
         G2=G(1,IG)**2+G(2,IG)**2+G(3,IG)**2
         CALL ISOLATE_WEIGHTFUNCTION(G2,W)
         CSVAR=F1(IG)*CONJG(F2(IG))*W
-        RES=RES+REAL(CSVAR)
+        RES=RES+REAL(CSVAR,kind=8)
         SVAR=AIMAG(CSVAR) 
         GRAD(1)=GRAD(1)+G(1,IG)*SVAR
         GRAD(2)=GRAD(2)+G(2,IG)*SVAR
@@ -1001,13 +1001,13 @@
       DO I=1,3
         D(I)=0.D0
       ENDDO
-      QTOT=QTOT+REAL(RHO(1))*FOURPI/3.D0*RMAX**3
-      QTTOT=REAL(RHO(1))*VOL
+      QTOT=QTOT+REAL(RHO(1),kind=8)*FOURPI/3.D0*RMAX**3
+      QTTOT=REAL(RHO(1),kind=8)*VOL
       DO IG=2,NG
         G1=DSQRT(G(1,IG)**2+G(2,IG)**2+G(3,IG)**2)
         GRMAX=G1*RMAX
         F=(DSIN(GRMAX)-GRMAX*DCOS(GRMAX))/GRMAX**3
-        QTOT=QTOT+FOURPI*F*RMAX**3*(2.D0*REAL(RHO(IG)))
+        QTOT=QTOT+FOURPI*F*RMAX**3*(2.D0*REAL(RHO(IG),kind=8))
 !
         F=(3.D0*DSIN(GRMAX)-3.D0*GRMAX*DCOS(GRMAX)-GRMAX**2*DSIN(GRMAX)) &
      &      /GRMAX**5

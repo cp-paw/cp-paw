@@ -1430,7 +1430,7 @@ END MODULE SORT_MODULE
                    DO IR2=1,NBAS
                     EIGR12=EIGR1*EIGR(IR2)
                     SINFAC=SINFAC-AIMAG(EIGR12)*Q(IR2)
-                    COSFAC=COSFAC+REAL(EIGR12)*Q(IR2)
+                    COSFAC=COSFAC+REAL(EIGR12,kind=8)*Q(IR2)
                   ENDDO
                   SINFAC=SINFAC*GFAC
                   COSFAC=COSFAC*GFAC 
