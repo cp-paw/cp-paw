@@ -1273,6 +1273,8 @@ Print*,'ilda ',ilda
         IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'OLD',0,TCHK)
         CALL LINKEDLIST$GET(LL_CNTL,'OLD',1,TCHK)
         CALL TIMESTEP$SETL4('NEWTHERMOSTAT',.NOT.TCHK)
+!       == THIS  IS IMPORTANT FOR THE NEW WAVE FUNCTION THERMOSTAT =====
+        CALL THERMOSTAT$SETL4('COOLONLY',.NOT.TCHK)
       END IF
 !
                             CALL TRACE$POP
@@ -1377,6 +1379,12 @@ Print*,'ilda ',ilda
 !     == COLLECT DATA                                                 ==
 !     ==================================================================
       CALL DYNOCC$SETL4('DYN',TON)
+!
+!     == RESTART WITH OCCUPATIONS FROM STRC FILE =======================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'MOVE',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'MOVE',0,.TRUE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'MOVE',0,TCHK)
+      CALL DYNOCC$SETL4('DYN',TCHK)
 !
 !     == RESTART WITH OCCUPATIONS FROM STRC FILE =======================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'START',1,TCHK)

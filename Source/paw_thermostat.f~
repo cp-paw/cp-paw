@@ -53,7 +53,6 @@ TYPE THERMOSTAT_TYPE
 ! == ACTUAL SETTING USED ===============================================
   CHARACTER(32):: ID          ! THERMOSTAT ID
   LOGICAL(4)   :: ON          ! ON/OFF SWITCH FOR THE THERMOSTAT
-  logical(4)   :: twave       ! use special wave function thermostat
   LOGICAL(4)   :: STOP        ! INITIAL DX/DT IS SET TO ZERO 
   REAL(8)      :: DT          ! TIME STEP FOR X(T)
   REAL(8)      :: Q           ! MASS OF THE NOSE VARIABLE
@@ -108,7 +107,6 @@ END MODULE THERMOSTAT_MODULE
 !   
       THIS%ID      =ID
       THIS%ON      =.FALSE.      
-      this%twave   =.false.
       THIS%DT      =0.D0
       THIS%Q       =0.D0
       THIS%FRICTION=0.D0
@@ -377,15 +375,16 @@ END MODULE THERMOSTAT_MODULE
 !
 !     == UPDATE FRICTION ===============================================
       VNOS =(XP-XM)/(2.D0*DT)
-      IF(THIS%twave) THEN  
-        IF(VNOS.LT.0) THEN !switch off when heating
-          xp=x0
-          THIS%XM  =X0
-          THIS%XMM =X0
-          THIS%XMMm=X0
-          vnos=0.d0
-        END IF
-      END IF
+IF(THIS%ID.EQ.'WAVES') THEN
+print*,'thermostat fudge =========================='
+  IF(VNOS.LT.0) THEN
+    xp=x0
+    THIS%XM  =X0
+    THIS%XMM =X0
+    THIS%XMMm=X0
+    vnos=0.d0
+  END IF
+END IF
       ANNER=0.5D0*DT*VNOS
       ANNER=MAX(ANNER,-0.99999D0)
       ANNER=MIN(ANNER,1.d0)
@@ -397,8 +396,11 @@ END MODULE THERMOSTAT_MODULE
       THIS%COOLING= ANNER
       THIS%EKIN   = 0.5D0*THIS%Q*VNOS**2 
       THIS%EPOT   = 2.D0*THIS%EKIN_TARGET*X0
-      if(this%twave) this%epot=0.d0
       THIS%EDISS  = THIS%EDISS+ANNEX*0.5D0*QMASS*VNOS**2
+!
+!     ==================================================================
+!     ==  PRINTOUT FOR TEST                                           ==
+!     ==================================================================
 !
 !     ==================================================================
 !     ==  PRINTOUT FOR TEST                                           ==
@@ -612,8 +614,6 @@ print*,'therm cooling 2 ',XDOT*DT/2.D0
          THIS%ON=VAL
       ELSE IF(ID.EQ.'STOP') THEN
          THIS%STOP=VAL
-      ELSE IF(ID.EQ.'COOLONLY') THEN
-         THIS%TWAVE=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)

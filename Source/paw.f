@@ -39,7 +39,6 @@
       CALL TRACE$PUSH('MAIN')
                               CALL TIMING$START
       CALL PAW
-
 !
 !     ==================================================================
 !     ==  END OF CARPARRINELLO CALCULATION                            ==
@@ -506,7 +505,8 @@
           CALL ATOMS$EFFEKIN(EKIN)
           CALL THERMOSTAT$SETR8('TARGET',EKIN)
         END IF
-        CALL ENERGYLIST$RETURN('WAVEFUNCTION KINETIC ENERGY',EKIN)
+!       CALL ENERGYLIST$RETURN('WAVEFUNCTION KINETIC ENERGY',EKIN)
+        CALL WAVES$GETR8('EKIN(PSI)',EKIN)
         CALL THERMOSTAT$SETR8('EKIN(SYSTEM)',EKIN)
         CALL THERMOSTAT$PROPAGATE()
       END IF
@@ -785,8 +785,10 @@ END MODULE STOPIT_MODULE
 !     ..................................................................
       SUBROUTINE PRINFO(TPRINT,NFI,DELT)
 !     ******************************************************************
+!     **  reports on the process of the simulation and invokes        ** 
+!     **  analysis routines                                           ** 
 !     **                                                              ** 
-!     **                                                              ** 
+!     **  prinfo is called once per timestep                          ** 
 !     ******************************************************************
       USE CONTINUUM_CONTROL_MODULE
       IMPLICIT NONE

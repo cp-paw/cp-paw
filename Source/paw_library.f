@@ -6,37 +6,52 @@
 !**                                                                   **
 !***********************************************************************
 !***********************************************************************
-
-#IF DEFINED(CPPVARIABLE_ABS)
+! CPPVAR_FFT_FFTW      USE FFTW FOR FOURIRT TRANSFORMS
+! CPPVAR_FFT_ESSL      USE ESSL FOR FOURIER TRANSFORMS
+! CPPVAR_FFT_PACK      USE EXPLICIT FFT
+!
+! CPPVAR_BLAS_ATLAS    USE ATLAS BLAS
+! CPPVAR_BLAS_ESSL     USE ESSL
+! CPPVAR_BLAS_EXPLICIT USE EXPLICIT BLAS
+!
+! CPPVAR_LANGEXT_XLF   LANGUAGE EXTENSIONS XLF
+!
+! CPPVAR_SUPPORT_XLF
+! CPPVAR_SUPPORT_ABS
+! CPPVAR_SUPPORT_DEC
+!
+! CPPVAR_ERF_EXPLICIT  USE EXPLICIT ERF AND ERFC
+! CPPVAR_ERF_IMPLICIT  USE IMPLICIT ERF AND ERFC
+!
+! CPPVAR_USAGE_EXIST  C-ROUTINE GETRUSAGE AVAILABLE
+!
 !=============== ENVIRONMENT ABSOFT COMPILER =========================
 !    IT ASSUMES THE ATLAS LAPACK AND BLAS ROUTINES TO BE LINKED
 !    IT ASSUMES THE ABSOFT SUPPORT LIBRARY LIBU77.A  TO BE LINKED
 !    IT ASSUMES THE FAST FOURIER TRANSFORM LIBRARY LIBFFTW.A  TO BE LINKED
-#DEFINE CPPVAR_FFTW
-#DEFINE CPPVAR_ATLAS
-#DEFINE CPPVAR_U77
-
-#ELIF DEFINED(CPPVARIABLE_XLF)
+#IF DEFINED(CPPVARIABLE_ABS)
+#DEFINE CPPVAR_FFT_FFTW
+#DEFINE CPPVAR_BLAS_ATLAS
+#DEFINE CPPVAR_SUPPORT_ABS
 !=============== ENVIRONMENT IBM AIX ===================================
 !    IT ASSUMES THE ESSL LIBRARY TO BE LINKED
 !    IT USES XLF SPECIFIC SUPPORT ROUTINES AND LANGUAGE EXTENSIONS
-#DEFINE CPPVAR_ESSL 
-#DEFINE CPPVAR_XLFSUP
-#DEFINE CPPVAR_XLFEXT
-#DEFINE CPPVAR_GETRUSAGE
+#ELIF DEFINED(CPPVARIABLE_XLF)
+#DEFINE CPPVAR_FFT_ESSL
+#DEFINE CPPVAR_BLAS_ESSL 
+#DEFINE CPPVAR_SUPPORT_XLF
+#DEFINE CPPVAR_LANGEXT_XLF  
+#DEFINE CPPVAR_USAGE_EXIST
 !#UNDEFINE EXLICITERF
-
-#ELIF DEFINED(CPPVARIABLE_DEC)
 !=============== ENVIRONMENT DEC ALPHA =================================
-#DEFINE CPPVAR_FFTW
-#DEFINE CPPVAR_ATLAS
-#DEFINE CPPVAR_GETRUSAGE
-
-#ELSE
+#ELIF DEFINED(CPPVARIABLE_DEC)
+#DEFINE CPPVAR_FFT_FFTW
+#DEFINE CPPVAR_BLAS_ATLAS
 !=============== FREE ENVIRONMENT ===== =================================
 ! MAKES NO ASSUMPTIONS ABOUT THE ENVIRONMENT
-#DEFINE CPPVAR_FFTPACK
-
+#ELSE
+#DEFINE CPPVAR_FFT_PACK
+#DEFINE CPPVAR_BLAS_EXPLICIT
 #ENDIF 
 
 #IFNDEF CPPVARIABLE_XLF 
@@ -95,9 +110,9 @@
       REAL(4)                :: TARRAY(2) ! ELAPSED USER/SYSTEM TIME
       REAL(4)                :: TOTAL
 !     ******************************************************************
-#IF DEFINED(CPPVAR_XLFSUP)
+#IF DEFINED(CPPVAR_SUPPORT_XLF)
       CALL TIMES(NTIME)     !XLF
-#ELIF DEFINED(CPPVAR_U77)
+#ELIF DEFINED(CPPVAR_SUPPORT_ABS)
       TOTAL=ETIME(TARRAY)   ! FROM ABSOFT SUPPORT LIBRARY LIBU77.A
       NTIME=NINT(100*TOTAL)
 #ELSE 
@@ -163,7 +178,7 @@
       USG%NIVCSW=0     
 !     ==================================================================
 !     ==================================================================
-#IF DEFINED(CPPVAR_GETRUSAGE)
+#IF DEFINED(CPPVAR_USAGE_EXIST)
       RC=GETRUSAGE(%VAL(0),USG)    ! C-ROUTINE
       IF(RC.NE.0) THEN
         CALL ERROR$MSG('ERROR CALLING MYGETRUSAGE')
@@ -173,6 +188,7 @@
 !
       CPUTIME=(REAL(USG%UTIME(1)+USG%STIME(1),KIND=8) &
      &        +REAL(USG%UTIME(2)+USG%STIME(2),KIND=8))*1.D-6
+      cputime=max(cputime,1.d-6)
       IF(ID.EQ.'MAXMEM') THEN
         VALUE=REAL(USG%MAXRSS,KIND=8)*KBYTE
       ELSE IF(ID.EQ.'USRTIME') THEN
@@ -193,7 +209,7 @@
       END IF
       RETURN
       END
-#IF DEFINED(CPPVAR_XLFEXT)
+#IF DEFINED(CPPVAR_LANGEXT_XLF)
 !     ..................................................................
       SUBROUTINE LIB$ERFR8(X,Y)
 !     ******************************************************************
@@ -216,7 +232,6 @@
 !     ******************************************************************
       REAL(8),INTENT(IN) :: X
       REAL(8),INTENT(OUT):: Y
-      REAL(8), EXTERNAL :: DERFC
 !     ******************************************************************
       Y=DERFC(X)
       RETURN
@@ -429,7 +444,7 @@ END MODULE RANDOM_MODULE
 !     ..................................................................
       SUBROUTINE LIB$RANDOMSEED
 !     ****************************************************************** 
-!     **  choose a seed  for the nadom number generator               **
+!     **  CHOOSE A SEED  FOR THE NADOM NUMBER GENERATOR               **
 !     ******************************************************************
       USE RANDOM_MODULE
       IMPLICIT NONE
@@ -460,7 +475,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: NAUX
       REAL(8)               :: AUX(100*N)
       INTEGER(4)            :: I,J
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       REAL(8)               :: RCOND
       REAL(8)               :: DET(2)
 #ELSE 
@@ -474,7 +489,7 @@ END MODULE RANDOM_MODULE
           AINV(I,J)=A(I,J)
         ENDDO
       ENDDO
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL DGEICD(AINV,N,N,0,RCOND,DET,AUX,NAUX) !ESSL
 #ELSE 
       CALL DGETRF(N,N,AINV,N,IPIV,INFO) !LAPACK
@@ -517,7 +532,7 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT):: E(N)
       REAL(8)   ,INTENT(OUT):: U(N,N)
       REAL(8)               :: WORK1((N*(N+1))/2)
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       REAL(8)               :: WORK2(2*N)
 #ELSE
       REAL(8)               :: WORK2(3*N)
@@ -542,7 +557,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       IF(TESSLERR) THEN
         CALL EINFO(0)
         CALL ERRSAV(2101,SAV2101)
@@ -564,7 +579,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == ESSL ERROR HANDLING                                          ==
 !     ==================================================================
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
  400  CONTINUE
       CALL ERROR$MSG('DIAGONALIZATION NOT CONVERGED')
       IF(TESSLERR) THEN
@@ -612,7 +627,7 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT):: E(N)
       COMPLEX(8),INTENT(OUT):: U(N,N)
       COMPLEX(8)            :: WORK1((N*(N+1))/2)
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       REAL(8)               :: RWORK(4*N)
 #ELSE
       COMPLEX(8)            :: CWORK(2*N)
@@ -646,7 +661,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       IF(TESSLERR) THEN
         CALL EINFO(0)
         CALL ERRSAV(2101,SAV2101)
@@ -690,7 +705,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == ESSL ERROR HANDLING                                          ==
 !     ==================================================================
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
  400  CONTINUE
       CALL ERROR$MSG('DIAGONALIZATION NOT CONVERGED')
       IF(TESSLERR) THEN
@@ -729,11 +744,11 @@ END MODULE RANDOM_MODULE
       COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
 !     *******************************************************************
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_FFT_ESSL)
       CALL LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
-#ELIF DEFINED(CPPVAR_FFTW)
+#ELIF DEFINED(CPPVAR_FFT_FFTW)
       CALL LIB_FFTW(DIR,LEN,NFFT,X,Y)
-#ELIF DEFINED(CPPVAR_FFTPACK)
+#ELIF DEFINED(CPPVAR_FFT_PACK)
       CALL LIB_FFTPACK(DIR,LEN,NFFT,X,Y)
 #ELSE
       CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
@@ -742,7 +757,7 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 !
-#IF DEFINED(CPPVAR_FFTW)
+#IF DEFINED(CPPVAR_FFT_FFTW)
 !     ..................................................................
       SUBROUTINE LIB_FFTW(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -827,7 +842,7 @@ END MODULE RANDOM_MODULE
 #ENDIF
 !
 !DCFT:  1-D FFT P765
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_FFT_ESSL)
 !     ..................................................................
       SUBROUTINE LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -893,7 +908,7 @@ END MODULE RANDOM_MODULE
 #ENDIF
 !
 !DCFT:  1-D FFT P765
-#IF DEFINED(CPPVAR_FFTPACK)
+#IF DEFINED(CPPVAR_FFT_PACK)
 !     ..................................................................
       SUBROUTINE LIB_FFTPACK(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -1001,7 +1016,7 @@ END MODULE RANDOM_MODULE
 !     ******************************************************************
       IF (TINIT) THEN
         TINIT=.FALSE.
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_FFT_ESSL)
 !       == ALLOWED LENGTH FOR THE ESSL FFT =============================
         COUNT=0
         OUTER: DO H=1,25
@@ -1019,7 +1034,7 @@ END MODULE RANDOM_MODULE
             ENDDO
           ENDDO
         ENDDO OUTER
-#ELIF DEFINED(CPPVAR_FFTW)
+#ELIF DEFINED(CPPVAR_FFT_FFTW)
         COUNT=0
         OUTER: DO H=1,25
           DO I=0,2
@@ -1091,11 +1106,11 @@ END MODULE RANDOM_MODULE
       COMPLEX(8)              :: X(N1,N2,N3)
       COMPLEX(8)              :: Y(N1,N2,N3)
 !     ******************************************************************
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_FFT_ESSL)
       CALL LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
-#ELIF DEFINED(CPPVAR_FFTW)
+#ELIF DEFINED(CPPVAR_FFT_FFTW)
       CALL LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
-!#ELIF DEFINED(CPPVAR_FFTPACK)
+!#ELIF DEFINED(CPPVAR_FFT_PACK)
 !      CALL LIB_3DFFTPACK(DIR,LEN,NFFT,X,Y)
 #ELSE
       CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
@@ -1103,8 +1118,8 @@ END MODULE RANDOM_MODULE
 #ENDIF
       RETURN
       END
-#IF DEFINED(CPPVAR_FFTW)
 !
+#IF DEFINED(CPPVAR_FFT_FFTW)
 !     ..................................................................
       SUBROUTINE LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
 !     ******************************************************************
@@ -1182,7 +1197,7 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 !
-#ELIF DEFINED(CPPVAR_ESSL)
+#ELIF DEFINED(CPPVAR_FFT_ESSL)
 !     ..................................................................
       SUBROUTINE LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
 !     ******************************************************************
@@ -1241,11 +1256,11 @@ END MODULE RANDOM_MODULE
       END IF
       ALLOCATE(AUX(NAUX))
       CALL DCFT3(X,N1,N1*N2,Y,N1,N1*N2,N1,N2,N3,ISIGN,SCALE,AUX,NAUX)
-      DEALLOCATE(AUX(NAUX))
+      DEALLOCATE(AUX)
       RETURN
       END
-#ELIF DEFINED(CPPVAR_FFTPACK)
 !
+#ELIF DEFINED(CPPVAR_FFT_PACK)
 !     ..................................................................
       SUBROUTINE LIB_3DFFTPACK(DIR,N1,N2,N3,X,Y)
 !     ******************************************************************
@@ -1317,9 +1332,9 @@ END MODULE RANDOM_MODULE
       REAL(8)     ,PARAMETER:: ONE=1.D0
       REAL(8)     ,PARAMETER:: ZERO=0.D0
 !     ******************************************************************
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL DGEMUL(A,N,'N',B,M,'N',C,N,N,M,L)
-#ELIF DEFINED(CPPVAR_ATLAS)
+#ELIF DEFINED(CPPVAR_BLAS_ATLAS)
       CALL DGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
 #ELSE
       C=MATMUL(A,B)
@@ -1344,9 +1359,9 @@ END MODULE RANDOM_MODULE
       COMPLEX(8)  ,PARAMETER:: ONE=(1.D0,0.D0)
       COMPLEX(8)  ,PARAMETER:: ZERO=(0.D0,0.D0)
 !     ******************************************************************
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL ZGEMUL(A,N,'N',B,M,'N',C,N,N,M,L)
-#ELIF DEFINED(CPPVAR_ATLAS)
+#ELIF DEFINED(CPPVAR_BLAS_ATLAS)
       CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
 #ELSE
       C=MATMUL(A,B)
@@ -1375,7 +1390,7 @@ END MODULE RANDOM_MODULE
       COMPLEX(8),ALLOCATABLE  :: WORK(:,:)
       INTEGER(4)              :: I,J,K
 !     ******************************************************************
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       IF(TID) THEN
         ALLOCATE(WORK(N,M))
         WORK=A
@@ -1437,7 +1452,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: I,J,K
       REAL(8)               :: SUM
 !     ******************************************************************
-#IF DEFINED(XLF)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL DGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'T',OPERATOR,LEN1,LEN1,N,LEN2)
 #ELSE 
       DO I=1,LEN1
@@ -1469,7 +1484,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: I,J,K
       COMPLEX(8)            :: SUM
 !     ******************************************************************
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL ZGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'C',OPERATOR,LEN1,LEN1,N,LEN2)
 #ELSE 
       DO I=1,LEN1
@@ -1507,7 +1522,7 @@ END MODULE RANDOM_MODULE
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTR8')
       END IF
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       IF(TID) THEN
 !       ==  OVERLAP(I,J) = 0.D0*OVERLAP+1.D0*SUM_K:PSI1(K,I)*PSI1(K,J) =
         CALL DSYRK('U','T',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
@@ -1568,7 +1583,7 @@ END MODULE RANDOM_MODULE
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTC8')
       END IF
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       IF(TID) THEN
         CALL ZHERK('U','C',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
         DO I=1,N1
@@ -1621,7 +1636,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)               :: I
       CHARACTER(8),PARAMETER   :: LIB='ESSL'
 !     ******************************************************************
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
         CALL ZAXPY(N,FAC,X,1,Y,1)
 #ELSE
         DO I=1,N
@@ -1647,7 +1662,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)               :: I
       CHARACTER(8),PARAMETER   :: LIB='ESSL'
 !     ******************************************************************
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       IF(FAC.EQ.1.D0) THEN
         CALL DAXPY(N,FAC,X,1,Y,1)
       ELSE IF(FAC.EQ.-1.D0) THEN
@@ -1708,7 +1723,7 @@ END MODULE RANDOM_MODULE
         ALLOCATE(AFACT(N,N))
         ALLOCATE(IPVT(N)) 
         AFACT=A
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
         CALL DGEF(AFACT,N,N,IPVT)
         X=B
         CALL DGES(AFACT,N,N,IPVT,X,0)
@@ -1721,7 +1736,7 @@ END MODULE RANDOM_MODULE
         DEALLOCATE(IPVT)
       ELSE   !SINGULAR VALUE DECOMPOSITION
         NM=MAX(1,MAX(N,M))
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
         ALLOCATE(AFACT(NM,M))
         ALLOCATE(BFACT(N,NEQ))
         AFACT(1:N,:)=A
@@ -1777,7 +1792,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)              :: IHELP
       INTEGER(4)              :: I,J
 !     ******************************************************************
-#IF DEFINED(CPPVAR_ESSL)
+#IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL ISORT(X,1,N)
 #ELSE
       DO I=1,N-1
@@ -1801,7 +1816,7 @@ END MODULE RANDOM_MODULE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
 !     *********************************************************************
-#IF DEFINED(CPPVAR_XLFSUP)
+#IF DEFINED(CPPVAR_SUPPORT_XLF)
       RC=HOSTNM_(HOSTNAME)    ! XLF SUPPORT LIBRARY
       IF(RC.NE.0)HOSTNAME='UNKNOWN'
 #ELSE
@@ -1818,15 +1833,15 @@ END MODULE RANDOM_MODULE
 !     *********************************************************************
       INTEGER(4),INTENT(IN) :: N
 !     *********************************************************************
-#IF DEFINED(CPPVAR_XLFSUP)
+#IF DEFINED(CPPVAR_SUPPORT_XLF
       CALL FLUSH_(N)  ! XLF USPPORT LIBRARY
-#ELIF DEFINED(CPPVAR_U77)
+#ELIF DEFINED(CPPVAR_SUPPORT_ABS)
       CALL FLUSH(N) ! FROM ABSOFT SUPPORT LIBRARY (UNDERSCORE)
 #ENDIF
       RETURN
       END 
 !
-#IFNDEF CPPVAR_ESSL
+#IFNDEF CPPVAR_BLAS_ESSL
 !
 !     ..................................................................
       SUBROUTINE DGEFA(A,LDA,N,IPVT,INFO)
@@ -2008,7 +2023,7 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 #ENDIF
-#IF DEFINED(CPPVAR_FFTPACK)
+#IF DEFINED(CPPVAR_FFT_PACK)
 !
 !     ..................................................................
       SUBROUTINE CFFTB(N,C,WA,IFAC)

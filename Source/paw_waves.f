@@ -3151,6 +3151,8 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       COMPLEX(8)             :: CSVAR
       REAL(8)   ,ALLOCATABLE :: NORM(:)
       REAL(8)   ,ALLOCATABLE :: RMAT(:,:),ROMAT(:,:),ROOMAT(:,:),RLAMBDA(:,:)
+      integer(4),ALLOCATABLE :: SMAP(:)
+      INTEGER(4)             :: I1,J1,K
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES$ORTHOGONALIZE')
                              CALL TIMING$CLOCKON('WAVES$ORTHOGONALIZE')
@@ -3340,19 +3342,22 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
 !         ==  NOW ADD OVERLAP OF PSEUDO WAVE FUNCTIONS                ==
 !         ==============================================================
           ALLOCATE(AUXMAT(NB,NB))
-          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM,THIS%PSIM,AUXMAT)
+          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB &
+      &                     ,THIS%PSIM,THIS%PSIM,AUXMAT)
           DO I=1,NB
             DO J=1,NB
               MAT(I,J)=MAT(I,J)+AUXMAT(I,J)
             ENDDO
           ENDDO
-          CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB,THIS%OPSI,THIS%PSIM,AUXMAT)
+          CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB &
+      &                     ,THIS%OPSI,THIS%PSIM,AUXMAT)
           DO I=1,NB
             DO J=1,NB
               OMAT(I,J)=OMAT(I,J)+AUXMAT(I,J)
             ENDDO
           ENDDO
-          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%OPSI,THIS%OPSI,AUXMAT)
+          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB &
+       &                    ,THIS%OPSI,THIS%OPSI,AUXMAT)
           DO I=1,NB
             DO J=1,NB
               OOMAT(I,J)=OOMAT(I,J)+AUXMAT(I,J)
@@ -3372,6 +3377,37 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
               LAMBDA(J,I)=CONJG(CSVAR)
             ENDDO
           ENDDO
+!===============================================================          
+          ALLOCATE(SMAP(NB))
+          DO I=1,NB
+            SMAP(I)=I
+          ENDDO
+          SVAR=0.D0
+          DO I=1,NB
+            DO J=I+1,NB
+              SVAR=MAX(SVAR,ABS(LAMBDA(I,J)))
+              SVAR=MAX(SVAR,ABS(LAMBDA(J,I)))
+              I1=SMAP(I)
+              J1=SMAP(J)
+              IF(real(LAMBDA(J1,J1)).LT.real(LAMBDA(I1,I1))) THEN
+                K=SMAP(I)
+                SMAP(I)=SMAP(J)
+                SMAP(J)=K
+              END IF
+            ENDDO
+          ENDDO  
+print*,'smap ',Smap
+print*,'lambda ',(real(lambda(i,i))*27.211d0,i=1,nb)
+PRINT*,'MAX ',SVAR*27.211d0
+          DO I=1,NB-1
+            I1=SMAP(I)
+            J1=SMAP(I+1)
+            IF(real(LAMBDA(I1,I1)).GT.real(LAMBDA(J1,J1))) THEN
+              CALL ERROR$msg('state ordering failed')
+              CALL ERROR$STOP('WAVES$ORTHOGONALIZE')
+            END IF
+          ENDDO
+!===============================================================          
           DO I=1,NB
             DO J=1,NB
               OCCI=OCC(I,IKPT,ISPIN)
@@ -3381,7 +3417,7 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
             ENDDO
           ENDDO
 !
-          IF (TSAFEORTHO) THEN
+          IF(TSAFEORTHO) THEN
             CALL PLANEWAVE$GETL4('TINV',TINV)
             IF(TINV) THEN
               ALLOCATE(RMAT(NB,NB))
@@ -3392,7 +3428,8 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
               ROOMAT=REAL(OOMAT)
               ALLOCATE(RLAMBDA(NB,NB))
               RLAMBDA=REAL(LAMBDA)
-              CALL WAVES_ORTHO_X(NB,OCC(1,IKPT,ISPIN),ROOMAT,RMAT,ROMAT,RLAMBDA)
+              CALL WAVES_ORTHO_X(NB,OCC(1,IKPT,ISPIN) &
+       &                        ,ROOMAT,RMAT,ROMAT,RLAMBDA)
               LAMBDA=CMPLX(RLAMBDA,0.D0,8)
               DEALLOCATE(RLAMBDA)
               DEALLOCATE(RMAT)
@@ -3402,11 +3439,12 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
               CALL WAVES_ORTHO_X_C(NB,OCC(1,IKPT,ISPIN),OOMAT,MAT,OMAT,LAMBDA)
             END IF
           ELSE
-            CALL WAVES_ORTHO_Y_C(NB,MAT,OMAT,OOMAT,LAMBDA)
+            CALL WAVES_ORTHO_Y_C(NB,MAT,OMAT,OOMAT,LAMBDA,smap)
           END IF
           DEALLOCATE(MAT)
           DEALLOCATE(OMAT)
           DEALLOCATE(OOMAT)
+ DEALLOCATE(SMAP)
 !
 !         ==================================================================
 !         ==  CALCULATE |PSI(+)>=|PSI>+|CHI>LAMBDA                        ==
@@ -3418,8 +3456,6 @@ PRINT*,'WARNING FROM WAVES$ORTHOGONALIZE'
 !AND PROJECTOR FUNCTIONS
           CALL WAVES_ADDOPROJ(NPRO,NDIM,NBH,NB,THIS%PROJ,OPROJ,LAMBDA)
           DEALLOCATE(OPROJ)
-          
-
 !
 !         ==================================================================
 !         ==  RESCALE GAMMA                                               ==
@@ -3961,7 +3997,7 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
       END
 !
 !      .................................................................
-       SUBROUTINE WAVES_ORTHO_Y_C(NB,PHIPHI,CHIPHI,CHICHI,X)
+       SUBROUTINE WAVES_ORTHO_Y_C(NB,PHIPHI,CHIPHI,CHICHI,X,map)
 !      **                                                             **
 !      **  CALCULATE LAGRANGE MULTIPLIERS FOR ORTHOGONALIZATION       **
 !      **    |PHI(I)>=|PHI(I)>+SUM_J |CHI(J)>X(J,I)                   **
@@ -3979,6 +4015,7 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
        COMPLEX(8),INTENT(IN) :: CHIPHI(NB,NB) !<PHI_I|O|CHI>
        COMPLEX(8),INTENT(IN) :: CHICHI(NB,NB) !<CHI_I|O|CHI_J>
        COMPLEX(8),INTENT(OUT):: X(NB,NB)      ! X(I>J)=0
+       integer(4),intent(in) :: map(nb)
        COMPLEX(8)            :: A(NB,NB)
        COMPLEX(8)            :: B(NB,NB)
        COMPLEX(8)            :: C(NB,NB)
@@ -3990,10 +4027,11 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
        COMPLEX(8)            :: CSVAR
        REAL(8)               :: SVAR,SVAR1,SVAR2
        REAL(8)               :: MAXDEV
-       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+       LOGICAL   ,PARAMETER  :: TTEST=.true.
        REAL(8)   ,PARAMETER  :: TOL=1.D-10
+       integer(4)            :: nu,nu0,iu,ju
 !      *****************************************************************
-                             CALL TRACE$PUSH('WAVES_ORTHO_Y')
+                             CALL TRACE$PUSH('WAVES_ORTHO_Y_C')
 !
 !      =================================================================
 !      ==  INITIALIZE                                                 ==
@@ -4014,7 +4052,8 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
 !      ==  ORTHOGONALIZATION LOOP                                     ==
 !      =================================================================
 !                            CALL TRACE$PASS('BEFORE ORTHOGONALIZATION LOOP')
-       DO N=1,NB
+       DO Nu=1,NB
+         n=map(nu)
 !
 !        ===============================================================
 !        == NORMALIZE PHI(N)                                          ==
@@ -4039,7 +4078,7 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
 !        ===============================================================
 !        == NOW UPDATE MATRICES                                       ==
 !        ===============================================================
-         N0=N   !SET N0=N FOR FAST CALCULATION AND N0=1 FOR TESTS
+         Nu0=Nu   !SET N0=N FOR FAST CALCULATION AND N0=1 FOR TESTS
 !N0=1
          DO I=1,NB
 !          == A(N,M)+B(N,N)*DELTA(M)=0  ======================
@@ -4067,46 +4106,58 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
 !        == ORTHOGONALIZE HIGHER PHI'S TO THIS PHI                    ==
 !        == PHI(J)=PHI(J)+CHI(N)*Z(J)       J>N                       ==
 !        ===============================================================
-         Z(1:N)=(0.D0,0.D0)
-         DO J=N+1,NB
-           Z(J)=-CONJG(A(J,N)/B(N,N))
+         do iu=1,nu
+           i=map(iu)
+           Z(i)=(0.D0,0.D0)
+         enddo
+         DO iu=Nu+1,NB
+           i=map(iu)
+           Z(i)=-CONJG(A(i,N)/B(N,N))
          ENDDO
 !               CALL TRACE$PASS('ORTHOGONALIZE HIGHER PHIS TO THIS PHI')
 !
 !        ===============================================================
 !        == NOW UPDATE MATRICES                                       ==
 !        ===============================================================
-         N0=N+1   !SET N0=N FOR FAST CALCULATION AND N0=1 FOR TESTS
+         Nu0=Nu+1   !SET N0=N FOR FAST CALCULATION AND N0=1 FOR TESTS
 !N0=1
          DO I=1,NB
 !          == A(N,M)+B(N,N)*DELTA(M)=0  ======================
-           DO J=N0,NB
+           DO Ju=Nu0,NB
+             j=map(ju)
              X(I,J)=X(I,J)+ALPHA(I,N)*Z(J)
            ENDDO
          ENDDO           
-         DO I=N0,NB
+         DO Iu=Nu0,NB
+           i=map(iu)
            DO J=1,NB
              A(I,J)=A(I,J)+CONJG(Z(I))*B(N,J)
            ENDDO
          ENDDO
          DO I=1,NB
-           DO J=N0,NB
+           DO Ju=Nu0,NB
+             j=map(ju)
              A(I,J)=A(I,J)+CONJG(B(N,I))*Z(J) 
            ENDDO
          ENDDO
-         DO I=N0,NB
-           DO J=N0,NB
+         DO Iu=Nu0,NB
+           i=map(iu)
+           DO Ju=Nu0,NB
+             j=map(ju)
              A(I,J)=A(I,J)+CONJG(Z(I))*C(N,N)*Z(J)
            ENDDO
          ENDDO
          DO I=1,NB
-           DO J=N0,NB
+           DO Ju=Nu0,NB
+             j=map(ju)
              B(I,J)=B(I,J)+C(I,N)*Z(J)
            ENDDO
          ENDDO
          IF(TTEST) THEN
-           DO I=1,N
-             DO J=N,NB
+           DO Iu=1,Nu
+             i=map(iu)
+             DO Ju=Nu,NB
+               j=map(ju)
                CALL TESTA(I,J,CSVAR)
                IF(ABS(CSVAR).GT.TOL) THEN
                  WRITE(*,FMT='("HIGHER PHIS ORTHOGONALIZED TO PHI(",I4,")")')N
@@ -4121,44 +4172,56 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
 !        == CHI(M)=CHI(M)+CHI(N)*DELTA(M)   M>N                       ==
 !        ===============================================================
 !               CALL TRACE$PASS('ORTHOGONALIZE HIGHER CHIS TO THIS PHI')
-         Z(1:N)=(0.D0,0.D0)
-         DO I=N+1,NB
+         do iu=1,nu
+           i=map(iu)
+           Z(i)=(0.D0,0.D0)
+         enddo
+         DO Iu=Nu+1,NB
+           i=map(iu)
 !          == |CHI(J)>=|CHI(J)>+|CHI(N)>*Z(J) ==========================
 !          == B(M,N)+B(N,N)*DELTA(M)=0
            Z(I)=-CONJG(B(I,N)/B(N,N))
          ENDDO
-         N0=N+1   !SET N0=N+1 FOR FAST CALCULATION AND N0=1 FOR TESTS
+         Nu0=Nu+1   !SET N0=N+1 FOR FAST CALCULATION AND N0=1 FOR TESTS
 !N0=1
          DO I=1,NB
-           DO J=N0,NB
+           DO Ju=Nu0,NB
+             j=map(ju)
              ALPHA(I,J)=ALPHA(I,J)+ALPHA(I,N)*Z(J)
            ENDDO
          ENDDO
-         DO I=N0,NB
+         DO Iu=Nu0,NB
+           i=map(iu)
            DO J=1,NB
              B(I,J)=B(I,J)+CONJG(Z(I))*B(N,J)
            ENDDO 
          ENDDO
          WORK(:,:)=0.D0
-         DO I=N0,NB
+         DO Iu=Nu0,NB
+           i=map(iu)
            DO J=1,NB
              WORK(I,J)=WORK(I,J)+CONJG(Z(I))*C(N,J) 
            ENDDO
          ENDDO
          DO I=1,NB
-           DO J=N0,NB
+           DO Ju=Nu0,NB
+             j=map(ju)
              WORK(I,J)=WORK(I,J)+C(I,N)*Z(J)
            ENDDO
          ENDDO
-         DO I=N0,NB
-           DO J=N0,NB
+         DO Iu=Nu0,NB
+           i=map(iu)
+           DO Ju=Nu0,NB
+             j=map(ju)
              WORK(I,J)=WORK(I,J)+CONJG(Z(I))*C(N,N)*Z(J)
            ENDDO
          ENDDO
          C(:,:)=C(:,:)+WORK(:,:)
          IF(TTEST) THEN
-           DO I=N+1,NB
-             DO J=1,N
+           DO Iu=Nu+1,NB
+             i=map(iu)
+             DO Ju=1,Nu
+               j=map(ju)
                CALL TESTB(I,J,CSVAR)
                IF(ABS(CSVAR).GT.TOL) THEN
 !                WRITE(*,FMT='("HIGHER CHIS ORTHOGONALIZED TO PHI(",I4,")")')N
@@ -4262,13 +4325,15 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
        REAL(8)               :: WORK(NB,NB)   ! (I>J)=0
        REAL(8)               :: DELTA(NB)
        INTEGER(4)            :: I,J,K,L,N,M,M1,M2
+       INTEGER(4)            :: nu,mu,m1u,iu
        REAL(8)               :: SVAR
        LOGICAL   ,PARAMETER  :: TPR=.FALSE.
        LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
        REAL(8)   ,PARAMETER  :: TOL=1.D-10
-       REAL(8)              :: TEST(NB,NB)
-       REAL(8)              :: TEST1(NB,NB)
-       REAL(8)              :: TEST2(NB,NB)
+       REAL(8)               :: TEST(NB,NB)
+       REAL(8)               :: TEST1(NB,NB)
+       REAL(8)               :: TEST2(NB,NB)
+       integer(4)            :: map(nb)
 !      *****************************************************************
                              CALL TRACE$PUSH('WAVES_ORTHO_Y')
 !
@@ -4276,6 +4341,7 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
 !      ==  INITIALIZE                                                 ==
 !      =================================================================
        DO I=1,NB
+         map(i)=i
          DO J=1,NB
            PHIPHI(I,J)=PHIPHI0(I,J)
            CHIPHI(I,J)=CHIPHI0(I,J)
@@ -4293,7 +4359,8 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
 !      ==  ORTHOGONALIZATION LOOP                                     ==
 !      =================================================================
                              CALL TRACE$PASS('BEFORE ORTHOGONALIZATION LOOP')
-       DO N=1,NB
+       DO Nu=1,NB
+         n=map(nu)
 !
 !        ===============================================================
 !        == NORMALIZE PHI(N)                                          ==
@@ -4311,11 +4378,11 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
            RLAMBDA(I,N)=RLAMBDA(I,N)+ALPHA(I,N)*SVAR
          ENDDO
          PHIPHI(N,N)=PHIPHI(N,N)+CHICHI(N,N)*SVAR**2
-         DO I=1,NB 
+         DO I=1,NB
            PHIPHI(I,N)=PHIPHI(I,N)+CHIPHI(N,I)*SVAR
            PHIPHI(N,I)=PHIPHI(N,I)+CHIPHI(N,I)*SVAR
          ENDDO
-         DO I=1,NB 
+         DO I=1,NB
            CHIPHI(I,N)=CHIPHI(I,N)+SVAR*CHICHI(N,I)
          ENDDO
          IF(TPR) THEN
@@ -4329,10 +4396,12 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
 !        ===============================================================
                 CALL TRACE$PASS('ORTHOGONALIZE HIGHER PHIS TO THIS PHI')
          DELTA=0.D0
-         DO M=N+1,NB
+         DO Mu=Nu+1,NB
+           m=map(mu)
 !          == PHIPHI(N,M)+CHIPHI(N,N)*DELTA(M)=0  ======================
            DELTA(M)=-PHIPHI(N,M)/CHIPHI(N,N)
-           DO I=1,N
+           DO Iu=1,Nu
+             i=map(iu)
              RLAMBDA(I,M)=RLAMBDA(I,M)+ALPHA(I,N)*DELTA(M)
            ENDDO
          ENDDO           
@@ -4343,7 +4412,8 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
      &                    +DELTA(M1)*CHICHI(N,N)*DELTA(M2)
            ENDDO
          ENDDO
-         DO M1=N+1,NB
+         DO M1u=Nu+1,NB
+           m1=map(m1u)
            DO M2=1,NB
              CHIPHI(M2,M1)=CHIPHI(M2,M1)+DELTA(M1)*CHICHI(N,M2)
            ENDDO
@@ -4359,12 +4429,14 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
 !        ===============================================================
                 CALL TRACE$PASS('ORTHOGONALIZE HIGHER CHIS TO THIS PHI')
          DELTA=0.D0
-         DO M=N+1,NB
+         DO Mu=Nu+1,NB
+           m=map(mu)
 !          == |CHI(M)>=|CHI(M)>+|CHI(N)>*DELTA(M) ============================
 !          == CHIPHI(M,N)+CHIPHI(N,N)*DELTA(M)=0
            DELTA(M)=-CHIPHI(M,N)/CHIPHI(N,N)
          ENDDO
-         DO M=N+1,NB
+         DO Mu=Nu+1,NB
+           m=map(mu)
            DO I=1,NB
              ALPHA(I,M)=ALPHA(I,M)+ALPHA(I,N)*DELTA(M)
            ENDDO
@@ -4734,7 +4806,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !
       ENDDO
       CALL ERROR$MSG('LOOP FOR ORTHOGONALIZATION IS NOT CONVERGED')
-      CALL ERROR$STOP('WAVES_ORTHO_X')
+      CALL ERROR$STOP('WAVES_ORTHO_X_c')
 !
 9000  CONTINUE
       DEALLOCATE(GAMN)
@@ -4928,7 +5000,16 @@ PRINT*,'ITER ',ITER,DIGAM
 !
       ENDDO
       CALL ERROR$MSG('LOOP FOR ORTHOGONALIZATION IS NOT CONVERGED')
+      print*,'eig ',eig
+      print*,'occ ',occ
+      do i=1,nb
+        do j=1,nb
+          write(*,fmt='(2i3,7f10.5)')i,j,lambda(i,j),u(i,j),psipsi(i,j) &
+    &                               ,chipsi(i,j),chichi(i,j)
+        enddo
+      enddo
       CALL ERROR$STOP('WAVES_ORTHO_X')
+      
 !
 9000  CONTINUE
       DEALLOCATE(GAMN)
@@ -4973,6 +5054,7 @@ PRINT*,'ITER ',ITER,DIGAM
       REAL(8)                     :: NORM(NB),SVAR
       COMPLEX(8)                  :: XTWOBYTWO(2,2)
       LOGICAL(4)      ,PARAMETER  :: TTEST=.TRUE.
+      integer(4)      ,allocatable:: smap(:)
 !     ******************************************************************
 !
 !     ==================================================================
@@ -5002,9 +5084,14 @@ PRINT*,'ITER ',ITER,DIGAM
 !     =================================================================
 !     ==  OBTAIN ORTHOGONALIZATION TRANSFORM                         ==
 !     =================================================================
+      ALLOCATE(smap(NB))
+      do i=1,nb
+        smap(i)=i
+      enddo
       ALLOCATE(X(NB,NB))
-      CALL WAVES_ORTHO_Y_C(NB,OVERLAP,OVERLAP,OVERLAP,X)
+      CALL WAVES_ORTHO_Y_C(NB,OVERLAP,OVERLAP,OVERLAP,X,smap)
       DEALLOCATE(OVERLAP)
+      deallocate(smap)
 !     
 !     =================================================================
 !     ==  TRANSFORM WAVE FUNCTIONS  |PSI>=|PSI>X                     ==

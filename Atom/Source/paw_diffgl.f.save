@@ -240,7 +240,7 @@
       PHI(:,:)=PHI(:,:)*SVAR
       STEP(:)=STEP(:)*SVAR
       IF(DABS(STEP(3)).GT.1.D-3) THEN
-        PRINT*,'WARNING FRom PAWBOUNDSTATE:',STEP(3),DE
+        PRINT*,'WARNING FROM PAWBOUNDSTATE:',STEP(3),DE
       END IF
 !
 !     ==================================================================
@@ -293,14 +293,12 @@
 !     ==================================================================
       DO I1=1,NPRO
         DO IR=MCH+1,NR
-exit
           IF(DABS(PRO(IR,I1)).GT.1.D-6) THEN
             CALL ERROR$MSG('WARNING FROM PAWDER PRO DOES NOT VANISH OUTSIDE')
             CALL ERROR$I4VAL('L',L)
             CALL ERROR$I4VAL('IPRO',I1)
             CALL ERROR$I4VAL('IR',IR)
             CALL ERROR$I4VAL('MCH',MCH)
-            CALL ERROR$r8VAL('r(mcH)',r1*exp(dex*real(mch-1)))
             CALL ERROR$STOP('PAWDER')
           END IF
         ENDDO
@@ -534,111 +532,77 @@ exit
       INTEGER(4)              :: Nnext
       INTEGER(4)              :: ITER,IR
       real(8)                 :: eup,elow
-      real(8)                 :: ginh(nr)
-      INTEGER(4)              :: IROUT
-      real(8)                 :: rout,VAL,DER,LOGDER
-      real(8)                 :: pi,svar,rcl
 !     ******************************************************************
-      pi=4.d0*datan(1.d0)
+      CONVG=.FALSE.
 !
 !     ==================================================================
-!     == ESTIMATE ENERGY OF THE BOUND STATE BY SHOOTING OUTWARD       ==
-!     == AND BISECTION OF THE ENERGY WINDOW                           ==
-!     == THE BOUND STATE HAS A VANISHING LOGARITHMIC DERIVATIVE       ==
-!     == THE RADIUS IS CHOSEN DYNAMICALLY: FOR CORE STATES IT IS      ==
-!     == RELATED  TO THE CLASSICAL TURNING POINT.                     ==
+!     == estimate energy by shooting outward                          ==
 !     ==================================================================
-      EUP=10.D0
-      ELOW=-1.D+4
-      GINH(:)=0.D0
-      ITER=0
-      CONVG=.FALSE.
-      DO WHILE(.NOT.CONVG)
-        ITER=ITER+1
-        E=0.5D0*(EUP+ELOW)
-!       == ESTIMATE CLASSICAL TURNING POINT FOR LOW LYING SHELLS
-        IROUT=1+INT(LOG(5.D0/R1)/DEX)
-        DO IR=21,IROUT
-          IF(POT(IR-20).GT.E) THEN
-            IROUT=IR
-            EXIT
-          END IF
-        ENDDO    
-        ROUT=R1*EXP(DEX*REAL(IROUT-1,KIND=8))
-        CALL SCHROEDER(.TRUE.,.TRUE.,R1,DEX,NR,L,E,AEZ,IROUT,ROUT &
-     &                     ,POT,PHI,GINH)
-        NNODE=0
-        DO IR=1,IROUT-1
-          IF(PHI(IR,1)*PHI(IR+1,1).LT.0.D0)NNODE=NNODE+1
-        ENDDO
-        VAL=PHI(IROUT,1)
-        DER=PHI(IROUT,2)
-        LOGDER=DATAN(-ROUT*DER/VAL)/PI+REAL(NNODE)+0.5D0
-        SVAR=LOGDER-(REAL(NN,KIND=8)+0.5D0)
-        IF(SVAR.GT.0.D0) THEN
-          EUP=E
-        ELSE 
-          ELOW=E
-        END IF
-        if(abs(eup-elow).gt.1.d-2) cycle
-        if(abs(eup-elow).lt.1.d-10) exit
-        CONVG=(ABS(SVAR).LT.1.D-3)
-        IF(ITER.GT.ITERX) THEN
-          CALL ERROR$MSG('SHOOTING LOOP NOT CONVERGED')
-          CALL ERROR$I4VAL('L',L)
-          CALL ERROR$R8VAL('E',E)
-          CALL ERROR$I4VAL('TARGET #(NODES)',NN)
-          CALL ERROR$I4VAL('ACTUAL #(NODES)',NNODE)
-          CALL ERROR$STOP('FIXNODE')
-        END IF
-      ENDDO
-!print*,'logder ',logder,e,elow,eup
+
 !
 !     ==================================================================
-!     == optimize energy by energy linearization                      ==
+!     ==                                                              ==
 !     ==================================================================
       ITER=0
-      CONVG=.FALSE.
+      eup=1.d+10
+      elow=-1.d+10
       DO WHILE(.NOT.CONVG)
         ITER=ITER+1
         EOLD=E
         IF(PRESENT(DLG)) THEN
-          CALL AEBOUNDSTATE(R1,DEX,NR,L,E,AEZ,BOXRADIUS,POT,PHI,DLG=DLG)
+          CALL AEBOUNDSTATE(R1,DEX,NR,L,EOLD,AEZ,BOXRADIUS,POT,PHI,DLG=DLG)
         ELSE
-          CALL AEBOUNDSTATE(R1,DEX,NR,L,E,AEZ,BOXRADIUS,POT,PHI)
+          CALL AEBOUNDSTATE(R1,DEX,NR,L,EOLD,AEZ,BOXRADIUS,POT,PHI)
         END IF
         NNODE=0
         DO IR=1,NR-1
           IF(PHI(IR,1)*PHI(IR+1,1).LT.0.D0)NNODE=NNODE+1
         ENDDO
-!print*,'e ',e,nnode
-        CONVG=ABS(EOLD-E).LT.1.D-9
+        IF(NN.NE.NNODE) THEN
+          if(nn.gt.nnode) then
+            nnext=nnode+1
+            elow=e
+          else
+            nnext=nnode-1
+            eup=e
+          end if
+!         == estimate the energy difference to the next band
+          E=E+0.5D0*((ZEFF-0.5d0)/DBLE(NNode+L+1))**2 &
+     &       -0.5D0*((ZEFF-0.5d0)/DBLE(NNext+L+1))**2
+          CONVG=.FALSE.
+print*,'wrong #nodes',e,nn,nnode
+        ELSE
+          CONVG=(ABS(E-EOLD).LT.TOL)
+!          The fix commented out created convergence problems
+!          The design is not foolproof but seems to work
+!           if(eold.lt.elow) then 
+!             e=0.5d0*(e+elow)
+!print*,'problem '
+!           else  if(eold.gt.eup) then
+!print*,'problem '
+!             e=0.5d0*(e+eup)
+!          else
+             if(eold.gt.e) then
+               elow=e
+             else
+               eup=e
+             end if
+             e=(elow+eup)/2.d0
+!e=eold
+!           end if       
+print*,'wright #nodes',e,eold,elow,eup
+        END IF
+!print*,'in fixnode',eup,elow,eold,e
         IF(ITER.GT.ITERX) THEN
           PRINT*,'PRESENT(DLG)=',PRESENT(DLG)
           CALL ERROR$MSG('LOOP NOT CONVERGED')
           CALL ERROR$I4VAL('L',L)
-          CALL ERROR$R8VAL('E',E)
+          CALL ERROR$r8VAL('e',e)
           CALL ERROR$I4VAL('TARGET #(NODES)',NN)
           CALL ERROR$I4VAL('ACTUAL #(NODES)',NNODE)
           CALL ERROR$STOP('FIXNODE')
         END IF
       ENDDO
-!
-!     ==========================================================
-!     == TOLERATE INCORRECT #NODES FOR WEAKLY BOUND STATES    ==
-!     ==========================================================
-      IF(NNODE.NE.NN)  THEN
-        IF(E.LT.-0.1D0) THEN
-          CALL ERROR$MSG('#NODES INCORRECT')
-          CALL ERROR$I4VAL('L',L)
-          CALL ERROR$R8VAL('E',E)
-          CALL ERROR$I4VAL('TARGET #(NODES)',NN)
-          CALL ERROR$I4VAL('ACTUAL #(NODES)',NNODE)
-          CALL ERROR$STOP('FIXNODE')
-        ELSE
-          PRINT*,'WARNING: #NODES INCORRECT L,NN,E ',L,NN,E
-        END IF
-      END IF
       RETURN
       END
 !
@@ -808,8 +772,8 @@ exit
       USE SCHRGL_INTERFACE_MODULE, ONLY : OUTBOUNDARY
       IMPLICIT NONE
       REAL(8),    PARAMETER    :: SCL=5.D0 ! SCL*R(CLASS.TURN.P.)=> SEMICLASICAL
-      LOGICAL,   INTENT(IN)    :: THOM  ! IGNORE INHOMOGENITY?   
-      LOGICAL,   INTENT(IN)    :: TFRWRD !INTEGRATE OUTWARD/INWARD
+      LOGICAL,   INTENT(IN)   :: THOM  ! IGNORE INHOMOGENITY?   
+      LOGICAL,   INTENT(IN)   :: TFRWRD !INTEGRATE OUTWARD/INWARD
       REAL(8),    INTENT(IN)   :: R1    ! RADIAL GRID R(I)=R1*EXP(DEX*(I-1))
       REAL(8),    INTENT(IN)   :: DEX   !
       INTEGER(4), INTENT(IN)   :: NR    ! NUMBER OF GRID POINTS
@@ -900,7 +864,7 @@ exit
           CALL OUTBOUNDARY(THOM,R1,DEX,NR,R,N1,BOXRADIUS,U,UP,UPP,CF)
           CALL INWRD(DEX,NR,N1,N2,U,UP,UPP,CF,CG,FR,FRP)
         END IF
-      END IF
+     END IF
 !     PRINT*,'SCHROEDER MARKE 2'
 !
 !     ==================================================================
@@ -922,11 +886,15 @@ exit
         RI=R(IR)
         PHI(IR,1)=U(IR)/RI
         PHI(IR,2)=(UP(IR)/DEX-U(IR))/RI**2
-        PHI(IR,3)=2.D0*(POT(IR)*Y0-E)*PHI(IR,1)
+!        PHI(IR,3)=2.D0*(POT(IR)*Y0-E)*PHI(IR,1)-2.D0*GINH(IR)
       ENDDO
-      IF(.NOT.THOM) THEN
+      IF(THOM) THEN
         DO IR=N1,N2
-          PHI(IR,3)=PHI(IR,3)-2.D0*GINH(IR)
+          PHI(IR,3)=2.D0*(POT(IR)*Y0-E)*PHI(IR,1)
+        ENDDO
+      ELSE
+        DO IR=N1,N2
+          PHI(IR,3)=2.D0*(POT(IR)*Y0-E)*PHI(IR,1)-2.D0*GINH(IR)
         ENDDO
       END IF
       RETURN

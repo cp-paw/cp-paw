@@ -66,6 +66,8 @@ ALP_COMPILE_N="fort -c"
 #ALP_COMPILE_N="${ALP_COMPILE_N} -convert ibm" 
 ALP_COMPILE_G="${ALP_COMPILE_N} -g3 -ladebug -C -assume gfullpath -check overflow -check underflow"
 ALP_COMPILE_O="${ALP_COMPILE_N} -O3" 
+ALP_COMPILE_OP="${ALP_COMPILE_O}" 
+ALP_COMPILE_NP="${ALP_COMPILE_N}" 
 ALP_LINK="fort "
 ## Absoft compiler for linux
 ABS_COMPILE_N="f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_"
@@ -319,6 +321,7 @@ case "$ARCH" in
         PAWX=${EXEDIR}/ppaw_fast.x
         F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC  -DCPPVARIABLE_PARALLEL"
         COMPILE=$ALP_COMPILE_OP
+	LLIBS="$LLIBS -L${MPIDIR}/lib/ -lmpich -lfmpich "
         LINK=${ALP_LINK}
         OPTRM="rm " 
         PARALLEL=T
@@ -330,7 +333,7 @@ case "$ARCH" in
     esac
     COMPILE="${COMPILE} -L${OBJDIR} -module ${OBJDIR} -I${OBJDIR}"
     LINK="${LINK} -I${OBJDIR} -L${OBJDIR}"
-    LLIBS="-lcxml"
+    LLIBS="${LLIBS} -lcxml"
     COMPILE77="${COMPILE}"
     ;;
   #========================================================================

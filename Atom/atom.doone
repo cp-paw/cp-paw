@@ -5,4 +5,4 @@ CH2=_.75_6.0
 ROOT=$CH1/026FE/fe$CH2
 rm ${ROOT}.prot 
 rm ${ROOT}.out 
-paw_atom ${ROOT}.acntl
+paw_atom.x ${ROOT}.acntl

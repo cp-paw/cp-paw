@@ -214,6 +214,7 @@ CALL TRACE$PASS('DONE')
       USE IO_MODULE
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
+      USE mpe_MODULE
       IMPLICIT NONE
       INTEGER(4)     ,INTENT(OUT)  :: NBEG
       INTEGER(4)     ,INTENT(OUT)  :: NOMORE
@@ -239,22 +240,26 @@ CALL TRACE$PASS('DONE')
       COMMON/VERSION/VERSIONTEXT
 !     ******************************************************************
                           CALL TRACE$PUSH('READIN')
+      call mpe$query(ntasks,thistask)
 !
 !     ==================================================================
 !     ==  SET CONTROLFILENAME AND STANDARD ROOT                       ==
 !     ==================================================================
-call mpe$query(ntasks,thistask)
-if(ntasks.gt.1) then
-  cntlname='case.cntl'
-  print*,'attention starting rootname hardwired to case in paw_ioroutines!!!!'
-  print*,'sorry!'
-else
-      IF (IARGC().LT.1) THEN
-        CALL ERROR$MSG('THE NAME OF THE CONTROLFILE MUST BE GIVEN AS ARGUMENT')
-        CALL ERROR$STOP('READIN')
+!if(ntasks.gt.1) then
+!  cntlname='case.cntl'
+!  print*,'attention starting rootname hardwired to case in paw_ioroutines!!!!'
+!  print*,'sorry!'
+!else
+      IF(THISTASK.EQ.1) THEN
+        IF (IARGC().LT.1) THEN
+          CALL ERROR$MSG('THE NAME OF THE CONTROLFILE')
+          CALL ERROR$MSG('MUST BE GIVEN AS ARGUMENT')
+          CALL ERROR$STOP('READIN')
+        END IF
+        CALL GETARG(1,CNTLNAME)
       END IF
-      CALL GETARG(1,CNTLNAME)
-end if
+      CALL MPE$BROADCAST(1,CNTLNAME)
+!END IF
 !     == IF ROOTNAME='-' USE THE ROOT OF THE CONTROLFILE ================
       ISVAR=INDEX(CNTLNAME,-'.CNTL',BACK=.TRUE.)
       IF(ISVAR.GT.0) THEN      
@@ -1372,6 +1377,12 @@ Print*,'ilda ',ilda
 !     == COLLECT DATA                                                 ==
 !     ==================================================================
       CALL DYNOCC$SETL4('DYN',TON)
+!
+!     == RESTART WITH OCCUPATIONS FROM STRC FILE =======================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'MOVE',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'MOVE',0,.TRUE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'MOVE',0,TCHK)
+      CALL DYNOCC$SETL4('DYN',TCHK)
 !
 !     == RESTART WITH OCCUPATIONS FROM STRC FILE =======================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'START',1,TCHK)
