@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# USAGE:
+#
+#  paw_distribution PAW_neuesdatum
+# 
+# the LIST variable contains all the files/directories to be 
+# included in the distribution
+#
+LIST="$1/configure $1/configure.in $1/Makefile.in $1/parms.* $1/src $1/doc $1/dx"
+rm -i `find $1 -name '*~'`
+rm -i `find $1 -name '#*#'`
+NAME=`echo $1 | cut -d'/' -f1`
+tar -cvzf $NAME.tar.gz $LIST

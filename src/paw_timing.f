@@ -357,34 +357,28 @@ END MODULE TIMING_MODULE
       DEALLOCATE(TIMEVAL)
       RETURN
       END  
-!    
-!     ..................................................................
-      SUBROUTINE TIMING_CLOCK(TIME)
-!     **                                                              **
-!     **  REPORTS CPU TIME IN SECONDS                                 **
-!     **                                                              **
-!     **  REMARK:                                                     **
-!     **    CLOCKTIC IS THE TIME STEP OF THE CLOCK IN SECONDS         **
-!     **    (MAY BE MACHINE DEPENDENT)                                **
-!     **                                                              **
-!     **    TIMES RETURNS IN UNITS OF CLOCKTICS                       **
-!     **    1)  USER TIME OF THE PARENT PROCESS                       **
-!     **    2)  SYSTEM TIME OF PARENT PROCESS                         **
-!     **    3)  USER TIME OF CHILD PROCESSES                          **
-!     **    4)  SYSTEM TIME OF CHILD PROCESSES                        **
-!     **                                                              **
-!     **  SUBROUTINES USED: TIMES (STANDARD C LIBRARY)                **
-!     **                                                              **
-!     ******************************************************************
+!
+!     ...............................................................
+      SUBROUTINE timing_clock(SECONDS)
+!     ***************************************************************
       IMPLICIT NONE
-      REAL(8),INTENT(OUT) :: TIME       ! USRTIME+SYSTIME IN SECONDS
-      INTEGER             :: NTIME(4)
-      REAL(8),PARAMETER   :: CLOCKTIC=0.01D0
-!     ******************************************************************
-      CALL lib$TIMES(NTIME)
-      TIME=REAL(SUM(NTIME),KIND=8)*CLOCKTIC
+      REAL(8) ,INTENT(OUT) :: SECONDS
+      INTEGER(4)           :: COUNT
+      INTEGER(4)           :: COUNTRATE
+      INTEGER(4)           :: COUNTMAX
+      integer(4),save      :: countturn=0
+      real(8)              :: countcycle
+      real(8)   ,save      :: current=0.d0
+!     ***************************************************************
+      CALL SYSTEM_CLOCK(COUNT,COUNTRATE,COUNTMAX)
+      countcycle=real(COUNTMAX)/REAL(COUNTRATE)
+      SECONDS=REAL(COUNT)/REAL(COUNTRATE)+countcycle*real(countturn)
+      IF(SECONDS.LT.CURRENT) THEN
+        COUNTTURN=COUNTTURN+1
+      END IF
+      CURRENT=SECONDS
       RETURN
-      END 
+      END SUBROUTINE timing_clock
 !    
 !     ..................................................................
       SUBROUTINE TIMING_CONVERT(TIME,TIMESTRING)

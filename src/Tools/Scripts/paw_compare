@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 WORKDIR=`pwd`
 #
 # list all .f files in .dir1 and .dir2
@@ -79,4 +78,4 @@ for i in $LIST; do
   fi
 done
 
-rm -f .dir* .tmp .file1 .file1
+rm -f .dir* .tmp .file1 .file2

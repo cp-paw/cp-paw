@@ -1,0 +1,40 @@
+!CONTROL
+ !GENERIC  DT=10.0 NSTEP=150 START=F !END   
+ !DFT    TYPE=8 !END 
+ !FOURIER EPWPSI=30 CDUAL=2 !END
+ !PSIDYN  STOP=T MPSICG2=0.5 MPSI=1000. FRIC=0.0
+    !AUTO FRIC(-)=0.3 FACT(-)=0.97 FRIC(+)=0.3 FACT(+)=1. !END
+    !AUTO_OFF FRIC(-)=0.01 FACT(-)=1.0 FRIC(+)=0.2 FACT(+)=1. !END
+ !END
+ !RDYN_OFF STOP=T MPSICG2=0.5 MPSI=1000. FRIC=0.0
+    !AUTO FRIC(-)=0.05 FACT(-)=0.95 FRIC(+)=0.05 FACT(+)=1. !END
+ !END
+!END 
+!EOB 
+
+This example is a typical example for a calculation to optimize the
+wave function. The option !control!generic:start=F is selected.This
+requires a restart file to exist. If one wants to start from scratch,
+!control!generic:start=t is required. It contains blocks that are
+switched off appending the string "_OFF" to a block key word. Those
+are currently inactive.
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

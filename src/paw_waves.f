@@ -993,18 +993,20 @@ CALL TIMING$CLOCKOFF('W:PSRHO')
 !
 !     ==================================================================
 !     ==================================================================
-SVAR1=0.D0
-DO IB=1,NRL
-  SVAR1=SVAR1+RHO(IB,1)
-ENDDO
-CALL PLANEWAVE$GETR8('RWEIGHT',SVAR2)
-SVAR1=SVAR1*SVAR2
-CALL MPE$COMBINE('+',SVAR1)
-PRINT*,'TOTAL CHARGE IN PSEUDO WAVE FUNCTIONS w/o pscore ',SVAR1
+if(1.eq.0) then
+  SVAR1=0.D0
+  DO IB=1,NRL
+    SVAR1=SVAR1+RHO(IB,1)
+  ENDDO
+  CALL PLANEWAVE$GETR8('RWEIGHT',SVAR2)
+  SVAR1=SVAR1*SVAR2
+  CALL MPE$COMBINE('+',SVAR1)
+  PRINT*,'TOTAL CHARGE IN PSEUDO WAVE FUNCTIONS w/o pscore ',SVAR1
+end if
 !
 !     ==================================================================
 !     == MULTIPOLE MOMENTS OF ONE-CENTER PART                         ==
-.     == CONTAINS CORE AND PSEUDOCORE                                 ==
+!     == CONTAINS CORE AND PSEUDOCORE                                 ==
 !     ==================================================================
 CALL TRACE$PASS('BEFORE MULTIPOLE MOMENTS')     
 CALL TIMING$CLOCKON('W:MOMENTS')
@@ -1839,6 +1841,7 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
         CALL MPE$COMBINE('+',EKIN)
         DEALLOCATE(DMAT)
         DEALLOCATE(G2)
+        stress(:,:)=0.d0
       END IF
 !
       RETURN
@@ -7233,226 +7236,3 @@ ENDDO
       DEALLOCATE(LAMBDA)
       RETURN
       END
-!
-!     ..................................................................
-      SUBROUTINE WAVES_EKIN_OLD(NGL,NDIM,NBH,NB,F,PSI,EKIN,TSTRESS,STRESS)
-!     ******************************************************************
-!     **                                                              **
-!     **  EVALUATE PS KINETIC ENERGY IN G-SPACE                       **
-!     **  EVALUATE NUMBER OF ELECTRONS IN G-SPACE                     **
-!     **                                                              **
-!     **  REMARKS:                                                    **
-!     **    REQUIRES PLANEWAVE OBJECT TO BE SET PROPERLY              **
-!     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
-      USE MPE_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NB         ! #(STATES)
-      INTEGER(4),INTENT(IN) :: NBH        ! #(WAVE FUNCTIONS)
-      INTEGER(4),INTENT(IN) :: NDIM       ! #(SPINOR COMPONENTS)
-      INTEGER(4),INTENT(IN) :: NGL        ! #(PLANE WAVES)
-      REAL(8)   ,INTENT(IN) :: F(NB)      ! OCCUPATION
-      COMPLEX(8),INTENT(IN) :: PSI(NGL,NDIM,NBH) ! PS-WAVE FUNCTION
-      REAL(8)   ,INTENT(OUT):: EKIN       ! KINETIC ENERGY
-      LOGICAL(4),INTENT(IN) :: TSTRESS    ! SWITCH STRESS ON/OFF
-      REAL(8)   ,INTENT(OUT):: STRESS(3,3)! STRESS
-      REAL(8)   ,ALLOCATABLE:: G2(:)      ! G**2
-      REAL(8)   ,ALLOCATABLE:: GVEC(:,:)  ! G   
-      COMPLEX(8),ALLOCATABLE:: PSI1(:,:,:)
-      COMPLEX(8)            :: CMAT(3,3)
-      COMPLEX(8)            :: CSVAR
-      LOGICAL(4)            :: TINV
-      INTEGER(4)            :: IB,IG,IDIM,I,J
-      REAL(8)               :: FP,FM
-      REAL(8)   ,PARAMETER  :: DSMALL=1.D-12
-!     ******************************************************************
-!
-!     ==================================================================
-!     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==
-!     ==================================================================
-      CALL PLANEWAVE$GETL4('TINV',TINV)
-      IF(TINV) THEN
-        IF(NBH.NE.(NB+1)/2) THEN
-          CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
-          CALL ERROR$STOP('WAVES_EKIN')
-        END IF
-      ELSE 
-        IF(NBH.NE.NB) THEN
-          CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
-          CALL ERROR$STOP('WAVES_EKIN')
-        END IF
-      END IF
-!
-!     ==================================================================
-!     ==  COLLECT G-VECTORS                                           ==
-!     ==================================================================
-      IF(TSTRESS) THEN
-        ALLOCATE(GVEC(3,NGL))
-        CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
-        ALLOCATE(PSI1(NGL,NDIM,3))
-      ELSE
-        ALLOCATE(G2(NGL))
-        CALL PLANEWAVE$GETR8A('G2',NGL,G2)
-        ALLOCATE(PSI1(NGL,NDIM,1))
-      END IF
-!
-!     ==================================================================
-!     ==  CALCULATE KINETIC ENERGY                                    ==
-!     ==================================================================
-      STRESS(:,:)=0.D0
-      EKIN=0.D0
-      DO IB=1,NBH
-!       == DETERMINE OCCUPATIONS =======================================
-        IF(TINV) THEN
-          FP=0.5D0*(F(2*IB-1)+F(2*IB))
-          FM=0.5D0*(F(2*IB-1)-F(2*IB))
-        ELSE
-          FP=F(IB)
-          FM=0.D0
-        END IF
-        IF(FP.EQ.0.D0.AND.FM.EQ.0.D0) CYCLE
-!
-!       ================================================================
-!       == GENERAL WAVE FUNCTION / FIRST PART OF SUPER WAVE FUNCTIONS ==
-!       == <PSI_+|G^2|PSI_+> FOR SUPER WAVE FUNCTIONS                 ==
-!       ================================================================
-        IF(TSTRESS) THEN
-          DO I=1,3
-            DO IDIM=1,NDIM
-              DO IG=1,NGL
-                PSI1(IG,IDIM,I)=GVEC(I,IG)*PSI(IG,IDIM,IB)
-              ENDDO
-            ENDDO
-          ENDDO
-          CALL PLANEWAVE$SCALARPRODUCT('=',NGL,NDIM,3,PSI1,3,PSI1,CMAT)
-          EKIN  =EKIN  +FP*0.5D0*REAL(CMAT(1,1)+CMAT(2,2)+CMAT(3,3))
-          STRESS=STRESS-FP*REAL(CMAT)
-        ELSE
-          DO IDIM=1,NDIM
-            DO IG=1,NGL
-              PSI1(IG,IDIM,1)=G2(IG)*PSI(IG,IDIM,IB)
-            ENDDO
-          ENDDO
-          CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,NDIM,1,PSI1,1,PSI(1,1,IB) &
-     &                                    ,CMAT)
-          EKIN=EKIN+FP*0.5D0*REAL(CMAT(1,1))
-        END IF
-        IF(.NOT.TINV.OR.ABS(FM).LT.DSMALL) CYCLE
-!
-!       ================================================================
-!       ==  <PSI_+|G^2|PSI_->                                         ==
-!       ================================================================
-        IF(TSTRESS) THEN
-          CALL PLANEWAVE$SCALARPRODUCT('-',NGL,NDIM,3,PSI1,3,PSI1,CMAT)
-!         == REMARK: G*PSI_-(G)=G*CONJG(PSI+(-G))=-CONJG(-G*PSI+(-G))
-          EKIN  =EKIN  -FM*0.5D0*REAL(CMAT(1,1)+CMAT(2,2)+CMAT(3,3))
-          STRESS=STRESS+FM*REAL(CMAT)
-        ELSE
-          CALL PLANEWAVE$SCALARPRODUCT('-',NGL,NDIM,1,PSI1,1,PSI(1,1,IB) &
-     &                                ,CMAT)
-          EKIN=EKIN+0.5D0*FM*REAL(CMAT(1,1))
-        END IF          
-      ENDDO
-!
-!     ==================================================================
-!     ==  SUM OVER TASKS AND CLOSE DOWN                               ==
-!     ==================================================================
-      DEALLOCATE(PSI1)
-      CALL MPE$COMBINE('+',EKIN)
-      IF(TSTRESS) THEN
-        CALL MPE$COMBINE('+',STRESS)
-        DEALLOCATE(GVEC)
-      ELSE
-        DEALLOCATE(G2)
-      END IF
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE WAVES$PROPAGATE_OLD()
-!     ******************************************************************
-!     **                                                              **
-!     **  PROPAGATES WAVE FUNCTIONS                                   **
-!     **                                                              **
-!     **  REMARKS:                                                    **
-!     **    PARAMETERS DELT,EMASS,EMASSCG2,ANNEE AND TSTOP MUST BE SET**
-!     **                                                              **
-!     ******************************************************************
-      USE WAVES_MODULE
-      IMPLICIT NONE
-      REAL(8)               :: SVAR1,SVAR2,FAC
-      INTEGER(4)            :: IKPT,ISPIN,IG,IDIM,IB
-      INTEGER(4)            :: NGL
-      INTEGER(4)            :: NBH
-      REAL(8)   ,ALLOCATABLE:: ARR(:)
-      COMPLEX(8)            :: CSVAR
-      REAL(8)               :: FRICMAT(3,3)
-      REAL(8)   ,ALLOCATABLE:: GVEC(:,:)
-!     ******************************************************************
-                            CALL TRACE$PUSH('WAVES$PROPAGATE')
-!
-!     ==================================================================
-!     ==  STOP WAVE FUNCTIONS                                         ==
-!     ==================================================================
-      IF(TSTOP) THEN
-        DO IKPT=1,NKPT
-          DO ISPIN=1,NSPIN
-            CALL WAVES_SELECTWV(IKPT,ISPIN)
-            THIS%PSIM(:,:,:)=THIS%PSI0(:,:,:)
-          ENDDO
-        ENDDO
-        TSTOP=.FALSE.
-      END IF
-!
-!     ==================================================================
-!     ==  EVALUATE WAVE FUNCTION MASS                                 ==
-!     ==================================================================
-!
-!     ==================================================================
-!     ==  PROPAGATE WAVE FUNCTIONS (PUT PSI(+) INTP PSIM)             ==
-!     ==================================================================
-      SVAR1=2.D0/(1.D0+ANNEE)
-      SVAR2=1.D0-SVAR1
-      FAC=-DELT**2/EMASS/(1.D0+ANNEE)
-      DO IKPT=1,NKPT
-        CALL WAVES_SELECTWV(IKPT,1)
-        CALL PLANEWAVE$SELECT(GSET%ID)
-        DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)
-          IF(.NOT.ASSOCIATED(THIS%HPSI)) THEN
-            CALL ERROR$MSG('HPSI NOT AVAILABLE')
-            CALL ERROR$MSG('EITHER WAVES$ETOT HAS NOT BEEN CALLED')
-            CALL ERROR$MSG('OR WAVES$PROPAGATE HAS BEEN CALLED PREVIOUSLY')
-            CALL ERROR$I4VAL('IKPT',IKPT)
-            CALL ERROR$I4VAL('ISPIN',ISPIN)
-            CALL ERROR$STOP('WAVES$PROPAGATE')
-          END IF
-          NGL=GSET%NGL
-          NBH=THIS%NBH
-          ALLOCATE(ARR(NGL))
-          CALL PLANEWAVE$GETR8A('G2',NGL,ARR)
-          DO IG=1,NGL
-            ARR(IG)=FAC/(1.D0+EMASSCG2*ARR(IG))
-          ENDDO
-          DO IB=1,NBH
-            DO IDIM=1,NDIM
-              DO IG=1,NGL
-                THIS%PSIM(IG,IDIM,IB)=SVAR1*THIS%PSI0(IG,IDIM,IB) &
-       &                             +SVAR2*THIS%PSIM(IG,IDIM,IB) &
-       &                             +ARR(IG)*THIS%HPSI(IG,IDIM,IB) 
-              ENDDO
-            ENDDO
-          ENDDO
-          DEALLOCATE(THIS%HPSI)
-          DEALLOCATE(ARR)
-        ENDDO
-      ENDDO
-                            CALL TRACE$POP
-      RETURN
-      END
-
-
-
-
-

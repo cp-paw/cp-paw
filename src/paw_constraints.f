@@ -3297,8 +3297,9 @@ u(:)=0.d0
 !     ******************************************************************
       USE MPE_MODULE
       IMPLICIT none
+      logical(4)               :: tswitch=.true.
       REAL(8)   ,PARAMETER     :: TOL=1.D-9
-      LOGICAL(4),PARAMETER     :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER     :: TPR=.false.
       LOGICAL(4),PARAMETER     :: TTEST=.FALSE.
       INTEGER(4),PARAMETER     :: ITERX=100
       INTEGER(4),INTENT(IN)    :: NX
@@ -3320,6 +3321,8 @@ u(:)=0.d0
       REAL(8)                  :: VEC(NC)
       REAL(8)                  :: RMAT(NC,NC)
       REAL(8)   ,ALLOCATABLE   :: WORK(:)
+      REAL(8)   ,ALLOCATABLE   :: WORK2d(:,:)
+      REAL(8)   ,ALLOCATABLE   :: WORK3d(:,:,:)
       LOGICAL(4)               :: TCONV
       LOGICAL(4)               :: TLINDEP
       INTEGER(4)               :: THISTASK,NTASKS
@@ -3413,6 +3416,41 @@ u(:)=0.d0
 !     == EQUATION FOR LAMBDA                                          ==
 !     ==  AA(N)+BB(N,I)*LAMBDA(I)+0.5*LAMBDA(I)*C(I,N,J)*LAMBDA(J)=0  ==
 !     ==================================================================
+if(tswitch) then
+!
+!     ==================================================================
+!     == EQUATION FOR LAMBDA                                          ==
+!     ==  AA(N)+BB(N,I)*LAMBDA(I)+0.5*LAMBDA(I)*Cc(I,N,J)*LAMBDA(J)=0 ==
+!     ==  aa(N)=a(n)+xp(i)*b(i,n)+0.5*xp(i)*c(i,j,n)*xp(j)
+!     ==  bb(N1,n2)=b(i,n1)*g(i,n2)+xp(i)*c(i,j,n1)*g(j,n2)
+!     ==  cc(n2,N1,n3)=g(i,n2)*c(i,j,n1)*g(j,n3)
+!     ==================================================================
+      allocate(work3d(nx,nc,nc)) 
+!     ==   work3d(j,n1,n2)=sum_i c(i,j,n1)*g(i,n2)
+      call lib$scalarproductr8(.false.,nx,nx*nc,c,nc,g,work3d)
+!     ==   cc(n3,n1,n2)=sum_i g(i,n3)*work3d(i,n1,n2)
+      call lib$scalarproductr8(.false.,nx,nc,g,nc*nc,work3d,cc)
+!    
+!     ==   bb(n1,n2)=sum_i xp(i)*work3d(i,n1,n2)
+      call lib$scalarproductr8(.false.,nx,1,xp,nc*nc,work3d,bb)
+      deallocate(work3d)
+!
+      allocate(work2d(nc,nc))
+!     ===  work2d(n1,n2)=sum_i b(i,n1)*g(i,n2)
+      call lib$scalarproductr8(.false.,nx,nc,b,nc,g,work2d)
+!     ===  bb(n1,n2)=bb(n1,n2)+work2d(n1,n2)
+      bb(:,:)=bb(:,:)+work2d(:,:)
+      deallocate(work2d)
+!
+      allocate(work2d(nx,nc))
+!     == work3d(j,n1)=b(j,n1)+sum_i xp(i)*c(i,j,n1)
+      call lib$scalarproductr8(.false.,nx,1,xp,nx*nc,c,work2d)
+      work2d(:,:)=0.5d0*work2d(:,:)+b(:,:)
+!     == aa=a+sum_i xp(i)*work3d(i,n)
+      call lib$scalarproductr8(.false.,nx,1,xp,nc,work2d,aa)
+      aa(:)=a(:)+aa(:)
+      deallocate(work2d)
+else
       CALL MPE$QUERY(NTASKS,THISTASK)
       ICOUNT=0
       DO IC=1,NC
@@ -3481,6 +3519,7 @@ u(:)=0.d0
         ENDDO
       ENDDO         
       CALL MPE$COMBINE('+',CC)
+end if
 !
       IF(TPR) THEN
         PRINT*,'AA '
@@ -3488,6 +3527,12 @@ u(:)=0.d0
         PRINT*,'BB '
         DO IC1=1,NC
           WRITE(*,FMT='(7E10.2)')(BB(IC1,IC2),IC2=1,NC)
+        ENDDO
+        PRINT*,'CC '
+        DO IC1=1,NC
+        DO IC2=1,NC
+          WRITE(*,FMT='(7E10.2)')(CC(IC1,IC2,ic3),IC3=1,NC)
+        ENDDO
         ENDDO
       END IF
 !

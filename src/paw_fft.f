@@ -118,6 +118,7 @@ TYPE PWPARALLEL_TYPE
   INTEGER(4),POINTER :: MINUSG(:)  ! (NGL) IG(G) -> IG(-G)
   INTEGER(4)         :: NGAMMA     ! G(NGAMMA) IS THE GAMMA POINT 
                                    ! NGAMMA=0 IF NOT ON THIS TASK 
+  integer(4),pointer :: igvech(:,:) ! igvec ofr minusg(ig)>ig
   ! POINTER TO NEXT THIS
   TYPE(PWPARALLEL_TYPE),POINTER :: NEXT
 END TYPE PWPARALLEL_TYPE
@@ -227,6 +228,7 @@ END MODULE PLANEWAVE_MODULE
       THIS%ID=ID
       THIS%TSUPER=.FALSE.
       THIS%NGAMMA=0
+      NULLIFY(THIS%IGVECH)
 !
 !     ==================================================================
 !     ==  CHECK IF ID ALREADY EXISTS                                  ==
@@ -963,6 +965,17 @@ END MODULE PLANEWAVE_MODULE
         ALLOCATE(THIS%NGHARR(NTASKS))
         CALL MPE$GATHER(1,NGH,THIS%NGHARR)
         CALL MPE$BROADCAST(1,THIS%NGHARR)
+!
+        ALLOCATE(this%IGVECH(3,NGL))
+        IGH=0
+!print*,'clemens marke 1'
+        DO IG=1,ngl
+          IF(THIS%MINUSG(IG).LT.IG) CYCLE
+          IGH=IGH+1
+!print*,'clemens ig,igh ',ig,igh
+          this%IGVECh(:,IGH)=THIS%IGVEC(:,IG)
+        ENDDO
+!print*,'clemens marke 2'
       ELSE
         NULLIFY(THIS%NGHARR)
       END IF
@@ -1441,23 +1454,128 @@ END MODULE PLANEWAVE_MODULE
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$STOP('PLANEWAVE$STRUCTUREFACTOR')
         END IF
-        ALLOCATE(IGVEC(3,NGL))
-        IGH=0
-        DO IG=1,THIS%NGLARR(THISTASK)
-          IF(THIS%MINUSG(IG).LT.IG) CYCLE
-          IGH=IGH+1
-          IGVEC(:,IGH)=THIS%IGVEC(:,IG)
-        ENDDO
+!!$        ALLOCATE(IGVEC(3,NGL))
+!!$        IGH=0
+!!$        DO IG=1,THIS%NGLARR(THISTASK)
+!!$          IF(THIS%MINUSG(IG).LT.IG) CYCLE
+!!$          IGH=IGH+1
+!!$          IGVEC(:,IGH)=THIS%IGVEC(:,IG)
+!!$        ENDDO
+!!$        CALL PLANEWAVE_STRUCTUREFACTOR_OLD(R,THIS%GBAS,THIS%KVEC &
+!!$     &                         ,THIS%NR1,THIS%NR2,THIS%NR3,NGL &
+!!$     &                         ,IGVEC,EIGR)
+!!$         DEALLOCATE(IGVEC)
+!
         CALL PLANEWAVE_STRUCTUREFACTOR(R,THIS%GBAS,THIS%KVEC &
      &                         ,THIS%NR1,THIS%NR2,THIS%NR3,NGL &
-     &                         ,IGVEC,EIGR)
-        DEALLOCATE(IGVEC)
+     &                         ,this%IGVECh,EIGR)
       END IF
       RETURN
       END
 !
 !     .....................................................PHFAC........
       SUBROUTINE PLANEWAVE_STRUCTUREFACTOR(R,GBAS,KVEC,NR1,NR2,NR3,NG &
+     &           ,IGVEC,EIGR)
+!     **                                                              **
+!     **  EVALUATES  EXP(-I*(G+K)*R)                                  **
+!     **                                                              **
+!     **  INPUT:                                                      **
+!     **    R       ATOMIC POSITION                                   **
+!     **    XK      POSITION OF THE K-VECTOR                          **
+!     **    GBAS    RECIPROCAL LATTICE VECTORS                        **
+!     **    NR1,NR2,NR3                                               **
+!     **                                                              **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: R(3)      ! ATOMIC POSITION
+      REAL(8)   ,INTENT(IN) :: KVEC(3)   ! K-VECTOR
+      REAL(8)   ,INTENT(IN) :: GBAS(3,3) ! REC. LATTICE VECTORS
+      INTEGER(4),INTENT(IN) :: NR1
+      INTEGER(4),INTENT(IN) :: NR2
+      INTEGER(4),INTENT(IN) :: NR3
+      INTEGER(4),INTENT(IN) :: NG        ! #(LOCAL PLANE WAVES)
+      INTEGER(4),INTENT(IN) :: IGVEC(3,NG)
+      COMPLEX(8),INTENT(OUT):: EIGR(NG)  ! E**(I*G*R)
+      INTEGER(4)            :: NRMAX
+      COMPLEX(8),POINTER,SAVE :: DCWORK(:,:)
+      COMPLEX(8)            :: CFACP,CSVARP,CFACM,CSVARM
+      REAL(8)               :: GR1,GR2,GR3
+      REAL(8)               :: RK1,RK2,RK3
+      INTEGER(4)            :: I,j,k,IG 
+      REAL(8)               :: KARTK(3)
+      integer(4),save       :: nrmaxsave=-1
+!     ******************************************************************
+      NRMAX=MAX(NR1,NR2,NR3)
+      IF(NRMAXSAVE.LT.NRMAX) THEN
+        IF(NRMAXSAVE.NE.-1)DEALLOCATE(DCWORK)
+        ALLOCATE(DCWORK(-NRMAX:NRMAX,3))
+        NRMAXSAVE=NRMAX
+      END IF
+      KARTK=MATMUL(GBAS,KVEC)
+!
+!     ==================================================================
+!     ==  FIRST                                                       ==
+!     ==================================================================
+      GR1=GBAS(1,1)*R(1)+GBAS(2,1)*R(2)+GBAS(3,1)*R(3)
+      RK1=R(1)*KARTK(1)
+      CFACP =CMPLX(DCOS(GR1),-DSIN(GR1),8)
+      CSVARP=CMPLX(DCOS(RK1),-DSIN(RK1),8)
+      CFACM=CONJG(CFACP)
+      CSVARM=CSVARP
+      DO I=1,NR1
+        DCWORK(I-1,1)=CSVARP
+        CSVARP=CSVARP*CFACP
+        DCWORK(-I+1,1)=CSVARM
+        CSVARM=CSVARM*CFACM
+      ENDDO
+!
+!     ==================================================================
+!     ==  SECOND DIRECTION                                            ==
+!     ==================================================================
+      GR2=GBAS(1,2)*R(1)+GBAS(2,2)*R(2)+GBAS(3,2)*R(3)
+      RK2=R(2)*KARTK(2)
+      CFACP =CMPLX(DCOS(GR2),-DSIN(GR2),8)
+      CSVARP=CMPLX(DCOS(RK2),-DSIN(RK2),8)
+      CFACM =CONJG(CFACP)
+      CSVARM=CSVARP
+      DO I=1,NR2
+        DCWORK(I-1,2)=CSVARP
+        CSVARP=CSVARP*CFACP
+        DCWORK(-I+1,2)=CSVARM
+        CSVARM=CSVARM*CFACM
+      ENDDO
+!
+!     ==================================================================
+!     ==  THIRD DIRECTION                                             ==
+!     ==================================================================
+      GR3=GBAS(1,3)*R(1)+GBAS(2,3)*R(2)+GBAS(3,3)*R(3)
+      RK3=R(3)*KARTK(3)
+      CFACP =CMPLX(DCOS(GR3),-DSIN(GR3),8)
+      CSVARP=CMPLX(DCOS(RK3),-DSIN(RK3),8)
+      CFACM =CONJG(CFACP)
+      CSVARM=CSVARP
+      DO I=1,NR3
+        DCWORK(I-1,3)=CSVARP
+        CSVARP=CSVARP*CFACP
+        DCWORK(-I+1,3)=CSVARM
+        CSVARM=CSVARM*CFACM
+      ENDDO
+!
+!     ==================================================================
+!     ==  combine three directions to structure factor                ==
+!     ==================================================================
+      DO IG=1,NG
+        I=IGVEC(1,IG) 
+        j=IGVEC(2,IG) 
+        k=IGVEC(3,IG) 
+        EIGR(IG)=DCWORK(I,1)*DCWORK(j,2)*DCWORK(k,3)
+      ENDDO
+      RETURN
+      END
+!
+!     .....................................................PHFAC........
+      SUBROUTINE PLANEWAVE_STRUCTUREFACTOR_old(R,GBAS,KVEC,NR1,NR2,NR3,NG &
      &           ,IGVEC,EIGR)
 !     **                                                              **
 !     **  EVALUATES  EXP(-I*(G+K)*R)                                  **

@@ -336,7 +336,10 @@ ${BINDIR}/${ARCH}/f90pp_tmplts.x: ${F90PPDIR}/f90pp_tmplts.f
 #########################################################################
 #
 ${PAWX} : F90PP ${OBJDIR}/FFTW_F77.I ${OBJDIR}/mpif90.h ${LOBJS} \
-          ${OBJECTS} ${MPE} ${OBJDIR}/liblapack.a ${OBJDIR}/libblas.a
+                ${OBJECTS} ${MPE} \
+                ${OBJDIR}/liblapack.a \
+                ${OBJDIR}/libblas.a \
+                ${OBJDIR}/libfftpack.a
 	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${MPE} ${LLIBS}
 	ar -ru $(PAWLIB) $(LOBJS) ${OBJDIR}/paw_mpelib_s.o
 #
@@ -390,16 +393,23 @@ ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f
 	${OPTRM} ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #
 #__compile lapack routines________________________________________________
-${OBJDIR}/liblapack.a : ${SRCDIR}/paw_lapack.f
-	${COMPILE77} -o ${OBJDIR}/paw_lapack.o ${SRCDIR}/paw_lapack.f
-	ar -ru ${OBJDIR}/liblapack.a ${OBJDIR}/paw_lapack.o
-	${OPTRM} ${OBJDIR}/paw_lapack.o
+${OBJDIR}/liblapack.a : ${SRCDIR}/Libs/lapack.f
+	${COMPILE77} -o ${OBJDIR}/lapack.o ${SRCDIR}/Libs/lapack.f
+	ar -ru ${OBJDIR}/liblapack.a ${OBJDIR}/lapack.o
+	${OPTRM} ${OBJDIR}/lapack.o
 #
 #__compile blas routines________________________________________________
-${OBJDIR}/libblas.a : ${SRCDIR}/paw_blas.f
-	${COMPILE77} -o ${OBJDIR}/paw_blas.o ${SRCDIR}/paw_blas.f
-	ar -ru ${OBJDIR}/libblas.a ${OBJDIR}/paw_blas.o
-	${OPTRM} ${OBJDIR}/paw_blas.o
+${OBJDIR}/libblas.a : ${SRCDIR}/Libs/blas.f
+	${COMPILE77} -o ${OBJDIR}/blas.o ${SRCDIR}/Libs/blas.f
+	ar -ru ${OBJDIR}/libblas.a ${OBJDIR}/blas.o
+	${OPTRM} ${OBJDIR}/blas.o
+#
+#__compile fftpack routines________________________________________________
+${OBJDIR}/libfftpack.a : ${SRCDIR}/Libs/fftpack.f
+	${BINDIR}/f90pp ${F90PPOPT} ${SRCDIR}/Libs/fftpack.f > ${OBJDIR}/fftpack_d.${FEXT}
+	${COMPILE} -o ${OBJDIR}/fftpack.o ${OBJDIR}/fftpack_d.f90
+	ar -ru ${OBJDIR}/libfftpack.a ${OBJDIR}/fftpack.o
+	${OPTRM} ${OBJDIR}/fftpack.o
 #
 #__general rule for object files_________________________________________
 $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f
