@@ -5738,22 +5738,22 @@ INTEGER(4)  :: IZ            !ATOMIC NUMBER
 REAL(8)     :: RAD           !``ASA RADIUS''
 REAL(8)     :: VAL(LNXX)     ! AEPHI(RAD)
 REAL(8)     :: DER(LNXX)     ! DAEPHI/DR(RAD)
-REAL(8)     :: OV(LNXX)      ! <AEPHI|AEPHI> WITHIN RAD
-REAL(8)     :: XK(3)         ! K-POINT IN RELATIVE COORDINATES
+REAL(8)     :: OV(LNXX,LNXX) ! <AEPHI|AEPHI> WITHIN RAD
+REAL(8)     :: XK(3,NKPT)    ! K-POINT IN RELATIVE COORDINATES
 INTEGER(4)  :: NB            ! #(BANDS)
-REAL(8)     :: EIG           ! EIGENVALUE
-COMPLEX(8)  :: PROJ(NDIM,NPRO)    ! PROJECTIONS
+REAL(8)     :: EIG(NB,NSPIN,NKPT)               ! EIGENVALUES
+COMPLEX(8)  :: PROJ(NDIM,NPRO,NB,NSPIN,NKPT)    ! PROJECTIONS
 !**************************************************************
 WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX
 WRITE(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
-WRITE(NFIL)RBAS(:,:),R(:,:)
+WRITE(NFIL)RBAS(:,:),R0(:,:)
 DO ISP=1,NSP
    WRITE(NFIL)IZ,RAD,VAL(1:LNX(ISP)),DER(1:LNX(ISP)) &
 &                                   ,OV(1:LNX(ISP),1:LNX(ISP))
 ENDDO
 DO IKPT=1,NKPT
   DO ISPIN=1,NSPIN
-    WRITE(NFIL)XK(:),NB
+    WRITE(NFIL)XK(:,IKPT),NB
     DO IB=1,NB
       WRITE(NFIL)EIG,PROJ(:,:)
     ENDDO
