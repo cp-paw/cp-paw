@@ -1265,51 +1265,49 @@ REAL(8)::EV
        REAL(8)              :: QTOL=1.D-10
        INTEGER(4),PARAMETER :: NITER=1000
        INTEGER(4)           :: ITER
-       integer(4)           :: nfilo
-       real(8)              :: sum
 integer(4) :: ntasks,thistask
 integer(4) :: count = 0
 !      *****************************************************************
-!!!!!!
-!DEBUG clemens
-!!!!!!
-open(10,file='dynocc_status.dat',status='unknown',form='formatted')
-write(10,*) starttype! ,' starttype'
-write(10,*) nb!,' nb'
-write(10,*) nkpt!,' nkpt'
-write(10,*) nspin!,' nspin'
-write(10,*) tdyn!,' tdyn'
-write(10,*) reset!,' reset'
-write(10,*) tstop!,' tstop'
-write(10,*) tfixspin!,' tfixspin'
-write(10,*) tfixtot!,' tfixtot'
-write(10,*) fmax!,' fmax' 
-write(10,*) sumofz!,' sumofz'
-write(10,*) charge!,' charge'
-write(10,*) totcha!,' totcha'
-write(10,*) spincha!,' spincha'
-write(10,*) mx!,' mx'
-write(10,*) totpot!,' totpot'
-write(10,*) spinpot!,' spinpot'
-write(10,*) temp!,' temp'
-write(10,*) annex!,' annex'
-write(10,*) deltat!,' deltat'
-write(10,*) tepsilon!,' tepsilon'
-do ispin = 1, nspin
-  do ikpt = 1, nkpt
-    write(10,*) XM(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
-    write(10,*) X0(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
-    write(10,*) XP(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
-    write(10,*) epsilon(:,ikpt,ispin)!,' epsilon for ikpt/ispin',ikpt,ispin
-    write(10,*) mpsidot2(:,ikpt,ispin)!,' mpsidot2 for ikpt,ispin',ikpt,ispin
-    
-  end do
-end do
-do ikpt = 1, nkpt
-  write(10,*) xk(:,ikpt)!,' xk for ikpt',ikpt
-  write(10,*) wkpt(ikpt)!,' wkpt for ikpt',ikpt
-end do
-close(10)
+!!!!!!!
+!!DEBUG clemens
+!!!!!!!
+!open(10,file='dynocc_status.dat',status='unknown',form='formatted')
+!write(10,*) starttype! ,' starttype'
+!write(10,*) nb!,' nb'
+!write(10,*) nkpt!,' nkpt'
+!write(10,*) nspin!,' nspin'
+!write(10,*) tdyn!,' tdyn'
+!write(10,*) reset!,' reset'
+!write(10,*) tstop!,' tstop'
+!write(10,*) tfixspin!,' tfixspin'
+!write(10,*) tfixtot!,' tfixtot'
+!write(10,*) fmax!,' fmax' 
+!write(10,*) sumofz!,' sumofz'
+!write(10,*) charge!,' charge'
+!write(10,*) totcha!,' totcha'
+!write(10,*) spincha!,' spincha'
+!write(10,*) mx!,' mx'
+!write(10,*) totpot!,' totpot'
+!write(10,*) spinpot!,' spinpot'
+!write(10,*) temp!,' temp'
+!write(10,*) annex!,' annex'
+!write(10,*) deltat!,' deltat'
+!write(10,*) tepsilon!,' tepsilon'
+!do ispin = 1, nspin
+!  do ikpt = 1, nkpt
+!    write(10,*) XM(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
+!    write(10,*) X0(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
+!    write(10,*) XP(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
+!    write(10,*) epsilon(:,ikpt,ispin)!,' epsilon for ikpt/ispin',ikpt,ispin
+!    write(10,*) mpsidot2(:,ikpt,ispin)!,' mpsidot2 for ikpt,ispin',ikpt,ispin
+!    
+!  end do
+!end do
+!do ikpt = 1, nkpt
+!  write(10,*) xk(:,ikpt)!,' xk for ikpt',ikpt
+!  write(10,*) wkpt(ikpt)!,' wkpt for ikpt',ikpt
+!end do
+!close(10)
 !!!!!!!
 !DEBUG
 !!!!!!!
@@ -1329,31 +1327,6 @@ close(10)
        TMPSIDOT2=ALLOCATED(MPSIDOT2)
 !      IF(TMPSIDOT2) PRINT*,'MPSIDOT2',MPSIDOT2
 !      IF(TMPSIDOT2) PRINT*,'E+MPSIDOT2',EPSILON+MPSIDOT2
-!
-!      =================================================================
-!      ==  TEST FOR FIXED OCCUPATIONS:                                ==
-!      ==  IF ALL OCCUPATIONS ARE ZERO OR ONE, THE FORCES VANISH      ==
-!      ==  THEREFORE THE DYNAMICS CANNOT START HERE. AS REMEDY THE    ==
-!      ==  OCCUPATIONS ARE RESET TO THE FERMI DISTRIBUTION FUNCTION   ==
-!      =================================================================
-       SUM=0.D0
-       DO ISPIN=1,NSPIN
-         DO IKPT=1,NKPT
-           DO IB=1,NB
-             SVAR=X0(IB,IKPT,ISPIN)
-             SUM=SUM+(SVAR*(1.D0-SVAR))**2
-           ENDDO
-         ENDDO
-       ENDDO
-       SUM=SQRT(SUM/REAL(NSPIN*NKPT*NB,KIND=8))
-       IF(SUM.LE.DSMALL) THEN
-         CALL FILEHANDLER$UNIT('PROT',NFILO)
-         WRITE(NFILO,FMT='("WARNING: OCCUPATIONS RESET TO FERMI DISTRIBUTION")')
-         CALL DYNOCC_INIOCCBYENERGY(NB,NKPT,NSPIN,FMAX &
-&          ,TEMP,TFIXTOT,TOTCHA,TOTPOT,TFIXSPIN,SPINCHA,SPINPOT &
-&          ,WKPT,EPSILON,X0)
-          XM(:,:,:)=X0(:,:,:)
-       END IF
 !
 !      =================================================================
 !      ==  AVOID ESCAPING OCCUPATIONS BY IMPOSING PERIODIC            ==
