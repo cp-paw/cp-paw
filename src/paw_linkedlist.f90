@@ -1,4 +1,11 @@
-@PROCESS NOOPTIMIZE
+!
+! MIND: this version of paw_linkedlist.f90 includes some changes in 
+!       order to cicrumvent compiler bugs of the IBM xlf90 compiler
+!       if the preprocessor variable XLFWORKAROUND is set, a work-around 
+!       version is compiled.
+!
+#DEFINE XLFWORKAROUND
+!
 !
 !***********************************************************************
 !**                                                                   **
@@ -869,6 +876,18 @@ END INTERFACE
 INTERFACE LINKEDLIST$GET
 #   MODULE TEMPLATE LINKEDLIST$GETNUM
 #   MODULE TEMPLATE LINKEDLIST$GETCHAR
+!
+!
+! MIND that module procedure has to be put "by hand" in both cases 
+! as the f90pp_tmplts.x only resolves the first template definition
+! which is the one for the workaround and does not include the 
+! definition of $getchr0. If the whole workaround construction is 
+! removed, also remove the whole if-else-endif block!
+#if defined(XLFWORKAROUND)
+    MODULE PROCEDURE LINKEDLIST$GETCHR0
+#else
+    MODULE PROCEDURE LINKEDLIST$GETCHR0
+#endif
 END INTERFACE 
 CONTAINS
 !     
@@ -1641,11 +1660,20 @@ CONTAINS
       TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE(<TYPEDEF>)
       CHARACTER(1)    ,POINTER    :: CHARVAL(:)
       INTEGER(4)                  :: LENG
+      character(256)              :: line
 !     ******************************************************************
       LIST=>LL%PTR
       LENG=<SIZE>
       CALL LINKEDLIST_GETGENERIC(LIST,ID,NTH,TYPE%NAME,LENG,CHARVAL)
+! MIND:
+! WORKAROUND FOR IBM XLF COMPILER (64 bit compilation mode)  
+! author: Johannes Schimpl
+!      write(line,*) transfer(charval,val)
+!      read(line,*) val
+! -> gives problems with large cases
+!orig: code
       VAL=<RESHAPE(>TRANSFER(CHARVAL,VAL)<RESHAPE)>
+!
       RETURN 
       END SUBROUTINE LINKEDLIST$GET<TYPEID><RANKID>
 #END TEMPLATE LINKEDLIST$GETNUM
@@ -1705,6 +1733,128 @@ CONTAINS
       RETURN
       END SUBROUTINE LINKEDLIST$SETCH<RANKID>
 #END TEMPLATE LINKEDLIST$SETCHAR
+
+
+!*************************************************************************
+#if defined(XLFWORKAROUND)
+!*************************************************************************
+
+#TEMPLATE LINKEDLIST$GETCHAR
+(<RANKID>,<SIZE>,<,SIZE>,<RESHAPE(><RESHAPE)><RANK>)
+    =([R1][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:)])
+     ([R2][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:)])
+     ([R3][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:)])
+     ([R4][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:)])
+     ([R5][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:,:)])
+     ([R6][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:,:,:)])
+#BODY
+!     
+!     ..................................................................
+      SUBROUTINE LINKEDLIST$GETCH<RANKID>(LL,ID,NTH,VAL)
+!     ******************************************************************
+!     **                                                              **
+!     **  SPECIFIC INTERFACE FOR LINKEDLIST_GET.                      **
+!     **  SEE LINKEDLIST_GETGENERIC FOR FURTHER INFO.                 **
+!     **                                                              **
+!     **  REMARKS:                                                    **
+!     **    THIS SPECIFIC INTERFACE DIFFERS FROM OTHER SPECIFIC       **
+!     **    INTERFACES BY THE TYPE OF VAL AND THE VALUE OF TYPE       **
+!     **    AND VAL MAY BE ARRAY VALUED OR SCALAR                     **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LL_TYPE)   ,INTENT(IN) :: LL
+      CHARACTER(*)    ,INTENT(IN) :: ID
+      INTEGER(4)      ,INTENT(IN) :: NTH
+      CHARACTER(*)    ,INTENT(OUT):: VAL<RANK>
+      TYPE(LLIST_TYPE),POINTER    :: LIST
+      TYPE(LDATA_TYPE),POINTER    :: DATA
+      TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
+      CHARACTER(1)    ,POINTER    :: CHARVAL(:)
+      CHARACTER(8)                :: STRING
+      CHARACTER(500)              :: MOLD
+      INTEGER(4)                  :: LENG
+      INTEGER(4)                  :: I1,I2,KIND
+!     ******************************************************************
+!
+      LIST=>LL%PTR
+      LENG=<SIZE>
+      WRITE(STRING,fmt='(i8)')LEN(VAL)
+      STRING=ADJUSTL(STRING)
+      STRING=TRIM(TYPE%NAME)//'('//TRIM(STRING)//')'
+      CALL LINKEDLIST_GETGENERIC(LIST,ID,NTH,STRING,LENG,CHARVAL)
+!     == CALCULATE LENGTH OF DATA RECEIVED ===========================
+      IF(NTH.EQ.0) THEN
+        CALL LLIST_FINDDATA(LIST,ID,1,DATA)
+      ELSE IF(NTH.GT.0) THEN
+        CALL LLIST_FINDDATA(LIST,ID,NTH,DATA)
+      ELSE
+        CALL ERROR$STOP('LINKEDLIST$GETCH<RANKID>')
+      END IF
+      STRING=DATA%TYPE
+      I1=INDEX(STRING,'(')
+      I2=INDEX(STRING,')')
+      READ(STRING(I1+1:I2-1),*)KIND
+!     == MAP STORED DATA ONTO VAL ====================================
+      VAL=<RESHAPE(>TRANSFER(CHARVAL,MOLD(1:KIND)<,SIZE>)<RESHAPE)>
+      RETURN 
+      END SUBROUTINE LINKEDLIST$GETCH<RANKID>
+#END TEMPLATE LINKEDLIST$GETCHAR
+!
+!     ..................................................................
+      SUBROUTINE LINKEDLIST$GETCHR0(LL,ID,NTH,VAL)
+!     ******************************************************************
+!     **                                                              **
+!     **  SPECIFIC INTERFACE FOR LINKEDLIST_GET.                      **
+!     **  SEE LINKEDLIST_GETGENERIC FOR FURTHER INFO.                 **
+!     **                                                              **
+!     **  REMARKS:                                                    **
+!     **    THIS SPECIFIC INTERFACE DIFFERS FROM OTHER SPECIFIC       **
+!     **    INTERFACES BY THE TYPE OF VAL AND THE VALUE OF TYPE       **
+!     **    AND VAL MAY BE ARRAY VALUED OR SCALAR                     **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LL_TYPE)   ,INTENT(IN) :: LL
+      CHARACTER(*)    ,INTENT(IN) :: ID
+      INTEGER(4)      ,INTENT(IN) :: NTH
+      CHARACTER(*)    ,INTENT(OUT):: VAL
+      TYPE(LLIST_TYPE),POINTER    :: LIST
+      TYPE(LDATA_TYPE),POINTER    :: DATA
+      TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
+      CHARACTER(1)    ,POINTER    :: CHARVAL(:)
+      CHARACTER(8)                :: STRING
+      CHARACTER(500)              :: MOLD
+      INTEGER(4)                  :: LENG
+      INTEGER(4)                  :: I1,I2,KIND
+!     ******************************************************************
+      LIST=>LL%PTR
+      LENG=1
+      WRITE(STRING,fmt='(i8)')LEN(VAL)
+      STRING=ADJUSTL(STRING)
+      STRING=TRIM(TYPE%NAME)//'('//TRIM(STRING)//')'
+      CALL LINKEDLIST_GETGENERIC(LIST,ID,NTH,STRING,LENG,CHARVAL)
+!     == CALCULATE LENGTH OF DATA RECEIVED ===========================
+      IF(NTH.EQ.0) THEN
+        CALL LLIST_FINDDATA(LIST,ID,1,DATA)
+      ELSE IF(NTH.GT.0) THEN
+        CALL LLIST_FINDDATA(LIST,ID,NTH,DATA)
+      ELSE
+        CALL ERROR$STOP('LINKEDLIST$GETCH<RANKID>')
+      END IF
+      STRING=DATA%TYPE
+      I1=INDEX(STRING,'(')
+      I2=INDEX(STRING,')')
+      READ(STRING(I1+1:I2-1),*)KIND
+!     == MAP STORED DATA ONTO VAL ====================================
+      val=' '
+      val(1:kind)=TRANSFER(CHARVAL,MOLD(1:KIND))
+      RETURN
+     END SUBROUTINE LINKEDLIST$GETCHR0
+
+!*************************************************************************
+#else   
+!*************************************************************************
 !
 #TEMPLATE LINKEDLIST$GETCHAR
 (<RANKID>,<SIZE>,<,SIZE>,<RESHAPE(><RESHAPE)><RANK>)
@@ -1744,6 +1894,7 @@ CONTAINS
       INTEGER(4)                  :: LENG
       INTEGER(4)                  :: I1,I2,KIND
 !     ******************************************************************
+!
       LIST=>LL%PTR
       LENG=<SIZE>
       WRITE(STRING,fmt='(i8)')LEN(VAL)
@@ -1767,6 +1918,10 @@ CONTAINS
       RETURN 
       END SUBROUTINE LINKEDLIST$GETCH<RANKID>
 #END TEMPLATE LINKEDLIST$GETCHAR
+
+!*************************************************************************
+#endif   
+!*************************************************************************
 !     
 !     ..................................................................
       SUBROUTINE LINKEDLIST$CONVERT(LL,ID,NTH_,TYPE)
