@@ -116,7 +116,7 @@ END MODULE WARMUP_MODULE
 !     == RETURN DATA                                                  ==
 !     ==================================================================
       CALL ATOMLIST$SETR8A('R(+)',0,3*NAT,RP)
-      CALL ATOMLIST$SETR8A('FORCE',0,3*NAT,FORCE)
+      CALL ATOMLIST$SETR8A('FORCE',0,NAT,FORCE)
 !
 !     ==================================================================
 !     == CLEAN UP AND CLOSE DOWN                                      ==

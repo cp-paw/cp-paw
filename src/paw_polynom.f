@@ -29,7 +29,7 @@
 !     ********************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NX
-      REAL(8)   ,INTENT(OUT):: X0
+      REAL(8)   ,INTENT(out):: X0
       REAL(8)   ,INTENT(OUT):: COEFF(NX)
       REAL(8)   ,INTENT(IN) :: X(NX)
       REAL(8)   ,INTENT(IN) :: Y(NX)

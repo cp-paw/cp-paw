@@ -1,0 +1,116 @@
+module fixrho_module
+  real(8), allocatable    :: qlm(:,:)
+  real(8), allocatable    :: rho(:,:)
+  real(8), allocatable    :: denmat(:,:,:,:)
+end module fixrho_module
+!
+!.......................................................................
+       subroutine clemens$getrho(nrl,ndimd,lmrxx,nat,qlm_,rho_,denmat_)
+       use fixrho_module 
+       implicit none
+       integer(4) ,intent(in)  :: nrl,ndimd,lmrxx,nat
+       real(8)    ,intent(out) :: qlm_(lmrxx,nat),rho_(nrl,ndimd)
+       real(8)    ,intent(out) :: denmat_(lmrxx,lmrxx,ndimd,nat)
+!************************************************************************
+       if (.not.allocated(qlm)) then
+          allocate(qlm(lmrxx,nat))
+          allocate(rho(nrl,ndimd))
+          allocate(denmat(lmrxx,lmrxx,ndimd,nat))
+          call clemens_read()
+       end if
+       qlm_(:,:)=qlm(:,:)
+       rho_(:,:)=rho(:,:)
+       denmat_(:,:,:,:)=denmat(:,:,:,:)
+       end
+!
+!
+!.......................................................................
+       subroutine clemens$setrho(nrl,ndimd,lmrxx,nat,qlm_,rho_,denmat_)
+       use fixrho_module 
+       implicit none
+       integer(4) ,intent(in)  :: nrl,ndimd,lmrxx,nat
+       real(8)    ,intent(out) :: qlm_(lmrxx,nat),rho_(nrl,ndimd)
+       real(8)    ,intent(out) :: denmat_(lmrxx,lmrxx,ndimd,nat)
+!************************************************************************
+       if (.not.allocated(qlm)) then
+          allocate(qlm(lmrxx,nat))
+          allocate(rho(nrl,ndimd))
+          allocate(denmat(lmrxx,lmrxx,ndimd,nat))
+       end if
+       qlm(:,:)=qlm_(:,:)
+       rho(:,:)=rho_(:,:)
+       denmat(:,:,:,:)=denmat_(:,:,:,:)
+       end
+!
+!.......................................................................
+       subroutine clemens_read()
+       use fixrho_module
+       implicit none
+       integer(4)                 :: nfil
+!************************************************************************
+       CALL FILEHANDLER$SETFILE('FIXRHO',.FALSE.,'fixrho.bin')
+       CALL FILEHANDLER$SETSPECIFICATION('FIXRHO','FORM','UNFORMATTED')
+       CALL FILEHANDLER$SETSPECIFICATION('FIXRHO','POSITION','REWIND')
+       CALL FILEHANDLER$UNIT('FIXRHO',NFIL)
+       read(nfil)qlm(:,:)
+       read(nfil)rho(:,:)
+       read(nfil)denmat(:,:,:,:)
+       call filehandler$close('FIXRHO')
+       return
+       end
+!
+!.......................................................................
+       subroutine clemens$write()
+       use fixrho_module
+       implicit none
+       integer(4)                 :: nfil
+!************************************************************************
+       CALL FILEHANDLER$SETFILE('FIXRHO',.FALSE.,'fixrho.bin')
+       CALL FILEHANDLER$SETSPECIFICATION('FIXRHO','FORM','UNFORMATTED')
+       CALL FILEHANDLER$SETSPECIFICATION('FIXRHO','POSITION','REWIND')
+       CALL FILEHANDLER$UNIT('FIXRHO',NFIL)
+       write(nfil)qlm(:,:)
+       write(nfil)rho(:,:)
+       write(nfil)denmat(:,:,:,:)
+       call filehandler$close('FIXRHO')
+       return
+       end
+       
+!
+!.......................................................................
+       subroutine clemens$writebands()
+       implicit none
+       integer(4)                 :: nfil
+       integer(4)                 :: nb,nkpt,nspin
+       integer(4)                 :: ikpt,ispin
+       real(8)                    :: ev
+       real(8),allocatable        :: xk(:,:),occ(:,:),wkpt(:)
+       real(8),allocatable        :: eigval(:,:,:)
+!************************************************************************
+       CALL CONSTANTS('EV',EV)
+       call dynocc$geti4('NB',nb)
+       call dynocc$geti4('NKPT',nkpt)
+       call dynocc$geti4('NSPIN',nspin)
+       allocate(xk(3,nkpt))
+       allocate(occ(nb,nkpt))
+       allocate(wkpt(nkpt))
+       allocate(eigval(nb,nkpt,nspin))
+       call dynocc$getr8a('XK',3*nkpt,xk)
+       call dynocc$getr8a('OCC',nb*nkpt,occ)
+       call dynocc$getr8a('WKPT',nkpt,wkpt)
+       do ispin=1,nspin
+         do ikpt=1,nkpt
+	   call waves$seti4('IKPT',ikpt)
+	   call waves$seti4('ISPIN',ispin)
+	   CALL WAVES$GETR8A('<PSI|H|PSI>',NB,EIGVAL(:,IKPT,ISPIN))
+	 end do
+       end do
+       eigval(:,:,:)=eigval(:,:,:)/ev
+       print*,'clemens: ',eigval
+       CALL FILEHANDLER$UNIT('BANDS-TRAJECTORY',NFIL)
+       write(nfil) nb,nkpt,nspin,xk,wkpt,occ,eigval
+       call filehandler$close('BANDS-TRAJECTORY')
+       return
+       end
+       
+

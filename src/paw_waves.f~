@@ -1156,10 +1156,10 @@ CALL TIMING$CLOCKOFF('W:MOMENTS')
 !     ==================================================================
 !     == overwrite density to for fixed potential calc.               ==
 !     ==================================================================
-      IF(TFIXRHO) THEN
+      IF (FIXRHO) THEN
         CALL WAVES_FIXRHOGET(NRL,NDIMD,LMRXX,NAT,QLM,RHO,DENMAT)
-      END if
-      IF(TWRITERHO) then
+      END
+      IF(WRITERHO) 
         CALL WAVES_FIXRHOSET(NRL,NDIMD,LMRXX,NAT,QLM,RHO,DENMAT)
       END IF
 !
@@ -7612,7 +7612,6 @@ END IF
 !
 !.....................................................................
 module wavesfixrho_module
-! this module is used to keep the density fixed
   real(8), allocatable    :: qlm(:,:)
   real(8), allocatable    :: rho(:,:)
   real(8), allocatable    :: denmat(:,:,:,:)
@@ -7620,7 +7619,7 @@ end module wavesfixrho_module
 !
 !      .................................................................
        subroutine waves_fixrhoget(nrl,ndimd,lmrxx,nat,qlm_,rho_,denmat_)
-       use wavesfixrho_module 
+       use fixrho_module 
        implicit none
        integer(4) ,intent(in)  :: nrl,ndimd,lmrxx,nat
        real(8)    ,intent(out) :: qlm_(lmrxx,nat),rho_(nrl,ndimd)
@@ -7630,7 +7629,7 @@ end module wavesfixrho_module
           allocate(qlm(lmrxx,nat))
           allocate(rho(nrl,ndimd))
           allocate(denmat(lmrxx,lmrxx,ndimd,nat))
-          call waves$fixrhoread()
+          call clemens_read()
        end if
        qlm_(:,:)=qlm(:,:)
        rho_(:,:)=rho(:,:)
@@ -7639,7 +7638,7 @@ end module wavesfixrho_module
 !
 !      .................................................................
        subroutine waves_fixrhoset(nrl,ndimd,lmrxx,nat,qlm_,rho_,denmat_)
-       use wavesfixrho_module 
+       use fixrho_module 
        implicit none
        integer(4) ,intent(in)  :: nrl,ndimd,lmrxx,nat
        real(8)    ,intent(out) :: qlm_(lmrxx,nat),rho_(nrl,ndimd)
@@ -7657,7 +7656,7 @@ end module wavesfixrho_module
 !
 !      .................................................................
        subroutine waves$fixrhoread()
-       use wavesfixrho_module
+       use fixrho_module
        implicit none
        integer(4)                 :: nfil
 !      ******************************************************************
@@ -7674,7 +7673,7 @@ end module wavesfixrho_module
 !
 !      .................................................................
        subroutine waves$fixrhowrite()
-       use wavesfixrho_module
+       use fixrho_module
        implicit none
        integer(4)                 :: nfil
 !      ******************************************************************

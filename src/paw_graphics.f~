@@ -925,13 +925,12 @@ print*,'fac',fac
       CALL WAVES$SETI4('IKPT',IKPT)
       CALL WAVES$SETI4('ISPIN',ISPIN)
       ALLOCATE(PSI(NNR))
-      CALL WAVES$SETL4('TIM',.TRUE.)
       CALL WAVES$GETR8A('PSPSI',NNR,PSI)
+      CALL WAVES$SETL4('TIM',.TRUE.)
       DO IR=1,NNR            
         WAVE(IR)=WAVE(IR)+FAC*PSI(IR)**2            
       ENDDO
       CALL WAVES$SETL4('TIM',.FALSE.)
-      CALL WAVES$GETR8A('PSPSI',NNR,PSI)
       DO IR=1,NNR            
         WAVE(IR)=WAVE(IR)+FAC*PSI(IR)**2            
       ENDDO

@@ -231,7 +231,6 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),INTENT(IN)   :: LMRX
       REAL(8)   ,INTENT(INOUT):: VQLM(LMRX)
       REAL(8)   ,INTENT(IN)   :: RHOB
-!     REAL(8)   ,INTENT(out)  :: potb ! average electrostatic potential
       REAL(8)   ,INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(OUT)  :: DO(LMNX,LMNX,ndimd)
       REAL(8)                 :: R1,DEX,XEXP,RI
@@ -1319,10 +1318,12 @@ END MODULE AUGMENTATION_MODULE
       XEXP=DEXP(DEX)
       SVAR=-2.D0*PI*RHOB/3.D0*DSQRT(4.D0*PI)
       RI=R1/XEXP
+!print*,'severe warning from augmentation_addbackground'
       DO IR=1,NR
         RI=RI*XEXP
         RI2=RI*RI
         SVAR1=SVAR*RI2
+!WORK(IR)=SVAR1*RHO(IR)
         WORK(IR)=SVAR1*RHO(IR)*ri2
         POT(IR)=POT(IR)+SVAR1
       ENDDO

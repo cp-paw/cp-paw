@@ -386,7 +386,7 @@ END MODULE RANDOM_MODULE
       USE RANDOM_MODULE
       IMPLICIT NONE
 !     ******************************************************************
-!     SEED=1
+      SEED=1
 !     == CHOICE EXPLICIT CPPVARIABLE_XLF RNG
 !     SEED=1_8
 !     == CHOICE ORIGINAL CPPVARIABLE_XLF RNG

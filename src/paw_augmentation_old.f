@@ -231,7 +231,6 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),INTENT(IN)   :: LMRX
       REAL(8)   ,INTENT(INOUT):: VQLM(LMRX)
       REAL(8)   ,INTENT(IN)   :: RHOB
-!     REAL(8)   ,INTENT(out)  :: potb ! average electrostatic potential
       REAL(8)   ,INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(OUT)  :: DO(LMNX,LMNX,ndimd)
       REAL(8)                 :: R1,DEX,XEXP,RI
@@ -280,9 +279,9 @@ END MODULE AUGMENTATION_MODULE
       CALL SETUP$LNX(ISP,LNX)
       ALLOCATE(LOX(LNX))
       CALL SETUP$LOFLN(ISP,LNX,LOX)
-      ALLOCATE(AEPHI(nr,LNX))
+      ALLOCATE(AEPHI(LNX,NR))
       CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
-      ALLOCATE(PSPHI(nr,LNX))
+      ALLOCATE(PSPHI(LNX,NR))
       CALL SETUP$PSPARTIALWAVES(ISP,NR,LNX,PSPHI)
       ALLOCATE(AECORE(NR))
       CALL SETUP$AECORE(ISP,NR,AECORE)
@@ -440,9 +439,6 @@ END MODULE AUGMENTATION_MODULE
      &                      ,PSRHO,PSBACKGROUND,PSPOT1)
       CALL AUGMENTATION_ADD('AE1 BACKGROUND',AEBACKGROUND)
       CALL AUGMENTATION_ADD('PS1 BACKGROUND',PSBACKGROUND)
-!
-!     == soft core ===================================================
-!      call augmentation_softcore(iat,r1,dex,nr,lmrx,aepot1)
 !     
 !     == ANALYSIS: ELECTRIC FIELD GRADIENTS ==========================
       CALL HYPERFINE$SET1CPOT('AE',IAT,R1,DEX,NR,NR,LMRX,AEPOT1)
@@ -1319,10 +1315,12 @@ END MODULE AUGMENTATION_MODULE
       XEXP=DEXP(DEX)
       SVAR=-2.D0*PI*RHOB/3.D0*DSQRT(4.D0*PI)
       RI=R1/XEXP
+!print*,'severe warning from augmentation_addbackground'
       DO IR=1,NR
         RI=RI*XEXP
         RI2=RI*RI
         SVAR1=SVAR*RI2
+!WORK(IR)=SVAR1*RHO(IR)
         WORK(IR)=SVAR1*RHO(IR)*ri2
         POT(IR)=POT(IR)+SVAR1
       ENDDO
@@ -1763,106 +1761,4 @@ PRINT*,'UONE ',UONE
       ENDDO
       RETURN
       END
-!!$!
-!!$!     .....................................................................
-!!$      subroutine augmentation_softcore(isp,r1,dex,nr,aerho1,aepot1)
-!!$      USE SCHRGL_INTERFACE_MODULE, ONLY : OUTBOUNDARY
-!!$      implicit none
-!!$      integer(4),intent(in) :: isp
-!!$      real(8)   ,intent(in) :: r1
-!!$      real(8)   ,intent(in) :: dex
-!!$      integer(4),intent(in) :: nr
-!!$      integer(4),intent(in) :: lmrx
-!!$      real(8)   ,intent(in) :: aerho1(nr)
-!!$      real(8)   ,intent(in) :: aepot1(nr)
-!!$      real(8)               :: aecore0(nr)
-!!$      real(8)               :: phi(nr,3)
-!!$      real(8)   ,parameter  :: tolb=1.d-6
-!!$      integer(4),parameter  :: ibix=100
-!!$      integer(4)            :: nb
-!!$      integer(4),allocatable:: lofb(:)  ! main angular momentum
-!!$      integer(4),allocatable:: nnofb(:) ! #(nodes)
-!!$      real(8)   ,allocatable:: fofb(:)  ! occupation
-!!$      real(8)   ,allocatable:: eofb(:)  ! energy
-!!$      real(8)   ,allocatable:: rclofb(:) 
-!!$      real(8)               :: aez
-!!$      integer(4)            :: niter
-!!$      integer(4)            :: iter,ib
-!!$!     **********************************************************************
-!!$      CALL SETUP$AECORE(ISP,NR,AECORE0)
-!!$      CALL SETUP$AEZ(ISP,AEZ)
-!!$!     ======================================================================
-!!$!     ==  hardwire parameters for iron                                    ==
-!!$!     ======================================================================
-!!$      allocate(lofb(nb))
-!!$      allocate(fofb(nb))
-!!$      allocate(eofb(nb))
-!!$      allocate(rclofb(nb))
-!!$      nb=5
-!!$      lofb=(/0,0,1,0,1/)
-!!$      nnofb=(/0,1,0,2,1/)
-!!$      do ib=1,nb
-!!$        fofb(ib)=real(2*l+1)
-!!$        zeff=aez-sum(fofb(1:ib-1))
-!!$        rclofb(ib)=1.d0/zeff/real(lofb(ib)+nnofb(ib)+1)
-!!$        ir=1+nint(log(rclofb(ib)/r1)/dex)
-!!$        eofc(ib)=aepot(ir)
-!!$      enddo
-!!$
-!!$!     ======================================================================
-!!$!     ==  start loop                                                      ==
-!!$!     ======================================================================
-!!$      niter=2
-!!$      do iter=1,niter
-!!$!
-!!$!       ==============================================================
-!!$!       ==  find core states                                        ==
-!!$!       ==============================================================
-!!$        aecore(:)=0.d0
-!!$        do ib=1,nlb
-!!$          x0=eofb(ib)
-!!$          istart=1
-!!$          tconv=.false.
-!!$          call BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
-!!$          do ibi=1,ibix
-!!$            tforward=.true.
-!!$            ir=1+nint(log(rclofb(ib)/r1)/dex)
-!!$            call SCHROEDER(tforward,.false.,R1,DEX,NR,Lofb(ib),Eofb(ib) &
-!!$     &                    ,AEZ,ir,4.d0 &
-!!$     &                     ,aePOT,PHI,GINH,DLG)
-!!$            din=rclofb(ib)*phi(ir,2)/phi(ir,1)
-!!$            din=nnofb(ib)+0.5d0+datan(din)/pi            
-!!$            tforward=.false.
-!!$            call SCHROEDER(tforward,.false.,R1,DEX,NR,Lofb(ib),Eofb(ib) &
-!!$     &                    ,AEZ,ir,4.d0 &
-!!$     &                     ,aePOT,PHI,GINH,DLG)
-!!$            dout=rclofb(ib)*phi(ir,2)/phi(ir,1)
-!!$            din=0.5d0+datan(dout)/pi            
-!!$            y0=din-dout
-!!$            tconv=abs(dx).lt.tolb
-!!$            if(tconv) exit
-!!$            call BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
-!!$            eofb(ib)=x0
-!!$          enddo
-!!$          if(.not.tconv) then
-!!$            call error$msg('loop not converged')
-!!$            call error$stop('augmentation_softcore')
-!!$          end if
-!!$          aecore(:)=aecore(:)+fb(ib)*phi(:)**2
-!!$        enddo
-!!$!
-!!$!       ==============================================================
-!!$!       ==  construct density                                       ==
-!!$!       ==============================================================
-!!$        rho(:)=rho0(:)+aecore(:)-aecore0(:)
-!!$!
-!!$!       ==============================================================
-!!$!       ==  construct potential                                     ==
-!!$!       ==============================================================
-!!$
-!!$
-!!$
-!!$      enddo
-!!$      return
-!!$      end
 

@@ -898,7 +898,6 @@ PRINT*,'ILDA ',ILDA
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)         :: LL_CNTL
-      TYPE(LL_TYPE)         :: LL_Test
       LOGICAL(4)            :: TCHK,TCHK1,TCHK2
       REAL(8)               :: FRICTION
       REAL(8)               :: SCALE
@@ -1004,33 +1003,6 @@ PRINT*,'ILDA ',ILDA
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'SWAPSTATES',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'SWAPSTATES',1,TCHK)
       CALL WAVES$SETL4('SWAPSTATES',TCHK)
-
-
-!
-!     ==================================================================
-!     ==  READ       fixrho                                           ==
-!     ==================================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'FIXRHO',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'FIXRHO',0,.FALSE.)
-      CALL LINKEDLIST$GET(LL_CNTL,'FIXRHO',1,TCHK)
-      CALL WAVES$SETL4('FIXRHO',TCHK)
-      IF(TCHK) THEN
-        LL_TEST=LL_CNTL
-        CALL LINKEDLIST$SELECT(LL_TEST,'~')
-        CALL LINKEDLIST$SELECT(LL_TEST,'CONTROL')
-        CALL LINKEDLIST$EXISTL(LL_TEST,'RDYN',1,TCHK1)
-        IF(TCHK1) THEN
-          CALL ERROR$MSG('FROZEN POTENTIAL AND ATOM DYNAMICS ARE INCOMPATIBLE')
-          CALL ERROR$MSG('!CONTROL!RDYN AND !CONTROL!PSIDYN:FIXRHO ARE INCOMPATIBLE')
-          CALL ERROR$STOP('READIN_PSIDYN')
-        END IF
-      END IF
-!
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'WRITERHO',0,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'WRITERHO',1,TCHK)
-        call waves$setl4('WRITERHO',tchk)
-      end if
 !
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!PSIDYN!AUTO                             ==

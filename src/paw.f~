@@ -197,8 +197,8 @@
       IF(TLAST.OR.(TPRINT.AND.(.NOT.TFIRST))) THEN
                               CALL TIMING$CLOCKON('RESTART I/O') 
         CALL WRITERESTART
-        CALL WAVES$GETL4('WRITERHO',TCHK)
-        IF(TCHK) CALL WAVES$FIXRHOWRITE()
+        call waves$getl4('writerho',tchk)
+        if(tchk) call waves$fixrhowrite()
                               CALL TIMING$CLOCKOFF('RESTART I/O')
 !       CALL MM_PAW_WRITE_RESTART (NFI) ! CALGARY QM/MM IMPLEMENTATION
       END IF
