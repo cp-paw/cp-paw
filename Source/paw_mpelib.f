@@ -33,7 +33,7 @@
 !***********************************************************************
 !
 MODULE MPE_MPIF_MODULE
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
   INCLUDE 'MPIF90.H'
 #ENDIF
   INTEGER(4) :: NTASKS
@@ -87,7 +87,7 @@ CONTAINS
       INTEGER(4)                 :: LENG
       INTEGER(4)                 :: IERR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
 !
 !     =================================================================
 !     == ALLOCATE WORK ARRAY                                         ==
@@ -167,7 +167,7 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
       INTEGER(4)                 :: IERR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
       CALL MPI_BCAST(VAL,<SIZE>,<MPI_TYPE>,FROMTASK-1 &
      &                ,MPI_COMM_WORLD,IERR)
 #ENDIF
@@ -192,7 +192,7 @@ CONTAINS
       INTEGER(4)                 :: LENG
       INTEGER(4)                 :: IERR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
         LENG=LEN(VAL)*SIZE(VAL)
         CALL MPI_BCAST(VAL,LENG,MPI_CHARACTER,FROMTASK-1 &
      &                ,MPI_COMM_WORLD,IERR)
@@ -217,7 +217,7 @@ CONTAINS
       INTEGER(4)                 :: LENG
       INTEGER(4)                 :: IERR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
         LENG=LEN(VAL)
         CALL MPI_BCAST(VAL,LENG,MPI_CHARACTER,FROMTASK-1 &
      &                ,MPI_COMM_WORLD,IERR)
@@ -276,7 +276,7 @@ CONTAINS
       <TYPE>      ,INTENT(IN)    :: VAL<RANK>
       INTEGER(4)                 :: IERR,IDUM
 !     ******************************************************************
-#IFDEF  CPPVARIABLE_PARALLEL
+#IFDEF  CPPVARABLE_PARALLEL
         CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASK-1,TAG &
      &               ,MPI_COMM_WORLD,IERR)
 #ELSE
@@ -309,7 +309,7 @@ CONTAINS
       CHARACTER(*),INTENT(IN)    :: VAL(:)
       INTEGER(4)                 :: IERR
 !     ******************************************************************
-#IFDEF  CPPVARIABLE_PARALLEL
+#IFDEF  CPPVARABLE_PARALLEL
         CALL MPI_SEND(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,TOTASK-1,TAG &
      &               ,MPI_COMM_WORLD,IERR)
 #ELSE
@@ -341,7 +341,7 @@ CONTAINS
       CHARACTER(*),INTENT(IN) :: VAL
       INTEGER(4)              :: IERR
 !     ******************************************************************
-#IFDEF  CPPVARIABLE_PARALLEL
+#IFDEF  CPPVARABLE_PARALLEL
       CALL MPI_SEND(VAL,LEN(VAL),MPI_CHARACTER,TOTASK-1,TAG &
      &               ,MPI_COMM_WORLD,IERR)
 #ELSE
@@ -396,7 +396,7 @@ CONTAINS
       INTEGER(4),INTENT(IN) :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
       <TYPE>    ,INTENT(OUT):: VAL<RANK>
       INTEGER(4)            :: IERR
-#IFDEF  CPPVARIABLE_PARALLEL
+#IFDEF  CPPVARABLE_PARALLEL
       INTEGER(4)            :: STAT(MPI_STATUS_SIZE)
 !     ******************************************************************
       CALL MPI_RECV(VAL,<SIZE>,<MPI_TYPE>,FROMTASK-1,TAG &
@@ -424,7 +424,7 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN)  :: FROMTASK !TASK NUMBER OF THE SENDING TASK
       INTEGER(4)  ,INTENT(IN)  :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
       CHARACTER(*),INTENT(OUT) :: VAL(:)   
-#IFDEF  CPPVARIABLE_PARALLEL
+#IFDEF  CPPVARABLE_PARALLEL
       INTEGER(4)               :: STAT(MPI_STATUS_SIZE)   
       INTEGER(4)               :: IERR
 !     ******************************************************************
@@ -453,7 +453,7 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN) :: FROMTASK !TASK NUMBER OF THE SENDING TASK
       INTEGER(4)  ,INTENT(IN) :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
       CHARACTER(*),INTENT(OUT):: VAL
-#IFDEF  CPPVARIABLE_PARALLEL
+#IFDEF  CPPVARABLE_PARALLEL
       INTEGER(4)              :: STAT(MPI_STATUS_SIZE)
       INTEGER(4)              :: IERR
 !     ******************************************************************
@@ -519,7 +519,7 @@ CONTAINS
 !      INTEGER(4)               :: NTASKS,THISTASK
       <TYPE>    ,ALLOCATABLE   :: VAL1(:)
 !     ******************************************************************
-#IFDEF  CPPVARIABLE_PARALLEL
+#IFDEF  CPPVARABLE_PARALLEL
         LENG=<SIZE>
 !       CALL MPE$QUERY(NTASKS,THISTASK)
         LENG1=LENG/NTASKS
@@ -583,7 +583,7 @@ CONTAINS
       INTEGER(4)            :: LENG
       INTEGER(4)            :: IERR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
         LENG=<SIZE>
         CALL MPI_GATHER(INVAL,LENG,<MPI_TYPE>,OUTVAL,LENG,<MPI_TYPE> &
      &                 ,TOTASK-1,MPI_COMM_WORLD,IERR)
@@ -622,7 +622,7 @@ END MODULE MPE_GATHER_MODULE
 !     == WHILE FOR A CALL FROM OUTSIDE, NTASKID S ARE TO BE           ==
 !     == OUT OF [1,NTASKNUM]                                          ==
 !     ==================================================================
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
 !     ================================================================
 !     == INITIALIZE MPI                                             ==
 !     ================================================================
@@ -653,7 +653,7 @@ END MODULE MPE_GATHER_MODULE
       IMPLICIT NONE
       INTEGER(4)        :: IERR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
       CALL MPI_FINALIZE(IERR)
 #ENDIF
       RETURN
@@ -670,7 +670,7 @@ END MODULE MPE_GATHER_MODULE
       INTEGER(4),INTENT(IN) :: NCODE_
       INTEGER(4)            :: IERR,IERROR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
       WRITE(*,*) 'EXIT:',NCODE_
       CALL MPI_ABORT(IERROR,7777)
       STOP 'ERROR STOP'
@@ -693,7 +693,7 @@ END MODULE MPE_GATHER_MODULE
       INTEGER(4),INTENT(OUT) :: THISTASK_
       INTEGER(4)             :: IERR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
 !     CALL MPI_COMM_SIZE(MPI_COMM_WORLD,NTASKS,IERR)
 !     CALL MPI_COMM_RANK(MPI_COMM_WORLD,THISTASK,IERR)
 !     THISTASK= THISTASK+1
@@ -720,7 +720,7 @@ END MODULE MPE_GATHER_MODULE
       IMPLICIT NONE
       INTEGER(4) :: IERR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
       CALL MPI_BARRIER(MPI_COMM_WORLD,IERR)
 #ENDIF
       RETURN
@@ -734,7 +734,7 @@ END MODULE MPE_GATHER_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(OUT) :: IPARALLEL      
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
       IPARALLEL=1
 #ELSE
       IPARALLEL=0
@@ -759,7 +759,7 @@ END MODULE MPE_GATHER_MODULE
       CHARACTER(1),INTENT(OUT) :: OUTVAL(SIZE)
       INTEGER(4)               :: IERR
 !     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
+#IFDEF CPPVARABLE_PARALLEL
         CALL MPI_ALLTOALL(INVAL,SIZE,MPI_BYTE,OUTVAL,SIZE &
      &                  ,MPI_BYTE,MPI_COMM_WORLD,IERR)
 #ELSE

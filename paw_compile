@@ -66,8 +66,6 @@ ALP_COMPILE_N="fort -c"
 #ALP_COMPILE_N="${ALP_COMPILE_N} -convert ibm" 
 ALP_COMPILE_G="${ALP_COMPILE_N} -g3 -ladebug -C -assume gfullpath -check overflow -check underflow"
 ALP_COMPILE_O="${ALP_COMPILE_N} -O3" 
-ALP_COMPILE_OP="${ALP_COMPILE_O}" 
-ALP_COMPILE_NP="${ALP_COMPILE_N}" 
 ALP_LINK="fort "
 ## Absoft compiler for linux
 ABS_COMPILE_N="f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_"
@@ -213,7 +211,7 @@ SRCDIR=${PAWDIR}/Source/
 #  F90PP is a shell script that removes the dollar signs
 #  in the subroutine names in a subroutine or call statement
 #  in order to conform with the standard fortran convention
-F90PP="${PAWDIR}/F90PP/f90pp -DIBMLICENSE -DNOIBMLICENSE"
+F90PP=${PAWDIR}/F90PP/f90pp 
 #
 #################################################################
 ##  scan options                                               ##
@@ -321,7 +319,6 @@ case "$ARCH" in
         PAWX=${EXEDIR}/ppaw_fast.x
         F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC  -DCPPVARIABLE_PARALLEL"
         COMPILE=$ALP_COMPILE_OP
-	LLIBS="$LLIBS -L${MPIDIR}/lib/ -lmpich -lfmpich "
         LINK=${ALP_LINK}
         OPTRM="rm " 
         PARALLEL=T
@@ -333,7 +330,7 @@ case "$ARCH" in
     esac
     COMPILE="${COMPILE} -L${OBJDIR} -module ${OBJDIR} -I${OBJDIR}"
     LINK="${LINK} -I${OBJDIR} -L${OBJDIR}"
-    LLIBS="${LLIBS} -lcxml"
+    LLIBS="-lcxml"
     COMPILE77="${COMPILE}"
     ;;
   #========================================================================
@@ -482,8 +479,6 @@ echo ......making executable........
 #=====  compile  =========================================
 export SRCDIR OBJDIR PAWX F90PP COMPILE COMPILE77 FEXT LINK ALLDEP OPTRM LLIBS PARALLEL
 typeset -i RC
-echo $F90PP
-#exit
 ${GNUMAKE} -f ${PAWDIR}/paw.mk ${PAWDIR}/F90PP/f90pp_tmplts.x 
 ${GNUMAKE} -f ${PAWDIR}/paw.mk ${PAWX} ; RC=$?
 #################################################################

@@ -43,11 +43,8 @@ MODULE THERMOSTAT_MODULE
 !**    3) IF THE 'COOLING' IS OBTAINED BEFORE CALLING THE FUNCTION    **
 !**    THERMOSTAT$PROPAGATE THE VALUE IS OBTAINED FROM A POLYNOMIAL   **
 !**    EXTRAPOLATION OF THE THERMOSTAT VARIABLE.                      **
-!**    IF THE 'COOLING' IS OBTaIND AFTER CALLING THERMOSTAT$PROPAGATE **
+!**    IF THE 'COOLING' IS OBTEIND AFTER CALLING THERMOSTAT$PROPAGATE **
 !**    IT IS OBTAINED FROM THE ACTUAL VALUES OF THE THERMOSTA VARIABLE**
-!**    4) The thermostat can operate in two modes. one is a pourely   **
-!**    cooling thermostat for the wave functions. this option is set  **
-!**    by setl4('coolonly',.true.)                                    **
 !**                                                                   **
 !***********************************************************************
 TYPE THERMOSTAT_TYPE
@@ -56,7 +53,6 @@ TYPE THERMOSTAT_TYPE
 ! == ACTUAL SETTING USED ===============================================
   CHARACTER(32):: ID          ! THERMOSTAT ID
   LOGICAL(4)   :: ON          ! ON/OFF SWITCH FOR THE THERMOSTAT
-  logical(4)   :: twave       ! use special wave function thermostat
   LOGICAL(4)   :: STOP        ! INITIAL DX/DT IS SET TO ZERO 
   REAL(8)      :: DT          ! TIME STEP FOR X(T)
   REAL(8)      :: Q           ! MASS OF THE NOSE VARIABLE
@@ -111,7 +107,6 @@ END MODULE THERMOSTAT_MODULE
 !   
       THIS%ID      =ID
       THIS%ON      =.FALSE.      
-      this%twave   =.false.
       THIS%DT      =0.D0
       THIS%Q       =0.D0
       THIS%FRICTION=0.D0
@@ -380,15 +375,16 @@ END MODULE THERMOSTAT_MODULE
 !
 !     == UPDATE FRICTION ===============================================
       VNOS =(XP-XM)/(2.D0*DT)
-      IF(THIS%TWAVE) THEN  
-        IF(VNOS.LT.0) THEN !SWITCH OFF WHEN HEATING
-          XP=X0
-          THIS%XM  =X0
-          THIS%XMM =X0
-          THIS%XMMM=X0
-          VNOS=0.D0
-        END IF
-      END IF
+IF(THIS%ID.EQ.'WAVES') THEN
+print*,'thermostat fudge =========================='
+  IF(VNOS.LT.0) THEN
+    xp=x0
+    THIS%XM  =X0
+    THIS%XMM =X0
+    THIS%XMMm=X0
+    vnos=0.d0
+  END IF
+END IF
       ANNER=0.5D0*DT*VNOS
       ANNER=MAX(ANNER,-0.99999D0)
       ANNER=MIN(ANNER,1.d0)
@@ -400,8 +396,11 @@ END MODULE THERMOSTAT_MODULE
       THIS%COOLING= ANNER
       THIS%EKIN   = 0.5D0*THIS%Q*VNOS**2 
       THIS%EPOT   = 2.D0*THIS%EKIN_TARGET*X0
-      if(this%twave) this%epot=0.d0
       THIS%EDISS  = THIS%EDISS+ANNEX*0.5D0*QMASS*VNOS**2
+!
+!     ==================================================================
+!     ==  PRINTOUT FOR TEST                                           ==
+!     ==================================================================
 !
 !     ==================================================================
 !     ==  PRINTOUT FOR TEST                                           ==
@@ -426,7 +425,7 @@ print*,'therm xp     ',xp,x0,xm
       REAL(8)            :: XM
       REAL(8)            :: XMM,XMMM
       REAL(8)            :: XP
-      REAL(8)            :: XDOT,xdotlast
+      REAL(8)            :: XDOT
       REAL(8)            :: DT
 !     ******************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
@@ -457,22 +456,8 @@ print*,'therm xp     ',xp,x0,xm
       XP=4.D0*X0-6.D0*XM+4.D0*XMM-XMMM
       THIS%XP     =XP
       XDOT=(XP-XM)/(2.D0*DT)
-      if(this%twave.and.xdot.lt.0) then
-        xdotlast=(x0-xmm)/(2.d0*dt)
-!       ================================================================
-!       == USE THE AVERAGE FRICTION AMONG THE TIME STEPS              ==
-!       == ASSUMING A LINEAR INTERPOLATION OF XDOT,                   ==
-!       == WHICH IS TRUNCATED AT ITS ZERO.                            ==
-!       == THE HISTOGRAMM SHAPED FRICTION OF HALF STEP IS SUBTRACTED. ==
-!       ================================================================
-        if(xdot.ne.-xdotlast) then
-!         XDOT=0.5D0*XDOTLAST*xdot/(xdotlast-XDOT)
-!rint*,'xdot....',xdot
-!       ELSE
-          XDOT=0.D0
-        END IF
-      end if
       THIS%COOLING=XDOT*DT/2.D0
+print*,'therm cooling 2 ',XDOT*DT/2.D0
 !
       RETURN
       END
@@ -629,8 +614,6 @@ print*,'therm xp     ',xp,x0,xm
          THIS%ON=VAL
       ELSE IF(ID.EQ.'STOP') THEN
          THIS%STOP=VAL
-      ELSE IF(ID.EQ.'COOLONLY') THEN
-         THIS%TWAVE=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)

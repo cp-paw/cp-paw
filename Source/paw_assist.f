@@ -1,4 +1,4 @@
-#IF defined(IBMLICENSE)
+!
 !........................................................AUTOPI.........
 MODULE DIALS_MODULE 
 !***********************************************************************
@@ -515,4 +515,4 @@ END MODULE AUTOPILOT_MODULE
       END IF
       RETURN
       END 
-#end if
+

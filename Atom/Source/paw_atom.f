@@ -408,7 +408,7 @@ END MODULE PROJECTION
 !     ==================================================================
 !     ==  WRITE GRAPHICS FILES                                        ==
 !     ==================================================================
-      CALL WRITEPOTENTIALS
+      CALL WRITEpotentials
       CALL WRITEGRAPHICS
       CALL TRACE$PASS('GRAPHICS FILES WRITTEN')
 !
@@ -707,9 +707,9 @@ PRINT*,'AFTER AESCF'
 !     ==  STARTING APPROXIMATION FOR ENERGIES                         ==
 !     ==  STATES SHOULD BE ORDERED WITH INCREASING ENERGY             ==
 !     ==================================================================
-      AUX1=-AECORE(:)/Y0*R(:)**2
-      CALL RADIAL$INTEGRAL(R1,DEX,NR,AUX1,ZCORE)  
-!     THE FOLLOWING LINE CREATES AN INTERFACE ERROR
+      aux1=-AECORE(:)/Y0*R(:)**2
+      CALL RADIAL$INTEGRAL(R1,DEX,NR,aux1,ZCORE)  
+!     the following line creates an interface error
 !     CALL RADIAL$INTEGRAL(R1,DEX,NR,-AECORE(:)/Y0*R(:)**2,ZCORE)
       ZEFF=AEZ+ZCORE
       DO IB=1,NB
@@ -1259,8 +1259,7 @@ PRINT*,'RHOT ',RHOV(1:4)+RHOC(1:4)
       INTEGER(4)                 :: NIN
       LOGICAL(4)                 :: TCHK
       INTEGER(4)                 :: NFILO
-      REAL(8)                    :: POWER
-      LOGICAL(4)                 :: T0VAL
+      real(8)                    :: power
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10 &
@@ -1277,7 +1276,7 @@ PRINT*,'RHOT ',RHOV(1:4)+RHOC(1:4)
 !     ==================================================================
 !     ==  CONSTRUCT PSEUDOPOTENTIAL POTENTIAL                         ==
 !     ==================================================================
-PRINT*,'TYPE ',TYPE
+print*,'type ',type
       IF(TRIM(TYPE).EQ.'POLYNOMIAL') THEN
         CALL LINKEDLIST$GET(LL_CNTL,'RC',1,RC)
 !
@@ -1285,59 +1284,45 @@ PRINT*,'TYPE ',TYPE
         IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POWER',0,2)
         CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,NIN)
 !
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'POT(0)',1,T0VAL)
-        IF(T0VAL) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'POT(0)',1,V0)
-        ELSE
-          V0=0.D0
-        END IF
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'POT',1,TCHK)
+        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POT',0,0.D0)
+        CALL LINKEDLIST$GET(LL_CNTL,'POT(0)',1,V0)
 !
 !       == REPORT PARAMETERS ===========================================
         CALL REPORT$CHVAL(NFILO,'TYPE',TYPE)
         CALL REPORT$STRING(NFILO,'FUNCTIONAL FORM: V(R)=A*R^N+B*R^(N+1) ')
         CALL REPORT$R8VAL(NFILO,'R_C',RC,'A0')
         CALL REPORT$I4VAL(NFILO,'LOWEST POWER (N) OF THE POLYNOMIAL',NIN,' ')
-        IF(T0VAL) THEN
-          CALL REPORT$R8VAL(NFILO,'V0',V0,'H')
-        ELSE
-          CALL REPORT$STRING(NFILO,'POTENTIAL AT THE ORIGIN NOT FIXED')
-        END IF
+        CALL REPORT$R8VAL(NFILO,'V0',V0,'H')
 !
 !       ================================================================
 !       ==  CONSTRUCT PSEUDOPOTENTIAL POTENTIAL                       ==
 !       ================================================================
-        CALL VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,T0VAL,V0,NR,AEPOT,PSPOT)
+        CALL VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,V0,NR,AEPOT,PSPOT)
       ELSE IF(TRIM(TYPE).EQ.'HBS') THEN
-        CALL TRACE$PASS('MARKE 0')
+        CALL trace$pass('marke 0')
         CALL LINKEDLIST$GET(LL_CNTL,'RC',1,RC)
 !
         CALL LINKEDLIST$EXISTD(LL_CNTL,'POWER',1,TCHK)
-        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POWER',0,6.D0)
-        CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,POWER)
+        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POWER',0,6.d0)
+        CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,power)
 !
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'POT(0)',1,T0VAL)
-        IF(T0VAL) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'POT(0)',1,V0)
-        ELSE
-          V0=0.D0
-        END IF
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'POT',1,TCHK)
+        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POT',0,0.D0)
+        CALL LINKEDLIST$GET(LL_CNTL,'POT(0)',1,V0)
 !
 !       == REPORT PARAMETERS ===========================================
         CALL REPORT$CHVAL(NFILO,'TYPE',TYPE)
-        CALL REPORT$STRING(NFILO,'FUNCTIONAL FORM: V(R)=V0*F(R)+(1-F(R))*V(R)')
+        CALL REPORT$STRING(NFILO,'FUNCTIONAL FORM: V(R)=v0*f(r)+(1-f(r))*v(r)')
         CALL REPORT$R8VAL(NFILO,'R_C',RC,'A0')
         CALL REPORT$I4VAL(NFILO,'LOWEST POWER (N) OF THE POLYNOMIAL',NIN,' ')
-        IF(T0VAL) THEN
-          CALL REPORT$R8VAL(NFILO,'V0',V0,'H')
-        ELSE
-          CALL REPORT$STRING(NFILO,'POTENTIAL AT THE ORIGIN NOT FIXED')
-        END IF
+        CALL REPORT$R8VAL(NFILO,'V0',V0,'H')
 !
 !       ================================================================
 !       ==  CONSTRUCT PSEUDOPOTENTIAL POTENTIAL                       ==
 !       ================================================================
-        CALL VTILDE_HBS(R1,DEX,RC,POWER,T0VAL,V0,NR,AEPOT,PSPOT)
-!        CALL WRITEF(NFILO,'PSPOT',PSPOT)
+        CALL VTILDE_hbs(R1,DEX,RC,power,V0,NR,AEPOT,PSPOT)
+!        call writef(nfilo,'pspot',pspot)
       ELSE
         CALL ERROR$MSG('TYPE NOT RECOGNIZED')
         CALL ERROR$STOP('VTILDE')
@@ -1346,7 +1331,7 @@ PRINT*,'TYPE ',TYPE
       END
 !
 !     ..................................................................
-      SUBROUTINE VTILDE_HBS(R1,DEX,RC,POWER,T0VAL,V0,NR,AEPOT,PSPOT)
+      SUBROUTINE VTILDE_HBS(R1,DEX,RC,POWER,V0,NR,AEPOT,PSPOT)
 !     ******************************************************************
 !     **                                                              **
 !     **  PSEUDIZES THE FUNCTION AEPOT BY A POLYNOMIAL                **
@@ -1360,45 +1345,36 @@ PRINT*,'TYPE ',TYPE
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER      :: TPR=.TRUE.
-      REAL(8)   ,INTENT(IN)     :: R1         ! 1ST RADIAL GRID POINT
-      REAL(8)   ,INTENT(IN)     :: DEX        ! LOG. GRID SPACING
-      INTEGER(4),INTENT(IN)     :: NR         ! #(RADIAL GRID POINTS)
+      LOGICAL(4),PARAMETER      :: TPR=.true.
+      REAL(8)   ,INTENT(IN)     :: R1         ! 1st radial grid point
+      REAL(8)   ,INTENT(IN)     :: DEX        ! log. grid spacing
+      INTEGER(4),INTENT(IN)     :: NR         ! #(radial grid points)
       REAL(8)   ,INTENT(IN)     :: RC         ! CUTOFF RADIUS
-      LOGICAL(4),INTENT(IN)     :: T0VAL      ! FIX VTILDE(R=0)
       REAL(8)   ,INTENT(IN)     :: V0         ! VTILDE(R=0)
-      REAL(8)   ,INTENT(IN)     :: POWER      !
+      real(8)   ,INTENT(IN)     :: power      !
       REAL(8)   ,INTENT(IN)     :: AEPOT(NR)  ! AE POTENTIAL
       REAL(8)   ,INTENT(OUT)    :: PSPOT(NR)  ! PS POTENTIAL
       INTEGER(4)                :: NFILO
       REAL(8)                   :: PI,Y0
       REAL(8)                   :: DFDR,DFDR1,DFDR2,FOFR
       INTEGER(4)                :: IR
-      INTEGER(4)                :: IRC
       REAL(8)                   :: RI,XEXP
-      REAL(8)                   :: CUT(NR)
-      REAL(8)                   :: FAC
+      real(8)                   :: cut(nr)
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/DSQRT(4.D0*PI)
       XEXP=DEXP(DEX)
-      IRC=NINT(1.D0+LOG(RC/R1)/DEX)
       RI=R1/XEXP
       DO IR=1,NR
         PSPOT(IR)=AEPOT(IR)
         RI=RI*XEXP
         CUT(IR)=EXP(-(RI/RC)**POWER)
       ENDDO
-!     ==                     ===========================================
-      IF(T0VAL) THEN
-        FAC=V0/Y0
-      ELSE
-        FAC=AEPOT(IRC)
-      END IF
+!     ==  CONVERT POLYNOMIAL ===========================================
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
-        PSPOT(IR)=FAC*CUT(IR)+(1.D0-CUT(IR))*AEPOT(IR)
+        PSPOT(IR)=V0/Y0*CUT(IR)+(1.D0-CUT(IR))*AEPOT(IR)
       ENDDO
 !
       IF(.NOT.TPR) RETURN
@@ -1418,7 +1394,7 @@ PRINT*,'TYPE ',TYPE
       END
 !
 !     ..................................................................
-      SUBROUTINE VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,T0VAL,V0,NR,AEPOT,PSPOT)
+      SUBROUTINE VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,V0,NR,AEPOT,PSPOT)
 !     ******************************************************************
 !     **                                                              **
 !     **  PSEUDIZES THE FUNCTION AEPOT BY A POLYNOMIAL                **
@@ -1433,7 +1409,6 @@ PRINT*,'TYPE ',TYPE
       REAL(8)   ,INTENT(IN)     :: DEX
       INTEGER(4),INTENT(IN)     :: NR
       REAL(8)   ,INTENT(IN)     :: RC         ! CUTOFF RADIUS
-      LOGICAL(4),INTENT(IN)     :: T0VAL      ! FIX VTILDE(R=0)
       REAL(8)   ,INTENT(IN)     :: V0         ! VTILDE(R=0)
       INTEGER(4),INTENT(IN)     :: NIN        ! LOWEST POWER OF PSPOT
       REAL(8)   ,INTENT(IN)     :: AEPOT(NR)  ! AE POTENTIAL
@@ -1471,15 +1446,13 @@ PRINT*,'TYPE ',TYPE
 !     ==================================================================
 !     ==  ADD POTENTIAL SO THAT PSPOT(R=0)=V0                         ==
 !     ==================================================================
-      IF(T0VAL) THEN
-        A=V0/Y0-A
-        RI=R1/XEXP
-        DO IR=1,IRC
-          RI=RI*XEXP
-           PSPOT(IR)=PSPOT(IR)+A*(1.D0-(RI/RC)**NIN &
+      A=V0/Y0-A
+      RI=R1/XEXP
+      DO IR=1,IRC
+        RI=RI*XEXP
+         PSPOT(IR)=PSPOT(IR)+A*(1.D0-(RI/RC)**NIN &
      &                       *(DBLE(NIN+1)-DBLE(NIN)*(RI/RC)))
-        ENDDO
-      END IF
+      ENDDO
 !
       IF(.NOT.TPR) RETURN
 !     ==================================================================
@@ -1517,7 +1490,6 @@ PRINT*,'TYPE ',TYPE
       REAL(8)                    :: V0       ! VTILDE(R=0)
       INTEGER(4)                 :: NIN
       LOGICAL(4)                 :: TCHK
-      LOGICAL(4)                 :: T0VAL=.TRUE.
       INTEGER(4)                 :: NFILO
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -1536,26 +1508,19 @@ PRINT*,'TYPE ',TYPE
         CALL LINKEDLIST$EXISTD(LL_CNTL,'POWER',1,TCHK)
         IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POWER',0,2)
         CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,NIN)
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'RHO(0)',1,T0VAL)
-        IF(T0VAL) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'RHO(0)',1,V0)
-        ELSE
-          V0=0.D0
-        END IF
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'RHO(0)',1,TCHK)
+        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'RHO(0)',0,0.D0)
+        CALL LINKEDLIST$GET(LL_CNTL,'RHO(0)',1,V0)
 !
 !       == REPORT PARAMETERS ===========================================
         CALL REPORT$CHVAL(NFILO,'TYPE',TYPE)
         CALL REPORT$STRING(NFILO,'FUNCTIONAL FORM: RHO(R)=A*R^N+B*R^(N+1) ')
         CALL REPORT$R8VAL(NFILO,'R_C',RC,'A0')
         CALL REPORT$I4VAL(NFILO,'LOWEST POWER (N) OF THE POLYNOMIAL',NIN,' ')
-        IF(T0VAL) THEN
-          CALL REPORT$R8VAL(NFILO,'PSEUDO DENSITY AT THE NUCLEUS',V0,'E/A0^3 ')
-        ELSE
-          CALL REPORT$STRING(NFILO,'VALUE AT THE ORIGIN NOT FIXED')
-        END IF
+        CALL REPORT$R8VAL(NFILO,'PSEUDO DENSITY AT THE NUCLEUS',V0,'E/A0^3 ')
 !
 !       == CONSTRUCT PSEUDO DENSITY ====================================
-        CALL VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,T0VAL,V0,NR,AECORE,PSCORE)
+        CALL VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,V0,NR,AECORE,PSCORE)
       ELSE
         CALL ERROR$MSG('TYPE NOT RECOGNIZED')
         CALL ERROR$STOP('PSEUDIZECORE')
@@ -1611,7 +1576,7 @@ PRINT*,'TYPE ',TYPE
           CALL ERROR$MSG('EITHER N OR E MUST BE SPECIFIED')
           CALL ERROR$STOP('PARTIALWAVES')
         END IF
-PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
+print*,'in partialwaves: ',tchk1,tchk2,lphi(iwave),n,e
         IF(TCHK1) THEN
 !         ==============================================================
 !         == CALCULATE AE-WAVE FUNCTIONS TO BE PSEUDIZED              ==
@@ -2403,8 +2368,8 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
       REAL(8)   ,ALLOCATABLE :: PROJ(:)        !(NWAVE1) <PRO|PSI>
       REAL(8)   ,ALLOCATABLE :: DENMAT(:,:)    !(NWAVE1,NWAVE1) 
       INTEGER(4)             :: NFILO
-REAL(8)                :: AE1RHO(NR),PS1RHO(NR)
-REAL(8)   ,ALLOCATABLE :: AEPHI1(:,:,:),PSPHI1(:,:,:)
+real(8)                :: ae1rho(nr),ps1rho(nr)
+real(8)   ,allocatable :: aephi1(:,:,:),psphi1(:,:,:)
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10," MAKE VHAT "/72("-"))')
@@ -2422,8 +2387,8 @@ REAL(8)   ,ALLOCATABLE :: AEPHI1(:,:,:),PSPHI1(:,:,:)
       CALL RADIAL$INTEGRAL(R1,DEX,NR,(AECORE(:)-PSCORE(:))*R(:)**2,SVAR)
       QAUG=-AEZ+SVAR*4.D0*PI*Y0
       CALL PROJECTION$LMAX(LMAX)
-AE1RHO(:)=0.D0
-PS1RHO(:)=0.D0
+ae1rho(:)=0.d0
+ps1rho(:)=0.d0
       DO L=0,LMAX
         CALL PROJECTION$NPRO(L,NWAVE1)
         ALLOCATE(PRO1(NR,NWAVE1))
@@ -2433,9 +2398,9 @@ PS1RHO(:)=0.D0
         ALLOCATE(PROJ(NWAVE1))
         CALL PROJECTION$POT(L,NWAVE1,PROL=PRO1,DOL=DO1,DATHL=DATH1)
 !
-ALLOCATE(AEPHI1(NR,3,NWAVE1))
-ALLOCATE(PSPHI1(NR,3,NWAVE1))
-CALL PROJECTION$POT(L,NWAVE1,AEPHIL=AEPHI1,PSPHIL=PSPHI1)
+allocate(aephi1(nr,3,nwave1))
+allocate(psphi1(nr,3,nwave1))
+CALL PROJECTION$POT(L,NWAVE1,aephil=aephi1,psphil=psphi1)
 
         DO IB=NC+1,NB
           IF(LB(IB).EQ.L) THEN
@@ -2500,14 +2465,14 @@ CALL PROJECTION$POT(L,NWAVE1,AEPHIL=AEPHI1,PSPHIL=PSPHI1)
             DO I1=1,NWAVE1
               DO I2=1,NWAVE1
                 QAUG=QAUG+PROJ(I1)*DO1(I1,I2)*PROJ(I2)*FB(IB)
-AE1RHO(:)=AE1RHO(:)+C0LL*AEPHI1(:,1,I1)*AEPHI(:,1,I2)*PROJ(I1)*PROJ(I2)
-PS1RHO(:)=PS1RHO(:)+C0LL*PSPHI1(:,1,I1)*PSPHI(:,1,I2)*PROJ(I1)*PROJ(I2)
+ae1rho(:)=ae1rho(:)+c0ll*aephi1(:,1,i1)*aephi(:,1,i2)*proj(i1)*proj(i2)
+ps1rho(:)=ps1rho(:)+c0ll*psphi1(:,1,i1)*psphi(:,1,i2)*proj(i1)*proj(i2)
               ENDDO
             ENDDO
           END IF
         ENDDO
-DEALLOCATE(AEPHI1)
-DEALLOCATE(PSPHI1)
+deallocate(aephi1)
+deallocate(psphi1)
         DEALLOCATE(PROJ)
         DEALLOCATE(PRO1)
         DEALLOCATE(DATH1)
@@ -2519,12 +2484,12 @@ DEALLOCATE(PSPHI1)
 !     ==  CALCULATE  EFFECTIVE POTENTIAL OF THE PSEUDO DENSITY        ==
 !     ==================================================================
       RHO(:)=RHO(:)+PSCORE(:)
-PRINT*,'PSRHO IN VHAT ',RHO(1:4)
+print*,'psrho in vhat ',rho(1:4)
       CALL VOFRHO(0.D0,R1,DEX,NR,RHO,POTOFRHO)
       DO IR=1,NR
 !        POTOFRHO(IR)=POTOFRHO(IR)+QAUG*ERF(R(IR)/RCSMALL)/R(IR)/Y0        
-        CALL LIB$ERFR8(R(IR)/RCSMALL,SVAR)
-        POTOFRHO(IR)=POTOFRHO(IR)+QAUG*SVAR/R(IR)/Y0        
+        call Lib$erfr8(R(IR)/RCSMALL,svar)
+        POTOFRHO(IR)=POTOFRHO(IR)+QAUG*svar/R(IR)/Y0        
       ENDDO
 !
 !     ==================================================================
@@ -2901,8 +2866,8 @@ PRINT*,'QAUG ',QAUG,AEZ,SVAR*4.D0*PI*Y0
       CALL VOFRHO(0.D0,R1,DEX,NR,RHO,POTOFRHO)
       DO IR=1,NR
 !        POTOFRHO(IR)=POTOFRHO(IR)+QAUG*ERF(R(IR)/RCSMALL)/R(IR)/Y0        
-        CALL LIB$ERFR8(R(IR)/RCSMALL,SVAR)
-        POTOFRHO(IR)=POTOFRHO(IR)+QAUG*SVAR/R(IR)/Y0        
+        call Lib$erfr8(R(IR)/RCSMALL,svar)
+        POTOFRHO(IR)=POTOFRHO(IR)+QAUG*svar/R(IR)/Y0        
       ENDDO
 !
 !     == CHECK CHARGE CONSERVATION ======================================
@@ -2959,8 +2924,8 @@ PRINT*,'WARNING! CODE FUDGED'
         CALL RADIAL$VALUE(R1,DEX,NR,AEPOT,RI,AEPOT1)
         CALL RADIAL$VALUE(R1,DEX,NR,PSPOT,RI,PSPOT1)
         CALL RADIAL$VALUE(R1,DEX,NR,VHAT,RI,VHAT1)
-        CALL RADIAL$VALUE(R1,DEX,NR,AECORE,RI,AECORE1)
-        CALL RADIAL$VALUE(R1,DEX,NR,PSCORE,RI,PSCORE1)
+        CALL RADIAL$VALUE(R1,DEX,NR,AECOrE,RI,AECORE1)
+        CALL RADIAL$VALUE(R1,DEX,NR,PSCOrE,RI,PSCORE1)
         AEPOT1=AEPOT1*Y0
         PSPOT1=PSPOT1*Y0
         AECORE1=AECORE1*Y0
@@ -2993,7 +2958,7 @@ PRINT*,'WARNING! CODE FUDGED'
       REAL(8)   ,ALLOCATABLE :: PSPHI1(:,:,:)
       REAL(8)   ,ALLOCATABLE :: PRO1(:,:)
       INTEGER(4)             :: NPRO,IPRO
-      INTEGER(4)             :: L
+      INTEGER(4)             :: l
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/DSQRT(4.D0*PI)
@@ -3020,15 +2985,15 @@ PRINT*,'WARNING! CODE FUDGED'
           CALL FILEHANDLER$UNIT('PRO_D',NFIL)
         ELSE IF(L.EQ.3) THEN
           CALL FILEHANDLER$UNIT('PRO_F',NFIL)
-        ELSE
-          CALL ERROR$MSG('L>3 NOT IMPLEMENTED')
-          CALL ERROR$STOP('WRITEGRAPHICS')
+        else
+          call error$msg('l>3 not implemented')
+          call error$stop('writegraphics')
         END IF 
         REWIND NFIL
         DO IR=1,NR
           WRITE(NFIL,*)R(IR),PRO1(IR,:)
         ENDDO
-        DEALLOCATE(PRO1)
+        deallocate(pro1)
       ENDDO
 !
 !     ==================================================================
@@ -3058,9 +3023,9 @@ PRINT*,'WARNING! CODE FUDGED'
           CALL FILEHANDLER$UNIT('PHI_D',NFIL)
         ELSE IF(L.EQ.3) THEN
           CALL FILEHANDLER$UNIT('PHI_F',NFIL)
-        ELSE
-          CALL ERROR$MSG('L>3 NOT IMPLEMENTED')
-          CALL ERROR$STOP('WRITEGRAPHICS')
+        else
+          call error$msg('l>3 not implemented')
+          call error$stop('writegraphics')
         END IF 
         REWIND NFIL
         DO IR=1,NR
@@ -3068,7 +3033,7 @@ PRINT*,'WARNING! CODE FUDGED'
         ENDDO
         DEALLOCATE(AEPHI1)
         DEALLOCATE(PSPHI1)
-      END DO
+      END do
       RETURN            
       END SUBROUTINE WRITEGRAPHICS
 !
@@ -3385,8 +3350,8 @@ PRINT*,'WARNING! CODE FUDGED'
         QAUG=QAUG-AEZ+SVAR*4*PI*Y0
         DO IR=1,NR
 !         POTOFRHO(IR)=POTOFRHO(IR)+QAUG*ERF(R(IR)/RCSMALL)/R(IR)/Y0        
-          CALL LIB$ERFR8(R(IR)/RCSMALL,SVAR)
-          POTOFRHO(IR)=POTOFRHO(IR)+QAUG*SVAR/R(IR)/Y0        
+          call Lib$erfr8(R(IR)/RCSMALL,svar)
+          POTOFRHO(IR)=POTOFRHO(IR)+QAUG*svar/R(IR)/Y0        
         ENDDO
         PSPOT1(:)=POTOFRHO(:)+VHAT(:)
 !
@@ -3585,8 +3550,8 @@ PRINT*,'WARNING! CODE FUDGED'
         CALL VOFRHO(0.D0,R1,DEX,NR,PSRHO,PSPOT)
         DO IR=1,NR
 !         PSPOT(IR)=PSPOT(IR)+QAUG*ERF(R(IR)/RCSMALL)/R(IR)/Y0+VHAT(IR)
-          CALL LIB$ERFR8(R(IR)/RCSMALL,SVAR)
-          PSPOT(IR)=PSPOT(IR)+QAUG*SVAR/R(IR)/Y0+VHAT(IR)        
+          call Lib$erfr8(R(IR)/RCSMALL,svar)
+          PSPOT(IR)=PSPOT(IR)+QAUG*svar/R(IR)/Y0+VHAT(IR)        
         ENDDO
 
 !       ================================================================
@@ -3734,7 +3699,7 @@ PRINT*,'WARNING! CODE FUDGED'
 !     == ENERGY GRID ===================================================
       REAL(8)                :: EMIN,EMAX
       REAL(8)   ,ALLOCATABLE :: EOFI(:)
-      INTEGER(4)             :: NE,IE,IE1
+      INTEGER(4)             :: NE,IE,ie1
 !     == ANGULAR MOMENTA ===============================================
       INTEGER(4)             :: LMAX           ! MAX ANG. MOMENTUM
       INTEGER(4)             :: L              !ANGULAR MOMENTUM
@@ -3754,12 +3719,12 @@ PRINT*,'WARNING! CODE FUDGED'
 !
       REAL(8)   ,ALLOCATABLE :: PHASEPAW(:,:)
       REAL(8)   ,ALLOCATABLE :: PHASEAE(:,:)
-      REAL(8)   ,ALLOCATABLE :: DE(:,:)
+      REAL(8)   ,ALLOCATABLE :: de(:,:)
       REAL(8)                :: PAWPSI(NR,3)
       REAL(8)                :: REFPSI(NR,3)
-      REAL(8)                :: AUX(NR),SVAR1,SVAR2
+      REAL(8)                :: AUX(NR),svar1,svar2
       INTEGER(4)             :: NODE
-      REAL(8)                :: RCOV,RPHASE
+      real(8)                :: rcov,rphase
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10 &
@@ -3768,7 +3733,7 @@ PRINT*,'WARNING! CODE FUDGED'
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
       RPHASE=1.5D0*RCOV
       CALL REPORT$R8VAL(NFILO,'PHASESHIFTS TAKEN AT RADIUS',RPHASE,'A_0')
-      CALL REPORT$STRING(NFILO,'(RADIUS=1.5 COVALENT RADIUS)')
+      CALL REPORT$string(NFILO,'(RADIUS=1.5 COVALENT RADIUS)')
 !
 !     ==================================================================
 !     ==  PREPARE SOME COMMON CONSTANTS                               ==
@@ -3780,7 +3745,7 @@ PRINT*,'WARNING! CODE FUDGED'
         R(IR)=RI
       ENDDO
 !     IRAUG=INT(1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX)
-      IRAUG=INT(1.D0+DLOG(RPHASE/R1)/DEX)
+      IRAUG=INT(1.D0+DLOG(rphase/R1)/DEX)
 !
 !     ==================================================================
 !     ==  COLLECT DATA FORM LINKEDLIST                                ==
@@ -3823,10 +3788,10 @@ PRINT*,'WARNING! CODE FUDGED'
 !       ==  FIND AE PHASE SHIFT                                       ==
 !       ================================================================
         DO IE=1,NE
-!         -- AUGMENTATION RADIUS NOT USED FOR OUTWARD INTEGRATION ------
+!         -- augmentation radius not used for outward integration ------
           CALL SCHROEDER(.TRUE.,.TRUE.,R1,DEX,NR,L,EOFI(IE),AEZ &
      &              ,IRAUG+4,AUGMENTATIONRADIUS,AEPOT,REFPSI,AUX)
-          CALL XPHASESHIFT(R1,DEX,NR,RPHASE &
+          CALL XPHASESHIFT(R1,DEX,NR,rphase &
      &                    ,REFPSI,PHASEAE(IE,L+1))
         ENDDO
 !
@@ -3856,7 +3821,7 @@ PRINT*,'WARNING! CODE FUDGED'
               PAWPSI(:,:)=PAWPSI(:,:) &
      &                   +(AEPHI1(:,:,IPRO)-PSPHI1(:,:,IPRO))*PROJ1(IPRO)
             ENDDO
-            CALL XPHASESHIFT(R1,DEX,NR,RPHASE,PAWPSI &
+            CALL XPHASESHIFT(R1,DEX,NR,rphase,PAWPSI &
      &                     ,PHASEPAW(IE,IPROSUM))
           ENDDO
           DEALLOCATE(PRO1)
@@ -3870,36 +3835,36 @@ PRINT*,'WARNING! CODE FUDGED'
       ENDDO
 !
 !     ==================================================================
-!     ==  ESTIMATE ENERGY SHIFTS                                      ==
+!     ==  estimate energy shifts                                      ==
 !     ==================================================================
-      ALLOCATE(DE(NE,NPROSUM))
+      ALLOCATE(de(NE,NPROSUM))
       IPROSUM=0
       DO L=0,LMAX
         CALL PROJECTION$NPRO(L,NPROX)
         DO IPRO=0,NPROX
           IPROSUM=IPROSUM+1
           DO IE=1,NE-1
-            IF(PHASEPAW(IE,IPROSUM)-PHASEAE(IE,L+1).GT.0.D0) THEN
-              DE(IE,IPROSUM)=-11.111111D0*EV
+            IF(PHASEPAW(IE,IPROSUM)-PHASEAE(IE,L+1).gt.0.d0) THEN
+              DE(IE,IPROSUM)=-11.111111D0*eV
               INNER1: DO IE1=IE-1,1,-1
-                IF(PHASEPAW(IE1,IPROSUM)-PHASEAE(IE,L+1).LE.0.D0) THEN
+                IF(PHASEPAW(IE1,IPROSUM)-PHASEAE(IE,L+1).Le.0.D0) THEN
                   SVAR1=PHASEPAW(IE1,IPROSUM)  -PHASEAE(IE,L+1)
                   SVAR2=PHASEPAW(IE1+1,IPROSUM)-PHASEAE(IE,L+1)
-                  DE(IE,IPROSUM)=EOFI(IE1)-EOFI(IE) &
+                  DE(IE,IPROSUM)=EOFI(IE1)-eofi(ie) &
       &                         -SVAR1*(EOFI(IE1+1)-EOFI(IE1))/(SVAR2-SVAR1)
-!                 DE(IE,IPROSUM)=EOFI(IE1)-EOFI(IE)
+!                 DE(IE,IPROSUM)=EOFI(IE1)-eofi(ie)
                   EXIT INNER1
                 END IF
               ENDDO INNER1
-            ELSE IF(PHASEPAW(IE,IPROSUM)-PHASEAE(IE,L+1).LE.0.D0) THEN
-              DE(IE,IPROSUM)=+11.111111D0*EV
+            ELSE IF(PHASEPAW(IE,IPROSUM)-PHASEAE(IE,L+1).le.0.d0) THEN
+              DE(IE,IPROSUM)=+11.111111D0*eV
               INNER2: DO IE1=IE+1,NE
-                IF(PHASEPAW(IE1,IPROSUM)-PHASEAE(IE,L+1).GT.0.D0) THEN
+                IF(PHASEPAW(IE1,IPROSUM)-PHASEAE(IE,L+1).Gt.0.D0) THEN
                   SVAR1=PHASEPAW(IE1,IPROSUM)  -PHASEAE(IE,L+1)
                   SVAR2=PHASEPAW(IE1-1,IPROSUM)-PHASEAE(IE,L+1)
-                  DE(IE,IPROSUM)=EOFI(IE1)-EOFI(IE) &
+                  DE(IE,IPROSUM)=EOFI(IE1)-eofi(ie) &
       &                         -SVAR1*(EOFI(IE1-1)-EOFI(IE1))/(SVAR2-SVAR1)
-!                  DE(IE,IPROSUM)=EOFI(IE1)-EOFI(IE)
+!                  DE(IE,IPROSUM)=EOFI(IE1)-eofi(ie)
                   EXIT INNER2
                 END IF
               ENDDO INNER2
@@ -3956,7 +3921,7 @@ PRINT*,'WARNING! CODE FUDGED'
       DEALLOCATE(EOFI)
       DEALLOCATE(PHASEPAW)
       DEALLOCATE(PHASEAE)
-      DEALLOCATE(DE)
+      DEALLOCATE(de)
       RETURN
       CONTAINS
 !      . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
@@ -3996,22 +3961,22 @@ PRINT*,'WARNING! CODE FUDGED'
       REAL(8)      ,INTENT(IN) :: F(NR)
       REAL(8)                  :: RI
       INTEGER(4)               :: IR
-      REAL(8)                  :: PI,Y0
+      REAL(8)                  :: pi,y0
 !     *******************************************************************
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
+      pi=4.d0*datan(1.d0)
+      y0=1.d0/sqrt(4.d0*pi)
       WRITE(NFILO,FMT='(A)')TRIM(TEXT)
       XEXP=DEXP(DEX)
       RI=R1/XEXP
-      WRITE(NFILO,FMT='(A5,2A20)')'IR','RI',F(IR)*Y0
+      WRITE(NFILO,FMT='(a5,2A20)')'ir','RI',F(IR)*Y0
       DO IR=1,NR
         RI=RI*XEXP
 !        IF(IR.LT.165) CYCLE
 !        IF(IR.GT.230) EXIT
 !       IF(MOD(IR,5).NE.0) CYCLE
-        WRITE(NFILO,FMT='(I5,2E20.5)')IR,RI,F(IR)*Y0
+        WRITE(NFILO,FMT='(i5,2E20.5)')ir,RI,F(IR)*y0
       ENDDO
-      RETURN
+      return
       END
 
 
