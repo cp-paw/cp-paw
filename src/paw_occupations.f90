@@ -898,6 +898,7 @@ END MODULE DYNOCC_MODULE
       INTEGER(4)                     :: ISPIN,IKPT,IB
       REAL(8)                        :: SVAR,DSVAR
       logical(4)                     :: told
+      integer(4)                     :: nfil1
 !     ******************************************************************
                           CALL TRACE$PUSH('DYNOCC$READ')
       IF(STARTTYPE.EQ.' ') THEN
@@ -914,7 +915,21 @@ END MODULE DYNOCC_MODULE
       IF(.NOT.TCHK) THEN
         CALL TRACE$POP ;RETURN
       END IF
+!     == check if restart file format from august 1996 =================
       told=(separator%version.eq.'AUG1996')
+      if ((starttype.eq.'E').and.(told)) then
+        call filehandler$unit('PROT',nfil1)
+        write(nfil1,*)
+        write(nfil1,'("**********************************************")')
+        write(nfil1,'("WARNING:")')
+        write(nfil1,'("IT IS NOT POSSIBLE TO RESTART FROM A RSTRT ")')
+        write(nfil1,'("FILE OF PREVIOUS RELEASES USING ")')
+        write(nfil1,'("!MERMIN START=T. THE CODE AUTOMATICALLY")')
+        write(nfil1,'("ASSUMES !MERMIN START=F")')
+        write(nfil1,'("**********************************************")')
+        write(nfil1,*)
+        call filehandler$close('PROT')
+      end if
 !
 !     ==================================================================
 !     == READ DATA                                                    ==
@@ -923,7 +938,7 @@ END MODULE DYNOCC_MODULE
       XM(:,:,:)=0.D0
       CALL MPE$QUERY(NTASKS,ITASK)
       IF(ITASK.EQ.1) THEN
-        IF(SEPARATOR%VERSION.NE.MYSEPARATOR%VERSION) THEN
+        IF((SEPARATOR%VERSION.NE.MYSEPARATOR%VERSION).and.(.not.told)) THEN
           CALL ERROR$MSG('VERSION NOT RECOGNIZED')
           CALL ERROR$CHVAL('VERSION',SEPARATOR%VERSION)
           CALL ERROR$STOP('DYNOCC$READ')
@@ -931,7 +946,7 @@ END MODULE DYNOCC_MODULE
         READ(NFIL)NB1,NKPT1,NSPIN1
         ALLOCATE(TMP0(NB1,NKPT1,NSPIN1))
         ALLOCATE(TMPM(NB1,NKPT1,NSPIN1))
-        ALLOCATE(TMPe(NB1,NKPT1,NSPIN1))
+        if(.not.told)ALLOCATE(TMPe(NB1,NKPT1,NSPIN1))
         READ(NFIL)TMP0(:,:,:)
         READ(NFIL)TMPM(:,:,:)
         if(.not.told)READ(NFIL)TMPe(:,:,:)
@@ -947,7 +962,7 @@ END MODULE DYNOCC_MODULE
         if(.not.told)EPSILON(1:NB1,1:NKPT1,1:NSPIN1)=TMPE(1:NB1,1:NKPT1,1:NSPIN1)
         DEALLOCATE(TMP0)
         DEALLOCATE(TMPM)
-        DEALLOCATE(TMPE)
+        if(.not.told)DEALLOCATE(TMPE)
 !
 !       ================================================================
 !       == AUGMENT MISSING DATA                                       ==
@@ -969,7 +984,7 @@ END MODULE DYNOCC_MODULE
 !     ==================================================================
       CALL MPE$BROADCAST(1,X0)
       CALL MPE$BROADCAST(1,XM)
-      CALL MPE$BROADCAST(1,epsilon)
+      if(.not.told)CALL MPE$BROADCAST(1,epsilon)
 !
 !     ==================================================================
 !     == CONVERT ENERGIES INTO OCCUPATIONS                            ==
