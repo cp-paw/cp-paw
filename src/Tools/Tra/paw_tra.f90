@@ -2022,6 +2022,8 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
        REAL(8)                   :: MASSUNIT
        REAL(8)                   :: LUNIT
        INTEGER(4)                :: NFILO
+integer(4),allocatable    :: ind(:)
+integer(4)                :: j
 !      ******************************************************************
                                CALL TRACE$PUSH('READ_STRC')
        LL_STRC=LL_STRC_
@@ -2047,15 +2049,31 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !      ==================================================================
        CALL LINKEDLIST$SELECT(LL_STRC,'~')
        CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+       ALLOCATE(IND(NAT))
        DO I=1,NAT
          CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
          CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT)
+         IND(I)=IAT
          CALL LINKEDLIST$GET(LL_STRC,'NAME',1,ATOM(IAT))
          SP(IAT)=ATOM(IAT)(1:2)
          CALL LINKEDLIST$EXISTD(LL_STRC,'SP',1,TCHK)
          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'SP',1,SP(IAT))
          CALL LINKEDLIST$SELECT(LL_STRC,'..')
        ENDDO
+
+!      ==CHECK FOR IDENTICAL ATOM NAMES AND INDICES OUT OF RANGE ========
+       DO I=1,NAT
+         DO J=I+1,NAT
+           IF(IND(I).EQ.IND(J)) THEN
+             CALL ERROR$MSG('TWO ATOMS WITH THE SAME NAME ARE NOT ALLOWED')
+             CALL ERROR$CHVAL('ATOM NAME',ATOM(IND(I)))
+             CALL ERROR$I4VAL('POSITION OF FIRST ATOM IN STRC_OUT FILE ',I)
+             CALL ERROR$I4VAL('POSITION OF SECOND ATOM IN STRC_OUT FILE ',J)
+             CALL ERROR$STOP('READ_STRC')
+           END IF
+         ENDDO
+       ENDDO
+       deallocate(ind)
 !
 !      ==================================================================
 !      ==   LOOK UP ATOMIC NUMBER OF SPECIES                           ==
@@ -2105,6 +2123,8 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
        DO I=1,NAT
          IF(IZ(I).EQ.0) THEN
            CALL ERROR$MSG('ATOMIC NUMBER NOT FOUND')
+           CALL ERROR$I4VAL('IAT',I)
+           CALL ERROR$CHVAL('NAME',ATOM(I))
            CALL ERROR$STOP('READ_STRC')
          END IF
        ENDDO

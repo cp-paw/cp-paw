@@ -480,6 +480,9 @@ END MODULE AUGMENTATION_MODULE
       DEALLOCATE(AEPOT1)
       DEALLOCATE(PSPOT1)
 !
+!     ==== this is for marcello santos to calculate core level shifts in frozen core
+!     call subroutine(isp,r1,dex,nr,lmrx,aepot)
+!
 !calculate new soft-core density here
 !     
       IF(TPR) THEN
