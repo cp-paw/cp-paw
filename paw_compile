@@ -61,11 +61,11 @@ XLF_COMPILE_NP="${XLF_COMPILE_N} -F:mpxlf90"
 XLF_COMPILE_GP="${XLF_COMPILE_G} -F:mpxlf90" 
 XLF_LINK="xlf90 -bmaxdata:0x70000000 -bloadmap:loadmap -qextchk -lessl" 
 ## dec alpha compiler
-ALP_COMPILE_N="fort -c  -automatic -assume source_include"
-ALP_COMPILE_N="${ALP_COMPILE_N} -convert ibm"
+ALP_COMPILE_N="fort -c"
+# write unformatted files like an ibm
+#ALP_COMPILE_N="${ALP_COMPILE_N} -convert ibm" 
 ALP_COMPILE_G="${ALP_COMPILE_N} -g3 -ladebug -C -assume gfullpath -check overflow -check underflow"
-ALP_COMPILE_O="${ALP_COMPILE_N} -O3  -math_library fast -inline speed" 
-ALP_COMPILE_N="${ALP_COMPILE_N} -math_library accurate"
+ALP_COMPILE_O="${ALP_COMPILE_N} -O3" 
 ALP_LINK="fort "
 ## Absoft compiler for linux
 ABS_COMPILE_N="f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_"

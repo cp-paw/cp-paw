@@ -399,12 +399,11 @@
       END
 #ENDIF
 !
-!
 !.......................................................................
 MODULE RANDOM_MODULE
-  INTEGER(4),SAVE        :: SEED=1
-  INTEGER(4),PARAMETER   :: RANFAC1=22222221
-  INTEGER(4),PARAMETER   :: RANFAC2=2**24
+  INTEGER(8),SAVE        :: SEED=1
+  INTEGER(8),PARAMETER   :: RANFAC1=22222221
+  INTEGER(8),PARAMETER   :: RANFAC2=2**24
 ! CHOICE EXPLICIT CPPVARIABLE_XLF RNG
 ! INTEGER(8),SAVE        :: SEED=1_8
 ! INTEGER(8),PARAMETER   :: RANFAC1=44485709377909_8
@@ -430,8 +429,7 @@ END MODULE RANDOM_MODULE
 !     ..................................................................
       SUBROUTINE LIB$RANDOMSEED
 !     ****************************************************************** 
-!     **  COMPLEMENTARY ERROR FUNCTION                                **
-!     **  Y=1-ERF(X)                                                  **
+!     **  choose a seed  for the nadom number generator               **
 !     ******************************************************************
       USE RANDOM_MODULE
       IMPLICIT NONE

@@ -1105,9 +1105,11 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     ==   WRITE CONSTRAINT INFORMATION                               ==
 !     ==================================================================
       CALL FILEHANDLER$UNIT('CONSTRAINTS',NFIL)
-      WRITE(NFIL,FMT='(20("="),2X,"TIMESTEP: ",I10,2X,20("="))')NFI
-      CALL CONSTRAINTS$REPORT(NFIL,'SHORT')
-      CALL lib$FLUSHfile(NFIL)
+      if(thistask.eq.1) then
+        WRITE(NFIL,FMT='(20("="),2X,"TIMESTEP: ",I10,2X,20("="))')NFI
+        CALL CONSTRAINTS$REPORT(NFIL,'SHORT')
+        CALL lib$FLUSHfile(NFIL)
+      end if
 !   
 !     ==================================================================
 !     ==   WRITE FILE STRC_OUT                                        ==

@@ -612,7 +612,7 @@ END MODULE MPE_GATHER_MODULE
       IMPLICIT NONE
       INTEGER(4)               :: IERR
       INTEGER(4)  ,PARAMETER   :: MBYTE=2**20
-      INTEGER(4)  ,PARAMETER   :: BUFFER_SIZE=10*MBYTE
+      INTEGER(4)  ,PARAMETER   :: BUFFER_SIZE=6*MBYTE
       CHARACTER(1),POINTER     :: BUFFER(:)
 !     ******************************************************************
 !

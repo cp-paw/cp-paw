@@ -6258,7 +6258,7 @@ export DXINCLUDE=${PAWDIR}/DX
     {\it architecture} -o -new}''.  
 \item Compile the tools using the command {\tt paw\_maketool}.
 \item 
-\begin{sloppypar}
+\begin{sloppypar} 
 If you are planning to run PAW on a parallel computer, redefine the
   variable ``{\tt CONTROLWORKSTATION}'' in ``{\tt \$PAWDIR/paw\_run}''
   to the machine name that will control your parallel jobs.  Depending
@@ -6266,11 +6266,14 @@ If you are planning to run PAW on a parallel computer, redefine the
   with ``{\tt MP\_}'' defined in the ``{\tt paw\_run}'' script. 
 \end{sloppypar}
 \item 
-\begin{sloppypar}
+\begin{sloppypar} 
   If you are planning to run PAW on a parallel computer, rewrite the
   file {\tt \$PAWDIR/hostlist}. It contains a list of the processors of
-  your parallel machine.
-\end{sloppypar}
+  your parallel machine. 
+\end{sloppypar} 
+\item redefine fort77 to fort on alpha-linux systems by intrroducing a
+line {\tt alias fort77=''fort''} into {\tt ~/.bashrc}. Used to compile the
+fftw package.
 \end{enumerate}
 
 %====================================================================

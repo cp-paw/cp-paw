@@ -1417,11 +1417,11 @@ REAL(8)::EV
            totpot =totpot -(+q1*(q0-totcha)-s1*(s0-spincha))/(q1**2-s1**2)
            spinpot=spinpot-(-s1*(q0-totcha)+q1*(s0-spincha))/(q1**2-s1**2)
          ELSE IF(TFIXTOT.AND.(.NOT.TFIXSPIN)) THEN
-           TOTPOT=totpot-Q0/Q1
+           TOTPOT=totpot-(Q0-totcha)/Q1
 !           IF(DABS(Q0).LT.TOL)DTOTPOT=0.D0
 !           DSPINPOT=0.D0
          ELSE IF((.NOT.TFIXTOT).AND.TFIXSPIN) THEN
-            SPINPOT=spinpot-S0/q1
+            SPINPOT=spinpot-(S0-spincha)/q1
 !           IF(DABS(S0).LT.TOL)DSPINPOT=0.D0
 !           DTOTPOT=0.D0
          ELSE IF((.NOT.TFIXTOT).AND.(.NOT. TFIXSPIN)) THEN
@@ -1439,6 +1439,7 @@ REAL(8)::EV
 !         ELSE
 !           SPINCHA=S0
 !         END IF
+print*,'dynocc ',tfixtot,tfixspin,q0,s0,totcha,spincha,totpot,spinpot
        ENDDO
        IF(.NOT.TCONV) THEN
          CALL ERROR$MSG('LOOP NOT CONVERGED') 
