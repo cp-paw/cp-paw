@@ -2602,6 +2602,7 @@ PRINT*,'ITER ',ITER,DIGAM
                 ELSE
                   WRITE(NFIL)THIS%EIGVAL(IB1),VEC
                 END IF
+!print*,'flag',flag
 !PRINT*,'E ',THIS%EIGVAL(IB1)
 !WRITE(*,FMT='(10F10.5)')VEC
               END IF

@@ -188,6 +188,7 @@
 
       CALL HYPERFINE$SETL4('WAKE',TPRINT)
       CALL GRAPHICS$SETL4('WAKE',TPRINT)
+      CALL CORE$SETL4('ON',TLAST)
 !
 !     ==================================================================
 !     ==   WRITE RESTART_OUT                                          ==
@@ -1156,6 +1157,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         ELSE
           CALL WAVES$REPORTEIG(NFILO)
         END IF
+        call core$report(nfilo)
       END IF
 !   
 !     ==================================================================

@@ -45,6 +45,7 @@ REAL(8)                :: RCSM
 INTEGER(4)             :: LNX
 INTEGER(4)             :: LMNX
 INTEGER(4)             :: LMRX
+INTEGER(4)             :: nc     !santos040616
 INTEGER(4),POINTER     :: LOX(:)       !(LNXX)
 REAL(8)   ,POINTER     :: VADD(:)      !(NRX)
 REAL(8)   ,POINTER     :: AECORE(:)    !(NRX)
@@ -59,6 +60,13 @@ REAL(8)   ,POINTER     :: PSCOREOFG(:) !(NGX)
 REAL(8)   ,POINTER     :: VHATOFG(:)   !(NGX)
 REAL(8)   ,POINTER     :: NHATPRIMEOFG(:)  !(NGX)
 REAL(8)   ,POINTER     :: PROOFG(:,:)  !(NRX,LNXX)
+! SANTOS040616 BEGIN
+REAL(8)   ,POINTER     :: AEPOT(:)     !(NRX)
+INTEGER(4),POINTER     :: LB(:)        !(NC)
+REAL(8)   ,POINTER     :: FB(:)        !(NC)
+REAL(8)   ,POINTER     :: EB(:)        !(NC)
+REAL(8)   ,POINTER     :: AEPSI(:,:)   !(NRX,NC)
+! SANTOS040616 END
 REAL(8)                :: M
 REAL(8)                :: ZV
 REAL(8)                :: PSG2
@@ -184,6 +192,14 @@ END MODULE SETUP_MODULE
       NULLIFY(THIS%VHATOFG) !(NGX)
       NULLIFY(THIS%NHATPRIMEOFG) !(NGX)
       NULLIFY(THIS%PROOFG)  !(NGX,LNX)
+! SANTOS040616 BEGIN
+      THIS%NC    =0
+      NULLIFY(THIS%AEPOT)   !(NRX)
+      NULLIFY(THIS%LB)      !(NC)
+      NULLIFY(THIS%FB)      !(NC)
+      NULLIFY(THIS%EB)      !(NC)
+      NULLIFY(THIS%AEPSI)   !(NRX,NC)
+! SANTOS040616 END
       NULLIFY(THIS%NEXT)
       WRITE(THIS%FILEID,*)THIS%I
       THIS%FILEID='ATOM'//ADJUSTL(THIS%FILEID)
@@ -236,6 +252,10 @@ END MODULE SETUP_MODULE
         VAL=THIS%LMRX
       ELSE IF(ID.EQ.'LMRXX') THEN
         VAL=LMRXX
+! SANTOS040616 BEGIN
+      ELSE IF(ID.EQ.'NC') THEN
+        VAL=THIS%NC
+! SANTOS040616 END
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -261,13 +281,22 @@ END MODULE SETUP_MODULE
         IF(LEN.NE.THIS%LNX) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETR8A')
+          CALL ERROR$STOP('SETUP$GETi4A')
         END IF
         VAL=THIS%LOX
+! SANTOS040616 BEGIN
+      ELSE IF(ID.EQ.'LB') THEN
+        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETRi4A')
+        END IF
+        VAL=THIS%LB
+! SANTOS040616 END
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SETUP$GETI4')
+        CALL ERROR$STOP('SETUP$GETI4a')
       END IF
       RETURN
       END
@@ -380,6 +409,36 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%DOVER,(/LEN/))
+! SANTOS040616 BEGIN
+      ELSE IF(ID.EQ.'FB') THEN
+        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%FB,(/LEN/))
+      ELSE IF(ID.EQ.'EB') THEN
+        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%EB,(/LEN/))
+      ELSE IF(ID.EQ.'AECOREPSI') THEN
+        IF(LEN.NE.THIS%NC*NR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%AEPSI,(/LEN/))
+      ELSE IF(ID.EQ.'ATOMICAEPOT') THEN
+        IF(LEN.NE.NR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL(:)=THIS%AEPOT(:)
+! SANTOS040616 END
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -509,12 +568,13 @@ END MODULE SETUP_MODULE
       REAL(8)               :: RI
       INTEGER(4)            :: IR
       INTEGER(4)            :: LN
-      INTEGER(4)            :: IRCCOR
+!INTEGER(4)            :: IRCCOR
       REAL(8)               :: XEXP
       LOGICAL(4)            :: TCHK
       INTEGER(4)            :: IRMAX
       CHARACTER(16)         :: NAME
       INTEGER(4)            :: L,LX,ISVAR,LNOLD,LNX
+      INTEGER(4)            :: nc !santos040616
       INTEGER(4)            :: ln1,ln2,ln1a,ln2a
       INTEGER(4),ALLOCATABLE:: NPRO(:)
       INTEGER(4),ALLOCATABLE:: IWORK(:)
@@ -556,6 +616,20 @@ END MODULE SETUP_MODULE
       THIS%PRO=0.D0
       THIS%AEPHI=0.D0
       THIS%PSPHI=0.D0
+! SANTOS040616 BEGIN
+      CALL INPOT$nc(NFIL,nc)
+      THIS%NC=NC
+      ALLOCATE(THIS%AEPOT(NRX))
+      ALLOCATE(THIS%LB(NC))
+      ALLOCATE(THIS%FB(NC))
+      ALLOCATE(THIS%EB(NC))
+      ALLOCATE(THIS%AEPSI(NRX,NC))
+      THIS%AEPOT=0.D0
+      THIS%LB=0.D0
+      THIS%FB=0.D0
+      THIS%EB=0.D0
+      THIS%AEPSI=0.D0
+! SANTOS040616 END
 !     
 !     ==================================================================
 !     ==  READ PSEUDOPOTENTIALS AND PSEUDO WAVE FUNCTIONS             ==
@@ -563,10 +637,15 @@ END MODULE SETUP_MODULE
                             CALL TRACE$PASS('READ SETUP FILES')
       THIS%RCBG=1.D0/DSQRT(0.218D0)
       
+!      CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
+!     &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &
+!     &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
+!     &         ,IRCCOR,THIS%AECORE,THIS%PSCORE,THIS%PRO)
       CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
      &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &
      &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
-     &         ,IRCCOR,THIS%AECORE,THIS%PSCORE,THIS%PRO)
+     &         ,THIS%AECORE,THIS%PSCORE,THIS%PRO &
+     &         ,THIS%AEPOT,this%nc,THIS%LB,THIS%FB,THIS%EB,THIS%AEPSI) !santos040616
       CALL FILEHANDLER$CLOSE(THIS%FILEID)
 !     
 !     ==================================================================
@@ -1503,7 +1582,30 @@ END MODULE SETUP_MODULE
                               CALL TRACE$PUSH('INPOT$LNX')
       REWIND NFIL
       READ(NFIL,FMT='(F15.10,F10.5,2I4)')R1,DEX,NR,LNX
+!     READ(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F15.12,I5)')R1,DEX,NR,LNX
+                              CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...........................................INPOT..................
+      SUBROUTINE INPOT$nc(NFIL,nc)
+!     ******************************************************************
+!     **                                                              **
+!     **                                                              **
+!     ******************************************************************
+      INTEGER(4),INTENT(IN)  :: NFIL
+      INTEGER(4),INTENT(OUT) :: nc
+      REAL(8)                :: R1,DEX,psz,aez,rcsm
+      integer(4)             :: NR,lnx
+!     ******************************************************************
+                              CALL TRACE$PUSH('INPOT$LNX')
+      REWIND NFIL
+      nc=0
+      READ(NFIL,err=1000,fmt='(F15.10,F10.5,2I4,2F5.2,F15.12,I5)') &
+     &               R1,DEX,NR,LNX,PSZ,AEZ,RCSM,nc
+!     READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM,IRCCOR,nc
 !     READ(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F20.15,I5)')R1,DEX,NR,LNX
+1000 continue
                               CALL TRACE$POP
       RETURN
       END
@@ -1511,7 +1613,9 @@ END MODULE SETUP_MODULE
 !     ...........................................INPOT..................
       SUBROUTINE INPOT$READALL(NFIL,NRX,R1,DEX,NR,LNX,LOX,AEZ,PSZ &
      &         ,PSPHI,AEPHI,VADD,RCSM &
-     &         ,DTKIN,DOVER,IRCCOR,RHOCOR,PSCORR,PRO)
+     &         ,DTKIN,DOVER,RHOCOR,PSCORR,PRO & !santos040616/blo
+     &         ,AEPOT,nc,LB,FB,EB,AEPSI)           !santos040616/blo
+!     &         ,DTKIN,DOVER,IRCCOR,RHOCOR,PSCORR,PRO)
 !     ******************************************************************
 !     **                                                              **
 !     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
@@ -1524,34 +1628,47 @@ END MODULE SETUP_MODULE
       REAL(8)    ,INTENT(IN)  :: DEX
       INTEGER(4) ,INTENT(IN)  :: NR
       INTEGER(4) ,INTENT(IN)  :: LNX
+      INTEGER(4) ,INTENT(IN)  :: nc   !santos
       REAL(8)    ,INTENT(OUT) :: AEZ
       REAL(8)    ,INTENT(OUT) :: PSZ
       REAL(8)    ,INTENT(OUT) :: RCSM
       REAL(8)    ,INTENT(OUT) :: VADD(NRX)
       REAL(8)    ,INTENT(OUT) :: PRO(NRX,LNX)
       INTEGER(4) ,INTENT(OUT) :: LOX(LNX)
-      INTEGER(4) ,INTENT(OUT) :: IRCCOR
+!INTEGER(4) ,INTENT(OUT) :: IRCCOR
       REAL(8)    ,INTENT(OUT) :: DTKIN(LNX,LNX)
       REAL(8)    ,INTENT(OUT) :: DOVER(LNX,LNX)
       REAL(8)    ,INTENT(OUT) :: AEPHI(NRX,LNX)
       REAL(8)    ,INTENT(OUT) :: PSPHI(NRX,LNX)
       REAL(8)    ,INTENT(OUT) :: RHOCOR(NRX)
       REAL(8)    ,INTENT(OUT) :: PSCORR(NRX)
+! SANTOS040616 BEGIN
+      REAL(8)    ,INTENT(OUT) :: AEPOT(NRX) ! ATOMIC AE POTENTIAL
+      INTEGER(4) ,INTENT(OUT) :: LB(NC) ! MAIN ANGULAR MOMENTUM
+      REAL(8)    ,INTENT(OUT) :: FB(NC) ! OCCUPATIONS
+      REAL(8)    ,INTENT(OUT) :: EB(NC) ! ONE-PARTICLE ENERGIES
+      REAL(8)    ,INTENT(OUT) :: AEPSI(NRX,NC) ! CORE STATES
+      INTEGER(4)              :: NC1
+! SANTOS040616 END
       REAL(8)                 :: R11,DEX1
       INTEGER(4)              :: NR1,LNX1,I,IR,LN1,LN2,LN
 !     ******************************************************************
                               CALL TRACE$PUSH('INPOT$READALL')
       REWIND NFIL
-      READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM,IRCCOR
-6000  FORMAT(F15.10,F10.5,2I4,2F5.2,F20.15,I5)
+!     == optional value nc following rcsm is not read 
+      READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM
+!      READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM,IRCCOR
+6000  FORMAT(F15.10,F10.5,2I4,2F5.2,F15.12,I5)
       IF(R11.NE.R1.OR.DEX1.NE.DEX.OR.NR1.NE.NR) THEN
         CALL ERROR$MSG('ONLY ONE TYPE OF RADIAL GRID ALLOWED')
         CALL ERROR$STOP('INPOT')
       END IF
-      IF(IRCCOR.LE.0.OR.IRCCOR.GT.NR) THEN
+
+
+!      IF(IRCCOR.LE.0.OR.IRCCOR.GT.NR) THEN
 !      PRINT*,'WARNING! NO MT-RADIUS SPECIFIED FOR ATOM WITH Z=',AEZ
-       IRCCOR=NR-2
-      END IF
+!       IRCCOR=NR-2
+!      END IF
       IF(LNX.NE.LNX1) THEN
         CALL ERROR$MSG('LNX OUT OF RANGE')
         CALL ERROR$I4VAL('LNX ON INPUT',LNX)
@@ -1577,12 +1694,27 @@ END MODULE SETUP_MODULE
                               CALL TRACE$PASS('BEFORE DOVER')
       READ(NFIL,6100)((DOVER(LN1,LN2),LN1=1,LNX),LN2=1,LNX)
                               CALL TRACE$PASS('BEFORE PROJECTORS')
-      DO 100 LN=1,LNX
-      READ(NFIL,6100)(PRO(IR,LN),IR=1,NR)
-      READ(NFIL,6100)(AEPHI(IR,LN),IR=1,NR)
-      READ(NFIL,6100)(PSPHI(IR,LN),IR=1,NR)
-6100  FORMAT(SP,5E14.8)
-100   CONTINUE
+      DO LN=1,LNX
+        READ(NFIL,6100)(PRO(IR,LN),IR=1,NR)
+        READ(NFIL,6100)(AEPHI(IR,LN),IR=1,NR)
+        READ(NFIL,6100)(PSPHI(IR,LN),IR=1,NR)
+6100    FORMAT(SP,5E14.8)
+      enddo
+! SANTOS040616 BEGIN
+      aepot(:)=0.d0
+      lb(:)=0
+      fb(:)=0.d0
+      eb(:)=0.d0
+      aepsi(:,:)=0.d0
+      READ(NFIL,end=1000,fmt='(SP,5E14.8)')(AEPOT(IR),IR=1,NR)
+      READ(NFIL,end=1000,fmt='(14I5)')(LB(I),I=1,NC)
+      READ(NFIL,end=1000,fmt='(SP,5E14.8)')(FB(I),I=1,NC)
+      READ(NFIL,end=1000,fmt='(SP,5E14.8)')(EB(I),I=1,NC)
+      DO I=1,NC
+        READ(NFIL,end=1000,fmt='(SP,5E14.8)')(AEPSI(IR,I),IR=1,NR)
+      enddo
+1000  continue
+! SANTOS040616 END
                               CALL TRACE$POP
       RETURN
       END

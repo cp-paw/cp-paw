@@ -516,6 +516,11 @@ CALL TRACE$PASS('DONE')
       CALL READIN_ANALYSE_HYPERFINE(LL_CNTL)
 !    
 !     ==================================================================
+!     ==  READ BLOCK !ANALYSE!HYPERFINE                               ==
+!     ==================================================================
+      CALL READIN_ANALYSE_corelevel(LL_CNTL)
+!    
+!     ==================================================================
 !     ==  READ BLOCK !ANALYSE!OPTIC                                   ==
 !     ==================================================================
       CALL READIN_ANALYSE_OPTIC(LL_CNTL)
@@ -1923,6 +1928,45 @@ PRINT*,'ILDA ',ILDA
         CALL HYPERFINE$SELECT('~')
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO
+                           CALL TRACE$POP
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE READIN_ANALYSE_CORELEVEL(LL_CNTL_)
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN)  :: LL_CNTL_
+      TYPE(LL_TYPE)             :: LL_CNTL
+      LOGICAL(4)                :: TCHK
+      INTEGER(4)                :: N
+      CHARACTER(32),ALLOCATABLE :: ATOMS(:)
+      LOGICAL(4)                :: DEFAULT
+!     ******************************************************************
+                           CALL TRACE$PUSH('READIN_ANALYSE_CORELEVEL')  
+      LL_CNTL=LL_CNTL_
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ANALYSE')
+      CALL LINKEDLIST$EXISTL(LL_CNTL,'CORELEVELS',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL CORE$SETL4('DEFAULT',.FALSE.)
+        CALL TRACE$POP
+      END IF
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CORELEVELS')
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'DEFAULT',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'DEFAULT',0,.FALSE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'DEFAULT',1,DEFAULT)
+      CALL CORE$SETL4('DEFAULT',DEFAULT)
+!
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ATOMS',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$SIZE(LL_CNTL,'ATOMS',1,N)
+        ALLOCATE(ATOMS(N))
+        CALL LINKEDLIST$GET(LL_CNTL,'ATOMS',1,ATOMS)
+        CALL CORE$SETCHA('ATOMS',N,ATOMS)
+        DEALLOCATE(ATOMS)
+      END IF
                            CALL TRACE$POP
       RETURN
       END

@@ -1821,6 +1821,8 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       REAL(8)               :: SUM,SVAR1,SVAR2,SVAR
       COMPLEX(8)            :: CSVAR
       INTEGER(4)            :: NDIMD,IDIM
+      INTEGER(4)            :: Nfilo
+      logical(4),parameter  :: tpr=.false.
 !     ******************************************************************
       NDIMD=NDIM**2
 !
@@ -1917,6 +1919,15 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
           ENDDO
         ENDDO
       ENDDO
+      IF(TPR) THEN
+        CALL FILEHANDLER$UNIT('PROT',NFILO)
+        DO IDIM=1,NDIMD
+          WRITE(NFILO,FMT='("waves_denmat: DENMAT FOR IDIM= ",I2)') IDIM
+          DO LMN1=1,LMNX
+            WRITE(NFILO,FMT='(9F10.6)')DENMAT(LMN1,:,IDIM)
+          ENDDO
+        ENDDO
+      END IF
       RETURN
       END
 !
@@ -2664,17 +2675,24 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
             DO LMN=1,LMNX
               II=II+1    ! II=(LMN,IDIM,IB)
               PROPSI(IDIM,IB,IPRO-1+LMN)=PROPSI1(II)
+!print*,'iat,lmn,propsi',iat,lmn,ib,propsi1(ii)
             ENDDO
           ENDDO
         ENDDO
         IPRO=IPRO+LMNX
       ENDDO
-       DEALLOCATE(LOX)
+      DEALLOCATE(LOX)
       DEALLOCATE(PRO)
       DEALLOCATE(PROPSI1)
       DEALLOCATE(EIGR)
       DEALLOCATE(GVEC)
       CALL MPE$COMBINE('+',PROPSI)
+!do ib=1,nb
+!  do lmn=1,lmnx
+!     print*,'propsi ',ib,lmn,propsi(1,ib,lmn)
+!  enddo
+!enddo
+!stop
                                CALL TIMING$CLOCKOFF('WAVES_PROJECTIONS')
       RETURN
       END

@@ -259,7 +259,7 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4)              :: LM,LMN1,LMN2,LMN11,LMN21,LN1,LN2,L1,L2,IM,ISPIN
       INTEGER(4)              :: NSPIN
       INTEGER(4)              :: NFILO
-      LOGICAL(4),PARAMETER    :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER    :: TPR=.false.
       LOGICAL(4),PARAMETER    :: TTEST=.FALSE.
       INTEGER(4),PARAMETER    :: ITEST=1
       LOGICAL(4)              :: TBACK,TSPIN
@@ -320,6 +320,7 @@ END MODULE AUGMENTATION_MODULE
             WRITE(NFILO,FMT='(9F10.6)')DENMAT(LMN1,:,IDIM)
           ENDDO
         ENDDO
+stop
       END IF
 
 !for soft-core iterate from here ...
@@ -481,7 +482,7 @@ END MODULE AUGMENTATION_MODULE
       DEALLOCATE(PSPOT1)
 !
 !     ==== this is for marcello santos to calculate core level shifts in frozen core
-!     call subroutine(isp,r1,dex,nr,lmrx,aepot)
+      call core_CORESHIFTS(IAT,ISP,R1,DEX,NR,LMRX,AEPOT)
 !
 !calculate new soft-core density here
 !     
@@ -604,7 +605,16 @@ END MODULE AUGMENTATION_MODULE
           CALL ERROR$STOP('SPHERE')
         ENDIF
       END IF
-
+      if(tpr) then
+        CALL FILEHANDLER$UNIT('PROT',NFILO)
+        DO IDIM=1,NDIMD
+          WRITE(NFILO,FMT='("dath FOR IDIM= ",I2)') IDIM
+          DO LMN1=1,LMNX
+            WRITE(NFILO,FMT='(9F10.6)')Dath(LMN1,:,IDIM)
+          ENDDO
+        ENDDO
+stop
+      end if
 !
 !     ==================================================================
 !     ==  CLOSE DOWN                                                  ==
@@ -1773,11 +1783,20 @@ END MODULE EXPERTNAL1CPOT_MODULE
             CALL RADIAL$INTEGRAL(R1,DEX,NR,AUX,UONE(LN1,LN2))
           ENDDO
         ENDDO
-        DEALLOCATE(AEPHI)
         DEALLOCATE(RDEP)
         DEALLOCATE(AUX)
-PRINT*,'LNX ',LNX,' LOX ',LOX
-PRINT*,'UONE ',UONE
+!open(41,file='dump',form='formatted')
+!ri=r1/xexp
+!do ir=1,nr
+!  ri=ri*xexp
+!  write(41,*)ri,(aephi(ir,ln1),ln1=1,lnx)
+!enddo
+!PRINT*,'LNX ',LNX,' LOX ',LOX
+!do ln1=1,lnx
+!  PRINT*,'UONE ',UONE(ln1,:)
+!enddo
+!stop
+        DEALLOCATE(AEPHI)
 !
 !       ==============================================================
 !       ==  CALCULATE ONE-CENTER HAMILTONIAN                        ==
