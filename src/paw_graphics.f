@@ -763,7 +763,7 @@ call timing$clockoff('--1')
       REAL(8)                  :: YLM(LMXX)
       REAL(8)                  :: RVEC(3)
       REAL(8)                  :: XEXP
-      REAL(8)                  :: RMAX,RMAX2,RI,SVAR
+      REAL(8)                  :: RMAX,RMAX2,RI,SVAR,svar1
       INTEGER(4)               :: IR,LM
       INTEGER(4)               :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
       REAL(8)                  :: T1,T2,T3
@@ -824,18 +824,11 @@ call timing$clockoff('--1')
               DIS2=RVEC(1)**2+RVEC(2)**2+RVEC(3)**2
               IF(DIS2.LE.RMAX2) THEN
                 DIS=MAX(1.D-8,DSQRT(DIS2))
-!                IF (DIS .GT. 1.D-6) THEN
-                 XIR=1.D0+DLOG(DIS/R1)/DEX
-!                ELSE
-!                 XIR=1.D0
-!                ENDIF
-                IR=MAX(1,INT(XIR))
-                W2=XIR-DBLE(IR)
-                W1=1.D0-W2
                 CALL GETYLM(LMX,RVEC,YLM)
                 SVAR=0.D0
                 DO LM=1,LMX
-                  SVAR=SVAR+(W1*DRHOL(IR,LM)+W2*DRHOL(IR,LM))*YLM(LM)
+                  CALL RADIAL$VALUE(R1,DEX,NRX,DRHOL(1,LM),DIS,SVAR1)
+                  SVAR=SVAR+SVAR1*YLM(LM)
                 ENDDO
                 RHO(I11,I21,I31)=RHO(I11,I21,I31)+SVAR
               END IF

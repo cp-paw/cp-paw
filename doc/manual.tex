@@ -4757,17 +4757,20 @@ can be selected in two different ways:
 
 \end{itemize}
 
+%=======================================
 \subsubsection{Operations}
-
-In order to access the data we have to define how they are to be
-represented.
-
+%=======================================
+Projected charges, spin and eventually spin directions are printed to
+the protocol file.  In order to access the data we have to define how
+they are to be represented.
 \begin{itemize}
 \item We can map the density of states on an energy grid and write the
-  date to a file, so that they can be plotted.
+date to a file, so that they can be plotted.
 \item The values at a given energy can be printed to the protocol.
 \item The values of a given state can be written to a protocol.
 \end{itemize}
+
+
 
 
 %==========================================================================
@@ -4951,7 +4954,7 @@ be built.}
 \mbax{\key{Z}
 \vdescr{vector defining the new z-direction to which TYPE refers}
 \vformat{real(3)} 
-\vrules{optional}
+\vrules{optional (overwritten by NNZ)}
 \vdefault{0.0,0.0,1.0}}
 
 \mbax{\key{NNZ}
@@ -4965,7 +4968,7 @@ defining the new z-direction points}
 \vdescr{vector defining the new xz-plane together with z  to which TYPE
 refers }
 \vformat{real(3)} 
-\vrules{optional}
+\vrules{optional (overwritten by NNX)}
 \vdefault{1.0,0.0,0.0}}
 
 \mbax{\key{NNX}
@@ -5034,6 +5037,21 @@ be present}
 \vformat{character} 
 \vrules{optional}
 \vdefault{none}}
+
+\mbax{\key{SPIN}
+\vdescr{selects the spin directions in noncollinear calculations. Can be
+\begin{description}
+\item[``TOTAL''] total density
+\item[``X'']   spin density in $x$-direction
+\item[``Y'']   spin density in $y$-direction
+\item[``Z'']   spin density in $z$-direction
+\item[``MAIN'']   spin density in the main spin direction of this atom
+\end{description}}
+\vformat{character} 
+\vrules{optional}
+\vdefault{TOTAL}
+}
+
 %----------------------------------------------------------------------
 \block{!DCNTL!WEIGHT!ORB}
 %----------------------------------------------------------------------
@@ -5080,7 +5098,24 @@ be present}
 \brules{optional,multiple}
 \bdescr{selects output of the data; if neither E[EV] nor B are given,
 the density of states and the number of states are mapped onto the
-energy grid.}
+energy grid.
+
+The format of the file produced is as follows: Each file have 5
+columns with the following content.
+\begin{enumerate}
+\item energy in eV.
+\item density of states (scaled fitting to the sum
+of states)
+\item integrated density of states (number of states below a given energy).
+\item density of states multiplied with actual occupations
+\item integrated density of states multiplied with actual occupations
+(number of occupied states below a given energy).
+\end{enumerate}
+In spin-polarized calculations, columns 2-5 refer to spin up. There
+are corresponding columns 6-9 for spin down electrons. In
+non-collinear calculations there are only 5 columns, which refer to
+the total density of states, unless a spin direction has been
+explicitely specified.}
 
 \mbax{\key{ID}
 \vdescr{defines the name for this set of matrix elements; refers to

@@ -27,7 +27,7 @@ LOGICAL(4)  :: START=.TRUE.    ! DOES NOT READ FROM RESTART FILE
 INTEGER(4)  :: NB=0            ! #(BANDS)
 INTEGER(4)  :: NKPT=0          ! #(K-POINTS)
 INTEGER(4)  :: NSPIN=0         ! #(SPINS)
-INTEGER(4)  :: Ndim=0          ! #(SPINor components)
+INTEGER(4)  :: NDIM=0          ! #(SPINOR COMPONENTS)
 LOGICAL(4)  :: TDYN=.FALSE.    ! DYNAMICAL/STATIC OCCUPATION
 LOGICAL(4)  :: RESET=.TRUE.    ! SETS OUTPUT MODE OF DYNOCC$REPORT
 LOGICAL(4)  :: TSTOP=.FALSE.   ! SET VELOCITY TO ZERO
@@ -828,7 +828,7 @@ PRINT*,'WGHT',WGHT
 !       ================================================================
         NB1=MIN(NB1,NB)
         NKPT1=MIN(NKPT1,NKPT)
-        Nspin1=MIN(NSPIN1,NSPIN)
+        NSPIN1=MIN(NSPIN1,NSPIN)
         X0(1:NB1,1:NKPT1,1:NSPIN1)=TMP0(1:NB1,1:NKPT1,1:NSPIN1)
         XM(1:NB1,1:NKPT1,1:NSPIN1)=TMPM(1:NB1,1:NKPT1,1:NSPIN1)
         DEALLOCATE(TMP0)
@@ -922,12 +922,12 @@ PRINT*,'WGHT',WGHT
          CALL REPORT$R8VAL(NFIL,'HEAT',SVAR,'H')
          IF(ALLOCATED(EPSILON)) THEN
            CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
+           WRITE(NFIL,*)'OCCUPATIONS AND ENERGY EXPECTATION VALUES [EV]'
            DO ISPIN=1,NSPIN
              DO IKPT=1,NKPT
-               WRITE(NFIL,*)'OCCUPATIONS AND ENERGIES[EV] FOR K-POINT:',IKPT &
-      &                                           ,' AND SPIN:',ISPIN
-               WRITE(NFIL,FMT='("EIG ",10F8.3)')EPSILON(:,IKPT,ISPIN)/EV
-               WRITE(NFIL,FMT='("OCC ",10F8.3)')OCC(:,IKPT,ISPIN)/WKPT(IKPT)
+               WRITE(NFIL,*)'FOR K-POINT:',IKPT,' AND SPIN:',ISPIN
+               CALL DYNOCC_PREIG('EIG',NFIL,NB,EPSILON(:,IKPT,ISPIN),EV)
+               CALL DYNOCC_PREIG('OCC',NFIL,NB,OCC(:,IKPT,ISPIN),WKPT(IKPT))
              ENDDO
            ENDDO
          END IF
@@ -949,7 +949,7 @@ PRINT*,'WGHT',WGHT
            DO IKPT=1,NKPT
              WRITE(NFIL,*)'OCCUPATIONS FOR K-POINT:',IKPT &
       &                                           ,' AND SPIN:',ISPIN
-             WRITE(NFIL,FMT='("OCC ",10F8.3)')OCC(:,IKPT,ISPIN)/WKPT(IKPT)
+             CALL DYNOCC_PREIG('OCC',NFIL,NB,OCC(:,IKPT,ISPIN),WKPT(IKPT))
            ENDDO
          ENDDO
        END IF
@@ -999,12 +999,12 @@ PRINT*,'WGHT',WGHT
          CALL REPORT$R8VAL(NFIL,'HEAT',SVAR,'H')
          IF(ALLOCATED(EPSILON)) THEN
            CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
+           WRITE(NFIL,*)'OCCUPATIONS AND ENERGY EXPECTATION VALUES [EV]'
            DO ISPIN=1,NSPIN
              DO IKPT=1,NKPT
-               WRITE(NFIL,*)'OCCUPATIONS AND ENERGIES[EV] FOR K-POINT:',IKPT &
-      &                                           ,' AND SPIN:',ISPIN
-               WRITE(NFIL,FMT='("EIG ",10F8.3)')EPSILON(:,IKPT,ISPIN)/EV
-               WRITE(NFIL,FMT='("OCC ",10F8.3)')OCC(:,IKPT,ISPIN)/WKPT(IKPT)
+               WRITE(NFIL,*)'FOR K-POINT:',IKPT,' AND SPIN:',ISPIN
+               CALL DYNOCC_PREIG('EIG',NFIL,NB,EPSILON(:,IKPT,ISPIN),EV)
+               CALL DYNOCC_PREIG('OCC',NFIL,NB,OCC(:,IKPT,ISPIN),WKPT(IKPT))
              ENDDO
            ENDDO
          END IF
@@ -1012,16 +1012,45 @@ PRINT*,'WGHT',WGHT
        IF((.NOT.RESET).AND.(.NOT.TDYN)) THEN
          IF(ALLOCATED(EPSILON)) THEN
 !          CALL DYNOCC$GETR8A('EPSILON',NB*NKPT*NSPIN,EPSILON)
+           WRITE(NFIL,*)'ENERGY EXPECTATION VALUES [EV]'
            DO ISPIN=1,NSPIN
              DO IKPT=1,NKPT
-               WRITE(NFIL,*)'ENERGIES[EV] FOR K-POINT:',IKPT &
-      &                                           ,' AND SPIN:',ISPIN
-               WRITE(NFIL,FMT='("EIG ",10F8.3)')EPSILON(:,IKPT,ISPIN)/EV
+               WRITE(NFIL,*)'FOR K-POINT:',IKPT,' AND SPIN:',ISPIN 
+               CALL DYNOCC_PREIG('EIG',NFIL,NB,EPSILON(:,IKPT,ISPIN),EV)
              ENDDO
            ENDDO
          END IF
        END IF
        RESET=.FALSE.
+       RETURN
+       END
+!
+!      .................................................................
+       SUBROUTINE DYNOCC_PREIG(ID,NFIL,NB,EIG,UNIT)
+       IMPLICIT NONE
+       CHARACTER(*),INTENT(IN) :: ID
+       INTEGER(4)  ,INTENT(IN) :: NFIL
+       INTEGER(4)  ,INTENT(IN) :: NB
+       REAL(8)     ,INTENT(IN) :: EIG(NB)
+       REAL(8)     ,INTENT(IN) :: UNIT
+       INTEGER(4)              :: ITEN,IB,I1,I2
+       CHARACTER(32)           :: FORMAT
+!      *****************************************************************
+       IF(ID.EQ.'EIG') THEN
+         FORMAT='("EIG",I3,":",10F8.3)'
+       ELSE IF(ID.EQ.'OCC') THEN
+         FORMAT='("OCC",I3,":",10F8.3)'
+       ELSE
+          CALL ERROR$MSG('ID NOT RECOGNIZED')
+          CALL ERROR$STOP('DYNOCC_PREIG')
+       END IF
+       ITEN=0
+       DO WHILE (NB.GT.ITEN)
+         I1=ITEN+1
+         I2=MIN(ITEN+10,NB)
+         WRITE(NFIL,FMT=FORMAT)ITEN,(EIG(IB)/UNIT,IB=I1,I2)
+         ITEN=ITEN+10
+       ENDDO
        RETURN
        END
 !
@@ -1131,7 +1160,7 @@ PRINT*,'INITIALIZE OCCUPATIONS WITHOUT EIGENVALUES'
              ELSE IF(SVAR.LE.0.D0) THEN
                X0(IB,:,ISPIN)=0.D0
              ELSE
-               call dynocc_xoff(svar,x1,dsvar)
+               CALL DYNOCC_XOFF(SVAR,X1,DSVAR)
                X0(IB,:,ISPIN)=X1
                SVAR=0.D0
              END IF
@@ -1319,8 +1348,8 @@ REAL(8)::EV
 !
 !      =================================================================
 !      ==  CALCULATE FORCE ON X                                       ==
-!      ==  remark:  the factor fmax is not used because the same term ==
-!      ==         appears also in the kinetic energy                  ==
+!      ==  REMARK:  THE FACTOR FMAX IS NOT USED BECAUSE THE SAME TERM ==
+!      ==         APPEARS ALSO IN THE KINETIC ENERGY                  ==
 !      =================================================================
        DO ISPIN=1,NSPIN 
          SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
@@ -1349,8 +1378,8 @@ REAL(8)::EV
 !
 !      =================================================================
 !      ==  PROPAGATE X WITOUT CONSTRAINTS                             ==
-!      ==  CONSTRAINT FORCE fx                                        ==
-!      ==  XP=Xbar+FX*(TOTPOT+SIGMA*SPINpOT)                          ==
+!      ==  CONSTRAINT FORCE FX                                        ==
+!      ==  XP=XBAR+FX*(TOTPOT+SIGMA*SPINPOT)                          ==
 !      =================================================================
        SVAR1=2.D0/(1.D0+ANNEX)
        SVAR2=1.D0-SVAR1
@@ -1359,9 +1388,9 @@ REAL(8)::EV
          SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
            DO IB=1,NB
-             xbar(ib,ikpt,ispin)=svar1*x0(ib,ikpt,ispin) &
-       &                        +svar2*xm(ib,ikpt,ispin) &
-       &                        +svar3*fx(ib,ikpt,ispin)
+             XBAR(IB,IKPT,ISPIN)=SVAR1*X0(IB,IKPT,ISPIN) &
+       &                        +SVAR2*XM(IB,IKPT,ISPIN) &
+       &                        +SVAR3*FX(IB,IKPT,ISPIN)
              CALL DYNOCC_FOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
              FX(IB,IKPT,ISPIN)=DSVAR*SVAR3
 !            XBAR(IB,IKPT,ISPIN)=XP(IB,IKPT,ISPIN) &
@@ -1375,22 +1404,22 @@ REAL(8)::EV
 !      =================================================================
        DO ITER=1,NITER
 !        == EVALUATE Q(X)=Q0+Q1*FX*ALPHA;  S(X)=Q0+S1*FX*BETA ==========
-         Q0=0.d0
-         S0=0.d0
+         Q0=0.D0
+         S0=0.D0
          Q1=0.D0 
          S1=0.D0
          DO ISPIN=1,NSPIN
            SIGMA=DBLE(3-2*ISPIN)
            DO IKPT=1,NKPT
              DO IB=1,NB
-               force=FX(IB,IKPT,ISPIN)
+               FORCE=FX(IB,IKPT,ISPIN)
                XP(IB,IKPT,ISPIN)=XBAR(IB,IKPT,ISPIN) &
-     &                         +(TOTPOT+SIGMA*SPINPOT)*force
+     &                         +(TOTPOT+SIGMA*SPINPOT)*FORCE
                CALL DYNOCC_FOFX(XP(IB,IKPT,ISPIN),SVAR,DSVAR)
                SVAR1=SVAR*FMAX*WKPT(IKPT)
                Q0=Q0+SVAR1 
                S0=S0+SVAR1*SIGMA
-               SVAR1=DSVAR*FMAX*WKPT(IKPT)*force
+               SVAR1=DSVAR*FMAX*WKPT(IKPT)*FORCE
                Q1=Q1+SVAR1 
                S1=S1+SVAR1*SIGMA
               ENDDO
@@ -1399,30 +1428,30 @@ REAL(8)::EV
 !
 !        == CHECK CONVERGENCE ==========================================
          TCONV=.TRUE.
-         if(tfixtot) TCONV=TCONV.AND.(abs(Q0-totcha).lT.QTOL) 
-         if(tfixspin)TCONV=TCONV.AND.(abs(S0-spincha).lT.QTOL)
+         IF(TFIXTOT) TCONV=TCONV.AND.(ABS(Q0-TOTCHA).LT.QTOL) 
+         IF(TFIXSPIN)TCONV=TCONV.AND.(ABS(S0-SPINCHA).LT.QTOL)
          IF(TCONV) EXIT
 !        ===============================================================
 !        == FIND ZERO OF LINARIZED Q(X)-TOTCHA; S(X)-SPINCHA ===========
-!        ==  q0+q1*dtotpot+s1*dspinpot=0                              ==
-!        ==  s0+s1*dtotpot+q1*dspinpot=0                              ==
+!        ==  Q0+Q1*DTOTPOT+S1*DSPINPOT=0                              ==
+!        ==  S0+S1*DTOTPOT+Q1*DSPINPOT=0                              ==
 !        ===============================================================
          IF(TFIXTOT.AND.TFIXSPIN) THEN
 !           DTOTPOT=-(Q0+S0)/(Q1+S1)
 !           IF(DABS(Q0+S0).LT.TOL)DTOTPOT=0.D0
 !           DSPINPOT=-(Q0-S0)/(Q1-S1)
 !           IF(DABS(Q0-S0).LT.TOL)DSPINPOT=0.D0
-!           SVARxsxb=0.5D0*(DTOTPOT+DSPINPOT)
+!           SVARXSXB=0.5D0*(DTOTPOT+DSPINPOT)
 !           DSPINPOT=0.5D0*(DTOTPOT-DSPINPOT)
 !           DTOTPOT=SVAR
-           totpot =totpot -(+q1*(q0-totcha)-s1*(s0-spincha))/(q1**2-s1**2)
-           spinpot=spinpot-(-s1*(q0-totcha)+q1*(s0-spincha))/(q1**2-s1**2)
+           TOTPOT =TOTPOT -(+Q1*(Q0-TOTCHA)-S1*(S0-SPINCHA))/(Q1**2-S1**2)
+           SPINPOT=SPINPOT-(-S1*(Q0-TOTCHA)+Q1*(S0-SPINCHA))/(Q1**2-S1**2)
          ELSE IF(TFIXTOT.AND.(.NOT.TFIXSPIN)) THEN
-           TOTPOT=totpot-(Q0-totcha)/Q1
+           TOTPOT=TOTPOT-(Q0-TOTCHA)/Q1
 !           IF(DABS(Q0).LT.TOL)DTOTPOT=0.D0
 !           DSPINPOT=0.D0
          ELSE IF((.NOT.TFIXTOT).AND.TFIXSPIN) THEN
-            SPINPOT=spinpot-(S0-spincha)/q1
+            SPINPOT=SPINPOT-(S0-SPINCHA)/Q1
 !           IF(DABS(S0).LT.TOL)DSPINPOT=0.D0
 !           DTOTPOT=0.D0
          ELSE IF((.NOT.TFIXTOT).AND.(.NOT. TFIXSPIN)) THEN
@@ -1440,7 +1469,7 @@ REAL(8)::EV
 !         ELSE
 !           SPINCHA=S0
 !         END IF
-print*,'dynocc ',tfixtot,tfixspin,q0,s0,totcha,spincha,totpot,spinpot
+PRINT*,'DYNOCC ',TFIXTOT,TFIXSPIN,Q0,S0,TOTCHA,SPINCHA,TOTPOT,SPINPOT
        ENDDO
        IF(.NOT.TCONV) THEN
          CALL ERROR$MSG('LOOP NOT CONVERGED') 
@@ -1448,8 +1477,8 @@ print*,'dynocc ',tfixtot,tfixspin,q0,s0,totcha,spincha,totpot,spinpot
          CALL ERROR$R8VAL('DEVIATION TOTAL SPIN',S0)
          CALL ERROR$STOP('DYNOCC$PROPAGATE')
        END IF
-       if(.not.tfixtot)totcha=q0
-       if(.not.tfixspin)spincha=s0
+       IF(.NOT.TFIXTOT)TOTCHA=Q0
+       IF(.NOT.TFIXSPIN)SPINCHA=S0
 !
 !      =================================================================
 !      == ADJUST CHEMICAL POTENTIALS AND CHARGES                      ==
@@ -1687,34 +1716,7 @@ END MODULE OCCUPATION_MODULE
       REAL(8)    ,ALLOCATABLE :: EIG(:,:,:)  !(NB,NKPT,NSPIN)
       REAL(8)    ,ALLOCATABLE :: OCC(:,:,:)  !(NB,NKPT,NSPIN)
 !     ******************************************************************
-      IF(STRING_.EQ.'OCC') THEN
-        IF(.NOT.ALLOCATED(OCC)) ALLOCATE(OCC(NB,NKPT,NSPIN))
-        CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
-        WRITE(NFIL,FMT='(/"OCCUPATIONS" &
-     &                 /"===========")')
-        DO ISPIN=1,NSPIN
-          DO IKPT=1,NKPT
-            WRITE(NFIL,FMT='("OCCUPATIONS FOR K-POINT ",I2 &
-     &                   ," AND SPIN ",I1)')IKPT,ISPIN
-            WRITE(NFIL,FMT='(10F8.3)')(OCC(IB,IKPT,ISPIN),IB=1,NB)
-          ENDDO
-        ENDDO
-        DEALLOCATE(OCC)
-      ELSE IF(STRING_.EQ.'EIG') THEN
-        WRITE(NFIL,FMT='(/"ONE-PARTICLE ENERGIES" &
-     &                   /"=====================")')
-        CALL CONSTANTS('EV',EV)
-        ALLOCATE(EIG(NB,NKPT,NSPIN))
-        CALL OCCUPATION$GET('EIG',NB*NKPT*NSPIN,EIG)
-        DO ISPIN=1,NSPIN
-          DO IKPT=1,NKPT
-            WRITE(NFIL,FMT='("EIGENVALUES[EV] FOR K-POINT ",I2 &
-     &                   ," AND SPIN ",I1)')IKPT,ISPIN
-            WRITE(NFIL,FMT='(10F8.3)')(EIG(IB,IKPT,ISPIN)/EV,IB=1,NB)
-          ENDDO
-        ENDDO
-        DEALLOCATE(EIG)
-      ELSE IF(STRING_.EQ.'KPOINTS') THEN
+      IF(STRING_.EQ.'KPOINTS') THEN
         WRITE(NFIL,FMT='(/"K-POINTS" &
      &                   /"========")')
         CALL CELL$GETR8A('T(0)',9,RBAS)

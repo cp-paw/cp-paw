@@ -1,4 +1,7 @@
-#########################################################################
+#
+#
+SHELL=/bin/sh
+#
 #########################################################################
 ##                                                                     ##
 ##  make an paw executable and a paw library using gmake               ##
@@ -67,22 +70,24 @@ MAKE=@MAKE@
 #
 ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
   MODE = _p
-  LLIBS=@LLIBS@ @LLIBSPARALLEL@
-  LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} @LLINK@ @LLINKPARALLEL@
-  F90PPOPT=-DCPPVARIABLE_PARALLEL @CPPVAR@ -arch ${ARCH}
+  LLIBS=@LLIBSPARALLEL@
+  LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} @LLINKPARALLEL@
+  F90PPOPT=-DCPPVARIABLE_PARALLEL @CPPVAR@ -arch=${ARCH}
   #
   # MPIF90.H is an include file for the MPICH-library
   # for parallel compilation, this file has to be copied into
   # the object directory
   #
   ifneq (${ARCH},@xlf90ARCH@)
-    MPICHINCLUDE=cp ${MPICHDIR}/include/mpif.h ${OBJDIR}/mpif90.h
+    ifneq (${MPICHDIR},notset)
+      MPICHINCLUDE=cp ${MPICHDIR}/include/mpif.h ${OBJDIR}/mpif90.h
+    endif
   endif
 else
   MODE = _s
   LLIBS=@LLIBS@ 
   LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} @LLINK@ 
-  F90PPOPT=@CPPVAR@ -arch ${ARCH}
+  F90PPOPT=@CPPVAR@ -arch=${ARCH}
 endif
 #
 # out of the file src/paw_mpelib.f a parallel _p and
@@ -120,11 +125,6 @@ PAWLIB= ${OBJDIR}/libpaw.a#
 #
 default: ${PAWX}
 #
-clean:
-	rm -f config.* 
-	rm -f Makefile 
-	rm -f Makefile.[^i]*
-#
 # THE PAW BINARIES
 #
 all: debug none fast parallel tools
@@ -141,31 +141,39 @@ all: debug none fast parallel tools
 #
 all_new: debug_new none_new fast_new parallel tools
 #
-tools: 	 atom tra wave grab pdos converttra cleantra strc tostrc
+tools: 	 atom tra wave grab dos converttra cleantra strc tostrc
 #
 none:   
-	export ALLDEP=F; cd ${OBJDIR}/${NONEDIR}; make -f ${PAWDIR}/Makefile.${NONEDIR}
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
+	${MAKE} -f ${PAWDIR}/Makefile.${NONEDIR}
 #
 none_new:
-	export ALLDEP=T; cd ${OBJDIR}/${NONEDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${NONEDIR}
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
+	${MAKE} -f ${PAWDIR}/Makefile.${NONEDIR}
 #
 fast:   
-	export ALLDEP=F; cd ${OBJDIR}/${FASTDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${FASTDIR}; \
+	${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
 #
 fast_new:   
-	export ALLDEP=T; cd ${OBJDIR}/${FASTDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${FASTDIR}; \
+	${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
 #
 debug:  
-	export ALLDEP=F; cd ${OBJDIR}/${DEBUGDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${DEBUGDIR}; \
+	${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
 #
 debug_new:  
-	export ALLDEP=T; cd ${OBJDIR}/${DEBUGDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${DEBUGDIR}; \
+	${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
 #
 parallel:
-	export ALLDEP=F; cd ${OBJDIR}/${PARALLELDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${PARALLELDIR}; \
+	${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
 #
 parallel_new:
-	export ALLDEP=T; cd ${OBJDIR}/${PARALLELDIR}; ${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
+	ALLDEP=T; export ALLDEP=T; cd ${OBJDIR}/${PARALLELDIR}; \
+	${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
 #
 # THE PAW TOOLS
 #
@@ -185,9 +193,9 @@ grab:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
            ${BINDIR}/${ARCH}/paw_grab.x 
 #
-pdos:
+dos:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_pdos.x 
+           ${BINDIR}/${ARCH}/paw_dos.x 
 #
 converttra:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
@@ -230,7 +238,7 @@ LOBJS = \
         ${OBJDIR}/paw_selftest.o \
         ${OBJDIR}/paw_strcio.o \
         ${OBJDIR}/paw_cell.o \
-        ${OBJDIR}/paw_formats.o \
+        ${OBJDIR}/paw_pdos.o \
         ${OBJDIR}/paw_library.o \
         ${OBJDIR}/paw_polynom.o 
 #
@@ -272,9 +280,9 @@ OBJECTS3 = \
            ${OBJDIR}/paw_pairpotential.o \
            ${OBJDIR}/paw_graphics.o \
            ${OBJDIR}/paw_waves.o \
-           ${OBJDIR}/paw_pdos.o \
            ${OBJDIR}/paw_kpoints.o \
-           ${OBJDIR}/paw_vext.o
+           ${OBJDIR}/paw_vext.o \
+#           ${OBJDIR}/paw_pdos.o 
 #          ${OBJDIR}/paw_optic.o \
 #
 OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3} 
@@ -295,8 +303,8 @@ OBJWAVE=  \
 # Objects for paw_grab.x
 OBJGRAB=  \
           ${OBJDIR}/paw_grab.o
-# Objects for paw_pdos.x
-OBJPDOS=  \
+# Objects for paw_dos.x
+OBJDOS=  \
           ${OBJDIR}/paw_dos.o
 # Objects for paw_converttra.x
 OBJCONVERTTRA=  \
@@ -346,8 +354,8 @@ ${BINDIR}/${ARCH}/paw_wave.x: ${OBJWAVE} libpaw.a
 ${BINDIR}/${ARCH}/paw_grab.x: ${OBJGRAB} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_grab.x ${OBJGRAB} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_pdos.x: ${OBJPDOS} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_pdos.x ${OBJPDOS} -lpaw ${LLIBS} 
+${BINDIR}/${ARCH}/paw_dos.x: ${OBJDOS} libpaw.a
+	${LINK} -o ${BINDIR}/${ARCH}/paw_dos.x ${OBJDOS} -lpaw ${LLIBS} 
 #
 ${BINDIR}/${ARCH}/paw_converttra.x: ${OBJCONVERTTRA} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_converttra.x ${OBJCONVERTTRA} -lpaw ${LLIBS} 
@@ -420,7 +428,7 @@ ${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJPDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f
+${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}

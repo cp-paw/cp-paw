@@ -1,3 +1,7 @@
+!nichtkollinear
+!kleine Komponente
+!Gammma punkt nicht mehr erstes element auf dem G-gitter
+!test extrapolate
 !
 !.........................................................................
 MODULE HYPERFINE_MODULE
@@ -252,7 +256,7 @@ END MODULE HYPERFINE_MODULE
             YARRAY(IR)=POT(IR,LM)/XARRAY(IR)**2
           ENDDO
           IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1V2 ",5E20.10)')YARRAY
-          CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,V2(LM-4))
+!         CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,V2(LM-4))
           V2(LM-4)=YARRAY(1)
         ENDDO
       ELSE
@@ -291,6 +295,7 @@ END MODULE HYPERFINE_MODULE
       LOGICAL(4)              :: TIS     ! SWITCH FOR ISOMER SHIFT
       LOGICAL(4)              :: TFC     ! SWITCH FOR FERMI CONTACT TERM
       LOGICAL(4)              :: TANIS   ! SWITCH FOR ANISOTROPIC
+      LOGICAL(4)              :: TEFG    ! SWITCH FOR EFG
       LOGICAL(4)              :: TCHK
       REAL(8)                 :: RHO0
       REAL(8)                 :: RI
@@ -331,10 +336,15 @@ END MODULE HYPERFINE_MODULE
       TIS=.FALSE.
       TFC=.FALSE.
       TANIS=.FALSE.
+      TEFG=.false.
       IF(IDENT1_.EQ.'TOT') THEN
-        CALL LINKEDLIST$EXISTD(LL_HPRFN,'TIS',1,TCHK)
+        CALL LINKEDLIST$EXISTdD(LL_HPRFN,'TIS',1,TCHK)
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_HPRFN,'TIS',1,TIS)
+        END IF
+        CALL LINKEDLIST$EXISTD(LL_HPRFN,'TEFG',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_HPRFN,'TEFG',1,TEFG)
         END IF
       ELSE IF(IDENT1_.EQ.'SPIN') THEN
         TSPIN=.TRUE.
@@ -419,6 +429,37 @@ END MODULE HYPERFINE_MODULE
           CALL LINKEDLIST$SET(LL_HPRFN,'PSRHOS2LM',0,ANIS)
         END IF  
       END IF
+! 
+!     ===================================================================
+!     == Electric field gradient                                       ==
+!     == EFG CURRENTLY CALCULATED FROM 1CPOTENTIAL
+!     ===================================================================
+      IF(TEFG) THEN
+        IF(LMRX.GE.9) THEN
+          RI=R1/XEXP
+          DO IR=1,NP
+            RI=RI*XEXP
+            XARRAY(IR)=RI
+           ENDDO      
+           DO LM=5,9
+            CALL RADIAL$POISSON(R1,DEX,NR,2,RHO(1,LM),WORK)
+            DO IR=1,NP
+              YARRAY(IR)=WORK(IR)/XARRAY(IR)**2
+            ENDDO
+            IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1VS2 ",5E20.10)')YARRAY
+            CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,v2(LM-4))
+          ENDDO
+        ELSE
+          v2(:)=0.D0
+        END IF
+!currently calculated from potential (see set1cpot) (check factor 2!)
+!        IF(IDENT_.EQ.'AE') THEN
+!          CALL LINKEDLIST$SET(LL_HPRFN,'AEv2lm',0,v2)
+!        ELSE IF(IDENT_.EQ.'PS') THEN
+!          CALL LINKEDLIST$SET(LL_HPRFN,'PSv2lm',0,v2)
+!        END IF  
+      END IF
+!
       CALL LINKEDLIST$SELECT(LL_HPRFN,'~')
                                 CALL TRACE$POP
       RETURN
@@ -450,7 +491,10 @@ LOGICAL(4),PARAMETER :: TTEST=.FALSE.
 !     ********************************************************************
       IF(.NOT.(TWAKE.AND.TPW)) RETURN
                                 CALL TRACE$PUSH('HYPERFINE$SETPWPOT')
-      CALL POTENTIAL$GETR8('EPWRHO',GMAX);GMAX=DSQRT(2.D0*GMAX)
+!     == get plane wave cutoff an convert to max. g-vector length
+      CALL POTENTIAL$GETR8('EPWRHO',GMAX)
+      GMAX=DSQRT(2.D0*GMAX)
+!
       CALL ATOMLIST$NATOM(NAT)
       DO IAT=1,NAT
         CALL LINKEDLIST$SELECT(LL_HPRFN,'~')
@@ -465,7 +509,7 @@ LOGICAL(4),PARAMETER :: TTEST=.FALSE.
 !           == EVALUATE ELECTRIC FIELD GRADIENTS                      ==
 !           == V(I,J) = D2V(R)/(DI*DJ)                                ==
 !           ============================================================
-ALLOCATE(WORK(6,NG));WORK=0.D0
+if(ttest)ALLOCATE(WORK(6,NG));WORK=0.D0
             DO I=1,3
               DO J=1,3
                 V(I,J)=0.D0
@@ -477,24 +521,32 @@ ALLOCATE(WORK(6,NG));WORK=0.D0
 !             __ 2 FROM ADDING COMPLEX CONJUGATE
               SVAR1=0.D0
               GLEN=DSQRT(G(1,IG)**2+G(2,IG)**2+G(3,IG)**2)
-              SVAR1=1.D0/(1.D0+DEXP(GLEN+3.D0-GMAX))   !MAY NOT BE A GOOD CHOICE
+!             == svar damps out high frequency oscillations of the potential 
+              SVAR1=1.D0/(1.D0+DEXP(GLEN+3.D0-GMAX))  !MAY NOT BE A GOOD CHOICE
 IF(TTEST) SVAR1=1.D0
               SVAR1=-2.D0*REAL(EXP(+CI*GR)*VOFG(IG))*SVAR1
               SVAR2=G(1,IG)*SVAR1
               V(1,1)=V(1,1)+G(1,IG)*SVAR2
               V(2,1)=V(2,1)+G(2,IG)*SVAR2
               V(3,1)=V(3,1)+G(3,IG)*SVAR2
-WORK(1,IG)=G(1,IG)*SVAR2
-WORK(2,IG)=G(2,IG)*SVAR2
-WORK(3,IG)=G(3,IG)*SVAR2
+IF(TTEST) then
+  WORK(1,IG)=G(1,IG)*SVAR2
+  WORK(2,IG)=G(2,IG)*SVAR2
+  WORK(3,IG)=G(3,IG)*SVAR2
+end if
               SVAR2=G(2,IG)*SVAR1
               V(2,2)=V(2,2)+G(2,IG)*SVAR2        
               V(3,2)=V(3,2)+G(3,IG)*SVAR2        
-WORK(4,IG)=G(2,IG)*SVAR2
-WORK(5,IG)=G(3,IG)*SVAR2
+if(ttest) then
+  WORK(4,IG)=G(2,IG)*SVAR2
+  WORK(5,IG)=G(3,IG)*SVAR2
+end if
               SVAR2=G(3,IG)*SVAR1
               V(3,3)=V(3,3)+G(3,IG)*SVAR2        
-WORK(6,IG)=G(3,IG)*SVAR2
+
+if(ttest) then
+  WORK(6,IG)=G(3,IG)*SVAR2
+end if
             ENDDO
 IF(TTEST) THEN
 !THIS IS TO TEST THE PLANE WAVE CONVERGENCE OF THE EFG AND THE FILTER
@@ -518,8 +570,6 @@ IF(TTEST) THEN
   ENDDO
   DEALLOCATE(WORK)
   CALL ERROR$STOP('EFG$SETPWPOT: FORCE STOP')
-ELSE
-  DEALLOCATE(WORK)
 END IF
 !           == SYMMETRIZE ================================================
             V(1,2)=V(2,1)
@@ -602,6 +652,8 @@ END IF
               RHO0=RHO0+2.D0*REAL(EXP(+CI*GR)*RHOG(IG))
             ENDDO
 !           __ SUBTRACT DOUBLE COUNTING OF THE GAMMA POINT____
+!error! assumption that gamma point resides on first element incorrect
+!remark: use parameter ngamma if possible
             IF(G(1,1)**2+G(2,1)**2+G(3,1)**2.LT.1.D-6) THEN
               RHO0=RHO0-REAL(RHOG(1))
             END IF
@@ -625,6 +677,7 @@ END IF
               ENDDO
             ENDDO
             FAC=-2.D0*4.D0*PI
+!error! assumes gamma apoint resides on first element
             DO IG=2,NG
               GR=R(1)*G(1,IG)+R(2)*G(2,IG)+R(3)*G(3,IG)
               G2=G(1,IG)**2+G(2,IG)**2+G(3,IG)**2

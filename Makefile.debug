@@ -19,21 +19,21 @@ COMPILE=f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_  -g -s
 #___________________________ Fortran77 compiler + compiler flags (for blas) 
 COMPILE77=f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_ -g -s 
 #___________________________ root directory of the PAW distribution
-PAWDIR=/home/ptpb/Tree/Archive/PAW_current
+PAWDIR=/home/ptpb/Tree/PAW
 #___________________________ path to the object files
-OBJDIR=/home/ptpb/Tree/Archive/PAW_current/bin/intel/Objects/debug
+OBJDIR=/home/ptpb/Tree/PAW/bin/intel/Objects/debug
 #___________________________ path to the source files
-SRCDIR=/home/ptpb/Tree/Archive/PAW_current/src
+SRCDIR=/home/ptpb/Tree/PAW/src
 #___________________________ path to the binaries
-BINDIR=/home/ptpb/Tree/Archive/PAW_current/bin
+BINDIR=/home/ptpb/Tree/PAW/bin
 #___________________________ the PAW-binary (inclusive path)
-PAWX=/home/ptpb/Tree/Archive/PAW_current/bin/intel/paw_dbg.x
+PAWX=/home/ptpb/Tree/PAW/bin/intel/paw_dbg.x
 #___________________________ set to yes, if FFTW is used
 FFTW=yes
 #___________________________ root directory of FFTW library
-FFTWDIR=/home/ptpb/Tree/Archive/PAW_current/lib/fftw-intel
+FFTWDIR=/home/ptpb/Tree/PAW/lib/fftw-intel
 #___________________________ root directory of MPICH library
-MPICHDIR=/home/ptpb/Tree/Archive/PAW_current/lib/mpich-intel
+MPICHDIR=/home/ptpb/Tree/PAW/lib/mpich-intel
 #___________________________ the extension of files to be compiled
 FEXT=f90
 #___________________________ the hardware architecture
@@ -55,7 +55,7 @@ PARALLELNAME=parallel
 #___________________________ directory name objects of the debug-binary
 DEBUGDIR=debug
 #___________________________ path to the tool-directory
-TOOLDIR=/home/ptpb/Tree/Archive/PAW_current/src/Tools
+TOOLDIR=/home/ptpb/Tree/PAW/src/Tools
 #___________________________ the way to compile the tools 
 TOOLCOMP=fast
 #___________________________ the GNU make utility
@@ -71,8 +71,8 @@ MAKE=gmake
 #
 ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
   MODE = _p
-  LLIBS=-lU77 -lm  -lfftw -llapack -lf77blas -latlas -lmpich -lfmpich
-  LINK=f90   -I${OBJDIR} -L${OBJDIR}  -L/home/ptpb/Tree/Archive/PAW_current/lib/fftw-intel/fftw/.libs/ -L/home/ptpb/Tree/Archive/PAW_current/lib/ATLAS/lib/Linux_PIII -L/home/ptpb/Tree/Archive/PAW_current/lib/mpich-intel/lib
+  LLIBS=-lU77 -lm  -lfftw -llapack -lf77blas -latlas  -lmpich -lfmpich 
+  LINK=f90   -I${OBJDIR} -L${OBJDIR}  -L/home/ptpb/Tree/PAW/lib/fftw-intel/fftw/.libs/ -L/home/ptpb/Tree/PAW/lib/ATLAS/lib/Linux_PIII -L/home/ptpb/Tree/PAW/lib/mpich-intel/lib
   F90PPOPT=-DCPPVARIABLE_PARALLEL  -DCPPVAR_U77 -DCPPVAR_FFT_FFTW -arch=${ARCH}
   #
   # MPIF90.H is an include file for the MPICH-library
@@ -86,8 +86,8 @@ ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
   endif
 else
   MODE = _s
-  LLIBS=-lU77 -lm  -lfftw -llapack -lf77blas -latlas 
-  LINK=f90   -I${OBJDIR} -L${OBJDIR}  -L/home/ptpb/Tree/Archive/PAW_current/lib/fftw-intel/fftw/.libs/ -L/home/ptpb/Tree/Archive/PAW_current/lib/ATLAS/lib/Linux_PIII 
+  LLIBS=-lU77 -lm  -lfftw -llapack -lf77blas -latlas  
+  LINK=f90   -I${OBJDIR} -L${OBJDIR}  -L/home/ptpb/Tree/PAW/lib/fftw-intel/fftw/.libs/ -L/home/ptpb/Tree/PAW/lib/ATLAS/lib/Linux_PIII 
   F90PPOPT= -DCPPVAR_U77 -DCPPVAR_FFT_FFTW -arch=${ARCH}
 endif
 #
@@ -196,7 +196,7 @@ grab:
 #
 pdos:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_pdos.x 
+           ${BINDIR}/${ARCH}/paw_dos.x 
 #
 converttra:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
@@ -239,7 +239,6 @@ LOBJS = \
         ${OBJDIR}/paw_selftest.o \
         ${OBJDIR}/paw_strcio.o \
         ${OBJDIR}/paw_cell.o \
-        ${OBJDIR}/paw_formats.o \
         ${OBJDIR}/paw_library.o \
         ${OBJDIR}/paw_polynom.o 
 #
@@ -304,7 +303,7 @@ OBJWAVE=  \
 # Objects for paw_grab.x
 OBJGRAB=  \
           ${OBJDIR}/paw_grab.o
-# Objects for paw_pdos.x
+# Objects for paw_dos.x
 OBJPDOS=  \
           ${OBJDIR}/paw_dos.o
 # Objects for paw_converttra.x
@@ -355,8 +354,8 @@ ${BINDIR}/${ARCH}/paw_wave.x: ${OBJWAVE} libpaw.a
 ${BINDIR}/${ARCH}/paw_grab.x: ${OBJGRAB} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_grab.x ${OBJGRAB} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_pdos.x: ${OBJPDOS} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_pdos.x ${OBJPDOS} -lpaw ${LLIBS} 
+${BINDIR}/${ARCH}/paw_dos.x: ${OBJPDOS} libpaw.a
+	${LINK} -o ${BINDIR}/${ARCH}/paw_dos.x ${OBJPDOS} -lpaw ${LLIBS} 
 #
 ${BINDIR}/${ARCH}/paw_converttra.x: ${OBJCONVERTTRA} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_converttra.x ${OBJCONVERTTRA} -lpaw ${LLIBS} 

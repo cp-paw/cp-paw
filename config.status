@@ -27,7 +27,7 @@ done
 
 ac_given_srcdir=.
 
-trap 'rm -fr Makefile /home/ptpb/Tree/Archive/PAW_current/bin/f90pp paw_compile conftest*; exit 1' 1 2 15
+trap 'rm -fr Makefile /fiji/jschimpl/Archive_PAW/test_PAW_20011002/bin/f90pp conftest*; exit 1' 1 2 15
 
 # Protect against being on the right side of a sed subst in config.status.
 sed 's/%@/@@/; s/@%/@@/; s/%g$/@g/; /@g$/s/[\\&%]/\\&/g;
@@ -39,7 +39,7 @@ s%@CFLAGS@%%g
 s%@CPPFLAGS@%%g
 s%@CXXFLAGS@%%g
 s%@FFLAGS@%%g
-s%@DEFS@% -DHAVE__HOME_PTPB_TREE_ARCHIVE_PAW_CURRENT_LIB_FFTW_INTEL=1 -DHAVE__HOME_PTPB_TREE_ARCHIVE_PAW_CURRENT_LIB_FFTW_INTEL_FFTW__LIBS_LIBFFTW_A=1 -DHAVE__HOME_PTPB_TREE_ARCHIVE_PAW_CURRENT_LIB_ATLAS=1 -DHAVE__HOME_PTPB_TREE_ARCHIVE_PAW_CURRENT_LIB_ATLAS_LIB_LINUX_PIII_LIBF77BLAS_A=1 -DHAVE__HOME_PTPB_TREE_ARCHIVE_PAW_CURRENT_LIB_ATLAS_LIB_LINUX_PIII_LIBATLAS_A=1 -DHAVE__HOME_PTPB_TREE_ARCHIVE_PAW_CURRENT_LIB_MPICH_INTEL=1 -DHAVE__HOME_PTPB_TREE_ARCHIVE_PAW_CURRENT_LIB_MPICH_INTEL_LIB_LIBMPICH_A=1 -DHAVE__HOME_PTPB_TREE_ARCHIVE_PAW_CURRENT_LIB_MPICH_INTEL_LIB_LIBFMPICH_A=1 %g
+s%@DEFS@% -DHAVE__FIJI_JSCHIMPL_ARCHIVE_PAW_TEST_PAW_20011002_LIB_FFTW_INTEL=1 -DHAVE__FIJI_JSCHIMPL_ARCHIVE_PAW_TEST_PAW_20011002_LIB_FFTW_INTEL_FFTW__LIBS_LIBFFTW_A=1 -DHAVE__FIJI_JSCHIMPL_ARCHIVE_PAW_TEST_PAW_20011002_LIB_ATLAS=1 -DHAVE__FIJI_JSCHIMPL_ARCHIVE_PAW_TEST_PAW_20011002_LIB_ATLAS_LIB_LINUX_ATHLON_LIBF77BLAS_A=1 -DHAVE__FIJI_JSCHIMPL_ARCHIVE_PAW_TEST_PAW_20011002_LIB_ATLAS_LIB_LINUX_ATHLON_LIBATLAS_A=1 -DHAVE__FIJI_JSCHIMPL_ARCHIVE_PAW_TEST_PAW_20011002_LIB_MPICH_INTEL=1 -DHAVE__FIJI_JSCHIMPL_ARCHIVE_PAW_TEST_PAW_20011002_LIB_MPICH_INTEL_LIB_LIBMPICH_A=1 -DHAVE__FIJI_JSCHIMPL_ARCHIVE_PAW_TEST_PAW_20011002_LIB_MPICH_INTEL_LIB_LIBFMPICH_A=1 %g
 s%@LDFLAGS@%%g
 s%@LIBS@%%g
 s%@exec_prefix@%${prefix}%g
@@ -59,31 +59,30 @@ s%@infodir@%${prefix}/info%g
 s%@mandir@%${prefix}/man%g
 s%@MAKE@%gmake%g
 s%@CC@%%g
-s%@CPP@%cpp%g
+s%@CPP@%cpp %g
 s%@COMPILER@%f90%g
-s%@PAWDIR@%/home/ptpb/Tree/Archive/PAW_current%g
+s%@PAWDIR@%/fiji/jschimpl/Archive_PAW/test_PAW_20011002%g
 s%@COMPILE@%f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_ %g
-s%@OPTIMIZE@%-B100 -O%g
 s%@COMPILE77@%f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_%g
 s%@LINK@%f90  %g
-s%@LLINK@% -L/home/ptpb/Tree/Archive/PAW_current/lib/fftw-intel/fftw/.libs/ -L/home/ptpb/Tree/Archive/PAW_current/lib/ATLAS/lib/Linux_PIII%g
-s%@LLINKPARALLEL@% -L/home/ptpb/Tree/Archive/PAW_current/lib/fftw-intel/fftw/.libs/ -L/home/ptpb/Tree/Archive/PAW_current/lib/ATLAS/lib/Linux_PIII -L/home/ptpb/Tree/Archive/PAW_current/lib/mpich-intel/lib%g
-s%@LLIBSPARALLEL@%-lU77 -lm  -lfftw -llapack -lf77blas -latlas -lmpich -lfmpich%g
-s%@LLIBS@%-lU77 -lm  -lfftw -llapack -lf77blas -latlas%g
-s%@OBJDIR@%/home/ptpb/Tree/Archive/PAW_current/bin/intel/Objects%g
-s%@SRCDIR@%/home/ptpb/Tree/Archive/PAW_current/src%g
-s%@BINDIR@%/home/ptpb/Tree/Archive/PAW_current/bin%g
+s%@LLINK@% -L/fiji/jschimpl/Archive_PAW/test_PAW_20011002/lib/fftw-intel/fftw/.libs/ -L/fiji/jschimpl/Archive_PAW/test_PAW_20011002/lib/ATLAS/lib/Linux_ATHLON%g
+s%@LLINKPARALLEL@% -L/fiji/jschimpl/Archive_PAW/test_PAW_20011002/lib/fftw-intel/fftw/.libs/ -L/fiji/jschimpl/Archive_PAW/test_PAW_20011002/lib/ATLAS/lib/Linux_ATHLON -L/fiji/jschimpl/Archive_PAW/test_PAW_20011002/lib/mpich-intel/lib%g
+s%@LLIBSPARALLEL@%-lU77 -lm  -lfftw -llapack -lf77blas -latlas  -lmpich -lfmpich %g
+s%@LLIBS@%-lU77 -lm  -lfftw -llapack -lf77blas -latlas %g
+s%@OBJDIR@%/fiji/jschimpl/Archive_PAW/test_PAW_20011002/bin/intel/Objects%g
+s%@SRCDIR@%/fiji/jschimpl/Archive_PAW/test_PAW_20011002/src%g
+s%@BINDIR@%/fiji/jschimpl/Archive_PAW/test_PAW_20011002/bin%g
 s%@FFTW@%yes%g
-s%@FFTWDIR@%/home/ptpb/Tree/Archive/PAW_current/lib/fftw-intel%g
-s%@MPICHDIR@%/home/ptpb/Tree/Archive/PAW_current/lib/mpich-intel%g
-s%@TOOLDIR@%/home/ptpb/Tree/Archive/PAW_current/src/Tools%g
+s%@FFTWDIR@%/fiji/jschimpl/Archive_PAW/test_PAW_20011002/lib/fftw-intel%g
+s%@MPICHDIR@%/fiji/jschimpl/Archive_PAW/test_PAW_20011002/lib/mpich-intel%g
+s%@TOOLDIR@%/fiji/jschimpl/Archive_PAW/test_PAW_20011002/src/Tools%g
 s%@NONEDIR@%none%g
 s%@FASTDIR@%fast%g
 s%@PARALLELDIR@%fast%g
 s%@PARALLELNAME@%parallel%g
 s%@DEBUGDIR@%debug%g
 s%@TOOLCOMP@%fast%g
-s%@PAWX@%/home/ptpb/Tree/Archive/PAW_current/bin/intel%g
+s%@PAWX@%/fiji/jschimpl/Archive_PAW/test_PAW_20011002/bin/intel%g
 s%@CPPVAR@% -DCPPVAR_U77 -DCPPVAR_FFT_FFTW%g
 s%@FEXT@%f90%g
 s%@ARCH@%intel%g
@@ -125,7 +124,7 @@ if test -z "$ac_sed_cmds"; then
   ac_sed_cmds=cat
 fi
 
-CONFIG_FILES=${CONFIG_FILES-"Makefile:Makefile.in /home/ptpb/Tree/Archive/PAW_current/bin/f90pp:src/F90PP/f90pp.in paw_compile:paw_compile.in"}
+CONFIG_FILES=${CONFIG_FILES-"Makefile:Makefile.in /fiji/jschimpl/Archive_PAW/test_PAW_20011002/bin/f90pp:src/F90PP/f90pp.in"}
 for ac_file in .. $CONFIG_FILES; do if test "x$ac_file" != x..; then
   # Support "outfile[:infile[:infile...]]", defaulting infile="outfile.in".
   case "$ac_file" in

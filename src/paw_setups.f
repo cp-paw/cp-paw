@@ -1495,9 +1495,10 @@ END MODULE SETUP_MODULE
 !     **                                                              **
 !     **                                                              **
 !     ******************************************************************
-      INTEGER(4),INTENT(IN) :: NFIL
+      INTEGER(4),INTENT(IN)  :: NFIL
       INTEGER(4),INTENT(OUT) :: LNX
-      REAL(8)                :: R1,DEX,NR
+      REAL(8)                :: R1,DEX
+      integer(4)             :: NR
 !     ******************************************************************
                               CALL TRACE$PUSH('INPOT$LNX')
       REWIND NFIL

@@ -1,0 +1,344 @@
+\section{Remarks} 
+\begin{itemize}
+\item In a test for hydrogen we found that the plane-wave
+converged result deviates if the core radius was small. It turned out
+that the vhat truncation error, which is estimated and printed in the
+unscreening routine, became large. The solution was to increase the
+number of projector functions.
+
+In that case the projector constructed from and acting on a bound
+state, differed from unity.
+
+\item the compensation charge density may be a problem. A suggestion
+  is to fix the decay to a fourth of the covalent radius. In that case
+  the density at the covalent radius is about 10$^-7$ times the number
+  of valence electrons.
+
+\item A d-partial wave component is important even for first-row double
+  bonded species.
+
+\item technical problems with the atomc program: K, Sc-Ti, Ni-Ge,
+  Se-Br, Rb, Y-Zr, Rh, Cs, Ba-Ta, Au-Hg, Fr-Md, Lr-106
+
+\item using $\lambda=6$ for the construction of the PS-partialwaves,
+  results in projector functions that extend to $1.5 r_c$. It is
+  instructive to look at the projector functions multiplied with
+  $r^2$, in order to see, which area is relevant for the augmentation.
+  
+\item the increase of projector functions and the unscreening step are
+  not exactly commutative. However, they should be commutative, if the
+  minimum augmentation is constructued from the occupied states. In
+  that case the contribution of higher projectors should be
+  neglegible.
+  
+\item the size of projector functions and partial waves is not well
+  balanced. The projector functions appear to increase in steps of
+  about an order of magnitude, while the partial waves appear to
+  decrease my a similar amount. A better choice would be obtained if
+  $r^2\tilde{p}$ is normalized to unity.
+
+\end{itemize}
+
+\section{Radial grids}
+All calculation inthe atomic program are done on radial logarithmic
+grids of the form
+\begin{equation}
+r_i=r_1{rm e}^{\alpha(i-1)}
+\end{equation}
+Typical values are $r1=1.024\times10^{-4}$ and $\alpha=1/20$. We use
+250 grid points.
+
+
+
+\section{All-electron atomic calculation}
+We construct a starting potential using the Thomas Fermi expression
+which correspons to the minimum of the two potentials:
+\begin{eqnarray*}
+x&=&r/\sqrt[3]{0.69395656/Z}\\
+v_s({\bf r})&=&-\frac{Z}{r} \frac{1}{1+\sqrt{x}(0.0274-x*(0.1486-0.007298*x))
++x*(1.24x(0.2302+0.006944x))}\\
+v({\bf r})&=& -Z/r
+end{eqnarray}
+Note that this is only the radial part and needs to be multiplied by $Y_s$.
+
+Next we determine a first guess for the energy eigenvalues assuming
+for each state a Coulomb-potential with an effective charge which has an
+in absolute value corresponding to the total number of electrons in
+the actual shell and all lower lying shells, minus one electron.
+\begin{displaymath}
+\epsilon_n=-\frac{1}{2} (\frac{Z^*_{\ell,n}}{n})^2
+\end{displaymath}
+Here $n=\ell+#(nodes)+1$ is the main quantum number. As an example a
+hydogen atom level would be predicted with $Z^*_{0,1}=1$. If the such
+predicted one-particle level lies above the potential tail, we
+shift it 0.1~H below the tail. This has been done to avoid starting
+with scattering states.
+
+Now we perform fixed node calculation for every one-particle state,
+add the charge density, potential. The input and output potentials are
+mixed and ythe process is repeated until selfconsistency.
+
+Next the total energy contributions are calculated. The core density,
+potential, the one-particle wave functions and energies are kept.
+
+\subsection{Fixed-node calculation}
+\subsection{Potential calculation}
+
+The potential is calculated using the Poisson Solver ({\tt
+  radial\$poisson} and DFT 
+functional module from the simulation code. 
+The derivative for the gradient corrections is
+ obtained using the {\tt radial\$derive} function of the radial module.
+
+\begin{eqnarray*}
+v(r)&=&-Z/r+\int\rho{|r-r^\prime}+\frac{\partial E_{xc}}{\partial \rho}
+-\Bigl(\frac{2}{r}+\frac{partial}{\partial_r}\Bigr)
+\Bigl[\frac{E_{xc}}{\partial(\partial\rho/\partial r)}\Bigr]
+\\
+\frac{E_{xc}}{\partial(\partial\rho/\partial r)}
+&=&2\frac{\partial\rho}{\partial r} \frac{E_{xc}}{\partial(\partial\rho/\partial r)^2}
+\end{eqnarray*}
+
+\subsection{Potential mixing}
+
+The potentials are mixed using Andersen mixing.
+\begin{equation}
+v_{i,+}(r)=
+\end{equation}
+
+\section{Pseudo-potential}
+\section{Pseudo-core}
+\section{Pseudo-partial waves}
+
+
+%===============================================================
+\section{Projector functions}
+%===============================================================
+
+%===============================================================
+\subsection{Preliminary projector functions}
+%===============================================================
+We normalize partial waves such that that the AE-partialwaves 
+are normalized to unity within the augmentation radius.
+
+Then we calculate 
+\begin{eqnarray*}
+dT&=&-\frac{1}{2}\Bigl[\langle\phi|\nabla^2|\phi\rangle
+-\langle\tilde\phi|\nabla^2|\tilde\phi\rangle\Bigr]
+\\
+dH&=&dT+\Bigl[\langle\phi|v|\phi\rangle
+-\langle\tilde\phi|\tilde{v}|\tilde\phi\rangle\Bigr]
+\\
+dO&=&\Bigl[\langle\phi|\phi\rangle
+-\langle\tilde\phi|\tilde\phi\rangle\Bigr]
+\end{eqnarray*}
+Note that $\nabla^2|\phi\rangle$ is obtained as
+$2(v-\epsilon)|phi\rangle$ using the potential from which the partial
+waves have been created, and therefore the Laplacian is not exactly
+the laplacian, but also contains relativistic effects. The
+relativistic effects correspond to the Laplacian contribution on the
+small component of the wave function.
+
+Now we construct the projector functions
+\begin{equation}
+\tilde{p}_i=(-\frac{1}{2}+\tilde{v}-\epsilon_i)|\tilde\phi_i\rangle
+\end{equation}
+The projector function obtained this way is truncated beyond the
+augmentation radius.
+
+If
+$\langle\tilde{p}|\tilde\phi\rangle/\langle\tilde\phi|\tilde\phi\rangle$
+is smaller than a tolerance (10^{-5}) we decide that the projector is
+orthogonal to the partial wave. In that case it is currecntly replaced
+by $e^{-(r/r_\Omega)^6}\phi(r)$. This is only a fix and should be
+replaced.
+%
+%===============================================================
+\subsection{Bi-orthogonality $\langle\tilde{p}_i|\tilde\phi_j\rangle
+=\delta_{i,j}$}
+%===============================================================
+
+Now we need to enforce the bi-orthonormality condition 
+$\langle\tilde{p}_i|\tilde\phi_j\rangle=\delta_{i,j}$. 
+\begin{enumerate}
+\item we make the PS-partial waves orthogonal to lower projector
+  functions
+ \begin{displaymath}
+   |\tilde\phi_i\rangle&=&|\tilde\phi_i\rangle-\sum_j^{i-1}
+|\tilde\phi_j\rangle\langle\tilde{p}_j|\tilde\phi_i\rangle
+\end{displaymath}
+For each term, we correct the one-center matrices accordingly.
+\item we make the projector function orthogonal to lower projector
+  functions
+ \begin{displaymath}
+   |\tilde{p}\rangle&=&|\tilde{p}_i\rangle-\sum_j^{i-1}
+|\tilde{p}\rangle\langle\tilde\phi_j|\tilde{p}_i\rangle
+\end{displaymath}
+\item we normalize the projector function
+ \begin{displaymath}
+   |\tilde{p}\rangle&=&|\tilde{p}_i\rangle/\langle\tilde\phi_i|\tilde{p}_i\rangle
+\end{displaymath}
+\item Finally, as an in principle unneccesary step, which is included
+  to avoid numerical instabilities, we normalize the partial waves
+  such that the norm of the AE partial waves within the augmentation
+  sphere is unity. In future, the {\it generalized} atomic sphere shall
+  be taken instead of the augmentation sphere.
+ \begin{eqnarray*}
+   |\phi_i\rangle&=&|\phi_i_i\rangle
+     /\sqrt{\langle\phi_i|\theta_\Omega|\phi_i\rangle}
+\\
+   |\tilde\phi_i\rangle&=&|\tilde\phi_i_i\rangle
+     /\sqrt{\langle\phi_i|\theta_\Omega|\phi_i\rangle}
+\\
+   |\tilde{p}\rangle&=&|\tilde{p}_i\rangle
+    \sqrt{\langle\phi_i|\theta_\Omega|\phi_i\rangle}
+\end{eqnarray*}
+we correct the one-center matrices accordingly.
+\end{enumerate}
+%
+%===============================================================
+\section{Unscreening and $\hat{v}$}
+%===============================================================
+%
+%===============================================================
+\section{Testing plane wave convergence}
+%===============================================================
+%
+The plane wave convergence is estimated from the one-particle wave
+functions of a non-self-consistent PAW calculation using 
+potentials $\tilde{v}$ and $\tilde{H}^2$. Per
+construction, these potentials should be identical to the
+self-consistent potentials, but may not cover some numerical
+errors. 
+
+The wave functions are transformed into Fourier-space using
+Besseltransforms. 
+
+The moments $\sum_{n}f_n \int dG \tilde{Psi}(G)*G^j$
+are calculated for j=2,4,6. The first corresponds to the
+pseudo-kinetic energy, the second term is used for the mass
+renormalization with a G-dependent wave function mass.
+
+The wave functions are transformed back into r-space, after truncating
+higher Fourier components. 
+
+With the new wave functions we obtain the
+projections $\langle\tilde{p}|\tilde\Psi\rangle$. Wave
+functions and projections are then renormalized with the factor
+$1/\sqrt{
+\langle\tilde\Psi|\tilde\Psi\rangle+
+\langle\tilde\Psi|\tilde{p}\rangle
+O^2\langle\tilde{p}|\tilde\Psi\rangle}$.
+
+With the new wave functions, we calculated pseudo density, one-center
+density matrix, and pseudo kinetic energy. This result is obtained
+truncation after every grid-point on the radial grid.
+
+For a given cutoff we calculate now the energy contributions.
+%
+%===============================================================
+\section{Testing scattering properties}
+%===============================================================
+%
+We integrate the Schr\"odinger equation with the AE-potential 
+outward for a set of energies. For the same energies, we
+evaluate the corresponding PAW-equation. This is done with increasing number of
+projector functions starting with zero projectors. The pseudo partial
+wave is augmented to obtain the corresponding AE partialwaves.
+
+Then we evaluate the phase shift $\Delta_\phi$ at the augmentation radius according to
+\begin{displaymath}
+\Delta_\phi=\frac{1}{2}-\frac{1}{\pi}\atan(\frac{d\phi/dr}{\phi}+#({\rm nodes})
+\end{displaymath}
+ where the number of nodes are counted up to the augmentation radius,
+ not counting a node at the origin.
+
+The phase shift defined this war has a immediate physical
+interpretation. The bonding states defined as $d\phi/dr=0$ at the
+radius, lie at $\Delta_{\phi}=n+0.5$, where n is the number of 
+nodes, while the antibonding states lie at $\Delta_{\phi}=n+1$.
+The hopping parameter is therefore directly proportional to the slope
+of the wave function between bonding and antibonding states, and the
+band-width is given by the energy difference of the so-obtained
+bonding and antibonding states. However, it is important to note that
+the band-width depends strongly on the radius chosen for the
+construction, which makes physical sense.
+
+In order to make the errors comprehendable, we search for the energy 
+displacements $d\epsilon(\epsilon)$ 
+that are neccesary to obtain identical phase shifts of
+the PAW and the AE calculation, i.e.
+\begin{displaymath}
+\Delta_{\phi,AE}(\epsilon)=\Delta_{\phi,AE}(\epsilon+d\epsilon)
+\end{displaymath}
+
+
+The results depend strongly on the radius, where the phase shift is
+evaluated. I sthe radius large we obtain a step-like phase shifts, and
+the energy shifts appear more accurate than in the case of a smaller
+radius.
+
+
+
+%==========================================================
+\subsection{Cutoff convergence of hydrogen}
+%==========================================================
+
+We start with the following control file 
+\begin{verbatim}
+!ACNTL
+ !GENERIC ELEMENT='H ' RAUG=3.D0 RBOX=20.D0 !END  
+ !DFT     TYPE=1 !END 
+ !GRID    R1=1.056E-4 DEX=0.05 NR=250 !END 
+ !VALENCE
+   !STATE L=0 N=1 F=1. !END 
+ !END 
+ !VTILDE     TYPE='POLYNOMIAL' RC=0.45 POWER=3 POT(0)=-3.43 !END 
+ !COMPENSATE RC=0.1 !END
+ !PSCORE     TYPE='POLYNOMIAL' RC=0.45 POWER=2 RHO(0)=0.0 !END 
+ !WAVE       L=0 N=1   PSTYPE='HBS' RC=0.40 LAMBDA=6 !END 
+ !WAVE       L=0 E=0.  PSTYPE='HBS' RC=0.40 LAMBDA=6 !END 
+!END  
+!EOB
+\begin{verbatim}
+and change !WAVE:RC from 0.3 to 0.7.
+Fig: h_epw_conv_a.eps
+
+
+The convergence tests showed that the largest contribution comes from
+changing the cutoff radius for the construction of the pseudo partial
+waves. Shifting the PS-potential up and down had a also considerable effect
+on the convergence, mainly affecting the shape of the dependency. For
+a value of about -3.8~H, the convergence was essentially exponential,
+while for other values a step occurred, whihc gives the illusion of
+convergence at low plane wave cutoffs, but then actually converges
+slower than if the value of -3.8~H was chosen. The best convergence
+that could be reached left a plane wave cutoff error of 1.8~mH at $E_{PW}=30~Ry$.
+
+The $\lamda=6$ and $r_c=3r_{cov}/4$  was chosen  for the partial waves.
+The pseudo-potential used a power of 3 and a cutoff 0.1~a$_0$ smaller
+than the cutoff for the wave functions. The ps core density was
+constructed with the same cutoff, and a power of 2. We used a potential at the origin
+
+\begin{tabular}{cc}
+\hline
+Sy & V(0) & $\tilde{n}^c(0) \\
+\hline
+default & -4.0 & 0.0 \\
+H  & -4.0 & 0.0\\
+O  & -3.0 & 0.1 \\
+\hline
+\end{tabular}
+
+
+
+
+
+
+
+
+
+
+
+
+

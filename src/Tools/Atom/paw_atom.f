@@ -370,7 +370,7 @@ END MODULE PROJECTION
 !     ==================================================================
 !     ==  output atomic densities for tb calculations (Thieme,Mueller)==
 !     ==================================================================nn
-!      call tbtest
+!     call tbtest
 !
 !     ==================================================================
 !     ==  CALCULATE LOCAL PSEUDO POTENTIAL                            ==
@@ -3619,6 +3619,8 @@ PRINT*,'WARNING! CODE FUDGED'
         WRITE(NFIL,FMT='(SP,5E14.8)')AEPHI(:,1,IWAVE)
         WRITE(NFIL,FMT='(SP,5E14.8)')PSPHI(:,1,IWAVE)
       ENDDO
+!     ==================================================================
+!     == all electron potential for 
 !     ==================================================================
       WRITE(NFIL,FMT='(SP,5E14.8)')aepot(:)
       CALL FILEHANDLER$CLOSE('SETUPO')

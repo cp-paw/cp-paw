@@ -1571,12 +1571,17 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !     ==  GET VIEWBOX                                                 ==
 !     ==================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'VIEWBOX')
+      tbox=.false.
       BOXR0(:)=0.D0
       BOXVEC(:,:)=RBAS(:,:)
       CALL LINKEDLIST$EXISTD(LL_CNTL,'T',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'T',1,BOXVEC)
+      IF(TCHK) then
+        tbox=.true.
+        CALL LINKEDLIST$GET(LL_CNTL,'T',1,BOXVEC)
+      end if
       CALL LINKEDLIST$EXISTD(LL_CNTL,'C',1,TCHK)  ! CENTER OF THE BOX
       IF(TCHK) THEN
+        tbox=.true.
         CALL LINKEDLIST$GET(LL_CNTL,'C',1,BOXR0)
         BOXR0(:)=BOXR0(:)-0.5D0*(BOXVEC(:,1)+BOXVEC(:,2)+BOXVEC(:,3))
         CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
@@ -1586,7 +1591,10 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
         END IF
       END IF
       CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,BOXR0)
+      IF(TCHK) then
+        tbox=.true.
+        CALL LINKEDLIST$GET(LL_CNTL,'O',1,BOXR0)
+      end if
 !
 !     ==================================================================
 !     ==  DEFINE FRAMES TO BE SKIPPED                                 ==

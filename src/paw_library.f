@@ -856,7 +856,11 @@ END MODULE RANDOM_MODULE
       COMPLEX(8)              :: XDUMMY(LEN,NFFT)
       INTEGER(4),SAVE         :: NP=0
       INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
+#IF DEFINED(CPPVAR_64BIT)
+      INTEGER(8),SAVE         :: PLANS(NPX,2),PLAN=-1
+#ELSE
       INTEGER(4),SAVE         :: PLANS(NPX,2),PLAN=-1
+#ENDIF
       LOGICAL                 :: DEF
 !     ******************************************************************
       XDUMMY=X

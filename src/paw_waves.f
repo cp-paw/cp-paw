@@ -83,8 +83,9 @@ TYPE WVSET_TYPE  !======================================================
   COMPLEX(8),POINTER :: RLAMM(:,:)      !(NB,NB)
   COMPLEX(8),POINTER :: RLAM2M(:,:)     !(NB,NB)
   COMPLEX(8),POINTER :: RLAM3M(:,:)     !(NB,NB)
-  COMPLEX(8),POINTER :: EIGVEC(:,:)     !(NB,NB)
-  REAL(8)   ,POINTER :: EIGVAL(:)       !(NB,NB)
+  COMPLEX(8),POINTER :: EIGVEC(:,:)     !(NB,NB) energy eigenvalues after diag
+  REAL(8)   ,POINTER :: EIGVAL(:)       !(NB,NB) eigenvectors after diag
+  real(8)   ,POINTER :: expectval(:)    !(NB) !<Psi_n|H|Psi_n>
 END TYPE WVSET_TYPE
 TYPE EXTERNALPOINTER_TYPE !=============================================
   INTEGER(4) :: IB
@@ -705,6 +706,7 @@ END MODULE WAVES_MODULE
           NULLIFY(THIS%RLAM3M)
           NULLIFY(THIS%EIGVAL)
           NULLIFY(THIS%EIGVEC)
+          NULLIFY(THIS%EXPECTVAL)
         ENDDO
       ENDDO
 !     
@@ -788,9 +790,22 @@ END MODULE WAVES_MODULE
       LOGICAL(4)             :: TINV
       LOGICAL(4)             :: TSTRESS
       LOGICAL(4)             :: TFORCE
+      LOGICAL(4)             :: Tchk
+      real(8)                :: pi
 !     ******************************************************************      
                              CALL TRACE$PUSH('WAVES$ETOT')
       CALL MPE$QUERY(NTASKS,THISTASK)
+!
+!     ==================================================================
+!     == CHECK CONSISTENCY WITH OCCUPATIONS OBJECT                    ==
+!     ==================================================================
+      CALL DYNOCC$GETL4('DYN',TCHK)
+      IF(TCHK) THEN
+        IF(TSAFEORTHO) THEN
+          CALL ERROR$MSG('FOR DYNAMICAL OCCUPATIONS, SAFEORTHO MUST BE FALSE')
+          CALL ERROR$STOP('WAVES$ETOT')
+        END IF
+      END IF
 !
 !     ==================================================================
 !     == SWITCHES FOR FORCE AND STRESS CALCULATION                    ==
@@ -882,6 +897,9 @@ WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(3,:)
 !
 !     ==================================================================
 !     == ONE-CENTER DENSITY MATRICES                                  ==
+!     == spin restricted nspin=1;ndim=1: (total)                      ==
+!     == spin polarized  nspin=2;ndim=1: (total,spin_z)               ==
+!     == noncollinear    nspin=1;ndim=2: (total,spin_x,spin_y,spin_z) ==
 !     ==================================================================
 CALL TRACE$PASS('BEFORE ONE-CENTER DENSITY MATRIX')     
 CALL TIMING$CLOCKOFF('W:EKIN')
@@ -921,10 +939,27 @@ CALL TIMING$CLOCKON('W:1CD')
           ENDDO
         ENDDO
       ENDDO
+      IF(NSPIN.EQ.2) THEN
+        DO IAT=1,NAT
+          ISP=MAP%ISP(IAT)
+          LMNX=MAP%LMNX(ISP)
+          DO LMN1=1,LMNX
+             DO LMN2=1,LMNX
+              SVAR1=DENMAT(LMN1,LMN2,1,IAT)
+              SVAR2=DENMAT(LMN1,LMN2,2,IAT)
+              DENMAT(LMN1,LMN2,1,IAT)=SVAR1+SVAR2
+              DENMAT(LMN1,LMN2,2,IAT)=SVAR1-SVAR2
+            ENDDO
+          ENDDO
+        ENDDO
+      END IF
 CALL TIMING$CLOCKOFF('W:1CD')
 !
 !     ==================================================================
-!     == PSEUDO DENSITY                                               ==
+!     == PSEUDO DENSITY still without pseudocore                      ==
+!     == spin restricted nspin=1;ndim=1: (total)                      ==
+!     == spin polarized  nspin=2;ndim=1: (total,spin_z)               ==
+!     == noncollinear    nspin=1;ndim=2: (total,spin_x,spin_y,spin_z) ==
 !     ==================================================================
 CALL TRACE$PASS('BEFORE PSEUDO DENSITY')     
 CALL TIMING$CLOCKON('W:PSRHO')
@@ -946,11 +981,6 @@ CALL TIMING$CLOCKON('W:PSRHO')
         ENDDO
       ENDDO
       DEALLOCATE(RHO1)
-CALL TIMING$CLOCKOFF('W:PSRHO')
-!
-!     ==================================================================
-!     == CONVERT DENSITY AND DENSITY MATRIX IN TOTAL AND SPIN PARTS   ==
-!     ==================================================================
       IF(NSPIN.EQ.2) THEN
         DO IR=1,NRL
           SVAR1=RHO(IR,1)
@@ -958,28 +988,23 @@ CALL TIMING$CLOCKOFF('W:PSRHO')
           RHO(IR,1)=SVAR1+SVAR2
           RHO(IR,2)=SVAR1-SVAR2
         ENDDO
-        DO LMN1=1,LMNX
-          DO LMN2=1,LMNX
-            DO IAT=1,NAT
-              SVAR1=DENMAT(LMN1,LMN2,1,IAT)
-              SVAR2=DENMAT(LMN1,LMN2,2,IAT)
-              DENMAT(LMN1,LMN2,1,IAT)=SVAR1+SVAR2
-              DENMAT(LMN1,LMN2,2,IAT)=SVAR1-SVAR2
-            ENDDO
-          ENDDO
-        ENDDO
-      END IF
-!       
+      end if
+CALL TIMING$CLOCKOFF('W:PSRHO')
+!
+!     ==================================================================
+!     ==================================================================
 SVAR1=0.D0
 DO IB=1,NRL
   SVAR1=SVAR1+RHO(IB,1)
 ENDDO
 CALL PLANEWAVE$GETR8('RWEIGHT',SVAR2)
 SVAR1=SVAR1*SVAR2
-PRINT*,'TOTAL CHARGE IN PSEUDO WAVE FUNCTIONS',SVAR1
+CALL MPE$COMBINE('+',SVAR1)
+PRINT*,'TOTAL CHARGE IN PSEUDO WAVE FUNCTIONS w/o pscore ',SVAR1
 !
 !     ==================================================================
 !     == MULTIPOLE MOMENTS OF ONE-CENTER PART                         ==
+.     == CONTAINS CORE AND PSEUDOCORE                                 ==
 !     ==================================================================
 CALL TRACE$PASS('BEFORE MULTIPOLE MOMENTS')     
 CALL TIMING$CLOCKON('W:MOMENTS')
@@ -996,9 +1021,10 @@ CALL TIMING$CLOCKON('W:MOMENTS')
         DEALLOCATE(DENMAT1)
       ENDDO
       CALL MPE$COMBINE('+',QLM)
-SVAR1=SVAR2
+pi=4.d0*datan(1.d0)
+SVAR1=0.d0
 DO IAT=1,NAT
-  SVAR1=SVAR1+QLM(1,IAT)*SQRT(16.D0*DATAN(1.D0))
+  SVAR1=SVAR1+QLM(1,IAT)*SQRT(4.d0*pi)
 ENDDO
 PRINT*,'TOTAL CHARGE IN AUGMENTATION',SVAR1
 CALL TIMING$CLOCKOFF('W:MOMENTS')
@@ -1127,6 +1153,8 @@ END IF
           RHO(IR,2)=SVAR1-SVAR2
         ENDDO
         DO IAT=1,NAT
+          ISP=MAP%ISP(IAT)
+          LMNX=MAP%LMNX(ISP)
           DO LMN1=1,LMNX
             DO LMN2=1,LMNX
               SVAR1=DH(LMN1,LMN2,1,IAT)
@@ -1282,6 +1310,7 @@ CALL TIMING$CLOCKON('W:EXPECT')
           NB=THIS%NB
           NBH=THIS%NBH
           NGL=GSET%NGL
+          IF(.NOT.ASSOCIATED(THIS%Expectval))ALLOCATE(THIS%expectval(NB))
           DO IB=1,NBH
             IF(GSET%TINV) THEN
               CALL WAVES_OVERLAP(.false.,NGL,NDIM,1,2 &
@@ -1294,6 +1323,7 @@ CALL TIMING$CLOCKON('W:EXPECT')
               EIG(IB,IKPT,ISPIN)=REAL(HAMILTON(1,1))
             END IF
           ENDDO
+          THIS%EXPECTVAL(:)=EIG(1:NB,IKPT,ISPIN)
 !PRINT*,'EIG ',EIG(:,IKPT,ISPIN)
         ENDDO
       ENDDO
@@ -1674,6 +1704,178 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       COMPLEX(8),ALLOCATABLE:: PSI1(:,:)
       REAL(8)   ,ALLOCATABLE:: DMAT(:)
       LOGICAL(4)            :: TINV
+      INTEGER(4)            :: IB,IG,IDIM,I,J
+      INTEGER(4)            :: NDIMD
+      REAL(8)               :: FP,FM
+      REAL(8)   ,PARAMETER  :: DSMALL=1.D-12
+      REAL(8)               :: EBUCKET
+      REAL(8)               :: SVAR
+!     ******************************************************************
+!
+!     ==================================================================
+!     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==
+!     ==================================================================
+      CALL PLANEWAVE$GETL4('TINV',TINV)
+      IF(TINV) THEN
+        IF(NBH.NE.(NB+1)/2) THEN
+          CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
+          CALL ERROR$STOP('WAVES_EKIN')
+        END IF
+      ELSE 
+        IF(NBH.NE.NB) THEN
+          CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
+          CALL ERROR$STOP('WAVES_EKIN')
+        END IF
+      END IF
+!
+!     ==================================================================
+!     ==  CALCULATE DMAT(G)=F(IB)*PSI^*(G,IB)*PSI(G,IB)               ==
+!     ==================================================================
+      NDIMD=(NDIM*(NDIM+1))/2
+      ALLOCATE(DMAT(NGL))
+      ALLOCATE(PSI1(NGL,NDIM))
+      DMAT(:)=0.D0
+      DO IB=1,NBH
+!       == DETERMINE OCCUPATIONS =======================================
+        IF(TINV) THEN
+          FP=0.5D0*(F(2*IB-1)+F(2*IB))
+          FM=0.5D0*(F(2*IB-1)-F(2*IB))
+        ELSE
+          FP=F(IB)
+          FM=0.D0
+        END IF
+!
+!       ================================================================
+!       == GENERAL WAVE FUNCTION / FIRST PART OF SUPER WAVE FUNCTIONS ==
+!       == <PSI_+|G^2|PSI_+> FOR SUPER WAVE FUNCTIONS                 ==
+!       ================================================================
+        IF(FP.EQ.0.D0.AND.FM.EQ.0.D0) CYCLE
+        DO IDIM=1,NDIM
+          DO IG=1,NGL
+            DMAT(IG)=DMAT(IG) &
+    &                 +fp*REAL(CONJG(PSI(IG,IDIM,IB))*PSI(IG,IDIM,IB))
+          ENDDO
+        ENDDO
+!
+!       ================================================================
+!       ==  <PSI_+|G^2|PSI_->                                         ==
+!       ================================================================
+        IF(.NOT.TINV.OR.ABS(FM).LT.DSMALL) CYCLE
+        DO IDIM=1,NDIM
+          CALL PLANEWAVE$INVERTG(NGL,PSI(1,IDIM,IB),PSI1(1,IDIM))
+        ENDDO
+        DO IDIM=1,NDIM
+          DO IG=1,NGL
+            DMAT(IG)=DMAT(IG) &
+     &                +fm*REAL(CONJG(PSI(IG,IDIM,IB))*PSI1(IG,IDIM))
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(PSI1)
+!
+!     ==================================================================
+!     ==  CALCULATE KINETIC ENERGY AND STRESS                         ==
+!     ==================================================================
+      IF(TSTRESS) THEN
+        ALLOCATE(GVEC(3,NGL))
+        CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+!       == KINETIC ENERGY AND KINETIC STRESS ===========================
+        STRESS(:,:)=0.D0
+        DO IG=1,NGL
+          STRESS(1,1)=STRESS(1,1)+GVEC(1,IG)*GVEC(1,IG)*DMAT(IG)
+          STRESS(1,2)=STRESS(1,2)+GVEC(1,IG)*GVEC(2,IG)*DMAT(IG)
+          STRESS(1,3)=STRESS(1,3)+GVEC(1,IG)*GVEC(3,IG)*DMAT(IG)
+          STRESS(2,2)=STRESS(2,2)+GVEC(2,IG)*GVEC(2,IG)*DMAT(IG)
+          STRESS(2,3)=STRESS(2,3)+GVEC(2,IG)*GVEC(3,IG)*DMAT(IG)
+          STRESS(3,3)=STRESS(3,3)+GVEC(3,IG)*GVEC(3,IG)*DMAT(IG)
+        ENDDO
+        EKIN=0.5D0*(STRESS(1,1)+STRESS(2,2)+STRESS(3,3))
+        STRESS=-STRESS
+!       == ENERGY AND STRESS DUE TO THE BUCKET POTENTIAL ===============
+        IF(TBUCKET) THEN
+          EBUCKET=0.D0
+          DO IG=1,NGL
+            IF(BUCKET(IG).EQ.0.D0) CYCLE
+            EBUCKET=EBUCKET+BUCKET(IG)*DMAT(IG)
+            SVAR=DMAT(IG)*DBUCKET(IG)
+            STRESS(1,1)=STRESS(1,1)-GVEC(1,IG)*GVEC(1,IG)*SVAR
+            STRESS(1,2)=STRESS(1,2)-GVEC(1,IG)*GVEC(2,IG)*SVAR
+            STRESS(1,3)=STRESS(1,3)-GVEC(1,IG)*GVEC(3,IG)*SVAR
+            STRESS(2,2)=STRESS(2,2)-GVEC(2,IG)*GVEC(2,IG)*SVAR
+            STRESS(2,3)=STRESS(2,3)-GVEC(2,IG)*GVEC(3,IG)*SVAR
+            STRESS(3,3)=STRESS(3,3)-GVEC(3,IG)*GVEC(3,IG)*SVAR
+          ENDDO
+          EKIN=EKIN+EBUCKET
+        END IF
+!       == PARALLELIZE AND CLOSE DOWN ==================================
+        STRESS(2,1)=STRESS(1,2)
+        STRESS(3,1)=STRESS(1,3)
+        STRESS(3,2)=STRESS(2,3)
+        EKIN=EKIN*GWEIGHT
+        STRESS=STRESS*GWEIGHT
+        CALL MPE$COMBINE('+',EKIN)
+        CALL MPE$COMBINE('+',STRESS)
+        DEALLOCATE(GVEC)
+        DEALLOCATE(DMAT)
+      ELSE
+        ALLOCATE(G2(NGL))
+        CALL PLANEWAVE$GETR8A('G2',NGL,G2)
+!       == KINETIC ENERGY ==============================================
+        EKIN=0.D0
+        DO IG=1,NGL
+          EKIN=EKIN+G2(IG)*DMAT(IG)
+        ENDDO
+        EKIN=0.5D0*EKIN
+!       == BUCKET POTENTIAL ============================================
+        IF(TBUCKET) THEN
+          EBUCKET=0.D0
+          DO IG=1,NGL
+            EBUCKET=EBUCKET+BUCKET(IG)*DMAT(IG)
+          ENDDO
+          EKIN=EKIN+EBUCKET
+        END IF
+!       ==  PARALLELIZE AND CLOSE DOWN =================================
+        EKIN=EKIN*GWEIGHT
+        CALL MPE$COMBINE('+',EKIN)
+        DEALLOCATE(DMAT)
+        DEALLOCATE(G2)
+      END IF
+!
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE WAVES_EKIN_OLD(NGL,NDIM,NBH,NB,F,GWEIGHT,PSI,EKIN &
+     &                         ,TSTRESS,STRESS,TBUCKET,BUCKET,DBUCKET)
+!     ******************************************************************
+!     **                                                              **
+!     **  EVALUATE PS KINETIC ENERGY IN G-SPACE                       **
+!     **  EVALUATE NUMBER OF ELECTRONS IN G-SPACE                     **
+!     **                                                              **
+!     **  REMARKS:                                                    **
+!     **    REQUIRES PLANEWAVE OBJECT TO BE SET PROPERLY              **
+!     **                                                              **
+!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
+      USE MPE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NB         ! #(STATES)
+      INTEGER(4),INTENT(IN) :: NBH        ! #(WAVE FUNCTIONS)
+      INTEGER(4),INTENT(IN) :: NDIM       ! #(SPINOR COMPONENTS)
+      INTEGER(4),INTENT(IN) :: NGL        ! #(PLANE WAVES)
+      REAL(8)   ,INTENT(IN) :: F(NB)      ! OCCUPATION
+      REAL(8)   ,INTENT(IN) :: GWEIGHT
+      COMPLEX(8),INTENT(IN) :: PSI(NGL,NDIM,NBH) ! PS-WAVE FUNCTION
+      REAL(8)   ,INTENT(OUT):: EKIN       ! KINETIC ENERGY
+      LOGICAL(4),INTENT(IN) :: TSTRESS    ! SWITCH STRESS ON/OFF
+      REAL(8)   ,INTENT(OUT):: STRESS(3,3)! STRESS
+      LOGICAL(4),INTENT(IN) :: TBUCKET    ! BUCKET POTENTIAL PRESENT
+      REAL(8)   ,INTENT(IN) :: BUCKET(NGL) ! BUCKET POTENTIAL
+      REAL(8)   ,INTENT(IN) :: DBUCKET(NGL) ! 1/G *DBUCKET/DG
+      REAL(8)   ,ALLOCATABLE:: G2(:)      ! G**2
+      REAL(8)   ,ALLOCATABLE:: GVEC(:,:)  ! G   
+      COMPLEX(8),ALLOCATABLE:: PSI1(:,:)
+      REAL(8)   ,ALLOCATABLE:: DMAT(:)
+      LOGICAL(4)            :: TINV
       INTEGER(4)            :: IB,IG,IDIM,I,J,IDIM1,IDIM2
       INTEGER(4)            :: NDIMD
       REAL(8)               :: FP,FM
@@ -1681,6 +1883,8 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       REAL(8)               :: EBUCKET
       REAL(8)               :: SVAR
 !     ******************************************************************
+      call error$msg('routine marked for deletion. contains errors!')
+      call error$stop('waves_ekin_old')
 !
 !     ==================================================================
 !     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==
@@ -5307,6 +5511,7 @@ PRINT*,'ITER ',ITER,DIGAM
             CALL PLANEWAVE$SELECT(GSET%ID)
             DEALLOCATE(THIS%EIGVAL)         
             DEALLOCATE(THIS%EIGVEC)         
+            DEALLOCATE(THIS%EXPECTVAL)
           ENDDO
         ENDDO
         THAMILTON=.FALSE.
@@ -5628,28 +5833,42 @@ PRINT*,'ITER ',ITER,DIGAM
           DEALLOCATE(PROJ)
 !
 !         ==============================================================
-!         ==  TRANSFORM TO EIGENSTATES AND WRITE                     ==
+!         ==  TRANSFORM TO EIGENSTATES if safeortho=.true.,           ==
+!         ==  AND WRITE                                               ==
 !         ==============================================================
-          DO IB1=1,NB
-            VEC=0.D0
-            DO IB2=1,NB
-              CSVAR=THIS%EIGVEC(IB2,IB1)
-              DO IPRO=1,NPRO
-                DO IDIM=1,NDIM
-                  VEC(IDIM,IPRO)=VEC(IDIM,IPRO)+VECTOR1(IDIM,IPRO,IB2)*CSVAR
+          if(tsafeortho) then
+            DO IB1=1,NB
+              VEC=0.D0
+              DO IB2=1,NB
+                CSVAR=THIS%EIGVEC(IB2,IB1)
+                DO IPRO=1,NPRO
+                  DO IDIM=1,NDIM
+                    VEC(IDIM,IPRO)=VEC(IDIM,IPRO)+VECTOR1(IDIM,IPRO,IB2)*CSVAR
+                  ENDDO
                 ENDDO
               ENDDO
-            ENDDO
-            IF(THISTASK.EQ.1) THEN
-              IF(FLAG.EQ.'011004') THEN
-                WRITE(NFIL)THIS%EIGVAL(IB1),OCC(IB1,IKPT,ISPIN),VEC
-              ELSE
-                WRITE(NFIL)THIS%EIGVAL(IB1),VEC
-              END IF
+              IF(THISTASK.EQ.1) THEN
+                IF(FLAG.EQ.'011004') THEN
+                  WRITE(NFIL)THIS%EIGVAL(IB1),OCC(IB1,IKPT,ISPIN),VEC
+                ELSE
+                  WRITE(NFIL)THIS%EIGVAL(IB1),VEC
+                END IF
 !PRINT*,'E ',THIS%EIGVAL(IB1)
 !WRITE(*,FMT='(10F10.5)')VEC
-            END IF
-          ENDDO
+              END IF
+            ENDDO
+          else
+            DO IB1=1,NB
+              IF(THISTASK.EQ.1) THEN
+                IF(FLAG.EQ.'011004') THEN
+                  WRITE(NFIL)THIS%EXPECTVAL(IB1),OCC(IB1,IKPT,ISPIN) &
+    &                       ,VECTOR1(:,:,IB1)
+                ELSE
+                  WRITE(NFIL)THIS%ExpectVAL(IB1),VECTOR1(:,:,IB1)
+                END IF
+              END IF
+            enddo
+          end if
           DEALLOCATE(VECTOR1)
         ENDDO
       ENDDO

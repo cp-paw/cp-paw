@@ -1658,7 +1658,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !       ==  MAP ATOMS INTO VIEWBOX                                    ==
 !       ================================================================
 !TBOX=.FALSE.
-print*,'tbox', tbox
+!print*,'tbox', tbox
         IF(.not.TBOX) THEN  ! fix due to compiler bug of absoft
           NATM=NAT0
         ELSE
