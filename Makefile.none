@@ -18,15 +18,15 @@ COMPILE=/opt/intel/compiler70/ia32/bin/ifc -c -mp
 #___________________________ Fortran77 compiler + compiler flags (for blas) 
 COMPILE77=/opt/intel/compiler70/ia32/bin/ifc -c -mp 
 #___________________________ root directory of the PAW distribution
-PAWDIR=/home/ptpb/Tree/PAW
+PAWDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox
 #___________________________ path to the object files
-OBJDIR=/home/ptpb/Tree/PAW/bin/ifc/Objects/none
+OBJDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/bin/ifc/Objects/none
 #___________________________ path to the source files
-SRCDIR=/home/ptpb/Tree/PAW/src
+SRCDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/src
 #___________________________ path to the binaries
-BINDIR=/home/ptpb/Tree/PAW/bin
+BINDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/bin
 #___________________________ the PAW-binary (inclusive path)
-PAWX=/home/ptpb/Tree/PAW/bin/ifc/paw.x
+PAWX=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/bin/ifc/paw.x
 #___________________________ set to yes, if FFTW is used
 FFTW=
 #___________________________ root directory of FFTW library
@@ -54,7 +54,7 @@ PARALLELNAME=parallel
 #___________________________ directory name objects of the debug-binary
 DEBUGDIR=debug
 #___________________________ path to the tool-directory
-TOOLDIR=/home/ptpb/Tree/PAW/src/Tools
+TOOLDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/src/Tools
 #___________________________ the way to compile the tools 
 TOOLCOMP=fast
 #___________________________ the GNU make utility

@@ -18,15 +18,15 @@ COMPILE=/opt/intel/compiler70/ia32/bin/ifc -c -mp   -xW -tpp7
 #___________________________ Fortran77 compiler + compiler flags (for blas) 
 COMPILE77=/opt/intel/compiler70/ia32/bin/ifc -c -mp  -xW -tpp7 
 #___________________________ root directory of the PAW distribution
-PAWDIR=/home/ptpb/Tree/PAW
+PAWDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox
 #___________________________ path to the object files
-OBJDIR=/home/ptpb/Tree/PAW/bin/ifc/Objects/fast
+OBJDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/bin/ifc/Objects/fast
 #___________________________ path to the source files
-SRCDIR=/home/ptpb/Tree/PAW/src
+SRCDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/src
 #___________________________ path to the binaries
-BINDIR=/home/ptpb/Tree/PAW/bin
+BINDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/bin
 #___________________________ the PAW-binary (inclusive path)
-PAWX=/home/ptpb/Tree/PAW/bin/ifc/paw_fast.x
+PAWX=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/bin/ifc/paw_fast.x
 #___________________________ set to yes, if FFTW is used
 FFTW=
 #___________________________ root directory of FFTW library
@@ -54,7 +54,7 @@ PARALLELNAME=parallel
 #___________________________ directory name objects of the debug-binary
 DEBUGDIR=debug
 #___________________________ path to the tool-directory
-TOOLDIR=/home/ptpb/Tree/PAW/src/Tools
+TOOLDIR=/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/src/Tools
 #___________________________ the way to compile the tools 
 TOOLCOMP=fast
 #___________________________ the GNU make utility
@@ -71,7 +71,7 @@ MAKE=gmake
 ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
   MODE = _p
   LLIBS= -Vaxlib -lfftw -lmkl_lapack -lmkl_p4 -lguide -lpthread -lfmpich -lmpich  
-  LINK=/opt/intel/compiler70/ia32/bin/ifc -xW -tpp7 -static  -I${OBJDIR} -L${OBJDIR} -L/homer/cfoerst/PAW/lib/fftw-intel/fftw/.libs/ -L/opt/intel/mkl/lib/32 -L/homer/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5_ifc/lib/
+  LINK=/opt/intel/compiler70/ia32/bin/ifc -xW -tpp7 -I${OBJDIR} -L${OBJDIR} -L/homer/cfoerst/PAW/lib/fftw-intel/fftw/.libs/ -L/opt/intel/mkl/lib/32 -L/homer/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5_ifc/lib/
   F90PPOPT=-DCPPVARIABLE_PARALLEL -DCPPVAR_FFT_FFTW -DCPPVAR_U77 -arch=${ARCH}
   #
   # MPIF.H is an include file for the MPICH-library
@@ -86,7 +86,7 @@ ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
 else
   MODE = _s
   LLIBS= -Vaxlib -lfftw -lmkl_lapack -lmkl_p4 -lguide -lpthread  
-  LINK=/opt/intel/compiler70/ia32/bin/ifc -xW -tpp7 -static  -I${OBJDIR} -L${OBJDIR} -L/homer/cfoerst/PAW/lib/fftw-intel/fftw/.libs/ -L/opt/intel/mkl/lib/32  
+  LINK=/opt/intel/compiler70/ia32/bin/ifc -xW -tpp7 -I${OBJDIR} -L${OBJDIR} -L/homer/cfoerst/PAW/lib/fftw-intel/fftw/.libs/ -L/opt/intel/mkl/lib/32  
   F90PPOPT=-DCPPVAR_FFT_FFTW -DCPPVAR_U77 -arch=${ARCH}
 endif
 #
