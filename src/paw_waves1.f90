@@ -997,9 +997,9 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
           NBH=THIS%NBH
           IF(TFIRST) THEN
             IF(OPTIMIZERTYPE.EQ.'CG') THEN       !KAESTNERCG
-              ALLOCATE(THIS%EIGVAL(NB))      !KAESTNERCG
-              THIS%EIGVAL(:)=1.D100          !KAESTNERCG
-            END IF                           !KAESTNERCG
+              ALLOCATE(THIS%EIGVAL(NB))          !KAESTNERCG
+              THIS%EIGVAL(:)=1.D100              !KAESTNERCG
+            END IF                               !KAESTNERCG
             IF(TRANDOM) THEN
               ALLOCATE(G2(NGL))
               CALL PLANEWAVE$GETR8A('G2',NGL,G2)

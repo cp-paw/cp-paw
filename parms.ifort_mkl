@@ -2,13 +2,13 @@
 # PARAMETER FILE FOR LINUX/INTEL
 #
 #________________________________architecture (arbitrary name)
-ARCH="ifc"
+ARCH="ifort"
 #
 #________________________________F90 compiler
-COMPILER="/opt/intel/compiler70/ia32/bin/ifc"
+COMPILER="/opt/intel_fc_80/bin/ifort"
 #
 #________________________________F77 compiler
-F77COMPILER="/opt/intel/compiler70/ia32/bin/ifc"
+F77COMPILER="/opt/intel_fc_80/bin/ifort"
 #
 #________________________________F90 compiler flags 
 FLAGS="-c -mp  "
@@ -32,16 +32,16 @@ F77DEBUG="-g -C -d4"
 LFLAGS="-xW -tpp7 -static "
 #
 #________________________________search directories for linking (sequential)
-LLINK="-L/homer/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.3/fftw/.libs/ -L/opt/intel/mkl/lib/32 "
+LLINK="-L/homer/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.3/fftw/.libs/ -L/opt/intel/mkl70/lib/32 "
 #
 #________________________________search directories for linking (parallel)
-PLLINK="-L/homer/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.3/fftw/.libs/ -L/homer/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5/lib"
+PLLINK="-L/homer/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.3/fftw/.libs/ -L/opt/intel/mkl70/lib/32 -L/homer/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.6_ifort/lib/ "
 #
 #________________________________external libraries (sequential)
-LIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_p4 -lguide -lpthread "
+LIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_ia32 -lguide -lpthread "
 #
 #________________________________external libraries (parallel)
-PLIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_p4 -lguide -lpthread -lfmpich -lmpich "
+PLIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_ia32 -lguide -lpthread -lfmpich -lmpich "
 #
 #________________________________preprocessor variables
 CPPVAR="-DCPPVAR_FFT_FFTW -DCPPVAR_U77"
