@@ -387,7 +387,7 @@ END MODULE WAVES_MODULE
           ENDDO
         ELSE
           DO IR=1,NRL
-            VAL(IR)=REAL(CWORK2(IR))
+            VAL(IR)=REAL(CWORK2(IR),kind=8)
           ENDDO
         END IF
         DEALLOCATE(CWORK2)
@@ -468,7 +468,7 @@ END MODULE WAVES_MODULE
           ENDDO
         ELSE
           DO LMN=1,LMNX
-            VAL(LMN)=REAL(CWORK1(LMN))
+            VAL(LMN)=REAL(CWORK1(LMN),kind=8)
           ENDDO
         END IF
         DEALLOCATE(CWORK1)
@@ -1595,12 +1595,12 @@ CALL TIMING$CLOCKON('W:EXPECT')
             IF(GSET%TINV) THEN
               CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,1,2 &
      &              ,THIS%PSI0(:,:,IB),THIS%HPSI(:,:,IB),HAMILTON)
-              EIG(2*IB-1,IKPT,ISPIN)=REAL(HAMILTON(1,1))
-              EIG(2*IB  ,IKPT,ISPIN)=REAL(HAMILTON(2,2))
+              EIG(2*IB-1,IKPT,ISPIN)=REAL(HAMILTON(1,1),kind=8)
+              EIG(2*IB  ,IKPT,ISPIN)=REAL(HAMILTON(2,2),kind=8)
             ELSE 
               CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,1,1 &
      &            ,THIS%PSI0(:,:,IB),THIS%HPSI(:,:,IB),HAMILTON)
-              EIG(IB,IKPT,ISPIN)=REAL(HAMILTON(1,1))
+              EIG(IB,IKPT,ISPIN)=REAL(HAMILTON(1,1),kind=8)
             END IF
           ENDDO
           THIS%EXPECTVAL(:)=EIG(1:NB,IKPT,ISPIN)
@@ -2059,23 +2059,23 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
       IF(NDIM.EQ.1) THEN  !== TOTAL DENSITY ===========================
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
-            DENMAT(LMN1,LMN2,1)=REAL(DENMAT1(LMN1,LMN2,1,1))
+            DENMAT(LMN1,LMN2,1)=REAL(DENMAT1(LMN1,LMN2,1,1),kind=8)
           ENDDO
         ENDDO
       ELSE IF(NDIM.EQ.2) THEN  !== TOTAL DENSITY, X,Y,Z SPIN DENSITY ==
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
             CSVAR=DENMAT1(LMN1,LMN2,1,1)+DENMAT1(LMN1,LMN2,2,2)
-            DENMAT(LMN1,LMN2,1) = REAL(CSVAR)
+            DENMAT(LMN1,LMN2,1) = REAL(CSVAR,kind=8)
             DENMATI(LMN1,LMN2,1)=AIMAG(CSVAR)
             CSVAR=DENMAT1(LMN1,LMN2,1,2)+DENMAT1(LMN1,LMN2,2,1)
-            DENMAT(LMN1,LMN2,2) = REAL(CSVAR)
+            DENMAT(LMN1,LMN2,2) = REAL(CSVAR,kind=8)
             DENMATI(LMN1,LMN2,2)=AIMAG(CSVAR)
             CSVAR=DENMAT1(LMN1,LMN2,1,2)-DENMAT1(LMN1,LMN2,2,1)
             DENMAT(LMN1,LMN2,3) =-AIMAG(CSVAR)
-            DENMATI(LMN1,LMN2,3)=+REAL(CSVAR)
+            DENMATI(LMN1,LMN2,3)=+REAL(CSVAR,kind=8)
             CSVAR=DENMAT1(LMN1,LMN2,1,1)-DENMAT1(LMN1,LMN2,2,2)
-            DENMAT(LMN1,LMN2,4) = REAL(CSVAR)
+            DENMAT(LMN1,LMN2,4) = REAL(CSVAR,kind=8)
             DENMATI(LMN1,LMN2,4)=AIMAG(CSVAR)
           ENDDO
         ENDDO
@@ -2189,7 +2189,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
         DO IDIM=1,NDIM
           DO IG=1,NGL
             DMAT(IG)=DMAT(IG) &
-    &                 +FP*REAL(CONJG(PSI(IG,IDIM,IB))*PSI(IG,IDIM,IB))
+    &                 +FP*REAL(CONJG(PSI(IG,IDIM,IB))*PSI(IG,IDIM,IB),kind=8)
           ENDDO
         ENDDO
 !
@@ -2203,7 +2203,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
         DO IDIM=1,NDIM
           DO IG=1,NGL
             DMAT(IG)=DMAT(IG) &
-     &                +FM*REAL(CONJG(PSI(IG,IDIM,IB))*PSI1(IG,IDIM))
+     &                +FM*REAL(CONJG(PSI(IG,IDIM,IB))*PSI1(IG,IDIM),kind=8)
           ENDDO
         ENDDO
       ENDDO
@@ -2367,7 +2367,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
             IF(IDIM1.NE.IDIM2)SVAR=2.D0*SVAR
             DO IG=1,NGL
               DMAT(IG)=DMAT(IG) &
-    &                 +SVAR*REAL(CONJG(PSI(IG,IDIM1,IB))*PSI(IG,IDIM2,IB))
+    &              +SVAR*REAL(CONJG(PSI(IG,IDIM1,IB))*PSI(IG,IDIM2,IB),kind=8)
             ENDDO
           ENDDO
         ENDDO
@@ -2385,7 +2385,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
             IF(IDIM1.NE.IDIM2)SVAR=2.D0*SVAR
             DO IG=1,NGL
               DMAT(IG)=DMAT(IG) &
-     &                +SVAR*REAL(CONJG(PSI(IG,IDIM1,IB))*PSI1(IG,IDIM2))
+     &           +SVAR*REAL(CONJG(PSI(IG,IDIM1,IB))*PSI1(IG,IDIM2),kind=8)
             ENDDO
           ENDDO
         ENDDO
@@ -2552,7 +2552,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
             ENDDO
           END IF
           DO IR=1,NRL
-            RHO(IR,1)=RHO(IR,1)+REAL(PSIOFR(IR,1,IBH)*PSI1(IR))
+            RHO(IR,1)=RHO(IR,1)+REAL(PSIOFR(IR,1,IBH)*PSI1(IR),kind=8)
           ENDDO
         ENDDO
 !
@@ -2567,7 +2567,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
             F1=F(IBH)
             IF(F1.EQ.0.D0) CYCLE
             DO IR=1,NRL
-              RE= REAL(PSIOFR(IR,1,IBH))
+              RE= REAL(PSIOFR(IR,1,IBH),kind=8)
               IM=AIMAG(PSIOFR(IR,1,IBH))
               RHO(IR,1)=RHO(IR,1)+F1*(RE**2+IM**2)
             ENDDO
@@ -2581,11 +2581,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
 !           == REAL(RHO11), REAL(RHO22), RE(RHO12), IM(RHO12) ==========
             DO IR=1,NRL
               RHO(IR,1)=RHO(IR,1) &
-    &                 +F1*REAL(PSIOFR(IR,1,IBH)*CONJG(PSIOFR(IR,1,IBH)))
+    &               +F1*REAL(PSIOFR(IR,1,IBH)*CONJG(PSIOFR(IR,1,IBH)),kind=8)
               RHO(IR,4)=RHO(IR,4) &
-    &                 +F1*REAL(PSIOFR(IR,2,IBH)*CONJG(PSIOFR(IR,2,IBH)))
+    &               +F1*REAL(PSIOFR(IR,2,IBH)*CONJG(PSIOFR(IR,2,IBH)),kind=8)
               CSVAR=PSIOFR(IR,1,IBH)*CONJG(PSIOFR(IR,2,IBH))
-              RHO(IR,2)=RHO(IR,2)+F1*REAL(CSVAR)
+              RHO(IR,2)=RHO(IR,2)+F1*REAL(CSVAR,kind=8)
               RHO(IR,3)=RHO(IR,3)+F1*AIMAG(CSVAR)
             ENDDO
           ENDDO
@@ -3185,12 +3185,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
               CSVAR =CONJG(DEDPRO(IG,LMN))
               CSVAR1=CSVAR*CWORK1(IG)
               CSVAR2=CSVAR*CWORK2(IG)
-              SVAR  =REAL(CI*CSVAR1)*YLM(IG,LM)
+              SVAR  =REAL(CI*CSVAR1,kind=8)*YLM(IG,LM)
               DO I=1,3
                 F(I)=F(I)+SVAR*GVEC(I,IG)
               ENDDO
-              SVAR1=REAL(CSVAR1)
-              SVAR2=REAL(CSVAR2)*YLM(IG,LM)
+              SVAR1=REAL(CSVAR1,kind=8)
+              SVAR2=REAL(CSVAR2,kind=8)*YLM(IG,LM)
               DO IJ=1,6
                 S(IJ)=S(IJ)-SVAR1*SYLM(IG,LM,IJ)-SVAR2*GIJ(IJ,IG)
               ENDDO
@@ -3198,7 +3198,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
             ENDDO
           ELSE
             DO IG=1,NGL
-              SVAR=REAL(CWORK1(IG)*CONJG(DEDPRO(IG,LMN)))*YLM(IG,LM)
+              SVAR=REAL(CWORK1(IG)*CONJG(DEDPRO(IG,LMN)),kind=8)*YLM(IG,LM)
               DO I=1,3
                 F(I)=F(I)+SVAR*GVEC(I,IG)
               ENDDO
@@ -3698,7 +3698,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
             DO IDIM=1,NDIM
               DO IG=1,NGL
                 CSVAR=THIS%PSI0(IG,IDIM,IB)-THIS%PSIM(IG,IDIM,IB)
-                V1=REAL(CSVAR)
+                V1=REAL(CSVAR,kind=8)
                 V2=AIMAG(CSVAR)
 !               SUM=SUM+MARR(IG)*(V1**2+V2**2)
                 SUM=SUM+GSET%MPSI(IG)*(V1**2+V2**2)
@@ -3725,10 +3725,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.3')
               TPSIP(:)=THIS%PSI0(:,IDIM,IB)-THIS%PSIM(:,IDIM,IB)
               CALL PLANEWAVE$INVERTG(NGL,TPSIP,TPSIM)
               DO IG=1,NGL
-!               SUM=SUM+MARR(IG)*(REAL(TPSIP(IG))*REAL(TPSIM(IG)) &
+!               SUM=SUM+MARR(IG)*(REAL(TPSIP(IG),kind=8)*REAL(TPSIM(IG),kind=8) &
 !    &                         +AIMAG(TPSIP(IG))*AIMAG(TPSIM(IG)))
-                SUM=SUM+GSET%MPSI(IG)*(REAL(TPSIP(IG))*REAL(TPSIM(IG)) &
-     &                               +AIMAG(TPSIP(IG))*AIMAG(TPSIM(IG)))
+                SUM=SUM+GSET%MPSI(IG) &
+     &                 *(REAL(TPSIP(IG),kind=8)*REAL(TPSIM(IG),kind=8) &
+     &                   +AIMAG(TPSIP(IG))*AIMAG(TPSIM(IG)))
               ENDDO            
             ENDDO
             EIG(IB1,IKPT,ISPIN)=EIG(IB1,IKPT,ISPIN)+0.5D0*SUM              
