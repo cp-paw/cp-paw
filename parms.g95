@@ -1,53 +1,52 @@
-# Call this file with
-#  ./configure --with-mpidir=/usr --with-fftwdir=/scratch/fleurat/WS_HOME_FILES/programs/fftw-2.1.3 --with-cppoptions=-traditional --with-parmfile=parms.sgi
 #
-# PARAMETER FILE FOR SGI
+# PARAMETER FILE FOR LINUX/INTEL
 #
 #________________________________architecture (arbitrary name)
-ARCH="sgi"
+ARCH="g95"
 #
 #________________________________F90 compiler
-COMPILER="f90"
+COMPILER="/opt/g95/bin/i686-pc-linux-gnu-g95"
 #
 #________________________________F77 compiler
-F77COMPILER="f90"
+F77COMPILER="/opt/g95/bin/i686-pc-linux-gnu-g95"
 #
 #________________________________F90 compiler flags 
 FLAGS="-c "
 #
 #________________________________F77 compiler flags
-F77FLAGS="-c"
+F77FLAGS="-c "
 #
 #________________________________F90 compiler optimization flags
-OPTIMIZE="-O2 -n32 -mips3 -align64"
+OPTIMIZE=" "
 #
 #________________________________F77 compiler optimization flags
-F77OPTIMIZE="-O2 -n32 -mips3 -align64"
+F77OPTIMIZE=" "
 #
 #________________________________F90 compiler debug flags
-DEBUG="-g"
+DEBUG="-g "
 #
 #________________________________F77 compiler debug flags
-F77DEBUG="-g"
+F77DEBUG="-g "
 #
 #________________________________flags for linking 
-LFLAGS=""
+LFLAGS=" "
 #
 #________________________________search directories for linking (sequential)
-LLINK=" -L/scratch/fleurat/WS_HOME_FILES/programs/fftw-2.1.3/lib -L/usr/global/fftw/lib  -L/usr/lib32/mips3"
+LLINK=" "
 #
 #________________________________search directories for linking (parallel)
-PLLINK=" -L/scratch/fleurat/WS_HOME_FILES/programs/fftw-2.1.3/lib -L/usr/global/fftw/lib -L/usr/lib32/mips3"
+PLLINK=" "
 #
 #________________________________external libraries (sequential)
-LIBS="-ldfftw -lscs"
+LIBS=" -llapack -lblas "
 #
 #________________________________external libraries (parallel)
-PLIBS="-ldfftw -lscs_mp -lmpi "
+PLIBS=" -llapack -lblas -lfmpich -lmpich "
 #
 #________________________________preprocessor variables
-CPPVAR="-DCPPVAR_FFT_FFTW -DCPPVAR_CALGARY "
+CPPVAR="-DCPPVAR_FFT_PACK "
 #
 #________________________________file extension
 FEXT="f90"
-
+#
+#
