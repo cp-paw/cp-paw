@@ -657,6 +657,7 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
       USE FILEHANDLER_MODULE, ONLY : FILE_TYPE
       IMPLICIT NONE
       TYPE (FILE_TYPE),INTENT(IN) :: FILE_
+      integer(4)      ,intent(in) :: ierr
       INTEGER(4)      ,INTENT(IN) :: IOS
       INTEGER(4)                  :: NFIL
       CHARACTER(9)                :: DEVNULL
