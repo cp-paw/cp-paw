@@ -847,6 +847,16 @@ extension {\tt \_r.tra}\\
 \vrules{optional}
 \vdefault{100}}
 
+\mbax{\key{RSTRTTYPE} \vdescr{allows to cut down the information on
+the restart file.  Option RSTRTTYPE='STATIC' only stores one set of
+wave functions. This reduces the amount of diskspace by nearly a
+factor of two. This option sould not be used 8in a dynamical
+simulation, because, the velocity of the wave functions will be set to
+zero.}
+\vformat{character}
+\vrules{optional}
+\vdefault{NONE}}
+
 \mbax{\key{START}
 \vdescr{T: start with random wave functions, and atomic positions from file 
 "STRC"\hfill\break 

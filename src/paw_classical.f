@@ -21,7 +21,7 @@ MODULE CLASSICAL_MODULE
 !**  ITERATE                                                         **
 !**   1. SELECT THE PROPER DATASET IF ANOTHER COULD BE SELECTED      **
 !**      USING CLASSICAL$SELECT                                      **
-!**   2. PRODUCE A NEW NEIGHBORLIST FOR NONBONDED INTERACTIONS        **
+!**   2. PRODUCE A NEW NEIGHBORLIST FOR NONBONDED INTERACTIONS       **
 !**      IF NECCESARY                                                **
 !**      USING CLASSICAL$NEIGHBORS                                   **
 !**   3. CALCULATE TOTAL ENERGY AND FORCES IF NECCESARY              **
@@ -1313,7 +1313,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==================================================================
 !     ==  REPORT ATOMIC POSITIONS                                     ==
 !     ==================================================================
-      WRITE(NFIL,FMT='(''=== POSITIONS IN A.U. ===; NAT='',I10)')MD%NAT
+      WRITE(NFIL,FMT='(''=== POSITIONS IN ANGSTROM ===; NAT='',I10)')MD%NAT
       CALL CONSTANTS('U',PRTONM)
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       DO IAT=1,MD%NAT
@@ -1325,7 +1325,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==================================================================
 !     ==  REPORT BONDS                                                ==
 !     ==================================================================
-      WRITE(NFIL,FMT='(''===  BONDS   ===; NBOND='',I10)')MD%NBOND
+      WRITE(NFIL,FMT='(''===  BONDS IN ANGSTROM  ===; NBOND='',I10)')MD%NBOND
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       DO IB=1,MD%NBOND
         IAT1=MD%INDEX2(1,IB)
@@ -1341,7 +1341,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==================================================================
 !     ==  REPORT BOND ANGLES                                          ==
 !     ==================================================================
-      WRITE(NFIL,FMT='(''===  ANGLES  ===; NANGLE='',I10)')MD%NANGLE
+      WRITE(NFIL,FMT='(''===  ANGLES IN DEGREE  ===; NANGLE='',I10)')MD%NANGLE
       PI=4.D0*DATAN(1.D0)
       DO IA=1,MD%NANGLE
         IAT1=MD%INDEX3(1,IA)
@@ -3818,6 +3818,15 @@ END MODULE UFFTABLE_MODULE
       END IF
 !
 !     ==================================================================
+!     ==  if array too small return with an unusable neighborlist     ==
+!     ==================================================================
+      if(nnb.gt.nnbx) then
+        nblist(:)%iat1=0
+        nblist(:)%iat2=0
+        return
+      end if
+!
+!     ==================================================================
 !     ==================================================================
 !     ==================================================================
       IF(TPR) THEN
@@ -3859,12 +3868,13 @@ END MODULE UFFTABLE_MODULE
         CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
       END IF
       NEXCLUSION=0
-!     ==  FIND BOND EXLCUSIONS
+!     ==  FIND BOND EXLCLUSIONS
       DO IB=1,NBOND
         IAT1=INDEX2(1,IB)
         IAT2=INDEX2(2,IB)
         NEXCLUSION=NEXCLUSION+1
         IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
+!if i understand correctly this must be completed for periodic systems
           IT1=0
           IT2=0
           IT3=0
@@ -3920,6 +3930,7 @@ END MODULE UFFTABLE_MODULE
 !     ==  RETURN THE NUMBER OF EXCLUSIONS IF GREATER THAN MAXIMUM     ==
 !     ==================================================================
       IF(NEXCLUSION+1.GT.NEXCLUSIONX) THEN
+!       == add one element for a flag indicating the last element
         NEXCLUSION=NEXCLUSION+1
         RETURN
       END IF
@@ -3928,7 +3939,7 @@ END MODULE UFFTABLE_MODULE
 !     ==  SORT IN INCREASING MAGNITUDE                                ==
 !     ==================================================================
       IF(NEXCLUSION.GT.1) THEN
-        call lib$sorti4(IEXCLUSION,NEXCLUSION)
+        call lib$sorti4(NEXCLUSION,IEXCLUSION)
 !
 !       ==  EXCLUDE DOUBLE EXCLUSIONS                                   ==
         I1=1
@@ -3953,7 +3964,7 @@ END MODULE UFFTABLE_MODULE
 !     ==================================================================
       NEXCLUSION=NEXCLUSION+1
       IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
-        IEXCLUSION(NEXCLUSION)=-1
+        IEXCLUSION(NEXCLUSION:)=-1
       END IF
 !
 !     ==================================================================

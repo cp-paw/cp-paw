@@ -639,6 +639,15 @@
 !     **   INITIALIZE BEFORE CALL WITH ISTART=1:                      **
 !     **   ISTART,X0,DX                                               **
 !     **                                                              **
+!     **   x0=                                                        **
+!     **   dx=1.d0                                                    **
+!     **   call bisec(1,ibi,x0,y0,dx,xm,ym)                           **
+!     **   do i=1,max                                                 **
+!     **     calculate y0 for value x0                                **
+!     **     call bisec(0,ibi,x0,y0,dx,xm,ym)                         **
+!     **     if(abs(y0).lt.tol) exit                                  **
+!     **   enddo                                                      **
+!     **                                                              **
 !     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
 !     ******************************************************************
       IMPLICIT none

@@ -1364,7 +1364,7 @@ CALL TIMING$CLOCKON('W:EXPECT')
 !     ==================================================================
 !     ==  EVALUATE <S^2>                                              ==
 !     ==================================================================
-      IF ((NDIM.EQ.2.or.NSPIN.eq.2).and.THAMILTON) then   ! thamilton should be replaced
+      IF ((NDIM.EQ.2).and.THAMILTON) then   ! thamilton should be replaced
          call timing$clockon('S2')
          DO IKPT=1,NKPT
             CALL WAVES_SELECTWV(IKPT,1)
@@ -6373,6 +6373,7 @@ PRINT*,'ITER ',ITER,DIGAM
         CALL MPE$BROADCAST(1,NGG_)
         CALL MPE$BROADCAST(1,NDIM_)
         CALL MPE$BROADCAST(1,NB_)
+        CALL MPE$BROADCAST(1,TSUPER_)
         IF(KEY.NE.'PSI') THEN
           CALL ERROR$MSG('ID IS NOT "PSI"')
           CALL ERROR$MSG('FILE IS CORRUPTED')
@@ -7201,7 +7202,7 @@ END IF
 !         ==============================================================
 !         ==  EXPAND TO REGULAR WAVE FUNCTIONS                        ==
 !         ==============================================================
-          IF(TSUPER1) THEN
+          IF(TSUPER2) THEN
             DO IB=NBH2,1,-1
               IB1=2*IB-1
               IB2=2*IB
@@ -7546,9 +7547,9 @@ end module totalspin_module
          CALL REPORT$R8VAL(NFIL,'<S_Z>',TOTSPIN(4),'HBAR')
          SVAR=DSQRT(TOTSPIN(2)**2+TOTSPIN(3)**2+TOTSPIN(4)**2)
          if (ndim.eq.2) call REPORT$R8VAL(NFIL,'|S|',SVAR,'HBAR')
-         CALL REPORT$R8VAL(NFIL,'TOTAL SPIN <S^2>',TOTSPIN(1),'HBAR^2')
-         svar=-0.5+SQRT(0.25+TOTSPIN(1))
-         CALL REPORT$R8VAL(NFIL,'SPIN QUANTUM NUMBER S',svar,'')
+!        CALL REPORT$R8VAL(NFIL,'TOTAL SPIN <S^2>',TOTSPIN(1),'HBAR^2')
+!        svar=-0.5+SQRT(0.25+TOTSPIN(1))
+!        CALL REPORT$R8VAL(NFIL,'SPIN QUANTUM NUMBER S',svar,'')
          RETURN
       END IF
     END SUBROUTINE WAVES$REPORTSPIN
