@@ -3779,7 +3779,7 @@ logical(4):: tchk
       do ig=1,ngb
         tchk=tchk.or.(map(ig).ne.ig)
       end do
-      if(tchk)print*,'remapping required'
+      IF(TCHK)PRINT*,'ORDER OF G-VECTORS FROM RESTART FILE HAS BEEN CHANGED'
       RETURN
       END
 !
