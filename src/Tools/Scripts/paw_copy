@@ -1,7 +1,0 @@
-#!/bin/sh
-# 
-# copies all files beginning with string $1 into files beginning with
-# $2 and with teh same ending
-#
-for FILE in $1* ;do cp -p "$FILE" "$2${FILE#$1}"; done
-exit
