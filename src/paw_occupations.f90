@@ -1295,8 +1295,7 @@ REAL(8)::EV
          DO IKPT=1,NKPT
            DO IB=1,NB
              SVAR=(X0(IB,IKPT,ISPIN)-XMIN)/(XMAX-XMIN)
-             IF(SVAR.GT.0.D0) CYCLE
-             IF(SVAR.LT.1.D0) CYCLE
+             IF(SVAR.GE.0.D0.and.SVAR.LT.1.D0) CYCLE
              ISVAR=INT(SVAR+100.D0)-100
              SVAR=(XMAX-XMIN)*REAL(ISVAR,KIND=8)
              X0(IB,IKPT,ISPIN)=X0(IB,IKPT,ISPIN)-SVAR
