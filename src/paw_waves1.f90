@@ -2,7 +2,7 @@
 !***********************************************************************
 !**                                                                   **
 !**  WAVES OBJECT                                                     **
-!**  This object is continued in paw_waves2.f90                       **
+!**  THIS OBJECT IS CONTINUED IN PAW_WAVES2.F90                       **
 !**                                                                   **
 !**  PURPOSE: OPERATIONS ON THE PLANE WAVE PART OF THE WAVE FUNCTIONS **
 !**                                                                   **
@@ -23,20 +23,20 @@
 !**    SETUP                                                          **
 !**    ...                                                            **
 !**                                                                   **
-!**  definition of spin dimensions:                                   **
-!**                           | nspin | ndim | ndimd |                **
+!**  DEFINITION OF SPIN DIMENSIONS:                                   **
+!**                           | NSPIN | NDIM | NDIMD |                **
 !**        -------------------------------------------                **
-!**        non-spin-polarized |   1   |   1  |   1   |                **
-!**        spin polarized     |   2   |   1  |   2   |                **
-!**        non-collinear      |   1   |   2  |   4   |                **
+!**        NON-SPIN-POLARIZED |   1   |   1  |   1   |                **
+!**        SPIN POLARIZED     |   2   |   1  |   2   |                **
+!**        NON-COLLINEAR      |   1   |   2  |   4   |                **
 !**                                                                   **
-!**     nspin is the number of slater determinants                    **
-!**     ndim is the number of spinor dimensions of the wave function  **
-!**     ndimd is the number of density components. Two representations**
-!**           are used:                                               **
-!**           nspin=2,ndim=1:  up/down and total/spin                 **
-!**           nspin=1,ndim=2:  upup/updown/downup/downdown and        **
-!**                            total/mx/my/mz                         **
+!**     NSPIN IS THE NUMBER OF SLATER DETERMINANTS                    **
+!**     NDIM IS THE NUMBER OF SPINOR DIMENSIONS OF THE WAVE FUNCTION  **
+!**     NDIMD IS THE NUMBER OF DENSITY COMPONENTS. TWO REPRESENTATIONS**
+!**           ARE USED:                                               **
+!**           NSPIN=2,NDIM=1:  UP/DOWN AND TOTAL/SPIN                 **
+!**           NSPIN=1,NDIM=2:  UPUP/UPDOWN/DOWNUP/DOWNDOWN AND        **
+!**                            TOTAL/MX/MY/MZ                         **
 !**                                                                   **
 !***********************************************************************
 !***********************************************************************
@@ -52,7 +52,7 @@ USE LINKEDLIST_MODULE
 ! THE TYPE MAP_TYPE DESCRIBES THE ARRANGEMENT OF PROJECTOR FUNCTIONS 
 ! AND THEIR LINKS TO ATOMS AN ANGULAR MOMENTA
 TYPE MAP_TYPE
-  INTEGER(4)         :: NAT         ! #(ATOms)
+  INTEGER(4)         :: NAT         ! #(ATOMS)
   INTEGER(4)         :: NSP         ! #(ATOM TYPES)
   INTEGER(4)         :: NBAREPRO    ! #(LN*NAT)
   INTEGER(4)         :: NRL         ! #(LOCAL REAL SPACE GRID POINTS)
@@ -97,7 +97,7 @@ TYPE WVSET_TYPE  !======================================================
   COMPLEX(8),POINTER :: RLAM2M(:,:)     !(NB,NB)
   COMPLEX(8),POINTER :: RLAM3M(:,:)     !(NB,NB)
   COMPLEX(8),POINTER :: EIGVEC(:,:)     !(NB,NB) ENERGY EIGENVALUES AFTER DIAG
-  REAL(8)   ,POINTER :: EIGVAL(:)       !(NB)    EIGENValues AFTER DIAG
+  REAL(8)   ,POINTER :: EIGVAL(:)       !(NB)    EIGENVALUES AFTER DIAG
   REAL(8)   ,POINTER :: EXPECTVAL(:)    !(NB) !<PSI_N|H|PSI_N>
 END TYPE WVSET_TYPE
 TYPE EXTERNALPOINTER_TYPE !=============================================
@@ -148,6 +148,7 @@ LOGICAL(4)                :: TFIRST=.TRUE.
 TYPE(EXTERNALPOINTER_TYPE):: EXTPNTR
 LOGICAL(4)                :: TFIXRHO=.FALSE.
 LOGICAL(4)                :: TWRITERHO=.FALSE.
+CHARACTER(8)              :: OPTIMIZERTYPE  ! SWITCH FOR CONJUGATE GRADIENT OR DYNAMICS
 CONTAINS
 !***********************************************************************
       SUBROUTINE WAVES_SELECTWV(IKPT,ISPIN)
@@ -290,10 +291,10 @@ END MODULE WAVES_MODULE
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('WAVES$GETR8A')
         END IF
-        VAL(:)=THIS%Eigval(:)
+        VAL(:)=THIS%EIGVAL(:)
 !
 !     ================================================================
-!     ==  energy expectations values of the one-partcle states      ==
+!     ==  ENERGY EXPECTATIONS VALUES OF THE ONE-PARTCLE STATES      ==
 !     ==  NOTE: IKPT,ISPIN MUST BE SET ON LINKEDLIST                ==
 !     ================================================================
       ELSE IF(ID.EQ.'<PSI|H|PSI>') THEN
@@ -379,7 +380,7 @@ END MODULE WAVES_MODULE
         END IF
         ALLOCATE(CWORK2(NRL))
         CALL PLANEWAVE$FFT('GTOR',1,NGL,CWORK1,NRL,CWORK2)
-        deALLOCATE(CWORK1)
+        DEALLOCATE(CWORK1)
         IF(EXTPNTR%TIM) THEN
           DO IR=1,NRL
             VAL(IR)=AIMAG(CWORK2(IR))
@@ -616,11 +617,11 @@ END MODULE WAVES_MODULE
       ELSE IF(ID.EQ.'SWAPSTATES') THEN
         VAL=TSWAPSTATES
       ELSE IF(ID.EQ.'WRITERHO') THEN
-        val=TWRITERHO
+        VAL=TWRITERHO
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('WAVES$getL4')
+        CALL ERROR$STOP('WAVES$GETL4')
       END IF
       RETURN
       END
@@ -636,7 +637,21 @@ END MODULE WAVES_MODULE
       CHARACTER(*),INTENT(IN) :: VAL
 !     ******************************************************************
       IF(ID.EQ.'RSTRTTYPE') THEN
+        IF(VAL.NE.'DYNAMIC'.AND.VAL.NE.'STATIC') THEN
+          CALL ERROR$MSG('VALUE NOT RECOGNIZED. ALLOWED VALUES ARE "STATIC" AND "DYNAMIC"')
+          CALL ERROR$CHVAL('VAL',VAL)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('WAVES$SETCH')
+        END IF
         RSTRTTYPE=VAL
+      ELSE IF(ID.EQ.'OPTIMIZER') THEN
+        IF(VAL.NE.'CG'.AND.VAL.NE.'MD') THEN
+          CALL ERROR$MSG('VALUE NOT RECOGNIZED. ALLOWED VALUES ARE "CG" AND "MD"')
+          CALL ERROR$CHVAL('VAL',VAL)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('WAVES$SETCH')
+        END IF
+        OPTIMIZERTYPE=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -666,7 +681,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: LNXX
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: NFILO
-      integer(4)             :: lnx
+      INTEGER(4)             :: LNX
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES$GVECTORS')
 !     
@@ -686,14 +701,14 @@ END MODULE WAVES_MODULE
       MAP%NBAREPRO=0
       DO ISP=1,MAP%NSP
         CALL SETUP$LNX(ISP,LNX)
-        MAP%LNX(ISP)=lnx
+        MAP%LNX(ISP)=LNX
         CALL SETUP$LOFLN(ISP,LNX,MAP%LOX(1:LNX,ISP))
         MAP%LMNX(ISP)=0
-        DO LN=1,lnx
+        DO LN=1,LNX
           MAP%LMNX(ISP)=MAP%LMNX(ISP)+2*MAP%LOX(LN,ISP)+1
           MAP%LMX=MAX(MAP%LMX,(MAP%LOX(LN,ISP)+1)**2)
         ENDDO
-        MAP%NBAREPRO=MAP%NBAREPRO+lnx
+        MAP%NBAREPRO=MAP%NBAREPRO+LNX
       ENDDO
       MAP%NPRO=0
       DO IAT=1,MAP%NAT
@@ -745,7 +760,7 @@ END MODULE WAVES_MODULE
 CALL FILEHANDLER$UNIT('PROT',NFILO)
 !WRITE(NFILO,*)'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
 !PRINT*,'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
-!tinv=.false.
+!TINV=.FALSE.
         CALL PLANEWAVE$INITIALIZE(GSET%ID,RBAS,XK(1,IKPT),TINV,EPWPSI &
      &                           ,NR1START,NR1L,NR2,NR3)
         CALL PLANEWAVE$SELECT(GSET%ID)
@@ -881,10 +896,10 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       REAL(8)                :: FORCE1(3)
       REAL(8)                :: STRESS1(3,3),STRESS(3,3)
       REAL(8)                :: STRESST(3,3)
-      REAL(8)                :: RBAS(3,3) ! real space lattice vectors
-      REAL(8)                :: gbas(3,3) ! reciprocal space lattice vectors
-      REAL(8)                :: RHOB      ! background density
-      REAL(8)                :: potb,potb1 ! average electrostatic potential
+      REAL(8)                :: RBAS(3,3) ! REAL SPACE LATTICE VECTORS
+      REAL(8)                :: GBAS(3,3) ! RECIPROCAL SPACE LATTICE VECTORS
+      REAL(8)                :: RHOB      ! BACKGROUND DENSITY
+      REAL(8)                :: POTB,POTB1 ! AVERAGE ELECTROSTATIC POTENTIAL
       REAL(8)   ,PARAMETER   :: TINY=1.D-300
       INTEGER(4)             :: NGL
       INTEGER(4)             :: NRL
@@ -899,7 +914,7 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       INTEGER(4)             :: NBH,NBX,NB
       INTEGER(4)             :: LMNX
       INTEGER(4)             :: THISTASK,NTASKS
-      REAL(8)                :: svar,SVAR1,SVAR2
+      REAL(8)                :: SVAR,SVAR1,SVAR2
       REAL(8)   ,ALLOCATABLE :: DO1(:,:)
       COMPLEX(8),ALLOCATABLE :: HAMILTON(:,:)
       COMPLEX(8),ALLOCATABLE :: EIGR(:)
@@ -907,7 +922,7 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       REAL(8)                :: GWEIGHT
       REAL(8)   ,ALLOCATABLE :: G2(:)      !G**2
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)  !GI
-      REAL(8)   ,ALLOCATABLE :: GIJ(:,:)   !GI*GJ/G2 (only filled if tstress!)
+      REAL(8)   ,ALLOCATABLE :: GIJ(:,:)   !GI*GJ/G2 (ONLY FILLED IF TSTRESS!)
       LOGICAL(4)             :: TINV
       LOGICAL(4)             :: TSTRESS
       LOGICAL(4)             :: TFORCE
@@ -917,7 +932,9 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       COMPLEX(8),ALLOCATABLE :: QMAT(:,:)   
       INTEGER(4)             :: NFILO
       INTEGER(4)             :: L1,L2,LN1,LN2
-      integer(4)             :: ngamma
+      INTEGER(4)             :: NGAMMA
+      LOGICAL(4)             :: TCONV ! MIXER SAYS THAT WAVE FUNCTIONS ARE CONVERGED !KAESTNERCG
+      REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
 !     ******************************************************************      
                              CALL TRACE$PUSH('WAVES$ETOT')
       CALL MPE$QUERY(NTASKS,THISTASK)
@@ -971,22 +988,28 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)
-          IF(ASSOCIATED(THIS%EIGVAL))DEALLOCATE(THIS%EIGVAL)
-          IF(ASSOCIATED(THIS%EIGVEC))DEALLOCATE(THIS%EIGVEC)
+          IF(OPTIMIZERTYPE.NE.'CG') THEN   !KAESTNERCG
+            IF(ASSOCIATED(THIS%EIGVAL))DEALLOCATE(THIS%EIGVAL)
+            IF(ASSOCIATED(THIS%EIGVEC))DEALLOCATE(THIS%EIGVEC)
+          END IF  !KAESTNERCG
           NGL=GSET%NGL
           NB=THIS%NB
           NBH=THIS%NBH
           IF(TFIRST) THEN
+            IF(OPTIMIZERTYPE.EQ.'CG') THEN       !KAESTNERCG
+              ALLOCATE(THIS%EIGVAL(NB))      !KAESTNERCG
+              THIS%EIGVAL(:)=1.D100          !KAESTNERCG
+            END IF                           !KAESTNERCG
             IF(TRANDOM) THEN
               ALLOCATE(G2(NGL))
               CALL PLANEWAVE$GETR8A('G2',NGL,G2)
               CALL WAVES_RANDOMIZE(NGL,NDIM,NBH,AMPRANDOM,G2,THIS%PSIM)
               DEALLOCATE(G2)
             END IF
-!call waves_comparepsi('before gramschmidt',ngl,ndim,nbh,this%psi0,THIS%psim)
+!CALL WAVES_COMPAREPSI('BEFORE GRAMSCHMIDT',NGL,NDIM,NBH,THIS%PSI0,THIS%PSIM)
             CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSI0)
             CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSIM)
-!call waves_comparepsi('after gramschmidt',ngl,ndim,nbh,this%psi0,THIS%psim)
+!CALL WAVES_COMPAREPSI('AFTER GRAMSCHMIDT',NGL,NDIM,NBH,THIS%PSI0,THIS%PSIM)
 !
 !           ============================================================
 !           == PROJECTIONS (REPLACEMENT BY PREDICTION IS FRAGILE!)    ==
@@ -1146,6 +1169,21 @@ IF(1.EQ.0) THEN
 END IF
 !
 !     ==================================================================
+!     == MIX RHO AND CHECK IF CONVERGED                               ==
+!     ==================================================================
+      IF(OPTIMIZERTYPE.EQ.'CG') THEN                                             !KAESTNERCG
+         CALL TIMING$CLOCKON('MIXER')                                        !KAESTNERCG
+         TSTOP=.TRUE. ! DO NOT PROPAGATE THE WAVE FUNCTION                   !KAESTNERCG
+                      ! MUST BE SET IN EACH ITERATION, SEE WAVES$PROPAGATE   !KAESTNERCG
+ PRINT*,'----------------- NEW CG SCF ITERATION------------------'           !KAESTNERCG
+         CALL WAVES_MIXRHO_PUL(NRL*NDIM,LMNXX*LMNXX*NDIMD*NAT,&              !KAESTNERCG
+              RHO,DENMAT,TCONV,CONVPSI)                                      !KAESTNERCG
+!!$         CALL WAVES_MIXRHOLIN(NRL,NDIM,LMNXX,NDIMD,NAT,&                  !KAESTNERCG
+!!$              RHO,DENMAT,TCONV,CONVPSI)                                   !KAESTNERCG
+         CALL TIMING$CLOCKOFF('MIXER')                                       !KAESTNERCG
+      END IF                                                                 !KAESTNERCG
+!
+!     ==================================================================
 !     == MULTIPOLE MOMENTS OF ONE-CENTER PART                         ==
 !     == CONTAINS CORE AND PSEUDOCORE                                 ==
 !     ==================================================================
@@ -1164,21 +1202,21 @@ CALL TIMING$CLOCKON('W:MOMENTS')
         DEALLOCATE(DENMAT1)
       ENDDO
       CALL MPE$COMBINE('+',QLM)
-PI=4.D0*DATAN(1.D0)
-SVAR1=0.D0
-DO IAT=1,NAT
-  SVAR1=SVAR1+QLM(1,IAT)*SQRT(4.D0*PI)
-ENDDO
-PRINT*,'TOTAL CHARGE IN AUGMENTATION',SVAR1
+!PI=4.D0*DATAN(1.D0)
+!SVAR1=0.D0
+!DO IAT=1,NAT
+!  SVAR1=SVAR1+QLM(1,IAT)*SQRT(4.D0*PI)
+!ENDDO
+!PRINT*,'TOTAL CHARGE IN AUGMENTATION',SVAR1
 CALL TIMING$CLOCKOFF('W:MOMENTS')
 !
 !     ==================================================================
-!     == overwrite density to for fixed potential calc.               ==
+!     == OVERWRITE DENSITY TO FOR FIXED POTENTIAL CALC.               ==
 !     ==================================================================
       IF(TFIXRHO) THEN
         CALL WAVES_FIXRHOGET(NRL,NDIMD,LMRXX,NAT,QLM,RHO,DENMAT)
-      END if
-      IF(TWRITERHO) then
+      END IF
+      IF(TWRITERHO) THEN
         CALL WAVES_FIXRHOSET(NRL,NDIMD,LMRXX,NAT,QLM,RHO,DENMAT)
       END IF
 !
@@ -1203,7 +1241,7 @@ CALL TIMING$CLOCKON('W:SPHERE')
       DH(:,:,:,:)=0.D0
       ALLOCATE(DO(LMNXX,LMNXX,NDIMD,NAT))
       DO(:,:,:,:)=0.D0
-      potb=0
+      POTB=0
       DO IAT=THISTASK,NAT,NTASKS   ! DISTRIBUTE WORK ACCROSS TASKS
         ISP=MAP%ISP(IAT)
         LMNX=MAP%LMNX(ISP)
@@ -1219,8 +1257,8 @@ CALL TIMING$CLOCKON('W:SPHERE')
         ALLOCATE(DH1(LMNX,LMNX,NDIMD))
         ALLOCATE(DOV1(LMNX,LMNX,NDIMD))
         CALL AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT1,DENMATI1 &
-     &               ,LMRX,VQLM(1,IAT),RHOB,potb1,DH1,DOV1)
-        potb=potb+potb1
+     &               ,LMRX,VQLM(1,IAT),RHOB,POTB1,DH1,DOV1)
+        POTB=POTB+POTB1
         DH(1:LMNX,1:LMNX,:,IAT)=DH1(:,:,:)
         DO(1:LMNX,1:LMNX,:,IAT)=DOV1(:,:,:)
         DEALLOCATE(DH1)
@@ -1231,16 +1269,16 @@ CALL TIMING$CLOCKON('W:SPHERE')
       DEALLOCATE(VQLM)
       CALL MPE$COMBINE('+',DH)
       CALL MPE$COMBINE('+',DO)
-      CALL MPE$COMBINE('+',potb)
+      CALL MPE$COMBINE('+',POTB)
 !     ==  SPREAD INFO FROM SPHERE OVER ALL TASKS AND UPDATE ENERGYLIST
       CALL AUGMENTATION$SYNC
 !
-!     ==  subtract average electrostatic potential =====================
-!     ==  to account for background density ============================
-!     ==  potb=-1/omega*int d^3r(\tilde{v}+v^1-\tilde{v}^1) ============
-!     ==  note that \int d^3r \tilde{v}=0
-      call gbass(rbas,gbas,svar)
-      potb=potb/svar
+!     ==  SUBTRACT AVERAGE ELECTROSTATIC POTENTIAL =====================
+!     ==  TO ACCOUNT FOR BACKGROUND DENSITY ============================
+!     ==  POTB=-1/OMEGA*INT D^3R(\TILDE{V}+V^1-\TILDE{V}^1) ============
+!     ==  NOTE THAT \INT D^3R \TILDE{V}=0
+      CALL GBASS(RBAS,GBAS,SVAR)
+      POTB=POTB/SVAR
       RHO(:,1)=RHO(:,1)+POTB
       DO IAT=1,NAT
         ISP=MAP%ISP(IAT)
@@ -1379,9 +1417,9 @@ END IF
 !     ==================================================================
 CALL TRACE$PASS('BEFORE FORCES AND STRESSES')     
 !CHECK IF ATOMS ARE MOVED
-WRITE(*,FMT='("BEFORE 1C STRESS ",3F15.7)')STRESS(1,:)
-WRITE(*,FMT='("BEFORE 1C STRESS ",3F15.7)')STRESS(2,:)
-WRITE(*,FMT='("BEFORE 1C STRESS ",3F15.7)')STRESS(3,:)
+!WRITE(*,FMT='("BEFORE 1C STRESS ",3F15.7)')STRESS(1,:)
+!WRITE(*,FMT='("BEFORE 1C STRESS ",3F15.7)')STRESS(2,:)
+!WRITE(*,FMT='("BEFORE 1C STRESS ",3F15.7)')STRESS(3,:)
 CALL TIMING$CLOCKON('W:FORCE')
       IF(TFORCE.OR.TSTRESS) THEN
         DO IKPT=1,NKPT
@@ -1408,8 +1446,8 @@ CALL TIMING$CLOCKON('W:FORCE')
                   ENDDO
                 ENDDO
               ENDDO
-            else
-              gij(:,:)=0
+            ELSE
+              GIJ(:,:)=0
             END IF
             IPRO=1
             DO IAT=1,NAT
@@ -1422,14 +1460,14 @@ CALL TIMING$CLOCKON('W:FORCE')
               CALL SETUP$1COVERLAP(ISP,LNX,DO1)
               ALLOCATE(DEDPROJ(NDIM,NBH,LMNX))
               ALLOCATE(DH1(LMNX,LMNX,NDIM**2))
-              if(ndim.eq.1) then
-                DH1(:,:,1)=DH(1:LMNX,1:LMNX,ispin,IAT)
-              else 
+              IF(NDIM.EQ.1) THEN
+                DH1(:,:,1)=DH(1:LMNX,1:LMNX,ISPIN,IAT)
+              ELSE 
                 DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
-              end if
-              CALL WAVES_DEDPROJ(NDIM,NBH,NB,LNX,MAP%LOX(1:lnx,ISP),LMNX &
+              END IF
+              CALL WAVES_DEDPROJ(NDIM,NBH,NB,LNX,MAP%LOX(1:LNX,ISP),LMNX &
      &                       ,OCC(:,IKPT,ISPIN) &
-     &                       ,THIS%PROJ(:,:,ipro:ipro+lmnx-1),DH1,DO1 &
+     &                       ,THIS%PROJ(:,:,IPRO:IPRO+LMNX-1),DH1,DO1 &
      &                       ,THIS%RLAM0,DEDPROJ)
               DEALLOCATE(DH1)
               DEALLOCATE(DO1)
@@ -1440,8 +1478,8 @@ CALL TIMING$CLOCKON('W:FORCE')
 !             == DE= <DPRO|DEDPRO> =====================================
               ALLOCATE(EIGR(NGL))
               CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
-              CALL WAVES_PROFORCE(LNX,LMNX,MAP%LOX(1:lnx,ISP),NGL,GWEIGHT,GVEC,GIJ &
-     &                   ,GSET%PRO(:,IBPRO:ibpro+lnx-1),GSET%DPRO(:,IBPRO:ibpro+lnx-1) &
+              CALL WAVES_PROFORCE(LNX,LMNX,MAP%LOX(1:LNX,ISP),NGL,GWEIGHT,GVEC,GIJ &
+     &                   ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),GSET%DPRO(:,IBPRO:IBPRO+LNX-1) &
      &                   ,MAP%LMX,GSET%YLM,GSET%SYLM &
      &                   ,EIGR,DEDPRO,FORCE1,TSTRESS,STRESS1)
               CALL MPE$COMBINE('+',FORCE1)
@@ -1458,7 +1496,16 @@ CALL TIMING$CLOCKON('W:FORCE')
         ENDDO
       END IF
 CALL TIMING$CLOCKOFF('W:FORCE')
-
+!
+!     ==================================================================
+!     ==  CALL GONJUGATE GRADIENT                                     ==
+!     ================================================================== 
+      IF(OPTIMIZERTYPE.EQ.'CG') THEN                                             !KAESTNERCG
+         CALL TIMING$CLOCKON('CG')                                           !KAESTNERCG
+         CALL CG$STATE_BY_STATE(MAP%NRL,NDIMD,RHO(:,:),CONVPSI,NAT,LMNXX,DH) !KAESTNERCG
+         CALL TIMING$CLOCKOFF('CG')                                          !KAESTNERCG
+         IF(TCONV) CALL STOPIT$SETL4('STOP',.TRUE.)                          !KAESTNERCG
+      END IF                                                                 !KAESTNERCG
 !
 !     ==================================================================
 !     ==  EVALUATE H*PSI                                              ==
@@ -1479,7 +1526,10 @@ CALL TIMING$CLOCKON('W:HPSI')
           IF(.NOT.ASSOCIATED(THIS%HPSI))ALLOCATE(THIS%HPSI(NGL,NDIM,NBH))
 !         == NOTE: THE ARRAY RHO CONTAINS THE POTENTIAL ================
 CALL TIMING$CLOCKON('W:HPSI.1')
-          CALL WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,THIS%PSI0,RHO(1,ISPIN) &
+!======================================================================== 
+IF(1.EQ.1)THEN !OLD VERSION CHANGE WAS REQUIRED FOR KAESTNERS CONJUGATE GRADIENT
+!======================================================================== 
+         CALL WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,THIS%PSI0,RHO(1,ISPIN) &
      &                   ,THIS%HPSI)
 CALL TIMING$CLOCKOFF('W:HPSI.1')
 !
@@ -1494,14 +1544,14 @@ CALL TIMING$CLOCKON('W:HPSI.2')
             ISP=MAP%ISP(IAT)
             LMNX=MAP%LMNX(ISP)
             ALLOCATE(DH1(LMNX,LMNX,NDIM**2))
-            if(ndim.eq.1) then
-              DH1(:,:,1)=DH(1:LMNX,1:LMNX,ispin,IAT)
-            else 
+            IF(NDIM.EQ.1) THEN
+              DH1(:,:,1)=DH(1:LMNX,1:LMNX,ISPIN,IAT)
+            ELSE 
               DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
-            end if
+            END IF
             CALL WAVES_HPROJ(NDIM,NBH,LMNX &
-     &           ,dh1,THIS%PROJ(:,:,ipro:ipro+lmnx-1),HPROJ(:,:,ipro:ipro+lmnx-1))
-            deallocate(dh1)
+     &           ,DH1,THIS%PROJ(:,:,IPRO:IPRO+LMNX-1),HPROJ(:,:,IPRO:IPRO+LMNX-1))
+            DEALLOCATE(DH1)
             IPRO=IPRO+LMNX
           ENDDO
 CALL TIMING$CLOCKOFF('W:HPSI.2')
@@ -1514,6 +1564,14 @@ CALL TIMING$CLOCKON('W:HPSI.3')
      &                     ,THIS%HPSI,HPROJ)
 CALL TIMING$CLOCKOFF('W:HPSI.3')
           DEALLOCATE(HPROJ)
+!======================================================================== 
+ELSE
+!======================================================================== 
+         CALL WAVES_HPSI(MAP,GSET,ISPIN,NGL,NDIM,NDIMD,NBH,MAP%NPRO,LMNXX,NAT,NRL&
+     &                  ,THIS%PSI0,RHO(1,ISPIN),R,THIS%PROJ,DH,THIS%HPSI)
+!======================================================================== 
+END IF
+!======================================================================== 
         ENDDO
       ENDDO
       DEALLOCATE(RHO)
@@ -1594,8 +1652,10 @@ CALL TIMING$CLOCKON('W:EXPECT')
           ENDDO
         ENDDO
       ELSE
-        IF(ASSOCIATED(THIS%EIGVAL))DEALLOCATE(THIS%EIGVAL)
-        IF(ASSOCIATED(THIS%EIGVEC))DEALLOCATE(THIS%EIGVEC)
+        IF(OPTIMIZERTYPE.NE.'CG') THEN    !KAESTNERCG
+          IF(ASSOCIATED(THIS%EIGVAL))DEALLOCATE(THIS%EIGVAL)
+          IF(ASSOCIATED(THIS%EIGVEC))DEALLOCATE(THIS%EIGVEC)
+        END IF                         !KAESTNERCG
       END IF
 CALL TIMING$CLOCKOFF('W:EXPECT')
 !
@@ -1634,7 +1694,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES_HPROJ(NDIM,NB,LMNX,dh,PROJ,HPROJ)
+      SUBROUTINE WAVES_HPROJ(NDIM,NB,LMNX,DH,PROJ,HPROJ)
 !     ******************************************************************
 !     **                                                              **
 !     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
@@ -1688,6 +1748,119 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       END IF
       RETURN
       END
+!
+!     ....................................................................
+      SUBROUTINE WAVES_HPSI(MAP,GSET,ISPIN,NGL,NDIM,NDIMD,NBH,NPRO,LMNXX,NAT,NRL &
+     &                     ,PSI,POT,R,PROJ,DH,HPSI)
+      USE WAVES_MODULE, ONLY: MAP_TYPE,GSET_TYPE
+      IMPLICIT NONE
+      INTEGER(4)     ,INTENT(IN) :: ISPIN
+      TYPE(MAP_TYPE) ,INTENT(IN) :: MAP  !NAT,NSP,NBAREPRO,NRL,NPRO,LMX,LNXX,LNX,LMNX,LOX,ISP
+      TYPE(GSET_TYPE),INTENT(IN) :: GSET
+      INTEGER(4)     ,INTENT(IN) :: NGL
+      INTEGER(4)     ,INTENT(IN) :: NDIM
+      INTEGER(4)     ,INTENT(IN) :: NDIMD
+      INTEGER(4)     ,INTENT(IN) :: NBH
+      INTEGER(4)     ,INTENT(IN) :: NRL
+      INTEGER(4)     ,INTENT(IN) :: NPRO
+      INTEGER(4)     ,INTENT(IN) :: LMNXX
+      INTEGER(4)     ,INTENT(IN) :: NAT
+      COMPLEX(8)     ,INTENT(IN) :: PSI(NGL,NDIM,NBH)
+      REAL(8)        ,INTENT(IN) :: POT(NRL,NDIM**2) !RHO(1,ISPIN)
+      REAL(8)        ,INTENT(IN) :: R(3,NAT)
+      COMPLEX(8)     ,INTENT(IN) :: PROJ(NDIM,NBH,NPRO)     !(NDIM,NBH,NPRO) <PSPSI|P>
+      REAL(8)        ,INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD,NAT)
+      COMPLEX(8)     ,INTENT(OUT):: HPSI(NGL,NDIM,NBH)
+      COMPLEX(8)     ,ALLOCATABLE:: HPROJ(:,:,:)  
+      REAL(8)        ,ALLOCATABLE:: DH1(:,:,:)
+      INTEGER(4)                 :: IPRO,IAT,ISP,LMNX
+!     ****************************************************************
+      CALL WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,PSI,POT,HPSI)
+CALL TIMING$CLOCKOFF('W:HPSI.1')
+!
+!     ================================================================
+!     ==  EVALUATE  DH<P|PSI>                                       ==
+!     ================================================================
+CALL TIMING$CLOCKON('W:HPSI.2')
+      ALLOCATE(HPROJ(NDIM,NBH,NPRO))
+      HPROJ(:,:,:)=(0.D0,0.D0)
+      IPRO=1
+      DO IAT=1,NAT
+        ISP=MAP%ISP(IAT)
+        LMNX=MAP%LMNX(ISP)
+        ALLOCATE(DH1(LMNX,LMNX,NDIM**2))
+        IF(NDIM.EQ.1) THEN
+          DH1(:,:,1)=DH(1:LMNX,1:LMNX,ISPIN,IAT)
+        ELSE 
+          DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
+        END IF
+        CALL WAVES_HPROJ(NDIM,NBH,LMNX,DH1 &
+       &       ,PROJ(:,:,IPRO:IPRO+LMNX-1),HPROJ(:,:,IPRO:IPRO+LMNX-1))
+        DEALLOCATE(DH1)
+        IPRO=IPRO+LMNX
+      ENDDO
+CALL TIMING$CLOCKOFF('W:HPSI.2')
+!
+!     ==============================================================
+!     ==  ADD  |P>DH<P|PSI>                                       ==
+!     ==============================================================
+CALL TIMING$CLOCKON('W:HPSI.3')
+      CALL WAVES_ADDPRO(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,HPSI,HPROJ)
+CALL TIMING$CLOCKOFF('W:HPSI.3')
+      DEALLOCATE(HPROJ)
+      RETURN
+      END
+!
+!     .................................................................
+      SUBROUTINE WAVES_OPSI(NB,NBH,NPRO,NAT,NGL,R0,PROJ,OPSI)
+!     *****************************************************************
+!     **                                                             **
+!     **  |PSI>+|P>DO<P|PSI>                                         **
+!     **                                                             **
+!     *********************************JOHANNES KAESTNER 2004**********
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)   :: NB
+      INTEGER(4) ,INTENT(IN)   :: NBH
+      INTEGER(4) ,INTENT(IN)   :: NPRO
+      INTEGER(4) ,INTENT(IN)   :: NAT
+      INTEGER(4) ,INTENT(IN)   :: NGL
+      REAL(8)    ,INTENT(IN)   :: R0(3,NAT)
+      COMPLEX(8) ,INTENT(IN)   :: PROJ(NDIM,NBH,NPRO)
+      COMPLEX(8) ,INTENT(INOUT):: OPSI(NGL,NDIM,NBH) !PSI ON ETRY, OPSI ON EXIT
+      INTEGER(4)               :: IPRO,IAT,ISP,M,LNX,LMNX
+      COMPLEX(8) ,ALLOCATABLE  :: OPROJ(:,:,:)
+      REAL(8)    ,ALLOCATABLE  :: DO(:,:)      ! 1-CENTER OVERLAP
+!     *****************************************************************
+!
+!     ==============================================================
+!     ==  EVALUATE  DO<P|PSI>  ASSUMING <PRO|PSI> IS STILL VALID  ==
+!     ==============================================================
+      ALLOCATE(OPROJ(NDIM,NBH,NPRO))
+      OPROJ(:,:,:)=(0.D0,0.D0)
+      IPRO=1
+      DO IAT=1,NAT
+         ISP=MAP%ISP(IAT)
+         LNX=MAP%LNX(ISP)
+         LMNX=MAP%LMNX(ISP)
+         ALLOCATE(DO(LNX,LNX))
+         CALL SETUP$1COVERLAP(ISP,LNX,DO)
+         CALL WAVES_OPROJ(LNX,MAP%LOX(1:LNX,ISP),DO,NDIM,LMNX,NBH &
+              &          ,PROJ(:,:,IPRO:IPRO+LMNX-1),OPROJ(:,:,IPRO:IPRO+LMNX-1))
+         DEALLOCATE(DO)
+         IPRO=IPRO+LMNX
+      ENDDO
+!
+!     ==============================================================
+!     ==  ADD  |PSI>+|P>DO<P|PSI>                                 ==
+!     ==============================================================
+      !ALLOCATE(THIS%OPSI(NGL,NDIM,NBH))
+      !THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
+      CALL WAVES_ADDPRO(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NPRO,OPSI,OPROJ)
+      DEALLOCATE(OPROJ)
+      ! THIS THIS%OPSI IS MY O|PSI> FOR CG
+      RETURN
+      END 
 !
 !     ..................................................................
       SUBROUTINE WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,PSI,V,HPSI)
@@ -1823,12 +1996,12 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       REAL(8)               :: SUM,SVAR1,SVAR2,SVAR
       COMPLEX(8)            :: CSVAR
       INTEGER(4)            :: NDIMD,IDIM
-      INTEGER(4)            :: Nfilo
-      logical(4),parameter  :: tpr=.false.
+      INTEGER(4)            :: NFILO
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
 !     ******************************************************************
       NDIMD=NDIM**2
-      denmat(:,:,:)=0.d0
-      denmati=0.d0
+      DENMAT(:,:,:)=0.D0
+      DENMATI=0.D0
 !
 !     ==================================================================
 !     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==
@@ -1926,7 +2099,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       IF(TPR) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         DO IDIM=1,NDIMD
-          WRITE(NFILO,FMT='("waves_denmat: DENMAT FOR IDIM= ",I2)') IDIM
+          WRITE(NFILO,FMT='("WAVES_DENMAT: DENMAT FOR IDIM= ",I2)') IDIM
           DO LMN1=1,LMNX
             WRITE(NFILO,FMT='(9F10.6)')DENMAT(LMN1,:,IDIM)
           ENDDO
@@ -2482,7 +2655,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
 !     ==================================================================
 !     ==  HPROJ = DH<P|PSI>                                           ==
 !     ==================================================================
-      CALL WAVES_HPROJ(NDIM,NBH,LMNX,dh,PROJ,DEDPROJ)
+      CALL WAVES_HPROJ(NDIM,NBH,LMNX,DH,PROJ,DEDPROJ)
 !
 !     ==================================================================
 !     ==  HPROJ = DH<P|PSI>*F                                         ==
@@ -2670,7 +2843,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
         IBPRO=1+SUM(MAP%LNX(1:ISP-1))
         CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
         CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
-     &                      ,GSET%PRO(:,IBPRO:ibpro+lnx-1),MAP%LMX,GSET%YLM,EIGR,PRO)
+     &                      ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM,EIGR,PRO)
         CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,1,LMNX,PRO,NDIM*NB,PSI &
      &                              ,PROPSI1)
         II=0
@@ -2679,7 +2852,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
             DO LMN=1,LMNX
               II=II+1    ! II=(LMN,IDIM,IB)
               PROPSI(IDIM,IB,IPRO-1+LMN)=PROPSI1(II)
-!print*,'iat,lmn,propsi',iat,lmn,ib,propsi1(ii)
+!PRINT*,'IAT,LMN,PROPSI',IAT,LMN,IB,PROPSI1(II)
             ENDDO
           ENDDO
         ENDDO
@@ -2691,12 +2864,12 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       DEALLOCATE(EIGR)
       DEALLOCATE(GVEC)
       CALL MPE$COMBINE('+',PROPSI)
-!do ib=1,nb
-!  do lmn=1,lmnx
-!     print*,'propsi ',ib,lmn,propsi(1,ib,lmn)
-!  enddo
-!enddo
-!stop
+!DO IB=1,NB
+!  DO LMN=1,LMNX
+!     PRINT*,'PROPSI ',IB,LMN,PROPSI(1,IB,LMN)
+!  ENDDO
+!ENDDO
+!STOP
                                CALL TIMING$CLOCKOFF('WAVES_PROJECTIONS')
       RETURN
       END
@@ -2771,7 +2944,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
         IBPRO=1+SUM(MAP%LNX(1:ISP-1))
         CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
         CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
-     &                      ,GSET%PRO(:,IBPRO:ibpro+lnx-1),MAP%LMX,GSET%YLM,EIGR,PRO)
+     &                      ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM,EIGR,PRO)
 !
 !       ===============================================================
 !       ==  |PSI>=|PSI>+|PRO>PROPSI                                  ==
@@ -3279,6 +3452,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       REAL(8)   ,ALLOCATABLE:: GVEC(:,:)
       REAL(8)               :: SVAR1,SVAR2,SVAR3
 !     ******************************************************************
+      IF(OPTIMIZERTYPE.EQ.'CG') RETURN                           !KAESTNERCG
                             CALL TRACE$PUSH('WAVES$PROPAGATE')
 !
 !     ==================================================================
@@ -3291,12 +3465,12 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
             THIS%PSIM(:,:,:)=THIS%PSI0(:,:,:)
           ENDDO
         ENDDO
-        waveekin1=0.d0
+        WAVEEKIN1=0.D0
         TSTOP=.FALSE.
       END IF
 !
 !     ==================================================================
-!     ==  PROPAGATE WAVE FUNCTIONS (PUT PSI(+) INTP PSIM)             ==
+!     ==  PROPAGATE WAVE FUNCTIONS (PUT PSI(+) INTO PSIM)             ==
 !     ==================================================================
       DO IKPT=1,NKPT
         CALL WAVES_SELECTWV(IKPT,1)

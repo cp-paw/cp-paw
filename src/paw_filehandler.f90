@@ -50,6 +50,8 @@ INTEGER(4)      ,PARAMETER   :: NFILMAXDEFAULT=20
 INTEGER(4)      ,PARAMETER   :: NFILMAXINCREMENT=10
 INTEGER(4)                   :: LASTFILE=0
 CHARACTER(512)               :: BARENAME=' '
+LOGICAL(4)                   :: TLITTLEENDIAN=.TRUE. !INTEL ARCHITECTURE USES LITTLE ENDIAN
+                                                     !IBM USES BIG ENDIAN
 !***********************************************************************
 CONTAINS
 !       ..................................................................     
@@ -136,7 +138,33 @@ CONTAINS
         ENDDO
         RETURN
         END SUBROUTINE FILEHANDLER_LOOKUP
-      END MODULE FILEHANDLER_MODULE
+END MODULE FILEHANDLER_MODULE
+!
+!     .................................................................
+      SUBROUTINE FILEHANDLER$SETCH(ID,VAL)
+!     ==================================================================
+!     ==  SET TABLE MAXIMUM TABLE SIZE                                ==
+!     ==================================================================
+      USE FILEHANDLER_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN):: id
+      CHARACTER(*),INTENT(IN):: val
+!     ******************************************************************
+      IF(ID.EQ.'ENDIAN') THEN
+        IF(VAL.NE.'LITTLE'.AND.VAL.NE.'BIG') THEN
+          CALL ERROR$MSG('VAL MUST BE  "LITTLE" OR "BIG"')
+          CALL ERROR$CHVAL('VAL',TRIM(VAL))
+          CALL ERROR$CHVAL('ID',TRIM(ID))
+          CALL ERROR$STOP('FILEHANDLER$SETCH')
+        END IF
+        TLITTLEENDIAN=(VAL.EQ.'LITTLE')
+      ELSE 
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',TRIM(ID))
+        CALL ERROR$STOP('FILEHANDLER$SETCH')
+      END IF
+      RETURN
+      END
 !
 !     .................................................................
       SUBROUTINE FILEHANDLER$SETROOT(STRING_)
@@ -465,8 +493,6 @@ CONTAINS
       CHARACTER(9)                   :: DEVNULL
       INTEGER(4)                     :: I
       LOGICAL(4)                     :: TOPENIBM  ! ibm choice between little and big endian
-      LOGICAL(4)                     :: TIntel=.false. ! if tintel, new files are written in 
-                                                       ! intel choice of little and big endian
       CHARACTER(1)                   :: convert        !used to test for little and big endian
 !     ******************************************************************
       STDOUT =-'STDOUT'
@@ -571,11 +597,11 @@ CONTAINS
 #IF DEFINED(CPPVAR_ENDIANCHECK)
         ELSE
           CALL FILEHANDLER_READCONVERT(FILE_,FORM,CONVERT)
-          if(convert.eq.'U') topenibm=(.not.tintel) !unknown
+          if(convert.eq.'U') topenibm=(.not.tlittleendian) !unknown
           IF(CONVERT.EQ.'B') TOPENIBM=.TRUE.
           IF(CONVERT.EQ.'L') TOPENIBM=.FALSE.
-          IF((ACTION.EQ.'WRITE'.AND.FILE_%POSITION.EQ.'REWIND').AND.TINTEL) TOPENIBM=.FALSE.
-          IF((ACTION.EQ.'WRITE'.AND.FILE_%POSITION.EQ.'REWIND').AND..NOT.TINTEL) TOPENIBM=.TRUE.
+          IF((ACTION.EQ.'WRITE'.AND.FILE_%POSITION.EQ.'REWIND').AND.TLITTLEENDIAN) TOPENIBM=.FALSE.
+          IF((ACTION.EQ.'WRITE'.AND.FILE_%POSITION.EQ.'REWIND').AND..NOT.TLITTLEENDIAN) TOPENIBM=.TRUE.
           IF(TOPENIBM) THEN 
             !FILE IS IBM COMPATIBLE AND HAS TO STAY SO
 PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED IBM-COMPATIBLE'

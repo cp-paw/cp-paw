@@ -1,3 +1,4 @@
+
 !***********************************************************************
 !***********************************************************************
 !**                                                                   **
@@ -80,6 +81,7 @@
           NGL=GSET%NGL
           NBH=THIS%NBH
           NB=THIS%NB
+if(1.eq.1) then ! change for kaestners conjugate gradient
 !
 !         ==============================================================
 !         ==  EVALUATE  DO<P|PSI>  ASSUMING <PRO|PSI> IS STILL VALID  ==
@@ -106,6 +108,13 @@
           THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
           CALL WAVES_ADDPRO(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NPRO,THIS%OPSI,OPROJ)
           DEALLOCATE(OPROJ)
+else
+          allocate(this%opsi(ngl,ndim,nbh))
+          this%opsi(:,:,:)=this%psi0(:,:,:)
+!$$$$$$$$$$$$$$$$$$$$$$$$ from here $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+          call WAVES_OPSI(nb,nbh,npro,nat,ngl,r0,this%proj,this%opsi)
+!$$$$$$$$$$$$$$$$$$$$$$$$ to here $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+end if
 !
 !         ==============================================================
 !         ==  DIVIDE BY WAVE FUNCTION MASS                            ==
@@ -2126,6 +2135,7 @@ PRINT*,'ITER ',ITER,DIGAM
       COMPLEX(8),ALLOCATABLE :: RLAMP(:,:)
       COMPLEX(8),POINTER     :: RLAMPTR(:,:)
 !     ******************************************************************
+      if(optimizertype.eq.'CG') return   !kaestnercg
       CALL CELL$GETL4('MOVE',TSTRESS)
       WAVEEKIN1=0.D0
       WAVEEKIN2=0.D0

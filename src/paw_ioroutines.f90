@@ -317,6 +317,23 @@ CALL TRACE$PASS('DONE')
          CALL TRACE$SETL4('ON',.FALSE.)
       END IF
 !
+!     == PRECONDITION FILEHANDLER FOR LITTLE AND BIG ENDIAN =============
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ENDIAN',0,TCHK)
+      IF(TCHK) THEN
+         CALL LINKEDLIST$GET(LL_CNTL,'ENDIAN',1,CH32SVAR)
+         IF(CH32SVAR.EQ.'INTEL') THEN
+           CH32SVAR='LITTLE'
+         ELSE IF(CH32SVAR.EQ.'IBM') THEN
+           CH32SVAR='BIG'
+         END IF
+         IF(CH32SVAR.NE.'LITTLE'.AND.CH32SVAR.NE.'BIG') THEN
+           CALL ERROR$MSG('ENDIAN MUST HAVE VALUES LITTLE,BIG,INTEL OR IBM')
+           CALL ERROR$CHVAL('ENDIAN',CH32SVAR)
+           CALL ERROR$STOP('READIN IN !CNTL!GENERIC:ENDIAN')
+         END IF
+         CALL FILEHANDLER$SETCH('ENDIAN',CH32SVAR)
+      END IF
+!
 !     == DEFAULT VALUES
       CALL LINKEDLIST$EXISTD(LL_CNTL,'DT',0,TCHK)
       IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'DT',0,10.D0) 
@@ -518,7 +535,7 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
 !     ==  READ BLOCK !ANALYSE!HYPERFINE                               ==
 !     ==================================================================
-      CALL READIN_ANALYSE_corelevel(LL_CNTL)
+      CALL READIN_ANALYSE_CORELEVEL(LL_CNTL)
 !    
 !     ==================================================================
 !     ==  READ BLOCK !ANALYSE!OPTIC                                   ==
@@ -1454,7 +1471,7 @@ PRINT*,'ILDA ',ILDA
       REAL(8)               :: FINAL,RATE
       INTEGER(4)            :: IDIAL,NDIAL
       CHARACTER(32)         :: DIALID
-      CHARACTER(1)          :: ch1
+      CHARACTER(1)          :: CH1
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_MERMIN')  
       LL_CNTL=LL_CNTL_
@@ -1481,7 +1498,7 @@ PRINT*,'ILDA ',ILDA
       END IF
 !
 !     == IF OCCUPATIONS ARE DYNAMICAL THE OCCUPATIONS ARE BY DEFAULT READ
-!     == FROM THE RESTART FILE UNLESS THE PARAMETER STARTtype IS SPECIFIED 
+!     == FROM THE RESTART FILE UNLESS THE PARAMETER STARTTYPE IS SPECIFIED 
 !     ==  ON INPUT IN THIS !CNTL!MERMIN BLOCK
 !
       CALL LOCK$DISABLE('!MERMIN IN READIN_MERMIN')
@@ -3320,15 +3337,15 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !     ==  DETERMINE ACTUAL #(BANDS)                                   ==
 !     ==================================================================
 !     == ESTIMATE FROM #(ELECTRONS) AND #(EMPTY BANDS) REQUESTED ========
-      if(nspin.eq.1.or.nspin.eq.3) then ! non-spin-polarized
+      IF(NSPIN.EQ.1.OR.NSPIN.EQ.3) THEN ! NON-SPIN-POLARIZED
         NOCC=1+INT((SUMOFZ+QION)/FMAX-1.D-6)
         NB=MAX(NB,NOCC+NEMPTY)
-      else IF(NSPIN.EQ.2) THEN
+      ELSE IF(NSPIN.EQ.2) THEN
   !      NOCC=0.5D0*REAL(NOCC+1,KIND=8)
-  !      NOCC=NOCC+INT(0.5D0*abs(TOTSPIN)+1.D0-1.D-5)
-         NOCC=1+INT(0.5d0*(SUMOFZ+QION)/FMAX-1.D-6)
-         NB=MAX(NB,NOCC+nempty)
-         NOCC=1+INT(0.5d0*(SUMOFZ+QION+abs(totspin))/FMAX-1.D-6)
+  !      NOCC=NOCC+INT(0.5D0*ABS(TOTSPIN)+1.D0-1.D-5)
+         NOCC=1+INT(0.5D0*(SUMOFZ+QION)/FMAX-1.D-6)
+         NB=MAX(NB,NOCC+NEMPTY)
+         NOCC=1+INT(0.5D0*(SUMOFZ+QION+ABS(TOTSPIN))/FMAX-1.D-6)
          NB=MAX(NB,NOCC)
       END IF
 !
