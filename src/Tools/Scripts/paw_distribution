@@ -67,7 +67,7 @@ fi
 #==================================================================
 echo 'ok: creating target directory'
 #
-LIST="configure configure.in Makefile.in parms.* src doc lib paw_distribution"
+LIST="configure configure.in Makefile.in parms.* src doc lib samples paw_distribution"
 mkdir $TARGET
 for X in $LIST
 do 

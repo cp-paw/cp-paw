@@ -4,8 +4,10 @@ WORKDIR=`pwd`
 #
 # list all .f files in .dir1 and .dir2
 #
-cd $1/; \ls -1 *.f > $WORKDIR/.dir1; cd $WORKDIR
-cd $2/; \ls -1 *.f > $WORKDIR/.dir2; cd $WORKDIR
+cd $1/;
+\ls -1 *.f90 > $WORKDIR/.dir1; cd $WORKDIR
+cd $2/;
+\ls -1 *.f90 > $WORKDIR/.dir2; cd $WORKDIR
 #
 # check for differences in .dir1 and .dir2 and report
 # inconsistencies concerning the filenames

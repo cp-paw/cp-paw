@@ -74,13 +74,13 @@ ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
   LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} @LLINKPARALLEL@
   F90PPOPT=-DCPPVARIABLE_PARALLEL @CPPVAR@ -arch=${ARCH}
   #
-  # MPIF90.H is an include file for the MPICH-library
+  # MPIF.H is an include file for the MPICH-library
   # for parallel compilation, this file has to be copied into
   # the object directory
   #
   ifneq (${ARCH},@xlf90ARCH@)
     ifneq (${MPICHDIR},notset)
-      MPICHINCLUDE=cp ${MPICHDIR}/include/mpif.h ${OBJDIR}/mpif90.h
+      MPICHINCLUDE=cp ${MPICHDIR}/include/mpif.h ${OBJDIR}/mpif.h
     endif
   endif
 else
@@ -141,7 +141,7 @@ all: debug none fast parallel tools
 #
 all_new: debug_new none_new fast_new parallel tools
 #
-tools: 	 atom tra wave grab dos converttra cleantra strc tostrc
+tools: 	 atom tra wave grab dos converttra cleantra strc tostrc toxyz
 #
 none:   
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
@@ -208,6 +208,10 @@ cleantra:
 strc:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
            ${BINDIR}/${ARCH}/paw_strc.x 
+#
+toxyz:
+	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
+           ${BINDIR}/${ARCH}/paw_toxyz.x 
 #
 tostrc:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
@@ -279,7 +283,8 @@ OBJECTS3 = \
            ${OBJDIR}/paw_occupations.o \
            ${OBJDIR}/paw_pairpotential.o \
            ${OBJDIR}/paw_graphics.o \
-           ${OBJDIR}/paw_waves.o \
+           ${OBJDIR}/paw_waves1.o \
+           ${OBJDIR}/paw_waves2.o \
            ${OBJDIR}/paw_kpoints.o \
            ${OBJDIR}/paw_vext.o \
 #           ${OBJDIR}/paw_pdos.o 
@@ -315,6 +320,9 @@ OBJCLEANTRA=  \
 # Objects for paw_strc.x
 OBJSTRC=  \
           ${OBJDIR}/paw_strc.o
+# Objects for paw_toxyz.x
+OBJTOXYZ=  \
+          ${OBJDIR}/paw_toxyz.o
 # Objects for paw_tostrc.x
 OBJTOSTRC=  \
           ${OBJDIR}/paw_tostrc.o
@@ -324,8 +332,8 @@ OBJTOSTRC=  \
 ##  create preprocessor                                                ##
 #########################################################################
 F90PP: ${BINDIR}/${ARCH}/f90pp_tmplts.x 
-${BINDIR}/${ARCH}/f90pp_tmplts.x: ${F90PPDIR}/f90pp_tmplts.f
-	${BINDIR}/f90pp -notemplates ${F90PPDIR}/f90pp_tmplts.f > \
+${BINDIR}/${ARCH}/f90pp_tmplts.x: ${F90PPDIR}/f90pp_tmplts.f90
+	${BINDIR}/f90pp -notemplates ${F90PPDIR}/f90pp_tmplts.f90 > \
             ${OBJDIR}/f90pp_tmplts_d.${FEXT} 
 	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
 	${LINK} -o ${BINDIR}/${ARCH}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o
@@ -335,8 +343,11 @@ ${BINDIR}/${ARCH}/f90pp_tmplts.x: ${F90PPDIR}/f90pp_tmplts.f
 ##  link files and produce executable PAWX                             ##
 #########################################################################
 #
-${PAWX} : F90PP ${OBJDIR}/FFTW_F77.I ${OBJDIR}/mpif90.h ${LOBJS} \
-          ${OBJECTS} ${MPE} ${OBJDIR}/liblapack.a ${OBJDIR}/libblas.a
+${PAWX} : F90PP ${OBJDIR}/FFTW_F77.I ${OBJDIR}/mpif.h ${LOBJS} \
+                ${OBJECTS} ${MPE} \
+                ${OBJDIR}/liblapack.a \
+                ${OBJDIR}/libblas.a \
+                ${OBJDIR}/libfftpack.a
 	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${MPE} ${LLIBS}
 	ar -ru $(PAWLIB) $(LOBJS) ${OBJDIR}/paw_mpelib_s.o
 #
@@ -366,6 +377,9 @@ ${BINDIR}/${ARCH}/paw_cleantra.x: ${OBJCLEANTRA} libpaw.a
 ${BINDIR}/${ARCH}/paw_strc.x: ${OBJSTRC} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_strc.x ${OBJSTRC} -lpaw ${LLIBS} 
 #
+${BINDIR}/${ARCH}/paw_toxyz.x: ${OBJTOXYZ} libpaw.a
+	${LINK} -o ${BINDIR}/${ARCH}/paw_toxyz.x ${OBJTOXYZ} -lpaw ${LLIBS} 
+#
 ${BINDIR}/${ARCH}/paw_tostrc.x: ${OBJTOSTRC} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_tostrc.x ${OBJTOSTRC} -lpaw ${LLIBS} 
 #
@@ -374,7 +388,7 @@ ${BINDIR}/${ARCH}/paw_tostrc.x: ${OBJTOSTRC} libpaw.a
 ${OBJDIR}/FFTW_F77.I:
 	${FFTWINCLUDE}
 #
-${OBJDIR}/mpif90.h:
+${OBJDIR}/mpif.h:
 	${MPICHINCLUDE}
 #
 #${OBJDIR}/mm_paw_f77.o 
@@ -384,71 +398,83 @@ ${OBJDIR}/mpif90.h:
 #########################################################################
 #
 #__special rule for parallel interface because of preprocessor___________
-${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f
+${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*$(MODE)_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #
 #__compile lapack routines________________________________________________
-${OBJDIR}/liblapack.a : ${SRCDIR}/paw_lapack.f
-	${COMPILE77} -o ${OBJDIR}/paw_lapack.o ${SRCDIR}/paw_lapack.f
-	ar -ru ${OBJDIR}/liblapack.a ${OBJDIR}/paw_lapack.o
-	${OPTRM} ${OBJDIR}/paw_lapack.o
+${OBJDIR}/liblapack.a : ${SRCDIR}/Libs/lapack.f
+	${COMPILE77} -o ${OBJDIR}/lapack.o ${SRCDIR}/Libs/lapack.f
+	ar -ru ${OBJDIR}/liblapack.a ${OBJDIR}/lapack.o
+	${OPTRM} ${OBJDIR}/lapack.o
 #
 #__compile blas routines________________________________________________
-${OBJDIR}/libblas.a : ${SRCDIR}/paw_blas.f
-	${COMPILE77} -o ${OBJDIR}/paw_blas.o ${SRCDIR}/paw_blas.f
-	ar -ru ${OBJDIR}/libblas.a ${OBJDIR}/paw_blas.o
-	${OPTRM} ${OBJDIR}/paw_blas.o
+${OBJDIR}/libblas.a : ${SRCDIR}/Libs/blas.f
+	${COMPILE77} -o ${OBJDIR}/blas.o ${SRCDIR}/Libs/blas.f
+	ar -ru ${OBJDIR}/libblas.a ${OBJDIR}/blas.o
+	${OPTRM} ${OBJDIR}/blas.o
+#
+#__compile fftpack routines________________________________________________
+${OBJDIR}/libfftpack.a : ${SRCDIR}/Libs/fftpack.f
+	${BINDIR}/f90pp ${F90PPOPT} ${SRCDIR}/Libs/fftpack.f > ${OBJDIR}/fftpack_d.${FEXT}
+	${COMPILE} -o ${OBJDIR}/fftpack.o ${OBJDIR}/fftpack_d.f90
+	ar -ru ${OBJDIR}/libfftpack.a ${OBJDIR}/fftpack.o
+	${OPTRM} ${OBJDIR}/fftpack.o
 #
 #__general rule for object files_________________________________________
-$(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f
+$(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 #__compile the tools____________________________________________________
-${OBJATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atom/%.f
+${OBJATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atom/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f
+${OBJTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f
+${OBJWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f
+${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f
+${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJCONVERTTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f
+${OBJCONVERTTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJCLEANTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f
+${OBJCLEANTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f
+${OBJSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJTOSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f
+${OBJTOXYZ}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
+	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJTOSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
@@ -464,7 +490,8 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_timing.o:        ${OBJDIR}/paw_mpelib${MODE}.o
  ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_mpelib${MODE}.o
  ${OBJDIR}/paw_report.o:        ${OBJDIR}/paw_mpelib${MODE}.o
- ${OBJDIR}/paw_waves.o:         ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_waves1.o:        ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_mpelib${MODE}.o
  ${OBJDIR}/paw_augmentation.o:  ${OBJDIR}/paw_mpelib${MODE}.o
  ${OBJDIR}/paw.o:               ${OBJDIR}/paw_mpelib${MODE}.o
  ${OBJDIR}/paw_constraints.o:   ${OBJDIR}/paw_mpelib${MODE}.o 
@@ -485,7 +512,8 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_constraints.o:   ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_occupations.o:   ${OBJDIR}/paw_linkedlist.o
- ${OBJDIR}/paw_waves.o:         ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_waves1.o:         ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_waves2.o:         ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_efg.o:           ${OBJDIR}/paw_linkedlist.o
 
  ${OBJDIR}/paw_atoms.o:         ${OBJDIR}/paw_report.o
@@ -496,9 +524,15 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_thermostat.o:    ${OBJDIR}/paw_report.o
 
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_clock.o 
- ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_waves.o
+ ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_waves1.o
+ ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_waves2.o
+
+ ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_waves1.o
 
  ${OBJDIR}/paw.o:               ${OBJDIR}/paw_continuum.o
+
+# ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_fft.o
+# ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_waves.o
 endif
 
 
