@@ -28,7 +28,7 @@ MODULE DFT_MODULE
 !**    3B) EVALUATE WITH FIRST AND SECOND DERIVATIVES                 **
 !**            DFT2(VAL,EXC,DEXC,D2EXC)                               **
 !**    3C) EVALUATE WITH FIRST, SECOND AND THIRD DERIVATIVES          **
-!**            DFT2(VAL,EXC,DEXC,D2EXC,D3EXC)                         **
+!**            DFT3(VAL,EXC,DEXC,D2EXC,D3EXC)                         **
 !**                                                                   **
 !**  NOTES:                                                           **
 !**    THE PARAMETER RHOTMIN MODIFIES THE FUNCTIONAL IF THE           **
@@ -94,6 +94,7 @@ MODULE DFT_MODULE
       TPW91L =.FALSE.  ! USE PERDEW WANG LOCAL
       TPW91G =.FALSE.  ! USE PERDEW WANG91 GC
       TPBE96 =.FALSE.  ! USE PERDEW BURKE ERNZERHOF GC
+      TLYP88 =.FALSE.  ! USE LEE YANG PARR GC
       DESCRIPTION(:)=' '
       DESCRIPTION(1)='NO FUNCTIONAL DESCRIPTION GIVEN'
 !
@@ -269,7 +270,7 @@ MODULE DFT_MODULE
         TGRATARGET=.TRUE.
         DESCRIPTION(1)='BECKE GRADIENT CORRECTION FOR EXCHANGE ' &
      &                          //'(J.CHEM.PHYS.96,P2155(1992))'
-        DESCRIPTION(2)='LEE-YANG-PARR-88 CORRELATION (UNDER CONSTRUCTION)' &
+        DESCRIPTION(2)='LEE-YANG-PARR-88 CORRELATION' &
      &                          //'(PHYS.REV.B 37, 785 (1988-I))'
 !
 !     ==================================================================
@@ -602,7 +603,7 @@ MODULE DFT_MODULE
       END IF
 !
 !     ==================================================================
-!     ==  PBE96 EXCHANGE CORRELATION FUNCTIONAL                       ==
+!     ==  LYP88 CORRELATION FUNCTIONAL                                ==
 !     ==================================================================
       IF(TLYP88) THEN
         CALL LYP88$EVAL1(VAL,EXC1,DEXC1)
@@ -626,7 +627,8 @@ MODULE DFT_MODULE
       GVXCST=DEXC(5)
 !
       IF(EXC.NE.EXC.OR.VXCT.NE.VXCT.OR.VXCS.NE.VXCS &
-     &             .OR.GVXCT2.NE.GVXCT2.OR.GVXCS2.NE.GVXCS2) THEN
+     &             .OR.GVXCT2.NE.GVXCT2.OR.GVXCS2.NE.GVXCS2 &
+                   .OR.GVXCST.NE.GVXCST) THEN
         CALL ERROR$MSG('ERROR AFTER DFT')
         CALL ERROR$L4VAL('TSPIN ',TSPIN)
         CALL ERROR$R8VAL('EXC ',EXC)
@@ -930,7 +932,7 @@ MODULE DFT_MODULE
       END IF
 !
 !     ==================================================================
-!     ==  PBE96 EXCHANGE CORRELATION FUNCTIONAL                       ==
+!     ==  LEE YANG-PARR 88 CORRELATION FUNCTIONAL                     ==
 !     ==================================================================
       IF(TLYP88) THEN
         CALL LYP88$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
@@ -6487,5 +6489,516 @@ END MODULE PBE_MODULE
        D3EXC(3,2,1)=D3EXC(1,2,3)
        RETURN
        END
+!
+!.......................................................................
+MODULE LYP88_MODULE
+!***********************************************************************
+!**                                                                   **
+!**    IMPLEMENTATION OF THE CORRELATION FUNCTIONAL OF                **
+!**    LEE,YANG,PARR (PHYS. REV. B 37,785 (1988-I))                   **
+!**    (INCLUDES LOCAL AND NONLOCAL CORRELATION)                      **
+!**                                                                   **
+!**  FUNCTIONS                                                        **
+!**    LYP88$EVAL1                                                    **
+!**    LYP88$EVAL2                                                    **
+!**    LYP88$EVAL3                                                    **
+!**                                                                   **
+!**                       Manuel Louwerse, Free University (NL) 2003  **
+!***********************************************************************
+LOGICAL(4)          :: TINI=.FALSE.
+REAL(8),PARAMETER   :: A=4.918D-02
+REAL(8),PARAMETER   :: B=0.132D0
+REAL(8),PARAMETER   :: C=0.2533D0
+REAL(8),PARAMETER   :: D=0.349D0
+REAL(8)             :: CF,CF2,AB
+CONTAINS
+!.......................................................................
+      SUBROUTINE LYP88_INITIALIZE
+      IMPLICIT NONE
+      REAL(8)       :: PI
+!     ******************************************************************
+      IF(TINI) RETURN
+      TINI=.TRUE.
+      PI=4.D0*DATAN(1.D0)
+      CF=(3.D0*PI*PI)**(2.D0/3.D0)*3.D0/10.D0
+      CF2=CF*2.D0**(11.D0/3.D0)*A*B
+      AB=A*B/72.D0
+      RETURN
+      END SUBROUTINE LYP88_INITIALIZE
+END MODULE LYP88_MODULE
+!     ..................................................................
+      SUBROUTINE LYP88$EVAL1(VAL,EXC,DEXC)
+!     ******************************************************************
+!     **                                                              **
+!     **  CALCULATE LEE-YANG-PARR CORRELATION                         **
+!     **  (PHYS. REV. B 37, 785 (1988-I))                             **
+!     **                                                              **
+!     **  FORMULA (2) FROM CHEM. PHYS. LETT. 157, 200 (1989)          **
+!     **  IS USED FOR THE IMPLEMENTATION.                             **
+!     **  FOR THE GGA-PART THIS FORMULA IS WORKED AROUND TO           **
+!     **  SOMETHING ONLY CONTAINING RHOT AND RHOS.                    **
+!     **                                                              **
+!     ******************************************************************
+      USE LYP88_MODULE
+      IMPLICIT NONE
+      REAL(8),INTENT(IN)  :: VAL(5)   !(RHOT,RHOS,GRHOT2,GRHOS2,GRHOST)
+      REAL(8),INTENT(OUT) :: EXC
+      REAL(8),INTENT(OUT) :: DEXC(5)  ! DEXC/DVAL(I)
+      REAL(8)             :: RHOT,RHOS,GRHOT2,GRHOS2,GRHOST,RA,RB
+      REAL(8)             :: RM13,DR,DDR,DR_T,RHO2,RHOS2,RHOS3
+      REAL(8)             :: OMEGA,OMEGA_T,DELTA,DELTA_T
+      REAL(8)             :: RA83,RB83
+      REAL(8)             :: LDA1,LDA1_T,LDA1_S,LDA2,LDA2_T,LDA2_S
+      REAL(8)             :: GGA1,GGA1_T,GGA1_S,GGA1_GT
+      REAL(8)             :: GGA2,GGA2_T,GGA2_S,GGA2_GS
+      REAL(8)             :: GGA3,GGA3_T,GGA3_S,GGA3_GST
+!     ******************************************************************
+      IF(.NOT.TINI) CALL LYP88_INITIALIZE
+      EXC=0.D0
+      DEXC(:)=0.D0
+      RHOT=VAL(1)
+      RHOS=VAL(2)
+      GRHOT2=VAL(3)
+      GRHOS2=VAL(4)
+      GRHOST=VAL(5)
+      RA=(RHOT+RHOS)/2.D0
+      RB=(RHOT-RHOS)/2.D0
+! N.B.: DRA/DRT=0.5  DRA/DRS=0.5  DRB/DRT=0.5  DRB/DRS=-0.5
+
+      RM13=RHOT**(-1.D0/3.D0)
+      DR=1.D0/(1.D0+D*RM13)
+      DDR=D*RM13*DR
+      DR_T=DDR/3.D0/RHOT    ! *DR
+      DELTA=C*RM13+DDR
+      DELTA_T=(DDR*DDR-DELTA)/3.D0/RHOT
+      OMEGA=EXP(-C*RM13)*DR*RM13**11
+      OMEGA_T=(DELTA-11.D0)/3.D0/RHOT    ! *OMEGA
+
+      RA83=RA**(8.D0/3.D0)
+      RB83=RB**(8.D0/3.D0)
+      LDA1=-A*4.D0*DR*RA*RB/RHOT
+      LDA1_T=LDA1*DR_T-LDA1/RHOT-2.D0*A*DR
+      LDA1_S=-A*2.D0*DR*(RB-RA)/RHOT
+      LDA2=-CF2*OMEGA*RA*RB*(RA83+RB83)
+      LDA2_T=LDA2*OMEGA_T-CF2*OMEGA*(11.D0/3.D0*(RA83*RB+RB83*RA)+RB83*RB+RA83*RA)/2.D0
+      LDA2_S=-CF2*OMEGA*(11.D0/3.D0*(RA83*RB-RB83*RA)+RB83*RB-RA83*RA)/2.D0
+
+      RHO2=RHOT*RHOT
+      RHOS2=RHOS*RHOS
+      RHOS3=RHOS2*RHOS
+      GGA1_GT=AB*OMEGA*(7.D0*(RHO2-RHOS2)*DELTA+3.D0*RHO2+39.D0*RHOS2)
+      GGA1=GGA1_GT*GRHOT2
+      GGA1_T=GGA1*OMEGA_T+AB*OMEGA*GRHOT2*(7.D0*(RHO2-RHOS2)*DELTA_T+14.D0*RHOT*DELTA+6.D0*RHOT)
+      GGA1_S=AB*OMEGA*GRHOT2*(-14.D0*RHOS*DELTA+78.D0*RHOS)
+      GGA2_GS=AB*OMEGA*(2.D0*RHO2-8.D0*RHOS2)
+      GGA2=GGA2_GS*GRHOS2
+      GGA2_T=GGA2*OMEGA_T+AB*OMEGA*GRHOS2*4.D0*RHOT
+      GGA2_S=-AB*OMEGA*GRHOS2*16.D0*RHOS
+      GGA3_GST=AB*OMEGA*(RHOT*RHOS*(DELTA-47.D0)-RHOS3/RHOT*(DELTA-11.D0))
+      GGA3=GGA3_GST*GRHOST
+      GGA3_T=GGA3*OMEGA_T+AB*OMEGA*GRHOST*(RHOS*(DELTA-47.D0)+RHOT*RHOS*DELTA_T &
+            +RHOS3/RHO2*(DELTA-11.D0)-RHOS3/RHOT*DELTA_T)
+      GGA3_S=AB*OMEGA*GRHOST*(RHOT*(DELTA-47.D0)-3.D0*RHOS2/RHOT*(DELTA-11.D0))
+
+      EXC=LDA1+LDA2+GGA1+GGA2+GGA3
+      DEXC(1)=LDA1_T+LDA2_T+GGA1_T+GGA2_T+GGA3_T
+      DEXC(2)=LDA1_S+LDA2_S+GGA1_S+GGA2_S+GGA3_S
+      DEXC(3)=GGA1_GT
+      DEXC(4)=GGA2_GS
+      DEXC(5)=GGA3_GST
+
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LYP88$EVAL2(VAL,EXC,DEXC,D2EXC)
+!     ******************************************************************
+!     **                                                              **
+!     **  CALCULATE LEE-YANG-PARR CORRELATION                         **
+!     **  (PHYS. REV. B 37, 785 (1988-I))                             **
+!     **                                                              **
+!     **  FORMULA (2) FROM CHEM. PHYS. LETT. 157, 200 (1989)          **
+!     **  IS USED FOR THE IMPLEMENTATION                              **
+!     **  FOR THE GGA-PART THIS FORMULA IS WORKED AROUND TO           **
+!     **  SOMETHING ONLY CONTAINING RHOT AND RHOS.                    **
+!     **                                                              **
+!     ******************************************************************
+      USE LYP88_MODULE
+      IMPLICIT NONE
+      REAL(8),INTENT(IN)  :: VAL(5)       !(RHOT,RHOS,GRHOT2,GRHOS2,GRHOST)
+      REAL(8),INTENT(OUT) :: EXC
+      REAL(8),INTENT(OUT) :: DEXC(5)      ! DEXC/DVAL(I)
+      REAL(8),INTENT(OUT) :: D2EXC(5,5)   ! D2EXC/DVAL(I)DVAL(J)
+      REAL(8)             :: RHOT,RHOS,GRHOT2,GRHOS2,GRHOST,RA,RB
+      REAL(8)             :: RM13,DR,DDR,DR_T,DR_TT,DDR2,RHO2,RHOS2,RS
+      REAL(8)             :: OMEGA,OMEGA_T,DELTA,DELTA_T
+      REAL(8)             :: OMEGA_TT,DELTA_TT
+      REAL(8)             :: RA53,RA83,RB53,RB83,TEMP,TEMP2
+      REAL(8)             :: LDA1,LDA1_T,LDA1_S,LDA2,LDA2_T,LDA2_S
+      REAL(8)             :: LDA1_TT,LDA1_TS,LDA1_SS,LDA2_TT,LDA2_TS,LDA2_SS
+      REAL(8)             :: GGA1,GGA1_T,GGA1_S,GGA1_G
+      REAL(8)             :: GGA1_TT,GGA1_TS,GGA1_SS,GGA1_TG,GGA1_SG
+      REAL(8)             :: GGA2,GGA2_T,GGA2_S,GGA2_G
+      REAL(8)             :: GGA2_TT,GGA2_TS,GGA2_SS,GGA2_TG,GGA2_SG
+      REAL(8)             :: GGA3,GGA3_T,GGA3_S,GGA3_G
+      REAL(8)             :: GGA3_TT,GGA3_TS,GGA3_SS,GGA3_TG,GGA3_SG
+      REAL(8)             :: GGA1_SSG,GGA2_SSG
+      INTEGER(4)          :: I
+!     ******************************************************************
+      IF(.NOT.TINI) CALL LYP88_INITIALIZE
+      EXC=0.D0
+      DEXC(:)=0.D0
+      D2EXC(:,:)=0.D0
+      RHOT=VAL(1)
+      RHOS=VAL(2)
+      GRHOT2=VAL(3)
+      GRHOS2=VAL(4)
+      GRHOST=VAL(5)
+      RA=(RHOT+RHOS)/2.D0
+      RB=(RHOT-RHOS)/2.D0
+! N.B.: DRA/DRT=0.5  DRA/DRS=0.5  DRB/DRT=0.5  DRB/DRS=-0.5
+
+      RM13=RHOT**(-1.D0/3.D0)
+      DR=1.D0/(1.D0+D*RM13)
+      DDR=D*RM13*DR
+      DDR2=DDR*DDR
+      RHO2=RHOT*RHOT
+      DR_T=DDR/3.D0/RHOT      ! *DR
+      DR_TT=DR_T*(2.D0*DDR-4.D0)/3.D0/RHOT                   ! *DR
+      DELTA=C*RM13+DDR
+      DELTA_T=(DDR2-DELTA)/3.D0/RHOT
+      DELTA_TT=(2.D0*DDR2*DDR-6.D0*DDR2+4.D0*DELTA)/9.D0/RHO2
+      OMEGA=EXP(-C*RM13)*DR*RM13**11
+      OMEGA_T=(DELTA-11.D0)/3.D0/RHOT    ! *OMEGA
+      OMEGA_TT=(OMEGA_T*(DELTA-14.D0)+DELTA_T)/3.D0/RHOT   ! *OMEGA
+
+!     ===================================================================
+!     ==  LDA-PART                                                     ==
+!     ===================================================================
+      LDA1=-A*4.D0*DR*RA*RB/RHOT
+      LDA1_T=LDA1*(DR_T-1.D0/RHOT)-2.D0*A*DR
+      LDA1_S=-A*2.D0*DR*(RB-RA)/RHOT
+      LDA1_TT=LDA1_T*(DR_T-1.D0/RHOT)+LDA1*(DR_TT-DR_T*DR_T+1.D0/RHO2)-2.D0*A*DR_T*DR
+      LDA1_TS=LDA1_S*(DR_T-1.D0/RHOT)
+      LDA1_SS=A*2.D0*DR/RHOT
+      RA53=RA**(5.D0/3.D0)
+      RA83=RA53*RA
+      RB53=RB**(5.D0/3.D0)
+      RB83=RB53*RB
+      TEMP=OMEGA*CF2*(11.D0/3.D0*(RA83*RB+RB83*RA)+RB83*RB+RA83*RA)/2.D0
+      TEMP2=OMEGA*CF2*(44.D0*(RA53*RB+RB53*RA)+33.D0*(RA83+RB83))/18.D0
+      LDA2=-CF2*OMEGA*RA*RB*(RA83+RB83)
+      LDA2_T=LDA2*OMEGA_T-TEMP
+      LDA2_S=-CF2*OMEGA*(11.D0/3.D0*(RA83*RB-RB83*RA)+RB83*RB-RA83*RA)/2.D0
+      LDA2_TT=LDA2*OMEGA_TT-2.D0*OMEGA_T*TEMP-TEMP2
+      LDA2_TS=LDA2_S*OMEGA_T-CF2*OMEGA*22.D0/9.D0*(RA53*RB-RB53*RA)
+      LDA2_SS=-CF2*OMEGA*(44.D0*(RA53*RB+RB53*RA)-33.D0*(RA83+RB83))/18.D0
+
+!     ===================================================================
+!     ==  GGA-PART                                                     ==
+!     ===================================================================
+      RHOS2=RHOS*RHOS
+      TEMP=AB*OMEGA*(7.D0*(RHO2-RHOS2)*DELTA_T+14.D0*RHOT*DELTA+6.D0*RHOT)
+      TEMP2=AB*OMEGA*(7.D0*(RHO2-RHOS2)*DELTA_TT+28.D0*RHOT*DELTA_T+14.D0*DELTA+6.D0)
+      GGA1_G=AB*OMEGA*(7.D0*(RHO2-RHOS2)*DELTA+3.D0*RHO2+39.D0*RHOS2)
+      GGA1=GGA1_G*GRHOT2
+      GGA1_TG=GGA1_G*OMEGA_T+TEMP
+      GGA1_T=GGA1_TG*GRHOT2
+      GGA1_SSG=AB*OMEGA*(-14.D0*DELTA+78.D0)
+      GGA1_S=GGA1_SSG*GRHOT2*RHOS
+      GGA1_SS=GGA1_SSG*GRHOT2
+      GGA1_SG=GGA1_SSG*RHOS
+      GGA1_TT=GGA1*OMEGA_TT+2.D0*OMEGA_T*TEMP*GRHOT2*GRHOT2+TEMP2*GRHOT2
+      GGA1_TS=GGA1_S*OMEGA_T-AB*OMEGA*GRHOT2*14.D0*RHOS*DELTA_T
+
+      GGA2_G=AB*OMEGA*(2.D0*RHO2-8.D0*RHOS2)
+      GGA2=GGA2_G*GRHOS2
+      GGA2_TG=GGA2_G*OMEGA_T+AB*OMEGA*4.D0*RHOT
+      GGA2_T=GGA2_TG*GRHOS2
+      GGA2_SSG=-AB*OMEGA*16.D0
+      GGA2_S=GGA2_SSG*GRHOS2*RHOS
+      GGA2_SS=GGA2_SSG*GRHOS2
+      GGA2_SG=GGA2_SSG*RHOS
+      GGA2_TT=GGA2*OMEGA_TT+AB*OMEGA*GRHOS2*(OMEGA_T*8.D0*RHOT+4.D0)
+      GGA2_TS=GGA2_S*OMEGA_T
+
+      RS=RHOS2/RHO2
+      TEMP=AB*OMEGA*(RHOS*(DELTA-47.D0+RS*(DELTA-11.D0))+RHOS*RHOT*DELTA_T*(1.D0-RS))
+      TEMP2=AB*OMEGA*(2.D0*RHOS*DELTA_T*(1.D0+RS)+RHOS*RHOT*DELTA_TT*(1.D0-RS) &
+           -2.D0*RHOS/RHOT*RS*(DELTA-11.D0))
+      GGA3_G=AB*OMEGA*RHOS*RHOT*(DELTA-47.D0-RS*(DELTA-11.D0))
+      GGA3=GGA3_G*GRHOST
+      GGA3_TG=GGA3_G*OMEGA_T+TEMP
+      GGA3_T=GGA3_TG*GRHOST
+      GGA3_SG=AB*OMEGA*(RHOT*(DELTA-47.D0)-3.D0*RS*RHOT*(DELTA-11.D0))
+      GGA3_S=GGA3_SG*GRHOST
+      GGA3_TT=GGA3*OMEGA_TT+2.D0*OMEGA_T*TEMP*GRHOST+TEMP2*GRHOST
+      GGA3_TS=GGA3_S*OMEGA_T+AB*OMEGA*GRHOST*(DELTA-47.D0+RHOT*DELTA_T+3.D0*RS*(DELTA-11.D0 &
+             -RHOT*DELTA_T))
+      GGA3_SS=-AB*OMEGA*GRHOST*6.D0*RHOS/RHOT*(DELTA-11.D0)
+
+!     ===================================================================
+!     ==  EXC=LDA+GGA                                                  ==
+!     ===================================================================
+      EXC=LDA1+LDA2+GGA1+GGA2+GGA3
+      DEXC(1)=LDA1_T+LDA2_T+GGA1_T+GGA2_T+GGA3_T
+      DEXC(2)=LDA1_S+LDA2_S+GGA1_S+GGA2_S+GGA3_S
+      DEXC(3)=GGA1_G
+      DEXC(4)=GGA2_G
+      DEXC(5)=GGA3_G
+      D2EXC(1,1)=LDA1_TT+LDA2_TT+GGA1_TT+GGA2_TT+GGA3_TT
+      D2EXC(1,2)=LDA1_TS+LDA2_TS+GGA1_TS+GGA2_TS+GGA3_TS
+      D2EXC(1,3)=GGA1_TG
+      D2EXC(1,4)=GGA2_TG
+      D2EXC(1,5)=GGA3_TG
+      D2EXC(2,2)=LDA1_SS+LDA2_SS+GGA1_SS+GGA2_SS+GGA3_SS
+      D2EXC(2,3)=GGA1_SG
+      D2EXC(2,4)=GGA2_SG
+      D2EXC(2,5)=GGA3_SG
+
+!     ============================================================
+!     == SYMMETRIZE                                             ==
+!     ============================================================
+      D2EXC(2,1)=D2EXC(1,2)
+      DO I=3,5
+        D2EXC(I,1)=D2EXC(1,I)
+        D2EXC(I,2)=D2EXC(2,I)
+      ENDDO
+
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LYP88$EVAL3(VAL,EXC,DEXC,D2EXC,D3EXC)
+!     ******************************************************************
+!     **                                                              **
+!     **  CALCULATE LEE-YANG-PARR CORRELATION                         **
+!     **  (PHYS. REV. B 37, 785 (1988-I))                             **
+!     **                                                              **
+!     **  FORMULA (2) FROM CHEM. PHYS. LETT. 157, 200 (1989)          **
+!     **  IS USED FOR THE IMPLEMENTATION                              **
+!     **  FOR THE GGA-PART THIS FORMULA IS WORKED AROUND TO           **
+!     **  SOMETHING ONLY CONTAINING RHOT AND RHOS.                    **
+!     **                                                              **
+!     ******************************************************************
+      USE LYP88_MODULE
+      IMPLICIT NONE
+      REAL(8),INTENT(IN)  :: VAL(5)       !(RHOT,RHOS,GRHOT2,GRHOS2,GRHOST)
+      REAL(8),INTENT(OUT) :: EXC
+      REAL(8),INTENT(OUT) :: DEXC(5)      ! DEXC/DVAL(I)
+      REAL(8),INTENT(OUT) :: D2EXC(5,5)   ! D2EXC/DVAL(I)DVAL(J)
+      REAL(8),INTENT(OUT) :: D3EXC(5,5,5) ! D3EXC/DVAL(I)DVAL(J)DVAL(K)
+      REAL(8)             :: RHOT,RHOS,GRHOT2,GRHOS2,GRHOST,RA,RB
+      REAL(8)             :: RM13,DR,DDR,DR_T,DR_TT,DR_TTT,DDR2,RHO2,DR_T2,RHOS2,RS
+      REAL(8)             :: OMEGA,OMEGA_T,DELTA,DELTA_T
+      REAL(8)             :: OMEGA_TT,OMEGA_TTT,DELTA_TT,DELTA_TTT
+      REAL(8)             :: RA23,RA53,RA83,RB23,RB53,RB83,TEMP,TEMP2
+      REAL(8)             :: LDA1,LDA1_T,LDA1_S,LDA2,LDA2_T,LDA2_S
+      REAL(8)             :: LDA1_TT,LDA1_TS,LDA1_SS,LDA2_TT,LDA2_TS,LDA2_SS
+      REAL(8)             :: LDA1_TTT,LDA1_TTS,LDA1_TSS,LDA1_SSS
+      REAL(8)             :: LDA2_TTT,LDA2_TTS,LDA2_TSS,LDA2_SSS
+      REAL(8)             :: GGA1,GGA1_T,GGA1_S,GGA1_G
+      REAL(8)             :: GGA1_TT,GGA1_TS,GGA1_SS,GGA1_TG,GGA1_SG
+      REAL(8)             :: GGA1_TTT,GGA1_TTS,GGA1_TSS,GGA1_SSS,GGA1_TTG,GGA1_TSG,GGA1_SSG
+      REAL(8)             :: GGA2,GGA2_T,GGA2_S,GGA2_G
+      REAL(8)             :: GGA2_TT,GGA2_TS,GGA2_SS,GGA2_TG,GGA2_SG
+      REAL(8)             :: GGA2_TTT,GGA2_TTS,GGA2_TSS,GGA2_SSS,GGA2_TTG,GGA2_TSG,GGA2_SSG
+      REAL(8)             :: GGA3,GGA3_T,GGA3_S,GGA3_G
+      REAL(8)             :: GGA3_TT,GGA3_TS,GGA3_SS,GGA3_TG,GGA3_SG
+      REAL(8)             :: GGA3_TTT,GGA3_TTS,GGA3_TSS,GGA3_SSS,GGA3_TTG,GGA3_TSG,GGA3_SSG
+      REAL(8)             :: GGA3_SSSG
+      INTEGER(4)          :: I
+!     ******************************************************************
+      IF(.NOT.TINI) CALL LYP88_INITIALIZE
+      EXC=0.D0
+      DEXC(:)=0.D0
+      D2EXC(:,:)=0.D0
+      D3EXC(:,:,:)=0.D0
+      RHOT=VAL(1)
+      RHOS=VAL(2)
+      GRHOT2=VAL(3)
+      GRHOS2=VAL(4)
+      GRHOST=VAL(5)
+      RA=(RHOT+RHOS)/2.D0
+      RB=(RHOT-RHOS)/2.D0
+! N.B.: DRA/DRT=0.5  DRA/DRS=0.5  DRB/DRT=0.5  DRB/DRS=-0.5
+
+      RM13=RHOT**(-1.D0/3.D0)
+      DR=1.D0/(1.D0+D*RM13)
+      DDR=D*RM13*DR
+      DDR2=DDR*DDR
+      RHO2=RHOT*RHOT
+      DR_T=DDR/3.D0/RHOT      ! *DR
+      DR_TT=DR_T*(2.D0*DDR-4.D0)/3.D0/RHOT                   ! *DR
+      DR_TTT=DR_T*(6.D0*DDR2-24.D0*DDR+28.D0)/9.D0/RHO2      ! *DR
+      DR_T2=DR_T*DR_T
+      DELTA=C*RM13+DDR
+      DELTA_T=(DDR2-DELTA)/3.D0/RHOT
+      DELTA_TT=(2.D0*DDR2*DDR-6.D0*DDR2+4.D0*DELTA)/9.D0/RHO2
+      DELTA_TTT=(6.D0*DDR2*DDR2-30.D0*DDR2*DDR+52.D0*DDR2-28.D0*DELTA)/27.D0/RHO2/RHOT
+      OMEGA=EXP(-C*RM13)*DR*RM13**11
+      OMEGA_T=(DELTA-11.D0)/3.D0/RHOT    ! *OMEGA
+      OMEGA_TT=(OMEGA_T*(DELTA-14.D0)+DELTA_T)/3.D0/RHOT   ! *OMEGA
+      OMEGA_TTT=(OMEGA_TT*(DELTA-17.D0)+2.D0*OMEGA_T*DELTA_T+DELTA_TT)/3.D0/RHOT   ! *OMEGA
+
+!     ===================================================================
+!     ==  LDA-PART                                                     ==
+!     ===================================================================
+      LDA1=-A*4.D0*DR*RA*RB/RHOT
+      LDA1_T=LDA1*(DR_T-1.D0/RHOT)-2.D0*A*DR
+      LDA1_S=-A*2.D0*DR*(RB-RA)/RHOT
+      LDA1_TT=LDA1_T*(DR_T-1.D0/RHOT)+LDA1*(DR_TT-DR_T2+1.D0/RHO2)-2.D0*A*DR_T*DR
+      LDA1_TS=LDA1_S*(DR_T-1.D0/RHOT)
+      LDA1_SS=A*2.D0*DR/RHOT
+      LDA1_TTT=LDA1_TT*(DR_T-1.D0/RHOT)+LDA1_T*2.D0*(DR_TT-DR_T2+1.D0/RHO2) &
+              +LDA1*(DR_TTT-3.D0*DR_TT*DR_T+2.D0*DR_T2*DR_T-2.D0/RHO2/RHOT)-2.D0*A*DR_TT*DR
+      LDA1_TTS=LDA1_TS*(DR_T-1.D0/RHOT)+LDA1_S*(DR_TT-DR_T2+1.D0/RHO2)
+      LDA1_TSS=LDA1_SS*(DR_T-1.D0/RHOT)
+      LDA1_SSS=0.D0
+      RA23=RA**(2.D0/3.D0)
+      RA53=RA23*RA
+      RA83=RA53*RA
+      RB23=RB**(2.D0/3.D0)
+      RB53=RB23*RB
+      RB83=RB53*RB
+      TEMP=OMEGA*CF2*(11.D0/3.D0*(RA83*RB+RB83*RA)+RB83*RB+RA83*RA)/2.D0
+      TEMP2=OMEGA*CF2*(44.D0*(RA53*RB+RB53*RA)+33.D0*(RA83+RB83))/18.D0
+      LDA2=-CF2*OMEGA*RA*RB*(RA83+RB83)
+      LDA2_T=LDA2*OMEGA_T-TEMP
+      LDA2_S=-CF2*OMEGA*(11.D0/3.D0*(RA83*RB-RB83*RA)+RB83*RB-RA83*RA)/2.D0
+      LDA2_TT=LDA2*OMEGA_TT-2.D0*OMEGA_T*TEMP-TEMP2
+      LDA2_TS=LDA2_S*OMEGA_T-CF2*OMEGA*22.D0/9.D0*(RA53*RB-RB53*RA)
+      LDA2_SS=-CF2*OMEGA*(44.D0*(RA53*RB+RB53*RA)-33.D0*(RA83+RB83))/18.D0
+      LDA2_TTT=LDA2*OMEGA_TTT-3.D0*OMEGA_TT*TEMP-3.D0*OMEGA_T*TEMP2 &
+              -CF2*OMEGA*(55.D0*(RA23*RB+RB23*RA)+99.D0*(RA53+RB53))/27.D0
+      LDA2_TTS=LDA2_S*OMEGA_TT-CF2*OMEGA*(132.D0*OMEGA_T*(RA53*RB-RB53*RA) &
+              +55.D0*(RA23*RB-RB23*RA)+33.D0*(RA53-RB53))/27.D0
+      LDA2_TSS=LDA2_SS*OMEGA_T-CF2*OMEGA*(55.D0*(RA23*RB+RB23*RA)-33.D0*(RA53+RB53))/27.D0
+      LDA2_SSS=-CF2*OMEGA*(55.D0*(RA23*RB-RB23*RA)+99.D0*(RB53-RA53))/27.D0
+
+!     ===================================================================
+!     ==  GGA-PART                                                     ==
+!     ===================================================================
+      RHOS2=RHOS*RHOS
+      TEMP=AB*OMEGA*(7.D0*(RHO2-RHOS2)*DELTA_T+14.D0*RHOT*DELTA+6.D0*RHOT)
+      TEMP2=AB*OMEGA*(7.D0*(RHO2-RHOS2)*DELTA_TT+28.D0*RHOT*DELTA_T+14.D0*DELTA+6.D0)
+      GGA1_G=AB*OMEGA*(7.D0*(RHO2-RHOS2)*DELTA+3.D0*RHO2+39.D0*RHOS2)
+      GGA1=GGA1_G*GRHOT2
+      GGA1_TG=GGA1_G*OMEGA_T+TEMP
+      GGA1_T=GGA1_TG*GRHOT2
+      GGA1_SSG=AB*OMEGA*(-14.D0*DELTA+78.D0)
+      GGA1_S=GGA1_SSG*GRHOT2*RHOS
+      GGA1_SS=GGA1_SSG*GRHOT2
+      GGA1_SG=GGA1_SSG*RHOS
+      GGA1_TTG=GGA1_G*OMEGA_TT+2.D0*OMEGA_T*TEMP+TEMP2
+      GGA1_TT=GGA1_TTG*GRHOT2
+      GGA1_TSG=GGA1_SG*OMEGA_T-AB*OMEGA*14.D0*RHOS*DELTA_T
+      GGA1_TS=GGA1_TSG*GRHOT2
+      GGA1_TTT=GGA1*OMEGA_TTT+3.D0*OMEGA_TT*TEMP*GRHOT2+3.D0*OMEGA_T*TEMP2*GRHOT2 &
+              +AB*OMEGA*GRHOT2*(7.D0*(RHO2-RHOS2)*DELTA_TTT+42.D0*RHOT*DELTA_TT+42.D0*DELTA_T)
+      GGA1_TTS=GGA1_S*OMEGA_TT-AB*OMEGA*GRHOT2*(2.D0*OMEGA_T*DELTA_T+DELTA_TT)*14.D0*RHOS
+      GGA1_TSS=GGA1_SS*OMEGA_T-AB*OMEGA*GRHOT2*14.D0*DELTA_T
+      GGA1_SSS=0.D0
+
+      GGA2_G=AB*OMEGA*(2.D0*RHO2-8.D0*RHOS2)
+      GGA2=GGA2_G*GRHOS2
+      GGA2_TG=GGA2_G*OMEGA_T+AB*OMEGA*4.D0*RHOT
+      GGA2_T=GGA2_TG*GRHOS2
+      GGA2_SSG=-AB*OMEGA*16.D0
+      GGA2_S=GGA2_SSG*GRHOS2*RHOS
+      GGA2_SS=GGA2_SSG*GRHOS2
+      GGA2_SG=GGA2_SSG*RHOS
+      GGA2_TTG=GGA2_G*OMEGA_TT+AB*OMEGA*(OMEGA_T*8.D0*RHOT+4.D0)
+      GGA2_TT=GGA2_TTG*GRHOS2
+      GGA2_TS=GGA2_S*OMEGA_T
+      GGA2_TSG=GGA2_SG*OMEGA_T
+      GGA2_TTT=GGA2*OMEGA_TTT+AB*OMEGA*GRHOS2*12.D0*(OMEGA_TT*RHOT+OMEGA_T)
+      GGA2_TTS=GGA2_S*OMEGA_TT
+      GGA2_TSS=GGA2_SS*OMEGA_T
+      GGA2_SSS=0.D0
+
+      RS=RHOS2/RHO2
+      TEMP=AB*OMEGA*(RHOS*(DELTA-47.D0+RS*(DELTA-11.D0))+RHOS*RHOT*DELTA_T*(1.D0-RS))
+      TEMP2=AB*OMEGA*(2.D0*RHOS*DELTA_T*(1.D0+RS)+RHOS*RHOT*DELTA_TT*(1.D0-RS) &
+           -2.D0*RHOS/RHOT*RS*(DELTA-11.D0))
+      GGA3_G=AB*OMEGA*RHOS*RHOT*(DELTA-47.D0-RS*(DELTA-11.D0))
+      GGA3=GGA3_G*GRHOST
+      GGA3_TG=GGA3_G*OMEGA_T+TEMP
+      GGA3_T=GGA3_TG*GRHOST
+      GGA3_SG=AB*OMEGA*(RHOT*(DELTA-47.D0)-3.D0*RS*RHOT*(DELTA-11.D0))
+      GGA3_S=GGA3_SG*GRHOST
+      GGA3_TTG=GGA3_G*OMEGA_TT+2.D0*OMEGA_T*TEMP+TEMP2
+      GGA3_TT=GGA3_TTG*GRHOST
+      GGA3_TSG=GGA3_SG*OMEGA_T+AB*OMEGA*(DELTA-47.D0+RHOT*DELTA_T+3.D0*RS*(DELTA-11.D0 &
+             -RHOT*DELTA_T))
+      GGA3_TS=GGA3_TSG*GRHOST
+      GGA3_SSSG=-AB*OMEGA*6.D0/RHOT*(DELTA-11.D0)
+      GGA3_SS=GGA3_SSSG*GRHOST*RHOS
+      GGA3_SSS=GGA3_SSSG*GRHOST
+      GGA3_SSG=GGA3_SSSG*RHOS
+      GGA3_TTT=GGA3*OMEGA_TTT+3.D0*OMEGA_TT*TEMP*GRHOST+3.D0*OMEGA_T*TEMP2*GRHOST &
+              +AB*OMEGA*GRHOST*(3.D0*RHOS*DELTA_TT*(1.D0+RS)+RHOS*RHOT*DELTA_TTT*(1.D0-RS) &
+              +6.D0*RHOS/RHOT*RS*((DELTA-11.D0)/RHOT-DELTA_T))
+      GGA3_TTS=GGA3_S*OMEGA_TT+AB*OMEGA*GRHOST*(6.D0*RS*(DELTA-11.D0-RHOT*DELTA_T) &
+              *(OMEGA_T-1.D0/RHOT)+2.D0*OMEGA_T*(DELTA+RHOT*DELTA_T-47.D0)+2.D0*DELTA_T &
+              +RHOT*DELTA_TT*(1.D0-3.D0*RS))
+      GGA3_TSS=GGA3_SS*OMEGA_T+AB*OMEGA*GRHOST*6.D0*RHOS/RHO2*(DELTA-11.D0-RHOT*DELTA_T)
+
+!     ===================================================================
+!     ==  EXC=LDA+GGA                                                  ==
+!     ===================================================================
+      EXC=LDA1+LDA2+GGA1+GGA2+GGA3
+      DEXC(1)=LDA1_T+LDA2_T+GGA1_T+GGA2_T+GGA3_T
+      DEXC(2)=LDA1_S+LDA2_S+GGA1_S+GGA2_S+GGA3_S
+      DEXC(3)=GGA1_G
+      DEXC(4)=GGA2_G
+      DEXC(5)=GGA3_G
+      D2EXC(1,1)=LDA1_TT+LDA2_TT+GGA1_TT+GGA2_TT+GGA3_TT
+      D2EXC(1,2)=LDA1_TS+LDA2_TS+GGA1_TS+GGA2_TS+GGA3_TS
+      D2EXC(1,3)=GGA1_TG
+      D2EXC(1,4)=GGA2_TG
+      D2EXC(1,5)=GGA3_TG
+      D2EXC(2,2)=LDA1_SS+LDA2_SS+GGA1_SS+GGA2_SS+GGA3_SS
+      D2EXC(2,3)=GGA1_SG
+      D2EXC(2,4)=GGA2_SG
+      D2EXC(2,5)=GGA3_SG
+      D3EXC(1,1,1)=LDA1_TTT+LDA2_TTT+GGA1_TTT+GGA2_TTT+GGA3_TTT
+      D3EXC(1,1,2)=LDA1_TTS+LDA2_TTS+GGA1_TTS+GGA2_TTS+GGA3_TTS
+      D3EXC(1,1,3)=GGA1_TTG
+      D3EXC(1,1,4)=GGA2_TTG
+      D3EXC(1,1,5)=GGA3_TTG
+      D3EXC(1,2,2)=LDA1_TSS+LDA2_TSS+GGA1_TSS+GGA2_TSS+GGA3_TSS
+      D3EXC(1,2,3)=GGA1_TSG
+      D3EXC(1,2,4)=GGA2_TSG
+      D3EXC(1,2,5)=GGA3_TSG
+      D3EXC(2,2,2)=LDA1_SSS+LDA2_SSS+GGA1_SSS+GGA2_SSS+GGA3_SSS
+      D3EXC(2,2,3)=GGA1_SSG
+      D3EXC(2,2,4)=GGA2_SSG
+      D3EXC(2,2,5)=GGA3_SSG
+
+!     ============================================================
+!     == SYMMETRIZE                                             ==
+!     ============================================================
+      D2EXC(2,1)=D2EXC(1,2)
+      D3EXC(1,2,1)=D3EXC(1,1,2)
+      D3EXC(2,1,1)=D3EXC(1,1,2)
+      D3EXC(2,1,2)=D3EXC(1,2,2)
+      D3EXC(2,2,1)=D3EXC(1,2,2)
+      DO I=3,5
+        D2EXC(I,1)=D2EXC(1,I)
+        D2EXC(I,2)=D2EXC(2,I)
+        D3EXC(1,I,1)=D3EXC(1,1,I)
+        D3EXC(I,1,1)=D3EXC(1,1,I)
+        D3EXC(2,I,2)=D3EXC(2,2,I)
+        D3EXC(I,2,2)=D3EXC(2,2,I)
+        D3EXC(1,I,2)=D3EXC(1,2,I)
+        D3EXC(2,1,I)=D3EXC(1,2,I)
+        D3EXC(2,I,1)=D3EXC(1,2,I)
+        D3EXC(I,1,2)=D3EXC(1,2,I)
+        D3EXC(I,2,1)=D3EXC(1,2,I)
+      ENDDO
+
+      RETURN
+      END
 
 
