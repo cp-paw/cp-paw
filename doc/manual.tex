@@ -856,6 +856,15 @@ otherwise}
 \vrules{optional}
 \vdefault{100}}
 
+\mbax{\key{endian} \vdescr{defines whether unformatted files are
+written in little endian as typical on intel computers or in big
+endian as on ibm computers. The value can be
+'little','intel','big','ibm'. The first two values have identical
+meaning and the last two have identical meaning.
+It is only functional using certain compilers (absoft).}  
+\vformat{character}
+\vrules{optional} \vdefault{little}}
+
 \mbax{\key{RUNTIME} 
 \vdescr{A soft stop is initialized after the given time has elapsed
 since start of the code.  Runtime is specified as a three element
