@@ -248,7 +248,8 @@ LOBJS = \
         ${OBJDIR}/paw_cell.o \
         ${OBJDIR}/paw_pdos.o \
         ${OBJDIR}/paw_library.o \
-        ${OBJDIR}/paw_polynom.o 
+        ${OBJDIR}/paw_polynom.o \
+        ${OBJDIR}/paw_debug.o
 #
 ##########################################################################
 ##  define other objects                                                ##
@@ -524,6 +525,7 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_atoms.o:         ${OBJDIR}/paw_mpelib${MODE}.o
  ${OBJDIR}/paw_classical.o:     ${OBJDIR}/paw_mpelib${MODE}.o
  ${OBJDIR}/paw_thermostat.o:    ${OBJDIR}/paw_mpelib${MODE}.o 
+ ${OBJDIR}/paw_debug.o:         ${OBJDIR}/paw_mpelib${MODE}.o 
 
  ${OBJDIR}/paw_ldaplusu.o:      ${OBJDIR}/paw_periodictable.o
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_periodictable.o
