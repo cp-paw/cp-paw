@@ -86,6 +86,7 @@ CONTAINS
       <TYPE>      ,ALLOCATABLE   :: WORK(:)
       INTEGER                    :: LENG
       INTEGER                    :: IERR
+      logical     ,parameter     :: ttest=.false.
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
 !
@@ -116,10 +117,68 @@ CONTAINS
         CALL ERROR$MSG('OPERATION NOT SUPPORTED')
         CALL ERROR$STOP('MPE$COMBINE')
       END IF
+      if(ttest) then
+        WORK=<RESHAPE(VAL)>
+        call mpe_testcombine<TYPEID><RANKID>(leng,work)
+      end if
       DEALLOCATE(WORK)
 #ENDIF
       RETURN
       END SUBROUTINE MPE$COMBINE<TYPEID><RANKID>
+#IFDEF CPPVARIABLE_PARALLEL
+!
+!     .......................................................................................
+      subroutine mpe_testcombine<TYPEID><RANKID>(len,val1)
+      USE MPE_MPIF_MODULE
+      implicit none
+      integer(4),intent(in)    :: len
+      <TYPE>    ,intent(in)    :: val1(len)
+      <TYPE>    ,allocatable   :: valarr(:,:)
+      integer                  :: itask
+      integer(4)               :: isvararr(1),isvar
+      logical(4)               :: tchk
+      integer                  :: lenstd
+      integer                  :: ierr
+      INTEGER                  :: STAT(MPI_STATUS_SIZE)
+      integer                  :: fromtask0,totask0,tag
+!     =========================================================================================
+      lenstd=len
+      allocate(valarr(len,ntasks))
+      valarr(:,1)=val1(:)
+      do itask=2,ntasks
+        tag=2000+itask
+        if(itask.eq.thistask) then
+          lenstd=len
+          totask0=0
+          CALL MPI_SEND(VAL1,lenstd,<MPI_TYPE>,totask0,tag,MPI_COMM_WORLD,IERR)
+        end if
+        if(thistask.eq.1) then
+          fromtask0=itask-1
+          CALL MPI_RECV(VALarr(:,itask),lenstd,<MPI_TYPE>,fromtask0,tag,MPI_COMM_WORLD,STAT,IERR)        
+        end if
+      enddo
+!     =================================================================
+!     == analyse                                                     ==
+!     =================================================================
+      tchk=.false.
+      if(thistask.eq.1) then
+        do itask=2,ntasks
+          tchk=tchk.or.(maxval(abs(valarr(:,itask)-valarr(:,1))).gt.0.d0)
+        enddo
+        if(tchk) then
+          print*,'error detected by mpe_testcombine: <TYPEID><RANKID>;',len
+          do itask=2,ntasks
+            isvararr=maxloc(abs(valarr(:,itask)-valarr(:,1)))
+            isvar=isvararr(1)
+            print*,itask,isvar,valarr(isvar,itask)-valarr(isvar,1),valarr(isvar,itask),valarr(isvar,1)
+          enddo
+          call error$msg('error in mpe$combine; result differs on different tasks')
+          call error$stop('mpe_testcombine')
+        end if
+      end if
+      return
+      end subroutine mpe_testcombine<TYPEID><RANKID>
+#ENDIF
 #END TEMPLATE MPE$COMBINE
 END MODULE MPE_COMBINE_MODULE
 !
@@ -166,12 +225,12 @@ CONTAINS
       IMPLICIT NONE
       <TYPE>      ,INTENT(INOUT) :: VAL<RANK>
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
-      INTEGER                    :: FROMTASKstd
+      INTEGER                    :: FROMTASK0
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-      fromtaskstd=fromtask
-      CALL MPI_BCAST(VAL,<SIZE>,<MPI_TYPE>,FROMTASKstd-1 &
+      fromtask0=fromtask-1
+      CALL MPI_BCAST(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0 &
      &                ,MPI_COMM_WORLD,IERR)
 #ENDIF
       RETURN
@@ -192,14 +251,14 @@ CONTAINS
       IMPLICIT NONE
       CHARACTER(*),INTENT(INOUT) :: VAL(:)
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
-      INTEGER                    :: FROMTASKstd
+      INTEGER                    :: FROMTASK0
       INTEGER                    :: LENG
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-      fromtaskstd=fromtask
+      fromtask0=fromtask-1
       LENG=LEN(VAL)*SIZE(VAL)
-      CALL MPI_BCAST(VAL,LENG,MPI_CHARACTER,FROMTASKstd-1 &
+      CALL MPI_BCAST(VAL,LENG,MPI_CHARACTER,FROMTASK0 &
      &                ,MPI_COMM_WORLD,IERR)
 #ENDIF
       RETURN
@@ -219,14 +278,14 @@ CONTAINS
       IMPLICIT NONE
       CHARACTER(*),INTENT(INOUT) :: VAL
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
-      INTEGER                    :: FROMTASKstd
+      INTEGER                    :: FROMTASK0
       INTEGER                    :: LENG
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-      fromtaskstd=fromtask
+      fromtask0=fromtask-1
       LENG=LEN(VAL)
-      CALL MPI_BCAST(VAL,LENG,MPI_CHARACTER,FROMTASKstd-1 &
+      CALL MPI_BCAST(VAL,LENG,MPI_CHARACTER,FROMTASK0 &
      &                ,MPI_COMM_WORLD,IERR)
 #ENDIF
       RETURN
@@ -281,14 +340,14 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN)    :: TOTASK
       INTEGER(4)  ,INTENT(IN)    :: TAG
       <TYPE>      ,INTENT(IN)    :: VAL<RANK>
-      INTEGER                    :: totaskstd
+      INTEGER                    :: totask0
       INTEGER                    :: tagstd
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF  CPPVARIABLE_PARALLEL
-      totaskstd=totask
+      totask0=totask-1
       tagstd=tag
-      CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASKstd-1,TAGstd &
+      CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASK0,TAGstd &
      &               ,MPI_COMM_WORLD,IERR)
 #ELSE
       CALL ERROR$MSG('MPE$SEND MUST NOT BE CALLED IN SCALAR MODE')
@@ -318,14 +377,14 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN)    :: TOTASK
       INTEGER(4)  ,INTENT(IN)    :: TAG
       CHARACTER(*),INTENT(IN)    :: VAL(:)
-      INTEGER                    :: totaskstd
+      INTEGER                    :: totask0
       INTEGER                    :: tagstd
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF  CPPVARIABLE_PARALLEL
-      totaskstd=totask
+      totask0=totask-1
       tagstd=tag
-      CALL MPI_SEND(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,TOTASKstd-1,TAGstd &
+      CALL MPI_SEND(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,TOTASK0,TAGstd &
      &               ,MPI_COMM_WORLD,IERR)
 #ELSE
       CALL ERROR$MSG('MPE$SEND MUST NOT BE CALLED IN SCALAR MODE')
@@ -354,14 +413,14 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN) :: TOTASK
       INTEGER(4)  ,INTENT(IN) :: TAG
       CHARACTER(*),INTENT(IN) :: VAL
-      INTEGER                 :: totaskstd
+      INTEGER                 :: totask0
       INTEGER                 :: tagstd
       INTEGER                 :: IERR
 !     ******************************************************************
 #IFDEF  CPPVARIABLE_PARALLEL
-      totaskstd=totask
+      totask0=totask-1
       tagstd=tag
-      CALL MPI_SEND(VAL,LEN(VAL),MPI_CHARACTER,TOTASKstd-1,TAGstd &
+      CALL MPI_SEND(VAL,LEN(VAL),MPI_CHARACTER,TOTASK0,TAGstd &
      &               ,MPI_COMM_WORLD,IERR)
 #ELSE
       CALL ERROR$MSG('MPE$SEND MUST NOT BE CALLED IN SCALAR MODE')
@@ -414,15 +473,15 @@ CONTAINS
       INTEGER(4),INTENT(IN) :: FROMTASK !TASK NUMBER OF THE SENDING TASK
       INTEGER(4),INTENT(IN) :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
       <TYPE>    ,INTENT(OUT):: VAL<RANK>
-      INTEGER               :: fromtaskstd
+      INTEGER               :: fromtask0
       INTEGER               :: tagstd
       INTEGER               :: IERR
 #IFDEF  CPPVARIABLE_PARALLEL
       INTEGER               :: STAT(MPI_STATUS_SIZE)
 !     ******************************************************************
-      fromtaskstd=fromtask
+      fromtask0=fromtask-1
       tagstd=tag
-      CALL MPI_RECV(VAL,<SIZE>,<MPI_TYPE>,FROMTASKstd-1,TAGstd &
+      CALL MPI_RECV(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,TAGstd &
      &               ,MPI_COMM_WORLD,STAT,IERR)        
 #ELSE
       CALL ERROR$MSG('MPE$RECEIVE MUST NOT BE CALLED IN SCALAR MODE')
@@ -447,15 +506,15 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN)  :: FROMTASK !TASK NUMBER OF THE SENDING TASK
       INTEGER(4)  ,INTENT(IN)  :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
       CHARACTER(*),INTENT(OUT) :: VAL(:)   
-      INTEGER               :: fromtaskstd
+      INTEGER               :: fromtask0
       INTEGER               :: tagstd
       INTEGER               :: IERR
 #IFDEF  CPPVARIABLE_PARALLEL
       INTEGER(4)               :: STAT(MPI_STATUS_SIZE)   
 !     ******************************************************************
-      fromtaskstd=fromtask
+      fromtask0=fromtask-1
       tagstd=tag
-      CALL MPI_RECV(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,FROMTASKstd-1,TAGstd &
+      CALL MPI_RECV(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,FROMTASK0,TAGstd &
      &               ,MPI_COMM_WORLD,STAT,IERR)        
 #ELSE
       VAL(:)=' '
@@ -480,15 +539,15 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN) :: FROMTASK !TASK NUMBER OF THE SENDING TASK
       INTEGER(4)  ,INTENT(IN) :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
       CHARACTER(*),INTENT(OUT):: VAL
-      INTEGER               :: fromtaskstd
+      INTEGER               :: fromtask0
       INTEGER               :: tagstd
       INTEGER               :: IERR
 #IFDEF  CPPVARIABLE_PARALLEL
       INTEGER(4)              :: STAT(MPI_STATUS_SIZE)
 !     ******************************************************************
-      fromtaskstd=fromtask
+      fromtask0=fromtask-1
       tagstd=tag
-      CALL MPI_RECV(VAL,LEN(VAL),MPI_CHARACTER,FROMTASKstd-1,TAGstd &
+      CALL MPI_RECV(VAL,LEN(VAL),MPI_CHARACTER,FROMTASK0,TAGstd &
      &               ,MPI_COMM_WORLD,STAT,IERR)        
 #ELSE
       VAL=' '
@@ -611,15 +670,15 @@ CONTAINS
       INTEGER(4),INTENT(IN) :: TOTASK
       <TYPE>    ,INTENT(IN) :: INVAL<RANK>
       <TYPE>    ,INTENT(OUT):: OUTVAL<RANK+1>
-      INTEGER               :: totaskstd
+      INTEGER               :: totask0
       INTEGER               :: LENG
       INTEGER               :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-        totaskstd=totask
+        totask0=totask-1
         LENG=<SIZE>
         CALL MPI_GATHER(INVAL,LENG,<MPI_TYPE>,OUTVAL,LENG,<MPI_TYPE> &
-     &                 ,TOTASKstd-1,MPI_COMM_WORLD,IERR)
+     &                 ,TOTASK0,MPI_COMM_WORLD,IERR)
 #ELSE
         OUTVAL<RANK,1>=INVAL<RANK>
 #ENDIF
@@ -727,9 +786,6 @@ END MODULE MPE_GATHER_MODULE
       INTEGER                :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-!     CALL MPI_COMM_SIZE(MPI_COMM_WORLD,NTASKS,IERR)
-!     CALL MPI_COMM_RANK(MPI_COMM_WORLD,THISTASK,IERR)
-!     THISTASK= THISTASK+1
       NTASKS_  =NTASKS
       THISTASK_=THISTASK
 #ELSE
