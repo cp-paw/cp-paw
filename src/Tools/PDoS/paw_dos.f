@@ -35,6 +35,7 @@ END MODULE SPINDIR_MODULE
       REAL(8)                   :: EMAX
       INTEGER(4)                :: NE
       REAL(8)                   :: EBROAD
+      CHARACTER(8)              :: SCALEY
       INTEGER(4)                :: NFILIN
       INTEGER(4)                :: NPRO
       INTEGER(4)                :: IKPT,ISPIN,IB,IPRO,IDIM
@@ -102,7 +103,6 @@ END MODULE SPINDIR_MODULE
       ENDDO
                             CALL TRACE$PASS('AFTER READPDOS')
 
-!Print*,'warning! subroutine report disconnected'
       CALL REPORT(NFILO,EIG)
                             CALL TRACE$PASS('AFTER REPORT')
 !
@@ -127,9 +127,9 @@ END MODULE SPINDIR_MODULE
 !     ==================================================================
 !     ==  MAKE PLOTS                                                  ==
 !     ==================================================================
-      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD)
+      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD,SCALEY)
                             CALL TRACE$PASS('AFTER READCNTL$GRID')
-      CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD &
+      CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
      &                    ,NB,NKPT,NSPIN,EIG,NSET,SET,LEGEND)
                             CALL TRACE$PASS('AFTER READCNTL$OUTPUT')
 !
@@ -167,19 +167,20 @@ END MODULE SPINDIR_MODULE
       INTEGER(4)              :: ISPIN,IKPT,IB,IDIM
       INTEGER(4)              :: IPRO,IPRO0,IPRO1,IPRO2
       INTEGER(4)              :: IAT,IAT0,ISP,IAT1,IAT2,ITEN
-      INTEGER(4)              :: IDIR,L1,L2,M,LN,LN1,LN2
+      INTEGER(4)              :: IDIR,L1,L2,M,LN,LN1,LN2,NATSPINANGLE
+      INTEGER(4) ,ALLOCATABLE :: IATSPINANGLE(:)
       REAL(8)                 :: SUM_(3),SPIN(3,NAT),TOTALSPIN(3)
-      REAL(8)    ,ALLOCATABLE :: angwght(:,:,:) ! (LOX,2,NAT)
+      REAL(8)    ,ALLOCATABLE :: ANGWGHT(:,:,:) ! (LOX,2,NAT)
       REAL(8)                 :: SUML,ANGLE(NAT),PI
 !     ******************************************************************
                                    CALL TRACE$PUSH('REPORT')
-      ALLOCATE(angwght(MAXVAL(LOX)+1,2,NAT))
-      angwght(:,:,:)=0.D0
+      ALLOCATE(ANGWGHT(MAXVAL(LOX)+1,2,NAT))
+      ANGWGHT(:,:,:)=0.D0
       SPIN(:,:)=0.D0
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
-!print*,'state%vec',ikpt,ispin,state%vec(1,:,:)
+!PRINT*,'STATE%VEC',IKPT,ISPIN,STATE%VEC(1,:,:)
           IPRO0=0
           DO IAT=1,NAT
             ISP=ISPECIES(IAT)
@@ -212,10 +213,11 @@ END MODULE SPINDIR_MODULE
                       END IF
                   ENDDO
                   DO IDIR=1,3
-                    SPIN(IDIR,IAT)=SPIN(IDIR,IAT)+State%occ(IB)*SUM_(IDIR)*OV(LN1,LN2,ISP)
+                    SPIN(IDIR,IAT)=SPIN(IDIR,IAT) &
+     &                   +2.D0*STATE%OCC(IB)*SUM_(IDIR)*OV(LN1,LN2,ISP)
                   END DO
-                  angwght(L1+1,ISPIN,IAT)=angwght(L1+1,ISPIN,IAT)+SUML &
-     &                        *State%OCC(IB)*OV(LN1,LN2,ISP)
+                  ANGWGHT(L1+1,ISPIN,IAT)=ANGWGHT(L1+1,ISPIN,IAT)+SUML &
+     &                        *STATE%OCC(IB)*OV(LN1,LN2,ISP)
                 ENDDO
                 IPRO2=IPRO2+2*L2+1
               ENDDO            
@@ -248,30 +250,33 @@ END MODULE SPINDIR_MODULE
       IF(NSPIN.EQ.1) THEN
         WRITE(NFILO,*)'  PROJECTED ON                    ALL        S         P         D'
         DO IAT=1,NAT
-        WRITE(NFILO,FMT='(2X,"CHARGE [-e] IN ATOM ",A6,":",4F10.3)') ATOMID(IAT),&
-     &         SUM(angwght(:,1,IAT)),(angwght(IDIR,1,IAT),IDIR=1,3)
+          L1=MIN(3,1+MAXVAL(LOX(:,ISPECIES(IAT))))
+          WRITE(NFILO,FMT='(2X,"CHARGE [-E] IN ATOM ",A6,":",4F10.3)') ATOMID(IAT),&
+     &         SUM(ANGWGHT(:,1,IAT)),(ANGWGHT(IDIR,1,IAT),IDIR=1,L1)
         END DO
       ELSE
         WRITE(NFILO,*)'  PROJECTED ON                     ALL        S         P         D'
         DO IAT=1,NAT
-          WRITE(NFILO,FMT='(2X,"CHARGE [-e] IN ATOM   ",A6,":",4F10.3)') ATOMID(IAT),&
-     &         SUM(angwght(:,:,IAT)),(angwght(IDIR,1,IAT)+angwght(IDIR,2,IAT),IDIR=1,3)
+          L1=MIN(3,1+MAXVAL(LOX(:,ISPECIES(IAT))))
+          WRITE(NFILO,FMT='(2X,"CHARGE [-E] IN ATOM   ",A6,":",4F10.3)') ATOMID(IAT),&
+     &         SUM(ANGWGHT(:,:,IAT)),(ANGWGHT(IDIR,1,IAT)+ANGWGHT(IDIR,2,IAT),IDIR=1,L1)
         END DO
         DO IAT=1,NAT
-          WRITE(NFILO,FMT='(2X,"SPIN [hbar/2] IN ATOM ",A6,":",4F10.3)') ATOMID(IAT),&
-     &         SUM(angwght(:,1,IAT))-SUM(angwght(:,2,IAT)),(angwght(IDIR,1,IAT)- &
-     &                        angwght(IDIR,2,IAT),IDIR=1,3)
+          L1=MIN(3,1+MAXVAL(LOX(:,ISPECIES(IAT))))
+          WRITE(NFILO,FMT='(2X,"SPIN [HBAR/2] IN ATOM ",A6,":",4F10.3)') ATOMID(IAT),&
+     &         SUM(ANGWGHT(:,1,IAT))-SUM(ANGWGHT(:,2,IAT)),(ANGWGHT(IDIR,1,IAT)- &
+     &                        ANGWGHT(IDIR,2,IAT),IDIR=1,L1)
         END DO
 !!$        DO IAT=1,NAT
 !!$          WRITE(NFILO,FMT='(2X,"  SPIN IN ATOM ",A6,"        ",4F10.3)') ATOMID(IAT),&
-!!$     &         0.5D0*(angwght(1,1,IAT)-angwght(1,2,IAT)),0.5D0*(angwght(2,1,IAT)-angwght(2,2,IAT)), &
-!!$     &         0.5D0*(angwght(3,1,IAT)-angwght(3,2,IAT)),0.5D0*(angwght(4,1,IAT)-angwght(4,2,IAT))
+!!$     &         0.5D0*(ANGWGHT(1,1,IAT)-ANGWGHT(1,2,IAT)),0.5D0*(ANGWGHT(2,1,IAT)-ANGWGHT(2,2,IAT)), &
+!!$     &         0.5D0*(ANGWGHT(3,1,IAT)-ANGWGHT(3,2,IAT)),0.5D0*(ANGWGHT(4,1,IAT)-ANGWGHT(4,2,IAT))
 !!$        END DO
       END IF
       IF(NDIM.EQ.2) THEN
         TOTALSPIN(:)=0.D0
         WRITE(NFILO,*)'**** SPIN ANALYSIS ****'
-        WRITE(NFILO,*)'  SPIN [hbar/2] PROJECTED ON    X         Y         Z      TOTAL'
+        WRITE(NFILO,*)'  SPIN [HBAR/2] PROJECTED ON    X         Y         Z      TOTAL'
         DO IAT=1,NAT
           WRITE(NFILO,FMT='(2X," SPIN OF ATOM:",A10,5F10.3)') ATOMID(IAT)&
      &         ,SPIN(1,IAT),SPIN(2,IAT),SPIN(3,IAT),SQRT(SPIN(1,IAT)**2+&
@@ -288,25 +293,36 @@ END MODULE SPINDIR_MODULE
 !     ==  PRINT ANGLES BETWEEN THE SPINS                              ==
 !     ==================================================================
       CALL CONSTANTS('PI',PI)
+
+!     CHOSE ATOMS WITH SPIN GREATER THAN 0.1 HBAR/2
+      NATSPINANGLE=0
+      ALLOCATE(IATSPINANGLE(NAT))
+      DO IAT1=1,NAT
+        IF(SQRT(SPIN(1,IAT1)**2+SPIN(2,IAT1)**2+SPIN(3,IAT1)**2).LE.0.1D0) CYCLE
+        NATSPINANGLE=NATSPINANGLE+1
+        IATSPINANGLE(NATSPINANGLE)=IAT1
+      END DO
       IF(NAT.GE.2) THEN
-        WRITE(NFILO,*)'**** ANGLES [DEG] BETWEEN THE SPINS ON THE ATOMS ****'
+        WRITE(NFILO,*)'**** ANGLES [DEG] BETWEEN THE SPINS > 0.1 ON THE ATOMS ****'
 !        WRITE(NFILO,FMT='(2X,9X,10A6)')(ATOMID(IAT2),IAT2=NAT,2,-1)
         WRITE(NFILO,FMT='(T12,A6,T20,A6,T28,A6,T36,A6,T44,A6,T52,A6,T60,A6,T68,A6,T76,A6,T84,A6)')&
-     &        (ATOMID(IAT2),IAT2=NAT,2,-1)
-        DO IAT1=1,NAT !SENKRECHT
-          DO IAT2=NAT,IAT1+1,-1   !WAAGRECHT
-            ANGLE(IAT2)=180.D0/PI*ACOS(SPINDIR(1,IAT1)*SPINDIR(1,IAT2)+ &
-     &         SPINDIR(2,IAT1)*SPINDIR(2,IAT2)+SPINDIR(3,IAT1)*SPINDIR(3,IAT2))
+     &        (ATOMID(IATSPINANGLE(IAT2)),IAT2=NATSPINANGLE,2,-1)
+        DO IAT1=1,NATSPINANGLE !SENKRECHT
+          DO IAT2=NATSPINANGLE,IAT1+1,-1   !WAAGRECHT
+            ANGLE(IAT2)=180.D0/PI*ACOS(SPINDIR(1,IATSPINANGLE(IAT1))*SPINDIR(1,IATSPINANGLE(IAT2))+ &
+     &         SPINDIR(2,IATSPINANGLE(IAT1))*SPINDIR(2,IATSPINANGLE(IAT2))+ &
+     &         SPINDIR(3,IATSPINANGLE(IAT1))*SPINDIR(3,IATSPINANGLE(IAT2)))
           END DO
-          ITEN=NAT
+          ITEN=NATSPINANGLE
           DO WHILE (IAT1+1.LE.ITEN)
             WRITE(NFILO,FMT='(2X,A6,10F8.2)') &
-     &          ATOMID(IAT1),(ANGLE(IAT2),IAT2=ITEN,MAX(ITEN-9,IAT1+1),-1)
+     &          ATOMID(IATSPINANGLE(IAT1)),(ANGLE(IAT2),IAT2=ITEN,MAX(ITEN-9,IAT1+1),-1)
             ITEN=ITEN-10
           ENDDO
           !WRITE(NFILO,FMT='(2X,A6,10F8.2)')ATOMID(IAT1),(ANGLE(IAT2),IAT2=NAT,IAT1+1,-1)
         END DO
       END IF
+      DEALLOCATE(IATSPINANGLE)
 !
 !     ==================================================================
 !     ==  THIS BLOCK IS INTENDED AS INPUTFILE FOR MOLDEN              ==
@@ -466,7 +482,7 @@ END MODULE SPINDIR_MODULE
         END IF
         CALL RESIZE
         NORB=NORB+1
-        ORBITAL(:,norb)=ORBITAL_(:)
+        ORBITAL(:,NORB)=ORBITAL_(:)
         ORBITALNAME(NORB)=NAME_
         RETURN
         END SUBROUTINE ORBITALS$SETORB
@@ -547,7 +563,7 @@ END MODULE SPINDIR_MODULE
       REAL(8)                  :: ORB(LMXX)
       INTEGER(4)               :: IAT,I,IAT2
       INTEGER(4)               :: I1,I2
-      CHARACTER(32)            :: ATOM1,atomz,atomx
+      CHARACTER(32)            :: ATOM1,ATOMZ,ATOMX
       CHARACTER(32)            :: ORBITALNAME1
       CHARACTER(8)             :: TYPE
       REAL(8)                  :: SVAR
@@ -589,9 +605,9 @@ END MODULE SPINDIR_MODULE
         CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,TYPE)
         CALL RESOLVETYPE(LMXX,TYPE,FAC,ORB)
 !       
-!       ============================================================
+!       ==============================================================
 !       ==  FIND NEAREST NEIGHBOUR DIRECTIONS                       ==
-!       ============================================================
+!       ==============================================================
         DRZ(:)=0.D0
         DRZ(3)=1.D0
         DRX(:)=0.D0
@@ -602,15 +618,15 @@ END MODULE SPINDIR_MODULE
         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'X',1,DRX(:))
         CALL LINKEDLIST$EXISTD(LL_CNTL,'NNZ',1,TCHK)
         IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'NNZ',1,ATOMz)
-          CALL RESOLVEATOM(ATOMz,IAT2)
+          CALL LINKEDLIST$GET(LL_CNTL,'NNZ',1,ATOMZ)
+          CALL RESOLVEATOM(ATOMZ,IAT2)
           DRZ(:)=RPOS(:,IAT2)-RPOS(:,IAT)
           CALL LINKEDLIST$SET(LL_CNTL,'Z',0,DRZ(:))
         END IF
         CALL LINKEDLIST$EXISTD(LL_CNTL,'NNX',1,TCHK)
         IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'NNX',1,ATOMx)
-          CALL RESOLVEATOM(ATOMx,IAT2)
+          CALL LINKEDLIST$GET(LL_CNTL,'NNX',1,ATOMX)
+          CALL RESOLVEATOM(ATOMX,IAT2)
           DRX(:)=RPOS(:,IAT2)-RPOS(:,IAT)
           CALL LINKEDLIST$SET(LL_CNTL,'X',0,DRX(:))
         END IF
@@ -892,17 +908,17 @@ END MODULE READCNTL_MODULE
       END SUBROUTINE READCNTL
 !
 !     ..................................................................
-      SUBROUTINE READCNTL$GRID(EMIN,EMAX,NE,EBROAD)
+      SUBROUTINE READCNTL$GRID(EMIN,EMAX,NE,EBROAD,SCALEY)
       USE READCNTL_MODULE
       IMPLICIT NONE
-      REAL(8)   ,INTENT(OUT) :: EMIN
-      REAL(8)   ,INTENT(OUT) :: EMAX
-      REAL(8)   ,INTENT(OUT) :: EBROAD
-      INTEGER(4),INTENT(OUT) :: NE
-      REAL(8)                :: DE
-      REAL(8)                :: EV
-      INTEGER(4)             :: NUM
-      LOGICAL(4)             :: TCHK
+      REAL(8)     ,INTENT(OUT) :: EMIN
+      REAL(8)     ,INTENT(OUT) :: EMAX
+      INTEGER(4)  ,INTENT(OUT) :: NE
+      REAL(8)     ,INTENT(OUT) :: EBROAD
+      CHARACTER(8),INTENT(OUT) :: SCALEY
+      REAL(8)                  :: DE
+      REAL(8)                  :: EV
+      LOGICAL(4)               :: TCHK
 !     ******************************************************************
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'DCNTL')
@@ -924,9 +940,13 @@ END MODULE READCNTL_MODULE
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'BROADENING[EV]',0,1.D-1)
       CALL LINKEDLIST$GET(LL_CNTL,'BROADENING[EV]',1,EBROAD)
 !
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'SCALEY',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'SCALEY',0,'NONE')
+      CALL LINKEDLIST$GET(LL_CNTL,'SCALEY',1,SCALEY)
+!
       CALL CONSTANTS('EV',EV)
       NE=INT((EMAX-EMIN)/DE)+1
-      DE=(EMAX-EMIN)/(NUM-1)
+      DE=(EMAX-EMIN)/(NE-1)
       EMIN=EMIN*EV
       EMAX=EMAX*EV
       DE=DE*EV
@@ -1295,16 +1315,16 @@ END MODULE READCNTL_MODULE
                     IF(TRIM(SPIN).EQ.'TOTAL') THEN
                       SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM*OV(LN1,LN2,ISP)
                     ELSE IF(TRIM(SPIN).EQ.'X') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM_(1)*OV(LN1,LN2,ISP)
+                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+2.D0*SUM_(1)*OV(LN1,LN2,ISP)
                     ELSE IF(TRIM(SPIN).EQ.'Y') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM_(2)*OV(LN1,LN2,ISP)
+                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+2.D0*SUM_(2)*OV(LN1,LN2,ISP)
                     ELSE IF(TRIM(SPIN).EQ.'Z') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM_(3)*OV(LN1,LN2,ISP)
+                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+2.D0*SUM_(3)*OV(LN1,LN2,ISP)
                     ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
 !                      SET(IB,IKPT,ISPIN,1)=SET(IB,IKPT,ISPIN,1)+(SUM_(1)*SPINDIR(1,IAT)+ &
 !     &                     SUM_(2)*SPINDIR(2,IAT)+SUM_(3)*SPINDIR(3,IAT))*OV(LN1,LN2,ISP)&
 !     &                      /REAL(NDIM)*SCALEOCC(IB,IKPT,ISPIN)
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+(SUM_(1)*SPINDIR(1,IAT)+ &
+                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+2.D0*(SUM_(1)*SPINDIR(1,IAT)+ &
      &                     SUM_(2)*SPINDIR(2,IAT)+SUM_(3)*SPINDIR(3,IAT))*OV(LN1,LN2,ISP)
                     ELSE
                       CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
@@ -1371,9 +1391,9 @@ END MODULE READCNTL_MODULE
                                  CALL TRACE$POP
       RETURN
       END
-
-
-      SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD &
+!
+!     ..................................................................
+      SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
      &                    ,NB,NKPT,NSPIN,EIG,NSET,SET,LEGEND)
 !     ******************************************************************
 !     ******************************************************************
@@ -1384,6 +1404,7 @@ END MODULE READCNTL_MODULE
       REAL(8)      ,INTENT(IN) :: EMIN
       REAL(8)      ,INTENT(IN) :: EMAX
       REAL(8)      ,INTENT(IN) :: EBROAD
+      CHARACTER(8) ,INTENT(IN) :: SCALEY
       INTEGER(4)   ,INTENT(IN) :: NB
       INTEGER(4)   ,INTENT(IN) :: NKPT
       INTEGER(4)   ,INTENT(IN) :: NSPIN
@@ -1454,7 +1475,7 @@ END MODULE READCNTL_MODULE
         CALL LINKEDLIST$EXISTD(LL_CNTL,'E[EV]',1,TE)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'K',1,TIK)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'S',1,TIS)
-        IF((.NOT.(TIB.OR.tE)).AND.(TIK.OR.TIS)) THEN
+        IF((.NOT.(TIB.OR.TE)).AND.(TIK.OR.TIS)) THEN
           CALL ERROR$MSG('K-POINT AND SPIN MUST NOT BE SELECTED FOR DENSITY OF STATES')
           CALL ERROR$STOP('READCNTL$OUTPUT') 
         END IF
@@ -1504,7 +1525,7 @@ END MODULE READCNTL_MODULE
               ENDDO
             ENDDO        
           ENDDO
-          IF(.NOT.TIS) SUM=SUM*2.D0/DBLE(NSPIN)  ! NO K-Point weight ? no ndim ?
+          IF(.NOT.TIS) SUM=SUM*2.D0/DBLE(NSPIN)  ! NO K-POINT WEIGHT ? NO NDIM ?
           WRITE(NFIL,FMT='(A32,"; B=",I3,"; K=",I2,"; S=",I1 &
      &                  ,"; E[EV]=",F10.5,"; TOTAL NOS=",F10.5)') &
      &                  LEGEND(ISET),IB0,IK0,IS0,ENERGY/EV,SUM
@@ -1537,7 +1558,7 @@ END MODULE READCNTL_MODULE
               ENDDO
             ENDDO        
           ENDDO
-          IF(.NOT.TIS) SUM=SUM*2.D0/DBLE(NSPIN)  ! NO K-Point weight ? no ndim ?
+          IF(.NOT.TIS) SUM=SUM*2.D0/DBLE(NSPIN)  ! NO K-POINT WEIGHT ? NO NDIM ?
           WRITE(NFIL,FMT='(A32,8X," K=",I2,"; S=",I1 &
      &                  ,"; E[EV]=",F10.5,"; TOTAL NOS=",F10.5)') &
      &                  LEGEND(ISET),IK0,IS0,ENERGY/EV,SUM
@@ -1556,8 +1577,8 @@ END MODULE READCNTL_MODULE
 !            CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,NB,NKPT,1,EIG &
 !     &                      ,SET(:,:,IS0,ISET),LEGEND(ISET))
 !          ELSE
-            CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,NB,NKPT,NSPIN,EIG &
-     &                      ,SET(:,:,:,ISET),LEGEND(ISET))
+            CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
+      &                   ,NB,NKPT,NSPIN,EIG,SET(:,:,:,ISET),LEGEND(ISET))
 !          END IF
         END IF
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
@@ -1568,8 +1589,8 @@ END MODULE READCNTL_MODULE
       END SUBROUTINE READCNTL$OUTPUT
 !
 !     ..................................................................
-      SUBROUTINE PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,NB,NKPT,NSPIN,EIG &
-     &                    ,SET,LEGEND)
+      SUBROUTINE PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
+     &                    ,NB,NKPT,NSPIN,EIG,SET,LEGEND)
       USE PDOS_MODULE, ONLY: STATE,STATEARR,NDIM
 !     ******************************************************************
 !     **                                                              **
@@ -1579,6 +1600,7 @@ END MODULE READCNTL_MODULE
       REAL(8)      ,INTENT(IN) :: EMIN
       REAL(8)      ,INTENT(IN) :: EMAX
       REAL(8)      ,INTENT(IN) :: EBROAD
+      CHARACTER(8) ,INTENT(IN) :: SCALEY
       INTEGER(4)   ,INTENT(IN) :: NB
       INTEGER(4)   ,INTENT(IN) :: NKPT
       INTEGER(4)   ,INTENT(IN) :: NSPIN
@@ -1597,26 +1619,26 @@ END MODULE READCNTL_MODULE
       REAL(8)              :: XNOS,XDOS
       REAL(8)              :: NOSSMALL(NSPIN,2)
       CHARACTER(256)       :: CMD
-      real(8)              :: wghtx
-      real(8)              :: wkpt(nkpt)
+      REAL(8)              :: WGHTX
+      REAL(8)              :: WKPT(NKPT)
 !     ******************************************************************
                                  CALL TRACE$PUSH('PUTONGRID')
       CALL CONSTANTS('EV',EV)
       DE=(EMAX-EMIN)/DBLE(NE-1)
-      ND=nint(ebroad/de*sqrt(-log(1.d-3)))
+      ND=NINT(EBROAD/DE*SQRT(-LOG(1.D-3)))
       DO IKPT=1,NKPT
-        wkpt(ikpt)=0.d0
+        WKPT(IKPT)=0.D0
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
-!         == caution: Here I estimate the weight and spin-degeneracy factor 
-!         == from the max occupation, whihc may be incorrect
-          wkpt(ikpt)=max(wkpt(ikpt),maxval(state%occ(:)))
-        enddo
-        if(wkpt(ikpt).eq.0.d0) then
-          call error$msg('no electrons for this k-point. got confused')
-          call error$stop('putongrid')
-        end if
-      enddo       
+!         == CAUTION: HERE I ESTIMATE THE WEIGHT AND SPIN-DEGENERACY FACTOR 
+!         == FROM THE MAX OCCUPATION, WHIHC MAY BE INCORRECT
+          WKPT(IKPT)=MAX(WKPT(IKPT),MAXVAL(STATE%OCC(:)))
+        ENDDO
+        IF(WKPT(IKPT).EQ.0.D0) THEN
+          CALL ERROR$MSG('NO ELECTRONS FOR THIS K-POINT. GOT CONFUSED')
+          CALL ERROR$STOP('PUTONGRID')
+        END IF
+      ENDDO       
 !
 !     ==================================================================
 !     ==                                                              ==
@@ -1626,9 +1648,9 @@ END MODULE READCNTL_MODULE
       DO ISPIN=1,NSPIN
         DO IKPT=1,NKPT
           STATE=>STATEARR(IKPT,ISPIN)
-!         == caution: Here I estimate the weight and spin-degeneracy factor 
-!         == from the max occupation, whihc may be incorrect
-          wghtx=wkpt(ikpt)
+!         == CAUTION: HERE I ESTIMATE THE WEIGHT AND SPIN-DEGENERACY FACTOR 
+!         == FROM THE MAX OCCUPATION, WHIHC MAY BE INCORRECT
+          WGHTX=WKPT(IKPT)
           DO IB=1,NB
             X=(EIG(IB,IKPT,ISPIN)-EMIN)/DE
             IE1=INT(X)
@@ -1637,16 +1659,16 @@ END MODULE READCNTL_MODULE
             W1=1.D0-W2
             IF (IE1.LT.1) THEN
 !              NOSSMALL(ISPIN,IOCC)=NOSSMALL(ISPIN,IOCC)+SET(IB,IKPT,ISPIN)
-              NOSSMALL(ISPIN,1)=NOSSMALL(ISPIN,1)+SET(IB,IKPT,ISPIN)*wghtx
-              NOSSMALL(ISPIN,2)=NOSSMALL(ISPIN,2)+SET(IB,IKPT,ISPIN)*state%occ(ib)
+              NOSSMALL(ISPIN,1)=NOSSMALL(ISPIN,1)+SET(IB,IKPT,ISPIN)*WGHTX
+              NOSSMALL(ISPIN,2)=NOSSMALL(ISPIN,2)+SET(IB,IKPT,ISPIN)*STATE%OCC(IB)
             ELSE
               IF(IE1.LE.NE.AND.IE1.GE.1) THEN 
-                NOS(IE1,ISPIN,1)=NOS(IE1,ISPIN,1)+W1*SET(IB,IKPT,ISPIN)*wghtx
-                NOS(IE1,ISPIN,2)=NOS(IE1,ISPIN,2)+W1*SET(IB,IKPT,ISPIN)*state%occ(ib)
+                NOS(IE1,ISPIN,1)=NOS(IE1,ISPIN,1)+W1*SET(IB,IKPT,ISPIN)*WGHTX
+                NOS(IE1,ISPIN,2)=NOS(IE1,ISPIN,2)+W1*SET(IB,IKPT,ISPIN)*STATE%OCC(IB)
               END IF
               IF(IE2.LE.NE.AND.IE2.GE.1) THEN
-                NOS(IE2,ISPIN,1)=NOS(IE2,ISPIN,1)+W2*SET(IB,IKPT,ISPIN)*wghtx
-                NOS(IE2,ISPIN,2)=NOS(IE2,ISPIN,2)+W2*SET(IB,IKPT,ISPIN)*state%occ(ib)
+                NOS(IE2,ISPIN,1)=NOS(IE2,ISPIN,1)+W2*SET(IB,IKPT,ISPIN)*WGHTX
+                NOS(IE2,ISPIN,2)=NOS(IE2,ISPIN,2)+W2*SET(IB,IKPT,ISPIN)*STATE%OCC(IB)
               END IF
             END IF
           ENDDO
@@ -1657,10 +1679,10 @@ END MODULE READCNTL_MODULE
 !     ==================================================================
 !     ==  RENORMALIZE WITH K-POINT WEIGHT AND SPIN MULTIPLICITY       ==
 !     ==================================================================
-      NOS(:,:,1)=NOS(:,:,1)/DBLE(NKPT)
-      NOSSMALL(:,1)=NOSSMALL(:,1)/DBLE(NKPT)
-      NOS(:,:,2)=NOS(:,:,2)/DBLE(NKPT)
-      NOSSMALL(:,2)=NOSSMALL(:,2)/DBLE(NKPT)
+!      NOS(:,:,1)=NOS(:,:,1)/DBLE(NKPT)
+!      NOSSMALL(:,1)=NOSSMALL(:,1)/DBLE(NKPT)
+!      NOS(:,:,2)=NOS(:,:,2)/DBLE(NKPT)
+!      NOSSMALL(:,2)=NOSSMALL(:,2)/DBLE(NKPT)
 !
 !     ==================================================================
 !     ==  CALCULATE DOS                                               ==
@@ -1714,30 +1736,35 @@ END MODULE READCNTL_MODULE
 !     ==================================================================
 !     ==  ROUND NOS AND DOS TO OBTAIN PROPER EDITING                  ==
 !     ==================================================================
-!      DO IOCC=1,2
-!        XDOS=0.D0
-!        XNOS=0.D0
-!        DO ISPIN=1,NSPIN
-!          DO IE=1,NE
-!            XDOS=MAX(XDOS,DABS(DOS(IE,ISPIN,IOCC)))
-!            XNOS=MAX(XNOS,DABS(NOS(IE,ISPIN,IOCC)))
- !         ENDDO
-!        ENDDO
-!        IF(XDOS.GT.0.D0) THEN
-!          FAC=XNOS/XDOS
-!        ELSE
-!          FAC=1.D0
-!        END IF
-!      END DO
-       DO IOCC=1,2
-         DO ISPIN=1,NSPIN
-           DO IE=1,NE
-!            DOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*FAC
-             IF(DABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
-             IF(DABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
-           ENDDO
-         ENDDO
-       ENDDO
+!CHECK THE FOLLOWING
+      IF(SCALEY.EQ.'NONE') THEN
+      ELSE IF(SCALEY.EQ.'DOS') THEN
+        SVAR=MAXVAL(DOS)
+        IF(SVAR.LT.1.D-99) THEN
+          CALL ERROR$MSG('NO VALUES IN DOS ARRAY')
+          CALL ERROR$STOP('PUTONGRID')
+        END IF
+        DOS=DOS*MAXVAL(NOS)/SVAR
+      ELSE IF(SCALEY.EQ.'NOS') THEN
+        SVAR=MAXVAL(NOS)
+        IF(SVAR.LT.1.D-99) THEN
+          CALL ERROR$MSG('NO VALUES IN NOS ARRAY')
+          CALL ERROR$STOP('PUTONGRID')
+        END IF
+        NOS=NOS*MAXVAL(DOS)/SVAR
+      ELSE
+        CALL ERROR$MSG('ILLEGAL VALUE OF SCALEY')
+        CALL ERROR$CHVAL('SCALEY',SCALEY)
+        CALL ERROR$STOP('PUTONGRID')
+      END IF     
+!       DO IOCC=1,2
+!         DO ISPIN=1,NSPIN
+!           DO IE=1,NE
+!             IF(DABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
+!             IF(DABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
+!           ENDDO
+!         ENDDO
+!       ENDDO
 
 !
 !     ==================================================================

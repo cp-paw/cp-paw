@@ -482,6 +482,9 @@
 !     ==  PROPAGATE OCCUPATIONS                                       ==
 !     ==================================================================
       CALL DYNOCC$PROPAGATE()
+      CALL DYNOCC$GETR8('EPOT',SVAR)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
+      
 ! 
 !     ==================================================================
 !     ==  PROPAGATE THERMOSTAT FOR THE NUCLEI                         ==

@@ -402,6 +402,7 @@ END MODULE THERMOSTAT_MODULE
       THIS%EPOT   = 2.D0*THIS%EKIN_TARGET*X0
       if(this%twave) this%epot=0.d0
       THIS%EDISS  = THIS%EDISS+ANNEX*0.5D0*QMASS*VNOS**2
+this%ediss=0.d0
 !
 !     ==================================================================
 !     ==  PRINTOUT FOR TEST                                           ==
