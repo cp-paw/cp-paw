@@ -1,0 +1,8 @@
+#!/bin/ksh
+ATOMDIR=/u/blo.2/PrivatePAW/Atomic
+#
+${PAWDIR}/F90PP/f90pp <build.f >build_d.f
+xlf90 -I${PAWDIR}/Objects/dbg -qmoddir=${PAWDIR}/Objects/dbg -L${PAWDIR}/Objects/dbg -lpaw build_d.f
+a.out
+
+

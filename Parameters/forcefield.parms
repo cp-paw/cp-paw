@@ -1,0 +1,7 @@
+!FFPARMS
+ !ATOM    !END
+ !BOND    ATOM1='H' ATOM2='H'                           D=0.5    K=0.03 !END
+ !ANGLE   ATOM1='H' ATOM2='C_3' ATOM3='H_'              PHI=194. K=0.03 !END
+ !TORSION ATOM1='H' ATOM2='C_3' ATOM3='H_'  ATOM4= 'H_' PHI=194. K=0.03 !END
+!END
+!EOB

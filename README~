@@ -1,5 +1,4 @@
 IBM License:
-============
 
 Most of the contents in this directory is IBM property and use
 requires a written license from IBM. Such code will be called IBM
@@ -18,16 +17,16 @@ IBM and non-IBM code are distinguished by c-preprocessor commands
 directed by the variables "LICENSEIBM" and "NOIBMLICENSE'. 
 Code
 
-If the code is preprocessed with the c-preprocessor variables
-LICENSEIBM and NOIBMLICENSE defined, the resulting code contains both
-IBM code and non-IBM code and should produce a workable
-code. Processing with IBMLICENSE defined and NOIBMLICENSE undefined
-creates a IBM code. This should produce a workable code Processing
-with NONIBMLICENSE defined and IBMLICENSE undefined alone produces
-only separate code. Processing with IBMLICENSE defined and
-NOIBMLICENSE undefined creates dummy interfaces, which are non-IBM
-code, but an irrevocable, unrestricted license to IBM is provided, so
-that a workable IBM version can be maintained maintained.
+If the code is preprocessed with LICENSEIBM and NOIBMLICENSE defined
+the resulting code contains both IBM code and non-IBM code and should
+produce a workable code. Processing with IBMLICENSE defined and
+NOIBMLICENSE undefined creates a IBM code. This should produce a
+workable code Processing with NONIBMLICENSE defined and IBMLICENSE
+undefined alone produces only separate code. Processing with
+IBMLICENSE defined and NOIBMLICENSE undefined creates dummy
+interfaces, which are non-IBM code, but an irrevocable, unrestricted
+license to IBM is provided, so that a workable IBM version can be
+maintained maintained.
 
 If a new program is written proceed as follows: begin with
 
@@ -64,22 +63,5 @@ this is non-IBM code, name of the authors, date for the first and the
 last modification and a statement that a license to IBM is granted.
 
 
-Coding rules:
-=============
 
-1) A $ in a subroutine or function names indicates a public function
-of an object. The naming convention is objectname$functionname The
-preprocessor replaces the $ by a double underscore __, because
-Fortran90 does not allow $.
 
-2) An underscore _ in a subroutine or function names indicates a
-private function of an object. The naming convention is
-objectname_functionname. 
-
-3) We use an argument to the c-preprocessor directive #endif. The
-fortran preprocessor f90pp removes the string trailing #endif.
-
-4) preprocessor directives may contain uppercase letters, even though
-this is not allowed. The fortran preprocessor f90pp will make selected
-command lowercase so that it is recognized by the preprocessor. (See
-F90PP/f90pp.sed for details.

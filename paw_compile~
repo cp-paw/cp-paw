@@ -213,7 +213,7 @@ SRCDIR=${PAWDIR}/Source/
 #  F90PP is a shell script that removes the dollar signs
 #  in the subroutine names in a subroutine or call statement
 #  in order to conform with the standard fortran convention
-F90PP="${PAWDIR}/F90PP/f90pp -DIBMLICENSE -DNOIBMLICENSE"
+F90PP="${PAWDIR}/F90PP/f90pp -DLICENSEIBM -DNOIBMLICENSE"
 #
 #################################################################
 ##  scan options                                               ##
@@ -483,7 +483,7 @@ echo ......making executable........
 export SRCDIR OBJDIR PAWX F90PP COMPILE COMPILE77 FEXT LINK ALLDEP OPTRM LLIBS PARALLEL
 typeset -i RC
 echo $F90PP
-#exit
+exit
 ${GNUMAKE} -f ${PAWDIR}/paw.mk ${PAWDIR}/F90PP/f90pp_tmplts.x 
 ${GNUMAKE} -f ${PAWDIR}/paw.mk ${PAWX} ; RC=$?
 #################################################################

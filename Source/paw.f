@@ -1,3 +1,4 @@
+#if defined(IBMLICENSE)
       PROGRAM MAIN
 !     ******************************************************************
 !     **     CP-PAW                                                   **
@@ -39,7 +40,6 @@
       CALL TRACE$PUSH('MAIN')
                               CALL TIMING$START
       CALL PAW
-
 !
 !     ==================================================================
 !     ==  END OF CARPARRINELLO CALCULATION                            ==
@@ -1267,6 +1267,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
                               CALL TRACE$POP
       RETURN
       END
-
+#end if
 
 

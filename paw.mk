@@ -126,11 +126,15 @@ ${F90PP_TMPLTS}.x : ${F90PP_TMPLTS}.f
 #${PAWX} : ${LOBJS} ${OBJECTS} ${MPE} ${OBJDIR}/liblapack.a ${OBJDIR}/libblas.a
 #	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${MPE} ${LLIBS}
 #	ar -ru $(PAWLIB) $(LOBJS)  ${OBJDIR}/paw_mpelib_s.o
-${PAWX} : ${LOBJS} ${OBJECTS} ${MPE} ${OBJDIR}/liblapack.a
-	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${MPE} ${LLIBS}
+#    PAW library
+$(PAWLIB) :$(LOBJS) ${OBJDIR}/paw_mpelib_s.o
 	ar -ru $(PAWLIB) $(LOBJS) ${OBJDIR}/paw_mpelib_s.o
-#
+# 
+${PAWX} : ${LOBJS} ${OBJECTS} ${MPE} ${OBJDIR}/liblapack.a $(PAWLIB)
+	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${MPE} ${LLIBS}
 #${OBJDIR}mm_paw_f77.o 
+# remark: $MPE is listed before $LLIBS, so that the parallel version 
+# is used  when required
 #########################################################################
 ##  compile code files independent of parameter                        ##
 ##  and place the objects in OBJDIR                                    ##

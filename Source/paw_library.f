@@ -53,7 +53,7 @@
 #DEFINE CPPVAR_FFT_PACK
 #DEFINE CPPVAR_BLAS_EXPLICIT
 #ENDIF 
-
+#if defined(IBMLICENSE)
 #IFNDEF CPPVARIABLE_XLF 
 !!.......................................................................
 !MODULE ARGS_MODULE
@@ -90,7 +90,7 @@
 !      TEXT=ARGS
 !      RETURN
 !      END
-#ENDIF
+#ENDIF(.not.CPPVARIABLE_XLF)
 !
 !     ..................................................................
       SUBROUTINE LIB$TIMES(NTIME)
@@ -188,6 +188,7 @@
 !
       CPUTIME=(REAL(USG%UTIME(1)+USG%STIME(1),KIND=8) &
      &        +REAL(USG%UTIME(2)+USG%STIME(2),KIND=8))*1.D-6
+      cputime=max(cputime,1.d-6)
       IF(ID.EQ.'MAXMEM') THEN
         VALUE=REAL(USG%MAXRSS,KIND=8)*KBYTE
       ELSE IF(ID.EQ.'USRTIME') THEN
@@ -3182,7 +3183,7 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 #ENDIF
-
+#endif(ibmlicense)
 
 
 

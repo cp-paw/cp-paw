@@ -26,9 +26,7 @@ set +x
 #=============================================================
 #(PAWDIR is defined in ~./profile)
 typeset -i NOPTIONS="$#"
-declare -a OPTIONS
-OPTIONS=$@
-#set -A OPTIONS -- "$@"
+set -A OPTIONS -- "$@"
 TEMPLATES=T
 CPPVARIABLES=""
 while (( $# )); do
