@@ -3,45 +3,43 @@ character(32)        :: filename="debugout"
 integer(8)           :: dunit=4243         
 logical(4)           :: alltasks=.true.
 end module debug_module
-
-subroutine debug$nan_R8(len,output,comment)
-  USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  real(8),      intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
-  integer(4)                         :: i
- !...................................................
-
-  CALL MPE$QUERY(NTASKS,THISTASK)
-if(.not.alltasks) then
-  OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
-       &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-  WRITE (dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-
-  if(thistask.eq.1) then
-     do i=1,len
-        if(output(i).ne.output(i)) then
-           WRITE (dunit,FMT="(A,I10,F25.14)")"the following element is dubious: ",i,output(i) 
-        end if
-     end do
-     close(dunit)
-  end if
-else
-  OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
-       &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-
-      do i=1,len
-        if(output(i).ne.output(i)) then
+!      ........................................................................
+       subroutine debug$nan_R8(len,output,comment)
+       USE MPE_MODULE
+       USE debug_module
+       implicit none
+       integer(4),   intent(in)           ::  len
+       real(8),      intent(in)           ::  output(len)
+       character(*), intent(in)           ::  comment
+       integer(4)                         ::  Ntasks,Thistask
+       integer(4)                         :: i
+ !     **************************************************************************
+       CALL MPE$QUERY(NTASKS,THISTASK)
+       if(.not.alltasks) then
+         OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+         &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
+         WRITE (dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
+         if(thistask.eq.1) then
+           do i=1,len
+             if(output(i).ne.output(i)) then
+               WRITE (dunit,FMT="(A,I10,F25.14)")"the following element is dubious: ",i,output(i) 
+             end if
+           end do
+           close(dunit)
+         end if
+       else
+         OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+      &     ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
+       do i=1,len
+         if(output(i).ne.output(i)) then
            WRITE (dunit,FMT="(2A,I10,A,I4,F25.14)")comment," dubious element: ",i," task: ",thistask,output(i) 
-        end if
-     end do
-     close(dunit)
-  end if
-end subroutine debug$nan_R8
-
+         end if
+       end do
+       close(dunit)
+       end if
+       end subroutine debug$nan_R8
+!
+!.....................................................................................
 subroutine debug$nan_C8(len,output,comment)
   USE MPE_MODULE
   USE debug_module
@@ -291,5 +289,16 @@ subroutine paw$debug_C8(len,output,comment)
      WRITE (dunit,FMT="(2f25.14)")output 
      close(dunit)
   end if
-  
 end subroutine paw$debug_C8
+!
+!     ................................................................................
+      subroutine debug$round_r8(len,val,tol)
+      USE MPE_MODULE
+      USE debug_module
+      implicit none
+      integer(4),intent(in)    ::  len
+      real(8)   ,intent(inout) ::  val(len)
+      real(8)   ,intent(in)    ::  tol
+!     **********************************************************************************
+      val(:)=nint(val(:)/tol)*tol
+      end subroutine debug$round_r8
