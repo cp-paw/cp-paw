@@ -1,0 +1,234 @@
+1a2
+> 
+2a4
+>       LOGICAL(4)   :: WFIRST=.TRUE.  
+5a8,13
+>       INTEGER(4)   :: MINI_LM=5
+>       INTEGER(4)   :: MAXI_LM=9
+>       INTEGER(4)   :: LMN_SUP
+>       INTEGER(4)   :: LMN_INF
+>       INTEGER(4)   :: NATOMS_D
+>       INTEGER(4)   :: ILAST
+14a23
+> 
+32a42,173
+> !
+> 
+> !============================================================================
+> ! BRICE 30/04/2002
+> !============================================================================  
+> 
+>       SUBROUTINE LDAPLUSU_WRITE_POT(IAT, NSPIN, MAX_LMN, LNX, L_OF_LMN,   &
+>                                    &LN_OF_LMN, POT_MAT, RMT, OVERLAP)
+> 
+>       USE ATOMS_MODULE  
+>       USE LDAPLUSU_MODULE
+>       USE STRINGS_MODULE
+>       USE OPTIC_MODULE
+> 
+> 
+>       IMPLICIT NONE
+> 
+>       INTEGER(4), INTENT(IN) :: IAT
+>       INTEGER(4), INTENT(IN) :: NSPIN
+>       INTEGER(4), INTENT(IN) :: MAX_LMN
+>       INTEGER(4), INTENT(IN) :: LNX
+>       INTEGER(4), INTENT(IN) :: L_OF_LMN(MAX_LMN)
+>       INTEGER(4), INTENT(IN) :: LN_OF_LMN(MAX_LMN)
+>       COMPLEX(8), INTENT(IN) :: POT_MAT(MAX_LMN, MAX_LMN, NSPIN)
+>       REAL(8), INTENT(IN)    :: RMT(LNX, LNX)
+>       REAL(8), INTENT(IN)    :: OVERLAP(LNX, LNX)
+>       
+> 
+>       INTEGER(4) :: I
+>       INTEGER(4) :: ISPIN
+>       INTEGER(4) :: ILMN1
+>       INTEGER(4) :: L
+>       INTEGER(4) :: VAL
+>       INTEGER(4) :: LNX1
+>       INTEGER(4) :: NFIL
+>       INTEGER(4),  ALLOCATABLE  :: LOX(:) 
+> 
+> 
+>       IF(.NOT.OPTIC) RETURN
+> 
+>       IF (WFIRST) THEN
+>          CALL ATOMLIST$NATOM(NAT) 
+>          NATOMS_D=0 
+>          DO I=1, NAT
+>             CALL ATOMLIST$GETI4('ISPECIES',I,VAL)
+>             CALL SETUP$LNX(VAL,LNX1)
+>             ALLOCATE(LOX(LNX1)) 
+>             CALL SETUP$LOFLN(VAL,LNX1,LOX) 
+>             DO L=1, LNX1
+>                IF (LOX(L)==2) THEN
+>                   NATOMS_D=NATOMS_D+1
+>                   ILAST=I
+>                   EXIT
+>                END IF 
+>             END DO
+>             DEALLOCATE(LOX) 
+>          END DO
+> 
+> 
+>          LMN_SUP=MAX_LMN
+>          DO ILMN1=1, LMN_SUP
+>             IF (L_OF_LMN(ILMN1)==2) THEN
+>                 LMN_INF=ILMN1
+>                 EXIT
+>             END IF
+>          END DO 
+> 
+>          CALL FILEHANDLER$SETFILE(+'LDA_U_POTENTIAL',.TRUE.,-'.LDA_U_POTENTIAL') 
+>          CALL FILEHANDLER$SETSPECIFICATION(+'LDA_U_POTENTIAL','STATUS','UNKNOWN')
+>          CALL FILEHANDLER$SETSPECIFICATION(+'LDA_U_POTENTIAL','POSITION','REWIND')
+>          CALL FILEHANDLER$SETSPECIFICATION(+'LDA_U_POTENTIAL','ACTION','WRITE')
+>          CALL FILEHANDLER$SETSPECIFICATION(+'LDA_U_POTENTIAL','FORM','FORMATTED') 
+>          CALL FILEHANDLER$UNIT('LDA_U_POTENTIAL',NFIL) 
+> 
+>          WRITE(*,*) 'IAT=', IAT
+>          WRITE(*,*) NATOMS_D, LMN_INF, LMN_SUP, MINI_LM, MAXI_LM 
+>          
+>          WRITE(NFIL,*) NATOMS_D, LMN_INF, LMN_SUP, MINI_LM, MAXI_LM 
+>          WFIRST=.FALSE. 
+>       END IF
+>   
+>  
+> !===========================================================================
+> !   a,s        a      a,s  a       a
+> !  V      =<Phi    | V    P   | Phi    >
+> !   nlm        nlm    mm   mm      nlm
+> !
+> !  is written for atoms a containing d electrons, for spin s up and down and
+> !  for nlm belonging to lmn_inf to lmn_sup.
+> !  For Ni we have lmn_inf=5 and lmn_sup=14 because two projectors are
+> !  considered to describe the eigth 3d electrons
+> !===========================================================================
+> 
+>       WRITE(NFIL,*) IAT, RMT(1,1)
+>       WRITE(*,*) 'IAT=', IAT, 'RMT=', RMT(1,1)
+>  
+> !===========================================================================
+> !  V           is written
+> !   nlm
+> !===========================================================================
+> 
+>      DO ISPIN=1, 2
+>         WRITE(NFIL,*) (27.2d0*REAL(POT_MAT(ILMN1,ILMN1,ISPIN)),   &
+>                      &ILMN1=LMN_INF, LMN_SUP)
+>      END DO
+> 
+> 
+> !===========================================================================
+> !  V           is written for lm ranging from 5 to 9
+> !   mm
+> !===========================================================================
+>  
+>       DO ISPIN=1, 2
+>          WRITE(NFIL,*) (REAL(POT_MAT(ILMN1,ILMN1,ISPIN))/           &
+>                       &OVERLAP(LN_OF_LMN(ILMN1), LN_OF_LMN(ILMN1)), &
+>                       &ILMN1=LMN_INF, LMN_INF+MAXI_LM-MINI_LM)
+>       END DO
+>  
+>  
+>       IF (ILAST==IAT) THEN 
+>          CALL FILEHANDLER$CLOSE('LDA_U_POTENTIAL')
+>       END IF
+> 
+>       END SUBROUTINE LDAPLUSU_WRITE_POT
+> 
+> !===========================================================================
+> !    END BRICE 30/04/2002
+> !===========================================================================
+> 
+> 
+> 
+> 
+34,35c175,176
+<       SUBROUTINE LDAPLUSU(IAT,NRX,LNX,LMNXX,NSPIN,LOX &
+<      &                ,R1,DEX,AEZ,AEPHI,DENMAT,DETOT,DH)
+---
+>       SUBROUTINE LDAPLUSU(IAT,NRX,LNX,LMNXX,NSPIN,LOX & 
+>                          &,R1,DEX,AEZ,AEPHI,DENMAT,DETOT,DH)
+37a179,180
+> 
+>       USE ATOMS_MODULE
+88a232
+>       REAL(8)                          :: EV
+101c245
+<       INTEGER(4) :: lmn1,lmn2,ispin1,ispin2,lm1,lm2,lm3,lm4   
+---
+>       INTEGER(4) :: lmn1,lmn2,ispin1,ispin2,lm1,lm2,lm3,lm4
+103a248,251
+>       INTEGER(4) :: ISP, IZ
+>       REAL(8) :: RCOV
+>       CHARACTER(60) :: ATOM
+> 
+107a256,266
+> 
+> 
+> !===================  TEMP   ==========================================
+> 
+>       CALL CONSTANTS('EV',EV)
+>       WRITE(*,*) 'EV= ', EV  
+> 
+> 
+>       IZ=NINT(AEZ)
+>       CALL PERIODICTABLE$GET(IZ, 'R(ASA)', RCOV) 
+>       CALL ATOMLIST$GETCH('NAME',IAT,ATOM) 
+109a269,270
+>       WRITE(*,*) 'ENTER IN LDA+U SUBROUTINE FOR ATOM ', ATOM 
+>       WRITE(*,*) 'RCOV IS EQUAL TO', RCOV
+110a272,273
+> !===================  END TEMP   =======================================
+>  
+339a503,515
+> !========================================================================
+> !     BRICE 02/05/2002
+> !========================================================================
+> 
+>       CALL LDAPLUSU_WRITE_POT(IAT, NSPIN, MAX_LMN, LNX, L_OF_LMN,   &
+>                                    &LN_OF_LMN, POT_MAT, R_MT, X) 
+> 
+> !========================================================================
+> !     END BRICE 02/05/2002
+> !========================================================================
+> 
+> 
+> 
+933,934c1109,1111
+<      SUBROUTINE POT_TYPE1(LMNXX,LNX,NSPIN,LM_OF_LMN,LN_OF_LMN, & 
+<                                             OCC,X,POT_MAT,DETOT)
+---
+>      SUBROUTINE POT_TYPE1(LMNXX,LNX,NSPIN,LM_OF_LMN,LN_OF_LMN, &
+>                          &OCC,X,POT_MAT,DETOT)
+> 
+967,968c1144,1146
+<      SUBROUTINE POT_TYPE2(LMNXX,LNX,NSPIN,LM_OF_LMN,M_OF_LMN,    & 
+<                            L_OF_LMN,LN_OF_LMN,OCC,X,POT_MAT,DETOT)
+---
+>      SUBROUTINE POT_TYPE2(LMNXX,LNX,NSPIN,LM_OF_LMN,M_OF_LMN,&
+>                          &L_OF_LMN,LN_OF_LMN,OCC,X,POT_MAT,DETOT)
+> 
+1159,1160c1337,1339
+<       SUBROUTINE POT_TYPE3(LMNXX,LNX,NSPIN,M_OF_LMN,LN_OF_LMN,  & 
+<                                         OCC,RHO,X,POT_MAT,DETOT)
+---
+>       SUBROUTINE POT_TYPE3(LMNXX,LNX,NSPIN,M_OF_LMN,LN_OF_LMN, &
+>                           &OCC,RHO,X,POT_MAT,DETOT)
+> 
+1196,1202d1374
+< 
+< !     TEMP
+<       WRITE(*,*)"XU IS EQUAL TO", XU
+<       WRITE(*,*)"XJ IS EQUAL TO", XJ
+< !     END TEMP
+< 
+< 
+1352,1353c1524,1526
+<      SUBROUTINE POT_TYPE4(LMNXX,LNX,NSPIN,LM_OF_LMN,M_OF_LMN,    & 
+<                            L_OF_LMN,LN_OF_LMN,OCC,RHO,X,POT_MAT,DETOT)
+---
+>      SUBROUTINE POT_TYPE4(LMNXX,LNX,NSPIN,LM_OF_LMN,M_OF_LMN, &
+>                          &L_OF_LMN,LN_OF_LMN,OCC,RHO,X,POT_MAT,DETOT)
+> 

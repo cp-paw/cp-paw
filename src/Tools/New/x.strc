@@ -1,0 +1,53 @@
+!STRUCTURE
+  !GENERIC LUNIT=1.8897259926 !END   
+  !OCCUPATIONS NBAND=8 NSPIN=1 !END
+  !LATTICE T= 0.00000  5.00000  5.00000               
+              5.00000  0.00000  5.00000               
+              5.00000  5.00000  0.00000 !END
+  !SPECIES NAME= 'H_' ZV=1. M=1.9380 
+           FILE='/u/blo.3/Atomic/001r045e6.out'  !END 
+  !SPECIES NAME= 'C_' ZV=4. M=18.9984 
+           FILE='/u/blo.3/Atomic/006r100e6.out'  !END 
+  !SPECIES NAME= 'O_' ZV=6. M=15.99946 
+           FILE='/u/blo.3/Atomic/008r100e6.out' !END 
+  !ATOM    NAME= 'H_1'  R= -0.50000  0.00000 -0.86600 !END
+  !ATOM    NAME= 'H_2'  R= -0.50000  0.00000  0.86600 !END
+  !ATOM    NAME= 'C_3'  R=  0.00000  0.00000  0.00000 !END
+  !ATOM    NAME= 'O_4'  R=  1.50000  0.00000  0.00000 !END
+  !ISOLATE NF=3 RC=0.5 RCFAC=1.5 GMAX2=3.0 DECOUPLE=T !END 
+  !QM-MM
+     !ATOM NAME='H_1'  FFTYPE='H_'  QMATOM='H_1' !END
+     !ATOM NAME='H_2'  FFTYPE='H_'  QMATOM='H_2' !END
+     !ATOM NAME='C_3'  FFTYPE='C_2' QMATOM='C_3' !END
+     !ATOM NAME='O_4'  FFTYPE='O_2' QMATOM='O_4' !END
+     !ATOM NAME='OW1'  FFTYPE='O_3' R=0.0 1.0 0.0  Q=-0.3  !END
+     !ATOM NAME='H1W1' FFTYPE='H_'  R=0.0 1.5 0.3  Q=+0.15 !END
+     !ATOM NAME='H2W1' FFTYPE='H_'  R=0.0 1.5 -0.3 Q=+0.15 !END
+     !BOND ATOM1='C_3' ATOM2='H_1'  BO=1. !END
+     !BOND ATOM1='C_3' ATOM2='H_2'  BO=1. !END
+     !BOND ATOM1='C_3' ATOM2='O_4'  BO=2. !END
+     !BOND ATOM1='OW1' ATOM2='H1W1' BO=1. !END
+     !BOND ATOM1='OW1' ATOM2='H2W1' BO=1. !END
+  !END
+  !CONSTRAINTS 
+    !FREEZE ATOM='C_3' !END
+    !LINEAR
+     MOVE=T VALUE=0.00 NSTEP=20 
+     !ATOM NAME='O_4' R=0. 0. 1. !END  
+   !END 
+   !LINEAR
+     MOVE=T VALUE=0.00 NSTEP=20 
+     !ATOM NAME='O_4' R=0. 1. 0. !END  
+   !END 
+  !END
+!END 
+!EOB 
+
+
+
+  !QM-MM STOP=T FRIC=0.01 ADIABATIC=T !END
+
+
+
+
+
