@@ -1,0 +1,13 @@
+#!/bin/tcsh -f
+
+diff -x'bin' -x'lib' -bBiqwr $1 $2 > .diff
+
+echo '----- FILES IN ONLY ONE OF THE DIRECITRIES -----'
+
+grep Only .diff |grep -v \~ |sort 
+
+echo '----- DIFFERING FILES ------'
+
+grep differ .diff | cut -d' ' -f2 |grep -v \~ 
+
+rm -f .diff

@@ -406,7 +406,7 @@ END MODULE CONSTRAINTS_MODULE
           CALL GROUPLIST$MEMBERS(STRING,NAT,TMEMBER)
           NC1=0
           DO IAT=1,NAT
-            IF(TMEMBER(IAT))NC1=NC1+1
+            IF(TMEMBER(IAT))NC1=NC1+3
           ENDDO
           CALL LINKEDLIST$SET(LL_CNSTR,'NC1',0,NC1)
 !
@@ -415,8 +415,8 @@ END MODULE CONSTRAINTS_MODULE
           II=1
           DO IAT=1,NAT
             IF(TMEMBER(IAT)) THEN
-              CALL CONSTRAINTS_FIXATOMVALUE(NAT,IAT,R0_,S0)
-              CALL CONSTRAINTS_FIXATOMVALUE(NAT,IAT,RM_,SM)
+              CALL CONSTRAINTS_FIXATOMVALUE(NAT,IAT,R0_,S0(ii))
+              CALL CONSTRAINTS_FIXATOMVALUE(NAT,IAT,RM_,SM(ii))
               II=II+3
             ENDIF
           ENDDO
@@ -959,6 +959,9 @@ END MODULE CONSTRAINTS_MODULE
       INTEGER(4)                :: IC,I,IAT1,IAT2,IAT3,IAT4,IAT,II,ICI
       INTEGER(4)                :: it1(3),it2(3),it3(3),it4(3)
 !     ******************************************************************
+      a(:)=0.d0
+      b(:,:)=0.d0
+      c(:,:,:)=0.d0
       LL_CNSTR=LL_CNSTR_
       CALL LINKEDLIST$GET(LL_CNSTR,'REFERENCE',1,RREF)
 !     
@@ -1025,7 +1028,7 @@ END MODULE CONSTRAINTS_MODULE
           DO IAT=1,NAT
             IF(TMEMBER(IAT)) THEN
               CALL CONSTRAINTS_SETFIXATOM(NAT,IAT &
-     &                       ,A(IC),B(1,IC),C(1,1,IC))
+     &                       ,A(II),B(1,II),C(1,1,II))
               II=II+3
             END IF
           ENDDO
@@ -3563,6 +3566,7 @@ end if
         PRINT*,'DEVIATION IN CONSTRAINT',SVAR,ITER
         IF(TPR) PRINT*,'DEVIATION IN CONSTRAINT',SVAR
         IF(.NOT.(SVAR.LE.0.OR.SVAR.GT.0)) THEN
+          CALL ERROR$MSG('DEVIATION VECTOR IS NOT A NUMERICAL QUANTITY')
           CALL ERROR$R8VAL('DEVIATION',SVAR)
           CALL ERROR$STOP('CONSTRAINTS_APPLY')
         END IF

@@ -1,0 +1,75 @@
+#!/bin/bash
+###################################################################
+##                                                               ##
+##  name: pawshow                                                ##
+##                                                               ##
+##  purpose: pulls out columns from the paw protocoll            ##
+##                                                               ##
+##  usage:                                                       ##
+##    pawshow option rootname                                    ##
+##                                                               ##
+##    (exactly one option must be given)                         ##
+##                                                               ##
+##  options:                                                     ##
+##     ?        help                                             ##
+##     -h       help                                             ##
+##     -e       static total energy                              ##
+##     -t       atomic temperature                               ##
+##     -c       constant energy (constant of motion)             ##
+##     -f       fictitios kinetic energy of the wave functions   ##
+##     -ar      friction acting on nuclei                        ##
+##     -ap      friction acting on wave functions                ##
+##                                                               ##
+##  dpendency:                                                   ##
+##    uses xmgr as plotting routine                              ##
+##                                                               ##
+###################################################################
+TEMPDIR=/tmp/
+USAGE='\n
+usage: "pawshow option rootname"\n\n
+1)rootname  is paw protocol file name without the ".prot" ending\n
+2)option (exactly one must be given) can be one of the following\n
+\t  ?: give info about use\n
+\t -h: give info about use\n
+\t -e: plot static total energy\n
+\t -t: plot temperature in kelvin\n
+\t -c: plot conserved energy\n
+\t -f: plot fictitious kinetic wave function energy\n
+\t -ar: plot friction acting on the nuclei\n
+\t -ap: plot friction acting on the wavefunctions'
+if (( $# < 2 )) ;then echo -e ${USAGE} ; exit; fi
+NAME=$2 
+case $1 in 
+"-e")# show static total energy
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $6}' >${TEMPDIR}tmp2
+    ;;
+"-t")# show temperature
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1'| sed 's/-/ -/g' | awk '{print $3 " " $4}' >${TEMPDIR}tmp2
+    ;;
+"-f")# show fictitious kinetic energy
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $5}' >${TEMPDIR}tmp2
+    ;;
+"-c")# show conserved energy 
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $7}' >${TEMPDIR}tmp2
+    ;;
+"-ap")# show friction acting on the wavefunctions
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $8}' >${TEMPDIR}tmp2
+    ;;
+"-ar")# show friction actin on the nuclei
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $9}' >${TEMPDIR}tmp2
+    ;;
+*)
+    echo ${USAGE} ; exit
+    ;;
+esac
+if (( $# == 3 )) ;then
+  cp ${TEMPDIR}tmp2 $3
+else
+  xmgrace ${TEMPDIR}tmp2
+  rm ${TEMPDIR}tmp2
+fi
+exit
+
+
+
+

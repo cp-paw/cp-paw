@@ -140,9 +140,6 @@
                               CALL TIMING$CLOCKON('RESTART I/O')
         CALL READRESTART
                               CALL TIMING$CLOCKOFF('RESTART I/O')
-!       ==  OBTAIN OCCUPATIONS FOR MERMIN FUNCTIONAL ===================
-        CALL DYNOCC$GETL4('DYN',TMERMN)
-        IF(TMERMN) CALL DYNOCC$INIOCC
       END IF
 !
 !     ================================================================
@@ -210,6 +207,7 @@
                               CALL TIMING$CLOCKON('TIMESTEP')
 !     ==use the line with "not tstop" to avoid an additional last time step
 !     if(.not.tstop) CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,TMERMN)
+      CALL DYNOCC$GETL4('DYN',TMERMN)
       CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,TMERMN)
                               CALL TIMING$CLOCKOFF('TIMESTEP')
 !

@@ -1,0 +1,14 @@
+!GCNTL
+  !GENERIC UNIT(E)='EV' !END
+  !SUBSTANCE ID='O' FILE='/u/blo/Projects/O/o.prot' !END
+  !SUBSTANCE ID='H2' FILE='/u/blo/Projects/H2/h2.prot' !END
+  !SUBSTANCE ID='H2O' FILE='/u/blo/Projects/H2O/h2o.prot' !END
+  !REACTION 
+    !FROM ID='O'   FAC=1.  !END
+    !FROM ID='H2'  FAC=1.  !END
+    !TO   ID='H2O' FAC=1.  !END
+  !END
+!END
+!EOB  
+
+

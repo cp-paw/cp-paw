@@ -1104,9 +1104,10 @@ END MODULE PLANEWAVE_MODULE
       REAL(8)                :: GSQUARE
       INTEGER(4)             :: IWORK(NG)
       INTEGER(4)             :: IK(3)
-      INTEGER(4)             :: IG1,IG2,IG3,ICOUNT
+      INTEGER(4)             :: ICOUNT,igarr(3),istart,istop
       REAL(8)                :: KARTK(3)
       integer(4)             :: from,to
+      real(8)                :: svar
 !     ******************************************************************
       KARTK=MATMUL(GBAS,KVEC)
 !
@@ -1152,40 +1153,52 @@ END MODULE PLANEWAVE_MODULE
       CALL SORT$FLIP(FROM,TO)
       DO WHILE (FROM.NE.0.OR.TO.NE.0)
         IF(TO.EQ.0) THEN
-          IG1=IGVEC(1,FROM)
-          IG2=IGVEC(2,FROM)
-          IG3=IGVEC(3,FROM)
+          IGARR(:)=IGVEC(:,FROM)
+          SVAR=G2A(FROM)
         ELSE IF(FROM.EQ.0) THEN
-          IGVEC(1,TO)=IG1
-          IGVEC(2,TO)=IG2
-          IGVEC(3,TO)=IG3
+          IGVEC(:,TO)=IGARR(:)
+          G2A(TO)=SVAR
         ELSE
-          IGVEC(1,TO)=IGVEC(1,FROM)
-          IGVEC(2,TO)=IGVEC(2,FROM)
-          IGVEC(3,TO)=IGVEC(3,FROM)
+          IGVEC(:,TO)=IGVEC(:,FROM)
+          G2A(TO)=G2A(FROM)
         END IF
         CALL SORT$FLIP(FROM,TO)
       ENDDO                
       CALL SORT$UNSET
-      return
-
-      CALL KB07AD(G2A,NG,IWORK)
 !
-      DO IG=1,NG-1
-        DO WHILE(IWORK(IG).NE.IG)
-          ITO=IWORK(IG)
-          IG1=IGVEC(1,ITO)
-          IG2=IGVEC(2,ITO)
-          IG3=IGVEC(3,ITO)
-          IGVEC(1,ITO)=IGVEC(1,IG)
-          IGVEC(2,ITO)=IGVEC(2,IG)
-          IGVEC(3,ITO)=IGVEC(3,IG)
-          IGVEC(1,IG)=IG1
-          IGVEC(2,IG)=IG2
-          IGVEC(3,IG)=IG3
-          IWORK(IG)=IWORK(ITO)
-          IWORK(ITO)=ITO
-        ENDDO
+!     =============================================================================
+!     ==  ORDER G-VECTORS WITHIN A START OF G-VECTORS OF SAME LENGTH             ==
+!     =============================================================================
+      ISTART=1
+      SVAR=G2A(ISTART)
+      DO IG=2,NG
+        IF(ABS(G2A(IG)-SVAR).LT.1.D-3.AND.IG.NE.NG) CYCLE
+        ISTOP=IG-1
+        if(ig.eq.NG)istop=ng
+        DO I=ISTART,ISTOP
+          DO J=I+1,ISTOP
+            IF(IGVEC(1,I).GT.IGVEC(1,J)) THEN
+              IGARR(:)=IGVEC(:,I)
+              IGVEC(:,I)=IGVEC(:,J)
+              IGVEC(:,J)=IGARR(:)
+            ELSE IF(IGVEC(1,I).eq.IGVEC(1,J)) THEN
+              IF (IGVEC(2,I).gt.IGVEC(2,J)) THEN
+                IGARR(:)=IGVEC(:,I)
+                IGVEC(:,I)=IGVEC(:,J)
+                IGVEC(:,J)=IGARR(:)
+              ELSE IF(IGVEC(2,I).eq.IGVEC(2,J)) THEN
+                IF(IGVEC(3,I).GT.IGVEC(3,J)) THEN
+                  IGARR(:)=IGVEC(:,I)
+                  IGVEC(:,I)=IGVEC(:,J)
+                  IGVEC(:,J)=IGARR(:)
+                END IF
+              END IF
+            END IF
+          END DO
+        END DO
+        IF(I.EQ.NG) EXIT
+        ISTART=I+1
+        SVAR=G2A(ISTART)
       ENDDO
       RETURN
       END 

@@ -370,6 +370,7 @@ ENDDO
 !     == RANDOMIZE VELOCITIES
 !     ==================================================================
       IF(TRANDOMIZE) THEN
+PRINT*,'TRANDOMIZE ',TRANDOMIZE
         CALL ATOMS_RANDOMIZEVELOCITY(NAT,RMASS,RM,AMPRE,DELT)
         CALL MPE$BROADCAST(1,RM)
         TRANDOMIZE=.FALSE.

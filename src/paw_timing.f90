@@ -282,8 +282,8 @@ END MODULE TIMING_MODULE
         WRITE(NFIL,FMT='(''TOTAL CPU TIME USED  : '',A12)')TIMESTRING(1)
         WRITE(NFIL,FMT='(''PERCENTAGE IDLE      : '',F5.1)')100.D0*TIDLE/TMAX
         WRITE(NFIL,FMT='(''NUMBER OF PROCESSORS : '',I4)')NTASKS
+        TOTAL=Tmax*real(ntasks)  ! USED TO OBTAIN PERCENTAGE OIF INDIVIDUAL CLOCKS
       END IF
-      TOTAL=Tmax*real(ntasks)  ! USED TO OBTAIN PERCENTAGE OIF INDIVIDUAL CLOCKS
 !
 !     ==================================================================
 !     ==  REPORT ON INDIVIDUAL CLOCKS                                 ==

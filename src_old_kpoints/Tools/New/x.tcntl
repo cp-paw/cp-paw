@@ -1,0 +1,27 @@
+!TCNTL
+  !FILES
+    !FILE ID='STRC' NAME='-ROOT-.strc_out' !END
+    !FILE ID='TRA' NAME='-ROOT-_r.tra' !END
+    !FILE ID='MOVIE' EXT=F NAME='-ROOT-_movie.dx' !END
+    !FILE ID='OUT' EXT=T NAME='-ROOT-_tra.out' !END
+  !END
+  !MOVIE
+     !VIEWBOX  O=-5. -5. -5. T=10. 0. 0. 0. 10. 0. 0. 0. 10. !END
+  !END
+  !MODE ID='B' 
+    !BOND SCALE=1.0 ATOM1='H_1' ATOM2='C_3' !END
+  !END 
+  !MODE ID='A' 
+    !ANGLE SCALE=1.0 ATOM1='H_1' ATOM2='C_3' ATOM3='H_2' !END
+  !END 
+  !MODEx ID='T' 
+    !TORSION SCALE=1.0 
+      ATOM1='H_1' ATOM2='C_3' ATOM3='O_4' ATOM4='H_2'
+    !END
+  !END 
+  !MODE ID='M' 
+    !MODE SCALE=1.0 ID='B' !END
+  !END 
+  !PRINT_OFF ID='A' TYPE='VELOCITY' !END
+!END
+!EOB

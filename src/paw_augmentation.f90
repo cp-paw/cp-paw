@@ -1440,6 +1440,105 @@ END MODULE AUGMENTATION_MODULE
       ENDDO
       RETURN
       END
+!!$!
+!!$!     ..................................................................
+!!$      subroutine augmentation_corelevels(ndimd,r1,dex,nr,lmrx,aepot)
+!!$      implicit none
+!!$      integer(4),intent(in) :: lmrx
+!!$      integer(4),intent(in) :: ndimd
+!!$      REAL(8)   ,INTENT(IN) :: r1
+!!$      REAL(8)   ,INTENT(IN) :: dex
+!!$      integer(4),intent(in) :: nr
+!!$      REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRX,NDIMD)
+!!$      integer(4)            :: nc         ! number of core states
+!!$      integer(4),allocatable:: lofc(:)    !(nc)
+!!$      real(8)   ,allocatable:: eofc(:)    !(nc)
+!!$      real(8)   ,allocatable:: vatom(nr)  !(nc)
+!!$      real(8)   ,allocatable:: phic(:,:)  !(nr,nc)
+!!$      real(8)   ,allocatable:: r2(:)   ! r**2
+!!$      real(8)   ,allocatable:: h(:,:)  ! hamiltonian
+!!$      complex(8),allocatable:: uc(:,:) ! core eigenvectors
+!!$      real(8)   ,allocatable:: eigc(:) ! core eigenvalues
+!!$      integer(4)            :: ne ! dimensiona of the hamiltonian
+!!$      integer(4)            :: i1,i2,m1,m2,l1,l2,lm1,lm2,lm3
+!!$!     ******************************************************************
+!!$      if(ndimd.ne.1) then
+!!$        call error$stop('augmentation_corelevels')
+!!$      end if
+!!$      pi=4.d0*datan(1.d0)
+!!$      c000=1/dsqrt(4.d0*pi)
+!!$!
+!!$!     ==================================================================
+!!$!     ==  read core levels                                            ==
+!!$!     ==================================================================
+!!$!===  read nc 
+!!$      allocate(lofc(nc))
+!!$      allocate(phic(nr,nc))
+!!$!
+!!$!     ==================================================================
+!!$!     ==                                                              ==
+!!$!     ==================================================================
+!!$      ne=0      
+!!$      do i=1,nc
+!!$        ne=ne+2*lc(i)+1
+!!$      enddo
+!!$      allocate(h(nc,nc))
+!!$      allocate(eigc(nc))
+!!$      allocate(ucc(nc,nc))
+!!$!
+!!$!     ==================================================================
+!!$!     ==  radial grid r2=r**2                                         ==
+!!$!     ==================================================================
+!!$      xexp=dexp(dex)
+!!$      ri=r1/xexp
+!!$      do ir=1,nr
+!!$        ri=ri*xexp
+!!$        r2(ir)=ri**2
+!!$      enddo
+!!$!
+!!$!     ==================================================================
+!!$!     ==  calculate hamiltonian                                       ==
+!!$!     ==================================================================
+!!$      do i1=1,nc
+!!$        l1=lofc(i1)
+!!$        do i2=i1,nc
+!!$          l2=lofc(i2)
+!!$          aux(:)=phi(:,i1)*phi(:,i2)*r2(:)
+!!$          do m1=1,2*l1+1
+!!$            lm1=l1**2+m1
+!!$            do m2=1,2*l2+1
+!!$              lm2=l2**2+m2
+!!$              sum(:)=0.d0
+!!$              DO LM3=1,LMRX
+!!$                CALL CLEBSCH(LM1,LM2,LM3,CG)
+!!$                if(cg.eq.0.d0) cycle
+!!$                sum(:)=sum(:)+cg*aepot(:,lm3,1)
+!!$              enddo
+!!$              if(lm1.eq.lm2) sum(:)=sum(:)-vc(:)*c000
+!!$              sum(:)=sum(:)*aux(:)
+!!$              CALL RADIAL$INTEGRAL(R1,DEX,NR,sum,h(ie1,ie2))
+!!$              h(ie2,ie1)=h(ie1,ie2)
+!!$! add eigenvalues
+!!$            enddo
+!!$          enddo
+!!$        enddo
+!!$      enddo
+!!$!
+!!$!     ==================================================================
+!!$!     ==  diagonalize Hamiltonian                                     ==
+!!$!     ==================================================================
+!!$      call lib$diagr8(ne,h,eigc,uc)
+!!$!
+!!$!     ==================================================================
+!!$!     ==  print eigenvalues                                           ==
+!!$!     ==================================================================
+!!$      call filehandler$unit('prot',nfilo)
+!!$      write(nfilo,fmt='("core eigenvalues"//"================")')
+!!$      write(nfilo,fmt='(10f10.3)')eigc
+!!$      return
+!!$      end
+
+
 !
 !.......................................................................
 MODULE EXPERTNAL1CPOT_MODULE

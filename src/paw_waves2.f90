@@ -93,8 +93,8 @@
             LMNX=MAP%LMNX(ISP)
             ALLOCATE(DO(LNX,LNX))
             CALL SETUP$1COVERLAP(ISP,LNX,DO)
-            CALL WAVES_OPROJ(LNX,MAP%LOX(1,ISP),DO,NDIM,LMNX,NBH &
-      &                      ,THIS%PROJ(1,1,IPRO),OPROJ(1,1,IPRO))
+            CALL WAVES_OPROJ(LNX,MAP%LOX(1:lnx,ISP),DO,NDIM,LMNX,NBH &
+      &          ,THIS%PROJ(:,:,ipro:ipro+lmnx-1),OPROJ(:,:,ipro:ipro+lmnx-1))
             DEALLOCATE(DO)
             IPRO=IPRO+LMNX
           ENDDO
@@ -3213,7 +3213,8 @@ END IF
                       DO IDIM=1,NDIM_
                         F1=PSIINSUPER(IG,IDIM)
                         F2=CONJG(PSIINSUPER(MINUSG(IG),IDIM))
-                        PSIIN(IG,IDIM)=0.5D0*CI*(F1-F2)
+!this has been corrected 9.Nov2003: (- sign included). PEB
+                        PSIIN(IG,IDIM)=-0.5D0*CI*(F1-F2)
                         PSIIN(MINUSG(IG),IDIM)=CONJG(PSIIN(IG,IDIM))
                       END DO
                     ENDDO
@@ -3714,6 +3715,7 @@ END IF
       REAL(8)               :: KA(3)
       REAL(8)               :: G(3)
       INTEGER(4)            :: MING(3),MAXG(3)
+logical(4):: tchk
 !     ******************************************************************
       CALL LIB$INVERTR8(3,GBASA,GBASIN)
 !
@@ -3769,6 +3771,15 @@ END IF
         MAP(IG)=MAP3D(IVEC1(1),IVEC1(2),IVEC1(3))
       ENDDO LOOP1
       DEALLOCATE(MAP3D)
+!
+!     ==================================================================
+!     ==  print if remapping has been done                            ==
+!     ==================================================================
+      tchk=.false.
+      do ig=1,ngb
+        tchk=tchk.or.(map(ig).ne.ig)
+      end do
+      if(tchk)print*,'remapping required'
       RETURN
       END
 !

@@ -530,7 +530,7 @@
       END
 !                                                                       
 !     .....................................................BONDS .......
-      SUBROUTINE DX_DENSITY(NFIL,NR1,NR2,NR3,RBAS,DENSITY,BOXR0,BOXVEC)
+      SUBROUTINE DX_DENSITY(NFIL,NR1,NR2,NR3,RBAS,DENSITYin,BOXR0,BOXVEC)
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
@@ -542,7 +542,7 @@
       INTEGER(4),INTENT(IN) :: NR2
       INTEGER(4),INTENT(IN) :: NR3
       REAL(8)   ,INTENT(IN) :: RBAS(3,3)
-      REAL(8)   ,INTENT(IN) :: DENSITY(NR1,NR2,NR3)
+      REAL(8)   ,INTENT(IN) :: DENSITYin(NR1,NR2,NR3)
       REAL(8)   ,INTENT(IN) :: BOXR0(3)
       REAL(8)   ,INTENT(IN) :: BOXVEC(3,3)
       REAL(8)               :: SBAS(3,3)
@@ -555,7 +555,18 @@
       REAL(8)               :: X,Y,Z
       REAL(8)               :: SH1,SH2,SH3
       INTEGER(4)            :: I,J,K
+      real(8)  ,parameter   :: maxvalue=9999.D0
+      REAL(8)               :: DENSITY(NR1,NR2,NR3)
 !     *******************************************************************
+      density(:,:,:)=densityin(:,:,:)
+      do k=1,nr3
+        do j=1,nr2
+          do i=1,nr1
+            svar=min(maxvalue,density(i,j,k))
+            density(i,j,k)=max(-maxvalue,svar)
+          end do
+        end do
+      end do
       SBAS(:,1)=RBAS(:,1)/REAL(NR1,KIND=8)
       SBAS(:,2)=RBAS(:,2)/REAL(NR2,KIND=8)
       SBAS(:,3)=RBAS(:,3)/REAL(NR3,KIND=8)
@@ -724,10 +735,16 @@
 !     ==   CONNECTIONS ARRAY: BONDS                                 ==
 !     ================================================================
       WRITE(NFIL,FMT='("#"/"#",T10,"BONDS"/"#")') !COMMENT
-      WRITE(NFIL,FMT='(A,I10/A,I10/A)') &
+      if(nbond.eq.0) then
+        WRITE(NFIL,FMT='(A,I10/A,I10)') &
+     &             -"OBJECT ",IOBJECT0+4 &
+     &            ,-"CLASS ARRAY TYPE INT RANK 1 SHAPE 2 ITEMS ",NBOND 
+      else
+        WRITE(NFIL,FMT='(A,I10/A,I10/A)') &
      &             -"OBJECT ",IOBJECT0+4 &
      &            ,-"CLASS ARRAY TYPE INT RANK 1 SHAPE 2 ITEMS ",NBOND &
      &            ,-"DATA FOLLOWS"
+      end if
       WRITE(NFIL,FMT='(10I5)')IBOND(:,:)-1
       WRITE(NFIL,FMT='(A)')-"ATTRIBUTE ""REF"" STRING ""POSITIONS"""
       WRITE(NFIL,FMT='(A)')-"ATTRIBUTE ""ELEMENT TYPE"" STRING ""LINES"""

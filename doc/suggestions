@@ -1,0 +1,17 @@
+1) intelligible command prompt: To get a command prompt that tells
+what machine and directory you are in, append the
+following line to your ~/.envfile or the ~/.profile
+export PS1=[$(uname -n)]${PWD##*/}$
+
+2) in order to access the history file and edding commands using the
+arrow keys insert the following line into your ~/.profile:  
+EDITOR=emacs
+
+
+2) Free Software can be found at the www  site
+ftp://sunsite.cnlab-switch.ch/mirror/aix
+useful is 
+monitor : reports cpu usage and machine usage (kmem is missing)
+make    : GNU-make
+emacs   : editor
+dired   : to be usedwith emacs

@@ -666,6 +666,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: LNXX
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: NFILO
+      integer(4)             :: lnx
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES$GVECTORS')
 !     
@@ -684,14 +685,15 @@ END MODULE WAVES_MODULE
       MAP%LOX(:,:)=0
       MAP%NBAREPRO=0
       DO ISP=1,MAP%NSP
-        CALL SETUP$LNX(ISP,MAP%LNX(ISP))
-        CALL SETUP$LOFLN(ISP,MAP%LNX(ISP),MAP%LOX(1,ISP))
+        CALL SETUP$LNX(ISP,LNX)
+        MAP%LNX(ISP)=lnx
+        CALL SETUP$LOFLN(ISP,LNX,MAP%LOX(1:LNX,ISP))
         MAP%LMNX(ISP)=0
-        DO LN=1,MAP%LNX(ISP)
+        DO LN=1,lnx
           MAP%LMNX(ISP)=MAP%LMNX(ISP)+2*MAP%LOX(LN,ISP)+1
           MAP%LMX=MAX(MAP%LMX,(MAP%LOX(LN,ISP)+1)**2)
         ENDDO
-        MAP%NBAREPRO=MAP%NBAREPRO+MAP%LNX(ISP)
+        MAP%NBAREPRO=MAP%NBAREPRO+lnx
       ENDDO
       MAP%NPRO=0
       DO IAT=1,MAP%NAT
@@ -903,7 +905,7 @@ END MODULE WAVES_MODULE
       REAL(8)                :: GWEIGHT
       REAL(8)   ,ALLOCATABLE :: G2(:)      !G**2
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)  !GI
-      REAL(8)   ,ALLOCATABLE :: GIJ(:,:)   !GI*GJ/G2
+      REAL(8)   ,ALLOCATABLE :: GIJ(:,:)   !GI*GJ/G2 (only filled if tstress!)
       LOGICAL(4)             :: TINV
       LOGICAL(4)             :: TSTRESS
       LOGICAL(4)             :: TFORCE
@@ -913,6 +915,7 @@ END MODULE WAVES_MODULE
       COMPLEX(8),ALLOCATABLE :: QMAT(:,:)   
       INTEGER(4)             :: NFILO
       INTEGER(4)             :: L1,L2,LN1,LN2
+      integer(4)             :: ngamma
 !     ******************************************************************      
                              CALL TRACE$PUSH('WAVES$ETOT')
       CALL MPE$QUERY(NTASKS,THISTASK)
@@ -978,10 +981,10 @@ END MODULE WAVES_MODULE
               CALL WAVES_RANDOMIZE(NGL,NDIM,NBH,AMPRANDOM,G2,THIS%PSIM)
               DEALLOCATE(G2)
             END IF
-call waves_comparepsi('before gramschmidt',ngl,ndim,nbh,this%psi0,THIS%psim)
+!call waves_comparepsi('before gramschmidt',ngl,ndim,nbh,this%psi0,THIS%psim)
             CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSI0)
             CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSIM)
-call waves_comparepsi('after gramschmidt',ngl,ndim,nbh,this%psi0,THIS%psim)
+!call waves_comparepsi('after gramschmidt',ngl,ndim,nbh,this%psi0,THIS%psim)
 !
 !           ============================================================
 !           == PROJECTIONS (REPLACEMENT BY PREDICTION IS FRAGILE!)    ==
@@ -1007,25 +1010,20 @@ CALL TIMING$CLOCKON('W:EKIN')
           NGL=GSET%NGL
           NBH=THIS%NBH
           NB=THIS%NB
-!print*,ikpt,gset%tinv
-!print*,'occ',occ(:,ikpt,ispin)
           CALL WAVES_EKIN(NGL,NDIM,NBH,NB,OCC(1,IKPT,ISPIN),GWEIGHT &
       &                         ,THIS%PSI0,EKIN1,TSTRESS,STRESS1 &
       &                         ,TBUCKET,GSET%BUCKET,GSET%DBUCKET)
-!        CALL WAVES_EKIN_OLD(GSET%NGL,NDIM,THIS%NBH,THIS%NB,OCC(1,IKPT,ISPIN) &
-!     &                   ,THIS%PSI0,EKIN1,TSTRESS,STRESS1)
           EKIN  =EKIN  +EKIN1
           STRESS=STRESS+STRESS1
         ENDDO
       ENDDO
-!stop
-PRINT*,'EKIN ',EKIN
       CALL ENERGYLIST$SET('PS  KINETIC',EKIN)
       CALL ENERGYLIST$ADD('AE  KINETIC',EKIN)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EKIN)
-WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(1,:)
-WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(2,:)
-WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(3,:)
+CALL TIMING$CLOCKOFF('W:EKIN')
+!D WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(1,:)
+!D WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(2,:)
+!D WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(3,:)
 !
 !     ==================================================================
 !     == ONE-CENTER DENSITY MATRICES                                  ==
@@ -1034,7 +1032,6 @@ WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(3,:)
 !     == NONCOLLINEAR    NSPIN=1;NDIM=2: (TOTAL,SPIN_X,SPIN_Y,SPIN_Z) ==
 !     ==================================================================
 CALL TRACE$PASS('BEFORE ONE-CENTER DENSITY MATRIX')     
-CALL TIMING$CLOCKOFF('W:EKIN')
 CALL TIMING$CLOCKON('W:1CD')
       NAT=MAP%NAT
       LMNXX=0
@@ -1231,6 +1228,7 @@ CALL TIMING$CLOCKON('W:SPHERE')
       ENDDO
       DEALLOCATE(VQLM)
       CALL MPE$COMBINE('+',DH)
+      CALL MPE$COMBINE('+',DO)
       CALL MPE$COMBINE('+',potb)
 !     ==  SPREAD INFO FROM SPHERE OVER ALL TASKS AND UPDATE ENERGYLIST
       CALL AUGMENTATION$SYNC
@@ -1241,8 +1239,7 @@ CALL TIMING$CLOCKON('W:SPHERE')
 !     ==  note that \int d^3r \tilde{v}=0
       call gbass(rbas,gbas,svar)
       potb=potb/svar
-!potb=0.d0
-      rho(:,1)=rho(:,1)+potb
+      RHO(:,1)=RHO(:,1)+POTB
       DO IAT=1,NAT
         ISP=MAP%ISP(IAT)
         LMN1=0
@@ -1253,7 +1250,8 @@ CALL TIMING$CLOCKON('W:SPHERE')
             L2=MAP%LOX(LN2,ISP)
             IF(L2.EQ.L1) THEN
               DO M=1,2*L1+1
-                DH(LMN1+M,LMN2+M,1,IAT)=DH(LMN1+M,LMN2+M,1,IAT)+POTB*DO(LMN1+M,LMN2+M,1,IAT)
+                DH(LMN1+M,LMN2+M,1,IAT)=DH(LMN1+M,LMN2+M,1,IAT) &
+     &                                 +POTB*DO(LMN1+M,LMN2+M,1,IAT)
               ENDDO
             END IF
             LMN2=LMN2+2*L2+1
@@ -1395,8 +1393,8 @@ CALL TIMING$CLOCKON('W:FORCE')
             NGL=GSET%NGL
             ALLOCATE(GVEC(3,NGL))
             CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+            ALLOCATE(GIJ(6,NGL))
             IF(TSTRESS) THEN
-              ALLOCATE(GIJ(6,NGL))
               DO IG=1,NGL
                 SVAR=GVEC(1,IG)**2+GVEC(2,IG)**2+GVEC(3,IG)**2
                 SVAR=1.D0/(SVAR+TINY)
@@ -1408,6 +1406,8 @@ CALL TIMING$CLOCKON('W:FORCE')
                   ENDDO
                 ENDDO
               ENDDO
+            else
+              gij(:,:)=0
             END IF
             IPRO=1
             DO IAT=1,NAT
@@ -1425,9 +1425,9 @@ CALL TIMING$CLOCKON('W:FORCE')
               else 
                 DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
               end if
-              CALL WAVES_DEDPROJ(NDIM,NBH,NB,LNX,MAP%LOX(1,ISP),LMNX &
-     &                       ,OCC(1,IKPT,ISPIN) &
-     &                       ,THIS%PROJ(1,1,IPRO),DH1,DO1 &
+              CALL WAVES_DEDPROJ(NDIM,NBH,NB,LNX,MAP%LOX(1:lnx,ISP),LMNX &
+     &                       ,OCC(:,IKPT,ISPIN) &
+     &                       ,THIS%PROJ(:,:,ipro:ipro+lmnx-1),DH1,DO1 &
      &                       ,THIS%RLAM0,DEDPROJ)
               DEALLOCATE(DH1)
               DEALLOCATE(DO1)
@@ -1438,8 +1438,8 @@ CALL TIMING$CLOCKON('W:FORCE')
 !             == DE= <DPRO|DEDPRO> =====================================
               ALLOCATE(EIGR(NGL))
               CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
-              CALL WAVES_PROFORCE(LNX,LMNX,MAP%LOX(1,ISP),NGL,GWEIGHT,GVEC,GIJ &
-     &                   ,GSET%PRO(1,IBPRO),GSET%DPRO(1,IBPRO) &
+              CALL WAVES_PROFORCE(LNX,LMNX,MAP%LOX(1:lnx,ISP),NGL,GWEIGHT,GVEC,GIJ &
+     &                   ,GSET%PRO(:,IBPRO:ibpro+lnx-1),GSET%DPRO(:,IBPRO:ibpro+lnx-1) &
      &                   ,MAP%LMX,GSET%YLM,GSET%SYLM &
      &                   ,EIGR,DEDPRO,FORCE1,TSTRESS,STRESS1)
               CALL MPE$COMBINE('+',FORCE1)
@@ -1450,12 +1450,13 @@ CALL TIMING$CLOCKON('W:FORCE')
               STRESS(:,:) =STRESS(:,:) +STRESS1(:,:)
               IPRO=IPRO+LMNX
             ENDDO
-            IF(TSTRESS) DEALLOCATE(GIJ)
+            DEALLOCATE(GIJ)
             DEALLOCATE(GVEC)
           ENDDO
         ENDDO
       END IF
 CALL TIMING$CLOCKOFF('W:FORCE')
+
 !
 !     ==================================================================
 !     ==  EVALUATE H*PSI                                              ==
@@ -1497,7 +1498,7 @@ CALL TIMING$CLOCKON('W:HPSI.2')
               DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
             end if
             CALL WAVES_HPROJ(NDIM,NBH,LMNX &
-     &                      ,dh1,THIS%PROJ(1,1,IPRO),HPROJ(1,1,IPRO))
+     &           ,dh1,THIS%PROJ(:,:,ipro:ipro+lmnx-1),HPROJ(:,:,ipro:ipro+lmnx-1))
             deallocate(dh1)
             IPRO=IPRO+LMNX
           ENDDO
@@ -1533,12 +1534,12 @@ CALL TIMING$CLOCKON('W:EXPECT')
           DO IB=1,NBH
             IF(GSET%TINV) THEN
               CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,1,2 &
-     &                    ,THIS%PSI0(1,1,IB),THIS%HPSI(1,1,IB),HAMILTON)
+     &              ,THIS%PSI0(:,:,IB),THIS%HPSI(:,:,IB),HAMILTON)
               EIG(2*IB-1,IKPT,ISPIN)=REAL(HAMILTON(1,1))
               EIG(2*IB  ,IKPT,ISPIN)=REAL(HAMILTON(2,2))
             ELSE 
               CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,1,1 &
-     &                    ,THIS%PSI0(1,1,IB),THIS%HPSI(1,1,IB),HAMILTON)
+     &            ,THIS%PSI0(:,:,IB),THIS%HPSI(:,:,IB),HAMILTON)
               EIG(IB,IKPT,ISPIN)=REAL(HAMILTON(1,1))
             END IF
           ENDDO
@@ -1611,12 +1612,12 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       CALL ATOMLIST$SETR8A('FORCE',0,3*NAT,FORCE)
       DEALLOCATE(FORCET)
 !     == STRESS ========================================================
-WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(1,:)
-WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(2,:)
-WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(3,:)
-WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(1,:)
-WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(2,:)
-WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
+!D WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(1,:)
+!D WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(2,:)
+!D WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(3,:)
+!D WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(1,:)
+!D WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(2,:)
+!D WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       CALL CELL$GETR8A('STRESS_I',9,STRESS1)
       STRESS=STRESS1-STRESS  ! IN THIS ROUTINE STRESS=+DE/DEPSILON!
       CALL CELL$SETR8A('STRESS_I',9,STRESS)
@@ -2654,7 +2655,7 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
         IBPRO=1+SUM(MAP%LNX(1:ISP-1))
         CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
         CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
-     &                      ,GSET%PRO(1,IBPRO),MAP%LMX,GSET%YLM,EIGR,PRO)
+     &                      ,GSET%PRO(:,IBPRO:ibpro+lnx-1),MAP%LMX,GSET%YLM,EIGR,PRO)
         CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,1,LMNX,PRO,NDIM*NB,PSI &
      &                              ,PROPSI1)
         II=0
@@ -2748,7 +2749,7 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
         IBPRO=1+SUM(MAP%LNX(1:ISP-1))
         CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
         CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
-     &                      ,GSET%PRO(1,IBPRO),MAP%LMX,GSET%YLM,EIGR,PRO)
+     &                      ,GSET%PRO(:,IBPRO:ibpro+lnx-1),MAP%LMX,GSET%YLM,EIGR,PRO)
 !
 !       ===============================================================
 !       ==  |PSI>=|PSI>+|PRO>PROPSI                                  ==
@@ -3090,8 +3091,8 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
           CALL SETUP$ISELECT(ISP)
           DO LN=1,MAP%LNX(ISP)
             IND=IND+1
-            CALL SETUP$GETFOFG('PRO',.FALSE.,LN,NGL,G2,CELLVOL,GSET%PRO(1,IND))
-            CALL SETUP$GETFOFG('PRO',.TRUE.,LN,NGL,G2,CELLVOL,GSET%DPRO(1,IND))
+            CALL SETUP$GETFOFG('PRO',.FALSE.,LN,NGL,G2,CELLVOL,GSET%PRO(:,IND))
+            CALL SETUP$GETFOFG('PRO',.TRUE.,LN,NGL,G2,CELLVOL,GSET%DPRO(:,IND))
           ENDDO
         ENDDO
 !

@@ -1,0 +1,86 @@
+#!/bin/sh
+#
+# USAGE:
+# 
+# the LIST variable contains all the files/directories to be 
+# included in the distribution
+#
+#  $# is the number of arguments
+#  $@ is the list of arguments
+#  shift removes the first argument from the argument list
+#  $n is the nth argument
+#
+SOURCE='PAW_current'
+TARGET=PAW_$(date +%y%m%d)
+#
+while test $# -gt 0  
+do
+  case $1 
+  in
+  -h)
+     echo 'creates a distribution PAW_date and its tarball'
+     echo 'paw_distribution [-h][-s sourcedirectory][-t targetdirectory]'
+     exit
+  ;;
+  -s)
+    shift
+    SOURCE=$1
+  ;;
+  -t)
+    shift
+    TARGET=$1
+  ;;
+  *)
+       echo 'illegal option. try -h'
+       exit
+  esac
+  shift
+done
+echo 'Source='$SOURCE '; Target='$TARGET
+#==================================================================
+#== test existence  of directories                               ==
+#==================================================================
+if test -d $SOURCE
+then
+   echo 'ok: source directory' $SOURCE 'exists'
+   if test ! -d $SOURCE/src -o ! -d $SOURCE/doc
+   then
+     echo 'strange structure of source directory. Closing down.'
+     exit
+   fi
+else 
+  echo 'error exit: source directory' $SOURCE 'does not exist'
+  exit
+fi
+if test -e $TARGET.tgz
+then
+  echo 'error exit: tar ball already exists'
+  exit
+fi
+if test -e $TARGET
+then
+  echo 'error exit: an entity named like target directory already exists'
+  exit
+fi
+#==================================================================
+#== create tar ball from source directory                        ==
+#==================================================================
+echo 'ok: creating target directory'
+#
+LIST="configure configure.in Makefile.in parms.* src doc lib samples paw_distribution"
+mkdir $TARGET
+for X in $LIST
+do 
+  cp -R ${SOURCE}/${X} ${TARGET}/$X
+# echo ${SOURCE}/${X} ${TARGET}/$X
+done
+# == REMOVE BACKUP FILES ===========================================
+REMOVE="$(find ${TARGET} -name '*~')  $(find ${TARGET} -name '#*#')"
+rm $REMOVE
+#== make tar ball ==================================================
+echo 'ok: creating tar ball'
+tar -czf ${TARGET}.tgz ${TARGET}
+echo 'ok: finished'
+exit
+
+

@@ -1,0 +1,24 @@
+###################################################################
+##                                                               ##
+##  $1 ROOT OF THE NEW PROJECT                                   ##
+##                                                               ##
+###################################################################
+#PAWDIR=/u/blo.2/PAW/ already defined in the profile
+sed g|ROOT=-ROOT-|ROOT=$1|s ${PAWDIRNEW}/Tools/New/x.doit > $1.doit
+NAME=cntl_erlx
+sed g|-ROOT-|$1|s ${PAWDIRNEW}/Tools/New/x.${NAME} > $1.${NAME}
+NAME=cntl_rrlx
+sed g|-ROOT-|$1|s ${PAWDIRNEW}/Tools/New/x.${NAME} > $1.${NAME}
+NAME=strc
+sed g|-ROOT-|$1|s ${PAWDIRNEW}/Tools/New/x.${NAME} > $1.${NAME}
+NAME=wcntl
+sed g|-ROOT-|$1|s ${PAWDIRNEW}/Tools/New/x.${NAME} > $1.${NAME}
+NAME=tcntl
+sed g|-ROOT-|$1|s ${PAWDIRNEW}/Tools/New/x.${NAME} > $1.${NAME}
+NAME=dcntl
+sed g|-ROOT-|$1|s ${PAWDIRNEW}/Tools/New/x.${NAME} > $1.${NAME}
+exit
+
+
+
+

@@ -3030,7 +3030,7 @@ PRINT*,'WARNING! CODE FUDGED'
         END IF 
         REWIND NFIL
         DO IR=1,NR
-          WRITE(NFIL,fmt='(100e20.10.3)')R(IR),PRO1(IR,:)
+          WRITE(NFIL,fmt='(100e20.10)')R(IR),PRO1(IR,:)
         ENDDO
         DEALLOCATE(PRO1)
       ENDDO

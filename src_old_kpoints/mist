@@ -1,0 +1,9 @@
+#!/bin/tcsh
+
+set name='MPE$QUERY'
+
+
+foreach i (*.f90)
+  sed -e "s/CALL $name(/CALL $name('~',/" $i > tmp
+  mv tmp ${i}
+end

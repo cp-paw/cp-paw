@@ -557,6 +557,7 @@
       INTEGER(4)            :: I,J,K
       real(8)  ,parameter   :: maxvalue=9999.D0
       REAL(8)               :: DENSITY(NR1,NR2,NR3)
+      REAL(8)               :: svar
 !     *******************************************************************
       density(:,:,:)=densityin(:,:,:)
       do k=1,nr3
