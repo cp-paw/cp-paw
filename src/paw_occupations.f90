@@ -530,7 +530,6 @@ END MODULE DYNOCC_MODULE
          END IF
          EPSILON=RESHAPE(DATA_,(/NB,NKPT,NSPIN/))
          TEPSILON=.TRUE.
-print*,'epsilon set ',tepsilon,epsilon
        ELSE IF(ID_.EQ.'M<PSIDOT|PSIDOT>') THEN
          IF(LEN_.NE.NB*NKPT*NSPIN) THEN
            CALL ERROR$MSG('DIMENSIONS INCONSISTENT')
@@ -1471,7 +1470,6 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
       IMPLICIT NONE
 !     ******************************************************************
       TEPSILON=.FALSE.
-print*,'tepsilon unset ',tepsilon
       IF(ALLOCATED(MPSIDOT2)) DEALLOCATE(MPSIDOT2)
       IF(TDYN) THEN
         XM(:,:,:)=X0(:,:,:)

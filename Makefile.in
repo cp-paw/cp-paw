@@ -127,7 +127,7 @@ default: ${PAWX}
 #
 # THE PAW BINARIES
 #
-all: debug none fast parallel tools
+all: debug none fast parallel tools doc
 #
 # Two targets aim at compiling every PAW-binary (not tool). This
 # is necessary, because the dependencies due to modules just have
