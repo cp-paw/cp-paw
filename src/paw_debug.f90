@@ -383,4 +383,83 @@ print*,'Ende debug$wavefunctions',thistask
       call mpe$sync
       call error$normalstop
       end subroutine debug$wavefunctions
+!
+!     .......................................................................................
+      subroutine debug$chkparacons_r8a(id,len,val)
+      use mpe_module
+      implicit none
+      integer(4),intent(in)    :: len
+      real(8)   ,intent(in)    :: val(len)
+      character(*),intent(in) ::  id
+      integer(4)               :: ntasks,thistask
+      real(8)   ,allocatable   :: valarr(:,:)
+      integer(4)               :: itask
+      integer(4)               :: isvararr(1),isvar
+!     =========================================================================================
+      call mpe$query(ntasks,thistask)
+      allocate(valarr(len,ntasks))
+      valarr(:,1)=val(:)
+      do itask=2,ntasks
+        if(itask.eq.thistask) then
+          call mpe$send(1,itask,val)
+        end if
+        if(thistask.eq.1) then
+          call mpe$receive(itask,itask,valarr(:,itask))
+        end if
+      enddo
+!     =================================================================
+!     == analyse                                                     ==
+!     =================================================================
+      if(thistask.eq.1) then
+        do itask=2,ntasks
+          isvararr=maxloc(abs(valarr(:,itask)-valarr(:,1)))
+          isvar=isvararr(1)
+          print*,trim(id),itask,isvar,valarr(isvar,itask)-valarr(isvar,1),valarr(isvar,itask),valarr(isvar,1)
+        enddo
+      end if
+      return
+      end
+!
+!     ...............................................................
+      subroutine debug$mpeident_r8a(len,val,ierr)
+!     **                                                           **
+!     ** this routine checks for if val is identical on all nodes  **
+!     ** with ierr it provides the number of task, for which val   **
+!     ** differs from the first task. If ierr=0 all are identical  **
+!     **                                                           **
+      use mpe_module
+      implicit none
+      integer(4),intent(in)    :: len
+      real(8)   ,intent(in)    :: val(len)
+      integer(4),intent(out)   :: ierr
+      integer(4)               :: ntasks,thistask
+      real(8)   ,allocatable   :: valarr(:,:)
+      integer(4)               :: itask
+      integer(4)               :: isvararr(1),isvar
+!     ******************************************************************
+      ierr=0
+      call mpe$query(ntasks,thistask)
+      allocate(valarr(len,ntasks))
+      valarr(:,1)=val(:)
+      do itask=2,ntasks
+        if(itask.eq.thistask) then
+          call mpe$send(1,itask,val)
+        end if
+        if(thistask.eq.1) then
+          call mpe$receive(itask,itask,valarr(:,itask))
+        end if
+      enddo
+!     =================================================================
+!     == analyse                                                     ==
+!     =================================================================
+      if(thistask.eq.1) then
+        ierr=0
+        do itask=2,ntasks
+          isvararr=maxloc(abs(valarr(:,itask)-valarr(:,1)))
+          isvar=isvararr(1)
+          if(valarr(isvar,itask)-valarr(isvar,1).ne.0.d0) ierr=ierr+1
+        enddo
+      end if
+      return
+      end
 
