@@ -18,6 +18,7 @@
       REAL(8)                     :: RUNIT        ! LENGTH UNIT ON STRUCTURE FILE
       REAL(8)                     :: RBAS(3,3)    ! LATTICE VECTORS
       CHARACTER(32),ALLOCATABLE   :: NAME(:)      ! ATOM NAMES
+      CHARACTER(32),ALLOCATABLE   :: SPECIES(:)   ! SPECIES NAME
       REAL(8),      ALLOCATABLE   :: R(:,:)       ! ATOMIC POSITIONS
       REAL(8),      ALLOCATABLE   :: Q(:)         ! CHARGES
       CHARACTER(32),ALLOCATABLE   :: MMNAME(:)      ! ATOM NAMES
@@ -164,6 +165,7 @@
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$NLISTS(LL_STRC,'ATOM',NAT)
       ALLOCATE(NAME(NAT))
+      ALLOCATE(SPECIES(NAT))
       ALLOCATE(R(3,NAT))
       ALLOCATE(NEIGH(8,NAT))
       NEIGH=0
@@ -172,6 +174,7 @@
         CALL LINKEDLIST$GET(LL_STRC,'R',1,R(:,IAT))
         R(:,IAT)=R(:,IAT)*RUNIT
         CALL LINKEDLIST$GET(LL_STRC,'NAME',1,NAME(IAT))
+        CALL LINKEDLIST$GET(LL_STRC,'SP',1,SPECIES(IAT))
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
 !
@@ -236,7 +239,12 @@
          DO IY=0,MY-1
             DO IZ=0,MZ-1
                DO IAT=1,NAT
-                  str=NAME(IAT)(1:2)
+!original version:
+!the name of the atom was used
+!                  str=NAME(IAT)(1:2)
+!updated version:
+!the species is used
+                  str=SPECIES(IAT)(1:2)
                   IF(str(2:2).EQ.'_') str(2:2)=' '
                   WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X),2X,A)')STR,R(:,IAT)+ &
                        &      IX*RBAS(:,1)+IY*RBAS(:,2)+IZ*RBAS(:,3),TRIM(NAME(IAT))
