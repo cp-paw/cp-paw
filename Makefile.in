@@ -141,7 +141,7 @@ all: debug none fast parallel tools doc
 #
 all_new: debug_new none_new fast_new parallel tools
 #
-tools: 	 atom tra wave grab dos converttra cleantra strc tostrc toxyz
+tools: 	 atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz
 #
 none:   
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
@@ -196,6 +196,10 @@ grab:
 dos:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
            ${BINDIR}/${ARCH}/paw_dos.x 
+#
+preopt:
+	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
+           ${BINDIR}/${ARCH}/paw_preopt.x 
 #
 converttra:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
@@ -312,6 +316,9 @@ OBJGRAB=  \
 # Objects for paw_dos.x
 OBJDOS=  \
           ${OBJDIR}/paw_dos.o
+# Objects for paw_preopt.x
+OBJPRE=  \
+          ${OBJDIR}/paw_preopt.o
 # Objects for paw_converttra.x
 OBJCONVERTTRA=  \
           ${OBJDIR}/paw_converttra.o
@@ -368,6 +375,10 @@ ${BINDIR}/${ARCH}/paw_grab.x: ${OBJGRAB} libpaw.a
 #
 ${BINDIR}/${ARCH}/paw_dos.x: ${OBJDOS} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_dos.x ${OBJDOS} -lpaw ${LLIBS} 
+#
+${BINDIR}/${ARCH}/paw_preopt.x: ${OBJPRE} libpaw.a
+	${LINK} -o ${BINDIR}/${ARCH}/paw_preopt.x ${OBJPRE} -lpaw ${LLIBS} \
+            ${OBJDIR}/paw_classical.o ${OBJDIR}/paw_periodictable.o
 #
 ${BINDIR}/${ARCH}/paw_converttra.x: ${OBJCONVERTTRA} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_converttra.x ${OBJCONVERTTRA} -lpaw ${LLIBS} 
@@ -451,6 +462,11 @@ ${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f90
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
+	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJPRE}: ${OBJDIR}/%.o : ${TOOLDIR}/Preopt/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
