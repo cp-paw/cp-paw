@@ -773,14 +773,14 @@ END MODULE STRCIO_MODULE
 !     == WRITE CSSR FILE                                              ==
 !     ==================================================================
       IF(TCRYSTAL) THEN
-        WRITE(NFIL,FMT='(T39,3F8.3 &
-     &   /T22,3F8.3,T50,"SPGR = 1 P 1",T72,"OPT = 1" &
-      &   /I4,''   1 CREATED BY PAW    '' &
-     &   /"     0 ",A4,": ",A4)') &
+        WRITE(NFIL,FMT='(T39,3F8.3' &
+     &   //'/T22,3F8.3,T50,"SPGR = 1 P 1",T72,"OPT = 1"' &
+      &  //' /I4,''   1 CREATED BY PAW    ''' &
+     &   //'/"     0 ",A4,": ",A4)') &
      &   A/ANGSTROM,B/ANGSTROM,C/ANGSTROM,ALPHA,BETA,GAMMA,NAT,OBJECTNAME(1:4),OBJECTNAME(1:4)
       ELSE
-        WRITE(NFIL,FMT='(//I4,''   1 CREATED BY PAW    '' &
-     &   /"     0 ",A4,": ",A4)')NAT,OBJECTNAME(1:4),OBJECTNAME(1:4)
+        WRITE(NFIL,FMT='(//I4,''   1 CREATED BY PAW    ''' &
+     &   //'/"     0 ",A4,": ",A4)')NAT,OBJECTNAME(1:4),OBJECTNAME(1:4)
       END IF
       DO IAT=1,NAT
         IF(NNEIGH.GT.8) THEN

@@ -561,7 +561,7 @@ WRITE(*,FMT='("STRESS_I ",3F10.5)')STRESS_I(3,:)
       V0=T0(1,1)*(T0(2,2)*T0(3,3)-T0(2,3)*T0(3,2)) &
      &  +T0(2,1)*(T0(3,2)*T0(1,3)-T0(3,3)*T0(1,2)) &
      &  +T0(3,1)*(T0(1,2)*T0(2,3)-T0(1,3)*T0(2,2)) 
-      IF(V0.GT.1.D+10*VREF) THEN
+      IF(ABS(V0).GT.1.D+10*ABS(VREF)) THEN
         CALL ERROR$MSG('CELL DYNAMICS UNSTABLE')
 !       CALL ERROR$R8AVAL('CELL',T0)
         CALL ERROR$R8VAL('VOLUME ',V0)

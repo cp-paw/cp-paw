@@ -521,7 +521,7 @@ MODULE DFT_MODULE
 !     == AVOID VERY SMALL DENSITIES                                   ==
 !     ==================================================================
       IF(VAL(1).LT.RHOTMIN) THEN
-RETURN !#
+!RETURN !#
         VAL(1)=RHOTMIN
       END IF
 
@@ -599,10 +599,10 @@ RETURN !#
 !     ==================================================================
 !     ==  WRAP-UP  (CHECKS ETC.)                                      ==
 !     ==================================================================
-     IF(VAL(1).LT.RHOTMIN) THEN
-        EXC=EXC*VAL(1)/RHOTMIN
+     IF(rhot.LT.RHOTMIN) THEN
         DEXC(1)=EXC/RHOTMIN
-        DEXC(2:5)=DEXC(2:5)*VAL(1)/RHOTMIN
+        DEXC(2:5)=DEXC(2:5)*rhot/RHOTMIN
+        EXC=EXC*rhot/RHOTMIN
       END IF
 !
       VXCT  =DEXC(1)
@@ -762,13 +762,13 @@ RETURN !#
 !     ==  WRAPUP AND CHECKS                                           ==
 !     ==================================================================
       IF(VAL_(1).LT.RHOTMIN) THEN
-        EXC=EXC*VAL_(1)/RHOTMIN
-        DEXC(1)=EXC/RHOTMIN
-        DEXC(2:5)=DEXC(2:5)*VAL_(1)/RHOTMIN
-        D2EXC(:,:)=D2EXC(:,:)*VAL_(1)/RHOTMIN
         D2EXC(1,1)=0.D0
         D2EXC(1,2:5)=DEXC(2:5)/RHOTMIN
         D2EXC(2:5,1)=DEXC(2:5)/RHOTMIN
+        D2EXC(2:5,2:5)=D2EXC(2:5,2:5)*VAL_(1)/RHOTMIN
+        DEXC(1)=EXC/RHOTMIN
+        DEXC(2:5)=DEXC(2:5)*VAL_(1)/RHOTMIN
+        EXC=EXC*VAL_(1)/RHOTMIN
       END IF
       IF(EXC.NE.EXC.OR.DEXC(1).NE.DEXC(1).OR.DEXC(2).NE.DEXC(2) &
             .OR.DEXC(3).NE.DEXC(3).OR.D2EXC(1,1).NE.D2EXC(1,1) &
@@ -932,13 +932,21 @@ RETURN !#
 !     ==  WRAPUP AND CHECKS                                           ==
 !     ==================================================================
       IF(VAL_(1).LT.RHOTMIN) THEN
-        EXC=EXC*VAL_(1)/RHOTMIN
-        DEXC(1)=EXC/RHOTMIN
-        DEXC(2:5)=DEXC(2:5)*VAL_(1)/RHOTMIN
-        D2EXC(:,:)=D2EXC(:,:)*VAL_(1)/RHOTMIN
+        d3exc(1,1,1)=0.d0
+        d3exc(1,1,2:5)=0.d0
+        d3exc(1,2:5,1)=0.d0
+        d3exc(2:5,1,1)=0.d0
+        d3exc(1,2:5,2:5)=d2exc(2:5,2:5)/rhotmin
+        d3exc(2:5,1,2:5)=d2exc(2:5,2:5)/rhotmin
+        d3exc(2:5,2:5,1)=d2exc(2:5,2:5)/rhotmin
+        d3exc(2:5,2:5,2:5)=d3exc(2:5,2:5,2:5)*val_(1)/rhotmin
         D2EXC(1,1)=0.D0
         D2EXC(1,2:5)=DEXC(2:5)/RHOTMIN
         D2EXC(2:5,1)=DEXC(2:5)/RHOTMIN
+        D2EXC(2:5,2:5)=D2EXC(2:5,2:5)*VAL_(1)/RHOTMIN
+        DEXC(1)=EXC/RHOTMIN
+        DEXC(2:5)=DEXC(2:5)*VAL_(1)/RHOTMIN
+        EXC=EXC*VAL_(1)/RHOTMIN
       END IF
       IF(EXC.NE.EXC.OR.DEXC(1).NE.DEXC(1).OR.DEXC(2).NE.DEXC(2) &
             .OR.DEXC(3).NE.DEXC(3).OR.D2EXC(1,1).NE.D2EXC(1,1) &

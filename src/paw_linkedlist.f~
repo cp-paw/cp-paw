@@ -2059,13 +2059,13 @@ CONTAINS
 !         == NOW CHANGE LINKEDLIST =====================================
 !         ==============================================================
           KEYL=LEN_TRIM(KEY)
-          IF(+KEY(1:KEYL).EQ.'!EOB') THEN
+          IF(KEY(1:KEYL).EQ.'!EOB') THEN
             IF(LEVEL.NE.0) THEN
               CALL ERROR$MSG('BLOCK STRUCTURE INCORRECT')
               CALL ERROR$STOP('BUFFER$READ')
             END IF
             EXIT
-          ELSE IF(+KEY(1:KEYL).EQ.'!END') THEN
+          ELSE IF(KEY(1:KEYL).EQ.'!END') THEN
             LEVEL=LEVEL-1
             IF(LEVEL.LT.0) THEN
               CALL ERROR$MSG('BLOCK STRUCTURE INCORRECT')
@@ -2229,7 +2229,7 @@ CONTAINS
 !       ================================================================
 !       ==  RECALCULATE FREE                                          ==
 !       ================================================================
-        TEOB=(INDEX(+LINE(1:LENG),'!EOB').NE.0)
+        TEOB=(INDEX(LINE(1:LENG),'!EOB').NE.0)
         FREE=BUFFER%LENG-BUFFER%LAST+1
         IF(FREE.LT.LENGX) THEN
           CALL BUFFER_PACK(BUFFER)

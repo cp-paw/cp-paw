@@ -112,8 +112,8 @@ CONTAINS
 !       ================================================================
 !       ==  PRODUCE STAMP  "SUN 03 DEC 1995 13:15 (16.245S)"         ==
 !       ================================================================
-        WRITE(STAMP,FMT='(A3,1X,I2.2,1X,A3,1X,I4.4,1X &
-     &     ,I2.2,":",I2.2," (",F6.3,"S)")') &
+        WRITE(STAMP,FMT='(A3,1X,I2.2,1X,A3,1X,I4.4,1X' &
+     &     //',I2.2,":",I2.2," (",F6.3,"S)")') &
      &     DAYS(D+1),NOW%DAY,MONTHS(NOW%MONTH),NOW%YEAR &
      &     ,NOW%HOUR,NOW%MINUTE,NOW%SECOND
         RETURN

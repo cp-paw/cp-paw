@@ -884,9 +884,9 @@ END MODULE STOPIT_MODULE
      &            'NFI','T[PSEC]','T[K]','EKIN(PSI)','E(RHO)','ECONS', &
      &            'ANNEE','ANNER','T(ENV)','EPOT(ENV)','ECNS(ENV)'
         ELSE IF (CALGARY_QMMM) THEN
-          WRITE(NFILO,FMT='(/5X,"NFI",3X,"TIME",1X,"TEMP",3X,"EKINC"   &
-     &                  ,5X,"E(RHO)",6X,"ECONS",1X,"ANNEE",1X,"ANNER", &
-     &                  "   E_MM  TEMP FRIC")')
+          WRITE(NFILO,FMT='(/5X,"NFI",3X,"TIME",1X,"TEMP",3X,"EKINC"'   &
+     &                  //',5X,"E(RHO)",6X,"ECONS",1X,"ANNEE",1X,"ANNER",' &
+     &                  //'"   E_MM  TEMP FRIC")')
         ELSE
           WRITE(NFILO,FMT='()')
           WRITE(NFILO,FMT='(2X,A5,A9,1X,A4,1X,A9,2A11,2A8)') &
@@ -983,23 +983,23 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL ATOMS$GETR8('FRICTION',ANNER)
 !
         IF (TCONTINUUM) THEN
-          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F8.5 &
-     &                      ,F11.5,1X,D7.2,1X,D7.2,2F6.3)') &
+          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F8.5' &
+     &                     //',F11.5,1X,D7.2,1X,D7.2,2F6.3)') &
      &               NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &              ,ESOLV,EKINQ,QFRIC,QTOT
         ELSE IF(TQMMM) THEN
           CALL CONSTANTS('KB',CELVIN)
           CALL QMMM$GETI4('NAT:ENV',ISVAR)
           QMMMTEMP=2.D0*QMMMKIN/DBLE(ISVAR)/CELVIN
-          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F6.3 &
-     &                ,I10,2F10.5)') &
+          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F6.3' &
+     &                //',I10,2F10.5)') &
      &                NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &               ,NINT(QMMMTEMP),QMMMPOT,QMMMKIN+QMMMPOT
         ELSE IF(CALGARY_QMMM) THEN
           IMM_TEMP=NINT(MM_TEMP)
-          WRITE(NFILO,FMT='("!>",I5,F8.4,1X,I4,F8.5,2F11.5,2F6.3,1X,F6.3,1X, &
-     &         I4,1X,F5.2 )') NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER,   &
-     &                     MM_POT_ENERGY, IMM_TEMP, MM_FRIC
+          WRITE(NFILO,FMT='("!>",I5,F8.4,1X,I4,F8.5,2F11.5,2F6.3,1X,F6.3,1X' &
+     &       //',I4,1X,F5.2 )') NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER   &
+     &                     ,MM_POT_ENERGY, IMM_TEMP, MM_FRIC
         ELSE
           WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F8.5)') &
      &                NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER

@@ -366,6 +366,7 @@ END MODULE WAVES_MODULE
         END IF
         ALLOCATE(CWORK2(NRL))
         CALL PLANEWAVE$FFT('GTOR',1,NGL,CWORK1,NRL,CWORK2)
+        deALLOCATE(CWORK1)
         IF(EXTPNTR%TIM) THEN
           DO IR=1,NRL
             VAL(IR)=AIMAG(CWORK2(IR))
@@ -726,6 +727,8 @@ END MODULE WAVES_MODULE
         ELSE
           TINV=.FALSE.
         END IF
+!print*,'tinv forced to be false in waves$initialize!!!'
+!tinv=.false.
         CALL PLANEWAVE$INITIALIZE(GSET%ID,RBAS,XK(1,IKPT),TINV,EPWPSI &
      &                           ,NR1START,NR1L,NR2,NR3)
         CALL PLANEWAVE$SELECT(GSET%ID)
@@ -861,8 +864,10 @@ END MODULE WAVES_MODULE
       REAL(8)                :: FORCE1(3)
       REAL(8)                :: STRESS1(3,3),STRESS(3,3)
       REAL(8)                :: STRESST(3,3)
-      REAL(8)                :: RBAS(3,3)
-      REAL(8)                :: RHOB
+      REAL(8)                :: RBAS(3,3) ! real space lattice vectors
+      REAL(8)                :: gbas(3,3) ! reciprocal space lattice vectors
+      REAL(8)                :: RHOB      ! background density
+      REAL(8)                :: potb,potb1 ! average electrostatic potential
       REAL(8)   ,PARAMETER   :: TINY=1.D-300
       INTEGER(4)             :: NGL
       INTEGER(4)             :: NRL
@@ -877,7 +882,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: NBH,NBX,NB
       INTEGER(4)             :: LMNX
       INTEGER(4)             :: THISTASK,NTASKS
-      REAL(8)                :: SVAR1,SVAR2
+      REAL(8)                :: svar,SVAR1,SVAR2
       REAL(8)   ,ALLOCATABLE :: DO1(:,:)
       COMPLEX(8),ALLOCATABLE :: HAMILTON(:,:)
       COMPLEX(8),ALLOCATABLE :: EIGR(:)
@@ -886,7 +891,6 @@ END MODULE WAVES_MODULE
       REAL(8)   ,ALLOCATABLE :: G2(:)      !G**2
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)  !GI
       REAL(8)   ,ALLOCATABLE :: GIJ(:,:)   !GI*GJ/G2
-      REAL(8)                :: SVAR
       LOGICAL(4)             :: TINV
       LOGICAL(4)             :: TSTRESS
       LOGICAL(4)             :: TFORCE
@@ -960,8 +964,10 @@ END MODULE WAVES_MODULE
               CALL WAVES_RANDOMIZE(NGL,NDIM,NBH,AMPRANDOM,G2,THIS%PSIM)
               DEALLOCATE(G2)
             END IF
+call waves_comparepsi('before gramschmidt',ngl,ndim,nbh,this%psi0,THIS%psim)
             CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSI0)
             CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSIM)
+call waves_comparepsi('after gramschmidt',ngl,ndim,nbh,this%psi0,THIS%psim)
 !
 !           ============================================================
 !           == PROJECTIONS (REPLACEMENT BY PREDICTION IS FRAGILE!)    ==
@@ -1184,6 +1190,7 @@ CALL TIMING$CLOCKON('W:SPHERE')
       DH(:,:,:,:)=0.D0
       ALLOCATE(DO(LMNXX,LMNXX,NDIMD,NAT))
       DO(:,:,:,:)=0.D0
+      potb=0
       DO IAT=THISTASK,NAT,NTASKS   ! DISTRIBUTE WORK ACCROSS TASKS
         ISP=MAP%ISP(IAT)
         LMNX=MAP%LMNX(ISP)
@@ -1199,7 +1206,8 @@ CALL TIMING$CLOCKON('W:SPHERE')
         ALLOCATE(DH1(LMNX,LMNX,NDIMD))
         ALLOCATE(DOV1(LMNX,LMNX,NDIMD))
         CALL AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT1,DENMATI1 &
-     &               ,LMRX,VQLM(1,IAT),RHOB,DH1,DOV1)
+     &               ,LMRX,VQLM(1,IAT),RHOB,potb1,DH1,DOV1)
+        potb=potb+potb1
         DH(1:LMNX,1:LMNX,:,IAT)=DH1(:,:,:)
         DO(1:LMNX,1:LMNX,:,IAT)=DOV1(:,:,:)
         DEALLOCATE(DH1)
@@ -1207,10 +1215,17 @@ CALL TIMING$CLOCKON('W:SPHERE')
         DEALLOCATE(DENMATI1)
         DEALLOCATE(DENMAT1)
       ENDDO
-      CALL MPE$COMBINE('+',DH)
       DEALLOCATE(VQLM)
+      CALL MPE$COMBINE('+',DH)
+      CALL MPE$COMBINE('+',potb)
 !     ==  SPREAD INFO FROM SPHERE OVER ALL TASKS AND UPDATE ENERGYLIST
       CALL AUGMENTATION$SYNC
+!
+!     ==  subtract average electrostatic potential =====================
+!     ==  to account for background density
+      call gbass(rbas,gbas,svar)
+      potb=potb/svar
+      rho(:,:)=rho(:,:)+potb
 CALL TIMING$CLOCKOFF('W:SPHERE')
 !
 !     ==================================================================
@@ -3210,6 +3225,7 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
             THIS%PSIM(:,:,:)=THIS%PSI0(:,:,:)
           ENDDO
         ENDDO
+        waveekin1=0.d0
         TSTOP=.FALSE.
       END IF
 !
@@ -5463,7 +5479,7 @@ PRINT*,'ITER ',ITER,DIGAM
       LOGICAL(4)                  :: TINV
       REAL(8)                     :: NORM(NB),SVAR
       COMPLEX(8)                  :: XTWOBYTWO(2,2)
-      LOGICAL(4)      ,PARAMETER  :: TTEST=.FALSE.
+      LOGICAL(4)      ,PARAMETER  :: TTEST=.false.
       INTEGER(4)      ,ALLOCATABLE:: SMAP(:)
 !     ******************************************************************
 !
@@ -5855,8 +5871,8 @@ PRINT*,'ITER ',ITER,DIGAM
 !    &      ,'INITIAL VELOCITIES ARE RANDOMIZED WITH ENERGY',AMPRE,'H')
 !     END IF
       IF(.NOT.TSAFEORTHO) THEN
-        WRITE(NFIL,FMT='("EIGENSTATES ARE CALCULATED." &
-     &                  ," (NO STRICT ENERGY CONSERVATION)")')
+        WRITE(NFIL,FMT='("EIGENSTATES ARE CALCULATED."' &
+     &                 //'," (NO STRICT ENERGY CONSERVATION)")')
       END IF
 !     
 !     ================================================================
@@ -6160,8 +6176,8 @@ PRINT*,'ITER ',ITER,DIGAM
           IF(NSPIN.EQ.1) THEN
             WRITE(STRING,FMT='("EIGENVALUES [EV] FOR K-POINT ",I4)')IKPT
           ELSE
-            WRITE(STRING,FMT='("EIGENVALUES [EV] FOR K-POINT ",I4 &
-     &                        ," AND SPIN ",I1)')IKPT,ISPIN
+            WRITE(STRING,FMT='("EIGENVALUES [EV] FOR K-POINT ",I4' &
+     &                        //'," AND SPIN ",I1)')IKPT,ISPIN
           END IF
           CALL REPORT$TITLE(NFIL,STRING)
           ITEN=0
@@ -6494,7 +6510,7 @@ PRINT*,'ITER ',ITER,DIGAM
       LOGICAL(4)              :: TCHK
       COMPLEX(8)              :: F1,F2
       COMPLEX(8),ALLOCATABLE  :: PSIINSUPER(:,:)
-
+      COMPLEX(8)              :: csvar,cmat(1,1)
 !     ******************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
       CALL MPE$QUERY(NTASKS,THISTASK)
@@ -6808,6 +6824,14 @@ END IF
           CALL PLANEWAVE$GETL4('TINV',TSUPER)
           IF(TSUPER) THEN
             DO ISPIN=1,NSPIN
+!             == remove the factor exp(i*phi) from the wave function
+              do ib=1,nb
+                call PLANEWAVE$SCALARPRODUCT('-',NGL,1,1 &
+        &                   ,psi(:,1,ib,ispin),1,psi(:,1,ib,ispin),cmat)
+                csvar=cmat(1,1)
+                csvar=conjg(sqrt(csvar/sqrt(csvar*conjg(csvar))))
+                psi(:,1,ib,ispin)=psi(:,1,ib,ispin)*csvar
+              enddo
               DO IB=1,NBH
                 IB1=2*IB-1
                 IB2=2*IB
@@ -7816,3 +7840,36 @@ END MODULE TOTALSPIN_MODULE
          RETURN
       END IF
     END SUBROUTINE WAVES$REPORTSPIN
+!
+!     ....................................................................
+      subroutine waves_comparepsi(id,ngl,ndim,nbh,psi1,psi2)
+      USE WAVES_MODULE, only : gset,delt
+      implicit none
+      character(*)    ,intent(in) :: id
+      INTEGER(4)      ,INTENT(IN) :: NGL
+      INTEGER(4)      ,INTENT(IN) :: NDIM
+      INTEGER(4)      ,INTENT(IN) :: NBH
+      COMPLEX(8)      ,INTENT(IN) :: PSI1(NGL,NDIM,NBH)
+      COMPLEX(8)      ,INTENT(IN) :: PSI2(NGL,NDIM,NBH)
+      complex(8)                  :: csvar
+      integer(4)                  :: ig,idim,ib
+      real(8)                     :: sum,sumtot
+      real(8)                     :: rbas(3,3),gbas(3,3),cellvol
+!     *********************************************************************
+      CALL CELL$GETR8A('T0',9,RBAS)
+      CALL GBASS(RBAS,GBAS,CELLVOL)
+      sumtot=0.d0
+      do ib=1,nbh
+        sum=0.d0
+        do ig=1,ngl
+          do idim=1,ndim
+            csvar=psi1(ig,idim,ib)-psi2(ig,idim,ib)
+            sum=sum+GSET%MPSI(IG)*(real(csvar)**2+aimag(csvar)**2)
+          enddo
+        enddo
+        sumtot=sumtot+sum
+        write(*,*)' kineticenergytest ',ib,sum*CELLVOL/DELT**2,id
+      enddo
+        write(*,*)' kineticenergytest total',sumtot*CELLVOL/DELT**2,id
+      return
+      end

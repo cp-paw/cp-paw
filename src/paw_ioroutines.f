@@ -22,15 +22,15 @@ CONTAINS
 !       ****************************************************************
         WRITE(NFILO,FMT='()')
         WRITE(NFILO,FMT='(72("*"))')
-        WRITE(NFILO,FMT='(72("*"),T15 &
-     &             ,"     FIRST-PRINCIPLES MOLECULAR DYNAMICS     ")')
-        WRITE(NFILO,FMT='(72("*"),T15 &
-     &             ,"   WITH THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
+        WRITE(NFILO,FMT='(72("*"),T15' &
+     &             //',"     FIRST-PRINCIPLES MOLECULAR DYNAMICS     ")')
+        WRITE(NFILO,FMT='(72("*"),T15' &
+     &             //',"   WITH THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
         WRITE(NFILO,FMT='(72("*"))')
-        WRITE(NFILO,FMT='(T10 &
-     &           ,"P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY")')
-        WRITE(NFILO,FMT='(T10 &
-     &      ,"(C) IBM, 1995-1997 * ANY USE REQUIRES WRITTEN LICENSE FROM IBM")')
+        WRITE(NFILO,FMT='(T10' &
+     &           //',"P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY")')
+        WRITE(NFILO,FMT='(T10' &
+     &      //',"(C) IBM, 1995-1997 * ANY USE REQUIRES WRITTEN LICENSE FROM IBM")')
         IF (VERSIONTEXT (17:17).NE.'%')THEN
           WRITE(NFILO,FMT='(A)') VERSIONTEXT
         ENDIF
@@ -516,8 +516,8 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
 !     ==================================================================
       WRITE(NFILO,FMT='()')
-      WRITE(NFILO,FMT='("INFORMATION FROM CONTROL INPUT FILE" &
-     &             /"===================================")')
+      WRITE(NFILO,FMT='("INFORMATION FROM CONTROL INPUT FILE"' &
+     &             //'/"===================================")')
 !
       IF(NBEG.LE.-1) THEN
         WRITE(NFILO,FMT='("START WITH RANDOM WAVE FUNCTIONS")')
@@ -525,28 +525,26 @@ CALL TRACE$PASS('DONE')
         WRITE(NFILO,FMT='("WAVE FUNCTIONS ARE READ FROM FILE")')
       END IF
       IF(TNWSTR) THEN
-        WRITE(NFILO,FMT='("ATOMIC STRUCTURE TAKEN FROM " &
-     &               ,"STRUCTURE INPUT FILE" &
-     &               /T10,"(STRUCTURE FROM RESTART FILE IGNORED)")')
+        WRITE(NFILO,FMT='("ATOMIC STRUCTURE TAKEN FROM "' &
+     &               //',"STRUCTURE INPUT FILE"' &
+     &               //'/T10,"(STRUCTURE FROM RESTART FILE IGNORED)")')
       END IF
-      WRITE(NFILO,FMT='(55("."),": " &
-     &             ,T1,"NUMBER OF ITERATIONS" &
-     &             ,T58,I10)')NOMORE
-      WRITE(NFILO,FMT='(55("."),": " &
-     &             ,T1,"TIME STEP" &
-     &             ,T58,F10.5," A.U.")')DELT
+      WRITE(NFILO,FMT='(55("."),": "' &
+     &             //',T1,"NUMBER OF ITERATIONS",T58,I10)')NOMORE
+      WRITE(NFILO,FMT='(55("."),": "' &
+     &             //',T1,"TIME STEP",T58,F10.5," A.U.")')DELT
 !
 !     ==================================================================
 !     ==  DATA FILES                                                  ==
 !     ==================================================================
       IF(NBEG.GE.0) THEN
-        WRITE(NFILO,FMT='(55("."),": " &
-     &             ,T1,"START WITH WAVE FUNCTIONS FROM FILE" &
-     &             ,T58,"RESTART_IN")')
+        WRITE(NFILO,FMT='(55("."),": "' &
+     &             //',T1,"START WITH WAVE FUNCTIONS FROM FILE"' &
+     &             //',T58,"RESTART_IN")')
       END IF
-      WRITE(NFILO,FMT='(55("."),": " &
-     &         ,T1,"DETAILED INFORMATION AFTER EACH" &
-     &         ,T58,I10," TIME STEPS")')IPRINT
+      WRITE(NFILO,FMT='(55("."),": "' &
+     &         //',T1,"DETAILED INFORMATION AFTER EACH"' &
+     &         //',T58,I10," TIME STEPS")')IPRINT
 !
                           CALL TRACE$POP
       RETURN
@@ -1705,25 +1703,19 @@ PRINT*,'ILDA ',ILDA
       IF(TCHK) THEN
         WRITE(NFILO,FMT='(55("."),": ",T1,"OPTIMIZE STRUCTURE")')
 !       CALL SHADOW$GET('NSTEP',4,ISVAR)
-        WRITE(NFILO,FMT='(55("."),": " &
-     &           ,T1,"MAX. NUMBER OF ITERATIONS" &
-     &           ,T58,F10.5)')ISVAR
+        WRITE(NFILO,FMT='(55("."),": "' &
+     &           //',T1,"MAX. NUMBER OF ITERATIONS",T58,F10.5)')ISVAR
 !       CALL SHADOW$GET('TOL',8,SVAR)
-        WRITE(NFILO,FMT='(55("."),": " &
-     &           ,T1,"TOLERANCE ON THE FORCE" &
-     &           ,T58,F10.5)')SVAR
+        WRITE(NFILO,FMT='(55("."),": ",T1,"TOLERANCE ON THE FORCE"' &
+     &           //',T58,F10.5)')SVAR
       END IF
 !     CALL SHADOW$GET('PRECONDITION',4,TCHK)
       IF(TCHK) THEN
         WRITE(NFILO,FMT='(55("."),": ",T1,"PRECONDITION DYNAMICS")')
 !       CALL SHADOW$GET('OMEGA1',8,SVAR)
-        WRITE(NFILO,FMT='(55("."),": " &
-     &           ,T1,"OMEGA1" &
-     &           ,T58,F10.5)')SVAR
+        WRITE(NFILO,FMT='(55("."),": ",T1,"OMEGA1",T58,F10.5)')SVAR
 !       CALL SHADOW$GET('OMEGA2',8,SVAR)
-        WRITE(NFILO,FMT='(55("."),": " &
-     &           ,T1,"OMEGA2" &
-     &           ,T58,F10.5)')SVAR
+        WRITE(NFILO,FMT='(55("."),": ",T1,"OMEGA2",T58,F10.5)')SVAR
       END IF
                               CALL TRACE$POP
       RETURN
@@ -2481,6 +2473,7 @@ PRINT*,'ILDA ',ILDA
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'ANALYSE')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'OPTIC',1,TON)
+      if(.not.ton) return
       CALL MPE$QUERY(NTASKS,THISTASK)
       IF(NTASKS.NE.1) THEN
         CALL ERROR$MSG('OPTIC MODULE IS NOT PARALLELIZED')
@@ -3857,8 +3850,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'DIR',1,DIR)
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("CENTER OF GRAVITY OF GROUP ",A10 &
-     &          ," ALONG:",3F6.2," IS FIXED")') CH32SVAR1,DIR(:)
+          WRITE(CH256SVAR1,FMT='("CENTER OF GRAVITY OF GROUP ",A10' &
+     &          //'," ALONG:",3F6.2," IS FIXED")') CH32SVAR1,DIR(:)
           CALL CONSTRAINTS$OPEN('TRANSLATIONALMOMENTUM',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
           CALL CONSTRAINTS$DEFINER8A('DIR',3,DIR)
@@ -3868,8 +3861,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           DIR(2)=0.D0   
           DIR(3)=0.D0   
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("CENTER OF GRAVITY OF GROUP ",A10 &
-     &            ," ALONG:",3F6.2," IS FIXED")') CH32SVAR1,DIR(:)
+          WRITE(CH256SVAR1,FMT='("CENTER OF GRAVITY OF GROUP ",A10' &
+     &            //'," ALONG:",3F6.2," IS FIXED")') CH32SVAR1,DIR(:)
           CALL CONSTRAINTS$OPEN('TRANSLATIONALMOMENTUM',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
           CALL CONSTRAINTS$DEFINER8A('DIR',3,DIR)
@@ -3878,8 +3871,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           DIR(2)=1.D0   
           DIR(3)=0.D0   
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("CENTER OF GRAVITY OF GROUP ",A10 &
-     &            ," ALONG:",3F6.2," IS FIXED")') CH32SVAR1,DIR(:)
+          WRITE(CH256SVAR1,FMT='("CENTER OF GRAVITY OF GROUP ",A10' &
+     &            //'," ALONG:",3F6.2," IS FIXED")') CH32SVAR1,DIR(:)
           CALL CONSTRAINTS$OPEN('TRANSLATIONALMOMENTUM',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
           CALL CONSTRAINTS$DEFINER8A('DIR',3,DIR)
@@ -3888,8 +3881,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           DIR(2)=0.D0   
           DIR(3)=1.D0   
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("CENTER OF GRAVITY OF GROUP ",A10 &
-     &         ," ALONG:",3F6.2," IS FIXED")') &
+          WRITE(CH256SVAR1,FMT='("CENTER OF GRAVITY OF GROUP ",A10' &
+     &         //'," ALONG:",3F6.2," IS FIXED")') &
      &          CH32SVAR1,DIR(:)
           CALL CONSTRAINTS$OPEN('TRANSLATIONALMOMENTUM',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
@@ -3936,9 +3929,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'AXIS',1,AXIS)
           CH256SVAR1=' '
-            WRITE(CH256SVAR1,FMT='("ORIENTATION OF GROUP " &
-     &           ,A10," ABOUT:" &
-     &           ,3F6.2," IS FIXED")')CH32SVAR1,AXIS(:)
+            WRITE(CH256SVAR1,FMT='("ORIENTATION OF GROUP "' &
+     &           //',A10," ABOUT:",3F6.2," IS FIXED")')CH32SVAR1,AXIS(:)
           CALL CONSTRAINTS$OPEN('ORIENTATION',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
           CALL CONSTRAINTS$DEFINER8A('PHI',3,AXIS)
@@ -3948,9 +3940,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           AXIS(2)=0.D0   
           AXIS(3)=0.D0   
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("ORIENTATION OF GROUP " &
-     &         ,A10," ABOUT:" &
-     &         ,3F6.2," IS FIXED")')CH32SVAR1,AXIS(:)
+          WRITE(CH256SVAR1,FMT='("ORIENTATION OF GROUP "' &
+     &         //',A10," ABOUT:",3F6.2," IS FIXED")')CH32SVAR1,AXIS(:)
           CALL CONSTRAINTS$OPEN('ORIENTATION',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
           CALL CONSTRAINTS$DEFINER8A('PHI',3,AXIS)
@@ -3959,9 +3950,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           AXIS(2)=1.D0   
           AXIS(3)=0.D0   
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("ORIENTATION OF GROUP " &
-     &         ,A10," ABOUT:" &
-     &         ,3F6.2," IS FIXED")')CH32SVAR1,AXIS(:)
+          WRITE(CH256SVAR1,FMT='("ORIENTATION OF GROUP "' &
+     &         //',A10," ABOUT:",3F6.2," IS FIXED")')CH32SVAR1,AXIS(:)
           CALL CONSTRAINTS$OPEN('ORIENTATION',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
           CALL CONSTRAINTS$DEFINER8A('PHI',3,AXIS)
@@ -3970,9 +3960,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           AXIS(2)=0.D0   
           AXIS(3)=1.D0   
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("ORIENTATION OF GROUP " &
-     &         ,A10," ABOUT:" &
-     &         ,3F6.2," IS FIXED")')CH32SVAR1,AXIS(:)
+          WRITE(CH256SVAR1,FMT='("ORIENTATION OF GROUP "' &
+     &         //',A10," ABOUT:",3F6.2," IS FIXED")')CH32SVAR1,AXIS(:)
           CALL CONSTRAINTS$OPEN('ORIENTATION',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
           CALL CONSTRAINTS$DEFINER8A('PHI',3,AXIS)
@@ -4020,8 +4009,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'AXIS',1,AXIS)
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("ROTATION OF GROUP ",A10 &
-     &          ," ABOUT:",3F6.2," IS FIXED")') &
+          WRITE(CH256SVAR1,FMT='("ROTATION OF GROUP ",A10' &
+     &          //'," ABOUT:",3F6.2," IS FIXED")') &
      &          CH32SVAR1,AXIS(:)
           CALL CONSTRAINTS$OPEN('ANGULARMOMENTUM',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
@@ -4032,8 +4021,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           AXIS(2)=0.D0   
           AXIS(3)=0.D0   
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("ROTATION OF GROUP ",A10 &
-     &          ," ABOUT:",3F6.2," IS FIXED")') &
+          WRITE(CH256SVAR1,FMT='("ROTATION OF GROUP ",A10' &
+     &          //'," ABOUT:",3F6.2," IS FIXED")') &
      &          CH32SVAR1,AXIS(:)
           CALL CONSTRAINTS$OPEN('ANGULARMOMENTUM',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
@@ -4043,8 +4032,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           AXIS(2)=1.D0   
           AXIS(3)=0.D0   
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("ROTATION OF GROUP ",A10 &
-     &        ," ABOUT:",3F6.2," IS FIXED")') &
+          WRITE(CH256SVAR1,FMT='("ROTATION OF GROUP ",A10' &
+     &        //'," ABOUT:",3F6.2," IS FIXED")') &
      &        CH32SVAR1,AXIS(:)
           CALL CONSTRAINTS$OPEN('ANGULARMOMENTUM',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)
@@ -4054,8 +4043,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           AXIS(2)=0.D0   
           AXIS(3)=1.D0   
           CH256SVAR1=' '
-          WRITE(CH256SVAR1,FMT='("ROTATION OF GROUP ",A10 &
-     &          ," ABOUT:",3F6.2," IS FIXED")') &
+          WRITE(CH256SVAR1,FMT='("ROTATION OF GROUP ",A10' &
+     &          //'," ABOUT:",3F6.2," IS FIXED")') &
      &          CH32SVAR1,AXIS(:)
           CALL CONSTRAINTS$OPEN('ANGULARMOMENTUM',CH256SVAR1)
           CALL CONSTRAINTS$DEFINECH('GROUP',CH32SVAR1)

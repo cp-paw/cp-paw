@@ -700,8 +700,8 @@ CONTAINS
 !     ******************************************************************
       CALL FILEHANDLER$IOSTATMESSAGE(IOS,X)
       PRINT*,'ERROR WHILE READING OR WRITING ON FILE ',NFIL
-      WRITE(*,FMT='('' AIX XL FORTRAN COMPILER MESSAGE FOR IOSTAT='',I3 &
-     &     /A58)')IOS,trim(X)
+      WRITE(*,FMT='('' AIX XL FORTRAN COMPILER MESSAGE FOR IOSTAT='',I3' &
+     &     //'/A58)')IOS,trim(X)
       IF(NFIL.NE.0) THEN
         INQUIRE(NFIL,NAME=STRING)
         PRINT*,STRING

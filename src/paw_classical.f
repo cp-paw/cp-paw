@@ -1317,8 +1317,8 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       CALL CONSTANTS('U',PRTONM)
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       DO IAT=1,MD%NAT
-        WRITE(NFIL,FMT='(I3,1X,A,"R=",3F10.5,2X &
-     &                  ,"A ;M=",F10.5,"U"," Q ",F10.5)') &
+        WRITE(NFIL,FMT='(I3,1X,A,"R=",3F10.5,2X' &
+     &                  //',"A ;M=",F10.5,"U"," Q ",F10.5)') &
      &       IAT,MD%TYPE(IAT),(MD%R0(I,IAT)/ANGSTROM,I=1,3),MD%RMASS(IAT)/PRTONM,MD%QEL(IAT)
       ENDDO
 !
@@ -4343,8 +4343,8 @@ END MODULE UFFTABLE_MODULE
           CALL FILEHANDLER$UNIT('PROT',NFILO)
           CALL CLASSICAL$EKIN(DELT,EKIN)
           ECON=EPOT+EKIN
-          WRITE(NFILO,FMT='("I",I10,"EPOT",E12.5," EKIN",E12.5 &
-     &                 ," ECONS",E12.5," ANNE",F3.1,"FMAX",E12.5)') &
+          WRITE(NFILO,FMT='("I",I10,"EPOT",E12.5," EKIN",E12.5' &
+     &                 //'," ECONS",E12.5," ANNE",F3.1,"FMAX",E12.5)') &
      &         ITER,EPOT,EKIN,ECON,ANNE,FMAX
         END IF
 !
@@ -4481,8 +4481,8 @@ END MODULE UFFTABLE_MODULE
         ELSE
           SVAR=0.D0
         END IF
-        WRITE(*,FMT='("I=",I5,"X=",E12.5,"E=",E12.5,"DEDX=",E12.5 &
-     &          ,"TEST=",E12.5)')I,X(I),E(I),DEDX(I),SVAR
+        WRITE(*,FMT='("I=",I5,"X=",E12.5,"E=",E12.5,"DEDX=",E12.5' &
+     &          //',"TEST=",E12.5)')I,X(I),E(I),DEDX(I),SVAR
       ENDDO
       CALL ERROR$MSG('NORMAL STOP IN TESTVALUE')
       CALL ERROR$STOP('TESTVALUE')

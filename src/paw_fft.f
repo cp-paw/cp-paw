@@ -1690,6 +1690,46 @@ END MODULE PLANEWAVE_MODULE
       END
 !
 !     .................................................................
+      SUBROUTINE PLANEWAVE$UNSUPER(NGL,FOFG,FOFGUNSUPER)
+!     ******************************************************************
+!     **  PLANEWAVE$UNSUPER                                           **
+!     **  RECONSTRUCTS THE REGULAR WAVE FUNCTIONS FROM THE            **
+!     **  SUPER WAVE FUNCTIONS                                        **
+!     **  FOFG(1)=PSI+   FOFGUNSUPER(1)=PSI(1)                        **
+!     **                 FOFGUNSUPER(2)=PSI(2)                        **
+!     ******************************************************************
+      USE PLANEWAVE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NGL
+      COMPLEX(8),INTENT(IN) :: FOFG(NGL)
+      COMPLEX(8),INTENT(OUT):: FOFGUNSUPER(NGL,2)
+      INTEGER(4)            :: IG
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      COMPLEX(8)            :: CSVAR1,CSVAR2
+!     ******************************************************************
+      IF(.NOT.THIS%TINV) THEN
+        CALL ERROR$MSG('NO TIME INVERSION SYMMETRY')
+        CALL ERROR$STOP('PLANEWAVE$INVERTG')
+      END IF
+      IF(THIS%TSUPER) THEN
+        CALL ERROR$MSG('INVERSION DOES NOT MAKE SENSE')
+        CALL ERROR$MSG('IF SUPER WAVE FUNCTION INTERFACE IS SELECTED')
+        CALL ERROR$STOP('PLANEWAVE$INVERTG')
+      END IF
+      IF(NGL.NE.THIS%NGLARR(THISTASK)) THEN
+        CALL ERROR$MSG('INCONSISTENT SIZE')
+        CALL ERROR$STOP('PLANEWAVE$INVERTG')
+      END IF
+      DO IG=1,NGL
+        CSVAR1=FOFG(IG)
+        CSVAR2=CONJG(FOFG(THIS%MINUSG(IG)))
+        FOFGUNSUPER(IG,1)=0.5D0*(CSVAR1+CSVAR2)
+        FOFGUNSUPER(IG,2)=-0.5D0*CI*(CSVAR1-CSVAR2)
+      ENDDO
+      RETURN
+      END
+!
+!     .................................................................
       SUBROUTINE PLANEWAVE$INVERTG(NGL,FOFG,FOFMG)
 !     ******************************************************************
 !     **  PLANEWAVE$INVERTG                                           **

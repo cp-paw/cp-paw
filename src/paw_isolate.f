@@ -66,18 +66,14 @@
       IF(.NOT.TON) RETURN
       WRITE(NFIL,FMT='(/"ISOLATE OBJECT"/15("="))')
       IF(TON) THEN
-        WRITE(NFIL,FMT='(55("."),": " &
-     &           ,T1,"NUMBER OF GAUSSIANS" &
-     &           ,T58,I10)')NFCT
-        WRITE(NFIL,FMT='(55("."),": " &
-     &           ,T1,"SMALLEST GAUSSIAN CUTOFF" &
-     &           ,T58,F10.5," A.U.")')RC0
-        WRITE(NFIL,FMT='(55("."),": " &
-     &           ,T1,"FACTOR FOR GAUSSIAN SPACING" &
-     &           ,T58,F10.5)')RCFAC
-        WRITE(NFIL,FMT='(55("."),": " &
-     &           ,T1,"PLANE WAVE CUTOFF" &
-     &           ,T58,F10.5," RY")')G2MAX
+        WRITE(NFIL,FMT='(55("."),": ",T1,"NUMBER OF GAUSSIANS"' &
+     &           //',T58,I10)')NFCT
+        WRITE(NFIL,FMT='(55("."),": ",T1,"SMALLEST GAUSSIAN CUTOFF"' &
+     &           //',T58,F10.5," A.U.")')RC0
+        WRITE(NFIL,FMT='(55("."),": ",T1,"FACTOR FOR GAUSSIAN SPACING"' &
+     &           //',T58,F10.5)')RCFAC
+        WRITE(NFIL,FMT='(55("."),": ",T1,"PLANE WAVE CUTOFF"' &
+     &           //',T58,F10.5," RY")')G2MAX
         IF(TISOLATE) THEN
           WRITE(NFIL,FMT='("PERIODIC IMAGES SUBTRACTED")')
         ELSE 
@@ -143,8 +139,8 @@
 !     == RMAX DETERMINES THE MAXIMUM PLANE WAVE CONSIDERED
 !     == RC DETERMINES THE DECAYB OF THE GAUSSIAN
       IF(TPR) THEN
-        WRITE(*,FMT='("NF=",I2," RC0=",F5.3," RCFAC=",F5.3 &
-     &               ," G2MAX ",F10.3)')NFCT,RC0,RCFAC,G2MAX
+        WRITE(*,FMT='("NF=",I2," RC0=",F5.3," RCFAC=",F5.3' &
+     &              //'," G2MAX ",F10.3)')NFCT,RC0,RCFAC,G2MAX
       END IF
       CALL GBASS(RBAS,GBAS,OMEGA)
       E=0.D0

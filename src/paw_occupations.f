@@ -1655,9 +1655,9 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
 !     ==================================================================
       IF(TPR) THEN
         CALL CONSTANTS('EV',EV)
-        WRITE(*,FMT='("#ELECTRONS( IN)=",F10.5 &
-     &               ," CHEMICAL POTENTIAL=",F10.3 &
-     &               /"# ELECTRONS(OUT)=",F10.5)')TOTCHA,CHMPOT/EV,TOTCHA+DQ
+        WRITE(*,FMT='("#ELECTRONS( IN)=",F10.5' &
+     &               //'," CHEMICAL POTENTIAL=",F10.3' &
+     &               //'/"# ELECTRONS(OUT)=",F10.5)')TOTCHA,CHMPOT/EV,TOTCHA+DQ
         DO ISPIN=1,NSPIN
           DO IKPT=1,NKPT
             WRITE(*,FMT='(5("(",F8.3,";",F4.2,")"))') &
@@ -1745,8 +1745,7 @@ END MODULE OCCUPATION_MODULE
       REAL(8)    ,ALLOCATABLE :: OCC(:,:,:)  !(NB,NKPT,NSPIN)
 !     ******************************************************************
       IF(STRING_.EQ.'KPOINTS') THEN
-        WRITE(NFIL,FMT='(/"K-POINTS" &
-     &                   /"========")')
+        WRITE(NFIL,FMT='(/"K-POINTS"/"========")')
         CALL CELL$GETR8A('T(0)',9,RBAS)
         CALL GBASS(RBAS,GBAS,CELLVOL)
         DO IKPT=1,NKPT
@@ -1756,9 +1755,9 @@ END MODULE OCCUPATION_MODULE
               DWORK(I)=DWORK(I)+GBAS(I,J)*XK(J,IKPT)
             ENDDO
           ENDDO
-          WRITE(NFIL,FMT='(" K",I1 &
-     &             ," = (",F5.2,"*G1,",F5.2,"*G2,",F5.2,"*G3)" &
-     &             ," = (",F7.5,",",F7.5,",",F7.5,");")') &
+          WRITE(NFIL,FMT='(" K",I1' &
+     &             //'," = (",F5.2,"*G1,",F5.2,"*G2,",F5.2,"*G3)"' &
+     &             //'," = (",F7.5,",",F7.5,",",F7.5,");")') &
      &             IKPT,(XK(I,IKPT),I=1,3) &
      &             ,(DWORK(I),I=1,3)
         ENDDO

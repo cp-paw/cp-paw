@@ -1186,8 +1186,8 @@ END MODULE CONSTRAINTS_MODULE
             ALLOCATE(SM(NC1))
             CALL LINKEDLIST$GET(LL_CNSTR,'S0',1,S0)
             CALL LINKEDLIST$GET(LL_CNSTR,'FC',1,SM)
-            WRITE(NFIL,FMT='("(VAL/FORCE):" &
-     &                    ,5("(",ES10.4E1,"/",E10.4E1,")"))') &
+            WRITE(NFIL,FMT='("(VAL/FORCE):"' &
+     &                    //',5("(",ES10.4E1,"/",E10.4E1,")"))') &
      &              (S0(II),-SM(II),II=1,NC1)
             DEALLOCATE(SM)
             DEALLOCATE(S0)
@@ -1732,68 +1732,50 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)               :: phiLEN,phix,phiy,phiz
       REAL(8)               :: TOTM
       REAL(8)               :: COG(3)
-      REAL(8)               :: U(3)
       REAL(8)               :: DX,DY,DZ
 !     ******************************************************************
 !
-!      =================================================================
-!      == NORMALIZE ANGLE VECTOR                                      ==
-!      =================================================================
-       PHILEN=DSQRT(PHI(1)**2+PHI(2)**2+PHI(3)**2)
-       PHIX=PHI(1)/PHILEN
-       PHIY=PHI(2)/PHILEN
-       PHIZ=PHI(3)/PHILEN
-!
-!      =================================================================
-!      == CALCULATE CENTER OF GRAVITY =================================
-!      =================================================================
-       TOTM=0.D0
-       COG(1)=0.D0
-       COG(2)=0.D0
-       COG(3)=0.D0
-       DO IAT=1,NAT
-         IF(TMEMBER(IAT)) THEN
-           TOTM=TOTM+RMASS(IAT)
-           COG(1)=COG(1)+RMASS(IAT)*R0(1,IAT)
-           COG(2)=COG(2)+RMASS(IAT)*R0(2,IAT)
-           COG(3)=COG(3)+RMASS(IAT)*R0(3,IAT)
-         END IF
-       ENDDO
-       COG(1)=COG(1)/TOTM
-       COG(2)=COG(2)/TOTM
-       COG(3)=COG(3)/TOTM
-!
-!      =================================================================
-!      == CALCULATE CENTER OF GRAVITY =================================
-!      =================================================================
-       VEC(:,:)=0.D0
-       U(1)=0.D0
-       U(2)=0.D0
-       U(3)=0.D0
-       DO IAT=1,NAT
-         IF(TMEMBER(IAT)) THEN
-           DX=R0(1,IAT)-COG(1)
-           DY=R0(2,IAT)-COG(2)
-           DZ=R0(3,IAT)-COG(3)
-           VEC(1,IAT)=RMASS(IAT)*(phiY*DZ-phiZ*DY)
-           VEC(2,IAT)=RMASS(IAT)*(phiZ*DX-phiX*DZ)
-           VEC(3,IAT)=RMASS(IAT)*(phiX*DY-phiY*DX)
-           U(1)=U(1)+RMASS(IAT)*VEC(1,IAT)
-           U(2)=U(2)+RMASS(IAT)*VEC(2,IAT)
-           U(3)=U(3)+RMASS(IAT)*VEC(3,IAT)
-         END IF
-       ENDDO
-       U(1)=U(1)/TOTM
-       U(2)=U(2)/TOTM
-       U(3)=U(3)/TOTM
-       DO IAT=1,NAT
-         IF(TMEMBER(IAT)) THEN
-           VEC(1,IAT)=VEC(1,IAT)-U(1)
-           VEC(2,IAT)=VEC(2,IAT)-U(2)
-           VEC(3,IAT)=VEC(3,IAT)-U(3)
-         END IF
-       ENDDO
-        
+!     =================================================================
+!     == NORMALIZE ANGLE VECTOR                                      ==
+!     =================================================================
+      PHILEN=DSQRT(PHI(1)**2+PHI(2)**2+PHI(3)**2)
+      PHIX=PHI(1)/PHILEN
+      PHIY=PHI(2)/PHILEN
+      PHIZ=PHI(3)/PHILEN
+!     
+!     =================================================================
+!     == CALCULATE CENTER OF GRAVITY =================================
+!     =================================================================
+      TOTM=0.D0
+      COG(1)=0.D0
+      COG(2)=0.D0
+      COG(3)=0.D0
+      DO IAT=1,NAT
+        IF(TMEMBER(IAT)) THEN
+          TOTM=TOTM+RMASS(IAT)
+          COG(1)=COG(1)+RMASS(IAT)*R0(1,IAT)
+          COG(2)=COG(2)+RMASS(IAT)*R0(2,IAT)
+          COG(3)=COG(3)+RMASS(IAT)*R0(3,IAT)
+        END IF
+      ENDDO
+      COG(1)=COG(1)/TOTM
+      COG(2)=COG(2)/TOTM
+      COG(3)=COG(3)/TOTM
+!     
+!     =================================================================
+!     == CALCULATE CENTER OF GRAVITY =================================
+!     =================================================================
+      VEC(:,:)=0.D0
+      DO IAT=1,NAT
+        IF(TMEMBER(IAT)) THEN
+          DX=R0(1,IAT)-COG(1)
+          DY=R0(2,IAT)-COG(2)
+          DZ=R0(3,IAT)-COG(3)
+          VEC(1,IAT)=RMASS(IAT)*(phiY*DZ-phiZ*DY)
+          VEC(2,IAT)=RMASS(IAT)*(phiZ*DX-phiX*DZ)
+          VEC(3,IAT)=RMASS(IAT)*(phiX*DY-phiY*DX)
+        END IF
+      ENDDO
       RETURN
       END
 !

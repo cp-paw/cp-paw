@@ -211,7 +211,7 @@ END MODULE AUGMENTATION_MODULE
 !
 !     ..................................................................
       SUBROUTINE AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT,denmati &
-     &                              ,LMRX,VQLM,RHOB,DATH,DO)
+     &                              ,LMRX,VQLM,RHOB,potb,DATH,DO)
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **
@@ -231,7 +231,7 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),INTENT(IN)   :: LMRX
       REAL(8)   ,INTENT(INOUT):: VQLM(LMRX)
       REAL(8)   ,INTENT(IN)   :: RHOB
-!     REAL(8)   ,INTENT(out)  :: potb ! average electrostatic potential
+      REAL(8)   ,INTENT(out)  :: potb ! integrated electrostatic augmentation potential
       REAL(8)   ,INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(OUT)  :: DO(LMNX,LMNX,ndimd)
       REAL(8)                 :: R1,DEX,XEXP,RI
@@ -268,8 +268,10 @@ END MODULE AUGMENTATION_MODULE
       CHARACTER(32)           :: ATOM
       REAL(8)                 :: VQLM1(LMRX)
       REAL(8)                 :: QLM(LMRX)
+      real(8)                 :: pi
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
+      pi=4.d0*datan(1.d0)
 !
 !     ==================================================================
 !     ==  COLLECT ATOM-TYPE SPECIFIC INFORMATION FROM SETUP OBJECT    ==
@@ -423,6 +425,21 @@ END MODULE AUGMENTATION_MODULE
       CALL AUGMENTATION_ADD('AE1 ELECTROSTATIC',AEEHARTREE)
       CALL AUGMENTATION_ADD('PS1 ELECTROSTATIC',PSEHARTREE)
       VQLM1(:)=VQLM1(:)+VQLM(:)
+!
+!     =================================================================
+!     == AVERAGE ONE-CENTER POTENTIAL                                ==
+!     =================================================================
+      ALLOCATE(DWORK1(NR))
+      DWORK1(:)=AEPOT1(:,1)-(PSPOT1(:,1)-VADD(:))
+      RI=R1/XEXP
+      DO IR=1,NR
+        RI=RI*XEXP
+        DWORK1(IR)=DWORK1(IR)*RI**2*SQRT(4.D0*PI)
+      ENDDO
+      CALL RADIAL$INTEGRAL(R1,DEX,NR,DWORK1,POTB)
+      POTB=-POTB
+potb=0.d0
+      DEALLOCATE(DWORK1)
 !     
 !     == ADD POTENTIAL FROM CHARGES "OUTSIDE" THE SPHERE =============      
       CALL AUGMENTATION_ADDVQLM(R1,DEX,NR,LMRX,VQLM1,AEPOT1,PSPOT1)
@@ -435,7 +452,8 @@ END MODULE AUGMENTATION_MODULE
       AEBACKGROUND=0.D0
       PSBACKGROUND=0.D0
       CALL AUGMENTATION_ADDBACKGROUND(R1,DEX,NR,RHOB &
-     &                      ,AERHO,AEBACKGROUND,AEPOT1)
+     &                      ,AERHO(:,1,1)+aecore(:),AEBACKGROUND,AEPOT1)
+!     &                      ,AERHO(:,1,1),AEBACKGROUND,AEPOT1) prev. version
       CALL AUGMENTATION_ADDBACKGROUND(R1,DEX,NR,RHOB &
      &                      ,PSRHO,PSBACKGROUND,PSPOT1)
       CALL AUGMENTATION_ADD('AE1 BACKGROUND',AEBACKGROUND)
@@ -1322,7 +1340,7 @@ END MODULE AUGMENTATION_MODULE
       DO IR=1,NR
         RI=RI*XEXP
         RI2=RI*RI
-        SVAR1=SVAR*RI2
+        SVAR1=SVAR*RI2 ! potential of the background
         WORK(IR)=SVAR1*RHO(IR)*ri2
         POT(IR)=POT(IR)+SVAR1
       ENDDO
@@ -1581,7 +1599,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       DATH(:,:,:)=0.D0
       ETOT=0.D0
 !
-!     ===================================================,P===============
+!     ==================================================================
 !     ==  SELECT POTENTIAL                                            ==  
 !     ==================================================================
 !     == DETERMINE ID OF THE ATOM TYPE (SPECIES)
