@@ -1521,6 +1521,7 @@ END MODULE RANDOM_MODULE
       END IF
       IF(TID) THEN
 !       == attention: scalar factors are supposed to be real as they are
+        overlap(:,:)=(0.d0,0.d0)
         CALL ZHERK('U','C',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
         DO I=1,N1
           DO J=I+1,N2
