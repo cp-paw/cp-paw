@@ -464,6 +464,10 @@ CONTAINS
       CHARACTER(5)                   :: STDIN
       CHARACTER(9)                   :: DEVNULL
       INTEGER(4)                     :: I
+      LOGICAL(4)                     :: TOPENIBM  ! ibm choice between little and big endian
+      LOGICAL(4)                     :: TIntel=.false. ! if tintel, new files are written in 
+                                                       ! intel choice of little and big endian
+      CHARACTER(1)                   :: convert        !used to test for little and big endian
 !     ******************************************************************
       STDOUT =-'STDOUT'
       STDIN  =-'STDIN'
@@ -546,9 +550,6 @@ CONTAINS
 !     ==================================================================
 !     == OPEN FILE                                                    ==
 !     ==================================================================
-#IF DEFINED(CPPVAR_ENDIANCHECK)
-      !CALL FILEHANDLER_READCONVERT(FILE_,FORM,CONVERT)
-#ELSE
       IF(TRIM(FILE_%PERMISSION).EQ.'N') THEN
         IERR=4
         OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,ERR=9999 &
@@ -558,16 +559,49 @@ CONTAINS
      &    ,POSITION=FILE_%POSITION)
       ELSE
         IERR=5
+#IF DEFINED(CPPVAR_ENDIANCHECK)
+        if(FORM.eq.'FORMATTED') then
+#ENDIF
         OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,ERR=9999 &
-     &    ,FILE=FILE_%NAME &
-     &    ,STATUS=FILE_%STATUS &
-     &    ,FORM=FORM &
-     &    ,POSITION=FILE_%POSITION &
-     &    ,ACTION=ACTION)
+     &      ,FILE=FILE_%NAME &
+     &      ,STATUS=FILE_%STATUS &
+     &      ,FORM=FORM &
+     &      ,POSITION=FILE_%POSITION &
+     &      ,ACTION=ACTION)
+#IF DEFINED(CPPVAR_ENDIANCHECK)
+        ELSE
+          CALL FILEHANDLER_READCONVERT(FILE_,FORM,CONVERT)
+          if(convert.eq.'U') topenibm=(.not.tintel) !unknown
+          IF(CONVERT.EQ.'B') TOPENIBM=.TRUE.
+          IF(CONVERT.EQ.'L') TOPENIBM=.FALSE.
+          IF((ACTION.EQ.'WRITE'.AND.FILE_%POSITION.EQ.'REWIND').AND.TINTEL) TOPENIBM=.FALSE.
+          IF((ACTION.EQ.'WRITE'.AND.FILE_%POSITION.EQ.'REWIND').AND..NOT.TINTEL) TOPENIBM=.TRUE.
+          IF(TOPENIBM) THEN 
+            !FILE IS IBM COMPATIBLE AND HAS TO STAY SO
+PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED IBM-COMPATIBLE'
+            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,ERR=9999 &
+                  &    ,FILE=FILE_%NAME &
+                  &    ,STATUS=FILE_%STATUS &
+                  &    ,FORM=FORM &
+                  &    ,POSITION=FILE_%POSITION &
+                  &    ,ACTION=ACTION &
+                  &    ,CONVERT='BIG_ENDIAN')            
+          ELSE
+            ! FILE IS INTEL COMPATIBLE
+PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPATIBLE'
+            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,ERR=9999 &
+                  &    ,FILE=FILE_%NAME &
+                  &    ,STATUS=FILE_%STATUS &
+                  &    ,FORM=FORM &
+                  &    ,POSITION=FILE_%POSITION &
+                  &    ,ACTION=ACTION &
+                  &    ,CONVERT='LITTLE_ENDIAN')
+         END IF
+        END IF
+#ENDIF
       END IF
       FILE_%OPEN=.TRUE.
       FILE_%USED=.TRUE.
-#ENDIF
 !  
 !     ==================================================================
 !     == RESET PARAMETERS                                             ==
