@@ -1,3 +1,4 @@
+@PROCESS NOOPTIMIZE
 !
 ! MIND: this version of paw_linkedlist.f90 includes some changes in 
 !       order to cicrumvent compiler bugs of the IBM xlf90 compiler
