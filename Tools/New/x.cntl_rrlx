@@ -1,0 +1,33 @@
+!CONTROL
+ !GENERIC NSTEP=100 DT=10.0 START=F !END   
+ !DFT     TYPE=8 !END 
+ !FOURIER EPWPSI=30 CDUAL=2 !END
+ !PSIDYN  STOP=T MPSICG2=0.5 MPSI=1000. FRIC=0.005 
+    !AUTO FRIC(-)=0.005 FACT(-)=1. FRIC(+)=0.1 FACT(+)=1. !END
+ !END
+ !RDYN STOP=F FRIC=0.0 
+   !AUTO FRIC(-)=0.0 FACT(-)=1.00  FRIC(+)=0.01 FACT(+)=1. !END
+ !END
+!END 
+!EOB 
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

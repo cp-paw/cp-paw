@@ -1,0 +1,3284 @@
+This is TeX, Version 3.14159 (Web2C 7.3.1) (format=latex 2000.3.11)  21 MAR 2001 19:43
+**manual
+(manual.tex
+LaTeX2e <1999/12/01> patch level 1
+Babel <v3.6Z> and hyphenation patterns for american, french, german, ngerman, n
+ohyphenation, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 1999/09/10 v1.4a Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo
+File: size12.clo 1999/09/10 v1.4a Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/usr/share/texmf/tex/latex/psnfss/times.sty
+Package: times 1999/03/29 PSNFSS v.7.2 Times font as default roman : S Rahtz
+)
+(/usr/share/texmf/tex/latex/base/ifthen.sty
+Package: ifthen 1999/09/10 v1.1b Standard LaTeX ifthen package (DPC)
+)
+(/usr/share/texmf/tex/latex/graphics/graphics.sty
+Package: graphics 1999/02/16 v1.0l Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/usr/share/texmf/tex/latex/config/graphics.cfg)
+Package graphics Info: Driver file: dvips.def on input line 80.
+
+(/usr/share/texmf/tex/latex/graphics/dvips.def
+File: dvips.def 1999/02/16 v3.0i Driver-dependant file (DPC,SPQR)
+))
+(/usr/share/texmf/tex/latex/graphics/color.sty
+Package: color 1999/02/16 v1.0i Standard LaTeX Color (DPC)
+
+(/usr/share/texmf/tex/latex/config/color.cfg)
+Package color Info: Driver file: dvips.def on input line 125.
+
+(/usr/share/texmf/tex/latex/graphics/dvipsnam.def
+File: dvipsnam.def 1999/02/16 v3.0i Driver-dependant file (DPC,SPQR)
+))
+(/usr/share/texmf/tex/latex/misc/shadow.sty
+Style Option: `shadow' v1.2.1 <16 September 1996> (M.O.)
+\txtwdth=\dimen103
+\sht=\dimen104
+\shw=\dimen105
+\shbox=\box26
+\sboxsep=\dimen106
+\sboxrule=\dimen107
+\sdim=\dimen108
+) (manual.aux)
+\openout1 = `manual.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 71.
+LaTeX Font Info:    ... okay on input line 71.
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 71.
+ (/usr/share/texmf/tex/latex/psnfss/ot1ptm.fd
+File: ot1ptm.fd 1998/07/06 Fontinst v1.800 font definitions for OT1/ptm.
+)
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <20.74> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 72.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <24.88> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 72.
+File: big.eps Graphic file (type eps)
+ <big.eps>
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <14.4> on input line 72.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 72.
+
+
+LaTeX Warning: No \author given.
+
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 76.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 76.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 76.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 77.
+[1
+
+] [2]
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <17.28> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 79.
+ (manual.toc
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1.
+ [3] [4] [5] [6] [7])
+\tf@toc=\write3
+\openout3 = `manual.toc'.
+
+ [8] [1] [2] [3] [4] [5]
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <14.4> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 342.
+LaTeX Font Info:    Try loading font information for OT1+pcr on input line 350.
+
+
+(/usr/share/texmf/tex/latex/psnfss/ot1pcr.fd
+File: ot1pcr.fd 1998/07/06 Fontinst v1.800 font definitions for OT1/pcr.
+) [6]
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 401.
+
+
+(/usr/share/texmf/tex/latex/psnfss/omsptm.fd
+File: omsptm.fd 
+)
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 401.
+ [7] [8] [9] [10]
+Overfull \hbox (4.6402pt too wide) in paragraph at lines 622--626
+[]\OT1/ptm/m/n/12 The sec-ond line de-fines a vari-able \OT1/pcr/m/n/12 ROOT\OT
+1/ptm/m/n/12 . In the fol-low-ing com-mands $ROOT
+ []
+
+[11] [12] [13]
+Underfull \hbox (badness 10000) in paragraph at lines 742--745
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 749--751
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 758--759
+
+ []
+
+[14]
+Underfull \hbox (badness 10000) in paragraph at lines 763--765
+
+ []
+
+[15]
+Overfull \hbox (36.97206pt too wide) in paragraph at lines 810--810
+[] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 810--811
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 818--819
+
+ []
+
+[16]
+Underfull \hbox (badness 10000) in paragraph at lines 824--825
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 829--831
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 836--837
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 842--843
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 848--849
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 857--858
+
+ []
+
+[17]
+Underfull \hbox (badness 10000) in paragraph at lines 863--866
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 903--903
+
+ []
+
+
+Underfull \hbox (badness 1990) in paragraph at lines 903--903
+[]\OT1/ptm/b/n/12 (81) \OT1/ptm/m/n/12 Perdew-Zunger[[]] + Becke gra-di-ent cor
+rection[[]] +
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 903--903
+
+ []
+
+
+Overfull \hbox (12.8751pt too wide) in paragraph at lines 903--904
+[][][]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 903--904
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 903--904
+
+ []
+
+[18]
+Underfull \hbox (badness 10000) in paragraph at lines 911--912
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 917--928
+
+ []
+
+
+Underfull \hbox (badness 7704) in paragraph at lines 941--941
+[]\OT1/ptm/m/n/12 plane wave cut-off for the wave func-tions in Ry-d-berg
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 941--942
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 947--947
+[]\OT1/ptm/m/n/12 plane wave cut-off for the charge den-sity in Ry-d-berg
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 947--948
+
+ []
+
+[19]
+Underfull \hbox (badness 10000) in paragraph at lines 954--955
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 960--981
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 960--981
+
+ []
+
+
+Underfull \hbox (badness 3108) in paragraph at lines 997--997
+[]\OT1/ptm/m/n/12 mass $\OML/cmm/m/it/12 m[]$ \OT1/ptm/m/n/12 for the wave func
+-tion dy-nam-ics. For proper
+ []
+
+
+Underfull \hbox (badness 1540) in paragraph at lines 997--997
+\OT1/ptm/m/n/12 mass renor-mal-iza-tion (dis-count-ing the nu-clear mass by the
+
+ []
+
+
+Underfull \hbox (badness 5077) in paragraph at lines 997--997
+\OT1/ptm/m/n/12 ef-fec-tive mass of the wave-func-tion cloud) the value of
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 997--997
+[]\OT1/ptm/m/n/12 10 $\OT1/cmr/m/n/12 ^^A[]$ \OT1/ptm/m/n/12 (for $\OT1/cmr/m/n
+/12 ^^A$ \OT1/ptm/m/n/12 see "!CON-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 997--998
+
+ []
+
+[20]
+Underfull \hbox (badness 10000) in paragraph at lines 1014--1015
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1020--1020
+[]\OT1/ptm/m/n/12 optional, not used if ``!CON-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1020--1021
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1036--1043
+
+ []
+
+[21]
+Underfull \hbox (badness 10000) in paragraph at lines 1055--1068
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1074--1075
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1081--1082
+
+ []
+
+[22]
+Underfull \hbox (badness 10000) in paragraph at lines 1088--1089
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1095--1096
+
+ []
+
+
+Underfull \hbox (badness 2521) in paragraph at lines 1125--1125
+\OT1/ptm/m/n/12 Thermostat for the wave func-tions. The ther-mo-stat acts
+ []
+
+
+Underfull \hbox (badness 6063) in paragraph at lines 1125--1125
+\OT1/ptm/m/n/12 like a Nose-Hoover ther-mo-stat, but the tar-get tem-per-a-
+ []
+
+
+Underfull \hbox (badness 2547) in paragraph at lines 1125--1125
+\OT1/ptm/m/n/12 ture is ad-justed at each time step ac-cord-ing to the es-ti-
+ []
+
+
+Underfull \hbox (badness 1721) in paragraph at lines 1125--1125
+\OT1/ptm/m/n/12 mated Born-Oppenheimer ki-netic en-ergy ob-tained from the
+ []
+
+
+Underfull \hbox (badness 2941) in paragraph at lines 1125--1125
+\OT1/ptm/m/n/12 in-stan-ta-neous atomic ve-loc-i-ties, the wave func-tion masse
+s
+ []
+
+
+Underfull \hbox (badness 5622) in paragraph at lines 1125--1125
+\OT1/ptm/m/n/12 and the val-ues of !STRUCTURE!SPECIES:PS$\OML/cmm/m/it/12 <$\OT
+1/ptm/m/n/12 G2$\OML/cmm/m/it/12 >$ \OT1/ptm/m/n/12 and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1100--1126
+
+ []
+
+[23]
+Underfull \hbox (badness 10000) in paragraph at lines 1132--1133
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1141--1142
+
+ []
+
+[24]
+Underfull \hbox (badness 10000) in paragraph at lines 1147--1147
+[]\OT1/ptm/m/n/12 see !CON-
+ []
+
+
+Overfull \hbox (27.32585pt too wide) in paragraph at lines 1147--1147
+\OT1/ptm/m/n/12 TROL!PSIDYN!THERMOSTAT:FREQ[THz] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1147--1148
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1153--1153
+[]\OT1/ptm/m/n/12 optional; not used if !CON-
+ []
+
+
+Overfull \hbox (10.66998pt too wide) in paragraph at lines 1153--1153
+\OT1/ptm/m/n/12 TROL!PSIDYN!THERMOSTAT:PERIOD
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1153--1154
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1162--1163
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1168--1169
+
+ []
+
+[25]
+Underfull \hbox (badness 10000) in paragraph at lines 1174--1175
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1179--1220
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1179--1220
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1179--1220
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1179--1220
+
+ []
+
+[26]
+Underfull \hbox (badness 10000) in paragraph at lines 1225--1226
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1230--1236
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1242--1243
+
+ []
+
+[27]
+Underfull \hbox (badness 10000) in paragraph at lines 1249--1250
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1256--1257
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1263--1264
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1268--1272
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1279--1280
+
+ []
+
+[28]
+Underfull \hbox (badness 10000) in paragraph at lines 1286--1287
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1293--1293
+[]\OT1/ptm/m/n/12 Each of the NPULSES heat pulses will stretch over
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1293--1294
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1299--1312
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1317--1318
+
+ []
+
+[29]
+Underfull \hbox (badness 10000) in paragraph at lines 1323--1324
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1329--1329
+[]\OT1/ptm/m/n/12 see !CON-
+ []
+
+
+Overfull \hbox (17.98996pt too wide) in paragraph at lines 1329--1329
+\OT1/ptm/m/n/12 TROL!RDYN!THERMOSTAT:FREQ[THz] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1329--1330
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1335--1335
+[]\OT1/ptm/m/n/12 optional; not used if !CON-
+ []
+
+
+Overfull \hbox (1.33409pt too wide) in paragraph at lines 1335--1335
+\OT1/ptm/m/n/12 TROL!RDYN!THERMOSTAT:PERIOD
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1335--1336
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1351--1352
+
+ []
+
+[30]
+Underfull \hbox (badness 10000) in paragraph at lines 1357--1358
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+[31]
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+[32]
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1468
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1468--1471
+
+ []
+
+[33]
+Underfull \hbox (badness 10000) in paragraph at lines 1474--1517
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1474--1517
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1474--1517
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1474--1517
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1474--1517
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1474--1517
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1474--1517
+
+ []
+
+[34]
+Underfull \hbox (badness 10000) in paragraph at lines 1519--1526
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1531--1532
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1537--1538
+
+ []
+
+[35]
+Underfull \hbox (badness 10000) in paragraph at lines 1544--1545
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1551--1552
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1557--1558
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1565--1566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1570--1573
+
+ []
+
+[36]
+Underfull \hbox (badness 10000) in paragraph at lines 1579--1580
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1586--1587
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1593--1594
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1600--1601
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1605--1611
+
+ []
+
+[37]
+Underfull \hbox (badness 10000) in paragraph at lines 1616--1617
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1622--1623
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1629--1630
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1637--1638
+
+ []
+
+[38]
+Underfull \hbox (badness 10000) in paragraph at lines 1643--1644
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1649--1654
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1659--1660
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1665--1666
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1671--1672
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1678--1679
+
+ []
+
+[39]
+Underfull \hbox (badness 10000) in paragraph at lines 1684--1685
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1690--1691
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1696--1697
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1702--1703
+
+ []
+
+[40]
+Underfull \hbox (badness 10000) in paragraph at lines 1707--1710
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1716--1717
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1723--1724
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1730--1731
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1737--1738
+
+ []
+
+[41]
+Underfull \hbox (badness 10000) in paragraph at lines 1742--1748
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1754--1755
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1761--1762
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1767--1768
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1848--1850
+
+ []
+
+[42]
+Underfull \hbox (badness 10000) in paragraph at lines 1854--1856
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1861--1862
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1867--1868
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1873--1874
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1879--1880
+
+ []
+
+[43]
+Underfull \hbox (badness 10000) in paragraph at lines 1884--1904
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1909--1910
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1917--1918
+
+ []
+
+[44]
+Underfull \hbox (badness 10000) in paragraph at lines 1925--1926
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1934--1935
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1942--1943
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1947--1956
+
+ []
+
+[45]
+Underfull \hbox (badness 10000) in paragraph at lines 1960--1961
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1966--1967
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1973--1974
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 1982--1983
+
+ []
+
+[46]
+Underfull \hbox (badness 10000) in paragraph at lines 1993--1994
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2000--2004
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2009--2010
+
+ []
+
+[47]
+Underfull \hbox (badness 10000) in paragraph at lines 2015--2016
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2022--2023
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2028--2029
+
+ []
+
+[48]
+Overfull \hbox (41.99982pt too wide) in paragraph at lines 2061--2061
+[]           \OT1/pcr/m/n/12 FILE='/u/blo.2/PAW/Setups/BP86/001H/h1.out'  !END[
+] 
+ []
+
+
+Overfull \hbox (41.99982pt too wide) in paragraph at lines 2061--2061
+[]           \OT1/pcr/m/n/12 FILE='/u/blo.2/PAW/Setups/BP86/006C/c1.out'  !END[
+] 
+ []
+
+
+Overfull \hbox (41.99982pt too wide) in paragraph at lines 2061--2061
+[]           \OT1/pcr/m/n/12 FILE='/u/blo.2/PAW/Setups/BP86/008O/o1.out'  !END[
+] 
+ []
+
+
+Overfull \hbox (27.59982pt too wide) in paragraph at lines 2061--2061
+[]  \OT1/pcr/m/n/12 !ATOM    NAME= 'H_1'  R= -0.50000  0.00000 -0.86600 !END[] 
+
+ []
+
+
+Overfull \hbox (27.59982pt too wide) in paragraph at lines 2061--2061
+[]  \OT1/pcr/m/n/12 !ATOM    NAME= 'H_2'  R= -0.50000  0.00000  0.86600 !END[] 
+
+ []
+
+
+Overfull \hbox (27.59982pt too wide) in paragraph at lines 2061--2061
+[]  \OT1/pcr/m/n/12 !ATOM    NAME= 'C_3'  R=  0.00000  0.00000  0.00000 !END[] 
+
+ []
+
+
+Overfull \hbox (27.59982pt too wide) in paragraph at lines 2061--2061
+[]  \OT1/pcr/m/n/12 !ATOM    NAME= 'O_4'  R=  1.50000  0.00000  0.00000 !END[] 
+
+ []
+
+
+Overfull \hbox (27.59982pt too wide) in paragraph at lines 2061--2061
+[]  \OT1/pcr/m/n/12 !ISOLATE NF=3 RC=0.5 RCFAC=1.5 GMAX2=3.0 DECOUPLE=T !END[] 
+
+ []
+
+[49]
+Underfull \hbox (badness 10000) in paragraph at lines 2110--2114
+
+ []
+
+
+Underfull \hbox (badness 1033) in paragraph at lines 2126--2126
+[]\OT1/ptm/m/n/12 specifies the length unit (in atomic units) for struc-tural i
+n-
+ []
+
+
+Underfull \hbox (badness 1281) in paragraph at lines 2126--2126
+\OT1/ptm/m/n/12 put in this file. All data are con-verted into atomic units
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2116--2128
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2116--2128
+
+ []
+
+[50]
+Underfull \hbox (badness 10000) in paragraph at lines 2130--2141
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2130--2141
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2143--2145
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2152--2153
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2159--2160
+
+ []
+
+[51]
+Underfull \hbox (badness 10000) in paragraph at lines 2166--2167
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2171--2173
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2181--2182
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2187--2188
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2193--2194
+
+ []
+
+[52]
+Underfull \hbox (badness 10000) in paragraph at lines 2204--2205
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2213--2214
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2223--2224
+
+ []
+
+[53]
+Underfull \hbox (badness 10000) in paragraph at lines 2232--2233
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2244--2245
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2251--2252
+
+ []
+
+[54]
+Underfull \hbox (badness 10000) in paragraph at lines 2256--2258
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2267--2268
+
+ []
+
+
+Underfull \hbox (badness 3199) in paragraph at lines 2276--2276
+[]\OT1/ptm/m/n/12 Atomic co-or-di-nates in Carte-sian co-or-di-nates and units 
+of
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2276--2277
+
+ []
+
+
+Underfull \hbox (badness 2285) in paragraph at lines 2283--2283
+[]\OT1/ptm/m/n/12 Mass of this atom. Over-writes value spec-i-fied in block
+ []
+
+
+Underfull \hbox (badness 1062) in paragraph at lines 2283--2283
+[]\OT1/ptm/m/n/12 Value spec-i-fied for the cor-re-spond-ing
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2283--2284
+
+ []
+
+[55]
+Underfull \hbox (badness 10000) in paragraph at lines 2289--2290
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2294--2332
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2294--2332
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2294--2332
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2294--2332
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2294--2332
+
+ []
+
+[56]
+Underfull \hbox (badness 10000) in paragraph at lines 2340--2341
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2345--2353
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2359--2360
+
+ []
+
+[57]
+Underfull \hbox (badness 10000) in paragraph at lines 2366--2381
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2366--2381
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2366--2381
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2383--2394
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2383--2394
+
+ []
+
+[58]
+Underfull \hbox (badness 10000) in paragraph at lines 2399--2400
+
+ []
+
+
+Underfull \hbox (badness 1097) in paragraph at lines 2406--2406
+[]\OT1/ptm/m/n/12 Scaling fac-tors for the de-cay con-stants. $\OML/cmm/m/it/12
+ r[]\OT1/cmr/m/n/12 (\OML/cmm/m/it/12 i\OT1/cmr/m/n/12 ) = \OML/cmm/m/it/12 r[]
+\OT1/cmr/m/n/12 (1) \OMS/cmsy/m/n/12 ^^C
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2406--2407
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2413--2414
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2419--2420
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+[59]
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+[60]
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+[61]
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 5578) in paragraph at lines 2566--2566
+[]\OT1/ptm/m/n/12 name of the first atom in the bond, cor-re-spond-ing to
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 2547) in paragraph at lines 2566--2566
+[]\OT1/ptm/m/n/12 name of the sec-ond atom in the bond, cor-re-spond-ing to
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+[62]
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+[63]
+Underfull \hbox (badness 10000) in paragraph at lines 2566--2566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2571--2572
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2576--2578
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2583--2584
+
+ []
+
+[64]
+Underfull \hbox (badness 10000) in paragraph at lines 2589--2590
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2595--2596
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2604--2608
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2613--2614
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2619--2620
+
+ []
+
+[65]
+Underfull \hbox (badness 10000) in paragraph at lines 2624--2627
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2631--2637
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2642--2643
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2648--2649
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2654--2655
+
+ []
+
+[66]
+Underfull \hbox (badness 10000) in paragraph at lines 2660--2668
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2672--2675
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2680--2681
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2685--2687
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2692--2693
+
+ []
+
+[67]
+Underfull \hbox (badness 10000) in paragraph at lines 2698--2699
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2703--2706
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2711--2712
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2717--2718
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2722--2725
+
+ []
+
+[68]
+Underfull \hbox (badness 10000) in paragraph at lines 2730--2731
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2736--2737
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2741--2746
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2751--2752
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2757--2758
+
+ []
+
+[69]
+Underfull \hbox (badness 10000) in paragraph at lines 2762--2764
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2769--2770
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2775--2776
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2785--2786
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2792--2793
+
+ []
+
+[70]
+Underfull \hbox (badness 10000) in paragraph at lines 2798--2799
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2804--2805
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2811--2812
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2832--2832
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2832--2832
+
+ []
+
+[71]
+Underfull \hbox (badness 10000) in paragraph at lines 2832--2833
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2837--2839
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2844--2845
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2850--2851
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2856--2857
+
+ []
+
+[72]
+Underfull \hbox (badness 10000) in paragraph at lines 2866--2867
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2873--2874
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2879--2880
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2885--2886
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2892--2893
+
+ []
+
+[73]
+Underfull \hbox (badness 10000) in paragraph at lines 2913--2913
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2913--2913
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2913--2914
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2918--2919
+
+ []
+
+
+Overfull \hbox (12.8751pt too wide) in paragraph at lines 2921--2922
+[][][]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2921--2922
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2921--2922
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2927--2928
+
+ []
+
+[74]
+Underfull \hbox (badness 10000) in paragraph at lines 2933--2934
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2939--2940
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2945--2946
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2955--2956
+
+ []
+
+[75]
+Underfull \hbox (badness 10000) in paragraph at lines 2962--2963
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2969--2970
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2975--2976
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 2982--2983
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3003--3003
+
+ []
+
+[76]
+Underfull \hbox (badness 10000) in paragraph at lines 3003--3003
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3003--3004
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3008--3011
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3016--3017
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3022--3023
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3032--3033
+
+ []
+
+[77]
+Underfull \hbox (badness 10000) in paragraph at lines 3039--3040
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3045--3046
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3051--3052
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3058--3059
+
+ []
+
+[78]
+Underfull \hbox (badness 10000) in paragraph at lines 3079--3079
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3079--3079
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3079--3081
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3083--3088
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3093--3094
+
+ []
+
+[79]
+Underfull \hbox (badness 10000) in paragraph at lines 3099--3100
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3105--3106
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3115--3116
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3122--3123
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3128--3129
+
+ []
+
+[80]
+Underfull \hbox (badness 10000) in paragraph at lines 3134--3135
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3141--3142
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3162--3162
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3162--3162
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3162--3163
+
+ []
+
+[81]
+Underfull \hbox (badness 10000) in paragraph at lines 3167--3173
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3183--3184
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3190--3191
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3196--3197
+
+ []
+
+[82]
+Underfull \hbox (badness 10000) in paragraph at lines 3202--3203
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3209--3210
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3230--3230
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3230--3230
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3230--3231
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3235--3237
+
+ []
+
+[83]
+Underfull \hbox (badness 10000) in paragraph at lines 3242--3243
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3248--3249
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3409--3409
+
+ []
+
+[84]
+Underfull \hbox (badness 10000) in paragraph at lines 3409--3411
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3409--3411
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3409--3411
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3409--3411
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3409--3411
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3409--3411
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3409--3411
+
+ []
+
+[85] [86] [87]
+Overfull \hbox (20.39983pt too wide) in paragraph at lines 3484--3484
+[]  \OT1/pcr/m/n/12 !SUBSTANCE ID='H2CO' FILE='~/PAW/Sample/h2co.prot' !END[] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3493--3496
+
+ []
+
+[88]
+Underfull \hbox (badness 10000) in paragraph at lines 3500--3502
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3508--3509
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3513--3516
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3521--3522
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3527--3528
+
+ []
+
+[89]
+Underfull \hbox (badness 10000) in paragraph at lines 3532--3534
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3540--3541
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3545--3547
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3552--3553
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3559--3560
+
+ []
+
+[90]
+Underfull \hbox (badness 10000) in paragraph at lines 3564--3566
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3571--3572
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3578--3579
+
+ []
+
+[91] [92]
+Underfull \hbox (badness 10000) in paragraph at lines 3658--3661
+
+ []
+
+[93]
+Underfull \hbox (badness 10000) in paragraph at lines 3665--3667
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3671--3673
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3678--3679
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3686--3687
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3692--3693
+
+ []
+
+[94]
+Underfull \hbox (badness 10000) in paragraph at lines 3697--3702
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3707--3708
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3713--3714
+
+ []
+
+[95]
+File: h2co-rho.epsf Graphic file (type eps)
+ <h2co-rho.epsf> [96] [97] [98]
+Underfull \hbox (badness 10000) in paragraph at lines 3832--3834
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3839--3841
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3848--3849
+
+ []
+
+[99]
+Underfull \hbox (badness 10000) in paragraph at lines 3853--3865
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3870--3871
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3878--3879
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3884--3885
+
+ []
+
+[100]
+Underfull \hbox (badness 10000) in paragraph at lines 3889--3892
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3897--3898
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3903--3904
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3909--3910
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3914--3918
+
+ []
+
+[101]
+Underfull \hbox (badness 10000) in paragraph at lines 3924--3925
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3931--3932
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3937--3942
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3947--3947
+[]\OT1/ptm/m/n/12 optional; in-com-pat-i-ble with ``!TC-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3947--3948
+
+ []
+
+[102]
+Underfull \hbox (badness 10000) in paragraph at lines 3953--3953
+[]\OT1/ptm/m/n/12 optional; in-com-pat-i-ble with ``!TC-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3953--3954
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3959--3960
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3964--3973
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3964--3973
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3980--3980
+\OT1/ptm/m/n/12 for !TC-NTL!MOVIE:FORMAT='DX'
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3980--3980
+\OT1/ptm/m/n/12 and by ``.movie.xyz'' for !TC-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3980--3981
+
+ []
+
+[103]
+Underfull \hbox (badness 10000) in paragraph at lines 3985--3988
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3994--3995
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 3999--4001
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4008--4009
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4015--4015
+[]\OT1/ptm/m/n/12 character; al-lowed val-ues are
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4015--4016
+
+ []
+
+[104]
+Underfull \hbox (badness 10000) in paragraph at lines 4020--4022
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4028--4029
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4034--4035
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4039--4043
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4045--4048
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4054--4055
+
+ []
+
+[105]
+Underfull \hbox (badness 10000) in paragraph at lines 4059--4061
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4065--4068
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4074--4075
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4079--4084
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4090--4091
+
+ []
+
+[106]
+Underfull \hbox (badness 10000) in paragraph at lines 4097--4098
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4102--4104
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4110--4111
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4116--4117
+
+ []
+
+[107]
+Underfull \hbox (badness 10000) in paragraph at lines 4121--4124
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4130--4131
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4135--4137
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4141--4145
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4151--4152
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4157--4158
+
+ []
+
+[108]
+Underfull \hbox (badness 10000) in paragraph at lines 4162--4165
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4171--4172
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4176--4179
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4188--4189
+
+ []
+
+[109]
+Underfull \hbox (badness 10000) in paragraph at lines 4193--4196
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4202--4203
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4207--4211
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4217--4218
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4223--4226
+
+ []
+
+[110]
+Underfull \hbox (badness 10000) in paragraph at lines 4228--4238
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4240--4252
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4240--4252
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4254--4258
+
+ []
+
+[111]
+Underfull \hbox (badness 10000) in paragraph at lines 4264--4265
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4270--4271
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4276--4280
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4284--4287
+
+ []
+
+[112]
+Underfull \hbox (badness 10000) in paragraph at lines 4293--4294
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4298--4301
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4307--4308
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4314--4315
+
+ []
+
+[113]
+Underfull \hbox (badness 10000) in paragraph at lines 4322--4323
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4327--4331
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4336--4337
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4344--4345
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4352--4353
+
+ []
+
+[114]
+Underfull \hbox (badness 10000) in paragraph at lines 4360--4361
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4365--4373
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4378--4379
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4385--4386
+
+ []
+
+[115]
+Underfull \hbox (badness 10000) in paragraph at lines 4392--4393
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4399--4400
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4406--4407
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4411--4413
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4418--4419
+
+ []
+
+[116]
+Underfull \hbox (badness 10000) in paragraph at lines 4424--4425
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4429--4431
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4436--4437
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4442--4443
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4452--4453
+
+ []
+
+[117] [118] [119]
+File: h2copdos.eps Graphic file (type eps)
+ <h2copdos.eps> [120] [121] [122] [123] [124] [125]
+Underfull \hbox (badness 10000) in paragraph at lines 4781--4784
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4788--4790
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4796--4797
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4802--4803
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4808--4809
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4815--4816
+
+ []
+
+[126]
+Underfull \hbox (badness 10000) in paragraph at lines 4820--4822
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4826--4828
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4847--4848
+
+ []
+
+[127]
+Underfull \hbox (badness 10000) in paragraph at lines 4855--4856
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4861--4862
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4866--4868
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4873--4874
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4878--4880
+
+ []
+
+[128]
+Underfull \hbox (badness 10000) in paragraph at lines 4886--4887
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4892--4893
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4902--4902
+[]\OT1/ptm/m/n/12 optional; in-com-pat-i-ble with name;
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4902--4903
+
+ []
+
+
+Overfull \hbox (47.8697pt too wide) in paragraph at lines 4908--4910
+\OT1/ptm/m/n/12 spec-i-fied.  [][]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4908--4910
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4908--4910
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4916--4917
+
+ []
+
+[129]
+Underfull \hbox (badness 10000) in paragraph at lines 4922--4923
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4929--4930
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4936--4937
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4943--4944
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4948--4961
+
+ []
+
+[130]
+Underfull \hbox (badness 10000) in paragraph at lines 4966--4967
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4978--4979
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 4983--4985
+
+ []
+
+[131]
+Underfull \hbox (badness 10000) in paragraph at lines 4990--4991
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5003--5005
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5007--5009
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5013--5017
+
+ []
+
+[132]
+Underfull \hbox (badness 10000) in paragraph at lines 5022--5023
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5027--5028
+
+ []
+
+
+Overfull \hbox (12.8751pt too wide) in paragraph at lines 5032--5033
+[][][]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5032--5033
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5032--5033
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5037--5038
+
+ []
+
+
+Overfull \hbox (12.8751pt too wide) in paragraph at lines 5042--5043
+[][][]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5042--5043
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5042--5043
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5047--5051
+
+ []
+
+[133]
+Underfull \hbox (badness 10000) in paragraph at lines 5057--5058
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5063--5064
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5069--5070
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5075--5076
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5081--5082
+
+ []
+
+[134]
+Underfull \hbox (badness 10000) in paragraph at lines 5087--5088
+
+ []
+
+[135]
+Overfull \hbox (41.99982pt too wide) in paragraph at lines 5133--5133
+[] \OT1/pcr/m/n/12 !VTILDE  TYPE='POLYNOMIAL' RC=1.0 POWER=3 POT(0)=-2.58 !END[
+] 
+ []
+
+
+Overfull \hbox (34.79982pt too wide) in paragraph at lines 5133--5133
+[] \OT1/pcr/m/n/12 !PSCORE  TYPE='POLYNOMIAL' RC=1.0 POWER=3 RHO(0)=0.05 !END[]
+ 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5144--5146
+
+ []
+
+[136]
+Underfull \hbox (badness 10000) in paragraph at lines 5150--5152
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5157--5158
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5163--5164
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5169--5170
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5174--5176
+
+ []
+
+[137]
+Underfull \hbox (badness 10000) in paragraph at lines 5181--5182
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5186--5189
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5194--5195
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5200--5201
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5206--5207
+
+ []
+
+[138]
+Underfull \hbox (badness 10000) in paragraph at lines 5211--5213
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5217--5219
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5224--5225
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5230--5231
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5236--5237
+
+ []
+
+[139]
+Underfull \hbox (badness 10000) in paragraph at lines 5241--5243
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5247--5249
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5254--5255
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5260--5261
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5266--5267
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5271--5274
+
+ []
+
+[140]
+Underfull \hbox (badness 10000) in paragraph at lines 5289--5290
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5295--5296
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5302--5303
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5308--5309
+
+ []
+
+[141]
+Underfull \hbox (badness 10000) in paragraph at lines 5313--5315
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5320--5321
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5325--5327
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5332--5333
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5338--5339
+
+ []
+
+[142]
+Underfull \hbox (badness 10000) in paragraph at lines 5344--5345
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5350--5351
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5355--5358
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5363--5364
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5370--5371
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5377--5378
+
+ []
+
+[143]
+Underfull \hbox (badness 10000) in paragraph at lines 5384--5385
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5390--5391
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 5396--5397
+
+ []
+
+[144]
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5440--5440
+[]\OT1/pcr/m/n/10.95 REAL(8)      :: WAVE(NR1,NR2,NR3) ! density or wave functi
+on[] 
+ []
+
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <10.95> on input line 5443.
+[145]
+Overfull \hbox (10.76952pt too wide) in paragraph at lines 5489--5489
+[]\OT1/pcr/m/n/10.95 INTEGER(4)  :: LNX(NSP)      !#(PARTIAL WAVES PER ATOM (L,
+N))[] 
+ []
+
+
+Overfull \hbox (17.33951pt too wide) in paragraph at lines 5489--5489
+[]\OT1/pcr/m/n/10.95 REAL(8)     :: XK(3)         ! K-POINT IN RELATIVE COORDIN
+ATES[] 
+ []
+
+
+Overfull \hbox (23.9095pt too wide) in paragraph at lines 5489--5489
+[]\OT1/pcr/m/n/10.95 !*********************************************************
+*****[] 
+ []
+
+
+Overfull \hbox (17.33951pt too wide) in paragraph at lines 5489--5489
+[]\OT1/pcr/m/n/10.95 &                                   ,OV(1:LNX(ISP),1:LNX(I
+SP))[] 
+ []
+
+[146] [147]
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5649--5649
+[]\OT1/pcr/m/n/10.95 GE.............=    2.002319     :ELECRON GYROMAGNETIC RAT
+IO[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5649--5649
+[]\OT1/pcr/m/n/10.95 KB.............=    3.166679E-06 :BOLTZMANN CONSTANT IN A.
+U.[] 
+ []
+
+[148] [149] [150]
+Overfull \hbox (8.94733pt too wide) in paragraph at lines 5689--5693
+\OT1/ptm/m/n/10.95 The hy-per-fine pa-ram-e-ters mea-sure the split-ting of sev
+-eral tran-si-tions, each of which switches
+ []
+
+[151]
+Overfull \hbox (17.44003pt too wide) in paragraph at lines 5761--5764
+\OT1/ptm/m/n/10.95 The mag-netic field is ei-ther given in mil-liTesla, in Oer-
+sted or in Gauss (1 Oe=1 gauss=10$[]$ T). 
+ []
+
+[152]
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5811--5811
+[]\OT1/pcr/m/n/10.95 SY   Z  MASS[U] R(COV) R(ASA) R(VDW) CONFIGURATION  #(NODE
+S)[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5811--5811
+[]\OT1/pcr/m/n/10.95 ----------------------------------------------------------
+--[] 
+ []
+
+[153]
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5853--5853
+[]\OT1/pcr/m/n/10.95 SY   Z  MASS[U] R(COV) R(ASA) R(VDW) CONFIGURATION  #(NODE
+S)[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5853--5853
+[]\OT1/pcr/m/n/10.95 ----------------------------------------------------------
+--[] 
+ []
+
+[154]
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 SY   Z  MASS[U] R(COV) R(ASA) R(VDW) CONFIGURATION  #(NODE
+S)[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 ----------------------------------------------------------
+--[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 FR  87  223.020  4.724  5.222  9.260 [RN]S1         S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 RA  88  226.025  3.779  4.178  6.949 [RN]S2         S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 AC  89  227.028  3.118  3.446  6.572 [RN]S2D1       S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 TH  90  232.038  3.118  3.446  6.418 [RN]S2D2       S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 PA  91  231.036  3.118  3.446  6.470 [RN]S2D1F2     S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 U   92  238.029  2.683  2.966  6.416 [RN]S2D1F3     S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 NP  93  237.048  3.080  3.405  6.470 [RN]S2D1F4     S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 PU  94  244.064  3.061  3.384  6.470 [RN]S2F6       S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 AM  95  243.061  3.496  3.864  6.389 [RN]S2F7       S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 CM  96  247.070  3.042  3.363  6.285 [RN]S2D1F7     S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 BK  97  247.070  3.005  3.321  6.310 [RN]S2F9       S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 CF  98  251.080  3.005  3.321  6.261 [RN]S2F10      S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 ES  99  252.083  2.986  3.300  6.234 [RN]S2F11      S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 FM 100  257.095  2.967  3.279  6.210 [RN]S2F12      S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 MD 101  258.099  2.948  3.259  6.187 [RN]S2F13      S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 NO 102  259.101  3.288  3.634  6.138 [RN]S2F14      S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 LR 103  260.105  2.948  3.259  6.115 [RN]S2D1F14    S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 RF 104  261.109  2.721  3.008  6.614 [RN]S2D2F14    S6P5D3
+F1[] 
+ []
+
+
+Overfull \hbox (4.19952pt too wide) in paragraph at lines 5895--5895
+[]\OT1/pcr/m/n/10.95 HA 105  262.114  2.532  2.799  6.614 [RN]S2D3F14    S6P5D3
+F1[] 
+ []
+
+[155] [156] [157] [158] [159] [160]
+Overfull \hbox (4.96997pt too wide) in paragraph at lines 6110--6113
+[]\OT1/ptm/m/n/12 A com-pressed tar file con-tain-ing the PAW di-rec-tory and a
+tomic
+ []
+
+
+Underfull \hbox (badness 5133) in paragraph at lines 6146--6151
+[]\OT1/ptm/m/n/12 The En-gi-neer-ing and Sci-en-tific Soubrou-tines Li-brary
+ []
+
+
+Underfull \hbox (badness 1460) in paragraph at lines 6146--6151
+\OT1/ptm/m/n/12 (ESSL)[[]]. The first ver-sion is for pow-erpc pro-ces-sors the
+ other
+ []
+
+
+Underfull \hbox (badness 2005) in paragraph at lines 6146--6151
+\OT1/ptm/m/n/12 for the power2 ar-chi-tec-ture. You can check the ver-sion num-
+bers
+ []
+
+[161] [162]
+Overfull \hbox (24.87163pt too wide) in paragraph at lines 6195--6198
+\OT1/ptm/m/n/12 tro-duce \OT1/ptm/m/it/12 your \OT1/ptm/m/n/12 ac-tual name for
+ the PAW di-rec-tory, in-stead of ``\OT1/pcr/m/n/12 /home/blo/PAW\OT1/ptm/m/n/1
+2 ''. 
+ []
+
+[163] [164] [165]
+Underfull \hbox (badness 10000) in paragraph at lines 6334--6335
+[]\OT1/ptm/m/n/12 !CONTROL!GENERIC:STOREPSIR 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6335--6336
+[]\OT1/ptm/m/n/12 !CONTROL!PSIDYN:AUTO 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6336--6337
+[]\OT1/ptm/m/n/12 !CONTROL!RDYN:AUTO 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6337--6338
+[]\OT1/ptm/m/n/12 !CONTROL!FILES!FILE:IDENT 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6338--6339
+[]\OT1/ptm/m/n/12 !STRUCTURE!GENERIC:NBAND 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6339--6340
+[]\OT1/ptm/m/n/12 !STRUCTURE!GENERIC:NSPIN 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6340--6341
+[]\OT1/ptm/m/n/12 !STRUCTURE!GENERIC:CHARGE[-QEL]
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6341--6342
+[]\OT1/ptm/m/n/12 !STRUCTURE!GENERIC:SPIN[-QEL] 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6342--6343
+[]\OT1/ptm/m/n/12 !STRUCTURE!OCCUP 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6343--6344
+[]\OT1/ptm/m/n/12 !CNTL!PSIDYN:SAVEORTHO 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6345--6346
+[]\OT1/ptm/m/n/12 !CONTROL!RNOSE 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 6346--6347
+[]\OT1/ptm/m/n/12 !CONTROL!PSINOSE 
+ []
+
+[166] [167] [168] [169] [170]
+Underfull \hbox (badness 10000) in paragraph at lines 6738--6742
+[]\OT1/ptm/m/n/12 Cerius$[]$ is a prod-uct of Molec-u-lar Sim-u-la-tions Inc. S
+ee
+ []
+
+[171]
+Underfull \hbox (badness 1189) in paragraph at lines 6780--6784
+[]\OT1/ptm/m/n/12 ``Adiabaticity in first-principles molec-u-lar dy-nam-ics'', 
+P.E. Bl[]ochl and
+ []
+
+
+Underfull \hbox (badness 1924) in paragraph at lines 6805--6808
+[]\OT1/ptm/m/n/12 For in-for-ma-tion of soft-ware from the free soft-ware foun-
+da-tion, see
+ []
+
+[172] [173] (manual.aux) ) 
+Here is how much of TeX's memory you used:
+ 847 strings out of 25901
+ 10097 string characters out of 197578
+ 57308 words of memory out of 384000
+ 3807 multiletter control sequences out of 10000+15000
+ 16384 words of font info for 46 fonts, out of 400000 for 1000
+ 14 hyphenation exceptions out of 1000
+ 24i,10n,24p,463b,400s stack positions out of 300i,100n,500p,50000b,4000s
+
+Output written on manual.dvi (181 pages, 390364 bytes).

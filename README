@@ -1,0 +1,2 @@
+-Change PAWDIRNEW back to PAWDIR in all shell scripts in the PAW
+  directory and in directory F90PP

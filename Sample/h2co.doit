@@ -1,0 +1,20 @@
+#!/bin/ksh
+#===================================================
+# sample doit file to execute the simulation code ==
+#===================================================
+#                                define the rootname 
+ROOT=${PAWDIR}/Sample/h2co                               
+#
+OPTIONS='-arch none'
+#          remove old out and error files
+rm ${ROOT}.err ; rm ${ROOT}.out                          
+#                                            compile
+echo compiling
+#paw_compile $OPTIONS 1>${ROOT}.cmp_err 2>&1
+#                                check if successful
+#if (( $? != 0 )); then exit 1; fi                        
+#                             execute paw simulation
+echo running
+paw_run $OPTIONS -c ${ROOT}.cntl 1>${ROOT}.err 2>&1
+
+

@@ -1,0 +1,21 @@
+#=================================================
+#==  add these lines to your .profile,          ==
+#==  when you install CP-PAW;                   ==
+#== replace /home/blo/PAW by the directory,     ==
+#== where PAW is installed                      ==
+#=================================================
+#== set variable for PAW-directory
+export PAWDIR=${PAWDIR}
+export PATH=$PATH:${PAWDIR}:${PAWDIR}/X
+#== set directories for the IBM Dataexplorer    ==
+export DXMACROS=${PAWDIR}/DX
+export DXINCLUDE=${PAWDIR}/DX
+#=================================================
+#== The following lines are customizations      ==
+#== unrelated to CP-PAW                         ==
+#== (uncomment if they shall be executed)       ==
+#=================================================
+#== emacs-style command line editing
+#export EDITOR=emacs                  
+#== convenient command line prompt
+#export PS1=[$(uname -n)]${PWD##*/}$  

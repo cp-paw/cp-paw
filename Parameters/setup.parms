@@ -1,0 +1,5 @@
+!STPPARMS
+  ROOT='/u/blo.2/Setups/' 
+  !ATOM PARMID='H_' Z=1 ZV=1 NPRO= 1 LRHOX=1 DFT='BP86' FILE='BP86/001H/h1.out' !END
+!END
+!EOB

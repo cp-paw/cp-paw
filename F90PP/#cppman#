@@ -1,0 +1,489 @@
+cpp Command
+
+
+
+Purpose
+
+Performs file inclusion and macro substitution on C language source
+files.
+
+Syntax
+
+/usr/ccs/lib/cpp [ -C ] [ -P ] [ -qDBCS ] [ -IDirectory ]
+[ -UName ] [ -DName [ =Definition ] ] [ -qlanglvl=Language
+] [ InFile ] [ OutFile ]
+
+Description
+
+The cpp command performs file inclusion and macro substitution on
+C language source files. It reads InFile and writes to OutFile (standard
+input and standard output by default).
+
+The cpp command is designed to conform to the preprocessing directives
+and instructions for the C language as defined by the document "Draft
+American National Standard for Information Systems - Programming Language
+C" (X3J11/88-159).
+
+The cpp program recognizes the following special names:
+
+__LINE__	The current line number.
+
+__DATE__	The date of translation of the source file.
+
+__TIME__	The time of translation of the source file.
+
+__STDC__	Indicates a conforming implementation.
+
+__FILE__	The current file name.
+
+__STR__	Indicates the compiler will generate inline code for certain
+string functions (as defined in /usr/include/string.h).
+
+__MATH__	Indicates the compiler will generate inline code for certain
+math functions (as defined in /usr/include/math.h).
+
+__ANSI__	Indicates langlvl is set equal to ANSI.
+
+__SAA__	Indicates langlvl is set equal to SAA.
+
+__SAA_L2__	Indicates langlvl is set equal to SAAL2.
+
+__EXTENDED__	Indicates langlvl is set equal to extended.
+
+__TIMESTAMP__	Indicates the date and time when the source file was
+last modified.
+
+All cpp directive lines must begin with a # (pound sign). These directives
+are:
+
+#define Name TokenString	Replaces subsequent instances of Name with
+TokenString.
+
+#define Name(Argument, . . . ,Argument) TokenString	Replaces subsequent
+instances of the sequence Name (Argument, . . . ,Argument) with TokenString,
+where each occurrence of an Argument in TokenString is replaced by
+the corresponding token in the comma-separated list. Note that there
+must not be any space between Name and the left parenthesis.
+
+#undef Name	Ignores the definition of Name from this point on.
+
+#include "File" or #include <File>	Includes at this point the
+contents of File, which cpp then processes.
+
+If you enclose File in " " (double quotation marks) the cpp command
+searches first in the directory of InFile, second in directories named
+with the -I flag, and last in directories on a standard list.
+
+If you use the <File> notation, the cpp command searches for File
+only in the standard directories. It does not search the directory
+in which InFile resides.
+
+#line Number ["File"]	Causes the implementation to behave as if
+the following sequence of source lines begins with a source line that
+has a line number as specified by Number. If File is supplied, the
+presumed name of the file is changed to be File.
+
+#error TokenString	Produces a diagnostic message that includes TokenString.
+
+#pragma TokenString	An implementation-defined instruction to the
+compiler.
+
+#endif	Ends a section of lines begun by a test directive (#if, 
+#ifdef, or #ifndef). Each test directive must have a matching #endif.
+
+#ifdef Name	Places the subsequent lines in the output only if:
+
+Name has been defined by a previous #define
+
+OR
+
+Name has been defined by the -D flag,
+
+OR
+
+Name is a special name recognized by the cpp command,
+
+AND
+
+Name has not been undefined by an intervening #undef,
+
+OR
+
+Name has not been undefined with the -U flag.
+
+#ifndef Name	Places the subsequent lines in the output only if:
+
+Name has never been defined by a previous #define,
+
+AND
+
+Name is not a special name recognized by the cpp command,
+
+OR
+
+Name has been defined by a previous #define but it has been undefined
+by an intervening #undef,
+
+OR
+
+Name is a special name recognized by the cpp command, but it has been
+undefined with the -U flag.
+
+#if Expression	Places subsequent lines in the output only if Expression
+evaluates to nonzero. All the binary nonassignment C operators, the
+?: operator, and the unary -, !, and - operators are legal in Expression.
+The precedence of the operators is the same as that defined in the
+C Language. There is also a unary operator defined, which can be used
+in Expression in these two forms:
+
+defined (Name) or defined Name	This allows the utility of #ifdef
+and #ifndef in a #if directive. Only these operators, integer constants,
+and names that are known by cpp should be used in Expression. The
+sizeof operator is not available.
+
+#elif Expression	Places subsequent lines in the output only if the
+expression in the preceding #if or #elif directive evaluates to
+false or is undefined, and this Expression evaluates to true.
+
+#else	Places subsequent lines in the output only if the expression
+in the preceding #if or #elif directive evaluates to false or is
+undefined (and hence the lines following the #if and preceding the
+#else have been ignored).
+
+Each test directive's condition is checked in order. If it evaluates
+to false (0), the group that it controls is skipped. Directives are
+processed only through the name that determines the directive in order
+to keep track of the level of nested conditionals; the rest of the
+directives' preprocessing tokens are ignored, as are the other preprocessing
+tokens in the group. Only the first group whose control condition
+evaluates to true (nonzero) is processed. If none of the conditions
+evaluates to true, and there is a #else directive, the group controlled
+by the #else is processed; lacking a #else directive, all the groups
+until the #endif are skipped.
+
+Flags
+
+-C	Copies C language comments from the source file to the output file.
+If you omit this flag, the cpp command removes all C language comments
+except those found on a cpp directive line.
+
+-DName[=Definition]	Defines Name as in a #define directive. The
+default Definition is 1.
+
+-IDirectory	Looks first in Directory, then looks in the directories
+on the standard list for #include files with names that do not begin
+with a / (slash). See the previous discussion of #include.
+
+-P	Preprocesses input without producing line control information for
+the next pass of the C compiler.
+
+-qDBCS	Specifies double-byte character set mode.
+
+-UName	Removes any initial definition of Name, where Name is a symbol
+predefined by the preprocessor (except for the four preprocessor mode
+indicators: __ANSI__, __EXTENDED__, __SAA__, and __SAA_L2__). This
+flag is not recognized in ANSI mode.
+
+-qlanglvl=Language	Selects a language level for processing. Language
+can be ANSI, SAA, SAAL2, or extended. The default is extended.
+
+Note:	When Language is extended, _NO_PROTO is not automatically defined.
+Such definition can be done using the -D option in the /etc/xlc.cfg
+file.
+
+Examples
+
+1.	To display the text that the preprocessor sends to the C compiler,
+enter:
+
+/usr/ccs/lib/cpp pgm.c
+
+This preprocesses pgm.c and displays the resulting text at the work
+station. You may want to see the preprocessor output when looking
+for errors in your macro definitions.
+
+2.	To create a file containing more readable preprocessed text, enter:
+
+/usr/ccs/lib/cpp -P -C pgm.c pgm.i
+
+This preprocesses pgm.c and stores the result in pgm.i. It omits line
+numbering information intended for the C compiler (-P), and includes
+program comments (-C).
+
+3.	To predefine macro identifiers, enter:
+
+/usr/ccs/lib/cpp -DBUFFERSIZE=512 -DDEBUG pgm.c pgm.i
+
+This defines BUFFERSIZE with the value 512 and DEBUG with the value
+1 before preprocessing.
+
+4.	To use #include files located in nonstandard directories, enter:
+
+/usr/ccs/lib/cpp -I/home/jim/include pgm.c
+
+This looks in the current directory for quoted #include files, then
+in /home/jim/include, and then in the standard directories. It looks
+in /home/jim/include for angle-bracketed #include files (< >) and
+then in the standard directories.
+
+5.	To preprocess with the ANSI definition, enter:
+
+/usr/ccs/lib/cpp -qlanglvl=ansi pgm.c
+
+Files
+
+/usr/include	Standard directory for #include files.
+
+Related Information
+
+The cc command, m4 command.
+
+
+
+
+=================================================================
+=================================================================
+
+cpp Command
+
+
+
+Purpose
+
+Performs file inclusion and macro substitution on C language source
+files.
+
+Syntax
+
+/usr/ccs/lib/cpp [ -C ] [ -P ] [ -qDBCS ] [ -IDirectory ]
+[ -UName ] [ -DName [ =Definition ] ] [ -qlanglvl=Language
+] [ InFile ] [ OutFile ]
+
+Description
+
+The cpp command performs file inclusion and macro substitution on
+C language source files. It reads InFile and writes to OutFile (standard
+input and standard output by default).
+
+The cpp command is designed to conform to the preprocessing directives
+and instructions for the C language as defined by the document "Draft
+American National Standard for Information Systems - Programming Language
+C" (X3J11/88-159).
+
+The cpp program recognizes the following special names:
+
+__LINE__	The current line number.
+
+__DATE__	The date of translation of the source file.
+
+__TIME__	The time of translation of the source file.
+
+__STDC__	Indicates a conforming implementation.
+
+__FILE__	The current file name.
+
+__STR__	Indicates the compiler will generate inline code for certain
+string functions (as defined in /usr/include/string.h).
+
+__MATH__	Indicates the compiler will generate inline code for certain
+math functions (as defined in /usr/include/math.h).
+
+__ANSI__	Indicates langlvl is set equal to ANSI.
+
+__SAA__	Indicates langlvl is set equal to SAA.
+
+__SAA_L2__	Indicates langlvl is set equal to SAAL2.
+
+__EXTENDED__	Indicates langlvl is set equal to extended.
+
+__TIMESTAMP__	Indicates the date and time when the source file was
+last modified.
+
+All cpp directive lines must begin with a # (pound sign). These directives
+are:
+
+#define Name TokenString	Replaces subsequent instances of Name with
+TokenString.
+
+#define Name(Argument, . . . ,Argument) TokenString	Replaces subsequent
+instances of the sequence Name (Argument, . . . ,Argument) with TokenString,
+where each occurrence of an Argument in TokenString is replaced by
+the corresponding token in the comma-separated list. Note that there
+must not be any space between Name and the left parenthesis.
+
+#undef Name	Ignores the definition of Name from this point on.
+
+#include "File" or #include <File>	Includes at this point the
+contents of File, which cpp then processes.
+
+If you enclose File in " " (double quotation marks) the cpp command
+searches first in the directory of InFile, second in directories named
+with the -I flag, and last in directories on a standard list.
+
+If you use the <File> notation, the cpp command searches for File
+only in the standard directories. It does not search the directory
+in which InFile resides.
+
+#line Number ["File"]	Causes the implementation to behave as if
+the following sequence of source lines begins with a source line that
+has a line number as specified by Number. If File is supplied, the
+presumed name of the file is changed to be File.
+
+#error TokenString	Produces a diagnostic message that includes TokenString.
+
+#pragma TokenString	An implementation-defined instruction to the
+compiler.
+
+#endif	Ends a section of lines begun by a test directive (#if, 
+#ifdef, or #ifndef). Each test directive must have a matching #endif.
+
+#ifdef Name	Places the subsequent lines in the output only if:
+
+Name has been defined by a previous #define
+
+OR
+
+Name has been defined by the -D flag,
+
+OR
+
+Name is a special name recognized by the cpp command,
+
+AND
+
+Name has not been undefined by an intervening #undef,
+
+OR
+
+Name has not been undefined with the -U flag.
+
+#ifndef Name	Places the subsequent lines in the output only if:
+
+Name has never been defined by a previous #define,
+
+AND
+
+Name is not a special name recognized by the cpp command,
+
+OR
+
+Name has been defined by a previous #define but it has been undefined
+by an intervening #undef,
+
+OR
+
+Name is a special name recognized by the cpp command, but it has been
+undefined with the -U flag.
+
+#if Expression	Places subsequent lines in the output only if Expression
+evaluates to nonzero. All the binary nonassignment C operators, the
+?: operator, and the unary -, !, and - operators are legal in Expression.
+The precedence of the operators is the same as that defined in the
+C Language. There is also a unary operator defined, which can be used
+in Expression in these two forms:
+
+defined (Name) or defined Name	This allows the utility of #ifdef
+and #ifndef in a #if directive. Only these operators, integer constants,
+and names that are known by cpp should be used in Expression. The
+sizeof operator is not available.
+
+#elif Expression	Places subsequent lines in the output only if the
+expression in the preceding #if or #elif directive evaluates to
+false or is undefined, and this Expression evaluates to true.
+
+#else	Places subsequent lines in the output only if the expression
+in the preceding #if or #elif directive evaluates to false or is
+undefined (and hence the lines following the #if and preceding the
+#else have been ignored).
+
+Each test directive's condition is checked in order. If it evaluates
+to false (0), the group that it controls is skipped. Directives are
+processed only through the name that determines the directive in order
+to keep track of the level of nested conditionals; the rest of the
+directives' preprocessing tokens are ignored, as are the other preprocessing
+tokens in the group. Only the first group whose control condition
+evaluates to true (nonzero) is processed. If none of the conditions
+evaluates to true, and there is a #else directive, the group controlled
+by the #else is processed; lacking a #else directive, all the groups
+until the #endif are skipped.
+
+Flags
+
+-C	Copies C language comments from the source file to the output file.
+If you omit this flag, the cpp command removes all C language comments
+except those found on a cpp directive line.
+
+-DName[=Definition]	Defines Name as in a #define directive. The
+default Definition is 1.
+
+-IDirectory	Looks first in Directory, then looks in the directories
+on the standard list for #include files with names that do not begin
+with a / (slash). See the previous discussion of #include.
+
+-P	Preprocesses input without producing line control information for
+the next pass of the C compiler.
+
+-qDBCS	Specifies double-byte character set mode.
+
+-UName	Removes any initial definition of Name, where Name is a symbol
+predefined by the preprocessor (except for the four preprocessor mode
+indicators: __ANSI__, __EXTENDED__, __SAA__, and __SAA_L2__). This
+flag is not recognized in ANSI mode.
+
+-qlanglvl=Language	Selects a language level for processing. Language
+can be ANSI, SAA, SAAL2, or extended. The default is extended.
+
+Note:	When Language is extended, _NO_PROTO is not automatically defined.
+Such definition can be done using the -D option in the /etc/xlc.cfg
+file.
+
+Examples
+
+1.	To display the text that the preprocessor sends to the C compiler,
+enter:
+
+/usr/ccs/lib/cpp pgm.c
+
+This preprocesses pgm.c and displays the resulting text at the work
+station. You may want to see the preprocessor output when looking
+for errors in your macro definitions.
+
+2.	To create a file containing more readable preprocessed text, enter:
+
+/usr/ccs/lib/cpp -P -C pgm.c pgm.i
+
+This preprocesses pgm.c and stores the result in pgm.i. It omits line
+numbering information intended for the C compiler (-P), and includes
+program comments (-C).
+
+3.	To predefine macro identifiers, enter:
+
+/usr/ccs/lib/cpp -DBUFFERSIZE=512 -DDEBUG pgm.c pgm.i
+
+This defines BUFFERSIZE with the value 512 and DEBUG with the value
+1 before preprocessing.
+
+4.	To use #include files located in nonstandard directories, enter:
+
+/usr/ccs/lib/cpp -I/home/jim/include pgm.c
+
+This looks in the current directory for quoted #include files, then
+in /home/jim/include, and then in the standard directories. It looks
+in /home/jim/include for angle-bracketed #include files (< >) and
+then in the standard directories.
+
+5.	To preprocess with the ANSI definition, enter:
+
+/usr/ccs/lib/cpp -qlanglvl=ansi pgm.c
+
+Files
+
+/usr/include	Standard directory for #include files.
+
+Related Information
+
+The cc command, m4 command.
+
+
+
+

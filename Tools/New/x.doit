@@ -1,0 +1,7 @@
+#!/bin/ksh
+ROOT=-ROOT-
+paw_compile 1>${ROOT}.out 2>${ROOT}.err
+if (( $? != 0 )); then exit 1; fi
+paw_run  -c ${ROOT}.cntl  1>>${ROOT}.out 2>>${ROOT}.err
+
+
