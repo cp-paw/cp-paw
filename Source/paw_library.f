@@ -53,7 +53,7 @@
 #DEFINE CPPVAR_FFT_PACK
 #DEFINE CPPVAR_BLAS_EXPLICIT
 #ENDIF 
-
+#if defined(IBMLICENSE)
 #IFNDEF CPPVARIABLE_XLF 
 !!.......................................................................
 !MODULE ARGS_MODULE
@@ -90,7 +90,7 @@
 !      TEXT=ARGS
 !      RETURN
 !      END
-#ENDIF
+#ENDIF(.not.CPPVARIABLE_XLF)
 !
 !     ..................................................................
       SUBROUTINE LIB$TIMES(NTIME)
@@ -3183,7 +3183,7 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 #ENDIF
-
+#endif(ibmlicense)
 
 
 

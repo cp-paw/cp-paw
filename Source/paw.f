@@ -1,3 +1,4 @@
+#if defined(IBMLICENSE)
       PROGRAM MAIN
 !     ******************************************************************
 !     **     CP-PAW                                                   **
@@ -1266,6 +1267,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
                               CALL TRACE$POP
       RETURN
       END
-
+#end if
 
 

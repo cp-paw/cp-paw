@@ -1260,6 +1260,7 @@ PRINT*,'RHOT ',RHOV(1:4)+RHOC(1:4)
       LOGICAL(4)                 :: TCHK
       INTEGER(4)                 :: NFILO
       real(8)                    :: power
+      logical(4)                 :: t0val
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10 &
@@ -1284,21 +1285,28 @@ print*,'type ',type
         IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POWER',0,2)
         CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,NIN)
 !
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'POT',1,TCHK)
-        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POT',0,0.D0)
-        CALL LINKEDLIST$GET(LL_CNTL,'POT(0)',1,V0)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'POT(0)',1,T0val)
+        if(t0val) then
+          CALL LINKEDLIST$GET(LL_CNTL,'POT(0)',1,V0)
+        else
+          v0=0.d0
+        end if
 !
 !       == REPORT PARAMETERS ===========================================
         CALL REPORT$CHVAL(NFILO,'TYPE',TYPE)
         CALL REPORT$STRING(NFILO,'FUNCTIONAL FORM: V(R)=A*R^N+B*R^(N+1) ')
         CALL REPORT$R8VAL(NFILO,'R_C',RC,'A0')
         CALL REPORT$I4VAL(NFILO,'LOWEST POWER (N) OF THE POLYNOMIAL',NIN,' ')
-        CALL REPORT$R8VAL(NFILO,'V0',V0,'H')
+        if(t0val) then
+          CALL REPORT$R8VAL(NFILO,'V0',V0,'H')
+        else
+          CALL REPORT$STRING(NFILO,'potential at the origin not fixed')
+        end if
 !
 !       ================================================================
 !       ==  CONSTRUCT PSEUDOPOTENTIAL POTENTIAL                       ==
 !       ================================================================
-        CALL VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,V0,NR,AEPOT,PSPOT)
+        CALL VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,t0val,V0,NR,AEPOT,PSPOT)
       ELSE IF(TRIM(TYPE).EQ.'HBS') THEN
         CALL trace$pass('marke 0')
         CALL LINKEDLIST$GET(LL_CNTL,'RC',1,RC)
@@ -1307,21 +1315,28 @@ print*,'type ',type
         IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POWER',0,6.d0)
         CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,power)
 !
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'POT',1,TCHK)
-        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POT',0,0.D0)
-        CALL LINKEDLIST$GET(LL_CNTL,'POT(0)',1,V0)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'POT(0)',1,T0val)
+        IF(t0val) then
+          CALL LINKEDLIST$GET(LL_CNTL,'POT(0)',1,V0)
+        else
+          v0=0.d0
+        end if
 !
 !       == REPORT PARAMETERS ===========================================
         CALL REPORT$CHVAL(NFILO,'TYPE',TYPE)
         CALL REPORT$STRING(NFILO,'FUNCTIONAL FORM: V(R)=v0*f(r)+(1-f(r))*v(r)')
         CALL REPORT$R8VAL(NFILO,'R_C',RC,'A0')
         CALL REPORT$I4VAL(NFILO,'LOWEST POWER (N) OF THE POLYNOMIAL',NIN,' ')
-        CALL REPORT$R8VAL(NFILO,'V0',V0,'H')
+        if(t0val) then
+          CALL REPORT$R8VAL(NFILO,'V0',V0,'H')
+        else
+          CALL REPORT$STRING(NFILO,'potential at the origin not fixed')
+        end if
 !
 !       ================================================================
 !       ==  CONSTRUCT PSEUDOPOTENTIAL POTENTIAL                       ==
 !       ================================================================
-        CALL VTILDE_hbs(R1,DEX,RC,power,V0,NR,AEPOT,PSPOT)
+        CALL VTILDE_hbs(R1,DEX,RC,power,t0val,V0,NR,AEPOT,PSPOT)
 !        call writef(nfilo,'pspot',pspot)
       ELSE
         CALL ERROR$MSG('TYPE NOT RECOGNIZED')
@@ -1331,7 +1346,7 @@ print*,'type ',type
       END
 !
 !     ..................................................................
-      SUBROUTINE VTILDE_HBS(R1,DEX,RC,POWER,V0,NR,AEPOT,PSPOT)
+      SUBROUTINE VTILDE_HBS(R1,DEX,RC,POWER,t0val,V0,NR,AEPOT,PSPOT)
 !     ******************************************************************
 !     **                                                              **
 !     **  PSEUDIZES THE FUNCTION AEPOT BY A POLYNOMIAL                **
@@ -1350,6 +1365,7 @@ print*,'type ',type
       REAL(8)   ,INTENT(IN)     :: DEX        ! log. grid spacing
       INTEGER(4),INTENT(IN)     :: NR         ! #(radial grid points)
       REAL(8)   ,INTENT(IN)     :: RC         ! CUTOFF RADIUS
+      REAL(8)   ,INTENT(IN)     :: t0val      ! fix VTILDE(R=0)
       REAL(8)   ,INTENT(IN)     :: V0         ! VTILDE(R=0)
       real(8)   ,INTENT(IN)     :: power      !
       REAL(8)   ,INTENT(IN)     :: AEPOT(NR)  ! AE POTENTIAL
@@ -1358,23 +1374,31 @@ print*,'type ',type
       REAL(8)                   :: PI,Y0
       REAL(8)                   :: DFDR,DFDR1,DFDR2,FOFR
       INTEGER(4)                :: IR
+      INTEGER(4)                :: IRc
       REAL(8)                   :: RI,XEXP
       real(8)                   :: cut(nr)
+      real(8)                   :: fac
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/DSQRT(4.D0*PI)
       XEXP=DEXP(DEX)
+      irc=nint(1.d0+log(rc/r1)/dex)
       RI=R1/XEXP
       DO IR=1,NR
         PSPOT(IR)=AEPOT(IR)
         RI=RI*XEXP
         CUT(IR)=EXP(-(RI/RC)**POWER)
       ENDDO
-!     ==  CONVERT POLYNOMIAL ===========================================
+!     ==                     ===========================================
+      if(t0val) then
+        fac=v0/y0
+      else
+        fac=aepot(irc)
+      end if
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
-        PSPOT(IR)=V0/Y0*CUT(IR)+(1.D0-CUT(IR))*AEPOT(IR)
+        PSPOT(IR)=fac*CUT(IR)+(1.D0-CUT(IR))*AEPOT(IR)
       ENDDO
 !
       IF(.NOT.TPR) RETURN
@@ -1394,7 +1418,7 @@ print*,'type ',type
       END
 !
 !     ..................................................................
-      SUBROUTINE VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,V0,NR,AEPOT,PSPOT)
+      SUBROUTINE VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,t0val,V0,NR,AEPOT,PSPOT)
 !     ******************************************************************
 !     **                                                              **
 !     **  PSEUDIZES THE FUNCTION AEPOT BY A POLYNOMIAL                **
@@ -1409,6 +1433,7 @@ print*,'type ',type
       REAL(8)   ,INTENT(IN)     :: DEX
       INTEGER(4),INTENT(IN)     :: NR
       REAL(8)   ,INTENT(IN)     :: RC         ! CUTOFF RADIUS
+      logical(4),INTENT(IN)     :: t0val      ! fix VTILDE(R=0)
       REAL(8)   ,INTENT(IN)     :: V0         ! VTILDE(R=0)
       INTEGER(4),INTENT(IN)     :: NIN        ! LOWEST POWER OF PSPOT
       REAL(8)   ,INTENT(IN)     :: AEPOT(NR)  ! AE POTENTIAL
@@ -1446,13 +1471,15 @@ print*,'type ',type
 !     ==================================================================
 !     ==  ADD POTENTIAL SO THAT PSPOT(R=0)=V0                         ==
 !     ==================================================================
-      A=V0/Y0-A
-      RI=R1/XEXP
-      DO IR=1,IRC
-        RI=RI*XEXP
-         PSPOT(IR)=PSPOT(IR)+A*(1.D0-(RI/RC)**NIN &
+      if(t0val) then
+        A=V0/Y0-A
+        RI=R1/XEXP
+        DO IR=1,IRC
+          RI=RI*XEXP
+           PSPOT(IR)=PSPOT(IR)+A*(1.D0-(RI/RC)**NIN &
      &                       *(DBLE(NIN+1)-DBLE(NIN)*(RI/RC)))
-      ENDDO
+        ENDDO
+      end if
 !
       IF(.NOT.TPR) RETURN
 !     ==================================================================
@@ -1490,6 +1517,7 @@ print*,'type ',type
       REAL(8)                    :: V0       ! VTILDE(R=0)
       INTEGER(4)                 :: NIN
       LOGICAL(4)                 :: TCHK
+      LOGICAL(4)                 :: T0VAL=.TRUE.
       INTEGER(4)                 :: NFILO
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -1508,19 +1536,26 @@ print*,'type ',type
         CALL LINKEDLIST$EXISTD(LL_CNTL,'POWER',1,TCHK)
         IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'POWER',0,2)
         CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,NIN)
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'RHO(0)',1,TCHK)
-        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'RHO(0)',0,0.D0)
-        CALL LINKEDLIST$GET(LL_CNTL,'RHO(0)',1,V0)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'RHO(0)',1,T0val)
+        IF(t0val) then
+          CALL LINKEDLIST$GET(LL_CNTL,'RHO(0)',1,V0)
+        else
+          v0=0.d0
+        end if
 !
 !       == REPORT PARAMETERS ===========================================
         CALL REPORT$CHVAL(NFILO,'TYPE',TYPE)
         CALL REPORT$STRING(NFILO,'FUNCTIONAL FORM: RHO(R)=A*R^N+B*R^(N+1) ')
         CALL REPORT$R8VAL(NFILO,'R_C',RC,'A0')
         CALL REPORT$I4VAL(NFILO,'LOWEST POWER (N) OF THE POLYNOMIAL',NIN,' ')
-        CALL REPORT$R8VAL(NFILO,'PSEUDO DENSITY AT THE NUCLEUS',V0,'E/A0^3 ')
+        if(t0val) then
+          CALL REPORT$R8VAL(NFILO,'PSEUDO DENSITY AT THE NUCLEUS',V0,'E/A0^3 ')
+        else
+          CALL REPORT$STRING(NFILO,'value at the origin not fixed')
+        end if
 !
 !       == CONSTRUCT PSEUDO DENSITY ====================================
-        CALL VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,V0,NR,AECORE,PSCORE)
+        CALL VTILDE_POLYNOMIAL(R1,DEX,RC,NIN,t0val,V0,NR,AECORE,PSCORE)
       ELSE
         CALL ERROR$MSG('TYPE NOT RECOGNIZED')
         CALL ERROR$STOP('PSEUDIZECORE')
