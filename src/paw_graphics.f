@@ -436,7 +436,7 @@ PRINT*,'TITLE ',TRIM(TITLE),.FALSE.
               ELSE
                 FAC=1.D0
               END IF
-              CALL GRAPHICS_ADDRHO(IB,IKPT,ISPIN,FAC,NNR,WAVE)
+              CALL GRAPHICS_ADDRHO(IB,IKPT,ISPIN,FAC,NNRL,WAVE)
             ENDDO
           ELSE
             CALL ERROR$MSG('INVALID OPTION OF FORMAT')

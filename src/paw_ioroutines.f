@@ -2176,8 +2176,8 @@ PRINT*,'ILDA ',ILDA
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
-      LOGICAL(4)               :: TCHK
       LOGICAL(4)               :: TON
+      integer(4)               :: NTASKS,THISTASK
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_ANALYSE_OPTIC')  
       LL_CNTL=LL_CNTL_
@@ -2185,14 +2185,13 @@ PRINT*,'ILDA ',ILDA
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'ANALYSE')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'OPTIC',1,TON)
-!     CALL OPTIC3$SETL4('ON',TON)
-      IF(.NOT.TON) THEN
-        CALL TRACE$POP
-        RETURN
+      CALL MPE$QUERY(NTASKS,THISTASK)
+      IF(NTASKS.NE.1) THEN
+        CALL ERROR$MSG('OPTIC MODULE IS NOT PARALLELIZED')
+        CALL ERROR$MSG('USE ONLY IN SCALAR MODE')
+        CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       END IF
-CALL ERROR$MSG('OPTIC CODE DISCONNECTED')
-CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
-
+      CALL OPTICS$SETL4('ON',TON)
                            CALL TRACE$POP
       RETURN
       END

@@ -508,7 +508,9 @@ END IF
       REAL(8)   ,ALLOCATABLE  :: RHELP(:)
       LOGICAL(4)              :: TBACK
       INTEGER(4)              :: NGAMMA
+      LOGICAL(4)              :: toptic
 !     ******************************************************************
+      CALL OPTICS$GETL4('ON',TOPTIC)
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL GBASS(RBAS,GBAS,CELLVOL)
       CALL DFT$GETL4('GC',TGRA)
@@ -517,6 +519,12 @@ END IF
       IF(NDIMD.GT.1) NSPIN=2
       TSPIN=(NSPIN.EQ.2)
       LRXX=INT(SQRT(REAL(LMRXX-1)+1.E-5))
+!
+!     ==================================================================
+!     == hand pseudo density of valence electrons to optics code      ==
+!     ==================================================================
+      if(toptic)CALL OPTICS$VXCG_VALENCE(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3 &
+     &                        ,NR1,NR2,NR3,NGL,CELLVOL,RHOE)
 !
 !     ==================================================================
 !     == TRANSFORM PSEUDO DENSITY INTO FOURIER SPACE                  ==
@@ -540,6 +548,12 @@ END IF
 !     ==  ADD PSEUDO CORE DENSITY                                     ==
 !     ==================================================================
       CALL POTENTIAL_ADDCORE(NGL,NSP,NAT,ISPECIES,TAU0,PSCORG,RHOG(1,1))
+!
+!     ==================================================================
+!     == hand total pseudo density to optics code                     ==
+!     ==================================================================
+      if(toptic)CALL OPTICS$VXCG_CORE(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3 &
+     &                     ,NR1,NR2,NR3,NGL,CELLVOL,RHOG)
 !
 !     ==================================================================
 !     == SELFTEST                                                     ==
@@ -711,6 +725,11 @@ WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(3,:)
       DEALLOCATE(CWORK)
 !
 !     ==================================================================
+!     == SEND POTENTIAL TO OPTICS CODE                                ==
+!     ==================================================================
+      if(toptic)CALL OPTICS$VXCG(NR1,NR2,NR3,NGL,RHOG,NSPIN)
+!
+!     ==================================================================
 !     == ADD HARTREE POTENTIAL TO EXCHANGE POTENTIAL                  ==
 !     ==================================================================
       DO IG=1,NGL
@@ -734,7 +753,7 @@ WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
 !     ==================================================================
 !     == SEND POTENTIAL TO OPTICS CODE                                ==
 !     ==================================================================
-!     CALL OPTIC3$VOFG(NR1,NR2,NR3,NGL,RHOE,NSPIN,INB1,INB2,INB3)
+      if(toptic)CALL OPTICS$VOFG(NR1,NR2,NR3,NGL,RHOG,NSPIN)
 !
 !     ==================================================================
 !     ==  COMBINE ARRAYS FOR PARALELL PROCESSING                      ==

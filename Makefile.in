@@ -282,8 +282,8 @@ OBJECTS3 = \
            ${OBJDIR}/paw_waves.o \
            ${OBJDIR}/paw_kpoints.o \
            ${OBJDIR}/paw_vext.o \
+           ${OBJDIR}/paw_optic.o 
 #           ${OBJDIR}/paw_pdos.o 
-#          ${OBJDIR}/paw_optic.o \
 #
 OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3} 
 # 

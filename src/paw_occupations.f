@@ -1562,6 +1562,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
       REAL(8)    ,INTENT(OUT):: F(NX,NKPTX,NSPINX)   ! OCCUPATIONS
       REAL(8)    ,INTENT(OUT):: CHMPOT               ! CHEMICAL POTENTIAL
       REAL(8)    ,INTENT(OUT):: EMERMN               ! HEAT OF THE ELECTRONS
+      INTEGER(4)             :: Istart
       INTEGER(4)             :: IB,I,ISPIN,IKPT
       REAL(8)                :: X0,DX,Y0,XM,YM
       REAL(8)                :: SVAR
@@ -1604,7 +1605,8 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
 !     ==================================================================
       X0=CHMPOT
       DX=1.D-2
-      CALL BISEC(1,IBI,X0,Y0,DX,XM,YM)
+      istart=1
+      CALL BISEC(istart,IBI,X0,Y0,DX,XM,YM)
       CHMPOT=X0
       DO ITER=1,ITERX
         SUM=0.D0
@@ -1623,7 +1625,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
         IF(DABS(DQ).LT.TOL) GOTO 110
         X0=CHMPOT
         Y0=DQ
-        CALL BISEC(0,IBI,X0,Y0,DX,XM,YM)
+        CALL BISEC(istart,IBI,X0,Y0,DX,XM,YM)
         CHMPOT=X0
       ENDDO
       CALL ERROR$MSG('OCCUPATIONS NOT CONVERGED')
