@@ -11,16 +11,16 @@ COMPILER="xlf90"
 F77COMPILER="xlf"
 #
 #________________________________F90 compiler flags 
-FLAGS="-qlanglvl=90STD -c -qhalt=e -qextchk"
+FLAGS="-qlanglvl=90STD -c -qhalt=e "
 #
 #________________________________F77 compiler flags
-F77FLAGS="-qlanglvl=77STD -c -qhalt=e -qextchk"
+F77FLAGS="-qlanglvl=77STD -c -qhalt=e "
 #
 #________________________________F90 compiler optimization flags
-OPTIMIZE="-O3 -Q+clebsch -qfloat=rsqrt:hssngl:rsqrt -qmaxmem=-1 -qarch=auto"
+OPTIMIZE="-O3 -Q+clebsch -qmaxmem=-1 -qarch=auto"
 #
 #________________________________F77 compiler optimization flags
-F77OPTIMIZE="-O3 -Q+clebsch -qfloat=rsqrt:hssngl:rsqrt -qmaxmem=-1 -qarch=auto"
+F77OPTIMIZE="-O3 -Q+clebsch -qmaxmem=-1 -qarch=auto"
 #
 #________________________________F90 compiler debug flags
 DEBUG="-g -C -qfullpath -qflttrap=zerodivide:invalid:enable -qsigtrap -qinitauto=FF"
@@ -29,7 +29,7 @@ DEBUG="-g -C -qfullpath -qflttrap=zerodivide:invalid:enable -qsigtrap -qinitauto
 F77DEBUG="-g -C -qfullpath -qflttrap=zerodivide:invalid:enable -qsigtrap -qinitauto=FF"
 #
 #________________________________flags for linking 
-LFLAGS="-bmaxdata:0x70000000 -bloadmap:loadmap -qextchk"
+LFLAGS="-bmaxstack:250000000 -bmaxdata:2000000000 -bloadmap:loadmap "
 #
 #________________________________search directories for linking (sequential)
 LLINK=""
