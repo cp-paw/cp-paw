@@ -1727,6 +1727,7 @@ print*,'tbox', tbox
         DEALLOCATE(POSM)
         DEALLOCATE(MAP)
         DEALLOCATE(RAD)
+	DEALLOCATE(scaledrad)
         DEALLOCATE(COLOR)
         DEALLOCATE(BOND)
         DEALLOCATE(ATOMM)

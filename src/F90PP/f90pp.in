@@ -13,7 +13,7 @@ set +x
 #==    5) run c-preprocessor cpp                            ==
 #==                                                         ==
 #==  options                                                ==
-#==    -arch name                                           ==
+#==    -arch=name                                           ==
 #==       adapt transformations to the compiler             ==
 #==       name can be "xlf", "dec", "absoft"                ==
 #==       use dec if you are using a different compiler     ==
@@ -32,7 +32,7 @@ PAWDIR="@PAWDIR@"
 BINDIR="@BINDIR@"
 SRCDIR="@SRCDIR@"
 CPP="@CPP@"
-f90ARCH="@f90ARCH@"
+absARCH="@absARCH@"
 fortARCH="@fortARCH@"
 xlf90ARCH="@xlf90ARCH@"
 #
@@ -42,14 +42,15 @@ OPTIONS=$@
 TEMPLATES=T
 for i in $OPTIONS; do
   case $i in
-    -arch|-arch*)            # set compiler
-     ARCH=${1#-arch}
-     if [ -z "${ARCH}" ] ; then shift ; ARCH=$1 ;fi
-     case $ARCH in
-       $f90ARCH|$fortARCH|$xlf90ARCH) ;;
-       "") echo "\n option -arch requires an argument";echo ${USAGE};exit 1;;
-       *) echo "\n unknown argument $ARCH for option -arch";echo ${USAGE}; exit 1 ;;
-     esac
+    -arch=*) 
+     ARCH=`echo $i | cut -d'=' -f2`
+#     ARCH=${1#-arch}
+#     if [ -z "${ARCH}" ] ; then shift ; ARCH=$1 ;fi
+#     case $ARCH in
+#       $absARCH|$fortARCH|$xlf90ARCH) ;;
+#       "") echo "\n option -arch requires an argument";echo ${USAGE};exit 1;;
+#       *) echo "\n unknown argument $ARCH for option -arch";echo ${USAGE}; exit 1 ;;
+#     esac
      shift
     ;;
     -D*)
