@@ -543,6 +543,8 @@ END MODULE WAVES_MODULE
         VAL=TRAWSTATES
       ELSE IF(ID.EQ.'TIM') THEN
         VAL=EXTPNTR%TIM
+      ELSE IF(ID.EQ.'SAFEORTHO') THEN
+        VAL=TSAFEORTHO
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -3398,9 +3400,9 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
               END IF
             ENDDO
           ENDDO  
-print*,'smap ',Smap
-print*,'lambda ',(real(lambda(i,i))*27.211d0,i=1,nb)
-PRINT*,'MAX ',SVAR*27.211d0
+!print*,'smap ',Smap
+!print*,'lambda ',(real(lambda(i,i))*27.211d0,i=1,nb)
+!PRINT*,'MAX ',SVAR*27.211d0
           DO I=1,NB-1
             I1=SMAP(I)
             J1=SMAP(I+1)
@@ -3453,9 +3455,9 @@ PRINT*,'MAX ',SVAR*27.211d0
 !         ==================================================================
           CALL WAVES_ADDOPSI(NGL,NDIM,NBH,NB,THIS%PSIM,THIS%OPSI,LAMBDA)
           DEALLOCATE(THIS%OPSI)
-PRINT*,'WARNING FROM WAVES$ORTHOGONALIZE'
-!MAKE SURE THAT PDOS AND GRAPHICS PICK UP A CONSISTENT SET OF WAVE FUNCTIONS 
-!AND PROJECTOR FUNCTIONS
+PRINT*,'WARNING FROM WAVES$ORTHOGONALIZE:'
+print*,'MAKE SURE THAT PDOS AND GRAPHICS PICK UP A CONSISTENT SET OF '
+print*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
           CALL WAVES_ADDOPROJ(NPRO,NDIM,NBH,NB,THIS%PROJ,OPROJ,LAMBDA)
           DEALLOCATE(OPROJ)
 !
@@ -3488,14 +3490,14 @@ PRINT*,'WARNING FROM WAVES$ORTHOGONALIZE'
             DO I=1,NB
               CSUM=CSUM+AUXMAT(I,I)*OCC(I,IKPT,ISPIN)
             ENDDO
-PRINT*,'1C-CHARGE AFTER ORTHOGONALIZATION ',CSUM
+!PRINT*,'1C-CHARGE AFTER ORTHOGONALIZATION ',CSUM
             ALLOCATE(MAT(NB,NB))
             CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM,THIS%PSIM,MAT)
             CSUM=(0.D0,0.D0)
             DO I=1,NB
               CSUM=CSUM+MAT(I,I)*OCC(I,IKPT,ISPIN)
             ENDDO
-PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
+!PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
             DO J=1,NB
               DO I=1,NB
                 MAT(I,J)=MAT(I,J)+AUXMAT(I,J)
@@ -4029,7 +4031,7 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
        COMPLEX(8)            :: CSVAR
        REAL(8)               :: SVAR,SVAR1,SVAR2
        REAL(8)               :: MAXDEV
-       LOGICAL   ,PARAMETER  :: TTEST=.true.
+       LOGICAL   ,PARAMETER  :: TTEST=.false.
        REAL(8)   ,PARAMETER  :: TOL=1.D-10
        integer(4)            :: nu,nu0,iu,ju
 !      *****************************************************************
@@ -4568,7 +4570,7 @@ PRINT*,'PS-CHARGE AFTER ORTHOGONALIZATION ',CSUM
 !     IMPLICIT NONE
       REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
       REAL(8)   ,PARAMETER     :: DSMALL = 1.D-12
-      INTEGER(4),PARAMETER     :: ITERX    = 100
+      INTEGER(4),PARAMETER     :: ITERX    = 200
       INTEGER(4),INTENT(IN)    :: NB
       REAL(8)   ,INTENT(IN)    :: OCC(NB)
       COMPLEX(8),INTENT(INOUT) :: LAMBDA(NB,NB)
@@ -5055,7 +5057,7 @@ PRINT*,'ITER ',ITER,DIGAM
       LOGICAL(4)                  :: TINV
       REAL(8)                     :: NORM(NB),SVAR
       COMPLEX(8)                  :: XTWOBYTWO(2,2)
-      LOGICAL(4)      ,PARAMETER  :: TTEST=.TRUE.
+      LOGICAL(4)      ,PARAMETER  :: TTEST=.false.
       integer(4)      ,allocatable:: smap(:)
 !     ******************************************************************
 !
@@ -5629,8 +5631,8 @@ PRINT*,'ITER ',ITER,DIGAM
             ENDDO
             IF(THISTASK.EQ.1) THEN
               WRITE(NFIL)THIS%EIGVAL(IB1),VEC
-print*,'e ',this%eigval(ib1)
-write(*,fmt='(10f10.5)')vec
+!print*,'e ',this%eigval(ib1)
+!write(*,fmt='(10f10.5)')vec
             END IF
           ENDDO
           DEALLOCATE(VECTOR1)

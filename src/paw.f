@@ -827,7 +827,7 @@ END MODULE STOPIT_MODULE
       REAL(8)               :: Ecellpot
       REAL(8)               :: Ecellkin
       REAL(8)               :: ESOLV,EKINQ,QFRIC,QTOT
-      LOGICAL(4)            :: TCHK
+      LOGICAL(4)            :: TCHK,tchk1
       LOGICAL(4)            :: TCONTINUUM
       LOGICAL(4)            :: TQMMM=.FALSE.
       REAL(8)               :: QMMMKIN   ! EKIN OF QM-MM ENVIRONMENT
@@ -1087,7 +1087,8 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       IF(TPRINT) THEN
         WRITE(NFILO,FMT='()')
         CALL DYNOCC$GETL4('DYN',TCHK) 
-        IF(TCHK) THEN
+        call waves$getl4('safeortho',tchk1)
+        IF(TCHK.or. tchk1) THEN
           CALL DYNOCC$REPORT(NFILO)
         ELSE
           CALL WAVES$REPORTEIG(NFILO)

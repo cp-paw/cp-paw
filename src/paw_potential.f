@@ -1051,7 +1051,6 @@ WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
       COMPLEX(8)              :: P0(3,3,LMRXX),PM(3,3,LMRXX),PT(3,3)
       REAL(8)   ,PARAMETER    :: TINY=1.D-300
       REAL(8)                 :: STRESSA(3,3),STRESSB(3,3),STRESSC(3,3)
-      logical(4),parameter    :: ttest=.true.
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FPI=4.D0*PI

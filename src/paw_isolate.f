@@ -250,7 +250,6 @@
       USE MPE_MODULE
       implicit none
       LOGICAL(4),PARAMETER    :: TPR=.FALSE.
-      LOGICAL(4),PARAMETER    :: TTEST=.TRUE.
       INTEGER(4),INTENT(IN)   :: NGS
       INTEGER(4),INTENT(IN)   :: NAT
       REAL(8)   ,INTENT(IN)   :: RBAS(3,3)

@@ -609,10 +609,10 @@ fortOPTIMIZE77="-O3"
 xlfOPTIMIZE77="-O3 -Q+clebsch -qfloat=rsqrt:hssngl:rsqrt -qmaxmem=-1 -qarch=auto"
 #
 # ________________compiler flags for debug compilation (Absoft,Compaq,IBM)
-absDEBUG90="-g -Rs"   
+absDEBUG90="-g -s"   
 fortDEBUG90="-g3 -ladebug -C -assume gfullpath -check overflow -check underflow"
 xlfDEBUG90="-g -C -qfullpath -qflttrap=zerodivide:invalid:enable -qsigtrap -qinitauto=FF"
-absDEBUG77="-g -Rs"   
+absDEBUG77="-g -s"   
 fortDEBUG77="-g3 -ladebug -C -assume gfullpath -check overflow -check underflow"
 xlfDEBUG77="-g -C -qfullpath -qflttrap=zerodivide:invalid:enable -qsigtrap -qinitauto=FF"
 #
@@ -1151,22 +1151,22 @@ fi
 # if yes get the values:
 #
 if test "$PARMFILE" != notset; then
-  ARCH=`grep ^ARCH $PARMFILE | cut -d'"' -f2`
-  COMPILER=`grep ^COMPILER $PARMFILE | cut -d'"' -f2`
-  F77COMPILER=`grep ^F77COMPILER $PARMFILE | cut -d'"' -f2`
-  FLAGS=`grep ^FLAGS $PARMFILE | cut -d'"' -f2`
-  F77FLAGS=`grep ^F77FLAGS $PARMFILE | cut -d'"' -f2`
-  OPTIMIZE=`grep ^OPTIMIZE $PARMFILE | cut -d'"' -f2`
-  F77OPTIMIZE=`grep ^F77OPTIMIZE $PARMFILE | cut -d'"' -f2`
-  DEBUG=`grep ^DEBUG $PARMFILE | cut -d'"' -f2`
-  F77DEBUG=`grep ^F77DEBUG $PARMFILE | cut -d'"' -f2`
-  LFLAGS=`grep ^LFLAGS $PARMFILE | cut -d'"' -f2`
-  LLINK=`grep ^LLINK $PARMFILE | cut -d'"' -f2`
-  PLLINK=`grep ^PLLINK $PARMFILE | cut -d'"' -f2`
-  LIBS=`grep ^LIBS= $PARMFILE | cut -d'"' -f2`
-  PLIBS=`grep ^PLIBS $PARMFILE | cut -d'"' -f2`
-  CPPVAR=`grep ^CPPVAR $PARMFILE | cut -d'"' -f2`
-  FEXT=`grep ^FEXT $PARMFILE | cut -d'"' -f2`
+  ARCH=`grep '^ARCH' $PARMFILE | cut -d'"' -f2`
+  COMPILER=`grep '^COMPILER' $PARMFILE | cut -d'"' -f2`
+  F77COMPILER=`grep '^F77COMPILER' $PARMFILE | cut -d'"' -f2`
+  FLAGS=`grep '^FLAGS' $PARMFILE | cut -d'"' -f2`
+  F77FLAGS=`grep '^F77FLAGS' $PARMFILE | cut -d'"' -f2`
+  OPTIMIZE=`grep '^OPTIMIZE' $PARMFILE | cut -d'"' -f2`
+  F77OPTIMIZE=`grep '^F77OPTIMIZE' $PARMFILE | cut -d'"' -f2`
+  DEBUG=`grep '^DEBUG' $PARMFILE | cut -d'"' -f2`
+  F77DEBUG=`grep '^F77DEBUG' $PARMFILE | cut -d'"' -f2`
+  LFLAGS=`grep '^LFLAGS' $PARMFILE | cut -d'"' -f2`
+  LLINK=`grep '^LLINK' $PARMFILE | cut -d'"' -f2`
+  PLLINK=`grep '^PLLINK' $PARMFILE | cut -d'"' -f2`
+  LIBS=`grep '^LIBS=' $PARMFILE | cut -d'"' -f2`
+  PLIBS=`grep '^PLIBS' $PARMFILE | cut -d'"' -f2`
+  CPPVAR=`grep '^CPPVAR' $PARMFILE | cut -d'"' -f2`
+  FEXT=`grep '^FEXT' $PARMFILE | cut -d'"' -f2`
   #  
   # compose final variables
   #
@@ -2108,7 +2108,7 @@ cp $SCRIPTDIR/* $BINDIR
 # removal of config.cache 
 rm -f config.cache
 echo "$ac_t""-------------------------------------" 1>&6
-echo "$ac_t""printing out summary                 " 1>&6
+echo "$ac_t""printing out of summary              " 1>&6
 echo "$ac_t""-------------------------------------" 1>&6
 echo "$ac_t""architecture                   : $ARCH" 1>&6
 echo "$ac_t""F90 compile command            : $COMPILE" 1>&6
