@@ -100,7 +100,7 @@ MPE = ${OBJDIR}/paw_mpelib$(MODE).o
 # object directory
 # 
 ifeq (${FFTW},yes)
-  FFTWINCLUDE=cp ${FFTWDIR}/fortran/fftw_f77.i ${OBJDIR}/FFTW_F77.I
+  FFTWINCLUDE=cp ${FFTWDIR}/fortran/fftw_f77.i ${OBJDIR}/fftw_f77.i
 endif
 #
 # paw_mpelib.f holds the subroutines necessary for parallel execution

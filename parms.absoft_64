@@ -11,16 +11,16 @@ COMPILER="f90"
 F77COMPILER="f90"
 #
 #________________________________F90 compiler flags 
-FLAGS="-c -YEXT_NAMES=LCS -YEXT_SFX=_ -I/home/cfoerst/libs/mvapich-alex/include/ -I/home/cfoerst/libs/fftw-2.1.5/fortran/ "
+FLAGS="-c -m64 -YEXT_NAMES=LCS -YEXT_SFX=_ -I/home/cfoerst/libs/mvapich-alex/include/ -I/home/cfoerst/libs/fftw-2.1.5/fortran/ "
 #
 #________________________________F77 compiler flags
-F77FLAGS="-c -YEXT_NAMES=LCS -YEXT_SFX=_ "
+F77FLAGS="-c -m64 -YEXT_NAMES=LCS -YEXT_SFX=_ "
 #
 #________________________________F90 compiler optimization flags
-OPTIMIZE=""
+OPTIMIZE=" -cpu:opteron -O2 "
 #
 #________________________________F77 compiler optimization flags
-F77OPTIMIZE=""
+F77OPTIMIZE=" -cpu:opteron -O2 "
 #
 #________________________________F90 compiler debug flags
 DEBUG="-g -Rs"
@@ -29,20 +29,21 @@ DEBUG="-g -Rs"
 F77DEBUG="-g -Rs"
 #
 #________________________________flags for linking 
-LFLAGS=""
+LFLAGS="-m64 "
 #
 #________________________________search directories for linking (sequential)
-LLINK="-L/home/alexp/paw_arch/libs/fftw-2.1.5_pgf/fftw/.libs/ "
+LLINK="-L/home/alexp/paw_arch/libs/fftw-2.1.5_pgf/fftw/.libs/ -L/home/cfoerst/libs/ATLAS/lib/Linux_HAMMER64SSE2 "
 #
 #________________________________search directories for linking (parallel)
-#PLLINK="-L/home/alexp/paw_arch/libs/fftw-2.1.5_pgf/fftw/.libs/ -L/home/alexp/mvapich_devel2/ -L/usr/local/ib_hpc/ib/infinihost/lib -L/usr/lib/gcc-lib/x86_64-redhat-linux/3.2.3/ "
-PLLINK="-L/home/alexp/paw_arch/libs/fftw-2.1.5_pgf/fftw/.libs/ -L/home/alexp/mvapich_devel_absoft/lib/ -L/usr/local/ib_hpc/ib/infinihost/lib "
+PLLINK="-L/home/alexp/paw_arch/libs/fftw-2.1.5_pgf/fftw/.libs/ -L/home/cfoerst/libs/ATLAS/lib/Linux_HAMMER64SSE2 -L/home/alexp/mvapich_devel_absoft/lib/ -L/usr/local/ib_hpc/ib/infinihost/lib "
 #
 #________________________________external libraries (sequential)
-LIBS="-lU77 -lm  -lfftw -llapack -lblas "
+#LIBS="-lU77 -lm  -lfftw -llapack -lblas "
+LIBS="-lU77 -lm  -lfftw -llapack -lf77blas -latlas "
 #
 #________________________________external libraries (parallel)
-PLIBS="-lU77 -lm  -lfftw -llapack -lblas -lfmpich -lmtl_common -lvapi -lmosal -lmpga -lmpich "
+#PLIBS="-lU77 -lm  -lfftw -llapack -lblas -lfmpich -lmtl_common -lvapi -lmosal -lmpga -lmpich "
+PLIBS="-lU77 -lm  -lfftw -llapack -lf77blas -latlas -lfmpich -lmtl_common -lvapi -lmosal -lmpga -lmpich "
 #
 #________________________________preprocessor variables
 CPPVAR="-DCPPVAR_U77 -DCPPVAR_FFT_FFTW -DCPPVAR_64BIT "

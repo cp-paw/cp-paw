@@ -1147,7 +1147,7 @@ END MODULE RANDOM_MODULE
       LOGICAL                 :: DEF
       INTEGER(4)              :: I
       INTEGER(4)  ,SAVE       :: ISIGN
-      INCLUDE 'FFTW_F77.I'
+      INCLUDE 'fftw_f77.i'
 !     ******************************************************************
       DIM(1)=N1
       DIM(2)=N2
