@@ -1,0 +1,56 @@
+#
+# PARAMETER FILE FOR LINUX/INTEL
+#
+#
+# PARAMETER FILE FOR LINUX/INTEL
+#
+#________________________________architecture (arbitrary name)
+ARCH="intel"
+#
+#________________________________F90 compiler
+COMPILER="/opt/intel/compiler60/ia32/bin/ifc"
+#
+#________________________________F77 compiler
+F77COMPILER="/opt/intel/compiler60/ia32/bin/ifc"
+#
+#________________________________F90 compiler flags 
+FLAGS="-c -mp "
+#
+#________________________________F77 compiler flags
+F77FLAGS="-c -mp "
+#
+#________________________________F90 compiler optimization flags
+OPTIMIZE="-O2 -axW "
+#
+#________________________________F77 compiler optimization flags
+F77OPTIMIZE="-O"
+#
+#________________________________F90 compiler debug flags
+DEBUG="-g"
+#
+#________________________________F77 compiler debug flags
+F77DEBUG="-g"
+#
+#________________________________flags for linking 
+LFLAGS=""
+#
+#________________________________search directories for linking (sequential)
+LLINK=" -static -L/homer/cfoerst/PAW/lib/fftw-intel/fftw/.libs/ -L/homer/cfoerst/PAW/lib/ATLAS/lib/Linux_ATHLON "
+#####LLINK="-static -L/homer/cfoerst/PAW/lib/fftw-intel/fftw/.libs/ -L/opt/intel/mkl/lib/32 "
+#
+#________________________________search directories for linking (parallel)
+PLLINK=" -static -L/homer/cfoerst/PAW/lib/mpich-intel/lib -L/homer/cfoerst/PAW/lib/fftw-intel/fftw/.libs/ -L/homer/cfoerst/PAW/lib/ATLAS/lib/Linux_ATHLON "
+#
+#________________________________external libraries (sequential)
+LIBS=" -Vaxlib -lfftw -llapack -lf77blas_ifc -latlas "
+#####LIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_p4 -lpthread "
+#________________________________external libraries (parallel)
+PLIBS=" -Vaxlib -lfftw -llapack -lf77blas_ifc -latlas -lfmpich -lmpich"
+#
+#________________________________preprocessor variables
+CPPVAR="-DCPPVAR_FFT_FFTW -DCPPVAR_U77"
+#
+#________________________________file extension
+FEXT="f90"
+#
+#

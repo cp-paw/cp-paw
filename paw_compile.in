@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# USAGE
+#
+# first argument: binary to be produced
+# rest of arguments: sources to be compiled and linked
+#      MIND: just one '.' (before the f or f90) in the name
+#
+BINARY=$1
+shift
+OPTIONS=$@
+TEMPLATES=T
+for i in $OPTIONS; do
+  echo "compiling $i"
+  @COMPILE@ @OPTIMIZE@ $i 
+  OBJ="$OBJ `echo $i | cut -d'.' -f1`.o"
+  shift
+done
+echo "linking $OBJ"
+@LINK@ -L@OBJDIR@/@FASTDIR@ @LLINK@ -o $BINARY $OBJ -lpaw @LLIBS@ 

@@ -1,0 +1,9 @@
+!WCNTL
+  !FILES
+    !FILE ID='WAVE' NAME='-ROOT--rho' !END
+    !FILE ID='STRC' NAME='-ROOT-.strc_out' !END
+    !FILE ID='WAVEDX' NAME='-ROOT--rho.dx' !END
+  !END
+  !VIEWBOX O=-5. -5. -5. T=10. 3*0. 10. 3*0. 10. !END
+!END
+!EOB

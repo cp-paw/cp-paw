@@ -1,0 +1,9 @@
+!WCNTL
+  !FILES
+    !FILE ID='WAVE' NAME='/u/blo.2/PAW/Sample/h2co-rho' !END
+    !FILE ID='STRC' NAME='/u/blo.2/PAW/Sample/h2co.strc_out' !END
+    !FILE ID='WAVEDX' NAME='/u/blo.2/PAW/Sample/h2co-rho.dx' !END
+  !END
+  !VIEWBOX O=-5. -5. -5. T=10. 3*0. 10. 3*0. 10. !END
+!END
+!EOB
