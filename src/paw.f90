@@ -1,4 +1,3 @@
-!cvstest
 !#if defined(IBMLICENSE)
       PROGRAM MAIN
 !     ******************************************************************
