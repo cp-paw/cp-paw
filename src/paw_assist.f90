@@ -487,8 +487,8 @@ END MODULE AUTOPILOT_MODULE
         CALL ERROR$STOP('AUTO$SETI4')
       END IF
 !     == settings of a particular autopilot 
-      IF(IDENT_.EQ.'??????') THEN
-!        ????=VALUE
+      IF(IDENT_.EQ.'XXX') THEN
+!        XXX=VALUE
       ELSE
         CALL ERROR$MSG('KEYWORD NOT RECOGNIZED')
         CALL ERROR$CHVAL('IDENT_',IDENT_)
