@@ -28,7 +28,7 @@ END MODULE CORE_MODULE
       USE CORE_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      LOGICAL(8)  ,INTENT(IN) :: VAL
+      LOGICAL(4)  ,INTENT(IN) :: VAL
 !     ******************************************************************
       IF(ID.EQ.'ON') THEN
         TCORESHIFTS=VAL
