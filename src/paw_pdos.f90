@@ -360,7 +360,11 @@ END MODULE PDOS_MODULE
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('PDOS$SETR8A')
         END IF
-        RBAS=RESHAPE(VAL,(/3,3/))
+!        RBAS=RESHAPE(VAL,(/3,3/))
+!clemens : ifc compiler bugfix
+        rbas(:,1)=val(1:3)
+        rbas(:,2)=val(4:6)
+        rbas(:,3)=val(7:9)
       ELSE IF(ID.EQ.'R') THEN
         IF(NAT.EQ.0) NAT=LEN/3
         IF(LEN.NE.3*NAT) THEN
