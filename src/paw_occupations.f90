@@ -1266,7 +1266,51 @@ REAL(8)::EV
        INTEGER(4),PARAMETER :: NITER=1000
        INTEGER(4)           :: ITER
 integer(4) :: ntasks,thistask
+integer(4) :: count = 0
 !      *****************************************************************
+!!!!!!
+!DEBUG clemens
+!!!!!!
+open(10,file='dynocc_status.dat',status='unknown',form='formatted')
+write(10,*) starttype! ,' starttype'
+write(10,*) nb!,' nb'
+write(10,*) nkpt!,' nkpt'
+write(10,*) nspin!,' nspin'
+write(10,*) tdyn!,' tdyn'
+write(10,*) reset!,' reset'
+write(10,*) tstop!,' tstop'
+write(10,*) tfixspin!,' tfixspin'
+write(10,*) tfixtot!,' tfixtot'
+write(10,*) fmax!,' fmax' 
+write(10,*) sumofz!,' sumofz'
+write(10,*) charge!,' charge'
+write(10,*) totcha!,' totcha'
+write(10,*) spincha!,' spincha'
+write(10,*) mx!,' mx'
+write(10,*) totpot!,' totpot'
+write(10,*) spinpot!,' spinpot'
+write(10,*) temp!,' temp'
+write(10,*) annex!,' annex'
+write(10,*) deltat!,' deltat'
+write(10,*) tepsilon!,' tepsilon'
+do ispin = 1, nspin
+  do ikpt = 1, nkpt
+    write(10,*) XM(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
+    write(10,*) X0(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
+    write(10,*) XP(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
+    write(10,*) epsilon(:,ikpt,ispin)!,' epsilon for ikpt/ispin',ikpt,ispin
+    write(10,*) mpsidot2(:,ikpt,ispin)!,' mpsidot2 for ikpt,ispin',ikpt,ispin
+    
+  end do
+end do
+do ikpt = 1, nkpt
+  write(10,*) xk(:,ikpt)!,' xk for ikpt',ikpt
+  write(10,*) wkpt(ikpt)!,' wkpt for ikpt',ikpt
+end do
+close(10)
+!!!!!!!
+!DEBUG
+!!!!!!!
        IF(.NOT.TDYN) then 
          xp(:,:,:)=x0(:,:,:)
          RETURN
@@ -1337,6 +1381,7 @@ integer(4) :: ntasks,thistask
 !      ==  REMARK:  THE FACTOR FMAX IS NOT USED BECAUSE THE SAME TERM ==
 !      ==         APPEARS ALSO IN THE KINETIC ENERGY                  ==
 !      =================================================================
+1000 continue
        DO ISPIN=1,NSPIN 
          SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
@@ -1353,6 +1398,16 @@ integer(4) :: ntasks,thistask
            ENDDO
          ENDDO
        ENDDO
+!CALL MPE$QUERY(NTASKS,THISTASK)
+!if (thistask.eq.1) then
+!  open(10,file='fofx.xy',status='unknown',form='formatted')
+!  do ikpt = 1, nkpt
+!    do ib = 1, nb
+!      write(10,'(2F25.15)') epsilon(ib,ikpt,1),fx(ib,ikpt,1)
+!    end do
+!  end do
+!  close(10)
+!end if
 !
 !      =================================================================
 !      ==  PROPAGATE X WITOUT CONSTRAINTS                             ==
@@ -1384,6 +1439,15 @@ integer(4) :: ntasks,thistask
            ENDDO
          ENDDO
        ENDDO
+!if (thistask.eq.1) then
+!  open(10,file='fx_b4_constraints.xy',status='unknown',form='formatted')
+!  do ikpt = 1, nkpt
+!    do ib = 1, nb
+!      write(10,'(2F25.15)') epsilon(ib,ikpt,1),xbar(ib,ikpt,1)
+!    end do
+!  end do
+!  close(10)
+!end if
 !
 !      =================================================================
 !      ==  APPLY CONSTRAINTS                                          ==
@@ -1412,6 +1476,26 @@ integer(4) :: ntasks,thistask
               ENDDO
            ENDDO
          ENDDO
+!if (thistask.eq.1) then
+!  open(10,file='fx_after_constraints.xy',status='unknown',form='formatted')
+!  do ikpt = 1, nkpt
+!    do ib = 1, nb
+!      write(10,'(2F25.15)') epsilon(ib,ikpt,1),xp(ib,ikpt,1)
+!    end do
+!  end do
+!  close(10)
+!end if
+
+!if(q1.lt.0.d0) then
+!  print*,'clemens: q1 smaller than zero:',iter
+!  count = count + 1
+!  if (count.gt.1000) then
+!    call error$msg('Peters fix resulted in endless loop')
+!    call error$stop('peters fix')
+!  end if
+!  goto 1000
+!endif
+!count = 0
 CALL MPE$QUERY(NTASKS,THISTASK)
 WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,totpot,Q0-TOTCHA,q1
 !

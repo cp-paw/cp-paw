@@ -32,10 +32,10 @@ F77DEBUG="-g -C -d4"
 LFLAGS="-xW -tpp7 -static "
 #
 #________________________________search directories for linking (sequential)
-LLINK="-L/homer/cfoerst/PAW/lib/fftw-intel/fftw/.libs/ -L/opt/intel/mkl/lib/32 "
+LLINK="-L/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/lib/fftw-intel/fftw/.libs/ -L/opt/intel/mkl/lib/32 "
 #
 #________________________________search directories for linking (parallel)
-PLLINK="-L/homer/cfoerst/PAW/lib/fftw-intel/fftw/.libs/ -L/opt/intel/mkl/lib/32 -L/homer/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5_ifc/lib/"
+PLLINK="-L/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/lib/fftw-intel/fftw/.libs/ -L/opt/intel/mkl/lib/32 -L/homer/cfoerst/ARCHIVE_PAW/PAW_sandbox/lib/mpich-intel/lib"
 #
 #________________________________external libraries (sequential)
 LIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_p4 -lguide -lpthread "

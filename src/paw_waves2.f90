@@ -4165,8 +4165,8 @@ end module wavesfixrho_module
        use wavesfixrho_module 
        implicit none
        integer(4) ,intent(in)  :: nrl,ndimd,lmrxx,nat
-       real(8)    ,intent(out) :: qlm_(lmrxx,nat),rho_(nrl,ndimd)
-       real(8)    ,intent(out) :: denmat_(lmrxx,lmrxx,ndimd,nat)
+       real(8)    ,intent(in)  :: qlm_(lmrxx,nat),rho_(nrl,ndimd)
+       real(8)    ,intent(in)  :: denmat_(lmrxx,lmrxx,ndimd,nat)
 !      ******************************************************************
        if (.not.allocated(qlm)) then
           allocate(qlm(lmrxx,nat))
