@@ -400,8 +400,8 @@ END MODULE GRAPHICS_MODULE
         TCORE=DENSITYPLOT(I)%TCORE
         SELECTOR=DENSITYPLOT(I)%SELECTOR
         IF(SELECTOR.EQ.'EMINMAX') THEN
-	  EMIN=DENSITYPLOT(I)%EMIN
-	  EMAX=DENSITYPLOT(I)%EMAX
+          EMIN=DENSITYPLOT(I)%EMIN
+          EMAX=DENSITYPLOT(I)%EMAX
           IBMIN(:,:)=NB
           IBMAX(:,:)=1
           DO ISPIN=1,NSPIN
@@ -494,6 +494,7 @@ END MODULE GRAPHICS_MODULE
       REAL(8)       ,ALLOCATABLE:: DENMAT(:,:) !(LMNXX,LMNXX)
       INTEGER(4)                :: IAT,ISP,LN
       INTEGER(4)                :: NFIL
+      integer(4)                :: NR1B,NR2B,NR3B
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_WAVEPLOT')
       CALL MPE$QUERY(NTASKNUM,NTASKID)
@@ -543,13 +544,20 @@ END MODULE GRAPHICS_MODULE
 !     ================================================================
 !     ==  EXPAND TO A FINER R-GRID                                  ==
 !     ================================================================
-      ALLOCATE(WAVEBIG(FACT*NR1,FACT*NR2,FACT*NR3))
+      nr1b=fact*nr1
+      nr2b=fact*nr2
+      nr3b=fact*nr3
+!     == take values compatible with fft routines ====================
+      call lib$fftadjustgrd(nr1b)
+      call lib$fftadjustgrd(nr2b)
+      call lib$fftadjustgrd(nr3b)
+      ALLOCATE(WAVEBIG(nr1b,nr2b,nr3b))
       IF(FACT.EQ.1) THEN
         CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WAVEBIG)
       ELSE
         ALLOCATE(WORK1(NR1,NR2,NR3))
         CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WORK1)
-        CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,FACT,WORK1,WAVEBIG)
+        CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,nr1b,nr2b,nr3b,WORK1,WAVEBIG)
         DEALLOCATE(WORK1)
       END IF
       DEALLOCATE(WAVE)
@@ -597,8 +605,8 @@ CALL TRACE$PASS('MARKE 3')
         CALL GRAPHICS_1CWAVE(R1,DEX,NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
      &                        ,PROJ,LMXX,DRHOL)
         DEALLOCATE(PROJ)
-        CALL GRAPHICS_RHOLTOR(RBAS,FACT*NR1,FACT*NR2,FACT*NR3 &
-     &         ,1,FACT*NR1,WAVEBIG,POS(:,IAT),R1,DEX,NR,LMXX,DRHOL)
+        CALL GRAPHICS_RHOLTOR(RBAS,nr1b,nr2b,nr3b &
+     &         ,1,nr1b,WAVEBIG,POS(:,IAT),R1,DEX,NR,LMXX,DRHOL)
         DEALLOCATE(DRHOL)
         DEALLOCATE(LOX)
         DEALLOCATE(AEPHI)
@@ -615,7 +623,7 @@ CALL TRACE$PASS('MARKE 3')
         CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','UNFORMATTED')
         CALL FILEHANDLER$UNIT('WAVEPLOT',NFIL)
         CALL WRITEWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,Q,ATOMNAME &
-    &                     ,NR1*FACT,NR2*FACT,NR3*FACT,WAVEBIG)
+    &                     ,nr1b,nr2b,nr3b,WAVEBIG)
         CALL FILEHANDLER$CLOSE('WAVEPLOT')
       END IF
 !
@@ -687,6 +695,7 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)      ,ALLOCATABLE :: AECORE(:)
       REAL(8)                   :: SVAR,XEXP,RI
       INTEGER(4)                :: I
+      integer(4)                :: NR1B,NR2B,NR3B
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_DENSITYPLOT')
       CALL MPE$QUERY(NTASKNUM,NTASKID)
@@ -753,13 +762,20 @@ CALL TRACE$PASS('MARKE 3')
 !     ================================================================
 !     ==  EXPAND TO A FINER R-GRID                                  ==
 !     ================================================================
-      ALLOCATE(WAVEBIG(FACT*NR1,FACT*NR2,FACT*NR3))
+      nr1b=fact*nr1
+      nr2b=fact*nr2
+      nr3b=fact*nr3
+!     == take values compatible with fft routines ====================
+      call lib$fftadjustgrd(nr1b)
+      call lib$fftadjustgrd(nr2b)
+      call lib$fftadjustgrd(nr3b)
+      ALLOCATE(WAVEBIG(nr1b,nr2b,nr3b))
       IF(FACT.EQ.1) THEN
         CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WAVEBIG)
       ELSE
         ALLOCATE(WORK1(NR1,NR2,NR3))
         CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WORK1)
-        CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,FACT,WORK1,WAVEBIG)
+        CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,nr1b,nr2b,nr3b,WORK1,WAVEBIG)
         DEALLOCATE(WORK1)
       END IF
       DEALLOCATE(WAVE)
@@ -816,8 +832,8 @@ CALL TRACE$PASS('MARKE 3')
         CALL GRAPHICS_1CRHO(R1,DEX,NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
      &               ,DENMAT(1,1),LMXX,DRHOL)
         DEALLOCATE(DENMAT)
-        CALL GRAPHICS_RHOLTOR(RBAS,FACT*NR1,FACT*NR2,FACT*NR3 &
-    &         ,1,FACT*NR1,WAVEBIG,POS(:,IAT),R1,DEX,NR,LMXX,DRHOL)
+        CALL GRAPHICS_RHOLTOR(RBAS,nr1b,nr2b,nr3b &
+    &         ,1,nr1b,WAVEBIG,POS(:,IAT),R1,DEX,NR,LMXX,DRHOL)
 !     
 !     ================================================================
 !     ==  ADD CORE CHARGE DENSITY                                   ==
@@ -826,8 +842,8 @@ CALL TRACE$PASS('MARKE 3')
           ALLOCATE(AECORE(NR))
           CALL SETUP$AECORE(ISP,NR,AECORE)
           IF(TYPE.EQ.'UP'.OR.TYPE.EQ.'DOWN') AECORE(:)=0.5D0*AECORE(:)
-          CALL GRAPHICS_RHOLTOR(RBAS,FACT*NR1,FACT*NR2,FACT*NR3 &
-    &           ,1,FACT*NR1,WAVEBIG,POS(:,IAT),R1,DEX,NR,1,AECORE)
+          CALL GRAPHICS_RHOLTOR(RBAS,nr1b,nr2b,nr3b &
+    &           ,1,nr1b,WAVEBIG,POS(:,IAT),R1,DEX,NR,1,AECORE)
           DEALLOCATE(AECORE)
         END IF
         DEALLOCATE(DRHOL)
@@ -844,7 +860,7 @@ CALL TRACE$PASS('MARKE 3')
         CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','UNFORMATTED')
         CALL FILEHANDLER$UNIT('WAVEPLOT',NFIL)
         CALL WRITEWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,Q,ATOMNAME &
-    &                     ,NR1*FACT,NR2*FACT,NR3*FACT,WAVEBIG)
+    &                     ,nr1b,nr2b,nr3b,WAVEBIG)
         CALL FILEHANDLER$CLOSE('WAVEPLOT')
       END IF
 !     
@@ -1183,15 +1199,17 @@ CALL TRACE$PASS('MARKE 3')
       END
 !
 !     ..................................................................
-      SUBROUTINE GRAPHICS_REFINEGRID(NR1,NR2,NR3,FACT,WAVE,WAVEBIG)
+      SUBROUTINE GRAPHICS_REFINEGRID(NR1,NR2,NR3,nr1b,nr2b,nr3b,WAVE,WAVEBIG)
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)     :: NR1
       INTEGER(4),INTENT(IN)     :: NR2
       INTEGER(4),INTENT(IN)     :: NR3
-      INTEGER(4),INTENT(IN)     :: FACT
+      INTEGER(4),INTENT(IN)     :: NR1b
+      INTEGER(4),INTENT(IN)     :: NR2b
+      INTEGER(4),INTENT(IN)     :: NR3b
       REAL(8),INTENT(IN)        :: WAVE(NR1,NR2,NR3)
-      REAL(8),INTENT(OUT)       :: WAVEBIG(FACT*NR1,FACT*NR2,FACT*NR3)
+      REAL(8),INTENT(OUT)       :: WAVEBIG(nr1b,nr2b,nr3b)
       COMPLEX(8),ALLOCATABLE    :: WORKC1(:,:,:)
       COMPLEX(8),ALLOCATABLE    :: WORKC2(:,:,:)
       INTEGER(4)                :: I
@@ -1205,24 +1223,24 @@ CALL TRACE$PASS('MARKE 3')
       ALLOCATE(WORKC2(NR1,NR2,NR3)) 
       CALL LIB$3DFFTC8('RTOG',NR1,NR2,NR3,WORKC1,WORKC2)
       DEALLOCATE(WORKC1)
-      ALLOCATE(WORKC1(FACT*NR1,FACT*NR2,FACT*NR3))      
+      ALLOCATE(WORKC1(nr1b,nr2b,nr3b))      
       WORKC1=(0.D0,0.D0)
-      I=NR1/2  !MIND NRX ARE GENERALLY EVEN?
+      I=NR1/2  !MIND: requires that only even numbers are used (-> assured by lib$fftadjustgrd)
       J=NR2/2
       K=NR3/2
-      E1=2*FACT-1   
-      E2=2*FACT 
-      WORKC1(1:I        ,1:J        ,1:K)        =WORKC2(1:I    ,1:J    ,1:K)
-      WORKC1(E1*I+1:E2*I,1:J        ,1:K)        =WORKC2(I+1:2*I,1:J    ,1:K)
-      WORKC1(1:I        ,E1*J+1:E2*J,1:K)        =WORKC2(1:I    ,J+1:2*J,1:K)        
-      WORKC1(1:I        ,1:J        ,E1*K+1:E2*K)=WORKC2(1:I    ,1:J    ,K+1:2*K)
-      WORKC1(E1*I+1:E2*I,E1*J+1:E2*J,1:K)        =WORKC2(I+1:2*I,J+1:2*J,1:K)
-      WORKC1(1:I        ,E1*J+1:E2*J,E1*K+1:E2*K)=WORKC2(1:I    ,J+1:2*J,K+1:2*K)        
-      WORKC1(E1*I+1:E2*I,1:J        ,E1*K+1:E2*K)=WORKC2(I+1:2*I,1:J    ,K+1:2*K)
-      WORKC1(E1*I+1:E2*I,E1*J+1:E2*J,E1*K+1:E2*K)=WORKC2(I+1:2*I,J+1:2*J,K+1:2*K)      
+!
+      WORKC1(1:I          ,1:J          ,1:K)          =WORKC2(1:I    ,1:J    ,1:K)
+      WORKC1(nr1b-i+1:nr1b,1:J          ,1:K)          =WORKC2(I+1:2*I,1:J    ,1:K)
+      WORKC1(1:I          ,nr2b-j+1:nr2b,1:K)          =WORKC2(1:I    ,J+1:2*J,1:K)        
+      WORKC1(1:I          ,1:J          ,nr3b-k+1:nr3b)=WORKC2(1:I    ,1:J    ,K+1:2*K)
+      WORKC1(nr1b-i+1:nr1b,nr2b-j+1:nr2b,1:K)          =WORKC2(I+1:2*I,J+1:2*J,1:K)
+      WORKC1(1:I          ,nr2b-j+1:nr2b,nr3b-k+1:nr3b)=WORKC2(1:I    ,J+1:2*J,K+1:2*K)        
+      WORKC1(nr1b-i+1:nr1b,1:J          ,nr3b-k+1:nr3b)=WORKC2(I+1:2*I,1:J    ,K+1:2*K)
+      WORKC1(nr1b-i+1:nr1b,nr2b-j+1:nr2b,nr3b-k+1:nr3b)=WORKC2(I+1:2*I,J+1:2*J,K+1:2*K)
+!
       DEALLOCATE(WORKC2)
-      ALLOCATE(WORKC2(FACT*NR1,FACT*NR2,FACT*NR3))
-      CALL LIB$3DFFTC8('GTOR',FACT*NR1,FACT*NR2,FACT*NR3,WORKC1,WORKC2)
+      ALLOCATE(WORKC2(nr1b,nr2b,nr3b))
+      CALL LIB$3DFFTC8('GTOR',nr1b,nr2b,nr3b,WORKC1,WORKC2)
       WAVEBIG(:,:,:)=REAL(WORKC2(:,:,:),KIND=8)
       DEALLOCATE(WORKC1)
       DEALLOCATE(WORKC2)
@@ -1252,7 +1270,6 @@ CALL TRACE$PASS('MARKE 3')
       NGL=NGL_
       IF(.NOT.ALLOCATED(PWPOT)) THEN
         ALLOCATE(PWPOT(NGL))
-      else 
       END IF
       PWPOT(:)=VHARTREE(:)
       RETURN
@@ -1315,7 +1332,7 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)                    :: RBAS(3,3),GBAS(3,3),DET
       REAL(8)   ,ALLOCATABLE     :: VHARTREE(:)
       REAL(8)   ,ALLOCATABLE     :: WORK(:)
-      REAL(8)   ,ALLOCATABLE     :: POTENTIAL(:)
+      REAL(8)   ,ALLOCATABLE     :: POTENTIAL(:,:,:)
       INTEGER(4)                 :: NRL
       INTEGER(4)                 :: NR1L
       INTEGER(4)                 :: NR1,NR2,NR3
@@ -1336,6 +1353,7 @@ CALL TRACE$PASS('MARKE 3')
       INTEGER(4)                 :: NFILO
       REAL(8)   ,ALLOCATABLE     :: ONECPOT(:,:,:)
       INTEGER(4)                 :: NTASKS,THISTASK
+      integer(4)                 :: nr1b,nr2b,nr3b
 !     ******************************************************************
 !COLLECTING OF INFORMATION
       CALL MPE$QUERY(NTASKS,THISTASK)
@@ -1358,7 +1376,14 @@ CALL TRACE$PASS('MARKE 3')
 !     ==================================================================
 !     ==  EXPAND GRID BY FACT AND UNPARALLELIZE                       ==
 !     ==================================================================
-      ALLOCATE(POTENTIAL(FACT*NR1*FACT*NR2*FACT*NR3))
+      nr1b=fact*nr1
+      nr2b=fact*nr2
+      nr3b=fact*nr3
+!     == take values compatible with fft routines ====================
+      call lib$fftadjustgrd(nr1b) 
+      call lib$fftadjustgrd(nr2b) 
+      call lib$fftadjustgrd(nr3b) 
+      ALLOCATE(POTENTIAL(nr1b,nr2b,nr3b))
       ALLOCATE(VHARTREE(NRL))
       CALL PLANEWAVE$SUPFFT('GTOR',1,NGL,PWPOT,NRL,VHARTREE)
       IF(FACT.EQ.1) THEN
@@ -1366,7 +1391,7 @@ CALL TRACE$PASS('MARKE 3')
       ELSE
         ALLOCATE(WORK(NR1*NR2*NR3))
         CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,VHARTREE,NR1*NR2*NR3,WORK)
-        CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,FACT,WORK,POTENTIAL)
+        CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,nr1b,nr2b,nr3b,WORK,POTENTIAL)
         DEALLOCATE(WORK)
       END IF
       DEALLOCATE(VHARTREE)
@@ -1394,14 +1419,13 @@ CALL TRACE$PASS('MARKE 3')
       CALL MPE$COMBINE('+',ONECPOT)
       DO IAT=1,NAT
         CALL SETUP$RADGRID(IAT,R1,DEX,NR)
-        PRINT*,'CLEMENS: LMRX: ',LMRXX
         CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
         CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
 PRINT*,'INCLUDE AE-CONTRIBUTIONS'
 CALL TIMING$CLOCKON('GRAPHICS 1CPOTENTIAL')
-         CALL GRAPHICS_RHOLTOR(RBAS,FACT*NR1,FACT*NR2,FACT*NR3,1,FACT*NR1 &
+         CALL GRAPHICS_RHOLTOR(RBAS,nr1b,nr2b,nr3b,1,nr1b &
       &           ,POTENTIAL,POS(:,IAT),R1,DEX,NRX,LMRXX,ONECPOT(:,:,IAT))
 CALL TIMING$CLOCKOFF('GRAPHICS 1CPOTENTIAL')
 PRINT*,'INCLUDED AE-CONTRIBUTIONS'
@@ -1416,7 +1440,7 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
         CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','UNFORMATTED')
         CALL FILEHANDLER$UNIT('WAVEPLOT',NFIL)
         CALL WRITEWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,Q,ATOMNAME &
-     &                  ,FACT*NR1,FACT*NR2,FACT*NR3,POTENTIAL)    
+     &                  ,nr1b,nr2b,nr3b,POTENTIAL)    
         CALL FILEHANDLER$CLOSE('WAVEPLOT')
       END IF
       DEALLOCATE(POTENTIAL)
