@@ -65,7 +65,7 @@
               ELSE IF(IND.GT.INDINV) THEN 
                 CYCLE ! INVERSE IMAGE IS NOT COUNTED
               ELSE
-               WGHT=2.D0*WGHT0 ! GENERAL K-POINT GETS THE WEIGHT OF IT IMAGE
+                WGHT=2.D0*WGHT0 ! GENERAL K-POINT GETS THE WEIGHT OF ITs IMAGE
               END IF
             ELSE
               WGHT=WGHT0

@@ -6108,12 +6108,15 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)  ,INTENT(INOUT):: NREC
       COMPLEX(8)  ,ALLOCATABLE:: PSIG(:,:)
       COMPLEX(8)  ,ALLOCATABLE:: PSI1(:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSI2(:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSIP(:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSIM(:,:)
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)              :: NTASKS,THISTASK
       INTEGER(4)              :: IOS
       INTEGER(4)              :: IKPT,ISPIN,IB,IDIM,IWAVE
       INTEGER(4)              :: LEN
-      INTEGER(4)              :: NG1,NGG,NGL,NBH,nb
+      INTEGER(4)              :: NG1,NGG,NGL,NBH
       LOGICAL(4)              :: TSUPER
       CHARACTER(64)           :: IOSTATMSG
       REAL(8)                 :: XK(3)
@@ -6148,6 +6151,10 @@ PRINT*,'ITER ',ITER,DIGAM
           CALL PLANEWAVE$SELECT(GSET%ID)
           TSUPER=GSET%TINV
           NREC=NREC+nwave*THIS%NBH*NSPIN
+!??
+          IF(TSUPER)NREC=NREC+nwave*THIS%NBH*NSPIN
+!          NREC=NREC+2*THIS%NBH*NSPIN
+!          IF(TSUPER)NREC=NREC+2*THIS%NBH*NSPIN
           ISVAR=-1
           CALL WAVES_WRITELAMBDA(NFIL,IKPT,ISVAR)
           NREC=NREC+ISVAR
@@ -6181,7 +6188,6 @@ PRINT*,'ITER ',ITER,DIGAM
         CALL PLANEWAVE$SELECT(GSET%ID)
         NGL=GSET%NGL
         NBH=THIS%NBH
-        NB=THIS%NB
         CALL PLANEWAVE$GETI4('NGG',NGG)
 !       
 !       ================================================================
@@ -6190,7 +6196,12 @@ PRINT*,'ITER ',ITER,DIGAM
         CALL PLANEWAVE$GETL4('TINV',TSUPER)
         IF(THISTASK.EQ.1) THEN
           KEY='PSI'
-          WRITE(NFIL)KEY,NGG,NDIM,NB,TSUPER  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          IF(TSUPER) THEN
+!??
+            WRITE(NFIL)KEY,NGG,NDIM,2*NBH,.FALSE. !<<<<<<<<<<<<<<<<<<<<<<<<<
+          ELSE
+            WRITE(NFIL)KEY,NGG,NDIM,NBH,TSUPER  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          END  IF
           NREC1=NREC1+1
         END IF
 !       
@@ -6199,18 +6210,31 @@ PRINT*,'ITER ',ITER,DIGAM
 !       ================================================================
         CALL PLANEWAVE$GETR8A('GBAS',9,GBAS)
         CALL PLANEWAVE$GETR8A('XK',3,XK)
+!       ALLOCATE(GVECL(3,NGL))
+!       CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVECL)
+!       ALLOCATE(GVECG(3,NGG))
+!       CALL PLANEWAVE$COLLECTR8(3,NGL,GVECL,NGG,GVECG)
         ALLOCATE(IGVECL(3,NGL))
         CALL PLANEWAVE$GETI4A('IGVEC',3*NGL,IGVECL)
         ALLOCATE(IGVECG(3,NGG))
         CALL PLANEWAVE$COLLECTI4(3,NGL,IGVECL,NGG,IGVECG)
         IF(THISTASK.EQ.1) THEN
           WRITE(NFIL)XK,IGVECG !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+!         WRITE(NFIL)KVEC,GBAS,GVECG !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           NREC1=NREC1+1
         END IF
+!       DEALLOCATE(GVECG)
+!       DEALLOCATE(GVECL)
         DEALLOCATE(IGVECG)
         DEALLOCATE(IGVECL)
+        
         ALLOCATE(PSIG(NGG,NDIM))
         ALLOCATE(PSI1(NGL,NDIM))
+        IF(TSUPER) THEN
+          ALLOCATE(PSI2(NGL,NDIM))
+          ALLOCATE(PSIP(NGL,NDIM))
+          ALLOCATE(PSIM(NGL,NDIM))
+        END IF
         DO IWAVE=1,nwave
           DO ISPIN=1,NSPIN
             CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -6223,6 +6247,14 @@ PRINT*,'ITER ',ITER,DIGAM
                   PSI1(:,IDIM)=THIS%PSIM(:,IDIM,IB)
                 END IF
               ENDDO
+              IF(TSUPER) THEN
+                DO IDIM=1,NDIM
+                  PSIP(:,IDIM)=PSI1(:,IDIM)
+                  CALL PLANEWAVE$INVERTG(NGL,PSIP(1,IDIM),PSIM(1,IDIM))
+                  PSI1(:,IDIM)=0.5D0   *(PSIP(:,IDIM)+PSIM(:,IDIM))
+                  PSI2(:,IDIM)=0.5D0*CI*(PSIP(:,IDIM)-PSIM(:,IDIM))
+                ENDDO
+              END IF
               DO IDIM=1,NDIM
                 CALL PLANEWAVE$COLLECTC8(1,NGL,PSI1(1,IDIM),NGG,PSIG(1,IDIM))
               ENDDO
@@ -6230,11 +6262,25 @@ PRINT*,'ITER ',ITER,DIGAM
                 WRITE(NFIL,ERR=9999,IOSTAT=IOS)PSIG !<<<<<<<<<<<<<<<<<<<
                 NREC1=NREC1+1
               END IF
+              IF(TSUPER) THEN
+                DO IDIM=1,NDIM
+                  CALL PLANEWAVE$COLLECTC8(1,NGL,PSI2(1,IDIM),NGG,PSIG(1,IDIM))
+                ENDDO
+                IF(THISTASK.EQ.1) THEN
+                  WRITE(NFIL,ERR=9999,IOSTAT=IOS)PSIG !<<<<<<<<<<<<<<<<<<<
+                  NREC1=NREC1+1
+                END IF
+              END IF
             ENDDO
           ENDDO
         ENDDO
         DEALLOCATE(PSI1)
         DEALLOCATE(PSIG)
+        IF(TSUPER) THEN
+          DEALLOCATE(PSI2)
+          DEALLOCATE(PSIP)
+          DEALLOCATE(PSIM)
+        END IF
         ISVAR=0
         CALL WAVES_WRITELAMBDA(NFIL,IKPT,ISVAR)
         NREC1=NREC1+ISVAR
@@ -6442,11 +6488,9 @@ PRINT*,'ITER ',ITER,DIGAM
      &         +(K(2)-K_(2))**2-(K(2)-KREAD(2,IKPT))**2 &
      &         +(K(3)-K_(3))**2-(K(3)-KREAD(3,IKPT))**2 
           IF(SVAR1.GT.0.D0) THEN  ! PREVIOUS CHOICE WAS BETTER
-            nbh_=nb_
-            if(tsuper_)nbh_=int(0.5d0*real(nb+1,8))
             DO IWAVE=1,nwave
               DO ISPIN_=1,NSPIN_
-                DO IB=1,NBH_
+                DO IB=1,NB_
                   IF(THISTASK.EQ.1)READ(NFIL)
                 ENDDO
               ENDDO
@@ -6477,11 +6521,11 @@ PRINT*,'ITER ',ITER,DIGAM
           CALL WAVES_MAPG(NGG_,GBAS_,GVECG_,NGG,GVECG,MAPG)
         END IF
         CALL MPE$BROADCAST(1,MAPG)
-!!$DO IG=1,NGG
-!!$  IF(MAPG(IG).NE.IG) THEN
-!!$     PRINT*,'MAPG ',IKPT_,IG,MAPG(IG),NGG,NGG_
-!!$  END IF
-!!$ENDDO
+DO IG=1,NGG
+  IF(MAPG(IG).NE.IG) THEN
+    PRINT*,'MAPG ',IKPT_,IG,MAPG(IG),NGG,NGG_
+  END IF
+ENDDO
         DEALLOCATE(GVECG_)
         DEALLOCATE(GVECG)
               CALL TRACE$PASS('MARKE 7')
@@ -6509,7 +6553,7 @@ END IF
                 if(.not.tsuper_) then
                   READ(NFIL,ERR=9999,IOSTAT=IOS)PSIIN !<<<<<<<<<<<<<<<<<<<
                 else  ! this for reading super wave functions
-                  if(.not.tchk) then   
+                  if(tchk) then   
                     READ(NFIL,ERR=9999,IOSTAT=IOS)PSIINsuper !<<<<<<<<<<<<
                     do ig=1,ngg_
                       if(minusg(ig).lt.ig) cycle
@@ -6520,7 +6564,7 @@ END IF
                         psiin(minusg(ig),idim)=conjg(psiin(ig,idim))
                       enddo
                     enddo
-                    tchk=.true.
+                    tchk=.false.
                   else
                     do ig=1,ngg_
                       if(minusg(ig).lt.ig) cycle
@@ -6531,7 +6575,7 @@ END IF
                         psiin(minusg(ig),idim)=conjg(psiin(ig,idim))
                       end do
                     enddo
-                    tchk=.false.
+                    tchk=.true.
                   end if
                 end if              
                 DO IDIM=1,NDIM_

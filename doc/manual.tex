@@ -1050,8 +1050,41 @@ obtained with a plane wave cutoff slightly higher than EPWBUCKET.}
   introduce Fermi occupation numbers.}
 \vformat{logical}
 \vrules{optional}
-\vdefault{.true.}}
+\vdefault{T}}
 }  % end of ifthenelse
+
+\ifthenelse{\boolean{private}}{
+\mbax{\key{SWAPSTATES}
+\vdescr{Only used with SAFEORTHO=F. For SWAPSTATES=F, the approximate
+eigenstates are ordered in increasing energy expectation values. This
+is used for optimizing electronic and atomic structures. Thus the
+given occupations refer to increasing one-particle energies in the
+final state.
+
+If, in a photochemical reaction with a state crossing with fixed
+occupations, the system shall remain on the upper branch of the energy
+surface, choose SWAPSTATES=F. If the system shall follow the crossing
+to the lower branch of the energy surface, choose  SWAPSTATES=T.
+
+In combination with the Mermin functional the following happens at a
+band crossing at the Fermi level.
+\begin{itemize}
+\item SWAPSTATES=F: the wave functions change their character, which
+results in wave function heating. The time scale of the conversion of
+the state depends on matrix elements and on the fictitious mass of the
+wave functions. This process is therefore rather uncontrolled. The
+occupations remain approximately constant. The crossing is treated
+like an avoided crossing.
+\item SWAPSTATES=T: the wave function maintains its character, but the
+occupations dynamically change from occupied to unoccupied and vice
+versa. If the croosing is an avoided crossing, the wave functions are
+reordered only if the if the conversion of the character of the wave
+functions is sufficiently retarded, that a band crossing of the
+one-particle energies takes place.
+\end{itemize}}
+  \vformat{logical} 
+  \vrules{optional}
+  \vdefault{F}}  }  % end of ifthenelse
 
 %\mbax{\key{DIAG}
 %\vdescr{apply unitary transformation to the trajectory so 
@@ -2175,11 +2208,16 @@ types, electronic occupations, atomic masses. etc...}
 \vrules{optional}
 \vdefault{12.}}
 
-\mbax{\key{DIV}
+\mbax{\key{DIV} 
 \vdescr{fractions of reciprocal lattice vectors defining the
-  reciprocal sublattice for the k-points.If \texttt{K} is not
-  specified, the k-points are equally spaced an set compatible with
-  the inversion symmetry}
+reciprocal sublattice for the k-points.If \texttt{K} is not specified,
+the k-points are equally spaced an set compatible with the inversion
+symmetry. Caution with non-orthogonal lattice vectors: $\vec
+G_1=\frac{1}{V}\vec T_2\times\vec T_3$, $\vec G_2=\frac{1}{V}\vec
+T_3\times\vec T_1$, $\vec G_3=\frac{1}{V}\vec T_1\times\vec T_2$,
+where $\vec G_i$ are the reciprocal space lattice vectors and $\vec
+T_i$ are the real space lattice vectors and $V=\vec T_1(\vec
+T_2\times\vec T_3)$ is the volume of the real space unit cell.  }
 \vformat{integer(3)}
 \vrules{optional; mutually exclusive with \texttt{R}}
 \vdefault{2 2 2}}
@@ -2258,12 +2296,12 @@ types, electronic occupations, atomic masses. etc...}
 
 \mbax{\key{LRHOX}
 \vdescr{One center expansion for the density is limited to a maximum
-  angular momentum of lrhox. The actual value may be smaller if the
-  LRHOX is larger than $\ell_{max}^2$ where +1) where $\ell_{max}$ is
-  the maximum angular momentum in the set of partial waves}
+  angular momentum of lrhox. If the value of LRHOX is larger
+  $2\ell_{max}$, where $\ell_{max}$ is the maximum angular momentum in
+  the set of partial waves, LRHOX is reset internally to $2\ell_{max}$.}
 \vformat{integer}
 \vrules{Optional}
-\vdefault{9}}
+\vdefault{2}}
 
 \mbax{\key{NPRO} 
   \vdescr{Array which determines the maximum number of projector
@@ -3431,9 +3469,15 @@ bond.}
 \vrules{optional}
 \vdefault{2.0}}
 %
-\mbax{\key{S}
-  \vdescr{restricts the spin on which the orbitals act. The $S=0$
-  defines a spin independent potential.}
+\mbax{\key{S} 
+\vdescr{restricts the spin on which the potential act. If this
+  parameter is ommitted the potential acts on all electrons
+  irrespective of their spin direction.  For a collinear
+  spin-polarized potential only $S=1$ is allowed and defines a
+  potential acting on the $z$-component of the spin. For a
+  non-collinear calculation (NSPIN=3 in !STRUCTURE!GENERIC) the values
+  of $S=1,S=2,S=3$ refer to the x,y,z components of the spin
+  respectively.}
   \vformat{integer}
   \vrules{optional}
   \vdefault{0}

@@ -102,6 +102,7 @@ END MODULE SPINDIR_MODULE
       ENDDO
                             CALL TRACE$PASS('AFTER READPDOS')
 
+!Print*,'warning! subroutine report disconnected'
       CALL REPORT(NFILO,EIG)
                             CALL TRACE$PASS('AFTER REPORT')
 !
@@ -178,6 +179,7 @@ END MODULE SPINDIR_MODULE
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
+!print*,'state%vec',ikpt,ispin,state%vec(1,:,:)
           IPRO0=0
           DO IAT=1,NAT
             ISP=ISPECIES(IAT)
@@ -464,7 +466,7 @@ END MODULE SPINDIR_MODULE
         END IF
         CALL RESIZE
         NORB=NORB+1
-        ORBITAL(:,NORB)=ORBITAL_(:)
+        ORBITAL(:,norb)=ORBITAL_(:)
         ORBITALNAME(NORB)=NAME_
         RETURN
         END SUBROUTINE ORBITALS$SETORB
@@ -500,6 +502,7 @@ END MODULE SPINDIR_MODULE
         SUBROUTINE RESIZE
         REAL(8)          ,ALLOCATABLE :: TMPORBITAL(:,:)
         CHARACTER(32),ALLOCATABLE :: TMPNAME(:)
+!       ****************************************************************
         IF(NORB+1.LT.NORBX) RETURN
         IF(NORB.GT.0) THEN
           ALLOCATE(TMPORBITAL(LENG,NORB))
@@ -544,7 +547,7 @@ END MODULE SPINDIR_MODULE
       REAL(8)                  :: ORB(LMXX)
       INTEGER(4)               :: IAT,I,IAT2
       INTEGER(4)               :: I1,I2
-      CHARACTER(32)            :: ATOM1
+      CHARACTER(32)            :: ATOM1,atomz,atomx
       CHARACTER(32)            :: ORBITALNAME1
       CHARACTER(8)             :: TYPE
       REAL(8)                  :: SVAR
@@ -599,15 +602,15 @@ END MODULE SPINDIR_MODULE
         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'X',1,DRX(:))
         CALL LINKEDLIST$EXISTD(LL_CNTL,'NNZ',1,TCHK)
         IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'NNZ',1,ATOM1)
-          CALL RESOLVEATOM(ATOM1,IAT2)
+          CALL LINKEDLIST$GET(LL_CNTL,'NNZ',1,ATOMz)
+          CALL RESOLVEATOM(ATOMz,IAT2)
           DRZ(:)=RPOS(:,IAT2)-RPOS(:,IAT)
           CALL LINKEDLIST$SET(LL_CNTL,'Z',0,DRZ(:))
         END IF
         CALL LINKEDLIST$EXISTD(LL_CNTL,'NNX',1,TCHK)
         IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'NNX',1,ATOM1)
-          CALL RESOLVEATOM(ATOM1,IAT2)
+          CALL LINKEDLIST$GET(LL_CNTL,'NNX',1,ATOMx)
+          CALL RESOLVEATOM(ATOMx,IAT2)
           DRX(:)=RPOS(:,IAT2)-RPOS(:,IAT)
           CALL LINKEDLIST$SET(LL_CNTL,'X',0,DRX(:))
         END IF
@@ -799,6 +802,10 @@ END MODULE SPINDIR_MODULE
       DO I=1,NPRO_
         SUM=SUM+REAL(CONJG(ORBITAL(I))*ORBITAL(I))
       ENDDO
+      IF(SUM.LE.0.D0) THEN
+        CALL ERROR$MSG('ORBITAL COEFFICIENTS VANISH')
+        CALL ERROR$STOP('NORMALIZEORBITAL')
+      END IF
       SUM=1.D0/SQRT(SUM)
       DO I=1,NPRO_
         ORBITAL(I)=ORBITAL(I)*SUM
@@ -1151,9 +1158,8 @@ END MODULE READCNTL_MODULE
 !
 !       ================================================================
 !       == ADD CONTRIBUTION FROM PREDEFINED ORBITALS ===================
-!       ================================================================!
-
-
+!       ================================================================
+!
 !
 !       == LOOK UP ORBITALS ============================================
         CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB',NORB)
@@ -1448,6 +1454,10 @@ END MODULE READCNTL_MODULE
         CALL LINKEDLIST$EXISTD(LL_CNTL,'E[EV]',1,TE)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'K',1,TIK)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'S',1,TIS)
+        IF((.NOT.(TIB.OR.tE)).AND.(TIK.OR.TIS)) THEN
+          CALL ERROR$MSG('K-POINT AND SPIN MUST NOT BE SELECTED FOR DENSITY OF STATES')
+          CALL ERROR$STOP('READCNTL$OUTPUT') 
+        END IF
         IK0=0
         IS0=0
         IF(TIK)CALL LINKEDLIST$GET(LL_CNTL,'K',1,IK0)
@@ -1588,16 +1598,25 @@ END MODULE READCNTL_MODULE
       REAL(8)              :: NOSSMALL(NSPIN,2)
       CHARACTER(256)       :: CMD
       real(8)              :: wghtx
+      real(8)              :: wkpt(nkpt)
 !     ******************************************************************
                                  CALL TRACE$PUSH('PUTONGRID')
       CALL CONSTANTS('EV',EV)
       DE=(EMAX-EMIN)/DBLE(NE-1)
-      ND=20
-      if(nspin.eq.1.and.ndim.eq.1) then
-        wghtx=2.d0
-      else 
-        wghtx=1.d0
-      end if
+      ND=nint(ebroad/de*sqrt(-log(1.d-3)))
+      DO IKPT=1,NKPT
+        wkpt(ikpt)=0.d0
+        DO ISPIN=1,NSPIN
+          STATE=>STATEARR(IKPT,ISPIN)
+!         == caution: Here I estimate the weight and spin-degeneracy factor 
+!         == from the max occupation, whihc may be incorrect
+          wkpt(ikpt)=max(wkpt(ikpt),maxval(state%occ(:)))
+        enddo
+        if(wkpt(ikpt).eq.0.d0) then
+          call error$msg('no electrons for this k-point. got confused')
+          call error$stop('putongrid')
+        end if
+      enddo       
 !
 !     ==================================================================
 !     ==                                                              ==
@@ -1607,6 +1626,9 @@ END MODULE READCNTL_MODULE
       DO ISPIN=1,NSPIN
         DO IKPT=1,NKPT
           STATE=>STATEARR(IKPT,ISPIN)
+!         == caution: Here I estimate the weight and spin-degeneracy factor 
+!         == from the max occupation, whihc may be incorrect
+          wghtx=wkpt(ikpt)
           DO IB=1,NB
             X=(EIG(IB,IKPT,ISPIN)-EMIN)/DE
             IE1=INT(X)
@@ -1647,6 +1669,7 @@ END MODULE READCNTL_MODULE
       DO IDE=-ND,ND
         FAC=FAC+EXP(-(DE*DBLE(IDE)/EBROAD)**2)
       ENDDO
+
       FAC=1.D0/FAC
       DOS(:,:,:)=0.D0
       DO ISPIN=1,NSPIN
@@ -1691,30 +1714,30 @@ END MODULE READCNTL_MODULE
 !     ==================================================================
 !     ==  ROUND NOS AND DOS TO OBTAIN PROPER EDITING                  ==
 !     ==================================================================
-      DO IOCC=1,2
-        XDOS=0.D0
-        XNOS=0.D0
-        DO ISPIN=1,NSPIN
-          DO IE=1,NE
-            XDOS=MAX(XDOS,DABS(DOS(IE,ISPIN,IOCC)))
-            XNOS=MAX(XNOS,DABS(NOS(IE,ISPIN,IOCC)))
-          ENDDO
-        ENDDO
-        IF(XDOS.GT.0.D0) THEN
-          FAC=XNOS/XDOS
-        ELSE
-          FAC=1.D0
-        END IF
-      END DO
-      DO IOCC=1,2
-        DO ISPIN=1,NSPIN
-          DO IE=1,NE
-            DOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*FAC
-            IF(DABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
-            IF(DABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
-          ENDDO
-        ENDDO
-      ENDDO
+!      DO IOCC=1,2
+!        XDOS=0.D0
+!        XNOS=0.D0
+!        DO ISPIN=1,NSPIN
+!          DO IE=1,NE
+!            XDOS=MAX(XDOS,DABS(DOS(IE,ISPIN,IOCC)))
+!            XNOS=MAX(XNOS,DABS(NOS(IE,ISPIN,IOCC)))
+ !         ENDDO
+!        ENDDO
+!        IF(XDOS.GT.0.D0) THEN
+!          FAC=XNOS/XDOS
+!        ELSE
+!          FAC=1.D0
+!        END IF
+!      END DO
+       DO IOCC=1,2
+         DO ISPIN=1,NSPIN
+           DO IE=1,NE
+!            DOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*FAC
+             IF(DABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
+             IF(DABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
+           ENDDO
+         ENDDO
+       ENDDO
 
 !
 !     ==================================================================

@@ -196,8 +196,6 @@
        CALL TRACE$PASS('WRITE WAVE TO DX-FILE')
        CALL FILEHANDLER$UNIT('WAVEDX',NFIL)
        REWIND NFIL
-print*,'boxr0 ',boxr0
-print*,'boxvec ',boxvec
        CALL DX_DENSITY(NFIL,NR1,NR2,NR3,RBAS,WAVE,BOXR0,BOXVEC)
        DEALLOCATE(WAVE)
        CALL TRACE$PASS('WAVE WRITTEN')
@@ -750,8 +748,8 @@ print*,'boxvec ',boxvec
           DO I1=0,1
             T1=DBLE(I1)
             X=BOXR0(1)+BOXVEC(1,1)*T1+BOXVEC(1,2)*T2+BOXVEC(1,3)*T3
-            Y=BOXR0(1)+BOXVEC(2,1)*T1+BOXVEC(2,2)*T2+BOXVEC(2,3)*T3
-            Z=BOXR0(1)+BOXVEC(3,1)*T1+BOXVEC(3,2)*T2+BOXVEC(3,3)*T3
+            Y=BOXR0(2)+BOXVEC(2,1)*T1+BOXVEC(2,2)*T2+BOXVEC(2,3)*T3
+            Z=BOXR0(3)+BOXVEC(3,1)*T1+BOXVEC(3,2)*T2+BOXVEC(3,3)*T3
             WRITE(NFIL,FMT='(3F10.5)')X,Y,Z
           ENDDO
         ENDDO

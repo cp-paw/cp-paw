@@ -37,7 +37,7 @@ usage: "pawshow option rootname"\n\n
 \t -f: plot fictitious kinetic wave function energy\n
 \t -ar: plot friction acting on the nuclei\n
 \t -ap: plot friction acting on the wavefunctions'
-if (( $# < 2 )) ;then echo ${USAGE} ; exit; fi
+if (( $# < 2 )) ;then echo -e ${USAGE} ; exit; fi
 NAME=$2 
 case $1 in 
 "-e")# show static total energy

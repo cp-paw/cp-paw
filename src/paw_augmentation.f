@@ -1413,39 +1413,52 @@ WORK(IR)=SVAR1*RHO(IR)
       RETURN
       END
 !
-!     ..................................................................
-      MODULE EXPERTNAL1CPOT_MODULE
-      TYPE EXTPOT
-        REAL(8)          :: VALUE
-        CHARACTER(LEN=32):: ATOM
-        REAL(8)          :: RC  
-        REAL(8)          :: PWR
-        CHARACTER(LEN=32):: TYPE   ! CAN BE 'S','P','D','ALL'
-        INTEGER(4)       :: idimd  ! idimd=0 REFERES TO ALL SPIN DIRECTIONS
-      END TYPE EXTPOT
-      INTEGER(4)             :: NPOT=0
-      INTEGER(4)             :: NPOTX=0
-      INTEGER(4),PARAMETER   :: DNPOT=5
-      TYPE (EXTPOT), ALLOCATABLE :: POT(:)
-      CONTAINS
-!       ...............................................................
-        SUBROUTINE CREATE
-        TYPE (EXTPOT),ALLOCATABLE :: TMPPOT(:)
-        IF(NPOT.LT.NPOTX) RETURN
-        IF(ALLOCATED(POT)) THEN
-          ALLOCATE(TMPPOT(NPOTX))
-          TMPPOT=POT
-          DEALLOCATE(POT)
-          NPOTX=NPOTX+DNPOT
-          ALLOCATE(POT(NPOTX))
-          POT(1:NPOT)=TMPPOT(1:NPOT)
-          DEALLOCATE(TMPPOT)
-        ELSE
-          NPOTX=DNPOT
-          ALLOCATE(POT(NPOTX))
-        END IF          
-        END SUBROUTINE CREATE
-      END MODULE EXPERTNAL1CPOT_MODULE
+!.......................................................................
+MODULE EXPERTNAL1CPOT_MODULE
+!**                                                                   **
+!**  applies an external potential acting on the electrons            **
+!**  within the augmentation region                                   **
+!**                                                                   **
+!**    IDIMD externally this index refers to                          **
+!**             0: total  for ndimd=1,2,4                             **
+!**             1: sz for ndimd=2                                     **
+!**             1: sx for ndimd=4                                     **
+!**             2: sy fpr ndimd=4                                     **
+!**             3: sz fpr ndimd=4                                     **
+!**          internally the value is raised by one so that it         **
+!**          corresponds to the indexing                              **
+!**                                                                   **
+TYPE EXTPOT
+  REAL(8)          :: VALUE
+  CHARACTER(LEN=32):: ATOM
+  REAL(8)          :: RC  
+  REAL(8)          :: PWR
+  CHARACTER(LEN=32):: TYPE   ! CAN BE 'S','P','D','ALL'
+  INTEGER(4)       :: idimd  ! idimd=0 REFERES TO ALL SPIN DIRECTIONS
+END TYPE EXTPOT
+INTEGER(4)             :: NPOT=0
+INTEGER(4)             :: NPOTX=0
+INTEGER(4),PARAMETER   :: DNPOT=5
+TYPE (EXTPOT), ALLOCATABLE :: POT(:)
+CONTAINS
+!  .....................................................................
+   SUBROUTINE CREATE
+   TYPE (EXTPOT),ALLOCATABLE :: TMPPOT(:)
+   IF(NPOT.LT.NPOTX) RETURN
+   IF(ALLOCATED(POT)) THEN
+     ALLOCATE(TMPPOT(NPOTX))
+     TMPPOT=POT
+     DEALLOCATE(POT)
+     NPOTX=NPOTX+DNPOT
+     ALLOCATE(POT(NPOTX))
+     POT(1:NPOT)=TMPPOT(1:NPOT)
+     DEALLOCATE(TMPPOT)
+   ELSE
+     NPOTX=DNPOT
+     ALLOCATE(POT(NPOTX))
+   END IF          
+   END SUBROUTINE CREATE
+END MODULE EXPERTNAL1CPOT_MODULE
 !
 !     ..................................................................
       SUBROUTINE EXTERNAL1CPOT$SETPOT(ATOM,TYPE,iDIMD,VALUE,RC,PWR)
@@ -1491,7 +1504,8 @@ WORK(IR)=SVAR1*RHO(IR)
         CALL WRITER8(NFIL,'VALUE',POT(IPOT)%VALUE,'H')
         CALL WRITER8(NFIL,'PWR',POT(IPOT)%PWR,' ')
         CALL WRITER8(NFIL,'RC',POT(IPOT)%RC,'ABOHR')
-        CALL WRITEI4(NFIL,'IDIMD ([NT],[NT,NS],[NT,NX,NY,NZ])',POT(IPOT)%IDIMD,' ')
+        CALL WRITEI4(NFIL,'IDIMD ([0=NT],[0=NT,1=NS],[0=NT,1=NX,2=NY,3=NZ])' &
+     &                   ,POT(IPOT)%IDIMD-1,' ')
       ENDDO
       RETURN
       CONTAINS
@@ -1557,7 +1571,7 @@ WORK(IR)=SVAR1*RHO(IR)
       DATH(:,:,:)=0.D0
       ETOT=0.D0
 !
-!     ==================================================================
+!     ===================================================,P===============
 !     ==  SELECT POTENTIAL                                            ==  
 !     ==================================================================
 !     == DETERMINE ID OF THE ATOM TYPE (SPECIES)

@@ -111,7 +111,6 @@ REAL(8)     :: EMASS=0.D0    ! MPSI(G)=EMASS*(1+EMASSCG2*G2)
 REAL(8)     :: EMASSCG2=0.D0 ! MPSI(G)=EMASS*(1+EMASSCG2*G2)
 REAL(8)     :: ANNEE=0.D0    ! FRICTION 
 LOGICAL(4)  :: TSTOP=.FALSE. ! INITIAL VELOCITY SET TO ZERO
-CHARACTER(32):: RSTRTTYPE='DYNAMIC'
 LOGICAL(4)  :: TRANDOM=.FALSE.    ! INITIAL VELOCITIES RANDOMIZED
 REAL(8)     :: AMPRANDOM=0.D0
 LOGICAL(4)  :: TSAFEORTHO=.TRUE.  ! CHOICE OR ORTHOGONALIZATION
@@ -556,26 +555,6 @@ END MODULE WAVES_MODULE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('WAVES$SETL4')
-      END IF
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE WAVES$SETch(ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      USE WAVES_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID
-      character(*),INTENT(IN) :: VAL
-!     ******************************************************************
-      IF(ID.EQ.'RSTRTTYPE') THEN
-        RSTRTTYPE=VAL
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('WAVES$SETCH')
       END IF
       RETURN
       END
@@ -6108,12 +6087,15 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)  ,INTENT(INOUT):: NREC
       COMPLEX(8)  ,ALLOCATABLE:: PSIG(:,:)
       COMPLEX(8)  ,ALLOCATABLE:: PSI1(:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSI2(:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSIP(:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSIM(:,:)
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)              :: NTASKS,THISTASK
       INTEGER(4)              :: IOS
       INTEGER(4)              :: IKPT,ISPIN,IB,IDIM,IWAVE
       INTEGER(4)              :: LEN
-      INTEGER(4)              :: NG1,NGG,NGL,NBH,nb
+      INTEGER(4)              :: NG1,NGG,NGL,NBH
       LOGICAL(4)              :: TSUPER
       CHARACTER(64)           :: IOSTATMSG
       REAL(8)                 :: XK(3)
@@ -6125,17 +6107,9 @@ PRINT*,'ITER ',ITER,DIGAM
       REAL(8)                 :: RBAS(3,3)
       INTEGER(4)  ,ALLOCATABLE:: IGVECG(:,:)
       INTEGER(4)  ,ALLOCATABLE:: IGVECL(:,:)
-      integer(4)              :: nwave=2
 !     ******************************************************************
               CALL TRACE$PUSH('WAVES_WRITEPSI')
       CALL MPE$QUERY(NTASKS,THISTASK)
-      IF(RSTRTTYPE.EQ.'STATIC') THEN
-        NWAVE=1
-      ELSE IF(RSTRTTYPE.EQ.'DYNAMIC') THEN
-        NWAVE=2
-      ELSE
-        CALL ERROR$STOP('WAVES_WRITEPSI')
-      END IF
 !
 !     ==================================================================
 !     ==  COUNT #(RECORDS)                                            ==
@@ -6147,7 +6121,8 @@ PRINT*,'ITER ',ITER,DIGAM
           CALL WAVES_SELECTWV(IKPT,1)
           CALL PLANEWAVE$SELECT(GSET%ID)
           TSUPER=GSET%TINV
-          NREC=NREC+nwave*THIS%NBH*NSPIN
+          NREC=NREC+2*THIS%NBH*NSPIN
+          IF(TSUPER)NREC=NREC+2*THIS%NBH*NSPIN
           ISVAR=-1
           CALL WAVES_WRITELAMBDA(NFIL,IKPT,ISVAR)
           NREC=NREC+ISVAR
@@ -6168,7 +6143,7 @@ PRINT*,'ITER ',ITER,DIGAM
       IF(THISTASK.EQ.1) THEN
 !       WRITE(NFIL)NKPT,NSPIN !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         CALL CELL$GETR8A('T(0)',9,RBAS)
-        WRITE(NFIL)NKPT,NSPIN,RBAS,nwave !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        WRITE(NFIL)NKPT,NSPIN,RBAS !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         NREC1=NREC1+1
       END IF
 !
@@ -6181,7 +6156,6 @@ PRINT*,'ITER ',ITER,DIGAM
         CALL PLANEWAVE$SELECT(GSET%ID)
         NGL=GSET%NGL
         NBH=THIS%NBH
-        NB=THIS%NB
         CALL PLANEWAVE$GETI4('NGG',NGG)
 !       
 !       ================================================================
@@ -6190,7 +6164,11 @@ PRINT*,'ITER ',ITER,DIGAM
         CALL PLANEWAVE$GETL4('TINV',TSUPER)
         IF(THISTASK.EQ.1) THEN
           KEY='PSI'
-          WRITE(NFIL)KEY,NGG,NDIM,NB,TSUPER  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          IF(TSUPER) THEN
+            WRITE(NFIL)KEY,NGG,NDIM,2*NBH,.FALSE. !<<<<<<<<<<<<<<<<<<<<<<<<<
+          ELSE
+            WRITE(NFIL)KEY,NGG,NDIM,NBH,TSUPER  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          END  IF
           NREC1=NREC1+1
         END IF
 !       
@@ -6199,19 +6177,32 @@ PRINT*,'ITER ',ITER,DIGAM
 !       ================================================================
         CALL PLANEWAVE$GETR8A('GBAS',9,GBAS)
         CALL PLANEWAVE$GETR8A('XK',3,XK)
+!       ALLOCATE(GVECL(3,NGL))
+!       CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVECL)
+!       ALLOCATE(GVECG(3,NGG))
+!       CALL PLANEWAVE$COLLECTR8(3,NGL,GVECL,NGG,GVECG)
         ALLOCATE(IGVECL(3,NGL))
         CALL PLANEWAVE$GETI4A('IGVEC',3*NGL,IGVECL)
         ALLOCATE(IGVECG(3,NGG))
         CALL PLANEWAVE$COLLECTI4(3,NGL,IGVECL,NGG,IGVECG)
         IF(THISTASK.EQ.1) THEN
           WRITE(NFIL)XK,IGVECG !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+!         WRITE(NFIL)KVEC,GBAS,GVECG !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           NREC1=NREC1+1
         END IF
+!       DEALLOCATE(GVECG)
+!       DEALLOCATE(GVECL)
         DEALLOCATE(IGVECG)
         DEALLOCATE(IGVECL)
+        
         ALLOCATE(PSIG(NGG,NDIM))
         ALLOCATE(PSI1(NGL,NDIM))
-        DO IWAVE=1,nwave
+        IF(TSUPER) THEN
+          ALLOCATE(PSI2(NGL,NDIM))
+          ALLOCATE(PSIP(NGL,NDIM))
+          ALLOCATE(PSIM(NGL,NDIM))
+        END IF
+        DO IWAVE=1,2
           DO ISPIN=1,NSPIN
             CALL WAVES_SELECTWV(IKPT,ISPIN)
             CALL PLANEWAVE$SELECT(GSET%ID)
@@ -6223,6 +6214,14 @@ PRINT*,'ITER ',ITER,DIGAM
                   PSI1(:,IDIM)=THIS%PSIM(:,IDIM,IB)
                 END IF
               ENDDO
+              IF(TSUPER) THEN
+                DO IDIM=1,NDIM
+                  PSIP(:,IDIM)=PSI1(:,IDIM)
+                  CALL PLANEWAVE$INVERTG(NGL,PSIP(1,IDIM),PSIM(1,IDIM))
+                  PSI1(:,IDIM)=0.5D0   *(PSIP(:,IDIM)+PSIM(:,IDIM))
+                  PSI2(:,IDIM)=0.5D0*CI*(PSIP(:,IDIM)-PSIM(:,IDIM))
+                ENDDO
+              END IF
               DO IDIM=1,NDIM
                 CALL PLANEWAVE$COLLECTC8(1,NGL,PSI1(1,IDIM),NGG,PSIG(1,IDIM))
               ENDDO
@@ -6230,11 +6229,25 @@ PRINT*,'ITER ',ITER,DIGAM
                 WRITE(NFIL,ERR=9999,IOSTAT=IOS)PSIG !<<<<<<<<<<<<<<<<<<<
                 NREC1=NREC1+1
               END IF
+              IF(TSUPER) THEN
+                DO IDIM=1,NDIM
+                  CALL PLANEWAVE$COLLECTC8(1,NGL,PSI2(1,IDIM),NGG,PSIG(1,IDIM))
+                ENDDO
+                IF(THISTASK.EQ.1) THEN
+                  WRITE(NFIL,ERR=9999,IOSTAT=IOS)PSIG !<<<<<<<<<<<<<<<<<<<
+                  NREC1=NREC1+1
+                END IF
+              END IF
             ENDDO
           ENDDO
         ENDDO
         DEALLOCATE(PSI1)
         DEALLOCATE(PSIG)
+        IF(TSUPER) THEN
+          DEALLOCATE(PSI2)
+          DEALLOCATE(PSIP)
+          DEALLOCATE(PSIM)
+        END IF
         ISVAR=0
         CALL WAVES_WRITELAMBDA(NFIL,IKPT,ISVAR)
         NREC1=NREC1+ISVAR
@@ -6308,12 +6321,6 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)              :: IFORMAT
       INTEGER(4) ,ALLOCATABLE :: IGVECG_(:,:)
       REAL(8)                 :: XG1,XG2,XG3
-      integer(4)              :: nwave
-      integer(4) ,allocatable :: minusg(:)
-      LOGICAL(4)              :: Tchk
-      COMPLEX(8)              :: F1,F2
-      COMPLEX(8),ALLOCATABLE  :: PSIINSUPER(:,:)
-
 !     ******************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
       CALL MPE$QUERY(NTASKS,THISTASK)
@@ -6322,29 +6329,15 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ==  READ SIZES                                                  ==
 !     ==================================================================
       IF(THISTASK.EQ.1) THEN
-!       IFORMAT=1
-!        READ(NFIL,ERR=100)NKPT_,NSPIN_,RBAS
-!        IFORMAT=2
-! 100    CONTINUE
-        nwave=2
-        iformat=0
-        READ(NFIL,ERR=100)NKPT_,NSPIN_
-        iformat=1
-        backspace(nfil)
+        IFORMAT=1
         READ(NFIL,ERR=100)NKPT_,NSPIN_,RBAS
-        iformat=2
-        backspace(nfil)
-        READ(NFIL,ERR=100)NKPT_,NSPIN_,RBAS,nwave
+        IFORMAT=2
  100    CONTINUE
-        if(iformat.eq.0) then
-          call error$msg('format not recognized')
-          call error$stop('waves_readpsi')
-        end if
       END IF
+!     == check for new formats (very dirty!!!!)
       CALL MPE$BROADCAST(1,NSPIN_)
       CALL MPE$BROADCAST(1,NKPT_)
       CALL MPE$BROADCAST(1,IFORMAT)
-      CALL MPE$BROADCAST(1,nwave)
       IF(IFORMAT.EQ.2) THEN
         CALL MPE$BROADCAST(1,RBAS)
         DO IKPT=1,NKPT
@@ -6394,10 +6387,6 @@ PRINT*,'ITER ',ITER,DIGAM
                 GVECG_(I,IG)=GBAS_(I,1)*XG1+GBAS_(I,2)*XG2+GBAS_(I,3)*XG3
               ENDDO
             ENDDO
-            IF(TSUPER_) THEN
-              ALLOCATE(MINUSG(NGG_))
-              CALL PLANEWAVE$MINUSG(K_,NGG_,IGVECg_,MINUSG)
-            END IF
             DEALLOCATE(IGVECG_)
           END IF
         END IF
@@ -6442,18 +6431,15 @@ PRINT*,'ITER ',ITER,DIGAM
      &         +(K(2)-K_(2))**2-(K(2)-KREAD(2,IKPT))**2 &
      &         +(K(3)-K_(3))**2-(K(3)-KREAD(3,IKPT))**2 
           IF(SVAR1.GT.0.D0) THEN  ! PREVIOUS CHOICE WAS BETTER
-            nbh_=nb_
-            if(tsuper_)nbh_=int(0.5d0*real(nb+1,8))
-            DO IWAVE=1,nwave
+            DO IWAVE=1,2
               DO ISPIN_=1,NSPIN_
-                DO IB=1,NBH_
+                DO IB=1,NB_
                   IF(THISTASK.EQ.1)READ(NFIL)
                 ENDDO
               ENDDO
             ENDDO
             CALL WAVES_READLAMBDA(NFIL,IKPT,.TRUE.)
             DEALLOCATE(GVECG_)
-            if(allocated(minusg))DEALLOCATE(minusg)
             CYCLE
           END IF
         END IF
@@ -6465,7 +6451,7 @@ PRINT*,'ITER ',ITER,DIGAM
         CALL PLANEWAVE$GETI4('NGG',NGG)
 !       
 !       ==============================================================
-!       ==  DEFINE MAPPING OF THE ARRAYS                            ==
+!       ==  DEFINE MAPPING OF THE ARRAYS                            ==             
 !       ==============================================================
         ALLOCATE(GVECL(3,NGL))
         ALLOCATE(GVECG(3,NGG))
@@ -6477,11 +6463,11 @@ PRINT*,'ITER ',ITER,DIGAM
           CALL WAVES_MAPG(NGG_,GBAS_,GVECG_,NGG,GVECG,MAPG)
         END IF
         CALL MPE$BROADCAST(1,MAPG)
-!!$DO IG=1,NGG
-!!$  IF(MAPG(IG).NE.IG) THEN
-!!$     PRINT*,'MAPG ',IKPT_,IG,MAPG(IG),NGG,NGG_
-!!$  END IF
-!!$ENDDO
+DO IG=1,NGG
+  IF(MAPG(IG).NE.IG) THEN
+    PRINT*,'MAPG ',IKPT_,IG,MAPG(IG),NGG,NGG_
+  END IF
+ENDDO
         DEALLOCATE(GVECG_)
         DEALLOCATE(GVECG)
               CALL TRACE$PASS('MARKE 7')
@@ -6489,51 +6475,19 @@ PRINT*,'ITER ',ITER,DIGAM
 !       ==============================================================
 !       ==  COLLECT DATA                                            ==
 !       ==============================================================
-IF(TSUPER_.AND.NDIM_.EQ.2) THEN
-  CALL ERROR$MSG('NONCOLLINEAR WAVE FUNCTIONS AND SUPER WAVE FUNCTIONS')
-  CALL ERROR$MSG('ARE NOT PROPERLY IMPLEMENTED BELOW')
-  CALL ERROR$STOP('WAVES_READPSI')
-END IF
         NBH=THIS%NBH
         NB=THIS%NB
         ALLOCATE(PSIIN(NGG_,NDIM_))
         ALLOCATE(PSIG(NGG,NDIM_))
         ALLOCATE(PSIL(NGL,NDIM_,NB_,NSPIN_))
         ALLOCATE(PSI(NGL,NDIM,NB,NSPIN))
-        if(tsuper_) allocate(psiinsuper(ngg_,ndim_))
-        DO IWAVE=1,nwave
+        iwavex=2
+        if(tonestep) iwavex=1
+        DO IWAVE=1,2
           DO ISPIN=1,NSPIN_
-            tchk=.false.
             DO IB=1,NB_
               IF(THISTASK.EQ.1) THEN 
-                if(.not.tsuper_) then
-                  READ(NFIL,ERR=9999,IOSTAT=IOS)PSIIN !<<<<<<<<<<<<<<<<<<<
-                else  ! this for reading super wave functions
-                  if(.not.tchk) then   
-                    READ(NFIL,ERR=9999,IOSTAT=IOS)PSIINsuper !<<<<<<<<<<<<
-                    do ig=1,ngg_
-                      if(minusg(ig).lt.ig) cycle
-                      do idim=1,ndim_
-                        f1=psiinsuper(ig,idim)
-                        f2=conjg(psiinsuper(minusg(ig),idim))
-                        psiin(ig,idim)=0.5d0*(f1+f2)
-                        psiin(minusg(ig),idim)=conjg(psiin(ig,idim))
-                      enddo
-                    enddo
-                    tchk=.true.
-                  else
-                    do ig=1,ngg_
-                      if(minusg(ig).lt.ig) cycle
-                      do idim=1,ndim_
-                        f1=psiinsuper(ig,idim)
-                        f2=conjg(psiinsuper(minusg(ig),idim))
-                        psiin(ig,idim)=0.5d0*ci*(f1-f2)
-                        psiin(minusg(ig),idim)=conjg(psiin(ig,idim))
-                      end do
-                    enddo
-                    tchk=.false.
-                  end if
-                end if              
+                READ(NFIL,ERR=9999,IOSTAT=IOS)PSIIN !<<<<<<<<<<<<<<<<<<<
                 DO IDIM=1,NDIM_
                   DO IG=1,NGG
                     IF(MAPG(IG).NE.0) THEN
@@ -6648,9 +6602,6 @@ END IF
                   ENDDO
                 ENDDO
               ENDDO
-              if(nwave.eq.1) then
-                THIS%PSIm=THIS%PSI0
-              end if
             ELSE IF(IWAVE.EQ.2) THEN
               DO IB=1,NBH
                 DO IDIM=1,NDIM
@@ -6663,12 +6614,10 @@ END IF
           ENDDO
         ENDDO 
         DEALLOCATE(PSIL)
+        DEALLOCATE(PSIIN)
         DEALLOCATE(PSIG)
         DEALLOCATE(MAPG)
         DEALLOCATE(PSI)
-        DEALLOCATE(PSIIN)
-        if(allocated(psiinsuper))DEALLOCATE(PSIinsuper)
-        if(allocated(minusg)) deallocate(minusg)
         CALL WAVES_READLAMBDA(NFIL,IKPT,.FALSE.)
       ENDDO
 !
@@ -6737,7 +6686,6 @@ END IF
       IF(.NOT.ASSOCIATED(THIS%RLAM2M)) NLAMBDA=2
       IF(.NOT.ASSOCIATED(THIS%RLAMM)) NLAMBDA=1
       IF(.NOT.ASSOCIATED(THIS%RLAM0)) NLAMBDA=0
-      IF(RSTRTTYPE.EQ.'STATIC') nlambda=0
 !
 !     ==================================================================
 !     == RETURN #(RECORDS) OR IF ON TASK OTHER THAN THE FIRST         ==

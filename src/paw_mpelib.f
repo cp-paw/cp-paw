@@ -673,7 +673,7 @@ END MODULE MPE_GATHER_MODULE
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
       WRITE(*,*) 'EXIT:',NCODE_
-      CALL MPI_ABORT(IERROR,7777)
+      CALL MPI_ABORT(MPI_COMM_WORLD,IERROR,7777)
       STOP 'ERROR STOP'
 #ELSE
       WRITE(*,*) 'EXIT:',NCODE_

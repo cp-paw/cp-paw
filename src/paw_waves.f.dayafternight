@@ -6442,11 +6442,9 @@ PRINT*,'ITER ',ITER,DIGAM
      &         +(K(2)-K_(2))**2-(K(2)-KREAD(2,IKPT))**2 &
      &         +(K(3)-K_(3))**2-(K(3)-KREAD(3,IKPT))**2 
           IF(SVAR1.GT.0.D0) THEN  ! PREVIOUS CHOICE WAS BETTER
-            nbh_=nb_
-            if(tsuper_)nbh_=int(0.5d0*real(nb+1,8))
             DO IWAVE=1,nwave
               DO ISPIN_=1,NSPIN_
-                DO IB=1,NBH_
+                DO IB=1,NB_
                   IF(THISTASK.EQ.1)READ(NFIL)
                 ENDDO
               ENDDO
