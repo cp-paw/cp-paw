@@ -123,7 +123,10 @@ ${F90PP_TMPLTS}.x : ${F90PP_TMPLTS}.f
 ##  link files and produce executable PAWX                             ##
 #########################################################################
 #
-${PAWX} : ${LOBJS} ${OBJECTS} ${MPE} ${OBJDIR}liblapack.a ${OBJDIR}libblas.a
+#${PAWX} : ${LOBJS} ${OBJECTS} ${MPE} ${OBJDIR}liblapack.a ${OBJDIR}libblas.a
+#	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${MPE} ${LLIBS}
+#	ar -ru $(PAWLIB) $(LOBJS)  ${OBJDIR}paw_mpelib_s.o
+${PAWX} : ${LOBJS} ${OBJECTS} ${MPE} ${OBJDIR}liblapack.a
 	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${MPE} ${LLIBS}
 	ar -ru $(PAWLIB) $(LOBJS) ${OBJDIR}paw_mpelib_s.o
 #

@@ -1282,12 +1282,12 @@ CALL TIMING$CLOCKON('W:EXPECT')
           NGL=GSET%NGL
           DO IB=1,NBH
             IF(GSET%TINV) THEN
-              CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,1,2 &
+              CALL WAVES_OVERLAP(.false.,NGL,NDIM,1,2 &
      &                    ,THIS%PSI0(1,1,IB),THIS%HPSI(1,1,IB),HAMILTON)
               EIG(2*IB-1,IKPT,ISPIN)=REAL(HAMILTON(1,1))
               EIG(2*IB  ,IKPT,ISPIN)=REAL(HAMILTON(2,2))
             ELSE 
-              CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,1,1 &
+              CALL WAVES_OVERLAP(.false.,NGL,NDIM,1,1 &
      &                    ,THIS%PSI0(1,1,IB),THIS%HPSI(1,1,IB),HAMILTON)
               EIG(IB,IKPT,ISPIN)=REAL(HAMILTON(1,1))
             END IF
@@ -1296,6 +1296,8 @@ CALL TIMING$CLOCKON('W:EXPECT')
         ENDDO
       ENDDO
       DEALLOCATE(HAMILTON)
+!     == OCCUPATIONS ===================================================
+      CALL DYNOCC$SETR8A('EPSILON',NB*NKPT*NSPIN,EIG)
 !
 !     ==================================================================
 !     ==  EVALUATE <PSI|H|PSI>                                        ==
@@ -1346,8 +1348,6 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       CALL CELL$GETR8A('STRESS_I',9,STRESS1)
       STRESS=STRESS1-STRESS  ! IN THIS ROUTINE STRESS=+DE/DEPSILON!
       CALL CELL$SETR8A('STRESS_I',9,STRESS)
-!     == OCCUPATIONS ===================================================
-      CALL DYNOCC$SETR8A('EPSILON',NB*NKPT*NSPIN,EIG)
 !     == DEALLOCATE ARRAYS =============================================
       DEALLOCATE(FORCE)
       DEALLOCATE(OCC)

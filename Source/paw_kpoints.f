@@ -1,13 +1,13 @@
 !
 !     ..................................................................
-      SUBROUTINE kpoints_nkdiv(rbas,rmax,nkdiv)
+      SUBROUTINE KPOINTS_NKDIV(RBAS,RMAX,NKDIV)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
-      implicit none
+      IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: RBAS(3,3)
       REAL(8)   ,INTENT(IN) :: RMAX
-      integer(4),INTENT(OUT):: NKDIV(3)
+      INTEGER(4),INTENT(OUT):: NKDIV(3)
       INTEGER(4)            :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
 !     ******************************************************************
       CALL BOXSPH(RBAS,0.D0,0.D0,0.D0,RMAX &
@@ -16,79 +16,69 @@
       NKDIV(2)=MAX2-MIN2+1
       NKDIV(3)=MAX3-MIN3+1
       RETURN
-      end
+      END
 !
 !     ..................................................................
-      SUBROUTINE KPOINTS_KPOINTS(tinv,nkdiv,nkpt,XK,wkpt)
+      SUBROUTINE KPOINTS_KPOINTS(TINV,NKDIV,NKPT,XK,WKPT)
 !     ******************************************************************
+!     **  SELECTS K-POINTS ON AN EQUISPACED GRID WITH THE PROVIDED    **
+!     **  DIVISIONS NKDIV. TIME INVERSION SYMMETRY IS CONSIDERED      **
+!     **  IF TINV=.TRUE.                                              **
+!     **                                                              **
+!     **  THE NUMBER OF K-POINTS MUST BE ESTIMATED USING KPOINTS_NKPT **
 !     **                                                              **
 !     ******************************************************************
-      implicit none
-      logical(4),intent(in) :: tinv
-      integer(4),INTENT(IN) :: nkdiv(3)
-      integer(4),INTENT(IN) :: nkpt
-      real(8)   ,INTENT(OUT):: xk(3,nkpt)
-      real(8)   ,INTENT(OUT):: wkpt(nkpt)
+      IMPLICIT NONE
+      LOGICAL(4),INTENT(IN) :: TINV        ! TIME INVERSION SYMMETRY
+      INTEGER(4),INTENT(IN) :: NKDIV(3)    ! #(DIVISIONS)
+      INTEGER(4),INTENT(IN) :: NKPT        ! #(KPOINTS)
+      REAL(8)   ,INTENT(OUT):: XK(3,NKPT)  !KPOINT IN RELATIVE COORDINATES
+      REAL(8)   ,INTENT(OUT):: WKPT(NKPT)  ! GEOMETRIC K-POINT WEIGHT
       INTEGER(4)            :: I1,I2,I3
+      INTEGER(4)            :: I1INV,I2INV,I3INV
       INTEGER(4)            :: N1,N2,N3
-      REAL(8)               :: T1FAC,T2FAC,T3FAC
-      REAL(8)               :: T1,T2,T3
-      REAL(8)               :: DET
-      logical(4)            :: tsymm1,tsymm2,tsymm3
-      logical(4)            :: tzero1,tzero2
-      real(8)               :: fac
-      integer(4)            :: ikpt
+      INTEGER(4)            :: IKPT
+      INTEGER(4)            :: IND,INDINV
+      REAL(8)               :: WGHT,WGHT0
 !     ******************************************************************
       N1=NKDIV(1)
       N2=NKDIV(2)
       N3=NKDIV(3)
-      T1FAC=1.D0/REAL(N1,KIND=8)
-      T2FAC=1.D0/REAL(N2,KIND=8)
-      T3FAC=1.D0/REAL(N3,KIND=8)
-      FAC=T1FAC*T2FAC*T3FAC      
+      WGHT0=1.D0/REAL(N1*N2*N3,KIND=8)
       IKPT=0
       DO I1=1,N1
-        T1=DBLE(I1-1)*T1FAC
-        IF(T1.GT.0.5D0)T1=-1.D0+T1
-        IF(TINV) THEN
-          TSYMM1=TINV.AND.(T1.EQ.0.D0.OR.T1.EQ.0.5D0)
-          IF(T1.LT.0.D0) CYCLE
-          TZERO1=T1.EQ.0.D0
-        END IF
         DO I2=1,N2
-          T2=DBLE(I2-1)*T2FAC
-          IF(T2.GT.0.5D0)T2=-1.D0+T2
-          IF(TINV) THEN
-            TSYMM2=TSYMM1.AND.(T2.EQ.0.D0.OR.T2.EQ.0.5D0)
-            IF(TZERO1.AND.T2.LT.0.D0) CYCLE
-            TZERO2=TZERO1.AND.T2.EQ.0.D0
-          END IF
           DO I3=1,N3
-            T3=DBLE(I3-1)*T3FAC
-            IF(T3.GT.0.5D0)T3=-1.D0+T3
+!           ===========================================================
+!           ==  CHECK INVERSION SYMMETRY                             ==
+!           ==  EACH POINT IN THE CELL IS DEFINED BY A SINGLE INTEGER==
+!           ==  LABEL IND=1+[I1-1+N1*(I2-1+N2*I3-1)]                 ==
+!           ===========================================================
             IF(TINV) THEN
-              TSYMM3=TSYMM2.AND.(T3.EQ.0.D0.OR.T3.EQ.0.5D0)
-              IF(TZERO2.AND.T3.LT.0.D0) CYCLE
+              I1INV=MOD(N1-(I1-1),N1)+1
+              I2INV=MOD(N2-(I2-1),N2)+1
+              I3INV=MOD(N3-(I3-1),N3)+1
+              IND   =I1   -1+N1*(I2   -1+N2*(I3   -1))
+              INDINV=I1INV-1+N1*(I2INV-1+N2*(I3INV-1))
+              IF(IND.EQ.INDINV) THEN  ! SPECIAL POINT (EQUIV TO ITS INVERSE)
+                WGHT=WGHT0                 
+              ELSE IF(IND.GT.INDINV) THEN 
+                CYCLE ! INVERSE IMAGE IS NOT COUNTED
+              ELSE
+               WGHT=2.D0*WGHT0 ! GENERAL K-POINT GETS THE WEIGHT OF IT IMAGE
+              END IF
+            ELSE
+              WGHT=WGHT0
             END IF
             IKPT=IKPT+1
-            IF(IKPT.GT.NKPT) THEN
-              CALL ERROR$MSG('#(K-POINTS) EXCEEDED')
-              CALL ERROR$I4VAL('NKPT',NKPT)
-              CALL ERROR$I4VAL('N1',N1)
-              CALL ERROR$I4VAL('N2',N2)
-              CALL ERROR$I4VAL('N3',N3)
-              CALL ERROR$STOP('KPOINTS$KPOINTS')
-            END IF
-            WKPT(IKPT)=FAC
-            IF(TINV) THEN
-               IF(.NOT.TSYMM3)WKPT(IKPT)=2.D0*WKPT(IKPT)  !avoid double couunting
-            END IF
-            XK(1,IKPT)=T1
-            XK(2,IKPT)=T2
-            XK(3,IKPT)=T3
+            IF(IKPT.GT.NKPT) CYCLE
+            XK(1,IKPT)=REAL(I1-1,KIND=8)/REAL(N1,KIND=8)
+            XK(2,IKPT)=REAL(I2-1,KIND=8)/REAL(N2,KIND=8)
+            XK(3,IKPT)=REAL(I3-1,KIND=8)/REAL(N3,KIND=8)
+            WKPT(IKPT)=WGHT
           ENDDO
         ENDDO
-      ENDDO
+      ENDDO   
       IF(IKPT.NE.NKPT) THEN
         CALL ERROR$MSG('INCONSISTENT #(K-POINTS)')
         CALL ERROR$I4VAL('NKPT ANTICIPATED',NKPT)
@@ -99,43 +89,47 @@
       END
 !
 !     ..................................................................
-      SUBROUTINE KPOINTS_nkpt(tinv,nkdiv,nkpt)
+      SUBROUTINE KPOINTS_NKPT(TINV,NKDIV,NKPT)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
-      implicit none
-      logical(4),intent(in) :: tinv
-      integer(4),INTENT(IN) :: nkdiv(3)
-      integer(4),INTENT(out):: nkpt
+      IMPLICIT NONE
+      LOGICAL(4),INTENT(IN) :: TINV
+      INTEGER(4),INTENT(IN) :: NKDIV(3)
+      INTEGER(4),INTENT(OUT):: NKPT
       INTEGER(4)            :: I1,I2,I3
+      INTEGER(4)            :: I1INV,I2INV,I3INV
       INTEGER(4)            :: N1,N2,N3
-      REAL(8)               :: T1FAC,T2FAC,T3FAC
-      REAL(8)               :: T1,T2,T3
-      REAL(8)               :: DET
+      INTEGER(4)            :: IKPT
+      INTEGER(4)            :: IND,INDINV
+!     ******************************************************************
 !     ******************************************************************
       N1=NKDIV(1)
       N2=NKDIV(2)
       N3=NKDIV(3)
-      T1FAC=1.D0/REAL(N1,KIND=8)
-      T2FAC=1.D0/REAL(N2,KIND=8)
-      T3FAC=1.D0/REAL(N3,KIND=8)
-      nKPT=0
+      NKPT=0
       DO I1=1,N1
-        T1=DBLE(I1-1)*T1FAC
-        IF(T1.GT.0.5D0)T1=-1.D0+T1
-        IF(TINV.AND.T1.LT.0.D0) CYCLE 
         DO I2=1,N2
-          T2=DBLE(I2-1)*T2FAC
-          IF(T2.GT.0.5D0)T2=-1.D0+T2
-          IF(TINV.AND.T1.EQ.0.D0.AND.T2.LT.0.D0) CYCLE 
           DO I3=1,N3
-            T3=DBLE(I3-1)*T3FAC
-            IF(T3.GT.0.5D0)T3=-1.D0+T3
-            IF(TINV.AND.T1.EQ.0.D0.AND.T2.EQ.0.AND.T3.LT.0.D0) CYCLE 
-            nKPT=nKPT+1
+!           ===========================================================
+!           ==  CHECK INVERSION SYMMETRY                             ==
+!           ==  EACH POINT IN THE CELL IS DEFINED BY A SINGLE INTEGER==
+!           ==  LABEL IND=1+[I1-1+N1*(I2-1+N2*I3-1)]                 ==
+!           ===========================================================
+            IF(TINV) THEN
+              I1INV=MOD(N1-(I1-1),N1)+1
+              I2INV=MOD(N2-(I2-1),N2)+1
+              I3INV=MOD(N3-(I3-1),N3)+1
+              IND   =I1   -1+N1*(I2   -1+N2*(I3   -1))
+              INDINV=I1INV-1+N1*(I2INV-1+N2*(I3INV-1))
+              IF(IND.GT.INDINV) THEN 
+                CYCLE ! INVERSE IMAGE IS NOT COUNTED
+              ENDIF
+            END IF
+            NKPT=NKPT+1
           ENDDO
         ENDDO
-      ENDDO
+      ENDDO   
       RETURN
       END
 

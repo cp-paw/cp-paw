@@ -6,6 +6,39 @@
 !**                                                                   **
 !***********************************************************************
 !***********************************************************************
+
+#IF DEFINED(CPPVARIABLE_ABS)
+!=============== ENVIRONMENT ABSOFT COMPILER =========================
+!    IT ASSUMES THE ATLAS LAPACK AND BLAS ROUTINES TO BE LINKED
+!    IT ASSUMES THE ABSOFT SUPPORT LIBRARY LIBU77.A  TO BE LINKED
+!    IT ASSUMES THE FAST FOURIER TRANSFORM LIBRARY LIBFFTW.A  TO BE LINKED
+#DEFINE CPPVAR_FFTW
+#DEFINE CPPVAR_ATLAS
+#DEFINE CPPVAR_U77
+
+#ELIF DEFINED(CPPVARIABLE_XLF)
+!=============== ENVIRONMENT IBM AIX ===================================
+!    IT ASSUMES THE ESSL LIBRARY TO BE LINKED
+!    IT USES XLF SPECIFIC SUPPORT ROUTINES AND LANGUAGE EXTENSIONS
+#DEFINE CPPVAR_ESSL 
+#DEFINE CPPVAR_XLFsup
+#DEFINE CPPVAR_XLFext
+#DEFINE CPPVAR_GETRUSAGE
+!#UNDEFINE EXLICITERF
+
+#ELIF DEFINED(CPPVARIABLE_DEC)
+!=============== ENVIRONMENT DEC ALPHA =================================
+#DEFINE CPPVAR_FFTW
+#DEFINE CPPVAR_ATLAS
+#DEFINE CPPVAR_GETRUSAGE
+
+#ELSE
+!=============== FREE ENVIRONMENT ===== =================================
+! MAKES NO ASSUMPTIONS ABOUT THE ENVIRONMENT
+#DEFINE CPPVAR_FFTpack
+
+#ENDIF 
+
 #IFNDEF CPPVARIABLE_XLF 
 !!.......................................................................
 !MODULE ARGS_MODULE
@@ -45,7 +78,7 @@
 #ENDIF
 !
 !     ..................................................................
-      SUBROUTINE LIB$times(ntime)
+      SUBROUTINE LIB$TIMES(NTIME)
 !     ******************************************************************
 !     **    TIMES RETURNS IN UNITS OF CLOCKTICS                       **
 !     **    1)  USER TIME OF THE PARENT PROCESS                       **
@@ -53,23 +86,25 @@
 !     **    3)  USER TIME OF CHILD PROCESSES                          **
 !     **    4)  SYSTEM TIME OF CHILD PROCESSES                        **
 !     **                                                              **
-!     **  a clocktick is considered 0.01 sec                          **
+!     **  A CLOCKTICK IS CONSIDERED 0.01 SEC                          **
 !     **                                                              **
 !     **  SUBROUTINES USED: TIMES (STANDARD C LIBRARY)                **
 !     ******************************************************************
-      integer(4),intent(out) :: ntime(4)
-      real(4)   ,external    :: etime     ! total elapsed time
-      real(4)                :: tarray(2) ! elapsed user/system time
-      real(4)                :: total
+      INTEGER(4),INTENT(OUT) :: NTIME(4)
+      REAL(4)   ,EXTERNAL    :: ETIME     ! TOTAL ELAPSED TIME
+      REAL(4)                :: TARRAY(2) ! ELAPSED USER/SYSTEM TIME
+      REAL(4)                :: TOTAL
 !     ******************************************************************
-      ntime=0
-#IFDEF CPPVARIABLE_XLF
-      call times(ntime)
+#IF DEFINED(CPPVAR_XLFsup)
+      CALL TIMES(NTIME)     !XLF
+#ELIF DEFINED(CPPVAR_U77)
+      TOTAL=ETIME(TARRAY)   ! FROM ABSOFT SUPPORT LIBRARY libU77.a
+      NTIME=NINT(100*TOTAL)
+#ELSE 
+      NTIME=0
 #ENDIF
-      total=etime(tarray)   ! from absoft support library
-      ntime=nint(100*total)
-      return
-      end
+      RETURN
+      END
 !     .................................................................
       SUBROUTINE LIB$GETUSAGE(ID,VALUE)
 !     *****************************************************************
@@ -128,7 +163,7 @@
       usg%NIVCSW=0     
 !     ==================================================================
 !     ==================================================================
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_GETRUSAGE)
       RC=GETRUSAGE(%VAL(0),USG)    ! C-ROUTINE
       IF(RC.NE.0) THEN
         CALL ERROR$MSG('ERROR CALLING MYGETRUSAGE')
@@ -158,8 +193,7 @@
       END IF
       RETURN
       END
-#IFDEF CPPVARIABLE_XLF
-!
+#IF DEFined(Cppvar_xlfext)
 !     ..................................................................
       SUBROUTINE LIB$ERFR8(X,Y)
 !     ******************************************************************
@@ -428,7 +462,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: NAUX
       REAL(8)               :: AUX(100*N)
       INTEGER(4)            :: I,J
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       REAL(8)               :: RCOND
       REAL(8)               :: DET(2)
 #ELSE 
@@ -442,11 +476,11 @@ END MODULE RANDOM_MODULE
           AINV(I,J)=A(I,J)
         ENDDO
       ENDDO
-#IFDEF CPPVARIABLE_XLF
-      CALL DGEICD(AINV,N,N,0,RCOND,DET,AUX,NAUX)
+#IF DEFined(CPPVAR_ESSL)
+      CALL DGEICD(AINV,N,N,0,RCOND,DET,AUX,NAUX) !ESSL
 #ELSE 
-      CALL DGETRF(N,N,AINV,N,IPIV,INFO)
-      CALL DGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) 
+      CALL DGETRF(N,N,AINV,N,IPIV,INFO) !lapack
+      CALL DGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !lapack
 #ENDIF
       RETURN
       END
@@ -470,6 +504,7 @@ END MODULE RANDOM_MODULE
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
+#if defined(cppvar_essl)
       INTERFACE
         SUBROUTINE EINFO(ICODE,INF1,INF2) !ESSL ERROR HANDLING ROUTINE
         INTEGER                       :: ICODE
@@ -477,13 +512,14 @@ END MODULE RANDOM_MODULE
         INTEGER ,INTENT(OUT),OPTIONAL :: INF2
         END SUBROUTINE EINFO
       END INTERFACE
+#endif
       LOGICAL(4) ,PARAMETER :: TESSLERR=.FALSE.
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: H(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
       REAL(8)   ,INTENT(OUT):: U(N,N)
       REAL(8)               :: WORK1((N*(N+1))/2)
-#ifdef CPPVARIABLE_XLF
+#if defined(CPPVAR_ESSL)
       REAL(8)               :: WORK2(2*N)
 #ELSE
       REAL(8)               :: WORK2(3*N)
@@ -508,7 +544,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       IF(TESSLERR) THEN
         CALL EINFO(0)
         CALL ERRSAV(2101,SAV2101)
@@ -530,7 +566,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == ESSL ERROR HANDLING                                          ==
 !     ==================================================================
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
  400  CONTINUE
       CALL ERROR$MSG('DIAGONALIZATION NOT CONVERGED')
       IF(TESSLERR) THEN
@@ -578,7 +614,7 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT):: E(N)
       COMPLEX(8),INTENT(OUT):: U(N,N)
       COMPLEX(8)            :: WORK1((N*(N+1))/2)
-#ifdef CPPVARIABLE_XLF
+#if defined(CPPVAR_ESSL)
       REAL(8)               :: RWORK(4*N)
 #else
       COMPLEX(8)            :: CWORK(2*N)
@@ -612,15 +648,15 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       IF(TESSLERR) THEN
         CALL EINFO(0)
         CALL ERRSAV(2101,SAV2101)
         CALL ERRSET(2101,255,0,0,0,2101)
       END IF
-      CALL ZHPEV(1,WORK1,E,U,N,N,RWORK,4*N)
+      CALL ZHPEV(1,WORK1,E,U,N,N,RWORK,4*N)  !essl
 #ELSE
-      CALL ZHPEV('V','L',N,WORK1,E,U,N,CWORK,RWORK,INFO)
+      CALL ZHPEV('V','L',N,WORK1,E,U,N,CWORK,RWORK,INFO) !lapack
       IF(INFO.NE.0) THEN
         CALL ERROR$MSG('DIAGONALIZATION NOT CONVERGED')
         CALL ERROR$STOP('DIAG')
@@ -656,7 +692,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == ESSL ERROR HANDLING                                          ==
 !     ==================================================================
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
  400  CONTINUE
       CALL ERROR$MSG('DIAGONALIZATION NOT CONVERGED')
       IF(TESSLERR) THEN
@@ -695,16 +731,20 @@ END MODULE RANDOM_MODULE
       COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
 !     *******************************************************************
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       call LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
-#ELSE
+#ELIF defined(CPPVAR_FFTW)
       CALL LIB_FFTW(DIR,LEN,NFFT,X,Y)
-!     CALL LIB_FFTpack(DIR,LEN,NFFT,X,Y)
+#elif defined(cppvar_fftpack)
+      CALL LIB_FFTpack(DIR,LEN,NFFT,X,Y)
+#else
+      call error$msg('no fft package selected during compilation')
+      call error$stop('LIB$FFTC8')
 #ENDIF
       RETURN
       END
 !
-#IFNDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_FFTW)
 !     ..................................................................
       SUBROUTINE LIB_FFTW(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -789,7 +829,7 @@ END MODULE RANDOM_MODULE
 #ENDIF
 !
 !DCFT:  1-D FFT P765
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
 !     ..................................................................
       SUBROUTINE LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -855,6 +895,7 @@ END MODULE RANDOM_MODULE
 #ENDIF
 !
 !DCFT:  1-D FFT P765
+#if defined(cppvar_fftpack)
 !     ..................................................................
       SUBROUTINE LIB_FFTpack(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -941,6 +982,7 @@ END MODULE RANDOM_MODULE
       END IF
       RETURN
       END
+#endif
 !
 !     ...................................................FESSL..........
       SUBROUTINE LIB$FFTADJUSTGRD(NR)
@@ -961,8 +1003,25 @@ END MODULE RANDOM_MODULE
 !     ******************************************************************
       IF (TINIT) THEN
         TINIT=.FALSE.
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
 !       == allowed length for the ESSL FFT =============================
+        COUNT=0
+        OUTER: DO H=1,25
+          DO I=0,2
+            DO J=0,1
+              DO K=0,1
+                DO M=0,1
+                  IF(COUNT.GE.MAXI) EXIT OUTER
+                  SVAR = 2.D0**H * 3.D0**I * 5.D0**J * 7.D0**K *11.D0**M
+                  IF(SVAR.GT.37748736.D0) CYCLE
+                  COUNT=COUNT+1
+                  IFR(COUNT)=NINT(SVAR)
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO OUTER
+#ELIF defined(CPPVAR_FFTW)
         COUNT=0
         OUTER: DO H=1,25
           DO I=0,2
@@ -1113,11 +1172,12 @@ END MODULE RANDOM_MODULE
       real(8)     ,PARAMETER:: ONE=1.D0
       real(8)     ,PARAMETER:: ZERO=0.D0
 !     ******************************************************************
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       CALL DGEMUL(A,N,'N',B,M,'N',C,N,N,M,L)
-#ELSE
+#ELif defined(CPPVAR_ATLAS)
       CALL DGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
-!     C=MATMUL(A,B)
+#ELSE
+      C=MATMUL(A,B)
 #ENDIF
       RETURN
       END
@@ -1139,11 +1199,12 @@ END MODULE RANDOM_MODULE
       COMPLEX(8)  ,PARAMETER:: ONE=(1.D0,0.D0)
       COMPLEX(8)  ,PARAMETER:: ZERO=(0.D0,0.D0)
 !     ******************************************************************
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       CALL ZGEMUL(A,N,'N',B,M,'N',C,N,N,M,L)
-#ELSE
+#ELif defined(CPPVAR_ATLAS)
       CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
-!     C=MATMUL(A,B)
+#else
+      C=MATMUL(A,B)
 #ENDIF
       RETURN
       END
@@ -1169,7 +1230,7 @@ END MODULE RANDOM_MODULE
       COMPLEX(8),ALLOCATABLE  :: WORK(:,:)
       INTEGER(4)              :: I,J,K
 !     ******************************************************************
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       IF(TID) THEN
         ALLOCATE(WORK(N,M))
         WORK=A
@@ -1231,7 +1292,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: I,J,K
       REAL(8)               :: SUM
 !     ******************************************************************
-#IFDEF CPPVARIABLE_XLF
+#IF DEFINED(XLF)
       CALL DGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'T',OPERATOR,LEN1,LEN1,N,LEN2)
 #ELSE 
       DO I=1,LEN1
@@ -1263,7 +1324,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: I,J,K
       COMPLEX(8)            :: SUM
 !     ******************************************************************
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       CALL ZGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'C',OPERATOR,LEN1,LEN1,N,LEN2)
 #ELSE 
       DO I=1,LEN1
@@ -1301,7 +1362,7 @@ END MODULE RANDOM_MODULE
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTR8')
       END IF
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       IF(TID) THEN
 !       ==  OVERLAP(I,J) = 0.D0*OVERLAP+1.D0*SUM_K:PSI1(K,I)*PSI1(K,J) =
         CALL DSYRK('U','T',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
@@ -1362,7 +1423,7 @@ END MODULE RANDOM_MODULE
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTC8')
       END IF
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       IF(TID) THEN
         CALL ZHERK('U','C',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
         DO I=1,N1
@@ -1415,13 +1476,13 @@ END MODULE RANDOM_MODULE
       INTEGER(4)               :: I
       CHARACTER(8),PARAMETER   :: LIB='ESSL'
 !     ******************************************************************
-      IF(LIB.EQ.'ESSL') THEN
+#if defined(Cppvar_essl)
         CALL ZAXPY(N,FAC,X,1,Y,1)
-      ELSE
+#ELSE
         DO I=1,N
           X(I)=X(I)+FAC*Y(I)
         ENDDO
-      END IF
+#endif
       RETURN
       END
 !
@@ -1441,7 +1502,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)               :: I
       CHARACTER(8),PARAMETER   :: LIB='ESSL'
 !     ******************************************************************
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       IF(FAC.EQ.1.D0) THEN
         CALL DAXPY(N,FAC,X,1,Y,1)
       ELSE IF(FAC.EQ.-1.D0) THEN
@@ -1502,7 +1563,7 @@ END MODULE RANDOM_MODULE
         ALLOCATE(AFACT(N,N))
         ALLOCATE(IPVT(N)) 
         AFACT=A
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
         CALL DGEF(AFACT,N,N,IPVT)
         X=B
         CALL DGES(AFACT,N,N,IPVT,X,0)
@@ -1515,7 +1576,7 @@ END MODULE RANDOM_MODULE
         DEALLOCATE(IPVT)
       ELSE   !SINGULAR VALUE DECOMPOSITION
         NM=MAX(1,MAX(N,M))
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
         ALLOCATE(AFACT(NM,M))
         ALLOCATE(BFACT(N,NEQ))
         AFACT(1:N,:)=A
@@ -1571,7 +1632,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)              :: IHELP
       INTEGER(4)              :: I,J
 !     ******************************************************************
-#IFDEF CPPVARIABLE_XLF
+#IF DEFined(CPPVAR_ESSL)
       CALL ISORT(X,1,N)
 #ELSE
       DO I=1,N-1
@@ -1595,8 +1656,8 @@ END MODULE RANDOM_MODULE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
 !     *********************************************************************
-#IFDEF CPPVARIABLE_XLF
-      RC=HOSTNM_(HOSTNAME)
+#IF DEFined(CPPVAR_XLFsup)
+      RC=HOSTNM_(HOSTNAME)    ! xlf support library
       IF(RC.NE.0)HOSTNAME='UNKNOWN'
 #ELSE
       HOSTNAME='UNKNOWN'
@@ -1612,26 +1673,15 @@ END MODULE RANDOM_MODULE
 !     *********************************************************************
       INTEGER(4),INTENT(IN) :: N
 !     *********************************************************************
-#IFDEF CPPVARIABLE_XLF
-      CALL FLUSH_(N)  ! xlf extension
-#ELSE 
+#IF DEFined(CPPVAR_XLFsup)
+      CALL FLUSH_(N)  ! xlf uspport library
+#ELif defined(CPPVAR_U77)
       CALL FLUSH(N) ! from absoft support library (underscore)
-!     CALL FLUSH_(N) 
 #ENDIF
       RETURN
       END 
 !
-#IFNDEF CPPVARIABLE_XLF 
-! 
-!     ......................................................................
-!     SUBROUTINE FLUSH_(N)
-!     *********************************************************************
-!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N     **
-!     *********************************************************************
-!     INTEGER(4),INTENT(IN) :: N
-!     *********************************************************************
-!     RETURN
-!     END
+#IFNDEF CPPVAR_ESSL
 !
 !     ..................................................................
       SUBROUTINE DGEFA(A,LDA,N,IPVT,INFO)
@@ -1686,7 +1736,7 @@ END MODULE RANDOM_MODULE
       DO K=1,NM1
         KP1=K+1
 !       ==  FIND L = PIVOT INDEX ======================================
-        L=IDAMAX(N-K+1,A(K,K),1) + K-1
+        L=IDAMAX(N-K+1,A(K,K),1) + K-1  !idamax<-blas library
         IPVT(K)=L
 !       == ZERO PIVOT IMPLIES THIS COLUMN ALREADY TRIANGULARIZED ======
         IF(A(L,K).NE.0.0D0) THEN
@@ -1812,6 +1862,8 @@ END MODULE RANDOM_MODULE
       END IF
       RETURN
       END
+#endif
+#if defined(cppvar_fftpack)
 !
 !     ..................................................................
       SUBROUTINE CFFTB(N,C,WA,IFAC)
@@ -2970,7 +3022,7 @@ END MODULE RANDOM_MODULE
       END IF
       RETURN
       END
-#ENDIF 
+#endif
 
 
 

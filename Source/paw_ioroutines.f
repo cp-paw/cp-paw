@@ -1395,7 +1395,7 @@ Print*,'ilda ',ilda
       CALL LINKEDLIST$EXISTD(LL_CNTL,'M',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'M',0,300.D0)
       CALL LINKEDLIST$GET(LL_CNTL,'M',0,MASS)
-      CALL DYNOCC$SETR8('M',MASS)
+      CALL DYNOCC$SETR8('MASS',MASS)
 !
 !     ==  FRICTION ON THE OCCUPATION DYNAMICS ========================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
@@ -2361,11 +2361,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
       INTEGER(4)   ,INTENT(OUT):: NKPT
       TYPE(LL_TYPE)            :: LL_STRC
-      LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: TCHK,tchk1
       INTEGER(4)               :: IKPT
       INTEGER(4)               :: IXK0(3)
       INTEGER(4)               :: NKDIV(3)
-      REAL(8)                  :: WKPT
       REAL(8)                  :: RBAS(3,3)
       REAL(8)                  :: RMAX
       REAL(8)    ,ALLOCATABLE  :: XK(:,:)
@@ -2377,52 +2376,63 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$EXISTL(LL_STRC,'KPOINTS',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SELECT(LL_STRC,'KPOINTS')
-        IXK0(:)=0
-        CALL LINKEDLIST$SET(LL_STRC,'K',0,IXK0) 
-        CALL LINKEDLIST$SELECT(LL_STRC,'..')
-        NKPT=1
-      END IF
       CALL LINKEDLIST$SELECT(LL_STRC,'KPOINTS')
+!     == set default ===================================================
+      IF(.NOT.TCHK) THEN
+        nkdiv(:)=1
+        CALL LINKEDLIST$SET(LL_STRC,'DIV',0,nkdiv) 
+      END IF
+!
+!FALSE FOR NON-COLLINEAR DESCRIPTION
+PRINT*,'WARNING FROM STRCIN_KPOINT!'
+      TINV=.TRUE. 
 !
 !     ==  READ ACTUAL VALUES  ==========================================
+      CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
+      CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK1)
       CALL LINKEDLIST$NDATA(LL_STRC,'K',NKPT)
-      IF(NKPT.NE.0) THEN  
+      IF(TCHK) THEN
+!       == K-POINT GRID DEFINED BY R =====================================
+        IF(TCHK1) THEN
+          CALL ERROR$MSG('!SPECIES!KPOINTS:R AND DIV ARE MUTUALLY EXCLUSIVE')
+          CALL ERROR$STOP('STRCIN_KPOINT')
+        END IF
+        IF(NKPT.NE.0) THEN
+          CALL ERROR$MSG('!SPECIES!KPOINT:R AND K ARE MUTUALLY EXCLUSIVE')
+          CALL ERROR$STOP('STRCIN_KPOINT')
+        END IF
+        CALL CELL$GETR8A('TREF',9,RBAS)
+        CALL LINKEDLIST$GET(LL_STRC,'R',1,RMAX)
+        CALL KPOINTS_NKDIV(RBAS,RMAX,NKDIV)
+        CALL KPOINTS_NKPT(TINV,NKDIV,NKPT)
         ALLOCATE(XK(3,NKPT))
         ALLOCATE(WGHT(NKPT))
+        CALL KPOINTS_KPOINTS(TINV,NKDIV,NKPT,XK,WGHT)
+!     == KPOINT GRID DEFINED BY DIV ====================================
+      ELSE 
         CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK)
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'DIV',1,NKDIV)
         ELSE
           NKDIV(:)=2.D0
         END IF
-        DO IKPT=1,NKPT
-          CALL LINKEDLIST$GET(LL_STRC,'K',IKPT,IXK0) 
-          XK(1,IKPT)=REAL(IXK0(1),KIND=8)/REAL(NKDIV(1),KIND=8)
-          XK(2,IKPT)=REAL(IXK0(2),KIND=8)/REAL(NKDIV(2),KIND=8)
-          XK(3,IKPT)=REAL(IXK0(3),KIND=8)/REAL(NKDIV(3),KIND=8)
-        ENDDO
-        DO IKPT=1,NKPT
-          WGHT(IKPT)=1.D0/REAL(NKPT,KIND=8)
-        ENDDO
-      ELSE
-        CALL CELL$GETR8A('TREF',9,RBAS)
-        CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL LINKEDLIST$SET(LL_STRC,'R',1,12.D0)
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'R',1,RMAX)
-
-        CALL KPOINTS_NKDIV(RBAS,RMAX,NKDIV)
-!FALSE FOR NON-COLLINEAR DESCRIPTION
-PRINT*,'WARNING FROM STRCIN_KPOINT!'
-        TINV=.TRUE. 
-        CALL KPOINTS_NKPT(TINV,NKDIV,NKPT)
-        ALLOCATE(XK(3,NKPT))
-        ALLOCATE(WGHT(NKPT))
-        CALL KPOINTS_KPOINTS(TINV,NKDIV,NKPT,XK,WGHT)
-      END IF
+        if(nkpt.eq.0) then
+          call kpoints_nkpt(tinv,nkdiv,nkpt)
+          ALLOCATE(XK(3,NKPT))
+          ALLOCATE(WGHT(NKPT))
+          call KPOINTS_KPOINTS(tinv,nkdiv,nkpt,XK,wght)
+        else     
+          ALLOCATE(XK(3,NKPT))
+          ALLOCATE(WGHT(NKPT))
+          DO IKPT=1,NKPT
+            CALL LINKEDLIST$GET(LL_STRC,'K',IKPT,IXK0) 
+            XK(1,IKPT)=REAL(IXK0(1),KIND=8)/REAL(NKDIV(1),KIND=8)
+            XK(2,IKPT)=REAL(IXK0(2),KIND=8)/REAL(NKDIV(2),KIND=8)
+            XK(3,IKPT)=REAL(IXK0(3),KIND=8)/REAL(NKDIV(3),KIND=8)
+          ENDDO
+        end if
+!       ==========================================================
+      end if
 !
 !     ==  PERFORM ACTIONS  ==============================================
       CALL DYNOCC$SETI4('NKPT',NKPT)
@@ -2879,11 +2889,11 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !     ==================================================================
       IF(TNONCOLL) NSPIN=1
       NB=2*INT((NB+1)/2)    !ONLY EVEN NUMBER OF STATES ALLOWED
-      CALL DYNOCC$CREATE(NB,NKPT,NSPIN) 
       CALL DYNOCC$SETR8('SUMOFZ',SUMOFZ)
       CALL DYNOCC$SETR8('TOTCHA',QION)
       CALL DYNOCC$SETR8('SPIN',TOTSPIN)
       CALL DYNOCC$SETR8('FMAX',FMAX)
+      CALL DYNOCC$CREATE(NB,NKPT,NSPIN) 
       CALL DYNOCC$INIOCC      ! GUESS OCCUPATIONS FOR EACH STATE
 !
       IF(TNONCOLL) THEN

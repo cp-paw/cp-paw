@@ -824,6 +824,7 @@ END MODULE STOPIT_MODULE
       REAL(8)               :: Ecellpot
       REAL(8)               :: Ecellkin
       REAL(8)               :: ESOLV,EKINQ,QFRIC,QTOT
+      LOGICAL(4)            :: TCHK
       LOGICAL(4)            :: TCONTINUUM
       LOGICAL(4)            :: TQMMM=.FALSE.
       REAL(8)               :: QMMMKIN   ! EKIN OF QM-MM ENVIRONMENT
@@ -1081,9 +1082,13 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     ==================================================================
                               CALL TRACE$PASS('BEFORE OCCUPATIONS')
       IF(TPRINT) THEN
-!       CALL OCCUPATION$REPORT(NFILO,'EIG')
         WRITE(NFILO,FMT='()')
-        CALL WAVES$REPORTEIG(NFILO)
+        CALL DYNOCC$GETL4('DYN',TCHK) 
+        IF(TCHK) THEN
+          CALL DYNOCC$REPORT(NFILO)
+        ELSE
+          CALL WAVES$REPORTEIG(NFILO)
+        END IF
       END IF
 !   
 !     ==================================================================

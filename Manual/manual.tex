@@ -2143,27 +2143,36 @@ types, electronic occupations, atomic masses. etc...}
 \brules{optional} 
 \bdescr{specifies the k-point grid. Default is $\Gamma$-point sampling.}
 
-\mbax{\key{K} \vdescr{k-point coordinates $(i_1,i_2,i_3)$ in units of
-    fractions of reciprocal lattice vectors: $k_i = 1/2\ \sum_j
-    G_{ij}*i_j/n_j$, where $G_{ij}$ is defined by the real space
-    lattice vectors $T_{ij}$ by $\sum_k G_{ki}T_{kj}=2\pi\delta_{ij}$.
-    The fractions are provided by \texttt{DIV}. The k-point
-    integration weights are equally distributed.}
-  \vformat{integer(3)} \vrules{multiple, optional} \vdefault{0 0 0}}
-
-\mbax{\key{DIV}
-\vdescr{fractions of reciprocal lattice vectors defining the
-  reciprocal sublattice for the k-points.}
-\vformat{integer(3)}
-\vrules{optional}
-\vdefault{2 2 2}}
-
 \mbax{\key{R}
 \vdescr{defines the density of k-points for the automatic generation
   of k-points. $\Delta k= 2\pi/R$.}
 \vformat{real}
-\vrules{optional. Not used if \texttt{K} is present.}
+\vrules{optional}
 \vdefault{12.}}
+
+\mbax{\key{DIV}
+\vdescr{fractions of reciprocal lattice vectors defining the
+  reciprocal sublattice for the k-points.If \texttt{K} is not
+  specified, the k-points are equally spaced an set compatible with
+  the inversion symmetry}
+\vformat{integer(3)}
+\vrules{optional; mutually exclusive with \texttt{R}}
+\vdefault{2 2 2}}
+
+\mbax{\key{K} 
+\vdescr{k-point coordinates $(i_1,i_2,i_3)$ in units of fractions of
+    reciprocal lattice vectors: $k_i = 1/2\ \sum_j G_{ij}*i_j/n_j$,
+    where $G_{ij}$ is defined by the real space lattice vectors
+    $T_{ij}$ by $\sum_k G_{ki}T_{kj}=2\pi\delta_{ij}$.  The fractions
+    are provided by \texttt{DIV}. The k-point integration weights are
+    equally distributed. This option is not recommended for general
+    use.  The safe approach is to set either \texttt{R} or
+    \texttt{DIV}. If \texttt{K} is not specified, the k-points are set
+    equally spaced according to \texttt{R} or \texttt{div}}
+\vformat{integer(3)} 
+\vrules{multiple, optional} 
+\vdefault{0 0 0}}
+
 
 %----------------------------------------------------------------------
 {\block{!STRUCTURE!SPECIES}
@@ -5399,8 +5408,21 @@ specified if E is specified. }
  
 %==========================================================================
 \newpage
-\section{Specifications of unformatted output data files}
+\section{Specifications of formatted and unformatted output data files}
 %==========================================================================
+%==========================================================================
+\subsection{Protocoll}
+%==========================================================================
+One-particle energies: The eigenvalues of the Hamiltonian in the basis
+of the wave function are printed, unless dynamical occupations are
+selected (i.e. \texttt{!CONTROL!MERMIN}). In this latter case, the
+diagonal elements of the Hamiltonian are printed. The one-particle
+energies are printed in eV. The occupations are printed without the
+geometric weight, but include spin degeneracy, so that for a non-spin
+polarized calculation the maximum allowed occupation is two.
+
+
+
 %==========================================================================
 \subsection{waveplot}
 %==========================================================================
@@ -6108,26 +6130,35 @@ Pople\cite{Pople}.
 %==========================================================================
 \begin{description}
 \item[paw.tgz,setups.tgz] A compressed tar file containing the PAW
-  directory and atomic information. nAlternatively you may obtain a cd
-  with a copy of the PAW and Setups directories
+directory and atomic information. nAlternatively you may obtain a cd
+with a copy of the PAW and Setups directories
 \item[cpp] A C-Preprocessor
 \item[gunzip,tar] gunzip is for example part of emacs, so that you can
-  simply open emacs, execute Cntl-d to open dired, set the curser to
-  the file you want to uncompress, pull down ``operate$\rightarrow$
-  compress or uncompress'' and say yes. This is only required if you
-  have the compressed files. 
+simply open emacs, execute Cntl-d to open dired, set the curser to the
+file you want to uncompress, pull down ``operate$\rightarrow$ compress
+or uncompress'' and say yes. This is only required if you have the
+compressed files.
 \item[gmake] A version of make, ``GNU-make'' by the Free Software
   Foundation\cite{FreeSoftwareFoundation}. This program is used only
   during installation. Under Linux simply called make.
-\item[MPI] Message Passing Interface \cite{MPI}. 
-  It is not required on scalar execution.
-\item[IBM Dataexplorer] The IBM Dataexplorer is used to visualize wave
-  functions etc.\cite{Dataexplorer}. If this software is unavailable,
-  some data produced cannot be seen. The Dataexplorer is freely
-  available. 
-\item[XMGR] A program to produce publication ready xy-graphics written
-  largely by Paul~J.~Turner \cite{XMGR}. You can use any equivalent
-  software, but you need to adapt the paw\_show tool.
+\item[fftw] is a library for fast Fourier
+transforms. \texttt{http://www.fftw.org}
+\item[atlas] Atomatically tuned linare algebra Software. Contains
+lapack and blas routines that tune itself to the computer architecture
+on which it is installed.\\ \texttt{http://www.netlib.org/atlas/}
+\item[mpich] Message passing Interface.\cite{MPI}
+  It is not required for scalar execution.\\
+\texttt{http://www-unix.mcs.anl.gov/mpi/index.html}
+\item[grace] is a tool for publication ready xy-graphs. Developed
+originally by Paul~J.~Turner \cite{XMGR} under the name ace/gr or xmgr
+it is now further developed under the name of grace. You can use any equivalent
+  software, but you need to adapt the paw\_show tool.\\
+\texttt{http://plasma-gate.weizmann.ac.il/Grace/}. 
+\item[Dataexplorer] 3D Visualization software. Displays and renders 3D
+objects.  The Dataexplorer is used to visualize wave functions
+etc.\cite{Dataexplorer} Originally developed at teh IBM Research
+laboratory teh IBM Dataexplorere is now open
+source.\\ \texttt{http://www.opendx.org/}
 \end{description}
 
 For the IBM environment you will need
@@ -6430,6 +6461,7 @@ keep this list as short as possible.
   IBM xlf compiler. To see if your compiler is included and what value
   to set use {\tt paw\_compile ?} to obtain the command line syntax.
 \end{itemize}
+
 
 \ifthenelse{\boolean{private}}{
 %==========================================================================

@@ -1,5 +1,4 @@
-#!/bin/ksh
-##!/bin/bash
+#!/bin/bash
 #################################################################
 ##                                                             ##
 ##  Name: paw_compile                                          ##
@@ -20,18 +19,17 @@
 ##    executing paw_compile                                    ##
 ##                                                             ##
 #################################################################
+# C- Preprocessor
 #CPP="/usr/ccs/lib/cpp -P"   # use cpp auf ibm
 CPP="/usr/bin/cpp -P"       # use cpp auf linux
-#CPP="/lib/cpp -P"          # use cpp auf alpha
 #  gnu make 
-#GNUMAKE=/zurich/6k/contrib/bin/gmake  # 
 GNUMAKE=/usr/bin/gmake       # use make auf linux
-#  uses all module dependencies in the module file
-FFTWDIR=${PAWDIR}/Libraries/Packages/fftw-2.1.3/
-#
-ATLASDIR=${PAWDIR}/Libraries/Packages/ATLAS/lib/Linux_PIII/ 
-#
-MPIDIR=${PAWDIR}/Libraries/Packages/mpich-1.2.1/
+#  Libraries (FFTW, ATLAS-Blas, MPI) are located in directory LIBDIR
+LIBDIR=/home/blo/Tree/Libraries/Packages
+FFTWDIR=${LIBDIR}/fftw-2.1.3/
+ATLASDIR=${LIBDIR}/ATLAS/
+ATLASSPEC=Linux_ATHLON/ 
+MPIDIR=${LIBDIR}/mpich-1.2.1/
 #################################################################
 ##  set compiler flags                                         ##
 #################################################################
@@ -75,7 +73,7 @@ ABS_COMPILE_O="${ABS_COMPILE_N} -B100 -O "
 ABS_COMPILE_OP="${ABS_COMPILE_O}"
 ABS_COMPILE_NP="${ABS_COMPILE_N}"
 ABS_COMPILE_GP="${ABS_COMPILE_G}"
-ABS_LINK="f90" 
+ABS_LINK="f90"
 ## Portland group compiler PGI
 PGI_COMPILE_N="pgf90 -c"
 PGI_COMPILE_G="${PGI_COMPILE_N} -g " 
@@ -242,7 +240,7 @@ case "$ARCH" in
       NP)
         OBJDIR=${OBJDIR}none/
         PAWX=${EXEDIR}ppaw.x
-        F90PP="${F90PP} -archxlf -DCPPVARIABLE_XLF -DCPPVARABLE_PARALLEL"
+        F90PP="${F90PP} -archxlf -DCPPVARIABLE_XLF -DCPPVARIABLE_PARALLEL"
         COMPILE=$XLF_COMPILE_NP
         LINK=${XLF_LINK}
         OPTRM="rm " 
@@ -259,7 +257,7 @@ case "$ARCH" in
       OP)
         OBJDIR=${OBJDIR}fast/
         PAWX=${EXEDIR}ppaw_fast.x
-        F90PP="${F90PP} -archxlf -DCPPVARIABLE_XLF -DCPPVARABLE_PARALLEL"
+        F90PP="${F90PP} -archxlf -DCPPVARIABLE_XLF -DCPPVARIABLE_PARALLEL"
         COMPILE=$XLF_COMPILE_OP
         LINK=${XLF_LINK}
         OPTRM="rm " 
@@ -284,7 +282,7 @@ case "$ARCH" in
       G)
         OBJDIR=${OBJDIR}dbg/
         PAWX=${EXEDIR}paw_dbg.x
-        F90PP="${F90PP} -archdec -DCPPVARABLE_DEC"
+        F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC"
         COMPILE=${ALP_COMPILE_G}
         LINK=${ALP_LINK}
         OPTRM="file "
@@ -292,7 +290,7 @@ case "$ARCH" in
       N)
         OBJDIR=${OBJDIR}none/
         PAWX=${EXEDIR}paw.x
-        F90PP="${F90PP} -archdec -DCPPVARABLE_DEC"
+        F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC"
         COMPILE=$ALP_COMPILE_N
         LINK=${ALP_LINK}
         OPTRM="rm " 
@@ -300,7 +298,7 @@ case "$ARCH" in
       NP)
         OBJDIR=${OBJDIR}none/
         PAWX=${EXEDIR}ppaw.x
-        F90PP="${F90PP} -archdec -DCPPVARABLE_DEC  -DCPPVARABLE_PARALLEL"
+        F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC  -DCPPVARIABLE_PARALLEL"
         COMPILE=$ALP_COMPILE_NP
         LINK=${ALP_LINK}
         OPTRM="rm " 
@@ -309,7 +307,7 @@ case "$ARCH" in
       O)
         OBJDIR=${OBJDIR}fast/
         PAWX=${EXEDIR}paw_fast.x
-        F90PP="${F90PP} -archdec -DCPPVARABLE_DEC"
+        F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC"
         COMPILE=$ALP_COMPILE_O
         LINK=${ALP_LINK}
         OPTRM="rm " 
@@ -317,7 +315,7 @@ case "$ARCH" in
       OP)
         OBJDIR=${OBJDIR}fast/
         PAWX=${EXEDIR}ppaw_fast.x
-        F90PP="${F90PP} -archdec -DCPPVARABLE_DEC  -DCPPVARABLE_PARALLEL"
+        F90PP="${F90PP} -archdec -DCPPVARIABLE_DEC  -DCPPVARIABLE_PARALLEL"
         COMPILE=$ALP_COMPILE_OP
         LINK=${ALP_LINK}
         OPTRM="rm " 
@@ -342,7 +340,7 @@ case "$ARCH" in
       G)
         OBJDIR=${OBJDIR}dbg/
         PAWX=${EXEDIR}paw_dbg.x
-        F90PP="${F90PP} -archabs -DCPPVARABLE_DEC"
+        F90PP="${F90PP} -archabs -DCPPVARIABLE_ABS"
         COMPILE=${ABS_COMPILE_G}
         LINK=${ABS_LINK}
         OPTRM="file "
@@ -350,7 +348,7 @@ case "$ARCH" in
       N)
         OBJDIR=${OBJDIR}none/
         PAWX=${EXEDIR}paw.x
-        F90PP="${F90PP} -archabs -DCPPVARABLE_DEC"
+        F90PP="${F90PP} -archabs -DCPPVARIABLE_ABS"
         COMPILE=$ABS_COMPILE_N
         LINK=${ABS_LINK}
         OPTRM="rm " 
@@ -358,7 +356,7 @@ case "$ARCH" in
       NP)
         OBJDIR=${OBJDIR}none/
         PAWX=${EXEDIR}ppaw.x
-        F90PP="${F90PP} -archdec -DCPPVARABLE_DEC  -DCPPVARABLE_PARALLEL"
+        F90PP="${F90PP} -archdec -DCPPVARIABLE_ABS  -DCPPVARIABLE_PARALLEL"
         COMPILE=$ABS_COMPILE_NP
 	LLIBS="$LLIBS -L${MPIDIR}/lib/ -lmpich -lfmpich "
         LINK=${ABS_LINK}
@@ -368,7 +366,7 @@ case "$ARCH" in
       O)
         OBJDIR=${OBJDIR}fast/
         PAWX=${EXEDIR}paw_fast.x
-        F90PP="${F90PP} -archdec -DCPPVARABLE_DEC"
+        F90PP="${F90PP} -archdec -DCPPVARIABLE_ABS"
         COMPILE=$ABS_COMPILE_O
         LINK=${ABS_LINK}
         OPTRM="rm " 
@@ -376,7 +374,7 @@ case "$ARCH" in
       OP)
         OBJDIR=${OBJDIR}fast/
         PAWX=${EXEDIR}ppaw_fast.x
-        F90PP="${F90PP} -archdec -DCPPVARABLE_DEC -DCPPVARABLE_PARALLEL"
+        F90PP="${F90PP} -archdec -DCPPVARIABLE_ABS -DCPPVARIABLE_PARALLEL"
         COMPILE=$ABS_COMPILE_OP
 	LLIBS="$LLIBS -L${MPIDIR}/lib/ -lmpich -lfmpich "
         LINK=${ABS_LINK}
@@ -384,20 +382,28 @@ case "$ARCH" in
         PARALLEL=T
       ;;
       *)
-       echo "OPT=$OPT not recognized"
+       echo "OPT=$OPT not recognized"f
        exit 1
       ;;
     esac
     COMPILE="${COMPILE} -L${OBJDIR}  -I${OBJDIR} -p${OBJDIR} "
-    LINK="${LINK} -I${OBJDIR} -L${OBJDIR} -L${FFTWDIR}/fftw/.libs "
-    LINK="${LINK} -L${ATLASDIR}"
-#   xerbla.o is a c-code required for atlas blas routine   
-    LLIBS="$LLIBS -llapack -lU77 -lf77blas  -latlas  -lfftw xerbla.o"
-#   LLIBS="$LLIBS -lblas -llapack -lfftw -lU77" # for source blas routines
-    COMPILE77="${COMPILE}"
+    LINK="${LINK} -I${OBJDIR} -L${OBJDIR}"
+    LLIBS="$LLIBS -lU77" # absoft suuport library
+#   ==  fftw ===============================================
+    LLIBS="$LLIBS -lfftw "
+    LINK="${LINK} -L${FFTWDIR}/fftw/.libs "
     cp ${FFTWDIR}/fortran/fftw_f77.i ${OBJDIR}/FFTW_F77.I
+#   ==  ATlas blas ======
+#   the source library lapack is used instead of the one suppliued by atlas
+#   xerbla.o is a c-code required for atlas blas routine   
+    LINK="${LINK} -L${ATLASDIR}/lib/${ATLASSPEC}"
+#   Attention! the order in which the libraries are supplied is critical!!!
+    LLIBS="$LLIBS -llapack -lf77blas -latlas"
+    cp ${ATLASDIR}/interfaces/blas/F77/src/${ATLASSPEC}/xerbla.o ${OBJDIR}/
+    COMPILE77="${COMPILE}"
+#   ==  MPI ==============================================
     cp ${MPIDIR}/include/mpif.h ${OBJDIR}/MPIF90.H
-    cp ${PAWDIR}/Libraries/Packages/xerbla.o ${OBJDIR}/
+#   cp ${LIBDIR}/xerbla.o ${OBJDIR}/
     ;;
   #========================================================================
   #==  Portland group compiler                                           ==
@@ -424,7 +430,7 @@ case "$ARCH" in
       NP)
         OBJDIR=${OBJDIR}none/
         PAWX=${EXEDIR}ppaw.x
-        F90PP="${F90PP} -archpgi -DCPPVARABLE_DEC  -DCPPVARABLE_PARALLEL"
+        F90PP="${F90PP} -archpgi -DCPPVARIABLE_PGI  -DCPPVARIABLE_PARALLEL"
         COMPILE=$ABS_COMPILE_NP
         LINK=${ABS_LINK}
         OPTRM="rm " 
@@ -433,7 +439,7 @@ case "$ARCH" in
       O)
         OBJDIR=${OBJDIR}fast/
         PAWX=${EXEDIR}paw_fast.x
-        F90PP="${F90PP} -archpgi -DCPPVARABLE_DEC"
+        F90PP="${F90PP} -archpgi -DCPPVARIABLE_PGI"
         COMPILE=$ABS_COMPILE_O
         LINK=${ABS_LINK}
         OPTRM="rm " 
@@ -441,7 +447,7 @@ case "$ARCH" in
       OP)
         OBJDIR=${OBJDIR}fast/
         PAWX=${EXEDIR}ppaw_fast.x
-        F90PP="${F90PP} -archpgi -DCPPVARABLE_DEC  -DCPPVARABLE_PARALLEL"
+        F90PP="${F90PP} -archpgi -DCPPVARIABLE_PGI  -DCPPVARIABLE_PARALLEL"
         COMPILE=$ABS_COMPILE_OP
         LINK=${ABS_LINK}
         OPTRM="rm " 
@@ -487,8 +493,7 @@ if [ $RC -ne 0 ] ; then
 else
    echo "compilation finished - no errors detected  ..."
 fi  
-return 0
-
+exit 0
 
 
 
