@@ -520,7 +520,8 @@ END MODULE FILEHANDLER_MODULE
       IERR=1
       IF(FILE_%OPEN) THEN
         IERR=2
-        CLOSE(FILE_%UNIT,IOSTAT=IOS,ERR=9999)
+        CLOSE(FILE_%UNIT,IOSTAT=IOS)
+        call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
         FILE_%OPEN=.FALSE.
       ELSE
         IERR=3
@@ -528,7 +529,8 @@ END MODULE FILEHANDLER_MODULE
           IF(I.EQ.0) CYCLE
           IF(I.EQ.5) CYCLE
           IF(I.EQ.6) CYCLE
-          INQUIRE(UNIT=I,OPENED=OD,ERR=9999,IOSTAT=IOS)
+          INQUIRE(UNIT=I,OPENED=OD,IOSTAT=IOS)
+          call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
           IF(.NOT.OD) THEN
             FILE_%UNIT=I
             GOTO 200
@@ -578,22 +580,24 @@ END MODULE FILEHANDLER_MODULE
 !     ==================================================================
       IF(TRIM(FILE_%PERMISSION).EQ.'N') THEN
         IERR=4
-        OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,ERR=9999 &
+        OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
      &    ,FILE=FILE_%NAME &
      &    ,STATUS=FILE_%STATUS &
      &    ,FORM=FORM &
      &    ,POSITION=FILE_%POSITION)
+         call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
       ELSE
         IERR=5
 #IF DEFINED(CPPVAR_ENDIANCHECK)
         if(FORM.eq.'FORMATTED') then
 #ENDIF
-        OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,ERR=9999 &
+        OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
      &      ,FILE=FILE_%NAME &
      &      ,STATUS=FILE_%STATUS &
      &      ,FORM=FORM &
      &      ,POSITION=FILE_%POSITION &
      &      ,ACTION=ACTION)
+         call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
 #IF DEFINED(CPPVAR_ENDIANCHECK)
         ELSE
           CALL FILEHANDLER_READCONVERT(FILE_,FORM,CONVERT)
@@ -605,23 +609,25 @@ END MODULE FILEHANDLER_MODULE
           IF(TOPENIBM) THEN 
             !FILE IS IBM COMPATIBLE AND HAS TO STAY SO
 PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED IBM-COMPATIBLE'
-            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,ERR=9999 &
+            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
                   &    ,FILE=FILE_%NAME &
                   &    ,STATUS=FILE_%STATUS &
                   &    ,FORM=FORM &
                   &    ,POSITION=FILE_%POSITION &
                   &    ,ACTION=ACTION &
                   &    ,CONVERT='BIG_ENDIAN')            
+            call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
           ELSE
             ! FILE IS INTEL COMPATIBLE
 PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPATIBLE'
-            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,ERR=9999 &
+            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
                   &    ,FILE=FILE_%NAME &
                   &    ,STATUS=FILE_%STATUS &
                   &    ,FORM=FORM &
                   &    ,POSITION=FILE_%POSITION &
                   &    ,ACTION=ACTION &
                   &    ,CONVERT='LITTLE_ENDIAN')
+            call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
          END IF
         END IF
 #ENDIF
@@ -641,7 +647,24 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
 !     FILE_%POSITION='ASIS'
       FILE_%USED=.TRUE.
       RETURN
- 9999 CONTINUE
+      END
+!
+!     ..................................................................
+      SUBROUTINE FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+!     ******************************************************************
+!     ******************************************************************
+      USE STRINGS_MODULE
+      USE FILEHANDLER_MODULE, ONLY : FILE_TYPE
+      IMPLICIT NONE
+      TYPE (FILE_TYPE),INTENT(IN) :: FILE_
+      INTEGER(4)      ,INTENT(IN) :: IOS
+      INTEGER(4)                  :: NFIL
+      CHARACTER(9)                :: DEVNULL
+      CHARACTER(128)              :: IOSTATMESSAGE
+!     ******************************************************************
+      DEVNULL=-'/DEV/NULL'
+      IF(IOS.EQ.0) RETURN 
+      IF(FILE_%NAME.EQ.DEVNULL) RETURN
       CALL FILEHANDLER$IOSTATMESSAGE(IOS,IOSTATMESSAGE)
       CALL ERROR$MSG('IO ERROR')
       CALL ERROR$I4VAL('IOS ',IOS)
@@ -651,26 +674,7 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
       CALL ERROR$CHVAL('POSITION ',FILE_%POSITION)
       CALL ERROR$CHVAL('IOS ',IOSTATMESSAGE)
       CALL ERROR$STOP('FILEHANDLER_OPEN')
-      END
-!
-!     ..................................................................
-      SUBROUTINE FILEHANDLER_CLOSE(FILE_)
-!     ******************************************************************
-!     ******************************************************************
-      USE FILEHANDLER_MODULE, ONLY : FILE_TYPE
-      IMPLICIT NONE
-      TYPE (FILE_TYPE),INTENT(INOUT) :: FILE_
-      INTEGER(4)                     :: NFIL
-!     ******************************************************************
-      IF(.NOT.FILE_%OPEN) RETURN
-      NFIL=FILE_%UNIT
-      IF(NFIL.EQ.0.OR.NFIL.EQ.5.OR.NFIL.EQ.6) RETURN
-!     INQUIRE(UNIT=NFIL,POSITION=FILE_%POSITION)
-      IF(FILE_%POSITION.EQ.'ASIS')FILE_%POSITION='APPEND'
-      CLOSE(NFIL)
-      FILE_%OPEN=.FALSE.
-      FILE_%UNIT=-1      
-      RETURN
+      STOP
       END
 !
 !     ..................................................................
@@ -768,6 +772,26 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
         INQUIRE(NFIL,NAME=STRING)
         PRINT*,STRING
       END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE FILEHANDLER_CLOSE(FILE_)
+!     ******************************************************************
+!     ******************************************************************
+      USE FILEHANDLER_MODULE, ONLY : FILE_TYPE
+      IMPLICIT NONE
+      TYPE (FILE_TYPE),INTENT(INOUT) :: FILE_
+      INTEGER(4)                     :: NFIL
+!     ******************************************************************
+      IF(.NOT.FILE_%OPEN) RETURN
+      NFIL=FILE_%UNIT
+      IF(NFIL.EQ.0.OR.NFIL.EQ.5.OR.NFIL.EQ.6) RETURN
+!     INQUIRE(UNIT=NFIL,POSITION=FILE_%POSITION)
+      IF(FILE_%POSITION.EQ.'ASIS')FILE_%POSITION='APPEND'
+      CLOSE(NFIL)
+      FILE_%OPEN=.FALSE.
+      FILE_%UNIT=-1      
       RETURN
       END
 !
