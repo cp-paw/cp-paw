@@ -214,7 +214,7 @@ CALL TRACE$PASS('DONE')
       USE IO_MODULE
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-      USE mpe_MODULE
+      USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4)     ,INTENT(OUT)  :: NBEG
       INTEGER(4)     ,INTENT(OUT)  :: NOMORE
@@ -236,21 +236,21 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)                   :: TPR=.FALSE.
       INTEGER(4)                   :: ISVAR
       INTEGER                      :: IARGC   ! RETURNS #(COMMAND LINE OPTIONS)
-      INTEGER                      :: ntasks,thistask
+      INTEGER                      :: NTASKS,THISTASK
       EXTERNAL IARGC
       COMMON/VERSION/VERSIONTEXT
 !     ******************************************************************
                           CALL TRACE$PUSH('READIN')
-      call mpe$query(ntasks,thistask)
+      CALL MPE$QUERY(NTASKS,THISTASK)
 !
 !     ==================================================================
 !     ==  SET CONTROLFILENAME AND STANDARD ROOT                       ==
 !     ==================================================================
-!if(ntasks.gt.1) then
-!  cntlname='case.cntl'
-!  print*,'attention starting rootname hardwired to case in paw_ioroutines!!!!'
-!  print*,'sorry!'
-!else
+!IF(NTASKS.GT.1) THEN
+!  CNTLNAME='CASE.CNTL'
+!  PRINT*,'ATTENTION STARTING ROOTNAME HARDWIRED TO CASE IN PAW_IOROUTINES!!!!'
+!  PRINT*,'SORRY!'
+!ELSE
       IF(THISTASK.EQ.1) THEN
         IF (IARGC().LT.1) THEN
           CALL ERROR$MSG('THE NAME OF THE CONTROLFILE')
@@ -804,7 +804,7 @@ CALL TRACE$PASS('DONE')
         CALL LINKEDLIST$SET(LL_CNTL,'TYPE',0,1)
       END IF
       CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,ILDA)
-Print*,'ilda ',ilda
+PRINT*,'ILDA ',ILDA
       CALL DFT$SETI4('TYPE',ILDA)
                           CALL TRACE$POP
       RETURN
@@ -819,10 +819,10 @@ Print*,'ilda ',ilda
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)         :: LL_CNTL
-      LOGICAL(4)            :: TCHK,tchk1
+      LOGICAL(4)            :: TCHK,TCHK1
       REAL(8)               :: EPWPSI    ! WAVE FUNCTION PLANE WAVE CUTOFF
       REAL(8)               :: EPWRHO    ! DENSITY PLANE WAVE CUTOFF
-      REAL(8)               :: EpwBUCKET   ! MIN ENERGY FOR BUCKET POTENTIAL
+      REAL(8)               :: EPWBUCKET   ! MIN ENERGY FOR BUCKET POTENTIAL
       REAL(8)               :: BUCKETPAR ! PARAMETER FOR BUCKET POTENTIAL
       REAL(8)               :: CDUAL     ! EPWRHO=EPWPSI*CDUAL
       REAL(8)               :: RY        ! RYDBERG
@@ -966,7 +966,7 @@ Print*,'ilda ',ilda
       IF(.NOT.TCHK) THEN
          EMASSCG2=0.5D0*(10.D0/(2.D0*PI))**2*DT**2/EMASS
          CALL LINKEDLIST$SET(LL_CNTL,'MPSICG2',0,EMASSCG2)
-!        CALL LINKEDLIST$SET(LL_CNTL,'MPSICG2',0,0.d0)
+!        CALL LINKEDLIST$SET(LL_CNTL,'MPSICG2',0,0.D0)
       END IF
       CALL LINKEDLIST$CONVERT(LL_CNTL,'MPSICG2',1,'R(8)')
       CALL LINKEDLIST$GET(LL_CNTL,'MPSICG2',1,EMASSCG2)
@@ -1502,6 +1502,8 @@ Print*,'ilda ',ilda
         CALL DIALS$SELECT('..')
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO
+      CALL READIN_AUTO(LL_CNTL,'OCC',9.6D-2,1.D0,0.5D0,1.D0)
+
                            CALL TRACE$POP
       RETURN
       END

@@ -403,6 +403,10 @@
       CALL WAVES$ETOT
 !     == EXTERNAL POTENTIAL ACTING ON ATOMS ============================
       CALL VEXT$APPLY
+!     == occupations ===================================================
+      CALL DYNOCC$GETR8('EPOT',SVAR)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
+      CALL ENERGYLIST$SET('ELECTRONIC HEAT',SVAR)
 !
 !     ==================================================================
 !     ==================================================================
@@ -485,9 +489,6 @@
 !     ==  PROPAGATE OCCUPATIONS                                       ==
 !     ==================================================================
       CALL DYNOCC$PROPAGATE()
-      CALL DYNOCC$GETR8('EPOT',SVAR)
-      CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
-      CALL ENERGYLIST$SET('ELECTRONIC HEAT',SVAR)
 ! 
 !     ==================================================================
 !     ==  PROPAGATE THERMOSTAT FOR THE NUCLEI                         ==
@@ -930,7 +931,7 @@ print*,'ecellkin/pot ',ecellkin,ecellpot,ECELLKIN+ECELLPOT
         ECONS=ECONS+EKINFC
 !
 !       == OCCUPATIONS =================================================
-        CALL ENERGYLIST$RETURN('ELECTRONIC HEAT',HEAT) ! -T*S_MERMIN
+        CALL ENERGYLIST$RETURN('EPOT',HEAT) ! -T*S_MERMIN-MU*N-B*S
         CALL ENERGYLIST$RETURN('OCCUPATION KINETIC ENERGY',OCCKIN)
         ECONS=ECONS+HEAT+OCCKIN
 !

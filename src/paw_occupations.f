@@ -645,8 +645,6 @@ PRINT*,'WGHT',WGHT
          DATA_=SPINCHA    
        ELSE IF(ID_.EQ.'TOTCHA') THEN
          DATA_=TOTCHA-SUMOFZ
-       ELSE IF(ID_.EQ.'-MU*N') THEN
-         DATA_=TOTPOT*(TOTCHA-SUMOFZ)
        ELSE IF(ID_.EQ.'FMAX') THEN
          DATA_=FMAX
        ELSE IF(ID_.EQ.'EKIN') THEN
@@ -662,6 +660,8 @@ PRINT*,'WGHT',WGHT
          DATA_=0.5D0*MX*SVAR*FMAX
          IF(.NOT.TDYN) DATA_=0.D0
        ELSE IF(ID_.EQ.'HEAT'.OR.ID_.EQ.'EPOT') THEN
+!        == REMARK: THE KEYWORD 'HEAT' SHOULD NOT BE USED ANY MORE
+!        == ENERGY OF RESERVOIRS: -T*S-MU*N
          SUM=0.D0
          DO ISPIN=1,NSPIN
            DO IKPT=1,NKPT
@@ -671,7 +671,24 @@ PRINT*,'WGHT',WGHT
              ENDDO
            ENDDO
          ENDDO
-         DATA_=TEMP*SUM*FMAX
+         DATA_=TEMP*SUM*FMAX-TOTPOT*(TOTCHA-SUMOFZ)
+!        == THE CHEMICAL POTENTIAL FOR SPIN DIRECTION ISPIN IS
+!        == TOTPOT-DBLE(3-2*ISPIN)*SPINPOT
+         DO ISPIN=1,NSPIN
+           SUM=0.D0
+           DO IKPT=1,NKPT
+             DO IB=1,NB
+               CALL DYNOCC_FOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
+               SUM=SUM+SVAR*FMAX*WKPT(IKPT)
+             ENDDO
+           ENDDO        
+           IF(.NOT.TFIXTOT) THEN
+             DATA_=DATA_-TOTPOT*(SUM-SUMOFZ)
+           END IF
+           IF(.NOT.TFIXSPIN) THEN
+             DATA_=DATA_-DBLE(3-2*ISPIN)*SPINPOT*(SUM-SUMOFZ)
+           END IF
+         ENDDO
        ELSE IF(ID_.EQ.'TEMP') THEN
          DATA_=TEMP
        ELSE
@@ -1288,7 +1305,7 @@ PRINT*,'INITIALIZE OCCUPATIONS WITHOUT EIGENVALUES'
        INTEGER(4)           :: ISVAR
 REAL(8)::EV
        LOGICAL(4)           :: TCONV
-       REAL(8)              :: QTOL=1.D-5
+       REAL(8)              :: QTOL=1.D-10
        INTEGER(4),PARAMETER :: NITER=1000
        INTEGER(4)           :: ITER
 !      *****************************************************************

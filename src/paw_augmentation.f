@@ -210,7 +210,7 @@ END MODULE AUGMENTATION_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT &
+      SUBROUTINE AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT,denmati &
      &                              ,LMRX,VQLM,RHOB,DATH,DO)
 !     ******************************************************************
 !     **                                                              **
@@ -227,6 +227,7 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),INTENT(IN)   :: LMNX
       INTEGER(4),INTENT(IN)   :: NDIMD
       REAL(8)   ,INTENT(INOUT):: DENMAT(LMNX,LMNX,NDIMD)
+      REAL(8)   ,INTENT(INOUT):: DENMATI(LMNX,LMNX,NDIMD)
       INTEGER(4),INTENT(IN)   :: LMRX
       REAL(8)   ,INTENT(INOUT):: VQLM(LMRX)
       REAL(8)   ,INTENT(IN)   :: RHOB

@@ -141,6 +141,7 @@ CONTAINS
         INTEGER(4)            :: I1,I2,J1,J2
         INTEGER(4)            :: INDEX(NPRO)
 !       ****************************************************************
+        index(:)=0
         I1=0
         DO J1=1,NWAVE
           IF(LPHI(J1).EQ.L) THEN
@@ -151,6 +152,10 @@ CONTAINS
         ENDDO
         DO I1=1,NPRO
           J1=INDEX(I1)
+          if(j1.eq.0) then
+            call error$msg('out of range')
+            call error$stop('PROJECTION$POT')
+          end if
           IF(PRESENT(PROL))   PROL(:,I1)=PRO(:,J1)
           IF(PRESENT(AEPHIL)) AEPHIL(:,:,I1)=AEPHI(:,:,J1)
           IF(PRESENT(PSPHIL)) PSPHIL(:,:,I1)=PSPHI(:,:,J1)
@@ -1664,7 +1669,7 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
 !         DO IR=1,IRAUG-1
 !           IF(AEPHI(IR,1,IWAVE)*AEPHI(IR+1,1,IWAVE).LT.0.D0)N=N+1
 !         ENDDO
-!         EWAVE(IWAVE)=E
+          EWAVE(IWAVE)=E
         END IF
 !
 !       ================================================================
@@ -2177,7 +2182,7 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
      &               +(PSPOT(IR)*Y0-ELN(N1))*PSPHI(IR,1,N1) 
         ENDDO
         DO IR=IRAUG+1,NR
-          PRO(IR,N1)=0.D0
+           PRO(IR,N1)=0.D0
         ENDDO
 !
 !       == CORRECT IF PROJECTOR ZERO ===================================
@@ -2210,6 +2215,11 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
           PRINT*,' PROJECTOR IS REPLACED'
         END IF
       ENDDO
+!print*,'l,n1 ',l,npro
+!do ir=1,nr
+!write(*,*)r1*exp(dex*real(ir-1)),pro(ir,:)/psphi(ir,1,:)
+!enddo
+!stop
 !
 !     ==================================================================
 !     ==  ORTHONORMALIZE PROJECTORS                                   ==
@@ -2221,7 +2231,8 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
           DO IR=1,NR
             AUX1(IR)=R(IR)**2*PSPHI(IR,1,N1)*PRO(IR,N2)
           ENDDO 
-          CALL RADIAL$INTEGRAL(R1,DEX,IRAUG,AUX1,SVAR)
+!          CALL RADIAL$INTEGRAL(R1,DEX,IRAUG,AUX1,SVAR)
+CALL RADIAL$INTEGRAL(R1,DEX,nr,AUX1,SVAR)
           DO I=1,3
             DO IR=1,NR
               PSPHI(IR,I,N1)=PSPHI(IR,I,N1)-PSPHI(IR,I,N2)*SVAR
@@ -2253,7 +2264,8 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
           DO IR=1,NR
             AUX1(IR)=R(IR)**2*PSPHI(IR,1,N2)*PRO(IR,N1)
           ENDDO 
-          CALL RADIAL$INTEGRAL(R1,DEX,IRAUG,AUX1,SVAR)
+!          CALL RADIAL$INTEGRAL(R1,DEX,IRAUG,AUX1,SVAR)
+CALL RADIAL$INTEGRAL(R1,DEX,nr,AUX1,SVAR)
           DO IR=1,NR
             PRO(IR,N1)=PRO(IR,N1)-PRO(IR,N2)*SVAR
           ENDDO
@@ -2263,7 +2275,8 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
         DO IR=1,NR
           AUX1(IR)=R(IR)**2*PSPHI(IR,1,N1)*PRO(IR,N1)
         ENDDO
-        CALL RADIAL$INTEGRAL(R1,DEX,IRAUG,AUX1,SVAR)
+!        CALL RADIAL$INTEGRAL(R1,DEX,iraug,AUX1,SVAR)
+ CALL RADIAL$INTEGRAL(R1,DEX,nr,AUX1,SVAR)
         SVAR=1.D0/SVAR
         DO IR=1,NR
           PRO(IR,N1)=PRO(IR,N1)*SVAR
@@ -2291,6 +2304,7 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
         DO(:,N1)   =DO(:,N1)*SVAR
         DO(N1,:)   =SVAR*DO(N1,:)
       ENDDO
+
 !
 !     ==================================================================
 !     ==  TEST                                                        ==
@@ -3599,7 +3613,7 @@ PRINT*,'WARNING! CODE FUDGED'
       IMPLICIT NONE
       INTEGER(4)      :: NFIL
       REAL(8)         :: PSZ=0.D0   !DUMMY: NOT USED
-      INTEGER(4)      :: IWAVE
+      INTEGER(4)      :: IWAVE,ir
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('SETUPO',NFIL)
       WRITE(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F15.12)') &

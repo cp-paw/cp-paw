@@ -512,10 +512,6 @@ END MODULE WAVES_MODULE
         TSWAPSTATES=VAL
       ELSE IF(ID.EQ.'RANDOMIZE') THEN
         TRANDOM=VAL
-        IF(TRANDOM) THEN
-          CALL ERROR$MSG('WAVE FUNCTION RANDOMIZATION NOT YET IMPLEMENTED')
-          CALL ERROR$STOP('WAVES$SETL4')
-        END IF
       ELSE IF(ID.EQ.'HAMILTON') THEN
         THAMILTON=VAL
       ELSE IF(ID.EQ.'FORCE') THEN
@@ -773,9 +769,12 @@ END MODULE WAVES_MODULE
       REAL(8)   ,ALLOCATABLE :: RHO1(:,:) ! AUXILIARY DENSITY ARRAY
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:)     ! <PRO|PSI0>
       REAL(8)   ,ALLOCATABLE :: DENMAT(:,:,:,:) ! 1CENTER DENSITY MATRIX
+      REAL(8)   ,ALLOCATABLE :: DENMATI(:,:,:,:) ! 1CENTER DENSITY MATRIX
+!                     (Imaginary part for spin orbit and current densities)
       REAL(8)   ,ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
       REAL(8)   ,ALLOCATABLE :: DO(:,:,:,:)     ! 1CENTER OVERLAP
       REAL(8)   ,ALLOCATABLE :: DENMAT1(:,:,:)  ! 1CENTER DENSITY MATRIX
+      REAL(8)   ,ALLOCATABLE :: DENMATI1(:,:,:) ! 1CENTER DENSITY MATRIX (Imag)
       REAL(8)   ,ALLOCATABLE :: DH1(:,:,:)      ! 1CENTER DENSITY MATRIX
       REAL(8)   ,ALLOCATABLE :: DOV1(:,:,:)      ! 1CENTER DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: DEDPRO(:,:)     ! DE/DPRO
@@ -810,6 +809,7 @@ END MODULE WAVES_MODULE
       COMPLEX(8),ALLOCATABLE :: EIGR(:)
       REAL(8)   ,ALLOCATABLE :: EIG(:,:,:)
       REAL(8)                :: GWEIGHT
+      REAL(8)   ,ALLOCATABLE :: G2(:)      !G**2
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)  !GI
       REAL(8)   ,ALLOCATABLE :: GIJ(:,:)   !GI*GJ/G2
       REAL(8)                :: SVAR
@@ -817,6 +817,7 @@ END MODULE WAVES_MODULE
       LOGICAL(4)             :: TSTRESS
       LOGICAL(4)             :: TFORCE
       LOGICAL(4)             :: Tchk
+      LOGICAL(4)             :: TSO=.FALSE. ! EVALUATE DENMATI
       real(8)                :: pi
       complex(8),ALLOCATABLE :: qmat(:,:)   
       integer(4)             :: nfilo
@@ -879,6 +880,12 @@ END MODULE WAVES_MODULE
           NB=THIS%NB
           NBH=THIS%NBH
           IF(TFIRST) THEN
+            IF(TRANDOM) THEN
+              ALLOCATE(G2(NGL))
+              CALL PLANEWAVE$GETR8A('G2',NGL,G2)
+              CALL WAVES_RANDOMIZE(NGL,NDIM,NBH,AMPRANDOM,G2,THIS%PSIM)
+              DEALLOCATE(G2)
+            END IF
             CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSI0)
             CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSIM)
 !
@@ -939,6 +946,10 @@ CALL TIMING$CLOCKON('W:1CD')
       ENDDO
       ALLOCATE(DENMAT(LMNXX,LMNXX,NDIMD,NAT))
       DENMAT(:,:,:,:)=0.D0
+      if(tso) then
+        ALLOCATE(DENMATI(LMNXX,LMNXX,NDIMD,NAT))
+        DENMATI(:,:,:,:)=0.D0
+      end if
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -952,15 +963,21 @@ CALL TIMING$CLOCKON('W:1CD')
             ALLOCATE(PROJ(NDIM,NBH,LMNX))
             PROJ(:,:,:)=THIS%PROJ(:,:,IPRO:IPRO-1+LMNX)
             ALLOCATE(DENMAT1(LMNX,LMNX,NDIMD))
+            ALLOCATE(DENMATI1(LMNX,LMNX,NDIMD))
             CALL WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC(1,IKPT,ISPIN),PROJ &
-     &                       ,DENMAT1)
+     &                       ,DENMAT1,denmati1)
             IF(NDIM.EQ.1) THEN
               DENMAT(1:LMNX,1:LMNX,ISPIN,IAT) &
      &                   =DENMAT(1:LMNX,1:LMNX,ISPIN,IAT)+DENMAT1(:,:,1)
             ELSE
               DENMAT(1:LMNX,1:LMNX,:,IAT) &
      &                       =DENMAT(1:LMNX,1:LMNX,:,IAT)+DENMAT1(:,:,:)
+              if(tso) then
+                DENMATI(1:LMNX,1:LMNX,:,IAT) &
+     &                       =DENMATI(1:LMNX,1:LMNX,:,IAT)+DENMATI1(:,:,:)
+              end if
             ENDIF
+            DEALLOCATE(DENMATi1)
             DEALLOCATE(DENMAT1)
             DEALLOCATE(PROJ)
             IPRO=IPRO+LMNX
@@ -1085,16 +1102,23 @@ CALL TIMING$CLOCKON('W:SPHERE')
         LMNX=MAP%LMNX(ISP)
         CALL SETUP$LMRX(ISP,LMRX)
         ALLOCATE(DENMAT1(LMNX,LMNX,NDIMD))
+        DENMAT1(:,:,:)=DENMAT(1:LMNX,1:LMNX,:,IAT)
+        ALLOCATE(DENMATI1(LMNX,LMNX,NDIMD))
+        if(tso) then
+          DENMATI1(:,:,:)=DENMATI(1:LMNX,1:LMNX,:,IAT)
+        else
+          DENMATI1(:,:,:)=0.d0
+        end if
         ALLOCATE(DH1(LMNX,LMNX,NDIMD))
         ALLOCATE(DOV1(LMNX,LMNX,NDIMD))
-        DENMAT1(:,:,:)=DENMAT(1:LMNX,1:LMNX,:,IAT)
-        CALL AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT1 &
+        CALL AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT1,denmati1 &
      &               ,LMRX,VQLM(1,IAT),RHOB,DH1,DOV1)
         DH(1:LMNX,1:LMNX,:,IAT)=DH1(:,:,:)
         DO(1:LMNX,1:LMNX,:,IAT)=DOV1(:,:,:)
-        DEALLOCATE(DENMAT1)
         DEALLOCATE(DH1)
         DEALLOCATE(DOV1)
+        DEALLOCATE(DENMATI1)
+        DEALLOCATE(DENMAT1)
       ENDDO
       CALL MPE$COMBINE('+',DH)
       DEALLOCATE(DO)  !NOT USED YET....
@@ -1171,6 +1195,7 @@ ELSE
   ENDDO 
 END IF
       DEALLOCATE(DENMAT)
+      DEALLOCATE(DENMATI)
 !
 !     ==================================================================
 !     == DECOMPOSE INTO SPIN-UP AND SPIN DOWN FOR NSPIN=2             ==
@@ -1601,7 +1626,7 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,PROPSI,DENMAT)
+      SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,PROPSI,DENMAT,denmati)
 !     ******************************************************************
 !     **                                                              **
 !     **  EVALUATE ONE-CENTER DENSITY MATRIX                          **
@@ -1625,11 +1650,13 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       REAL(8)   ,INTENT(IN) :: OCC(NB)! OCCUPATIONS
       COMPLEX(8),INTENT(IN) :: PROPSI(NDIM,NBH,LMNX) !<PRO|PSI>
       REAL(8)   ,INTENT(OUT):: DENMAT(LMNX,LMNX,NDIM**2)
+      REAL(8)   ,INTENT(OUT):: DENMATI(LMNX,LMNX,NDIM**2)
       COMPLEX(8)            :: DENMAT1(LMNX,LMNX,NDIM,NDIM)
       COMPLEX(8)            :: FUNC(LMNX,NDIM)
       LOGICAL(4)            :: TINV
       INTEGER(4)            :: LMN1,LMN2,IDIM1,IDIM2,IB
       REAL(8)               :: SUM,SVAR1,SVAR2,SVAR
+      COMPLEX(8)            :: csvar
       INTEGER(4)            :: NDIMD,IDIM
 !     ******************************************************************
       NDIMD=NDIM**2
@@ -1696,14 +1723,18 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       ELSE IF(NDIM.EQ.2) THEN  !== TOTAL DENSITY, X,Y,Z SPIN DENSITY ==
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
-            DENMAT(LMN1,LMN2,1)=  REAL(DENMAT1(LMN1,LMN2,1,1) &       
-    &                                 +DENMAT1(LMN1,LMN2,2,2))       
-            DENMAT(LMN1,LMN2,2)=  REAL(DENMAT1(LMN1,LMN2,1,2)  &      
-    &                                 +DENMAT1(LMN1,LMN2,2,1))     
-            DENMAT(LMN1,LMN2,3)=-AIMAG(DENMAT1(LMN1,LMN2,1,2) &       
-    &                                 -DENMAT1(LMN1,LMN2,2,1))
-            DENMAT(LMN1,LMN2,4)=  REAL(DENMAT1(LMN1,LMN2,1,1) &
-                                      -DENMAT1(LMN1,LMN2,2,2))     
+            csvar=DENMAT1(LMN1,LMN2,1,1)+DENMAT1(LMN1,LMN2,2,2)
+            DENMAT(LMN1,LMN2,1) = REAL(csvar)
+            DENMATI(LMN1,LMN2,1)=aimag(csvar)
+            csvar=DENMAT1(LMN1,LMN2,1,2)+DENMAT1(LMN1,LMN2,2,1)
+            DENMAT(LMN1,LMN2,2) = REAL(csvar)
+            DENMATI(LMN1,LMN2,2)=aimag(csvar)
+            csvar=DENMAT1(LMN1,LMN2,1,2)-DENMAT1(LMN1,LMN2,2,1)
+            DENMAT(LMN1,LMN2,3) =-AIMAG(csvar)
+            DENMATI(LMN1,LMN2,3)=+real(csvar)
+            csvar=DENMAT1(LMN1,LMN2,1,1)-DENMAT1(LMN1,LMN2,2,2)
+            DENMAT(LMN1,LMN2,4) = REAL(csvar)
+            DENMATI(LMN1,LMN2,4)=aimag(csvar)
           ENDDO
         ENDDO
       END IF
@@ -1717,6 +1748,9 @@ WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
             SVAR=0.5D0*(DENMAT(LMN1,LMN2,IDIM)+DENMAT(LMN2,LMN1,IDIM))
             DENMAT(LMN1,LMN2,IDIM)=SVAR
             DENMAT(LMN2,LMN1,IDIM)=SVAR
+            SVAR=0.5D0*(DENMATI(LMN1,LMN2,IDIM)-DENMATI(LMN2,LMN1,IDIM))
+            DENMATi(LMN1,LMN2,IDIM)= SVAR
+            DENMATi(LMN2,LMN1,IDIM)=-SVAR
           ENDDO
         ENDDO
       ENDDO
@@ -5584,6 +5618,50 @@ PRINT*,'ITER ',ITER,DIGAM
       END
 !
 !     ......................................................RANWAV......
+      SUBROUTINE WAVES_randomize(NG,NDIM,NB,amplitude,G2,PSI)
+!     ******************************************************************
+!     **                                                              **
+!     **  CREATE RANDOM WAVE FUNCTIONS                                **
+!     **                                                              **
+!     **  THE MAXIMUM WEIGHT OF THE WAVE FUNCTIONS AT EPW[RY]=GC2     **
+!     **                                                              **
+!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NB              ! #(BANDS)
+      INTEGER(4),INTENT(IN)    :: NG              ! #(PLANE WAVES),MAX
+      INTEGER(4),INTENT(IN)    :: NDIM            ! #(PLANE WAVES),MAX
+      REAL(8)   ,INTENT(IN)    :: amplitude       ! scale factor
+      REAL(8)   ,INTENT(IN)    :: G2(NG)          ! G**2
+      COMPLEX(8),INTENT(INOUT) :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
+      INTEGER(4)               :: IB,IG,IDIM
+      REAL(8)                  :: PI,GC,FAC
+      REAL(8)   ,PARAMETER     :: GC2=10.D0
+      REAL(8)                  :: SCALE(NG)
+      REAL(8)                  :: REC,RIM
+!     ******************************************************************
+      PI=4.D0*DATAN(1.D0)
+      FAC=2.D0*SQRT(PI*GC2)
+      FAC=FAC**3/REAL(NDIM,8)*(2.D0/3.D0)
+      FAC=amplitude/FAC
+      DO IG=1,NG
+        SCALE(IG)=FAC*EXP(-0.5D0*G2(IG)/GC2)
+      ENDDO
+      CALL LIB$RANDOMSEED
+      DO IB=1,NB
+        DO IDIM=1,NDIM
+          DO IG=1,NG
+            CALL LIB$RANDOM(REC)
+            CALL LIB$RANDOM(RIM)
+            REC=2.D0*REC-1.D0
+            RIM=2.D0*RIM-1.D0
+            PSI(IG,IDIM,IB)=psi(ig,idim,ib)+CMPLX(REC,RIM)*SCALE(IG)
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ......................................................RANWAV......
       SUBROUTINE WAVES_INITIALIZERANDOM(NG,NDIM,NB,G2,PSI)
 !     ******************************************************************
 !     **                                                              **
@@ -5597,7 +5675,7 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4),INTENT(IN)    :: NG              ! #(PLANE WAVES),MAX
       INTEGER(4),INTENT(IN)    :: NDIM            ! #(PLANE WAVES),MAX
       REAL(8)   ,INTENT(IN)    :: G2(NG)          ! G**2
-      COMPLEX(8),INTENT(INOUT) :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
+      COMPLEX(8),INTENT(OUT)   :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
       INTEGER(4)               :: IB,IG,IDIM
       REAL(8)                  :: PI,GC,FAC
       REAL(8)   ,PARAMETER     :: GC2=10.D0

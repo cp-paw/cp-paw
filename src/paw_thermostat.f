@@ -661,6 +661,8 @@ print*,'therm xp     ',xp,x0,xm
       ELSE IF(ID.EQ.'EKIN') THEN
         VAL=THIS%EKIN
       ELSE IF(ID.EQ.'EPOT') THEN
+        THIS%EPOT   = 2.D0*THIS%EKIN_TARGET*THIS%X0
+        IF(THIS%TWAVE) THIS%EPOT=0.D0
         VAL=THIS%EPOT
       ELSE IF(ID.EQ.'EDISS') THEN
         VAL=THIS%EDISS
