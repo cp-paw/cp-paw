@@ -1341,13 +1341,13 @@ integer(4) :: ntasks,thistask
          SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
            DO IB=1,NB
-!            == FORCE FROM BANDS AND CHEMICAL POTENTIAL ===============
+!            == FORCE FROM BANDS ======================================
              CALL DYNOCC_FOFX(X0(IB,IKPT,ISPIN),OCC,DOCCDX)
              FORCE=-EPSILON(IB,IKPT,ISPIN)*DOCCDX
 !            FORCE=FORCE+(TOTPOT+SIGMA*SPINPOT)*DOCCDX
              IF(TMPSIDOT2) FORCE=FORCE+MPSIDOT2(IB,IKPT,ISPIN)*DOCCDX
              FX(IB,IKPT,ISPIN)=FORCE
-!            == FORCE FROM BANDS AND CHEMICAL POTENTIAL ===============
+!            == FORCE FROM entropy term ===============================
              CALL DYNOCC_SOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
              FX(IB,IKPT,ISPIN)=FX(IB,IKPT,ISPIN)-TEMP*DSVAR
            ENDDO
@@ -1393,6 +1393,7 @@ integer(4) :: ntasks,thistask
          Q0=0.D0
          S0=0.D0
          Q1=0.D0 
+
          S1=0.D0
          DO ISPIN=1,NSPIN
            SIGMA=DBLE(3-2*ISPIN)
@@ -1411,6 +1412,8 @@ integer(4) :: ntasks,thistask
               ENDDO
            ENDDO
          ENDDO
+CALL MPE$QUERY(NTASKS,THISTASK)
+WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,totpot,Q0-TOTCHA,q1
 !
 !        == CHECK CONVERGENCE ==========================================
          TCONV=.TRUE.
@@ -1455,10 +1458,10 @@ integer(4) :: ntasks,thistask
 !         ELSE
 !           SPINCHA=S0
 !         END IF
-CALL MPE$QUERY(NTASKS,THISTASK)
-WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,Q0-TOTCHA,TOTPOT,q1
        ENDDO
        IF(.NOT.TCONV) THEN
+!CALL MPE$QUERY(NTASKS,THISTASK)
+!WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,Q0-TOTCHA,TOTPOT,q1
          CALL ERROR$MSG('LOOP NOT CONVERGED') 
          CALL ERROR$R8VAL('DEVIATION TOTAL CHARGE',Q0)
          CALL ERROR$R8VAL('DEVIATION TOTAL SPIN',S0)
