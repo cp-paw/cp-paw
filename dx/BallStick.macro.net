@@ -1,7 +1,7 @@
 //
-// time: Tue Aug 17 09:16:15 2004
+// time: Thu Jan  6 21:20:22 2005
 //
-// version: 3.1.2 (format), 4.2.0 (DX)
+// version: 3.2.0 (format), 4.3.2 (DX)
 //
 //
 // Begin MDF
@@ -40,7 +40,7 @@ macro BallStick(
 BallStick_Input_1_out_1 = input_1;
     // 
     // node Glyph[1]: x = 41, y = 144, inputs = 7, label = Glyph
-    // input[4]: defaulting = 0, visible = 1, type = 5, value = .30000
+    // input[4]: defaulting = 0, visible = 1, type = 5, value = 0.80000
     // input[5]: defaulting = 0, visible = 1, type = 5, value = 0.00000
     // input[6]: defaulting = 0, visible = 1, type = 5, value = 0.00000
     // input[7]: visible = 1
@@ -50,35 +50,35 @@ BallStick_Glyph_1_out_1 =
     BallStick_Input_1_out_1,
     NULL,
     NULL,
-    .30000,
+    0.80000,
     0.00000,
     0.00000,
     NULL
     ) [instance: 1, cache: 1];
     // 
     // node Tube[1]: x = 251, y = 144, inputs = 4, label = Tube
-    // input[2]: defaulting = 0, visible = 1, type = 5, value = 0.300000
+    // input[2]: defaulting = 0, visible = 1, type = 5, value = 0.500000
     // input[3]: defaulting = 1, visible = 0, type = 1, value = NULL
     // input[4]: defaulting = 1, visible = 0, type = 32, value = NULL
     //
 BallStick_Tube_1_out_1 = 
     Tube(
     BallStick_Input_1_out_1,
-    0.300000,
+    0.500000,
     NULL,
     NULL
     ) [instance: 1, cache: 1];
     // 
     // node Color[1]: x = 239, y = 244, inputs = 5, label = Color
     // input[2]: defaulting = 0, visible = 1, type = 32, value = "steelblue"
-    // input[3]: defaulting = 0, visible = 1, type = 5, value = 0.4
+    // input[3]: defaulting = 0, visible = 1, type = 5, value = 1.
     // input[5]: defaulting = 1, visible = 0, type = 3, value = 1
     //
 BallStick_Color_1_out_1 = 
     Color(
     BallStick_Tube_1_out_1,
     "steelblue",
-    0.4,
+    1.,
     NULL,
     NULL
     ) [instance: 1, cache: 1];
@@ -134,14 +134,14 @@ BallStick_Collect_5_out_1 =
     ) [instance: 5, cache: 1];
     // 
     // node Tube[3]: x = 451, y = 144, inputs = 4, label = Tube
-    // input[2]: defaulting = 0, visible = 1, type = 5, value = 0.1
+    // input[2]: defaulting = 0, visible = 1, type = 5, value = 0.3
     // input[3]: defaulting = 0, visible = 0, type = 1, value = 3
     // input[4]: defaulting = 1, visible = 0, type = 32, value = NULL
     //
 BallStick_Tube_3_out_1 = 
     Tube(
     BallStick_Input_1_out_1,
-    0.1,
+    0.3,
     3,
     NULL
     ) [instance: 3, cache: 1];

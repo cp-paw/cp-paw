@@ -29,19 +29,19 @@ DEBUG="-g -C -d4"
 F77DEBUG="-g -C -d4"
 #
 #________________________________flags for linking 
-LFLAGS="-tpp7 -O3 -static "
+LFLAGS="-tpp7 -O3  "
 #
 #________________________________search directories for linking (sequential)
-LLINK="-L/homer/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.3/fftw/.libs/ -L/opt/intel/mkl/lib/32 "
+LLINK="-L/home/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32 "
 #
 #________________________________search directories for linking (parallel)
-PLLINK="-L/homer/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.3/fftw/.libs/ -L/opt/intel/mkl/lib/32 -L/homer/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5/lib"
+PLLINK="-L/home/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32 -L/home/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5/lib"
 #
 #________________________________external libraries (sequential)
-LIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_p4 -lguide -lpthread "
+LIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_ia32 -lguide -lpthread "
 #
 #________________________________external libraries (parallel)
-PLIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_p4 -lguide -lpthread -lfmpich -lmpich "
+PLIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_ia32 -lguide -lpthread -lfmpich -lmpich "
 #
 #________________________________preprocessor variables
 CPPVAR="-DCPPVAR_FFT_FFTW -DCPPVAR_U77"

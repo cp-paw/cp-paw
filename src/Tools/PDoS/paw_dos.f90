@@ -1774,10 +1774,10 @@ END MODULE READCNTL_MODULE
       DO IE=1,NE
         E=EMIN+(EMAX-EMIN)*DBLE(IE-1)/DBLE(NE-1)
         IF(NSPIN.EQ.1) THEN
-          WRITE(NFIL,FMT='(F11.5,4F11.5)') &
+          WRITE(NFIL,FMT='(F14.8,4F14.8)') &
      &          E/EV,DOS(IE,1,1),NOS(IE,1,1),DOS(IE,1,2),NOS(IE,1,2)
         ELSE
-          WRITE(NFIL,FMT='(F11.5,8F11.5)') &
+          WRITE(NFIL,FMT='(F14.8,8F14.8)') &
      &        E/EV,DOS(IE,1,1),NOS(IE,1,1) &
      &        ,-DOS(IE,2,1),-NOS(IE,2,1),DOS(IE,1,2),NOS(IE,1,2),&
      &         -DOS(IE,2,2),-NOS(IE,2,2)
