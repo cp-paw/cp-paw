@@ -1654,11 +1654,12 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
           CALL SCHROEDER(.TRUE.,.TRUE.,R1,DEX,NR,LPHI(IWAVE),E,AEZ &
      &              ,IRAUG+5,AUGMENTATIONRADIUS,AEPOT,AEPHI(:,:,IWAVE),AUX)
 !         == REPORT NUMBER OF NODES TO LINKEDLIST ======================
-          N=L+1
-          DO IR=1,IRAUG-1
-            IF(AEPHI(IR,1,IWAVE)*AEPHI(IR+1,1,IWAVE).LT.0.D0)N=N+1
-          ENDDO
-          EWAVE(IWAVE)=E
+!         l=lphi(iwave)!
+!         N=L+1
+!         DO IR=1,IRAUG-1
+!           IF(AEPHI(IR,1,IWAVE)*AEPHI(IR+1,1,IWAVE).LT.0.D0)N=N+1
+!         ENDDO
+!         EWAVE(IWAVE)=E
         END IF
 !
 !       ================================================================
@@ -1700,7 +1701,7 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
         CUT(IRAUG+1:NR)=0.D0
         CALL HBS(R1,DEX,NR,AUGMENTATIONRADIUS,CUT,TNORM &
      &            ,PSPOT,LPHI(IWAVE),E &
-     &            ,AEPHI(:,:,IWAVE),NODEC,PSPHI(:,:,IWAVE),PRO(:,IWAVE))
+     &            ,AEPHI(:,:,IWAVE),NODEC,PSPHI(:,:,IWAVE))
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO
       RETURN
@@ -1708,7 +1709,7 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
 !
 !     ......................................................PSPHI0......
       SUBROUTINE HBS(R1,DEX,NR,RMT,CUT,TNORM,PSPOT &
-     &              ,L,E,AEPHI,NODEC,PSPHI,PRO)
+     &              ,L,E,AEPHI,NODEC,PSPHI)
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **
@@ -1732,7 +1733,6 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
       REAL(8)   ,INTENT(IN) :: PSPOT(NR)
       REAL(8)   ,INTENT(IN) :: AEPHI(NR,3)
       REAL(8)   ,INTENT(OUT):: PSPHI(NR,3)
-      REAL(8)   ,INTENT(OUT):: PRO(NR)
       INTEGER(4)            :: IRMT
       REAL(8)               :: PI,Y0
       REAL(8)               :: PHASAE
@@ -1930,24 +1930,6 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
         WRITE(NFILO,FMT='(72("-")/72("-"),T10," TEST PARTIAL WAVES FINISHED "/72("-"))')
         RETURN
       END SUBROUTINE TEST
-!     . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
-      FUNCTION VALUE(R1,DEX,NR,F,R) RESULT(FOFR)
-        IMPLICIT NONE
-        REAL(8)   ,INTENT(IN) :: R1      
-        REAL(8)   ,INTENT(IN) :: DEX      
-        INTEGER(4),INTENT(IN) :: NR
-        REAL(8)   ,INTENT(IN) :: R      
-        REAL(8)   ,INTENT(IN) :: F(NR)
-        REAL(8)               :: FOFR
-        REAL(8)               :: X,W1,W2,DL
-        INTEGER(4)            :: IX,IR
-        X=1.D0+DLOG(R/R1)/DEX
-        IX=INT(X)
-        X=DBLE(IX)
-        W2=X-DBLE(IX)
-        W1=1.D0-W2
-        FOFR=W1*F(IX)+W2*F(IX+1)
-       END FUNCTION VALUE   
 !      . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
        SUBROUTINE PHASESHIFT(R1,DEX,NR,R,PHI,PHASE)
         IMPLICIT NONE
@@ -2025,7 +2007,7 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
         ENDDO
 !
 !       == TRANSFORM TO PROPER PROJECTOR FUNCTIONS  ====================
-        CALL MKPRO(R1,DEX,NR,AUGMENTATIONRADIUS &
+        CALL MKpRO(R1,DEX,NR,AUGMENTATIONRADIUS &
      &    ,L,IRMT,AEPOT,PSPOT,NWAVE1,EWAVE1,AEPHI1,PSPHI1,DTKIN1,DATH1,DO1,PRO1)
 !
 !       == MAP BACK ====================================================
@@ -2076,8 +2058,8 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
       REAL(8),   INTENT(IN)   :: RAUG
       REAL(8),   INTENT(IN)   :: AEPOT(NR)         !
       REAL(8),   INTENT(IN)   :: PSPOT(NR)         !
-      REAL(8),   INTENT(IN)   :: ELN(NPRO)         ! ONE PARTICLE ENERGIES OF AEPHI
       INTEGER(4),INTENT(IN)   :: NPRO              !
+      REAL(8),   INTENT(IN)   :: ELN(NPRO)         ! ONE PARTICLE ENERGIES OF AEPHI
       REAL(8),   INTENT(INOUT):: AEPHI(NR,3,NPRO)  !
       REAL(8),   INTENT(INOUT):: PSPHI(NR,3,NPRO)  !
       REAL(8),   INTENT(OUT)  :: PRO(NR,NPRO)      !
@@ -3409,9 +3391,13 @@ PRINT*,'WARNING! CODE FUDGED'
       USE PROJECTION
       USE SCHRGL_INTERFACE_MODULE, ONLY : PAWBOUNDSTATE
       IMPLICIT NONE
+      integer(4):: npro
+      integer(4),allocatable :: sb(:)
 !     ******************************************************************
+!      npro=nwave
+!      ALLOCATE(SB(NB)); SB(:)=1
 !      CALL PAWSCF(R1,DEX,NR,OUTERBOXRADIUS &
-!     &          ,VHAT,AEZ,RCSMALL,PSCORE,AECORE,NPRO,LPRO,PRO,PSPHI,AEPHI &
+!     &          ,VHAT,AEZ,RCSMALL,PSCORE,AECORE,NPRO,Lphi,PRO,PSPHI,AEPHI &
 !     &          ,DTKIN,DO,NB,LB,FB &
 !     &          ,PSPOT,DATH,EB)
 !      CALL AESCF(AEZ,R1,DEX,NR,OUTERBOXRADIUS &
@@ -3469,7 +3455,6 @@ PRINT*,'WARNING! CODE FUDGED'
       REAL(8)                 :: PROJ(NPRO,NB)
       REAL(8)                 :: DENMAT(NPRO,NPRO)
       REAL(8)                 :: PSRHO(NR)
-      REAL(8)                 :: RCSMALL
       REAL(8)                 :: PI,Y0,C0LL
       REAL(8)                 :: QAUG
       REAL(8)                 :: SVAR
@@ -3584,8 +3569,8 @@ PRINT*,'WARNING! CODE FUDGED'
         PSRHO(:)=PSRHO(:)+PSCORE(:)
         CALL VOFRHO(0.D0,R1,DEX,NR,PSRHO,PSPOT)
         DO IR=1,NR
-!         PSPOT(IR)=PSPOT(IR)+QAUG*ERF(R(IR)/RCSMALL)/R(IR)/Y0+VHAT(IR)
-          CALL LIB$ERFR8(R(IR)/RCSMALL,SVAR)
+!         PSPOT(IR)=PSPOT(IR)+QAUG*ERF(R(IR)/RCSM)/R(IR)/Y0+VHAT(IR)
+          CALL LIB$ERFR8(R(IR)/RCSM,SVAR)
           PSPOT(IR)=PSPOT(IR)+QAUG*SVAR/R(IR)/Y0+VHAT(IR)        
         ENDDO
 

@@ -17,6 +17,7 @@ AC_INIT(src)
 #
 # the default path for the binaries is
 # $PAWDIR/$BINARIES/$*ARCH
+# PAWDIR will be set automatically after this block!
 #
 #_________________directory for the binaries
 #
@@ -29,21 +30,34 @@ DEBUGBIN="paw_dbg.x"
 PARALLELBIN="ppaw_fast.x"
 #
 # ________________directories for the architecture dependent binaries
-f90ARCH="intel_amd"   
+f90ARCH="intel"   
 fortARCH="alpha"   
 xlf90ARCH="ibm"  
 #
-# ________________compiler flags for unoptimized compilation
+# Specification of the Fortran Compilers
+# Fortran77 is needed for the internal numerical
+# libraries
+# ________________Fortran77/90 compilers 
+AbsoftF90="f90"
+AbsoftF77="f90"
+CompaqF90="fort"
+CompaqF77="fort"
+IBMF90="xlf90"
+IBMF77="xlf"
+# ________________compiler flags for unoptimized compilation (Absoft,Compaq,IBM)
 f90FLAGS="-c -YEXT_NAMES=LCS -YEXT_SFX=_"
+f77FLAGS="$f90FLAGS"
 fortFLAGS="-c"
+fort77FLAGS="$fortFLAGS"
 xlf90FLAGS="-qlanglvl=90STD -c -qhalt=e -qextchk"
+xlfFLAGS="-qlanglvl=77STD -c -qhalt=e -qextchk"
 #
-# ________________compiler flags for optimized compilation
+# ________________compiler flags for optimized compilation (Absoft,Compaq,IBM)
 f90OPTIMIZE="-B100 -O"
 fortOPTIMIZE="-O3"
-xlf90OPTIMIZE="-O3 -Q+clebsch -qfloat=rsqrt:hssngl:rsqrt -qmaxmem=-1 -qarch=ppc"
+xlf90OPTIMIZE="-O3 -Q+clebsch -qfloat=rsqrt:hssngl:rsqrt -qmaxmem=-1 -qarch=auto"
 #
-# ________________compiler flags for debug compilation
+# ________________compiler flags for debug compilation (Absoft,Compaq,IBM)
 f90DEBUG="-g -Rs"   
 fortDEBUG="-g3 -ladebug -C -assume gfullpath -check overflow -check underflow"
 xlf90DEBUG="-g -C -qfullpath -qflttrap=zerodivide:invalid:enable -qsigtrap -qinitauto=FF"
@@ -57,6 +71,13 @@ xlf90LFLAGS="-bmaxdata:0x70000000 -bloadmap:loadmap -qextchk"
 f90FEXT="f90"
 fortFEXT="f90"
 xlf90FEXT="f"
+#
+# ________________remove preprocessed sources after compilation?
+#                 set to "rm" if yes and to "file" if no
+NONEOPTRM="rm"
+FASTOPTRM="rm"
+PARALLELOPTRM="rm"
+DEBUGOPTRM="file"
 #
 # the object files can be found in
 # $PAWDIR/$BINARIES/$ARCH/$OBJECTS/$*DIR
@@ -86,10 +107,10 @@ TOOLCOMP="fast"
 LIBRARIES="lib"  
 #
 #________________ default directory for FFTW-distribution
-FFTWROOT="fftw-2.1.3"   
+FFTWROOT="fftw"    # to be specified later! (fftw-$ARCH)
 #
 #________________ directory of MPICH-distribution
-MPICHROOT="mpich-1.2.1"  
+MPICHROOT="mpich"  # to be specified later! (mpich-$ARCH)
 #
 #________________ directory of ATLAS-distribution
 ATLASROOT="ATLAS"  
@@ -123,10 +144,10 @@ AC_ARG_WITH(libs,--without-libs\
             do NOT use external numerical libraries,
             USELIBS=$withval,USELIBS=yes)
 AC_ARG_WITH(fftwdir,--with-fftwdir=DIR\
-        root directory of fftw distribution,
+        root directory of FFTW distribution,
             FFTWDIR=$withval,FFTWDIR=notset)
 AC_ARG_WITH(mpichdir,--with-mpidir=DIR\
-         root directory of mpich distribution,
+         root directory of MPICH distribution,
             MPICHDIR=$withval,MPICHDIR=notset)
 AC_ARG_WITH(atlasdir,--with-atlasdir=DIR\
        root directory of ATLAS distribution,
@@ -144,17 +165,15 @@ AC_ARG_WITH(cflags,--with-cflags=FLAGS\
        specify additional compiler flags,
             USERFLAGS=$withval)
 AC_ARG_WITH(lflags,--with-lflags=LFLAGS\
-       specify additional compiler flags for linking,
+      specify additional compiler flags for linking,
             USERLFLAGS=$withval)
-AC_ARG_WITH(llibs,--with-llibs=LFLAGS\
-       specify additional libraries to be linked,
+AC_ARG_WITH(llibs,--with-llibs=LLIBS\
+        specify additional libraries to be linked,
             USERLIBS=$withval)
-
-echo "USERFLAGS $USERFLAGS"
 #
 # Check for Fortran90 Compiler
 #
-AC_CHECK_PROGS(COMPILER, f90 fort xlf90,no)
+AC_CHECK_PROGS(COMPILER, $AbsoftF90 $CompaqF90 $IBMF90,no)
 if test "$COMPILER" = "no"; then 
    AC_MSG_ERROR(no valid compiler (f90,fort,xlf90) found)
 fi	
@@ -162,44 +181,49 @@ fi
 # define COMPILE and LINK VARIABLES
 #
 # Absoft f90
-if test "$COMPILER" = "f90"; then
+if test "$COMPILER" = "$AbsoftF90"; then
    LINK="$COMPILER $f90LFLAGS $USERLFLAGS"
-   LLIBS="-lU77 $USERLIBS"
+   LLIBS="-lU77 -lm $USERLIBS"
    COMPILE="$COMPILER $f90FLAGS $USERFLAGS"
-   COMPILE77="$COMPILE"
-   CPPVAR="$CPPVAR -DCPPVARIABLE_ABS -DCPPVAR_U77"
+   COMPILE77="$AbsoftF77 $f77FLAGS"
+   CPPVAR="$CPPVAR -DCPPVAR_U77"
    ARCH=$f90ARCH
    FEXT=$f90FEXT
    OPTIMIZE="$f90OPTIMIZE" 
    DEBUG="$f90DEBUG"      
 fi
 # Compaq fort
-if test "$COMPILER" = "fort"; then
+if test "$COMPILER" = "$CompaqF90"; then
    LINK="$COMPILER $fortLFLAGS $USERLFLAGS"
    COMPILE="$COMPILER $fortFLAGS $USERFLAGS"
    LLIBS="$USERLIBS"
-   COMPILE77="$COMPILE"
-   CPPVAR="$CPPVAR -DCPPVARIABLE_DEC"
+   COMPILE77="$CompaqF77 $fort77FLAGS"
+   CPPVAR="$CPPVAR"
    ARCH=$fortARCH
    FEXT=$fortFEXT
    OPTIMIZE="$fortOPTIMIZE"
    DEBUG="$fortDEBUG"
 fi
 # IBM xlf90
-if test "$COMPILER" = "xlf90"; then
+if test "$COMPILER" = "$IBMF90"; then
    LINK="$COMPILER $xlf90LFLAGS $USERLFLAGS"
    COMPILE="$COMPILER $xlf90FLAGS $USERFLAGS"
+   COMPILE77="$IBMF77 $xlfFLAGS $USERFLAGS" 
    LLIBS="$USERLIBS"
-   COMPILE77="$COMPILE"
-   CPPVAR="$CPPVAR -DCPPVARIABLE_XLF -DCPPVAR_SUPPORT_XLF -DCPPVAR_USAGE_EXIST \
-           -DCPPVAR_LANGEXT_XLF"
+   CPPVAR="$CPPVAR -DCPPVAR_SUPPORT_XLF -DCPPVAR_USAGE_EXIST \
+-DCPPVAR_LANGEXT_XLF"
    ARCH=$xlf90ARCH
    FEXT=$xlf90FEXT
    OPTIMIZE="$xlf90OPTIMIZE"
    DEBUG="$xlf90DEBUG"
 fi
+#
+# setting architecture dependens directories
+#
 OBJDIR="$OBJDIR/$ARCH/$OBJECTS"
 PAWX="$BINDIR/$ARCH"
+MPICHROOT="$MPICHROOT-$ARCH"
+FFTWROOT="$FFTWROOT-$ARCH"
 #
 # Check for GNU make utility
 #
@@ -252,7 +276,7 @@ if test "$USELIBS" = "no"; then
   #
   # Determine external libraries for Absoft f90
   #
-  if test "$COMPILER" = "f90"; then
+  if test "$COMPILER" = "$AbsoftF90"; then
     #
     # The FFTW-routines
     #
@@ -351,7 +375,7 @@ if test "$USELIBS" = "no"; then
   # 
   # Determine external libraries for IBM xlf90
   #
-  if test  "$COMPILER" = "xlf90"; then
+  if test  "$COMPILER" = "$IBMF90"; then
     # THE ESSL 
     AC_HAVE_LIBRARY(essl,ESSL=found,ESSL=no)
     if test "$ESSL" = "no"; then
@@ -371,7 +395,7 @@ if test "$USELIBS" = "no"; then
   # 
   # Determine external library for Compaq fort
   #
-  if test  "$COMPILER" = "fort"; then
+  if test  "$COMPILER" = "$CompaqF90"; then
     # THE CXML
     AC_HAVE_LIBRARY(cxml,CXML=found,CXML=no)
     if test "$CXML" = "no"; then
@@ -391,47 +415,52 @@ fi
 #
 # Check for MPICH
 #
-
-if test "$MPICHDIR" = "notset"; then
-  # if MPICHDIR not set by command line argument
-  AC_MSG_RESULT(---------------------------------)
-  AC_MSG_RESULT(take default path for MPICH as no)
-  AC_MSG_RESULT(command line argument is given)
-  AC_MSG_RESULT(---------------------------------)
-  AC_CHECK_FILES($PAWDIR/$LIBRARIES/$MPICHROOT \
-                 $PAWDIR/$LIBRARIES/$MPICHROOT/lib/libmpich.a\
-                 $PAWDIR/$LIBRARIES/$MPICHROOT/lib/libfmpich.a,
-                 MPICHDIR="$PAWDIR/$LIBRARIES/$MPICHROOT", 
-                 MPICHDIR=notset)
-                  	        else
-  # if MPICHDIR set by command line argument				   
-  AC_CHECK_FILES($MPICHDIR/ \
-                 $MPICHDIR/lib/libmpich.a\
-                 $MPICHDIR/lib/libfmpich.a,
-                 MPICHDIR="$MPICHDIR", 
-         	 MPICHDIR=notset)
-fi			
-# if no MPICH-library found -> no parallel compilation possible
-# otherwise set variables
-if test "$MPICHDIR" = "notset"; then
-  AC_MSG_WARN(--------------------------------)
-  AC_MSG_WARN(MPICH-library not found!)
-  AC_MSG_WARN(no parallel compilation possible)
-  AC_MSG_WARN(--------------------------------)
-  MPICH=no
+# only if non-IBM!!!
+#
+if test "$ARCH" = "$xlf90ARCH"; then
+  # Search for libmpi.a on IBMs
+  AC_HAVE_LIBRARY(mpi,LLIBSPARALLEL=-lmpi)
                                 else
-  LLINKPARALLEL="-L$MPICHDIR/lib"				     
-  LLIBSPARALLEL="-lmpich -lfmpich"
-  MPICH=yes
-  # introduction of PARALLELNAME to avoid problems
-  # with Makefile.* generation when PARALLELDIR=fast
-  # --> see below 
-  if test "$PARALLELDIR" = "$FASTDIR"; then
-     PARALLELNAME="parallel"
-                                       else
-     PARALLELNAME="$PARALLELDIR"
-  fi
-fi  
+  if test "$MPICHDIR" = "notset"; then
+    # if MPICHDIR not set by command line argument
+    AC_MSG_RESULT(---------------------------------)
+    AC_MSG_RESULT(take default path for MPICH as no)
+    AC_MSG_RESULT(command line argument is given)
+    AC_MSG_RESULT(---------------------------------)
+    AC_CHECK_FILES($PAWDIR/$LIBRARIES/$MPICHROOT \
+                   $PAWDIR/$LIBRARIES/$MPICHROOT/lib/libmpich.a\
+                   $PAWDIR/$LIBRARIES/$MPICHROOT/lib/libfmpich.a,
+                   MPICHDIR="$PAWDIR/$LIBRARIES/$MPICHROOT", 
+                   MPICHDIR=notset)
+                    	        else
+    # if MPICHDIR set by command line argument				   
+    AC_CHECK_FILES($MPICHDIR/ \
+                   $MPICHDIR/lib/libmpich.a\
+                   $MPICHDIR/lib/libfmpich.a,
+                   MPICHDIR="$MPICHDIR", 
+                   MPICHDIR=notset)
+  fi			
+  # if no MPICH-library found -> no parallel compilation possible
+  # otherwise set variables
+  if test "$MPICHDIR" = "notset"; then
+    AC_MSG_WARN(--------------------------------)
+    AC_MSG_WARN(MPICH-library not found!)
+    AC_MSG_WARN(no parallel compilation possible)
+    AC_MSG_WARN(--------------------------------)
+                                  else
+    LLINKPARALLEL="-L$MPICHDIR/lib"				     
+    LLIBSPARALLEL="-lmpich -lfmpich"
+  fi  
+fi
+#
+# introduction of PARALLELNAME to avoid problems
+# with Makefile.* generation when PARALLELDIR=fast
+# --> see below 
+if test "$PARALLELDIR" = "$FASTDIR"; then
+  PARALLELNAME="parallel"
+                                     else
+  PARALLELNAME="$PARALLELDIR"
+fi
 #
 # Definition of variables to be substituted in the *.in files
 # There the synax is @VARIABLE@
@@ -462,6 +491,7 @@ AC_SUBST(CPPVAR)
 AC_SUBST(FEXT)
 AC_SUBST(ARCH)
 AC_SUBST(CPP)
+AC_SUBST(MAKE)
 AC_SUBST(f90ARCH)
 AC_SUBST(fortARCH)
 AC_SUBST(xlf90ARCH)
@@ -478,8 +508,8 @@ chmod +x $BINDIR/f90pp
 AC_MSG_RESULT(creating Makefile.none)
 sed -e "s%\(OBJDIR.*=.*\)%\1/$NONEDIR%" \
     -e "s%\(PAWX.*=.*\)%\1/$NONEBIN%"\
+    -e "s%varOPTRM%$NONEOPTRM%"\
     -e 's%varPARALLEL%F%'\
-    -e 's%varOPTRM%rm%'\
     Makefile > Makefile.${NONEDIR}
 #
 # subsituting to get Makefile.fast
@@ -488,21 +518,19 @@ AC_MSG_RESULT(creating Makefile.fast)
 sed -e "s%\(COMPILE.*=.*\)%\1 $OPTIMIZE %"\
     -e "s%\(OBJDIR.*=.*\)%\1/$FASTDIR%"\
     -e "s%\(PAWX.*=.*\)%\1/$FASTBIN%"\
+    -e "s%varOPTRM%$FASTOPTRM%"\
     -e 's%varPARALLEL%F%'\
-    -e 's%varOPTRM%rm%'\
     Makefile > Makefile.${FASTDIR}
 #
 # subsituting to get Makefile.parallel
 #
-if test "$MPICH" = "yes"; then
   AC_MSG_RESULT(creating Makefile.parallel)
   sed -e "s%\(COMPILE.*=.*\)%\1 $OPTIMIZE %"\
       -e "s%\(OBJDIR.*=.*\)%\1/$PARALLELDIR%"\
       -e "s%\(PAWX.*=.*\)%\1/$PARALLELBIN%"\
+      -e "s%varOPTRM%$PARALLELOPTRM%"\
       -e 's%varPARALLEL%T%'\
-      -e 's%varOPTRM%rm%'\
       Makefile > Makefile.${PARALLELNAME}
-fi    
 #
 # subsituting to get Makefile.debug
 #
@@ -510,8 +538,8 @@ AC_MSG_RESULT(creating Makefile.debug)
 sed -e "s%\(COMPILE.*=.*\)%\1 $DEBUG %"\
     -e "s%\(OBJDIR.*=.*\)%\1/$DEBUGDIR%"\
     -e "s%\(PAWX.*=.*\)%\1/$DEBUGBIN%"\
+    -e "s%varOPTRM%$DEBUGOPTRM%"\
     -e 's%varPARALLEL%F%'\
-    -e 's%varOPTRM%file%'\
     Makefile > Makefile.${DEBUGDIR}
 #
 # creating subdirectories

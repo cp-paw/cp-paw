@@ -136,7 +136,7 @@
        REAL(8)                   :: BOXR0(3)
        REAL(8)                   :: BOXVEC(3,3)
        INTEGER(4)   ,ALLOCATABLE :: IZ(:)      !(NAT) ATOMIC NUMBER
-       REAL(8)      ,ALLOCATABLE :: POSM(:,:)  ! POSITIONS
+       REAL(8)      ,ALLOCATABLE :: POSM(:,:)  ! MODEL POSITIONS
        INTEGER(4)   ,ALLOCATABLE :: MAP(:)     !MAPPING FROM MODEL 
        REAL(8)      ,ALLOCATABLE :: RAD(:)   
        REAL(8)      ,ALLOCATABLE :: COLOR(:,:)
@@ -145,7 +145,6 @@
        LOGICAL(4)                :: TCHK
        INTEGER(4)                :: NATM
        INTEGER(4)                :: IVEC(3)
-       real(8)      ,ALLOCATABLE :: scaledrad(:)
 !      ******************************************************************
        CALL TRACE$PUSH('MWAVE')
        LL_CNTL=LL_CNTL_
@@ -210,24 +209,21 @@ print*,'boxvec ',boxvec
        ALLOCATE(MAP(NATM))
        CALL MODEL$ATOMS(BOXR0,BOXVEC,NAT,POS,RBAS,NATM,POSM,MAP)
        ALLOCATE(RAD(NATM))
-       ALLOCATE(SCALEDRAD(NATM))
        ALLOCATE(COLOR(3,NATM))
        DO IAT=1,NATM
          CALL PERIODICTABLE$GET(NINT(Z(MAP(IAT))),'R(COV)',RAD(IAT))
          CALL ATOMCOLOR(NINT(Z(MAP(IAT))),IVEC)
          COLOR(:,IAT)=REAL(IVEC,KIND=8)/200.D0
        ENDDO
-       scaledrad(:)=1.2d0*rad(:)
-       CALL MODEL$NBONDM(NATM,POSM,scaledrad,NBOND)
+       CALL MODEL$NBONDM(NATM,POSM,1.2D0*RAD,NBOND)
        ALLOCATE(BOND(2,NBOND))
-       CALL MODEL$BONDS(NATM,POSM,scaledrad,NBOND,BOND)
+       CALL MODEL$BONDS(NATM,POSM,1.2D0*RAD,NBOND,BOND)
 !
 !      ==================================================================
 !      ==  WRITE BALLSTICK MODEL TO DATAEXPLORER FILE                  ==
 !      ==================================================================
        CALL TRACE$PASS('BEFORE BALLSTICK')
-       scaledrad(:)=0.5d0*rad(:)
-       CALL DXBALLSTICK(NFIL,NATM,COLOR,scaledrad,POSM,NBOND,BOND,BOXR0,BOXVEC)
+       CALL DXBALLSTICK(NFIL,NATM,COLOR,0.5D0*RAD,POSM,NBOND,BOND,BOXR0,BOXVEC)
        CALL TRACE$PASS('AFTER BALLSTICK')
 !
 !      ==================================================================

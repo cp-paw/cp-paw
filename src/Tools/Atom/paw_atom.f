@@ -2888,7 +2888,9 @@ PRINT*,'QAUG ',QAUG,AEZ,SVAR*4.D0*PI*Y0
       ENDDO
 !
 !     == CHECK CHARGE CONSERVATION ======================================
-      CALL RADIAL$INTEGRAL(R1,DEX,NR,4.D0*PI*Y0*RHO(:)*R(:)**2,SVAR)
+      AUX(:)=4.D0*PI*Y0*RHO(:)*R(:)**2
+      CALL RADIAL$INTEGRAL(R1,DEX,NR,AUX,SVAR)
+!     CALL RADIAL$INTEGRAL(R1,DEX,NR,4.D0*PI*Y0*RHO(:)*R(:)**2,SVAR)
       WRITE(NFILO,*)'SUM OF ELECTRONS',SVAR+QAUG,SVAR,QAUG
 !
 !     ==================================================================

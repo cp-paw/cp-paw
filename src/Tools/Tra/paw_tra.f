@@ -1,9 +1,9 @@
 !.......................................................................
 MODULE TRAJECTORY_MODULE
-!clemens
 TYPE TRA_TYPE
   INTEGER(4)             :: NSTEP
-  REAL(8)   ,POINTER     :: CELL(:,:)!(9,NSTEP)      CELL CONSTANTS
+!clemens
+  REAL(8)   ,POINTER     :: CELL(:,:)!(9,NSTEP)
   REAL(8)   ,POINTER     :: R(:,:,:) !(3,NAT,NSTEP)  POSITION
   REAL(8)   ,POINTER     :: Q(:,:)   !(NAT,NSTEP)    CHARGE
   REAL(8)   ,POINTER     :: T(:)     !(NSTEP)        TIME
@@ -1365,7 +1365,8 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       REWIND(NFIL)
       READ(NFIL)I,TIME,LENG 
       FIRSTONFILE=TIME
-      IF(NAT.NE.LENG/4) THEN
+!clemens
+      IF(NAT.NE.(LENG-9)/4) THEN
         CALL ERROR$MSG('#(ATOMS) ON TRAJECTORY FILE INCONSISTENT WITH STRC FILE')
         CALL ERROR$I4VAL('#(ATOMS) ON TRA FILE',LENG/4)
         CALL ERROR$I4VAL('#(ATOMS) ON STRC FILE',NAT)
@@ -1410,6 +1411,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !     ==================================================================
 !     ==  ALLOCATE TRAJECTORY AND READ                                ==
 !     ==================================================================
+!clemens
       ALLOCATE(TRA%CELL(9,NSTEP))
       ALLOCATE(TRA%R(3,NAT,NSTEP))
       ALLOCATE(TRA%Q(NAT,NSTEP))
@@ -1424,8 +1426,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       I=1
       DO 
 !clemens
-
-        READ(NFIL,END=200)TRA%ISTEP(I),TRA%T(I),TRA%CELL(:,I),LENG,TRA%R(:,:,I),TRA%Q(:,I)
+        READ(NFIL,END=200)TRA%ISTEP(I),TRA%T(I),LENG,TRA%CELL(:,I),TRA%R(:,:,I),TRA%Q(:,I)
         IF(TRA%T(I)-TLAST.LT.DT) CYCLE
         TLAST=TRA%T(I)
         I=I+1
@@ -1507,6 +1508,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       CHARACTER(32),ALLOCATABLE :: ATOMM(:) ! 
       REAL(8)      ,ALLOCATABLE :: QM(:) 
       LOGICAL(4)                :: TBOX
+      real(8)      ,allocatable :: scaledrad(:)
 !     ******************************************************************
                            CALL TRACE$PUSH('WRITETRA')
       LL_STRC=LL_STRC_
@@ -1656,6 +1658,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !       ==  MAP ATOMS INTO VIEWBOX                                    ==
 !       ================================================================
 !TBOX=.FALSE.
+print*,'tbox', tbox
         IF(.not.TBOX) THEN  ! fix due to compiler bug of absoft
           NATM=NAT0
         ELSE
@@ -1672,6 +1675,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
           CALL MODEL$ATOMS(BOXR0,BOXVEC,NAT0,R0,RBAS,NATM,POSM,MAP)
         END IF
         ALLOCATE(RAD(NATM))
+        ALLOCATE(scaledrad(NATM))
         ALLOCATE(COLOR(3,NATM))
         ALLOCATE(EL(NATM))
         ALLOCATE(ATOMM(NATM))
@@ -1688,9 +1692,10 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !       ================================================================
 !       ==  CALCULATE BONDS                                           ==
 !       ================================================================
-        CALL MODEL$NBONDM(NATM,POSM,1.2D0*RAD,NBOND)
+        scaledrad(:)=1.2d0*rad(:)
+        CALL MODEL$NBONDM(NATM,POSM,scaledrad(:),NBOND)
         ALLOCATE(BOND(2,NBOND))
-        CALL MODEL$BONDS(NATM,POSM,1.2D0*RAD,NBOND,BOND)
+        CALL MODEL$BONDS(NATM,POSM,scaledrad(:),NBOND,BOND)
 !     
 !       ================================================================
 !       ==  WRITE CSSR FILE FOR TEST                                  ==
@@ -1705,7 +1710,8 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !       ================================================================
         IF(FORMAT.EQ.'DX') THEN
           IOBJ=6*(IFRAME-1)
-          CALL DXBALLSTICK(NFIL,IOBJ,NATM,COLOR,0.5D0*RAD,POSM,NBOND,BOND &
+          scaledrad(:)=0.5d0*rad(:)
+          CALL DXBALLSTICK(NFIL,IOBJ,NATM,COLOR,scaledrad(:),POSM,NBOND,BOND &
       &         ,BOXR0,BOXVEC)
         ELSE IF(FORMAT.EQ.'XYZ') THEN
           CALL WRITEXYZ(NFIL,IFRAME,NATM,EL,POSM)

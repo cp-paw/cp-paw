@@ -189,13 +189,6 @@ END MODULE ATOMS_MODULE
       REAL(8)               :: EFFEMASS(NAT)
       REAL(8)               :: EMASS,EMASSCG2
       REAL(8)               :: RBAS(3,3)
-!clemens
-      REAL(8)               :: DELTAT
-      REAL(8)               :: TIME
-      INTEGER(4)            :: NFI
-      REAL(8)               :: PICO
-      REAL(8)               :: SECOND
-!end clemens      
 !     ******************************************************************
       CALL MPE$QUERY(NTASKS,THISTASK) 
       IF(THISTASK.NE.1) RETURN
@@ -205,15 +198,8 @@ END MODULE ATOMS_MODULE
       CALL ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
       CALL CELL$GETR8A('T(0)',9,RBAS)
 !
-!clemens
-      CALL TIMESTEP$GETR8('DELTAT',DELT)
-      CALL TIMESTEP$GETI4('ISTEP',NFI)
-      CALL CONSTANTS('PICO',PICO)
-      CALL CONSTANTS('SECOND',SECOND)
-      TIME=REAL(NFI)*DELT/(PICO*SECOND)
       CALL REPORT$TITLE(NFIL,'ATOMLIST REPORT')
-      WRITE(NFIL,FMT='("T1=",3F10.6/"T2=",3F10.6/"T3=",3F10.6," @ ",F10.6)')RBAS,TIME
-!end clemens      
+      WRITE(NFIL,FMT='("T1=",3F10.6/"T2=",3F10.6/"T3=",3F10.6)')RBAS
       WRITE(STRING,FMT='(T1,A,T10,A,T43,A,T53,A,T65,A)') &
      &                  'NAME','R(0)','M[U]','MPSI_EFF[U]','Q'
       WRITE(NFIL,FMT='(A)')TRIM(STRING)

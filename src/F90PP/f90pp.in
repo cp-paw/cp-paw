@@ -38,20 +38,15 @@ xlf90ARCH="@xlf90ARCH@"
 #
 # process command line arguments
 #
-#typeset -i NOPTIONS="$#"
-#declare -a OPTIONS
 OPTIONS=$@
-#set -A OPTIONS -- "$@"
 TEMPLATES=T
-#while (( $# )); do
 for i in $OPTIONS; do
   case $i in
-#  case "$1" in
     -arch|-arch*)            # set compiler
      ARCH=${1#-arch}
      if [ -z "${ARCH}" ] ; then shift ; ARCH=$1 ;fi
      case $ARCH in
-       $f90ARCH|$fortARCH|xlf90ARCH) ;;
+       $f90ARCH|$fortARCH|$xlf90ARCH) ;;
        "") echo "\n option -arch requires an argument";echo ${USAGE};exit 1;;
        *) echo "\n unknown argument $ARCH for option -arch";echo ${USAGE}; exit 1 ;;
      esac
@@ -85,7 +80,7 @@ done
 # -DName[=Definition] Defines Name as in a #define directive. The default Definition is 1.
 case $ARCH in
   $xlf90ARCH) CPP="$CPP -P -C" ;;
-  *) CPP="$CPP -P -C" ;;
+  *)          CPP="$CPP -P -C" ;;
 esac
 CPP="$CPP $CPPVAR"
 #

@@ -541,6 +541,8 @@ END MODULE RANDOM_MODULE
       CHARACTER(8)          :: SAV2101
       INTEGER(4)            :: I1,I2
       INTEGER(4)            :: INFO
+      INTEGER               :: INF1
+      INTEGER               :: INF2
 !     ******************************************************************
 !
 !     ==================================================================
@@ -559,7 +561,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 #IF DEFINED(CPPVAR_BLAS_ESSL)
       IF(TESSLERR) THEN
-        CALL EINFO(0)
+        CALL EINFO(0,INF1,INF2)
         CALL ERRSAV(2101,SAV2101)
         CALL ERRSET(2101,255,0,0,0,2101)
 !       CALL DSPEV(1,WORK1,E,U,N,N,WORK2,2*N,400) !->ESSL
@@ -641,6 +643,9 @@ END MODULE RANDOM_MODULE
       LOGICAL(4)            :: TCHK
       COMPLEX(8),ALLOCATABLE:: WORK3(:,:)
       INTEGER(4)            :: INFO
+!clemens
+      INTEGER               :: INF1
+      INTEGER               :: INF2
 !     ******************************************************************
 
 !     ==================================================================
@@ -663,7 +668,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 #IF DEFINED(CPPVAR_BLAS_ESSL)
       IF(TESSLERR) THEN
-        CALL EINFO(0)
+        CALL EINFO(0,INF1,INF2)
         CALL ERRSAV(2101,SAV2101)
         CALL ERRSET(2101,255,0,0,0,2101)
       END IF

@@ -1243,25 +1243,16 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       DWORK(8)=HEAT
       CALL TRAJECTORYIO$ADD('ENERGY-TRAJECTORY',NFI,TIME,8,DWORK)
       DEALLOCATE(DWORK)
-!clemens
-!
-!     ==================================================================
-!     ==   WRITE CELL CONSTANTS                                       ==
-!     ==================================================================
-                              CALL TRACE$PASS('BEFORE CELL-TRAJECTORY')
-      ALLOCATE(DWORK(9))
-      CALL CELL$GETR8A('T(0)',9,DWORK(1:9))
-      CALL TRAJECTORYIO$ADD('CELL-CONSTANTS',NFI,TIME,9,DWORK)
-      DEALLOCATE(DWORK)
 !   
 !     ==================================================================
 !     ==   WRITE POSITION TRAJECTORY                                  ==
 !     ==================================================================
                               CALL TRACE$PASS('BEFORE R-TRAJECTORY')
-      ALLOCATE(DWORK(4*NAT))
-      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,DWORK(1:3*NAT))
-      CALL ATOMLIST$GETR8A('Q',0,NAT,DWORK(1+3*NAT:))
-      CALL TRAJECTORYIO$ADD('POSITION-TRAJECTORY',NFI,TIME,4*NAT,DWORK)
+      ALLOCATE(DWORK(9+4*NAT))
+      CALL CELL$GETR8A('T(0)',9,DWORK(1:9))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,DWORK(10:9+3*NAT))
+      CALL ATOMLIST$GETR8A('Q',0,NAT,DWORK(10+3*NAT:))
+      CALL TRAJECTORYIO$ADD('POSITION-TRAJECTORY',NFI,TIME,9+4*NAT,DWORK)
       DEALLOCATE(DWORK)
 !   
 !     ==================================================================
