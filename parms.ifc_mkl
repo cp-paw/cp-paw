@@ -17,10 +17,10 @@ FLAGS="-c -mp  "
 F77FLAGS="-c -mp "
 #
 #________________________________F90 compiler optimization flags
-OPTIMIZE="-xW -tpp7"
+OPTIMIZE="-xW -tpp7 "
 #
 #________________________________F77 compiler optimization flags
-F77OPTIMIZE="-xW -tpp7"
+F77OPTIMIZE="-xW -tpp7 "
 #
 #________________________________F90 compiler debug flags
 DEBUG="-g -C -d4"

@@ -1934,7 +1934,7 @@ END MODULE OCCUPATION_MODULE
               DWORK(I)=DWORK(I)+GBAS(I,J)*XK(J,IKPT)
             ENDDO
           ENDDO
-          WRITE(NFIL,FMT='(" K",I1' &
+          WRITE(NFIL,FMT='(" K",I4' &
      &             //'," = (",F5.2,"*G1,",F5.2,"*G2,",F5.2,"*G3)"' &
      &             //'," = (",F7.5,",",F7.5,",",F7.5,");")') &
      &             IKPT,(XK(I,IKPT),I=1,3) &
