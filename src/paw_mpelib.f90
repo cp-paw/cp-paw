@@ -94,7 +94,8 @@ CONTAINS
 !     =================================================================
       LENG=<SIZE>
       ALLOCATE(WORK(LENG))
-      WORK(:)=<RESHAPE(VAL)>
+                                 ! WORK(:)=<RESHAPE(VAL)>   
+      work(:)=transfer(val,work) ! reshape failed for the pathscale compiler
 !     
 !     =================================================================
 !     == PERFORM OPERATION                                           ==
@@ -528,7 +529,8 @@ CONTAINS
           CALL ERROR$STOP('MPE$TRANSPOSE<TYPEID><RANKID>')
         END IF
         ALLOCATE(VAL1(LENG))
-        VAL1=RESHAPE(VAL,(/LENG/))
+                                   ! VAL1=RESHAPE(VAL,(/LENG/))
+        val1(:)=transfer(val,val1) ! reshape failed for the pathscale compiler
 	CALL MPE$SYNC
         CALL MPI_ALLTOALL(VAL1,LENG1,<MPI_TYPE>,VAL,LENG1,<MPI_TYPE> &
      &                  ,MPI_COMM_WORLD,IERR)
