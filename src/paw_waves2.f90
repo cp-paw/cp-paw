@@ -344,13 +344,13 @@ end if
             CALL PLANEWAVE$GETL4('TINV',TINV)
             IF(TINV) THEN
               ALLOCATE(RMAT(NB,NB))
-              RMAT=REAL(MAT)
+              RMAT=REAL(MAT,kind=8)
               ALLOCATE(ROMAT(NB,NB))
-              ROMAT=REAL(OMAT)
+              ROMAT=REAL(OMAT,kind=8)
               ALLOCATE(ROOMAT(NB,NB))
-              ROOMAT=REAL(OOMAT)
+              ROOMAT=REAL(OOMAT,kind=8)
               ALLOCATE(RLAMBDA(NB,NB))
-              RLAMBDA=REAL(LAMBDA)
+              RLAMBDA=REAL(LAMBDA,kind=8)
               CALL WAVES_ORTHO_X(NB,OCC(1,IKPT,ISPIN) &
        &                        ,ROOMAT,RMAT,ROMAT,RLAMBDA)
               LAMBDA=CMPLX(RLAMBDA,0.D0,8)
@@ -759,7 +759,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
          DO IBH2=1,NBH
            IB2A=2*IBH2-1
            IB2B=MIN(2*IBH2,NB)
-           RE=0.5D0* REAL(TMAT(IBH1,IBH2))
+           RE=0.5D0* REAL(TMAT(IBH1,IBH2),kind=8)
            IM=0.5D0*AIMAG(TMAT(IBH1,IBH2))
 !          == WATCH THE ORDER OF THE FOLLOWING 4 LINES!!! =============
 !          == BECAUSE IB1B=IB1A FOR 2*IBH1>NB =========================
@@ -784,7 +784,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !          == <PSI-(I)|PSI+(J)> ========================================
            IB2A=2*IBH2-1
            IB2B=MIN(2*IBH2,NB)
-           RE=0.5D0* REAL(TMAT(IBH1,IBH2))
+           RE=0.5D0* REAL(TMAT(IBH1,IBH2),kind=8)
            IM=0.5D0*AIMAG(TMAT(IBH1,IBH2))
            MAT2(1,1)=+RE
            MAT2(1,2)=+IM
@@ -892,9 +892,9 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
             IF(.NOT.TINV) THEN
               MAT(IBH1,IBH2)=MAT(IBH1,IBH2)+CSVAR1
             ELSE
-              RE1=  REAL(CSVAR1)
+              RE1=  REAL(CSVAR1,kind=8)
               IM1= AIMAG(CSVAR1)
-              RE2=  REAL(CSVAR2)
+              RE2=  REAL(CSVAR2,kind=8)
               IM2=-AIMAG(CSVAR2)  ! COMPLEX CONJUGATE OF CSVAR2 USED
               RMAT(1,1)=0.5D0*( RE1+RE2)
               RMAT(1,2)=0.5D0*( IM1-IM2)
@@ -984,7 +984,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !        ===============================================================
 !                            CALL TRACE$PASS('NORMALIZE')
          SVAR=CONJG(B(N,N))*B(N,N)-A(N,N)*C(N,N)-AIMAG(B(N,N))**2
-         SVAR1=-REAL(B(N,N))
+         SVAR1=-REAL(B(N,N),kind=8)
          IF(SVAR.GE.0.D0) THEN
            SVAR2=SQRT(SVAR)
            IF(SVAR1*SVAR2.GE.0.D0) THEN
@@ -996,7 +996,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
            PRINT*,'ORTHOGONALIZATION FAILED! TRYING BEST APPROXIMATION...'
            Z(N)=SVAR1
          END IF
-         Z(N)=Z(N)/REAL(C(N,N))
+         Z(N)=Z(N)/REAL(C(N,N),kind=8)
 !
 !        ===============================================================
 !        == NOW UPDATE MATRICES                                       ==
@@ -2258,7 +2258,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FAC=2.D0*SQRT(PI*GC2)
-      FAC=FAC**3/REAL(NDIM,8)*(2.D0/3.D0)
+      FAC=FAC**3/REAL(NDIM,kind=8)*(2.D0/3.D0)
       FAC=AMPLITUDE/FAC
       DO IG=1,NG
         SCALE(IG)=FAC*EXP(-0.5D0*G2(IG)/GC2)
@@ -2301,7 +2301,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FAC=2.D0*SQRT(PI*GC2)
-      FAC=FAC**3/REAL(NDIM,8)*(2.D0/3.D0)
+      FAC=FAC**3/REAL(NDIM,kind=8)*(2.D0/3.D0)
       FAC=1.D0/FAC
       DO IG=1,NG
         SCALE(IG)=FAC*EXP(-0.5D0*G2(IG)/GC2)
@@ -2575,7 +2575,7 @@ PRINT*,'ITER ',ITER,DIGAM
               IB2=2+2*(IBH-1)
               DO IPRO=1,NPRO
                 DO IDIM=1,NDIM
-                  VECTOR1(IDIM,IPRO,IB1)=REAL(PROJ(IDIM,IBH,IPRO))
+                  VECTOR1(IDIM,IPRO,IB1)=REAL(PROJ(IDIM,IBH,IPRO),kind=8)
                   VECTOR1(IDIM,IPRO,IB2)=AIMAG(PROJ(IDIM,IBH,IPRO))
                 ENDDO
               ENDDO
@@ -2777,7 +2777,7 @@ PRINT*,'ITER ',ITER,DIGAM
         DO IKPT=1,NKPT
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           DO IB=1,THIS%NB
-            EIG(IB,IKPT,ISPIN)=REAL(THIS%RLAM0(IB,IB))
+            EIG(IB,IKPT,ISPIN)=REAL(THIS%RLAM0(IB,IB),kind=8)
           ENDDO
         ENDDO
       ENDDO
@@ -3084,9 +3084,9 @@ PRINT*,'ITER ',ITER,DIGAM
             ALLOCATE(IGVECG_(3,NGG_))
             READ(NFIL)K_,IGVECG_ !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             DO IG=1,NGG_
-              XG1=REAL(IGVECG_(1,IG),8)+K_(1)
-              XG2=REAL(IGVECG_(2,IG),8)+K_(2)
-              XG3=REAL(IGVECG_(3,IG),8)+K_(3)
+              XG1=REAL(IGVECG_(1,IG),kind=8)+K_(1)
+              XG2=REAL(IGVECG_(2,IG),kind=8)+K_(2)
+              XG3=REAL(IGVECG_(3,IG),kind=8)+K_(3)
               DO I=1,3
                 GVECG_(I,IG)=GBAS_(I,1)*XG1+GBAS_(I,2)*XG2+GBAS_(I,3)*XG3
               ENDDO
@@ -3140,7 +3140,7 @@ PRINT*,'ITER ',ITER,DIGAM
      &         +(K(3)-K_(3))**2-(K(3)-KREAD(3,IKPT))**2 
           IF(SVAR1.GT.0.D0) THEN  ! PREVIOUS CHOICE WAS BETTER
             NBH_=NB_
-            IF(TSUPER_)NBH_=INT(0.5D0*REAL(NB+1,8))
+            IF(TSUPER_)NBH_=INT(0.5D0*REAL(NB+1,kind=8))
             DO IWAVE=1,NWAVE
               DO ISPIN_=1,NSPIN_
                 DO IB=1,NBH_
@@ -3738,7 +3738,7 @@ logical(4):: tchk
       DO I=1,3
         IVEC1(I)=NINT(G(I))
       ENDDO
-      G=REAL(NINT(G))
+      G=REAL(NINT(G),kind=8)
       G(:)=MATMUL(GBASA,REAL(IVEC1,KIND=8))
       KA(:)=GVECA(:,1)-G(:)
 !
@@ -4309,11 +4309,11 @@ END MODULE TOTALSPIN_MODULE
        PRINT*,'TOTALSPIN: PART DOWN UP  : ',SUM-SVAR
 
        IF (THISTASK.EQ.1) THEN
-          PRINT*,'SPIN: 2*<S_X>: ',2.D0*REAL(SPINX),' HBAR'
-          PRINT*,'SPIN: 2*<S_Y>: ',2.D0*REAL(SPINY),' HBAR'
-          PRINT*,'SPIN: 2*<S_Z>: ',2.D0*REAL(SPINZ),' HBAR'
-          PRINT*,'TOTALSPIN: <S^2>: ',REAL(SUM),' HBAR^2'
-          PRINT*,'SPIN QUATUM NUMBER S=',-0.5+SQRT(0.25+REAL(SUM))
+          PRINT*,'SPIN: 2*<S_X>: ',2.D0*REAL(SPINX,kind=8),' HBAR'
+          PRINT*,'SPIN: 2*<S_Y>: ',2.D0*REAL(SPINY,kind=8),' HBAR'
+          PRINT*,'SPIN: 2*<S_Z>: ',2.D0*REAL(SPINZ,kind=8),' HBAR'
+          PRINT*,'TOTALSPIN: <S^2>: ',REAL(SUM,kind=8),' HBAR^2'
+          PRINT*,'SPIN QUATUM NUMBER S=',-0.5+SQRT(0.25+REAL(SUM,kind=8))
           IF (IKPT.EQ.1) TOTSPIN=0.D0 ! SUM UP TOTAL SPIN OVER K-POINTS
           TOTSPIN(1)=TOTSPIN(1)+DBLE(SUM)
           TOTSPIN(2)=TOTSPIN(2)+DBLE(SPINX)
@@ -4374,7 +4374,7 @@ END MODULE TOTALSPIN_MODULE
         do ig=1,ngl
           do idim=1,ndim
             csvar=psi1(ig,idim,ib)-psi2(ig,idim,ib)
-            sum=sum+GSET%MPSI(IG)*(real(csvar)**2+aimag(csvar)**2)
+            sum=sum+GSET%MPSI(IG)*(real(csvar,kind=8)**2+aimag(csvar)**2)
           enddo
         enddo
         sumtot=sumtot+sum
