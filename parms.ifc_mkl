@@ -11,16 +11,16 @@ COMPILER="/opt/intel/compiler70/ia32/bin/ifc"
 F77COMPILER="/opt/intel/compiler70/ia32/bin/ifc"
 #
 #________________________________F90 compiler flags 
-FLAGS="-c -mp  "
+FLAGS="-c -mp1  "
 #
 #________________________________F77 compiler flags
-F77FLAGS="-c -mp "
+F77FLAGS="-c -mp1 "
 #
 #________________________________F90 compiler optimization flags
-OPTIMIZE="-xW -tpp7 "
+OPTIMIZE="-tpp7 -O3"
 #
 #________________________________F77 compiler optimization flags
-F77OPTIMIZE="-xW -tpp7 "
+F77OPTIMIZE="-axW -tpp7 -O3"
 #
 #________________________________F90 compiler debug flags
 DEBUG="-g -C -d4"
@@ -29,13 +29,13 @@ DEBUG="-g -C -d4"
 F77DEBUG="-g -C -d4"
 #
 #________________________________flags for linking 
-LFLAGS="-xW -tpp7 -static "
+LFLAGS="-tpp7 -O3 -static "
 #
 #________________________________search directories for linking (sequential)
 LLINK="-L/homer/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.3/fftw/.libs/ -L/opt/intel/mkl/lib/32 "
 #
 #________________________________search directories for linking (parallel)
-PLLINK="-L/homer/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.3/fftw/.libs/ -L/homer/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5/lib"
+PLLINK="-L/homer/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.3/fftw/.libs/ -L/opt/intel/mkl/lib/32 -L/homer/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5/lib"
 #
 #________________________________external libraries (sequential)
 LIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_p4 -lguide -lpthread "
