@@ -1679,7 +1679,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
          END IF
        ELSE        ! SPIN-POLARIZED CASE
          DO ISPIN=1,NSPIN
-           TOT=0.5D0*TOTCHA+0.5D0*SPINCHA*(3-2*ISPIN)         
+           TOT=0.5D0*TOTCHA+0.5D0*SPINCHA*real(3-2*ISPIN,8)         
            ISVAR=INT(TOT)
            X(1:ISVAR,:,ISPIN)=1.D0
            X(ISVAR+1:NB,:,ISPIN)=0.D0

@@ -742,7 +742,9 @@ END MODULE WAVES_MODULE
         ELSE
           TINV=.FALSE.
         END IF
-!print*,'tinv forced to be false in waves$initialize!!!'
+CALL FILEHANDLER$UNIT('PROT',NFILO)
+!WRITE(NFILO,*)'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
+!PRINT*,'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
 !tinv=.false.
         CALL PLANEWAVE$INITIALIZE(GSET%ID,RBAS,XK(1,IKPT),TINV,EPWPSI &
      &                           ,NR1START,NR1L,NR2,NR3)

@@ -61,6 +61,7 @@ TYPE MD_TYPE
   REAL(8)      ,POINTER :: R0(:,:)        !(3,NAT)  ACTUAL ATOMIC POSITIONS
   REAL(8)      ,POINTER :: RMASS(:)       !(NAT)    ATOMIC MASSES
   CHARACTER(5) ,POINTER :: TYPE(:)        !(NAT)    ATOM TYPE
+  CHARACTER(30),POINTER :: atname(:)      !(NAT)    ATOM name
   REAL(8)      ,POINTER :: QEL(:)         !(NAT)    POINT CHARGE
   INTEGER(4)            :: NBOND               
   INTEGER(4)   ,POINTER :: INDEX2(:,:)    ! (3,NBOND)     
@@ -418,7 +419,7 @@ END MODULE CLASSICAL_MODULE
       END IF
 !
 !     =================================================================
-!     == INDEX2 = ARRAY DEFINING COVALENT BONDS                      ==
+!     ==  defines if an atom is frozen                               ==
 !     =================================================================
       IF(ID_.EQ.'TFREEZE') THEN
         IF(MD%NAT.EQ.0)MD%NAT=LENG_
@@ -497,6 +498,16 @@ END MODULE CLASSICAL_MODULE
         END IF
         IF(.NOT.ASSOCIATED(MD%TYPE))ALLOCATE(MD%TYPE(MD%NAT))
         MD%TYPE=VAL_
+      ELSE IF(ID_.EQ.'ATOMNAME') THEN
+        IF(MD%NAT.EQ.0) MD%NAT=LENG_
+        IF(LENG_.NE.MD%NAT) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
+          CALL ERROR$STOP('CLASSICAL$SETCHA')
+        END IF
+        IF(.NOT.ASSOCIATED(MD%ATNAME))ALLOCATE(MD%ATNAME(MD%NAT))
+        MD%ATNAME=VAL_
       ELSE
         CALL ERROR$MSG('INVALID IDENTIFIER')
         CALL ERROR$CHVAL('ID',ID_)
@@ -845,7 +856,7 @@ END MODULE CLASSICAL_MODULE
 !     ==================================================================
 !     ==  DEFINE POTENTIALS FOR                                       ==
 !     ==================================================================
-      NANGLEX=6*MD%NAT
+      NANGLEX=12*MD%NAT   !the value of 12 is probably not the optimum choice
       NTORSIONX=6*MD%NBOND
       NINVERSIONX=MD%NAT*3
       NTYPEX=MD%NAT
@@ -1270,6 +1281,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==================================================================
       FMAX_=0.D0
       DO IAT=1,MD%NAT
+        if(md%tfreeze(iat)) cycle ! do not include the force on frozen atoms
         DO I=1,3
           FMAX_=FMAX_+MD%FORCE(I,IAT)**2
         ENDDO
@@ -1465,7 +1477,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     =================================================================
 !     ==  TWO BODY INTERACTION                                       ==
 !     =================================================================
-      PRINT*,'BOND',NBOND,ETOT
+!     PRINT*,'BOND',NBOND,ETOT
       ICOUNT=0
 
       DO I2BODY=1,NBOND
@@ -1489,7 +1501,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     =================================================================
 !     ==  BOND ANGLE FORCES                                          ==
 !     =================================================================
-      PRINT*,'ANGLE',NANGLE,ETOT
+!     PRINT*,'ANGLE',NANGLE,ETOT
       DO IANGLE=1,NANGLE
         ICOUNT=ICOUNT+1
         IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE
@@ -1515,7 +1527,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     =================================================================
 !     ==  TORSION ANGLE FORCES                                       ==
 !     =================================================================
-      PRINT*,'TORSION',NTORSION,ETOT
+!     PRINT*,'TORSION',NTORSION,ETOT
       DO ITORSION=1,NTORSION
         ICOUNT=ICOUNT+1
         IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE
@@ -1544,7 +1556,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     =================================================================
 !     ==  INVERSION FORCES                                           ==
 !     =================================================================
-      PRINT*,'INVERSION',NINVERSION,ETOT
+!     PRINT*,'INVERSION',NINVERSION,ETOT
       DO IINV=1,NINVERSION
         ICOUNT=ICOUNT+1
         IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE
@@ -1553,7 +1565,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
         IAT3=INDEX5(3,IINV)
         IAT4=INDEX5(4,IINV)
         IPOT=INDEX5(5,IINV)
-        PRINT*,'INVERSION DETAILS',IAT1,IAT2,IAT3,IAT4,IPOT
+!       PRINT*,'INVERSION DETAILS',IAT1,IAT2,IAT3,IAT4,IPOT
         CALL CLASSICAL_EINVERSION(R(1,IAT1),R(1,IAT2),R(1,IAT3),R(1,IAT4) &
      &              ,DE,F1,F2,F3,F4,POT(IPOT))
         ETOT=ETOT+DE
@@ -1646,7 +1658,9 @@ real(8) :: g1,dgdx1
           D2=D2+RBAS(2,1)*T1+RBAS(2,2)*T2+RBAS(2,3)*T3
           D3=D3+RBAS(3,1)*T1+RBAS(3,2)*T2+RBAS(3,3)*T3
         END IF
-        X=1.D0/DSQRT(D1*D1+D2*D2+D3*D3)
+        x=D1*D1+D2*D2+D3*D3
+        if(x.lt.1.D-20) x=1.D-20
+        X=1.D0/DSQRT(x)
         FAC=0.D0
 !         
 !       ============================================================
@@ -2319,6 +2333,10 @@ real(8) :: g1,dgdx1
             TYPE2=TYPE(IAT2)
             CALL UFFTABLE$NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
             NPOT=NPOT+1
+            IF(NPOT.GT.NPOTX) THEN
+              CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE at nonbond')
+              CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
+            END IF
             CALL CLASSICAL_NONBONDPOTA(ID,X,D,POT(NPOT))
             NONBOND(I1,I2)=NPOT
             NONBOND(I2,I1)=NPOT
@@ -2929,6 +2947,44 @@ PAR(141)=UFFPAR_TYPE('PIR  ',0.616, 90.000,3.851,0.000,12.000,1.912)
       END SUBROUTINE UFFTABLE_INI
 END MODULE UFFTABLE_MODULE
 !     .................................................................
+      SUBROUTINE UFFTABLE$EXIST(TYPE_,EXIST,SUGGESTION)
+!     ******************************************************************
+!     **  check if force field type exist.                           **
+!     **  used in paw_preopt tool                                    **
+!     **                                                             **
+!     **  remark                                                     **
+!     **  if the string type is contained in an existing atom type   **
+!     **  but not identical to an existing atom type                 **
+!     **  one of the existing atom types is returned as suggestion   **
+!     **                                                             **
+!     ************************written by Johannes Kaestner 2002********
+      USE UFFTABLE_MODULE
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: TYPE_
+      LOGICAL(4)  ,INTENT(OUT):: EXIST
+      CHARACTER(5),INTENT(OUT):: SUGGESTION
+      INTEGER(4)              :: ITYPE
+!     ******************************************************************
+      CALL UFFTABLE_INI
+!
+!     ==================================================================
+!     ==  FIND ATOM TYPE                                              ==
+!     ==================================================================
+      ITYPE=1
+      SUGGESTION=''
+      EXIST=.FALSE.
+      DO ITYPE=1,NTYPE
+         IF(TYPE_.EQ.PAR(ITYPE)%NAME) THEN
+            EXIST=.TRUE.
+            SUGGESTION=PAR(ITYPE)%NAME
+            EXIT
+         ELSE
+            IF(INDEX(PAR(ITYPE)%NAME,TYPE_).GT.0) SUGGESTION=PAR(ITYPE)%NAME
+         END IF
+      END DO
+    END SUBROUTINE UFFTABLE$EXIST
+!     .................................................................
       SUBROUTINE UFFTABLE$GET(TYPE_,ID,VAL_)
       USE UFFTABLE_MODULE
       USE PERIODICTABLE_MODULE
@@ -2947,9 +3003,9 @@ END MODULE UFFTABLE_MODULE
       DO WHILE(TYPE_.NE.PAR(ITYPE)%NAME) 
         ITYPE=ITYPE+1
         IF(ITYPE.GT.NTYPE) THEN
-          CALL ERROR$MSG('ATOM TYPE NOT RECOGNIZED')
+          CALL ERROR$MSG('FFTYPE NOT RECOGNIZED')
           CALL ERROR$CHVAL('TYPE ',TYPE_)
-          CALL ERROR$STOP('UFFTABLE$GETR8')
+          CALL ERROR$STOP('UFFTABLE$GET')
         END IF
       ENDDO
 !
@@ -2972,7 +3028,7 @@ END MODULE UFFTABLE_MODULE
         CALL PERIODICTABLE$GET(TYPE_(1:2),'EN',VAL_)
       ELSE
         CALL ERROR$MSG('ID_ NOT RECOGNIZED')
-        CALL ERROR$STOP('UFFTABLE$GETR8')
+        CALL ERROR$STOP('UFFTABLE$GET')
       END IF
       RETURN
       END        
