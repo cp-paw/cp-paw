@@ -2063,6 +2063,36 @@ charges instead to prevent unphysical heat transfer between surface charges and 
 \vrules{optional}
 \vdefault{.false.}}
 
+
+%----------------------------------------------------------------------
+\block{!CONTROL!ANALYSE!CORELEVELS}
+%----------------------------------------------------------------------
+\brules{optional} \bdescr{calculates the positions of the core levels
+  (absolute and relative to the isolated atom (atomic calculation)). Note that
+  core relaxation effects, which contribute typically to 15~\%, are not
+  included. The absolute position of the core levels is only meaningfull for
+  isolated molecules. For extended systems, the zero of the electrostatic
+  potential is not the vacuum level, so that only relative shifts within a
+  single calculation are meaningful. For Tests see Pasquarello et al., Phys.
+  Rev. B 53, 10942 (1996).\\
+\textbf{Note does not work yet for parallel execution. Minor changes are required}
+}
+
+\mbax{\key{DEFAULT}
+\vdescr{Selects if core-levels shall be calculated for atoms, which are not in
+  the list of selected atoms.(see below).}
+\vformat{logical}
+\vrules{optional}
+\vdefault{.false.}}
+
+\mbax{\key{ATOMS}
+\vdescr{List of atoms, for which the core levels shall be calculated or
+  avoided. If default=F the core levels of specified are calculated. If
+  default=T, the core levels of all atoms not specified are calculated.}
+\vformat{character,array of arbitrary length}
+\vrules{optional}
+\vdefault{none}}
+
 %----------------------------------------------------------------------
 \block{!CONTROL!ANALYSE!WAVE}
 %----------------------------------------------------------------------

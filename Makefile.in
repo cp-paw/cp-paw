@@ -261,6 +261,7 @@ OBJECTS1 = \
 #
 OBJECTS2 = \
            ${OBJDIR}/paw_augmentation.o \
+           ${OBJDIR}/paw_softcore.o \
            ${OBJDIR}/paw_atoms.o \
            ${OBJDIR}/paw.o \
            ${OBJDIR}/paw_efg.o \
