@@ -2271,7 +2271,7 @@ PRINT*,'ITER ',ITER,DIGAM
             CALL LIB$RANDOM(RIM)
             REC=2.D0*REC-1.D0
             RIM=2.D0*RIM-1.D0
-            PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM)*SCALE(IG)
+            PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM,kind=8)*SCALE(IG)
           ENDDO
         ENDDO
       ENDDO
@@ -2314,7 +2314,7 @@ PRINT*,'ITER ',ITER,DIGAM
             CALL LIB$RANDOM(RIM)
             REC=2.D0*REC-1.D0
             RIM=2.D0*RIM-1.D0
-            PSI(IG,IDIM,IB)=CMPLX(REC,RIM)*SCALE(IG)
+            PSI(IG,IDIM,IB)=CMPLX(REC,RIM,kind=8)*SCALE(IG)
           ENDDO
         ENDDO
       ENDDO
