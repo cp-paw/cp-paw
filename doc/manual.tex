@@ -5076,7 +5076,8 @@ $ \exp{-(e/b)^2} $, where $b$ is the broadening.}
 Density of States (DoS) to the same height as the corresponding other
 function. Possible values are 'NONE', 'DOS', and 'NOS'. For 'NONE' no 
 rescaling takes place. with 'DOS' the DoS is rescaled and for 'NOS', 
-the NoS is rescaled.}
+the NoS is rescaled. Attention the scaling is done for each function 
+put to file individually!}
 \vformat{character} 
 \vrules{optional}
 \vdefault{'none'}}
@@ -6097,11 +6098,14 @@ protocol file.
 %==========================================================================
 \subsubsection{Position Trajectory}
 %==========================================================================
-In the position trajectory ``{\it root}\_r.tra'', LEN is four times
-the number of atoms and array are the atomic positions starting x,y,z
-of the first atom, x,y,z of the second and so fourth until the last
-atom followed by the point charges on the atoms beginning with the
-first atom.
+In the position trajectory ``{\it root}\_r.tra'', LEN is $9+4N$, where
+$N$ is the the number of atoms.The first 9 numbers are the lattice
+vectors in the form x,y,z-components of the first lattice vector,
+x,y,z components of the second vector and so on.  Then the atomic
+positions are written in the same manner, starting x,y,z of the first
+atom, x,y,z of the second and so fourth until the last atom. Finally
+the point charges of the atoms are written beginning with the first
+atom.
 
 %==========================================================================
 \newpage

@@ -2482,7 +2482,8 @@ CALL PROJECTION$POT(L,NWAVE1,AEPHIL=AEPHI1,PSPHIL=PSPHI1)
             CALL REPORT$R8VAL(NFILO,"NORM (REMOVE THIS)",SUM,' ')
             SVAR=1.D0/DSQRT(SUM)
             PSPSI(:,:)=PSPSI(:,:)*SVAR
-            PROJ(:)=PROJ(:)*SUM
+!           PROJ(:)=PROJ(:)*SUM    !pb050225 sum must be replaced by svar
+            PROJ(:)=PROJ(:)*SVAR    
 !
 !           ============================================================
 !           ==  ADD TO DENSITY                                        ==
@@ -2533,6 +2534,12 @@ PRINT*,'PSRHO IN VHAT ',RHO(1:4)
 !     ==  CALCULATE  VHAT                                             ==
 !     ==================================================================
       VHAT(:)=PSPOT(:)-POTOFRHO(:)
+!print*,'== r-pspot-potofrho-vhat*y0 ========================'
+!do ir=1,nr
+!  write(nfilo,*)r(ir),pspot(ir)*y0,potofrho(ir)*y0,vhat(ir)*y0
+!enddo
+!print*,'======================================================'
+!call error$stop('forced stop')
 !
 !     ==================================================================
 !     == CHECK CHARGE CONSERVATION                                    ==
