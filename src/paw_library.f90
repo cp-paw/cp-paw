@@ -1521,9 +1521,9 @@ END MODULE RANDOM_MODULE
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTC8')
       END IF
-      overlap(:,:)=(0.d0,0.d0)
       IF(TID) THEN
 !       == attention: scalar factors are supposed to be real as they are
+        overlap(:,:)=(0.d0,0.d0)
         CALL ZHERK('U','C',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
         DO I=1,N1
           DO J=I+1,N2
@@ -1534,6 +1534,7 @@ END MODULE RANDOM_MODULE
 #IF DEFINED(CPPVAR_BLAS_ESSL)
         CALL ZGEMUL(PSI1,LEN,'C',PSI2,LEN,'N',OVERLAP,N1,N1,LEN,N2)
 #ELSE 
+        overlap(:,:)=(0.d0,0.d0)
         CALL ZGEMM('C','N',N1,N2,LEN,(1.D0,0.D0),PSI1,LEN,PSI2,LEN &
      &            ,(0.D0,0.D0),OVERLAP,N1)
 #endif
