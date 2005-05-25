@@ -60,8 +60,8 @@ INTEGER(4)                :: IWAVEPTR=0
 INTEGER(4)                :: IDENSITYPTR=0
 INTEGER(4)                :: IPOTPTR=0
 COMPLEX(8),ALLOCATABLE    :: PWPOT(:)
-REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)
-REAL(8)   ,ALLOCATABLE    :: PS1CPOT(:,:,:)
+REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)  !(NRX,LMRX,NAT)
+REAL(8)   ,ALLOCATABLE    :: PS1CPOT(:,:,:)  !(NRX,LMRX,NAT)
 INTEGER(4)                :: LMRXX=0    !INITIALLY NOT SET
 INTEGER(4)                :: NRX=0
 INTEGER(4)                :: NGL=0
@@ -284,7 +284,10 @@ END MODULE GRAPHICS_MODULE
       USE GRAPHICS_MODULE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
+      REAL(8)                 :: PI,Y0
 !     ******************************************************************
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       IF(ID.EQ.'DR') THEN 
         IF(IWAVEPTR.NE.0) THEN
           WAVEPLOT(IWAVEPTR)%DR=VAL
@@ -313,7 +316,16 @@ END MODULE GRAPHICS_MODULE
           CALL ERROR$STOP('GRAPHICS$SETR8')
         END IF
         DENSITYPLOT(IDENSITYPTR)%EMAX=VAL
-
+!
+      ELSE IF(ID.EQ.'POTSHIFT') THEN 
+        IF(IPOTPTR.EQ.0) return
+        if(ALLOCATED(PWPOT)) THEN
+          PWPOT(:)=PWPOT(:)+VAL
+        END IF
+        IF(ALLOCATED(AE1CPOT).AND.ALLOCATED(PS1CPOT)) THEN
+          AE1CPOT(:,1,:)=AE1CPOT(:,1,:)+VAL/Y0
+          PS1CPOT(:,1,:)=PS1CPOT(:,1,:)+VAL/Y0
+        END IF
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)

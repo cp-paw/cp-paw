@@ -1947,7 +1947,6 @@ PRINT*,'ITER ',ITER,DIGAM
 !     **  GRAM-SCHMIDT ORTHOGONALIZATION OF A SET OF WAVE FUNCTIONS   **
 !     **                                                              **
 !     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
-      USE MPE_MODULE
       USE WAVES_MODULE, ONLY: MAP_TYPE,GSET_TYPE
       IMPLICIT NONE
       TYPE(MAP_TYPE)  ,INTENT(IN) :: MAP
