@@ -149,7 +149,7 @@ END MODULE ATOMS_MODULE
       REAL(8)               :: KELVIN
       INTEGER(4)            :: NTASKS,THISTASK
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK) 
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK) 
       IF(THISTASK.NE.1) RETURN
       CALL CONSTANTS('KB',KELVIN)
       CALL REPORT$TITLE(NFIL,'ATOMS')
@@ -190,7 +190,7 @@ END MODULE ATOMS_MODULE
       REAL(8)               :: EMASS,EMASSCG2
       REAL(8)               :: RBAS(3,3)
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK) 
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK) 
       IF(THISTASK.NE.1) RETURN
       CALL CONSTANTS('U',U)
       CALL WAVES$GETR8('EMASS',EMASS)
@@ -296,7 +296,7 @@ END MODULE ATOMS_MODULE
           DO IAT=1,NAT
             SVAR=SVAR+EFFEMASS(IAT)/RMASS(IAT)
           ENDDO
-          SVAR=SVAR/REAL(NAT,kind=8)*EKIN
+          SVAR=SVAR/REAL(NAT,KIND=8)*EKIN
           IF(SVAR.EQ.0.D0) THEN
             CALL ERROR$MSG('TEMPERATURE FOR WAVE FUNCTION THERMOSTAT IS ZERO')
             CALL ERROR$MSG('PROBABLY !STRUCTURE!SPECIES:PS<G2> IS NOT SPECIFIED')
@@ -372,7 +372,7 @@ ENDDO
       IF(TRANDOMIZE) THEN
 PRINT*,'TRANDOMIZE ',TRANDOMIZE
         CALL ATOMS_RANDOMIZEVELOCITY(NAT,RMASS,RM,AMPRE,DELT)
-        CALL MPE$BROADCAST(1,RM)
+        CALL MPE$BROADCAST('MONOMER',1,RM)
         TRANDOMIZE=.FALSE.
       END IF 
 ! 
@@ -482,7 +482,7 @@ TSTRESS=.FALSE.
 !     == MAP NEW COORDINATES BACK INTO THE CURRENT UNIT CELL          ==
 !     ==================================================================
       IF(TSTRESS) THEN
-        CALL lib$invertr8(3,MAPTOCELL,MAPTOCELL)
+        CALL LIB$INVERTR8(3,MAPTOCELL,MAPTOCELL)
 !CALL INVERT(3,MAPTOCELL,MAPTOCELL)
         DO IAT=1,NAT
           RP(:,IAT)=MATMUL(MAPTOCELL,RP1(:,IAT))
@@ -639,7 +639,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !     **    THE TARGET KINETIC ENERGY IS 1.5*NAT*EBATH                **
 !     **                                                              **
 !     ******************************************************************
-      IMPLICIT none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: NAT        ! #(ATOMS)
       REAL(8)   ,INTENT(IN)   :: DELT       ! TIME STEP
       REAL(8)   ,INTENT(IN)   :: EBATH      ! K_BT OF THE HEAT BATH
@@ -789,7 +789,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
             MATP(I,I)=1.D0+ANNER1+MATP(I,I)
             MATM(I,I)=1.D0-ANNER1+MATM(I,I)
           ENDDO
-          CALL lib$INVERTr8(3,MATP,MATPINV)
+          CALL LIB$INVERTR8(3,MATP,MATPINV)
 !CALL INVERT(3,MATP,MATPINV)
           RP(:,IAT)=MATMUL(MATPINV,2.D0*R0(:,IAT)-MATMUL(MATM,RM(:,IAT)) &
      &                                  +FORCE(:,IAT)*DT**2/RMASS0)
@@ -811,7 +811,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
-      USE ATOMS_MODULE,ONLY : R0,RM,NAT,name
+      USE ATOMS_MODULE,ONLY : R0,RM,NAT,NAME
       USE RESTART_INTERFACE
       IMPLICIT NONE
       INTEGER(4)            ,INTENT(IN) :: NFIL
@@ -821,17 +821,17 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
                =SEPARATOR_TYPE(4,'ATOMS','NONE','AUG2003','NONE')
 !     TYPE (SEPARATOR_TYPE),PARAMETER  :: MYSEPARATOR &
 !              =SEPARATOR_TYPE(3,'ATOMS','NONE','AUG1996','NONE')
-      INTEGER(4)                        :: NTASKS,ITASK
+      INTEGER(4)                        :: NTASKS,THISTASK
 !     ******************************************************************
-      CALL WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
 !
 !     ==================================================================
 !     ==  WRITE DATA                                                  ==
 !     ==================================================================
-      CALL MPE$QUERY(NTASKS,ITASK)
-      IF(ITASK.EQ.1) THEN
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      IF(THISTASK.EQ.1) THEN
+        CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
         WRITE(NFIL)NAT
-        WRITE(NFIL)name(:)
+        WRITE(NFIL)NAME(:)
         WRITE(NFIL)R0(:,:)
         WRITE(NFIL)RM(:,:)
       END IF
@@ -850,38 +850,39 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       INTEGER(4)            ,INTENT(IN)  :: NFIL
       INTEGER(4)            ,INTENT(IN)  :: NFILO
       LOGICAL(4)            ,INTENT(OUT) :: TCHK
-      TYPE (SEPARATOR_TYPE),PARAMETER   :: MYSEPARATOR_old1 &
+      TYPE (SEPARATOR_TYPE),PARAMETER   :: MYSEPARATOR_OLD1 &
                  =SEPARATOR_TYPE(3,'ATOMS','NONE','AUG1996','NONE')
       TYPE (SEPARATOR_TYPE),PARAMETER   :: MYSEPARATOR &
                  =SEPARATOR_TYPE(4,'ATOMS','NONE','AUG2003','NONE')
       TYPE (SEPARATOR_TYPE)             :: SEPARATOR
       INTEGER(4)                    :: NAT1 
       REAL(8)          ,ALLOCATABLE :: TMP(:,:)   !(3,NAT1)
-      character(32)    ,ALLOCATABLE :: name1(:)   !(NAT1)
-      logical(4)                    :: tchk1        
-      INTEGER(4)                    :: NTASKS,ITASK
-      INTEGER(4)                    :: iat,iat1
+      CHARACTER(32)    ,ALLOCATABLE :: NAME1(:)   !(NAT1)
+      LOGICAL(4)                    :: TCHK1        
+      INTEGER(4)                    :: NTASKS,THISTASK
+      INTEGER(4)                    :: IAT,IAT1
 !     ******************************************************************
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK=.NOT.START
       SEPARATOR=MYSEPARATOR
-      CALL READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      CALL MPE$BROADCAST('MONOMER',1,TCHK)
       IF(.NOT.TCHK) RETURN
 !
-      CALL MPE$QUERY(NTASKS,ITASK)
 !
 !     ==================================================================
 !     ==  READ DATA                                                   ==
 !     ==================================================================
-      IF(ITASK.EQ.1) THEN
+      IF(THISTASK.EQ.1) THEN
         IF(SEPARATOR%VERSION.EQ.MYSEPARATOR%VERSION) THEN
           READ(NFIL)NAT1
           ALLOCATE(TMP(3,NAT1))
           ALLOCATE(NAME1(NAT1))
           READ(NFIL)NAME1(:)
           READ(NFIL)TMP(:,:)
-!         == read r(0)
+!         == READ R(0)
           DO IAT=1,NAT
-            tchk1=.false.
+            TCHK1=.FALSE.
             DO IAT1=1,NAT1
               IF(NAME1(IAT1).EQ.NAME(IAT)) THEN
                 R0(:,IAT)=TMP(:,IAT1)
@@ -895,7 +896,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
               CALL ERROR$STOP('ATOMS$READ')
             END IF
           ENDDO
-!         == read r(-)
+!         == READ R(-)
           READ(NFIL)TMP(:,:)
           DO IAT=1,NAT
             DO IAT1=1,NAT1
@@ -934,8 +935,8 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !     ==================================================================
 !     ==  BROADCAST RESULT                                            ==
 !     ==================================================================
-      CALL MPE$BROADCAST(1,R0)
-      CALL MPE$BROADCAST(1,RM)
+      CALL MPE$BROADCAST('MONOMER',1,R0)
+      CALL MPE$BROADCAST('MONOMER',1,RM)
 !
 !     ==================================================================
 !     ==  STORE DATA                                                  ==
@@ -1213,7 +1214,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
           IF(LENG_.NE.NAT) GOTO 9000
           VAL_(:)=NAME(:)
         ELSE
-           CALL ERROR$MSG('GETchA DOES NOT HANDLE SCALARS')
+           CALL ERROR$MSG('GETCHA DOES NOT HANDLE SCALARS')
            CALL ERROR$STOP('ATOMLIST$GETCHA')
         END IF
       ELSE 
@@ -2053,7 +2054,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       INTEGER(4)            :: IAT
       INTEGER(4)            :: NTASKS,THISTASK
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK) 
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK) 
       IF(THISTASK.NE.1) RETURN
       VEL1(:,:)=R0(:,:)-RM(:,:)
       VEL2(:,:)=RP(:,:)-R0(:,:)

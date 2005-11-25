@@ -8,7 +8,7 @@
 !
 !.......................................................................
 MODULE THERMOSTAT_MODULE
-!*****************g******************************************************
+!*****************G******************************************************
 !**                                                                   **
 !**  THERMOSTAT IMPLEMENTS THE NOSE THERMOSTAT                        **
 !**                                                                   **
@@ -43,11 +43,13 @@ MODULE THERMOSTAT_MODULE
 !**    3) IF THE 'COOLING' IS OBTAINED BEFORE CALLING THE FUNCTION    **
 !**    THERMOSTAT$PROPAGATE THE VALUE IS OBTAINED FROM A POLYNOMIAL   **
 !**    EXTRAPOLATION OF THE THERMOSTAT VARIABLE.                      **
-!**    IF THE 'COOLING' IS OBTaIND AFTER CALLING THERMOSTAT$PROPAGATE **
+!**    IF THE 'COOLING' IS OBTAIND AFTER CALLING THERMOSTAT$PROPAGATE **
 !**    IT IS OBTAINED FROM THE ACTUAL VALUES OF THE THERMOSTA VARIABLE**
-!**    4) The thermostat can operate in two modes. one is a pourely   **
-!**    cooling thermostat for the wave functions. this option is set  **
-!**    by setl4('coolonly',.true.)                                    **
+!**    4) THE THERMOSTAT CAN OPERATE IN TWO MODES. ONE IS A POURELY   **
+!**    COOLING THERMOSTAT FOR THE WAVE FUNCTIONS. THIS OPTION IS SET  **
+!**    BY SETL4('COOLONLY',.TRUE.)                                    **
+!**    5) DURING READING  AND WRITING, THE THERMOSTAT ASSUMES THAT    **
+!**    IT LIVES ON THE PROCESSOR GROUP MONOMER (SEE MPE OBJECT)       **
 !**                                                                   **
 !***********************************************************************
 TYPE THERMOSTAT_TYPE
@@ -56,7 +58,7 @@ TYPE THERMOSTAT_TYPE
 ! == ACTUAL SETTING USED ===============================================
   CHARACTER(32):: ID          ! THERMOSTAT ID
   LOGICAL(4)   :: ON          ! ON/OFF SWITCH FOR THE THERMOSTAT
-  logical(4)   :: twave       ! use special wave function thermostat
+  LOGICAL(4)   :: TWAVE       ! USE SPECIAL WAVE FUNCTION THERMOSTAT
   LOGICAL(4)   :: STOP        ! INITIAL DX/DT IS SET TO ZERO 
   REAL(8)      :: DT          ! TIME STEP FOR X(T)
   REAL(8)      :: Q           ! MASS OF THE NOSE VARIABLE
@@ -97,21 +99,26 @@ END MODULE THERMOSTAT_MODULE
         THIS=>FIRST_THIS
       ELSE
         THIS=>FIRST_THIS
-        DO WHILE (ASSOCIATED(THIS%NEXT))
+        DO 
           IF(THIS%ID.EQ.ID) THEN
             CALL ERROR$MSG('CANNOT CREATE THERMOSTAT WITH THE SAME NAME')
+            CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('THERMOSTAT$NEW')
           END IF
-          THIS=>THIS%NEXT
+          IF(ASSOCIATED(THIS%NEXT)) THEN
+            THIS=>THIS%NEXT
+          ELSE
+            ALLOCATE(THIS%NEXT)
+            THIS=>THIS%NEXT
+            EXIT
+          END IF
         ENDDO
-        ALLOCATE(THIS%NEXT)
-        THIS=>THIS%NEXT
       END IF
       THIS%GFREE=0.D0
 !   
       THIS%ID      =ID
       THIS%ON      =.FALSE.      
-      this%twave   =.false.
+      THIS%TWAVE   =.FALSE.
       THIS%DT      =0.D0
       THIS%Q       =0.D0
       THIS%FRICTION=0.D0
@@ -145,7 +152,7 @@ END MODULE THERMOSTAT_MODULE
 !     ******************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
-        CALL ERROR$STOP('THERMOSTAT$DElete')
+        CALL ERROR$STOP('THERMOSTAT$DELETE')
       END IF
       IF(ASSOCIATED(THIS,FIRST_THIS)) THEN
         FIRST_THIS=THIS
@@ -182,7 +189,7 @@ END MODULE THERMOSTAT_MODULE
 !
 !     == FIND THERMOSTAT AND SELECT
       THIS=>FIRST_THIS
-      DO WHILE (THIS%ID.NE.ID) 
+      DO WHILE (THIS%ID.NE.ID)
         IF(.NOT.ASSOCIATED(THIS%NEXT)) THEN
           CALL ERROR$MSG('THERMOSTAT DOES NOT EXIST')
           CALL ERROR$CHVAL('ID',ID)
@@ -203,7 +210,7 @@ END MODULE THERMOSTAT_MODULE
       INTEGER(4)            ,INTENT(IN) :: NFIL
       REAL(8)                           :: KELVIN
       REAL(8)                           :: SVAR
-      REAL(8)                           :: omega0
+      REAL(8)                           :: OMEGA0
       REAL(8)                           :: PI
 !     ******************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
@@ -255,11 +262,11 @@ END MODULE THERMOSTAT_MODULE
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       OMEGA0=2.D0*PI/PERIOD
-      q=4.D0*TARGET/OMEGA0**2   ! OMEGA0=SQRT(4*<T>/q)
+      Q=4.D0*TARGET/OMEGA0**2   ! OMEGA0=SQRT(4*<T>/Q)
       ALPHA=1.D0/OMEGA0         ! CRITICAL DAMPING
       FRICTION=ALPHA*DT/2.D0    ! FRICTION FOR CRITICAL DAMPING
       RETURN
-      end
+      END
 !
 !     ..................................................................
       SUBROUTINE THERMOSTAT$SCALEGFREE(GFREE)
@@ -314,7 +321,7 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       REAL(8)               :: X0,XM,XP
       REAL(8)               :: ANNEX  ! FRICTION FOR THE NOSE THERMOSTAT
       REAL(8)               :: QMASS  ! THERMOSTAT MASS
-      REAL(8)               :: target ! target kinetic energy of the system
+      REAL(8)               :: TARGET ! TARGET KINETIC ENERGY OF THE SYSTEM
       REAL(8)               :: EKIN
       REAL(8)               :: SVAR1,SVAR2,SVAR3
       REAL(8)               :: VNOS
@@ -393,7 +400,7 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       END IF
       ANNER=0.5D0*DT*VNOS
       ANNER=MAX(ANNER,-0.99999D0)
-      ANNER=MIN(ANNER,1.d0)
+      ANNER=MIN(ANNER,1.D0)
 !
 !     ==================================================================
 !     ==  COLLECT RESULTS                                             ==
@@ -402,9 +409,9 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       THIS%COOLING= ANNER
       THIS%EKIN   = 0.5D0*THIS%Q*VNOS**2 
       THIS%EPOT   = 2.D0*THIS%EKIN_TARGET*X0
-      if(this%twave) this%epot=0.d0
+      IF(THIS%TWAVE) THIS%EPOT=0.D0
       THIS%EDISS  = THIS%EDISS+ANNEX*0.5D0*QMASS*VNOS**2
-this%ediss=0.d0
+THIS%EDISS=0.D0
 !
 !     ==================================================================
 !     ==  PRINTOUT FOR TEST                                           ==
@@ -413,8 +420,8 @@ this%ediss=0.d0
         WRITE(*,'("THERMOSTAT: XNOS :",F5.2," VNOS ",F5.2," ENOSEP ",F10.5)') &
      &          X0,VNOS,THIS%EKIN+THIS%EPOT
       END IF
-print*,'therm cooling',anner        
-print*,'therm xp     ',xp,x0,xm
+PRINT*,'THERM COOLING',ANNER        
+PRINT*,'THERM XP     ',XP,X0,XM
       RETURN
       END
 !
@@ -429,7 +436,7 @@ print*,'therm xp     ',xp,x0,xm
       REAL(8)            :: XM
       REAL(8)            :: XMM,XMMM
       REAL(8)            :: XP
-      REAL(8)            :: XDOT,xdotlast
+      REAL(8)            :: XDOT,XDOTLAST
       REAL(8)            :: DT
 !     ******************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
@@ -455,26 +462,26 @@ print*,'therm xp     ',xp,x0,xm
       XM =THIS%XM
       XMM=THIS%XMM 
       XMMM=THIS%XMMM
-!     xp=2.d0*x0-xm
+!     XP=2.D0*X0-XM
 !     XP=3.D0*X0-3.D0*XM+XMM
       XP=4.D0*X0-6.D0*XM+4.D0*XMM-XMMM
       THIS%XP     =XP
       XDOT=(XP-XM)/(2.D0*DT)
-      if(this%twave.and.xdot.lt.0) then
-        xdotlast=(x0-xmm)/(2.d0*dt)
+      IF(THIS%TWAVE.AND.XDOT.LT.0) THEN
+        XDOTLAST=(X0-XMM)/(2.D0*DT)
 !       ================================================================
 !       == USE THE AVERAGE FRICTION AMONG THE TIME STEPS              ==
 !       == ASSUMING A LINEAR INTERPOLATION OF XDOT,                   ==
 !       == WHICH IS TRUNCATED AT ITS ZERO.                            ==
 !       == THE HISTOGRAMM SHAPED FRICTION OF HALF STEP IS SUBTRACTED. ==
 !       ================================================================
-        if(xdot.ne.-xdotlast) then
-!         XDOT=0.5D0*XDOTLAST*xdot/(xdotlast-XDOT)
-!rint*,'xdot....',xdot
+        IF(XDOT.NE.-XDOTLAST) THEN
+!         XDOT=0.5D0*XDOTLAST*XDOT/(XDOTLAST-XDOT)
+!RINT*,'XDOT....',XDOT
 !       ELSE
           XDOT=0.D0
         END IF
-      end if
+      END IF
       THIS%COOLING=XDOT*DT/2.D0
 !
       RETURN
@@ -503,7 +510,7 @@ print*,'therm xp     ',xp,x0,xm
       END IF
       IF(.NOT.THIS%ON) RETURN
 !
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     == COLLECT DATA ==================================================
       X0 =THIS%X0
@@ -514,7 +521,7 @@ print*,'therm xp     ',xp,x0,xm
       IF(THISTASK.EQ.1) THEN
         SEPARATOR=MYSEPARATOR
         SEPARATOR%NAME=THIS%ID
-        CALL WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+        CALL RESTART$WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
         WRITE(NFIL)X0,XM,XMM
       END IF
       RETURN
@@ -542,13 +549,13 @@ print*,'therm xp     ',xp,x0,xm
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$READ')
       END IF
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     == READ DATA FROM FILE ===========================================
       TCHK=THIS%ON
       SEPARATOR=MYSEPARATOR
       SEPARATOR%NAME=THIS%ID
-      CALL READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
 !
 !     == RETURN AND LEAVE THERMOSTAT VARIABLES UNCHANGED ==============
       IF(.NOT.TCHK)RETURN
@@ -562,9 +569,9 @@ print*,'therm xp     ',xp,x0,xm
       END IF
 !
 !     == DISTRIBUTE ARRAY TO ALL PARALLEL TASKS =======================
-      CALL MPE$BROADCAST(1,X0)
-      CALL MPE$BROADCAST(1,XM)
-      CALL MPE$BROADCAST(1,XMM)
+      CALL MPE$BROADCAST('MONOMER',1,X0)
+      CALL MPE$BROADCAST('MONOMER',1,XM)
+      CALL MPE$BROADCAST('MONOMER',1,XMM)
 !
 !     == SET  DATA E ARRAY TO ALL PARALLEL TASKS =======================
       THIS%X0=X0
@@ -590,11 +597,11 @@ print*,'therm xp     ',xp,x0,xm
       END IF
       IF(ID.EQ.'TIMESTEP') THEN
         THIS%DT=VAL
-      else IF(ID.EQ.'FRICTION') THEN
+      ELSE IF(ID.EQ.'FRICTION') THEN
         THIS%FRICTION=VAL
       ELSE IF(ID.EQ.'MASS') THEN
         THIS%Q=VAL
-IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$setr8',THIS%Q
+IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SETR8',THIS%Q
       ELSE IF(ID.EQ.'TARGET') THEN
         THIS%EKIN_TARGET=VAL
       ELSE IF(ID.EQ.'EKIN(SYSTEM)') THEN

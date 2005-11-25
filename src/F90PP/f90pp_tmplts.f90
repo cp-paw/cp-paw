@@ -323,7 +323,7 @@ END MODULE TEMPLATE_MODULE
       USE STRINGS
       IMPLICIT NONE
       INTEGER(4),PARAMETER :: LINELENG=256
-      INTEGER(4),PARAMETER :: NLINEX=10000
+      INTEGER(4),PARAMETER :: NLINEX=100000
       CHARACTER(LINELENG)  :: BUFFER(NLINEX)
       CHARACTER(LINELENG)  :: BUFFERdummy
       INTEGER(4)           :: NLINE
@@ -346,6 +346,7 @@ END MODULE TEMPLATE_MODULE
       DO 
         I=I+1
         IF(I.GT.NLINE) EXIT
+!       == select beginning of the template, i.e. a line '#...template ...'
         IF(BUFFER(I)(1:1).NE.'#')CYCLE
         call uppercase1(buffer(i),buffer(i))
         IF(INDEX(BUFFER(I),'MODULE TEMPLATE').NE.0) CYCLE

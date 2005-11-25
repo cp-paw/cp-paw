@@ -10,7 +10,7 @@ MODULE VEXT_MODULE
 TYPE VPAIR_TYPE
   INTEGER(4)               :: IAT1
   INTEGER(4)               :: IAT2
-  real(8)                  :: E0
+  REAL(8)                  :: E0
   TYPE(VPAIR_TYPE),POINTER :: NEXT
 END TYPE VPAIR_TYPE
 !
@@ -82,7 +82,7 @@ END MODULE VEXT_MODULE
        REAL(8)         ,ALLOCATABLE:: FORCE1(:,:)
 !      *****************************************************************
        IF(.NOT.TON) RETURN
-       CALL ATOMLIST$natom(nat)
+       CALL ATOMLIST$NATOM(NAT)
        ALLOCATE(R0(3,NAT))
        ALLOCATE(FORCE(3,NAT))
        ALLOCATE(FORCE1(3,NAT))
@@ -140,7 +140,7 @@ END MODULE VEXT_MODULE
 !      =================================================================
        DO IAT=1,NAT
          CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-         CALL ATOMtypeLIST$SELECTI4(ISP)
+         CALL ATOMTYPELIST$SELECTI4(ISP)
          CALL ATOMTYPELIST$GETI4('IZ',IZ(IAT))
          CALL PERIODICTABLE$GET(IZ(IAT),'R(VDW)',RVDW(IAT))
          CALL PERIODICTABLE$GET(IZ(IAT),'R(COV)',RCOV(IAT))
@@ -173,7 +173,7 @@ END MODULE VEXT_MODULE
                  DR(:)=R0(:,IAT2)-R0(:,IAT1) &
          &            +RBAS(:,1)*DBLE(IT1)+RBAS(:,2)*DBLE(IT2)+RBAS(:,3)*DBLE(IT3)
                  DIS=SQRT(DOT_PRODUCT(DR(:),DR(:)))
-                 if(dis.lt.1.d-6) cycle
+                 IF(DIS.LT.1.D-6) CYCLE
                  IF(DIS.LT.DVDW) THEN
                    SVAR=E0/(DCOV-DVDW)**2
                    ENERGY=ENERGY+SVAR*(DIS-DVDW)**2

@@ -6,16 +6,16 @@
 !**  PURPOSE: REPORTS THE USAGE OF THE SYSTEM RESOURCES              **
 !**                                                                  **
 !**  METHODS                                                         **
-!**    USAGE$GET(ID,VAL)                       x                      **
+!**    USAGE$GET(ID,VAL)                       X                      **
 !**    USAGE$REPORT(NFIL)                                            **
 !**                                                                  **
 !**  REMARKS: USES C-FUNCTION "GETRUSAGE"  SEE AIX INFO AND          **
-!**    /uSr/include/SYS/RESOURCE.H FOR FURTHER INFORMATION           **
+!**    /USR/INCLUDE/SYS/RESOURCE.H FOR FURTHER INFORMATION           **
 !**                                                                  **
 !**********************************************************************
 !**********************************************************************
 !     .................................................................
-      SUBROUTINE USAGE$get(id,val)
+      SUBROUTINE USAGE$GET(ID,VAL)
 !     *****************************************************************
 !     **                                                             **
 !     **  PROVIDES INFORMATION  ON THE USAGE OF SYSTEM RESOURCES     **
@@ -24,12 +24,12 @@
 !     *****************************************************************
       USE MPE_MODULE
       IMPLICIT NONE
-      character(*),intent(in) :: id
-      real(8)     ,intent(out):: val
+      CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,INTENT(OUT):: VAL
 !     *****************************************************************
-      call lib$getusage(id,val)
-      return
-      end
+      CALL LIB$GETUSAGE(ID,VAL)
+      RETURN
+      END
 !     .................................................................
       SUBROUTINE USAGE$REPORT(NFIL)
 !     *****************************************************************
@@ -46,11 +46,10 @@
       INTEGER(4)            :: NITEM=6
       REAL(8)   ,ALLOCATABLE:: LOCARRAY(:)
       REAL(8)   ,ALLOCATABLE:: GLOBARRAY(:,:)
-      real(8)               :: cputime
+      REAL(8)               :: CPUTIME
 !     *****************************************************************
-!return
-      CALL MPE$QUERY(NTASKS,THISTASK)
-      ALLOCATE(LOCARRAY(nitem))
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
+      ALLOCATE(LOCARRAY(NITEM))
 !
 !     =================================================================
 !     == COLLECT ON EACH NODE                                        == 
@@ -66,7 +65,7 @@
 !     == AVERAGE OVER ALL NODES                                      == 
 !     =================================================================
       ALLOCATE(GLOBARRAY(NITEM,NTASKS))
-      CALL MPE$GATHER(1,LOCARRAY,GLOBARRAY)
+      CALL MPE$GATHER('~',1,LOCARRAY,GLOBARRAY)
       LOCARRAY(:)=SUM(GLOBARRAY,DIM=2)/REAL(NTASKS,KIND=8)
       DEALLOCATE(GLOBARRAY)
 !

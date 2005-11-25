@@ -26,11 +26,11 @@ MODULE DYNOCC_MODULE
 !**    SUMOFZ                                                         **
 !**    TDYN                                                           **
 !**    IF(TDYN) THEN                                                  **
-!**      TEMP,MX,DELAT,ANNEX,TSTOP,freeze                             **
+!**      TEMP,MX,DELAT,ANNEX,TSTOP,FREEZE                             **
 !**      TFIXTOT                                                      **
 !**      TFIXSPIN                                                     **
 !**      IF(TFIXTOT) THEN                                             **
-!**        TOTCHA   (on input as excess charge)                       **
+!**        TOTCHA   (ON INPUT AS EXCESS CHARGE)                       **
 !**      ELSE                                                         **
 !**        TOTPOT                                                     **
 !**      END IF                                                       **
@@ -42,7 +42,7 @@ MODULE DYNOCC_MODULE
 !**    ELSE                                                           **
 !**      OCC                                                          **
 !**    END IF                                                         **
-!**    starttype                                                      **
+!**    STARTTYPE                                                      **
 !**                                                                   **
 !**    FOUR DIFFERENT STARTTYPE ARE POSSIBLE:                         **
 !**      'X' READS THE OCCUPATION VARIABLES FROM RESTART FILE         **
@@ -60,7 +60,7 @@ MODULE DYNOCC_MODULE
 !**    TEMPERATURE, THE TOTAL CHARGE OR SPIN (OR SPINPOT).             **
 !**                                                                   **
 !************PETER E BLOECHL, IBM ZURICH RESEARCH LABORATORY (1996)*****
-character(1):: starttype       ! can be 'n','e','x'
+CHARACTER(1):: STARTTYPE       ! CAN BE 'N','E','X'
 INTEGER(4)  :: NB=0            ! #(BANDS)
 INTEGER(4)  :: NKPT=0          ! #(K-POINTS)
 INTEGER(4)  :: NSPIN=0         ! #(SPINS)
@@ -71,8 +71,8 @@ LOGICAL(4)  :: TFIXSPIN=.FALSE.! FIXED SPIN/ MAGNETIC FIELD
 LOGICAL(4)  :: TFIXTOT=.FALSE. ! FIXED CHARGE/CHEMICAL POTENTIAL
 REAL(8)     :: FMAX=1.D0       ! MAX OCCUPATION OF A SINGLE STATE
 REAL(8)     :: SUMOFZ=-1.D0    ! SUM OF NUCLEAR CHARGES
-REAL(8)     :: charge=0.D0     ! excess number
-REAL(8)     :: TOTCHA=0.D0     ! NUMBER OF ELECTRONS (=sumofz+charge)
+REAL(8)     :: CHARGE=0.D0     ! EXCESS NUMBER
+REAL(8)     :: TOTCHA=0.D0     ! NUMBER OF ELECTRONS (=SUMOFZ+CHARGE)
 REAL(8)     :: SPINCHA=0.D0    ! TOTAL SPIN [ELECTRON SPINS]
 REAL(8)     :: MX=800.D0       ! MASS OF OCCUPATION DYNAMICS
 REAL(8)     :: TOTPOT=0.D0     ! FERMI LEVEL
@@ -83,7 +83,7 @@ REAL(8)     :: DELTAT=0.D0     ! TIME STEP
 REAL(8)   ,ALLOCATABLE :: XM(:,:,:)       ! DYNAMICAL VARIABLES FRO OCCUPATIONS
 REAL(8)   ,ALLOCATABLE :: X0(:,:,:)
 REAL(8)   ,ALLOCATABLE :: XP(:,:,:)
-logical(4)             :: tepsilon=.false.
+LOGICAL(4)             :: TEPSILON=.FALSE.
 REAL(8)   ,ALLOCATABLE :: EPSILON(:,:,:)  ! DE/DF=<PSI|H|PSI>
 !! REMARK MPSIDOT2 IS NOT PROPERLY TREATED, BECAUSE IT IS CALCULATED IN TWO STEPS
 REAL(8)   ,ALLOCATABLE :: MPSIDOT2(:,:,:) ! M_PSI<PSIDOT||PSIDOT> 
@@ -340,7 +340,7 @@ END MODULE DYNOCC_MODULE
        CALL DYNOCC$SETR8('TEMP',1.D0)
        CALL DYNOCC$SETL4('FIXQ',.TRUE.)
        CALL DYNOCC$SETL4('FIXS',.TRUE.)
-       CALL DYNOCC$SETch('STARTTYPE','N')
+       CALL DYNOCC$SETCH('STARTTYPE','N')
        CALL DYNOCC$CREATE(NB,NKPT,NSPIN)
 !REMARK WHY IS XK NEEDED?
        CALL DYNOCC$INIOCC
@@ -403,11 +403,11 @@ END MODULE DYNOCC_MODULE
        ALLOCATE(XM(NB,NKPT,NSPIN))
        ALLOCATE(X0(NB,NKPT,NSPIN))
        ALLOCATE(XP(NB,NKPT,NSPIN))
-       ALLOCATE(epsilon(NB,NKPT,NSPIN))
+       ALLOCATE(EPSILON(NB,NKPT,NSPIN))
        XM(:,:,:)=0.5D0
        X0(:,:,:)=0.5D0
        XP(:,:,:)=0.5D0
-       epsilon(:,:,:)=-1.d0
+       EPSILON(:,:,:)=-1.D0
        RETURN
        END
 !      .................................................................
@@ -513,12 +513,12 @@ END MODULE DYNOCC_MODULE
          END IF
          IF(.NOT.ALLOCATED(WKPT))ALLOCATE(WKPT(NKPT))
          WKPT(:)=DATA_(:)
-!pb031019start
-         IF(abs(SUM(WKPT)-1.d0).gt.1.d-6) THEN
+!PB031019START
+         IF(ABS(SUM(WKPT)-1.D0).GT.1.D-6) THEN
            CALL ERROR$MSG('OCCUPATIONS DO NOT SUM UP TO ONE!')
            CALL ERROR$STOP('DYNOCC$SETR8A')
          END IF
-!pb031019end
+!PB031019END
 !      ===================================================================
        ELSE IF(ID_.EQ.'EPSILON') THEN
          IF(LEN_.NE.NB*NKPT*NSPIN) THEN
@@ -556,14 +556,14 @@ END MODULE DYNOCC_MODULE
        END
 !
 !      .................................................................
-       SUBROUTINE DYNOCC$SETch(ID_,DATA_)
+       SUBROUTINE DYNOCC$SETCH(ID_,DATA_)
 !      *****************************************************************
-!      **  SET character                                              **
+!      **  SET CHARACTER                                              **
 !      *****************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
-       character(*),INTENT(IN) :: DATA_
+       CHARACTER(*),INTENT(IN) :: DATA_
 !      *****************************************************************
        IF(ID_.EQ.'STARTTYPE') THEN
          STARTTYPE=DATA_
@@ -574,7 +574,7 @@ END MODULE DYNOCC_MODULE
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
-         CALL ERROR$STOP('DYNOCC$SETch')
+         CALL ERROR$STOP('DYNOCC$SETCH')
        END IF
        RETURN
        END
@@ -592,14 +592,14 @@ END MODULE DYNOCC_MODULE
 !      *****************************************************************
        IF(ID_.EQ.'SUMOFZ') THEN
          SUMOFZ=DATA_
-         TOTCHA=SUMOFZ+charge
+         TOTCHA=SUMOFZ+CHARGE
          RESET=.TRUE.
        ELSE IF(ID_.EQ.'TOTCHA') THEN
          IF(SUMOFZ.LT.0.D0) THEN
            CALL ERROR$MSG('SUMOFZ MUST BE SET BEFORE TOTCHA')
            CALL ERROR$STOP('DYNOCC$SETR8')
          END IF
-         charge=data_
+         CHARGE=DATA_
          TOTCHA=SUMOFZ+CHARGE
          RESET=.TRUE.
        ELSE IF(ID_.EQ.'SPIN') THEN
@@ -846,29 +846,29 @@ END MODULE DYNOCC_MODULE
       LOGICAL(4)       ,INTENT(OUT):: TCHK
       TYPE(SEPARATOR_TYPE),PARAMETER :: MYSEPARATOR &
           =SEPARATOR_TYPE(4,'OCCUPATIONS','NONE','OCT2003',' ')
-      TYPE(SEPARATOR_TYPE),PARAMETER :: oldSEPARATOR &
+      TYPE(SEPARATOR_TYPE),PARAMETER :: OLDSEPARATOR &
           =SEPARATOR_TYPE(3,'OCCUPATIONS','NONE','AUG1996',' ')
-      INTEGER(4)                   :: NTASKS,ITASK
-      logical(4)                   :: tnew=.true.
+      INTEGER(4)                   :: NTASKS,THISTASK
+      LOGICAL(4)                   :: TNEW=.TRUE.
 !     ******************************************************************
                           CALL TRACE$PUSH('OCCUPATIONS$WRITE')
-      CALL MPE$QUERY(NTASKS,ITASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(TNEW) THEN
-        CALL WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
-        IF(ITASK.EQ.1) THEN
+        IF(THISTASK.EQ.1) THEN
+          CALL restart$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
           WRITE(NFIL)NB,NKPT,NSPIN
           WRITE(NFIL)X0(:,:,:)
           WRITE(NFIL)XM(:,:,:)
-          WRITE(NFIL)epsilon(:,:,:)
+          WRITE(NFIL)EPSILON(:,:,:)
         END IF
-      else
-        CALL WRITESEPARATOR(oldSEPARATOR,NFIL,NFILO,TCHK)
-        IF(ITASK.EQ.1) THEN
+      ELSE
+        IF(THISTASK.EQ.1) THEN
+          CALL restart$WRITESEPARATOR(OLDSEPARATOR,NFIL,NFILO,TCHK)
           WRITE(NFIL)NB,NKPT,NSPIN
           WRITE(NFIL)X0(:,:,:)
           WRITE(NFIL)XM(:,:,:)
         END IF
-      end if
+      END IF
                            CALL TRACE$POP
       RETURN
       END
@@ -887,18 +887,18 @@ END MODULE DYNOCC_MODULE
       LOGICAL(4)         ,INTENT(OUT):: TCHK
       TYPE(SEPARATOR_TYPE),PARAMETER :: MYSEPARATOR &
           =SEPARATOR_TYPE(4,'OCCUPATIONS','NONE','OCT2003',' ')
-      TYPE(SEPARATOR_TYPE),PARAMETER :: oldSEPARATOR &
+      TYPE(SEPARATOR_TYPE),PARAMETER :: OLDSEPARATOR &
           =SEPARATOR_TYPE(3,'OCCUPATIONS','NONE','AUG1996',' ')
       TYPE(SEPARATOR_TYPE)           :: SEPARATOR 
       REAL(8)            ,ALLOCATABLE:: TMP0(:,:,:)
       REAL(8)            ,ALLOCATABLE:: TMPM(:,:,:)
       REAL(8)            ,ALLOCATABLE:: TMPE(:,:,:)
       INTEGER(4)                     :: NB1,NKPT1,NSPIN1
-      INTEGER(4)                     :: NTASKS,ITASK
+      INTEGER(4)                     :: NTASKS,THISTASK
       INTEGER(4)                     :: ISPIN,IKPT,IB
       REAL(8)                        :: SVAR,DSVAR
-      logical(4)                     :: told
-      integer(4)                     :: nfil1
+      LOGICAL(4)                     :: TOLD
+      INTEGER(4)                     :: NFIL1
 !     ******************************************************************
                           CALL TRACE$PUSH('DYNOCC$READ')
       IF(STARTTYPE.EQ.' ') THEN
@@ -910,35 +910,36 @@ END MODULE DYNOCC_MODULE
         RETURN
       END IF
 !
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       SEPARATOR=MYSEPARATOR
-      CALL READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      CALL MPE$BROADCAST('MONOMER',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL TRACE$POP ;RETURN
       END IF
-!     == check if restart file format from august 1996 =================
-      told=(separator%version.eq.'AUG1996')
-      if ((starttype.eq.'E').and.(told)) then
-        call filehandler$unit('PROT',nfil1)
-        write(nfil1,*)
-        write(nfil1,'("**********************************************")')
-        write(nfil1,'("WARNING:")')
-        write(nfil1,'("IT IS NOT POSSIBLE TO RESTART FROM A RSTRT ")')
-        write(nfil1,'("FILE OF PREVIOUS RELEASES USING ")')
-        write(nfil1,'("!MERMIN START=T. THE CODE AUTOMATICALLY")')
-        write(nfil1,'("ASSUMES !MERMIN START=F")')
-        write(nfil1,'("**********************************************")')
-        write(nfil1,*)
-        call filehandler$close('PROT')
-      end if
+!     == CHECK IF RESTART FILE FORMAT FROM AUGUST 1996 =================
+      TOLD=(SEPARATOR%VERSION.EQ.'AUG1996')
+      IF ((STARTTYPE.EQ.'E').AND.(TOLD)) THEN
+        CALL FILEHANDLER$UNIT('PROT',NFIL1)
+        WRITE(NFIL1,*)
+        WRITE(NFIL1,'("**********************************************")')
+        WRITE(NFIL1,'("WARNING:")')
+        WRITE(NFIL1,'("IT IS NOT POSSIBLE TO RESTART FROM A RSTRT ")')
+        WRITE(NFIL1,'("FILE OF PREVIOUS RELEASES USING ")')
+        WRITE(NFIL1,'("!MERMIN START=T. THE CODE AUTOMATICALLY")')
+        WRITE(NFIL1,'("ASSUMES !MERMIN START=F")')
+        WRITE(NFIL1,'("**********************************************")')
+        WRITE(NFIL1,*)
+        CALL FILEHANDLER$CLOSE('PROT')
+      END IF
 !
 !     ==================================================================
 !     == READ DATA                                                    ==
 !     ==================================================================
       X0(:,:,:)=0.D0
       XM(:,:,:)=0.D0
-      CALL MPE$QUERY(NTASKS,ITASK)
-      IF(ITASK.EQ.1) THEN
-        IF((SEPARATOR%VERSION.NE.MYSEPARATOR%VERSION).and.(.not.told)) THEN
+      IF(THISTASK.EQ.1) THEN
+        IF((SEPARATOR%VERSION.NE.MYSEPARATOR%VERSION).AND.(.NOT.TOLD)) THEN
           CALL ERROR$MSG('VERSION NOT RECOGNIZED')
           CALL ERROR$CHVAL('VERSION',SEPARATOR%VERSION)
           CALL ERROR$STOP('DYNOCC$READ')
@@ -946,10 +947,10 @@ END MODULE DYNOCC_MODULE
         READ(NFIL)NB1,NKPT1,NSPIN1
         ALLOCATE(TMP0(NB1,NKPT1,NSPIN1))
         ALLOCATE(TMPM(NB1,NKPT1,NSPIN1))
-        if(.not.told)ALLOCATE(TMPe(NB1,NKPT1,NSPIN1))
+        IF(.NOT.TOLD)ALLOCATE(TMPE(NB1,NKPT1,NSPIN1))
         READ(NFIL)TMP0(:,:,:)
         READ(NFIL)TMPM(:,:,:)
-        if(.not.told)READ(NFIL)TMPe(:,:,:)
+        IF(.NOT.TOLD)READ(NFIL)TMPE(:,:,:)
 !
 !       ================================================================
 !       == DISCARD SUPERFLOUS DATA AND MAP INTO ARRAY                 ==
@@ -959,10 +960,10 @@ END MODULE DYNOCC_MODULE
         NSPIN1=MIN(NSPIN1,NSPIN)
         X0(1:NB1,1:NKPT1,1:NSPIN1)=TMP0(1:NB1,1:NKPT1,1:NSPIN1)
         XM(1:NB1,1:NKPT1,1:NSPIN1)=TMPM(1:NB1,1:NKPT1,1:NSPIN1)
-        if(.not.told)EPSILON(1:NB1,1:NKPT1,1:NSPIN1)=TMPE(1:NB1,1:NKPT1,1:NSPIN1)
+        IF(.NOT.TOLD)EPSILON(1:NB1,1:NKPT1,1:NSPIN1)=TMPE(1:NB1,1:NKPT1,1:NSPIN1)
         DEALLOCATE(TMP0)
         DEALLOCATE(TMPM)
-        if(.not.told)DEALLOCATE(TMPE)
+        IF(.NOT.TOLD)DEALLOCATE(TMPE)
 !
 !       ================================================================
 !       == AUGMENT MISSING DATA                                       ==
@@ -970,26 +971,26 @@ END MODULE DYNOCC_MODULE
         DO IKPT=NKPT1+1,NKPT
           X0(:,IKPT,:)=X0(:,1,:)
           XM(:,IKPT,:)=XM(:,1,:)
-          if(.not.told)epsilon(:,IKPT,:)=epsilon(:,1,:)
+          IF(.NOT.TOLD)EPSILON(:,IKPT,:)=EPSILON(:,1,:)
         ENDDO
         IF(NSPIN1.EQ.1.AND.NSPIN.EQ.2) THEN
           X0(:,:,2)=X0(:,:,1)
           XM(:,:,2)=XM(:,:,1)
-          if(.not.told)epsilon(:,:,2)=epsilon(:,:,1)
+          IF(.NOT.TOLD)EPSILON(:,:,2)=EPSILON(:,:,1)
         END IF
       END IF
 !
 !     ==================================================================
 !     ==  BROADCAST                                                   ==
 !     ==================================================================
-      CALL MPE$BROADCAST(1,X0)
-      CALL MPE$BROADCAST(1,XM)
-      if(.not.told)CALL MPE$BROADCAST(1,epsilon)
+      CALL MPE$BROADCAST('MONOMER',1,X0)
+      CALL MPE$BROADCAST('MONOMER',1,XM)
+      IF(.NOT.TOLD)CALL MPE$BROADCAST('MONOMER',1,EPSILON)
 !
 !     ==================================================================
 !     == CONVERT ENERGIES INTO OCCUPATIONS                            ==
 !     ==================================================================
-      IF(STARTTYPE.EQ.'E'.and.(.not.told)) THEN
+      IF(STARTTYPE.EQ.'E'.AND.(.NOT.TOLD)) THEN
         CALL DYNOCC_INIOCCBYENERGY(NB,NKPT,NSPIN,FMAX &
       &          ,TEMP,TFIXTOT,TOTCHA,TOTPOT,TFIXSPIN,SPINCHA,SPINPOT &
       &          ,WKPT,EPSILON,X0)
@@ -1265,56 +1266,56 @@ REAL(8)::EV
        REAL(8)              :: QTOL=1.D-10
        INTEGER(4),PARAMETER :: NITER=1000
        INTEGER(4)           :: ITER
-integer(4) :: ntasks,thistask
-integer(4) :: count = 0
+INTEGER(4) :: NTASKS,THISTASK
+INTEGER(4) :: COUNT = 0
 !      *****************************************************************
 !!!!!!!
-!!DEBUG clemens
+!!DEBUG CLEMENS
 !!!!!!!
-!open(10,file='dynocc_status.dat',status='unknown',form='formatted')
-!write(10,*) starttype! ,' starttype'
-!write(10,*) nb!,' nb'
-!write(10,*) nkpt!,' nkpt'
-!write(10,*) nspin!,' nspin'
-!write(10,*) tdyn!,' tdyn'
-!write(10,*) reset!,' reset'
-!write(10,*) tstop!,' tstop'
-!write(10,*) tfixspin!,' tfixspin'
-!write(10,*) tfixtot!,' tfixtot'
-!write(10,*) fmax!,' fmax' 
-!write(10,*) sumofz!,' sumofz'
-!write(10,*) charge!,' charge'
-!write(10,*) totcha!,' totcha'
-!write(10,*) spincha!,' spincha'
-!write(10,*) mx!,' mx'
-!write(10,*) totpot!,' totpot'
-!write(10,*) spinpot!,' spinpot'
-!write(10,*) temp!,' temp'
-!write(10,*) annex!,' annex'
-!write(10,*) deltat!,' deltat'
-!write(10,*) tepsilon!,' tepsilon'
-!do ispin = 1, nspin
-!  do ikpt = 1, nkpt
-!    write(10,*) XM(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
-!    write(10,*) X0(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
-!    write(10,*) XP(:,ikpt,ispin)!,' XM for ikpt/ispin',ikpt,ispin
-!    write(10,*) epsilon(:,ikpt,ispin)!,' epsilon for ikpt/ispin',ikpt,ispin
-!    write(10,*) mpsidot2(:,ikpt,ispin)!,' mpsidot2 for ikpt,ispin',ikpt,ispin
+!OPEN(10,FILE='DYNOCC_STATUS.DAT',STATUS='UNKNOWN',FORM='FORMATTED')
+!WRITE(10,*) STARTTYPE! ,' STARTTYPE'
+!WRITE(10,*) NB!,' NB'
+!WRITE(10,*) NKPT!,' NKPT'
+!WRITE(10,*) NSPIN!,' NSPIN'
+!WRITE(10,*) TDYN!,' TDYN'
+!WRITE(10,*) RESET!,' RESET'
+!WRITE(10,*) TSTOP!,' TSTOP'
+!WRITE(10,*) TFIXSPIN!,' TFIXSPIN'
+!WRITE(10,*) TFIXTOT!,' TFIXTOT'
+!WRITE(10,*) FMAX!,' FMAX' 
+!WRITE(10,*) SUMOFZ!,' SUMOFZ'
+!WRITE(10,*) CHARGE!,' CHARGE'
+!WRITE(10,*) TOTCHA!,' TOTCHA'
+!WRITE(10,*) SPINCHA!,' SPINCHA'
+!WRITE(10,*) MX!,' MX'
+!WRITE(10,*) TOTPOT!,' TOTPOT'
+!WRITE(10,*) SPINPOT!,' SPINPOT'
+!WRITE(10,*) TEMP!,' TEMP'
+!WRITE(10,*) ANNEX!,' ANNEX'
+!WRITE(10,*) DELTAT!,' DELTAT'
+!WRITE(10,*) TEPSILON!,' TEPSILON'
+!DO ISPIN = 1, NSPIN
+!  DO IKPT = 1, NKPT
+!    WRITE(10,*) XM(:,IKPT,ISPIN)!,' XM FOR IKPT/ISPIN',IKPT,ISPIN
+!    WRITE(10,*) X0(:,IKPT,ISPIN)!,' XM FOR IKPT/ISPIN',IKPT,ISPIN
+!    WRITE(10,*) XP(:,IKPT,ISPIN)!,' XM FOR IKPT/ISPIN',IKPT,ISPIN
+!    WRITE(10,*) EPSILON(:,IKPT,ISPIN)!,' EPSILON FOR IKPT/ISPIN',IKPT,ISPIN
+!    WRITE(10,*) MPSIDOT2(:,IKPT,ISPIN)!,' MPSIDOT2 FOR IKPT,ISPIN',IKPT,ISPIN
 !    
-!  end do
-!end do
-!do ikpt = 1, nkpt
-!  write(10,*) xk(:,ikpt)!,' xk for ikpt',ikpt
-!  write(10,*) wkpt(ikpt)!,' wkpt for ikpt',ikpt
-!end do
-!close(10)
+!  END DO
+!END DO
+!DO IKPT = 1, NKPT
+!  WRITE(10,*) XK(:,IKPT)!,' XK FOR IKPT',IKPT
+!  WRITE(10,*) WKPT(IKPT)!,' WKPT FOR IKPT',IKPT
+!END DO
+!CLOSE(10)
 !!!!!!!
 !DEBUG
 !!!!!!!
-       IF(.NOT.TDYN) then 
-         xp(:,:,:)=x0(:,:,:)
+       IF(.NOT.TDYN) THEN 
+         XP(:,:,:)=X0(:,:,:)
          RETURN
-       end if
+       END IF
                               CALL TRACE$PUSH('DYNOCC$PROPAGATE')
        IF(NSPIN.EQ.1) THEN
          TFIXSPIN=.FALSE.
@@ -1340,7 +1341,7 @@ integer(4) :: count = 0
          DO IKPT=1,NKPT
            DO IB=1,NB
              SVAR=(X0(IB,IKPT,ISPIN)-XMIN)/(XMAX-XMIN)
-             IF(SVAR.GE.0.D0.and.SVAR.LT.1.D0) CYCLE
+             IF(SVAR.GE.0.D0.AND.SVAR.LT.1.D0) CYCLE
              ISVAR=INT(SVAR+100.D0)-100
              SVAR=(XMAX-XMIN)*REAL(ISVAR,KIND=8)
              X0(IB,IKPT,ISPIN)=X0(IB,IKPT,ISPIN)-SVAR
@@ -1381,7 +1382,7 @@ integer(4) :: count = 0
 !      ==  REMARK:  THE FACTOR FMAX IS NOT USED BECAUSE THE SAME TERM ==
 !      ==         APPEARS ALSO IN THE KINETIC ENERGY                  ==
 !      =================================================================
-1000 continue
+1000 CONTINUE
        DO ISPIN=1,NSPIN 
          SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
@@ -1392,22 +1393,22 @@ integer(4) :: count = 0
 !            FORCE=FORCE+(TOTPOT+SIGMA*SPINPOT)*DOCCDX
              IF(TMPSIDOT2) FORCE=FORCE+MPSIDOT2(IB,IKPT,ISPIN)*DOCCDX
              FX(IB,IKPT,ISPIN)=FORCE
-!            == FORCE FROM entropy term ===============================
+!            == FORCE FROM ENTROPY TERM ===============================
              CALL DYNOCC_SOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
              FX(IB,IKPT,ISPIN)=FX(IB,IKPT,ISPIN)-TEMP*DSVAR
            ENDDO
          ENDDO
        ENDDO
-!CALL MPE$QUERY(NTASKS,THISTASK)
-!if (thistask.eq.1) then
-!  open(10,file='fofx.xy',status='unknown',form='formatted')
-!  do ikpt = 1, nkpt
-!    do ib = 1, nb
-!      write(10,'(2F25.15)') epsilon(ib,ikpt,1),fx(ib,ikpt,1)
-!    end do
-!  end do
-!  close(10)
-!end if
+!CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+!IF (THISTASK.EQ.1) THEN
+!  OPEN(10,FILE='FOFX.XY',STATUS='UNKNOWN',FORM='FORMATTED')
+!  DO IKPT = 1, NKPT
+!    DO IB = 1, NB
+!      WRITE(10,'(2F25.15)') EPSILON(IB,IKPT,1),FX(IB,IKPT,1)
+!    END DO
+!  END DO
+!  CLOSE(10)
+!END IF
 !
 !      =================================================================
 !      ==  PROPAGATE X WITOUT CONSTRAINTS                             ==
@@ -1439,15 +1440,15 @@ integer(4) :: count = 0
            ENDDO
          ENDDO
        ENDDO
-!if (thistask.eq.1) then
-!  open(10,file='fx_b4_constraints.xy',status='unknown',form='formatted')
-!  do ikpt = 1, nkpt
-!    do ib = 1, nb
-!      write(10,'(2F25.15)') epsilon(ib,ikpt,1),xbar(ib,ikpt,1)
-!    end do
-!  end do
-!  close(10)
-!end if
+!IF (THISTASK.EQ.1) THEN
+!  OPEN(10,FILE='FX_B4_CONSTRAINTS.XY',STATUS='UNKNOWN',FORM='FORMATTED')
+!  DO IKPT = 1, NKPT
+!    DO IB = 1, NB
+!      WRITE(10,'(2F25.15)') EPSILON(IB,IKPT,1),XBAR(IB,IKPT,1)
+!    END DO
+!  END DO
+!  CLOSE(10)
+!END IF
 !
 !      =================================================================
 !      ==  APPLY CONSTRAINTS                                          ==
@@ -1476,28 +1477,28 @@ integer(4) :: count = 0
               ENDDO
            ENDDO
          ENDDO
-!if (thistask.eq.1) then
-!  open(10,file='fx_after_constraints.xy',status='unknown',form='formatted')
-!  do ikpt = 1, nkpt
-!    do ib = 1, nb
-!      write(10,'(2F25.15)') epsilon(ib,ikpt,1),xp(ib,ikpt,1)
-!    end do
-!  end do
-!  close(10)
-!end if
+!IF (THISTASK.EQ.1) THEN
+!  OPEN(10,FILE='FX_AFTER_CONSTRAINTS.XY',STATUS='UNKNOWN',FORM='FORMATTED')
+!  DO IKPT = 1, NKPT
+!    DO IB = 1, NB
+!      WRITE(10,'(2F25.15)') EPSILON(IB,IKPT,1),XP(IB,IKPT,1)
+!    END DO
+!  END DO
+!  CLOSE(10)
+!END IF
 
-!if(q1.lt.0.d0) then
-!  print*,'clemens: q1 smaller than zero:',iter
-!  count = count + 1
-!  if (count.gt.1000) then
-!    call error$msg('Peters fix resulted in endless loop')
-!    call error$stop('peters fix')
-!  end if
-!  goto 1000
-!endif
-!count = 0
-CALL MPE$QUERY(NTASKS,THISTASK)
-WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,totpot,Q0-TOTCHA,q1
+!IF(Q1.LT.0.D0) THEN
+!  PRINT*,'CLEMENS: Q1 SMALLER THAN ZERO:',ITER
+!  COUNT = COUNT + 1
+!  IF (COUNT.GT.1000) THEN
+!    CALL ERROR$MSG('PETERS FIX RESULTED IN ENDLESS LOOP')
+!    CALL ERROR$STOP('PETERS FIX')
+!  END IF
+!  GOTO 1000
+!ENDIF
+!COUNT = 0
+!CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+!WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,TOTPOT,Q0-TOTCHA,Q1
 !
 !        == CHECK CONVERGENCE ==========================================
          TCONV=.TRUE.
@@ -1544,8 +1545,8 @@ WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,totpot,Q0-TOTCHA,q1
 !         END IF
        ENDDO
        IF(.NOT.TCONV) THEN
-!CALL MPE$QUERY(NTASKS,THISTASK)
-!WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,Q0-TOTCHA,TOTPOT,q1
+!CALL MPE$QUERY('NONE',NTASKS,THISTASK)
+!WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,Q0-TOTCHA,TOTPOT,Q1
          CALL ERROR$MSG('LOOP NOT CONVERGED') 
          CALL ERROR$R8VAL('DEVIATION TOTAL CHARGE',Q0)
          CALL ERROR$R8VAL('DEVIATION TOTAL SPIN',S0)
@@ -1559,8 +1560,8 @@ WRITE(*,FMT='("DYNOCC",2I4,6F20.15)')THISTASK,ITER,totpot,Q0-TOTCHA,q1
 !      == AND TEST CHARGE AND SPIN CONSERVATION                       ==
 !      =================================================================
 !
-PRINT*,'SPIN   ',SPINCHA,' SPINPOT ',SPINPOT
-PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
+!PRINT*,'SPIN   ',SPINCHA,' SPINPOT ',SPINPOT
+!PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
 !
                               CALL TRACE$POP
        RETURN
@@ -1591,8 +1592,8 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
        IMPLICIT NONE
 !      *****************************************************************
                                   CALL TRACE$PUSH('DYNOCC$INIOCC')
-       call DYNOCC_INIOCCBYNUMBER(NB,NKPT,NSPIN,FMAX,TOTCHA,SPINCHA,WKPT,X0)
-       xm(:,:,:)=x0(:,:,:)
+       CALL DYNOCC_INIOCCBYNUMBER(NB,NKPT,NSPIN,FMAX,TOTCHA,SPINCHA,WKPT,X0)
+       XM(:,:,:)=X0(:,:,:)
                                    CALL TRACE$POP
        RETURN
        END
@@ -1600,11 +1601,11 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
 !      .................................................................
        SUBROUTINE DYNOCC$MODOCC(IB_,IKPT_,ISPIN_,OCC_)
 !      *****************************************************************
-!      **  modify iNDIVIDUAL OCCUPATIONS                              **
+!      **  MODIFY INDIVIDUAL OCCUPATIONS                              **
 !      **                                                             **
-!      **  obtains the new occupation for a particular state          **
-!      **  and adjusts totcha, spincha and the occupation variable    **
-!      ** for that state                                              **
+!      **  OBTAINS THE NEW OCCUPATION FOR A PARTICULAR STATE          **
+!      **  AND ADJUSTS TOTCHA, SPINCHA AND THE OCCUPATION VARIABLE    **
+!      ** FOR THAT STATE                                              **
 !      **                                                             **
 !      *****************************************************************
        USE DYNOCC_MODULE
@@ -1641,7 +1642,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
        XM(IB_,IKPT_,ISPIN_)=SVAR
        RETURN 
        END
-!pb031019start
+!PB031019START
 !
 !      .................................................................
        SUBROUTINE DYNOCC_INIOCCBYNUMBER(NB,NKPT,NSPIN,FMAX &
@@ -1655,12 +1656,12 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
        INTEGER(4) ,INTENT(IN) :: NSPIN        ! #(SPINS),MAX
        REAL(8)    ,INTENT(IN) :: TOTCHA       ! TOTAL CHARGE
        REAL(8)    ,INTENT(IN) :: SPINCHA      ! SPIN CHARGE
-       REAL(8)    ,INTENT(IN) :: FMAX         ! max(OCCUPATION PER STATE)
+       REAL(8)    ,INTENT(IN) :: FMAX         ! MAX(OCCUPATION PER STATE)
        REAL(8)    ,INTENT(IN) :: WKPT(NKPT)   ! K-POINT WEIGHTS
-       REAL(8)    ,INTENT(OUT):: x(NB,NKPT,NSPIN) ! OCCUPATION variable
+       REAL(8)    ,INTENT(OUT):: X(NB,NKPT,NSPIN) ! OCCUPATION VARIABLE
        REAL(8)                :: TOT,SVAR
-       INTEGER(4)             :: ispin,isvar
-       REAL(8)                :: dx
+       INTEGER(4)             :: ISPIN,ISVAR
+       REAL(8)                :: DX
 !      *****************************************************************
        IF(NSPIN.EQ.1) THEN ! NON-SPIN-POLARIZED AND NON-COLLINEAR CASE
          ISVAR=INT(TOTCHA/FMAX)
@@ -1679,7 +1680,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
          END IF
        ELSE        ! SPIN-POLARIZED CASE
          DO ISPIN=1,NSPIN
-           TOT=0.5D0*TOTCHA+0.5D0*SPINCHA*real(3-2*ISPIN,8)         
+           TOT=0.5D0*TOTCHA+0.5D0*SPINCHA*REAL(3-2*ISPIN,8)         
            ISVAR=INT(TOT)
            X(1:ISVAR,:,ISPIN)=1.D0
            X(ISVAR+1:NB,:,ISPIN)=0.D0
@@ -1711,14 +1712,14 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
        INTEGER(4),INTENT(IN)    :: NB
        INTEGER(4),INTENT(IN)    :: NKPT
        INTEGER(4),INTENT(IN)    :: NSPIN
-       REAL(8)   ,INTENT(IN)    :: fmax    ! max(occupation per state)
+       REAL(8)   ,INTENT(IN)    :: FMAX    ! MAX(OCCUPATION PER STATE)
        REAL(8)   ,INTENT(IN)    :: TEMP
        LOGICAL(4),INTENT(IN)    :: TFIXTOT
        LOGICAL(4),INTENT(IN)    :: TFIXSPIN
-       REAL(8)   ,INTENT(INout) :: TOTCHA
-       REAL(8)   ,INTENT(inout) :: TOTPOT
-       REAL(8)   ,INTENT(INout) :: SPINCHA
-       REAL(8)   ,INTENT(inout) :: SPINPOT
+       REAL(8)   ,INTENT(INOUT) :: TOTCHA
+       REAL(8)   ,INTENT(INOUT) :: TOTPOT
+       REAL(8)   ,INTENT(INOUT) :: SPINCHA
+       REAL(8)   ,INTENT(INOUT) :: SPINPOT
        REAL(8)   ,INTENT(IN)    :: EPSILON(NB,NKPT,NSPIN)
        REAL(8)   ,INTENT(IN)    :: WKPT(NKPT)
        REAL(8)   ,INTENT(OUT)   :: X0(NB,NKPT,NSPIN)
@@ -1727,9 +1728,9 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
        INTEGER(4)               :: ISPINDEG
        REAL(8)                  :: EMERMN
        REAL(8)                  :: SIGMA
-       REAL(8)                  :: DSVAR,svar1
-       real(8)                  :: work(nb,nkpt)
-       real(8)                  :: ev
+       REAL(8)                  :: DSVAR,SVAR1
+       REAL(8)                  :: WORK(NB,NKPT)
+       REAL(8)                  :: EV
 !      *****************************************************************
                                   CALL TRACE$PUSH('DYNOCC_INIOCCBYENERGY')
        X0(:,:,:)=0.D0
@@ -1753,10 +1754,10 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
            ELSE 
              DO ISPIN=1,NSPIN
                SIGMA=DBLE(3-2*ISPIN)
-               work(:,:)=EPSILON(:,:,ISPIN)+SPINPOT*SIGMA
+               WORK(:,:)=EPSILON(:,:,ISPIN)+SPINPOT*SIGMA
                CALL DYNOCC_MERMIN(NB,NKPT,1,NB,NKPT,1 &
      &           ,0.5D0*(TOTCHA+SIGMA*SPINCHA),ISPINDEG,TEMP &
-     &           ,WKPT,work(:,:),X0(:,:,ISPIN),TOTPOT,EMERMN)
+     &           ,WKPT,WORK(:,:),X0(:,:,ISPIN),TOTPOT,EMERMN)
              ENDDO
            END IF
          ELSE
@@ -1786,12 +1787,12 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
        END IF
 !
 !      =========================================================================
-!      ==  convert occupations into x-variables                               ==
+!      ==  CONVERT OCCUPATIONS INTO X-VARIABLES                               ==
 !      =========================================================================
        DO ISPIN=1,NSPIN
          DO IKPT=1,NKPT
            DO IB=1,NB
-!write(*,fmt='(3i3,2f10.5)')ib,ikpt,ispin,epsilon(ib,ikpt,ispin)*27.211d0,x0(ib,ikpt,ispin)
+!WRITE(*,FMT='(3I3,2F10.5)')IB,IKPT,ISPIN,EPSILON(IB,IKPT,ISPIN)*27.211D0,X0(IB,IKPT,ISPIN)
              SVAR=X0(IB,IKPT,ISPIN)/FMAX
              CALL DYNOCC_XOFF(SVAR,X0(IB,IKPT,ISPIN),DSVAR)
            ENDDO
@@ -1799,7 +1800,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
        ENDDO
        RETURN
        END
-!pb031019end
+!PB031019END
 !
 !     .....................................................MERMIN.......
       SUBROUTINE DYNOCC_MERMIN(NX,NKPTX,NSPINX,NBANDS,NKPT,NSPIN &
@@ -1829,7 +1830,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
       REAL(8)    ,INTENT(OUT):: F(NX,NKPTX,NSPINX)   ! OCCUPATIONS
       REAL(8)    ,INTENT(OUT):: CHMPOT               ! CHEMICAL POTENTIAL
       REAL(8)    ,INTENT(OUT):: EMERMN               ! HEAT OF THE ELECTRONS
-      INTEGER(4)             :: Istart
+      INTEGER(4)             :: ISTART
       INTEGER(4)             :: IB,I,ISPIN,IKPT
       REAL(8)                :: X0,DX,Y0,XM,YM
       REAL(8)                :: SVAR
@@ -1876,8 +1877,8 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
 !     ==================================================================
       X0=CHMPOT
       DX=1.D-2
-      istart=1
-      CALL BISEC(istart,IBI,X0,Y0,DX,XM,YM)
+      ISTART=1
+      CALL BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
       CHMPOT=X0
       DO ITER=1,ITERX
         SUM=0.D0
@@ -1896,7 +1897,7 @@ PRINT*,'CHARGE ',TOTCHA ,' EFERMI  ',TOTPOT
         IF(DABS(DQ).LT.TOL) GOTO 110
         X0=CHMPOT
         Y0=DQ
-        CALL BISEC(istart,IBI,X0,Y0,DX,XM,YM)
+        CALL BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
         CHMPOT=X0
       ENDDO
       CALL ERROR$MSG('OCCUPATIONS NOT CONVERGED')

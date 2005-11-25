@@ -286,11 +286,11 @@ TYPE CONTROL_TYPE
 END TYPE CONTROL_TYPE
 INTEGER(4),PARAMETER :: NAUTOX=5
 TYPE(CONTROL_TYPE)   :: CONTROL(NAUTOX) &
-          & =(/CONTROL_TYPE('WAVES',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.d0) &
-          &   ,CONTROL_TYPE('ATOMS',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.d0) &
-          &   ,CONTROL_TYPE('OCC',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.d0) &
-          &   ,CONTROL_TYPE('QM-MM',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.d0) &
-          &   ,CONTROL_TYPE('CONTINUUM',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.d0)/)
+          & =(/CONTROL_TYPE('WAVES',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.D0) &
+          &   ,CONTROL_TYPE('ATOMS',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.D0) &
+          &   ,CONTROL_TYPE('OCC',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.D0) &
+          &   ,CONTROL_TYPE('QM-MM',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.D0) &
+          &   ,CONTROL_TYPE('CONTINUUM',.FALSE.,0.D0,1.D0,0.D0,1.D0,0.D0)/)
 INTEGER(4)           ::NAUTO=NAUTOX
 LOGICAL(4) :: TINI=.FALSE.
 LOGICAL(4) :: TAUTO=.FALSE.  ! SWITCH(AUTOPILOT ON/OFF)
@@ -315,7 +315,7 @@ END MODULE AUTOPILOT_MODULE
       INTEGER(4)            :: I
       INTEGER(4)            :: NTASKS,THISTASK
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
       IF(.NOT.TAUTO) RETURN
       CALL REPORT$TITLE(NFIL,'AUTOMATIC MINIMIZER')
@@ -467,26 +467,26 @@ END MODULE AUTOPILOT_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE AUTO$SETi4(IDENT_,VALUE)
+      SUBROUTINE AUTO$SETI4(IDENT_,VALUE)
 !     ******************************************************************
 !     ******************************************************************
       USE AUTOPILOT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: IDENT_
-      integer(4)  ,INTENT(IN) :: VALUE
+      INTEGER(4)  ,INTENT(IN) :: VALUE
       INTEGER(4)              :: I
 !     ******************************************************************
-!     == global variables (not specific for a particular autopilot)
+!     == GLOBAL VARIABLES (NOT SPECIFIC FOR A PARTICULAR AUTOPILOT)
       IF(IDENT_.EQ.'NTOL') THEN
         NTOL=VALUE
-        return
-      end if
-!     == check if a particular autopilot is selected
+        RETURN
+      END IF
+!     == CHECK IF A PARTICULAR AUTOPILOT IS SELECTED
       IF(ISELECT.EQ.0) THEN
         CALL ERROR$MSG('CONTROL MUST BE SELECTED')
         CALL ERROR$STOP('AUTO$SETI4')
       END IF
-!     == settings of a particular autopilot 
+!     == SETTINGS OF A PARTICULAR AUTOPILOT 
       IF(IDENT_.EQ.'XXX') THEN
 !        XXX=VALUE
       ELSE

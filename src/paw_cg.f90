@@ -17,13 +17,13 @@ REAL(8) ,ALLOCATABLE :: DH(:,:,:,:) ! (LMNXX,LMNXX,NDIMD,NAT)
 !INTEGER(4)     :: NPRO
 INTEGER(4)               :: NRL
 REAL(8) ,ALLOCATABLE :: V(:,:) ! (NRL,NDIMD)
-logical(4)               :: tsavemem=.false.
-!logical(4)               :: tsavemem=.true.
-! avoid recalculation of projections
+LOGICAL(4)               :: TSAVEMEM=.FALSE.
+!LOGICAL(4)               :: TSAVEMEM=.TRUE.
+! AVOID RECALCULATION OF PROJECTIONS
 !COMPLEX(8)  ,ALLOCATABLE :: PROJ(:,:)
-logical(4)               :: tnewpro=.true.
-! avoid recalculation of opsi(old)
-COMPLEX(8)  ,ALLOCATABLE :: opsiold(:,:) ! (nb,ngl)
+LOGICAL(4)               :: TNEWPRO=.TRUE.
+! AVOID RECALCULATION OF OPSI(OLD)
+COMPLEX(8)  ,ALLOCATABLE :: OPSIOLD(:,:) ! (NB,NGL)
 END MODULE CG_INTERFACE_MODULE
 
 
@@ -39,12 +39,12 @@ END MODULE CG_INTERFACE_MODULE
       INTEGER(4)   , INTENT(IN)   :: NRL_
       INTEGER(4)   , INTENT(IN)   :: NDIMD_
       REAL(8)      , INTENT(IN)   :: V_(NRL_,NDIMD_)
-      REAL(8)      , INTENT(INout)   :: CONV 
+      REAL(8)      , INTENT(INOUT)   :: CONV 
       INTEGER(4)   , INTENT(IN)   :: NAT_
       INTEGER(4)   , INTENT(IN)   :: LMNXX_
       REAL(8)      , INTENT(IN)   :: DH_(LMNXX_,LMNXX_,NDIMD_,NAT_)
       LOGICAL(4)                  :: TCONV
-      INTEGER(4)                  :: NGL,NB,NBH,ib,npro
+      INTEGER(4)                  :: NGL,NB,NBH,IB,NPRO
       INTEGER(4)                  :: NITERX
       REAL(8)     ,ALLOCATABLE    :: G2(:) ! (NGL)
       REAL(8)     ,ALLOCATABLE    :: R0(:,:)
@@ -56,14 +56,14 @@ END MODULE CG_INTERFACE_MODULE
       END IF
       NAT=NAT_
       LMNXX=LMNXX_
-      ALLOCATE(DH(LMNXX,LMNXX,ndimd,NAT))
+      ALLOCATE(DH(LMNXX,LMNXX,NDIMD,NAT))
       DH=DH_
       NPRO=MAP%NPRO
       
       NRL=NRL_
       ALLOCATE(V(NRL,NDIMD_))
       V=V_
-write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
+WRITE(*,"('CG-MIXER: POT   :',3F10.7)") V(1:3,1)
       NITERX=30 !400
       DO IKPT=1,NKPT
          DO ISPIN=1,NSPIN
@@ -74,39 +74,39 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
             NB=THIS%NB
             !ALLOCATE(THIS%EIGVAL(NB))
             !ALLOCATE(PROJ(NDIM,NPRO))
-            if((.not.tsavemem).and.(nb.gt.1)) then
-               print*,'savemem=false, allocating ',nb*ngl*16.D0/1024.D0,' KB'
-               allocate(opsiold(nb-1,ngl))
-            end if
+            IF((.NOT.TSAVEMEM).AND.(NB.GT.1)) THEN
+               PRINT*,'SAVEMEM=FALSE, ALLOCATING ',NB*NGL*16.D0/1024.D0,' KB'
+               ALLOCATE(OPSIOLD(NB-1,NGL))
+            END IF
             !IF(.NOT.ASSOCIATED(THIS%HPSI))ALLOCATE(THIS%HPSI(NGL,NDIM,NBH))
             IF(NB.NE.NBH) THEN
                CALL ERROR$MSG('SUPERWAVEFUNCTIONS NOT YET IMPLEMENTED')
                CALL ERROR$STOP('CG$STATE_BY_STATE')
             END IF
-            if(allocated(g2)) deallocate(g2) !new gset?
+            IF(ALLOCATED(G2)) DEALLOCATE(G2) !NEW GSET?
             ALLOCATE(G2(NGL))
             CALL PLANEWAVE$GETR8A('G2',NGL,G2)
             !G2(:)=1.D0 ! IF THIS LINE IS USED, PRECONDITIONING IS AVOIDED
-!!$            ! if the following loop is used, start from random WF
-!!$            do ib=1,nb
-!!$               conv=1.D-8
-!!$               CALL WAVES_RANDOMIZE(NGL,1,1,1.D4,G2,THIS%PSI0(:,1,ib))
-!!$            end do
+!!$            ! IF THE FOLLOWING LOOP IS USED, START FROM RANDOM WF
+!!$            DO IB=1,NB
+!!$               CONV=1.D-8
+!!$               CALL WAVES_RANDOMIZE(NGL,1,1,1.D4,G2,THIS%PSI0(:,1,IB))
+!!$            END DO
 
-            CALL CG_STATE_BY_STATE(NGL,NB,ndim,npro,CONV,NITERX,G2,&
+            CALL CG_STATE_BY_STATE(NGL,NB,NDIM,NPRO,CONV,NITERX,G2,&
                  THIS%EIGVAL, &
                  THIS%PSI0,TCONV)
-            call timing$clockon('cg-pro2')
+            CALL TIMING$CLOCKON('CG-PRO2')
             ALLOCATE(R0(3,NAT))
             CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-            CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,NDIM,NBH,map%NPRO &
+            CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,NDIM,NBH,MAP%NPRO &
                 ,THIS%PSI0,THIS%PROJ) 
-            deallocate(r0)
-            !deALLOCATE(PROJ)
-            call timing$clockoff('cg-pro2')
-            if(.not.tsavemem) then
-               deallocate(opsiold)
-            end if
+            DEALLOCATE(R0)
+            !DEALLOCATE(PROJ)
+            CALL TIMING$CLOCKOFF('CG-PRO2')
+            IF(.NOT.TSAVEMEM) THEN
+               DEALLOCATE(OPSIOLD)
+            END IF
          END DO
       END DO
       DEALLOCATE(DH)
@@ -115,14 +115,14 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
       PRINT*,'CG EPS:',THIS%EIGVAL*27.211396
       !CALL ERROR$STOP(' BREAK IN CG$STATE_BY_STATE')
       IF(.NOT.TCONV) THEN
-         print*,'CG CYCLE NOT CONVERGED'
+         PRINT*,'CG CYCLE NOT CONVERGED'
          CALL ERROR$MSG('CG CYCLE NOT CONVERGED')
          CALL ERROR$STOP('CG$STATE_BY_STATE')
       END IF
       END SUBROUTINE CG$STATE_BY_STATE
 !
 !     ..................................................................
-      SUBROUTINE CG_OPERATOR_DOT_VEC(ID,NGL,ndim,npro,PSI,OPSI,proj)
+      SUBROUTINE CG_OPERATOR_DOT_VEC(ID,NGL,NDIM,NPRO,PSI,OPSI,PROJ)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
@@ -131,28 +131,28 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: NGL
-      INTEGER(4)  ,INTENT(IN)  :: Ndim
-      INTEGER(4)  ,INTENT(IN)  :: Npro
+      INTEGER(4)  ,INTENT(IN)  :: NDIM
+      INTEGER(4)  ,INTENT(IN)  :: NPRO
       COMPLEX(8)  ,INTENT(IN)  :: PSI(NGL)
       COMPLEX(8)  ,INTENT(OUT) :: OPSI(NGL)
-      COMPLEX(8)  ,INTENT(inOUT):: proj(ndim,npro)
+      COMPLEX(8)  ,INTENT(INOUT):: PROJ(NDIM,NPRO)
       REAL(8)     ,ALLOCATABLE :: R0(:,:)
 !     ******************************************************************
       IF(ID.EQ.'HAMILTON') THEN
-         call timing$clockon('cg-hpsi')
+         CALL TIMING$CLOCKON('CG-HPSI')
          ALLOCATE(R0(3,NAT))
          CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-!write(*,"('Hpsi proj 1',3f10.5)") real(proj(1,1:3))
-         if(tnewpro) then
-            call timing$clockon('cg-proj')
+!WRITE(*,"('HPSI PROJ 1',3F10.5)") REAL(PROJ(1,1:3))
+         IF(TNEWPRO) THEN
+            CALL TIMING$CLOCKON('CG-PROJ')
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,1,1,NPRO &
                  ,PSI,PROJ)
-            call timing$clockoff('cg-proj')
-         end if
-!write(*,"('Hpsi proj 2',3f10.5)") real(proj(1,1:3))
+            CALL TIMING$CLOCKOFF('CG-PROJ')
+         END IF
+!WRITE(*,"('HPSI PROJ 2',3F10.5)") REAL(PROJ(1,1:3))
          DEALLOCATE(R0)
          CALL WAVES_HPSI(MAP,GSET,ISPIN,NGL,NDIM,NDIMD,1,NPRO,LMNXX,NAT,NRL &
-     &                  ,PSI,v(1,ISPIN),R0,PROJ,DH,OPSI)  !opsi ist eigentlich hpsi
+     &                  ,PSI,V(1,ISPIN),R0,PROJ,DH,OPSI)  !OPSI IST EIGENTLICH HPSI
 !        IF(NDIM.EQ.1) THEN
 !            CALL WAVES_HPSI(IKPT,ISPIN,NRL,V(:,ISPIN),NAT,LMNXX,DH,&
 !                NGL,1,1,NPRO,PROJ,PSI,OPSI)
@@ -160,22 +160,22 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
 !            CALL WAVES_HPSI(IKPT,ISPIN,NRL,V(:,1:NDIMD),NAT,LMNXX,DH,&
 !                 NGL,1,1,NPRO,PROJ,PSI,OPSI)
 !         END IF
-         call timing$clockoff('cg-hpsi')
+         CALL TIMING$CLOCKOFF('CG-HPSI')
       ELSE IF (ID.EQ.'OVERLAP') THEN
-         call timing$clockon('cg-opsi')
+         CALL TIMING$CLOCKON('CG-OPSI')
          ALLOCATE(R0(3,NAT))
          CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-         if(tnewpro) then
-            call timing$clockon('cg-proj')
+         IF(TNEWPRO) THEN
+            CALL TIMING$CLOCKON('CG-PROJ')
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,1,1,NPRO &
                  ,PSI,PROJ)
-            call timing$clockoff('cg-proj')
-         end if
-!write(*,"('opsi proj  ',3f10.5)") real(proj(1,1:3))
+            CALL TIMING$CLOCKOFF('CG-PROJ')
+         END IF
+!WRITE(*,"('OPSI PROJ  ',3F10.5)") REAL(PROJ(1,1:3))
          OPSI=PSI
          CALL WAVES_OPSI(1,1,NPRO,NAT,NGL,R0,PROJ,OPSI)
          DEALLOCATE(R0)
-         call timing$clockoff('cg-opsi')
+         CALL TIMING$CLOCKOFF('CG-OPSI')
       ELSE
          CALL ERROR$MSG('ID IN CG_OPERATOR_DOT_VEC MUST BE HAMILTON OR OVERLAP')
          CALL ERROR$STOP('CG_OPERATOR_DOT_VEC')
@@ -195,10 +195,10 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
       COMPLEX(8),INTENT(IN)  :: PSI2(NGL)
       COMPLEX(8),INTENT(OUT) :: CVAR
 !     ******************************************************************
-      call timing$clockon('cg-psipsi')
+      CALL TIMING$CLOCKON('CG-PSIPSI')
       CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,1,1,PSI1,1,PSI2,CVAR)
-      CALL MPE$COMBINE('+',cvar)
-      call timing$clockoff('cg-psipsi')
+      CALL MPE$COMBINE('NONE','+',CVAR)
+      CALL TIMING$CLOCKOFF('CG-PSIPSI')
       END SUBROUTINE CG_DOT_PRODUCT
 
 
@@ -243,19 +243,19 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
 !     **                                                              **
 !     ******************************************************************
 !     ******************************************************************
-      SUBROUTINE CG_STATE_BY_STATE(NGL,NB,ndim,npro,CONV,NITERX,G2,EPS,&
+      SUBROUTINE CG_STATE_BY_STATE(NGL,NB,NDIM,NPRO,CONV,NITERX,G2,EPS,&
            EIGVEC,TCONV)
-      use mpe_module
-      use CG_INTERFACE_MODULE, only: tnewpro,tsavemem,opsiold
+      USE MPE_MODULE
+      USE CG_INTERFACE_MODULE, ONLY: TNEWPRO,TSAVEMEM,OPSIOLD
       IMPLICIT NONE
       INTEGER(4)   , INTENT(IN)   :: NGL
       INTEGER(4)   , INTENT(IN)   :: NB
-      INTEGER(4)   , INTENT(IN)   :: Ndim
-      INTEGER(4)   , INTENT(IN)   :: Npro
+      INTEGER(4)   , INTENT(IN)   :: NDIM
+      INTEGER(4)   , INTENT(IN)   :: NPRO
       REAL(8)      , INTENT(IN)   :: CONV
       INTEGER(4)   , INTENT(IN)   :: NITERX
       REAL(8)      , INTENT(IN)   :: G2(NGL)
-      REAL(8)      , INTENT(inOUT):: EPS(NB)
+      REAL(8)      , INTENT(INOUT):: EPS(NB)
       COMPLEX(8)   , INTENT(INOUT):: EIGVEC(NGL,NB)
       LOGICAL(4)   , INTENT(OUT)  :: TCONV
       INTEGER(4)                  :: ITER
@@ -294,15 +294,15 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
       INTEGER(4)                  :: ISTEP
       INTEGER(4)   , PARAMETER    :: NSTEP=30
       REAL(8)                     :: WORK2D(NB,NB)
-      integer(4)                  :: thistask,ntasks
+      INTEGER(4)                  :: THISTASK,NTASKS
 
-      !johannes
-      COMPLEX(8)                  :: projpsi(ndim,npro)
-      COMPLEX(8)                  :: projsearch(ndim,npro)
+      !JOHANNES
+      COMPLEX(8)                  :: PROJPSI(NDIM,NPRO)
+      COMPLEX(8)                  :: PROJSEARCH(NDIM,NPRO)
       
 !     .................................................................
 !
-      call mpe$query(ntasks,thistask)
+      CALL MPE$QUERY('NONE',NTASKS,THISTASK)
       PI = 4.D0*ATAN(1.D0)
 !
 !     =================================================================
@@ -315,16 +315,16 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
       DO IB = 1, NB
 !
 !       == ORTHOGONALIZE TO THE ALREADY OPTIMIZED ONES ================
-!!$   ! das sollte eh unten gemacht werden!!!!!----------------
+!!$   ! DAS SOLLTE EH UNTEN GEMACHT WERDEN!!!!!----------------
 !!$        DO IB1 = 1, IB-1
 !!$          CALL CG_INTERNAL_ORTHOGONALIZE(NGL,EIGVEC(:,IB),EIGVEC(:,IB1))
 !!$        END DO
 !!$        CALL CG_INTERNAL_NORMALIZE(NGL,EIGVEC(:,IB))
 !CALL CG_INTERNAL_OVERLAP('OVERLAP',NGL,EIGVEC(:,IB),EIGVEC(:,IB),CVAR)
-!print*,'<Psi|Psi>=',cvar
+!PRINT*,'<PSI|PSI>=',CVAR
 
 !
-        EPSOLD = eps(ib) !1.D100 
+        EPSOLD = EPS(IB) !1.D100 
         TCONVERGED = .FALSE.
         TRESTART = .TRUE.
         TLASTCHECK = .FALSE.   ! WHEN CONVERGENCE IS REACHED, ANOTHER
@@ -343,30 +343,30 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
 !         == TO AVOID ACCUMULATION OF ROUNDING ERRORS                ==
 !         =============================================================
           IF ((MOD(ITER,10).EQ.1).OR.TLASTCHECK) THEN
-            call timing$clockon('cg-m1-orthogonalize')
+            CALL TIMING$CLOCKON('CG-M1-ORTHOGONALIZE')
             DO IB1 = 1, IB-1
-              if(tsavemem) then
+              IF(TSAVEMEM) THEN
                 CALL CG_INTERNAL_ORTHOGONALIZE(NGL,EIGVEC(:,IB),EIGVEC(:,IB1))
-              else
-                CALL CG_INTERNAL_ORTHO_psi(NGL,EIGVEC(:,IB),&
+              ELSE
+                CALL CG_INTERNAL_ORTHO_PSI(NGL,EIGVEC(:,IB),&
                      EIGVEC(:,IB1),IB1)
-              end if
+              END IF
             END DO
-            ! calculate P(PSI) here
-            tnewpro=.true.
-            CALL CG_INTERNAL_NORMALIZE(NGL,ndim,npro,EIGVEC(:,IB),projpsi)
-            call timing$clockoff('cg-m1-orthogonalize')
+            ! CALCULATE P(PSI) HERE
+            TNEWPRO=.TRUE.
+            CALL CG_INTERNAL_NORMALIZE(NGL,NDIM,NPRO,EIGVEC(:,IB),PROJPSI)
+            CALL TIMING$CLOCKOFF('CG-M1-ORTHOGONALIZE')
           END IF
 !
-          call timing$clockon('cg-m2-hpsi') !time critical
-          tnewpro=.false.
+          CALL TIMING$CLOCKON('CG-M2-HPSI') !TIME CRITICAL
+          TNEWPRO=.FALSE.
           !CALL CG_INTERNAL_MULTIPLY('HAMILTON',NGL,EIGVEC(:,IB),HEIG(:))
-          CALL CG_OPERATOR_DOT_VEC('HAMILTON',NGL,ndim,npro,EIGVEC(:,IB),&
-               HEIG(:),projpsi)
-          tnewpro=.true.
+          CALL CG_OPERATOR_DOT_VEC('HAMILTON',NGL,NDIM,NPRO,EIGVEC(:,IB),&
+               HEIG(:),PROJPSI)
+          TNEWPRO=.TRUE.
           CALL CG_INTERNAL_SCALARPRODUCT(NGL,EIGVEC(:,IB),HEIG(:),CVAR)
           EPS(IB) = REAL(CVAR,KIND=8)
-          call timing$clockoff('cg-m2-hpsi')
+          CALL TIMING$CLOCKOFF('CG-M2-HPSI')
 !
 !         ==============================================================
 !         == EXIT WHEN CONVERGED                                      ==
@@ -376,12 +376,12 @@ write(*,"('CG-Mixer: pot   :',3f10.7)") v(1:3,1)
 !         ==============================================================
 PRINT*,IB,ITER,EPS(IB)
 
-!print*,'task ',thistask,' res:',ABS(EPS(IB) - EPSOLD),'conv:',conv
-!print*,'task ',thistask,(ABS(EPS(IB) - EPSOLD).LT.CONV)
+!PRINT*,'TASK ',THISTASK,' RES:',ABS(EPS(IB) - EPSOLD),'CONV:',CONV
+!PRINT*,'TASK ',THISTASK,(ABS(EPS(IB) - EPSOLD).LT.CONV)
           IF (ABS(EPS(IB) - EPSOLD).LT.CONV) THEN
             IF (.NOT.TLASTCHECK) THEN
               TLASTCHECK = .TRUE.
-PRINT*,'TRIGGERING A LAST STEEPEST DECENT CHECK : task ',thistask
+PRINT*,'TRIGGERING A LAST STEEPEST DECENT CHECK : TASK ',THISTASK
             ELSE
               PRINT*,'CONVERGED', ITER
               TCONVERGED = .TRUE.
@@ -394,37 +394,37 @@ PRINT*,'TRIGGERING A LAST STEEPEST DECENT CHECK : task ',thistask
           EPSOLD = EPS(IB)
 !
 !         == COMPUTE GRADIENT =========================================
-          call timing$clockon('cg-m3-grad')
-          tnewpro=.false.
+          CALL TIMING$CLOCKON('CG-M3-GRAD')
+          TNEWPRO=.FALSE.
           !CALL CG_INTERNAL_MULTIPLY('OVERLAP',NGL,EIGVEC(:,IB),OPSI(:))
-          call CG_OPERATOR_DOT_VEC('OVERLAP',NGL,ndim,npro,EIGVEC(:,IB),&
-               OPSI(:),projpsi)
-          tnewpro=.true.
+          CALL CG_OPERATOR_DOT_VEC('OVERLAP',NGL,NDIM,NPRO,EIGVEC(:,IB),&
+               OPSI(:),PROJPSI)
+          TNEWPRO=.TRUE.
           GRAD(:) = HEIG(:) - CMPLX(EPS(IB), KIND=8)*OPSI(:)
-          call timing$clockoff('cg-m3-grad')
-!print*,'task',thistask,'after gradient'
+          CALL TIMING$CLOCKOFF('CG-M3-GRAD')
+!PRINT*,'TASK',THISTASK,'AFTER GRADIENT'
 !
 !         == PRECONDITIONING ==========================================
-          call timing$clockon('cg-m4-precon')
+          CALL TIMING$CLOCKON('CG-M4-PRECON')
           CALL CG_PRECONDITION_FULL(NGL,G2(:),EIGVEC(:,IB),GRAD(:),PRECOND(:)) 
-          call timing$clockoff('cg-m4-precon')
-!print*,'task',thistask,'after precon'
+          CALL TIMING$CLOCKOFF('CG-M4-PRECON')
+!PRINT*,'TASK',THISTASK,'AFTER PRECON'
 !
 !         == ORTHOGONALIZE GRADIENT TO ALREADY OPTIMIZED WAVE-FUNCTIONS
-          call timing$clockon('cg-m5-orthogonalize G')
+          CALL TIMING$CLOCKON('CG-M5-ORTHOGONALIZE G')
           DO IB1 = 1, IB - 1
-            if(tsavemem) then
+            IF(TSAVEMEM) THEN
                CALL CG_INTERNAL_ORTHOGONALIZE(NGL,PRECOND(:),EIGVEC(:,IB1))
-            else
-               CALL CG_INTERNAL_ORTHO_psi(NGL,PRECOND(:),&
+            ELSE
+               CALL CG_INTERNAL_ORTHO_PSI(NGL,PRECOND(:),&
                     EIGVEC(:,IB1),IB1)
-            end if
+            END IF
           END DO
-          call timing$clockoff('cg-m5-orthogonalize G')
-!print*,'task',thistask,'after orthgrad'
+          CALL TIMING$CLOCKOFF('CG-M5-ORTHOGONALIZE G')
+!PRINT*,'TASK',THISTASK,'AFTER ORTHGRAD'
 !
 
-          call timing$clockon('cg-m6-cg')
+          CALL TIMING$CLOCKON('CG-M6-CG')
 !         == CONJUGATE GRADIENT =======================================
           CALL CG_DOT_PRODUCT(NGL,GRAD(:),PRECOND(:),GTIMESGC)
           CALL CG_DOT_PRODUCT(NGL,GRADOLD(:),PRECOND(:),CVAR)!TRICK TO IMPROVE CONVERGENCE (E.G. KRESSE DISS)
@@ -435,54 +435,54 @@ PRINT*,'TRIGGERING A LAST STEEPEST DECENT CHECK : task ',thistask
             SEARCH(:) = PRECOND(:) + SEARCHOLD(:)*(GTIMESGC-CVAR)/GTIMESGCOLD
           END IF
 !          CALL CG_DOT_PRODUCT(NGL,GRAD(:),PRECOND(:),GTIMESGCOLD)
-          gtimesgcold = gtimesgc !cange on Aug 25 2004
+          GTIMESGCOLD = GTIMESGC !CANGE ON AUG 25 2004
           SEARCHOLD(:) = SEARCH(:)
           GRADOLD(:) = GRAD(:)
-          call timing$clockoff('cg-m6-cg')
+          CALL TIMING$CLOCKOFF('CG-M6-CG')
 !        
 !         == ORTHOGONALIZE TO ACTUAL WAVE-FUNCTION ====================
-          call timing$clockon('cg-m7-orthsearch1')
-          CALL CG_INTERNAL_ORTHOGONALIZE(NGL,SEARCH(:),EIGVEC(:,IB),opsi)
-          ! here, P(search) have to be calculated
-          call timing$clockoff('cg-m7-orthsearch1')
-          tnewpro=.true.
-          call timing$clockon('cg-m7-orthsearch2') ! time critical
-          CALL CG_INTERNAL_NORMALIZE(NGL,ndim,npro,SEARCH(:),projsearch)
-          call timing$clockoff('cg-m7-orthsearch2')
+          CALL TIMING$CLOCKON('CG-M7-ORTHSEARCH1')
+          CALL CG_INTERNAL_ORTHOGONALIZE(NGL,SEARCH(:),EIGVEC(:,IB),OPSI)
+          ! HERE, P(SEARCH) HAVE TO BE CALCULATED
+          CALL TIMING$CLOCKOFF('CG-M7-ORTHSEARCH1')
+          TNEWPRO=.TRUE.
+          CALL TIMING$CLOCKON('CG-M7-ORTHSEARCH2') ! TIME CRITICAL
+          CALL CG_INTERNAL_NORMALIZE(NGL,NDIM,NPRO,SEARCH(:),PROJSEARCH)
+          CALL TIMING$CLOCKOFF('CG-M7-ORTHSEARCH2')
 !
 !         == CALCULATE TRANSFORMATION ANGLE THETA -====================
 !         == MIND: ONE SHOULD ALSO CONSIDER OVERLAP!!! ================
-          call timing$clockon('cg-m8-theta') !time critical
+          CALL TIMING$CLOCKON('CG-M8-THETA') !TIME CRITICAL
           H11 = EPS(IB)
 !PRINT*,'CALL3'
           CALL CG_INTERNAL_SCALARPRODUCT(NGL,SEARCH(:),HEIG(:),CVAR)
           H12 = REAL(CVAR, KIND=8)  
           H21 = H12
 !PRINT*,'CALL H|SEARCH>'
-          tnewpro=.false.
-          CALL CG_INTERNAL_OVERLAP('HAMILTON',NGL,ndim,npro,SEARCH(:),&
-               SEARCH(:),projsearch,CVAR)
-          tnewpro=.true.
+          TNEWPRO=.FALSE.
+          CALL CG_INTERNAL_OVERLAP('HAMILTON',NGL,NDIM,NPRO,SEARCH(:),&
+               SEARCH(:),PROJSEARCH,CVAR)
+          TNEWPRO=.TRUE.
           H22 = REAL(CVAR, KIND=8)
 !
           THETA = 0.5D0*ATAN(((H21 + H12)/(H11 - H22)))
           IF (H11.GT.H22) THETA = THETA + PI/2.D0
-          call timing$clockoff('cg-m8-theta')
+          CALL TIMING$CLOCKOFF('CG-M8-THETA')
 !         == PROPAGATE WAVE-FUNCTION ==================================
-          call timing$clockon('cg-m9-propagate')
+          CALL TIMING$CLOCKON('CG-M9-PROPAGATE')
           EIGVEC(:,IB) = CMPLX(COS(THETA), KIND=8)*EIGVEC(:,IB) + &
                          CMPLX(SIN(THETA), KIND=8)*SEARCH(:)
-          projpsi(:,:) = CMPLX(COS(THETA), KIND=8)*projpsi(:,:) + &
-                         CMPLX(SIN(THETA), KIND=8)*projsearch(:,:)
-          call timing$clockoff('cg-m9-propagate')
+          PROJPSI(:,:) = CMPLX(COS(THETA), KIND=8)*PROJPSI(:,:) + &
+                         CMPLX(SIN(THETA), KIND=8)*PROJSEARCH(:,:)
+          CALL TIMING$CLOCKOFF('CG-M9-PROPAGATE')
 !
         END DO
-        if((.not.tsavemem).and.(ib.lt.nb)) then
-           ! save opsi(ib) in opsiold
-           !CALL CG_INTERNAL_MULTIPLY('OVERLAP',NGL,EIGVEC(:,IB),opsiold(ib,:))
-           call CG_OPERATOR_DOT_VEC('OVERLAP',NGL,ndim,npro,EIGVEC(:,IB),&
-                opsiold(ib,:),projpsi)
-        end if
+        IF((.NOT.TSAVEMEM).AND.(IB.LT.NB)) THEN
+           ! SAVE OPSI(IB) IN OPSIOLD
+           !CALL CG_INTERNAL_MULTIPLY('OVERLAP',NGL,EIGVEC(:,IB),OPSIOLD(IB,:))
+           CALL CG_OPERATOR_DOT_VEC('OVERLAP',NGL,NDIM,NPRO,EIGVEC(:,IB),&
+                OPSIOLD(IB,:),PROJPSI)
+        END IF
            
         IF (.NOT.TCONVERGED) THEN
           ITERSUMMARY(IB) = ITER-1
@@ -513,11 +513,11 @@ PRINT*,"------------------------NEXT-BAND-----------------------------"
 !        WRITE(*,*)
 !      END DO
 !
-write(*,ADVANCE='NO',FMT="(a)") 'CG: ITERSUMMARY: '
-do ib=1,nb
-   write(*,ADVANCE='NO',FMT="(i3)") ITERSUMMARY(ib)
-end do
-write(*,*)
+WRITE(*,ADVANCE='NO',FMT="(A)") 'CG: ITERSUMMARY: '
+DO IB=1,NB
+   WRITE(*,ADVANCE='NO',FMT="(I3)") ITERSUMMARY(IB)
+END DO
+WRITE(*,*)
 !PRINT*,'CG: ITERSUMMARY: ',ITERSUMMARY(:)
 !
       TCONV = .TRUE.
@@ -572,7 +572,7 @@ write(*,*)
       END SUBROUTINE
 !
 !     ..................................................................
-      SUBROUTINE CG_INTERNAL_MULTIPLY_del(ID,NGL,PSI,OPSI)
+      SUBROUTINE CG_INTERNAL_MULTIPLY_DEL(ID,NGL,PSI,OPSI)
 !     ******************************************************************
 !     ** CALCULATES  H|PSI>                                           **
 !     ******************************************************************
@@ -602,28 +602,28 @@ write(*,*)
       END SUBROUTINE
 !
 !     ..................................................................
-      SUBROUTINE CG_INTERNAL_OVERLAP(ID,NGL,ndim,npro,PSI1,PSI2,proj,CVAR)
+      SUBROUTINE CG_INTERNAL_OVERLAP(ID,NGL,NDIM,NPRO,PSI1,PSI2,PROJ,CVAR)
 !     ******************************************************************
 !     ** CALCULATES THE EXPECTATION VALUE <PSI|O|PSI>                 **
 !     ******************************************************************
       IMPLICIT NONE
       CHARACTER(*)     , INTENT(IN)    :: ID
       INTEGER(4)       , INTENT(IN)    :: NGL 
-      INTEGER(4)       , INTENT(IN)    :: Ndim 
-      INTEGER(4)       , INTENT(IN)    :: Npro
+      INTEGER(4)       , INTENT(IN)    :: NDIM 
+      INTEGER(4)       , INTENT(IN)    :: NPRO
       COMPLEX(8)       , INTENT(IN)    :: PSI1(NGL)
       COMPLEX(8)       , INTENT(IN)    :: PSI2(NGL)
-      COMPLEX(8)       , INTENT(INout) :: Proj(ndim,npro)
+      COMPLEX(8)       , INTENT(INOUT) :: PROJ(NDIM,NPRO)
       COMPLEX(8)       , INTENT(OUT)   :: CVAR
       COMPLEX(8)                       :: OPSI(NGL)
 !     ******************************************************************
-      CALL CG_OPERATOR_DOT_VEC(ID,NGL,ndim,npro,PSI2(:),OPSI(:),proj)
+      CALL CG_OPERATOR_DOT_VEC(ID,NGL,NDIM,NPRO,PSI2(:),OPSI(:),PROJ)
       CALL CG_DOT_PRODUCT(NGL,PSI1(:),OPSI(:),CVAR)
       RETURN
       END SUBROUTINE
 !
 !     ..................................................................
-      SUBROUTINE CG_INTERNAL_EXPECTVAL_weg(ID,NGL,PSI,EVAL)
+      SUBROUTINE CG_INTERNAL_EXPECTVAL_WEG(ID,NGL,PSI,EVAL)
 !     ******************************************************************
 !     ** CALCULATES THE EXPECTATION VALUE <PSI|H|PSI>                 **
 !     ******************************************************************
@@ -643,64 +643,64 @@ write(*,*)
       END SUBROUTINE
 !
 !     ..................................................................
-      SUBROUTINE CG_INTERNAL_ORTHOGONALIZE(NGL,search,PSI,opsi)
+      SUBROUTINE CG_INTERNAL_ORTHOGONALIZE(NGL,SEARCH,PSI,OPSI)
 !     ******************************************************************
 !     ** ORTHOGONALIZES PSI1 TO PSI2                                  **
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4)       , INTENT(IN)    :: NGL 
-      COMPLEX(8)       , INTENT(INOUT) :: search(NGL)
+      COMPLEX(8)       , INTENT(INOUT) :: SEARCH(NGL)
       COMPLEX(8)       , INTENT(IN)    :: PSI(NGL)
-      complex(8)       , intent(in)    :: opsi(ngl)
+      COMPLEX(8)       , INTENT(IN)    :: OPSI(NGL)
       COMPLEX(8)                       :: CVAR
 !     ******************************************************************
       !CALL CG_INTERNAL_OVERLAP('OVERLAP',NGL,PSI2(:),PSI1(:),CVAR)
-      CALL CG_DOT_PRODUCT(NGL,search,OPSI,CVAR)
-      search(:) = search(:) - CVAR*PSI(:)
+      CALL CG_DOT_PRODUCT(NGL,SEARCH,OPSI,CVAR)
+      SEARCH(:) = SEARCH(:) - CVAR*PSI(:)
       RETURN
       END SUBROUTINE
 !
 !     ..................................................................
-      SUBROUTINE CG_INTERNAL_ORTHO_psi(NGL,PSI1,psi2,ib2)
+      SUBROUTINE CG_INTERNAL_ORTHO_PSI(NGL,PSI1,PSI2,IB2)
 !     ******************************************************************
 !     ** ORTHOGONALIZES PSI1 TO PSI2                                  **
 !     ******************************************************************
-      use CG_INTERFACE_MODULE, only: opsiold
+      USE CG_INTERFACE_MODULE, ONLY: OPSIOLD
       IMPLICIT NONE
       INTEGER(4)       , INTENT(IN)    :: NGL 
       COMPLEX(8)       , INTENT(INOUT) :: PSI1(NGL)
       COMPLEX(8)       , INTENT(IN)    :: PSI2(NGL)
-      integer(4)       , INTENT(IN)    :: ib2
-      COMPLEX(8)                       :: CVAR   ,cvar2
+      INTEGER(4)       , INTENT(IN)    :: IB2
+      COMPLEX(8)                       :: CVAR   ,CVAR2
 !     ******************************************************************
       !CALL CG_INTERNAL_OVERLAP('OVERLAP',NGL,PSI2(:),PSI1(:),CVAR)
-      CALL CG_DOT_PRODUCT(NGL,PSI1(:),OPSIold(ib2,:),CVAR)
-      PSI1(:) = PSI1(:) - conjg(CVAR)*PSI2(:)
+      CALL CG_DOT_PRODUCT(NGL,PSI1(:),OPSIOLD(IB2,:),CVAR)
+      PSI1(:) = PSI1(:) - CONJG(CVAR)*PSI2(:)
       RETURN
       END SUBROUTINE
 !
 !     ..................................................................
-      SUBROUTINE CG_INTERNAL_NORMALIZE(NGL,ndim,npro,PSI,proj)
+      SUBROUTINE CG_INTERNAL_NORMALIZE(NGL,NDIM,NPRO,PSI,PROJ)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
       USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4)       , INTENT(IN)    :: NGL 
-      INTEGER(4)       , INTENT(IN)    :: ndim
-      INTEGER(4)       , INTENT(IN)    :: npro
+      INTEGER(4)       , INTENT(IN)    :: NDIM
+      INTEGER(4)       , INTENT(IN)    :: NPRO
       COMPLEX(8)       , INTENT(INOUT) :: PSI(NGL)
-      COMPLEX(8)       , INTENT(INOUT) :: proj(ndim,npro)
+      COMPLEX(8)       , INTENT(INOUT) :: PROJ(NDIM,NPRO)
       COMPLEX(8)                       :: CVAR
 !     ******************************************************************
-      CALL CG_INTERNAL_OVERLAP('OVERLAP',NGL,ndim,npro,PSI(:),PSI(:),proj,CVAR)
-!print*,'par CG_INTERNAL_NORMALIZE',cvar
-!write(*,"('norm proj 1',3f10.5)") real(proj(1,1:3))
+      CALL CG_INTERNAL_OVERLAP('OVERLAP',NGL,NDIM,NPRO,PSI(:),PSI(:),PROJ,CVAR)
+!PRINT*,'PAR CG_INTERNAL_NORMALIZE',CVAR
+!WRITE(*,"('NORM PROJ 1',3F10.5)") REAL(PROJ(1,1:3))
       PSI(:) = PSI(:) / SQRT(CVAR)
-      proj=proj / SQRT(CVAR)
-!write(*,"('norm proj 2',3f10.5)") real(proj(1,1:3))
+      PROJ=PROJ / SQRT(CVAR)
+!WRITE(*,"('NORM PROJ 2',3F10.5)") REAL(PROJ(1,1:3))
       RETURN
-      end subroutine CG_INTERNAL_NORMALIZE
+      END SUBROUTINE CG_INTERNAL_NORMALIZE
 
 
 

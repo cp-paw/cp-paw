@@ -1,3 +1,9 @@
+!=========Error!===================================================
+! Manual Louwerse ran into the problem that the unscreening and
+! therefore vbar is inaccurate if the number of partial waves is too
+! small. The solution would be not to recalculate the pseudowave
+! functions using the PAW-Schroedinger equation, but directly use
+! the auxiliary partial waves.
 !.......................................................................
 MODULE GRID
 REAL(8)                :: R1=1.056D-4

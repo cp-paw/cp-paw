@@ -667,12 +667,13 @@ WRITE(*,FMT='("TP ",3F10.5)')TP(3,:)
       TYPE (SEPARATOR_TYPE)            :: SEPARATOR
       INTEGER(4)                       :: NTASKS,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK=.TRUE.
       SEPARATOR=MYSEPARATOR
-      CALL READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      CALL MPE$BROADCAST('MONOMER',1,TCHK)
       IF(.NOT.TCHK) RETURN
 !
-      CALL MPE$QUERY(NTASKS,THISTASK)
 !
 !     ==================================================================
 !     ==  READ DATA                                                   ==
@@ -684,8 +685,8 @@ WRITE(*,FMT='("TP ",3F10.5)')TP(3,:)
         END IF        
         READ(NFIL)T0,TM
       END IF
-      CALL MPE$BROADCAST(1,T0)
-      CALL MPE$BROADCAST(1,TM)
+      CALL MPE$BROADCAST('MONOMER',1,T0)
+      CALL MPE$BROADCAST('MONOMER',1,TM)
       RETURN
       END
 !
@@ -704,13 +705,13 @@ WRITE(*,FMT='("TP ",3F10.5)')TP(3,:)
                =SEPARATOR_TYPE(1,'CELL','NONE','MAY2000','NONE')
       INTEGER(4)                        :: NTASKS,THISTASK
 !     ******************************************************************
-      CALL WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
 !
 !     ==================================================================
 !     ==  WRITE DATA                                                  ==
 !     ==================================================================
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
+        CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
         WRITE(NFIL)T0(:,:),TM(:,:),TMM(:,:)
       END IF
       RETURN

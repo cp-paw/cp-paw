@@ -1,10 +1,10 @@
 !************************************************************************
-!  DEMONSTRATOR CODE FOR dmft
+!  DEMONSTRATOR CODE FOR DMFT
 !  CODE WRITTEN FOR A SINGLE SITE 
 !************************************************************************
-module dmft_module
-logical(4)             :: TON=.FALSE.
-logical(4)             :: TINI=.FALSE.
+MODULE DMFT_MODULE
+LOGICAL(4)             :: TON=.FALSE.
+LOGICAL(4)             :: TINI=.FALSE.
 INTEGER(4)             :: NOMEGA
 REAL(8)   ,ALLOCATABLE :: OMEGA(:)
 INTEGER(4)             :: NDIM=2
@@ -12,12 +12,12 @@ INTEGER(4),ALLOCATABLE :: NORB
 INTEGER(4),ALLOCATABLE :: ORBPRO(:,:)     !(NPRO,NORB)
 COMPLEX(8),ALLOCATABLE :: GREEN(:,:,:,:,:)  ! WEISS FUNCTION
 COMPLEX(8),ALLOCATABLE :: HAMIL(:,:,:,:,:)
-end module dmft_module
+END MODULE DMFT_MODULE
 !
 !      .................................................................
-       subroutine dmft_INITIALIZE
+       SUBROUTINE DMFT_INITIALIZE
 !      *****************************************************************
-!      **  evaluates the coefficients of the local orbitals           **
+!      **  EVALUATES THE COEFFICIENTS OF THE LOCAL ORBITALS           **
 !      *****************************************************************
        USE DMFT_MODULE
        IMPLICIT NONE
@@ -26,10 +26,10 @@ end module dmft_module
        INTEGER(4) :: I
 !      *****************************************************************
        TINI=.TRUE.
-       IF(nOMEGA.eq.0) then        
+       IF(NOMEGA.EQ.0) THEN        
          CALL ERROR$MSG('NOMEGA NOT DEFINED')
          CALL ERROR$CHVAL('ID',ID)
-         CALL ERROR$stop('dmft$seti4')
+         CALL ERROR$STOP('DMFT$SETI4')
        END IF
 !
 !      =================================================================
@@ -53,7 +53,7 @@ end module dmft_module
        END
 !
 !      .................................................................
-       subroutine dmft$setI4(ID,VAL)
+       SUBROUTINE DMFT$SETI4(ID,VAL)
        USE DMFT_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID
@@ -62,17 +62,17 @@ end module dmft_module
        IF(ID.EQ.'NOMEGA') THEN
          NOMEGA=VAL
          CALL ERROR$MSG('NOMEGA IS STILL HARD WIRED; DO NOT SET')
-         CALL ERROR$stop('dmft$seti4')
+         CALL ERROR$STOP('DMFT$SETI4')
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID',ID)
-         CALL ERROR$stop('dmft$seti4')
+         CALL ERROR$STOP('DMFT$SETI4')
        END IF
        RETURN
        END
 !
 !      .................................................................
-       subroutine dmft$setL4(ID,VAL)
+       SUBROUTINE DMFT$SETL4(ID,VAL)
        USE DMFT_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID
@@ -83,13 +83,13 @@ end module dmft_module
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID',ID)
-         CALL ERROR$stop('dmft$seti4')
+         CALL ERROR$STOP('DMFT$SETI4')
        END IF
        RETURN
        END
 !
 !      .................................................................
-       SUBROUTINE DMFT$SETPROJ(NDIM,NB,NPRO,PROJ,Hamilton)
+       SUBROUTINE DMFT$SETPROJ(NDIM,NB,NPRO,PROJ,HAMILTON)
 !      *****************************************************************
 !      **  PROJECTS ONTO WAVE FUNCTIONS ONTO LOCAL ORBITALS           **
 !      **  AND ADDS RESULT TO WEISS FUNCTION                          **
@@ -100,11 +100,11 @@ end module dmft_module
        INTEGER(4),INTENT(IN) :: NB         ! #(BANDS)
        INTEGER(4),INTENT(IN) :: NPRO       ! #(PARTIAL WAVES)
        INTEGER(4),INTENT(IN) :: NORB       ! #(LOCALIZED ORBITALS)
-       COMPLEX(8),INTENT(in) :: hamilton(nb,nb)
-       COMPLEX(8),INTENT(in) :: proj(npro,nb)
+       COMPLEX(8),INTENT(IN) :: HAMILTON(NB,NB)
+       COMPLEX(8),INTENT(IN) :: PROJ(NPRO,NB)
        COMPLEX(8)            :: ORBCOEFF(NDIM,NB,NORB)
-       real(8)               :: epsilon(nb)
-       complex(8)            :: u(nb,nb)
+       REAL(8)               :: EPSILON(NB)
+       COMPLEX(8)            :: U(NB,NB)
 !      *****************************************************************
        IF(.NOT.TON) RETURN
        IF(.NOT.TINI) CALL DMFT_INITIALIZE
@@ -116,24 +116,24 @@ end module dmft_module
        END IF
 !
 !      =================================================================
-!      ==  project wave function onto local orbitals                  ==
+!      ==  PROJECT WAVE FUNCTION ONTO LOCAL ORBITALS                  ==
 !      =================================================================
        CALL DMFT_PROJECTIONS(NB,NPRO,NORB,PROJ,ORBPRO,ORBCOEFF)
 !
 !      =================================================================
-!      ==  transform to eigenstates                                   ==
+!      ==  TRANSFORM TO EIGENSTATES                                   ==
 !      =================================================================
-       call lib$diagc8(nb,hamilton,epsilon,u)
-       do iorb=1,norb
-         do idim=1,ndim
-           orbcoff(idim,:,iorb)=matmul(orbcoff(idim,:,iorb),u)
-         enddo
-       enddo
+       CALL LIB$DIAGC8(NB,HAMILTON,EPSILON,U)
+       DO IORB=1,NORB
+         DO IDIM=1,NDIM
+           ORBCOFF(IDIM,:,IORB)=MATMUL(ORBCOFF(IDIM,:,IORB),U)
+         ENDDO
+       ENDDO
 !
 !      =================================================================
-!      ==  add to greens function                                     ==
+!      ==  ADD TO GREENS FUNCTION                                     ==
 !      =================================================================
-       CALL DMFT_ADDGREEN(NB,NORB,epsilon,ORBCOEFF,nomega,omega,GREEN,HAMIL)
+       CALL DMFT_ADDGREEN(NB,NORB,EPSILON,ORBCOEFF,NOMEGA,OMEGA,GREEN,HAMIL)
        RETURN
        END
 !
@@ -145,14 +145,14 @@ end module dmft_module
 !      *****************************************************************
        USE DMFT_MODULE
        IMPLICIT NONE
-       complex(8),allocatable :: weiss(ndim,norb,ndim,norb,nomega)
+       COMPLEX(8),ALLOCATABLE :: WEISS(NDIM,NORB,NDIM,NORB,NOMEGA)
 !      *****************************************************************
        IF(.NOT.TON) RETURN
-       allocate(weiss(ndim,norb,ndim,norb,nomega)
+       ALLOCATE(WEISS(NDIM,NORB,NDIM,NORB,NOMEGA)
        CALL DMFT_WEISS(NDIM*NORB,NOMEGA,GREEN,HAMIL,WEISS)
-       deallocate(green)
-       deallocate(hamil)
-       start=true
+       DEALLOCATE(GREEN)
+       DEALLOCATE(HAMIL)
+       START=TRUE
 
        RETURN
        END
@@ -191,16 +191,16 @@ end module dmft_module
        END
 !
 !      .................................................................
-       CALL DMFT_ADDGREEN(NB,NORB,epsilon,ORBCOEFF,nomega,omega,GREEN,HAMIL)
+       CALL DMFT_ADDGREEN(NB,NORB,EPSILON,ORBCOEFF,NOMEGA,OMEGA,GREEN,HAMIL)
 !      *****************************************************************
-!      **  EVALUATES THE matrix elements of teh greens function       **
-!      **  and its inverse between the local orbitals                 **
+!      **  EVALUATES THE MATRIX ELEMENTS OF TEH GREENS FUNCTION       **
+!      **  AND ITS INVERSE BETWEEN THE LOCAL ORBITALS                 **
 !      **                                                             **
 !      *****************************************************************
        INTEGER(4),INTENT(IN) :: NB         ! #(BANDS)
        INTEGER(4),INTENT(IN) :: NORB       ! #(LOCALIZED ORBITALS)
-       real(8)   ,INTENT(in) :: epsilon(nb)
-       COMPLEX(8),INTENT(in) :: ORBCOEFF(NDIM,NB,NORB)
+       REAL(8)   ,INTENT(IN) :: EPSILON(NB)
+       COMPLEX(8),INTENT(IN) :: ORBCOEFF(NDIM,NB,NORB)
        INTEGER(4),INTENT(IN) :: NOMEGA
        REAL(8)   ,INTENT(IN) :: OMEGA(NOMEGA)
        COMPLEX(8),INTENT(OUT):: GREEN(NORB,NORB,NOMEGA)
@@ -233,26 +233,26 @@ end module dmft_module
        END
 !
 !      .................................................................
-       SUBROUTINE DMFT_weiss(NORB,nomega,GREEN,HAMIL,weiss)
+       SUBROUTINE DMFT_WEISS(NORB,NOMEGA,GREEN,HAMIL,WEISS)
 !      *****************************************************************
-!      **  EVALUATES THE matrix elements of teh greens function       **
-!      **  and its inverse between the local orbitals                 **
+!      **  EVALUATES THE MATRIX ELEMENTS OF TEH GREENS FUNCTION       **
+!      **  AND ITS INVERSE BETWEEN THE LOCAL ORBITALS                 **
 !      **                                                             **
 !      *****************************************************************
        INTEGER(4),INTENT(IN) :: NORB       ! #(LOCALIZED ORBITALS)
-       INTEGER(4),INTENT(IN) :: NOmega
-        COMPLEX(8),INTENT(in) :: GREEN(NORB,NORB,NOMEGA)
-       COMPLEX(8),INTENT(in) :: HAMILTON(NORB,NORB,NOMEGA)
-       COMPLEX(8),INTENT(OUT):: weiss(NORB,NORB,NOMEGA)
+       INTEGER(4),INTENT(IN) :: NOMEGA
+        COMPLEX(8),INTENT(IN) :: GREEN(NORB,NORB,NOMEGA)
+       COMPLEX(8),INTENT(IN) :: HAMILTON(NORB,NORB,NOMEGA)
+       COMPLEX(8),INTENT(OUT):: WEISS(NORB,NORB,NOMEGA)
        INTEGER(4)            :: IO
-       INTEGER(4)            :: iomega
-       COMPLEX(8)            :: one(norb,norb)
-       COMPLEX(8)            :: gh(norb,norb)
-       COMPLEX(8)            :: gh2(norb,norb)
+       INTEGER(4)            :: IOMEGA
+       COMPLEX(8)            :: ONE(NORB,NORB)
+       COMPLEX(8)            :: GH(NORB,NORB)
+       COMPLEX(8)            :: GH2(NORB,NORB)
 !      *****************************************************************
        ONE(:,:)=(0.D0,0.D0)
        DO IO=1,NORB
-         ONE(IO,IO)=(1.D0,0.d0)
+         ONE(IO,IO)=(1.D0,0.D0)
        ENDDO
        DO IOMEGA=1,NOMEGA
          GH(:,:)=MATMUL(GREEN(:,:,IOMEGA),HAMIL(:,:,IOMEGA))

@@ -240,7 +240,7 @@ END MODULE STRCIO_MODULE
           CALL ERROR$I4VAL('NAT',NAT)
           CALL ERROR$STOP('STRCIO$GETI4A')
         END IF
-        VAL(1:len)=0
+        VAL(1:LEN)=0
         DO IAT=1,NAT
           DO IN=1,NNEIGH
             IF(IN.GT.NNEIGH1) CYCLE
@@ -533,7 +533,7 @@ END MODULE STRCIO_MODULE
       CHARACTER(32)             :: STRING
       REAL(8)      ,ALLOCATABLE :: RAD(:)
       REAL(8)                   :: T(3)
-      integer(4)                :: DI
+      INTEGER(4)                :: DI
       REAL(8)                   :: DR(3)
       REAL(8)                   :: DIS
       REAL(8)                   :: DISMAX
@@ -542,7 +542,7 @@ END MODULE STRCIO_MODULE
       REAL(8)                   :: ANGSTROM
       REAL(8)                   :: SQR2      !SQRT(2)
       REAL(8)                   :: ALAT
-      logical(4)                :: tchk
+      LOGICAL(4)                :: TCHK
 !     ******************************************************************
       SQR2=SQRT(2.D0)
       CALL CONSTANTS('ANGSTROM',ANGSTROM)

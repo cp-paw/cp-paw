@@ -193,13 +193,14 @@ END MODULE TIMING_MODULE
       END
 !    
 !     ..................................................................
-      SUBROUTINE TIMING$PRINT(NFIL,ID_)
+      SUBROUTINE TIMING$PRINT(cid,NFIL,ID_)
 !     ******************************************************************
-!     **  report timing information                                   **
+!     **  REPORT TIMING INFORMATION                                   **
 !     ******************************************************************
       USE TIMING_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: cid  ! communicator id (see mpe)
       CHARACTER(*),INTENT(IN) :: ID_
       INTEGER(4)  ,INTENT(IN) :: NFIL
       CHARACTER(32)           :: ID
@@ -218,105 +219,86 @@ END MODULE TIMING_MODULE
       INTEGER(4)              :: ISVAR
       CHARACTER(12)           :: TIMESTRING(2)
       REAL(8)                 :: PERCENT
-      real(8)                 :: percentidle
-!     ******************************************************************
+      REAL(8)                 :: PERCENTIDLE
+      character(64),allocatable:: idarr(:)
+      real(8)      ,allocatable:: tarr(:)
+      real(8)      ,allocatable:: tarrall(:,:)
+      integer(4)   ,allocatable:: icountarr(:)
+!     ************************  P.E. BLOECHL, TU-CLAUSTHAL 2005  *******
       CALL TIMING_CLOCK(TIME)
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY(cid,NTASKS,THISTASK)
+CALL MPE$SYNC('MONOMER')
+print*,thistask,'timing$print start',nfil,time,begintime,cid
       IF(.NOT.STARTED) THEN
-        CALL ERROR$MSG('WARNING FORM TIMING CLOCK HAS NOT BEEN STARTED')
+        CALL ERROR$MSG('WARNING FroM TIMING: CLOCK HAS NOT BEEN STARTED')
         CALL ERROR$MSG('CALL TIMING$START BEFORE ANY OTHER FUNCTON')
         CALL ERROR$STOP('TIMIMG')
       END IF
 !
 !     ==================================================================
-!     ==  FIND CORRECT CLOCKS                                         ==
+!     ==  collect timing information from all nodes                   ==
 !     ==================================================================
-      IF(ID_.EQ.'ALL') THEN
-        I1=1
-        I2=NENTRY
-      ELSE
-        ID=ID_
-        IENTRY=0
+!     == THE FIRST TASK DECIDES, WHICH CLOCKS ARE REPORTED
+      ISVAR=NENTRY
+      CALL MPE$BROADCAST(CID,1,ISVAR)
+      ALLOCATE(IDARR(ISVAR))
+      ALLOCATE(TARR(ISVAR))
+      ALLOCATE(TARRALL(ISVAR,NTASKS))
+      ALLOCATE(ICOUNTARR(ISVAR))
+      IF(THISTASK.EQ.1) THEN
         DO I=1,NENTRY
-          IF(ID.EQ.CLOCK(I)%NAME) THEN
-            IENTRY=I
-            EXIT
+          IDARR(I)=CLOCK(I)%NAME
+        ENDDO
+      END IF
+      CALL MPE$BROADCAST(CID,1,IDARR)
+      TARR(:)=0.D0
+      DO I=1,ISVAR
+        DO J=1,NENTRY
+          IF(CLOCK(J)%NAME.EQ.IDARR(I)) THEN
+            TARR(I)=TARR(I)+CLOCK(J)%USED
+            IF(CLOCK(J)%RUNNING)TARR(I)=TARR(I)+TIME
+            ICOUNTARR(I)=ICOUNTARR(I)+CLOCK(I)%COUNT
           END IF
         ENDDO
-        IF(IENTRY.EQ.0) THEN
-          PRINT*,'WARNING FROM TIMING!'
-          PRINT*,'ATTEMPT TO PRINT UNKNOWN CLOCK'
-          RETURN
-        END IF
-        I1=IENTRY
-        I2=IENTRY
-      END IF
-!
-!     ==================================================================
-!     ==  CHECK CONSISTENCY OF #(CLOCKS) ON ALL TASKS                 ==
-!     ==================================================================
-      ISVAR=NENTRY
-      CALL MPE$BROADCAST(1,ISVAR)
-      IF(ISVAR.NE.NENTRY) THEN
-        CALL ERROR$MSG('INCONSISTENT TIMING TABLES ON PARALLEL TASKS')
-        CALL ERROR$STOP('TIMING$REPORT')
-      END IF
+      ENDDO
+      CALL MPE$GATHER(CID,1,TARR,TARRALL)
+      CALL MPE$COMBINE(CID,'+',ICOUNTARR)
+      DEALLOCATE(IDARR)
+      DEALLOCATE(TARR)
 !
 !     ==================================================================
 !     ==  REPORT GLOBAL TIMING                                        ==
 !     ==================================================================
-      TLOCAL=TIME-BEGINTIME
-      ALLOCATE(TIMEVAL(NTASKS))
-      CALL MPE$GATHER(1,TLOCAL,TIMEVAL)
       IF(THISTASK.EQ.1) THEN
-        TSUM=0.
-        TMAX=0.D0
-        DO I=1,NTASKS
-          TSUM=TSUM+TIMEVAL(I)
-          TMAX=MAX(TIMEVAL(I),TMAX)
-        ENDDO
-        TMAX=MAX(1.D-10,TMAX)    ! AVOID DIVIDE-BY-ZERO
-        TIDLE=TMAX-TSUM/DBLE(NTASKS)
-        CALL TIMING_CONVERT(TSUM,TIMESTRING(1))
+        TLOCAL=TIME-BEGINTIME
         WRITE(NFIL,FMT='(/''RUN-TIME REPORT''/''==============='')')
-        WRITE(NFIL,FMT='(''TOTAL CPU TIME USED  : '',A12)')TIMESTRING(1)
-        WRITE(NFIL,FMT='(''PERCENTAGE IDLE      : '',F5.1)')100.D0*TIDLE/TMAX
-        WRITE(NFIL,FMT='(''NUMBER OF PROCESSORS : '',I4)')NTASKS
-        TOTAL=Tmax*real(ntasks)  ! USED TO OBTAIN PERCENTAGE OIF INDIVIDUAL CLOCKS
-      END IF
+        CALL TIMING_CONVERT(TLOCAL,TIMESTRING(1))
+        WRITE(NFIL,FMT='(''CPU TIME ON FIRST TASK : '',A12)')TIMESTRING(1)
+        CALL TIMING_CONVERT(TLOCAL*REAL(NTASKS,KIND=8),TIMESTRING(1))
+        WRITE(NFIL,FMT='(''TOTAL CPU TIME         : '',A12)')TIMESTRING(1)
+        WRITE(NFIL,FMT='(''NUMBER OF PROCESSORS   : '',I4)')NTASKS
+        TOTAL=TLOCAL*REAL(NTASKS)  ! USED TO OBTAIN PERCENTAGE OIF INDIVIDUAL CLOCKS
 !
-!     ==================================================================
-!     ==  REPORT ON INDIVIDUAL CLOCKS                                 ==
-!     ==================================================================
-      IF(THISTASK.EQ.1) THEN
+!       ==================================================================
+!       ==  REPORT ON INDIVIDUAL CLOCKS                                 ==
+!       ==================================================================
         WRITE(NFIL,FMT='(A,T20," ",A6," ",A12," ",A12," ",A7," ",A7)') &
      &         "NAME","#CALLS","TOTAL","PER CALL","T/TOTAL","IDLE"
-      END IF
-      DO I=I1,I2
-!
-!       ================================================================
-!       ==  COLLECT TIME USED FROM ALL TASKS (PROCESSORS)             ==
-!       ================================================================
-        IF(CLOCK(I)%RUNNING) THEN
-          IF(THISTASK.EQ.1) THEN          
-            WRITE(NFIL,FMT='(A," HAS NOT BEEN CLOCKED OFF")')CLOCK(I)%NAME
-          END IF
-          TLOCAL=CLOCK(I)%USED+TIME
-        ELSE 
-          TLOCAL=CLOCK(I)%USED
-        END IF
-        CALL MPE$GATHER(1,TLOCAL,TIMEVAL)
 !
 !       ================================================================
 !       ==  ANALYSIS AND PRINTOUT ONLY ON TASK 1                      ==
 !       ================================================================
-        IF(THISTASK.EQ.1) THEN
+        ALLOCATE(TIMEVAL(NTASKS))
+        DO I=1,NENTRY
+          TIMEVAL(:)=TARRALL(I,:)
+!
           TMAX=0.D0
           TSUM = 0.D0
           DO J=1,NTASKS
             TSUM=TSUM+TIMEVAL(J)
             TMAX=MAX(TMAX,TIMEVAL(J))
           ENDDO
+          IF(TSUM.EQ.0.D0) CYCLE  ! NO REPORT IF NO TIME HAS BEEN SPENT
           TMAX=MAX(1.D-10,TMAX)    ! AVOID DIVIDE-BY-ZERO
           PERCENTIDLE=100*(TMAX-TSUM/REAL(NTASKS,KIND=8))/TMAX
 !
@@ -329,7 +311,7 @@ END MODULE TIMING_MODULE
 !         ==  TIME PER CALL                                           ==
 !         ==============================================================
           IF(CLOCK(I)%COUNT.NE.0) THEN
-            SVAR=TSUM/DBLE(CLOCK(I)%COUNT)
+            SVAR=TSUM/REAL(ICOUNTARR(I),KIND=8)
           ELSE
             SVAR=0.D0
           END IF
@@ -339,7 +321,7 @@ END MODULE TIMING_MODULE
 !         ==  PERCENTAGE OF TOTAL TIME USED SINCE STARTING THE CLOCKS ==
 !         ==============================================================
           IF(TSUM.NE.0.D0) THEN
-            PERCENT=Tsum/TOTAL*100.D0
+            PERCENT=TSUM/TOTAL*100.D0
           ELSE
             PERCENT=0
           END IF
@@ -351,34 +333,37 @@ END MODULE TIMING_MODULE
      &      FMT='(A20," ",I6," ",A12," ",A12," ",F5.1,"% ",F5.1,"%")') &
      &       CLOCK(I)%NAME,CLOCK(I)%COUNT,(TIMESTRING(J),J=1,2) &
      &      ,PERCENT,PERCENTIDLE
-        END IF
+        ENDDO
+        DEALLOCATE(TIMEVAL)
 !     
-      ENDDO
-      DEALLOCATE(TIMEVAL)
+      END IF
+      DEALLOCATE(TARRALL)
+      DEALLOCATE(ICOUNTARR)
+PRINT*,THISTASK,'TIMING$PRINT DONE'
       RETURN
       END  
 !
 !     ...............................................................
-      SUBROUTINE timing_clock(SECONDS)
+      SUBROUTINE TIMING_CLOCK(SECONDS)
 !     ***************************************************************
       IMPLICIT NONE
       REAL(8) ,INTENT(OUT) :: SECONDS
       INTEGER(4)           :: COUNT
       INTEGER(4)           :: COUNTRATE
       INTEGER(4)           :: COUNTMAX
-      integer(4),save      :: countturn=0
-      real(8)              :: countcycle
-      real(8)   ,save      :: current=0.d0
+      INTEGER(4),SAVE      :: COUNTTURN=0
+      REAL(8)              :: COUNTCYCLE
+      REAL(8)   ,SAVE      :: CURRENT=0.D0
 !     ***************************************************************
       CALL SYSTEM_CLOCK(COUNT,COUNTRATE,COUNTMAX)
-      countcycle=real(COUNTMAX)/REAL(COUNTRATE)
-      SECONDS=REAL(COUNT)/REAL(COUNTRATE)+countcycle*real(countturn)
+      COUNTCYCLE=REAL(COUNTMAX)/REAL(COUNTRATE)
+      SECONDS=REAL(COUNT)/REAL(COUNTRATE)+COUNTCYCLE*REAL(COUNTTURN)
       IF(SECONDS.LT.CURRENT) THEN
         COUNTTURN=COUNTTURN+1
       END IF
       CURRENT=SECONDS
       RETURN
-      END SUBROUTINE timing_clock
+      END SUBROUTINE TIMING_CLOCK
 !    
 !     ..................................................................
       SUBROUTINE TIMING_CONVERT(TIME,TIMESTRING)

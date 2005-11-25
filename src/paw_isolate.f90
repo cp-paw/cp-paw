@@ -96,7 +96,7 @@
 !     ******************************************************************
       USE ISOLATE_MODULE
       IMPLICIT NONE
-      LOGICAL    ,PARAMETER    :: TPR=.False.
+      LOGICAL    ,PARAMETER    :: TPR=.FALSE.
       REAL(8)    ,PARAMETER    :: XK(3)=(/0.D0,0.D0,0.D0/)
       INTEGER(4) ,INTENT(IN)   :: NSP           ! #(ATOM TYPES)
       INTEGER(4) ,INTENT(IN)   :: NAT           ! #(ATOMS)
@@ -113,24 +113,24 @@
       INTEGER(4) ,INTENT(IN)   :: NG            ! #(G-VECTORS)
       COMPLEX(8) ,INTENT(IN)   :: RHO(NG)
       COMPLEX(8) ,INTENT(INOUT):: POT(NG)
-      REAL(8)    ,allocatable  :: G2(:)
-      real(8)    ,allocatable  :: gvec(:,:)
-      complex(8) ,allocatable  :: eigr(:)
+      REAL(8)    ,ALLOCATABLE  :: G2(:)
+      REAL(8)    ,ALLOCATABLE  :: GVEC(:,:)
+      COMPLEX(8) ,ALLOCATABLE  :: EIGR(:)
       INTEGER(4)               :: NGS
       INTEGER(4) ,ALLOCATABLE  :: MAP(:)     !(NGS)       
       COMPLEX(8) ,ALLOCATABLE  :: RHOS(:)    !(NGS)   
       COMPLEX(8) ,ALLOCATABLE  :: F(:,:,:)   !(NGS,NFCT,NAT) 
-      REAL(8)    ,ALLOCATABLE  :: GvecS(:,:) !(3,NGS)
+      REAL(8)    ,ALLOCATABLE  :: GVECS(:,:) !(3,NGS)
       REAL(8)                  :: RC(NFCT,NAT)   
       REAL(8)                  :: RCSM(NAT)         
-      real(8)                  :: decay(nfct)
+      REAL(8)                  :: DECAY(NFCT)
       REAL(8)                  :: GBAS(3,3)
       REAL(8)                  :: OMEGA
       REAL(8)                  :: FORCET(3,NAT)     
       REAL(8)                  :: VQLMT(LMRXX,NAT)  
       REAL(8)                  :: ET
-      INTEGER(4)               :: IAT,ISP,IFCT,IG,I,LM,igs
-      INTEGER(4)               :: ngamma
+      INTEGER(4)               :: IAT,ISP,IFCT,IG,I,LM,IGS
+      INTEGER(4)               :: NGAMMA
 !     ******************************************************************
       IF(.NOT.TON)RETURN
                               CALL TRACE$PUSH('ISOLATE')
@@ -201,17 +201,17 @@
         IG=MAP(IGS)
         RHOS(IGS)=RHO(IG)
         GVECS(:,IGS)=GVEC(:,IG)
-        if(ig.eq.ngamma) ngamma=igs
+        IF(IG.EQ.NGAMMA) NGAMMA=IGS
       ENDDO
       DEALLOCATE(GVEC)
 !
 !     ==================================================================
 !     == CONSTRUCT CORRECTIONONS                                      ==
 !     ==================================================================
-      CALL ISOLATE_A(NGS,NAT,RBAS,ET,POS,FORCET,GvecS &
-     &              ,ngamma,RHOS,LMRXX,QLM,VQLMT,NFCT,F,RC,RCSM)
+      CALL ISOLATE_A(NGS,NAT,RBAS,ET,POS,FORCET,GVECS &
+     &              ,NGAMMA,RHOS,LMRXX,QLM,VQLMT,NFCT,F,RC,RCSM)
       DEALLOCATE(F)
-      DEALLOCATE(GvecS)
+      DEALLOCATE(GVECS)
 
 !     ==================================================================
 !     ==  ADD CORRECTION TO POTENTIAL                                 ==
@@ -239,11 +239,11 @@
 !
 !     ..................................................................
       SUBROUTINE ISOLATE_A(NGS,NAT,RBAS,E,BAS,FORCE,G &
-     &                    ,ngamma,RHO,LMRXX,QLM,VQLM,NFCT,F,RC,RCSM)
+     &                    ,NGAMMA,RHO,LMRXX,QLM,VQLM,NFCT,F,RC,RCSM)
 !     ******************************************************************
 !     ******************************************************************
       USE MPE_MODULE
-      implicit none
+      IMPLICIT NONE
       LOGICAL(4),PARAMETER    :: TPR=.FALSE.
       INTEGER(4),INTENT(IN)   :: NGS
       INTEGER(4),INTENT(IN)   :: NAT
@@ -252,7 +252,7 @@
       REAL(8)   ,INTENT(IN)   :: BAS(3,NAT)
       REAL(8)   ,INTENT(OUT)  :: FORCE(3,NAT)
       REAL(8)   ,INTENT(IN)   :: G(3,NGS)
-      integer(4),INTENT(IN)   :: ngamma
+      INTEGER(4),INTENT(IN)   :: NGAMMA
       COMPLEX(8),INTENT(INOUT):: RHO(NGS)
       INTEGER(4),INTENT(IN)   :: LMRXX
       REAL(8)   ,INTENT(IN)   :: QLM(LMRXX,NAT)
@@ -295,14 +295,14 @@
       REAL(8)     :: XI(NFCT*NAT)
       REAL(8)     :: D(NFCT*NAT)
       REAL(8)     :: TDIP,DIP(3)
-      real(8)     :: debye
-      real(8)     :: g2,w
+      REAL(8)     :: DEBYE
+      REAL(8)     :: G2,W
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/DSQRT(4.D0*PI)
       CALL GBASS(RBAS,GBAS,VOL)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     ==================================================================
 !     == INITIALIZE                                                   ==
@@ -317,18 +317,18 @@
 !     ==  DEFINE GGAMMA,RHOGAMMA                                      ==
 !     ==================================================================
       IF(NGAMMA.NE.0) THEN
-        RHOGAMMA=REAL(RHO(NGAMMA),kind=8)
+        RHOGAMMA=REAL(RHO(NGAMMA),KIND=8)
         DO I=1,NAT*NFCT
-           GGAMMA(I)=REAL(F(NGAMMA,I),kind=8)
+           GGAMMA(I)=REAL(F(NGAMMA,I),KIND=8)
         ENDDO
       ELSE
         RHOGAMMA=0.D0
         DO I=1,NAT*NFCT
           GGAMMA(I)=0.D0
-        ENDdo
+        ENDDO
       END IF
-      CALL MPE$COMBINE('+',GGAMMA)
-      CALL MPE$COMBINE('+',RHOGAMMA)
+      CALL MPE$COMBINE('MONOMER','+',GGAMMA)
+      CALL MPE$COMBINE('MONOMER','+',RHOGAMMA)
 !
 !     ==================================================================
 !     ==      GRHO(I)=      <F(I)|RHO>      GG(I,J)=      <F(I)|F(J)> ==
@@ -336,10 +336,10 @@
 !     ==================================================================
                               CALL TIMING$CLOCKON('ISOLATE_A_DOT')
       DO I=1,NAT*NFCT
-!       ____GRHO(I)=<F(I)|w|RHO>________________________________________
+!       ____GRHO(I)=<F(I)|W|RHO>________________________________________
         CALL ISOLATE_DOT(NGS,G,F(1,I),RHO,VOL,GRHO(I),GRADGRHO(1,I))
         DO J=I,NAT*NFCT
-!         ____GG(I,J)=<F(I)|w|F(J)>_____________________________________
+!         ____GG(I,J)=<F(I)|W|F(J)>_____________________________________
           CALL ISOLATE_DOT(NGS,G,F(1,I),F(1,J),VOL,GG(I,J),GRADGG(1,I,J))
           GG(J,I)=GG(I,J)
           GRADGG(1,J,I)=-GRADGG(1,I,J)
@@ -347,10 +347,10 @@
           GRADGG(3,J,I)=-GRADGG(3,I,J)
         ENDDO
       ENDDO
-      CALL MPE$COMBINE('+',GRHO)
-      CALL MPE$COMBINE('+',GRADGRHO)
-      CALL MPE$COMBINE('+',GG)
-      CALL MPE$COMBINE('+',GRADGG)
+      CALL MPE$COMBINE('MONOMER','+',GRHO)
+      CALL MPE$COMBINE('MONOMER','+',GRADGRHO)
+      CALL MPE$COMBINE('MONOMER','+',GG)
+      CALL MPE$COMBINE('MONOMER','+',GRADGG)
                               CALL TIMING$CLOCKOFF('ISOLATE_A_DOT')
 !
 !     ==================================================================
@@ -359,7 +359,7 @@
 !     ==================================================================
 !
 !     ____GGINV =[<G|G>]**(-1)__________________________________________
-      call lib$invertr8(nat*nfct,gg,gginv)
+      CALL LIB$INVERTR8(NAT*NFCT,GG,GGINV)
 !
 !     ____QI= [<G|G>]**(-1)*<G|RHO>______________________________________
       CALL DGEMV('N',NAT*NFCT,NAT*NFCT,1.D0,GGINV,NAT*NFCT &
@@ -398,9 +398,9 @@
         SUM=SUM+XI(I)*GGAMMA(I)*VOL
       ENDDO
 !     ____XI(I)=XI(I)/SUM_________________________________________________
-      do i=1,nat*nfct
-        xi(i)=xi(i)/sum
-      enddo
+      DO I=1,NAT*NFCT
+        XI(I)=XI(I)/SUM
+      ENDDO
 !
 !     == APPLY CONSTRAINT TO CHARGES ===================================
       SUM=RHOGAMMA*VOL
@@ -408,9 +408,9 @@
         SUM=SUM-QI(I)*GGAMMA(I)*VOL
       ENDDO
 !     __QI(I)=QI(I)+XI(I)*SUM______________________________________________
-      do i=1,nat*nfct
-        qi(i)=qi(i)+xi(i)*sum
-      enddo
+      DO I=1,NAT*NFCT
+        QI(I)=QI(I)+XI(I)*SUM
+      ENDDO
 !
 !     ==================================================================
 !     ==  GRADIENT OF QI                                               ==
@@ -444,7 +444,7 @@
           END IF
         ENDDO
       ENDDO
-      CALL MPE$COMBINE('+',GRADQI)
+      CALL MPE$COMBINE('MONOMER','+',GRADQI)
 !
 !     ==================================================================
 !     ==  QI= [<F|F>]**(-1)*<F|RHO>       |RHO-BAR>=|F>QI               ==
@@ -546,7 +546,7 @@
           WRITE(*,FMT='("DIPOLE =0")')
         END IF
         DO IAT=1,NAT
-          if(lmrxx.lt.4) cycle   !attention when lmrx(isp)<lmrxx
+          IF(LMRXX.LT.4) CYCLE   !ATTENTION WHEN LMRX(ISP)<LMRXX
           DIP(1)=DIP(1)+QLM(2,IAT)
           DIP(2)=DIP(2)+QLM(4,IAT)
           DIP(3)=DIP(3)+QLM(3,IAT)
@@ -600,7 +600,7 @@
 !
       DO I=1,NAT*NFCT
         DO IG=1,NGS
-          if(ig.eq.ngamma) cycle
+          IF(IG.EQ.NGAMMA) CYCLE
           G2=G(1,IG)**2+G(2,IG)**2+G(3,IG)**2
           CALL ISOLATE_WEIGHTFUNCTION(G2,W)
           RHO(IG)=RHO(IG)+F(IG,I)*W*D(I)
@@ -695,9 +695,9 @@
       ENDDO
 !
 !     ==================================================================
-!     ==  Calgary QM/MM interface                                     ==
+!     ==  CALGARY QM/MM INTERFACE                                     ==
 !     ==================================================================
-!     call mm_paw_md_interface(NG,RC,QI,VI1,FORCE1)
+!     CALL MM_PAW_MD_INTERFACE(NG,RC,QI,VI1,FORCE1)
 !     VI(:,:) = VI(:,:) + VI1(:,:)
 !     FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)
 !
@@ -734,7 +734,7 @@
       REAL(8)               :: ENERGY2
       REAL(8)               :: POT2(NAT)
       REAL(8)               :: FORCE2(3,NAT)
-      integer(4)            :: i,iat
+      INTEGER(4)            :: I,IAT
 !     ******************************************************************
 !
 !     ==================================================================
@@ -834,7 +834,7 @@
       SUBROUTINE ISOLATE_DOT(NG,G,F1,F2,OMEGA,RES,GRAD)
 !     ******************************************************************
 !     **                                                              **
-!     **  res=<f1|w(G)|f2>                                            **
+!     **  RES=<F1|W(G)|F2>                                            **
 !     **                                                              **
 !     **                                                              **
 !     ******************************************************************
@@ -846,7 +846,7 @@
       REAL(8)   ,INTENT(OUT) :: RES
       REAL(8)   ,INTENT(OUT) :: GRAD(3)
       COMPLEX(8)             :: CSVAR
-      REAL(8)                :: G2,SVAR,w
+      REAL(8)                :: G2,SVAR,W
       INTEGER(4)             :: IG
 !     ******************************************************************
       RES=0.D0
@@ -857,7 +857,7 @@
         G2=G(1,IG)**2+G(2,IG)**2+G(3,IG)**2
         CALL ISOLATE_WEIGHTFUNCTION(G2,W)
         CSVAR=F1(IG)*CONJG(F2(IG))*W
-        RES=RES+REAL(CSVAR,kind=8)
+        RES=RES+REAL(CSVAR,KIND=8)
         SVAR=AIMAG(CSVAR) 
         GRAD(1)=GRAD(1)+G(1,IG)*SVAR
         GRAD(2)=GRAD(2)+G(2,IG)*SVAR
@@ -953,33 +953,33 @@
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
-      IMPLICIT none
-      REAL(8)   ,intent(in) :: RBAS(3,3)
-      integer(4),intent(in) :: ngx
-      integer(4),intent(in) :: ng
-      REAL(8)   ,intent(in) :: G(3,NGX)
-      COMPLEX(8),intent(in) :: RHO(NG)
-      integer(4),intent(in) :: nsp
-      integer(4),intent(in) :: nat
-      integer(4),intent(in) :: ispecies(nat)
-      real(8)   ,intent(in) :: POS(3,NAT)
-      integer(4),intent(in) :: lmrxx
-      integer(4),intent(in) :: lmrx(nsp)
-      REAL(8)   ,intent(in) :: QLM(LMRXX,NAT)
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      INTEGER(4),INTENT(IN) :: NGX
+      INTEGER(4),INTENT(IN) :: NG
+      REAL(8)   ,INTENT(IN) :: G(3,NGX)
+      COMPLEX(8),INTENT(IN) :: RHO(NG)
+      INTEGER(4),INTENT(IN) :: NSP
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: ISPECIES(NAT)
+      REAL(8)   ,INTENT(IN) :: POS(3,NAT)
+      INTEGER(4),INTENT(IN) :: LMRXX
+      INTEGER(4),INTENT(IN) :: LMRX(NSP)
+      REAL(8)   ,INTENT(IN) :: QLM(LMRXX,NAT)
       REAL(8)               :: D(3)
-      real(8)               :: pi,fourpi
-      real(8)               :: y0
-      real(8)               :: debye
+      REAL(8)               :: PI,FOURPI
+      REAL(8)               :: Y0
+      REAL(8)               :: DEBYE
       REAL(8)               :: GBAS(3,3)
-      real(8)               :: vol
-      real(8)               :: rmax
-      real(8)               :: qtot,qttot
-      real(8)               :: dtot
-      real(8)               :: fac
-      real(8)               :: f
-      real(8)               :: grmax
-      real(8)               :: g1
-      integer(4)            :: i,ig,iat
+      REAL(8)               :: VOL
+      REAL(8)               :: RMAX
+      REAL(8)               :: QTOT,QTTOT
+      REAL(8)               :: DTOT
+      REAL(8)               :: FAC
+      REAL(8)               :: F
+      REAL(8)               :: GRMAX
+      REAL(8)               :: G1
+      INTEGER(4)            :: I,IG,IAT
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FOURPI=4.D0*PI
@@ -1001,13 +1001,13 @@
       DO I=1,3
         D(I)=0.D0
       ENDDO
-      QTOT=QTOT+REAL(RHO(1),kind=8)*FOURPI/3.D0*RMAX**3
-      QTTOT=REAL(RHO(1),kind=8)*VOL
+      QTOT=QTOT+REAL(RHO(1),KIND=8)*FOURPI/3.D0*RMAX**3
+      QTTOT=REAL(RHO(1),KIND=8)*VOL
       DO IG=2,NG
         G1=DSQRT(G(1,IG)**2+G(2,IG)**2+G(3,IG)**2)
         GRMAX=G1*RMAX
         F=(DSIN(GRMAX)-GRMAX*DCOS(GRMAX))/GRMAX**3
-        QTOT=QTOT+FOURPI*F*RMAX**3*(2.D0*REAL(RHO(IG),kind=8))
+        QTOT=QTOT+FOURPI*F*RMAX**3*(2.D0*REAL(RHO(IG),KIND=8))
 !
         F=(3.D0*DSIN(GRMAX)-3.D0*GRMAX*DCOS(GRMAX)-GRMAX**2*DSIN(GRMAX)) &
      &      /GRMAX**5
@@ -1018,16 +1018,16 @@
       ENDDO
       DTOT=DSQRT(D(1)**2+D(2)**2+D(3)**2)
 !
-      write(*,fmt='("plane wave contributrion to dipole moment:")')
+      WRITE(*,FMT='("PLANE WAVE CONTRIBUTRION TO DIPOLE MOMENT:")')
       PRINT*,' QTOT ',QTOT,' QTTOT ',QTTOT
-      WRITE(*,FMT='("dipole moment:",F10.5,"DEBYE; DIRECTION: (",3F3.0,")")') &
+      WRITE(*,FMT='("DIPOLE MOMENT:",F10.5,"DEBYE; DIRECTION: (",3F3.0,")")') &
      &      DTOT/DEBYE,(D(I)/DTOT,I=1,3)
 !
 !     ==================================================================
 !     ==  DIPOLE MOMENT                                               ==
 !     ==================================================================
       DO IAT=1,NAT
-        if(lmrx(ISPECIES(IAT)).le.4) cycle
+        IF(LMRX(ISPECIES(IAT)).LE.4) CYCLE
         FAC=QLM(1,IAT)/Y0
         QTOT=QTOT+FAC
         QTTOT=QTTOT+FAC
@@ -1040,16 +1040,16 @@
       ENDDO
 !
 !     ==================================================================
-!     ==  printout                                                    ==
+!     ==  PRINTOUT                                                    ==
 !     ==================================================================
       DTOT=DSQRT(D(1)**2+D(2)**2+D(3)**2)
       D(1)=D(1)/DTOT
       D(2)=D(2)/DTOT
       D(3)=D(3)/DTOT
 !
-      write(*,fmt='("complete dipole moment:")')
+      WRITE(*,FMT='("COMPLETE DIPOLE MOMENT:")')
       PRINT*,' QTOT ',QTOT,'QTTOT ',QTTOT
-      WRITE(*,FMT='("Dipole moment",F10.5,"DEBYE; DIRECTION: (",3F3.0,")")') &
+      WRITE(*,FMT='("DIPOLE MOMENT",F10.5,"DEBYE; DIRECTION: (",3F3.0,")")') &
      &      DTOT/DEBYE,D
       RETURN
       END

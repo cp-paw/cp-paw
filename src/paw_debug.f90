@@ -1,218 +1,220 @@
-module debug_module
-character(32)        :: filename="debugout"
-integer(8)           :: dunit=4243         
-logical(4)           :: alltasks=.true.
-end module debug_module
+!**   works for each monomer separately
+MODULE DEBUG_MODULE
+CHARACTER(32)        :: FILENAME="DEBUGOUT"
+INTEGER(8)           :: DUNIT=4243         
+LOGICAL(4)           :: ALLTASKS=.TRUE.
+END MODULE DEBUG_MODULE
 !      ........................................................................
-       subroutine debug$nan_R8(len,output,comment)
+       SUBROUTINE DEBUG$NAN_R8(LEN,OUTPUT,COMMENT)
        USE MPE_MODULE
-       USE debug_module
-       implicit none
-       integer(4),   intent(in)           ::  len
-       real(8),      intent(in)           ::  output(len)
-       character(*), intent(in)           ::  comment
-       integer(4)                         ::  Ntasks,Thistask
-       integer(4)                         :: i
+       USE DEBUG_MODULE
+       IMPLICIT NONE
+       INTEGER(4),   INTENT(IN)           ::  LEN
+       REAL(8),      INTENT(IN)           ::  OUTPUT(LEN)
+       CHARACTER(*), INTENT(IN)           ::  COMMENT
+       INTEGER(4)                         ::  NTASKS,THISTASK
+       INTEGER(4)                         :: I
  !     **************************************************************************
-       CALL MPE$QUERY(NTASKS,THISTASK)
-       if(.not.alltasks) then
-         OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+       IF(.NOT.ALLTASKS) THEN
+         OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
          &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-         WRITE (dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-         if(thistask.eq.1) then
-           do i=1,len
-             if(output(i).ne.output(i)) then
-               WRITE (dunit,FMT="(A,I10,F25.14)")"the following element is dubious: ",i,output(i) 
-             end if
-           end do
-           close(dunit)
-         end if
-       else
-         OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+         WRITE (DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+         IF(THISTASK.EQ.1) THEN
+           DO I=1,LEN
+             IF(OUTPUT(I).NE.OUTPUT(I)) THEN
+               WRITE (DUNIT,FMT="(A,I10,F25.14)")"THE FOLLOWING ELEMENT IS DUBIOUS: ",I,OUTPUT(I) 
+             END IF
+           END DO
+           CLOSE(DUNIT)
+         END IF
+       ELSE
+         OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
       &     ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-       do i=1,len
-         if(output(i).ne.output(i)) then
-           WRITE (dunit,FMT="(2A,I10,A,I4,F25.14)")comment," dubious element: ",i," task: ",thistask,output(i) 
-         end if
-       end do
-       close(dunit)
-       end if
-       end subroutine debug$nan_R8
+       DO I=1,LEN
+         IF(OUTPUT(I).NE.OUTPUT(I)) THEN
+           WRITE(DUNIT,FMT="(2A,I10,A,I4,F25.14)") &
+      &          COMMENT," DUBIOUS ELEMENT: ",I," TASK: ",THISTASK,OUTPUT(I) 
+         END IF
+       END DO
+       CLOSE(DUNIT)
+       END IF
+       END SUBROUTINE DEBUG$NAN_R8
 !
 !.....................................................................................
-subroutine debug$nan_C8(len,output,comment)
+SUBROUTINE DEBUG$NAN_C8(LEN,OUTPUT,COMMENT)
   USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  complex(8),   intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
-  integer(4)                         :: i
+  USE DEBUG_MODULE
+  IMPLICIT NONE
+  INTEGER(4),   INTENT(IN)           ::  LEN
+  COMPLEX(8),   INTENT(IN)           ::  OUTPUT(LEN)
+  CHARACTER(*), INTENT(IN)           ::  COMMENT
+  INTEGER(4)                         ::  NTASKS,THISTASK
+  INTEGER(4)                         :: I
  !...................................................
-  CALL MPE$QUERY(NTASKS,THISTASK)
-if(.not.alltasks) then
-  OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+IF(.NOT.ALLTASKS) THEN
+  OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
        &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-  WRITE (dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
+  WRITE (DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
 
-  if(thistask.eq.1) then
-     do i=1,len
-        if(output(i).ne.output(i)) then
-           WRITE (dunit,FMT="(A,I10,2F25.14)")"the following element is dubious: ",i,output(i) 
-        end if
-     end do
-     close(dunit)
-  end if
-else
-  OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  IF(THISTASK.EQ.1) THEN
+     DO I=1,LEN
+        IF(OUTPUT(I).NE.OUTPUT(I)) THEN
+           WRITE (DUNIT,FMT="(A,I10,2F25.14)")"THE FOLLOWING ELEMENT IS DUBIOUS: ",I,OUTPUT(I) 
+        END IF
+     END DO
+     CLOSE(DUNIT)
+  END IF
+ELSE
+  OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
        &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-     do i=1,len
-        if(output(i).ne.output(i)) then
-           WRITE (dunit,FMT="(2A,I10,A,I4,2F25.14)")comment," dubious element: ",i," task: ",thistask,output(i) 
-        end if
-     end do
-     close(dunit)
+     DO I=1,LEN
+        IF(OUTPUT(I).NE.OUTPUT(I)) THEN
+           WRITE (DUNIT,FMT="(2A,I10,A,I4,2F25.14)")COMMENT," DUBIOUS ELEMENT: ",I," TASK: ",THISTASK,OUTPUT(I) 
+        END IF
+     END DO
+     CLOSE(DUNIT)
 
-end if
-end subroutine debug$nan_C8
+END IF
+END SUBROUTINE DEBUG$NAN_C8
 
 
-subroutine debug$nan_I4(len,output,comment)
+SUBROUTINE DEBUG$NAN_I4(LEN,OUTPUT,COMMENT)
   USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  integer(4),   intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
-  integer(4)                         :: i
+  USE DEBUG_MODULE
+  IMPLICIT NONE
+  INTEGER(4),   INTENT(IN)           ::  LEN
+  INTEGER(4),   INTENT(IN)           ::  OUTPUT(LEN)
+  CHARACTER(*), INTENT(IN)           ::  COMMENT
+  INTEGER(4)                         ::  NTASKS,THISTASK
+  INTEGER(4)                         :: I
  !...................................................
 
-  CALL MPE$QUERY(NTASKS,THISTASK)
-if(.not.alltasks) then
-  OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+IF(.NOT.ALLTASKS) THEN
+  OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
        &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-  WRITE (dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
+  WRITE (DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
 
-  if(thistask.eq.1) then
-     do i=1,len
-        if(output(i).ne.output(i)) then
-           WRITE (dunit,FMT="(A,I10,I10)")"the following element is dubious: ",i,output(i) 
-        end if
-     end do
-     close(dunit)
-  end if
-else
-  OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  IF(THISTASK.EQ.1) THEN
+     DO I=1,LEN
+        IF(OUTPUT(I).NE.OUTPUT(I)) THEN
+           WRITE (DUNIT,FMT="(A,I10,I10)")"THE FOLLOWING ELEMENT IS DUBIOUS: ",I,OUTPUT(I) 
+        END IF
+     END DO
+     CLOSE(DUNIT)
+  END IF
+ELSE
+  OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
        &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
 
-     do i=1,len
-        if(output(i).ne.output(i)) then
-           WRITE (dunit,FMT="(2A,I10,A,I4,I10)")comment," dubious element: ",i," task: ",thistask,output(i) 
-        end if
-     end do
-     close(dunit)
+     DO I=1,LEN
+        IF(OUTPUT(I).NE.OUTPUT(I)) THEN
+           WRITE (DUNIT,FMT="(2A,I10,A,I4,I10)")COMMENT," DUBIOUS ELEMENT: ",I," TASK: ",THISTASK,OUTPUT(I) 
+        END IF
+     END DO
+     CLOSE(DUNIT)
 
-end if
-end subroutine debug$nan_I4
-
-
+END IF
+END SUBROUTINE DEBUG$NAN_I4
 
 
 
 
-subroutine debug$write_R8(len,output,comment)
+
+
+SUBROUTINE DEBUG$WRITE_R8(LEN,OUTPUT,COMMENT)
   USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  real(8),      intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
+  USE DEBUG_MODULE
+  IMPLICIT NONE
+  INTEGER(4),   INTENT(IN)           ::  LEN
+  REAL(8),      INTENT(IN)           ::  OUTPUT(LEN)
+  CHARACTER(*), INTENT(IN)           ::  COMMENT
+  INTEGER(4)                         ::  NTASKS,THISTASK
   !...................................................
 
-  CALL MPE$QUERY(NTASKS,THISTASK)
-  if(thistask.eq.1) then
-     OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+  IF(THISTASK.EQ.1) THEN
+     OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
           &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-     WRITE (dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-!     WRITE (dunit,*)output 
-     WRITE (dunit,FMT="(F25.14)")output 
-     close(dunit)
-  end if
+     WRITE (DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+!     WRITE (DUNIT,*)OUTPUT 
+     WRITE (DUNIT,FMT="(F25.14)")OUTPUT 
+     CLOSE(DUNIT)
+  END IF
   
-end subroutine debug$write_R8
+END SUBROUTINE DEBUG$WRITE_R8
 
 
 
 
 
-subroutine debug$write_I4(len,output,comment)
+SUBROUTINE DEBUG$WRITE_I4(LEN,OUTPUT,COMMENT)
   USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  integer(4),   intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
+  USE DEBUG_MODULE
+  IMPLICIT NONE
+  INTEGER(4),   INTENT(IN)           ::  LEN
+  INTEGER(4),   INTENT(IN)           ::  OUTPUT(LEN)
+  CHARACTER(*), INTENT(IN)           ::  COMMENT
+  INTEGER(4)                         ::  NTASKS,THISTASK
   !...................................................
 
-  CALL MPE$QUERY(NTASKS,THISTASK)
-  if(thistask.eq.1) then
-     OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+  IF(THISTASK.EQ.1) THEN
+     OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
           &ACCESS="SEQUENTIAL", ACTION="WRITE", POSITION="APPEND")
-     WRITE (UNIT=dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-     WRITE (dunit,*)output 
-     close(dunit)
-  end if
+     WRITE (UNIT=DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+     WRITE (DUNIT,*)OUTPUT 
+     CLOSE(DUNIT)
+  END IF
   
-end subroutine debug$write_I4
+END SUBROUTINE DEBUG$WRITE_I4
 !
 !  
-subroutine debug$write_l4(len,output,comment)
+SUBROUTINE DEBUG$WRITE_L4(LEN,OUTPUT,COMMENT)
   USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  logical(4),   intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
+  USE DEBUG_MODULE
+  IMPLICIT NONE
+  INTEGER(4),   INTENT(IN)           ::  LEN
+  LOGICAL(4),   INTENT(IN)           ::  OUTPUT(LEN)
+  CHARACTER(*), INTENT(IN)           ::  COMMENT
+  INTEGER(4)                         ::  NTASKS,THISTASK
   !...................................................
 
-  CALL MPE$QUERY(NTASKS,THISTASK)
-  if(thistask.eq.1) then
-     OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+  IF(THISTASK.EQ.1) THEN
+     OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
           &ACCESS="SEQUENTIAL", ACTION="WRITE", POSITION="APPEND")
-     WRITE (UNIT=dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-     WRITE (dunit,*)output 
-     close(dunit)
-  end if
+     WRITE (UNIT=DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+     WRITE (DUNIT,*)OUTPUT 
+     CLOSE(DUNIT)
+  END IF
   
-end subroutine debug$write_l4
+END SUBROUTINE DEBUG$WRITE_L4
 
 
-subroutine debug$write_C8(len,output,comment)
+SUBROUTINE DEBUG$WRITE_C8(LEN,OUTPUT,COMMENT)
   USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  complex(8),   intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
+  USE DEBUG_MODULE
+  IMPLICIT NONE
+  INTEGER(4),   INTENT(IN)           ::  LEN
+  COMPLEX(8),   INTENT(IN)           ::  OUTPUT(LEN)
+  CHARACTER(*), INTENT(IN)           ::  COMMENT
+  INTEGER(4)                         ::  NTASKS,THISTASK
   !...................................................
 
-  CALL MPE$QUERY(NTASKS,THISTASK)
-  if(thistask.eq.1) then
-     OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+  IF(THISTASK.EQ.1) THEN
+     OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
           &ACCESS="SEQUENTIAL", ACTION="WRITE", POSITION="APPEND")
-     WRITE (UNIT=dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-!     WRITE (dunit,*)output 
-     WRITE (dunit,FMT="(2f25.14)")output 
-     close(dunit)
-  end if
+     WRITE (UNIT=DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+!     WRITE (DUNIT,*)OUTPUT 
+     WRITE (DUNIT,FMT="(2F25.14)")OUTPUT 
+     CLOSE(DUNIT)
+  END IF
   
-end subroutine debug$write_C8
+END SUBROUTINE DEBUG$WRITE_C8
 
 
 
@@ -220,93 +222,93 @@ end subroutine debug$write_C8
 
 
 
-!the following code is here for historical reasons and will be deleted!
+!THE FOLLOWING CODE IS HERE FOR HISTORICAL REASONS AND WILL BE DELETED!
 
 
-subroutine paw$debug_R8(len,output,comment)
+SUBROUTINE PAW$DEBUG_R8(LEN,OUTPUT,COMMENT)
   USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  real(8),      intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
+  USE DEBUG_MODULE
+  IMPLICIT NONE
+  INTEGER(4),   INTENT(IN)           ::  LEN
+  REAL(8),      INTENT(IN)           ::  OUTPUT(LEN)
+  CHARACTER(*), INTENT(IN)           ::  COMMENT
+  INTEGER(4)                         ::  NTASKS,THISTASK
   !...................................................
 
-  CALL MPE$QUERY(NTASKS,THISTASK)
-  if(thistask.eq.1) then
-     OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+  IF(THISTASK.EQ.1) THEN
+     OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
           &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-     WRITE (dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-!     WRITE (dunit,*)output 
-     WRITE (dunit,FMT="(F25.14)")output 
-     close(dunit)
-  end if
+     WRITE (DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+!     WRITE (DUNIT,*)OUTPUT 
+     WRITE (DUNIT,FMT="(F25.14)")OUTPUT 
+     CLOSE(DUNIT)
+  END IF
   
-end subroutine paw$debug_R8
+END SUBROUTINE PAW$DEBUG_R8
 
 
 
 
 
-subroutine paw$debug_I4(len,output,comment)
+SUBROUTINE PAW$DEBUG_I4(LEN,OUTPUT,COMMENT)
   USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  integer(4),   intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
+  USE DEBUG_MODULE
+  IMPLICIT NONE
+  INTEGER(4),   INTENT(IN)           ::  LEN
+  INTEGER(4),   INTENT(IN)           ::  OUTPUT(LEN)
+  CHARACTER(*), INTENT(IN)           ::  COMMENT
+  INTEGER(4)                         ::  NTASKS,THISTASK
   !...................................................
 
-  CALL MPE$QUERY(NTASKS,THISTASK)
-  if(thistask.eq.1) then
-     OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+  IF(THISTASK.EQ.1) THEN
+     OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
           &ACCESS="SEQUENTIAL", ACTION="WRITE", POSITION="APPEND")
-     WRITE (UNIT=dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-     WRITE (dunit,*)output 
-     close(dunit)
-  end if
+     WRITE (UNIT=DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+     WRITE (DUNIT,*)OUTPUT 
+     CLOSE(DUNIT)
+  END IF
   
-end subroutine paw$debug_I4
+END SUBROUTINE PAW$DEBUG_I4
 
-subroutine paw$debug_C8(len,output,comment)
+SUBROUTINE PAW$DEBUG_C8(LEN,OUTPUT,COMMENT)
   USE MPE_MODULE
-  USE debug_module
-  implicit none
-  integer(4),   intent(in)           ::  len
-  complex(8),   intent(in)           ::  output(len)
-  character(*), intent(in)           ::  comment
-  integer(4)                         ::  Ntasks,Thistask
+  USE DEBUG_MODULE
+  IMPLICIT NONE
+  INTEGER(4),   INTENT(IN)           ::  LEN
+  COMPLEX(8),   INTENT(IN)           ::  OUTPUT(LEN)
+  CHARACTER(*), INTENT(IN)           ::  COMMENT
+  INTEGER(4)                         ::  NTASKS,THISTASK
   !...................................................
 
-  CALL MPE$QUERY(NTASKS,THISTASK)
-  if(thistask.eq.1) then
-     OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+  IF(THISTASK.EQ.1) THEN
+     OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
           &ACCESS="SEQUENTIAL", ACTION="WRITE", POSITION="APPEND")
-     WRITE (UNIT=dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-!     WRITE (dunit,*)output 
-     WRITE (dunit,FMT="(2f25.14)")output 
-     close(dunit)
-  end if
-end subroutine paw$debug_C8
+     WRITE (UNIT=DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+!     WRITE (DUNIT,*)OUTPUT 
+     WRITE (DUNIT,FMT="(2F25.14)")OUTPUT 
+     CLOSE(DUNIT)
+  END IF
+END SUBROUTINE PAW$DEBUG_C8
 !
 !     ................................................................................
-      subroutine debug$round_r8(len,val,tol)
+      SUBROUTINE DEBUG$ROUND_R8(LEN,VAL,TOL)
       USE MPE_MODULE
-      USE debug_module
-      implicit none
-      integer(4),intent(in)    ::  len
-      real(8)   ,intent(inout) ::  val(len)
-      real(8)   ,intent(in)    ::  tol
+      USE DEBUG_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    ::  LEN
+      REAL(8)   ,INTENT(INOUT) ::  VAL(LEN)
+      REAL(8)   ,INTENT(IN)    ::  TOL
 !     **********************************************************************************
-      val(:)=nint(val(:)/tol)*tol
-      end subroutine debug$round_r8
+      VAL(:)=NINT(VAL(:)/TOL)*TOL
+      END SUBROUTINE DEBUG$ROUND_R8
 !
 !     ................................................................................
-      subroutine debug$wavefunctions()
-      use waves_module
-      USE debug_module
+      SUBROUTINE DEBUG$WAVEFUNCTIONS()
+      USE WAVES_MODULE
+      USE DEBUG_MODULE
       IMPLICIT NONE
       COMPLEX(8)  ,ALLOCATABLE:: PSIG(:,:)
       COMPLEX(8)  ,ALLOCATABLE:: PSI1(:,:)
@@ -320,20 +322,20 @@ end subroutine paw$debug_C8
       INTEGER(4)              :: NREC1,ISVAR
       CHARACTER(8)            :: KEY
       REAL(8)                 :: RBAS(3,3)
-      REAL(8)                 :: a,b
+      REAL(8)                 :: A,B
       INTEGER(4)  ,ALLOCATABLE:: IGVECG(:,:)
       INTEGER(4)  ,ALLOCATABLE:: IGVECL(:,:)
-      INTEGER(4)              :: ig
-      character(64)           :: comment='wave function printout'
-      real(8)      ,parameter :: tol=1.d-12
+      INTEGER(4)              :: IG
+      CHARACTER(64)           :: COMMENT='WAVE FUNCTION PRINTOUT'
+      REAL(8)      ,PARAMETER :: TOL=1.D-12
 !     **********************************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
-print*,'Anfang debug$wavefunctions',thistask
-  if(thistask.eq.1) then
-     OPEN (dunit, FILE=trim(adjustl(filename)), STATUS="UNKNOWN", &
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+PRINT*,'ANFANG DEBUG$WAVEFUNCTIONS',THISTASK
+  IF(THISTASK.EQ.1) THEN
+     OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
           &ACCESS="SEQUENTIAL", ACTION="WRITE", POSITION="APPEND")
-     WRITE (UNIT=dunit, FMT="(3A)", ADVANCE="YES" )"==============",comment,"==============" 
-  end if
+     WRITE (UNIT=DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+  END IF
       DO IKPT=1,NKPT
         CALL WAVES_SELECTWV(IKPT,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
@@ -353,113 +355,113 @@ print*,'Anfang debug$wavefunctions',thistask
           CALL PLANEWAVE$SELECT(GSET%ID)
           DO IB=1,NBH
             DO IDIM=1,NDIM
-              PSI1(:,IDIM)=THIS%Hpsi(:,IDIM,IB)  !<<<<=================================
-              do ig=1,ngl
-                a=real(psi1(ig,idim))
-                b=aimag(psi1(ig,idim))
-                a=tol*real(nint(a/tol),kind=8)
-                b=tol*real(nint(b/tol),kind=8)
-                psi1(ig,idim)=cmplx(a,b,kind=8)
-              enddo
+              PSI1(:,IDIM)=THIS%HPSI(:,IDIM,IB)  !<<<<=================================
+              DO IG=1,NGL
+                A=REAL(PSI1(IG,IDIM))
+                B=AIMAG(PSI1(IG,IDIM))
+                A=TOL*REAL(NINT(A/TOL),KIND=8)
+                B=TOL*REAL(NINT(B/TOL),KIND=8)
+                PSI1(IG,IDIM)=CMPLX(A,B,KIND=8)
+              ENDDO
             ENDDO
             DO IDIM=1,NDIM
               CALL PLANEWAVE$COLLECTC8(1,NGL,PSI1(1,IDIM),NGG,PSIG(1,IDIM))
             ENDDO
-            if(thistask.eq.1) then
-              do ig=1,ngg
-                write(dunit,*)ib,igvecg(:,ig),psig(ig,:)
+            IF(THISTASK.EQ.1) THEN
+              DO IG=1,NGG
+                WRITE(DUNIT,*)IB,IGVECG(:,IG),PSIG(IG,:)
               ENDDO
-            end if
+            END IF
           ENDDO
           DEALLOCATE(PSI1)
           DEALLOCATE(PSIG)
         ENDDO 
         DEALLOCATE(IGVECG)
-      enddo
-      if(thistask.eq.1) then
-        close(dunit)
-      end if
-print*,'Ende debug$wavefunctions',thistask
-      call mpe$sync
-      call error$normalstop
-      end subroutine debug$wavefunctions
+      ENDDO
+      IF(THISTASK.EQ.1) THEN
+        CLOSE(DUNIT)
+      END IF
+PRINT*,'ENDE DEBUG$WAVEFUNCTIONS',THISTASK
+      CALL MPE$SYNC('MONOMER')
+      CALL ERROR$NORMALSTOP
+      END SUBROUTINE DEBUG$WAVEFUNCTIONS
 !
 !     .......................................................................................
-      subroutine debug$chkparacons_r8a(id,len,val)
-      use mpe_module
-      implicit none
-      integer(4),intent(in)    :: len
-      real(8)   ,intent(in)    :: val(len)
-      character(*),intent(in) ::  id
-      integer(4)               :: ntasks,thistask
-      real(8)   ,allocatable   :: valarr(:,:)
-      integer(4)               :: itask
-      integer(4)               :: isvararr(1),isvar
+      SUBROUTINE DEBUG$CHKPARACONS_R8A(ID,LEN,VAL)
+      USE MPE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: LEN
+      REAL(8)   ,INTENT(IN)    :: VAL(LEN)
+      CHARACTER(*),INTENT(IN) ::  ID
+      INTEGER(4)               :: NTASKS,THISTASK
+      REAL(8)   ,ALLOCATABLE   :: VALARR(:,:)
+      INTEGER(4)               :: ITASK
+      INTEGER(4)               :: ISVARARR(1),ISVAR
 !     =========================================================================================
-      call mpe$query(ntasks,thistask)
-      allocate(valarr(len,ntasks))
-      valarr(:,1)=val(:)
-      do itask=2,ntasks
-        if(itask.eq.thistask) then
-          call mpe$send(1,itask,val)
-        end if
-        if(thistask.eq.1) then
-          call mpe$receive(itask,itask,valarr(:,itask))
-        end if
-      enddo
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      ALLOCATE(VALARR(LEN,NTASKS))
+      VALARR(:,1)=VAL(:)
+      DO ITASK=2,NTASKS
+        IF(ITASK.EQ.THISTASK) THEN
+          CALL MPE$SEND('MONOMER',1,ITASK,VAL)
+        END IF
+        IF(THISTASK.EQ.1) THEN
+          CALL MPE$RECEIVE('MONOMER',ITASK,ITASK,VALARR(:,ITASK))
+        END IF
+      ENDDO
 !     =================================================================
-!     == analyse                                                     ==
+!     == ANALYSE                                                     ==
 !     =================================================================
-      if(thistask.eq.1) then
-        do itask=2,ntasks
-          isvararr=maxloc(abs(valarr(:,itask)-valarr(:,1)))
-          isvar=isvararr(1)
-          print*,trim(id),itask,isvar,valarr(isvar,itask)-valarr(isvar,1),valarr(isvar,itask),valarr(isvar,1)
-        enddo
-      end if
-      return
-      end
+      IF(THISTASK.EQ.1) THEN
+        DO ITASK=2,NTASKS
+          ISVARARR=MAXLOC(ABS(VALARR(:,ITASK)-VALARR(:,1)))
+          ISVAR=ISVARARR(1)
+          PRINT*,TRIM(ID),ITASK,ISVAR,VALARR(ISVAR,ITASK)-VALARR(ISVAR,1),VALARR(ISVAR,ITASK),VALARR(ISVAR,1)
+        ENDDO
+      END IF
+      RETURN
+      END
 !
 !     ...............................................................
-      subroutine debug$mpeident_r8a(len,val,ierr)
+      SUBROUTINE DEBUG$MPEIDENT_R8A(LEN,VAL,IERR)
 !     **                                                           **
-!     ** this routine checks for if val is identical on all nodes  **
-!     ** with ierr it provides the number of task, for which val   **
-!     ** differs from the first task. If ierr=0 all are identical  **
+!     ** THIS ROUTINE CHECKS FOR IF VAL IS IDENTICAL ON ALL NODES  **
+!     ** WITH IERR IT PROVIDES THE NUMBER OF TASK, FOR WHICH VAL   **
+!     ** DIFFERS FROM THE FIRST TASK. IF IERR=0 ALL ARE IDENTICAL  **
 !     **                                                           **
-      use mpe_module
-      implicit none
-      integer(4),intent(in)    :: len
-      real(8)   ,intent(in)    :: val(len)
-      integer(4),intent(out)   :: ierr
-      integer(4)               :: ntasks,thistask
-      real(8)   ,allocatable   :: valarr(:,:)
-      integer(4)               :: itask
-      integer(4)               :: isvararr(1),isvar
+      USE MPE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: LEN
+      REAL(8)   ,INTENT(IN)    :: VAL(LEN)
+      INTEGER(4),INTENT(OUT)   :: IERR
+      INTEGER(4)               :: NTASKS,THISTASK
+      REAL(8)   ,ALLOCATABLE   :: VALARR(:,:)
+      INTEGER(4)               :: ITASK
+      INTEGER(4)               :: ISVARARR(1),ISVAR
 !     ******************************************************************
-      ierr=0
-      call mpe$query(ntasks,thistask)
-      allocate(valarr(len,ntasks))
-      valarr(:,1)=val(:)
-      do itask=2,ntasks
-        if(itask.eq.thistask) then
-          call mpe$send(1,itask,val)
-        end if
-        if(thistask.eq.1) then
-          call mpe$receive(itask,itask,valarr(:,itask))
-        end if
-      enddo
+      IERR=0
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      ALLOCATE(VALARR(LEN,NTASKS))
+      VALARR(:,1)=VAL(:)
+      DO ITASK=2,NTASKS
+        IF(ITASK.EQ.THISTASK) THEN
+          CALL MPE$SEND('MONOMER',1,ITASK,VAL)
+        END IF
+        IF(THISTASK.EQ.1) THEN
+          CALL MPE$RECEIVE('MONOMER',ITASK,ITASK,VALARR(:,ITASK))
+        END IF
+      ENDDO
 !     =================================================================
-!     == analyse                                                     ==
+!     == ANALYSE                                                     ==
 !     =================================================================
-      if(thistask.eq.1) then
-        ierr=0
-        do itask=2,ntasks
-          isvararr=maxloc(abs(valarr(:,itask)-valarr(:,1)))
-          isvar=isvararr(1)
-          if(valarr(isvar,itask)-valarr(isvar,1).ne.0.d0) ierr=ierr+1
-        enddo
-      end if
-      return
-      end
+      IF(THISTASK.EQ.1) THEN
+        IERR=0
+        DO ITASK=2,NTASKS
+          ISVARARR=MAXLOC(ABS(VALARR(:,ITASK)-VALARR(:,1)))
+          ISVAR=ISVARARR(1)
+          IF(VALARR(ISVAR,ITASK)-VALARR(ISVAR,1).NE.0.D0) IERR=IERR+1
+        ENDDO
+      END IF
+      RETURN
+      END
 

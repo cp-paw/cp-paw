@@ -24,7 +24,7 @@
 !**                                                                   **
 !***********************************************************************
 !     ....................................................................
-      SUBROUTINE radial_INTERPOLATE(NP,RI,FI_,R0,F0)
+      SUBROUTINE RADIAL_INTERPOLATE(NP,RI,FI_,R0,F0)
 !     **                                                              **
 !     **  POLYNOMIAL EXTRAPOLATION OF ORDER NP FROM NP POINTS (RI,FI_)**
 !     **  TO THE POINT (R0,F0)                                        **
@@ -57,7 +57,7 @@
         FI(I)=0.D0
       ENDDO
       RETURN
-      END SUBROUTINE radial_INTERPOLATE
+      END SUBROUTINE RADIAL_INTERPOLATE
 !
 !     .......................................................SPHLSD.....
       SUBROUTINE RADIAL$DERIVE(R1,DEX,NR,F,G)
@@ -295,7 +295,7 @@
       SUBROUTINE RADIAL$INTEGRAL1(R1,DEX,NR,F1,RAD,VAL)
 !     ******************************************************************
 !     **                                                              **
-!     **   SUM could be done faster                                   **
+!     **   SUM COULD BE DONE FASTER                                   **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
@@ -310,7 +310,7 @@
       REAL(8)   ,PARAMETER  :: C2= -5.D0/48.D0
       REAL(8)   ,PARAMETER  :: C3= +1.D0/48.D0
       REAL(8)               :: F(NR),G(NR)
-      INTEGER(4)            :: IR,iint
+      INTEGER(4)            :: IR,IINT
       REAL(8)               :: R2,R3
       REAL(8)               :: S21,S31,SUM0,END1
       REAL(8)               :: A,B,C,RINT(4),GINT(4)
@@ -371,16 +371,16 @@
       END IF
 
       IR=MIN(INT(LOG(RAD/R1)/DEX),NR-3)
-      DO iint=1,4
-        RINT(iint)=r1*DEXP((IR-1+iint-1)*DEX)
-        GINT(iint)=G(IR-1+iint)
+      DO IINT=1,4
+        RINT(IINT)=R1*DEXP((IR-1+IINT-1)*DEX)
+        GINT(IINT)=G(IR-1+IINT)
       END DO
       CALL RADIAL_INTERPOLATE(4,RINT,GINT,RAD,VAL)      
       RETURN
       END
 !
 !     .....................................................INTRAD.......
-      SUBROUTINE RADIAL$INTEGRAL2(R1,DEX,NR,F1,r,RES)
+      SUBROUTINE RADIAL$INTEGRAL2(R1,DEX,NR,F1,R,RES)
 !     ******************************************************************
 !     **                                                              **
 !     **  INTEGRATES THE RADIAL FUNCTION F(R) FROM 0 TO GRID POINT NR **
@@ -405,22 +405,22 @@
       REAL(8)   ,INTENT(IN) :: DEX
       INTEGER(4),INTENT(IN) :: NR
       REAL(8)   ,INTENT(IN) :: F1(NR)
-      REAL(8)   ,INTENT(IN) :: r
+      REAL(8)   ,INTENT(IN) :: R
       REAL(8)   ,INTENT(OUT):: RES
       REAL(8)   ,PARAMETER  :: C0=-31.D0/48.D0
       REAL(8)   ,PARAMETER  :: C1=+11.D0/48.D0
       REAL(8)   ,PARAMETER  :: C2= -5.D0/48.D0
       REAL(8)   ,PARAMETER  :: C3= +1.D0/48.D0
       REAL(8)               :: F(NR)
-      INTEGER(4)            :: IR,ir1
-      INTEGER(4)            :: i1   ! first grid point for interpolation
+      INTEGER(4)            :: IR,IR1
+      INTEGER(4)            :: I1   ! FIRST GRID POINT FOR INTERPOLATION
       REAL(8)               :: R2,R3
-      REAL(8)               :: S21,S31,SUM0,sum
+      REAL(8)               :: S21,S31,SUM0,SUM
       REAL(8)               :: A,B,C
       REAL(8)               :: RI,XEXP
-      real(8)               :: rp(4),val(4)
+      REAL(8)               :: RP(4),VAL(4)
 !     ******************************************************************
-call error$MSG('ROUTINE MARKED FOR DELETION')
+CALL ERROR$MSG('ROUTINE MARKED FOR DELETION')
 CALL ERROR$STOP('RADIAL$INTEGRAL2')
       IF(NR.LT.10) THEN
         CALL ERROR$MSG('NUMBER OF MESHPOINTS SMALLLER THAN 10')
@@ -430,7 +430,7 @@ CALL ERROR$STOP('RADIAL$INTEGRAL2')
         F(IR)=F1(IR)
       ENDDO
       XEXP=DEXP(DEX)
-      i1=min(int(log(r/r1)/dex),1)
+      I1=MIN(INT(LOG(R/R1)/DEX),1)
 !      
 !     ==================================================================
 !     ==  INTEGRATE FROM ZERO TO THE FIRST GRID-POINT                 ==
@@ -461,7 +461,7 @@ CALL ERROR$STOP('RADIAL$INTEGRAL2')
       ENDDO
       IR1=0
       RP=R1*EXP(DEX*REAL(IR1-1,KIND=8))/XEXP
-      val(:)=0.d0
+      VAL(:)=0.D0
       DO IR=I1,I1+3
         IR1=IR1+1
         RI=RI*XEXP
@@ -617,7 +617,7 @@ CALL ERROR$STOP('RADIAL$INTEGRAL2')
         REAL(8)   ,INTENT(OUT):: DF0
         REAL(8)               :: F0(NP)
         REAL(8)               :: FI(NP)
-        REAL(8)               :: SVAR,dsvar,fac
+        REAL(8)               :: SVAR,DSVAR,FAC
         INTEGER(4)            :: I,J,IP
 !       ****************************************************************
         FI(:)=FI_(:)
@@ -644,7 +644,7 @@ CALL ERROR$STOP('RADIAL$INTEGRAL2')
           FI(I)=0.D0
         ENDDO
         RETURN
-        END SUBROUTINE INTERPOLATEgrad
+        END SUBROUTINE INTERPOLATEGRAD
       END SUBROUTINE RADIAL$DERIVATIVE
 !
 !     .....................................................POISON.......
@@ -908,7 +908,7 @@ CONTAINS
       CALL NLOGN(N,XA,WW,NP) 
       CL=0.25D0*DEX/DBLE(NP)
       DO I=1,NH 
-        G(2*I-1)=CL*REAL(XA(I),kind=8) 
+        G(2*I-1)=CL*REAL(XA(I),KIND=8) 
         G(2*I)  =CL*AIMAG(XA(I)) 
       ENDDO
       RETURN 
@@ -983,7 +983,7 @@ CONTAINS
         AA=AA*BB 
       ENDDO
       DO I=1,NP
-        G(I)=REAL(XA(I),kind=8)
+        G(I)=REAL(XA(I),KIND=8)
       ENDDO
       RETURN
       END SUBROUTINE BTLARGEG
@@ -1216,7 +1216,7 @@ CONTAINS
 !     **  THIS ROUTINE CONTAINED IN MODULE BESSELTRANSFORM_MODULE     **
 !     **                                                              **
 !     ******************************************************************
-      IMPLICIT none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: N
       INTEGER(4),INTENT(IN)   :: NP
       COMPLEX(8),INTENT(INOUT):: X(NP)
@@ -1415,14 +1415,14 @@ END MODULE BESSELTRANSFORM_MODULE
 !     **                                                              **
 !     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
 !     **                                                              **
-      IMPLICIT none
-      integer(4),intent(in) :: nr
-      real(8)   ,intent(in) :: F(NR)
-      real(8)   ,intent(in) :: x
-      real(8)   ,intent(out):: res
-      integer(4)            :: incr
-      real(8)               :: xx1,xx2,xx3,xx4
-      real(8)               :: p1,p2,p3,p4,p21,p32,p43,p321,p432,p4321
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: F(NR)
+      REAL(8)   ,INTENT(IN) :: X
+      REAL(8)   ,INTENT(OUT):: RES
+      INTEGER(4)            :: INCR
+      REAL(8)               :: XX1,XX2,XX3,XX4
+      REAL(8)               :: P1,P2,P3,P4,P21,P32,P43,P321,P432,P4321
 !     ******************************************************************
       INCR=INT(X)
       INCR=MIN0(INCR,NR-2)
@@ -1454,22 +1454,22 @@ END MODULE BESSELTRANSFORM_MODULE
 !     **                                                              **
 !     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
 !     **                                                              **
-      IMPLICIT none
-      real(8)   ,intent(in) :: r1    ! 1. radial grid point
-      real(8)   ,intent(in) :: dex   ! factor between subsequent grid points
-      integer(4),intent(in) :: nr    ! #(grid points)
-      real(8)   ,intent(in) :: f(nr) 
-      integer(4),intent(in) :: l     ! main angular momentum
-      real(8)   ,intent(in) :: g
-      real(8)   ,intent(in) :: rmax
-      real(8)   ,intent(out):: res
-      real(8)               :: fac(4)
-      integer(4)            :: nstep
-      integer(4)            :: i,ir
-      real(8)               :: rstep
-      real(8)               :: x,r
-      real(8)               :: val
-      real(8),external      :: bessl
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: R1    ! 1. RADIAL GRID POINT
+      REAL(8)   ,INTENT(IN) :: DEX   ! FACTOR BETWEEN SUBSEQUENT GRID POINTS
+      INTEGER(4),INTENT(IN) :: NR    ! #(GRID POINTS)
+      REAL(8)   ,INTENT(IN) :: F(NR) 
+      INTEGER(4),INTENT(IN) :: L     ! MAIN ANGULAR MOMENTUM
+      REAL(8)   ,INTENT(IN) :: G
+      REAL(8)   ,INTENT(IN) :: RMAX
+      REAL(8)   ,INTENT(OUT):: RES
+      REAL(8)               :: FAC(4)
+      INTEGER(4)            :: NSTEP
+      INTEGER(4)            :: I,IR
+      REAL(8)               :: RSTEP
+      REAL(8)               :: X,R
+      REAL(8)               :: VAL
+      REAL(8),EXTERNAL      :: BESSL
 !     ******************************************************************
       NSTEP=20.D0*G/6.D0
       NSTEP=MAX0(NSTEP,400)
@@ -1501,7 +1501,7 @@ END MODULE BESSELTRANSFORM_MODULE
       END
 !
 !     ..............................................BESSL...............
-      FUNCTION BESSL(L,X) RESult(Y)
+      FUNCTION BESSL(L,X) RESULT(Y)
 !     ******************************************************************
 !     **                                                              **
 !     **  CALCULATES THE SPHERICAL BESSEL FUNCTION                    **

@@ -8,17 +8,17 @@
 !**                                                                   **
 !**  FUNCTIONS:                                                       **
 !**    MPE$INIT                                                       **
-!**    MPE$QUERY(NTASKS,THISTASK)                                     **
-!**    MPE$SYNC                                                       **
+!**    MPE$QUERY(CID,NTASKS,THISTASK)                                 **
+!**    MPE$SYNC(CID)                                                  **
 !**    MPE$STOPALL(RETURNCODE)                                        **
 !**    MPE$EXIT                                                       **
 !**    MPE$ISPARALLEL(IPARALLEL) ??                                   **
-!**    MPE$COMBINE(OPERATION,VAL)                                     **
-!**    MPE$BROADCAST(FROMTASK,VAL)                                    **
-!**    MPE$SEND(TOTASK,TAG,VAL)                                       **
-!**    MPE$RECEIVE(FROMTASK,TAG,VAL)                                  **
-!**    MPE$TRANSPOSE(VAL)                                             **
-!**    MPE$GATHER(TOTASK,INVAL,OUTVAL)                                **
+!**    MPE$COMBINE(CID,OPERATION,VAL)                                 **
+!**    MPE$BROADCAST(CID,FROMTASK,VAL)                                **
+!**    MPE$SEND(CID,TOTASK,TAG,VAL)                                   **
+!**    MPE$RECEIVE(CID,FROMTASK,TAG,VAL)                              **
+!**    MPE$TRANSPOSE(CID,VAL)                                         **
+!**    MPE$GATHER(CID,TOTASK,INVAL,OUTVAL)                            **
 !**                                                                   **
 !**  REMARKS:                                                         **
 !**    1) INTERFACE TO MPI (MESSAGE PASSING LIBRARY)                  **
@@ -27,6 +27,8 @@
 !**       THUS THIS FILE MUST NOT BE MADE UPPERCASE                   **
 !**    3) THIS MODULE REQUIRES THE FILE MPIF90.H IN THE PATH FOR      **
 !**       INCLUDE FILES                                               **
+!**    4) CID STANDS FOR COMMUNICATOR ID AND DETERMINES THE GROUP OF  **
+!**       PROCESSORS  ON WHICH THE COMMAND IS EXECUTED                **
 !**                                                                   **
 !**           ERNST NUSTERER 1994/1996                                **
 !** MODIFIED: PETER E. BLOECHL, IBM ZURICH RESEARCH LABORATORY (1996) **
@@ -34,11 +36,58 @@
 !
 MODULE MPE_MPIF_MODULE
 #IFDEF CPPVARIABLE_PARALLEL
-  INCLUDE 'mpif.h'
+  include 'mpif.h'
 #ENDIF
-  INTEGER    :: NTASKS
-  INTEGER    :: THISTASK
+  TYPE THISTYPE
+    CHARACTER(128)     :: ID
+    INTEGER(4)         :: THISTASK
+    INTEGER(4)         :: NTASKS
+    INTEGER            :: COMM
+    INTEGER(4),POINTER :: SENDTAG(:)
+    INTEGER(4),POINTER :: RECEIVETAG(:)
+    TYPE(THISTYPE),POINTER:: NEXT
+  END TYPE THISTYPE
+  LOGICAL(4)      :: TINI=.FALSE.
+  INTEGER         :: COMM
+  INTEGER         :: NTASKS
+  INTEGER         :: THISTASK
+  INTEGER,POINTER :: SENDTAG(:)
+  INTEGER,POINTER :: RECEIVETAG(:)
+  TYPE(THISTYPE),POINTER :: FIRSTTHIS
+  TYPE(THISTYPE),POINTER :: this
 END MODULE MPE_MPIF_MODULE
+!      ..................................................................
+       SUBROUTINE MPE$SELECT(CID)
+       USE MPE_MPIF_MODULE
+       IMPLICIT NONE
+       CHARACTER(*),INTENT(IN) :: CID
+!      ******************************************************************
+       IF(.NOT.TINI) THEN
+         CALL ERROR$MSG('MPI$INIT MUST BE CALLED BEFORE ANY OTHER MPE ROUTINE')
+         CALL ERROR$STOP('MPE$SELECT')
+       END IF
+       IF(THIS%ID.EQ.CID) RETURN
+       THIS=>FIRSTTHIS
+       DO 
+         IF(THIS%ID.EQ.CID) THEN
+           NTASKS=THIS%NTASKS
+           THISTASK=THIS%THISTASK
+           COMM=THIS%COMM
+           SENDTAG=>THIS%SENDTAG
+           RECEIVETAG=>THIS%RECEIVETAG
+           exit
+         ELSE
+           IF(ASSOCIATED(THIS%NEXT)) THEN
+             THIS=>THIS%NEXT
+           ELSE
+             CALL ERROR$MSG('UNKNOWN ID')
+             CALL ERROR$CHVAL('ID',TRIM(CID))
+             CALL ERROR$STOP('MPE$SELECT')
+           END IF
+         END IF
+       ENDDO
+       RETURN
+       END SUBROUTINE MPE$SELECT
 !
 !***********************************************************************
 !***********************************************************************
@@ -65,7 +114,7 @@ CONTAINS
 #BODY
 !
 !     ..................................................................
-      SUBROUTINE MPE$COMBINE<TYPEID><RANKID>(OPERATION,VAL)
+      SUBROUTINE MPE$COMBINE<TYPEID><RANKID>(CID,OPERATION,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     **  NAME: MPE$COMBINER8                                         **
@@ -81,14 +130,16 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: CID
       CHARACTER(*),INTENT(IN)    :: OPERATION
       <TYPE>      ,INTENT(INOUT) :: VAL<RANK>
       <TYPE>      ,ALLOCATABLE   :: WORK(:)
       INTEGER                    :: LENG
       INTEGER                    :: IERR
-      logical     ,parameter     :: ttest=.false.
+      LOGICAL     ,PARAMETER     :: TTEST=.FALSE.
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
+      CALL MPE$SELECT(CID)
 !
 !     =================================================================
 !     == ALLOCATE WORK ARRAY                                         ==
@@ -96,31 +147,31 @@ CONTAINS
       LENG=<SIZE>
       ALLOCATE(WORK(LENG))
                                  ! WORK(:)=<RESHAPE(VAL)>   
-      work(:)=transfer(val,work) ! reshape failed for the pathscale compiler
+      WORK(:)=TRANSFER(VAL,WORK) ! RESHAPE FAILED FOR THE PATHSCALE COMPILER
 !     
 !     =================================================================
 !     == PERFORM OPERATION                                           ==
 !     =================================================================
       IF(OPERATION.EQ.'+')THEN
         CALL MPI_ALLREDUCE(WORK,VAL,LENG &
-     &           ,<MPI_TYPE>,MPI_SUM,MPI_COMM_WORLD,IERR)
+     &           ,<MPI_TYPE>,MPI_SUM,COMM,IERR)
       ELSE IF(OPERATION.EQ.'*')THEN
         CALL MPI_ALLREDUCE(WORK,VAL,LENG &
-     &           ,<MPI_TYPE>,MPI_PROD,MPI_COMM_WORLD,IERR)
+     &           ,<MPI_TYPE>,MPI_PROD,COMM,IERR)
       ELSE IF(OPERATION.EQ.'MAX')THEN
         CALL MPI_ALLREDUCE(WORK,VAL,LENG &
-     &           ,<MPI_TYPE>,MPI_MAX,MPI_COMM_WORLD,IERR)
+     &           ,<MPI_TYPE>,MPI_MAX,COMM,IERR)
       ELSE IF(OPERATION.EQ.'MIN')THEN
         CALL MPI_ALLREDUCE(WORK,VAL,LENG &
-     &           ,<MPI_TYPE>,MPI_MIN,MPI_COMM_WORLD,IERR)
+     &           ,<MPI_TYPE>,MPI_MIN,COMM,IERR)
       ELSE
         CALL ERROR$MSG('OPERATION NOT SUPPORTED')
         CALL ERROR$STOP('MPE$COMBINE')
       END IF
-      if(ttest) then
+      IF(TTEST) THEN
         WORK=<RESHAPE(VAL)>
-        call mpe_testcombine<TYPEID><RANKID>(leng,work)
-      end if
+        CALL MPE_TESTCOMBINE<TYPEID><RANKID>(CID,LENG,WORK)
+      END IF
       DEALLOCATE(WORK)
 #ENDIF
       RETURN
@@ -128,56 +179,57 @@ CONTAINS
 #IFDEF CPPVARIABLE_PARALLEL
 !
 !     .......................................................................................
-      subroutine mpe_testcombine<TYPEID><RANKID>(len,val1)
+      SUBROUTINE MPE_TESTCOMBINE<TYPEID><RANKID>(CID,LEN,VAL1)
       USE MPE_MPIF_MODULE
-      implicit none
-      integer(4),intent(in)    :: len
-      <TYPE>    ,intent(in)    :: val1(len)
-      <TYPE>    ,allocatable   :: valarr(:,:)
-      integer                  :: itask
-      integer(4)               :: isvararr(1),isvar
-      logical(4)               :: tchk
-      integer                  :: lenstd
-      integer                  :: ierr
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: CID
+      INTEGER(4),INTENT(IN)    :: LEN
+      <TYPE>    ,INTENT(IN)    :: VAL1(LEN)
+      <TYPE>    ,ALLOCATABLE   :: VALARR(:,:)
+      INTEGER                  :: ITASK
+      INTEGER(4)               :: ISVARARR(1),ISVAR
+      LOGICAL(4)               :: TCHK
+      INTEGER                  :: LENSTD
+      INTEGER                  :: IERR
       INTEGER                  :: STAT(MPI_STATUS_SIZE)
-      integer                  :: fromtask0,totask0,tag
+      INTEGER                  :: FROMTASK0,TOTASK0,TAG
 !     =========================================================================================
-      lenstd=len
-      allocate(valarr(len,ntasks))
-      valarr(:,1)=val1(:)
-      do itask=2,ntasks
-        tag=2000+itask
-        if(itask.eq.thistask) then
-          lenstd=len
-          totask0=0
-          CALL MPI_SEND(VAL1,lenstd,<MPI_TYPE>,totask0,tag,MPI_COMM_WORLD,IERR)
-        end if
-        if(thistask.eq.1) then
-          fromtask0=itask-1
-          CALL MPI_RECV(VALarr(:,itask),lenstd,<MPI_TYPE>,fromtask0,tag,MPI_COMM_WORLD,STAT,IERR)        
-        end if
-      enddo
+      LENSTD=LEN
+      ALLOCATE(VALARR(LEN,NTASKS))
+      VALARR(:,1)=VAL1(:)
+      DO ITASK=2,NTASKS
+        TAG=2000+ITASK
+        IF(ITASK.EQ.THISTASK) THEN
+          LENSTD=LEN
+          TOTASK0=0
+          CALL MPI_SEND(VAL1,LENSTD,<MPI_TYPE>,TOTASK0,TAG,COMM,IERR)
+        END IF
+        IF(THISTASK.EQ.1) THEN
+          FROMTASK0=ITASK-1
+          CALL MPI_RECV(VALARR(:,ITASK),LENSTD,<MPI_TYPE>,FROMTASK0,TAG,COMM,STAT,IERR)        
+        END IF
+      ENDDO
 !     =================================================================
-!     == analyse                                                     ==
+!     == ANALYSE                                                     ==
 !     =================================================================
-      tchk=.false.
-      if(thistask.eq.1) then
-        do itask=2,ntasks
-          tchk=tchk.or.(maxval(abs(valarr(:,itask)-valarr(:,1))).gt.0.d0)
-        enddo
-        if(tchk) then
-          print*,'error detected by mpe_testcombine: <TYPEID><RANKID>;',len
-          do itask=2,ntasks
-            isvararr=maxloc(abs(valarr(:,itask)-valarr(:,1)))
-            isvar=isvararr(1)
-            print*,itask,isvar,valarr(isvar,itask)-valarr(isvar,1),valarr(isvar,itask),valarr(isvar,1)
-          enddo
-          call error$msg('error in mpe$combine; result differs on different tasks')
-          call error$stop('mpe_testcombine')
-        end if
-      end if
-      return
-      end subroutine mpe_testcombine<TYPEID><RANKID>
+      TCHK=.FALSE.
+      IF(THISTASK.EQ.1) THEN
+        DO ITASK=2,NTASKS
+          TCHK=TCHK.OR.(MAXVAL(ABS(VALARR(:,ITASK)-VALARR(:,1))).GT.0.D0)
+        ENDDO
+        IF(TCHK) THEN
+          PRINT*,'ERROR DETECTED BY MPE_TESTCOMBINE: <TYPEID><RANKID>;',LEN
+          DO ITASK=2,NTASKS
+            ISVARARR=MAXLOC(ABS(VALARR(:,ITASK)-VALARR(:,1)))
+            ISVAR=ISVARARR(1)
+            PRINT*,ITASK,ISVAR,VALARR(ISVAR,ITASK)-VALARR(ISVAR,1),VALARR(ISVAR,ITASK),VALARR(ISVAR,1)
+          ENDDO
+          CALL ERROR$MSG('ERROR IN MPE$COMBINE; RESULT DIFFERS ON DIFFERENT TASKS')
+          CALL ERROR$STOP('MPE_TESTCOMBINE')
+        END IF
+      END IF
+      RETURN
+      END SUBROUTINE MPE_TESTCOMBINE<TYPEID><RANKID>
 #ENDIF
 #END TEMPLATE MPE$COMBINE
 END MODULE MPE_COMBINE_MODULE
@@ -212,7 +264,7 @@ CONTAINS
 #BODY
 !
 !     ..................................................................
-      SUBROUTINE MPE$BROADCAST<TYPEID><RANKID>(FROMTASK,VAL)
+      SUBROUTINE MPE$BROADCAST<TYPEID><RANKID>(CID,FROMTASK,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     ** MPE$BROADCASTR8                                              **
@@ -223,22 +275,24 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: CID
       <TYPE>      ,INTENT(INOUT) :: VAL<RANK>
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
       INTEGER                    :: FROMTASK0
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-      fromtask0=fromtask-1
+      CALL MPE$SELECT(CID)
+      FROMTASK0=FROMTASK-1
       CALL MPI_BCAST(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0 &
-     &                ,MPI_COMM_WORLD,IERR)
+     &                ,COMM,IERR)
 #ENDIF
       RETURN
       END SUBROUTINE MPE$BROADCAST<TYPEID><RANKID>
 #END TEMPLATE MPE$BROADCAST
 !
 !     ..................................................................
-      SUBROUTINE MPE$BROADCASTCHA(FROMTASK,VAL)
+      SUBROUTINE MPE$BROADCASTCHA(CID,FROMTASK,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     ** MPE$BROADCASTR8                                              **
@@ -249,6 +303,7 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: CID
       CHARACTER(*),INTENT(INOUT) :: VAL(:)
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
       INTEGER                    :: FROMTASK0
@@ -256,16 +311,17 @@ CONTAINS
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-      fromtask0=fromtask-1
+      CALL MPE$SELECT(CID)
+      FROMTASK0=FROMTASK-1
       LENG=LEN(VAL)*SIZE(VAL)
       CALL MPI_BCAST(VAL,LENG,MPI_CHARACTER,FROMTASK0 &
-     &                ,MPI_COMM_WORLD,IERR)
+     &                ,COMM,IERR)
 #ENDIF
       RETURN
       END SUBROUTINE MPE$BROADCASTCHA
 !
 !     ..................................................................
-      SUBROUTINE MPE$BROADCASTCH(FROMTASK,VAL) 
+      SUBROUTINE MPE$BROADCASTCH(CID,FROMTASK,VAL) 
 !     ******************************************************************
 !     **                                                              **
 !     ** MPE$BROADCASTR8                                              **
@@ -276,6 +332,7 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: CID
       CHARACTER(*),INTENT(INOUT) :: VAL
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
       INTEGER                    :: FROMTASK0
@@ -283,14 +340,196 @@ CONTAINS
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-      fromtask0=fromtask-1
+      CALL MPE$SELECT(CID)
+      FROMTASK0=FROMTASK-1
       LENG=LEN(VAL)
       CALL MPI_BCAST(VAL,LENG,MPI_CHARACTER,FROMTASK0 &
-     &                ,MPI_COMM_WORLD,IERR)
+     &                ,COMM,IERR)
 #ENDIF
       RETURN
       END SUBROUTINE MPE$BROADCASTCH
 END MODULE MPE_BROADCAST_MODULE
+!
+!***********************************************************************
+!***********************************************************************
+@PROCESS NOEXTCHK
+MODULE MPE_SENDRECEIVE_MODULE
+PUBLIC MPE$SENDRECEIVE
+INTERFACE MPE$SENDRECEIVE       !(TOTASK,TAG,VAL)
+#   MODULE TEMPLATE MPE$SENDRECEIVE
+    MODULE PROCEDURE MPE$SENDRECEIVECHA
+    MODULE PROCEDURE MPE$SENDRECEIVECH
+END INTERFACE 
+CONTAINS
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#TEMPLATE MPE$SENDRECEIVE
+(<TYPEID><TYPE><MPI_TYPE>)
+                =([C8],[COMPLEX(8)][MPI_DOUBLE_COMPLEX])
+                 ([R8],[REAL(8)][MPI_REAL8])
+                 ([R4],[REAL(4)][MPI_REAL4])
+                 ([I4],[INTEGER(4)][MPI_INTEGER4])
+                 ([L4],[LOGICAL(4)][MPI_LOGICAL])
+(<RANKID><SIZE><RANK>)
+                 =([R0],[1],[])
+                 =([R1],[SIZE(VAL)],[(:)])
+                 =([R2],[SIZE(VAL)],[(:,:)])
+                 =([R3],[SIZE(VAL)],[(:,:,:)])
+                 =([R4],[SIZE(VAL)],[(:,:,:,:)])
+                 =([R5],[SIZE(VAL)],[(:,:,:,:,:)])
+                 =([R6],[SIZE(VAL)],[(:,:,:,:,:,:)])
+#BODY
+!     ..................................................................
+      SUBROUTINE MPE$SENDRECEIVE<TYPEID><RANKID>(CID,FROMTASK,TOTASK,VAL,msgid_)
+!     ******************************************************************
+!     **                                                              **
+!     **  NAME: MPE$SENDRECEIVE                                       **
+!     **                                                              **
+!     **  PURPOSE: SEND VAL FROM FROMTASK TO TOTASK                   **
+!     **     VAL(TOTASK)=VAL(FROMTASK)                                **
+!     **                                                              **
+!     **  REMARKS:                                                    **
+!     **    TAG IS SOME INTEGER NUMBER WHICH ALLOWES TO DIFFERENTIATE **
+!     **    BETWEEN DIFFERENT MESSAGES.                               **
+!     **                                                              **
+!     ******************************************************************
+      USE MPE_MPIF_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: CID
+      INTEGER(4)  ,INTENT(IN)    :: FROMTASK
+      INTEGER(4)  ,INTENT(IN)    :: TOTASK
+      <TYPE>      ,INTENT(INOUT) :: VAL<RANK>
+      character(*),intent(in),optional :: msgid_
+      character(32)              :: msgid
+      INTEGER                    :: TOTASK0
+      INTEGER                    :: FROMTASK0
+      INTEGER                    :: TAGSTD
+      INTEGER                    :: IERR
+#IFDEF  CPPVARIABLE_PARALLEL
+      INTEGER                 :: STAT(MPI_STATUS_SIZE)
+!     ******************************************************************
+      CALL MPE$SELECT(CID)
+      IF(PRESENT(MSGID_)) THEN
+        MSGID=MSGID_
+        CALL MPE$SENDRECEIVECH(CID,FROMTASK,TOTASK,MSGID)
+        IF(trim(MSGID).NE.MSGID_) THEN
+          CALL ERROR$I4VAL('THISTASK',THISTASK)
+          CALL ERROR$I4VAL('FROMTASK',FROMTASK)
+          CALL ERROR$I4VAL('TOTASK',TOTASK)
+          CALL ERROR$CHVAL('MSGID_',MSGID_)
+          CALL ERROR$CHVAL('MSGID',trim(MSGID))
+          CALL ERROR$STOP('MPE$SENDRECEIVE<TYPEID><RANKID>')
+        END IF
+      END IF
+      IF(FROMTASK.EQ.TOTASK) RETURN
+      IF(THISTASK.EQ.FROMTASK) THEN
+        CALL MPE_COUNTTAGS('SEND',TOTASK,TAGSTD)
+        TOTASK0=TOTASK-1
+!PRINT*,'SEND FROM ',FROMTASK,' TO ',TOTASK,' MSG: ',TAGSTD
+        CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASK0,TAGSTD &
+     &               ,COMM,IERR)
+      ELSE IF(THISTASK.EQ.TOTASK) THEN
+        CALL MPE_COUNTTAGS('RECEIVE',FROMTASK,TAGSTD)
+        FROMTASK0=FROMTASK-1
+!PRINT*,'RECEIVE FROM ',FROMTASK,' ON ',TOTASK,' MSG: ',TAGSTD
+        CALL MPI_RECV(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,TAGSTD &
+     &               ,COMM,STAT,IERR)        
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE MPE$SENDRECEIVE<TYPEID><RANKID>
+#END TEMPLATE MPE$SENDRECEIVE
+!
+!     ..................................................................
+      SUBROUTINE MPE$SENDRECEIVECHA(CID,FROMTASK,TOTASK,VAL)
+!     ******************************************************************
+!     **                                                              **
+!     **  NAME: MPE$SENDRECEIVE                                              **
+!     **                                                              **
+!     **  PURPOSE: SEND BLOCKING. SEND VAL TO TOTASK                  **
+!     **    AND WAIT UNTIL IT IS RECEIVED BY MPE$RECEIVE              **
+!     **     VAL(TOTASK)=VAL(THISTASK)                                **
+!     **                                                              **
+!     **  REMARKS:                                                    **
+!     **    TAG IS SOME INTEGER NUMBER WHICH ALLOWES TO DIFFERENTIATE **
+!     **    BETWEEN DIFFERENT MESSAGES.                               **
+!     **                                                              **
+!     ******************************************************************
+      USE MPE_MPIF_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: CID
+      INTEGER(4)  ,INTENT(IN)    :: FROMTASK
+      INTEGER(4)  ,INTENT(IN)    :: TOTASK
+      CHARACTER(*),INTENT(IN)    :: VAL(:)
+      INTEGER                    :: FROMTASK0
+      INTEGER                    :: TOTASK0
+      INTEGER                    :: TAGSTD
+      INTEGER                    :: IERR
+#IFDEF  CPPVARIABLE_PARALLEL
+      INTEGER                 :: STAT(MPI_STATUS_SIZE)
+!     ******************************************************************
+      CALL MPE$SELECT(CID)
+      CALL MPE$QUERY(CID,NTASKS,THISTASK)
+      IF(THISTASK.EQ.FROMTASK) THEN
+        CALL MPE_COUNTTAGS('SEND',TOTASK,TAGSTD)
+        TOTASK0=TOTASK-1
+        CALL MPI_SEND(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,TOTASK0,TAGSTD &
+     &               ,COMM,IERR)
+      ELSE IF(THISTASK.EQ.TOTASK) THEN
+        CALL MPE_COUNTTAGS('RECEIVE',FROMTASK,TAGSTD)
+        FROMTASK0=FROMTASK-1
+        CALL MPI_RECV(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,FROMTASK0,TAGSTD &
+     &               ,COMM,STAT,IERR)        
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE MPE$SENDRECEIVECHA
+!
+!     ..................................................................
+      SUBROUTINE MPE$SENDRECEIVECH(CID,FROMTASK,TOTASK,VAL)
+!     ******************************************************************
+!     **                                                              **
+!     **  NAME: MPE$SENDRECEIVE                                              **
+!     **                                                              **
+!     **  PURPOSE: SEND BLOCKING. SEND VAL TO TOTASK                  **
+!     **    AND WAIT UNTIL IT IS RECEIVED BY MPE$RECEIVE              **
+!     **     VAL(TOTASK)=VAL(THISTASK)                                **
+!     **                                                              **
+!     **  REMARKS:                                                    **
+!     **    TAG IS SOME INTEGER NUMBER WHICH ALLOWES TO DIFFERENTIATE **
+!     **    BETWEEN DIFFERENT MESSAGES.                               **
+!     **                                                              **
+!     ******************************************************************
+      USE MPE_MPIF_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: CID
+      INTEGER(4)  ,INTENT(IN) :: FROMTASK
+      INTEGER(4)  ,INTENT(IN) :: TOTASK
+      CHARACTER(*),INTENT(IN) :: VAL
+      INTEGER                 :: FROMTASK0
+      INTEGER                 :: TOTASK0
+      INTEGER                 :: TAGSTD
+      INTEGER                 :: IERR
+#IFDEF  CPPVARIABLE_PARALLEL
+      INTEGER                 :: STAT(MPI_STATUS_SIZE)
+!     ******************************************************************
+      CALL MPE$SELECT(CID)
+      CALL MPE$QUERY(CID,NTASKS,THISTASK)
+      IF(THISTASK.EQ.FROMTASK) THEN
+        CALL MPE_COUNTTAGS('SEND',TOTASK,TAGSTD)
+        TOTASK0=TOTASK-1
+        CALL MPI_SEND(VAL,LEN(VAL),MPI_CHARACTER,TOTASK0,TAGSTD &
+     &               ,COMM,IERR)
+      ELSE IF(THISTASK.EQ.TOTASK) THEN
+        CALL MPE_COUNTTAGS('RECEIVE',FROMTASK,TAGSTD)
+        FROMTASK0=FROMTASK-1
+        CALL MPI_RECV(VAL,LEN(VAL),MPI_CHARACTER,FROMTASK0,TAGSTD &
+     &               ,COMM,STAT,IERR)        
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE MPE$SENDRECEIVECH
+END MODULE MPE_SENDRECEIVE_MODULE
+!***********************************************************************
 !
 !***********************************************************************
 !***********************************************************************
@@ -321,7 +560,7 @@ CONTAINS
                  =([R6],[SIZE(VAL)],[(:,:,:,:,:,:)])
 #BODY
 !     ..................................................................
-      SUBROUTINE MPE$SEND<TYPEID><RANKID>(TOTASK,TAG,VAL)
+      SUBROUTINE MPE$SEND<TYPEID><RANKID>(CID,TOTASK,TAG,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     **  NAME: MPE$SEND                                              **
@@ -337,18 +576,20 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: CID
       INTEGER(4)  ,INTENT(IN)    :: TOTASK
       INTEGER(4)  ,INTENT(IN)    :: TAG
       <TYPE>      ,INTENT(IN)    :: VAL<RANK>
-      INTEGER                    :: totask0
-      INTEGER                    :: tagstd
+      INTEGER                    :: TOTASK0
+      INTEGER                    :: TAGSTD
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF  CPPVARIABLE_PARALLEL
-      totask0=totask-1
-      tagstd=tag
-      CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASK0,TAGstd &
-     &               ,MPI_COMM_WORLD,IERR)
+      CALL MPE$SELECT(CID)
+      TOTASK0=TOTASK-1
+      TAGSTD=TAG
+      CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASK0,TAGSTD &
+     &               ,COMM,IERR)
 #ELSE
       CALL ERROR$MSG('MPE$SEND MUST NOT BE CALLED IN SCALAR MODE')
       CALL ERROR$STOP('MPE$SEND<TYPEID><RANKID>')
@@ -358,7 +599,7 @@ CONTAINS
 #END TEMPLATE MPE$SEND
 !
 !     ..................................................................
-      SUBROUTINE MPE$SENDCHA(TOTASK,TAG,VAL)
+      SUBROUTINE MPE$SENDCHA(CID,TOTASK,TAG,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     **  NAME: MPE$SEND                                              **
@@ -374,18 +615,20 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: CID
       INTEGER(4)  ,INTENT(IN)    :: TOTASK
       INTEGER(4)  ,INTENT(IN)    :: TAG
       CHARACTER(*),INTENT(IN)    :: VAL(:)
-      INTEGER                    :: totask0
-      INTEGER                    :: tagstd
+      INTEGER                    :: TOTASK0
+      INTEGER                    :: TAGSTD
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF  CPPVARIABLE_PARALLEL
-      totask0=totask-1
-      tagstd=tag
-      CALL MPI_SEND(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,TOTASK0,TAGstd &
-     &               ,MPI_COMM_WORLD,IERR)
+      CALL MPE$SELECT(CID)
+      TOTASK0=TOTASK-1
+      TAGSTD=TAG
+      CALL MPI_SEND(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,TOTASK0,TAGSTD &
+     &               ,COMM,IERR)
 #ELSE
       CALL ERROR$MSG('MPE$SEND MUST NOT BE CALLED IN SCALAR MODE')
       CALL ERROR$STOP('MPE$SENDCH')
@@ -394,7 +637,7 @@ CONTAINS
       END SUBROUTINE MPE$SENDCHA
 !
 !     ..................................................................
-      SUBROUTINE MPE$SENDCH(TOTASK,TAG,VAL)
+      SUBROUTINE MPE$SENDCH(CID,TOTASK,TAG,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     **  NAME: MPE$SEND                                              **
@@ -410,18 +653,20 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: CID
       INTEGER(4)  ,INTENT(IN) :: TOTASK
       INTEGER(4)  ,INTENT(IN) :: TAG
       CHARACTER(*),INTENT(IN) :: VAL
-      INTEGER                 :: totask0
-      INTEGER                 :: tagstd
+      INTEGER                 :: TOTASK0
+      INTEGER                 :: TAGSTD
       INTEGER                 :: IERR
 !     ******************************************************************
 #IFDEF  CPPVARIABLE_PARALLEL
-      totask0=totask-1
-      tagstd=tag
-      CALL MPI_SEND(VAL,LEN(VAL),MPI_CHARACTER,TOTASK0,TAGstd &
-     &               ,MPI_COMM_WORLD,IERR)
+      CALL MPE$SELECT(CID)
+      TOTASK0=TOTASK-1
+      TAGSTD=TAG
+      CALL MPI_SEND(VAL,LEN(VAL),MPI_CHARACTER,TOTASK0,TAGSTD &
+     &               ,COMM,IERR)
 #ELSE
       CALL ERROR$MSG('MPE$SEND MUST NOT BE CALLED IN SCALAR MODE')
       CALL ERROR$STOP('MPE$SENDCH')
@@ -430,6 +675,7 @@ CONTAINS
       END SUBROUTINE MPE$SENDCH
 END MODULE MPE_SEND_MODULE
 !***********************************************************************
+
 !***********************************************************************
 @PROCESS NOEXTCHK
 MODULE MPE_RECEIVE_MODULE
@@ -459,7 +705,7 @@ CONTAINS
 #BODY
 !
 !     ..................................................................
-      SUBROUTINE MPE$RECEIVE<TYPEID><RANKID>(FROMTASK,TAG,VAL)
+      SUBROUTINE MPE$RECEIVE<TYPEID><RANKID>(CID,FROMTASK,TAG,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     ** NAME: MPE$RECEIVE                                            **
@@ -470,19 +716,21 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: FROMTASK !TASK NUMBER OF THE SENDING TASK
-      INTEGER(4),INTENT(IN) :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
-      <TYPE>    ,INTENT(OUT):: VAL<RANK>
-      INTEGER               :: fromtask0
-      INTEGER               :: tagstd
-      INTEGER               :: IERR
+      CHARACTER(*),INTENT(IN) :: CID
+      INTEGER(4)  ,INTENT(IN) :: FROMTASK !TASK NUMBER OF THE SENDING TASK
+      INTEGER(4)  ,INTENT(IN) :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
+      <TYPE>      ,INTENT(OUT):: VAL<RANK>
+      INTEGER                 :: FROMTASK0
+      INTEGER                 :: TAGSTD
+      INTEGER                 :: IERR
 #IFDEF  CPPVARIABLE_PARALLEL
-      INTEGER               :: STAT(MPI_STATUS_SIZE)
+      INTEGER                 :: STAT(MPI_STATUS_SIZE)
 !     ******************************************************************
-      fromtask0=fromtask-1
-      tagstd=tag
-      CALL MPI_RECV(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,TAGstd &
-     &               ,MPI_COMM_WORLD,STAT,IERR)        
+      CALL MPE$SELECT(CID)
+      FROMTASK0=FROMTASK-1
+      TAGSTD=TAG
+      CALL MPI_RECV(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,TAGSTD &
+     &               ,COMM,STAT,IERR)        
 #ELSE
       CALL ERROR$MSG('MPE$RECEIVE MUST NOT BE CALLED IN SCALAR MODE')
       CALL ERROR$STOP('MPE$RECEIVER8A')
@@ -492,7 +740,7 @@ CONTAINS
 #END TEMPLATE MPE$RECEIVE
 !
 !     ..................................................................
-      SUBROUTINE MPE$RECEIVECHA(FROMTASK,TAG,VAL)
+      SUBROUTINE MPE$RECEIVECHA(CID,FROMTASK,TAG,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     ** NAME: MPE$RECEIVE                                            **
@@ -503,19 +751,21 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: CID
       INTEGER(4)  ,INTENT(IN)  :: FROMTASK !TASK NUMBER OF THE SENDING TASK
       INTEGER(4)  ,INTENT(IN)  :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
       CHARACTER(*),INTENT(OUT) :: VAL(:)   
-      INTEGER               :: fromtask0
-      INTEGER               :: tagstd
+      INTEGER               :: FROMTASK0
+      INTEGER               :: TAGSTD
       INTEGER               :: IERR
 #IFDEF  CPPVARIABLE_PARALLEL
       INTEGER(4)               :: STAT(MPI_STATUS_SIZE)   
 !     ******************************************************************
-      fromtask0=fromtask-1
-      tagstd=tag
-      CALL MPI_RECV(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,FROMTASK0,TAGstd &
-     &               ,MPI_COMM_WORLD,STAT,IERR)        
+      CALL MPE$SELECT(CID)
+      FROMTASK0=FROMTASK-1
+      TAGSTD=TAG
+      CALL MPI_RECV(VAL,LEN(VAL)*SIZE(VAL),MPI_CHARACTER,FROMTASK0,TAGSTD &
+     &               ,COMM,STAT,IERR)        
 #ELSE
       VAL(:)=' '
       CALL ERROR$MSG('MPE$RECEIVE MUST NOT BE CALLED IN SCALAR MODE')
@@ -525,7 +775,7 @@ CONTAINS
       END SUBROUTINE MPE$RECEIVECHA
 !
 !     ..................................................................
-      SUBROUTINE MPE$RECEIVECH(FROMTASK,TAG,VAL)
+      SUBROUTINE MPE$RECEIVECH(CID,FROMTASK,TAG,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     ** NAME: MPE$RECEIVE                                            **
@@ -536,19 +786,21 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: CID
       INTEGER(4)  ,INTENT(IN) :: FROMTASK !TASK NUMBER OF THE SENDING TASK
       INTEGER(4)  ,INTENT(IN) :: TAG      !IDENTIFIES A PARTICULAR MESSAGE
       CHARACTER(*),INTENT(OUT):: VAL
-      INTEGER               :: fromtask0
-      INTEGER               :: tagstd
+      INTEGER               :: FROMTASK0
+      INTEGER               :: TAGSTD
       INTEGER               :: IERR
 #IFDEF  CPPVARIABLE_PARALLEL
       INTEGER(4)              :: STAT(MPI_STATUS_SIZE)
 !     ******************************************************************
-      fromtask0=fromtask-1
-      tagstd=tag
-      CALL MPI_RECV(VAL,LEN(VAL),MPI_CHARACTER,FROMTASK0,TAGstd &
-     &               ,MPI_COMM_WORLD,STAT,IERR)        
+      CALL MPE$SELECT(CID)
+      FROMTASK0=FROMTASK-1
+      TAGSTD=TAG
+      CALL MPI_RECV(VAL,LEN(VAL),MPI_CHARACTER,FROMTASK0,TAGSTD &
+     &               ,COMM,STAT,IERR)        
 #ELSE
       VAL=' '
       CALL ERROR$MSG('MPE$RECEIVE MUST NOT BE CALLED IN SCALAR MODE')
@@ -584,7 +836,7 @@ CONTAINS
 #BODY
 !
 !     ..................................................................
-      SUBROUTINE MPE$TRANSPOSE<TYPEID><RANKID>(VAL)
+      SUBROUTINE MPE$TRANSPOSE<TYPEID><RANKID>(CID,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     **  NAME: MPE$TRANSPOSE                                         **
@@ -603,12 +855,14 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
-      <TYPE>    ,INTENT(INOUT) :: VAL<RANK>
-      INTEGER                  :: IERR
-      INTEGER                  :: LENG,LENG1
-      <TYPE>    ,ALLOCATABLE   :: VAL1(:)
+      CHARACTER(*),INTENT(IN)    :: CID
+      <TYPE>      ,INTENT(INOUT) :: VAL<RANK>
+      INTEGER                    :: IERR
+      INTEGER                    :: LENG,LENG1
+      <TYPE>      ,ALLOCATABLE   :: VAL1(:)
 !     ******************************************************************
 #IFDEF  CPPVARIABLE_PARALLEL
+      CALL MPE$SELECT(CID)
         LENG=<SIZE>
         LENG1=LENG/NTASKS
         IF(LENG1*NTASKS.NE.LENG) THEN
@@ -617,10 +871,10 @@ CONTAINS
         END IF
         ALLOCATE(VAL1(LENG))
                                    ! VAL1=RESHAPE(VAL,(/LENG/))
-        val1(:)=transfer(val,val1) ! reshape failed for the pathscale compiler
- 	CALL MPE$SYNC
+        VAL1(:)=TRANSFER(VAL,VAL1) ! RESHAPE FAILED FOR THE PATHSCALE COMPILER
+        CALL MPE$SYNC(CID)
         CALL MPI_ALLTOALL(VAL1,LENG1,<MPI_TYPE>,VAL,LENG1,<MPI_TYPE> &
-     &                  ,MPI_COMM_WORLD,IERR)
+     &                  ,COMM,IERR)
         DEALLOCATE(VAL1)
 #ENDIF
       RETURN
@@ -655,7 +909,7 @@ CONTAINS
 #BODY
 !
 !     ..................................................................
-      SUBROUTINE MPE$GATHER<TYPEID><RANKID>(TOTASK,INVAL,OUTVAL)
+      SUBROUTINE MPE$GATHER<TYPEID><RANKID>(CID,TOTASK,INVAL,OUTVAL)
 !     ******************************************************************
 !     **                                                              **
 !     ** MPE$GATHER                                                   **
@@ -667,25 +921,43 @@ CONTAINS
 !     ******************************************************************
       USE MPE_MPIF_MODULE 
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: TOTASK
-      <TYPE>    ,INTENT(IN) :: INVAL<RANK>
-      <TYPE>    ,INTENT(OUT):: OUTVAL<RANK+1>
-      INTEGER               :: totask0
-      INTEGER               :: LENG
-      INTEGER               :: IERR
+      CHARACTER(*),INTENT(IN) :: CID
+      INTEGER(4)  ,INTENT(IN) :: TOTASK
+      <TYPE>      ,INTENT(IN) :: INVAL<RANK>
+      <TYPE>      ,INTENT(OUT):: OUTVAL<RANK+1>
+      INTEGER                 :: TOTASK0
+      INTEGER                 :: LENG
+      INTEGER                 :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-        totask0=totask-1
-        LENG=<SIZE>
-        CALL MPI_GATHER(INVAL,LENG,<MPI_TYPE>,OUTVAL,LENG,<MPI_TYPE> &
-     &                 ,TOTASK0,MPI_COMM_WORLD,IERR)
+      CALL MPE$SELECT(CID)
+      TOTASK0=TOTASK-1
+      LENG=<SIZE>
+      CALL MPI_GATHER(INVAL,LENG,<MPI_TYPE>,OUTVAL,LENG,<MPI_TYPE> &
+     &                 ,TOTASK0,COMM,IERR)
 #ELSE
-        OUTVAL<RANK,1>=INVAL<RANK>
+      OUTVAL<RANK,1>=INVAL<RANK>
 #ENDIF
       RETURN
       END SUBROUTINE MPE$GATHER<TYPEID><RANKID>
 #END TEMPLATE MPE$GATHER
 END MODULE MPE_GATHER_MODULE
+!
+!.......................................................................
+MODULE MPE_MODULE
+!=======================================================================
+!==  THE FILE MPIF90.H IS THE INCLUDE FILE MPIF.H PROVIDED WITH THE 
+!==  MESSAGE PASSING INTERFACE (MPI), WHICH IS CONVERTED 
+!==  TO FORTRAN90 FREE FORMAT
+!=======================================================================
+USE MPE_GATHER_MODULE
+USE MPE_TRANSPOSE_MODULE
+USE MPE_SENDRECEIVE_MODULE
+USE MPE_SEND_MODULE
+USE MPE_RECEIVE_MODULE
+USE MPE_COMBINE_MODULE
+USE MPE_BROADCAST_MODULE
+END MODULE MPE_MODULE
 !    
 !     ..................................................................
       SUBROUTINE MPE$INIT
@@ -707,6 +979,11 @@ END MODULE MPE_GATHER_MODULE
       INTEGER     ,PARAMETER   :: BUFFER_SIZE=6*MBYTE
       CHARACTER(1),POINTER     :: BUFFER(:)
 !     ******************************************************************
+      IF(TINI) THEN
+        CALL ERROR$MSG('MPE$INIT MUST ONLY BE CALLED ONCE')
+        CALL ERROR$STOP('MPE$INIT')
+      END IF     
+      TINI=.TRUE.
 !
 !     ==================================================================
 !     == GET NUMBER OF TASKS , ID OF THIS ONE                         ==
@@ -730,9 +1007,75 @@ END MODULE MPE_GATHER_MODULE
 !     ================================================================
 !     ==  DETERMINE #(TASKS) AND NUMBER OF THIS TASK                ==
 !     ================================================================
-      CALL MPI_COMM_SIZE(MPI_COMM_WORLD,NTASKS,IERR)
-      CALL MPI_COMM_RANK(MPI_COMM_WORLD,THISTASK,IERR)
+      comm=mpi_comm_world
+      CALL MPI_COMM_SIZE(COMM,NTASKS,IERR)
+      CALL MPI_COMM_RANK(COMM,THISTASK,IERR)
       THISTASK= THISTASK+1
+      ALLOCATE(FIRSTTHIS)
+      THIS=>FIRSTTHIS
+      THIS%ID='~'
+      THIS%THISTASK=THISTASK
+      THIS%NTASKS=NTASKS
+      THIS%COMM=COMM
+      ALLOCATE(THIS%SENDTAG(NTASKS))
+      ALLOCATE(THIS%RECEIVETAG(NTASKS))
+      THIS%SENDTAG(:)=0
+      THIS%RECEIVETAG(:)=0
+      NULLIFY(THIS%NEXT)
+      CALL MPE$SELECT('~')
+#ENDIF
+      RETURN
+      END
+!    
+!     ..................................................................
+      SUBROUTINE MPE$NEW(CID,NEWCID,NTASKS_,ICOLOR_)
+!     ******************************************************************
+!     **                                                              **
+!     **                                                              **
+!     ******************************************************************
+      USE MPE_MPIF_MODULE
+      USE MPE_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: CID
+      CHARACTER(*),INTENT(IN)  :: NEWCID
+      INTEGER     ,INTENT(IN)  :: NTASKS_
+      INTEGER     ,INTENT(IN)  :: ICOLOR_(NTASKS)
+      INTEGER(4)               :: IERR
+      INTEGER(4)               :: I
+      INTEGER(4)               :: NEWCOMM
+      INTEGER(4)               :: ICOLOR(NTASKS_)
+!     ******************************************************************
+#IFDEF CPPVARIABLE_PARALLEL
+      CALL MPE$SELECT(CID)
+      IF(NTASKS_.NE.NTASKS) THEN
+        CALL ERROR$MSG('INCONSISTENT SIZES')
+        CALL ERROR$STOP('MPE$NEW')
+      END IF
+      ICOLOR(:)=ICOLOR_(:)
+!
+!     ===================================================================
+!     == the broadcast command is to ensure that icolor is identical   ==
+!     == on all tasks and to ensure that mpe$new is executed on all    ==
+!     == nodes of the corresponding group                              ==
+!     ===================================================================
+      CALL MPE$BROADCAST(CID,1,ICOLOR)
+      ALLOCATE(THIS%NEXT)
+      THIS=>THIS%NEXT
+      THIS%ID=NEWCID
+      NULLIFY(THIS%NEXT)
+      CALL MPI_COMM_SPLIT(COMM,ICOLOR(THISTASK),THISTASK-1,NEWCOMM,IERR)
+      COMM=NEWCOMM
+      THIS%COMM=COMM
+      CALL MPI_COMM_SIZE(COMM,NTASKS,IERR)
+      THIS%NTASKS=ntasks
+      CALL MPI_COMM_RANK(COMM,THISTASK,IERR)
+      thistask=thistask+1
+      THIS%THISTASK=thistask
+      ALLOCATE(THIS%SENDTAG(NTASKS))
+      ALLOCATE(THIS%RECEIVETAG(NTASKS))
+      THIS%SENDTAG(:)=0
+      THIS%RECEIVETAG(:)=0
+      CALL MPE$SELECT(CID)
 #ENDIF
       RETURN
       END
@@ -763,8 +1106,9 @@ END MODULE MPE_GATHER_MODULE
       INTEGER               :: IERR,IERROR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
+      CALL MPE$SELECT('~')
       WRITE(*,*) 'EXIT:',NCODE_
-      CALL MPI_ABORT(MPI_COMM_WORLD,IERROR,7777)
+      CALL MPI_ABORT(COMM,IERROR,7777)
       STOP 'ERROR STOP'
 #ELSE
       WRITE(*,*) 'EXIT:',NCODE_
@@ -773,7 +1117,7 @@ END MODULE MPE_GATHER_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE MPE$QUERY(NTASKS_,THISTASK_)
+      SUBROUTINE MPE$QUERY(CID,NTASKS_,THISTASK_)
 !     ******************************************************************
 !     ** MPE$QUERY                                                    **
 !     == RETURN THE TOTAL NUMBER OF TASKS                             ==
@@ -781,11 +1125,13 @@ END MODULE MPE_GATHER_MODULE
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE 
-      INTEGER(4),INTENT(OUT) :: NTASKS_
-      INTEGER(4),INTENT(OUT) :: THISTASK_
-      INTEGER                :: IERR
+      CHARACTER(*),INTENT(IN)  :: CID   ! COMMUNICATOR ID
+      INTEGER(4)  ,INTENT(OUT) :: NTASKS_   !#(TASKS IN THE GROUP)
+      INTEGER(4)  ,INTENT(OUT) :: THISTASK_ ! NUMBER OF THE TASK IN THE GROUP
+      INTEGER                  :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
+      CALL MPE$SELECT(CID)
       NTASKS_  =NTASKS
       THISTASK_=THISTASK
 #ELSE
@@ -796,10 +1142,10 @@ END MODULE MPE_GATHER_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE MPE$SYNC
+      SUBROUTINE MPE$SYNC(CID)
 !     ******************************************************************
 !     **                                                              **
-!     **  MPE$SYNC                                                    **
+!     **  MPE$SYNC(CID)                                               **
 !     **                                                              **
 !     **  PURPOSE: SYNCHRONIZE ALL TASKS                              **
 !     **  (WAITS UNTILL ALL TASKS ARRIVED AT THIS POINT OF THE CODE)  **
@@ -807,10 +1153,12 @@ END MODULE MPE_GATHER_MODULE
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
-      INTEGER    :: IERR
+      CHARACTER(*),INTENT(IN)  :: CID   ! COMMUNICATOR ID
+      INTEGER                  :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-      CALL MPI_BARRIER(MPI_COMM_WORLD,IERR)
+      CALL MPE$SELECT(CID)
+      CALL MPI_BARRIER(COMM,IERR)
 #ENDIF
       RETURN
       END
@@ -832,10 +1180,12 @@ END MODULE MPE_GATHER_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE MPE$INDEX(INVAL,OUTVAL,SIZE)
+      SUBROUTINE MPE$INDEX(CID,INVAL,OUTVAL,SIZE)
 !     ******************************************************************
 !     **                                                              **
 !     ** MPE$INDEX                                                    **
+!     **                                                              **
+!     **                                                              **
 !     **                                                              **
 !     ** 2 TASKS AOUT(TASK1) := (1,8), AOUT(TASK2) := (4,9)           **
 !     **         ARES(TASK1)  = (1,4), AOUT(TASK2)  = (8,9)           **
@@ -843,33 +1193,55 @@ END MODULE MPE_GATHER_MODULE
 !     ******************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: CID   ! COMMUNICATOR ID
       INTEGER(4)  ,INTENT(IN)  :: SIZE
       CHARACTER(1),INTENT(IN)  :: INVAL(SIZE)
       CHARACTER(1),INTENT(OUT) :: OUTVAL(SIZE)
-      INTEGER                  :: sizestd
+      INTEGER                  :: SIZESTD
       INTEGER                  :: IERR
 !     ******************************************************************
+      CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION')
+      CALL ERROR$STOP('MPE$INDEX')
 #IFDEF CPPVARIABLE_PARALLEL
-      sizestd=size
-      CALL MPI_ALLTOALL(INVAL,SIZEstd,MPI_BYTE,OUTVAL,SIZEstd &
-     &                  ,MPI_BYTE,MPI_COMM_WORLD,IERR)
+      CALL MPE$SELECT(CID)
+      SIZESTD=SIZE
+      CALL MPI_ALLTOALL(INVAL,SIZESTD,MPI_BYTE,OUTVAL,SIZESTD &
+     &                  ,MPI_BYTE,COMM,IERR)
 #ELSE
       OUTVAL(:)=INVAL(:)
 #ENDIF
       RETURN
       END
-!
-!.......................................................................
-MODULE MPE_MODULE
-!=======================================================================
-!==  THE FILE MPIF90.H IS THE INCLUDE FILE MPIF.H PROVIDED WITH THE 
-!==  MESSAGE PASSING INTERFACE (MPI), WHICH IS CONVERTED 
-!==  TO FORTRAN90 FREE FORMAT
-!=======================================================================
-USE MPE_GATHER_MODULE
-USE MPE_TRANSPOSE_MODULE
-USE MPE_SEND_MODULE
-USE MPE_RECEIVE_MODULE
-USE MPE_COMBINE_MODULE
-USE MPE_BROADCAST_MODULE
-END MODULE MPE_MODULE
+! 
+!     .....................................................................
+      SUBROUTINE MPE_COUNTTAGS(ID,OTHERTASK,TAG)
+      USE MPE_MPIF_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4),INTENT(IN) :: OTHERTASK
+      INTEGER(4),INTENT(OUT) :: TAG
+      INTEGER(4)             :: TOTASK
+      INTEGER(4)             :: FROMTASK
+      INTEGER(4),PARAMETER   :: MAXTAG=100000
+!     *********************************************************************
+      IF(ID.EQ.'SEND') THEN
+        TOTASK=OTHERTASK
+        FROMTASK=THISTASK
+        SENDTAG(TOTASK)=SENDTAG(TOTASK)+1
+        IF(SENDTAG(TOTASK).GT.MAXTAG) SENDTAG(TOTASK)=1
+        TAG=FROMTASK+NTASKS*(TOTASK-1+NTASKS*SENDTAG(TOTASK))
+!print*,'sendtag ',thistask,othertask,'::',sendtag,'--',tag
+      ELSE IF(ID.EQ.'RECEIVE') THEN
+        FROMTASK=OTHERTASK
+        TOTASK=THISTASK
+        RECEIVETAG(FROMTASK)=RECEIVETAG(FROMTASK)+1
+        IF(RECEIVETAG(FROMTASK).GT.MAXTAG) RECEIVETAG(FROMTASK)=1
+        TAG=FROMTASK+NTASKS*(TOTASK-1+NTASKS*RECEIVETAG(FROMTASK))
+!print*,'receivetag ',thistask,othertask,'::',receivetag,'--',tag
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED') 
+        CALL ERROR$MSG('ALLOWED VALUES ARE SEND AND RECEIVE')
+        CALL ERROR$STOP('MPE_COUNTTAGS')
+      END IF
+      RETURN
+      END SUBROUTINE MPE_COUNTTAGS

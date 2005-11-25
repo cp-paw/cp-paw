@@ -19,7 +19,7 @@
 MODULE AUGMENTATION_MODULE
 INTEGER(4)  ,PARAMETER :: NE=8
 CHARACTER(32)          :: ID(NE)
-REAL(8)                :: val(NE)
+REAL(8)                :: VAL(NE)
 LOGICAL(4)             :: TINI=.FALSE.
 END MODULE AUGMENTATION_MODULE
 !
@@ -46,7 +46,7 @@ END MODULE AUGMENTATION_MODULE
       ID(7)='AE1-PS1 KINETIC'         
       ID(8)='LDA+U EXCHANGE'          
       DO I=1,NE
-        val(NE)=0.D0
+        VAL(NE)=0.D0
       ENDDO
       RETURN
       END
@@ -96,7 +96,7 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)    :: SVAR
 !     ******************************************************************
       TINI=.FALSE.
-      CALL MPE$COMBINE('+',VAL)
+      CALL MPE$COMBINE('MONOMER','+',VAL)
       DO I=1,NE
         CALL ENERGYLIST$SET(ID(I),VAL(I))
       ENDDO
@@ -127,7 +127,7 @@ END MODULE AUGMENTATION_MODULE
 !     **                                                             **
 !     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)**
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPR=.false.
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       INTEGER(4),INTENT(IN)  :: ISP
       INTEGER(4),INTENT(IN)  :: LMNX
       INTEGER(4),INTENT(IN)  :: LMRX
@@ -154,7 +154,7 @@ END MODULE AUGMENTATION_MODULE
         CALL FILEHANDLER$UNIT('PROT',NFILO)
 !       WRITE(*,FMT='("TOTAL DENSITY MATRIX")')
         DO LMN1=1,LMNX
-!         WRITE(*,FMT='(9F10.6)')(DENMAT(LMN1,lmn2),lmn2=1,lmnx)
+!         WRITE(*,FMT='(9F10.6)')(DENMAT(LMN1,LMN2),LMN2=1,LMNX)
         ENDDO
       END IF
 !     
@@ -210,8 +210,8 @@ END MODULE AUGMENTATION_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT,denmati &
-     &                              ,LMRX,VQLM,RHOB,potb,DATH,DO)
+      SUBROUTINE AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT,DENMATI &
+     &                              ,LMRX,VQLM,RHOB,POTB,DATH,DO)
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **
@@ -231,9 +231,9 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),INTENT(IN)   :: LMRX
       REAL(8)   ,INTENT(INOUT):: VQLM(LMRX)
       REAL(8)   ,INTENT(IN)   :: RHOB
-      REAL(8)   ,INTENT(out)  :: potb ! integrated electrostatic augmentation potential
+      REAL(8)   ,INTENT(OUT)  :: POTB ! INTEGRATED ELECTROSTATIC AUGMENTATION POTENTIAL
       REAL(8)   ,INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
-      REAL(8)   ,INTENT(OUT)  :: DO(LMNX,LMNX,ndimd)
+      REAL(8)   ,INTENT(OUT)  :: DO(LMNX,LMNX,NDIMD)
       REAL(8)                 :: R1,DEX,XEXP,RI
       REAL(8)                 :: AEZ
       INTEGER(4)              :: NR
@@ -259,7 +259,7 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4)              :: LM,LMN1,LMN2,LMN11,LMN21,LN1,LN2,L1,L2,IM,ISPIN
       INTEGER(4)              :: NSPIN
       INTEGER(4)              :: NFILO
-      LOGICAL(4),PARAMETER    :: TPR=.false.
+      LOGICAL(4),PARAMETER    :: TPR=.FALSE.
       LOGICAL(4),PARAMETER    :: TTEST=.FALSE.
       INTEGER(4),PARAMETER    :: ITEST=1
       LOGICAL(4)              :: TBACK,TSPIN
@@ -268,10 +268,10 @@ END MODULE AUGMENTATION_MODULE
       CHARACTER(32)           :: ATOM
       REAL(8)                 :: VQLM1(LMRX)
       REAL(8)                 :: QLM(LMRX)
-      real(8)                 :: pi
+      REAL(8)                 :: PI
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
-      pi=4.d0*datan(1.d0)
+      PI=4.D0*DATAN(1.D0)
 !
 !     ==================================================================
 !     ==  COLLECT ATOM-TYPE SPECIFIC INFORMATION FROM SETUP OBJECT    ==
@@ -282,9 +282,9 @@ END MODULE AUGMENTATION_MODULE
       CALL SETUP$LNX(ISP,LNX)
       ALLOCATE(LOX(LNX))
       CALL SETUP$LOFLN(ISP,LNX,LOX)
-      ALLOCATE(AEPHI(nr,LNX))
+      ALLOCATE(AEPHI(NR,LNX))
       CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
-      ALLOCATE(PSPHI(nr,LNX))
+      ALLOCATE(PSPHI(NR,LNX))
       CALL SETUP$PSPARTIALWAVES(ISP,NR,LNX,PSPHI)
       ALLOCATE(AECORE(NR))
       CALL SETUP$AECORE(ISP,NR,AECORE)
@@ -292,7 +292,7 @@ END MODULE AUGMENTATION_MODULE
       CALL SETUP$PSCORE(ISP,NR,PSCORE)
       CALL SETUP$RCSM(ISP,RCSM)
       ALLOCATE(VADD(NR))
-      CALL SETUP$VBAR(ISP,nr,VADD)
+      CALL SETUP$VBAR(ISP,NR,VADD)
       ALLOCATE(DOVER(LNX,LNX))
       CALL SETUP$1COVERLAP(ISP,LNX,DOVER)
       ALLOCATE(DTKIN(LNX,LNX))
@@ -320,10 +320,10 @@ END MODULE AUGMENTATION_MODULE
             WRITE(NFILO,FMT='(9F10.6)')DENMAT(LMN1,:,IDIM)
           ENDDO
         ENDDO
-stop
+STOP
       END IF
 
-!for soft-core iterate from here ...
+!FOR SOFT-CORE ITERATE FROM HERE ...
 !
 !     ==================================================================
 !     ==  CALCULATE 1-CENTER CHARGE DENSITY                           ==
@@ -338,7 +338,7 @@ stop
       ENDDO
 !     
 !     ================================================================
-!     ==  evaluate multipole moments                                ==
+!     ==  EVALUATE MULTIPOLE MOMENTS                                ==
 !     ================================================================
       CALL AUGMENTATION_QLM(R1,DEX,NR,NR,LMRX &
      &                   ,AEZ,AECORE,PSCORE,AERHO,PSRHO,QLM)
@@ -346,9 +346,9 @@ stop
 !     ================================================================
 !     ==  SEND DENSITIES TO HYPERFINE-PARAMETER OBJECT              ==
 !     ================================================================
-!move this part to the end of the routine
-!take care however that the first call takes the pseudodensity
-! without pseudo core!
+!MOVE THIS PART TO THE END OF THE ROUTINE
+!TAKE CARE HOWEVER THAT THE FIRST CALL TAKES THE PSEUDODENSITY
+! WITHOUT PSEUDO CORE!
       ALLOCATE(AEPOT(NR,LMRX,1))   ! USED AS AUXILIARY VARIABLE
       CALL HYPERFINE$SET1CRHO('PS','TOT',IAT,R1,DEX,NR,NR,LMRX,PSRHO)
       AEPOT(:,:,1)=AERHO(:,:,1)
@@ -435,11 +435,11 @@ stop
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
-        DWORK1(IR)=DWORK1(IR)*RI**2*SQRT(4.D0*PI)  !sqrt(4*pi)=4*pi*Y_0
+        DWORK1(IR)=DWORK1(IR)*RI**2*SQRT(4.D0*PI)  !SQRT(4*PI)=4*PI*Y_0
       ENDDO
       CALL RADIAL$INTEGRAL(R1,DEX,NR,DWORK1,POTB)
       POTB=-POTB
-!peb03 potb=0.d0
+!PEB03 POTB=0.D0
       DEALLOCATE(DWORK1)
 !     
 !     == ADD POTENTIAL FROM CHARGES "OUTSIDE" THE SPHERE =============      
@@ -453,15 +453,15 @@ stop
       AEBACKGROUND=0.D0
       PSBACKGROUND=0.D0
       CALL AUGMENTATION_ADDBACKGROUND(R1,DEX,NR,RHOB &
-     &                      ,AERHO(:,1,1)+aecore(:),AEBACKGROUND,AEPOT1)
-!     &                     ,AERHO(:,1,1),AEBACKGROUND,AEPOT1) prev. version
+     &                      ,AERHO(:,1,1)+AECORE(:),AEBACKGROUND,AEPOT1)
+!     &                     ,AERHO(:,1,1),AEBACKGROUND,AEPOT1) PREV. VERSION
       CALL AUGMENTATION_ADDBACKGROUND(R1,DEX,NR,RHOB &
      &                      ,PSRHO,PSBACKGROUND,PSPOT1)
       CALL AUGMENTATION_ADD('AE1 BACKGROUND',AEBACKGROUND)
       CALL AUGMENTATION_ADD('PS1 BACKGROUND',PSBACKGROUND)
 !
-!     == soft core ===================================================
-!      call augmentation_softcore(iat,r1,dex,nr,lmrx,aepot1)
+!     == SOFT CORE ===================================================
+!      CALL AUGMENTATION_SOFTCORE(IAT,R1,DEX,NR,LMRX,AEPOT1)
 !     
 !     == ANALYSIS: ELECTRIC FIELD GRADIENTS ==========================
       CALL HYPERFINE$SET1CPOT('AE',IAT,R1,DEX,NR,NR,LMRX,AEPOT1)
@@ -481,10 +481,10 @@ stop
       DEALLOCATE(AEPOT1)
       DEALLOCATE(PSPOT1)
 !
-!     ==== this is for marcello santos to calculate core level shifts in frozen core
-      call core_CORESHIFTS(IAT,ISP,R1,DEX,NR,LMRX,AEPOT)
+!     ==== THIS IS FOR MARCELLO SANTOS TO CALCULATE CORE LEVEL SHIFTS IN FROZEN CORE
+      CALL CORE_CORESHIFTS(IAT,ISP,R1,DEX,NR,LMRX,AEPOT)
 !
-!calculate new soft-core density here
+!CALCULATE NEW SOFT-CORE DENSITY HERE
 !     
       IF(TPR) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -587,7 +587,7 @@ stop
 !     ==  APPLY EXTERNAL POTENTIAL                                  ==
 !     ================================================================
       CALL ATOMLIST$GETCH('NAME',IAT,ATOM)
-      ALLOCATE(DATP(LMNX,LMNX,Ndimd))
+      ALLOCATE(DATP(LMNX,LMNX,NDIMD))
       CALL EXTERNAL1CPOT$APPLY(ATOM,LMNX,NDIMD,DENMAT,DATP,DETOT)
       DATH(:,:,:)=DATH(:,:,:)+DATP(:,:,:)
       DEALLOCATE(DATP)
@@ -599,22 +599,22 @@ stop
       IF(TTEST) THEN
         IF(ITEST.EQ.1.OR.ITEST.EQ.3) THEN
           ENL=AEEXC-PSEXC+AEEHARTREE-PSEHARTREE+EKINNL+DETOT
-          CALL SELFTEST$END('SPHERE',LMNX*LMNX*NDIMD,dath,enl,TBACK)
+          CALL SELFTEST$END('SPHERE',LMNX*LMNX*NDIMD,DATH,ENL,TBACK)
           IF(TBACK) GOTO 1000
           CALL ERROR$MSG('STOP AFTER SELFTEST')
           CALL ERROR$STOP('SPHERE')
         ENDIF
       END IF
-      if(tpr) then
+      IF(TPR) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         DO IDIM=1,NDIMD
-          WRITE(NFILO,FMT='("dath FOR IDIM= ",I2)') IDIM
+          WRITE(NFILO,FMT='("DATH FOR IDIM= ",I2)') IDIM
           DO LMN1=1,LMNX
-            WRITE(NFILO,FMT='(9F10.6)')Dath(LMN1,:,IDIM)
+            WRITE(NFILO,FMT='(9F10.6)')DATH(LMN1,:,IDIM)
           ENDDO
         ENDDO
-stop
-      end if
+STOP
+      END IF
 !
 !     ==================================================================
 !     ==  CLOSE DOWN                                                  ==
@@ -819,7 +819,7 @@ stop
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
       REAL(8)               :: WORK3(NR)
-      real(8)   ,parameter  :: tiny=1.d-300
+      REAL(8)   ,PARAMETER  :: TINY=1.D-300
 !     ******************************************************************
       CALL TRACE$PUSH('AUGMENTATION_XC')
       EXC=0.D0
@@ -870,7 +870,7 @@ stop
         ENDDO
 !       ==  TRANSFORM B INTO C=B/(2*B0*Y0) =============================
         DO IR=1,NR
-          WORK(IR)=0.5D0/(B(IR,1)*Y0+tiny)
+          WORK(IR)=0.5D0/(B(IR,1)*Y0+TINY)
         ENDDO
         DO LM1=2,LMRX
           B(:,LM1)=B(:,LM1)*WORK(:)
@@ -986,7 +986,7 @@ stop
 !     ==================================================================
 !     ==  TRANSFORM POTENTIALS FOR SPHERICAL PART                     ==
 !     ==================================================================
-      allocate(vgrho(nr,lmrx,nspin))
+      ALLOCATE(VGRHO(NR,LMRX,NSPIN))
       VRHO(:,:,:)=0.D0
       VGRHO(:,:,:)=0.D0
       DO ISPIN=1,NSPIN
@@ -1050,16 +1050,16 @@ stop
           ENDDO
         ENDDO
       ENDIF
-      deallocate(vgrho)
+      DEALLOCATE(VGRHO)
 !
 !     ==================================================================
 !     ==  TRANSFORM GRADIENT POTENTIAL BACK TO POTENTIALS             ==
 !     ==================================================================
       VXC(:,:,1)=VRHO(:,:,1)
       IF(NDIMD.EQ.2) THEN
-        VXC(:,:,2)=Vrho(:,:,2)
+        VXC(:,:,2)=VRHO(:,:,2)
       ELSE IF(NDIMD.EQ.4) THEN
-        allocate(vb(nr,lmrx))
+        ALLOCATE(VB(NR,LMRX))
         VB(:,:)=0.D0
         DO LM2=1,LMRX
           DO LM3=2,LMRX
@@ -1076,16 +1076,16 @@ stop
         DO LM1=2,LMRX
           VB(:,1)=VB(:,1)+VB(:,LM1)*B(:,LM1)
         ENDDO
-        WORK(:)=0.5D0/SQRT(B(:,1)*Y0+tiny)
+        WORK(:)=0.5D0/SQRT(B(:,1)*Y0+TINY)
         DO LM1=1,LMRX
           VB(:,LM1)=VB(:,LM1)*WORK(:)
         ENDDO
-        VB(:,1)=VB(:,1)*2.d0*Y0
+        VB(:,1)=VB(:,1)*2.D0*Y0
         WORK(:)=0.D0
         DO LM1=1,LMRX
           WORK(:)=WORK(:)+VRHO(:,LM1,2)*RHO(:,LM1,2)
         ENDDO
-        VB(:,1)=VB(:,1)+0.5D0*WORK(:)/(B(:,1)+tiny)
+        VB(:,1)=VB(:,1)+0.5D0*WORK(:)/(B(:,1)+TINY)
 !       == TRANSFORM VB=DE/DB INTO POTENTIAL FOR SPIN DENSITY ==========
         DO LM1=1,LMRX
           VB(:,LM1)=2.D0*VB(:,LM1)
@@ -1353,8 +1353,8 @@ stop
       DO IR=1,NR
         RI=RI*XEXP
         RI2=RI*RI
-        SVAR1=SVAR*RI2 ! potential of the background
-        WORK(IR)=SVAR1*RHO(IR)*ri2
+        SVAR1=SVAR*RI2 ! POTENTIAL OF THE BACKGROUND
+        WORK(IR)=SVAR1*RHO(IR)*RI2
         POT(IR)=POT(IR)+SVAR1
       ENDDO
       CALL RADIAL$INTEGRAL(R1,DEX,NR,WORK,EB)
@@ -1455,118 +1455,118 @@ stop
       END
 !!$!
 !!$!     ..................................................................
-!!$      subroutine augmentation_corelevels(ndimd,r1,dex,nr,lmrx,aepot)
-!!$      implicit none
-!!$      integer(4),intent(in) :: lmrx
-!!$      integer(4),intent(in) :: ndimd
-!!$      REAL(8)   ,INTENT(IN) :: r1
-!!$      REAL(8)   ,INTENT(IN) :: dex
-!!$      integer(4),intent(in) :: nr
+!!$      SUBROUTINE AUGMENTATION_CORELEVELS(NDIMD,R1,DEX,NR,LMRX,AEPOT)
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN) :: LMRX
+!!$      INTEGER(4),INTENT(IN) :: NDIMD
+!!$      REAL(8)   ,INTENT(IN) :: R1
+!!$      REAL(8)   ,INTENT(IN) :: DEX
+!!$      INTEGER(4),INTENT(IN) :: NR
 !!$      REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRX,NDIMD)
-!!$      integer(4)            :: nc         ! number of core states
-!!$      integer(4),allocatable:: lofc(:)    !(nc)
-!!$      real(8)   ,allocatable:: eofc(:)    !(nc)
-!!$      real(8)   ,allocatable:: vatom(nr)  !(nc)
-!!$      real(8)   ,allocatable:: phic(:,:)  !(nr,nc)
-!!$      real(8)   ,allocatable:: r2(:)   ! r**2
-!!$      real(8)   ,allocatable:: h(:,:)  ! hamiltonian
-!!$      complex(8),allocatable:: uc(:,:) ! core eigenvectors
-!!$      real(8)   ,allocatable:: eigc(:) ! core eigenvalues
-!!$      integer(4)            :: ne ! dimensiona of the hamiltonian
-!!$      integer(4)            :: i1,i2,m1,m2,l1,l2,lm1,lm2,lm3
+!!$      INTEGER(4)            :: NC         ! NUMBER OF CORE STATES
+!!$      INTEGER(4),ALLOCATABLE:: LOFC(:)    !(NC)
+!!$      REAL(8)   ,ALLOCATABLE:: EOFC(:)    !(NC)
+!!$      REAL(8)   ,ALLOCATABLE:: VATOM(NR)  !(NC)
+!!$      REAL(8)   ,ALLOCATABLE:: PHIC(:,:)  !(NR,NC)
+!!$      REAL(8)   ,ALLOCATABLE:: R2(:)   ! R**2
+!!$      REAL(8)   ,ALLOCATABLE:: H(:,:)  ! HAMILTONIAN
+!!$      COMPLEX(8),ALLOCATABLE:: UC(:,:) ! CORE EIGENVECTORS
+!!$      REAL(8)   ,ALLOCATABLE:: EIGC(:) ! CORE EIGENVALUES
+!!$      INTEGER(4)            :: NE ! DIMENSIONA OF THE HAMILTONIAN
+!!$      INTEGER(4)            :: I1,I2,M1,M2,L1,L2,LM1,LM2,LM3
 !!$!     ******************************************************************
-!!$      if(ndimd.ne.1) then
-!!$        call error$stop('augmentation_corelevels')
-!!$      end if
-!!$      pi=4.d0*datan(1.d0)
-!!$      c000=1/dsqrt(4.d0*pi)
+!!$      IF(NDIMD.NE.1) THEN
+!!$        CALL ERROR$STOP('AUGMENTATION_CORELEVELS')
+!!$      END IF
+!!$      PI=4.D0*DATAN(1.D0)
+!!$      C000=1/DSQRT(4.D0*PI)
 !!$!
 !!$!     ==================================================================
-!!$!     ==  read core levels                                            ==
+!!$!     ==  READ CORE LEVELS                                            ==
 !!$!     ==================================================================
-!!$!===  read nc 
-!!$      allocate(lofc(nc))
-!!$      allocate(phic(nr,nc))
+!!$!===  READ NC 
+!!$      ALLOCATE(LOFC(NC))
+!!$      ALLOCATE(PHIC(NR,NC))
 !!$!
 !!$!     ==================================================================
 !!$!     ==                                                              ==
 !!$!     ==================================================================
-!!$      ne=0      
-!!$      do i=1,nc
-!!$        ne=ne+2*lc(i)+1
-!!$      enddo
-!!$      allocate(h(nc,nc))
-!!$      allocate(eigc(nc))
-!!$      allocate(ucc(nc,nc))
+!!$      NE=0      
+!!$      DO I=1,NC
+!!$        NE=NE+2*LC(I)+1
+!!$      ENDDO
+!!$      ALLOCATE(H(NC,NC))
+!!$      ALLOCATE(EIGC(NC))
+!!$      ALLOCATE(UCC(NC,NC))
 !!$!
 !!$!     ==================================================================
-!!$!     ==  radial grid r2=r**2                                         ==
+!!$!     ==  RADIAL GRID R2=R**2                                         ==
 !!$!     ==================================================================
-!!$      xexp=dexp(dex)
-!!$      ri=r1/xexp
-!!$      do ir=1,nr
-!!$        ri=ri*xexp
-!!$        r2(ir)=ri**2
-!!$      enddo
+!!$      XEXP=DEXP(DEX)
+!!$      RI=R1/XEXP
+!!$      DO IR=1,NR
+!!$        RI=RI*XEXP
+!!$        R2(IR)=RI**2
+!!$      ENDDO
 !!$!
 !!$!     ==================================================================
-!!$!     ==  calculate hamiltonian                                       ==
+!!$!     ==  CALCULATE HAMILTONIAN                                       ==
 !!$!     ==================================================================
-!!$      do i1=1,nc
-!!$        l1=lofc(i1)
-!!$        do i2=i1,nc
-!!$          l2=lofc(i2)
-!!$          aux(:)=phi(:,i1)*phi(:,i2)*r2(:)
-!!$          do m1=1,2*l1+1
-!!$            lm1=l1**2+m1
-!!$            do m2=1,2*l2+1
-!!$              lm2=l2**2+m2
-!!$              sum(:)=0.d0
+!!$      DO I1=1,NC
+!!$        L1=LOFC(I1)
+!!$        DO I2=I1,NC
+!!$          L2=LOFC(I2)
+!!$          AUX(:)=PHI(:,I1)*PHI(:,I2)*R2(:)
+!!$          DO M1=1,2*L1+1
+!!$            LM1=L1**2+M1
+!!$            DO M2=1,2*L2+1
+!!$              LM2=L2**2+M2
+!!$              SUM(:)=0.D0
 !!$              DO LM3=1,LMRX
 !!$                CALL CLEBSCH(LM1,LM2,LM3,CG)
-!!$                if(cg.eq.0.d0) cycle
-!!$                sum(:)=sum(:)+cg*aepot(:,lm3,1)
-!!$              enddo
-!!$              if(lm1.eq.lm2) sum(:)=sum(:)-vc(:)*c000
-!!$              sum(:)=sum(:)*aux(:)
-!!$              CALL RADIAL$INTEGRAL(R1,DEX,NR,sum,h(ie1,ie2))
-!!$              h(ie2,ie1)=h(ie1,ie2)
-!!$! add eigenvalues
-!!$            enddo
-!!$          enddo
-!!$        enddo
-!!$      enddo
+!!$                IF(CG.EQ.0.D0) CYCLE
+!!$                SUM(:)=SUM(:)+CG*AEPOT(:,LM3,1)
+!!$              ENDDO
+!!$              IF(LM1.EQ.LM2) SUM(:)=SUM(:)-VC(:)*C000
+!!$              SUM(:)=SUM(:)*AUX(:)
+!!$              CALL RADIAL$INTEGRAL(R1,DEX,NR,SUM,H(IE1,IE2))
+!!$              H(IE2,IE1)=H(IE1,IE2)
+!!$! ADD EIGENVALUES
+!!$            ENDDO
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
 !!$!
 !!$!     ==================================================================
-!!$!     ==  diagonalize Hamiltonian                                     ==
+!!$!     ==  DIAGONALIZE HAMILTONIAN                                     ==
 !!$!     ==================================================================
-!!$      call lib$diagr8(ne,h,eigc,uc)
+!!$      CALL LIB$DIAGR8(NE,H,EIGC,UC)
 !!$!
 !!$!     ==================================================================
-!!$!     ==  print eigenvalues                                           ==
+!!$!     ==  PRINT EIGENVALUES                                           ==
 !!$!     ==================================================================
-!!$      call filehandler$unit('prot',nfilo)
-!!$      write(nfilo,fmt='("core eigenvalues"//"================")')
-!!$      write(nfilo,fmt='(10f10.3)')eigc
-!!$      return
-!!$      end
+!!$      CALL FILEHANDLER$UNIT('PROT',NFILO)
+!!$      WRITE(NFILO,FMT='("CORE EIGENVALUES"//"================")')
+!!$      WRITE(NFILO,FMT='(10F10.3)')EIGC
+!!$      RETURN
+!!$      END
 
 
 !
 !.......................................................................
 MODULE EXPERTNAL1CPOT_MODULE
 !**                                                                   **
-!**  applies an external potential acting on the electrons            **
-!**  within the augmentation region                                   **
+!**  APPLIES AN EXTERNAL POTENTIAL ACTING ON THE ELECTRONS            **
+!**  WITHIN THE AUGMENTATION REGION                                   **
 !**                                                                   **
-!**    IDIMD externally this index refers to                          **
-!**             0: total  for ndimd=1,2,4                             **
-!**             1: sz for ndimd=2                                     **
-!**             1: sx for ndimd=4                                     **
-!**             2: sy fpr ndimd=4                                     **
-!**             3: sz fpr ndimd=4                                     **
-!**          internally the value is raised by one so that it         **
-!**          corresponds to the indexing                              **
+!**    IDIMD EXTERNALLY THIS INDEX REFERS TO                          **
+!**             0: TOTAL  FOR NDIMD=1,2,4                             **
+!**             1: SZ FOR NDIMD=2                                     **
+!**             1: SX FOR NDIMD=4                                     **
+!**             2: SY FPR NDIMD=4                                     **
+!**             3: SZ FPR NDIMD=4                                     **
+!**          INTERNALLY THE VALUE IS RAISED BY ONE SO THAT IT         **
+!**          CORRESPONDS TO THE INDEXING                              **
 !**                                                                   **
 TYPE EXTPOT
   REAL(8)          :: VALUE
@@ -1574,7 +1574,7 @@ TYPE EXTPOT
   REAL(8)          :: RC  
   REAL(8)          :: PWR
   CHARACTER(LEN=32):: TYPE   ! CAN BE 'S','P','D','ALL'
-  INTEGER(4)       :: idimd  ! idimd=0 REFERES TO ALL SPIN DIRECTIONS
+  INTEGER(4)       :: IDIMD  ! IDIMD=0 REFERES TO ALL SPIN DIRECTIONS
 END TYPE EXTPOT
 INTEGER(4)             :: NPOT=0
 INTEGER(4)             :: NPOTX=0
@@ -1601,13 +1601,13 @@ CONTAINS
 END MODULE EXPERTNAL1CPOT_MODULE
 !
 !     ..................................................................
-      SUBROUTINE EXTERNAL1CPOT$SETPOT(ATOM,TYPE,iDIMD,VALUE,RC,PWR)
+      SUBROUTINE EXTERNAL1CPOT$SETPOT(ATOM,TYPE,IDIMD,VALUE,RC,PWR)
       USE EXPERTNAL1CPOT_MODULE
       IMPLICIT NONE
       REAL(8)          ,INTENT(IN) :: VALUE
       CHARACTER(LEN=32),INTENT(IN) :: ATOM
       CHARACTER(LEN=32),INTENT(IN) :: TYPE
-      INTEGER(4)       ,INTENT(IN) :: iDIMD
+      INTEGER(4)       ,INTENT(IN) :: IDIMD
       REAL(8)          ,INTENT(IN) :: RC
       REAL(8)          ,INTENT(IN) :: PWR
 !     ******************************************************************
@@ -1617,7 +1617,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       POT(NPOT)%VALUE=VALUE
       POT(NPOT)%RC=RC
       POT(NPOT)%PWR=PWR
-      POT(NPOT)%idimd=idimd+1
+      POT(NPOT)%IDIMD=IDIMD+1
       POT(NPOT)%TYPE =TYPE
       RETURN
       END
@@ -1678,16 +1678,16 @@ END MODULE EXPERTNAL1CPOT_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE EXTERNAL1CPOT$APPLY(ATOM,LMNX,ndimd,DENMAT,DATH,ETOT)
+      SUBROUTINE EXTERNAL1CPOT$APPLY(ATOM,LMNX,NDIMD,DENMAT,DATH,ETOT)
 !     ******************************************************************
 !     ******************************************************************
       USE EXPERTNAL1CPOT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)   :: ATOM
-      INTEGER(4)  ,INTENT(IN)   :: Ndimd
+      INTEGER(4)  ,INTENT(IN)   :: NDIMD
       INTEGER(4)  ,INTENT(IN)   :: LMNX
-      REAL(8)     ,INTENT(IN)   :: DENMAT(LMNX,LMNX,Ndimd)
-      REAL(8)     ,INTENT(OUT)  :: DATH(LMNX,LMNX,Ndimd)
+      REAL(8)     ,INTENT(IN)   :: DENMAT(LMNX,LMNX,NDIMD)
+      REAL(8)     ,INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
       REAL(8)     ,INTENT(OUT)  :: ETOT
       TYPE(EXTPOT)              :: POT1
       INTEGER(4)                :: LANG
@@ -1706,7 +1706,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       REAL(8)      ,ALLOCATABLE :: AUX(:)    !(NR)
       CHARACTER(32)             :: SPECIES
       LOGICAL(4)                :: TCHK
-      INTEGER(4)                :: LN1,LN2,LMN1,LMN2,IR,IPOT,Idimd,L1,L2,I
+      INTEGER(4)                :: LN1,LN2,LMN1,LMN2,IR,IPOT,IDIMD,L1,L2,I
 !     ******************************************************************
       DATH(:,:,:)=0.D0
       ETOT=0.D0
@@ -1785,17 +1785,17 @@ END MODULE EXPERTNAL1CPOT_MODULE
         ENDDO
         DEALLOCATE(RDEP)
         DEALLOCATE(AUX)
-!open(41,file='dump',form='formatted')
-!ri=r1/xexp
-!do ir=1,nr
-!  ri=ri*xexp
-!  write(41,*)ri,(aephi(ir,ln1),ln1=1,lnx)
-!enddo
+!OPEN(41,FILE='DUMP',FORM='FORMATTED')
+!RI=R1/XEXP
+!DO IR=1,NR
+!  RI=RI*XEXP
+!  WRITE(41,*)RI,(AEPHI(IR,LN1),LN1=1,LNX)
+!ENDDO
 !PRINT*,'LNX ',LNX,' LOX ',LOX
-!do ln1=1,lnx
-!  PRINT*,'UONE ',UONE(ln1,:)
-!enddo
-!stop
+!DO LN1=1,LNX
+!  PRINT*,'UONE ',UONE(LN1,:)
+!ENDDO
+!STOP
         DEALLOCATE(AEPHI)
 !
 !       ==============================================================
@@ -1833,10 +1833,10 @@ END MODULE EXPERTNAL1CPOT_MODULE
 !     ==  CALCULATE TOTAL ENERGY                                  ==
 !     ==============================================================
       ETOT=0.D0
-      DO Idimd=1,ndimd
+      DO IDIMD=1,NDIMD
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
-            ETOT=ETOT+DENMAT(LMN1,LMN2,idimd)*DATH(LMN1,LMN2,Idimd)
+            ETOT=ETOT+DENMAT(LMN1,LMN2,IDIMD)*DATH(LMN1,LMN2,IDIMD)
           ENDDO
         ENDDO
       ENDDO
@@ -1885,7 +1885,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       REAL(8),   INTENT(OUT):: V
       REAL(8)               :: PI
       REAL(8)               :: X2,GAUSS,FAC1,FAC2
-      real(8)               :: erfx
+      REAL(8)               :: ERFX
       INTEGER(4)            :: I
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
@@ -1904,104 +1904,104 @@ END MODULE EXPERTNAL1CPOT_MODULE
       END
 !!$!
 !!$!     .....................................................................
-!!$      subroutine augmentation_softcore(isp,r1,dex,nr,aerho1,aepot1)
+!!$      SUBROUTINE AUGMENTATION_SOFTCORE(ISP,R1,DEX,NR,AERHO1,AEPOT1)
 !!$      USE SCHRGL_INTERFACE_MODULE, ONLY : OUTBOUNDARY
-!!$      implicit none
-!!$      integer(4),intent(in) :: isp
-!!$      real(8)   ,intent(in) :: r1
-!!$      real(8)   ,intent(in) :: dex
-!!$      integer(4),intent(in) :: nr
-!!$      integer(4),intent(in) :: lmrx
-!!$      real(8)   ,intent(in) :: aerho1(nr)
-!!$      real(8)   ,intent(in) :: aepot1(nr)
-!!$      real(8)               :: aecore0(nr)
-!!$      real(8)               :: phi(nr,3)
-!!$      real(8)   ,parameter  :: tolb=1.d-6
-!!$      integer(4),parameter  :: ibix=100
-!!$      integer(4)            :: nb
-!!$      integer(4),allocatable:: lofb(:)  ! main angular momentum
-!!$      integer(4),allocatable:: nnofb(:) ! #(nodes)
-!!$      real(8)   ,allocatable:: fofb(:)  ! occupation
-!!$      real(8)   ,allocatable:: eofb(:)  ! energy
-!!$      real(8)   ,allocatable:: rclofb(:) 
-!!$      real(8)               :: aez
-!!$      integer(4)            :: niter
-!!$      integer(4)            :: iter,ib
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN) :: ISP
+!!$      REAL(8)   ,INTENT(IN) :: R1
+!!$      REAL(8)   ,INTENT(IN) :: DEX
+!!$      INTEGER(4),INTENT(IN) :: NR
+!!$      INTEGER(4),INTENT(IN) :: LMRX
+!!$      REAL(8)   ,INTENT(IN) :: AERHO1(NR)
+!!$      REAL(8)   ,INTENT(IN) :: AEPOT1(NR)
+!!$      REAL(8)               :: AECORE0(NR)
+!!$      REAL(8)               :: PHI(NR,3)
+!!$      REAL(8)   ,PARAMETER  :: TOLB=1.D-6
+!!$      INTEGER(4),PARAMETER  :: IBIX=100
+!!$      INTEGER(4)            :: NB
+!!$      INTEGER(4),ALLOCATABLE:: LOFB(:)  ! MAIN ANGULAR MOMENTUM
+!!$      INTEGER(4),ALLOCATABLE:: NNOFB(:) ! #(NODES)
+!!$      REAL(8)   ,ALLOCATABLE:: FOFB(:)  ! OCCUPATION
+!!$      REAL(8)   ,ALLOCATABLE:: EOFB(:)  ! ENERGY
+!!$      REAL(8)   ,ALLOCATABLE:: RCLOFB(:) 
+!!$      REAL(8)               :: AEZ
+!!$      INTEGER(4)            :: NITER
+!!$      INTEGER(4)            :: ITER,IB
 !!$!     **********************************************************************
 !!$      CALL SETUP$AECORE(ISP,NR,AECORE0)
 !!$      CALL SETUP$AEZ(ISP,AEZ)
 !!$!     ======================================================================
-!!$!     ==  hardwire parameters for iron                                    ==
+!!$!     ==  HARDWIRE PARAMETERS FOR IRON                                    ==
 !!$!     ======================================================================
-!!$      allocate(lofb(nb))
-!!$      allocate(fofb(nb))
-!!$      allocate(eofb(nb))
-!!$      allocate(rclofb(nb))
-!!$      nb=5
-!!$      lofb=(/0,0,1,0,1/)
-!!$      nnofb=(/0,1,0,2,1/)
-!!$      do ib=1,nb
-!!$        fofb(ib)=real(2*l+1)
-!!$        zeff=aez-sum(fofb(1:ib-1))
-!!$        rclofb(ib)=1.d0/zeff/real(lofb(ib)+nnofb(ib)+1)
-!!$        ir=1+nint(log(rclofb(ib)/r1)/dex)
-!!$        eofc(ib)=aepot(ir)
-!!$      enddo
+!!$      ALLOCATE(LOFB(NB))
+!!$      ALLOCATE(FOFB(NB))
+!!$      ALLOCATE(EOFB(NB))
+!!$      ALLOCATE(RCLOFB(NB))
+!!$      NB=5
+!!$      LOFB=(/0,0,1,0,1/)
+!!$      NNOFB=(/0,1,0,2,1/)
+!!$      DO IB=1,NB
+!!$        FOFB(IB)=REAL(2*L+1)
+!!$        ZEFF=AEZ-SUM(FOFB(1:IB-1))
+!!$        RCLOFB(IB)=1.D0/ZEFF/REAL(LOFB(IB)+NNOFB(IB)+1)
+!!$        IR=1+NINT(LOG(RCLOFB(IB)/R1)/DEX)
+!!$        EOFC(IB)=AEPOT(IR)
+!!$      ENDDO
 !!$
 !!$!     ======================================================================
-!!$!     ==  start loop                                                      ==
+!!$!     ==  START LOOP                                                      ==
 !!$!     ======================================================================
-!!$      niter=2
-!!$      do iter=1,niter
+!!$      NITER=2
+!!$      DO ITER=1,NITER
 !!$!
 !!$!       ==============================================================
-!!$!       ==  find core states                                        ==
+!!$!       ==  FIND CORE STATES                                        ==
 !!$!       ==============================================================
-!!$        aecore(:)=0.d0
-!!$        do ib=1,nlb
-!!$          x0=eofb(ib)
-!!$          istart=1
-!!$          tconv=.false.
-!!$          call BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
-!!$          do ibi=1,ibix
-!!$            tforward=.true.
-!!$            ir=1+nint(log(rclofb(ib)/r1)/dex)
-!!$            call SCHROEDER(tforward,.false.,R1,DEX,NR,Lofb(ib),Eofb(ib) &
-!!$     &                    ,AEZ,ir,4.d0 &
-!!$     &                     ,aePOT,PHI,GINH,DLG)
-!!$            din=rclofb(ib)*phi(ir,2)/phi(ir,1)
-!!$            din=nnofb(ib)+0.5d0+datan(din)/pi            
-!!$            tforward=.false.
-!!$            call SCHROEDER(tforward,.false.,R1,DEX,NR,Lofb(ib),Eofb(ib) &
-!!$     &                    ,AEZ,ir,4.d0 &
-!!$     &                     ,aePOT,PHI,GINH,DLG)
-!!$            dout=rclofb(ib)*phi(ir,2)/phi(ir,1)
-!!$            din=0.5d0+datan(dout)/pi            
-!!$            y0=din-dout
-!!$            tconv=abs(dx).lt.tolb
-!!$            if(tconv) exit
-!!$            call BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
-!!$            eofb(ib)=x0
-!!$          enddo
-!!$          if(.not.tconv) then
-!!$            call error$msg('loop not converged')
-!!$            call error$stop('augmentation_softcore')
-!!$          end if
-!!$          aecore(:)=aecore(:)+fb(ib)*phi(:)**2
-!!$        enddo
+!!$        AECORE(:)=0.D0
+!!$        DO IB=1,NLB
+!!$          X0=EOFB(IB)
+!!$          ISTART=1
+!!$          TCONV=.FALSE.
+!!$          CALL BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
+!!$          DO IBI=1,IBIX
+!!$            TFORWARD=.TRUE.
+!!$            IR=1+NINT(LOG(RCLOFB(IB)/R1)/DEX)
+!!$            CALL SCHROEDER(TFORWARD,.FALSE.,R1,DEX,NR,LOFB(IB),EOFB(IB) &
+!!$     &                    ,AEZ,IR,4.D0 &
+!!$     &                     ,AEPOT,PHI,GINH,DLG)
+!!$            DIN=RCLOFB(IB)*PHI(IR,2)/PHI(IR,1)
+!!$            DIN=NNOFB(IB)+0.5D0+DATAN(DIN)/PI            
+!!$            TFORWARD=.FALSE.
+!!$            CALL SCHROEDER(TFORWARD,.FALSE.,R1,DEX,NR,LOFB(IB),EOFB(IB) &
+!!$     &                    ,AEZ,IR,4.D0 &
+!!$     &                     ,AEPOT,PHI,GINH,DLG)
+!!$            DOUT=RCLOFB(IB)*PHI(IR,2)/PHI(IR,1)
+!!$            DIN=0.5D0+DATAN(DOUT)/PI            
+!!$            Y0=DIN-DOUT
+!!$            TCONV=ABS(DX).LT.TOLB
+!!$            IF(TCONV) EXIT
+!!$            CALL BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
+!!$            EOFB(IB)=X0
+!!$          ENDDO
+!!$          IF(.NOT.TCONV) THEN
+!!$            CALL ERROR$MSG('LOOP NOT CONVERGED')
+!!$            CALL ERROR$STOP('AUGMENTATION_SOFTCORE')
+!!$          END IF
+!!$          AECORE(:)=AECORE(:)+FB(IB)*PHI(:)**2
+!!$        ENDDO
 !!$!
 !!$!       ==============================================================
-!!$!       ==  construct density                                       ==
+!!$!       ==  CONSTRUCT DENSITY                                       ==
 !!$!       ==============================================================
-!!$        rho(:)=rho0(:)+aecore(:)-aecore0(:)
+!!$        RHO(:)=RHO0(:)+AECORE(:)-AECORE0(:)
 !!$!
 !!$!       ==============================================================
-!!$!       ==  construct potential                                     ==
+!!$!       ==  CONSTRUCT POTENTIAL                                     ==
 !!$!       ==============================================================
 !!$
 !!$
 !!$
-!!$      enddo
-!!$      return
-!!$      end
+!!$      ENDDO
+!!$      RETURN
+!!$      END
 

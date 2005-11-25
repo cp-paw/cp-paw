@@ -69,7 +69,7 @@ END MODULE IO_MODULE
       INTEGER(4)               :: NTASKS,THISTASK
 !     ******************************************************************
                            CALL TRACE$PUSH('IO$REPORT')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
 !     ==================================================================
@@ -239,20 +239,16 @@ CALL TRACE$PASS('DONE')
       INTEGER                      :: NTASKS,THISTASK
       INTEGER(4)                   :: LEN
       INTEGER(4)                   :: RUNTIME(3)
+      integer(4)   ,allocatable    :: splitkey(:)
       EXTERNAL IARGC
       COMMON/VERSION/VERSIONTEXT
 !     ******************************************************************
                           CALL TRACE$PUSH('READIN')
-      CALL MPE$QUERY(NTASKS,THISTASK)
 !
 !     ==================================================================
 !     ==  SET CONTROLFILENAME AND STANDARD ROOT                       ==
 !     ==================================================================
-!IF(NTASKS.GT.1) THEN
-!  CNTLNAME='CASE.CNTL'
-!  PRINT*,'ATTENTION STARTING ROOTNAME HARDWIRED TO CASE IN PAW_IOROUTINES!!!!'
-!  PRINT*,'SORRY!'
-!ELSE
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
         IF (IARGC().LT.1) THEN
           CALL ERROR$MSG('THE NAME OF THE CONTROLFILE')
@@ -261,8 +257,28 @@ CALL TRACE$PASS('DONE')
         END IF
         CALL GETARG(1,CNTLNAME)
       END IF
-      CALL MPE$BROADCAST(1,CNTLNAME)
-!END IF
+      CALL MPE$BROADCAST('~',1,CNTLNAME)
+!
+!     ==================================================================
+!     ==  define polymer if necessary                                 ==
+!     ==================================================================
+      ALLOCATE(SPLITKEY(NTASKS))
+      IF(INDEX(CNTLNAME,-'.POLYMER_CNTL',BACK=.TRUE.).NE.0) THEN
+!       POLYMER_CNTL DEFINES SEVERAL MONOMERS AND THE ROOTNAMES FOR THE 
+!       INDIVIDUAL MONOMERS. IT ALSO PROVIDES INFORMATION ON THE 
+!       RELATIVE COMPUTATIONAL EFFORT, WHICH DIVIDE THE PROCESSORS AMONG 
+!       INDIVIUDAL MONOMERS.
+        CALL ERROR$MSG('OPTION FOR POLYMER NOT YET INCLUDED')
+        CALL ERROR$STOP('READIN')
+      ELSE
+        SPLITKEY(:)=1
+      END IF
+      CALL MPE$NEW('~','MONOMER',NTASKS,SPLITKEY)
+      DEALLOCATE(SPLITKEY)
+!
+!     ==================================================================
+!     ==  SET CONTROLFILENAME AND STANDARD ROOT                       ==
+!     ==================================================================
 !     == IF ROOTNAME='-' USE THE ROOT OF THE CONTROLFILE ================
       ISVAR=INDEX(CNTLNAME,-'.CNTL',BACK=.TRUE.)
       IF(ISVAR.GT.0) THEN      
@@ -288,7 +304,7 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
       CALL LINKEDLIST$NEW(LL_CNTL)
       CALL FILEHANDLER$UNIT('CNTL',NFIL)
-      CALL LINKEDLIST$READ(LL_CNTL,NFIL)
+      CALL LINKEDLIST$READ(LL_CNTL,NFIL,'MONOMER')
 !
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!FILES!FILE                              ==
@@ -682,12 +698,11 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4),PARAMETER :: F=.FALSE.
       CHARACTER(32)        :: CH32SVAR1
       CHARACTER(32)        :: ID
-      INTEGER(4)           :: NTASKNUM
-      INTEGER(4)           :: NTASKID
+      INTEGER(4)           :: NTASKS
+      INTEGER(4)           :: THISTASK
       INTEGER(4)           :: NFILO
 !     ******************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
-      CALL MPE$QUERY(NTASKNUM,NTASKID)
 !  
 !     ==================================================================
 !     == SET STANDARD FILENAMES                                       ==
@@ -706,8 +721,10 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
 !     ==  PROTOCOLL FILE================================================
+!     ==  EACH MONOMER HAS ITS OWN PROTOCOLL FILE
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       ID=+'PROT'
-      IF(NTASKID.GT.1)THEN
+      IF(THISTASK.GT.1)THEN
         CALL FILEHANDLER$SETFILE(ID,F,-'/DEV/NULL')
       ELSE
         CALL FILEHANDLER$SETFILE(ID,T,-'.PROT')
@@ -746,7 +763,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETFILE(ID,T,-'.RSTRT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READWRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
 !
 !     ==  ENERGY TRAJECTORY ============================================
@@ -768,6 +785,14 @@ CALL TRACE$PASS('DONE')
 !     ==  BANDS  TRAJECTORY ============================================
       ID=+'POSITION-TRAJECTORY'
       CALL FILEHANDLER$SETFILE(ID,T,-'_R.TRA')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+!
+!     ==  BANDS  TRAJECTORY ============================================
+      ID=+'QMMM-POS-TRA'
+      CALL FILEHANDLER$SETFILE(ID,T,-'_R.QMMMTRA')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -1842,8 +1867,10 @@ PRINT*,'ILDA ',ILDA
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'QM-MM',1,TON)
       CALL QMMM$SETL4('ON',TON)
-      CALL THERMOSTAT$NEW('QM-MM')   ! CREATED BUT NOT SWITCHED ON, IF NOT USED
+!      CALL THERMOSTAT$NEW('QM-MM')   ! CREATED BUT NOT SWITCHED ON, IF NOT USED
       IF(.NOT.TON) THEN
+!       == THERMOSTAT REMAINS OFF, BUT MUST EXIST FOR THE REPORT
+        CALL THERMOSTAT$NEW('QM-MM')
         CALL TRACE$POP
         RETURN
       END IF
@@ -1894,7 +1921,7 @@ PRINT*,'ILDA ',ILDA
 !     ==================================================================
 !     ==  !CONTROL!QM-MM!THERMOSTAT                                   ==
 !     ==================================================================
-      CALL READIN_THERMOSTAT(LL_CNTL_,'QM-MM',DT,0.5D0*293.D0*KELVIN,10.D0)
+      CALL READIN_THERMOSTAT(LL_CNTL,'QM-MM',DT,0.5D0*293.D0*KELVIN,10.D0)
                            CALL TRACE$POP 
       RETURN
       END
@@ -2140,6 +2167,14 @@ PRINT*,'ILDA ',ILDA
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'R',0,.TRUE.)
       CALL LINKEDLIST$GET(LL_CNTL,'R',1,TCHK)
       CALL TRAJECTORYIO$ON('POSITION-TRAJECTORY',TCHK)
+!
+!     ==================================================================
+!     == QM-MM POSITION TRAJECTORY                                    ==
+!     ==================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'QMMM',0,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'QMMM',0,.FALSE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'QMMM',1,TCHK)
+      CALL TRAJECTORYIO$ON('QMMM-POS-TRA',TCHK)
 !
 !     ==================================================================
 !     ==  FORCE TRAJECTORY                                            ==
@@ -2605,12 +2640,9 @@ PRINT*,'ILDA ',ILDA
       CALL ERROR$MSG('OPTIC MODULE HAS BEEN REMOVED TEMPORARILY IN THIS VERSION')
       CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 
-      CALL MPE$QUERY(NTASKS,THISTASK)
-      IF(NTASKS.NE.1) THEN
-        CALL ERROR$MSG('OPTIC MODULE IS NOT PARALLELIZED')
-        CALL ERROR$MSG('USE ONLY IN SCALAR MODE')
-        CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
-      END IF
+CALL ERROR$MSG('OPTIC MODULE IS NOT PARALLELIZED')
+CALL ERROR$MSG('USE ONLY IN SCALAR MODE')
+CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !! COMMENTED OUT
 !     CALL OPTICS$SETL4('ON',TON)
                            CALL TRACE$POP
@@ -2641,7 +2673,7 @@ PRINT*,'ILDA ',ILDA
 !     ==================================================================
       CALL LINKEDLIST$NEW(LL_STRC)
       CALL FILEHANDLER$UNIT('STRC',NFIL)
-      CALL LINKEDLIST$READ(LL_STRC,NFIL)
+      CALL LINKEDLIST$READ(LL_STRC,NFIL,'MONOMER')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
 !
 !     ==================================================================
@@ -2818,6 +2850,7 @@ PRINT*,'ILDA ',ILDA
       INTEGER(4)               :: IKPT
       INTEGER(4)               :: IXK0(3)
       INTEGER(4)               :: NKDIV(3)
+      INTEGER(4)               :: ISHIFT(3)=0
       REAL(8)                  :: RBAS(3,3)
       REAL(8)                  :: RMAX
       REAL(8)    ,ALLOCATABLE  :: XK(:,:)
@@ -2841,6 +2874,10 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       TINV=.TRUE. 
 !
 !     ==  READ ACTUAL VALUES  ==========================================
+      ISHIFT(:)=0
+      CALL LINKEDLIST$EXISTD(LL_STRC,'SHIFT',1,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'SHIFT',1,ISHIFT)
+!
       CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
       CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK1)
       CALL LINKEDLIST$NDATA(LL_STRC,'K',NKPT)
@@ -2857,10 +2894,10 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL CELL$GETR8A('TREF',9,RBAS)
         CALL LINKEDLIST$GET(LL_STRC,'R',1,RMAX)
         CALL KPOINTS_NKDIV(RBAS,RMAX,NKDIV)
-        CALL KPOINTS_NKPT(TINV,NKDIV,NKPT)
+        CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
         ALLOCATE(XK(3,NKPT))
         ALLOCATE(WGHT(NKPT))
-        CALL KPOINTS_KPOINTS(TINV,NKDIV,NKPT,XK,WGHT)
+        CALL KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WGHT)
 !     == KPOINT GRID DEFINED BY DIV ====================================
       ELSE 
         CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK)
@@ -2874,11 +2911,17 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           NKDIV(:)=2.D0
         END IF
         IF(NKPT.EQ.0) THEN
-          CALL KPOINTS_NKPT(TINV,NKDIV,NKPT)
+          CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
           ALLOCATE(XK(3,NKPT))
           ALLOCATE(WGHT(NKPT))
-          CALL KPOINTS_KPOINTS(TINV,NKDIV,NKPT,XK,WGHT)
+          CALL KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WGHT)
         ELSE     
+          CALL LINKEDLIST$EXISTD(LL_STRC,'SHIFT',1,TCHK)
+          IF(TCHK) THEN
+            CALL ERROR$MSG('!SPECIES!KPOINT:SHIFT MUST NOT BE USED')
+            CALL ERROR$MSG('IF KPOINTS ARE SPECIFIED BY HAND')
+            CALL ERROR$STOP('STRCIN_KPOINT')
+          END IF
           ALLOCATE(XK(3,NKPT))
           ALLOCATE(WGHT(NKPT))
           DO IKPT=1,NKPT
@@ -5118,11 +5161,11 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !     ==================================================================
 !     ==  WRITE BUFFER STRC                                           ==
 !     ==================================================================
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
         CALL FILEHANDLER$UNIT('STRC_OUT',NFIL)
         CALL LINKEDLIST$SELECT(LL_STRC,'~')
-        CALL LINKEDLIST$WRITE(LL_STRC,NFIL)
+        CALL LINKEDLIST$WRITE(LL_STRC,NFIL,'MONOMER')
         CALL FILEHANDLER$CLOSE('STRC_OUT')
       END IF
 !

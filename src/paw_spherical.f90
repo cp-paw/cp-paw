@@ -87,7 +87,7 @@
           LMM=LM0+M
           LMP=LM0-M
           SVAR=FAC*YLM(LMM)*SQ2
-          YLM(LMP)=SVAR*REAL(EIMPHI,kind=8)
+          YLM(LMP)=SVAR*REAL(EIMPHI,KIND=8)
           YLM(LMM)=SVAR*AIMAG(EIMPHI)
         ENDDO
       ENDDO
@@ -178,7 +178,7 @@
       REAL(8)   ,INTENT(IN) :: ROT(3,3)        ! ROTATION MATRIX FOR POSITIONS
       REAL(8)   ,INTENT(OUT):: YLMROT(LMX,LMX) ! ROTATION MATRIX FOR COEFFICIENTS
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.     ! PRINTS RESULT
-      LOGICAL(4),PARAMETER  :: TTEST=.true.    ! CHECKS WHETHER RO IS UNITARY
+      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.    ! CHECKS WHETHER RO IS UNITARY
       INTEGER(4)            :: LX
       INTEGER(4)            :: I1,I2,J1,J2
       INTEGER(4)            :: INDEX(3)
@@ -568,7 +568,7 @@ TYPE(A_TYPE),ALLOCATABLE :: THIS(:)
 END MODULE SPHERICALCCMAT_MODULE
 !
 !     ..................................................................
-      SUBROUTINE SPHERICAL$clearCCMAT
+      SUBROUTINE SPHERICAL$CLEARCCMAT
       USE SPHERICALCCMAT_MODULE
       IMPLICIT NONE
 !     *******************************************************************
@@ -688,7 +688,7 @@ PRINT*,'INITIALIZE TO LRXX ',LRXX
 !     **  MATRIX P0 USED TO EVALUATE THE STRESS IN A REPRESENTATION   **
 !     **  OF SPHERICAL HARMONICS                                      **
 !     **  SEE SPHERICALCCMAT_MODULE FOR DETAILS                       **
-!     **  lm2=0 and cc=0.d0 on return if i is too large               **
+!     **  LM2=0 AND CC=0.D0 ON RETURN IF I IS TOO LARGE               **
 !     ******************************************************************
       USE SPHERICALCCMAT_MODULE
       IMPLICIT NONE
@@ -717,7 +717,7 @@ PRINT*,'INITIALIZE TO LRXX ',LRXX
 !     **  MATRIX P0 USED TO EVALUATE THE STRESS IN A REPRESENTATION   **
 !     **  OF SPHERICAL HARMONICS                                      **
 !     **  SEE SPHERICALCCMAT_MODULE FOR DETAILS                       **
-!     **  lm2=0 and cc=0.d0 on return if i is too large               **
+!     **  LM2=0 AND CC=0.D0 ON RETURN IF I IS TOO LARGE               **
 !     ******************************************************************
       USE SPHERICALCCMAT_MODULE
       IMPLICIT NONE

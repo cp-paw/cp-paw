@@ -19,7 +19,7 @@
       END
 !
 !     ..................................................................
-      SUBROUTINE KPOINTS_KPOINTS(TINV,NKDIV,NKPT,XK,WKPT)
+      SUBROUTINE KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WKPT)
 !     ******************************************************************
 !     **  SELECTS K-POINTS ON AN EQUISPACED GRID WITH THE PROVIDED    **
 !     **  DIVISIONS NKDIV. TIME INVERSION SYMMETRY IS CONSIDERED      **
@@ -31,6 +31,7 @@
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TINV        ! TIME INVERSION SYMMETRY
       INTEGER(4),INTENT(IN) :: NKDIV(3)    ! #(DIVISIONS)
+      INTEGER(4),INTENT(IN) :: ISHIFT(3)   ! DISPLACEMENT AWAY FROM GAMMA
       INTEGER(4),INTENT(IN) :: NKPT        ! #(KPOINTS)
       REAL(8)   ,INTENT(OUT):: XK(3,NKPT)  !KPOINT IN RELATIVE COORDINATES
       REAL(8)   ,INTENT(OUT):: WKPT(NKPT)  ! GEOMETRIC K-POINT WEIGHT
@@ -55,9 +56,9 @@
 !           ==  LABEL IND=1+[I1-1+N1*(I2-1+N2*I3-1)]                 ==
 !           ===========================================================
             IF(TINV) THEN
-              I1INV=MOD(N1-(I1-1),N1)+1
-              I2INV=MOD(N2-(I2-1),N2)+1
-              I3INV=MOD(N3-(I3-1),N3)+1
+              I1INV=MOD(N1-(I1+ISHIFT(1)-1),N1)+1
+              I2INV=MOD(N2-(I2+ISHIFT(2)-1),N2)+1
+              I3INV=MOD(N3-(I3+ISHIFT(3)-1),N3)+1
               IND   =I1   -1+N1*(I2   -1+N2*(I3   -1))
               INDINV=I1INV-1+N1*(I2INV-1+N2*(I3INV-1))
               IF(IND.EQ.INDINV) THEN  ! SPECIAL POINT (EQUIV TO ITS INVERSE)
@@ -65,17 +66,18 @@
               ELSE IF(IND.GT.INDINV) THEN 
                 CYCLE ! INVERSE IMAGE IS NOT COUNTED
               ELSE
-                WGHT=2.D0*WGHT0 ! GENERAL K-POINT GETS THE WEIGHT OF ITs IMAGE
+                WGHT=2.D0*WGHT0 ! GENERAL K-POINT GETS THE WEIGHT OF ITS IMAGE
               END IF
             ELSE
               WGHT=WGHT0
             END IF
             IKPT=IKPT+1
             IF(IKPT.GT.NKPT) CYCLE
-            XK(1,IKPT)=REAL(I1-1,KIND=8)/REAL(N1,KIND=8)
-            XK(2,IKPT)=REAL(I2-1,KIND=8)/REAL(N2,KIND=8)
-            XK(3,IKPT)=REAL(I3-1,KIND=8)/REAL(N3,KIND=8)
+            XK(1,IKPT)=REAL(2*(I1-1)+ISHIFT(1),KIND=8)/REAL(2*N1,KIND=8)
+            XK(2,IKPT)=REAL(2*(I2-1)+ISHIFT(2),KIND=8)/REAL(2*N2,KIND=8)
+            XK(3,IKPT)=REAL(2*(I3-1)+ISHIFT(3),KIND=8)/REAL(2*N3,KIND=8)
             WKPT(IKPT)=WGHT
+!write(*,fmt='(i5,3f10.5,5x,f10.4)')ikpt,xk(:,ikpt),wkpt(ikpt)
           ENDDO
         ENDDO
       ENDDO   
@@ -85,17 +87,19 @@
         CALL ERROR$I4VAL('NKPT ACTUAL     ',IKPT)
         CALL ERROR$STOP('KPOINTS$KPOINTS')
       END IF
+!call error$stop('forced stop')
       RETURN
       END
 !
 !     ..................................................................
-      SUBROUTINE KPOINTS_NKPT(TINV,NKDIV,NKPT)
+      SUBROUTINE KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TINV
       INTEGER(4),INTENT(IN) :: NKDIV(3)
+      INTEGER(4),INTENT(IN) :: ISHIFT(3)   ! DISPLACEMENT AWAY FROM GAMMA
       INTEGER(4),INTENT(OUT):: NKPT
       INTEGER(4)            :: I1,I2,I3
       INTEGER(4)            :: I1INV,I2INV,I3INV
@@ -117,9 +121,9 @@
 !           ==  LABEL IND=1+[I1-1+N1*(I2-1+N2*I3-1)]                 ==
 !           ===========================================================
             IF(TINV) THEN
-              I1INV=MOD(N1-(I1-1),N1)+1
-              I2INV=MOD(N2-(I2-1),N2)+1
-              I3INV=MOD(N3-(I3-1),N3)+1
+              I1INV=MOD(N1-(I1+ISHIFT(1)-1),N1)+1
+              I2INV=MOD(N2-(I2+ISHIFT(2)-1),N2)+1
+              I3INV=MOD(N3-(I3+ISHIFT(3)-1),N3)+1
               IND   =I1   -1+N1*(I2   -1+N2*(I3   -1))
               INDINV=I1INV-1+N1*(I2INV-1+N2*(I3INV-1))
               IF(IND.GT.INDINV) THEN 

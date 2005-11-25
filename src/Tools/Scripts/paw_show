@@ -36,7 +36,13 @@ usage: "pawshow option rootname"\n\n
 \t -c: plot conserved energy\n
 \t -f: plot fictitious kinetic wave function energy\n
 \t -ar: plot friction acting on the nuclei\n
-\t -ap: plot friction acting on the wavefunctions'
+\t -ap: plot friction acting on the wavefunctions\n
+USE THE FOLLOWING FOR QM-MM CALCULATIONS:\n
+\t -qe: plot static total energy of the environmet\n
+\t -qc: plot conserved energy of the environment\n
+\t -qt: plot temperature in kelvin of the environment\n
+\t -tqt: both temperatures\n
+\t -cqc: both conserved energies'
 if (( $# < 2 )) ;then echo -e ${USAGE} ; exit; fi
 NAME=$2 
 case $1 in 
@@ -58,6 +64,21 @@ case $1 in
 "-ar")# show friction actin on the nuclei
     grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $9}' >${TEMPDIR}tmp2
     ;;
+"-qe")# show static total energy of environment
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($11 != "") print $3, " ", $11}' >${TEMPDIR}tmp2
+    ;;
+"-qc")# show conserved energy of environment
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($12 != "") print $3, " ", $12}' >${TEMPDIR}tmp2
+    ;;
+"-qt")# show temperature in kelvin of the environment
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($10 != "") print $3, " ", $10}' >${TEMPDIR}tmp2
+    ;;
+"-tqt")# show temperature in kelvin of the environment
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($10 != "") print $3, " ", $4, " " ,$10}' >${TEMPDIR}tmp2
+    ;;
+"-cqc")# show temperature in kelvin of the environment
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($10 != "") print $3, " ", $7, " " ,$12}' >${TEMPDIR}tmp2
+    ;;
 *)
     echo ${USAGE} ; exit
     ;;
@@ -65,8 +86,16 @@ esac
 if (( $# == 3 )) ;then
   cp ${TEMPDIR}tmp2 $3
 else
-  xmgrace ${TEMPDIR}tmp2
-  rm ${TEMPDIR}tmp2
+    if (( $2 == -tqt)); then
+	    xmgrace -nxy ${TEMPDIR}tmp2
+    else
+	if (( $2 == -cqc)); then 
+	    xmgrace -nxy ${TEMPDIR}tmp2
+        else
+	    xmgrace ${TEMPDIR}tmp2
+	fi
+    fi
+    rm ${TEMPDIR}tmp2
 fi
 exit
 

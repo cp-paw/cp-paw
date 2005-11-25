@@ -29,7 +29,7 @@
 !     ********************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NX
-      REAL(8)   ,INTENT(out):: X0
+      REAL(8)   ,INTENT(OUT):: X0
       REAL(8)   ,INTENT(OUT):: COEFF(NX)
       REAL(8)   ,INTENT(IN) :: X(NX)
       REAL(8)   ,INTENT(IN) :: Y(NX)
@@ -132,17 +132,17 @@
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: N1
       REAL(8)   ,INTENT(IN)    :: X1
-      REAL(8)   ,INTENT(IN)    :: c1(n1)
+      REAL(8)   ,INTENT(IN)    :: C1(N1)
       INTEGER(4),INTENT(IN)    :: N2
       REAL(8)   ,INTENT(IN)    :: X2
-      REAL(8)   ,INTENT(IN)    :: c2(n2)
+      REAL(8)   ,INTENT(IN)    :: C2(N2)
       INTEGER(4),INTENT(IN)    :: N3
-      REAL(8)   ,INTENT(in)    :: X3
-      REAL(8)   ,INTENT(out)   :: c3(n3)
-      REAL(8)                  :: x1s,C1s(N1)
-      REAL(8)                  :: x2s,C2s(N2)
-      REAL(8)                  :: sum
-      INTEGER(4)               :: I,J,j1,j2
+      REAL(8)   ,INTENT(IN)    :: X3
+      REAL(8)   ,INTENT(OUT)   :: C3(N3)
+      REAL(8)                  :: X1S,C1S(N1)
+      REAL(8)                  :: X2S,C2S(N2)
+      REAL(8)                  :: SUM
+      INTEGER(4)               :: I,J,J1,J2
 !     ********************************************************************
       X1S=X1
       C1S(:)=C1(:)
@@ -165,7 +165,7 @@
 !     ....................................................................
       SUBROUTINE POLYNOM$VALUE(NX,X0,COEFF,X,Y)
 !     **                                                                **
-!     **  EVALUATES THE VALUE y oF THE POLYNOMIAL AT POINT X            **
+!     **  EVALUATES THE VALUE Y OF THE POLYNOMIAL AT POINT X            **
 !     **                                                                **
 !     ********************************************************************
       IMPLICIT NONE

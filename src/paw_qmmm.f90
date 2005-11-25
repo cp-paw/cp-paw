@@ -16,14 +16,14 @@ MODULE QMMM_MODULE
 !**                                                                   **
 !**  METHODS:                                                         **
 !**    QMMM$INTERFACE                                                 **
-!**    QMMM$scaleforce(nat,qforce)                                    **
+!**    QMMM$SCALEFORCE(NAT,QFORCE)                                    **
 !**    QMMM$PROPAGATE                                                 **
 !**    QMMM$SWITCH                                                    **
 !**                                                                   **
 !**  USES:                                                            **
 !**    CLASSICAL                                                      **
 !**                                                                   **
-!**  remarks:                                                         **
+!**  REMARKS:                                                         **
 !**  THE ENERGIES FROM THIS MODULE ARE ACCESSED VIA                   **
 !**      QMMM$GETR8('EPOT',VAL)                                       **
 !**      QMMM$GETR8('EKIN',VAL)                                       **
@@ -31,7 +31,12 @@ MODULE QMMM_MODULE
 !**  THE ENERGYLIST IS NOT USED IN THIS OBJECT                        **
 !**                                                                   **
 !***********************************************************************
+
 TYPE LINK_TYPE
+! LINK DESCRIBES A BOND ACROSS THE QM-MM BOUNDARY. Q/M/SJOINT ARE THE 
+! ATOM INDICES FOR THE COMMON ATOM OF ALL THREE SUBSYSTEMS.
+! Q/S ATOM REFERS TO THE DUMMY ATOM IN THE BOND AND M ATOM IS THE 
+! ATOM INDEX OF THE MM-SYSTEM CONNECTED TO THE QM-SYSTEM.
   INTEGER(4)  :: QJOINT
   INTEGER(4)  :: MJOINT
   INTEGER(4)  :: SJOINT
@@ -42,6 +47,11 @@ TYPE LINK_TYPE
   REAL(8)     :: MCHARGE
 END TYPE LINK_TYPE
 TYPE MAP_TYPE
+! MAP PROVIDES THE INDICES FOR THE ATOMS COMMON TOP ALL THREE SUBSYSTEMS.
+! THE ATOM HAS THE INDEX QATOM IN THE QM-SYSTEM, THE INDEX SATOM IN THE 
+! SHADOW AND THE INDEX MATOM IN THE MM SYSTEM. MAP HAS ENTRIES ALSO TO 
+! BOTH PARTNERS OF A BOND CROSSING THE QM-MM BOUNDARY. (IT INCLUDES ALSO 
+! THE DUMMY HYDROGEN IN THE BOND.
   INTEGER(4)  :: QATOM
   INTEGER(4)  :: MATOM
   INTEGER(4)  :: SATOM
@@ -128,7 +138,7 @@ END MODULE QMMM_MODULE
       CALL THERMOSTAT$SELECT('QM-MM')
       CALL THERMOSTAT$GETL4('ON',TCHK)
       IF(TCHK) THEN
-        CALL THERMOSTAT$SCALEGFREE(REAL(NATM-NATS,KIND=8))
+        CALL THERMOSTAT$SCALEGFREE(REAL(3*(NATM-NATS),KIND=8))
       END IF
                          CALL TRACE$POP
       RETURN
@@ -204,7 +214,7 @@ END MODULE QMMM_MODULE
       ELSE 
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('QMMM$SETI4')
+        CALL ERROR$STOP('QMMM$gETI4')
       END IF
       RETURN
       END
@@ -330,7 +340,7 @@ END MODULE QMMM_MODULE
       INTEGER(4)             :: NTASKS,THISTASK
 !     *****************************************************************
       IF(.NOT.TON) RETURN
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
                               CALL TRACE$PUSH('QMMM$REPORT')
       IF(THISTASK.EQ.1) THEN
         CALL CONSTANTS('KB',KELVIN)
@@ -1187,15 +1197,15 @@ ENDDO
       REAL(8)               ,ALLOCATABLE:: R0(:,:)
       REAL(8)               ,ALLOCATABLE:: RM(:,:)
       REAL(8)               ,ALLOCATABLE:: QEL(:)
-      INTEGER(4)                        :: NTASKS,ITASK
+      INTEGER(4)                        :: NTASKS,THISTASK
 !     ******************************************************************
       IF(.NOT.TON) RETURN
-      CALL WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
 !
 !     == WRITE SHADOW ======
-      CALL MPE$QUERY(NTASKS,ITASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL CLASSICAL$SELECT('SHADOW')
-      IF(ITASK.EQ.1) THEN
+      IF(THISTASK.EQ.1) THEN
+        CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
         CALL CLASSICAL$GETI4('NAT',NAT)
         ALLOCATE(R0(3,NAT))
         ALLOCATE(RM(3,NAT))
@@ -1216,7 +1226,7 @@ ENDDO
 !
 !     == WRITE QMMM ======
       CALL CLASSICAL$SELECT('QMMM')
-      IF(ITASK.EQ.1) THEN
+      IF(THISTASK.EQ.1) THEN
         CALL CLASSICAL$GETI4('NAT',NAT)
         ALLOCATE(R0(3,NAT))
         ALLOCATE(RM(3,NAT))
@@ -1251,19 +1261,20 @@ ENDDO
       TYPE (SEPARATOR_TYPE),PARAMETER  :: MYSEPARATOR &
                  =SEPARATOR_TYPE(8,'QM-MM','NONE','AUG1996','NONE')
       TYPE (SEPARATOR_TYPE)            :: SEPARATOR
-      INTEGER(4)                       :: NTASKS,ITASK
+      INTEGER(4)                       :: NTASKS,THISTASK
       INTEGER(4)                       :: NAT
       INTEGER(4)                       :: I
       REAL(8)              ,ALLOCATABLE:: R0(:,:)
       REAL(8)              ,ALLOCATABLE:: RM(:,:)
       REAL(8)              ,ALLOCATABLE:: QEL(:)
 !     ******************************************************************
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK=TON
       SEPARATOR=MYSEPARATOR
-      CALL READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      CALL MPE$BROADCAST('MONOMER',1,TCHK)
       IF(.NOT.TCHK) RETURN
 
-      CALL MPE$QUERY(NTASKS,ITASK)
       IF(SEPARATOR%VERSION.NE.MYSEPARATOR%VERSION) THEN
         CALL ERROR$MSG('VERSION NOT CONSISTENT')
         CALL ERROR$STOP('QMMM$READ')
@@ -1275,7 +1286,7 @@ ENDDO
       ALLOCATE(R0(3,NATS))
       ALLOCATE(RM(3,NATS))
       ALLOCATE(QEL(NATS))
-      IF(ITASK.EQ.1) THEN
+      IF(THISTASK.EQ.1) THEN
         READ(NFIL)NAT
         IF(NAT.NE.NATS) THEN
           CALL ERROR$MSG('#(SHADOW ATOMS NOT CONSISTENT')
@@ -1287,9 +1298,9 @@ ENDDO
         READ(NFIL)RM(:,:)
         READ(NFIL)QEL(:)
       END IF
-      CALL MPE$BROADCAST(1,R0)
-      CALL MPE$BROADCAST(1,RM)
-      CALL MPE$BROADCAST(1,QEL)
+      CALL MPE$BROADCAST('MONOMER',1,R0)
+      CALL MPE$BROADCAST('MONOMER',1,RM)
+      CALL MPE$BROADCAST('MONOMER',1,QEL)
       CALL CLASSICAL$SETR8A('R(0)',3*NATS,R0)
       CALL CLASSICAL$SETR8A('R(-)',3*NATS,RM)
       CALL CLASSICAL$SETR8A('QEL',NATS,QEL)
@@ -1302,7 +1313,7 @@ ENDDO
       ALLOCATE(R0(3,NATM))
       ALLOCATE(RM(3,NATM))
       ALLOCATE(QEL(NATM))
-      IF(ITASK.EQ.1) THEN
+      IF(THISTASK.EQ.1) THEN
         READ(NFIL)NAT
         IF(NAT.NE.NATM) THEN
           CALL ERROR$MSG('#(QM-MM ATOMS NOT CONSISTENT')
@@ -1314,9 +1325,9 @@ ENDDO
         READ(NFIL)RM(:,:)
         READ(NFIL)QEL(:)   !CHARGE WILL NOT BE USED
       END IF
-      CALL MPE$BROADCAST(1,R0)
-      CALL MPE$BROADCAST(1,RM)
-!     CALL MPE$BROADCAST(1,QEL)
+      CALL MPE$BROADCAST('MONOMER',1,R0)
+      CALL MPE$BROADCAST('MONOMER',1,RM)
+!     CALL MPE$BROADCAST('MONOMER',1,QEL)
       CALL CLASSICAL$SETR8A('R(0)',3*NATM,R0)
       CALL CLASSICAL$SETR8A('R(-)',3*NATM,RM)
 !     CALL CLASSICAL$SETR8A('QEL',NATM,QEL)

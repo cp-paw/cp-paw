@@ -49,7 +49,7 @@
       USE POTENTIAL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      LOGICAL(4)  ,INTENT(in) :: VAL
+      LOGICAL(4)  ,INTENT(IN) :: VAL
 !     ******************************************************************
       IF(ID.EQ.'STRESS') THEN
         TSTRESS=VAL
@@ -182,7 +182,7 @@
 !     ==  INITIALIZE PLANEWAVE OBJECT                               ==
 !     ================================================================
       CALL CELL$GETR8A('TREF',9,RBAS)
-      CALL PLANEWAVE$INITIALIZE('DENSITY',RBAS,K,.TRUE.,EPWRHO &
+      CALL PLANEWAVE$INITIALIZE('DENSITY','MONOMER',RBAS,K,.TRUE.,EPWRHO &
      &                         ,NR1START,NR1L,NR2,NR3)
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL PLANEWAVE$SETL4('SUPER',.TRUE.)
@@ -508,7 +508,7 @@ END IF
       REAL(8)   ,ALLOCATABLE  :: RHELP(:)
       LOGICAL(4)              :: TBACK
       INTEGER(4)              :: NGAMMA
-      LOGICAL(4)              :: toptic
+      LOGICAL(4)              :: TOPTIC
 !     ******************************************************************
 !      CALL OPTICS$GETL4('ON',TOPTIC)
       CALL PLANEWAVE$SELECT('DENSITY')
@@ -521,28 +521,33 @@ END IF
       LRXX=INT(SQRT(REAL(LMRXX-1)+1.E-5))
 !
 !     ==================================================================
-!     == hand pseudo density of valence electrons to optics code      ==
+!     == HAND PSEUDO DENSITY OF VALENCE ELECTRONS TO OPTICS CODE      ==
 !     ==================================================================
-!      if(toptic)CALL OPTICS$VXCG_VALENCE(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3 &
+!      IF(TOPTIC)CALL OPTICS$VXCG_VALENCE(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3 &
 !     &                        ,NR1,NR2,NR3,NGL,CELLVOL,RHOE)
 !
 !     ==================================================================
 !     == TRANSFORM PSEUDO DENSITY INTO FOURIER SPACE                  ==
 !     ==================================================================
 !CALL PLANEWAVE$GETI4('NGAMMA',NGAMMA)
-!svar=0.d0
-!do ir=1,nrl
-!  svar=svar+rhoe(ir,1)
-!enddo
-!svar=svar*cellvol/real(nrl,kind=8)
-!print*,'charge before transform ',svar
-!print*,'nspin,ngl,nrl,cellvol,ngamma ',nspin,ngl,nrl,cellvol,ngamma
+!PRINT*,'NSPIN,NGL,NRL,CELLVOL,NGAMMA ',NSPIN,NGL,NRL,CELLVOL,NGAMMA
+!SVAR=0.D0
+!DO IR=1,NRL
+!  SVAR=SVAR+RHOE(IR,1)
+!ENDDO
+!SVAR=SVAR !*CELLVOL
+!CALL MPE$COMBINE('MONOMER','+',SVAR)
+!ngamma=nrl
+!CALL MPE$COMBINE('MONOMER','+',ngamma)
+!svar=svar/real(ngamma,kind=8)
+!PRINT*,'CHARGE BEFORE TRANSFORM ',SVAR
 
       ALLOCATE(RHOG(NGL,NSPIN))
       CALL PLANEWAVE$SUPFFT('RTOG',NSPIN,NGL,RHOG,NRL,RHOE)
 
-!print*,'rhog(1) a ',rhog(ngamma,1)*cellvol
-!stop
+!CALL PLANEWAVE$GETI4('NGAMMA',NGAMMA)
+!if(ngamma.ne.0)PRINT*,'RHOG(1) A ',RHOG(NGAMMA,1) !*CELLVOL
+!STOP
 !
 !     ==================================================================
 !     ==  ADD PSEUDO CORE DENSITY                                     ==
@@ -550,9 +555,9 @@ END IF
       CALL POTENTIAL_ADDCORE(NGL,NSP,NAT,ISPECIES,TAU0,PSCORG,RHOG(1,1))
 !
 !     ==================================================================
-!     == hand total pseudo density to optics code                     ==
+!     == HAND TOTAL PSEUDO DENSITY TO OPTICS CODE                     ==
 !     ==================================================================
-!      if(toptic)CALL OPTICS$VXCG_CORE(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3 &
+!      IF(TOPTIC)CALL OPTICS$VXCG_CORE(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3 &
 !     &                     ,NR1,NR2,NR3,NGL,CELLVOL,RHOG)
 !
 !     ==================================================================
@@ -612,7 +617,7 @@ END IF
      &            ,RHOG(1,1),VHARTREE,QLM,VQLM1,TAU0,FORCE1,EHARTREE &
      &            ,CELLVOL,G2,GVEC,YLMOFG,VBARG,DVBARG,G0,V0,RHOBT &
      &            ,TSTRESS,DG0,DV0,STRESS1)
-      CALL MPE$COMBINE('+',RHOBT)
+      CALL MPE$COMBINE('MONOMER','+',RHOBT)
       FIONT(:,:)=FIONT(:,:)+FORCE1(:,:)
       VQLMT(:,:)=VQLMT(:,:)+VQLM1(:,:)
       STRESST(:,:)=STRESST(:,:)+STRESS1(:,:)
@@ -635,10 +640,10 @@ END IF
       VQLM(:,:)=VQLM(:,:)+VQLM1(:,:)
       STRESS(:,:)=STRESS(:,:)+STRESS1(:,:)
                                 CALL TIMING$CLOCKOFF('VOFRHO: PAIRP')
-PRINT*,'PAIRP. ENERGY ',EPAIR
-WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(1,:)
-WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(2,:)
-WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(3,:)
+!PRINT*,'PAIRP. ENERGY ',EPAIR
+!WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(1,:)
+!WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(2,:)
+!WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(3,:)
 !
 !     ==================================================================
 !     ==  ISOLATE CHARGE DENSITY FROM PERIODIC IMAGES                 ==
@@ -698,9 +703,11 @@ WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(3,:)
       CALL POTENTIAL_XC(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3,CELLVOL &
      &                 ,RHOE,GRHO,EXC,TSTRESS,STRESS1)
       STRESST(:,:)=STRESST(:,:)+STRESS1(:,:)
-WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(1,:)
-WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(2,:)
-WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(3,:)
+if(tstress) then
+  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(1,:)
+  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(2,:)
+  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(3,:)
+end if
                            CALL TIMING$CLOCKOFF('VOFRHO: XC-POTENTIAL')
 !
 !     ==================================================================
@@ -727,7 +734,7 @@ WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(3,:)
 !     ==================================================================
 !     == SEND POTENTIAL TO OPTICS CODE                                ==
 !     ==================================================================
-!     if(toptic)CALL OPTICS$VXCG(NR1,NR2,NR3,NGL,RHOG,NSPIN)
+!     IF(TOPTIC)CALL OPTICS$VXCG(NR1,NR2,NR3,NGL,RHOG,NSPIN)
 !
 !     ==================================================================
 !     == ADD HARTREE POTENTIAL TO EXCHANGE POTENTIAL                  ==
@@ -745,25 +752,25 @@ WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(3,:)
      &              ,NGL,G2,GVEC,RHOG(1,1),PSCORG,DPSCORG)
       FIONT=FIONT+FORCE1
       STRESST=STRESST+STRESS1
-WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(1,:)
-WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(2,:)
-WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
+!WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(1,:)
+!WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(2,:)
+!WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
       CALL TIMING$CLOCKOFF('VOFRHO: FORCE ON PS-CORE')
 !
 !     ==================================================================
 !     == SEND POTENTIAL TO OPTICS CODE                                ==
 !     ==================================================================
-!     if(toptic)CALL OPTICS$VOFG(NR1,NR2,NR3,NGL,RHOG,NSPIN)
+!     IF(TOPTIC)CALL OPTICS$VOFG(NR1,NR2,NR3,NGL,RHOG,NSPIN)
 !
 !     ==================================================================
 !     ==  COMBINE ARRAYS FOR PARALELL PROCESSING                      ==
 !     ==================================================================
 !     ++ PARALLEL START ++++++++++++++++++++++++++++++++++++++++++++++++
-      CALL MPE$COMBINE('+',EHARTREE)
-      CALL MPE$COMBINE('+',FIONT)
-      CALL MPE$COMBINE('+',VQLMT)
-      CALL MPE$COMBINE('+',STRESST)
-      CALL MPE$COMBINE('+',EXC)
+      CALL MPE$COMBINE('MONOMER','+',EHARTREE)
+      CALL MPE$COMBINE('MONOMER','+',FIONT)
+      CALL MPE$COMBINE('MONOMER','+',VQLMT)
+      CALL MPE$COMBINE('MONOMER','+',STRESST)
+      CALL MPE$COMBINE('MONOMER','+',EXC)
 !     ++ PARALLEL END ++++++++++++++++++++++++++++++++++++++++++++++++++
       STRESS(:,:)=STRESS(:,:)+STRESST(:,:)
       DO IAT=1,NAT
@@ -886,7 +893,7 @@ WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
             FORCE1(I)=FORCE1(I)+SVAR*GVEC(I,IG)
           ENDDO
 !         == STRESSES =================================================
-          SVAR1=-REAL(CONJG(VTEMP(IG))*DPSCORG(IG,ISP)*EIGR(IG),kind=8)/(G2(IG)+TINY)
+          SVAR1=-REAL(CONJG(VTEMP(IG))*DPSCORG(IG,ISP)*EIGR(IG),KIND=8)/(G2(IG)+TINY)
           DO I=1,3
             DO J=1,3
               STRESS1(I,J)=STRESS1(I,J)+GVEC(I,IG)*GVEC(J,IG)*SVAR1
@@ -1056,7 +1063,7 @@ WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
       REAL(8)   ,INTENT(IN)   :: DV0(NGL,NSP)
       REAL(8)   ,INTENT(OUT)  :: STRESS(3,3)
       COMPLEX(8),ALLOCATABLE  :: EIGR(:)         !(NGL)
-      COMPLEX(8),ALLOCATABLE  :: RHO2(:)         !(NGL) psrho+compensation
+      COMPLEX(8),ALLOCATABLE  :: RHO2(:)         !(NGL) PSRHO+COMPENSATION
       COMPLEX(8),ALLOCATABLE  :: VG(:)           !(NGL)
       COMPLEX(8)              :: CFAC(LMRXX)
       INTEGER(4)              :: NGAMMA  
@@ -1121,7 +1128,8 @@ WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
 !     ==  ADD BACKGROUND                                              ==
 !     ==================================================================
       IF(NGAMMA.NE.0) THEN
-        RHOB=-REAL(RHO2(NGAMMA),kind=8)
+        RHOB=-REAL(RHO2(NGAMMA),KIND=8)
+PRINT*,'gweight',GWEIGHT,'rhob',rhob
 PRINT*,'RHOB  FROM VOFRHO_HARTREE',RHOB*GWEIGHT
 PRINT*,'Q(RHO) FROM VOFRHO_HARTREE',RHO(NGAMMA)*GWEIGHT
 PRINT*,'Q(RHO2) FROM VOFRHO_HARTREE',RHO2(NGAMMA)*GWEIGHT
@@ -1147,10 +1155,10 @@ CSVAR=CSVAR+0.5D0*CONJG(RHO2(IG))*VG(IG)
           POT(IG)=POT(IG)+VG(IG)
         END IF
       ENDDO
-      EHARTREE=REAL(CSUM,kind=8)
-PRINT*,'PURE HARTREE ENERGY ',REAL(CSVAR,kind=8)*2.D0*GWEIGHT
-PRINT*,'RHO*POT ',REAL(CSUM-CSVAR,kind=8)*2.D0*GWEIGHT
-PRINT*,'STRESS PREDICTED ',-REAL(CSVAR,kind=8)*2.D0*GWEIGHT/3.D0-REAL(CSUM-CSVAR,kind=8)*2.D0*GWEIGHT
+      EHARTREE=REAL(CSUM,KIND=8)
+PRINT*,'PURE HARTREE ENERGY ',REAL(CSVAR,KIND=8)*2.D0*GWEIGHT
+PRINT*,'RHO*POT ',REAL(CSUM-CSVAR,KIND=8)*2.D0*GWEIGHT
+PRINT*,'STRESS PREDICTED ',-REAL(CSVAR,KIND=8)*2.D0*GWEIGHT/3.D0-REAL(CSUM-CSVAR,KIND=8)*2.D0*GWEIGHT
 !
 !     == NOW TAKE CARE OF STRESSES =====================================
 !     == INTEGRATION WEIGHT IS DONE LATER ==============================
@@ -1172,9 +1180,9 @@ PRINT*,'STRESS PREDICTED ',-REAL(CSVAR,kind=8)*2.D0*GWEIGHT/3.D0-REAL(CSUM-CSVAR
         ENDDO
       ENDIF
 
-WRITE(*,FMT='("MAXWELL STRESS ",3F15.7)')STRESS(1,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL STRESS ",3F15.7)')STRESS(2,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL STRESS ",3F15.7)')STRESS(3,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL STRESS ",3F15.7)')STRESS(1,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL STRESS ",3F15.7)')STRESS(2,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL STRESS ",3F15.7)')STRESS(3,:)*2.D0*GWEIGHT
 STRESSA=0.D0
 STRESSB=0.D0
 STRESSC=0.D0
@@ -1227,7 +1235,7 @@ STRESSC=0.D0
           IF(IG.EQ.NGAMMA) THEN
             CSVAR0=(G0(IG,ISP)*CONJG(VG(IG))+V0(IG,ISP)*CONJG(RHO2(IG)))
             CSVAR=CSVAR0*CFAC(1)*YLMOFG(1,IG)*EIGR(IG)
-            VQLM(1,IAT)=VQLM(1,IAT)-0.5D0*REAL(CSVAR,kind=8)
+            VQLM(1,IAT)=VQLM(1,IAT)-0.5D0*REAL(CSVAR,KIND=8)
           END IF
 !         == MULTIPOLE POTENTIALS ======================================
           AVAL=( G0(IG,ISP)*CONJG(VG(IG)) + V0(IG,ISP)*CONJG(RHO2(IG)) )
@@ -1235,7 +1243,7 @@ STRESSC=0.D0
           CSUM=0.D0
           DO LM=1,LMRX(ISP)
             CSVAR=CFAC(LM)*YLMOFG(LM,IG)
-            VQLM(LM,IAT)=VQLM(LM,IAT)+REAL(CSVAR*AVAL,kind=8)
+            VQLM(LM,IAT)=VQLM(LM,IAT)+REAL(CSVAR*AVAL,KIND=8)
             CSUM=CSUM   + QLM(LM,IAT)*CSVAR
           ENDDO
 !         == FORCES ====================================================
@@ -1252,30 +1260,30 @@ STRESSC=0.D0
             BVAL=DG0(IG,ISP)*CONJG(VG(IG))+DV0(IG,ISP)*CONJG(RHO2(IG)) 
             BVAL=BVAL*EIGR(IG)
             DVAL=DVBARG(IG,ISP)*Y0*EIGR(IG)*CONJG(RHO2(IG))
-            SVAR=REAL(DVAL+BVAL*CSUM,kind=8)/(G2(IG)+TINY)
+            SVAR=REAL(DVAL+BVAL*CSUM,KIND=8)/(G2(IG)+TINY)
             DO I=1,3
               DO J=1,3
-                STRESS(I,J)=STRESS(I,J)- REAL(PT(I,J)*AVAL,kind=8) &
+                STRESS(I,J)=STRESS(I,J)- REAL(PT(I,J)*AVAL,KIND=8) &
      &                                 - GVEC(I,IG)*GVEC(J,IG)*SVAR
 !
-                STRESSA(I,J)=STRESSA(I,J)- REAL(PT(I,J)*AVAL,kind=8) 
-                STRESSB(I,J)=STRESSB(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(DVAL,kind=8)/(G2(IG)+TINY)
-                STRESSC(I,J)=STRESSC(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(BVAL*CSUM,kind=8)/(G2(IG)+TINY)
+                STRESSA(I,J)=STRESSA(I,J)- REAL(PT(I,J)*AVAL,KIND=8) 
+                STRESSB(I,J)=STRESSB(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(DVAL,KIND=8)/(G2(IG)+TINY)
+                STRESSC(I,J)=STRESSC(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(BVAL*CSUM,KIND=8)/(G2(IG)+TINY)
               ENDDO
             ENDDO
             PT(:,:)=0.D0  ! RESET FOR NEXT G-VECTOR
           END IF
         ENDDO
       ENDDO
-WRITE(*,FMT='("MAXWELL++  STRESS ",3F15.7)')STRESSA(1,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL++  STRESS ",3F15.7)')STRESSA(2,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL++  STRESS ",3F15.7)')STRESSA(3,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSB(1,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSB(2,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSB(3,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSC(1,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSC(2,:)*2.D0*GWEIGHT
-WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSC(3,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL++  STRESS ",3F15.7)')STRESSA(1,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL++  STRESS ",3F15.7)')STRESSA(2,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL++  STRESS ",3F15.7)')STRESSA(3,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSB(1,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSB(2,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSB(3,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSC(1,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSC(2,:)*2.D0*GWEIGHT
+!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSC(3,:)*2.D0*GWEIGHT
 !
 !     ==================================================================
 !     ==  MULTIPLY WITH INTEGRATION WEIGHT                            ==

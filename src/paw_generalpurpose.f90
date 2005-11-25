@@ -231,7 +231,7 @@
 !     ==================================================================
 !     ==  CALCULATE RBASIN, THE INVERSE OF RBAS                       ==
 !     ==================================================================
-      call lib$invertr8(3,rbas,rbasin)
+      CALL LIB$INVERTR8(3,RBAS,RBASIN)
 !      DO I=1,3
 !        DO J=1,3
 !          RBASIN(I,J)=RBAS(I,J)
@@ -328,8 +328,8 @@
        REAL(8)                 :: X1,Y1,Z1
        REAL(8)                 :: X2,Y2,Z2
        REAL(8)                 :: DX,DY,DZ
-       REAL(8)                 :: Xm,Ym,Zm
-       INTEGER(4)              :: I,J,K,IAT,iter
+       REAL(8)                 :: XM,YM,ZM
+       INTEGER(4)              :: I,J,K,IAT,ITER
        REAL(8)   ,PARAMETER    :: TOL=1.D-6
        INTEGER(4),PARAMETER    :: ITERX=10000
 !      *****************************************************************
@@ -476,17 +476,17 @@
 !      **                                                             **
 !      ** ROTATION MATRIX FROM EULER ANGLES (SEE GOLDSTEIN)           **
 !      **                                                             **
-       IMPLICIT none
-       real(8)   ,intent(in) :: phi
-       real(8)   ,intent(in) :: theta
-       real(8)   ,intent(in) :: psi
-       real(8)   ,intent(out):: R(3,3)
-       real(8)               :: c1,s1
-       real(8)               :: c2,s2
-       real(8)               :: c3,s3
-       integer(4)            :: i,j,k
-       real(8)               :: svar
-       LOGICAL(4),parameter  :: TTEST=.false.
+       IMPLICIT NONE
+       REAL(8)   ,INTENT(IN) :: PHI
+       REAL(8)   ,INTENT(IN) :: THETA
+       REAL(8)   ,INTENT(IN) :: PSI
+       REAL(8)   ,INTENT(OUT):: R(3,3)
+       REAL(8)               :: C1,S1
+       REAL(8)               :: C2,S2
+       REAL(8)               :: C3,S3
+       INTEGER(4)            :: I,J,K
+       REAL(8)               :: SVAR
+       LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
 !      ******************************************************************
        C1=COS(PHI)
        S1=SIN(PHI)
@@ -507,7 +507,7 @@
 !      =================================================================
 !      == TEST
 !      =================================================================
-       if(ttest) then
+       IF(TTEST) THEN
          DO I=1,3
            DO J=1,3
              SVAR=0.D0
@@ -520,7 +520,7 @@
              END IF
            ENDDO
          ENDDO
-       end if
+       END IF
        RETURN
        END
 !
@@ -532,16 +532,16 @@
 !      **  THE ROTATION IS COUNTER CLOCKWISE                          **
 !      **  THE TRANSFORMED VECTOR IS XPRIME=R*X                       **
 !      **                                                             **
-       IMPLICIT none
+       IMPLICIT NONE
        REAL(8)   ,INTENT(IN)  :: PHI(3)
        REAL(8)   ,INTENT(OUT) :: R(3,3)
        REAL(8)   ,PARAMETER   :: TOL=1.D-6
-       real(8)                :: R1(3,3)
-       real(8)                :: R2(3,3)
-       real(8)                :: absphi
-       real(8)                :: cosphi,sinphi
-       real(8)                :: svar
-       integer(4)             :: i,j,k
+       REAL(8)                :: R1(3,3)
+       REAL(8)                :: R2(3,3)
+       REAL(8)                :: ABSPHI
+       REAL(8)                :: COSPHI,SINPHI
+       REAL(8)                :: SVAR
+       INTEGER(4)             :: I,J,K
 !      *****************************************************************
        ABSPHI=DSQRT(PHI(1)**2+PHI(2)**2+PHI(3)**2)
 !
@@ -639,27 +639,27 @@
 !     **   INITIALIZE BEFORE CALL WITH ISTART=1:                      **
 !     **   ISTART,X0,DX                                               **
 !     **                                                              **
-!     **   x0=                                                        **
-!     **   dx=1.d0                                                    **
-!     **   call bisec(1,ibi,x0,y0,dx,xm,ym)                           **
-!     **   do i=1,max                                                 **
-!     **     calculate y0 for value x0                                **
-!     **     call bisec(0,ibi,x0,y0,dx,xm,ym)                         **
-!     **     if(abs(y0).lt.tol) exit                                  **
-!     **   enddo                                                      **
+!     **   X0=                                                        **
+!     **   DX=1.D0                                                    **
+!     **   CALL BISEC(1,IBI,X0,Y0,DX,XM,YM)                           **
+!     **   DO I=1,MAX                                                 **
+!     **     CALCULATE Y0 FOR VALUE X0                                **
+!     **     CALL BISEC(0,IBI,X0,Y0,DX,XM,YM)                         **
+!     **     IF(ABS(Y0).LT.TOL) EXIT                                  **
+!     **   ENDDO                                                      **
 !     **                                                              **
 !     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
 !     ******************************************************************
-      IMPLICIT none
-      integer(4),intent(inout) :: istart  !=1 BEFORE ITERATION/ =0 otherwise
-      integer(4),intent(inout) :: ibi     ! switch between expansion and contraction 
-      real(8)   ,intent(inout) :: x0      ! current argument
-      real(8)   ,intent(in)    :: y0      ! function value at x0
-      real(8)   ,intent(inout) :: dx      ! step width
-      real(8)   ,intent(inout) :: ym      ! function value at xm
-      real(8)   ,intent(inout) :: xm      ! previous argument
-      real(8)                  :: slope
-      real(8)                  :: xp
+      IMPLICIT NONE
+      INTEGER(4),INTENT(INOUT) :: ISTART  !=1 BEFORE ITERATION/ =0 OTHERWISE
+      INTEGER(4),INTENT(INOUT) :: IBI     ! SWITCH BETWEEN EXPANSION AND CONTRACTION 
+      REAL(8)   ,INTENT(INOUT) :: X0      ! CURRENT ARGUMENT
+      REAL(8)   ,INTENT(IN)    :: Y0      ! FUNCTION VALUE AT X0
+      REAL(8)   ,INTENT(INOUT) :: DX      ! STEP WIDTH
+      REAL(8)   ,INTENT(INOUT) :: YM      ! FUNCTION VALUE AT XM
+      REAL(8)   ,INTENT(INOUT) :: XM      ! PREVIOUS ARGUMENT
+      REAL(8)                  :: SLOPE
+      REAL(8)                  :: XP
 !     ******************************************************************
 !
 !     ==   STARTUP
@@ -1270,7 +1270,7 @@ END MODULE SORT_MODULE
 !     **       BOXSPH                                                 **
 !     **                                                              **
 !     ******************************************************************
-      USE MPE_MODULE
+!     USE MPE_MODULE
       IMPLICIT NONE
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       REAL(8),   PARAMETER  :: TOL=1.D-8
@@ -1286,10 +1286,9 @@ END MODULE SORT_MODULE
       COMPLEX(8)            :: EIGR12
       COMPLEX(8)            :: EIGR1
       REAL(8)               :: PI,FOURPI,ROOT2
-      INTEGER(4)            :: NTASKNUM,ITASK
       REAL(8)               :: VOL
       REAL(8)               :: RC,X,Y,C1,C2,SVAR,FAC,GFAC
-      INTEGER(4)            :: K,I,IR,IR1,IR2,ICOUNT
+      INTEGER(4)            :: K,I,IR,IR1,IR2
       REAL(8)               :: GMAX,RMAX
       INTEGER(4)            :: IG1MIN,IG1MAX
       INTEGER(4)            :: IG2MIN,IG2MAX
@@ -1308,6 +1307,7 @@ END MODULE SORT_MODULE
       REAL(8)               :: RFAC1,RFAC2,DV,QTOT
       REAL(8)               :: GR,G2MAX
       REAL(8)               :: ERFCX
+!     INTEGER(4)            :: NTASKNUM,ITASK,ICOUNT
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FOURPI=4.D0*PI
@@ -1316,7 +1316,7 @@ END MODULE SORT_MODULE
 !     ==================================================================
 !     == CHECKS FOR PARALLEIZATION                                    ==
 !     ==================================================================
-      CALL MPE$QUERY(NTASKNUM,ITASK)
+!     CALL MPE$QUERY('NONE',NTASKNUM,ITASK)
 !
 !     ==================================================================
 !     == CALCULATE RECIPROCAL TRANSLATION VECTORS                     ==
@@ -1390,7 +1390,7 @@ END MODULE SORT_MODULE
       CALL BOXSPH(GBAS,0.D0,0.D0,0.D0,GMAX &
      &           ,IG1MIN,IG1MAX,IG2MIN,IG2MAX,IG3MIN,IG3MAX)
       G2MAX=GMAX**2
-      ICOUNT=0
+!     ICOUNT=0
       DO IG1=IG1MIN,IG1MAX
         T1=DBLE(IG1)
 !       IF(IG1.EQ.0) THEN
@@ -1406,44 +1406,41 @@ END MODULE SORT_MODULE
 !           IG3MIN=-IG3MAX
 !         END IF  
           DO IG3=IG3MIN,IG3MAX
-            ICOUNT=ICOUNT+1
+!           ICOUNT=ICOUNT+1
 !           __ SELECTION FOR PARALLEL PROCESSING________________________
-            IF(MOD(ICOUNT-1,NTASKNUM).EQ.ITASK-1) THEN
+!           IF(MOD(ICOUNT-1,NTASKNUM).ne.ITASK-1) cycle
 !
-              T3=DBLE(IG3)
-              G1=GBAS(1,1)*T1+GBAS(1,2)*T2+GBAS(1,3)*T3  
-              G2=GBAS(2,1)*T1+GBAS(2,2)*T2+GBAS(2,3)*T3  
-              G3=GBAS(3,1)*T1+GBAS(3,2)*T2+GBAS(3,3)*T3  
-              GSQUARE=G1*G1+G2*G2+G3*G3
-              IF(GSQUARE.LE.G2MAX.AND.GSQUARE.GT.1.D-7) THEN 
-                FAC=2.D0*FOURPI/VOL*0.5D0
-                SVAR=-0.5D0*GSQUARE*RC**2
-                GFAC=FAC*DEXP(SVAR)/GSQUARE
-                DO IR=1,NBAS
-                  GR=G1*BAS(1,IR)+G2*BAS(2,IR)+G3*BAS(3,IR) 
-                  EIGR(IR)=EXP(-CI*GR)
-                ENDDO  
-                DO IR1=1,NBAS
-                  EIGR1=CONJG(EIGR(IR1)) 
-                  SINFAC=0.D0
-                  COSFAC=0.D0
-                   DO IR2=1,NBAS
-                    EIGR12=EIGR1*EIGR(IR2)
-                    SINFAC=SINFAC-AIMAG(EIGR12)*Q(IR2)
-                    COSFAC=COSFAC+REAL(EIGR12,kind=8)*Q(IR2)
-                  ENDDO
-                  SINFAC=SINFAC*GFAC
-                  COSFAC=COSFAC*GFAC 
-                  VMAD(IR1)=VMAD(IR1)+COSFAC
-                  SVAR=Q(IR1)*SINFAC           
-                  FMAD(1,IR1)=FMAD(1,IR1)+SVAR*G1
-                  FMAD(2,IR1)=FMAD(2,IR1)+SVAR*G2
-                  FMAD(3,IR1)=FMAD(3,IR1)+SVAR*G3
+            T3=DBLE(IG3)
+            G1=GBAS(1,1)*T1+GBAS(1,2)*T2+GBAS(1,3)*T3  
+            G2=GBAS(2,1)*T1+GBAS(2,2)*T2+GBAS(2,3)*T3  
+            G3=GBAS(3,1)*T1+GBAS(3,2)*T2+GBAS(3,3)*T3  
+            GSQUARE=G1*G1+G2*G2+G3*G3
+            IF(GSQUARE.LE.G2MAX.AND.GSQUARE.GT.1.D-7) THEN 
+              FAC=2.D0*FOURPI/VOL*0.5D0
+              SVAR=-0.5D0*GSQUARE*RC**2
+              GFAC=FAC*DEXP(SVAR)/GSQUARE
+              DO IR=1,NBAS
+                GR=G1*BAS(1,IR)+G2*BAS(2,IR)+G3*BAS(3,IR) 
+                EIGR(IR)=EXP(-CI*GR)
+              ENDDO  
+              DO IR1=1,NBAS
+                EIGR1=CONJG(EIGR(IR1)) 
+                SINFAC=0.D0
+                COSFAC=0.D0
+                 DO IR2=1,NBAS
+                  EIGR12=EIGR1*EIGR(IR2)
+                  SINFAC=SINFAC-AIMAG(EIGR12)*Q(IR2)
+                  COSFAC=COSFAC+REAL(EIGR12,KIND=8)*Q(IR2)
                 ENDDO
-              END IF
-!             __ END SELECTION FOR PARALLEL PROCESSING__________________
+                SINFAC=SINFAC*GFAC
+                COSFAC=COSFAC*GFAC 
+                VMAD(IR1)=VMAD(IR1)+COSFAC
+                SVAR=Q(IR1)*SINFAC           
+                FMAD(1,IR1)=FMAD(1,IR1)+SVAR*G1
+                FMAD(2,IR1)=FMAD(2,IR1)+SVAR*G2
+                FMAD(3,IR1)=FMAD(3,IR1)+SVAR*G3
+              ENDDO
             END IF
-!
           ENDDO
         ENDDO
       ENDDO
@@ -1451,61 +1448,59 @@ END MODULE SORT_MODULE
 !     ==================================================================
 !     == R-SPACE SUM                                                  ==
 !     ==================================================================
-      ICOUNT=0
+!     ICOUNT=0
       FAC=1.D0/(ROOT2*RC)
       DO IR1=1,NBAS
         DO IR2=1,NBAS
-          ICOUNT=ICOUNT+1
+!         ICOUNT=ICOUNT+1
 !         __ SELECTION FOR PARALLEL PROCESSING__________________________
-          IF(MOD(ICOUNT-1,NTASKNUM).EQ.ITASK-1) THEN
-          
-            Q12=Q(IR1)*Q(IR2)
-            DR1=BAS(1,IR2)-BAS(1,IR1)
-            DR2=BAS(2,IR2)-BAS(2,IR1)
-            DR3=BAS(3,IR2)-BAS(3,IR1)
-            CALL BOXSPH(RBAS,-DR1,-DR2,-DR3,RMAX &
-     &             ,IT1MIN,IT1MAX,IT2MIN,IT2MAX,IT3MIN,IT3MAX)
-            DO IT1=IT1MIN,IT1MAX
-              T1=DBLE(IT1)
-              DO IT2=IT2MIN,IT2MAX
-                T2=DBLE(IT2)
-                DO IT3=IT3MIN,IT3MAX
-                  T3=DBLE(IT3)
-                  DX=DR1+RBAS(1,1)*T1+RBAS(1,2)*T2+RBAS(1,3)*T3  
-                  DY=DR2+RBAS(2,1)*T1+RBAS(2,2)*T2+RBAS(2,3)*T3  
-                  DZ=DR3+RBAS(3,1)*T1+RBAS(3,2)*T2+RBAS(3,3)*T3  
-                  DLEN=DSQRT(DX*DX+DY*DY+DZ*DZ)
-                  IF(DLEN.LT.RMAX) THEN
-                    IF(IR1.EQ.IR2 &
-     &                     .AND.IT1.EQ.0.AND.IT2.EQ.0.AND.IT3.EQ.0) THEN
-                      RFAC1=-SQRT(2.D0/PI)/RC
-                      RFAC2=0.D0
-                    ELSE
-                      CALL LIB$ERFCr8(DLEN*FAC,ERFCX)
-                      RFAC1=ERFCX/DLEN
-                      RFAC2=-(RFAC1+FAC*2.D0/DSQRT(PI) &
-     &                                 *DEXP(-(FAC*DLEN)**2))/DLEN**2
-                    END IF
-                    RFAC1=0.5D0*RFAC1
-                    RFAC2=0.5D0*RFAC2*Q12
-                    VMAD(IR1)=VMAD(IR1)+RFAC1*Q(IR2)
-                    VMAD(IR2)=VMAD(IR2)+RFAC1*Q(IR1)
-                    FMAD(1,IR1)=FMAD(1,IR1)-RFAC2*DX     
-                    FMAD(2,IR1)=FMAD(2,IR1)-RFAC2*DY     
-                    FMAD(3,IR1)=FMAD(3,IR1)-RFAC2*DZ     
-                    FMAD(1,IR2)=FMAD(1,IR2)+RFAC2*DX     
-                    FMAD(2,IR2)=FMAD(2,IR2)+RFAC2*DY     
-                    FMAD(3,IR2)=FMAD(3,IR2)+RFAC2*DZ     
-                  END IF              
-                ENDDO
+!         IF(MOD(ICOUNT-1,NTASKNUM).ne.ITASK-1) cycle
+         
+          Q12=Q(IR1)*Q(IR2)
+          DR1=BAS(1,IR2)-BAS(1,IR1)
+          DR2=BAS(2,IR2)-BAS(2,IR1)
+          DR3=BAS(3,IR2)-BAS(3,IR1)
+          CALL BOXSPH(RBAS,-DR1,-DR2,-DR3,RMAX &
+     &           ,IT1MIN,IT1MAX,IT2MIN,IT2MAX,IT3MIN,IT3MAX)
+          DO IT1=IT1MIN,IT1MAX
+            T1=DBLE(IT1)
+            DO IT2=IT2MIN,IT2MAX
+              T2=DBLE(IT2)
+              DO IT3=IT3MIN,IT3MAX
+                T3=DBLE(IT3)
+                DX=DR1+RBAS(1,1)*T1+RBAS(1,2)*T2+RBAS(1,3)*T3  
+                DY=DR2+RBAS(2,1)*T1+RBAS(2,2)*T2+RBAS(2,3)*T3  
+                DZ=DR3+RBAS(3,1)*T1+RBAS(3,2)*T2+RBAS(3,3)*T3  
+                DLEN=DSQRT(DX*DX+DY*DY+DZ*DZ)
+                IF(DLEN.LT.RMAX) THEN
+                  IF(IR1.EQ.IR2 &
+     &                   .AND.IT1.EQ.0.AND.IT2.EQ.0.AND.IT3.EQ.0) THEN
+                    RFAC1=-SQRT(2.D0/PI)/RC
+                    RFAC2=0.D0
+                  ELSE
+                    CALL LIB$ERFCR8(DLEN*FAC,ERFCX)
+                    RFAC1=ERFCX/DLEN
+                    RFAC2=-(RFAC1+FAC*2.D0/DSQRT(PI) &
+     &                               *DEXP(-(FAC*DLEN)**2))/DLEN**2
+                  END IF
+                  RFAC1=0.5D0*RFAC1
+                  RFAC2=0.5D0*RFAC2*Q12
+                  VMAD(IR1)=VMAD(IR1)+RFAC1*Q(IR2)
+                  VMAD(IR2)=VMAD(IR2)+RFAC1*Q(IR1)
+                  FMAD(1,IR1)=FMAD(1,IR1)-RFAC2*DX     
+                  FMAD(2,IR1)=FMAD(2,IR1)-RFAC2*DY     
+                  FMAD(3,IR1)=FMAD(3,IR1)-RFAC2*DZ     
+                  FMAD(1,IR2)=FMAD(1,IR2)+RFAC2*DX     
+                  FMAD(2,IR2)=FMAD(2,IR2)+RFAC2*DY     
+                  FMAD(3,IR2)=FMAD(3,IR2)+RFAC2*DZ     
+                END IF              
               ENDDO
             ENDDO
-!         __ END SELECTION FOR PARALLEL PROCESSING______________________
-          END IF
+          ENDDO
         ENDDO
       ENDDO
-      CALL MPE$COMBINE('+',FMAD)
-      CALL MPE$COMBINE('+',VMAD)
+!     CALL MPE$COMBINE('NONE','+',FMAD)
+!     CALL MPE$COMBINE('NONE','+',VMAD)
 
 !     == FROM YIN/COHEN???NIO
       QTOT=0.D0

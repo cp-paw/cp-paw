@@ -1,327 +1,327 @@
 !
 !.......................................................................
-module mixpulay_module
-  integer(4)           ,save :: nhistory=3
-  REAL(8)  ,ALLOCATABLE,save :: RHOold(:,:)  ! CHARGE DENSITY
-  REAL(8)  ,ALLOCATABLE,save :: resold(:,:) ! 1CENTER DENSITY MATRIX
-  REAL(8)  ,ALLOCATABLE,save :: rhoout(:) ! 1CENTER DENSITY MATRIX
-  real(8)  ,allocatable,save :: a(:,:)
-  real(8)  ,allocatable,save :: ainv(:,:)
-  real(8)  ,allocatable,save :: test(:,:)
-  real(8)  ,allocatable,save :: b(:)
-  real(8)  ,allocatable,save :: alphabar(:)
-  logical(4)           ,save :: tfirst=.true.
-  integer(4)           ,save :: iiter
-end module mixpulay_module
+MODULE MIXPULAY_MODULE
+  INTEGER(4)           ,SAVE :: NHISTORY=3
+  REAL(8)  ,ALLOCATABLE,SAVE :: RHOOLD(:,:)  ! CHARGE DENSITY
+  REAL(8)  ,ALLOCATABLE,SAVE :: RESOLD(:,:) ! 1CENTER DENSITY MATRIX
+  REAL(8)  ,ALLOCATABLE,SAVE :: RHOOUT(:) ! 1CENTER DENSITY MATRIX
+  REAL(8)  ,ALLOCATABLE,SAVE :: A(:,:)
+  REAL(8)  ,ALLOCATABLE,SAVE :: AINV(:,:)
+  REAL(8)  ,ALLOCATABLE,SAVE :: TEST(:,:)
+  REAL(8)  ,ALLOCATABLE,SAVE :: B(:)
+  REAL(8)  ,ALLOCATABLE,SAVE :: ALPHABAR(:)
+  LOGICAL(4)           ,SAVE :: TFIRST=.TRUE.
+  INTEGER(4)           ,SAVE :: IITER
+END MODULE MIXPULAY_MODULE
 
 !     ..................................................................
-      SUBROUTINE waves_mixrho_pul(rhodim,dendim,rho,denmat,tconv,&
-           convpsi) ! using R and only A
+      SUBROUTINE WAVES_MIXRHO_PUL(RHODIM,DENDIM,RHO,DENMAT,TCONV,&
+           CONVPSI) ! USING R AND ONLY A
 !     ******************************************************************
-!     ** allpy a pulay mixing scheme,                                 **
-!     ** Ref: Kresse, Furtmueller Com. Mater. Sci. 6, 15 (1996)       **
-!     **     Equations 83 to 87                                       **
+!     ** ALLPY A PULAY MIXING SCHEME,                                 **
+!     ** REF: KRESSE, FURTMUELLER COM. MATER. SCI. 6, 15 (1996)       **
+!     **     EQUATIONS 83 TO 87                                       **
 !     ******************************************************************
-      ! todo: deallocate-mechanism
-      use mixpulay_module
+      ! TODO: DEALLOCATE-MECHANISM
+      USE MIXPULAY_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)    :: rhodim
-      INTEGER(4) ,INTENT(IN)    :: dendim
-      REAL(8)    ,INTENT(INout) :: rho(rhodim) !rho(NRL,NDIMD)
-      REAL(8)    ,INTENT(INout) :: DENMAT(dendim) !(LMNXX,LMNXX,NDIMD,NAT)
-      logical(4) ,intent(out)   :: tconv
-      real(8)    ,intent(out)   :: convpsi
-      real(8)                   :: conv=1.D-8
-      real(8)                   :: g=0.5D0 !mixing factor
-      real(8)                   :: svar
-      real(8)                   :: r22,r12,r11
-      integer(4)                :: ih1,ih2,nback
-      integer(4)                :: rhox
+      INTEGER(4) ,INTENT(IN)    :: RHODIM
+      INTEGER(4) ,INTENT(IN)    :: DENDIM
+      REAL(8)    ,INTENT(INOUT) :: RHO(RHODIM) !RHO(NRL,NDIMD)
+      REAL(8)    ,INTENT(INOUT) :: DENMAT(DENDIM) !(LMNXX,LMNXX,NDIMD,NAT)
+      LOGICAL(4) ,INTENT(OUT)   :: TCONV
+      REAL(8)    ,INTENT(OUT)   :: CONVPSI
+      REAL(8)                   :: CONV=1.D-8
+      REAL(8)                   :: G=0.5D0 !MIXING FACTOR
+      REAL(8)                   :: SVAR
+      REAL(8)                   :: R22,R12,R11
+      INTEGER(4)                :: IH1,IH2,NBACK
+      INTEGER(4)                :: RHOX
 !     ******************************************************************
-      !first step
-      if(tfirst) then
-         iiter=1
-         if(nhistory.lt.1) then
-            call error$msg('nhistory must be at least 1 (for linear mixing)')
-            call error$stop('waves_mixrho')
-         end if
-         ! allocate arrays
-         allocate(rhoold(rhodim+dendim,nhistory))
-         rhoold=0.D0
-         allocate(resold(rhodim+dendim,nhistory))
-         resold=0.D0
-         print*,'mixer, allocating ',nhistory*(rhodim+dendim)*2.D0* &
+      !FIRST STEP
+      IF(TFIRST) THEN
+         IITER=1
+         IF(NHISTORY.LT.1) THEN
+            CALL ERROR$MSG('NHISTORY MUST BE AT LEAST 1 (FOR LINEAR MIXING)')
+            CALL ERROR$STOP('WAVES_MIXRHO')
+         END IF
+         ! ALLOCATE ARRAYS
+         ALLOCATE(RHOOLD(RHODIM+DENDIM,NHISTORY))
+         RHOOLD=0.D0
+         ALLOCATE(RESOLD(RHODIM+DENDIM,NHISTORY))
+         RESOLD=0.D0
+         PRINT*,'MIXER, ALLOCATING ',NHISTORY*(RHODIM+DENDIM)*2.D0* &
               8.D0/1024.D0,' KB'
-         allocate(a(nhistory,nhistory))
-         a=0.D0
-         allocate(ainv(nhistory,nhistory))
-         ainv=0.D0
-         allocate(alphabar(nhistory))
-         alphabar=0.D0
-         ! assign first density
-         rhoold(1:rhodim,1)=rho(:)
-         rhoold(rhodim+1:rhodim+dendim,1)=denmat(:)
-         tfirst=.false.
-         tconv=.false.
-         convpsi=1.D-3 ! 3 auch gut
-         return
-      end if
-      ! after first step: do mixing
+         ALLOCATE(A(NHISTORY,NHISTORY))
+         A=0.D0
+         ALLOCATE(AINV(NHISTORY,NHISTORY))
+         AINV=0.D0
+         ALLOCATE(ALPHABAR(NHISTORY))
+         ALPHABAR=0.D0
+         ! ASSIGN FIRST DENSITY
+         RHOOLD(1:RHODIM,1)=RHO(:)
+         RHOOLD(RHODIM+1:RHODIM+DENDIM,1)=DENMAT(:)
+         TFIRST=.FALSE.
+         TCONV=.FALSE.
+         CONVPSI=1.D-3 ! 3 AUCH GUT
+         RETURN
+      END IF
+      ! AFTER FIRST STEP: DO MIXING
 
-!!$! do nothing but returning the start density
-!!$rho(:)=rhoold(1:rhodim,1)
-!!$denmat(:)=rhoold(rhodim+1:rhodim+dendim,1)
-!!$convpsi=1.D-6 
-!!$return
-      allocate(rhoout(rhodim+dendim))
-      iiter=iiter+1
+!!$! DO NOTHING BUT RETURNING THE START DENSITY
+!!$RHO(:)=RHOOLD(1:RHODIM,1)
+!!$DENMAT(:)=RHOOLD(RHODIM+1:RHODIM+DENDIM,1)
+!!$CONVPSI=1.D-6 
+!!$RETURN
+      ALLOCATE(RHOOUT(RHODIM+DENDIM))
+      IITER=IITER+1
 
-      print*,' -------------- mixer iter: ',iiter,' ----------'
-      call LIB$SCALARPRODUCTR8(.true.,rhodim,1,&
-           rho(1:rhodim)-rhoold(1:rhodim,1),1,&
-           rho(1:rhodim)-rhoold(1:rhodim,1),svar)
-      !svar=maxval(abs(rho(1:rhodim)-rhoold(1:rhodim,1)))
-      CALL MPE$COMBINE('+',svar)
-write(*,"('CG-Mixer: rho   :',3f10.7)") rho(1:3)
-write(*,"('CG-Mixer: rhoold:',3f10.7)") rhoold(1:3,1)
-print*,'CG-Mixer iter ',iiter,' rho-diff (res) =',svar
-      if(svar.gt.1.D-1) then
-         convpsi=1.D-4 ! 4 auch gut
-      else
-         convpsi=1.D-6
-      end if
-      if(svar.lt.1.D-4) convpsi=1.D-8
-      tconv=.false. !(svar.lt.conv) ! do not use desity criterion
+      PRINT*,' -------------- MIXER ITER: ',IITER,' ----------'
+      CALL LIB$SCALARPRODUCTR8(.TRUE.,RHODIM,1,&
+           RHO(1:RHODIM)-RHOOLD(1:RHODIM,1),1,&
+           RHO(1:RHODIM)-RHOOLD(1:RHODIM,1),SVAR)
+      !SVAR=MAXVAL(ABS(RHO(1:RHODIM)-RHOOLD(1:RHODIM,1)))
+      CALL MPE$COMBINE('NONE','+',SVAR)
+WRITE(*,"('CG-MIXER: RHO   :',3F10.7)") RHO(1:3)
+WRITE(*,"('CG-MIXER: RHOOLD:',3F10.7)") RHOOLD(1:3,1)
+PRINT*,'CG-MIXER ITER ',IITER,' RHO-DIFF (RES) =',SVAR
+      IF(SVAR.GT.1.D-1) THEN
+         CONVPSI=1.D-4 ! 4 AUCH GUT
+      ELSE
+         CONVPSI=1.D-6
+      END IF
+      IF(SVAR.LT.1.D-4) CONVPSI=1.D-8
+      TCONV=.FALSE. !(SVAR.LT.CONV) ! DO NOT USE DESITY CRITERION
 
-      ! resold(:,1) contains the newest 
-      resold(1:rhodim,1)=rho(:)-rhoold(1:rhodim,1)
-      resold(rhodim+1:rhodim+dendim,1)=denmat(:) &
-           -rhoold(rhodim+1:rhodim+dendim,1)
-      !rhoout=rhoold(:,1)+g*resold(:,1)  ! linear part of eq. 92
-      nback=min(nhistory,iiter-1)
-print*,'mixer nback', nback
+      ! RESOLD(:,1) CONTAINS THE NEWEST 
+      RESOLD(1:RHODIM,1)=RHO(:)-RHOOLD(1:RHODIM,1)
+      RESOLD(RHODIM+1:RHODIM+DENDIM,1)=DENMAT(:) &
+           -RHOOLD(RHODIM+1:RHODIM+DENDIM,1)
+      !RHOOUT=RHOOLD(:,1)+G*RESOLD(:,1)  ! LINEAR PART OF EQ. 92
+      NBACK=MIN(NHISTORY,IITER-1)
+PRINT*,'MIXER NBACK', NBACK
 
-do ih1=1,nhistory 
-   write(*,"('    mix resold(',i1,')    ',4f10.5)") ih1,resold(1:4,ih1)
-end do
-print*,'  mix      ======='
-do ih1=1,nhistory 
-   write(*,"('    mix rhoold(',i1,')    ',4f10.5)") ih1,rhoold(1:4,ih1)
-end do
-print*,'  mix      ======='
+DO IH1=1,NHISTORY 
+   WRITE(*,"('    MIX RESOLD(',I1,')    ',4F10.5)") IH1,RESOLD(1:4,IH1)
+END DO
+PRINT*,'  MIX      ======='
+DO IH1=1,NHISTORY 
+   WRITE(*,"('    MIX RHOOLD(',I1,')    ',4F10.5)") IH1,RHOOLD(1:4,IH1)
+END DO
+PRINT*,'  MIX      ======='
 
-      rhox=rhodim ! use only density for adjusting fitting
-      !rhox=rhodim+dendim ! also use denamt for fitting
-!!$      do ih1=2,nback ! eq. 91
-!!$         do ih2=ih1,nback
-!!$            call LIB$SCALARPRODUCTR8(.false.,rhox,1,&
-!!$                 resold(1:rhox,ih1),1,&
-!!$                 resold(1:rhox,ih2),&
-!!$                 a(ih1,ih2))
-!!$            a(ih2,ih1)=a(ih1,ih2)
-!!$         end do
-!!$      end do
-      ! eq. 87
-      call LIB$SCALARPRODUCTR8(.true.,rhox,nback,&
-           resold(1:rhox,1:nback),nback,resold(1:rhox,1:nback),&
-           a(1:nback,1:nback))
+      RHOX=RHODIM ! USE ONLY DENSITY FOR ADJUSTING FITTING
+      !RHOX=RHODIM+DENDIM ! ALSO USE DENAMT FOR FITTING
+!!$      DO IH1=2,NBACK ! EQ. 91
+!!$         DO IH2=IH1,NBACK
+!!$            CALL LIB$SCALARPRODUCTR8(.FALSE.,RHOX,1,&
+!!$                 RESOLD(1:RHOX,IH1),1,&
+!!$                 RESOLD(1:RHOX,IH2),&
+!!$                 A(IH1,IH2))
+!!$            A(IH2,IH1)=A(IH1,IH2)
+!!$         END DO
+!!$      END DO
+      ! EQ. 87
+      CALL LIB$SCALARPRODUCTR8(.TRUE.,RHOX,NBACK,&
+           RESOLD(1:RHOX,1:NBACK),NBACK,RESOLD(1:RHOX,1:NBACK),&
+           A(1:NBACK,1:NBACK))
 
-do ih1=1,nhistory 
-  write(*,"('mix a        ',5f10.5)") a(:,ih1)
-end do
-      if(nback.ge.1) then
-         call LIB$INVERTR8(nback,A(1:nback,1:nback),AINV(1:nback,1:nback))
-      end if
-do ih1=1,nhistory 
-  write(*,"('mix ainv     ',5f15.5)") ainv(ih1,:)
-end do
-!!$call lib$matmulr8(nback-1,nback-1,nback-1,a,ainv,test)
-!!$do ih1=2,nhistory 
-!!$  write(*,"('mix ainv*a   ',4f15.5)") test(ih1,:)
-!!$end do
-      svar=0.D0
-      do ih1=1,nback ! eq 87
-         do ih2=1,nback
-            svar=svar+ainv(ih1,ih2)
-         end do
-      end do
-print*,'mix sum ainv:',svar
-      alphabar=0.D0
-      do ih1=1,nback ! eq 87
-         do ih2=1,nback
-            alphabar(ih1)=alphabar(ih1)+ainv(ih1,ih2)
-         end do
-      end do
-      alphabar=alphabar/svar
-write(*,"('mix alphabar ',5f10.5)") alphabar(:)
-      rhoout=0.D0
-      do ih1=1,nback ! eq 83
-         rhoout=rhoout+alphabar(ih1)*(rhoold(:,ih1)+g*resold(:,ih1))
-      end do
-write(*,"('CG-Mixer: rhoout:',3f10.7)") rhoout(1:3)
-      ! map rhoold on rho and denmat
-      rho(:)=rhoout(1:rhodim)
-      denmat(:)=rhoout(rhodim+1:rhodim+dendim)
-      ! propagate rhoold and resold
-      do ih1=nhistory,2,-1
-         rhoold(:,ih1)=rhoold(:,ih1-1)
-         resold(:,ih1)=resold(:,ih1-1)
-      end do
-      rhoold(:,1)=rhoout
-      deallocate(rhoout)
-      return
-      end 
+DO IH1=1,NHISTORY 
+  WRITE(*,"('MIX A        ',5F10.5)") A(:,IH1)
+END DO
+      IF(NBACK.GE.1) THEN
+         CALL LIB$INVERTR8(NBACK,A(1:NBACK,1:NBACK),AINV(1:NBACK,1:NBACK))
+      END IF
+DO IH1=1,NHISTORY 
+  WRITE(*,"('MIX AINV     ',5F15.5)") AINV(IH1,:)
+END DO
+!!$CALL LIB$MATMULR8(NBACK-1,NBACK-1,NBACK-1,A,AINV,TEST)
+!!$DO IH1=2,NHISTORY 
+!!$  WRITE(*,"('MIX AINV*A   ',4F15.5)") TEST(IH1,:)
+!!$END DO
+      SVAR=0.D0
+      DO IH1=1,NBACK ! EQ 87
+         DO IH2=1,NBACK
+            SVAR=SVAR+AINV(IH1,IH2)
+         END DO
+      END DO
+PRINT*,'MIX SUM AINV:',SVAR
+      ALPHABAR=0.D0
+      DO IH1=1,NBACK ! EQ 87
+         DO IH2=1,NBACK
+            ALPHABAR(IH1)=ALPHABAR(IH1)+AINV(IH1,IH2)
+         END DO
+      END DO
+      ALPHABAR=ALPHABAR/SVAR
+WRITE(*,"('MIX ALPHABAR ',5F10.5)") ALPHABAR(:)
+      RHOOUT=0.D0
+      DO IH1=1,NBACK ! EQ 83
+         RHOOUT=RHOOUT+ALPHABAR(IH1)*(RHOOLD(:,IH1)+G*RESOLD(:,IH1))
+      END DO
+WRITE(*,"('CG-MIXER: RHOOUT:',3F10.7)") RHOOUT(1:3)
+      ! MAP RHOOLD ON RHO AND DENMAT
+      RHO(:)=RHOOUT(1:RHODIM)
+      DENMAT(:)=RHOOUT(RHODIM+1:RHODIM+DENDIM)
+      ! PROPAGATE RHOOLD AND RESOLD
+      DO IH1=NHISTORY,2,-1
+         RHOOLD(:,IH1)=RHOOLD(:,IH1-1)
+         RESOLD(:,IH1)=RESOLD(:,IH1-1)
+      END DO
+      RHOOLD(:,1)=RHOOUT
+      DEALLOCATE(RHOOUT)
+      RETURN
+      END 
 !
 !     ..................................................................
-      SUBROUTINE waves_mixrho_pul_dR(rhodim,dendim,rho,denmat,tconv,&
-           convpsi) ! using dR first large, then small
+      SUBROUTINE WAVES_MIXRHO_PUL_DR(RHODIM,DENDIM,RHO,DENMAT,TCONV,&
+           CONVPSI) ! USING DR FIRST LARGE, THEN SMALL
 !     ******************************************************************
-!     ** allpy a pulay mixing scheme,                                 **
-!     ** Ref: Kresse, Furtmueller Com. Mater. Sci. 6, 15 (1996)       **
-!     ** using the delta-R scheme of equations 88 to 92               **
+!     ** ALLPY A PULAY MIXING SCHEME,                                 **
+!     ** REF: KRESSE, FURTMUELLER COM. MATER. SCI. 6, 15 (1996)       **
+!     ** USING THE DELTA-R SCHEME OF EQUATIONS 88 TO 92               **
 !     ******************************************************************
-      ! todo: deallocate-mechanism
-      use mixpulay_module
+      ! TODO: DEALLOCATE-MECHANISM
+      USE MIXPULAY_MODULE
       IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)    :: rhodim
-      INTEGER(4) ,INTENT(IN)    :: dendim
-      REAL(8)    ,INTENT(INout) :: rho(rhodim) !rho(NRL,NDIMD)
-      REAL(8)    ,INTENT(INout) :: DENMAT(dendim) !(LMNXX,LMNXX,NDIMD,NAT)
-      logical(4) ,intent(out)   :: tconv
-      real(8)    ,intent(out)   :: convpsi
-      real(8)                   :: conv=1.D-6
-      real(8)                   :: g=0.5D0 !mixing factor
-      real(8)                   :: svar
-      real(8)                   :: r22,r12,r11
-      integer(4)                :: ih1,ih2,nback
-      integer(4)                :: rhox
+      INTEGER(4) ,INTENT(IN)    :: RHODIM
+      INTEGER(4) ,INTENT(IN)    :: DENDIM
+      REAL(8)    ,INTENT(INOUT) :: RHO(RHODIM) !RHO(NRL,NDIMD)
+      REAL(8)    ,INTENT(INOUT) :: DENMAT(DENDIM) !(LMNXX,LMNXX,NDIMD,NAT)
+      LOGICAL(4) ,INTENT(OUT)   :: TCONV
+      REAL(8)    ,INTENT(OUT)   :: CONVPSI
+      REAL(8)                   :: CONV=1.D-6
+      REAL(8)                   :: G=0.5D0 !MIXING FACTOR
+      REAL(8)                   :: SVAR
+      REAL(8)                   :: R22,R12,R11
+      INTEGER(4)                :: IH1,IH2,NBACK
+      INTEGER(4)                :: RHOX
 !     ******************************************************************
-      !first step
-      if(tfirst) then
-         iiter=1
-         if(nhistory.lt.1) then
-            call error$msg('nhistory must be at least 1 (for linear mixing)')
-            call error$stop('waves_mixrho')
-         end if
-         allocate(rhoold(rhodim+dendim,nhistory))
-         allocate(resold(rhodim+dendim,nhistory))
-         print*,'mixer, allocating ',nhistory*(rhodim+dendim)*2.D0* &
+      !FIRST STEP
+      IF(TFIRST) THEN
+         IITER=1
+         IF(NHISTORY.LT.1) THEN
+            CALL ERROR$MSG('NHISTORY MUST BE AT LEAST 1 (FOR LINEAR MIXING)')
+            CALL ERROR$STOP('WAVES_MIXRHO')
+         END IF
+         ALLOCATE(RHOOLD(RHODIM+DENDIM,NHISTORY))
+         ALLOCATE(RESOLD(RHODIM+DENDIM,NHISTORY))
+         PRINT*,'MIXER, ALLOCATING ',NHISTORY*(RHODIM+DENDIM)*2.D0* &
               8.D0/1024.D0,' KB'
-         allocate(a(2:nhistory,2:nhistory))
-         a=0.D0
-         allocate(ainv(2:nhistory,2:nhistory))
-         ainv=0.D0
-         allocate(test(2:nhistory,2:nhistory))
-         test=0.D0
-         allocate(b(2:nhistory))
-         b=0.D0
-         allocate(alphabar(2:nhistory))
-         alphabar=0.D0
-         rhoold=0.D0
-         resold=0.D0
-         rhoold(1:rhodim,1)=rho(:)
-         rhoold(rhodim+1:rhodim+dendim,1)=denmat(:)
-         tfirst=.false.
-         tconv=.false.
-         convpsi=1.D-3 ! 3 auch gut
-         return
-      end if
-      ! steps after first step: do mixing
-      allocate(rhoout(rhodim+dendim))
-      iiter=iiter+1
+         ALLOCATE(A(2:NHISTORY,2:NHISTORY))
+         A=0.D0
+         ALLOCATE(AINV(2:NHISTORY,2:NHISTORY))
+         AINV=0.D0
+         ALLOCATE(TEST(2:NHISTORY,2:NHISTORY))
+         TEST=0.D0
+         ALLOCATE(B(2:NHISTORY))
+         B=0.D0
+         ALLOCATE(ALPHABAR(2:NHISTORY))
+         ALPHABAR=0.D0
+         RHOOLD=0.D0
+         RESOLD=0.D0
+         RHOOLD(1:RHODIM,1)=RHO(:)
+         RHOOLD(RHODIM+1:RHODIM+DENDIM,1)=DENMAT(:)
+         TFIRST=.FALSE.
+         TCONV=.FALSE.
+         CONVPSI=1.D-3 ! 3 AUCH GUT
+         RETURN
+      END IF
+      ! STEPS AFTER FIRST STEP: DO MIXING
+      ALLOCATE(RHOOUT(RHODIM+DENDIM))
+      IITER=IITER+1
 
-print*,' -------------- mixer iter: ',iiter,' ----------'
-svar=maxval(abs(rho(1:rhodim)-rhoold(1:rhodim,1)))
-write(*,"('CG-Mixer: rho   :',3f10.7)") rho(1:3)
-write(*,"('CG-Mixer: rhoold:',3f10.7)") rhoold(1:3,1)
-print*,'CG-Mixer iter ',iiter,' rho-diff (res) =',svar
-      if(svar.gt.1.D-1) then
-         convpsi=1.D-4 ! 4 auch gut
-      else
-         convpsi=1.D-6
-      end if
-      if(svar.lt.1.D-4) convpsi=1.D-8
-      tconv=(svar.lt.conv)
+PRINT*,' -------------- MIXER ITER: ',IITER,' ----------'
+SVAR=MAXVAL(ABS(RHO(1:RHODIM)-RHOOLD(1:RHODIM,1)))
+WRITE(*,"('CG-MIXER: RHO   :',3F10.7)") RHO(1:3)
+WRITE(*,"('CG-MIXER: RHOOLD:',3F10.7)") RHOOLD(1:3,1)
+PRINT*,'CG-MIXER ITER ',IITER,' RHO-DIFF (RES) =',SVAR
+      IF(SVAR.GT.1.D-1) THEN
+         CONVPSI=1.D-4 ! 4 AUCH GUT
+      ELSE
+         CONVPSI=1.D-6
+      END IF
+      IF(SVAR.LT.1.D-4) CONVPSI=1.D-8
+      TCONV=(SVAR.LT.CONV)
 
-      ! resold(:,1) contains the newest 
-      resold(1:rhodim,1)=rho(:)-rhoold(1:rhodim,1)
-      resold(rhodim+1:rhodim+dendim,1)=denmat(:) &
-           -rhoold(rhodim+1:rhodim+dendim,1)
-      if(nhistory.ge.2) then
-         resold(:,2)=resold(:,1)-resold(:,2) ! store delta R in resold
-      end if
-      rhoout=rhoold(:,1)+g*resold(:,1)  ! linear part of eq. 92
-      nback=min(nhistory,iiter-1)
-print*,'mixer nback', nback
+      ! RESOLD(:,1) CONTAINS THE NEWEST 
+      RESOLD(1:RHODIM,1)=RHO(:)-RHOOLD(1:RHODIM,1)
+      RESOLD(RHODIM+1:RHODIM+DENDIM,1)=DENMAT(:) &
+           -RHOOLD(RHODIM+1:RHODIM+DENDIM,1)
+      IF(NHISTORY.GE.2) THEN
+         RESOLD(:,2)=RESOLD(:,1)-RESOLD(:,2) ! STORE DELTA R IN RESOLD
+      END IF
+      RHOOUT=RHOOLD(:,1)+G*RESOLD(:,1)  ! LINEAR PART OF EQ. 92
+      NBACK=MIN(NHISTORY,IITER-1)
+PRINT*,'MIXER NBACK', NBACK
 
-do ih1=1,nhistory 
-   write(*,"('    mix resold(',i1,')    ',4f10.5)") ih1,resold(1:4,ih1)
-end do
-print*,'        ======='
-do ih1=1,nhistory 
-   write(*,"('    mix rhoold(',i1,')    ',4f10.5)") ih1,rhoold(1:4,ih1)
-end do
-print*,'        ======='
+DO IH1=1,NHISTORY 
+   WRITE(*,"('    MIX RESOLD(',I1,')    ',4F10.5)") IH1,RESOLD(1:4,IH1)
+END DO
+PRINT*,'        ======='
+DO IH1=1,NHISTORY 
+   WRITE(*,"('    MIX RHOOLD(',I1,')    ',4F10.5)") IH1,RHOOLD(1:4,IH1)
+END DO
+PRINT*,'        ======='
 
-      rhox=rhodim ! use only density for adjusting fitting
-      !rhox=rhodim+dendim ! also use denamt for fitting
-      ! the following loop may be done by only one call
+      RHOX=RHODIM ! USE ONLY DENSITY FOR ADJUSTING FITTING
+      !RHOX=RHODIM+DENDIM ! ALSO USE DENAMT FOR FITTING
+      ! THE FOLLOWING LOOP MAY BE DONE BY ONLY ONE CALL
 
-!!$      do ih1=2,nback ! eq. 91
-!!$         do ih2=ih1,nback
-!!$            call LIB$SCALARPRODUCTR8(.false.,rhox,1,&
-!!$                 resold(1:rhox,ih1),1,&
-!!$                 resold(1:rhox,ih2),&
-!!$                 a(ih1,ih2))
-!!$            a(ih2,ih1)=a(ih1,ih2)
-!!$         end do
-!!$      end do
-      call LIB$SCALARPRODUCTR8(.true.,rhox,nback-1,&
-           resold(1:rhox,2:nback),nback-1,resold(1:rhox,2:nback),&
-           a(2:nback,2:nback))
+!!$      DO IH1=2,NBACK ! EQ. 91
+!!$         DO IH2=IH1,NBACK
+!!$            CALL LIB$SCALARPRODUCTR8(.FALSE.,RHOX,1,&
+!!$                 RESOLD(1:RHOX,IH1),1,&
+!!$                 RESOLD(1:RHOX,IH2),&
+!!$                 A(IH1,IH2))
+!!$            A(IH2,IH1)=A(IH1,IH2)
+!!$         END DO
+!!$      END DO
+      CALL LIB$SCALARPRODUCTR8(.TRUE.,RHOX,NBACK-1,&
+           RESOLD(1:RHOX,2:NBACK),NBACK-1,RESOLD(1:RHOX,2:NBACK),&
+           A(2:NBACK,2:NBACK))
 
-do ih1=2,nhistory ! eq. 91
-  write(*,"('mix a        ',4f10.5)") a(:,ih1)
-end do
-      do ih1=2,nback ! eq 90 b=<dR_j|R1>
-         call LIB$SCALARPRODUCTR8(.false.,rhox,1, &
-              resold(1:rhox,ih1),1,resold(1:rhox,1),b(ih1))
-      end do
-write(*,"('mix b        ',4f10.5)") b
-      if(nback.ge.2) then
-         call LIB$INVERTR8(nback-1,A(2:nback,2:nback),AINV(2:nback,2:nback))
-      end if
-do ih1=2,nhistory 
-  write(*,"('mix ainv     ',4f15.5)") ainv(ih1,:)
-end do
-!!$call lib$matmulr8(nback-1,nback-1,nback-1,a,ainv,test)
-!!$do ih1=2,nhistory 
-!!$  write(*,"('mix ainv*a   ',4f15.5)") test(ih1,:)
-!!$end do
-      alphabar=0.D0
-      do ih1=2,nback ! eq 90 
-         do ih2=ih1,nback
-            alphabar(ih1)=alphabar(ih1)-ainv(ih1,ih2)*b(ih2)
-         end do
-      end do
-write(*,"('mix alphabar ',4f10.5)") alphabar(:)
-      do ih1=2,nback ! sum in eq 92  
-         rhoout=rhoout+alphabar(ih1)*(rhoold(:,ih1-1)-rhoold(:,ih1)+ &
-              g*(resold(:,ih1)))
-      end do
-      ! map rhoold on rho and denmat
-!write(*,"('CG-Mixer: rhoout:',3f10.7)") rhoout(1:3)
-      rho(:)=rhoout(1:rhodim)
-      denmat(:)=rhoout(rhodim+1:rhodim+dendim)
-      ! propagate rhoold and resold
-      do ih1=nhistory,2,-1
-         rhoold(:,ih1)=rhoold(:,ih1-1)
-         resold(:,ih1)=resold(:,ih1-1)
-      end do
-      rhoold(:,1)=rhoout
-      deallocate(rhoout)
-      return
-      end 
+DO IH1=2,NHISTORY ! EQ. 91
+  WRITE(*,"('MIX A        ',4F10.5)") A(:,IH1)
+END DO
+      DO IH1=2,NBACK ! EQ 90 B=<DR_J|R1>
+         CALL LIB$SCALARPRODUCTR8(.FALSE.,RHOX,1, &
+              RESOLD(1:RHOX,IH1),1,RESOLD(1:RHOX,1),B(IH1))
+      END DO
+WRITE(*,"('MIX B        ',4F10.5)") B
+      IF(NBACK.GE.2) THEN
+         CALL LIB$INVERTR8(NBACK-1,A(2:NBACK,2:NBACK),AINV(2:NBACK,2:NBACK))
+      END IF
+DO IH1=2,NHISTORY 
+  WRITE(*,"('MIX AINV     ',4F15.5)") AINV(IH1,:)
+END DO
+!!$CALL LIB$MATMULR8(NBACK-1,NBACK-1,NBACK-1,A,AINV,TEST)
+!!$DO IH1=2,NHISTORY 
+!!$  WRITE(*,"('MIX AINV*A   ',4F15.5)") TEST(IH1,:)
+!!$END DO
+      ALPHABAR=0.D0
+      DO IH1=2,NBACK ! EQ 90 
+         DO IH2=IH1,NBACK
+            ALPHABAR(IH1)=ALPHABAR(IH1)-AINV(IH1,IH2)*B(IH2)
+         END DO
+      END DO
+WRITE(*,"('MIX ALPHABAR ',4F10.5)") ALPHABAR(:)
+      DO IH1=2,NBACK ! SUM IN EQ 92  
+         RHOOUT=RHOOUT+ALPHABAR(IH1)*(RHOOLD(:,IH1-1)-RHOOLD(:,IH1)+ &
+              G*(RESOLD(:,IH1)))
+      END DO
+      ! MAP RHOOLD ON RHO AND DENMAT
+!WRITE(*,"('CG-MIXER: RHOOUT:',3F10.7)") RHOOUT(1:3)
+      RHO(:)=RHOOUT(1:RHODIM)
+      DENMAT(:)=RHOOUT(RHODIM+1:RHODIM+DENDIM)
+      ! PROPAGATE RHOOLD AND RESOLD
+      DO IH1=NHISTORY,2,-1
+         RHOOLD(:,IH1)=RHOOLD(:,IH1-1)
+         RESOLD(:,IH1)=RESOLD(:,IH1-1)
+      END DO
+      RHOOLD(:,1)=RHOOUT
+      DEALLOCATE(RHOOUT)
+      RETURN
+      END 
 
 

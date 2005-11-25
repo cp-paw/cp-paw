@@ -1,7 +1,7 @@
-!nichtkollinear
-!kleine Komponente
-!Gammma punkt nicht mehr erstes element auf dem G-gitter
-!test extrapolate
+!NICHTKOLLINEAR
+!KLEINE KOMPONENTE
+!GAMMMA PUNKT NICHT MEHR ERSTES ELEMENT AUF DEM G-GITTER
+!TEST EXTRAPOLATE
 !
 !.........................................................................
 MODULE HYPERFINE_MODULE
@@ -55,7 +55,7 @@ LOGICAL(4)   :: TPWRHOS=.FALSE.! ON/OFF SWITCH SPINPOLARIZED
 CONTAINS
 !     ....................................................................
       SUBROUTINE HYPERFINE_NEWLIST
-      implicit none
+      IMPLICIT NONE
       IF(TINI) RETURN
       CALL LINKEDLIST$NEW(LL_HPRFN)
       TINI=.TRUE.
@@ -336,7 +336,7 @@ END MODULE HYPERFINE_MODULE
       TIS=.FALSE.
       TFC=.FALSE.
       TANIS=.FALSE.
-      TEFG=.false.
+      TEFG=.FALSE.
       IF(IDENT1_.EQ.'TOT') THEN
         CALL LINKEDLIST$EXISTD(LL_HPRFN,'TIS',1,TCHK)
         IF(TCHK) THEN
@@ -431,7 +431,7 @@ END MODULE HYPERFINE_MODULE
       END IF
 ! 
 !     ===================================================================
-!     == Electric field gradient                                       ==
+!     == ELECTRIC FIELD GRADIENT                                       ==
 !     == EFG CURRENTLY CALCULATED FROM 1CPOTENTIAL
 !     ===================================================================
       IF(TEFG) THEN
@@ -447,16 +447,16 @@ END MODULE HYPERFINE_MODULE
               YARRAY(IR)=WORK(IR)/XARRAY(IR)**2
             ENDDO
             IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1VS2 ",5E20.10)')YARRAY
-            CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,v2(LM-4))
+            CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,V2(LM-4))
           ENDDO
         ELSE
-          v2(:)=0.D0
+          V2(:)=0.D0
         END IF
-!currently calculated from potential (see set1cpot) (check factor 2!)
+!CURRENTLY CALCULATED FROM POTENTIAL (SEE SET1CPOT) (CHECK FACTOR 2!)
 !        IF(IDENT_.EQ.'AE') THEN
-!          CALL LINKEDLIST$SET(LL_HPRFN,'AEv2lm',0,v2)
+!          CALL LINKEDLIST$SET(LL_HPRFN,'AEV2LM',0,V2)
 !        ELSE IF(IDENT_.EQ.'PS') THEN
-!          CALL LINKEDLIST$SET(LL_HPRFN,'PSv2lm',0,v2)
+!          CALL LINKEDLIST$SET(LL_HPRFN,'PSV2LM',0,V2)
 !        END IF  
       END IF
 !
@@ -491,7 +491,7 @@ LOGICAL(4),PARAMETER :: TTEST=.FALSE.
 !     ********************************************************************
       IF(.NOT.(TWAKE.AND.TPW)) RETURN
                                 CALL TRACE$PUSH('HYPERFINE$SETPWPOT')
-!     == get plane wave cutoff an convert to max. g-vector length
+!     == GET PLANE WAVE CUTOFF AN CONVERT TO MAX. G-VECTOR LENGTH
       CALL POTENTIAL$GETR8('EPWRHO',GMAX)
       GMAX=DSQRT(2.D0*GMAX)
 !
@@ -509,7 +509,7 @@ LOGICAL(4),PARAMETER :: TTEST=.FALSE.
 !           == EVALUATE ELECTRIC FIELD GRADIENTS                      ==
 !           == V(I,J) = D2V(R)/(DI*DJ)                                ==
 !           ============================================================
-if(ttest)ALLOCATE(WORK(6,NG));WORK=0.D0
+IF(TTEST)ALLOCATE(WORK(6,NG));WORK=0.D0
             DO I=1,3
               DO J=1,3
                 V(I,J)=0.D0
@@ -521,32 +521,32 @@ if(ttest)ALLOCATE(WORK(6,NG));WORK=0.D0
 !             __ 2 FROM ADDING COMPLEX CONJUGATE
               SVAR1=0.D0
               GLEN=DSQRT(G(1,IG)**2+G(2,IG)**2+G(3,IG)**2)
-!             == svar damps out high frequency oscillations of the potential 
+!             == SVAR DAMPS OUT HIGH FREQUENCY OSCILLATIONS OF THE POTENTIAL 
               SVAR1=1.D0/(1.D0+DEXP(GLEN+3.D0-GMAX))  !MAY NOT BE A GOOD CHOICE
 IF(TTEST) SVAR1=1.D0
-              SVAR1=-2.D0*REAL(EXP(+CI*GR)*VOFG(IG),kind=8)*SVAR1
+              SVAR1=-2.D0*REAL(EXP(+CI*GR)*VOFG(IG),KIND=8)*SVAR1
               SVAR2=G(1,IG)*SVAR1
               V(1,1)=V(1,1)+G(1,IG)*SVAR2
               V(2,1)=V(2,1)+G(2,IG)*SVAR2
               V(3,1)=V(3,1)+G(3,IG)*SVAR2
-IF(TTEST) then
+IF(TTEST) THEN
   WORK(1,IG)=G(1,IG)*SVAR2
   WORK(2,IG)=G(2,IG)*SVAR2
   WORK(3,IG)=G(3,IG)*SVAR2
-end if
+END IF
               SVAR2=G(2,IG)*SVAR1
               V(2,2)=V(2,2)+G(2,IG)*SVAR2        
               V(3,2)=V(3,2)+G(3,IG)*SVAR2        
-if(ttest) then
+IF(TTEST) THEN
   WORK(4,IG)=G(2,IG)*SVAR2
   WORK(5,IG)=G(3,IG)*SVAR2
-end if
+END IF
               SVAR2=G(3,IG)*SVAR1
               V(3,3)=V(3,3)+G(3,IG)*SVAR2        
 
-if(ttest) then
+IF(TTEST) THEN
   WORK(6,IG)=G(3,IG)*SVAR2
-end if
+END IF
             ENDDO
 IF(TTEST) THEN
 !THIS IS TO TEST THE PLANE WAVE CONVERGENCE OF THE EFG AND THE FILTER
@@ -594,21 +594,21 @@ END IF
 !     **  GET SECOND DERIVATIVE OF THE RADIAL POTENTIAL AT THE ORIGIN   **
 !     ********************************************************************
       USE HYPERFINE_MODULE
-      implicit none
+      IMPLICIT NONE
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       CHARACTER(*),INTENT(IN) :: IDENT_  ! CAN BE 'TOT' OR 'SPIN'
       INTEGER(4)  ,INTENT(IN) :: NG
       REAL(8)     ,INTENT(IN) :: G(3,NG)
       COMPLEX(8)  ,INTENT(IN) :: RHOG(NG)
       CHARACTER(32)           :: ATOMNAME
-      INTEGER(4)              :: IAT,I,J,ig
+      INTEGER(4)              :: IAT,I,J,IG
       REAL(8)                 :: R(3)
       REAL(8)                 :: RHO0
       REAL(8)                 :: GR 
-      REAL(8)                 :: tr
+      REAL(8)                 :: TR
       REAL(8)                 :: G2
       REAL(8)                 :: PI
-      REAL(8)                 :: fac
+      REAL(8)                 :: FAC
       REAL(8)                 :: V(3,3)
       LOGICAL(4)              :: TIS   ! ON/OFF SWITCH ISOMER SHIFT 
       LOGICAL(4)              :: TFC   ! ON/OFF SWITCH FERMI CONTACT
@@ -616,7 +616,7 @@ END IF
       LOGICAL(4)              :: TCHK
       REAL(8)                 :: SVAR1,SVAR2
       INTEGER(4)              :: NFILO
-      INTEGER(4)              :: Nat
+      INTEGER(4)              :: NAT
 !     ********************************************************************
       IF(.NOT.(TWAKE.AND. TPW)) RETURN
                                 CALL TRACE$PUSH('HYPERFINE$SETPWRHO')
@@ -649,13 +649,13 @@ END IF
             DO IG=1,NG
               GR=R(1)*G(1,IG)+R(2)*G(2,IG)+R(3)*G(3,IG)
 !             __ 2 FROM ADDING COMPLEX CONJUGATE
-              RHO0=RHO0+2.D0*REAL(EXP(+CI*GR)*RHOG(IG),kind=8)
+              RHO0=RHO0+2.D0*REAL(EXP(+CI*GR)*RHOG(IG),KIND=8)
             ENDDO
 !           __ SUBTRACT DOUBLE COUNTING OF THE GAMMA POINT____
-!error! assumption that gamma point resides on first element incorrect
-!remark: use parameter ngamma if possible
+!ERROR! ASSUMPTION THAT GAMMA POINT RESIDES ON FIRST ELEMENT INCORRECT
+!REMARK: USE PARAMETER NGAMMA IF POSSIBLE
             IF(G(1,1)**2+G(2,1)**2+G(3,1)**2.LT.1.D-6) THEN
-              RHO0=RHO0-REAL(RHOG(1),kind=8)
+              RHO0=RHO0-REAL(RHOG(1),KIND=8)
             END IF
             IF(IDENT_.EQ.'SPIN') THEN             
               CALL LINKEDLIST$SET(LL_HPRFN,'PSRHOSPW',0,RHO0)
@@ -677,12 +677,12 @@ END IF
               ENDDO
             ENDDO
             FAC=-2.D0*4.D0*PI
-!error! assumes gamma apoint resides on first element
+!ERROR! ASSUMES GAMMA APOINT RESIDES ON FIRST ELEMENT
             DO IG=2,NG
               GR=R(1)*G(1,IG)+R(2)*G(2,IG)+R(3)*G(3,IG)
               G2=G(1,IG)**2+G(2,IG)**2+G(3,IG)**2
 !             __ 2 FROM ADDING COMPLEX CONJUGATE
-              SVAR1=FAC*REAL(EXP(+CI*GR)*RHOG(IG),kind=8)/G2
+              SVAR1=FAC*REAL(EXP(+CI*GR)*RHOG(IG),KIND=8)/G2
               SVAR2=G(1,IG)*SVAR1
               V(1,1)=V(1,1)+G(1,IG)*SVAR2
               V(2,1)=V(2,1)+G(2,IG)*SVAR2
@@ -752,7 +752,7 @@ END IF
 !     ================================================================
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/DSQRT(4.D0*PI)
-      CALL MPE$QUERY(NTASKNUM,NTASKID)
+      CALL MPE$QUERY('MONOMER',NTASKNUM,NTASKID)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
 !     ================================================================
@@ -805,7 +805,7 @@ END IF
               RHOT0=RHOT0-SVAR*Y0
             END IF
           END IF
-          CALL MPE$COMBINE('+',RHOT0)
+          CALL MPE$COMBINE('MONOMER','+',RHOT0)
                          CALL TRACE$PASS('BEFORE PRINT IS')
           IF(NTASKID.EQ.1) THEN
             CALL REPORT$R8VAL(NFILO,'ELECTRON DENSITY AT THE NUCLEUS OF ATOM ' &
@@ -843,10 +843,10 @@ END IF
                PSRHO1S0=SVAR*Y0
                RHOS0=RHOS0-SVAR*Y0
             END IF
-            CALL MPE$COMBINE('+',AERHO1S0)
-            CALL MPE$COMBINE('+',PSRHO1S0)
-            CALL MPE$COMBINE('+',PSRHOS0)
-            CALL MPE$COMBINE('+',RHOS0)
+            CALL MPE$COMBINE('MONOMER','+',AERHO1S0)
+            CALL MPE$COMBINE('MONOMER','+',PSRHO1S0)
+            CALL MPE$COMBINE('MONOMER','+',PSRHOS0)
+            CALL MPE$COMBINE('MONOMER','+',RHOS0)
           END IF
           IF(NTASKID.EQ.1) THEN
             SVAR=2.D0/3.D0
@@ -857,7 +857,7 @@ END IF
             CALL CONSTANTS('HBAR',SVAR1)         ; SVAR=SVAR*0.5D0*SVAR1
 !           ==   
             CALL CONSTANTS('TESLA',SVAR1)        ; SVAR=SVAR/SVAR1
-            PRINT*,'THiS NUMBER SHOULD BE 104.98 : ',SVAR
+            PRINT*,'THIS NUMBER SHOULD BE 104.98 : ',SVAR
             CALL REPORT$R8VAL(NFILO,'SPIN DENSITY AT THE NUCLEUS OF ATOM ' &
       &                            //TRIM(ATOMNAME),RHOS0,'1/ABOHR^3')
             CALL REPORT$R8VAL(NFILO,'FERMI CONTACT HYPERFINE FIELD FOR ATOM ' &
@@ -916,10 +916,10 @@ END IF
           END IF
 !         ==  PARALLELIZATION: SUM OVER ALL NODES ======================
                          CALL TRACE$PASS('IN EFG 4')
-          CALL MPE$COMBINE('+',EFG)
-          CALL MPE$COMBINE('+',PSEFG)
-          CALL MPE$COMBINE('+',PSEFG1)
-          CALL MPE$COMBINE('+',AEEFG1)
+          CALL MPE$COMBINE('MONOMER','+',EFG)
+          CALL MPE$COMBINE('MONOMER','+',PSEFG)
+          CALL MPE$COMBINE('MONOMER','+',PSEFG1)
+          CALL MPE$COMBINE('MONOMER','+',AEEFG1)
                          CALL TRACE$PASS('IN EFG 5')
 !         ==  CONVERSION AND PRINTOUT FOR ELECTRIC FIELD GRADIENTS =====
           IF(NTASKID.EQ.1) THEN
@@ -998,7 +998,7 @@ END IF
             END IF
           END IF
 !         == PARALLELIZATION : SUM OVER ALL NODES ======================
-          CALL MPE$COMBINE('+',ANIS)
+          CALL MPE$COMBINE('MONOMER','+',ANIS)
 !         == CONVERSION AND PRINTOUT FOR ANISOTROPIC HYPERFINE PARAMETERS
           IF(NTASKID.EQ.1) THEN
             SVAR=1.D0/(4.D0*PI)
@@ -1142,12 +1142,12 @@ END IF
       RHO0=0.D0
       FAC=1.D0/(1.D0+RTH/R2)
       DO I=1,4
-        SVAR=DLAM+REAL(I,kind=8)
+        SVAR=DLAM+REAL(I,KIND=8)
         CI(I)=CI(I)*(R2/RTH)**SVAR/(SVAR*(1.D0+R2/RTH)**2)
         SUM=CI(I)
         DO J=1,100
-          CI(I)=CI(I)*FAC/(1.D0+SVAR/REAL(J,kind=8))
-          SUM=SUM+REAL(J+1,kind=8)*CI(I)
+          CI(I)=CI(I)*FAC/(1.D0+SVAR/REAL(J,KIND=8))
+          SUM=SUM+REAL(J+1,KIND=8)*CI(I)
         ENDDO
         RHO0=RHO0+SUM
       ENDDO

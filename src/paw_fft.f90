@@ -92,6 +92,7 @@ MODULE PLANEWAVE_MODULE
 !***********************************************************************
 TYPE PWPARALLEL_TYPE
   CHARACTER(32)      :: ID         ! PRODUCED BY "KEYCRYPT"
+  character(32)      :: cid        ! communicator id for parallelization
   REAL(8)            :: KVEC(3)    ! K-POINT IN RELATIVE COORDINATES
   REAL(8)            :: GBAS(3,3)  ! RECIPROCAL LATTICE VECTORS
   INTEGER(4)         :: NR1        ! 1ST DIMENSION FO FFT GRID (GLOBAL)
@@ -118,14 +119,12 @@ TYPE PWPARALLEL_TYPE
   INTEGER(4),POINTER :: MINUSG(:)  ! (NGL) IG(G) -> IG(-G)
   INTEGER(4)         :: NGAMMA     ! G(NGAMMA) IS THE GAMMA POINT 
                                    ! NGAMMA=0 IF NOT ON THIS TASK 
-  integer(4),pointer :: igvech(:,:) ! igvec ofr minusg(ig)>ig
+  INTEGER(4),POINTER :: IGVECH(:,:) ! IGVEC OFR MINUSG(IG)>IG
   ! POINTER TO NEXT THIS
   TYPE(PWPARALLEL_TYPE),POINTER :: NEXT
 END TYPE PWPARALLEL_TYPE
 LOGICAL(4)                     :: TINI=.FALSE.
 TYPE (PWPARALLEL_TYPE),POINTER :: THIS
-INTEGER(4)                     :: THISTASK
-INTEGER(4)                     :: NTASKS
 END MODULE PLANEWAVE_MODULE
 !***********************************************************************
 !     
@@ -135,26 +134,110 @@ END MODULE PLANEWAVE_MODULE
 !     **  PLANEWAVE$REPORT DEASCRIBED THE SETTING FOR THE             **
 !     **  THE SELECTED PLANEWAVE OBJECT                               **
 !     ******************************************************************
+      use mpe_module
       USE PLANEWAVE_MODULE
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)  :: NFIL
       INTEGER(4)              :: ITASK,IG
       INTEGER(4)              :: NGL
       REAL(8)    ,ALLOCATABLE :: GVEC(:,:)
+      INTEGER(4)              :: ntasks,THISTASK
+      integer(4)              :: ntasks1,thistask1
+      TYPE (PWPARALLEL_TYPE),POINTER :: THIS1
+      character(64)           :: ID
+      character(64)           :: ID0
+      LOGICAL(4)              :: TINV
+      LOGICAL(4)              :: TSUPER
+      REAL(8)                 :: KVEC(3)
+      INTEGER(4)              :: NR1,NR2,NR3
+      INTEGER(4)              :: i,j
+      integer(4),allocatable  :: icount(:)
+      integer(4),allocatable  :: iwork(:,:)
 !     ******************************************************************
-      IF(THISTASK.NE.1) RETURN
-      CALL REPORT$TITLE(NFIL,'PLANEWAVE')
-      CALL REPORT$CHVAL(NFIL,'ID',THIS%ID)
-      CALL REPORT$L4VAL(NFIL,'TINV',THIS%TINV)
-      CALL REPORT$L4VAL(NFIL,'TSUPER',THIS%TSUPER)
-      WRITE(NFIL,FMT='("GBASINV*K=(",3F10.5,")")')THIS%KVEC
-      CALL REPORT$I4VAL(NFIL,'NR1',THIS%NR1,' ')
-      CALL REPORT$I4VAL(NFIL,'NR2',THIS%NR2,' ')
-      CALL REPORT$I4VAL(NFIL,'NR3',THIS%NR3,' ')
-      DO ITASK=1,NTASKS
-        WRITE(NFIL,FMT='("TASK ",I4," NR1L ",I5," NGL ",I5," NSTRIPEL ",I5)') &
-           ITASK,THIS%NR1LARR(ITASK),THIS%NGLARR(ITASK),THIS%NSTRIPELARR(ITASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+!
+!     == FIND OUT, HOW MANY INSTANCES ON EACH TASK HAVE THIS TASK AS THE MAIN TASK
+      ALLOCATE(ICOUNT(NTASKS))
+      ICOUNT(:)=0
+      THIS1=>THIS
+      DO 
+        CALL MPE$QUERY(THIS1%CID,NTASKS1,THISTASK1)
+        IF(THISTASK1.EQ.1) ICOUNT(THISTASK)=ICOUNT(THISTASK)+1
+        THIS1=>THIS1%NEXT
+        IF(ASSOCIATED(THIS,THIS1)) EXIT
       ENDDO
+      CALL MPE$COMBINE('MONOMER','+',ICOUNT)
+print*,thistask,'icount',icount
+!
+      DO ITASK=1,NTASKS
+        IF(THISTASK.NE.ITASK.AND.THISTASK.NE.1) CYCLE
+        THIS1=>THIS
+        DO I=1,ICOUNT(ITASK)
+          IF(THISTASK.EQ.ITASK) THEN
+            do 
+              CALL MPE$QUERY(THIS1%CID,NTASKS1,THISTASK1)
+              if(thistask1.eq.1) exit
+              this1=>this1%next
+            enddo
+            ID=THIS1%ID
+            TINV=THIS1%TINV
+            TSUPER=THIS1%TSUPER
+            KVEC(:)=THIS1%KVEC
+            NR1=THIS1%NR1
+            NR2=THIS1%NR2
+            NR3=THIS1%NR3
+            CALL MPE$QUERY(THIS1%CID,NTASKS1,THISTASK1)
+          END IF
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,ID)
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,TINV)
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,TSUPER)
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,KVEC)
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,NR1)
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,NR2)
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,NR3)
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,ntasks1)
+          IF(THISTASK.EQ.1) THEN
+            CALL REPORT$TITLE(NFIL,'PLANEWAVE')
+            CALL REPORT$CHVAL(NFIL,'ID',ID)
+            CALL REPORT$L4VAL(NFIL,'TINV',TINV)
+            CALL REPORT$L4VAL(NFIL,'TSUPER',TSUPER)
+            WRITE(NFIL,FMT='("GBASINV*K=(",3F10.5,")")')KVEC
+            CALL REPORT$I4VAL(NFIL,'NR1',NR1,' ')
+            CALL REPORT$I4VAL(NFIL,'NR2',NR2,' ')
+            CALL REPORT$I4VAL(NFIL,'NR3',NR3,' ')
+          END IF
+          ALLOCATE(IWORK(NTASKS1,3))
+          IF(THISTASK.EQ.ITASK) THEN
+            IWORK(:,1)=THIS1%NR1LARR(:)          
+            IWORK(:,2)=THIS1%NGLARR(:)          
+            IWORK(:,3)=THIS1%NSTRIPELARR(:)          
+          END IF
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,iwork)
+          if(thistask.eq.1) then
+            DO J=1,ntasks1
+              WRITE(NFIL,FMT='("TASK ",I4," NR1L ",I5," NGL ",I5," NSTRIPEL ",I5)') &
+              J,IWORK(J,1),IWORK(J,2),IWORK(J,3)
+            ENDDO
+          END IF
+          DEALLOCATE(IWORK)
+          IF(THISTASK.EQ.ITASK)THIS1=>THIS1%NEXT
+        ENDDO
+      ENDDO
+      deallocate(icount)
+
+!      IF(THISTASK.NE.1) RETURN
+!      CALL REPORT$TITLE(NFIL,'PLANEWAVE')
+!      CALL REPORT$CHVAL(NFIL,'ID',THIS%ID)
+!      CALL REPORT$L4VAL(NFIL,'TINV',THIS%TINV)
+!      CALL REPORT$L4VAL(NFIL,'TSUPER',THIS%TSUPER)
+!      WRITE(NFIL,FMT='("GBASINV*K=(",3F10.5,")")')THIS%KVEC
+!      CALL REPORT$I4VAL(NFIL,'NR1',THIS%NR1,' ')
+!      CALL REPORT$I4VAL(NFIL,'NR2',THIS%NR2,' ')
+!      CALL REPORT$I4VAL(NFIL,'NR3',THIS%NR3,' ')
+!      DO ITASK=1,NTASKS
+!        WRITE(NFIL,FMT='("TASK ",I4," NR1L ",I5," NGL ",I5," NSTRIPEL ",I5)') &
+!           ITASK,THIS%NR1LARR(ITASK),THIS%NGLARR(ITASK),THIS%NSTRIPELARR(ITASK)
+!      ENDDO
       RETURN
       END
 !     
@@ -214,7 +297,6 @@ END MODULE PLANEWAVE_MODULE
         TINI=.TRUE.
         ALLOCATE(THIS)
         THIS%NEXT=>THIS
-        CALL MPE$QUERY(NTASKS,THISTASK)
       ELSE
         ALLOCATE(THIS1)
         THIS1%NEXT=>THIS%NEXT
@@ -226,6 +308,7 @@ END MODULE PLANEWAVE_MODULE
 !     ==  DO SOME INITIALIZATIONS                                     ==
 !     ==================================================================
       THIS%ID=ID
+      this%cid='none'
       THIS%TSUPER=.FALSE.
       THIS%NGAMMA=0
       NULLIFY(THIS%IGVECH)
@@ -303,7 +386,9 @@ END MODULE PLANEWAVE_MODULE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(OUT):: VAL
       LOGICAL(4)              :: TSUPER
+      INTEGER(4)              :: NTASKS,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(THIS%CID,NTASKS,THISTASK)
       TSUPER=THIS%TSUPER
       IF(ID.EQ.'NGL') THEN         ! LOCAL #(GVECTORS)
         IF(TSUPER) THEN
@@ -359,7 +444,9 @@ END MODULE PLANEWAVE_MODULE
       LOGICAL(4)              :: SUPER
       INTEGER(4)              :: IG,IGH
       INTEGER(4)              :: NG
+      INTEGER(4)              :: NTASKS,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(THIS%CID,NTASKS,THISTASK)
       SUPER=THIS%TSUPER
 !
 !     ==================================================================
@@ -400,6 +487,19 @@ END MODULE PLANEWAVE_MODULE
             CALL ERROR$STOP('PLANEWAVE$GETI4A')
           END IF
         END IF
+!
+!     ==================================================================
+!     ==  NR1LARR                                                     ==
+!     ==================================================================
+      ELSE IF(ID.EQ.'NR1LARR') THEN
+        IF(LEN.NE.NTASKS) THEN
+          CALL ERROR$MSG('SIZE INCONSISTENT')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$I4VAL('NTASKS',NTASKS)
+          CALL ERROR$STOP('PLANEWAVE$GETI4A')
+        END IF
+        VAL(:)=THIS%NR1LARR(:)
 !
 !     ==================================================================
 !     ==  UNKNOWN ID                                                  ==
@@ -449,7 +549,9 @@ END MODULE PLANEWAVE_MODULE
       LOGICAL(4)              :: SUPER
       INTEGER(4)              :: IG,IGH
       INTEGER(4)              :: NG
+      INTEGER(4)              :: NTASKS,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(THIS%CID,NTASKS,THISTASK)
       SUPER=THIS%TSUPER
 !
 !     ==================================================================
@@ -584,11 +686,11 @@ END MODULE PLANEWAVE_MODULE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       REAL(8)     ,INTENT(IN) :: VAL(LEN)
-      real(8)                 :: rbas(3,3)
+      REAL(8)                 :: RBAS(3,3)
 !     ******************************************************************
 !
 !     ==================================================================
-!     ==  sET G-VECTORS                                               ==
+!     ==  SET G-VECTORS                                               ==
 !     ==================================================================
       IF(ID.EQ.'RBAS') THEN   ! LATTICE VECTORS
         IF(LEN.NE.9) THEN
@@ -680,6 +782,30 @@ END MODULE PLANEWAVE_MODULE
       END
 !
 !     ..................................................................
+      SUBROUTINE PLANEWAVE$sETCH(ID,VAL)
+!     ******************************************************************
+!     **  HANDLES REQUESTS FOR COMPLEX ARRAYS                         **
+!     ******************************************************************
+      USE PLANEWAVE_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(*),INTENT(in):: VAL
+!     ******************************************************************
+!
+!     ==================================================================
+!     ==  GET CURRENT ID                                              ==
+!     ==================================================================
+      IF(ID.EQ.'CID') THEN   ! PHASE FACTOR
+        THIS%CID=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PLANEWAVE$GETCH')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
       SUBROUTINE PLANEWAVE$CHECKINVERSION(KVEC,TINV)
 !     ******************************************************************
 !     **  THIS TOOL IS USED TO DETERMINE IF THE RECIPROCAL SPACE GRID **
@@ -701,7 +827,7 @@ END MODULE PLANEWAVE_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE PLANEWAVE$DIVIDERGRIDONTASKS(EPW,RBAS,NR1START,NR1L,NR2,NR3)
+      SUBROUTINE PLANEWAVE$DIVIDERGRIDONTASKS(EPW,RBAS,cid,NR1START,NR1L,NR2,NR3)
 !     ******************************************************************
 !     **  THIS TOOL IS USED TO DETERMINE THE REAL SPACE GRID,         **
 !     **  WHICH IS THE INPUT FOR THE PLANEWAVE OBJECT.                **
@@ -710,6 +836,7 @@ END MODULE PLANEWAVE_MODULE
 !     **  GRID                                                        **
 !     ******************************************************************
       IMPLICIT NONE
+      character(*),INTENT(IN):: cid      ! communicator id (see mpe)
       REAL(8)   ,INTENT(IN)  :: EPW      ! PLANE WAVE CUTOFF
       REAL(8)   ,INTENT(IN)  :: RBAS(3,3)! R-SPACE LATTICE VECTORS
       INTEGER(4),INTENT(OUT) :: NR1START ! INDEX OF FIRST R-GRID PLANE
@@ -727,7 +854,7 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)             :: MIN3,MAX3
       INTEGER(4)             :: NBELOW,NABOVE
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY(cid,NTASKS,THISTASK)
       CALL GBASS(RBAS,GBAS,VOL)
       RAD=DSQRT(2.D0*EPW)+1.D-6
       CALL BOXSPH(GBAS,0.D0,0.D0,0.D0,RAD &
@@ -735,9 +862,9 @@ END MODULE PLANEWAVE_MODULE
       NR1G=MAX1-MIN1+1
       NR2=MAX2-MIN2+1
       NR3=MAX3-MIN3+1
-      CALL LIB$FFTadjustGRD(NR1G)
-      CALL LIB$FFTadjustGRD(NR2)
-      CALL LIB$FFTadjustGRD(NR3)
+      CALL LIB$FFTADJUSTGRD(NR1G)
+      CALL LIB$FFTADJUSTGRD(NR2)
+      CALL LIB$FFTADJUSTGRD(NR3)
       NR1L=NR1G/NTASKS
       ISVAR=NR1G-NTASKS*NR1L
       IF(THISTASK.LE.ISVAR) THEN
@@ -750,7 +877,7 @@ END MODULE PLANEWAVE_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE PLANEWAVE$INITIALIZE(ID,RBAS,KVEC,TINV,EPW &
+      SUBROUTINE PLANEWAVE$INITIALIZE(ID,cid,RBAS,KVEC,TINV,EPW &
      &                               ,NR1START,NR1L,NR2,NR3)
 !     ******************************************************************
 !     **                                                              **
@@ -763,7 +890,8 @@ END MODULE PLANEWAVE_MODULE
       USE PLANEWAVE_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID      ! IDENTIFIER
+      CHARACTER(*),INTENT(IN) :: ID        ! IDENTIFIER
+      CHARACTER(*),INTENT(IN) :: cID       ! communicator id (see mpe)
       REAL(8)     ,INTENT(IN) :: RBAS(3,3) ! LATTICE VECTORS 
       REAL(8)     ,INTENT(IN) :: KVEC(3)   ! K-VECTOR IN RELATIVE! COORDINATES
       LOGICAL(4)  ,INTENT(IN) :: TINV      ! SELECT SUPERWAVEFUNCTIONS
@@ -782,6 +910,7 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4) ,ALLOCATABLE :: MINUSG(:)
       INTEGER(4) ,ALLOCATABLE :: ITASKOFYZ(:,:)
       INTEGER(4) ,ALLOCATABLE :: MAP(:)
+      INTEGER(4)              :: NTASKS,THISTASK
 !     ******************************************************************
                            CALL TRACE$PUSH('PLANEWAVE$INITIALIZE')
       IF(NR1L.EQ.0) THEN
@@ -789,9 +918,10 @@ END MODULE PLANEWAVE_MODULE
         CALL ERROR$MSG('STOPPING, BECAUSE PARALLELIZATION WILL FAIL')
         CALL ERROR$STOP('PLANEWAVE$INITIALIZE')
       ENDIF 
- 
+      CALL MPE$QUERY(CID,NTASKS,THISTASK) 
       CALL PLANEWAVE_NEW(ID)
       CALL GBASS(RBAS,GBAS,VOL)
+      THIS%CID=CID
       THIS%KVEC=KVEC
       THIS%GBAS=GBAS
       THIS%NR2=NR2
@@ -799,9 +929,10 @@ END MODULE PLANEWAVE_MODULE
       THIS%NR1L=NR1L
       THIS%NR1START=NR1START
       THIS%TINV=TINV
+      CALL MPE$QUERY(THIS%CID,NTASKS,THISTASK)
       ALLOCATE(THIS%NR1LARR(NTASKS))
-      CALL MPE$GATHER(1,NR1L,THIS%NR1LARR)
-      CALL MPE$BROADCAST(1,THIS%NR1LARR)
+      CALL MPE$GATHER(THIS%CID,1,NR1L,THIS%NR1LARR)
+      CALL MPE$BROADCAST(THIS%CID,1,THIS%NR1LARR)
       THIS%NR1=SUM(THIS%NR1LARR)
       NR1=THIS%NR1
       THIS%GWEIGHT=VOL
@@ -969,19 +1100,19 @@ END MODULE PLANEWAVE_MODULE
           END IF
         ENDDO
         ALLOCATE(THIS%NGHARR(NTASKS))
-        CALL MPE$GATHER(1,NGH,THIS%NGHARR)
-        CALL MPE$BROADCAST(1,THIS%NGHARR)
+        CALL MPE$GATHER(THIS%CID,1,NGH,THIS%NGHARR)
+        CALL MPE$BROADCAST(THIS%CID,1,THIS%NGHARR)
 !
-        ALLOCATE(this%IGVECH(3,NGL))
+        ALLOCATE(THIS%IGVECH(3,NGL))
         IGH=0
-!print*,'clemens marke 1'
-        DO IG=1,ngl
+!PRINT*,'CLEMENS MARKE 1'
+        DO IG=1,NGL
           IF(THIS%MINUSG(IG).LT.IG) CYCLE
           IGH=IGH+1
-!print*,'clemens ig,igh ',ig,igh
-          this%IGVECh(:,IGH)=THIS%IGVEC(:,IG)
+!PRINT*,'CLEMENS IG,IGH ',IG,IGH
+          THIS%IGVECH(:,IGH)=THIS%IGVEC(:,IG)
         ENDDO
-!print*,'clemens marke 2'
+!PRINT*,'CLEMENS MARKE 2'
       ELSE
         NULLIFY(THIS%NGHARR)
       END IF
@@ -1110,10 +1241,10 @@ END MODULE PLANEWAVE_MODULE
       REAL(8)                :: GSQUARE
       INTEGER(4)             :: IWORK(NG)
       INTEGER(4)             :: IK(3)
-      INTEGER(4)             :: ICOUNT,igarr(3),istart,istop
+      INTEGER(4)             :: ICOUNT,IGARR(3),ISTART,ISTOP
       REAL(8)                :: KARTK(3)
-      integer(4)             :: from,to
-      real(8)                :: svar
+      INTEGER(4)             :: FROM,TO
+      REAL(8)                :: SVAR
 !     ******************************************************************
       KARTK=MATMUL(GBAS,KVEC)
 !
@@ -1180,19 +1311,19 @@ END MODULE PLANEWAVE_MODULE
       DO IG=2,NG
         IF(ABS(G2A(IG)-SVAR).LT.1.D-5.AND.IG.NE.NG) CYCLE
         ISTOP=IG-1
-        if(ig.eq.NG)istop=ng
+        IF(IG.EQ.NG)ISTOP=NG
         DO I=ISTART,ISTOP
           DO J=I+1,ISTOP
             IF(IGVEC(1,I).GT.IGVEC(1,J)) THEN
               IGARR(:)=IGVEC(:,I)
               IGVEC(:,I)=IGVEC(:,J)
               IGVEC(:,J)=IGARR(:)
-            ELSE IF(IGVEC(1,I).eq.IGVEC(1,J)) THEN
-              IF (IGVEC(2,I).gt.IGVEC(2,J)) THEN
+            ELSE IF(IGVEC(1,I).EQ.IGVEC(1,J)) THEN
+              IF (IGVEC(2,I).GT.IGVEC(2,J)) THEN
                 IGARR(:)=IGVEC(:,I)
                 IGVEC(:,I)=IGVEC(:,J)
                 IGVEC(:,J)=IGARR(:)
-              ELSE IF(IGVEC(2,I).eq.IGVEC(2,J)) THEN
+              ELSE IF(IGVEC(2,I).EQ.IGVEC(2,J)) THEN
                 IF(IGVEC(3,I).GT.IGVEC(3,J)) THEN
                   IGARR(:)=IGVEC(:,I)
                   IGVEC(:,I)=IGVEC(:,J)
@@ -1373,7 +1504,9 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)            :: IG
       REAL(8)               :: T1,T2,T3
       REAL(8)               :: KARTK(3)
+      INTEGER(4)            :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(THIS%CID,NTASKS,THISTASK)
       IF(NGL.NE.THIS%NGLARR(THISTASK)) THEN
         CALL ERROR$MSG('SIZE INCONSISTENT')
         CALL ERROR$STOP('PLANEWAVE_GVECTORS')
@@ -1446,7 +1579,7 @@ END MODULE PLANEWAVE_MODULE
       SUBROUTINE PLANEWAVE$STRUCTUREFACTOR(R,NGL,EIGR)
 !     ******************************************************************
 !     **                                                              **
-!     **  CALCULATE STRUCTURE FACTORS EXP(I*G*R)                      **
+!     **  CALCULATE STRUCTURE FACTORS EXP(-I*G*R)                     **
 !     **                                                              **
 !     ******************************************************************
       USE PLANEWAVE_MODULE
@@ -1458,7 +1591,9 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)             :: IG,IGH
       INTEGER(4)             :: NG
       INTEGER(4)             :: NGH
+      INTEGER(4)            :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
       IF(.NOT.THIS%TSUPER) THEN
         IF(NGL.NE.THIS%NGLARR(THISTASK)) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -1487,7 +1622,7 @@ END MODULE PLANEWAVE_MODULE
 !
         CALL PLANEWAVE_STRUCTUREFACTOR(R,THIS%GBAS,THIS%KVEC &
      &                         ,THIS%NR1,THIS%NR2,THIS%NR3,NGL &
-     &                         ,this%IGVECh,EIGR)
+     &                         ,THIS%IGVECH,EIGR)
       END IF
       RETURN
       END
@@ -1510,20 +1645,20 @@ END MODULE PLANEWAVE_MODULE
       REAL(8)   ,INTENT(IN) :: R(3)      ! ATOMIC POSITION
       REAL(8)   ,INTENT(IN) :: KVEC(3)   ! K-VECTOR
       REAL(8)   ,INTENT(IN) :: GBAS(3,3) ! REC. LATTICE VECTORS
-      INTEGER(4),INTENT(IN) :: NR1
+      INTEGER(4),INTENT(IN) :: NR1       ! #(GRID-POINTS IN R-SPACE || FIRST LATTICE VECTOR)
       INTEGER(4),INTENT(IN) :: NR2
       INTEGER(4),INTENT(IN) :: NR3
       INTEGER(4),INTENT(IN) :: NG        ! #(LOCAL PLANE WAVES)
       INTEGER(4),INTENT(IN) :: IGVEC(3,NG)
-      COMPLEX(8),INTENT(OUT):: EIGR(NG)  ! E**(I*G*R)
+      COMPLEX(8),INTENT(OUT):: EIGR(NG)  ! E**(-I*G*R)
       INTEGER(4)            :: NRMAX
       COMPLEX(8),POINTER,SAVE :: DCWORK(:,:)
       COMPLEX(8)            :: CFACP,CSVARP,CFACM,CSVARM
       REAL(8)               :: GR1,GR2,GR3
       REAL(8)               :: RK1,RK2,RK3
-      INTEGER(4)            :: I,j,k,IG 
+      INTEGER(4)            :: I,J,K,IG 
       REAL(8)               :: KARTK(3)
-      integer(4),save       :: nrmaxsave=-1
+      INTEGER(4),SAVE       :: NRMAXSAVE=-1
 !     ******************************************************************
       NRMAX=MAX(NR1,NR2,NR3)
       IF(NRMAXSAVE.LT.NRMAX) THEN
@@ -1582,19 +1717,19 @@ END MODULE PLANEWAVE_MODULE
       ENDDO
 !
 !     ==================================================================
-!     ==  combine three directions to structure factor                ==
+!     ==  COMBINE THREE DIRECTIONS TO STRUCTURE FACTOR                ==
 !     ==================================================================
       DO IG=1,NG
         I=IGVEC(1,IG) 
-        j=IGVEC(2,IG) 
-        k=IGVEC(3,IG) 
-        EIGR(IG)=DCWORK(I,1)*DCWORK(j,2)*DCWORK(k,3)
+        J=IGVEC(2,IG) 
+        K=IGVEC(3,IG) 
+        EIGR(IG)=DCWORK(I,1)*DCWORK(J,2)*DCWORK(K,3)
       ENDDO
       RETURN
       END
 !
 !     .....................................................PHFAC........
-      SUBROUTINE PLANEWAVE_STRUCTUREFACTOR_old(R,GBAS,KVEC,NR1,NR2,NR3,NG &
+      SUBROUTINE PLANEWAVE_STRUCTUREFACTOR_OLD(R,GBAS,KVEC,NR1,NR2,NR3,NG &
      &           ,IGVEC,EIGR)
 !     **                                                              **
 !     **  EVALUATES  EXP(-I*(G+K)*R)                                  **
@@ -1624,7 +1759,7 @@ END MODULE PLANEWAVE_MODULE
       REAL(8)               :: RK1,RK2,RK3
       INTEGER(4)            :: I,IG 
       REAL(8)               :: KARTK(3)
-      integer(4),save       :: nrmaxsave=-1
+      INTEGER(4),SAVE       :: NRMAXSAVE=-1
 !     ******************************************************************
       NRMAX=MAX(NR1,NR2,NR3)
       IF(NRMAXSAVE.LT.NRMAX) THEN
@@ -1725,7 +1860,9 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)            :: IG
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       COMPLEX(8)            :: CSVAR1,CSVAR2
+      INTEGER(4)            :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
       IF(.NOT.THIS%TINV) THEN
         CALL ERROR$MSG('NO TIME INVERSION SYMMETRY')
         CALL ERROR$STOP('PLANEWAVE$INVERTG')
@@ -1761,7 +1898,9 @@ END MODULE PLANEWAVE_MODULE
       COMPLEX(8),INTENT(IN) :: FOFG(NGL)
       COMPLEX(8),INTENT(OUT):: FOFMG(NGL)
       INTEGER(4)            :: IG
+      INTEGER(4)            :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
       IF(.NOT.THIS%TINV) THEN
         CALL ERROR$MSG('NO TIME INVERSION SYMMETRY')
         CALL ERROR$STOP('PLANEWAVE$INVERTG')
@@ -1806,7 +1945,9 @@ END MODULE PLANEWAVE_MODULE
       COMPLEX(8),ALLOCATABLE     :: FOFG1(:)
       COMPLEX(8),ALLOCATABLE     :: FOFR1(:)
       COMPLEX(8)                 :: F1,F2
+      INTEGER(4)            :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
                                  CALL TRACE$PUSH('PLANEWAVE$SUPFFT')
                                  CALL TIMING$CLOCKON('PLANEWAVE$SUPFFT')
 !
@@ -1871,7 +2012,7 @@ END MODULE PLANEWAVE_MODULE
 !         ==============================================================
 !         == NOW TRANSFORM SUPER WAVE FUNCTIONS TO R-SPACE            ==
 !         ==============================================================
-          CALL PLANEWAVE_FFTGTOR(NGL,NRL,NR1,NR2,NR3,THISTASK,NTASKS &
+          CALL PLANEWAVE_FFTGTOR(this%cid,ntasks,NGL,NRL,NR1,NR2,NR3 &
      &           ,NSTRIPELX,THIS%NSTRIPELARR,THIS%NR1LARR &
      &           ,THIS%IGTOSTRIPE,THIS%ISTRIPETOYZ &
      &           ,FOFG1,FOFR1)
@@ -1881,12 +2022,12 @@ END MODULE PLANEWAVE_MODULE
 !         ==============================================================
           IF(IFFT+1.LE.NFFT) THEN
             DO IR=1,NRL
-              FOFR(IR,IFFT)  =REAL(FOFR1(IR),kind=8)
+              FOFR(IR,IFFT)  =REAL(FOFR1(IR),KIND=8)
               FOFR(IR,IFFT+1)=AIMAG(FOFR1(IR))
             ENDDO
           ELSE
             DO IR=1,NRL
-              FOFR(IR,IFFT)=REAL(FOFR1(IR),kind=8)
+              FOFR(IR,IFFT)=REAL(FOFR1(IR),KIND=8)
             ENDDO
           END IF
         ENDDO
@@ -1909,7 +2050,7 @@ END MODULE PLANEWAVE_MODULE
 !         ==============================================================
 !         == NOW TRANSFORM SUPER WAVE FUNCTIONS TO G-SPACE            ==
 !         ==============================================================
-          CALL PLANEWAVE_FFTRTOG(NGL,NRL,NR1,NR2,NR3,THISTASK,NTASKS &
+          CALL PLANEWAVE_FFTRTOG(this%cid,ntasks,NGL,NRL,NR1,NR2,NR3 &
      &           ,NSTRIPELX,THIS%NSTRIPELARR,THIS%NR1LARR &
      &           ,THIS%IGTOSTRIPE,THIS%ISTRIPETOYZ &
      &           ,FOFG1,FOFR1)
@@ -1960,7 +2101,9 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                 :: NR1,NR2,NR3
       INTEGER(4)                 :: NSTRIPELX
       INTEGER(4)                 :: IFFT
+      INTEGER(4)                 :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
                                  CALL TRACE$PUSH('PLANEWAVE$FFT')
                                  CALL TIMING$CLOCKON('PLANEWAVE$FFT')
       IF(NGL.NE.THIS%NGLARR(THISTASK)) THEN
@@ -1981,14 +2124,14 @@ END MODULE PLANEWAVE_MODULE
       NSTRIPELX=MAXVAL(THIS%NSTRIPELARR)
       IF(ID.EQ.'GTOR') THEN
         DO IFFT=1,NFFT
-          CALL PLANEWAVE_FFTGTOR(NGL,NRL,NR1,NR2,NR3,THISTASK,NTASKS &
+          CALL PLANEWAVE_FFTGTOR(this%cid,ntasks,NGL,NRL,NR1,NR2,NR3 &
      &           ,NSTRIPELX,THIS%NSTRIPELARR,THIS%NR1LARR &
      &           ,THIS%IGTOSTRIPE,THIS%ISTRIPETOYZ &
      &           ,FOFG(1,IFFT),FOFR(1,IFFT))
         ENDDO
       ELSE IF(ID.EQ.'RTOG') THEN
         DO IFFT=1,NFFT
-          CALL PLANEWAVE_FFTRTOG(NGL,NRL,NR1,NR2,NR3,THISTASK,NTASKS &
+          CALL PLANEWAVE_FFTRTOG(this%cid,ntasks,NGL,NRL,NR1,NR2,NR3 &
      &           ,NSTRIPELX,THIS%NSTRIPELARR,THIS%NR1LARR &
      &           ,THIS%IGTOSTRIPE,THIS%ISTRIPETOYZ &
      &           ,FOFG(1,IFFT),FOFR(1,IFFT))
@@ -2004,7 +2147,7 @@ END MODULE PLANEWAVE_MODULE
       END      
 !
 !     ..................................................................
-      SUBROUTINE PLANEWAVE_FFTGTOR(NGL,NRL,NR1,NR2,NR3,THISTASK,NTASKS &
+      SUBROUTINE PLANEWAVE_FFTGTOR(cid,ntasks_,NGL,NRL,NR1,NR2,NR3 &
      &           ,NSTRIPELX,NSTRIPELARR,NR1LARR,IGTOSTRIPE,ISTRIPETOYZ &
      &           ,FOFG,FOFR)
 !     ******************************************************************
@@ -2015,15 +2158,16 @@ END MODULE PLANEWAVE_MODULE
 !     ******************************************************************
       USE MPE_MODULE
       IMPLICIT NONE
+      character(*),intent(in)   :: cid   ! communicator id (see mpelib)
+      INTEGER(4)  ,INTENT(IN)   :: ntasks_
       INTEGER(4)  ,INTENT(IN)   :: NGL
       INTEGER(4)  ,INTENT(IN)   :: NRL
       INTEGER(4)  ,INTENT(IN)   :: NR1,NR2,NR3    !GLOBAL
-      INTEGER(4)  ,INTENT(IN)   :: NTASKS,THISTASK
       INTEGER(4)  ,INTENT(IN)   :: IGTOSTRIPE(NGL)
-      INTEGER(4)  ,INTENT(IN)   :: NSTRIPELARR(NTASKS)
-      INTEGER(4)  ,INTENT(IN)   :: NR1LARR(NTASKS)
+      INTEGER(4)  ,INTENT(IN)   :: NSTRIPELARR(NTASKS_)
+      INTEGER(4)  ,INTENT(IN)   :: NR1LARR(NTASKS_)
       INTEGER(4)  ,INTENT(IN)   :: NSTRIPELX
-      INTEGER(4)  ,INTENT(IN)   :: ISTRIPETOYZ(NSTRIPELX,NTASKS)
+      INTEGER(4)  ,INTENT(IN)   :: ISTRIPETOYZ(NSTRIPELX,NTASKS_)
       COMPLEX(8)  ,INTENT(IN)   :: FOFG(NGL)
       COMPLEX(8)  ,INTENT(OUT)  :: FOFR(NRL)
       COMPLEX(8)  ,ALLOCATABLE  :: UIU(:,:,:)  !(NR1LX,NSTRIPEX,NTASKS)
@@ -2036,9 +2180,15 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                :: IR1,IR2,IR3,IR1L
       INTEGER(4)                :: IMID,I23
       INTEGER(4)                :: NR3END1,NR3END2
-      INTEGER(4)                :: IND1,IND2,stride2
+      INTEGER(4)                :: IND1,IND2,STRIDE2
       INTEGER(4)                :: IG
+      INTEGER(4)                 :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(cid,NTASKS,THISTASK)
+      if(ntasks.ne.ntasks_) then
+        call error$msg('inconsistent ntasks')
+        call error$stop('PLANEWAVE_FFTRTOG')
+      end if
       IF(MAX(NR1,NR2,NR3).GT.2048) THEN
         CALL ERROR$MSG('INSUFFICIENT SIZE FOR AUXILIARY ARRAYS') 
         CALL ERROR$STOP('PLANEWAVE_FFTGTOR')
@@ -2078,13 +2228,13 @@ END MODULE PLANEWAVE_MODULE
       ENDDO
       DEALLOCATE(FOFG1)
 !
-      CALL MPE$TRANSPOSE(UIU)
+      CALL MPE$TRANSPOSE(CID,UIU)
 !
       FOFR(:)=CMPLX(0.D0,0.D0,8)
       IMID=NR3/2
       NR3END1=1
       NR3END2=NR3
-      stride2=nr2*nr3
+      STRIDE2=NR2*NR3
       DO ITASK=1,NTASKS
         DO ISTRIPEL=1,NSTRIPELARR(ITASK)
           I23=ISTRIPETOYZ(ISTRIPEL,ITASK)   ! I23=IR2+NR2*(IR3-1)
@@ -2138,15 +2288,15 @@ END MODULE PLANEWAVE_MODULE
       ENDDO
 !
 !     ==================================================================
-!     == FFT 3rd DIMENSION (NR3)                                      ==
+!     == FFT 3RD DIMENSION (NR3)                                      ==
 !     ==================================================================
-      caLL LIB$FFTC8('GTOR',NR3,NR2*NR1L,FOFR1,FOFR1)
+      CALL LIB$FFTC8('GTOR',NR3,NR2*NR1L,FOFR1,FOFR1)
 !
 !     ==================================================================
 !     == TRANSPOSE TO OPTIMIZE STRIDE                                 ==
 !     == FOFR(IR1,IR2,IR3)=FOFR(IR2,IR3,IR1)                         ==
 !     ==================================================================
-      stride2=nr1l*nr2
+      STRIDE2=NR1L*NR2
       DO IR1L=1,NR1L
         DO IR2=1,NR2
           IND1=NR3 *(IR2-1+NR2*(IR1L-1))
@@ -2154,8 +2304,8 @@ END MODULE PLANEWAVE_MODULE
           DO IR3=1,NR3
 !           IND1=IR3 +NR3 *(IR2-1+NR2*(IR1L-1))
 !           IND2=IR1L+NR1L*(IR2-1+NR2*(IR3-1))
-            ind1=ind1+1
-            ind2=ind2+stride2
+            IND1=IND1+1
+            IND2=IND2+STRIDE2
             FOFR(IND2)=FOFR1(IND1)
           ENDDO
         ENDDO
@@ -2165,7 +2315,7 @@ END MODULE PLANEWAVE_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE PLANEWAVE_FFTRTOG(NGL,NRL,NR1,NR2,NR3,THISTASK,NTASKS &
+      SUBROUTINE PLANEWAVE_FFTRTOG(cid,ntasks_,NGL,NRL,NR1,NR2,NR3 &
      &          ,NSTRIPELX,NSTRIPELARR,NR1LARR,IGTOSTRIPE,ISTRIPETOYZ &
      &          ,FOFG,FOFR)
 !     ******************************************************************
@@ -2176,15 +2326,16 @@ END MODULE PLANEWAVE_MODULE
 !     ******************************************************************
       USE MPE_MODULE
       IMPLICIT NONE 
+      character(*),intent(in)   :: cid
+      INTEGER(4)  ,INTENT(IN)   :: ntasks_
       INTEGER(4)  ,INTENT(IN)   :: NGL
       INTEGER(4)  ,INTENT(IN)   :: NRL
       INTEGER(4)  ,INTENT(IN)   :: NR1,NR2,NR3    !GLOBAL
-      INTEGER(4)  ,INTENT(IN)   :: NTASKS,THISTASK
-      INTEGER(4)  ,INTENT(IN)   :: NSTRIPELARR(NTASKS)
-      INTEGER(4)  ,INTENT(IN)   :: NR1LARR(NTASKS)
+      INTEGER(4)  ,INTENT(IN)   :: NSTRIPELARR(NTASKS_)
+      INTEGER(4)  ,INTENT(IN)   :: NR1LARR(NTASKS_)
       INTEGER(4)  ,INTENT(IN)   :: IGTOSTRIPE(NGL)
       INTEGER(4)  ,INTENT(IN)   :: NSTRIPELX
-      INTEGER(4)  ,INTENT(IN)   :: ISTRIPETOYZ(NSTRIPELX,NTASKS)
+      INTEGER(4)  ,INTENT(IN)   :: ISTRIPETOYZ(NSTRIPELX,NTASKS_)
       COMPLEX(8)  ,INTENT(OUT)  :: FOFG(NGL)
       COMPLEX(8)  ,INTENT(IN)   :: FOFR(NRL)
       COMPLEX(8)  ,ALLOCATABLE  :: UIU(:,:,:)  !(NR1LX,NSTRIPELX,NTASKS)
@@ -2200,7 +2351,13 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                :: IND1,IND2
       INTEGER(4)                :: NSTRIPEL
       INTEGER(4)                :: IG,J,I
+      INTEGER(4)                 :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(cid,NTASKS,THISTASK)
+      if(ntasks.ne.ntasks_) then
+        call error$msg('inconsistent ntasks')
+        call error$stop('PLANEWAVE_FFTRTOG')
+      end if
       NR1L=NR1LARR(THISTASK)
       NR1LX=MAXVAL(NR1LARR)
       NSTRIPEL=NSTRIPELARR(THISTASK)
@@ -2292,7 +2449,7 @@ END MODULE PLANEWAVE_MODULE
         ENDDO
       ENDDO
       DEALLOCATE(FOFR2)
-      CALL MPE$TRANSPOSE(UIU)
+      CALL MPE$TRANSPOSE(CID,UIU)
       ALLOCATE(FOFG1(NR1*NSTRIPEL))
       FOFG1(:)=CMPLX(0.D0,0.D0,8)
       DO ISTRIPEL=1,NSTRIPEL
@@ -2327,7 +2484,7 @@ END MODULE PLANEWAVE_MODULE
 !     **  SCALAR PRODUCT OF SETS OF FUNCTIONS IN RECIPROCAL SPACE     **
 !     **                                                              **
 !     **  THE SUBROUTINE IS NOT PARALLELIZED ADD THE RESULT EXTERNALLY**
-!     **  USING MPE$COMBINE('+',MAT)                                  **
+!     **  USING MPE$COMBINE('NONE','+',MAT)                                  **
 !     **                                                              **
 !     **  THREE OPTIONS SPECIFIED BY ID                               **
 !     **    ID='=' INDICATES THAT F1=F2                               **
@@ -2487,7 +2644,7 @@ END MODULE PLANEWAVE_MODULE
       SUBROUTINE PLANEWAVE$ADDPRODUCT(ID,NGL,NDIM,N1,F1,N2,F2,MAT)
 !     ******************************************************************
 !     **                                                              **
-!     **  f1=f1+f2*mat                                                **
+!     **  F1=F1+F2*MAT                                                **
 !     **  THREE OPTIONS SPECIFIED BY ID                               **
 !     **    ID='=' INDICATES THAT F1=F2                               **
 !     **    ID='-' <F1(-)|F2(+)>                                      **
@@ -2615,7 +2772,9 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)              :: NGLX
       INTEGER(4)              :: NG,NGL
       LOGICAL(4)              :: TSUPER
+      INTEGER(4)                 :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
                               CALL TRACE$PUSH('PLANEWAVE$DISTRIBUTE')
       IF (.NOT.TINI) THEN
         CALL ERROR$MSG('LIST NOT INITIALIZED')
@@ -2661,14 +2820,14 @@ END MODULE PLANEWAVE_MODULE
             ENDIF
           ENDDO
           IF(TOTASK.NE.1) THEN
-            CALL MPE$SEND(TOTASK,10,XTMP(:,1:NGSEND))
+            CALL MPE$SEND(THIS%CID,TOTASK,10,XTMP(:,1:NGSEND))
           ELSE
             XLOC(:,:)=XTMP(:,1:NGSEND)
           END IF
         ENDDO
         DEALLOCATE(XTMP)
       ELSE
-        CALL MPE$RECEIVE(1,10,XLOC)
+        CALL MPE$RECEIVE(THIS%CID,1,10,XLOC)
       ENDIF
                      CALL TRACE$POP
       RETURN
@@ -2700,8 +2859,10 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)               :: FROMTASK
       INTEGER(4)               :: IG,IGL
       INTEGER(4)               :: NGL,NGLX,NG
-      logical(4)               :: TSUPER
+      LOGICAL(4)               :: TSUPER
+      INTEGER(4)                 :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
                      CALL TRACE$PUSH('PLANEWAVE$COLLECT')
       IF (.NOT.TINI) THEN
         CALL ERROR$MSG('LIST NOT INITIALIZED')
@@ -2715,13 +2876,13 @@ END MODULE PLANEWAVE_MODULE
       IF(TSUPER) THEN
         NG=SUM(THIS%NGHARR)
         NGL=THIS%NGHARR(THISTASK)
-        NGLX=MAXVAL(THIS%NGhARR(:))
+        NGLX=MAXVAL(THIS%NGHARR(:))
       ELSE
         NG=SUM(THIS%NGLARR)
         NGL=THIS%NGLARR(THISTASK)
         NGLX=MAXVAL(THIS%NGLARR(:))
       END IF
-      IF(NGGLOB.NE.NG.and.thistask.eq.1) THEN
+      IF(NGGLOB.NE.NG.AND.THISTASK.EQ.1) THEN
         CALL ERROR$MSG('GLOBAL %(G-VECTORS) INCONSISTENT WITH OBJECT')
         CALL ERROR$I4VAL('NG (ON INPUT)',NGGLOB)
         CALL ERROR$I4VAL('NG (IN OBJECT)',NG)
@@ -2732,7 +2893,7 @@ END MODULE PLANEWAVE_MODULE
         CALL ERROR$STOP('PLANEWAVE$COLLECT')
       END IF
       ALLOCATE(X_LOCTMP(NDIM,NGLX))
-      CALL MPE$SYNC !THIS IS ONLY USED TO AVOID FILLING UP THE BUFFER
+      CALL MPE$SYNC(THIS%CID) !THIS IS ONLY USED TO AVOID FILLING UP THE BUFFER
       IF(THISTASK.EQ.1)THEN
 !
 !       ================================================================
@@ -2740,7 +2901,7 @@ END MODULE PLANEWAVE_MODULE
 !       ================================================================
         DO FROMTASK=1,NTASKS
           IF(FROMTASK.NE.1) THEN
-            CALL MPE$RECEIVE(FROMTASK,FROMTASK*2,NGFROM)
+            CALL MPE$RECEIVE(THIS%CID,FROMTASK,FROMTASK*2,NGFROM)
             IF(NGFROM.GT.NGLX) THEN
               CALL ERROR$MSG('PACKAGE TOO LARGE')
               CALL ERROR$I4VAL('FROMTASK',FROMTASK)
@@ -2748,7 +2909,7 @@ END MODULE PLANEWAVE_MODULE
               CALL ERROR$I4VAL('NGLX',NGLX)
               CALL ERROR$STOP('PLANEWAVE_COLLECT')
             END IF
-            CALL MPE$RECEIVE(FROMTASK,FROMTASK*2+1,X_LOCTMP)
+            CALL MPE$RECEIVE(THIS%CID,FROMTASK,FROMTASK*2+1,X_LOCTMP)
             IGL=0
             DO IG=1,NG
               IF(THIS%TASKOFIG(IG).NE.FROMTASK) CYCLE
@@ -2768,9 +2929,9 @@ END MODULE PLANEWAVE_MODULE
 !       ================================================================
 !       == OTHER TASKS SEND TO TASK ONE                               ==
 !       ================================================================
-        CALL MPE$SEND(1,THISTASK*2,NGL)
+        CALL MPE$SEND(THIS%CID,1,THISTASK*2,NGL)
         X_LOCTMP(:,1:NGL)=XLOC(:,:)
-        CALL MPE$SEND(1,THISTASK*2+1,X_LOCTMP)
+        CALL MPE$SEND(THIS%CID,1,THISTASK*2+1,X_LOCTMP)
       ENDIF
       DEALLOCATE(X_LOCTMP)
                      CALL TRACE$POP
@@ -2794,7 +2955,9 @@ END MODULE PLANEWAVE_MODULE
       REAL(8)     ,ALLOCATABLE:: X_LOCTMP(:)
       INTEGER(4)              :: I23,IRG,IRL,IR1L,IR2,IR3
       INTEGER(4)              :: FROMTASK
+      INTEGER(4)                 :: ntasks,THISTASK
 !     ******************************************************************
+      CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
                      CALL TRACE$PUSH('PLANEWAVE$RSPACECOLLECTR8')
       IF(.NOT.TINI) THEN
         CALL ERROR$MSG('LIST NOT INITIALIZED')
@@ -2815,7 +2978,7 @@ END MODULE PLANEWAVE_MODULE
       XG(:)=0.D0
       NRLX=MAXVAL(THIS%NR1LARR(:))*NR2*NR3
       ALLOCATE(X_LOCTMP(NRLX))
-      CALL MPE$SYNC !THIS IS ONLY USED TO AVOID FILLING UP THE BUFFER
+      CALL MPE$SYNC(THIS%CID) !THIS IS ONLY USED TO AVOID FILLING UP THE BUFFER
       IF(THISTASK.EQ.1)THEN
 !
 !       ================================================================
@@ -2825,12 +2988,12 @@ END MODULE PLANEWAVE_MODULE
         DO FROMTASK=1,NTASKS
           NR1L=THIS%NR1LARR(FROMTASK)
           IF(FROMTASK.NE.1) THEN
-            CALL MPE$RECEIVE(FROMTASK,FROMTASK*2,NRLFROM)
+            CALL MPE$RECEIVE(THIS%CID,FROMTASK,FROMTASK*2,NRLFROM)
             IF(NRLFROM.GT.NRLX) THEN
               CALL ERROR$MSG('PACKAGE TO LARGE')
               CALL ERROR$STOP('PLANEWAVE$RSPACECOLLECTR8')
             END IF
-            CALL MPE$RECEIVE(FROMTASK,FROMTASK*2+1,X_LOCTMP)
+            CALL MPE$RECEIVE(THIS%CID,FROMTASK,FROMTASK*2+1,X_LOCTMP)
             I23=-1
             DO IR3=1,NR3
               DO IR2=1,NR2
@@ -2865,9 +3028,9 @@ END MODULE PLANEWAVE_MODULE
 !       ================================================================
 !       == OTHER TASKS SEND TO TASK ONE                               ==
 !       ================================================================
-        CALL MPE$SEND(1,THISTASK*2,NRL)
+        CALL MPE$SEND(THIS%CID,1,THISTASK*2,NRL)
         X_LOCTMP(1:NRL)=XL(:)
-        CALL MPE$SEND(1,THISTASK*2+1,X_LOCTMP)
+        CALL MPE$SEND(THIS%CID,1,THISTASK*2+1,X_LOCTMP)
       ENDIF
       DEALLOCATE(X_LOCTMP)
                      CALL TRACE$POP

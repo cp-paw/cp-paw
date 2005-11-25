@@ -182,10 +182,10 @@ END MODULE SELFTEST_MODULE
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         WRITE(NFILO,FMT='(72("="))')
         WRITE(NFILO,FMT='(72("="),T10,"  SELFTEST:",A,"  ")')IDENT
-!       == energy derivative from energies
-        WRITE(NFILO,FMT='("DX ",f10.5," DEDX(AN) ",ES20.10,"XX",ES20.10)') &
+!       == ENERGY DERIVATIVE FROM ENERGIES
+        WRITE(NFILO,FMT='("DX ",F10.5," DEDX(AN) ",ES20.10,"XX",ES20.10)') &
      &                0.D0,DEDDIFF,0.D0
-!       == energy derivative from forces
+!       == ENERGY DERIVATIVE FROM FORCES
         DO I=1,NAMP
           DX=DIFFAMP*DBLE(I)
           SVAR=DFORCE(I)

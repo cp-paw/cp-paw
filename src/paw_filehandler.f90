@@ -58,7 +58,7 @@ CONTAINS
         SUBROUTINE FILEHANDLER_CREATE
 !       ****************************************************************
 !       ****************************************************************
-        use strings_module
+        USE STRINGS_MODULE
         IMPLICIT NONE
         INTEGER(4)    :: I
 !       ****************************************************************
@@ -131,7 +131,7 @@ CONTAINS
 !       ****************************************************************
         IFIL_=0
         DO I=1,LASTFILE
-          IF(trim(ID_).EQ.TRIM(FILE(I)%ID)) THEN
+          IF(TRIM(ID_).EQ.TRIM(FILE(I)%ID)) THEN
             IFIL_=I
             RETURN
           END IF
@@ -147,8 +147,8 @@ END MODULE FILEHANDLER_MODULE
 !     ==================================================================
       USE FILEHANDLER_MODULE
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN):: id
-      CHARACTER(*),INTENT(IN):: val
+      CHARACTER(*),INTENT(IN):: ID
+      CHARACTER(*),INTENT(IN):: VAL
 !     ******************************************************************
       IF(ID.EQ.'ENDIAN') THEN
         IF(VAL.NE.'LITTLE'.AND.VAL.NE.'BIG') THEN
@@ -194,7 +194,7 @@ END MODULE FILEHANDLER_MODULE
       CALL FILEHANDLER_LOOKUP(ID_,IFIL)
       IF(IFIL.EQ.0) THEN
         CALL ERROR$MSG('FILE IDENTIFIER NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID',trim(ID_))
+        CALL ERROR$CHVAL('ID',TRIM(ID_))
         CALL ERROR$STOP('FILEHANDLER$UNIT')
       END IF
       IF(.NOT.FILE(IFIL)%OPEN) THEN
@@ -477,13 +477,13 @@ END MODULE FILEHANDLER_MODULE
 !     **                                                              **
 !     **                                                              **
 !     ******************************************************************
-      use strings_module
+      USE STRINGS_MODULE
       USE FILEHANDLER_MODULE
       IMPLICIT NONE
       TYPE (FILE_TYPE),INTENT(INOUT) :: FILE_
       INTEGER(4)                     :: IERR
       INTEGER(4)                     :: IOS
-      character(128)                 :: iostatmessage
+      CHARACTER(128)                 :: IOSTATMESSAGE
       LOGICAL(4)                     :: OD
       CHARACTER(9)                   :: ACTION
       CHARACTER(11)                  :: FORM
@@ -492,8 +492,8 @@ END MODULE FILEHANDLER_MODULE
       CHARACTER(5)                   :: STDIN
       CHARACTER(9)                   :: DEVNULL
       INTEGER(4)                     :: I
-      LOGICAL(4)                     :: TOPENIBM  ! ibm choice between little and big endian
-      CHARACTER(1)                   :: convert        !used to test for little and big endian
+      LOGICAL(4)                     :: TOPENIBM  ! IBM CHOICE BETWEEN LITTLE AND BIG ENDIAN
+      CHARACTER(1)                   :: CONVERT        !USED TO TEST FOR LITTLE AND BIG ENDIAN
 !     ******************************************************************
       STDOUT =-'STDOUT'
       STDIN  =-'STDIN'
@@ -521,7 +521,7 @@ END MODULE FILEHANDLER_MODULE
       IF(FILE_%OPEN) THEN
         IERR=2
         CLOSE(FILE_%UNIT,IOSTAT=IOS)
-        call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+        CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
         FILE_%OPEN=.FALSE.
       ELSE
         IERR=3
@@ -530,7 +530,7 @@ END MODULE FILEHANDLER_MODULE
           IF(I.EQ.5) CYCLE
           IF(I.EQ.6) CYCLE
           INQUIRE(UNIT=I,OPENED=OD,IOSTAT=IOS)
-          call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+          CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
           IF(.NOT.OD) THEN
             FILE_%UNIT=I
             GOTO 200
@@ -585,11 +585,11 @@ END MODULE FILEHANDLER_MODULE
      &    ,STATUS=FILE_%STATUS &
      &    ,FORM=FORM &
      &    ,POSITION=FILE_%POSITION)
-         call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+         CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
       ELSE
         IERR=5
 #IF DEFINED(CPPVAR_ENDIANCHECK)
-        if(FORM.eq.'FORMATTED') then
+        IF(FORM.EQ.'FORMATTED') THEN
 #ENDIF
         OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
      &      ,FILE=FILE_%NAME &
@@ -597,11 +597,11 @@ END MODULE FILEHANDLER_MODULE
      &      ,FORM=FORM &
      &      ,POSITION=FILE_%POSITION &
      &      ,ACTION=ACTION)
-         call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+         CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
 #IF DEFINED(CPPVAR_ENDIANCHECK)
         ELSE
           CALL FILEHANDLER_READCONVERT(FILE_,FORM,CONVERT)
-          if(convert.eq.'U') topenibm=(.not.tlittleendian) !unknown
+          IF(CONVERT.EQ.'U') TOPENIBM=(.NOT.TLITTLEENDIAN) !UNKNOWN
           IF(CONVERT.EQ.'B') TOPENIBM=.TRUE.
           IF(CONVERT.EQ.'L') TOPENIBM=.FALSE.
           IF((ACTION.EQ.'WRITE'.AND.FILE_%POSITION.EQ.'REWIND').AND.TLITTLEENDIAN) TOPENIBM=.FALSE.
@@ -616,7 +616,7 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED IBM-COMPATIB
                   &    ,POSITION=FILE_%POSITION &
                   &    ,ACTION=ACTION &
                   &    ,CONVERT='BIG_ENDIAN')            
-            call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+            CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
           ELSE
             ! FILE IS INTEL COMPATIBLE
 PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPATIBLE'
@@ -627,7 +627,7 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
                   &    ,POSITION=FILE_%POSITION &
                   &    ,ACTION=ACTION &
                   &    ,CONVERT='LITTLE_ENDIAN')
-            call FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+            CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
          END IF
         END IF
 #ENDIF
@@ -657,7 +657,7 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
       USE FILEHANDLER_MODULE, ONLY : FILE_TYPE
       IMPLICIT NONE
       TYPE (FILE_TYPE),INTENT(IN) :: FILE_
-      integer(4)      ,intent(in) :: ierr
+      INTEGER(4)      ,INTENT(IN) :: IERR
       INTEGER(4)      ,INTENT(IN) :: IOS
       INTEGER(4)                  :: NFIL
       CHARACTER(9)                :: DEVNULL
@@ -744,7 +744,7 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
       IF(IOS.EQ.107)X='FILE EXISTS, STATUS=NEW SPECIFIED'
       IF(IOS.EQ.108) &
      &    X='THE I/O STATEMENT REFERS TO UNIT WHICH IS NOT CONNECTED'
-      return
+      RETURN
       END
 !
 !     ..................................................................
@@ -768,7 +768,7 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
       CALL FILEHANDLER$IOSTATMESSAGE(IOS,X)
       PRINT*,'ERROR WHILE READING OR WRITING ON FILE ',NFIL
       WRITE(*,FMT='('' AIX XL FORTRAN COMPILER MESSAGE FOR IOSTAT='',I3' &
-     &     //'/A58)')IOS,trim(X)
+     &     //'/A58)')IOS,TRIM(X)
       IF(NFIL.NE.0) THEN
         INQUIRE(NFIL,NAME=STRING)
         PRINT*,STRING
@@ -780,12 +780,16 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
       SUBROUTINE FILEHANDLER_CLOSE(FILE_)
 !     ******************************************************************
 !     ******************************************************************
+      USE STRINGS_MODULE
       USE FILEHANDLER_MODULE, ONLY : FILE_TYPE
       IMPLICIT NONE
       TYPE (FILE_TYPE),INTENT(INOUT) :: FILE_
       INTEGER(4)                     :: NFIL
+      CHARACTER(9)                   :: DEVNULL
 !     ******************************************************************
       IF(.NOT.FILE_%OPEN) RETURN
+      DEVNULL=-'/DEV/NULL'
+      IF(FILE_%NAME.EQ.DEVNULL) RETURN  ! /DEV/NULL CANNOT BE CLOSED
       NFIL=FILE_%UNIT
       IF(NFIL.EQ.0.OR.NFIL.EQ.5.OR.NFIL.EQ.6) RETURN
 !     INQUIRE(UNIT=NFIL,POSITION=FILE_%POSITION)
@@ -800,9 +804,9 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
 !     ..................................................................
       SUBROUTINE FILEHANDLER_READCONVERT(FILE_,FORM,CONVERT)
 !     ******************************************************************
-!     **  determines if a file is written in little or big-endian.    **
-!     **  test if the first byte is readable with a given selection   **
-!     **  if reading is not possible (ERR=?), tries the other selection**
+!     **  DETERMINES IF A FILE IS WRITTEN IN LITTLE OR BIG-ENDIAN.    **
+!     **  TEST IF THE FIRST BYTE IS READABLE WITH A GIVEN SELECTION   **
+!     **  IF READING IS NOT POSSIBLE (ERR=?), TRIES THE OTHER SELECTION**
 !     ******************************************************************
       USE FILEHANDLER_MODULE, ONLY : FILE_TYPE
       IMPLICIT NONE

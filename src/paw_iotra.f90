@@ -90,7 +90,7 @@ CONTAINS
         ELSE
           CALL TRAJECTORYIO_NEW(ID,XXX%NEXT)
           XXX=>XXX%NEXT
-          exit
+          EXIT
         END IF
       ENDDO
       RETURN
@@ -209,7 +209,7 @@ END MODULE TRAJECTORYIO_MODULE
       INTEGER(4)               :: ISTEP
       TYPE(XXX_TYPE),POINTER   :: XXX
 !     ****************************************************************** 
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.GT.1)RETURN
 !
 !     ==================================================================
@@ -277,7 +277,7 @@ END MODULE TRAJECTORYIO_MODULE
       TYPE(XXX_TYPE),POINTER   :: XXX
       INTEGER(4)               :: NTASKS,THISTASK
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.GT.1)RETURN
       XXX=>XXXSTART
       DO WHILE (ASSOCIATED(XXX))

@@ -47,7 +47,7 @@
       LOGICAL(4)             :: TBACK
 !     ******************************************************************
                              CALL TRACE$PUSH('PAIRP')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       EPAIR=0.D0
       VQLM(:,:)=0.D0
@@ -180,10 +180,10 @@
 !     == HELP ARRAY TEMPORARY STORING THE FORCES =======================
 !     == FORCE_T IS ALLOCATED NAT+1 IN ORDER TO STORE EPAIR FOR COMM  ==
 !     ==================================================================
-      CALL MPE$COMBINE('+',EPAIR)
-      CALL MPE$COMBINE('+',VQLM)
-      CALL MPE$COMBINE('+',FORCE)
-      CALL MPE$COMBINE('+',STRESS)
+      CALL MPE$COMBINE('MONOMER','+',EPAIR)
+      CALL MPE$COMBINE('MONOMER','+',VQLM)
+      CALL MPE$COMBINE('MONOMER','+',FORCE)
+      CALL MPE$COMBINE('MONOMER','+',STRESS)
 !
 !     ==================================================================
 !     ==  HERE OPTIONAL SELF TEST                                     ==

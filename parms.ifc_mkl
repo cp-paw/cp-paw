@@ -11,7 +11,10 @@ COMPILER="/opt/intel/compiler70/ia32/bin/ifc"
 F77COMPILER="/opt/intel/compiler70/ia32/bin/ifc"
 #
 #________________________________F90 compiler flags 
-FLAGS="-c -mp1  "
+
+FLAGS="-c -mp -I/yap/tools/paw_arch/libs/axel/fftw-2.1.5_o3_safefp/fortran/ -I/yap/tools/paw_arch/libs/mpich-1.2.5.2_SSH/include/"
+
+
 #
 #________________________________F77 compiler flags
 F77FLAGS="-c -mp1 "
@@ -32,10 +35,16 @@ F77DEBUG="-g -C -d4"
 LFLAGS="-tpp7 -O3  "
 #
 #________________________________search directories for linking (sequential)
-LLINK="-L/home/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32 "
+
+LLINK="-L/yap/tools/paw_arch/libs/axel/fftw-2.1.5_o3_safefp/fftw/.libs/ -L/yap/tools/paw_arch/libs/axel/mkl72/lib/32/ -L/yap/tools/paw_arch/libs/"
+
+#LLINK="-L/home/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32 "
 #
 #________________________________search directories for linking (parallel)
-PLLINK="-L/home/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32 -L/home/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5/lib"
+
+PLLINK="-L/yap/tools/paw_arch/libs/axel/fftw-2.1.5_o3_safefp/fftw/.libs/ -L/yap/tools/paw_arch/libs/axel/mkl72/lib/32/ -L/yap/tools/paw_arch/libs/ -L/yap/tools/paw_arch/libs/mpich-1.2.5.2_SSH/lib/"
+
+#PLLINK="-L/home/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32 -L/home/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5/lib"
 #
 #________________________________external libraries (sequential)
 LIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_ia32 -lguide -lpthread "

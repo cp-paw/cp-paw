@@ -9,7 +9,7 @@ MODULE WARMUP_MODULE
 LOGICAL(4)            :: TON=.FALSE.
 INTEGER(4)            :: NPULSE         ! #PULSES
 INTEGER(4)            :: PULSE_LENGTH   ! #STEPS PER PULSE
-REAL(8)               :: TARGET_TEMP    ! TARGET TEMPERATURE Kelvin
+REAL(8)               :: TARGET_TEMP    ! TARGET TEMPERATURE KELVIN
 END MODULE WARMUP_MODULE
 !
 !     ..................................................................
@@ -146,12 +146,12 @@ END MODULE WARMUP_MODULE
       INTEGER(4),INTENT(IN)      ::  NSTEP_IN
       INTEGER(4),INTENT(INOUT)   :: NPULSE
       REAL(8)   ,INTENT(IN)      :: TFINAL, DELT
-      REAL(8)   ,INTENT(IN)      :: RMASS(nat)
-      REAL(8)   ,INTENT(IN)      :: RM(3,nat)
-      REAL(8)   ,INTENT(IN)      :: R0(3,nat)
-      REAL(8)   ,INTENT(INOUT)   :: FORCE(3,nat)
-      REAL(8)   ,INTENT(INOUT)   :: RP(3,nat)
-      REAL(8)                    :: MASS(3,nat)
+      REAL(8)   ,INTENT(IN)      :: RMASS(NAT)
+      REAL(8)   ,INTENT(IN)      :: RM(3,NAT)
+      REAL(8)   ,INTENT(IN)      :: R0(3,NAT)
+      REAL(8)   ,INTENT(INOUT)   :: FORCE(3,NAT)
+      REAL(8)   ,INTENT(INOUT)   :: RP(3,NAT)
+      REAL(8)                    :: MASS(3,NAT)
       INTEGER(4),SAVE            :: NSTEP
       REAL(8)   ,ALLOCATABLE,SAVE:: DELTAV(:,:)
       REAL(8)   ,ALLOCATABLE,SAVE:: DELTAVO(:,:)
@@ -370,10 +370,10 @@ END MODULE WARMUP_MODULE
 !     *****************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: IPULSE, NAT
-      REAL(8)   ,INTENT(IN)   :: RM(3,nat)
-      REAL(8)   ,INTENT(IN)   :: RP(3,nat)
-      REAL(8)   ,INTENT(INOUT):: DELTAV(3,nat)
-      REAL(8)   ,INTENT(IN)   :: RMASS(nat)
+      REAL(8)   ,INTENT(IN)   :: RM(3,NAT)
+      REAL(8)   ,INTENT(IN)   :: RP(3,NAT)
+      REAL(8)   ,INTENT(INOUT):: DELTAV(3,NAT)
+      REAL(8)   ,INTENT(IN)   :: RMASS(NAT)
       REAL(8)   ,ALLOCATABLE  :: VPRO(:,:)
       REAL(8)   ,ALLOCATABLE  :: DWORK(:,:)
       REAL(8)   ,ALLOCATABLE  :: RCHECK(:,:)

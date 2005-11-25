@@ -25,8 +25,8 @@
 !     **                                                              **
 !     **                                                              **
       USE LDAPLUSU_MODULE
-      use periodictable_module
-      IMPLICIT none
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NRX
       INTEGER(4),INTENT(IN) :: LMNXX
       INTEGER(4),INTENT(IN) :: NSPIN
@@ -39,7 +39,7 @@
       REAL(8)   ,INTENT(IN) :: AEPHI(NRX,LNX)
       REAL(8)   ,INTENT(IN) :: DENMAT(LMNXX,LMNXX,NSPIN)
       REAL(8)   ,INTENT(OUT):: DH(LMNXX,LMNXX,NSPIN)
-      REAL(8)   ,INTENT(OUT):: detot
+      REAL(8)   ,INTENT(OUT):: DETOT
       REAL(8)   ,ALLOCATABLE:: OCC(:,:)
       REAL(8)   ,ALLOCATABLE:: POT(:,:)
       REAL(8)               :: X(LNX,LNX)
@@ -47,16 +47,16 @@
       REAL(8)               :: RJ(0:3)
       REAL(8)               :: RU(0:3)
       REAL(8)               :: WORK(NRX)
-      REAL(8)               :: xexp,ri
-      REAL(8)               :: ev
-      REAL(8)               :: rasa
-      integer(4)            :: lx,lmnx,ln,l,lmx,iz,ispin,lm,m
-      integer(4)            :: ln1,ln2,l1,l2,m1,m2,lmn1,lmn2,lm1,lm2
-      integer(4)            :: ir
-      real(8)               :: occ1up,occ2up,occ1down,occ2down
-      real(8)               :: v1up,v1down,v2up,v2down
-      real(8)               :: avpot,avocc
-      real(8)               :: svar
+      REAL(8)               :: XEXP,RI
+      REAL(8)               :: EV
+      REAL(8)               :: RASA
+      INTEGER(4)            :: LX,LMNX,LN,L,LMX,IZ,ISPIN,LM,M
+      INTEGER(4)            :: LN1,LN2,L1,L2,M1,M2,LMN1,LMN2,LM1,LM2
+      INTEGER(4)            :: IR
+      REAL(8)               :: OCC1UP,OCC2UP,OCC1DOWN,OCC2DOWN
+      REAL(8)               :: V1UP,V1DOWN,V2UP,V2DOWN
+      REAL(8)               :: AVPOT,AVOCC
+      REAL(8)               :: SVAR
 !     *******************************************************************
 !     == POINTER ARRAYS
       IF(.NOT.TDO) RETURN

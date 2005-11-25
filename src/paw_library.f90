@@ -53,7 +53,7 @@
 !#DEFINE CPPVAR_FFTPACK
 !#DEFINE CPPVAR_BLAS_EXPLICIT
 !#ENDIF 
-!#if defined(IBMLICENSE)
+!#IF DEFINED(IBMLICENSE)
 !
 !     .................................................................
       SUBROUTINE LIB$GETUSAGE(ID,VALUE)
@@ -125,7 +125,7 @@
 !
       CPUTIME=(REAL(USG%UTIME(1)+USG%STIME(1),KIND=8) &
      &        +REAL(USG%UTIME(2)+USG%STIME(2),KIND=8))*1.D-6
-      cputime=max(cputime,1.d-6)
+      CPUTIME=MAX(CPUTIME,1.D-6)
       IF(ID.EQ.'MAXMEM') THEN
         VALUE=REAL(USG%MAXRSS,KIND=8)*KBYTE
       ELSE IF(ID.EQ.'USRTIME') THEN
@@ -276,7 +276,7 @@
       IF (W .LT. 2.2D0) THEN
           T = W * W
           K = INT(T)
-          T = T - REAL(K,kind=8)
+          T = T - REAL(K,KIND=8)
           K = K * 13
           Y = (((((((((((( A(K    )*T + A(K+ 1)) * T + &
      &        A(K+ 2))*T + A(K+ 3))*T + A(K+ 4)) * T + &
@@ -285,7 +285,7 @@
      &        A(K+11))*T + A(K+12))*W
       ELSE IF (W .LT. 6.9D0) THEN
           K = INT(W)
-          T = W - REAL(K,kind=8)
+          T = W - REAL(K,KIND=8)
           K = 13 * (K - 2)
           Y = (((((((((((B(K) * T + B(K + 1)) * T + &
      &        B(K + 2)) * T + B(K + 3)) * T + B(K + 4)) * T + &
@@ -372,7 +372,7 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT) :: X
 !     ******************************************************************
       SEED=MODULO(RANFAC1*SEED,RANFAC2)
-      X=REAL(SEED,kind=8)/REAL(RANFAC2,kind=8)
+      X=REAL(SEED,KIND=8)/REAL(RANFAC2,KIND=8)
 !     == CHOICE EXPLICIT CPPVARIABLE_XLF RNG
 !     CALL RANDOM_NUMBER(Y)
       RETURN
@@ -577,7 +577,7 @@ END MODULE RANDOM_MODULE
       LOGICAL(4)            :: TCHK
       COMPLEX(8),ALLOCATABLE:: WORK3(:,:)
       INTEGER(4)            :: INFO
-!clemens
+!CLEMENS
       INTEGER               :: INF1
       INTEGER               :: INF2
 !     ******************************************************************
@@ -703,7 +703,7 @@ END MODULE RANDOM_MODULE
 !
 !  ATTENTION !!!
 !  DO NOT USE !!
-!  Clemens Foerst
+!  CLEMENS FOERST
 !     ..................................................................
       SUBROUTINE LIB_FFTCXML(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -771,7 +771,7 @@ END MODULE RANDOM_MODULE
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      INCLUDE 'fftw_f77.i'
+      INCLUDE 'FFTW_F77.I'
       CHARACTER(*),INTENT(IN) :: DIR
       INTEGER(4)  ,INTENT(IN) :: LEN
       INTEGER(4)  ,INTENT(IN) :: NFFT
@@ -783,7 +783,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)  ,SAVE       :: ISIGN
       REAL(8)     ,SAVE       :: SCALE
       COMPLEX(8)              :: XDUMMY(LEN,NFFT)
-      integer(4)              :: i
+      INTEGER(4)              :: I
       INTEGER(4),SAVE         :: NP=0
       INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
 #IF DEFINED(CPPVAR_64BIT)
@@ -974,23 +974,23 @@ END MODULE RANDOM_MODULE
       IF(ISIGN.EQ.1) THEN
         DO IFFT=1,NFFT
           DO I=1,LEN
-            SEQUENCE(2*I-1)= REAL(X(I,IFFT),kind=8)
+            SEQUENCE(2*I-1)= REAL(X(I,IFFT),KIND=8)
             SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
           ENDDO
           CALL CFFTF(LEN,SEQUENCE,AUX2,IAUX)
           DO I=1,LEN
-            Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I),kind=8)*SCALE
+            Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I),KIND=8)*SCALE
           ENDDO
         ENDDO
       ELSE
         DO IFFT=1,NFFT
           DO I=1,LEN
-            SEQUENCE(2*I-1)= REAL(X(I,IFFT),kind=8)
+            SEQUENCE(2*I-1)= REAL(X(I,IFFT),KIND=8)
             SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
           ENDDO
           CALL CFFTB(LEN,SEQUENCE,AUX2,IAUX)
           DO I=1,LEN
-            Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I),kind=8)*SCALE
+            Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I),KIND=8)*SCALE
           ENDDO
         ENDDO
       END IF
@@ -1147,7 +1147,7 @@ END MODULE RANDOM_MODULE
       LOGICAL                 :: DEF
       INTEGER(4)              :: I
       INTEGER(4)  ,SAVE       :: ISIGN
-      INCLUDE 'fftw_f77.i'
+      INCLUDE 'FFTW_F77.I'
 !     ******************************************************************
       DIM(1)=N1
       DIM(2)=N2
@@ -1365,7 +1365,7 @@ END MODULE RANDOM_MODULE
 !#ELIF DEFINED(CPPVAR_BLAS_ATLAS)
 !      CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
 #ELSE
-      c(:,:)=(0.d0,0.d0)
+      C(:,:)=(0.D0,0.D0)
       CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
 #ENDIF
       RETURN
@@ -1377,8 +1377,8 @@ END MODULE RANDOM_MODULE
       SUBROUTINE LIB$ADDPRODUCTC8(TID,N,M,L,A,B,C)
 !     ******************************************************************
 !     **  ADD THE PRODUCT OF TWO MATRICES                             **
-!     **  c=c+matmul(a,b)                                             **
-!     **  for tid=.true., a and c may use identical storage           **
+!     **  C=C+MATMUL(A,B)                                             **
+!     **  FOR TID=.TRUE., A AND C MAY USE IDENTICAL STORAGE           **
 !     ******************************************************************
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN)   :: TID
@@ -1392,14 +1392,14 @@ END MODULE RANDOM_MODULE
       COMPLEX(8),ALLOCATABLE  :: WORK(:,:)
       INTEGER(4)              :: I,J,K
 !     ******************************************************************
-      if(tid) then
+      IF(TID) THEN
         ALLOCATE(WORK(N,M))
         WORK=A
-!       ==  c=c+matmul(work,b) 
-        CALL ZGEMM('N','N',N,L,M,(1.D0,0.D0),work,N,B,M,(1.D0,0.D0),C,N)
+!       ==  C=C+MATMUL(WORK,B) 
+        CALL ZGEMM('N','N',N,L,M,(1.D0,0.D0),WORK,N,B,M,(1.D0,0.D0),C,N)
         DEALLOCATE(WORK)
       ELSE
-!       ==  c=c+matmul(a,b) 
+!       ==  C=C+MATMUL(A,B) 
         CALL ZGEMM('N','N',N,L,M,(1.D0,0.D0),A,N,B,M,(1.D0,0.D0),C,N)
       END IF
       RETURN
@@ -1424,7 +1424,7 @@ END MODULE RANDOM_MODULE
 #IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL DGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'T',OPERATOR,LEN1,LEN1,N,LEN2)
 #ELSE 
-!     == operator=matmul(psi1,transpose(psi2))
+!     == OPERATOR=MATMUL(PSI1,TRANSPOSE(PSI2))
       CALL DGEMM('N','T',LEN1,LEN2,N,1.D0,PSI1,LEN1,PSI2,LEN2,0.D0 &
      &          ,OPERATOR,LEN1)
 #ENDIF
@@ -1450,8 +1450,8 @@ END MODULE RANDOM_MODULE
 #IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL ZGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'C',OPERATOR,LEN1,LEN1,N,LEN2)
 #ELSE 
-!     == operator=matmul(psi1,transpose(psi2))
-      operator(:,:)=(0.d0,0.d0)
+!     == OPERATOR=MATMUL(PSI1,TRANSPOSE(PSI2))
+      OPERATOR(:,:)=(0.D0,0.D0)
       CALL ZGEMM('N','C',LEN1,LEN2,N,(1.D0,0.D0) &
      &          ,PSI1(:,:),LEN1,PSI2(:,:),LEN2,(0.D0,0.D0),OPERATOR,LEN1)
 #ENDIF
@@ -1521,9 +1521,9 @@ END MODULE RANDOM_MODULE
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTC8')
       END IF
-      overlap(:,:)=(0.d0,0.d0)
+      OVERLAP(:,:)=(0.D0,0.D0)
       IF(TID) THEN
-!       == attention: scalar factors are supposed to be real as they are
+!       == ATTENTION: SCALAR FACTORS ARE SUPPOSED TO BE REAL AS THEY ARE
         CALL ZHERK('U','C',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
         DO I=1,N1
           DO J=I+1,N2
@@ -1536,7 +1536,7 @@ END MODULE RANDOM_MODULE
 #ELSE 
         CALL ZGEMM('C','N',N1,N2,LEN,(1.D0,0.D0),PSI1,LEN,PSI2,LEN &
      &            ,(0.D0,0.D0),OVERLAP,N1)
-#endif
+#ENDIF
       END IF
       RETURN
       END
@@ -1581,7 +1581,7 @@ END MODULE RANDOM_MODULE
         CALL DVES(N,X,1,Y,1,X,1)
 #ELSE
         CALL DAXPY(N,FAC,X,1,Y,1)
-#endif
+#ENDIF
       ELSE
         CALL DAXPY(N,FAC,X,1,Y,1)
       END IF
@@ -3084,7 +3084,7 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 #ENDIF
-!#endif(ibmlicense)
+!#ENDIF(IBMLICENSE)
 
 
 

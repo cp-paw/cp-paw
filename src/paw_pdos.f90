@@ -4,7 +4,7 @@ MODULE PDOS_MODULE
 TYPE STATE_TYPE
  INTEGER(4)         :: NB
  REAL(8)   ,POINTER :: EIG(:)
- REAL(8)   ,POINTER :: occ(:)
+ REAL(8)   ,POINTER :: OCC(:)
  COMPLEX(8),POINTER :: VEC(:,:,:)
 END TYPE STATE_TYPE 
 INTEGER(4)             :: NAT
@@ -361,10 +361,10 @@ END MODULE PDOS_MODULE
           CALL ERROR$STOP('PDOS$SETR8A')
         END IF
 !        RBAS=RESHAPE(VAL,(/3,3/))
-!clemens : ifc compiler bugfix
-        rbas(:,1)=val(1:3)
-        rbas(:,2)=val(4:6)
-        rbas(:,3)=val(7:9)
+!CLEMENS : IFC COMPILER BUGFIX
+        RBAS(:,1)=VAL(1:3)
+        RBAS(:,2)=VAL(4:6)
+        RBAS(:,3)=VAL(7:9)
       ELSE IF(ID.EQ.'R') THEN
         IF(NAT.EQ.0) NAT=LEN/3
         IF(LEN.NE.3*NAT) THEN
@@ -450,19 +450,17 @@ END MODULE PDOS_MODULE
       INTEGER(4)             :: NTASKS,THISTASK
       INTEGER(4)             :: IOS
       CHARACTER(82)          :: IOSTATMSG
-      character(32)          :: flag
-      logical(4)             :: tchk
+      CHARACTER(32)          :: FLAG
+      LOGICAL(4)             :: TCHK
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS%READ')
-      CALL MPE$QUERY(NTASKS,THISTASK)
-      IF(THISTASK.NE.1) RETURN
 !
 !     ==================================================================
 !     == GENERAL QUANTITIES                                           ==
 !     ==================================================================
-      tchk=.false.
-      READ(NFIL,ERR=100)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,flag
-      tchk=.true.
+      TCHK=.FALSE.
+      READ(NFIL,ERR=100)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG
+      TCHK=.TRUE.
  100  CONTINUE
       IF(.NOT.TCHK) THEN
         PRINT*,'WARNING: NO OCCUPATIONS PRESENT IN PDOS FILE'
@@ -498,7 +496,7 @@ END MODULE PDOS_MODULE
       ENDDO
 !
 !     ==================================================================
-!     ==  NOW read PROJECTIONS                                       ==
+!     ==  NOW READ PROJECTIONS                                       ==
 !     ==================================================================
       ALLOCATE(XK(3,NKPT))
       ALLOCATE(STATEARR(NKPT,NSPIN))
@@ -509,13 +507,13 @@ END MODULE PDOS_MODULE
           STATE%NB=NB
           ALLOCATE(STATE%EIG(NB))
           ALLOCATE(STATE%VEC(NDIM,NPRO,NB))
-          ALLOCATE(state%OCC(NB))
+          ALLOCATE(STATE%OCC(NB))
           DO IB=1,NB
             IF(FLAG.EQ.'011004') THEN
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB) &
-    &                          ,state%OCC(IB),STATE%VEC(:,:,IB)
+    &                          ,STATE%OCC(IB),STATE%VEC(:,:,IB)
             ELSE
-              state%occ(:)=0.d0
+              STATE%OCC(:)=0.D0
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB),STATE%VEC(:,:,IB)
             END IF
           ENDDO
@@ -525,7 +523,7 @@ END MODULE PDOS_MODULE
       RETURN
  9999 CONTINUE
       CALL FILEHANDLER$IOSTATMESSAGE(IOS,IOSTATMSG)
-      CALL ERROR$MSG('ERROR reading pdos FILE')
+      CALL ERROR$MSG('ERROR READING PDOS FILE')
       CALL ERROR$I4VAL('IOS',IOS)
       CALL ERROR$CHVAL('IOSTATMSG',IOSTATMSG)
       CALL ERROR$I4VAL('IB',IB)
@@ -549,8 +547,6 @@ END MODULE PDOS_MODULE
       INTEGER(4)             :: NTASKS,THISTASK
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITE')
-      CALL MPE$QUERY(NTASKS,THISTASK)
-      IF(THISTASK.NE.1) RETURN
 !
 !     ==================================================================
 !     == GENERAL QUANTITIES                                           ==

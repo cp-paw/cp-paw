@@ -45,7 +45,7 @@ REAL(8)                :: RCSM
 INTEGER(4)             :: LNX
 INTEGER(4)             :: LMNX
 INTEGER(4)             :: LMRX
-INTEGER(4)             :: nc     !santos040616
+INTEGER(4)             :: NC     !SANTOS040616
 INTEGER(4),POINTER     :: LOX(:)       !(LNXX)
 REAL(8)   ,POINTER     :: VADD(:)      !(NRX)
 REAL(8)   ,POINTER     :: AECORE(:)    !(NRX)
@@ -275,13 +275,13 @@ END MODULE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
-      INTEGER(4)  ,INTENT(OUT) :: VAL(len)
+      INTEGER(4)  ,INTENT(OUT) :: VAL(LEN)
 !     ******************************************************************
       IF(ID.EQ.'LOX') THEN
         IF(LEN.NE.THIS%LNX) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETi4A')
+          CALL ERROR$STOP('SETUP$GETI4A')
         END IF
         VAL=THIS%LOX
 ! SANTOS040616 BEGIN
@@ -289,14 +289,14 @@ END MODULE SETUP_MODULE
         IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETRi4A')
+          CALL ERROR$STOP('SETUP$GETRI4A')
         END IF
         VAL=THIS%LB
 ! SANTOS040616 END
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SETUP$GETI4a')
+        CALL ERROR$STOP('SETUP$GETI4A')
       END IF
       RETURN
       END
@@ -457,10 +457,10 @@ END MODULE SETUP_MODULE
 !     ******************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)  :: ID      !identifier
-      LOGICAL(4)  ,INTENT(IN)  :: TDER    ! calculate radial dervative
-      INTEGER(4)  ,INTENT(IN)  :: IND     ! selector (used only for id=pro)
-      INTEGER(4)  ,INTENT(IN)  :: NG_     ! #(plane waves)
+      CHARACTER(*),INTENT(IN)  :: ID      !IDENTIFIER
+      LOGICAL(4)  ,INTENT(IN)  :: TDER    ! CALCULATE RADIAL DERVATIVE
+      INTEGER(4)  ,INTENT(IN)  :: IND     ! SELECTOR (USED ONLY FOR ID=PRO)
+      INTEGER(4)  ,INTENT(IN)  :: NG_     ! #(PLANE WAVES)
       REAL(8)     ,INTENT(IN)  :: G2(NG_) ! G**2
       REAL(8)     ,INTENT(OUT) :: F(NG_)  
       REAL(8)                  :: FOFG(NG)
@@ -470,7 +470,7 @@ END MODULE SETUP_MODULE
       REAL(8)                  :: CELLVOL
       REAL(8)                  :: G
 !     ******************************************************************
-      if(ng_.eq.0) return
+      IF(NG_.EQ.0) RETURN
       IF(ID.EQ.'PRO') THEN
         IF(IND.LT.1.OR.IND.GT.THIS%LNX) THEN
           CALL ERROR$MSG('LN OUT OF RANGE')
@@ -500,6 +500,7 @@ END MODULE SETUP_MODULE
       NGAMMA=0
       IF(TDER) THEN
         G=DSQRT(G2(1))
+        IF(G.LT.1.D-6) NGAMMA=1
         CALL RADIAL$DERIVATIVE(G1,DEX,NG,FOFG,G,F(1))
         F(1)=G*F(1)
         DO IG=2,NG_
@@ -514,6 +515,7 @@ END MODULE SETUP_MODULE
         ENDDO
       ELSE
         G=DSQRT(G2(1))
+        IF(G.LT.1.D-6) NGAMMA=1
         CALL RADIAL$VALUE(G1,DEX,NG,FOFG,G,F(1))
         DO IG=2,NG_
           IF(DABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
@@ -534,7 +536,7 @@ END MODULE SETUP_MODULE
         IF(TDER) THEN
           NGAMMA=0.D0
         ELSE
-          IF(ID.EQ.'g0') THEN 
+          IF(ID.EQ.'G0') THEN 
             F(NGAMMA)=4.D0*PI
           ELSE IF(ID.EQ.'V0') THEN
             F(NGAMMA)=PI*(THIS%RCBG**2-THIS%RCSM**2)*4.D0*PI
@@ -574,8 +576,8 @@ END MODULE SETUP_MODULE
       INTEGER(4)            :: IRMAX
       CHARACTER(16)         :: NAME
       INTEGER(4)            :: L,LX,ISVAR,LNOLD,LNX
-      INTEGER(4)            :: nc !santos040616
-      INTEGER(4)            :: ln1,ln2,ln1a,ln2a
+      INTEGER(4)            :: NC !SANTOS040616
+      INTEGER(4)            :: LN1,LN2,LN1A,LN2A
       INTEGER(4),ALLOCATABLE:: NPRO(:)
       INTEGER(4),ALLOCATABLE:: IWORK(:)
       REAL(8)   ,ALLOCATABLE:: DWORK(:,:,:) 
@@ -617,7 +619,7 @@ END MODULE SETUP_MODULE
       THIS%AEPHI=0.D0
       THIS%PSPHI=0.D0
 ! SANTOS040616 BEGIN
-      CALL INPOT$nc(NFIL,nc)
+      CALL INPOT$NC(NFIL,NC)
       THIS%NC=NC
       ALLOCATE(THIS%AEPOT(NRX))
       ALLOCATE(THIS%LB(NC))
@@ -645,7 +647,7 @@ END MODULE SETUP_MODULE
      &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &
      &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
      &         ,THIS%AECORE,THIS%PSCORE,THIS%PRO &
-     &         ,THIS%AEPOT,this%nc,THIS%LB,THIS%FB,THIS%EB,THIS%AEPSI) !santos040616
+     &         ,THIS%AEPOT,THIS%NC,THIS%LB,THIS%FB,THIS%EB,THIS%AEPSI) !SANTOS040616
       CALL FILEHANDLER$CLOSE(THIS%FILEID)
 !     
 !     ==================================================================
@@ -711,9 +713,9 @@ END MODULE SETUP_MODULE
       DWORK(:,:,1)=THIS%DTKIN(:,:)
       DWORK(:,:,2)=THIS%DOVER(:,:)
       DEALLOCATE(THIS%DTKIN)
-      DEALLOCATE(THIS%dOVER)
+      DEALLOCATE(THIS%DOVER)
       ALLOCATE(THIS%DTKIN(LNX,LNX))
-      ALLOCATE(THIS%dOVER(LNX,LNX))
+      ALLOCATE(THIS%DOVER(LNX,LNX))
       LN1A=0
       DO LN1=1,LNOLD
         IF(IWORK(LN1).EQ.-1) CYCLE
@@ -723,28 +725,28 @@ END MODULE SETUP_MODULE
           IF(IWORK(LN2).EQ.-1) CYCLE
           LN2A=LN2A+1
           THIS%DTKIN(LN1A,LN2A)=DWORK(LN1,LN2,1)
-          THIS%dOVER(LN1A,LN2A)=DWORK(LN1,LN2,2)
+          THIS%DOVER(LN1A,LN2A)=DWORK(LN1,LN2,2)
         ENDDO
       ENDDO
       DEALLOCATE(DWORK)
 !
       DEALLOCATE(IWORK)
 
-!!$print*,'=============================================================='
-!!$print*,'psz  ',this%psz
-!!$print*,'aez  ',this%aez
-!!$print*,'rcsm ',this%rcsm
-!!$print*,'lnx  ',this%lnx
-!!$print*,'lox  ',this%lox
-!!$print*,'pro  ',this%pro
-!!$print*,'aephi',this%aephi
-!!$print*,'psphi',this%psphi
-!!$print*,'vadd ',this%vadd
-!!$print*,'pscore',this%pscore
-!!$print*,'aecore',this%aecore
-!!$print*,'dover',this%dover
-!!$print*,'dtkin',this%dtkin
-!call error$stop('forced stop in setup')
+!!$PRINT*,'=============================================================='
+!!$PRINT*,'PSZ  ',THIS%PSZ
+!!$PRINT*,'AEZ  ',THIS%AEZ
+!!$PRINT*,'RCSM ',THIS%RCSM
+!!$PRINT*,'LNX  ',THIS%LNX
+!!$PRINT*,'LOX  ',THIS%LOX
+!!$PRINT*,'PRO  ',THIS%PRO
+!!$PRINT*,'AEPHI',THIS%AEPHI
+!!$PRINT*,'PSPHI',THIS%PSPHI
+!!$PRINT*,'VADD ',THIS%VADD
+!!$PRINT*,'PSCORE',THIS%PSCORE
+!!$PRINT*,'AECORE',THIS%AECORE
+!!$PRINT*,'DOVER',THIS%DOVER
+!!$PRINT*,'DTKIN',THIS%DTKIN
+!CALL ERROR$STOP('FORCED STOP IN SETUP')
 !     
 !     ==================================================================
 !     == SET VALUES BEYOND A CERTAIN RADIUS EXACTLY TO ZERO           ==
@@ -851,7 +853,7 @@ END MODULE SETUP_MODULE
       REAL(8)                    :: U
       INTEGER(4)                 :: THISTASK,NTASKS
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
       CALL CONSTANTS$GET('U',U)
       THIS1=>FIRST
@@ -1033,7 +1035,7 @@ END MODULE SETUP_MODULE
       REAL(8)   ,PARAMETER  :: RMAX=5.D0
 !     ******************************************************************
       CALL ERROR$MSG('MARKED FOR DELTION: DO NOT USE!')
-      CALL ERROR$STOP('SETUP$pscoreg')
+      CALL ERROR$STOP('SETUP$PSCOREG')
                               CALL TRACE$PUSH('SETUP$PSCOREG')
       CALL SETUP$ISELECT(ISP_)
 !
@@ -1064,7 +1066,7 @@ END MODULE SETUP_MODULE
       REAL(8)   ,PARAMETER  :: RMAX=5.D0
 !     ******************************************************************
       CALL ERROR$MSG('MARKED FOR DELTION: DO NOT USE!')
-      CALL ERROR$STOP('SETUP$vbarg')
+      CALL ERROR$STOP('SETUP$VBARG')
                             CALL TRACE$PUSH('SETUP$VBARG')
              CALL TIMING$CLOCKON('FORMF-BESSOV VBAR')
       CALL SETUP$ISELECT(ISP_)
@@ -1477,7 +1479,7 @@ END MODULE SETUP_MODULE
       REAL(8)               :: SVAR1,SVAR2,SVAR3,SVAR4
       REAL(8)               :: BGGAUSS,SMGAUSS
       INTEGER(4)            :: IG,NSTART
-      REAL(8)               :: GI2,xexp2
+      REAL(8)               :: GI2,XEXP2
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       SVAR1=-0.25D0*RCBG**2
@@ -1593,7 +1595,7 @@ END MODULE SETUP_MODULE
       INTEGER(4),INTENT(IN)  :: NFIL
       INTEGER(4),INTENT(OUT) :: LNX
       REAL(8)                :: R1,DEX
-      integer(4)             :: NR
+      INTEGER(4)             :: NR
 !     ******************************************************************
                               CALL TRACE$PUSH('INPOT$LNX')
       REWIND NFIL
@@ -1604,24 +1606,24 @@ END MODULE SETUP_MODULE
       END
 !
 !     ...........................................INPOT..................
-      SUBROUTINE INPOT$nc(NFIL,nc)
+      SUBROUTINE INPOT$NC(NFIL,NC)
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **
 !     ******************************************************************
       INTEGER(4),INTENT(IN)  :: NFIL
-      INTEGER(4),INTENT(OUT) :: nc
-      REAL(8)                :: R1,DEX,psz,aez,rcsm
-      integer(4)             :: NR,lnx
+      INTEGER(4),INTENT(OUT) :: NC
+      REAL(8)                :: R1,DEX,PSZ,AEZ,RCSM
+      INTEGER(4)             :: NR,LNX
 !     ******************************************************************
                               CALL TRACE$PUSH('INPOT$LNX')
       REWIND NFIL
-      nc=0
-      READ(NFIL,err=1000,fmt='(F15.10,F10.5,2I4,2F5.2,F15.12,I5)') &
-     &               R1,DEX,NR,LNX,PSZ,AEZ,RCSM,nc
-!     READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM,IRCCOR,nc
+      NC=0
+      READ(NFIL,ERR=1000,FMT='(F15.10,F10.5,2I4,2F5.2,F15.12,I5)') &
+     &               R1,DEX,NR,LNX,PSZ,AEZ,RCSM,NC
+!     READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM,IRCCOR,NC
 !     READ(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F20.15,I5)')R1,DEX,NR,LNX
-1000 continue
+1000 CONTINUE
                               CALL TRACE$POP
       RETURN
       END
@@ -1629,8 +1631,8 @@ END MODULE SETUP_MODULE
 !     ...........................................INPOT..................
       SUBROUTINE INPOT$READALL(NFIL,NRX,R1,DEX,NR,LNX,LOX,AEZ,PSZ &
      &         ,PSPHI,AEPHI,VADD,RCSM &
-     &         ,DTKIN,DOVER,RHOCOR,PSCORR,PRO & !santos040616/blo
-     &         ,AEPOT,nc,LB,FB,EB,AEPSI)           !santos040616/blo
+     &         ,DTKIN,DOVER,RHOCOR,PSCORR,PRO & !SANTOS040616/BLO
+     &         ,AEPOT,NC,LB,FB,EB,AEPSI)           !SANTOS040616/BLO
 !     &         ,DTKIN,DOVER,IRCCOR,RHOCOR,PSCORR,PRO)
 !     ******************************************************************
 !     **                                                              **
@@ -1644,7 +1646,7 @@ END MODULE SETUP_MODULE
       REAL(8)    ,INTENT(IN)  :: DEX
       INTEGER(4) ,INTENT(IN)  :: NR
       INTEGER(4) ,INTENT(IN)  :: LNX
-      INTEGER(4) ,INTENT(IN)  :: nc   !santos
+      INTEGER(4) ,INTENT(IN)  :: NC   !SANTOS
       REAL(8)    ,INTENT(OUT) :: AEZ
       REAL(8)    ,INTENT(OUT) :: PSZ
       REAL(8)    ,INTENT(OUT) :: RCSM
@@ -1671,7 +1673,7 @@ END MODULE SETUP_MODULE
 !     ******************************************************************
                               CALL TRACE$PUSH('INPOT$READALL')
       REWIND NFIL
-!     == optional value nc following rcsm is not read 
+!     == OPTIONAL VALUE NC FOLLOWING RCSM IS NOT READ 
       READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM
 !      READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM,IRCCOR
 6000  FORMAT(F15.10,F10.5,2I4,2F5.2,F15.12,I5)
@@ -1715,21 +1717,21 @@ END MODULE SETUP_MODULE
         READ(NFIL,6100)(AEPHI(IR,LN),IR=1,NR)
         READ(NFIL,6100)(PSPHI(IR,LN),IR=1,NR)
 6100    FORMAT(SP,5E14.8)
-      enddo
+      ENDDO
 ! SANTOS040616 BEGIN
-      aepot(:)=0.d0
-      lb(:)=0
-      fb(:)=0.d0
-      eb(:)=0.d0
-      aepsi(:,:)=0.d0
-      READ(NFIL,end=1000,fmt='(SP,5E14.8)')(AEPOT(IR),IR=1,NR)
-      READ(NFIL,end=1000,fmt='(14I5)')(LB(I),I=1,NC)
-      READ(NFIL,end=1000,fmt='(SP,5E14.8)')(FB(I),I=1,NC)
-      READ(NFIL,end=1000,fmt='(SP,5E14.8)')(EB(I),I=1,NC)
+      AEPOT(:)=0.D0
+      LB(:)=0
+      FB(:)=0.D0
+      EB(:)=0.D0
+      AEPSI(:,:)=0.D0
+      READ(NFIL,END=1000,FMT='(SP,5E14.8)')(AEPOT(IR),IR=1,NR)
+      READ(NFIL,END=1000,FMT='(14I5)')(LB(I),I=1,NC)
+      READ(NFIL,END=1000,FMT='(SP,5E14.8)')(FB(I),I=1,NC)
+      READ(NFIL,END=1000,FMT='(SP,5E14.8)')(EB(I),I=1,NC)
       DO I=1,NC
-        READ(NFIL,end=1000,fmt='(SP,5E14.8)')(AEPSI(IR,I),IR=1,NR)
-      enddo
-1000  continue
+        READ(NFIL,END=1000,FMT='(SP,5E14.8)')(AEPSI(IR,I),IR=1,NR)
+      ENDDO
+1000  CONTINUE
 ! SANTOS040616 END
                               CALL TRACE$POP
       RETURN

@@ -1,7 +1,7 @@
 !
 !=======================================================================
-!== optics object supplied by Mebarek Alouani    Aug.22, 2002         ==
-!== copyright Mebarek Alouani and Peter E. Bloechl                    ==
+!== OPTICS OBJECT SUPPLIED BY MEBAREK ALOUANI    AUG.22, 2002         ==
+!== COPYRIGHT MEBAREK ALOUANI AND PETER E. BLOECHL                    ==
 !=======================================================================
 !..........................................................OPTIC........
 MODULE OPTIC_MODULE
@@ -20,10 +20,10 @@ INTEGER(4), ALLOCATABLE     :: INDV2(:) ! NUMBER OF DISPLACEMENTS
            !IN Y-DIRECTION FOR VXC
 INTEGER(4), ALLOCATABLE     :: INDV3(:) ! NUMBER OF DISPLACEMENTS
            !IN Z-DIRECTION FOR VXC
-INTEGER(4), ALLOCATABLE :: igvec(:,:)
+INTEGER(4), ALLOCATABLE :: IGVEC(:,:)
 REAL(8),    ALLOCATABLE :: GK(:,:) 
-COMPLEX(8),    ALLOCATABLE :: rhog_val(:,:) 
-COMPLEX(8),    ALLOCATABLE :: rhog_core(:,:) 
+COMPLEX(8),    ALLOCATABLE :: RHOG_VAL(:,:) 
+COMPLEX(8),    ALLOCATABLE :: RHOG_CORE(:,:) 
 END MODULE OPTIC_MODULE
 !
 !       ............................................................
@@ -42,10 +42,10 @@ END MODULE OPTIC_MODULE
         RETURN
         END
 
-!written by MEA
-SUBROUTINE OPTICS$CORRELATION_PARTIALS(iat,r1,dex,NR,NRX,lnx,LMRX,&
-           LMNX,lox,NDIMD,AERHO,PSRHO,PSCORE,AECORE,AEPHI,PSPHI) 
- use optic_module
+!WRITTEN BY MEA
+SUBROUTINE OPTICS$CORRELATION_PARTIALS(IAT,R1,DEX,NR,NRX,LNX,LMRX,&
+           LMNX,LOX,NDIMD,AERHO,PSRHO,PSCORE,AECORE,AEPHI,PSPHI) 
+ USE OPTIC_MODULE
  IMPLICIT NONE  
  REAL(8)   ,INTENT(IN) :: R1
  REAL(8)   ,INTENT(IN) :: DEX
@@ -61,50 +61,50 @@ SUBROUTINE OPTICS$CORRELATION_PARTIALS(iat,r1,dex,NR,NRX,lnx,LMRX,&
  REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX)
  REAL(8)   ,INTENT(IN) :: PSPHI(NR,LNX)
  INTEGER(4),INTENT(IN) :: LOX(LNX)
- INTEGER(4)            :: ir
- REAL(8)               :: dummy
- REAL(8), ALLOCATABLE  :: aepot(:,:,:)
- REAL(8), ALLOCATABLE  :: pspot(:,:,:)
- REAL(8), ALLOCATABLE  :: aerho_temp(:,:,:)
- REAL(8), ALLOCATABLE  :: psrho_temp(:,:,:)
- REAL(8), ALLOCATABLE  :: datp(:,:,:)
+ INTEGER(4)            :: IR
+ REAL(8)               :: DUMMY
+ REAL(8), ALLOCATABLE  :: AEPOT(:,:,:)
+ REAL(8), ALLOCATABLE  :: PSPOT(:,:,:)
+ REAL(8), ALLOCATABLE  :: AERHO_TEMP(:,:,:)
+ REAL(8), ALLOCATABLE  :: PSRHO_TEMP(:,:,:)
+ REAL(8), ALLOCATABLE  :: DATP(:,:,:)
 
       IF(.NOT.OPTIC)RETURN  
-      if(.not.INIT_OPTIC)call OPTICS_INIT
+      IF(.NOT.INIT_OPTIC)CALL OPTICS_INIT
  CALL OPTICS$RHO_PARTIAL(IAT,NR,LMRX,NDIMD,PSRHO,AERHO)
  ALLOCATE(AEPOT(NRX,LMRX,NDIMD))
  ALLOCATE(PSPOT(NRX,LMRX,NDIMD))
  AEPOT(:,:,:)=0.D0
  PSPOT(:,:,:)=0.D0
- CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,AERHO,dummy,AEPOT)
- CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,PSRHO,dummy,PSPOT)
+ CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,AERHO,DUMMY,AEPOT)
+ CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,PSRHO,DUMMY,PSPOT)
  ALLOCATE(DATP(LMNX,LMNX,NDIMD))
  CALL AUGMENTATION_EXPECT(R1,DEX,NRX,NDIMD,LNX,LOX,LMNX,LMRX &
                          ,AEPOT,PSPOT,AEPHI,PSPHI,DATP)
  CORRELATION_VALENCE(1:LMNX,1:LMNX,NDIMD,IAT)=DATP(:,:,NDIMD)
- DATP(:,:,:) = 0.0d0
+ DATP(:,:,:) = 0.0D0
  ALLOCATE(AERHO_TEMP(NRX,LMRX,NDIMD))
  ALLOCATE(PSRHO_TEMP(NRX,LMRX,NDIMD))
- AErho_temp(:,:,:)=AERHO(:,:,:)
- PSrho_temp(:,:,:)=PSRHO(:,:,:)
+ AERHO_TEMP(:,:,:)=AERHO(:,:,:)
+ PSRHO_TEMP(:,:,:)=PSRHO(:,:,:)
  AERHO_TEMP(:,1,1) = AERHO(:,1,1) + AECORE(:)
  PSRHO_TEMP(:,1,1) = PSRHO(:,1,1) + PSCORE(:)
  AEPOT(:,:,:)=0.D0
  PSPOT(:,:,:)=0.D0
- CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,AERHO_TEMP,dummy,AEPOT)
- CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,PSRHO_TEMP,dummy,PSPOT)
+ CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,AERHO_TEMP,DUMMY,AEPOT)
+ CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,PSRHO_TEMP,DUMMY,PSPOT)
  CALL AUGMENTATION_EXPECT(R1,DEX,NRX,NDIMD,LNX,LOX,LMNX,LMRX &
                          ,AEPOT,PSPOT,AEPHI,PSPHI,DATP)
  CORRELATION(1:LMNX,1:LMNX,NDIMD,IAT)=DATP(:,:,NDIMD)
- DATP(:,:,:) = 0.0d0
+ DATP(:,:,:) = 0.0D0
  AEPOT(:,:,:)=0.D0
  PSPOT(:,:,:)=0.D0
- AErho_temp(:,:,:)=0.D0
- PSrho_temp(:,:,:)=0.D0
+ AERHO_TEMP(:,:,:)=0.D0
+ PSRHO_TEMP(:,:,:)=0.D0
  PSRHO_TEMP(:,1,1)=PSCORE(:)
  AERHO_TEMP(:,1,1)=AECORE(:)
- CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,AERHO_TEMP,dummy,AEPOT)
- CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,PSRHO_TEMP,dummy,PSPOT)
+ CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,AERHO_TEMP,DUMMY,AEPOT)
+ CALL AUGMENTATION_XC(R1,DEX,NR,LMRX,NDIMD,PSRHO_TEMP,DUMMY,PSPOT)
  CALL AUGMENTATION_EXPECT(R1,DEX,NRX,NDIMD,LNX,LOX,LMNX,LMRX &
                          ,AEPOT,PSPOT,AEPHI,PSPHI,DATP)
  CORRELATION_CORE(1:LMNX,1:LMNX,NDIMD,IAT)=DATP(:,:,NDIMD)
@@ -113,24 +113,24 @@ SUBROUTINE OPTICS$CORRELATION_PARTIALS(iat,r1,dex,NR,NRX,lnx,LMRX,&
  DEALLOCATE(PSRHO_TEMP)
  DEALLOCATE(AEPOT)
  DEALLOCATE(PSPOT)
-END SUBROUTINE optics$correlation_partials
+END SUBROUTINE OPTICS$CORRELATION_PARTIALS
 
-SUBROUTINE optics$writeout_partials(NSPIN,NAT,LMNXX,DH,DO)
+SUBROUTINE OPTICS$WRITEOUT_PARTIALS(NSPIN,NAT,LMNXX,DH,DO)
    USE OPTIC_MODULE
    IMPLICIT NONE  
-   INTEGER(4) :: nspin, nat, ispecies(nat)
+   INTEGER(4) :: NSPIN, NAT, ISPECIES(NAT)
    INTEGER(4) :: LMNXX
    REAL(8), INTENT(IN) :: DH(1:LMNXX,1:LMNXX,NSPIN,NAT)
    REAL(8), INTENT(IN) :: DO(1:LMNXX,1:LMNXX,NSPIN,NAT)
       IF(.NOT.OPTIC)RETURN  
-      if(.not.INIT_OPTIC)call OPTICS_INIT
+      IF(.NOT.INIT_OPTIC)CALL OPTICS_INIT
         CALL OPTICS$ATOMS(NSPIN,NAT,LMNXX,DH,DO)
         CALL ATOMLIST$GETI4A('ISPECIES',0,NAT,ISPECIES)
         CALL OPTICS$WRITE_RHO_PARTIAL(NSPIN,NAT,ISPECIES)
         CALL OPTICS$VXC_PARTIAL(NSPIN,NAT,ISPECIES)
         CALL OPTICS$VXC_PARTIAL_VALENCE(NSPIN,NAT,ISPECIES)
         CALL OPTICS$VXC_PARTIAL_CORE(NSPIN,NAT,ISPECIES)
-END SUBROUTINE optics$writeout_partials
+END SUBROUTINE OPTICS$WRITEOUT_PARTIALS
 
 
 SUBROUTINE OPTICS$VOFG(NR1,NR2,NR3,NVOFG,RHOG,NSPINV)
@@ -151,7 +151,7 @@ SUBROUTINE OPTICS$VOFG(NR1,NR2,NR3,NVOFG,RHOG,NSPINV)
       INTEGER(4) :: NFIL1
 !     ******************************************************************
       IF(.NOT.OPTIC)RETURN  
-      if(.not.INIT_OPTIC)call OPTICS_INIT
+      IF(.NOT.INIT_OPTIC)CALL OPTICS_INIT
 
       CALL FILEHANDLER$UNIT('OPTICS_INFO',NFIL1)
       WRITE(NFIL1,*)'SUBROUTINE OPTICS_VOFG EST APPELEE'
@@ -178,19 +178,19 @@ SUBROUTINE OPTICS$VOFG(NR1,NR2,NR3,NVOFG,RHOG,NSPINV)
 END SUBROUTINE OPTICS$VOFG
 
 !=========================================================================== 
-!     Exchange and correlation matrix elements of the potential written     
-!     using the partial waves: <phi_i|vxc1|phi_j>-<phi_i~|vxc1~|phi_j~>
-!     The results are written in file OPTICS_VXC_PARTIAL
-!                                                B. Arnaud
+!     EXCHANGE AND CORRELATION MATRIX ELEMENTS OF THE POTENTIAL WRITTEN     
+!     USING THE PARTIAL WAVES: <PHI_I|VXC1|PHI_J>-<PHI_I~|VXC1~|PHI_J~>
+!     THE RESULTS ARE WRITTEN IN FILE OPTICS_VXC_PARTIAL
+!                                                B. ARNAUD
 !=========================================================================== 
     
 SUBROUTINE OPTICS$VXC_PARTIAL(NSPINXC,NATXC,ISPECIES)
       USE OPTIC_MODULE
       IMPLICIT NONE
 
-      INTEGER(4) :: NSPINXC ! number of spins
-      INTEGER(4) :: NATXC   ! number of atoms
-      INTEGER(4) :: ISPECIES(NATXC) ! species associated to an atom
+      INTEGER(4) :: NSPINXC ! NUMBER OF SPINS
+      INTEGER(4) :: NATXC   ! NUMBER OF ATOMS
+      INTEGER(4) :: ISPECIES(NATXC) ! SPECIES ASSOCIATED TO AN ATOM
 
       INTEGER(4) :: LMNXXC
       INTEGER(4) :: I
@@ -203,7 +203,7 @@ SUBROUTINE OPTICS$VXC_PARTIAL(NSPINXC,NATXC,ISPECIES)
       INTEGER(4) :: LMN2 
       
       IF(.NOT.OPTIC)RETURN  
-      if(.NOT.INIT_OPTIC)call OPTICS_INIT
+      IF(.NOT.INIT_OPTIC)CALL OPTICS_INIT
 
       CALL FILEHANDLER$UNIT('OPTICS_INFO',NFIL1)
       WRITE(NFIL1,*)'SUBROUTINE OPTICS_VXC_PARTIAL EST APPELEE'
@@ -248,20 +248,20 @@ END SUBROUTINE OPTICS$REQUEST
 
 
 !=========================================================================== 
-!     Exchange and correlation matrix elements of the potential written     
-!     using the partial waves: <phi_i|vxc1|phi_j>-<phi_i~|vxc1~|phi_j~>
-!     The results are written in file OPTICS_VXC_PARTIAL_VALENCE. Here
-!     only the valence charge density is used.
-!                                                B. Arnaud
+!     EXCHANGE AND CORRELATION MATRIX ELEMENTS OF THE POTENTIAL WRITTEN     
+!     USING THE PARTIAL WAVES: <PHI_I|VXC1|PHI_J>-<PHI_I~|VXC1~|PHI_J~>
+!     THE RESULTS ARE WRITTEN IN FILE OPTICS_VXC_PARTIAL_VALENCE. HERE
+!     ONLY THE VALENCE CHARGE DENSITY IS USED.
+!                                                B. ARNAUD
 !=========================================================================== 
 
 SUBROUTINE OPTICS$VXC_PARTIAL_VALENCE(NSPINXC,NATXC,ISPECIES)
       USE OPTIC_MODULE
       IMPLICIT NONE
 
-      INTEGER(4) :: NSPINXC ! number of spins
-      INTEGER(4) :: NATXC   ! number of atoms
-      INTEGER(4) :: ISPECIES(NATXC) ! species associated to an atom
+      INTEGER(4) :: NSPINXC ! NUMBER OF SPINS
+      INTEGER(4) :: NATXC   ! NUMBER OF ATOMS
+      INTEGER(4) :: ISPECIES(NATXC) ! SPECIES ASSOCIATED TO AN ATOM
 
       INTEGER(4) :: LMNXXC
       INTEGER(4) :: I
@@ -274,7 +274,7 @@ SUBROUTINE OPTICS$VXC_PARTIAL_VALENCE(NSPINXC,NATXC,ISPECIES)
       INTEGER(4) :: LMN2
 
       IF(.NOT.OPTIC)RETURN
-      if(.NOT.INIT_OPTIC) CALL OPTICS_INIT
+      IF(.NOT.INIT_OPTIC) CALL OPTICS_INIT
 
       CALL FILEHANDLER$UNIT('OPTICS_INFO',NFIL1)
       WRITE(NFIL1,*)'SUBROUTINE OPTICS_VXC_PARTIAL_VALENCE EST APPELEE'
@@ -304,20 +304,20 @@ SUBROUTINE OPTICS$VXC_PARTIAL_VALENCE(NSPINXC,NATXC,ISPECIES)
 END SUBROUTINE OPTICS$VXC_PARTIAL_VALENCE
 
 !=========================================================================== 
-!     Exchange and correlation matrix elements of the potential written     
-!     using the partial waves: <phi_i|vxc1|phi_j>-<phi_i~|vxc1~|phi_j~>
-!     The results are written in file OPTICS_VXC_PARTIAL_VALENCE. Here
-!     only the core charge density is used.
-!                                                B. Arnaud
+!     EXCHANGE AND CORRELATION MATRIX ELEMENTS OF THE POTENTIAL WRITTEN     
+!     USING THE PARTIAL WAVES: <PHI_I|VXC1|PHI_J>-<PHI_I~|VXC1~|PHI_J~>
+!     THE RESULTS ARE WRITTEN IN FILE OPTICS_VXC_PARTIAL_VALENCE. HERE
+!     ONLY THE CORE CHARGE DENSITY IS USED.
+!                                                B. ARNAUD
 !=========================================================================== 
 
 SUBROUTINE OPTICS$VXC_PARTIAL_CORE(NSPINXC,NATXC,ISPECIES)
       USE OPTIC_MODULE
       IMPLICIT NONE
 
-      INTEGER(4) :: NSPINXC ! number of spins
-      INTEGER(4) :: NATXC   ! number of atoms
-      INTEGER(4) :: ISPECIES(NATXC) ! species associated to an atom
+      INTEGER(4) :: NSPINXC ! NUMBER OF SPINS
+      INTEGER(4) :: NATXC   ! NUMBER OF ATOMS
+      INTEGER(4) :: ISPECIES(NATXC) ! SPECIES ASSOCIATED TO AN ATOM
 
       INTEGER(4) :: LMNXXC
       INTEGER(4) :: I
@@ -330,7 +330,7 @@ SUBROUTINE OPTICS$VXC_PARTIAL_CORE(NSPINXC,NATXC,ISPECIES)
       INTEGER(4) :: LMN2
 
       IF(.NOT.OPTIC)RETURN
-      if(.NOT.INIT_OPTIC) CALL OPTICS_INIT
+      IF(.NOT.INIT_OPTIC) CALL OPTICS_INIT
 
       CALL FILEHANDLER$UNIT('OPTICS_INFO',NFIL1)
       WRITE(NFIL1,*)'SUBROUTINE OPTICS_VXC_PARTIAL_CORE EST APPELEE'
@@ -359,8 +359,8 @@ SUBROUTINE OPTICS$VXC_PARTIAL_CORE(NSPINXC,NATXC,ISPECIES)
 
 END SUBROUTINE OPTICS$VXC_PARTIAL_CORE
 !=========================================================================== 
-! PARTIAL_RHO(IR,LMN,ISPIN,IAT) contains AERHO(IR,LMN,ISPIN,IAT)-PSRHO(IR,LMN,ISPIN,IAT)
-!                                                B. Arnaud
+! PARTIAL_RHO(IR,LMN,ISPIN,IAT) CONTAINS AERHO(IR,LMN,ISPIN,IAT)-PSRHO(IR,LMN,ISPIN,IAT)
+!                                                B. ARNAUD
 !=========================================================================== 
 SUBROUTINE OPTICS$RHO_PARTIAL(IAT,NRX,LMRX,NSPIN,PSRHO,AERHO)
 
@@ -393,8 +393,8 @@ SUBROUTINE OPTICS$RHO_PARTIAL(IAT,NRX,LMRX,NSPIN,PSRHO,AERHO)
 
 END SUBROUTINE OPTICS$RHO_PARTIAL
 !=========================================================================== 
-!     PARTIAL_RHO(IR,LMN,ISPIN,IAT) is written in file OPTICS_PARTIAL_RHO_VALENCE
-!                                                B. Arnaud
+!     PARTIAL_RHO(IR,LMN,ISPIN,IAT) IS WRITTEN IN FILE OPTICS_PARTIAL_RHO_VALENCE
+!                                                B. ARNAUD
 !=========================================================================== 
 SUBROUTINE OPTICS$WRITE_RHO_PARTIAL(NSPIN,NAT,ISPECIES)
 
@@ -455,9 +455,9 @@ END SUBROUTINE OPTICS$WRITE_RHO_PARTIAL
 
 
 !=========================================================================== 
-!     RHOG contains the Fourier component of the exchange-correlation potential.
-!     The results are written in file OPTICS_VXC
-!                                                B. Arnaud
+!     RHOG CONTAINS THE FOURIER COMPONENT OF THE EXCHANGE-CORRELATION POTENTIAL.
+!     THE RESULTS ARE WRITTEN IN FILE OPTICS_VXC
+!                                                B. ARNAUD
 !=========================================================================== 
 SUBROUTINE OPTICS$VXCG(NR1,NR2,NR3,NVOFG,RHOG,NSPINV)
       USE OPTIC_MODULE
@@ -512,10 +512,10 @@ SUBROUTINE OPTICS$VXCG(NR1,NR2,NR3,NVOFG,RHOG,NSPINV)
 END SUBROUTINE OPTICS$VXCG
 
 !=========================================================================== 
-!     RHOG_TEMP contains the Fourier component of the exchange-correlation potential
-!     For the valence electrons. 
-!     The results are written in file OPTICS_VXC_VALENCE
-!                                                B. Arnaud
+!     RHOG_TEMP CONTAINS THE FOURIER COMPONENT OF THE EXCHANGE-CORRELATION POTENTIAL
+!     FOR THE VALENCE ELECTRONS. 
+!     THE RESULTS ARE WRITTEN IN FILE OPTICS_VXC_VALENCE
+!                                                B. ARNAUD
 !=========================================================================== 
 SUBROUTINE OPTICS$VXCG_VALENCE(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
                       NR3,NVOFG,CELLVOL,RHOE)
@@ -536,7 +536,7 @@ SUBROUTINE OPTICS$VXCG_VALENCE(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
                     !THE THE PLANE WAVE POTENTIAL VXC.
                     !COMPLEX CONJUGATES ARE NOT INCLUDED.
       REAL(8)    :: CELLVOL
-      REAL(8), intent(IN)    :: RHOE(NNRX,NSPIN)
+      REAL(8), INTENT(IN)    :: RHOE(NNRX,NSPIN)
       REAL(8), ALLOCATABLE    :: RHOE_TEMP(:,:)
       INTEGER(4) :: I, IG, ISPIN
       INTEGER(4) :: NFIL
@@ -544,12 +544,12 @@ SUBROUTINE OPTICS$VXCG_VALENCE(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
       INTEGER(4) :: NFFT
       INTEGER(4) :: NVOFR
 
-      REAL(8)   :: EXC                       ! E_xc ENERGY
+      REAL(8)   :: EXC                       ! E_XC ENERGY
       REAL(8), ALLOCATABLE    :: GRHO(:,:,:) !  USED IF TGRA=.TRUE.
       COMPLEX(8), ALLOCATABLE :: RHOG_TEMP(:,:) !FOURIER COEFFS OF DENSITY
-      COMPLEX(8), ALLOCATABLE :: work(:,:)  !FOURIER COEFFICIENTS OF DENSITY
-      logical(4) :: tdummy
-      real(8)    :: dummy(3,3)
+      COMPLEX(8), ALLOCATABLE :: WORK(:,:)  !FOURIER COEFFICIENTS OF DENSITY
+      LOGICAL(4) :: TDUMMY
+      REAL(8)    :: DUMMY(3,3)
       IF(.NOT.OPTIC)RETURN
       IF(.NOT.INIT_OPTIC)CALL OPTICS_INIT
 
@@ -562,26 +562,26 @@ SUBROUTINE OPTICS$VXCG_VALENCE(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
 !=========================================================================== 
 
       ALLOCATE(RHOE_TEMP(NNRX,NSPIN))
-      rhoe_temp(:,:) = rhoe(:,:)
+      RHOE_TEMP(:,:) = RHOE(:,:)
       ALLOCATE(RHOG_TEMP(NVOFG,NSPIN))
       ALLOCATE(RHOG_VAL(NVOFG,NSPIN))
-      ALLOCATE(work(NVOFG,NSPIN))
+      ALLOCATE(WORK(NVOFG,NSPIN))
       NFFT=NSPIN
-      ALLOCATE(indv1(nvofg))
-      ALLOCATE(indv2(nvofg))
-      ALLOCATE(indv3(nvofg))
-      ALLOCATE(igvec(3,nvofg))
-      ALLOCATE(gk(3,nvofg))
-      CALL PLANEWAVE$GETI4A('IGVEC',3*nvofg,IGVEC)
-      INDV1(:) = IGVEC(1,1:nvofg)
-      INDV2(:) = IGVEC(2,1:nvofg)
-      INDV3(:) = IGVEC(3,1:nvofg)
+      ALLOCATE(INDV1(NVOFG))
+      ALLOCATE(INDV2(NVOFG))
+      ALLOCATE(INDV3(NVOFG))
+      ALLOCATE(IGVEC(3,NVOFG))
+      ALLOCATE(GK(3,NVOFG))
+      CALL PLANEWAVE$GETI4A('IGVEC',3*NVOFG,IGVEC)
+      INDV1(:) = IGVEC(1,1:NVOFG)
+      INDV2(:) = IGVEC(2,1:NVOFG)
+      INDV3(:) = IGVEC(3,1:NVOFG)
 
       CALL PLANEWAVE$GETR8A('GVEC',3*NVOFG,GK)
       CALL PLANEWAVE$SELECT('DENSITY')  ! MEA
       CALL PLANEWAVE$SUPFFT('RTOG',NSPIN,NVOFG,RHOG_TEMP,NNRX,RHOE_TEMP)
 
-      rhog_val(:,:) = rhog_temp(:,:)
+      RHOG_VAL(:,:) = RHOG_TEMP(:,:)
       CALL FILEHANDLER$UNIT('OPTICS_RHOG_VALENCE',NFIL)
       WRITE(NFIL,*)NR1, NR2, NR3
       WRITE(NFIL,*)NVOFG
@@ -591,8 +591,8 @@ SUBROUTINE OPTICS$VXCG_VALENCE(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
       CALL FILEHANDLER$CLOSE('OPTICS_RHOG_VALENCE')
 
 !=========================================================================== 
-! The density gradient is calculated in real space (output:GRHO)
-! from the density is reciprocal space.
+! THE DENSITY GRADIENT IS CALCULATED IN REAL SPACE (OUTPUT:GRHO)
+! FROM THE DENSITY IS RECIPROCAL SPACE.
 !=========================================================================== 
 
       IF(TGRA) THEN
@@ -603,12 +603,12 @@ SUBROUTINE OPTICS$VXCG_VALENCE(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
       END IF
 
 !=========================================================================== 
-! RHOE_TEMP et GRHO contains the potentials corresponding to the density and
-! its gradient after calling  POTENTIAL_XC.
-! These potentials are obtained in real space.
+! RHOE_TEMP ET GRHO CONTAINS THE POTENTIALS CORRESPONDING TO THE DENSITY AND
+! ITS GRADIENT AFTER CALLING  POTENTIAL_XC.
+! THESE POTENTIALS ARE OBTAINED IN REAL SPACE.
 !=========================================================================== 
       CALL POTENTIAL_XC (TGRA,NSPIN,NNRX,NNR,NNRSCAL,CELLVOL, & 
-                         RHOE_TEMP,GRHO,EXC,tdummy,dummy)
+                         RHOE_TEMP,GRHO,EXC,TDUMMY,DUMMY)
 
       IF(TGRA) THEN
         CALL POTENTIAL_GRADIENT('POT',NSPIN,NVOFG,GK,RHOG_TEMP,NNR,GRHO)
@@ -620,10 +620,10 @@ SUBROUTINE OPTICS$VXCG_VALENCE(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL PLANEWAVE$SUPFFT('RTOG',NSPIN,NVOFG,WORK,NNRX,RHOE_TEMP)
 
-     IF( tgra ) THEN  
+     IF( TGRA ) THEN  
       RHOG_TEMP(:,:)=RHOG_TEMP(:,:)+WORK(:,:)
      ELSE
-      RHOG_TEMP(:,:) = work(:,:)
+      RHOG_TEMP(:,:) = WORK(:,:)
      END IF 
 
       CALL FILEHANDLER$UNIT('OPTICS_VXCG_VALENCE',NFIL)
@@ -640,7 +640,7 @@ SUBROUTINE OPTICS$VXCG_VALENCE(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
 
 
 END SUBROUTINE OPTICS$VXCG_VALENCE
-SUBROUTINE OPTICS$VXCG_core(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
+SUBROUTINE OPTICS$VXCG_CORE(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
                       NR3,NVOFG,CELLVOL,RHOG_TEMP)
 
       USE PLANEWAVE_MODULE
@@ -666,37 +666,37 @@ SUBROUTINE OPTICS$VXCG_core(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
       INTEGER(4) :: NFFT
       INTEGER(4) :: NVOFR
 
-      REAL(8)   :: EXC                       ! E_xc ENERGY
+      REAL(8)   :: EXC                       ! E_XC ENERGY
       REAL(8), ALLOCATABLE    :: GRHO(:,:,:) !  USED IF TGRA=.TRUE.
-!FOURIER COEFFS OF the total DENSITY
-      COMPLEX(8), INTENT(IN) :: RHOG_TEMP(nvofg,nspin) 
-      COMPLEX(8), ALLOCATABLE :: work(:,:)  !FOURIER COEFFICIENTS OF DENSITY
-      logical(4) :: tdummy
-      real(8)    :: dummy(3,3)
+!FOURIER COEFFS OF THE TOTAL DENSITY
+      COMPLEX(8), INTENT(IN) :: RHOG_TEMP(NVOFG,NSPIN) 
+      COMPLEX(8), ALLOCATABLE :: WORK(:,:)  !FOURIER COEFFICIENTS OF DENSITY
+      LOGICAL(4) :: TDUMMY
+      REAL(8)    :: DUMMY(3,3)
       IF(.NOT.OPTIC)RETURN
       IF(.NOT.INIT_OPTIC)CALL OPTICS_INIT
 
       CALL FILEHANDLER$UNIT('OPTICS_INFO',NFIL1)
-      WRITE(NFIL1,*)'SUBROUTINE OPTICS_VXCG_core EST APPELEE'
+      WRITE(NFIL1,*)'SUBROUTINE OPTICS_VXCG_CORE EST APPELEE'
 
 
 !=========================================================================== 
 ! FOURIER TRANSFORM OF THE DENSITY FROM REAL SPACE TO RECIPROCAL SPACE
 !=========================================================================== 
 
-      ALLOCATE(RHOG_core(nvofg,NSPIN))
-      ALLOCATE(RHOE_TEMP(nnrx,NSPIN))
-      ALLOCATE(work(NVOFG,NSPIN))
+      ALLOCATE(RHOG_CORE(NVOFG,NSPIN))
+      ALLOCATE(RHOE_TEMP(NNRX,NSPIN))
+      ALLOCATE(WORK(NVOFG,NSPIN))
       NFFT=NSPIN
-      rhog_core(:,:) = rhog_temp(:,:) - rhog_val(:,:)
+      RHOG_CORE(:,:) = RHOG_TEMP(:,:) - RHOG_VAL(:,:)
 
       CALL PLANEWAVE$SELECT('DENSITY')  ! MEA
       CALL PLANEWAVE$SUPFFT('GTOR',NSPIN,NVOFG,RHOG_CORE,NNRX,RHOE_TEMP)
 
 
 !=========================================================================== 
-! The density gradient is calculated in real space (output:GRHO)
-! from the density is reciprocal space.
+! THE DENSITY GRADIENT IS CALCULATED IN REAL SPACE (OUTPUT:GRHO)
+! FROM THE DENSITY IS RECIPROCAL SPACE.
 !=========================================================================== 
 
       IF(TGRA) THEN
@@ -707,12 +707,12 @@ SUBROUTINE OPTICS$VXCG_core(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
       END IF
 
 !=========================================================================== 
-! RHOE_TEMP et GRHO contains the potentials corresponding to the density and
-! its gradient after calling  POTENTIAL_XC.
-! These potentials are obtained in real space.
+! RHOE_TEMP ET GRHO CONTAINS THE POTENTIALS CORRESPONDING TO THE DENSITY AND
+! ITS GRADIENT AFTER CALLING  POTENTIAL_XC.
+! THESE POTENTIALS ARE OBTAINED IN REAL SPACE.
 !=========================================================================== 
       CALL POTENTIAL_XC (TGRA,NSPIN,NNRX,NNR,NNRSCAL,CELLVOL, & 
-                         RHOE_TEMP,GRHO,EXC,tdummy,dummy)
+                         RHOE_TEMP,GRHO,EXC,TDUMMY,DUMMY)
 
       IF(TGRA) THEN
         CALL POTENTIAL_GRADIENT('POT',NSPIN,NVOFG,GK,RHOG_CORE,NNR,GRHO)
@@ -724,10 +724,10 @@ SUBROUTINE OPTICS$VXCG_core(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL PLANEWAVE$SUPFFT('RTOG',NSPIN,NVOFG,WORK,NNRX,RHOE_TEMP)
 
-     IF( tgra ) THEN  
+     IF( TGRA ) THEN  
       RHOG_CORE(:,:)=RHOG_CORE(:,:)+WORK(:,:)
      ELSE
-      RHOG_CORE(:,:) = work(:,:)
+      RHOG_CORE(:,:) = WORK(:,:)
      END IF 
 
       CALL FILEHANDLER$UNIT('OPTICS_VXCG_CORE',NFIL)
@@ -743,7 +743,7 @@ SUBROUTINE OPTICS$VXCG_core(TGRA,NSPIN,NNRX,NNR,NNRSCAL,NR1,NR2,&
       CALL FILEHANDLER$CLOSE('OPTICS_INFO')
 
 
-END SUBROUTINE OPTICS$VXCG_core
+END SUBROUTINE OPTICS$VXCG_CORE
 !
 !     ..................................................................
 SUBROUTINE OPTICS$SETL4(ID,VAL)
@@ -904,7 +904,7 @@ SUBROUTINE OPTICS$ATOMS(NSPIN2,NAT2,LMNXX2,DH,DO)
       USE ATOMS_MODULE
       USE SETUP_MODULE
       IMPLICIT NONE
-      INTEGER(4)            :: NFIL,IAT,VAL,i,LNX, LMNX, LNj,LMNXX2,nat2
+      INTEGER(4)            :: NFIL,IAT,VAL,I,LNX, LMNX, LNJ,LMNXX2,NAT2
       CHARACTER(60)        :: ATOM
       REAL(8)               :: ZVAL
       REAL(8)               :: POS(3)
@@ -916,21 +916,21 @@ SUBROUTINE OPTICS$ATOMS(NSPIN2,NAT2,LMNXX2,DH,DO)
       REAL(8),  ALLOCATABLE    :: PSPHII(:,:)
       INTEGER(4)               :: NSPIN
       INTEGER(4)               :: NSPIN2
-      INTEGER(4)               :: j, nfil1, ispin
+      INTEGER(4)               :: J, NFIL1, ISPIN
 
 !     ******************************************************************
       IF(.NOT.OPTIC)RETURN  
-      if(.not.INIT_OPTIC)call OPTICS_INIT
+      IF(.NOT.INIT_OPTIC)CALL OPTICS_INIT
       CALL FILEHANDLER$UNIT('OPTICS_INFO',NFIL1)
       WRITE(NFIL1,*)'SUBROUTINE OPTICS_ATOMS EST APPELEE'
       CALL FILEHANDLER$UNIT('OPTICS_ATOMS',NFIL)
 
       WRITE(NFIL,*)'ATOMS'
 
-      CALL ATOMLIST$NATOM(NAT)  !nbre total d atomes
+      CALL ATOMLIST$NATOM(NAT)  !NBRE TOTAL D ATOMES
       WRITE(NFIL,*) NAT
 
-      DO IAT=1,NAT   !loop sur tout les atomes
+      DO IAT=1,NAT   !LOOP SUR TOUT LES ATOMES
         WRITE(NFIL,*) IAT
 
         CALL ATOMLIST$GETI4('ISPECIES',IAT,VAL)
@@ -954,7 +954,7 @@ SUBROUTINE OPTICS$ATOMS(NSPIN2,NAT2,LMNXX2,DH,DO)
         WRITE(NFIL,*) LMNX
 
         CALL SETUP$LOFLN(VAL,LNX,LOX)
-        WRITE(NFIL,*)(LOX(i),i=1,LNX)
+        WRITE(NFIL,*)(LOX(I),I=1,LNX)
 
         CALL SETUP$RADGRID(VAL,R1,DEX,NR)
 
@@ -969,14 +969,14 @@ SUBROUTINE OPTICS$ATOMS(NSPIN2,NAT2,LMNXX2,DH,DO)
         CALL SETUP$AEPARTIALWAVES(VAL,NR,LNX,AEPHII)
         CALL SETUP$PSPARTIALWAVES(VAL,NR,LNX,PSPHII)
 
-        DO i=1,NR
-          WRITE(NFIL,*)(PROJ(i,LNj),LNj=1,LNX)
+        DO I=1,NR
+          WRITE(NFIL,*)(PROJ(I,LNJ),LNJ=1,LNX)
         ENDDO 
-        DO i=1,NR
-          WRITE(NFIL,*)(AEPHII(i,LNj),LNj=1,LNX)
+        DO I=1,NR
+          WRITE(NFIL,*)(AEPHII(I,LNJ),LNJ=1,LNX)
         ENDDO 
-        DO i=1,NR
-          WRITE(NFIL,*)(PSPHII(i,LNj),LNj=1,LNX)
+        DO I=1,NR
+          WRITE(NFIL,*)(PSPHII(I,LNJ),LNJ=1,LNX)
         ENDDO
 
         DEALLOCATE(PROJ)
@@ -985,8 +985,8 @@ SUBROUTINE OPTICS$ATOMS(NSPIN2,NAT2,LMNXX2,DH,DO)
         DEALLOCATE(LOX)
       ENDDO
 
-      nspin=1
-      DO IAT=1,NAT   !loop sur tout les atomes
+      NSPIN=1
+      DO IAT=1,NAT   !LOOP SUR TOUT LES ATOMES
        CALL ATOMLIST$GETI4('ISPECIES',IAT,VAL)
        CALL SETUP$LMNX(VAL,LMNX)
        WRITE(NFIL,*) 'DH'
@@ -994,23 +994,23 @@ SUBROUTINE OPTICS$ATOMS(NSPIN2,NAT2,LMNXX2,DH,DO)
        WRITE(NFIL,*) IAT
        WRITE(NFIL,*) NSPIN2, LMNX
        IF (NSPIN2==1) THEN
-          ispin=1
-          DO i=1,LMNX
-             DO j=1,LMNX
-                WRITE(NFIL,*) i,j,ispin,IAT,DH(i,j,1,iat)
+          ISPIN=1
+          DO I=1,LMNX
+             DO J=1,LMNX
+                WRITE(NFIL,*) I,J,ISPIN,IAT,DH(I,J,1,IAT)
              ENDDO
           ENDDO
        ELSE
-          ispin=1
-          DO i=1,LMNX
-             DO j=1,LMNX
-                WRITE(NFIL,*) i,j,ispin,IAT,DH(i,j,1,iat)+DH(i,j,2,iat)
+          ISPIN=1
+          DO I=1,LMNX
+             DO J=1,LMNX
+                WRITE(NFIL,*) I,J,ISPIN,IAT,DH(I,J,1,IAT)+DH(I,J,2,IAT)
              ENDDO
           ENDDO
-          ispin=2
-          DO i=1,LMNX
-             DO j=1,LMNX
-                WRITE(NFIL,*) i,j,ispin,IAT,DH(i,j,1,iat)-DH(i,j,2,iat)
+          ISPIN=2
+          DO I=1,LMNX
+             DO J=1,LMNX
+                WRITE(NFIL,*) I,J,ISPIN,IAT,DH(I,J,1,IAT)-DH(I,J,2,IAT)
              ENDDO
           ENDDO
        END IF
@@ -1018,10 +1018,10 @@ SUBROUTINE OPTICS$ATOMS(NSPIN2,NAT2,LMNXX2,DH,DO)
        WRITE(NFIL,*) NAT
        WRITE(NFIL,*) IAT
        WRITE(NFIL,*) NSPIN2, LMNX
-       DO ispin=1, NSPIN2
-          DO i=1,LMNX
-             DO j=1,LMNX
-                WRITE(NFIL,*) I,J,ispin,IAT,DO(i,j,1,iat)
+       DO ISPIN=1, NSPIN2
+          DO I=1,LMNX
+             DO J=1,LMNX
+                WRITE(NFIL,*) I,J,ISPIN,IAT,DO(I,J,1,IAT)
              ENDDO
           ENDDO
        ENDDO
@@ -1040,14 +1040,14 @@ SUBROUTINE OPTICS$LATTICE
       REAL(8) :: RBAS(3,3)     !LATTICE BASIS VECTORS.
       REAL(8) :: GBAS(9)     !RECIPROCAL LATTICE BASIS VECTORS.
       REAL(8) :: GBASSS(3,3)     !RECIPROCAL LATTICE BASIS VECTORS.
-      REAL(8) :: CELLVOL       !volume of the unit cell
-      INTEGER(4)            :: NFIL, IG, NGL, nfil1
+      REAL(8) :: CELLVOL       !VOLUME OF THE UNIT CELL
+      INTEGER(4)            :: NFIL, IG, NGL, NFIL1
       INTEGER(4) :: NGLL
       INTEGER(4), ALLOCATABLE      :: IGVECC(:,:)
       LOGICAL(4) :: VAL
 !     ******************************************************************
       IF(.NOT.OPTIC)RETURN  
-      if(.not.INIT_OPTIC)call OPTICS_INIT
+      IF(.NOT.INIT_OPTIC)CALL OPTICS_INIT
       CALL FILEHANDLER$UNIT('OPTICS_INFO',NFIL1)
       WRITE(NFIL1,*)'SUBROUTINE OPTICS_LATTICE EST APPELEE'
       CALL FILEHANDLER$UNIT('OPTICS_LATTICE',NFIL)
@@ -1065,7 +1065,7 @@ SUBROUTINE OPTICS$LATTICE
       CALL PLANEWAVEOPTIC$GETI4A('IGVEC',3*NGLL,IGVECC)
 !     CALL PLANEWAVE$GETI4A('IGVEC',3*NGLL,IGVECC)
       DO IG=1,NGLL
-        WRITE(NFIL,*) IGVECC(1,ig),IGVECC(2,ig),IGVECC(3,ig)
+        WRITE(NFIL,*) IGVECC(1,IG),IGVECC(2,IG),IGVECC(3,IG)
       ENDDO
 
       WRITE(NFIL1,*)'FIN DE LA SUBROUTINE OPTICS_ATOMS'
@@ -1073,7 +1073,7 @@ SUBROUTINE OPTICS$LATTICE
       CALL FILEHANDLER$CLOSE('OPTICS_LATTICE')
       DEALLOCATE(IGVECC)
 END SUBROUTINE OPTICS$LATTICE
-!     cette routine a ete ecrite par seb
+!     CETTE ROUTINE A ETE ECRITE PAR SEB
 ! ..................................................................
 SUBROUTINE SETUP$PROJECTOR(ISP_,NRX_,LNX_,PROJ_)
 ! ==================================================================

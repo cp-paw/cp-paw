@@ -1,4 +1,4 @@
-!#if defined(IBMLICENSE)
+!#IF DEFINED(IBMLICENSE)
       PROGRAM MAIN
 !     ******************************************************************
 !     **     CP-PAW                                                   **
@@ -16,7 +16,7 @@
 !     **  AUTHOR: PETER E. BLOECHL                                    **
 !     **                                                              **
 !     ******************************************************************
-      use clock_module
+      USE CLOCK_MODULE
       IMPLICIT NONE
       CHARACTER(32) :: DATIME
       CHARACTER(256):: VERSIONTEXT
@@ -32,7 +32,6 @@
 !     == INITIALIZE MPE ROUTINE FOR PARALLEL PROCESSING               ==
 !     ==================================================================
       CALL MPE$INIT
-      CALL MPE$QUERY(NTASKS,THISTASK)
 !
 !     ==================================================================
 !     ==  ENTER CAR-PARRINELLO SIMULATION                             ==
@@ -45,13 +44,14 @@
 !     ==  END OF CARPARRINELLO CALCULATION                            ==
 !     ==================================================================
 !     ==PRINTING IS ALLOWED ONLY ON THE FIRST TASK =====================
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN      
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         CALL FILEHANDLER$REPORT(NFILO,'USED')
       END IF
 !     == TIMING MUST BE CALLED BY ALL NODES =========================== 
       CALL TRACE$PASS('BEFORE TIMING')
-      CALL TIMING$PRINT(NFILO,'ALL')
+      CALL TIMING$PRINT('MONOMER',NFILO,'ALL')
       CALL TRACE$PASS('AFTER TIMING')
       CALL USAGE$REPORT(NFILO)
       CALL TRACE$PASS('AFTER USAGE')
@@ -100,11 +100,11 @@
       INTEGER(4)   :: IPRINT    ! 
       INTEGER(4)   :: NBEG      ! DECIDES IF RESTART FILE IS READ
       REAL(8)      :: DELT
-      logical(4)   :: tchk
+      LOGICAL(4)   :: TCHK
 !     ******************************************************************
                               CALL TRACE$PUSH('PAW')
                               CALL TIMING$CLOCKON('INITIALIZATION')
-      call stopit$setstarttime
+      CALL STOPIT$SETSTARTTIME
 !
 !     ==================================================================
 !     ====  READ CONTROL INPUT DATA FILE "CNTL"                     ====
@@ -152,7 +152,7 @@
 !     ==================================================================
       CALL FILEHANDLER$UNIT('PROT',NFILO)
                               CALL TIMING$CLOCKOFF('INITIALIZATION')
-                              CALL TIMING$PRINT(NFILO,'ALL')
+                              CALL TIMING$PRINT('MONOMER',NFILO,'ALL')
                               CALL TIMING$START
 !
 !     ==================================================================
@@ -206,8 +206,8 @@
 !     ==   PERFORM ONE TIME STEP                                      ==
 !     ==================================================================
                               CALL TIMING$CLOCKON('TIMESTEP')
-!     ==use the line with "not tstop" to avoid an additional last time step
-!     if(.not.tstop) CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,TMERMN)
+!     ==USE THE LINE WITH "NOT TSTOP" TO AVOID AN ADDITIONAL LAST TIME STEP
+!     IF(.NOT.TSTOP) CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,TMERMN)
       CALL DYNOCC$GETL4('DYN',TMERMN)
       CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,TMERMN)
                               CALL TIMING$CLOCKOFF('TIMESTEP')
@@ -369,7 +369,7 @@
       REAL(8)                 :: EKIN   ! GENERIC KINETIC ENERGY
       REAL(8)                 :: SVAR
       LOGICAL(4)              :: TCHK1,TCHK2
-      real(8)                 :: stress(3,3)
+      REAL(8)                 :: STRESS(3,3)
 !     ******************************************************************      
                               CALL TRACE$PUSH('TIMESTEP')
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -406,7 +406,7 @@
       CALL WAVES$ETOT
 !     == EXTERNAL POTENTIAL ACTING ON ATOMS ============================
       CALL VEXT$APPLY
-!     == occupations ===================================================
+!     == OCCUPATIONS ===================================================
       CALL DYNOCC$GETR8('EPOT',SVAR)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
       CALL ENERGYLIST$SET('ELECTRONIC HEAT',SVAR)
@@ -479,7 +479,7 @@
 !     ==================================================================
       CALL CELL$PROPAGATE()
       CALL CELL$GETR8('EPOT',SVAR)
-      CALL ENERGYLIST$set('CELLOSTAT POTENTIAL',SVAR)     
+      CALL ENERGYLIST$SET('CELLOSTAT POTENTIAL',SVAR)     
       CALL ENERGYLIST$ADD('CONSTANT ENERGY',SVAR)
 ! 
 !     ==================================================================
@@ -554,7 +554,7 @@
 !     == UNIT CELL                                                    ==
 !     ==================================================================
       CALL CELL$GETR8('EKIN',EKIN)
-      CALL ENERGYLIST$set('CELLOSTAT KINETIC',EKIN)     
+      CALL ENERGYLIST$SET('CELLOSTAT KINETIC',EKIN)     
       CALL ENERGYLIST$ADD('CONSTANT ENERGY',EKIN)
 !
 !     ==================================================================
@@ -576,7 +576,7 @@
       END IF
 !
 !     ==================================================================
-!     ==  collect energy of wave function thermostat                  ==
+!     ==  COLLECT ENERGY OF WAVE FUNCTION THERMOSTAT                  ==
 !     ==================================================================
       CALL THERMOSTAT$SELECT('WAVES')
       CALL THERMOSTAT$GETL4('ON',TCHK)
@@ -632,17 +632,17 @@ MODULE STOPIT_MODULE
 !**                                                                   ** 
 !**  SET SWITCH TO INITIATE SOFT-KILL                                 ** 
 !**  SWITCH CAN BE SET BY                                             ** 
-!**   A) CREATE A PREDEFINED EXITfILE                                 ** 
-!**   B) BY THE CODE BY SETTINg TSTOP EXPLICITELY                     ** 
+!**   A) CREATE A PREDEFINED EXITFILE                                 ** 
+!**   B) BY THE CODE BY SETTING TSTOP EXPLICITELY                     ** 
 !**                                                                   ** 
-use clock_module 
-!use clock_module , only : date_time,(.later.)
+USE CLOCK_MODULE 
+!USE CLOCK_MODULE , ONLY : DATE_TIME,(.LATER.)
 LOGICAL(4)     :: TSTOP=.FALSE.   ! INITIATE SOFT-KILL
 LOGICAL(4)     :: DISTRIBUTED=.FALSE. ! TSTOP=TRUE ON ALL NODES
 LOGICAL(4)     :: TNOTIFY=.TRUE.  ! NOTIFICATION ABOUT STOP REQUIRED
-LOGICAL(4)     :: EXITFILEREMOVED
-integer(4)     :: runtime=-1         ! runtime in seconds
-type(date_time) :: starttime
+LOGICAL(4)     :: EXITFILEREMOVED=.FALSE.
+INTEGER(4)     :: RUNTIME=-1         ! RUNTIME IN SECONDS
+TYPE(DATE_TIME) :: STARTTIME
 END MODULE STOPIT_MODULE
 !
 !     ..................................................................
@@ -673,7 +673,7 @@ END MODULE STOPIT_MODULE
       USE STOPIT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN):: ID_
-      integer(4)  ,INTENT(IN) :: VAL_
+      INTEGER(4)  ,INTENT(IN) :: VAL_
 !     ****************************************************************** 
       IF(TRIM(ID_).EQ.'RUNTIME') THEN 
         RUNTIME=VAL_    ! RUNTIME IN SECONDS
@@ -725,7 +725,7 @@ END MODULE STOPIT_MODULE
       END
 !
 !     ...................................................STOPIT.........
-      SUBROUTINE STOPIT$setstarttime
+      SUBROUTINE STOPIT$SETSTARTTIME
 !     ****************************************************************** 
 !     **  STOPIT_UPDATE                                               ** 
 !     **                                                              ** 
@@ -733,11 +733,10 @@ END MODULE STOPIT_MODULE
 !     **                                                              ** 
 !     ****************************************************************** 
       USE STOPIT_MODULE
-      USE MPE_MODULE
       IMPLICIT NONE
-      call clock$now(starttime)
-      return
-      end
+      CALL CLOCK$NOW(STARTTIME)
+      RETURN
+      END
 
 !
 !     ...................................................STOPIT.........
@@ -757,71 +756,64 @@ END MODULE STOPIT_MODULE
       CHARACTER(256) :: EXITFILE=' '
       CHARACTER(264) :: CMD
       INTEGER(4)     :: NTASKS,THISTASK
-      type(date_time) :: endtime,now
-      integer(4)      :: isvar
+      TYPE(DATE_TIME) :: ENDTIME,NOW
+      INTEGER(4)      :: ISVAR
 !     ****************************************************************** 
-      CALL MPE$QUERY(NTASKS,THISTASK)
 !
 !     ==================================================================
-!     ==  CHECK EXITFILE ONLY FROM THE FIRST TASK                     ==
+!     ==  REMOVE EXIT FILE IN THE FIRST REQUEST                       ==
 !     ==================================================================
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
-!       ================================================================
-!       ==  REMOVE EXIT FILE IN THE FIRST REQUEST                     ==
-!       ================================================================
         IF(.NOT.EXITFILEREMOVED) THEN
           CALL FILEHANDLER$FILENAME('EXIT',EXITFILE)
           INQUIRE(FILE=EXITFILE,EXIST=TCHK)
           IF(TCHK) THEN
 !           == CHAR(114)//CHAR(109)='RM'  (LOWERCASE)
             CMD=CHAR(114)//CHAR(109)//' '//EXITFILE
-!           call error$msg('system call removed for absoft')
-!           call error$stop('stopit$update')
+!           CALL ERROR$MSG('SYSTEM CALL REMOVED FOR ABSOFT')
+!           CALL ERROR$STOP('STOPIT$UPDATE')
             CALL SYSTEM(CMD)
           END IF
           EXITFILEREMOVED=.TRUE.
-        END IF
-!       ================================================================
-!       ==  CHECK IF EXITFILE EXISTS                                  ==
-!       ================================================================
-        IF(.NOT.TSTOP) THEN
-          CALL FILEHANDLER$FILENAME('EXIT',EXITFILE)
-          INQUIRE(FILE=EXITFILE,EXIST=TSTOP)
-          IF(TSTOP) THEN
-            CALL FILEHANDLER$UNIT('PROT',NFILO)
-            WRITE(NFILO,*)'EXITFILE EXISTS. PROGRAM WILL TERMINATE'
-            CALL lib$FLUSHfile(NFILO)
-            TNOTIFY=.FALSE.
-          END IF
         END IF
       ELSE
         EXITFILEREMOVED=.TRUE.
       END IF
 
 !     ==================================================================
-!     ==  CHECK WHETHER TSTOP=T FOR ANY TASK                          ==
+!     ==  CHECK IF TIME EXCEEDS LIMIT                                 ==
 !     ==================================================================
-      if(runtime.gt.0) then
-        endtime=starttime
-        isvar=runtime
-        endtime%second=endtime%second+isvar
+      IF(RUNTIME.GT.0) THEN
+        ENDTIME=STARTTIME
+        ISVAR=RUNTIME
+        ENDTIME%SECOND=ENDTIME%SECOND+ISVAR
 !
-        isvar=int(endtime%second/60)
-        endtime%second=endtime%second-isvar*60
-        endtime%minute=endtime%minute+isvar
+        ISVAR=INT(ENDTIME%SECOND/60)
+        ENDTIME%SECOND=ENDTIME%SECOND-ISVAR*60
+        ENDTIME%MINUTE=ENDTIME%MINUTE+ISVAR
 !
-        isvar=int(endtime%minute/60)
-        endtime%minute=endtime%minute-isvar*60
-        endtime%hour=endtime%hour+isvar
+        ISVAR=INT(ENDTIME%MINUTE/60)
+        ENDTIME%MINUTE=ENDTIME%MINUTE-ISVAR*60
+        ENDTIME%HOUR=ENDTIME%HOUR+ISVAR
 !
-        isvar=int(endtime%hour/24)
-        endtime%hour=endtime%hour-isvar*24
-        endtime%day=endtime%day+isvar
+        ISVAR=INT(ENDTIME%HOUR/24)
+        ENDTIME%HOUR=ENDTIME%HOUR-ISVAR*24
+        ENDTIME%DAY=ENDTIME%DAY+ISVAR
 !
-!       Warning! THis choice stops at the last second of the current month!!!!!!!
-        call clock$now(now)
-        if(now.later.endtime) tstop=.true.
-      end if
+!       WARNING! THIS CHOICE STOPS AT THE LAST SECOND OF THE CURRENT MONTH!!!!!!!
+        CALL CLOCK$NOW(NOW)
+        IF(NOW.LATER.ENDTIME) TSTOP=.TRUE.
+      END IF
+!
+!     ==================================================================
+!     ==  CHECK IF EXITFILE EXISTS                                    ==
+!     ==================================================================
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
+      IF(.NOT.TSTOP.AND.THISTASK.EQ.1) THEN
+        CALL FILEHANDLER$FILENAME('EXIT',EXITFILE)
+        INQUIRE(FILE=EXITFILE,EXIST=TSTOP)
+      END IF
 !
 !     ==================================================================
 !     ==  CHECK WHETHER TSTOP=T FOR ANY TASK                          ==
@@ -832,7 +824,7 @@ END MODULE STOPIT_MODULE
         ELSE
           NVAL=0
         ENDIF
-        CALL MPE$COMBINE('+',NVAL)
+        CALL MPE$COMBINE('~','+',NVAL)
         TSTOP=(NVAL.NE.0) 
         DISTRIBUTED=TSTOP
       END IF
@@ -840,10 +832,11 @@ END MODULE STOPIT_MODULE
 !     ==================================================================
 !     == WRITE MESSAGE IF NOT DONE ALREADY =============================
 !     ==================================================================
-      IF(TSTOP.AND.TNOTIFY) THEN
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      IF(TSTOP.AND.TNOTIFY.AND.THISTASK.EQ.1) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         WRITE(NFILO,*)'STOP SIGNAL RECEIVED'
-        CALL lib$FLUSHfile(NFILO)
+        CALL LIB$FLUSHFILE(NFILO)
         TNOTIFY=.FALSE.
       END IF
       RETURN
@@ -852,10 +845,10 @@ END MODULE STOPIT_MODULE
 !     ..................................................................
       SUBROUTINE PRINFO(TPRINT,NFI,DELT)
 !     ******************************************************************
-!     **  reports on the process of the simulation and invokes        ** 
-!     **  analysis routines                                           ** 
+!     **  REPORTS ON THE PROCESS OF THE SIMULATION AND INVOKES        ** 
+!     **  ANALYSIS ROUTINES                                           ** 
 !     **                                                              ** 
-!     **  prinfo is called once per timestep                          ** 
+!     **  PRINFO IS CALLED ONCE PER TIMESTEP                          ** 
 !     ******************************************************************
       USE CONTINUUM_CONTROL_MODULE
       IMPLICIT NONE
@@ -890,10 +883,10 @@ END MODULE STOPIT_MODULE
       REAL(8)               :: SVAR
       INTEGER(4)            :: ISVAR
       REAL(8)               :: EFFEKIN
-      REAL(8)               :: Ecellpot
-      REAL(8)               :: Ecellkin
+      REAL(8)               :: ECELLPOT
+      REAL(8)               :: ECELLKIN
       REAL(8)               :: ESOLV,EKINQ,QFRIC,QTOT
-      LOGICAL(4)            :: TCHK,tchk1
+      LOGICAL(4)            :: TCHK,TCHK1
       LOGICAL(4)            :: TCONTINUUM
       LOGICAL(4)            :: TQMMM=.FALSE.
       REAL(8)               :: QMMMKIN   ! EKIN OF QM-MM ENVIRONMENT
@@ -914,7 +907,7 @@ END MODULE STOPIT_MODULE
       CALL ATOMLIST$NATOM(NAT)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       GLIB=3*NAT-3
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !   
 !     ==================================================================
 !     ==   HYPERFINE PARAMETERS                                       ==
@@ -990,7 +983,7 @@ END MODULE STOPIT_MODULE
         CALL ENERGYLIST$RETURN('CELLOSTAT KINETIC',ECELLKIN)     
         CALL ENERGYLIST$RETURN('CELLOSTAT POTENTIAL',ECELLPOT)     
         ECONS=ECONS+ECELLKIN+ECELLPOT
-print*,'ecellkin/pot ',ecellkin,ecellpot,ECELLKIN+ECELLPOT
+PRINT*,'ECELLKIN/POT ',ECELLKIN,ECELLPOT,ECELLKIN+ECELLPOT
 !
 !       == ELECTRON AND ATOM THERMOSTATS ===============================
         CALL ENERGYLIST$RETURN('ATOM THERMOSTAT',ENOSEP)     
@@ -1057,7 +1050,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         ELSE IF(TQMMM) THEN
           CALL CONSTANTS('KB',CELVIN)
           CALL QMMM$GETI4('NAT:ENV',ISVAR)
-          QMMMTEMP=2.D0*QMMMKIN/DBLE(ISVAR)/CELVIN
+          QMMMTEMP=2.D0*QMMMKIN/REAL(3*ISVAR,KIND=8)/CELVIN
           WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F6.3' &
      &                //',I10,2F10.5)') &
      &                NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
@@ -1157,7 +1150,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         ELSE
           CALL WAVES$REPORTEIG(NFILO)
         END IF
-        call core$report(nfilo)
+        CALL CORE$REPORT(NFILO)
       END IF
 !   
 !     ==================================================================
@@ -1168,17 +1161,17 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL CONSTRAINTS$REPORT(NFILO,'FULL')
       END IF
                               CALL TRACE$PASS('BEFORE FLUSH')
-      CALL lib$FLUSHfile(NFILO)
+      CALL LIB$FLUSHFILE(NFILO)
 !   
 !     ==================================================================
 !     ==   WRITE CONSTRAINT INFORMATION                               ==
 !     ==================================================================
       CALL FILEHANDLER$UNIT('CONSTRAINTS',NFIL)
-      if(thistask.eq.1) then
+      IF(THISTASK.EQ.1) THEN
         WRITE(NFIL,FMT='(20("="),2X,"TIMESTEP: ",I10,2X,20("="))')NFI
         CALL CONSTRAINTS$REPORT(NFIL,'SHORT')
-        CALL lib$FLUSHfile(NFIL)
-      end if
+        CALL LIB$FLUSHFILE(NFIL)
+      END IF
 !   
 !     ==================================================================
 !     ==   WRITE FILE STRC_OUT                                        ==
@@ -1201,7 +1194,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       REAL(8)   ,ALLOCATABLE :: DWORK(:) 
       REAL(8)                :: TIME
       REAL(8)                :: SVAR
-      INTEGER(4)             :: NAT
+      INTEGER(4)             :: NAT,NATM
       REAL(8)                :: ECONS
       REAL(8)                :: ETOT
       REAL(8)                :: EKINP
@@ -1217,11 +1210,12 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       LOGICAL(4)             :: TCONTINUUM
       REAL(8)                :: ESOLV,EKINQ,QFRIC,QTOT
       REAL(8)                :: EEXT
+      INTEGER(4)             :: IAT,JAT
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
                                  CALL TRACE$PUSH('WRITETRAJECTORY')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL CONSTANTS('PICO',PICO)
       CALL CONSTANTS('SECOND',SECOND)
       CALL CONSTANTS('KB',CELVIN)
@@ -1330,10 +1324,29 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       DWORK(3*NAT+1:4*NAT)=0.D0 ! SHALL CONTAIN IN FUTURE THE POTENTIALS
       CALL TRAJECTORYIO$ADD('FORCE-TRAJECTORY',NFI,TIME,4*NAT,DWORK)
       DEALLOCATE(DWORK)
+
+
+!   
+!     ==================================================================
+!     ==   WRITE POSITION TRAJECTORY FOR QMMM                         ==
+!     ==================================================================
+                              CALL TRACE$PASS('BEFORE QM-MM R-TRAJECTORY')
+      CALL QMMM$GETL4('ON',TQMMM)
+      IF(TQMMM) THEN
+         CALL CLASSICAL$SELECT('QMMM')
+         CALL CLASSICAL$GETI4('NAT',NATM)
+         ALLOCATE(DWORK(9+4*NATM))
+         CALL CELL$GETR8A('T(0)',9,DWORK(1:9))
+         CALL CLASSICAL$GETR8A('R(0)',3*NATM,DWORK(10:9+3*NATM))
+         CALL CLASSICAL$GETR8A('QEL',NATM,DWORK(10+3*NATM:))
+
+         CALL TRAJECTORYIO$ADD('QMMM-POS-TRA',NFI,TIME,9+4*NATM,DWORK)
+         DEALLOCATE(DWORK)
+      END IF
 !
                               CALL TRACE$POP
       RETURN
       END
-!#end if
+!#END IF
 
 

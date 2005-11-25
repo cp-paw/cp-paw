@@ -380,8 +380,8 @@ ${BINDIR}/${ARCH}/paw_dos.x: ${OBJDOS} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_dos.x ${OBJDOS} -lpaw ${LLIBS} 
 #
 ${BINDIR}/${ARCH}/paw_preopt.x: ${OBJPRE} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_preopt.x ${OBJPRE} -lpaw ${LLIBS} \
-            ${OBJDIR}/paw_classical.o ${OBJDIR}/paw_periodictable.o
+	${LINK} -o ${BINDIR}/${ARCH}/paw_preopt.x ${OBJPRE} \
+	${OBJDIR}/paw_classical.o -lpaw ${LLIBS}
 #
 ${BINDIR}/${ARCH}/paw_converttra.x: ${OBJCONVERTTRA} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_converttra.x ${OBJCONVERTTRA} -lpaw ${LLIBS} 

@@ -137,7 +137,7 @@ END MODULE ENERGYLIST_MODULE
 !     ==================================================================
       USE ENERGYLIST_MODULE
       IMPLICIT NONE
-      CHARACTER(*) ,INTENT(in)  :: STRING_
+      CHARACTER(*) ,INTENT(IN)  :: STRING_
       REAL(8)      ,INTENT(OUT) :: VALUE_
       CHARACTER(40)             :: STRING
       INTEGER(4)                :: I
@@ -192,7 +192,7 @@ END MODULE ENERGYLIST_MODULE
       USE ENERGYLIST_MODULE
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NFIL
-      CHARACTER(*) ,INTENT(in) :: STRING_
+      CHARACTER(*) ,INTENT(IN) :: STRING_
       CHARACTER(40)            :: STRING
       INTEGER(4)               :: I
 !     ******************************************************************
@@ -472,12 +472,12 @@ END MODULE ATOMTYPELIST_MODULE
       DO ITYPE=1,NTYPEX
         XXX(ITYPE)%NAME=' '
         XXX(ITYPE)%Z=0.D0
-        XXX(ITYPE)%PSg2=0.D0
-        XXX(ITYPE)%PSg4=0.D0
+        XXX(ITYPE)%PSG2=0.D0
+        XXX(ITYPE)%PSG4=0.D0
         XXX(ITYPE)%VALENCE=0.D0
         XXX(ITYPE)%RMASS=0.D0
-!linux patch    NULLIFY(XXX(ITYPE)%NPRO)   
-allocate(xxx(itype)%npro(1))
+!LINUX PATCH    NULLIFY(XXX(ITYPE)%NPRO)   
+ALLOCATE(XXX(ITYPE)%NPRO(1))
       ENDDO
       RETURN
       END
@@ -755,9 +755,9 @@ allocate(xxx(itype)%npro(1))
       END IF
 !  
       IF(ID.EQ.'NPRO') THEN
-        IF(ASSOCIATED(XXX(THISTYPE)%NPRO)) then  !linux patch
+        IF(ASSOCIATED(XXX(THISTYPE)%NPRO)) THEN  !LINUX PATCH
           DEALLOCATE(XXX(THISTYPE)%NPRO)
-        end if    !linux patch (see nullify in atomtypelist$initialize)
+        END IF    !LINUX PATCH (SEE NULLIFY IN ATOMTYPELIST$INITIALIZE)
         ALLOCATE(XXX(THISTYPE)%NPRO(LEN))
         XXX(THISTYPE)%NPRO(:)=VAL(:)
       ELSE

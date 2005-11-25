@@ -16,11 +16,11 @@ LOGICAL(4)            :: TON=.FALSE.
 INTEGER(4)            :: ITOTAL         ! TIMESTEP COUNTER
 LOGICAL(4)            :: TINI=.FALSE.
 REAL(8)   ,PARAMETER  :: TOL=1.D-10
-REAL(8)   ,ALLOCATABLE:: DELTAV(:,:)    !(3,NAT) pulse direction
+REAL(8)   ,ALLOCATABLE:: DELTAV(:,:)    !(3,NAT) PULSE DIRECTION
 INTEGER(4)            :: NPULSE=30      ! #PULSES
 INTEGER(4)            :: NSTEP=10       ! #STEPS PER PULSE
 INTEGER(4)            :: NAT=0          ! #ATOMS
-REAL(8)               :: TFINAL=0.d0   ! #TARGET TEMPERATURE in Hartree!!
+REAL(8)               :: TFINAL=0.D0   ! #TARGET TEMPERATURE IN HARTREE!!
 REAL(8)               :: RKB=0.D0       ! BOLTZMANN CONSTANT
 END MODULE HEATBATH_MODULE
 !
@@ -40,9 +40,9 @@ END MODULE HEATBATH_MODULE
       CALL CONSTANTS('KB',RKB)
 !     
 !     ================================================================
-!     ==  set deault final temperature                              ==
+!     ==  SET DEAULT FINAL TEMPERATURE                              ==
 !     ================================================================
-      if(tfinal.le.0.d0)tfinal=300.d0*rkb 
+      IF(TFINAL.LE.0.D0)TFINAL=300.D0*RKB 
 !     
 !     ================================================================
 !     ==  WRITE TO PROTOCOLL                                        ==
@@ -53,7 +53,7 @@ END MODULE HEATBATH_MODULE
       WRITE(NFILO,FMT='("==============================")')
       WRITE(NFILO,FMT='("NUMBER OF PULSES:     ",I4)')NPULSE
       WRITE(NFILO,FMT='("NUMBER OF STEPS/PULSE:",I4)')NSTEP
-      WRITE(NFILO,FMT='("TOTAL PUMPED DELTA T: ",F10.5)')TFINAL/rkb
+      WRITE(NFILO,FMT='("TOTAL PUMPED DELTA T: ",F10.5)')TFINAL/RKB
       RETURN
       END
 !
@@ -250,7 +250,7 @@ END MODULE HEATBATH_MODULE
           TEMPER   =TEMPER+RMASS(IAT)*SVAR**2**2
         ENDDO
       ENDDO
-      TEMPER   =TEMPER/dBLE(NG)
+      TEMPER   =TEMPER/DBLE(NG)
 !
 !     ==================================================================
 !     == CALCULATE REQUIRED TEMPERATURE                               ==
@@ -260,8 +260,8 @@ END MODULE HEATBATH_MODULE
       TARGETTEMP=TEMPER+RKAPPA
 !
       IF(TDEBUG) THEN
-        PRINT*,'TEMPERATURE AT BEGINNING OF LOOP FROM (+)',TEMPER/rkb
-        PRINT*,'TARGET TEMPERATURE                       ',TARGETTEMP/rkb
+        PRINT*,'TEMPERATURE AT BEGINNING OF LOOP FROM (+)',TEMPER/RKB
+        PRINT*,'TARGET TEMPERATURE                       ',TARGETTEMP/RKB
       END IF
 !
 !     ==================================================================
@@ -297,7 +297,7 @@ END MODULE HEATBATH_MODULE
         ENDDO
       ENDDO
       SVAR=SVAR/DBLE(NG)
-      IF (TDEBUG)PRINT*,'TEMPERATURE AT END OF LOOP (1)',SVAR/rkb
+      IF (TDEBUG)PRINT*,'TEMPERATURE AT END OF LOOP (1)',SVAR/RKB
 !
       IF (DABS(SVAR-TARGETTEMP).GT.1.D-5) THEN
         CALL ERROR$MSG('HEATBATH: DESIRED DELTA T NOT EFFECTED')

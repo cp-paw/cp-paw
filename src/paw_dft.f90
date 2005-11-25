@@ -806,7 +806,7 @@ MODULE DFT_MODULE
         CALL ERROR$STOP('DFT2')
       END IF
       RETURN
-      END
+    END SUBROUTINE DFT2
 !
 !     .....................................................DFT..........
       SUBROUTINE DFT3(VAL_,EXC,DEXC,D2EXC,D3EXC)
@@ -980,10 +980,10 @@ MODULE DFT_MODULE
         CALL ERROR$R8VAL('D2EXC(2,2)',D2EXC(2,2))
         CALL ERROR$R8VAL('D2EXC(2,3)',D2EXC(2,3))
         CALL ERROR$R8VAL('D2EXC(3,3)',D2EXC(3,3))
-        CALL ERROR$STOP('DFT2')
+        CALL ERROR$STOP('DFT3')
       END IF
       RETURN
-      END
+    END SUBROUTINE DFT3
 !
 !.......................................................................
 MODULE TABLE1D_MODULE
@@ -6503,7 +6503,7 @@ MODULE LYP88_MODULE
 !**    LYP88$EVAL2                                                    **
 !**    LYP88$EVAL3                                                    **
 !**                                                                   **
-!**                       Manuel Louwerse, Free University (NL) 2003  **
+!**                       MANUEL LOUWERSE, FREE UNIVERSITY (NL) 2003  **
 !***********************************************************************
 LOGICAL(4)          :: TINI=.FALSE.
 REAL(8),PARAMETER   :: A=4.918D-02
@@ -6708,7 +6708,7 @@ END MODULE LYP88_MODULE
       GGA1_S=GGA1_SSG*GRHOT2*RHOS
       GGA1_SS=GGA1_SSG*GRHOT2
       GGA1_SG=GGA1_SSG*RHOS
-      GGA1_TT=GGA1*OMEGA_TT+2.D0*OMEGA_T*TEMP*GRHOT2*GRHOT2+TEMP2*GRHOT2
+      GGA1_TT=GGA1*OMEGA_TT+2.D0*OMEGA_T*TEMP*GRHOT2+TEMP2*GRHOT2
       GGA1_TS=GGA1_S*OMEGA_T-AB*OMEGA*GRHOT2*14.D0*RHOS*DELTA_T
 
       GGA2_G=AB*OMEGA*(2.D0*RHO2-8.D0*RHOS2)

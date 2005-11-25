@@ -61,7 +61,7 @@ TYPE MD_TYPE
   REAL(8)      ,POINTER :: R0(:,:)        !(3,NAT)  ACTUAL ATOMIC POSITIONS
   REAL(8)      ,POINTER :: RMASS(:)       !(NAT)    ATOMIC MASSES
   CHARACTER(5) ,POINTER :: TYPE(:)        !(NAT)    ATOM TYPE
-  CHARACTER(30),POINTER :: atname(:)      !(NAT)    ATOM name
+  CHARACTER(30),POINTER :: ATNAME(:)      !(NAT)    ATOM NAME
   REAL(8)      ,POINTER :: QEL(:)         !(NAT)    POINT CHARGE
   INTEGER(4)            :: NBOND               
   INTEGER(4)   ,POINTER :: INDEX2(:,:)    ! (3,NBOND)     
@@ -204,9 +204,9 @@ END MODULE CLASSICAL_MODULE
           CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
           CALL ERROR$STOP('CLASSICAL$SETR8A')
         END IF
-        IF(.NOT.ASSOCIATED(MD%R0))then
+        IF(.NOT.ASSOCIATED(MD%R0))THEN
           ALLOCATE(MD%R0(3,MD%NAT))
-        end if
+        END IF
         MD%R0=RESHAPE(VAL_,(/3,MD%NAT/))
 !
 !     =================================================================
@@ -419,7 +419,7 @@ END MODULE CLASSICAL_MODULE
       END IF
 !
 !     =================================================================
-!     ==  defines if an atom is frozen                               ==
+!     ==  DEFINES IF AN ATOM IS FROZEN                               ==
 !     =================================================================
       IF(ID_.EQ.'TFREEZE') THEN
         IF(MD%NAT.EQ.0)MD%NAT=LENG_
@@ -856,7 +856,7 @@ END MODULE CLASSICAL_MODULE
 !     ==================================================================
 !     ==  DEFINE POTENTIALS FOR                                       ==
 !     ==================================================================
-      NANGLEX=12*MD%NAT   !the value of 12 is probably not the optimum choice
+      NANGLEX=12*MD%NAT   !THE VALUE OF 12 IS PROBABLY NOT THE OPTIMUM CHOICE
       NTORSIONX=6*MD%NBOND
       NINVERSIONX=MD%NAT*3
       NTYPEX=MD%NAT
@@ -1281,7 +1281,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==================================================================
       FMAX_=0.D0
       DO IAT=1,MD%NAT
-        if(md%tfreeze(iat)) cycle ! do not include the force on frozen atoms
+        IF(MD%TFREEZE(IAT)) CYCLE ! DO NOT INCLUDE THE FORCE ON FROZEN ATOMS
         DO I=1,3
           FMAX_=FMAX_+MD%FORCE(I,IAT)**2
         ENDDO
@@ -1316,7 +1316,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
         CALL ERROR$STOP('CLASSICAL$ETOT')
       END IF
       CALL CLASSICAL_INITIALIZE
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) THEN
         CALL TRACE$POP
         RETURN
@@ -1450,7 +1450,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       INTEGER(4)            :: THISTASK,NTASKS,ICOUNT
 !     *****************************************************************
                             CALL TRACE$PUSH('CLASSICAL_ETOTAL')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 ! 
 !     =================================================================
 !     ==  ZERO OUT ARRAYS                                            ==
@@ -1586,9 +1586,9 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==  ADD RESULTS FROM ALL TASKS                                  ==
 !     ==================================================================
  9999 CONTINUE
-      CALL MPE$COMBINE('+',ETOT)
-      CALL MPE$COMBINE('+',F)
-      CALL MPE$COMBINE('+',V)
+      CALL MPE$COMBINE('MONOMER','+',ETOT)
+      CALL MPE$COMBINE('MONOMER','+',F)
+      CALL MPE$COMBINE('MONOMER','+',V)
                             CALL TRACE$POP
       RETURN
       END
@@ -1631,10 +1631,10 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       REAL(8)                         :: DE2,DEDX
       INTEGER(4)                      :: THISTASK,NTASKS,ICOUNT
       REAL(8)                         :: T1,T2,T3
-real(8) :: g1,dgdx1
+REAL(8) :: G1,DGDX1
 !     ******************************************************************
                                CALL TRACE$PUSH('CLASSICAL_ECOULOMB')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       PI=4.D0*DATAN(1.D0)
       ICOUNT=0   ! USED TO DISTRIBUTE TASKS
       DO IIB=1,NNB
@@ -1658,9 +1658,9 @@ real(8) :: g1,dgdx1
           D2=D2+RBAS(2,1)*T1+RBAS(2,2)*T2+RBAS(2,3)*T3
           D3=D3+RBAS(3,1)*T1+RBAS(3,2)*T2+RBAS(3,3)*T3
         END IF
-        x=D1*D1+D2*D2+D3*D3
-        if(x.lt.1.D-20) x=1.D-20
-        X=1.D0/DSQRT(x)
+        X=D1*D1+D2*D2+D3*D3
+        IF(X.LT.1.D-20) X=1.D-20
+        X=1.D0/DSQRT(X)
         FAC=0.D0
 !         
 !       ============================================================
@@ -1669,10 +1669,10 @@ real(8) :: g1,dgdx1
 !       ==  GAUSSIANS  RHO(R)=SUM Q_I*G(R-R_I)                    ==
 !       ============================================================
         RC=4.D0
-        CALL VALUE(POT(1),RC*X,G,DGDX)   ! pot(1) of one contains the coulomb potential
+        CALL VALUE(POT(1),RC*X,G,DGDX)   ! POT(1) OF ONE CONTAINS THE COULOMB POTENTIAL
         G=G/RC
         E=E+Q1*Q2*G
-        FAC=fac+Q1*Q2*DGDX           
+        FAC=FAC+Q1*Q2*DGDX           
         V(IAT1)=V(IAT1)+Q2*G
         V(IAT2)=V(IAT2)+Q1*G
 !         
@@ -1701,9 +1701,9 @@ real(8) :: g1,dgdx1
         SVAR=FAC*D3
         F(3,IAT2)=F(3,IAT2)-SVAR
         F(3,IAT1)=F(3,IAT1)+SVAR
-        SIGMA(1,:)=SIGMA(1,:)+fac*d1**2
-        SIGMA(2,:)=SIGMA(2,:)+Fac*d2**2
-        SIGMA(3,:)=SIGMA(3,:)+fac*d3**2
+        SIGMA(1,:)=SIGMA(1,:)+FAC*D1**2
+        SIGMA(2,:)=SIGMA(2,:)+FAC*D2**2
+        SIGMA(3,:)=SIGMA(3,:)+FAC*D3**2
       ENDDO
                                CALL TRACE$POP
       RETURN
@@ -2051,7 +2051,7 @@ real(8) :: g1,dgdx1
 !     ==  SET UP ELECTROSTATIC POTENTIAL                              ==
 !     ================================================================== 
       NPOT=NPOT+1
-      CALL classical_COULOMBPOTA(POT(NPOT))   
+      CALL CLASSICAL_COULOMBPOTA(POT(NPOT))   
 !     
 !     ================================================================== 
 !     ==  PREPARE BOND INDEX ARRAYS AND SET BOND DISTANCE POTENTIALS  ==
@@ -2259,7 +2259,7 @@ real(8) :: g1,dgdx1
             TYPE2=TYPE(IAT2)
             TYPE3=TYPE(IAT3)
             TYPE4=TYPE(IAT4)
-!            no BO needed for inversion                               
+!            NO BO NEEDED FOR INVERSION                               
 !            BO12=BONEIGH(1+MOD(II-1,3),IAT)
 !            BO13=BONEIGH(1+MOD(II  ,3),IAT)
 !            BO14=BONEIGH(1+MOD(II+1,3),IAT)
@@ -2334,7 +2334,7 @@ real(8) :: g1,dgdx1
             CALL UFFTABLE$NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
             NPOT=NPOT+1
             IF(NPOT.GT.NPOTX) THEN
-              CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE at nonbond')
+              CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE AT NONBOND')
               CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
             END IF
             CALL CLASSICAL_NONBONDPOTA(ID,X,D,POT(NPOT))
@@ -2348,7 +2348,7 @@ real(8) :: g1,dgdx1
       END
 !
 !     ..................................................................
-      SUBROUTINE CLASSICAL_coulombpota(POT)
+      SUBROUTINE CLASSICAL_COULOMBPOTA(POT)
 !     ******************************************************************
 !     **                                                              **
 !     **  RETURNS RC*F(RC/R) AS FUNCTION OF X=RC/R                    **
@@ -2364,7 +2364,7 @@ real(8) :: g1,dgdx1
       INTEGER(4)                 :: I
       REAL(8)                    :: X,R,DRDX,SVAR,ALPHA
       REAL(8)                    :: PI
-      REAL(8)                    :: erfx
+      REAL(8)                    :: ERFX
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       POT%ID='COULOMB WITH GAUSS CUTOFF'
@@ -2378,7 +2378,7 @@ real(8) :: g1,dgdx1
         IF(X.NE.0.D0) THEN
           CALL LIB$ERFR8(1.D0/X,ERFX)
           POT%VAL(I)=X*ERFX    
-          POT%DER(I)=ERFx-2.D0/(X*SQRT(PI))*EXP(-1.D0/X**2) 
+          POT%DER(I)=ERFX-2.D0/(X*SQRT(PI))*EXP(-1.D0/X**2) 
         ELSE
           POT%VAL(I)=0.D0
           POT%DER(I)=1.D0
@@ -2400,7 +2400,7 @@ real(8) :: g1,dgdx1
       REAL(8)       ,INTENT(IN)  :: DIJ     !FORCE CONSTANT
       TYPE(POT_TYPE),INTENT(OUT) :: POT
       INTEGER(4)    ,PARAMETER   :: NX=1000
-      REAL(8)       ,PARAMETER   :: X1=1.d-6 
+      REAL(8)       ,PARAMETER   :: X1=1.D-6 
       REAL(8)       ,PARAMETER   :: X2=5.D0
       LOGICAL(4)    ,PARAMETER   :: THARMONIC=.TRUE.
       INTEGER(4)                 :: I
@@ -2414,7 +2414,7 @@ real(8) :: g1,dgdx1
       ALLOCATE(POT%DER(POT%NX))
       DO I=1,POT%NX
         X=POT%X1+POT%DX*DBLE(I-1)
-!       == potential divide-by-zero: see x1
+!       == POTENTIAL DIVIDE-BY-ZERO: SEE X1
         R=1/X
         DRDX=-R**2
         IF(THARMONIC) THEN
@@ -2512,7 +2512,7 @@ real(8) :: g1,dgdx1
 !
 !     ==================================================================
 !     ==  REMOVE THE POTENTIAL-WELL AT THETA=0                        ==
-!     ==  (neccesary to avoid minima for bond angles at theta=0)      ==
+!     ==  (NECCESARY TO AVOID MINIMA FOR BOND ANGLES AT THETA=0)      ==
 !     ==================================================================
       IF(POT%DER(POT%NX).GT.0) RETURN
       DO I=POT%NX-1,1,-1
@@ -2688,8 +2688,8 @@ real(8) :: g1,dgdx1
             POT%VAL(I)=DIJ*(-2.D0*SVAR6+SVAR6**2)
             POT%DER(I)=DIJ*12.D0*(-SVAR6+SVAR6**2)*R
           ELSE
-            call error$msg('INVALID NONBOND POTENTIAL')
-            call error$stop('CLASSICAL_NONBONDPOTA')
+            CALL ERROR$MSG('INVALID NONBOND POTENTIAL')
+            CALL ERROR$STOP('CLASSICAL_NONBONDPOTA')
           END IF
         ELSE
           POT%VAL(I)=0.D0
@@ -2933,13 +2933,13 @@ PAR(134)=UFFPAR_TYPE('FM6+3',1.712, 90.000,3.286,0.012,12.000,3.900)
 PAR(135)=UFFPAR_TYPE('MD6+3',1.689, 90.000,3.274,0.011,12.000,3.900)
 PAR(136)=UFFPAR_TYPE('NO6+3',1.679, 90.000,3.248,0.011,12.000,3.900)
 PAR(137)=UFFPAR_TYPE('LW6+3',1.698, 90.000,3.236,0.011,12.000,3.900)
-! cyclopentadienyl center
+! CYCLOPENTADIENYL CENTER
 PAR(138)=UFFPAR_TYPE('CPR  ',0.551, 90.000,3.851,0.000,12.000,1.912)
-! cyclopentadienyl center with back bonding such as ferrocene
+! CYCLOPENTADIENYL CENTER WITH BACK BONDING SUCH AS FERROCENE
 PAR(139)=UFFPAR_TYPE('CPR_B',0.340, 90.000,3.851,0.000,12.000,1.912)
-! double bond center
+! DOUBLE BOND CENTER
 PAR(140)=UFFPAR_TYPE('CIR  ',0.616, 90.000,3.851,0.000,12.000,1.912)
-! allyl center
+! ALLYL CENTER
 PAR(141)=UFFPAR_TYPE('PIR  ',0.616, 90.000,3.851,0.000,12.000,1.912)
       NTYPE=141
       TINI=.TRUE.
@@ -2949,15 +2949,15 @@ END MODULE UFFTABLE_MODULE
 !     .................................................................
       SUBROUTINE UFFTABLE$EXIST(TYPE_,EXIST,SUGGESTION)
 !     ******************************************************************
-!     **  check if force field type exist.                           **
-!     **  used in paw_preopt tool                                    **
+!     **  CHECK IF FORCE FIELD TYPE EXIST.                           **
+!     **  USED IN PAW_PREOPT TOOL                                    **
 !     **                                                             **
-!     **  remark                                                     **
-!     **  if the string type is contained in an existing atom type   **
-!     **  but not identical to an existing atom type                 **
-!     **  one of the existing atom types is returned as suggestion   **
+!     **  REMARK                                                     **
+!     **  IF THE STRING TYPE IS CONTAINED IN AN EXISTING ATOM TYPE   **
+!     **  BUT NOT IDENTICAL TO AN EXISTING ATOM TYPE                 **
+!     **  ONE OF THE EXISTING ATOM TYPES IS RETURNED AS SUGGESTION   **
 !     **                                                             **
-!     ************************written by Johannes Kaestner 2002********
+!     ************************WRITTEN BY JOHANNES KAESTNER 2002********
       USE UFFTABLE_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
@@ -3070,7 +3070,7 @@ END MODULE UFFTABLE_MODULE
 !
 !     ==================================================================
 !     == ELECTRONEGATIVITY CORRECTION EQ.4                            ==
-!     == ATTENTION! WRONG SIGN IN THE UFF PAPER (corrected here)      ==
+!     == ATTENTION! WRONG SIGN IN THE UFF PAPER (CORRECTED HERE)      ==
 !     ==================================================================
       REN=-RI*RJ*(DSQRT(ENCI)-DSQRT(ENCJ))**2/(ENCI*RI+ENCJ*RJ)
 !
@@ -3700,16 +3700,16 @@ END MODULE UFFTABLE_MODULE
             K=0.D0
          CASE('P_3+3')
             GAMMA0=9.714677D-2
-            K=11.D0          ! K=E(barrier)/2
+            K=11.D0          ! K=E(BARRIER)/2
          CASE('AS3+3')
             GAMMA0=5.282239D-2
-            K=11.D0          ! K=E(barrier)/2
+            K=11.D0          ! K=E(BARRIER)/2
          CASE('SB3+3')
             GAMMA0=4.00605D-2
-            K=11.D0          ! K=E(barrier)/2
+            K=11.D0          ! K=E(BARRIER)/2
          CASE('BI3+3')
             GAMMA0=0.D0
-            K=11.D0          ! K=E(barrier)/2
+            K=11.D0          ! K=E(BARRIER)/2
          CASE DEFAULT
             GOTO 9999
       ENDSELECT
@@ -3784,7 +3784,7 @@ END MODULE UFFTABLE_MODULE
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
-      USE CLASSICAL_MODULE, ONLY : NONBOND_TYPE,rclongrange
+      USE CLASSICAL_MODULE, ONLY : NONBOND_TYPE,RCLONGRANGE
       IMPLICIT NONE
       LOGICAL(4)        ,PARAMETER  :: TPR=.FALSE.
       INTEGER(4)        ,INTENT(IN) :: NAT
@@ -3808,7 +3808,7 @@ END MODULE UFFTABLE_MODULE
       REAL(8)                       :: TI(3,(1+2*MAXDIV)**3)
       LOGICAL(4)                    :: TT((1+2*MAXDIV)**3)
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     ==================================================================
 !     == TRANSLATION VECTORS                                          ==
@@ -3830,7 +3830,7 @@ END MODULE UFFTABLE_MODULE
 !     ==================================================================
 !     == SET UP NEIGHBORLIST                                          ==
 !     ==================================================================
-      RMAX2=Rclongrange**2
+      RMAX2=RCLONGRANGE**2
       NNB=0
       IEX=1
       EXCLUSION=IEXCLUSION(IEX)
@@ -3874,13 +3874,13 @@ END MODULE UFFTABLE_MODULE
       END IF
 !
 !     ==================================================================
-!     ==  if array too small return with an unusable neighborlist     ==
+!     ==  IF ARRAY TOO SMALL RETURN WITH AN UNUSABLE NEIGHBORLIST     ==
 !     ==================================================================
-      if(nnb.gt.nnbx) then
-        nblist(:)%iat1=0
-        nblist(:)%iat2=0
-        return
-      end if
+      IF(NNB.GT.NNBX) THEN
+        NBLIST(:)%IAT1=0
+        NBLIST(:)%IAT2=0
+        RETURN
+      END IF
 !
 !     ==================================================================
 !     ==================================================================
@@ -3930,7 +3930,7 @@ END MODULE UFFTABLE_MODULE
         IAT2=INDEX2(2,IB)
         NEXCLUSION=NEXCLUSION+1
         IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
-!if i understand correctly this must be completed for periodic systems
+!IF I UNDERSTAND CORRECTLY THIS MUST BE COMPLETED FOR PERIODIC SYSTEMS
           IT1=0
           IT2=0
           IT3=0
@@ -3986,7 +3986,7 @@ END MODULE UFFTABLE_MODULE
 !     ==  RETURN THE NUMBER OF EXCLUSIONS IF GREATER THAN MAXIMUM     ==
 !     ==================================================================
       IF(NEXCLUSION+1.GT.NEXCLUSIONX) THEN
-!       == add one element for a flag indicating the last element
+!       == ADD ONE ELEMENT FOR A FLAG INDICATING THE LAST ELEMENT
         NEXCLUSION=NEXCLUSION+1
         RETURN
       END IF
@@ -3995,7 +3995,7 @@ END MODULE UFFTABLE_MODULE
 !     ==  SORT IN INCREASING MAGNITUDE                                ==
 !     ==================================================================
       IF(NEXCLUSION.GT.1) THEN
-        call lib$sorti4(NEXCLUSION,IEXCLUSION)
+        CALL LIB$SORTI4(NEXCLUSION,IEXCLUSION)
 !
 !       ==  EXCLUDE DOUBLE EXCLUSIONS                                   ==
         I1=1
@@ -4508,17 +4508,17 @@ END MODULE UFFTABLE_MODULE
 !     ******************************************************************
 !     ******************************************************************
       USE CLASSICAL_MODULE,ONLY: POT_TYPE
-      IMPLICIT none
+      IMPLICIT NONE
       TYPE(POT_TYPE),INTENT(IN)  :: POT
-      integer(4),PARAMETER :: NDIFF=10
-      real(8)              :: X(-NDIFF:NDIFF)
-      real(8)              :: E(-NDIFF:NDIFF)
-      real(8)              :: DEDX(-NDIFF:NDIFF)
-      integer(4)           :: i0  
-      integer(4)           :: i
-      real(8)              :: x0
-      real(8)              :: dx1
-      real(8)              :: svar
+      INTEGER(4),PARAMETER :: NDIFF=10
+      REAL(8)              :: X(-NDIFF:NDIFF)
+      REAL(8)              :: E(-NDIFF:NDIFF)
+      REAL(8)              :: DEDX(-NDIFF:NDIFF)
+      INTEGER(4)           :: I0  
+      INTEGER(4)           :: I
+      REAL(8)              :: X0
+      REAL(8)              :: DX1
+      REAL(8)              :: SVAR
 !     ******************************************************************
       I0=POT%NX/2
       X0=POT%X1+POT%DX*(I0-1)
@@ -4527,7 +4527,7 @@ END MODULE UFFTABLE_MODULE
         X(I)=X0+DX1*DBLE(I)
         CALL VALUE(POT,X(I),E(I),DEDX(I))
       ENDDO
-      PRINT*,'X1,DX,NX,E(0) ',pot%X1,pot%DX,pot%NX,x0,E(0)
+      PRINT*,'X1,DX,NX,E(0) ',POT%X1,POT%DX,POT%NX,X0,E(0)
       DO I=-NDIFF,NDIFF
         E(I)=E(I)-E(0)
       ENDDO

@@ -36,7 +36,7 @@
           FORCET(I,IAT)=0.D0
         ENDDO
       ENDDO
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('NONE',NTASKS,THISTASK)
       DO ISPIN=1,NSPIN
         DO IKPT=1,NKPT
           DO IAT=THISTASK,NAT,NTASKS
@@ -49,7 +49,7 @@
           ENDDO
         ENDDO
       ENDDO
-      CALL MPE$COMBINE('+',FORCET)
+      CALL MPE$COMBINE('NONE','+',FORCET)
 !     
 !     ==================================================================
 !     ==  ADD THESE FORCES TO ATOMLIST                                ==
@@ -103,7 +103,7 @@
       INTEGER(4),INTENT(IN) :: LMNX
       REAL(8)   ,INTENT(IN) :: WKPT
       REAL(8)   ,INTENT(IN) :: F(NB)
-      REAL(8)   ,INTENT(IN) :: H(NX,NX)   ! ORTHO-Lagrange multiplier
+      REAL(8)   ,INTENT(IN) :: H(NX,NX)   ! ORTHO-LAGRANGE MULTIPLIER
       REAL(8)   ,INTENT(IN) :: DFNL(NAT,NB,LMNXX,3)
       REAL(8)   ,INTENT(IN) :: HNL(NAT,NB,LMNXX)  
       REAL(8)   ,INTENT(IN) :: ONL(NAT,NB,LMNXX)

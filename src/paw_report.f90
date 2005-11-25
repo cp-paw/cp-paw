@@ -105,11 +105,11 @@
 MODULE RESTART_INTERFACE
 TYPE SEPARATOR_TYPE
   SEQUENCE
-  INTEGER(4)    :: NREC      ! #(records written excluding separator)
-  CHARACTER(32) :: ID        ! identifier specifies the type of data
-  CHARACTER(32) :: NAME      ! some special name 
-  CHARACTER(64) :: VERSION   ! version id
-  CHARACTER(256):: NOTES     ! other remarks
+  INTEGER(4)    :: NREC      ! #(RECORDS WRITTEN EXCLUDING SEPARATOR)
+  CHARACTER(32) :: ID        ! IDENTIFIER SPECIFIES THE TYPE OF DATA
+  CHARACTER(32) :: NAME      ! SOME SPECIAL NAME 
+  CHARACTER(64) :: VERSION   ! VERSION ID
+  CHARACTER(256):: NOTES     ! OTHER REMARKS
 END TYPE SEPARATOR_TYPE
 TYPE (SEPARATOR_TYPE) :: HEADER &
      =SEPARATOR_TYPE(0,'HEADER','NONE','AUG1996','DEFAULT HEADER')
@@ -117,18 +117,17 @@ TYPE (SEPARATOR_TYPE) :: ENDOFFILE &
      =SEPARATOR_TYPE(0,'ENDOFFILE','NONE','AUG1996','DEFAULT EOF')
 CONTAINS
 !     ..................................................................
-      SUBROUTINE READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      SUBROUTINE RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
 !     ******************************************************************
 !     **  READS SEPARATOR FROM FILE NFIL                              **
 !     **                                                              **
-!     **  data are read only if id and name coincide                  **
+!     **  DATA ARE READ ONLY IF ID AND NAME COINCIDE                  **
 !     **                                                              **
 !     **                                                              **
 !     **  TCHK ON INPUT : DATASET SHOULD BE READ OR SKIPPED           **
 !     **  TCHK ON OUTPUT: DATASET SHOULD BE READ OR SKIPPED           **
 !     ******************************************************************
-      USE MPE_MODULE
-      implicit none
+      IMPLICIT NONE
       INTEGER(4)           ,INTENT(IN)   :: NFIL
       INTEGER(4)           ,INTENT(IN)   :: NFILO
       LOGICAL(4)           ,INTENT(INOUT):: TCHK
@@ -136,77 +135,65 @@ CONTAINS
       TYPE (SEPARATOR_TYPE)              :: XSEPARATOR
       INTEGER(4)                         :: NTASKS,THISTASK
       LOGICAL(4)                         :: TCHK1
-      integer(4)                         :: i
+      INTEGER(4)                         :: I
 !     ******************************************************************
-!
-      CALL MPE$QUERY(NTASKS,THISTASK)
-!
-      IF(THISTASK.EQ.1) THEN
-        READ(NFIL)XSEPARATOR
-        TCHK1=(XSEPARATOR%ID.NE.SEPARATOR%ID) 
-        TCHK1=TCHK1.OR.(XSEPARATOR%NAME.NE.SEPARATOR%NAME)
-        IF(TCHK1) THEN
-!         == no match : reposition =====================================
-          BACKSPACE(NFIL)
-          TCHK=.FALSE.
-        ELSE
-          IF(TCHK) THEN
-!         == match: decide to read =====================================
-            TCHK=.TRUE.
-            SEPARATOR=XSEPARATOR
-            IF(TRIM(SEPARATOR%NAME).EQ.'NONE') THEN
-              WRITE(NFILO,FMT='("READING: ",A)')TRIM(SEPARATOR%ID)
-            ELSE
-              WRITE(NFILO,FMT='("READING: ",A,":",A)') &
-                  TRIM(SEPARATOR%ID),TRIM(SEPARATOR%NAME)
-            END IF
+      READ(NFIL)XSEPARATOR
+      TCHK1=(XSEPARATOR%ID.NE.SEPARATOR%ID) 
+      TCHK1=TCHK1.OR.(XSEPARATOR%NAME.NE.SEPARATOR%NAME)
+      IF(TCHK1) THEN
+!       == NO MATCH : REPOSITION =====================================
+        BACKSPACE(NFIL)
+        TCHK=.FALSE.
+      ELSE
+        IF(TCHK) THEN
+!       == MATCH: DECIDE TO READ =====================================
+          TCHK=.TRUE.
+          SEPARATOR=XSEPARATOR
+          IF(TRIM(SEPARATOR%NAME).EQ.'NONE') THEN
+            WRITE(NFILO,FMT='("READING: ",A)')TRIM(SEPARATOR%ID)
           ELSE
-!         == match: decide not to read =================================
-            TCHK=.FALSE.
-            IF(TRIM(SEPARATOR%NAME).EQ.'NONE') THEN
-              WRITE(NFILO,FMT='("SKIPPING: ",A)')TRIM(SEPARATOR%ID)
-            ELSE
-              WRITE(NFILO,FMT='("SKIPPING: ",A,":",A)') &
-                  TRIM(SEPARATOR%ID),TRIM(SEPARATOR%NAME)
-            END IF
-            DO I=1,XSEPARATOR%NREC
-              READ(NFIL)
-            ENDDO
+            WRITE(NFILO,FMT='("READING: ",A,":",A)') &
+                TRIM(SEPARATOR%ID),TRIM(SEPARATOR%NAME)
           END IF
+        ELSE
+!       == MATCH: DECIDE NOT TO READ =================================
+          TCHK=.FALSE.
+          IF(TRIM(SEPARATOR%NAME).EQ.'NONE') THEN
+            WRITE(NFILO,FMT='("SKIPPING: ",A)')TRIM(SEPARATOR%ID)
+          ELSE
+            WRITE(NFILO,FMT='("SKIPPING: ",A,":",A)') &
+                TRIM(SEPARATOR%ID),TRIM(SEPARATOR%NAME)
+          END IF
+          DO I=1,XSEPARATOR%NREC
+            READ(NFIL)
+          ENDDO
         END IF
       END IF
-!
-      CALL MPE$BROADCAST(1,TCHK)
-!
       RETURN
-      END SUBROUTINE READSEPARATOR
+      END SUBROUTINE RESTART$READSEPARATOR
 !
 !     ..................................................................
-      SUBROUTINE WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      SUBROUTINE restart$WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
 !     ******************************************************************
 !     **  READS SEPARATOR FROM FILE NFIL                              **
-!     **  TCHK ON INPUT : DATASET SHOULD BE READ OR SKIPPED           **
-!     **  TCHK ON OUTPUT: DATASET SHOULD BE READ OR SKIPPED           **
+!     **  TCHK is not used                                            **
 !     ******************************************************************
-      implicit none
+      IMPLICIT NONE
       TYPE (SEPARATOR_TYPE),INTENT(IN)   :: SEPARATOR
       INTEGER(4)           ,INTENT(IN)   :: NFIL
       INTEGER(4)           ,INTENT(IN)   :: NFILO
-      LOGICAL(4)           ,INTENT(INOUT):: TCHK
+      LOGICAL(4)           ,INTENT(IN)   :: TCHK
       INTEGER(4)                         :: NTASKS,THISTASK
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
-      IF(THISTASK.EQ.1) THEN
-        WRITE(NFIL)SEPARATOR
-        IF(TRIM(SEPARATOR%NAME).EQ.'NONE') THEN
-          WRITE(NFILO,FMT='("WRITING : ",A)')TRIM(SEPARATOR%ID) 
-        ELSE
-          WRITE(NFILO,FMT='("WRITING : ",A,":",A)') &
-                   TRIM(SEPARATOR%ID),TRIM(SEPARATOR%NAME)
-        END IF
+      WRITE(NFIL)SEPARATOR
+      IF(TRIM(SEPARATOR%NAME).EQ.'NONE') THEN
+        WRITE(NFILO,FMT='("WRITING : ",A)')TRIM(SEPARATOR%ID) 
+      ELSE
+        WRITE(NFILO,FMT='("WRITING : ",A,":",A)') &
+                 TRIM(SEPARATOR%ID),TRIM(SEPARATOR%NAME)
       END IF
       RETURN
-      END SUBROUTINE WRITESEPARATOR
+      END SUBROUTINE RESTART$WRITESEPARATOR
 !     ..................................................................
       SUBROUTINE RESTART$SKIP(NFIL,NFILO)
 !     ******************************************************************
@@ -221,8 +208,6 @@ CONTAINS
       INTEGER(4)                         :: NTASKS,THISTASK
       INTEGER(4)                         :: I,NREC
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
-      IF(THISTASK.NE.1) RETURN
       READ(NFIL)SEPARATOR
       WRITE(NFILO,FMT='("SKIPPING : ",A)')TRIM(SEPARATOR%ID)
       NREC=SEPARATOR%NREC
@@ -237,4 +222,50 @@ CONTAINS
       ENDDO
       RETURN
       END SUBROUTINE RESTART$SKIP
+!
+!     ..................................................................
+      SUBROUTINE restart$CHECK(NFIL)
+!     ******************************************************************
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4)           ,INTENT(IN)   :: NFIL
+      TYPE (SEPARATOR_TYPE)              :: SEPARATOR
+      INTEGER(4)                         :: NREC,I
+      INTEGER(4)                         :: item
+      character(10):: string
+!     ******************************************************************
+      ITEM=0
+      REWIND NFIL
+      DO 
+        ITEM=ITEM+1
+        READ(NFIL,END=1000)SEPARATOR
+        WRITE(*,FMT='("CHECKING RESTART FILE: ",A10,I5)')SEPARATOR%ID,SEPARATOR%NREC
+        IF(ITEM.EQ.1.AND.SePARATOR%ID.NE.HEADER%ID) THEN
+          CALL ERROR$MSG('FILE STRUCTURE IS CORRUPTED')
+          CALL ERROR$MSG('FILE DOES NOT BEGIN WITH THE HEADER')
+          CALL ERROR$CHVAL('ID',SEPARATOR%ID)
+          CALL ERROR$STOP('RESTART$CHECK')
+        END IF
+        IF(SEPARATOR%ID.EQ.ENDOFFILE%ID) RETURN
+        NREC=SEPARATOR%NREC
+        IF(NREC.LT.0.OR.NREC.GT.10000000) THEN
+          CALL ERROR$MSG('FILE STRUCTURE CORRUPTED')
+          CALL ERROR$CHVAL('NAME',SEPARATOR%id)
+          CALL ERROR$I4VAL('NREC',NREC)
+          CALL ERROR$STOP('RESTART$CHECK')
+        END IF
+        DO I=1,NREC
+          READ(NFIL,END=2000)
+        ENDDO
+      ENDDO
+1000  CONTINUE
+      CALL ERROR$MSG('FILE STRUCTURE IS CORRUPTED')
+      CALL ERROR$MSG('FILE ENDS WITHOUT AN "ENDOFFILE"')
+      CALL ERROR$STOP('RESTART$CHECK')
+2000  CONTINUE
+      CALL ERROR$MSG('FILE STRUCTURE IS CORRUPTED')
+      CALL ERROR$MSG('FILE ENDS BEFORE RECORD ARE FINISHED')
+      CALL ERROR$STOP('RESTART$CHECK')
+      RETURN
+    END SUBROUTINE RESTART$CHECK
 END MODULE RESTART_INTERFACE

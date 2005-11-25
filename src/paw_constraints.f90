@@ -293,14 +293,14 @@ END MODULE CONSTRAINTS_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE CONSTRAINTS$SETREFERENCE(rbas,NAT_,R0_,RM_,RMASS_,DELT)
+      SUBROUTINE CONSTRAINTS$SETREFERENCE(RBAS,NAT_,R0_,RM_,RMASS_,DELT)
 !     ******************************************************************
 !     **  SET REFERENCE CONFIGURATION                                 **
 !     ******************************************************************
       USE CONSTRAINTS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT_    ! #(ATOMS)
-      REAL(8)   ,INTENT(IN) :: rbas(3,3)
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
       REAL(8)   ,INTENT(IN) :: R0_(3,NAT_)
       REAL(8)   ,INTENT(IN) :: RM_(3,NAT_)
       REAL(8)   ,INTENT(IN) :: RMASS_(NAT_)
@@ -312,7 +312,7 @@ END MODULE CONSTRAINTS_MODULE
       INTEGER(4)            :: NBYTE
       INTEGER(4)            :: NC1
       INTEGER(4)            :: IAT1,IAT2,IAT3,IAT4,IAT
-      integer(4)            :: it1(3),it2(3),it3(3),it4(3)
+      INTEGER(4)            :: IT1(3),IT2(3),IT3(3),IT4(3)
       INTEGER(4)            :: NMEMBER
       CHARACTER(32)         :: TYPE
       CHARACTER(256)        :: STRING,STRING1
@@ -328,7 +328,7 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)   ,ALLOCATABLE:: RREF(:,:)  !(3*NAT,3*NAT,NC)
       REAL(8)               :: ANNES
       REAL(8)               :: SMASS
-      real(8)               :: phi(3)
+      REAL(8)               :: PHI(3)
 !     ******************************************************************
       IF(.NOT.TON) RETURN
       NAT=NAT_
@@ -357,7 +357,7 @@ END MODULE CONSTRAINTS_MODULE
         STRING='BONDLENGTH'
         IF(TYPE.EQ.STRING(1:32)) THEN
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM1',1,STRING)
-          CALL ATOMLIST$INDEXX(STRING,IAT1,it1)
+          CALL ATOMLIST$INDEXX(STRING,IAT1,IT1)
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM2',1,STRING)
           CALL ATOMLIST$INDEXX(STRING,IAT2,IT2)
           NC1=1
@@ -365,8 +365,8 @@ END MODULE CONSTRAINTS_MODULE
 !
           ALLOCATE(S0(NC1))
           ALLOCATE(SM(NC1))
-          CALL CONSTRAINTS_BONDLENGTHVALUE(NAT,IAT1,it1,IAT2,it2,rbas,R0_,S0(1))
-          CALL CONSTRAINTS_BONDLENGTHVALUE(NAT,IAT1,it1,IAT2,it2,rbas,RM_,SM(1))
+          CALL CONSTRAINTS_BONDLENGTHVALUE(NAT,IAT1,IT1,IAT2,IT2,RBAS,R0_,S0(1))
+          CALL CONSTRAINTS_BONDLENGTHVALUE(NAT,IAT1,IT1,IAT2,IT2,RBAS,RM_,SM(1))
         END IF
 !
 !       ==  GENERAL LINEAR =============================================
@@ -415,8 +415,8 @@ END MODULE CONSTRAINTS_MODULE
           II=1
           DO IAT=1,NAT
             IF(TMEMBER(IAT)) THEN
-              CALL CONSTRAINTS_FIXATOMVALUE(NAT,IAT,R0_,S0(ii))
-              CALL CONSTRAINTS_FIXATOMVALUE(NAT,IAT,RM_,SM(ii))
+              CALL CONSTRAINTS_FIXATOMVALUE(NAT,IAT,R0_,S0(II))
+              CALL CONSTRAINTS_FIXATOMVALUE(NAT,IAT,RM_,SM(II))
               II=II+3
             ENDIF
           ENDDO
@@ -513,7 +513,7 @@ END MODULE CONSTRAINTS_MODULE
 !         == CONVERT INTO GENERALLINEAR ==============================
           TYPE='GENERALLINEAR'
           CALL LINKEDLIST$SET(LL_CNSTR,'TYPE',0,TYPE)
-          CALL LINKEDLIST$sET(LL_CNSTR,'VEC',0,VEC)
+          CALL LINKEDLIST$SET(LL_CNSTR,'VEC',0,VEC)
           NC1=1
           CALL LINKEDLIST$SET(LL_CNSTR,'NC1',0,NC1)
           ALLOCATE(S0(NC1))
@@ -529,11 +529,11 @@ END MODULE CONSTRAINTS_MODULE
           NC1=1
           CALL LINKEDLIST$SET(LL_CNSTR,'NC1',0,NC1)
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM1',1,STRING)
-          CALL ATOMLIST$INDEXx(STRING,IAT1,it1)
+          CALL ATOMLIST$INDEXX(STRING,IAT1,IT1)
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM2',1,STRING)
-          CALL ATOMLIST$INDEXx(STRING,IAT2,it2)
+          CALL ATOMLIST$INDEXX(STRING,IAT2,IT2)
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM3',1,STRING)
-          CALL ATOMLIST$INDEXx(STRING,IAT3,it3)
+          CALL ATOMLIST$INDEXX(STRING,IAT3,IT3)
 !
           ALLOCATE(S0(NC1))
           ALLOCATE(SM(NC1))
@@ -688,7 +688,7 @@ END MODULE CONSTRAINTS_MODULE
 !     **  RETURN NUMBER OF CONSTRAINTS                                **
 !     ******************************************************************
       USE CONSTRAINTS_MODULE
-      implicit none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT_
       INTEGER(4),INTENT(OUT):: NFREE_
       INTEGER(4)            :: NUM
@@ -696,7 +696,7 @@ END MODULE CONSTRAINTS_MODULE
       CHARACTER(32)         :: TYPE
       CHARACTER(32)         :: STRING
       INTEGER(4)            :: NC1
-      INTEGER(4)            :: nat
+      INTEGER(4)            :: NAT
       INTEGER(4)            :: NMEMBER
       LOGICAL(4)            :: TMEMBER(NAT_)
 !     ******************************************************************
@@ -713,7 +713,7 @@ END MODULE CONSTRAINTS_MODULE
       CALL LINKEDLIST$NLISTS(LL_CNSTR,'CONSTRAINT',NUM)
       NC=0
       DO I=1,NUM
-        nc1=0
+        NC1=0
         CALL LINKEDLIST$SELECT(LL_CNSTR,'~')
         CALL LINKEDLIST$SELECT(LL_CNSTR,'CONSTRAINT',I)
         CALL LINKEDLIST$GET(LL_CNSTR,'TYPE',1,TYPE)
@@ -793,13 +793,13 @@ END MODULE CONSTRAINTS_MODULE
       END
 !
 !     .................................................................
-      SUBROUTINE CONSTRAINTS$APPLY(rbas,NAT,R0,RP,RMASS,FORCE,DELT)
+      SUBROUTINE CONSTRAINTS$APPLY(RBAS,NAT,R0,RP,RMASS,FORCE,DELT)
 !     ******************************************************************
 !     **  APPLY CONSTRAINTS                                           **
 !     ******************************************************************
       USE CONSTRAINTS_MODULE
       IMPLICIT NONE
-      real(8)   ,INTENT(IN)   :: rbas(3,3)
+      REAL(8)   ,INTENT(IN)   :: RBAS(3,3)
       INTEGER(4),INTENT(IN)   :: NAT
       REAL(8)   ,INTENT(IN)   :: RMASS(NAT)
       REAL(8)   ,INTENT(IN)   :: R0(3,NAT)
@@ -826,7 +826,7 @@ END MODULE CONSTRAINTS_MODULE
       ALLOCATE(A(NC))
       ALLOCATE(B(3*NAT,NC))
       ALLOCATE(C(3*NAT,3*NAT,NC))
-      CALL CONSTRAINTS_APPLY_COLLECT(LL_CNSTR,NC,NAT,DELT,rbas,RMASS,R0,A,B,C)
+      CALL CONSTRAINTS_APPLY_COLLECT(LL_CNSTR,NC,NAT,DELT,RBAS,RMASS,R0,A,B,C)
 !     
 !     ================================================================
 !     == APPLY CONSTRAINTS                                          ==
@@ -935,7 +935,7 @@ END MODULE CONSTRAINTS_MODULE
       END
 !
 !     .................................................................
-      SUBROUTINE CONSTRAINTS_APPLY_COLLECT(LL_CNSTR_,NC,NAT,DELT,rbas &
+      SUBROUTINE CONSTRAINTS_APPLY_COLLECT(LL_CNSTR_,NC,NAT,DELT,RBAS &
      &                                    ,RMASS,R0,A,B,C)
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
@@ -943,7 +943,7 @@ END MODULE CONSTRAINTS_MODULE
       INTEGER(4)   ,INTENT(IN)  :: NC
       INTEGER(4)   ,INTENT(IN)  :: NAT
       REAL(8)      ,INTENT(IN)  :: DELT
-      REAL(8)      ,INTENT(IN)  :: rbas(3,3)
+      REAL(8)      ,INTENT(IN)  :: RBAS(3,3)
       REAL(8)      ,INTENT(IN)  :: R0(3,NAT)
       REAL(8)      ,INTENT(IN)  :: RMASS(NAT)
       REAL(8)      ,INTENT(OUT) :: A(NC)  
@@ -960,11 +960,11 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)      ,ALLOCATABLE :: S0(:)            !(NC1)
       REAL(8)                   :: RREF(3,NAT)
       INTEGER(4)                :: IC,I,IAT1,IAT2,IAT3,IAT4,IAT,II,ICI
-      INTEGER(4)                :: it1(3),it2(3),it3(3),it4(3)
+      INTEGER(4)                :: IT1(3),IT2(3),IT3(3),IT4(3)
 !     ******************************************************************
-      a(:)=0.d0
-      b(:,:)=0.d0
-      c(:,:,:)=0.d0
+      A(:)=0.D0
+      B(:,:)=0.D0
+      C(:,:,:)=0.D0
       LL_CNSTR=LL_CNSTR_
       CALL LINKEDLIST$GET(LL_CNSTR,'REFERENCE',1,RREF)
 !     
@@ -982,11 +982,11 @@ END MODULE CONSTRAINTS_MODULE
         STRING='BONDLENGTH'
         IF(TYPE.EQ.STRING(1:32)) THEN
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM1',1,STRING)
-          CALL ATOMLIST$INDEXX(STRING,IAT1,it1)
+          CALL ATOMLIST$INDEXX(STRING,IAT1,IT1)
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM2',1,STRING)
-          CALL ATOMLIST$INDEXx(STRING,IAT2,it2)
-          CALL CONSTRAINTS_SETBONDLENGTH(NAT,IAT1,it1,IAT2,it2 &
-     &                  ,A(IC),B(1,IC),C(1,1,IC),rbas,R0)
+          CALL ATOMLIST$INDEXX(STRING,IAT2,IT2)
+          CALL CONSTRAINTS_SETBONDLENGTH(NAT,IAT1,IT1,IAT2,IT2 &
+     &                  ,A(IC),B(1,IC),C(1,1,IC),RBAS,R0)
         ENDIF
 !     
 !       ==  TRANSLATIONALMOMENTUM  ===================================
@@ -1056,13 +1056,13 @@ END MODULE CONSTRAINTS_MODULE
         STRING='MIDPLANE'
         IF(TYPE.EQ.STRING(1:32)) THEN
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM1',1,STRING)
-          CALL ATOMLIST$INDEXx(STRING,IAT1,it1)
+          CALL ATOMLIST$INDEXX(STRING,IAT1,IT1)
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM2',1,STRING)
-          CALL ATOMLIST$INDEXx(STRING,IAT2,it2)
+          CALL ATOMLIST$INDEXX(STRING,IAT2,IT2)
           CALL LINKEDLIST$GET(LL_CNSTR,'ATOM3',1,STRING)
-          CALL ATOMLIST$INDEXx(STRING,IAT3,it3)
-          CALL CONSTRAINTS_SETMIDPLANE(NAT,IAT1,it1,IAT2,it2,IAT3,it3 &
-     &                              ,A(IC),B(1,IC),C(1,1,IC),rbas,R0)
+          CALL ATOMLIST$INDEXX(STRING,IAT3,IT3)
+          CALL CONSTRAINTS_SETMIDPLANE(NAT,IAT1,IT1,IAT2,IT2,IAT3,IT3 &
+     &                              ,A(IC),B(1,IC),C(1,1,IC),RBAS,R0)
         ENDIF
 !
 !       ==  COG SEPARATION===============================================
@@ -1205,17 +1205,17 @@ END MODULE CONSTRAINTS_MODULE
 !
 !     ..................................................................
       SUBROUTINE CONSTRAINTS_FLOATS(S0,SM,SP,DELT,SMASS,ANNES,FS,EKINS)
-      IMPLICIT none
-      real(8)    ,intent(in) :: s0
-      real(8)    ,intent(in) :: sm
-      real(8)    ,intent(out):: sp
-      real(8)    ,intent(out):: ekins
-      real(8)    ,intent(in) :: annes
-      real(8)    ,intent(in) :: fs
-      real(8)    ,intent(in) :: delt
-      real(8)    ,intent(in) :: smass
-      integer(4)             :: nfilo
-      real(8)                :: svar1,svar2,svar3
+      IMPLICIT NONE
+      REAL(8)    ,INTENT(IN) :: S0
+      REAL(8)    ,INTENT(IN) :: SM
+      REAL(8)    ,INTENT(OUT):: SP
+      REAL(8)    ,INTENT(OUT):: EKINS
+      REAL(8)    ,INTENT(IN) :: ANNES
+      REAL(8)    ,INTENT(IN) :: FS
+      REAL(8)    ,INTENT(IN) :: DELT
+      REAL(8)    ,INTENT(IN) :: SMASS
+      INTEGER(4)             :: NFILO
+      REAL(8)                :: SVAR1,SVAR2,SVAR3
 !     ******************************************************************
       SVAR1=2.D0/(1.D0+ANNES)
       SVAR2=1.D0-SVAR1
@@ -1235,7 +1235,7 @@ END MODULE CONSTRAINTS_MODULE
 !     ** 
 !     **  MOVES CONSTRAINT TO A GIVEN VALUE OR VELOCITY               **
 !     ** 
-      IMPLICIT none
+      IMPLICIT NONE
       INTEGER(4),INTENT(INOUT) :: ICOUNT
       REAL(8)   ,INTENT(IN)    :: S0
       REAL(8)   ,INTENT(IN)    :: SM
@@ -1246,9 +1246,9 @@ END MODULE CONSTRAINTS_MODULE
       INTEGER(4),INTENT(IN)    :: NSTEP
       LOGICAL(4),INTENT(IN)    :: SETS
       LOGICAL(4),INTENT(IN)    :: SETV
-      real(8)                  :: tbydelta
-      real(8)                  :: t
-      real(8)                  :: vf,sf,delta2
+      REAL(8)                  :: TBYDELTA
+      REAL(8)                  :: T
+      REAL(8)                  :: VF,SF,DELTA2
 !     ******************************************************************
       TBYDELTA=DBLE(ICOUNT-NSTEP)
 !
@@ -1318,7 +1318,7 @@ END MODULE CONSTRAINTS_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE CONSTRAINTS_BONDLENGTHVALUE(NAT,IAT1,it1,IAT2,it2,rbas,R0,VALUE)
+      SUBROUTINE CONSTRAINTS_BONDLENGTHVALUE(NAT,IAT1,IT1,IAT2,IT2,RBAS,R0,VALUE)
 !     ******************************************************************
 !     **                                                              **
 !     **  BOND-LENGTH CONSTRAINT : SET VALUE                          **   
@@ -1336,17 +1336,17 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)               :: T2(3)
       INTEGER(4)            :: I
 !     ******************************************************************
-      t2=matmul(rbas,real(it2-it1,kind=8))
+      T2=MATMUL(RBAS,REAL(IT2-IT1,KIND=8))
       VALUE=0.D0
       DO I=1,3
-        VALUE=VALUE+(R0(I,IAT1)-(R0(I,IAT2)+t2(i)))**2
+        VALUE=VALUE+(R0(I,IAT1)-(R0(I,IAT2)+T2(I)))**2
       ENDDO
       VALUE=DSQRT(VALUE)
       RETURN      
       END
 !
 !     ..................................................................
-      SUBROUTINE CONSTRAINTS_SETBONDLENGTH(NAT,IAT1,it1,IAT2,it2,A,B,C,rbas,R0)
+      SUBROUTINE CONSTRAINTS_SETBONDLENGTH(NAT,IAT1,IT1,IAT2,IT2,A,B,C,RBAS,R0)
 !     ******************************************************************
 !     **                                                              **
 !     **  BOND-LENGTH CONSTRAINT : SET UP COORDINATES                 **   
@@ -1355,10 +1355,10 @@ END MODULE CONSTRAINTS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT
       INTEGER(4),INTENT(IN) :: IAT1
-      INTEGER(4),INTENT(IN) :: it1(3)
+      INTEGER(4),INTENT(IN) :: IT1(3)
       INTEGER(4),INTENT(IN) :: IAT2
-      INTEGER(4),INTENT(IN) :: it2(3)
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3)
+      INTEGER(4),INTENT(IN) :: IT2(3)
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
       REAL(8)   ,INTENT(IN) :: R0(3,NAT)
       REAL(8)   ,INTENT(OUT):: A
       REAL(8)   ,INTENT(OUT):: B(3,NAT)
@@ -1367,7 +1367,7 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)               :: DIS,DI,DJ
       REAL(8)               :: DELTAK
       REAL(8)               :: SVAR
-      real(8)               :: dr(3)
+      REAL(8)               :: DR(3)
 !     ******************************************************************
       CALL CONSTRAINTS_INIT(3*NAT,A,B,C) 
       DR(:)=R0(:,IAT2)-R0(:,IAT1)+MATMUL(RBAS,REAL(IT2(:)-IT1(:),KIND=8))
@@ -1420,27 +1420,27 @@ END MODULE CONSTRAINTS_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE CONSTRAINTS_MIDPLANEVALUE(NAT,IAT1,it1,IAT2,it2,IAT3,it3 &
-     &                                    ,rbas,R0,VALUE)
+      SUBROUTINE CONSTRAINTS_MIDPLANEVALUE(NAT,IAT1,IT1,IAT2,IT2,IAT3,IT3 &
+     &                                    ,RBAS,R0,VALUE)
 !     ******************************************************************
 !     **  CONSTRAINTS_MIDPLANEVALUE                                   **
 !     **  CALCULATE VALUE OF CONSTRAINT FROM THE REFERENCE STRUCTURE  **
 !     ******************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NAT            ! #(atoms)
-      INTEGER(4),INTENT(IN) :: IAT1           ! index of first atom
-      INTEGER(4),INTENT(IN) :: It1(3)         ! #(lattice translations for iat1)
-      INTEGER(4),INTENT(IN) :: IAT2           ! index of central atom
-      INTEGER(4),INTENT(IN) :: It2(3)         ! #(lattice translations for iat2)
-      INTEGER(4),INTENT(IN) :: IAT3           ! index of third atom
-      INTEGER(4),INTENT(IN) :: It3(3)         ! #(lattice translations for iat3)
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3)      ! lattice translation vectors
-      REAL(8)   ,INTENT(IN) :: R0(3,NAT)      ! atomic positions
-      REAL(8)   ,INTENT(OUT):: VALUE          ! value of the constraint
+      INTEGER(4),INTENT(IN) :: NAT            ! #(ATOMS)
+      INTEGER(4),INTENT(IN) :: IAT1           ! INDEX OF FIRST ATOM
+      INTEGER(4),INTENT(IN) :: IT1(3)         ! #(LATTICE TRANSLATIONS FOR IAT1)
+      INTEGER(4),INTENT(IN) :: IAT2           ! INDEX OF CENTRAL ATOM
+      INTEGER(4),INTENT(IN) :: IT2(3)         ! #(LATTICE TRANSLATIONS FOR IAT2)
+      INTEGER(4),INTENT(IN) :: IAT3           ! INDEX OF THIRD ATOM
+      INTEGER(4),INTENT(IN) :: IT3(3)         ! #(LATTICE TRANSLATIONS FOR IAT3)
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)      ! LATTICE TRANSLATION VECTORS
+      REAL(8)   ,INTENT(IN) :: R0(3,NAT)      ! ATOMIC POSITIONS
+      REAL(8)   ,INTENT(OUT):: VALUE          ! VALUE OF THE CONSTRAINT
       INTEGER(4)            :: I
       REAL(8)               :: R31R21,R31R31
       REAL(8)               :: R31(3),R21(3)
-      REAL(8)               :: t31(3),t21(3)
+      REAL(8)               :: T31(3),T21(3)
 !     ******************************************************************
       T21=MATMUL(RBAS,REAL(IT2-IT1,KIND=8))
       T31=MATMUL(RBAS,REAL(IT3-IT1,KIND=8))
@@ -1457,8 +1457,8 @@ END MODULE CONSTRAINTS_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE CONSTRAINTS_SETMIDPLANE(NAT,IAT1,it1,IAT2,it2,IAT3,it3 &
-     &                                  ,A,B,C,rbas,R0)
+      SUBROUTINE CONSTRAINTS_SETMIDPLANE(NAT,IAT1,IT1,IAT2,IT2,IAT3,IT3 &
+     &                                  ,A,B,C,RBAS,R0)
 !     ******************************************************************
 !     **  CONSTRAINTS_SETMIDPLANE                                     **
 !     **  APPROXIMATES CONSTRAINT FUNCTION (WITHOUT VALUE)            **
@@ -1466,7 +1466,7 @@ END MODULE CONSTRAINTS_MODULE
 !     **  THE CONSTRAINT IS THE POLYNOMIAL MINUS THE VALUE FROM THE   **
 !     **  REFERENCE STRUCTURE                                         **
 !     **                                                              **
-!     **    x=(r2-r1)*(r3-r1)/|r3-r1|**2                               **
+!     **    X=(R2-R1)*(R3-R1)/|R3-R1|**2                               **
 !     **                                                              **
 !     **  A VALUE OF ZERO IMPLIES THAT R2 LIES IN A PLANE NORMAL TO   **
 !     **  R3-R1 THROUGH R1                                            **
@@ -1476,12 +1476,12 @@ END MODULE CONSTRAINTS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT
       INTEGER(4),INTENT(IN) :: IAT1
-      INTEGER(4),INTENT(IN) :: it1(3)
+      INTEGER(4),INTENT(IN) :: IT1(3)
       INTEGER(4),INTENT(IN) :: IAT2
-      INTEGER(4),INTENT(IN) :: it2(3)
+      INTEGER(4),INTENT(IN) :: IT2(3)
       INTEGER(4),INTENT(IN) :: IAT3
-      INTEGER(4),INTENT(IN) :: it3(3)
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3)
+      INTEGER(4),INTENT(IN) :: IT3(3)
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
       REAL(8)   ,INTENT(IN) :: R0(3,NAT)
       REAL(8)   ,INTENT(OUT):: A
       REAL(8)   ,INTENT(OUT):: B(3,NAT)
@@ -1491,15 +1491,15 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)               :: R31(3),R21(3)
       REAL(8)               :: SVAR,SVAR1,SVAR2
       REAL(8)               :: DELTAK
-      real(8)               :: t21(3),t31(3)
+      REAL(8)               :: T21(3),T31(3)
 !     ******************************************************************
 !
 !     ==================================================================
 !     ==                                                              ==
 !     ==================================================================
       CALL CONSTRAINTS_INIT(3*NAT,A,B,C) 
-      t21=matmul(rbas,real(it2-it1,kind=8))
-      t31=matmul(rbas,real(it3-it1,kind=8))
+      T21=MATMUL(RBAS,REAL(IT2-IT1,KIND=8))
+      T31=MATMUL(RBAS,REAL(IT3-IT1,KIND=8))
 !
 !     ==================================================================
 !     == CALCULATE TAYLOR EXPANSION COEFFICIENTS                      ==
@@ -1507,8 +1507,8 @@ END MODULE CONSTRAINTS_MODULE
       R31R21=0.D0
       R31R31=0.D0
       DO I=1,3
-        R31(I)=R0(I,IAT3)-R0(I,IAT1)+t31(i)
-        R21(I)=R0(I,IAT2)-R0(I,IAT1)+t21(i)
+        R31(I)=R0(I,IAT3)-R0(I,IAT1)+T31(I)
+        R21(I)=R0(I,IAT2)-R0(I,IAT1)+T21(I)
         R31R21=R31R21+R31(I)*R21(I)
         R31R31=R31R31+R31(I)**2
       ENDDO
@@ -1714,28 +1714,28 @@ END MODULE CONSTRAINTS_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE CONSTRAINTS_orientationvector(NAT,TMEMBER,phi,R0,rmass,vec)
+      SUBROUTINE CONSTRAINTS_ORIENTATIONVECTOR(NAT,TMEMBER,PHI,R0,RMASS,VEC)
 !     ******************************************************************
 !     **                                                              **
 !     **  TRANSFORMS THE CONSTRAINT FOR FIXING THE ORIENTATION        **
-!     **    PHI*[SUM_I:M_I*Xref_I CROSS X_I]                          **
+!     **    PHI*[SUM_I:M_I*XREF_I CROSS X_I]                          **
 !     **    WITH  X_I=R_I-[SUM_J:M_JR_J]/[SUM_J:M_J]                  **
 !     **                                                              **
-!     ** into a vector for a linear constraint                        **
-!     **    [sum_i:vec(i)r(i)]=0                                      **
+!     ** INTO A VECTOR FOR A LINEAR CONSTRAINT                        **
+!     **    [SUM_I:VEC(I)R(I)]=0                                      **
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT
-      REAL(8)   ,INTENT(IN) :: phi(3)
+      REAL(8)   ,INTENT(IN) :: PHI(3)
       LOGICAL(4),INTENT(IN) :: TMEMBER(NAT)
       REAL(8)   ,INTENT(IN) :: R0(3,NAT)
       REAL(8)   ,INTENT(IN) :: RMASS(NAT)
-      REAL(8)   ,INTENT(OUT):: vec(3,nat)
+      REAL(8)   ,INTENT(OUT):: VEC(3,NAT)
       INTEGER(4)            :: IAT
-      REAL(8)               :: phiLEN,phix,phiy,phiz
+      REAL(8)               :: PHILEN,PHIX,PHIY,PHIZ
       REAL(8)               :: TOTM
       REAL(8)               :: COG(3)
       REAL(8)               :: DX,DY,DZ
@@ -1777,9 +1777,9 @@ END MODULE CONSTRAINTS_MODULE
           DX=R0(1,IAT)-COG(1)
           DY=R0(2,IAT)-COG(2)
           DZ=R0(3,IAT)-COG(3)
-          VEC(1,IAT)=RMASS(IAT)*(phiY*DZ-phiZ*DY)
-          VEC(2,IAT)=RMASS(IAT)*(phiZ*DX-phiX*DZ)
-          VEC(3,IAT)=RMASS(IAT)*(phiX*DY-phiY*DX)
+          VEC(1,IAT)=RMASS(IAT)*(PHIY*DZ-PHIZ*DY)
+          VEC(2,IAT)=RMASS(IAT)*(PHIZ*DX-PHIX*DZ)
+          VEC(3,IAT)=RMASS(IAT)*(PHIX*DY-PHIY*DX)
         END IF
       ENDDO
       RETURN
@@ -1811,7 +1811,7 @@ END MODULE CONSTRAINTS_MODULE
       X=X_/XLEN
       Y=Y_/XLEN
       Z=Z_/XLEN
-!     == CALCULATE CENTER OF GRAVITY from reference positions ==========
+!     == CALCULATE CENTER OF GRAVITY FROM REFERENCE POSITIONS ==========
       TOTM=0.D0
       COG(1)=0.D0
       COG(2)=0.D0
@@ -1915,7 +1915,7 @@ END MODULE CONSTRAINTS_MODULE
        U(1)=U(1)/TOTM
        U(2)=U(2)/TOTM
        U(3)=U(3)/TOTM
-u(:)=0.d0
+U(:)=0.D0
        DO IAT=1,NAT
          IF(TMEMBER(IAT)) THEN
            B(1,IAT)=(B(1,IAT)-U(1))/DELTA
@@ -2040,9 +2040,9 @@ u(:)=0.d0
         SVAR=SVAR+(COG1(I)-COG2(I))**2.D0
       ENDDO
       VALUE_=DSQRT(SVAR)
-      print*,'cog group1: ',tmember1
-      print*,'cog group2: ',tmember2
-      PRINT*,'COG  value: ',VALUE_
+      PRINT*,'COG GROUP1: ',TMEMBER1
+      PRINT*,'COG GROUP2: ',TMEMBER2
+      PRINT*,'COG  VALUE: ',VALUE_
 !
       RETURN
       END
@@ -2200,7 +2200,7 @@ u(:)=0.d0
 !     **  CONSTRAINS THE ANGLE ENCLOSED BETWEEN ATOMS IAT1--IAT2--IAT3
 !     **
 !     ******************************************************************
-      IMPLICIT none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT
       INTEGER(4),INTENT(IN) :: IAT1
       INTEGER(4),INTENT(IN) :: IAT2
@@ -2210,9 +2210,9 @@ u(:)=0.d0
       REAL(8)   ,INTENT(OUT):: C(3,NAT,3,NAT)
       REAL(8)   ,INTENT(IN) :: R0(3,NAT)
       REAL(8)               :: X(9),DI(9),DIDJ(9,9),B1(9)
-      real(8)               :: prefac
-      real(8)               :: phi
-      integer(4)            :: i,j,ichk
+      REAL(8)               :: PREFAC
+      REAL(8)               :: PHI
+      INTEGER(4)            :: I,J,ICHK
 !     ******************************************************************
 !
 !     ==================================================================
@@ -2339,7 +2339,7 @@ u(:)=0.d0
       REAL(8)               :: DIVDX,AI
       INTEGER(4)            :: I,J
 !     ******************************************************************
-      ichk=0
+      ICHK=0
 !
 !     ----------------------------------------------------------------
 !     --- R1=X(1:3)   R2=X(4:6)  R3=X(7:9)
@@ -2533,7 +2533,7 @@ u(:)=0.d0
 !     **  CONSTRAINS THE TORSION OF IAT1-IAT2---IAT3-IAT4
 !     **
 !     ******************************************************************
-      IMPLICIT none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT
       INTEGER(4),INTENT(IN) :: IAT1
       INTEGER(4),INTENT(IN) :: IAT2
@@ -2544,9 +2544,9 @@ u(:)=0.d0
       REAL(8)   ,INTENT(OUT):: B(3,NAT)
       REAL(8)   ,INTENT(OUT):: C(3,NAT,3,NAT)
       REAL(8)               :: X(12),DI(12),DIDJ(12,12),B1(12)
-      real(8)               :: phi
-      real(8)               :: prefac
-      integer(4)            :: i,j,ichk
+      REAL(8)               :: PHI
+      REAL(8)               :: PREFAC
+      INTEGER(4)            :: I,J,ICHK
 !     ******************************************************************
 !
 ! --- TRANSFER R0 TO X ARRAY TO MAKE HANDLING AND PASSING EASIER
@@ -2636,7 +2636,7 @@ u(:)=0.d0
 !     --- CALCULATE TORSION AND ANALYTICAL DERIVATIVES           --
 !     --- 12DIM VECTOR X IS HANDED OVER, PHI,DI,DIDJ ARE RETURNED-- 
 !     -------------------------------------------------------------
-      IMPLICIT none
+      IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: X(12)
       REAL(8)   ,INTENT(OUT):: TORS
       REAL(8)   ,INTENT(OUT):: DI(12)
@@ -2647,10 +2647,10 @@ u(:)=0.d0
       REAL(8) :: DDDX(12),DJDX(12),DVDX(12),DGDX(12),DPDX(3,12),DQDX(3,12)
       REAL(8) :: D2QDX2(3,12,12),D2PDX2(3,12,12)
       REAL(8) :: D2BDX2(12,12),D2ADX2(12,12),D2CDX2(12,12),D2DDX2(12,12)
-      real(8) :: d,coverd,abyb2n,abyb,c,a,b,ai,divdx,prefac,v
-      integer(4) :: i,j,k
+      REAL(8) :: D,COVERD,ABYB2N,ABYB,C,A,B,AI,DIVDX,PREFAC,V
+      INTEGER(4) :: I,J,K
 !     ******************************************************************
-      ichk=0
+      ICHK=0
       T(:)=X(1:3)  -X(4:6)
       U(:)=X(7:9)  -X(4:6)
       R(:)=X(10:12)-X(7:9)
@@ -2672,7 +2672,7 @@ u(:)=0.d0
 ! --- CALCULATE FIRST DERIVATIVES
 ! ----------------------------------------------------------------
 ! --- CALCULATE DERIVATIVE OF ARCCOS
-      IF (dabs(DABS(COVERD)-1.d0) < 1.D-9) THEN
+      IF (DABS(DABS(COVERD)-1.D0) < 1.D-9) THEN
         PRINT*,'WARNING: DERIVATIVE OF TORSION AT ZERO AND PI IS UNDEFINED!'
         V=0.D0
       ELSE
@@ -3283,10 +3283,10 @@ u(:)=0.d0
 !     **                                                              **
 !     ******************************************************************
       USE MPE_MODULE
-      IMPLICIT none
-      logical(4)               :: tswitch=.true.
+      IMPLICIT NONE
+      LOGICAL(4)               :: TSWITCH=.TRUE.
       REAL(8)   ,PARAMETER     :: TOL=1.D-9
-      LOGICAL(4),PARAMETER     :: TPR=.false.
+      LOGICAL(4),PARAMETER     :: TPR=.FALSE.
       LOGICAL(4),PARAMETER     :: TTEST=.FALSE.
       INTEGER(4),PARAMETER     :: ITERX=100
       INTEGER(4),INTENT(IN)    :: NX
@@ -3306,8 +3306,8 @@ u(:)=0.d0
       REAL(8)                  :: CC(NC,NC,NC)
       REAL(8)                  :: VEC(NC)
       REAL(8)                  :: RMAT(NC,NC)
-      REAL(8)   ,ALLOCATABLE   :: WORK2d(:,:)
-      REAL(8)   ,ALLOCATABLE   :: WORK3d(:,:,:)
+      REAL(8)   ,ALLOCATABLE   :: WORK2D(:,:)
+      REAL(8)   ,ALLOCATABLE   :: WORK3D(:,:,:)
       LOGICAL(4)               :: TCONV
       LOGICAL(4)               :: TLINDEP
       INTEGER(4)               :: THISTASK,NTASKS
@@ -3400,42 +3400,42 @@ u(:)=0.d0
 !     == EQUATION FOR LAMBDA                                          ==
 !     ==  AA(N)+BB(N,I)*LAMBDA(I)+0.5*LAMBDA(I)*C(I,N,J)*LAMBDA(J)=0  ==
 !     ==================================================================
-if(tswitch) then
+IF(TSWITCH) THEN
 !
 !     ==================================================================
 !     == EQUATION FOR LAMBDA                                          ==
-!     ==  AA(N)+BB(N,I)*LAMBDA(I)+0.5*LAMBDA(I)*Cc(I,N,J)*LAMBDA(J)=0 ==
-!     ==  aa(N)=a(n)+xp(i)*b(i,n)+0.5*xp(i)*c(i,j,n)*xp(j)
-!     ==  bb(N1,n2)=b(i,n1)*g(i,n2)+xp(i)*c(i,j,n1)*g(j,n2)
-!     ==  cc(n2,N1,n3)=g(i,n2)*c(i,j,n1)*g(j,n3)
+!     ==  AA(N)+BB(N,I)*LAMBDA(I)+0.5*LAMBDA(I)*CC(I,N,J)*LAMBDA(J)=0 ==
+!     ==  AA(N)=A(N)+XP(I)*B(I,N)+0.5*XP(I)*C(I,J,N)*XP(J)
+!     ==  BB(N1,N2)=B(I,N1)*G(I,N2)+XP(I)*C(I,J,N1)*G(J,N2)
+!     ==  CC(N2,N1,N3)=G(I,N2)*C(I,J,N1)*G(J,N3)
 !     ==================================================================
-      allocate(work3d(nx,nc,nc)) 
-!     ==   work3d(j,n1,n2)=sum_i c(i,j,n1)*g(i,n2)
-      call lib$scalarproductr8(.false.,nx,nx*nc,c,nc,g,work3d)
-!     ==   cc(n3,n1,n2)=sum_i g(i,n3)*work3d(i,n1,n2)
-      call lib$scalarproductr8(.false.,nx,nc,g,nc*nc,work3d,cc)
+      ALLOCATE(WORK3D(NX,NC,NC)) 
+!     ==   WORK3D(J,N1,N2)=SUM_I C(I,J,N1)*G(I,N2)
+      CALL LIB$SCALARPRODUCTR8(.FALSE.,NX,NX*NC,C,NC,G,WORK3D)
+!     ==   CC(N3,N1,N2)=SUM_I G(I,N3)*WORK3D(I,N1,N2)
+      CALL LIB$SCALARPRODUCTR8(.FALSE.,NX,NC,G,NC*NC,WORK3D,CC)
 !    
-!     ==   bb(n1,n2)=sum_i xp(i)*work3d(i,n1,n2)
-      call lib$scalarproductr8(.false.,nx,1,xp,nc*nc,work3d,bb)
-      deallocate(work3d)
+!     ==   BB(N1,N2)=SUM_I XP(I)*WORK3D(I,N1,N2)
+      CALL LIB$SCALARPRODUCTR8(.FALSE.,NX,1,XP,NC*NC,WORK3D,BB)
+      DEALLOCATE(WORK3D)
 !
-      allocate(work2d(nc,nc))
-!     ===  work2d(n1,n2)=sum_i b(i,n1)*g(i,n2)
-      call lib$scalarproductr8(.false.,nx,nc,b,nc,g,work2d)
-!     ===  bb(n1,n2)=bb(n1,n2)+work2d(n1,n2)
-      bb(:,:)=bb(:,:)+work2d(:,:)
-      deallocate(work2d)
+      ALLOCATE(WORK2D(NC,NC))
+!     ===  WORK2D(N1,N2)=SUM_I B(I,N1)*G(I,N2)
+      CALL LIB$SCALARPRODUCTR8(.FALSE.,NX,NC,B,NC,G,WORK2D)
+!     ===  BB(N1,N2)=BB(N1,N2)+WORK2D(N1,N2)
+      BB(:,:)=BB(:,:)+WORK2D(:,:)
+      DEALLOCATE(WORK2D)
 !
-      allocate(work2d(nx,nc))
-!     == work3d(j,n1)=b(j,n1)+sum_i xp(i)*c(i,j,n1)
-      call lib$scalarproductr8(.false.,nx,1,xp,nx*nc,c,work2d)
-      work2d(:,:)=0.5d0*work2d(:,:)+b(:,:)
-!     == aa=a+sum_i xp(i)*work3d(i,n)
-      call lib$scalarproductr8(.false.,nx,1,xp,nc,work2d,aa)
-      aa(:)=a(:)+aa(:)
-      deallocate(work2d)
-else
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      ALLOCATE(WORK2D(NX,NC))
+!     == WORK3D(J,N1)=B(J,N1)+SUM_I XP(I)*C(I,J,N1)
+      CALL LIB$SCALARPRODUCTR8(.FALSE.,NX,1,XP,NX*NC,C,WORK2D)
+      WORK2D(:,:)=0.5D0*WORK2D(:,:)+B(:,:)
+!     == AA=A+SUM_I XP(I)*WORK3D(I,N)
+      CALL LIB$SCALARPRODUCTR8(.FALSE.,NX,1,XP,NC,WORK2D,AA)
+      AA(:)=A(:)+AA(:)
+      DEALLOCATE(WORK2D)
+ELSE
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       ICOUNT=0
       DO IC=1,NC
         ICOUNT=ICOUNT+1
@@ -3455,7 +3455,7 @@ else
 !        __SELECTION OF PARALLELPROCESSING FINISHED______________________
         END IF
       ENDDO           
-      CALL MPE$COMBINE('+',AA)
+      CALL MPE$COMBINE('MONOMER','+',AA)
 !
       ICOUNT=0
       DO IC1=1,NC
@@ -3478,7 +3478,7 @@ else
           END IF
         ENDDO
       ENDDO
-      CALL MPE$COMBINE('+',BB)
+      CALL MPE$COMBINE('MONOMER','+',BB)
 ! 
       ICOUNT=0
       DO IC1=1,NC
@@ -3502,8 +3502,8 @@ else
           ENDDO
         ENDDO
       ENDDO         
-      CALL MPE$COMBINE('+',CC)
-end if
+      CALL MPE$COMBINE('MONOMER','+',CC)
+END IF
 !
       IF(TPR) THEN
         PRINT*,'AA '
@@ -3515,7 +3515,7 @@ end if
         PRINT*,'CC '
         DO IC1=1,NC
         DO IC2=1,NC
-          WRITE(*,FMT='(7E10.2)')(CC(IC1,IC2,ic3),IC3=1,NC)
+          WRITE(*,FMT='(7E10.2)')(CC(IC1,IC2,IC3),IC3=1,NC)
         ENDDO
         ENDDO
       END IF
@@ -3565,7 +3565,7 @@ end if
           SVAR=MAX(SVAR,DABS(VEC(IC)))
         ENDDO
         TCONV=(SVAR.LT.TOL)
-!       PRINT*,'DEVIATION IN CONSTRAINT',abs(vec)
+!       PRINT*,'DEVIATION IN CONSTRAINT',ABS(VEC)
         PRINT*,'DEVIATION IN CONSTRAINT',SVAR,ITER
         IF(TPR) PRINT*,'DEVIATION IN CONSTRAINT',SVAR
         IF(.NOT.(SVAR.LE.0.OR.SVAR.GT.0)) THEN
@@ -3581,9 +3581,9 @@ end if
 !         __ CHECK LINEAR DEPENDENCE OF CONSTRAINTS_____________________
           IF(TLINDEP) THEN
             TAUSINGVAL=1.D-8
-            call LIB$MATRIXSOLVE(Nc,nc,1,rmat,vec,vec)
+            CALL LIB$MATRIXSOLVE(NC,NC,1,RMAT,VEC,VEC)
           ELSE
-            call LIB$MATRIXSOLVE(Nc,nc,1,rmat,vec,vec)
+            CALL LIB$MATRIXSOLVE(NC,NC,1,RMAT,VEC,VEC)
           END IF
         ELSE
           VEC(1)=VEC(1)/RMAT(1,1)

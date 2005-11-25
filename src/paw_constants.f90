@@ -1,16 +1,16 @@
-      subroutine constants(string,val)
+      SUBROUTINE CONSTANTS(STRING,VAL)
       IMPLICIT NONE
       CHARACTER(LEN=*),INTENT(IN) :: STRING
       REAL(8)          ,INTENT(OUT):: VAL
-      call constants$get(string,val)
-      return
-      end
-      subroutine constants$list(nfil)
+      CALL CONSTANTS$GET(STRING,VAL)
+      RETURN
+      END
+      SUBROUTINE CONSTANTS$LIST(NFIL)
       IMPLICIT NONE
-      integer(4),intent(in) :: nfil 
-      call constants$report(nfil)
-      return
-      end
+      INTEGER(4),INTENT(IN) :: NFIL 
+      CALL CONSTANTS$REPORT(NFIL)
+      RETURN
+      END
 !     ==================================================================
 !     ==================================================================
 !     ==== GENERAL PURPOSE ROUTINES ====================================
@@ -22,9 +22,9 @@
 MODULE CONSTANTS_MODULE
 !***********************************************************************
 !**                                                                   **
-!**  name: constants                                                  **
+!**  NAME: CONSTANTS                                                  **
 !**                                                                   **
-!**  purpose: provide fundamental constants and conversion units      **
+!**  PURPOSE: PROVIDE FUNDAMENTAL CONSTANTS AND CONVERSION UNITS      **
 !**                                                                   **
 !**  SOURCE IS:                                                       **
 !**  "THE FUNDAMENTAL PHYSICAL CONSTANTS"                             **
@@ -33,7 +33,7 @@ MODULE CONSTANTS_MODULE
 !**                                                                   **
 !***********************************************************************
 !**                                                                   **
-!**  atomic units:                                                    **
+!**  ATOMIC UNITS:                                                    **
 !**      HBAR=E=M_E=4*PI*EPSILON_0=1                                  **
 !**                                                                   **
 !**                                                                   **
@@ -80,11 +80,11 @@ LOGICAL(4)               :: TFIRST=.TRUE.
 REAL(8),   PARAMETER :: E    =1.D0               ! ELEMENTARY CHARGE
 REAL(8),   PARAMETER :: ME   =1.D0               ! ELECTRON MASS
 REAL(8),   PARAMETER :: HBAR =1.D0               ! PLANCK CONSTANT
-REAL(8),   PARAMETER :: ALPHA=7.2973530833D-3    ! FINESTRUCTURE CONSTANT =E**2/(4\pi\epsilon_0*c)
+REAL(8),   PARAMETER :: ALPHA=7.2973530833D-3    ! FINESTRUCTURE CONSTANT =E**2/(4\PI\EPSILON_0*C)
 REAL(8),   PARAMETER :: C=E*E/(HBAR*ALPHA)       ! SPEED OF LIGHT
-REAL(8),   PARAMETER :: Kelvin=1.d0              ! temperature
+REAL(8),   PARAMETER :: KELVIN=1.D0              ! TEMPERATURE
 !***********************************************************************
-!** CONVERSION from atomic units TO SI UNITS USING FOUR CONSTANTS     **
+!** CONVERSION FROM ATOMIC UNITS TO SI UNITS USING FOUR CONSTANTS     **
 !** C=299792458 M/SEC                                                 **
 !** HBAR=1.0545726663D-34 KG*M**2/SEC                                 **
 !** ME=9.109389754D+31 KG                                             **
@@ -95,7 +95,7 @@ REAL(8)   ,PARAMETER :: HBARBYJS=1.0545726663D-34! PLANCK CONSTANT / [JOULE*SECO
 REAL(8)   ,PARAMETER :: MEBYKG  =9.109389754D-31 ! ELECTRON MASS / KG
 REAL(8)   ,PARAMETER :: EBYAS   =1.6021773349D-19! ELECTRON CHARGE / [AMPERE*SECOND]
 !***********************************************************************
-!** define now the fundamental si units in terms of atomic units      **
+!** DEFINE NOW THE FUNDAMENTAL SI UNITS IN TERMS OF ATOMIC UNITS      **
 !***********************************************************************
 REAL(8)   ,PARAMETER :: KG    =ME/MEBYKG         ! KILOGRAMM
 REAL(8)   ,PARAMETER :: METER =CBYMBYS/HBARBYJS*HBAR/C/KG
@@ -124,7 +124,7 @@ REAL(8)   ,PARAMETER :: GIGA =1.D+9
 REAL(8)   ,PARAMETER :: TERA =1.D+12
 REAL(8)   ,PARAMETER :: PETA =1.D+15
 !***********************************************************************
-contains
+CONTAINS
 !     ..................................................................
       SUBROUTINE CONSTANTS_INITIALIZE
 !     ******************************************************************
@@ -147,7 +147,7 @@ contains
       REAL(8)              :: COULOMB         ! SI UNIT FOR CHARGE
       REAL(8)              :: VOLT            ! SI UNIT FOR ELCTROSTATIC POTENTIAL
       REAL(8)              :: TESLA           ! SI UNIT FOR THE MAGNETIC FIELD
-      REAL(8)              :: Pascal          ! SI UNIT FOR THE pressure
+      REAL(8)              :: PASCAL          ! SI UNIT FOR THE PRESSURE
       REAL(8)              :: KJBYMOL         ! KILOJOULE PER MOLE
       REAL(8)              :: KCALBYMOL       ! KILOCALORIE PER MOLE
       REAL(8)              :: CGSCHARGEUNIT   ! 
@@ -156,10 +156,10 @@ contains
       NC=0
 !     
 !     ==================================================================
-!     == dimension less constants                                     ==
+!     == DIMENSION LESS CONSTANTS                                     ==
 !     ==================================================================
       PI=4.D0*DATAN(1.D0) ;
-      nc=nc+1;XXX(NC)=CONSTANT('PI',PI,'PI')
+      NC=NC+1;XXX(NC)=CONSTANT('PI',PI,'PI')
       NC=NC+1;XXX(NC)=CONSTANT('ALPHA',ALPHA,'FINE STRUCTURE CONSTANT')
       NC=NC+1;XXX(NC)=CONSTANT('MBYTE',2.D0**20,'MEGA BYTE')
       NC=NC+1;XXX(NC)=CONSTANT('DEGREE',2.D0*PI/360.D0,'DEGREE (UNIT FOR ANGLE)')
@@ -172,7 +172,7 @@ contains
       NC=NC+1;XXX(NC)=CONSTANT('ME',ME,'A.U.FOR MASS = ELECTRON MASS')
       EPSILON0=1.D0/(4.D0*PI)
       NC=NC+1;XXX(NC)=CONSTANT('EPSILON0',EPSILON0,'PERMITIVITY OF VACUUM')
-      NC=NC+1;XXX(NC)=CONSTANT('KELVIN',Kelvin,'TEMPERATURE UNIT (A.U. and SI)')
+      NC=NC+1;XXX(NC)=CONSTANT('KELVIN',KELVIN,'TEMPERATURE UNIT (A.U. AND SI)')
 !     
 !     ==================================================================
 !     == DERIVED ATOMIC UNITS                                         ==
@@ -213,7 +213,7 @@ contains
       COULOMB=AMPERE*SECOND 
       TESLA=KG/(COULOMB*SECOND)
       VOLT=JOULE/COULOMB
-      Pascal=Joule/meter**3
+      PASCAL=JOULE/METER**3
       NC=NC+1;XXX(NC)=CONSTANT('NEWTON',NEWTON,'SI UNIT FOR FORCE=NEWTON')
       NC=NC+1;XXX(NC)=CONSTANT('JOULE',JOULE,'SI UNIT FOR ENERGY=JOULE')
       NC=NC+1;XXX(NC)=CONSTANT('COULOMB',COULOMB,'SI UNIT FOR CHARGE=COULOMB')
@@ -226,7 +226,7 @@ contains
       NC=NC+1;XXX(NC)=CONSTANT('HOUR',60.D0*60.D0*SECOND,'UNIT FOR TIME =HOUR')
       NC=NC+1;XXX(NC)=CONSTANT('DAY',24.D0*60.D0*60.D0*SECOND,'UNIT FOR TIME =DAY')
       NC=NC+1;XXX(NC)=CONSTANT('HERTZ',1.D0/SECOND,'UNIT FOR FREQUENCY =HERTZ')
-      NC=NC+1;XXX(NC)=CONSTANT('OHM',VOLT*METER/AMPERE,'UNIT FOR ELECTRICAL RESISTANCE =OHM')
+      NC=NC+1;XXX(NC)=CONSTANT('OHM',VOLT/AMPERE,'UNIT FOR ELECTRICAL RESISTANCE =OHM')
 !     
 !     ==================================================================
 !     == DERIVED UNITS                                                ==
@@ -260,11 +260,11 @@ contains
       NC=NC+1;XXX(NC)=CONSTANT('PETA',1.D+15,'PETA=1.D+15')
       TFIRST=.FALSE.
       RETURN
-      END subroutine constants_initialize
-end module CONSTANTS_MODULE
+      END SUBROUTINE CONSTANTS_INITIALIZE
+END MODULE CONSTANTS_MODULE
 !
 !     ..................................................................
-      SUBROUTINE CONSTANTS$get(id_,VAL)
+      SUBROUTINE CONSTANTS$GET(ID_,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     **  RETURNS THE  VALUE OF A CONSTANT IDENTIFIED BY A STRING     **
@@ -279,23 +279,23 @@ end module CONSTANTS_MODULE
 !     ******************************************************************
       IF(TFIRST) CALL CONSTANTS_INITIALIZE
       DO I=1,NC
-        IF(id_.EQ.XXX(I)%NAME) THEN
+        IF(ID_.EQ.XXX(I)%NAME) THEN
           VAL=XXX(I)%VALUE
           RETURN
         END IF
       ENDDO
-      IF(TRIM(id_).EQ.'HELP') THEN
+      IF(TRIM(ID_).EQ.'HELP') THEN
         CALL CONSTANTS$LIST(6)
         RETURN
       END IF
       CALL ERROR$MSG('STRING NOT FOUND IN ROUTINE CONSTANTS')
-      CALL ERROR$CHVAL('STRING=',id_)
+      CALL ERROR$CHVAL('STRING=',ID_)
       CALL ERROR$STOP('CONSTANTS')
       RETURN
       END
 !
 !     ..................................................................
-      SUBROUTINE CONSTANTS$report(NFIL)
+      SUBROUTINE CONSTANTS$REPORT(NFIL)
 !     ******************************************************************
 !     **                                                              **
 !     **  PRINTS A  LIST OF THE CONSTANTS KNOWN TO THE OBJECT         **

@@ -16,18 +16,18 @@ MODULE TRACE_MODULE
 !**                                                                  **
 !**********************************************************************
 IMPLICIT NONE
-LOGICAL(4)              :: TOFF=.false.
+LOGICAL(4)              :: TOFF=.FALSE.
 INTEGER(4)   ,PARAMETER :: MAXLEVEL=20
 LOGICAL(4)   ,SAVE      :: TFIRST=.TRUE.
 CHARACTER(32),SAVE      :: HISTORY(MAXLEVEL)
 INTEGER(4)   ,SAVE      :: LEVEL=0
-INTEGER(4)   ,SAVE      :: ITASK=0
-INTEGER(4)              :: NTASK=1
+INTEGER(4)   ,SAVE      :: THISTASK=0
+INTEGER(4)              :: NTASKS=1
 CONTAINS
 !**********************************************************************
 !     .................................................................
       SUBROUTINE TRACE_FIRST
-      CALL MPE$QUERY(NTASK,ITASK)
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
       TFIRST=.TRUE.
       END SUBROUTINE TRACE_FIRST
 END MODULE TRACE_MODULE
@@ -59,7 +59,7 @@ END MODULE TRACE_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN):: CURRENT_
       REAL(8)                :: MAXMEM
-      REAL(8)                :: MBYTE=2.d0**20
+      REAL(8)                :: MBYTE=2.D0**20
 !     ******************************************************************
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST
@@ -69,8 +69,8 @@ END MODULE TRACE_MODULE
         HISTORY(LEVEL)=CURRENT_
       END IF
       WRITE(*,FMT='("TRACE-PUSH(",I3,"): LEVEL=",I3," INTO ",A)') &
-     &           ITASK,LEVEL,CURRENT_
-        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5)')ITASK,MAXMEM/mbyte
+     &           THISTASK,LEVEL,CURRENT_
+        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5)')THISTASK,MAXMEM/MBYTE
       RETURN 
       END
 !
@@ -81,19 +81,19 @@ END MODULE TRACE_MODULE
       USE TRACE_MODULE
       IMPLICIT NONE
       REAL(8)          :: MAXMEM
-      REAL(8)          :: MBYTE=2.d0**20
+      REAL(8)          :: MBYTE=2.D0**20
 !     ******************************************************************
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST
       CALL USAGE$GET('MAXMEM',MAXMEM)
-      IF(level.ge.1.and.LEVEL.LE.MAXLEVEL)THEN
+      IF(LEVEL.GE.1.AND.LEVEL.LE.MAXLEVEL)THEN
         WRITE(*,FMT='("TRACE-POP (",I3,"): LEVEL=",I3," FROM ",A)') &
-     &              ITASK,LEVEL,HISTORY(LEVEL)
-        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5)')ITASK,MAXMEM/mbyte
+     &              THISTASK,LEVEL,HISTORY(LEVEL)
+        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5)')THISTASK,MAXMEM/MBYTE
         HISTORY(LEVEL)=' '
       ELSE                  
-        WRITE(*,FMT='("TRACE-POP(",I3,"): LEVEL=",I3)')ITASK,LEVEL
-        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5)')ITASK,MAXMEM/mbyte
+        WRITE(*,FMT='("TRACE-POP(",I3,"): LEVEL=",I3)')THISTASK,LEVEL
+        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5)')THISTASK,MAXMEM/MBYTE
       END IF
       LEVEL=LEVEL-1
       RETURN 
@@ -110,7 +110,7 @@ END MODULE TRACE_MODULE
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST
       WRITE(*,FMT='("TRACE-PASS(",I3,"): LEVEL=",I3," WHERE:",A)') &
-     &          ITASK,LEVEL,MARK
+     &          THISTASK,LEVEL,MARK
       RETURN 
       END
 !
@@ -129,11 +129,11 @@ END MODULE TRACE_MODULE
       WRITE(NFILERR,FMT='("TRACE-HISTORY:")')
       DO I=1,MIN(LEVEL,MAXLEVEL)
           WRITE(NFILERR,FMT='("LEVEL(",I3,")=",I3," : ",A)') &
-     &          ITASK,I,HISTORY(I)
+     &          THISTASK,I,HISTORY(I)
       ENDDO
       IF(LEVEL.GT.MAXLEVEL) THEN
         WRITE(NFILERR,FMT='("CURRENT LEVEL(",I3,") IS ",I3)') &
-     &        ITASK,LEVEL
+     &        THISTASK,LEVEL
       END IF
       RETURN 
       END

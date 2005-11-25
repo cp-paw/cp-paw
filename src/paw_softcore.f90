@@ -1,26 +1,26 @@
 MODULE CORE_MODULE
 !**                                                                   **
-!**  the complex pointer list this is needed for the parallelization  **
-!**  because every node will calculate the core levels only for its   **
-!**  own set of atoms and only the first node can write               **
+!**  THE COMPLEX POINTER LIST THIS IS NEEDED FOR THE PARALLELIZATION  **
+!**  BECAUSE EVERY NODE WILL CALCULATE THE CORE LEVELS ONLY FOR ITS   **
+!**  OWN SET OF ATOMS AND ONLY THE FIRST NODE CAN WRITE               **
 !**                                                                   **
 !**  COMMUNIATION IN CROE$REPORT NOT DONE YET.                        **
 !**                                                                   **
-type coreshift_type
-integer(4)           :: iat
-integer(4)           :: n
-character(8),pointer :: type(:)
-real(8)     ,pointer :: e(:)
-real(8)     ,pointer :: eatom(:)
-type(coreshift_type),pointer :: next
-end type coreshift_type
+TYPE CORESHIFT_TYPE
+INTEGER(4)           :: IAT
+INTEGER(4)           :: N
+CHARACTER(8),POINTER :: TYPE(:)
+REAL(8)     ,POINTER :: E(:)
+REAL(8)     ,POINTER :: EATOM(:)
+TYPE(CORESHIFT_TYPE),POINTER :: NEXT
+END TYPE CORESHIFT_TYPE
 LOGICAL(4)                  :: TCORESHIFTS=.TRUE.
 LOGICAL(4)                  :: DEFAULT=.FALSE.
 INTEGER(4)                  :: NATOMS=0
 CHARACTER(32),ALLOCATABLE   :: ATOMS(:)
-type(coreshift_type),target :: first
-type(coreshift_type),pointer:: this
-logical(4),save             :: tini=.false.
+TYPE(CORESHIFT_TYPE),TARGET :: FIRST
+TYPE(CORESHIFT_TYPE),POINTER:: THIS
+LOGICAL(4),SAVE             :: TINI=.FALSE.
 END MODULE CORE_MODULE
 !
 !     ..................................................................
@@ -67,22 +67,22 @@ END MODULE CORE_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE CORE$report(nfil)
+      SUBROUTINE CORE$REPORT(NFIL)
       USE CORE_MODULE
       IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN) :: nfil
-      real(8)                 :: ev
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      REAL(8)                 :: EV
       CHARACTER(32)           :: NAME
       INTEGER(4)              :: I,IAT
       REAL(8)                 :: SVAR
-      integer(4)              :: thistask,ntasks
+      INTEGER(4)              :: THISTASK,NTASKS
 !     ******************************************************************
-      call mpe$query(ntasks,thistask)
-if(ntasks.ne.1) return
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      IF(thistask.NE.1) RETURN
       CALL CONSTANTS('EV',EV)
       THIS=>FIRST
       DO 
-        if(this%iat.eq.0) exit
+        IF(THIS%IAT.EQ.0) EXIT
         CALL ATOMLIST$GETCH('NAME',THIS%IAT,NAME)
         CALL REPORT$TITLE(NFIL,'EIGENVALUES OF CORE STATES FROM ATOM '& 
      &                       //TRIM(NAME))
@@ -164,34 +164,34 @@ if(ntasks.ne.1) return
       IF(.NOT.TCHK) RETURN
 !
 !     ===================================================================
-!     ==  select the proper entry in the table                         ==
+!     ==  SELECT THE PROPER ENTRY IN THE TABLE                         ==
 !     ===================================================================
-      this=>first
-      if(.not.tini) then
-        tini=.true.
-        this%iat=iat
-        this%n=0
-        nullify(this%e)
-        nullify(this%eatom)
-        nullify(this%type)
-        nullify(this%next)
-      else
-        do
-          if(this%iat.eq.iat) exit
-          if(associated(this%next)) then
-            this=>this%next
-          else
-            allocate(this%next)
-            this=>this%next
-            nullify(this%next)
-            this%iat=iat
-            this%n=0
-            nullify(this%e)
-            nullify(this%eatom)
-            nullify(this%type)
-          end if
-        enddo
-      end if
+      THIS=>FIRST
+      IF(.NOT.TINI) THEN
+        TINI=.TRUE.
+        THIS%IAT=IAT
+        THIS%N=0
+        NULLIFY(THIS%E)
+        NULLIFY(THIS%EATOM)
+        NULLIFY(THIS%TYPE)
+        NULLIFY(THIS%NEXT)
+      ELSE
+        DO
+          IF(THIS%IAT.EQ.IAT) EXIT
+          IF(ASSOCIATED(THIS%NEXT)) THEN
+            THIS=>THIS%NEXT
+          ELSE
+            ALLOCATE(THIS%NEXT)
+            THIS=>THIS%NEXT
+            NULLIFY(THIS%NEXT)
+            THIS%IAT=IAT
+            THIS%N=0
+            NULLIFY(THIS%E)
+            NULLIFY(THIS%EATOM)
+            NULLIFY(THIS%TYPE)
+          END IF
+        ENDDO
+      END IF
 !
 !     ==================================================================
 !     ==  COLLECT CORE PARTIAL WAVES FROM SETUP OBJECT                ==
@@ -225,12 +225,12 @@ if(ntasks.ne.1) return
         LMNX=LMNX+2*LB(I)+1
         LMRX=MAX(LMRX,(2*LB(I)+1)**2)
       ENDDO
-      if(this%n.ne.lmnx) then
-        this%n=lmnx
-        allocate(this%type(lmnx))
-        allocate(this%e(lmnx))
-        allocate(this%eatom(lmnx))
-      end if
+      IF(THIS%N.NE.LMNX) THEN
+        THIS%N=LMNX
+        ALLOCATE(THIS%TYPE(LMNX))
+        ALLOCATE(THIS%E(LMNX))
+        ALLOCATE(THIS%EATOM(LMNX))
+      END IF
 
 !     ==================================================================
 !     == SUBTRACTS ATOMIC AE POTENTIAL FROM AE TOTAL POTENTIAL        ==
@@ -295,32 +295,32 @@ if(ntasks.ne.1) return
       DEALLOCATE(EIGENVEC)
 !
 !     ==================================================================
-!     ==  write into table                                            ==
+!     ==  WRITE INTO TABLE                                            ==
 !     ==================================================================
       LMN1=0
       DO LN1=1,NC
         L1=LB(LN1)
         DO IM1=1,2*L1+1
           LMN1=LMN1+1
-          this%e(lmn1)=eigenval(lmn1)
-          this%eatom(lmn1)=eb(ln1)
-          i=l1
-          do ln2=1,ln1
-            if(lb(ln2).ne.l1) cycle
-            i=i+1
-          enddo
-          write(this%type(lmn1),fmt='(i2)')i
-          if(l1.eq.0) then
-            this%type(lmn1)=trim(this%type(lmn1))//'s'
-          else if(l1.eq.1) then
-            this%type(lmn1)=trim(this%type(lmn1))//'p'
-          else if(l1.eq.2) then
-            this%type(lmn1)=trim(this%type(lmn1))//'d'
-          else if(l1.eq.3) then
-            this%type(lmn1)=trim(this%type(lmn1))//'f'
-          else
-            this%type(lmn1)=trim(this%type(lmn1))//'??'
-          end if
+          THIS%E(LMN1)=EIGENVAL(LMN1)
+          THIS%EATOM(LMN1)=EB(LN1)
+          I=L1
+          DO LN2=1,LN1
+            IF(LB(LN2).NE.L1) CYCLE
+            I=I+1
+          ENDDO
+          WRITE(THIS%TYPE(LMN1),FMT='(I2)')I
+          IF(L1.EQ.0) THEN
+            THIS%TYPE(LMN1)=TRIM(THIS%TYPE(LMN1))//'S'
+          ELSE IF(L1.EQ.1) THEN
+            THIS%TYPE(LMN1)=TRIM(THIS%TYPE(LMN1))//'P'
+          ELSE IF(L1.EQ.2) THEN
+            THIS%TYPE(LMN1)=TRIM(THIS%TYPE(LMN1))//'D'
+          ELSE IF(L1.EQ.3) THEN
+            THIS%TYPE(LMN1)=TRIM(THIS%TYPE(LMN1))//'F'
+          ELSE
+            THIS%TYPE(LMN1)=TRIM(THIS%TYPE(LMN1))//'??'
+          END IF
         ENDDO
       ENDDO
       
@@ -349,7 +349,7 @@ if(ntasks.ne.1) return
 !!$      ENDDO
 !!$
 !      CALL FILEHANDLER$UNIT('PROT',NFILO)
-!      CALL CORE$report(nfilo)
+!      CALL CORE$REPORT(NFILO)
 !     DO I=1,LMNX
 !       AUX2 = EIGENVAL(I) - EB(I)
 !       WRITE(NFILO,FMT='(6F12.5)')EIGENVAL(I),EIGENVAL(I)/EV,EB(I)&

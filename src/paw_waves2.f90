@@ -1,8 +1,8 @@
-
+!
 !***********************************************************************
 !***********************************************************************
 !**                                                                   **
-!** continuation of waves object: see paw_waves1.f90 for header       **
+!** CONTINUATION OF WAVES OBJECT: SEE PAW_WAVES1.F90 FOR HEADER       **
 !**                                                                   **
 !***********************************************************************
 !***********************************************************************
@@ -66,22 +66,22 @@
 !     == COLLECT OCCUPATIONS                                          ==
 !     ==================================================================
       CALL DYNOCC$GETI4('NB',NBX)
-      ALLOCATE(OCC(NBX,NKPT,NSPIN))
-      CALL DYNOCC$GETR8A('OCC',NBX*NKPT*NSPIN,OCC)
+      ALLOCATE(OCC(NBX,NKPTL,NSPIN))
+      CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
       ALLOCATE(R0(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
 !
 !     ==================================================================
 !     ==  CALCULATE FORCE OF CONSTRAINT                               ==
 !     ==================================================================
-      DO IKPT=1,NKPT
+      DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)
           NGL=GSET%NGL
           NBH=THIS%NBH
           NB=THIS%NB
-if(1.eq.1) then ! change for kaestners conjugate gradient
+IF(1.EQ.1) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
 !
 !         ==============================================================
 !         ==  EVALUATE  DO<P|PSI>  ASSUMING <PRO|PSI> IS STILL VALID  ==
@@ -95,8 +95,8 @@ if(1.eq.1) then ! change for kaestners conjugate gradient
             LMNX=MAP%LMNX(ISP)
             ALLOCATE(DO(LNX,LNX))
             CALL SETUP$1COVERLAP(ISP,LNX,DO)
-            CALL WAVES_OPROJ(LNX,MAP%LOX(1:lnx,ISP),DO,NDIM,LMNX,NBH &
-      &          ,THIS%PROJ(:,:,ipro:ipro+lmnx-1),OPROJ(:,:,ipro:ipro+lmnx-1))
+            CALL WAVES_OPROJ(LNX,MAP%LOX(1:LNX,ISP),DO,NDIM,LMNX,NBH &
+      &          ,THIS%PROJ(:,:,IPRO:IPRO+LMNX-1),OPROJ(:,:,IPRO:IPRO+LMNX-1))
             DEALLOCATE(DO)
             IPRO=IPRO+LMNX
           ENDDO
@@ -108,13 +108,13 @@ if(1.eq.1) then ! change for kaestners conjugate gradient
           THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
           CALL WAVES_ADDPRO(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NPRO,THIS%OPSI,OPROJ)
           DEALLOCATE(OPROJ)
-else
-          allocate(this%opsi(ngl,ndim,nbh))
-          this%opsi(:,:,:)=this%psi0(:,:,:)
-!$$$$$$$$$$$$$$$$$$$$$$$$ from here $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-          call WAVES_OPSI(nb,nbh,npro,nat,ngl,r0,this%proj,this%opsi)
-!$$$$$$$$$$$$$$$$$$$$$$$$ to here $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-end if
+ELSE
+          ALLOCATE(THIS%OPSI(NGL,NDIM,NBH))
+          THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
+!$$$$$$$$$$$$$$$$$$$$$$$$ FROM HERE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+          CALL WAVES_OPSI(NB,NBH,NPRO,NAT,NGL,R0,THIS%PROJ,THIS%OPSI)
+!$$$$$$$$$$$$$$$$$$$$$$$$ TO HERE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+END IF
 !
 !         ==============================================================
 !         ==  DIVIDE BY WAVE FUNCTION MASS                            ==
@@ -170,7 +170,7 @@ end if
      &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
         CELLSCALE=1.D0/SQRT(CELLSCALE)
 !       == NOW K-POINT DEPENDENT DATA ==================================
-        DO IKPT=1,NKPT
+        DO IKPT=1,NKPTL
           CALL WAVES_SELECTWV(IKPT,1)
           CALL PLANEWAVE$SELECT(GSET%ID)
           NGL=GSET%NGL
@@ -219,7 +219,7 @@ end if
 !     ==================================================================
 !     ==  NOW ORTHOGONALIZE                                           ==
 !     ==================================================================
-      DO IKPT=1,NKPT
+      DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)
@@ -232,9 +232,11 @@ end if
 !         ==============================================================
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
      &                                             ,THIS%PSIM,THIS%PROJ)
+          CALL MPE$COMBINE('K','+',THIS%PROJ)
           ALLOCATE(OPROJ(NDIM,NBH,NPRO))
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
      &                                                 ,THIS%OPSI,OPROJ)
+          CALL MPE$COMBINE('K','+',OPROJ)
 !
 !         ==============================================================
 !         ==  1C-OVERLAP OF <PSI0|PSI0>, <OPSI|PSI0> AND <OPSI|OPSI>  ==
@@ -344,13 +346,13 @@ end if
             CALL PLANEWAVE$GETL4('TINV',TINV)
             IF(TINV) THEN
               ALLOCATE(RMAT(NB,NB))
-              RMAT=REAL(MAT,kind=8)
+              RMAT=REAL(MAT,KIND=8)
               ALLOCATE(ROMAT(NB,NB))
-              ROMAT=REAL(OMAT,kind=8)
+              ROMAT=REAL(OMAT,KIND=8)
               ALLOCATE(ROOMAT(NB,NB))
-              ROOMAT=REAL(OOMAT,kind=8)
+              ROOMAT=REAL(OOMAT,KIND=8)
               ALLOCATE(RLAMBDA(NB,NB))
-              RLAMBDA=REAL(LAMBDA,kind=8)
+              RLAMBDA=REAL(LAMBDA,KIND=8)
               CALL WAVES_ORTHO_X(NB,OCC(1,IKPT,ISPIN) &
        &                        ,ROOMAT,RMAT,ROMAT,RLAMBDA)
               LAMBDA=CMPLX(RLAMBDA,0.D0,8)
@@ -402,6 +404,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
           IF(TTEST) THEN
             ALLOCATE(OPROJ(NDIM,NBH,NPRO))
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO,THIS%PSIM,OPROJ)
+            CALL MPE$COMBINE('K','+',OPROJ)
             ALLOCATE(AUXMAT(NB,NB))
             CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIM,NBH,NB,NPRO,OPROJ,OPROJ,AUXMAT)
             DEALLOCATE(OPROJ)
@@ -447,7 +450,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !     ==================================================================
       IF(TSTRESS) THEN
         CALL CELL$GETR8A('T0',9,RBAS)
-        DO IKPT=1,NKPT
+        DO IKPT=1,NKPTL
           CALL WAVES_SELECTWV(IKPT,1)
           CALL PLANEWAVE$SELECT(GSET%ID)
           CALL PLANEWAVE$SETR8A('RBAS',9,RBAS)
@@ -738,7 +741,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
          ELSE
            CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,NDIM,NB,PSI1,NB,PSI2,MAT)
          END IF
-         CALL MPE$COMBINE('+',MAT)
+         CALL MPE$COMBINE('K','+',MAT)
                              CALL TIMING$CLOCKOFF('WAVES_OVERLAP')
          RETURN
        ENDIF
@@ -759,7 +762,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
          DO IBH2=1,NBH
            IB2A=2*IBH2-1
            IB2B=MIN(2*IBH2,NB)
-           RE=0.5D0* REAL(TMAT(IBH1,IBH2),kind=8)
+           RE=0.5D0* REAL(TMAT(IBH1,IBH2),KIND=8)
            IM=0.5D0*AIMAG(TMAT(IBH1,IBH2))
 !          == WATCH THE ORDER OF THE FOLLOWING 4 LINES!!! =============
 !          == BECAUSE IB1B=IB1A FOR 2*IBH1>NB =========================
@@ -784,7 +787,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !          == <PSI-(I)|PSI+(J)> ========================================
            IB2A=2*IBH2-1
            IB2B=MIN(2*IBH2,NB)
-           RE=0.5D0* REAL(TMAT(IBH1,IBH2),kind=8)
+           RE=0.5D0* REAL(TMAT(IBH1,IBH2),KIND=8)
            IM=0.5D0*AIMAG(TMAT(IBH1,IBH2))
            MAT2(1,1)=+RE
            MAT2(1,2)=+IM
@@ -798,7 +801,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
          ENDDO
        ENDDO
        DEALLOCATE(TMAT)
-       CALL MPE$COMBINE('+',MAT)
+       CALL MPE$COMBINE('K','+',MAT)
                              CALL TIMING$CLOCKOFF('WAVES_OVERLAP')
        RETURN
        END
@@ -825,7 +828,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
       COMPLEX(8)  ,INTENT(OUT)  :: MAT(NB,NB)
       REAL(8)     ,ALLOCATABLE  :: DOVER(:,:)
       INTEGER(4)                :: NTASKS,THISTASK
-      INTEGER(4)                :: ICOUNT,IAT,ISP
+      INTEGER(4)                :: IAT,ISP
       INTEGER(4)                :: LMN1,LN1,L1
       INTEGER(4)                :: LMN2,LN2,L2
       INTEGER(4)                :: IB1,IB2,IPRO,IPRO1,IPRO2,M
@@ -836,16 +839,14 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
       REAL(8)                   :: RMAT(2,2)
       LOGICAL(4)                :: TINV
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('K',NTASKS,THISTASK)
       MAT(:,:)=(0.D0,0.D0)
       TINV=NB.NE.NBH
-      ICOUNT=0
       IPRO=0
       DO IAT=1,MAP%NAT
         ISP=MAP%ISP(IAT)
 !       __ SELECTION FOR PARALLEL PROCESSING____________________________
-        ICOUNT=ICOUNT+1
-        IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) THEN
+        IF(MOD(IAT-1,NTASKS).NE.THISTASK-1) THEN
           IPRO=IPRO+MAP%LMNX(ISP)
           CYCLE
         END IF
@@ -892,9 +893,9 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
             IF(.NOT.TINV) THEN
               MAT(IBH1,IBH2)=MAT(IBH1,IBH2)+CSVAR1
             ELSE
-              RE1=  REAL(CSVAR1,kind=8)
+              RE1=  REAL(CSVAR1,KIND=8)
               IM1= AIMAG(CSVAR1)
-              RE2=  REAL(CSVAR2,kind=8)
+              RE2=  REAL(CSVAR2,KIND=8)
               IM2=-AIMAG(CSVAR2)  ! COMPLEX CONJUGATE OF CSVAR2 USED
               RMAT(1,1)=0.5D0*( RE1+RE2)
               RMAT(1,2)=0.5D0*( IM1-IM2)
@@ -915,7 +916,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
         DEALLOCATE(DOVER)
         IPRO=IPRO+MAP%LMNX(ISP)
       ENDDO
-      CALL MPE$COMBINE('+',MAT)
+      CALL MPE$COMBINE('K','+',MAT)
       RETURN
       END
 !
@@ -984,7 +985,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !        ===============================================================
 !                            CALL TRACE$PASS('NORMALIZE')
          SVAR=CONJG(B(N,N))*B(N,N)-A(N,N)*C(N,N)-AIMAG(B(N,N))**2
-         SVAR1=-REAL(B(N,N),kind=8)
+         SVAR1=-REAL(B(N,N),KIND=8)
          IF(SVAR.GE.0.D0) THEN
            SVAR2=SQRT(SVAR)
            IF(SVAR1*SVAR2.GE.0.D0) THEN
@@ -996,7 +997,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
            PRINT*,'ORTHOGONALIZATION FAILED! TRYING BEST APPROXIMATION...'
            Z(N)=SVAR1
          END IF
-         Z(N)=Z(N)/REAL(C(N,N),kind=8)
+         Z(N)=Z(N)/REAL(C(N,N),KIND=8)
 !
 !        ===============================================================
 !        == NOW UPDATE MATRICES                                       ==
@@ -1948,6 +1949,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     **                                                              **
 !     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
       USE WAVES_MODULE, ONLY: MAP_TYPE,GSET_TYPE
+      USE MPE_MODULE
       IMPLICIT NONE
       TYPE(MAP_TYPE)  ,INTENT(IN) :: MAP
       TYPE(GSET_TYPE) ,INTENT(IN) :: GSET
@@ -1975,7 +1977,7 @@ PRINT*,'ITER ',ITER,DIGAM
       LOGICAL(4)                  :: TINV
       REAL(8)                     :: NORM(NB),SVAR
       COMPLEX(8)                  :: XTWOBYTWO(2,2)
-      LOGICAL(4)      ,PARAMETER  :: TTEST=.false.
+      LOGICAL(4)      ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)      ,ALLOCATABLE:: SMAP(:)
 !     ******************************************************************
 !
@@ -1987,6 +1989,7 @@ PRINT*,'ITER ',ITER,DIGAM
       NPRO=MAP%NPRO
       ALLOCATE(PROJ(NDIM,NBH,NPRO))
       CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,PSI,PROJ)
+      CALL MPE$COMBINE('K','+',PROJ)
 !     
 !     ==================================================================
 !     ==  OVERLAP OF <PSI0|PSI0>,                                     ==
@@ -2083,6 +2086,7 @@ PRINT*,'ITER ',ITER,DIGAM
       IF(TTEST) THEN
         ALLOCATE(PROJ(NDIM,NBH,NPRO))
         CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,PSI,PROJ)
+        CALL MPE$COMBINE('K','+',PROJ)
         ALLOCATE(AUXMAT(NB,NB))
         CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIM,NBH,NB,NPRO,PROJ,PROJ,AUXMAT)
         DEALLOCATE(PROJ)
@@ -2134,7 +2138,7 @@ PRINT*,'ITER ',ITER,DIGAM
       COMPLEX(8),ALLOCATABLE :: RLAMP(:,:)
       COMPLEX(8),POINTER     :: RLAMPTR(:,:)
 !     ******************************************************************
-      if(optimizertype.eq.'CG') return   !kaestnercg
+      IF(OPTIMIZERTYPE.EQ.'CG') RETURN   !KAESTNERCG
       CALL CELL$GETL4('MOVE',TSTRESS)
       WAVEEKIN1=0.D0
       WAVEEKIN2=0.D0
@@ -2148,7 +2152,7 @@ PRINT*,'ITER ',ITER,DIGAM
      &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
         CELLSCALE=1.D0/SQRT(CELLSCALE)
       ENDIF
-      DO IKPT=1,NKPT
+      DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)
@@ -2219,7 +2223,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ==  DELETE HAMILTONIAN AND EIGENVALUES                          ==
 !     ==================================================================
       IF(THAMILTON) THEN
-        DO IKPT=1,NKPT
+        DO IKPT=1,NKPTL
           DO ISPIN=1,NSPIN
             CALL WAVES_SELECTWV(IKPT,ISPIN)
             CALL PLANEWAVE$SELECT(GSET%ID)
@@ -2257,7 +2261,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FAC=2.D0*SQRT(PI*GC2)
-      FAC=FAC**3/REAL(NDIM,kind=8)*(2.D0/3.D0)
+      FAC=FAC**3/REAL(NDIM,KIND=8)*(2.D0/3.D0)
       FAC=AMPLITUDE/FAC
       DO IG=1,NG
         SCALE(IG)=FAC*EXP(-0.5D0*G2(IG)/GC2)
@@ -2270,7 +2274,7 @@ PRINT*,'ITER ',ITER,DIGAM
             CALL LIB$RANDOM(RIM)
             REC=2.D0*REC-1.D0
             RIM=2.D0*RIM-1.D0
-            PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM,kind=8)*SCALE(IG)
+            PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM,KIND=8)*SCALE(IG)
           ENDDO
         ENDDO
       ENDDO
@@ -2300,7 +2304,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FAC=2.D0*SQRT(PI*GC2)
-      FAC=FAC**3/REAL(NDIM,kind=8)*(2.D0/3.D0)
+      FAC=FAC**3/REAL(NDIM,KIND=8)*(2.D0/3.D0)
       FAC=1.D0/FAC
       DO IG=1,NG
         SCALE(IG)=FAC*EXP(-0.5D0*G2(IG)/GC2)
@@ -2313,7 +2317,7 @@ PRINT*,'ITER ',ITER,DIGAM
             CALL LIB$RANDOM(RIM)
             REC=2.D0*REC-1.D0
             RIM=2.D0*RIM-1.D0
-            PSI(IG,IDIM,IB)=CMPLX(REC,RIM,kind=8)*SCALE(IG)
+            PSI(IG,IDIM,IB)=CMPLX(REC,RIM,KIND=8)*SCALE(IG)
           ENDDO
         ENDDO
       ENDDO
@@ -2343,6 +2347,9 @@ PRINT*,'ITER ',ITER,DIGAM
       REAL(8)               :: SVAR
       REAL(8)               :: MEMORY
       INTEGER(4)            :: NG
+      INTEGER(4)            :: NTASKS,THISTASK
+      INTEGER(4)            :: IKPTL
+      CHARACTER(64)         :: STRING
 !     ******************************************************************
       CALL CONSTANTS('RY',RY)
       CALL REPORT$TITLE(NFIL,'WAVE FUNCTIONS')
@@ -2375,12 +2382,23 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ================================================================
 !     ==  REPORT INFORMATION ABOUT G-VECTORS                        ==
 !     ================================================================
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      IKPTL=0
       DO IKPT=1,NKPT
-        CALL WAVES_SELECTWV(IKPT,1)
-        NG=GSET%NGL
-        CALL MPE$COMBINE('+',NG)
+        IF(KMAP(IKPT).EQ.THISTASK) THEN
+          IKPTL=IKPTL+1
+          CALL WAVES_SELECTWV(IKPTL,1)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          CALL PLANEWAVE$GETI4('NGG',NG)
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT),1,NG)
         CALL REPORT$I4VAL(NFIL &
      &       ,'NUMBER OF (GLOBAL) PLANE WAVES FOR WAVE FUNCTION',NG,' ')
+      ENDDO
+!
+      DO IKPT=1,NKPT
+        WRITE(STRING,FMT='("KPOINT NR.",I5,"RESIDES ON TASK")')IKPT
+        CALL REPORT$I4VAL(NFIL,STRING,KMAP(IKPT),' ')
       ENDDO
       RETURN
       END
@@ -2392,6 +2410,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     **  GET                                                         **
 !     ******************************************************************
       USE WAVES_MODULE
+      USE MPE_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTEGER(4)             :: NFIL
@@ -2410,8 +2429,9 @@ PRINT*,'ITER ',ITER,DIGAM
       COMPLEX(8)             :: CSVAR
       INTEGER(4)             :: NB,NBH
       REAL(8)   ,ALLOCATABLE :: XK(:,:)
-      COMPLEX(8),ALLOCATABLE :: VEC(:,:)      
+      COMPLEX(8),ALLOCATABLE :: VEC(:,:,:)      
       COMPLEX(8),ALLOCATABLE :: VECTOR1(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: EIG(:)
       INTEGER(4)             :: LNXX,LNX,NPRO
       INTEGER(4)             :: NGL
       INTEGER(4),ALLOCATABLE :: LOX(:)
@@ -2420,19 +2440,22 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)             :: ISP,IR
       INTEGER(4)             :: NTASKS,THISTASK
       INTEGER(4)             :: IB1,IB2,IBH,LN1,LN2,IDIM,IKPT,ISPIN,IPRO
+      INTEGER(4)             :: IKPTG
+      INTEGER(4)             :: MSGID
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:)
       CHARACTER(16),ALLOCATABLE :: ATOMID(:)
       REAL(8)                :: SVAR      
       CHARACTER(32)          :: FLAG='011004'
       INTEGER(4)             :: NBX
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
+      LOGICAL(4)             :: TKGROUP
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES$WRITEPDOS')
       IF(.NOT.THAMILTON) THEN
         CALL ERROR$MSG('EIGENVALUES NOT PRESENT')
         CALL ERROR$STOP('WAVES$WRITEPDOS')
       END IF
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     ==================================================================
 !     == GENERAL QUANTITIES                                           ==
@@ -2441,6 +2464,7 @@ PRINT*,'ITER ',ITER,DIGAM
       NAT=MAP%NAT
       NPRO=MAP%NPRO
       LNXX=MAP%LNXX
+! THE SETTING OF PDOS DOES SEEM REDUNDANT. IT IS WRITTEN HERE....
       CALL PDOS$SETI4('NAT',NAT)
       CALL PDOS$SETI4('NSP',NSP)
       CALL PDOS$SETI4('NKPT',NKPT)
@@ -2540,99 +2564,126 @@ PRINT*,'ITER ',ITER,DIGAM
       ALLOCATE(XK(3,NKPT))
       CALL DYNOCC$GETR8A('XK',3*NKPT,XK)
       CALL PDOS$SETR8A('XK',3*NKPT,XK)
-      ALLOCATE(VEC(NDIM,NPRO))
-      DO IKPT=1,NKPT
+      IKPT=0    ! IKPT IS THE K-POINT INDEX LOCAL TO MPE-GROUP K
+      DO IKPTG=1,NKPT
+        TKGROUP=THISTASK.EQ.KMAP(IKPTG)
+        CALL MPE$BROADCAST('K',1,TKGROUP)
+        IF(.NOT.(THISTASK.EQ.1.OR.TKGROUP)) CYCLE
+        if(tkgroup)IKPT=IKPT+1
         DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)
-          IF(.NOT.ASSOCIATED(THIS%EIGVEC)) THEN
-            CALL ERROR$MSG('EIGENVALUES NOT PRESENT')
-            CALL ERROR$STOP('WAVES$WRITEPDOS')
+          IF(TKGROUP) THEN
+            CALL WAVES_SELECTWV(IKPT,ISPIN)
+            CALL PLANEWAVE$SELECT(GSET%ID)
+            IF(.NOT.ASSOCIATED(THIS%EIGVEC)) THEN
+              CALL ERROR$MSG('EIGENVALUES NOT PRESENT')
+              CALL ERROR$STOP('WAVES$WRITEPDOS')
+            END IF
+            NB=THIS%NB
+            NBH=THIS%NBH
+            NGL=GSET%NGL
+            TINV=GSET%TINV
+!  
+!           =============================================================
+!           ==  CALCULATE PROJECTIONS                                  ==
+!           =============================================================
+            ALLOCATE(PROJ(NDIM,NBH,NPRO))
+            CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO &
+       &                          ,THIS%PSI0,PROJ)
+            CALL MPE$COMBINE('K','+',PROJ)
           END IF
-          NB=THIS%NB
-          NBH=THIS%NBH
-          NGL=GSET%NGL
-          ALLOCATE(VECTOR1(NDIM,NPRO,NB))
-          TINV=GSET%TINV
-          IF(THISTASK.EQ.1) THEN
-            WRITE(NFIL)XK(:,IKPT),NB
-          END IF
+          IF(KMAP(IKPTG).EQ.THISTASK) THEN
+            ALLOCATE(VECTOR1(NDIM,NPRO,NB))
 !
-!         =============================================================
-!         ==  CALCULATE PROJECTIONS                                  ==
-!         =============================================================
-          ALLOCATE(PROJ(NDIM,NBH,NPRO))
-          CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO &
-     &                            ,THIS%PSI0,PROJ)
-!
-!         ==============================================================
-!         == UNRAVEL SUPER WAVE FUNCTIONS                             ==
-!         ==============================================================
-          IF(TINV) THEN
-            DO IBH=1,NBH
-              IB1=1+2*(IBH-1)
-              IB2=2+2*(IBH-1)
-              DO IPRO=1,NPRO
-                DO IDIM=1,NDIM
-                  VECTOR1(IDIM,IPRO,IB1)=REAL(PROJ(IDIM,IBH,IPRO),kind=8)
-                  VECTOR1(IDIM,IPRO,IB2)=AIMAG(PROJ(IDIM,IBH,IPRO))
-                ENDDO
-              ENDDO
-            ENDDO
-          ELSE
-            DO IB1=1,NB
-              DO IPRO=1,NPRO
-                DO IDIM=1,NDIM
-                  VECTOR1(IDIM,IPRO,IB1)=PROJ(IDIM,IB1,IPRO)
-                ENDDO
-              ENDDO
-            ENDDO
-          END IF
-          DEALLOCATE(PROJ)
-!
-!         ==============================================================
-!         ==  TRANSFORM TO EIGENSTATES IF SAFEORTHO=.TRUE.,           ==
-!         ==  AND WRITE                                               ==
-!         ==============================================================
-          IF(TSAFEORTHO) THEN
-            DO IB1=1,NB
-              VEC=0.D0
-              DO IB2=1,NB
-                CSVAR=THIS%EIGVEC(IB2,IB1)
+!           ==============================================================
+!           == UNRAVEL SUPER WAVE FUNCTIONS                             ==
+!           ==============================================================
+            IF(TINV) THEN
+              DO IBH=1,NBH
+                IB1=1+2*(IBH-1)
+                IB2=2+2*(IBH-1)
                 DO IPRO=1,NPRO
                   DO IDIM=1,NDIM
-                    VEC(IDIM,IPRO)=VEC(IDIM,IPRO)+VECTOR1(IDIM,IPRO,IB2)*CSVAR
+                    VECTOR1(IDIM,IPRO,IB1)=REAL(PROJ(IDIM,IBH,IPRO),KIND=8)
+                    VECTOR1(IDIM,IPRO,IB2)=AIMAG(PROJ(IDIM,IBH,IPRO))
                   ENDDO
                 ENDDO
               ENDDO
-              IF(THISTASK.EQ.1) THEN
-                IF(FLAG.EQ.'011004') THEN
-                  WRITE(NFIL)THIS%EIGVAL(IB1),OCC(IB1,IKPT,ISPIN),VEC
-                ELSE
-                  WRITE(NFIL)THIS%EIGVAL(IB1),VEC
-                END IF
-!print*,'flag',flag
-!PRINT*,'E ',THIS%EIGVAL(IB1)
-!WRITE(*,FMT='(10F10.5)')VEC
-              END IF
-            ENDDO
-          ELSE
-            DO IB1=1,NB
-              IF(THISTASK.EQ.1) THEN
-                IF(FLAG.EQ.'011004') THEN
-                  WRITE(NFIL)THIS%EXPECTVAL(IB1),OCC(IB1,IKPT,ISPIN) &
-    &                       ,VECTOR1(:,:,IB1)
-                ELSE
-                  WRITE(NFIL)THIS%EXPECTVAL(IB1),VECTOR1(:,:,IB1)
-                END IF
-              END IF
-            ENDDO
+            ELSE
+              DO IB1=1,NB
+                DO IPRO=1,NPRO
+                  DO IDIM=1,NDIM
+                    VECTOR1(IDIM,IPRO,IB1)=PROJ(IDIM,IB1,IPRO)
+                  ENDDO
+                ENDDO
+              ENDDO
+            END IF
+!
+!           ==============================================================
+!           ==  TRANSFORM TO EIGENSTATES IF SAFEORTHO=.TRUE.,           ==
+!           ==============================================================
+            ALLOCATE(EIG(NB))
+            IF(TSAFEORTHO) THEN
+!             == CONSTRUCT EIGENSTATES ===================================
+              ALLOCATE(VEC(NDIM,NPRO,NB))
+              VEC(:,:,:)=0.D0
+              DO IB1=1,NB
+                DO IB2=1,NB
+                  VEC(:,:,IB1)=VEC(:,:,IB1) &
+      &                       +VECTOR1(:,:,IB2)*THIS%EIGVEC(IB2,IB1)
+                ENDDO
+              ENDDO
+              VECTOR1(:,:,:)=VEC(:,:,:)
+              DEALLOCATE(VEC)
+              EIG(:)=THIS%EIGVAL(:)
+            ELSE
+              EIG(:)=THIS%EXPECTVAL(:)
+            END IF
           END IF
-          DEALLOCATE(VECTOR1)
-        ENDDO
-      ENDDO
+          IF(TKGROUP) DEALLOCATE(PROJ)
+!
+!         ================================================================
+!         == COMMUNICATE RESULT TO FIRST NODE OF MONOMER                ==
+!         == NB MAY IN FUTURE DEPEND ON THE K-POINT                     ==
+!         == NDIM AND NPRO ARE INDEPENDENT OF THE K-POINTS              ==
+!         ================================================================
+          IF(KMAP(IKPTG).NE.1) THEN  !ONLY COMMUNICATE WHEN NECESSARY
+            CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NB)
+            IF(THISTASK.EQ.1) THEN
+              ALLOCATE(EIG(NB))
+              ALLOCATE(VECTOR1(NDIM,NPRO,NB))
+            END IF
+            CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,EIG)
+            CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,VECTOR1)
+            IF(THISTASK.EQ.KMAP(IKPTG)) THEN
+              DEALLOCATE(EIG)
+              DEALLOCATE(VECTOR1)
+            END IF
+          END IF
+!
+!         ================================================================
+!         == NOW THE DATA IS AVAILABLE ON TASK 1 OF MONOMER; NEXT WRITE ==  
+!         == ON FILE. ATTENTION DATA ARE ONLY AVAILABLE ON TASK 1.      ==
+!         == THIS BLOCK CANNOT BE INTEGRATED INTO THE COMMUNICATION     ==
+!         == NBLOCK ABOVE, BECAUSE THERE IS NO COMMUNICATION IF THE DATA==
+!         == ARE ALREADY IN TASK 1.                                     ==
+!         ================================================================
+          IF(THISTASK.EQ.1) THEN
+            WRITE(NFIL)XK(:,IKPT),NB
+            DO IB1=1,NB
+              IF(FLAG.EQ.'011004') THEN
+!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
+                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPT,ISPIN),VECTOR1
+              ELSE
+!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
+                WRITE(NFIL)EIG(IB1),VECTOR1
+              END IF
+            ENDDO
+            DEALLOCATE(EIG)
+            DEALLOCATE(VECTOR1)
+          END IF
+        ENDDO  ! END LOOP OVER ISPIN
+      ENDDO  ! END LOOP OVER IKPTG
       DEALLOCATE(XK)
-      DEALLOCATE(VEC)
       DEALLOCATE(R)
       DEALLOCATE(OCC)
       IF(THISTASK.EQ.1) THEN
@@ -2646,44 +2697,61 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ..................................................................
       SUBROUTINE WAVES$REPORTEIG(NFIL)
 !     ******************************************************************
-!     **  WAVES$GET                                                   **
-!     **  GET                                                         **
+!     **                                                              **
+!     **                                                              **
 !     ******************************************************************
-      USE MPE_MODULE
       USE WAVES_MODULE
+      USE mpe_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
-      INTEGER(4)            :: IKPT
+      INTEGER(4)            :: IKPT,ikptl
       INTEGER(4)            :: ISPIN
       INTEGER(4)            :: IB
       INTEGER(4)            :: ITEN
       REAL(8)               :: EV
       CHARACTER(64)         :: STRING
       INTEGER(4)            :: NB
+      real(8)      ,allocatable :: eig(:)
+      INTEGER(4)            :: Ntasks,thistask
 !     ******************************************************************
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL CONSTANTS('EV',EV)
+      IKPTL=0
       DO IKPT=1,NKPT
+        IF(KMAP(IKPT).EQ.THISTASK) IKPTL=IKPTL+1
+        IF(THISTASK.NE.1.AND.THISTASK.NE.KMAP(IKPT)) CYCLE
         DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)
-          IF(.NOT.ASSOCIATED(THIS%EIGVAL)) THEN
-            CALL ERROR$MSG('EIGENVALUES NOT PRESENT')
-            CALL ERROR$STOP('WAVES$REPORTEIG')
+          IF(THISTASK.EQ.KMAP(IKPT)) THEN
+            CALL WAVES_SELECTWV(IKPTL,ISPIN)
+            CALL PLANEWAVE$SELECT(GSET%ID)
+            IF(.NOT.ASSOCIATED(THIS%EIGVAL)) THEN
+              CALL ERROR$MSG('EIGENVALUES NOT PRESENT')
+              CALL ERROR$STOP('WAVES$REPORTEIG')
+            END IF
+            NB=THIS%NB
           END IF
-          NB=THIS%NB
-          IF(NSPIN.EQ.1) THEN
-            WRITE(STRING,FMT='("EIGENVALUES [EV] FOR K-POINT ",I4)')IKPT
-          ELSE
-            WRITE(STRING,FMT='("EIGENVALUES [EV] FOR K-POINT ",I4' &
+          CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT),1,NB)
+          ALLOCATE(EIG(NB))
+          IF(THISTASK.EQ.KMAP(IKPT)) THEN
+            EIG(:)=THIS%EIGVAL(:)
+          END IF
+          CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT),1,EIG)
+          IF(THISTASK.EQ.1) THEN
+            IF(NSPIN.EQ.1) THEN
+              WRITE(STRING,FMT='("EIGENVALUES [EV] FOR K-POINT ",I4)')IKPT
+            ELSE
+              WRITE(STRING,FMT='("EIGENVALUES [EV] FOR K-POINT ",I4' &
      &                        //'," AND SPIN ",I1)')IKPT,ISPIN
+            END IF
+            CALL REPORT$TITLE(NFIL,STRING)
+            ITEN=0
+            DO WHILE (NB.GT.ITEN)
+              WRITE(NFIL,FMT='(I3,":",10F8.3)') &
+     &             ITEN,(EIG(IB)/EV,IB=ITEN+1,MIN(ITEN+10,NB))
+              ITEN=ITEN+10
+            ENDDO
           END IF
-          CALL REPORT$TITLE(NFIL,STRING)
-          ITEN=0
-          DO WHILE (NB.GT.ITEN)
-            WRITE(NFIL,FMT='(I3,":",10F8.3)') &
-     &           ITEN,(THIS%EIGVAL(IB)/EV,IB=ITEN+1,MIN(ITEN+10,NB))
-            ITEN=ITEN+10
-          ENDDO
+          DEALLOCATE(EIG)
         ENDDO
       ENDDO
       RETURN
@@ -2710,14 +2778,14 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)                       :: NB,NBH
 !     ******************************************************************
               CALL TRACE$PUSH('WAVES$WRITE')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     == WRITE WAVE FUNCTION FOR THE THIS TIME STEP ==================
       TCHK=.TRUE.
       SEPARATOR=SEP_WAVES
       SEPARATOR%NREC=-1
       CALL WAVES_WRITEPSI(NFIL,SEPARATOR%NREC)
-      CALL WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      IF(THISTASK.EQ.1)CALL RESTART$WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
       CALL WAVES_WRITEPSI(NFIL,SEPARATOR%NREC)
               CALL TRACE$POP
       RETURN
@@ -2755,14 +2823,15 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)                       :: THISTASK,NTASKS
 !     ******************************************************************
                                   CALL TRACE$PUSH('WAVES$READ')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     ==================================================================
 !     ==  READ WAVE FUNCTIONS FOR THIS TIME STEP                      ==
 !     ==================================================================
       TCHK=.TRUE.
       SEPARATOR=SEP_WAVES
-      CALL READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      CALL MPE$BROADCAST('MONOMER',1,TCHK)
       IF(.NOT.TCHK) RETURN
       CALL WAVES_READPSI(NFIL)
 !
@@ -2770,17 +2839,17 @@ PRINT*,'ITER ',ITER,DIGAM
 !     == SET OCCUPATIONS FOR DYNOCC OBJECT                            ==
 !     ==================================================================
       CALL DYNOCC$GETI4('NB',NBX)
-      ALLOCATE(EIG(NBX,NKPT,NSPIN))
+      ALLOCATE(EIG(NBX,NKPTL,NSPIN))
       EIG(:,:,:)=0.D0
       DO ISPIN=1,NSPIN
-        DO IKPT=1,NKPT
+        DO IKPT=1,NKPTL
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           DO IB=1,THIS%NB
-            EIG(IB,IKPT,ISPIN)=REAL(THIS%RLAM0(IB,IB),kind=8)
+            EIG(IB,IKPT,ISPIN)=REAL(THIS%RLAM0(IB,IB),KIND=8)
           ENDDO
         ENDDO
       ENDDO
-      CALL DYNOCC$SETR8A('EPSILON',NBX*NKPT*NSPIN,EIG)
+      CALL WAVES_DYNOCCSETR8A('EPSILON',NBX*NKPTL*NSPIN,EIG)
       DEALLOCATE(EIG)
 !
 !     ==================================================================
@@ -2797,6 +2866,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     **  WRITE WAVE FUNCTIONS TO RESTART FILE                        **
 !     **                                                              **
 !     ******************************************************************
+      USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFIL 
@@ -2806,7 +2876,7 @@ PRINT*,'ITER ',ITER,DIGAM
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)              :: NTASKS,THISTASK
       INTEGER(4)              :: IOS
-      INTEGER(4)              :: IKPT,ISPIN,IB,IDIM,IWAVE
+      INTEGER(4)              :: IKPT,IKPTL,IKPTG,ISPIN,IB,IDIM,IWAVE
       INTEGER(4)              :: LEN
       INTEGER(4)              :: NG1,NGG,NGL,NBH,NB
       LOGICAL(4)              :: TSUPER
@@ -2821,9 +2891,11 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)  ,ALLOCATABLE:: IGVECG(:,:)
       INTEGER(4)  ,ALLOCATABLE:: IGVECL(:,:)
       INTEGER(4)              :: NWAVE=2
+      INTEGER(4)              :: ISUM
+      LOGICAL(4)              :: TKGROUP
 !     ******************************************************************
               CALL TRACE$PUSH('WAVES_WRITEPSI')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(RSTRTTYPE.EQ.'STATIC') THEN
         NWAVE=1
       ELSE IF(RSTRTTYPE.EQ.'DYNAMIC') THEN
@@ -2837,31 +2909,31 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ==================================================================
       IF(NREC.EQ.-1) THEN
         NREC=1
-        DO IKPT=1,NKPT
-          NREC=NREC+2
-          CALL WAVES_SELECTWV(IKPT,1)
-          CALL PLANEWAVE$SELECT(GSET%ID)
-          TSUPER=GSET%TINV
-          NREC=NREC+NWAVE*THIS%NBH*NSPIN
-          ISVAR=-1
-          CALL WAVES_WRITELAMBDA(NFIL,IKPT,ISVAR)
-          NREC=NREC+ISVAR
+        ISUM=0
+        IKPT=0
+        DO IKPTG=1,NKPT
+          IF(THISTASK.EQ.KMAP(IKPTG)) THEN
+            IKPT=IKPT+1
+            CALL WAVES_SELECTWV(IKPT,1)
+            CALL PLANEWAVE$SELECT(GSET%ID)
+            ISUM=ISUM+2+NWAVE*THIS%NBH*NSPIN
+!           == ISVAR=-1: LET WAVES$WRITELAMBDA WORK OUT HOW MANY RECORDS IT NEEDS
+            ISVAR=-1
+            CALL WAVES_WRITELAMBDA(NFIL,IKPTG,ISVAR)
+            ISUM=ISUM+ISVAR
+          END IF
         ENDDO  
+        CALL MPE$COMBINE('MONOMER','+',ISUM)
+        NREC=NREC+ISUM
         CALL TRACE$POP
         RETURN
       END IF
       NREC1=0
 !
 !     ==================================================================
-!     ==  GET DIMENSIONS ETC.                                         ==
-!     ==================================================================
-      CALL MPE$QUERY(NTASKS,THISTASK)
-!
-!     ==================================================================
 !     ==  WRITE SIZES                                                 ==
 !     ==================================================================
       IF(THISTASK.EQ.1) THEN
-!       WRITE(NFIL)NKPT,NSPIN !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         CALL CELL$GETR8A('T(0)',9,RBAS)
         WRITE(NFIL)NKPT,NSPIN,RBAS,NWAVE !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         NREC1=NREC1+1
@@ -2870,19 +2942,29 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ==================================================================
 !     ==  LOOP OVER K-POINTS AND SPINS                                ==
 !     ==================================================================
-              CALL TRACE$PASS('MARKE 5')
-      DO IKPT=1,NKPT
-        CALL WAVES_SELECTWV(IKPT,1)
-        CALL PLANEWAVE$SELECT(GSET%ID)
-        NGL=GSET%NGL
-        NBH=THIS%NBH
-        NB=THIS%NB
-        CALL PLANEWAVE$GETI4('NGG',NGG)
+      IKPT=0
+      DO IKPTG=1,NKPT
+        TKGROUP=(THISTASK.EQ.KMAP(IKPTG))
+        CALL MPE$BROADCAST('K',1,TKGROUP) 
+        IF(.NOT.(THISTASK.EQ.1.OR.TKGROUP)) CYCLE
+        IF(TKGROUP) THEN
+          IKPT=IKPT+1
+          CALL WAVES_SELECTWV(IKPT,1)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          NGL=GSET%NGL
+          NBH=THIS%NBH
+          NB=THIS%NB
+          CALL PLANEWAVE$GETI4('NGG',NGG)
+          CALL PLANEWAVE$GETL4('TINV',TSUPER)
+        END IF
 !       
 !       ================================================================
 !       == WRITE SIZE AND TYPE OF WAVE FUNCTION                       ==
 !       ================================================================
-        CALL PLANEWAVE$GETL4('TINV',TSUPER)
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NGG)
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NB)
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NBH)
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,TSUPER)
         IF(THISTASK.EQ.1) THEN
           KEY='PSI'
           WRITE(NFIL)KEY,NGG,NDIM,NB,TSUPER  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -2892,35 +2974,43 @@ PRINT*,'ITER ',ITER,DIGAM
 !       ================================================================
 !       == WRITE K-POINTS AND G-VECTORS                               ==
 !       ================================================================
-        CALL PLANEWAVE$GETR8A('GBAS',9,GBAS)
-        CALL PLANEWAVE$GETR8A('XK',3,XK)
-        ALLOCATE(IGVECL(3,NGL))
-        CALL PLANEWAVE$GETI4A('IGVEC',3*NGL,IGVECL)
         ALLOCATE(IGVECG(3,NGG))
-        CALL PLANEWAVE$COLLECTI4(3,NGL,IGVECL,NGG,IGVECG)
+        IF(TKGROUP) THEN
+          CALL PLANEWAVE$GETR8A('GBAS',9,GBAS)
+          CALL PLANEWAVE$GETR8A('XK',3,XK)
+          ALLOCATE(IGVECL(3,NGL))
+          CALL PLANEWAVE$GETI4A('IGVEC',3*NGL,IGVECL)
+          CALL PLANEWAVE$COLLECTI4(3,NGL,IGVECL,NGG,IGVECG)
+          DEALLOCATE(IGVECL)
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,XK)
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,IGVECG)
         IF(THISTASK.EQ.1) THEN
           WRITE(NFIL)XK,IGVECG !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           NREC1=NREC1+1
         END IF
         DEALLOCATE(IGVECG)
-        DEALLOCATE(IGVECL)
+!
         ALLOCATE(PSIG(NGG,NDIM))
-        ALLOCATE(PSI1(NGL,NDIM))
+        IF(TKGROUP) ALLOCATE(PSI1(NGL,NDIM))
         DO IWAVE=1,NWAVE
           DO ISPIN=1,NSPIN
-            CALL WAVES_SELECTWV(IKPT,ISPIN)
-            CALL PLANEWAVE$SELECT(GSET%ID)
             DO IB=1,NBH
-              DO IDIM=1,NDIM
-                IF(IWAVE.EQ.1) THEN
-                  PSI1(:,IDIM)=THIS%PSI0(:,IDIM,IB)
-                ELSE IF(IWAVE.EQ.2) THEN
-                  PSI1(:,IDIM)=THIS%PSIM(:,IDIM,IB)
-                END IF
-              ENDDO
-              DO IDIM=1,NDIM
-                CALL PLANEWAVE$COLLECTC8(1,NGL,PSI1(1,IDIM),NGG,PSIG(1,IDIM))
-              ENDDO
+              IF(TKGROUP) THEN
+                CALL WAVES_SELECTWV(IKPT,ISPIN)
+                CALL PLANEWAVE$SELECT(GSET%ID)
+                DO IDIM=1,NDIM
+                  IF(IWAVE.EQ.1) THEN
+                    PSI1(:,IDIM)=THIS%PSI0(:,IDIM,IB)
+                  ELSE IF(IWAVE.EQ.2) THEN
+                    PSI1(:,IDIM)=THIS%PSIM(:,IDIM,IB)
+                  END IF
+                ENDDO
+                DO IDIM=1,NDIM
+                  CALL PLANEWAVE$COLLECTC8(1,NGL,PSI1(1,IDIM),NGG,PSIG(1,IDIM))
+                ENDDO
+              END IF
+              CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,PSIG)
               IF(THISTASK.EQ.1) THEN
                 WRITE(NFIL,ERR=9999,IOSTAT=IOS)PSIG !<<<<<<<<<<<<<<<<<<<
                 NREC1=NREC1+1
@@ -2928,13 +3018,13 @@ PRINT*,'ITER ',ITER,DIGAM
             ENDDO
           ENDDO
         ENDDO
-        DEALLOCATE(PSI1)
+        IF(TKGROUP) DEALLOCATE(PSI1)
         DEALLOCATE(PSIG)
         ISVAR=0
-        CALL WAVES_WRITELAMBDA(NFIL,IKPT,ISVAR)
+        CALL WAVES_WRITELAMBDA(NFIL,IKPTG,ISVAR)
         NREC1=NREC1+ISVAR
       ENDDO 
- !
+!
 !     ==================================================================
 !     ==  DEALLOCATE                                                  ==
 !     ==================================================================
@@ -2976,12 +3066,13 @@ PRINT*,'ITER ',ITER,DIGAM
       LOGICAL(4)              :: TSUPER_,TSUPER
       INTEGER(4)              :: IKPT_,ISPIN_
       INTEGER(4)              :: IKPT1,IKPT,IB,IDIM,IG,IB1,IB2,ISPIN,I
-      INTEGER(4)              :: IKPT0
+      INTEGER(4)              :: IKPT0,IKPTG,IKPTL
       INTEGER(4)              :: IWAVE
       LOGICAL(4)              :: TREAD(NKPT)
       REAL(8)                 :: KREAD(3,NKPT)
-      REAL(8)                 :: K(3)        ! ACTUAL K-POINT 
-      REAL(8)                 :: K_(3)       ! K-POINT ON FILE
+      REAL(8)     ,ALLOCATABLE:: XK(:,:)     ! K-POINTS IN RELATIVE COORDINATES
+      REAL(8)                 :: DK(3)       ! K-POINT DIFFERENCE IN A.U.
+      REAL(8)                 :: K_(3)       ! K-POINT ON FILE IN RELATIVE COORDINATES
       REAL(8)                 :: GBAS_(3,3)  ! REC. LATT. VECT. ON FILE
       REAL(8)     ,ALLOCATABLE:: GVECG_(:,:) ! G-VECTORS ON FILE
       REAL(8)     ,ALLOCATABLE:: GVECG(:,:)  ! G-VECTORS (GLOBAL)
@@ -2994,6 +3085,7 @@ PRINT*,'ITER ',ITER,DIGAM
       COMPLEX(8)  ,ALLOCATABLE:: PSIL(:,:,:,:)
       COMPLEX(8)  ,ALLOCATABLE:: PSIIN(:,:)
       COMPLEX(8)  ,ALLOCATABLE:: PSIG(:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSITMP(:,:)
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)              :: ISVAR1
       INTEGER(4)              :: IOS
@@ -3008,10 +3100,12 @@ PRINT*,'ITER ',ITER,DIGAM
       LOGICAL(4)              :: TCHK
       COMPLEX(8)              :: F1,F2
       COMPLEX(8),ALLOCATABLE  :: PSIINSUPER(:,:)
-      COMPLEX(8)              :: csvar,cmat(1,1)
+      COMPLEX(8)              :: CSVAR,CMAT(1,1)
+      LOGICAL(4)              :: TKGROUP
+      LOGICAL(4)              :: TSKIP
 !     ******************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     ==================================================================
 !     ==  READ SIZES                                                  ==
@@ -3036,13 +3130,13 @@ PRINT*,'ITER ',ITER,DIGAM
           CALL ERROR$STOP('WAVES_READPSI')
         END IF
       END IF
-      CALL MPE$BROADCAST(1,NSPIN_)
-      CALL MPE$BROADCAST(1,NKPT_)
-      CALL MPE$BROADCAST(1,IFORMAT)
-      CALL MPE$BROADCAST(1,NWAVE)
+      CALL MPE$BROADCAST('MONOMER',1,NSPIN_)
+      CALL MPE$BROADCAST('MONOMER',1,NKPT_)
+      CALL MPE$BROADCAST('MONOMER',1,IFORMAT)
+      CALL MPE$BROADCAST('MONOMER',1,NWAVE)
       IF(IFORMAT.EQ.2) THEN
-        CALL MPE$BROADCAST(1,RBAS)
-        DO IKPT=1,NKPT
+        CALL MPE$BROADCAST('MONOMER',1,RBAS)
+        DO IKPT=1,NKPTL
           CALL WAVES_SELECTWV(IKPT,1)
           CALL PLANEWAVE$SELECT(GSET%ID)
           CALL PLANEWAVE$SETR8A('RBAS',9,RBAS)
@@ -3053,58 +3147,60 @@ PRINT*,'ITER ',ITER,DIGAM
 !     ==================================================================
 !     ==  LOOP OVER K-POINTS AND SPINS                                ==
 !     ==================================================================
-              CALL TRACE$PASS('MARKE 5')
+              CALL TRACE$PASS('READPSI MARKE 5')
+      ALLOCATE(XK(3,NKPT))
+      CALL DYNOCC$GETR8A('XK',3*NKPT,XK) !K-POINTS IN RELATIVE COORDINATES
       GBASFIX=.FALSE.
       TREAD(:)=.FALSE.
-      DO IKPT_=1,NKPT_
+      DO IKPT_=1,NKPT_   ! LOOP OVER ALL K-POINTS ON THE FILE
+!PRINT*,THISTASK,'=================== READPSI MARKE 1 IKPT_=',IKPT_,'====================='
+!       == FIND OUT IF DATA ARE YTO BE READ AND TO WHICH K-GROUP THEY BELONG
 !
 !       ================================================================
 !       ==  READ COORDINATES OF THE WAVE FUNCTIONS                    ==
 !       ================================================================
         IF(THISTASK.EQ.1) THEN
           READ(NFIL)KEY,NGG_,NDIM_,NB_,TSUPER_   !<<<<<<<<<<<<<<<<<<<<<<
-        END IF
-        CALL MPE$BROADCAST(1,KEY)
-        CALL MPE$BROADCAST(1,NGG_)
-        CALL MPE$BROADCAST(1,NDIM_)
-        CALL MPE$BROADCAST(1,NB_)
-        CALL MPE$BROADCAST(1,TSUPER_)
-        IF(KEY.NE.'PSI') THEN
-          CALL ERROR$MSG('ID IS NOT "PSI"')
-          CALL ERROR$MSG('FILE IS CORRUPTED')
-          CALL ERROR$I4VAL('IKPT_',IKPT_)
-          CALL ERROR$STOP('WAVES_READPSI')
-        END IF
-        ALLOCATE(GVECG_(3,NGG_))
-        IF(THISTASK.EQ.1) THEN
+          IF(KEY.NE.'PSI') THEN
+            CALL ERROR$MSG('ID IS NOT "PSI"')
+            CALL ERROR$MSG('FILE IS CORRUPTED')
+            CALL ERROR$I4VAL('IKPT_',IKPT_)
+            CALL ERROR$STOP('WAVES_READPSI')
+          END IF
+          ALLOCATE(GVECG_(3,NGG_))
           IF(IFORMAT.EQ.1) THEN
             READ(NFIL)K_,GBAS_,GVECG_ !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           ELSE
+            ALLOCATE(MINUSG(NGG_))
             ALLOCATE(IGVECG_(3,NGG_))
+!           GBAS_ HAS BEEN CALCULATED EARLIER FOR IFROMAT=2
             READ(NFIL)K_,IGVECG_ !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            IF(TSUPER_) THEN
+!             == MINUSG IS ONLY USED ON THE READING TASK. 
+!             == PLANEWAVE$MINUSG IS INDEPENDENT FROM THE PLANEWAVE_MODULE
+              CALL PLANEWAVE$MINUSG(K_,NGG_,IGVECG_,MINUSG)
+            END IF
             DO IG=1,NGG_
-              XG1=REAL(IGVECG_(1,IG),kind=8)+K_(1)
-              XG2=REAL(IGVECG_(2,IG),kind=8)+K_(2)
-              XG3=REAL(IGVECG_(3,IG),kind=8)+K_(3)
+              XG1=REAL(IGVECG_(1,IG),KIND=8)+K_(1)
+              XG2=REAL(IGVECG_(2,IG),KIND=8)+K_(2)
+              XG3=REAL(IGVECG_(3,IG),KIND=8)+K_(3)
               DO I=1,3
                 GVECG_(I,IG)=GBAS_(I,1)*XG1+GBAS_(I,2)*XG2+GBAS_(I,3)*XG3
               ENDDO
             ENDDO
-            IF(TSUPER_) THEN
-              ALLOCATE(MINUSG(NGG_))
-              CALL PLANEWAVE$MINUSG(K_,NGG_,IGVECG_,MINUSG)
-            END IF
             DEALLOCATE(IGVECG_)
           END IF
         END IF
-        CALL MPE$BROADCAST(1,K_)
-        CALL MPE$BROADCAST(1,GVECG_)
 !
+!       ==================================================================
+!       == SET THE NEW LATTICE VECTORS ON ALL TASKS ======================
+!       == THIS SHOULD BETTER BE DONE VIA THE ATOM OR THE CELL OBJECT   ==
+!       ==================================================================
         IF(IFORMAT.EQ.1.AND.(.NOT.GBASFIX)) THEN
-          GBASFIX=.TRUE.
-          CALL MPE$BROADCAST(1,GBAS_)
+          GBASFIX=.TRUE. 
+          CALL MPE$BROADCAST('MONOMER',1,GBAS_)
           CALL GBASS(GBAS_,RBAS,SVAR)
-          DO IKPT1=1,NKPT
+          DO IKPT1=1,NKPTL
             CALL WAVES_SELECTWV(IKPT1,1)
             CALL PLANEWAVE$SELECT(GSET%ID)
             CALL PLANEWAVE$SETR8A('RBAS',9,RBAS)
@@ -3114,72 +3210,121 @@ PRINT*,'ITER ',ITER,DIGAM
 !       ==================================================================
 !       ==  FIND NEAREST K-POINT                                        ==
 !       ==================================================================
-        SVAR=1.D+10
-        IKPT=1
-        DO IKPT1=1,NKPT
-          CALL WAVES_SELECTWV(IKPT1,1)
-          CALL PLANEWAVE$SELECT(GSET%ID)
-          CALL PLANEWAVE$GETR8A('XK',3,K)
-          SVAR1=(K(1)-K_(1))**2+(K(2)-K_(2))**2+(K(3)-K_(3))**2
-          IF(SVAR1.LT.SVAR) THEN
-            IKPT=IKPT1
-            SVAR=SVAR1
-          END IF
-        ENDDO
-        CALL WAVES_SELECTWV(IKPT,1)
-        CALL PLANEWAVE$SELECT(GSET%ID)
+        IF(THISTASK.EQ.1) THEN
+          SVAR=1.D+10
+          DO IKPT1=1,NKPT
+            DK(:)=MATMUL(GBAS_,(XK(:,IKPT1)-K_(:)))
+            SVAR1=DOT_PRODUCT(DK,DK)
+            IF(SVAR1.LT.SVAR) THEN
+              IKPTG=IKPT1
+              SVAR=SVAR1
+            END IF
+          ENDDO
 !       
-!       ==================================================================
-!       ==  FIND NEAREST K-POINT                                        ==
-!       ==================================================================
-        IF(TREAD(IKPT)) THEN
-          CALL PLANEWAVE$GETR8A('XK',3,K)
-          SVAR1=(K(1)-K_(1))**2-(K(1)-KREAD(1,IKPT))**2 &
-     &         +(K(2)-K_(2))**2-(K(2)-KREAD(2,IKPT))**2 &
-     &         +(K(3)-K_(3))**2-(K(3)-KREAD(3,IKPT))**2 
-          IF(SVAR1.GT.0.D0) THEN  ! PREVIOUS CHOICE WAS BETTER
-            NBH_=NB_
-            IF(TSUPER_)NBH_=INT(0.5D0*REAL(NB+1,kind=8))
-            DO IWAVE=1,NWAVE
-              DO ISPIN_=1,NSPIN_
-                DO IB=1,NBH_
-                  IF(THISTASK.EQ.1)READ(NFIL)
+!         ==================================================================
+!         ==  CHECK IF THERE IS NOT ANOTHER K-POINT, THAT HAS ALREADY BEEN==
+!         ==  READ IN INTO THE SELECTED ARRAY AND THAT IS CLOSER          ==
+!         ==================================================================
+          TSKIP=.FALSE.
+          IF(TREAD(IKPTG)) THEN
+            DK(:)=MATMUL(GBAS_,(XK(:,IKPTG)-K_(:)))
+            SVAR=DOT_PRODUCT(DK,DK)
+            DK(:)=MATMUL(GBAS_,(XK(:,IKPTG)-KREAD(:,IKPTG)))
+            SVAR1=SVAR-DOT_PRODUCT(DK,DK)
+            IF(SVAR1.GT.0.D0) THEN  ! PREVIOUS CHOICE WAS BETTER
+              NBH_=NB_
+              IF(TSUPER_)NBH_=INT(0.5D0*REAL(NB_+1,KIND=8))
+              DO IWAVE=1,NWAVE
+                DO ISPIN_=1,NSPIN_
+                  DO IB=1,NBH_
+                    IF(THISTASK.EQ.1)READ(NFIL)
+                  ENDDO
                 ENDDO
               ENDDO
-            ENDDO
-            CALL WAVES_READLAMBDA(NFIL,IKPT,.TRUE.)
-            DEALLOCATE(GVECG_)
-            IF(ALLOCATED(MINUSG))DEALLOCATE(MINUSG)
-            CYCLE
+              CALL WAVES_READLAMBDA(NFIL,IKPTG,.TRUE.)
+              TSKIP=.TRUE.
+            END IF
           END IF
+          TREAD(IKPTG)=.TRUE.
+          KREAD(:,IKPTG)=K_(:)
         END IF
-        TREAD(IKPT)=.TRUE.
-        KREAD(:,IKPT)=K_(:)
-        CALL TRACE$PASS('MARKE 6')
+        CALL MPE$BROADCAST('MONOMER',1,TSKIP)
+!
+!       == DETERMINE THE K-GROUP WHERE THE K-POINT IKPTG RESIDES       ==
+        IF(.NOT.TSKIP) THEN
+          CALL MPE$BROADCAST('MONOMER',1,IKPTG)
+          TKGROUP=THISTASK.EQ.KMAP(IKPTG)
+          CALL MPE$BROADCAST('K',1,TKGROUP)
+        ELSE
+          TKGROUP=.FALSE.   ! NOT NEEDED
+          IKPTG=0
+        END IF
+!
+!       ===================================================================
+!       ==  SKIP REST OF THE LOOP,                                       ==
+!       ==  FOR ALL TASKS IF THERE ARE ALREADY BETTER DATA FOR THIS K-POINT
+!       ==  OR, IF DATA ARE READ, ON ALL TASKS THAT ARE NOT INVOLVED     ==
+!       ===================================================================
+        IF(TSKIP.OR.(.NOT.(THISTASK.EQ.1.OR.TKGROUP))) THEN
+          IF(ALLOCATED(GVECG_))DEALLOCATE(GVECG_)
+          IF(ALLOCATED(MINUSG))DEALLOCATE(MINUSG)
+          CYCLE
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NDIM_)
+        CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NB_)
+        IF(TKGROUP) THEN
+          CALL MPE$BROADCAST('K',1,NDIM_)
+          CALL MPE$BROADCAST('K',1,NB_)
+          CALL MPE$BROADCAST('K',1,NSPIN_)
+          CALL MPE$BROADCAST('K',1,NWAVE)
+        END IF
+!
+!       == DETERMINE LOKAL K-POINT ===================================        
+        IF(TKGROUP) THEN
+          IKPTL=0
+          DO I=1,IKPTG
+            IF(KMAP(I).EQ.KMAP(IKPTG)) IKPTL=IKPTL+1
+          ENDDO            
+         ELSE
+           IKPTL=0 ! MAKE SURE THE FIRST MONOMER-TASK CANNOT USE IT
+         END IF
+!
 !       == SET DATA FOR FURTHER USE ==================================
-        NGL=GSET%NGL
-        CALL PLANEWAVE$GETI4('NGG',NGG)
+        IF(TKGROUP) THEN
+          CALL WAVES_SELECTWV(IKPTL,1)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          NGL=GSET%NGL
+          CALL PLANEWAVE$GETI4('NGG',NGG)
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTg),1,NGG)
 !       
 !       ==============================================================
 !       ==  DEFINE MAPPING OF THE ARRAYS                            ==
 !       ==============================================================
-        ALLOCATE(GVECL(3,NGL))
         ALLOCATE(GVECG(3,NGG))
-        CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVECL)
-        CALL PLANEWAVE$COLLECTR8(3,NGL,GVECL,NGG,GVECG)
-        DEALLOCATE(GVECL)
-        ALLOCATE(MAPG(NGG))
+        IF(TKGROUP) THEN
+          ALLOCATE(GVECL(3,NGL))
+          CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVECL)
+          CALL PLANEWAVE$COLLECTR8(3,NGL,GVECL,NGG,GVECG)
+          DEALLOCATE(GVECL)
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTg),1,GVECG)
         IF(THISTASK.EQ.1) THEN
+          ALLOCATE(MAPG(NGG))
           CALL WAVES_MAPG(NGG_,GBAS_,GVECG_,NGG,GVECG,MAPG)
         END IF
-        CALL MPE$BROADCAST(1,MAPG)
+        IF(THISTASK.EQ.1)DEALLOCATE(GVECG_)
+        DEALLOCATE(GVECG)
 !!$DO IG=1,NGG
 !!$  IF(MAPG(IG).NE.IG) THEN
 !!$     PRINT*,'MAPG ',IKPT_,IG,MAPG(IG),NGG,NGG_
 !!$  END IF
 !!$ENDDO
-        DEALLOCATE(GVECG_)
-        DEALLOCATE(GVECG)
+!       --------------------------------------------------------------
+!       == THE FIRST TASK KNOWS:
+!       ==   NGG,MAPG,MINUSG
+!       ==   NGG_,NDIM_,NB_,TSUPER_
+!       --------------------------------------------------------------
               CALL TRACE$PASS('MARKE 7')
 !       
 !       ==============================================================
@@ -3190,13 +3335,18 @@ IF(TSUPER_.AND.NDIM_.EQ.2) THEN
   CALL ERROR$MSG('ARE NOT PROPERLY IMPLEMENTED BELOW')
   CALL ERROR$STOP('WAVES_READPSI')
 END IF
-        NBH=THIS%NBH
-        NB=THIS%NB
-        ALLOCATE(PSIIN(NGG_,NDIM_))
+              CALL TRACE$PASS('READPSI MARKE 9')
         ALLOCATE(PSIG(NGG,NDIM_))
-        ALLOCATE(PSIL(NGL,NDIM_,NB_,NSPIN_))
-        ALLOCATE(PSI(NGL,NDIM,NB,NSPIN))
-        IF(TSUPER_) ALLOCATE(PSIINSUPER(NGG_,NDIM_))
+        IF(TKGROUP) THEN
+          NBH=THIS%NBH
+          NB=THIS%NB
+          ALLOCATE(PSIL(NGL,NDIM_,NB_,NSPIN_))
+          ALLOCATE(PSI(NGL,NDIM,NB,NSPIN))
+        END IF
+        IF(THISTASK.EQ.1) THEN
+          ALLOCATE(PSIIN(NGG_,NDIM_))
+          IF(TSUPER_) ALLOCATE(PSIINSUPER(NGG_,NDIM_))
+        END IF
         DO IWAVE=1,NWAVE
           DO ISPIN=1,NSPIN_
             TCHK=.FALSE.
@@ -3223,7 +3373,7 @@ END IF
                       DO IDIM=1,NDIM_
                         F1=PSIINSUPER(IG,IDIM)
                         F2=CONJG(PSIINSUPER(MINUSG(IG),IDIM))
-!this has been corrected 9.Nov2003: (- sign included). PEB
+!THIS HAS BEEN CORRECTED 9.NOV2003: (- SIGN INCLUDED). PEB
                         PSIIN(IG,IDIM)=-0.5D0*CI*(F1-F2)
                         PSIIN(MINUSG(IG),IDIM)=CONJG(PSIIN(IG,IDIM))
                       END DO
@@ -3241,9 +3391,12 @@ END IF
                   ENDDO
                 ENDDO
               END IF
-              DO IDIM=1,NDIM_
-                CALL PLANEWAVE$DISTRIBUTEC8(1,NGG,PSIG(1,IDIM),NGL,PSIL(1,IDIM,IB,ISPIN))
-              ENDDO
+              CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),PSIG)
+              IF(TKGROUP) THEN
+                DO IDIM=1,NDIM_
+                  CALL PLANEWAVE$DISTRIBUTEC8(1,NGG,PSIG(1,IDIM),NGL,PSIL(1,IDIM,IB,ISPIN))
+                ENDDO
+              END IF
             ENDDO
           ENDDO
 !       
@@ -3252,158 +3405,187 @@ END IF
 !         ==============================================================
 !         == SAME REPRESENTATION =========================================
           CALL TRACE$PASS('MARKE 9')
-          IF(NDIM.EQ.NDIM_.AND.NSPIN.EQ.NSPIN_) THEN
-            DO IB=1,NB
-              IF(IB.GT.NB_) EXIT
-              PSI(:,:,IB,:)=PSIL(:,:,IB,:)
-            ENDDO
-!         == FROM NON-SPIN POLARIZED CALCULATION =========================
-          ELSE IF(NSPIN_.EQ.1.AND.NDIM_.EQ.1) THEN
-            IF(NSPIN.EQ.2) THEN
-              DO ISPIN=1,NSPIN
+          IF(TKGROUP) THEN
+!           ===== first map random wave function into new file           
+            CALL PLANEWAVE$GETL4('TINV',TSUPER)
+            if(tsuper) then
+              allocate(psitmp(ngl,2))
+              do ispin=1,nspin
+                DO IB=1,NBH
+                  IB1=2*IB-1
+                  IB2=2*IB
+                  DO IDIM=1,NDIM
+                    PSITMP(:,1)=this%psi0(:,idim,ib)
+                    CALL PLANEWAVE$INVERTG(NGL,this%psi0(:,idim,ib),PSITMP(1,2))
+                    PSI(:,IDIM,IB1,ispin)= 0.5D0   *(PSITMP(:,1)+PSITMP(:,2))
+                    PSI(:,IDIM,IB2,ispin)=-0.5D0*CI*(PSITMP(:,1)-PSITMP(:,2))
+                  END DO
+                ENDDO
+              enddo
+              deallocate(psitmp)
+            else
+              psi(:,:,:,ispin)=this%psi0(:,:,:)
+            end if
+!           ===============================================================
+            IF(NDIM.EQ.NDIM_.AND.NSPIN.EQ.NSPIN_) THEN
+              DO IB=1,NB
+                IF(IB.GT.NB_) EXIT
+                PSI(:,:,IB,:)=PSIL(:,:,IB,:)
+              ENDDO
+!           == FROM NON-SPIN POLARIZED CALCULATION =========================
+            ELSE IF(NSPIN_.EQ.1.AND.NDIM_.EQ.1) THEN
+              IF(NSPIN.EQ.2) THEN
+                DO ISPIN=1,NSPIN
+                  DO IB=1,NB
+                    IF(IB.GT.NB_) EXIT
+                    PSI(:,1,IB,ISPIN)=PSIL(:,1,IB,1)
+                  ENDDO
+                ENDDO
+              ELSE IF(NDIM.EQ.2) THEN
                 DO IB=1,NB
-                  IF(IB.GT.NB_) EXIT
-                  PSI(:,1,IB,ISPIN)=PSIL(:,1,IB,1)
+                  IB1=INT(0.5*REAL(IB+1)) ! IB1 =1,1,2,2,3,3,...
+                  IF(IB1.GT.NB_) EXIT
+                  IDIM=2+IB-2*IB1         ! IDIM=1,2,1,2,1,2,...
+                  PSI(:,IDIM,IB,1)=PSIL(:,1,IB1,1)
+                ENDDO
+              ELSE
+                CALL ERROR$MSG('TRANSFORMATION NOT IMPLEMENTED')
+                CALL ERROR$STOP('WAVES$READPSI')
+              END IF
+!           == FROM SPIN POLARIZED CALCULATION ===========================
+            ELSE IF(NSPIN_.EQ.2.AND.NDIM_.EQ.1) THEN
+              IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN
+                DO IB=1,NB
+                  PSI(:,1,IB,1)=PSIL(:,1,IB,1)
+                ENDDO
+              ELSE IF(NSPIN.EQ.1.AND.NDIM.EQ.2) THEN
+                DO IB=1,(NB+1)/2
+                  IB1=2*IB-1
+                  IB2=2*IB
+                  PSI(:,1,IB1,1)=PSIL(:,1,IB,1)
+                  PSI(:,2,IB1,1)=(0.D0,0.D0)
+                  IF(IB2.GT.NB) EXIT
+                  PSI(:,1,IB2,1)=(0.D0,0.D0)
+                  PSI(:,2,IB2,1)=PSIL(:,1,IB,2)
+                ENDDO
+              ELSE
+                CALL ERROR$MSG('TRANSFORMATION NOT IMPLEMENTED')
+                CALL ERROR$STOP('WAVES$READPSI')
+              END IF
+!           == FROM NONCOLLINEAR CALCULATION  ==============================
+            ELSE IF(NSPIN_.EQ.2.AND.NDIM_.EQ.1) THEN
+              IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN
+                DO IB=1,NB 
+                  PSI(:,1,IB,1)=PSIL(:,1,2*IB-1,1)
+                ENDDO
+              ELSE IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN
+                DO IB=1,NB 
+                  IB1=2*IB-1
+                  IB2=2*IB
+                  PSI(:,1,IB,1)=PSIL(:,1,IB1,1)
+                  PSI(:,1,IB,2)=PSIL(:,1,IB2,1)
+                ENDDO
+              ELSE
+                CALL ERROR$MSG('TRANSFORMATION NOT IMPLEMENTED')
+                CALL ERROR$STOP('WAVES$READPSI')
+              END IF
+            END IF           
+            CALL TRACE$PASS('MARKE 10')
+!         
+!           ==============================================================
+!           ==  MAP ONTO SUPER WAVE FUNCTIONS                           ==
+!           ==============================================================
+            CALL PLANEWAVE$GETL4('TINV',TSUPER)
+            IF(TSUPER) THEN
+              DO ISPIN=1,NSPIN
+!               == REMOVE THE FACTOR EXP(I*PHI) FROM THE WAVE FUNCTION
+                DO IB=1,NB
+                  CALL PLANEWAVE$SCALARPRODUCT('-',NGL,1,1 &
+          &                   ,PSI(:,1,IB,ISPIN),1,PSI(:,1,IB,ISPIN),CMAT)
+                  CSVAR=CMAT(1,1)
+                  CSVAR=CONJG(SQRT(CSVAR/SQRT(CSVAR*CONJG(CSVAR))))
+                  PSI(:,1,IB,ISPIN)=PSI(:,1,IB,ISPIN)*CSVAR
+                ENDDO
+                DO IB=1,NBH
+                  IB1=2*IB-1
+                  IB2=2*IB
+                  PSI(:,1,IB,ISPIN)=PSI(:,1,IB1,ISPIN)+CI*PSI(:,1,IB2,ISPIN)
                 ENDDO
               ENDDO
-            ELSE IF(NDIM.EQ.2) THEN
-              DO IB=1,NB
-                IB1=INT(0.5*REAL(IB+1)) ! IB1 =1,1,2,2,3,3,...
-                IF(IB1.GT.NB_) EXIT
-                IDIM=2+IB-2*IB1         ! IDIM=1,2,1,2,1,2,...
-                PSI(:,IDIM,IB,1)=PSIL(:,1,IB1,1)
-              ENDDO
-            ELSE
-              CALL ERROR$MSG('TRANSFORMATION NOT IMPLEMENTED')
-              CALL ERROR$STOP('WAVES$READPSI')
             END IF
-!         == FROM SPIN POLARIZED CALCULATION ===========================
-          ELSE IF(NSPIN_.EQ.2.AND.NDIM_.EQ.1) THEN
-            IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN
-              DO IB=1,NB
-                PSI(:,1,IB,1)=PSIL(:,1,IB,1)
-              ENDDO
-            ELSE IF(NSPIN.EQ.1.AND.NDIM.EQ.2) THEN
-              DO IB=1,(NB+1)/2
-                IB1=2*IB-1
-                IB2=2*IB
-                PSI(:,1,IB1,1)=PSIL(:,1,IB,1)
-                PSI(:,2,IB1,1)=(0.D0,0.D0)
-                IF(IB2.GT.NB) EXIT
-                PSI(:,1,IB2,1)=(0.D0,0.D0)
-                PSI(:,2,IB2,1)=PSIL(:,1,IB,2)
-              ENDDO
-            ELSE
-              CALL ERROR$MSG('TRANSFORMATION NOT IMPLEMENTED')
-              CALL ERROR$STOP('WAVES$READPSI')
-            END IF
-!         == FROM NONCOLLINEAR CALCULATION  ==============================
-          ELSE IF(NSPIN_.EQ.2.AND.NDIM_.EQ.1) THEN
-            IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN
-              DO IB=1,NB 
-                PSI(:,1,IB,1)=PSIL(:,1,2*IB-1,1)
-              ENDDO
-            ELSE IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN
-              DO IB=1,NB 
-                IB1=2*IB-1
-                IB2=2*IB
-                PSI(:,1,IB,1)=PSIL(:,1,IB1,1)
-                PSI(:,1,IB,2)=PSIL(:,1,IB2,1)
-              ENDDO
-            ELSE
-              CALL ERROR$MSG('TRANSFORMATION NOT IMPLEMENTED')
-              CALL ERROR$STOP('WAVES$READPSI')
-            END IF
-          END IF           
-          CALL TRACE$PASS('MARKE 10')
-!       
-!         ==============================================================
-!         ==  MAP ONTO SUPER WAVE FUNCTIONS                           ==
-!         ==============================================================
-          CALL PLANEWAVE$GETL4('TINV',TSUPER)
-          IF(TSUPER) THEN
+!         
+!           ==============================================================
+!           ==  MAP BACK                                                ==
+!           ==============================================================
+            CALL TRACE$PASS('MARKE 11')
             DO ISPIN=1,NSPIN
-!             == remove the factor exp(i*phi) from the wave function
-              do ib=1,nb
-                call PLANEWAVE$SCALARPRODUCT('-',NGL,1,1 &
-        &                   ,psi(:,1,ib,ispin),1,psi(:,1,ib,ispin),cmat)
-                csvar=cmat(1,1)
-                csvar=conjg(sqrt(csvar/sqrt(csvar*conjg(csvar))))
-                psi(:,1,ib,ispin)=psi(:,1,ib,ispin)*csvar
-              enddo
-              DO IB=1,NBH
-                IB1=2*IB-1
-                IB2=2*IB
-                PSI(:,1,IB,ISPIN)=PSI(:,1,IB1,ISPIN)+CI*PSI(:,1,IB2,ISPIN)
-              ENDDO
+              CALL WAVES_SELECTWV(IKPTL,ISPIN)
+              IF(IWAVE.EQ.1) THEN
+                DO IB=1,NBH
+                  DO IDIM=1,NDIM
+                    DO IG=1,NGL
+                      THIS%PSI0(IG,IDIM,IB)=PSI(IG,IDIM,IB,ISPIN)
+                    ENDDO
+                  ENDDO
+                ENDDO
+                IF(NWAVE.EQ.1) THEN
+                  THIS%PSIM=THIS%PSI0
+                END IF
+              ELSE IF(IWAVE.EQ.2) THEN
+                DO IB=1,NBH
+                  DO IDIM=1,NDIM
+                    DO IG=1,NGL
+                      THIS%PSIM(IG,IDIM,IB)=PSI(IG,IDIM,IB,ISPIN)
+                    ENDDO
+                  ENDDO
+                ENDDO
+              END IF
             ENDDO
           END IF
-!       
-!         ==============================================================
-!         ==  MAP BACK                                                ==
-!         ==============================================================
-          CALL TRACE$PASS('MARKE 11')
-          DO ISPIN=1,NSPIN
-            CALL WAVES_SELECTWV(IKPT,ISPIN)
-            IF(IWAVE.EQ.1) THEN
-              DO IB=1,NBH
-                DO IDIM=1,NDIM
-                  DO IG=1,NGL
-                    THIS%PSI0(IG,IDIM,IB)=PSI(IG,IDIM,IB,ISPIN)
-                  ENDDO
-                ENDDO
-              ENDDO
-              IF(NWAVE.EQ.1) THEN
-                THIS%PSIM=THIS%PSI0
-              END IF
-            ELSE IF(IWAVE.EQ.2) THEN
-              DO IB=1,NBH
-                DO IDIM=1,NDIM
-                  DO IG=1,NGL
-                    THIS%PSIM(IG,IDIM,IB)=PSI(IG,IDIM,IB,ISPIN)
-                  ENDDO
-                ENDDO
-              ENDDO
-            END IF
-          ENDDO
         ENDDO 
-        DEALLOCATE(PSIL)
         DEALLOCATE(PSIG)
-        DEALLOCATE(MAPG)
-        DEALLOCATE(PSI)
-        DEALLOCATE(PSIIN)
-        IF(ALLOCATED(PSIINSUPER))DEALLOCATE(PSIINSUPER)
-        IF(ALLOCATED(MINUSG)) DEALLOCATE(MINUSG)
-        CALL WAVES_READLAMBDA(NFIL,IKPT,.FALSE.)
+        IF(TKGROUP) THEN
+          DEALLOCATE(PSIL)
+          DEALLOCATE(PSI)
+        END IF
+        IF(THISTASK.EQ.1) THEN
+          DEALLOCATE(MAPG)
+          DEALLOCATE(PSIIN)
+          IF(ALLOCATED(PSIINSUPER))DEALLOCATE(PSIINSUPER)
+          IF(ALLOCATED(MINUSG)) DEALLOCATE(MINUSG)
+        END IF
+        CALL WAVES_READLAMBDA(NFIL,IKPTG,.FALSE.)
       ENDDO
 !
 !     ==================================================================
 !     ==  COMPLETE K-POINTS                                           ==
 !     ==================================================================
+      CALL MPE$BROADCAST('MONOMER',1,TREAD)
+      CALL MPE$BROADCAST('MONOMER',1,kREAD)
       CALL TRACE$PASS('MARKE 14')
       DO IKPT=1,NKPT
         IF(TREAD(IKPT)) CYCLE
-        CALL WAVES_SELECTWV(IKPT,1)
-        CALL PLANEWAVE$SELECT(GSET%ID)
-        CALL PLANEWAVE$GETR8A('K',3,K)
         SVAR=1.D+10
+        ikpt0=0
         DO IKPT_=1,NKPT_
           IF(.NOT.TREAD(IKPT_)) CYCLE
-          SVAR1=(K(1)-KREAD(1,IKPT_))**2+(K(2)-KREAD(2,IKPT_))**2 &
-     &                                  +(K(3)-KREAD(3,IKPT_))**2
+          DK(:)=XK(:,IKPT)-KREAD(:,IKPT_)
+          SVAR1=DOT_PRODUCT(DK,DK)
           IF(SVAR1.LT.SVAR) THEN
             IKPT0=IKPT_
             SVAR=SVAR1
           END IF
         ENDDO       
-        CALL WAVES_COPYPSI(IKPT,IKPT0)
-        CALL WAVES_COPYLAMBDA(IKPT0,IKPT)
+        if(ikpt0.ne.0) then
+          CALL WAVES_COPYPSI(IKPT0,IKPT)
+          CALL WAVES_COPYLAMBDA(IKPT0,IKPT)
+        end if
       ENDDO 
-
 !
 !     ==================================================================
 !     ==  CLOSE DOWN                                                  ==
 !     ==================================================================
+      DEALLOCATE(XK)
                                CALL TRACE$POP
       RETURN
  9999 CONTINUE
@@ -3413,87 +3595,129 @@ END IF
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES_WRITELAMBDA(NFIL,IKPT,NREC)
+      SUBROUTINE WAVES_WRITELAMBDA(NFIL,IKPTG,NREC)
 !     ******************************************************************
 !     **                                                              **
-!     **  WRITE WAVE FUNCTIONS TO RESTART FILE                        **
+!     **  WRITE LAGRANGE MULTIPLIERS  TO RESTART FILE                 **
 !     **                                                              **
 !     ******************************************************************
+      USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
-      INTEGER(4)   ,INTENT(IN) :: NFIL
-      INTEGER(4)   ,INTENT(IN) :: IKPT
-      INTEGER(4)   ,INTENT(INOUT) :: NREC
-      INTEGER(4)               :: NTASKS,THISTASK
-      INTEGER(4)               :: ISPIN,I
-      INTEGER(4)               :: NB
-      CHARACTER(8)             :: KEY
-      COMPLEX(8)   ,ALLOCATABLE:: LAMBDA(:,:,:)
-      INTEGER(4)               :: NLAMBDA
+      INTEGER(4)  ,INTENT(IN)   :: NFIL
+      INTEGER(4)  ,INTENT(IN)   :: IKPTG
+      INTEGER(4)  ,INTENT(INOUT):: NREC
+      INTEGER(4)                :: NTASKS,THISTASK
+      INTEGER(4)                :: ISPIN,I,IKPTL,IKPT
+      INTEGER(4)                :: NB
+      CHARACTER(8)              :: KEY
+      COMPLEX(8)  ,ALLOCATABLE  :: LAMBDA(:,:)
+      INTEGER(4)                :: NLAMBDA
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
-      CALL WAVES_SELECTWV(IKPT,1)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+!     == ONLY THE FORST TASK OF THE K-GROUP AND THE WRITING TASK IS INVOLVED
+      IF(.NOT.(THISTASK.EQ.1.OR.THISTASK.EQ.KMAP(IKPTG))) RETURN
+      IKPTL=0
+      DO IKPT=1,IKPTG
+        IF(KMAP(IKPT).EQ.KMAP(IKPTG))IKPTL=IKPTL+1
+      ENDDO
 !
 !     ==================================================================
 !     == COUNT DEPTH OF HISTORY FOR LAGRANGE PARAMETERS               ==
 !     ==================================================================
-      NLAMBDA=4
-      IF(.NOT.ASSOCIATED(THIS%RLAM3M)) NLAMBDA=3
-      IF(.NOT.ASSOCIATED(THIS%RLAM2M)) NLAMBDA=2
-      IF(.NOT.ASSOCIATED(THIS%RLAMM)) NLAMBDA=1
-      IF(.NOT.ASSOCIATED(THIS%RLAM0)) NLAMBDA=0
-      IF(RSTRTTYPE.EQ.'STATIC') NLAMBDA=1
+      IF(THISTASK.EQ.KMAP(IKPTG)) THEN      
+        CALL WAVES_SELECTWV(IKPTL,1)
+        NLAMBDA=4
+        IF(.NOT.ASSOCIATED(THIS%RLAM3M)) NLAMBDA=3
+        IF(.NOT.ASSOCIATED(THIS%RLAM2M)) NLAMBDA=2
+        IF(.NOT.ASSOCIATED(THIS%RLAMM)) NLAMBDA=1
+        IF(.NOT.ASSOCIATED(THIS%RLAM0)) NLAMBDA=0
+        IF(RSTRTTYPE.EQ.'STATIC') NLAMBDA=1
+      END IF
 !
 !     ==================================================================
 !     == RETURN #(RECORDS) OR IF ON TASK OTHER THAN THE FIRST         ==
 !     ==================================================================
       IF(NREC.EQ.-1) THEN
-        NREC=1+NSPIN*NLAMBDA
+!       == THE RESULT IS COMMUNICATED IN WAVES_WRITEPSI
+        NREC=0
+        IF(THISTASK.EQ.KMAP(IKPTG)) NREC=1+NSPIN*NLAMBDA
         RETURN
       END IF
-      IF(THISTASK.NE.1) RETURN
-      NREC=0
+      CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NLAMBDA)
 !
 !     ==================================================================
 !     == NOW WRITE TO FILE                                            ==
 !     ==================================================================
+      NREC=0
       KEY='LAMBDA'
-      NB=THIS%NB
-      WRITE(NFIL)KEY,NB,NDIM,NSPIN,NLAMBDA  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
-      NREC=NREC+1
+      IF(THISTASK.EQ.KMAP(IKPTG)) THEN      
+        NB=THIS%NB
+      END IF
+      CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NB)
+      IF(THISTASK.EQ.1) THEN
+        WRITE(NFIL)KEY,NB,NDIM,NSPIN,NLAMBDA  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        NREC=NREC+1
+      END IF
+      ALLOCATE(LAMBDA(NB,NB))
+!
       IF(NLAMBDA.GE.1) THEN
         DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          WRITE(NFIL)THIS%RLAM0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-          NREC=NREC+1
+          IF(THISTASK.EQ.KMAP(IKPTG)) THEN      
+            CALL WAVES_SELECTWV(IKPTL,ISPIN)
+            LAMBDA(:,:)=THIS%RLAM0(:,:)
+          END IF
+          CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,LAMBDA)
+          IF(THISTASK.EQ.1) THEN
+            WRITE(NFIL)THIS%RLAM0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            NREC=NREC+1
+          END IF
         ENDDO
       END IF
       IF(NLAMBDA.GE.2) THEN
         DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          WRITE(NFIL)THIS%RLAMM !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-          NREC=NREC+1
+          IF(THISTASK.EQ.KMAP(IKPTG)) THEN      
+            CALL WAVES_SELECTWV(IKPTL,ISPIN)
+            LAMBDA(:,:)=THIS%RLAMM(:,:)
+          END IF
+          CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,LAMBDA)
+          IF(THISTASK.EQ.1) THEN
+            WRITE(NFIL)LAMBDA  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            NREC=NREC+1
+          END IF
         ENDDO
       END IF
       IF(NLAMBDA.GE.3) THEN
         DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          WRITE(NFIL)THIS%RLAM2M !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-          NREC=NREC+1
+          IF(THISTASK.EQ.KMAP(IKPTG)) THEN      
+            CALL WAVES_SELECTWV(IKPTL,ISPIN)
+            LAMBDA(:,:)=THIS%RLAM2M(:,:)
+          END IF
+          CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,LAMBDA)
+          IF(THISTASK.EQ.1) THEN
+            WRITE(NFIL)LAMBDA !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            NREC=NREC+1
+          END IF
         ENDDO
       END IF
       IF(NLAMBDA.GE.4) THEN
         DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          WRITE(NFIL)THIS%RLAM3M !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-          NREC=NREC+1
+          IF(THISTASK.EQ.KMAP(IKPTG)) THEN      
+            CALL WAVES_SELECTWV(IKPTL,ISPIN)
+          END IF
+          LAMBDA(:,:)=THIS%RLAM3M(:,:)
+          CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,LAMBDA)
+          IF(THISTASK.EQ.1) THEN
+            WRITE(NFIL)LAMBDA !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            NREC=NREC+1
+          END IF
         ENDDO
       END IF
       RETURN
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES_READLAMBDA(NFIL,IKPT,TSKIP)
+      SUBROUTINE WAVES_READLAMBDA(NFIL,IKPTg,TSKIP)
 !     ******************************************************************
 !     **                                                              **
 !     **  WRITE WAVE FUNCTIONS TO RESTART FILE                        **
@@ -3503,19 +3727,20 @@ END IF
       USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NFIL
-      INTEGER(4)   ,INTENT(IN) :: IKPT
+      INTEGER(4)   ,INTENT(IN) :: IKPTg
       LOGICAL(4)   ,INTENT(IN) :: TSKIP
       INTEGER(4)               :: NTASKS,THISTASK
-      INTEGER(4)               :: ISPIN,I,IB1,IB2
+      INTEGER(4)               :: ISPIN,I,IB1,IB2,ikptl
       INTEGER(4)               :: NB_,NDIM_,NSPIN_
       INTEGER(4)               :: NB,NBA
       INTEGER(4)               :: NLAMBDA
       CHARACTER(8)             :: KEY
       COMPLEX(8)   ,ALLOCATABLE:: LAMBDA(:,:,:)
       COMPLEX(8)   ,ALLOCATABLE:: LAMBDA2(:,:,:)
+      logical(4)               :: tkgroup
 !     ******************************************************************
                            CALL TRACE$PUSH('WAVES_READLAMBDA')
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     ==================================================================
 !     == READ AND BROADCAST HISTORY-DEPTH OF LAGRANGE PARAMETERS      ==
@@ -3537,25 +3762,48 @@ END IF
         CALL TRACE$POP
         RETURN
       END IF
-      CALL MPE$BROADCAST(1,NLAMBDA)
+!
+!     ==================================================================
+!     ==  COMMUNICATE                                                 ==
+!     ==================================================================
+!     == CODE IS ONLY EXECUTED ON THE FIRST TASK OF MONOMER-GROUP AND
+!     == THE RELEVANT K-GROUP
+      TKGROUP=.TRUE.
+      IF(THISTASK.EQ.1)TKGROUP=KMAP(IKPTG).EQ.1
+      CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NLAMBDA)
+      CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NB_)
+      CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NDIM_)
+      CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NSPIN_)
+      IF(TKGROUP) THEN
+        CALL MPE$BROADCAST('K',1,NLAMBDA)
+        CALL MPE$BROADCAST('K',1,NDIM_)
+        CALL MPE$BROADCAST('K',1,NSPIN_)
+        IKPTL=0
+        DO I=1,IKPTG
+          IF(KMAP(I).EQ.KMAP(IKPTG))IKPTL=IKPTL+1
+        ENDDO
+        CALL WAVES_SELECTWV(IKPTL,1)
+        NB=THIS%NB
+      END IF
 !
 !     ==================================================================
 !     ==  READ AND FOLD DOWN                                          ==
 !     ==================================================================
-      IF(THISTASK.EQ.1) THEN
-        CALL WAVES_SELECTWV(IKPT,1)
-        NB=THIS%NB
-        ALLOCATE(LAMBDA(NB_,NB_,NSPIN_))
-        ALLOCATE(LAMBDA2(NB,NB,NSPIN))
-        NBA=MIN(NB,NB_)
-        DO I=1,NLAMBDA
+      IF(THISTASK.EQ.1.OR.THISTASK.EQ.KMAP(IKPTG)) ALLOCATE(LAMBDA(NB_,NB_,NSPIN_))
+      IF(TKGROUP) ALLOCATE(LAMBDA2(NB,NB,NSPIN))
+      NBA=MIN(NB,NB_)
+      DO I=1,NLAMBDA
+        IF(THISTASK.EQ.1) THEN
           DO ISPIN=1,NSPIN_
             READ(NFIL)LAMBDA(:,:,ISPIN)  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           ENDDO
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),LAMBDA)
 !
-!         ==============================================================
-!         ==  TRANSFORM BETWEEN DATA MODELS                           ==
-!         ==============================================================
+!       ==============================================================
+!       ==  TRANSFORM BETWEEN DATA MODELS                           ==
+!       ==============================================================
+        IF(THISTASK.EQ.KMAP(IKPTG)) THEN  ! RESULT WILL BE COMMUNICATED LATER
           LAMBDA2=(0.D0,0.D0)
           IF(NSPIN.EQ.NSPIN_.AND.NDIM.EQ.NDIM_) THEN
             LAMBDA2(1:NBA,1:NBA,:)=LAMBDA(1:NBA,1:NBA,:)
@@ -3641,12 +3889,15 @@ END IF
               CALL ERROR$STOP('WAVES_READLAMBDA')
             END IF
           END IF
+        END IF
 !
-!         ==============================================================
-!         ==  MAP ONTO THIS                                           ==
-!         ==============================================================
+!       ==============================================================
+!       ==  MAP ONTO THIS                                           ==
+!       ==============================================================
+        IF(TKGROUP) THEN
+          CALL MPE$BROADCAST('K',1,LAMBDA2)
           DO ISPIN=1,NSPIN
-            CALL WAVES_SELECTWV(IKPT,ISPIN)
+            CALL WAVES_SELECTWV(IKPTL,ISPIN)
             NB=THIS%NB
             IF(I.EQ.1) THEN
               IF(.NOT.ASSOCIATED(THIS%RLAM0))ALLOCATE(THIS%RLAM0(NB,NB))
@@ -3662,34 +3913,10 @@ END IF
               THIS%RLAM3M=LAMBDA2(:,:,ISPIN)
             END IF
           ENDDO
-        ENDDO
-        DEALLOCATE(LAMBDA)
-        DEALLOCATE(LAMBDA2)
-      END IF
-!
-!     ==================================================================
-!     ==  BROADCAST LAMBDA                                            ==
-!     ==================================================================
-      DO ISPIN=1,NSPIN
-        CALL WAVES_SELECTWV(IKPT,ISPIN)
-        NB=THIS%NB
-        IF(NLAMBDA.GE.1)THEN
-          IF(.NOT.ASSOCIATED(THIS%RLAM0))ALLOCATE(THIS%RLAM0(NB,NB))
-          CALL MPE$BROADCAST(1,THIS%RLAM0)
-        END IF
-        IF(NLAMBDA.GE.2)THEN
-          IF(.NOT.ASSOCIATED(THIS%RLAMM))ALLOCATE(THIS%RLAMM(NB,NB))
-          CALL MPE$BROADCAST(1,THIS%RLAMM)
-        END IF
-        IF(NLAMBDA.GE.3)THEN
-          IF(.NOT.ASSOCIATED(THIS%RLAM2M))ALLOCATE(THIS%RLAM2M(NB,NB))
-          CALL MPE$BROADCAST(1,THIS%RLAM2M)
-        END IF
-        IF(NLAMBDA.GE.4)THEN
-          IF(.NOT.ASSOCIATED(THIS%RLAM3M))ALLOCATE(THIS%RLAM3M(NB,NB))
-          CALL MPE$BROADCAST(1,THIS%RLAM3M)
-        END IF
+        ENDIF
       ENDDO
+      IF(ALLOCATED(LAMBDA))DEALLOCATE(LAMBDA)
+      IF(ALLOCATED(LAMBDA))DEALLOCATE(LAMBDA2)
                            CALL TRACE$POP
       RETURN
       END
@@ -3725,7 +3952,7 @@ END IF
       REAL(8)               :: KA(3)
       REAL(8)               :: G(3)
       INTEGER(4)            :: MING(3),MAXG(3)
-logical(4):: tchk
+LOGICAL(4):: TCHK
 !     ******************************************************************
       CALL LIB$INVERTR8(3,GBASA,GBASIN)
 !
@@ -3737,7 +3964,7 @@ logical(4):: tchk
       DO I=1,3
         IVEC1(I)=NINT(G(I))
       ENDDO
-      G=REAL(NINT(G),kind=8)
+      G=REAL(NINT(G),KIND=8)
       G(:)=MATMUL(GBASA,REAL(IVEC1,KIND=8))
       KA(:)=GVECA(:,1)-G(:)
 !
@@ -3783,12 +4010,12 @@ logical(4):: tchk
       DEALLOCATE(MAP3D)
 !
 !     ==================================================================
-!     ==  print if remapping has been done                            ==
+!     ==  PRINT IF REMAPPING HAS BEEN DONE                            ==
 !     ==================================================================
-      tchk=.false.
-      do ig=1,ngb
-        tchk=tchk.or.(map(ig).ne.ig)
-      end do
+      TCHK=.FALSE.
+      DO IG=1,NGB
+        TCHK=TCHK.OR.(MAP(IG).NE.IG)
+      END DO
       IF(TCHK)PRINT*,'ORDER OF G-VECTORS FROM RESTART FILE HAS BEEN CHANGED'
       RETURN
       END
@@ -3800,6 +4027,7 @@ logical(4):: tchk
 !     **  MAP WAVE FUNCTIONS FROM ONE K-POINT IKPT2 ONTO IKPT1        **
 !     **                                                              **
 !     ******************************************************************
+      USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IKPT1
@@ -3820,65 +4048,97 @@ logical(4):: tchk
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       REAL(8)               :: GBAS(3,3)
       INTEGER(4)            :: NTASKS,THISTASK
+      LOGICAL(4)            :: TKGROUP1,TKGROUP2
+      INTEGER(4)            :: IKPTL1,IKPTL2,IKPT
 !     ******************************************************************
-      CALL MPE$QUERY(NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      TKGROUP1=(THISTASK.EQ.KMAP(IKPT1))
+      CALL MPE$BROADCAST('K',1,TKGROUP1) 
+      TKGROUP2=(THISTASK.EQ.KMAP(IKPT2))
+      IF(.NOT.(TKGROUP1.OR.TKGROUP2)) RETURN
+      IKPTL1=0
+      DO IKPT=1,IKPT1
+        IF(KMAP(IKPT).EQ.KMAP(IKPT1))IKPTL1=IKPTL1+1
+      ENDDO
+      IKPTL2=0
+      DO IKPT=1,IKPT2
+        IF(KMAP(IKPT).EQ.KMAP(IKPT2))IKPTL2=IKPTL2+1
+      ENDDO
 !
 !     ==================================================================
 !     ==  MAPPING FROM IKPT2 TO IKPT1                                 ==
 !     ==================================================================
 !     == GET GLOBAL GVECTORS FROM IKPT1 ================================
-      CALL WAVES_SELECTWV(IKPT1,1)
-      CALL PLANEWAVE$SELECT(GSET%ID)
-      NGL1=GSET%NGL
-      ALLOCATE(GVECL(3,NGL1))
-      CALL PLANEWAVE$GETR8A('GVEC',3*NGL1,GVECL)
-      CALL PLANEWAVE$GETI4('NGG',NGG1)
-      IF(THISTASK.NE.1) NGG1=1 
-      ALLOCATE(GVECG1(3,NGG1))
-      CALL PLANEWAVE$COLLECTR8(3,NGL1,GVECL,NGG1,GVECG1)
-      DEALLOCATE(GVECL)
+      IF(TKGROUP1) THEN
+        CALL WAVES_SELECTWV(IKPTL1,1)
+        CALL PLANEWAVE$SELECT(GSET%ID)
+        NGL1=GSET%NGL
+        ALLOCATE(GVECL(3,NGL1))
+        CALL PLANEWAVE$GETR8A('GVEC',3*NGL1,GVECL)
+        CALL PLANEWAVE$GETI4('NGG',NGG1)
+        ALLOCATE(GVECG1(3,NGG1))
+        CALL PLANEWAVE$COLLECTR8(3,NGL1,GVECL,NGG1,GVECG1)
+        DEALLOCATE(GVECL)
+      END IF
 !
 !     == GET GLOBAL GVECTORS FROM IKPT2 ================================
-      CALL WAVES_SELECTWV(IKPT2,1)
-      CALL PLANEWAVE$SELECT(GSET%ID)
-      NGL2=GSET%NGL
-      ALLOCATE(GVECL(3,NGL2))
-      CALL PLANEWAVE$GETR8A('GVEC',3*NGL2,GVECL)
-      CALL PLANEWAVE$GETI4('NGG',NGG2)
-      IF(THISTASK.NE.1) NGG2=1 
-      ALLOCATE(GVECG2(3,NGG2))
-      CALL PLANEWAVE$COLLECTR8(3,NGL2,GVECL,NGG2,GVECG2)
-      DEALLOCATE(GVECL)
+      IF(TKGROUP2) THEN
+        CALL WAVES_SELECTWV(IKPTL2,1)
+        CALL PLANEWAVE$SELECT(GSET%ID)
+        NGL2=GSET%NGL
+        ALLOCATE(GVECL(3,NGL2))
+        CALL PLANEWAVE$GETR8A('GVEC',3*NGL2,GVECL)
+        CALL PLANEWAVE$GETI4('NGG',NGG2)
+        ALLOCATE(GVECG2(3,NGG2))
+        CALL PLANEWAVE$COLLECTR8(3,NGL2,GVECL,NGG2,GVECG2)
+        DEALLOCATE(GVECL)
+      END IF
 !
 !     == COPY GBAS      ================================================
-      CALL WAVES_SELECTWV(IKPT2,1)
-      CALL PLANEWAVE$SELECT(GSET%ID)
-      CALL PLANEWAVE$GETR8A('GBAS',9,GBAS)
-      CALL WAVES_SELECTWV(IKPT2,1)
-      CALL PLANEWAVE$SELECT(GSET%ID)
-      CALL PLANEWAVE$SETR8A('GBAS',9,GBAS)
+      IF(THISTASK.EQ.KMAP(IKPT2)) THEN
+        CALL WAVES_SELECTWV(IKPTL2,1)
+        CALL PLANEWAVE$SELECT(GSET%ID)
+        CALL PLANEWAVE$GETR8A('GBAS',9,GBAS)
+      END IF
+      CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),GBAS)
+      IF(TKGROUP1) THEN
+        CALL MPE$BROADCAST('K',1,GBAS)        
+        CALL WAVES_SELECTWV(IKPTL1,1)
+        CALL PLANEWAVE$SELECT(GSET%ID)
+        CALL PLANEWAVE$SETR8A('GBAS',9,GBAS)
+      END IF
 !
 !     == DEFINE MAPPING ================================================
-      IF(THISTASK.EQ.1) THEN
+      CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),NGG2)
+      IF(THISTASK.EQ.KMAP(IKPT1).AND..NOT.TKGROUP2) ALLOCATE(GVECG2(3,NGG2))
+      CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),GVECG2)
+      IF(THISTASK.EQ.KMAP(IKPT1)) THEN
         ALLOCATE(MAPG(NGG1))
         CALL WAVES_MAPG(NGG2,GBAS,GVECG2,NGG1,GVECG1,MAPG)
+        DEALLOCATE(GVECG2)
       END IF
-      DEALLOCATE(GVECG1)
-      DEALLOCATE(GVECG2)
+      IF(ALLOCATED(GVECG1)) DEALLOCATE(GVECG1)
+      IF(ALLOCATED(GVECG2)) DEALLOCATE(GVECG2)
 !
 !     ==================================================================
 !     ==  COPY                                                        ==
 !     ==================================================================
-      CALL WAVES_SELECTWV(IKPT1,1)
-      CALL PLANEWAVE$SELECT(GSET%ID)
-      CALL PLANEWAVE$GETL4('TINV',TSUPER1)
-      NB1=THIS%NB
-      NBH1=THIS%NBH
-      CALL WAVES_SELECTWV(IKPT2,1)
-      CALL PLANEWAVE$SELECT(GSET%ID)
-      CALL PLANEWAVE$GETL4('TINV',TSUPER2)
-      NB2=THIS%NB
-      NBH2=THIS%NBH
+      IF(TKGROUP1) THEN
+        CALL WAVES_SELECTWV(IKPTL1,1)
+        CALL PLANEWAVE$SELECT(GSET%ID)
+        CALL PLANEWAVE$GETL4('TINV',TSUPER1)
+        NB1=THIS%NB
+        NBH1=THIS%NBH
+      END IF
+      IF(TKGROUP1) THEN
+        CALL WAVES_SELECTWV(IKPTL2,1)
+        CALL PLANEWAVE$SELECT(GSET%ID)
+        CALL PLANEWAVE$GETL4('TINV',TSUPER2)
+        NB2=THIS%NB
+        NBH2=THIS%NBH
+      END IF
+      CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),NB2)
+      CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),NBH2)
 
       NBN=MIN(NB1,NB2)
       IF(TSUPER1) THEN
@@ -3897,36 +4157,38 @@ logical(4):: tchk
 !     ==================================================================
       DO IWAVE=1,2
         DO ISPIN=1,NSPIN
+          IF(TKGROUP2) THEN
 !
-!         ==============================================================
-!         == MAP DATA ONTO TEMP ARRAY                                 ==
-!         ==============================================================
-          CALL WAVES_SELECTWV(IKPT2,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)
-          IF(IWAVE.EQ.1) THEN
-            DO IB=1,NBH2
-              PSI2(:,:,IB)=THIS%PSI0(:,:,IB)
-            ENDDO
-          ELSE IF(IWAVE.EQ.2) THEN
-            DO IB=1,NBH2
-              PSI2(:,:,IB)=THIS%PSIM(:,:,IB)
-            ENDDO
-          END IF
-!
-!         ==============================================================
-!         ==  EXPAND TO REGULAR WAVE FUNCTIONS                        ==
-!         ==============================================================
-          IF(TSUPER2) THEN
-            DO IB=NBH2,1,-1
-              IB1=2*IB-1
-              IB2=2*IB
-              DO IDIM=1,NDIM
-                PSITMP2(:,1)=PSI2(:,IDIM,IB)
-                CALL PLANEWAVE$INVERTG(NGL2,PSI2(1,IDIM,IB),PSITMP2(1,2))
-                PSI2(:,IDIM,IB1)= 0.5D0   *(PSITMP2(:,1)+PSITMP2(:,2))
-                PSI2(:,IDIM,IB2)=-0.5D0*CI*(PSITMP2(:,1)-PSITMP2(:,2))
-              END DO
-            ENDDO
+!           ==============================================================
+!           == MAP DATA ONTO TEMP ARRAY                                 ==
+!           ==============================================================
+            CALL WAVES_SELECTWV(IKPTL2,ISPIN)
+            CALL PLANEWAVE$SELECT(GSET%ID)
+            IF(IWAVE.EQ.1) THEN
+              DO IB=1,NBH2
+                PSI2(:,:,IB)=THIS%PSI0(:,:,IB)
+              ENDDO
+            ELSE IF(IWAVE.EQ.2) THEN
+              DO IB=1,NBH2
+                PSI2(:,:,IB)=THIS%PSIM(:,:,IB)
+              ENDDO
+            END IF
+!      
+!           ==============================================================
+!           ==  EXPAND TO REGULAR WAVE FUNCTIONS                        ==
+!           ==============================================================
+            IF(TSUPER2) THEN
+              DO IB=NBH2,1,-1
+                IB1=2*IB-1
+                IB2=2*IB
+                DO IDIM=1,NDIM
+                  PSITMP2(:,1)=PSI2(:,IDIM,IB)
+                  CALL PLANEWAVE$INVERTG(NGL2,PSI2(1,IDIM,IB),PSITMP2(1,2))
+                  PSI2(:,IDIM,IB1)= 0.5D0   *(PSITMP2(:,1)+PSITMP2(:,2))
+                  PSI2(:,IDIM,IB2)=-0.5D0*CI*(PSITMP2(:,1)-PSITMP2(:,2))
+                END DO
+              ENDDO
+            END IF
           END IF
 !
 !         ==============================================================
@@ -3934,10 +4196,13 @@ logical(4):: tchk
 !         ==============================================================
           DO IB=1,NBN
             DO IDIM=1,NDIM
-              CALL WAVES_SELECTWV(IKPT2,ISPIN)
-              CALL PLANEWAVE$SELECT(GSET%ID)
-              CALL PLANEWAVE$COLLECTC8(1,NGL2,PSI2(1,IDIM,IB),NGG2,PSIG2)
-              IF(THISTASK.EQ.1) THEN
+              IF(TKGROUP2) THEN
+                CALL WAVES_SELECTWV(IKPTL2,ISPIN)
+                CALL PLANEWAVE$SELECT(GSET%ID)
+                CALL PLANEWAVE$COLLECTC8(1,NGL2,PSI2(1,IDIM,IB),NGG2,PSIG2)
+              END IF
+              CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),PSIG2)
+              IF(THISTASK.EQ.KMAP(IKPT1)) THEN
                 DO IG=1,NGG1
                   IF(MAPG(IG).NE.0) THEN
                     PSIG1(IG)=PSIG2(MAPG(IG))
@@ -3946,16 +4211,18 @@ logical(4):: tchk
                   END IF
                 ENDDO
               END IF
-              CALL WAVES_SELECTWV(IKPT1,ISPIN)
-              CALL PLANEWAVE$SELECT(GSET%ID)
-              CALL PLANEWAVE$DISTRIBUTEC8(1,NGG1,PSIG1,NGL1,PSI1(1,IDIM,IB))
+              IF(TKGROUP1) THEN
+                CALL WAVES_SELECTWV(IKPTL1,ISPIN)
+                CALL PLANEWAVE$SELECT(GSET%ID)
+                CALL PLANEWAVE$DISTRIBUTEC8(1,NGG1,PSIG1,NGL1,PSI1(1,IDIM,IB))
+              END IF
             ENDDO
           ENDDO
 !
 !         ==============================================================
 !         == MAP ONTO SUPER WAVE FUNCTIONS                            ==
 !         ==============================================================
-          IF(TSUPER1) THEN
+          IF(TKGROUP1.AND.TSUPER1) THEN
             DO IB=1,NBHN
               IB1=2*IB-1
               IB2=2*IB
@@ -3966,20 +4233,22 @@ logical(4):: tchk
 !         ==============================================================
 !         == SAVE INTO THIS                                           ==
 !         ==============================================================
-          CALL WAVES_SELECTWV(IKPT1,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)
-          IF(IWAVE.EQ.1) THEN
-            DO IB=1,NBHN
-              THIS%PSI0(:,:,IB)=PSI1(:,:,IB)
-            ENDDO
-          ELSE IF(IWAVE.EQ.2) THEN
-            DO IB=1,NBHN
-              THIS%PSIM(:,:,IB)=PSI1(:,:,IB)
-            ENDDO
+          IF(TKGROUP1) THEN
+            CALL WAVES_SELECTWV(IKPTL1,ISPIN)
+            CALL PLANEWAVE$SELECT(GSET%ID)
+            IF(IWAVE.EQ.1) THEN
+              DO IB=1,NBHN
+                THIS%PSI0(:,:,IB)=PSI1(:,:,IB)
+              ENDDO
+            ELSE IF(IWAVE.EQ.2) THEN
+              DO IB=1,NBHN
+                THIS%PSIM(:,:,IB)=PSI1(:,:,IB)
+              ENDDO
+            END IF
           END IF
         ENDDO
       ENDDO
-      IF(THISTASK.EQ.1)DEALLOCATE(MAPG)
+      IF(THISTASK.EQ.KMAP(IKPT1))DEALLOCATE(MAPG)
       DEALLOCATE(PSI1)
       DEALLOCATE(PSI2)
       DEALLOCATE(PSIG1)
@@ -3995,6 +4264,7 @@ logical(4):: tchk
 !     **  COPY LAGRANGE MULTIPLIERS FROM K-POINT IKPT1 TO IKPT2       **
 !     **                                                              **
 !     ******************************************************************
+      USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: IKPT1
@@ -4002,225 +4272,333 @@ logical(4):: tchk
       INTEGER(4)               :: NB1,NB2,NBA
       INTEGER(4)               :: ISPIN
       COMPLEX(8)   ,ALLOCATABLE:: LAMBDA(:,:)
+      LOGICAL(4)               :: TKGROUP1,TKGROUP2
+      LOGICAL(4)               :: TCHK
+      INTEGER(4)               :: IKPTL1,IKPTL2,IKPT
+      INTEGER(4)               :: NTASKS,THISTASK
 !     ******************************************************************
-      CALL WAVES_SELECTWV(IKPT1,1)
-      NB1=THIS%NB
-      CALL WAVES_SELECTWV(IKPT2,1)
-      NB2=THIS%NB
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      TKGROUP1=(THISTASK.EQ.KMAP(IKPT1))
+      CALL MPE$BROADCAST('K',1,TKGROUP1) 
+      TKGROUP2=(THISTASK.EQ.KMAP(IKPT2))
+      IF(.NOT.(TKGROUP1.OR.TKGROUP2)) RETURN
+      IKPTL1=0
+      DO IKPT=1,IKPT1
+        IF(KMAP(IKPT).EQ.KMAP(IKPT1))IKPTL1=IKPTL1+1
+      ENDDO
+      IKPTL2=0
+      DO IKPT=1,IKPT2
+        IF(KMAP(IKPT).EQ.KMAP(IKPT2))IKPTL2=IKPTL2+1
+      ENDDO
+!
+      IF(TKGROUP1) THEN
+        CALL WAVES_SELECTWV(IKPTL1,1)
+        NB1=THIS%NB
+      END IF
+      IF(TKGROUP2) THEN
+        CALL WAVES_SELECTWV(IKPTL2,1)
+        NB2=THIS%NB
+      END IF
+      CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),NB2)
+      CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT1),KMAP(IKPT2),NB1)
       NBA=MIN(NB1,NB2)
       ALLOCATE(LAMBDA(NBA,NBA))
+!
+!     ====================================================================
+!     == COPY RLAM(0)                                                   ==
+!     ====================================================================
       DO ISPIN=1,NSPIN
-        CALL WAVES_SELECTWV(IKPT2,ISPIN)
-        IF(.NOT.ASSOCIATED(THIS%RLAM0)) RETURN
-        LAMBDA=THIS%RLAM0(1:NBA,1:NBA)
-        CALL WAVES_SELECTWV(IKPT2,ISPIN)
-        IF(.NOT.ASSOCIATED(THIS%RLAM0)) ALLOCATE(THIS%RLAM0(NB2,NB2))
-        THIS%RLAM0=(0.D0,0.D0)        
-        THIS%RLAM0(1:NBA,1:NBA)=LAMBDA
+!       -- CHECK IF A LAMBDA MATRIX IS PRESENT ----------
+        IF(THISTASK.EQ.KMAP(IKPT2)) THEN
+          CALL WAVES_SELECTWV(IKPTL2,ISPIN)
+          TCHK=(.NOT.ASSOCIATED(THIS%RLAM0))
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),TCHK)
+        CALL MPE$BROADCAST('K',1,TCHK)
+        IF(TCHK) RETURN
+!
+!       -- NOW COPY
+        IF(THISTASK.EQ.KMAP(IKPT2)) THEN
+          LAMBDA=THIS%RLAM0(1:NBA,1:NBA)
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),LAMBDA)
+        IF(THISTASK.EQ.KMAP(IKPT1)) THEN
+          CALL WAVES_SELECTWV(IKPTL1,ISPIN)
+          IF(.NOT.ASSOCIATED(THIS%RLAM0)) ALLOCATE(THIS%RLAM0(NB1,NB1))
+          THIS%RLAM0=(0.D0,0.D0)        
+          THIS%RLAM0(1:NBA,1:NBA)=LAMBDA
+        END IF
+        IF(TKGROUP1) THEN
+          CALL MPE$BROADCAST('K',1,THIS%RLAM0)
+        END IF
       ENDDO
+!
+!     ====================================================================
+!     == COPY RLAM(-)                                                   ==
+!     ====================================================================
       DO ISPIN=1,NSPIN
-        CALL WAVES_SELECTWV(IKPT2,ISPIN)
-        IF(.NOT.ASSOCIATED(THIS%RLAMM)) RETURN
-        LAMBDA=THIS%RLAMM(1:NBA,1:NBA)
-        CALL WAVES_SELECTWV(IKPT2,ISPIN)
-        IF(.NOT.ASSOCIATED(THIS%RLAMM))ALLOCATE(THIS%RLAMM(NB2,NB2))
-        THIS%RLAMM=(0.D0,0.D0)        
-        THIS%RLAMM(1:NBA,1:NBA)=LAMBDA
+!       -- CHECK IF A LAMBDA MATRIX IS PRESENT ----------
+        IF(THISTASK.EQ.KMAP(IKPT2)) THEN
+          CALL WAVES_SELECTWV(IKPTL2,ISPIN)
+          TCHK=(.NOT.ASSOCIATED(THIS%RLAMM))
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),TCHK)
+        CALL MPE$BROADCAST('K',1,TCHK)
+        IF(TCHK) RETURN
+!
+!       -- NOW COPY
+        IF(THISTASK.EQ.KMAP(IKPT2)) THEN
+          LAMBDA=THIS%RLAMM(1:NBA,1:NBA)
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),LAMBDA)
+        IF(THISTASK.EQ.KMAP(IKPT1)) THEN
+          CALL WAVES_SELECTWV(IKPTL1,ISPIN)
+          IF(.NOT.ASSOCIATED(THIS%RLAMM)) ALLOCATE(THIS%RLAMM(NB1,NB1))
+          THIS%RLAMM=(0.D0,0.D0)        
+          THIS%RLAMM(1:NBA,1:NBA)=LAMBDA
+        END IF
+        IF(TKGROUP1) THEN
+          CALL MPE$BROADCAST('K',1,THIS%RLAMM)
+        END IF
       ENDDO
+!
+!     ====================================================================
+!     == COPY RLAM(2-)                                                  ==
+!     ====================================================================
       DO ISPIN=1,NSPIN
-        CALL WAVES_SELECTWV(IKPT2,ISPIN)
-        IF(.NOT.ASSOCIATED(THIS%RLAM2M)) RETURN
-        LAMBDA=THIS%RLAM2M(1:NBA,1:NBA)
-        CALL WAVES_SELECTWV(IKPT2,ISPIN)
-        IF(.NOT.ASSOCIATED(THIS%RLAM2M)) ALLOCATE(THIS%RLAM2M(NB2,NB2))
-        THIS%RLAM2M=(0.D0,0.D0)        
-        THIS%RLAM2M(1:NBA,1:NBA)=LAMBDA
+!       -- CHECK IF A LAMBDA MATRIX IS PRESENT ----------
+        IF(THISTASK.EQ.KMAP(IKPT2)) THEN
+          CALL WAVES_SELECTWV(IKPTL2,ISPIN)
+          TCHK=(.NOT.ASSOCIATED(THIS%RLAM2M))
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),TCHK)
+        CALL MPE$BROADCAST('K',1,TCHK)
+        IF(TCHK) RETURN
+!
+!       -- NOW COPY
+        IF(THISTASK.EQ.KMAP(IKPT2)) THEN
+          LAMBDA=THIS%RLAM2M(1:NBA,1:NBA)
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),LAMBDA)
+        IF(THISTASK.EQ.KMAP(IKPT1)) THEN
+          CALL WAVES_SELECTWV(IKPTL1,ISPIN)
+          IF(.NOT.ASSOCIATED(THIS%RLAM2M)) ALLOCATE(THIS%RLAM2M(NB1,NB1))
+          THIS%RLAM2M=(0.D0,0.D0)        
+          THIS%RLAM2M(1:NBA,1:NBA)=LAMBDA
+        END IF
+        IF(TKGROUP1) THEN
+          CALL MPE$BROADCAST('K',1,THIS%RLAM2M)
+        END IF
       ENDDO
+!
+!     ====================================================================
+!     == COPY RLAM(3-)                                                  ==
+!     ====================================================================
       DO ISPIN=1,NSPIN
-        CALL WAVES_SELECTWV(IKPT2,ISPIN)
-        IF(.NOT.ASSOCIATED(THIS%RLAM3M)) RETURN
-        LAMBDA=THIS%RLAM3M(1:NBA,1:NBA)
-        CALL WAVES_SELECTWV(IKPT2,ISPIN)
-        IF(.NOT.ASSOCIATED(THIS%RLAM3M)) ALLOCATE(THIS%RLAM3M(NB2,NB2))
-        THIS%RLAM2M=(0.D0,0.D0)        
-        THIS%RLAM3M(1:NBA,1:NBA)=LAMBDA
+!       -- CHECK IF A LAMBDA MATRIX IS PRESENT ----------
+        IF(THISTASK.EQ.KMAP(IKPT2)) THEN
+          CALL WAVES_SELECTWV(IKPTL2,ISPIN)
+          TCHK=(.NOT.ASSOCIATED(THIS%RLAM3M))
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),TCHK)
+        CALL MPE$BROADCAST('K',1,TCHK)
+        IF(TCHK) RETURN
+!
+!       -- NOW COPY
+        IF(THISTASK.EQ.KMAP(IKPT2)) THEN
+          LAMBDA=THIS%RLAM3M(1:NBA,1:NBA)
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPT2),KMAP(IKPT1),LAMBDA)
+        IF(THISTASK.EQ.KMAP(IKPT1)) THEN
+          CALL WAVES_SELECTWV(IKPTL1,ISPIN)
+          IF(.NOT.ASSOCIATED(THIS%RLAM3M)) ALLOCATE(THIS%RLAM3M(NB1,NB1))
+          THIS%RLAM3M=(0.D0,0.D0)        
+          THIS%RLAM3M(1:NBA,1:NBA)=LAMBDA
+        END IF
+        IF(TKGROUP1) THEN
+          CALL MPE$BROADCAST('K',1,THIS%RLAM3M)
+        END IF
       ENDDO
       DEALLOCATE(LAMBDA)
       RETURN
-      END SUBROUTINE WAVES_COPYLAMBDA!
-!      .................................................................
-       SUBROUTINE WAVES_SPINOROVERLAP(NBH,NB,IKPT,QMAT)
-!      *****************************************************************
-!      **  CALCULATES Q_K,I,L,J=1/2*<PSI_I,K|PSI_J,L>                 **
-!      **  I AND J ARE BAND-INDICES                                   **
-!      **  K AND L ARE 1 OR 2 AND ARE THE SPINOR PART OF THE WAVEFUNCTION
-!      *****************************************************************
-       USE WAVES_MODULE
-       IMPLICIT NONE
-       INTEGER(4),INTENT(IN) :: NBH,NB,IKPT
-       COMPLEX(8),INTENT(OUT):: QMAT(2*NB*NSPIN,2*NB*NSPIN)
-       COMPLEX(8),ALLOCATABLE :: AUXMAT(:,:)
-       COMPLEX(8),ALLOCATABLE :: AUXMAT2(:,:)
-       COMPLEX(8),ALLOCATABLE :: OPROJ(:,:,:)
-       COMPLEX(8),ALLOCATABLE :: PSI0(:,:,:)
-       INTEGER(4)            :: NGL,NBD,I,J,NDIMHALF,ISPIN
-       IF (NDIM.EQ.1.AND.NSPIN.EQ.1) THEN
-          CALL ERROR$MSG('S^2 ONLY POSSIBLE FOR NOT SPIN RESTRICTED CALCULATION')
-          CALL ERROR$I4VAL('NDIM',NDIM)
-          CALL ERROR$I4VAL('NSPIN',NSPIN)
-          CALL ERROR$STOP('WAVES_SPINOROVERLAP')
-       END IF
-       IF(NDIM.EQ.2) THEN   !NON-COLLINEAR
-          CALL WAVES_SELECTWV(IKPT,1)
+      END SUBROUTINE WAVES_COPYLAMBDA
+!
+!     .................................................................
+      SUBROUTINE WAVES_SPINOROVERLAP(NBH,NB,IKPT,QMAT)
+!     *****************************************************************
+!     **  CALCULATES Q_K,I,L,J=1/2*<PSI_I,K|PSI_J,L>                 **
+!     **  I AND J ARE BAND-INDICES                                   **
+!     **  K AND L ARE 1 OR 2 AND ARE THE SPINOR PART OF THE WAVEFUNCTION
+!     *****************************************************************
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NBH,NB,IKPT
+      COMPLEX(8),INTENT(OUT):: QMAT(2*NB*NSPIN,2*NB*NSPIN)
+      COMPLEX(8),ALLOCATABLE :: AUXMAT(:,:)
+      COMPLEX(8),ALLOCATABLE :: AUXMAT2(:,:)
+      COMPLEX(8),ALLOCATABLE :: OPROJ(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: PSI0(:,:,:)
+      INTEGER(4)            :: NGL,NBD,I,J,NDIMHALF,ISPIN
+!     ====================================================================
+CALL ERROR$MSG('K-POINT PARALLELIZATION NOT YET IMPLEMENTED IN THIS ROUTINE!')
+CALL ERROR$STOP('WAVES_SPINOVERLAP')
+      IF(NDIM.EQ.1.AND.NSPIN.EQ.1) THEN
+        CALL ERROR$MSG('S^2 ONLY POSSIBLE FOR NOT SPIN RESTRICTED CALCULATION')
+        CALL ERROR$I4VAL('NDIM',NDIM)
+        CALL ERROR$I4VAL('NSPIN',NSPIN)
+        CALL ERROR$STOP('WAVES_SPINOROVERLAP')
+      END IF
+      IF(NDIM.EQ.2) THEN   !NON-COLLINEAR
+        CALL WAVES_SELECTWV(IKPT,1)
+        CALL PLANEWAVE$SELECT(GSET%ID)      
+        NGL=GSET%NGL   
+        NBD=2*NB
+        NDIMHALF=1
+        ALLOCATE(AUXMAT(NBD,NBD))
+        CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIMHALF,NBD,NBD,MAP%NPRO,THIS%PROJ,THIS%PROJ,AUXMAT)
+        CALL WAVES_OVERLAP(.TRUE.,NGL,NDIMHALF,NBD,NBD,THIS%PSI0,THIS%PSI0,QMAT)
+        DO J=1,NBD
+          DO I=1,NBD
+            QMAT(I,J)=(QMAT(I,J)+AUXMAT(I,J))*0.5D0
+          ENDDO
+        ENDDO
+        DEALLOCATE(AUXMAT)
+      ELSE  ! COLLINEAR SPIN POLARIZED
+        ALLOCATE(AUXMAT(NB*2,NB*2))
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)      
-          NGL=GSET%NGL   
+          NGL=GSET%NGL              
           NBD=2*NB
-          NDIMHALF=1
-          ALLOCATE(AUXMAT(NBD,NBD))
-          CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIMHALF,NBD,NBD,MAP%NPRO,THIS%PROJ,THIS%PROJ,AUXMAT)
-          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIMHALF,NBD,NBD,THIS%PSI0,THIS%PSI0,QMAT)
-          DO J=1,NBD
-             DO I=1,NBD
-                QMAT(I,J)=(QMAT(I,J)+AUXMAT(I,J))*0.5D0
-             ENDDO
-          ENDDO
-          DEALLOCATE(AUXMAT)
-       ELSE  ! COLLINEAR SPIN POLARIZED
-          ALLOCATE(AUXMAT(NB*2,NB*2))
-          DO ISPIN=1,NSPIN
-             CALL WAVES_SELECTWV(IKPT,ISPIN)
-             CALL PLANEWAVE$SELECT(GSET%ID)      
-             NGL=GSET%NGL              
-             NBD=2*NB
-             IF(ISPIN.EQ.1) ALLOCATE(OPROJ(1,NBH*2,MAP%NPRO))
-             IF(ISPIN.EQ.1) THEN
-                OPROJ(:,1:NBH,:)=THIS%PROJ
-             ELSE
-                OPROJ(:,NBH+1:2*NBH,:)=THIS%PROJ
-             END IF
-          END DO
-          CALL WAVES_1COVERLAP(.TRUE.,MAP,1,NBH*2,NB*2,MAP%NPRO,OPROJ,OPROJ,AUXMAT)
-          DEALLOCATE(OPROJ)
-          ALLOCATE(AUXMAT2(NB*2,NB*2))
-          DO ISPIN=1,NSPIN
-             CALL WAVES_SELECTWV(IKPT,ISPIN)
-             CALL PLANEWAVE$SELECT(GSET%ID)      
-             NGL=GSET%NGL
-             IF(ISPIN.EQ.1) ALLOCATE(PSI0(NGL,1,2*NBH))
-             IF(ISPIN.EQ.1) THEN
-                PSI0(:,:,1:NBH)=THIS%PSI0
-             ELSE
-                PSI0(:,:,NBH+1:2*NBH)=THIS%PSI0
-             END IF
-          END DO
-          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH*2,NB*2,PSI0,PSI0,AUXMAT2)
-          DEALLOCATE(PSI0)
+          IF(ISPIN.EQ.1) ALLOCATE(OPROJ(1,NBH*2,MAP%NPRO))
+          IF(ISPIN.EQ.1) THEN
+            OPROJ(:,1:NBH,:)=THIS%PROJ
+          ELSE
+            OPROJ(:,NBH+1:2*NBH,:)=THIS%PROJ
+          END IF
+        END DO
+        CALL WAVES_1COVERLAP(.TRUE.,MAP,1,NBH*2,NB*2,MAP%NPRO,OPROJ,OPROJ,AUXMAT)
+        DEALLOCATE(OPROJ)
+        ALLOCATE(AUXMAT2(NB*2,NB*2))
+        DO ISPIN=1,NSPIN
+           CALL WAVES_SELECTWV(IKPT,ISPIN)
+           CALL PLANEWAVE$SELECT(GSET%ID)      
+           NGL=GSET%NGL
+           IF(ISPIN.EQ.1) ALLOCATE(PSI0(NGL,1,2*NBH))
+           IF(ISPIN.EQ.1) THEN
+              PSI0(:,:,1:NBH)=THIS%PSI0
+           ELSE
+              PSI0(:,:,NBH+1:2*NBH)=THIS%PSI0
+           END IF
+        END DO
+        CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH*2,NB*2,PSI0,PSI0,AUXMAT2)
+        DEALLOCATE(PSI0)
 
-          QMAT=(0.D0,0.D0)
-          DO I=1,NB  ! UP UP
-             DO J=1,NB
-                QMAT(2*I-1,2*J-1)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
-             ENDDO
-          ENDDO
-          DO I=NB+1,2*NB  ! DOWN DOWN
-             DO J=NB+1,2*NB
-                QMAT(2*I,2*J)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
-             ENDDO
-          ENDDO
-          DO I=1,NB  ! UP DOWN
-             DO J=NB+1,2*NB
-                QMAT(2*I-1,2*J)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
-             ENDDO
-          ENDDO         
-          DO I=NB+1,2*NB  ! DOWN UP
-             DO J=1,NB
-                QMAT(2*I,2*J-1)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
-             ENDDO
-          ENDDO
-          DEALLOCATE(AUXMAT)
-          DEALLOCATE(AUXMAT2)
-       END IF
-       RETURN
-     END SUBROUTINE WAVES_SPINOROVERLAP
+        QMAT=(0.D0,0.D0)
+        DO I=1,NB  ! UP UP
+           DO J=1,NB
+              QMAT(2*I-1,2*J-1)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
+           ENDDO
+        ENDDO
+        DO I=NB+1,2*NB  ! DOWN DOWN
+           DO J=NB+1,2*NB
+              QMAT(2*I,2*J)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
+           ENDDO
+        ENDDO
+        DO I=1,NB  ! UP DOWN
+           DO J=NB+1,2*NB
+              QMAT(2*I-1,2*J)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
+           ENDDO
+        ENDDO         
+        DO I=NB+1,2*NB  ! DOWN UP
+           DO J=1,NB
+              QMAT(2*I,2*J-1)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
+           ENDDO
+        ENDDO
+        DEALLOCATE(AUXMAT)
+        DEALLOCATE(AUXMAT2)
+      END IF
+      RETURN
+      END SUBROUTINE WAVES_SPINOROVERLAP
 !
 !.....................................................................
-module wavesfixrho_module
-! this module is used to keep the density fixed
-  real(8), allocatable    :: qlm(:,:)
-  real(8), allocatable    :: rho(:,:)
-  real(8), allocatable    :: denmat(:,:,:,:)
-end module wavesfixrho_module
+MODULE WAVESFIXRHO_MODULE
+! THIS MODULE IS USED TO KEEP THE DENSITY FIXED
+  REAL(8), ALLOCATABLE    :: QLM(:,:)
+  REAL(8), ALLOCATABLE    :: RHO(:,:)
+  REAL(8), ALLOCATABLE    :: DENMAT(:,:,:,:)
+END MODULE WAVESFIXRHO_MODULE
 !
 !      .................................................................
-       subroutine waves_fixrhoget(nrl,ndimd,lmrxx,nat,qlm_,rho_,denmat_)
-       use wavesfixrho_module 
-       implicit none
-       integer(4) ,intent(in)  :: nrl,ndimd,lmrxx,nat
-       real(8)    ,intent(out) :: qlm_(lmrxx,nat),rho_(nrl,ndimd)
-       real(8)    ,intent(out) :: denmat_(lmrxx,lmrxx,ndimd,nat)
+       SUBROUTINE WAVES_FIXRHOGET(NRL,NDIMD,LMRXX,NAT,QLM_,RHO_,DENMAT_)
+       USE WAVESFIXRHO_MODULE 
+       IMPLICIT NONE
+       INTEGER(4) ,INTENT(IN)  :: NRL,NDIMD,LMRXX,NAT
+       REAL(8)    ,INTENT(OUT) :: QLM_(LMRXX,NAT),RHO_(NRL,NDIMD)
+       REAL(8)    ,INTENT(OUT) :: DENMAT_(LMRXX,LMRXX,NDIMD,NAT)
 !      ******************************************************************
-       if (.not.allocated(qlm)) then
-          allocate(qlm(lmrxx,nat))
-          allocate(rho(nrl,ndimd))
-          allocate(denmat(lmrxx,lmrxx,ndimd,nat))
-          call waves$fixrhoread()
-       end if
-       qlm_(:,:)=qlm(:,:)
-       rho_(:,:)=rho(:,:)
-       denmat_(:,:,:,:)=denmat(:,:,:,:)
-       end
+       IF (.NOT.ALLOCATED(QLM)) THEN
+          ALLOCATE(QLM(LMRXX,NAT))
+          ALLOCATE(RHO(NRL,NDIMD))
+          ALLOCATE(DENMAT(LMRXX,LMRXX,NDIMD,NAT))
+          CALL WAVES$FIXRHOREAD()
+       END IF
+       QLM_(:,:)=QLM(:,:)
+       RHO_(:,:)=RHO(:,:)
+       DENMAT_(:,:,:,:)=DENMAT(:,:,:,:)
+       END
 !
 !      .................................................................
-       subroutine waves_fixrhoset(nrl,ndimd,lmrxx,nat,qlm_,rho_,denmat_)
-       use wavesfixrho_module 
-       implicit none
-       integer(4) ,intent(in)  :: nrl,ndimd,lmrxx,nat
-       real(8)    ,intent(in)  :: qlm_(lmrxx,nat),rho_(nrl,ndimd)
-       real(8)    ,intent(in)  :: denmat_(lmrxx,lmrxx,ndimd,nat)
+       SUBROUTINE WAVES_FIXRHOSET(NRL,NDIMD,LMRXX,NAT,QLM_,RHO_,DENMAT_)
+       USE WAVESFIXRHO_MODULE 
+       IMPLICIT NONE
+       INTEGER(4) ,INTENT(IN)  :: NRL,NDIMD,LMRXX,NAT
+       REAL(8)    ,INTENT(IN)  :: QLM_(LMRXX,NAT),RHO_(NRL,NDIMD)
+       REAL(8)    ,INTENT(IN)  :: DENMAT_(LMRXX,LMRXX,NDIMD,NAT)
 !      ******************************************************************
-       if (.not.allocated(qlm)) then
-          allocate(qlm(lmrxx,nat))
-          allocate(rho(nrl,ndimd))
-          allocate(denmat(lmrxx,lmrxx,ndimd,nat))
-       end if
-       qlm(:,:)=qlm_(:,:)
-       rho(:,:)=rho_(:,:)
-       denmat(:,:,:,:)=denmat_(:,:,:,:)
-       end
+       IF (.NOT.ALLOCATED(QLM)) THEN
+          ALLOCATE(QLM(LMRXX,NAT))
+          ALLOCATE(RHO(NRL,NDIMD))
+          ALLOCATE(DENMAT(LMRXX,LMRXX,NDIMD,NAT))
+       END IF
+       QLM(:,:)=QLM_(:,:)
+       RHO(:,:)=RHO_(:,:)
+       DENMAT(:,:,:,:)=DENMAT_(:,:,:,:)
+       END
 !
 !      .................................................................
-       subroutine waves$fixrhoread()
-       use wavesfixrho_module
-       implicit none
-       integer(4)                 :: nfil
+       SUBROUTINE WAVES$FIXRHOREAD()
+       USE WAVESFIXRHO_MODULE
+       IMPLICIT NONE
+       INTEGER(4)                 :: NFIL
 !      ******************************************************************
-       CALL FILEHANDLER$SETFILE('FIXRHO',.FALSE.,'fixrho.bin')
+       CALL FILEHANDLER$SETFILE('FIXRHO',.FALSE.,'FIXRHO.BIN')
        CALL FILEHANDLER$SETSPECIFICATION('FIXRHO','FORM','UNFORMATTED')
        CALL FILEHANDLER$SETSPECIFICATION('FIXRHO','POSITION','REWIND')
        CALL FILEHANDLER$UNIT('FIXRHO',NFIL)
-       read(nfil)qlm(:,:)
-       read(nfil)rho(:,:)
-       read(nfil)denmat(:,:,:,:)
-       call filehandler$close('FIXRHO')
-       return
-       end
+       READ(NFIL)QLM(:,:)
+       READ(NFIL)RHO(:,:)
+       READ(NFIL)DENMAT(:,:,:,:)
+       CALL FILEHANDLER$CLOSE('FIXRHO')
+       RETURN
+       END
 !
 !      .................................................................
-       subroutine waves$fixrhowrite()
-       use wavesfixrho_module
-       implicit none
-       integer(4)                 :: nfil
+       SUBROUTINE WAVES$FIXRHOWRITE()
+       USE WAVESFIXRHO_MODULE
+       IMPLICIT NONE
+       INTEGER(4)                 :: NFIL
 !      ******************************************************************
-       CALL FILEHANDLER$SETFILE('FIXRHO',.FALSE.,'fixrho.bin')
+       CALL FILEHANDLER$SETFILE('FIXRHO',.FALSE.,'FIXRHO.BIN')
        CALL FILEHANDLER$SETSPECIFICATION('FIXRHO','FORM','UNFORMATTED')
        CALL FILEHANDLER$SETSPECIFICATION('FIXRHO','POSITION','REWIND')
        CALL FILEHANDLER$UNIT('FIXRHO',NFIL)
-       write(nfil)qlm(:,:)
-       write(nfil)rho(:,:)
-       write(nfil)denmat(:,:,:,:)
-       call filehandler$close('FIXRHO')
-       return
-       end
+       WRITE(NFIL)QLM(:,:)
+       WRITE(NFIL)RHO(:,:)
+       WRITE(NFIL)DENMAT(:,:,:,:)
+       CALL FILEHANDLER$CLOSE('FIXRHO')
+       RETURN
+       END
        
        
 
@@ -4247,7 +4625,7 @@ END MODULE TOTALSPIN_MODULE
        REAL(8)               :: IOCC(NB*NSPIN),SVAR
        INTEGER(4)            :: I,J,NTASKS,THISTASK,NBD
        
-       CALL MPE$QUERY(NTASKS,THISTASK)
+       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 
        DO I=1,NB
           IOCC(I)=OCC(I,IKPT,1)
@@ -4308,11 +4686,11 @@ END MODULE TOTALSPIN_MODULE
        PRINT*,'TOTALSPIN: PART DOWN UP  : ',SUM-SVAR
 
        IF (THISTASK.EQ.1) THEN
-          PRINT*,'SPIN: 2*<S_X>: ',2.D0*REAL(SPINX,kind=8),' HBAR'
-          PRINT*,'SPIN: 2*<S_Y>: ',2.D0*REAL(SPINY,kind=8),' HBAR'
-          PRINT*,'SPIN: 2*<S_Z>: ',2.D0*REAL(SPINZ,kind=8),' HBAR'
-          PRINT*,'TOTALSPIN: <S^2>: ',REAL(SUM,kind=8),' HBAR^2'
-          PRINT*,'SPIN QUATUM NUMBER S=',-0.5+SQRT(0.25+REAL(SUM,kind=8))
+          PRINT*,'SPIN: 2*<S_X>: ',2.D0*REAL(SPINX,KIND=8),' HBAR'
+          PRINT*,'SPIN: 2*<S_Y>: ',2.D0*REAL(SPINY,KIND=8),' HBAR'
+          PRINT*,'SPIN: 2*<S_Z>: ',2.D0*REAL(SPINZ,KIND=8),' HBAR'
+          PRINT*,'TOTALSPIN: <S^2>: ',REAL(SUM,KIND=8),' HBAR^2'
+          PRINT*,'SPIN QUATUM NUMBER S=',-0.5+SQRT(0.25+REAL(SUM,KIND=8))
           IF (IKPT.EQ.1) TOTSPIN=0.D0 ! SUM UP TOTAL SPIN OVER K-POINTS
           TOTSPIN(1)=TOTSPIN(1)+DBLE(SUM)
           TOTSPIN(2)=TOTSPIN(2)+DBLE(SPINX)
@@ -4351,34 +4729,34 @@ END MODULE TOTALSPIN_MODULE
     END SUBROUTINE WAVES$REPORTSPIN
 !
 !     ....................................................................
-      subroutine waves_comparepsi(id,ngl,ndim,nbh,psi1,psi2)
-      USE WAVES_MODULE, only : gset,delt
-      implicit none
-      character(*)    ,intent(in) :: id
+      SUBROUTINE WAVES_COMPAREPSI(ID,NGL,NDIM,NBH,PSI1,PSI2)
+      USE WAVES_MODULE, ONLY : GSET,DELT
+      IMPLICIT NONE
+      CHARACTER(*)    ,INTENT(IN) :: ID
       INTEGER(4)      ,INTENT(IN) :: NGL
       INTEGER(4)      ,INTENT(IN) :: NDIM
       INTEGER(4)      ,INTENT(IN) :: NBH
       COMPLEX(8)      ,INTENT(IN) :: PSI1(NGL,NDIM,NBH)
       COMPLEX(8)      ,INTENT(IN) :: PSI2(NGL,NDIM,NBH)
-      complex(8)                  :: csvar
-      integer(4)                  :: ig,idim,ib
-      real(8)                     :: sum,sumtot
-      real(8)                     :: rbas(3,3),gbas(3,3),cellvol
+      COMPLEX(8)                  :: CSVAR
+      INTEGER(4)                  :: IG,IDIM,IB
+      REAL(8)                     :: SUM,SUMTOT
+      REAL(8)                     :: RBAS(3,3),GBAS(3,3),CELLVOL
 !     *********************************************************************
       CALL CELL$GETR8A('T0',9,RBAS)
       CALL GBASS(RBAS,GBAS,CELLVOL)
-      sumtot=0.d0
-      do ib=1,nbh
-        sum=0.d0
-        do ig=1,ngl
-          do idim=1,ndim
-            csvar=psi1(ig,idim,ib)-psi2(ig,idim,ib)
-            sum=sum+GSET%MPSI(IG)*(real(csvar,kind=8)**2+aimag(csvar)**2)
-          enddo
-        enddo
-        sumtot=sumtot+sum
-        write(*,*)' kineticenergytest ',ib,sum*CELLVOL/DELT**2,id
-      enddo
-        write(*,*)' kineticenergytest total',sumtot*CELLVOL/DELT**2,id
-      return
-      end
+      SUMTOT=0.D0
+      DO IB=1,NBH
+        SUM=0.D0
+        DO IG=1,NGL
+          DO IDIM=1,NDIM
+            CSVAR=PSI1(IG,IDIM,IB)-PSI2(IG,IDIM,IB)
+            SUM=SUM+GSET%MPSI(IG)*(REAL(CSVAR,KIND=8)**2+AIMAG(CSVAR)**2)
+          ENDDO
+        ENDDO
+        SUMTOT=SUMTOT+SUM
+        WRITE(*,*)' KINETICENERGYTEST ',IB,SUM*CELLVOL/DELT**2,ID
+      ENDDO
+        WRITE(*,*)' KINETICENERGYTEST TOTAL',SUMTOT*CELLVOL/DELT**2,ID
+      RETURN
+      END
