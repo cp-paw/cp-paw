@@ -610,6 +610,12 @@ REAL(8),SAVE :: POTX(5)
       CALL CLASSICAL$SELECT('SHADOW')
       CALL CLASSICAL$GETR8A('R(0)',3*NATS,SPOS)
       CALL CLASSICAL$GETR8A('QEL',NATS,SCHARGE)
+!
+!     =========================================================================
+!     ==  for the atoms shared between Q,M and S, set positions and charges  ==
+!     ==  equal to Q-positions                                               ==
+!     ==  M-velocities are set to zero                                       ==
+!     =========================================================================
       DO IMAP=1,NMAP
         IATQ=MAP(IMAP)%QATOM
         IATM=MAP(IMAP)%MATOM
@@ -620,6 +626,11 @@ REAL(8),SAVE :: POTX(5)
         MCHARGE(IATM)=CHARGE(IATQ)
         SCHARGE(IATS)=CHARGE(IATQ)
       ENDDO      
+!
+!     =========================================================================
+!     ==  for the link-bonds, determine the position of the dummy atom       ==
+!     ==  and the linked environment atom in M from the Q-positions          ==
+!     =========================================================================
       DO ILINK=1,NLINK
         IATQJ=LINK(ILINK)%QJOINT
         IATMJ=LINK(ILINK)%MJOINT

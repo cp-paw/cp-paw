@@ -4673,6 +4673,12 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
          CALL LINKEDLIST$GET(LL_STRC,'R',1,MATOM(IATM)%R)
          MATOM(IATM)%R(:)=MATOM(IATM)%R(:)*UNIT
        ELSE
+          CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
+          IF(TCHK) THEN
+            CALL ERROR$MSG('R MUST NOT BE SPECIFIED')
+            CALL ERROR$MSG('ATOMIC POSITION IS TAKEN FROM QM ATOM')
+            CALL ERROR$STOP('STRCIN_SOLVENT')
+          END IF
          MATOM(IATM)%R(:)=QATOM(IATQ)%R
          SATOM(IATS)%R(:)=QATOM(IATQ)%R
        END IF
@@ -4691,6 +4697,12 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
             MATOM(IATM)%M=MATOM(IATM)%M
           END IF
         ELSE
+          CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
+          IF(TCHK) THEN
+            CALL ERROR$MSG('M MUST NOT BE SPECIFIED')
+            CALL ERROR$MSG('MASS IS TAKEN FROM QM ATOM')
+            CALL ERROR$STOP('STRCIN_SOLVENT')
+          END IF
           MATOM(IATM)%M=QATOM(IATQ)%M
           SATOM(IATS)%M=QATOM(IATQ)%M
         END IF
@@ -4717,6 +4729,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL LINKEDLIST$SELECT(LL_STRC,'LINK',ILINK)
 !
 !       == JOINT ATOM ==================================================
+!       == the joint atom is present in the qm and the MM system =======
         CALL LINKEDLIST$EXISTD(LL_STRC,'MMJOINT',1,TCHK)
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('VARIABLE !QM-MM!LINK:MMJOINT NOT FOUND')
@@ -4809,6 +4822,10 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !       
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
+      if(iats.ne.nats) then
+        call error$msg('consistency check iats failed')
+        call error$stop('strcin_solvent')
+      end if
 !
 !     ==================================================================
 !     ==================================================================
@@ -4951,6 +4968,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         TYPE(ATOM_TYPE),INTENT(IN) :: ATOM(NAT)
         TYPE(BOND_TYPE),INTENT(IN) :: BOND(NBOND)
         INTEGER(4)                 :: IAT,IBOND
+        character(32)              :: atomname(nat)
         REAL(8)                    :: R(3,NAT)
         REAL(8)                    :: MASS(NAT)
         REAL(8)                    :: CHARGE(NAT)
@@ -4967,6 +4985,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           MASS(IAT)  =ATOM(IAT)%M
           CHARGE(IAT)=ATOM(IAT)%Q
           FFTYPE(IAT)=ATOM(IAT)%FFTYPE
+          ATOMNAME(IAT)=ATOM(IAT)%NAME
         ENDDO
         CALL CLASSICAL$SETI4('NAT',NAT)
         CALL CLASSICAL$SETR8A('R(0)',3*NAT,R)
@@ -4974,6 +4993,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL CLASSICAL$SETR8A('MASS',NAT,MASS)
         CALL CLASSICAL$SETR8A('QEL',NAT,CHARGE)
         CALL CLASSICAL$SETCHA('TYPE',NAT,FFTYPE)
+        CALL CLASSICAL$SETCHA('ATOMNAME',NAT,ATOMNAME)
 !
 !       ================================================================
 !       ==  SEND BOND INFORMATION TO CLASSICAL OBJECT                 ==

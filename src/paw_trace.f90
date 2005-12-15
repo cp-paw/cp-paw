@@ -60,6 +60,8 @@ END MODULE TRACE_MODULE
       CHARACTER(*),INTENT(IN):: CURRENT_
       REAL(8)                :: MAXMEM
       REAL(8)                :: MBYTE=2.D0**20
+      CHARACTER(8)           :: DATE
+      CHARACTER(10)          :: TIME
 !     ******************************************************************
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST
@@ -70,7 +72,9 @@ END MODULE TRACE_MODULE
       END IF
       WRITE(*,FMT='("TRACE-PUSH(",I3,"): LEVEL=",I3," INTO ",A)') &
      &           THISTASK,LEVEL,CURRENT_
-        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5)')THISTASK,MAXMEM/MBYTE
+      CALL DATE_AND_TIME(DATE,TIME)
+      WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5,"TIME")') &
+     &             THISTASK,MAXMEM/MBYTE,DATE,TIME
       RETURN 
       END
 !
@@ -82,18 +86,23 @@ END MODULE TRACE_MODULE
       IMPLICIT NONE
       REAL(8)          :: MAXMEM
       REAL(8)          :: MBYTE=2.D0**20
+      CHARACTER(8)           :: DATE
+      CHARACTER(10)          :: TIME
 !     ******************************************************************
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST
       CALL USAGE$GET('MAXMEM',MAXMEM)
+      CALL DATE_AND_TIME(DATE,TIME)
       IF(LEVEL.GE.1.AND.LEVEL.LE.MAXLEVEL)THEN
         WRITE(*,FMT='("TRACE-POP (",I3,"): LEVEL=",I3," FROM ",A)') &
      &              THISTASK,LEVEL,HISTORY(LEVEL)
-        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5)')THISTASK,MAXMEM/MBYTE
+        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5,"TIME")') &
+     &                THISTASK,MAXMEM/MBYTE,DATE,TIME
         HISTORY(LEVEL)=' '
       ELSE                  
         WRITE(*,FMT='("TRACE-POP(",I3,"): LEVEL=",I3)')THISTASK,LEVEL
-        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5)')THISTASK,MAXMEM/MBYTE
+        WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5,"TIME")') &
+     &                  THISTASK,MAXMEM/MBYTE,DATE,TIME
       END IF
       LEVEL=LEVEL-1
       RETURN 

@@ -498,6 +498,7 @@ END MODULE CLASSICAL_MODULE
         END IF
         IF(.NOT.ASSOCIATED(MD%TYPE))ALLOCATE(MD%TYPE(MD%NAT))
         MD%TYPE=VAL_
+!
       ELSE IF(ID_.EQ.'ATOMNAME') THEN
         IF(MD%NAT.EQ.0) MD%NAT=LENG_
         IF(LENG_.NE.MD%NAT) THEN
@@ -1227,6 +1228,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           EKIN_=EKIN_+SVAR*(MD%RP(I,IAT)-MD%RM(I,IAT))**2
         ENDDO
       ENDDO
+print*,'velocity ',md%rp-md%rm
                                CALL TRACE$POP
       RETURN
       END
@@ -1589,9 +1591,35 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       CALL MPE$COMBINE('MONOMER','+',ETOT)
       CALL MPE$COMBINE('MONOMER','+',F)
       CALL MPE$COMBINE('MONOMER','+',V)
+!
+!     == this is an optional consistency check
+!     call CLASSICAL_testsumrules(nat,R,F)
+
                             CALL TRACE$POP
       RETURN
       END
+! 
+!     ..................................................................
+      SUBROUTINE CLASSICAL_testsumrules(nat,R,F)
+      implicit none
+      integer(4),intent(in) :: nat
+      real(8)   ,intent(in) :: r(3,nat)
+      real(8)   ,intent(in) :: f(3,nat)
+      real(8)               :: ftot(3)    ! gesamtkraft
+      real(8)               :: d(3)       ! drehmoment
+      integer(4)            :: iat
+!     ******************************************************************
+      ftot(:)=0.d0
+      d(:)=0.d0
+      do iat=1,nat
+        ftot(:)=ftot(:)+f(:,iat)
+        d(1)=d(1)+f(2,iat)*r(3,iat)-f(3,iat)*r(2,iat)
+        d(2)=d(2)+f(3,iat)*r(1,iat)-f(1,iat)*r(3,iat)
+        d(3)=d(3)+f(1,iat)*r(2,iat)-f(2,iat)*r(1,iat)
+      enddo
+      write(*,fmt='("sumrules ",6f15.7)')ftot,d
+      return
+      end
 ! 
 !     ..................................................................
       SUBROUTINE CLASSICAL_ECOULOMB(NAT,R,Q,E,F,V,RBAS,SIGMA &
@@ -1862,6 +1890,14 @@ REAL(8) :: G1,DGDX1
       UU=UX*UX+UY*UY+UZ*UZ
       VV=VX*VX+VY*VY+VZ*VZ
       UV=UX*VX+UY*VY+UZ*VZ
+      if(abs(uu*vv).lt.1.d-8) then
+        e=0.d0
+        f1(:)=0.d0
+        f2(:)=0.d0
+        f3(:)=0.d0
+        f4(:)=0.d0
+        return
+      end if
       ROOTUUVVINV=1.D0/DSQRT(UU*VV)
 !     == X IS THE COS(PHI) WHERE PHI IS THE ANGLE BETWEEN U AND V ======
       X=UV*ROOTUUVVINV
@@ -1941,11 +1977,20 @@ REAL(8) :: G1,DGDX1
       R41X=R4(1)-R1(1)
       R41Y=R4(2)-R1(2)
       R41Z=R4(3)-R1(3)
-      UX=R21Y*R31Z-R21Z*R31Y
+      UX=R21Y*R31Z-R21Z*R31Y    ! u=(r2-e1)x(r3-r1)
       UY=R21Z*R31X-R21X*R31Z
       UZ=R21X*R31Y-R21Y*R31X
-      UL=UX*UX+UY*UY+UZ*UZ
-      R41L=R41X*R41X+R41Y*R41Y+R41Z*R41Z
+      UL=UX*UX+UY*UY+UZ*UZ      ! ul=u**2
+      if(ul.lt.1.d-8) then
+!       == u=0 i.e. r21 and r31 are collinear
+        e=0.d0
+        f1(:)=0.d0
+        f2(:)=0.d0
+        f3(:)=0.d0
+        f4(:)=0.d0
+        return
+      end if
+      R41L=R41X*R41X+R41Y*R41Y+R41Z*R41Z  !r41l=(r4-r1)**2
       UR41=UX*R41X+UY*R41Y+UZ*R41Z
       FAC=1.D0/DSQRT(UL*R41L)
       X=UR41*FAC

@@ -2569,7 +2569,7 @@ PRINT*,'ITER ',ITER,DIGAM
         TKGROUP=THISTASK.EQ.KMAP(IKPTG)
         CALL MPE$BROADCAST('K',1,TKGROUP)
         IF(.NOT.(THISTASK.EQ.1.OR.TKGROUP)) CYCLE
-        if(tkgroup)IKPT=IKPT+1
+        IF(TKGROUP)IKPT=IKPT+1
         DO ISPIN=1,NSPIN
           IF(TKGROUP) THEN
             CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -2701,18 +2701,18 @@ PRINT*,'ITER ',ITER,DIGAM
 !     **                                                              **
 !     ******************************************************************
       USE WAVES_MODULE
-      USE mpe_MODULE
+      USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
-      INTEGER(4)            :: IKPT,ikptl
+      INTEGER(4)            :: IKPT,IKPTL
       INTEGER(4)            :: ISPIN
       INTEGER(4)            :: IB
       INTEGER(4)            :: ITEN
       REAL(8)               :: EV
       CHARACTER(64)         :: STRING
       INTEGER(4)            :: NB
-      real(8)      ,allocatable :: eig(:)
-      INTEGER(4)            :: Ntasks,thistask
+      REAL(8)      ,ALLOCATABLE :: EIG(:)
+      INTEGER(4)            :: NTASKS,THISTASK
 !     ******************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL CONSTANTS('EV',EV)
@@ -3296,7 +3296,7 @@ PRINT*,'ITER ',ITER,DIGAM
           NGL=GSET%NGL
           CALL PLANEWAVE$GETI4('NGG',NGG)
         END IF
-        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTg),1,NGG)
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NGG)
 !       
 !       ==============================================================
 !       ==  DEFINE MAPPING OF THE ARRAYS                            ==
@@ -3308,7 +3308,7 @@ PRINT*,'ITER ',ITER,DIGAM
           CALL PLANEWAVE$COLLECTR8(3,NGL,GVECL,NGG,GVECG)
           DEALLOCATE(GVECL)
         END IF
-        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTg),1,GVECG)
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,GVECG)
         IF(THISTASK.EQ.1) THEN
           ALLOCATE(MAPG(NGG))
           CALL WAVES_MAPG(NGG_,GBAS_,GVECG_,NGG,GVECG,MAPG)
@@ -3406,27 +3406,35 @@ END IF
 !         == SAME REPRESENTATION =========================================
           CALL TRACE$PASS('MARKE 9')
           IF(TKGROUP) THEN
-!           ===== first map random wave function into new file           
+!           ===== FIRST MAP RANDOM WAVE FUNCTION INTO NEW FILE           
             CALL PLANEWAVE$GETL4('TINV',TSUPER)
-            if(tsuper) then
-              allocate(psitmp(ngl,2))
-              do ispin=1,nspin
+            IF(TSUPER) THEN
+              ALLOCATE(PSITMP(NGL,2))
+              DO ISPIN=1,NSPIN
+                CALL WAVES_SELECTWV(IKPTL,ISPIN)
+                CALL PLANEWAVE$SELECT(GSET%ID)
                 DO IB=1,NBH
                   IB1=2*IB-1
                   IB2=2*IB
                   DO IDIM=1,NDIM
-                    PSITMP(:,1)=this%psi0(:,idim,ib)
-                    CALL PLANEWAVE$INVERTG(NGL,this%psi0(:,idim,ib),PSITMP(1,2))
-                    PSI(:,IDIM,IB1,ispin)= 0.5D0   *(PSITMP(:,1)+PSITMP(:,2))
-                    PSI(:,IDIM,IB2,ispin)=-0.5D0*CI*(PSITMP(:,1)-PSITMP(:,2))
+                    PSITMP(:,1)=THIS%PSI0(:,IDIM,IB)
+                    CALL PLANEWAVE$INVERTG(NGL,THIS%PSI0(:,IDIM,IB),PSITMP(:,2))
+                    PSI(:,IDIM,IB1,ISPIN)= 0.5D0   *(PSITMP(:,1)+PSITMP(:,2))
+                    PSI(:,IDIM,IB2,ISPIN)=-0.5D0*CI*(PSITMP(:,1)-PSITMP(:,2))
                   END DO
                 ENDDO
-              enddo
-              deallocate(psitmp)
-            else
-              psi(:,:,:,ispin)=this%psi0(:,:,:)
-            end if
-!           ===============================================================
+              ENDDO
+              DEALLOCATE(PSITMP)
+            ELSE
+              DO ISPIN=1,NSPIN
+                CALL WAVES_SELECTWV(IKPTL,ISPIN)
+                CALL PLANEWAVE$SELECT(GSET%ID)
+                PSI(:,:,:,ISPIN)=THIS%PSI0(:,:,:)
+              ENDDO
+            END IF
+!           ===================================================================
+!           ==
+!           ===================================================================
             IF(NDIM.EQ.NDIM_.AND.NSPIN.EQ.NSPIN_) THEN
               DO IB=1,NB
                 IF(IB.GT.NB_) EXIT
@@ -3561,12 +3569,12 @@ END IF
 !     ==  COMPLETE K-POINTS                                           ==
 !     ==================================================================
       CALL MPE$BROADCAST('MONOMER',1,TREAD)
-      CALL MPE$BROADCAST('MONOMER',1,kREAD)
+      CALL MPE$BROADCAST('MONOMER',1,KREAD)
       CALL TRACE$PASS('MARKE 14')
       DO IKPT=1,NKPT
         IF(TREAD(IKPT)) CYCLE
         SVAR=1.D+10
-        ikpt0=0
+        IKPT0=0
         DO IKPT_=1,NKPT_
           IF(.NOT.TREAD(IKPT_)) CYCLE
           DK(:)=XK(:,IKPT)-KREAD(:,IKPT_)
@@ -3576,10 +3584,10 @@ END IF
             SVAR=SVAR1
           END IF
         ENDDO       
-        if(ikpt0.ne.0) then
+        IF(IKPT0.NE.0) THEN
           CALL WAVES_COPYPSI(IKPT0,IKPT)
           CALL WAVES_COPYLAMBDA(IKPT0,IKPT)
-        end if
+        END IF
       ENDDO 
 !
 !     ==================================================================
@@ -3717,7 +3725,7 @@ END IF
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES_READLAMBDA(NFIL,IKPTg,TSKIP)
+      SUBROUTINE WAVES_READLAMBDA(NFIL,IKPTG,TSKIP)
 !     ******************************************************************
 !     **                                                              **
 !     **  WRITE WAVE FUNCTIONS TO RESTART FILE                        **
@@ -3727,17 +3735,17 @@ END IF
       USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NFIL
-      INTEGER(4)   ,INTENT(IN) :: IKPTg
+      INTEGER(4)   ,INTENT(IN) :: IKPTG
       LOGICAL(4)   ,INTENT(IN) :: TSKIP
       INTEGER(4)               :: NTASKS,THISTASK
-      INTEGER(4)               :: ISPIN,I,IB1,IB2,ikptl
+      INTEGER(4)               :: ISPIN,I,IB1,IB2,IKPTL
       INTEGER(4)               :: NB_,NDIM_,NSPIN_
       INTEGER(4)               :: NB,NBA
       INTEGER(4)               :: NLAMBDA
       CHARACTER(8)             :: KEY
       COMPLEX(8)   ,ALLOCATABLE:: LAMBDA(:,:,:)
       COMPLEX(8)   ,ALLOCATABLE:: LAMBDA2(:,:,:)
-      logical(4)               :: tkgroup
+      LOGICAL(4)               :: TKGROUP
 !     ******************************************************************
                            CALL TRACE$PUSH('WAVES_READLAMBDA')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)

@@ -579,6 +579,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       IMPLICIT NONE
       REAL(8),INTENT(OUT) :: TEMPERATURE_
       REAL(8)             :: EKIN
+      REAL(8)             :: DEKIN
       INTEGER(4)          :: NFREE
 !     ******************************************************************
       CALL CONSTRAINTS$NFREE(NAT,NFREE)
@@ -586,7 +587,8 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
         TEMPERATURE_=0.D0
       ELSE
         CALL ATOMS_EKIN(NAT,DELT,RMASS,RM,RP,EKIN)
-        TEMPERATURE_=EKIN/(0.5D0*DBLE(NFREE))
+        CALL QMMM$DEKIN(DELT,DEKIN)
+        TEMPERATURE_=(EKIN+DEKIN)/(0.5D0*DBLE(NFREE))
       END IF
       RETURN
       END
