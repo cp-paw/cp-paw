@@ -346,7 +346,8 @@ WRITE(*,"('CG-MIXER: POT   :',3F10.7)") V(1:3,1)
             CALL TIMING$CLOCKON('CG-M1-ORTHOGONALIZE')
             DO IB1 = 1, IB-1
               IF(TSAVEMEM) THEN
-                CALL CG_INTERNAL_ORTHOGONALIZE(NGL,EIGVEC(:,IB),EIGVEC(:,IB1))
+!in the following line the argument opsi was missing in the original version
+                CALL CG_INTERNAL_ORTHOGONALIZE(NGL,EIGVEC(:,IB),EIGVEC(:,IB1),opsi)
               ELSE
                 CALL CG_INTERNAL_ORTHO_PSI(NGL,EIGVEC(:,IB),&
                      EIGVEC(:,IB1),IB1)

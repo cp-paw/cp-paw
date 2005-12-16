@@ -498,7 +498,6 @@ END MODULE CLASSICAL_MODULE
         END IF
         IF(.NOT.ASSOCIATED(MD%TYPE))ALLOCATE(MD%TYPE(MD%NAT))
         MD%TYPE=VAL_
-!
       ELSE IF(ID_.EQ.'ATOMNAME') THEN
         IF(MD%NAT.EQ.0) MD%NAT=LENG_
         IF(LENG_.NE.MD%NAT) THEN
@@ -1176,6 +1175,8 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==  PROPAGATE ATOMS WITHOUT CONSTRAINTS                         ==
 !     ==================================================================
       DO IAT=1,MD%NAT
+!if (IAT.EQ.1) print*,"FLAG: FORCE1 ",IAT,MD%FORCE(:,IAT)
+
         SVAR1=2.D0/(1.D0+ANNE)
         SVAR2=1.D0-SVAR1
         SVAR3=DELT**2/MD%RMASS(IAT)/(1.D0+ANNE)
@@ -1228,7 +1229,6 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           EKIN_=EKIN_+SVAR*(MD%RP(I,IAT)-MD%RM(I,IAT))**2
         ENDDO
       ENDDO
-print*,'velocity ',md%rp-md%rm
                                CALL TRACE$POP
       RETURN
       END
@@ -2313,7 +2313,7 @@ REAL(8) :: G1,DGDX1
             IF(.NOT.TCHK) CYCLE
 !
             NINVERSION=NINVERSION+1
-     PRINT*,'NINVERSION',NINVERSION
+!     PRINT*,'NINVERSION',NINVERSION
 
             INDEX5(1,NINVERSION)=IAT
             INDEX5(2,NINVERSION)=IAT2

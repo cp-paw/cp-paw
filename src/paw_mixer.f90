@@ -34,7 +34,7 @@ END MODULE MIXPULAY_MODULE
       REAL(8)    ,INTENT(OUT)   :: CONVPSI
       REAL(8)                   :: CONV=1.D-8
       REAL(8)                   :: G=0.5D0 !MIXING FACTOR
-      REAL(8)                   :: SVAR
+      REAL(8)                   :: SVAR,c(1,1)
       REAL(8)                   :: R22,R12,R11
       INTEGER(4)                :: IH1,IH2,NBACK
       INTEGER(4)                :: RHOX
@@ -80,7 +80,8 @@ END MODULE MIXPULAY_MODULE
       PRINT*,' -------------- MIXER ITER: ',IITER,' ----------'
       CALL LIB$SCALARPRODUCTR8(.TRUE.,RHODIM,1,&
            RHO(1:RHODIM)-RHOOLD(1:RHODIM,1),1,&
-           RHO(1:RHODIM)-RHOOLD(1:RHODIM,1),SVAR)
+           RHO(1:RHODIM)-RHOOLD(1:RHODIM,1),c)
+      svar=c(1,1)
       !SVAR=MAXVAL(ABS(RHO(1:RHODIM)-RHOOLD(1:RHODIM,1)))
       CALL MPE$COMBINE('NONE','+',SVAR)
 WRITE(*,"('CG-MIXER: RHO   :',3F10.7)") RHO(1:3)

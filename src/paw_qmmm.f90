@@ -214,7 +214,7 @@ END MODULE QMMM_MODULE
       ELSE 
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('QMMM$gETI4')
+        CALL ERROR$STOP('QMMM$GETI4')
       END IF
       RETURN
       END
@@ -612,9 +612,9 @@ REAL(8),SAVE :: POTX(5)
       CALL CLASSICAL$GETR8A('QEL',NATS,SCHARGE)
 !
 !     =========================================================================
-!     ==  for the atoms shared between Q,M and S, set positions and charges  ==
-!     ==  equal to Q-positions                                               ==
-!     ==  M-velocities are set to zero                                       ==
+!     ==  FOR THE ATOMS SHARED BETWEEN Q,M AND S, SET POSITIONS AND CHARGES  ==
+!     ==  EQUAL TO Q-POSITIONS                                               ==
+!     ==  M-VELOCITIES ARE SET TO ZERO                                       ==
 !     =========================================================================
       DO IMAP=1,NMAP
         IATQ=MAP(IMAP)%QATOM
@@ -628,8 +628,8 @@ REAL(8),SAVE :: POTX(5)
       ENDDO      
 !
 !     =========================================================================
-!     ==  for the link-bonds, determine the position of the dummy atom       ==
-!     ==  and the linked environment atom in M from the Q-positions          ==
+!     ==  FOR THE LINK-BONDS, DETERMINE THE POSITION OF THE DUMMY ATOM       ==
+!     ==  AND THE LINKED ENVIRONMENT ATOM IN M FROM THE Q-POSITIONS          ==
 !     =========================================================================
       DO ILINK=1,NLINK
         IATQJ=LINK(ILINK)%QJOINT

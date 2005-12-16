@@ -28,6 +28,7 @@ INTEGER(4)                  :: NMODES
 INTEGER(4)                  :: NSTEP
 INTEGER(4)                  :: NAT,QNAT
 REAL(8)                     :: RBAS(3,3)
+LOGICAL(4)                  :: TQMMM=.FALSE.
 CONTAINS
 !     .............................................................
       SUBROUTINE TRAJECTORY_NEWMODES
@@ -49,12 +50,21 @@ CONTAINS
       INTEGER(4)  ,INTENT(OUT):: IAT
       INTEGER(4)              :: I
 !     ******************************************************************
-      DO I=1,NAT
-        IF(NAME.EQ.ATOM(I)) THEN
-          IAT=I
-          RETURN
-        END IF
-      ENDDO
+      IF(.NOT.TQMMM) THEN
+         DO I=1,NAT
+            IF(NAME.EQ.ATOM(I)) THEN
+               IAT=I
+               RETURN
+            END IF
+         ENDDO
+      ELSE
+         DO I=1,QNAT
+            IF(NAME.EQ.ATOM(I)) THEN
+               IAT=I
+               RETURN
+            END IF
+         ENDDO
+      END IF
       CALL ERROR$MSG('ATOM NAME NOT RECOGNIZED')
       CALL ERROR$CHVAL('NAME ',NAME)
       CALL ERROR$STOP('TRAJECTORY_ATOMLOOKUP')
@@ -92,7 +102,7 @@ END MODULE TRAJECTORY_MODULE
       INTEGER(4)     :: I,NLISTS
       INTEGER(4)     :: NFIL
       INTEGER(4)     :: NFILO
-      LOGICAL(4)     :: TCHK,TQMMM
+      LOGICAL(4)     :: TCHK
       CHARACTER(32)  :: ID
       REAL(8)        :: T1,T2,DT
       REAL(8)        :: SECOND
@@ -149,7 +159,6 @@ END MODULE TRAJECTORY_MODULE
       CALL FILEHANDLER$SETSPECIFICATION('STRC','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','FORM','FORMATTED')
 !SASCHA QM-MM
-      TQMMM=.FALSE.
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
 
@@ -170,7 +179,6 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'FILES')
-
 
 !
 !     ==================================================================
@@ -231,12 +239,12 @@ END MODULE TRAJECTORY_MODULE
 !     == GET ATOMIC NUMBER                                            ==
 !     ==================================================================
       IF(.NOT.TQMMM) THEN
-         CALL READ_STRC(LL_STRC,.FALSE.)
+         CALL READ_STRC(LL_STRC)
       END IF
 
 !SASCHA QMMM
       IF(TQMMM) THEN
-         CALL READ_STRC(LL_STRC,.TRUE.)
+         CALL READ_STRC(LL_STRC)
       END IF
 
 
@@ -276,8 +284,9 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$SELECT(LL_CNTL,'..')
 !
 
+CALL FILEHANDLER$FILENAME('TRA',str)
       CALL FILEHANDLER$UNIT('TRA',NFIL)      
-      CALL READTRA(NFIL,T1,T2,DT,TQMMM)
+      CALL READTRA(NFIL,T1,T2,DT)
 !
 !     ==================================================================
 !     ==                                                              ==
@@ -397,8 +406,8 @@ END MODULE TRAJECTORY_MODULE
       INTEGER(4)               :: NFIL
       INTEGER(4)               :: NFILO
       CHARACTER(256)           :: FILE
-      LOGICAL(4)               :: TSELECTC(NAT)
-      LOGICAL(4)               :: TSELECTP(NAT)
+      LOGICAL(4)   ,ALLOCATABLE:: TSELECTC(:)
+      LOGICAL(4)   ,ALLOCATABLE:: TSELECTP(:)
       REAL(8)                  :: PICO,SECOND
       REAL(8)                  :: TIME
       REAL(8)                  :: T1,T2,T3
@@ -424,8 +433,19 @@ END MODULE TRAJECTORY_MODULE
       INTEGER(4)   ,PARAMETER  :: NX=1000
       REAL(8)      ,ALLOCATABLE:: P(:)
       INTEGER(4)               :: TO,FROM
+      INTEGER(4)               :: NATOM
 !     ******************************************************************
                                CALL TRACE$PUSH('CORRELATION')
+      IF(TQMMM) THEN
+!         ALLOCATE(TSELECT(QNAT))
+         ALLOCATE(TSELECTP(QNAT))
+         NATOM=QNAT
+      ELSE
+!         ALLOCATE(TSELECT(NAT))
+         ALLOCATE(TSELECTP(NAT))
+         NATOM=NAT
+      END IF
+
       CALL CONSTANTS$GET('PICO',PICO)
       CALL CONSTANTS$GET('SECOND',SECOND)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -470,14 +490,14 @@ END MODULE TRAJECTORY_MODULE
 !     ================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'CENTER',1,TCHK)
       IF(TCHK) THEN
-        CALL SELECTION(LL_CNTL,NAT,ATOM,TSELECTC)
+        CALL SELECTION(LL_CNTL,NATOM,ATOM,TSELECTC)
       ELSE
         TSELECTC(:)=.TRUE.
       END IF
 !     CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'PARTNER',1,TCHK)
       IF(TCHK) THEN
-        CALL SELECTION(LL_CNTL,NAT,ATOM,TSELECTP)
+        CALL SELECTION(LL_CNTL,NATOM,ATOM,TSELECTP)
       ELSE
         TSELECTP(:)=.TRUE.
       END IF
@@ -523,7 +543,7 @@ END MODULE TRAJECTORY_MODULE
 !     == DEFINE POSITIONS TO BE CONSIDERED                          ==
 !     ================================================================
       NATM=0
-      DO IAT=1,NAT
+      DO IAT=1,NATOM
         IF(.NOT.(TSELECTC(IAT).OR.TSELECTP(IAT))) CYCLE
         NATM=NATM+1
       ENDDO
@@ -532,7 +552,7 @@ END MODULE TRAJECTORY_MODULE
       ALLOCATE(TSELECTCM(NATM))
       ALLOCATE(TSELECTPM(NATM))
       IATM=0
-      DO IAT=1,NAT
+      DO IAT=1,NATOM
         IF(.NOT.(TSELECTC(IAT).OR.TSELECTP(IAT))) CYCLE
         IATM=IATM+1
         TSELECTCM(IATM)=TSELECTC(IAT)
@@ -552,7 +572,7 @@ END MODULE TRAJECTORY_MODULE
       INNMAX=0
       DO ISTEP=1,NSTEP
         IATM=0
-        DO IAT=1,NAT
+        DO IAT=1,NATOM
           IF(.NOT.(TSELECTC(IAT).OR.TSELECTP(IAT))) CYCLE
           IATM=IATM+1
           POSM(:,IATM)=TRA%R(:,IAT,ISTEP)
@@ -675,15 +695,22 @@ END MODULE TRAJECTORY_MODULE
       INTEGER(4)               :: NFIL
       INTEGER(4)               :: NFILO
       CHARACTER(256)           :: FILE
-      LOGICAL(4)               :: TSELECT(NAT)
+      LOGICAL(4)   ,ALLOCATABLE:: TSELECT(:)
       REAL(8)                  :: PICO,SECOND
       REAL(8)                  :: TIME
-      INTEGER(4)               :: NATM
+      INTEGER(4)               :: NATM,NATOM
       CHARACTER(32),ALLOCATABLE:: ATOMM(:)
       REAL(8)      ,ALLOCATABLE:: POSM(:,:)
       REAL(8)      ,ALLOCATABLE:: QM(:)
 !     ******************************************************************
                                CALL TRACE$PUSH('SNAPSHOT')
+      IF(TQMMM) THEN
+         ALLOCATE(TSELECT(QNAT))
+         NATOM=QNAT
+      ELSE
+         ALLOCATE(TSELECT(NAT))
+         NATOM=NAT
+      END IF
       CALL CONSTANTS$GET('PICO',PICO)
       CALL CONSTANTS$GET('SECOND',SECOND)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -766,16 +793,16 @@ END MODULE TRAJECTORY_MODULE
 !       ==============================================================
 !       ==  SELECT ATOMS                                            ==
 !       ==============================================================
-        CALL SELECTION(LL_CNTL,NAT,ATOM,TSELECT)
+        CALL SELECTION(LL_CNTL,NATOM,ATOM,TSELECT)
         NATM=0
-        DO IAT=1,NAT
+        DO IAT=1,NATOM
           IF(TSELECT(IAT)) NATM=NATM+1
         ENDDO
         ALLOCATE(ATOMM(NATM))
         ALLOCATE(POSM(3,NATM))
         ALLOCATE(QM(NATM))
         IATM=0
-        DO IAT=1,NAT
+        DO IAT=1,NATOM
           IF(.NOT.TSELECT(IAT)) CYCLE
           IATM=IATM+1
           ATOMM(IATM)=ATOM(IAT)
@@ -833,13 +860,13 @@ END MODULE TRAJECTORY_MODULE
       TYPE(LL_TYPE)            :: LL_CNTL
       INTEGER(4)               :: NPLOT
       LOGICAL(4)               :: TCHK
-      INTEGER(4)               :: IPLOT,IAT,ISTEP
+      INTEGER(4)               :: IPLOT,IAT,ISTEP,NATOM
       INTEGER(4)               :: NFIL
       INTEGER(4)               :: NFILO
       CHARACTER(256)           :: FILE
       REAL(8)                  :: DR(3)
       REAL(8)                  :: DIS
-      LOGICAL(4)               :: TSELECT(NAT)
+      LOGICAL(4)   ,ALLOCATABLE:: TSELECT(:)
       REAL(8)                  :: PICO,SECOND,ANGSTROM
       INTEGER(4)               :: N,I
       CHARACTER(16),ALLOCATABLE:: ATOMNAMES(:)
@@ -847,6 +874,13 @@ END MODULE TRAJECTORY_MODULE
       REAL(8)                  :: U  ! ATOMIC MASS UNIT: C12/12
 !     ******************************************************************
                                CALL TRACE$PUSH('SOFT')
+      IF(TQMMM) THEN
+         NATOM=QNAT
+         ALLOCATE(TSELECT(QNAT))
+      ELSE
+         NATOM=NAT
+         ALLOCATE(TSELECT(NAT))
+      END IF
       CALL CONSTANTS$GET('PICO',PICO)
       CALL CONSTANTS$GET('SECOND',SECOND)
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
@@ -891,7 +925,7 @@ END MODULE TRAJECTORY_MODULE
 !     ================================================================
 !     ==  SELECT ATOMS                                              ==
 !     ================================================================
-      CALL SELECTION(LL_CNTL,NAT,ATOM,TSELECT)
+      CALL SELECTION(LL_CNTL,NATOM,ATOM,TSELECT)
 !     
 !     ================================================================
 !     ==  SOFT                                                      ==
@@ -902,7 +936,7 @@ END MODULE TRAJECTORY_MODULE
       WRITE(NFIL,FMT='(E20.5,10F10.5)')TRA%T(1)/(PICO*SECOND),S/(ANGSTROM*SQRT(U))
       DO ISTEP=2,NSTEP
         DIS=0.D0
-        DO IAT=1,NAT
+        DO IAT=1,NATOM
           IF(.NOT.TSELECT(IAT)) CYCLE
           DR(:)=TRA%R(:,IAT,ISTEP)-TRA%R(:,IAT,ISTEP-1)
           DIS=DIS+SQRT(MASS(IAT)*DOT_PRODUCT(DR,DR))
@@ -928,19 +962,26 @@ END MODULE TRAJECTORY_MODULE
       TYPE(LL_TYPE)            :: LL_CNTL
       INTEGER(4)               :: NPLOT
       LOGICAL(4)               :: TCHK
-      INTEGER(4)               :: IPLOT,IAT,ISTEP
+      INTEGER(4)               :: IPLOT,IAT,ISTEP,NATOM
       INTEGER(4)               :: NFIL
       INTEGER(4)               :: NFILO
       CHARACTER(256)           :: FILE
       REAL(8)                  :: DR(3)
       REAL(8)                  :: DIS
-      LOGICAL(4)               :: TSELECT(NAT)
+      LOGICAL(4)   ,ALLOCATABLE:: TSELECT(:)
       REAL(8)                  :: PICO,SECOND,ANGSTROM
       INTEGER(4)               :: N,I
       CHARACTER(16),ALLOCATABLE:: ATOMNAMES(:)
       CHARACTER(32)            :: FILEID
 !     ******************************************************************
                                CALL TRACE$PUSH('SPAGHETTI')
+      IF(TQMMM) THEN
+         NATOM=QNAT
+         ALLOCATE(TSELECT(QNAT))
+      ELSE
+         NATOM=NAT
+         ALLOCATE(TSELECT(NAT))
+      END IF
       CALL CONSTANTS$GET('PICO',PICO)
       CALL CONSTANTS$GET('SECOND',SECOND)
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
@@ -983,14 +1024,14 @@ END MODULE TRAJECTORY_MODULE
 !       ================================================================
 !       ==  SELECT ATOMS                                              ==
 !       ================================================================
-        CALL SELECTION(LL_CNTL,NAT,ATOM,TSELECT)
+        CALL SELECTION(LL_CNTL,NATOM,ATOM,TSELECT)
 !
 !       ================================================================
 !       ==  SPAGHETTI                                                  ==
 !       ================================================================
         CALL FILEHANDLER$UNIT(FILEID,NFIL)
         REWIND(NFIL)
-        DO IAT=1,NAT
+        DO IAT=1,NATOM
           IF(.NOT.TSELECT(IAT)) CYCLE
           WRITE(NFIL,FMT='(E20.5,10F10.5)') &
      &         TRA%T(1)/(PICO*SECOND),0.D0
@@ -1034,14 +1075,22 @@ END MODULE TRAJECTORY_MODULE
       REAL(8)                  :: DELTAT
       LOGICAL(4)               :: TFILE   ! FILE SHALL BE WRITTEN OR NOT
       REAL(8)                  :: PICO,SECOND,ANGSTROM,KELVIN
-      LOGICAL(4)               :: TSELECT(NAT)
+      LOGICAL(4)   ,ALLOCATABLE:: TSELECT(:)
       INTEGER(4)               :: N,I
       CHARACTER(16),ALLOCATABLE:: ATOMNAMES(:)
       INTEGER(4)   ,PARAMETER  :: CHOICE=2
       REAL(8)                  :: SUM
       REAL(8)                  :: TRTRD,ALPHARTRD,TAVRTRD
+      INTEGER(4)               :: NATOM
 !     ******************************************************************
                                CALL TRACE$PUSH('TEMPERATURE')
+      IF(TQMMM) THEN
+         NATOM=QNAT
+         ALLOCATE(TSELECT(QNAT))
+      ELSE
+         NATOM = NAT
+         ALLOCATE(TSELECT(NAT))
+      END IF
       LL_CNTL=LL_CNTL_
 !
       CALL CONSTANTS$GET('PICO',PICO)
@@ -1054,7 +1103,7 @@ END MODULE TRAJECTORY_MODULE
 !     ==  TEMPERATURE                                                  ==
 !     ================================================================
       CALL REPORT$TITLE(NFILO,'TEMPERATURE OF INDIVIDUAL ATOMS')
-      DO IAT=1,NAT
+      DO IAT=1,NATOM
         TAV=0.D0
         T2AV=0.D0
         DO ISTEP=2,NSTEP-1
@@ -1121,7 +1170,7 @@ END MODULE TRAJECTORY_MODULE
 !       ================================================================
 !       ==  SELECT ATOMS                                              ==
 !       ================================================================
-        CALL SELECTION(LL_CNTL,NAT,ATOM,TSELECT)
+        CALL SELECTION(LL_CNTL,NATOM,ATOM,TSELECT)
 !
 !       ================================================================
 !       ==  TEMPERATURE                                               ==
@@ -1130,7 +1179,7 @@ END MODULE TRAJECTORY_MODULE
         TAVRTRD=0.D0
         REWIND(NFIL)
         IF(CHOICE.EQ.1) THEN
-          DO IAT=1,NAT
+          DO IAT=1,NATOM
             IF(.NOT.TSELECT(IAT)) CYCLE
             WRITE(NFIL,*)TRA%T(1)/(PICO*SECOND),0.D0
             DO ISTEP=2,NSTEP-1
@@ -1364,7 +1413,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       END
 !
 !     ..................................................................
-      SUBROUTINE READTRA(NFIL,T1,T2,DT,TQMMM_)
+      SUBROUTINE READTRA(NFIL,T1,T2,DT)
 !     ******************************************************************
 !     **  READ TRAJECTORY FILE *****************************************
 !     ******************************************************************
@@ -1376,8 +1425,6 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       REAL(8)   ,INTENT(IN)  :: DT
       REAL(8)                :: TLAST
       INTEGER(4),INTENT(IN)  :: NFIL
-      LOGICAL(4),INTENT(IN)  :: TQMMM_
-      LOGICAL(4)             :: TQMMM
       INTEGER(4)             :: LENG
       INTEGER(4)             :: ISTART,IREC
       INTEGER(4)             :: I,J
@@ -1387,7 +1434,6 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       REAL(8)                :: SECOND
       REAL(8)                :: FIRSTONFILE,LASTONFILE
 !     ******************************************************************
-      TQMMM=TQMMM_
 
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL CONSTANTS$GET('SECOND',SECOND)
@@ -1416,7 +1462,6 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
             CALL ERROR$STOP('READTRA')
          END IF
       END IF
-
 
 !
 !     ==================================================================
@@ -1549,7 +1594,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       CHARACTER(32)             :: FORMAT
       CHARACTER(2) ,ALLOCATABLE :: EL(:)
       CHARACTER(265)            :: FILE
-      LOGICAL(4)                :: TSELECT(NAT)
+      LOGICAL(4)   ,ALLOCATABLE :: TSELECT(:)
       INTEGER(4)                :: NAT0    ! #(SELECTED ATOMS)
       REAL(8)      ,ALLOCATABLE :: R0(:,:) ! POSITIONS OF SELECTED ATOMS
       INTEGER(4)   ,ALLOCATABLE :: IZ0(:)  ! ATOMIC NUMBER OF SELECTED ATOMS
@@ -1558,22 +1603,28 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       INTEGER(4)                :: IZTHIS,IAT1,I
       CHARACTER(32),ALLOCATABLE :: ATOMM(:) ! 
       REAL(8)      ,ALLOCATABLE :: QM(:) 
-      LOGICAL(4)                :: TBOX,TQMMM
+      LOGICAL(4)                :: TBOX,TQMMM_out
       real(8)      ,allocatable :: scaledrad(:)
 !     ******************************************************************
                            CALL TRACE$PUSH('WRITETRA')
       LL_STRC=LL_STRC_
       LL_CNTL=LL_CNTL_
-      TQMMM=.FALSE.
+      TQMMM_OUT=.FALSE.
 
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
 
       CALL LINKEDLIST$EXISTD(LL_CNTL,'QMMM',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'QMMM',0,TQMMM)
-      CALL LINKEDLIST$GET(LL_CNTL,'QMMM',1,TQMMM)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'QMMM',0,TQMMM_OUT)
+      CALL LINKEDLIST$GET(LL_CNTL,'QMMM',1,TQMMM_OUT)
 
       CALL LINKEDLIST$SELECT(LL_CNTL,'MOVIE')
+      IF(TQMMM_OUT) THEN
+         ALLOCATE(TSELECT(QNAT))
+      ELSE
+         ALLOCATE(TSELECT(NAT))
+      END IF
+
 !
 !     ==================================================================
 !     ==  SELECT FORMAT                                               ==
@@ -1667,10 +1718,10 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !     ==================================================================
 !     ==  SELECT ATOMS                                                ==
 !     ==================================================================
-      IF(.NOT.TQMMM)  CALL SELECTION(LL_CNTL,NAT,ATOM,TSELECT)
-      IF(TQMMM)  CALL SELECTION(LL_CNTL,QNAT,ATOM,TSELECT)
+      IF(.NOT.TQMMM_OUT)  CALL SELECTION(LL_CNTL,NAT,ATOM,TSELECT)
+      IF(TQMMM_OUT)  CALL SELECTION(LL_CNTL,QNAT,ATOM,TSELECT)
       NAT0=0
-      IF(.NOT.TQMMM) THEN
+      IF(.NOT.TQMMM_OUT) THEN
          DO IAT=1,NAT
             IF(TSELECT(IAT)) NAT0=NAT0+1
          ENDDO
@@ -1685,7 +1736,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       ALLOCATE(ATOM0(NAT0))
       ALLOCATE(Q0(NAT0))
       IAT1=0
-      IF(.NOT.TQMMM) THEN
+      IF(.NOT.TQMMM_OUT) THEN
          DO IAT=1,NAT
             IF(TSELECT(IAT)) THEN
                IAT1=IAT1+1
@@ -1730,7 +1781,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !       ==  SELECT ATOMS AND MAP POSITION VECTOR INTO R0              ==
 !       ================================================================
         IAT1=0
-        IF(.NOT.TQMMM) THEN
+        IF(.NOT.TQMMM_OUT) THEN
            DO IAT=1,NAT
               IF(TSELECT(IAT)) THEN
                  IAT1=IAT1+1
@@ -1777,7 +1828,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
         ALLOCATE(QM(NATM))
         DO IAT=1,NATM
           IZTHIS=IZ0(MAP(IAT))
-
+!print*,"FLAG: ", IZTHIS, EL(IAT), IZ0(MAP(IAT)), MAP(IAT)
           CALL PERIODICTABLE$GET(IZTHIS,'R(COV)',RAD(IAT))
           CALL PERIODICTABLE$GET(IZTHIS,'SYMBOL',EL(IAT))
           CALL ATOMCOLOR(IZTHIS,IVEC)
@@ -1810,7 +1861,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
           CALL DXBALLSTICK(NFIL,IOBJ,NATM,COLOR,scaledrad(:),POSM,NBOND,BOND &
       &         ,BOXR0,BOXVEC)
         ELSE IF(FORMAT.EQ.'XYZ') THEN
-
+!PRINT*,"FLAG CALL WRITEXYZ(NATM): ",NATM
           CALL WRITEXYZ(NFIL,IFRAME,NATM,EL,POSM)
         ELSE
           CALL ERROR$MSG('FORMAT NOT RECOGNIZED')
@@ -2090,23 +2141,22 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       END
 !
 !      ..................................................................
-       SUBROUTINE READ_STRC(LL_STRC_,TQMMM_)
+       SUBROUTINE READ_STRC(LL_STRC_)
 !      ******************************************************************
 !      **  READS STRC FILE                                             **
 !      ******************************************************************
        USE LINKEDLIST_MODULE
        USE PERIODICTABLE_MODULE
-       USE TRAJECTORY_MODULE, ONLY: NAT,IZ,MASS,ATOM,RBAS,QNAT
+       USE TRAJECTORY_MODULE, ONLY: NAT,IZ,MASS,ATOM,RBAS,QNAT,TQMMM
        IMPLICIT NONE
        TYPE(LL_TYPE),INTENT(IN)  :: LL_STRC_
-       LOGICAL(4)   ,INTENT(IN)  :: TQMMM_
        TYPE(LL_TYPE)             :: LL_STRC
        CHARACTER(16),ALLOCATABLE :: SP(:)    !(NAT)
        CHARACTER(16)             :: SPNAME
        INTEGER(4)                :: I,IAT
        INTEGER(4)                :: NSP
        CHARACTER(2)              :: SYMBOL
-       LOGICAL(4)                :: TCHK,TQMMM
+       LOGICAL(4)                :: TCHK
        INTEGER(4)                :: IZ1
        REAL(8)                   :: MASS1
        REAL(8)                   :: MASSUNIT
@@ -2117,7 +2167,6 @@ integer(4)                :: j
 !      ******************************************************************
                                CALL TRACE$PUSH('READ_STRC')
        LL_STRC=LL_STRC_
-       TQMMM=TQMMM_
 
        CALL CONSTANTS$GET('U',MASSUNIT)
 !
@@ -2213,7 +2262,7 @@ integer(4)                :: j
          CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',I)
          CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
          SYMBOL=SPNAME(1:2)
-
+print*,"FLAG SPNAME: ",SPNAME
          IF(SYMBOL(2:2).EQ.'_')SYMBOL(2:2)=' '
          CALL PERIODICTABLE$GET(SYMBOL,'Z',IZ1)
 !
@@ -2317,9 +2366,9 @@ integer(4)                :: j
 !     ==================================================================
 !     ==  REPORT DATA                                                 ==
 !     ==================================================================
-!     CALL FILEHANDLER$UNIT('PROT',NFILO)
-!     CALL REPORT$TITLE(NFILO,'DATA FROM STRUCTURE FILE')
-!     WRITE(NFILO,FMT='(10A8)')ATOM
+     CALL FILEHANDLER$UNIT('PROT',NFILO)
+     CALL REPORT$TITLE(NFILO,'DATA FROM STRUCTURE FILE')
+     WRITE(NFILO,FMT='(10A8)')ATOM
                                   CALL TRACE$POP
       RETURN
       END 
@@ -3268,7 +3317,7 @@ PRINT*,'COLLECT JUMPS'
       END
 !
 !     ................................................................
-      SUBROUTINE SELECTION(LL_CNTL_,NAT,ATOM,TSELECT)
+      SUBROUTINE SELECTION(LL_CNTL_,NATOM,ATOM,TSELECT)
 !     ****************************************************************
 !     **                                                            **
 !     **  READS THE STANDARDIZED BLOCK !SELECT FROM THE             **
@@ -3278,9 +3327,9 @@ PRINT*,'COLLECT JUMPS'
       USE LINKEDLIST_MODULE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
-      INTEGER(4)   ,INTENT(IN) :: NAT
-      CHARACTER(*) ,INTENT(IN) :: ATOM(NAT)
-      LOGICAL(4)   ,INTENT(OUT):: TSELECT(NAT)
+      INTEGER(4)   ,INTENT(IN) :: NATOM
+      CHARACTER(*) ,INTENT(IN) :: ATOM(NATOM)
+      LOGICAL(4)   ,INTENT(OUT):: TSELECT(NATOM)
       LOGICAL(4)               :: TCHK
       INTEGER(4)               :: N,I
       CHARACTER(16),ALLOCATABLE:: ATOMNAMES(:)
@@ -3311,7 +3360,7 @@ PRINT*,'COLLECT JUMPS'
       TSELECT(:)=.FALSE.
       DO I=1,N
         TCHK=.FALSE.
-        DO IAT=1,NAT
+        DO IAT=1,NATOM
           IF(ATOMNAMES(I).EQ.ATOM(IAT)) THEN
             IF(TCHK) THEN
               CALL ERROR$MSG('ATOM '//TRIM(ATOMNAMES(I))//' SELECTED TWICE')
@@ -3331,7 +3380,7 @@ PRINT*,'COLLECT JUMPS'
 !     ==  PRINT FOR TEST                                              ==
 !     ==================================================================
       IF(TPR) THEN
-        DO IAT=1,NAT
+        DO IAT=1,NATOM
           IF(TSELECT(IAT)) THEN
             I=I+1
             WRITE(*,FMT='(A8,L18,A8)')ATOM(IAT),TSELECT(IAT)

@@ -482,7 +482,7 @@
       CHARACTER(80)           :: LINE
       CHARACTER(5), ALLOCATABLE :: FFTYPE(:)
       INTEGER(4)              :: IAT,NAT,JAT,NHET,NCON,IAT1,IAT2,NCON2
-      LOGICAL(4)              :: OK1,UFF
+      LOGICAL(4)              :: OK1,UFF,TSWITCH
       CHARACTER(*), PARAMETER :: ATOM_FORM='(6X,I5,X,A4,X,A3,X,A1,I4,4X,3F8.3,22X,A2)'
       CHARACTER(*), PARAMETER :: CON_FORM='(6X,5I5)'
       INTEGER(4)              :: I,J,K,IVAR
@@ -503,6 +503,7 @@
       INTEGER(4)                   :: NOXYGEN, con(4), atom 
 
       OK1=.true.
+      TSWITCH=.false.
 !----------------------
 !WHICH FORCEFIELD? FIX THIS LATER...
       UFF=.TRUE.
@@ -648,12 +649,41 @@
 !           ------------------------------------------------
 !           -- FIRST AMINOACID = TWO MORE PROTONS         --
 !           ------------------------------------------------
-            FFTYPE(IAT+1)="C_3  "
-            FFTYPE(IAT+2)="C_2  "
-            FFTYPE(IAT+3)="O_1  "
-            IF(FIRST) THEN
+         FFTYPE(IAT+1)="C_3  "
+         FFTYPE(IAT+2)="C_2  "
+         FFTYPE(IAT+3)="O_1  "
+         IF(FIRST) THEN
+            FFTYPE(IAT)="N_3  "
+            Q(IAT)=1.0d0
+            NPROTON=NPROTON+1
+            ivar = nat+nhet+nproton
+            NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
+            R_H = ATOMS(IAT)%R + 0.7*(ATOMS(IAT)%R - ATOMS(IAT+1)%R)
+            NBOND = NBOND+1
+            BONDS(NBOND)%ATOM1=IAT
+            BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
+            BONDS(NBOND)%BO=1
+            WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)') "!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
+                 &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
+            NPROTON=NPROTON+1
+            ivar = nat+nhet+nproton
+            NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
+            R_H = ATOMS(IAT)%R + 0.7*(ATOMS(IAT+1)%R - ATOMS(IAT+2)%R)
+            NBOND = NBOND+1
+            BONDS(NBOND)%ATOM1=IAT
+            BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
+            BONDS(NBOND)%BO=1
+            WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
+                 &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
+            FIRST=.FALSE.
+         ELSE 
+            FFTYPE(IAT)="N_2  "
+            Q(IAT)=0.0d0
+            IF(ATOMS(IAT-1)%CHAINID.NE.ATOMS(IAT)%CHAINID) THEN
+               print*,"FLAG: NEW CHAIN FOUND. SET TWO MORE PROTONS AND CHARGE +1 FOR NITROGEN"
+               print*,"FLAG: ",ATOMS(IAT-1)%CHAINID, ATOMS(IAT-1)%ATOM,ATOMS(IAT)%CHAINID, ATOMS(IAT)%ATOM
                FFTYPE(IAT)="N_3  "
-               Q(IAT)=1.0d0
+               Q(IAT) = 1.0d0
                NPROTON=NPROTON+1
                ivar = nat+nhet+nproton
                NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
@@ -663,50 +693,39 @@
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)') "!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT+1)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
                NPROTON=NPROTON+1
                ivar = nat+nhet+nproton
                NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-               R_H = ATOMS(IAT)%R + 0.7*(ATOMS(IAT+1)%R - ATOMS(IAT+2)%R)
+               R_H = ATOMS(IAT)%R - 0.7*(ATOMS(IAT+4)%R - ATOMS(IAT+1)%R)
                NBOND = NBOND+1
                BONDS(NBOND)%ATOM1=IAT
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT+1)," FFTYPE='"//name(iat)(1:2)//"' !END"
-               FIRST=.FALSE.
-            ELSE 
-               FFTYPE(IAT)="N_2  "
-               Q(IAT)=0.0d0
-               IF(ATOMS(IAT-1)%CHAINID.NE.ATOMS(IAT)%CHAINID) THEN
-                  FFTYPE(IAT)="N_3  "
-                  Q(IAT) = 1.0d0
-                  NPROTON=NPROTON+1
-                  ivar = nat+nhet+nproton
-                  NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-                  R_H = ATOMS(IAT)%R + 0.7*(ATOMS(IAT)%R - ATOMS(IAT+1)%R)
-                  NBOND = NBOND+1
-                  BONDS(NBOND)%ATOM1=IAT
-                  BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
-                  BONDS(NBOND)%BO=1
-                  WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)') "!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                       &                   ," Q=",Q(IAT+1)," FFTYPE='"//name(iat)(1:2)//"' !END"
-                  NPROTON=NPROTON+1
-                  ivar = nat+nhet+nproton
-                  NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-                  R_H = ATOMS(IAT)%R - 0.7*(ATOMS(IAT+4)%R - ATOMS(IAT+1)%R)
-                  NBOND = NBOND+1
-                  BONDS(NBOND)%ATOM1=IAT
-                  BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
-                  BONDS(NBOND)%BO=1
-                  WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                       &                   ," Q=",Q(IAT+1)," FFTYPE='"//name(iat)(1:2)//"' !END"
-               END IF
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
+         END IF
 !           ------------------------------------------------
 !           -- LAST AMINOACID = ADD -O  TO THE END        --
 !           ------------------------------------------------
-            IF(((IAT+NRES-1).EQ.NAT)) THEN !letzte AS  insgesamt
+         IF(((IAT+NRES-1).EQ.NAT)) THEN !letzte AS  insgesamt
+            NPROTON=NPROTON+1
+            ivar = nat+nhet+nproton
+            NAME(IAT) = TRIM(ADJUSTL("O_"//(.itos.ivar)))
+            NOXYGEN=NOXYGEN+1
+            R_H = ATOMS(IAT+2)%R + 0.7*(ATOMS(IAT+2)%R - ATOMS(IAT+1)%R)
+            NBOND = NBOND+1
+            BONDS(NBOND)%ATOM1=IAT+2
+            BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
+            OXYGEN(NOXYGEN)=NPROTON
+            BONDS(NBOND)%BO=1
+            Q(NAT+NHET+NPROTON)=-1.0d0
+            WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
+                 &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"1' !END"
+!            Q(IAT)=0.0d0
+         ELSE
+            IF(ATOMS(IAT)%CHAINID.NE.ATOMS(IAT+NRES)%CHAINID) THEN !LETZTE AS IN KETTE
                NPROTON=NPROTON+1
                ivar = nat+nhet+nproton
                NAME(IAT) = TRIM(ADJUSTL("O_"//(.itos.ivar)))
@@ -717,141 +736,126 @@
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                OXYGEN(NOXYGEN)=NPROTON
                BONDS(NBOND)%BO=1
-               Q(IAT)=-1.0d0
+               Q(NAT+NHET+NPROTON)=-1.0d0
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"1' !END"
-               Q(IAT)=0.0d0
-            ELSE
-               IF(ATOMS(IAT)%CHAINID.NE.ATOMS(IAT+NRES)%CHAINID) THEN !LETZTE AS IN KETTE
-                  NPROTON=NPROTON+1
-                  ivar = nat+nhet+nproton
-                  NAME(IAT) = TRIM(ADJUSTL("O_"//(.itos.ivar)))
-                  NOXYGEN=NOXYGEN+1
-                  R_H = ATOMS(IAT+2)%R + 0.7*(ATOMS(IAT+2)%R - ATOMS(IAT+1)%R)
-                  NBOND = NBOND+1
-                  BONDS(NBOND)%ATOM1=IAT+2
-                  BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
-                  OXYGEN(NOXYGEN)=NPROTON
-                  BONDS(NBOND)%BO=1
-                  Q(IAT)=-1.0d0
-                  WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                       &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"1' !END"
-                  Q(IAT)=0.0d0
-               END IF
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"1' !END"
+!               Q(IAT)=0.0d0
             END IF
-
-            !BOND N_1 -- C_2
+         END IF
+         
+         !BOND N_1 -- C_2
+         NBOND = NBOND+1
+         BONDS(NBOND)%ATOM1=IAT
+         BONDS(NBOND)%ATOM2=IAT+1
+         BONDS(NBOND)%BO=1
+         !PROTON TO N_1
+         IF(ATOMS(IAT)%RESNAME.NE."PRO") THEN
+            NPROTON=NPROTON+1
+            ivar = nat+nhet+nproton
+            NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
+            R_H = ATOMS(IAT)%R + 0.7*((ATOMS(IAT)%R - ATOMS(IAT+1)%R) + (ATOMS(IAT+2)%R &
+                 & - ATOMS(IAT+1)%R))
             NBOND = NBOND+1
             BONDS(NBOND)%ATOM1=IAT
-            BONDS(NBOND)%ATOM2=IAT+1
+            BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
-            !PROTON TO N_1
-            IF(ATOMS(IAT)%RESNAME.NE."PRO") THEN
-               NPROTON=NPROTON+1
-               ivar = nat+nhet+nproton
-               NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-               R_H = ATOMS(IAT)%R + 0.7*((ATOMS(IAT)%R - ATOMS(IAT+1)%R) + (ATOMS(IAT+2)%R &
+            WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
+                 &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
+         END IF
+         !PROTON H_2 TO C_2
+         IF(.NOT.TCHK(2)) THEN
+            NPROTON=NPROTON+1
+            ivar = nat+nhet+nproton
+            NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
+            R_H = ATOMS(IAT+1)%R + 0.7*((ATOMS(IAT)%R - ATOMS(IAT+1)%R) + (ATOMS(IAT+2)%R &
                  & - ATOMS(IAT+1)%R))
-               NBOND = NBOND+1
-               BONDS(NBOND)%ATOM1=IAT
-               BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
-               BONDS(NBOND)%BO=1
-               WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT+1)," FFTYPE='"//name(iat)(1:2)//"' !END"
-            END IF
-            !PROTON H_2 TO C_2
-            IF(.NOT.TCHK(2)) THEN
-               NPROTON=NPROTON+1
-               ivar = nat+nhet+nproton
-               NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-               R_H = ATOMS(IAT+1)%R + 0.7*((ATOMS(IAT)%R - ATOMS(IAT+1)%R) + (ATOMS(IAT+2)%R &
-                    & - ATOMS(IAT+1)%R))
-               NBOND = NBOND+1
-               BONDS(NBOND)%ATOM1=IAT+1
-               BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
-               BONDS(NBOND)%BO=1
-               WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT+1)," FFTYPE='"//name(iat)(1:2)//"' !END"
-            END IF
-            !BOND C_2 -- C_3
+            NBOND = NBOND+1
+            BONDS(NBOND)%ATOM1=IAT+1
+            BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
+            BONDS(NBOND)%BO=1
+            WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
+                 &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
+         END IF
+         !BOND C_2 -- C_3
+         NBOND = NBOND + 1
+         BONDS(NBOND)%ATOM1=IAT+1
+         BONDS(NBOND)%ATOM2=IAT+2
+         BONDS(NBOND)%BO=1
+         !BOND C_3 -- O_4
+         NBOND = NBOND + 1
+         BONDS(NBOND)%ATOM1=IAT+2
+         BONDS(NBOND)%ATOM2=IAT+3
+         BONDS(NBOND)%BO=2
+         !BOND C_2 -- C_5
+         IF(ATOMS(IAT)%RESNAME.NE."GLY") THEN
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+1
-            BONDS(NBOND)%ATOM2=IAT+2
+            BONDS(NBOND)%ATOM2=IAT+4
             BONDS(NBOND)%BO=1
-            !BOND C_3 -- O_4
-            NBOND = NBOND + 1
-            BONDS(NBOND)%ATOM1=IAT+2
-            BONDS(NBOND)%ATOM2=IAT+3
-            BONDS(NBOND)%BO=2
-            !BOND C_2 -- C_5
-            IF(ATOMS(IAT)%RESNAME.NE."GLY") THEN
-               NBOND = NBOND + 1
-               BONDS(NBOND)%ATOM1=IAT+1
-               BONDS(NBOND)%ATOM2=IAT+4
-               BONDS(NBOND)%BO=1
-            END IF
-Q(IAT)=0.0d0
-!   =======================================================================
-!   == BUILD BONDS AND PROTONS FOR EACH KIND OF AMINOACID                ==
-!   =======================================================================
-    IF(AS_OK) THEN
-!      ========================================================================
-!      ==  RESIDUE SERINE OR CYSTEINE                                        ==
-!      ========================================================================
-         IF((ATOMS(IAT)%RESNAME.EQ."SER").OR.(ATOMS(IAT)%RESNAME.EQ."CYS")) THEN
-            FFTYPE(IAT+4)="C_3  "
-            IF(ATOMS(IAT)%RESNAME.EQ."SER") FFTYPE(IAT+5)="O_2  "
-            IF(ATOMS(IAT)%RESNAME.EQ."CYS") FFTYPE(IAT+5)="S_2  "
-!           -------------------------------------------------
-!           -- REST OF AMINOACID                           --
-!           -------------------------------------------------
-            !PROTON H_3 TO C_5
-            IF(.NOT.TCHK(5)) THEN
+         END IF
+!         Q(IAT)=0.0d0
+         !   =======================================================================
+         !   == BUILD BONDS AND PROTONS FOR EACH KIND OF AMINOACID                ==
+         !   =======================================================================
+         IF(AS_OK) THEN
+            !      ========================================================================
+            !      ==  RESIDUE SERINE OR CYSTEINE                                        ==
+            !      ========================================================================
+            IF((ATOMS(IAT)%RESNAME.EQ."SER").OR.(ATOMS(IAT)%RESNAME.EQ."CYS")) THEN
+               FFTYPE(IAT+4)="C_3  "
+               IF(ATOMS(IAT)%RESNAME.EQ."SER") FFTYPE(IAT+5)="O_2  "
+               IF(ATOMS(IAT)%RESNAME.EQ."CYS") FFTYPE(IAT+5)="S_3+2"
+               !           -------------------------------------------------
+               !           -- REST OF AMINOACID                           --
+               !           -------------------------------------------------
+               !PROTON H_3 TO C_5
+               IF(.NOT.TCHK(5)) THEN
+                  NPROTON=NPROTON+1
+                  ivar = nat+nhet+nproton
+                  NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
+                  R_H = ATOMS(IAT+4)%R + 0.7*(ATOMS(IAT+2)%R - ATOMS(IAT+1)%R)
+                  NBOND = NBOND+1
+                  BONDS(NBOND)%ATOM1=IAT+4
+                  BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
+                  BONDS(NBOND)%BO=1
+                  WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
+                       &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
+               END IF
+               !PROTON H_4 TO C_5
                NPROTON=NPROTON+1
                ivar = nat+nhet+nproton
                NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-               R_H = ATOMS(IAT+4)%R + 0.7*(ATOMS(IAT+2)%R - ATOMS(IAT+1)%R)
+               R_H = ATOMS(IAT+4)%R + 0.7*(ATOMS(IAT+1)%R - ATOMS(IAT)%R)
                NBOND = NBOND+1
                BONDS(NBOND)%ATOM1=IAT+4
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
-            END IF
-            !PROTON H_4 TO C_5
-            NPROTON=NPROTON+1
-            ivar = nat+nhet+nproton
-            NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-            R_H = ATOMS(IAT+4)%R + 0.7*(ATOMS(IAT+1)%R - ATOMS(IAT)%R)
-            NBOND = NBOND+1
-            BONDS(NBOND)%ATOM1=IAT+4
-            BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
-            BONDS(NBOND)%BO=1
-            WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
-            !BOND C_5 -- O_6
-            NBOND = NBOND + 1
-            BONDS(NBOND)%ATOM1=IAT+4
-            BONDS(NBOND)%ATOM2=IAT+5
-            BONDS(NBOND)%BO=1
-
-            !PROTON H_5 TO O_6 or S_6 (CYSTEINE)
-            IF(.NOT.TCHK(6)) THEN
-               NPROTON=NPROTON+1
-               ivar = nat+nhet+nproton
-               NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-               R_H = ATOMS(IAT+5)%R + 0.7*(ATOMS(IAT+5)%R - ATOMS(IAT+4)%R)
-               NBOND = NBOND+1
-               BONDS(NBOND)%ATOM1=IAT+5
-               BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
+               !BOND C_5 -- O_6
+               NBOND = NBOND + 1
+               BONDS(NBOND)%ATOM1=IAT+4
+               BONDS(NBOND)%ATOM2=IAT+5
                BONDS(NBOND)%BO=1
-               WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
-            END IF
-
-            IAT=IAT+NRES-1
-         END IF !END OF SERINE OR CYSTEINE 
-
+               
+               !PROTON H_5 TO O_6 or S_6 (CYSTEINE)
+               print*,"FLAG: CYSTEINE OR SERINE: ATOM 6 BONDED TO CLUSTER?",TCHK(6)
+               IF(.NOT.TCHK(6)) THEN
+                  NPROTON=NPROTON+1
+                  ivar = nat+nhet+nproton
+                  NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
+                  R_H = ATOMS(IAT+5)%R + 0.7*(ATOMS(IAT+5)%R - ATOMS(IAT+4)%R)
+                  NBOND = NBOND+1
+                  BONDS(NBOND)%ATOM1=IAT+5
+                  BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
+                  BONDS(NBOND)%BO=1
+                  WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
+                       &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
+               END IF
+               
+               IAT=IAT+NRES-1
+            END IF !END OF SERINE OR CYSTEINE 
+            
 !      ========================================================================
 !      ==  RESIDUE GLUTAMINEAcid                                             ==
 !      ========================================================================
@@ -876,7 +880,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON H_4 TO C_5
             NPROTON=NPROTON+1
@@ -888,7 +892,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -905,7 +909,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON H_6 TO C_6
             NPROTON=NPROTON+1
@@ -917,7 +921,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_6 -- C_7
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+5
@@ -958,7 +962,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 1 TO C_6
             IF(.NOT.TCHK(6)) THEN
@@ -971,7 +975,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_6
             NPROTON= NPROTON+1
@@ -983,7 +987,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 3 TO C_6
             NPROTON= NPROTON+1
             ivar = nat+nhet+nproton
@@ -994,7 +998,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
              !PROTON 1 TO C_7
             NPROTON= NPROTON+1
             ivar = nat+nhet+nproton
@@ -1005,7 +1009,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 2 TO C_7
             IF(.NOT.TCHK(7)) THEN
                NPROTON= NPROTON+1
@@ -1017,7 +1021,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 3 TO C_7
             NPROTON= NPROTON+1
@@ -1029,7 +1033,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -1067,7 +1071,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON= NPROTON+1
@@ -1079,11 +1083,11 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
-            BONDS(NBOND)%ATOM1=IAT+4
-            BONDS(NBOND)%ATOM2=IAT+5
+            BONDS(NBOND)%ATOM1=IAT+5
+            BONDS(NBOND)%ATOM2=IAT+6
             BONDS(NBOND)%BO=1
             !PROTON 1 TO C_6
             IF(.NOT.TCHK(6)) THEN
@@ -1096,7 +1100,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_6 -- C_7
             NBOND = NBOND + 1
@@ -1118,7 +1122,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 2 TO C_7
             IF(.NOT.TCHK(7)) THEN
                NPROTON= NPROTON+1
@@ -1130,7 +1134,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 3 TO C_7
             NPROTON= NPROTON+1
@@ -1142,7 +1146,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 1 TO C_8
             NPROTON= NPROTON+1
             ivar = nat+nhet+nproton
@@ -1153,7 +1157,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 2 TO C_8
             IF(.NOT.TCHK(8)) THEN
                NPROTON= NPROTON+1
@@ -1165,7 +1169,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 3 TO C_8
             NPROTON= NPROTON+1
@@ -1177,7 +1181,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
 
             IAT= IAT+ NRES-1
          END IF !END OF LEUCINE
@@ -1205,7 +1209,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
@@ -1228,7 +1232,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_7
             NPROTON= NPROTON+1
@@ -1240,7 +1244,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 3 TO C_7
             NPROTON= NPROTON+1
             ivar = nat+nhet+nproton
@@ -1251,7 +1255,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 1 TO C_6
             IF(.NOT.TCHK(6)) THEN
                NPROTON= NPROTON+1
@@ -1263,7 +1267,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_6
             NPROTON= NPROTON+1
@@ -1275,7 +1279,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_6 -- C_8
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+5
@@ -1291,7 +1295,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 2 TO C_8
             IF(.NOT.TCHK(8)) THEN
                NPROTON= NPROTON+1
@@ -1303,7 +1307,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 3 TO C_8
             NPROTON= NPROTON+1
@@ -1315,7 +1319,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
 
             IAT= IAT+ NRES-1
          END IF !END OF ISOLEUCINE
@@ -1343,7 +1347,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON H_4 TO C_5
             NPROTON=NPROTON+1
@@ -1355,7 +1359,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -1372,7 +1376,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON H_6 TO C_6
             NPROTON=NPROTON+1
@@ -1384,7 +1388,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_6 -- C_7
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+5
@@ -1411,7 +1415,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO N_9
             NPROTON=NPROTON+1
@@ -1423,7 +1427,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
 
             IAT=IAT+NRES-1
          END IF !END OF GLUTAMINE
@@ -1454,7 +1458,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -1466,7 +1470,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -1513,7 +1517,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON TO C_10
             IF(.NOT.TCHK(10)) THEN
@@ -1522,11 +1526,11 @@ Q(IAT)=0.0d0
                NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
                R_H= ATOMS(IAT+9)%R - 0.7*((ATOMS(IAT+8)%R - ATOMS(IAT+10)%R))
                NBOND= NBOND + 1
-               BONDS(NBOND)%ATOM1=IAT+6
+               BONDS(NBOND)%ATOM1=IAT+9
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON TO C_9
             IF(.NOT.TCHK(9)) THEN
@@ -1539,7 +1543,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON TO C_8
             IF(.NOT.TCHK(8)) THEN
@@ -1552,7 +1556,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_11 -- O_12
             NBOND = NBOND + 1
@@ -1570,7 +1574,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
 
             IAT= IAT+ NRES-1
@@ -1597,7 +1601,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -1609,7 +1613,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -1626,7 +1630,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_6
             NPROTON=NPROTON+1
@@ -1634,11 +1638,11 @@ Q(IAT)=0.0d0
             NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
             R_H = ATOMS(IAT+5)%R + 0.7*(ATOMS(IAT+5)%R - ATOMS(IAT+6)%R)
             NBOND = NBOND+1
-            BONDS(NBOND)%ATOM1=IAT+4
+            BONDS(NBOND)%ATOM1=IAT+5
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_6 -- C_7
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+5
@@ -1655,7 +1659,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_7
             NPROTON=NPROTON+1
@@ -1667,8 +1671,14 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
 
+            !BOND C_7 -- C_1
+            NBOND = NBOND + 1
+            BONDS(NBOND)%ATOM1=IAT
+            BONDS(NBOND)%ATOM2=IAT+6
+            BONDS(NBOND)%BO=1
+            FFTYPE(IAT)="N_3  "
 
             IAT= IAT+ NRES-1
          END IF !END OF PROLINE
@@ -1697,7 +1707,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -1709,7 +1719,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -1726,7 +1736,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_6
             NPROTON=NPROTON+1
@@ -1738,7 +1748,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_6 -- C_7
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+5
@@ -1755,7 +1765,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_7
             NPROTON=NPROTON+1
@@ -1767,7 +1777,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_7 -- C_8
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+6
@@ -1784,7 +1794,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_8
             NPROTON=NPROTON+1
@@ -1796,11 +1806,11 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_8 -- N_9
             NBOND = NBOND + 1
-            BONDS(NBOND)%ATOM1=IAT+6
-            BONDS(NBOND)%ATOM2=IAT+7
+            BONDS(NBOND)%ATOM1=IAT+7
+            BONDS(NBOND)%ATOM2=IAT+8
             BONDS(NBOND)%BO=1
             !PROTON 1 TO N_9
             IF(.NOT.TCHK(9)) THEN
@@ -1813,7 +1823,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO N_9
             NPROTON=NPROTON+1
@@ -1825,7 +1835,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 3 TO N_9
             NPROTON=NPROTON+1
             ivar = nat+nhet+nproton
@@ -1836,7 +1846,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
 
 
             IAT= IAT+ NRES-1
@@ -1861,7 +1871,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -1873,7 +1883,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 3 TO C_5
             NPROTON=NPROTON+1
             ivar = nat+nhet+nproton
@@ -1885,7 +1895,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
 
             IAT= IAT+ NRES-1
          END IF !END OF ALANINE
@@ -1913,7 +1923,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -1926,7 +1936,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -1950,6 +1960,12 @@ Q(IAT)=0.0d0
 !      ==  RESIDUE ASPARAGINE                                                ==
 !      ========================================================================
          IF(ATOMS(IAT)%RESNAME.EQ."ASN") THEN
+!           -------------------------------------------------
+!           -- N and O can be switched in PDB file         --
+!           -------------------------------------------------
+            IF(ADJUSTL(ATOMS(IAT+6)%ELEMENT).EQ."O ") tswitch=.true.
+!           -------------------------------------------------
+
             FFTYPE(IAT+4)="C_3"
             FFTYPE(IAT+5)="C_3"
             FFTYPE(IAT+6)="N_2"
@@ -1968,7 +1984,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -1981,22 +1997,24 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
             BONDS(NBOND)%ATOM2=IAT+5
-            BONDS(NBOND)%BO=1
+            BONDS(NBOND)%BO=1            
             !BOND C_6 -- N_7
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+5
             BONDS(NBOND)%ATOM2=IAT+6
             BONDS(NBOND)%BO=1
+            if(tswitch) BONDS(NBOND)%BO=2
             !BOND C_6 -- O_8
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+5
             BONDS(NBOND)%ATOM2=IAT+7
             BONDS(NBOND)%BO=2
+            if(tswitch) BONDS(NBOND)%BO=1
             !PROTON 1 TO N_7
             IF(.NOT.TCHK(7)) THEN
                NPROTON=NPROTON+1
@@ -2005,22 +2023,24 @@ Q(IAT)=0.0d0
                R_H = ATOMS(IAT+7)%R + 0.7*((ATOMS(IAT+5)%R - ATOMS(IAT+4)%R))
                NBOND = NBOND+1
                BONDS(NBOND)%ATOM1=IAT+6
+               if(TSWITCH) BONDS(NBOND)%ATOM1=IAT+7
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
-            !PROTON 1 TO N_7
+            !PROTON 2 TO N_7
             NPROTON=NPROTON+1
             ivar = nat+nhet+nproton
             NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
             R_H = ATOMS(IAT+7)%R + 0.7*((ATOMS(IAT+5)%R - ATOMS(IAT+6)%R))
             NBOND = NBOND+1
             BONDS(NBOND)%ATOM1=IAT+6
+            if(TSWITCH) BONDS(NBOND)%ATOM1=IAT+7
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
 
             IAT= IAT+ NRES-1
          END IF !END OF ASPARAGINE
@@ -2050,7 +2070,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -2062,7 +2082,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -2105,7 +2125,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 1 TO C_9
             IF (.NOT.TCHK(9)) THEN
@@ -2119,7 +2139,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 1 TO N_10
             IF(.NOT.TCHK(10)) THEN
@@ -2133,7 +2153,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 1 TO C_8
             IF(.NOT.TCHK(8)) THEN
@@ -2147,7 +2167,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
 
             IAT= IAT+ NRES-1
@@ -2172,7 +2192,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
 
             IAT= IAT+ NRES-1
@@ -2204,7 +2224,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -2216,7 +2236,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -2233,7 +2253,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_6
             NPROTON=NPROTON+1
@@ -2245,7 +2265,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_6 -- C_7
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+5
@@ -2262,7 +2282,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_7
             NPROTON=NPROTON+1
@@ -2274,7 +2294,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_7 -- N_8
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+6
@@ -2291,12 +2311,12 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND N_8 -- C_9
             NBOND = NBOND + 1
-            BONDS(NBOND)%ATOM1=IAT+6
-            BONDS(NBOND)%ATOM2=IAT+7
+            BONDS(NBOND)%ATOM1=IAT+7
+            BONDS(NBOND)%ATOM2=IAT+8
             BONDS(NBOND)%BO=1
             !BOND C_9 -- N_10
             NBOND = NBOND + 1
@@ -2319,7 +2339,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO N_10
             NPROTON=NPROTON+1
@@ -2331,7 +2351,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 1 TO N_11
             IF(.NOT.TCHK(11)) THEN
                NPROTON=NPROTON+1
@@ -2343,7 +2363,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 1 TO N_11
             NPROTON=NPROTON+1
@@ -2355,7 +2375,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             
             IAT= IAT+ NRES-1
          END IF !END OF GLYCINE
@@ -2366,7 +2386,7 @@ Q(IAT)=0.0d0
          IF(ATOMS(IAT)%RESNAME.EQ."MET") THEN
             FFTYPE(IAT+4)="C_3"
             FFTYPE(IAT+5)="C_3"
-            FFTYPE(IAT+6)="S_2"
+            FFTYPE(IAT+6)="S_3+2"
             FFTYPE(IAT+7)="C_3"
 !           -------------------------------------------------
 !           -- REST OF AMINOACID                           --
@@ -2382,7 +2402,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -2394,7 +2414,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -2411,7 +2431,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_6
             NPROTON=NPROTON+1
@@ -2423,7 +2443,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_6 -- S_7
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+5
@@ -2445,7 +2465,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_8
             NPROTON=NPROTON+1
@@ -2457,7 +2477,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 3 TO C_8
             NPROTON=NPROTON+1
             ivar = nat+nhet+nproton
@@ -2468,7 +2488,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
              
             IAT= IAT+ NRES-1
          END IF !END OF METIONINE
@@ -2494,7 +2514,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_5 -- O_6
             NBOND = NBOND + 1
@@ -2508,11 +2528,11 @@ Q(IAT)=0.0d0
                NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
                R_H = ATOMS(IAT+5)%R + 0.7*(ATOMS(IAT+5)%R - ATOMS(IAT+4)%R)
                NBOND = NBOND+1
-               BONDS(NBOND)%ATOM1=IAT+4
+               BONDS(NBOND)%ATOM1=IAT+5
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_5 -- C_7
             NBOND = NBOND + 1
@@ -2530,7 +2550,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_7
             NPROTON=NPROTON+1
@@ -2542,7 +2562,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !PROTON 3 TO C_7
             NPROTON=NPROTON+1
             ivar = nat+nhet+nproton
@@ -2553,7 +2573,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             
             IAT= IAT+ NRES-1
          END IF !END OF THREONINE
@@ -2587,7 +2607,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -2599,7 +2619,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -2621,7 +2641,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_7 -- N_9
             NBOND = NBOND + 1
@@ -2640,7 +2660,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND N_9 -- C_10
             NBOND = NBOND + 1
@@ -2674,7 +2694,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_11 -- C_13
             NBOND = NBOND + 1
@@ -2693,7 +2713,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_13 -- C_14
             NBOND = NBOND + 1
@@ -2712,7 +2732,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_14 -- C_12
             NBOND = NBOND + 1
@@ -2731,7 +2751,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !BOND C_12 -- C_10
             NBOND = NBOND + 1
@@ -2768,7 +2788,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
                END IF
             !PROTON 2 TO C_5
             NPROTON=NPROTON+1
@@ -2780,7 +2800,7 @@ Q(IAT)=0.0d0
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+              &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             !BOND C_5 -- C_6
             NBOND = NBOND + 1
             BONDS(NBOND)%ATOM1=IAT+4
@@ -2827,7 +2847,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON TO C_10
             IF(.NOT.TCHK(10)) THEN
@@ -2836,11 +2856,11 @@ Q(IAT)=0.0d0
                NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
                R_H= ATOMS(IAT+9)%R - 0.7*((ATOMS(IAT+8)%R - ATOMS(IAT+10)%R))
                NBOND= NBOND + 1
-               BONDS(NBOND)%ATOM1=IAT+6
+               BONDS(NBOND)%ATOM1=IAT+9
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON TO C_9
             IF(.NOT.TCHK(9)) THEN
@@ -2853,7 +2873,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON TO C_8
             IF(.NOT.TCHK(8)) THEN
@@ -2866,7 +2886,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             !PROTON TO C_11
             IF(.NOT.TCHK(11)) THEN
@@ -2879,7 +2899,7 @@ Q(IAT)=0.0d0
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                    &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                    &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             END IF
             
             IAT= IAT+ NRES-1
@@ -2895,9 +2915,53 @@ Q(IAT)=0.0d0
 !   == FILL UP HETATMS (WATER) WITH PROTONS AND MAKE FFTYPE FOR HETATMS ==
 !   ======================================================================
       DO IAT=1,NHET
-         IF(HETATMS(IAT)%ATOM(1:2).EQ." S") FFTYPE(NAT+IAT)="S_3"
-         IF(HETATMS(IAT)%ATOM(1:2).EQ."FE") FFTYPE(NAT+IAT)="Fe3+2"
-         IF(HETATMS(IAT)%ATOM(1:2).EQ."MO") FFTYPE(NAT+IAT)="Mo6+6"
+         IF(HETATMS(IAT)%ATOM(1:2).EQ." S") FFTYPE(NAT+IAT)="S_3+2"
+         IF(HETATMS(IAT)%ATOM(1:2).EQ."FE") FFTYPE(NAT+IAT)="FE3+2"
+         IF(HETATMS(IAT)%ATOM(1:2).EQ."MO") FFTYPE(NAT+IAT)="MO6+6"
+         IF(HETATMS(IAT)%ATOM(1:2).EQ."CA") FFTYPE(NAT+IAT)="CA6+2"
+ 
+
+         IF(HETATMS(IAT)%RESNAME.EQ."PO4") THEN
+            FFTYPE(NAT+IAT)="P_3+5"
+
+            FFTYPE(NAT+IAT+1)="O_2"
+            NBOND = NBOND+1
+            BONDS(NBOND)%ATOM1=NAT+IAT
+            BONDS(NBOND)%ATOM2=NAT+IAT+1
+            BONDS(NBOND)%BO=1
+            NPROTON=NPROTON+1
+            ivar = nat+nhet+nproton
+            NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
+            R_H = HETATMS(IAT)%R + (/1.0, 0.0, 0.0/)
+            NBOND = NBOND+1
+            BONDS(NBOND)%ATOM1=NAT+IAT
+            BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
+            BONDS(NBOND)%BO=1
+            WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)') "!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
+                 &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
+
+            FFTYPE(NAT+IAT+2)="O_1"
+            Q(NAT+IAT+2)=-1.0d0
+            NBOND = NBOND+1
+            BONDS(NBOND)%ATOM1=NAT+IAT
+            BONDS(NBOND)%ATOM2=NAT+IAT+2
+            BONDS(NBOND)%BO=1
+
+            FFTYPE(NAT+IAT+3)="O_1"
+            Q(NAT+IAT+3)=-1.0d0
+            NBOND = NBOND+1
+            BONDS(NBOND)%ATOM1=NAT+IAT
+            BONDS(NBOND)%ATOM2=NAT+IAT+3
+            BONDS(NBOND)%BO=1
+
+            FFTYPE(NAT+IAT+4)="O_1"
+            NBOND = NBOND+1
+            BONDS(NBOND)%ATOM1=NAT+IAT
+            BONDS(NBOND)%ATOM2=NAT+IAT+4
+            BONDS(NBOND)%BO=2
+         END IF
+            
+
          IF(HETATMS(IAT)%RESNAME.EQ."HOH") THEN
             FFTYPE(NAT+IAT)="O_2"
             NPROTON=NPROTON+1
@@ -2905,21 +2969,21 @@ Q(IAT)=0.0d0
             NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
             R_H = HETATMS(IAT)%R + (/1.0, 0.0, 0.0/)
             NBOND = NBOND+1
-            BONDS(NBOND)%ATOM1=IAT
+            BONDS(NBOND)%ATOM1=NAT+IAT
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)') "!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                 &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                 &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
             NPROTON=NPROTON+1
             ivar = nat+nhet+nproton
             NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
             R_H = HETATMS(IAT)%R + (/0.0, 1.0, 0.0/)
             NBOND = NBOND+1
-            BONDS(NBOND)%ATOM1=IAT
+            BONDS(NBOND)%ATOM1=NAT+IAT
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
             BONDS(NBOND)%BO=1
             WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
-                 &                   ," Q=",Q(IAT)," FFTYPE='"//name(iat)(1:2)//"' !END"
+                 &                   ," Q=",Q(NAT+NHET+NPROTON)," FFTYPE='"//name(iat)(1:2)//"' !END"
          END IF
       ENDDO
 
@@ -2980,16 +3044,28 @@ Q(IAT)=0.0d0
 !   ======================================================================
 !   == BUILD BONDS BETWEEN AMINOACIDS                                   ==
 !   ======================================================================
-      DO IAT=1,NAT-1
-         IF((ATOMS(IAT)%RESNAME.NE.ATOMS(IAT+1)%RESNAME).AND.(ATOMS(IAT)%CHAINID.EQ.ATOMS(IAT+1)%CHAINID)) THEN
-            NBOND = NBOND + 1
-            BONDS(NBOND)%ATOM1=IAT
-            BONDS(NBOND)%ATOM2=IAT+1
-            BONDS(NBOND)%BO=1
+!  PRODUCES ERRORS. CONNECTS THE LAST ATOM OF AN AMINOACID WITH THE NEXT AMINOACID.
+!  CORRECT: THE THIRD ATOM HAS TO BE CONNECTED TO THE NEXT AMINOACID
+!       DO IAT=1,NAT-1
+!          IF((ATOMS(IAT)%RESNAME.NE.ATOMS(IAT+1)%RESNAME).AND.(ATOMS(IAT)%CHAINID.EQ.ATOMS(IAT+1)%CHAINID)) THEN
+!             NBOND = NBOND + 1
+!             BONDS(NBOND)%ATOM1=IAT
+!             BONDS(NBOND)%ATOM2=IAT+1
+!             BONDS(NBOND)%BO=1
+!          END IF
+!       ENDDO
+      IAT=1
+      DO WHILE(IAT.LE.NAT-1)
+         CALL GET_NRES(ATOMS(IAT)%RESNAME,NRES)
+         IF(ATOMS(IAT)%CHAINID.EQ.ATOMS(IAT+NRES)%CHAINID) THEN
+            NBOND= NBOND + 1
+            BONDS(NBOND)%ATOM1= IAT+2
+            BONDS(NBOND)%ATOM2= IAT+NRES
+            BONDS(NBOND)%BO= 1
          END IF
+         IAT= IAT + NRES 
       ENDDO
-            
-
+ 
 !     =====================================================================
 !     == WRITE ATOMS                                                     ==
 !     =====================================================================
@@ -3005,8 +3081,8 @@ Q(IAT)=0.0d0
          END IF
          
          WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A,A,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",ATOMS(IAT)%R(:) &
-              &                   ," Q=",Q(IAT)," FFTYPE='",TRIM(ADJUSTL(FFTYPE(IAT))),&
-              & "'   RES='"//ATOMS(IAT)%RESNAME//"' !END"
+              & ," Q=",Q(IAT)," FFTYPE='",TRIM(ADJUSTL(FFTYPE(IAT))),&
+              & "'   RES='"//ATOMS(IAT)%RESNAME//TRIM(ADJUSTL(.ITOS.ATOMS(IAT)%RESID))//"' !END"
       ENDDO
       DEALLOCATE(NAME)
 
@@ -3017,16 +3093,15 @@ Q(IAT)=0.0d0
       DO IAT=1,NHET
          NAME(IAT) = TRIM(ADJUSTL(HETATMS(IAT)%ELEMENT))
          J=IACHAR(NAME(IAT)(2:2))
+         ivar=nat+iat
          IF(J.ge.65.AND.J.LE.90.OR.J.GE.97.AND.J.LE.122) THEN
-            ivar=nat+iat
-            NAME(IAT) = TRIM(ADJUSTL(NAME(IAT)))//.ITOS.ivar
+            NAME(IAT) = TRIM(ADJUSTL(NAME(IAT)))//TRIM(ADJUSTL(.ITOS.ivar))
          else
-            ivar=nat+iat
             NAME(IAT) = TRIM(ADJUSTL(NAME(IAT)))//"_"//TRIM(ADJUSTL(.ITOS.ivar))
          END IF
          
          WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A,A5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",HETATMS(IAT)%R(:) &
-              &                   ," Q=",Q(NAT+IAT)," FFTYPE='",FFTYPE(NAT+IAT),"'   RES='"//HETATMS(IAT)%RESNAME//"' !END"
+              &  ," Q=",Q(NAT+IAT)," FFTYPE='",FFTYPE(NAT+IAT),"'   RES='"//HETATMS(IAT)%RESNAME//"' !END"
       ENDDO
       DEALLOCATE(NAME)
       DEALLOCATE(Q)
@@ -3079,7 +3154,7 @@ print*,"PRINTING BONDS"
      &                  //"' ATOM2='"//TRIM(NAME(IAT2)) &
      &                  //"' BO=",BONDS(I)%BO," !END"
          ENDDO
-
+print*,"===DONE==="
 
       STOP
 

@@ -674,7 +674,7 @@ END MODULE WAVES_MODULE
       REAL(8)                :: CELLVOL   ! UNIT CELL  VOLUME
       REAL(8)   ,ALLOCATABLE :: XK(:,:)   ! K-POINTS IN RELATIVE COORDINATES
       REAL(8)   ,ALLOCATABLE :: G2(:)     ! G**2
-      INTEGER(4)             :: LN,ISP,IKPT,ISPIN,IAT,ikptg,ikptl
+      INTEGER(4)             :: LN,ISP,IKPT,ISPIN,IAT,IKPTG,IKPTL
       INTEGER(4)             :: NB
       INTEGER(4)             :: NBH
       INTEGER(4)             :: NGL
@@ -686,7 +686,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: NTASKS,THISTASK
       INTEGER(4),ALLOCATABLE :: ICOLOR(:)
       LOGICAL(4),ALLOCATABLE :: TINVARR(:)
-      logical(4)             :: tkgroup
+      LOGICAL(4)             :: TKGROUP
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES$INITIALIZE')
 !     
@@ -798,9 +798,9 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
 !WRITE(NFILO,*)'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
 !PRINT*,'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
 !TINV=.FALSE.
-!       ==  not that xk refers to the local k-point index =================
-print*,thistask,'before ',xk(:,ikptl),tinv
-        CALL PLANEWAVE$INITIALIZE(GSET%ID,'K',RBAS,XK(1,IKPTl),TINV,EPWPSI &
+!       ==  NOT THAT XK REFERS TO THE LOCAL K-POINT INDEX =================
+PRINT*,THISTASK,'BEFORE ',XK(:,IKPTL),TINV
+        CALL PLANEWAVE$INITIALIZE(GSET%ID,'K',RBAS,XK(1,IKPTL),TINV,EPWPSI &
      &                           ,NR1START,NR1L,NR2,NR3)
         CALL PLANEWAVE$SELECT(GSET%ID)
         CALL PLANEWAVE$GETL4('TINV',GSET%TINV)
@@ -1111,8 +1111,8 @@ print*,thistask,'before ',xk(:,ikptl),tinv
       LOGICAL(4)             :: TCONV ! MIXER SAYS THAT WAVE FUNCTIONS ARE CONVERGED !KAESTNERCG
       REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
 !     ******************************************************************      
-integer(4) ::ntasks_w,thistask_w
-call mpe$query('~',ntasks_w,thistask_w)
+INTEGER(4) ::NTASKS_W,THISTASK_W
+CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
                               CALL TRACE$PUSH('WAVES$ETOT')
 !
 !     ==================================================================
@@ -1291,7 +1291,7 @@ CALL TRACE$PASS('BEFORE VOFRHO')
       CALL WAVES_VOFRHO(NRL,NDIMD,RHO,RHOB,NAT,LMRXX,QLM,VQLM)
       DEALLOCATE(QLM)
 CALL TRACE$PASS('AFTER VOFRHO')
-!call error$stop('forced stop in waves$etot')
+!CALL ERROR$STOP('FORCED STOP IN WAVES$ETOT')
 
 !      ALLOCATE(FORCET(3,NAT))
 !      ALLOCATE(VQLM(LMRXX,NAT))
@@ -1604,12 +1604,12 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
                               CALL TRACE$PUSH('WAVES_VOFRHO')
 
 !     == ASSUMES THAT NR2 AND NR3 ARE IDENTICAL FOR DENSITY AND FOR
-!     == ALL WAVES IN THE GROUP/ nr1l on the other hand may differ
+!     == ALL WAVES IN THE GROUP/ NR1L ON THE OTHER HAND MAY DIFFER
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL PLANEWAVE$GETI4('NR1L',NR1L_V)
       CALL PLANEWAVE$GETI4('NR2',NR2)
       CALL PLANEWAVE$GETI4('NR3',NR3)
-      NR1L=NRL/(NR2*NR3)  ! nrl=nr1l*nr2*nr3  refers to the wave function!
+      NR1L=NRL/(NR2*NR3)  ! NRL=NR1L*NR2*NR3  REFERS TO THE WAVE FUNCTION!
 !
 !     ==================================================================
 !     == PERFORM SUM OVER K-POINT GROUPS AND REDISTRIBUTE             ==
@@ -1625,7 +1625,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       FORCE(:,:)=0.D0
       STRESS(:,:)=0.D0
       VQLM(:,:)=0.D0
-      CALL POTENTIAL$VOFRHO(NR1L_V*NR2*NR3,NDIMD,RHO_v,LMRXX,NAT,QLM,VQLM &
+      CALL POTENTIAL$VOFRHO(NR1L_V*NR2*NR3,NDIMD,RHO_V,LMRXX,NAT,QLM,VQLM &
      &                     ,R,FORCE,RBAS,STRESS,RHOB)
 !
 !     ==================================================================
@@ -1669,7 +1669,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
 !     **    ONE K-GROUP                                               **
 !     **                                                              **
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
-      USE WAVES_MODULE, ONLY : WAVES_SELECTWV,GSET,nkptl
+      USE WAVES_MODULE, ONLY : WAVES_SELECTWV,GSET,NKPTL
       USE MPE_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -1693,8 +1693,8 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       INTEGER(4)            :: IWORK2(2)
       INTEGER(4)            :: IRSTART,IREND
       INTEGER(4)            :: IR1_P,IR2_P,IR1_V,IR2_V
-integer(4) :: ir1,ir2,ir3
-real(8)    :: svar
+INTEGER(4) :: IR1,IR2,IR3
+REAL(8)    :: SVAR
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES_MAPPSITOPOT')
       IF(ID.NE.'PSITOPOT'.AND.ID.NE.'POTTOPSI') THEN
@@ -1726,14 +1726,14 @@ real(8)    :: svar
 !     ====================================================================
 !     == COMMUNICATE WHICH PLANES OF RHO_P ARE HELD BY EACH PROCESSOR   ==
 !     ====================================================================
-!     __ it is possible that there is no k-point on a task
-      if(nkptl.gt.0) then
+!     __ IT IS POSSIBLE THAT THERE IS NO K-POINT ON A TASK
+      IF(NKPTL.GT.0) THEN
         CALL WAVES_SELECTWV(1,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
         CALL PLANEWAVE$GETI4('NR1START',NR1START_P)
-      else
-        nr1start_p=1
-      end if
+      ELSE
+        NR1START_P=1
+      END IF
       ALLOCATE(NR1FIRST_P(NTASKS))
       ALLOCATE(NR1LAST_P(NTASKS))
       DO ITASK=1,NTASKS
@@ -1761,7 +1761,7 @@ real(8)    :: svar
 !
           IRSTART=MAX(NR1FIRST_V(ITASK_V),NR1FIRST_P(ITASK_P)) 
           IREND  =MIN(NR1LAST_V(ITASK_V),NR1LAST_P(ITASK_P)) 
-          IF(IRSTART.gt.IREND) CYCLE  ! NO MESSAGE, GO TO NEXT....
+          IF(IRSTART.GT.IREND) CYCLE  ! NO MESSAGE, GO TO NEXT....
 !
 !         ==============================================================
 !         ==                                                          ==
@@ -1782,12 +1782,12 @@ real(8)    :: svar
             IF(ID.EQ.'PSITOPOT') THEN
               IF(THISTASK.EQ.ITASK_P) THEN
 !               __ SEND ____
-!print*,'send   : ',thistask,':',itask_p,'->',itask_v,' ; ',ir1_p,ir2_p
+!PRINT*,'SEND   : ',THISTASK,':',ITASK_P,'->',ITASK_V,' ; ',IR1_P,IR2_P
                 CALL MPE$SENDRECEIVE('MONOMER',ITASK_P,ITASK_V &
      &                              ,RHO_P(IR1_P:IR2_P,:,:,:))
               ELSE
 !               __ RECEIVE ____
-!print*,'receive: ',thistask,':',itask_p,'->',itask_v,' ; ',ir1_v,ir2_v
+!PRINT*,'RECEIVE: ',THISTASK,':',ITASK_P,'->',ITASK_V,' ; ',IR1_V,IR2_V
                 CALL MPE$SENDRECEIVE('MONOMER',ITASK_P,ITASK_V &
      &                              ,ARR(1:IR2_P-IR1_P+1,:,:,:))
                 RHO_V(IR1_V:IR2_V,:,:,:)=RHO_V(IR1_V:IR2_V,:,:,:) &
@@ -1796,37 +1796,37 @@ real(8)    :: svar
             ELSE
               IF(THISTASK.EQ.ITASK_V) THEN
 !               ____SEND____
-!print*,'send   : ',thistask,':',itask_v,'->',itask_p
+!PRINT*,'SEND   : ',THISTASK,':',ITASK_V,'->',ITASK_P
                 CALL MPE$SENDRECEIVE('MONOMER',ITASK_V,ITASK_P,RHO_V(IR1_V:IR2_V,:,:,:))
               ELSE
 !               __ RECEIVE______
-!print*,'receive: ', thistask,':',itask_v,'->',itask_p
+!PRINT*,'RECEIVE: ', THISTASK,':',ITASK_V,'->',ITASK_P
                 CALL MPE$SENDRECEIVE('MONOMER',ITASK_V,ITASK_P,RHO_P(IR1_P:IR2_P,:,:,:))
               END IF
             END IF
           END IF
         ENDDO
       ENDDO      
-!print*,'mappsitopot: id=',trim(id),' task=',thistask,': done'
+!PRINT*,'MAPPSITOPOT: ID=',TRIM(ID),' TASK=',THISTASK,': DONE'
       IF(ALLOCATED(ARR))DEALLOCATE(ARR)
-IF(ID.EQ.'PSITOPOT_x') THEN
+IF(ID.EQ.'PSITOPOT_X') THEN
  PRINT*,THISTASK,'NR1FIRST_V',NR1FIRST_V  
  PRINT*,THISTASK,'NR1LAST_V ',NR1LAST_V  
  PRINT*,THISTASK,'NR1FIRST_P',NR1FIRST_P  
  PRINT*,THISTASK,'NR1LAST_P ',NR1LAST_P  
- PRINT*,'RHO_V(X,1,1) ',RHO_v(1:10,1,1,1)
- svar=0.d0
- do ir3=1,nr3
-   do ir2=1,nr2
-     do ir1=1,nr1l_v
+ PRINT*,'RHO_V(X,1,1) ',RHO_V(1:10,1,1,1)
+ SVAR=0.D0
+ DO IR3=1,NR3
+   DO IR2=1,NR2
+     DO IR1=1,NR1L_V
         SVAR=SVAR+ABS(RHO_V(IR1,IR2,IR2,1))
      ENDDO
    ENDDO
  ENDDO
  CALL MPE$COMBINE('MONOMER','+',SVAR)
- ir1=nr1l_v*nr2*nr3
- CALL MPE$COMBINE('MONOMER','+',ir1)
- PRINT*,THISTASK,'SUM ',SVAR/real(ir1,kind=8)
+ IR1=NR1L_V*NR2*NR3
+ CALL MPE$COMBINE('MONOMER','+',IR1)
+ PRINT*,THISTASK,'SUM ',SVAR/REAL(IR1,KIND=8)
 END IF
                               CALL TRACE$POP
       RETURN
@@ -4964,13 +4964,13 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !      ...............................................................
        SUBROUTINE WAVES_PREBALANCE(NGROUPS,NA,NB,WA,WB)
 !      **                                                             **
-!      **  tries do distribute the computational effort equally       **
-!      **  onto ngroups groups. It assumes that there are two types   **
-!      **  of kpoints with weights Wa and WB. na and nb specifies     **
-!      **  the number of k-points from each type in the corresponding **
-!      **  groups                                                     **
+!      **  TRIES DO DISTRIBUTE THE COMPUTATIONAL EFFORT EQUALLY       **
+!      **  ONTO NGROUPS GROUPS. IT ASSUMES THAT THERE ARE TWO TYPES   **
+!      **  OF KPOINTS WITH WEIGHTS WA AND WB. NA AND NB SPECIFIES     **
+!      **  THE NUMBER OF K-POINTS FROM EACH TYPE IN THE CORRESPONDING **
+!      **  GROUPS                                                     **
 !      **                                                             **
-       implicit none
+       IMPLICIT NONE
        INTEGER(4),INTENT(IN)    :: NGROUPS
        INTEGER(4),INTENT(INOUT) :: NA(NGROUPS)
        INTEGER(4),INTENT(INOUT) :: NB(NGROUPS)
@@ -5018,7 +5018,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
              NB(IPOS1)=NB(IPOS1)-1        
              NB(IPOS2A)=NB(IPOS2A)+1        
            END IF
-           cycle
+           CYCLE
          ELSE
            EXIT
          END IF
