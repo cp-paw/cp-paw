@@ -4431,31 +4431,35 @@ LOGICAL(4):: TCHK
       RETURN
       END SUBROUTINE WAVES_COPYLAMBDA
 !
-!     .................................................................
+!     ....................................................................
       SUBROUTINE WAVES_SPINOROVERLAP(NBH,NB,IKPT,QMAT)
-!     *****************************************************************
-!     **  CALCULATES Q_K,I,L,J=1/2*<PSI_I,K|PSI_J,L>                 **
-!     **  I AND J ARE BAND-INDICES                                   **
-!     **  K AND L ARE 1 OR 2 AND ARE THE SPINOR PART OF THE WAVEFUNCTION
-!     *****************************************************************
+!     ********************************************************************
+!     **  calculates the overlap between the spin contribution          **
+!     **  of the spinors needed to evaluate the total spin.             **
+!     **  CALCULATES Q_K,I,L,J=1/2*<PSI_I,K|PSI_J,L>                    **
+!     **  I AND J ARE BAND-INDICES                                      **
+!     **  K AND L ARE 1 OR 2 AND ARE THE SPINOR PART OF THE WAVEFUNCTION *
+!     ********************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NBH,NB,IKPT
-      COMPLEX(8),INTENT(OUT):: QMAT(2*NB*NSPIN,2*NB*NSPIN)
+      INTEGER(4),INTENT(IN)  :: NBH,NB,IKPT
+      COMPLEX(8),INTENT(OUT) :: QMAT(2*NB*NSPIN,2*NB*NSPIN)
       COMPLEX(8),ALLOCATABLE :: AUXMAT(:,:)
       COMPLEX(8),ALLOCATABLE :: AUXMAT2(:,:)
       COMPLEX(8),ALLOCATABLE :: OPROJ(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSI0(:,:,:)
-      INTEGER(4)            :: NGL,NBD,I,J,NDIMHALF,ISPIN
-!     ====================================================================
-CALL ERROR$MSG('K-POINT PARALLELIZATION NOT YET IMPLEMENTED IN THIS ROUTINE!')
-CALL ERROR$STOP('WAVES_SPINOVERLAP')
+      INTEGER(4)             :: NGL,NBD,I,J,NDIMHALF,ISPIN
+!     ******************************************************************
       IF(NDIM.EQ.1.AND.NSPIN.EQ.1) THEN
         CALL ERROR$MSG('S^2 ONLY POSSIBLE FOR NOT SPIN RESTRICTED CALCULATION')
         CALL ERROR$I4VAL('NDIM',NDIM)
         CALL ERROR$I4VAL('NSPIN',NSPIN)
         CALL ERROR$STOP('WAVES_SPINOROVERLAP')
       END IF
+!
+!     ==================================================================
+!     ==  noncollinear case                                           ==
+!     ==================================================================
       IF(NDIM.EQ.2) THEN   !NON-COLLINEAR
         CALL WAVES_SELECTWV(IKPT,1)
         CALL PLANEWAVE$SELECT(GSET%ID)      
@@ -4471,7 +4475,11 @@ CALL ERROR$STOP('WAVES_SPINOVERLAP')
           ENDDO
         ENDDO
         DEALLOCATE(AUXMAT)
-      ELSE  ! COLLINEAR SPIN POLARIZED
+!
+!     ==================================================================
+!     ==  collinear spin-polarized case                                           ==
+!     ==================================================================
+      ELSE  
         ALLOCATE(AUXMAT(NB*2,NB*2))
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -4504,24 +4512,24 @@ CALL ERROR$STOP('WAVES_SPINOVERLAP')
 
         QMAT=(0.D0,0.D0)
         DO I=1,NB  ! UP UP
-           DO J=1,NB
-              QMAT(2*I-1,2*J-1)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
-           ENDDO
+          DO J=1,NB
+            QMAT(2*I-1,2*J-1)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
+          ENDDO
         ENDDO
         DO I=NB+1,2*NB  ! DOWN DOWN
-           DO J=NB+1,2*NB
-              QMAT(2*I,2*J)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
-           ENDDO
+          DO J=NB+1,2*NB
+            QMAT(2*I,2*J)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
+         ENDDO
         ENDDO
         DO I=1,NB  ! UP DOWN
-           DO J=NB+1,2*NB
-              QMAT(2*I-1,2*J)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
-           ENDDO
+          DO J=NB+1,2*NB
+            QMAT(2*I-1,2*J)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
+         ENDDO
         ENDDO         
         DO I=NB+1,2*NB  ! DOWN UP
-           DO J=1,NB
-              QMAT(2*I,2*J-1)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
-           ENDDO
+          DO J=1,NB
+            QMAT(2*I,2*J-1)=(AUXMAT(I,J)+AUXMAT2(I,J))*0.5D0
+          ENDDO
         ENDDO
         DEALLOCATE(AUXMAT)
         DEALLOCATE(AUXMAT2)
@@ -4529,7 +4537,7 @@ CALL ERROR$STOP('WAVES_SPINOVERLAP')
       RETURN
       END SUBROUTINE WAVES_SPINOROVERLAP
 !
-!.....................................................................
+!.......................................................................
 MODULE WAVESFIXRHO_MODULE
 ! THIS MODULE IS USED TO KEEP THE DENSITY FIXED
   REAL(8), ALLOCATABLE    :: QLM(:,:)
@@ -4537,14 +4545,15 @@ MODULE WAVESFIXRHO_MODULE
   REAL(8), ALLOCATABLE    :: DENMAT(:,:,:,:)
 END MODULE WAVESFIXRHO_MODULE
 !
-!      .................................................................
+!      ...................................................................
        SUBROUTINE WAVES_FIXRHOGET(NRL,NDIMD,LMRXX,NAT,QLM_,RHO_,DENMAT_)
        USE WAVESFIXRHO_MODULE 
        IMPLICIT NONE
        INTEGER(4) ,INTENT(IN)  :: NRL,NDIMD,LMRXX,NAT
        REAL(8)    ,INTENT(OUT) :: QLM_(LMRXX,NAT),RHO_(NRL,NDIMD)
        REAL(8)    ,INTENT(OUT) :: DENMAT_(LMRXX,LMRXX,NDIMD,NAT)
-!      ******************************************************************
+!     ********************************************************************
+
        IF (.NOT.ALLOCATED(QLM)) THEN
           ALLOCATE(QLM(LMRXX,NAT))
           ALLOCATE(RHO(NRL,NDIMD))
@@ -4613,11 +4622,102 @@ END MODULE WAVESFIXRHO_MODULE
 !
 !.....................................................................
 MODULE TOTALSPIN_MODULE
+!** TOTALSPIN CONTAINS <S^2>,<S_X>,<S_Y>,<S_X>                      **
 REAL(8)               :: TOTSPIN(4) ! DIFFERS FROM JOHANNES' VERSION
 END MODULE TOTALSPIN_MODULE
 !
+!     ..................................................................
+      SUBROUTINE WAVES_TOTALSPINRESET()
+      USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES' VERSION
+      TOTSPIN=0.D0
+      END SUBROUTINE WAVES_TOTALSPINRESET
+!
+!     ..................................................................
+      SUBROUTINE WAVES_TOTALSPIN(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
+!     ******************************************************************
+!     **  CALCULATES <S^2>,<S_x>,<s_y>,<s_x> IN UNITS OF HBAR^2       **
+!     **                                                              **
+!     **                                                              **
+!     ******************************************************************
+      USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES' VERSION
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NB,NKPT,IKPT,NSPIN
+      REAL(8)   ,INTENT(IN) :: OCC(NB,NKPT,NSPIN) 
+      COMPLEX(8),INTENT(IN) :: QMAT(2,NB*NSPIN,2,NB*NSPIN) ! Q_I,J,K,L=1/2*<PSI_I,K|PSI_J,K>  
+      COMPLEX(8)            :: SUM,PART,SPINX,SPINY,SPINZ
+      COMPLEX(8)            :: csvarx,csvary,csvarz
+      COMPLEX(8)            :: expects2
+      REAL(8)               :: IOCC(NB*NSPIN),SVAR
+      INTEGER(4)            :: I,J,NTASKS,THISTASK,NBD
+      complex(8),parameter  :: ci=(0.d0,1.d0)
+!     ******************************************************************
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+
+      DO I=1,NB
+         IOCC(I)=OCC(I,IKPT,1)
+      END DO
+      IF(NSPIN.EQ.2) THEN
+        DO I=1,NB
+          IOCC(NB+I)=OCC(I,IKPT,2)
+        END DO
+      END IF
+      NBD=NSPIN*NB !ONE BAND FOR ONE ELECTRON
+!
+!     ==================================================================
+!     == spin expectation value of the slater determinant             ==
+!     ==================================================================
+      spinx=0.d0
+      spiny=0.d0
+      spinz=0.d0
+      DO I=1,NBD
+        spinx=spinx+(QMAT(1,I,2,I)+QMAT(2,I,1,I))*iocc(i)
+        spiny=spiny-ci*(QMAT(1,I,2,I)-QMAT(2,I,1,I))*iocc(i)
+        spinz=spinz+(QMAT(1,I,1,I)-QMAT(2,I,2,I))*iocc(i)
+      END DO
+!
+!     ==================================================================
+!     == expectation value of s**2 of the slater determinant          ==
+!     ==================================================================
+      expects2=0.D0
+      DO I=1,NBD
+        expects2=expects2+IOCC(I)*0.75D0
+      END DO
+!
+!     ==================================================================
+!     == now add the exchange-like contribution to the spin           ==
+!     ==================================================================
+      sum=0.d0
+      DO I=1,NBD
+        DO J=1,NBD
+          PART=(QMAT(1,I,1,J)-QMAT(2,I,2,J))*(QMAT(1,J,1,I)-QMAT(2,J,2,I)) &
+     &        +4.D0*QMAT(1,I,2,J)*QMAT(2,J,1,I)
+          SUM=SUM-PART*SQRT(IOCC(I)*IOCC(J))
+        END DO
+      END DO
+      PRINT*,'TOTALSPIN: echange like contribution : ',SUM
+      PRINT*,'TOTALSPIN: PART 3/4+X+Y+Z: ',expects2+SPINX**2+SPINY**2+SPINZ**2
+      SUM=sum+expects2+SPINX**2+SPINY**2+SPINZ**2
+!
+!     ==================================================================
+!     == print result                                                 ==
+!     ==================================================================
+      IF(THISTASK.EQ.1) tHEN
+        PRINT*,'SPIN: 2*<S_X>: ',2.D0*REAL(SPINX,KIND=8),' HBAR'
+        PRINT*,'SPIN: 2*<S_Y>: ',2.D0*REAL(SPINY,KIND=8),' HBAR'
+        PRINT*,'SPIN: 2*<S_Z>: ',2.D0*REAL(SPINZ,KIND=8),' HBAR'
+        PRINT*,'TOTALSPIN: <S^2>: ',REAL(SUM,KIND=8),' HBAR^2'
+        PRINT*,'SPIN QUATUM NUMBER S=',-0.5+SQRT(0.25+REAL(SUM,KIND=8))
+        IF (IKPT.EQ.1) TOTSPIN=0.D0 ! SUM UP TOTAL SPIN OVER K-POINTS
+        TOTSPIN(1)=TOTSPIN(1)+real(SUM,kind=8)
+        TOTSPIN(2)=TOTSPIN(2)+real(SPINX,kind=8)
+        TOTSPIN(3)=TOTSPIN(3)+real(SPINY,kind=8)
+        TOTSPIN(4)=TOTSPIN(4)+real(SPINZ,kind=8)
+       END IF
+       RETURN
+       END SUBROUTINE WAVES_TOTALSPIN
+!
 !      .................................................................
-       SUBROUTINE WAVES_TOTALSPIN(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
+       SUBROUTINE WAVES_TOTALSPIN_old(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
 !      *****************************************************************
 !      **  CALCULATES <S^2> IN UNITS OF HBAR^2                        **
 !      **                                                             **
@@ -4632,6 +4732,8 @@ END MODULE TOTALSPIN_MODULE
        COMPLEX(8)            :: SUM,PART,SPINX,SPINY,SPINZ
        REAL(8)               :: IOCC(NB*NSPIN),SVAR
        INTEGER(4)            :: I,J,NTASKS,THISTASK,NBD
+       CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION. DO NOT USE ANY MORE')
+       CALL ERROR$STOP('WAVES_TOTALSPIN_OLD')
        
        CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 
@@ -4706,7 +4808,7 @@ END MODULE TOTALSPIN_MODULE
           TOTSPIN(4)=TOTSPIN(4)+DBLE(SPINZ)
        END IF
        RETURN
-     END SUBROUTINE WAVES_TOTALSPIN
+     END SUBROUTINE WAVES_TOTALSPIN_old
 !
 !     ..................................................................
       SUBROUTINE WAVES$REPORTSPIN(NFIL)
