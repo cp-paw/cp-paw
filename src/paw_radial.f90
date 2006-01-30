@@ -165,10 +165,10 @@
       C=(S21-S31)/(R2-R3)
       B=S21-C*(R1+R2)
       A=F(1)-B*R1-C*R1**2
-      SUM0 = ( A*R1 + .5D0*B*R1**2 + 1.D0/3.D0*C*R1**3 ) / DEX
+!SUM0 = ( A*R1 + .5D0*B*R1**2 + 1.D0/3.D0*C*R1**3 ) / DEX
 !the former line is incorrect. corrected on Dec. 31, 2005. PEB
-! the following line is correct
-! SUM0 = A*R1 + .5D0*B*R1**2 + 1.D0/3.D0*C*R1**3 
+!the following line is correct
+      SUM0 = A*R1 + .5D0*B*R1**2 + 1.D0/3.D0*C*R1**3 
 !     ==================================================================
 !     ==  TRANSFORMATION ONTO LINEAR GRID                             ==
 !     ==================================================================
