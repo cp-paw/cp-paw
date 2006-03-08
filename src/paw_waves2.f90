@@ -2672,10 +2672,10 @@ PRINT*,'ITER ',ITER,DIGAM
             DO IB1=1,NB
               IF(FLAG.EQ.'011004') THEN
 !               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
-                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPT,ISPIN),VECTOR1
+                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPT,ISPIN),VECTOR1(:,:,ib1)
               ELSE
 !               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
-                WRITE(NFIL)EIG(IB1),VECTOR1
+                WRITE(NFIL)EIG(IB1),VECTOR1(:,:,ib1)
               END IF
             ENDDO
             DEALLOCATE(EIG)
