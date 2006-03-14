@@ -196,7 +196,7 @@ END MODULE HYPERFINE_MODULE
       END
 !
 !     ....................................................................
-      SUBROUTINE HYPERFINE$SET1CPOT(IDENT_,IAT_,R1,DEX,NR,NRX,LMRX,POT)
+      SUBROUTINE HYPERFINE$SET1CPOT(IDENT_,IAT_,gid,NR,NRX,LMRX,POT)
 !     ********************************************************************
 !     **  USE 1-CENTER POTENTIAL FOR ELECTRIC FIELD GRADIENTS          **
 !     ********************************************************************
@@ -204,18 +204,16 @@ END MODULE HYPERFINE_MODULE
       IMPLICIT NONE
       CHARACTER(*) ,INTENT(IN) :: IDENT_  ! CAN BE 'AE' OR 'PS' 
       INTEGER(4)   ,INTENT(IN) :: IAT_    ! ATOM INDEX (SEE ATOMLIST)
-      REAL(8)      ,INTENT(IN) :: R1
-      REAL(8)      ,INTENT(IN) :: DEX
+      INTEGER(4)   ,INTENT(IN) :: gid
       INTEGER(4)   ,INTENT(IN) :: NR,NRX
       INTEGER(4)   ,INTENT(IN) :: LMRX
       REAL(8)      ,INTENT(IN) :: POT(NRX,LMRX)
-      REAL(8)                  :: XEXP
       LOGICAL(4)               :: TEFG
       LOGICAL(4)               :: TCHK
       REAL(8)                  :: V2(5)
       INTEGER(4)   ,PARAMETER  :: NP=5
-      REAL(8)                  :: XARRAY(NP),YARRAY(NP)
-      REAL(8)                  :: RI
+      REAL(8)                  :: YARRAY(NP)
+      REAL(8)                  :: R(nr)
       INTEGER(4)               :: LM,IR
       CHARACTER(32)            :: ATOMNAME
 !     ********************************************************************
@@ -242,21 +240,14 @@ END MODULE HYPERFINE_MODULE
 !     == V(R)=R(I)*V(I,J)*R(J)                                         ==
 !     == V2LM=LIM(R->0) V_L(R)/R**2                                    ==
 !     ===================================================================
-      XEXP=DEXP(DEX)
-      RI=R1/XEXP
-      DO IR=1,NP
-        RI=RI*XEXP
-        XARRAY(IR)=RI
-      ENDDO      
-      IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1X ",5E20.10)')XARRAY
+      call radial$r(gid,nr,r)
+      IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1X ",5E20.10)')r(1:np)
       IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1V ",1E20.10)')POT(1,1)
       IF(LMRX.GE.9) THEN
         DO LM=5,9
-          DO IR=1,NP
-            YARRAY(IR)=POT(IR,LM)/XARRAY(IR)**2
-          ENDDO
+          YARRAY(1:np)=POT(1:np,LM)/r(1:np)**2
           IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1V2 ",5E20.10)')YARRAY
-!         CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,V2(LM-4))
+!         CALL EXTRAPOLATE(NP,r(1:np),YARRAY,0.D0,V2(LM-4))
           V2(LM-4)=YARRAY(1)
         ENDDO
       ELSE
@@ -277,7 +268,7 @@ END MODULE HYPERFINE_MODULE
       END
 !
 !     ....................................................................
-      SUBROUTINE HYPERFINE$SET1CRHO(IDENT_,IDENT1_,IAT_,R1,DEX,NR,NRX,LMRX,RHO)
+      SUBROUTINE HYPERFINE$SET1CRHO(IDENT_,IDENT1_,IAT_,gid,NR,NRX,LMRX,RHO)
 !     ********************************************************************
 !     **  GET SECOND DERIVATIVE OF THE RADIAL POTENTIAL AT THE ORIGIN   **
 !     ********************************************************************
@@ -286,12 +277,10 @@ END MODULE HYPERFINE_MODULE
       CHARACTER(*),INTENT(IN) :: IDENT_  ! CAN BE 'AE' OR 'PS' 
       CHARACTER(*),INTENT(IN) :: IDENT1_ ! CAN BE 'TOT' OR 'SPIN' 
       INTEGER(4)  ,INTENT(IN) :: IAT_    ! ATOM INDEX (SEE ATOMLIST)
-      REAL(8)     ,INTENT(IN) :: R1
-      REAL(8)     ,INTENT(IN) :: DEX
+      INTEGER(4)  ,INTENT(IN) :: gid
       INTEGER(4)  ,INTENT(IN) :: NR,NRX
       INTEGER(4)  ,INTENT(IN) :: LMRX
       REAL(8)     ,INTENT(IN) :: RHO(NRX,LMRX)
-      REAL(8)                 :: XEXP
       LOGICAL(4)              :: TIS     ! SWITCH FOR ISOMER SHIFT
       LOGICAL(4)              :: TFC     ! SWITCH FOR FERMI CONTACT TERM
       LOGICAL(4)              :: TANIS   ! SWITCH FOR ANISOTROPIC
@@ -307,6 +296,7 @@ END MODULE HYPERFINE_MODULE
       INTEGER(4)              :: LM,IR
       CHARACTER(32)           :: ATOMNAME
       REAL(8)                 :: Z
+      real(8)                 :: r(nr)
 !     ********************************************************************
 ! 
 !     ===================================================================
@@ -362,19 +352,13 @@ END MODULE HYPERFINE_MODULE
         RETURN 
       END IF
       IF(LMRX.LT.1) THEN; CALL TRACE$POP; RETURN; END IF
-      XEXP=DEXP(DEX)
+      call radial$r(gid,nr,r)
 ! 
 !     ===================================================================
 !     == ISOMER SHIFT                                                  ==
 !     ===================================================================
       IF(TIS) THEN
-        RI=R1/XEXP
-        DO IR=1,NP
-          RI=RI*XEXP
-          XARRAY(IR)=RI
-          YARRAY(IR)=RHO(IR,1)
-        ENDDO      
-        CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,RHO0)
+        CALL EXTRAPOLATE(NP,r(1:np),rho(1:np,1),0.D0,RHO0)
         IF(IDENT_.EQ.'AE') THEN
           CALL LINKEDLIST$SET(LL_HPRFN,'AERHOTLM',0,RHO0)
         ELSE IF(IDENT_.EQ.'PS') THEN
@@ -388,16 +372,10 @@ END MODULE HYPERFINE_MODULE
       IF(TFC) THEN
         IF(IDENT_.EQ.'AE') THEN
           CALL ATOMLIST$GETR8('Z',IAT_,Z)
-          CALL EFG_THOMSON(R1,DEX,NR,RHO,Z,RHO0)
+          CALL EFG_THOMSON(gid,NR,RHO,Z,RHO0)
           CALL LINKEDLIST$SET(LL_HPRFN,'AERHOSLM',0,RHO0)
         ELSE IF(IDENT_.EQ.'PS') THEN
-          RI=R1/XEXP
-          DO IR=1,NP
-            RI=RI*XEXP
-            XARRAY(IR)=RI
-            YARRAY(IR)=RHO(IR,1)
-          ENDDO      
-          CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,RHO0)
+          CALL EXTRAPOLATE(NP,r(1:np),rho(1:np,1),0.D0,RHO0)
           CALL LINKEDLIST$SET(LL_HPRFN,'PSRHOSLM',0,RHO0)
         END IF  
       END IF
@@ -407,18 +385,11 @@ END MODULE HYPERFINE_MODULE
 !     ===================================================================
       IF(TANIS) THEN
         IF(LMRX.GE.9) THEN
-          RI=R1/XEXP
-          DO IR=1,NP
-            RI=RI*XEXP
-            XARRAY(IR)=RI
-           ENDDO      
-           DO LM=5,9
-            CALL RADIAL$POISSON(R1,DEX,NR,2,RHO(1,LM),WORK)
-            DO IR=1,NP
-              YARRAY(IR)=WORK(IR)/XARRAY(IR)**2
-            ENDDO
+          DO LM=5,9
+            CALL RADIAL$POISSON(gid,NR,2,RHO(1,LM),WORK)
+            YARRAY(1:np)=WORK(1:np)/r(1:np)**2
             IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1VS2 ",5E20.10)')YARRAY
-            CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,ANIS(LM-4))
+            CALL EXTRAPOLATE(NP,r(1:np),YARRAY,0.D0,ANIS(LM-4))
           ENDDO
         ELSE
           ANIS(:)=0.D0
@@ -436,18 +407,11 @@ END MODULE HYPERFINE_MODULE
 !     ===================================================================
       IF(TEFG) THEN
         IF(LMRX.GE.9) THEN
-          RI=R1/XEXP
-          DO IR=1,NP
-            RI=RI*XEXP
-            XARRAY(IR)=RI
-           ENDDO      
-           DO LM=5,9
-            CALL RADIAL$POISSON(R1,DEX,NR,2,RHO(1,LM),WORK)
-            DO IR=1,NP
-              YARRAY(IR)=WORK(IR)/XARRAY(IR)**2
-            ENDDO
+          DO LM=5,9
+            CALL RADIAL$POISSON(gid,NR,2,RHO(1,LM),WORK)
+            YARRAY(1:np)=WORK(1:np)/r(1:np)**2
             IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1VS2 ",5E20.10)')YARRAY
-            CALL EXTRAPOLATE(NP,XARRAY,YARRAY,0.D0,V2(LM-4))
+            CALL EXTRAPOLATE(NP,r(1:np),YARRAY,0.D0,V2(LM-4))
           ENDDO
         ELSE
           V2(:)=0.D0
@@ -1081,14 +1045,13 @@ END IF
       END SUBROUTINE DTOXYZ
 !
 !     ..................................................................
-      SUBROUTINE EFG_THOMSON(R1,DEX,NR,RHO,Z,RHO0)
+      SUBROUTINE EFG_THOMSON(gid,NR,RHO,Z,RHO0)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
       USE HYPERFINE_MODULE, ONLY: EXTRAPOLATE
       IMPLICIT NONE
-      REAL(8)   ,INTENT(IN) :: R1           ! FIRST GRID POINT
-      REAL(8)   ,INTENT(IN) :: DEX          ! LOG-SPACING OF GRID POINTS
+      INTEGER(4),INTENT(IN) :: gid          ! GRID id
       INTEGER(4),INTENT(IN) :: NR           ! #(GRID POINTS)
       REAL(8)   ,INTENT(IN) :: RHO(NR)      ! DENSITY
       REAL(8)   ,INTENT(IN) :: Z            ! ATOMIC NUMBER
@@ -1113,12 +1076,7 @@ END IF
       DLAM=2.D0*(LAMBDA-1.D0)   ! ASSUMES S-LIKE BEHAVIOR OF WAVE FUNCTIONS
       IF(Z.LT.1) DLAM=0.D0     
 !     == PREPARE RADIAL GRID ===========================================
-      XEXP=DEXP(DEX)
-      RI=R1/XEXP
-      DO IR=1,NR
-        RI=RI*XEXP
-        R(IR)=RI
-      ENDDO
+      call radial$r(gid,nr,r)
 !
 !     ================================================================== 
 !     == INTEGRATE TO THE SECOND K-POINT                              == 
@@ -1138,7 +1096,7 @@ END IF
       DO I=1,4
         CI(I)=CI(I)*RTH**(I-1)
       ENDDO
-      R2=R1*XEXP
+      R2=R(2)
       RHO0=0.D0
       FAC=1.D0/(1.D0+RTH/R2)
       DO I=1,4

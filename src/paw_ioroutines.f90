@@ -64,6 +64,7 @@ END MODULE IO_MODULE
 !     ..................................................................
       SUBROUTINE IO$REPORT
       USE IO_MODULE
+      USE continuum_module
       IMPLICIT NONE
       INTEGER(4) :: NFILO
       INTEGER(4)               :: NTASKS,THISTASK
@@ -1147,6 +1148,7 @@ PRINT*,'ILDA ',ILDA
 !     ******************************************************************
 !     ******************************************************************
       USE LINKEDLIST_MODULE
+      USE continuum_module
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
@@ -2027,6 +2029,7 @@ PRINT*,'ILDA ',ILDA
       SUBROUTINE READIN_CONTINUUM(LL_CNTL_)
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
+      USE continuum_module
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
@@ -2124,6 +2127,40 @@ PRINT*,'ILDA ',ILDA
       END IF
       CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,SVAR)
       CALL CONTINUUM$SETR8('FRICTION',SVAR)
+!new options
+!
+!     == keep_dff =====================================================
+      CALL LINKEDLIST__EXISTD(LL_CNTL,'KEEP_DFF',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST__SET(LL_CNTL,'KEEP_DFF',0,.true.)
+print *,'keep_dff set in list'
+      END IF
+      CALL LINKEDLIST__GET(LL_CNTL,'KEEP_DFF',1,TCHK)
+      CALL CONTINUUM__SETL4('KEEP_DFF',TCHK)
+!
+!     == debug_print =====================================================
+      CALL LINKEDLIST__EXISTD(LL_CNTL,'DEBUG_PRINT',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST__SET(LL_CNTL,'DEBUG_PRINT',0,.FALSE.)
+      END IF
+      CALL LINKEDLIST__GET(LL_CNTL,'DEBUG_PRINT',1,TCHK)
+      CALL CONTINUUM__SETL4('DEBUG_PRINT',TCHK)
+!
+!     == read_old_restart =====================================================
+      CALL LINKEDLIST__EXISTD(LL_CNTL,'READ_OLD_RESTART',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST__SET(LL_CNTL,'READ_OLD_RESTART',0,.FALSE.)
+      END IF
+      CALL LINKEDLIST__GET(LL_CNTL,'READ_OLD_RESTART',1,TCHK)
+      CALL CONTINUUM__SETL4('READ_OLD_RESTART',TCHK)
+!
+!     == filter_faces =====================================================
+      CALL LINKEDLIST__EXISTD(LL_CNTL,'FILTER_FACES',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST__SET(LL_CNTL,'FILTER_FACES',0,.FALSE.)
+      END IF
+      CALL LINKEDLIST__GET(LL_CNTL,'FILTER_FACES',1,TCHK)
+      CALL CONTINUUM__SETL4('FILTER_FACES',TCHK)
 !
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!CONTINUUM!AUTO                          ==
@@ -2133,7 +2170,6 @@ PRINT*,'ILDA ',ILDA
       CALL FILEHANDLER$SETFILE('CONTINUUM_PROTOCOL',.TRUE.,-'_SURFACECHARGE.PROT')
       CALL FILEHANDLER$SETSPECIFICATION('CONTINUUM_PROTOCOL','STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION('CONTINUUM_PROTOCOL','FORM','FORMATTED')
-
 !
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!CONTINUUM!AUTO                          ==
@@ -2402,8 +2438,8 @@ PRINT*,'ILDA ',ILDA
           CALL LINKEDLIST$GET(LL_CNTL,'EMIN[EV]',1,EMIN)
           CALL LINKEDLIST$GET(LL_CNTL,'EMAX[EV]',1,EMAX)
           CALL CONSTANTS$GET('EV',EV)
-	  EMIN=EMIN*EV
-	  EMAX=EMAX*EV
+          EMIN=EMIN*EV
+          EMAX=EMAX*EV
           CALL GRAPHICS$SETR8('EMIN',EMIN)
           CALL GRAPHICS$SETR8('EMAX',EMAX)
         ELSE IF(TCHK2) THEN
@@ -4941,14 +4977,22 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         LINKARRAY(5,ILINK)=LINK(ILINK)%MATOM
         LINKARRAY(6,ILINK)=LINK(ILINK)%SATOM
       ENDDO
+!     == maparray only includes atoms not participating in link bonds
       NMAP=0
       DO IATS=1,NATS
+        tchk=.false.
+        do ilink=1,nlink
+          tchk=tchk.or.(iats.eq.linkarray(6,ilink))
+          tchk=tchk.or.(iats.eq.linkarray(3,ilink))
+          if(tchk) exit
+        enddo
+        if(tchk) cycle
         NMAP=NMAP+1
         MAPARRAY(1,NMAP)=SATOM(IATS)%QMSATOM
         MAPARRAY(2,NMAP)=QATOM(MAPARRAY(1,NMAP))%QMSATOM
         MAPARRAY(3,NMAP)=IATS
       ENDDO
-      CALL QMMM$SETI4A('MAP',3*NMAP,MAPARRAY)
+      CALL QMMM$SETI4A('MAP',3*NMAP,MAPARRAY(:,1:nmap))
       CALL QMMM$SETI4A('LINK',6*NLINK,LINKARRAY)
       DEALLOCATE(LINKARRAY)
       DEALLOCATE(MAPARRAY)
@@ -5031,6 +5075,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       SUBROUTINE STRCIN_CONTINUUM(LL_STRC_)
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
+      USE continuum_module
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
       TYPE(LL_TYPE)            :: LL_STRC

@@ -14,6 +14,7 @@
 !     ******************************************************************
       USE RESTART_INTERFACE
       USE MPE_MODULE
+      USE continuum_module
       IMPLICIT NONE
       LOGICAL(4)            :: TCHK
       INTEGER(4)            :: NFILO
@@ -139,10 +140,6 @@
       TREAD=TREAD.OR.TCHK
 !
 !     ==================================================================
-!     ==  READ CONTINUUM ENVIRONMENT                                  ==
-!     ==================================================================
-!
-!     ==================================================================
 !     ==  UNIDENTIFIED OPTION                                         ==
 !     ==================================================================
       IF(.NOT.TREAD) THEN
@@ -158,6 +155,7 @@
       USE RESTART_INTERFACE
       USE MPE_MODULE
       USE STRINGS_MODULE
+      USE continuum_module
       IMPLICIT NONE
       INTEGER(4)          :: NFIL
       INTEGER(4)          :: NFILO

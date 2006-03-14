@@ -38,6 +38,8 @@ MODULE SETUP_MODULE
 TYPE THIS_TYPE
 INTEGER(4)             :: I
 CHARACTER(32)          :: ID
+INTEGER(4)             :: GID          ! GRID ID FOR R-SPACE GRID
+INTEGER(4)             :: GIDG         ! GRID ID FOR G-SPACE GRID
 REAL(8)                :: AEZ
 REAL(8)                :: PSZ
 REAL(8)                :: RCBG
@@ -53,6 +55,8 @@ REAL(8)   ,POINTER     :: PSCORE(:)    !(NRX)
 REAL(8)   ,POINTER     :: PRO(:,:)     !(NRX,LNXX)
 REAL(8)   ,POINTER     :: AEPHI(:,:)   !(NRX,LNXX)
 REAL(8)   ,POINTER     :: PSPHI(:,:)   !(NRX,LNXX)
+REAL(8)   ,POINTER     :: uPHI(:,:)   !(NRX,LNXX)
+REAL(8)   ,POINTER     :: tuPHI(:,:)   !(NRX,LNXX)
 REAL(8)   ,POINTER     :: DTKIN(:,:)   !(LNXX,LNXX)
 REAL(8)   ,POINTER     :: DOVER(:,:)   !(LNXX,LNXX)
 REAL(8)   ,POINTER     :: VADDOFG(:)   !(NGX)
@@ -75,13 +79,11 @@ CHARACTER(16)          :: FILEID
 TYPE(THIS_TYPE),POINTER:: NEXT
 END TYPE THIS_TYPE
 !
-REAL(8)                :: R1 =1.056D-4
-REAL(8)                :: DEX=5.D-2
-INTEGER(4)             :: NR =250
-INTEGER(4)             :: NRX=250
-REAL(8)   ,PARAMETER   :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
-INTEGER(4),PARAMETER   :: NG=256
-REAL(8)                :: G1          ! FIRST POINT ON THE RADIAL G-GRID
+!INTEGER(4)             :: NR    !=250
+!INTEGER(4)             :: NRX=250
+!REAL(8)   ,PARAMETER   :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
+!INTEGER(4),PARAMETER   :: NG=256
+!REAL(8)               :: G1          ! FIRST POINT ON THE RADIAL G-GRID
 INTEGER(4)             :: NSP=0
 INTEGER(4)             :: LMRXX=0
 INTEGER(4)             :: LMNXX=0
@@ -240,10 +242,18 @@ END MODULE SETUP_MODULE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(OUT) :: VAL
 !     ******************************************************************
-      IF(ID.EQ.'NR') THEN
-        VAL=NR
+      IF(ID.EQ.'GID') THEN
+        VAL=THIS%GID
+      ELSE IF(ID.EQ.'GIDG') THEN
+        VAL=THIS%GIDG
+      ELSE IF(ID.EQ.'NR') THEN
+!       == THIS SHALL BE MARKED FOR DELETION'
+        CALL RADIAL$GETI4(THIS%GID,'NR',VAL)
+!       VAL=NR
       ELSE IF(ID.EQ.'NRX') THEN
-        VAL=NRX
+!       == THIS SHALL BE MARKED FOR DELETION'
+        CALL RADIAL$GETI4(THIS%GID,'NR',VAL)
+!       VAL=NRX
       ELSE IF(ID.EQ.'LNX') THEN
         VAL=THIS%LNX
       ELSE IF(ID.EQ.'LMNX') THEN
@@ -293,6 +303,13 @@ END MODULE SETUP_MODULE
         END IF
         VAL=THIS%LB
 ! SANTOS040616 END
+      ELSE IF(ID.EQ.'LOFC') THEN
+        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETRI4A')
+        END IF
+        VAL=THIS%LB
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -328,9 +345,15 @@ END MODULE SETUP_MODULE
       ELSE IF(ID.EQ.'<G4>') THEN
         VAL=THIS%PSG4
       ELSE IF(ID.EQ.'R1') THEN
-        VAL=R1
+        CALL ERROR$MSG('INTERFACE MARKED FOR DELETION!')
+        CALL ERROR$MSG('DEX IS OWNED BY RADIAL OBJECT')
+        CALL ERROR$STOP('SETUP$GETR8')
+!       VAL=R1
       ELSE IF(ID.EQ.'DEX') THEN
-        VAL=DEX
+        CALL ERROR$MSG('INTERFACE MARKED FOR DELETION!')
+        CALL ERROR$MSG('DEX IS OWNED BY RADIAL OBJECT')
+        CALL ERROR$STOP('SETUP$GETR8')
+!       VAL=DEX
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -351,7 +374,9 @@ END MODULE SETUP_MODULE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
+      INTEGER(4)               :: NR
 !     ******************************************************************
+      CALL RADIAL$GETI4(THIS%GID,'NR',NR)
       IF(ID.EQ.'PRO') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -373,6 +398,20 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%PSPHI,(/LEN/))
+      ELSE IF(ID.EQ.'NDLSPHI') THEN
+        IF(LEN.NE.THIS%LNX*NR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%uPHI,(/LEN/))
+      ELSE IF(ID.EQ.'NDLSTPHI') THEN
+        IF(LEN.NE.THIS%LNX*NR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%TuPHI,(/LEN/))
       ELSE IF(ID.EQ.'AECORE') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -439,6 +478,28 @@ END MODULE SETUP_MODULE
         END IF
         VAL(:)=THIS%AEPOT(:)
 ! SANTOS040616 END
+      ELSE IF(ID.EQ.'FOFC') THEN
+        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%FB,(/LEN/))
+!     == ATOMIC ENERGIES OF THE CORE STATES ===========================
+      ELSE IF(ID.EQ.'EOFC') THEN
+        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%EB,(/LEN/))
+      ELSE IF(ID.EQ.'NUCPOT') THEN
+        IF(LEN.NE.NR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        CALL SETUP_NUCPOT(THIS%GID,NR,THIS%AEZ,VAL)
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -446,7 +507,6 @@ END MODULE SETUP_MODULE
       END IF
       RETURN
       END  
-
 !
 !     ..................................................................
       SUBROUTINE SETUP$GETFOFG(ID,TDER,IND,NG_,G2,CELLVOL,F)
@@ -463,14 +523,18 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: NG_     ! #(PLANE WAVES)
       REAL(8)     ,INTENT(IN)  :: G2(NG_) ! G**2
       REAL(8)     ,INTENT(OUT) :: F(NG_)  
-      REAL(8)                  :: FOFG(NG)
+      REAL(8)     ,ALLOCATABLE :: FOFG(:)  !(NG)
       REAL(8)                  :: PI
       INTEGER(4)               :: IG
+      INTEGER(4)               :: NG
       INTEGER(4)               :: NGAMMA
       REAL(8)                  :: CELLVOL
       REAL(8)                  :: G
+      INTEGER(4)               :: GIDG
 !     ******************************************************************
       IF(NG_.EQ.0) RETURN
+      CALL RADIAL$GETI4(THIS%GIDG,'NR',NG)
+      ALLOCATE(FOFG(NG))
       IF(ID.EQ.'PRO') THEN
         IF(IND.LT.1.OR.IND.GT.THIS%LNX) THEN
           CALL ERROR$MSG('LN OUT OF RANGE')
@@ -497,11 +561,12 @@ END MODULE SETUP_MODULE
 !     ==================================================================
 !     == INTERPOLATE VALUES FROM RADIAL GRID
 !     ==================================================================
+      GIDG=THIS%GIDG
       NGAMMA=0
       IF(TDER) THEN
         G=DSQRT(G2(1))
         IF(G.LT.1.D-6) NGAMMA=1
-        CALL RADIAL$DERIVATIVE(G1,DEX,NG,FOFG,G,F(1))
+        CALL RADIAL$DERIVATIVE(GIDG,NG,FOFG,G,F(1))
         F(1)=G*F(1)
         DO IG=2,NG_
           IF(DABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
@@ -509,24 +574,25 @@ END MODULE SETUP_MODULE
           ELSE
             G=DSQRT(G2(IG))
             IF(G.LT.1.D-6) NGAMMA=IG
-            CALL RADIAL$DERIVATIVE(G1,DEX,NG,FOFG,G,F(IG))
+            CALL RADIAL$DERIVATIVE(GIDG,NG,FOFG,G,F(IG))
             F(IG)=G*F(IG)
           END IF
         ENDDO
       ELSE
         G=DSQRT(G2(1))
         IF(G.LT.1.D-6) NGAMMA=1
-        CALL RADIAL$VALUE(G1,DEX,NG,FOFG,G,F(1))
+        CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(1))
         DO IG=2,NG_
           IF(DABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
             F(IG) =F(IG-1)
           ELSE
             G=DSQRT(G2(IG))
             IF(G.LT.1.D-6) NGAMMA=IG
-            CALL RADIAL$VALUE(G1,DEX,NG,FOFG,G,F(IG))
+            CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(IG))
           END IF
         ENDDO
       END IF
+      DEALLOCATE(FOFG)
 !
 !     ==================================================================
 !     == CORRECT EXTRAPOLATION TO THE GAMMA POINT                     ==
@@ -550,7 +616,6 @@ END MODULE SETUP_MODULE
       F=F/CELLVOL
       RETURN
       END
-
 !
 !     ..................................................................
       SUBROUTINE SETUP_READ
@@ -566,7 +631,14 @@ END MODULE SETUP_MODULE
       INTEGER(4)            :: LMRXCUT
       INTEGER(4)            :: NFILO
       INTEGER(4)            :: ISP
+      INTEGER(4)            :: GID
+      INTEGER(4)            :: GIDG
       INTEGER(4)            :: NFIL
+      REAL(8)               :: G1
+      REAL(8)   ,PARAMETER  :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
+      INTEGER(4),PARAMETER  :: NG=250
+      REAL(8)               :: R1,DEX
+      INTEGER(4)            :: NR,NRX
       REAL(8)               :: RI
       INTEGER(4)            :: IR
       INTEGER(4)            :: LN
@@ -581,12 +653,14 @@ END MODULE SETUP_MODULE
       INTEGER(4),ALLOCATABLE:: NPRO(:)
       INTEGER(4),ALLOCATABLE:: IWORK(:)
       REAL(8)   ,ALLOCATABLE:: DWORK(:,:,:) 
-      REAL(8)               :: PI,FOURPI
-      REAL(8)               :: ERROR       ! ERROR ESTIMATE
-      REAL(8)   ,ALLOCATABLE:: FOFR1(:)   
-      REAL(8)   ,ALLOCATABLE:: FOFG1(:)
+      REAL(8)               :: PI,FOURPI,Y0
+      LOGICAL(4)            :: TNEWFORMAT
+      REAL(8)   ,ALLOCATABLE:: R(:)
+      REAL(8)               :: SVAR
 !     ******************************************************************
                             CALL TRACE$PUSH('SETUP$READ')
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO SETUP SELECTED')
         CALL ERROR$STOP('SETUP$READ')
@@ -600,9 +674,26 @@ END MODULE SETUP_MODULE
       CALL ATOMTYPELIST$GETR8('PS<G4>',THIS%PSG4)
 !
       CALL FILEHANDLER$UNIT(THIS%FILEID,NFIL)
+      CALL SETUPREAD$NEW(NFIL,TNEWFORMAT)
 !
-      CALL INPOT$LNX(NFIL,LNX)
-      THIS%LNX=LNX
+      IF(TNEWFORMAT) THEN
+        CALL SETUPREAD$GETI4('LNX',LNX)
+        CALL SETUPREAD$GETI4('GID',THIS%GID)
+        GID=THIS%GID
+        CALL SETUPREAD$GETI4('NR',NR)
+        NRX=NR
+        THIS%LNX=LNX
+      ELSE
+        CALL INPOT$GRID(NFIL,R1,DEX,NR)
+        CALL RADIAL$NEW('LOG',GID)
+        THIS%GID=GID
+        NRX=NR
+        CALL RADIAL$SETI4(GID,'NR',NR)
+        CALL RADIAL$SETR8(GID,'DEX',DEX)
+        CALL RADIAL$SETR8(GID,'R1',R1)
+        CALL INPOT$LNX(NFIL,LNX)
+        THIS%LNX=LNX
+      END IF
       ALLOCATE(THIS%LOX(LNX))
       ALLOCATE(THIS%VADD(NRX))
       ALLOCATE(THIS%AECORE(NRX))
@@ -610,6 +701,8 @@ END MODULE SETUP_MODULE
       ALLOCATE(THIS%PRO(NRX,LNX))
       ALLOCATE(THIS%AEPHI(NRX,LNX))
       ALLOCATE(THIS%PSPHI(NRX,LNX))
+      ALLOCATE(THIS%uPHI(NRX,LNX))
+      ALLOCATE(THIS%TuPHI(NRX,LNX))
       ALLOCATE(THIS%DTKIN(LNX,LNX))
       ALLOCATE(THIS%DOVER(LNX,LNX))
       THIS%VADD=0.D0
@@ -619,7 +712,11 @@ END MODULE SETUP_MODULE
       THIS%AEPHI=0.D0
       THIS%PSPHI=0.D0
 ! SANTOS040616 BEGIN
-      CALL INPOT$NC(NFIL,NC)
+      IF(TNEWFORMAT) THEN
+        CALL SETUPREAD$GETI4('NC',NC)
+      ELSE
+        CALL INPOT$NC(NFIL,NC)
+      END IF
       THIS%NC=NC
       ALLOCATE(THIS%AEPOT(NRX))
       ALLOCATE(THIS%LB(NC))
@@ -643,12 +740,46 @@ END MODULE SETUP_MODULE
 !     &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &
 !     &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
 !     &         ,IRCCOR,THIS%AECORE,THIS%PSCORE,THIS%PRO)
-      CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
+      IF(TNEWFORMAT) THEN
+        CALL SETUPREAD$GETI4A('LOX',LNX,THIS%LOX)
+        CALL SETUPREAD$GETR8('AEZ',THIS%AEZ)
+        CALL SETUPREAD$GETR8('PSZ',THIS%PSZ)
+        CALL SETUPREAD$GETR8A('PSPHI',NR*LNX,THIS%PSPHI)
+        CALL SETUPREAD$GETR8A('AEPHI',NR*LNX,THIS%AEPHI)
+        CALL SETUPREAD$GETR8A('PRO',NR*LNX,THIS%PRO)
+        CALL SETUPREAD$GETR8A('NDLSPHI',NR*LNX,THIS%UPHI)
+        CALL SETUPREAD$GETR8A('NDLSTPHI',NR*LNX,THIS%TUPHI)
+        CALL SETUPREAD$GETR8A('VADD',NR,THIS%VADD)
+        CALL SETUPREAD$GETR8('RCSM',THIS%RCSM)
+        CALL SETUPREAD$GETR8A('DT',LNX*LNX,THIS%DTKIN)
+        CALL SETUPREAD$GETR8A('DO',LNX*LNX,THIS%DOVER)
+        CALL SETUPREAD$GETR8A('PSCORE',NR,THIS%PSCORE)
+        CALL SETUPREAD$GETR8A('AECORE',NR,THIS%AECORE)
+        CALL SETUPREAD$GETR8A('AEPOT',NR,THIS%AEPOT)
+!ADD HERE THE CORE WAVE FUNCTIONS FOR SANTOS
+        CALL SETUPREAD$GETI4A('LOFC',NC,THIS%LB)
+        CALL SETUPREAD$GETR8A('FOFC',NC,THIS%FB)
+        CALL SETUPREAD$GETR8A('EOFC',NC,THIS%EB)
+        THIS%AEPSI=0.D0
+      ELSE
+        CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
      &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &
      &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
      &         ,THIS%AECORE,THIS%PSCORE,THIS%PRO &
      &         ,THIS%AEPOT,THIS%NC,THIS%LB,THIS%FB,THIS%EB,THIS%AEPSI) !SANTOS040616
+      END IF
       CALL FILEHANDLER$CLOSE(THIS%FILEID)
+PRINT*,'NEW FORMAT?',TNEWFORMAT
+ALLOCATE(R(NR))
+CALL RADIAL$R(GID,NR,R)
+CALL RADIAL$INTEGRAL(GID,NR,4.D0*PI*THIS%AECORE*Y0*R**2,SVAR)
+PRINT*,'INT AECORE ',SVAR
+CALL RADIAL$INTEGRAL(GID,NR,4.D0*PI*THIS%PSCORE*Y0*R**2,SVAR)
+PRINT*,'INT PSCORE ',SVAR
+PRINT*,'AEZ ',THIS%AEZ
+PRINT*,'PSZ ',THIS%PSZ
+PRINT*,'RCSM ',THIS%RCSM
+!STOP
 !     
 !     ==================================================================
 !     == LIMIT NUMBER OF PROJECTORS FOR EACH L                        ==
@@ -683,19 +814,25 @@ END MODULE SETUP_MODULE
       THIS%LNX=LNX
 !
 !     == FOLD DOWN ARRAYS FOR PROJECTORS AND PARTIALWAVES, LOX =========
-      ALLOCATE(DWORK(NRX,LNOLD,3))
+      ALLOCATE(DWORK(NRX,LNOLD,5))
       ALLOCATE(IWORK(LNOLD))
       DWORK(:,:,1)=THIS%PRO(:,:)
       DWORK(:,:,2)=THIS%AEPHI(:,:)
       DWORK(:,:,3)=THIS%PSPHI(:,:)
+      DWORK(:,:,4)=THIS%uPHI(:,:)
+      DWORK(:,:,5)=THIS%tuPHI(:,:)
       IWORK(:)=THIS%LOX(:)
       DEALLOCATE(THIS%PRO)
       DEALLOCATE(THIS%AEPHI)
       DEALLOCATE(THIS%PSPHI)
+      DEALLOCATE(THIS%uPHI)
+      DEALLOCATE(THIS%tuPHI)
       DEALLOCATE(THIS%LOX)
       ALLOCATE(THIS%PRO(NRX,THIS%LNX))
       ALLOCATE(THIS%AEPHI(NRX,THIS%LNX))
       ALLOCATE(THIS%PSPHI(NRX,THIS%LNX))
+      ALLOCATE(THIS%uPHI(NRX,THIS%LNX))
+      ALLOCATE(THIS%tuPHI(NRX,THIS%LNX))
       ALLOCATE(THIS%LOX(THIS%LNX))
       ISVAR=0
       DO LN=1,LNOLD
@@ -704,6 +841,8 @@ END MODULE SETUP_MODULE
         THIS%PRO(:,ISVAR)=DWORK(:,LN,1)
         THIS%AEPHI(:,ISVAR)=DWORK(:,LN,2)
         THIS%PSPHI(:,ISVAR)=DWORK(:,LN,3)
+        THIS%UPHI(:,ISVAR)=DWORK(:,LN,4)
+        THIS%TUPHI(:,ISVAR)=DWORK(:,LN,5)
         THIS%LOX(ISVAR)=IWORK(LN)
       ENDDO
       DEALLOCATE(DWORK)
@@ -767,6 +906,8 @@ END MODULE SETUP_MODULE
         DO LN=1,THIS%LNX
           THIS%AEPHI(IR,LN)=0.D0
           THIS%PSPHI(IR,LN)=0.D0
+          THIS%uPHI(IR,LN)=0.D0
+          THIS%tuPHI(IR,LN)=0.D0
         ENDDO
       ENDDO
 !     
@@ -802,37 +943,37 @@ END MODULE SETUP_MODULE
 !     ==================================================================
       PI=4.D0*DATAN(1.D0)
       FOURPI=4.D0*PI
-      G1=GMAX*DEXP(-DEX*DBLE(NR-1))
-      IF(NG.LT.NR) THEN
-        CALL ERROR$STOP('SETUP_RADTOG')
-      END IF
-      ALLOCATE(FOFR1(NG))
-      ALLOCATE(FOFG1(NG))
-      FOFR1(NR+1:NG)=0.D0
+      Y0=1.D0/SQRT(FOURPI)
+      GID=THIS%GID
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      CALL RADIAL$GETR8(GID,'DEX',DEX)
+      G1=GMAX*DEXP(-DEX*DBLE(NG-1))
+      CALL RADIAL$NEW('LOG',GIDG)
+      THIS%GIDG=GIDG
+      CALL RADIAL$SETI4(GIDG,'NR',NG)
+      CALL RADIAL$SETR8(GIDG,'R1',G1)
+      CALL RADIAL$SETR8(GIDG,'DEX',DEX)
+PRINT*,'GIDG ',GIDG,G1,DEX,NG
+!       
 !     == VADD (VBAR) ===================================================
-      FOFR1(1:NR)=FOURPI*THIS%VADD(1:NR)
-      CALL BESSELTRANSFORM(0,NG,R1,G1,DEX,FOFR1,FOFG1,ERROR)
       ALLOCATE(THIS%VADDOFG(NG))
-      THIS%VADDOFG(:)=FOFG1(:)
+      CALL RADIAL$BESSELTRANSFORM(0,GID,NR,THIS%VADD,GIDG,NG,THIS%VADDOFG)
+      THIS%VADDOFG(:)=FOURPI*THIS%VADDOFG(:)
 !     == PSCORE (VBAR) =================================================
-      FOFR1(1:NR)=FOURPI*THIS%PSCORE(1:NR)
-      CALL BESSELTRANSFORM(0,NG,R1,G1,DEX,FOFR1,FOFG1,ERROR)
       ALLOCATE(THIS%PSCOREOFG(NG))
-      THIS%PSCOREOFG(:)=FOFG1(:)
+      CALL RADIAL$BESSELTRANSFORM(0,GID,NR,THIS%PSCORE,GIDG,NG,THIS%PSCOREOFG)
+      THIS%PSCOREOFG(:)=FOURPI*THIS%PSCOREOFG(:)
 !     == PROJECTORS ====================================================
       ALLOCATE(THIS%PROOFG(NG,LNX))
       DO LN=1,LNX
         L=THIS%LOX(LN)
-        FOFR1(1:NR)=FOURPI*THIS%PRO(1:NR,LN)
-        CALL BESSELTRANSFORM(L,NG,R1,G1,DEX,FOFR1,FOFG1,ERROR)
-        THIS%PROOFG(:,LN)=FOFG1(:)
+        CALL RADIAL$BESSELTRANSFORM(L,GID,NR,THIS%PRO(:,LN),GIDG,NG,THIS%PROOFG(:,LN))
+        THIS%PROOFG(:,LN)=FOURPI*THIS%PROOFG(:,LN)
       ENDDO
-      DEALLOCATE(FOFR1)
-      DEALLOCATE(FOFG1)
 !     == COMPENSATION GAUSSIAN =========================================
       ALLOCATE(THIS%NHATPRIMEOFG(NG))
       ALLOCATE(THIS%VHATOFG(NG))
-      CALL SETUP_COMPOFG(THIS%RCBG,THIS%RCSM,G1,DEX,NG &
+      CALL SETUP_COMPOFG(THIS%RCBG,THIS%RCSM,GIDG,NG &
      &                  ,THIS%NHATPRIMEOFG,THIS%VHATOFG)
 !      
                             CALL TRACE$POP
@@ -897,6 +1038,40 @@ END MODULE SETUP_MODULE
       RETURN
       END
 !
+!     ......................................................................
+      SUBROUTINE SETUP_NUCPOT(GID,NR,Z,POT)
+!     **                                                                  **
+!     **  ELECTROSTATIC POTENTIAL OF A NUCLEUS WITH FINITE RADIUS         **
+!     **  THE NUCLEUS IS CONSIDERED AS A HOMOGENEOUSLY CHARGED SPHERE.    **
+!     **  THE RADIUS IS RELATED  TO THE TOTAL MASS (NUMBER OF NUCLEONS),  **
+!     **  WHICH CAN BE LOOKED UP KNOWING THE ATOMIC NUMBER Z.             **
+!     **                                                                  **
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID      ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR       ! #(RADIAL GRID POINTS)
+      REAL(8)   ,INTENT(IN) :: Z        ! ATOMIC NUMBER
+      REAL(8)   ,INTENT(OUT):: POT(NR)  ! POTENTIAL
+      REAL(8)               :: RNUC     ! NUCLEAR RADIUS
+      REAL(8)               :: R(NR)    ! RADIAL GRID
+      REAL(8)               :: PI,Y0
+      INTEGER(4)            :: IR
+!     ***********************************************************************
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL PERIODICTABLE$GET(NINT(Z),'RNUC',RNUC)
+      CALL RADIAL$R(GID,NR,R)
+      DO IR=1,NR
+        IF(R(IR).GT.RNUC) THEN
+           POT(IR)=-Z/R(IR)
+        ELSE
+          POT(IR)=-Z/RNUC*(1.5D0-0.5D0*(R(IR)/RNUC)**2)
+        END IF
+      ENDDO
+      POT(:)=POT(:)/Y0
+      RETURN
+      END
+!
 !     ..................................................................
       SUBROUTINE SETUP$READ
 !     ******************************************************************
@@ -933,151 +1108,6 @@ END MODULE SETUP_MODULE
 
 !
 !     ..................................................................
-      SUBROUTINE SETUP$RADIALGPRO(ISP_,LNX_,CELLVOL_,NG_,G2_,PROG_,DPROG_)
-!     ******************************************************************
-!     ** GAUSSIANS AND POTENTIAL FOR THE EWALD TRICK WITH THE         **
-!     ** COMPENSATION CHARGE DENSIT TO THE DENSITY G-GRID             **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: LNX_
-      REAL(8)   ,INTENT(IN) :: CELLVOL_
-      INTEGER(4),INTENT(IN) :: NG_
-      REAL(8)   ,INTENT(IN) :: G2_(NG_)
-      REAL(8)   ,INTENT(OUT):: PROG_(NG_,LNX_)
-      REAL(8)   ,INTENT(OUT):: DPROG_(NG_,LNX_)
-      REAL(8)   ,PARAMETER  :: RMAX=5.D0
-      INTEGER(4)            :: IG,LN,L
-!     ******************************************************************
-      CALL ERROR$MSG('MARKED FOR DELTION: DO NOT USE!')
-      CALL ERROR$STOP('SETUP$RADIALGPRO')
-                            CALL TRACE$PUSH('SETUP$GPROJECTORS')
-!
-!     ==================================================================
-!     ==  SOME INITIAL CHECKS                                         ==
-!     ==================================================================
-      CALL SETUP$ISELECT(ISP_)
-      IF(LNX_.NE.THIS%LNX) THEN
-        CALL ERROR$OVERFLOW('LNX_',LNX_,THIS%LNX)
-        CALL ERROR$STOP('SETUP$GPROJECTORS')
-      END IF
-
-!     ==================================================================
-!     ==  CALCULATE PROG USING A BESSELTRANSFORM                      ==
-!     ==================================================================
-      DO LN=1,LNX_
-        DO IG=1,NG_
-          PROG_(IG,LN)=0.D0
-        ENDDO
-        L=THIS%LOX(LN)
-        CALL SETUP_RADTOG(L,R1,DEX,NRX,RMAX,THIS%PRO(1,LN) &
-     &                 ,NG_,CELLVOL_,G2_,PROG_(1,LN),DPROG_(1,LN))
-      ENDDO
-                            CALL TRACE$POP
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$COMPENSATION(ISP_,NG_,G2_,CELLVOL_ &
-     &                             ,G0_,V0_,DG0_,DV0_)
-!     ******************************************************************
-!     ** GAUSSIANS AND POTENTIAL FOR THE EWALD TRICK WITH THE         **
-!     ** COMPENSATION CHARGE DENSIT TO THE DENSITY G-GRID             **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      REAL(8)   ,INTENT(IN) :: CELLVOL_
-      INTEGER(4),INTENT(IN) :: NG_
-      REAL(8)   ,INTENT(IN) :: G2_(NG_)
-      REAL(8)   ,INTENT(OUT):: G0_(NG_)
-      REAL(8)   ,INTENT(OUT):: V0_(NG_)
-      REAL(8)   ,INTENT(OUT):: DG0_(NG_)
-      REAL(8)   ,INTENT(OUT):: DV0_(NG_)
-!     ******************************************************************
-      CALL ERROR$MSG('MARKED FOR DELTION: DO NOT USE!')
-      CALL ERROR$STOP('SETUP$COMPENSATION')
-                              CALL TRACE$PUSH('SETUP$COMPENSATION')
-!
-!     ==================================================================
-!     ==  SOME INITIAL CHECKS                                         ==
-!     ==================================================================
-      IF(ISP_.GT.NSP) THEN
-        CALL ERROR$OVERFLOW('ISP_',ISP_,NSP)
-        CALL ERROR$STOP('SETUP$COMPENSATION')
-      END IF
-!
-!     ==================================================================
-!     ==  CALCULATE G0,V0                                             ==
-!     ==================================================================
-               CALL TIMING$CLOCKON('FORMF-BESSOV COMPENSATION')
-      CALL SETUP_COMPENSATIONGAUSSIANS(THIS%RCBG,THIS%RCSM &
-     &          ,NG_,G2_,CELLVOL_,G0_,V0_,DG0_,DV0_)
-             CALL TIMING$CLOCKOFF('FORMF-BESSOV COMPENSATION')
-                            CALL TRACE$POP
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$PSCOREG(ISP_,NG_,G2_,CELLVOL_,PSCOREG_,DPSCOREG_)
-!     ******************************************************************
-!     **  RETURN PSCOREDENSITY                                        **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: NG_
-      REAL(8)   ,INTENT(IN) :: G2_(NG_)
-      REAL(8)   ,INTENT(IN) :: CELLVOL_
-      REAL(8)   ,INTENT(OUT):: PSCOREG_(NG_)
-      REAL(8)   ,INTENT(OUT):: DPSCOREG_(NG_)
-      REAL(8)   ,PARAMETER  :: RMAX=5.D0
-!     ******************************************************************
-      CALL ERROR$MSG('MARKED FOR DELTION: DO NOT USE!')
-      CALL ERROR$STOP('SETUP$PSCOREG')
-                              CALL TRACE$PUSH('SETUP$PSCOREG')
-      CALL SETUP$ISELECT(ISP_)
-!
-!     ==================================================================
-!     ==  CALCULATE PSEUDOCOREDENSITY IN RECIPROCAL SPACE             ==
-!     ==================================================================
-                              CALL TIMING$CLOCKON('FORMF-BESSOV PSCORE')
-      CALL SETUP_RADTOG(0,R1,DEX,NRX,RMAX,THIS%PSCORE,NG_,CELLVOL_,G2_ &
-     &               ,PSCOREG_,DPSCOREG_)
-                              CALL TIMING$CLOCKOFF('FORMF-BESSOV PSCORE')
-                              CALL TRACE$POP
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$VBARG(ISP_,NG_,G2_,CELLVOL_,VBARG_,DVBARG_)
-!     ******************************************************************
-!     **  CALCULATE FORMFACTOR OF LOCAL PART :<VLOC|G>                **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: NG_
-      REAL(8)   ,INTENT(IN) :: G2_(NG_)
-      REAL(8)   ,INTENT(IN) :: CELLVOL_
-      REAL(8)   ,INTENT(OUT):: VBARG_(NG_)
-      REAL(8)   ,INTENT(OUT):: DVBARG_(NG_)
-      REAL(8)   ,PARAMETER  :: RMAX=5.D0
-!     ******************************************************************
-      CALL ERROR$MSG('MARKED FOR DELTION: DO NOT USE!')
-      CALL ERROR$STOP('SETUP$VBARG')
-                            CALL TRACE$PUSH('SETUP$VBARG')
-             CALL TIMING$CLOCKON('FORMF-BESSOV VBAR')
-      CALL SETUP$ISELECT(ISP_)
-      CALL SETUP_RADTOG(0,R1,DEX,NRX,RMAX,THIS%VADD,NG_,CELLVOL_,G2_ &
-     &               ,VBARG_,DVBARG_)
-             CALL TIMING$CLOCKOFF('FORMF-BESSOV VBAR')
-                            CALL TRACE$POP
-      RETURN  
-      END
-!
-!     ..................................................................
       SUBROUTINE SETUP$AEPARTIALWAVES(ISP_,NRX_,LNX_,AEPHI_)
 !     ******************************************************************
 !     **  RETURN AE PARTIAL WAVES ON THE RADIAL GRID                  **
@@ -1088,14 +1118,19 @@ END MODULE SETUP_MODULE
       INTEGER(4),INTENT(IN) :: NRX_
       INTEGER(4),INTENT(IN) :: LNX_
       REAL(8)   ,INTENT(OUT):: AEPHI_(NRX_,LNX_)
-      INTEGER(4)            :: LN,IR
+      INTEGER(4)            :: LN,IR,NR
 !     ******************************************************************
       CALL SETUP$ISELECT(ISP_)
-      DO LN=1,LNX_
-        DO IR=1,NR
-          AEPHI_(IR,LN)=THIS%AEPHI(IR,LN)
-        ENDDO
-      ENDDO
+      CALL RADIAL$GETI4(THIS%GID,'NR',NR)
+      IF(NRX_.NE.NR) THEN
+        CALL ERROR$MSG('INCONSISTENT GRID SIZE')
+        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
+      END IF
+      IF(LNX_.NE.THIS%LNX) THEN
+        CALL ERROR$MSG('INCONSISTENT #(PARTIAL WAVES)')
+        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
+      END IF
+      AEPHI_(:,:)=THIS%AEPHI(:,:)
       RETURN  
       END
 !
@@ -1110,14 +1145,19 @@ END MODULE SETUP_MODULE
       INTEGER(4),INTENT(IN) :: NRX_
       INTEGER(4),INTENT(IN) :: LNX_
       REAL(8)   ,INTENT(OUT):: PSPHI_(NRX_,LNX_)
-      INTEGER(4)            :: IR,LN
+      INTEGER(4)            :: IR,LN,NR
 !     ******************************************************************
       CALL SETUP$ISELECT(ISP_)
-      DO LN=1,LNX_
-        DO IR=1,NR
-          PSPHI_(IR,LN)=THIS%PSPHI(IR,LN)
-        ENDDO
-      ENDDO
+      CALL RADIAL$GETI4(THIS%GID,'NR',NR)
+      IF(NRX_.NE.NR) THEN
+        CALL ERROR$MSG('INCONSISTENT GRID SIZE')
+        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
+      END IF
+      IF(LNX_.NE.THIS%LNX) THEN
+        CALL ERROR$MSG('INCONSISTENT #(PARTIAL WAVES)')
+        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
+      END IF
+      PSPHI_(:,:)=THIS%PSPHI(:,:)
       RETURN  
       END
 !
@@ -1150,9 +1190,7 @@ END MODULE SETUP_MODULE
       INTEGER(4)            :: IR
 !     ******************************************************************
       CALL SETUP$ISELECT(ISP_)
-      DO IR=1,NR
-        PSCORE_(IR)=THIS%PSCORE(IR)
-      ENDDO
+      PSCORE_(:)=THIS%PSCORE(:)
       RETURN  
       END
 !
@@ -1169,9 +1207,7 @@ END MODULE SETUP_MODULE
       INTEGER(4)            :: IR
 !     ******************************************************************
       CALL SETUP$ISELECT(ISP_)
-      DO IR=1,NR
-        VBAR_(IR)=THIS%VADD(IR)
-      ENDDO
+      VBAR_(:)=THIS%VADD(:)
       RETURN  
       END
 !
@@ -1395,70 +1431,17 @@ END MODULE SETUP_MODULE
       REAL(8)   ,INTENT(OUT):: DEX_
       INTEGER(4),INTENT(OUT):: NR_
 !     ******************************************************************
-      R1_=R1
-      DEX_=DEX
-      NR_=NR
+      CALL ERROR$MSG('INTERFACE MARKED FOR DELETION!')
+      CALL ERROR$MSG('R1,DEX,NR IS OWNED BY RADIAL OBJECT')
+      CALL ERROR$STOP('SETUP$RADGRID')
+!      R1_=R1
+!      DEX_=DEX
+!      NR_=NR
       RETURN  
       END
 !
 !     ..................................................................
-      SUBROUTINE SETUP_COMPENSATIONGAUSSIANS(RCBG,RCSM &
-     &                ,NG,G2,CELLVOL,G0,V0,DG0,DV0)
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      REAL(8)   ,INTENT(IN) :: RCBG
-      REAL(8)   ,INTENT(IN) :: RCSM
-      INTEGER(4),INTENT(IN) :: NG
-      REAL(8)   ,INTENT(IN) :: G2(NG)
-      REAL(8)   ,INTENT(IN) :: CELLVOL
-      REAL(8)   ,INTENT(OUT):: G0(NG)
-      REAL(8)   ,INTENT(OUT):: V0(NG)
-      REAL(8)   ,INTENT(OUT):: DG0(NG)  ! |G|DG0/DG
-      REAL(8)   ,INTENT(OUT):: DV0(NG)  ! |G|DV0/DG
-      LOGICAL(4)            :: TGAMMA
-      REAL(8)   ,PARAMETER  :: EPSILONGAMMA=1.D-7
-      REAL(8)               :: PI
-      REAL(8)               :: SVAR1,SVAR2,SVAR3,SVAR4
-      REAL(8)               :: BGGAUSS,SMGAUSS
-      INTEGER(4)            :: IG,NSTART
-!     ******************************************************************
-      CALL ERROR$MSG('MARKED FOR DELETION: DO NOT USE!')
-      CALL ERROR$STOP('SETUP_COMPENSATIONGAUSSIANS')
-      PI=4.D0*DATAN(1.D0)
-!
-!     ==================================================================
-!     == CALCULATE GAUSSIANS ETC FOR COMPENSATION CHARGE DENSITY      ==
-!     ==================================================================
-      SVAR1=-0.25D0*RCBG**2
-      SVAR2=-0.25D0*RCSM**2
-      SVAR3=4.D0*PI/CELLVOL
-      SVAR4=-4.D0*PI*SVAR3
-      DO IG=1,NG
-        IF(G2(IG).GT.1.D-12) THEN
-          BGGAUSS=DEXP(SVAR1*G2(IG))
-          SMGAUSS=DEXP(SVAR2*G2(IG))
-          G0(IG)=SVAR3*BGGAUSS
-          V0(IG)=SVAR4*(BGGAUSS-SMGAUSS)/G2(IG)
-          DG0(IG)=2.D0*SVAR1*G2(IG)*G0(IG)
-          DV0(IG)=2.D0*SVAR4*(SVAR1*BGGAUSS-SVAR2*SMGAUSS)-2.D0*V0(IG)
-        ELSE
-          G0(IG)=SVAR3
-          V0(IG)=PI*(RCBG**2-RCSM**2)*SVAR3
-          V0(IG)=SVAR4*(SVAR1-SVAR2)
-          DG0(IG)=0.D0
-          DV0(IG)=0.D0
-        END IF
-      ENDDO
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP_COMPOFG(RCBG,RCSM,G1,DEX,NG,G0,V0)
+      SUBROUTINE SETUP_COMPOFG(RCBG,RCSM,GIDG,NG,G0,V0)
 !     ******************************************************************
 !     **                                                              **
 !     **  COMPENSATION DENSITY AND POTENTIAL ON A RADIAL GRID         **
@@ -1468,8 +1451,7 @@ END MODULE SETUP_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: RCBG
       REAL(8)   ,INTENT(IN) :: RCSM
-      REAL(8)   ,INTENT(IN) :: G1
-      REAL(8)   ,INTENT(IN) :: DEX
+      INTEGER(4),INTENT(IN) :: GIDG
       INTEGER(4),INTENT(IN) :: NG
       REAL(8)   ,INTENT(OUT):: G0(NG)
       REAL(8)   ,INTENT(OUT):: V0(NG)
@@ -1480,20 +1462,19 @@ END MODULE SETUP_MODULE
       REAL(8)               :: BGGAUSS,SMGAUSS
       INTEGER(4)            :: IG,NSTART
       REAL(8)               :: GI2,XEXP2
+      REAL(8)               :: GARR(NG)
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       SVAR1=-0.25D0*RCBG**2
       SVAR2=-0.25D0*RCSM**2
       SVAR3=4.D0*PI
       SVAR4=-4.D0*PI*SVAR3
-      XEXP2=EXP(DEX)**2
-      GI2=G1**2/XEXP2
+      CALL RADIAL$R(GIDG,NG,GARR)
       DO IG=1,NG
-        GI2=GI2*XEXP2
-        BGGAUSS=DEXP(SVAR1*GI2)
-        SMGAUSS=DEXP(SVAR2*GI2)
+        BGGAUSS=DEXP(SVAR1*GARR(IG)**2)
+        SMGAUSS=DEXP(SVAR2*GARR(IG)**2)
         G0(IG)=SVAR3*BGGAUSS
-        V0(IG)=SVAR4*(BGGAUSS-SMGAUSS)/GI2
+        V0(IG)=SVAR4*(BGGAUSS-SMGAUSS)/GARR(IG)**2
       ENDDO
       RETURN  
       END
@@ -1521,71 +1502,6 @@ END MODULE SETUP_MODULE
       RETURN
       END
 !
-!     ..................................................................
-      SUBROUTINE SETUP_RADTOG(L,R1,DEX,NR,RMAX,FOFR,NG,CELLVOL,G2,FOFG,DFOFG)
-!     **                                                              **
-!     **  TRANSFORMS A FUNCTION FOFR GIVEN ON A LOGARITHMIC GRID      **
-!     **  INTO G-SPACE                                                **
-!     **                                                              **
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: L
-      REAL(8)   ,INTENT(IN) :: DEX
-      INTEGER(4),INTENT(IN) :: NR
-      REAL(8)   ,INTENT(IN) :: R1
-      INTEGER(4),INTENT(IN) :: NG
-      REAL(8)   ,INTENT(IN) :: RMAX
-      REAL(8)   ,INTENT(IN) :: CELLVOL
-      REAL(8)   ,INTENT(IN) :: FOFR(NR)
-      REAL(8)   ,INTENT(IN) :: G2(NG)
-      REAL(8)   ,INTENT(OUT):: FOFG(NG)
-      REAL(8)   ,INTENT(OUT):: DFOFG(NG)   !DF/DG
-      REAL(8)               :: PI,FOURPI
-      REAL(8)               :: FAC
-      REAL(8)               :: G
-      REAL(8)               :: RES
-      INTEGER(4)            :: IG
-!     == NEW VERSION=========
-      REAL(8)   ,PARAMETER  :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
-      INTEGER(4),PARAMETER  :: NR1=256
-      REAL(8)               :: G1          ! FIRST POINT ON THE RADIAL G-GRID
-      REAL(8)               :: ERROR       ! ERROR ESTIMATE
-      REAL(8)               :: FOFR1(NR1)   
-      REAL(8)               :: FOFG1(NR1)
-!     ******************************************************************
-      CALL ERROR$MSG('MARKED FOR DELETION: DO NOT USE!')
-      CALL ERROR$STOP('SETUP_RADTOG')
-      PI=4.D0*DATAN(1.D0)
-      FOURPI=4.D0*PI
-      FAC=FOURPI/CELLVOL
-      G1=GMAX*DEXP(-DEX*DBLE(NR-1))
-      IF(NR1.LT.NR) THEN
-        CALL ERROR$STOP('SETUP_RADTOG')
-      END IF
-      FOFR1(1:NR)=FOFR(1:NR)
-      FOFR1(NR+1:NR1)=0.D0
-      CALL BESSELTRANSFORM(L,NR1,R1,G1,DEX,FOFR1,FOFG1,ERROR)
-      FOFG1(:)=FAC*FOFG1(:)
-!     == REMARK: THE EXTRAPOLATION TO THE GAMMA POINT MAY BE PROBLEMATIC 
-!     == BECAUSE OF WRIGGLES IN THE FOURIER TRANSFORMED FUNCTION
-!     == AN EARLIER VERSION USED THE VALUE OF THE FIRST RADIAL GRID POINT
-      G=DSQRT(G2(1))
-      CALL RADIAL$VALUE(G1,DEX,NR1,FOFG1,G,FOFG(1))
-      CALL RADIAL$DERIVATIVE(G1,DEX,NR1,FOFG1,G,DFOFG(1))
-      DFOFG(1)=G*DFOFG(1)
-      DO IG=2,NG
-        IF(DABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
-          FOFG(IG) =FOFG(IG-1)
-          DFOFG(IG)=DFOFG(IG-1)
-        ELSE
-          G=DSQRT(G2(IG))
-          CALL RADIAL$VALUE(G1,DEX,NR1,FOFG1,G,FOFG(IG))
-          CALL RADIAL$DERIVATIVE(G1,DEX,NR1,FOFG1,G,DFOFG(IG))
-          DFOFG(IG)=G*DFOFG(IG)
-        END IF
-      ENDDO
-      RETURN
-      END      
-!
 !     ...........................................INPOT..................
       SUBROUTINE INPOT$LNX(NFIL,LNX)
 !     ******************************************************************
@@ -1601,6 +1517,24 @@ END MODULE SETUP_MODULE
       REWIND NFIL
       READ(NFIL,FMT='(F15.10,F10.5,2I4)')R1,DEX,NR,LNX
 !     READ(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F15.12,I5)')R1,DEX,NR,LNX
+                              CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...........................................INPOT..................
+      SUBROUTINE INPOT$GRID(NFIL,R1,DEX,NR)
+!     ******************************************************************
+!     **                                                              **
+!     **                                                              **
+!     ******************************************************************
+      INTEGER(4),INTENT(IN)  :: NFIL
+      INTEGER(4),INTENT(OUT) :: NR
+      REAL(8)   ,INTENT(OUT) :: R1
+      REAL(8)   ,INTENT(OUT) :: DEX
+!     ******************************************************************
+                              CALL TRACE$PUSH('INPOT$GRID')
+      REWIND NFIL
+      READ(NFIL,FMT='(F15.10,F10.5,2I4)')R1,DEX,NR
                               CALL TRACE$POP
       RETURN
       END

@@ -492,6 +492,8 @@
 !     ==  SET CHARGES IN ATOMLIST AND GET EXTERNAL POTENTIALS        ==
 !     ==================================================================
       CALL ISOLATE_INTERFACE(RBAS,NAT,BAS,NFCT+1,XQI,XRC,E,XVI,FORCE)
+print*,'after return'
+call trace$pass('after isolate_interface')
 !
 !     ==================================================================
 !     == CONTRIBUTION FROM THE POSITIVE BACKGROUND                    ==
@@ -637,6 +639,7 @@
 !     **                                                              **
 !     ******************************************************************
       USE ISOLATE_MODULE, ONLY : TISOLATE
+      USE continuum_module
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT           ! #(ATOMS)
       INTEGER(4),INTENT(IN) :: NG            ! #(GAUSSIANS PER SITE)
@@ -704,15 +707,11 @@
 !     ==================================================================
 !     ==  COUPLE CONTINUUM                                            ==
 !     ==================================================================
+print*,'warning continuum propagate switched off because it changes an intent(in) variable (PEB 15.Jan06)'
       CALL CONTINUUM$PROPAGATE(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
       ENERGY=ENERGY+ENERGY1
       VI(:,:)=VI(:,:)+VI1(:,:)
       FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)
-!     THE FOLLOWING IS THE OLD CALL TO THE CONTINUUM, THE ONE
-!     WHICH COUPLED TO THE POINT CHARGES ONLY. THE SOCKET WITHIN
-!     PAW_CONTINUUM.F STILL EXISTS AND CAN BE HOOKED UP IF NECESSARY
-!     CALL CONTINUUM$PROPAGATE(NAT,POS,CHARGE,ENERGY1,POT1,FORCE1)
-
       RETURN
       END
 !

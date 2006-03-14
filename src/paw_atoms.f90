@@ -331,6 +331,7 @@ END MODULE ATOMS_MODULE
       REAL(8)        :: ENOSEP
       REAL(8)        :: EFFEMASS(NAT)
       REAL(8)        :: REDRMASS(NAT)
+      REAL(8)        :: anner1(nat)
       LOGICAL(4)     :: TCHK
       INTEGER(4)     :: ITER
       LOGICAL(4)     :: TSTRESS
@@ -384,11 +385,6 @@ PRINT*,'TRANDOMIZE ',TRANDOMIZE
         CALL CONSTRAINTS$SETREFERENCE(RBAS,NAT,R0,RM,REDRMASS,DELT)
         TCONSTRAINTREFERENCE=.TRUE.
       END IF
-!
-!     ==================================================================
-!     ==  DISTRIBUTE FORCES FOR LINK ATOMS OF QM-MM COUPLING         ==
-!     ==================================================================
-      CALL QMMM$SCALEFORCE(NAT,FORCE)
 ! 
 !     == PRECONDITIONING =============================================
 !     CALL SHADOW$PRECONDITION(NAT,RMASS,R0,FORCE)
@@ -405,6 +401,13 @@ TSTRESS=.FALSE.
 !     IF(TSTRESS) CALL CELL$GETR8A('FRICMAT',9,CELLFRIC)
       CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
    &                      ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+!
+!     ==================================================================
+!     == take care of link bonds as constraints                       ==
+!     ==================================================================
+      call ATOMS_frictionarray(NAT,ANNER,ANNEE &
+     &                 ,RMASS,EFFEMASS,anner1)
+      call QMMM$propagate(nat,delt,anner,redrmass,anner1,rm,r0,rp)
 !
 !     ==================================================================
 !     == WARMUP SYSTEM                                                ==
@@ -607,7 +610,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !     ******************************************************************
       FORCE(:,:)=0.D0
       CALL QMMM$SWITCH
-      CALL CONTINUUM$SWITCH(NAT,RP,R0)
+!      CALL CONTINUUM$SWITCH(NAT,RP,R0) ! not needed for hms-continuum
 !
       CALL CELL$GETL4('MOVE',TSTRESS)
       IF(TSTRESS) THEN
@@ -718,6 +721,31 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       ENDDO
       RETURN
       END
+!
+!     ..................................................................
+      SUBROUTINE ATOMS_frictionarray(NAT,ANNER,ANNEE &
+     &                 ,RMASS,EFFEMASS,anner1)
+!     ******************************************************************
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NAT           ! #(ATOMS)
+      REAL(8)   ,INTENT(IN) :: ANNER         ! FRICTION ON THE ATOMS
+      REAL(8)   ,INTENT(IN) :: ANNEE         ! FRICTION ON THE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(IN) :: RMASS(NAT)    ! true MASS OF THE NUCLEUS
+      REAL(8)   ,INTENT(IN) :: EFFEMASS(NAT) ! MASS OF TEH ELECTRONS
+      REAL(8)   ,INTENT(OUT):: anner1(nat)   ! friction
+      REAL(8)               :: rmass0        ! bare mass
+      INTEGER(4)            :: IAT
+!     ******************************************************************
+      DO IAT=1,NAT
+!       == CORRECT MASS FOR EFFECTIVE MASS OF THE ELECTRONS ============
+        RMASS0=RMASS(IAT)-EFFEMASS(IAT)
+!       == CORRECT FRICTION FOR ELECTRON FRICTION  =====================
+        ANNER1(iat)=(RMASS(IAT)*ANNER-EFFEMASS(IAT)*ANNEE)/RMASS0
+      enddo
+      return
+      end
 !
 !     ..................................................................
       SUBROUTINE ATOMS_PROPAGATE(NAT,DT,ANNER,ANNEE &

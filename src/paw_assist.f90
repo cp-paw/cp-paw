@@ -354,6 +354,7 @@ END MODULE AUTOPILOT_MODULE
 !     **  AUTOPILOT SETS THE FRICTION PARAMETERS ANNEE AND ANNER      **
 !     **                                                              **
       USE AUTOPILOT_MODULE
+      USE continuum_module, ONLY : continuum__setr8
       IMPLICIT NONE
       REAL(8)                :: ETOT 
       LOGICAL(4),INTENT(OUT) :: TSTOP

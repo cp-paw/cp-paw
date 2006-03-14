@@ -2420,11 +2420,11 @@ PRINT*,'ITER ',ITER,DIGAM
       REAL(8)   ,ALLOCATABLE :: R(:,:)
       REAL(8)   ,ALLOCATABLE :: RAD(:)
       REAL(8)   ,ALLOCATABLE :: WORK(:)
+      REAL(8)   ,ALLOCATABLE :: WORK1(:)
       REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)
       REAL(8)                :: AEZ
       INTEGER(4),ALLOCATABLE :: IZ(:)
       INTEGER(4)             :: NAT,NSP
-      REAL(8)                :: R1,DEX,XEXP,RI
       INTEGER(4)             :: NR
       COMPLEX(8)             :: CSVAR
       INTEGER(4)             :: NB,NBH
@@ -2449,6 +2449,8 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)             :: NBX
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       LOGICAL(4)             :: TKGROUP
+      INTEGER(4)             :: GID
+      REAL(8)   ,ALLOCATABLE :: RI(:)
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES$WRITEPDOS')
       IF(.NOT.THAMILTON) THEN
@@ -2507,32 +2509,30 @@ PRINT*,'ITER ',ITER,DIGAM
       ALLOCATE(LOX(LNXX))
       ALLOCATE(IZ(NSP))
       ALLOCATE(RAD(NSP))
-      CALL SETUP$GETI4('NR',NR)
-      ALLOCATE(AEPHI(NR,LNXX))
-      ALLOCATE(WORK(NR))
-      CALL SETUP$GETR8('R1',R1)
-      CALL SETUP$GETR8('DEX',DEX)
-      XEXP=EXP(DEX)
       DO ISP=1,NSP
         OV(:,:,:)=0.D0
         CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('GID',GID)
+        CALL RADIAL$GETI4(GID,'NR',NR)
+        ALLOCATE(RI(NR))
+        CALL RADIAL$R(GID,NR,RI)
         LNX=MAP%LNX(ISP)
         LOX=MAP%LOX(:,ISP)
         CALL SETUP$GETR8('AEZ',AEZ)
         IZ(ISP)=NINT(AEZ)
         CALL PERIODICTABLE$GET(IZ(ISP),'R(ASA)',RAD(ISP))
+        ALLOCATE(AEPHI(NR,LNXX))
         CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
+        ALLOCATE(WORK(NR))
+        ALLOCATE(WORK1(NR))
         DO LN1=1,LNX
-          CALL RADIAL$VALUE(R1,DEX,NR,AEPHI(1,LN1),RAD(ISP),VAL(LN1,ISP))
-          CALL RADIAL$DERIVATIVE(R1,DEX,NR,AEPHI(1,LN1),RAD(ISP),DER(LN1,ISP))
+          CALL RADIAL$VALUE(GID,NR,AEPHI(1,LN1),RAD(ISP),VAL(LN1,ISP))
+          CALL RADIAL$DERIVATIVE(GID,NR,AEPHI(1,LN1),RAD(ISP),DER(LN1,ISP))
           DO LN2=LN1,LNX
             IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-            RI=R1/XEXP
-            DO IR=1,NR
-              RI=RI*XEXP
-              WORK(IR)=RI**2*AEPHI(IR,LN1)*AEPHI(IR,LN2)
-            ENDDO
-            CALL RADIAL$INTEGRAL1(R1,DEX,NR,WORK,RAD(ISP),OV(LN1,LN2,ISP))
+            WORK(:)=AEPHI(:,LN1)*AEPHI(:,LN2)*RI(:)**2
+            CALL RADIAL$INTEGRAte(GID,NR,WORK,work1)
+            CALL RADIAL$value(GID,NR,WORK1,RAD(ISP),OV(LN1,LN2,ISP))
             OV(LN2,LN1,ISP)=OV(LN1,LN2,ISP)
           ENDDO
         ENDDO
@@ -2540,6 +2540,10 @@ PRINT*,'ITER ',ITER,DIGAM
           WRITE(NFIL)IZ(ISP),RAD(ISP),VAL(1:LNX,ISP),DER(1:LNX,ISP) &
      &              ,OV(1:LNX,1:LNX,ISP)
         END IF
+        DEALLOCATE(RI)
+        DEALLOCATE(WORK)
+        DEALLOCATE(WORK1)
+        DEALLOCATE(AEPHI)
       ENDDO
       CALL PDOS$SETI4A('IZ',NSP,IZ)
       CALL PDOS$SETR8A('RAD',NSP,RAD)
@@ -2551,8 +2555,6 @@ PRINT*,'ITER ',ITER,DIGAM
       DEALLOCATE(RAD)
       DEALLOCATE(DER)
       DEALLOCATE(OV)
-      DEALLOCATE(WORK)
-      DEALLOCATE(AEPHI)
       DEALLOCATE(LOX)
 !
 !     ==================================================================
@@ -4434,8 +4436,8 @@ LOGICAL(4):: TCHK
 !     ....................................................................
       SUBROUTINE WAVES_SPINOROVERLAP(NBH,NB,IKPT,QMAT)
 !     ********************************************************************
-!     **  calculates the overlap between the spin contribution          **
-!     **  of the spinors needed to evaluate the total spin.             **
+!     **  CALCULATES THE OVERLAP BETWEEN THE SPIN CONTRIBUTION          **
+!     **  OF THE SPINORS NEEDED TO EVALUATE THE TOTAL SPIN.             **
 !     **  CALCULATES Q_K,I,L,J=1/2*<PSI_I,K|PSI_J,L>                    **
 !     **  I AND J ARE BAND-INDICES                                      **
 !     **  K AND L ARE 1 OR 2 AND ARE THE SPINOR PART OF THE WAVEFUNCTION *
@@ -4458,7 +4460,7 @@ LOGICAL(4):: TCHK
       END IF
 !
 !     ==================================================================
-!     ==  noncollinear case                                           ==
+!     ==  NONCOLLINEAR CASE                                           ==
 !     ==================================================================
       IF(NDIM.EQ.2) THEN   !NON-COLLINEAR
         CALL WAVES_SELECTWV(IKPT,1)
@@ -4477,7 +4479,7 @@ LOGICAL(4):: TCHK
         DEALLOCATE(AUXMAT)
 !
 !     ==================================================================
-!     ==  collinear spin-polarized case                                           ==
+!     ==  COLLINEAR SPIN-POLARIZED CASE                                           ==
 !     ==================================================================
       ELSE  
         ALLOCATE(AUXMAT(NB*2,NB*2))
@@ -4635,7 +4637,7 @@ END MODULE TOTALSPIN_MODULE
 !     ..................................................................
       SUBROUTINE WAVES_TOTALSPIN(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
 !     ******************************************************************
-!     **  CALCULATES <S^2>,<S_x>,<s_y>,<s_x> IN UNITS OF HBAR^2       **
+!     **  CALCULATES <S^2>,<S_X>,<S_Y>,<S_X> IN UNITS OF HBAR^2       **
 !     **                                                              **
 !     **                                                              **
 !     ******************************************************************
@@ -4645,11 +4647,11 @@ END MODULE TOTALSPIN_MODULE
       REAL(8)   ,INTENT(IN) :: OCC(NB,NKPT,NSPIN) 
       COMPLEX(8),INTENT(IN) :: QMAT(2,NB*NSPIN,2,NB*NSPIN) ! Q_I,J,K,L=1/2*<PSI_I,K|PSI_J,K>  
       COMPLEX(8)            :: SUM,PART,SPINX,SPINY,SPINZ
-      COMPLEX(8)            :: csvarx,csvary,csvarz
-      COMPLEX(8)            :: expects2
+      COMPLEX(8)            :: CSVARX,CSVARY,CSVARZ
+      COMPLEX(8)            :: EXPECTS2
       REAL(8)               :: IOCC(NB*NSPIN),SVAR
       INTEGER(4)            :: I,J,NTASKS,THISTASK,NBD
-      complex(8),parameter  :: ci=(0.d0,1.d0)
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
 !     ******************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 
@@ -4664,29 +4666,29 @@ END MODULE TOTALSPIN_MODULE
       NBD=NSPIN*NB !ONE BAND FOR ONE ELECTRON
 !
 !     ==================================================================
-!     == spin expectation value of the slater determinant             ==
+!     == SPIN EXPECTATION VALUE OF THE SLATER DETERMINANT             ==
 !     ==================================================================
-      spinx=0.d0
-      spiny=0.d0
-      spinz=0.d0
+      SPINX=0.D0
+      SPINY=0.D0
+      SPINZ=0.D0
       DO I=1,NBD
-        spinx=spinx+(QMAT(1,I,2,I)+QMAT(2,I,1,I))*iocc(i)
-        spiny=spiny-ci*(QMAT(1,I,2,I)-QMAT(2,I,1,I))*iocc(i)
-        spinz=spinz+(QMAT(1,I,1,I)-QMAT(2,I,2,I))*iocc(i)
+        SPINX=SPINX+(QMAT(1,I,2,I)+QMAT(2,I,1,I))*IOCC(I)
+        SPINY=SPINY-CI*(QMAT(1,I,2,I)-QMAT(2,I,1,I))*IOCC(I)
+        SPINZ=SPINZ+(QMAT(1,I,1,I)-QMAT(2,I,2,I))*IOCC(I)
       END DO
 !
 !     ==================================================================
-!     == expectation value of s**2 of the slater determinant          ==
+!     == EXPECTATION VALUE OF S**2 OF THE SLATER DETERMINANT          ==
 !     ==================================================================
-      expects2=0.D0
+      EXPECTS2=0.D0
       DO I=1,NBD
-        expects2=expects2+IOCC(I)*0.75D0
+        EXPECTS2=EXPECTS2+IOCC(I)*0.75D0
       END DO
 !
 !     ==================================================================
-!     == now add the exchange-like contribution to the spin           ==
+!     == NOW ADD THE EXCHANGE-LIKE CONTRIBUTION TO THE SPIN           ==
 !     ==================================================================
-      sum=0.d0
+      SUM=0.D0
       DO I=1,NBD
         DO J=1,NBD
           PART=(QMAT(1,I,1,J)-QMAT(2,I,2,J))*(QMAT(1,J,1,I)-QMAT(2,J,2,I)) &
@@ -4694,30 +4696,30 @@ END MODULE TOTALSPIN_MODULE
           SUM=SUM-PART*SQRT(IOCC(I)*IOCC(J))
         END DO
       END DO
-      PRINT*,'TOTALSPIN: echange like contribution : ',SUM
-      PRINT*,'TOTALSPIN: PART 3/4+X+Y+Z: ',expects2+SPINX**2+SPINY**2+SPINZ**2
-      SUM=sum+expects2+SPINX**2+SPINY**2+SPINZ**2
+      PRINT*,'TOTALSPIN: ECHANGE LIKE CONTRIBUTION : ',SUM
+      PRINT*,'TOTALSPIN: PART 3/4+X+Y+Z: ',EXPECTS2+SPINX**2+SPINY**2+SPINZ**2
+      SUM=SUM+EXPECTS2+SPINX**2+SPINY**2+SPINZ**2
 !
 !     ==================================================================
-!     == print result                                                 ==
+!     == PRINT RESULT                                                 ==
 !     ==================================================================
-      IF(THISTASK.EQ.1) tHEN
+      IF(THISTASK.EQ.1) THEN
         PRINT*,'SPIN: 2*<S_X>: ',2.D0*REAL(SPINX,KIND=8),' HBAR'
         PRINT*,'SPIN: 2*<S_Y>: ',2.D0*REAL(SPINY,KIND=8),' HBAR'
         PRINT*,'SPIN: 2*<S_Z>: ',2.D0*REAL(SPINZ,KIND=8),' HBAR'
         PRINT*,'TOTALSPIN: <S^2>: ',REAL(SUM,KIND=8),' HBAR^2'
         PRINT*,'SPIN QUATUM NUMBER S=',-0.5+SQRT(0.25+REAL(SUM,KIND=8))
         IF (IKPT.EQ.1) TOTSPIN=0.D0 ! SUM UP TOTAL SPIN OVER K-POINTS
-        TOTSPIN(1)=TOTSPIN(1)+real(SUM,kind=8)
-        TOTSPIN(2)=TOTSPIN(2)+real(SPINX,kind=8)
-        TOTSPIN(3)=TOTSPIN(3)+real(SPINY,kind=8)
-        TOTSPIN(4)=TOTSPIN(4)+real(SPINZ,kind=8)
+        TOTSPIN(1)=TOTSPIN(1)+REAL(SUM,KIND=8)
+        TOTSPIN(2)=TOTSPIN(2)+REAL(SPINX,KIND=8)
+        TOTSPIN(3)=TOTSPIN(3)+REAL(SPINY,KIND=8)
+        TOTSPIN(4)=TOTSPIN(4)+REAL(SPINZ,KIND=8)
        END IF
        RETURN
        END SUBROUTINE WAVES_TOTALSPIN
 !
 !      .................................................................
-       SUBROUTINE WAVES_TOTALSPIN_old(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
+       SUBROUTINE WAVES_TOTALSPIN_OLD(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
 !      *****************************************************************
 !      **  CALCULATES <S^2> IN UNITS OF HBAR^2                        **
 !      **                                                             **
@@ -4808,7 +4810,7 @@ END MODULE TOTALSPIN_MODULE
           TOTSPIN(4)=TOTSPIN(4)+DBLE(SPINZ)
        END IF
        RETURN
-     END SUBROUTINE WAVES_TOTALSPIN_old
+     END SUBROUTINE WAVES_TOTALSPIN_OLD
 !
 !     ..................................................................
       SUBROUTINE WAVES$REPORTSPIN(NFIL)

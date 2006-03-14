@@ -242,6 +242,7 @@ LOBJS = \
         ${OBJDIR}/paw_report.o \
         ${OBJDIR}/paw_periodictable.o \
         ${OBJDIR}/paw_radial.o \
+        ${OBJDIR}/paw_specialfunctions.o \
         ${OBJDIR}/paw_usage.o \
         ${OBJDIR}/paw_selftest.o \
         ${OBJDIR}/paw_strcio.o \
@@ -285,6 +286,7 @@ OBJECTS2 = \
 #
 OBJECTS3 = \
            ${OBJDIR}/paw_setups.o \
+           ${OBJDIR}/paw_setupread.o \
            ${OBJDIR}/paw_potential.o \
            ${OBJDIR}/paw_occupations.o \
            ${OBJDIR}/paw_pairpotential.o \

@@ -102,7 +102,7 @@ END MODULE CORE_MODULE
 !
 ! SANTOS040617 BEGIN
 !     ..................................................................
-      SUBROUTINE CORE_CORESHIFTS(IAT,ISP,R1,DEX,NR,LMRXX,AEPOT)
+      SUBROUTINE CORE_CORESHIFTS(IAT,ISP,gid,NR,LMRXX,AEPOT)
 !     ******************************************************************
 !     **                                                              **
 !     **  CALCULATES THE EIGENVALUES OF CORE HAMILTONIAN              **
@@ -113,8 +113,7 @@ END MODULE CORE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IAT
       INTEGER(4),INTENT(IN) :: ISP
-      REAL(8)   ,INTENT(IN) :: R1
-      REAL(8)   ,INTENT(IN) :: DEX
+      INTEGER(4),INTENT(IN) :: gid
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: LMRXX
       REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRXX)
@@ -126,13 +125,13 @@ END MODULE CORE_MODULE
 !     REAL(8)   ,ALLOCATABLE:: FB(:)
       REAL(8)   ,ALLOCATABLE:: EB(:)
       REAL(8)   ,ALLOCATABLE:: AEPSI(:,:)
+      REAL(8)               :: r(nr)
       CHARACTER(32)         :: NAME
       INTEGER(4)            :: LMNX
       INTEGER(4)            :: LMRX
 
       REAL(8)               :: PI
-      REAL(8)               :: XEXP,RI
-      INTEGER(4)            :: I,IR
+      INTEGER(4)            :: I
       REAL(8)               :: AUX1(NR)
       REAL(8)               :: AUX2
       CHARACTER(LEN=82)     :: STRING
@@ -154,6 +153,7 @@ END MODULE CORE_MODULE
       LOGICAL(4)            :: TCHK
 !     ******************************************************************
       IF(.NOT.TCORESHIFTS) RETURN
+      call radial$r(gid,nr,r)
       CALL ATOMLIST$GETCH('NAME',IAT,NAME)
       TCHK=DEFAULT
       DO I=1,NATOMS
@@ -217,7 +217,6 @@ END MODULE CORE_MODULE
 !     ==  CONSTANTS                                                   ==
 !     ==================================================================
       PI=4.D0*DATAN(1.D0)
-      XEXP=DEXP(DEX)
 
       LMNX=0
       LMRX=0
@@ -236,14 +235,11 @@ END MODULE CORE_MODULE
 !     == SUBTRACTS ATOMIC AE POTENTIAL FROM AE TOTAL POTENTIAL        ==
 !     ==================================================================
       AEPOT1(:,:)=AEPOT(:,:)
-      DO IR=1,NR
-        AEPOT1(IR,1)=AEPOT(IR,1)-ATPOT(IR)
-      ENDDO
+      AEPOT1(:,1)=AEPOT(:,1)-ATPOT(:)
 
 !     ==================================================================
 !     ==   CALCULATE HAMILTONIAN                                      ==
 !     ==================================================================
-      XEXP=DEXP(DEX)
       ALLOCATE(HAMIL(LMNX,LMNX))      
       HAMIL(:,:)=0.D0
 !
@@ -268,18 +264,12 @@ END MODULE CORE_MODULE
               DO LM3=1,LMRX
                 CALL CLEBSCH(LM1,LM2,LM3,CG)
                 IF(CG.NE.0.D0) THEN
-                    DO IR=1,NR
-                      AEDMU(IR)=AEDMU(IR)+CG*AEPOT1(IR,LM3)
-                    ENDDO
+                  AEDMU(:)=AEDMU(:)+CG*AEPOT1(:,LM3)
                 END IF
               ENDDO
 !
-              RI=R1/XEXP
-              DO IR=1,NR
-                RI=RI*XEXP
-                DWORK1(IR)=(AEDMU(IR)*AEPSI(IR,LN1)*AEPSI(IR,LN2))*RI**2
-              ENDDO
-              CALL RADIAL$INTEGRAL(R1,DEX,NR,DWORK1,SVAR)
+              DWORK1(:)=(AEDMU(:)*AEPSI(:,LN1)*AEPSI(:,LN2))*R(:)**2
+              CALL RADIAL$INTEGRAL(gid,NR,DWORK1,SVAR)
               HAMIL(LMN1,LMN2)=HAMIL(LMN1,LMN2)+SVAR
 !
             ENDDO

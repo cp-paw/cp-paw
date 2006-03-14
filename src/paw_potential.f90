@@ -653,6 +653,7 @@ END IF
       EISOLATE=0.D0
       FORCE1(:,:)=0.D0
       VQLM1(:,:)=0.D0
+!     __ isolate may set rhobt to zero _________________________________
       CALL ISOLATE(NSP,NAT,ISPECIES,TAU0,RBAS,FORCE1,EISOLATE &
      &            ,LMRXX,LMRX,QLM,VQLM1,RHOBT,NGL,RHOG(1,1),VHARTREE)
       FION(:,:)=FION(:,:)+FORCE1(:,:)

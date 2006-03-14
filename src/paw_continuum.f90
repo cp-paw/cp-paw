@@ -2240,16 +2240,17 @@ END
       USE CONTINUUM_CONTROL_MODULE
       USE NET_MODULE
       IMPLICIT NONE
+      INTEGER,INTENT(IN)      :: NAT
+      REAL(8),intent(inout)   :: R0(3,nat)
+      INTEGER,INTENT(IN)      :: NG
+      REAL(8),intent(in)      :: RC(ng,nat)
+      REAL(8),intent(inout)   :: QMAD(ng,nat)
+      REAL(8),intent(out)     :: PCONT(ng,nat)
+      REAL(8),INTENT(OUT)     :: ECONT
+      REAL(8),intent(out)     :: CFORCE(3,nat)
       TYPE (FACETYPE),POINTER :: FACE
-      INTEGER,INTENT(IN)      :: NAT,NG
-      REAL(8),INTENT(OUT)         :: ECONT
-      REAL(8),DIMENSION(3,NAT)    :: CFORCE
       REAL(8),DIMENSION(3,NAT)    :: CFORCEMEM,CFORCEX
-      REAL(8),DIMENSION(NG,NAT)   :: RC
-      REAL(8),DIMENSION(NG,NAT)   :: PCONT
       REAL(8),DIMENSION(NG,NAT)   :: PCONTMEM,PCONTX
-      REAL(8),DIMENSION(NG,NAT)   :: QMAD
-      REAL(8),DIMENSION(3,NAT)    :: R0
       REAL(8),ALLOCATABLE,DIMENSION(:) :: QV
       INTEGER :: IAT,I,NFACE,FI,MULTIPLE,J,K,L
       LOGICAL :: MOVE_ATOMS,FORCE_ZERO_OVERLAP,ON_FLAG,MOVE_NETCHARGES,&
@@ -2258,7 +2259,7 @@ END
         &CHARGE_FRICTION,SOME_VARIABLE,ETOT,DELT=1.D-8,E1,E2
       LOGICAL,SAVE :: TFIRST=.TRUE.,TVAF=.FALSE.,TNUMERICAL=.FALSE.
       LOGICAL :: RESTART
-!
+!     ******************************************************************
       IF (TFIRST) THEN
        CALL CONTINUUM$INITIALIZE
        IF (TVAF) OPEN(88,FILE='QVAF.OUT',FORM='UNFORMATTED')
@@ -2271,6 +2272,7 @@ END
       CFORCEMEM(:,:)=0.D0
 !
       CALL GET_SET_ON('GET',ON_FLAG)
+print*,'on-flag',on_flag
       IF (.NOT. ON_FLAG) RETURN
                                CALL TRACE$PUSH('CONTINUUM$PROPAGATE')
 !

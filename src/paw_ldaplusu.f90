@@ -21,7 +21,7 @@
 !
 !     ...................................................AUTOPI.........
       SUBROUTINE LDAPLUSU(NRX,LMNXX,NSPIN,LOX,LNX &
-     &                ,R1,DEX,NR,AEZ,AEPHI,DENMAT,DETOT,DH)
+     &                ,gid,NR,AEZ,AEPHI,DENMAT,DETOT,DH)
 !     **                                                              **
 !     **                                                              **
       USE LDAPLUSU_MODULE
@@ -32,8 +32,7 @@
       INTEGER(4),INTENT(IN) :: NSPIN
       INTEGER(4),INTENT(IN) :: LNX
       INTEGER(4),INTENT(IN) :: LOX(LNX)
-      REAL(8)   ,INTENT(IN) :: R1
-      REAL(8)   ,INTENT(IN) :: DEX
+      INTEGER(4),INTENT(IN) :: gid   ! grid id
       INTEGER(4),INTENT(IN) :: NR
       REAL(8)   ,INTENT(IN) :: AEZ
       REAL(8)   ,INTENT(IN) :: AEPHI(NRX,LNX)
@@ -57,10 +56,11 @@
       REAL(8)               :: V1UP,V1DOWN,V2UP,V2DOWN
       REAL(8)               :: AVPOT,AVOCC
       REAL(8)               :: SVAR
+      REAL(8)               :: r(nr)
 !     *******************************************************************
 !     == POINTER ARRAYS
       IF(.NOT.TDO) RETURN
-      XEXP=DEXP(DEX)
+      call radial$r(gid,nr,r)
       DETOT=0.D0
 !     == EVALUATE LMX ===================================================
       LX=-1
@@ -106,13 +106,11 @@
           X(LN1,LN2)=0.D0
           X(LN2,LN1)=0.D0
           IF(L1.EQ.L2) THEN 
-            RI=R1/XEXP
             DO IR=1,NR
-              RI=RI*XEXP
-              WORK(IR)=AEPHI(IR,LN1)*AEPHI(IR,LN2)*RI**2
-              IF(RI.GT.RASA) WORK(IR)=0.D0
+              WORK(ir)=AEPHI(ir,LN1)*AEPHI(ir,LN2)*R(ir)**2
+              IF(R(ir).GT.RASA) WORK(IR)=0.D0
             ENDDO
-            CALL RADIAL$INTEGRAL(R1,DEX,NR,WORK,X(LN1,LN2))
+            CALL RADIAL$INTEGRAL(gid,NR,WORK,X(LN1,LN2))
             X(LN2,LN1)=X(LN1,LN2)
           END IF
         ENDDO

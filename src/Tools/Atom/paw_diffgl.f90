@@ -185,7 +185,7 @@
       PHI(1:MCH,1) =PHI1(1:MCH,1)
       PHI(MCH:NR,1)=PHI2(MCH:NR,1)
       DO I1=1,NPRO
-        CALL RADIAL$INTEGRAL(R1,DEX,NR,R(:)**2*PRO(:,I1)*PHI(:,1),VEC(I1))
+        CALL OLDRADIAL$INTEGRAL(R1,DEX,NR,R(:)**2*PRO(:,I1)*PHI(:,1),VEC(I1))
       ENDDO
       GINH(:)=PHI(:,1)
       DO I1=1,NPRO
@@ -228,9 +228,9 @@
 !     == NORMALIZE                                                    ==
 !     ==================================================================
       DO I1=1,NPRO
-        CALL RADIAL$INTEGRAL(R1,DEX,NR,r(:)**2*pro(:,i1)*phi(:,1),VEC(I1))
+        CALL OLDRADIAL$INTEGRAL(R1,DEX,NR,r(:)**2*pro(:,i1)*phi(:,1),VEC(I1))
       ENDDO
-      CALL RADIAL$INTEGRAL(R1,DEX,NR,(phi(:,1)*r(:))**2,SVAR)
+      CALL OLDRADIAL$INTEGRAL(R1,DEX,NR,(phi(:,1)*r(:))**2,SVAR)
       DO I1=1,NPRO
         DO I2=1,NPRO
           SVAR=SVAR+VEC(I1)*DO(I1,I2)*VEC(I2)
@@ -329,7 +329,7 @@ exit
             RI=RI*XEXP
             AUX(IR)=RI**2*PRO(IR,I1)*V(IR,1,I2)
           ENDDO
-          CALL RADIAL$INTEGRAL(R1,DEX,NR,AUX,AMAT(I1,I2))
+          CALL OLDRADIAL$INTEGRAL(R1,DEX,NR,AUX,AMAT(I1,I2))
         ENDDO
       ENDDO
       DO I1=1,NPRO
@@ -338,7 +338,7 @@ exit
           RI=RI*XEXP
           AUX(IR)=RI**2*PRO(IR,I1)*U(IR,1)
         ENDDO
-        CALL RADIAL$INTEGRAL(R1,DEX,NR,AUX,CVEC(I1))
+        CALL OLDRADIAL$INTEGRAL(R1,DEX,NR,AUX,CVEC(I1))
       ENDDO  
 !
 !     ==================================================================
@@ -743,10 +743,10 @@ exit
 !     == MATCH DERIVATIVES                                            ==
 !     ==================================================================
       IF(PRESENT(DLG)) THEN
-        CALL RADIAL$VALUE(R1,DEX,NR,PHI1(:,1),boxradius,PHI1x(1))
-        CALL RADIAL$VALUE(R1,DEX,NR,PHI1(:,2),boxradius,PHI1x(2))
-        CALL RADIAL$VALUE(R1,DEX,NR,PHI1dot(:,1),boxradius,PHI1dotx(1))
-        CALL RADIAL$VALUE(R1,DEX,NR,PHI1dot(:,2),boxradius,PHI1dotx(2))
+        CALL OLDRADIAL$VALUE(R1,DEX,NR,PHI1(:,1),boxradius,PHI1x(1))
+        CALL OLDRADIAL$VALUE(R1,DEX,NR,PHI1(:,2),boxradius,PHI1x(2))
+        CALL OLDRADIAL$VALUE(R1,DEX,NR,PHI1dot(:,1),boxradius,PHI1dotx(1))
+        CALL OLDRADIAL$VALUE(R1,DEX,NR,PHI1dot(:,2),boxradius,PHI1dotx(2))
         DE=-(PHI1X(2)-DLG/BOXRADIUS*PHI1X(1))/(PHI1DOTX(2)-DLG/BOXRADIUS*PHI1DOTX(1))
         PHI(1:MCH,:)=PHI1(1:MCH,:)+PHI1DOT(1:MCH,:)*DE
       ELSE
@@ -760,7 +760,7 @@ exit
 !     ==================================================================
 !     == NORMALIZE                                                    ==
 !     ==================================================================
-      CALL RADIAL$INTEGRAL(R1,DEX,NR,(R(:)*PHI(:,1))**2,SVAR)
+      CALL OLDRADIAL$INTEGRAL(R1,DEX,NR,(R(:)*PHI(:,1))**2,SVAR)
       SVAR=1.D0/DSQRT(SVAR)
       PHI(:,:)=PHI(:,:)*SVAR
       STEP(:)=STEP(:)*SVAR
@@ -770,7 +770,7 @@ exit
 !     == EVALUATE NEW ENERGY                                          ==
 !     ==================================================================
       GINH(:)=PHI(:,1)*(-0.5D0*PHI(:,3)+POT(:)*Y0*PHI(:,1))
-      CALL RADIAL$INTEGRAL(R1,DEX,NR,R(:)**2*GINH(:),SVAR)
+      CALL OLDRADIAL$INTEGRAL(R1,DEX,NR,R(:)**2*GINH(:),SVAR)
       E=SVAR
       RETURN
       END

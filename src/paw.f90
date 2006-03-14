@@ -346,6 +346,7 @@
 !     ******************************************************************      
 !     ******************************************************************      
       USE TIMESTEP_MODULE ,ONLY : DELTAT,ISTEPNUMBER,TNEWTHERMOSTAT
+      USE continuum_module,ONLY : continuum$setr8
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: DELT   ! TIME STEP
       LOGICAL(4),INTENT(IN)   :: TPRINT ! ON/OFF SWITCH FOR LONG PRINTOUT
@@ -850,7 +851,8 @@ END MODULE STOPIT_MODULE
 !     **                                                              ** 
 !     **  PRINFO IS CALLED ONCE PER TIMESTEP                          ** 
 !     ******************************************************************
-      USE CONTINUUM_CONTROL_MODULE
+      USE CONTINUUM_MODULE
+!     USE CONTINUUM_CONTROL_MODULE!replaced by continuum_module in hms-continuum
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TPRINT
       INTEGER(4),INTENT(IN) :: NFI
@@ -1183,6 +1185,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !
 !     ................................................................... 
       SUBROUTINE WRITETRAJECTORY(NFI,DELT)
+      USE continuum_module
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NFI
       REAL(8)   ,INTENT(IN)  :: DELT

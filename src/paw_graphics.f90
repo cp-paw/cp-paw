@@ -51,6 +51,10 @@ TYPE POTPLOT_TYPE
  CHARACTER(128)          :: TITLE ! IMAGE TITLE 
  REAL(8)                 :: DR    ! STEP SIZE OF THE GRID
 END TYPE POTPLOT_TYPE
+type onecrho_type
+  real(8),pointer        :: ae1cpot(:,:)
+  real(8),pointer        :: ps1cpot(:,:)
+end type onecrho_type
 TYPE(DENSITYPLOT_TYPE),ALLOCATABLE :: DENSITYPLOT(:)
 TYPE(WAVEPLOT_TYPE)   ,ALLOCATABLE :: WAVEPLOT(:)
 TYPE(POTPLOT_TYPE)                 :: POTPLOT
@@ -60,6 +64,7 @@ INTEGER(4)                :: IWAVEPTR=0
 INTEGER(4)                :: IDENSITYPTR=0
 INTEGER(4)                :: IPOTPTR=0
 COMPLEX(8),ALLOCATABLE    :: PWPOT(:)
+type(onecrho_type),allocatable :: onecpotarray(:)  ! shALL REPLACE AE1CPOT AND PS1CPOT
 REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)  !(NRX,LMRX,NAT)
 REAL(8)   ,ALLOCATABLE    :: PS1CPOT(:,:,:)  !(NRX,LMRX,NAT)
 INTEGER(4)                :: LMRXX=0    !INITIALLY NOT SET
@@ -507,6 +512,7 @@ END MODULE GRAPHICS_MODULE
       INTEGER(4)                :: IAT,ISP,LN
       INTEGER(4)                :: NFIL
       INTEGER(4)                :: NR1B,NR2B,NR3B
+      INTEGER(4)                :: gid    ! grid id
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_WAVEPLOT')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -597,7 +603,10 @@ CALL TRACE$PASS('MARKE 3')
         CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
 !       __ GET PARTIAL WAVES__________________________________________
-        CALL SETUP$RADGRID(ISP,R1,DEX,NR)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('GID',GID)
+        CALL RADIAL$GETI4(GID,'NR',NR)
+!
         CALL SETUP$LNX(ISP,LNX)
         ALLOCATE(LOX(LNX))
         CALL SETUP$LOFLN(ISP,LNX,LOX)
@@ -614,11 +623,11 @@ CALL TRACE$PASS('MARKE 3')
         ENDDO
         LMXX=(LX+1)**2
         ALLOCATE(DRHOL(NR,LMXX))
-        CALL GRAPHICS_1CWAVE(R1,DEX,NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
+        CALL GRAPHICS_1CWAVE(NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
      &                        ,PROJ,LMXX,DRHOL)
         DEALLOCATE(PROJ)
         CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
-     &         ,1,NR1B,WAVEBIG,POS(:,IAT),R1,DEX,NR,LMXX,DRHOL)
+     &         ,1,NR1B,WAVEBIG,POS(:,IAT),gid,NR,LMXX,DRHOL)
         DEALLOCATE(DRHOL)
         DEALLOCATE(LOX)
         DEALLOCATE(AEPHI)
@@ -691,7 +700,6 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)       ,ALLOCATABLE:: Z(:)
       REAL(8)       ,ALLOCATABLE:: Q(:)
       INTEGER(4)                :: LMNXX
-      REAL(8)                   :: R1,DEX
       INTEGER(4)                :: NR
       INTEGER(4)                :: LNX
       INTEGER(4)    ,ALLOCATABLE:: LOX(:)    !LNX
@@ -708,6 +716,7 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)                   :: SVAR,XEXP,RI
       INTEGER(4)                :: I
       INTEGER(4)                :: NR1B,NR2B,NR3B
+      INTEGER(4)                :: gid
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_DENSITYPLOT')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -813,7 +822,9 @@ CALL TRACE$PASS('MARKE 3')
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
         CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-        CALL SETUP$RADGRID(ISP,R1,DEX,NR)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('GID',GID)
+        CALL RADIAL$GETI4(GID,'NR',NR)
         CALL SETUP$LNX(ISP,LNX)
         ALLOCATE(LOX(LNX))
         CALL SETUP$LOFLN(ISP,LNX,LOX)
@@ -841,11 +852,11 @@ CALL TRACE$PASS('MARKE 3')
         ENDDO
         LMXX=9
         ALLOCATE(DRHOL(NR,LMXX))
-        CALL GRAPHICS_1CRHO(R1,DEX,NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
+        CALL GRAPHICS_1CRHO(NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
      &               ,DENMAT(1,1),LMXX,DRHOL)
         DEALLOCATE(DENMAT)
         CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
-    &         ,1,NR1B,WAVEBIG,POS(:,IAT),R1,DEX,NR,LMXX,DRHOL)
+    &         ,1,NR1B,WAVEBIG,POS(:,IAT),gid,NR,LMXX,DRHOL)
 !     
 !     ================================================================
 !     ==  ADD CORE CHARGE DENSITY                                   ==
@@ -855,7 +866,7 @@ CALL TRACE$PASS('MARKE 3')
           CALL SETUP$AECORE(ISP,NR,AECORE)
           IF(TYPE.EQ.'UP'.OR.TYPE.EQ.'DOWN') AECORE(:)=0.5D0*AECORE(:)
           CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
-    &           ,1,NR1B,WAVEBIG,POS(:,IAT),R1,DEX,NR,1,AECORE)
+    &           ,1,NR1B,WAVEBIG,POS(:,IAT),gid,NR,1,AECORE)
           DEALLOCATE(AECORE)
         END IF
         DEALLOCATE(DRHOL)
@@ -1001,7 +1012,7 @@ CALL TRACE$PASS('MARKE 3')
 !
 !     ..................................................................
       SUBROUTINE GRAPHICS_RHOLTOR(RBAS,NR1,NR2,NR3,NR1START,NR1L,RHO,R0 &
-     &           ,R1,DEX,NRX,LMX,DRHOL)
+     &           ,gid,NR,LMX,DRHOL)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
@@ -1009,18 +1020,16 @@ CALL TRACE$PASS('MARKE 3')
       INTEGER(4),PARAMETER     :: LMXX=36
       REAL(8)   ,PARAMETER     :: TOL=1.D-5
       INTEGER(4),INTENT(IN)    :: NR1,NR2,NR3,NR1START,NR1L
-      INTEGER(4),INTENT(IN)    :: NRX
+      INTEGER(4),INTENT(IN)    :: NR
       INTEGER(4),INTENT(IN)    :: LMX
       REAL(8)   ,INTENT(INOUT) :: RHO(NR1L,NR2,NR3)
-      REAL(8)   ,INTENT(IN)    :: DRHOL(NRX,LMX)
+      REAL(8)   ,INTENT(IN)    :: DRHOL(NR,LMX)
       REAL(8)   ,INTENT(IN)    :: RBAS(3,3)
       REAL(8)   ,INTENT(IN)    :: R0(3)
-      REAL(8)   ,INTENT(IN)    :: R1
-      REAL(8)   ,INTENT(IN)    :: DEX
+      integer(4),INTENT(IN)    :: gid
       REAL(8)                  :: DR(3,3)
       REAL(8)                  :: YLM(LMXX)
       REAL(8)                  :: RVEC(3)
-      REAL(8)                  :: XEXP
       REAL(8)                  :: RMAX,RMAX2,RI,SVAR,SVAR1
       INTEGER(4)               :: IR,LM
       INTEGER(4)               :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
@@ -1030,8 +1039,9 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)                  :: DIS,DIS2
       REAL(8)                  :: XIR
       REAL(8)                  :: W1,W2
+      REAL(8)                  :: r(nr)
 !     ******************************************************************
-      XEXP=DEXP(DEX)
+      call radial$r(gid,nr,r)
       IF(LMXX.LT.LMX) THEN
         CALL ERROR$MSG('INCREASE DIMENSION LMXX')
         CALL ERROR$STOP('GRAPHICS_RHOLTOR')
@@ -1041,14 +1051,12 @@ CALL TRACE$PASS('MARKE 3')
 !     ==  DETERMINE RMAX                                              ==
 !     ==================================================================
       RMAX=0.D0
-      RI=R1/XEXP
-      DO IR=1,NRX
-        RI=RI*XEXP
+      DO IR=1,NR
         SVAR=0.D0
         DO LM=1,LMX
           SVAR=MAX(DABS(DRHOL(IR,LM)),SVAR)
         ENDDO
-        IF(SVAR.GT.TOL)RMAX=RI
+        IF(SVAR.GT.TOL)RMAX=R(ir)
       ENDDO
       RMAX2=RMAX**2
 !
@@ -1085,7 +1093,7 @@ CALL TRACE$PASS('MARKE 3')
                 CALL GETYLM(LMX,RVEC,YLM)
                 SVAR=0.D0
                 DO LM=1,LMX
-                  CALL RADIAL$VALUE(R1,DEX,NRX,DRHOL(1,LM),DIS,SVAR1)
+                  CALL RADIAL$VALUE(gid,NR,DRHOL(1,LM),DIS,SVAR1)
                   SVAR=SVAR+SVAR1*YLM(LM)
                 ENDDO
                 RHO(I11,I21,I31)=RHO(I11,I21,I31)+SVAR
@@ -1098,36 +1106,28 @@ CALL TRACE$PASS('MARKE 3')
       END
 !
 !     ..................................................................
-      SUBROUTINE GRAPHICS_1CRHO(R1,DEX,NRX,LNX,LOX,AEPHI,PSPHI,LMNX &
+      SUBROUTINE GRAPHICS_1CRHO(NR,LNX,LOX,AEPHI,PSPHI,LMNX &
      &                   ,DENMAT,LMX,DRHOL)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),PARAMETER   :: LMXX=36
-      REAL(8)   ,INTENT(IN)  :: R1
-      REAL(8)   ,INTENT(IN)  :: DEX
-      INTEGER(4),INTENT(IN)  :: NRX
+      INTEGER(4),INTENT(IN)  :: NR
       INTEGER(4),INTENT(IN)  :: LNX
       INTEGER(4),INTENT(IN)  :: LOX(LNX)
-      REAL(8)   ,INTENT(IN)  :: AEPHI(NRX,LNX)
-      REAL(8)   ,INTENT(IN)  :: PSPHI(NRX,LNX)
+      REAL(8)   ,INTENT(IN)  :: AEPHI(NR,LNX)
+      REAL(8)   ,INTENT(IN)  :: PSPHI(NR,LNX)
       INTEGER(4),INTENT(IN)  :: LMNX
       REAL(8)   ,INTENT(IN)  :: DENMAT(LMNX,LMNX)
       INTEGER(4),INTENT(IN)  :: LMX
-      REAL(8)   ,INTENT(OUT) :: DRHOL(NRX,LMX)
-      INTEGER(4)             :: LM,IR,LMN1,LN1,LM1,L1,M1,LMN2,LN2,LM2,L2,M2
+      REAL(8)   ,INTENT(OUT) :: DRHOL(NR,LMX)
+      INTEGER(4)             :: LM,LMN1,LN1,LM1,L1,M1,LMN2,LN2,LM2,L2,M2
       REAL(8)                :: CG,DENMAT1,SVAR
       REAL(8)   ,ALLOCATABLE :: WORK(:)
 !     ******************************************************************
-!
-      DO LM=1,LMX
-        DO IR=1,NRX
-          DRHOL(IR,LM)=0.D0
-        ENDDO
-      ENDDO
-!
-      ALLOCATE(WORK(NRX))
+      drhol(:,:)=0.d0
+      ALLOCATE(WORK(NR))
       LMN1=0
       DO LN1=1,LNX
         L1=LOX(LN1)
@@ -1135,10 +1135,7 @@ CALL TRACE$PASS('MARKE 3')
         DO LN2=1,LNX
           L2=LOX(LN2)
 !
-          DO IR=1,NRX
-            WORK(IR)=AEPHI(IR,LN1)*AEPHI(IR,LN2) &
-     &              -PSPHI(IR,LN1)*PSPHI(IR,LN2)
-          ENDDO
+          WORK(:)=AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2)
           DO M1=1,2*L1+1
             LM1=L1**2+M1
             DO M2=1,2*L2+1
@@ -1149,9 +1146,7 @@ CALL TRACE$PASS('MARKE 3')
                 CALL CLEBSCH(LM,LM1,LM2,CG)
                 IF(CG.NE.0.D0) THEN
                   SVAR=CG*DENMAT1
-                  DO IR=1,NRX
-                    DRHOL(IR,LM)=DRHOL(IR,LM)+WORK(IR)*SVAR
-                  ENDDO
+                  DRHOL(:,LM)=DRHOL(:,LM)+WORK(:)*SVAR
                 END IF
               ENDDO
 !
@@ -1166,32 +1161,25 @@ CALL TRACE$PASS('MARKE 3')
       END
 !
 !     ..................................................................
-      SUBROUTINE GRAPHICS_1CWAVE(R1,DEX,NRX,LNX,LOX,AEPHI,PSPHI,LMNX &
+      SUBROUTINE GRAPHICS_1CWAVE(NR,LNX,LOX,AEPHI,PSPHI,LMNX &
      &                   ,PROJ,LMX,DRHOL)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      REAL(8)   ,INTENT(IN)  :: R1
-      REAL(8)   ,INTENT(IN)  :: DEX
-      INTEGER(4),INTENT(IN)  :: NRX
+      INTEGER(4),INTENT(IN)  :: NR
       INTEGER(4),INTENT(IN)  :: LNX
       INTEGER(4),INTENT(IN)  :: LMNX
       INTEGER(4),INTENT(IN)  :: LMX
       INTEGER(4),INTENT(IN)  :: LOX(LNX)
-      REAL(8)   ,INTENT(IN)  :: AEPHI(NRX,LNX)
-      REAL(8)   ,INTENT(IN)  :: PSPHI(NRX,LNX)
+      REAL(8)   ,INTENT(IN)  :: AEPHI(NR,LNX)
+      REAL(8)   ,INTENT(IN)  :: PSPHI(NR,LNX)
       REAL(8)   ,INTENT(IN)  :: PROJ(LMNX)
-      REAL(8)   ,INTENT(OUT) :: DRHOL(NRX,LMX)
+      REAL(8)   ,INTENT(OUT) :: DRHOL(NR,LMX)
       INTEGER(4)             :: LM,IR,LMN,LN,M,L
       REAL(8)                :: SVAR
 !     ******************************************************************
-      DO LM=1,LMX
-        DO IR=1,NRX
-          DRHOL(IR,LM)=0.D0
-        ENDDO
-      ENDDO
-!
+      drhol(:,:)=0.d0
       LMN=0
       DO LN=1,LNX
         L=LOX(LN)
@@ -1201,9 +1189,7 @@ CALL TRACE$PASS('MARKE 3')
           IF(LM.LE.LMX) THEN
             SVAR=PROJ(LMN)
 !            PRINT*,'1CWAVE',LN,M,LMN,LM,SVAR
-            DO IR=1,NRX
-              DRHOL(IR,LM)=DRHOL(IR,LM)+SVAR*(AEPHI(IR,LN)-PSPHI(IR,LN))
-            ENDDO
+            DRHOL(:,LM)=DRHOL(:,LM)+SVAR*(AEPHI(:,LN)-PSPHI(:,LN))
           END IF
         ENDDO
       ENDDO
@@ -1288,7 +1274,7 @@ CALL TRACE$PASS('MARKE 3')
       END
 !
 !     ....................................................................
-      SUBROUTINE GRAPHICS$SET1CPOT(IDENT_,IAT_,R1,DEX,NR,NRX_,LMRX,POT)
+      SUBROUTINE GRAPHICS$SET1CPOT(IDENT_,IAT_,gid,NR,NRX_,LMRX,POT)
 !     ********************************************************************
 !     **  USE 1-CENTER POTENTIAL FOR ELECTRIC FIELD GRADIENTS          **
 !     ********************************************************************
@@ -1296,8 +1282,7 @@ CALL TRACE$PASS('MARKE 3')
       IMPLICIT NONE
       CHARACTER(*) ,INTENT(IN) :: IDENT_  ! CAN BE 'AE' OR 'PS' 
       INTEGER(4)   ,INTENT(IN) :: IAT_    ! ATOM INDEX (SEE ATOMLIST)
-      REAL(8)      ,INTENT(IN) :: R1
-      REAL(8)      ,INTENT(IN) :: DEX
+      INTEGER(4)   ,INTENT(IN) :: gid
       INTEGER(4)   ,INTENT(IN) :: NR,NRX_
       INTEGER(4)   ,INTENT(IN) :: LMRX
       REAL(8)      ,INTENT(IN) :: POT(NRX_,LMRX)
@@ -1366,6 +1351,8 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)   ,ALLOCATABLE     :: ONECPOT(:,:,:)
       INTEGER(4)                 :: NTASKS,THISTASK
       INTEGER(4)                 :: NR1B,NR2B,NR3B
+      INTEGER(4)                 :: isp
+      INTEGER(4)                 :: gid
 !     ******************************************************************
 !COLLECTING OF INFORMATION
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -1430,7 +1417,16 @@ CALL TRACE$PASS('MARKE 3')
       ONECPOT=AE1CPOT-PS1CPOT
       CALL MPE$COMBINE('MONOMER','+',ONECPOT)
       DO IAT=1,NAT
-        CALL SETUP$RADGRID(IAT,R1,DEX,NR)
+        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+        CALL SETUP$ISELECT(ISP)
+        call setup$geti4('gid',gid)                
+        call radial$geti4(gid,'nr',nr)
+        IF(NRX.NE.NR) THEN
+          CALL ERROR$MSG('INCONSISTENT GRID SIZE')
+          CALL ERROR$MSG('ERROR ENTERED WHILE ALLOWING ATOM SPECIFIC RADIAL GRIDS')
+          CALL ERROR$STOP('GRAPHICS_CREATEPOT')
+        END IF
+!        CALL SETUP$RADGRID(IAT,R1,DEX,NR)
         CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
@@ -1438,7 +1434,7 @@ CALL TRACE$PASS('MARKE 3')
 PRINT*,'INCLUDE AE-CONTRIBUTIONS'
 CALL TIMING$CLOCKON('GRAPHICS 1CPOTENTIAL')
          CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B,1,NR1B &
-      &           ,POTENTIAL,POS(:,IAT),R1,DEX,NRX,LMRXX,ONECPOT(:,:,IAT))
+      &           ,POTENTIAL,POS(:,IAT),gid,NRX,LMRXX,ONECPOT(:,:,IAT))
 CALL TIMING$CLOCKOFF('GRAPHICS 1CPOTENTIAL')
 PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       ENDDO
