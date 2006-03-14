@@ -141,7 +141,7 @@ all: debug none fast parallel tools doc
 #
 all_new: debug_new none_new fast_new parallel tools
 #
-tools: 	 atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz
+tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz
 #
 none:   
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
@@ -176,6 +176,10 @@ parallel_new:
 	${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
 #
 # THE PAW TOOLS
+#
+newatom:
+	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
+           ${BINDIR}/${ARCH}/paw_newatom.x 
 #
 atom:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
@@ -276,7 +280,7 @@ OBJECTS2 = \
            ${OBJDIR}/paw_ionew.o \
            ${OBJDIR}/paw_qmmm.o \
            ${OBJDIR}/paw_classical.o \
-           ${OBJDIR}/paw_continuum.o \
+           ${OBJDIR}/paw_continuum_hms_s.o \
            ${OBJDIR}/paw_warmup.o \
 #  the following is for the QMMM of Woo and Margl
 #          ${OBJDIR}/mm_paw_modules.o \
@@ -305,6 +309,9 @@ OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 #
 # Definition of objects for the compilation of the PAW-tools
 #
+# Objects for atomic setup tool
+OBJNEWATOM = \
+          ${OBJDIR}/paw_newatom.o 
 # Objects for atomic setup tool
 OBJATOM = \
           ${OBJDIR}/paw_diffgl.o \
@@ -365,6 +372,9 @@ ${PAWX} : F90PP ${OBJDIR}/FFTW_F77.I ${OBJDIR}/mpif.h ${LOBJS} \
 	ar -ru $(PAWLIB) $(LOBJS) ${OBJDIR}/paw_mpelib_s.o
 #
 # produce executables for the Tools
+#
+${BINDIR}/${ARCH}/paw_newatom.x: ${OBJNEWATOM} libpaw.a ${OBJDIR}/paw_setupread.o
+	${LINK} -o ${BINDIR}/${ARCH}/paw_newatom.x ${OBJNEWATOM} ${OBJDIR}/paw_setupread.o -lpaw ${LLIBS} 
 #
 ${BINDIR}/${ARCH}/paw_atom.x: ${OBJATOM} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_atom.x ${OBJATOM} -lpaw ${LLIBS} 
@@ -446,6 +456,12 @@ $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 #__compile the tools____________________________________________________
+#
+${OBJNEWATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atomnew/%.f90
+	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
+#
 ${OBJATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atom/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
@@ -554,7 +570,7 @@ ifeq ($(ALLDEP),T)
 
  ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_waves1.o
 
- ${OBJDIR}/paw.o:               ${OBJDIR}/paw_continuum.o
+ ${OBJDIR}/paw.o:               ${OBJDIR}/paw_continuum_hms_s.o
 
  ${OBJDIR}/paw_cg.o:               ${OBJDIR}/paw_waves1.o
 
