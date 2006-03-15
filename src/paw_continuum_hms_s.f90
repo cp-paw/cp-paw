@@ -209,12 +209,12 @@ subroutine continuum_init
 !  by continuum$read, because we don't know the face_q before that anyway)
 
 !hms -->
-USE isolate_module,only: nfct
+!blo --> USE isolate_module,only: nfct
 !hms <--
 
 implicit none
 
-
+integer(4)                                :: nfct
 integer                                   :: nat, ng
 integer                                   :: nfil, nfilprot, ia, ifg, ip, i, iv
 integer                                   :: nmem, dummy
@@ -227,8 +227,12 @@ real(kind=8), parameter                   :: MB = 1.D0/1024.D0/1024.D0
 ! firstly we have to figure out the number of atoms and gaussians
                                    call trace$push('continuum_init')
 call atomlist$natom(nat)
+!blo -->
+CALL ISOLATE$GETI4('NFCT',NFCT)
+!blo <--
 !hms call isolate$ngauss(ng)
 !hms -->
+
 ng = nfct + 1
 !hms <--
 

@@ -23,6 +23,22 @@
       END MODULE ISOLATE_MODULE
 !
 !     ..................................................................
+      SUBROUTINE ISOLATE$GETI4(ID,VAL)
+      USE ISOLATE_MODULE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(out):: VAL
+!     ******************************************************************
+      IF(ID.EQ.'NFCT') THEN
+        VAL=NFCT
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ISOLATE$GETI4')
+      END IF
+      RETURN
+      END      
+!
+!     ..................................................................
       SUBROUTINE ISOLATE$ONOFF(STRING,NFCT_,RC0_,RCFAC_,G2MAX_,DECOUPLE_)
 !     ******************************************************************
 !     **  SWITCH ISOLATE ON AND OFF                                   **
