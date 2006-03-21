@@ -2405,6 +2405,12 @@ CONTAINS
 !       ================================================================
 !       ==  CHECK HERE FOR THE PRESENCE OF TABS ETC                   ==
 !       ================================================================
+!       == remove carriage return as special character
+        STCHAR=LINE(LENG:LENG)
+        IF(IACHAR(STCHAR).EQ.13) THEN
+          LINE(LENG:LENG)=' '
+          LENG=LENG-1
+        END IF
         DO I=1,LENG
           STCHAR=LINE(I:I)
           ISVAR=IACHAR(STCHAR)
@@ -2412,7 +2418,7 @@ CONTAINS
             CALL ERROR$MSG('TABS AND OTHER SPECIAL LETTERS ARE NOT ALLOWED')
             CALL ERROR$MSG('IN BUFFER STRUCTURED INPUT FILES')
             CALL ERROR$CHVAL('LINE',TRIM(LINE))
-            CALL ERROR$CHVAL('POSITION',TRIM(LINE))
+            CALL ERROR$i4vaL('POSITION',i)
             CALL ERROR$I4VAL('ASCII VALUE OF DISALLOWED CHARACTER',ISVAR)
             CALL ERROR$STOP('BUFFER_READ')
           END IF
