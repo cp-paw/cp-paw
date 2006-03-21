@@ -300,14 +300,10 @@
 !     == REPORT ======================================================== 
       CALL REPORT$TITLE(NFILO,'EIGENSTATES AFTER SCF CALCULATION')
       DO IB=1,NB
-        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2," E[H]=",F15.9)') &
-     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB)
+        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2 &
+     &                ," E[H]=",F20.9," E[ev]=",F20.9)') &
+     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB),EOFI(IB)/ev
       ENDDO
-      DO IB=1,NB
-        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2," E[ev]=",F15.9)') &
-     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB)/ev
-      ENDDO
-!
       DEALLOCATE(RHOADD)
 !
 !     ================================================================
@@ -326,8 +322,9 @@
 !     == REPORT ======================================================
       WRITE(NFILO,FMT='("EIGENSTATES AFTER NON-SCF CALCULATION IN SCF POT")')
       DO IB=1,NB
-        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2," E=",F15.9)') &
-     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB)
+        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2 &
+     &                ," E[H]=",F20.9," E[ev]=",F20.9)') &
+     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB),EOFI(IB)/ev
       ENDDO
 !
 !     ================================================================
@@ -337,16 +334,15 @@
       ALLOCATE(TUOFI(NR,NB)) ; tuofi=0.d0
       CALL NODELESS('EFFZORA',GID,NR,NB,LOFI,SOFI,NNOFI,DREL,AEPOT &
      &             ,UOFI,TUOFI,EOFI)
-!stop 'forced stop'
 !
 !     == REPORT =======================================================
       WRITE(NFILO,FMT='("EIGENSTATES FROM NODELESS CALCULATION")')
       DO IB=1,NB
-        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2," E=",F15.9)') &
-     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB)
-print*,'uofi end ',ib,uofi(nr-4:,ib)
+        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2 &
+     &                ," E[H]=",F20.9," E[ev]=",F20.9)') &
+     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB),EOFI(IB)/ev
       ENDDO
-!      CALL HAMTEST(GID,NR,AEPOT,NB,LOFI,SOFI,UOFI,TUOFI)
+!     CALL HAMTEST(GID,NR,AEPOT,NB,LOFI,SOFI,UOFI,TUOFI)
 !
 !     ================================================================
 !     == SELF-CONSISTENT ATOM FINISHED; WRITE RESULT                ==
@@ -597,7 +593,7 @@ print*,'uofi end ',ib,uofi(nr-4:,ib)
 !       USE METHOD ADJUSTING PSEUDOPOTENTIAL
         CALL CONSTRUCTPSPHI1(GID,NR,RC,POW_POT,PSPOT,L,NAUG &
      &                      ,EGRID(:,L+1),PSPHI(:,:,L+1),TPSPHI(:,:,L+1))
-PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
+!PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
 !       == USE METHOD MATCHING BESSEL FUNCTIONS
 !       CALL CONSTRUCTPSPHI(GID,NR,RC,L,NAUG,PSPHI(:,:,L+1),TPSPHI(:,:,L+1))
 !
@@ -1508,6 +1504,7 @@ PRINT*,'KI ',KI
 !     == MAP POWERSERIES EXPANSION ONTO SUPPORT ENERGY GRID                ==
 !     =======================================================================
       DO IB=1,NB
+print*,'constructpsphi1',ib
 !
 !       =====================================================================
 !       ==  DETERMINE PHASESHIFT OF PSPHI                                  ==
@@ -1517,9 +1514,8 @@ PRINT*,'KI ',KI
 !       =====================================================================
 !       ==  FIND POTENTIAL THAT PRODUCES CORRECT PHASESHIFT                ==
 !       =====================================================================
-        VAL0=0.D0
-        ISTART=1
-        X0=0.D0
+        ISTART=-1
+        X0=pspot(1)
         DX=0.1D0
         CALL BISEC(ISTART,IBI,X0,F0,DX,XM,FM)
         DO ITER=1,NITER
@@ -2015,7 +2011,7 @@ enddo
       XMAX=0.D0
       CONVG=.FALSE.
       IF(TBROYDEN) THEN
-        CALL BROYDEN$NEW(NR,20,1.D0)
+        CALL BROYDEN$NEW(NR,4,1.D0)
       ELSE
         CALL MYMIXPOT('ON',GID,NR,POT,XMAX,XAV)
       END IF
@@ -2052,13 +2048,13 @@ enddo
 !       ================================================================
         if(tbroyden) then
           xav=sqrt(dot_product(pot-potin,pot-potin)/real(nr,kind=8))
-          xmax=maxval(pot-potin) 
+          xmax=maxval(abs(pot-potin)) 
           call broyden$step(nr,potin,(pot-potin))
           pot=potin
-print*,'xmax ',xmax,xav
        else
           CALL MYMIXPOT('GO',GID,NR,POT,XMAX,XAV)
         end if
+print*,'xmax ',xmax,xav
         CONVG=(XMAX.LT.TOL)
       ENDDO
       CALL ERROR$MSG('SELFCONSISTENCY LOOP NOT CONVERGED')
@@ -2333,10 +2329,6 @@ print*,'xmax ',xmax,xav
           TPHI(:,IB)=TPHI(:,IB)*SVAR
         END IF
       ENDDO
-print*,'nb ',nb
-do ib=1,nb
-print*,'ndlss ',ib,phi(nr-5:,ib)
-enddo
       RETURN
       END
 !
@@ -2478,10 +2470,10 @@ enddo
       REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
       INTEGER(4)                 :: ISTART,IBI
-      REAL(8)                    :: X0,Y0,DX,XM,YM
+      REAL(8)                    :: X0,Z0,DX,XM,ZM
       REAL(8)    ,PARAMETER      :: TOL=1.D-8
-      REAL(8)                    :: PI
-      REAL(8)                    :: VAL,DER,RTEST
+      REAL(8)                    :: PI,Y0
+      REAL(8)                    :: VAL,DER,DERO,RTEST
       REAL(8)                    :: R(NR)
       REAL(8)                    :: PHIHOM(NR),PHIINHOM(NR),GHOM(NR)
       INTEGER(4)                 :: NN1
@@ -2490,41 +2482,118 @@ enddo
       INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
       INTEGER(4)                 :: IRMATCH 
       REAL(8)                    :: SVAR
+      REAL(8)                    :: POT1(NR)
+      REAL(8)   ,PARAMETER       :: XMAX=1.D+100 ! MAXIMUM FACTOR IN THE WAVE FUNCTION
+      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
       LOGICAL(4)                 :: THOM
+      integer(4)                 :: nn1m,nn10,nn1p
+      real(8)                    :: phip(nr),phim(nr)
+      real(8)                    :: rcl
+      real(8)                    :: swkb(nr)  ! phi=e^S
+      real(8)                    :: aux(nr),aux1(nr)
+      integer(4)                 :: irout,ircl
 !     *********************************************************************
       PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       RTEST=R(NR)
       ISTART=1
       X0=E
-      DX=1.D0
-      CALL BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
+      DX=1.D-2
+      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
       DO I=1,NITER
         E=X0
+!        E=MIN(X0,EMAX)
+!
+!       =======================================================================
+!       ==  CUT OFF THE POTENTIAL                                            ==
+!       =======================================================================
+        POT1(:)=POT(:)
+!       == FIND CLASSICAL TURNING POINT
+        RCL=R(NR)
+        IF(E.LT.POT(NR)*Y0) THEN
+          DO IR=NR-1,1,-1
+            IF(E.GT.POT(IR)*Y0) THEN
+              IRCL=IR
+              RCL=R(IR)-(POT(IR)-E/Y0)/(POT(IR+1)-POT(IR))*(R(IR+1)-R(IR))
+! RCL=MIN(RTEST,R(NR))
+              EXIT
+            END IF
+          ENDDO
+          RTEST=RCL
+        END IF
+!
+!       == USE WKB SOLUTION FOR THE SCHR.GL. FOR A CONSTANT POTENTIAL AND L=0
+!       == TO ESTIMATE FACTOR FROM RTEST TO OUTERMOST POINT
+        irout=nr
+        IF(RTEST.LT.R(NR)) THEN
+          AUX(:IRCL)=0.D0
+          AUX(IRCL+1:)=SQRT(REAL(L*(L+1),kind=8)/R(ircl+1:)**2+2.D0*(POT(IRCL+1:)*Y0-E))
+          CALL RADIAL$DERIVe(GID,NR,AUX,AUX1)
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,Swkb)
+!          Swkb(:)=Swkb(:)-0.5D0*LOG(AUX1(:))-LOG(R(:))
+          Swkb(:)=Swkb(:)-LOG(R(:))
+!         == DETERMINE IROUT WHERE THE WAVE FUNCTION CAN GROW BY A FACTOR 
+!         == OF XMAX FROM THE CLASSICAL TURNING POINT
+          SVAR=LOG(XMAX)
+          DO IR=1,NR
+            IF(Swkb(IR).GT.SVAR) THEN
+              IROUT=IR-1
+              EXIT
+            END IF
+          ENDDO
+        END IF
+        svar=pot(irout)
+        pot1(:)=pot(:)
+        pot1(irout:)=pot(irout)
+!print*,'r(irout)',rcl,r(irout),pot1(nr)
+!
+!       =======================================================================
+!       == INTEGRATE RADIAL SCHRODINGER EQUATION OUTWARD                     ==
+!       =======================================================================
         IDIR=1
-        CALL RADIAL$SCHRODINGER(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHI)
-        CALL RADIAL$VALUE(GID,NR,PHI,RTEST,VAL)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHI,RTEST,DER)
+        CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHI)
+!       == CHECK FOR OVERFLOW
+        IF(.NOT.(PHI(irout).GT.0.OR.PHI(irout).Le.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('NN',NN)
+          CALL ERROR$STOP('BOUNDSTATE')
+        END IF
+!
+!       =======================================================================
+!       == CALCULATE PHASE SHIFT =========================================
+!       =======================================================================
         NN1=0
-        DO IR=2,NR-1
-          IF(R(IR+1).GT.RTEST) THEN
-            IF(VAL*PHI(IR).LT.0.D0) NN1=NN1+1
-            EXIT
-          END IF
-          IF(PHI(IR+1)*PHI(IR).LT.0.D0) NN1=NN1+1
+        DO IR=3,irout
+          IF(PHI(IR)*PHI(IR-1).LT.0.D0) NN1=NN1+1
         ENDDO
-        Y0=-.5D0-ATAN(DER/VAL)/PI+REAL(NN1-NN,KIND=8)
+        Z0=-1.D0
+        IF(NN1.Gt.NN) Z0=1.D0
+!write(*,fmt='("iter",4i5,4e20.10)')I,L,NN1,NN,E,2.d0*DX,phi(irout),z0
+        IF(ABS(2.d0*DX).LE.TOL) EXIT
 !       =====================================================================
 !       ==  BISECTION                                                      ==
 !       =====================================================================
-        CALL BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
-        IF(ABS(DX).LE.TOL) EXIT
+        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
       ENDDO
       IF(ABS(DX).GT.TOL) THEN
         CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
         CALL ERROR$MSG('BOUND STATE NOT FOUND')
         CALL ERROR$STOP('BOUNDSTATE')
       END IF
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E+2.d0*dx,IDIR,PHIp)
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E-2.d0*dx,IDIR,PHIm)
+      NN1p=-nn
+      NN1m=-nn
+      NN10=-nn
+      DO IR=3,irout
+        IF(PHI(IR)*PHI(IR-1).LT.0.D0)   NN10=NN10+1
+        IF(PHIm(IR)*PHIm(IR-1).LT.0.D0) NN1m=NN1m+1
+        IF(PHIp(IR)*PHIp(IR-1).LT.0.D0) NN1p=NN1p+1
+      ENDDO
+!Print*,'nn1-nn ',nn1m,nn10,nn1p
+!Print*,'e ',e-2.d0*dx,e,e+2.d0*dx
 !
 !     =======================================================================
 !     ==  DETERMINE MATCHING POINT                                         ==
@@ -2532,7 +2601,7 @@ enddo
       THOM=MAXVAL(ABS(G(:))).EQ.0.D0
       DO IR=1,NR
          IRMATCH=IR
-         IF(POT(IR)-E.GT.0.D0.OR.R(IR).GT.5.D0) EXIT
+         IF(POT(IR)-E/y0.GT.0.D0.OR.R(IR).GT.5.D0) EXIT
       ENDDO
 !
 !     =======================================================================
@@ -2540,9 +2609,10 @@ enddo
 !     =======================================================================
       IDIR=-1
       GHOM(:)=0.D0
-      CALL RADIAL$SCHRODINGER(GID,NR,POT,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
+      if(irout.lt.nr) GHOM(IROUT)=1.D-5
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
       IF(.NOT.THOM) THEN     
-        CALL RADIAL$SCHRODINGER(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHIINHOM)
+        CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
       ELSE
         PHIINHOM(:)=0.D0
       END IF
@@ -2551,8 +2621,202 @@ enddo
 !     ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
 !     =======================================================================
       SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
-      PHI(IRMATCH:)=PHIINHOM(IRMATCH:)+SVAR*PHIHOM(IRMATCH:)
-!print*,'phi end',phi(nr-5:nr)
+      PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+      SVAR=(DERO-DER)/PHI(IRMATCH)
+      PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+do ir=1,nr
+  if(.not.(phi(ir).gt.0.d0.or.phi(ir).le.0.d0)) then
+    print*,'error'
+    print*,'phiin',phi(:irmatch-1)
+    print*,'phiout',phi(irmatch:)
+    print*,'svar ',svar
+    call error$stop('boundstate')
+  end if
+enddo
+      RETURN
+      END
+!
+!     ......................................................................
+      SUBROUTINE old1BOUNDSTATE(GID,NR,L,SO,DREL,G,NN,POT,E,PHI)
+!     **                                                                  **
+!     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND     **
+!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                 **
+!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G            **
+!     **                                                                  **
+!     **  FIRST, THE ENERGY IS DETERMINED BY BISECTION ON THE             **
+!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.     **
+!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.     **
+!     **                                                                  **
+!     **  SECONDLY, THE SCHROEDINGER EQUATION IS SOLVED INWARD, AND       **
+!     **  MATCHED WITH VALUE, EITHER AT THE CLASSICAL TURNING POINT       **
+!     **  OR A SPECIFIED RADIUS, WHATEVER IS SMALLER.                     **
+!     **                                                                  **
+!     **                                                                  **
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
+      REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
+      INTEGER(4) ,INTENT(IN)     :: NN      !#(NODES)
+      REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL
+      REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      INTEGER(4)                 :: ISTART,IBI
+      REAL(8)                    :: X0,Z0,DX,XM,ZM
+      REAL(8)    ,PARAMETER      :: TOL=1.D-8
+      REAL(8)                    :: PI,Y0
+      REAL(8)                    :: VAL,DER,DERO,RTEST
+      REAL(8)                    :: R(NR)
+      REAL(8)                    :: PHIHOM(NR),PHIINHOM(NR),GHOM(NR)
+      INTEGER(4)                 :: NN1
+      INTEGER(4) ,PARAMETER      :: NITER=100
+      INTEGER(4)                 :: I,IR
+      INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
+      INTEGER(4)                 :: IRMATCH 
+      REAL(8)                    :: SVAR
+      REAL(8)                    :: POT1(NR)
+      REAL(8)   ,PARAMETER       :: XMAX=1.D+100 ! MAXIMUM FACTOR IN THE WAVE FUNCTION
+      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
+      LOGICAL(4)                 :: THOM
+      integer(4)                 :: nn1m,nn10,nn1p
+      real(8)                    :: phip(nr),phim(nr)
+      real(8)                    :: rcl,ircl
+!     *********************************************************************
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+      RTEST=R(NR)
+      ISTART=1
+      X0=E
+      DX=1.D-2
+      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      DO I=1,NITER
+        E=X0
+!        E=MIN(X0,EMAX)
+!
+!       =======================================================================
+!       ==  CUT OFF THE POTENTIAL                                            ==
+!       =======================================================================
+        pot1(:)=pot(:)
+!       == FIND CLASSICAL TURNING POINT
+        Rcl=R(NR)
+        IF(E.lt.POT(NR)*y0) THEN
+          DO IR=NR-1,1,-1
+            IF(E.gt.POT(IR)*y0) THEN
+              rcl=R(IR)-(POT(IR)-E/y0)/(POT(IR+1)-POT(IR))*(R(IR+1)-R(IR))
+! rcl=MIN(RTEST,R(NR))
+              EXIT
+            END IF
+          ENDDO
+          rtest=rcl
+        END IF
+!
+!       == USE WKB SOLUTION FOR THE SCHR.GL. FOR A CONSTANT POTENTIAL AND L=0
+!       == TO ESTIMATE FACTOR FROM RTEST TO OUTERMOST POINT
+        IF(RTEST.LT.R(NR)) THEN
+          SVAR=0.5D0*(LOG(XMAX*R(NR)/RTEST)/(R(NR)-RTEST))**2
+          do ir=nr-1,1,-1
+            if(pot(ir)*y0.gt.E+SVAR) cycle
+write(*,fmt='("pot changed",8f20.5)')svar,e,pot(ir)*y0,pot(ir+1)*y0,rtest,r(ir)
+            exit
+          enddo
+          POT1(:)=MIN(POT(:),(E+SVAR)/y0)
+        ELSE
+          POT1(:)=POT(:)
+        END IF
+!
+!       =======================================================================
+!       == INTEGRATE RADIAL SCHRODINGER EQUATION OUTWARD                     ==
+!       =======================================================================
+        IDIR=1
+        CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHI)
+!       == CHECK FOR OVERFLOW
+        IF(.NOT.(PHI(NR).GT.0.OR.PHI(NR).LT.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('NN',NN)
+          CALL ERROR$STOP('BOUNDSTATE')
+        END IF
+!
+!       =======================================================================
+!       == CALCULATE PHASE SHIFT =========================================
+!       =======================================================================
+        NN1=0
+        DO IR=3,NR
+          IF(PHI(IR)*PHI(IR-1).LT.0.D0) NN1=NN1+1
+        ENDDO
+        Z0=-1.D0
+        IF(NN1.Gt.NN) Z0=1.D0
+write(*,fmt='("iter",4i5,4e20.10)')I,L,NN1,NN,E,2.d0*DX,phi(nr),z0
+        IF(ABS(2.d0*DX).LE.TOL) EXIT
+!       =====================================================================
+!       ==  BISECTION                                                      ==
+!       =====================================================================
+        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      ENDDO
+      IF(ABS(DX).GT.TOL) THEN
+        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
+        CALL ERROR$MSG('BOUND STATE NOT FOUND')
+        CALL ERROR$STOP('BOUNDSTATE')
+      END IF
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E+2.d0*dx,IDIR,PHIp)
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E-2.d0*dx,IDIR,PHIm)
+      NN1p=-nn
+      NN1m=-nn
+      NN10=-nn
+      DO IR=3,NR-1
+        IF(PHI(IR)*PHI(IR-1).LT.0.D0)   NN10=NN10+1
+        IF(PHIm(IR)*PHIm(IR-1).LT.0.D0) NN1m=NN1m+1
+        IF(PHIp(IR)*PHIp(IR-1).LT.0.D0) NN1p=NN1p+1
+      ENDDO
+!Print*,'nn1-nn ',nn1m,nn10,nn1p
+!Print*,'e ',e-2.d0*dx,e,e+2.d0*dx
+!
+!     =======================================================================
+!     ==  DETERMINE MATCHING POINT                                         ==
+!     =======================================================================
+      THOM=MAXVAL(ABS(G(:))).EQ.0.D0
+      DO IR=1,NR
+         IRMATCH=IR
+         IF(POT(IR)-E/y0.GT.0.D0.OR.R(IR).GT.5.D0) EXIT
+      ENDDO
+!
+!     =======================================================================
+!     ==  INTEGRATE INWARD                                                 ==
+!     =======================================================================
+      IDIR=-1
+      GHOM(:)=0.D0
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
+      IF(.NOT.THOM) THEN     
+        CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
+      ELSE
+        PHIINHOM(:)=0.D0
+      END IF
+!
+!     =======================================================================
+!     ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
+!     =======================================================================
+      SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
+      PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+      SVAR=(DERO-DER)/PHI(IRMATCH)
+!PRINT*,'SVAR',SVAR,R(IRMATCH),DER/PHI(IRMATCH),DERO/PHI(IRMATCH)
+!do ir=1,nr
+!  print*,r(ir),phi(ir),phiinhom(ir)
+!enddo
+!!$      IF(ABS(SVAR).GT.1.D-5) THEN
+!!$        CALL ERROR$MSG('DERIVATIVES DO NOT MATCH')
+!!$        CALL ERROR$R8VAL('STEP IN LOG. DERIVATIVE',SVAR)
+!!$        CALL ERROR$R8VAL('RC',R(IRMATCH))
+!!$        CALL ERROR$STOP('BOUNDSTATE')
+!!$      END IF
+!
+      PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
       RETURN
       END
 !
@@ -3272,519 +3536,6 @@ PRINT*,'PSEADD,PSEADD1 ',PSEADD,PSEADD1
       CALL REPORT$R8VAL(NFILO,'PS1-EHARTREE',PSEH1,'H')
       RETURN
       END
-!============REPOSITORY OFF OLD SUBROUTINES ===================================
-!.......................................................................
-      SUBROUTINE GMOMENTS(GID,NR,LMX,LMRX,DREL,POT,PHI)
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      INTEGER(4),INTENT(IN) :: LMX
-      INTEGER(4),INTENT(IN) :: LMRX
-      REAL(8)   ,INTENT(IN) :: DREL(NR)
-      REAL(8)   ,INTENT(IN) :: POT(NR,LMRX)
-      REAL(8)   ,INTENT(IN) :: PHI(NR,LMX)
-      integer(4)            :: gidg,ng
-!     *******************************************************************
-      CALL RADIAL$NEW('LOG',GIDG)
-!      CALL GRIDPARAMETERS(DMIN,DMAX,RX,R1,DEX,NR)
-      NG=256
-      CALL RADIAL$SETI4(GIDG,'NR',NG)
-!      CALL RADIAL$SETR8(GIDG,'DEX',0.05D0)
-!      CALL RADIAL$SETR8(GIDG,'R1',SQRT(200.D0/DEXP(NG*DEX)))
-!      ALLOCATE(G(NG))
-!      CALL RADIAL$R(GIDG,NG,G)
-
-      RETURN
-      END
-!.......................................................................
-      SUBROUTINE RADIAL$NSPHSCHRODINGER(GID,NR,LMX,LMRX,DREL,POT,PHI)
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      INTEGER(4),INTENT(IN) :: LMX
-      INTEGER(4),INTENT(IN) :: LMRX
-      REAL(8)   ,INTENT(IN) :: DREL(NR)
-      REAL(8)   ,INTENT(IN) :: POT(NR,LMRX)
-      REAL(8)   ,INTENT(IN) :: PHI(NR,LMX)
-!     *******************************************************************
-      RETURN
-      END
-
-!
-!     ......................................................................
-      SUBROUTINE TESTSTATES(GID,NR,L,E,POT,PHIC,NAUG,ENU,UPHI)
-!     **                                                                  **
-!     **  COMPARES THE ENERGY TAYLOR EXPANSION OF THE WAVE FUNCTION       **
-!     **  WITH NODELESS COEFFICIENTS WITH THE DIRECT CALCULKATION OF      **
-!     **      |PHI(E)>=SUM_N |PHI_I>*(E-ENU)^N/N!                         **
-!     **  WITH NODELESS COEFFICIENTS                                     **
-!     **       (H-E)|PHI(E)>=|PHI_C>                                      **
-!     **  WHERE PHIC IS THE HIGHES CORE FUNCTION                          **
-!     **  AND WITH THE DIRECT CALCULATION OF THE SCHROEDINGER EQUATION    **
-!     **       (H-E)|PHI(E)>=0                                            **
-!     **                                                                  **
-!     **  ATTENTION! CALCULATION IS NON-RELATIVISTIC                      **
-!     **                                                                  **
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)     :: GID      ! GRID ID
-      INTEGER(4) ,INTENT(IN)     :: NR       ! #(RDIAL GRID POINTS)
-      INTEGER(4) ,INTENT(IN)     :: L        ! ANGULAR MOMENTUM
-      REAL(8)    ,INTENT(IN)     :: E        ! ENERGY
-      REAL(8)    ,INTENT(IN)     :: POT(NR)  ! POTENTIAL (RADIAL PART ONLY)
-      REAL(8)    ,INTENT(IN)     :: PHIC(NR) ! HIGHEST NODE-LESS CORE STATE
-      INTEGER(4) ,INTENT(IN)     :: NAUG     ! #(TAYOR COEFFICIENTS)
-      REAL(8)    ,INTENT(IN)     :: ENU      ! CENTER OF TAYLOR EXPANSION
-      REAL(8)    ,INTENT(IN)     :: UPHI(NR,NAUG) ! D^I PHI/DE^I I=0,..NAUG-1
-      REAL(8)                    :: G(NR)
-      REAL(8)                    :: DREL(NR)
-      INTEGER(4)                 :: SO
-      REAL(8)                    :: PHI1(NR)
-      REAL(8)                    :: PHI3(NR)
-      REAL(8)                    :: PHI2(NR,NAUG)
-      REAL(8)                    :: R(NR)
-      INTEGER(4)                 :: IR,IB
-!     ***********************************************************************
-!
-!     =======================================================================
-!     ==  (H-E)|PHI1>=0                                                    ==
-!     =======================================================================
-      DREL=0.D0
-      SO=0
-      G=0.D0
-      CALL RADIAL$SCHRODINGER(GID,NR,POT,DREL,SO,G,L,E,1,PHI3)
-!
-!     =======================================================================
-!     ==  (H-E)|PHI1>=|PHIC>                                               ==
-!     =======================================================================
-      DREL=0.D0
-      SO=0
-      G=PHIC
-      CALL RADIAL$SCHRODINGER(GID,NR,POT,DREL,SO,G,L,E,1,PHI1)
-!
-!     =======================================================================
-!     ==  USE TAYLOR EXPANSION                                             ==
-!     =======================================================================
-      DO IB=1,NAUG
-        CALL SCATOENERGY(GID,NR,IB,ENU,UPHI(:,1:IB),E,PHI2(:,IB))
-      ENDDO
-!
-!     =======================================================================
-!     ==  PRINT RESULT                                                     ==
-!     =======================================================================
-      PHI3(:)=PHI3(:)*PHI1(230)/PHI3(230)
-      CALL RADIAL$R(GID,NR,R)
-      OPEN(100,FILE='TESTSTATE.DAT')
-      DO IR=1,NR
-!        IF(R(IR).GT.5.D0) EXIT
-        WRITE(100,FMT='(30F20.5)')R(IR),PHI1(IR),PHI3(IR),PHI2(IR,:) 
-      ENDDO
-      CLOSE(100)
-      RETURN
-      END
-!
-!     ......................................................................
-      SUBROUTINE SCATOENERGY(GID,NR,NAUG,ENU,UPHI,E,UOFE)
-!     **                                                                  **
-!     **  COMPUTES THE FUNCTION AT A GIVEN ENERGY FROM THE TAYLOR         **
-!     **  EXPANSION COEFFICIENTS                                          **
-!     **      |PHI(E)>=SUM_N |PHI_I>*(E-ENU)^N/N!                         **
-!     **                                                                  **
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)     :: GID           ! GRID ID
-      INTEGER(4) ,INTENT(IN)     :: NR            !#(RADIAL GRID POINTS)
-      INTEGER(4) ,INTENT(IN)     :: NAUG          !#(EXPANSION COEFFICIENTS)
-      REAL(8)    ,INTENT(IN)     :: ENU           ! CENTER OF THE EXPANSION 
-      REAL(8)    ,INTENT(IN)     :: UPHI(NR,NAUG) !|PHI_I>
-      REAL(8)    ,INTENT(IN)     :: E             ! ENERGY
-      REAL(8)    ,INTENT(OUT)    :: UOFE(NR)      ! |PHI(E)>
-      REAL(8)                    :: R(NR)         ! RADIAL GRID
-      REAL(8)                    :: SVAR
-      INTEGER(4)                 :: IB
-      REAL(8)                    :: FAK(0:NAUG-1)  ! FACULTY
-!     ***********************************************************************
-!
-!     =======================================================================
-!     == CALCULATE FACULTY                                                 ==
-!     =======================================================================
-      FAK(0)=1.D0
-      DO IB=1,NAUG-1
-        FAK(IB)=FAK(IB-1)*REAL(IB,KIND=8)
-      ENDDO
-!
-!     =======================================================================
-!     == SUM UP TAYLOR EXPANSION                                           ==
-!     =======================================================================
-      UOFE(:)=0.D0
-      SVAR=1.D0
-      DO IB=1,NAUG
-        SVAR=(E-ENU)**(IB-1)/FAK(IB-1)
-        UOFE(:)=UOFE(:)+SVAR*UPHI(:,IB)
-      ENDDO
-      RETURN
-      END
-!     ....................................................................
-      SUBROUTINE TAYLOREXPANSION(NP,CN,RI,FI)
-!     **                                                              **
-!     **     F(R)=\SUM_{J=0}^{N-1} 1/J! *C_J R^{J}                    **
-!     **                                                              **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ****
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NP
-      REAL(8)   ,INTENT(IN) :: CN(NP)
-      REAL(8)   ,INTENT(IN) :: RI(NP)
-      REAL(8)   ,INTENT(OUT):: FI(NP)
-      INTEGER(4)            :: I,J
-      REAL(8)               :: X,FAC
-!     ****************************************************************
-      DO I=1,NP
-        X=RI(I)
-        FI(I)=CN(1)
-        FAC=1.D0
-        DO J=2,NP
-          FAC=FAC*X/REAL(J-1,KIND=8)
-          FI(I)=FI(I)+FAC*CN(J)
-        ENDDO
-      ENDDO  
-      RETURN
-      END      
-!
-!     ....................................................................
-      SUBROUTINE TAYLORCOEFFICIENTS(NP,RI_,FI_,CN)
-!     **                                                              **
-!     **  OBTAINS THE COEFFICIENTS CN FOR A POWERSERIES EXPANSION OF  **
-!     **  ORDER NP THROUGH NP DATA POINTS. R0 IS THE EXPANSION POINT  **
-!     **  THE INTERPOLATED FUNCTION IS GIVEN BY                       **
-!     **     F(R)=\SUM_{J=0}^{N-1} 1/J! *C_J R^{J}                    **
-!     **                                                              **
-!     **                                                              **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ****
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NP
-      REAL(8)   ,INTENT(IN) :: RI_(NP)
-      REAL(8)   ,INTENT(IN) :: FI_(NP)
-      REAL(8)   ,INTENT(OUT):: CN(NP)
-      REAL(8)               :: FI(NP)
-      REAL(8)               :: RI(NP)
-      REAL(8)               :: DCN(NP)
-      REAL(8)               :: DCN1(NP)
-      REAL(8)               :: SVAR,VAL,A,B,FAC
-      INTEGER(4)            :: I,J,IP,K
-      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
-!     ****************************************************************
-      FI(:)=FI_(:)
-      RI(:)=RI_(:)
-      CN(:)=0.D0
-      DO I=1,NP
-!       == CONSTRUCT POLYNOMIAL OF ORDER I-1
-        DCN(:)=0.D0
-        DCN(1)=FI(I)
-        DO J=1,I-1
-          A=1.D0/(RI(I)-RI(J))
-          B=-A*RI(J)
-          DCN1=0.D0
-          DO K=1,J
-            DCN1(K+1)=DCN1(K+1)+A*DCN(K)
-            DCN1(K)=DCN1(K)+B*DCN(K)
-          ENDDO
-          DCN(:)=DCN1(:)
-        ENDDO
-        CN(:)=CN(:)+DCN(:)
-!       == SUBTRACT POLYNOMIAL FROM DATA
-        DO J=1,NP
-          VAL=0.D0
-          SVAR=1.D0
-          DO K=1,I
-            VAL=VAL+DCN(K)*SVAR
-            SVAR=SVAR*RI(J)
-          ENDDO
-          FI(J)=FI(J)-VAL
-        ENDDO
-      ENDDO
-!
-!     ================================================================
-!     == CONVERT POWERSERIES COEFF. INTO TAYLOR EXPANSION COEFF.    ==
-!     ================================================================
-      FAC=1.D0
-      DO I=2,NP
-        FAC=FAC*REAL(I-1,KIND=8)
-        CN(I)=FAC*CN(I)
-      ENDDO
-!
-!     ================================================================
-!     == TEST ACCURACY OF THE POLYNOMIAL                            ==
-!     ================================================================
-      IF(TPR) THEN
-        DO I=1,NP
-          VAL=CN(1)
-          FAC=1.D0
-          DO J=2,NP
-            FAC=FAC/REAL(J-1,KIND=8)
-            VAL=VAL+FAC*CN(J)*RI(I)**(J-1)
-          ENDDO
-          PRINT*,'VAL ',VAL,FI_(I),VAL-FI_(I)
-        ENDDO
-      END IF
-      RETURN
-      END SUBROUTINE TAYLORCOEFFICIENTS
-!
-!     ......................................................................
-      SUBROUTINE HAMTEST(GID,NR,POT,NB,LOFI,SOFI,UOFI,TUOFI)
-!     **                                                                  **
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)     :: GID
-      INTEGER(4) ,INTENT(IN)     :: NR
-      INTEGER(4) ,INTENT(IN)     :: NB
-      INTEGER(4) ,INTENT(IN)     :: LOFI(NB)
-      INTEGER(4) ,INTENT(IN)     :: SOFI(NB)
-      REAL(8)    ,INTENT(IN)     :: POT(NR)
-      REAL(8)    ,INTENT(IN)     :: UOFI(NR,NB)
-      REAL(8)    ,INTENT(IN)     :: TUOFI(NR,NB)
-      REAL(8)                    :: R(NR)
-      REAL(8)                    :: R2(NR)
-      REAL(8)                    :: AUX(NR)
-      REAL(8)                    :: SVAR
-      REAL(8)                    :: H(NB,NB),O(NB,NB)
-      INTEGER(4)                 :: IB,JB,IR
-      REAL(8)                    :: PI,Y0
-!     *********************************************************************
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      CALL RADIAL$R(GID,NR,R)
-      R2=R**2
-      DO IB=1,NB
-        DO JB=1,NB
-          H(IB,JB)=0.D0
-          O(IB,JB)=0.D0
-          IF(LOFI(IB).NE.LOFI(JB)) CYCLE
-          AUX=UOFI(:,IB)*TUOFI(:,JB)*R2
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-          H(IB,JB)=SVAR
-!
-          AUX=POT*Y0*UOFI(:,IB)*UOFI(:,JB)*R2
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-          H(IB,JB)=H(IB,JB)+SVAR
-!
-          AUX=UOFI(:,IB)*UOFI(:,JB)*R2
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-          O(IB,JB)=SVAR
-        ENDDO
-      ENDDO
-WRITE(*,FMT='("HAMILTONIAN")')
-DO IB=1,NB
-WRITE(*,FMT='(20F10.5)')H(IB,:)
-ENDDO
-WRITE(*,FMT='("OVERLAP")')
-DO IB=1,NB
-WRITE(*,FMT='(20F10.5)')O(IB,:)
-ENDDO
-      RETURN
-      END
-!
-!     ......................................................................
-      SUBROUTINE KINPSI(GID,NR,L,PHI,TPHI)
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)     :: GID
-      INTEGER(4) ,INTENT(IN)     :: NR
-      INTEGER(4) ,INTENT(IN)     :: L  !ANGULAR MOMENTUM
-      REAL(8)    ,INTENT(IN)     :: PHI(NR)   !WAVE FUNCTIONS
-      REAL(8)    ,INTENT(OUT)    :: TPHI(NR)   !WAVE FUNCTIONS
-      REAL(8)                    :: R(NR)
-      REAL(8)                    :: DPHIDR(NR)
-      REAL(8)                    :: D2PHIDR2(NR)
-!     ***********************************************************************
-      CALL RADIAL$R(GID,NR,R)
-      CALL RADIAL$VERLETD1(GID,NR,PHI(:),DPHIDR)
-      CALL RADIAL$VERLETD2(GID,NR,PHI(:),D2PHIDR2)
-      TPHI(:)=D2PHIDR2(:)+2.D0*DPHIDR(:)/R(:) &
-     &          -REAL(L*(L+1),KIND=8)*PHI(:)/R(:)**2
-      TPHI(:)=-0.5D0*TPHI(:)
-      RETURN
-      END
-!
-!     ......................................................................
-      SUBROUTINE NODECONVERT(ID,GID,NR,NB,LOFI,SO,NN,PHIIN,PHIOUT)
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)    :: ID
-      INTEGER(4) ,INTENT(IN)     :: GID
-      INTEGER(4) ,INTENT(IN)     :: NR
-      INTEGER(4) ,INTENT(IN)     :: NB        ! #(STATES)
-      INTEGER(4) ,INTENT(IN)     :: LOFI(NB)  !ANGULAR MOMENTUM
-      INTEGER(4) ,INTENT(IN)     :: SO(NB)    !SWITCH FOR SPIN-ORBIT COUP.
-      INTEGER(4) ,INTENT(IN)     :: NN(NB)    !#(NODES)
-      REAL(8)    ,INTENT(IN)     :: PHIIN(NR,NB)   !WAVE FUNCTIONS
-      REAL(8)    ,INTENT(OUT)    :: PHIOUT(NR,NB)   !WAVE FUNCTIONS
-      REAL(8)                    :: R(NR)
-      REAL(8)                    :: AUX(NR)
-      REAL(8)                    :: O11,O12
-      INTEGER(4)                 :: IB,JB
-!     ***********************************************************************
-      IF(ID.EQ.'LTON') THEN
-        CALL RADIAL$R(GID,NR,R)
-        DO IB=NB,1,-1
-          PHIOUT(:,IB)=PHIIN(:,IB)
-          DO JB=IB-1,1,-1
-            IF(LOFI(JB).NE.LOFI(IB)) CYCLE
-            IF(SO(JB).NE.SO(IB)) CYCLE
-            IF(NN(JB).GE.NN(IB)) CYCLE
-            AUX(:)=R(:)**2*PHIIN(:,JB)*PHIOUT(:,IB)
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,O12)
-            AUX(:)=R(:)**2*PHIIN(:,JB)**2
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,O11)
-            PHIOUT(:,IB)=PHIOUT(:,IB)-PHIIN(:,JB)*O12/O11
-          ENDDO
-          AUX(:)=(R(:)*PHIOUT(:,IB))**2
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,O11)
-          PHIOUT(:,IB)=PHIOUT(:,IB)/SQRT(O11)
-        ENDDO  
-      ELSE IF(ID.EQ.'NTOL') THEN
-CALL ERROR$STOP('NOT YET CODED')
-      ELSE
-CALL ERROR$STOP('NOT YET CODED')
-      END IF
-      RETURN
-      END
-
-!
-!     ......................................................................
-      SUBROUTINE AEPSI(GID,NR,NB,LOFI,SO,NN,DREL,POT,PHI,E)
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)     :: GID
-      INTEGER(4) ,INTENT(IN)     :: NR
-      INTEGER(4) ,INTENT(IN)     :: NB        ! #(STATES)
-      INTEGER(4) ,INTENT(IN)     :: LOFI(NB)  !ANGULAR MOMENTUM
-      INTEGER(4) ,INTENT(IN)     :: SO(NB)    !SWITCH FOR SPIN-ORBIT COUP.
-      INTEGER(4) ,INTENT(IN)     :: NN(NB)    !#(NODES)
-      REAL(8)    ,INTENT(IN)     :: DREL(NR)  !RELATIVISTIC CORRECTION
-      REAL(8)    ,INTENT(IN)     :: POT(NR)   !POTENTIAL
-      REAL(8)    ,INTENT(OUT)    :: PHI(NR,NB)   !WAVE FUNCTIONS
-      REAL(8)    ,INTENT(OUT)    :: E(NB)     !ONE-PARTICLE ENERGIES
-      REAL(8)                    :: R(NR)
-      REAL(8)                    :: G(NR)
-      REAL(8)                    :: AUX(NR)
-      INTEGER(4)                 :: IB,IR
-      REAL(8)                    :: SVAR
-!     ***********************************************************************
-      CALL RADIAL$R(GID,NR,R)
-      DO IB=1,NB
-         G(:)=0.D0
-         CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),DREL,G,NN(IB),POT,E(IB),PHI(:,IB))
-         AUX(:)=(R(:)*PHI(:,IB))**2
-         CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-         PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
-      ENDDO
-      RETURN
-      END
-!
-module bfgs_module
-integer(4)             :: len=0
-logical(4)             :: on=.false.
-logical(4)             :: first=.true.
-real(8)   ,allocatable :: x0(:),xm(:)
-real(8)   ,allocatable :: f0(:),fm(:)
-real(8)                :: e0,em
-real(8)   ,allocatable :: b(:,:)  ! inverse hessian
-end module bfgs_module
-!
-!     ......................................................................
-      SUBROUTINE BFGS$new(len_,alpha)
-      use bfgs_module
-      IMPLICIT NONE
-      integer(4),INTENT(IN) :: LEN_
-      REAL(8)   ,INTENT(IN) :: ALPHA
-      INTEGER(4)            :: I
-!     ************************************************************************
-      if(on) then
-        call error$msg('bfgs must be switched off before reuse')
-        call error$stop('bfgs$new')
-      end if
-      on=.true.
-      len=len_
-      allocate(x0(len))
-      allocate(xm(len))
-      allocate(f0(len))
-      allocate(fm(len))
-      allocate(b(len,len))
-      first=.true.
-      b(:,:)=0.d0
-      do i=1,len
-        b(i,i)=1.d0/alpha
-      enddo
-      return
-      end
-!
-!     ......................................................................
-      SUBROUTINE BFGS$clear
-      use bfgs_module
-      IMPLICIT NONE
-!     ************************************************************************
-      if(on) then
-        call error$msg('bfgs must be switched off before reuse')
-        call error$stop('bfgs$new')
-      end if
-      on=.false.
-      len=0
-      deallocate(x0)
-      deallocate(xm)
-      deallocate(f0)
-      deallocate(fm)
-      deallocate(b)
-      return
-      end
-!
-!     ......................................................................
-      SUBROUTINE BFGS$set(len_,x_,f_,e_)
-      use bfgs_module
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)     :: len_
-      real(8)   ,INTENT(IN)     :: x_(len_)
-      real(8)   ,INTENT(IN)     :: f_(len_)
-      real(8)   ,INTENT(IN)     :: e_
-!     ************************************************************************
-      if(.not.on) then
-        call error$msg('bfgs must be set on by bfgs$new')
-        call error$stop('bfgs$set')
-      end if
-      if(LEN_.NE.lEN) then
-        call error$msg('INCONSISTENT ARRAY SIZE')
-        call error$stop('bfgs$set')
-      end if
-      xm=x0
-      x0=x_
-      fm=f0
-      f0=f_
-      em=e0
-      e0=e_
-      return
-      end
-!
-!     ......................................................................
-      SUBROUTINE BFGS$next(len_,xp)
-      use bfgs_module
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)     :: len_
-      real(8)   ,INTENT(out)    :: xp(len_)
-      real(8)                   :: s(len_)
-      real(8)                   :: y(len_)
-      real(8)                   :: bs(len_)
-      real(8)                   :: sbs
-      real(8)                   :: ys
-      integer(4)                :: i
-!     ************************************************************************
-      if(.not.on) then
-        call error$msg('bfgs must be set on by bfgs$new')
-        call error$stop('bfgs$set')
-      end if
-      s=x0-xm
-      y=-f0+fm
-      bs=matmul(b,s)
-      sbs=dot_product(s,bs)
-      ys=dot_product(y,s)
-      do i=1,len
-        B(:,i)=B(:,i)-bs(:)*bs(i)/sbs+y(:)*y(i)/ys
-      enddo
-      xp=x0+matmul(B,f0)
-      return
-      end
 !..................................................................................
 MODULE BROYDEN_MODULE
 LOGICAL(4)         :: TON=.FALSE.

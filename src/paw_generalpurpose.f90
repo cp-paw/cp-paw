@@ -629,18 +629,24 @@
 !     ******************************************************************
 !     **                                                              **
 !     **  FINDS THE ZERO OF A MONOTONIC FUNCTION Y(X)                 **
-!     **  BY DOUBLING STEP SIZE AND SUBSEQUANT BYSECTION.             **
+!     **  BY DOUBLING STEP SIZE AND SUBSEQUENT BYSECTION.             **
 !     **  THE ROUTINE MUST BE CALLED IN A LOOP                        **
 !     **  THAT STOPS WHEN CONVERGENCE IS OBTAINED                     **
 !     **  AND SUPPLIES NEW FUNCTION VALUES Y0 FOR THE VALUE X0        **
 !     **  THAT IS SUPPLIED BY THIS ROUTINE.                           **
 !     **  REMARK: CALL THIS ROUTINE ONCE BEFORE THE LOOP              **
 !     **                                                              **
-!     **   INITIALIZE BEFORE CALL WITH ISTART=1:                      **
-!     **   ISTART,X0,DX                                               **
+!     **   INITIALIZE BEFORE CALL WITH                                **
+!     **   ISTART=1 FOR MONOTONICALLY INCREASING OR WITH              **
+!     **   ISTART=-1 FOR MONOTONICALLY DECREASING FUNCTIONS:          **
+!     **   AND WITH X0 THE STARTING ARGUMENT AND WITH DX THE          **
+!     **   STARTING STEP SIZE                                         **
 !     **                                                              **
-!     **   X0=                                                        **
-!     **   DX=1.D0                                                    **
+!     **   DO NOT CHANGE THE VALUES FOR IBI,DX,XM,Y DURING THE        **
+!     **   ITERATION                                                  **
+!     **                                                              **
+!     **   X0=??                                                      **
+!     **   DX=??                                                      **
 !     **   CALL BISEC(1,IBI,X0,Y0,DX,XM,YM)                           **
 !     **   DO I=1,MAX                                                 **
 !     **     CALCULATE Y0 FOR VALUE X0                                **
@@ -658,12 +664,14 @@
       REAL(8)   ,INTENT(INOUT) :: DX      ! STEP WIDTH
       REAL(8)   ,INTENT(INOUT) :: YM      ! FUNCTION VALUE AT XM
       REAL(8)   ,INTENT(INOUT) :: XM      ! PREVIOUS ARGUMENT
-      REAL(8)                  :: SLOPE
+      REAL(8)   ,save          :: SLOPE
       REAL(8)                  :: XP
 !     ******************************************************************
 !
 !     ==   STARTUP
-      IF(ISTART.EQ.1) THEN
+      IF(ISTART.ne.0) THEN
+        slope=-1.d0
+        if(istart.gt.0) slope=1.d0
         ISTART=0
         IBI=0
         YM=0.D0
@@ -679,7 +687,6 @@
       END IF
 !
 !     == PROPAGATE
-      SLOPE=(Y0-YM)/(X0-XM)
       XP=X0-DSIGN(DX,Y0*SLOPE)
       IF(IBI.EQ.0)DX=DX*2.D0
       IF(IBI.EQ.1)DX=DX/2.D0

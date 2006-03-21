@@ -512,6 +512,7 @@
       REAL(8)    ,INTENT(INOUT):: F(NX)
       REAL(8)                :: AP(NX),A0(NX),AM(NX)
       INTEGER(4)             :: I
+      INTEGER(4)             :: Itest
 !     ******************************************************************
 !     == AP*F(+) + A0*F(0) + AM*F(-) = D
       AP(:)=A(:)+0.5D0*B(:)
@@ -524,9 +525,7 @@
       ELSE IF(IDIR.LT.0) THEN
         DO I=NX-1,2,-1
           F(I-1)=( -(A0(I)+AP(I))*F(I) +AP(I)*(F(I)-F(I+1)) +D(I) )/AM(I)
-!WRITE(*,FMT='(7E15.5)')REAL(I),AP(I),A0(I),AM(I)
         ENDDO
-!STOP
       ELSE
          CALL ERROR$MSG('INVALID VALUE OF IDIR')
          CALL ERROR$STOP('RADIAL_DGLEQUISPACED')
@@ -1135,6 +1134,64 @@ END IF
         IF(THOM)PHI(NR-1)=1.D-8
       END IF
       CALL RADIAL$DGL(GID,IDIR,NR,A,B,C,D,PHI)
+      RETURN
+      END 
+!
+!     ..................................................................
+      SUBROUTINE RADIAL$kinphi(GID,NR,DREL,SO,L,PHI,tphi)
+!     **                                                                  **
+!     **                                                                  **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID FOR RADIAL GRID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: L       ! MAINANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+                 ! SO=0: NO SO; SO=1: L/S PARALLEL; SO=-1: L,S ANTIPARALLEL
+      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
+!                                           ! DREL= M0/MREL(R)-1
+      REAL(8)    ,INTENT(in)     :: PHI(NR) !WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: tPHI(NR)!kinetic energy times phi
+      REAL(8)                    :: A(NR) 
+      REAL(8)                    :: B(NR) 
+      REAL(8)                    :: C(NR) 
+      REAL(8)                    :: R(NR) 
+      REAL(8)                    :: SOFACTOR
+      REAL(8)                    :: RDPRIME(NR)
+      REAL(8)                    :: dphidr(NR)
+      REAL(8)                    :: d2phidr2(NR)
+!     ************************************************************************
+!     ==================================================================
+!     == SPIN ORBIT COUPLING ===========================================
+!     ==================================================================
+      IF (SO.EQ.0) THEN
+        SOFACTOR=0.D0
+      ELSE IF(SO.EQ.1) THEN
+        SOFACTOR=REAL(L,KIND=8)
+      ELSE IF(SO.EQ.-1) THEN
+        SOFACTOR=REAL(-L-1,KIND=8)
+      ELSE
+         CALL ERROR$MSG('SO CAN ONLY HAVE VALUES -1,0,1')
+         CALL ERROR$STOP('RADIAL$SCHRODINGER')
+      END IF
+!     ==================================================================
+!     == PREPARE ARRAYS FOR INTEGRATION ================================
+!     ==================================================================
+      CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
+      CALL RADIAL$R(GID,NR,R)
+      a(:)=1.D0+DREL(:)
+!     == avoid divide by zero if the first grid point is the origin.
+!     == the forces on the first grid point are not used,
+!     == because radial$dgl is based on the verlet algorithm
+!     == that cannot use the forces on the first and last grid point
+      B(2:)=2.D0*(1.d0+DREL(2:))/R(2:)+RDPRIME(2:)
+      C(2:)=-(1.D0+DREL(2:))*REAL(L*(L+1),KIND=8)/R(2:)**2 &
+     &    +RDPRIME(2:)*SOFACTOR/R(2:) 
+      b(1)=b(2)
+      c(1)=c(2)
+      call radial$verletd1(gid,nr,phi,dphidr)
+      call radial$verletd2(gid,nr,phi,d2phidr2)
+      tphi(:)=-0.5d0*(a(:)*d2phidr2(:)+b(:)*dphidr(:)+c(:)*phi(:))
       RETURN
       END 
 !

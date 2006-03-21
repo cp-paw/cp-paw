@@ -979,7 +979,7 @@ PRINT*,THISTASK,'BEFORE ',XK(:,IKPTL),TINV
             IKPTL=IKPTL+1
             VAL(IKPTL)=VALG(IKPT)
           END IF
-        ENDDO                        
+        ENDDO                         
         DEALLOCATE(VALG)
         CALL MPE$BROADCAST('K',1,VAL)
       ELSE

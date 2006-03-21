@@ -268,7 +268,7 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)                 :: VQLM1(LMRX)
       REAL(8)                 :: QLM(LMRX)
       REAL(8)                 :: PI
-      logical(4),parameter    :: tsoftcore=.true.
+      LOGICAL(4),PARAMETER    :: TSOFTCORE=.TRUE.
       real(8)   ,allocatable  :: aehpot(:,:)
       real(8)   ,allocatable  :: aexcpot(:,:,:)
       real(8)   ,allocatable  :: pshpot(:,:)
@@ -360,7 +360,8 @@ print*,'new sphere'
 !     ==  NEW SOFT CORE                                             ==
 !     ================================================================
       IF(TSOFTCORE) THEN
-        CALL AUGMENTATION_NEWSOFTCORE(GID,NR,AEZ,AERHO(:,1,1),AECORE)
+        CALL AUGMENTATION_NEWSOFTCORE(GID,NR,AEZ,AERHO(:,1,1),AECORE &
+     &                               ,lmrx,lmnx,denmat(:,:,1),vqlm1,rhob)
       END IF
 !
 !     =================================================================
@@ -583,57 +584,72 @@ STOP
       END
 !
 !     ..................................................................
-      subroutine augmentation_newsoftcore(gid,nr,aez,aerho,aecore)        
-      implicit none
-      integer(4),intent(in) :: gid
-      integer(4),intent(in) :: nr
-      real(8)   ,intent(in) :: aez
-      real(8)   ,intent(in) :: aerho(nr)
-      real(8)   ,intent(in) :: aecore(nr)
-      real(8)               :: pi,y0,c0ll
-      real(8)               :: r(nr)
-      logical(4)            :: convg
-      real(8)               :: rho(nr)
-      real(8)               :: pot(nr)
-      real(8)               :: drel(nr)
-      real(8)               :: aepot(nr)
-      real(8)               :: potin(nr)
-      real(8)               :: aux(nr)
-      real(8)               :: EH,Exc
-      real(8)   ,allocatable:: fofi(:)      
-      real(8)   ,allocatable:: eofi(:)      
-      integer(4),allocatable:: lofi(:)      
-      integer(4),allocatable:: sofi(:)      
-      integer(4),allocatable:: nnofi(:)      
-      integer(4)            :: lnx
-      integer(4),allocatable:: lox(:)
-      real(8)   ,allocatable:: uphi(:,:)
-      real(8)   ,allocatable:: tuphi(:,:)
-      real(8)               :: xmax
-      real(8)               :: svar
-      integer(4)            :: iter,i,j,ib
-      integer(4),parameter  :: niter=2000
-      real(8)   ,parameter  :: tol=1.d-4
-      integer(4)            :: lmrx=1
-      integer(4)            :: ndimd=1
-      integer(4)            :: nc
-      real(8)               :: ecore,ecoreat
-      real(8)   ,allocatable:: phic(:,:)
-      real(8)   ,allocatable:: tphic(:,:)
-      real(8)               :: rhoold
+      SUBROUTINE AUGMENTATION_NEWSOFTCORE(GID,NR,AEZ,AERHO,AECORE &
+     &                                   ,LMRX,LMNX,DENMAT,VQLM,RHOB)        
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: AEZ
+      REAL(8)   ,INTENT(IN) :: AERHO(NR)
+      REAL(8)   ,INTENT(IN) :: AECORE(NR)
+      INTEGER(4),INTENT(IN) :: LMRX
+      INTEGER(4),INTENT(IN) :: LMNX
+      REAL(8)   ,INTENT(IN) :: DENMAT(LMNX,LMNX)
+      REAL(8)   ,INTENT(IN) :: VQLM(LMRX)
+      REAL(8)   ,INTENT(IN) :: RHOB
+      REAL(8)               :: AEHPOT(NR,LMRX)
+      REAL(8)               :: AEXCPOT(NR,LMRX)
+      REAL(8)               :: POTNS(NR,LMRX)
+      REAL(8)               :: RHONS(NR,LMRX)
+      REAL(8)               :: PI,Y0,C0LL
+      REAL(8)               :: R(NR)
+      LOGICAL(4)            :: CONVG
+      REAL(8)               :: RHO(NR)
+      REAL(8)               :: POT(NR)
+      REAL(8)               :: AEPOT(NR)
+      REAL(8)               :: POTIN(NR)
+      REAL(8)               :: AUX(NR)
+      REAL(8)               :: EH,EXC,DECORE,AEEHARTREE
+      REAL(8)   ,ALLOCATABLE:: FOFI(:)      
+      REAL(8)   ,ALLOCATABLE:: EOFI(:)      
+      INTEGER(4),ALLOCATABLE:: LOFI(:)      
+      INTEGER(4),ALLOCATABLE:: SOFI(:)      
+      INTEGER(4),ALLOCATABLE:: NNOFI(:)      
+      INTEGER(4)            :: LNX
+      INTEGER(4),ALLOCATABLE:: LOX(:)
+      REAL(8)   ,ALLOCATABLE:: UPHI(:,:)
+      REAL(8)   ,ALLOCATABLE:: TUPHI(:,:)
+      REAL(8)               :: XMAX
+      REAL(8)               :: SVAR
+      INTEGER(4)            :: ITER,I,J,IB
+      INTEGER(4),PARAMETER  :: NITER=2000
+      REAL(8)   ,PARAMETER  :: TOL=1.D-4
+      INTEGER(4)            :: NDIMD=1
+      INTEGER(4)            :: NC
+      REAL(8)               :: ECORE,ECOREAT
+      REAL(8)   ,ALLOCATABLE:: PHIC(:,:)
+      REAL(8)   ,ALLOCATABLE:: TPHIC(:,:)
+      REAL(8)   ,ALLOCATABLE:: AEPHI(:,:)
+      REAL(8)   ,ALLOCATABLE:: TAEPHI(:,:)
+      REAL(8)               :: RHOOLD
+      INTEGER(4)            :: LN,IC
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
-      c0ll=y0
+      C0LL=Y0
       CALL RADIAL$R(GID,NR,R)
-      CALL SETUP$GETi4('NC',NC)
-      allocate(eofi(nc))
-      allocate(lofi(nc))
-      allocate(sofi(nc))
-      allocate(fofi(nc))
+!
+!     ================================================================
+!     == COLLECT DATA FROM SETUP OBJECT                             ==
+!     ================================================================
+      CALL SETUP$GETI4('NC',NC)
+      ALLOCATE(EOFI(NC))
+      ALLOCATE(LOFI(NC))
+      ALLOCATE(SOFI(NC))
+      ALLOCATE(FOFI(NC))
       ALLOCATE(NNOFI(NC))
-      ALLOCATE(phic(nr,NC))
-      ALLOCATE(tphic(nr,NC))
+      ALLOCATE(PHIC(NR,NC))
+      ALLOCATE(TPHIC(NR,NC))
       CALL SETUP$GETR8A('FOFC',NC,FOFI)
       CALL SETUP$GETR8A('EOFC',NC,EOFI)
       CALL SETUP$GETI4A('LOFC',NC,LOFI)
@@ -644,157 +660,179 @@ STOP
           IF(LOFI(J).EQ.LOFI(I))NNOFI(I)=NNOFI(I)+1
         ENDDO
       ENDDO
-!
-!     == COLLECT NODELESS PARTIAL WAVES ============================
-      CALL SETUP$GETI4('LNX',LNX)
-      ALLOCATE(LOX(LNX))
-      ALLOCATE(UPHI(NR,LNX))
-      ALLOCATE(TUPHI(NR,LNX))
-      CALL SETUP$GETR8A('NDLSPHI',NR*LNX,UPHI)
-      CALL SETUP$GETR8A('NDLSTPHI',NR*LNX,TUPHI)
+      CALL SETUP$GETR8A('ATOMICAEPOT',NR,AEPOT)
 !
 !     ================================================================
-!     == calculate core energy                                      ==
+!     == CALCULATE ATOMIC CORE ENERGY                               ==
 !     ================================================================
-      CALL SETUP$GETR8A('ATOMICAEPOT',NR,POT)
-      ecoreat=0.d0
-      rho(:)=0.d0
-      DO IB=1,Nc
-         CALL RELATIVISTICCORRECTION(GID,NR,POT,Eofi(ib),DREL)
-         CALL BOUNDSTATE(GID,NR,LOFI(IB),SOfi(IB),DREL,NNofi(IB),POT &
-     &                  ,Eofi(IB),PHIc(:,ib))
-         AUX(:)=(R(:)*PHIc(:,ib))**2
-         CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-         PHIC(:,IB)=PHIC(:,IB)/SQRT(SVAR)
-         ECOREAT=ECOREAT+FOFI(IB)*EOFI(IB)
-         RHO=RHO+FOFI(IB)*C0LL*PHIC(:,IB)**2
-      ENDDO
+      POT=AEPOT
+      CALL SF_AERHO(GID,NR,NC,LOFI,SOFI,FOFI,NNOFI,POT,RHO,EOFI,PHIC,TPHIC)
+      CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,POT,RHO,ECOREAT,AUX)
 PRINT*,'===============ATOMIC CORE========================='
 DO IB=1,NC
   PRINT*,'L,E ',LOFI(IB),EOFI(IB)
 ENDDO
-      AUX=POT*RHO*R**2
-      CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-      ECOREAT=ECOREAT-SVAR
-PRINT*,'CORE-EKIN ',ECOREAT
-      CALL AUGMENTATION_XC(GID,NR,1,NDIMD,RHO,EXC,AUX)
-      ECOREAT=ECOREAT+EXC
-PRINT*,'CORE-EXC ',EXC
-      POT(:)=0.D0
-      CALL SETUP$GETR8A('NUCPOT',NR,AUX)
-      POT(:)  = POT(:)+AUX(:)
-      CALL RADIAL$POISSON(GID,NR,0,RHO,AUX)
-      POT(:)  = POT(:)+0.5D0*AUX(:)
-      AUX(:)=POT*RHO*R**2
-      CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-PRINT*,'CORE-EH ',SVAR
-      ECOREAT=ECOREAT+SVAR
-PRINT*,'ATOMIC CORE ENERGY ',ECOREAT
-!     ==============================================================
-!     == SET UP STARTING POTENTIAL =================================
-!     ==============================================================
-      rho=aerho+aecore
-      pot=0.d0
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,rho,EXC,aux)
-aux(1)=aux(2)
-      POT(:)  = POT(:)+AUX(:)
-      CALL SETUP$GETR8A('NUCPOT',NR,AUX)
-      POT(:)  = POT(:)+AUX(:)
-      CALL RADIAL$POISSON(GID,NR,0,RHO,AUX)
-      POT(:)  = POT(:)+AUX(:)
-      svar=aepot(nr)-pot(nr)
-      pot=pot+svar
-!     == LOOP FOR EIGENSTATES
+!
+!     =====================================================================
+!     == SCF LOOP FOR SPHERICAL POTENTIAL                                ==
+!     =====================================================================
+      POT=AEPOT ! STARTING POTENTIAL IS THE ATOMIC POTENTIAL 
       XMAX=0.D0
       CONVG=.FALSE.
       CALL BROYDEN$NEW(NR,10,1.D0)
       DO ITER=1,NITER
-        CALL newsoftcore_AERHO(GID,NR,NC,LOFI,SOFI,FOFI,NNOFI,POT,RHO,EOFI)
+        CALL SF_AERHO(GID,NR,NC,LOFI,SOFI,FOFI,NNOFI,POT,RHO,EOFI,PHIC,TPHIC)
 !
 !       ================================================================
 !       ==  EXIT IF CONVERGED                                         ==
 !       ================================================================
         IF(CONVG) THEN
           CALL BROYDEN$CLEAR
-          exit
+          EXIT
         END IF
 
 !       ====================================================================
 !       == CALCULATE OUTPUT POTENTIAL                                     ==
 !       ====================================================================
         POTIN=POT
-        RHO(:)=RHO(:)+AERHO(:)
-        pot=0.d0
-        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,rho,EXC,aux)
-AUX(1)=AUX(2)
-        POT(:)  = POT(:)+AUX(:)
-        CALL SETUP$GETR8A('NUCPOT',NR,AUX)
-        POT(:)  = POT(:)+AUX(:)
-        CALL RADIAL$POISSON(GID,NR,0,RHO,AUX)
-        POT(:)  = POT(:)+AUX(:)
-!       == do not forget the external potential and the background !!
-        svar=aepot(nr)-pot(nr)
-        pot=pot+svar
+        CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,AUX,RHO+AERHO,SVAR,POT)
+!       == DO NOT FORGET THE EXTERNAL POTENTIAL AND THE BACKGROUND !!
+        SVAR=AEPOT(NR)-POT(NR)
+        POT=POT+SVAR
 !
 !       ================================================================
 !       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD     ==
 !       ================================================================
-        XMAX=MAXVAL(abs(POT-POTIN)) 
+        XMAX=MAXVAL(ABS(POT-POTIN)) 
         CALL BROYDEN$STEP(NR,POTIN,(POT-POTIN))
         POT=POTIN
         CONVG=(XMAX.LT.TOL)
       ENDDO
-      if(.not.convg) then
+      IF(.NOT.CONVG) THEN
         CALL ERROR$MSG('SELFCONSISTENCY LOOP NOT CONVERGED')
         CALL ERROR$STOP('AUGMETATION_NEWSOFTCORE')
-      end if
+      END IF
 !
 !     ================================================================
-!     ==  now calculate total energy                                ==
+!     ==  NOW CALCULATE TOTAL ENERGY IN SPHERICAL POTENTIAL         ==
 !     ================================================================
-      ECORE=0.D0
-      RHO(:)=0.D0
-      DO IB=1,NC
-         CALL RELATIVISTICCORRECTION(GID,NR,POT,EOFI(IB),DREL)
-         CALL BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),DREL,NNOFI(IB),POT &
-     &                  ,EOFI(IB),PHIC(:,IB))
-         AUX(:)=(R(:)*PHIC(:,IB))**2
-         CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-         PHIC(:,IB)=PHIC(:,IB)/SQRT(SVAR)
-         TPHIC(:,IB)=(EOFI(IB)-POT(:))*PHIC(:,IB)
-         ECORE=ECORE+FOFI(IB)*EOFI(IB)
-         RHO=RHO+FOFI(IB)*C0LL*PHIC(:,IB)**2
-      ENDDO
+      CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,POT,RHO,ECORE,AUX)
+      DECORE=ECORE-ECOREAT   ! CORE RELAXATION ENERGY
+!
 PRINT*,'===============SCF CORE========================='
 DO IB=1,NC
   PRINT*,'L,E ',LOFI(IB),EOFI(IB)
 ENDDO
-      AUX=POT*RHO*R**2
-      CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-      ECORE=ECORE-SVAR
-PRINT*,'CORE-EKIN ',ECORE
-      CALL AUGMENTATION_XC(GID,NR,1,NDIMD,RHO,EXC,AUX)
-PRINT*,'CORE-EXC ',EXC
-      ECORE=ECORE+EXC
-      POT(:)=0.D0
-      CALL SETUP$GETR8A('NUCPOT',NR,AUX)
-      POT(:)  = POT(:)+AUX(:)
-      CALL RADIAL$POISSON(GID,NR,0,RHO,AUX)
-      POT(:)  = POT(:)+0.5D0*AUX(:)
-      AUX(:)=POT*RHO*R**2
-      CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-PRINT*,'CORE-EH ',SVAR
-      ECORE=ECORE+SVAR
 PRINT*,'SCF CORE ENERGY ',ECORE
-      ECORE=ECORE-ECOREAT
-PRINT*,'CORE RELAXATION ENERGY ENERGY ',ECORE
+PRINT*,'CORE RELAXATION ENERGY ENERGY ',DECORE
 !
 !     ===============================================================
+!     == ADJUST PARTIAL WAVES AND CALCULATE DENSITY                ==
+!     ===============================================================
+!     == COLLECT NODELESS PARTIAL WAVES ============================
+      CALL SETUP$GETI4('LNX',LNX)
+      ALLOCATE(LOX(LNX))
+      CALL SETUP$GETI4A('LOX',LNX,LOX)
+      ALLOCATE(UPHI(NR,LNX))
+      ALLOCATE(TUPHI(NR,LNX))
+      CALL SETUP$GETR8A('NDLSPHI',NR*LNX,UPHI)
+      CALL SETUP$GETR8A('NDLSTPHI',NR*LNX,TUPHI)
+!
+!     ===============================================================
+!     == ORTHOGONALIZE NODELESS WAVE FUNCTIONS TO THE CORE STATES  ==
+!     ===============================================================
+!     ==  CORE STATES ARE NOT ORTHONORMAL BECAUSE OF RELATIVISTIC 
+!     ==  EFFECTS. THEY ARE NOT TREATED PROPERLY....
+      ALLOCATE(AEPHI(NR,LNX))
+      ALLOCATE(TAEPHI(NR,LNX))
+      AEPHI=UPHI
+      TAEPHI=TUPHI
+      DO LN=1,LNX
+        DO IC=1,NC
+          IF(LOX(LN).NE.LOFI(IC)) CYCLE
+          AUX(:)=UPHI(:,LN)*PHIC(:,IC)*R(:)**2
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+          UPHI(:,LN)=UPHI(:,LN)-PHIC(:,IC)*SVAR
+          TUPHI(:,LN)=TUPHI(:,LN)-TPHIC(:,IC)*SVAR
+        ENDDO
+      ENDDO  
+      CALL AUGMENTATION_RHO(NR,LNX,LOX,AEPHI,LMNX,DENMAT,LMRX,RHONS)
+      RHONS(:,1)=RHONS(:,1)+RHO(:)
+      DEALLOCATE(AEPHI)
+      DEALLOCATE(TAEPHI)
+      AUX(:)=0.D0  ! CORE IS SET TO ZERO, DENSITY CONTAINS CORE
+      CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AUX,RHONS &
+     &                            ,VQLM,RHOB,AEHPOT,AEEHARTREE)
+!     == SPIN SWITCHED OFF      
+      CALL AUGMENTATION_XC(GID,NR,LMRX,1,AUX,RHONS,AEXCPOT)
+      POTNS=AEHPOT+AEXCPOT
+!
+!     ===============================================================
+!     == SELF-CONSISTENT NONSPHERICAL CORE/VALENCE                 ==
+!     ===============================================================
+      DO ITER=1,100
+        CALL SF_DO(GID,NR,LNX,LOX,UPHI,LMNX,DENMAT,LMRX,POTNS &
+     &                ,NC,LOFI,PHIC,TPHIC,2.D0,RHONS)
+        AUX(:)=0.D0  ! CORE IS SET TO ZERO, DENSITY CONTAINS CORE
+        CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AUX,RHONS &
+     &                              ,VQLM,RHOB,AEHPOT,AEEHARTREE)
+!       == SPIN SWITCHED OFF      
+        CALL AUGMENTATION_XC(GID,NR,LMRX,1,AUX,RHONS,AEXCPOT)
+        POTNS=AEHPOT+AEXCPOT
+      ENDDO
+PRINT*,'MARKE AFTER SF_DO'
+      DEALLOCATE(LOX)
+      DEALLOCATE(UPHI)
+      DEALLOCATE(TUPHI)
+      DEALLOCATE(EOFI)
+      DEALLOCATE(LOFI)
+      DEALLOCATE(SOFI)
+      DEALLOCATE(FOFI)
+      DEALLOCATE(NNOFI)
+      DEALLOCATE(PHIC)
+      DEALLOCATE(TPHIC)
+PRINT*,'DONE'
+      RETURN
+      END
+!
+!     ....................................................................
+      SUBROUTINE SF_SPHERICALCOREETOT(GID,NR,NB,E,F,POTIN,RHO,ETOT,POTOUT)
+!     **                                                                **
+!     ** CALCULATES ENERGY OF A SPHERICAL-NON-SPIN-POLARIZED ATOM       **
+!     ** FOR GIVEN ENERGY EIGENVALUES, INPUT POTENTIAL AND DENSITY      **
+!     **                                                                **
+!     ** remark: uses setup object, which must be properly selected     **
+!     **                                                                **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: NB
+      REAL(8)   ,INTENT(IN) :: E(NB)
+      REAL(8)   ,INTENT(IN) :: F(NB)
+      REAL(8)   ,INTENT(IN) :: POTIN(NR)
+      REAL(8)   ,INTENT(IN) :: RHO(NR)
+      REAL(8)   ,INTENT(OUT):: ETOT
+      REAL(8)   ,INTENT(OUT):: POTOUT(NR)
+      REAL(8)               :: AUX(NR)
+      REAL(8)               :: potnuc(NR)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: Exc,svar
+!     *****************************************************************
+      CALL AUGMENTATION_XC(GID,NR,1,1,RHO,EXC,POTOUT)
+      potout(1)=potout(2)
+      CALL SETUP$GETR8A('NUCPOT',NR,POTNUC)
+      POTOUT(:)  = POTOUT(:)+POTNUC(:)
+      CALL RADIAL$POISSON(GID,NR,0,RHO,AUX)
+      POTOUT(:)  = POTOUT(:)+AUX(:)
+      CALL RADIAL$R(GID,NR,R)
+      AUX(:)=(-POTIN+POTNUC(:)+0.5D0*AUX(:))*RHO(:)*R(:)**2
+      CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+      ETOT=SUM(E*F)+EXC+SVAR
       RETURN
       END
 !
 !     ......................................................................
-      SUBROUTINE newsoftcore_AErho(GID,NR,NB,LOFI,SO,F,NN,POT,RHO,E)
+      SUBROUTINE sf_AErho(GID,NR,NB,LOFI,SO,F,NN,POT,RHO,E,phi,tphi)
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID
       INTEGER(4) ,INTENT(IN)     :: NR
@@ -806,11 +844,14 @@ PRINT*,'CORE RELAXATION ENERGY ENERGY ',ECORE
       REAL(8)    ,INTENT(IN)     :: POT(NR)   !POTENTIAL
       REAL(8)    ,INTENT(OUT)    :: RHO(NR)   !DENSITY
       REAL(8)    ,INTENT(INOUT)  :: E(NB)     !ONE-PARTICLE ENERGIES
+      REAL(8)    ,intent(out)    :: PHI(NR,nb)
+      REAL(8)    ,intent(out)    :: tPHI(NR,nb)
       REAL(8)                    :: R(NR)
       REAL(8)                    :: DREL(NR)  !RELATIVISTIC CORRECTION
       REAL(8)                    :: AUX(NR)
-      REAL(8)                    :: PHI(NR)
-      INTEGER(4)                 :: IB,IR
+      INTEGER(4),parameter       :: niter=100
+      real(8)   ,parameter       :: tol=1.d-4
+      INTEGER(4)                 :: IB,IR,i
       REAL(8)                    :: SVAR
       REAL(8)                    :: C0LL,PI,Y0
 !     ***********************************************************************
@@ -820,12 +861,19 @@ PRINT*,'CORE RELAXATION ENERGY ENERGY ',ECORE
       CALL RADIAL$R(GID,NR,R)
       RHO(:)=0.D0
       DO IB=1,NB
-         CALL RELATIVISTICCORRECTION(GID,NR,POT,E(IB),DREL)
-         CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),DREL,NN(IB),POT,E(IB),PHI)
-         AUX(:)=(R(:)*PHI(:))**2
+         do i=1,niter
+           svar=e(ib)
+           CALL RELATIVISTICCORRECTION(GID,NR,POT,E(IB),DREL)
+           aux(:)=0.d0
+           CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),DREL,aux,NN(IB),POT &
+     &                  ,E(IB),PHI(:,ib))
+           if(abs(e(ib)-svar).lt.tol) exit
+         enddo
+         AUX(:)=(R(:)*PHI(:,ib))**2
          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-         PHI(:)=PHI(:)/SQRT(SVAR)
-         RHO(:)=RHO(:)+F(IB)*C0LL*PHI(:)**2
+         PHI(:,ib)=PHI(:,ib)/SQRT(SVAR)
+         tphi(:,ib)=(e(ib)-pot(:)*y0)*phi(:,ib)
+         RHO(:)=RHO(:)+F(IB)*C0LL*PHI(:,ib)**2
       ENDDO
       RETURN
       END
@@ -866,7 +914,378 @@ PRINT*,'CORE RELAXATION ENERGY ENERGY ',ECORE
       END
 !
 !     ......................................................................
-      SUBROUTINE BOUNDSTATE(GID,NR,L,SO,DREL,NN,POT,E,PHI)
+      SUBROUTINE BOUNDSTATE(GID,NR,L,SO,DREL,G,NN,POT,E,PHI)
+!     **                                                                  **
+!     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND     **
+!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                 **
+!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G            **
+!     **                                                                  **
+!     **  FIRST, THE ENERGY IS DETERMINED BY BISECTION ON THE             **
+!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.     **
+!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.     **
+!     **                                                                  **
+!     **  SECONDLY, THE SCHROEDINGER EQUATION IS SOLVED INWARD, AND       **
+!     **  MATCHED WITH VALUE, EITHER AT THE CLASSICAL TURNING POINT       **
+!     **  OR A SPECIFIED RADIUS, WHATEVER IS SMALLER.                     **
+!     **                                                                  **
+!     **                                                                  **
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
+      REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
+      INTEGER(4) ,INTENT(IN)     :: NN      !#(NODES)
+      REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL
+      REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      INTEGER(4)                 :: ISTART,IBI
+      REAL(8)                    :: X0,Z0,DX,XM,ZM
+      REAL(8)    ,PARAMETER      :: TOL=1.D-8
+      REAL(8)                    :: PI,Y0
+      REAL(8)                    :: VAL,DER,DERO,RTEST
+      REAL(8)                    :: R(NR)
+      REAL(8)                    :: PHIHOM(NR),PHIINHOM(NR),GHOM(NR)
+      INTEGER(4)                 :: NN1
+      INTEGER(4) ,PARAMETER      :: NITER=100
+      INTEGER(4)                 :: I,IR
+      INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
+      INTEGER(4)                 :: IRMATCH 
+      REAL(8)                    :: SVAR
+      REAL(8)                    :: POT1(NR)
+      REAL(8)   ,PARAMETER       :: XMAX=1.D+100 ! MAXIMUM FACTOR IN THE WAVE FUNCTION
+      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
+      LOGICAL(4)                 :: THOM
+      integer(4)                 :: nn1m,nn10,nn1p
+      real(8)                    :: phip(nr),phim(nr)
+      real(8)                    :: rcl
+      real(8)                    :: swkb(nr)  ! phi=e^S
+      real(8)                    :: aux(nr),aux1(nr)
+      integer(4)                 :: irout,ircl
+!     *********************************************************************
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+      RTEST=R(NR)
+      ISTART=1
+      X0=E
+      DX=1.D-2
+      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      DO I=1,NITER
+        E=X0
+!        E=MIN(X0,EMAX)
+!
+!       =======================================================================
+!       ==  CUT OFF THE POTENTIAL                                            ==
+!       =======================================================================
+        POT1(:)=POT(:)
+!       == FIND CLASSICAL TURNING POINT
+        RCL=R(NR)
+        IF(E.LT.POT(NR)*Y0) THEN
+          DO IR=NR-1,1,-1
+            IF(E.GT.POT(IR)*Y0) THEN
+              IRCL=IR
+              RCL=R(IR)-(POT(IR)-E/Y0)/(POT(IR+1)-POT(IR))*(R(IR+1)-R(IR))
+! RCL=MIN(RTEST,R(NR))
+              EXIT
+            END IF
+          ENDDO
+          RTEST=RCL
+        END IF
+!
+!       == USE WKB SOLUTION FOR THE SCHR.GL. FOR A CONSTANT POTENTIAL AND L=0
+!       == TO ESTIMATE FACTOR FROM RTEST TO OUTERMOST POINT
+        irout=nr
+        IF(RTEST.LT.R(NR)) THEN
+          AUX(:IRCL)=0.D0
+          AUX(IRCL+1:)=SQRT(REAL(L*(L+1),kind=8)/R(ircl+1:)**2+2.D0*(POT(IRCL+1:)*Y0-E))
+          CALL RADIAL$DERIVe(GID,NR,AUX,AUX1)
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,Swkb)
+!          Swkb(:)=Swkb(:)-0.5D0*LOG(AUX1(:))-LOG(R(:))
+          Swkb(:)=Swkb(:)-LOG(R(:))
+!         == DETERMINE IROUT WHERE THE WAVE FUNCTION CAN GROW BY A FACTOR 
+!         == OF XMAX FROM THE CLASSICAL TURNING POINT
+          SVAR=LOG(XMAX)
+          DO IR=1,NR
+            IF(Swkb(IR).GT.SVAR) THEN
+              IROUT=IR-1
+              EXIT
+            END IF
+          ENDDO
+        END IF
+        svar=pot(irout)
+        pot1(:)=pot(:)
+        pot1(irout:)=pot(irout)
+!print*,'r(irout)',rcl,r(irout),pot1(nr)
+!
+!       =======================================================================
+!       == INTEGRATE RADIAL SCHRODINGER EQUATION OUTWARD                     ==
+!       =======================================================================
+        IDIR=1
+        CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHI)
+!       == CHECK FOR OVERFLOW
+        IF(.NOT.(PHI(irout).GT.0.OR.PHI(irout).Le.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('NN',NN)
+          CALL ERROR$STOP('BOUNDSTATE')
+        END IF
+!
+!       =======================================================================
+!       == CALCULATE PHASE SHIFT =========================================
+!       =======================================================================
+        NN1=0
+        DO IR=3,irout
+          IF(PHI(IR)*PHI(IR-1).LT.0.D0) NN1=NN1+1
+        ENDDO
+        Z0=-1.D0
+        IF(NN1.Gt.NN) Z0=1.D0
+!write(*,fmt='("iter",4i5,4e20.10)')I,L,NN1,NN,E,2.d0*DX,phi(irout),z0
+        IF(ABS(2.d0*DX).LE.TOL) EXIT
+!       =====================================================================
+!       ==  BISECTION                                                      ==
+!       =====================================================================
+        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      ENDDO
+      IF(ABS(DX).GT.TOL) THEN
+        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
+        CALL ERROR$MSG('BOUND STATE NOT FOUND')
+        CALL ERROR$STOP('BOUNDSTATE')
+      END IF
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E+2.d0*dx,IDIR,PHIp)
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E-2.d0*dx,IDIR,PHIm)
+      NN1p=-nn
+      NN1m=-nn
+      NN10=-nn
+      DO IR=3,irout
+        IF(PHI(IR)*PHI(IR-1).LT.0.D0)   NN10=NN10+1
+        IF(PHIm(IR)*PHIm(IR-1).LT.0.D0) NN1m=NN1m+1
+        IF(PHIp(IR)*PHIp(IR-1).LT.0.D0) NN1p=NN1p+1
+      ENDDO
+!Print*,'nn1-nn ',nn1m,nn10,nn1p
+!Print*,'e ',e-2.d0*dx,e,e+2.d0*dx
+!
+!     =======================================================================
+!     ==  DETERMINE MATCHING POINT                                         ==
+!     =======================================================================
+      THOM=MAXVAL(ABS(G(:))).EQ.0.D0
+      DO IR=1,NR
+         IRMATCH=IR
+         IF(POT(IR)-E/y0.GT.0.D0.OR.R(IR).GT.5.D0) EXIT
+      ENDDO
+!
+!     =======================================================================
+!     ==  INTEGRATE INWARD                                                 ==
+!     =======================================================================
+      IDIR=-1
+      GHOM(:)=0.D0
+      if(irout.lt.nr) GHOM(IROUT)=1.D-5
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
+      IF(.NOT.THOM) THEN     
+        CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
+      ELSE
+        PHIINHOM(:)=0.D0
+      END IF
+!
+!     =======================================================================
+!     ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
+!     =======================================================================
+      SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
+      PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+      SVAR=(DERO-DER)/PHI(IRMATCH)
+      PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+do ir=1,nr
+  if(.not.(phi(ir).gt.0.d0.or.phi(ir).le.0.d0)) then
+    print*,'error'
+    print*,'phiin',phi(:irmatch-1)
+    print*,'phiout',phi(irmatch:)
+    print*,'svar ',svar
+    call error$stop('boundstate')
+  end if
+enddo
+      RETURN
+      END
+!
+!     ......................................................................
+      SUBROUTINE old2BOUNDSTATE(GID,NR,L,SO,DREL,G,NN,POT,E,PHI)
+!     **                                                                  **
+!     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND     **
+!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                 **
+!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G            **
+!     **                                                                  **
+!     **  FIRST, THE ENERGY IS DETERMINED BY BISECTION ON THE             **
+!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.     **
+!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.     **
+!     **                                                                  **
+!     **  SECONDLY, THE SCHROEDINGER EQUATION IS SOLVED INWARD, AND       **
+!     **  MATCHED WITH VALUE, EITHER AT THE CLASSICAL TURNING POINT       **
+!     **  OR A SPECIFIED RADIUS, WHATEVER IS SMALLER.                     **
+!     **                                                                  **
+!     **                                                                  **
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
+      REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
+      INTEGER(4) ,INTENT(IN)     :: NN      !#(NODES)
+      REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL
+      REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      INTEGER(4)                 :: ISTART,IBI
+      REAL(8)                    :: X0,Z0,DX,XM,ZM
+      REAL(8)    ,PARAMETER      :: TOL=1.D-8
+      REAL(8)                    :: PI,Y0
+      REAL(8)                    :: VAL,DER,DERO,RTEST
+      REAL(8)                    :: R(NR)
+      REAL(8)                    :: PHIHOM(NR),PHIINHOM(NR),GHOM(NR)
+      INTEGER(4)                 :: NN1
+      INTEGER(4) ,PARAMETER      :: NITER=100
+      INTEGER(4)                 :: I,IR
+      INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
+      INTEGER(4)                 :: IRMATCH 
+      REAL(8)                    :: SVAR
+      REAL(8)                    :: POT1(NR)
+      REAL(8)   ,PARAMETER       :: XMAX=1.D+100 ! MAXIMUM FACTOR IN THE WAVE FUNCTION
+      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
+      LOGICAL(4)                 :: THOM
+      integer(4)                 :: nn1m,nn10,nn1p
+      real(8)                    ::phip(nr),phim(nr)
+!     *********************************************************************
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+      RTEST=R(NR)
+      ISTART=1
+      X0=E
+      DX=1.D0
+      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      DO I=1,NITER
+        E=X0
+!        E=MIN(X0,EMAX)
+!
+!       =======================================================================
+!       ==  CUT OFF THE POTENTIAL                                            ==
+!       =======================================================================
+!       == FIND CLASSICAL TURNING POINT
+        RTEST=R(NR)
+        IF(E.lt.POT(NR)*y0) THEN
+          DO IR=NR-1,1,-1
+            IF(E.gt.POT(IR)*y0) THEN
+              RTEST=R(IR)-POT(IR)/(POT(IR+1)-POT(IR))*(R(IR+1)-R(IR))
+              RTEST=MIN(RTEST,R(NR))
+              EXIT
+            END IF
+          ENDDO
+        END IF
+!
+!       == USE WKB SOLUTION FOR THE SCHR.GL. FOR A CONSTANT POTENTIAL AND L=0
+!       == TO ESTIMATE FACTOR FROM RTEST TO OUTERMOST POINT
+        IF(RTEST.LT.R(NR)) THEN
+          SVAR=0.5D0*(LOG(XMAX*R(NR)/RTEST)/(R(NR)-RTEST))**2
+          POT1(:)=MIN(POT(:),(E+SVAR)/y0)
+!print*,'pot changed',svar,e
+        ELSE
+          POT1(:)=POT(:)
+        END IF
+!
+!       =======================================================================
+!       == INTEGRATE RADIAL SCHRODINGER EQUATION OUTWARD                     ==
+!       =======================================================================
+        IDIR=1
+        CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHI)
+!       == CHECK FOR OVERFLOW
+        IF(.NOT.(PHI(NR).GT.0.OR.PHI(NR).LT.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('NN',NN)
+          CALL ERROR$STOP('BOUNDSTATE')
+        END IF
+!
+!       =======================================================================
+!       == CALCULATE PHASE SHIFT =========================================
+!       =======================================================================
+        NN1=0
+        DO IR=3,NR
+          IF(PHI(IR)*PHI(IR-1).LT.0.D0) NN1=NN1+1
+        ENDDO
+        Z0=-1.D0
+        IF(NN1.Gt.NN) Z0=1.D0
+!write(*,fmt='("iter",4i5,4e20.10)')I,L,NN1,NN,E,2.d0*DX,x0-xm,z0
+        IF(ABS(2.d0*DX).LE.TOL) EXIT
+!       =====================================================================
+!       ==  BISECTION                                                      ==
+!       =====================================================================
+        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      ENDDO
+      IF(ABS(DX).GT.TOL) THEN
+        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
+        CALL ERROR$MSG('BOUND STATE NOT FOUND')
+        CALL ERROR$STOP('BOUNDSTATE')
+      END IF
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E+2.d0*dx,IDIR,PHIp)
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E-2.d0*dx,IDIR,PHIm)
+      NN1p=-nn
+      NN1m=-nn
+      NN10=-nn
+      DO IR=3,NR-1
+        IF(PHI(IR)*PHI(IR-1).LT.0.D0)   NN10=NN10+1
+        IF(PHIm(IR)*PHIm(IR-1).LT.0.D0) NN1m=NN1m+1
+        IF(PHIp(IR)*PHIp(IR-1).LT.0.D0) NN1p=NN1p+1
+      ENDDO
+!Print*,'nn1-nn ',nn1m,nn10,nn1p
+!Print*,'e ',e-2.d0*dx,e,e+2.d0*dx
+!
+!     =======================================================================
+!     ==  DETERMINE MATCHING POINT                                         ==
+!     =======================================================================
+      THOM=MAXVAL(ABS(G(:))).EQ.0.D0
+      DO IR=1,NR
+         IRMATCH=IR
+         IF(POT(IR)-E/y0.GT.0.D0.OR.R(IR).GT.5.D0) EXIT
+      ENDDO
+!
+!     =======================================================================
+!     ==  INTEGRATE INWARD                                                 ==
+!     =======================================================================
+      IDIR=-1
+      GHOM(:)=0.D0
+      CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
+      IF(.NOT.THOM) THEN     
+        CALL RADIAL$SCHRODINGER(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
+      ELSE
+        PHIINHOM(:)=0.D0
+      END IF
+!
+!     =======================================================================
+!     ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
+!     =======================================================================
+      SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
+      PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+      SVAR=(DERO-DER)/PHI(IRMATCH)
+!PRINT*,'SVAR',SVAR,R(IRMATCH),DER/PHI(IRMATCH),DERO/PHI(IRMATCH)
+!do ir=1,nr
+!  print*,r(ir),phi(ir),phiinhom(ir)
+!enddo
+!!$      IF(ABS(SVAR).GT.1.D-5) THEN
+!!$        CALL ERROR$MSG('DERIVATIVES DO NOT MATCH')
+!!$        CALL ERROR$R8VAL('STEP IN LOG. DERIVATIVE',SVAR)
+!!$        CALL ERROR$R8VAL('RC',R(IRMATCH))
+!!$        CALL ERROR$STOP('BOUNDSTATE')
+!!$      END IF
+!
+      PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+      RETURN
+      END
+!
+!     ......................................................................
+      SUBROUTINE oldBOUNDSTATE(GID,NR,L,SO,DREL,NN,POT,E,PHI)
 !     **                                                                  **
 !     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND     **
 !     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                 **
@@ -970,6 +1389,465 @@ PRINT*,'CORE RELAXATION ENERGY ENERGY ',ECORE
       PHI(IRMATCH:)=PHIINHOM(IRMATCH:)+SVAR*PHIHOM(IRMATCH:)
       RETURN
       END
+!
+!        ....................................................................
+         SUBROUTINE SF_DO(GID,NR,LNX,LOX,UPHI,NPHI,THETA,LMRX,POT &
+        &                ,LNXCORE,LOXCORE,PHIC,TPHIC,F,RHO)
+         IMPLICIT NONE
+         INTEGER(4),INTENT(IN)  :: GID
+         INTEGER(4),INTENT(IN)  :: NR
+         INTEGER(4),INTENT(IN)  :: LNX
+         INTEGER(4),INTENT(IN)  :: LOX(LNX)
+         REAL(8)   ,INTENT(IN)  :: UPHI(NR,LNX)
+         INTEGER(4),INTENT(IN)  :: NPHI   !LMNX
+         REAL(8)   ,INTENT(IN)  :: THETA(NPHI,NPHI)
+         INTEGER(4),INTENT(IN)  :: LMRX
+         REAL(8)   ,INTENT(IN)  :: POT(NR,LMRX)
+         INTEGER(4),INTENT(IN)  :: LNXCORE
+         INTEGER(4),INTENT(IN)  :: LOXCORE(LNXCORE)
+         REAL(8)   ,INTENT(IN)  :: PHIC(NR,LNXCORE)
+         REAL(8)   ,INTENT(IN)  :: TPHIC(NR,LNXCORE)
+         REAL(8)   ,INTENT(IN)  :: F     ! CORE OCCUPATION (1 OR 2)
+         REAL(8)   ,INTENT(OUT) :: RHO(NR,LMRX)
+         INTEGER(4)             :: NC
+         INTEGER(4)             :: NG
+         INTEGER(4)             :: LMOFPHI(NPHI)
+         REAL(8)                :: U(NR,NPHI)
+         INTEGER(4),ALLOCATABLE :: LMOFG(:)
+         REAL(8)   ,ALLOCATABLE :: G(:,:)
+         REAL(8)   ,ALLOCATABLE :: TG(:,:)
+         REAL(8)   ,ALLOCATABLE :: GG(:,:)
+         REAL(8)   ,ALLOCATABLE :: GHG(:,:)
+         REAL(8)   ,ALLOCATABLE :: UG(:,:)
+         REAL(8)   ,ALLOCATABLE :: UHG(:,:)
+         REAL(8)   ,ALLOCATABLE :: Q(:,:)
+         integer(4)             :: i,j
+real(8) :: aux(nr),svar,r(nr)
+real(8),allocatable :: mat(:,:)
+!        ***********************************************************************
+         CALL SF_EXPAND(NR,LNX,LOX,NPHI,UPHI,LMOFPHI,U)
+!
+!        =======================================================================
+!        ==  use core states as basis functions g                             ==
+!        =======================================================================
+         NG=SUM(2.D0*LOXCORE(:)+1.D0)
+         NC=NG
+         ALLOCATE(LMOFG(NG))
+         ALLOCATE(G(NR,Ng))
+         CALL SF_EXPAND(NR,LNXcore,LOXCORE,NG,PHIC,LMOFG,G)
+         ALLOCATE(TG(NR,Ng))
+         CALL SF_EXPAND(NR,LNXcore,LOXCORE,NG,TPHIC,LMOFG,TG)
+!!$print*,'lmofg',lmofg
+!!$call radial$r(gid,nr,r)
+!!$do i=1,ng
+!!$  do j=1,i
+!!$    if(lmofg(i).ne.lmofg(j)) cycle
+!!$    aux(:)=g(:,i)*g(:,j)*r(:)**2
+!!$    call radial$integral(gid,nr,aux,svar)
+!!$    if(i.eq.j) svar=svar-1.d0
+!!$    if(abs(svar).gt.1.d-10) then
+!!$      print*,'core overlap 1',i,j,lmofg(i),svar
+!!$    end if
+!!$  enddo
+!!$enddo
+!
+!        =======================================================================
+!        ==  calculate matrix elements                                        ==
+!        =======================================================================
+         ALLOCATE(GG(NG,NG))
+         ALLOCATE(GHG(NG,NG))
+         ALLOCATE(UG(NPHI,NG))
+         ALLOCATE(UHG(NPHI,NG))
+         CALL SF_SETUP(GID,NR,NG,NPHI,LMRX,LMOFG,LMOFPHI,G,TG,U,POT &
+        &                ,GG,GHG,UG,UHG)
+!print*,'ug  ',nphi,ng,ug
+!print*,'uhg ',ng,nphi,uhg
+!print*,'gg  ',ng,gg
+!print*,'ghg ',ng,ghg
+
+!
+!        =======================================================================
+!        ==  determine expansion coefficients for core states                 ==
+!        =======================================================================
+         ALLOCATE(q(NG,NC))
+         q(:,:)=0.d0
+         do i=1,ng
+           q(i,i)=1.d0
+         enddo
+!!$print*,'marke 2',ng,nc
+!!$allocate(mat(ng,ng))
+!!$mat=matmul(transpose(q),matmul(gg,q))
+!!$do i=1,ng
+!!$  do j=1,i
+!!$    svar=mat(i,j)
+!!$    if(i.eq.j) svar=svar-1.d0
+!!$    if(abs(svar).gt.1.d-10) then
+!!$      print*,'core overlap 2',i,j,svar
+!!$    end if
+!!$  enddo
+!!$enddo
+
+         CALL SF_ITERATE(NPHI,NG,NC,GG,GHG,UG,UHG,THETA,F,Q)
+!
+!        =======================================================================
+!        ==  calculate new one-center density                                 ==
+!        =======================================================================
+         CALL SF_MAKERHO(NR,NPHI,NG,NC,LMRX,LMOFG,LMOFPHI,U,G,UG,THETA,Q,RHO)
+         deALLOCATE(q)
+         deALLOCATE(GG)
+         deALLOCATE(GHG)
+         deALLOCATE(UG)
+         deALLOCATE(UHG)
+         deALLOCATE(TG)
+         deALLOCATE(G)
+         deALLOCATE(lmofg)
+         RETURN
+         END
+!
+!        ........................................................................
+         SUBROUTINE SF_MAKERHO(NR,NPHI,NG,NC,LMRX,LMOFG,LMOFPHI,U,G,UG,THETA,Q,RHO)
+         IMPLICIT NONE
+         INTEGER(4),INTENT(IN)  :: NR
+         INTEGER(4),INTENT(IN)  :: NG
+         INTEGER(4),INTENT(IN)  :: NPHI
+         INTEGER(4),INTENT(IN)  :: NC
+         INTEGER(4),INTENT(IN)  :: LMRX
+         INTEGER(4),INTENT(IN)  :: LMOFPHI(NPHI)
+         INTEGER(4),INTENT(IN)  :: LMOFG(NG)
+         REAL(8)   ,INTENT(IN)  :: U(NR,NPHI)
+         REAL(8)   ,INTENT(IN)  :: G(NR,NG)
+         REAL(8)   ,INTENT(IN)  :: UG(NPHI,NG)
+         REAL(8)   ,INTENT(IN)  :: THETA(NPHI,NPHI)
+         REAL(8)   ,INTENT(IN)  :: Q(NG,NC)
+         REAL(8)   ,INTENT(OUT) :: RHO(NR,LMRX)
+         INTEGER(4)             :: I,J,LM
+         REAL(8)                :: CG
+         REAL(8)                :: MAT1(NG,NPHI),MAT2(NG,NPHI)
+         REAL(8)                :: GUFAC(NG,NPHI)
+         REAL(8)                :: GGFAC(NG,NG)
+!        ***********************************************************************
+         RHO(:,:)=0.D0
+!
+!        =======================================================================
+!        ==   <R|U>D<U|R>                                                     ==
+!        =======================================================================
+         DO I=1,NPHI
+           DO J=1,NPHI
+             DO LM=1,LMRX
+               CALL CLEBSCH(LMOFPHI(I),LMOFPHI(J),LM,CG)
+               IF(CG.EQ.0.D0) CYCLE
+               RHO(:,LM)=RHO(:,LM)+THETA(I,J)*CG*U(:,I)*U(:,J)
+             ENDDO
+           ENDDO
+         ENDDO
+!
+!        =======================================================================
+!        ==   <R|U>D<U|R>                                                     ==
+!        =======================================================================
+!        ==  MAT1=Q^DAGGER Q <G|U> =============================================
+         MAT1=MATMUL(TRANSPOSE(Q),MATMUL(Q,TRANSPOSE(UG)))
+         MAT2=MATMUL(MAT1,THETA)
+         GUFAC=-2.D0*MAT2
+         DO I=1,NG
+           DO J=1,NPHI
+             DO LM=1,LMRX
+               CALL CLEBSCH(LMOFG(I),LMOFPHI(J),LM,CG)
+               IF(CG.EQ.0.D0) CYCLE
+               RHO(:,LM)=RHO(:,LM)+GUFAC(I,J)*CG*G(:,I)*U(:,J)
+             ENDDO
+           ENDDO
+         ENDDO
+!
+!        =======================================================================
+!        ==   <R|U>D<U|R>                                                     ==
+!        =======================================================================
+         GGFAC=MATMUL(MAT2,TRANSPOSE(MAT1))+MATMUL(TRANSPOSE(Q),Q)
+         DO I=1,NG
+           DO J=1,NG
+             DO LM=1,LMRX
+               CALL CLEBSCH(LMOFG(I),LMOFG(J),LM,CG)
+               IF(CG.EQ.0.D0) CYCLE
+               RHO(:,LM)=RHO(:,LM)+GGFAC(I,J)*CG*G(:,I)*G(:,J)
+             ENDDO
+           ENDDO
+         ENDDO
+         RETURN
+         END
+!
+!        ........................................................................
+         SUBROUTINE SF_EXPAND(NR,LNX,LOX,LMNX,UPHI,LMOFPHI,U)
+!        ** TAKES UPHI STORED WITH ARGUMENT LN AND MAKES THE CORRESPONDING
+!        ** FUNCTION WITH ARGUMENT LMN
+         IMPLICIT NONE
+         INTEGER(4),INTENT(IN)  :: NR
+         INTEGER(4),INTENT(IN)  :: LNX
+         INTEGER(4),INTENT(IN)  :: LOX(LNX)
+         INTEGER(4),INTENT(IN)  :: LMNX
+         REAL(8)   ,INTENT(IN)  :: UPHI(NR,LNX)
+         INTEGER(4),INTENT(OUT) :: LMOFPHI(LMNX)
+         REAL(8)   ,INTENT(OUT) :: U(NR,LMNX)
+         INTEGER(4)             :: LMN,L,M,LN
+!        ***********************************************************************
+         u(:,:)=0.d0
+         LMN=0
+         DO LN=1,LNX
+           L=LOX(LN)
+           DO M=1,2*L+1
+             LMN=LMN+1
+             U(:,LMN)=UPHI(:,LN)
+             LMOFPHI(LMN)=L**2+M
+           ENDDO
+         ENDDO
+         RETURN
+         END                             
+!
+!        ........................................................................
+         SUBROUTINE SF_SETUP(GID,NR,NG,NPHI,LMX,LMOFG,LMOFPHI,G,TG,U,POT &
+        &                ,GG,GHG,UG,UHG)
+         IMPLICIT NONE
+         INTEGER(4),INTENT(IN)  :: GID
+         INTEGER(4),INTENT(IN)  :: NR
+         INTEGER(4),INTENT(IN)  :: NG
+         INTEGER(4),INTENT(IN)  :: LMOFG(NG)
+         INTEGER(4),INTENT(IN)  :: LMX
+         REAL(8)   ,INTENT(IN)  :: G(NR,NG)
+         REAL(8)   ,INTENT(IN)  :: TG(NR,NG)
+         REAL(8)   ,INTENT(IN)  :: POT(NR,LMX)
+         INTEGER(4),INTENT(IN)  :: NPHI
+         INTEGER(4),INTENT(IN)  :: LMOFPHI(NPHI)
+         REAL(8)   ,INTENT(IN)  :: U(NR,NPHI)
+         REAL(8)   ,INTENT(OUT) :: GG(NG,NG)
+         REAL(8)   ,INTENT(OUT) :: GHG(NG,NG)
+         REAL(8)   ,INTENT(OUT) :: UG(NPHI,NG)
+         REAL(8)   ,INTENT(OUT) :: UHG(NPHI,NG)
+         REAL(8)                :: R(NR)
+         REAL(8)                :: AUX(NR)
+         REAL(8)                :: VG(NR)
+         REAL(8)                :: SVAR
+         REAL(8)                :: CG
+         INTEGER(4)             :: I,J
+         INTEGER(4)             :: LM1,LM2,LM3,LMX1
+!        ******************************************************************
+         CALL RADIAL$R(GID,NR,R)
+         gg(:,:)=0.d0
+         ghg(:,:)=0.d0
+         ug(:,:)=0.d0
+         uhg(:,:)=0.d0
+!
+!        ==================================================================
+!        == <G|G> AND <G|T|G> =============================================
+!        ==================================================================
+         DO I=1,NG
+           LM1=LMOFG(I)
+           DO J=1,I
+             IF(LM1.eq.LMOFG(J)) THEN
+               AUX(:)=G(:,I)*G(:,J)*R(:)**2
+               CALL RADIAL$INTEGRAL(GID,NR,AUX,GG(I,J))
+               GG(J,I)=GG(i,j)
+               AUX(:)=G(:,I)*TG(:,J)*R(:)**2
+               CALL RADIAL$INTEGRAL(GID,NR,AUX,GHG(I,J))
+               GHG(J,I)=GHG(i,j)
+             END IF
+           ENDDO
+         ENDDO
+!
+!        ==================================================================
+!        == <U|G> AND <U|T|G>
+!        ==================================================================
+         DO I=1,NPHI
+           LM1=LMOFPHI(I)
+           DO J=1,NG
+             IF(LM1.eq.LMOFG(J)) THEN
+               AUX(:)=U(:,I)*G(:,J)*R(:)**2
+               CALL RADIAL$INTEGRAL(GID,NR,AUX,UG(I,J))
+               AUX(:)=U(:,I)*TG(:,J)*R(:)**2
+               CALL RADIAL$INTEGRAL(GID,NR,AUX,UHG(I,J))
+             END IF
+           ENDDO
+         ENDDO
+!
+!        ==================================================================
+!        == ADD <G|V|G> AND <U|V|G>                                      ==
+!        ==================================================================
+         DO I=1,NG
+           LM1=LMOFG(I)
+           LMX1=MAX(MAXVAL(LMOFG(1:I)),MAXVAL(LMOFPHI))
+           DO LM2=1,LMX1
+             VG(:)=0.D0
+             DO LM3=1,LMX
+               CALL CLEBSCH(LM1,LM2,LM3,CG)
+               VG(:)=VG(:)+POT(:,LM2)*G(:,I) 
+             ENDDO
+             VG(:)=VG(:)*R(:)**2
+             DO J=1,I
+               IF(LMOFG(J).NE.LM2) CYCLE
+               AUX(:)=G(:,J)*VG(:)
+               CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+               GHG(I,J)=GHG(I,J)+SVAR
+               IF(I.NE.J) GHG(J,I)=GHG(J,I)+SVAR
+             ENDDO
+             DO J=1,NPHI
+               IF(LMOFPHI(J).NE.LM2) CYCLE
+               AUX(:)=U(:,J)*VG(:)
+               CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+               UHG(J,I)=UHG(J,I)+SVAR
+             ENDDO
+           ENDDO
+         ENDDO
+         RETURN
+         END
+!
+!        ..................................................................
+         SUBROUTINE SF_ITERATE(NPHI,NG,NC,GG,GHG,UG,UHG,THETA,F,Q)
+         IMPLICIT NONE
+         INTEGER(4),INTENT(IN)   :: NPHI
+         INTEGER(4),INTENT(IN)   :: NG
+         INTEGER(4),INTENT(IN)   :: NC
+         REAL(8)   ,INTENT(IN)   :: GG(NG,NG)
+         REAL(8)   ,INTENT(IN)   :: GHG(NG,NG)
+         REAL(8)   ,INTENT(IN)   :: UG(NPHI,NG)
+         REAL(8)   ,INTENT(IN)   :: UHG(NPHI,NG)
+         REAL(8)   ,INTENT(IN)   :: THETA(NPHI,NPHI)
+         REAL(8)   ,INTENT(IN)   :: F    ! CORE OCCUPATION (1.OR 2.)
+         REAL(8)   ,INTENT(INOUT):: Q(NG,NC)
+         INTEGER(4),PARAMETER    :: NITER=100
+         REAL(8)   ,PARAMETER    :: ALPHAMIX=1.D-2
+         REAL(8)   ,PARAMETER    :: TOL=1.D-6
+         INTEGER(4)              :: ITER
+         REAL(8)                 :: E1,E2
+         REAL(8)                 :: DEDQ1(NG,NC)
+         REAL(8)                 :: DEDQ2(NG,NC)
+         REAL(8)                 :: Q2(NG,NC)
+         REAL(8)                 :: ALPHANEU
+         REAL(8)                 :: SVAR1,SVAR2
+REAL(8)                 :: DEDQsave(NG,NC)
+integer(4)              :: i
+!        ******************************************************************
+!rint*,'marke iterate'
+         DO ITER=1,NITER
+           CALL SF_ORTHO(NG,NC,GG,Q)
+           CALL SF_FORCE(NPHI,NG,NC,GG,GHG,UG,UHG,THETA,F &
+        &                      ,Q,E1,DEDQ1)
+if(iter.eq.1) then
+!  dedqsave=dedq1
+else
+!  dedq1=dedqsave
+end if
+           SVAR1=SUM(DEDQ1*DEDQ1)
+           IF(SQRT(SVAR1/REAL(NC)).le.TOL) then
+             print*,'sf iterate converged after ',iter,' iterations'
+             return
+           end if
+           Q2=Q-ALPHAMIX*DEDQ1
+           CALL SF_ORTHO(NG,NC,GG,Q2)
+           CALL SF_FORCE(NPHI,NG,NC,GG,GHG,UG,UHG,THETA,F &
+        &                      ,Q2,E2,DEDQ2)
+           SVAR2=SUM(DEDQ1*DEDQ2)
+!print*,'e ',e1,e1-alphamix*svar1,e2,e2+alphamix*svar2
+           ALPHANEU=ALPHAMIX*SVAR1/(SVAR2-SVAR1)
+           Q=Q-ALPHANEU*DEDQ1
+         END DO
+         CALL ERROR$MSG('LOOP NOT NOT CONVERGED')
+         CALL ERROR$STOP('SF_ITERATE')
+         RETURN
+         END
+!
+!        ..................................................................
+         SUBROUTINE SF_ORTHO(NG,NC,GG,Q)
+!        **                                                              **
+!        ** ORTHOGONALIZES THE CORE STATES                               **
+!        **                                                              **
+!        **   QDAGGER*GG*Q=1                                             **
+!        **                                                              **
+!        ******************************************************************
+         IMPLICIT NONE
+         INTEGER(4),INTENT(IN)   :: NG
+         INTEGER(4),INTENT(IN)   :: NC
+         REAL(8)   ,INTENT(IN)   :: GG(NG,NG)      ! 'B'
+         REAL(8)   ,INTENT(INOUT):: Q(NG,NC)       ! CORE EXPANSION COEFFICIENTS
+         INTEGER(4),PARAMETER    :: NITER=1000
+         REAL(8)   ,PARAMETER    :: TOL=1.D-6
+         REAL(8)                 :: BQ(NG,NC)
+         REAL(8)                 :: MAT(NC,NC)
+         REAL(8)                 :: MATINV(NC,NC)
+         INTEGER(4)              :: I,ITER,j
+         real(8)                 :: svar
+!        *********************************************************************
+         BQ=MATMUL(GG,Q)
+         MAT=MATMUL(TRANSPOSE(BQ),BQ)
+         CALL LIB$INVERTR8(NC,MAT,MATINV)
+         BQ=0.5D0*MATMUL(BQ,MATINV)
+         DO ITER=1,NITER
+           MAT=MATMUL(TRANSPOSE(Q),MATMUL(GG,Q))
+           DO I=1,NC
+             MAT(I,I)=MAT(I,I)-1.D0
+           ENDDO
+           svar=MAXVAL(ABS(MAT))
+           IF(svar.LT.TOL) RETURN
+           Q=Q-MATMUL(BQ,MAT)
+         ENDDO
+!
+!        == loop not converged; provide details ==============================
+do i=1,nc
+  do j=1,i
+    if(abs(mat(i,j)).gt.tol.or.abs(mat(j,i)).gt.tol) then
+      print*,'i,j ',i,j,mat(i,j),mat(j,i)
+    end if
+  enddo
+enddo
+         call error$msg('LOOP NOT CONVERGED')
+         call error$stop('sf_ortho')
+         RETURN
+         END
+!
+!        ..................................................................
+         SUBROUTINE SF_FORCE(NPHI,NG,NC,GG,GHG,UG,UHG,THETA,F,Q,E,DEDQ)
+!        **                                                              **
+!        ** DETERMINES THE ENERGY AND THE FORCE AND THE CONSTRAINT FORCE **
+!        ** ACTING ON THE EXPANSION COEFFICIENTS OF THE CORE STATES      **
+!        **                                                              **
+!        **   E=CONST + TR[-2*THETA*C*Q*QDAGGER*DDAGGER                  **
+!        **                +QDAGGER*A*Q*(F+(C*Q)DAGGER*THETA*C*Q)]       **
+!        **                                                              **
+!        ******************************************************************
+         IMPLICIT NONE
+         INTEGER(4),INTENT(IN) :: NPHI
+         INTEGER(4),INTENT(IN) :: NG
+         INTEGER(4),INTENT(IN) :: NC
+         REAL(8)   ,INTENT(IN) :: GG(NG,NG)      ! 'B'
+         REAL(8)   ,INTENT(IN) :: GHG(NG,NG)     ! 'A' 
+         REAL(8)   ,INTENT(IN) :: UG(NPHI,NG)    ! 'C'
+         REAL(8)   ,INTENT(IN) :: UHG(NPHI,NG)   ! 'D'
+         REAL(8)   ,INTENT(IN) :: THETA(NPHI,NPHI) ! DENSITY MATRIX
+         REAL(8)   ,INTENT(IN) :: F              ! CORE OCCUPATIONS (1 OR 2)
+         REAL(8)   ,INTENT(IN) :: Q(NG,NC)       ! CORE EXPANSION COEFFICIENTS
+         REAL(8)   ,INTENT(OUT):: E              ! NON-SCF ENERGY
+         REAL(8)   ,INTENT(OUT):: DEDQ(NG,NC)    ! ENERGY DERIVATIVE
+         REAL(8)               :: FC(NG,NC)      ! FORCE OF CONSTRAINS
+         REAL(8)               :: THETAC(NPHI,NG)
+         REAL(8)               :: AQQCMINUSD(NG,NPHI)
+         REAL(8)               :: MAT1(NG,NG)
+         REAL(8)               :: MAT(NC,NC)
+         REAL(8)               :: MATINV(NC,NC)
+         INTEGER(4)            :: I
+!        *********************************************************************
+         THETAC=MATMUL(THETA,UG)
+         AQQCMINUSD=-TRANSPOSE(UHG) &
+        &          +MATMUL(GHG,MATMUL(TRANSPOSE(Q),MATMUL(Q,TRANSPOSE(UG))))
+         MAT1=MATMUL(AQQCMINUSD,THETAC)
+         MAT1=MAT1+TRANSPOSE(MAT1)+F*GHG
+         DEDQ=2.D0*MATMUL(MAT1,Q)
+         AQQCMINUSD=-TRANSPOSE(UHG)+AQQCMINUSD
+         MAT1=MATMUL(AQQCMINUSD,THETAC)+F*GHG
+         E=SUM(Q*MATMUL(MAT1,Q))
+!
+!        == ORTHOGONALIZE GRADIENT TO EXISTING CORE STATES
+         FC=MATMUL(GG,Q)
+         MAT=MATMUL(TRANSPOSE(FC),FC)
+         CALL LIB$INVERTR8(NC,MAT,MATINV)
+         DEDQ=DEDQ-MATMUL(MATMUL(FC,MATMUL(MATINV,TRANSPOSE(FC))),DEDQ)
+         RETURN
+         END
 !
 !..................................................................................
 MODULE BROYDEN_MODULE

@@ -315,7 +315,8 @@ OBJNEWATOM = \
 # Objects for atomic setup tool
 OBJATOM = \
           ${OBJDIR}/paw_diffgl.o \
-          ${OBJDIR}/paw_atom.o
+          ${OBJDIR}/paw_oldradial.o \
+          ${OBJDIR}/paw_atom.o 
 # Objects for paw_tra.x
 OBJTRA =  \
           ${OBJDIR}/paw_tra.o

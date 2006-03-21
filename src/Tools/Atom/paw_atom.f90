@@ -1674,7 +1674,7 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
 !         == FOR A GIVEN ONE-PARTICLE ENERGY                          ==
 !         ==============================================================
 !         == FIXED ENERGY CALCULATION ==================================
-          IRAUG=1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX+1.D0
+          IRAUG=int(1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX+1.D0)
           CALL SCHROEDER(.TRUE.,.TRUE.,R1,DEX,NR,LPHI(IWAVE),E,AEZ &
      &              ,IRAUG+5,AUGMENTATIONRADIUS,AEPOT,AEPHI(:,:,IWAVE),AUX)
 !         == REPORT NUMBER OF NODES TO LINKEDLIST ======================
@@ -2003,7 +2003,7 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
       INTEGER(4)             :: IRMT=230
       REAL(8), PARAMETER     :: RMT=3.5D0
 !     ******************************************************************
-      IRMT=2.D0+DLOG(RMT/R1)/DEX
+      IRMT=int(2.D0+DLOG(RMT/R1)/DEX)
       LMAX=MAXVAL(LPHI)
       DO L=0,LMAX
 !       == HOW MANY PROJECTORS FOR THIS ANGULAR MOMENTUM? ==============
@@ -2427,7 +2427,7 @@ REAL(8)   ,ALLOCATABLE :: AEPHI1(:,:,:),PSPHI1(:,:,:)
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/DSQRT(4.D0*PI) 
       C0LL=Y0
-      IRAUG=1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX+1.D0
+      IRAUG=int(1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX+1.D0)
       XEXP=DEXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
