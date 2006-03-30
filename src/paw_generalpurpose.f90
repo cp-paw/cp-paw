@@ -928,6 +928,22 @@ CONTAINS
 END MODULE SORT_MODULE
 !
 !     ..................................................................
+      SUBROUTINE SORT$indexarray(lEN_,x,ind)
+!     **                                                              **
+!     ** direct interface for heapsort                                **
+!     **    x(ind(i)) increases with inreasing i                      **
+!     **                                                              **
+      USE SORT_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LEN_
+      real(8)   ,intent(in) :: x(len_)
+      integer(4),intent(out):: ind(len_)
+!     *******************************************************************
+      call HEAPSORT(LEN,x,IND)
+      return 
+      end
+!
+!     ..................................................................
       SUBROUTINE SORT$SET(LEN_,CRIT)
 !     ******************************************************************
 !     ******************************************************************
@@ -1346,7 +1362,8 @@ END MODULE SORT_MODULE
             GOTO 100
           END IF
         ENDDO
-        PRINT*,'G NOT FOUND'
+        CALL ERROR$MSG('G-cutoff NOT FOUND')
+        CALL ERROR$STOP('MADELUNG')
  100    CONTINUE
         SVAR=VOL*TOL/(8.D0*PI*RC**2)
         DX=0.1D0
@@ -1362,7 +1379,8 @@ END MODULE SORT_MODULE
             GOTO 200
           END IF
         ENDDO
-        PRINT*,'R NOT FOUND'
+        CALL ERROR$MSG('R-cutoff NOT FOUND')
+        CALL ERROR$STOP('MADELUNG')
  200    CONTINUE
         RC=DSQRT(C1/(2.D0*PI*C2))*VOL**(1.D0/3.D0)
         GMAX=C1/RC
@@ -1426,6 +1444,10 @@ END MODULE SORT_MODULE
               FAC=2.D0*FOURPI/VOL*0.5D0
               SVAR=-0.5D0*GSQUARE*RC**2
               GFAC=FAC*DEXP(SVAR)/GSQUARE
+!             ========================================================
+!             == this is the first time-critical part 
+!             == can be streamlined:
+!             ========================================================
               DO IR=1,NBAS
                 GR=G1*BAS(1,IR)+G2*BAS(2,IR)+G3*BAS(3,IR) 
                 EIGR(IR)=EXP(-CI*GR)
@@ -1434,7 +1456,9 @@ END MODULE SORT_MODULE
                 EIGR1=CONJG(EIGR(IR1)) 
                 SINFAC=0.D0
                 COSFAC=0.D0
-                 DO IR2=1,NBAS
+!               == better blas2: sinfac=aimag(eigr1*sum(eigr*q))
+!               ==               cosfac= real(eigr1*sum(eigr*q))
+                DO IR2=1,NBAS
                   EIGR12=EIGR1*EIGR(IR2)
                   SINFAC=SINFAC-AIMAG(EIGR12)*Q(IR2)
                   COSFAC=COSFAC+REAL(EIGR12,KIND=8)*Q(IR2)
@@ -1458,15 +1482,15 @@ END MODULE SORT_MODULE
 !     ICOUNT=0
       FAC=1.D0/(ROOT2*RC)
       DO IR1=1,NBAS
+!       ICOUNT=ICOUNT+1
+!       __ SELECTION FOR PARALLEL PROCESSING__________________________
+!       IF(MOD(ICOUNT-1,NTASKNUM).ne.ITASK-1) cycle
         DO IR2=1,NBAS
-!         ICOUNT=ICOUNT+1
-!         __ SELECTION FOR PARALLEL PROCESSING__________________________
-!         IF(MOD(ICOUNT-1,NTASKNUM).ne.ITASK-1) cycle
-         
           Q12=Q(IR1)*Q(IR2)
           DR1=BAS(1,IR2)-BAS(1,IR1)
           DR2=BAS(2,IR2)-BAS(2,IR1)
           DR3=BAS(3,IR2)-BAS(3,IR1)
+!         == calling boxsph is too complicated
           CALL BOXSPH(RBAS,-DR1,-DR2,-DR3,RMAX &
      &           ,IT1MIN,IT1MAX,IT2MIN,IT2MAX,IT3MIN,IT3MAX)
           DO IT1=IT1MIN,IT1MAX
@@ -1480,11 +1504,16 @@ END MODULE SORT_MODULE
                 DZ=DR3+RBAS(3,1)*T1+RBAS(3,2)*T2+RBAS(3,3)*T3  
                 DLEN=DSQRT(DX*DX+DY*DY+DZ*DZ)
                 IF(DLEN.LT.RMAX) THEN
+!                 == this is time critical
                   IF(IR1.EQ.IR2 &
      &                   .AND.IT1.EQ.0.AND.IT2.EQ.0.AND.IT3.EQ.0) THEN
                     RFAC1=-SQRT(2.D0/PI)/RC
                     RFAC2=0.D0
                   ELSE
+!                   == table lookup may be faster
+!                   == store spline of p(x):=erfc(x)/x
+!                   ==    rfac1=fac*p(dlen*fac)
+!                   ==    rfac2=[ac**2*dp(dlen*fac)/d(dlen*fac)]/dlen
                     CALL LIB$ERFCR8(DLEN*FAC,ERFCX)
                     RFAC1=ERFCX/DLEN
                     RFAC2=-(RFAC1+FAC*2.D0/DSQRT(PI) &

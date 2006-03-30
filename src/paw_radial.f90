@@ -313,7 +313,7 @@
       F0=0.D0
       DO I=1,NP
 !       == CONSTRUCT A POLYNOMIAL WITH VALUE 1 AT THE ITH POINT
-!       == A zero on all points left to the ith point
+!       == A ZERO ON ALL POINTS LEFT TO THE ITH POINT
         SVAR=1.D0
         DO J=1,I-1
           SVAR=SVAR*(R0-RI(J))/(RI(I)-RI(J))
@@ -362,8 +362,8 @@
         DSVAR=0.D0
         DO J=1,I-1
 !         == DO NOT CHANGE THE ORDER OF THE NEXT TWO STATEMENTS ======
-!         == svar=prod_j=1^i-1 (r-rj)/(ri-rj)
-!         == svar=d/dr svar=prod_j=1^i-1 [1/(ri-rj)+(r-rj)/(ri-rj)*d/dr)
+!         == SVAR=PROD_J=1^I-1 (R-RJ)/(RI-RJ)
+!         == SVAR=D/DR SVAR=PROD_J=1^I-1 [1/(RI-RJ)+(R-RJ)/(RI-RJ)*D/DR)
           FAC=1.D0/(RI(I)-RI(J))
           DSVAR=(DSVAR*(R0-RI(J))+SVAR)*FAC
           SVAR=SVAR*(R0-RI(J))*FAC
@@ -512,7 +512,7 @@
       REAL(8)    ,INTENT(INOUT):: F(NX)
       REAL(8)                :: AP(NX),A0(NX),AM(NX)
       INTEGER(4)             :: I
-      INTEGER(4)             :: Itest
+      INTEGER(4)             :: ITEST
 !     ******************************************************************
 !     == AP*F(+) + A0*F(0) + AM*F(-) = D
       AP(:)=A(:)+0.5D0*B(:)
@@ -677,14 +677,14 @@ END MODULE RADIAL_MODULE
       END SUBROUTINE RADIAL_RESOLVE
 !
 !     .................................................................
-      SUBROUTINE RADIAL$report(nfil)
+      SUBROUTINE RADIAL$REPORT(NFIL)
 !     **                                                                  **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
       USE RADIAL_MODULE
       IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN) :: nfil
-      INTEGER(4)              :: GIDS,TYPE,i,nr
-      real(8)                 :: r1,dex
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      INTEGER(4)              :: GIDS,TYPE,I,NR
+      REAL(8)                 :: R1,DEX
 !     ***************************************************************
       DO I=1,NGID
         GIDS=GRIDARRAY(2,I)
@@ -718,14 +718,14 @@ END MODULE RADIAL_MODULE
       END SUBROUTINE RADIAL$SETR8
 !
 !     .................................................................
-      SUBROUTINE RADIAL$gETR8(GID,ID,VAL)
+      SUBROUTINE RADIAL$GETR8(GID,ID,VAL)
 !     **                                                                  **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
       USE RADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: GID
       CHARACTER(*),INTENT(IN) :: ID
-      REAL(8)     ,INTENT(out):: VAL
+      REAL(8)     ,INTENT(OUT):: VAL
       INTEGER(4)              :: GIDS,TYPE
 !     ***************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
@@ -1114,16 +1114,16 @@ END IF
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
       CALL RADIAL$R(GID,NR,R)
       A(:)=1.D0+DREL(:)
-!     == avoid divide by zero if the first grid point is the origin.
-!     == the forces on the first grid point are not used,
-!     == because radial$dgl is based on the verlet algorithm
-!     == that cannot use the forces on the first and last grid point
-      B(2:)=2.D0*(1.d0+DREL(2:))/R(2:)+RDPRIME(2:)
+!     == AVOID DIVIDE BY ZERO IF THE FIRST GRID POINT IS THE ORIGIN.
+!     == THE FORCES ON THE FIRST GRID POINT ARE NOT USED,
+!     == BECAUSE RADIAL$DGL IS BASED ON THE VERLET ALGORITHM
+!     == THAT CANNOT USE THE FORCES ON THE FIRST AND LAST GRID POINT
+      B(2:)=2.D0*(1.D0+DREL(2:))/R(2:)+RDPRIME(2:)
       C(2:)=-(1.D0+DREL(2:))*REAL(L*(L+1),KIND=8)/R(2:)**2 &
      &    +RDPRIME(2:)*SOFACTOR/R(2:) &
      &    -2.D0*(POT(2:)*Y0-E)
-      b(1)=b(2)
-      c(1)=c(2)
+      B(1)=B(2)
+      C(1)=C(2)
       D(:)=-2.D0*G(:)
       THOM=MAXVAL(ABS(G(:))).EQ.0.D0
       IF(IDIR.GE.0) THEN
@@ -1138,7 +1138,7 @@ END IF
       END 
 !
 !     ..................................................................
-      SUBROUTINE RADIAL$kinphi(GID,NR,DREL,SO,L,PHI,tphi)
+      SUBROUTINE RADIAL$KINPHI(GID,NR,DREL,SO,L,PHI,TPHI)
 !     **                                                                  **
 !     **                                                                  **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
@@ -1150,16 +1150,16 @@ END IF
                  ! SO=0: NO SO; SO=1: L/S PARALLEL; SO=-1: L,S ANTIPARALLEL
       REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
 !                                           ! DREL= M0/MREL(R)-1
-      REAL(8)    ,INTENT(in)     :: PHI(NR) !WAVE-FUNCTION
-      REAL(8)    ,INTENT(OUT)    :: tPHI(NR)!kinetic energy times phi
+      REAL(8)    ,INTENT(IN)     :: PHI(NR) !WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: TPHI(NR)!KINETIC ENERGY TIMES PHI
       REAL(8)                    :: A(NR) 
       REAL(8)                    :: B(NR) 
       REAL(8)                    :: C(NR) 
       REAL(8)                    :: R(NR) 
       REAL(8)                    :: SOFACTOR
       REAL(8)                    :: RDPRIME(NR)
-      REAL(8)                    :: dphidr(NR)
-      REAL(8)                    :: d2phidr2(NR)
+      REAL(8)                    :: DPHIDR(NR)
+      REAL(8)                    :: D2PHIDR2(NR)
 !     ************************************************************************
 !     ==================================================================
 !     == SPIN ORBIT COUPLING ===========================================
@@ -1179,19 +1179,19 @@ END IF
 !     ==================================================================
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
       CALL RADIAL$R(GID,NR,R)
-      a(:)=1.D0+DREL(:)
-!     == avoid divide by zero if the first grid point is the origin.
-!     == the forces on the first grid point are not used,
-!     == because radial$dgl is based on the verlet algorithm
-!     == that cannot use the forces on the first and last grid point
-      B(2:)=2.D0*(1.d0+DREL(2:))/R(2:)+RDPRIME(2:)
+      A(:)=1.D0+DREL(:)
+!     == AVOID DIVIDE BY ZERO IF THE FIRST GRID POINT IS THE ORIGIN.
+!     == THE FORCES ON THE FIRST GRID POINT ARE NOT USED,
+!     == BECAUSE RADIAL$DGL IS BASED ON THE VERLET ALGORITHM
+!     == THAT CANNOT USE THE FORCES ON THE FIRST AND LAST GRID POINT
+      B(2:)=2.D0*(1.D0+DREL(2:))/R(2:)+RDPRIME(2:)
       C(2:)=-(1.D0+DREL(2:))*REAL(L*(L+1),KIND=8)/R(2:)**2 &
      &    +RDPRIME(2:)*SOFACTOR/R(2:) 
-      b(1)=b(2)
-      c(1)=c(2)
-      call radial$verletd1(gid,nr,phi,dphidr)
-      call radial$verletd2(gid,nr,phi,d2phidr2)
-      tphi(:)=-0.5d0*(a(:)*d2phidr2(:)+b(:)*dphidr(:)+c(:)*phi(:))
+      B(1)=B(2)
+      C(1)=C(2)
+      CALL RADIAL$VERLETD1(GID,NR,PHI,DPHIDR)
+      CALL RADIAL$VERLETD2(GID,NR,PHI,D2PHIDR2)
+      TPHI(:)=-0.5D0*(A(:)*D2PHIDR2(:)+B(:)*DPHIDR(:)+C(:)*PHI(:))
       RETURN
       END 
 !
@@ -1377,20 +1377,20 @@ END MODULE SHLOGRADIAL_MODULE
      END SUBROUTINE SHLOGRADIAL$SETR8
 !
 !      .................................................................
-       SUBROUTINE SHLOGRADIAL$gETR8(GID,ID,VAL)
+       SUBROUTINE SHLOGRADIAL$GETR8(GID,ID,VAL)
 !      *****************************************************************
 !      *****************************************************************
        USE SHLOGRADIAL_MODULE
        IMPLICIT NONE
        INTEGER(4)  ,INTENT(IN) :: GID
        CHARACTER(*),INTENT(IN) :: ID
-       REAL(8)     ,INTENT(out):: VAL
+       REAL(8)     ,INTENT(OUT):: VAL
 !      ***************************************************************
        IF(GID.GT.NGID) THEN
          CALL ERROR$MSG('GRID ID OUT OF RANGE')
          CALL ERROR$I4VAL('GID',GID)
          CALL ERROR$I4VAL('NGID',NGID)
-         CALL ERROR$STOP('SHLOGRADIAL$gETR8')
+         CALL ERROR$STOP('SHLOGRADIAL$GETR8')
        END IF
        IF(ID.EQ.'R1') THEN
          VAL=GRIDARRAY(GID)%R1
@@ -1399,7 +1399,7 @@ END MODULE SHLOGRADIAL_MODULE
        ELSE
           CALL ERROR$MSG('ID NOT RECOGNIZED')
           CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SHLOGRADIAL$gETR8')
+          CALL ERROR$STOP('SHLOGRADIAL$GETR8')
        END IF
        RETURN
        END SUBROUTINE SHLOGRADIAL$GETR8
@@ -1501,7 +1501,7 @@ END MODULE SHLOGRADIAL_MODULE
          CALL ERROR$I4VAL('NR_',NR_)
          CALL ERROR$STOP('SHLOGRADIAL$VALUE')
       END IF
-      XI=1.D0+LOG(R0/R1+1.d0)/DEX
+      XI=1.D0+LOG(R0/R1+1.D0)/DEX
       IR1=INT(XI)-1
       IR1=MAX(1,IR1)
       IR1=MIN(IR1,NR-3)
@@ -1593,7 +1593,7 @@ END MODULE SHLOGRADIAL_MODULE
          CALL ERROR$I4VAL('NR_',NR_)
          CALL ERROR$STOP('SHLOGRADIAL$DERIVATIVE')
       END IF
-      XI=1.D0+LOG(R0/R1+1.d0)/DEX
+      XI=1.D0+LOG(R0/R1+1.D0)/DEX
       IR1=INT(XI)-1
       IR1=MAX(1,IR1)
       IR1=MIN(IR1,NR-3)
@@ -1771,29 +1771,29 @@ END MODULE LOGRADIAL_MODULE
       END
 !
 !      .................................................................
-       SUBROUTINE LOGRADIAL$gETR8(GID,ID,VAL)
+       SUBROUTINE LOGRADIAL$GETR8(GID,ID,VAL)
 !      *****************************************************************
 !      *****************************************************************
        USE LOGRADIAL_MODULE
        IMPLICIT NONE
        INTEGER(4)  ,INTENT(IN) :: GID
        CHARACTER(*),INTENT(IN) :: ID
-       REAL(8)     ,INTENT(out):: VAL
+       REAL(8)     ,INTENT(OUT):: VAL
 !      ***************************************************************
        IF(GID.GT.NGID) THEN
          CALL ERROR$MSG('GRID ID OUT OF RANGE')
          CALL ERROR$I4VAL('GID',GID)
          CALL ERROR$I4VAL('NGID',NGID)
-         CALL ERROR$STOP('LOGRADIAL$gETR8')
+         CALL ERROR$STOP('LOGRADIAL$GETR8')
        END IF
        IF(ID.EQ.'R1') THEN
-         val=GRIDARRAY(GID)%R1
+         VAL=GRIDARRAY(GID)%R1
        ELSE IF(ID.EQ.'DEX') THEN
-         val=GRIDARRAY(GID)%DEX
+         VAL=GRIDARRAY(GID)%DEX
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID',ID)
-         CALL ERROR$STOP('LOGRADIAL$gETR8')
+         CALL ERROR$STOP('LOGRADIAL$GETR8')
        END IF
        RETURN
        END SUBROUTINE LOGRADIAL$GETR8
@@ -1890,7 +1890,7 @@ END MODULE LOGRADIAL_MODULE
 !     ******************************************************************
       CALL LOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
-        CALL ERROR$MSG('grid SIZE INCONSISTENT')
+        CALL ERROR$MSG('GRID SIZE INCONSISTENT')
         CALL ERROR$I4VAL('NR',NR)
         CALL ERROR$I4VAL('NR_',NR_)
         CALL ERROR$STOP('LOGRADIAL$R')
@@ -1917,10 +1917,10 @@ END MODULE LOGRADIAL_MODULE
 !     ******************************************************************
       CALL LOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
-        CALL ERROR$MSG('grid SIZE INCONSISTENT')
+        CALL ERROR$MSG('GRID SIZE INCONSISTENT')
         CALL ERROR$I4VAL('NR',NR)
         CALL ERROR$I4VAL('NR_',NR_)
-        CALL ERROR$STOP('LOGRADIAL$value')
+        CALL ERROR$STOP('LOGRADIAL$VALUE')
       END IF
       IF(R0.GT.R1) THEN
         XI=1.D0+LOG(R0/R1)/DEX
@@ -1941,7 +1941,7 @@ END MODULE LOGRADIAL_MODULE
       END      
 !
 !     ...................................................................
-      SUBROUTINE LOGRADIAL$INTEGRATE(GID,nr_,F,G)
+      SUBROUTINE LOGRADIAL$INTEGRATE(GID,NR_,F,G)
       USE LOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -1954,11 +1954,11 @@ END MODULE LOGRADIAL_MODULE
       INTEGER(4)            :: IR
 !     ******************************************************************
       CALL LOGRADIAL_RESOLVE(GID)
-      IF(Nr_.NE.NR) THEN
-        CALL ERROR$MSG('grid SIZE INCONSISTENT')
+      IF(NR_.NE.NR) THEN
+        CALL ERROR$MSG('GRID SIZE INCONSISTENT')
         CALL ERROR$I4VAL('NR',NR)
         CALL ERROR$I4VAL('NR_',NR_)
-        CALL ERROR$STOP('LOGRADIAL$integrate')
+        CALL ERROR$STOP('LOGRADIAL$INTEGRATE')
       END IF
 !
 !     ==================================================================
@@ -1969,7 +1969,7 @@ END MODULE LOGRADIAL_MODULE
         RI=RI*XEXP
         FBAR(IR)=F(IR)*(DEX*RI)
       ENDDO
-      CALL RADIAL_INTEGRATEEQUISPACED(Nr,FBAR,G)
+      CALL RADIAL_INTEGRATEEQUISPACED(NR,FBAR,G)
 !
 !     ==================================================================
 !     ==  INTEGRATE FROM 0 TO R1                                      ==
@@ -2166,10 +2166,10 @@ REAL(8)                :: R1SAVE=0.D0
 REAL(8)                :: G1SAVE=0.D0
 REAL(8)                :: DEXSAVE=0.D0
 INTEGER(4)             :: NSAVE=0
-! besseltransform requires mapping from shlog to log grid type
-integer(4),parameter   :: nmapx=20
-integer(4)             :: nmap=0
-integer(4)             :: map(4,nmapx)
+! BESSELTRANSFORM REQUIRES MAPPING FROM SHLOG TO LOG GRID TYPE
+INTEGER(4),PARAMETER   :: NMAPX=20
+INTEGER(4)             :: NMAP=0
+INTEGER(4)             :: MAP(4,NMAPX)
 CONTAINS
 !     ..................................................................
       SUBROUTINE BTSMALLG(L,R1,G1,DEX,NP,F,G,N,WW,TA)
@@ -2682,14 +2682,14 @@ END MODULE BESSELTRANSFORM_MODULE
       SUBROUTINE RADIAL$BESSELTRANSFORM(L,GID1,NR_,F,GID2,NG_,G)
 !     **                                                              **
       USE BESSELTRANSFORM_MODULE
-      implicit none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L      ! ANGULAR MOMENTUM
       INTEGER(4),INTENT(IN) :: GID1
       INTEGER(4),INTENT(IN) :: NR_
       REAL(8)   ,INTENT(IN) :: F(NR_)
       INTEGER(4),INTENT(IN) :: GID2
       INTEGER(4),INTENT(IN) :: NG_
-      REAL(8)   ,INTENT(OUT):: G(Ng_)
+      REAL(8)   ,INTENT(OUT):: G(NG_)
       REAL(8)               :: DISC
       INTEGER(4)            :: GID1A
       INTEGER(4)            :: GID2A
@@ -2702,7 +2702,7 @@ END MODULE BESSELTRANSFORM_MODULE
       REAL(8)               :: R(NR_) 
       REAL(8)   ,ALLOCATABLE :: FA(:),GA(:)
 !     ******************************************************************
-                             call trace$push('RADIAL$BESSELTRANSFORM')
+                             CALL TRACE$PUSH('RADIAL$BESSELTRANSFORM')
 !
 !     ==================================================================
 !     == DETERMINE SUPPORT GRIDS                                      ==
@@ -2731,8 +2731,8 @@ END MODULE BESSELTRANSFORM_MODULE
         MAP(2,NMAP)=GID2
         MAP(3,NMAP)=GID1A
         MAP(4,NMAP)=GID2A
-        NX=INT(LOG(REAL(MAX(NR_,NG_),KIND=8))/LOG(2.D0)+1.d0-1.D-8)
-        nx=2**nx
+        NX=INT(LOG(REAL(MAX(NR_,NG_),KIND=8))/LOG(2.D0)+1.D0-1.D-8)
+        NX=2**NX
         CALL RADIAL$SETI4(GID1A,'NR',NX)
         CALL RADIAL$SETI4(GID2A,'NR',NX)
 !
@@ -2744,12 +2744,13 @@ END MODULE BESSELTRANSFORM_MODULE
         CALL RADIAL$SETR8(GID2A,'R1',G1)
         CALL RADIAL$R(GID1,NR_,R)
         R1A=R(NR_)/EXP(DEX*(NX-1))
-        CALL RADIAL$SETR8(GID1a,'R1',R1A)
+        CALL RADIAL$SETR8(GID1A,'R1',R1A)
       END IF
 !
 !     ==================================================================
 !     == TRANSFORM TO SUPPORT GRID, BESSELTRANSFORM AND TRANSFORM FROM SUPPORT GRID==
 !     ==================================================================
+!      CALL RADIAL$GETI4(GID1A,'NR',NX)
       ALLOCATE(FA(NX))
       ALLOCATE(GA(NX))
       CALL RADIAL$GETR8(GID1A,'DEX',DEX)

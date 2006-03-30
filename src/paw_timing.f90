@@ -252,6 +252,7 @@ print*,thistask,'timing$print start',nfil,time,begintime,cid
       END IF
       CALL MPE$BROADCAST(CID,1,IDARR)
       TARR(:)=0.D0
+      ICOUNTARR(:)=0
       DO I=1,ISVAR
         DO J=1,NENTRY
           IF(CLOCK(J)%NAME.EQ.IDARR(I)) THEN
