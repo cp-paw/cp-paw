@@ -2750,7 +2750,7 @@ END MODULE BESSELTRANSFORM_MODULE
 !     ==================================================================
 !     == TRANSFORM TO SUPPORT GRID, BESSELTRANSFORM AND TRANSFORM FROM SUPPORT GRID==
 !     ==================================================================
-!      CALL RADIAL$GETI4(GID1A,'NR',NX)
+      CALL RADIAL$GETI4(GID1A,'NR',NX)
       ALLOCATE(FA(NX))
       ALLOCATE(GA(NX))
       CALL RADIAL$GETR8(GID1A,'DEX',DEX)
