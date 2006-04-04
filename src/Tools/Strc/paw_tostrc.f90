@@ -77,6 +77,21 @@
          CALL readPDB(NFIL,NFILSTRC)
       END IF
 
+      IF(+SUFFIX.EQ.'PDB_RED') THEN
+         CALL FILEHANDLER$SETFILE('PDB_RED',.TRUE.,-'.PDB_RED')
+         CALL FILEHANDLER$SETSPECIFICATION('PDB_RED','STATUS','OLD')
+         CALL FILEHANDLER$SETSPECIFICATION('PDB_RED','POSITION','REWIND')
+         CALL FILEHANDLER$SETSPECIFICATION('PDB_RED','ACTION','READ')
+         CALL FILEHANDLER$SETSPECIFICATION('PDB_RED','FORM','FORMATTED')
+         
+         !     ==================================================================
+         !     == READ PDB FILE                                                ==
+         !     ==================================================================
+         CALL FILEHANDLER$UNIT('PDB_RED',NFIL)
+         CALL FILEHANDLER$UNIT('STRC',NFILSTRC)
+         CALL readPDB_RED(NFIL,NFILSTRC)
+      END IF
+
       IF(+SUFFIX.EQ.'XSD') THEN
          CALL FILEHANDLER$SETFILE('XSD',.TRUE.,-'.XSD')
          CALL FILEHANDLER$SETSPECIFICATION('XSD','STATUS','OLD')
@@ -753,7 +768,7 @@
             NPROTON=NPROTON+1
             ivar = nat+nhet+nproton
             NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-            R_H = ATOMS(IAT)%R + 0.7*((ATOMS(IAT)%R - ATOMS(IAT+1)%R) + (ATOMS(IAT+2)%R &
+            R_H = ATOMS(IAT)%R - 0.7*((ATOMS(IAT)%R - ATOMS(IAT+1)%R) + (ATOMS(IAT+2)%R &
                  & - ATOMS(IAT+1)%R))
             NBOND = NBOND+1
             BONDS(NBOND)%ATOM1=IAT
@@ -2459,9 +2474,9 @@
                NPROTON=NPROTON+1
                ivar = nat+nhet+nproton
                NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-               R_H = ATOMS(IAT+7)%R - 0.7*(ATOMS(IAT+4)%R - ATOMS(IAT+5)%R)
+               R_H = ATOMS(IAT+7)%R - 0.7*(ATOMS(IAT+2)%R - ATOMS(IAT+1)%R)
                NBOND = NBOND+1
-               BONDS(NBOND)%ATOM1=IAT+5
+               BONDS(NBOND)%ATOM1=IAT+7
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
                BONDS(NBOND)%BO=1
                WRITE(NFILSTRC,FMT='(A,3F10.5,A,F10.5,A)')"!ATOM NAME='"//TRIM(NAME(IAT))//"' R=",R_H(:) &
@@ -2471,7 +2486,7 @@
             NPROTON=NPROTON+1
             ivar = nat+nhet+nproton
             NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-            R_H = ATOMS(IAT+7)%R + 0.7*(ATOMS(IAT+4)%R - ATOMS(IAT+5)%R)
+            R_H = ATOMS(IAT+7)%R + 0.7*(ATOMS(IAT+2)%R - ATOMS(IAT+1)%R)
             NBOND = NBOND+1
             BONDS(NBOND)%ATOM1=IAT+7
             BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
@@ -2508,7 +2523,7 @@
                NPROTON=NPROTON+1
                ivar = nat+nhet+nproton
                NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-               R_H = ATOMS(IAT+4)%R + 0.7*(ATOMS(IAT+1)%R - ATOMS(IAT+2)%R)
+               R_H = ATOMS(IAT+4)%R - 0.7*( (ATOMS(IAT+5)%R - ATOMS(IAT+4)%R) + (ATOMS(IAT+6)%R - ATOMS(IAT+4)%R) )
                NBOND = NBOND+1
                BONDS(NBOND)%ATOM1=IAT+4
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
@@ -2544,7 +2559,7 @@
                NPROTON=NPROTON+1
                ivar = nat+nhet+nproton
                NAME(IAT) = TRIM(ADJUSTL("H_"//(.itos.ivar)))
-               R_H = ATOMS(IAT+6)%R + 0.7*(ATOMS(IAT+2)%R - ATOMS(IAT+1)%R)
+               R_H = ATOMS(IAT+6)%R + 0.7*(ATOMS(IAT+4)%R - ATOMS(IAT+1)%R)
                NBOND = NBOND+1
                BONDS(NBOND)%ATOM1=IAT+6
                BONDS(NBOND)%ATOM2=NAT+NHET+NPROTON
@@ -3161,7 +3176,39 @@ print*,"===DONE==="
       END SUBROUTINE READPDB
 
 
+      SUBROUTINE READPDB_RED(NFIL, NFILSTRC)
+        USE STRINGS_MODULE
+        USE FORCEFIELD_MODULE, ONLY: PDB_ATOM_TYPE
+        IMPLICIT NONE
+        INTEGER(4),       INTENT(IN)  :: NFIL, NFILSTRC
+        CHARACTER(103)                 :: line
+        CHARACTER(LEN=*), PARAMETER   :: pdb_form='(A6,I5,1X,A5,A4,A1,I4,4X,3F8.3,2F6.2,6X,A4,A2,2X,A1,1X,A12,1X,A7)'
+        TYPE(PDB_ATOM_TYPE)           :: pdb_atom
+        character(6)                  :: dummy
+        CHARACTER(10)                 :: paw_name
 
+        REWIND(NFIL)
+        DO
+           READ(NFIL,FMT='(A102)', END=301) LINE
+           IF(LINE(1:6).EQ.'ATOM  '.OR.LINE(1:6).EQ.'HETATM') THEN
+              READ(LINE,pdb_form) dummy, pdb_atom
+              IF(SCAN(PDB_ATOM%NAME(1:1),'1234567890').NE.0) THEN
+                 paw_name = pdb_atom%name(2:2)//"_"//pdb_atom%name(3:LEN_TRIM(pdb_atom%name))//&
+                      & pdb_atom%name(1:1)//"_"&
+                      & //TRIM(ADJUSTL(.itos.pdb_atom%id))//"'"
+              ELSE IF(PDB_ATOM%NAME(1:1).EQ.' ') THEN
+                 paw_name = pdb_atom%name(2:2)//"_"//pdb_atom%name(3:LEN_TRIM(pdb_atom%name))//"_"&
+                      & //TRIM(ADJUSTL(.itos.pdb_atom%id))//"'"               
+              ELSE
+                 paw_name = pdb_atom%name(1:2)//pdb_atom%name(3:LEN_TRIM(pdb_atom%name))//"_"&
+                      &//TRIM(ADJUSTL(.itos.pdb_atom%id))//"'"
+              END IF
+              WRITE(NFILSTRC,FMT='(A,3F15.5,A)')"   !ATOM NAME='"//TRIM(ADJUSTL(paw_name))//"  R=",pdb_atom%r(:),"' !END"
+
+           END IF
+        END DO
+301     RETURN
+      END SUBROUTINE READPDB_RED
 
 
 !     ..................................................................
