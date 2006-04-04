@@ -478,6 +478,11 @@ CALL TRACE$PASS('DONE')
 !     ==  READ BLOCK !CONTROL!CONTINUUM                               ==
 !     ==================================================================
       CALL READIN_CONTINUUM(LL_CNTL)
+!    
+!     ==================================================================
+!     ==  READ BLOCK !CONTROL!CONTINUUM                               ==
+!     ==================================================================
+      CALL READIN_COsmo(LL_CNTL)
 
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!QMMM (CALGARY IMPLEMENTATION)
@@ -2186,6 +2191,113 @@ print *,'keep_dff set in list'
       RETURN
       END
 !
+!     ...................................................................
+      SUBROUTINE READIN_COSMO(LL_CNTL_)
+      USE LINKEDLIST_MODULE
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
+      TYPE(LL_TYPE)            :: LL_CNTL
+      LOGICAL(4)               :: TCHK
+      REAL(8)                  :: SVAR
+      REAL(8)                  :: FRICTION
+      REAL(8)                  :: SCALE
+      INTEGER(4)               :: MULTIPLE
+      REAL(8)                  :: KELVIN
+      REAL(8)                  :: DT
+!     ******************************************************************
+      LL_CNTL=LL_CNTL_
+!
+!     ==================================================================
+!     ==  READ BLOCK !CONTROL!GENERIC                                 ==
+!     ==================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
+      CALL LINKEDLIST$GET(LL_CNTL,'DT',1,DT)
+!     ==================================================================
+!     ==  READ BLOCK !CONTROL!CONTINUUM                               ==
+!     ==================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+      CALL LINKEDLIST$EXISTL(LL_CNTL,'COSMO',1,TCHK)
+      CALL COSMO$SETL4('ON',TCHK)
+      IF(.NOT.TCHK) RETURN
+                               CALL TRACE$PUSH('READIN_CONTINUUM')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'COSMO')
+!
+!     == STOP =======================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'STOP',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'STOP',0,.FALSE.)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'STOP',1,TCHK)
+      CALL COSMO$SETL4('STOP',TCHK)
+!
+!     == START =====================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'START',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'START',0,.FALSE.)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'START',1,TCHK)
+      CALL COSMO$SETL4('START',TCHK)
+!
+!     == MASS ===================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'M',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        PRINT*,'WARNING! NO MASS FOR SURFACE CHARGES SUPPLIED!'
+        PRINT*,'DEFAULT VALUE OF 1000.D0 IS SUPPLIED BY PAW!'
+        CALL LINKEDLIST$SET(LL_CNTL,'M',1,1000.D0)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'M',1,SVAR)
+      CALL COSMO$SETR8('MASS',SVAR)
+!
+!     == MULTIPLE TIMESTEPS?  ========================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'MULTIPLE',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'MULTIPLE',1,MULTIPLE)
+        CALL COSMO$SETI4('MULTIPLE',MULTIPLE)
+      END IF
+!
+!     == MULTIPLE TIMESTEPS?  ========================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ADIABATIC',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'ADIABATIC',0,.FALSE.)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'ADIABATIC',1,TCHK)
+      CALL COSMO$SETL4('ADIABATIC',TCHK)
+!
+!     == EPSILON = DIELECTRIC CONSTANT ===========================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'EPSILON',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'EPSILON',0,1.D12)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'EPSILON',1,SVAR)
+      CALL COSMO$SETR8('EPSILON',SVAR)
+!
+!     ==  FRIC ===================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'FRIC',0,0.D0)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,SVAR)
+      CALL COSMO$SETR8('FRICTION',SVAR)
+!
+!     ==================================================================
+!     ==  READ BLOCK !CONTROL!COsmo!AUTO                              ==
+!     ==================================================================
+!      CALL READIN_AUTO(LL_CNTL,'COsmo',0.3D0,0.96D0,1.D0,1.D0)
+!
+!     ==================================================================
+!     ==  READ BLOCK !QNOSE                                           ==
+!     ==================================================================
+!      CALL CONSTANTS('KB',KELVIN)
+!      CALL READIN_THERMOSTAT(LL_CNTL_,'COSMO',DT,0.5D0*293.D0*KELVIN,10.D0)
+!
+                                 CALL TRACE$POP
+      RETURN
+      END
+!
 !     ..................................................................
       SUBROUTINE READIN_ANALYSE_TRAJECTORIES(LL_CNTL_)
 !     ******************************************************************
@@ -2805,6 +2917,11 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==  ENTER BLOCK !STRUCTURE!CONTINUUM                            ==
 !     ==================================================================
       CALL STRCIN_CONTINUUM(LL_STRC)
+!
+!     ==================================================================
+!     ==  ENTER BLOCK !STRUCTURE!COsmo                                ==
+!     ==================================================================
+      CALL STRCIN_COsmo(LL_STRC)
 !
 !     ==================================================================
 !     ==  ENTER BLOCK !STRUCTURE!CONSTRAINTS!RIGID                    ==
@@ -5132,6 +5249,63 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       CALL CONTINUUM$SETR8A('RAD',NAT,RSOLV)
       CALL CONTINUUM$SETCHA('TESS',NAT,GRIDTYPE)
       DEALLOCATE(GRIDTYPE)
+      DEALLOCATE(RSOLV)
+                                          CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...................................................................
+      SUBROUTINE STRCIN_COsmo(LL_STRC_)
+      USE LINKEDLIST_MODULE
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
+      TYPE(LL_TYPE)            :: LL_STRC
+      LOGICAL(4)               :: TCHK
+      INTEGER(4)               :: NAT1
+      INTEGER(4)               :: IAT1
+      INTEGER(4)               :: IAT,NAT
+      CHARACTER(32)            :: NAME
+      REAL(8)       ,ALLOCATABLE:: RSOLV(:)
+!     ******************************************************************
+      LL_STRC=LL_STRC_
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$EXISTL(LL_STRC,'COSMO',1,TCHK)
+      IF(.NOT.TCHK) RETURN
+                                 CALL TRACE$PUSH('STRCIN_CONTINUUM')
+      CALL ATOMLIST$NATOM(NAT)
+      ALLOCATE(RSOLV(NAT))
+      RSOLV(:)=0.D0
+!
+      CALL LINKEDLIST$SELECT(LL_STRC,'COSMO')
+      CALL LINKEDLIST$NLISTS(LL_STRC,'ATOM',NAT1)
+      IF(NAT1.NE.NAT) THEN
+        CALL ERROR$MSG('NUMBER OF ATOMS INCONSISTENT')
+        CALL ERROR$STOP('STRCIN_COSMO')
+      END IF
+      DO IAT1=1,NAT1
+        CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',IAT1)
+!
+!       ==  NAME  ================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'NAME',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('!STRUCTURE!CONTINUUM!ATOM:NAME NOT SPECIFIED')
+          CALL ERROR$STOP('STRCIN_CONTINUUM')
+        END IF
+        CALL LINKEDLIST$GET(LL_STRC,'NAME',1,NAME)
+        CALL ATOMLIST$INDEX(NAME,IAT)
+!
+!       ==  RAD  ================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RAD',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL LINKEDLIST$SET(LL_STRC,'RAD',1,3.D0)
+        END IF
+        CALL LINKEDLIST$GET(LL_STRC,'RAD',1,RSOLV(IAT))
+!
+        CALL LINKEDLIST$SELECT(LL_STRC,'..')
+      ENDDO
+      CALL COSMO$SETR8A('RSOLV',NAT,RSOLV)
       DEALLOCATE(RSOLV)
                                           CALL TRACE$POP
       RETURN

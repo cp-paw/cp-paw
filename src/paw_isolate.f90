@@ -723,8 +723,8 @@ call trace$pass('after isolate_interface')
 !     ==================================================================
 !     ==  COUPLE CONTINUUM                                            ==
 !     ==================================================================
-print*,'warning continuum propagate switched off because it changes an intent(in) variable (PEB 15.Jan06)'
-      CALL CONTINUUM$PROPAGATE(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
+!      CALL CONTINUUM$PROPAGATE(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
+      CALL COSMO$interface(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
       ENERGY=ENERGY+ENERGY1
       VI(:,:)=VI(:,:)+VI1(:,:)
       FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)

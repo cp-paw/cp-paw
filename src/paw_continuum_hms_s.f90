@@ -1,6 +1,7 @@
 !blo todo
 !blo 1)there are calles from linkedlist with a double underscore instead of a dollar
 !blo 2) there is a remark in rforces saying that the implentation may not be correct
+! there was an error in cont_calc_ener when calculating the face-self energy
 !..........................................................................
 Module continuum_module
 !***************************************************************************
@@ -68,7 +69,7 @@ Module continuum_module
 !blo   
 !***************************************************************************
 implicit none
-private
+!private
 !===========================================================================
 !== this is the interface to the module                                   ==
 !===========================================================================
@@ -265,7 +266,7 @@ contains
       ngauss = ng
       allocate(npoints(natoms))
       allocate(face_peratom(natoms))
-      allocate(face_area(natoms))
+      allocate(face_area(natoms)) 
 !
 !     =======================================================================
 !     ==  read the first two lines of all tesselation files for all atoms  ==
@@ -328,6 +329,9 @@ contains
 !     ==  allocate little stuff                                            ==
 !     =======================================================================
       allocate(atom_surf(natoms))
+!<<blo
+      atom_surf(:)=0.d0 !used in net_report but assigned only later in setup
+!>>blo
       allocate(atom_charge(natoms))
       allocate(atom_weighed_charge(natoms))
 !      
@@ -419,7 +423,8 @@ PRINT*,'In continuum_init: ',contv_rsolv(ia),face_peratom(ia),face_area(ia)
 !     ==  contv_timestep = contv_timestep/contv_multiple                   ==
 !     =======================================================================
       call report_continuum_controls(nfilprot)
-      call net_report
+
+!blo      call net_report  ! uses many data that are not yet assigned
       contv_init = .true.
                                          call trace$pop
       end subroutine continuum_init
@@ -524,9 +529,11 @@ PRINT*,'In continuum_init: ',contv_rsolv(ia),face_peratom(ia),face_area(ia)
 
         read (nfil) nfaces_
         if (nfaces_ /= nfaces) then
-            call error$msg('RESTART FILE AND INPUT ARE INCONSISTENT')
-            call error$stop("CONTINUUM$READ OLD RESTART")
-            return 
+          call error$msg('RESTART FILE AND INPUT ARE INCONSISTENT')
+          call error$i4val('nfaces_',nfaces_)
+          call error$i4val('nfaces',nfaces)
+          call error$stop("CONTINUUM$READ OLD RESTART")
+          return 
         end if
 
 print *, "cont readin"
@@ -563,9 +570,11 @@ print *, "current size of face_q ", size(face_q)
         read (nfil) nfaces_
         read (nfil) natoms_
         if ((nfaces_ /= nfaces) .or. (natoms_ /= natoms)) then
-            call error$msg('RESTART FILE AND INPUT ARE INCONSISTENT')
-            call error$stop('CONTINUUM$READ')
-            return 
+          call error$msg('RESTART FILE AND INPUT ARE INCONSISTENT')
+          call error$i4val('nfaces_',nfaces_)
+          call error$i4val('nfaces',nfaces)
+          call error$stop('CONTINUUM$READ')
+          return 
         end if      
 !hms -->
         !hms  We check consistency between values from input (cntl, strc) and rstrt
@@ -577,22 +586,33 @@ print *, "current size of face_q ", size(face_q)
         READ(nfil) face_q, face_qm, face_fmem, face_atom_, face_relpos_, face_peratom_, face_area_
 
         DO iat = 1,natoms
-           IF ((face_peratom_(iat) /= face_peratom(iat)).OR.(face_area_(iat) /= face_area(iat))) THEN
-              CALL error$msg('RESTART FILE AND INPUT ARE INCONSISTENT')
-              CALL error$stop('CONTINUUM$READ')
-           ENDIF
+          IF ((face_peratom_(iat) /= face_peratom(iat)).OR.(face_area_(iat) /= face_area(iat))) THEN
+            CALL error$msg('RESTART FILE AND INPUT ARE INCONSISTENT')
+            call error$i4val('iat',iat)
+            call error$i4val('face_peratom_',face_peratom_(iat))
+            call error$i4val('face_peratom',face_peratom(iat))
+            call error$r8val('face_area_',face_area_(iat))
+            call error$r8val('face_area',face_area(iat))
+            CALL error$stop('CONTINUUM$READ')
+          ENDIF
         END DO
         DO ifc = 1,nfaces
-           IF (face_atom_(ifc) /= face_atom(ifc)) THEN
+          IF (face_atom_(ifc) /= face_atom(ifc)) THEN
+            CALL error$msg('RESTART FILE AND INPUT ARE INCONSISTENT')
+            call error$i4val('face_atom(ifc)',face_atom(ifc))
+            call error$i4val('face_atom_(ifc)',face_atom_(ifc))
+            CALL error$stop('CONTINUUM$READ')
+          ENDIF
+          DO i = 1,3
+            IF(abs(face_relpos_(i,ifc)-face_relpos(i,ifc)).gt.1.d-8) THEN
               CALL error$msg('RESTART FILE AND INPUT ARE INCONSISTENT')
+              call error$i4val('ifc',ifc)
+              call error$i4val('i',i)
+              call error$r8val('face_relpos(i,ifc)',face_relpos(i,ifc))
+              call error$r8val('face_relpos_(i,ifc)',face_relpos_(i,ifc))
               CALL error$stop('CONTINUUM$READ')
-           ENDIF
-           DO i = 1,3
-              IF (face_relpos_(i,ifc) /= face_relpos(i,ifc)) THEN
-                 CALL error$msg('RESTART FILE AND INPUT ARE INCONSISTENT')
-                 CALL error$stop('CONTINUUM$READ')
-              ENDIF
-           END DO
+            ENDIF
+          END DO
         END DO
         DEALLOCATE(face_atom_)
         DEALLOCATE(face_relpos_)
@@ -680,7 +700,7 @@ print *, "current size of face_q ", size(face_q)
       real(kind=8), intent(out)   :: kinetic_energy
       integer                     :: i
       real(kind=8)                :: timestep
-      real(8)                     :: svar1,svar2,svar2
+      real(8)                     :: svar1,svar2,svar3
 !     ***********************************************************************
                                           call trace$push('PROPAGATE_CHARGE')
       KINETIC_ENERGY=0.D0
@@ -1605,6 +1625,28 @@ PRINT *, "## The potential used is        : ", cwdff
       CFORCEMEM(:,:)=0.D0
 !
 !     =======================================================================
+!     == include here cosmo for comparison
+!     =======================================================================
+      call continuum_setup(nat,r0,ng,rc,qmad)
+!
+      CALL COSMO$READTESSELATION(CONTV_TESSELATION_NAME(1))
+      CALL COSMO$SETR8A('RSOLV',NAT,CONTV_RSOLV)
+      CALL COSMO$SETR8A('Q0',NFACES,FACE_Q)
+      CALL COSMO$SETL4('ON',.TRUE.)
+      CALL COSMO$SETR8('EPSILONR',80.1D0)
+      CALL COSMO$INTERFACE(NAT,R0,NG,RC,QMAD,ECONT,PCONT,CFORCE)
+!
+      call cont_calc_ener(nat,nfaces,ng,face_q,face_pos,face_atom,bigf &
+    &              ,face_area,r0,rc,qmad,contv_scalingfactor,e_ff,e_sff,e_af,e_fh,e_st)
+      print *,"  e_ff   :", e_ff     !face-face interaction
+      print *,"  e_sff  :", e_sff    ! face-electrostatic self interaction
+      print *,"  e_af   :", e_af     ! atom face interaction
+      print *,"  e_fh   :", e_fh     ! overlap region
+      print *,"  e_st   :", e_st     ! surface tension
+print*,'hms etot ',e_ff+e_sff+e_af+e_fh+e_st
+stop
+!
+!     =======================================================================
 !     == do multiple timesteps here (First half of cyle??)                 ==
 !     =======================================================================
       call continuum_setup(nat,r0,ng,rc,qmad)
@@ -1951,36 +1993,47 @@ endif
 !     **                                                                   **
       implicit none
       integer      :: nfilo, i
-      real(kind=8) :: total_surf, total_surf_perc, surf_perc
+      real(8)      :: total_surf, total_surf_perc, surf_perc
 !hms -->
        character(16):: name(natoms)
 !hms <--
 !     ***********************************************************************
- call filehandler$unit('PROT',nfilo)
+      call filehandler$unit('PROT',nfilo)
+      write (nfilo, *)
+      WRITE(NFILO,fmt='("CONTINUUM REPORT"/"================")')
+      write (nfilo, FMT='(A16,1X, A12,1X, A12,1X, A17,1X, A12,1X, A12)') &
+     &                   "Name", "Rsolv [au]", "Surface", "Eff. Surf. [%]" &
+     &                   , "Eff. chrg.", "Charge"
 
- write (nfilo, *)
- WRITE(NFILO,fmt='("CONTINUUM REPORT"/"================")')
- write (nfilo, FMT='(A16,1X, A12,1X, A12,1X, A17,1X, A12,1X, A12)') &
-       &    "Name", "Rsolv [au]", "Surface", "Eff. Surf. [%]", "Eff. chrg.", "Charge"
-
- total_surf = 0.0D0
- total_surf_perc = 0.0D0
- CALL atomlist$getcha('NAME',0,natoms,name(:))
- do i = 1, natoms
-    total_surf = total_surf + atom_surf(i)
-    surf_perc  = atom_surf(i)/(face_area(i)*face_peratom(i))*100.D0
-    total_surf_perc = total_surf_perc + surf_perc
+      total_surf=0.0D0
+      total_surf_perc = 0.0D0
+      CALL atomlist$getcha('NAME',0,natoms,name(:))
+print*,'marke1 net_report'
+      do i=1,natoms
+print*,'iata ',i,atom_surf(i)
+print*,'iatb ',i,face_area(i)
+print*,'iatc ',i,face_peratom(i)
+        total_surf = total_surf + atom_surf(i)
+        surf_perc  = atom_surf(i)/(face_area(i)*face_peratom(i))*100.D0
+        total_surf_perc = total_surf_perc + surf_perc
 !hms     write (nfilo, FMT='(I4,1X, F12.3,1X, F12.5,3X, F14.1,1x, F12.5,1X, F12.5)') &
 !hms        &    i, contv_rsolv(i), atom_surf(i), surf_perc, atom_weighed_charge(i), atom_charge(i)
-    write (nfilo, FMT='(A16,1X, F12.3,1X, F12.5,3X, F14.1,1x, F12.5,1X, F12.5)') &
-       &    name(i), contv_rsolv(i), atom_surf(i), surf_perc, atom_weighed_charge(i), atom_charge(i)
- end do
- write (nfilo, *) ' ' 
- write (nfilo, FMT='(A18, F12.5,1X, F12.1,1X, F12.5,1X, F12.5)') &
-       &    "SUM:", total_surf, total_surf_perc/natoms, total_weighed_charge, total_charge
- write (nfilo, *) ' '
- return
-end subroutine net_report 
+print*,'iatd ',i,contv_rsolv(i)
+print*,'iatf ',i,atom_weighed_charge(i)
+print*,'iatg ',i,atom_charge(i)
+print*,'marke1a net_report'
+        write (nfilo, FMT='(A16,1X,F12.3,1X,F12.5,3X,F14.1,1x,F12.5,1X,F12.5)') &
+     &    name(i),contv_rsolv(i),atom_surf(i),surf_perc,atom_weighed_charge(i), atom_charge(i)
+print*,'marke1b net_report'
+      end do
+      write (nfilo,*) ' ' 
+print*,'marke2 net_report'
+print*,'total_surf',total_surf
+      write (nfilo,FMT='(A18, F12.5,1X, F12.1,1X, F12.5,1X, F12.5)') &
+     &    "SUM:", total_surf, total_surf_perc/natoms, total_weighed_charge, total_charge
+      write (nfilo, *) ' '
+      return
+      end subroutine net_report 
 
 ! #######################################################################
 
@@ -2058,90 +2111,92 @@ end subroutine net_report
       end subroutine cont_calc_bigf
 !
 !     .......................................................................
-      subroutine cont_calc_ener(na,nf,ng,q,qpos,fba,bigf,fa,r0,rc,qmad, feps,e_ff,e_sff,e_af,e_fh,e_st)
+      subroutine cont_calc_ener(na,nf,ng,q,qpos,fba,bigf,fa,r0,rc,qmad,feps &
+     &                         ,e_ff,e_sff,e_af,e_fh,e_st)
 !     **                                                                   **
-
-!  this subroutine calculates all energy contributions of the current implement.
-!  in a straightforward way (i.e. NO attempts to make it efficient) as simple as possible
-!  => this is to verify things not to calculate things
-!  we get ALL informations as parameters!
-!
-  implicit none
-  integer, intent(in)                             :: na, nf, ng
-  real(kind=8), dimension(nf), intent(in)         :: q, bigf
-  integer, dimension(nf), intent(in)              :: fba
-  real(kind=8), dimension(na), intent(in)         :: fa
-  real(kind=8), dimension(3,nf), intent(in)       :: qpos
-  real(kind=8), dimension(3,na), intent(in)       :: r0
-  real(kind=8), dimension(ng,na), intent(in)      :: rc, qmad
-  real(kind=8), intent(in)                        :: feps
-  real(kind=8), intent(out)                       :: e_ff,e_sff,e_af,e_fh,e_st
-
-  real(kind=8)                                    :: k_tension, k1, dist, errfct
-  real(kind=8), dimension(3)                      :: vect
-  integer                                         :: ifc, ifc1, ifc2, ia, ig
+!     **  this subroutine calculates all energy contributions of the       **
+!     **  current implementation in a straightforward way (i.e. NO         **
+!     **  attempts to make it efficient) as simple as possible             **
+!     **   => this is to verify things not to calculate things             **
+!     **  we get ALL informations as parameters!                           **
+!     **                                                                   **
+      implicit none
+      integer, intent(in)                             :: na, nf, ng
+      real(kind=8), dimension(nf), intent(in)         :: q, bigf
+      integer, dimension(nf), intent(in)              :: fba
+      real(kind=8), dimension(na), intent(in)         :: fa
+      real(kind=8), dimension(3,nf), intent(in)       :: qpos
+      real(kind=8), dimension(3,na), intent(in)       :: r0
+      real(kind=8), dimension(ng,na), intent(in)      :: rc, qmad
+      real(kind=8), intent(in)                        :: feps
+      real(kind=8), intent(out)                       :: e_ff,e_sff,e_af,e_fh,e_st
+    
+      real(kind=8)                                    :: k_tension, k1, dist, errfct
+      real(kind=8), dimension(3)                      :: vect
+      integer                                         :: ifc, ifc1, ifc2, ia, ig
 !     ***********************************************************************
-
-  !   FACE FACE  INTERACTION (INTER)
-  !
-  e_ff = 0.0D0
-  do ifc1 = 1,nf
-     do ifc2 = 1,nf
-        if (ifc1 /= ifc2) then
-           vect(:) = qpos(:,ifc1) - qpos(:,ifc2)
-           dist = dsqrt(sum(vect*vect))
-           e_ff = e_ff + (q(ifc1) * bigf(ifc1) * q(ifc2) * bigf(ifc2))/dist
-        end if
-     end do
-  end do
-  ! correct it
-  e_ff = e_ff * feps * 0.5D0
-
-  !   FACE FACE INTERACTION (INTRA)
-  !
-  e_sff = 0.0D0
-  do ifc = 1,nf
-     e_sff = e_sff + ((q(ifc)**2)/dsqrt(fa(fba(ifc))))
-  end do
-  ! correct
-  e_sff = e_sff * 1.90D0 * feps
-
-  
-  !   ATOM FACE INTERACTION
-  !
-  e_af = 0.0D0
-  do ifc = 1,nf
-     do ia = 1,na
-        vect(:) = qpos(:,ifc) - r0(:,ia)
-        dist = dsqrt(sum(vect*vect))
-        do ig = 1,ng
-           CALL lib$erfr8(dist/rc(ig,ia), errfct)
-           e_af = e_af + (bigf(ifc) * q(ifc) * qmad(ig, ia) * errfct / dist) 
+!
+!     =======================================================================
+!     ==  FACE FACE  INTERACTION (INTER)
+!     =======================================================================
+      e_ff = 0.0D0
+      do ifc1 = 1,nf
+        do ifc2 = 1,nf
+          if (ifc1 /= ifc2) then
+            vect(:) = qpos(:,ifc1) - qpos(:,ifc2)
+            dist = dsqrt(sum(vect*vect))
+            e_ff = e_ff + (q(ifc1) * bigf(ifc1) * q(ifc2) * bigf(ifc2))/dist
+          end if
         end do
-     end do 
-  end do
-
-
-  !   FACE HARDNESS
-  !
-  K1 = 1.0D1
-  e_fh = 0.0D0
-  do ifc = 1,nf
-     e_fh = e_fh + k1 * (1.0D0 - bigf(ifc)) * (q(ifc)**2)
-  end do
-
-
+      end do
+      e_ff = e_ff * feps * 0.5D0
+!
+!     =======================================================================
+!     ==  FACE FACE INTERACTION (INTRA)
+!     =======================================================================
+      e_sff = 0.0D0
+      do ifc = 1,nf
+!blo     e_sff = e_sff + ((q(ifc)**2)/dsqrt(fa(fba(ifc))))
+        e_sff = e_sff + ((bigf(ifc)*q(ifc))**2/dsqrt(fa(fba(ifc))))
+      end do
+!blo      e_sff = e_sff * 1.90D0 * feps
+      e_sff = e_sff * 1.07d0*sqrt(4.d0*datan(1.d0)) * feps
+!  
+!     =======================================================================
+!     ==  ATOM FACE INTERACTION
+!     =======================================================================
+      e_af = 0.0D0
+      do ifc = 1,nf
+        do ia = 1,na
+          vect(:) = qpos(:,ifc) - r0(:,ia)
+          dist = dsqrt(sum(vect*vect))
+          do ig = 1,ng
+            CALL lib$erfr8(dist/rc(ig,ia), errfct)
+            e_af = e_af + (bigf(ifc) * q(ifc) * qmad(ig, ia) * errfct / dist) 
+          end do
+        end do 
+      end do
+!
+!     =======================================================================
+!     ==  FACE HARDNESS
+!     =======================================================================
+      K1 = 1.0D1
+      e_fh = 0.0D0
+      do ifc = 1,nf
+        e_fh = e_fh + k1 * (1.0D0 - bigf(ifc)) * (q(ifc)**2)
+      end do
+!
+!     =======================================================================
   !   SURFACE TENSION
-  !
+!     =======================================================================
   !   ----- THIS IS FITTED TO R(C)=3.32AU AND R(H)=2.17AU
 !hms   e_st = 0.0018276D0
 !hms   K_TENSION=4.6647D-6
-  e_st = 0.D0
-  K_TENSION = 0.D0
-  !
-  do ifc = 1,nf
-     e_st = e_st + k_tension * bigf(ifc) * fa(fba(ifc))
-  end do
+      e_st = 0.D0
+      K_TENSION = 0.D0
+      do ifc = 1,nf
+        e_st = e_st + k_tension * bigf(ifc) * fa(fba(ifc))
+      end do
       return
       end subroutine cont_calc_ener
 !

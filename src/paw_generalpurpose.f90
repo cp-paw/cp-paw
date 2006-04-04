@@ -928,7 +928,7 @@ CONTAINS
 END MODULE SORT_MODULE
 !
 !     ..................................................................
-      SUBROUTINE SORT$indexarray(lEN_,x,ind)
+      SUBROUTINE SORT$indexarray(lEN_,x,ind_)
 !     **                                                              **
 !     ** direct interface for heapsort                                **
 !     **    x(ind(i)) increases with inreasing i                      **
@@ -937,9 +937,9 @@ END MODULE SORT_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LEN_
       real(8)   ,intent(in) :: x(len_)
-      integer(4),intent(out):: ind(len_)
+      integer(4),intent(out):: ind_(len_)
 !     *******************************************************************
-      call HEAPSORT(LEN,x,IND)
+      call HEAPSORT(LEN_,x,IND_)
       return 
       end
 !

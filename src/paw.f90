@@ -346,7 +346,7 @@
 !     ******************************************************************      
 !     ******************************************************************      
       USE TIMESTEP_MODULE ,ONLY : DELTAT,ISTEPNUMBER,TNEWTHERMOSTAT
-      USE continuum_module,ONLY : continuum$setr8
+      USE CONTINUUM_MODULE,ONLY : CONTINUUM$SETR8
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: DELT   ! TIME STEP
       LOGICAL(4),INTENT(IN)   :: TPRINT ! ON/OFF SWITCH FOR LONG PRINTOUT
@@ -852,7 +852,7 @@ END MODULE STOPIT_MODULE
 !     **  PRINFO IS CALLED ONCE PER TIMESTEP                          ** 
 !     ******************************************************************
       USE CONTINUUM_MODULE
-!     USE CONTINUUM_CONTROL_MODULE!replaced by continuum_module in hms-continuum
+!     USE CONTINUUM_CONTROL_MODULE!REPLACED BY CONTINUUM_MODULE IN HMS-CONTINUUM
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TPRINT
       INTEGER(4),INTENT(IN) :: NFI
@@ -902,6 +902,8 @@ END MODULE STOPIT_MODULE
       INTEGER(4)            :: IMM_TEMP
       REAL(8)               :: MM_NOSE_ENERGY
       REAL(8)               :: MM_FRIC
+      LOGICAL(4)            :: TCOSMO
+      REAL(8)               :: EKINCOSMO,EPOTCOSMO
       CHARACTER(126):: NAME
 !     ******************************************************************
                               CALL TRACE$PUSH('PRINFO')
@@ -1031,6 +1033,14 @@ PRINT*,'ECELLKIN/POT ',ECELLKIN,ECELLPOT,ECELLKIN+ECELLPOT
           ECONS=ECONS+EKINQ
         END IF
 !
+        CALL COSMO$GETL4('ON',TCOSMO)
+        IF(TCOSMO) THEN
+          CALL ENERGYLIST$RETURN('COSMO KINETIC ENERGY',EKINCOSMO)
+          CALL ENERGYLIST$RETURN('COSMO POTENTIAL ENERGY',EPOTCOSMO)
+          ECONS=ECONS+EKINCOSMO+EPOTCOSMO
+          ETOT=ETOT+EPOTCOSMO
+        END IF
+!
 !       == EXTERNAL POTENTIAL============================================
         CALL ENERGYLIST$RETURN('EXTERNAL POTENTIAL',EEXT)
         ECONS=ECONS+EEXT
@@ -1049,6 +1059,11 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
      &                     //',F11.5,1X,D7.2,1X,D7.2,2F6.3)') &
      &               NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &              ,ESOLV,EKINQ,QFRIC,QTOT
+        ELSE IF (TCOSMO) THEN
+          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F8.5' &
+     &                     //',F11.5,1X,D7.2,1X,D7.2,2F6.3)') &
+     &               NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
+     &              ,EPOTCOSMO,EKINCOSMO
         ELSE IF(TQMMM) THEN
           CALL CONSTANTS('KB',CELVIN)
           CALL QMMM$GETI4('NAT:ENV',ISVAR)
@@ -1099,6 +1114,10 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
           CALL ENERGYLIST$PRINTONE(NFILO,'ELECTRONIC HEAT')
           CALL ENERGYLIST$PRINTONE(NFILO,'OCCUPATION KINETIC ENERGY')
           CALL ENERGYLIST$PRINTONE(NFILO,'EXTERNAL POTENTIAL')
+          IF(TCOSMO) THEN
+            CALL ENERGYLIST$PRINTONE(NFILO,'COSMO KINETIC ENERGY')
+            CALL ENERGYLIST$PRINTONE(NFILO,'COSMO POTENTIAL ENERGY')
+          END IF
           IF(TCONTINUUM) THEN
             WRITE(NFILO,*)'-----ELECTROSTATIC SOLVATION CONTRIBUTIONS-----'
             CALL ENERGYLIST$PRINTONE(NFILO,'INTER-TRIANGLE-POTENTIAL')
@@ -1185,7 +1204,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !
 !     ................................................................... 
       SUBROUTINE WRITETRAJECTORY(NFI,DELT)
-      USE continuum_module
+      USE CONTINUUM_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NFI
       REAL(8)   ,INTENT(IN)  :: DELT
