@@ -2,17 +2,17 @@
 # PARAMETER FILE FOR LINUX/INTEL
 #
 #________________________________architecture (arbitrary name)
-ARCH="ifc"
+ARCH="ifc7_peter"
 #
 #________________________________F90 compiler
-COMPILER="/opt/intel/compiler70/ia32/bin/ifc"
+COMPILER="ifc7"
 #
 #________________________________F77 compiler
-F77COMPILER="/opt/intel/compiler70/ia32/bin/ifc"
+F77COMPILER="ifc7"
 #
 #________________________________F90 compiler flags 
 
-FLAGS="-c -mp -I/yap/tools/paw_arch/libs/axel/fftw-2.1.5_o3_safefp/fortran/ -I/yap/tools/paw_arch/libs/mpich-1.2.5.2_SSH/include/"
+FLAGS="-c -mp -I/home/tools/fftw-2.1.5/fortran/ -I/home/tools/mpich-1.2.6/include/"
 
 
 #
@@ -20,10 +20,10 @@ FLAGS="-c -mp -I/yap/tools/paw_arch/libs/axel/fftw-2.1.5_o3_safefp/fortran/ -I/y
 F77FLAGS="-c -mp1 "
 #
 #________________________________F90 compiler optimization flags
-OPTIMIZE="-tpp7 -O3"
+OPTIMIZE="-tpp7 -C -d4"
 #
 #________________________________F77 compiler optimization flags
-F77OPTIMIZE="-axW -tpp7 -O3"
+F77OPTIMIZE="-axW -C -d4"
 #
 #________________________________F90 compiler debug flags
 DEBUG="-g -C -d4"
@@ -36,13 +36,13 @@ LFLAGS="-tpp7 -O3  "
 #
 #________________________________search directories for linking (sequential)
 
-LLINK="-L/yap/tools/paw_arch/libs/axel/fftw-2.1.5_o3_safefp/fftw/.libs/ -L/yap/tools/paw_arch/libs/axel/mkl72/lib/32/ -L/yap/tools/paw_arch/libs/"
+LLINK="-L/home/tools/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32/"
 
 #LLINK="-L/home/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32 "
 #
 #________________________________search directories for linking (parallel)
 
-PLLINK="-L/yap/tools/paw_arch/libs/axel/fftw-2.1.5_o3_safefp/fftw/.libs/ -L/yap/tools/paw_arch/libs/axel/mkl72/lib/32/ -L/yap/tools/paw_arch/libs/ -L/yap/tools/paw_arch/libs/mpich-1.2.5.2_SSH/lib/"
+PLLINK="-L/home/tools/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32/ -L/home/tools/mpich-1.2.6/lib/"
 
 #PLLINK="-L/home/cfoerst/ARCHIVE_PAW/libs/fftw-2.1.5/fftw/.libs/ -L/opt/intel/mkl72/lib/32 -L/home/cfoerst/ARCHIVE_PAW/libs/mpich-1.2.5/lib"
 #

@@ -299,6 +299,7 @@ END MODULE COSMO_MODULE
       TYPE (SEPARATOR_TYPE)              :: SEPARATOR
       INTEGER(4)                         :: NTASKS,THISTASK
 !     ***********************************************************************
+      if(.not.ton) return
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK=.NOT.START
       SEPARATOR=MYSEPARATOR
@@ -340,6 +341,7 @@ END MODULE COSMO_MODULE
       TYPE (SEPARATOR_TYPE)              :: SEPARATOR
       INTEGER(4)                         :: NTASKS,THISTASK
 !     ***********************************************************************
+      if(.not.ton) return
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK=.NOT.START
       SEPARATOR=MYSEPARATOR
