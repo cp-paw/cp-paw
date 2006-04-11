@@ -119,7 +119,7 @@
 !     ==================================================================
 !     ==  INITIALIZE ATOMIC SETUPS                                    ==
 !     ==================================================================
-      CALL SETUP$READ
+      CALL SETUP$READ()
 !
 !     ==================================================================
 !     ==  INITIALIZE ATOMS OBJECT                                     ==
@@ -942,6 +942,7 @@ END MODULE STOPIT_MODULE
 !     ==================================================================
                              CALL TRACE$PASS('WRITE HEADER')
       IF(THISTASK.EQ.1.AND.TFIRST) THEN
+        CALL COSMO$GETL4('ON',TCOSMO)
         IF(TQMMM) THEN
           WRITE(NFILO,FMT='()')
           WRITE(NFILO,FMT='(2X,A5,A9,1X,A4,1X,A9,2A11,2A6,3A10)') &
@@ -951,6 +952,11 @@ END MODULE STOPIT_MODULE
           WRITE(NFILO,FMT='(/5X,"NFI",3X,"TIME",1X,"TEMP",3X,"EKINC"'   &
      &                  //',5X,"E(RHO)",6X,"ECONS",1X,"ANNEE",1X,"ANNER",' &
      &                  //'"   E_MM  TEMP FRIC")')
+        ELSE IF (TCOSMO) THEN
+          WRITE(NFILO,FMT='()')
+          WRITE(NFILO,FMT='(2X,A5,A9,1X,A4,1X,A9,2A11,2A8,2A11)') &
+     &            'NFI','T[PSEC]','T[K]','EKIN(PSI)','E(RHO)','ECONS', &
+     &            'ANNEE','ANNER','COSMO-EPOT','COSMO-EKIN'
         ELSE
           WRITE(NFILO,FMT='()')
           WRITE(NFILO,FMT='(2X,A5,A9,1X,A4,1X,A9,2A11,2A8)') &
@@ -1061,7 +1067,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
      &              ,ESOLV,EKINQ,QFRIC,QTOT
         ELSE IF (TCOSMO) THEN
           WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F8.5' &
-     &                     //',F11.5,1X,D7.2,1X,D7.2,2F6.3)') &
+     &                     //',2F11.5)') &
      &               NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &              ,EPOTCOSMO,EKINCOSMO
         ELSE IF(TQMMM) THEN

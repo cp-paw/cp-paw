@@ -482,6 +482,8 @@ END MODULE SETUP_MODULE
         IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$i4val('len',len)
+          CALL ERROR$i4val('this%nc',this%nc)
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%FB,(/LEN/))
@@ -658,12 +660,12 @@ END MODULE SETUP_MODULE
       REAL(8)   ,ALLOCATABLE:: R(:)
       REAL(8)               :: SVAR
 !     ******************************************************************
-                            CALL TRACE$PUSH('SETUP$READ')
+                            CALL TRACE$PUSH('SETUP_READ')
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO SETUP SELECTED')
-        CALL ERROR$STOP('SETUP$READ')
+        CALL ERROR$STOP('SETUP_READ')
       END IF
 !
       CALL ATOMTYPELIST$NAME(THIS%I,THIS%ID)
@@ -1073,7 +1075,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       END
 !
 !     ..................................................................
-      SUBROUTINE SETUP$READ
+      SUBROUTINE SETUP$READ()
 !     ******************************************************************
 !     **  READ SETUP                                                  **
 !     ******************************************************************

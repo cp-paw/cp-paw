@@ -343,14 +343,9 @@ END MODULE COSMO_MODULE
 !     ***********************************************************************
       if(.not.ton) return
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-      TCHK=.NOT.START
-      SEPARATOR=MYSEPARATOR
-      IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
-      CALL MPE$BROADCAST('MONOMER',1,TCHK)
-      IF(.NOT.TCHK) RETURN
 !
 !     =======================================================================
-!     ==  READ CHARGES                                                     ==
+!     ==  write CHARGES                                                    ==
 !     =======================================================================
       IF(THISTASK.EQ.1) THEN
         CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
@@ -1624,14 +1619,26 @@ USE CONTINUUM_MODULE
       REAL(8)   ,ALLOCATABLE   :: VTHETA(:)
       REAL(8)   ,ALLOCATABLE   :: VTHETA1(:)
 !
-      REAL(8)                  :: EPOT,EPOT1
-      REAL(8)                  :: EKIN,EKIN1
+      REAL(8)                  :: EPOT,EPOT1,epotsum
+      REAL(8)                  :: EKIN,EKIN1,ekinsum
       INTEGER                  :: I,IAT,ITER,IQ1,IQ2
       REAL(8)                  :: RBAS(3,3)
       LOGICAL                  :: TCONVG
       REAL(8)                  :: SVAR
       INTEGER                  :: NITER
+
+      real(8)                  :: r01(3,nat_)
+      real(8)                  :: qmad1(ng,nat_)
+      real(8)                  :: teststep=1.d-3
+      integer  ,parameter      :: ntest=5
+      real(8)                  :: e(ntest)
+      real(8)                  :: f(ntest)
+      logical                  :: test=.true.
+      integer                  :: itest
 !     ***********************************************************************
+      etot=0.d0
+      vmad(:,:)=0.d0
+      force(:,:)=0.d0
       IF (.NOT.TON) RETURN
                                CALL TRACE$PUSH('CONTINUUM$PROPAGATE')
 PRINT*,'=============================== COSMO ============================='
@@ -1676,12 +1683,23 @@ PRINT*,'=============================== COSMO ============================='
         Q0(:)=0.D0
         QM(:)=0.D0
       END IF
+
+!     == keep input variables in separate arrays to enable testing
+      qmad1=qmad
+      r01=r0
 !
+!!$      do itest=1,ntest
+!!$        r01=r0
+!!$        qmad1=qmad
+!!$        if(test) then
+!!$          r01(1,1)=r01(1,1)+teststep*real(itest-1)
+!!$        end if
+!!$!
 !     =======================================================================
 !     == SETUP DATA THAT DEPEND ONLY ON POSITIONS BUT NOT THE CHARGES      ==
 !     =======================================================================
       ALLOCATE(RQ(3,NQ))
-      RAT(:,:)=R0(:,:)
+      RAT(:,:)=R01(:,:)
       DO IAT=1,NAT
         DO I=IQFIRST(IAT),IQFIRST(IAT)+NQAT(IAT)-1
           RQ(:,I)=QRELPOS(:,I)+RAT(:,IAT)
@@ -1706,23 +1724,25 @@ PRINT*,'NNN',NNN
       ALLOCATE(FQ1(3,NQ))
       ALLOCATE(VTHETA(NQ))
       ALLOCATE(VTHETA1(NQ))
+      ekinsum=0.d0
+      epotsum=0.d0
       DO ITER=1,NITER
         VQ(:)=0.D0
-!        IF(.NOT.TMULTIPLE.OR.ITER.EQ.1) THEN
-          EPOT=0.D0
-          EKIN=0.D0
+        EPOT=0.D0
+        EKIN=0.D0
+        IF(.NOT.TMULTIPLE.OR.ITER.EQ.1) THEN
           VAT(:)=0.D0
           VTHETA(:)=0.D0
           FAT(:,:)=0.D0
           VMAD(:,:)=0.D0
-!        END IF
+        END IF
 !
 !       =======================================================================
 !       == BIG ELECTROSTATIC DOUBLE SUM                                      ==
 !       =======================================================================
         QBAR(:)=Q0(:)*THETA(:)
         DO IAT=1,NAT
-          QATBAR(IAT)=FDIEL*SUM(QMAD(:,IAT))
+          QATBAR(IAT)=FDIEL*SUM(QMAD1(:,IAT))
         ENDDO 
         CALL COSMO_LONGRANGE(TISO,RBAS,NQ,NAT,dismin,ZEROTHETA,QBAR,RQ,QATBAR,RAT &
      &                      ,EPOT1,VQ1,FQ1,VAT1,FAT1)
@@ -1758,7 +1778,7 @@ PRINT*,'NNN',NNN
 !       == DENSITY SURFACE INTERACTION                                       ==
 !       =======================================================================
         CALL COSMO_SHORTRANGED(NQ,NAT,NG,NNX,NNN,NNLIST,RBAS,IQFIRST,NQAT,ZEROTHETA &
-     &                      ,EPOT1,QBAR,VQ1,QRELPOS,RAT,FAT1,RC,QMAD,VMAD1)
+     &                      ,EPOT1,QBAR,VQ1,QRELPOS,RAT,FAT1,RC,QMAD1,VMAD1)
         EPOT=EPOT+EPOT1
         VQ(:)=VQ(:)+VQ1(:)*THETA(:)
         VTHETA=VTHETA(:)+VQ1(:)*Q0(:)
@@ -1794,9 +1814,13 @@ PRINT*,'NNN',NNN
         CALL COSMO_EKIN(DT,QMASS,NQ,QP,Q0,QM,EKIN1)
         EKIN=EKIN+EKIN1
 WRITE(*,FMT='(I5,3F20.10)')ITER,EKIN,EPOT,EKIN+EPOT
-EKIN=0.D0
-EPOT=0.D0
         CALL COSMO_SWITCH(NQ,QP,Q0,QM)
+        if(tmultiple) then
+          ekinsum=ekinsum+ekin
+          epotsum=epotsum+epot
+          ekin=0.d0
+          epot=0.d0
+         end if
       ENDDO
       IF(TADIABATIC.AND.(.NOT.TCONVG)) THEN
         CALL ERROR$MSG('LOOP NOT CONVERGED')
@@ -1808,11 +1832,15 @@ EPOT=0.D0
 !     =======================================================================
       IF(TMULTIPLE) THEN
         SVAR=1.D0/REAL(NMULTIPLE)
-        EKIN=EKIN*SVAR
-        EPOT=EPOT*SVAR
+        EKIN=EKINsum*SVAR
+        EPOT=EPOTsum*SVAR
         FORCE(:,:)=FAT(:,:)*SVAR
         VMAD(:,:)=VMAD(:,:)*SVAR
       END IF
+      if(tadiabatic) then
+        force(:,:)=fat(:,:)
+      end if
+
 !
 !     =======================================================================
 !     ==  report energies                                                  ==
@@ -1833,6 +1861,19 @@ EPOT=0.D0
       DEALLOCATE(ZEROTHETA)
       DEALLOCATE(THETA)
       DEALLOCATE(RQ)
+
+
+!!$        if(test) then
+!!$          e(itest)=epot
+!!$          f(itest)=force(1,1)
+!!$        end if
+!!$      enddo
+!!$      print*,0.d0,f(1)
+!!$      do i=2,ntest
+!!$        print*,i,(e(i)-e(1))/teststep/real(i-1)
+!!$      enddo
+!!$      stop
+
                           CALL TIMING$CLOCKOFF('CONT: PROPAGATE')
                           CALL TRACE$POP
       RETURN 

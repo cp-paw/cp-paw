@@ -264,6 +264,7 @@ END MODULE AUGMENTATION_MODULE
       LOGICAL(4)              :: TBACK,TSPIN
       REAL(8)                 :: DETOT,PSEHARTREE,AEEHARTREE,COREEXC
       REAL(8)                 :: EKINNL,ENL,AEEXC,PSEXC,HAMUP,HAMDWN
+      real(8)                 :: decore
       CHARACTER(32)           :: ATOM
       REAL(8)                 :: VQLM1(LMRX)
       REAL(8)                 :: QLM(LMRX)
@@ -360,8 +361,8 @@ print*,'new sphere'
 !     ==  NEW SOFT CORE                                             ==
 !     ================================================================
       IF(TSOFTCORE) THEN
-        CALL AUGMENTATION_NEWSOFTCORE(GID,NR,AEZ,AERHO(:,1,1),AECORE &
-     &                               ,lmrx,lmnx,denmat(:,:,1),vqlm1,rhob)
+        CALL AUGMENTATION_NEWSOFTCORE(GID,NR,lmrx,ndimd,AEZ,AERHO,AECORE &
+     &                               ,lmnx,denmat,vqlm1,rhob,decore)
       END IF
 !
 !     =================================================================
@@ -412,6 +413,7 @@ print*,'new sphere'
       CALL AUGMENTATION_ADD('AE1 EXCHANGE-CORRELATION',AEEXC)
       CALL AUGMENTATION_ADD('PS1 EXCHANGE-CORRELATION',PSEXC)
       CALL AUGMENTATION_ADD('AE1 ELECTROSTATIC',AEEHARTREE)
+      CALL AUGMENTATION_ADD('AE1 ELECTROSTATIC',decore)
       CALL AUGMENTATION_ADD('PS1 ELECTROSTATIC',PSEHARTREE)
 !
 !     =================================================================
@@ -584,23 +586,25 @@ STOP
       END
 !
 !     ..................................................................
-      SUBROUTINE AUGMENTATION_NEWSOFTCORE(GID,NR,AEZ,AERHO,AECORE &
-     &                                   ,LMRX,LMNX,DENMAT,VQLM,RHOB)        
+      SUBROUTINE AUGMENTATION_NEWSOFTCORE(GID,NR,lmrx,ndimd,AEZ,AERHO,AECORE &
+     &                                   ,LMNX,DENMAT,VQLM,RHOB,decore)        
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
-      REAL(8)   ,INTENT(IN) :: AEZ
-      REAL(8)   ,INTENT(IN) :: AERHO(NR)
-      REAL(8)   ,INTENT(IN) :: AECORE(NR)
       INTEGER(4),INTENT(IN) :: LMRX
+      INTEGER(4),INTENT(IN) :: ndimd
+      REAL(8)   ,INTENT(IN) :: AEZ
+      REAL(8)   ,INTENT(INout):: AERHO(NR,lmrx,ndimd)
+      REAL(8)   ,INTENT(IN) :: AECORE(NR)
       INTEGER(4),INTENT(IN) :: LMNX
-      REAL(8)   ,INTENT(IN) :: DENMAT(LMNX,LMNX)
+      REAL(8)   ,INTENT(IN) :: DENMAT(LMNX,LMNX,ndimd)
       REAL(8)   ,INTENT(IN) :: VQLM(LMRX)
       REAL(8)   ,INTENT(IN) :: RHOB
+      REAL(8)   ,INTENT(out):: decore
       REAL(8)               :: AEHPOT(NR,LMRX)
-      REAL(8)               :: AEXCPOT(NR,LMRX)
-      REAL(8)               :: POTNS(NR,LMRX)
-      REAL(8)               :: RHONS(NR,LMRX)
+      REAL(8)               :: AEXCPOT(NR,LMRX,ndimd)
+      REAL(8)               :: POTNS(NR,LMRX,ndimd)
+      REAL(8)               :: RHONS(NR,LMRX,ndimd)
       REAL(8)               :: PI,Y0,C0LL
       REAL(8)               :: R(NR)
       LOGICAL(4)            :: CONVG
@@ -609,7 +613,7 @@ STOP
       REAL(8)               :: AEPOT(NR)
       REAL(8)               :: POTIN(NR)
       REAL(8)               :: AUX(NR)
-      REAL(8)               :: EH,EXC,DECORE,AEEHARTREE
+      REAL(8)               :: EH,EXC,AEEHARTREE
       REAL(8)   ,ALLOCATABLE:: FOFI(:)      
       REAL(8)   ,ALLOCATABLE:: EOFI(:)      
       INTEGER(4),ALLOCATABLE:: LOFI(:)      
@@ -620,19 +624,29 @@ STOP
       REAL(8)   ,ALLOCATABLE:: UPHI(:,:)
       REAL(8)   ,ALLOCATABLE:: TUPHI(:,:)
       REAL(8)               :: XMAX
-      REAL(8)               :: SVAR
+      REAL(8)               :: SVAR,svar1
       INTEGER(4)            :: ITER,I,J,IB
       INTEGER(4),PARAMETER  :: NITER=2000
       REAL(8)   ,PARAMETER  :: TOL=1.D-4
-      INTEGER(4)            :: NDIMD=1
       INTEGER(4)            :: NC
       REAL(8)               :: ECORE,ECOREAT
+      REAL(8)               :: Ekinc,Ekincat
       REAL(8)   ,ALLOCATABLE:: PHIC(:,:)
       REAL(8)   ,ALLOCATABLE:: TPHIC(:,:)
+      REAL(8)   ,ALLOCATABLE:: PHICat(:,:)
+      REAL(8)   ,ALLOCATABLE:: TPHICat(:,:)
       REAL(8)   ,ALLOCATABLE:: AEPHI(:,:)
+      REAL(8)   ,ALLOCATABLE:: TAEPHIat(:,:)
+      REAL(8)   ,ALLOCATABLE:: AEPHIat(:,:)
       REAL(8)   ,ALLOCATABLE:: TAEPHI(:,:)
       REAL(8)               :: RHOOLD
-      INTEGER(4)            :: LN,IC
+      INTEGER(4)            :: LN,IC,ln1,ln2,lmn1,lmn2,im,l1,l2
+      logical(4)            :: tspherical=.false.
+      integer(4)            :: nspin
+      real(8)               :: drel(nr)
+      real(8)   ,allocatable:: phitest(:,:,:,:)
+      real(8)               :: g(nr,lmrx)
+      real(8)               :: e(nr,lmrx)
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -643,6 +657,10 @@ STOP
 !     == COLLECT DATA FROM SETUP OBJECT                             ==
 !     ================================================================
       CALL SETUP$GETI4('NC',NC)
+!     ==  return if there is no core (i.e. hydrogen, Helium
+      if(nc.eq.0)Print*,'return from softcore because nc=0 ',nc,aez      
+      if(nc.eq.0) return
+!
       ALLOCATE(EOFI(NC))
       ALLOCATE(LOFI(NC))
       ALLOCATE(SOFI(NC))
@@ -650,6 +668,8 @@ STOP
       ALLOCATE(NNOFI(NC))
       ALLOCATE(PHIC(NR,NC))
       ALLOCATE(TPHIC(NR,NC))
+      ALLOCATE(PHICat(NR,NC))
+      ALLOCATE(TPHICat(NR,NC))
       CALL SETUP$GETR8A('FOFC',NC,FOFI)
       CALL SETUP$GETR8A('EOFC',NC,EOFI)
       CALL SETUP$GETI4A('LOFC',NC,LOFI)
@@ -666,8 +686,8 @@ STOP
 !     == CALCULATE ATOMIC CORE ENERGY                               ==
 !     ================================================================
       POT=AEPOT
-      CALL SF_AERHO(GID,NR,NC,LOFI,SOFI,FOFI,NNOFI,POT,RHO,EOFI,PHIC,TPHIC)
-      CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,POT,RHO,ECOREAT,AUX)
+      CALL SF_AERHO(GID,NR,NC,LOFI,SOFI,FOFI,NNOFI,POT,RHO,EOFI,PHICat,TPHICat)
+      CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,POT,RHO,ECOREAT,ekincat,AUX)
 PRINT*,'===============ATOMIC CORE========================='
 DO IB=1,NC
   PRINT*,'L,E ',LOFI(IB),EOFI(IB)
@@ -695,7 +715,7 @@ ENDDO
 !       == CALCULATE OUTPUT POTENTIAL                                     ==
 !       ====================================================================
         POTIN=POT
-        CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,AUX,RHO+AERHO,SVAR,POT)
+        CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,AUX,RHO+AERHO(:,1,1),SVAR,svar1,POT)
 !       == DO NOT FORGET THE EXTERNAL POTENTIAL AND THE BACKGROUND !!
         SVAR=AEPOT(NR)-POT(NR)
         POT=POT+SVAR
@@ -716,7 +736,7 @@ ENDDO
 !     ================================================================
 !     ==  NOW CALCULATE TOTAL ENERGY IN SPHERICAL POTENTIAL         ==
 !     ================================================================
-      CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,POT,RHO,ECORE,AUX)
+      CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,POT,RHO,ECORE,ekinc,AUX)
       DECORE=ECORE-ECOREAT   ! CORE RELAXATION ENERGY
 !
 PRINT*,'===============SCF CORE========================='
@@ -745,40 +765,119 @@ PRINT*,'CORE RELAXATION ENERGY ENERGY ',DECORE
 !     ==  EFFECTS. THEY ARE NOT TREATED PROPERLY....
       ALLOCATE(AEPHI(NR,LNX))
       ALLOCATE(TAEPHI(NR,LNX))
+      ALLOCATE(AEPHIat(NR,LNX))
+      ALLOCATE(TAEPHIat(NR,LNX))
       AEPHI=UPHI
       TAEPHI=TUPHI
+      AEPHIat=UPHI
+      TAEPHIat=TUPHI
       DO LN=1,LNX
         DO IC=1,NC
           IF(LOX(LN).NE.LOFI(IC)) CYCLE
-          AUX(:)=UPHI(:,LN)*PHIC(:,IC)*R(:)**2
+          AUX(:)=aePHI(:,LN)*PHICat(:,IC)*R(:)**2
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-          UPHI(:,LN)=UPHI(:,LN)-PHIC(:,IC)*SVAR
-          TUPHI(:,LN)=TUPHI(:,LN)-TPHIC(:,IC)*SVAR
+          aePHIat(:,LN)=aePHIat(:,LN)-PHICat(:,IC)*SVAR
+          TaePHIat(:,LN)=TaePHIat(:,LN)-TPHICat(:,IC)*SVAR
+!
+          AUX(:)=aePHI(:,LN)*PHIC(:,IC)*R(:)**2
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+          aePHI(:,LN)=aePHI(:,LN)-PHIC(:,IC)*SVAR
+          TaePHI(:,LN)=TaePHI(:,LN)-TPHIC(:,IC)*SVAR
         ENDDO
       ENDDO  
+!
+!     ===============================================================
+!     == determine new valence and core density                    ==
+!     ===============================================================
       CALL AUGMENTATION_RHO(NR,LNX,LOX,AEPHI,LMNX,DENMAT,LMRX,RHONS)
-      RHONS(:,1)=RHONS(:,1)+RHO(:)
+      RHONS(:,1,1)=RHONS(:,1,1)+RHO(:)
+!
+!     ===============================================================
+!     == return if only spherical core is required                 ==
+!     ===============================================================
+      if(tspherical) then
+        decore=ekinc-ekincat
+        lmn1=0
+        do ln1=1,lnx
+          l1=lox(ln1)
+          lmn2=0
+          do ln2=1,lnx
+            l2=lox(ln2)
+            if(l2.eq.l1) then
+              aux(:)=(aephi(:,ln1)*taephi(:,ln2)-aephiat(:,ln1)*taephiat(:,ln2))*r(:)**2
+              call radial$integral(gid,nr,aux,svar)
+              do im=1,2*l1+1
+                decore=decore+svar*denmat(lmn1+im,lmn2+im,1)
+              enddo
+            end if
+            lmn2=lmn2+2*l2+1
+          enddo
+          lmn1=lmn1+2*l1+1
+        enddo
+        aerho(:,:,:)=rhons(:,:,:)
+        aerho(:,1,1)=aerho(:,1,1)-aecore(:)
+        DEALLOCATE(aephiat)
+        DEALLOCATE(taephiat)
+        DEALLOCATE(aephi)
+        DEALLOCATE(taephi)
+        DEALLOCATE(LOX)
+        DEALLOCATE(UPHI)
+        DEALLOCATE(TUPHI)
+        DEALLOCATE(EOFI)
+        DEALLOCATE(LOFI)
+        DEALLOCATE(SOFI)
+        DEALLOCATE(FOFI)
+        DEALLOCATE(NNOFI)
+        DEALLOCATE(PHIC)
+        DEALLOCATE(TPHIC)
+print*,'back from soft core'
+        return
+      end if 
       DEALLOCATE(AEPHI)
       DEALLOCATE(TAEPHI)
+!
+!     ===============================================================
+!     == calculate non-spherical potential                         ==
+!     ===============================================================
+PRINT*,'SPHERICAL PART OF SOFTCORE FINISHED. nOW NONSPHERICAL PART...'
       AUX(:)=0.D0  ! CORE IS SET TO ZERO, DENSITY CONTAINS CORE
       CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AUX,RHONS &
      &                            ,VQLM,RHOB,AEHPOT,AEEHARTREE)
-!     == SPIN SWITCHED OFF      
-      CALL AUGMENTATION_XC(GID,NR,LMRX,1,AUX,RHONS,AEXCPOT)
-      POTNS=AEHPOT+AEXCPOT
+      CALL AUGMENTATION_XC(GID,NR,LMRX,ndimd,AUX,RHONS,AEXCPOT)
+      potns(:,:,:)=aexcpot(:,:,:)
+      potns(:,:,1)=potns(:,:,1)+aehpot(:,:)
+!
+nspin=1
+g(:,:)=0.d0
+ib=1
+print*,'eofi ',ib,eofi(ib)
+CALL RELATIVISTICCORRECTION(GID,NR,POTns(:,1,1),Eofi(IB),DREL)
+allocate(phitest(nr,lmrx,nspin,lmrx*nspin))
+call RADIAL$nonsphbound(GID,NR,nspin,lmrx,POTns,dREL,G,Eofi(ib),PHItest)
+stop 'after nonsphbound'
+
 !
 !     ===============================================================
 !     == SELF-CONSISTENT NONSPHERICAL CORE/VALENCE                 ==
+!     == SPHERICAL SOFT CORE STATES ARE USED AS BASIS FUNCTIONS    ==
 !     ===============================================================
       DO ITER=1,100
+PRINT*,'BEFORE SF_DO',ITER
         CALL SF_DO(GID,NR,LNX,LOX,UPHI,LMNX,DENMAT,LMRX,POTNS &
      &                ,NC,LOFI,PHIC,TPHIC,2.D0,RHONS)
+PRINT*,'AFTER SF_DO',ITER
         AUX(:)=0.D0  ! CORE IS SET TO ZERO, DENSITY CONTAINS CORE
         CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AUX,RHONS &
      &                              ,VQLM,RHOB,AEHPOT,AEEHARTREE)
 !       == SPIN SWITCHED OFF      
-        CALL AUGMENTATION_XC(GID,NR,LMRX,1,AUX,RHONS,AEXCPOT)
-        POTNS=AEHPOT+AEXCPOT
+        CALL AUGMENTATION_XC(GID,NR,LMRX,ndimd,AUX,RHONS,AEXCPOT)
+        potns(:,:,:)=aexcpot(:,:,:)
+        potns(:,:,1)=potns(:,:,1)+aehpot(:,:)
+!
+!       == update basis functions ====================================       
+!        call sf_updatebasis(gid,nr,ng,nc,nphi,lmrx,lmofg,g,tg &
+!     &                         ,lmofphi,uphi,tuphi &
+!     &                         ,theta,q,f,ug,uhg,ghg,drel,pot)
       ENDDO
 PRINT*,'MARKE AFTER SF_DO'
       DEALLOCATE(LOX)
@@ -792,11 +891,112 @@ PRINT*,'MARKE AFTER SF_DO'
       DEALLOCATE(PHIC)
       DEALLOCATE(TPHIC)
 PRINT*,'DONE'
+stop
       RETURN
       END
 !
 !     ....................................................................
-      SUBROUTINE SF_SPHERICALCOREETOT(GID,NR,NB,E,F,POTIN,RHO,ETOT,POTOUT)
+      subroutine sf_updatebasis(gid,nr,ng,nc,nphi,lmrx,lmofg,g,tg &
+     &                         ,lmofphi,uphi,tuphi &
+     &                         ,theta,q,f,ug,uhg,ghg,drel,pot)
+      implicit none
+      integer(4),intent(in) :: gid
+      integer(4),intent(in) :: nr
+      integer(4),intent(in) :: ng
+      integer(4),intent(in) :: nc
+      integer(4),intent(in) :: nphi
+      integer(4),intent(in) :: lmrx
+      integer(4),intent(in) :: lmofphi(nphi)
+      real(8)   ,intent(in) :: uphi(nr,nphi)
+      real(8)   ,intent(in) :: tuphi(nr,nphi)
+      integer(4),intent(in) :: lmofg(ng)
+      real(8)   ,intent(in) :: g(nr,ng)
+      real(8)   ,intent(in) :: tg(nr,ng)
+      real(8)   ,intent(in) :: q(ng,nc)
+      real(8)   ,intent(in) :: theta(nphi,nphi)
+      real(8)   ,intent(in) :: f
+      real(8)   ,intent(in) :: ug(nphi,ng)   !C
+      real(8)   ,intent(in) :: ghg(ng,ng)    !A
+      real(8)   ,intent(in) :: uhg(nphi,ng)    !D
+      real(8)   ,intent(in) :: drel(nr)    
+      real(8)   ,intent(in) :: pot(nr,lmrx)    
+      real(8)               :: cq(nphi,nc)
+      real(8)               :: thetacq(nphi,nc)
+      real(8)               :: qqplus(ng,ng)
+      real(8)               :: matc(nc,nc)
+      real(8)               :: matg(ng,ng)
+      real(8)               :: matgin(ng,ng)
+      real(8)               :: pre1(nphi,ng)
+      real(8)               :: pre2(nphi,ng)
+      real(8)               :: ginh(nr,ng)
+      real(8)   ,allocatable:: huphi(:,:,:)
+      real(8)               :: gnew(nr,ng)
+      real(8)               :: aux(nr)
+      integer(4)            :: lmx
+      integer(4)            :: lx
+      integer(4)            :: i,j,lm1,lm2,lm3,lm,l,nn
+      real(8)               :: e
+      real(8)               :: so
+      real(8)               :: cg    !gaunt coefficient
+!     ********************************************************************
+      cq=matmul(ug,q)
+      thetacq=matmul(theta,cq)
+      qqplus=matmul(q,transpose(q))
+      matc=matmul(transpose(cq),thetacq)
+      do i=1,nc
+        matc(i,i)=matc(i,i)+f
+      enddo
+      matg=matmul(q,matmul(matc,transpose(q)))
+      call lib$invertr8(ng,matg,matgin)
+!
+      pre1=matmul(matmul(thetacq,transpose(q)),matgin)
+      pre2=matmul(theta,uhg)-matmul(thetacq,matmul(transpose(q),ghg))
+      pre2=matmul(pre2,qqplus)
+      pre2=matmul(pre2,matgin)
+!
+!     =======================================================================
+!     ==  (t+v-e)|g> = (t+v)|u>*pre1 + |u>*pre2
+!     =======================================================================
+      lmx=maxval(lmofg)
+      ALLOCATE(huphi(nr,LMX,nphi))
+      HUPHI(:,:,:)=0.D0
+      DO I=1,NPHI
+        HUPHI(:,LMOFPHI(I),I)=TUPHI(:,I)
+        DO LM2=1,LMRX
+          AUX(:)=POT(:,LM2)*UPHI(:,I)
+          DO LM3=1,LMX
+            CALL CLEBSCH(LM1,LM2,LM3,CG)
+            IF(CG.EQ.0.D0) CYCLE
+            HUPHI(:,LM3,I)=HUPHI(:,LM3,I)+CG*AUX(:)
+          ENDDO
+        ENDDO
+      ENDDO
+!
+      DO I=1,NG
+        LM=LMOFG(I)
+        GINH(:,I)=GINH(:,I)+matmul(HUPHI(:,LM,:),PRE1(:,i))
+        do j=1,nphi
+          if(lmofphi(j).ne.lm) cycle
+          GINH(:,I)=GINH(:,I)+uphi(:,j)*pre2(j,i)
+        enddo
+      enddo
+      deallocate(huphi)
+!
+!     =======================================================================
+!     ==  (t+v-e)|g> = ginh
+!     =======================================================================
+      do i=1,ng
+        so=0.d0
+        nn=0 !????
+        l=int(sqrt(real(lmofg(i)-1))+0.1d0)
+        CALL BOUNDSTATE(GID,NR,L,SO,DREL,ginh(:,i),NN,POT(:,1),E,gnew(:,i))
+      enddo    
+!
+      return
+      end
+!
+!     ....................................................................
+      SUBROUTINE SF_SPHERICALCOREETOT(GID,NR,NB,E,F,POTIN,RHO,ETOT,ekin,POTOUT)
 !     **                                                                **
 !     ** CALCULATES ENERGY OF A SPHERICAL-NON-SPIN-POLARIZED ATOM       **
 !     ** FOR GIVEN ENERGY EIGENVALUES, INPUT POTENTIAL AND DENSITY      **
@@ -812,6 +1012,7 @@ PRINT*,'DONE'
       REAL(8)   ,INTENT(IN) :: POTIN(NR)
       REAL(8)   ,INTENT(IN) :: RHO(NR)
       REAL(8)   ,INTENT(OUT):: ETOT
+      REAL(8)   ,INTENT(OUT):: Ekin
       REAL(8)   ,INTENT(OUT):: POTOUT(NR)
       REAL(8)               :: AUX(NR)
       REAL(8)               :: potnuc(NR)
@@ -828,6 +1029,9 @@ PRINT*,'DONE'
       AUX(:)=(-POTIN+POTNUC(:)+0.5D0*AUX(:))*RHO(:)*R(:)**2
       CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
       ETOT=SUM(E*F)+EXC+SVAR
+      AUX(:)=POTIN*RHO(:)*R(:)**2
+      CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+      ekin=SUM(E*F)-svar
       RETURN
       END
 !
@@ -1422,15 +1626,17 @@ enddo
          REAL(8)   ,ALLOCATABLE :: UHG(:,:)
          REAL(8)   ,ALLOCATABLE :: Q(:,:)
          integer(4)             :: i,j
+         real(8)   ,allocatable :: eig(:)
 real(8) :: aux(nr),svar,r(nr)
 real(8),allocatable :: mat(:,:)
 !        ***********************************************************************
+!        EXPANDS THE U FUNCTION INTO AN ARRAY (NR,NPHI)
          CALL SF_EXPAND(NR,LNX,LOX,NPHI,UPHI,LMOFPHI,U)
 !
 !        =======================================================================
 !        ==  use core states as basis functions g                             ==
 !        =======================================================================
-         NG=SUM(2.D0*LOXCORE(:)+1.D0)
+         NG=SUM(2.D0*LOXCORE(:)+1.D0) ! #(CORE WAVE FUNCTIONS) NO SPIN YET
          NC=NG
          ALLOCATE(LMOFG(NG))
          ALLOCATE(G(NR,Ng))
@@ -1464,7 +1670,20 @@ real(8),allocatable :: mat(:,:)
 !print*,'uhg ',ng,nphi,uhg
 !print*,'gg  ',ng,gg
 !print*,'ghg ',ng,ghg
-
+print*,'lmrx',lmrx
+print*,'ng',ng
+         allocate(eig(ng))
+         ALLOCATE(q(NG,Ng))
+         call lib$generaleigenvaluer8(ng,ghg,gg,eig,q)
+         print*,'nonspherical eigenvalues'
+         do i=1,ng
+           print*,i,eig(i)
+         enddo
+!         do i=1,ng
+!           write(*,fmt='(i3,10f10.3/10f10.3/10f10.3/10f10.3)')i,q(:,i)
+!         enddo
+         deallocate(eig)
+         deallocate(q)
 !
 !        =======================================================================
 !        ==  determine expansion coefficients for core states                 ==
@@ -1486,7 +1705,7 @@ real(8),allocatable :: mat(:,:)
 !!$    end if
 !!$  enddo
 !!$enddo
-
+!
          CALL SF_ITERATE(NPHI,NG,NC,GG,GHG,UG,UHG,THETA,F,Q)
 !
 !        =======================================================================
@@ -1576,8 +1795,10 @@ real(8),allocatable :: mat(:,:)
 !
 !        ........................................................................
          SUBROUTINE SF_EXPAND(NR,LNX,LOX,LMNX,UPHI,LMOFPHI,U)
-!        ** TAKES UPHI STORED WITH ARGUMENT LN AND MAKES THE CORRESPONDING
-!        ** FUNCTION WITH ARGUMENT LMN
+!        **                                                                    **
+!        ** TAKES UPHI STORED WITH ARGUMENT LN AND MAKES THE CORRESPONDING     **
+!        ** FUNCTION WITH ARGUMENT LMN                                         **
+!        **                                                                    **
          IMPLICIT NONE
          INTEGER(4),INTENT(IN)  :: NR
          INTEGER(4),INTENT(IN)  :: LNX
@@ -1627,6 +1848,7 @@ real(8),allocatable :: mat(:,:)
          REAL(8)                :: CG
          INTEGER(4)             :: I,J
          INTEGER(4)             :: LM1,LM2,LM3,LMX1
+ real(8) :: e(ng),vec(ng,ng)
 !        ******************************************************************
          CALL RADIAL$R(GID,NR,R)
          gg(:,:)=0.d0
@@ -1673,12 +1895,14 @@ real(8),allocatable :: mat(:,:)
            LM1=LMOFG(I)
            LMX1=MAX(MAXVAL(LMOFG(1:I)),MAXVAL(LMOFPHI))
            DO LM2=1,LMX1
+!            == determine lm2 component of v|g>
              VG(:)=0.D0
              DO LM3=1,LMX
                CALL CLEBSCH(LM1,LM2,LM3,CG)
-               VG(:)=VG(:)+POT(:,LM2)*G(:,I) 
+               VG(:)=VG(:)+POT(:,LM3)*cg
              ENDDO
-             VG(:)=VG(:)*R(:)**2
+             VG(:)=VG(:)*R(:)**2*G(:,I) 
+!            == now work out all matrix elements with lm2 on the left side
              DO J=1,I
                IF(LMOFG(J).NE.LM2) CYCLE
                AUX(:)=G(:,J)*VG(:)
@@ -1694,11 +1918,28 @@ real(8),allocatable :: mat(:,:)
              ENDDO
            ENDDO
          ENDDO
+!
+!        ==================================================================
+!        == Print                                                        ==
+!        ==================================================================
+
+!!$print*,'gg',lmx
+!!$         do i=1,ng
+!!$           write(*,fmt='(i5,33f10.3)')i,gg(i,:)
+!!$         enddo
+!!$print*,'ghg'
+!!$         do i=1,ng
+!!$           write(*,fmt='(i5,33f10.3)')i,ghg(i,:)
+!!$         enddo
          RETURN
          END
 !
 !        ..................................................................
          SUBROUTINE SF_ITERATE(NPHI,NG,NC,GG,GHG,UG,UHG,THETA,F,Q)
+!        **                                                              **
+!        **  FOR A GIVEN BASIS SET FOR THE CORE FUNCTIONS, DETERMIN THE  **
+!        **  EXPANSION COEFFICIENTS q                                    **
+!        **                                                              **
          IMPLICIT NONE
          INTEGER(4),INTENT(IN)   :: NPHI
          INTEGER(4),INTENT(IN)   :: NG
@@ -1712,7 +1953,7 @@ real(8),allocatable :: mat(:,:)
          REAL(8)   ,INTENT(INOUT):: Q(NG,NC)
          INTEGER(4),PARAMETER    :: NITER=100
          REAL(8)   ,PARAMETER    :: ALPHAMIX=1.D-2
-         REAL(8)   ,PARAMETER    :: TOL=1.D-6
+         REAL(8)   ,PARAMETER    :: TOL=1.D-8
          INTEGER(4)              :: ITER
          REAL(8)                 :: E1,E2
          REAL(8)                 :: DEDQ1(NG,NC)
@@ -1723,7 +1964,6 @@ real(8),allocatable :: mat(:,:)
 REAL(8)                 :: DEDQsave(NG,NC)
 integer(4)              :: i
 !        ******************************************************************
-!rint*,'marke iterate'
          DO ITER=1,NITER
            CALL SF_ORTHO(NG,NC,GG,Q)
            CALL SF_FORCE(NPHI,NG,NC,GG,GHG,UG,UHG,THETA,F &
@@ -1734,8 +1974,8 @@ else
 !  dedq1=dedqsave
 end if
            SVAR1=SUM(DEDQ1*DEDQ1)
-           IF(SQRT(SVAR1/REAL(NC)).le.TOL) then
-             print*,'sf iterate converged after ',iter,' iterations'
+           IF(SQRT(SVAR1).le.TOL) then
+             print*,'sf iterate converged after ',iter,' iterations (',SVAR1,')'
              return
            end if
            Q2=Q-ALPHAMIX*DEDQ1
@@ -1743,7 +1983,7 @@ end if
            CALL SF_FORCE(NPHI,NG,NC,GG,GHG,UG,UHG,THETA,F &
         &                      ,Q2,E2,DEDQ2)
            SVAR2=SUM(DEDQ1*DEDQ2)
-!print*,'e ',e1,e1-alphamix*svar1,e2,e2+alphamix*svar2
+print*,'e ',ITER,e1,e1-alphamix*svar1,e2,e2+alphamix*svar2
            ALPHANEU=ALPHAMIX*SVAR1/(SVAR2-SVAR1)
            Q=Q-ALPHANEU*DEDQ1
          END DO
@@ -1783,11 +2023,16 @@ end if
              MAT(I,I)=MAT(I,I)-1.D0
            ENDDO
            svar=MAXVAL(ABS(MAT))
-           IF(svar.LT.TOL) RETURN
+print*,'sf_ortho iter ',iter,svar
+           IF(svar.LT.TOL) then
+             if(.not.(svar.lt.tol.or.svar.ge.tol)) exit ! catch no-numbers
+             RETURN
+           end if
            Q=Q-MATMUL(BQ,MAT)
          ENDDO
 !
 !        == loop not converged; provide details ==============================
+print*,'nc ',nc
 do i=1,nc
   do j=1,i
     if(abs(mat(i,j)).gt.tol.or.abs(mat(j,i)).gt.tol) then
@@ -2955,7 +3200,7 @@ TYPE EXTPOT
   CHARACTER(LEN=32):: ATOM
   REAL(8)          :: RC  
   REAL(8)          :: PWR
-  CHARACTER(LEN=32):: TYPE   ! CAN BE 'S','P','D','ALL'
+  CHARACTER(LEN=32):: TYPE   ! CAN BE 'S','P','D',f','ALL'
   INTEGER(4)       :: IDIMD  ! IDIMD=0 REFERES TO ALL SPIN DIRECTIONS
 END TYPE EXTPOT
 INTEGER(4)             :: NPOT=0
@@ -3112,6 +3357,8 @@ END MODULE EXPERTNAL1CPOT_MODULE
           LANG=1
         ELSE IF(TRIM(POT1%TYPE).EQ.'D') THEN
           LANG=2
+        ELSE IF(TRIM(POT1%TYPE).EQ.'F') THEN
+          LANG=3
         ELSE IF(TRIM(POT1%TYPE).EQ.'ALL') THEN
           LANG=-1
         ELSE

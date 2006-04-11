@@ -660,6 +660,35 @@ END MODULE RANDOM_MODULE
 #ENDIF
       END
 !
+!     ......................................................................
+      subroutine lib$generaleigenvaluer8(n,a,b,e,vec)
+!     == solves the generalized, real non-symmetric eigenvalue problem   **
+!     ** not tested!!!!!!                                                **
+      implicit none
+      integer(4),intent(in) :: n
+      real(8)   ,intent(in) :: a(n,n)
+      real(8)   ,intent(in) :: b(n,n)
+      real(8)   ,intent(out):: e(n)
+      real(8)   ,intent(out) :: vec(n,n)
+      integer                :: lwork     
+      real(8)                :: work(16*n)
+      real(8)                :: alphar(n)
+      real(8)                :: alphai(n)
+      real(8)                :: beta(n)
+      integer(4)             :: info
+      real(8)                :: a1(n,n)
+      real(8)                :: b1(n,n)
+!     *********************************************************************
+      lwork=16*n
+      a1=a   !dggev overwrites input!!
+      b1=b
+      call dggev('N','V',n,a1,n,b1,n,alphar,alphai,beta &
+     &           ,vec,n,vec,n,work,lwork,info)
+      if(abs(maxval(alphai(:))).gt.0.d0)print*,'maxval(alphai(:))',maxval(alphai(:))
+      e(:)=alphar(:)/beta(:)
+      return
+      end
+!
 !     ..................................................................
       SUBROUTINE LIB$FFTC8(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -1592,6 +1621,55 @@ END MODULE RANDOM_MODULE
 !DGES(A,LDA,N,IPVT,BX)         BX=A^{-1}*BX (USES IPVT FROM DGEF)
 !DGESVF                        SINGULAR VALUE DECOMPOSITION P696
 !DGESVS  LEAST SQUARES SOLUTION USING SINGULAR VALUE DECOMPOSITION P703
+!     ..................................................................
+      SUBROUTINE LIB$MATRIXSOLVEnew(N,M,NEQ,A,X,B)
+!     ******************************************************************
+!     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
+!     **  WHERE A IS A(N,M)                                           **
+!     **  IF A IS NOT SQUARE, THE EQUATION IS SOLVED IN A LEAST       **
+!     **  SQUARE SENSE                                                **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      INTEGER(4),INTENT(IN) :: M
+      INTEGER(4),INTENT(IN) :: NEQ
+      REAL(8)   ,INTENT(IN) :: A(N,M)
+      REAL(8)   ,INTENT(OUT):: X(M,NEQ)
+      REAL(8)   ,INTENT(IN) :: B(N,NEQ)
+      real(8)               :: a1(n,m)
+      real(8)               :: b1(n,neq)
+      integer               :: info
+      real(8)               :: rcond=1.d-12
+      integer               :: ldwork
+      integer               :: irank
+      real(8)               :: sing(n)
+      real(8)   ,allocatable:: work(:)
+      integer               :: n1,m1,neq1
+!     ******************************************************************
+      ldwork=3*min(M,N)+max(2*min(M,N),max(M,N),Neq)
+      allocate(work(ldwork))
+      n1=n
+      m1=m
+      neq1=neq
+      a1=a 
+      b1=b
+      call dgelss(n1,m1,neq1,a1,n,b1,n1,sing,rcond,irank,work,ldwork,info)
+      x=b1
+      deallocate(work)
+      if(info.gt.0) then
+        call error$msg('ith argument has illegal value')
+        call error$i4val('i',info)
+        call error$stop('LIB$MATRIXSOLVEnew')
+      else if(info.lt.0) then
+        call error$msg('singlar value decomposition not converged')
+        call error$msg('i off-diagonal elements of intermediate')
+        call error$msg('bidiagonal form did not converge to zero')
+        call error$i4val('i',info)
+        call error$stop('LIB$MATRIXSOLVEnew')
+      end if
+      return
+      end
+!
 !     ..................................................................
       SUBROUTINE LIB$MATRIXSOLVE(N,M,NEQ,A,X,B)
 !     ******************************************************************

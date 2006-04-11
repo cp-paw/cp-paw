@@ -75,6 +75,7 @@
       REAL(8)   ,ALLOCATABLE :: UC(:)   ! HIGHEST CORE STATE FOR THIS L
       REAL(8)                :: E
       REAL(8)   ,ALLOCATABLE :: EGRID(:,:)
+      REAL(8)   ,ALLOCATABLE :: fGRID(:,:)
       REAL(8)   ,ALLOCATABLE :: DT(:,:,:)
       REAL(8)   ,ALLOCATABLE :: DO(:,:,:)
       REAL(8)   ,ALLOCATABLE :: DH(:,:,:)
@@ -108,8 +109,10 @@
       INTEGER(4)             :: NFILO
       LOGICAL(4)             :: TLOG=.TRUE.
       INTEGER(4)             :: GID2
-      INTEGER(4)             :: NR2,ll
+      INTEGER(4)             :: NR2,ll,iaug
       real(8)                :: ev
+      real(8)                :: svar1,svar2,svar3
+      integer(4)             ::ISVAR1ARR(1)  ! USED TO RESHAPE AN ARRAY OF LENGTH 1
 !     ****************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -347,9 +350,8 @@
 !     ================================================================
 !     == SELF-CONSISTENT ATOM FINISHED; WRITE RESULT                ==
 !     ================================================================
-      CALL WRITEPHI('PSI.DAT',GID,NR,NB,UOFI)
-      CALL WRITEPHI('PSI_T.DAT',GID,NR,NB,TUOFI)
-      CALL WRITEPHI('AEPOT.DAT',GID,NR,1,AEPOT)
+      CALL WRITEPHI('ALLNODELESS.DAT',GID,NR,NB,UOFI)
+      CALL WRITEPHI('ALLNODELESS_T.DAT',GID,NR,NB,TUOFI)
 !
 !     ================================================================
 !     == TOTAL ENERGY                                               ==
@@ -372,6 +374,7 @@
       RC_CORE=RC_CORE*RCOV
       CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,POW_CORE)  !POWER FOR CORE PSEUDIZATION
       CALL LINKEDLIST$GET(LL_CNTL,'VAL0',1,VAL0_CORE)  !VALUE AT THE ORIGIN FOR CORE PSEUDIZATION
+      val0_core=val0_core/y0
 
       ALLOCATE(PSRHOC(NR))
       CALL PSEUDIZE(GID,NR,POW_CORE,VAL0_CORE,RC_CORE,AERHOC,PSRHOC)
@@ -380,7 +383,7 @@
       CALL REPORT$TITLE(NFILO,'PSEUDO CORE DENSITY')
       CALL REPORT$R8VAL(NFILO,'RC',RC_CORE,'')
       CALL REPORT$I4VAL(NFILO,'POWER',POW_CORE,'')
-      CALL REPORT$R8VAL(NFILO,'VAL(0)',VAL0_CORE,'')
+      CALL REPORT$R8VAL(NFILO,'VAL(0)',VAL0_CORE*y0,'')
 !
 !     ================================================================
 !     ==  PSEUDO POTENTIAL                                          ==
@@ -392,6 +395,7 @@
       RC_POT=RC_POT*RCOV
       CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,POW_POT)  !POWER FOR POTENTIAL PSEUDIZATION 
       CALL LINKEDLIST$GET(LL_CNTL,'VAL0',1,VAL0_POT)  !VALUE AT THE ORIGIN FOR POTENTIAL PSEUDIZATION
+      val0_pot=val0_pot/y0
 !
       ALLOCATE(PSPOT(NR))
       CALL PSEUDIZE(GID,NR,POW_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
@@ -400,7 +404,7 @@
       CALL REPORT$TITLE(NFILO,'PSEUDO POTENTIAL')
       CALL REPORT$R8VAL(NFILO,'RC',RC_POT,'')
       CALL REPORT$I4VAL(NFILO,'POWER',POW_POT,'')
-      CALL REPORT$R8VAL(NFILO,'VAL(0)',VAL0_POT,'')
+      CALL REPORT$R8VAL(NFILO,'VAL(0)',VAL0_POT*y0,'')
 !
 !     ================================================================
 !     ==  COMPENSATION GAUSSIAN                                     ==
@@ -491,6 +495,7 @@
       ALLOCATE(DH(NAUG,NAUG,LMAX+1))
       ALLOCATE(PROPSIBAR(NAUG,NAUG,LMAX+1))
       ALLOCATE(EGRID(NAUG,LMAX+1))
+      ALLOCATE(fGRID(NAUG,LMAX+1))
       ALLOCATE(PSPHISAVE(NR,NAUG,LMAX+1))
 !
 !     ================================================================
@@ -500,6 +505,16 @@
       DO L=0,LMAX
         WRITE(NFILO,FMT='(30("="),2X,"L=",I1,2X,30("="))')L
         NAUG=NPRO(L+1)
+!       == ext is used as ending for printouts of l-dependent FUNCTIONS
+        IF(L.EQ.0) THEN
+          EXT='_S.DAT'
+        ELSE IF (L.EQ.1) THEN
+          EXT='_P.DAT'
+        ELSE IF (L.EQ.2) THEN
+          EXT='_D.DAT'
+        ELSE IF (L.EQ.3) THEN
+          EXT='_F.DAT'
+        END IF
 !
 !ATTENTION CURRENTLY NPRO MUST BE THE SAME FOR ALL L!!!!
 !
@@ -507,34 +522,42 @@
 !       ==  DETERMINE HIGHEST NODELESS CORE WAVE FUNCTION UC            ==
 !       =================================================================
         UC(:)=0.D0
+!
+!       == determine index ic of highest core state. (-1 if there is none)
+!       == determine highest core state uc
+!       == determine NNstart, the number of nodes for the lowest valence state
         NNSTART=0   ! #(NODES OF FIRST  VALENCE WAVE FUNCTION)
         IC=-1
         DO IB=1,NC
           IF(LOFI(IB).NE.L) CYCLE
           IF(NNOFI(IB)+1.GT.NNSTART) THEN
             UC(:)=UOFI(:,IB)
-            NNSTART=NNOFI(IB)+1
+            NNSTART=NNOFI(IB)+1  ! lowest valence state has one node more 
+                                 ! than highest core state
             IC=IB
           END IF
         ENDDO        
-        IF(IC.EQ.-1) THEN
-          EGRID(1,L+1)=0.D0
-        ELSE
-          TCHK=.FALSE.
-          NNEND=0
-          DO IB=NC+1,NB
-            IF(LOFI(IB).NE.L) CYCLE
-            IF(NNOFI(IB).GE.NNSTART) THEN
-              EGRID(NNOFI(IB)-NNSTART+1,L+1)=EOFI(IB)
-              NNEND=MAX(NNOFI(IB)-NNSTART+1,NNEND)
-              TCHK=.TRUE.
-            END IF
-          ENDDO
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('LOWEST VALENCE STATE NOT FOUND')
-            CALL ERROR$I4VAL('L',L)
-            CALL ERROR$STOP('MAIN')
+!
+!       ==  determine energies for partial wave construction ==================
+        egrid(:,l+1)=0.d0
+        fgrid(:,l+1)=0.d0
+        TCHK=.FALSE.
+        NNEND=0
+        DO IB=NC+1,NB
+          IF(LOFI(IB).NE.L) CYCLE
+          IF(NNOFI(IB).GE.NNSTART) THEN
+            iaug=NNOFI(IB)-NNSTART+1
+            fGRID(iaug,L+1)=fOFI(IB)
+            EGRID(iaug,L+1)=EOFI(IB)
+            NNEND=MAX(iaug,NNEND)
+            TCHK=.TRUE.
           END IF
+        ENDDO
+! the lowest state of each angular momentum shall be a bound state.
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('LOWEST VALENCE STATE NOT FOUND')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$STOP('MAIN')
         END IF
 !
         CALL REPORT$I4VAL(NFILO,'NN OF HIGHEST CORE STATES ',NNSTART-1,'')
@@ -551,7 +574,11 @@
        &                    ,EGRID(IB,L+1),UPHI(:,IB,L+1),TUPHI(:,IB,L+1))
             CALL REPORT$R8VAL(NFILO,'ENERGY SUPPORT GRID POINT (BOUND)',EGRID(IB,L+1),'H')
           ELSE
-            EGRID(IB,L+1)=EGRID(NNEND,L+1)+0.5D0*REAL(IB-NNEND,KIND=8)**2
+            IF(IB.EQ.1.AND.NNEND.GT.0) THEN   
+              EGRID(IB,L+1)=0.D0
+            ELSE
+              EGRID(IB,L+1)=EGRID(NNEND,L+1)+0.5D0*REAL(IB-NNEND,KIND=8)**2
+            END IF
             CALL ONENODELESS('SCATT',GID,NR,L,NN,SO,DREL,AEPOT,UC &
        &                    ,EGRID(IB,L+1),UPHI(:,IB,L+1),TUPHI(:,IB,L+1))
             CALL REPORT$R8VAL(NFILO,'ENERGY SUPPORT GRID POINT (UNBOUND)',EGRID(IB,L+1),'H')
@@ -577,6 +604,13 @@
           IF(IB.LE.NNEND) THEN
             CALL RADIAL$INTEGRAL(GID,NR,(AEPHI(:,IB,L+1)*R(:))**2,SVAR)
             SVAR=1.D0/SQRT(SVAR)
+          else
+!           == choose 5th point to avoid divideing by small numbers for L.neq.0
+            if(ib.eq.1) then
+              svar=r(5)**l/aephi(5,ib,l+1)
+            else
+              svar=aephi(5,ib-1,l+1)/aephi(5,ib,l+1)
+            end if
           end if
           UPHI(:,IB,L+1)  =  UPHI(:,IB,L+1)*SVAR
           TUPHI(:,IB,L+1) = TUPHI(:,IB,L+1)*SVAR
@@ -617,12 +651,86 @@
 !       ======================================================================
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
-          ISVAR=NNOFI(IB)-NNSTART+1
-          AUX(:)=(AEPHI(:,ISVAR,L+1)*R(:))**2
+          IAUG=NNOFI(IB)-NNSTART+1
+          AUX(:)=(AEPHI(:,IAUG,L+1)*R(:))**2
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-          SVAR=C0LL*FOFI(IB)/SVAR
-          PSRHOV(:)=PSRHOV(:)+SVAR*PSPHI(:,ISVAR,L+1)**2
+          SVAR=FOFI(IB)/SVAR*Y0
+          PSRHOV(:)=PSRHOV(:)+SVAR*PSPHI(:,IAUG,L+1)**2
         ENDDO
+!
+!       =================================================================
+!       ==  TEST RESULT BY RECALCULATING PSPHI FROM BARE PROJECTORS
+!       =================================================================
+        WRITE(NFILO,FMT='(72("=")/72("="),T20,"  BARE QUANTITIES DONE: TESTS...  "/72("="))')
+        ALLOCATE(PHI2(NR,NAUG))
+        ALLOCATE(PHI3(NR,NAUG))
+        ALLOCATE(G(NR))
+        WRITE(NFILO,FMT='("TEST: SOLVE [T+PSV-E|F>=|PRO>")')
+        WRITE(NFILO,FMT='("     AND COMPARE |F> WITH |PSPHI> ... (MUST VANISH)")')
+        DO IB=1,NAUG
+          G(:)=PRO(:,IB,L+1)
+          CALL RADIAL$SCHRODINGER(GID,NR,PSPOT,DREL,0,G,L,EGRID(IB,L+1) &
+       &                        ,1,PHI2(:,IB))
+!         == ENSURE SAME NORM AS PSPHI BY ADDING THE HOMOGENEOUS SOLUTION
+          G=0.D0
+          CALL RADIAL$SCHRODINGER(GID,NR,PSPOT,DREL,0,G,L,EGRID(IB,L+1) &
+       &                        ,1,PHI3(:,IB))
+          isvar1arr=maxloc(abs(psphi(:,ib,l+1)))
+          ir=min(isvar1arr(1),ircut-1)
+          SVAR=(PSPHI(IR,IB,L+1)-PHI2(IR,IB))/PHI3(IR,IB)
+          PHI2(:,IB)=PHI2(:,IB)+PHI3(:,IB)*SVAR
+          write(nfilo,fmt='(i5,e20.10)')ib,maxval(abs(phi2(:,ib)-PSPHI(:,ib,L+1)))
+        ENDDO
+        DEALLOCATE(G)
+!
+        ALLOCATE(WORK2D(NR,3*NAUG))
+        WORK2D(:,1:NAUG)=PHI2(:,:)
+        WORK2D(:,NAUG+1:2*NAUG)=PSPHI(:,:,L+1)
+        WORK2D(:,2*NAUG+1:3*NAUG)=PSPHI(:,:,L+1)-PHI2(:,:)
+        CALL WRITEPHI('TESTBAREPSPHI'//TRIM(EXT),GID,NR,3*NAUG,WORK2D)
+        DEALLOCATE(WORK2D)
+!
+        DEALLOCATE(PHI3) 
+        DEALLOCATE(PHI2)
+!
+!       =================================================================
+!       ==  test schroedinger equation for aephi and psphi             ==
+!       =================================================================
+        ALLOCATE(PHI2(NR,NAUG))
+        ALLOCATE(PHI3(NR,NAUG))
+!       == phi2 and phi3 must vanish if everything is ok
+        DO IB=1,NAUG
+          PHI2(:,IB)=TAEPHI(:,IB,L+1) &
+      &             +(AEPOT(:)*Y0-EGRID(IB,L+1))*AEPHI(:,IB,L+1)
+          PHI3(:,IB)=TPSPHI(:,IB,L+1) &
+      &             +(PSPOT(:)*Y0-EGRID(IB,L+1))*PSPHI(:,IB,L+1) &
+      &             -PRO(:,IB,L+1)
+          DO JB=1,NAUG
+            AUX(:)=PRO(:,IB,L+1)*PSPHI(:,JB,L+1)*R(:)**2
+            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+            PROPSIBAR(IB,JB,L+1)=SVAR
+          ENDDO
+        ENDDO
+!       == test if [t+vtilde-e+|pro>(dh-edo)<pro|]|phi>=0
+        WRITE(NFILO,FMT='("TEST SCHROEDINGER EQUATION FOR BARE WAVE FUNCTIONS")')
+        WRITE(NFILO,FMT='("....THE FOLLOWING VALUES MUST VANISH")')
+        WRITE(NFILO,FMT='(t11,"[T+V-E]|PHI>",t31,"[T+PSV-E]|PSPHI>-|PRO>")') 
+        DO IB=1,NAUG
+          svar1=maxval(abs(phi2(:,ib)))
+          svar2=maxval(abs(phi3(:,ib)))
+          write(nfilo,fmt='(i5,3e20.10)')ib,svar1,svar2
+        ENDDO
+        write(nfilo,fmt='("(dH-edO<pro|pspsi>+<pro|pspsi> ... must vanish")')
+        do ib=1,naug
+          write(nfilo,fmt='(20f20.10)')DH(:,IB,L+1)-EGRID(IB,L+1)*DO(:,IB,L+1)+PROPSIBAR(IB,:,L+1)
+        enddo
+        write(nfilo,fmt='("<pro|pspsi>")')
+        do ib=1,naug
+          write(nfilo,fmt='(20f20.10)')propsibar(ib,:,l+1)
+        enddo
+        DEALLOCATE(PHI2)
+        DEALLOCATE(PHI3)
+        WRITE(NFILO,FMT='(72("=")/72("="),T20,"TESTS DONE"/72("="))')
 !
 !       ======================================================================
 !       == TRUNCATE PARTIAL WAVES TO AVOID NUMERICAL ERRORS WITH EXPONENTIAL
@@ -639,78 +747,14 @@
 !       ======================================================================
 !       == BARE QUANTITIES FINISHED. WRITE RESULT...                        ==
 !       ======================================================================
-        IF(L.EQ.0) THEN
-          EXT='_S.DAT'
-        ELSE IF (L.EQ.1) THEN
-          EXT='_P.DAT'
-        ELSE IF (L.EQ.2) THEN
-          EXT='_D.DAT'
-        ELSE IF (L.EQ.3) THEN
-          EXT='_F.DAT'
-        END IF
-        ALLOCATE(WORK2D(NR,4*NAUG))
+!       == bareaugment contains ae,nodeless, and ps partial waves
+        ALLOCATE(WORK2D(NR,3*NAUG))
         WORK2D(:,1:NAUG)=AEPHI(:,:,L+1)
         WORK2D(:,NAUG+1:2*NAUG)=UPHI(:,:,L+1)
         WORK2D(:,2*NAUG+1:3*NAUG)=PSPHI(:,:,L+1)
-        WORK2D(:,3*naug+1:4*NAUG)=PRO(:,:,L+1)
-        CALL WRITEPHI('BAREAUGMENT'//TRIM(EXT),GID,NR,4*NAUG,WORK2D)
+        CALL WRITEPHI('BAREPARTIALWAVES'//TRIM(EXT),GID,NR,3*NAUG,WORK2D)
         DEALLOCATE(WORK2D)
-        CALL WRITEPHI('NODELESS'//TRIM(EXT),GID,NR,NAUG,UPHI(:,:,L+1))
-        CALL WRITEPHI('NODELESS_T'//TRIM(EXT),GID,NR,NAUG,TUPHI(:,:,L+1))
-        CALL WRITEPHI('BAREAEPHI'//TRIM(EXT),GID,NR,NAUG,AEPHI(:,:,L+1))
-        CALL WRITEPHI('BAREAEPHI_T'//TRIM(EXT),GID,NR,NAUG,TAEPHI(:,:,L+1))
-        CALL WRITEPHI('BAREPSPHI'//TRIM(EXT),GID,NR,NAUG,PSPHI(:,:,L+1))
-        CALL WRITEPHI('BAREPSPHI_T'//TRIM(EXT),GID,NR,NAUG,TPSPHI(:,:,L+1))
         CALL WRITEPHI('BAREPRO'//TRIM(EXT),GID,NR,NAUG,PRO(:,:,L+1))
-!
-!       =================================================================
-!       ==  TEST RESULT BY RECALCULATING PSPHI FROM BARE PROJECTORS
-!       =================================================================
-        ALLOCATE(PHI2(NR,NAUG))
-        ALLOCATE(PHI3(NR,NAUG))
-        ALLOCATE(G(NR))
-        DO IB=1,NAUG
-          G(:)=PRO(:,IB,L+1)
-!          DREL=0.D0
-          CALL RADIAL$SCHRODINGER(GID,NR,PSPOT,DREL,0,G,L,EGRID(IB,L+1) &
-       &                        ,1,PHI2(:,IB))
-!         == ENSURE SAME NORM AS PSPHI BY ADDING THE HOMOGENEOUS SOLUTION
-          G=0.D0
-          CALL RADIAL$SCHRODINGER(GID,NR,PSPOT,DREL,0,G,L,EGRID(IB,L+1) &
-       &                        ,1,PHI3(:,IB))
-          IR=50
-          SVAR=(PSPHI(IR,IB,L+1)-PHI2(IR,IB))/(PHI3(IR,IB)-PHI2(IR,IB))
-          PHI2(:,IB)=PHI2(:,IB)+PHI3(:,IB)*SVAR
-        ENDDO
-        DEALLOCATE(G)
-        DEALLOCATE(PHI3)!
-        CALL WRITECOMPARE('YYY.DAT',GID,NR,NAUG,PHI2,PSPHI(:,:,L+1))
-        DEALLOCATE(PHI2)
-!
-!       =================================================================
-!       ==                                                             ==
-!       =================================================================
-        ALLOCATE(PHI2(NR,NAUG))
-        ALLOCATE(PHI3(NR,NAUG))
-        DO IB=1,NAUG
-          PHI2(:,IB)=TAEPHI(:,IB,L+1) &
-      &             +(AEPOT(:)*Y0-EGRID(IB,L+1))*AEPHI(:,IB,L+1)
-          PHI3(:,IB)=TPSPHI(:,IB,L+1) &
-      &             +(PSPOT(:)*Y0-EGRID(IB,L+1))*PSPHI(:,IB,L+1) &
-      &             -PRO(:,IB,L+1)
-          DO JB=1,NAUG
-            AUX(:)=PRO(:,IB,L+1)*PSPHI(:,JB,L+1)*R(:)**2
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-            PROPSIBAR(IB,JB,L+1)=SVAR
-          ENDDO
-        ENDDO
-        DO IB=1,NAUG
-          PRINT*,'TEST1',IB,-PROPSIBAR(IB,:,L+1)
-          PRINT*,'TEST2',IB,DH(:,IB,L+1)-EGRID(IB,L+1)*DO(:,IB,L+1)
-        ENDDO
-        CALL WRITECOMPARE('ZZZ.DAT',GID,NR,NAUG,PHI2,PHI3)
-        DEALLOCATE(PHI2)
-        DEALLOCATE(PHI3)
 !
 !       =================================================================
 !       ==  ENSURE BIORTHOGONALIZATION CONDITION                       ==
@@ -794,7 +838,12 @@ print*,'================loop done========================'
 !     ===================================================================
       CALL UNSCREEN(GID,NR,AEZ,AERHOC+AERHOV,PSRHOC+PSRHOV,PSPOT,RCSM,VADD)
 !     == TEST
-      CALL WRITEPHI('VADD.DAT',GID,NR,1,VADD)
+      allocate(work2d(nr,3))
+      work2d(:,1)=aepot*y0
+      work2d(:,2)=pspot*y0
+      work2d(:,3)=(pspot-vadd)*y0
+      CALL WRITEPHI('POTENTIALS.DAT',GID,NR,3,WORK2D)
+      DEALLOCATE(WORK2D)
       CALL WRITEPHI('PSRHOV.DAT',GID,NR,1,PSRHOV)
       CALL WRITECOMPARE('AERHO-PSRHO.DAT',GID,NR,1,AERHOV+AERHOC,PSRHOV+PSRHOC)
 !
@@ -1998,7 +2047,7 @@ enddo
       INTEGER(4)                 :: NITER=5000
       REAL(8)                    :: XAV,XMAX
       LOGICAL(4)                 :: CONVG
-      REAL(8)   ,PARAMETER       :: TOL=1.D-6
+      REAL(8)   ,PARAMETER       :: TOL=1.D-5
       INTEGER(4)                  :: NFILO
       REAL(8)                    :: EH,EXC
       logical(4),parameter       :: tbroyden=.true.
