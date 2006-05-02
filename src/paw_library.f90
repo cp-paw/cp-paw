@@ -661,33 +661,66 @@ END MODULE RANDOM_MODULE
       END
 !
 !     ......................................................................
-      subroutine lib$generaleigenvaluer8(n,a,b,e,vec)
-!     == solves the generalized, real non-symmetric eigenvalue problem   **
-!     ** not tested!!!!!!                                                **
-      implicit none
-      integer(4),intent(in) :: n
-      real(8)   ,intent(in) :: a(n,n)
-      real(8)   ,intent(in) :: b(n,n)
-      real(8)   ,intent(out):: e(n)
-      real(8)   ,intent(out) :: vec(n,n)
-      integer                :: lwork     
-      real(8)                :: work(16*n)
-      real(8)                :: alphar(n)
-      real(8)                :: alphai(n)
-      real(8)                :: beta(n)
-      integer(4)             :: info
-      real(8)                :: a1(n,n)
-      real(8)                :: b1(n,n)
+      SUBROUTINE LIB$GENERALEIGENVALUER8(N,A,B,E,VEC)
+!     == SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
+!     **      [A(:,:)+E(I)*B(:,:)]*VEC(:,I)=0                            **
+!     ** NOT TESTED!!!!!!                                                **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      REAL(8)   ,INTENT(IN) :: A(N,N)
+      REAL(8)   ,INTENT(IN) :: B(N,N)
+      REAL(8)   ,INTENT(OUT):: E(N)
+      REAL(8)   ,INTENT(OUT) :: VEC(N,N)
+      INTEGER                :: N1
+      INTEGER                :: LWORK     
+      REAL(8)                :: WORK(16*N)
+      REAL(8)                :: ALPHAR(N)
+      REAL(8)                :: ALPHAI(N)
+      REAL(8)                :: BETA(N)
+      INTEGER                :: INFO
+      REAL(8)                :: A1(N,N)
+      REAL(8)                :: B1(N,N)
+      LOGICAL                :: TTEST=.false.
+      REAL(8)                :: DEV
+      INTEGER                :: I
 !     *********************************************************************
-      lwork=16*n
-      a1=a   !dggev overwrites input!!
-      b1=b
-      call dggev('N','V',n,a1,n,b1,n,alphar,alphai,beta &
-     &           ,vec,n,vec,n,work,lwork,info)
-      if(abs(maxval(alphai(:))).gt.0.d0)print*,'maxval(alphai(:))',maxval(alphai(:))
-      e(:)=alphar(:)/beta(:)
-      return
-      end
+      LWORK=16*N
+      N1=N
+      A1=A   !DGGEV OVERWRITES INPUT!!
+      B1=-B
+      CALL DGGEV('N','V',N1,A1,N1,B1,N1,ALPHAR,ALPHAI,BETA &
+     &           ,VEC,N1,VEC,N1,WORK,LWORK,INFO)
+      IF(ABS(MAXVAL(ALPHAI(:))).GT.0.D0)PRINT*,'MAXVAL(ALPHAI(:))',MAXVAL(ALPHAI(:))
+      E(:)=ALPHAR(:)/BETA(:)
+!
+      IF(ABS(MAXVAL(ALPHAI)).NE.0.D0) THEN
+        print*,'warning:EIGENVALUE PROBLEM HAS COMPLEX EIGENVALUES'
+!        CALL ERROR$MSG('EIGENVALUE PROBLEM HAS COMPLEX EIGENVALUES')
+!        CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+      END IF
+      IF(INFO.LT.0) THEN
+        CALL ERROR$MSG('ITH ARGUMENT OF DGGEV HAS ILLEGAL VALUE')
+        CALL ERROR$I4VAL('I',-INFO)
+        CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+      ELSE IF(INFO.GT.0) THEN
+        CALL ERROR$MSG('THE QZ ITERATION FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+      END IF
+      IF(TTEST) THEN
+        DEV=0.D0
+        DO I=1,N
+          DEV=MAX(DEV,MAXVAL(ABS(MATMUL(A+E(I)*B,VEC(:,I)))))
+        ENDDO
+        PRINT*,'DEV',DEV
+        IF(DEV.GT.1.D-6) THEN
+          CALL ERROR$MSG('GENERAL EIGENVALUE TEST FAILED')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+        END IF
+      END IF
+      RETURN
+      END
 !
 !     ..................................................................
       SUBROUTINE LIB$FFTC8(DIR,LEN,NFFT,X,Y)                  
@@ -1639,7 +1672,7 @@ END MODULE RANDOM_MODULE
       real(8)               :: a1(n,m)
       real(8)               :: b1(n,neq)
       integer               :: info
-      real(8)               :: rcond=1.d-12
+      real(8)               :: rcond=-1.d0
       integer               :: ldwork
       integer               :: irank
       real(8)               :: sing(n)
@@ -1647,27 +1680,29 @@ END MODULE RANDOM_MODULE
       integer               :: n1,m1,neq1
 !     ******************************************************************
       ldwork=3*min(M,N)+max(2*min(M,N),max(M,N),Neq)
+!     -- use 3*m+3*n+neq
       allocate(work(ldwork))
       n1=n
       m1=m
       neq1=neq
       a1=a 
       b1=b
-      call dgelss(n1,m1,neq1,a1,n,b1,n1,sing,rcond,irank,work,ldwork,info)
+      call dgelss(n1,m1,neq1,a1,n1,b1,n1,sing,rcond,irank,work,ldwork,info)
       x=b1
-      deallocate(work)
-      if(info.gt.0) then
-        call error$msg('ith argument has illegal value')
-        call error$i4val('i',info)
-        call error$stop('LIB$MATRIXSOLVEnew')
-      else if(info.lt.0) then
-        call error$msg('singlar value decomposition not converged')
-        call error$msg('i off-diagonal elements of intermediate')
-        call error$msg('bidiagonal form did not converge to zero')
-        call error$i4val('i',info)
-        call error$stop('LIB$MATRIXSOLVEnew')
-      end if
-      return
+print*,'irank ',irank,info,n1,m1,neq1
+      DEALLOCATE(WORK)
+      IF(INFO.GT.0) THEN
+        CALL ERROR$MSG('ITH ARGUMENT HAS ILLEGAL VALUE')
+        CALL ERROR$I4VAL('I',INFO)
+        CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
+      ELSE IF(INFO.LT.0) THEN
+        CALL ERROR$MSG('SINGLAR VALUE DECOMPOSITION NOT CONVERGED')
+        CALL ERROR$MSG('I OFF-DIAGONAL ELEMENTS OF INTERMEDIATE')
+        CALL ERROR$MSG('BIDIAGONAL FORM DID NOT CONVERGE TO ZERO')
+        CALL ERROR$I4VAL('I',INFO)
+        CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
+      END IF
+      RETURN
       end
 !
 !     ..................................................................

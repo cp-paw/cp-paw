@@ -1223,7 +1223,7 @@ END IF
       END 
 !
 !     ..................................................................
-      SUBROUTINE RADIAL$nonsphbound(GID,NR,nspin,lmrx,POT,DREL,G,E,PHI)
+      SUBROUTINE RADIAL$nonsphbound(GID,NR,ndimd,lmx,lmrx,POT,DREL,G,E,de,PHI,tphi)
 !     **                                                                  **
 !     **  SOLVES THE RELATIVISTIC RADIAL DIRAC EQUATION FOR THE           **
 !     **  LARGE COMPONENT. DREL=1/MREL-1/M0 IS A MEASURE FOR THE          **
@@ -1232,53 +1232,48 @@ END IF
 !     **  SPIN ORBIT COUPLING IS MEASURED BY SO WHICH CAN HAVE THE VALUES:**
 !     **    SO=0 NO-SPIN ORBIT COUPLING                                   **
 !     **    SO=1 PARALLEL SPIN AND ORBITAL ANGULAR MOMENTUM               **
-!     **    SO=-1 ANTIPARALLEL SPIN AND ORBITAL ANGULAR MOMENTUM          **
-!     **  IDIR DESCRIBES THE DIRECTION OF THE INTEGRATION OF THE DIFF.EQ. **
-!     **    IDIR=1 OUTWARD INTEGRATION                                    **
-!     **    IDIR=-1 INWARD INTEGRATION                                    **
 !     **  G IS AN INHOMOGENEITY, WHICH MUST BE SET TO ZERO FOR THE        **
 !     **  HOMOGENEOUS SOLUTION.                                           **
+!     **                                                                  **
+!     **  the solutions are calculated to linear order in de              **
+!     **  where E+de is the new energy of the wave functions              **
 !     **                                                                  **
 !     **  THE DIFFERENTIAL EQUATION IS SOLVED WITH THE VERLET ALGORITHM   **
 !     **    DPHI/DX=(PHI(+)-PHI(-))/2                                     **
 !     **    D2PHI/DX2=PHI(+)-2PHI(0)+PHI(-)                               **
 !     **  WHERE X IS THE VARIABLE WITH R(X=I)=R_I                         **
 !     **                                                                  **
-!     **  IN THE PRESENCE OF AN INHOMOGENEITY, THE SOLUTION STARTS        **
-!     **  WITH ZERO VALUE AND DERIVATIVE.                                 **
-!     **                                                                  **
-!     **  IN THE ABSENCE OF AN INHOMOGENEITY, THE SOLUTION STARTS         **
-!     **  WITH R**L FROM THE INSIDE AND FROM THE OUTSIDE WITH VALUE ZERO  **
-!     **  AND FINITE SLOPE                                                **
-!     **                                                                  **
 !     **  THE NONRELATIVISTIC SOLUTION IS OBTAINED BY SETTINH DREL=0      **
 !     **                                                                  **
 !     **  ATTENTION! THE ROUTINE IS NOT GUARDED AGAINST OVERFLOW DUE      **
 !     **    TO THE EXPONENTIAL INCREASE OF THE SOLUTION                   **
 !     **                                                                  **
-!     **  REMARKS:                                                        **
-!     **  - POT IS ONLY THE RADIAL PART OF THE POTENTIAL.                 **
-!     **    THE POTENTIAL IS POT*Y0 WHERE Y0 IS A SPHERICAL HARMONIC      **
-!     **                                                                  **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID FOR RADIAL GRID
       INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
-      INTEGER(4) ,INTENT(IN)     :: nspin
-      INTEGER(4) ,INTENT(IN)     :: lmrx
+      INTEGER(4) ,INTENT(IN)     :: ndimd   ! (1,2,4)#(spinor components)
+      INTEGER(4) ,INTENT(IN)     :: lmx     ! x#(wave function angular momenta
+      INTEGER(4) ,INTENT(IN)     :: lmrx    ! x#(potential angular momenta)
       REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
 !                                           ! DREL= M0/MREL(R)-1
-      REAL(8)    ,INTENT(IN)     :: G(NR,lmrx,nspin)   !INHOMOGENITY
+      REAL(8)    ,INTENT(IN)     :: G(NR,lmx,2)   !INHOMOGENITY
       REAL(8)    ,INTENT(IN)     :: E       !ENERGY
-      REAL(8)    ,INTENT(IN)     :: POT(NR,lmrx,nspin*nspin) !POTENTIAL (RADIAL PART ONLY)
-      REAL(8)    ,INTENT(OUT)    :: PHI(NR,lmrx,nspin,lmrx*nspin) ! WAVE-FUNCTION
+      REAL(8)    ,INTENT(IN)     :: POT(NR,lmrx,ndimd) !POTENTIAL (RADIAL PART ONLY)
+      complex(8) ,INTENT(OUT)    :: PHI(NR,lmx,2,2*lmx) ! WAVE-FUNCTION
+      complex(8) ,INTENT(OUT)    :: tPHI(NR,lmx,2,2*lmx) ! kinetic energy * WAVE-FUNCTION
+      real(8)    ,intent(out)    :: de(2*lmx)
       integer(4)                 :: lx
-      INTEGER(4)                 :: lox(lmrx)
-      integer(4)                 :: lm,lm1,lm2,lm3,l,m,im,is,is1,is2
+      INTEGER(4)                 :: lox(lmx,2) ! angular momenta
+      integer(4)                 :: lm,lm1,lm2,lm3,l,m,im,is,ib,is1,is2
       REAL(8)                    :: A(NR)
       REAL(8)                    :: B(NR)
-      REAL(8)                    :: C(NR,lmrx,nspin,lmrx,nspin)
-      REAL(8)                    :: D(NR,lmrx,nspin) 
+      complex(8)                 :: C(NR,lmx,2,lmx,2)
+      real(8)                    :: Cr(NR,lmx,2,lmx,2)
+!     real(8)                    :: C(NR,lmx,4,lmx,4)
+      complex(8)                 :: D(NR,lmx,2) 
+      real(8)                    :: Dr(NR,lmx,2) 
+      real(8)                    :: phir(nr,lmx,2,2*lmx)
       REAL(8)                    :: R(NR) 
       REAL(8)                    :: aux(NR) 
       REAL(8)                    :: PI
@@ -1286,28 +1281,29 @@ END IF
       REAL(8)                    :: cg
       REAL(8)                    :: RDPRIME(NR)
       INTEGER(4)                 :: IR
-      REAL(8)                    :: RI
       LOGICAL(4)                 :: THOM
-      real(8)   ,parameter       :: xmax=1.d+100
+!      real(8)   ,parameter       :: xmax=1.d+100
+      real(8)   ,parameter       :: xmax=1.d+20
       real(8)                    :: rcl,rtest,swkb(nr),aux1(nr),svar
       integer(4)                 :: ircl,irout
+      complex(8),parameter       :: ci=(0.d0,1.d0)
+      complex(8)                 :: cls(lmx,2,lmx,2) ! spin orbit matrix (ls)
 !     ************************************************************************
-print*,'in radial$nonsphbound'
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/DSQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
-      lx=int(sqrt(lmrx-1.d0)+0.1d0)
+      lx=int(sqrt(lmx-1.d0)+0.1d0)
       lm=0
       do l=0,lx
         do m=1,2*l+1
           lm=lm+1
-          lox(lm)=l
+          lox(lm,:)=l
         enddo
       enddo
 !
 !     ==================================================================
-!     ==  determine classical truning point                           ==
+!     ==  determine classical turning point                           ==
 !     ==================================================================
       RCL=R(NR)
       IF(E.LT.POT(NR,1,1)*Y0) THEN
@@ -1321,12 +1317,16 @@ print*,'in radial$nonsphbound'
         RTEST=RCL
       END IF
 !
+!     ==================================================================
+!     ==  determine outermost point 'irout' for inward integration    ==
+!     ==================================================================
 !     == USE WKB SOLUTION FOR THE SCHR.GL. FOR A CONSTANT POTENTIAL AND L=0
 !     == TO ESTIMATE FACTOR FROM RTEST TO OUTERMOST POINT
-      irout=nr
+      irout=nr-1   ! point nr does not contribute, therefore one less
       IF(RTEST.LT.R(NR)) THEN
         AUX(:IRCL)=0.D0
-        AUX(IRCL+1:)=SQRT(REAL(L*(L+1),kind=8)/R(ircl+1:)**2+2.D0*(POT(IRCL+1:,1,1)*Y0-E))
+        AUX(IRCL+1:)=SQRT(2.D0*(POT(IRCL+1:,1,1)*Y0-E))
+!        AUX(IRCL+1:)=SQRT(REAL(L*(L+1),kind=8)/R(ircl+1:)**2+2.D0*(POT(IRCL+1:,1,1)*Y0-E))
         CALL RADIAL$DERIVe(GID,NR,AUX,AUX1)
         CALL RADIAL$INTEGRATE(GID,NR,AUX,Swkb)
 !        Swkb(:)=Swkb(:)-0.5D0*LOG(AUX1(:))-LOG(R(:))
@@ -1341,6 +1341,7 @@ print*,'in radial$nonsphbound'
           END IF
         ENDDO
       END IF
+print*,'rcl,irout',r(ircl),r(irout),ndimd
 !
 !     ==================================================================
 !     ==  prepare potential-independent arrays                        ==
@@ -1354,34 +1355,32 @@ print*,'in radial$nonsphbound'
       B(2:)=2.D0*(1.D0+DREL(2:))/R(2:)+RDPRIME(2:)
       B(1)=B(2)
       D(:,:,:)=-2.D0*G(:,:,:)
-     
+!
 !     ==================================================================
 !     ==  Coupling between wave function components via potential     ==
 !     ==================================================================
-print*,'pot ',pot(:100,1,1)
       c(:,:,:,:,:)=0.d0
-      do lm1=1,lmrx
-        do lm2=1,lmrx
+      do lm1=1,lmx
+        do lm2=1,lmx
           aux(:)=0.d0
           do lm3=1,lmrx
             call clebsch(lm1,lm2,lm3,cg)
             aux=cg*pot(:,lm3,1)
-            if(lm3.eq.1) aux(irout+1:)=aux(irout)
+            if(lm3.eq.1) aux(irout+1:)=aux(irout)  ! constant potential beyond irout
             c(:,lm1,1,lm2,1)=c(:,lm1,1,lm2,1)+aux
-            if(nspin.gt.1) then
-              c(:,lm1,2,lm2,2)=c(:,lm1,2,lm2,2)+aux
-              if(nspin.eq.2) then
+            c(:,lm1,2,lm2,2)=c(:,lm1,2,lm2,2)+aux
+            if(ndimd.gt.1) then
+              if(ndimd.eq.2) then
                 aux=cg*pot(:,lm3,2)
                 c(:,lm1,1,lm2,1)=c(:,lm1,1,lm1,1)+aux
                 c(:,lm1,2,lm2,2)=c(:,lm1,2,lm1,2)-aux
               else
-                call error$stop('in radial_xxx')
                 aux=cg*pot(:,lm3,2)
                 c(:,lm1,1,lm2,2)=c(:,lm1,1,lm1,2)+aux
                 c(:,lm1,2,lm2,1)=c(:,lm1,2,lm1,1)-aux
                 aux=cg*pot(:,lm3,3)
-                c(:,lm1,1,lm2,2)=c(:,lm1,1,lm1,2)+aux
-                c(:,lm1,2,lm2,1)=c(:,lm1,2,lm1,1)-aux
+                c(:,lm1,1,lm2,2)=c(:,lm1,1,lm1,2)-ci*aux
+                c(:,lm1,2,lm2,1)=c(:,lm1,2,lm1,1)+ci*aux
                 aux=cg*pot(:,lm3,4)
                 c(:,lm1,1,lm2,1)=c(:,lm1,1,lm1,1)+aux
                 c(:,lm1,2,lm2,2)=c(:,lm1,2,lm1,2)-aux
@@ -1392,45 +1391,165 @@ print*,'pot ',pot(:100,1,1)
       enddo
       c=-2.d0*C
 !
+!     ==================================================================
+!     ==  kinetic energy term to c                                    ==
+!     ==================================================================
       lm=0
-      do l=1,lx
+      do l=0,lx
         aux(1)=0.d0
         aux(2:)=-(1.D0+DREL(2:))/R(2:)**2 * real(l*(l+1),kind=8)+2.d0*e
         do im=1,2*l+1
           lm=lm+1
-          do is=1,nspin
+          do is=1,2
             c(:,lm,is,lm,is)=c(:,lm,is,lm,is)+aux(:)
           enddo
         enddo
       enddo
-!     ==  avoid zerobyzero
-      c(1,:,:,:,:)=c(2,:,:,:,:)
+!
 !     ==================================================================
 !     ==  add spin orbit coupling to E                                ==
 !     ==================================================================
-!     == spin orbit coupling missing
-!!$      do l=0,lx
-!!$        xl=real(l,kind=8)
-!!$        do m=-l,l
-!!$          xm=real(m,kind=8)
-!!$          lm=lm+1
-!!$          lpfac(lm)=sqrt((xl-xm)(xl+xm+1.d0))  ! (L_+)Y_{l,m}=lmpfac*Y_{l,m+1}
-!!$          lmfac(lm)=sqrt((xl+xm)(xl-xm+1.d0))  ! (L_-)Y_{l,m}=lmmfac*Y_{l,m-1}
-!!$          lzfac(lm)=xm                         ! (L+z)Y_{l,m}=lmmfac*Y_{l,m}
-!!$!                                              ! Y_{L,m} are true spherical harmonics
-!!$        enddo
-!!$      enddo
-!print*,'r(irout)',rcl,r(irout),pot1(nr)
+      call radial_ls(lmx,cls)
+      aux(2:)=-rdprime(2:)/r(2:)
+      aux(1)=aux(2)
+      do lm1=1,lmx
+        do is1=1,2
+          do lm2=1,lmx
+            do is2=1,2
+              if(abs(cls(lm1,is1,lm2,is2)).lt.1.d-10) cycle
+              c(:,lm1,is1,lm2,is2)=c(:,lm1,is1,lm2,is2)+aux(:)*cls(lm1,is1,lm2,is2)
+            enddo
+          enddo
+        enddo
+      enddo
+!     ==  avoid divide zerobyzero
+      c(1,:,:,:,:)=c(2,:,:,:,:)
 !
 !     ==================================================================
 !     ==  determine bound states                                      ==
 !     ==================================================================
-print*,'before radial_xxx',nspin,lmrx
-      call radial_xxx(gid,nr,lmrx*nspin,ircl,irout,lox,a,b,c,d,phi)
+!!$      c(:,:,1,:,1)=  real(c1(:,:,1,:,1))
+!!$      c(:,:,1,:,2)=-aimag(c1(:,:,1,:,1))
+!!$      c(:,:,1,:,3)=  real(c1(:,:,1,:,2))
+!!$      c(:,:,1,:,4)=-aimag(c1(:,:,1,:,2))
+!!$!
+!!$      c(:,:,2,:,1)= aimag(c1(:,:,1,:,1))
+!!$      c(:,:,2,:,2)=  real(c1(:,:,1,:,1))
+!!$      c(:,:,2,:,3)= aimag(c1(:,:,1,:,2))
+!!$      c(:,:,2,:,4)=  real(c1(:,:,1,:,2))
+!!$!
+!!$      c(:,:,3,:,1)=  real(c1(:,:,2,:,1))
+!!$      c(:,:,3,:,2)=-aimag(c1(:,:,2,:,1))
+!!$      c(:,:,3,:,3)=  real(c1(:,:,2,:,2))
+!!$      c(:,:,3,:,4)=-aimag(c1(:,:,2,:,2))
+!!$!
+!!$      c(:,:,4,:,1)= aimag(c1(:,:,2,:,1))
+!!$      c(:,:,4,:,2)=  real(c1(:,:,2,:,1))
+!!$      c(:,:,4,:,3)= aimag(c1(:,:,2,:,2))
+!!$      c(:,:,4,:,4)=  real(c1(:,:,2,:,2))
+!
+      cr=real(c)
+      dr=real(d)
+      call radial_xxx(gid,nr,2*lmx,ircl,irout,lox,a,b,cr,dr,de,phir)
+      phi(:,:,:,:)=phir(:,:,:,:)
+!      phi(:,:,1)=phir(:,:,1)+ci*phir(:,:,2)
+!      phi(:,:,2)=phir(:,:,3)+ci*phir(:,:,4)
+!
+!     ==================================================================
+!     ==  determine Tphi                                              ==
+!     ==================================================================
+!     -- better directly work out the kinetic energy because  the 
+!     -- schroedinger equation is fulfilled only to first order in de
+!not yet done!
+      tphi=0.d0
+!!$      do ib=1,lmx
+!!$        tphi(:,:,:,ib)=(e+de(ib))*phi(:,:,:,ib)
+!!$      enddo
+!!$      do lm1=1,lmx
+!!$        do lm2=1,lmx
+!!$          do lm3=1,lmrx
+!!$            call clebsch(lm1,lm2,lm3,cg)
+!!$            aux(:)=cg*pot(:,lm3,ispin)
+!!$            do ib=1,lmx
+!!$              tphi(:,lm1,:,ib)=tphi(:,lm1,:,ib)-aux(:)*phi(:,lm2,:,ib)
+!!$            enddo
+!!$          enddo
+!!$        enddo
+!!$      enddo
       return
-      end
+      end SUBROUTINE RADIAL$nonsphbound
+!
+!     .......................................................................
+      subroutine radial_ls(lmx,c)
+!     **                                                                    **
+!     **  spin orbit matrix elements                                        **
+!     **                                                                    **
+!     **  matrix elements of L*sigma in real spherical harmonics            **
+!     **  where sigma are the pauli matrices and L are the angular momenta  **
+!     **                                                                    **
+      implicit none
+      integer(4),intent(in) :: lmx
+      complex(8),intent(out):: c(lmx,2,lmx,2)
+      real(8)               :: c1(lmx,2,lmx,2)
+      integer(4)            :: lx
+      integer(4)            :: l,m,m1,m2,lm,lm1p,lm1m,lm2p,lm2m
+      real(8)               :: svar
+      complex(8),parameter  :: ci=(0.d0,1.d0)
+      complex(8)            :: fac1,fac2,fac3,fac4
+!     ************************************************************************
+      lx=int(sqrt(real(lmx)-1.d0+1.d-3))
+      c1=0.d0
+      lm=0
+      do l=0,lx 
+        do m=-l,l
+          lm=lm+1
+          c1(lm,1,lm,1)=real(m)
+          c1(lm,2,lm,2)=-real(m)
+          if(m.eq.l) cycle
+          svar=sqrt( real((l-m)*(l+m+1)) )
+          c1(lm,1,lm+1,2)=svar
+          c1(lm+1,1,lm,2)=svar
+        enddo
+      enddo
+!     ==================================================================
+!     == transform to real spherical harmonics                        ==
+!     ==================================================================
+      c=(0.d0,0.d0)
+      do l=0,lx 
+        lm1p=l**2+l
+        lm1m=lm1p
+        do m1=1,l
+          lm1p=lm1p+1
+          lm1m=lm1m-1
+          lm2p=l**2+l
+          lm2m=lm2p
+          do m2=1,l
+            lm2p=lm2p+1
+            lm2m=lm2m-1
+            fac1=0.5d0
+            fac2=0.5d0*(-1.d0)**(m1+m2)
+            fac3=0.5d0*(-1.d0)**m2
+            fac4=0.5d0*(-1.d0)**m1
+            c(lm1p,:,lm2p,:)=fac1*c1(lm1p,:,lm2p,:)+fac2*c1(lm1m,:,lm2m,:) &
+    &                       +fac3*c1(lm1p,:,lm2m,:)+fac3*c1(lm1m,:,lm2p,:)
+            c(lm1m,:,lm2m,:)=fac1*c1(lm1p,:,lm2p,:)+fac2*c1(lm1m,:,lm2m,:) &
+    &                       -fac3*c1(lm1p,:,lm2m,:)-fac3*c1(lm1m,:,lm2p,:)
+            fac1=fac1*ci
+            fac2=fac2*ci
+            fac3=fac3*ci
+            fac4=fac4*ci
+            c(lm1p,:,lm2m,:)=-fac1*c1(lm1p,:,lm2p,:)+fac2*c1(lm1m,:,lm2m,:) &
+    &                        +fac3*c1(lm1p,:,lm2m,:)-fac3*c1(lm1m,:,lm2p,:)
+            c(lm1m,:,lm2p,:)=fac1*c1(lm1p,:,lm2p,:)-fac2*c1(lm1m,:,lm2m,:) &
+    &                       +fac3*c1(lm1p,:,lm2m,:)-fac3*c1(lm1m,:,lm2p,:)
+          enddo
+        enddo
+      enddo
+      return
+      end subroutine radial_ls
+!
 !     ..................................................................
-      subroutine radial_xxx(gid,nr,nf,irmatch,irout,lox,a,b,c1,d,phi)
+      subroutine radial_xxx(gid,nr,nf,irmatch,irout,lox,a,b,c,d,de,phi)
       implicit none
       integer(4),intent(in) :: gid
       integer(4),intent(in) :: nr
@@ -1440,8 +1559,9 @@ print*,'before radial_xxx',nspin,lmrx
       integer(4),intent(in) :: lox(nf)
       real(8)   ,intent(in) :: a(nr)
       real(8)   ,intent(in) :: b(nr)
-      real(8)   ,intent(in) :: c1(nr,nf,nf)
+      real(8)   ,intent(in) :: c(nr,nf,nf)
       real(8)   ,intent(in) :: d(nr,nf)
+      real(8)   ,intent(out):: de(nf)
       real(8)   ,intent(out):: phi(nr,nf,nf)
       logical               :: thom
       real(8)               :: phil(nr,nf,nf)
@@ -1450,23 +1570,28 @@ print*,'before radial_xxx',nspin,lmrx
       real(8)               :: phir_dot(nr,nf,nf)
       real(8)               :: phir_inhom(nr,nf)
       real(8)               :: phil_inhom(nr,nf)
+      real(8)               :: phir_dot_inhom(nr,nf)
+      real(8)               :: phil_dot_inhom(nr,nf)
       integer(4)            :: if,if1,if2,ir
-      real(8)               :: mat(nf,nf),matinv(nf,nf),vec(nf)
+      real(8)               :: mat(nf,nf),vec(nf)
       integer(4)            :: irc
       real(8)               :: kink_inhom(nf)
       real(8)               :: kink_hom(nf,nf)
       real(8)               :: kink_dot(nf,nf)
+      real(8)               :: kink_dot_inhom(nf)
       real(8)               :: r(nr)
       real(8)               :: dhom(nr,nf)
-      real(8) ::bvec(nf),xvec(nf)
-      real(8) ::bmat(nf,nf),xmat(nf,nf)
-      real(8) ::aux(nr),svar      
-real(8) ::c(nr,nf,nf)
-integer(4) :: i,j
-      real(8):: au(2,2),xu(2),bu(2)
+      logical   ,parameter  :: twrite=.false.
+      real(8)               :: bvec(nf),xvec(nf)
+      real(8)               :: bvecs(nf,2*nf+2),xvecs(nf,2*nf+1)
+      real(8)               :: bmat(nf,nf),xmat(nf,nf)
+      real(8)               :: aux(nr),svar      
+      real(8)               :: aux1(nr),aux2(nr),aux3(nr)
+      real(8)               :: svar1,svar2,svar3
+      integer(4)            :: i,j
+      character(64)         :: file
 !     ******************************************************************
-c=c1
-print*,'in radial_xxx'
+print*,'radal_xxx start',irmatch,irout,nr
       call radial$r(gid,nr,r)
       irc=irmatch
 !
@@ -1474,25 +1599,23 @@ print*,'in radial_xxx'
 !     ==  obtain inhomogeneous solution                               ==
 !     ==================================================================
       THOM=MAXVAL(ABS(d(:,:))).EQ.0.D0
+IF(.NOT.THOM) THEN
+  CALL ERROR$MSG('INHOMOGENEOUS SOLUTION NOT YET IMPLEMENTED')
+  CALL ERROR$STOP('RADIAL_XXX')
+END IF
+print*,'radial_xxx:dgl'
       phil_inhom(:,:)=0.d0
       phir_inhom(:,:)=0.d0
       if(.not.thom) then
         CALL RADIAL$DGLgen(GID,NR,nf,1,A,B,C,D,PHIl_inhom)
+        CALL RADIAL$DGLgen(GID,NR,nf,1,A,B,C,PHIl_inhom,phil_dot_inhom)
         CALL RADIAL$DGLgen(GID,NR,nf,-1,A,B,C,D,PHIr_inhom)
+        CALL RADIAL$DGLgen(GID,NR,nf,-1,A,B,C,PHIr_inhom,PHIr_dot_inhom)
       end if  
 !
 !     ==================================================================
 !     ==  obtain homogeneous solution and their phidots               ==
 !     ==================================================================
-print*,'rcl ',irc,r(irc),irout,r(irout),nf
-print*,'lox ',lox
-!print*,'c',c(:100,nf,nf)
-do i=1,nf
-  do j=1,nf
-    if(i.eq.j) cycle
-!    c(:,i,j)=0.d0
-  enddo
-enddo
       phil(:,:,:)=0.d0
       phir(:,:,:)=0.d0
       phil_dot(:,:,:)=0.d0
@@ -1514,96 +1637,168 @@ enddo
 !     ==================================================================
 !     ==  make solutions continuous                                   ==
 !     ==================================================================
+print*,'radial_xxx:match value'
       mat(:,:)=phir(irc,:,:)
 !     == matrix is not symmetric. thus solve with singular value decomposition
-!
-!     == make inhomogeneous solution continuous =======================
-      if(.not.thom) then
-        bvec(:)=phil_inhom(irc,:)-phir_inhom(irc,:)
-        call lib$matrixsolve(nf,nf,1,mat,vec,bvec)
-        do if=1,nf
-          phir_inhom(:,:)=phir_inhom(:,:)+phir(:,:,if)*vec(if)
-        enddo
-      end if
-!
-!     == make phidot solutions continuous =============================
-      bmat(:,:)=phil_dot(irc,:,:)-phir_dot(irc,:,:)
-      call lib$matrixsolvenew(nf,nf,nf,mat,xmat,bmat)
-print*,'test_dot ',maxval(abs(matmul(mat,xmat)-bmat))
-!!$print*,'test1 ',maxval(abs(matmul(mat,xmat)-bmat))
-!!$do if=1,nf
-!!$  bvec(:)=phil_dot(irc,:,if)-phir_dot(irc,:,if)
-!!$  call lib$matrixsolvenew(nf,nf,1,mat,xvec,bvec)
-!!$  print*,'test2 ',if,maxval(abs(matmul(mat,xvec)-bvec))
-!!$enddo
-!!$stop
+      bvecs(:,1:nf)=phil(irc,:,:)
+      bvecs(:,nf+1:2*nf)=phil_dot(irc,:,:)-phir_dot(irc,:,:)
+      bvecs(:,2*nf+1)=phil_inhom(irc,:)-phir_inhom(irc,:)
+      bvecs(:,2*nf+2)=phil_dot_inhom(irc,:)-phir_dot_inhom(irc,:)
+      call lib$matrixsolve(nf,nf,2*nf+2,mat,xvecs,bvecs)
+      do ir=1,nr        
+        phir(ir,:,:)=matmul(phir(ir,:,:),xvecs(:,1:nf))
+      enddo
       do if1=1,nf
         do if2=1,nf
-          phir_dot(:,:,if1)=phir_dot(:,:,if1)+phir(:,:,if2)*xmat(if2,if1)
+          phir_dot(:,:,if1)=phir_dot(:,:,if1)+phir(:,:,if2)*xvecs(if2,nf+if1)
         enddo
       enddo
-print*,'cont_dot',phir_dot(irc,:,:)-phil_dot(irc,:,:)
-!
-!     == make homogeneous solutions continuous =======================
-      bmat(:,:)=phil(irc,:,:)
-      call lib$matrixsolve(nf,nf,nf,mat,xmat,bmat)
-print*,'test_hom ',maxval(abs(matmul(mat,xmat)-bmat))
-      do ir=1,nr        
-        phir(ir,:,:)=matmul(phir(ir,:,:),xmat)
-      enddo
-print*,'cont',phir(irc,:,:)-phil(irc,:,:)
-!
-!     ==================================================================
-!     ==  normalize homogeneous solutions, and scale phidot accordingly=
-!     ==================================================================
-      do i=1,nf
-        aux(:)=0.d0
-        do j=1,nf
-          aux(1:irc)=aux(1:irc)+phil(1:irc,j,i)**2
-          aux(irc+1:)=aux(irc+1:)+phir(irc+1:,j,i)**2
+      if(.not.thom) then
+        do if=1,nf
+          phir_inhom(:,:)=phir_inhom(:,:)+phir(:,:,if)*xvecs(if,2*nf+1)
         enddo
-        aux(:)=aux(:)*r(:)**2
-        call radial$integral(gid,nr,aux,svar)
-        svar=1.d0/sqrt(svar)
-        phil(:,:,i)=phil(:,:,i)*svar
-        phir(:,:,i)=phir(:,:,i)*svar
-        phil_dot(:,:,i)=phil_dot(:,:,i)*svar
-        phir_dot(:,:,i)=phir_dot(:,:,i)*svar
-      enddo
+        do if=1,nf
+          phir_dot_inhom(:,:)=phir_dot_inhom(:,:)+phir(:,:,if)*xvecs(if,2*nf+2)
+        enddo
+      end if
+!!$!
+!!$!     == make inhomogeneous solution continuous =======================
+!!$      if(.not.thom) then
+!!$        bvec(:)=phil_inhom(irc,:)-phir_inhom(irc,:)
+!!$        call lib$matrixsolve(nf,nf,1,mat,vec,bvec)
+!!$        do if=1,nf
+!!$          phir_inhom(:,:)=phir_inhom(:,:)+phir(:,:,if)*vec(if)
+!!$        enddo
+!!$        bvec(:)=phil_dot_inhom(irc,:)-phir_dot_inhom(irc,:)
+!!$        call lib$matrixsolve(nf,nf,1,mat,vec,bvec)
+!!$        do if=1,nf
+!!$          phir_dot_inhom(:,:)=phir_dot_inhom(:,:)+phir(:,:,if)*vec(if)
+!!$        enddo
+!!$      end if
+!!$!
+!!$!     == make phidot solutions continuous =============================
+!!$      bmat(:,:)=phil_dot(irc,:,:)-phir_dot(irc,:,:)
+!!$!print*,'nf',nf
+!!$!print*,'mat',mat
+!!$!print*,'bmat',bmat
+!!$      call lib$matrixsolvenew(nf,nf,nf,mat,xmat,bmat)
+!!$print*,'test_dot ',maxval(abs(matmul(mat,xmat)-bmat))
+!!$      do if1=1,nf
+!!$        do if2=1,nf
+!!$          phir_dot(:,:,if1)=phir_dot(:,:,if1)+phir(:,:,if2)*xmat(if2,if1)
+!!$        enddo
+!!$      enddo
+!!$!
+!!$!     == make homogeneous solutions continuous =======================
+!!$      bmat(:,:)=phil(irc,:,:)
+!!$      call lib$matrixsolvenew(nf,nf,nf,mat,xmat,bmat)
+!!$print*,'test_hom ',maxval(abs(matmul(mat,xmat)-bmat))
+!!$      do ir=1,nr        
+!!$        phir(ir,:,:)=matmul(phir(ir,:,:),xmat)
+!!$      enddo
 !
 !     ==================================================================
-!     ==  determine kinks                                             ==
+!     ==  determine kinks (verlet expression is correct)              ==
 !     ==================================================================
-!
-!     == determine kinks (verlet expression is correct)  =============
+print*,'radial_xxx:match kinks'
       if(.not.thom) then
         kink_inhom(:)=(phir_inhom(irc+1,:)-phir_inhom(irc-1,:)) &
      &               -(phil_inhom(irc+1,:)-phil_inhom(irc-1,:))
+        kink_dot_inhom(:)=(phir_dot_inhom(irc+1,:)-phir_dot_inhom(irc-1,:)) &
+     &                   -(phil_dot_inhom(irc+1,:)-phil_dot_inhom(irc-1,:))
       end if
       kink_hom(:,:)=(phir(irc+1,:,:)-phir(irc-1,:,:)) &
      &             -(phil(irc+1,:,:)-phil(irc-1,:,:))
       kink_dot(:,:)=(phir_dot(irc+1,:,:)-phir_dot(irc-1,:,:)) &
      &             -(phil_dot(irc+1,:,:)-phil_dot(irc-1,:,:))
 !
+!     ==================================================================
 !     == map left and right solutions into one array =================
+!     ==================================================================
       phil_inhom(irc:,:)=phir_inhom(irc:,:)
       phil(irc:,:,:)=phir(irc:,:,:)
       phil_dot(irc:,:,:)=phir_dot(irc:,:,:)
 !
-print*,'phil'
-print*,phil_dot(:,nf,nf)
+!     ==================================================================
+!     == make inhomogeneous solution differentiable                   ==
+!     ==================================================================
+      if(.not.thom) then
+        call lib$matrixsolve(nf,nf,1,kink_hom,xvec,-kink_inhom)
+        do i=1,nf
+          phil_inhom(:,:)=phil_inhom(:,:)+phil(:,:,i)*xvec(i)
+        enddo
+        call lib$matrixsolve(nf,nf,1,kink_hom,xvec,-kink_dot_inhom)
+        do i=1,nf
+          phil_dot_inhom(:,:)=phil_dot_inhom(:,:)+phil(:,:,i)*xvec(i)
+        enddo
+      end if
 !
+!     ==================================================================
 !     == diagonalize (Kink_hom+epsilon*kink_dot) Not hermitean!
-print*,'nf ',nf
-print*,'kink_hom ',kink_hom
-print*,'kink_dot ',kink_dot
-      call lib$generaleigenvaluer8(nf,kink_hom,kink_dot,vec,mat)
-print*,'vec ',vec
-stop
-!     == solve inhomogeneous problem c=ch+ci(epsilon_n)
-!     == ci(epsilon_n)=(kink_hom+epsilon_n*kink_dot)**(-1)*kink_inhom
-!     not done 
-      call error$stop('radial_xx')
+!     ==================================================================
+print*,'radial_xxx: eigenvalue'
+      call lib$generaleigenvaluer8(nf,kink_hom,kink_dot,de,mat)
+print*,'radial_xxx: eigenvalue done'
+!     == use phir as intermediate array
+      phir(:,:,:)=0.d0
+      do if=1,nf
+        do if2=1,nf
+          phir(:,:,if)=phir(:,:,if)+(phil(:,:,if2)+de(if)*phil_dot(:,:,if2))*mat(if2,if)
+        enddo
+      enddo
+      phil(:,:,:)=phir(:,:,:)
+!
+!     ==================================================================
+!     ==  normalize solutions                                         ==
+!     ==================================================================
+      do i=1,nf
+        phir_inhom(:,:)=phil_inhom(:,:)+de(i)*phil_dot_inhom(:,:)
+        aux1(:)=0.d0
+        aux2(:)=0.d0
+        aux3(:)=0.d0
+        do j=1,nf
+          aux1(:)=aux1(:)+phir_inhom(:,j)**2
+          aux2(:)=aux2(:)+phir_inhom(:,j)*phil(:,j,i)
+          aux3(:)=aux3(:)+phil(:,j,i)**2
+        enddo
+        aux1(:)=aux1(:)*r(:)**2
+        aux2(:)=aux2(:)*r(:)**2
+        aux3(:)=aux3(:)*r(:)**2
+        call radial$integral(gid,nr,aux1,svar1)
+        call radial$integral(gid,nr,aux2,svar2)
+        call radial$integral(gid,nr,aux3,svar3)
+        svar1=svar1-1.d0
+        if(svar2**2-svar1*svar3.lt.0.d0) then
+          CALL ERROR$MSG('NORMALIZATION FAILED')
+          call error$stop('radial_xxx')
+        endif
+        if(svar2.ge.0.d0) then
+          svar=(-svar2+sqrt(svar2**2-svar1*svar3))/svar3
+        else
+          svar=(-svar2-sqrt(svar2**2-svar1*svar3))/svar3
+        end if
+        phi(:,:,i)=phir_inhom(:,:)+phil(:,:,i)*svar
+      enddo
+!
+!     ==================================================================
+!     ==  print result                                                ==
+!     ==================================================================
+      if(twrite) then
+        do if=1,nf
+          write(file,*)if
+          file='wave'//trim(adjustl(file))//'.dat'
+          open(9,file=file,form='formatted')
+          do ir=1,nr
+            do if2=1,nf
+              if(abs(phi(ir,if2,if)).le.1.d-100)phi(ir,if2,if)=0.d0
+            enddo
+            write(9,fmt='(10e20.10)')r(ir),phi(ir,:,if)
+          enddo
+          close(9)
+        enddo
+        stop
+      end if
+print*,'radal_xxx end'
       RETURN
       END 
 !
@@ -1745,6 +1940,7 @@ TYPE SHLOGGRID_TYPE
   REAL(8)    :: R1
   REAL(8)    :: DEX
   INTEGER(4) :: NR
+  real(8)   ,pointer :: r(:)
 END TYPE SHLOGGRID_TYPE
 TYPE(SHLOGGRID_TYPE), ALLOCATABLE :: GRIDARRAY(:)
 INTEGER(4)                        :: NGIDX=0
@@ -1794,6 +1990,10 @@ END MODULE SHLOGRADIAL_MODULE
 !
       NGID=NGID+1
       GID=NGID
+      GRIDARRAY(NGID)%R1=0.D0
+      GRIDARRAY(NGID)%DEX=0.D0
+      GRIDARRAY(NGID)%NR=0
+      nullify(GRIDARRAY(NGID)%R)
       RETURN
       END
 !
@@ -1804,6 +2004,8 @@ END MODULE SHLOGRADIAL_MODULE
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
+      REAL(8)               :: RI
+      INTEGER(4)            :: IR
 !     *******************************************************************
       IF(GID.GT.NGID) THEN
         CALL ERROR$MSG('GRID ID OUT OF RANGE')
@@ -1815,6 +2017,15 @@ END MODULE SHLOGRADIAL_MODULE
       DEX=GRIDARRAY(GID)%DEX
       NR=GRIDARRAY(GID)%NR
       XEXP=DEXP(DEX)
+      IF(.NOT.ASSOCIATED(GRIDARRAY(GID)%R)) THEN
+        ALLOCATE(GRIDARRAY(GID)%R(NR))
+        RI=R1/XEXP
+        DO IR=1,NR 
+          RI=RI*XEXP
+          GRIDARRAY(GID)%R(IR)=RI-R1
+        ENDDO
+        GRIDARRAY(GID)%R(1)=RMIN
+      END IF
       RETURN
       END
 !
@@ -1941,6 +2152,10 @@ END MODULE SHLOGRADIAL_MODULE
          CALL ERROR$I4VAL('NR',NR)
          CALL ERROR$I4VAL('NR_',NR_)
          CALL ERROR$STOP('SHLOGRADIAL$R')
+      END IF
+      IF(ASSOCIATED(GRIDARRAY(GID)%R)) THEN
+        R(:)=GRIDARRAY(GID)%R(:)
+        RETURN
       END IF
       RI=R1/XEXP
       DO IR=1,NR 
@@ -2144,10 +2359,11 @@ END MODULE SHLOGRADIAL_MODULE
       CALL SHLOGRADIAL$R(GID,NR,R)
       DRDX(:)=DEX*(R(:)+R1)   
       B1(:)=B(:)*DRDX(:)-DEX*A(:)
+      drdx(:)=drdx(:)**2
       DO I=1,NF
-        D1(:,I)=D(:,I)*DRDX(:)**2
+        D1(:,I)=D(:,I)*DRDX(:)
         DO J=1,NF
-          C1(:,I,J)=C(:,I,J)*DRDX(:)**2
+          C1(:,I,J)=C(:,I,J)*DRDX(:)
         ENDDO
       ENDDO
       CALL RADIAL_DGLEQUISPACEDGEN(NR,NF,idir,A,B1,C1,D1,F)

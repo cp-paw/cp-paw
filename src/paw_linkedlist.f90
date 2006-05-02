@@ -2401,6 +2401,7 @@ CONTAINS
         CALL MPE$BROADCAST(cid,1,LINE)
         LINE=ADJUSTL(LINE)
         LENG=LEN_TRIM(LINE)
+        if(leng.le.0) cycle
 !
 !       ================================================================
 !       ==  CHECK HERE FOR THE PRESENCE OF TABS ETC                   ==
