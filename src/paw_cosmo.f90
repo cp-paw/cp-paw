@@ -13,8 +13,8 @@ REAL(8),SAVE             :: ANNE=0.D0      ! FRICTION
 INTEGER,SAVE             :: NMULTIPLE=30   ! #(MULTIPLE STEPS PER ITERATION)
 REAL(8),SAVE             :: QMASS=1.D+5    ! MASS FOR SURFACE CHARGES
 REAL(8),SAVE             :: KSELF=10.D0
-REAL(8),SAVE             :: GAMMA=0.D0
-REAL(8),SAVE             :: BETA=0.D0
+REAL(8),SAVE             :: GAMMA=6.3739d-6 !see section IV.B in senn et al.
+REAL(8),SAVE             :: BETA=2.1567d-3 !see section IV.B in senn et al.
 REAL(8),SAVE             :: FDIEL=1.D0    ! (E_R-1)/(E_R+0.5)
 INTEGER,SAVE             :: NAT=0
 REAL(8),SAVE,ALLOCATABLE :: RSOLV(:) !(NAT) SOLVATION RADIUS
@@ -1341,7 +1341,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       VTHETA(:)=0.D0
       VSURF(:)=0.D0
       EBLANK=0.D0
-      ENONPOLAR=0.D0
+      ENONPOLAR=beta
       ESELF=0.D0
 !
 !     ======================================================================

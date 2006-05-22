@@ -722,6 +722,57 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 !
+!     ......................................................................
+      SUBROUTINE LIB$GENERALEIGENVALUEc8(N,H,O,E,VEC)
+!     == SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
+!     **      [H(:,:)-E(I)*O(:,:)]*VEC(:,I)=0                            **
+!     ** NOT TESTED!!!!!!                                                **
+!     ** remark: h and o must be hermiten, O must be positive definite   **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      complex(8),INTENT(IN) :: H(N,N)
+      complex(8),INTENT(IN) :: O(N,N)
+      real(8)   ,INTENT(OUT):: E(N)
+      complex(8),INTENT(OUT):: VEC(N,N)
+      INTEGER               :: N1
+      INTEGER               :: LdWORK
+      complex(8)            :: WORK(n*N)
+      complex(8)            :: o1(n,N)
+      real(8)               :: rwork(3*n-2)
+      INTEGER               :: INFO
+      LOGICAL               :: TTEST=.true.
+      REAL(8)               :: DEV
+      INTEGER               :: I,j
+!     *********************************************************************
+      LDWORK=N*N
+      N1=N
+      VEC=H   
+      o1=o
+      CALL ZHEGV(1,'V','U',N1,vec,N1,O1,N1,E,WORK,LDWORK,rWORK,INFO)
+      IF(INFO.LT.0) THEN
+        CALL ERROR$MSG('ITH ARGUMENT OF ZHGEV HAS ILLEGAL VALUE')
+        CALL ERROR$I4VAL('I',-INFO)
+        CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+      ELSE IF(info.gt.0) THEN
+        CALL ERROR$MSG('failed')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+      END IF
+      IF(TTEST) THEN
+        DEV=0.D0
+        DO I=1,N
+          DEV=MAX(DEV,MAXVAL(ABS(MATMUL(H-E(I)*O,VEC(:,I)))))
+        ENDDO
+        PRINT*,'DEV',DEV
+        IF(DEV.GT.1.D-6) THEN
+          CALL ERROR$MSG('GENERAL EIGENVALUE TEST FAILED')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+        END IF
+      END IF
+      RETURN
+      END
+!
 !     ..................................................................
       SUBROUTINE LIB$FFTC8(DIR,LEN,NFFT,X,Y)                  
 !     ******************************************************************
@@ -1702,6 +1753,60 @@ print*,'irank ',irank,info,n1,m1,neq1
         CALL ERROR$I4VAL('I',INFO)
         CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
       END IF
+      RETURN
+      end
+!     ..................................................................
+      SUBROUTINE LIB$MATRIXSOLVEnewc8(N,M,NEQ,A,X,B)
+!     ******************************************************************
+!     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
+!     **  WHERE A IS A(N,M)                                           **
+!     **  IF A IS NOT SQUARE, THE EQUATION IS SOLVED IN A LEAST       **
+!     **  SQUARE SENSE                                                **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      INTEGER(4),INTENT(IN) :: M
+      INTEGER(4),INTENT(IN) :: NEQ
+      complex(8),INTENT(IN) :: A(N,M)
+      complex(8),INTENT(OUT):: X(M,NEQ)
+      complex(8),INTENT(IN) :: B(N,NEQ)
+      complex(8)            :: a1(n,m)
+      complex(8)            :: b1(n,neq)
+      integer               :: info
+      real(8)               :: rcond=-1.d0
+      integer               :: ldwork
+      integer               :: irank
+      integer               :: ipivot(n)
+      real(8)               :: sing(n)
+      real(8)   ,allocatable:: work(:)
+      integer               :: n1,m1,neq1
+!     ******************************************************************
+      ldwork=3*min(M,N)+max(2*min(M,N),max(M,N),Neq)
+!     -- use 3*m+3*n+neq
+      allocate(work(ldwork))
+      n1=n
+      m1=m
+      neq1=neq
+      a1=a 
+      b1=b
+      if(n1.eq.m1) then
+        call zgesv(n1,neq1,a1,n1,ipivot,b1,n1,info)
+        x=b1
+        IF(INFO.lt.0) THEN
+          CALL ERROR$MSG('ITH ARGUMENT HAS ILLEGAL VALUE')
+          CALL ERROR$I4VAL('I',-INFO)
+          CALL ERROR$STOP('LIB$MATRIXSOLVENEWC8')
+        ELSE IF(INFO.gt.0) THEN
+          CALL ERROR$MSG('PROBLEM IS SINGULAR. NO SOLUTION CAN BE COMPUTED')
+          CALL ERROR$I4VAL('I',INFO)
+          CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
+        END IF
+      ELSE
+        CALL ERROR$MSG('N.NEQ.M NOT IMPLEMENTED')
+        CALL ERROR$STOP('LIB$MATRIXSOLVENEWC8')
+!        CALL ZGELSD(N,M,NEQ,A,N,B,N,S,RCOND,RANK,WORK,LWORK,RWORK,IWORK,INFO)
+      END IF
+      DEALLOCATE(WORK)
       RETURN
       end
 !

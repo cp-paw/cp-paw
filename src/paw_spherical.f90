@@ -271,6 +271,246 @@
        RETURN
        END
 !
+!     .......................................................................
+      subroutine spherical$ylmtrans(lmx,c)
+!     **                                                                   **
+!     **  transformation matrix from real spherical harmonics Ybar         **
+!     **  to angular momentum eigenstates y                                **
+!     **                                                                   **
+!     **   1=\SUM_{LM,LM'} |y_{LM}><y_{LM}|YBAR_{LM'}><yBAR_{LM'}|         **
+!     **    =\SUM_{LM,LM'} |y_{LM}>C_{LM,LM'}<yBAR_{LM'}|                  **
+!     **                                                                   **
+      implicit none
+      integer(4),intent(in) :: lmx
+      complex(8),intent(out):: c(lmx,lmx)
+      integer(4)            :: l,m,lm,lmp,lmm,I
+      integer(4)            :: lmax
+      real(8)               :: fac
+      real(8)               :: sqrtinv
+      LOGICAL(4)            :: TTEST=.FALSE.
+      COMPLEX(8)            :: CTEST(LMX,LMX)
+      REAL(8)               :: SVAR
+!     ***********************************************************************
+      LMAX=INT(SQRT(REAL(LMX)+1.D-8))-1
+      IF((Lmax+1)**2.NE.LMX) THEN
+        call error$MSG('LMX MUST SPAN FULL L-SHELLS')
+        call error$R8VAL('LMX',LMX)
+        CALL ERROR$STOP('SPHERICAL_ylmtrans')
+      END IF
+      sqrtinv=1.d0/sqrt(2.d0)
+      c=(0.d0,0.d0)
+      do L=0,LMAX
+        lmp=l**2+l+1
+        lmm=lmp
+        c(lmp,lmp)=(1.d0,0.D0)
+        fac=1.d0
+        do m=1,l
+          fac=-fac
+          lmp=lmp+1
+          lmm=lmm-1
+          c(lmp,lmp)=    (1.d0, 0.d0)*sqrtinv
+          c(lmp,lmm)=    (0.d0,-1.d0)*sqrtinv
+          c(lmm,lmp)=fac*(1.d0, 0.d0)*sqrtinv
+          c(lmm,lmm)=fac*(0.d0, 1.d0)*sqrtinv
+        enddo
+      enddo
+!
+      IF(TTEST) THEN
+        CTEST=MATMUL(TRANSPOSE(CONJG(C)),C)
+        DO I=1,LMX
+          CTEST(I,I)=CTEST(I,I)-(1.D0,0.D0)
+        ENDDO
+        SVAR=MAXVAL(ABS(CTEST))
+        IF(SVAR.GT.1.D-10) THEN
+          CALL ERROR$MSG('TRANSFORMATION IS NOT UNITARY')   
+          CALL ERROR$R8VAL('DEVIATION',SVAR)
+          CALL ERROR$STOP('SPHERICAL_YLMTRANS')   
+        END IF
+      END IF
+      return
+      end
+!
+!     .......................................................................
+      subroutine spherical$ER(lmx,x,y,z)
+!     **                                                                   **
+!     **  matrix elements of the unit vectors x/r, y/r, z/y                **
+!     **                                                                   **
+!     **       xi/r=\sum_{lm,lm'} |y_lm><y_lm|xi/r|y_lm'><ybar_lm'|        **
+!     **           =\sum_{lm,lm'} |y_lm> xi_{lm,lm'} <ybar_lm'|            **
+!     **                                                                   **
+!     **       x_{lm,lm'}=<lm|x/r|lm'>                                     **
+!     **       y_{lm,lm'}=<lm|y/r|lm'>                                     **
+!     **       z_{lm,lm'}=<lm|z/r|lm'>                                     **
+!     **                                                                   **
+      implicit none
+      integer(4),intent(in) :: lmx
+      real(8)   ,intent(out):: x(lmx,lmx)
+      real(8)   ,intent(out):: y(lmx,lmx)
+      real(8)   ,intent(out):: z(lmx,lmx)
+      real(8)               :: pi,sq4piby3
+      integer(4)            :: lm1,lm2
+!     ***********************************************************************
+      pi=4.d0*datan(1.d0)
+      sq4piby3=sqrt(4.d0*pi/3.d0)
+      DO LM1=1,LMX
+        DO LM2=1,LMX
+          CALL CLeBSCH(LM1,LM2,2,x(lm1,lm2))
+          CALL CLeBSCH(LM1,LM2,3,y(LM1,LM2))
+          CALL CLeBSCH(LM1,LM2,4,z(LM1,LM2))
+        ENDDO
+      ENDDO
+      x=x*SQ4PIBY3
+      y=y*SQ4PIBY3
+      z=z*SQ4PIBY3
+      RETURN
+      END
+!
+!     .......................................................................
+      subroutine spherical$L(lmx,lx,ly,lz)
+!     **                                                                   **
+!     **  angular momentum matrix elements in a representation             **
+!     **  of real spherical harmonics                                      **
+!     **                                                                   **
+!     **    lx_{lm,lm'}=<lm|lx|lm'>                                        **
+!     **                                                                   **
+      implicit none
+      integer(4),intent(in) :: lmx
+      complex(8),intent(out):: lX(lmx,lmx)
+      complex(8),intent(out):: lY(lmx,lmx)
+      complex(8),intent(out):: lz(lmx,lmx)
+      complex(8)            :: c(lmx,lmx)
+      INTEGER(4)            :: Lmax
+      INTEGER(4)            :: LM,L,M
+      INTEGER(4)            :: LOX(LMX),MOX(LMX)
+      REAL(8)               :: LPFAC(LMX),LMFAC(LMX),LZFAC(LMX)
+      COMPLEX(8)            :: LPMAT(LMX,LMX),LMMAT(LMX,LMX)
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+!     ***********************************************************************
+      LMAX=INT(SQRT(REAL(LMX)+1.D-8))-1
+      IF((Lmax+1)**2.NE.LMX) THEN
+        CALL ERROR$STOP('SPHERICAL_L')
+      END IF
+      LM=0
+      DO L=0,LMAX
+        DO M=-L,L
+          LM=LM+1
+          LOX(LM)=L
+          MOX(LM)=M
+          LPFAC(LM)=SQRT(REAL((L-M)*(L+M+1),KIND=8))
+          LMFAC(LM)=SQRT(REAL((L+M)*(L-M+1),KIND=8))
+          LZFAC(LM)=REAL(M,KIND=8)
+        ENDDO
+      ENDDO
+!
+!     =======================================================================
+!     == angular momenta in angular momentum eigenstates                   ==
+!     =======================================================================
+      lz=(0.d0,0.d0)
+      lpMAT=(0.d0,0.d0)
+      lmMAT=(0.d0,0.d0)
+      do lm=1,lmx
+        lz(lm,lm)=cmplx(lzfac(lm),0.d0)
+        if(mox(lm).ne.+lox(lm))lpMAT(lm+1,lm)=CMPLX(lpfac(lm),0.D0)
+        if(mox(lm).ne.-lox(lm))lmMAT(lm-1,lm)=CMPLX(lmfac(lm),0.D0)
+      enddo
+!
+!     =======================================================================
+!     == transform from a basis of angular momentum eigenstates to a basis ==
+!     == of real spherical harmonics                                       ==
+!     =======================================================================
+      call spherical$ylmtrans(lmx,c)
+      lz=matmul(lz,c)
+      lpmat=matmul(lpmat,c)
+      lmmat=matmul(lmmat,c)
+      c=transpose(conjg(c))
+      lz=matmul(c,lz)
+      lpmat=matmul(c,lpmat)
+      lmmat=matmul(c,lmmat)
+!
+!     =======================================================================
+!     == cartesian angular momenta                                         ==
+!     =======================================================================
+      lx= 0.5d0   *(Lpmat+lmmat)
+      lY=-0.5d0*CI*(Lpmat-lmmat)
+      return
+      end
+!
+!     .......................................................................
+      subroutine SPHERICAL_TEST()
+!     **                                                                   **
+      implicit none
+      INTEGER(4),PARAMETER :: LMX=9
+      COMPLEX(8)           :: LX(LMX,LMX),LY(LMX,LMX),LZ(LMX,LMX)
+      complex(8)           :: c(lmx,lmx)
+      complex(8)           :: cdagger(lmx,lmx)
+      complex(8)           :: mat(lmx,lmx)
+      integer(4)           :: i,LM,L,M
+      integer(4)           :: LMAX
+      REAL(8)              :: SVAR
+      integer(4)           :: LOX(LMX),MOX(LMX)
+      complex(8)           :: ci=(0.d0,1.d0)
+!     ***********************************************************************
+      LMAX=INT(SQRT(REAL(LMX)+1.D-8))-1
+      IF((Lmax+1)**2.NE.LMX) THEN
+        CALL ERROR$STOP('SPHERICAL_L')
+      END IF
+      LM=0
+      DO L=0,LMAX
+        DO M=-L,L
+          LM=LM+1
+          LOX(LM)=L
+          MOX(LM)=M
+         ENDDO
+      ENDDO
+!
+      CALL spherical$L(lmx,lx,ly,lz)
+      call spherical$ylmtrans(lmx,c)
+      cdagger=transpose(conjg(c))
+!
+!     == CHECK EIGENVALUE EQUATION FOR LZ
+      MAT=MATMUL(LZ,CDAGGER)
+      DO I=1,LMX
+        MAT(:,I)=MAT(:,I)-CDAGGER(:,I)*REAL(MOX(I))
+      ENDDO
+      SVAR=MAXVAL(ABS(MAT))
+      PRINT*,'DEVIATION EIGENVALUE LZ ',SVAR
+
+!     == CHECK EIGENVALUE EQUATION FOR L**2
+      mat=matmul(lx,lx)+matmul(ly,ly)+matmul(lz,lz)
+      PRINT*,'L**2'
+      do i=1,lmx
+        write(*,fmt='(20("(",2f6.2,")"))')mat(I,:)
+      enddo
+!
+!     == PRINT TRANSFORMATION FROM REAL HARMONICS
+      print*,'c'
+      mat=c
+      do i=1,lmx
+        write(*,fmt='(20("(",2f6.2,")"))')mat(I,:)
+      enddo
+!
+!     == CHECK IF C IS UNITARY
+      print*,'cdagger*c'
+      mat=matmul(cdagger,c)
+      do i=1,lmx
+        write(*,fmt='(20("(",2f6.2,")"))')mat(:,i)
+      enddo
+      print*,'c*cdagger'
+      mat=matmul(c,cdagger)
+      do i=1,lmx
+        write(*,fmt='(20("(",2f6.2,")"))')mat(:,i)
+      enddo
+!
+      print*,'check commutator relations'
+      mat=matmul(lx,ly)-matmul(ly,lx)-ci*lz
+      print*,'[lx,ly]-i*lz',maxval(abs(mat))
+      mat=matmul(ly,lz)-matmul(lz,ly)-ci*lx
+      print*,'[ly,lz]-i*lx',maxval(abs(mat))
+      mat=matmul(lz,lx)-matmul(lx,lz)-ci*ly
+      print*,'[lz,lx]-i*ly',maxval(abs(mat))
+      RETURN
+      END
+!
 !..........................................................CLBSCH........
 MODULE CLEBSCH_MODULE
 INTEGER(4)          :: LMXX=0

@@ -643,8 +643,8 @@ STOP
       REAL(8)   ,ALLOCATABLE:: AEPHIat(:,:)
       REAL(8)   ,ALLOCATABLE:: TAEPHI(:,:)
       REAL(8)               :: RHOOLD
-      INTEGER(4)            :: LN,IC,ln1,ln2,lmn1,lmn2,im,l1,l2
-      logical(4)            :: tspherical=.false.
+      INTEGER(4)            :: LN,IC,ln1,ln2,lmn1,lmn2,im,l1,l2,ibg,l
+      logical(4)            :: tspherical=.true.
       integer(4)            :: nspin
       real(8)               :: drel(nr)
       real(8)   ,allocatable:: phitest(:,:,:,:)
@@ -656,6 +656,7 @@ STOP
       real(8)  ,allocatable :: ebg(:)
       complex(8),allocatable :: phibg(:,:,:,:)
       complex(8),allocatable :: tphibg(:,:,:,:)
+      complex(8),allocatable :: sphibg(:,:,:,:)
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -756,6 +757,7 @@ ENDDO
         END IF
         CALL SF_SPHERICALCOREETOT(GID,NR,NC,EOFI,FOFI,POT,RHO,ECORE,ekinc,AUX)
         DECORE=ECORE-ECOREAT   ! CORE RELAXATION ENERGY
+print*,'core relaxation energy ',decore
 !
 !       ===============================================================
 !       == ORTHOGONALIZE NODELESS WAVE FUNCTIONS TO THE CORE STATES  ==
@@ -837,6 +839,7 @@ PRINT*,'CORE RELAXATION ENERGY ENERGY ',DECORE
         allocate(ebg(nbg))
         allocate(phibg(nr,lmx,2,nbg))
         allocate(tphibg(nr,lmx,2,nbg))
+        allocate(sphibg(nr,lmx,2,nbg))
         potns(:,:,:)=0.d0
         POTns(:,1,1)=AEPOT ! STARTING POTENTIAL IS THE ATOMIC POTENTIAL 
         XMAX=0.D0
@@ -847,18 +850,25 @@ PRINT*,'CORE RELAXATION ENERGY ENERGY ',DECORE
 !         ================================================================
 !         ==  GENERATE WAVE FUNCTIONS                                   ==
 !         ================================================================
+!potns(:,2:,:)=0.d0
           call sf_nonsphcorestates(GID,NR,ndimd,lmrx,Nc,LOFI,SOfi,Fofi,NNofi &
-     &                       ,POTns,Eofi,lmx,nbg,ebg,phibg,tphibg)
-          do i=1,nbg
-            print*,'ebg ',i,ebg(i)
+     &                       ,POTns,Eofi,lmx,nbg,ebg,phibg,sphibg)
+
+          ibg=0
+          do i=1,nc
+            l=lofi(i)
+            do j=1,2*(2*l+1)
+              ibg=ibg+1
+              print*,'ebg ',ibg,ebg(ibg),eofi(i),i
+            enddo
           enddo
 !    
 !         ================================================================
 !         ==  generate valence partial waves                            ==
 !         ================================================================
           call sf_totalrho(gid,nr,lmnx,ndimd,denmat,lnx,lox,uphi,tuphi &
-      &                ,nbg,lmx,phibg,tphibg,lmrx,rhons,ekinv,ekinc)
-rhons=rhons+aerho
+      &                ,nbg,lmx,phibg,tphibg,sphibg,lmrx,rhons,ekinv,ekinc)
+!rhons=rhons+aerho
  aux=rhons(:,1,1)*r(:)**2
  call radial$integral(gid,nr,aux,svar)
 print*,'charge ',4.d0*pi*svar*y0,aez
@@ -985,7 +995,7 @@ print*,'back from soft core'
 !
 !      ...................................................................
        subroutine sf_totalrho(gid,nr,lmnx,ndimd,denmat,lnx,lox,uphi,tuphi &
-      &                ,nc,lmx,phic,tphic,lmrx,rho,ekinv,ekinc)
+      &                ,nc,lmx,phic,tphic,sphic,lmrx,rho,ekinv,ekinc)
 !      **                                                               **
 !      **  calculates the total density assuming a noncollinear model   **
 !      **  with complex wave functions and a complex density matrix     **
@@ -1008,6 +1018,7 @@ use periodictable_module
        integer(4),intent(in) :: nc    !#(core states)
        integer(4),intent(in) :: lmx   !#(angular momenta for wave functions)
        complex(8),intent(in) :: phic(nr,lmx,2,nc)
+       complex(8),intent(in) :: sphic(nr,lmx,2,nc)
        complex(8),intent(in) :: tphic(nr,lmx,2,nc)
        integer(4),intent(in) :: lmrx
        real(8)   ,intent(out):: rho(nr,lmrx,ndimd)
@@ -1044,6 +1055,7 @@ integer(4) :: ic1,ic2
            do lm=1,lmx
              do is=1,2
                caux(:)=caux(:)+conjg(phic(:,lm,is,ic1))*phic(:,lm,is,ic2)
+!              caux(:)=caux(:)+conjg(sphic(:,lm,is,ic1))*sphic(:,lm,is,ic2)
              enddo
            enddo
            caux(:)=caux(:)*r(:)**2
@@ -1056,6 +1068,30 @@ integer(4) :: ic1,ic2
            print*,ic1,ic2,svar1,svar2
          enddo
        enddo
+       print*,'core overlap-1'
+       aux(:)=(0.d0,0.d0)
+       do ic1=1,nc
+         do lm=1,lmx
+           do is=1,2
+             aux(:)=aux(:)+abs(phic(:,lm,is,ic1))**2
+           enddo
+         enddo
+       enddo
+       aux(:)=aux(:)*r(:)**2
+       call radial$integral(gid,nr,aux,svar1)
+       print*,'charge deviation ',svar1-real(nc)
+!
+       aux=0.d0
+       do ic1=1,nc
+         do lm=1,lmx
+           do is=1,2
+             aux(:)=aux(:)+abs(sphic(:,lm,is,ic1))**2
+           enddo
+         enddo
+       enddo
+       aux(:)=aux(:)*r(:)**2
+       call radial$integral(gid,nr,aux,svar1)
+       print*,'charge in positrons ',svar1
 !
 !      =======================================================================
 !      == EVALUATE OVERLAPS WITH UPHI                                       ==
@@ -1071,7 +1107,7 @@ integer(4) :: ic1,ic2
            if(lm.gt.lmx) cycle
            DO IS=1,2
              DO IC=1,NC
-               cAUX(:)=conjg(PHIC(:,LM,IS,IC))*UPHI(:,LN)
+               cAUX(:)=conjg(PHIC(:,LM,IS,IC))*UPHI(:,LN)*r(:)**2
                aux(:)=real(caux(:))
                CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
                AUX(:)=aimag(caux)
@@ -1171,23 +1207,22 @@ do ic=1,nr
 enddo
 call radial$integral(gid,nr,aux,svar1)
 print*,'valence charge ',svar1
-crho=(0.d0,0.d0)
 !
 !      =======================================================================
 !      == core density                                                      ==
 !      =======================================================================
-       caux(:)=0.d0
+       caux=0.d0
        do ic=1,nc
          caux2(:)=0.d0
          do lm1=1,lmx
            caux(:)=caux(:)  +phic(:,lm1,1,ic)*conjg(tphic(:,lm1,1,ic)) &
       &                     +phic(:,lm1,2,ic)*conjg(tphic(:,lm1,2,ic))
-           caux2(:)=caux2(:)+phic(:,lm1,1,ic)*conjg(phic(:,lm1,1,ic)) &
-      &                     +phic(:,lm1,2,ic)*conjg(phic(:,lm1,2,ic))
+!           caux2(:)=caux2(:)+phic(:,lm1,1,ic)*conjg(phic(:,lm1,1,ic)) &
+!      &                     +phic(:,lm1,2,ic)*conjg(phic(:,lm1,2,ic))
          enddo
-aux(:)=real(caux2(:))*r(:)**2
-call radial$integral(gid,nr,aux,svar1)
-print*,'core wave function norm ',ic,svar1
+!aux(:)=real(caux2(:))*r(:)**2
+!call radial$integral(gid,nr,aux,svar1)
+!print*,'core wave function norm ',ic,svar1
          do lmr=1,lmrx
            do lm1=1,lmx
              do lm2=1,lmx
@@ -1219,6 +1254,10 @@ print*,'core wave function norm ',ic,svar1
          rho(:,:,3)=aimag(crho(:,:,1,2)-crho(:,:,2,1))
          rho(:,:,4)=real(crho(:,:,1,1)-crho(:,:,2,2))
        end if
+!
+!      =======================================================================
+!      == write wave functions                                              ==
+!      =======================================================================
        return
        end
 !
@@ -1296,6 +1335,8 @@ print*,'core wave function norm ',ic,svar1
            svar=e(ib)
            CALL RELATIVISTICCORRECTION(GID,NR,POT,E(IB),DREL)
            aux(:)=0.d0
+!print*,'warning: relativistic corrections switched off in sf_aerho'
+!drel=0.d0
            CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),DREL,aux,NN(IB),POT &
      &                  ,E(IB),PHI(:,ib))
            if(abs(e(ib)-svar).lt.tol) exit
@@ -1311,7 +1352,7 @@ print*,'core wave function norm ',ic,svar1
 !
 !     ......................................................................
       SUBROUTINE sf_nonsphcorestates(GID,NR,ndimd,lmrx,NB,LOFI,SO,F,NN &
-     &                              ,POT,e,lmx,nbg,ebg,phi,tphi)
+     &                              ,POT,e,lmx,nbg,ebg,phi,sphi)
 !     **                                                                  **
 !     **  does not work for non-collinear calculations                    **
 !     **  works internally spin-polarized                                 **
@@ -1332,7 +1373,8 @@ print*,'core wave function norm ',ic,svar1
       INTEGER(4) ,INTENT(IN)   :: nbg       
       REAL(8)    ,intent(out)  :: ebg(nbg)
       complex(8) ,intent(out)  :: PHI(NR,lmx,2,nbg)
-      complex(8) ,intent(out)  :: tPHI(NR,lmx,2,nbg)
+      complex(8) ,intent(out)  :: sPHI(NR,lmx,2,nbg)
+      complex(8)               :: tPHI(NR,lmx,2,nbg)
       complex(8)               :: phitest(nr,lmx,2,2*lmx)
       complex(8)               :: tphitest(nr,lmx,2,2*lmx)
       real(8)                  :: ginh(nr,lmx,2)
@@ -1363,7 +1405,6 @@ print*,'core wave function norm ',ic,svar1
 !     == map potential into local spin-polarized array                      ==
 !     ========================================================================
       ibg=0
-print*,'warning from sf_nonsphcorestates: no relativistic corrections!!'
       DO IB=1,NB
 !
 !       ======================================================================
@@ -1372,39 +1413,29 @@ print*,'warning from sf_nonsphcorestates: no relativistic corrections!!'
         do i=1,niter
           svar=e(ib)
           CALL RELATIVISTICCORRECTION(GID,NR,POT,E(IB),DREL)
-drel(:)=0.d0
           aux(:)=0.d0
           CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),DREL,aux,NN(IB),POT(:,1,1) &
      &                 ,E(IB),aux1)
-print*,'spherical loop ',i,e(ib)
           if(abs(e(ib)-svar).lt.tol) exit
         enddo
+print*,'spherical loop ',i,e(ib)
 !
 !       ======================================================================
 !       == determine nonspherical solutions in this shell                   ==
 !       ======================================================================
         ginh=0.d0
         call RADIAL$nonsphbound(GID,NR,ndimd,lmx,lmrx,POT,dREL,Ginh,E(ib) &
-     &                         ,de,PHItest,tphitest)
+     &                         ,2*(2*lofi(ib)+1),de,PHItest,tphitest)
 !
 !       ======================================================================
 !       == select the relevant solutions                                    ==
 !       ======================================================================
-        tselect(:)=.true.
-        do i=2*(2*lofi(ib)+1)+1,2*lmx
-          isvararr=maxloc(abs(de),tselect)
-          isvar=isvararr(1)
-          tselect(isvar)=.false.
-        enddo
-        print*,'max dev',maxval(abs(de),tselect),'==========================='
-        do i=1,2*lmx
-          if(.not.tselect(i)) cycle
+        do i=1,2*(2*lofi(ib)+1)
           ibg=ibg+1
           ebg(ibg)=e(ib)+de(i)
           phi(:,:,:,ibg)=phitest(:,:,:,i)
-          tphi(:,:,:,ibg)=tphitest(:,:,:,i)
+          sphi(:,:,:,ibg)=tphitest(:,:,:,i)
         enddo
-print*,' test ',ib,ibg,ebg(ibg-2*(2*lofi(ib)+1)+1:ibg)
       enddo
 !print*,'loop done'
       RETURN

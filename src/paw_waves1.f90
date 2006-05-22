@@ -276,6 +276,12 @@ END MODULE WAVES_MODULE
 !     ================================================================
       ELSE IF(ID.EQ.'EIGVAL') THEN
         IKPT=EXTPNTR%IKPT
+        IF(IKPT.EQ.0) THEN
+          CALL ERROR$MSG('STATE NOT AVAILABLE ON THIS TASK')
+          CALL ERROR$MSG('THIS ERROR OCCURS ONLY FOR PARALLEL JOBS')
+          CALL ERROR$MSG("USE WAVES$GETL4('AVAILABLESTATE',TCHK) TO EXPLORE")
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
         ISPIN=EXTPNTR%ISPIN
         CALL WAVES_SELECTWV(IKPT,ISPIN)
         CALL PLANEWAVE$SELECT(GSET%ID)
@@ -299,6 +305,12 @@ END MODULE WAVES_MODULE
 !     ================================================================
       ELSE IF(ID.EQ.'<PSI|H|PSI>') THEN
         IKPT=EXTPNTR%IKPT
+        IF(IKPT.EQ.0) THEN
+          CALL ERROR$MSG('STATE NOT AVAILABLE ON THIS TASK')
+          CALL ERROR$MSG('THIS ERROR OCCURS ONLY FOR PARALLEL JOBS')
+          CALL ERROR$MSG("USE WAVES$GETL4('AVAILABLESTATE',TCHK) TO EXPLORE")
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
         ISPIN=EXTPNTR%ISPIN
         CALL WAVES_SELECTWV(IKPT,ISPIN)
         CALL PLANEWAVE$SELECT(GSET%ID)
@@ -322,6 +334,12 @@ END MODULE WAVES_MODULE
 !     ================================================================
       ELSE IF(ID.EQ.'PSPSI') THEN
         IKPT=EXTPNTR%IKPT
+        IF(IKPT.EQ.0) THEN
+          CALL ERROR$MSG('STATE NOT AVAILABLE ON THIS TASK')
+          CALL ERROR$MSG('THIS ERROR OCCURS ONLY FOR PARALLEL JOBS')
+          CALL ERROR$MSG("USE WAVES$GETL4('AVAILABLESTATE',TCHK) TO EXPLORE")
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
         ISPIN=EXTPNTR%ISPIN
         IB=EXTPNTR%IB
         IF(NSPIN.EQ.1.AND.NDIM.EQ.2) THEN
@@ -396,7 +414,13 @@ END MODULE WAVES_MODULE
 !     ==  GET PROJECTIONS                                           ==
 !     ================================================================
       ELSE IF(ID.EQ.'<PSPSI|PRO>') THEN
-        IKPT=EXTPNTR%IKPT
+        IKPT=EXTPNTR%IKPT   ! IKPT REFERS TO LOCAL KPOINTS
+        IF(IKPT.EQ.0) THEN
+          CALL ERROR$MSG('STATE NOT AVAILABLE ON THIS TASK')
+          CALL ERROR$MSG('THIS ERROR OCCURS ONLY FOR PARALLEL JOBS')
+          CALL ERROR$MSG("USE WAVES$GETL4('AVAILABLESTATE',TCHK) TO EXPLORE")
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
         ISPIN=EXTPNTR%ISPIN
         IB=EXTPNTR%IB
         IF(NSPIN.EQ.1.AND.NDIM.EQ.2) THEN
@@ -490,11 +514,27 @@ END MODULE WAVES_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: VAL
+      integer(4)              :: ikpt,ikptl,i
+      integer(4)              :: thistask,ntasks
 !     ******************************************************************
       IF(ID.EQ.'SPINORDIM') THEN
         NDIM=VAL
+!
       ELSE IF(ID.EQ.'IKPT') THEN
-        EXTPNTR%IKPT=VAL
+        ikpt=val
+!       == check if k-point is present ===============================
+        call mpe$query(thistask,ntasks)
+        IF(KMAP(IKPT).NE.THISTASK) THEN
+          ikptl=0
+        else
+!         == convert global ikpt into local ikpt =====================
+          ikptl=0
+          do i=1,ikpt
+            if(KMAP(IKPT).eq.THISTASK) ikptl=ikptl+1
+          enddo
+        END IF
+        EXTPNTR%IKPT=ikptl
+!
       ELSE IF(ID.EQ.'ISPIN') THEN
         EXTPNTR%ISPIN=VAL
       ELSE IF(ID.EQ.'IB') THEN
@@ -618,6 +658,8 @@ END MODULE WAVES_MODULE
         VAL=TSWAPSTATES
       ELSE IF(ID.EQ.'WRITERHO') THEN
         VAL=TWRITERHO
+      ELSE IF(ID.EQ.'AVAILABLESTATE') THEN
+        VAL=(EXTPNTR%IKPT.NE.0)
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
