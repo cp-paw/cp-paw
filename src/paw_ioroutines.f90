@@ -3132,6 +3132,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       CHARACTER(8)             :: CH8SVAR1
       CHARACTER(32)            :: SPNAME
       CHARACTER(256)           :: SETUPFILE
+      CHARACTER(32)            :: softcoretype
       INTEGER(4)               :: IZ
       INTEGER(4)               :: ISVAR
       REAL(8)                  :: Z
@@ -3246,6 +3247,16 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL ATOMTYPELIST$SETI4A('NPRO',LENG,NPRO)
         CALL ATOMTYPELIST$UNSELECT
         DEALLOCATE(NPRO)
+!
+!       ================================================================
+!       ==  SOFTCORE TYPE                                             ==
+!       ================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'SOFTCORE',1,TCHK)
+        IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_STRC,'SOFTCORE',0,'NONE')
+        CALL LINKEDLIST$GET(LL_STRC,'SOFTCORE',1,SOFTCORETYPE)
+        CALL ATOMTYPELIST$SELECT(SPNAME)
+        CALL ATOMTYPELIST$SETCH('SOFTCORETYPE',SOFTCORETYPE)
+        CALL ATOMTYPELIST$UNSELECT
 !
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO

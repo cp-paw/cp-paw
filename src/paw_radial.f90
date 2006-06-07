@@ -760,7 +760,7 @@ END MODULE RADIAL_MODULE
         GRIDARRAY(:,:)=0
 !       == COPY CONTENTS SAVED FROM GRIDARRAY BACK ====================
         IF(ALLOCATED(NEWARRAY)) THEN
-          GRIDARRAY(:,NGIDX)=NEWARRAY(:,NGIDX)
+          GRIDARRAY(:,:NGIDX)=NEWARRAY(:,:NGIDX)
           DEALLOCATE(NEWARRAY)
         END IF
         NGIDX=NEWNGIDX
@@ -976,6 +976,7 @@ END IF
       SUBROUTINE RADIAL$VALUE(GID,NR,F,R0,F0)
 !     **                                                                  **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+use radial_module
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
@@ -991,6 +992,8 @@ END IF
       ELSE IF(TYPE.EQ.2) THEN
         CALL SHLOGRADIAL$VALUE(GIDS,NR,F,R0,F0) 
       ELSE
+print*,'gridarray ',gridarray(:,:ngid)
+print*,'gids ',gids
         CALL ERROR$MSG('GRID TYPE NOT RECOGNIZED')
         CALL ERROR$I4VAL('GID',GID)
         CALL ERROR$I4VAL('TYPE',TYPE)
@@ -1338,7 +1341,8 @@ END IF
       END 
 !
 !     ..................................................................
-      SUBROUTINE RADIAL$nonsphbound(GID,NR,ndimd,lmx,lmrx,POT,DREL,G,E,nphi,de,PHI,sphi)
+      SUBROUTINE RADIAL$nonsphbound(GID,NR,ndimd,lmx,lmrx,POT,DREL,G,E &
+     &                             ,nphi,eb,PHI,tphi,sphi,tsphi,tok)
 !     **                                                                  **
 !     **  SOLVES THE RELATIVISTIC RADIAL DIRAC EQUATION FOR THE           **
 !     **  LARGE COMPONENT. DREL=1/MREL-1/M0 IS A MEASURE FOR THE          **
@@ -1377,15 +1381,19 @@ END IF
       REAL(8)    ,INTENT(IN)     :: POT(NR,lmrx,ndimd) !POTENTIAL (RADIAL PART ONLY)
       integer(4) ,intent(in)     :: nphi
       complex(8) ,INTENT(OUT)    :: PHI(NR,lmx,2,nphi) ! WAVE-FUNCTION
+      complex(8) ,INTENT(OUT)    :: tPHI(NR,lmx,2,nphi) ! WAVE-FUNCTION
       complex(8) ,INTENT(OUT)    :: sPHI(NR,lmx,2,nphi) ! WAVE-FUNCTION
-      complex(8)                 :: tPHI(NR,lmx,2,nphi) ! kinetic energy * WAVE-FUNCTION
-      real(8)    ,intent(out)    :: de(2*lmx)
+      complex(8) ,intent(out)    :: tsPHI(NR,lmx,2,nphi) ! kinetic energy * WAVE-FUNCTION
+      real(8)    ,intent(out)    :: eb(nphi)
+      logical(4) ,intent(out)    :: tok
+      real(8)                    :: de(nphi)
       integer(4)                 :: lx
       INTEGER(4)                 :: lox(lmx,2) ! angular momenta
       integer(4)                 :: lm,lm1,lm2,lm3,l,m,im,is,ib,is1,is2
       REAL(8)                    :: A(NR)
       REAL(8)                    :: B(NR)
       complex(8)                 :: C(NR,lmx,2,lmx,2)
+      complex(8)                 :: Cpot(NR,lmx,2,lmx,2)
       complex(8)                 :: Cr(lmx,2,lmx,2)
       complex(8)                 :: Ca(lmx,2,lmx,2)
       complex(8)                 :: D(NR,lmx,2) 
@@ -1403,11 +1411,13 @@ END IF
       LOGICAL(4)                 :: THOM
 !      real(8)   ,parameter       :: xmax=1.d+100
       real(8)   ,parameter       :: xmax=1.d+20
-      real(8)                    :: rcl,rtest,swkb(nr),svar
+      real(8)                    :: swkb(nr),svar
       integer(4)                 :: ircl,irout
       complex(8),parameter       :: ci=(0.d0,1.d0)
       complex(8)                 :: cls(lmx,2,lmx,2) ! spin orbit matrix (ls)
+      logical(4)                 :: tchk
 !     ************************************************************************
+      tok=.false.
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/DSQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
@@ -1424,43 +1434,39 @@ END IF
 !     ==================================================================
 !     ==  determine classical turning point                           ==
 !     ==================================================================
-      RCL=R(NR)
-      IF(E.LT.POT(NR,1,1)*Y0) THEN
-        DO IR=NR-1,1,-1
+!     == irout must be smaller or equal to nr-1 because inhomogeneity
+!     == on the last grid point does not contribute to differential 
+!     == equation. irout is smaller or equal to ircl
+      ircl=nr-3   
+!       == r(ircl) is the first grid point inside the classical turning point
+      IF(E.LT.POT(IRcl,1,1)*Y0) THEN
+        DO IR=IRCL,1,-1
           IF(E.GT.POT(IR,1,1)*Y0) THEN
             IRCL=IR
-            RCL=R(IR)-(POT(IR,1,1)-E/Y0)/(POT(IR+1,1,1)-POT(IR,1,1))*(R(IR+1)-R(IR))
             EXIT
           END IF
         ENDDO
-        RTEST=RCL
       END IF
 !
 !     ==================================================================
 !     ==  determine outermost point 'irout' for inward integration    ==
 !     ==================================================================
 !     == USE WKB SOLUTION FOR THE SCHR.GL. FOR A CONSTANT POTENTIAL AND L=0
-!     == TO ESTIMATE FACTOR FROM RTEST TO OUTERMOST POINT
-      irout=nr-1   ! point nr does not contribute, therefore one less
-      IF(RTEST.LT.R(NR)) THEN
-        AUX(:IRCL)=0.D0
-        AUX(IRCL+1:)=SQRT(2.D0*(POT(IRCL+1:,1,1)*Y0-E))
-!        AUX(IRCL+1:)=SQRT(REAL(L*(L+1),kind=8)/R(ircl+1:)**2+2.D0*(POT(IRCL+1:,1,1)*Y0-E))
-        CALL RADIAL$DERIVe(GID,NR,AUX,AUX1)
-        CALL RADIAL$INTEGRATE(GID,NR,AUX,Swkb)
-!        Swkb(:)=Swkb(:)-0.5D0*LOG(AUX1(:))-LOG(R(:))
-        Swkb(:)=Swkb(:)-LOG(R(:))
-!       == DETERMINE IROUT WHERE THE WAVE FUNCTION CAN GROW BY A FACTOR 
-!       == OF XMAX FROM THE CLASSICAL TURNING POINT
-        SVAR=LOG(XMAX)
-        DO IR=1,NR
-          IF(Swkb(IR).GT.SVAR) THEN
-            IROUT=IR-1
-            EXIT
-          END IF
-        ENDDO
-      END IF
-print*,'rcl,irout',r(ircl),r(irout),ndimd
+!     == TO ESTIMATE FACTOR FROM Rcl TO OUTERMOST POINT
+      AUX(:IRCL)=0.D0
+      AUX(IRCL+1:)=SQRT(max(0.d0,2.D0*(POT(IRCL+1:,1,1)*Y0-E)))
+      CALL RADIAL$INTEGRATE(GID,NR,AUX,Swkb)
+      Swkb(:)=Swkb(:)-LOG(R(:))
+!     == DETERMINE IROUT WHERE THE WAVE FUNCTION CAN GROW BY A FACTOR 
+!     == OF XMAX FROM THE CLASSICAL TURNING POINT
+      SVAR=LOG(XMAX)
+      irout=nr-1
+      DO IR=ircl,NR
+        IF(Swkb(IR).GT.SVAR) THEN
+          IROUT=IR-1
+          EXIT
+        END IF
+      ENDDO
 !
 !     ==================================================================
 !     ==  prepare potential-independent arrays                        ==
@@ -1478,7 +1484,7 @@ print*,'rcl,irout',r(ircl),r(irout),ndimd
 !     ==================================================================
 !     ==  Coupling between wave function components via potential     ==
 !     ==================================================================
-      c(:,:,:,:,:)=0.d0
+      c(:,:,:,:,:)=(0.d0,0.d0)
       do lm1=1,lmx
         do lm2=1,lmx
           aux(:)=0.d0
@@ -1492,23 +1498,24 @@ print*,'rcl,irout',r(ircl),r(irout),ndimd
             if(ndimd.gt.1) then
               if(ndimd.eq.2) then
                 aux=cg*pot(:,lm3,2)
-                c(:,lm1,1,lm2,1)=c(:,lm1,1,lm1,1)+aux
-                c(:,lm1,2,lm2,2)=c(:,lm1,2,lm1,2)-aux
+                c(:,lm1,1,lm2,1)=c(:,lm1,1,lm2,1)+aux
+                c(:,lm1,2,lm2,2)=c(:,lm1,2,lm2,2)-aux
               else
                 aux=cg*pot(:,lm3,2)
-                c(:,lm1,1,lm2,2)=c(:,lm1,1,lm1,2)+aux
-                c(:,lm1,2,lm2,1)=c(:,lm1,2,lm1,1)-aux
+                c(:,lm1,1,lm2,2)=c(:,lm1,1,lm2,2)+aux
+                c(:,lm1,2,lm2,1)=c(:,lm1,2,lm2,1)-aux
                 aux=cg*pot(:,lm3,3)
-                c(:,lm1,1,lm2,2)=c(:,lm1,1,lm1,2)-ci*aux
-                c(:,lm1,2,lm2,1)=c(:,lm1,2,lm1,1)+ci*aux
+                c(:,lm1,1,lm2,2)=c(:,lm1,1,lm2,2)-ci*aux
+                c(:,lm1,2,lm2,1)=c(:,lm1,2,lm2,1)+ci*aux
                 aux=cg*pot(:,lm3,4)
-                c(:,lm1,1,lm2,1)=c(:,lm1,1,lm1,1)+aux
-                c(:,lm1,2,lm2,2)=c(:,lm1,2,lm1,2)-aux
+                c(:,lm1,1,lm2,1)=c(:,lm1,1,lm2,1)+aux
+                c(:,lm1,2,lm2,2)=c(:,lm1,2,lm2,2)-aux
               end if
             end if
           enddo
         enddo
       enddo
+      cpot=c    ! store to evaluate kinetic energy
       c=-2.d0*C
 !
 !     ==================================================================
@@ -1530,6 +1537,7 @@ print*,'rcl,irout',r(ircl),r(irout),ndimd
 !     ==  add spin orbit coupling to E                                ==
 !     ==================================================================
       call radial_ls(lmx,cls)
+!cls=0.d0
       aux(2:)=-rdprime(2:)/r(2:)
       aux(1)=aux(2)
       do lm1=1,lmx
@@ -1545,23 +1553,14 @@ print*,'rcl,irout',r(ircl),r(irout),ndimd
 !     ==  avoid divide zerobyzero
       c(1,:,:,:,:)=c(2,:,:,:,:)
 !
-      svar=0.d0
-      do lm1=1,lmx
-        do is1=1,2
-          do lm2=1,lmx
-            do is2=1,2
-              svar=max(svar,maxval(abs(c(:,lm1,is1,lm2,is2)-conjg(c(:,lm2,is2,lm1,is1)))))
-             enddo
-          enddo
-        enddo
-      enddo
-print*,'is the hamiltonian hermitean? ',svar
-!
 !     ==================================================================
 !     ==  determine bound states                                      ==
 !     ==================================================================
-      irout=min(irout,nr-1)
-      call radial_xxxc(gid,nr,2*lmx,ircl,irout,lox,a,b,c,d,nphi,de,phi)
+      call radial_xxxc(gid,nr,2*lmx,ircl,irout,lox,a,b,c,d,nphi,de,phi,tchk)
+      if(.not.tchk) then
+        call error$stop('radial_xxxc finished with error')
+        call error$stop('radial$nonsphbound')
+      end if
 !
 !     ==================================================================
 !     ==  determine SMALL COMPONENT                                   ==
@@ -1604,26 +1603,33 @@ print*,'is the hamiltonian hermitean? ',svar
       ENDDO
 !
 !     ==================================================================
-!     ==  determine Tphi                                              ==
+!     ==  shift energies                                              ==
+!     ==================================================================
+      eb(:)=de(:)+e
+!
+!     ==================================================================
+!     ==  determine Tphi and tsphi                                              ==
 !     ==================================================================
 !     -- better directly work out the kinetic energy because  the 
 !     -- schroedinger equation is fulfilled only to first order in de
-!not yet done!
-      tphi=0.d0
-!!$      do ib=1,lmx
-!!$        tphi(:,:,:,ib)=(e+de(ib))*phi(:,:,:,ib)
-!!$      enddo
-!!$      do lm1=1,lmx
-!!$        do lm2=1,lmx
-!!$          do lm3=1,lmrx
-!!$            call clebsch(lm1,lm2,lm3,cg)
-!!$            aux(:)=cg*pot(:,lm3,ispin)
-!!$            do ib=1,lmx
-!!$              tphi(:,lm1,:,ib)=tphi(:,lm1,:,ib)-aux(:)*phi(:,lm2,:,ib)
-!!$            enddo
-!!$          enddo
-!!$        enddo
-!!$      enddo
+      do ib=1,nphi
+        tphi(:,:,:,ib)=eb(ib)*phi(:,:,:,ib)
+        tsphi(:,:,:,ib)=eb(ib)*sphi(:,:,:,ib)
+        do is1=1,2
+          do lm1=1,lmx
+            do is2=1,2
+              do lm2=1,lmx
+                tphi(:,lm1,is1,ib)=tphi(:,lm1,is1,ib) &
+     &                         -cpot(:,lm1,is1,lm2,is2)*phi(:,lm2,is2,ib)
+                tsphi(:,lm1,is1,ib)=tsphi(:,lm1,is1,ib) &
+     &                         -cpot(:,lm1,is1,lm2,is2)*sphi(:,lm2,is2,ib)
+              enddo
+            enddo  
+          enddo
+        enddo
+      enddo
+!
+      tok=.true.
       return
       end SUBROUTINE RADIAL$nonsphbound
 !
@@ -1877,7 +1883,7 @@ print*,'is the hamiltonian hermitean? ',svar
       end
 !
 !     ..................................................................
-      subroutine radial_xxxc(gid,nr,nf,irmatch,irout,lox,a,b,c,d,nphi,de,phi)
+      subroutine radial_xxxc(gid,nr,nf,irmatch,irout,lox,a,b,c,d,nphi,de,phi,tok)
       implicit none
       integer(4),intent(in) :: gid
       integer(4),intent(in) :: nr
@@ -1892,6 +1898,7 @@ print*,'is the hamiltonian hermitean? ',svar
       integer(4),intent(in) :: nphi
       real(8)   ,intent(out):: de(nphi)
       complex(8),intent(out):: phi(nr,nf,nphi)
+      logical(4),intent(out):: tok
       logical               :: thom
       complex(8)            :: allphil(nr,nf,nf)
       complex(8)            :: allphir(nr,nf,nf)
@@ -1926,7 +1933,8 @@ print*,'is the hamiltonian hermitean? ',svar
       complex(8)            :: amat(nphi-1,nphi-1),bvec(nphi-1),xvec(nphi-1)
 character(32):: file
 !     ******************************************************************
-print*,'new radial_xxxc started',nphi,nf
+      tok=.false.
+!print*,'new radial_xxxc started',nphi,nf
       if(irout+1.gt.nr) then
         call error$msg('irout out of range')
         call error$stop('radial_xxxc')
@@ -1942,12 +1950,12 @@ print*,'new radial_xxxc started',nphi,nf
       END IF
       CALL RADIAL$R(GID,NR,R)
       IRC=IRMATCH
-print*,'irout ',irout,r(irout),irc,r(irc)
+!print*,'irout ',irout,r(irout),irc,r(irc)
 !
 !     ==================================================================
 !     ==  obtain homogeneous solution                                 ==
 !     ==================================================================
-print*,'radial_xxxc: determine phi',l0
+!print*,'radial_xxxc: determine phi',l0
       allphil(:,:,:)=(0.d0,0.d0)
       allphir(:,:,:)=(0.d0,0.d0)
       do if=1,nf
@@ -1966,7 +1974,7 @@ print*,'radial_xxxc: determine phi',l0
 !     ==================================================================
 !     ==  make phi_hom solutions continuous                           ==
 !     ==================================================================
-print*,'radial_xxxc: match phi'
+!print*,'radial_xxxc: match phi'
       mat(:,:)=allphir(irc,:,:)
 !     == matrix is not symmetric. thus solve with singular value decomposition
       bvecs(:,1:nf)=allphil(irc,:,:)
@@ -1982,7 +1990,7 @@ print*,'radial_xxxc: match phi'
 !     ==================================================================
 !     == remove kinks in non-relevant angular momenta channels        ==
 !     ==================================================================
-print*,'remove kinks of other angular momentum channels of phi'
+!print*,'remove kinks of other angular momentum channels of phi'
       i=0
       do if1=1,nf
         if(lox(if1).eq.l0) cycle
@@ -2025,12 +2033,11 @@ print*,'remove kinks of other angular momentum channels of phi'
      &                            +allphir(irc-1:irout+1,:,if2)*hx(j,i)
         enddo
       enddo  
-print*,'marke 4'
 !
 !     ====================================================================
 !     ==   orthogonalize phi                                                ==
 !     ====================================================================
-print*,'radial_xxxc: orthogonalize phi'
+!print*,'radial_xxxc: orthogonalize phi'
       do i=1,nphi
 !       == orthogonalize
         do j=1,i-1
@@ -2142,7 +2149,7 @@ print*,'radial_xxxc: orthogonalize phi'
 !     ==================================================================
 !     ==  determine phidot                                            ==
 !     ==================================================================
-print*,'radial_xxxc: determine phidot'
+!print*,'radial_xxxc: determine phidot'
       phil_dot(:,:,:)=0.d0
       phir_dot(:,:,:)=0.d0
       do if=1,nphi
@@ -2155,7 +2162,7 @@ print*,'radial_xxxc: determine phidot'
 !     ==================================================================
 !     ==  make phi_dot continuous                                     ==
 !     ==================================================================
-print*,'radial_xxxc: match phidot'
+!print*,'radial_xxxc: match phidot'
       mat(:,:)=allphir(irc,:,:)
       bvecs(:,:nphi)=phil_dot(irc,:,:)-phir_dot(irc,:,:)
       call lib$matrixsolvenewc8(nf,nf,nphi,mat,xvecs(:,:nphi),bvecs(:,:nphi))
@@ -2170,7 +2177,7 @@ print*,'radial_xxxc: match phidot'
 !     ==================================================================
 !     == remove kinks in non-relevant angular momentum channels        ==
 !     ==================================================================
-print*,'remove kinks of other angular momentum channels of phidot'
+!print*,'remove kinks of other angular momentum channels of phidot'
       i=0
       do if1=1,nf
         if(lox(if1).eq.l0) cycle
@@ -2268,7 +2275,7 @@ print*,'remove kinks of other angular momentum channels of phidot'
 !     ==================================================================
 !     ==  remove kinks by mixing phidot into phi                      ==
 !     ==================================================================
-print*,'radial_xxxc:match kinks'
+!print*,'radial_xxxc:match kinks'
       i=0
       do if2=1,nf
         if(lox(if2).ne.l0) cycle
@@ -2292,8 +2299,8 @@ print*,'radial_xxxc:match kinks'
 !!$do i=1,nphi
 !!$  write(*,fmt='("ham ",50("(",2f10.5")   "))')ham(i,:)
 !!$enddo
-svar=0.5d0*maxval(abs(ham-transpose(conjg(ham))))
-print*,'deviation from hermiticity',svar
+!svar=0.5d0*maxval(abs(ham-transpose(conjg(ham))))
+!print*,'deviation from hermiticity',svar
 !
 !     ==================================================================
 !     ==  determine overlap matrix                                    ==
@@ -2362,7 +2369,7 @@ print*,'deviation from hermiticity',svar
           phi(irc+1:irout+1,:,i)=phi(irc+1:irout+1,:,i)+phir(irc+1:irout+1,:,j)*kinkc(j,i)      
         enddo
       enddo
-print*,'de',de
+!print*,'de',de
 !!$!
 !!$!     ==================================================================
 !!$!     ==  normalize solutions                                         ==
@@ -2419,6 +2426,7 @@ print*,'de',de
 !!$        call error$msg('wave functions not orthogonal')
 !!$        call error$stop('radial_xxxc')
 !!$      end if
+      tok=.true.
       RETURN
       END 
 !
