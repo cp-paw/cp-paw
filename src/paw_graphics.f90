@@ -51,10 +51,10 @@ TYPE POTPLOT_TYPE
  CHARACTER(128)          :: TITLE ! IMAGE TITLE 
  REAL(8)                 :: DR    ! STEP SIZE OF THE GRID
 END TYPE POTPLOT_TYPE
-type onecrho_type
-  real(8),pointer        :: ae1cpot(:,:)
-  real(8),pointer        :: ps1cpot(:,:)
-end type onecrho_type
+TYPE ONECRHO_TYPE
+  REAL(8),POINTER        :: AE1CPOT(:,:)
+  REAL(8),POINTER        :: PS1CPOT(:,:)
+END TYPE ONECRHO_TYPE
 TYPE(DENSITYPLOT_TYPE),ALLOCATABLE :: DENSITYPLOT(:)
 TYPE(WAVEPLOT_TYPE)   ,ALLOCATABLE :: WAVEPLOT(:)
 TYPE(POTPLOT_TYPE)                 :: POTPLOT
@@ -64,7 +64,7 @@ INTEGER(4)                :: IWAVEPTR=0
 INTEGER(4)                :: IDENSITYPTR=0
 INTEGER(4)                :: IPOTPTR=0
 COMPLEX(8),ALLOCATABLE    :: PWPOT(:)
-type(onecrho_type),allocatable :: onecpotarray(:)  ! shALL REPLACE AE1CPOT AND PS1CPOT
+TYPE(ONECRHO_TYPE),ALLOCATABLE :: ONECPOTARRAY(:)  ! SHALL REPLACE AE1CPOT AND PS1CPOT
 REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)  !(NRX,LMRX,NAT)
 REAL(8)   ,ALLOCATABLE    :: PS1CPOT(:,:,:)  !(NRX,LMRX,NAT)
 INTEGER(4)                :: LMRXX=0    !INITIALLY NOT SET
@@ -470,6 +470,7 @@ END MODULE GRAPHICS_MODULE
 !     ******************************************************************
 !     **  PLOT                                                        **
 !     ******************************************************************
+      use mpe_module
       IMPLICIT NONE
       CHARACTER(512),INTENT(IN) :: FILE
       CHARACTER(128),INTENT(IN) :: TITLE
@@ -479,6 +480,7 @@ END MODULE GRAPHICS_MODULE
       INTEGER(4)    ,INTENT(IN) :: ISPIN ! SPIN INDEX
       LOGICAL(4)    ,INTENT(IN) :: TIMAG  ! IMAGINARY OR REAL PART
       INTEGER(4)                :: NTASKS,THISTASK
+      INTEGER(4)                :: NTASKS_k,THISTASK_k
       INTEGER(4)                :: NR1,NR1L,NR2,NR3
       INTEGER(4)                :: NNR,NNRL
       INTEGER(4)                :: NR1START
@@ -512,10 +514,12 @@ END MODULE GRAPHICS_MODULE
       INTEGER(4)                :: IAT,ISP,LN
       INTEGER(4)                :: NFIL
       INTEGER(4)                :: NR1B,NR2B,NR3B
-      INTEGER(4)                :: gid    ! grid id
+      INTEGER(4)                :: GID    ! GRID ID
+      logical(4)                :: tkgroup
+      logical(4)                :: tsend,treceive
+      integer(4)                :: sendtask
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_WAVEPLOT')
-      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     =================================================================
 !     =================================================================
@@ -544,24 +548,16 @@ END MODULE GRAPHICS_MODULE
       CALL WAVES$SETI4('IKPT',IKPT)
       CALL WAVES$SETI4('ISPIN',ISPIN)
       CALL WAVES$SETL4('TIM',TIMAG)
+!     == CHECK IF STATE IS PRESENT ON THE CURRENT NODE
+      CALL WAVES$STATESELECTED(IB,IKPT,ISPIN,TKGROUP)
 !
 !     =================================================================
-!     ==  FACTOR FOR GRID REFINEMENT                                 ==
+!     ==  FACTOR FOR GRID REFINEMENT AND NEW GRID PARAMETERS         ==
 !     =================================================================
       CALL CELL$GETR8A('T(0)',9,RBAS)
       CALL GBASS(RBAS,GBAS,DET)
       FACT=NINT(((DET/DR**3)/REAL(NR1*NR2*NR3,KIND=8))**(1./3.))
       FACT=MAX(1,FACT)
-!
-!     =================================================================
-!     ==  GET GENERIC FROM SETUPS OBJECT                             ==
-!     =================================================================
-      ALLOCATE(WAVE(NR1L,NR2,NR3))
-      CALL WAVES$GETR8A('PSPSI',NNRL,WAVE)
-!     
-!     ================================================================
-!     ==  EXPAND TO A FINER R-GRID                                  ==
-!     ================================================================
       NR1B=FACT*NR1
       NR2B=FACT*NR2
       NR3B=FACT*NR3
@@ -569,22 +565,26 @@ END MODULE GRAPHICS_MODULE
       CALL LIB$FFTADJUSTGRD(NR1B)
       CALL LIB$FFTADJUSTGRD(NR2B)
       CALL LIB$FFTADJUSTGRD(NR3B)
-      ALLOCATE(WAVEBIG(NR1B,NR2B,NR3B))
-      IF(FACT.EQ.1) THEN
-        CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WAVEBIG)
-      ELSE
-        ALLOCATE(WORK1(NR1,NR2,NR3))
-        CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WORK1)
-        CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,NR1B,NR2B,NR3B,WORK1,WAVEBIG)
-        DEALLOCATE(WORK1)
-      END IF
-      DEALLOCATE(WAVE)
 !
 !     =================================================================
+!     ==  GET GENERIC FROM SETUPS OBJECT                             ==
+!     ==   AND EXPAND TO A FINER R-GRID                              ==
 !     =================================================================
-!     == ONE-CENTER CONTRIBUTION
-!     =================================================================
-!     =================================================================
+      ALLOCATE(WAVEBIG(NR1B,NR2B,NR3B))
+      WAVEBIG=0.D0
+      IF(TKGROUP) THEN
+        ALLOCATE(WAVE(NR1L,NR2,NR3))
+        CALL WAVES$GETR8A('PSPSI',NNRL,WAVE)
+        IF(FACT.EQ.1) THEN
+          CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WAVEBIG)
+        ELSE
+          ALLOCATE(WORK1(NR1,NR2,NR3))
+          CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WORK1)
+          CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,NR1B,NR2B,NR3B,WORK1,WAVEBIG)
+          DEALLOCATE(WORK1)
+        END IF
+        DEALLOCATE(WAVE)
+      END IF
 !
 !     =================================================================
 !     ==  GET GENERIC FROM ATOM OBJECT                               ==
@@ -596,43 +596,78 @@ END MODULE GRAPHICS_MODULE
       ALLOCATE(Z(NAT))
       ALLOCATE(Q(NAT))
       DO IAT=1,NAT
-CALL TRACE$PASS('MARKE 3')
+       CALL TRACE$PASS('MARKE 3')
         CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
         CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
-        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-!       __ GET PARTIAL WAVES__________________________________________
-        CALL SETUP$ISELECT(ISP)
-        CALL SETUP$GETI4('GID',GID)
-        CALL RADIAL$GETI4(GID,'NR',NR)
+      ENDDO
 !
-        CALL SETUP$LNX(ISP,LNX)
-        ALLOCATE(LOX(LNX))
-        CALL SETUP$LOFLN(ISP,LNX,LOX)
-        ALLOCATE(AEPHI(NR,LNX))
-        ALLOCATE(PSPHI(NR,LNX))
-        CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
-        CALL SETUP$PSPARTIALWAVES(ISP,NR,LNX,PSPHI)
-        ALLOCATE(PROJ(LMNXX))
-        CALL WAVES$SETI4('IAT',IAT)
-        CALL WAVES$GETR8A('<PSPSI|PRO>',LMNXX,PROJ)
-        LX=0
-        DO LN=1,LNX
-          LX=MAX(LX,LOX(LN))
-        ENDDO
-        LMXX=(LX+1)**2
-        ALLOCATE(DRHOL(NR,LMXX))
-        CALL GRAPHICS_1CWAVE(NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
+!     =================================================================
+!     == ADD 1-C CONTRIBUTION (ONLY TASK1 OF THIS K-GROUP)           ==
+!     =================================================================
+      CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
+      IF(TKGROUP.AND.THISTASK_K.EQ.1) THEN
+        DO IAT=1,NAT  
+          CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+!         __ GET PARTIAL WAVES__________________________________________
+          CALL SETUP$ISELECT(ISP)
+          CALL SETUP$GETI4('GID',GID)
+          CALL RADIAL$GETI4(GID,'NR',NR)
+!
+          CALL SETUP$LNX(ISP,LNX)
+          ALLOCATE(LOX(LNX))
+          CALL SETUP$LOFLN(ISP,LNX,LOX)
+          ALLOCATE(AEPHI(NR,LNX))
+          ALLOCATE(PSPHI(NR,LNX))
+          CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
+          CALL SETUP$PSPARTIALWAVES(ISP,NR,LNX,PSPHI)
+          ALLOCATE(PROJ(LMNXX))
+          CALL WAVES$SETI4('IAT',IAT)
+          CALL WAVES$GETR8A('<PSPSI|PRO>',LMNXX,PROJ)
+          LX=0
+          DO LN=1,LNX
+            LX=MAX(LX,LOX(LN))
+          ENDDO
+          LMXX=(LX+1)**2
+          ALLOCATE(DRHOL(NR,LMXX))
+          CALL GRAPHICS_1CWAVE(NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
      &                        ,PROJ,LMXX,DRHOL)
-        DEALLOCATE(PROJ)
-        CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
-     &         ,1,NR1B,WAVEBIG,POS(:,IAT),gid,NR,LMXX,DRHOL)
-        DEALLOCATE(DRHOL)
-        DEALLOCATE(LOX)
-        DEALLOCATE(AEPHI)
-        DEALLOCATE(PSPHI)
-      ENDDO  
+          DEALLOCATE(PROJ)
+          CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
+     &         ,1,NR1B,WAVEBIG,POS(:,IAT),GID,NR,LMXX,DRHOL)
+          DEALLOCATE(DRHOL)
+          DEALLOCATE(LOX)
+          DEALLOCATE(AEPHI)
+          DEALLOCATE(PSPHI)
+        ENDDO  
+      END IF
+!     
+!     ================================================================
+!     ==  SEND INFO TO FIRST TASK OF MONOMER                        ==
+!     ================================================================
+      CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      TSEND=TKGROUP.AND.THISTASK_K.EQ.1
+      TRECEIVE=THISTASK.EQ.1
+      IF(.NOT.(TSEND.AND.TRECEIVE)) THEN
+        SENDTASK=0
+        IF(TSEND) SENDTASK=THISTASK
+        CALL MPE$COMBINE('MONOMER','+',SENDTASK)
+        IF(TSEND) THEN
+          CALL MPE$SEND('MONOMER',1,1,NR1B)
+          CALL MPE$SEND('MONOMER',1,2,NR2B)
+          CALL MPE$SEND('MONOMER',1,3,NR3B)
+          CALL MPE$SEND('MONOMER',1,4,WAVEBIG)
+          DEALLOCATE(WAVEBIG)
+        ELSE IF(TRECEIVE) THEN
+          CALL MPE$RECEIVE('MONOMER',SENDTASK,1,NR1B)
+          CALL MPE$RECEIVE('MONOMER',SENDTASK,2,NR2B)
+          CALL MPE$RECEIVE('MONOMER',SENDTASK,3,NR3B)
+          ALLOCATE(WAVEBIG(NR1B,NR2B,NR3B))
+          CALL MPE$RECEIVE('MONOMER',SENDTASK,4,WAVEBIG)
+        END IF
+      END IF
 !     
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
@@ -646,13 +681,13 @@ CALL TRACE$PASS('MARKE 3')
         CALL WRITEWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,Q,ATOMNAME &
     &                     ,NR1B,NR2B,NR3B,WAVEBIG)
         CALL FILEHANDLER$CLOSE('WAVEPLOT')
+        DEALLOCATE(WAVEBIG)
       END IF
 !
 !     ==================================================================
 !     == CLOSE DOWN                                                   ==
 !     ==================================================================
       CALL WAVES$SETL4('RAWSTATES',SAVETRAWSTATES)
-      DEALLOCATE(WAVEBIG)
       DEALLOCATE(ATOMNAME)
       DEALLOCATE(Z)
       DEALLOCATE(Q)
@@ -667,6 +702,7 @@ CALL TRACE$PASS('MARKE 3')
 !     ******************************************************************
 !     **  PLOT                                                        **
 !     ******************************************************************
+      use mpe_module
       IMPLICIT NONE
       CHARACTER(512),INTENT(IN) :: FILE
       CHARACTER(128),INTENT(IN) :: TITLE
@@ -680,6 +716,7 @@ CALL TRACE$PASS('MARKE 3')
       INTEGER(4)    ,INTENT(IN) :: IBMIN(NKPT,NSPIN)
       INTEGER(4)    ,INTENT(IN) :: IBMAX(NKPT,NSPIN)
       INTEGER(4)                :: NTASKS,THISTASK
+      INTEGER(4)                :: NTASKS_k,THISTASK_k
       INTEGER(4)                :: NR1,NR1L,NR2,NR3
       INTEGER(4)                :: NNR,NNRL
       INTEGER(4)                :: NR1START
@@ -714,12 +751,14 @@ CALL TRACE$PASS('MARKE 3')
       INTEGER(4)                :: NFIL
       REAL(8)      ,ALLOCATABLE :: AECORE(:)
       REAL(8)                   :: SVAR,XEXP,RI
-      INTEGER(4)                :: I
+      INTEGER(4)                :: I,itask
       INTEGER(4)                :: NR1B,NR2B,NR3B
-      INTEGER(4)                :: gid
+      INTEGER(4)                :: GID
+      integer(4)   ,allocatable :: iwork(:)
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_DENSITYPLOT')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      CALL MPE$QUERY('k',NTASKS_k,THISTASK_k)
 !
 !     =================================================================
 !     ==  GET GENERIC INFORMATION ABOUT NUMBER AND SIZE OF THE       ==
@@ -790,16 +829,16 @@ CALL TRACE$PASS('MARKE 3')
       CALL LIB$FFTADJUSTGRD(NR1B)
       CALL LIB$FFTADJUSTGRD(NR2B)
       CALL LIB$FFTADJUSTGRD(NR3B)
-      ALLOCATE(WAVEBIG(NR1B,NR2B,NR3B))
-      IF(FACT.EQ.1) THEN
-        CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WAVEBIG)
-      ELSE
-        ALLOCATE(WORK1(NR1,NR2,NR3))
-        CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WORK1)
-        CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,NR1B,NR2B,NR3B,WORK1,WAVEBIG)
-        DEALLOCATE(WORK1)
-      END IF
+      ALLOCATE(WORK1(NR1,NR2,NR3))
+      CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,work1)
       DEALLOCATE(WAVE)
+      ALLOCATE(WAVEBIG(NR1B,NR2B,NR3B))
+      IF(FACT.eq.1) THEN
+        wavebig=work1
+      else
+        CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,NR1B,NR2B,NR3B,WORK1,WAVEBIG)
+      END IF
+      DEALLOCATE(WORK1)
 !     
 !     ================================================================
 !     ================================================================
@@ -821,6 +860,9 @@ CALL TRACE$PASS('MARKE 3')
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
         CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
+      enddo
+!
+      DO IAT=1,NAT
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('GID',GID)
@@ -856,17 +898,17 @@ CALL TRACE$PASS('MARKE 3')
      &               ,DENMAT(1,1),LMXX,DRHOL)
         DEALLOCATE(DENMAT)
         CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
-    &         ,1,NR1B,WAVEBIG,POS(:,IAT),gid,NR,LMXX,DRHOL)
+    &         ,1,NR1B,WAVEBIG,POS(:,IAT),GID,NR,LMXX,DRHOL)
 !     
-!     ================================================================
-!     ==  ADD CORE CHARGE DENSITY                                   ==
-!     ================================================================
-        IF (TCORE.AND.(.NOT.(TYPE.EQ.'SPIN'))) THEN
+!       ================================================================
+!       ==  ADD CORE CHARGE DENSITY                                   ==
+!       ================================================================
+        IF(thistask.eq.1.and.TCORE.AND.(.NOT.(TYPE.EQ.'SPIN'))) THEN
           ALLOCATE(AECORE(NR))
           CALL SETUP$AECORE(ISP,NR,AECORE)
           IF(TYPE.EQ.'UP'.OR.TYPE.EQ.'DOWN') AECORE(:)=0.5D0*AECORE(:)
           CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
-    &           ,1,NR1B,WAVEBIG,POS(:,IAT),gid,NR,1,AECORE)
+    &           ,1,NR1B,WAVEBIG,POS(:,IAT),GID,NR,1,AECORE)
           DEALLOCATE(AECORE)
         END IF
         DEALLOCATE(DRHOL)
@@ -874,6 +916,27 @@ CALL TRACE$PASS('MARKE 3')
         DEALLOCATE(AEPHI)
         DEALLOCATE(PSPHI)
       ENDDO  
+!     
+!     ================================================================
+!     ==  PRINT WAVE                                                ==
+!     ================================================================
+      IF(THISTASK_K.NE.1) WAVEBIG=0.D0
+      ALLOCATE(IWORK(NTASKS))
+      IWORK=0
+      IF(THISTASK_K.EQ.1)IWORK(THISTASK)=THISTASK 
+      CALL MPE$COMBINE('MONOMER','+',IWORK)
+      DO ITASK=1,NTASKS
+        IF(IWORK(ITASK).EQ.0) CYCLE
+        IF(THISTASK.EQ.IWORK(ITASK)) THEN
+!         == SEND MSG TO TASK 1 OF MONOMER GROUP. ITASK IS THE MSG-TAG
+          CALL MPE$SEND('MONOMER',1,ITASK,WAVEBIG)
+        ELSE IF(THISTASK.EQ.1) THEN
+          ALLOCATE(WORK1(NR1B,NR2B,NR3B))
+          CALL MPE$RECEIVE('MONOMER',IWORK(THISTASK),ITASK,WORK1)
+          WAVEBIG=WAVEBIG+WORK1
+          DEALLOCATE(WORK1)
+        END IF
+      ENDDO
 !     
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
@@ -950,10 +1013,13 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)   ,INTENT(INOUT):: DENMAT(LMNXX,LMNXX)
       REAL(8)   ,ALLOCATABLE  :: PROJ(:) ! (LMNXX)  POINTER ($PROJ,PROJ)
       INTEGER(4)              :: LMN1,LMN2
+      logical(4)              :: tkgroup
 !     ******************************************************************
       CALL WAVES$SETI4('IB',IB)
       CALL WAVES$SETI4('IKPT',IKPT)
       CALL WAVES$SETI4('ISPIN',ISPIN)
+      CALL WAVES$STATESELECTED(IB,IKPT,ISPIN,TKGROUP)
+      IF(.NOT.TKGROUP) RETURN
       ALLOCATE(PROJ(LMNXX))
       CALL WAVES$SETL4('TIM',.TRUE.)
       CALL WAVES$GETR8A('<PSPSI|PRO>',LMNXX,PROJ)
@@ -991,10 +1057,13 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)   ,INTENT(INOUT):: WAVE(NNR) ! DENSITY
       REAL(8)   ,ALLOCATABLE  :: PSI(:)    ! (NNR)
       INTEGER(4)              :: IR
+      logical(4)              :: tkgroup
 !     ******************************************************************
       CALL WAVES$SETI4('IB',IB)
       CALL WAVES$SETI4('IKPT',IKPT)
       CALL WAVES$SETI4('ISPIN',ISPIN)
+      CALL WAVES$STATESELECTED(IB,IKPT,ISPIN,TKGROUP)
+      IF(.NOT.TKGROUP) RETURN
       ALLOCATE(PSI(NNR))
       CALL WAVES$SETL4('TIM',.TRUE.)
       CALL WAVES$GETR8A('PSPSI',NNR,PSI)
@@ -1012,7 +1081,7 @@ CALL TRACE$PASS('MARKE 3')
 !
 !     ..................................................................
       SUBROUTINE GRAPHICS_RHOLTOR(RBAS,NR1,NR2,NR3,NR1START,NR1L,RHO,R0 &
-     &           ,gid,NR,LMX,DRHOL)
+     &           ,GID,NR,LMX,DRHOL)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
@@ -1026,7 +1095,7 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)   ,INTENT(IN)    :: DRHOL(NR,LMX)
       REAL(8)   ,INTENT(IN)    :: RBAS(3,3)
       REAL(8)   ,INTENT(IN)    :: R0(3)
-      integer(4),INTENT(IN)    :: gid
+      INTEGER(4),INTENT(IN)    :: GID
       REAL(8)                  :: DR(3,3)
       REAL(8)                  :: YLM(LMXX)
       REAL(8)                  :: RVEC(3)
@@ -1039,9 +1108,9 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)                  :: DIS,DIS2
       REAL(8)                  :: XIR
       REAL(8)                  :: W1,W2
-      REAL(8)                  :: r(nr)
+      REAL(8)                  :: R(NR)
 !     ******************************************************************
-      call radial$r(gid,nr,r)
+      CALL RADIAL$R(GID,NR,R)
       IF(LMXX.LT.LMX) THEN
         CALL ERROR$MSG('INCREASE DIMENSION LMXX')
         CALL ERROR$STOP('GRAPHICS_RHOLTOR')
@@ -1056,7 +1125,7 @@ CALL TRACE$PASS('MARKE 3')
         DO LM=1,LMX
           SVAR=MAX(DABS(DRHOL(IR,LM)),SVAR)
         ENDDO
-        IF(SVAR.GT.TOL)RMAX=R(ir)
+        IF(SVAR.GT.TOL)RMAX=R(IR)
       ENDDO
       RMAX2=RMAX**2
 !
@@ -1093,7 +1162,7 @@ CALL TRACE$PASS('MARKE 3')
                 CALL GETYLM(LMX,RVEC,YLM)
                 SVAR=0.D0
                 DO LM=1,LMX
-                  CALL RADIAL$VALUE(gid,NR,DRHOL(1,LM),DIS,SVAR1)
+                  CALL RADIAL$VALUE(GID,NR,DRHOL(1,LM),DIS,SVAR1)
                   SVAR=SVAR+SVAR1*YLM(LM)
                 ENDDO
                 RHO(I11,I21,I31)=RHO(I11,I21,I31)+SVAR
@@ -1126,7 +1195,7 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)                :: CG,DENMAT1,SVAR
       REAL(8)   ,ALLOCATABLE :: WORK(:)
 !     ******************************************************************
-      drhol(:,:)=0.d0
+      DRHOL(:,:)=0.D0
       ALLOCATE(WORK(NR))
       LMN1=0
       DO LN1=1,LNX
@@ -1179,7 +1248,7 @@ CALL TRACE$PASS('MARKE 3')
       INTEGER(4)             :: LM,IR,LMN,LN,M,L
       REAL(8)                :: SVAR
 !     ******************************************************************
-      drhol(:,:)=0.d0
+      DRHOL(:,:)=0.D0
       LMN=0
       DO LN=1,LNX
         L=LOX(LN)
@@ -1274,7 +1343,7 @@ CALL TRACE$PASS('MARKE 3')
       END
 !
 !     ....................................................................
-      SUBROUTINE GRAPHICS$SET1CPOT(IDENT_,IAT_,gid,NR,NRX_,LMRX,POT)
+      SUBROUTINE GRAPHICS$SET1CPOT(IDENT_,IAT_,GID,NR,NRX_,LMRX,POT)
 !     ********************************************************************
 !     **  USE 1-CENTER POTENTIAL FOR ELECTRIC FIELD GRADIENTS          **
 !     ********************************************************************
@@ -1282,7 +1351,7 @@ CALL TRACE$PASS('MARKE 3')
       IMPLICIT NONE
       CHARACTER(*) ,INTENT(IN) :: IDENT_  ! CAN BE 'AE' OR 'PS' 
       INTEGER(4)   ,INTENT(IN) :: IAT_    ! ATOM INDEX (SEE ATOMLIST)
-      INTEGER(4)   ,INTENT(IN) :: gid
+      INTEGER(4)   ,INTENT(IN) :: GID
       INTEGER(4)   ,INTENT(IN) :: NR,NRX_
       INTEGER(4)   ,INTENT(IN) :: LMRX
       REAL(8)      ,INTENT(IN) :: POT(NRX_,LMRX)
@@ -1351,8 +1420,8 @@ CALL TRACE$PASS('MARKE 3')
       REAL(8)   ,ALLOCATABLE     :: ONECPOT(:,:,:)
       INTEGER(4)                 :: NTASKS,THISTASK
       INTEGER(4)                 :: NR1B,NR2B,NR3B
-      INTEGER(4)                 :: isp
-      INTEGER(4)                 :: gid
+      INTEGER(4)                 :: ISP
+      INTEGER(4)                 :: GID
 !     ******************************************************************
 !COLLECTING OF INFORMATION
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -1419,8 +1488,8 @@ CALL TRACE$PASS('MARKE 3')
       DO IAT=1,NAT
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
         CALL SETUP$ISELECT(ISP)
-        call setup$geti4('gid',gid)                
-        call radial$geti4(gid,'nr',nr)
+        CALL SETUP$GETI4('GID',GID)                
+        CALL RADIAL$GETI4(GID,'NR',NR)
         IF(NRX.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT GRID SIZE')
           CALL ERROR$MSG('ERROR ENTERED WHILE ALLOWING ATOM SPECIFIC RADIAL GRIDS')
@@ -1434,7 +1503,7 @@ CALL TRACE$PASS('MARKE 3')
 PRINT*,'INCLUDE AE-CONTRIBUTIONS'
 CALL TIMING$CLOCKON('GRAPHICS 1CPOTENTIAL')
          CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B,1,NR1B &
-      &           ,POTENTIAL,POS(:,IAT),gid,NRX,LMRXX,ONECPOT(:,:,IAT))
+      &           ,POTENTIAL,POS(:,IAT),GID,NRX,LMRXX,ONECPOT(:,:,IAT))
 CALL TIMING$CLOCKOFF('GRAPHICS 1CPOTENTIAL')
 PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       ENDDO

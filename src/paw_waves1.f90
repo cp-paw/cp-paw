@@ -170,6 +170,27 @@ CONTAINS
 END MODULE WAVES_MODULE
 !
 !     ..................................................................
+      SUBROUTINE WAVES$STATESELECTED(IB,IKPT,ISPIN,TCHK)
+!     ******************************************************************
+!     **  WAVES$STATESELECTED                                         **
+!     **  TESTS IF THE EXTERNAL POINTER SELECTS A STATE THAT IS       **
+!     **  AVAILABLE ON THIS TASK                                      **
+!     ******************************************************************
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: IB
+      INTEGER(4),INTENT(IN) :: IKPT
+      INTEGER(4),INTENT(IN) :: ISPIN
+      LOGICAL(4),INTENT(OUT):: TCHK
+!     ******************************************************************
+      TCHK=.TRUE.
+      TCHK=TCHK.AND.EXTPNTR%IKPT.NE.0
+      TCHK=TCHK.AND.EXTPNTR%ISPIN.NE.0
+      TCHK=TCHK.AND.EXTPNTR%IB.NE.0
+      RETURN
+      END
+!
+!     ..................................................................
       SUBROUTINE WAVES$SETR8(ID,VAL)
 !     ******************************************************************
 !     **  WAVES$SETR8A                                                **
