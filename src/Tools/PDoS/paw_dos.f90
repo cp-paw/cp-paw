@@ -101,7 +101,7 @@ END MODULE SPINDIR_MODULE
 print*,'state ',state%vec(:,:,ib)
           ENDDO
         ENDDO
-      ENDDOgalli
+      ENDDO
                             CALL TRACE$PASS('AFTER READPDOS')
 
       CALL REPORT(NFILO,EIG)

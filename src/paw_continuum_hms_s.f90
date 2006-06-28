@@ -445,6 +445,7 @@ PRINT*,'In continuum_init: ',contv_rsolv(ia),face_peratom(ia),face_area(ia)
 !     **  is not handled properly.)                                   **      
 !     ******************************************************************
       USE RESTART_INTERFACE
+      use mpe_module
       IMPLICIT NONE
       INTEGER(4)            ,INTENT(IN)  :: NFIL
       INTEGER(4)            ,INTENT(IN)  :: NFILO
@@ -476,8 +477,10 @@ PRINT*,'In continuum_init: ',contv_rsolv(ia),face_peratom(ia),face_area(ia)
       REAL(8),ALLOCATABLE,DIMENSION(:) :: FACE_Q_old
       REAL(8),ALLOCATABLE,DIMENSION(:) :: FACE_QM_old
       REAL(8),ALLOCATABLE,DIMENSION(:) :: FACE_fmem_old
+      INTEGER(4)                       :: THISTASK,NTASKS
 !     ******************************************************************
                                  call trace$push('CONTINUUM$READ')
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK= contv_restart .and. contv_on
       ! contv_restart=T means that we read from rstrt (keyword START=F)
 
@@ -488,8 +491,8 @@ PRINT*,'In continuum_init: ',contv_rsolv(ia),face_peratom(ia),face_area(ia)
            SEPARATOR=MYSEPARATOR
            XSEPARATOR=MYSEPARATOR
       end if
-
-      CALL restart$READSEPARATOR(XSEPARATOR,NFIL,NFILO,TCHK)
+      if(thistask.eq.1)CALL restart$READSEPARATOR(XSEPARATOR,NFIL,NFILO,TCHK)
+      CALL MPE$BROADCAST('MONOMER',1,TCHK)
 
       IF(.not.TCHK) then
          call trace$pop

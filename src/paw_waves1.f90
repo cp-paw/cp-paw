@@ -1113,13 +1113,12 @@ PRINT*,THISTASK,'BEFORE ',XK(:,IKPTL),TINV
       REAL(8)   ,ALLOCATABLE :: RHO(:,:)  ! CHARGE DENSITY
       REAL(8)   ,ALLOCATABLE :: RHO1(:,:) ! AUXILIARY DENSITY ARRAY
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:)     ! <PRO|PSI0>
-      REAL(8)   ,ALLOCATABLE :: DENMAT(:,:,:,:) ! 1CENTER DENSITY MATRIX
-      REAL(8)   ,ALLOCATABLE :: DENMATI(:,:,:,:) ! 1CENTER DENSITY MATRIX
-!                     (IMAGINARY PART FOR SPIN ORBIT AND CURRENT DENSITIES)
+      complex(8),ALLOCATABLE :: DENMAT(:,:,:,:) ! 1CENTER DENSITY MATRIX
+      complex(8),ALLOCATABLE :: eDENMAT(:,:,:,:)! energy-weighted DENSITY MATRIX
       REAL(8)   ,ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
       REAL(8)   ,ALLOCATABLE :: DO(:,:,:,:)     ! 1CENTER OVERLAP
-      REAL(8)   ,ALLOCATABLE :: DENMAT1(:,:,:)  ! 1CENTER DENSITY MATRIX
-      REAL(8)   ,ALLOCATABLE :: DENMATI1(:,:,:) ! 1CENTER DENSITY MATRIX (IMAG)
+      complex(8),ALLOCATABLE :: DENMAT1(:,:,:)  ! 1CENTER DENSITY MATRIX
+      complex(8),ALLOCATABLE :: eDENMAT1(:,:,:) ! e-weighted 1CENTER DENSITY MATRIX
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       REAL(8)   ,ALLOCATABLE :: R(:,:)
       REAL(8)   ,ALLOCATABLE :: FORCE(:,:)
@@ -1157,7 +1156,6 @@ PRINT*,THISTASK,'BEFORE ',XK(:,IKPTL),TINV
       LOGICAL(4)             :: TSTRESS
       LOGICAL(4)             :: TFORCE
       LOGICAL(4)             :: TCHK
-      LOGICAL(4)             :: TSO=.FALSE. ! EVALUATE DENMATI
       REAL(8)                :: PI
       COMPLEX(8),ALLOCATABLE :: QMAT(:,:)   
       INTEGER(4)             :: NFILO
@@ -1277,8 +1275,8 @@ CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
         LMNXX=MAX(LMNXX,MAP%LMNX(ISP))
       ENDDO
       ALLOCATE(DENMAT(LMNXX,LMNXX,NDIMD,NAT))
-      ALLOCATE(DENMATI(LMNXX,LMNXX,NDIMD,NAT))
-      CALL WAVES$DENMAT(LMNXX,NDIMD,NAT,DENMAT,DENMATI) !<<<<<<<<<<<<<<<
+      ALLOCATE(eDENMAT(LMNXX,LMNXX,NDIMD,NAT))
+      CALL WAVES$DENMAT(LMNXX,NDIMD,NAT,DENMAT,eDENMAT) !<<<<<<<<<<<<<<<
 !
 !     ==================================================================
 !     == PSEUDO DENSITY STILL WITHOUT PSEUDOCORE                      ==
@@ -1311,10 +1309,11 @@ END IF
          TSTOP=.TRUE. ! DO NOT PROPAGATE THE WAVE FUNCTION                   !KAESTNERCG
                       ! MUST BE SET IN EACH ITERATION, SEE WAVES$PROPAGATE   !KAESTNERCG
  PRINT*,'----------------- NEW CG SCF ITERATION------------------'           !KAESTNERCG
-         CALL WAVES_MIXRHO_PUL(NRL*NDIM,LMNXX*LMNXX*NDIMD*NAT,&              !KAESTNERCG
-              RHO,DENMAT,TCONV,CONVPSI)                                      !KAESTNERCG
-!!$         CALL WAVES_MIXRHOLIN(NRL,NDIM,LMNXX,NDIMD,NAT,&                  !KAESTNERCG
-!!$              RHO,DENMAT,TCONV,CONVPSI)                                   !KAESTNERCG
+call error$msg('mixer switched off because it is still incompatible')
+call error$msg('with a complex density matrix')
+call error$stop('waves$etot')
+!         CALL WAVES_MIXRHO_PUL(NRL*NDIM,LMNXX*LMNXX*NDIMD*NAT,&              !KAESTNERCG
+!              RHO,real(DENMAT,kind=8),TCONV,CONVPSI)                         !KAESTNERCG
          CALL TIMING$CLOCKOFF('MIXER')                                       !KAESTNERCG
       END IF                                                                 !KAESTNERCG
 !
@@ -1326,7 +1325,6 @@ END IF
       ALLOCATE(QLM(LMRXX,NAT))
       NAT=MAP%NAT
       CALL WAVES$MOMENTS(NAT,LMRXX,NDIMD,LMNXX,DENMAT,QLM)
-
 !
 !     ==================================================================
 !     == OVERWRITE DENSITY TO FOR FIXED POTENTIAL CALC.               ==
@@ -1362,7 +1360,7 @@ CALL TRACE$PASS('AFTER VOFRHO')
 !     ================================================================== 
       ALLOCATE(DH(LMNXX,LMNXX,NDIMD,NAT))
       ALLOCATE(DO(LMNXX,LMNXX,NDIMD,NAT))
-      CALL WAVES$SPHERE(LMNXX,NDIMD,NAT,LMRXX,RHOB,DENMAT,DENMATI &
+      CALL WAVES$SPHERE(LMNXX,NDIMD,NAT,LMRXX,RHOB,DENMAT,eDENMAT &
      &                 ,VQLM,DH,DO,POTB)
 !
 !     ===================================================================
@@ -1405,7 +1403,7 @@ IF(NSPIN.EQ.2) THEN
           CYCLE
         END IF
         WRITE(*,FMT='("=",I1,10E10.3)') &
-             LN,(DENMAT(LMN1+M,LMN1+M,ISPIN,IAT),M=1,2*L+1)
+             LN,(real(DENMAT(LMN1+M,LMN1+M,ISPIN,IAT),kind=8),M=1,2*L+1)
         LMN1=LMN1+2*L+1
       ENDDO
     ENDDO
@@ -1438,7 +1436,7 @@ ELSE
           CYCLE
         END IF
 !        WRITE(*,FMT='("=",I2,10E10.3)') &
-!             LN,(DENMAT(LMN1+M,LMN1+M,ISPIN,IAT),M=1,2*L+1)
+!             LN,(real(DENMAT(LMN1+M,LMN1+M,ISPIN,IAT),kind=8),M=1,2*L+1)
         LMN1=LMN1+2*L+1
       ENDDO
     ENDDO
@@ -1460,7 +1458,7 @@ ELSE
 END IF
       DEALLOCATE(VQLM)
       DEALLOCATE(DENMAT)
-      DEALLOCATE(DENMATI)
+      DEALLOCATE(eDENMAT)
 !
 !     ==================================================================
 !     == DECOMPOSE INTO SPIN-UP AND SPIN DOWN FOR NSPIN=2             ==
@@ -2271,7 +2269,7 @@ END IF
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES$DENMAT(LMNXX,NDIMD_,NAT,DENMAT,DENMATI)
+      SUBROUTINE WAVES$DENMAT(LMNXX,NDIMD_,NAT,DENMAT,eDENMAT)
 !     ******************************************************************
 !     **                                                              **
 !     **  EVALUATES ONE-CENTER DENSITY MATRIX FROM THE ACTUAL         **
@@ -2289,21 +2287,22 @@ END IF
       INTEGER(4),INTENT(IN)  :: LMNXX
       INTEGER(4),INTENT(IN)  :: NDIMD_
       INTEGER(4),INTENT(IN)  :: NAT    
-      REAL(8)   ,INTENT(OUT) :: DENMAT(LMNXX,LMNXX,NDIMD,NAT)
-      REAL(8)   ,INTENT(OUT) :: DENMATI(LMNXX,LMNXX,NDIMD,NAT)
+      complex(8),INTENT(OUT) :: DENMAT(LMNXX,LMNXX,NDIMD,NAT)
+      complex(8),INTENT(OUT) :: eDENMAT(LMNXX,LMNXX,NDIMD,NAT)
       INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
       INTEGER(4)             :: NB    !#(WAVE FUNCTIONS)
       INTEGER(4)             :: IPRO  ! PROJECTOR INDEX
       INTEGER(4)             :: ISP   ! SPECIES INDEX
       INTEGER(4)             :: LMNX  ! 
       INTEGER(4)             :: NBX   ! 
-      INTEGER(4)             :: IAT,ISPIN,IKPT,LMN1,LMN2
+      INTEGER(4)             :: IAT,ISPIN,IKPT,LMN1,LMN2,idim
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:) !(NDIM,NBH,LMNX) <PRO|PSPSI>
-      REAL(8)   ,ALLOCATABLE :: DENMAT1(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: DENMATI1(:,:,:)
+      complex(8),ALLOCATABLE :: DENMAT1(:,:,:)
+      complex(8),ALLOCATABLE :: eDENMAT1(:,:,:)
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
-      REAL(8)                :: SVAR1,SVAR2
+      complex(8)             :: cSVAR1,cSVAR2
       INTEGER(4)             :: NTASKS,THISTASK
+      logical(4),parameter   :: tprint=.true.
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES$DENMAT')
                               CALL TIMING$CLOCKON('W:DENMAT')
@@ -2323,8 +2322,8 @@ END IF
 !     ==                                                              ==
 !     ==================================================================
       CALL MPE$QUERY('K',NTASKS,THISTASK)
-      DENMAT(:,:,:,:)=0.D0
-      DENMATI(:,:,:,:)=0.D0
+      DENMAT(:,:,:,:)=(0.D0,0.d0)
+      eDENMAT(:,:,:,:)=(0.D0,0.d0)
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -2344,20 +2343,22 @@ END IF
             ALLOCATE(PROJ(NDIM,NBH,LMNX))
             PROJ(:,:,:)=THIS%PROJ(:,:,IPRO:IPRO-1+LMNX)
             ALLOCATE(DENMAT1(LMNX,LMNX,NDIMD))
-            ALLOCATE(DENMATI1(LMNX,LMNX,NDIMD))
-            CALL WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC(1,IKPT,ISPIN),PROJ &
-     &                       ,DENMAT1,DENMATI1)
+            ALLOCATE(eDENMAT1(LMNX,LMNX,NDIMD))
+            CALL WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC(1,IKPT,ISPIN),this%rlam0 &
+     &                       ,PROJ,DENMAT1,edenmat1)
             IF(NDIM.EQ.1) THEN
               DENMAT(1:LMNX,1:LMNX,ISPIN,IAT) &
      &                   =DENMAT(1:LMNX,1:LMNX,ISPIN,IAT)+DENMAT1(:,:,1)
+              eDENMAT(1:LMNX,1:LMNX,ISPIN,IAT) &
+     &                   =eDENMAT(1:LMNX,1:LMNX,ISPIN,IAT)+eDENMAT1(:,:,1)
             ELSE
               DENMAT(1:LMNX,1:LMNX,:,IAT) &
      &                       =DENMAT(1:LMNX,1:LMNX,:,IAT)+DENMAT1(:,:,:)
-              DENMATI(1:LMNX,1:LMNX,:,IAT) &
-     &                       =DENMATI(1:LMNX,1:LMNX,:,IAT)+DENMATI1(:,:,:)
+              eDENMAT(1:LMNX,1:LMNX,:,IAT) &
+     &                       =eDENMAT(1:LMNX,1:LMNX,:,IAT)+eDENMAT1(:,:,:)
             ENDIF
-            DEALLOCATE(DENMATI1)
             DEALLOCATE(DENMAT1)
+            DEALLOCATE(eDENMAT1)
             DEALLOCATE(PROJ)
             IPRO=IPRO+LMNX
           ENDDO
@@ -2369,7 +2370,7 @@ END IF
 !     == EACH PROCESSOR OF EACH K-GROUP ONLY ADDS UP A FRACTION OF THE PROJECTIONS
 !     == THEREFORE THERE IS NO DOUBLE COUNTING BY SUMMING OVER THE MONOMER
       CALL MPE$COMBINE('MONOMER','+',DENMAT)
-      CALL MPE$COMBINE('MONOMER','+',DENMATI)
+      CALL MPE$COMBINE('MONOMER','+',eDENMAT)
 !
 !     ==================================================================
 !     ==  CONVERT SPIN-UP AND SPIN-DOWN DENSITY MATRIX INTO           ==
@@ -2381,21 +2382,46 @@ END IF
           LMNX=MAP%LMNX(ISP)
           DO LMN1=1,LMNX
              DO LMN2=1,LMNX
-              SVAR1=DENMAT(LMN1,LMN2,1,IAT)
-              SVAR2=DENMAT(LMN1,LMN2,2,IAT)
-              DENMAT(LMN1,LMN2,1,IAT)=SVAR1+SVAR2   ! TOTAL 
-              DENMAT(LMN1,LMN2,2,IAT)=SVAR1-SVAR2   ! SPIN
+              cSVAR1=DENMAT(LMN1,LMN2,1,IAT)
+              cSVAR2=DENMAT(LMN1,LMN2,2,IAT)
+              DENMAT(LMN1,LMN2,1,IAT)=cSVAR1+cSVAR2   ! TOTAL 
+              DENMAT(LMN1,LMN2,2,IAT)=cSVAR1-cSVAR2   ! SPIN
+!
+              cSVAR1=eDENMAT(LMN1,LMN2,1,IAT)
+              cSVAR2=eDENMAT(LMN1,LMN2,2,IAT)
+              eDENMAT(LMN1,LMN2,1,IAT)=cSVAR1+cSVAR2   ! TOTAL 
+              eDENMAT(LMN1,LMN2,2,IAT)=cSVAR1-cSVAR2   ! SPIN
             ENDDO
           ENDDO
         ENDDO
       END IF
+!
+!     ==================================================================
+!     ==  print for test                                              ==
+!     ==================================================================
+      IF(tprint) THEN
+        write(*,fmt='("test print from waves$denmat")')
+        DO IAT=1,NAT
+          ISP=MAP%ISP(IAT)
+          LMNX=MAP%LMNX(ISP)
+          do idim=1,ndimd
+            write(*,fmt='("denmat for atom ",i3," and spin ",i3)')iat,idim
+            DO LMN1=1,LMNX
+              write(*,fmt='("R",i3,100f10.5)')lmn1,real(denmat(lmn1,:lmnx,idim,iat))
+              write(*,fmt='("I",i3,100f10.5)')lmn1,aimag(denmat(lmn1,:lmnx,idim,iat))
+            enddo
+          ENDDO
+        ENDDO
+      END IF
+!
                               CALL TIMING$CLOCKOFF('W:DENMAT')
                               CALL TRACE$POP
      RETURN
      END SUBROUTINE WAVES$DENMAT
 !
 !     ..................................................................
-      SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,PROPSI,DENMAT,DENMATI)
+      SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,lambda,PROPSi &
+     &                       ,DENMAT,edenmat)
 !     ******************************************************************
 !     **                                                              **
 !     **  EVALUATE ONE-CENTER DENSITY MATRIX                          **
@@ -2417,22 +2443,26 @@ END IF
       INTEGER(4),INTENT(IN) :: NB     ! #(STATES)
       INTEGER(4),INTENT(IN) :: LMNX   ! #(PROJECTORS ON THIS SITE)
       REAL(8)   ,INTENT(IN) :: OCC(NB)! OCCUPATIONS
+      COMPLEX(8),INTENT(IN) :: lambda(Nb,nb)   !lagrange/f
       COMPLEX(8),INTENT(IN) :: PROPSI(NDIM,NBH,LMNX) !<PRO|PSI>
-      REAL(8)   ,INTENT(OUT):: DENMAT(LMNX,LMNX,NDIM**2)
-      REAL(8)   ,INTENT(OUT):: DENMATI(LMNX,LMNX,NDIM**2)
+      complex(8),INTENT(OUT):: DENMAT(LMNX,LMNX,NDIM**2)
+      complex(8),INTENT(OUT):: eDENMAT(LMNX,LMNX,NDIM**2)
       COMPLEX(8)            :: DENMAT1(LMNX,LMNX,NDIM,NDIM)
+      COMPLEX(8)            :: eDENMAT1(LMNX,LMNX,NDIM,NDIM)
       COMPLEX(8)            :: FUNC(LMNX,NDIM)
+      COMPLEX(8)            :: lagr(nb,nb)
       LOGICAL(4)            :: TINV
-      INTEGER(4)            :: LMN1,LMN2,IDIM1,IDIM2,IB
+      INTEGER(4)            :: LMN1,LMN2,IDIM1,IDIM2,IB,ib1,ib2
       REAL(8)               :: SUM,SVAR1,SVAR2,SVAR
-      COMPLEX(8)            :: CSVAR
+      COMPLEX(8)            :: CSVAR,cfacr,cfaci,cfac1,cfac2
       INTEGER(4)            :: NDIMD,IDIM
       INTEGER(4)            :: NFILO
-      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPR=.false.
+      complex(8),parameter   :: ci=(0.d0,1.d0)
 !     ******************************************************************
       NDIMD=NDIM**2
-      DENMAT(:,:,:)=0.D0
-      DENMATI=0.D0
+      DENMAT(:,:,:)=(0.D0,0.d0)
+      eDENMAT(:,:,:)=(0.D0,0.d0)
 !
 !     ==================================================================
 !     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==
@@ -2453,7 +2483,13 @@ END IF
 !     ==================================================================
 !     ==  SUM UP THE DENSITY MATRIX                                   ==
 !     ==================================================================
-      DENMAT1(:,:,:,:)=0.D0
+!     == super wave functions for tinv=true
+!     ==   <p|psi1+i*psi2>(f1+f2)/2<psi1-i*psi2|p>
+!     == + <p|psi1+i*psi2>(f1-f2)/2<psi1+i*psi2|p>
+!     == = <p|psi1>f1<psi1|p>+<p|psi2>f2<psi2|p>
+!     == + i[<p|psi2>f1<psi1|p>-<p|psi1>f2<psi2|p>]
+!     == imaginary part is dropped
+      DENMAT1(:,:,:,:)=(0.D0,0.d0)
       DO IB=1,NBH
 !       == FIND OCCUPATION OF THE STATE ===============================
         IF(TINV) THEN
@@ -2465,6 +2501,7 @@ END IF
         DO LMN1=1,LMNX
           DO IDIM1=1,NDIM
             IF(TINV) THEN
+!             == func=(f1+f2)/2<psi1-i*psi2|p>+(f1-f2)/2<psi1+i*psi2|p>
               FUNC(LMN1,IDIM1)=SVAR1*CONJG(PROPSI(IDIM1,IB,LMN1)) &
      &                        +SVAR2*PROPSI(IDIM1,IB,LMN1)
             ELSE 
@@ -2483,6 +2520,54 @@ END IF
           ENDDO
         ENDDO
       ENDDO
+!     == density matrix for real wave functions is real. Imaginary part
+!     == contains crap due to super wave functions
+      if(tinv) then
+        DENMAT1(:,:,:,:)=REAL(DENMAT1(:,:,:,:),KIND=8)
+      end if
+!
+!     ==================================================================
+!     == NOW SUM UP EDENMAT  <P|PSITILDE>*LAMBDA*<PSITILDE|P>         ==
+!     ==================================================================
+      DO IB2=1,NB
+        LAGR(:,IB2)=LAMBDA(:,IB2)*OCC(IB2)
+print*,'lagr ',ib2,lagr(:,ib2)
+      ENDDO
+      EDENMAT1(:,:,:,:)=(0.D0,0.D0)
+      IF(TINV) THEN
+        DO IB1=1,NBH
+          func(:,:)=(0.d0,0.d0)
+          DO IB2=1,NBH
+            CFACR=LAGR(2*IB1-1,2*IB2-1)+CI*LAGR(2*IB1,2*IB2-1)
+            CFACI=LAGR(2*IB1-1,2*IB2)+CI*LAGR(2*IB1,2*IB2)
+            CFAC1=0.5D0*(CFACR-CI*CFACI)
+            CFAC2=0.5D0*(CFACR+CI*CFACI)
+            FUNC(:,:)=FUNC(:,:)+CFAC1*PROPSI(:,IB2,:) &
+     &                         +CFAC2*conjg(PROPSI(:,IB2,:))
+          ENDDO
+          do idim2=1,ndim
+            do idim1=1,ndim
+              do lmn2=1,lmnx
+                do lmn1=1,lmnx
+                  EDENMAT1(LMN1,LMN2,IDIM1,IDIM2)=EDENMAT1(LMN1,LMN2,IDIM1,IDIM2) &
+     &                              +conjg(PROPSI(IDIM1,IB1,LMN1))*FUNC(IDIM2,LMN2)
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+!       == density matrix for real wave functions is real. Imaginary part
+!       == contains crap due to super wave functions
+        EDENMAT1(:,:,:,:)=REAL(EDENMAT1(:,:,:,:),KIND=8)
+      ELSE
+        DO IB1=1,NBH
+          DO IB2=1,NBH
+            FUNC(:,:)=FUNC(:,:)+LAGR(IB1,IB2)*CONJG(PROPSI(:,IB2,:))
+          ENDDO
+          EDENMAT1(LMN1,LMN2,IDIM1,IDIM2)=EDENMAT1(LMN1,LMN2,IDIM1,IDIM2) &
+     &                    +PROPSI(IDIM1,IB1,LMN1)*FUNC(IDIM2,LMN2)
+        ENDDO
+      END IF
 !
 !     ==================================================================
 !     == MAP DENSITY MATRIX ONTO TOTAL AND SPIN DENSITY               ==
@@ -2490,24 +2575,32 @@ END IF
       IF(NDIM.EQ.1) THEN  !== TOTAL DENSITY ===========================
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
-            DENMAT(LMN1,LMN2,1)=REAL(DENMAT1(LMN1,LMN2,1,1),KIND=8)
+            DENMAT(LMN1,LMN2,1)=DENMAT1(LMN1,LMN2,1,1)
+            EDENMAT(LMN1,LMN2,1)=EDENMAT1(LMN1,LMN2,1,1)
           ENDDO
         ENDDO
       ELSE IF(NDIM.EQ.2) THEN  !== TOTAL DENSITY, X,Y,Z SPIN DENSITY ==
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
             CSVAR=DENMAT1(LMN1,LMN2,1,1)+DENMAT1(LMN1,LMN2,2,2)
-            DENMAT(LMN1,LMN2,1) = REAL(CSVAR,KIND=8)
-            DENMATI(LMN1,LMN2,1)=AIMAG(CSVAR)
+            DENMAT(LMN1,LMN2,1) =csvar
             CSVAR=DENMAT1(LMN1,LMN2,1,2)+DENMAT1(LMN1,LMN2,2,1)
-            DENMAT(LMN1,LMN2,2) = REAL(CSVAR,KIND=8)
-            DENMATI(LMN1,LMN2,2)=AIMAG(CSVAR)
-            CSVAR=DENMAT1(LMN1,LMN2,1,2)-DENMAT1(LMN1,LMN2,2,1)
-            DENMAT(LMN1,LMN2,3) =-AIMAG(CSVAR)
-            DENMATI(LMN1,LMN2,3)=+REAL(CSVAR,KIND=8)
+            DENMAT(LMN1,LMN2,2) =CSVAR
+!           == denmat=Tr[sigma*denmat1]=sum_{i,j} sigma_{i,j}*denmat{j,i}
+!           == hence the minus sign for the antisymmetric sigma
+            CSVAR=ci*(DENMAT1(LMN1,LMN2,1,2)-DENMAT1(LMN1,LMN2,2,1))
+            DENMAT(LMN1,LMN2,3) =CSVAR
             CSVAR=DENMAT1(LMN1,LMN2,1,1)-DENMAT1(LMN1,LMN2,2,2)
-            DENMAT(LMN1,LMN2,4) = REAL(CSVAR,KIND=8)
-            DENMATI(LMN1,LMN2,4)=AIMAG(CSVAR)
+            DENMAT(LMN1,LMN2,4) =csvar
+!
+            CSVAR=EDENMAT1(LMN1,LMN2,1,1)+EDENMAT1(LMN1,LMN2,2,2)
+            EDENMAT(LMN1,LMN2,1) =CSVAR
+            CSVAR=EDENMAT1(LMN1,LMN2,1,2)+EDENMAT1(LMN1,LMN2,2,1)
+            EDENMAT(LMN1,LMN2,2) =CSVAR
+            CSVAR=ci*(EDENMAT1(LMN1,LMN2,1,2)-EDENMAT1(LMN1,LMN2,2,1))
+            EDENMAT(LMN1,LMN2,3) =CSVAR
+            CSVAR=EDENMAT1(LMN1,LMN2,1,1)-EDENMAT1(LMN1,LMN2,2,2)
+            EDENMAT(LMN1,LMN2,4) =CSVAR
           ENDDO
         ENDDO
       END IF
@@ -2518,23 +2611,31 @@ END IF
       DO IDIM=1,NDIMD
         DO LMN1=1,LMNX
           DO LMN2=LMN1+1,LMNX
-            SVAR=0.5D0*(DENMAT(LMN1,LMN2,IDIM)+DENMAT(LMN2,LMN1,IDIM))
-            DENMAT(LMN1,LMN2,IDIM)=SVAR
-            DENMAT(LMN2,LMN1,IDIM)=SVAR
-            SVAR=0.5D0*(DENMATI(LMN1,LMN2,IDIM)-DENMATI(LMN2,LMN1,IDIM))
-            DENMATI(LMN1,LMN2,IDIM)= SVAR
-            DENMATI(LMN2,LMN1,IDIM)=-SVAR
+            cSVAR=0.5D0*(DENMAT(LMN1,LMN2,IDIM)+conjg(DENMAT(LMN2,LMN1,IDIM)))
+            DENMAT(LMN1,LMN2,IDIM)=cSVAR
+            DENMAT(LMN2,LMN1,IDIM)=conjg(cSVAR)
+!
+            cSVAR=0.5D0*(eDENMAT(LMN1,LMN2,IDIM)+conjg(eDENMAT(LMN2,LMN1,IDIM)))
+            eDENMAT(LMN1,LMN2,IDIM)=cSVAR
+            eDENMAT(LMN2,LMN1,IDIM)=conjg(cSVAR)
           ENDDO
         ENDDO
       ENDDO
+!
+!     ==================================================================
+!     == prinout for test                                             ==
+!     ==================================================================
       IF(TPR) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         DO IDIM=1,NDIMD
           WRITE(NFILO,FMT='("WAVES_DENMAT: DENMAT FOR IDIM= ",I2)') IDIM
           DO LMN1=1,LMNX
-            WRITE(NFILO,FMT='(9F10.6)')DENMAT(LMN1,:,IDIM)
+            WRITE(NFILO,FMT='(9F10.6)')real(DENMAT(LMN1,:lmnx,idIM),kind=8)
           ENDDO
         ENDDO
+        do ib=1,nbh
+          WRITE(NFILO,FMT='("propsi",i5,50F10.6)')ib,propsi(1,ib,:lmnx)
+        enddo
       END IF
       RETURN
       END
@@ -2621,14 +2722,14 @@ END IF
       INTEGER(4),INTENT(IN)  :: NAT
       INTEGER(4),INTENT(IN)  :: LMNXX
       INTEGER(4),INTENT(IN)  :: NDIMD_
-      REAL(8)   ,INTENT(IN)  :: DENMAT(LMNXX,LMNXX,NDIMD,NAT)
+      COMPLEX(8),INTENT(IN)  :: DENMAT(LMNXX,LMNXX,NDIMD,NAT)
       REAL(8)   ,INTENT(OUT) :: QLM(LMRXX,NAT)
       INTEGER(4)             :: ISP
       INTEGER(4)             :: IAT
       INTEGER(4)             :: LMNX
       INTEGER(4)             :: LMRX
       INTEGER(4)             :: NTASKS,THISTASK
-      REAL(8)   ,ALLOCATABLE :: DENMAT1(:,:)
+      COMPLEX(8),ALLOCATABLE :: DENMAT1(:,:)
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES$MOMENTS')
                               CALL TIMING$CLOCKON('W:MOMENTS')
@@ -2665,7 +2766,7 @@ END IF
       END SUBROUTINE WAVES$MOMENTS
 !
 !     ..................................................................
-      SUBROUTINE WAVES$SPHERE(LMNXX,NDIMD_,NAT,LMRXX,RHOB,DENMAT,DENMATI &
+      SUBROUTINE WAVES$SPHERE(LMNXX,NDIMD_,NAT,LMRXX,RHOB,DENMAT,eDENMAT &
      &                       ,VQLM,DH,DO,POTB)
 !     ******************************************************************
 !     **                                                              **
@@ -2689,8 +2790,8 @@ END IF
       INTEGER(4),INTENT(IN)  :: NAT    
       INTEGER(4),INTENT(IN)  :: LMRXX
       REAL(8)   ,INTENT(IN)  :: RHOB
-      REAL(8)   ,INTENT(IN)  :: DENMAT(LMNXX,LMNXX,NDIMD_,NAT)
-      REAL(8)   ,INTENT(IN)  :: DENMATI(LMNXX,LMNXX,NDIMD,NAT)
+      complex(8),INTENT(IN)  :: DENMAT(LMNXX,LMNXX,NDIMD_,NAT)
+      complex(8),INTENT(IN)  :: eDENMAT(LMNXX,LMNXX,NDIMD,NAT)
       REAL(8)   ,INTENT(INOUT):: VQLM(LMRXX,NAT)
       REAL(8)   ,INTENT(OUT) :: DH(LMNXX,LMNXX,NDIMD_,NAT)
       REAL(8)   ,INTENT(OUT) :: DO(LMNXX,LMNXX,NDIMD_,NAT)
@@ -2701,8 +2802,8 @@ END IF
       INTEGER(4)             :: LMNX  ! 
       INTEGER(4)             :: LMRX  ! 
       INTEGER(4)             :: NTASKS,THISTASK
-      REAL(8)   ,ALLOCATABLE :: DENMAT1(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: DENMATI1(:,:,:)
+      complex(8),ALLOCATABLE :: DENMAT1(:,:,:)
+      complex(8),ALLOCATABLE :: eDENMAT1(:,:,:)
       REAL(8)   ,ALLOCATABLE :: DH1(:,:,:)  !(LMNX,LMNX,NDIMD)
       REAL(8)   ,ALLOCATABLE :: DOV1(:,:,:) !(LMNX,LMNX,NDIMD)
       REAL(8)                :: RBAS(3,3)
@@ -2728,20 +2829,20 @@ END IF
         LMNX=MAP%LMNX(ISP)
         CALL SETUP$LMRX(ISP,LMRX)
         ALLOCATE(DENMAT1(LMNX,LMNX,NDIMD))
-        ALLOCATE(DENMATI1(LMNX,LMNX,NDIMD))
+        ALLOCATE(eDENMAT1(LMNX,LMNX,NDIMD))
         DENMAT1(:,:,:)=DENMAT(1:LMNX,1:LMNX,:,IAT)
-        DENMATI1(:,:,:)=DENMATI(1:LMNX,1:LMNX,:,IAT)
+        eDENMAT1(:,:,:)=eDENMAT(1:LMNX,1:LMNX,:,IAT)
         ALLOCATE(DH1(LMNX,LMNX,NDIMD))
         ALLOCATE(DOV1(LMNX,LMNX,NDIMD))
-        CALL AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT1,DENMATI1 &
+        CALL AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT1,eDENMAT1 &
      &               ,LMRX,VQLM(1,IAT),RHOB,POTB1,DH1,DOV1)
         POTB=POTB+POTB1
         DH(1:LMNX,1:LMNX,:,IAT)=DH1(:,:,:)
         DO(1:LMNX,1:LMNX,:,IAT)=DOV1(:,:,:)
         DEALLOCATE(DH1)
         DEALLOCATE(DOV1)
-        DEALLOCATE(DENMATI1)
         DEALLOCATE(DENMAT1)
+        DEALLOCATE(eDENMAT1)
       END DO
       CALL MPE$COMBINE('MONOMER','+',DH)
       CALL MPE$COMBINE('MONOMER','+',DO)
@@ -3567,12 +3668,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       IF(TINV) THEN
         IF(NBH.NE.(NB+1)/2) THEN
           CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
-          CALL ERROR$STOP('WAVES_DENMAT')
+          CALL ERROR$STOP('WAVES_DENsity')
         END IF
       ELSE 
         IF(NBH.NE.NB) THEN
           CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
-          CALL ERROR$STOP('WAVES_DENMAT')
+          CALL ERROR$STOP('WAVES_DENsity')
         END IF
       END IF
 !
@@ -3679,6 +3780,9 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  CALCULATES THE DERIVATIVE OF THE ONE-CENTER                 **
 !     **  ENERGIES WITH RESPECT TO THE PROJECTOR FUNCTIONS            **
 !     **    DEDPROJ = DE/(DPROJ)                                      **
+!     **            = dh<p|psitilde>f-do<p|psitilde>*lambda           **
+!     **  lambda is calculated from this%rlam0 by multiplication with **
+!     **  0.5*(fi+fj)                                                 **
 !     **                                                              **
 !     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
       IMPLICIT NONE

@@ -959,6 +959,10 @@ END MODULE SORT_MODULE
       END IF
       TSET=.TRUE.
       LEN=LEN_
+if(len.le.1) then
+  if(len.eq.1) len=0
+  return
+end if
       ALLOCATE(IND(LEN))
       ALLOCATE(RANK(LEN))
       CALL HEAPSORT(LEN,CRIT,IND)
@@ -990,6 +994,7 @@ END MODULE SORT_MODULE
         CALL ERROR$MSG('SORT OBJECT NOT INITIALIZED')        
         CALL ERROR$STOP('SORT$RESTART')
       END IF
+if(len.eq.0) return
       CALL SORTRANK(LEN,IND,RANK)
       I0=1
       IHOLE=0
@@ -1004,6 +1009,9 @@ END MODULE SORT_MODULE
       IMPLICIT NONE
 !     ******************************************************************
       TSET=.FALSE.
+i0=0
+if(len.eq.0)return
+len=0
       DEALLOCATE(IND)
       DEALLOCATE(RANK)
       LEN=1
@@ -1042,6 +1050,11 @@ END MODULE SORT_MODULE
         CALL ERROR$MSG('SORT OBJECT NOT INITIALIZED')        
         CALL ERROR$STOP('SORT$FLIP')
       END IF
+if(len.eq.0) then
+  from=0
+  to=0
+  return
+end if
       IF(IHOLE.EQ.0) THEN
 !       == FIND ELEMENT WHICH IS ON THE WRONG POSITION ================
         DO WHILE(RANK(I0).EQ.I0)

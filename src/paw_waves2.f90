@@ -383,17 +383,21 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
           DEALLOCATE(OPROJ)
 !
 !         ==================================================================
-!         ==  RESCALE GAMMA                                               ==
+!         ==  map lambda onto rlam0                                       ==
 !         ==================================================================
-!         == MASS IS NOT INCLUDED HERE (MASS TENSOR IS TAKEN CARE OF IN 
-!         == PSIBAR AND (1/M)O|PSI> 
-          DO I=1,NB
-            DO J=I,NB
-              LAMBDA(I,J)=0.5D0*(LAMBDA(I,J)+CONJG(LAMBDA(J,I)))
-              LAMBDA(J,I)=CONJG(LAMBDA(I,J))
-            ENDDO
-          ENDDO
-!PRINT*,'LAMBDA[EV] ',(REAL(LAMBDA(I,I))*27.211D0,I=1,NB)
+!         == MASS IS NOT INCLUDED HERE (MASS TENSOR IS TAKEN CARE OF IN   ==
+!         == PSIBAR AND (1/M)O|PSI>                                       ==
+!         ==================================================================
+!         == RLAM0 IS DEFINED VIA THE EQUATION OF MOTION                  ==
+!         ==         M|PSIDOTDOT>=-H|PSI>+O|PSI>*RLAM0                    ==
+!         == RLAM0(I,J)*OCC(J) IS THE LAGRANGE PARAMETER, WHICH IS        ==
+!         == HERMITEAN. ITS MATRIX ELEMENTS INVOLVING UNOCCUPIED STATES   ==
+!         == VANISHES.                                                    ==
+!         == RLAM0 IS NOT HERMITEAN! FOR A SYSTEM AT REST THE RELATION    ==
+!         ==        RLAM0=<PSI|H|PSI>                                     ==
+!         == HOLDS. THEN THE MATRIX FOR STATES WITH DIFFERENT OCCUPATIONS ==
+!         == VANISH.                                                      ==
+!         ==================================================================
           IF(.NOT.ASSOCIATED(THIS%RLAM0))ALLOCATE(THIS%RLAM0(NB,NB))
           THIS%RLAM0(:,:)=LAMBDA(:,:)
           DEALLOCATE(LAMBDA)
@@ -1479,12 +1483,16 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !     **                                                              **
 !     **  NEW VERSION WITH DIAGONALIZATION FOR CHIPSI                    **
 !     **                                                              **
-!     **                                                              **
 !     **  THE METHOD IS DESCRIBED IN :                                **
 !     **    R.CAR AND M.PARRINELLO, IN "SIMPLE MOLECULAR SYSTEMS      **
 !     **    AT VERY HIGH DENSITY", PAGE 455                           **
 !     **    ED. A.POLIAN, PLOUBEYRE AND N.BOCCARA                     **
 !     **    (PLENUM PUBLISHING CORPORATION,1989)                      **
+!     **                                                              **
+!     **  THE MATRIX LAMBDA IS NOT THE LAGRANGE MULTIPLIER BUT THE    **
+!     **  NON-HERMITAEAN FORM. THE LAGRANGE MULTIPLIERS, WHICH ARE    **
+!     **  HERMITEAN, ARE OBTAINED FROM THIS LAMBDA MATRIX BY          **
+!     **  MULTIPLICATION WITH THE OCCUPATION TO THE RIGHT.            **
 !     **                                                              **
 !     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1992)***
 !     IMPLICIT NONE
@@ -2670,11 +2678,22 @@ PRINT*,'ITER ',ITER,DIGAM
 !         == ARE ALREADY IN TASK 1.                                     ==
 !         ================================================================
           IF(THISTASK.EQ.1) THEN
-            WRITE(NFIL)XK(:,IKPT),NB
+!!$            == this is the uncorrected version with ikpt instead of ikptg
+!!$            WRITE(NFIL)XK(:,IKPT),NB
+!!$            DO IB1=1,NB
+!!$              IF(FLAG.EQ.'011004') THEN
+!!$!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
+!!$                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPT,ISPIN),VECTOR1(:,:,ib1)
+!!$              ELSE
+!!$!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
+!!$                WRITE(NFIL)EIG(IB1),VECTOR1(:,:,ib1)
+!!$              END IF
+!!$            ENDDO
+            WRITE(NFIL)XK(:,IKPTg),NB
             DO IB1=1,NB
               IF(FLAG.EQ.'011004') THEN
 !               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
-                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPT,ISPIN),VECTOR1(:,:,ib1)
+                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPTg,ISPIN),VECTOR1(:,:,ib1)
               ELSE
 !               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
                 WRITE(NFIL)EIG(IB1),VECTOR1(:,:,ib1)
@@ -2834,7 +2853,10 @@ PRINT*,'ITER ',ITER,DIGAM
       SEPARATOR=SEP_WAVES
       IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
       CALL MPE$BROADCAST('MONOMER',1,TCHK)
-      IF(.NOT.TCHK) RETURN
+      IF(.NOT.TCHK) then
+                                  CALL TRACE$Pop
+        RETURN
+      end if
       CALL WAVES_READPSI(NFIL)
 !
 !     ==================================================================
@@ -4542,9 +4564,9 @@ LOGICAL(4):: TCHK
 !.......................................................................
 MODULE WAVESFIXRHO_MODULE
 ! THIS MODULE IS USED TO KEEP THE DENSITY FIXED
-  REAL(8), ALLOCATABLE    :: QLM(:,:)
-  REAL(8), ALLOCATABLE    :: RHO(:,:)
-  REAL(8), ALLOCATABLE    :: DENMAT(:,:,:,:)
+  REAL(8)   ,ALLOCATABLE    :: QLM(:,:)
+  REAL(8)   ,ALLOCATABLE    :: RHO(:,:)
+  complex(8),ALLOCATABLE    :: DENMAT(:,:,:,:)
 END MODULE WAVESFIXRHO_MODULE
 !
 !      ...................................................................
@@ -4553,7 +4575,7 @@ END MODULE WAVESFIXRHO_MODULE
        IMPLICIT NONE
        INTEGER(4) ,INTENT(IN)  :: NRL,NDIMD,LMRXX,NAT
        REAL(8)    ,INTENT(OUT) :: QLM_(LMRXX,NAT),RHO_(NRL,NDIMD)
-       REAL(8)    ,INTENT(OUT) :: DENMAT_(LMRXX,LMRXX,NDIMD,NAT)
+       complex(8) ,INTENT(OUT) :: DENMAT_(LMRXX,LMRXX,NDIMD,NAT)
 !     ********************************************************************
 
        IF (.NOT.ALLOCATED(QLM)) THEN
@@ -4573,7 +4595,7 @@ END MODULE WAVESFIXRHO_MODULE
        IMPLICIT NONE
        INTEGER(4) ,INTENT(IN)  :: NRL,NDIMD,LMRXX,NAT
        REAL(8)    ,INTENT(IN)  :: QLM_(LMRXX,NAT),RHO_(NRL,NDIMD)
-       REAL(8)    ,INTENT(IN)  :: DENMAT_(LMRXX,LMRXX,NDIMD,NAT)
+       complex(8) ,INTENT(IN)  :: DENMAT_(LMRXX,LMRXX,NDIMD,NAT)
 !      ******************************************************************
        IF (.NOT.ALLOCATED(QLM)) THEN
           ALLOCATE(QLM(LMRXX,NAT))
@@ -4618,9 +4640,6 @@ END MODULE WAVESFIXRHO_MODULE
        CALL FILEHANDLER$CLOSE('FIXRHO')
        RETURN
        END
-       
-       
-
 !
 !.....................................................................
 MODULE TOTALSPIN_MODULE

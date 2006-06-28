@@ -113,6 +113,7 @@
       real(8)                :: ev
       real(8)                :: svar1,svar2,svar3
       integer(4)             ::ISVAR1ARR(1)  ! USED TO RESHAPE AN ARRAY OF LENGTH 1
+      character(16)          :: PSEUDOPARTIALWAVEMETHOD
 !     ****************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -424,9 +425,20 @@
 !     ================================================================
 !     ==  AUGMENTATION                                              ==
 !     ================================================================
+      PSEUDOPARTIALWAVEMETHOD='HBS'
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
       CALL LINKEDLIST$SELECT(LL_CNTL,'AUGMENTATION')
+      PSEUDOPARTIALWAVEMETHOD='HBS'
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'PSEUDOMETHOD',1,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'PSEUDOMETHOD' &
+     &                                   ,1,PSEUDOPARTIALWAVEMETHOD)
+      IF(PSEUDOPARTIALWAVEMETHOD.NE.'HBS'.AND. &
+     &   PSEUDOPARTIALWAVEMETHOD.NE.'KRESSE') THEN
+        CALL ERROR$MSG('ILLEGAL VALUE FOR PSEUDIZATION METHOD')
+        CALL ERROR$CHVAL('PSEUDOPARTIALWAVEMETHOD',PSEUDOPARTIALWAVEMETHOD)
+        CALL ERROR$STOP('MAIN')
+      END IF
       CALL LINKEDLIST$EXISTD(LL_CNTL,'NPRO',1,TCHK)
       LMAX=2
       IF(TCHK) THEN
@@ -572,7 +584,8 @@
             NN=IB-1
             CALL ONENODELESS('BOUND',GID,NR,L,NN,SO,DREL,AEPOT,UC &
        &                    ,EGRID(IB,L+1),UPHI(:,IB,L+1),TUPHI(:,IB,L+1))
-            CALL REPORT$R8VAL(NFILO,'ENERGY SUPPORT GRID POINT (BOUND)',EGRID(IB,L+1),'H')
+            CALL REPORT$R8VAL(NFILO,'ENERGY SUPPORT GRID POINT (BOUND)' & 
+       &                           ,EGRID(IB,L+1),'H')
           ELSE
             IF(IB.EQ.1.AND.NNEND.GT.0) THEN   
               EGRID(IB,L+1)=0.D0
@@ -581,7 +594,8 @@
             END IF
             CALL ONENODELESS('SCATT',GID,NR,L,NN,SO,DREL,AEPOT,UC &
        &                    ,EGRID(IB,L+1),UPHI(:,IB,L+1),TUPHI(:,IB,L+1))
-            CALL REPORT$R8VAL(NFILO,'ENERGY SUPPORT GRID POINT (UNBOUND)',EGRID(IB,L+1),'H')
+            CALL REPORT$R8VAL(NFILO,'ENERGY SUPPORT GRID POINT (UNBOUND)' &
+       &                           ,EGRID(IB,L+1),'H')
 !
           END IF
         ENDDO
@@ -625,11 +639,30 @@
         TPSPHI(:,:,L+1)=TUPHI(:,:,L+1)
         RC=RCL(L+1)
 !       USE METHOD ADJUSTING PSEUDOPOTENTIAL
-        CALL CONSTRUCTPSPHI1(GID,NR,RC,POW_POT,PSPOT,L,NAUG &
+PSEUDOPARTIALWAVEMETHOD='HBS'
+        IF(PSEUDOPARTIALWAVEMETHOD.eq.'HBS') THEN
+          CALL CONSTRUCTPSPHI1(GID,NR,RC,POW_POT,PSPOT,L,NAUG &
      &                      ,EGRID(:,L+1),PSPHI(:,:,L+1),TPSPHI(:,:,L+1))
-!PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
 !       == USE METHOD MATCHING BESSEL FUNCTIONS
-!       CALL CONSTRUCTPSPHI(GID,NR,RC,L,NAUG,PSPHI(:,:,L+1),TPSPHI(:,:,L+1))
+        ELSE IF(PSEUDOPARTIALWAVEMETHOD.eq.'KRESSE') THEN
+          CALL CONSTRUCTPSPHI(GID,NR,RC,L,NAUG,PSPHI(:,:,L+1),TPSPHI(:,:,L+1))
+        ELSE
+          CALL ERROR$MSG('METHOD FOR CONSTRUCTING PSEUDO PARTIAL WAVES')
+          CALL ERROR$MSG('NOT RECOGNIZED')
+          CALL ERROR$chval('PSEUDOPARTIALWAVEMETHOD',PSEUDOPARTIALWAVEMETHOD)
+          CALL ERROR$STOP('ATOM')
+        END IF
+!
+!       =================================================================
+!       ==  write pseudopotential for each partial wave                ==
+!       =================================================================
+PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
+        ALLOCATE(WORK2D(NR,NAUG))
+        DO IB=1,NAUG
+          WORK2D(:,IB)=-TPSpHI(:,IB,L+1)/PSPHI(:,IB,L+1)+EGRID(IB,l+1)
+        ENDDO
+        CALL WRITEPHI('PSPOTOFPHI'//TRIM(EXT),GID,NR,NAUG,WORK2D)
+        DEALLOCATE(WORK2D)
 !
 !       =================================================================
 !       ==  CONSTRUCT BARE PROJECTOR FUNCTIONS                         ==
@@ -787,11 +820,12 @@ DO IB=1,NAUG
   WRITE(*,FMT='(20E20.5)')DO(IB,:,L+1)
 ENDDO
 print*,'write files'
-        ALLOCATE(WORK2D(NR,3*NAUG))
+        ALLOCATE(WORK2D(NR,4*NAUG))
         WORK2D(:,1:NAUG)=AEPHI(:,:,L+1)
         WORK2D(:,NAUG+1:2*NAUG)=PSPHI(:,:,L+1)
         WORK2D(:,2*naug+1:3*NAUG)=PRO(:,:,L+1)
-        CALL WRITEPHI('AUGMENT'//TRIM(EXT),GID,NR,3*NAUG,WORK2D)
+        WORK2D(:,3*NAUG+1:4*NAUG)=uPHI(:,:,L+1)
+        CALL WRITEPHI('AUGMENT'//TRIM(EXT),GID,NR,4*NAUG,WORK2D)
         DEALLOCATE(WORK2D)
         CALL WRITEPHI('AEPHI'//TRIM(EXT),GID,NR,NAUG,AEPHI(:,:,L+1))
         CALL WRITEPHI('AEPHI_T'//TRIM(EXT),GID,NR,NAUG,TAEPHI(:,:,L+1))
@@ -1335,7 +1369,7 @@ PRINT*,' START READING SETUP FILE'
       REAL(8)                    :: SUPPHI(NR,NB)
       REAL(8)                    :: SUPTPHI(NR,NB)
       REAL(8)                    :: SHIFT
-      LOGICAL(4),PARAMETER       :: TDIFFERENTIABLELAPLACIAN=.FALSE.
+      LOGICAL(4),PARAMETER       :: TDIFFERENTIABLELAPLACIAN=.false.
 !     ***********************************************************************
       PI=4.D0*DATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
@@ -1352,7 +1386,7 @@ PRINT*,' START READING SETUP FILE'
         CALL SPECIALFUNCTION$BESSEL(L,R(IR),JL(IR)) 
       ENDDO
 !     == 2*TJL-JL=0 =======================================================
-      TJL(:)=0.5D0*JL(:)   
+      TJL(:)=0.5D0*JL(:)   !kinetic energy times bessel function
 !
 !     =======================================================================
 !     == CALCULATE PHASESHIFT OF BESSEL FUNCTION                           ==
@@ -1376,7 +1410,11 @@ PRINT*,' START READING SETUP FILE'
 !       =======================================================================
         CALL PHASESHIFT(GID,NR,SUPPHI,RC,SHIFT)
         IF(PHASE(1)-SHIFT.GT.0.D0) THEN
-PRINT*,'WARNING SHIFT WAS REQUIRED ',L,IB
+          CALL ERROR$MSG('MATCHING INCLUDING FIRST BESSEL FUNCTION NOT POSSIBLE')
+          CALL ERROR$MSG('TRY TO INCREASE MATCHING RADIUS')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$STOP('CONSTRUCTPSPHI')
+PRINT*,'WARNING SHIFT WAS REQUIRED ',L,IB,PHASE(1),SHIFT
            SHIFT=SHIFT+REAL(INT(PHASE(1)-SHIFT+1.D0))
         END IF
 !!$OPEN(100,FILE='PHASE.DAT')
@@ -1389,7 +1427,7 @@ PRINT*,'SHIFT ',IB,SHIFT,NN
 !       =======================================================================
 !       == SEARCH ZERO OF PHASE USING BISECTION                              ==
 !       =======================================================================
-         DO I=1,NZEROS
+        DO I=1,NZEROS
           ISTART=1
           X0=0.4D0+1.D-3
           DX=0.1D0
@@ -1416,6 +1454,7 @@ PRINT*,'KI ',KI
 !       =======================================================================
 !       == CONSTRUCT NEW PSEUDO WAVE FUNCTION                                ==
 !       =======================================================================
+        CALL RADIAL$VALUE(GID,NR,SUPPHI(:,IB),RC,VAL)
         CALL RADIAL$VALUE(GID,NR,SUPTPHI(:,IB),RC,VALT)
         CALL RADIAL$DERIVATIVE(GID,NR,SUPTPHI(:,IB),RC,DERT)     
         IF(KI(3)*RC.GT.R(NR-2)) THEN
@@ -1426,7 +1465,7 @@ PRINT*,'KI ',KI
           CALL ERROR$R8VAL('R(NR-2)',R(NR-2))
           CALL ERROR$STOP('CONSTRUCTPSPHI')
         END IF
-!       == MATCH K1 AND K2
+!       == MATCH K1 AND K2 =============================================
         CALL RADIAL$VALUE(GID,NR,JL,KI(1)*RC,A11)
         CALL RADIAL$VALUE(GID,NR,JL,KI(2)*RC,A12)
         CALL RADIAL$VALUE(GID,NR,TJL,KI(1)*RC,A21)

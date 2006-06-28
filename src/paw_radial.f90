@@ -1304,9 +1304,9 @@ print*,'gids ',gids
       IF (SO.EQ.0) THEN
         SOFACTOR=0.D0
       ELSE IF(SO.EQ.1) THEN
-        SOFACTOR=REAL(L,KIND=8)
+        SOFACTOR=REAL(L,KIND=8)       ! parallel spin and orbit
       ELSE IF(SO.EQ.-1) THEN
-        SOFACTOR=REAL(-L-1,KIND=8)
+        SOFACTOR=REAL(-L-1,KIND=8)    ! antiparallelspin and orbit
       ELSE
          CALL ERROR$MSG('SO CAN ONLY HAVE VALUES -1,0,1')
          CALL ERROR$STOP('RADIAL$SCHRODINGER')
@@ -1323,7 +1323,7 @@ print*,'gids ',gids
 !     == THAT CANNOT USE THE FORCES ON THE FIRST AND LAST GRID POINT
       B(2:)=2.D0*(1.D0+DREL(2:))/R(2:)+RDPRIME(2:)
       C(2:)=-(1.D0+DREL(2:))*REAL(L*(L+1),KIND=8)/R(2:)**2 &
-     &    +RDPRIME(2:)*SOFACTOR/R(2:) &
+     &    -RDPRIME(2:)*SOFACTOR/R(2:) &
      &    -2.D0*(POT(2:)*Y0-E)
       B(1)=B(2)
       C(1)=C(2)
@@ -1565,6 +1565,97 @@ print*,'gids ',gids
 !     ==================================================================
 !     ==  determine SMALL COMPONENT                                   ==
 !     ==================================================================
+       sphi=(0.d0,0.d0)
+!      call radial_smallcomponent(gid,nr,lmx,nphi,drel,phi,sphi)
+!
+!!$      CALL radial_sp(lmx,cr,ca)
+!!$      CALL CONSTANTS$GET('C',SVAR)
+!!$      A(:)=(1.D0+DREL(:))/(2.D0*SVAR)
+!!$      sphi(:,:,:,:)=(0.d0,0.d0)
+!!$      DO Ib=1,NPHI
+!!$        DO IS=1,2
+!!$          DO LM=1,LMX
+!!$            CALL RADIAL$DERIVE(GID,NR,real(PHI(:,LM,IS,Ib)),aux1)
+!!$            CALL RADIAL$DERIVE(GID,NR,aimag(PHI(:,LM,IS,Ib)),aux2)
+!!$            dphi(:,lm,is)=cmplx(aux1,aux2)
+!!$          ENDDO
+!!$        ENDDO
+!!$!
+!!$        do is2=1,2
+!!$          DO LM2=1,LMX
+!!$            do is1=1,2
+!!$              DO LM1=1,LMX
+!!$                CSVAR=CR(LM1,is1,LM2,is2)
+!!$                IF(CSVAR.NE.0.D0) THEN
+!!$                  SPHI(:,LM1,is1,Ib)=SPHI(:,LM1,is1,Ib)+CSVAR*DPHI(:,LM2,is2)
+!!$                END IF
+!!$                CSVAR=CA(LM1,is1,LM2,is2)
+!!$                IF(CSVAR.NE.0.D0) THEN
+!!$                  SPHI(:,LM1,is1,Ib)=SPHI(:,LM1,is1,Ib)+CSVAR*PHI(:,LM2,is2,Ib)
+!!$                END IF
+!!$              enddo
+!!$            enddo
+!!$          ENDDO
+!!$        ENDDO
+!!$!
+!!$        DO LM=1,LMX
+!!$          do is=1,2
+!!$            sphi(:,lm,is,ib)=a(:)*sphi(:,lm,is,ib)                  
+!!$          enddo
+!!$        ENDDO
+!!$      ENDDO
+!
+!     ==================================================================
+!     ==  shift energies                                              ==
+!     ==================================================================
+      eb(:)=de(:)+e
+!
+!     ==================================================================
+!     ==  determine Tphi and tsphi                                              ==
+!     ==================================================================
+!     -- better directly work out the kinetic energy because  the 
+!     -- schroedinger equation is fulfilled only to first order in de
+      do ib=1,nphi
+        tphi(:,:,:,ib)=eb(ib)*phi(:,:,:,ib)
+        tsphi(:,:,:,ib)=eb(ib)*sphi(:,:,:,ib)
+        do is1=1,2
+          do lm1=1,lmx
+            do is2=1,2
+              do lm2=1,lmx
+                tphi(:,lm1,is1,ib)=tphi(:,lm1,is1,ib) &
+     &                         -cpot(:,lm1,is1,lm2,is2)*phi(:,lm2,is2,ib)
+                tsphi(:,lm1,is1,ib)=tsphi(:,lm1,is1,ib) &
+     &                         -cpot(:,lm1,is1,lm2,is2)*sphi(:,lm2,is2,ib)
+              enddo
+            enddo  
+          enddo
+        enddo
+      enddo
+!
+      tok=.true.
+      return
+      end SUBROUTINE RADIAL$nonsphbound
+!
+!     ........................................................................
+      subroutine radial_smallcomponent(gid,nr,lmx,nphi,drel,phi,sphi)
+!     **                                                                    **
+!     **                                                                    **
+      implicit none
+      integer(4),intent(in) :: gid
+      integer(4),intent(in) :: nr
+      integer(4),intent(in) :: lmx
+      integer(4),intent(in) :: nphi
+      real(8)   ,intent(in) :: drel(nr)
+      complex(8),intent(in) :: phi(nr,lmx,2,nphi)
+      complex(8),intent(out):: sphi(nr,lmx,2,nphi)
+      complex(8)            :: cr(lmx,2,lmx,2)
+      complex(8)            :: ca(lmx,2,lmx,2)
+      real(8)               :: a(nr)
+      real(8)               :: aux1(nr),aux2(nr),svar
+      real(8)               :: dphi(nr,lmx,2)
+      complex(8)            :: csvar
+      integer(4)            :: ib,is,lm,is1,is2,lm1,lm2
+!     ************************************************************************
       CALL radial_sp(lmx,cr,ca)
       CALL CONSTANTS$GET('C',SVAR)
       A(:)=(1.D0+DREL(:))/(2.D0*SVAR)
@@ -1601,37 +1692,8 @@ print*,'gids ',gids
           enddo
         ENDDO
       ENDDO
-!
-!     ==================================================================
-!     ==  shift energies                                              ==
-!     ==================================================================
-      eb(:)=de(:)+e
-!
-!     ==================================================================
-!     ==  determine Tphi and tsphi                                              ==
-!     ==================================================================
-!     -- better directly work out the kinetic energy because  the 
-!     -- schroedinger equation is fulfilled only to first order in de
-      do ib=1,nphi
-        tphi(:,:,:,ib)=eb(ib)*phi(:,:,:,ib)
-        tsphi(:,:,:,ib)=eb(ib)*sphi(:,:,:,ib)
-        do is1=1,2
-          do lm1=1,lmx
-            do is2=1,2
-              do lm2=1,lmx
-                tphi(:,lm1,is1,ib)=tphi(:,lm1,is1,ib) &
-     &                         -cpot(:,lm1,is1,lm2,is2)*phi(:,lm2,is2,ib)
-                tsphi(:,lm1,is1,ib)=tsphi(:,lm1,is1,ib) &
-     &                         -cpot(:,lm1,is1,lm2,is2)*sphi(:,lm2,is2,ib)
-              enddo
-            enddo  
-          enddo
-        enddo
-      enddo
-!
-      tok=.true.
       return
-      end SUBROUTINE RADIAL$nonsphbound
+      end
 !
 !     .......................................................................
       subroutine radial_lsold(lmx,c)

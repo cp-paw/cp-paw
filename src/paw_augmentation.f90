@@ -116,7 +116,6 @@ END MODULE AUGMENTATION_MODULE
       CALL ENERGYLIST$ADD('AE  EXCHANGE-CORRELATION',VAL(1)-VAL(2)+VAL(8))
       CALL ENERGYLIST$ADD('AE  ELECTROSTATIC',VAL(3)-VAL(4))
       CALL ENERGYLIST$ADD('BACKGROUND',VAL(5)-VAL(6))
-      CALL ENERGYLIST$ADD('CORE RELAXATION',VAL(9))
       VAL(:)=0.D0
       RETURN
       END
@@ -134,7 +133,7 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),INTENT(IN)  :: ISP
       INTEGER(4),INTENT(IN)  :: LMNX
       INTEGER(4),INTENT(IN)  :: LMRX
-      REAL(8)   ,INTENT(IN)  :: DENMAT(LMNX,LMNX)
+      complex(8),INTENT(IN)  :: DENMAT(LMNX,LMNX)
       REAL(8)   ,INTENT(OUT) :: QLM(LMRX)
       REAL(8)   ,ALLOCATABLE :: AERHO(:,:)   !(NR,LMRX)
       REAL(8)   ,ALLOCATABLE :: PSRHO(:,:)   !(NR,LMRX)
@@ -215,7 +214,7 @@ END MODULE AUGMENTATION_MODULE
 !
 !     ..................................................................
 ! NEW SPHERE
-      SUBROUTINE AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT,DENMATI &
+      SUBROUTINE AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT,eDENMAT &
      &                              ,LMRX,VQLM,RHOB,POTB,DATH,DO)
 !     ******************************************************************
 !     **                                                              **
@@ -231,8 +230,8 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),INTENT(IN)   :: IAT
       INTEGER(4),INTENT(IN)   :: LMNX
       INTEGER(4),INTENT(IN)   :: NDIMD
-      REAL(8)   ,INTENT(INOUT):: DENMAT(LMNX,LMNX,NDIMD)
-      REAL(8)   ,INTENT(INOUT):: DENMATI(LMNX,LMNX,NDIMD)
+      complex(8),INTENT(INOUT):: DENMAT(LMNX,LMNX,NDIMD)
+      complex(8),INTENT(INOUT):: eDENMAT(LMNX,LMNX,NDIMD)
       INTEGER(4),INTENT(IN)   :: LMRX
       REAL(8)   ,INTENT(INOUT):: VQLM(LMRX)
       REAL(8)   ,INTENT(IN)   :: RHOB ! NEUTRALIZING BACKGROUND DENSITY
@@ -289,7 +288,6 @@ END MODULE AUGMENTATION_MODULE
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
       PI=4.D0*DATAN(1.D0)
-PRINT*,'NEW SPHERE'
 !
 !     ==================================================================
 !     ==  COLLECT ATOM-TYPE SPECIFIC INFORMATION FROM SETUP OBJECT    ==
@@ -338,7 +336,7 @@ PRINT*,'NEW SPHERE'
           CALL SELFTEST$START('SPHERE',LMNX*LMNX*NDIMD,DENMAT,1.D-3)
           VQLM(:)=0.D0
           DO IDIM=1,NDIMD
-            DENMAT(:,:,IDIM)=0.5D0*(DENMAT(:,:,IDIM)+TRANSPOSE(DENMAT(:,:,IDIM)))
+            DENMAT(:,:,IDIM)=0.5D0*(DENMAT(:,:,IDIM)+TRANSPOSE(conjg(DENMAT(:,:,IDIM))))
           ENDDO
         END IF
       ENDIF
@@ -352,6 +350,13 @@ PRINT*,'NEW SPHERE'
           ENDDO
         ENDDO
       END IF
+!
+!     ==================================================================
+!     ==  CALCULATE 1-CENTER kinetic energy                           ==
+!     ==================================================================
+!     == density matrix is hermitean for each spin direction
+      EKINNL=real(sum(conjg(denmat)*dtkin),kind=8)
+      CALL AUGMENTATION_ADD('AE1-PS1 KINETIC',EKINNL)
 !
 !     ==================================================================
 !     ==  CALCULATE 1-CENTER CHARGE DENSITY                           ==
@@ -385,7 +390,7 @@ PRINT*,'NEW SPHERE'
       ELSE 
         ALLOCATE(DELTARHO(NR,LMRX,NDIMD))
         CALL AUGMENTATION_NEWSOFTCORE(SOFTCORETYPE,GID,NR,LMRX,NDIMD,AEZ,LMNX &
-     &          ,DENMAT,VQLM1,RHOB,DELTAH,DELTAO,DELTARHO,DECORE)
+     &          ,DENMAT,edenmat,VQLM1,RHOB,DELTAH,DELTAO,DELTARHO,DECORE)
         DTKIN=DTKIN+DELTAH
         DO=DO+DELTAO
         DEALLOCATE(DELTARHO)
@@ -502,38 +507,8 @@ PRINT*,'NEW SPHERE'
 !     ==================================================================
 !     ==  EVALUATE KINETIC HAMILTONIAN AND OVERLAP                    ==
 !     ==================================================================
-      EKINNL=0.D0
-      DO IDIM=1,NDIMD
-        DO LMN1=1,LMNX
-          DO LMN2=1,LMNX
-            EKINNL=EKINNL+DENMAT(LMN1,LMN2,IDIM)*DTKIN(LMN2,LMN1,IDIM)
-          ENDDO
-        ENDDO
-      ENDDO
       DATH(:,:,:)=DTKIN(:,:,:)
 !
-!!$      EKINNL=0.D0
-!!$      DATH=0.D0
-!!$      DO=0.D0
-!!$      LMN1=0
-!!$      DO LN1=1,LNX
-!!$        L1=LOX(LN1)
-!!$        LMN2=0
-!!$        DO LN2=1,LNX
-!!$          L2=LOX(LN2)
-!!$          IF(L1.EQ.L2) THEN
-!!$            DO IM=1,2*L1+1
-!!$              LMN11=LMN1+IM
-!!$              LMN21=LMN2+IM
-!!$              EKINNL=EKINNL+DENMAT(LMN11,LMN21,1)*DTKIN1(LN1,LN2)
-!!$              DATH(LMN11,LMN21,1)=DTKIN1(LN1,LN2)
-!!$              DO(LMN11,LMN21,1)  =DOVER(LN1,LN2)
-!!$            ENDDO
-!!$          ENDIF
-!!$          LMN2=LMN2+2*L2+1
-!!$        ENDDO
-!!$        LMN1=LMN1+2*L1+1
-!!$      ENDDO
       IF(TTEST) THEN
         IF(ITEST.EQ.2) THEN
           CALL SELFTEST$END('SPHERE-EKI',LMNX*LMNX*NDIMD,DATH,EKINNL,TBACK)
@@ -543,7 +518,6 @@ PRINT*,'NEW SPHERE'
         END IF
       END IF
 !     
-      CALL AUGMENTATION_ADD('AE1-PS1 KINETIC',EKINNL)
 !     
 !     ================================================================
 !     ==   ADD POTENTIAL ENERGY TO THE ONE-CENTER HAMILTONIAN       ==
@@ -623,7 +597,7 @@ STOP
 !
 !     ..................................................................
       SUBROUTINE AUGMENTATION_NEWSOFTCORE(SOFTCORETYPE,GID,NR,LMRX,NDIMD,AEZ &
-     &             ,LMNX,DENMAT,VQLM,RHOB,DELTAH,DELTAO,DELTARHO,DECORE)        
+     &             ,LMNX,DENMAT,edenmat,VQLM,RHOB,DELTAH,DELTAO,DELTARHO,DECORE)        
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: SOFTCORETYPE
       INTEGER(4),INTENT(IN) :: GID
@@ -632,7 +606,8 @@ STOP
       INTEGER(4),INTENT(IN) :: NDIMD
       REAL(8)   ,INTENT(IN) :: AEZ
       INTEGER(4),INTENT(IN) :: LMNX
-      REAL(8)   ,INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
+      complex(8),INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
+      complex(8),INTENT(IN) :: eDENMAT(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(IN) :: VQLM(LMRX)
       REAL(8)   ,INTENT(IN) :: RHOB
       REAL(8)   ,INTENT(OUT):: DELTAH(LMNX,LMNX,NDIMD) 
@@ -675,6 +650,8 @@ STOP
       REAL(8)               :: POTIN_NSPH(NR,LMRX,NDIMD)
       COMPLEX(8),ALLOCATABLE:: AEPHI_NSPH(:,:,:,:) ! AE PART. WAVES FROM UPHI AND NSPH. SOFTCORE
       COMPLEX(8),ALLOCATABLE:: TAEPHI_NSPH(:,:,:,:) ! AE PART. WAVES FROM UPHI AND NSPH. SOFTCORE
+      COMPLEX(8),ALLOCATABLE:: sAEPHI_NSPH(:,:,:,:) ! AE PART. WAVES FROM UPHI AND NSPH. SOFTCORE
+      COMPLEX(8),ALLOCATABLE:: TsAEPHI_NSPH(:,:,:,:) ! AE PART. WAVES FROM UPHI AND NSPH. SOFTCORE
       INTEGER(4)            :: NC_NSPH
       REAL(8)   ,ALLOCATABLE:: EC_NSPH(:)
       COMPLEX(8),ALLOCATABLE:: PHIC_NSPH(:,:,:,:)
@@ -710,18 +687,21 @@ STOP
       INTEGER(4)            :: LNX
       INTEGER(4),ALLOCATABLE:: LOX(:)
       REAL(8)               :: XMAX
-      REAL(8)               :: SVAR,SVAR1,svar2
+      REAL(8)               :: SVAR,SVAR1,SVAR2
       INTEGER(4)            :: ITER,I,J,IB
       INTEGER(4),PARAMETER  :: NITER=2000
       REAL(8)   ,PARAMETER  :: TOL=1.D-5
       INTEGER(4)            :: NC
       REAL(8)               :: EKINC,EKINCAT,EKINV
       INTEGER(4)            :: LN,IC,LN1,LN2,LMN1,LMN2,IM,L1,L2,IBG,L
-      INTEGER(4)            :: IDIM,LMN,lm
+      INTEGER(4)            :: IDIM,LMN,LM
       REAL(8)               :: DREL(NR)
       REAL(8)               :: G(NR,LMRX)
       REAL(8)               :: E(NR,LMRX)
       INTEGER(4)            :: LMX
+      logical(4),allocatable:: tsph(:)
+      real(8)               :: pot_hyperfine(nr,lmrx,ndimd)
+      real(8)               :: rho_hyperfine(nr,lmrx,ndimd)
 !     ******************************************************************
       IF(SOFTCORETYPE.EQ.'SPHERICAL'.OR. &
      &   SOFTCORETYPE.EQ.'NONSPHERICAL'.OR. &
@@ -738,6 +718,14 @@ STOP
       Y0=1.D0/SQRT(4.D0*PI)
       C0LL=Y0
       CALL RADIAL$R(GID,NR,R)
+!
+!     ================================================================
+!     == reset output data                                          ==
+!     ================================================================
+      decore=0.d0
+      deltao=0.d0
+      deltah=0.d0
+      deltarho=0.d0
 !
 !     ================================================================
 !     == COLLECT DATA FROM SETUP OBJECT                             ==
@@ -778,6 +766,12 @@ STOP
           IF(LOFI(J).EQ.LOFI(I))NNOFI(I)=NNOFI(I)+1
         ENDDO
       ENDDO
+!
+!     == COLLECT CORE STATES ============================================
+      allocate(tsph(nc))
+      tsph(:)=.false.
+print*,'tsph',tsph
+
 !     ==  COLLECT CORE STATES
 !      ALLOCATE(PHIC(NR,NC))
 !      CALL SETUP$GETR8A('AECOREPSI',NR*NC,PHIC)
@@ -813,6 +807,16 @@ STOP
 !
       CALL SF_POTMATRIX_SPH(GID,NR,LMRX,NDIMD,LNX,LOX,LMNX &
      &                     ,AEPOT_AT,AEPHI_AT,H_AT,O_AT)
+!
+!
+!     =====================================================================
+!     ==  hyperfine                                                      ==
+!     =====================================================================
+       rho_hyperfine(:,:,:)=RHOV_AT(:,:,:)
+       rho_hyperfine(:,1,1)=rho_hyperfine(:,1,1)+RHOC_AT(:)
+       CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AUX,rho_hyperfine &
+      &                           ,VQLM,RHOB,pot_hyperfine,svar)
+      CALL SF_HYPERFINE('AT',GID,NR,LMRX,NDIMD,AEZ,rho_hyperfine,pot_hyperfine)
 !PRINT*,'O_AT ',O_AT
       H_AT=H_AT+TKIN_AT
 !
@@ -833,10 +837,6 @@ PRINT*,' '
 !     =====================================================================
 !     ==  WRAP UP                                                        ==
 !     =====================================================================
-CALL SF_WRITE('RHOV_AT.DAT',GID,NR,LMRX*NDIMD,RHOV_AT)
-DELTARHO=RHOV_AT
-DELTARHO(:,1,1)=DELTARHO(:,1,1)+RHOC_AT(:)
-CALL SF_WRITE('RHOT_AT.DAT',GID,NR,LMRX*NDIMD,DELTARHO)
       IF(SOFTCORETYPE.EQ.'FROZEN') THEN
         DELTARHO(:,:,:)=0.D0
         DELTAH(:,:,:)=0.D0
@@ -861,19 +861,15 @@ ENDDO
 !     =====================================================================
 !     =====================================================================
 !     =====================================================================
-!     == determine weight for broydens method                             ==
+!     == DETERMINE WEIGHT FOR BROYDENS METHOD                             ==
 !     =====================================================================
-      broydenweight(:,:,:)=rhov_at(:,:,:)
-      broydenweight(:,1,1)=broydenweight(:,1,1)+rhoc_at(:)
-      CALL RADIAL$GETR8(I,'DEX',svar1)
-      CALL RADIAL$GETR8(I,'R1',svar2)
-      aux(:)=svar1*r(:)**2*(r(:)+svar2)
-      do idim=1,ndimd
-        do lm=1,lmrx
-          broydenweight(:,lm,idim)=broydenweight(:,lm,idim)*aux(:)
-        enddo
-      enddo      
-      broydenweight(:,:,:)=broydenweight(:,:,:)+0.1d0
+      CALL RADIAL$GETR8(I,'DEX',SVAR1)
+      CALL RADIAL$GETR8(I,'R1',SVAR2)
+      AUX(:)=svar1*(RHOV_AT(:,1,1)+RHOC_AT(:))*R(:)**3
+      BROYDENWEIGHT(:,:,:)=0.D0
+      BROYDENWEIGHT(:,1,1)=AUX(:)
+      BROYDENWEIGHT(:,:,:)=BROYDENWEIGHT(:,:,:)+1.D0
+!
 !     =====================================================================
 !     == SCF LOOP FOR SPHERICAL POTENTIAL                                ==
 !     =====================================================================
@@ -901,14 +897,17 @@ ENDDO
         CALL SF_ECORE_SPH(GID,NR,NC,EOFI,FOFI,POTIN,RHOC_SPH,ECORE_SPH,EKINCAT,AUX)
 !
 !       ==================================================================
-!       == NEW PARTIAL WAVES =============================================
+!       == NEW PARTIAL WAVES                                            ==
 !       ==================================================================
-        CALL SF_PARTWAVES_SPH(GID,NR,LNX,LOX,UPHI,TUPHI &
+        if(SOFTCORETYPE.EQ.'SPHERICALFIXV') THEN
+!         == keep original partial waves
+          AEPHI_SPH=AEPHI_AT
+          TAEPHI_SPH=TAEPHI_AT
+        else
+!         == recalculate partial waves from nodeless partial waves and new core
+          CALL SF_PARTWAVES_SPH(GID,NR,LNX,LOX,UPHI,TUPHI &
      &                      ,NC,LOFI,PHIC_SPH,TPHIC_SPH,AEPHI_SPH,TAEPHI_SPH)
-IF(SOFTCORETYPE.EQ.'SPHERICALFIXV') THEN
- AEPHI_SPH=AEPHI_AT
- TAEPHI_SPH=TAEPHI_AT
-END IF
+        END IF
 !
 !       ==================================================================
 !       == VALENCE DENSITY AND KINETIC ENERGY MATRIX ELEMENTS ============
@@ -926,8 +925,6 @@ END IF
         SVAR=AEPOT_AT(NR,1,1)-AEPOT_SPH(NR,1,1)
         AEPOT_SPH(:,1,1)=AEPOT_SPH(:,1,1)+SVAR
 !
-PRINT*,'ETOT ',ITER,ECORE_SPH+EVALENCE_SPH-ECORE_AT-EVALENCE_AT,XMAX
-!
 !       ================================================================
 !       ==  EXIT IF CONVERGED                                         ==
 !       ================================================================
@@ -936,7 +933,7 @@ PRINT*,'ETOT ',ITER,ECORE_SPH+EVALENCE_SPH-ECORE_AT-EVALENCE_AT,XMAX
           EXIT
         END IF
 !
-!       ================================================================
+!       =================================================================
 !       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD     ==
 !       ================================================================
         XMAX=MAXVAL(ABS(AEPOT_SPH(:,1,1)-POTIN)) 
@@ -957,6 +954,15 @@ PRINT*,'ETOT ',ITER,ECORE_SPH+EVALENCE_SPH-ECORE_AT-EVALENCE_AT,XMAX
       H_SPH=H_SPH+TKIN_SPH
 !
 !     =====================================================================
+!     ==  hyperfine                                                      ==
+!     =====================================================================
+       rho_hyperfine(:,:,:)=RHOV_sph(:,:,:)
+       rho_hyperfine(:,1,1)=rho_hyperfine(:,1,1)+RHOC_sph(:)
+       CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AUX,rho_hyperfine &
+      &                           ,VQLM,RHOB,pot_hyperfine,svar)
+      CALL SF_HYPERFINE('sph',GID,NR,LMRX,NDIMD,AEZ,rho_hyperfine,pot_hyperfine)
+!
+!     =====================================================================
 !     ==  PRINT                                                          ==
 !     =====================================================================
 PRINT*,'===============SCF CORE========================='
@@ -972,19 +978,13 @@ ENDDO
 !     =====================================================================
 !     ==  WRAP UP                                                        ==
 !     =====================================================================
-CALL SF_WRITE('RHOV_SPH.DAT',GID,NR,LMRX*NDIMD,RHOV_SPH)
-DELTARHO=RHOV_SPH
-DELTARHO(:,1,1)=DELTARHO(:,1,1)+RHOC_SPH(:)
-CALL SF_WRITE('RHOT_SPH.DAT',GID,NR,LMRX*NDIMD,DELTARHO)
-DELTARHO(:,:,:)=RHOV_SPH(:,:,:)-RHOV_AT(:,:,:)
-DELTARHO(:,1,1)=DELTARHO(:,1,1)+RHOC_SPH(:)-RHOC_AT(:)
-CALL SF_WRITE('DELTARHO_SPH.DAT',GID,NR,LMRX*NDIMD,DELTARHO)
       IF(SOFTCORETYPE(1:9).EQ.'SPHERICAL') THEN
         DELTARHO(:,:,:)=RHOV_SPH(:,:,:)-RHOV_AT(:,:,:)
         DELTARHO(:,1,1)=DELTARHO(:,1,1)+RHOC_SPH(:)-RHOC_AT(:)
         DELTAH(:,:,:)=H_SPH-H_AT
         DELTAO(:,:,:)=O_SPH-O_AT
         DECORE=ECORE_SPH+EVALENCE_SPH-ECORE_AT-EVALENCE_AT
+        decore=decore-real(sum(conjg(edenmat(:,:,:))*deltao))
 DO IDIM=1,NDIMD
   DO LMN=1,LMNX
     WRITE(*,FMT='("DH",I3,40F10.5)')LMN,DELTAH(LMN,:,IDIM)
@@ -1012,15 +1012,19 @@ ENDDO
       ALLOCATE(TSPHIC_NSPH(NR,LMX,2,NC_NSPH))
       ALLOCATE(AEPHI_NSPH(NR,LMX,2,2*LMNX))
       ALLOCATE(TAEPHI_NSPH(NR,LMX,2,2*LMNX))
+      ALLOCATE(sAEPHI_NSPH(NR,LMX,2,2*LMNX))
+      ALLOCATE(TsAEPHI_NSPH(NR,LMX,2,2*LMNX))
       AEPOT_NSPH=AEPOT_SPH ! STARTING POTENTIAL IS RELAXED SPHERICAL POTENTIAL
       XMAX=0.D0
       CONVG=.FALSE.
       CALL BROYDEN$NEW(NR*LMRX*NDIMD,0,0.5D0)
+!      CALL BROYDEN$SETWEIGHT(NR*LMRX*NDIMD,BROYDENWEIGHT)
       DO ITER=1,NITER
         POTIN_NSPH=AEPOT_NSPH
 !    
 !       == CORE WAVE FUNCTIONS AND CORE DENSITY ========================
-        CALL SF_CORESTATES_NSPH(GID,NR,NDIMD,LMRX,NC,LOFI,SOFI,FOFI,NNOFI &
+print*,'timing: nsph calculate core states'
+        CALL SF_CORESTATES_NSPH(GID,NR,NDIMD,LMRX,NC,LOFI,SOFI,FOFI,NNOFI,tsph &
      &                  ,POTIN_NSPH,EOFI,LMX,RHOC_NSPH,NC_NSPH,EC_NSPH &
      &                  ,PHIC_NSPH,TPHIC_NSPH,SPHIC_NSPH,TSPHIC_NSPH)
 !
@@ -1041,30 +1045,33 @@ ENDDO
 !       ==================================================================
 !       == CORE ENERGY ===================================================
 !       ==================================================================
+print*,'timing: nsph calculate core energy'
         CALL SF_ECORE_NSPH(GID,NR,NC_NSPH,EC_NSPH,LMRX,NDIMD,POTIN_NSPH &
       &                   ,RHOC_NSPH,ECORE_NSPH)
 !
 !       ==================================================================
 !       == NEW PARTIAL WAVES =============================================
 !       ==================================================================
-        CALL SF_PARTWAVES_NSPH(GID,NR,LNX,LOX,UPHI,TUPHI,LMNX &
+print*,'timing: nsph calculate partial waves'
+        IF(SOFTCORETYPE.EQ.'NONSPHERICALFIXV') THEN
+          AEPHI_SPH=AEPHI_AT
+          TAEPHI_SPH=TAEPHI_AT
+        else
+          CALL SF_PARTWAVES_NSPH(GID,NR,LNX,LOX,UPHI,TUPHI,LMNX &
       &                ,NC_NSPH,LMX,PHIC_NSPH,TPHIC_NSPH,SPHIC_NSPH,TSPHIC_NSPH &
-      &                ,AEPHI_NSPH,TAEPHI_NSPH)
-CALL SF_WRITE('AEPHI_NSPH1R.DAT',GID,NR,2*LMX,REAL(AEPHI_NSPH(:,:,:,1)))
-CALL SF_WRITE('AEPHI_NSPH1I.DAT',GID,NR,2*LMX,AIMAG(AEPHI_NSPH(:,:,:,1)))
-CALL SF_WRITE('AEPHI_NSPH2R.DAT',GID,NR,2*LMX,REAL(AEPHI_NSPH(:,:,:,2)))
-CALL SF_WRITE('AEPHI_NSPH3R.DAT',GID,NR,2*LMX,REAL(AEPHI_NSPH(:,:,:,3)))
-IF(SOFTCORETYPE.EQ.'NONSPHERICALFIXV') THEN
- AEPHI_SPH=AEPHI_AT
- TAEPHI_SPH=TAEPHI_AT
-END IF
+      &                ,AEPHI_NSPH,TAEPHI_NSPH,sAEPHI_NSPH,TsAEPHI_NSPH)
+!!$        call SF_UPDATEPARTWAVES_NSPH(GID,NR,lmx,LMNX,NDIMD,DENMAT &
+!!$     &       ,aephi_nsph,taephi_nsph,saephi_nsph,tsaephi_nsph &
+!!$     &        ,lmrx,potin_nsph,nc_nsph,phic_nsph,sphic_nsph)
+        END IF
 !
 !       ==================================================================
 !       == VALENCE DENSITY AND KINETIC ENERGY MATRIX ELEMENTS ============
 !       ==================================================================
+print*,'timing: nsph calculate valence density'
         CALL SF_RHOVALENCE_NSPH(GID,NR,LMNX,NDIMD,DENMAT,LMX &
-      &                       ,AEPHI_NSPH,TAEPHI_NSPH,LMRX &
-      &                       ,TKIN_NSPH,RHOV_NSPH)
+      &                       ,AEPHI_NSPH,TAEPHI_NSPH,sAEPHI_NSPH,TsAEPHI_NSPH &
+      &                       ,LMRX,TKIN_NSPH,RHOV_NSPH)
 AUX=RHOV_NSPH(:,1,1)*Y0*R(:)**2
 CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
 PRINT*,'VALENCE CHARGE ',4.D0*PI*SVAR
@@ -1075,11 +1082,9 @@ PRINT*,'TOTAL CHARGE ',4.D0*PI*SVAR*Y0-AEZ
 !       ==================================================================
 !       == VALENCE ENERGY AND FULL POTENTIAL =============================
 !       ==================================================================
+print*,'timing: nsph calculate valence energy'
         CALL SF_EVALENCE_NSPH(GID,NR,LMNX,LMRX,NDIMD,RHOC_NSPH,RHOV_NSPH,DENMAT &
       &                      ,RHOB,VQLM,TKIN_NSPH,EVALENCE_NSPH,AEPOT_NSPH)
-!
-PRINT*,'DECORE         ',ECORE_NSPH+EVALENCE_NSPH-ECORE_AT-EVALENCE_AT
-PRINT*,'INDIVIDUAL CONTRIBS',ECORE_NSPH,EVALENCE_NSPH,ECORE_AT,EVALENCE_AT
 !
 !       ================================================================
 !       ==  EXIT IF CONVERGED                                         ==
@@ -1095,10 +1100,10 @@ PRINT*,'INDIVIDUAL CONTRIBS',ECORE_NSPH,EVALENCE_NSPH,ECORE_AT,EVALENCE_AT
 !       ================================================================
 !       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD     ==
 !       ================================================================
+print*,'timing: nsph mixing'
         XMAX=MAXVAL(ABS(AEPOT_NSPH-POTIN_NSPH)) 
         CALL BROYDEN$STEP(NR*LMRX*NDIMD,POTIN_NSPH,AEPOT_NSPH-POTIN_NSPH)
         AEPOT_NSPH=POTIN_NSPH
-!AEPOT_NSPH=POTIN_NSPH+0.3D0*(AEPOT_NSPH-POTIN_NSPH)
         CONVG=(XMAX.LT.TOL)
 PRINT*,'XMAX ',XMAX,TOL,CONVG
       ENDDO
@@ -1113,6 +1118,15 @@ PRINT*,'XMAX ',XMAX,TOL,CONVG
       CALL SF_POTMATRIX_NSPH(GID,NR,LMRX,NDIMD,LMX,LMNX &
      &                      ,AEPOT_NSPH,AEPHI_NSPH,H_NSPH,O_NSPH)
       H_NSPH=H_NSPH+TKIN_NSPH
+
+!
+!     =====================================================================
+!     ==  hyperfine                                                      ==
+!     =====================================================================
+       rho_hyperfine(:,:,:)=RHOV_NSPH(:,:,:)+RHOC_NSPH(:,:,:)
+       CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AUX,rho_hyperfine &
+      &                           ,VQLM,RHOB,pot_hyperfine,svar)
+      CALL SF_HYPERFINE('nsph',GID,NR,LMRX,NDIMD,AEZ,rho_hyperfine,pot_hyperfine)
 !
 !     =====================================================================
 !     ==  WRAP UP                                                        ==
@@ -1129,26 +1143,8 @@ CALL SF_WRITE('DELTARHO_NSPH.DAT',GID,NR,LMRX*NDIMD,DELTARHO)
       DELTAH(:,:,:)=H_NSPH-H_AT
       DELTAO(:,:,:)=O_NSPH-O_AT
       DECORE=ECORE_NSPH+EVALENCE_NSPH-ECORE_AT-EVALENCE_AT
-!!$DO IDIM=1,NDIMD
-!!$  DO LMN=1,LMNX
-!!$    WRITE(*,FMT='("O_AT",I3,40F10.5)')LMN,O_AT(LMN,:,IDIM)
-!!$  ENDDO
-!!$ENDDO
-!!$DO IDIM=1,NDIMD
-!!$  DO LMN=1,LMNX
-!!$    WRITE(*,FMT='("O_NSPH",I3,40F10.5)')LMN,O_NSPH(LMN,:,IDIM)
-!!$  ENDDO
-!!$ENDDO
-!!$DO IDIM=1,NDIMD
-!!$  DO LMN=1,LMNX
-!!$    WRITE(*,FMT='("H_AT",I3,40F10.5)')LMN,H_AT(LMN,:,IDIM)
-!!$  ENDDO
-!!$ENDDO
-!!$DO IDIM=1,NDIMD
-!!$  DO LMN=1,LMNX
-!!$    WRITE(*,FMT='("H_NSPH",I3,40F10.5)')LMN,H_NSPH(LMN,:,IDIM)
-!!$  ENDDO
-!!$ENDDO
+      decore=decore-real(sum(conjg(edenmat(:,:,:))*deltao))
+print*,'decore before returning from newsoftcore ',decore
 DO IDIM=1,NDIMD
   DO LMN=1,LMNX
     WRITE(*,FMT='("DH",I3,40F10.5)')LMN,DELTAH(LMN,:,IDIM)
@@ -1208,16 +1204,17 @@ ENDDO
       CALL RADIAL$R(GID,NR,R)
       OPEN(100,FILE=FILE,FORM='FORMATTED')
       DO I=1,NR
-        WRITE(100,FMT='(35F20.10)')R(I),F(I,:)
+        WRITE(100,FMT='(100F20.10)')R(I),F(I,:)
       ENDDO
       CLOSE(100)
       RETURN
       END
 !
 !     ...................................................................
-      SUBROUTINE SF_HYPERFINE(GID,NR,LMRX,NDIMD,AEZ,RHO,POT)
+      SUBROUTINE SF_HYPERFINE(ID,GID,NR,LMRX,NDIMD,AEZ,RHO,POT)
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: LMRX
@@ -1247,7 +1244,11 @@ ENDDO
       AUX1(:)=RHO(:,1,1)*Y0*((R(:)/RNUC)**4-(R(:)/RNUC)**2)
       CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
       CALL RADIAL$VALUE(GID,NR,AUX2,RNUC,SVAR1)
-      ISOMER=6.D0*PI*AEZ*RNUC*SVAR1
+      AUX1(:)=((R(:)/RNUC)**4-(R(:)/RNUC)**2)
+      CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+      CALL RADIAL$VALUE(GID,NR,AUX2,RNUC,SVAR2)
+      ISOMER=svar1/svar2
+PRINT*,'ISOMERSHIFT (rho(0)',isomer
 !
 !     ======================================================================
 !     ==  ELECTRIC FIELD GRADIENT                                         ==
@@ -1257,6 +1258,7 @@ ENDDO
         CALL RADIAL$VALUE(GID,NR,AUX1,RNUC,V2(LM-4))
       ENDDO
       V2(:)=V2(:)/RNUC**2
+
 !     ==  FROM SPHERICAL HARMONICS TO CARTESIAN COORDINATES
 !         __VLM=V(R)/R**2___VXYZ=D2V/(DI*DJ)____________________________
       CALL DTOXYZ(V2,EFG)  ! SEE EFG
@@ -1291,6 +1293,7 @@ PRINT*,UNIT,'SHOULD BE EQUAL TO ',-9.7175D0
 !     ==   
       CALL CONSTANTS('TESLA',SVAR1)        ; UNIT=UNIT/SVAR1
       PRINT*,'THIS NUMBER SHOULD BE 104.98 : ',UNIT
+PRINT*,'FERMI CONTACT TERM [TESLA] ',FERMI*UNIT
 !      CALL REPORT$R8VAL(NFILO,'SPIN DENSITY AT THE NUCLEUS OF ATOM ' &
 !      &                            //TRIM(ATOMNAME),FERMI,'1/ABOHR^3')
 !      CALL REPORT$R8VAL(NFILO,'FERMI CONTACT HYPERFINE FIELD FOR ATOM ' &
@@ -1329,6 +1332,7 @@ PRINT*,UNIT,'SHOULD BE EQUAL TO ',-9.7175D0
 !!$      DO I=1,3
 !!$        WRITE(NFILO,FMT='(T5,F10.5,T20,3F10.5)')UNIT*EIG(I),(U(J,I),J=1,3)
 !!$      ENDDO
+      PRINT*,'ANISOTROPIC HYPERFINE[TESLA]',EIG(:)*UNIT
       RETURN
       END
 !
@@ -1381,7 +1385,7 @@ PRINT*,UNIT,'SHOULD BE EQUAL TO ',-9.7175D0
       END
 !
 !     ......................................................................
-      SUBROUTINE SF_CORESTATES_NSPH(GID,NR,NDIMD,LMRX,NB,LOFI,SO,F,NN &
+      SUBROUTINE SF_CORESTATES_NSPH(GID,NR,NDIMD,LMRX,NB,LOFI,SO,F,NN,tsph &
      &                          ,POT,E,LMX,RHOC,NBG,EBG,PHI,TPHI,SPHI,TSPHI)
 !     **                                                                  **
 !     **                                                                  **
@@ -1395,6 +1399,7 @@ PRINT*,UNIT,'SHOULD BE EQUAL TO ',-9.7175D0
       INTEGER(4) ,INTENT(IN)   :: SO(NB)    !SWITCH FOR SPIN-ORBIT COUP.
       INTEGER(4) ,INTENT(IN)   :: NN(NB)    !#(NODES)
       REAL(8)    ,INTENT(IN)   :: F(NB)     !OCCUPATION
+      logical(4) ,intent(in)   :: tsph(nb)  ! use spherical potential 
       REAL(8)    ,INTENT(IN)   :: POT(NR,LMRX,NDIMD)   !POTENTIAL
       REAL(8)    ,INTENT(INOUT):: E(NB)     !ONE-PARTICLE ENERGIES
       INTEGER(4) ,INTENT(IN)   :: LMX       ! #(WAVE FUNCTION ANGULAR MOMENTA)
@@ -1447,17 +1452,23 @@ PRINT*,UNIT,'SHOULD BE EQUAL TO ',-9.7175D0
      &                 ,E(IB),AUX1)
           IF(ABS(E(IB)-SVAR).LT.TOL) EXIT
         ENDDO
+        I1=IBG+1
+        I2=IBG+2*(2*LOFI(IB)+1)
 !
 !       ======================================================================
 !       == DETERMINE NONSPHERICAL SOLUTIONS IN THIS SHELL                   ==
 !       ======================================================================
-        GINH=0.D0
-        I1=IBG+1
-        I2=IBG+2*(2*LOFI(IB)+1)
-        CALL RADIAL$NONSPHBOUND(GID,NR,NDIMD,LMX,LMRX,POT,DREL,GINH,E(IB) &
+        if(tsph(ib)) then
+          call sf_soboundstates(gid,nr,lofi(ib),nn(ib),lmx,pot(:,:,1),e(ib) &
+    &               ,i2-i1+1,ebg(i1:i2),phi(:,:,:,i1:i2),tphi(:,:,:,i1:i2) &
+    &               ,sphi(:,:,:,i1:i2),tsphi(:,:,:,i1:i2))
+        else
+          GINH=0.D0
+          CALL RADIAL$NONSPHBOUND(GID,NR,NDIMD,LMX,LMRX,POT,DREL,GINH,E(IB) &
      &                         ,2*(2*LOFI(IB)+1),EBG(I1:I2) &
      &                         ,PHI(:,:,:,I1:I2),TPHI(:,:,:,I1:I2) &
      &                         ,SPHI(:,:,:,I1:I2),TSPHI(:,:,:,I1:I2),TCHK)
+        end if
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('RADIAL$NONSPHBOUND FINISHED WITH ERROR')
           CALL ERROR$STOP('SF_CORESTATES_NSPH')
@@ -1483,7 +1494,8 @@ PRINT*,'NOW CALCULATE CORE CHARGE'
               DO IS1=1,2
                 DO IS2=1,2
                   CAUX(:,IS1,IS2)=CAUX(:,IS1,IS2) &
-      &                  +CG*CONJG(PHI(:,LM1,IS1,IBG))*PHI(:,LM2,IS2,IBG)
+      &                  +CG*CONJG(PHI(:,LM1,IS1,IBG))*PHI(:,LM2,IS2,IBG) &
+      &                  +CG*CONJG(sPHI(:,LM1,IS1,IBG))*sPHI(:,LM2,IS2,IBG)
                 ENDDO
               ENDDO
             ENDDO
@@ -1505,9 +1517,211 @@ PRINT*,'CORE CHARGE IN CORESTATES',4.D0*PI*SVAR
       RETURN
       END
 !
+!     ......................................................................
+      subroutine sf_soboundstates(gid,nr,l,nn,lmx,pot,enu,nphi,e,phi,tphi,sphi,tsphi)
+      implicit none
+      integer(4),intent(in) :: gid
+      integer(4),intent(in) :: nr
+      integer(4),intent(in) :: l
+      integer(4),intent(in) :: nn
+      integer(4),intent(in) :: lmx
+      real(8)   ,intent(in) :: pot(nr)
+      real(8)   ,intent(in) :: enu
+      integer(4),intent(in) :: nphi
+      real(8)   ,intent(out):: e(nphi)
+      complex(8),intent(out):: phi(nr,lmx,2,nphi)   !large component
+      complex(8),intent(out):: tphi(nr,lmx,2,nphi)  ! kinetic energy * large comp.
+      complex(8),intent(out):: sphi(nr,lmx,2,nphi)  ! small component
+      complex(8),intent(out):: tsphi(nr,lmx,2,nphi) ! kinetic energy * small comp.
+      real(8)               :: phi1(nr,2)
+      real(8)               :: tphi1(nr,2)
+      real(8)               :: e1(2)
+      real(8)               :: drel(nr)
+      real(8)               :: aux(nr),svar
+      real(8)               :: eprev
+      real(8)   ,parameter  :: tol=1.d-6
+      integer(4),parameter  :: niter=100
+      integer(4)            :: iso,i,iphi,m,lmp,lmm,is,lm
+      integer(4)            :: so
+      real(8)               :: clm,clmplus1
+      complex(8)            :: cp,cm
+      real(8)               :: pi,y0
+      real(8)               :: r(nr)
+!     **********************************************************************
+      if(nphi.ne.2*(2*l+1)) then
+        call error$msg('number of states requested inconsistent with angular momentum')
+        call error$i4val('nphi',nphi)
+        call error$i4val('l',l)
+        call error$stop('sf_soboundstates')
+      end if
+      pi=4.d0*datan(1.d0)
+      y0=1.d0/sqrt(4.d0*pi)
+      call radial$r(gid,nr,r)
+      phi1=0.d0
+      e1=0.d0
+      CALL RELATIVISTICCORRECTION(GID,NR,POT,Enu,DREL)
+!
+!     ============================================================================
+!     == energies and wave functions for parallel and antiparallel spin-orbit   ==
+!     ============================================================================
+      do iso=1,2
+!       iso=1 -> antiparallel ; iso=2 -> parallel
+        e1(iso)=enu
+        so=-3+2*iso
+        if(l.eq.0) so=0.d0
+        if(l.eq.0.and.iso.eq.1) cycle
+        DO I=1,NITER
+          eprev=E1(iso)
+          AUX(:)=0.D0
+          CALL BOUNDSTATE(GID,NR,L,SO,DREL,AUX,NN,POT,E1(iso),phi1(:,iso))
+          IF(ABS(E1(iso)-eprev).LT.TOL) EXIT
+        ENDDO
+        tphi1(:,iso)=(e1(iso)-pot(:)*y0)*phi1(:,iso)
+      enddo
+!
+!     ============================================================================
+!     ==  large component                                                       ==
+!     ============================================================================
+      phi(:,:,:,:)=(0.d0,0.d0)
+      tphi(:,:,:,:)=(0.d0,0.d0)
+      iphi=0
+!     == antiparallel spin and orbit (no contribution for l=0)
+      do m=-l,l-1
+        iphi=iphi+1
+        e(iphi)=e1(1)
+        clm=sqrt(real(l-m,kind=8)/real(2*l+1,kind=8))
+        call sf_torealsphericalharmonics(l,m,lmp,lmm,cp,cm)
+        phi(:,lmp,1,iphi)=cp*clm*phi1(:,1)
+        tphi(:,lmp,1,iphi)=cp*clm*tphi1(:,1)
+        if(m.ne.0) then
+          phi(:,lmm,1,iphi)=cm*clm*phi1(:,1)
+          tphi(:,lmm,1,iphi)=cm*clm*tphi1(:,1)
+        end if
+        clmplus1=-sqrt(real(l+m+1,kind=8)/real(2*l+1,kind=8))
+        call sf_torealsphericalharmonics(l,m+1,lmp,lmm,cp,cm)
+        phi(:,lmp,2,iphi)=cp*clmplus1*phi1(:,1)
+        tphi(:,lmp,2,iphi)=cp*clmplus1*tphi1(:,1)
+        if(m+1.ne.0) then
+          phi(:,lmm,2,iphi)=cm*clmplus1*phi1(:,1)
+          tphi(:,lmm,2,iphi)=cm*clmplus1*tphi1(:,1)
+        end if
+      enddo
+!     == parallel spin and orbit (here also l=0)
+      do m=-l-1,l
+        iphi=iphi+1
+        e(iphi)=e1(2)
+        if(m.ge.-l) then
+          clm=sqrt(real(l+m+1,kind=8)/real(2*l+1,kind=8))
+          call sf_torealsphericalharmonics(l,m,lmp,lmm,cp,cm)
+          phi(:,lmp,1,iphi)=cp*clm*phi1(:,2)
+          tphi(:,lmp,1,iphi)=cp*clm*tphi1(:,2)
+          if(m.ne.0) then
+            phi(:,lmm,1,iphi)=cm*clm*phi1(:,2)
+            tphi(:,lmm,1,iphi)=cm*clm*tphi1(:,2)
+          end if
+        end if
+        if(m+1.le.l) then
+          clmplus1=sqrt(real(l-m,kind=8)/real(2*l+1,kind=8))
+          call sf_torealsphericalharmonics(l,m+1,lmp,lmm,cp,cm)
+          phi(:,lmp,2,iphi)=cp*clmplus1*phi1(:,2)
+          Tphi(:,lmp,2,iphi)=cp*clmplus1*Tphi1(:,2)
+          if(m+1.ne.0) then
+            phi(:,lmm,2,iphi)=cm*clmplus1*phi1(:,2)
+            tphi(:,lmm,2,iphi)=cm*clmplus1*tphi1(:,2)
+          end if
+        end if
+      enddo
+sphi=(0.d0,0.d0)
+tsphi=(0.d0,0.d0)
+print*,'warning! small component switched off in sf_soboundstate'
+return
+!
+!     ============================================================================
+!     ==  small component                                                       ==
+!     ============================================================================
+      call radial_smallcomponent(gid,nr,lmx,nphi,drel,phi,sphi)
+      do iphi=1,nphi
+        aux(:)=e(iphi)-pot(:)*y0
+        do is=1,2
+          do lm=1,lmx
+            tsphi(:,lm,is,iphi)=aux(:)*sphi(:,lm,is,iphi)
+          enddo
+        enddo
+      enddo
+!
+!     ============================================================================
+!     ==  renormalize                                                           ==
+!     ============================================================================
+      do iphi=1,nphi
+        aux(:)=0.d0
+        do is=1,2
+          do lm=1,lmx
+            aux(:)=aux(:)+abs(phi(:,lm,is,iphi))**2+abs(sphi(:,lm,is,iphi))**2
+          enddo
+        enddo
+        aux(:)=aux(:)*r(:)**2
+        call radial$integral(gid,nr,aux,svar)
+        svar=1.d0/sqrt(svar)
+        phi(:,:,:,iphi)=phi(:,:,:,iphi)*svar
+        tphi(:,:,:,iphi)=tphi(:,:,:,iphi)*svar
+        sphi(:,:,:,iphi)=sphi(:,:,:,iphi)*svar
+        tsphi(:,:,:,iphi)=tsphi(:,:,:,iphi)*svar
+      enddo
+      return
+      end
+!
+!     ....................................................................
+      subroutine sf_torealsphericalharmonics(l,m,lmp,lmm,cp,cm)
+!     **                                                                **
+!     **  an spherical harmonics |l,m>, which is an angular momentum    **
+!     **  eigenstate with quantum numbers l and m is represented        **
+!     **  in terms of real spherical harmonics as                       **
+!     **     |l,m>=cp*ylm(lmp)+cm*ylm(lmm)                              **
+!     **  where cp,cm are complex coefficients and lmp and lmm are      **
+!     **  an combined index identifying real spherical harmonics        **
+!     **                                                                **
+!     **  caution: There are different choices of spherical harmonics   **
+!     **                                                                **
+!     **                                                                **
+      implicit none
+      integer(4),intent(in) :: l
+      integer(4),intent(in) :: m
+      integer(4),intent(out):: lmp
+      integer(4),intent(out):: lmm
+      complex(8),intent(out):: cp
+      complex(8),intent(out):: cm
+      complex(8),parameter  :: ci=(0.d0,1.d0)
+      complex(8)            :: sqr2inv
+!     ******************************************************************
+      sqr2inv=(1.d0,0.d0)
+      sqr2inv=sqr2inv/sqrt(2.d0)
+      if(abs(m).gt.l) then
+        call error$stop('sf_torealsphericalharmonics')
+      end if
+      lmp=l**2+l+1+abs(m)
+      lmm=l**2+l+1-abs(m)
+      if(m.gt.0) then
+        cp=sqr2inv
+        cm=sqr2inv*ci
+      else if(m.lt.0) then
+        cp=(-1.d0)**m*sqr2inv
+        cm=-(-1.d0)**m*sqr2inv*ci
+      else
+        cp=(1.d0,0.d0)
+        cm=(0.d0,0.d0)
+      end if
+      if(abs(abs(cp)**2+abs(cm)**2-1.d0).gt.1.d-8) then
+        call error$msg('coefficients are not nomalized')
+        call error$r8val('norm**2',abs(cp)**2+abs(cm)**2)
+        call error$stop('sf_torealsphericalharmonics')
+      end if
+
+      return
+      end
+!
 !     ....................................................................
       SUBROUTINE SF_ECORE_SPH(GID,NR,NB,E,F,POTIN,RHO,ETOT,EKIN,POTOUT)
-!     **                                                                **
+!     **                                                               **
 !     ** CALCULATES ENERGY OF A SPHERICAL-NON-SPIN-POLARIZED ATOM       **
 !     ** FOR GIVEN ENERGY EIGENVALUES, INPUT POTENTIAL AND DENSITY      **
 !     **                                                                **
@@ -1518,9 +1732,9 @@ PRINT*,'CORE CHARGE IN CORESTATES',4.D0*PI*SVAR
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: NB
       REAL(8)   ,INTENT(IN) :: E(NB)
-      REAL(8)   ,INTENT(IN) :: F(NB)
-      REAL(8)   ,INTENT(IN) :: POTIN(NR)
-      REAL(8)   ,INTENT(IN) :: RHO(NR)
+      REAL(8)   ,INTENT(IN) :: F(NB)      ! occupations
+      REAL(8)   ,INTENT(IN) :: POTIN(NR)  !input potential
+      REAL(8)   ,INTENT(IN) :: RHO(NR)    !core density
       REAL(8)   ,INTENT(OUT):: ETOT
       REAL(8)   ,INTENT(OUT):: EKIN
       REAL(8)   ,INTENT(OUT):: POTOUT(NR)
@@ -1682,7 +1896,8 @@ PRINT*,'CORE ECORE   ',ETOT
 !
 !      ...................................................................
        SUBROUTINE SF_PARTWAVES_NSPH(GID,NR,LNX,LOX,UPHI,TUPHI,LMNX &
-      &                ,NC,LMX,PHIC,TPHIC,SPHIC,TSPHIC,AEPHI_NSPH,TAEPHI_NSPH)
+      &                ,NC,LMX,PHIC,TPHIC,SPHIC,TSPHIC &
+      &                ,AEPHI_NSPH,TAEPHI_NSPH,sAEPHI_NSPH,TsAEPHI_NSPH)
 !      **                                                               **
 !      **  CALCULATES THE TOTAL DENSITY ASSUMING A NONCOLLINEAR MODEL   **
 !      **  WITH COMPLEX WAVE FUNCTIONS AND A COMPLEX DENSITY MATRIX     **
@@ -1708,6 +1923,8 @@ USE PERIODICTABLE_MODULE
        COMPLEX(8),INTENT(IN) :: TSPHIC(NR,LMX,2,NC)
        COMPLEX(8),INTENT(OUT):: AEPHI_NSPH(NR,LMX,2,LMNX*2) !(NR,LMX,NSPIN,NV)
        COMPLEX(8),INTENT(OUT):: TAEPHI_NSPH(NR,LMX,2,LMNX*2) !(NR,LMX,NSPIN,NV)
+       COMPLEX(8),INTENT(OUT):: sAEPHI_NSPH(NR,LMX,2,LMNX*2) !(NR,LMX,NSPIN,NV)
+       COMPLEX(8),INTENT(OUT):: TsAEPHI_NSPH(NR,LMX,2,LMNX*2) !(NR,LMX,NSPIN,NV)
        COMPLEX(8)            :: S(NC,2*LMNX) ! <PHI_C|U>
        REAL(8)               :: PI,Y0
        COMPLEX(8)            :: CAUX(NR)
@@ -1772,8 +1989,10 @@ INTEGER(4) :: IC1,IC2
 !      =======================================================================
 !      == ORTHOGONALIZE UPHI TO THE CORE STATES                             ==
 !      =======================================================================
-       AEPHI_NSPH(:,:,:,:)=0.D0
-       TAEPHI_NSPH(:,:,:,:)=0.D0
+       AEPHI_NSPH(:,:,:,:)=(0.D0,0d0)
+       TAEPHI_NSPH(:,:,:,:)=(0.D0,0.d0)
+       sAEPHI_NSPH(:,:,:,:)=(0.D0,0.d0)
+       TsAEPHI_NSPH(:,:,:,:)=(0.D0,0.d0)
        LMN=0
        DO LN=1,LNX
          L=LOX(LN)
@@ -1791,12 +2010,231 @@ INTEGER(4) :: IC1,IC2
 
        DO IV=1,NV
          DO IC=1,NC
-           AEPHI_NSPH(:,:,:,IV) = AEPHI_NSPH(:,:,:,IV)- PHIC(:,:,:,IC)*S(IC,IV)
-           TAEPHI_NSPH(:,:,:,IV)=TAEPHI_NSPH(:,:,:,IV)-TPHIC(:,:,:,IC)*S(IC,IV)
+           AEPHI_NSPH(:,:,:,IV)  =  AEPHI_NSPH(:,:,:,IV)-  PHIC(:,:,:,IC)*S(IC,IV)
+           TAEPHI_NSPH(:,:,:,IV) = TAEPHI_NSPH(:,:,:,IV)- TPHIC(:,:,:,IC)*S(IC,IV)
+           sAEPHI_NSPH(:,:,:,IV) = sAEPHI_NSPH(:,:,:,IV)- sPHIC(:,:,:,IC)*S(IC,IV)
+           tsAEPHI_NSPH(:,:,:,IV)=tsAEPHI_NSPH(:,:,:,IV)-tsPHIC(:,:,:,IC)*S(IC,IV)
          ENDDO
        ENDDO
+      
        RETURN
        END
+!
+!     ...................................................................
+      SUBROUTINE SF_UPDATEPARTWAVES_NSPH(GID,NR,lmx,LMNX,NDIMD,DENMAT &
+     &            ,aephi,taephi,saephi,tsaephi,lmrx,pot,nc,phic,sphic)
+!     **                                                               **
+!     **  VALENCE TOTAL ENERGY FROM GIVEN PARTIAL WAVES                **
+!     **                                                               **
+!     **  REMARK: ONLY A SPHERICAL POTENTIAL IS CONSTRUCTED            **
+!     **                                                               **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: LmX
+      INTEGER(4),INTENT(IN) :: LmrX
+      INTEGER(4),INTENT(IN) :: LmNX
+      INTEGER(4),INTENT(IN) :: ndimd
+      complex(8),intent(in) :: denmat(lmnx,lmnx,ndimd)
+      complex(8),intent(in) :: aephi(nr,lmx,2,2*lmnx)
+      complex(8),intent(in) :: taephi(nr,lmx,2,2*lmnx)
+      complex(8),intent(in) :: saephi(nr,lmx,2,2*lmnx)
+      complex(8),intent(in) :: tsaephi(nr,lmx,2,2*lmnx)
+      real(8)   ,intent(in) :: pot(nr,lmrx,ndimd)
+      integer(4),intent(in) :: nc
+      complex(8),intent(in) :: phic(nr,lmx,2,nc)
+      complex(8),intent(in) :: sphic(nr,lmx,2,nc)
+      complex(8)            :: theta(2*lmnx,2*lmnx)
+      complex(8)            :: pot1(nr,lmrx,2,2)
+      complex(8)            :: daephi(nr,lmx,2,2*lmnx)
+      complex(8)            :: dsaephi(nr,lmx,2,2*lmnx)
+      complex(8)            :: faephi(nr,lmx,2,2*lmnx)
+      complex(8)            :: fsaephi(nr,lmx,2,2*lmnx)
+      integer(4)            :: lmn,lm1,lm2,lmr,is1,is2,lmn1,lmn2,ir,ic,is,lm
+      real(8)               :: cg
+      complex(8),parameter  :: ci=(0.d0,1.d0)
+      character(64)         :: filename
+      complex(8)            :: s(nc)
+      complex(8)            :: caux(nr),csvar1,csvar2
+      real(8)               :: aux(nr),svar1,svar2
+      real(8)               :: r(nr)
+      integer(4)            :: irc
+!     *******************************************************************
+      call radial$r(gid,nr,r)
+!
+!      =======================================================================
+!      == TRANSFORM DENSITY MATRIX IN COMPLEX SPINOR FORM                   ==
+!      == use A=0.5*sum_{i=0}^3 sigma_i*Tr[sigma_i*A]                       ==
+!      == where sigma_0=1 and for i>0 sigma_i are the pauli matrices        ==
+!      =======================================================================
+       THETA(:,:)=(0.D0,0.D0)
+       IF(NDIMD.EQ.1) THEN
+         THETA(:LMNX,:LMNX)    =0.5D0*DENMAT(:,:,1)
+         THETA(LMNX+1:,LMNX+1:)=0.5D0*DENMAT(:,:,1)
+       ELSE IF(NDIMD.EQ.2) THEN
+         THETA(:LMNX,:LMNX)    =0.5D0*(DENMAT(:,:,1)+DENMAT(:,:,2))
+         THETA(LMNX+1:,LMNX+1:)=0.5D0*(DENMAT(:,:,1)-DENMAT(:,:,2))
+       ELSE IF(NDIMD.EQ.4) THEN
+         THETA(:LMNX,:LMNX)    =0.5D0*(DENMAT(:,:,1)+DENMAT(:,:,4))
+         THETA(LMNX+1:,LMNX+1:)=0.5D0*(DENMAT(:,:,1)-DENMAT(:,:,4))
+         THETA(:LMNX,LMNX+1:)  =0.5D0*(DENMAT(:,:,2)-CI*DENMAT(:,:,3))
+         THETA(LMNX+1:,:LMNX)  =0.5D0*(DENMAT(:,:,2)+CI*DENMAT(:,:,3))
+       END IF
+!
+!      =======================================================================
+!      == expand potential                                                  ==
+!      =======================================================================
+       pot1(:,:,:,:)=(0.d0,0.d0)
+       pot1(:,:,1,1)=pot1(:,:,1,1)+pot(:,:,1)
+       pot1(:,:,2,2)=pot1(:,:,2,2)+pot(:,:,1)
+       if(ndimd.eq.2) then
+         pot1(:,:,1,1)=pot1(:,:,1,1)+pot(:,:,2)
+         pot1(:,:,2,2)=pot1(:,:,2,2)-pot(:,:,2)
+       else if(ndimd.eq.4) then
+         pot1(:,:,1,2)=pot1(:,:,1,2)+pot(:,:,2)-ci*pot(:,:,3)
+         pot1(:,:,2,1)=pot1(:,:,2,1)+pot(:,:,2)+ci*pot(:,:,3)
+         pot1(:,:,1,1)=pot1(:,:,1,1)+pot(:,:,4)
+         pot1(:,:,2,2)=pot1(:,:,2,2)-pot(:,:,4)
+       end if
+!
+!      =======================================================================
+!      == TRANSFORM gradient of partial waves                               ==
+!      =======================================================================
+      daephi(:,:,:,:)=taephi(:,:,:,:)
+      dsaephi(:,:,:,:)=tsaephi(:,:,:,:)
+      do lmn=1,2*lmnx
+        do is1=1,2
+          do lm1=1,lmx
+            do is2=1,2
+              do lm2=1,lmx
+                do lmr=1,lmrx
+                  call clebsch(lm1,lm2,lmr,cg)
+                  if(cg.eq.0.d0) cycle
+                  daephi(:,lm1,is1,lmn)=daephi(:,lm1,is1,lmn) &
+     &                           +cg*pot1(:,lmr,is1,is2)*aephi(:,lm2,is2,lmn)
+                  dsaephi(:,lm1,is1,lmn)=dsaephi(:,lm1,is1,lmn) &
+     &                           +cg*pot1(:,lmr,is1,is2)*saephi(:,lm2,is2,lmn)
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+!
+!      =======================================================================
+!      == multiply with theta                                              ==
+!      =======================================================================
+      faephi(:,:,:,:)=0.d0
+      fsaephi(:,:,:,:)=0.d0
+      do lmn1=1,2*lmnx
+        do lmn2=1,2*lmnx
+          faephi(:,:,:,lmn1)=faephi(:,:,:,lmn1)+daephi(:,:,:,lmn2)*theta(lmn2,lmn1)
+          fsaephi(:,:,:,lmn1)=fsaephi(:,:,:,lmn1)+dsaephi(:,:,:,lmn2)*theta(lmn2,lmn1)
+        enddo
+      enddo
+      daephi=faephi
+      dsaephi=fsaephi
+!
+!      =======================================================================
+!      == cancel tail by mixing aephi                                       ==
+!      =======================================================================
+do ir=1,nr
+  if(r(ir).gt.2.5d0) exit
+  irc=ir
+enddo
+       do lmn=1,lmnx
+         csvar1=sum(conjg(faephi(irc,:,:,lmn))*aephi(irc,:,:,lmn)) &
+     &         +sum(conjg(fsaephi(irc,:,:,lmn))*saephi(irc,:,:,lmn))         
+         csvar2=sum(conjg(aephi(irc,:,:,lmn))*aephi(irc,:,:,lmn)) &
+     &         +sum(conjg(saephi(irc,:,:,lmn))*saephi(irc,:,:,lmn))
+         csvar1=csvar1/csvar2
+         faephi(:,:,:,lmn)=faephi(:,:,:,lmn)-aephi(:,:,:,lmn)*csvar1
+       enddo
+!
+!      =======================================================================
+!      == orthogonalize to core                                             ==
+!      =======================================================================
+      do lmn=1,lmnx
+        do ic=1,nc
+          caux(:)=0.d0
+          do lm=1,lmx
+            do is=1,2
+              caux(:)=caux(:)+conjg(phic(:,lm,is,ic))*faephi(:,lm,is,lmn) &
+     &                      +conjg(sphic(:,lm,is,ic))*fsaephi(:,lm,is,lmn)
+            enddo
+          enddo
+          caux(:)=caux(:)*r(:)**2
+          aux(:)=real(caux,kind=8)
+          call radial$integral(gid,nr,aux,svar1)    
+          aux(:)=aimag(caux)
+          call radial$integral(gid,nr,aux,svar2)    
+          s(ic)=cmplx(svar1,svar2,kind=8)
+        enddo
+        do ic=1,nc
+          faephi(:,:,:,lmn)=faephi(:,:,:,lmn)-phic(:,:,:,ic)*s(ic)
+          fsaephi(:,:,:,lmn)=fsaephi(:,:,:,lmn)-sphic(:,:,:,ic)*s(ic)
+        enddo
+      enddo
+!
+!      =======================================================================
+!      == multiply with theta                                              ==
+!      =======================================================================
+      do lmn1=1,2*lmnx
+        write(filename,*)lmn1
+        filename=adjustl(filename)
+        filename=trim('daephi'//trim(filename))//".dat"
+        open(unit=8,file=filename,form='formatted')
+        do ir=1,nr
+          write(8,fmt='(100f20.5)')r(ir),real(daephi(ir,:,:,lmn1)),aimag(daephi(ir,:,:,lmn1))
+        enddo
+        close(8)
+      enddo
+      do lmn1=1,2*lmnx
+        write(filename,*)lmn1
+        filename=adjustl(filename)
+        filename=trim('faephi'//trim(filename))//".dat"
+        open(unit=8,file=filename,form='formatted')
+        do ir=1,nr
+          write(8,fmt='(100f20.5)')r(ir),real(faephi(ir,:,:,lmn1)),aimag(faephi(ir,:,:,lmn1))
+        enddo
+        close(8)
+      enddo
+      do lmn1=1,2*lmnx
+        write(filename,*)lmn1
+        filename=adjustl(filename)
+        filename=trim('fsaephi'//trim(filename))//".dat"
+        open(unit=8,file=filename,form='formatted')
+        do ir=1,nr
+          write(8,fmt='(100f20.5)')r(ir),real(fsaephi(ir,:,:,lmn1)),aimag(fsaephi(ir,:,:,lmn1))
+        enddo
+        close(8)
+      enddo
+      do lmn1=1,2*lmnx
+        write(filename,*)lmn1
+        filename=adjustl(filename)
+        filename=trim('aephi'//trim(filename))//".dat"
+        open(unit=8,file=filename,form='formatted')
+        do ir=1,nr
+          write(8,fmt='(100f20.5)')r(ir),real(aephi(ir,:,:,lmn1)),aimag(aephi(ir,:,:,lmn1))
+        enddo
+        close(8)
+      enddo
+      do lmn1=1,2*lmnx
+        write(filename,*)lmn1
+        filename=adjustl(filename)
+        filename=trim('taephi'//trim(filename))//".dat"
+        open(unit=8,file=filename,form='formatted')
+        do ir=1,nr
+          write(8,fmt='(100f20.5)')r(ir),real(taephi(ir,:,:,lmn1)),aimag(taephi(ir,:,:,lmn1))
+        enddo
+        close(8)
+      enddo
+CALL SF_WRITE('pot.dat',GID,NR,LMRX*NDIMD,pot)
+CALL SF_WRITE('pot1r.dat',GID,NR,LMRX*4,real(pot1))
+CALL SF_WRITE('pot1i.dat',GID,NR,LMRX*4,aimag(pot1))
+stop 'done'
+      return
+      end
 !
 !     ...................................................................
       SUBROUTINE SF_RHOVALENCE_SPH(GID,NR,LNX,LOX,LMNX,NDIMD,DENMAT &
@@ -1813,7 +2251,7 @@ INTEGER(4) :: IC1,IC2
       INTEGER(4),INTENT(IN) :: LOX(LNX)
       INTEGER(4),INTENT(IN) :: LMNX
       INTEGER(4),INTENT(IN) :: NDIMD
-      REAL(8)   ,INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
+      complex(8),INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX)
       REAL(8)   ,INTENT(IN) :: TAEPHI(NR,LNX)
       INTEGER(4),INTENT(IN) :: LMRX
@@ -1854,7 +2292,7 @@ INTEGER(4) :: IC1,IC2
 !
 !      ...................................................................
        SUBROUTINE SF_RHOVALENCE_NSPH(GID,NR,LMNX,NDIMD,DENMAT,LMX &
-      &                             ,AEPHI,TAEPHI,LMRX,TKIN,RHO)
+      &                             ,AEPHI,TAEPHI,saephi,tsaephi,LMRX,TKIN,RHO)
 !      **                                                               **
 !      **  CALCULATES THE TOTAL DENSITY ASSUMING A NONCOLLINEAR MODEL   **
 !      **  WITH COMPLEX WAVE FUNCTIONS AND A COMPLEX DENSITY MATRIX     **
@@ -1869,14 +2307,17 @@ USE PERIODICTABLE_MODULE
        INTEGER(4),INTENT(IN) :: NR
        INTEGER(4),INTENT(IN) :: LMNX
        INTEGER(4),INTENT(IN) :: NDIMD
-       REAL(8)   ,INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
+       complex(8),INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
        INTEGER(4),INTENT(IN) :: LMX   !#(ANGULAR MOMENTA FOR WAVE FUNCTIONS)
        COMPLEX(8),INTENT(IN) :: AEPHI(NR,LMX,2,2*LMNX)
        COMPLEX(8),INTENT(IN) :: TAEPHI(NR,LMX,2,2*LMNX)
+       COMPLEX(8),INTENT(IN) :: sAEPHI(NR,LMX,2,2*LMNX)
+       COMPLEX(8),INTENT(IN) :: TsAEPHI(NR,LMX,2,2*LMNX)
        INTEGER(4),INTENT(IN) :: LMRX
        REAL(8)   ,INTENT(OUT):: TKIN(LMNX,LMNX,NDIMD)
        REAL(8)   ,INTENT(OUT):: RHO(NR,LMRX,NDIMD)
        COMPLEX(8)            :: PHIVTHETA(NR,LMX,2,2*LMNX)
+       COMPLEX(8)            :: sPHIVTHETA(NR,LMX,2,2*LMNX)
        COMPLEX(8)            :: THETA(2*LMNX,2*LMNX)
        COMPLEX(8)            :: CRHO(NR,LMRX,2,2)
        INTEGER(4)            :: NV ! 2*LMNX=#(PARTIAL WAVES) EXPANDED
@@ -1897,6 +2338,8 @@ Y0=1.D0/SQRT(4.D0*PI)
 !
 !      =======================================================================
 !      == TRANSFORM DENSITY MATRIX IN COMPLEX SPINOR FORM                   ==
+!      == use A=0.5*sum_{i=0}^3 sigma_i*Tr[sigma_i*A]                       ==
+!      == where sigma_0=1 and for i>0 sigma_i are the pauli matrices        ==
 !      =======================================================================
        THETA(:,:)=(0.D0,0.D0)
        IF(NDIMD.EQ.1) THEN
@@ -1908,8 +2351,8 @@ Y0=1.D0/SQRT(4.D0*PI)
        ELSE IF(NDIMD.EQ.4) THEN
          THETA(:LMNX,:LMNX)    =0.5D0*(DENMAT(:,:,1)+DENMAT(:,:,4))
          THETA(LMNX+1:,LMNX+1:)=0.5D0*(DENMAT(:,:,1)-DENMAT(:,:,4))
-         THETA(:LMNX,LMNX+1:)  =0.5D0*(DENMAT(:,:,2)+CI*DENMAT(:,:,3))
-         THETA(LMNX+1:,:LMNX)  =0.5D0*(DENMAT(:,:,2)-CI*DENMAT(:,:,3))
+         THETA(:LMNX,LMNX+1:)  =0.5D0*(DENMAT(:,:,2)-CI*DENMAT(:,:,3))
+         THETA(LMNX+1:,:LMNX)  =0.5D0*(DENMAT(:,:,2)+CI*DENMAT(:,:,3))
        END IF
 !
 !      =======================================================================
@@ -1920,7 +2363,8 @@ Y0=1.D0/SQRT(4.D0*PI)
            CAUX=0.D0
            DO IS=1,2
              DO LM=1,LMX
-               CAUX=CAUX+CONJG(AEPHI(:,LM,IS,IV1))*TAEPHI(:,LM,IS,IV2)
+               CAUX=CAUX+CONJG(AEPHI(:,LM,IS,IV1))*TAEPHI(:,LM,IS,IV2) &
+     &                  +CONJG(SAEPHI(:,LM,IS,IV1))*TSAEPHI(:,LM,IS,IV2)
              ENDDO
            ENDDO
            CAUX=CAUX*R**2
@@ -1952,10 +2396,13 @@ Y0=1.D0/SQRT(4.D0*PI)
 !      == CALCULATE VALENCE DENSITY                                         ==
 !      =======================================================================
        PHIVTHETA(:,:,:,:)=0.D0
+       sPHIVTHETA(:,:,:,:)=0.D0
        DO IV1=1,NV
          DO IV2=1,NV
            PHIVTHETA(:,:,:,IV1)=PHIVTHETA(:,:,:,IV1) &
-                               +AEPHI(:,:,:,IV2)*THETA(IV2,IV1)
+      &                         +AEPHI(:,:,:,IV2)*THETA(IV2,IV1)
+           sPHIVTHETA(:,:,:,IV1)=sPHIVTHETA(:,:,:,IV1) &
+      &                         +sAEPHI(:,:,:,IV2)*THETA(IV2,IV1)
          ENDDO
        ENDDO
 !
@@ -1969,7 +2416,8 @@ Y0=1.D0/SQRT(4.D0*PI)
                DO IS1=1,2
                  DO IS2=1,2
                    CRHO(:,LMR,IS1,IS2)=CRHO(:,LMR,IS1,IS2) &
-      &                   +CG*PHIVTHETA(:,LM1,IS1,IV)*CONJG(AEPHI(:,LM2,IS2,IV))
+      &                   +CG*PHIVTHETA(:,LM1,IS1,IV)*CONJG(AEPHI(:,LM2,IS2,IV)) &
+      &                   +CG*sPHIVTHETA(:,LM1,IS1,IV)*CONJG(sAEPHI(:,LM2,IS2,IV))
                  ENDDO
                ENDDO
              ENDDO
@@ -2019,7 +2467,7 @@ PRINT*,'VALENCE CHARGE ',4.D0*PI*SVAR*Y0
       INTEGER(4),INTENT(IN) :: NDIMD
       REAL(8)   ,INTENT(IN) :: RHOC(NR)
       REAL(8)   ,INTENT(IN) :: RHOV(NR,LMRX,NDIMD)
-      REAL(8)   ,INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
+      complex(8),INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(IN) :: RHOB
       REAL(8)   ,INTENT(IN) :: VQLM(LMRX)
       REAL(8)   ,INTENT(IN) :: TKIN(LMNX,LMNX,NDIMD)
@@ -2041,7 +2489,7 @@ PRINT*,'VALENCE CHARGE ',4.D0*PI*SVAR*Y0
       DO IDIMD=1,NDIMD
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
-            EKIN=EKIN+DENMAT(LMN1,LMN2,IDIMD)*TKIN(LMN2,LMN1,IDIMD)
+            EKIN=EKIN+real(DENMAT(LMN1,LMN2,IDIMD)*TKIN(LMN2,LMN1,IDIMD),kind=8)
           ENDDO
         ENDDO
       ENDDO
@@ -2096,7 +2544,7 @@ PRINT*,'EVALENCE',ETOT
        INTEGER(4),INTENT(IN) :: NDIMD
        REAL(8)   ,INTENT(IN) :: RHOC(NR,LMRX,NDIMD)
        REAL(8)   ,INTENT(IN) :: RHOV(NR,LMRX,NDIMD)
-       REAL(8)   ,INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
+       complex(8),INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD)
        REAL(8)   ,INTENT(IN) :: RHOB
        REAL(8)   ,INTENT(IN) :: VQLM(LMRX)
        REAL(8)   ,INTENT(IN) :: TKIN(LMNX,LMNX,NDIMD)
@@ -2107,6 +2555,7 @@ PRINT*,'EVALENCE',ETOT
        INTEGER(4)            :: IDIMD,LMR,LMN1,LMN2
        REAL(8)               :: EKIN,EXC,EXCCORE,EH,EHCORE
        REAL(8)               :: HPOT(NR,LMRX)
+       real(8)               :: VQLM0(LMRX),RHOB0
 !      ***********************************************************************
        CALL RADIAL$R(GID,NR,R)
 !
@@ -2117,7 +2566,7 @@ PRINT*,'EVALENCE',ETOT
        DO IDIMD=1,NDIMD
          DO LMN1=1,LMNX
            DO LMN2=1,LMNX
-             EKIN=EKIN+DENMAT(LMN1,LMN2,IDIMD)*TKIN(LMN2,LMN1,IDIMD)
+             EKIN=EKIN+real(DENMAT(LMN1,LMN2,IDIMD)*TKIN(LMN2,LMN1,IDIMD),kind=8)
            ENDDO
          ENDDO
        ENDDO
@@ -2134,8 +2583,10 @@ PRINT*,'EVALENCE',ETOT
 !      == HARTREE ENERGY                                                    ==
 !      =======================================================================
        AUX(:)=0.D0  ! CORE IS SET TO ZERO, DENSITY CONTAINS CORE
+       RHOB0=0.D0
+       VQLM0(:)=0.D0
        CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AUX,RHOC(:,:,1) &
-      &                          ,VQLM,RHOB,HPOT,EHCORE)
+      &                          ,VQLM0,RHOB0,HPOT,EHCORE)
        HPOT=0.D0
        CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AUX,RHOV(:,:,1)+RHOC(:,:,1) &
       &                          ,VQLM,RHOB,HPOT,EH)
@@ -2584,6 +3035,12 @@ DO IR=1,NR
     CALL ERROR$STOP('BOUNDSTATE')
   END IF
 ENDDO
+!
+!     =======================================================================
+!     ==  normalize solution                                               ==
+!     =======================================================================
+      call radial$integral(gid,nr,(phi(:)*r(:))**2,svar)
+      phi(:)=phi(:)/sqrt(svar)
       RETURN
       END
 !
@@ -2877,7 +3334,7 @@ INTEGER(4)         :: NX=0
 REAL(8)            :: ALPHA
 REAL(8),ALLOCATABLE :: XPREV(:,:)
 REAL(8),ALLOCATABLE :: YPREV(:,:)
-REAL(8),ALLOCATABLE :: weight(:)
+REAL(8),ALLOCATABLE :: WEIGHT(:)
 END MODULE BROYDEN_MODULE
 !      .............................................................................
        SUBROUTINE BROYDEN$NEW(NX_,NSTEPX_,ALPHA_)
@@ -2898,10 +3355,10 @@ END MODULE BROYDEN_MODULE
        ALPHA=ALPHA_
        ALLOCATE(XPREV(NX,NSTEPX))
        ALLOCATE(YPREV(NX,NSTEPX))
-       ALLOCATE(weight(NX))
-       weight(:)=1.d0
-       xprev(:,:)=0.d0
-       yprev(:,:)=0.d0
+       ALLOCATE(WEIGHT(NX))
+       WEIGHT(:)=1.D0
+       XPREV(:,:)=0.D0
+       YPREV(:,:)=0.D0
        RETURN
        END
 !      .............................................................................
@@ -2921,26 +3378,26 @@ END MODULE BROYDEN_MODULE
        ALPHA=0.D0
        DEALLOCATE(XPREV)
        DEALLOCATE(YPREV)
-       DEALLOCATE(weight)
+       DEALLOCATE(WEIGHT)
        RETURN
        END
 !      .............................................................................
-       SUBROUTINE BROYDEN$setweight(nx_,weight_)
+       SUBROUTINE BROYDEN$SETWEIGHT(NX_,WEIGHT_)
        USE BROYDEN_MODULE
        IMPLICIT NONE
-       integer(4),intent(in) :: nx_
-       real(8)   ,intent(in)  :: weight_(nx_)
+       INTEGER(4),INTENT(IN) :: NX_
+       REAL(8)   ,INTENT(IN)  :: WEIGHT_(NX_)
 !      *****************************************************************************
        IF(.NOT.TON) THEN
          CALL ERROR$MSG('BROYDEN OBJECT NOT ACTIVE')
          CALL ERROR$MSG('CALL BROYDEN$NEW FIRST')
-         CALL ERROR$STOP('BROYDEN$setweight')
+         CALL ERROR$STOP('BROYDEN$SETWEIGHT')
        END IF
        IF(NX_.NE.NX) THEN
          CALL ERROR$MSG('SIZE INCONSISTENT')
-         CALL ERROR$STOP('BROYDEN$Setweight')
+         CALL ERROR$STOP('BROYDEN$SETWEIGHT')
        END IF
-       weight(:)=weight_(:)
+       WEIGHT(:)=WEIGHT_(:)
        RETURN
        END
 !      .............................................................................
@@ -3017,12 +3474,12 @@ END MODULE BROYDEN_MODULE
          XPREV(:,I)=XPREV(:,I-1)
        ENDDO
        XPREV(:,1)=X(:)     
-       YPREV(:,1)=wY(:)     
+       YPREV(:,1)=WY(:)     
 !
 !      =================================================================
 !      == PREDICT NEW VECTOR                                          ==
 !      =================================================================
-       X=X+ALPHA*wY-MATMUL(DX,MATMUL(TRANSPOSE(DY),wY))
+       X=X+ALPHA*WY-MATMUL(DX,MATMUL(TRANSPOSE(DY),WY))
        DEALLOCATE(DX)
        DEALLOCATE(DY)
        RETURN
@@ -3038,14 +3495,14 @@ END MODULE BROYDEN_MODULE
 !     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
 !     ******************************************************************
       IMPLICIT NONE
-      INTEGER(4), INTENT(IN) :: NR
-      INTEGER(4), INTENT(IN) :: LNX
-      INTEGER(4), INTENT(IN) :: LOX(LNX)
-      INTEGER(4), INTENT(IN) :: LMNXX
-      INTEGER(4), INTENT(IN) :: LMRX
-      REAL(8)    ,INTENT(IN) :: DENMAT(LMNXX,LMNXX)
-      REAL(8)    ,INTENT(IN) :: PHI(NR,LNX)
-      REAL(8)    ,INTENT(OUT):: RHOL(NR,LMRX)
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: LNX
+      INTEGER(4),INTENT(IN) :: LOX(LNX)
+      INTEGER(4),INTENT(IN) :: LMNXX
+      INTEGER(4),INTENT(IN) :: LMRX
+      complex(8),INTENT(IN) :: DENMAT(LMNXX,LMNXX)
+      REAL(8)   ,INTENT(IN) :: PHI(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: RHOL(NR,LMRX)
       INTEGER(4)             :: LMR
       INTEGER(4)             :: LMN1,LN1,L1,IM1,LMN2,LN2,L2,IM2
       INTEGER(4)             :: LM1,LM2,LM3
@@ -3076,7 +3533,8 @@ END MODULE BROYDEN_MODULE
               DO LM3=1,LMRX
                 CALL CLEBSCH(LM1,LM2,LM3,CG)
                 IF(CG.NE.0.D0) THEN
-                  SVAR=CG*DENMAT(LMN1,LMN2)
+!                 == assumes real partial waves ==================
+                  SVAR=CG*real(DENMAT(LMN1,LMN2))
                   RHOL(:,LM3)=RHOL(:,LM3)+SVAR*PHI(:,LN1)*PHI(:,LN2)
                 END IF
               ENDDO
@@ -4131,7 +4589,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       CHARACTER(*),INTENT(IN)   :: ATOM
       INTEGER(4)  ,INTENT(IN)   :: NDIMD
       INTEGER(4)  ,INTENT(IN)   :: LMNX
-      REAL(8)     ,INTENT(IN)   :: DENMAT(LMNX,LMNX,NDIMD)
+      complex(8)  ,INTENT(IN)   :: DENMAT(LMNX,LMNX,NDIMD)
       REAL(8)     ,INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
       REAL(8)     ,INTENT(OUT)  :: ETOT
       TYPE(EXTPOT)              :: POT1
@@ -4274,7 +4732,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       DO IDIMD=1,NDIMD
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
-            ETOT=ETOT+DENMAT(LMN1,LMN2,IDIMD)*DATH(LMN1,LMN2,IDIMD)
+            ETOT=ETOT+real(DENMAT(LMN1,LMN2,IDIMD)*DATH(LMN2,LMN1,IDIMD),kind=8)
           ENDDO
         ENDDO
       ENDDO
@@ -4442,479 +4900,6 @@ END MODULE EXPERTNAL1CPOT_MODULE
 !!$      ENDDO
 !!$      RETURN
 !!$      END
-
-!
-!     ..................................................................
-!OLD SPHERE!!!!!
-      SUBROUTINE AUGMENTATION$SPHEREOLD(ISP,IAT,LMNX,NDIMD,DENMAT,DENMATI &   
-     &                              ,LMRX,VQLM,RHOB,POTB,DATH,DO)
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     ** THREE OPTIONS:                                               **
-!     **   1 - NON-SPIN POLARIZED (NT)                                **
-!     **   2 - SPIN-POLARIZED (NT,NS)                                 **
-!     **   4 - NONCOLLINEAR SPIN  (NT,NSX,NSY,NSZ)                    **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)   :: ISP
-      INTEGER(4),INTENT(IN)   :: IAT
-      INTEGER(4),INTENT(IN)   :: LMNX
-      INTEGER(4),INTENT(IN)   :: NDIMD
-      REAL(8)   ,INTENT(INOUT):: DENMAT(LMNX,LMNX,NDIMD)
-      REAL(8)   ,INTENT(INOUT):: DENMATI(LMNX,LMNX,NDIMD)
-      INTEGER(4),INTENT(IN)   :: LMRX
-      REAL(8)   ,INTENT(INOUT):: VQLM(LMRX)
-      REAL(8)   ,INTENT(IN)   :: RHOB
-      REAL(8)   ,INTENT(OUT)  :: POTB ! INTEGRATED ELECTROSTATIC AUGMENTATION POTENTIAL
-      REAL(8)   ,INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
-      REAL(8)   ,INTENT(OUT)  :: DO(LMNX,LMNX,NDIMD)
-      INTEGER(4)              :: GID
-      REAL(8)   ,ALLOCATABLE  :: R(:)
-      REAL(8)                 :: R1,DEX,XEXP,RI
-      REAL(8)                 :: AEZ
-      INTEGER(4)              :: NR
-      INTEGER(4)              :: LNX
-      INTEGER(4),ALLOCATABLE  :: LOX(:)
-      REAL(8)   ,ALLOCATABLE  :: AEPHI(:,:)
-      REAL(8)   ,ALLOCATABLE  :: PSPHI(:,:)
-      REAL(8)   ,ALLOCATABLE  :: AECORE(:)
-      REAL(8)   ,ALLOCATABLE  :: PSCORE(:)
-      REAL(8)                 :: RCSM
-      REAL(8)   ,ALLOCATABLE  :: VADD(:)
-      REAL(8)   ,ALLOCATABLE  :: DOVER(:,:)
-      REAL(8)   ,ALLOCATABLE  :: DTKIN(:,:)
-      REAL(8)   ,ALLOCATABLE  :: AERHO(:,:,:)
-      REAL(8)   ,ALLOCATABLE  :: PSRHO(:,:,:)
-      REAL(8)   ,ALLOCATABLE  :: AEPOT(:,:,:)
-      REAL(8)   ,ALLOCATABLE  :: PSPOT(:,:,:)
-      REAL(8)   ,ALLOCATABLE  :: AEPOT1(:,:)
-      REAL(8)   ,ALLOCATABLE  :: PSPOT1(:,:)
-      REAL(8)   ,ALLOCATABLE  :: DATP(:,:,:)
-      REAL(8)   ,ALLOCATABLE  :: DWORK1(:)
-      INTEGER(4)              :: IDIM,LMR,IR
-      INTEGER(4)              :: LM,LMN1,LMN2,LMN11,LMN21,LN1,LN2,L1,L2,IM,ISPIN
-      INTEGER(4)              :: NSPIN
-      INTEGER(4)              :: NFILO
-      LOGICAL(4),PARAMETER    :: TPR=.FALSE.
-      LOGICAL(4),PARAMETER    :: TTEST=.FALSE.
-      INTEGER(4),PARAMETER    :: ITEST=1
-      LOGICAL(4)              :: TBACK,TSPIN
-      REAL(8)                 :: DETOT,PSEHARTREE,AEEHARTREE,COREEXC,EKINNL,ENL,AEEXC,PSEXC,HAMUP,HAMDWN
-      REAL(8)                 :: AEBACKGROUND,PSBACKGROUND
-      CHARACTER(32)           :: ATOM
-      REAL(8)                 :: VQLM1(LMRX)
-      REAL(8)                 :: QLM(LMRX)
-      REAL(8)                 :: PI
-      LOGICAL(4),PARAMETER    :: TSOFTCORE=.TRUE.
-      REAL(8)                 :: AETEST,PSTEST
-!     ******************************************************************
-                            CALL TRACE$PUSH('AUGMENTATION$SPHERE')
-      PI=4.D0*DATAN(1.D0)
-PRINT*,'OLD SPHERE'
-!
-!     ==================================================================
-!     ==  COLLECT ATOM-TYPE SPECIFIC INFORMATION FROM SETUP OBJECT    ==
-!     ==================================================================
-      CALL SETUP$ISELECT(ISP)
-      CALL SETUP$GETI4('GID',GID)
-      CALL RADIAL$GETI4(GID,'NR',NR)
-      ALLOCATE(R(NR))
-      CALL RADIAL$R(GID,NR,R)
-!CALL SETUP$RADGRID(ISP,R1,DEX,NR)
-!XEXP=DEXP(DEX)
-!
-      CALL SETUP$AEZ(ISP,AEZ)
-      CALL SETUP$LNX(ISP,LNX)
-      ALLOCATE(LOX(LNX))
-      CALL SETUP$LOFLN(ISP,LNX,LOX)
-      ALLOCATE(AEPHI(NR,LNX))
-      CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
-      ALLOCATE(PSPHI(NR,LNX))
-      CALL SETUP$PSPARTIALWAVES(ISP,NR,LNX,PSPHI)
-      ALLOCATE(AECORE(NR))
-      CALL SETUP$AECORE(ISP,NR,AECORE)
-      ALLOCATE(PSCORE(NR))
-      CALL SETUP$PSCORE(ISP,NR,PSCORE)
-      CALL SETUP$RCSM(ISP,RCSM)
-      ALLOCATE(VADD(NR))
-      CALL SETUP$VBAR(ISP,NR,VADD)
-      ALLOCATE(DOVER(LNX,LNX))
-      CALL SETUP$1COVERLAP(ISP,LNX,DOVER)
-      ALLOCATE(DTKIN(LNX,LNX))
-      CALL SETUP$1CKINETIC(ISP,LNX,DTKIN)
-!
-!     ==================================================================
-!     ==  SELF TEST                                                   ==
-!     ==================================================================
- 1000 CONTINUE
-      IF(TTEST) THEN
-        IF(ITEST.EQ.1.OR.ITEST.EQ.3) THEN 
-          CALL SELFTEST$START('SPHERE',LMNX*LMNX*NDIMD,DENMAT,1.D-3)
-          VQLM(:)=0.D0
-          DO IDIM=1,NDIMD
-            DENMAT(:,:,IDIM)=0.5D0*(DENMAT(:,:,IDIM)+TRANSPOSE(DENMAT(:,:,IDIM)))
-          ENDDO
-        END IF
-      ENDIF
-!     == PRINT DENSITY MATRIX FOR TEST
-      IF(TPR) THEN
-        CALL FILEHANDLER$UNIT('PROT',NFILO)
-        DO IDIM=1,NDIMD
-          WRITE(NFILO,FMT='("DENMAT FOR IDIM= ",I2)') IDIM
-          DO LMN1=1,LMNX
-            WRITE(NFILO,FMT='(9F15.6)')DENMAT(LMN1,:,IDIM)
-          ENDDO
-        ENDDO
-      END IF
-
-!FOR SOFT-CORE ITERATE FROM HERE ...
-!
-!     ==================================================================
-!     ==  CALCULATE 1-CENTER CHARGE DENSITY                           ==
-!     ==================================================================
-      ALLOCATE(AERHO(NR,LMRX,NDIMD))
-      ALLOCATE(PSRHO(NR,LMRX,NDIMD))
-      DO IDIM=1,NDIMD
-        CALL AUGMENTATION_RHO(NR,LNX,LOX,AEPHI &
-     &                  ,LMNX,DENMAT(1,1,IDIM),LMRX,AERHO(1,1,IDIM))
-        CALL AUGMENTATION_RHO(NR,LNX,LOX,PSPHI &
-     &                  ,LMNX,DENMAT(1,1,IDIM),LMRX,PSRHO(1,1,IDIM))
-      ENDDO
-!     
-!     ================================================================
-!     ==  EVALUATE MULTIPOLE MOMENTS                                ==
-!     ================================================================
-      CALL AUGMENTATION_QLM(GID,NR,LMRX,AEZ,AECORE,PSCORE,AERHO,PSRHO,QLM)
-      PSRHO(:,1,1)=PSRHO(:,1,1)+PSCORE(:)   
-      CALL AUGMENTATION_ADJUSTVQLM(GID,NR,LMRX,PSRHO(:,:,1),RCSM,QLM,VQLM1)
-      PSRHO(:,1,1)=PSRHO(:,1,1)-PSCORE(:)   
-PRINT*,'VQLM1 ',VQLM+VQLM1
-!     
-!     ================================================================
-!     ==  NEW SOFT CORE                                             ==
-!     ================================================================
-      IF(TSOFTCORE) THEN
-!        CALL AUGMENTATION_NEWSOFTCORE(GID,NR,AEZ,AERHO(:,1,1),AECORE)
-      END IF
-
-!!$!TEST
-!!$      ALLOCATE(PSPOT1(NR,LMRX))
-!!$      ALLOCATE(AEPOT1(NR,LMRX))
-!!$      CALL AUGMENTATION_PSHARTREE(GID,NR,LMRX,PSCORE,PSRHO(:,:,1) &
-!!$     &                 ,VADD,RCSM,QLM,VQLM,RHOB,PSPOT1,PSEHARTREE)
-!!$      CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AECORE,AERHO(:,:,1) &
-!!$     &                 ,VQLM,RHOB,AEPOT1,AEEHARTREE)
-!!$      DEALLOCATE(AEPOT1)
-!!$      DEALLOCATE(PSPOT1)
-!!$PRINT*,'EHARTREE ',AEEHARTREE,PSEHARTREE
-!!$!
-!!$!     =================================================================
-!!$!     == AVERAGE ELECTROSTATIC ONE-CENTER POTENTIAL                  ==
-!!$!     =================================================================
-!!$      ALLOCATE(DWORK1(NR))
-!!$      DWORK1(:)=AEPOT(:,1,1)-(PSPOT(:,1,1)-VADD(:))
-!!$      DWORK1(:)=DWORK1(:)*R(:)**2*SQRT(4.D0*PI)  !SQRT(4*PI)=4*PI*Y_0
-!!$      CALL RADIAL$INTEGRAL(GID,NR,DWORK1,POTB)
-!!$      POTB=-POTB
-!!$!PEB03 POTB=0.D0
-!!$      DEALLOCATE(DWORK1)
-!     
-!     ================================================================
-!     ==  SEND DENSITIES TO HYPERFINE-PARAMETER OBJECT              ==
-!     ================================================================
-!MOVE THIS PART TO THE END OF THE ROUTINE
-!TAKE CARE HOWEVER THAT THE FIRST CALL TAKES THE PSEUDODENSITY
-! WITHOUT PSEUDO CORE!
-      ALLOCATE(AEPOT(NR,LMRX,1))   ! USED AS AUXILIARY VARIABLE
-      CALL HYPERFINE$SET1CRHO('PS','TOT',IAT,GID,NR,NR,LMRX,PSRHO)
-      AEPOT(:,:,1)=AERHO(:,:,1)
-      AEPOT(:,1,1)=AEPOT(:,1,1)+AECORE(:)
-      CALL HYPERFINE$SET1CRHO('AE','TOT',IAT,GID,NR,NR,LMRX,AEPOT)
-      IF(NDIMD.GT.1) THEN
-        ALLOCATE(PSPOT(NR,LMRX,1))
-        IF(NDIMD.EQ.2) THEN        ! COLLINEAR SPIN POLARIZED 
-          AEPOT(:,:,1)=AERHO(:,:,2)
-          PSPOT(:,:,1)=PSRHO(:,:,2)
-        ELSE IF(NDIMD.EQ.4) THEN   ! NON-COLLINEAR SPIN POLARIZED 
-          AEPOT(:,:,1)=SQRT(AERHO(:,:,2)**2+AERHO(:,:,3)**2+AERHO(:,:,4)**2)
-          PSPOT(:,:,1)=SQRT(PSRHO(:,:,2)**2+PSRHO(:,:,3)**2+PSRHO(:,:,4)**2)
-        END IF
-        CALL HYPERFINE$SET1CRHO('PS','SPIN',IAT,GID,NR,NR,LMRX,PSPOT)
-        CALL HYPERFINE$SET1CRHO('AE','SPIN',IAT,GID,NR,NR,LMRX,AEPOT)
-        DEALLOCATE(PSPOT)
-      END IF
-      DEALLOCATE(AEPOT)
-!     
-!     ================================================================
-!     ==  ADD CORE CHARGE DENSITY                                   ==
-!     ================================================================
-      DO IR=1,NR
-        PSRHO(IR,1,1)=PSRHO(IR,1,1)+PSCORE(IR)
-      ENDDO
-!     
-!     ================================================================
-!     ================================================================
-!     ==   CALCULATE 1-CENTER POTENTIAL                             ==
-!     ================================================================
-!     ================================================================
-      ALLOCATE(AEPOT(NR,LMRX,NDIMD))
-      ALLOCATE(PSPOT(NR,LMRX,NDIMD))
-      AEPOT(:,:,:)=0.D0
-      PSPOT(:,:,:)=0.D0
-!     
-!     ================================================================
-!     ==   ADD EXCHANGE AND CORRELATION POTENTIAL                   ==
-!     ================================================================
-      AEEXC=0.D0
-      PSEXC=0.D0
-!     == AE-EXCHANGE ENERGY AND POTENTIAL ============================
-      AERHO(:,1,1)=AERHO(:,1,1)+AECORE(:)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,AERHO,AEEXC,AEPOT)
-      AERHO(:,1,1)=AERHO(:,1,1)-AECORE(:)
-!     == PS-EXCHANGE ENERGY AND POTENTIAL ============================
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,PSRHO,PSEXC,PSPOT)
-!     == CORE ONLY EXCHANGE ENERGY ===================================
-      COREEXC=0.D0
-      ALLOCATE(DWORK1(NR))
-      CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,COREEXC,DWORK1)
-      DEALLOCATE(DWORK1)
-      AEEXC=AEEXC-COREEXC
-!     
-      CALL AUGMENTATION_ADD('AE1 EXCHANGE-CORRELATION',AEEXC)
-      CALL AUGMENTATION_ADD('PS1 EXCHANGE-CORRELATION',PSEXC)
-!     
-!     ================================================================
-!     ==   CALCULATE ELECTROSTATIC POTENTIAL                        ==
-!     ================================================================
-      AEEHARTREE=0.D0
-      PSEHARTREE=0.D0
-      ALLOCATE(AEPOT1(NR,LMRX))
-      ALLOCATE(PSPOT1(NR,LMRX))
-      AEPOT1(:,:)=0.D0
-      PSPOT1(:,:)=0.D0
-      VQLM1(:)=0.D0
-!     == NOTE: COMPENSATION DENSITY IS ADDED TO PSRHO ================
-      CALL AUGMENTATION_HARTREE(IAT,GID,NR,AEZ,AECORE &
-     &          ,VADD,RCSM,LMRX,AERHO,PSRHO,QLM,AEPOT1,PSPOT1,VQLM1 &
-     &          ,AEEHARTREE,PSEHARTREE)
-      CALL AUGMENTATION_ADD('AE1 ELECTROSTATIC',AEEHARTREE)
-      CALL AUGMENTATION_ADD('PS1 ELECTROSTATIC',PSEHARTREE)
-PRINT*,'VQLM1 ',VQLM+VQLM1
-      VQLM1(:)=VQLM1(:)+VQLM(:)
-AETEST=AEEHARTREE
-PSTEST=PSEHARTREE
-PRINT*,'AEEHARTREE WITHOUT BACKGROUND ETC. ',AEEHARTREE
-!
-!     =================================================================
-!     == AVERAGE ONE-CENTER POTENTIAL                                ==
-!     =================================================================
-      ALLOCATE(DWORK1(NR))
-      DWORK1(:)=AEPOT1(:,1)-(PSPOT1(:,1)-VADD(:))
-      DWORK1(:)=DWORK1(:)*R(:)**2*SQRT(4.D0*PI)  !SQRT(4*PI)=4*PI*Y_0
-      CALL RADIAL$INTEGRAL(GID,NR,DWORK1,POTB)
-      POTB=-POTB
-!PEB03 POTB=0.D0
-      DEALLOCATE(DWORK1)
-!     
-!     == ADD POTENTIAL FROM CHARGES "OUTSIDE" THE SPHERE =============      
-      CALL AUGMENTATION_ADDVQLM(GID,NR,LMRX,VQLM1,AEPOT1,PSPOT1)
-!     
-!     == ADD POTENTIAL FROM THE NEUTRALIZING BACKGROUND ==============
-!     == THE BACKGROUND DOES NOT ADD TO SUM OF ONE-CENTER ENERGIES  ==
-!     == AND NEED NOT BE CONSIDERED. IT SHOULD BE INCLUDED, IF THE  ==
-!     == POTENTIALS SHOULD BE THE CORRECT ONE-CENTER POTENTIALS     ==
-!     == AT THIS POIINT THE DERIVATIVES ARE NOT CORRECT YET         ==
-      AEBACKGROUND=0.D0
-      PSBACKGROUND=0.D0
-PRINT*,'BACKGROUND DENSITY ',RHOB
-      CALL AUGMENTATION_ADDBACKGROUND(GID,NR,RHOB &
-     &                      ,AERHO(:,1,1)+AECORE(:),AEBACKGROUND,AEPOT1)
-PRINT*,'BACKGROUND ENERGY ',AEBACKGROUND
-      CALL AUGMENTATION_ADDBACKGROUND(GID,NR,RHOB &
-     &                      ,PSRHO,PSBACKGROUND,PSPOT1)
-      CALL AUGMENTATION_ADD('AE1 BACKGROUND',AEBACKGROUND)
-      CALL AUGMENTATION_ADD('PS1 BACKGROUND',PSBACKGROUND)
-AETEST=AETEST+AEBACKGROUND
-PSTEST=PSTEST+PSBACKGROUND
-PRINT*,'EHARTREE 2 ',AETEST,PSTEST
-!
-!     == SOFT CORE ===================================================
-!      CALL AUGMENTATION_SOFTCORE(IAT,R1,DEX,NR,LMRX,AEPOT1)
-!     
-!     == ANALYSIS: ELECTRIC FIELD GRADIENTS ==========================
-      CALL HYPERFINE$SET1CPOT('AE',IAT,GID,NR,NR,LMRX,AEPOT1)
-      CALL HYPERFINE$SET1CPOT('PS',IAT,GID,NR,NR,LMRX,PSPOT1)
-!     
-!     == ANALYSIS: POTENTIAL PLOT           ==========================
-      CALL GRAPHICS$SET1CPOT('AE',IAT,GID,NR,NR,LMRX,AEPOT1)
-      CALL GRAPHICS$SET1CPOT('PS',IAT,GID,NR,NR,LMRX,PSPOT1)
-!     
-!     == ADD ELECTROSTATIC POTENTIAL TO TOTAL POTENTIAL ==============
-      DO LM=1,LMRX
-        DO IR=1,NR
-          AEPOT(IR,LM,1)=AEPOT(IR,LM,1)+AEPOT1(IR,LM)
-          PSPOT(IR,LM,1)=PSPOT(IR,LM,1)+PSPOT1(IR,LM)
-        ENDDO
-      ENDDO
-      DEALLOCATE(AEPOT1)
-      DEALLOCATE(PSPOT1)
-!
-!     ==== THIS IS FOR MARCELLO SANTOS TO CALCULATE CORE LEVEL SHIFTS IN FROZEN CORE
-      CALL CORE_CORESHIFTS(IAT,ISP,GID,NR,LMRX,AEPOT)
-!
-!CALCULATE NEW SOFT-CORE DENSITY HERE
-!     
-      IF(TPR) THEN
-        CALL FILEHANDLER$UNIT('PROT',NFILO)
-        DO ISPIN=1,NSPIN
-          WRITE(NFILO,*)'AE POTENTIAL FOR SPIN ',ISPIN
-          DO IR=1,NR,50
-            WRITE(NFILO,FMT='(9F10.5)')(AEPOT(IR,LM,ISPIN),LM=1,LMRX)
-          ENDDO
-        ENDDO
-        DO ISPIN=1,NSPIN
-          WRITE(NFILO,*)'PS POTENTIAL FOR ATOM ',IAT,ISPIN
-          DO IR=1,NR,50
-            WRITE(NFILO,FMT='(9F10.5)')(PSPOT(IR,LM,ISPIN),LM=1,LMRX)
-          ENDDO
-        ENDDO
-      ENDIF
-!     
-!     ==================================================================
-!     ==  SELF TEST FOR HAMILTONIAN AND OVERLAP                       ==
-!     ==================================================================
- 1001 CONTINUE
-      IF(TTEST) THEN
-        IF(ITEST.EQ.2) THEN
-          CALL SELFTEST$START('SPHERE-EKI',LMNX*LMNX*NDIMD,DENMAT,1.D-3)
-        ELSE IF(ITEST.EQ.3) THEN
-          CALL RADIAL$R(GID,'DEX',DEX,R)
-          ENL=0.D0
-          DO LM=1,LMRX
-            ENL=ENL+DEX*SUM(AERHO(:,LM,1)**2*R(:)**3)
-            AEPOT(:,LM,1)=2.D0*AERHO(:,LM,1)
-            PSPOT(:,LM,1)=0.D0
-          ENDDO
-          AEEHARTREE=ENL
-          PSEHARTREE=0.D0
-          AEEXC=0.D0
-          PSEXC=0.D0
-        END IF
-      END IF
-!     
-!     ==================================================================
-!     ==  EVALUATE KINETIC HAMILTONIAN AND OVERLAP                    ==
-!     ==================================================================
-      EKINNL=0.D0
-      DATH(:,:,:)=0.D0
-      DO(:,:,:)=0.D0
-      LMN1=0
-      DO LN1=1,LNX
-        L1=LOX(LN1)
-        LMN2=0
-        DO LN2=1,LNX
-          L2=LOX(LN2)
-          IF(L1.EQ.L2) THEN
-            DO IM=1,2*L1+1
-              LMN11=LMN1+IM
-              LMN21=LMN2+IM
-              EKINNL=EKINNL+DENMAT(LMN11,LMN21,1)*DTKIN(LN1,LN2)
-              DATH(LMN11,LMN21,1)=DTKIN(LN1,LN2)
-              DO(LMN11,LMN21,1)  =DOVER(LN1,LN2)
-            ENDDO
-          ENDIF
-          LMN2=LMN2+2*L2+1
-        ENDDO
-        LMN1=LMN1+2*L1+1
-      ENDDO
-      IF(TTEST) THEN
-        IF(ITEST.EQ.2) THEN
-          CALL SELFTEST$END('SPHERE-EKI',LMNX*LMNX*NDIMD,DATH,EKINNL,TBACK)
-          IF(TBACK) GOTO 1001
-          CALL ERROR$MSG('STOP AFTER SELFTEST')
-          CALL ERROR$STOP('SPHERE')
-        END IF
-      END IF
-!     
-      CALL AUGMENTATION_ADD('AE1-PS1 KINETIC',EKINNL)
-!     
-!     ================================================================
-!     ==   ADD POTENTIAL ENERGY TO THE ONE-CENTER HAMILTONIAN       ==
-!     ==   DATH =DATH + <AEPHI|AEPOT|AEPHI>-<PSPHI|PSPOT|PSPHI>     ==
-!     ================================================================
-      ALLOCATE(DATP(LMNX,LMNX,NDIMD))
-      CALL AUGMENTATION_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX &
-     &                        ,AEPOT,PSPOT,AEPHI,PSPHI,DATP)
-      DATH(:,:,:)=DATH(:,:,:)+DATP(:,:,:)
-      DEALLOCATE(DATP)
-!     WRITE(TESTSTRING,FMT='("R8DATH",I2,12(" "))')IAT
-!     CALL STOREIT(TESTSTRING,8*LMNX*LMNX*NSPIN,DATH)
-!
-!     ================================================================
-!     ==  LDA + U                                                   ==
-!     ================================================================
-!     ALLOCATE(DATP(LMNX,LMNX,NDIMD))
-!     DETOT=0.D0
-!     CALL LDAPLUSU(NRX,LNX,LMNX,NSPIN,LOX,LNX &
-!     &             ,GID,NR,AEZ,AEPHI,DENMAT,DETOT,DATP)
-!     DATH(:,:,:)=DATH(:,:,:)+DATP(:,:,:)
-!     DEALLOCATE(DATP)
-!     CALL AUGMENTATION_ADD('LDA+U EXCHANGE',DETOT)
-!
-!     ================================================================
-!     ==  APPLY EXTERNAL POTENTIAL                                  ==
-!     ================================================================
-      CALL ATOMLIST$GETCH('NAME',IAT,ATOM)
-      ALLOCATE(DATP(LMNX,LMNX,NDIMD))
-      CALL EXTERNAL1CPOT$APPLY(ATOM,LMNX,NDIMD,DENMAT,DATP,DETOT)
-      DATH(:,:,:)=DATH(:,:,:)+DATP(:,:,:)
-      DEALLOCATE(DATP)
-      CALL AUGMENTATION_ADD('LDA+U EXCHANGE',DETOT)
-!     
-!     ================================================================
-!     ==  SELF-TEST                                                 ==
-!     ================================================================
-      IF(TTEST) THEN
-        IF(ITEST.EQ.1.OR.ITEST.EQ.3) THEN
-          ENL=AEEXC-PSEXC+AEEHARTREE-PSEHARTREE+EKINNL+DETOT
-          CALL SELFTEST$END('SPHERE',LMNX*LMNX*NDIMD,DATH,ENL,TBACK)
-          IF(TBACK) GOTO 1000
-          CALL ERROR$MSG('STOP AFTER SELFTEST')
-          CALL ERROR$STOP('SPHERE')
-        ENDIF
-      END IF
-      IF(TPR) THEN
-        CALL FILEHANDLER$UNIT('PROT',NFILO)
-        DO IDIM=1,NDIMD
-          WRITE(NFILO,FMT='("DATH FOR IDIM= ",I2)') IDIM
-          DO LMN1=1,LMNX
-            WRITE(NFILO,FMT='(9F15.6)')DATH(LMN1,:,IDIM)
-          ENDDO
-        ENDDO
-STOP
-      END IF
-!
-!     ==================================================================
-!     ==  CLOSE DOWN                                                  ==
-!     ==================================================================
-      DEALLOCATE(AEPOT)
-      DEALLOCATE(PSPOT)
-      DEALLOCATE(AERHO)
-      DEALLOCATE(PSRHO)
-      DEALLOCATE(LOX)
-      DEALLOCATE(AEPHI)
-      DEALLOCATE(PSPHI)
-      DEALLOCATE(AECORE)
-      DEALLOCATE(PSCORE)
-      DEALLOCATE(VADD)
-      DEALLOCATE(DOVER)
-      DEALLOCATE(DTKIN)
-      DEALLOCATE(R)
-                               CALL TRACE$POP
-      RETURN
-      END
 !
 !     ..................................................................
       SUBROUTINE AUGMENTATION_ADDVQLM(GID,NR,LMRX,VQLM,AEPOT,PSPOT)
