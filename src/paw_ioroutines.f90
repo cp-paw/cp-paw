@@ -1228,6 +1228,21 @@ PRINT*,'ILDA ',ILDA
       CALL ATOMS$SETL4('START',TCHK)
 !
 !     ==================================================================
+!     ==  attention                                                   ==
+!     ==================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'USEOPTFRIC',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'USEOPTFRIC',1,TCHK)
+      END IF
+      CALL ATOMS$SETL4('USEOPTFRIC',TCHK)
+!
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'NONEGFRIC',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'NONEGFRIC',1,TCHK)
+      END IF
+      CALL ATOMS$SETL4('NONEGATIVEFRICTION',TCHK)
+!
+!     ==================================================================
 !     ==  READ BLOCK !CONTROL!RDYN!AUTO                               ==
 !     ==================================================================
       CALL READIN_AUTO(LL_CNTL,'ATOMS',1.D-2,1.D0,0.1D0,1.D0)
@@ -2404,11 +2419,12 @@ print *,'keep_dff set in list'
 !
 !       == SET FILENAME FOR THE IMAGE===================================
         WRITE(CH256SVAR1,*)IWAVE
-        CH256SVAR1='WAVE'//ADJUSTL(CH256SVAR1)//'.WV'
+        ch256svar1=adjustl(ch256svar1)
+        CH256SVAR1='WAVE'//trim(CH256SVAR1(1:249))//'.WV'
         CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,CH256SVAR1)
         CALL GRAPHICS$SETCH('FILE',TRIM(CH256SVAR1))
-!
+
 !       == GRID SPACING
         DR=0.4D0
         CALL LINKEDLIST$EXISTD(LL_CNTL,'DR',1,TCHK)
@@ -2497,7 +2513,8 @@ print *,'keep_dff set in list'
 !
 !       == SET FILENAME FOR THE IMAGE===================================
         WRITE(CH256SVAR1,*)IDEN
-        CH256SVAR1='DENSITY'//ADJUSTL(CH256SVAR1)//'.WV'
+        CH256SVAR1=ADJUSTL(CH256SVAR1)
+        CH256SVAR1='DENSITY'//trim(CH256SVAR1(1:246))//'.WV'
         CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,CH256SVAR1)
         CALL GRAPHICS$SETCH('FILE',TRIM(CH256SVAR1))
@@ -3025,6 +3042,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)    ,ALLOCATABLE  :: XK(:,:)
       REAL(8)    ,ALLOCATABLE  :: WGHT(:)
       LOGICAL(4)               :: TINV
+      character(32)            :: bzitype
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_KPOINT')
       LL_STRC=LL_STRC_
@@ -3043,65 +3061,68 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       TINV=.TRUE. 
 !
 !     ==  READ ACTUAL VALUES  ==========================================
+      CALL LINKEDLIST$EXISTD(LL_STRC,'BZINTEGRATION',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'BZINTEGRATION',0,'MP')
+      CALL LINKEDLIST$GET(LL_STRC,'BZINTEGRATION',1,BZITYPE)
+      IF(BZITYPE.NE.'MP'.AND.BZITYPE.NE.'TETRA+') THEN
+        CALL ERROR$MSG('BZINTEGRATION NOT RECOGNIZED')
+        CALL ERROR$CHVAL('BZINTEGRATION',BZITYPE)
+        CALL ERROR$STop('STRCIN_KPOINT')
+      END IF
+      CALL DYNOCC$SETCH('BZINTEGRATION',BZITYPE)
+!
       ISHIFT(:)=0
       CALL LINKEDLIST$EXISTD(LL_STRC,'SHIFT',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'SHIFT',1,ISHIFT)
 !
+      CALL LINKEDLIST$NDATA(LL_STRC,'K',NKPT)
+      IF(NKPT.NE.0) THEN
+        CALL ERROR$MSG('CHOICE OF INDIVIDUALLY SPECIFIED KPOINTS HAS BEEN DISABLED')
+        CALL ERROR$MSG('OPTION STRV!KPOINT:K IS NO MORE ALLOWED')
+        CALL ERROR$STOP('strcin_KPOINT')
+      END IF
+!
+!     ====================================================================
+!     == determine divisions nkdiv of reciprocal unit cell              ==
+!     ====================================================================
       CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
       CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK1)
-      CALL LINKEDLIST$NDATA(LL_STRC,'K',NKPT)
-      IF(TCHK) THEN
+      if(tchk1.and.tchk) then
+        CALL ERROR$MSG('!SPECIES!KPOINTS:R AND DIV ARE MUTUALLY EXCLUSIVE')
+        CALL ERROR$STOP('STRCIN_KPOINT')
+      else if(tchk) then
 !       == K-POINT GRID DEFINED BY R =====================================
-        IF(TCHK1) THEN
-          CALL ERROR$MSG('!SPECIES!KPOINTS:R AND DIV ARE MUTUALLY EXCLUSIVE')
-          CALL ERROR$STOP('STRCIN_KPOINT')
-        END IF
-        IF(NKPT.NE.0) THEN
-          CALL ERROR$MSG('!SPECIES!KPOINT:R AND K ARE MUTUALLY EXCLUSIVE')
-          CALL ERROR$STOP('STRCIN_KPOINT')
-        END IF
         CALL CELL$GETR8A('TREF',9,RBAS)
         CALL LINKEDLIST$GET(LL_STRC,'R',1,RMAX)
         CALL KPOINTS_NKDIV(RBAS,RMAX,NKDIV)
+      else if(tchk1) then
+        CALL LINKEDLIST$GET(LL_STRC,'DIV',1,NKDIV)
+        IF(NKDIV(1).LE.0.OR.NKDIV(2).LE.0.OR.NKDIV(3).LE.0) THEN
+          CALL ERROR$MSG('!SPECIES!KPOINT:DIV MUST BE GREATER THAN ZERO')
+          CALL ERROR$STOP('STRCIN_KPOINT')
+        END IF
+      else
+        NKDIV(:)=2.D0
+      end if
+!
+!     ====================================================================
+!     == determine k-points and integration weights                     ==
+!     ====================================================================
+      IF(BZITYPE.EQ.'MP') THEN
         CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
         ALLOCATE(XK(3,NKPT))
         ALLOCATE(WGHT(NKPT))
         CALL KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WGHT)
-!     == KPOINT GRID DEFINED BY DIV ====================================
-      ELSE 
-        CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_STRC,'DIV',1,NKDIV)
-          IF(NKDIV(1).LE.0.OR.NKDIV(2).LE.0.OR.NKDIV(3).LE.0) THEN
-            CALL ERROR$MSG('!SPECIES!KPOINT:DIV MUST BE GREATER THAN ZERO')
-            CALL ERROR$STOP('STRCIN_KPOINT')
-          END IF
-        ELSE
-          NKDIV(:)=2.D0
-        END IF
-        IF(NKPT.EQ.0) THEN
-          CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
-          ALLOCATE(XK(3,NKPT))
-          ALLOCATE(WGHT(NKPT))
-          CALL KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WGHT)
-        ELSE     
-          CALL LINKEDLIST$EXISTD(LL_STRC,'SHIFT',1,TCHK)
-          IF(TCHK) THEN
-            CALL ERROR$MSG('!SPECIES!KPOINT:SHIFT MUST NOT BE USED')
-            CALL ERROR$MSG('IF KPOINTS ARE SPECIFIED BY HAND')
-            CALL ERROR$STOP('STRCIN_KPOINT')
-          END IF
-          ALLOCATE(XK(3,NKPT))
-          ALLOCATE(WGHT(NKPT))
-          DO IKPT=1,NKPT
-            CALL LINKEDLIST$GET(LL_STRC,'K',IKPT,IXK0) 
-            XK(1,IKPT)=REAL(IXK0(1),KIND=8)/REAL(NKDIV(1),KIND=8)
-            XK(2,IKPT)=REAL(IXK0(2),KIND=8)/REAL(NKDIV(2),KIND=8)
-            XK(3,IKPT)=REAL(IXK0(3),KIND=8)/REAL(NKDIV(3),KIND=8)
-          ENDDO
-          WGHT(:)=1.D0/REAL(NKPT,KIND=8)
-        END IF
-!       ==========================================================
+      ELSE IF(BZITYPE.EQ.'TETRA+') THEN
+        CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
+        CALL BRILLOUIN$GETI4('NL',NKPT)
+        ALLOCATE(XK(3,NKPT))
+        ALLOCATE(WGHT(NKPT))
+        CALL BRILLOUIN$GETR8A('XK',3*NKPT,XK)
+        CALL BRILLOUIN$GETR8A('WKPT',NKPT,WGHT)
+      ELSE
+        CALL ERROR$MSG('BZITYPE NOT RECOGNIZED')
+        CALL ERROR$STOP('STRCIN_KPOINT')
       END IF
 !
 !     ==  PERFORM ACTIONS  ==============================================
@@ -3159,7 +3180,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
              CALL ATOMTYPELIST$ADD(SPNAME)
              CH8SVAR1=SPNAME(1:2)
              IF(CH8SVAR1(2:2).EQ.'_') CH8SVAR1(2:2)=' '
-!            CALL PERIODICTABLE$ATOMICNUMBER(CH8SVAR1(1:2),IZ)
              CALL PERIODICTABLE$GET(CH8SVAR1(1:2),'Z',IZ)
              Z=DBLE(IZ)
              CALL ATOMTYPELIST$SETZ(SPNAME,Z)
@@ -3171,7 +3191,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
              CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
              CH8SVAR1=' '
              WRITE(CH8SVAR1,FMT='(I8)')ISP
-             CH8SVAR1='ATOM'//ADJUSTL(CH8SVAR1)
+             ch8svar1=adjustl(ch8svar1)
+             CH8SVAR1='ATOM'//trim(CH8SVAR1(1:4))
              CALL ATOMTYPELIST$SETFILE(SPNAME,CH8SVAR1(1:5))
 !
              CALL FILEHANDLER$SETFILE(CH8SVAR1(1:5),.FALSE.,SETUPFILE)

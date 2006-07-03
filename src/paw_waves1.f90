@@ -2323,7 +2323,7 @@ END IF
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       complex(8)             :: cSVAR1,cSVAR2
       INTEGER(4)             :: NTASKS,THISTASK
-      logical(4),parameter   :: tprint=.true.
+      logical(4),parameter   :: tprint=.false.
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES$DENMAT')
                               CALL TIMING$CLOCKON('W:DENMAT')
@@ -2563,15 +2563,17 @@ print*,'lagr ',ib2,lagr(:,ib2)
             CFACI=LAGR(2*IB1-1,2*IB2)+CI*LAGR(2*IB1,2*IB2)
             CFAC1=0.5D0*(CFACR-CI*CFACI)
             CFAC2=0.5D0*(CFACR+CI*CFACI)
-            FUNC(:,:)=FUNC(:,:)+CFAC1*PROPSI(:,IB2,:) &
-     &                         +CFAC2*conjg(PROPSI(:,IB2,:))
+            do idim=1,ndim
+              FUNC(:,idim)=FUNC(:,idim)+CFAC1*PROPSI(idim,IB2,:) &
+     &                         +CFAC2*conjg(PROPSI(idim,IB2,:))
+            enddo
           ENDDO
           do idim2=1,ndim
             do idim1=1,ndim
               do lmn2=1,lmnx
                 do lmn1=1,lmnx
                   EDENMAT1(LMN1,LMN2,IDIM1,IDIM2)=EDENMAT1(LMN1,LMN2,IDIM1,IDIM2) &
-     &                              +conjg(PROPSI(IDIM1,IB1,LMN1))*FUNC(IDIM2,LMN2)
+     &                              +conjg(PROPSI(IDIM1,IB1,LMN1))*FUNC(LMN2,idim2)
                 ENDDO
               ENDDO
             ENDDO

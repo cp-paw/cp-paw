@@ -2,6 +2,10 @@
 !     ..................................................................
       SUBROUTINE KPOINTS_NKDIV(RBAS,RMAX,NKDIV)
 !     ******************************************************************
+!     **  calculates the division of the reciprocal unit cell         **
+!     **  consistent with a radius rmax in real space.                **
+!     **  the k-point grid is consistent with a supercell with        **
+!     **  the longest diameter equal to rmax. (check this)            **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE

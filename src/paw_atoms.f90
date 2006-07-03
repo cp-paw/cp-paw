@@ -1,7 +1,6 @@
-!
-!....................................................................... 
+!.................................................................... 
 MODULE ATOMS_MODULE
-!***********************************************************************
+!*****e******************************************************************
 !**                                                                   **
 !**  NAME: ATOMS                                                      **
 !**                                                                   **
@@ -16,6 +15,14 @@ MODULE ATOMS_MODULE
 !**  REMARKS:                                                         **
 !**    FOR HISTORICAL REASONS, PART OF THIS OBJECT IS NAMED ATOMLIST  **
 !**                                                                   **
+!**  STATEOFTHIS RUNS THROUGH THE FOLLOWING LIFE CYCLE:               **
+!**    'NOT INITIALIZED'                                              **
+!**    'INITIALIZED'                                                  **
+!**    'PROPAGATED WITHOUT CONSTRAINTS'                               **
+!**    'PROPAGATED WITH CONSTRAINTS'                                  **
+!**    'SWITCHED'                                                     **
+!**    NEXT: 'PROPAGATED WITHOUT CONSTRAINTS'                         **
+!**                                                                   **
 !******************PETER E. BLOECHL, IBM RESEARCH LABORATORY (1996)*****
 REAL(8)          :: DELT=0.D0      ! TIME STEP
 REAL(8)          :: AMPRE=0.D0     ! TARGET TEMPERATURE FOR RANDOMIZATION
@@ -26,6 +33,10 @@ LOGICAL(4)       :: TRANDOMIZE=.FALSE.  ! RANDOMIZE INITIAL VELOCITIES
 LOGICAL(4)       :: START=.FALSE.  ! RANDOMIZE INITIAL VELOCITIES
 REAL(8)          :: ANNEE=0.D0
 LOGICAL(4)       :: TCONSTRAINTREFERENCE=.FALSE.
+LOGICAL(4)       :: TNONEGATIVEFRICTION=.FALSE. ! REMOVES NEGATIVE FRICTIONS
+                                                ! DO NOT USE WITH THERMOSTATS
+LOGICAL(4)       :: TOPTFRIC=.FALSE. ! USE OPTIMUM FRICTION
+                                     ! OVERWRITES FRICTION OF THERMOSTAT AND AUTOPILOT
 INTEGER(4)       :: NAT=0
 CHARACTER(32),ALLOCATABLE :: NAME(:)
 REAL(8)      ,ALLOCATABLE :: R0(:,:)
@@ -35,12 +46,19 @@ REAL(8)      ,ALLOCATABLE :: FORCE(:,:)
 REAL(8)      ,ALLOCATABLE :: RMASS(:)
 REAL(8)      ,ALLOCATABLE :: PSG2(:)
 REAL(8)      ,ALLOCATABLE :: PSG4(:)
-!REAL(8)     ,ALLOCATABLE :: REDUCEDMASS(:)
 INTEGER(4)   ,ALLOCATABLE :: ISPECIES(:)
 REAL(8)      ,ALLOCATABLE :: Z(:)
 REAL(8)      ,ALLOCATABLE :: ZV(:)
 REAL(8)      ,ALLOCATABLE :: CHARGE(:)
 REAL(8)                   :: CELLKIN(3,3) ! SUM M*RDOT_I*RDOT_J
+CHARACTER(128)            :: STATEOFTHIS='NOT INITIALIZED'
+! the following is required to estimate the optimum frictions on the atoms
+real(8)                   :: aopt1av       ! aopt=sqrt(aopt1av/aopt2av)
+real(8)                   :: aopt2av
+real(8)                   :: mixaopt=0.3d0 ! mixaopt=1: no floating average
+real(8)      ,allocatable :: annervec0(:)
+real(8)      ,allocatable :: annervecm(:)
+real(8)      ,allocatable :: r2m(:,:)
 END MODULE ATOMS_MODULE
 !
 !     .................................................................. 
@@ -60,6 +78,8 @@ END MODULE ATOMS_MODULE
         ANNER=VAL_
       ELSE IF(ID_.EQ.'ANNEE') THEN
         ANNEE=VAL_
+      ELSE IF(ID_.EQ.'MIXAOPT') THEN
+        MIXAOPT=VAL_
       ELSE
         CALL ERROR$MSG('ID_ NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID_',ID_)
@@ -108,6 +128,10 @@ END MODULE ATOMS_MODULE
         TDYN=VAL_
       ELSE IF(ID_.EQ.'START') THEN
         START=VAL_
+      ELSE IF(ID_.EQ.'USEOPTFRIC') THEN
+        TOPTFRIC=VAL_
+      ELSE IF(ID_.EQ.'NONEGATIVEFRICTION') THEN
+        TNONEGATIVEFRICTION=VAL_
       ELSE
         CALL ERROR$MSG('ID_ NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID_',ID_)
@@ -167,6 +191,12 @@ END MODULE ATOMS_MODULE
         END IF
         IF(ANNER.NE.0.D0) THEN
           CALL REPORT$R8VAL(NFIL,'FRICTION',ANNER,' ')
+        END IF
+        IF(TNONEGATIVEFRICTION) THEN
+          CALL REPORT$STRING(NFIL,'NEGATIVE FRICTIONS REMOVED')
+        END IF
+        IF(TOPTFRIC) THEN
+          CALL REPORT$STRING(NFIL,'OPTIMUM FRICTION USED')
         END IF
       END IF
       RETURN
@@ -262,7 +292,7 @@ END MODULE ATOMS_MODULE
       CALL ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
 !
 !     ==================================================================
-!     ==   CHECK IF EFFECTIVE MASS IS NEGATIVE                        ==
+!     ==   CHECK IF REDUCED MASS IS NEGATIVE                          ==
 !     ==================================================================
       TERR=.FALSE.
       DO IAT=1,NAT
@@ -312,6 +342,7 @@ END MODULE ATOMS_MODULE
           CALL ERROR$STOP('ATOMS$INITIALIZE')
         END IF
       END IF
+      STATEOFTHIS='INITIALIZED'
                                CALL TRACE$POP
       RETURN
       END
@@ -338,11 +369,26 @@ END MODULE ATOMS_MODULE
       REAL(8)        :: STRESS(3,3)
       REAL(8)        :: CELLFRIC(3,3)
       REAL(8)        :: RBAS(3,3)
+      REAL(8)        :: SVAR
 !     ******************************************************************
                               CALL TRACE$PUSH('ATOMS$PROPAGATE')
 DO IAT=1,NAT
   WRITE(*,FMT='("FORCE ",I3,3F15.10)')IAT,FORCE(:,IAT)
 ENDDO
+! 
+!     ==================================================================
+!     == CONTROL AND CHANGE STATE OF THIS                             ==
+!     ==================================================================
+      IF(STATEOFTHIS.NE.'INITIALIZED'.AND.STATEOFTHIS.NE.'SWITCHED') THEN
+        CALL ERROR$MSG('ATOMS OBJECT IS IN THE INCORRECT STATE')
+        CALL ERROR$MSG('FOR APLICATION OF CONSTRAINTS')
+        CALL ERROR$STOP('ATOMS$PROPAGATE')
+      END IF
+      STATEOFTHIS='PROPAGATED WITHOUT CONSTRAINTS'
+! 
+!     ==================================================================
+!     == FREEZE ATOMIC POSITIONS                                      ==
+!     ==================================================================
       IF(.NOT.TDYN) THEN
         RP(:,:)=R0(:,:)
         RM(:,:)=R0(:,:)
@@ -359,6 +405,33 @@ ENDDO
         REDRMASS(IAT)=RMASS(IAT)-EFFEMASS(IAT)
       ENDDO
 ! 
+!     ================================================================
+!     ==  DETERMINE FRICTION VECTOR                                 ==
+!     ================================================================
+      if(.not.allocated(annervec0))allocate(annervec0(nat))
+      IF(TOPTFRIC) THEN
+        IF(AOPT2AV.GT.0.D0) THEN
+          SVAR=SQRT(AOPT1AV/AOPT2AV)
+        ELSE
+          SVAR=anner
+        END IF
+        anner=svar
+PRINT*,'ATOMS: OPT.FRICTION ',svar,AOPT1AV,AOPT2AV,MIXAOPT
+!       == CORRECT FRICTION FOR ELECTRON FRICTION  =====================
+        ANNERVEC0(:)=(RMASS(:)*svar-EFFEMASS(:)*ANNEE)/REDRMASS(:)
+      ELSE
+!        == CORRECT FRICTION FOR ELECTRON FRICTION  =====================
+        ANNERvec0(:)=(RMASS(:)*ANNER-EFFEMASS(:)*ANNEE)/redrmass(:)
+      end if
+!
+!     == ENSURE THAT THE FRICTION IS ALWAYS POSITIVE. THE COMPENSATION ==
+!     == FOR THE DRAG BY WAVE FUNCTION CLOUD CAN LEAD TO NEGATIVE FRICTION.
+!     == DO NOT USE THIS OPTION WITH A THERMOSTAT!!
+      if(tnonegativefriction) then
+        ANNERVEC0(:)=MAX(ANNERVEC0,0.D0)
+      end if
+print*,'atoms$propagate marke 1'
+! 
 !     ==================================================================
 !     == STOP ATOMIC MOTION
 !     ==================================================================
@@ -366,6 +439,7 @@ ENDDO
         RM(:,:)=R0(:,:)
         TSTOP=.FALSE.
       END IF
+print*,'atoms$propagate marke 2'
 !
 !     ==================================================================
 !     == RANDOMIZE VELOCITIES
@@ -376,15 +450,19 @@ PRINT*,'TRANDOMIZE ',TRANDOMIZE
         CALL MPE$BROADCAST('MONOMER',1,RM)
         TRANDOMIZE=.FALSE.
       END IF 
+print*,'atoms$propagate marke 3'
 ! 
 !     ==================================================================
 !     ==  SET REFERENCE STRUCTURE  FOR CONSTRAINTS                    ==
 !     ==================================================================
+print*,'TCONSTRAINTREFERENCE',TCONSTRAINTREFERENCE
       IF(.NOT.TCONSTRAINTREFERENCE) THEN
         CALL CELL$GETR8A('T(0)',9,RBAS)
         CALL CONSTRAINTS$SETREFERENCE(RBAS,NAT,R0,RM,REDRMASS,DELT)
+print*,'tconstraintreference is set'
         TCONSTRAINTREFERENCE=.TRUE.
       END IF
+print*,'atoms$propagate marke 4'
 ! 
 !     == PRECONDITIONING =============================================
 !     CALL SHADOW$PRECONDITION(NAT,RMASS,R0,FORCE)
@@ -399,7 +477,7 @@ CELLFRIC=0.D0
 TSTRESS=.FALSE.
 !     CALL CELL$GETL4('MOVE',TSTRESS)
 !     IF(TSTRESS) CALL CELL$GETR8A('FRICMAT',9,CELLFRIC)
-      CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
+      CALL ATOMS_PROPAGATE(NAT,DELT,redrmass,ANNERvec0 &
    &                      ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
 !
 !     ==================================================================
@@ -443,7 +521,21 @@ ENDDO
       REAL(8)        :: V(3)
       REAL(8)        :: RBAS(3,3)
 !     ******************************************************************
+! 
+!     ==================================================================
+!     == CONTROL AND CHANGE STATE OF THIS                             ==
+!     ==================================================================
+      IF(STATEOFTHIS.NE.'PROPAGATED WITHOUT CONSTRAINTS') then
+        CALL ERROR$MSG('ATOMS OBJECT IS IN THE INCORRECT STATE')
+        CALL ERROR$MSG('FOR APLICATION OF CONSTRAINTS')
+        CALL ERROR$STOP('ATOMS$CONSTRAINTS')
+      END IF
+      STATEOFTHIS='PROPAGATED WITH CONSTRAINTS'
                               CALL TRACE$PUSH('ATOMS$CONSTRAINTS')
+! 
+!     ==================================================================
+!     == return if atomic structure is static                         ==
+!     ==================================================================
       IF(.NOT.TDYN) THEN
         CALL TRACE$POP ;RETURN
       END IF
@@ -514,6 +606,7 @@ TSTRESS=.FALSE.
 WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(1,:)
 WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(2,:)
 WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
+!
                             CALL TRACE$POP
       RETURN
       END
@@ -597,6 +690,118 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       END
 !
 !     .................................................................. 
+      SUBROUTINE ATOMS$FORCECRITERION(FAV,FMAX)
+!     ******************************************************************
+!     **  CALCULATES THE ABSOLUTE VALUE OF THE FORCE                  **
+!     **                                                              **
+!     **  CALL AFTER CONSTRAINTS AND BEFORE SWITCH                    **
+!     ****************************************************************** 
+      USE ATOMS_MODULE
+      IMPLICIT NONE
+      REAL(8),INTENT(OUT) :: FAV
+      REAL(8),INTENT(OUT) :: FMAX
+      real(8)             :: f(3,nat)
+      INTEGER(4)          :: IAT
+      real(8)             :: svar
+      real(8)             :: mred  ! reduced mass
+      real(8)             :: a0    ! effective friction
+      real(8)             :: emass,emasscg2
+      real(8)             :: effemass(nat)
+!     ****************************************************************** 
+! 
+!     ==================================================================
+!     == CONTROL STATE OF THIS                                        ==
+!     ==================================================================
+      IF(STATEOFTHIS.NE.'PROPAGATED WITH CONSTRAINTS') then
+        CALL ERROR$MSG('ATOMS OBJECT IS IN THE INCORRECT STATE')
+        CALL ERROR$CHVAL('STATEOFTHIS',STATEOFTHIS)
+        CALL ERROR$STOP('ATOMS$FORCECRITERION')
+      END IF
+!
+!     == return for static calculation. forces are determined from trajectory
+      if(.not.tdyn) then
+        fav=huge(fav)
+        fmax=huge(fmax)
+        return
+      end if
+
+      IF(.NOT.ALLOCATED(ANNERVEC0)) THEN
+        CALL ERROR$MSG('ANNERVEC0 NOT YET ALLOCATED')
+        CALL ERROR$STOP('ATOMS$FORCECRITERION')
+      END IF
+! 
+!     ==================================================================
+!     == DETERMINE MASS OF WAVE FUNCTION CLOUD                        ==
+!     ==================================================================
+      CALL WAVES$GETR8('EMASS',EMASS)
+      CALL WAVES$GETR8('EMASSCG2',EMASSCG2)
+      CALL ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
+! 
+!     ==================================================================
+!     == DETERMINE MAXIMUM AND AVERAGE VALUE OF THE FORCE             ==
+!     ==================================================================
+      FAV=0.D0
+      FMAX=0.D0
+      DO IAT=1,NAT
+        MRED=RMASS(IAT)-EFFEMASS(IAT)
+        A0=ANNERVEC0(IAT)
+        F(:,:)=(1.d0+A0)*RP(:,:)-2.D0*R0(:,:)+(1.d0-A0)*RM(:,:)
+        F(:,IAT)=F(:,IAT)*mred
+        SVAR=DOT_PRODUCT(F(:,IAT),F(:,IAT))
+        FAV=FAV+SVAR
+        FMAX=MAX(FMAX,SVAR)
+      ENDDO
+      FAV=FAV/DELT**2
+      FMAX=FMAX/DELT**2
+      FAV=SQRT(FAV/REAL(NAT,KIND=8))
+      Fmax=SQRT(Fmax)
+      RETURN
+      END
+!
+!     .................................................................. 
+      SUBROUTINE ATOMS_optfriction(aopt1,aopt2,nat,rp,r0,rm,r2m &
+     &                     ,annerVEC0,ANNERVECM,rEDUCEDMass)
+!     ******************************************************************
+!     **  CALCULATES THE ABSOLUTE VALUE OF THE FORCE                  **
+!     **                                                              **
+!     **  CALL AFTER CONSTRAINTS AND BEFORE SWITCH                    **
+!     ****************************************************************** 
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(OUT):: aopt1  ! optimum friction =sqrt(aopt1/aopt2)
+      REAL(8)   ,INTENT(OUT):: aopt2  ! optimum friction =sqrt(aopt1/aopt2)
+      integer(4),intent(in) :: nat
+      real(8)   ,intent(in) :: rp(3,nat)  ! positions at next time step
+      real(8)   ,intent(in) :: r0(3,nat)  ! positions at current time step
+      real(8)   ,intent(in) :: rm(3,nat)  ! position at previous time step
+      real(8)   ,intent(in) :: r2m(3,nat) ! position two steps before
+      real(8)   ,intent(in) :: annerVEC0(NAT)  ! current friction 
+      real(8)   ,intent(in) :: annerVECM(NAT)  ! PREVIOUS friction 
+      real(8)   ,intent(in) :: rEDUCEDmass(nat) ! REDUCED mass 
+      INTEGER(4)            :: IAT
+      real(8)               :: asum,bsum
+      real(8)               :: a0 ! effective friction/current time step
+      real(8)               :: am ! effective friction/previous time step
+      real(8)               :: df(3),dx(3),mdx(3)
+!     ****************************************************************** 
+      ASUM=0.D0
+      BSUM=0.D0
+      DO IAT=1,NAT
+        A0=ANNERVEC0(IAT)
+        AM=ANNERVECM(IAT)
+        DF(:)=(1.D0+A0)*RP(:,IAT)-(3.D0+AM)*R0(:,IAT) &
+     &       +(3.D0-A0)*RM(:,IAT)-(1.D0-AM)*R2M(:,IAT)
+        DX(:)=(R0(:,IAT)-RM(:,IAT))
+        MDX(:)=REDUCEDMASS(IAT)*DX(:)
+        ASUM=ASUM+DOT_PRODUCT(DF,MDX)
+        BSUM=BSUM+DOT_PRODUCT(DX,MDX)
+      ENDDO
+      ASUM=ABS(ASUM)
+      AOPT1=asum
+      AOPT2=bsum
+      RETURN
+      END
+!
+!     .................................................................. 
       SUBROUTINE ATOMS$SWITCH()
 !     ******************************************************************
 !     **  SWITCH ATOMIC POSITIONS  R(+)->R(0)->R(M)                   **
@@ -607,7 +812,46 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       LOGICAL(4)  :: TSTRESS
       INTEGER(4)  :: IAT
       REAL(8)     :: DRPM(3)
+      REAL(8)     :: EFFEMASS(NAT)
+      REAL(8)     :: EMASS,EMASSCG2
+      REAL(8)     :: aopt1,aopt2
 !     ******************************************************************
+!
+!     ==================================================================
+!     == CONTROL STATE OF THIS                                        ==
+!     ==================================================================
+      IF(STATEOFTHIS.NE.'PROPAGATED WITH CONSTRAINTS') then
+        CALL ERROR$MSG('ATOMS OBJECT IS IN THE INCORRECT STATE')
+        CALL ERROR$CHVAL('STATEOFTHIS',STATEOFTHIS)
+        CALL ERROR$STOP('ATOMS$SWITCH')
+      END IF
+      STATEOFTHIS='SWITCHED'
+!
+!     ==================================================================
+!     == wrap up various stuff                                        ==
+!     ==================================================================
+      IF(ALLOCATED(R2M)) THEN
+        CALL WAVES$GETR8('EMASS',EMASS)
+        CALL WAVES$GETR8('EMASSCG2',EMASSCG2)
+        CALL ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
+        CALL ATOMS_OPTFRICTION(AOPT1,aopt2,NAT,RP,R0,RM,R2M &
+     &                     ,ANNERVEC0,ANNERVECM,RMASS-EFFEMASS)
+!
+!       == PERFORM FLOATING AVERAGE OF NUMERATOR AND DENOMINATOR  ======
+!       == OPTIMUM FRICTION FACTOR =SQRT(AOPT1AV/AOPT2AV)
+        AOPT1AV=MIXAOPT*AOPT1+(1.D0-MIXAOPT)*AOPT1AV
+        AOPT2AV=MIXAOPT*AOPT2+(1.D0-MIXAOPT)*AOPT2AV
+      ELSE 
+!       == OPTIMUM FRICTION IS IDENTICAL TO ACTUAL FRICTION.
+!       == NUMERATOR AND DENOMINATOR ARE SET TO SMALL VALUES SO THAT THEY 
+!       == ARE DOMINATED QUICKLY BY THE ACTUAL VALUES.
+        AOPT2av=1.d-9
+        AOPT1av=anner**2*aopt2av
+      END IF
+!
+!     ==================================================================
+!     == NOW PERFORM ACTUAL SWITCH                                    ==
+!     ==================================================================
       FORCE(:,:)=0.D0
       CALL QMMM$SWITCH
 !      CALL CONTINUUM$SWITCH(NAT,RP,R0) ! not needed for hms-continuum
@@ -623,9 +867,17 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
         ENDDO
       END IF
       IF(.NOT.TDYN) RETURN
+!
+!     ==================================================================
+!     == switch variables (also for optimum friction)                 ==
+!     ==================================================================
+      if(.not.allocated(r2m))allocate(r2m(3,nat))
+      if(.not.allocated(annervecm))allocate(annervecm(nat))
+      r2m(:,:)=rm(:,:)
       RM(:,:)=R0(:,:)
       R0(:,:)=RP(:,:)
       RP(:,:)=2.D0*R0(:,:)-RM(:,:)
+      annervecm(:)=annervec0(:)
       CALL CONSTRAINTS$SWITCH()
       RETURN
       END
@@ -748,8 +1000,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       end
 !
 !     ..................................................................
-      SUBROUTINE ATOMS_PROPAGATE(NAT,DT,ANNER,ANNEE &
-     &                 ,RMASS,EFFEMASS,FORCE,R0,RM,RP &
+      SUBROUTINE ATOMS_PROPAGATE(NAT,DT,RMASS,annervec,FORCE,R0,RM,RP &
      &                 ,TSTRESS,CELLFRIC,CELLKIN)
 !     ******************************************************************
 !     **                                                              **
@@ -764,11 +1015,9 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT           ! #(ATOMS)
-      REAL(8)   ,INTENT(IN) :: DT        ! TIME STEP
-      REAL(8)   ,INTENT(IN) :: ANNER         ! FRICTION ON THE ATOMS
-      REAL(8)   ,INTENT(IN) :: ANNEE         ! FRICTION ON THE WAVE FUNCTIONS
-      REAL(8)   ,INTENT(IN) :: RMASS(NAT)    ! BARE MASS OF THE NUCLEUS
-      REAL(8)   ,INTENT(IN) :: EFFEMASS(NAT) ! MASS OF TEH ELECTRONS
+      REAL(8)   ,INTENT(IN) :: DT            ! TIME STEP
+      REAL(8)   ,INTENT(IN) :: RMASS(NAT)    ! REDUCED MASS OF THE NUCLEUS
+      REAL(8)   ,INTENT(IN) :: ANNERVEC(NAT) ! FRICTION ON THE NUCLEI
       REAL(8)   ,INTENT(IN) :: R0(3,NAT)     ! R(0)
       REAL(8)   ,INTENT(IN) :: RM(3,NAT)     ! R(-)
       REAL(8)   ,INTENT(OUT):: RP(3,NAT)     ! R(+)
@@ -786,14 +1035,10 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       CELLKIN=0.D0
       IF(.NOT.TSTRESS) THEN
         DO IAT=1,NAT
-!         == CORRECT MASS FOR EFFECTIVE MASS OF THE ELECTRONS ============
-          RMASS0=RMASS(IAT)-EFFEMASS(IAT)
-!         == CORRECT FRICTION FOR ELECTRON FRICTION  =====================
-          ANNER1=(RMASS(IAT)*ANNER-EFFEMASS(IAT)*ANNEE)/RMASS0
 !         ==  PROPAGATE ==================================================
-          SVAR1=2.D0/(1.D0+ANNER1)
+          SVAR1=2.D0/(1.D0+ANNERVEC(IAT))
           SVAR2=1.D0-SVAR1
-          SVAR3=DT**2/RMASS0/(1.D0+ANNER1)
+          SVAR3=DT**2/RMASS(IAT)/(1.D0+ANNERVEC(IAT))
           DO I=1,3
             RP(I,IAT)=SVAR1*R0(I,IAT)+SVAR2*RM(I,IAT)+SVAR3*FORCE(I,IAT)
             V(I)=(RP(I,IAT)-RM(I,IAT))/(2.D0*DT)
@@ -806,29 +1051,24 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
         ENDDO
       ELSE 
         DO IAT=1,NAT
-!         == CORRECT MASS FOR EFFECTIVE MASS OF THE ELECTRONS ============
-          RMASS0=RMASS(IAT)-EFFEMASS(IAT)
-!         == CORRECT FRICTION FOR ELECTRON FRICTION  =====================
-          ANNER1=(RMASS(IAT)*ANNER-EFFEMASS(IAT)*ANNEE)/RMASS0
 !         ==  PROPAGATE ==================================================
           DO I=1,3 
             DO J=1,3
               MATP(I,J)=CELLFRIC(I,J)
               MATM(I,J)=-CELLFRIC(I,J)
             ENDDO
-            MATP(I,I)=1.D0+ANNER1+MATP(I,I)
-            MATM(I,I)=1.D0-ANNER1+MATM(I,I)
+            MATP(I,I)=1.D0+ANNERvec(iat)+MATP(I,I)
+            MATM(I,I)=1.D0-ANNERvec(iat)+MATM(I,I)
           ENDDO
           CALL LIB$INVERTR8(3,MATP,MATPINV)
-!CALL INVERT(3,MATP,MATPINV)
           RP(:,IAT)=MATMUL(MATPINV,2.D0*R0(:,IAT)-MATMUL(MATM,RM(:,IAT)) &
-     &                                  +FORCE(:,IAT)*DT**2/RMASS0)
+     &                                  +FORCE(:,IAT)*DT**2/RMASS(iat))
           DO I=1,3
             V(I)=(RP(I,IAT)-RM(I,IAT))/(2.D0*DT)
           ENDDO
           DO I=1,3
             DO J=1,3
-              CELLKIN(I,J)=CELLKIN(I,J)+RMASS0*V(I)*V(J)
+              CELLKIN(I,J)=CELLKIN(I,J)+RMASS(iat)*V(I)*V(J)
             ENDDO
           ENDDO
         ENDDO

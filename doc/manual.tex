@@ -1082,12 +1082,14 @@ obtained with a plane wave cutoff slightly higher than EPWBUCKET.}
 \mbax{\key{SAFEORTHO}
 \vdescr{chooses the way the orthogonality constraints for the wave
   functions is enforced. If SAFEORTHO=T is selected the traditional
-  way is used, which results in a strictly  energy-conserving
+  way is used, which results in a strictly energy-conserving
   dynamics. If SAFEORTHO=F a new method is used which converges at
   eigenstates of the Hamiltonian, but is energy conserving only if the
   states are sufficiently close to eigenstates. This option allows to
   calculate excited states or to use the Mermin functional in order to
-  introduce Fermi occupation numbers.}
+  introduce Fermi occupation numbers. It must be used in connection
+  with dynamical occupations such as the Mermin functional and the
+  tetrahedron method for Brillouin-zone integration.}
 \vformat{logical}
 \vrules{optional}
 \vdefault{T}}
@@ -1321,6 +1323,35 @@ will allow the wave functions to recover.}
 \vformat{real}
 \vrules{optional, not used if ``AUTO'' is selected.}
 \vdefault{0.0}}
+
+\mbax{\key{NONEGEFRIC}
+\vdescr{\textbf{Experimental option!}
+Avoids negative friction on the atoms. It is recommended for
+structure optimizations. It must not be used in connection with
+thermostats.  The friction can become negative via the compensation
+for the drag by the wave function cloud. A friction on the wave
+functions implicitely causes an effective friction on the atoms.  This
+effective friction is compensated by adding a negative friction on the
+atoms. In this case the total friction on some atoms can become
+negative so that the atoms cannot come to rest.
+[Future developents shall automatically exclude simultaneous use
+together with thermostats.]} 
+\vformat{logical} 
+\vrules{optional}
+\vdefault{false}}
+
+\mbax{\key{USEOPTFRIC}
+\vdescr{\textbf{Experimental option!}  Estimates the optimum friction
+for optimization of the atomic structure.  as
+$$a_{opt}=\Delta\sqrt{\frac{\dot{\vec{R}}\dot{\vec{F}}}
+{\dot{\vec{R}}\mathbf{M}\dot{\vec{R}}}}$$ In addition a floating
+average of this friction value is used. The formula is derived from a
+projection os the Lagrangian onto a one-dimensional motion and the
+assumption of a harmonic oscillator. The force constant can then be
+estimated from the change of the forces between two time steps.}
+\vformat{logical}
+\vrules{optional} 
+\vdefault{false}}
 
 %----------------------------------------------------------------------
 \block{!CONTROL!RDYN!AUTO}

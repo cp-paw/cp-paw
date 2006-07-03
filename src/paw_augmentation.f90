@@ -276,7 +276,6 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)                 :: VQLM1(LMRX)
       REAL(8)                 :: QLM(LMRX)
       REAL(8)                 :: PI
-      LOGICAL(4),PARAMETER    :: TSOFTCORE=.TRUE.
       REAL(8)   ,ALLOCATABLE  :: AEHPOT(:,:)
       REAL(8)   ,ALLOCATABLE  :: AEXCPOT(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: PSHPOT(:,:)

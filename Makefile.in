@@ -294,6 +294,7 @@ OBJECTS3 = \
            ${OBJDIR}/paw_setupread.o \
            ${OBJDIR}/paw_potential.o \
            ${OBJDIR}/paw_occupations.o \
+           ${OBJDIR}/paw_brillouin.o \
            ${OBJDIR}/paw_pairpotential.o \
            ${OBJDIR}/paw_graphics.o \
            ${OBJDIR}/paw_waves1.o \

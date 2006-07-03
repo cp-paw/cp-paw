@@ -80,7 +80,10 @@ REAL(8)     :: SPINPOT=0.D0    ! MAGNETIC FIELD
 REAL(8)     :: TEMP=0.D0       ! TEMPERATURE
 REAL(8)     :: ANNEX=0.D0      ! FRICTION 
 REAL(8)     :: DELTAT=0.D0     ! TIME STEP
-REAL(8)   ,ALLOCATABLE :: XM(:,:,:)       ! DYNAMICAL VARIABLES FRO OCCUPATIONS
+CHARACTER(32) :: BZITYPE='MP'  ! TYPE OF BRILLOUIN-ZONE INTEGRATION METHOD
+                               ! CAN BE 'MP' FOR MONCKHORST-PACK SAMPLING
+                               !     OR 'TETRA+' FOR THE IMPROVED TETRAHEDRON METHOD
+REAL(8)   ,ALLOCATABLE :: XM(:,:,:)     ! DYNAMICAL VARIABLES FRO OCCUPATIONS
 REAL(8)   ,ALLOCATABLE :: X0(:,:,:)
 REAL(8)   ,ALLOCATABLE :: XP(:,:,:)
 LOGICAL(4)             :: TEPSILON=.FALSE.
@@ -411,23 +414,23 @@ END MODULE DYNOCC_MODULE
        RETURN
        END
 !      .................................................................
-       SUBROUTINE DYNOCC$SETL4(ID_,VAL_)
+       SUBROUTINE DYNOCC$SETL4(ID_,VAL)
 !      *****************************************************************
 !      **  SET LOGICAL PARAMETERS                                     **
 !      *****************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
-       LOGICAL(4)  ,INTENT(IN) :: VAL_
+       LOGICAL(4)  ,INTENT(IN) :: VAL
 !      *****************************************************************
        IF(ID_.EQ.'DYN') THEN
-         TDYN=VAL_
+         TDYN=VAL
        ELSE IF(ID_.EQ.'FIXS') THEN
-         TFIXSPIN=VAL_
+         TFIXSPIN=VAL
        ELSE IF(ID_.EQ.'FIXQ') THEN
-         TFIXTOT=VAL_
+         TFIXTOT=VAL
        ELSE IF(ID_.EQ.'STOP') THEN
-         TSTOP=VAL_
+         TSTOP=VAL
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
@@ -437,7 +440,7 @@ END MODULE DYNOCC_MODULE
        RETURN
        END
 !      .................................................................
-       SUBROUTINE DYNOCC$SETI4A(ID_,LEN_,VAL_)
+       SUBROUTINE DYNOCC$SETI4A(ID_,LEN_,VAL)
 !      *****************************************************************
 !      **  SET LOGICAL PARAMETERS                                     **
 !      *****************************************************************
@@ -445,7 +448,7 @@ END MODULE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
        INTEGER(4)  ,INTENT(IN) :: LEN_
-       INTEGER(4)  ,INTENT(IN) :: VAL_(LEN_)
+       INTEGER(4)  ,INTENT(IN) :: VAL(LEN_)
 !      *****************************************************************
        IF(ID_.EQ.'+-+-+-+-') THEN
        ELSE
@@ -457,21 +460,21 @@ END MODULE DYNOCC_MODULE
        RETURN
        END
 !      .................................................................
-       SUBROUTINE DYNOCC$SETI4(ID_,VAL_)
+       SUBROUTINE DYNOCC$SETI4(ID_,VAL)
 !      *****************************************************************
 !      **  SET LOGICAL PARAMETERS                                     **
 !      *****************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
-       INTEGER(4)  ,INTENT(IN) :: VAL_
+       INTEGER(4)  ,INTENT(IN) :: VAL
 !      *****************************************************************
        IF(ID_.EQ.'NKPT') THEN
          IF(NKPT.NE.0) THEN
            CALL ERROR$MSG('NKPT IS ALREADY SET')
            CALL ERROR$STOP('DYNOCC$SETI4')
          END IF
-         NKPT=VAL_
+         NKPT=VAL
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
@@ -482,7 +485,7 @@ END MODULE DYNOCC_MODULE
        END
 !
 !      .................................................................
-       SUBROUTINE DYNOCC$SETR8A(ID_,LEN_,DATA_)
+       SUBROUTINE DYNOCC$SETR8A(ID_,LEN_,VAL)
 !      *****************************************************************
 !      **  SET REAL(8) ARRAY                                          **
 !      *****************************************************************
@@ -490,7 +493,7 @@ END MODULE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
        INTEGER(4)  ,INTENT(IN) :: LEN_
-       REAL(8)     ,INTENT(IN) :: DATA_(LEN_)
+       REAL(8)     ,INTENT(IN) :: VAL(LEN_)
        REAL(8)                 :: SVAR
 !      *****************************************************************
        IF(ID_.EQ.'XK') THEN
@@ -502,7 +505,7 @@ END MODULE DYNOCC_MODULE
            CALL ERROR$STOP('DYNOCC$SETR8A')
          END IF
          IF(.NOT.ALLOCATED(XK))ALLOCATE(XK(3,NKPT))
-         XK(:,:)=RESHAPE(DATA_,(/3,NKPT/))
+         XK(:,:)=RESHAPE(VAL,(/3,NKPT/))
        ELSE IF(ID_.EQ.'WKPT') THEN
          IF(NKPT.EQ.0) THEN
            NKPT=LEN_
@@ -512,7 +515,7 @@ END MODULE DYNOCC_MODULE
            CALL ERROR$STOP('DYNOCC$SETR8A')
          END IF
          IF(.NOT.ALLOCATED(WKPT))ALLOCATE(WKPT(NKPT))
-         WKPT(:)=DATA_(:)
+         WKPT(:)=VAL(:)
 !PB031019START
          IF(ABS(SUM(WKPT)-1.D0).GT.1.D-6) THEN
            CALL ERROR$MSG('OCCUPATIONS DO NOT SUM UP TO ONE!')
@@ -528,7 +531,7 @@ END MODULE DYNOCC_MODULE
            CALL ERROR$I4VAL('NB*NKPT*NSPIN',NB*NKPT*NSPIN)
            CALL ERROR$STOP('DYNOCC$SETR8A')
          END IF
-         EPSILON=RESHAPE(DATA_,(/NB,NKPT,NSPIN/))
+         EPSILON=RESHAPE(VAL,(/NB,NKPT,NSPIN/))
          TEPSILON=.TRUE.
        ELSE IF(ID_.EQ.'M<PSIDOT|PSIDOT>') THEN
          IF(LEN_.NE.NB*NKPT*NSPIN) THEN
@@ -546,7 +549,7 @@ END MODULE DYNOCC_MODULE
            MPSIDOT2(:,:,:)=0.5D0*MPSIDOT2(:,:,:)
            SVAR=0.5D0
          END IF
-         MPSIDOT2=MPSIDOT2+SVAR*RESHAPE(DATA_,(/NB,NKPT,NSPIN/))
+         MPSIDOT2=MPSIDOT2+SVAR*RESHAPE(VAL,(/NB,NKPT,NSPIN/))
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
@@ -556,21 +559,37 @@ END MODULE DYNOCC_MODULE
        END
 !
 !      .................................................................
-       SUBROUTINE DYNOCC$SETCH(ID_,DATA_)
+       SUBROUTINE DYNOCC$SETCH(ID_,VAL)
 !      *****************************************************************
 !      **  SET CHARACTER                                              **
 !      *****************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
-       CHARACTER(*),INTENT(IN) :: DATA_
+       CHARACTER(*),INTENT(IN) :: VAL
 !      *****************************************************************
        IF(ID_.EQ.'STARTTYPE') THEN
-         STARTTYPE=DATA_
+         STARTTYPE=VAL
          IF(STARTTYPE.NE.'N'.AND.STARTTYPE.NE.'E'.AND.STARTTYPE.NE.'X') THEN
            CALL ERROR$MSG('ILLEGAL VALUE OF STARTTYPE')
            CALL ERROR$MSG('ALLOWED VALUES ARE "N", "E", AND "X"')
+           CALL ERROR$CHVAL('ID_',ID_)
+           CALL ERROR$STOP('DYNOCC$SETCH')
          END IF
+       ELSE IF(ID_.EQ.'BZINTEGRATION') THEN
+         IF(VAL.NE.'MP'.AND.VAL.NE.'TETRA+') THEN
+           CALL ERROR$MSG('ILLEGAL VALUE OF BZINTEGRATION')
+           CALL ERROR$MSG('ALLOWED VALUES ARE "MP", "TETRA+"')
+           CALL ERROR$CHVAL('ID_',ID_)
+           CALL ERROR$STOP('DYNOCC$SETCH')
+         END IF
+         BZITYPE=VAL
+IF(BZITYPE.EQ.'TETRA+') THEN
+ CALL BRILLOUIN$TESTING
+ CALL ERROR$MSG('FORCED STOP AFTER TESTING BRILLOUIN')
+ CALL ERROR$MSG('OPTION NOT IMPLEMENTED')
+ CALL ERROR$STOP('DYNOCC$SETCH')
+END IF
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
@@ -580,18 +599,18 @@ END MODULE DYNOCC_MODULE
        END
 !
 !      .................................................................
-       SUBROUTINE DYNOCC$SETR8(ID_,DATA_)
+       SUBROUTINE DYNOCC$SETR8(ID_,VAL)
 !      *****************************************************************
 !      *****************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE 
        CHARACTER(*),INTENT(IN) :: ID_
-       REAL(8)     ,INTENT(IN) :: DATA_
+       REAL(8)     ,INTENT(IN) :: VAL
        INTEGER(4)              :: IB,ISPIN,IKPT,IND
        REAL(8)                 :: SVAR
 !      *****************************************************************
        IF(ID_.EQ.'SUMOFZ') THEN
-         SUMOFZ=DATA_
+         SUMOFZ=VAL
          TOTCHA=SUMOFZ+CHARGE
          RESET=.TRUE.
        ELSE IF(ID_.EQ.'TOTCHA') THEN
@@ -599,32 +618,32 @@ END MODULE DYNOCC_MODULE
            CALL ERROR$MSG('SUMOFZ MUST BE SET BEFORE TOTCHA')
            CALL ERROR$STOP('DYNOCC$SETR8')
          END IF
-         CHARGE=DATA_
+         CHARGE=VAL
          TOTCHA=SUMOFZ+CHARGE
          RESET=.TRUE.
        ELSE IF(ID_.EQ.'SPIN') THEN
-         SPINCHA=DATA_
+         SPINCHA=VAL
          RESET=.TRUE.
          PRINT*,'DYNOCC$SETR8: SPIN HAS BEEN SET TO ',SPINCHA
        ELSE IF(ID_.EQ.'FMAX') THEN
-         FMAX=DATA_
+         FMAX=VAL
          RESET=.TRUE.
        ELSE IF(ID_.EQ.'EFERMI') THEN
-         TOTPOT=DATA_
+         TOTPOT=VAL
          RESET=.TRUE.
        ELSE IF(ID_.EQ.'MAGNETICFIELD') THEN
-         SPINPOT=DATA_
+         SPINPOT=VAL
          RESET=.TRUE.
        ELSE IF(ID_.EQ.'MASS') THEN
-         MX=DATA_
+         MX=VAL
          RESET=.TRUE.
        ELSE IF(ID_.EQ.'FRICTION') THEN
-         ANNEX=DATA_
+         ANNEX=VAL
          RESET=.TRUE.
        ELSE IF(ID_.EQ.'TIMESTEP') THEN
-         DELTAT=DATA_
+         DELTAT=VAL
        ELSE IF(ID_.EQ.'TEMP') THEN
-         TEMP=DATA_
+         TEMP=VAL
          RESET=.TRUE.
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -634,17 +653,17 @@ END MODULE DYNOCC_MODULE
        RETURN
        END
 !      .................................................................
-       SUBROUTINE DYNOCC$GETL4(ID_,VAL_)
+       SUBROUTINE DYNOCC$GETL4(ID_,VAL)
 !      *****************************************************************
 !      **  SET LOGICAL PARAMETERS                                     **
 !      *****************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
-       LOGICAL(4)  ,INTENT(OUT):: VAL_
+       LOGICAL(4)  ,INTENT(OUT):: VAL
 !      *****************************************************************
        IF(ID_.EQ.'DYN') THEN
-         VAL_=TDYN
+         VAL=TDYN
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
@@ -653,21 +672,21 @@ END MODULE DYNOCC_MODULE
        RETURN
        END
 !      .................................................................
-       SUBROUTINE DYNOCC$GETI4(ID_,VAL_)
+       SUBROUTINE DYNOCC$GETI4(ID_,VAL)
 !      *****************************************************************
 !      **  SET INTEGER PARAMETERS                                     **
 !      *****************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
-       INTEGER(4)  ,INTENT(OUT):: VAL_
+       INTEGER(4)  ,INTENT(OUT):: VAL
 !      *****************************************************************
        IF(ID_.EQ.'NKPT') THEN
-         VAL_=NKPT
+         VAL=NKPT
        ELSE IF(ID_.EQ.'NSPIN') THEN
-         VAL_=NSPIN
+         VAL=NSPIN
        ELSE IF(ID_.EQ.'NB') THEN
-         VAL_=NB
+         VAL=NB
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
@@ -676,7 +695,7 @@ END MODULE DYNOCC_MODULE
        RETURN
        END
 !      .................................................................
-       SUBROUTINE DYNOCC$GETI4A(ID_,LEN_,VAL_)
+       SUBROUTINE DYNOCC$GETI4A(ID_,LEN_,VAL)
 !      *****************************************************************
 !      **  SET INTEGER PARAMETERS                                     **
 !      *****************************************************************
@@ -684,10 +703,10 @@ END MODULE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
        INTEGER(4)  ,INTENT(IN)::  LEN_
-       INTEGER(4)  ,INTENT(OUT):: VAL_(LEN_)
+       INTEGER(4)  ,INTENT(OUT):: VAL(LEN_)
 !      *****************************************************************
        IF(ID_.EQ.'') THEN
-         VAL_(:)=0
+         VAL(:)=0
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
@@ -697,22 +716,22 @@ END MODULE DYNOCC_MODULE
        END
 !
 !      .................................................................
-       SUBROUTINE DYNOCC$GETR8(ID_,DATA_)
+       SUBROUTINE DYNOCC$GETR8(ID_,VAL)
 !      *****************************************************************
 !      *****************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID_
-       REAL(8)     ,INTENT(OUT):: DATA_
+       REAL(8)     ,INTENT(OUT):: VAL
        REAL(8)                 :: SPEED,SVAR,DSVAR,SUM
        INTEGER(4)              :: IB,IKPT,ISPIN,IND
 !      *****************************************************************
        IF(ID_.EQ.'SPIN') THEN
-         DATA_=SPINCHA    
+         VAL=SPINCHA    
        ELSE IF(ID_.EQ.'TOTCHA') THEN
-         DATA_=TOTCHA-SUMOFZ
+         VAL=TOTCHA-SUMOFZ
        ELSE IF(ID_.EQ.'FMAX') THEN
-         DATA_=FMAX
+         VAL=FMAX
        ELSE IF(ID_.EQ.'EKIN') THEN
          SVAR=0.D0
          DO ISPIN=1,NSPIN
@@ -723,8 +742,8 @@ END MODULE DYNOCC_MODULE
              ENDDO
            ENDDO
          ENDDO
-         DATA_=0.5D0*MX*SVAR*FMAX
-         IF(.NOT.TDYN) DATA_=0.D0
+         VAL=0.5D0*MX*SVAR*FMAX
+         IF(.NOT.TDYN) VAL=0.D0
        ELSE IF(ID_.EQ.'HEAT'.OR.ID_.EQ.'EPOT') THEN
 !        == REMARK: THE KEYWORD 'HEAT' SHOULD NOT BE USED ANY MORE
 !        == ENERGY OF RESERVOIRS: -T*S-MU*N
@@ -737,7 +756,7 @@ END MODULE DYNOCC_MODULE
              ENDDO
            ENDDO
          ENDDO
-         DATA_=TEMP*SUM*FMAX-TOTPOT*(TOTCHA-SUMOFZ)
+         VAL=TEMP*SUM*FMAX-TOTPOT*(TOTCHA-SUMOFZ)
 !        == THE CHEMICAL POTENTIAL FOR SPIN DIRECTION ISPIN IS
 !        == TOTPOT-DBLE(3-2*ISPIN)*SPINPOT
          DO ISPIN=1,NSPIN
@@ -749,14 +768,14 @@ END MODULE DYNOCC_MODULE
              ENDDO
            ENDDO        
            IF(.NOT.TFIXTOT) THEN
-             DATA_=DATA_-TOTPOT*(SUM-SUMOFZ)
+             VAL=VAL-TOTPOT*(SUM-SUMOFZ)
            END IF
            IF(.NOT.TFIXSPIN) THEN
-             DATA_=DATA_-DBLE(3-2*ISPIN)*SPINPOT*(SUM-SUMOFZ)
+             VAL=VAL-DBLE(3-2*ISPIN)*SPINPOT*(SUM-SUMOFZ)
            END IF
          ENDDO
        ELSE IF(ID_.EQ.'TEMP') THEN
-         DATA_=TEMP
+         VAL=TEMP
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
@@ -855,7 +874,7 @@ END MODULE DYNOCC_MODULE
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(TNEW) THEN
         IF(THISTASK.EQ.1) THEN
-          CALL restart$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
+          CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
           WRITE(NFIL)NB,NKPT,NSPIN
           WRITE(NFIL)X0(:,:,:)
           WRITE(NFIL)XM(:,:,:)
@@ -863,7 +882,7 @@ END MODULE DYNOCC_MODULE
         END IF
       ELSE
         IF(THISTASK.EQ.1) THEN
-          CALL restart$WRITESEPARATOR(OLDSEPARATOR,NFIL,NFILO,TCHK)
+          CALL RESTART$WRITESEPARATOR(OLDSEPARATOR,NFIL,NFILO,TCHK)
           WRITE(NFIL)NB,NKPT,NSPIN
           WRITE(NFIL)X0(:,:,:)
           WRITE(NFIL)XM(:,:,:)
@@ -1382,7 +1401,7 @@ INTEGER(4) :: COUNT = 0
 !      ==  REMARK:  THE FACTOR FMAX IS NOT USED BECAUSE THE SAME TERM ==
 !      ==         APPEARS ALSO IN THE KINETIC ENERGY                  ==
 !      =================================================================
-1000 CONTINUE
+!1000 CONTINUE
        DO ISPIN=1,NSPIN 
          SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
@@ -1956,7 +1975,7 @@ CONTAINS
 END MODULE OCCUPATION_MODULE
 !
 !     ..................................................................
-      SUBROUTINE OCCUPATION$SET(STRING_,NBYTE_,VAL_)
+      SUBROUTINE OCCUPATION$SET(STRING_,NBYTE_,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
@@ -1964,17 +1983,17 @@ END MODULE OCCUPATION_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: STRING_
       INTEGER(4)  ,INTENT(IN) :: NBYTE_
-      REAL(8)     ,INTENT(IN) :: VAL_(NBYTE_)
+      REAL(8)     ,INTENT(IN) :: VAL(NBYTE_)
 !     ******************************************************************
       CALL TRACE$PUSH('OCCUPATION$SET')
       CALL OCCUPATION_NEWLIST
-      CALL LINKEDLIST$SET(LL_OCC,STRING_,0,VAL_)
+      CALL LINKEDLIST$SET(LL_OCC,STRING_,0,VAL)
       CALL TRACE$POP
       RETURN
       END
 !
 !     ..................................................................
-      SUBROUTINE OCCUPATION$GET(STRING_,NBYTE_,VAL_)
+      SUBROUTINE OCCUPATION$GET(STRING_,NBYTE_,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
@@ -1982,7 +2001,7 @@ END MODULE OCCUPATION_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: STRING_
       INTEGER(4)  ,INTENT(IN) :: NBYTE_
-      REAL(8)     ,INTENT(OUT):: VAL_(NBYTE_)
+      REAL(8)     ,INTENT(OUT):: VAL(NBYTE_)
       LOGICAL(4)              :: TCHK
 !     ******************************************************************
       CALL TRACE$PUSH('OCCUPATION$GET')
@@ -1993,7 +2012,7 @@ END MODULE OCCUPATION_MODULE
         CALL ERROR$CHVAL('STRING',STRING_)
         CALL ERROR$STOP('OCCUPATION$GET')
       END IF
-      CALL LINKEDLIST$GET(LL_OCC,STRING_,1,VAL_)
+      CALL LINKEDLIST$GET(LL_OCC,STRING_,1,VAL)
       CALL TRACE$POP
       RETURN
       END
