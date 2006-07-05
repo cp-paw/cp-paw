@@ -294,7 +294,7 @@
       LMAX=INT(SQRT(REAL(LMX)+1.D-8))-1
       IF((Lmax+1)**2.NE.LMX) THEN
         call error$MSG('LMX MUST SPAN FULL L-SHELLS')
-        call error$R8VAL('LMX',LMX)
+        call error$i4VAL('LMX',LMX)
         CALL ERROR$STOP('SPHERICAL_ylmtrans')
       END IF
       sqrtinv=1.d0/sqrt(2.d0)

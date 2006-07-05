@@ -544,7 +544,7 @@ END MODULE WAVES_MODULE
       ELSE IF(ID.EQ.'IKPT') THEN
         ikpt=val
 !       == check if k-point is present ===============================
-        call mpe$query(thistask,ntasks)
+        CALL MPE$QUERY('MONOMER',THISTASK,NTASKS)
         IF(KMAP(IKPT).NE.THISTASK) THEN
           ikptl=0
         else
