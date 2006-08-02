@@ -141,7 +141,7 @@
             gold=g
           endif
         enddo
-        stop' a too large, itmax soo small, stop in gcf'
+        stop 'a too large, itmax soo small, stop in gcf'
         end
 !
 !     ..............................................BESSL...............

@@ -102,10 +102,13 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)   ,ALLOCATABLE:: WGHT(:,:)
       REAL(8)   ,ALLOCATABLE:: A(:,:)
       INTEGER(4)           :: NFIL1=1001
+!     ******************************************************************
+                                    call trace$push('BRILLOUIN$TESTING')
 !     ==================================================================
 !     ==  READ LATTICE VECTORS                                        ==
 !     ==================================================================
       OPEN(UNIT=NFIL1,FILE='TEST.IN')
+      rewind nfil1
 !     ==== RBAS(I,J) = REAL SPACE LATTICE VECTORS (I=X,Y,Z)
       DO I=1,3
         READ(NFIL1,*)RBAS(:,I)
@@ -131,7 +134,9 @@ END MODULE BRILLOUIN_MODULE
 !     ==================================================================
 !     ==  FIND IRREDUCIBLE K-POINTS AND TETRAHEDRA                    ==
 !     ==================================================================
-      CALL BRILLOUIN$MSH(RBAS,NKP,NSYM,IIO,IARB)
+!      CALL BRILLOUIN$MSH(RBAS,NKP,NSYM,IIO,IARB)
+
+      call BRILLOUIN$MSHNOSYM(.true.,RBAS,(/5,5,5/),(/1,1,1/))
  
 !     ==================================================================
 !     ==  CALCULATE ENERGIES AT THE IRREDUCIBLE K-POINTS              ==
@@ -184,8 +189,62 @@ END MODULE BRILLOUIN_MODULE
 !     ==================================================================
 !     ==  PRINT OUT                                                   ==
 !     ==================================================================
-      PRINT*,'INTEGRAL OF A : ',SUMA
+      PRINT*,'INTEGRAL OF A : ',SUMA 
+!
+!     ==================================================================
+!     ==  test derivatives                                            ==
+!     ==================================================================
+      CALL brillouin_testweightandder
+
+                                    call trace$pop
       END SUBROUTINE BRILLOUIN$TESTING
+!
+!     ..................................................................
+      subroutine brillouin_testweightandder
+!     ** test routine for brillouin$weightander                       **
+!     ** checks derivatives against numerical derivatives             **
+      implicit none
+      real(8) :: vol=1.d0
+      real(8) :: e0(4)=(/2.d0,1.d0,0.d0,3.d0/)
+      real(8) :: delta=1.d-8
+      real(8) :: ef
+      real(8) :: e(4)
+      real(8) :: wght(4)
+      real(8) :: wght0(4)
+      real(8) :: dwght(4,4)
+      real(8) :: dwght0(4,4)
+      real(8) :: wghtarr(4,2,4)
+      real(8) :: dwghttest(4,4)
+      integer(4) :: I,J,k
+!     ******************************************************************
+      do k=1,3
+        ef=0.3+real(k-1,kind=8)
+        print*,'now test weightandder case ',k,ef
+        call BRILLOUIN_WEIGHTandder(VOL,E0,EF,WGHT0,dwght0)
+        do i=1,4
+          do j=1,2
+            e=e0
+            e(i)=e(i)+real(2*j-3,kind=8)*delta
+            call BRILLOUIN_WEIGHTandder(VOL,E,EF,WGHT,dwght)
+            wghtarr(:,j,i)=wght
+          enddo
+          dwghttest(:,i)=(wghtarr(:,2,i)-wghtarr(:,1,i))/(2.D0*delta)
+          do j=1,4
+            print*,'test ',dwght(j,i),dwghttest(j,i),dwghttest(j,i)-dwght(j,i)
+          enddo
+        enddo
+      enddo
+      return
+      end
+!
+!     ..................................................................
+      subroutine brillouin_OPTIMIZE(NKP_,EKP_,WGHT_)
+!      implicit none
+!     ******************************************************************
+
+
+      return
+      end
 !
 !     ..................................................................
       SUBROUTINE BRILLOUIN$SETR8A(ID,LEN,VAL)
@@ -204,8 +263,6 @@ END MODULE BRILLOUIN_MODULE
           CALL ERROR$STOP('BRILLOUIN$SETR8A')
         END IF
         THIS%RBAS=RESHAPE(VAL,(/3,3/))
-        CALL GBASS(THIS%RBAS,GBAS,SVAR)
-        THIS%VOL=SVAR/REAL(6*THIS%NKDIV(1)*THIS%NKDIV(2)*THIS%NKDIV(3),KIND=8)
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
         CALL ERROR$CHVAL('ID',ID)
@@ -331,6 +388,7 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)               :: V   ! UNIT CELL VOLUME
       LOGICAL(4)            :: TCHK
 !     ******************************************************************
+                                   call trace$push('BRILLOUIN$MSH')
       THIS%RBAS=RBAS
       INV=0
 !     ------------------------------------------------------------------
@@ -413,6 +471,7 @@ END MODULE BRILLOUIN_MODULE
       MWRIT=100                                                         
       CALL BRILLOUIN_TETCNT(NMSHP,NUM,TET0,N,INV,THIS)
       DEALLOCATE(NUM)
+                                   call trace$pop
       RETURN                                                            
       END                                                               
 !     .....................................................ARBMSH.......
@@ -465,6 +524,9 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4)            :: IIO(3,3,2)
       INTEGER(4)            :: NSYM  !#(SYMMETRY OPERATIONS) 1 OR 2
 !     ******************************************************************
+                                   call trace$push('BRILLOUIN$MSHNOSYM')
+      this%rbas=rbas
+!
       INV=0
       IF(TINV) INV=1
       IIO(:,:,:)=0
@@ -480,7 +542,7 @@ END MODULE BRILLOUIN_MODULE
 !     ------------------------------------------------------------------
 !     -- DEFINE MESH                                                  --
 !     ------------------------------------------------------------------
-      NMSHP=NKDIV(1)*NKDIV(2)*NKDIV(3)
+      NMSHP=(NKDIV(1)+1)*(NKDIV(2)+1)*(NKDIV(3)+1)
       CALL GBASS(RBAS,GBAS,DUMMY)                                             
 !     ------------------------------------------------------------------
 !     -- FIND IRREDUCIBLE K-POINTS                                    --
@@ -557,6 +619,7 @@ END MODULE BRILLOUIN_MODULE
       MWRIT=100                                                         
       CALL BRILLOUIN_TETCNT(NMSHP,NUM,TET0,NKDIV,INV,THIS)
       DEALLOCATE(NUM)
+                                   call trace$pop
       RETURN                                                            
       END                                                               
 !
@@ -1130,6 +1193,7 @@ END MODULE BRILLOUIN_MODULE
 !     ------------------------------------------------------------------
 !     --  CHECK SUMRULE                                               --
 !     ------------------------------------------------------------------
+      sum=0.d0
       DO I=1,THIS%NTET
         SUM=SUM+THIS%VOL*DBLE(THIS%MULT(I))
       ENDDO
@@ -1916,6 +1980,10 @@ END MODULE BRILLOUIN_MODULE
         DOS=12.d0*VPRIME/de
         DDOS(:)=12.d0*DVPRIME(:)/de
         DDOS(1)=ddos(1)+dos/de
+!
+!     ======================================================================
+!     == second case e1,e2<ef<e3,e4                                       ==
+!     ======================================================================
       ELSE IF(EF.GT.E(2).AND.EF.LT.E(3)) THEN                           
         DE1=EF-E(1)                                                     
         DE2=EF-E(2)                                                     
@@ -1928,8 +1996,8 @@ END MODULE BRILLOUIN_MODULE
         dvprime(3)=-vprime/e31
         dvprime(4)=-vprime/e41
 !
-        wghtfac(1)=(3.D0-DE1/E41-DE1/E31)
-        dwghtfac(1,1)=(1.d0*de1/e41)/e41
+        wghtfac(1)=3.D0-DE1/E41-DE1/E31
+        dwghtfac(1,1)=(1.d0-de1/e41)/e41+(1.d0-de1/e31)/e31
         dwghtfac(1,2)=0.d0
         dwghtfac(1,3)=+de1/e31**2
         dwghtfac(1,4)=+de1/e41**2
@@ -1955,8 +2023,8 @@ END MODULE BRILLOUIN_MODULE
         ENDDO
 !       ------  TETRAHEDRON X2,X13',X23',X14'                           
         VPRIME=.25D0*VOL*DE2*DE3*DE1/(E32*E31*E41)                      
-        dvprime(1)=vprime*(-1.d0/de2+1.d0/de3-1.d0/de1+1.d0/e31+1.d0/e41)
-        dvprime(2)=vprime*(1.d0/de2+1.d0/e32)
+        dvprime(1)=vprime*(-1.d0/de1+1.d0/e31+1.d0/e41)
+        dvprime(2)=vprime*(-1.d0/de2+1.d0/e32)
         dvprime(3)=vprime*(1.d0/de3-1.d0/e32-1.d0/e31)
         dvprime(4)=vprime*(-1.d0/e41)
 !
@@ -1982,7 +2050,7 @@ END MODULE BRILLOUIN_MODULE
         dwghtfac(4,1)=-(1.d0-de1/e41)/e41
         dwghtfac(4,2)=0.d0
         dwghtfac(4,3)=0.d0
-        dwghtfac(4,4)=de1/e41**2
+        dwghtfac(4,4)=-de1/e41**2
 !
         wght(:)=wght(:)+vprime*wghtfac(:) 
         DO I=1,4        
@@ -2000,11 +2068,11 @@ END MODULE BRILLOUIN_MODULE
         dwghtfac(1,1)=(1.d0-de1/e41)/e41
         dwghtfac(1,2)=0.d0
         dwghtfac(1,3)=0.d0 
-        dwghtfac(1,3)=de1/e41**2
+        dwghtfac(1,4)=de1/e41**2
 !
         WGHTfac(2)=3.D0-DE2/E32-DE2/E42
         dwghtfac(2,1)=0.d0
-        dwghtfac(2,2)=(1.d0-de1/e32)/e32+(1.d0-de2/e42)/e42
+        dwghtfac(2,2)=(1.d0-de2/e32)/e32+(1.d0-de2/e42)/e42
         dwghtfac(2,3)=de2/e32**2
         dwghtfac(2,4)=de2/e42**2
 
@@ -2018,7 +2086,7 @@ END MODULE BRILLOUIN_MODULE
         dwghtfac(4,1)=-(1.d0-de1/e41)/e41
         dwghtfac(4,2)=-(1.d0-de2/e42)/e42
         dwghtfac(4,3)=0.d0
-        dwghtfac(4,4)=-de2*(1.d0/e42**2+1.d0/e41**2)
+        dwghtfac(4,4)=-de2/e42**2-de1/e41**2
 !
         wght(:)=wght(:)+vprime*wghtfac(:) 
         DO I=1,4        
@@ -2033,40 +2101,44 @@ END MODULE BRILLOUIN_MODULE
         ddos(1)=da*(-1.d0/e21+1.d0/e31+1.d0/e41) &
        &       +db*(1.d0/e31+1.d0/e41)*de2 &
        &       +dc*(1.d0/e41+1.d0/e31-1.d0/(e31+e42))*de2**2
-        ddos(3)=da*(1.d0/e21) &
-       &       +dc*(1.d0/e32+1.d0/e42-1.d0/(e31+e42)) &
+        ddos(2)=da*(1.d0/e21) &
+       &       +dc*(1.d0/e32+1.d0/e42-1.d0/(e31+e42))*DE2**2 &
        &       -db-2.d0*dc*de2
         ddos(3)=da*(-1.d0/e31) &
        &       +db*(-1.d0/e31)*de2 &
        &       +dc*(-1.d0/e32-1.d0/e31+1.d0/(e31+e42))*de2**2
         ddos(4)=da*(-1.d0/e41) &
-       &       +db*(1.d0/e41)*de2 &
-       &       +dc*(-1.d0/e41-1.d0/e42+1.d0/(e31+e42))*de2 
+       &       +db*(-1.d0/e41)*de2 &
+       &       +dc*(-1.d0/e41-1.d0/e42+1.d0/(e31+e42))*de2**2 
+!
+!     ======================================================================
+!     == last case                                                        ==
+!     ======================================================================
       ELSE IF(EF.GE.E(3).AND.EF.LT.E(4)) THEN                           
         DE=E(4)-EF                                                      
         VPRIME=.25D0*VOL*DE**3/(E41*E42*E43)                            
         dvprime(1)=vprime*(1.d0/e41)
         dvprime(2)=vprime*(1.d0/e42)
         dvprime(3)=vprime*(1.d0/e43)
-        dvprime(4)=vprime*(3.d0/de-1.d0/e41+1.d0/e42+1.d0/e42)
+        dvprime(4)=vprime*3.d0/de-vprime*(1.d0/e41+1.d0/e42+1.d0/e43)
 !
         wghtfac(1)=-DE/E41
         dwghtfac(1,1)=-de/e41**2
         dwghtfac(1,2)=0.d0
         dwghtfac(1,3)=0.d0
-        dwghtfac(1,4)=-(1.d0+de/e41)/e41
+        dwghtfac(1,4)=-(1.d0-de/e41)/e41
 !
         wghtfac(2)=-DE/E42
         dwghtfac(2,1)=0.d0
         dwghtfac(2,2)=-de/e42**2
         dwghtfac(2,3)=0.d0
-        dwghtfac(2,4)=-(1.d0+de/e42)/e42
+        dwghtfac(2,4)=-(1.d0-de/e42)/e42
 
         wghtfac(3)=-DE/E43
         dwghtfac(3,1)=0.d0
         dwghtfac(3,2)=0.d0
         dwghtfac(3,3)=-de/e43**2
-        dwghtfac(3,4)=-(1.d0+de/e43)/e43
+        dwghtfac(3,4)=-(1.d0-de/e43)/e43
 
         wghtfac(4)=-(4.D0-DE/E41-DE/E42-DE/E43)
         dwghtfac(4,1)=de/e41**2
@@ -2097,7 +2169,7 @@ END MODULE BRILLOUIN_MODULE
             WGHT(M)=WGHT(M)+.25D0*(E(N)-E(M))*DOS*.1D0                      
             dwght(m,:)=dwght(m,:)+0.25*(e(n)-e(m))*ddos(:)*0.1d0
             dwght(m,n)=dwght(m,n)+0.25*dos*0.1d0
-            dwght(m,m)=dwght(m,n)-0.25*dos*0.1d0
+            dwght(m,m)=dwght(m,m)-0.25*dos*0.1d0
           ENDDO
         ENDDO
       END IF                                                            
@@ -2106,13 +2178,17 @@ END MODULE BRILLOUIN_MODULE
 !     ------------------------------------------------------------------
       DO I=1,4                                                      
         FA(INDEX(I))=WGHT(I)                                              
-        dfa(:,index(i))=dwght(i,:)
         FB(INDEX(I))=E(I)                                                 
+        do j=1,4
+          dfa(index(i),index(j))=dwght(i,j)
+        enddo
       ENDDO
       DO I=1,4                                                      
         WGHT(I)=FA(I)                                                     
-        dwght(i,:)=dfa(:,i)
         E(I)=FB(I)                                                        
+        do j=1,4
+          dwght(i,j)=dfa(i,j)
+        enddo
       ENDDO
       RETURN                                                            
       END                                                               

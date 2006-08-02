@@ -734,17 +734,17 @@
       C=1.D0/RINT
       RETURN
       END
-!
-!     .....................................................INITDC.......
-      SUBROUTINE INITDC(N,CARRAY)
-      COMPLEX(8) CARRAY(N)
-      CALL FILEHANDLER$UNIT('PROT',NFILO)
-      WRITE(NFILO,FMT='("THE ROUTINE INITDC SHOULD NOT BE USED")')
-      DO I=1,N
-        CARRAY(I)=(0.D0,0.D0)
-      ENDDO
-      RETURN
-      END
+!!$!
+!!$!     .....................................................INITDC.......
+!!$      SUBROUTINE INITDC(N,CARRAY)
+!!$      COMPLEX(8) CARRAY(N)
+!!$      CALL FILEHANDLER$UNIT('PROT',NFILO)
+!!$      WRITE(NFILO,FMT='("THE ROUTINE INITDC SHOULD NOT BE USED")')
+!!$      DO I=1,N
+!!$        CARRAY(I)=(0.D0,0.D0)
+!!$      ENDDO
+!!$      RETURN
+!!$      END
 !
 !      .................................................................
        SUBROUTINE GAUSS_RANDOM_NUMBER(HARVEST)

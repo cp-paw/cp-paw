@@ -2247,6 +2247,7 @@ CONTAINS
 !     == INITIALIZE AND FILL BUFFER                                   ==
 !     ==================================================================
       CALL BUFFER_NEW(BUFFER,BUFFERSIZE)
+      rewind(nfil)
       CALL BUFFER_READTOBUFFER(NFIL,BUFFER,cid)
 !
 !     ==================================================================
