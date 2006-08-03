@@ -1569,7 +1569,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       END
 
 !     .......................................................................
-      SUBROUTINE COSMO$INTERFACE(NAT_,R0,NG,RC,QMAD,ETOT,VMAD,FORCE)
+      SUBROUTINE COSMO$INTERFACE(NAT_,R0,NG,RC,QMAD,EpOT,ekin,VMAD,FORCE)
 !     **                                                                   **
 !     ** PROPAGATE                                                         **
 !     **                                                                   **
@@ -1588,7 +1588,8 @@ USE CONTINUUM_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NAT_
       INTEGER(4),INTENT(IN)    :: NG
-      REAL(8)   ,INTENT(OUT)   :: ETOT
+      REAL(8)   ,INTENT(OUT)   :: Epot
+      REAL(8)   ,INTENT(OUT)   :: Ekin
       REAL(8)   ,INTENT(OUT)   :: FORCE(3,NAT_)
       REAL(8)   ,INTENT(OUT)   :: VMAD(NG,NAT_)    !PCONT
       REAL(8)   ,INTENT(IN)    :: R0(3,NAT_)
@@ -1619,8 +1620,8 @@ USE CONTINUUM_MODULE
       REAL(8)   ,ALLOCATABLE   :: VTHETA(:)
       REAL(8)   ,ALLOCATABLE   :: VTHETA1(:)
 !
-      REAL(8)                  :: EPOT,EPOT1,epotsum
-      REAL(8)                  :: EKIN,EKIN1,ekinsum
+      REAL(8)                  :: EPOT1,epotsum
+      REAL(8)                  :: EKIN1,ekinsum
       INTEGER                  :: I,IAT,ITER,IQ1,IQ2
       REAL(8)                  :: RBAS(3,3)
       LOGICAL                  :: TCONVG
@@ -1636,7 +1637,8 @@ USE CONTINUUM_MODULE
       logical                  :: test=.true.
       integer                  :: itest
 !     ***********************************************************************
-      etot=0.d0
+      epot=0.d0
+      ekin=0.d0
       vmad(:,:)=0.d0
       force(:,:)=0.d0
       IF (.NOT.TON) RETURN
@@ -1764,6 +1766,7 @@ PRINT*,'NNN',NNN
         VTHETA(:)=VTHETA(:)+VQ1(:)*Q0(:)
         VAT(:)=VAT(:)+VAT1(:)*FDIEL
         FAT(:,:)=FAT(:,:)+FAT1(:,:)
+print*,'longrange ',epot1,'sum(qbar)',sum(qbar),'sum(qatbar)',sum(qatbar)
 !
 !       =======================================================================
 !       == SELF-ENERGY                                                       ==
@@ -1773,6 +1776,7 @@ PRINT*,'NNN',NNN
         EPOT=EPOT+EPOT1
         VQ(:)=VQ(:)+VQ1(:)
         VTHETA(:)=VTHETA(:)+VTHETA1(:)
+print*,'self energy ',epot1
 !
 !       =======================================================================
 !       == DENSITY SURFACE INTERACTION                                       ==
@@ -1784,6 +1788,7 @@ PRINT*,'NNN',NNN
         VTHETA=VTHETA(:)+VQ1(:)*Q0(:)
         FAT(:,:)=FAT(:,:)+FAT1(:,:)
         VMAD(:,:)=VMAD(:,:)+VMAD1(:,:)
+print*,'short ranged ',epot1
 !
 !       =======================================================================
 !       == TRANSFORM BACK TO FUNDAMENTAL VARIABLES                           ==
@@ -1840,15 +1845,6 @@ WRITE(*,FMT='(I5,3F20.10)')ITER,EKIN,EPOT,EKIN+EPOT
       if(tadiabatic) then
         force(:,:)=fat(:,:)
       end if
-
-!
-!     =======================================================================
-!     ==  report energies                                                  ==
-!     =======================================================================
-      CALL ENERGYLIST$SET('COSMO KINETIC ENERGY',EKIN)
-      CALL ENERGYLIST$SET('COSMO POTENTIAL ENERGY',EPOT)
-      CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT)
-      CALL ENERGYLIST$ADD('CONSTANT ENERGY',EKIN+EPOT)
 !
 !     =======================================================================
 !     ==  CLOSE DOWN                                                       ==

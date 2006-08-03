@@ -1052,8 +1052,10 @@ PRINT*,'ECELLKIN/POT ',ECELLKIN,ECELLPOT,ECELLKIN+ECELLPOT
         IF(TCOSMO) THEN
           CALL ENERGYLIST$RETURN('COSMO KINETIC ENERGY',EKINCOSMO)
           CALL ENERGYLIST$RETURN('COSMO POTENTIAL ENERGY',EPOTCOSMO)
-          ECONS=ECONS+EKINCOSMO+EPOTCOSMO
-          ETOT=ETOT+EPOTCOSMO
+!is already contained in econs and etot
+!          ECONS=ECONS+EKINCOSMO+EPOTCOSMO
+!          ETOT=ETOT+EPOTCOSMO
+!print*,'prinfo epotcosmo added to etot ',epotcosmo
         END IF
 !
 !       == EXTERNAL POTENTIAL============================================
@@ -1106,10 +1108,15 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !         ==  BASIC LDA ================================================
           CALL ENERGYLIST$PRINTONE(NFILO,'TOTAL ENERGY')     
           CALL ENERGYLIST$PRINTONE(NFILO,'AE  KINETIC')     
+!         == AE electrostatic energy does not include isolate energy  ==
+!         == (previously it was added)                             =====
           CALL ENERGYLIST$PRINTONE(NFILO,'AE  ELECTROSTATIC')     
           CALL ENERGYLIST$PRINTONE(NFILO,'AE  EXCHANGE-CORRELATION')     
           CALL ENERGYLIST$PRINTONE(NFILO,'BACKGROUND')     
+          CALL ENERGYLIST$PRINTONE(NFILO,'ISOLATE ENERGY')     
           CALL ENERGYLIST$PRINTONE(NFILO,'PS  KINETIC')     
+!         == PS electrostatic energy does not include isolate energy  ==
+!         == (previously it was added)                             =====
           CALL ENERGYLIST$PRINTONE(NFILO,'PS  ELECTROSTATIC')     
           CALL ENERGYLIST$PRINTONE(NFILO,'PS  EXCHANGE-CORRELATION')     
           CALL ENERGYLIST$PRINTONE(NFILO,'CORE RELAXATION')     
@@ -1130,6 +1137,8 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
           CALL ENERGYLIST$PRINTONE(NFILO,'ELECTRONIC HEAT')
           CALL ENERGYLIST$PRINTONE(NFILO,'OCCUPATION KINETIC ENERGY')
           CALL ENERGYLIST$PRINTONE(NFILO,'EXTERNAL POTENTIAL')
+          CALL ENERGYLIST$PRINTONE(NFILO,'QMMM KINETIC ENERGY')
+          CALL ENERGYLIST$PRINTONE(NFILO,'QMMM POTENTIAL ENERGY')
           IF(TCOSMO) THEN
             CALL ENERGYLIST$PRINTONE(NFILO,'COSMO KINETIC ENERGY')
             CALL ENERGYLIST$PRINTONE(NFILO,'COSMO POTENTIAL ENERGY')

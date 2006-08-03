@@ -1789,15 +1789,18 @@ each step that reduces the energy}
 \vrules{optional}
 \vdefault{F}}
 
+
 %\ifthenelse{\boolean{private}}{
 %----------------------------------------------------------------------
-\block{!CONTROL!CONTINUUM}
+\block{!CONTROL!COSMO}
 %----------------------------------------------------------------------
 \brules{optional} 
 %
 \bdescr{controls parameters for the dynamics of the continuum
-  description of solvent. Essentially identical to the COSMO method by Klamt and Schuurmann,
-with modifications that allow consistent forces. }
+  description of solvent. Essentially identical to the COSMO method by
+  Klamt and Schuurmann, with modifications that allow consistent
+  forces\cite{senn03_jcp118p1089.}.}
+
 
 \mbax{\key{STOP}
 \vdescr{sets initial velocities of the environment to zero}
@@ -1805,119 +1808,172 @@ with modifications that allow consistent forces. }
 \vrules{optional}
 \vdefault{false}}
 
-\mbax{\key{FREEZE}
-\vdescr{Keeps the solvent charges fixed}
-\vformat{logical}
-\vrules{optional}
-\vdefault{false}}
-
-\mbax{\key{EXCLUDEOVERLAP}
-\vdescr{Set charges in the overlap region of two spheres exactly to zero}
-\vformat{logical}
-\vrules{optional}
-\vdefault{false}}
-
 \mbax{\key{START}
-\vdescr{start with zero charges as opposed to reading charges from
-  restart file}
+\vdescr{restarts screening charges with value zero}
 \vformat{logical}
 \vrules{optional}
-\vdefault{FALSE}}
+\vdefault{false}}
 
 \mbax{\key{M}
-\vdescr{Mass for surface charges.}
+\vdescr{Mass for the surface charge dynamics}
 \vformat{real}
 \vrules{optional}
 \vdefault{1000.}}
 
 \mbax{\key{MULTIPLE}
-\vdescr{Oversampling factor for multiple timestep algorithm. When this key is on (i.e. greater than 1), then the equations of motion for the surface charges are integrated on a grid that is MULTIPLE times finer than the one that is used for the integration of QM nuclei and wavefunctions. Allowed values for MULTIPLE are 1 and 2n (n can be any integer).}
+\vdescr{Number of time steps of the surface charge dynamics 
+        per PAW timestep}
 \vformat{integer}
 \vrules{optional}
 \vdefault{1}}
 
-\mbax{\key{EPSILON}
-\vdescr{Dielectric constant. Incorporated into the COSMO hamiltonian by scaling the self-interaction of the solute-solvent-interface by $\varepsilon/(\varepsilon-1)$, which is also practiced by Truo}
-\vformat{real}
-\vrules{optional}
-\vdefault{10$^{12}$}}
-
-\mbax{\key{FRIC}
-\vdescr{Friction acting on surface charges (between 0 and 1)}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.}}
-
-%----------------------------------------------------------------------
-\block{!CONTROL!CONTINUUM!AUTO}
-%----------------------------------------------------------------------
-\brules{optional} \bdescr{Automatic annealing procedure for the
-  dynamics of the screening charges. See also remarks for
-  !CONTROL!PSIDYN!AUTO}
-
-\mbax{\key{FRIC(+)}
-\vdescr{start value for the friction factor $c_\alpha$ used for
-increasing energy}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.3}}
-
-\mbax{\key{FACT(+)}
-\vdescr{factor multiplied with the friction factor FRIC(+) in 
-each step that reduces the energy}
-\vformat{real}
-\vrules{optional}
-\vdefault{1.0}}
-
-\mbax{\key{FRIC(-)}
-\vdescr{start value for the friction factor $c_\alpha$ used for
-decreasing energy}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.3}}
-
-\mbax{\key{FACT(-)}
-\vdescr{factor multiplied with the friction factor FRIC(-) in 
-each step that reduces the energy}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.97}}
-
-\mbax{\key{MINFRIC}
-\vdescr{minimum friction used}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.}}
-
-%----------------------------------------------------------------------
-\block{!CONTROL!CONTINUUM!NOSE}
-%----------------------------------------------------------------------
-\brules{optional} 
-%
-\bdescr{Nos\'e thermostat \cite{Nose} for constant temperature
-  ensemble for the surface charges of the continuum solvation model. Provided, but not recommended. It is recommended to
-use instead multiple timestep oversampling with very light fictitious masses for the surface
-charges instead to prevent unphysical heat transfer between surface charges and wavefunction.}
-
-
-\mbax{\key{$<$EKIN$>$}
-\vdescr{average kinetic energy of the surface charges}
-\vformat{real}
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{FREQ[THZ]}
-\vdescr{frequency of the Nos\'e variable in THz. This is an alternative
-  to !CONTROL!RNOSE:PERIOD}
-\vformat{real}
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{STOP}
-\vdescr{velocity for Nos\'e variable is set to zero in the first iteration}
+\mbax{\key{ADIABATIC}
+\vdescr{chooses optimizations of screening charges in each time step}
 \vformat{logical}
 \vrules{optional}
-\vdefault{F}}
+\vdefault{false}}
+
+\mbax{\key{EPSILON}
+\vdescr{Dielectric constant of the solvent}
+\vformat{real}
+\vrules{optional}
+\vdefault{10$^12$ (metallic screening)}}
+
+\mbax{\key{FRIC}
+\vdescr{friction for the dynamics of the screening charges}
+\vformat{real}
+\vrules{optional}
+\vdefault{0.}}
+
+% %----------------------------------------------------------------------
+% \block{!CONTROL!CONTINUUM}
+% %----------------------------------------------------------------------
+% \brules{optional} 
+% %
+% \bdescr{controls parameters for the dynamics of the continuum
+%   description of solvent. Essentially identical to the COSMO 
+%     method by Klamt and Schuurmann,
+%  with modifications that allow consistent forces. }
+% 
+% \mbax{\key{STOP}
+% \vdescr{sets initial velocities of the environment to zero}
+% \vformat{logical}
+% \vrules{optional}
+% \vdefault{false}}
+% 
+% \mbax{\key{FREEZE}
+% \vdescr{Keeps the solvent charges fixed}
+% \vformat{logical}
+% \vrules{optional}
+% \vdefault{false}}
+% 
+% \mbax{\key{EXCLUDEOVERLAP}
+% \vdescr{Set charges in the overlap region of two spheres exactly to zero}
+% \vformat{logical}
+% \vrules{optional}
+% \vdefault{false}}
+% 
+% \mbax{\key{START}
+% \vdescr{start with zero charges as opposed to reading charges from
+%   restart file}
+% \vformat{logical}
+% \vrules{optional}
+% \vdefault{FALSE}}
+% 
+% \mbax{\key{M}
+% \vdescr{Mass for surface charges.}
+% \vformat{real}
+% \vrules{optional}
+% \vdefault{1000.}}
+% 
+% \mbax{\key{MULTIPLE}
+% \vdescr{Oversampling factor for multiple timestep algorithm. When this key is on (i.e. greater than 1), then the equations of motion for the surface charges are integrated on a grid that is MULTIPLE times finer than the one that is used for the integration of QM nuclei and wavefunctions. Allowed values for MULTIPLE are 1 and 2n (n can be any integer).}
+% \vformat{integer}
+% \vrules{optional}
+% \vdefault{1}}
+% 
+% \mbax{\key{EPSILON}
+% \vdescr{Dielectric constant. Incorporated into the COSMO hamiltonian by scaling the self-interaction of the solute-solvent-interface by $\varepsilon/(\varepsilon-1)$, which is also practiced by Truo}
+% \vformat{real}
+% \vrules{optional}
+% \vdefault{10$^{12}$}}
+% 
+% \mbax{\key{FRIC}
+% \vdescr{Friction acting on surface charges (between 0 and 1)}
+% \vformat{real}
+% \vrules{optional}
+% \vdefault{0.}}
+% 
+% %----------------------------------------------------------------------
+% \block{!CONTROL!CONTINUUM!AUTO}
+% %----------------------------------------------------------------------
+% \brules{optional} \bdescr{Automatic annealing procedure for the
+%   dynamics of the screening charges. See also remarks for
+%   !CONTROL!PSIDYN!AUTO}
+% 
+% \mbax{\key{FRIC(+)}
+% \vdescr{start value for the friction factor $c_\alpha$ used for
+% increasing energy}
+% \vformat{real}
+% \vrules{optional}
+% \vdefault{0.3}}
+% 
+% \mbax{\key{FACT(+)}
+% \vdescr{factor multiplied with the friction factor FRIC(+) in 
+% each step that reduces the energy}
+% \vformat{real}
+% \vrules{optional}
+% \vdefault{1.0}}
+% 
+% \mbax{\key{FRIC(-)}
+% \vdescr{start value for the friction factor $c_\alpha$ used for
+% decreasing energy}
+% \vformat{real}
+% \vrules{optional}
+% \vdefault{0.3}}
+% 
+% \mbax{\key{FACT(-)}
+% \vdescr{factor multiplied with the friction factor FRIC(-) in 
+% each step that reduces the energy}
+% \vformat{real}
+% \vrules{optional}
+% \vdefault{0.97}}
+% 
+% \mbax{\key{MINFRIC}
+% \vdescr{minimum friction used}
+% \vformat{real}
+% \vrules{optional}
+% \vdefault{0.}}
+% 
+% %----------------------------------------------------------------------
+% \block{!CONTROL!CONTINUUM!NOSE}
+% %----------------------------------------------------------------------
+% \brules{optional} 
+% %
+% \bdescr{Nos\'e thermostat \cite{Nose} for constant temperature
+%   ensemble for the surface charges of the continuum solvation model. Provided, but not recommended. It is recommended to
+% use instead multiple timestep oversampling with very light fictitious masses for the surface
+% charges instead to prevent unphysical heat transfer between surface charges and wavefunction.}
+% 
+% 
+% \mbax{\key{$<$EKIN$>$}
+% \vdescr{average kinetic energy of the surface charges}
+% \vformat{real}
+% \vrules{mandatory}
+% \vdefault{none}}
+% 
+% \mbax{\key{FREQ[THZ]}
+% \vdescr{frequency of the Nos\'e variable in THz. This is an alternative
+%   to !CONTROL!RNOSE:PERIOD}
+% \vformat{real}
+% \vrules{mandatory}
+% \vdefault{none}}
+% 
+% \mbax{\key{STOP}
+% \vdescr{velocity for Nos\'e variable is set to zero in the first iteration}
+% \vformat{logical}
+% \vrules{optional}
+% \vdefault{F}}
 
 %{}%end of \ifthenelse
 
@@ -2844,17 +2900,23 @@ contributing to the fit}
 \vdefault{None}}
 
 }{}% end of \ifthenelse
-
+%
 %----------------------------------------------------------------------
-\block{!STRUCTURE!CONTINUUM}
+\block{!STRUCTURE!COSMO}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{Here, data is provided that pertains to the representation of the solute surface. For each atom, a file must be provided that specifies the distribution of surface points around the atom, as well as a radius that specifies the distance of closest approach between solute and solvent for this atom. }
-
+\brules{optional} \bdescr{Here, data is provided that pertains to the
+representation of the solute surface. For each atom a radius that
+specifies the distance of closest approach between solute and solvent
+for this atom. }
+%
 %----------------------------------------------------------------------
-\block{!STRUCTURE!CONTINUUM!ATOM}
+\block{!STRUCTURE!COSMO!ATOM}
 %----------------------------------------------------------------------
-\brules{mandatory, multiple}
-\bdescr{For each atom, a file must be provided that specifies the distribution of surface points around the atom, as well as a radius that specifies the distance of closest approach between solute and solvent for this atom.}
+\brules{mandatory, multiple} 
+\bdescr{ThereHere, data is provided that pertains to the
+representation of the solute surface. For each atom a radius that
+specifies the distance of closest approach between solute and solvent
+for this atom. }
 
 \mbax{\key{NAME}
 \vdescr{Atom name. Must be correspond to !STRUCTURE!ATOM.}
@@ -2863,18 +2925,49 @@ contributing to the fit}
 \vdefault{None}}
 
 \mbax{\key{RAD}
-\vdescr{Distance of closest approach between solute and solvent. Usually close to the vdW radius.}
+\vdescr{Distance of closest approach between solute and solvent. 
+    Usually close to the vdW radius.}
 \vformat{Real}
 \vrules{Mandatory}
 \vdefault{None}}
 
-\mbax{\key{GRIDTYPE}
-\vdescr{Name of the file that contains the discretized representation of the surface of this atom. Usually the same for all atoms.}
-\vformat{Character}
-\vrules{optional}
-\vdefault{None}}
-
-
+% %----------------------------------------------------------------------
+% \block{!STRUCTURE!CONTINUUM}
+% %----------------------------------------------------------------------
+% \brules{optional} 
+% \bdescr{Here, data is provided that pertains to the representation of
+% the solute surface. For each atom, a file must be provided that
+% specifies the distribution of surface points around the atom, as well
+% as a radius that specifies the distance of closest approach between
+% solute and solvent for this atom. }
+% 
+% %----------------------------------------------------------------------
+% \block{!STRUCTURE!CONTINUUM!ATOM}
+% %----------------------------------------------------------------------
+% \brules{mandatory, multiple}
+% \bdescr{For each atom, a file must be provided that specifies 
+% the distribution of surface points around the atom, as well as a
+% radius that specifies the distance of closest approach between solute
+% and solvent for this atom.}
+% 
+% \mbax{\key{NAME}
+% \vdescr{Atom name. Must be correspond to !STRUCTURE!ATOM.}
+% \vformat{Character}
+% \vrules{Mandatory}
+% \vdefault{None}}
+% 
+% \mbax{\key{RAD}
+% \vdescr{Distance of closest approach between solute and solvent. Usually close to the vdW radius.}
+% \vformat{Real}
+% \vrules{Mandatory}
+% \vdefault{None}}
+% 
+% \mbax{\key{GRIDTYPE}
+% \vdescr{Name of the file that contains the discretized 
+% representation of the surface of this atom. Usually the same for all atoms.}
+% \vformat{Character}
+% \vrules{optional}
+% \vdefault{None}}
 %}{}% end of \ifthenelse
 
 

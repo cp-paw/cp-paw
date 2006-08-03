@@ -795,15 +795,14 @@ end if
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EPAIR)
       CALL ENERGYLIST$ADD('AE  ELECTROSTATIC',EPAIR)
       CALL ENERGYLIST$ADD('PS  ELECTROSTATIC',EPAIR)
-!   
-      CALL ENERGYLIST$ADD('TOTAL ENERGY',EISOLATE)
-      CALL ENERGYLIST$ADD('AE  ELECTROSTATIC',EISOLATE)
-      CALL ENERGYLIST$ADD('PS  ELECTROSTATIC',EISOLATE)
-      CALL ENERGYLIST$SET('ISOLATE ENERGY',EISOLATE)
 !
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EXC)
       CALL ENERGYLIST$ADD('AE  EXCHANGE-CORRELATION',EXC)
       CALL ENERGYLIST$ADD('PS  EXCHANGE-CORRELATION',EXC)
+!   
+!     == eisolate contains the energy contributions from isolate,      ==
+!     == cosmo, qmmm etc. the corresponding energylist contributions   ==
+!     == are already taken are off in isolate.                         ==
 !
 !     ==================================================================
 !     ==  SELFTEST                                                    ==

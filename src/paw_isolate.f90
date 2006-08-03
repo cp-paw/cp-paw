@@ -232,21 +232,19 @@
 !     ==================================================================
 !     ==  ADD CORRECTION TO POTENTIAL                                 ==
 !     ==================================================================
-      IF(TISOLATE) THEN
-        RHOB=0.D0
-        E=ET
-        DO IAT=1,NAT
-          DO I=1,3
-            FORCE(I,IAT)=FORCE(I,IAT)+FORCET(I,IAT)
-          ENDDO
-          DO LM=1,LMRX(ISPECIES(IAT))
-            VQLM(LM,IAT)=VQLM(LM,IAT)+VQLMT(LM,IAT)
-          ENDDO
+      RHOB=0.D0
+      E=ET
+      DO IAT=1,NAT
+        DO I=1,3
+          FORCE(I,IAT)=FORCE(I,IAT)+FORCET(I,IAT)
         ENDDO
-        DO IG=1,NGS
-          POT(MAP(IG))=POT(MAP(IG))+RHOS(IG)
+        DO LM=1,LMRX(ISPECIES(IAT))
+          VQLM(LM,IAT)=VQLM(LM,IAT)+VQLMT(LM,IAT)
         ENDDO
-      END IF
+      ENDDO
+      DO IG=1,NGS
+        POT(MAP(IG))=POT(MAP(IG))+RHOS(IG)
+      ENDDO
       DEALLOCATE(MAP)
       DEALLOCATE(RHOS)
                               CALL TRACE$POP
@@ -258,6 +256,7 @@
      &                    ,NGAMMA,RHO,LMRXX,QLM,VQLM,NFCT,F,RC,RCSM)
 !     ******************************************************************
 !     ******************************************************************
+      USE ISOLATE_MODULE, ONLY : TISOLATE
       USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER    :: TPR=.FALSE.
@@ -502,35 +501,39 @@
           QMAD(IAT)=QMAD(IAT)+XQI(IFCT,IAT)
         ENDDO
       ENDDO
+print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vol
       CALL ATOMLIST$SETR8A('Q',0,NAT,QMAD)
 !
 !     ==================================================================
 !     ==  SET CHARGES IN ATOMLIST AND GET EXTERNAL POTENTIALS        ==
 !     ==================================================================
       CALL ISOLATE_INTERFACE(RBAS,NAT,BAS,NFCT+1,XQI,XRC,E,XVI,FORCE)
-print*,'after return'
-call trace$pass('after isolate_interface')
 !
 !     ==================================================================
 !     == CONTRIBUTION FROM THE POSITIVE BACKGROUND                    ==
 !     ==================================================================
-      FAC=-0.5D0*PI/VOL
-      SUM=0.D0
-      DO IAT1=1,NAT
-        DO IFCT1=1,NFCT+1
-          SVAR=0.D0
-          DO IAT2=1,NAT
-            DO IFCT2=1,NFCT+1
-              SVAR=SVAR+FAC*(XRC(IFCT1,IAT1)**2+XRC(IFCT2,IAT2)**2) &
+      if(tisolate) then
+        FAC=-0.5D0*PI/VOL
+        SUM=0.D0
+        DO IAT1=1,NAT
+          DO IFCT1=1,NFCT+1
+            SVAR=0.D0
+            DO IAT2=1,NAT
+              DO IFCT2=1,NFCT+1
+                SVAR=SVAR+FAC*(XRC(IFCT1,IAT1)**2+XRC(IFCT2,IAT2)**2) &
      &             *XQI(IFCT2,IAT2)
+              ENDDO
             ENDDO
+            SUM=SUM+SVAR*XQI(IFCT1,IAT1)
+            XVI(IFCT1,IAT1)=XVI(IFCT1,IAT1)+2.D0*SVAR
           ENDDO
-          SUM=SUM+SVAR*XQI(IFCT1,IAT1)
-          XVI(IFCT1,IAT1)=XVI(IFCT1,IAT1)+2.D0*SVAR
         ENDDO
-      ENDDO
-      EBACKGROUND=SUM
-      E=E+EBACKGROUND
+        EBACKGROUND=SUM
+        E=E+EBACKGROUND
+!       == first part of isolate energy is added in isolate_interface
+        CALL ENERGYLIST$add('ISOLATE ENERGY',ebackground)
+        CALL ENERGYLIST$ADD('TOTAL ENERGY',Ebackground)
+      end if
 !
 !     ==================================================================
 !     ==  BACK TRANSFORM                                              ==
@@ -653,6 +656,9 @@ call trace$pass('after isolate_interface')
 !     **  CAUTION! ASSURE THAT FORCES POTENTIALS AND ENERGIES         **
 !     **  ARE PROPERLY ADDED AND NOT RESET BY EXTERNAL ROUTINES       **
 !     **                                                              **
+!     **  the energies are added already here to the total energy     **
+!     **  the intent out argument energy is not used lateron          **
+!     **                                                              **
 !     ******************************************************************
       USE ISOLATE_MODULE, ONLY : TISOLATE
       USE continuum_module
@@ -668,6 +674,8 @@ call trace$pass('after isolate_interface')
       REAL(8)   ,INTENT(OUT):: VI(NG,NAT)    ! POTENTIAL OF THE GAUSSIAN CHARGES
       REAL(8)               :: VI1(NG,NAT)   
       REAL(8)               :: ENERGY1       ! ENERGY 
+      REAL(8)               :: epot1         ! potential ENERGY contribution
+      REAL(8)               :: ekin1         ! kinetic ENERGY contribution 
       REAL(8)               :: FORCE1(3,NAT) ! FORCE
       REAL(8)               :: POT1(NAT)     ! POT
       REAL(8)               :: CHARGE(NAT)   ! ATOMIC POINT CHARGES
@@ -691,27 +699,34 @@ call trace$pass('after isolate_interface')
 !     == ISOLATE PERIODIC IMAGES                                      ==
 !     ==================================================================
       IF(TISOLATE) THEN
-        CALL ISOLATE_DECOUPLEPERIODIC(RBAS,NAT,POS,CHARGE,ENERGY1,POT1,FORCE1)
-        ENERGY=ENERGY+ENERGY1
+        CALL ISOLATE_DECOUPLEPERIODIC(RBAS,NAT,POS,CHARGE,Epot1,POT1,FORCE1)
+        ENERGY=ENERGY+Epot1
         DO IAT=1,NAT
           FORCE(:,IAT)=FORCE(:,IAT)+FORCE1(:,IAT)
           DO IG=1,NG
             VI(IG,IAT)=VI(IG,IAT)+POT1(IAT)
           ENDDO
         ENDDO
+        CALL ENERGYLIST$SET('ISOLATE ENERGY',EPOT1)
+        CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT1)
       END IF
 !
 !     ==================================================================
 !     ==  COUPLE CLASSICAL ENVIRONMENT                                ==
 !     ==================================================================
-      CALL QMMM$INTERFACE(NAT,POS,CHARGE,FORCE1,POT1,ENERGY1)
-      ENERGY=ENERGY+ENERGY1
+      CALL QMMM$INTERFACE(NAT,POS,CHARGE,FORCE1,POT1,EPOT1)
+      ENERGY=ENERGY+EPOT1
       DO IAT=1,NAT
         FORCE(:,IAT)=FORCE(:,IAT)+FORCE1(:,IAT)
         DO IG=1,NG
           VI(IG,IAT)=VI(IG,IAT)+POT1(IAT)
         ENDDO
       ENDDO
+!     == KINETIC ENERGY IS CALCULATED BY ATOMS$EKIN AND TREATED TOGETHER 
+!     == WITH ATOM ENERGY.
+      CALL ENERGYLIST$SET('QMMM KINETIC ENERGY',-1.1111D0)
+      CALL ENERGYLIST$SET('QMMM POTENTIAL ENERGY',EPOT1)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT1)
 !
 !     ==================================================================
 !     ==  CALGARY QM/MM INTERFACE                                     ==
@@ -725,10 +740,15 @@ call trace$pass('after isolate_interface')
 !     ==================================================================
 !      CALL CONTINUUM$PROPAGATE(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
       CALL COSMO$SETL4('PERIODIC',.NOT.TISOLATE)
-      CALL COSMO$INTERFACE(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
-      ENERGY=ENERGY+ENERGY1
+      CALL COSMO$INTERFACE(NAT,POS,NG,RC,QI,EPOT1,EKIN1,VI1,FORCE1)
+      ENERGY=ENERGY+EPOT1
       VI(:,:)=VI(:,:)+VI1(:,:)
       FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)
+      CALL ENERGYLIST$SET('COSMO KINETIC ENERGY',EKIN1)
+      CALL ENERGYLIST$SET('COSMO POTENTIAL ENERGY',EPOT1)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT1)
+      CALL ENERGYLIST$ADD('CONSTANT ENERGY',EPOT1+EKIN1)
+!
       RETURN
       END
 !
