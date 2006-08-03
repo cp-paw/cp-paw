@@ -136,8 +136,8 @@
 !     ==================================================================
 !     ==  READ CONTINUUM ENVIRONMENT                                  ==
 !     ==================================================================
-      CALL CONTINUUM$READ(NFIL,NFILO,TCHK)
-      TREAD=TREAD.OR.TCHK
+!      CALL CONTINUUM$READ(NFIL,NFILO,TCHK)
+!      TREAD=TREAD.OR.TCHK
 !
 !     ==================================================================
 !     ==  READ COsmo ENVIRONMENT                                  ==
@@ -244,7 +244,7 @@
 !     ==================================================================
 !     == WRITE CONTINUUM ENVIRONMENT                                  ==
 !     ==================================================================
-      CALL CONTINUUM$WRITE(NFIL,NFILO,TCHK)
+!      CALL CONTINUUM$WRITE(NFIL,NFILO,TCHK)
 !
 !     ==================================================================
 !     == WRITE COsmo ENVIRONMENT                                      ==

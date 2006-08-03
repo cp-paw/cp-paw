@@ -477,7 +477,7 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!CONTINUUM                               ==
 !     ==================================================================
-      CALL READIN_CONTINUUM(LL_CNTL)
+!      CALL READIN_CONTINUUM(LL_CNTL)
 !    
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!CONTINUUM                               ==

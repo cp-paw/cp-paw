@@ -724,7 +724,8 @@ call trace$pass('after isolate_interface')
 !     ==  COUPLE CONTINUUM                                            ==
 !     ==================================================================
 !      CALL CONTINUUM$PROPAGATE(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
-      CALL COSMO$interface(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
+      CALL COSMO$SETL4('PERIODIC',.NOT.TISOLATE)
+      CALL COSMO$INTERFACE(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
       ENERGY=ENERGY+ENERGY1
       VI(:,:)=VI(:,:)+VI1(:,:)
       FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)

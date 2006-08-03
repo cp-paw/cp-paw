@@ -635,7 +635,7 @@ END MODULE COSMO_MODULE
 !     == UNFOLD POSITIONS                                                       ==
 !     ============================================================================
       IF(.NOT.TISO) THEN
-        DO IAT1=1,NNX
+        DO IAT1=1,Nat
           DO IN=1,NNN(IAT1)
             IAT2=NNLIST(1,IN,IAT1)
             NNLIST(2:4,IN,IAT1)=NNLIST(2:4,IN,IAT1)+IFOLD(:,IAT2)-IFOLD(:,IAT1)
@@ -1847,6 +1847,7 @@ WRITE(*,FMT='(I5,3F20.10)')ITER,EKIN,EPOT,EKIN+EPOT
 !     =======================================================================
       CALL ENERGYLIST$SET('COSMO KINETIC ENERGY',EKIN)
       CALL ENERGYLIST$SET('COSMO POTENTIAL ENERGY',EPOT)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT)
       CALL ENERGYLIST$ADD('CONSTANT ENERGY',EKIN+EPOT)
 !
 !     =======================================================================
