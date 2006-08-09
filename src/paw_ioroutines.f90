@@ -28,9 +28,9 @@ CONTAINS
      &             //',"   WITH THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
         WRITE(NFILO,FMT='(72("*"))')
         WRITE(NFILO,FMT='(T10' &
-     &           //',"P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY")')
+     &           //',"P.E. BLOECHL, Clausthal University of Technology")')
         WRITE(NFILO,FMT='(T10' &
-     &      //',"(C) IBM, 1995-1997 * ANY USE REQUIRES WRITTEN LICENSE FROM IBM")')
+     &      //',"(C) Clausthal University of Technology (CUT) * ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
         IF (VERSIONTEXT (17:17).NE.'%')THEN
           WRITE(NFILO,FMT='(A)') VERSIONTEXT
         ENDIF
@@ -907,8 +907,14 @@ CALL TRACE$PASS('DONE')
         CALL LINKEDLIST$SET(LL_CNTL,'TYPE',0,1)
       END IF
       CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,ILDA)
-PRINT*,'ILDA ',ILDA
       CALL DFT$SETI4('TYPE',ILDA)
+!
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'VDW',1,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'VDW',1,TCHK)
+      CALL VDW$SETL4('ON',TCHK)
+      IF(ILDA.EQ.10) THEN
+        CALL VDW$SETCH('FUNCTIONAL','PBE')
+      END IF
                           CALL TRACE$POP
       RETURN
       END

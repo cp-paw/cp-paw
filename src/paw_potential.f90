@@ -802,7 +802,7 @@ end if
 !   
 !     == eisolate contains the energy contributions from isolate,      ==
 !     == cosmo, qmmm etc. the corresponding energylist contributions   ==
-!     == are already taken are off in isolate.                         ==
+!     == are already taken are off in isolate_interface                ==
 !
 !     ==================================================================
 !     ==  SELFTEST                                                    ==
@@ -1004,7 +1004,6 @@ end if
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
         CALL PLANEWAVE$STRUCTUREFACTOR(RAT(1,IAT),NGL,EIGR)
-
         DO IG=1,NGL
           RHO(IG)=RHO(IG)+PSCORG(IG,ISP)*Y0*EIGR(IG)
         ENDDO

@@ -232,7 +232,9 @@
 !     ==================================================================
 !     ==  ADD CORRECTION TO POTENTIAL                                 ==
 !     ==================================================================
-      RHOB=0.D0
+      if(tisolate) then
+        RHOB=0.D0
+      end if
       E=ET
       DO IAT=1,NAT
         DO I=1,3
@@ -749,6 +751,19 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT1)
       CALL ENERGYLIST$ADD('CONSTANT ENERGY',EPOT1+EKIN1)
 !
+!
+!     ==================================================================
+!     ==  COUPLE vdw  (van der Waals as interatomic potential         ==
+!     ==================================================================
+      CALL VDW$SETL4('PERIODIC',.NOT.TISOLATE)
+      CALL VDW$INTERFACE(NAT,POS,EPOT1,FORCE1)
+      ENERGY=ENERGY+EPOT1
+      VI(:,:)=VI(:,:)+VI1(:,:)
+      FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)
+      CALL ENERGYLIST$SET('VAN DER WAALS ENERGY',EPOT1)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT1)
+      CALL ENERGYLIST$ADD('CONSTANT ENERGY',EPOT1)
+
       RETURN
       END
 !

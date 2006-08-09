@@ -1129,16 +1129,38 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
           CALL ENERGYLIST$PRINTONE(NFILO,'BO-WAVEFUNCTION KINETIC ENERGY')
           CALL ENERGYLIST$PRINTONE(NFILO,'ELECTRON THERMOSTAT')     
 !
+!         == Van der Waals energy========================================
+          CALL VDW$GETL4('ON',TCHK)
+          IF(TCHK) THEN
+            CALL ENERGYLIST$PRINTONE(NFILO,'VAN DER WAALS ENERGY')
+          END IF
+!
 !         == CELLOSTAT   ================================================
-          CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT KINETIC')
-          CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT POTENTIAL')
+          CALL CELL$GETL4('ON',TCHK)
+          CALL CELL$GETL4('MOVE',TCHK1)
+          IF(TCHK.AND.TCHK1) THEN
+            CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT KINETIC')
+            CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT POTENTIAL')
+          END IF
           
 !         == OCCUPATIONS ================================================
-          CALL ENERGYLIST$PRINTONE(NFILO,'ELECTRONIC HEAT')
-          CALL ENERGYLIST$PRINTONE(NFILO,'OCCUPATION KINETIC ENERGY')
+          CALL DYNOCC$GETL4('DYN',TCHK)
+          IF(TCHK) THEN
+            CALL ENERGYLIST$PRINTONE(NFILO,'ELECTRONIC HEAT')
+            CALL ENERGYLIST$PRINTONE(NFILO,'OCCUPATION KINETIC ENERGY')
+          end if
+!
+!         == external potential =========================================
           CALL ENERGYLIST$PRINTONE(NFILO,'EXTERNAL POTENTIAL')
-          CALL ENERGYLIST$PRINTONE(NFILO,'QMMM KINETIC ENERGY')
-          CALL ENERGYLIST$PRINTONE(NFILO,'QMMM POTENTIAL ENERGY')
+!
+!         == QM-MM ======================================================
+          CALL QMMM$GETL4('ON',TQMMM)
+          IF(TQMMM) THEN
+            CALL ENERGYLIST$PRINTONE(NFILO,'QMMM KINETIC ENERGY')
+            CALL ENERGYLIST$PRINTONE(NFILO,'QMMM POTENTIAL ENERGY')
+          end if
+!
+!         == COSMO ======================================================
           IF(TCOSMO) THEN
             CALL ENERGYLIST$PRINTONE(NFILO,'COSMO KINETIC ENERGY')
             CALL ENERGYLIST$PRINTONE(NFILO,'COSMO POTENTIAL ENERGY')
@@ -1178,6 +1200,11 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL QMMM$REPORT(NFILO)
       ENDIF
                               CALL TRACE$PASS('AFTER STATEANALYSIS')
+!   
+!     ==================================================================
+!     ==   write file for cosmotherm                                  ==
+!     ==================================================================
+      call cosmo$printout()
 !   
 !     ==================================================================
 !     ==   CALCULATE OPTICAL MATRIXELEMENTS                           ==

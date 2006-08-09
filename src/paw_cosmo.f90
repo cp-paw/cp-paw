@@ -1386,9 +1386,9 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
 !     ======================================================================
       ENONPOLAR=ENONPOLAR+GAMMA
       ETOT=EBLANK+ENONPOLAR+ESELF
-!PRINT*,'COSMO EBLANK',EBLANK
-!PRINT*,'COSMO ENONPOLAR',ENONPOLAR
-!PRINT*,'COSMO ESELF',ESELF
+PRINT*,'COSMO EBLANK',EBLANK
+PRINT*,'COSMO ENONPOLAR',ENONPOLAR
+PRINT*,'COSMO ESELF',ESELF
       RETURN
       END
 !
@@ -1875,3 +1875,52 @@ WRITE(*,FMT='(I5,3F20.10)')ITER,EKIN,EPOT,EKIN+EPOT
                           CALL TRACE$POP
       RETURN 
       END SUBROUTINE COSMO$INTERFACE
+!
+!     ............................................................................
+      SUBROUTINE COSMO$PRINTOUT()
+      USE COSMO_MODULE
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4)            :: NFIL
+      CHARACTER(2)          :: SYMBOL
+      CHARACTER(10)         :: id
+      REAL(8)               :: RAT(3)
+      REAL(8)               :: FACEAREA
+      REAL(8)               :: PI
+      real(8)               :: angstrom
+      integer(4)            :: i,iat
+      real(8)               :: aez
+!     ***********************************************************************************
+      IF (.NOT.TON) RETURN
+      PI=4.D0*DATAN(1.D0)
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
+!      
+      ID='COSMO_OUT'
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,'.COSMO_OUT')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
+!
+      CALL FILEHANDLER$UNIT('COSMO_OUT',NFIL)
+      REWIND(NFIL)
+      WRITE(NFIL,FMT='("COORD_RAD")')
+      WRITE(NFIL,FMT='("#ATOM",T10,"X",T20,"Y",T30,"Z",T40,"ELEMENT",T50,"RADIUS [A]")')
+      DO Iat=1,NAT
+        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT)
+        CALL ATOMLIST$GETR8('Z',IAT,AEZ)
+        CALL PERIODICTABLE$GET(NINT(AEZ),'SYMBOL',SYMBOL)
+        IF(SYMBOL(2:2).EQ.'_') SYMBOL(2:2)=' '
+        WRITE(NFIL,FMT='(I3,3F20.14,A3,F15.5)')Iat,RAT,SYMBOL,RSOLV(Iat)/ANGSTROM
+      ENDDO
+      WRITE(NFIL,FMT='("COORD_CAR")')
+      DO IAT=1,NAT
+        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT)
+        FACEAREA=4.D0*PI*RSOLV(IAT)/REAL(NQAT(IAT),KIND=8)
+        DO I=IQFIRST(IAT),IQFIRST(IAT)+NQAT(IAT)-1
+          WRITE(NFIL,FMT='(*)')I,IAT,QRELPOS(:,I)+RAT(:),Q0(I),FACEAREA,Q0(I)/FACEAREA
+        ENDDO
+      ENDDO
+      CALL FILEHANDLER$CLOSE('COSMO_OUT')
+      RETURN
+      END
