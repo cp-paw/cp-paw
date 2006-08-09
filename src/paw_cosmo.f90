@@ -29,6 +29,9 @@ REAL(8),SAVE,ALLOCATABLE :: QM(:)
 REAL(8),SAVE,ALLOCATABLE :: QP(:)
 INTEGER,SAVE             :: NPTESS=0
 REAL(8),SAVE,ALLOCATABLE :: RTESS(:,:)
+!== SASCHA - printout charges
+LOGICAL(4) ::  TCHARGES
+!======
 !
 CONTAINS
 !
@@ -179,7 +182,9 @@ END MODULE COSMO_MODULE
         TADIABATIC=VAL
       ELSE IF(ID.EQ.'PERIODIC') THEN
         TISO=.NOT.VAL
-      ELSE
+      ELSE IF(ID.EQ.'CHARGES') THEN
+         TCHARGES=VAL
+      ELSE         
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('COSMO$SETL4')
@@ -1636,6 +1641,17 @@ USE CONTINUUM_MODULE
       real(8)                  :: f(ntest)
       logical                  :: test=.true.
       integer                  :: itest
+
+integer(4) :: nfilinfo,nxyz,j
+
+TYPE XYZ_TYPE
+   character(2)   :: name
+   real(8)        :: r(3)
+end TYPE XYZ_TYPE
+
+type(xyz_type), allocatable :: xyz(:)
+real(8) :: d
+
 !     ***********************************************************************
       epot=0.d0
       ekin=0.d0
@@ -1701,12 +1717,36 @@ USE CONTINUUM_MODULE
 !     == SETUP DATA THAT DEPEND ONLY ON POSITIONS BUT NOT THE CHARGES      ==
 !     =======================================================================
       ALLOCATE(RQ(3,NQ))
+do i=1,NQ
+   rq(:,I) = 0.d0
+enddo
+call filehandler$unit('INFO',NFILINFO)
       RAT(:,:)=R01(:,:)
+allocate(xyz(NQ))
+nxyz=0
       DO IAT=1,NAT
         DO I=IQFIRST(IAT),IQFIRST(IAT)+NQAT(IAT)-1
           RQ(:,I)=QRELPOS(:,I)+RAT(:,IAT)
+xyz(i)%name="Cl"
+xyz(i)%r= RQ(:,i)
+nxyz = nxyz + 1
         ENDDO
       ENDDO 
+
+! do i=1,NQ
+!    do j=1,NQ
+!       d= sqrt( (xyz(i)%r(1) - xyz(j)%r(1))**2 + (xyz(i)%r(2) - xyz(j)%r(2))**2 + (xyz(i)%r(3) - xyz(j)%r(3))**2 )
+!       if(d.lt.0.001d0) then 
+!          xyz(j)%name="S "
+!          xyz(i)%name="S "
+!       end if
+!    end do
+! end do
+
+
+print*,"FLAG: NXYZ=",NXYZ," NQ=",NQ
+write(nfilinfo,FMT='(I12)') NQ
+write(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
 !
                                       CALL TIMING$CLOCKON('CONT: PROPAGATE')
       RMAX=MAX(2.D0*MAXVAL(RSOLV),5.D0*MAXVAL(RC))
@@ -1715,6 +1755,11 @@ USE CONTINUUM_MODULE
       ALLOCATE(THETA(NQ))
       CALL COSMO_CUTOFF(NAT,NQ,RAT,RBAS,RSOLV,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
      &                       ,ZEROTHETA,THETA)
+! IF(TCHARGES) THEN
+!    do i=1,NQ
+!       IF(.NOT.ZEROTHETA(i))  write(NFILINFO,FMT='(A2,3F11.5)') xyz(i)%name, xyz(i)%r(:)
+!    enddo
+! END IF
 !
 !     =======================================================================
 !     == NOW CALCULATE TOTAL ENERGY                                        ==
@@ -1848,6 +1893,14 @@ WRITE(*,FMT='(I5,3F20.10)')ITER,EKIN,EPOT,EKIN+EPOT
 !     =======================================================================
 !     ==  CLOSE DOWN                                                       ==
 !     =======================================================================
+IF(TCHARGES) THEN
+   do i=1,NQ
+      IF(QBAR(i).le.0) xyz(i)%NAME='O '
+      IF(.NOT.ZEROTHETA(i))  write(NFILINFO,FMT='(A2,3F11.5,F15.10)') xyz(i)%name, xyz(i)%r(:), QBAR(i)
+   enddo
+END IF
+
+
       DEALLOCATE(QBAR)
       DEALLOCATE(VQ)
       DEALLOCATE(VQ1)

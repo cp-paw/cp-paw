@@ -764,6 +764,14 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
+!     ==  INFO FILE   ==================================================
+      ID=+'INFO'
+      CALL FILEHANDLER$SETFILE(ID,T,-'.INFO')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
+!
 !     ==  RESTART_IN FILE ==============================================
       ID=+'RESTART_IN'
       CALL FILEHANDLER$SETFILE(ID,T,-'.RSTRT')
@@ -2303,6 +2311,14 @@ print *,'keep_dff set in list'
       END IF
       CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,SVAR)
       CALL COSMO$SETR8('FRICTION',SVAR)
+!
+!     ==  PRINT CHARGES ================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'CHARGES',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'CHARGES',0,.FALSE.)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'CHARGES',1,TCHK)
+      CALL COSMO$SETL4('CHARGES',TCHK)
 !
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!COsmo!AUTO                              ==
