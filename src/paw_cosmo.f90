@@ -768,7 +768,7 @@ END MODULE COSMO_MODULE
         IF(ZEROTHETA(IQ)) THETA(IQ)=0.D0
         IF(ZEROTHETA(IQ)) IAT=IAT+1
       ENDDO
-      PRINT*,'FRACTION OF NONZERO CHARGES ',REAL(IAT)/REAL(NQ)
+!     PRINT*,'FRACTION OF NONZERO CHARGES ',REAL(IAT)/REAL(NQ)
       RETURN
       END
 !
@@ -1386,9 +1386,9 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
 !     ======================================================================
       ENONPOLAR=ENONPOLAR+GAMMA
       ETOT=EBLANK+ENONPOLAR+ESELF
-PRINT*,'COSMO EBLANK',EBLANK
-PRINT*,'COSMO ENONPOLAR',ENONPOLAR
-PRINT*,'COSMO ESELF',ESELF
+!PRINT*,'COSMO EBLANK',EBLANK
+!PRINT*,'COSMO ENONPOLAR',ENONPOLAR
+!PRINT*,'COSMO ESELF',ESELF
       RETURN
       END
 !
@@ -1643,7 +1643,7 @@ USE CONTINUUM_MODULE
       force(:,:)=0.d0
       IF (.NOT.TON) RETURN
                                CALL TRACE$PUSH('CONTINUUM$PROPAGATE')
-PRINT*,'=============================== COSMO ============================='
+!PRINT*,'=============================== COSMO ============================='
 !TADIABATIC=.TRUE.
 !TMULTIPLE=.TRUE.
 !NMULTIPLE=100
@@ -1711,7 +1711,6 @@ PRINT*,'=============================== COSMO ============================='
                                       CALL TIMING$CLOCKON('CONT: PROPAGATE')
       RMAX=MAX(2.D0*MAXVAL(RSOLV),5.D0*MAXVAL(RC))
       CALL COSMO_NEIGHBORLIST(TISO,NAT,RAT,RBAS,RMAX,NNX,NNN,NNLIST) 
-PRINT*,'NNN',NNN
       ALLOCATE(ZEROTHETA(NQ))
       ALLOCATE(THETA(NQ))
       CALL COSMO_CUTOFF(NAT,NQ,RAT,RBAS,RSOLV,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
@@ -1766,7 +1765,7 @@ PRINT*,'NNN',NNN
         VTHETA(:)=VTHETA(:)+VQ1(:)*Q0(:)
         VAT(:)=VAT(:)+VAT1(:)*FDIEL
         FAT(:,:)=FAT(:,:)+FAT1(:,:)
-print*,'longrange ',epot1,'sum(qbar)',sum(qbar),'sum(qatbar)',sum(qatbar)
+!print*,'longrange ',epot1,'sum(qbar)',sum(qbar),'sum(qatbar)',sum(qatbar)
 !
 !       =======================================================================
 !       == SELF-ENERGY                                                       ==
@@ -1776,7 +1775,7 @@ print*,'longrange ',epot1,'sum(qbar)',sum(qbar),'sum(qatbar)',sum(qatbar)
         EPOT=EPOT+EPOT1
         VQ(:)=VQ(:)+VQ1(:)
         VTHETA(:)=VTHETA(:)+VTHETA1(:)
-print*,'self energy ',epot1
+!print*,'self energy ',epot1
 !
 !       =======================================================================
 !       == DENSITY SURFACE INTERACTION                                       ==
@@ -1788,7 +1787,7 @@ print*,'self energy ',epot1
         VTHETA=VTHETA(:)+VQ1(:)*Q0(:)
         FAT(:,:)=FAT(:,:)+FAT1(:,:)
         VMAD(:,:)=VMAD(:,:)+VMAD1(:,:)
-print*,'short ranged ',epot1
+!print*,'short ranged ',epot1
 !
 !       =======================================================================
 !       == TRANSFORM BACK TO FUNDAMENTAL VARIABLES                           ==
