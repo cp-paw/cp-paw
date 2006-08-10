@@ -1,9 +1,10 @@
 !#IF DEFINED(IBMLICENSE)
       PROGRAM MAIN
 !     ******************************************************************
-!     **     CP-PAW                                                   **
-!     **     (C) COPYRIGHT   I B M   CORPORATION   1990-1997          **
-!     **     LICENSED MATERIALS -  PROPERTY     OF     I B M          **
+!     **                      CP-PAW                                  **
+!     **     (C) COPYRIGHT   Clausthal University of Technology       **
+!     **     LICENSED MATERIALS                                       **
+!     **     PROPERTY of Clausthal University of Technology           **
 !     ******************************************************************
 !     **                                                              **
 !     **  THIS THE CAR-PARRINELLO FIRST PRINCIPLES MOLECULAR DYNAMICS **

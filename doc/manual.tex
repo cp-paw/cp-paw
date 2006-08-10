@@ -101,7 +101,7 @@ the code more secure to use.
 Any other suggestions on how to improve the clarity of this description
 or the code are most welcome.
 
-Programs become outdated lnearly as quickly as newspapers. Note that
+Programs become outdated nearly as quickly as newspapers. Note that
 the executable of this code may also have an expiration date.  The
 code will print a warning about a month before it expires. Please make
 sure that you know the expiration date when you receive an executable.
@@ -109,8 +109,7 @@ If the license expires, discuss with your contact person about
 obtaining an extension of the license and a new executable program.
 
 Note that the CP-PAW code including all related material is
-copyrighted. You require a valid license from IBM to execute it. There
-you can also find the copyright agreement.
+copyrighted. You require a valid license to execute it. 
 
 %==========================================================================
 \section{What is the projector augmented wave method?}
@@ -253,28 +252,28 @@ memory and CPU time.  The scalar version program is identical to the
 parallel version with the exception that a dummy interface is used
 instead of MPI.
 
-The program relies heavily on the {\bf ESSL (Engineering and
-  Scientific Subroutine Library)} \cite{ESSL}.  This library takes
-care of basic computations such as matrix multiplications and FFTs
-(Fast Fourier transforms). A large fraction of the total CPU time is
-spent in these routines. In this way the code development concentrates
-on algorithmic developments and not, for example, on how to optimize a
-FFT.  This will be done by experts who continually adapt this library
-to modern computer architectures.
+The program relies heavily on linear algebra packages such as LAPACK,
+BLAS and FFTW. These libraries takes care of basic computations such
+as matrix multiplications and FFTs (Fast Fourier transforms). A large
+fraction of the total CPU time is spent in these routines. In this way
+the code development concentrates on algorithmic developments and not,
+for example, on how to optimize a FFT.  The latter will be done by
+experts who continually adapt this library to modern computer
+architectures.
 
 One programming principle I try to follow is the German engineering
 motto {\bf ``Fewer Parts!''}. For the user this implies that he will
 find few instances where two options provide the same functionality. I
 hope that the limitations will be offset by clarity.
 
-The program uses {\bf Hartree atomic units} and Cartesian coordiantes.
-Angles are handled in radian ($2\pi{\rm\ rad}= 360~\deg$).
-The conversion to other units is often done during printing. The
-conversion factors are provided by a particular agent (see
-section~\ref{constants}), which is based on the values of fundamental
-physical constants recommended in 1986 by CODATA (Committee on Data
-for Science and Technology of the International Council of Scientific
-Unions) \cite{Constants}.
+The program uses {\bf Hartree atomic units}, that is
+$\hbar=e=m_e=4\pi\epsilon_0=1$, and Cartesian coordiantes.  Angles are
+handled in radian ($2\pi{\rm\ rad}= 360~\deg$).  The conversion to
+other units is often done during printing. The conversion factors are
+provided by a particular agent (see section~\ref{constants}), which is
+based on the values of fundamental physical constants recommended in
+1986 by CODATA (Committee on Data for Science and Technology of the
+International Council of Scientific Unions) \cite{Constants}.
 
 The program divides work into {\bf three steps: simulation --
   analysis -- visualization}.  The program consists of the simulation
@@ -302,9 +301,10 @@ because you dare not jeopardize its operation.
 In contrast to analysis, simulation is computationally expensive.
 Therefore, it is desirable to archive as much data from the simulation
 as possible, and be able to go back later and look at it again. Hence
-the simulation writes most data rather unspecifically in machine-readable
-form  (which saves considerable disk space).  The data are written in a
-simple format so that it is easy to read them into the analysis tools.
+the simulation writes most data rather unspecifically in
+machine-readable form (which saves a considerable amount of disk
+space).  The data are written in a simple format so that it is easy to
+read them into the analysis tools.
 
 Visualization is also separated from analysis, because many tools
 exist and the choice is a matter of taste and wealth. The analysis
@@ -949,6 +949,15 @@ parameterization of the Ceperley Alder}
 \vrules{optional}
 \vdefault{F}}
 }{} % end of \ifthenelse
+
+\mbax{\key{VDW}
+\vdescr{Adds van der Waals Interactions\cite{grimme04_jcc25_1463}. 
+The van der Waals interaction is described by an interatomic pair-potential 
+that has a long-ranged $r^{-6}$ behavior and which is cut of smoothly 
+at short distances.}
+\vformat{logical}
+\vrules{optional (Untested)}
+\vdefault{F}}
 
 
 %----------------------------------------------------------------------
@@ -6991,6 +7000,9 @@ Pople\cite{Pople}.
 \newpage
 \section{Installation}
 %==========================================================================
+\textbf{Warning! This section is obsolete.  Follow the instruction of
+install.tex instead.}
+
 %
 %==========================================================================
 \subsection{Resources required}
@@ -7618,6 +7630,10 @@ keep this list as short as possible.
   product of IBM. See
   ``http://direct.boulder.ibm.com/rsdirect/us/software/essl.htm'' for
   more information.
+%
+\bibitem{grimme04_jcc25_1463}S. Grimme, \textit{Accurate description
+of Van der Waals complexes by density functional theory including
+empirical corrections}, J. Comput. Chem. \textbf{25},1463 (2004).
 %0
 \bibitem{IRC} ``A Formulation of the Reaction Coordinate'' J. Phys.
   Chem. {\bf 74}, 4161 (1970); ``The Path of Chemical Reactions -- The
