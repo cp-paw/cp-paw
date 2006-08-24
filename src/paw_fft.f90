@@ -1492,9 +1492,7 @@ print*,thistask,'icount',icount
 !     **                                                              **
 !     **  GENERATES THE RECIPROCAL LATTICE VECTORS                    **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       USE PLANEWAVE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NGL
@@ -1531,7 +1529,7 @@ print*,thistask,'icount',icount
 !     **                                                              **
 !     ** CALCULATES PHASE  FACTOR EXP( I*K*R ) ON THE REAL SPACE GRID **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NR1,NR2,NR3
       INTEGER(4),INTENT(IN) :: NR1START,NR1END

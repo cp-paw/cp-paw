@@ -30,8 +30,8 @@
 !**    4) CID STANDS FOR COMMUNICATOR ID AND DETERMINES THE GROUP OF  **
 !**       PROCESSORS  ON WHICH THE COMMAND IS EXECUTED                **
 !**                                                                   **
-!**           ERNST NUSTERER 1994/1996                                **
-!** MODIFIED: PETER E. BLOECHL, IBM ZURICH RESEARCH LABORATORY (1996) **
+!**                                          ERNST NUSTERER 1994/1996 **
+!**                                MODIFIED: PETER E. BLOECHL, (1996) **
 !***********************************************************************
 !
 MODULE MPE_MPIF_MODULE

@@ -2850,7 +2850,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     **                                                              **
 !     **  READ STRUCTURAL DATA                                        **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1995)***
+!     ****************************************** P.E. BLOECHL, 1995 ****
       USE IO_MODULE
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
@@ -5371,7 +5371,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !     **                                                              **
 !     **  UPDATES THE BUFFER STRC AND WRITES IT ON STRC_OUT           **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+!     ****************************************** P.E. BLOECHL, 1991 ****
       USE IO_MODULE, ONLY : LL_STRC
       USE LINKEDLIST_MODULE
       IMPLICIT NONE

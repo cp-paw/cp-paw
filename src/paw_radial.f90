@@ -2547,8 +2547,7 @@ character(32):: file
 !     **                                                              **
 !     **    QLM = INT{D^3R: RHO(R) * |R|**L *Y_L(R) }                 **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1997) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1997*****
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID      ! FIRST POINT ON RADIAL GRID
       INTEGER(4),INTENT(IN) :: NR      ! NUMBER OF RADIAL GRID POINTS
@@ -3562,7 +3561,7 @@ MODULE BESSELTRANSFORM_MODULE
 !**  REFERENCE:                                                       **
 !**    J.D. TALMAN. COMP. PHYS. COMMUN. 30 (1983) 93                  **
 !**                                                                   **
-!*************PETER E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996)****
+!*********************************************** P.E. BLOECHL, 1996*****
 COMPLEX(8),ALLOCATABLE :: TA(:)     ! WORK ARRAY, SAVE
 COMPLEX(8),ALLOCATABLE :: TRBE(:,:) ! WORK ARRAY,SAVE
 COMPLEX(8),ALLOCATABLE :: WW(:)     ! WORK ARRAY,SAVE
@@ -4299,8 +4298,7 @@ END MODULE BESSELTRANSFORM_MODULE
 !     **  BY INTERPOLATION BY A THIRD ORDER POLYNOM                   **
 !     **  F(X=I)=F(I)                                                 **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
+!     ****************************************** P.E. BLOECHL, 1991*****
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NR
       REAL(8)   ,INTENT(IN) :: F(NR)
@@ -4340,8 +4338,7 @@ CALL ERROR$STOP('BESSOV')
 !     **  WITH THE FUNCTION F GIVEN ON AN LOGARITHMIC GRID            **
 !     **  (3-D OVERLAPP)                                              **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
+!     ****************************************** P.E. BLOECHL, 1991*****
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: R1    ! 1. RADIAL GRID POINT
       REAL(8)   ,INTENT(IN) :: DEX   ! FACTOR BETWEEN SUBSEQUENT GRID POINTS
@@ -4399,9 +4396,7 @@ CALL ERROR$STOP('BESSOV')
 !     **    FORMULA 10.1.2              FOR   X < 8                   **
 !     **    FORMULA 10.1.8 AND  10.1.9  FOR   X > 8                   **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991*****
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       INTEGER(4),INTENT(IN) :: L ! MAIN AGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT

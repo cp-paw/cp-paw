@@ -817,7 +817,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !     **  CALCULATES THE 1C CONTRIBUTION TO THE OVERLAP MATRIX        **
 !     **  ( RESULT IS ADDED TO "MAT"! )                               **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1992)***
+!     *******************************************P.E. BLOECHL, (1992)***
       USE MPE_MODULE
       USE WAVES_MODULE, ONLY: MAP_TYPE
       IMPLICIT NONE
@@ -1494,7 +1494,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !     **  HERMITEAN, ARE OBTAINED FROM THIS LAMBDA MATRIX BY          **
 !     **  MULTIPLICATION WITH THE OCCUPATION TO THE RIGHT.            **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1992)***
+!     *******************************************P.E. BLOECHL, (1992)***
 !     IMPLICIT NONE
       REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
       REAL(8)   ,PARAMETER     :: DSMALL = 1.D-12
@@ -1761,8 +1761,8 @@ PRINT*,'ITER ',ITER,DIGAM
 !     **    ED. A.POLIAN, PLOUBEYRE AND N.BOCCARA                     **
 !     **    (PLENUM PUBLISHING CORPORATION,1989)                      **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1992)***
-!     IMPLICIT NONE
+!     *******************************************P.E. BLOECHL, (1992)***
+      IMPLICIT NONE
       REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
       REAL(8)   ,PARAMETER     :: DSMALL = 1.D-12
       INTEGER(4),PARAMETER     :: MAX    = 200
@@ -1955,7 +1955,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     **                                                              **
 !     **  GRAM-SCHMIDT ORTHOGONALIZATION OF A SET OF WAVE FUNCTIONS   **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
+!     *******************************************P.E. BLOECHL, (1999)***
       USE WAVES_MODULE, ONLY: MAP_TYPE,GSET_TYPE
       USE MPE_MODULE
       IMPLICIT NONE
@@ -2253,7 +2253,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     **                                                              **
 !     **  THE MAXIMUM WEIGHT OF THE WAVE FUNCTIONS AT EPW[RY]=GC2     **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+!     *******************************************P.E. BLOECHL, (1991)***
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NB              ! #(BANDS)
       INTEGER(4),INTENT(IN)    :: NG              ! #(PLANE WAVES),MAX
@@ -2297,7 +2297,7 @@ PRINT*,'ITER ',ITER,DIGAM
 !     **                                                              **
 !     **  THE MAXIMUM WEIGHT OF THE WAVE FUNCTIONS AT EPW[RY]=GC2     **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+!     *******************************************P.E. BLOECHL, (1991)***
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NB              ! #(BANDS)
       INTEGER(4),INTENT(IN)    :: NG              ! #(PLANE WAVES),MAX

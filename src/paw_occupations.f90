@@ -57,9 +57,9 @@ MODULE DYNOCC_MODULE
 !**    OCCUPATIONS ARE OVERWRITTEN. IF STARTTYPE='X' THE OCCUPATIONS  **
 !**    ARE READ FROM FILE. FOR STARTTYPE='E' THE ENERGIES ARE READ    **
 !**    FROM FILE AND THE OCCUPATIONS ARE CREATED NEW USING THE        **
-!**    TEMPERATURE, THE TOTAL CHARGE OR SPIN (OR SPINPOT).             **
+!**    TEMPERATURE, THE TOTAL CHARGE OR SPIN (OR SPINPOT).            **
 !**                                                                   **
-!************PETER E BLOECHL, IBM ZURICH RESEARCH LABORATORY (1996)*****
+!******************************************* PETER E. BLOECHL, 1996 *****
 CHARACTER(1):: STARTTYPE       ! CAN BE 'N','E','X'
 INTEGER(4)  :: NB=0            ! #(BANDS)
 INTEGER(4)  :: NKPT=0          ! #(K-POINTS)
@@ -1831,9 +1831,7 @@ INTEGER(4) :: COUNT = 0
 !     **  AND CALCULATES THE ENERGY -T*S RELATED TO THE ENTROPY OF    **
 !     **  THE ELECTRONS.                                              **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       LOGICAL(4) ,PARAMETER  :: TPR=.TRUE.
       INTEGER(4) ,PARAMETER  :: ITERX=1000   ! MAX #(ITERATIONS)

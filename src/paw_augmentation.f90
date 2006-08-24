@@ -123,11 +123,11 @@ END MODULE AUGMENTATION_MODULE
 !     .....................................................MOMNTS.......
       SUBROUTINE AUGMENTATION$MOMENTS(ISP,LMNX,DENMAT,LMRX,QLM)
 !     ******************************************************************
-!     **                                                             **
-!     **  CALCULATES THE ELECTROSTATIC MULTIPOLE MOMENTS FOR THE     **
-!     **  COMPENSTATION CHARGE DENSITY                               **
-!     **                                                             **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)**
+!     **                                                              **
+!     **  CALCULATES THE ELECTROSTATIC MULTIPOLE MOMENTS FOR THE      **
+!     **  COMPENSTATION CHARGE DENSITY                                **
+!     **                                                              **
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       INTEGER(4),INTENT(IN)  :: ISP
@@ -3491,8 +3491,7 @@ END MODULE BROYDEN_MODULE
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: LNX
@@ -3616,7 +3615,7 @@ END MODULE BROYDEN_MODULE
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
-!     *********** P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1996) **
+!     ****************************************** P.E. BLOECHL, 1996 ****
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TNS=.TRUE. ! NON-SPHERICAL CONTRIBUTIONS ON
       INTEGER(4),INTENT(IN) :: GID

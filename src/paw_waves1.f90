@@ -46,7 +46,7 @@ MODULE WAVES_MODULE
 !***********************************************************************
 !**                                                                   **
 !**                                                                   **
-!******************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1995)**
+!************************************************P.E. BLOECHL, (1995)***
 USE LINKEDLIST_MODULE
 ! ----------------------------------------------------------------------
 ! THE TYPE MAP_TYPE DESCRIBES THE ARRANGEMENT OF PROJECTOR FUNCTIONS 
@@ -1122,7 +1122,7 @@ PRINT*,THISTASK,'BEFORE ',XK(:,IKPTL),TINV
 !     **  EVALUATE PS KINETIC ENERGY IN G-SPACE                       **
 !     **  EVALUATE NUMBER OF ELECTRONS IN G-SPACE                     **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (2000)***
+!     *******************************************P.E. BLOECHL, (2000)***
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -2129,7 +2129,7 @@ END IF
 !     **  REMARKS:                                                    **
 !     **    REQUIRES PLANEWAVE OBJECT TO BE SET PROPERLY              **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
+!     *******************************************P.E. BLOECHL, (1999)***
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NB         ! #(STATES)
       INTEGER(4),INTENT(IN) :: NBH        ! #(WAVE FUNCTIONS)
@@ -2454,7 +2454,7 @@ END IF
 !     **                                                              **
 !     **  SUPERWAVE FUNCTIONS ARE DEFINED AS: PSI=PSI1+I*PSI2         **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
+!     *******************************************P.E. BLOECHL, (1999)***
 !RELEASED: 8.OCT.99
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NDIM   ! #(SPINOR COMPONENTS)
@@ -3198,11 +3198,11 @@ END IF
       RETURN
       END SUBROUTINE WAVES$HPSI
 !
-!     ..................................................................
+!     .................................................................
       SUBROUTINE WAVES_HPROJ(NDIM,NB,LMNX,DH,PROJ,HPROJ)
-!     ******************************************************************
-!     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+!     *****************************************************************
+!     **                                                             **
+!     *******************************************P.E. BLOECHL, (1991***
       USE WAVES_MODULE, ONLY : MAP_TYPE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NDIM
@@ -3215,7 +3215,7 @@ END IF
       INTEGER(4)             :: LMN1,LMN2
       REAL(8)                :: DHUPUP,DHDNDN
       COMPLEX(8)             :: DHUPDN,DHDNUP
-!     ******************************************************************
+!     *****************************************************************
       HPROJ(:,:,:)=(0.D0,0.D0)
 !
 !     ==============================================================
@@ -3368,14 +3368,14 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       RETURN
       END 
 !
-!     ..................................................................
+!     .................................................................
       SUBROUTINE WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,PSI,V,HPSI)
-!     ******************************************************************
-!     **                                                              **
-!     **  EVALUATES H*PSI WITHOUT THE AUGMENTATION PART               **
-!     **  |HPSI>=(-0.5*NABLA**2+PS-V)|PSPSI(0)>                       **
-!     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+!     *****************************************************************
+!     **                                                             **
+!     **  EVALUATES H*PSI WITHOUT THE AUGMENTATION PART              **
+!     **  |HPSI>=(-0.5*NABLA**2+PS-V)|PSPSI(0)>                      **
+!     **                                                             **
+!     *******************************************P.E. BLOECHL, (1991)**
       USE WAVES_MODULE, ONLY : GSET_TYPE,TBUCKET
       IMPLICIT NONE
       TYPE(GSET_TYPE),INTENT(IN) :: GSET
@@ -3480,7 +3480,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  REMARKS:                                                    **
 !     **    REQUIRES PLANEWAVE OBJECT TO BE SET PROPERLY              **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
+!     *******************************************P.E. BLOECHL, (1999)***
       USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NB         ! #(STATES)
@@ -3658,7 +3658,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  THE  ELECTRON DENSITY RHOE IN REAL SPACE                    **
 !     **                                                              **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+!     *******************************************P.E. BLOECHL, (1991)***
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NGL         ! MAX # PLANE WAVES
       INTEGER(4),INTENT(IN)  :: NRL         ! # R-SPACE POINTS
@@ -3804,7 +3804,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  lambda is calculated from this%rlam0 by multiplication with **
 !     **  0.5*(fi+fj)                                                 **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
+!     *******************************************P.E. BLOECHL, (1999)***
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: NDIM      ! #(SPINOR COMPONENTS)
       INTEGER(4),INTENT(IN)   :: NB        ! #(BANDS)
@@ -3912,7 +3912,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **    - DEDPRO SHOULD BE A REAL FUNCTION IN REAL SPACE          **
 !     **       BUT THAT THE SYMMETRY IS NOT ENFORCES YET              **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
+!     *******************************************P.E. BLOECHL, (1999)***
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN)   :: TINV
       INTEGER(4),INTENT(IN)   :: NGL       ! (#(G-VECTORS)
@@ -3973,7 +3973,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  CALCULATE PROJECTIONS                                       **
 !     **                                                              **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1998)***
+!     *******************************************P.E. BLOECHL, (1998)***
       USE WAVES_MODULE, ONLY : MAP_TYPE,GSET_TYPE
       IMPLICIT NONE
       TYPE(MAP_TYPE) ,INTENT(IN) :: MAP
@@ -4070,7 +4070,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  CALCULATE PROJECTIONS                                       **
 !     **                                                              **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1998)***
+!     *******************************************P.E. BLOECHL, (1998)***
       USE WAVES_MODULE, ONLY : MAP_TYPE,GSET_TYPE
       IMPLICIT NONE
       TYPE(MAP_TYPE) ,INTENT(IN) :: MAP
@@ -4186,7 +4186,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  TAKES THE BARE PROJECTOR FUNCTIONS AND CALCULATES FULL      **
 !     **  PROJECTOR FUNCTIONS WITH STRUCTURE FACTOR AND I**L          **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1998)***
+!     *******************************************P.E. BLOECHL, (1998)***
       IMPLICIT NONE
       INTEGER(4)    ,INTENT(IN) :: LNX       ! #(PROJECTORS PER ATOM)
       INTEGER(4)    ,INTENT(IN) :: LMNX      ! #(PROJECTORS PER ATOM)
@@ -4232,7 +4232,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  FOR NDIM.NE.3 FIRST DERIVATIVES ARE CALCULATED              **
 !     **  FOR NDIM.NE.6 SECOND DERIVATIVES ARE CALCULATED             **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1998)***
+!     *******************************************P.E. BLOECHL, (1998)***
       IMPLICIT NONE
       INTEGER(4)    ,INTENT(IN) :: IPRO1    ! FIRST PROJECTOR
       INTEGER(4)    ,INTENT(IN) :: NPRO     ! X#(NUMBER OF PROJECTORS)
@@ -4304,7 +4304,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  FOR NDIM.NE.3 FIRST DERIVATIVES ARE CALCULATED              **
 !     **  FOR NDIM.NE.6 SECOND DERIVATIVES ARE CALCULATED             **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1998)***
+!     *******************************************P.E. BLOECHL, (1998)***
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LNX           ! #(BARE PROJECTORSS)
       INTEGER(4),INTENT(IN) :: LMNX          ! #(PROJECTORSS)
@@ -4426,7 +4426,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  THIS ROUTINE MUST BE CALLED INITIALLY AND AFTER EACH        **
 !     **  CHANGE OF THE CELL-SHAPE.                                   **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
+!     *******************************************P.E. BLOECHL, (1999)***
       USE WAVES_MODULE
       IMPLICIT NONE
       REAL(8)        ,ALLOCATABLE   :: G2(:)
@@ -4537,7 +4537,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **                                                              **
 !     **  EVALUATES STRAINED SPHERICAL HARMONICS ON THE G-SPACE GRID  **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1999)***
+!     *******************************************P.E. BLOECHL, (1999)***
       USE WAVES_MODULE, ONLY : GSET_TYPE,MAP_TYPE
       IMPLICIT NONE
       INTEGER(4)     ,INTENT(IN)    :: NGL  ! #(G-VECTORS)

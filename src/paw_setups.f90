@@ -33,7 +33,7 @@ MODULE SETUP_MODULE
 !**    VLOC      LOCAL CONTRIBUTION TO PSEUDOPOTENTIAL                **
 !**    WNL       NONLOCAL CONTRIBUTION (PROJECTOR)                    **
 !**                                                                   **
-!**          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)      **
+!**                                              P.E. BLOECHL, (1991) **
 !***********************************************************************
 TYPE THIS_TYPE
 INTEGER(4)             :: I
@@ -1577,9 +1577,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     &         ,DTKIN,DOVER,IRCCOR,RHOCOR,PSCORR,PRO)
 !     ******************************************************************
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ******************************************* P.E. BLOECHL, 1991 ***
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)  :: NFIL
       INTEGER(4) ,INTENT(IN)  :: NRX

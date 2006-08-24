@@ -19,8 +19,7 @@
 !**                                                                   **
 !**       ORIGINAL VERSION: PETER MARGL                               **
 !**       MODIFIED VERSION:                                           **
-!**           PETER E. BLOECHL, IBM ZURICH RESEARCH LABORATORY (1996) **
-!***********************************************************************
+!******************************************* PETER E. BLOECHL, 1996 ****
 !.......................................................................
 MODULE GRAPHICS_MODULE
 TYPE WAVEPLOT_TYPE

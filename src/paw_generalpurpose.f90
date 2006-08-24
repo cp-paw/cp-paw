@@ -7,6 +7,7 @@
 !     **                                                                 **
 !     **  ATTENTION!! ANGLES ARE IN DEGREE I.E. IN UNITS OF  2*PI/360    **
 !     **                                                                 **
+!     *********************************************************************
       IMPLICIT NONE
       LOGICAL, INTENT(IN)    :: SWITCH  ! ABC...-> T / T->ABC...
       REAL(8),  INTENT(INOUT) :: A,B,C   ! LENGTH OF LATTICE VECTORS
@@ -76,7 +77,7 @@
 !     **          RI*GI=2*PI ; GI*GJ=0 FOR I.NE.J                     **
 !     **  AND THE REAL SPACE UNIT CELL VOLUME                         **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       REAL(8), INTENT(IN)  :: RBAS(3,3) ! REAL SPACE LATTIC VECTORS
       REAL(8), INTENT(OUT) :: GBAS(3,3) ! RECIPROCAL SPACE LATTICE VECTORS
@@ -134,8 +135,7 @@
 !     **                                                              **
 !     **  WARNING: THE DISPLACEMENTS MUST NOT BE SMALLER THAN -1.E+6  **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)  :: RBAS(3,3)
       REAL(8)   ,INTENT(IN)  :: X0,Y0,Z0
@@ -654,8 +654,7 @@
 !     **     IF(ABS(Y0).LT.TOL) EXIT                                  **
 !     **   ENDDO                                                      **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       INTEGER(4),INTENT(INOUT) :: ISTART  !=1 BEFORE ITERATION/ =0 OTHERWISE
       INTEGER(4),INTENT(INOUT) :: IBI     ! SWITCH BETWEEN EXPANSION AND CONTRACTION 
@@ -709,9 +708,7 @@
 !     **                                                              **
 !     **   Q = INT(DR**3): G_L(R) * R**L * Y_LM(R) !=! 1              **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L
       REAL(8)   ,INTENT(IN) :: ALPHA

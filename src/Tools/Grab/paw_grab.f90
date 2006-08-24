@@ -99,9 +99,10 @@ END MODULE SUBSTANCE_MODULE
      &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
       WRITE(NFILO,FMT='(72("*"))')
       WRITE(NFILO,FMT='(T28 &
-     &           ," P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY ")')
+     &           ," P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY ")')
       WRITE(NFILO,FMT='(T10 &
-     &      ,"(C) IBM, 1995-1997 * ANY USE REQUIRES WRITTEN LICENSE FROM IBM")')
+     &      ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY " &
+     &      ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
       WRITE(NFILO,*)
 !
 !     ==================================================================

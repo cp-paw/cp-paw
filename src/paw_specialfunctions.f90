@@ -153,9 +153,7 @@
 !     **    FORMULA 10.1.2              FOR   X < 8                   **
 !     **    FORMULA 10.1.8 AND  10.1.9  FOR   X > 8                   **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN AGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT

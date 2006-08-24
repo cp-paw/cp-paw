@@ -7,7 +7,7 @@
 !     **  CALCCULATES SELF ENERGY AND PAIR INTERACTION OF             **
 !     **  COMPENSATION CHARGES                                        **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991)***
+!     ****************************************** P.E. BLOECHL, 1991 ****
       USE MPE_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)  :: RBAS(3,3)         !LATTICE VECTORS

@@ -92,7 +92,7 @@
 !     **  CALCULATES THE FORCE DUE TO THE POSITION DEPENDENCE         **
 !     **  OF THE OVERLAP OPERATOR                                     **
 !     **                                                              **
-!     ************P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1992)***
+!     *******************************************P.E. BLOECHL, (1992)***
       IMPLICIT NONE
       INTEGER(4),PARAMETER  :: IPR=0
       INTEGER(4),INTENT(IN) :: IAT

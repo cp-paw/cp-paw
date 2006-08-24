@@ -438,8 +438,7 @@ END IF
 !     **    RHOE           PLANE WAVE POTENTIAL IN REAL SPACE         **
 !     **                   (SPIN UP AND SPIN DOWN)                    **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4)              :: TSPIN

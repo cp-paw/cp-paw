@@ -83,7 +83,7 @@
 \section{Initial remarks}
 %==========================================================================
 I am frequently changing the CP-PAW program. Therefore, it is
-unavoidable that this description will not be complete in some places,
+unavoidable that this description is incomplete in some places,
 that it may lists options that are no longer supported, or that it
 contains errors. Please let me know if you find something unclear or
 even incorrect. Other users will be grateful.
@@ -467,44 +467,34 @@ use colons in atom names.
 %==========================================================================
 \section{Before starting... (\$PAWDIR and \$ROOT)}
 %==========================================================================
-In this manual, I frequently refer to \$PAWDIR and \$ROOT. They are
-explained in this section.
+In this manual, I frequently refer to \$PAWDIR and \$ROOT. They are explained in the following:
 
 %==========================================================================
 \subsection{The PAW directory}
 %==========================================================================
-If you have never used the CP-PAW code before, you may want to know where
-things are. If the program is set up properly, you will have an
+\$PAWDIR is the name of the directory where the PAW code is
+installed. 
+
+In the directory \$PAWDIR you will find the following directories 
+\begin{itemize}
+\item \verb|src| contains the source codes. The sources for the
+analysis tools are located in a subdirectory \verb|Tools|.
+\item \verb|doc| contains the manual and installation notes
+\item \verb|bin| will be created if it does not exist. It contains the
+executable codes
+\item \verb|dx| contains files required by the dataexplorer to
+visualize wave functions, densities and atomic structures
+\end{itemize}
+
+
+
+If the program is set up properly, you will have an
 environment variable {\tt \$PAWDIR}, which refers to the directory
 where the PAW code is installed. You can try it with ``{\tt echo
   \$PAWDIR}'', which will print the PAW directory. Then you can go to
 the PAW directory using ``{\tt cd \$PAWDIR}'', and see its contents
 using ``{\tt ls -l}''.
 
-You will see the following directories: (If you have a license to the
-object code only, the directories following ``Source'' may be
-missing.)
-
-\noindent
-\begin{tabular}{|l|l|}
-\hline
-Manual:& Latex and postscript version of this manual\\
-X:& Executables for the simulation code and tools\\
-Sample:& Example data files\\
-DX:& Visual programs for the IBM Dataexplorer\\
-Setup:& Atomic input data ordered according to the DFT functional
-  used.\\
-TMP:& Directory used for temporary storage. Its contents can be
-  deleted\\
-& if no PAW-related jobs are running.\\
-\hline
-Source:& Source code for the simulation code and the PAW library\\
-Tools:& Contains analysis tools\\
-F90PP:& Self-written preprocessor for the compilation\\
-Objects:& Object files, PAW-Library and module files\\
-& (subdirectories pwr2,ppc,none for architecture specific versions)\\
-\hline
-\end{tabular}
 
 %==========================================================================
 \subsection{The project data structure}
@@ -580,35 +570,43 @@ done.
 
 The simulation code is executed using the command
 
-\bigskip\fbox{{\tt paw\_run -c} {\it controlfile}}\bigskip
+\bigskip\fbox{{\tt paw\_fast.x } {\it controlfile} {\tt 1$>$err 2$>$\&1 \&}}\bigskip
 
-\noindent where {\it controlfile} is the name of the control input file
-described in the next section. 
+\noindent where {\it controlfile} is the name of the control input
+file described in the next section.  With {\tt 1$>$err} one redirects
+the print statements to the file out. If the file existed before it is
+overwritten. This information is normally irrelevent and is used for
+development purposes. However, it is crucial for tracing errors.  With
+{\tt 2$>$\&1} one redirects also error messages into the same file,
+namely {\tt err}. Thus also error messages be it from PAW or from the
+system are written in the same directory. The last {\tt \&} simply
+sends the job into the background. That is you can continue working in
+the same window while the job is running.
 
-A full set of options for the command {\tt paw\_run} is obtained
-using {\tt paw\_run ?}
+{\tt paw\_fast.x} is simply the name of the PAW executable. There will
+be several executables. If you are using a parallel computer using MPI
+you will need an executable that starts with {\tt ppaw} instead of
+{\tt paw}. The executable with {\tt fast} is the one compiled with all
+reasonable optimization flags for the compiler. For all normal
+purposes this one should be used. In addition there may be an
+executable with {\tt dbg} instead of {\tt fast} for debugging purposes
+and one with nothing, with no special flags, which can be used to find
+errors induced by optimization.
 
-\subsubsection{The wrapper ``doit''}
 
-It is recommended that the commands to run the simulation code be put into
-a wrapper shell script of the following form
+Sometimes it is convenient to write a little wrapper shell-script for
+this command.
 \begin{verbatim}
-#!/bin/ksh
+#!/bin/sh
 #===================================================
 # sample doit file to execute the simulation code ==
 #===================================================
 #                                define the rootname 
-ROOT=${PAWDIR}/Sample/h2co                               
-#                     remove old out and error files
-rm ${ROOT}.err 
-#                                            compile
-paw_compile 1>${ROOT}.err 2>&1
-#                                check if successful
-if (( $? != 0 )); then exit 1; fi                        
+ROOT=/home/user/Tree/Testrun/H2CO/h2co                               
 #                             execute paw simulation
-paw_run -c ${ROOT}.cntl 1>${ROOT}.err 2>&1
+paw_fast.x ${ROOT}.cntl 1>${ROOT}.err 2>&1
 \end{verbatim}
-This file would be called {\tt \$PAWDIR/Sample/h2co.doit}, which is
+This file would be called {\tt \${ROOT}.doit}, which is
 also the command to execute the code.  Such a wrapper avoids some
 unnecessary typing if you run the job repeatedly. It can easily be
 modified to execute the simulation code several times with different
@@ -617,34 +615,22 @@ control files.
 What does the wrapper do? Let us discuss it line by line. (Comment
 lines, i.e. those starting with a hatch sign, are not discussed.)
 \begin{enumerate}
-\item The first line {\tt \#!/bin/ksh} simply specifies that the
-  wrapper is written using the KORN shell.  
+\item The first line {\tt \#!/bin/sh} simply specifies that the
+  wrapper is a shell script
 \item The second line defines a variable {\tt ROOT}. In the following
-  commands \${ROOT} is shorthand for {\tt \$PAWDIR/Sample/h2co}. Thus
-  one can use the same wrapper for different simulations by simply
-  changing the value of {\tt ROOT}.
-\item The third line recompiles any parts of the the source code that
-  have been changed.  This line and the next should not be used if
-  you only have the executable. The standard output and error files
-  are redirected to {\tt \${ROOT}.err}. You can view it during
-  execution using the command\hfill\break\medskip\fbox{\tt tail -f
-    \$PAWDIR/Sample/h2co.err}\medskip
-\item The fourth line checks whether the previous command had a
-  non-zero return value indicating an error. If that happens,
-  execution of the wrapper is terminated at this point -- with a
-  non-zero return value.
-\item 
+  commands \${ROOT} is shorthand for {\tt
+  /home/user/Tree/Testrun/H2CO/h2co}. Thus one can use the same
+  wrapper for different simulations by simply changing the value of
+  {\tt ROOT}.
 \begin{sloppypar}
   The last line executes the the simulation code using the control
-  file {\tt \${ROOT}.cntl}. Standard output and standard error are
-  redirected into the file {\tt \${ROOT}.err}. This file is useful
-  only if an error occurred in the program.
+  file {\tt \${ROOT}.cntl}. 
 \end{sloppypar}
 \end{enumerate}
 
 \subsubsection{Terminate the simulation}
 
-The program can be stopped before regular completion by creating a
+The execution can be stopped before regular completion by creating a
 so-called exit file
 
 \bigskip\fbox{{\tt touch }{\it exitfile}}\bigskip
@@ -6995,202 +6981,6 @@ using Numol by Becke\cite{Beckethermochemistry,DFTBenchmarks}.
 Zero-point vibration energies have been tabulated by
 Pople\cite{Pople}.
 
-
-%==========================================================================
-\newpage
-\section{Installation}
-%==========================================================================
-\textbf{Warning! This section is obsolete.  Follow the instruction of
-install.tex instead.}
-
-%
-%==========================================================================
-\subsection{Resources required}
-%==========================================================================
-\begin{description}
-\item[paw.tgz,setups.tgz] A compressed tar file containing the PAW
-directory and atomic information. nAlternatively you may obtain a cd
-with a copy of the PAW and Setups directories
-\item[cpp] A C-Preprocessor
-\item[gunzip,tar] gunzip is for example part of emacs, so that you can
-simply open emacs, execute Cntl-d to open dired, set the curser to the
-file you want to uncompress, pull down ``operate$\rightarrow$ compress
-or uncompress'' and say yes. This is only required if you have the
-compressed files.
-\item[gmake] A version of make, ``GNU-make'' by the Free Software
-  Foundation\cite{FreeSoftwareFoundation}. This program is used only
-  during installation. Under Linux simply called make.
-\item[fftw] is a library for fast Fourier
-transforms. \texttt{http://www.fftw.org}
-\item[atlas] Atomatically tuned linare algebra Software. Contains
-lapack and blas routines that tune itself to the computer architecture
-on which it is installed.\\ \texttt{http://www.netlib.org/atlas/}
-\item[mpich] Message passing Interface.\cite{MPI}
-  It is not required for scalar execution.\\
-\texttt{http://www-unix.mcs.anl.gov/mpi/index.html}
-\item[grace] is a tool for publication ready xy-graphs. Developed
-originally by Paul~J.~Turner \cite{XMGR} under the name ace/gr or xmgr
-it is now further developed under the name of grace. You can use any equivalent
-  software, but you need to adapt the paw\_show tool.\\
-\texttt{http://plasma-gate.weizmann.ac.il/Grace/}. 
-\item[Dataexplorer] 3D Visualization software. Displays and renders 3D
-objects.  The Dataexplorer is used to visualize wave functions
-etc.\cite{Dataexplorer} Originally developed at teh IBM Research
-laboratory teh IBM Dataexplorere is now open
-source.\\ \texttt{http://www.opendx.org/}
-\end{description}
-
-For the IBM environment you will need
-\begin{description}
-\item[AIX] operating system. You can check the operating system level
-  using the command  ``{\tt oslevel}''.
-\item[XLF90] FORTRAN90 compiler and runtime environment. You can check
-  the version number using the command ``{\tt lslpp -h xlfrte}''.
-\item You will require an ``mpxlf90'' command to compile the parallel
-  version of the code.  This can be created from an existing ``mpxlf''
-  as described below.  For execution on a parallel computer, you will
-  have to change also the settings of the parameters beginning with
-  ``MP\_''.
-\item[libessl.a,libesslp2.a]
-\begin{sloppypar} 
- The Engineering and Scientific
-  Soubroutines Library (ESSL)\cite{ESSL}. The first version is for powerpc
-  processors the other for the power2 architecture. You can check the
-  version numbers using the command ``{\tt lslpp -h essl.rs1.rte}''
-  and ``{\tt lslpp -h essl.rs2.rte}''.and ``{\tt lslpp -h essl.common.rte}''.
-\end{sloppypar}
-\end{description}
-%
-%==========================================================================
-\subsection{Installation procedure}
-%==========================================================================
-
-\begin{enumerate}
-\item Create a new directory in which you want to keep the codes and
-  executables etc. of the PAW code.
-\item Copy the ``{\tt paw.tar.gz}'' file into that directory, where
-  the PAW directory shall reside.
-\item 
-\begin{sloppypar}
-Uncompress the tar file with ``{\tt gunzip paw.tgz}''. You will create
-a file ``{\tt paw.tar}''.
-\end{sloppypar}
-\item  untar the files with ``{\tt tar xvf paw.tar .}'' you will
-  create a directory named PAW in the current directory.
-\item Append the following lines to your
-  ``\~/.profile'' file.  (these lines are found in PAW/paw\_profile)
- \begin{verbatim}
-#=================================================
-#==  add these lines to your .profile,          ==
-#==  when you install CP-PAW;                   ==
-#==  replace /home/blo/PAW by the directory,    ==
-#==  where PAW is installed                     ==
-#=================================================
-#== set variable for PAW-directory
-export PAWDIR=/home/blo/PAW           
-export PATH=$PATH:${PAWDIR}:${PAWDIR}/X
-#== set directories for the IBM Dataexplorer    ==
-export DXMACROS=${PAWDIR}/DX
-export DXINCLUDE=${PAWDIR}/DX
-#=================================================
-#== The following lines are customizations      ==
-#== unrelated to CP-PAW                         ==
-#== (uncomment if they shall be executed)       ==
-#=================================================
-#== emacs-style command line editing
-#export EDITOR=emacs                  
-#== convenient command line prompt
-#export PS1=[$(uname -n)]${PWD##*/}$  
- \end{verbatim}
- In the first export command, defining the variable PAWDIR, you need
- to introduce {\em your} actual name for the PAW directory, instead of
- ``{\tt /home/blo/PAW}''. 
-
- If you use C-shell instead of Korn-shell, append the line
-\begin{verbatim}
- setenv ENV $HOME/.envfile
-\end{verbatim}
- to your ``{\tt\~/.login}'' file, and create a ``{\tt\~/.envfile}'' in
- your home directory that begins with ``{\tt \#!/bin/ksh}'' and
- contains the lines given above that otherwise should be included in
- the ``{\tt\~.profile}''.
-\item In order to make the changes in ``{\tt \~/.profile}'' effective,
-  log-out and log-on again.  You can check whether the settings are
-  effective with the commands ``{\tt
-    echo \$PAWDIR}'', ``{\tt echo \$PATH}'', ``{\tt echo \$DXMACROS}''
-  and ``{\tt echo \$DXINCLUDE}''.
-\item Redefine the variable ``{\tt GNUMAKE}'' in ``{\tt
-    \$PAWDIR/paw\_compile}''. GNUMAKE should be set to the command that
-  executes the GNU make command \cite{FreeSoftwareFoundation} on your
-  system. The command name shall contain the full path.
-\item Redefine the variable ``{\tt CPP}'' in ``{\tt
-    \$PAWDIR/paw\_compile}''. CPP be set to the command that
-  executes the C-preprocessor. The command name shall contain the full path.
-\item redefine the variable {\tt FEXT} in {\tt paw\_mk} and in {\tt
-    paw\_maketool}. It needs to have the value ``f'' for the aix
-  Fortran compiler ``xlf'' and the value ``f90'' otherwise. This
-  variable redefines the extension of the fortran source codes that
-  are fed into the compiler.
-\item Obtain the command line options by
-  executing ``{\tt paw\_compile -h+}''. 
-  Compile the code using the command ``{\tt paw\_compile -arch
-    {\it architecture} -o -new}''.  
-\item Compile the tools using the command {\tt paw\_maketool}.
-\item 
-\begin{sloppypar} 
-If you are planning to run PAW on a parallel computer, redefine the
-  variable ``{\tt CONTROLWORKSTATION}'' in ``{\tt \$PAWDIR/paw\_run}''
-  to the machine name that will control your parallel jobs.  Depending
-  on your system you may have to redefine other variables beginning
-  with ``{\tt MP\_}'' defined in the ``{\tt paw\_run}'' script. 
-\end{sloppypar}
-\item 
-\begin{sloppypar} 
-  If you are planning to run PAW on a parallel computer, rewrite the
-  file {\tt \$PAWDIR/hostlist}. It contains a list of the processors of
-  your parallel machine. 
-\end{sloppypar} 
-\item redefine fort77 to fort on alpha-linux systems by intrroducing a
-line {\tt alias fort77=''fort''} into {\tt ~/.bashrc}. Used to compile the
-fftw package.
-\end{enumerate}
-
-%====================================================================
-\subsection{Compile the simulation code}
-%====================================================================
-
-The simulation code is executed using the command
-
-\bigskip\fbox{{\tt paw\_compile}}\bigskip
-
-\noindent The full set of options is obtained using {\tt paw\_compile} with
-the option ``-h+''.
-
-Note that when compiling the code from scratch the option -new must be
-specified. The compilation may halt several times. In this
-case the compilation command needs to be issued several times.
-
-%=========================================================
-\subsection{Create mpxlf90}
-%=========================================================
-
-mpxlf90 has been made available to compile xlf90 programs and to link
-all the libraries needed for parallel job execution on the SP2.
-
-The following description holds for AIX 4.1.4 and POE 2.1
-
-On the control workstation (or any SP2 node) do:
-
-\begin{enumerate}
-\item cp -p /usr/lpp/ppe.poe/bin/mpxlf  /usr/lpp/ppe.poe/bin/mpxlf90
-\item Replace all occurrences of xlf by xlf90 in
-   /usr/lpp/ppe.poe/bin/mpxlf90.
-\item cp -p /usr/lpp/ppe.poe/lib/poe.cfg /usr/lpp/ppe.poe/lib/poe.cfg.orig
-\item Add the xlf90 stanza of the file /etc/xlf.cfg to
-   /usr/lpp/ppe.poe/lib/poe.cfg.
-\item Distribute the files mpxlf90, poe.cfg.orig and poe.cfg to all nodes
-   (and the control workstation).
-\end{enumerate}
 
 \section{Troubleshooting}
 

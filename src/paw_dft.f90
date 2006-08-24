@@ -2,7 +2,6 @@
 !.........................................................DFT...........
 MODULE DFT_MODULE
 !***********************************************************************
-!***********************************************************************
 !**                                                                   **
 !**  NAME:  DFT                                                       **
 !**                                                                   **
@@ -3133,8 +3132,7 @@ END MODULE PERDEW_MODULE
 !     **                                                              **
 !     **  REMARK: THIS ROUTINE IS A KLON OF PERDEW_RHODEP3            **
 !     **                                                              **
-!     **           P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1996 ****
       USE PERDEW_MODULE
       IMPLICIT NONE
       REAL(8),INTENT(IN)   :: RHOT
@@ -3210,8 +3208,7 @@ END MODULE PERDEW_MODULE
 !     **                                                              **
 !     **  REMARK: THIS ROUTINE IS A KLON OF PERDEW_RHODEP3            **
 !     **                                                              **
-!     **           P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1996 ****
       USE PERDEW_MODULE
       IMPLICIT NONE
       REAL(8),INTENT(IN)   :: RHOT
@@ -3295,8 +3292,7 @@ END MODULE PERDEW_MODULE
 !     **     E = (1/D) * FEXP * EXP(FPHI*|GRHOT|) * GRHOT**2          **
 !     **  WHERE GRHOT IS THE GRADEINT OF THE TOTAL DENSITY            **
 !     **                                                              **
-!     **           P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1996 ****
       USE PERDEW_MODULE
       IMPLICIT NONE
       REAL(8),INTENT(IN)   :: RHOT
@@ -3393,8 +3389,7 @@ END MODULE PERDEW_MODULE
 !     **                                                              **
 !     **  REMARK: THIS ROUTINE IS A KLON OF PERDEW_SPINDEP3           **
 !     **                                                              **
-!     **           P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1996 ****
       USE PERDEW_MODULE
       IMPLICIT NONE
       REAL(8),INTENT(IN) :: SIGMA
@@ -3441,8 +3436,7 @@ END MODULE PERDEW_MODULE
 !     **                                                              **
 !     **  REMARK: THIS ROUTINE IS A KLON OF PERDEW_SPINDEP3           **
 !     **                                                              **
-!     **           P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1996 ****
       USE PERDEW_MODULE
       IMPLICIT NONE
       REAL(8),INTENT(IN) :: SIGMA
@@ -3491,8 +3485,7 @@ END MODULE PERDEW_MODULE
 !     **  AS IN EQ.4 OF  J.P. PERDEW PHYS. REV. B, 33, 8822 (1986)    **
 !     **  WHERE SIGMA IS RHOT/RHOS                                    **
 !     **                                                              **
-!     **           P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1996 ****
       USE PERDEW_MODULE
       IMPLICIT NONE
       REAL(8),INTENT(IN) :: SIGMA
@@ -3546,8 +3539,7 @@ END MODULE PERDEW_MODULE
 !     **  REMARKS:                                                    **
 !     **    VAL=(RHOT,RHOS,GRHOT**2,DUMMY,DUMMY)                      **
 !     **                                                              **
-!     **           P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1996 ****
       USE PERDEW_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: VAL(5)
@@ -3640,8 +3632,7 @@ END MODULE PERDEW_MODULE
 !     **  REMARKS:                                                    **
 !     **    VAL=(RHOT,RHOS,GRHOT**2,DUMMY,DUMMY)                      **
 !     **                                                              **
-!     **           P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1996 ****
       USE PERDEW_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: VAL(5)
@@ -3765,8 +3756,7 @@ END MODULE PERDEW_MODULE
 !     **  REMARKS:                                                    **
 !     **    VAL=(RHOT,RHOS,GRHOT**2,DUMMY,DUMMY)                      **
 !     **                                                              **
-!     **           P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY(1996) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1996 ****
       USE PERDEW_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: VAL(5)

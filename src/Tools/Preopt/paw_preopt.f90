@@ -16,8 +16,6 @@
 !     **                                                              **
 !     **   documentation (manual)                                     **
 !     **                                                              **
-!     **                                                              **
-!     **                                                              **
 !     ******************************************************************
 !
 !     ..................................................................
@@ -693,7 +691,8 @@ END MODULE READ_MODULE
       WRITE(NFILO,FMT='(T27 &
      &           ,"J. SCHIMPL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
       WRITE(NFILO,FMT='(T9 &
-     &      ,"(C) IBM, 1995-1997 * ANY USE REQUIRES WRITTEN LICENSE FROM IBM ?")')
+     &      ,"(C) Clausthal University of Technology (CUT), Germany " &
+     &      ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT ")')
       WRITE(NFILO,*)
       RETURN
       END SUBROUTINE INITIALIZEFILEHANDLER

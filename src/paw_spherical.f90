@@ -34,7 +34,7 @@
 !     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2      **
 !     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2      **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
+!     **                                         P.E. BLOECHL, (1991) **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
@@ -101,8 +101,7 @@
 !     **  CALCULATE THE ORDINARY LEGENDRE POLYNOMIALS                 **
 !     **  TIMES THE FACTOR DSQRT((L-M)!/(L+M)!)                       **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN)  :: LMX
       INTEGER(4)  ,INTENT(IN)  :: LX
@@ -526,9 +525,7 @@ END MODULE CLEBSCH_MODULE
 !     **                                                              **
 !     **    Y(LM1)*Y(LM2)= SUM(LM3|CG(LM1,LM2,LM3)*Y(LM3))            **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       USE CLEBSCH_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LM1
@@ -560,9 +557,7 @@ END MODULE CLEBSCH_MODULE
 !     **                                                              **
 !     **    Y(LM1)*Y(LM2)= SUM(LM3|CG(LM1,LM2,LM3)*Y(LM3))            **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       INTEGER(4),INTENT(IN) :: LMXX
@@ -701,9 +696,7 @@ END MODULE CLEBSCH_MODULE
 !     **  THREEJ = (-1)**L1-L2-M3 * ( L1  L2  L3 )                    **
 !     **                            ( M1  M2  M3 )                    **
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L1
       INTEGER(4),INTENT(IN) :: M1
@@ -745,9 +738,7 @@ END MODULE CLEBSCH_MODULE
       DOUBLE PRECISION FUNCTION PRECG(L1,L2,L3,FACT,SQFACT)
 !     ******************************************************************
 !     **                                                              **
-!     **          P.E. BLOECHL, IBM RESEARCH LABORATORY ZURICH (1991) **
-!     **                                                              **
-!     ******************************************************************
+!     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L1
       INTEGER(4),INTENT(IN) :: L2

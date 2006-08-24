@@ -29,6 +29,7 @@ INTEGER(4)                  :: NSTEP
 INTEGER(4)                  :: NAT,QNAT
 REAL(8)                     :: RBAS(3,3)
 LOGICAL(4)                  :: TQMMM=.FALSE.
+CHARACTER(16)               :: FFORMAT
 CONTAINS
 !     .............................................................
       SUBROUTINE TRAJECTORY_NEWMODES
@@ -110,7 +111,7 @@ END MODULE TRAJECTORY_MODULE
       INTEGER(4)     :: I,NLISTS
       INTEGER(4)     :: NFIL
       INTEGER(4)     :: NFILO
-      LOGICAL(4)     :: TCHK
+      LOGICAL(4)     :: TCHK,TFILE
       CHARACTER(32)  :: ID
       REAL(8)        :: T1,T2,DT
       REAL(8)        :: SECOND
@@ -176,6 +177,16 @@ END MODULE TRAJECTORY_MODULE
       IF(TCHK) THEN
          CALL FILEHANDLER$SETFILE('TRA',.TRUE.,-'_R.QMMMTRA')
          TQMMM=.TRUE.
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'FORMAT',1,TFILE)
+         IF(.NOT.TFILE) CALL LINKEDLIST$SET(LL_CNTL,'FORMAT',0,'STRC')
+         CALL LINKEDLIST$GET(LL_CNTL,'FORMAT',1,FFORMAT)
+         IF(FFORMAT.EQ.'PDB') THEN
+            CALL FILEHANDLER$SETFILE('MMSTRC',.TRUE.,-'.PDB')
+            CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','STATUS','OLD')
+            CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','POSITION','REWIND')
+            CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','ACTION','READ')
+            CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','FORM','FORMATTED')
+         END IF
       ELSE
          CALL FILEHANDLER$SETFILE('TRA',.TRUE.,-'_R.TRA')
       END IF
@@ -187,7 +198,6 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'FILES')
-
 !
 !     ==================================================================
 !     ==  RENAME FILES IF DESIRED                                     ==
@@ -230,9 +240,10 @@ END MODULE TRAJECTORY_MODULE
      &           ,"   FOR THE PROJECTOR-AUGMENTED WAVE METHOD   ")')
       WRITE(NFILO,FMT='(72("*"))')
       WRITE(NFILO,FMT='(T10 &
-     &         ,"P.E. BLOECHL, IBM ZURICH RESEARCH LABORATORY")')
+     &         ,"P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
       WRITE(NFILO,FMT='(T10 &
-     &    ,"(C) IBM, 1995-1997 * ANY USE REQUIRES WRITTEN LICENSE FROM IBM")')
+     &    ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY " &
+     &    ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
       WRITE(NFILO,*)
 !
 !     ==================================================================
@@ -246,16 +257,7 @@ END MODULE TRAJECTORY_MODULE
 !     ==================================================================
 !     == GET ATOMIC NUMBER                                            ==
 !     ==================================================================
-      IF(.NOT.TQMMM) THEN
-         CALL READ_STRC(LL_STRC)
-      END IF
-
-!SASCHA QMMM
-      IF(TQMMM) THEN
-         CALL READ_STRC(LL_STRC)
-      END IF
-
-
+      CALL READ_STRC(LL_STRC)
 !
 !     ==================================================================
 !     ==  READ TRAJECTORY                                             ==
@@ -1812,7 +1814,6 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !       ==  MAP ATOMS INTO VIEWBOX                                    ==
 !       ================================================================
 !TBOX=.FALSE.
-!print*,'tbox', tbox
         IF(.not.TBOX) THEN  ! fix due to compiler bug of absoft
           NATM=NAT0
         ELSE
@@ -2154,8 +2155,10 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !      **  READS STRC FILE                                             **
 !      ******************************************************************
        USE LINKEDLIST_MODULE
+       USE STRINGS_MODULE
        USE PERIODICTABLE_MODULE
-       USE TRAJECTORY_MODULE, ONLY: NAT,IZ,MASS,ATOM,RBAS,QNAT,TQMMM
+       USE FORCEFIELD_MODULE, ONLY: MMATOM, PDB_FORM
+       USE TRAJECTORY_MODULE, ONLY: NAT,IZ,MASS,ATOM,RBAS,QNAT,TQMMM,FFORMAT
        IMPLICIT NONE
        TYPE(LL_TYPE),INTENT(IN)  :: LL_STRC_
        TYPE(LL_TYPE)             :: LL_STRC
@@ -2171,7 +2174,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
        REAL(8)                   :: LUNIT
        INTEGER(4)                :: NFILO
 integer(4),allocatable    :: ind(:)
-integer(4)                :: j
+integer(4)                :: j,natm
 !      ******************************************************************
                                CALL TRACE$PUSH('READ_STRC')
        LL_STRC=LL_STRC_
@@ -2189,17 +2192,28 @@ integer(4)                :: j
           ALLOCATE(MASS(NAT))
           ALLOCATE(ATOM(NAT))
           ALLOCATE(SP(NAT))
-       ELSE
-          CALL LINKEDLIST$SELECT(LL_STRC,'~')
-          CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
-          CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
-          CALL LINKEDLIST$NLISTS(LL_STRC,'ATOM',QNAT)
-          CALL LINKEDLIST$SELECT(LL_STRC,'..')
-          ALLOCATE(IZ(QNAT))
-          ALLOCATE(MASS(QNAT))
-          ALLOCATE(ATOM(QNAT))
-          ALLOCATE(SP(QNAT))
-       END IF          
+       ELSE 
+          IF(FFORMAT.EQ.'STRC') THEN
+             CALL LINKEDLIST$SELECT(LL_STRC,'~')
+             CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+             CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
+             CALL LINKEDLIST$NLISTS(LL_STRC,'ATOM',QNAT)
+             CALL LINKEDLIST$SELECT(LL_STRC,'..')
+          ELSE IF(FFORMAT.EQ.'PDB') THEN
+             CALL FORCEFIELD$READ_MMSTRC
+             CALL FORCEFIELD$GETI4('NMMATOM',QNAT)
+! !-- REPORT ATOM DATA FROM PDB FILE
+!          DO IAT=1,QNAT
+!             WRITE(*,pdb_form) MMATOM(IAT)
+!          ENDDO
+! print*,"FLAG: FORCED STOP - PRINTOUT OF MMATOMS. ",QNAT
+! STOP         
+         END IF
+         ALLOCATE(IZ(QNAT))
+         ALLOCATE(MASS(QNAT))
+         ALLOCATE(ATOM(QNAT))
+         ALLOCATE(SP(QNAT))
+       END IF
        IZ(:)=0
        MASS(:)=0.D0
        ATOM(:)=' '
@@ -2211,6 +2225,8 @@ integer(4)                :: j
        CALL LINKEDLIST$SELECT(LL_STRC,'~')
        CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
        IF(.NOT.TQMMM) THEN
+          CALL LINKEDLIST$SELECT(LL_STRC,'~')
+          CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
           ALLOCATE(IND(NAT))
           DO I=1,NAT
              CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
@@ -2222,24 +2238,37 @@ integer(4)                :: j
              IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'SP',1,SP(IAT))
              CALL LINKEDLIST$SELECT(LL_STRC,'..')
           ENDDO
-       ELSE
-          ALLOCATE(IND(QNAT))
-          CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
-          DO I=1,QNAT
-             CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
-             CALL LINKEDLIST$EXISTD(LL_STRC,'INDEX',1,TCHK)
-             IF(TCHK) THEN
-                CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT) !there is no INDEX in QMMM part
-             ELSE 
-                IAT = I
-             END IF
-             IND(I)=IAT
-             CALL LINKEDLIST$GET(LL_STRC,'NAME',1,ATOM(IAT))
-             SP(IAT) = ATOM(IAT)(1:2)
-             CALL LINKEDLIST$EXISTD(LL_STRC,'SP',1,TCHK)
-             IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'SP',1,SP(IAT))
-             CALL LINKEDLIST$SELECT(LL_STRC,'..')
-          ENDDO
+       ELSE 
+          IF(FFORMAT.EQ.'STRC') THEN
+             CALL LINKEDLIST$SELECT(LL_STRC,'~')
+             CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+             ALLOCATE(IND(QNAT))
+             CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
+             DO I=1,QNAT
+                CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
+                CALL LINKEDLIST$EXISTD(LL_STRC,'INDEX',1,TCHK)
+                IF(TCHK) THEN
+                   CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT) !there is no INDEX in QMMM part
+                ELSE 
+                   IAT = I
+                END IF
+                IND(I)=IAT
+                CALL LINKEDLIST$GET(LL_STRC,'NAME',1,ATOM(IAT))
+                SP(IAT) = ATOM(IAT)(1:2)
+                CALL LINKEDLIST$EXISTD(LL_STRC,'SP',1,TCHK)
+                IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'SP',1,SP(IAT))
+                CALL LINKEDLIST$SELECT(LL_STRC,'..')
+             ENDDO
+          END IF
+          IF(FFORMAT.EQ.'PDB') THEN
+             ALLOCATE(IND(QNAT))
+             DO I=1,QNAT
+                IAT=I
+                IND(I)=IAT
+                ATOM(IAT)=TRIM(ADJUSTL(MMATOM(IAT)%NAME))//'_'//.itos.IAT
+               SP(IAT) = ATOM(IAT)(1:2)
+            END DO
+          END IF
        END IF
 
 
@@ -2258,78 +2287,90 @@ integer(4)                :: j
              ENDDO
           ENDDO
        END IF
-       deallocate(ind)
+
+       IF(ALLOCATED(IND)) deallocate(ind)
 !
 !      ==================================================================
 !      ==   LOOK UP ATOMIC NUMBER OF SPECIES                           ==
 !      ==================================================================
-       CALL LINKEDLIST$SELECT(LL_STRC,'~')
-       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
-       CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
-       DO I=1,NSP
-         CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',I)
-         CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
-         SYMBOL=SPNAME(1:2)
-print*,"FLAG SPNAME: ",SPNAME
-         IF(SYMBOL(2:2).EQ.'_')SYMBOL(2:2)=' '
-         CALL PERIODICTABLE$GET(SYMBOL,'Z',IZ1)
-!
-         CALL PERIODICTABLE$GET(SYMBOL,'MASS',MASS1)
-         CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
-         IF(TCHK) THEN
-           CALL LINKEDLIST$GET(LL_STRC,'M',1,MASS1)
-           MASS1=MASS1*MASSUNIT
-         END IF
-
-         IF(.NOT.TQMMM) THEN
-            DO IAT=1,NAT
-               IF(SPNAME.EQ.SP(IAT)) THEN
-                  IZ(IAT)=IZ1
-                  MASS(IAT)=MASS1
-               END IF
-            ENDDO
-         ELSE
-            DO IAT=1,QNAT
-               IF(SPNAME.EQ.SP(IAT)) THEN
-                  IZ(IAT)=IZ1
-                  MASS(IAT)=MASS1
-               END IF
-            ENDDO
-         END IF
-         CALL LINKEDLIST$SELECT(LL_STRC,'..')
-       ENDDO
+       IF(.NOT.TQMMM.OR.FFORMAT.EQ.'STRC') THEN
+          CALL LINKEDLIST$SELECT(LL_STRC,'~')
+          CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+          CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
+          DO I=1,NSP
+             CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',I)
+             CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
+             SYMBOL=SPNAME(1:2)
+             print*,"FLAG SPNAME: ",SPNAME
+             IF(SYMBOL(2:2).EQ.'_')SYMBOL(2:2)=' '
+             CALL PERIODICTABLE$GET(SYMBOL,'Z',IZ1)
+             !
+             CALL PERIODICTABLE$GET(SYMBOL,'MASS',MASS1)
+             CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
+             IF(TCHK) THEN
+                CALL LINKEDLIST$GET(LL_STRC,'M',1,MASS1)
+                MASS1=MASS1*MASSUNIT
+             END IF
+             IF(.NOT.TQMMM) THEN
+                DO IAT=1,NAT
+                   IF(SPNAME.EQ.SP(IAT)) THEN
+                      IZ(IAT)=IZ1
+                      MASS(IAT)=MASS1
+                   END IF
+                ENDDO
+             ELSE
+                DO IAT=1,QNAT
+                   IF(SPNAME.EQ.SP(IAT)) THEN
+                      IZ(IAT)=IZ1
+                      MASS(IAT)=MASS1
+                   END IF
+                ENDDO
+             END IF
+             CALL LINKEDLIST$SELECT(LL_STRC,'..')
+          ENDDO
+       ELSE  !FOR PDB FILES
+          DO IAT=1, QNAT
+             SYMBOL = TRIM(ADJUSTL(MMATOM(IAT)%ELEMENT))
+             CALL PERIODICTABLE$GET(SYMBOL,'Z',IZ1)
+             CALL PERIODICTABLE$GET(SYMBOL,'MASS',MASS1)
+             IZ(IAT)=IZ1
+             MASS(IAT)=MASS1
+          END DO
+       END IF
 !
 !      ==================================================================
 !      ==  OVERWRITE DEFAULTS                                          ==
 !      ==================================================================
-       CALL LINKEDLIST$SELECT(LL_STRC,'~')
-       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+       IF(.NOT.TQMMM.OR.FFORMAT.EQ.'STRC') THEN
+          CALL LINKEDLIST$SELECT(LL_STRC,'~')
+          CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
 
-       IF(.NOT.TQMMM) THEN
-          DO I=1,NAT
-             CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
-             CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT)
-             CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
-             IF(TCHK)THEN
-                CALL LINKEDLIST$GET(LL_STRC,'M',1,MASS(IAT))
-                MASS(IAT)=MASS(IAT)*MASSUNIT
-             END IF
-             CALL LINKEDLIST$SELECT(LL_STRC,'..')
-          ENDDO
-       ELSE
-          DO I=1,QNAT
-             CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
-             CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
-!             CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT)  !NO INDEX in QMMM Part
-             IAT = I
-             CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
-             IF(TCHK)THEN
-                CALL LINKEDLIST$GET(LL_STRC,'M',1,MASS(IAT))
-                MASS(IAT)=MASS(IAT)*MASSUNIT
-             END IF
-             CALL LINKEDLIST$SELECT(LL_STRC,'..')
-             CALL LINKEDLIST$SELECT(LL_STRC,'..')
-          ENDDO
+          IF(.NOT.TQMMM) THEN
+             DO I=1,NAT
+                CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
+                CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT)
+                CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
+                IF(TCHK)THEN
+                   CALL LINKEDLIST$GET(LL_STRC,'M',1,MASS(IAT))
+                   MASS(IAT)=MASS(IAT)*MASSUNIT
+                END IF
+                CALL LINKEDLIST$SELECT(LL_STRC,'..')
+             ENDDO
+          ELSE
+             DO I=1,QNAT
+                CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
+                CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
+                !             CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT)  !NO INDEX in QMMM Part
+                IAT = I
+                CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
+                IF(TCHK)THEN
+                   CALL LINKEDLIST$GET(LL_STRC,'M',1,MASS(IAT))
+                   MASS(IAT)=MASS(IAT)*MASSUNIT
+                END IF
+                CALL LINKEDLIST$SELECT(LL_STRC,'..')
+                CALL LINKEDLIST$SELECT(LL_STRC,'..')
+             ENDDO
+          END IF
        END IF
 !
 !      ==================================================================

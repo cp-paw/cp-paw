@@ -272,6 +272,8 @@ OBJECTS1 = \
 OBJECTS2 = \
            ${OBJDIR}/paw_augmentation.o \
            ${OBJDIR}/paw_softcore.o \
+           ${OBJDIR}/paw_classical.o \
+           ${OBJDIR}/paw_forcefield.o \
            ${OBJDIR}/paw_atoms.o \
            ${OBJDIR}/paw.o \
            ${OBJDIR}/paw_efg.o \
@@ -279,7 +281,6 @@ OBJECTS2 = \
            ${OBJDIR}/paw_iotra.o \
            ${OBJDIR}/paw_ionew.o \
            ${OBJDIR}/paw_qmmm.o \
-           ${OBJDIR}/paw_classical.o \
            ${OBJDIR}/paw_continuum_hms_s.o \
            ${OBJDIR}/paw_cosmo.o \
            ${OBJDIR}/paw_warmup.o \
@@ -322,7 +323,7 @@ OBJATOM = \
           ${OBJDIR}/paw_atom.o 
 # Objects for paw_tra.x
 OBJTRA =  \
-          ${OBJDIR}/paw_tra.o
+          ${OBJDIR}/paw_tra.o 
 # Objects for paw_wave.x
 OBJWAVE=  \
           ${OBJDIR}/paw_wave.o
@@ -334,7 +335,7 @@ OBJDOS=  \
           ${OBJDIR}/paw_dos.o
 # Objects for paw_preopt.x
 OBJPRE=  \
-          ${OBJDIR}/paw_preopt.o
+          ${OBJDIR}/paw_preopt.o 
 # Objects for paw_converttra.x
 OBJCONVERTTRA=  \
           ${OBJDIR}/paw_converttra.o
@@ -384,7 +385,7 @@ ${BINDIR}/${ARCH}/paw_atom.x: ${OBJATOM} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_atom.x ${OBJATOM} -lpaw ${LLIBS} 
 #
 ${BINDIR}/${ARCH}/paw_tra.x: ${OBJTRA} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_tra.x ${OBJTRA} -lpaw ${LLIBS} 
+	${LINK} -o ${BINDIR}/${ARCH}/paw_tra.x ${OBJTRA} ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LLIBS} 
 #
 ${BINDIR}/${ARCH}/paw_wave.x: ${OBJWAVE} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_wave.x ${OBJWAVE} -lpaw ${LLIBS} 
@@ -396,8 +397,7 @@ ${BINDIR}/${ARCH}/paw_dos.x: ${OBJDOS} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_dos.x ${OBJDOS} -lpaw ${LLIBS} 
 #
 ${BINDIR}/${ARCH}/paw_preopt.x: ${OBJPRE} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_preopt.x ${OBJPRE} \
-	${OBJDIR}/paw_classical.o -lpaw ${LLIBS}
+	${LINK} -o ${BINDIR}/${ARCH}/paw_preopt.x ${OBJPRE}  ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LLIBS}
 #
 ${BINDIR}/${ARCH}/paw_converttra.x: ${OBJCONVERTTRA} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_converttra.x ${OBJCONVERTTRA} -lpaw ${LLIBS} 

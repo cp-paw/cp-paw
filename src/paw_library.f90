@@ -53,7 +53,6 @@
 !#DEFINE CPPVAR_FFTPACK
 !#DEFINE CPPVAR_BLAS_EXPLICIT
 !#ENDIF 
-!#IF DEFINED(IBMLICENSE)
 !
 !     .................................................................
       SUBROUTINE LIB$GETUSAGE(ID,VALUE)
