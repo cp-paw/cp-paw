@@ -6,8 +6,11 @@
 \usepackage{times}
 \usepackage{ifthen}
 \usepackage{graphics}
+\usepackage{graphicx}
 \usepackage{color}
 \usepackage{shadow}
+\usepackage{makeidx}
+\makeindex
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %  if private=false certain descriptions are excluded using
@@ -628,6 +631,15 @@ lines, i.e. those starting with a hatch sign, are not discussed.)
 \end{sloppypar}
 \end{enumerate}
 
+In order to track the simulation one can issue the command
+
+\bigskip\fbox{{\tt tail -f \$ROOT.prot }}\bigskip
+
+which continually prints the lines written to the protocoll file also
+to the screen. Another way to trace the simulation is the command {\tt
+paw\_show} described in section~\ref{sec:pawshow}.
+
+
 \subsubsection{Terminate the simulation}
 
 The execution can be stopped before regular completion by creating a
@@ -644,12 +656,13 @@ a signal trap. The command
 
 \bigskip\fbox{{\tt kill -30\ }{\it PID}}\bigskip
 
-\noindent where {\it PID} is the process id number, causes the program to
-terminate the execution after the next iteration. Note, however, that
-this command can sometimes crash the code, namely if the code is
+\noindent where {\it PID} is the process id number, causes the program
+to terminate the execution after the next iteration. Note, however,
+that this command can sometimes crash the code, namely if the code is
 writing to a file at the moment you issue the command.  Its use is
 therefore not recommended, and it may even be removed from future
-versions.
+versions. The process id number can be obtained either from the
+command \verb|top| or from the command \verb+ps -elf |grep paw+.
 
 %
 %==========================================================================
@@ -818,8 +831,8 @@ extension {\tt \_r.tra}\\
 \mbax{\key{START}
 \vdescr{T: start with random wave functions, and atomic positions from file 
 "STRC"\hfill\break 
-F: wave functions are taken from restart file, unless specified
-otherwise}
+F: wave functions and atomic positions are taken from restart file, 
+unless specified otherwise}
 \vformat{logical}
 \vrules{optional}
 \vdefault{F}}
@@ -831,18 +844,20 @@ otherwise}
 \vdefault{100}}
 
 \mbax{\key{DT}
-\vdescr{time step $\Delta$ in a.u.}
+\vdescr{time step $\Delta$ in a.u. (1~a.u.$\approx$ 0.024~fs)}
 \vformat{real}
 \vrules{optional}
 \vdefault{10.0}}
 
 \mbax{\key{NWRITE}
-\vdescr{detailed information is written every ``NWRITE'' time steps}
+\vdescr{Every ``NWRITE'' time steps, the program writes detailed information 
+into the protocoll file and it updates the restart file. Note that writing 
+the restart file is time consuming.}
 \vformat{integer}
 \vrules{optional}
 \vdefault{100}}
 
-\mbax{\key{endian} \vdescr{defines whether unformatted files are
+\mbax{\key{ENDIAN} \vdescr{defines whether unformatted files are
 written in little endian as typical on intel computers or in big
 endian as on ibm computers. The value can be
 'little','intel','big','ibm'. The first two values have identical
@@ -873,7 +888,7 @@ autoconv time steps.}
 \mbax{\key{RSTRTTYPE} \vdescr{allows to cut down the information on
 the restart file.  Option RSTRTTYPE='STATIC' only stores one set of
 wave functions. This reduces the amount of diskspace by nearly a
-factor of two. This option sould not be used 8in a dynamical
+factor of two. This option should not be used in a dynamical
 simulation, because, the velocity of the wave functions will be set to
 zero.}
 \vformat{character}
@@ -988,7 +1003,10 @@ result; cdual=2 is often a good choice.}
 \vrules{optional; this value is overwritten by any occurance of ``EPWRHO''}
 \vdefault{4}}
 
-\mbax{\key{EPWBUCKET} \vdescr{Parameter $E_B$ in Ry specified as
+\mbax{\key{EPWBUCKET} 
+\vdescr{Used mostly for cell dynamics. 
+See section~\ref{sec:sawtooth} for an explanation of the sawtooth 
+behavior. Parameter $E_B$ in Ry specified as
 follows: If specified an additial potential energy term
 $\sum_{G,n}f_n\langle\tilde\Psi_n|G\langle B(G)\langle
 G|\tilde\Psi_n\rangle$, is added top the total energy where
@@ -1042,10 +1060,25 @@ obtained with a plane wave cutoff slightly higher than EPWBUCKET.}
 %\vdefault{0.}}
 
 \mbax{\key{MPSI}
-\vdescr{mass $m_\Psi$ for the wave function dynamics. For proper mass
-    renormalization (discounting the nuclear mass by the effective mass
-   of the wavefunction cloud) the value of !STRUCTURE!SPECIES:PS$<$G2$>$
-   needs to be specified.}
+\vdescr{mass $m_\Psi^0$ for the wave function dynamics. The wave function 
+mass is an operator of the form
+\begin{eqnarray*}
+\hat{m}_\psi=\sum_{\vec{G}} |\vec{G}\rangle 
+m_\psi^0(1+c \vec{G}^2)\langle\vec{G}|
+\end{eqnarray*}
+The coefficient $c$ is set in MPSICG2. 
+
+The G-dependent wave function mass is used to reduce the otherwise
+very large frequency of the wave function components with large
+$|\vec{G}|$. For the large G-components of the auxiliary wave
+functions we can approximate the effective potential by a constant, 
+which makes the Hamiltonian diagonal in $|\vec{G}\rangle$. This allows 
+to estimate the frequency from
+\begin{eqnarray*}
+\hat{m}_\psi^0(1+c \vec{G}^2) \ddot\Psi_G
+=\left[\frac{\vec{G}^2}{2}+v_{eff}\right]\Psi_G
+\end{eqnarray*}
+ }
 \vformat{real}
 \vrules{optional}
 \vdefault{10 $\Delta^2$ (for $\Delta$ see "!CONTROL!GENERIC:DT")}}
@@ -1343,7 +1376,8 @@ $$a_{opt}=\Delta\sqrt{\frac{\dot{\vec{R}}\dot{\vec{F}}}
 average of this friction value is used. The formula is derived from a
 projection os the Lagrangian onto a one-dimensional motion and the
 assumption of a harmonic oscillator. The force constant can then be
-estimated from the change of the forces between two time steps.}
+estimated from the change of the forces between two time steps. 
+See Sec.~\ref{sec:optfric} for further information.}
 \vformat{logical}
 \vrules{optional} 
 \vdefault{false}}
@@ -1839,6 +1873,24 @@ each step that reduces the energy}
 \vformat{real}
 \vrules{optional}
 \vdefault{0.}}
+
+\mbax{\key{OPTFRIC}
+\vdescr{If true, the optimum friction scheme used for the relaxation 
+of the screening charges. See Sec.~\ref{sec:optfric} for further information.
+Is only used in combination with option ADIABATIC. 
+\index{optimum friction!in COSMO}
+}
+\vformat{logical}
+\vrules{optional, only used in combination with ADIABATIC=T}
+\vdefault{.false.}}
+
+\mbax{\key{RETARD}
+\vdescr{Only used in combination with OPTFRIC=T. The running average of the 
+optimum friction scheme adjusts within RETARD time steps to one-half of the 
+original deviation.}
+\vformat{real}
+\vrules{optional, only used in combination with OPTFRIC=T}
+\vdefault{0.d0}}
 
 % %----------------------------------------------------------------------
 % \block{!CONTROL!CONTINUUM}
@@ -3784,6 +3836,7 @@ bond.}
 %==========================================================================
 \newpage
 \section{The Energy Analysis Tool: ``paw\_show''}
+\label{sec:pawshow}
 %==========================================================================
 The tool paw\_show allows one to inspect the protocol file. It plots the
 total energy, the instantaneous temperature of the atoms, the
@@ -6871,7 +6924,34 @@ friction parameters.
     of the steepest descent approach which uses $a=1$.)
 \end{itemize}
 
-\ifthenelse{\boolean{private}}{
+%==========================================================================
+\subsection{Optimum friction scheme}
+\label{sec:optfric}\index{optimum friction}
+%==========================================================================
+The optimum friction is estimated from the forces and velocities of
+two subsequent time steps. These data are used to estimate the
+effective curvature and the effective mass along the line of
+propagation.
+
+The optimum friction factor is estimated according to
+\begin{eqnarray*}
+a_{opt}=\Delta\sqrt{\frac{\dot{R}\dot{F}}{\dot{R}\mathbf{m}\dot{R}}}
+\end{eqnarray*}
+
+Numerator and Denominator can oszillate rapidly. Therefore we use a
+running average, which is calculated accoring to
+\begin{eqnarray*}
+\langle a_{opt}\rangle=\beta a_{opt}+(1-\beta)\langle a_{opt}
+\end{eqnarray*}
+The running average approaches the actual value exponentially. The
+deviation approaches $\frac{1}{2}$ of the original value after $n$
+time steps of
+\begin{eqnarray*}
+\beta=1-2^{-\frac{1}{n}}
+\end{eqnarray*}
+
+
+%\ifthenelse{\boolean{private}}{
 %==========================================================================
 \subsection{Wave function dynamics}
 %==========================================================================
@@ -6961,6 +7041,43 @@ the electron chemical potential, $S$ is the total spin and $N$ is the
 total number of electrons.
 
 %==========================================================================
+\subsection{Sawtooth behavior of the total energy.}
+\label{sec:sawtooth}
+%==========================================================================
+If we change the volume of the unit cell, the number of basis
+functions changes abruptly always when a new star of G-vectors enters
+or leaves teh sphere defined by the plane wave cutoff. This abrupt
+change of the basis set results in abrupt changes of the total energy.
+Thus we obtain a typical saw-tooth behavior of the energy as function
+of volume as shown in Fig.~\ref{fig:sawtooth}.
+
+\begin{figure}[h!]
+\includegraphics[width=6cm]{Figs/Sawtooth/sawtooth.eps}
+\includegraphics[width=6cm]{Figs/Gbucket/gbucket.eps}
+\label{fig:sawtooth}
+\caption{Left: Sawtooth behavior of the total energy as function of
+volume with a fixed plane wave cutoff (black) with a fixed number of
+plane waves (green dashed) and the correct result with a fully
+converged calculation (red). By adding a G-dependent potential the
+plane wave convergence can be artyificially accelerated.}
+\end{figure}
+
+The steps in the total energy vanish if the calculation is fully
+converged in the basis set size, because additional basis functions do
+not lower the total energy. If the function is not converged, the best
+result is obtained by keeping the same plane wave cutoff. However, if
+a the energy obtained at a few points is then fitted to a parabola or
+the murnaghan equation of state, one has to be carefull with the
+steps.
+
+This sawtooth behavior can be suppressed by including an additional
+G-dependent Bucket potential that ensures that the wave function
+coefficients at the plane wave cutoff vanish strictly.
+
+
+
+
+%==========================================================================
 \subsection{Constraints acting on atoms}
 %==========================================================================
 
@@ -6970,7 +7087,7 @@ total number of electrons.
 %==========================================================================
 
 
-}{} % end of \ifthenelse
+%}{} % end of \ifthenelse
 
 %==========================================================================
 \newpage
@@ -7540,6 +7657,7 @@ O.K.~Andersen, Phys. Rev. B {\bf 44}, 943 (1991).
   C. Jones, G.W. trucks and K. Raghavachari,
   J. Chem. Phys. {\bf 93}, 2537(1990)
 \end{thebibliography}
+\printindex
 \end{document}
 \bye
 %====================================================================

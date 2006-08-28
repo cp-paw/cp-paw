@@ -284,6 +284,7 @@ OBJECTS2 = \
            ${OBJDIR}/paw_continuum_hms_s.o \
            ${OBJDIR}/paw_cosmo.o \
            ${OBJDIR}/paw_warmup.o \
+           ${OBJDIR}/paw_optfric.o 
 #  the following is for the QMMM of Woo and Margl
 #          ${OBJDIR}/mm_paw_modules.o \
 #          ${OBJDIR}/mm_paw_core_mm.o \
