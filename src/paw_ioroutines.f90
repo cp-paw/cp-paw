@@ -2229,6 +2229,7 @@ print *,'keep_dff set in list'
       TYPE(LL_TYPE)            :: LL_CNTL
       LOGICAL(4)               :: TCHK
       REAL(8)                  :: SVAR
+      REAL(8)                  :: fric
       REAL(8)                  :: FRICTION
       REAL(8)                  :: SCALE
       INTEGER(4)               :: MULTIPLE
@@ -2309,8 +2310,8 @@ print *,'keep_dff set in list'
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'FRIC',0,0.D0)
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,SVAR)
-      CALL COSMO$SETR8('FRICTION',SVAR)
+      CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,fric)
+      CALL COSMO$SETR8('FRICTION',fric)
 !
 !     ==  PRINT CHARGES ================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'CHARGES',1,TCHK)
@@ -2319,6 +2320,27 @@ print *,'keep_dff set in list'
       END IF
       CALL LINKEDLIST$GET(LL_CNTL,'CHARGES',1,TCHK)
       CALL COSMO$SETL4('CHARGES',TCHK)
+!
+!     ==================================================================
+!     ==  READ BLOCK !CONTROL!COSMO!OPTFRIC                           ==
+!     ==================================================================
+      CALL OPTFRIC$NEW('COSMO')
+      CALL OPTFRIC$SELECT('COSMO')
+!
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'OPTFRIC',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'OPTFRIC',0,.FALSE.)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'OPTFRIC',1,TCHK)
+      CALL OPTFRIC$SETL4('ON',TCHK)
+      CALL OPTFRIC$SETR8('STARTFRIC',FRIC)
+!
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'RETARD',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'RETARD',0,0.D0)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'RETARD',1,SVAR)
+      CALL OPTFRIC$SETR8('RETARD',SVAR)
 !
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!COsmo!AUTO                              ==

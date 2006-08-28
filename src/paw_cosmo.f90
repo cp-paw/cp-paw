@@ -2,7 +2,7 @@ MODULE COSMO_MODULE
 LOGICAL,SAVE             :: TON=.FALSE.    ! ACTIVATES COSMO
 LOGICAL,SAVE             :: TINI=.FALSE. 
 LOGICAL,SAVE             :: START=.FALSE. 
-LOGICAL,SAVE             :: TISO=.true.   ! TREATS AS ISOLATED CLUSTER/ PERIODIC SYSTEM
+LOGICAL,SAVE             :: TISO=.TRUE.   ! TREATS AS ISOLATED CLUSTER/ PERIODIC SYSTEM
 LOGICAL,SAVE             :: TSTOP=.FALSE.  ! SETS INITIAL VELOCITIES TO ZERO
 LOGICAL,SAVE             :: TADIABATIC=.FALSE.  ! MINIMIZATION IN EACH STEP
 LOGICAL,SAVE             :: TMULTIPLE=.FALSE.   !MULTIPLE TIME STEP DYNAMOCS
@@ -13,12 +13,12 @@ REAL(8),SAVE             :: ANNE=0.D0      ! FRICTION
 INTEGER,SAVE             :: NMULTIPLE=30   ! #(MULTIPLE STEPS PER ITERATION)
 REAL(8),SAVE             :: QMASS=1.D+5    ! MASS FOR SURFACE CHARGES
 REAL(8),SAVE             :: KSELF=10.D0
-REAL(8),SAVE             :: GAMMA=6.3739d-6 !see section IV.B in senn et al.
-REAL(8),SAVE             :: BETA=2.1567d-3 !see section IV.B in senn et al.
+REAL(8),SAVE             :: GAMMA=6.3739D-6 !SEE SECTION IV.B IN SENN ET AL.
+REAL(8),SAVE             :: BETA=2.1567D-3 !SEE SECTION IV.B IN SENN ET AL.
 REAL(8),SAVE             :: FDIEL=1.D0    ! (E_R-1)/(E_R+0.5)
 INTEGER,SAVE             :: NAT=0
 REAL(8),SAVE,ALLOCATABLE :: RSOLV(:) !(NAT) SOLVATION RADIUS
-real(8),SAVE             :: dismin
+REAL(8),SAVE             :: DISMIN
 !== 
 INTEGER                  :: NQ=0     !#(CHARGES)=SUM(NQAT)
 INTEGER,SAVE,ALLOCATABLE :: NQAT(:)
@@ -29,7 +29,7 @@ REAL(8),SAVE,ALLOCATABLE :: QM(:)
 REAL(8),SAVE,ALLOCATABLE :: QP(:)
 INTEGER,SAVE             :: NPTESS=0
 REAL(8),SAVE,ALLOCATABLE :: RTESS(:,:)
-!== SASCHA - printout charges
+!== SASCHA - PRINTOUT CHARGES
 LOGICAL(4) ::  TCHARGES
 !======
 !
@@ -133,7 +133,7 @@ END MODULE COSMO_MODULE
         IF(VAL.LT.1.D-8) THEN
           CALL ERROR$MSG('COSMO WITHOUT DIELECTRIC CONSTANT DOES NOT MAKE SENSE')
           CALL ERROR$MSG('STOPPING TO AVOID DIVIDE BY ZERO')
-          CALL ERROR$r8val('EPSILONR',VAL)
+          CALL ERROR$R8VAL('EPSILONR',VAL)
           CALL ERROR$STOP('COSMO$SETR8')
         END IF
         FDIEL=(VAL-1)/VAL
@@ -193,19 +193,19 @@ END MODULE COSMO_MODULE
       END
 !
 !     .......................................................................
-      SUBROUTINE COSMO$gETL4(ID,VAL)
+      SUBROUTINE COSMO$GETL4(ID,VAL)
 !     **                                                                   **
       USE COSMO_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      LOGICAL(4)  ,INTENT(out):: VAL
+      LOGICAL(4)  ,INTENT(OUT):: VAL
 !     ***********************************************************************
       IF(ID.EQ.'ON') THEN
-        val=ton
+        VAL=TON
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('COSMO$gTL4')
+        CALL ERROR$STOP('COSMO$GTL4')
       END IF
       RETURN
       END
@@ -219,11 +219,11 @@ END MODULE COSMO_MODULE
       IMPLICIT NONE
       INTEGER(4)       :: ISVAR
       INTEGER(4)       :: IAT,IQ1,IQ2
-      real(8)          :: svar
-      real(8)          :: pi      
+      REAL(8)          :: SVAR
+      REAL(8)          :: PI      
 !     ***********************************************************************
       IF(TINI) RETURN
-      pi=4.d0*datan(1.d0)
+      PI=4.D0*DATAN(1.D0)
 !
 !     =======================================================================
 !     == CHECK IF TESSELATION FILE HAS BEEN READ                           ==
@@ -254,7 +254,7 @@ END MODULE COSMO_MODULE
       END IF
       IF(.NOT.ALLOCATED(Q0)) THEN
         ALLOCATE(Q0(NQ))
-        Q0(:)=0.d0
+        Q0(:)=0.D0
       END IF
       IF(.NOT.ALLOCATED(QM)) THEN
         ALLOCATE(QM(NQ))
@@ -280,10 +280,10 @@ END MODULE COSMO_MODULE
       ENDDO
 !
 !     =======================================================================
-!     == determine cutooff for nearby surface charges                      ==
+!     == DETERMINE CUTOOFF FOR NEARBY SURFACE CHARGES                      ==
 !     =======================================================================
-      svar=4.d0*pi*sum(rsolv(:)**2)/real(nq)
-      dismin=2.d0*fdiel/(2.d0*sqrt(svar))/(1.07d0*sqrt(pi))
+      SVAR=4.D0*PI*SUM(RSOLV(:)**2)/REAL(NQ)
+      DISMIN=2.D0*FDIEL/(2.D0*SQRT(SVAR))/(1.07D0*SQRT(PI))
       TINI=.TRUE.
       RETURN
       END
@@ -304,7 +304,7 @@ END MODULE COSMO_MODULE
       TYPE (SEPARATOR_TYPE)              :: SEPARATOR
       INTEGER(4)                         :: NTASKS,THISTASK
 !     ***********************************************************************
-      if(.not.ton) return
+      IF(.NOT.TON) RETURN
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK=.NOT.START
       SEPARATOR=MYSEPARATOR
@@ -346,11 +346,11 @@ END MODULE COSMO_MODULE
       TYPE (SEPARATOR_TYPE)              :: SEPARATOR
       INTEGER(4)                         :: NTASKS,THISTASK
 !     ***********************************************************************
-      if(.not.ton) return
+      IF(.NOT.TON) RETURN
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     =======================================================================
-!     ==  write CHARGES                                                    ==
+!     ==  WRITE CHARGES                                                    ==
 !     =======================================================================
       IF(THISTASK.EQ.1) THEN
         CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
@@ -640,7 +640,7 @@ END MODULE COSMO_MODULE
 !     == UNFOLD POSITIONS                                                       ==
 !     ============================================================================
       IF(.NOT.TISO) THEN
-        DO IAT1=1,Nat
+        DO IAT1=1,NAT
           DO IN=1,NNN(IAT1)
             IAT2=NNLIST(1,IN,IAT1)
             NNLIST(2:4,IN,IAT1)=NNLIST(2:4,IN,IAT1)+IFOLD(:,IAT2)-IFOLD(:,IAT1)
@@ -838,7 +838,7 @@ END MODULE COSMO_MODULE
       END
 !
 !     .......................................................................
-      SUBROUTINE COSMO_LONGRANGE(TISO,RBAS,NQ,NAT,dismin,ZEROTHETA &
+      SUBROUTINE COSMO_LONGRANGE(TISO,RBAS,NQ,NAT,DISMIN,ZEROTHETA &
      &                     ,QBAR,RQ,QATBAR,RAT,ETOT,VQBAR,FQ,VATBAR,FAT)
 !     **                                                                   **
 !     **  CALCULATES THE LONG-RANGED COULOMB INTERACTION OF SURFACE CHARGES**
@@ -860,7 +860,7 @@ END MODULE COSMO_MODULE
       INTEGER,INTENT(IN) :: NQ
       INTEGER,INTENT(IN) :: NAT
       LOGICAL,INTENT(IN) :: ZEROTHETA(NQ)
-      REAL(8),INTENT(IN) :: dismin
+      REAL(8),INTENT(IN) :: DISMIN
       REAL(8),INTENT(IN) :: QBAR(NQ)
       REAL(8),INTENT(IN) :: RQ(3,NQ)
       REAL(8),INTENT(IN) :: QATBAR(NAT)
@@ -896,11 +896,11 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       CALL COSMO_MAPTOEFF(NAT,NQ,NQEFF,ZEROTHETA &
      &                   ,QBAR,RQ,QATBAR,RAT,QEFF,REFF)
       IF(TISO) THEN
-        CALL COSMO_ISOLATEDHARTREE(NQEFF,REFF,QEFF,ETOT,VEFF,FEFF,dismin)
-        CALL COSMO_ISOLATEDHARTREE(NAT,RAT,QATBAR,ETOT1,V1,F1,dismin)
+        CALL COSMO_ISOLATEDHARTREE(NQEFF,REFF,QEFF,ETOT,VEFF,FEFF,DISMIN)
+        CALL COSMO_ISOLATEDHARTREE(NAT,RAT,QATBAR,ETOT1,V1,F1,DISMIN)
       ELSE
-        CALL COSMO_MADELUNG(NQEFF,RBAS,REFF,QEFF,ETOT,VEFF,FEFF,dismin)
-        CALL COSMO_MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1,dismin)
+        CALL COSMO_MADELUNG(NQEFF,RBAS,REFF,QEFF,ETOT,VEFF,FEFF,DISMIN)
+        CALL COSMO_MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1,DISMIN)
       END IF
       ETOT=ETOT-ETOT1
       VEFF(NQEFF-NAT+1:NQEFF)=VEFF(NQEFF-NAT+1:NQEFF)-V1(:)
@@ -915,12 +915,12 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       END
 !      
 !     ......................................................MADELUNG....
-      SUBROUTINE COSMO_MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD,dismin)
+      SUBROUTINE COSMO_MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD,DISMIN)
 !     ******************************************************************
 !     **                                                              **
 !     ** EVALUATES MADELUNG ENERGY, POTENTIAL AND FORCES              **
 !     **                                                              **
-!     ** reference: "molecular simulations" Frenkel/smit              **
+!     ** REFERENCE: "MOLECULAR SIMULATIONS" FRENKEL/SMIT              **
 !     ** USES: MPE$QUERY                                              **
 !     **       MPE$COMBINE                                            **
 !     **       GBASS                                                  **
@@ -938,7 +938,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       REAL(8),   INTENT(OUT):: EMAD          ! MADELUNG ENERGY   
       REAL(8),   INTENT(OUT):: VMAD(NBAS)    ! POTENTIAL AT CHARGE POSITIONS
       REAL(8),   INTENT(OUT):: FMAD(3,NBAS)  ! FORCES ON CHARGES
-      REAL(8),   INTENT(IN) :: dismin
+      REAL(8),   INTENT(IN) :: DISMIN
       REAL(8)               :: GBAS(3,3)     ! RECIPROCAL LATTICE VECTORS
       COMPLEX(8)            :: EIGR(NBAS)    ! FORM FACTOR
       REAL(8)               :: PI,FOURPI,ROOT2
@@ -971,7 +971,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       REAL(8)               :: X0,Y0,XM,YM,X2
       REAL(8)               :: ALPHA
       COMPLEX(8)            :: RHOK,CSVAR
-      real(8)               :: b,c  ! factors for close contact potential
+      REAL(8)               :: B,C  ! FACTORS FOR CLOSE CONTACT POTENTIAL
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FOURPI=4.D0*PI
@@ -1123,7 +1123,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
                     RFAC1=-SQRT(2.D0/PI)/RC
                     RFAC2=0.D0
                   ELSE
-                    if(dlen.gt.dismin) then
+                    IF(DLEN.GT.DISMIN) THEN
 !                   == TABLE LOOKUP MAY BE FASTER
 !                   == STORE SPLINE OF P(X):=ERFC(X)/X
 !                   ==    RFAC1=FAC*P(DLEN*FAC)
@@ -1132,10 +1132,10 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
                       RFAC1=ERFCX/DLEN
                       RFAC2=-(RFAC1+FAC*2.D0/DSQRT(PI) &
      &                               *DEXP(-(FAC*DLEN)**2))/DLEN**2
-                    else
-                      rfac1=b+c*dlen
-                      rfac2=c/dlen
-                    end if
+                    ELSE
+                      RFAC1=B+C*DLEN
+                      RFAC2=C/DLEN
+                    END IF
                   END IF
                   RFAC1=0.5D0*RFAC1
                   RFAC2=0.5D0*RFAC2*Q12
@@ -1264,7 +1264,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       END
 !      
 !     ...................................................................
-      SUBROUTINE COSMO_ISOLATEDHARTREE(N,R,Q,ETOT,V,F,dismin)
+      SUBROUTINE COSMO_ISOLATEDHARTREE(N,R,Q,ETOT,V,F,DISMIN)
 !     **                                                               **
 !     **  COLLECTS ALL NONZERO SURFACE CHARGES AND ATOMIC CHARGES      **
 !     **  INTO ONE ARRAY                                               **
@@ -1276,7 +1276,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       REAL(8),INTENT(OUT):: ETOT    ! TOTAL ENERGY
       REAL(8),INTENT(OUT):: V(N)    ! POTENTIALS
       REAL(8),INTENT(OUT):: F(3,N)  ! FORCES
-      REAL(8),INTENT(IN) :: dismin  ! POSITIONS
+      REAL(8),INTENT(IN) :: DISMIN  ! POSITIONS
       REAL(8)            :: DR(3)
       REAL(8)            :: DIS
       REAL(8)            :: SVAR
@@ -1346,7 +1346,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       VTHETA(:)=0.D0
       VSURF(:)=0.D0
       EBLANK=0.D0
-      ENONPOLAR=beta
+      ENONPOLAR=BETA
       ESELF=0.D0
 !
 !     ======================================================================
@@ -1574,7 +1574,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       END
 
 !     .......................................................................
-      SUBROUTINE COSMO$INTERFACE(NAT_,R0,NG,RC,QMAD,EpOT,ekin,VMAD,FORCE)
+      SUBROUTINE COSMO$INTERFACE(NAT_,R0,NG,RC,QMAD,EPOT,EKIN,VMAD,FORCE)
 !     **                                                                   **
 !     ** PROPAGATE                                                         **
 !     **                                                                   **
@@ -1593,12 +1593,12 @@ USE CONTINUUM_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NAT_
       INTEGER(4),INTENT(IN)    :: NG
-      REAL(8)   ,INTENT(OUT)   :: Epot
-      REAL(8)   ,INTENT(OUT)   :: Ekin
+      REAL(8)   ,INTENT(OUT)   :: EPOT
+      REAL(8)   ,INTENT(OUT)   :: EKIN
       REAL(8)   ,INTENT(OUT)   :: FORCE(3,NAT_)
       REAL(8)   ,INTENT(OUT)   :: VMAD(NG,NAT_)    !PCONT
       REAL(8)   ,INTENT(IN)    :: R0(3,NAT_)
-      REAL(8)   ,INTENT(INOUT)    :: QMAD(NG,NAT_)
+      REAL(8)   ,INTENT(INOUT) :: QMAD(NG,NAT_)
       REAL(8)   ,INTENT(IN)    :: RC(NG,NAT_)
       INTEGER   ,PARAMETER     :: NNX=20  ! MAX. #(NEIGBORS)/ATOM
       REAL(8)                  :: RMAX    ! MAX. DISTANCE FOR NEIGHBORLIST
@@ -1620,49 +1620,39 @@ USE CONTINUUM_MODULE
       REAL(8)   ,ALLOCATABLE   :: FQ1(:,:)
       REAL(8)   ,ALLOCATABLE   :: VQ(:)
       REAL(8)   ,ALLOCATABLE   :: VQ1(:)
+      REAL(8)   ,ALLOCATABLE   :: Q2M(:)
 !     == THETA
       REAL(8)   ,ALLOCATABLE   :: THETA(:)
       REAL(8)   ,ALLOCATABLE   :: VTHETA(:)
       REAL(8)   ,ALLOCATABLE   :: VTHETA1(:)
 !
-      REAL(8)                  :: EPOT1,epotsum
-      REAL(8)                  :: EKIN1,ekinsum
+      REAL(8)                  :: EPOT1,EPOTSUM
+      REAL(8)                  :: EKIN1,EKINSUM
       INTEGER                  :: I,IAT,ITER,IQ1,IQ2
       REAL(8)                  :: RBAS(3,3)
       LOGICAL                  :: TCONVG
       REAL(8)                  :: SVAR
       INTEGER                  :: NITER
 
-      real(8)                  :: r01(3,nat_)
-      real(8)                  :: qmad1(ng,nat_)
-      real(8)                  :: teststep=1.d-3
-      integer  ,parameter      :: ntest=5
-      real(8)                  :: e(ntest)
-      real(8)                  :: f(ntest)
-      logical                  :: test=.true.
-      integer                  :: itest
-
-integer(4) :: nfilinfo,nxyz,j
-
-TYPE XYZ_TYPE
-   character(2)   :: name
-   real(8)        :: r(3)
-end TYPE XYZ_TYPE
-
-type(xyz_type), allocatable :: xyz(:)
-real(8) :: d
-
+      REAL(8)                  :: R01(3,NAT_)
+      REAL(8)                  :: QMAD1(NG,NAT_)
+      REAL(8)                  :: TESTSTEP=1.D-3
+      INTEGER  ,PARAMETER      :: NTEST=5
+      REAL(8)                  :: E(NTEST)
+      REAL(8)                  :: F(NTEST)
+      LOGICAL                  :: TEST=.TRUE.
+      LOGICAL(4)               :: Tchk
+      INTEGER                  :: ITEST
+INTEGER(4) :: NFILINFO,J
 !     ***********************************************************************
-      epot=0.d0
-      ekin=0.d0
-      vmad(:,:)=0.d0
-      force(:,:)=0.d0
+      EPOT=0.D0
+      EKIN=0.D0
+      VMAD(:,:)=0.D0
+      FORCE(:,:)=0.D0
       IF (.NOT.TON) RETURN
-                               CALL TRACE$PUSH('CONTINUUM$PROPAGATE')
+                               CALL TRACE$PUSH('COSMO$INTERFACE')
+                               CALL TIMING$CLOCKON('COSMO')
 !PRINT*,'=============================== COSMO ============================='
-!TADIABATIC=.TRUE.
-!TMULTIPLE=.TRUE.
-!NMULTIPLE=100
       IF(TADIABATIC.AND.TMULTIPLE) THEN
         CALL ERROR$MSG('OPTIONS ADIABATIC AND MULTIPLE ARE MUTUALLY EXCLUSIVE')
         CALL ERROR$STOP('COSMO$INTERFACE')
@@ -1683,10 +1673,13 @@ real(8) :: d
 !     == SETUP DATA THAT DEPEND ONLY ON POSITIONS BUT NOT THE CHARGES      ==
 !     =======================================================================
       IF(TADIABATIC) THEN
-        ANNE=3.D-1
-        QMASS=12.D0
-        DT=1.D0
         NITER=1000
+        CALL OPTFRIC$SELECT('COSMO')
+        CALL OPTFRIC$GETL4('ON',TCHK) 
+        IF(TCHK) THEN
+          ALLOCATE(Q2M(NQ))
+          q2m(:)=qm(:)
+        END IF
       END IF
       IF(TMULTIPLE) THEN
         NITER=NMULTIPLE
@@ -1700,66 +1693,37 @@ real(8) :: d
       IF(START) THEN
         Q0(:)=0.D0
         QM(:)=0.D0
+        START=.FALSE.
       END IF
 
-!     == keep input variables in separate arrays to enable testing
-      qmad1=qmad
-      r01=r0
+!     == KEEP INPUT VARIABLES IN SEPARATE ARRAYS TO ENABLE TESTING
+      QMAD1=QMAD
+      R01=R0
 !
-!!$      do itest=1,ntest
-!!$        r01=r0
-!!$        qmad1=qmad
-!!$        if(test) then
-!!$          r01(1,1)=r01(1,1)+teststep*real(itest-1)
-!!$        end if
+!!$      DO ITEST=1,NTEST
+!!$        R01=R0
+!!$        QMAD1=QMAD
+!!$        IF(TEST) THEN
+!!$          R01(1,1)=R01(1,1)+TESTSTEP*REAL(ITEST-1)
+!!$        END IF
 !!$!
 !     =======================================================================
 !     == SETUP DATA THAT DEPEND ONLY ON POSITIONS BUT NOT THE CHARGES      ==
 !     =======================================================================
       ALLOCATE(RQ(3,NQ))
-do i=1,NQ
-   rq(:,I) = 0.d0
-enddo
-call filehandler$unit('INFO',NFILINFO)
       RAT(:,:)=R01(:,:)
-allocate(xyz(NQ))
-nxyz=0
       DO IAT=1,NAT
         DO I=IQFIRST(IAT),IQFIRST(IAT)+NQAT(IAT)-1
           RQ(:,I)=QRELPOS(:,I)+RAT(:,IAT)
-xyz(i)%name="Cl"
-xyz(i)%r= RQ(:,i)
-nxyz = nxyz + 1
         ENDDO
       ENDDO 
-
-! do i=1,NQ
-!    do j=1,NQ
-!       d= sqrt( (xyz(i)%r(1) - xyz(j)%r(1))**2 + (xyz(i)%r(2) - xyz(j)%r(2))**2 + (xyz(i)%r(3) - xyz(j)%r(3))**2 )
-!       if(d.lt.0.001d0) then 
-!          xyz(j)%name="S "
-!          xyz(i)%name="S "
-!       end if
-!    end do
-! end do
-
-
-print*,"FLAG: NXYZ=",NXYZ," NQ=",NQ
-write(nfilinfo,FMT='(I12)') NQ
-write(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
 !
-                                      CALL TIMING$CLOCKON('CONT: PROPAGATE')
       RMAX=MAX(2.D0*MAXVAL(RSOLV),5.D0*MAXVAL(RC))
       CALL COSMO_NEIGHBORLIST(TISO,NAT,RAT,RBAS,RMAX,NNX,NNN,NNLIST) 
       ALLOCATE(ZEROTHETA(NQ))
       ALLOCATE(THETA(NQ))
       CALL COSMO_CUTOFF(NAT,NQ,RAT,RBAS,RSOLV,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
      &                       ,ZEROTHETA,THETA)
-! IF(TCHARGES) THEN
-!    do i=1,NQ
-!       IF(.NOT.ZEROTHETA(i))  write(NFILINFO,FMT='(A2,3F11.5)') xyz(i)%name, xyz(i)%r(:)
-!    enddo
-! END IF
 !
 !     =======================================================================
 !     == NOW CALCULATE TOTAL ENERGY                                        ==
@@ -1770,8 +1734,8 @@ write(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
       ALLOCATE(FQ1(3,NQ))
       ALLOCATE(VTHETA(NQ))
       ALLOCATE(VTHETA1(NQ))
-      ekinsum=0.d0
-      epotsum=0.d0
+      EKINSUM=0.D0
+      EPOTSUM=0.D0
       DO ITER=1,NITER
         VQ(:)=0.D0
         EPOT=0.D0
@@ -1790,7 +1754,7 @@ write(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
         DO IAT=1,NAT
           QATBAR(IAT)=FDIEL*SUM(QMAD1(:,IAT))
         ENDDO 
-        CALL COSMO_LONGRANGE(TISO,RBAS,NQ,NAT,dismin,ZEROTHETA,QBAR,RQ,QATBAR,RAT &
+        CALL COSMO_LONGRANGE(TISO,RBAS,NQ,NAT,DISMIN,ZEROTHETA,QBAR,RQ,QATBAR,RAT &
      &                      ,EPOT1,VQ1,FQ1,VAT1,FAT1)
         DO IAT=1,NAT
           IQ1=IQFIRST(IAT)
@@ -1810,7 +1774,7 @@ write(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
         VTHETA(:)=VTHETA(:)+VQ1(:)*Q0(:)
         VAT(:)=VAT(:)+VAT1(:)*FDIEL
         FAT(:,:)=FAT(:,:)+FAT1(:,:)
-!print*,'longrange ',epot1,'sum(qbar)',sum(qbar),'sum(qatbar)',sum(qatbar)
+!PRINT*,'LONGRANGE ',EPOT1,'SUM(QBAR)',SUM(QBAR),'SUM(QATBAR)',SUM(QATBAR)
 !
 !       =======================================================================
 !       == SELF-ENERGY                                                       ==
@@ -1820,7 +1784,7 @@ write(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
         EPOT=EPOT+EPOT1
         VQ(:)=VQ(:)+VQ1(:)
         VTHETA(:)=VTHETA(:)+VTHETA1(:)
-!print*,'self energy ',epot1
+!PRINT*,'SELF ENERGY ',EPOT1
 !
 !       =======================================================================
 !       == DENSITY SURFACE INTERACTION                                       ==
@@ -1832,7 +1796,7 @@ write(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
         VTHETA=VTHETA(:)+VQ1(:)*Q0(:)
         FAT(:,:)=FAT(:,:)+FAT1(:,:)
         VMAD(:,:)=VMAD(:,:)+VMAD1(:,:)
-!print*,'short ranged ',epot1
+!PRINT*,'SHORT RANGED ',EPOT1
 !
 !       =======================================================================
 !       == TRANSFORM BACK TO FUNDAMENTAL VARIABLES                           ==
@@ -1851,7 +1815,7 @@ write(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
 !       =====================================================================
         IF(TADIABATIC) THEN
           SVAR=SQRT(SUM(VQ(:)**2)/NQ)
-          TCONVG=(SVAR.LT.1.D-8)
+          TCONVG=(SVAR.LT.1.D-6)
           IF(TCONVG)EXIT
         END IF
 !
@@ -1859,17 +1823,28 @@ write(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
 !       ==  PROPAGATE,KINETIC ENERGY AND SWITCH                            ==
 !       =====================================================================
 !       == MAGIC NUMBER DT**2/M=1/1000                                     ==
+        IF(TADIABATIC) THEN
+          CALL OPTFRIC$GETL4('ON',TCHK)
+          IF(TCHK) CALL OPTFRIC$GETR8('FRIC',ANNE)
+        END IF
         CALL COSMO_PROPAGATE(DT,ANNE,QMASS,NQ,Q0,QM,-VQ,QP)
         CALL COSMO_EKIN(DT,QMASS,NQ,QP,Q0,QM,EKIN1)
         EKIN=EKIN+EKIN1
-WRITE(*,FMT='(I5,3F20.10)')ITER,EKIN,EPOT,EKIN+EPOT
+WRITE(*,FMT='(I5,4F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,anne
+        IF(TADIABATIC) THEN
+          CALL OPTFRIC$GETL4('ON',TCHK)
+          IF(TCHK) THEN
+            CALL OPTFRIC$UPDATER8('COSMO',NQ,QP,Q0,QM,Q2M,(/(QMASS,i=1,nq)/))
+            Q2M=QM
+          END IF
+        END IF
         CALL COSMO_SWITCH(NQ,QP,Q0,QM)
-        if(tmultiple) then
-          ekinsum=ekinsum+ekin
-          epotsum=epotsum+epot
-          ekin=0.d0
-          epot=0.d0
-         end if
+        IF(TMULTIPLE) THEN
+          EKINSUM=EKINSUM+EKIN
+          EPOTSUM=EPOTSUM+EPOT
+          EKIN=0.D0
+          EPOT=0.D0
+         END IF
       ENDDO
       IF(TADIABATIC.AND.(.NOT.TCONVG)) THEN
         CALL ERROR$MSG('LOOP NOT CONVERGED')
@@ -1881,26 +1856,35 @@ WRITE(*,FMT='(I5,3F20.10)')ITER,EKIN,EPOT,EKIN+EPOT
 !     =======================================================================
       IF(TMULTIPLE) THEN
         SVAR=1.D0/REAL(NMULTIPLE)
-        EKIN=EKINsum*SVAR
-        EPOT=EPOTsum*SVAR
+        EKIN=EKINSUM*SVAR
+        EPOT=EPOTSUM*SVAR
         FORCE(:,:)=FAT(:,:)*SVAR
         VMAD(:,:)=VMAD(:,:)*SVAR
       END IF
-      if(tadiabatic) then
-        force(:,:)=fat(:,:)
-      end if
+      IF(TADIABATIC) THEN
+        FORCE(:,:)=FAT(:,:)
+      END IF
 !
 !     =======================================================================
 !     ==  CLOSE DOWN                                                       ==
 !     =======================================================================
 IF(TCHARGES) THEN
-   do i=1,NQ
-      IF(QBAR(i).le.0) xyz(i)%NAME='O '
-      IF(.NOT.ZEROTHETA(i))  write(NFILINFO,FMT='(A2,3F11.5,F15.10)') xyz(i)%name, xyz(i)%r(:), QBAR(i)
-   enddo
+  CALL FILEHANDLER$UNIT('INFO',NFILINFO)
+  REWIND(NFILINFO)
+  WRITE(NFILINFO,FMT='(I12)') NQ
+  WRITE(NFILINFO,FMT='(A10,I10)') "    NONAME",101010
+  DO I=1,NQ
+    IF(ZEROTHETA(I)) CYCLE
+    IF(QBAR(I).LE.0) THEN
+      WRITE(NFILINFO,FMT='(A2,3F11.5,F15.10)')'O',RQ(:,I), QBAR(I)
+    ELSE 
+      WRITE(NFILINFO,FMT='(A2,3F11.5,F15.10)')'CL',RQ(:,I), QBAR(I)
+    END IF
+  ENDDO
 END IF
 
 
+      IF(ALLOCATED(Q2M)) DEALLOCATE(Q2M)
       DEALLOCATE(QBAR)
       DEALLOCATE(VQ)
       DEALLOCATE(VQ1)
@@ -1910,21 +1894,8 @@ END IF
       DEALLOCATE(ZEROTHETA)
       DEALLOCATE(THETA)
       DEALLOCATE(RQ)
-
-
-!!$        if(test) then
-!!$          e(itest)=epot
-!!$          f(itest)=force(1,1)
-!!$        end if
-!!$      enddo
-!!$      print*,0.d0,f(1)
-!!$      do i=2,ntest
-!!$        print*,i,(e(i)-e(1))/teststep/real(i-1)
-!!$      enddo
-!!$      stop
-
-                          CALL TIMING$CLOCKOFF('CONT: PROPAGATE')
-                          CALL TRACE$POP
+                               CALL TIMING$CLOCKOFF('COSMO')
+                               CALL TRACE$POP
       RETURN 
       END SUBROUTINE COSMO$INTERFACE
 !
@@ -1935,13 +1906,13 @@ END IF
       IMPLICIT NONE
       INTEGER(4)            :: NFIL
       CHARACTER(2)          :: SYMBOL
-      CHARACTER(10)         :: id
+      CHARACTER(10)         :: ID
       REAL(8)               :: RAT(3)
       REAL(8)               :: FACEAREA
       REAL(8)               :: PI
-      real(8)               :: angstrom
-      integer(4)            :: i,iat
-      real(8)               :: aez
+      REAL(8)               :: ANGSTROM
+      INTEGER(4)            :: I,IAT
+      REAL(8)               :: AEZ
 !     ***********************************************************************************
       IF (.NOT.TON) RETURN
       PI=4.D0*DATAN(1.D0)
@@ -1958,19 +1929,20 @@ END IF
       REWIND(NFIL)
       WRITE(NFIL,FMT='("COORD_RAD")')
       WRITE(NFIL,FMT='("#ATOM",T10,"X",T20,"Y",T30,"Z",T40,"ELEMENT",T50,"RADIUS [A]")')
-      DO Iat=1,NAT
+      DO IAT=1,NAT
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT)
         CALL ATOMLIST$GETR8('Z',IAT,AEZ)
         CALL PERIODICTABLE$GET(NINT(AEZ),'SYMBOL',SYMBOL)
         IF(SYMBOL(2:2).EQ.'_') SYMBOL(2:2)=' '
-        WRITE(NFIL,FMT='(I3,3F20.14,A3,F15.5)')Iat,RAT,SYMBOL,RSOLV(Iat)/ANGSTROM
+        WRITE(NFIL,FMT='(I3,3F20.14,A3,F15.5)')IAT,RAT,SYMBOL,RSOLV(IAT)/ANGSTROM
       ENDDO
       WRITE(NFIL,FMT='("COORD_CAR")')
       DO IAT=1,NAT
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT)
         FACEAREA=4.D0*PI*RSOLV(IAT)/REAL(NQAT(IAT),KIND=8)
         DO I=IQFIRST(IAT),IQFIRST(IAT)+NQAT(IAT)-1
-          WRITE(NFIL,FMT='(*)')I,IAT,QRELPOS(:,I)+RAT(:),Q0(I),FACEAREA,Q0(I)/FACEAREA
+!          WRITE(NFIL,FMT='(*)')I,IAT,QRELPOS(:,I)+RAT(:),Q0(I),FACEAREA,Q0(I)/FACEAREA
+          WRITE(NFIL,*)I,IAT,QRELPOS(:,I)+RAT(:),Q0(I),FACEAREA,Q0(I)/FACEAREA
         ENDDO
       ENDDO
       CALL FILEHANDLER$CLOSE('COSMO_OUT')

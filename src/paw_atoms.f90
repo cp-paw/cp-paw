@@ -372,6 +372,7 @@ END MODULE ATOMS_MODULE
       REAL(8)        :: SVAR
 !     ******************************************************************
                               CALL TRACE$PUSH('ATOMS$PROPAGATE')
+print*,'forces from atoms$propagate',maxval(abs(force))
 DO IAT=1,NAT
   WRITE(*,FMT='("FORCE ",I3,3F15.10)')IAT,FORCE(:,IAT)
 ENDDO
@@ -483,8 +484,7 @@ TSTRESS=.FALSE.
 !     ==================================================================
 !     == take care of link bonds as constraints                       ==
 !     ==================================================================
-      call ATOMS_frictionarray(NAT,ANNER,ANNEE &
-     &                 ,RMASS,EFFEMASS,anner1)
+      call ATOMS_frictionarray(NAT,ANNER,ANNEE,RMASS,EFFEMASS,anner1)
       call QMMM$propagate(nat,delt,anner,redrmass,anner1,rm,r0,rp)
 !
 !     ==================================================================
@@ -1027,7 +1027,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       REAL(8)   ,INTENT(OUT):: CELLKIN(3,3) ! FORCE
       INTEGER(4)            :: IAT,I,J
       REAL(8)               :: ANNER1
-      REAL(8)               :: RMASS0        ! BARE ATOM MASS
       REAL(8)               :: SVAR1,SVAR2,SVAR3
       REAL(8)               :: MATP(3,3),MATM(3,3),MATPINV(3,3)
       REAL(8)               :: V(3)
@@ -1045,7 +1044,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
           ENDDO
           DO I=1,3
             DO J=1,3
-              CELLKIN(I,J)=CELLKIN(I,J)+RMASS0*V(I)*V(J)
+              CELLKIN(I,J)=CELLKIN(I,J)+RMASS(iat)*V(I)*V(J)
             ENDDO
           ENDDO
         ENDDO
@@ -1551,7 +1550,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
           VAL_=ISPECIES
         ELSE
            CALL ERROR$MSG('GETI4A DOES NOT HANDLE SCALARS')
-           CALL ERROR$STOP('ATOMLIST$GETR8A')
+           CALL ERROR$STOP('ATOMLIST$GETi4A')
         END IF
       ELSE 
         CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
