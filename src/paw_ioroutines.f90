@@ -23,14 +23,16 @@ CONTAINS
         WRITE(NFILO,FMT='()')
         WRITE(NFILO,FMT='(72("*"))')
         WRITE(NFILO,FMT='(72("*"),T15' &
-     &             //',"     FIRST-PRINCIPLES MOLECULAR DYNAMICS     ")')
+     &              //',"                CP-PAW                     ")')
         WRITE(NFILO,FMT='(72("*"),T15' &
-     &             //',"   WITH THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
+     &           //',"     FIRST PRINCIPLEX MOLECULAR DYNAMICS      ")')
+        WRITE(NFILO,FMT='(72("*"),T15' &
+     &           //',"   WITH THE PROJECTOR AUGMENTED WAVE METHOD   ")')
         WRITE(NFILO,FMT='(72("*"))')
         WRITE(NFILO,FMT='(T10' &
-     &           //',"P.E. BLOECHL, Clausthal University of Technology")')
+     &           //',"P.E. BLOECHL, (C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
         WRITE(NFILO,FMT='(T10' &
-     &      //',"(C) Clausthal University of Technology (CUT) * ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
+     &           //',"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
         IF (VERSIONTEXT (17:17).NE.'%')THEN
           WRITE(NFILO,FMT='(A)') VERSIONTEXT
         ENDIF
@@ -41,6 +43,24 @@ CONTAINS
      &           DATIME,HOSTNAME
         CALL LOCK$REPORT(NFILO)
         END SUBROUTINE PUTHEADER
+!
+!       ................................................................
+        SUBROUTINE printversion()
+        use version_module
+        IMPLICIT NONE
+!       ****************************************************************
+        WRITE(*,FMT='()')
+        WRITE(*,FMT='(72("*"))')
+        WRITE(*,FMT='(72("*"),T15' &
+     &              //',"  CP-PAW version info: ")')
+        WRITE(*,FMT='(72("*"))')
+        WRITE(*,FMT='(A)')trim(VERINF)
+        WRITE(*,FMT='(A)')trim(VERREV)
+        WRITE(*,FMT='(A)')trim(VERAUT)
+        WRITE(*,FMT='(72("*"))')
+        CALL ERROR$NORMALSTOP
+        stop
+        END SUBROUTINE printversion
 !       ................................................................
         SUBROUTINE WRITER8(NFIL,NAME,VALUE,UNIT)
         INTEGER(4)  ,INTENT(IN) :: NFIL
@@ -267,6 +287,9 @@ CALL TRACE$PASS('DONE')
         CALL GETARG(1,CNTLNAME)
       END IF
       CALL MPE$BROADCAST('~',1,CNTLNAME)
+      if(cntlname.eq.'-version') then
+        call printversion()
+      end if
 !
 !     ==================================================================
 !     ==  define polymer if necessary                                 ==
@@ -2227,7 +2250,7 @@ print *,'keep_dff set in list'
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
-      LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: TCHK,tchk1,tchk2
       REAL(8)                  :: SVAR
       REAL(8)                  :: fric
       REAL(8)                  :: FRICTION
@@ -2297,6 +2320,21 @@ print *,'keep_dff set in list'
       CALL LINKEDLIST$GET(LL_CNTL,'ADIABATIC',1,TCHK)
       CALL COSMO$SETL4('ADIABATIC',TCHK)
 !
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ETOL',1,TCHK1)
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'QTOL',1,TCHK2)
+      if(.not.(tchk1.or.tchk2)) then
+        CALL COSMO$SETr8('ETOL',1.d-7)
+      end if
+      IF(TCHK1) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'ETOL',1,svar)
+        CALL COSMO$SETr8('ETOL',SVAR)
+      END IF
+!
+      IF(TCHK2) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'QTOL',1,svar)
+        CALL COSMO$SETr8('QTOL',SVAR)
+      END IF
+!
 !     == EPSILON = DIELECTRIC CONSTANT ===========================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EPSILON',1,TCHK)
       IF(.NOT.TCHK) THEN
@@ -2312,6 +2350,14 @@ print *,'keep_dff set in list'
       END IF
       CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,fric)
       CALL COSMO$SETR8('FRICTION',fric)
+!
+!     ==  FRIC ===================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'VPAULI',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'VPAULI',0,0.D0)
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'VPAULI',1,SVAR)
+      CALL COSMO$SETR8('VPAULI',SVAR)
 !
 !     ==  PRINT CHARGES ================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'CHARGES',1,TCHK)

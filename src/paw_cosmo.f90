@@ -6,7 +6,9 @@ LOGICAL,SAVE             :: TISO=.TRUE.   ! TREATS AS ISOLATED CLUSTER/ PERIODIC
 LOGICAL,SAVE             :: TSTOP=.FALSE.  ! SETS INITIAL VELOCITIES TO ZERO
 LOGICAL,SAVE             :: TADIABATIC=.FALSE.  ! MINIMIZATION IN EACH STEP
 LOGICAL,SAVE             :: TMULTIPLE=.FALSE.   !MULTIPLE TIME STEP DYNAMOCS
-REAL(8),SAVE             :: VTOL=1.D-8  ! TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
+REAL(8),SAVE             :: eTOL=-1.d0  ! energy TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
+REAL(8),SAVE             :: qTOL=-1.d0  ! charge TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
+
 !==  PARAMETERS THAT DEFINE THE ENERGY FUNCTIONAL
 REAL(8),SAVE             :: DT=10.D0        ! TIME STEP
 REAL(8),SAVE             :: ANNE=0.D0      ! FRICTION
@@ -19,6 +21,7 @@ REAL(8),SAVE             :: FDIEL=1.D0    ! (E_R-1)/(E_R+0.5)
 INTEGER,SAVE             :: NAT=0
 REAL(8),SAVE,ALLOCATABLE :: RSOLV(:) !(NAT) SOLVATION RADIUS
 REAL(8),SAVE             :: DISMIN
+REAL(8),SAVE             :: vpauli=0.d0
 !== 
 INTEGER                  :: NQ=0     !#(CHARGES)=SUM(NQAT)
 INTEGER,SAVE,ALLOCATABLE :: NQAT(:)
@@ -120,6 +123,10 @@ END MODULE COSMO_MODULE
         DT=VAL
       ELSE IF(ID.EQ.'FRICTION') THEN
         ANNE=VAL
+      ELSE IF(ID.EQ.'ETOL') THEN
+        ETOL=VAL
+      ELSE IF(ID.EQ.'QTOL') THEN
+        QTOL=VAL
       ELSE IF(ID.EQ.'MASS') THEN
         QMASS=VAL
       ELSE IF(ID.EQ.'GAMMA') THEN
@@ -137,6 +144,8 @@ END MODULE COSMO_MODULE
           CALL ERROR$STOP('COSMO$SETR8')
         END IF
         FDIEL=(VAL-1)/VAL
+      ELSE IF(ID.EQ.'VPAULI') THEN
+        VPAULI=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -797,7 +806,7 @@ END MODULE COSMO_MODULE
       INTEGER,INTENT(IN) :: IQFIRST(NAT)
       INTEGER,INTENT(IN) :: NQAT(NAT)
       REAL(8),INTENT(IN) :: RQ(3,NQ)     ! ABSOLUTE POSITIONS OF CHARGE
-      LOGICAL,INTENT(OUT):: ZEROTHETA(NQ)
+      LOGICAL,INTENT(in) :: ZEROTHETA(NQ)
       REAL(8),INTENT(IN) :: THETA(NQ)
       REAL(8),INTENT(IN) :: VTHETA(NQ)
       REAL(8),INTENT(OUT):: FAT(3,NAT)
@@ -834,6 +843,88 @@ END MODULE COSMO_MODULE
           ENDDO
         ENDDO
       ENDDO
+      RETURN
+      END
+!
+!     .......................................................................
+      SUBROUTINE COSMO_Pauli(NAT,ng,rc,qmad,NQ,RAT,RBAS,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
+     &                       ,ZEROTHETA,vpauli,epauli,FAT,vmad)
+!     **                                                                   **
+!     **  CALCULATES ENERGY CORRESPONDING TO A POTENTIAL ON THE SURFACE    **
+!     **  CHARGES THAT ACT ON THE MODEL CHARE DENSITY                      **
+!     **  this potential shall mimick the pauli repulsion by the solvent.  **
+!     **                                                                   **
+!     **                                                                   ** 
+     IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NAT
+      INTEGER,INTENT(IN) :: ng
+      real(8),intent(in) :: rc(ng,nat)
+      real(8),intent(in) :: qmad(ng,nat)
+      INTEGER,INTENT(IN) :: NQ
+      INTEGER,INTENT(IN) :: NNX
+      INTEGER,INTENT(IN) :: NNN(NAT)
+      INTEGER,INTENT(IN) :: NNLIST(4,NNX,NAT)
+      REAL(8),INTENT(IN) :: RAT(3,NAT)
+      REAL(8),INTENT(IN) :: RBAS(3,3)
+      INTEGER,INTENT(IN) :: IQFIRST(NAT)
+      INTEGER,INTENT(IN) :: NQAT(NAT)
+      REAL(8),INTENT(IN) :: RQ(3,NQ)     ! ABSOLUTE POSITIONS OF CHARGE
+      LOGICAL,INTENT(in) :: ZEROTHETA(NQ)
+      REAL(8),INTENT(in) :: vpauli
+      REAL(8),INTENT(OUT):: epauli
+      REAL(8),INTENT(OUT):: FAT(3,NAT)
+      REAL(8),INTENT(OUT):: vmad(ng,NAT)
+      INTEGER            :: IAT1,IAT2,IQ
+      REAL(8)            :: DR(3),DIS
+      REAL(8)            :: R2(3)
+      REAL(8)            :: SVAR
+      INTEGER(4)         :: IQ1,IQ2,IN,IT1,IT2,IT3,ig
+      real(8)            :: ffac,rc1
+      real(8)            :: pi,sqpi
+!     ***********************************************************************
+      pi=4.d0*datan(1.d0)
+      sqpi=sqrt(pi)
+      epauli=0.D0
+      FAT(:,:)=0.D0
+      vmad(:,:)=0.D0
+      DO IAT1=1,NAT
+        IQ1=IQFIRST(IAT1)
+        IQ2=IQFIRST(IAT1)-1+NQAT(IAT1)
+        DO IN=1,NNN(IAT1)
+          IAT2=NNLIST(1,IN,IAT1)
+          IT1 =NNLIST(2,IN,IAT1)
+          IT2 =NNLIST(3,IN,IAT1)
+          IT3 =NNLIST(4,IN,IAT1)
+          R2(:)=RAT(:,IAT2) &
+       &         +RBAS(:,1)*REAL(IT1)+RBAS(:,2)*REAL(IT2)+RBAS(:,3)*REAL(IT3)
+          DO IQ=IQ1,IQ2
+            IF(ZEROTHETA(IQ)) CYCLE
+            DR(:)=R2(:)-RQ(:,IQ)
+            DIS=SQRT(SUM(DR**2))
+            ffac=0.d0
+            do ig=1,ng
+              rc1=rc(ig,iat2)
+              svar=vpauli/(sqpi*rc1)**3*exp(-(dis/rc1)**2)
+              vmad(ig,iat2)=vmad(ig,iat2)+svar
+              svar=svar*qmad(ig,iat2)
+              epauli=epauli+svar
+              ffac=ffac-2.d0/rc1**2*svar
+            enddo
+            FAT(:,IAT2)=FAT(:,IAT2)-SVAR*DR(:)
+            FAT(:,IAT1)=FAT(:,IAT1)+SVAR*DR(:)
+          ENDDO
+        ENDDO
+      ENDDO
+do iat1=1,nat
+  write(*,*)'qmad ',iat1,qmad(:,iat1)
+enddo
+do iat1=1,nat
+  write(*,*)'rc ',iat1,rc(:,iat1)
+enddo
+do iat1=1,nat
+  write(*,*)'vmad ',iat1,vmad(:,iat1)
+enddo
+print*,'epauli ',epauli
       RETURN
       END
 !
@@ -1634,6 +1725,8 @@ USE CONTINUUM_MODULE
       REAL(8)                  :: SVAR
       INTEGER                  :: NITER
 
+      REAL(8)                  :: annem  ! previous friction factor
+      real(8)                  :: dq,de
       REAL(8)                  :: R01(3,NAT_)
       REAL(8)                  :: QMAD1(NG,NAT_)
       REAL(8)                  :: TESTSTEP=1.D-3
@@ -1676,10 +1769,8 @@ INTEGER(4) :: NFILINFO,J
         NITER=1000
         CALL OPTFRIC$SELECT('COSMO')
         CALL OPTFRIC$GETL4('ON',TCHK) 
-        IF(TCHK) THEN
-          ALLOCATE(Q2M(NQ))
-          q2m(:)=qm(:)
-        END IF
+        ALLOCATE(Q2M(NQ))
+        q2m(:)=qm(:)
       END IF
       IF(TMULTIPLE) THEN
         NITER=NMULTIPLE
@@ -1813,25 +1904,33 @@ INTEGER(4) :: NFILINFO,J
 !       =====================================================================
 !       ==  PROPAGATE,KINETIC ENERGY AND SWITCH                            ==
 !       =====================================================================
-        IF(TADIABATIC) THEN
-          SVAR=SQRT(SUM(VQ(:)**2)/NQ)
-          TCONVG=(SVAR.LT.1.D-6)
-          IF(TCONVG)EXIT
-        END IF
-!
-!       =====================================================================
-!       ==  PROPAGATE,KINETIC ENERGY AND SWITCH                            ==
-!       =====================================================================
 !       == MAGIC NUMBER DT**2/M=1/1000                                     ==
         IF(TADIABATIC) THEN
           CALL OPTFRIC$GETL4('ON',TCHK)
+          annem=anne
           IF(TCHK) CALL OPTFRIC$GETR8('FRIC',ANNE)
         END IF
         CALL COSMO_PROPAGATE(DT,ANNE,QMASS,NQ,Q0,QM,-VQ,QP)
         CALL COSMO_EKIN(DT,QMASS,NQ,QP,Q0,QM,EKIN1)
         EKIN=EKIN+EKIN1
-WRITE(*,FMT='(I5,4F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,anne
+WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ekin+epot-de,anne,de,dq
+!
         IF(TADIABATIC) THEN
+!         == check convergence ==============================================
+          CALL OPTFRIC$TESTCONV(NQ,QP,Q0,QM,Q2M,ANNE,ANNEM,DT,(/(QMASS,I=1,NQ)/),DQ,DE)
+          IF(ETOL.GT.0.AND.QTOL.GT.0) THEN 
+            TCONVG=(DQ.LT.QTOL.AND.DE.LT.ETOL)
+          ELSE IF(ETOL.GT.0.AND.QTOL.LT.0) THEN 
+            TCONVG=DE.LT.ETOL
+          ELSE IF(ETOL.LT.0.AND.QTOL.GT.0) THEN 
+            TCONVG=DQ.LT.QTOL
+          ELSE
+            CALL ERROR$MSG('QTOL OR ETOL MUST BE SET FOR ADIABATIC OPTION') 
+            CALL ERROR$STOP('COSMO$INTERFACE')
+          END IF
+          tconvg=tconvg.and.(iter.ge.3)
+          IF(TCONVG)EXIT
+!         == update optimized friction
           CALL OPTFRIC$GETL4('ON',TCHK)
           IF(TCHK) THEN
             CALL OPTFRIC$UPDATER8('COSMO',NQ,QP,Q0,QM,Q2M,(/(QMASS,i=1,nq)/))
@@ -1864,6 +1963,16 @@ WRITE(*,FMT='(I5,4F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,anne
       IF(TADIABATIC) THEN
         FORCE(:,:)=FAT(:,:)
       END IF
+!
+!     =======================================================================
+!     ==  add pauli repulsion                                              ==
+!     =======================================================================
+      call COSMO_Pauli(NAT,ng,rc,qmad,NQ,RAT,RBAS,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
+     &                       ,ZEROTHETA,vpauli,epot1,FAT1,vmad1)
+      epot=epot+epot1
+      force(:,:)=force(:,:)+fat1(:,:)
+      vmad(:,:)=vmad(:,:)+vmad1(:,:)
+print*,'epauli ',epot1
 !
 !     =======================================================================
 !     ==  CLOSE DOWN                                                       ==

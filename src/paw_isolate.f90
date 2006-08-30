@@ -738,7 +738,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)
 !
 !     ==================================================================
-!     ==  COUPLE CONTINUUM                                            ==
+!     ==  COUPLE COsmo                                                ==
 !     ==================================================================
 !      CALL CONTINUUM$PROPAGATE(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
       CALL COSMO$SETL4('PERIODIC',.NOT.TISOLATE)
@@ -748,17 +748,15 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)
       CALL ENERGYLIST$SET('COSMO KINETIC ENERGY',EKIN1)
       CALL ENERGYLIST$SET('COSMO POTENTIAL ENERGY',EPOT1)
-      CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT1)
+       CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT1)
       CALL ENERGYLIST$ADD('CONSTANT ENERGY',EPOT1+EKIN1)
 !
-!
 !     ==================================================================
-!     ==  COUPLE vdw  (van der Waals as interatomic potential         ==
+!     ==  COUPLE VDW  (VAN DER WAALS AS INTERATOMIC POTENTIAL         ==
 !     ==================================================================
       CALL VDW$SETL4('PERIODIC',.NOT.TISOLATE)
       CALL VDW$INTERFACE(NAT,POS,EPOT1,FORCE1)
       ENERGY=ENERGY+EPOT1
-      VI(:,:)=VI(:,:)+VI1(:,:)
       FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)
       CALL ENERGYLIST$SET('VAN DER WAALS ENERGY',EPOT1)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EPOT1)

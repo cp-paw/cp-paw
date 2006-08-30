@@ -287,10 +287,9 @@ END MODULE OPTFRIC_MODULE
         DF=(1.D0+A0)*XP(I)-(3.D0+AM)*X0(I)+(3.D0-A0)*XM(I)-(1.D0-AM)*X2M(I)
         DX=X0(I)-XM(I)
         MDX=MASS(I)*DX
-        ASUM=ASUM+DF*MDX
+        ASUM=ASUM-DF*MDX
         BSUM=BSUM+DX*MDX
       ENDDO
-      ASUM=ABS(ASUM)
       AOPT1=ASUM
       AOPT2=BSUM
 !
@@ -298,8 +297,9 @@ END MODULE OPTFRIC_MODULE
 !     == set new friction                                                  ==
 !     =======================================================================
       this%fricm=this%fric0
-      IF(aopt2.GT.0.D0) THEN
+      IF(aopt1.gT.0.D0) THEN
         aopt=sqrt(AOPT1/AOPT2)
+        mixaopt=this%retard
         this%aoptav=MIXAOPT*aopt+(1.D0-MIXAOPT)*this%AOPTAV
         this%fric0=this%aoptav
         this%fric0=min(this%fric0,1.d0)
@@ -307,16 +307,53 @@ END MODULE OPTFRIC_MODULE
       ELSE
         this%fric0=this%startfric
       END IF
-!print*,'optfric ',this%RETARD,this%aopt1av,this%aopt2av,this%fric0,AOPT1,AOPT2
+!print*,'optfric ',mixaopt,this%aoptav,this%fric0,AOPT1,AOPT2
+      RETURN
+      END
+!
+!     .................................................................. 
+      SUBROUTINE OPTFRIC$TESTCONV(LEN,XP,X0,XM,X2M,A0,AM,DT,MASS,DX,DE)
+!     ******************************************************************
+!     **  ESTIMATES THE DEVIATION IN ENERGY AND DISTANCE FROM THE     **
+!     **  MINIMUM IF THE TOTAL ENERGY SURFACE                         **
+!     **  this is a stand-alone routine                               **
+!     ****************************************************************** 
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      REAL(8)     ,INTENT(IN) :: XP(LEN)  ! NEXT POSITIONS 
+      REAL(8)     ,INTENT(IN) :: X0(LEN)  ! CURRENT POSITIONS 
+      REAL(8)     ,INTENT(IN) :: XM(LEN)  ! PREVIOUS POSITIONS
+      REAL(8)     ,INTENT(IN) :: X2M(LEN) ! POSITIONS BEFORE PREVIOUS 
+      REAL(8)     ,INTENT(IN) :: A0       ! CURRENT FRICTION FACTOR 
+      REAL(8)     ,INTENT(IN) :: AM       ! PREVIOUS FRICTION FACTOR
+      REAL(8)     ,INTENT(IN) :: DT       ! TIME STEP
+      REAL(8)     ,INTENT(IN) :: MASS(LEN)! DIAGONAL ELEMENTS OF MASS TENSOR
+      REAL(8)     ,INTENT(OUT):: DX       ! ESTIMATED DISTANCE FROM MINIMUM
+      REAL(8)     ,INTENT(OUT):: DE       ! ESTIMATED ENERGY DIFFERENCE
+      REAL(8)                 :: F02,DXDF,DX2
+!     ****************************************************************** 
+!     == F02=F0**2 =========================================================
+      F02=SUM((MASS(:)*( (1.D0+A0)*XP(:) - 2.D0*X0(:) + (1.D0-A0)*XM(:) ))**2)
+      F02=F02/DT**4
+!     == DXDF=(X0-XM)*(F0-FM) ================================================
+      DXDF=DOT_PRODUCT(X0(:)-XM(:),MASS(:)*((1.D0+A0)*XP(:)-(3.D0+AM)*X0(:) &
+     &                            +(3.D0-A0)*XM-(1.D0-AM)*X2M(:)))
+      DXDF=DXDF/DT**2
+!     == DX2=(X0-XM)**2 ======================================================
+      DX2=SUM((X0(:)-XM(:))**2)
+!     == DE IS THE ESTIMATE OF THE ENERGY DIFFERENCE TO THE MINIMUM
+      DE=-0.5D0*DX2*F02/DXDF
+!     == DX IS THE ESTIMATED DISTANCE FROM THE MINIMUM
+      DX=-DX2*SQRT(F02)/DXDF
       RETURN
       END
 !!$!
 !!$!      .......................................................................
 !!$       PROGRAM TEST
-!!$       implicit none
+!!$       IMPLICIT NONE
 !!$       REAL(8)     :: C(2,2)
 !!$       REAL(8)     :: MASS(2)
-!!$       REAL(8)     :: dt=1.d-1
+!!$       REAL(8)     :: DT=1.D-1
 !!$       REAL(8)     :: X0(2)
 !!$       REAL(8)     :: XM(2)
 !!$       REAL(8)     :: XP(2)

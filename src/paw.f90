@@ -1,4 +1,12 @@
 !#IF DEFINED(IBMLICENSE)
+Module version_module
+character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo/src/paw.f90 $'
+character(256):: VERrev='$LastChangedRevision: 427 $'
+character(256):: VERaut='$LastChangedBy: ptpb $'
+character(256):: VERdate='$LastChangedDate: 2006-08-30 15:13:47 +0200 (Mi, 30. Aug 2006) $'
+end Module version_module
+!
+!     ..................................................................
       PROGRAM MAIN
 !     ******************************************************************
 !     **                      CP-PAW                                  **
