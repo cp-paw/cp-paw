@@ -625,6 +625,11 @@ for i in $list; do
 done
 cp $SCRIPTDIR/* $BINDIR
 #
+# creating subdirectories
+#
+AC_MSG_RESULT(copy $PARMFILE to parms.in_use)
+cp $PARMFILE parms.in_use
+#
 # removal of config.cache 
 rm -f config.cache
 AC_MSG_RESULT(-------------------------------------)

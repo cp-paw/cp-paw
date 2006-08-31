@@ -1862,6 +1862,23 @@ each step that reduces the energy}
 \vrules{optional}
 \vdefault{false}}
 
+\mbax{\key{ETOL}
+\vdescr{energy convergence criterion for ADIABATIC=T. Inner loop terminates, 
+if estimated energy deviation from minimum is smaller than etol.}
+\vformat{logical}
+\vrules{if ADIABATIC=T either ETOL or QTOL or both must be specified. 
+Not used for ADIABATIC=F.}
+\vdefault{$10^{-7}$ if qtol is not specified}}
+ 
+\mbax{\key{QTOL}
+\vdescr{charge convergence criterion for ADIABATIC=T. Inner loop terminates, 
+if estimated charge deviation from minimum , i.e. $|\vec{q}-\vec{q}_{min}|$ 
+is smaller than etol.}
+\vformat{logical}
+\vrules{if ADIABATIC=T either ETOL or QTOL or both must be specified.
+Not used for ADIABATIC=F.}
+\vdefault{charge criterion is not used}}
+
 \mbax{\key{EPSILON}
 \vdescr{Dielectric constant of the solvent}
 \vformat{real}
@@ -1890,6 +1907,12 @@ optimum friction scheme adjusts within RETARD time steps to one-half of the
 original deviation.}
 \vformat{real}
 \vrules{optional, only used in combination with OPTFRIC=T}
+\vdefault{0.d0}}
+
+\mbax{\key{VPAULI}
+\vdescr{Only for testing purposes!}
+\vformat{real}
+\vrules{optional}
 \vdefault{0.d0}}
 
 % %----------------------------------------------------------------------

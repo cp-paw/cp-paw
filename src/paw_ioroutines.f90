@@ -14,6 +14,7 @@ CONTAINS
 !       ................................................................
         SUBROUTINE PUTHEADER(NFILO,VERSIONTEXT)
         USE CLOCK_MODULE
+        USE VERSION_MODULE
         IMPLICIT NONE
         INTEGER(4)   ,INTENT(IN) :: NFILO
         CHARACTER(*) ,INTENT(IN) :: VERSIONTEXT
@@ -33,6 +34,11 @@ CONTAINS
      &           //',"P.E. BLOECHL, (C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
         WRITE(NFILO,FMT='(T10' &
      &           //',"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
+        WRITE(NFILO,FMT='(T10,A)')trim(VERINF)
+        WRITE(NFILO,FMT='(T10,A)')trim(VERREV)
+        WRITE(NFILO,FMT='(T10,A)')trim(VERAUT)
+        WRITE(NFILO,FMT='(T10,A)')trim(VERDAT)
+
         IF (VERSIONTEXT (17:17).NE.'%')THEN
           WRITE(NFILO,FMT='(A)') VERSIONTEXT
         ENDIF
@@ -57,6 +63,7 @@ CONTAINS
         WRITE(*,FMT='(A)')trim(VERINF)
         WRITE(*,FMT='(A)')trim(VERREV)
         WRITE(*,FMT='(A)')trim(VERAUT)
+        WRITE(*,FMT='(A)')trim(VERDAT)
         WRITE(*,FMT='(72("*"))')
         CALL ERROR$NORMALSTOP
         stop
@@ -287,8 +294,10 @@ CALL TRACE$PASS('DONE')
         CALL GETARG(1,CNTLNAME)
       END IF
       CALL MPE$BROADCAST('~',1,CNTLNAME)
-      if(cntlname.eq.'-version') then
+      if(cntlname.eq.'--version') then
+        call version$writeparmfile()
         call printversion()
+        call error$normalstop
       end if
 !
 !     ==================================================================
