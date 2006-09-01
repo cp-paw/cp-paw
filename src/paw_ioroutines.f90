@@ -294,11 +294,21 @@ CALL TRACE$PASS('DONE')
         CALL GETARG(1,CNTLNAME)
       END IF
       CALL MPE$BROADCAST('~',1,CNTLNAME)
-      if(cntlname.eq.'--version') then
-        call version$writeparmfile()
-        call printversion()
-        call error$normalstop
-      end if
+      IF(+CNTLNAME.EQ.'--HELP'.OR.+CNTLNAME.EQ.'-H'.OR.+CNTLNAME.eq.'?') THEN
+        WRITE(*,FMT='("CONTROL FILE",T15,"EXECUTE ")')
+        WRITE(*,FMT='("--HELP",T15,"PRINT HELP INFORMATION")')
+        WRITE(*,FMT='("-H",T15,"PRINT HELP INFORMATION")')
+        WRITE(*,FMT='("?",T15,"PRINT HELP INFORMATION")')
+        WRITE(*,FMT='("--VERSION",T15,"PRINT VERSION INFORMATION")')
+        WRITE(*,FMT='("--PARMFILE",T15,"PRINT PARMFILE")')
+        CALL ERROR$NORMALSTOP
+      ELSE IF(+CNTLNAME.EQ.'--VERSION') THEN
+        CALL PRINTVERSION()
+        CALL ERROR$NORMALSTOP
+      ELSE IF(+CNTLNAME.EQ.'--PARMFILE') THEN
+        CALL VERSION$WRITEPARMFILE()
+        CALL ERROR$NORMALSTOP
+      END IF
 !
 !     ==================================================================
 !     ==  define polymer if necessary                                 ==

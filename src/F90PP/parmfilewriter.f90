@@ -3,8 +3,8 @@
 !      ** which prints the input file to a specified fortran channel         **
        character(256) :: line
 !      **************************************************************************
-       write(*,fmt='(A)')'subroutine version$writeparmfile(nfil)'
-       write(*,fmt='(A)')'integer(4),intent(in) :: nfil'
+       write(*,fmt='(A)')'subroutine version$writeparmfile()'
+!       write(*,fmt='(A)')'integer(4),intent(in) :: nfil'
        do
          read(*,fmt='(A)',err=100,end=100)line
          if(len_trim(line).eq.0) cycle
