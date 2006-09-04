@@ -1,9 +1,0 @@
-#!/bin/sh
-COMPILE="f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_  -g -s "
-COMPILE77="f90 -c -YEXT_NAMES=LCS -YEXT_SFX=_ -g -s "
-LLIBS="-lU77 -lm  -lfftw -llapack -lf77blas -latlas  "
-OBJDIR="/home/ptpb/Tree/PAW/bin/intel/Objects/debug"
-LINK="f90   -I${OBJDIR} -L${OBJDIR}  -L/home/ptpb/Tree/PAW/lib/fftw-intel/fftw/.libs/ -L/home/ptpb/Tree/PAW/lib/ATLAS/lib/Linux_PIII "
-${COMPILE} -opaw_dmft.o paw_dmft.f90 
-${LINK} -opaw_dmft.x paw_dmft.o
-./paw_dmft.x
