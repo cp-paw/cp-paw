@@ -854,7 +854,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !     ==================================================================
       FORCE(:,:)=0.D0
       CALL QMMM$SWITCH
-!      CALL CONTINUUM$SWITCH(NAT,RP,R0) ! not needed for hms-continuum
 !
       CALL CELL$GETL4('MOVE',TSTRESS)
       IF(TSTRESS) THEN

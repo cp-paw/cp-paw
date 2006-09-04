@@ -1,9 +1,9 @@
 !#IF DEFINED(IBMLICENSE)
 Module version_module
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 435 $'
+character(256):: VERrev='$LastChangedRevision: 439 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2006-08-31 17:20:47 +0200 (Do, 31. Aug 2006) $'
+character(256):: VERdat='$LastChangedDate: 2006-09-04 10:59:32 +0200 (Mo, 04. Sep 2006) $'
 end Module version_module
 !
 !     ..................................................................
@@ -355,7 +355,6 @@ end Module version_module
 !     ******************************************************************      
 !     ******************************************************************      
       USE TIMESTEP_MODULE ,ONLY : DELTAT,ISTEPNUMBER,TNEWTHERMOSTAT
-      USE CONTINUUM_MODULE,ONLY : CONTINUUM$SETR8
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: DELT   ! TIME STEP
       LOGICAL(4),INTENT(IN)   :: TPRINT ! ON/OFF SWITCH FOR LONG PRINTOUT
@@ -401,7 +400,6 @@ end Module version_module
       CALL CELL$SETR8('DT',DELT)
       CALL DYNOCC$SETR8('TIMESTEP',DELT)
       CALL QMMM$SETR8('TIMESTEP',DELT)
-      CALL CONTINUUM$SETR8('TIMESTEP',DELT)
       CALL THERMOSTAT$SELECT('ATOMS') 
       CALL THERMOSTAT$SETR8('TIMESTEP',DELT)
       CALL THERMOSTAT$SELECT('WAVES') 
@@ -869,8 +867,6 @@ END MODULE STOPIT_MODULE
 !     **                                                              ** 
 !     **  PRINFO IS CALLED ONCE PER TIMESTEP                          ** 
 !     ******************************************************************
-      USE CONTINUUM_MODULE
-!     USE CONTINUUM_CONTROL_MODULE!REPLACED BY CONTINUUM_MODULE IN HMS-CONTINUUM
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TPRINT
       INTEGER(4),INTENT(IN) :: NFI
@@ -907,7 +903,6 @@ END MODULE STOPIT_MODULE
       REAL(8)               :: ECELLKIN
       REAL(8)               :: ESOLV,EKINQ,QFRIC,QTOT
       LOGICAL(4)            :: TCHK,TCHK1
-      LOGICAL(4)            :: TCONTINUUM
       LOGICAL(4)            :: TQMMM=.FALSE.
       REAL(8)               :: QMMMKIN   ! EKIN OF QM-MM ENVIRONMENT
       REAL(8)               :: QMMMPOT   ! EPOT OF QM-MM ENVIRONMENT
@@ -1047,16 +1042,8 @@ PRINT*,'ECELLKIN/POT ',ECELLKIN,ECELLPOT,ECELLKIN+ECELLPOT
           CALL ENERGYLIST$RETURN('MM ATOM FRICTION',MM_FRIC)
           ECONS=ECONS + MM_KINETIC_ENERGY + MM_NOSE_ENERGY
         END IF
-
 !
-!       == CONTINUUM (COSMO) ===========================================
-        CALL CONTINUUM$RETURNPROTOCOL(TCONTINUUM,ESOLV,EKINQ,QFRIC,QTOT)
-        IF(TCONTINUUM) THEN
-          CALL ENERGYLIST$RETURN('SURFACE Q EKIN',EKINQ)    ! REPLACE LATER 
-                                            !BY "CONTINUUM KINETIC ENERGY"
-          ECONS=ECONS+EKINQ
-        END IF
-!
+!       == COsmo =========================================================
         CALL COSMO$GETL4('ON',TCOSMO)
         IF(TCOSMO) THEN
           CALL ENERGYLIST$RETURN('COSMO KINETIC ENERGY',EKINCOSMO)
@@ -1080,12 +1067,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL WAVES$GETR8('FRICTION',ANNEE)
         CALL ATOMS$GETR8('FRICTION',ANNER)
 !
-        IF (TCONTINUUM) THEN
-          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F8.5' &
-     &                     //',F11.5,1X,D7.2,1X,D7.2,2F6.3)') &
-     &               NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
-     &              ,ESOLV,EKINQ,QFRIC,QTOT
-        ELSE IF (TCOSMO) THEN
+        IF (TCOSMO) THEN
           WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F9.5,2F11.5,2F8.5' &
      &                     //',2F11.5)') &
      &               NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
@@ -1174,16 +1156,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
             CALL ENERGYLIST$PRINTONE(NFILO,'COSMO KINETIC ENERGY')
             CALL ENERGYLIST$PRINTONE(NFILO,'COSMO POTENTIAL ENERGY')
           END IF
-          IF(TCONTINUUM) THEN
-            WRITE(NFILO,*)'-----ELECTROSTATIC SOLVATION CONTRIBUTIONS-----'
-            CALL ENERGYLIST$PRINTONE(NFILO,'INTER-TRIANGLE-POTENTIAL')
-            CALL ENERGYLIST$PRINTONE(NFILO,'INTRA-TRIANGLE-POTENTIAL')
-            CALL ENERGYLIST$PRINTONE(NFILO,'ION-TRIANGLE-POTENTIAL')
-            CALL ENERGYLIST$PRINTONE(NFILO,'CAVITY-HARDNESS-POTENTIAL')
-            CALL ENERGYLIST$PRINTONE(NFILO,'SURFACETENSION-POTENTIAL')
-            CALL ENERGYLIST$PRINTONE(NFILO,'TOTAL-SURFACE-POTENTIAL')
-            CALL ENERGYLIST$PRINTONE(NFILO,'SURFACE Q EKIN')
-          END IF
           IF (CALGARY_QMMM) THEN
             WRITE(NFILO,*)'    ----- QM/MM MM CONTRIBUTIONS -----'
             CALL ENERGYLIST$PRINTONE(NFILO,'MM KINETIC ENERGY')
@@ -1265,7 +1237,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !
 !     ................................................................... 
       SUBROUTINE WRITETRAJECTORY(NFI,DELT)
-      USE CONTINUUM_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NFI
       REAL(8)   ,INTENT(IN)  :: DELT
@@ -1290,7 +1261,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       REAL(8)                :: OCCKIN
       LOGICAL(4)             :: TQMMM,TCALGARYQMMM
       REAL(8)                :: QMMMKIN,QMMMPOT,QMMMTHERM
-      LOGICAL(4)             :: TCONTINUUM
       REAL(8)                :: ESOLV,EKINQ,QFRIC,QTOT
       REAL(8)                :: EEXT
       INTEGER(4)             :: IAT,JAT
@@ -1350,13 +1320,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL ENERGYLIST$RETURN('MM KINETIC ENERGY',QMMMKIN)
         CALL ENERGYLIST$RETURN('MM THERMOSTAT',QMMMTHERM)
         ECONS=ECONS+QMMMKIN+QMMMTHERM
-      END IF
-!     
-!     == CONTINUUM ===================================================
-      CALL CONTINUUM$RETURNPROTOCOL(TCONTINUUM,ESOLV,EKINQ,QFRIC,QTOT)
-      IF(TCONTINUUM) THEN
-        CALL ENERGYLIST$RETURN('SURFACE Q EKIN',EKINQ)    ! REPLACE 
-        ECONS=ECONS+EKINQ        ! LATER BY "CONTINUUM KINETIC ENERGY"
       END IF
 !     
 !     == EXTERNAL POTENTIAL============================================

@@ -1679,7 +1679,6 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
 !     ** -> THIS IS ENSURED BY THE FACT THAT MULTIPLE MUST BE AN EVEN      **
 !     ** NUMBER (AT LEAST 2 :-)                                            **
 !     **                                                                   **
-USE CONTINUUM_MODULE
       USE COSMO_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NAT_
@@ -1759,7 +1758,7 @@ INTEGER(4) :: NFILINFO,J
 !
       IF(NAT_.NE.NAT) THEN
         CALL ERROR$MSG("INCONSISTENT NUMBER OF ATOMS")
-        CALL ERROR$STOP("CONTINUUM$PROPAGATE")
+        CALL ERROR$STOP("COsmo$interface")
       END IF
 !
 !     =======================================================================

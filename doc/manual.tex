@@ -1153,7 +1153,7 @@ functions is sufficiently retarded, that a band crossing of the
 one-particle energies takes place.
 \end{itemize}}
   \vformat{logical} 
-  \vrules{optional}
+  \vrules{optional, not tested}
   \vdefault{F}}  }  % end of ifthenelse
 
 %\mbax{\key{DIAG}
@@ -1429,7 +1429,7 @@ each step that reduces the energy}
 %----------------------------------------------------------------------
 \block{!CONTROL!RDYN!WARMUP}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{Heating procedure for QM nuclei. Applies a
+\brules{optional, not tested} \bdescr{Heating procedure for QM nuclei. Applies a
 series of sinusoidal heat pulses in orthogonal directions to provide
 optimal excitation of the atomic system without dislodging the
 wavefunctions from the BO surface. This is an approximate procedure.}
@@ -2226,14 +2226,15 @@ original deviation.}
   documented in the protocol. The anisotropic hyperfine parameter is
   related to the $\ell=2$ component of the spin density near the nucleus}
 \vformat{logical}
-\vrules{optional}
+\vrules{optional}<
 \vdefault{.false.}}
 
 
 %----------------------------------------------------------------------
 \block{!CONTROL!ANALYSE!CORELEVELS}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{calculates the positions of the core levels
+\brules{optional, not tested} 
+\bdescr{calculates the positions of the core levels
   (absolute and relative to the isolated atom (atomic calculation)). Note that
   core relaxation effects, which contribute typically to 15~\%, are not
   included. The absolute position of the core levels is only meaningfull for
@@ -2828,7 +2829,7 @@ contributing to the fit}
 %----------------------------------------------------------------------
 \block{!STRUCTURE!QM-MM}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{Describes the quantum-mechanical
+\brules{optional, under development} \bdescr{Describes the quantum-mechanical
   molecular-mechanical coupling. The coupling involves three different
   systems. (1) The quantum mechanical (QM) molecule, (2) The molecular
   mechanical (MM) shadow of the QM molecule and (3) the MM embedding

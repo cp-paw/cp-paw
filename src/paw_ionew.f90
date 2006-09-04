@@ -14,7 +14,6 @@
 !     ******************************************************************
       USE RESTART_INTERFACE
       USE MPE_MODULE
-      USE continuum_module
       IMPLICIT NONE
       LOGICAL(4)            :: TCHK
       INTEGER(4)            :: NFILO
@@ -134,12 +133,6 @@
       TREAD=TREAD.OR.TCHK
 !
 !     ==================================================================
-!     ==  READ CONTINUUM ENVIRONMENT                                  ==
-!     ==================================================================
-!      CALL CONTINUUM$READ(NFIL,NFILO,TCHK)
-!      TREAD=TREAD.OR.TCHK
-!
-!     ==================================================================
 !     ==  READ COsmo ENVIRONMENT                                  ==
 !     ==================================================================
       CALL COsmo$READ(NFIL,NFILO,TCHK)
@@ -161,7 +154,6 @@
       USE RESTART_INTERFACE
       USE MPE_MODULE
       USE STRINGS_MODULE
-      USE continuum_module
       IMPLICIT NONE
       INTEGER(4)          :: NFIL
       INTEGER(4)          :: NFILO
@@ -240,11 +232,6 @@
 !     == WRITE MOLECULAR MECHANICS ENVIRONMENT                        ==
 !     ==================================================================
       CALL QMMM$WRITE(NFIL,NFILO,TCHK)
-!
-!     ==================================================================
-!     == WRITE CONTINUUM ENVIRONMENT                                  ==
-!     ==================================================================
-!      CALL CONTINUUM$WRITE(NFIL,NFILO,TCHK)
 !
 !     ==================================================================
 !     == WRITE COsmo ENVIRONMENT                                      ==

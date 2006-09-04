@@ -663,7 +663,6 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     **                                                              **
 !     ******************************************************************
       USE ISOLATE_MODULE, ONLY : TISOLATE
-      USE continuum_module
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT           ! #(ATOMS)
       INTEGER(4),INTENT(IN) :: NG            ! #(GAUSSIANS PER SITE)
@@ -740,7 +739,6 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     ==================================================================
 !     ==  COUPLE COsmo                                                ==
 !     ==================================================================
-!      CALL CONTINUUM$PROPAGATE(NAT,POS,NG,RC,QI,ENERGY1,VI1,FORCE1)
       CALL COSMO$SETL4('PERIODIC',.NOT.TISOLATE)
       CALL COSMO$INTERFACE(NAT,POS,NG,RC,QI,EPOT1,EKIN1,VI1,FORCE1)
       ENERGY=ENERGY+EPOT1

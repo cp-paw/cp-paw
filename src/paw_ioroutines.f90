@@ -34,10 +34,10 @@ CONTAINS
      &           //',"P.E. BLOECHL, (C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
         WRITE(NFILO,FMT='(T10' &
      &           //',"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
-        WRITE(NFILO,FMT='(T10,A)')trim(VERINF)
-        WRITE(NFILO,FMT='(T10,A)')trim(VERREV)
-        WRITE(NFILO,FMT='(T10,A)')trim(VERAUT)
-        WRITE(NFILO,FMT='(T10,A)')trim(VERDAT)
+        WRITE(NFILO,FMT='(T10,A)')TRIM(VERINF)
+        WRITE(NFILO,FMT='(T10,A)')TRIM(VERREV)
+        WRITE(NFILO,FMT='(T10,A)')TRIM(VERAUT)
+        WRITE(NFILO,FMT='(T10,A)')TRIM(VERDAT)
 
         IF (VERSIONTEXT (17:17).NE.'%')THEN
           WRITE(NFILO,FMT='(A)') VERSIONTEXT
@@ -51,23 +51,23 @@ CONTAINS
         END SUBROUTINE PUTHEADER
 !
 !       ................................................................
-        SUBROUTINE printversion()
-        use version_module
+        SUBROUTINE PRINTVERSION()
+        USE VERSION_MODULE
         IMPLICIT NONE
 !       ****************************************************************
         WRITE(*,FMT='()')
         WRITE(*,FMT='(72("*"))')
         WRITE(*,FMT='(72("*"),T15' &
-     &              //',"  CP-PAW version info: ")')
+     &              //',"  CP-PAW VERSION INFO: ")')
         WRITE(*,FMT='(72("*"))')
-        WRITE(*,FMT='(A)')trim(VERINF)
-        WRITE(*,FMT='(A)')trim(VERREV)
-        WRITE(*,FMT='(A)')trim(VERAUT)
-        WRITE(*,FMT='(A)')trim(VERDAT)
+        WRITE(*,FMT='(A)')TRIM(VERINF)
+        WRITE(*,FMT='(A)')TRIM(VERREV)
+        WRITE(*,FMT='(A)')TRIM(VERAUT)
+        WRITE(*,FMT='(A)')TRIM(VERDAT)
         WRITE(*,FMT='(72("*"))')
         CALL ERROR$NORMALSTOP
-        stop
-        END SUBROUTINE printversion
+        STOP
+        END SUBROUTINE PRINTVERSION
 !       ................................................................
         SUBROUTINE WRITER8(NFIL,NAME,VALUE,UNIT)
         INTEGER(4)  ,INTENT(IN) :: NFIL
@@ -91,7 +91,6 @@ END MODULE IO_MODULE
 !     ..................................................................
       SUBROUTINE IO$REPORT
       USE IO_MODULE
-      USE continuum_module
       IMPLICIT NONE
       INTEGER(4) :: NFILO
       INTEGER(4)               :: NTASKS,THISTASK
@@ -169,12 +168,6 @@ CALL TRACE$PASS('CELL')
 !     ==================================================================
 CALL TRACE$PASS('QMMM')
       CALL QMMM$REPORT(NFILO)
-!
-!     ==================================================================
-!     == CONTINUUM SOLVATION                                          ==
-!     ==================================================================
-!     IF(THISTASK.EQ.1)WRITE(NFILO,FMT='()')
-!     CALL CONTINUUM$REPORT(NFILO)
 !
 !     ==================================================================
 !     == QM-MM THERMOSTAT                                             ==
@@ -275,7 +268,7 @@ CALL TRACE$PASS('DONE')
       INTEGER                      :: NTASKS,THISTASK
       INTEGER(4)                   :: LEN
       INTEGER(4)                   :: RUNTIME(3)
-      integer(4)   ,allocatable    :: splitkey(:)
+      INTEGER(4)   ,ALLOCATABLE    :: SPLITKEY(:)
       EXTERNAL IARGC
       COMMON/VERSION/VERSIONTEXT
 !     ******************************************************************
@@ -294,7 +287,7 @@ CALL TRACE$PASS('DONE')
         CALL GETARG(1,CNTLNAME)
       END IF
       CALL MPE$BROADCAST('~',1,CNTLNAME)
-      IF(+CNTLNAME.EQ.'--HELP'.OR.+CNTLNAME.EQ.'-H'.OR.+CNTLNAME.eq.'?') THEN
+      IF(+CNTLNAME.EQ.'--HELP'.OR.+CNTLNAME.EQ.'-H'.OR.+CNTLNAME.EQ.'?') THEN
         WRITE(*,FMT='("CONTROL FILE",T15,"EXECUTE ")')
         WRITE(*,FMT='("--HELP",T15,"PRINT HELP INFORMATION")')
         WRITE(*,FMT='("-H",T15,"PRINT HELP INFORMATION")')
@@ -311,7 +304,7 @@ CALL TRACE$PASS('DONE')
       END IF
 !
 !     ==================================================================
-!     ==  define polymer if necessary                                 ==
+!     ==  DEFINE POLYMER IF NECESSARY                                 ==
 !     ==================================================================
       ALLOCATE(SPLITKEY(NTASKS))
       IF(INDEX(CNTLNAME,-'.POLYMER_CNTL',BACK=.TRUE.).NE.0) THEN
@@ -517,14 +510,9 @@ CALL TRACE$PASS('DONE')
       CALL READIN_QMMM(LL_CNTL)
 !    
 !     ==================================================================
-!     ==  READ BLOCK !CONTROL!CONTINUUM                               ==
+!     ==  READ BLOCK !CONTROL!COSMO                                   ==
 !     ==================================================================
-!      CALL READIN_CONTINUUM(LL_CNTL)
-!    
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!CONTINUUM                               ==
-!     ==================================================================
-      CALL READIN_COsmo(LL_CNTL)
+      CALL READIN_COSMO(LL_CNTL)
 
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!QMMM (CALGARY IMPLEMENTATION)
@@ -1209,7 +1197,6 @@ CALL TRACE$PASS('DONE')
 !     ******************************************************************
 !     ******************************************************************
       USE LINKEDLIST_MODULE
-      USE continuum_module
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
@@ -1249,8 +1236,6 @@ CALL TRACE$PASS('DONE')
 !
 !     == SET ATOMS OBJECT ==============================================
       CALL ATOMS$SETL4('MOVE',TFOR)
-!     == SET CONTINUUM OBJECT ==========================================
-      CALL CONTINUUM$SETL4('MOVE',TFOR)
 !
 !     == STOP
       CALL LINKEDLIST$EXISTD(LL_CNTL,'STOP',1,TCHK)
@@ -1284,7 +1269,7 @@ CALL TRACE$PASS('DONE')
       CALL ATOMS$SETL4('START',TCHK)
 !
 !     ==================================================================
-!     ==  attention                                                   ==
+!     ==  ATTENTION                                                   ==
 !     ==================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'USEOPTFRIC',1,TCHK)
       IF(TCHK) THEN
@@ -2102,176 +2087,15 @@ CALL TRACE$PASS('DONE')
       END
 !
 !     ...................................................................
-      SUBROUTINE READIN_CONTINUUM(LL_CNTL_)
-      USE LINKEDLIST_MODULE
-      USE STRINGS_MODULE
-      USE continuum_module
-      IMPLICIT NONE
-      TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
-      TYPE(LL_TYPE)            :: LL_CNTL
-      LOGICAL(4)               :: TCHK
-      REAL(8)                  :: SVAR
-      REAL(8)                  :: FRICTION
-      REAL(8)                  :: SCALE
-      INTEGER(4)               :: MULTIPLE
-      REAL(8)                  :: KELVIN
-      REAL(8)                  :: DT
-!     ******************************************************************
-      LL_CNTL=LL_CNTL_
-!
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!GENERIC                                 ==
-!     ==================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
-      CALL LINKEDLIST$GET(LL_CNTL,'DT',1,DT)
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!CONTINUUM                               ==
-!     ==================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
-      CALL LINKEDLIST$EXISTL(LL_CNTL,'CONTINUUM',1,TCHK)
-      CALL CONTINUUM$SETL4('ON',TCHK)
-      IF(.NOT.TCHK) RETURN
-                               CALL TRACE$PUSH('READIN_CONTINUUM')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTINUUM')
-!
-!     == STOP =======================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'STOP',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'STOP',0,.FALSE.)
-      END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'STOP',1,TCHK)
-      CALL CONTINUUM$SETL4('STOP',TCHK)
-!
-!     == FREEZE =======================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'FREEZE',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'FREEZE',0,.FALSE.)
-      END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'FREEZE',1,TCHK)
-      CALL CONTINUUM$SETL4('FREEZE',TCHK)
-!
-!     == EXCLUDE OVERLAP ===========================================
-!     == SET CHARGES WITH IN SPHER OVERLAP EXACTLY TO ZERO =========
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'EXCLUDEOVERLAP',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'EXCLUDEOVERLAP',0,.FALSE.)
-      END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'EXCLUDEOVERLAP',1,TCHK)
-      CALL CONTINUUM$SETL4('EXCLUDEOVERLAP',TCHK)
-!
-!     == START =====================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'START',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'START',0,.FALSE.)
-      END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'START',1,TCHK)
-      CALL CONTINUUM$SETL4('START',TCHK)
-!
-!     == MASS ===================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'M',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        PRINT*,'WARNING! NO MASS FOR SURFACE CHARGES SUPPLIED!'
-        PRINT*,'DEFAULT VALUE OF 1000.D0 IS SUPPLIED BY PAW!'
-        CALL LINKEDLIST$SET(LL_CNTL,'M',1,1000.D0)
-      END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'M',1,SVAR)
-      CALL CONTINUUM$SETR8('MASS',SVAR)
-!
-!     == MULTIPLE TIMESTEPS?  ========================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'MULTIPLE',1,TCHK)
-      IF(.NOT.TCHK) THEN
-       MULTIPLE=1
-      END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'MULTIPLE',1,MULTIPLE)
-      CALL CONTINUUM$SETI4('MULTIPLE',MULTIPLE)
-!
-!     == EPSILON = DIELECTRIC CONSTANT ===========================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'EPSILON',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'EPSILON',0,1.D12)
-      END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'EPSILON',1,SVAR)
-      CALL CONTINUUM$SETR8('EPSILON',SVAR)
-!
-!     ==  FRIC ===================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'FRIC',0,0.D0)
-      END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,SVAR)
-      CALL CONTINUUM$SETR8('FRICTION',SVAR)
-!new options
-!
-!     == keep_dff =====================================================
-      CALL LINKEDLIST__EXISTD(LL_CNTL,'KEEP_DFF',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST__SET(LL_CNTL,'KEEP_DFF',0,.true.)
-print *,'keep_dff set in list'
-      END IF
-      CALL LINKEDLIST__GET(LL_CNTL,'KEEP_DFF',1,TCHK)
-      CALL CONTINUUM__SETL4('KEEP_DFF',TCHK)
-!
-!     == debug_print =====================================================
-      CALL LINKEDLIST__EXISTD(LL_CNTL,'DEBUG_PRINT',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST__SET(LL_CNTL,'DEBUG_PRINT',0,.FALSE.)
-      END IF
-      CALL LINKEDLIST__GET(LL_CNTL,'DEBUG_PRINT',1,TCHK)
-      CALL CONTINUUM__SETL4('DEBUG_PRINT',TCHK)
-!
-!     == read_old_restart =====================================================
-      CALL LINKEDLIST__EXISTD(LL_CNTL,'READ_OLD_RESTART',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST__SET(LL_CNTL,'READ_OLD_RESTART',0,.FALSE.)
-      END IF
-      CALL LINKEDLIST__GET(LL_CNTL,'READ_OLD_RESTART',1,TCHK)
-      CALL CONTINUUM__SETL4('READ_OLD_RESTART',TCHK)
-!
-!     == filter_faces =====================================================
-      CALL LINKEDLIST__EXISTD(LL_CNTL,'FILTER_FACES',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST__SET(LL_CNTL,'FILTER_FACES',0,.FALSE.)
-      END IF
-      CALL LINKEDLIST__GET(LL_CNTL,'FILTER_FACES',1,TCHK)
-      CALL CONTINUUM__SETL4('FILTER_FACES',TCHK)
-!
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!CONTINUUM!AUTO                          ==
-!     ==================================================================
-      CALL FILEHANDLER$SETFILE('CONTINUUM_RESTART',.TRUE.,-'.CONTINUUM_RESTART')
-      CALL FILEHANDLER$SETSPECIFICATION('CONTINUUM_RESTART','FORM','FORMATTED')
-      CALL FILEHANDLER$SETFILE('CONTINUUM_PROTOCOL',.TRUE.,-'_SURFACECHARGE.PROT')
-      CALL FILEHANDLER$SETSPECIFICATION('CONTINUUM_PROTOCOL','STATUS','OLD')
-      CALL FILEHANDLER$SETSPECIFICATION('CONTINUUM_PROTOCOL','FORM','FORMATTED')
-!
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!CONTINUUM!AUTO                          ==
-!     ==================================================================
-      CALL READIN_AUTO(LL_CNTL,'CONTINUUM',0.3D0,0.96D0,1.D0,1.D0)
-!
-!     ==================================================================
-!     ==  READ BLOCK !QNOSE                                           ==
-!     ==================================================================
-      CALL CONSTANTS('KB',KELVIN)
-      CALL READIN_THERMOSTAT(LL_CNTL_,'CONTINUUM',DT,0.5D0*293.D0*KELVIN,10.D0)
-!
-                                 CALL TRACE$POP
-      RETURN
-      END
-!
-!     ...................................................................
       SUBROUTINE READIN_COSMO(LL_CNTL_)
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
-      LOGICAL(4)               :: TCHK,tchk1,tchk2
+      LOGICAL(4)               :: TCHK,TCHK1,TCHK2
       REAL(8)                  :: SVAR
-      REAL(8)                  :: fric
+      REAL(8)                  :: FRIC
       REAL(8)                  :: FRICTION
       REAL(8)                  :: SCALE
       INTEGER(4)               :: MULTIPLE
@@ -2288,14 +2112,14 @@ print *,'keep_dff set in list'
       CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
       CALL LINKEDLIST$GET(LL_CNTL,'DT',1,DT)
 !     ==================================================================
-!     ==  READ BLOCK !CONTROL!CONTINUUM                               ==
+!     ==  READ BLOCK !CONTROL!COSMO                                   ==
 !     ==================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'COSMO',1,TCHK)
       CALL COSMO$SETL4('ON',TCHK)
       IF(.NOT.TCHK) RETURN
-                               CALL TRACE$PUSH('READIN_CONTINUUM')
+                               CALL TRACE$PUSH('READIN_COSMO')
       CALL LINKEDLIST$SELECT(LL_CNTL,'COSMO')
 !
 !     == STOP =======================================================
@@ -2341,17 +2165,17 @@ print *,'keep_dff set in list'
 !
       CALL LINKEDLIST$EXISTD(LL_CNTL,'ETOL',1,TCHK1)
       CALL LINKEDLIST$EXISTD(LL_CNTL,'QTOL',1,TCHK2)
-      if(.not.(tchk1.or.tchk2)) then
-        CALL COSMO$SETr8('ETOL',1.d-7)
-      end if
+      IF(.NOT.(TCHK1.OR.TCHK2)) THEN
+        CALL COSMO$SETR8('ETOL',1.D-7)
+      END IF
       IF(TCHK1) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'ETOL',1,svar)
-        CALL COSMO$SETr8('ETOL',SVAR)
+        CALL LINKEDLIST$GET(LL_CNTL,'ETOL',1,SVAR)
+        CALL COSMO$SETR8('ETOL',SVAR)
       END IF
 !
       IF(TCHK2) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'QTOL',1,svar)
-        CALL COSMO$SETr8('QTOL',SVAR)
+        CALL LINKEDLIST$GET(LL_CNTL,'QTOL',1,SVAR)
+        CALL COSMO$SETR8('QTOL',SVAR)
       END IF
 !
 !     == EPSILON = DIELECTRIC CONSTANT ===========================
@@ -2367,8 +2191,8 @@ print *,'keep_dff set in list'
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'FRIC',0,0.D0)
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,fric)
-      CALL COSMO$SETR8('FRICTION',fric)
+      CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,FRIC)
+      CALL COSMO$SETR8('FRICTION',FRIC)
 !
 !     ==  FRIC ===================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'VPAULI',1,TCHK)
@@ -2408,9 +2232,9 @@ print *,'keep_dff set in list'
       CALL OPTFRIC$SETR8('RETARD',SVAR)
 !
 !     ==================================================================
-!     ==  READ BLOCK !CONTROL!COsmo!AUTO                              ==
+!     ==  READ BLOCK !CONTROL!COSMO!AUTO                              ==
 !     ==================================================================
-!      CALL READIN_AUTO(LL_CNTL,'COsmo',0.3D0,0.96D0,1.D0,1.D0)
+!      CALL READIN_AUTO(LL_CNTL,'COSMO',0.3D0,0.96D0,1.D0,1.D0)
 !
 !     ==================================================================
 !     ==  READ BLOCK !QNOSE                                           ==
@@ -2528,8 +2352,8 @@ print *,'keep_dff set in list'
 !
 !       == SET FILENAME FOR THE IMAGE===================================
         WRITE(CH256SVAR1,*)IWAVE
-        ch256svar1=adjustl(ch256svar1)
-        CH256SVAR1='WAVE'//trim(CH256SVAR1(1:249))//'.WV'
+        CH256SVAR1=ADJUSTL(CH256SVAR1)
+        CH256SVAR1='WAVE'//TRIM(CH256SVAR1(1:249))//'.WV'
         CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,CH256SVAR1)
         CALL GRAPHICS$SETCH('FILE',TRIM(CH256SVAR1))
@@ -2623,7 +2447,7 @@ print *,'keep_dff set in list'
 !       == SET FILENAME FOR THE IMAGE===================================
         WRITE(CH256SVAR1,*)IDEN
         CH256SVAR1=ADJUSTL(CH256SVAR1)
-        CH256SVAR1='DENSITY'//trim(CH256SVAR1(1:246))//'.WV'
+        CH256SVAR1='DENSITY'//TRIM(CH256SVAR1(1:246))//'.WV'
         CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,CH256SVAR1)
         CALL GRAPHICS$SETCH('FILE',TRIM(CH256SVAR1))
@@ -3040,14 +2864,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL STRCIN_SOLVENT(LL_STRC)
 !
 !     ==================================================================
-!     ==  ENTER BLOCK !STRUCTURE!CONTINUUM                            ==
+!     ==  ENTER BLOCK !STRUCTURE!COSMO                                ==
 !     ==================================================================
-      CALL STRCIN_CONTINUUM(LL_STRC)
-!
-!     ==================================================================
-!     ==  ENTER BLOCK !STRUCTURE!COsmo                                ==
-!     ==================================================================
-      CALL STRCIN_COsmo(LL_STRC)
+      CALL STRCIN_COSMO(LL_STRC)
 !
 !     ==================================================================
 !     ==  ENTER BLOCK !STRUCTURE!CONSTRAINTS!RIGID                    ==
@@ -3151,7 +2970,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)    ,ALLOCATABLE  :: XK(:,:)
       REAL(8)    ,ALLOCATABLE  :: WGHT(:)
       LOGICAL(4)               :: TINV
-      character(32)            :: bzitype
+      CHARACTER(32)            :: BZITYPE
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_KPOINT')
       LL_STRC=LL_STRC_
@@ -3176,7 +2995,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       IF(BZITYPE.NE.'MP'.AND.BZITYPE.NE.'TETRA+') THEN
         CALL ERROR$MSG('BZINTEGRATION NOT RECOGNIZED')
         CALL ERROR$CHVAL('BZINTEGRATION',BZITYPE)
-        CALL ERROR$STop('STRCIN_KPOINT')
+        CALL ERROR$STOP('STRCIN_KPOINT')
       END IF
       CALL DYNOCC$SETCH('BZINTEGRATION',BZITYPE)
 !
@@ -3188,34 +3007,34 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       IF(NKPT.NE.0) THEN
         CALL ERROR$MSG('CHOICE OF INDIVIDUALLY SPECIFIED KPOINTS HAS BEEN DISABLED')
         CALL ERROR$MSG('OPTION STRV!KPOINT:K IS NO MORE ALLOWED')
-        CALL ERROR$STOP('strcin_KPOINT')
+        CALL ERROR$STOP('STRCIN_KPOINT')
       END IF
 !
 !     ====================================================================
-!     == determine divisions nkdiv of reciprocal unit cell              ==
+!     == DETERMINE DIVISIONS NKDIV OF RECIPROCAL UNIT CELL              ==
 !     ====================================================================
       CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
       CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK1)
-      if(tchk1.and.tchk) then
+      IF(TCHK1.AND.TCHK) THEN
         CALL ERROR$MSG('!SPECIES!KPOINTS:R AND DIV ARE MUTUALLY EXCLUSIVE')
         CALL ERROR$STOP('STRCIN_KPOINT')
-      else if(tchk) then
+      ELSE IF(TCHK) THEN
 !       == K-POINT GRID DEFINED BY R =====================================
         CALL CELL$GETR8A('TREF',9,RBAS)
         CALL LINKEDLIST$GET(LL_STRC,'R',1,RMAX)
         CALL KPOINTS_NKDIV(RBAS,RMAX,NKDIV)
-      else if(tchk1) then
+      ELSE IF(TCHK1) THEN
         CALL LINKEDLIST$GET(LL_STRC,'DIV',1,NKDIV)
         IF(NKDIV(1).LE.0.OR.NKDIV(2).LE.0.OR.NKDIV(3).LE.0) THEN
           CALL ERROR$MSG('!SPECIES!KPOINT:DIV MUST BE GREATER THAN ZERO')
           CALL ERROR$STOP('STRCIN_KPOINT')
         END IF
-      else
+      ELSE
         NKDIV(:)=2.D0
-      end if
+      END IF
 !
 !     ====================================================================
-!     == determine k-points and integration weights                     ==
+!     == DETERMINE K-POINTS AND INTEGRATION WEIGHTS                     ==
 !     ====================================================================
       IF(BZITYPE.EQ.'MP') THEN
         CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
@@ -3262,7 +3081,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       CHARACTER(8)             :: CH8SVAR1
       CHARACTER(32)            :: SPNAME
       CHARACTER(256)           :: SETUPFILE
-      CHARACTER(32)            :: softcoretype
+      CHARACTER(32)            :: SOFTCORETYPE
       INTEGER(4)               :: IZ
       INTEGER(4)               :: ISVAR
       REAL(8)                  :: Z
@@ -3300,8 +3119,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
              CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
              CH8SVAR1=' '
              WRITE(CH8SVAR1,FMT='(I8)')ISP
-             ch8svar1=adjustl(ch8svar1)
-             CH8SVAR1='ATOM'//trim(CH8SVAR1(1:4))
+             CH8SVAR1=ADJUSTL(CH8SVAR1)
+             CH8SVAR1='ATOM'//TRIM(CH8SVAR1(1:4))
              CALL ATOMTYPELIST$SETFILE(SPNAME,CH8SVAR1(1:5))
 !
              CALL FILEHANDLER$SETFILE(CH8SVAR1(1:5),.FALSE.,SETUPFILE)
@@ -5039,7 +4858,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL LINKEDLIST$SELECT(LL_STRC,'LINK',ILINK)
 !
 !       == JOINT ATOM ==================================================
-!       == the joint atom is present in the qm and the MM system =======
+!       == THE JOINT ATOM IS PRESENT IN THE QM AND THE MM SYSTEM =======
         CALL LINKEDLIST$EXISTD(LL_STRC,'MMJOINT',1,TCHK)
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('VARIABLE !QM-MM!LINK:MMJOINT NOT FOUND')
@@ -5132,10 +4951,10 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !       
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
-      if(iats.ne.nats) then
-        call error$msg('consistency check iats failed')
-        call error$stop('strcin_solvent')
-      end if
+      IF(IATS.NE.NATS) THEN
+        CALL ERROR$MSG('CONSISTENCY CHECK IATS FAILED')
+        CALL ERROR$STOP('STRCIN_SOLVENT')
+      END IF
 !
 !     ==================================================================
 !     ==================================================================
@@ -5235,22 +5054,22 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         LINKARRAY(5,ILINK)=LINK(ILINK)%MATOM
         LINKARRAY(6,ILINK)=LINK(ILINK)%SATOM
       ENDDO
-!     == maparray only includes atoms not participating in link bonds
+!     == MAPARRAY ONLY INCLUDES ATOMS NOT PARTICIPATING IN LINK BONDS
       NMAP=0
       DO IATS=1,NATS
-        tchk=.false.
-        do ilink=1,nlink
-          tchk=tchk.or.(iats.eq.linkarray(6,ilink))
-          tchk=tchk.or.(iats.eq.linkarray(3,ilink))
-          if(tchk) exit
-        enddo
-        if(tchk) cycle
+        TCHK=.FALSE.
+        DO ILINK=1,NLINK
+          TCHK=TCHK.OR.(IATS.EQ.LINKARRAY(6,ILINK))
+          TCHK=TCHK.OR.(IATS.EQ.LINKARRAY(3,ILINK))
+          IF(TCHK) EXIT
+        ENDDO
+        IF(TCHK) CYCLE
         NMAP=NMAP+1
         MAPARRAY(1,NMAP)=SATOM(IATS)%QMSATOM
         MAPARRAY(2,NMAP)=QATOM(MAPARRAY(1,NMAP))%QMSATOM
         MAPARRAY(3,NMAP)=IATS
       ENDDO
-      CALL QMMM$SETI4A('MAP',3*NMAP,MAPARRAY(:,1:nmap))
+      CALL QMMM$SETI4A('MAP',3*NMAP,MAPARRAY(:,1:NMAP))
       CALL QMMM$SETI4A('LINK',6*NLINK,LINKARRAY)
       DEALLOCATE(LINKARRAY)
       DEALLOCATE(MAPARRAY)
@@ -5286,7 +5105,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         TYPE(ATOM_TYPE),INTENT(IN) :: ATOM(NAT)
         TYPE(BOND_TYPE),INTENT(IN) :: BOND(NBOND)
         INTEGER(4)                 :: IAT,IBOND
-        character(32)              :: atomname(nat)
+        CHARACTER(32)              :: ATOMNAME(NAT)
         REAL(8)                    :: R(3,NAT)
         REAL(8)                    :: MASS(NAT)
         REAL(8)                    :: CHARGE(NAT)
@@ -5330,73 +5149,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       END
 !
 !     ...................................................................
-      SUBROUTINE STRCIN_CONTINUUM(LL_STRC_)
-      USE LINKEDLIST_MODULE
-      USE STRINGS_MODULE
-      USE continuum_module
-      IMPLICIT NONE
-      TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
-      TYPE(LL_TYPE)            :: LL_STRC
-      LOGICAL(4)               :: TCHK
-      INTEGER(4)               :: NAT1
-      INTEGER(4)               :: IAT1
-      INTEGER(4)               :: IAT,NAT
-      CHARACTER(32)            :: NAME
-      REAL(8)       ,ALLOCATABLE:: RSOLV(:)
-      CHARACTER(128),ALLOCATABLE:: GRIDTYPE(:)
-!     ******************************************************************
-      LL_STRC=LL_STRC_
-      CALL LINKEDLIST$SELECT(LL_STRC,'~')
-      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
-      CALL LINKEDLIST$EXISTL(LL_STRC,'CONTINUUM',1,TCHK)
-      IF(.NOT.TCHK) RETURN
-                                 CALL TRACE$PUSH('STRCIN_CONTINUUM')
-      CALL ATOMLIST$NATOM(NAT)
-      ALLOCATE(RSOLV(NAT))
-      RSOLV(:)=0.D0
-      ALLOCATE(GRIDTYPE(NAT))
-      GRIDTYPE(:)=' '
-!
-      CALL LINKEDLIST$SELECT(LL_STRC,'CONTINUUM')
-      CALL LINKEDLIST$NLISTS(LL_STRC,'ATOM',NAT1)
-      DO IAT1=1,NAT1
-        CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',IAT1)
-!
-!       ==  NAME  ================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'NAME',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('!STRUCTURE!CONTINUUM!ATOM:NAME NOT SPECIFIED')
-          CALL ERROR$STOP('STRCIN_CONTINUUM')
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'NAME',1,NAME)
-        CALL ATOMLIST$INDEX(NAME,IAT)
-!
-!       ==  RAD  ================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'RAD',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL LINKEDLIST$SET(LL_STRC,'RAD',1,3.D0)
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'RAD',1,RSOLV(IAT))
-!
-!       ==  GRID TYPE ===============================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'GRIDTYPE',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL LINKEDLIST$SET(LL_STRC,'GRIDTYPE',1,-'NEW_TESS.1')
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'GRIDTYPE',1,GRIDTYPE(IAT))
-!
-        CALL LINKEDLIST$SELECT(LL_STRC,'..')
-      ENDDO
-      CALL CONTINUUM$SETR8A('RAD',NAT,RSOLV)
-      CALL CONTINUUM$SETCHA('TESS',NAT,GRIDTYPE)
-      DEALLOCATE(GRIDTYPE)
-      DEALLOCATE(RSOLV)
-                                          CALL TRACE$POP
-      RETURN
-      END
-!
-!     ...................................................................
-      SUBROUTINE STRCIN_COsmo(LL_STRC_)
+      SUBROUTINE STRCIN_COSMO(LL_STRC_)
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -5414,7 +5167,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$EXISTL(LL_STRC,'COSMO',1,TCHK)
       IF(.NOT.TCHK) RETURN
-                                 CALL TRACE$PUSH('STRCIN_CONTINUUM')
+                                 CALL TRACE$PUSH('STRCIN_COSMO')
       CALL ATOMLIST$NATOM(NAT)
       ALLOCATE(RSOLV(NAT))
       RSOLV(:)=0.D0
@@ -5431,8 +5184,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !       ==  NAME  ================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'NAME',1,TCHK)
         IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('!STRUCTURE!CONTINUUM!ATOM:NAME NOT SPECIFIED')
-          CALL ERROR$STOP('STRCIN_CONTINUUM')
+          CALL ERROR$MSG('!STRUCTURE!COSMO!ATOM:NAME NOT SPECIFIED')
+          CALL ERROR$STOP('STRCIN_COSMO')
         END IF
         CALL LINKEDLIST$GET(LL_STRC,'NAME',1,NAME)
         CALL ATOMLIST$INDEX(NAME,IAT)
@@ -5463,7 +5216,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       INTERFACE 
-        SUBROUTINE LINKEDLIST$write(LL_,NFIL,CID_)
+        SUBROUTINE LINKEDLIST$WRITE(LL_,NFIL,CID_)
         USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
         TYPE(LL_TYPE),INTENT(IN) :: LL_
         INTEGER(4)   ,INTENT(IN) :: NFIL
