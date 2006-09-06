@@ -254,6 +254,7 @@ LOBJS = \
         ${OBJDIR}/paw_pdos.o \
         ${OBJDIR}/paw_library.o \
         ${OBJDIR}/paw_polynom.o \
+        ${OBJDIR}/paw_dimer.o  \
         ${OBJDIR}/paw_debug.o
 #
 ##########################################################################
@@ -549,6 +550,9 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_debug.o:         ${OBJDIR}/paw_mpelib${MODE}.o 
  ${OBJDIR}/paw_debug.o:          ${OBJDIR}/paw_waves1.o 
  ${OBJDIR}/paw_debug.o:          ${OBJDIR}/paw_waves2.o 
+
+ ${OBJDIR}/paw_dimer.o:         ${OBJDIR}/paw_mpelib${MODE}.o 
+
 
  ${OBJDIR}/paw_ldaplusu.o:      ${OBJDIR}/paw_periodictable.o
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_periodictable.o

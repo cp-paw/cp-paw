@@ -499,6 +499,207 @@ ENDDO
                             CALL TRACE$POP
       RETURN
       END
+
+
+!     ..................................................................
+      SUBROUTINE ATOMS$PROPAGATE_DIMER()
+!     ******************************************************************
+!     **  PROPAGATE: PROPAGATES ATOMIC POSITIONS                      **
+!     ******************************************************************
+      USE ATOMS_MODULE
+      USE MPE_MODULE
+      IMPLICIT NONE
+      INTEGER(4)     :: IAT,I
+      REAL(8)        :: EKIN
+      REAL(8)        :: DEKIN
+      REAL(8)        :: EMASS,EMASSCG2
+      REAL(8)        :: ENOSEP
+      REAL(8)        :: EFFEMASS(NAT)
+      REAL(8)        :: REDRMASS(NAT)
+      REAL(8)        :: anner1(nat)
+      LOGICAL(4)     :: TCHK,TCHK2,TCHK3,TCHK4,TCHK5
+      INTEGER(4)     :: ITER
+      LOGICAL(4)     :: TSTRESS
+      REAL(8)        :: STRESS(3,3)
+      REAL(8)        :: CELLFRIC(3,3)
+      REAL(8)        :: RBAS(3,3)
+      real(8)        :: x0(Nat*3),xp(NAT*3) !massweighted coordinates for the dimer
+!     ******************************************************************
+                              CALL TRACE$PUSH('ATOMS$PROPAGATE')
+DO IAT=1,NAT
+  WRITE(*,FMT='("FORCE ",I3,3F15.10)')IAT,FORCE(:,IAT)
+ENDDO
+     CALL DIMER$GETL4('DIMER',TCHK)
+     if(tchk) CALL DIMER$GETL4('PLACEDIMER',TCHK)
+     IF(.NOT.TDYN.and..not.TCHK) THEN
+        RP(:,:)=R0(:,:)
+        RM(:,:)=R0(:,:)
+        CALL TRACE$POP ;RETURN
+     END IF
+
+! 
+!     ==================================================================
+!     == CALCULATE EFFECTIVE AND REDUCED MASS
+!     ==================================================================
+      CALL WAVES$GETR8('EMASS',EMASS)
+      CALL WAVES$GETR8('EMASSCG2',EMASSCG2)
+      CALL ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
+      DO IAT=1,NAT
+        REDRMASS(IAT)=RMASS(IAT)-EFFEMASS(IAT)
+      ENDDO
+! 
+!     ==================================================================
+!     == STOP ATOMIC MOTION
+!     ==================================================================
+      IF(TSTOP) THEN
+        RM(:,:)=R0(:,:)
+        TSTOP=.FALSE.
+      END IF
+!
+!     ==================================================================
+!     == RANDOMIZE VELOCITIES
+!     ==================================================================
+      IF(TRANDOMIZE) THEN
+PRINT*,'TRANDOMIZE ',TRANDOMIZE
+        CALL ATOMS_RANDOMIZEVELOCITY(NAT,RMASS,RM,AMPRE,DELT)
+        CALL MPE$BROADCAST('MONOMER',1,RM)
+        TRANDOMIZE=.FALSE.
+      END IF 
+! 
+!     ==================================================================
+!     ==  SET REFERENCE STRUCTURE  FOR CONSTRAINTS                    ==
+!     ==================================================================
+      IF(.NOT.TCONSTRAINTREFERENCE) THEN
+        CALL CELL$GETR8A('T(0)',9,RBAS)
+        CALL CONSTRAINTS$SETREFERENCE(RBAS,NAT,R0,RM,REDRMASS,DELT)
+        TCONSTRAINTREFERENCE=.TRUE.
+      END IF
+! 
+!     == PRECONDITIONING =============================================
+!     CALL SHADOW$PRECONDITION(NAT,RMASS,R0,FORCE)
+! 
+!     == SYMMETRIZE FORCE ============================================
+      CALL SYMMETRIZE$FORCE(NAT,FORCE)
+! 
+!     ================================================================
+!     ==  PROPAGATE ATOMS                                           ==
+!     ================================================================
+      CELLFRIC=0.D0
+      TSTRESS=.FALSE.
+      !     CALL CELL$GETL4('MOVE',TSTRESS)
+      !     IF(TSTRESS) CALL CELL$GETR8A('FRICMAT',9,CELLFRIC)
+
+
+      !alexp-dimer 
+      !The old call was just  the one below
+      !CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
+      !&                      ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+
+
+      !this is a hardwired reread of some cntl parameters
+      !check or delete this
+      !call MPE$QUERY('~',NTASKS,THISTASK)
+      !if(thistask.eq.1) call DIMER$REREAD()
+      !this is hardwired reread of some cntl parameters
+
+
+      CALL DIMER$GETL4('DIMER',TCHK)
+      CALL DIMER$GETL4('STRETCH',TCHK2)
+      CALL DIMER$GETL4('PLACEDIMER',TCHK3)
+      CALL DIMER$GETL4('DIMERFOLLOWDOWN',TCHK4)
+      CALL DIMER$GETL4('KDLENGTH',TCHK5)
+      !   CALL DIMER$GETL4('OUTPUT?',TCHK5) include this if peter want's the output
+      print*,tchk,tchk2,tchk3,tchk4,tchk5
+
+      if(TCHK.and.TCHK2.and.TCHK5) then
+         CALL ERROR$MSG('WE CAN NOT STRETCH THE DIMER AND KEEP ITS LENGTH')
+         CALL ERROR$MSG('AT THE SAME TIME - ADJUST YOUR .CNTL-FILE')
+         CALL ERROR$STOP('ATOMS$PROPAGATE')
+      end if
+
+      if(TCHK.and..not.TCHK2.and..not.TCHK3.and..not.TCHK4.and..not.TCHK5) then
+         !normal dimer propagation
+         CALL DIMER$PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
+              &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+
+      else if(TCHK.and..not.TCHK2.and..not.TCHK4.and.(TCHK3.or.TCHK5)) then
+         CALL DIMER$PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
+              &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+         !set the correct positions (we got them in the RP positions)
+         R0(:,:)=RP(:,:)
+         RM(:,:)=RP(:,:)
+         CALL DIMER$SETL4('PLACEDIMER',.FALSE.)
+         CALL DIMER$SETL4('KDLENGTH',.FALSE.)
+         !this was it for this step
+         CALL TRACE$POP ;RETURN
+
+      else if (.not.TCHK.and.TCHK3) then
+         CALL ERROR$MSG('I CAN NOT PLACE DIMER IN A NON DIMER CALCULATION')
+         CALL ERROR$CHVAL('PLACEDIMER',TCHK3)
+         CALL ERROR$CHVAL('DIMER',TCHK)
+         CALL ERROR$STOP('ATOMS$PROPAGATE')
+    
+      else if(TCHK.and..not.TCHK4.and.TCHK2) then
+         !let the second image followdown until (R2-R1)^2=d^2 
+         if(TCHK3) then
+            call DIMER$GET_massweighted(Nat*3,R0,X0)
+            CALL DIMER$STRETCH(NAT,X0,Xp) !the second xp is arbitrary
+            call DIMER$GET_unmassweighted(Nat*3,X0,R0)
+            CALL DIMER$SETL4('PLACEDIMER',.FALSE.)
+         else 
+            CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
+                 &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+            
+            call DIMER$GET_massweighted(Nat*3,R0,X0)
+            call DIMER$GET_massweighted(Nat*3,RP,XP)
+            CALL DIMER$STRETCH(NAT,XP,X0)
+            call DIMER$GET_unmassweighted(Nat*3,XP,RP)!only this because R0 is not changed!
+         end if
+
+
+      else 
+         !=== as usual or dimer images decoupled follow down
+         stop 'THIS COMES FROM THE DIMER MERGE AND SHOULD NOT HAPPEN'
+         CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
+              &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+
+
+         !writes the energy for a dimer follwodown calculation 
+         !if peter doesn't like it delete the call
+         if(tchk) then
+            call DIMER$WRITEENERGYTRA(NAT*3,RP)
+            CALL MPE$SYNC('~')
+         end if
+
+      end if
+
+      !alexp-dimer end 
+
+
+!
+!     ==================================================================
+!     == take care of link bonds as constraints                       ==
+!     ==================================================================
+      call ATOMS_frictionarray(NAT,ANNER,ANNEE &
+     &                 ,RMASS,EFFEMASS,anner1)
+      call QMMM$propagate(nat,delt,anner,redrmass,anner1,rm,r0,rp)
+!
+!     ==================================================================
+!     == WARMUP SYSTEM                                                ==
+!     ==================================================================
+      CALL PAW_WARMUP_APPLY
+DO IAT=1,NAT
+  WRITE(*,FMT='("RM ",I3,3F15.10)')IAT,RM(:,IAT)
+  WRITE(*,FMT='("R0 ",I3,3F15.10)')IAT,R0(:,IAT)
+  WRITE(*,FMT='("RP ",I3,3F15.10)')IAT,RP(:,IAT)
+ENDDO
+                            CALL TRACE$POP
+      RETURN
+    END SUBROUTINE ATOMS$PROPAGATE_DIMER
+
+
+
+
 !
 !     ..................................................................
       SUBROUTINE ATOMS$CONSTRAINTS
@@ -539,6 +740,16 @@ ENDDO
       IF(.NOT.TDYN) THEN
         CALL TRACE$POP ;RETURN
       END IF
+
+      call dimer$getl4('DIMER',tchk)
+      if(tchk) then
+         PRINT*,'********** WARNING FROM DIMER ****************'
+         PRINT*,'THIS IS A DIMER CALCULATION'
+         PRINT*,'IGNORING ALL CONSTRAINTS IN ATOMS$CONSTRAINTS'
+         PRINT*,'********** WARNING FROM DIMER ****************'
+         return
+      end if
+
 ! 
 !     ==================================================================
 !     == CALCULATE EFFECTIVE AND REDUCED MASS

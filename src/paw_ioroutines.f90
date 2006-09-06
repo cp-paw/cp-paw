@@ -302,6 +302,7 @@ CALL TRACE$PASS('DONE')
         CALL VERSION$WRITEPARMFILE()
         CALL ERROR$NORMALSTOP
       END IF
+
 !
 !     ==================================================================
 !     ==  DEFINE POLYMER IF NECESSARY                                 ==
@@ -312,8 +313,29 @@ CALL TRACE$PASS('DONE')
 !       INDIVIDUAL MONOMERS. IT ALSO PROVIDES INFORMATION ON THE 
 !       RELATIVE COMPUTATIONAL EFFORT, WHICH DIVIDE THE PROCESSORS AMONG 
 !       INDIVIUDAL MONOMERS.
-        CALL ERROR$MSG('OPTION FOR POLYMER NOT YET INCLUDED')
-        CALL ERROR$STOP('READIN')
+
+         !alexp-dimer
+         !=== this is a quick-fix for the dimer
+         !=== later one could read the polymer data from a specific cntl file
+
+         CALL DIMER$SETL4('DIMER',.TRUE.)
+         !--- we split in 2 parts
+         splitkey(1:int(ntasks/2))=1
+         splitkey(int(ntasks/2)+1:ntasks)=2
+
+         !--- we set the name of the cntl-file by hand
+         !    this is almost the same code as below, but ensures that we do not
+         !    have to change the code below for the quick-fix
+         ISVAR=INDEX(CNTLNAME,-'.POLYMER_CNTL',BACK=.TRUE.)
+         IF(ISVAR.GT.0) THEN      
+            ROOTNAME=CNTLNAME(1:ISVAR-1)//'_m'//.itos.splitkey(thistask)
+         ELSE
+            CALL ERROR$MSG('ROOTNAME FOR POLYMER EMPTY')
+            CALL ERROR$STOP('READIN')
+         END IF
+         CNTLNAME=trim(adjustl(rootname))//'.cntl'
+         !alexp-dimer end
+
       ELSE
         SPLITKEY(:)=1
       END IF
@@ -330,6 +352,7 @@ CALL TRACE$PASS('DONE')
       ELSE
         ROOTNAME=' '
       END IF
+
 !     == CONNECT CONTROL FILE ==========================================
       CALL FILEHANDLER$SETROOT(ROOTNAME)
       CALL FILEHANDLER$SETFILE(+'CNTL',.FALSE.,CNTLNAME)
@@ -337,6 +360,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','FORM','FORMATTED')
+
 !
 !     ==================================================================
 !     ==  CHECK EXPIRATION DATE                                       ==
@@ -360,6 +384,17 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL PUTHEADER(NFILO,VERSIONTEXT)
+
+
+
+
+!     ======================================================================
+!     ==  READ BLOCK !DIMER  AND !CONTROL!GENERIC START= (for placedimer) ==
+!     ======================================================================
+      CALL DIMER$GETL4('DIMER',TCHK)
+      if(tchk) then
+         call readin_dimer(LL_CNTL)
+      end if
 !    
 !     ==================================================================
 !     ==  READ BLOCK !GENERIC                                         ==
@@ -2755,6 +2790,359 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       RETURN
       END
 !
+
+!     ..................................................................
+      SUBROUTINE READIN_DIMER(LL_CNTL_)
+!     ******************************************************************
+!     **  READ BLOCK !CONTROL!MERMIN                                  **
+!     ******************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
+      TYPE(LL_TYPE)         :: LL_CNTL
+      LOGICAL(4)            :: TCHK
+      LOGICAL(4)            :: TON
+      REAL(8)               :: SVARR
+      INTEGER(4)            :: SVARI,ITH
+      LOGICAL(4)            :: SVARL
+      CHARACTER(32)         :: SVARCH
+      REAL(8),ALLOCATABLE   :: SVARV(:)
+      integer(4)            :: nfil
+!     ******************************************************************
+
+      CALL TRACE$PUSH('READIN_DIMER')  
+      LL_CNTL=LL_CNTL_
+
+!
+!     ==================================================================
+!     == SELECT DIMER LIST OR EXIT IF IT DOES NOT EXIST              ==
+!     ==================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+      CALL LINKEDLIST$EXISTL(LL_CNTL,'DIMER',1,TON)
+
+      IF(.NOT.TON) THEN
+         CALL DIMER$SETL4('DIMER',.FALSE.)
+         CALL TRACE$POP
+         RETURN
+      else !we have a dimer block
+         CALL DIMER$SETL4('DIMER',.TRUE.)
+
+!     ========INITIALIZE DEFAULT VALUES =====================        
+         call dimer$INIT()
+
+         !=== FIND OUT IF WE READ A RESTART FILE -> NO NEED TO PLACE DIMER
+         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
+         
+         
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'START',0,TCHK)
+         IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_CNTL,'START',1,SVARL)
+            CALL DIMER$SETL4('PLACEDIMER',SVARL)
+         ELSE
+            !the deault is start=f -> restart-file -> do not place the dimer
+            CALL DIMER$SETL4('PLACEDIMER',.FALSE.)
+         end IF
+         
+
+         !=== NOW READ THE DIMER SETTINGS
+         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'DIMER')
+         
+
+!     ========GENERAL SETTINGS ==============================        
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'DIMERDIST',0,TCHK)
+         IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_CNTL,'DIMERDIST',1,SVARR)
+            CALL DIMER$SETR8('D',SVARR)
+         END IF
+         
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'KDLENGTH',0,TCHK)
+         IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_CNTL,'KDLENGTH',1,SVARL)
+            CALL DIMER$SETL4('KDLENGTH',SVARL)
+         end IF
+         
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'STRETCHDIST',0,TCHK)
+         IF(TCHK) then
+            CALL LINKEDLIST$GET(LL_CNTL,'STRETCHDIST',1,SVARR)
+            CALL DIMER$SETR8('STRETCHDIST',SVARR)
+            CALL DIMER$SETL4('STRETCH',.true.)
+         end IF
+         
+!     ========CONSTRAINTS ======= ==============================        
+         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'DIMER')
+         CALL LINKEDLIST$EXISTL(LL_CNTL,'CONSTRAINTS',1,TON)
+         IF(TON) THEN
+            CALL LINKEDLIST$SELECT(LL_CNTL,'CONSTRAINTS')
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'CENTERID',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'CENTERID',1,SVARCH)
+               CALL DIMER$SETCH('CENTER_ID',SVARCH)
+            END IF
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'CENTERCOORD',0,TCHK)
+            IF(TCHK) THEN
+               IF(ALLOCATED(SVARV)) DEALLOCATE(SVARV)
+               ALLOCATE(SVARV(3))
+               CALL LINKEDLIST$GET(LL_CNTL,'CENTERCOORD',1,SVARV)
+               CALL DIMER$SETV('CENTERCOORD',SVARV,3)
+            END IF
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'CONSTRSTEP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'CONSTRSTEP',1,SVARR)
+               CALL DIMER$SETR8('CONSTRSTEP',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$NLISTS(LL_CNTL,'COUPLE',SVARI)
+            DO ITH=1,SVARI
+               CALL LINKEDLIST$SELECT(LL_CNTL,'COUPLE',ITH)
+               CALL LINKEDLIST$EXISTD(LL_CNTL,'ATOM',1,TCHK)
+               IF(TCHK) THEN
+                  CALL LINKEDLIST$GET(LL_CNTL,'ATOM',1,SVARCH)
+                  CALL DIMER$CONSTRLIST_ADD(SVARCH)
+               END IF
+               CALL LINKEDLIST$SELECT(LL_CNTL,'..')            
+            END DO
+         end IF
+         
+!     ========ITERATION CONTROL==============================        
+         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'DIMER')
+         CALL LINKEDLIST$EXISTL(LL_CNTL,'ITERATION',1,TON)
+         IF(TON) THEN
+            CALL LINKEDLIST$SELECT(LL_CNTL,'ITERATION')
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'LITERMAX',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'LITERMAX',1,SVARI)
+               CALL DIMER$SETI4('CALCMULTIPLIERITERMAX',SVARI)
+            END IF
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'DLAMBDA',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'DLAMBDA',1,SVARR)
+               CALL DIMER$SETR8('DLAMBDA',SVARR)
+            END IF
+
+!Deprecated
+!!$         CALL LINKEDLIST$EXISTD(LL_CNTL,'VITER',0,TCHK)
+!!$         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'VITER',1,CALCVELOCITYITERMAX)
+!!$
+!!$         CALL LINKEDLIST$EXISTD(LL_CNTL,'DVELOCITY',0,TCHK)
+!!$         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'DVELOCITY',1,DVELOCITY)
+!!$
+!!$         CALL LINKEDLIST$EXISTD(LL_CNTL,'DROT',0,TCHK)
+!!$         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'DROT',1,DROT)
+
+
+         end IF
+
+!     ========MOTION CONTROL ================================        
+         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'DIMER')
+         CALL LINKEDLIST$EXISTL(LL_CNTL,'MOTION',1,TON)
+         IF(TON) THEN
+            CALL LINKEDLIST$SELECT(LL_CNTL,'MOTION')
+            
+!alex: this is for pclimb-testing!
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'CLIMBPERP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'CLIMBPERP',1,SVARL)
+               CALL DIMER$SETL4('CLIMBPERP',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FORCEDSTEP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FORCEDSTEP',1,SVARR)
+               CALL DIMER$SETR8('FORCEDSTEP',SVARR)
+            END IF
+            
+!alex: this is for pclimb-testing!
+
+
+
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'DFOLLOWDOWN',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'DFOLLOWDOWN',1,SVARL)
+               CALL DIMER$SETL4('DIMERFOLLOWDOWN',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'INHIBITUP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'INHIBITUP',1,SVARL)
+               CALL DIMER$SETL4('INHIBITUP',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'INHIBITPERP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'INHIBITPERP',1,SVARL)
+               CALL DIMER$SETL4('INHIBITPERP',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'ONLYROT',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'ONLYROT',1,SVARL)
+               CALL DIMER$SETL4('ONLYROT',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'ONLYPERP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'ONLYPERP',1,SVARL)
+               CALL DIMER$SETL4('ONLYPERP',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'WDOWN',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'WDOWN',1,SVARL)
+               CALL DIMER$SETL4('WDOWN',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'WDOWNFACT',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'WDOWNFACT',1,SVARR)
+               CALL DIMER$SETR8('WDOWNFACT',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FMPARA',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FMPARA',1,SVARR)
+               CALL DIMER$SETR8('FMPARA',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FMPERP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FMPERP',1,SVARR)
+               CALL DIMER$SETR8('FMPERP',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FMROT',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FMROT',1,SVARR)
+               CALL DIMER$SETR8('FMROT',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FRICPARA',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FRICPARA',1,SVARR)
+               CALL DIMER$SETR8('FRICPARA',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FRICPERP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FRICPERP',1,SVARR)
+               CALL DIMER$SETR8('FRICPERP',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FRICROT',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FRICROT',1,SVARR)
+               CALL DIMER$SETR8('FRICROT',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'OPTFRICPARA',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'OPTFRICPARA',1,SVARL)
+               CALL DIMER$SETL4('OPTFRICPARA',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'OPTFRICPERP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'OPTFRICPERP',1,SVARL)
+               CALL DIMER$SETL4('OPTFRICPERP',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'OPTFRICROT',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'OPTFRICROT',1,SVARL)
+               CALL DIMER$SETL4('OPTFRICROT',SVARL)
+            END IF
+            
+         end IF
+         
+!     ========LENGTH CONTROL ================================        
+         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'DIMER')
+         CALL LINKEDLIST$EXISTL(LL_CNTL,'FLEXLENGTH',1,TON)
+         IF(TON) THEN
+            CALL LINKEDLIST$SELECT(LL_CNTL,'FLEXLENGTH')
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'DLFLEX',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'DLFLEX',1,SVARL)
+               CALL DIMER$SETL4('DLFLEX',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'LCS',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'LCS',1,SVARI)
+               CALL DIMER$SETI4('LCS',SVARI)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'CENTERDIFFMIN',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'CENTERDIFFMIN',1,SVARR)
+               CALL DIMER$SETR8('RCDIFFMIN',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'DSTEP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'DSTEP',1,SVARR)
+               CALL DIMER$SETR8('DSTEP',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'DTOBE',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'DTOBE',1,SVARR)
+               CALL DIMER$SETR8('DMIN',SVARR)
+            END IF
+         end IF
+         
+
+
+
+!     ========OUTPUT CONTROL ================================        
+         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'DIMER')
+         CALL LINKEDLIST$EXISTL(LL_CNTL,'OUTPUT',1,TON)
+         IF(TON) THEN
+            CALL LINKEDLIST$SELECT(LL_CNTL,'OUTPUT')
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'ENERGYTRA',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'ENERGYTRA',1,SVARR)
+               CALL DIMER$SETR8('ENERGYTRA',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'NATOMS',0,TCHK)
+            IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'NATOMS',1,SVARI)
+            SVARI=SVARI*3
+            IF(ALLOCATED(SVARV)) DEALLOCATE(SVARV)
+            ALLOCATE(SVARV(SVARI))
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'RTS',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'RTS',1,SVARV)
+               CALL DIMER$SETV('RTS',SVARV,SVARI)
+            END IF
+         END IF
+      END IF !from dimer block
+      
+      CALL FILEHANDLER$UNIT('DPROT',NFIL)
+      CALL DIMER$REPORT_SETTINGS(NFIL)
+      CALL TRACE$POP
+      return
+    end SUBROUTINE READIN_DIMER
+ 
+
 !     .....................................................STRCIN.......
       SUBROUTINE STRCIN
 !     ******************************************************************

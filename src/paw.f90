@@ -1,9 +1,9 @@
 !#IF DEFINED(IBMLICENSE)
 Module version_module
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 439 $'
-character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2006-09-04 10:59:32 +0200 (Mo, 04. Sep 2006) $'
+character(256):: VERrev='$LastChangedRevision: 447 $'
+character(256):: VERaut='$LastChangedBy: alexp $'
+character(256):: VERdat='$LastChangedDate: 2006-09-06 15:03:24 +0200 (Mi, 06. Sep 2006) $'
 end Module version_module
 !
 !     ..................................................................
@@ -124,6 +124,12 @@ end Module version_module
 !     ==  READ STRUCTURAL DATA FROM FILE "STRC"                       ==
 !     ==================================================================
       CALL STRCIN
+
+!     ==================================================================
+!     ==  SET DIMER DIMENSION                                         ==
+!     ==================================================================
+      CALL DIMER$INITDIM()
+
 !
 !     ==================================================================
 !     ==  INITIALIZE ATOMIC SETUPS                                    ==
@@ -480,7 +486,14 @@ end Module version_module
 !     ==================================================================
 !     ==  PROPAGATE NUCLEI                                            ==
 !     ==================================================================
-      CALL ATOMS$PROPAGATE()
+!---dimermerge fix      
+      CALL DIMER$GETL4('DIMER',TCHK)
+      IF(TCHK) THEN
+         CALL ATOMS$PROPAGATE_DIMER()
+      ELSE
+         CALL ATOMS$PROPAGATE()
+      END IF
+!---end dimermerge fix      
       CALL ATOMS$CONSTRAINTS()
 ! 
 !     ==================================================================

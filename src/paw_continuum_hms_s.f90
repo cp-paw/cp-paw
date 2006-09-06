@@ -88,6 +88,7 @@ public continuum$propagate
 ! as a convention all "control" variables which have been in the          ==
 ! original code in teh control module get a contv_                        ==
 !===========================================================================
+logical,parameter             :: truncont_hms=.false.
 logical,save                  :: contv_restart
 logical,save                  :: contv_move_netcharges
 logical,save                  :: contv_on=.false.
@@ -479,6 +480,7 @@ PRINT*,'In continuum_init: ',contv_rsolv(ia),face_peratom(ia),face_area(ia)
       REAL(8),ALLOCATABLE,DIMENSION(:) :: FACE_fmem_old
       INTEGER(4)                       :: THISTASK,NTASKS
 !     ******************************************************************
+      if(.not.truncont_hms) return
                                  call trace$push('CONTINUUM$READ')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK= contv_restart .and. contv_on
@@ -644,6 +646,7 @@ print *, "current size of face_q ", size(face_q)
       TYPE (SEPARATOR_TYPE),PARAMETER   :: MYSEPARATOR &
              =SEPARATOR_TYPE(3,'CONTINUUM','NONE','FEB1999','NONE')
 !     ******************************************************************
+      if(.not.truncont_hms) return
       call trace$push('CONTINUUM$WRITE')
       IF(.NOT. contv_ON) RETURN
       TCHK=.TRUE.
@@ -1610,6 +1613,7 @@ PRINT *, "## The potential used is        : ", cwdff
       real(kind=8)          :: e_ff, e_sff, e_af, e_fh, e_st
 !RS
 !     ***********************************************************************
+      if(.not.truncont_hms) return
       IF (.NOT. contv_on) RETURN
                                CALL TRACE$PUSH('CONTINUUM$PROPAGATE')
       IF (TFIRST .and. (.not. contv_init)) THEN
