@@ -285,7 +285,6 @@ OBJECTS2 = \
            ${OBJDIR}/paw_cosmo.o \
            ${OBJDIR}/paw_warmup.o \
            ${OBJDIR}/paw_optfric.o 
-#           ${OBJDIR}/paw_continuum_hms_s.o \
 #  the following is for the QMMM of Woo and Margl
 #          ${OBJDIR}/mm_paw_modules.o \
 #          ${OBJDIR}/mm_paw_core_mm.o \
@@ -576,11 +575,6 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_waves2.o
 
  ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_waves1.o
-
-# ${OBJDIR}/paw.o:               ${OBJDIR}/paw_continuum_hms_s.o
-# ${OBJDIR}/paw_isolate.o:       ${OBJDIR}/paw_continuum_hms_s.o
-# ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_continuum_hms_s.o
-# ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_continuum_hms_s.o
 
  ${OBJDIR}/paw_cg.o:               ${OBJDIR}/paw_waves1.o
 
