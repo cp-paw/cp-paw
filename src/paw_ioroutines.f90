@@ -26,12 +26,12 @@ CONTAINS
         WRITE(NFILO,FMT='(72("*"),T15' &
      &              //',"                CP-PAW                     ")')
         WRITE(NFILO,FMT='(72("*"),T15' &
-     &           //',"     FIRST PRINCIPLEX MOLECULAR DYNAMICS      ")')
+     &           //',"     FIRST PRINCIPLES MOLECULAR DYNAMICS      ")')
         WRITE(NFILO,FMT='(72("*"),T15' &
      &           //',"   WITH THE PROJECTOR AUGMENTED WAVE METHOD   ")')
         WRITE(NFILO,FMT='(72("*"))')
         WRITE(NFILO,FMT='(T10' &
-     &           //',"P.E. BLOECHL, (C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
+     &           //',"P.E. BLOECHL, (C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT)")')
         WRITE(NFILO,FMT='(T10' &
      &           //',"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
         WRITE(NFILO,FMT='(T10,A)')TRIM(VERINF)
@@ -60,7 +60,8 @@ CONTAINS
         WRITE(*,FMT='(72("*"),T15' &
      &              //',"  CP-PAW VERSION INFO: ")')
         WRITE(*,FMT='(72("*"))')
-        WRITE(*,FMT='(A)')TRIM(VERINF)
+
+        WRITE(*,FMT='(A)')TRIM(VERINF(17:))
         WRITE(*,FMT='(A)')TRIM(VERREV)
         WRITE(*,FMT='(A)')TRIM(VERAUT)
         WRITE(*,FMT='(A)')TRIM(VERDAT)
