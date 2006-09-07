@@ -34,7 +34,7 @@ CONTAINS
      &           //',"P.E. BLOECHL, (C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT)")')
         WRITE(NFILO,FMT='(T10' &
      &           //',"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
-        WRITE(NFILO,FMT='(T10,A)')TRIM(VERINF)
+        WRITE(NFILO,FMT='(T10,A)')TRIM(VERINF(43:))
         WRITE(NFILO,FMT='(T10,A)')TRIM(VERREV)
         WRITE(NFILO,FMT='(T10,A)')TRIM(VERAUT)
         WRITE(NFILO,FMT='(T10,A)')TRIM(VERDAT)
@@ -61,7 +61,7 @@ CONTAINS
      &              //',"  CP-PAW VERSION INFO: ")')
         WRITE(*,FMT='(72("*"))')
 
-        WRITE(*,FMT='(A)')TRIM(VERINF(17:))
+        WRITE(*,FMT='(A)')TRIM(VERINF(43:))
         WRITE(*,FMT='(A)')TRIM(VERREV)
         WRITE(*,FMT='(A)')TRIM(VERAUT)
         WRITE(*,FMT='(A)')TRIM(VERDAT)

@@ -2444,6 +2444,7 @@ CONTAINS
               CALL ERROR$i4vaL('POSITION',i)
               CALL ERROR$I4VAL('ASCII VALUE OF DISALLOWED CHARACTER',ISVAR)
               CALL ERROR$STOP('BUFFER_READ')
+           end if
           END IF
         ENDDO
 !
