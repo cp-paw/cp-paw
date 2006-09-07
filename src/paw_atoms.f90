@@ -523,6 +523,7 @@ ENDDO
       REAL(8)        :: STRESS(3,3)
       REAL(8)        :: CELLFRIC(3,3)
       REAL(8)        :: RBAS(3,3)
+      REAL(8)        :: svar
       real(8)        :: x0(Nat*3),xp(NAT*3) !massweighted coordinates for the dimer
 !     ******************************************************************
                               CALL TRACE$PUSH('ATOMS$PROPAGATE')
@@ -536,7 +537,6 @@ ENDDO
         RM(:,:)=R0(:,:)
         CALL TRACE$POP ;RETURN
      END IF
-
 ! 
 !     ==================================================================
 !     == CALCULATE EFFECTIVE AND REDUCED MASS
@@ -574,6 +574,35 @@ PRINT*,'TRANDOMIZE ',TRANDOMIZE
         CALL CONSTRAINTS$SETREFERENCE(RBAS,NAT,R0,RM,REDRMASS,DELT)
         TCONSTRAINTREFERENCE=.TRUE.
       END IF
+
+!     ================================================================
+!     ==  DETERMINE FRICTION VECTOR                                 ==
+!     ================================================================
+      if(.not.allocated(annervec0))allocate(annervec0(nat))
+      IF(TOPTFRIC) THEN
+        IF(AOPT2AV.GT.0.D0) THEN
+          SVAR=SQRT(AOPT1AV/AOPT2AV)
+        ELSE
+          SVAR=anner
+        END IF
+        anner=svar
+PRINT*,'ATOMS: OPT.FRICTION ',svar,AOPT1AV,AOPT2AV,MIXAOPT
+!       == CORRECT FRICTION FOR ELECTRON FRICTION  =====================
+        ANNERVEC0(:)=(RMASS(:)*svar-EFFEMASS(:)*ANNEE)/REDRMASS(:)
+      ELSE
+!        == CORRECT FRICTION FOR ELECTRON FRICTION  =====================
+        ANNERvec0(:)=(RMASS(:)*ANNER-EFFEMASS(:)*ANNEE)/redrmass(:)
+      end if
+!
+!     == ENSURE THAT THE FRICTION IS ALWAYS POSITIVE. THE COMPENSATION ==
+!     == FOR THE DRAG BY WAVE FUNCTION CLOUD CAN LEAD TO NEGATIVE FRICTION.
+!     == DO NOT USE THIS OPTION WITH A THERMOSTAT!!
+      if(tnonegativefriction) then
+        ANNERVEC0(:)=MAX(ANNERVEC0,0.D0)
+      end if
+
+
+
 ! 
 !     == PRECONDITIONING =============================================
 !     CALL SHADOW$PRECONDITION(NAT,RMASS,R0,FORCE)
@@ -722,6 +751,17 @@ ENDDO
       REAL(8)        :: V(3)
       REAL(8)        :: RBAS(3,3)
 !     ******************************************************************
+
+      call dimer$getl4('DIMER',tchk)
+      if(tchk) then
+         PRINT*,'********** WARNING FROM DIMER ****************'
+         PRINT*,'THIS IS A DIMER CALCULATION'
+         PRINT*,'IGNORING ALL CONSTRAINTS IN ATOMS$CONSTRAINTS'
+         PRINT*,'********** WARNING FROM DIMER ****************'
+         return
+      end if
+
+
 ! 
 !     ==================================================================
 !     == CONTROL AND CHANGE STATE OF THIS                             ==
@@ -741,14 +781,6 @@ ENDDO
         CALL TRACE$POP ;RETURN
       END IF
 
-      call dimer$getl4('DIMER',tchk)
-      if(tchk) then
-         PRINT*,'********** WARNING FROM DIMER ****************'
-         PRINT*,'THIS IS A DIMER CALCULATION'
-         PRINT*,'IGNORING ALL CONSTRAINTS IN ATOMS$CONSTRAINTS'
-         PRINT*,'********** WARNING FROM DIMER ****************'
-         return
-      end if
 
 ! 
 !     ==================================================================
@@ -918,7 +950,20 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       real(8)             :: a0    ! effective friction
       real(8)             :: emass,emasscg2
       real(8)             :: effemass(nat)
+      logical(4)          :: tchk
 !     ****************************************************************** 
+
+      call dimer$getl4('DIMER',tchk)
+      if(tchk) then
+         PRINT*,'********** WARNING FROM DIMER ****************'
+         PRINT*,'THIS IS A DIMER CALCULATION'
+         PRINT*,'IGNORING FORCECRITERION IN ATOMS$FORCECRITERION'
+         PRINT*,'********** WARNING FROM DIMER ****************'
+         fav=huge(fav)
+         fmax=huge(fmax)
+         return
+      end if
+
 ! 
 !     ==================================================================
 !     == CONTROL STATE OF THIS                                        ==
@@ -1026,16 +1071,26 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       REAL(8)     :: EFFEMASS(NAT)
       REAL(8)     :: EMASS,EMASSCG2
       REAL(8)     :: aopt1,aopt2
+      LOGICAL(4)  :: TCHK
 !     ******************************************************************
 !
 !     ==================================================================
 !     == CONTROL STATE OF THIS                                        ==
 !     ==================================================================
-      IF(STATEOFTHIS.NE.'PROPAGATED WITH CONSTRAINTS') then
-        CALL ERROR$MSG('ATOMS OBJECT IS IN THE INCORRECT STATE')
-        CALL ERROR$CHVAL('STATEOFTHIS',STATEOFTHIS)
-        CALL ERROR$STOP('ATOMS$SWITCH')
-      END IF
+      call dimer$getl4('DIMER',tchk)
+      if(tchk) then
+         PRINT*,'********** WARNING FROM DIMER ****************'
+         PRINT*,'THIS IS A DIMER CALCULATION'
+         PRINT*,'IGNORING STATEOFTHIS IN ATOMS$SWITCH'
+         PRINT*,'********** WARNING FROM DIMER ****************'
+      else
+         IF(STATEOFTHIS.NE.'PROPAGATED WITH CONSTRAINTS') then
+            CALL ERROR$MSG('ATOMS OBJECT IS IN THE INCORRECT STATE')
+            CALL ERROR$CHVAL('STATEOFTHIS',STATEOFTHIS)
+            CALL ERROR$STOP('ATOMS$SWITCH')
+         END IF
+      end if
+
       STATEOFTHIS='SWITCHED'
 !
 !     ==================================================================
