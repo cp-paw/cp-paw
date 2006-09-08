@@ -1517,7 +1517,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       REAL(8),INTENT(IN) :: Q(NQ)   ! Q*THETA
       REAL(8),INTENT(OUT):: VQ(NQ)   ! DE/D(Q*THETA)
       REAL(8),INTENT(IN) :: QRELPOS(3,NQ)
-      REAL(8),INTENT(IN) :: RC(NG)
+      REAL(8),INTENT(IN) :: RC(NG,nat)
       REAL(8),INTENT(IN) :: RAT(3,NAT)
       REAL(8),INTENT(IN) :: QMAD(NG,NAT)
       REAL(8),INTENT(OUT):: VMAD(NG,NAT)
@@ -1552,7 +1552,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
         QSUM=SUM(Q(IQ1:IQ2))
         VSUM=0.D0
         DO IG=1,NG
-          RC1=RC(IG)
+          RC1=RC(IG,iat1)
           CALL LIB$ERFR8(DIS/RC1,GAUSSINT)
           VINT=(GAUSSINT-1.D0)/DIS
 !         == FOR THE PURE ATOM-SURF ENERGY USE VINT=GAUSSINT/DIS  ======
@@ -1581,7 +1581,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
             DIS2=SUM(DR(:)**2)
             DIS=SQRT(DIS2)
             DO IG=1,NG
-              RC1=RC(IG)
+              RC1=RC(IG,iat2)
 ! IF(DIS/RC1.GT.5.D0*RC1) CYCLE
               CALL LIB$ERFR8(DIS/RC1,GAUSSINT)
               DGAUSSINTDR=TWOBYSQPI*EXP(-DIS2/RC1**2)/RC1
