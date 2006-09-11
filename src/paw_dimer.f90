@@ -1482,21 +1482,21 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
 
 
        spara=sqrt(dot_product(xpara(:),xpara(:)))
-       if(spara.eq.0.d0) then
+       if(spara.lt.1.d-10) then
           epara(:)=0.d0
        else
           epara(:)=xpara(:)/spara
        end if
 
        sperp=sqrt(dot_product(xperp(:),xperp(:)))
-       if(sperp.eq.0.d0) then
+       if(sperp.lt.1.d-10) then
           eperp(:)=0.d0
        else
           eperp(:)=xperp(:)/sperp
        end if
 
        srot=sqrt(dot_product(xrot(:),xrot(:)))
-       if(srot.eq.0.d0) then
+       if(srot.lt.1.d-10) then
           erot(:)=0.d0
        else
           erot(:)=xrot(:)/srot
@@ -1512,7 +1512,7 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
 !      ==               determine the optimal friction                    ==
 !      =====================================================================
 
-       if(spara.eq.0.d0) then
+       if(spara.lt.1.d-10) then
           cpara=0.d0
           omega2para=0.d0
           paraanner=0.d0
@@ -1526,7 +1526,7 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        end if
 
 
-       if(sperp.eq.0.d0) then
+       if(sperp.lt.1.d-10) then
           cperp=0.d0
           omega2perp=0.d0
           perpanner=0.d0
@@ -1539,7 +1539,7 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        end if
 
 
-       if(srot.eq.0.d0) then
+       if(srot.lt.1.d-10) then
           crot=0.d0
           omega2rot=0.d0
           rotanner=0.d0
