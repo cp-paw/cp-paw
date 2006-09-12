@@ -2766,10 +2766,14 @@ CONTAINS
 !       ================================================================
         DO I=1,II
           IDATA=IDATA+1
-          READ(DATUM,*)VAL(IDATA)
+          READ(DATUM,*,err=1000)VAL(IDATA)
         ENDDO
       ENDDO
       RETURN
+1000  CONTINUE
+      CALL ERROR$MSG('CORRUPTED DATA FIELD ON INPUT')
+      CALL ERROR$CHVAL('DATUM',DATUM)
+      CALL ERROR$STOP('BUFFER_READ<TYPEID>')
       END SUBROUTINE BUFFER_READ<TYPEID>
 #END TEMPLATE BUFFER_READXX
 !
