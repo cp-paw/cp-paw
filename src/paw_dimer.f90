@@ -890,6 +890,8 @@ end SUBROUTINE PLACE_DIMER
                &+(fdiff(:)+g2_(:))*dt**2/(mrot*svar1)
           
 
+
+
           !---------------------------------------------------------------------
           !-----------   APPLY THE COUPLE CONSTRAINT IF NECESSARY   ------------
           !---------------------------------------------------------------------
@@ -899,6 +901,24 @@ end SUBROUTINE PLACE_DIMER
             !Y1BAR STAYS THE SAME BECAUSE 2*(X1+X2)/2=X1+X2!
          END IF
           
+
+
+          !---------------------------------------------------------------------
+          !-----------   GET RID OF UNWISHED MOTION                 ------------
+          !---------------------------------------------------------------------
+          if(onlyrot) then
+             !substract the covered distance of the center of grav.
+             !the cog does not move:
+             y1p(:)=y10(:)
+             !alt. test subtract the parallel and the perp. distance
+          end if
+          
+          if(inhibitup) then
+             !substract the parallel part of ther covered distance of the center of grav.
+             y1p(:)=y1p(:)-(y20(:)/dot_product(y20(:),y20(:)))*dot_product(y20(:),(y1p(:)-y10(:)))
+          end if
+
+
           
           
           !---------------------------------------------------------------------
@@ -1019,24 +1039,6 @@ end SUBROUTINE PLACE_DIMER
 !!$       end if
 
        
-       !=====================================================================
-       !== do we use only the rotation?                                    ==
-       !=====================================================================
-       if(onlyrot) then
-          !substract the covered distance of the center of grav.
-          x1p(:)=x1p(:)-(y1p(:)-y10(:))
-          x2p(:)=x2p(:)-(y1p(:)-y10(:))
-       end if
-       !        =====================================================================
-       !        == do we inhibit the parallel motion?                              ==
-       !        =====================================================================
-       if(inhibitup) then
-          !substract the parallel part of ther covered distance of the center of grav.
-          x1p(:)=x1p(:)-(y20(:)/dot_product(y20(:),y20(:)))*dot_product(y20(:),(y1p(:)-y10(:)))
-          x2p(:)=x2p(:)-(y20(:)/dot_product(y20(:),y20(:)))*dot_product(y20(:),(y1p(:)-y10(:)))
-          !              x1p(:)=x1p(:)-(((x10-x20)/dot_product(x10-x20,x10-x20))*dot_product(x10-x20,x1p-x10))
-          !              x2p(:)=x2p(:)-(((x10-x20)/dot_product(x10-x20,x10-x20))*dot_product(x10-x20,x2p-x20))
-       end if
        
        write(dprotfil,*)'DIMER: DIMER_PROPAGATE: DIMER MASSW. PARALLEL MOTION:',&
             &dot_product(y20,0.5d0*(x1p+x2p)-0.5d0*(x10+x20))/sqrt(dot_product(y20,y20))
