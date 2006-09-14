@@ -1,6 +1,6 @@
 !#IF DEFINED(IBMLICENSE)
 Module version_module
-character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo_move/src/paw.f90 $'
+character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo/devel/src/paw.f90 $'
 character(256):: VERrev='$LastChangedRevision: 447 $'
 character(256):: VERaut='$LastChangedBy: alexp $'
 character(256):: VERdat='$LastChangedDate: 2006-09-06 15:03:24 +0200 (Mi, 06. Sep 2006) $'
