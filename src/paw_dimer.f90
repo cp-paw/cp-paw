@@ -805,9 +805,12 @@ end SUBROUTINE PLACE_DIMER
        real(8)   ,intent(inout) :: g1_(n)
        real(8)   ,intent(inout) :: g2_(n)
 
+
+
        integer(4),parameter  :: niterx=1000 ! #(iterations)
        real(8)   ,parameter  :: tol=1.d-8
        real(8)   ,parameter  :: du=1.d-5
+       real(8)               :: f1used(n),f2used(n)
        real(8)               :: fsum(n) ! f1+f2
        real(8)               :: fdiff(n) ! f1-f2
        real(8)               :: fsumpara
@@ -844,16 +847,23 @@ end SUBROUTINE PLACE_DIMER
        real(8)               :: xrot(n)
 !      ****************************************************************
        tconv=.false.
+       f1used(:)=f1(:)
+       f2used(:)=f2(:)
+
+       !weight down image 1 (use a positive mpara here)
+       if(wdown) then
+          f1used(:)=f1(:)*wdownfact
+       end if
+          
 
        y10(:)=0.5d0*(x10(:)+x20(:))
        y20(:)=x10(:)-x20(:)
        y1m(:)=0.5d0*(x1m(:)+x2m(:))
        y2m(:)=x1m(:)-x2m(:)
-       fsum(:)=f1(:)+f2(:)
-       fdiff(:)=f1(:)-f2(:)
+       fsum(:)=f1used(:)+f2used(:)
+       fdiff(:)=f1used(:)-f2used(:)
        fsumpara=dot_product(y20(:),fsum(:))
        fdiffpara=dot_product(y20(:),fdiff(:))
-
 
 
        do i=1,CALCVELOCITYITERMAX
