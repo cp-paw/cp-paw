@@ -96,7 +96,15 @@ real(8)                       :: ekinrotm
 
 end MODULE DIMER_MODULE
 
-
+module dimer_oscillator_module
+  integer(4)                :: odim=3    !for the dimer: cpara,cperp,crot
+  real(8),allocatable       :: oscm(:)
+  real(8),allocatable       :: osc0(:)
+  real(8),allocatable       :: oscp(:)
+  real(8),allocatable       :: oscmass(:)  
+  real(8),allocatable       :: oscanner(:)
+  real(8),allocatable       :: oscc(:) !the harmonic potential
+end module dimer_oscillator_module
 
 
 
@@ -319,6 +327,8 @@ end subroutine dimer_init_files
       REAL(8)   ,INTENT(OUT)   :: CELLKIN2(3,3)         ! 
       REAL(8)                  :: UF1(dim)              !m^-(1/2)*FORCE FROM POTENTIAL
       REAL(8)                  :: UF2(dim)              !m^-(1/2)*FORCE FROM POTENTIAL
+      REAL(8)                  :: MF1(dim)              !m^(1/2)*FORCE FROM POTENTIAL
+      REAL(8)                  :: MF2(dim)              !m^(1/2)*FORCE FROM POTENTIAL
       real(8)                  :: sqdimerdist           !current (distance between dimerpoints)**2
       REAL(8)                  :: R1NC(dim),R2NC(dim)   !POSITION WITHOUT CONSTRAINS
       REAL(8)                  :: V1(DIM),V2(DIM)                !VELOCITY
@@ -419,6 +429,9 @@ end subroutine dimer_init_files
          call DIMER$GET_unmassweighted(dim,f1,Uf1)
          call DIMER$GET_unmassweighted(dim,f2,Uf2)
 
+         call DIMER$GET_massweighted(dim,f1,mf1)
+         call DIMER$GET_massweighted(dim,f2,mf2)
+
          if(.true..or.optfricperp.or.optfricpara.or.optfricrot) then
             perpfirst=.false.
             parafirst=.false.
@@ -437,7 +450,7 @@ end subroutine dimer_init_files
             end if
 
             !======    get the optimal friction    ========
-            call dimer$optanner(dim,dt,f1,f2,x1,X1m,x2,x2m,fmperp,fmpara,fmrot,&
+            call dimer$optanner(dim,dt,mf1,mf2,x1,X1m,x2,x2m,fmperp,fmpara,fmrot,&
                  &fperpm,fparam,frotm,fperp0,fpara0,frot0,fricusedperp,fricusedpara,fricusedrot)
 
 
@@ -862,8 +875,6 @@ end SUBROUTINE PLACE_DIMER
        y2m(:)=x1m(:)-x2m(:)
        fsum(:)=f1used(:)+f2used(:)
        fdiff(:)=f1used(:)-f2used(:)
-       fsumpara=dot_product(y20(:),fsum(:))
-       fdiffpara=dot_product(y20(:),fdiff(:))
 
 
        do i=1,CALCVELOCITYITERMAX
@@ -1462,7 +1473,7 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
 !      =====================================================================
 !      ==    determine the forces (directions referenced on image1)       ==
 !      =====================================================================
-       fpara0(:)=e0(:)*dot_product(e0(:),(f1(:)+f2(:)))
+       fpara0(:)=e0(:)*dot_product(e0(:),(0.5d0*(f1(:)+f2(:))))
        fperp0(:)=0.5d0*(f1ortho(:)+f2ortho(:))
 
 
@@ -1484,13 +1495,40 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        write(dprotfil,*)'paraforces',sqrt(dot_product(fpara0(:),fpara0(:)))
        write(dprotfil,*)'rotforces',sqrt(dot_product(frot0(:),frot0(:)))
 
+
+
+!      =====================================================================
+!      ==    determine the forces (directions referenced on image1)       ==
+!      =====================================================================
+       fpara0(:)=e0(:)*dot_product(e0(:),(0.5d0*(f1(:)+f2(:))))
+       fperp0(:)=0.5d0*(f1ortho(:)+f2ortho(:))
+
+
+       if(dot_product(f1ortho(:),f2ortho(:)).lt.0.0d0) then
+          !antiparallel
+          if(dot_product(f1ortho(:),f1ortho(:)).lt.dot_product(f2ortho(:),f2ortho(:))) then
+             frot0(:)=f1ortho(:)
+          else if(dot_product(f1ortho(:),f1ortho(:)).gt.dot_product(f2ortho(:),f2ortho(:))) then
+             frot0(:)=-f2ortho(:)!- because we reference all on image one!!!
+          else
+             frot0(:)=f1ortho(:)
+          end if
+       else
+          !parallel
+          frot0(:)=0.5d0*(f1ortho(:)-f2ortho(:))
+       end if
+
+       write(dprotfil,*)'perpforces',sqrt(dot_product(fperp0(:),fperp0(:)))
+       write(dprotfil,*)'paraforces',sqrt(dot_product(fpara0(:),fpara0(:)))
+       write(dprotfil,*)'rotforces',sqrt(dot_product(frot0(:),frot0(:)))
+
 !      =====================================================================
 !      ==determine the covered distances (directions referenced on image1)==
 !      =====================================================================
        xcenter(:)=y10(:)-y1m(:)
        xpara(:)=em(:)*dot_product(em(:),xcenter(:))
        xperp(:)=xcenter(:)-xpara(:)
-       xrot(:)=x10(:)-xcenter(:)-x1m(:)
+       xrot(:)=2.d0*(x10(:)-xcenter(:)-x1m(:))
 
 
        spara=sqrt(dot_product(xpara(:),xpara(:)))
@@ -1531,8 +1569,11 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        else
           cpara=-(dot_product(fpara0(:),epara(:))-dot_product(fparam(:),epara(:)))/&
                &spara
+          write(dprotfil,*)'cdirectpara',cpara
+          call dimer_proposcillator(dt,1,cpara) !cpara oscillator uses the dim 1
+          write(dprotfil,*)'cmeanpara',cpara
           call DIMER$GET_massweighted(n,epara(:),emwpara(:))
-          omega2para=abs(cpara/(2.d0*mpara*dot_product(emwpara(:),emwpara(:))))
+          omega2para=abs(cpara/(mpara*dot_product(emwpara(:),emwpara(:))))
           paraanner=0.5d0*dt*sqrt(4.d0*omega2para)
           if(paraanner.gt.1.d0)paraanner=1.d0
        end if
@@ -1545,8 +1586,11 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        else
           cperp=-(dot_product(fperp0(:),eperp(:))-dot_product(fperpm(:),eperp(:)))/&
                &sperp
+          write(dprotfil,*)'cdirectperp',cperp
+          call dimer_proposcillator(dt,2,cperp) !cperp oscillator uses the dim 2
+          write(dprotfil,*)'cmeanperp',cperp
           call DIMER$GET_massweighted(n,eperp(:),emwperp(:))
-          omega2perp=abs(cperp/(2.d0*mperp*dot_product(emwperp(:),emwperp(:))))
+          omega2perp=abs(cperp/(mperp*dot_product(emwperp(:),emwperp(:))))
           perpanner=0.5d0*dt*sqrt(4.d0*omega2perp)
        end if
 
@@ -1558,10 +1602,13 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        else
           crot=-(dot_product(frot0(:),erot(:))-dot_product(frotm(:),erot(:)))/&
                &srot
+          write(dprotfil,*)'cdirectrot',crot
+          call dimer_proposcillator(dt,3,crot) !crot oscillator uses the dim 3
+          write(dprotfil,*)'cmeanrot',crot
           call DIMER$GET_massweighted(n,erot(:),emwrot(:))
           omega2rot=abs(crot/(dot_product(emwrot(:),emwrot(:))))
 
-          omega2rot=(omega2rot-(omega2para*2.d0*mpara))/mrot
+          omega2rot=(omega2rot-omega2para)/mrot
           if(omega2rot.lt.0.d0) then
              print*,'omega2rot is negative - check that'
              print*,omega2rot
@@ -1602,17 +1649,18 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
 !      =====================================================================
 !      ==                     estimate TS                                 ==
 !      =====================================================================
+       call dimer$get_unmassweighted(n,y10,vec1)
+       write(dprotfil,*)'CENTERCOORD,unmassweigted ',y10(:)
+       write(dprotfil,*)'CENTERCOORD,unmassweigted ',vec1(:)
 
-       print*,'estimate',y10(:)+fpara0(:)/cpara+fperp0(:)/cperp
-       print*,'dist',sqrt(dot_product(fpara0(:)/cpara+fperp0(:)/cperp,fpara0(:)/cpara+fperp0(:)/cperp))
+       !TO DO: ADD HERE A CORRECTION FOR A ROTATIONAL FORCE!
 
-       
-       write(dprotfil,*)'paraanner,omega2,c',paraanner,omega2para,cpara
-       write(dprotfil,*)'perpanner,omega2,c',perpanner,omega2perp,cperp
-       write(dprotfil,*)'rotanner,omega2,c',rotanner,omega2rot,crot
+       vec1(:)=0.d0
+       if(abs(cpara).gt.1.d-5) vec1(:)=vec1(:)+fpara0(:)/cpara
+       if(abs(cperp).gt.1.d-5) vec1(:)=vec1(:)+fperp0(:)/cperp
+       write(dprotfil,*)'TS estimate',y10(:)+vec1(:)
+       write(dprotfil,*)'TS dist',sqrt(dot_product(vec1(:),vec1(:)))
 
-       write(dprotfil,*)'TS estimate',y10(:)+fpara0(:)/cpara+fperp0(:)/cperp
-       write(dprotfil,*)'TS dist',sqrt(dot_product(fpara0(:)/cpara+fperp0(:)/cperp,fpara0(:)/cpara+fperp0(:)/cperp))
        return
      end subroutine dimer$optanner
 
@@ -2154,6 +2202,7 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
 !     **  SHOULD BE CALLED BEFORE DIMER_READIN@PAW_IOROUTINES         **
 !     ******************************************************************
       USE DIMER_MODULE
+      use dimer_oscillator_module
       IMPLICIT NONE
       !********************************
         dimerfollowdown       =  .false.
@@ -2208,6 +2257,30 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
 
         !connect the protocoll files etc.
         call dimer_init_files()
+
+
+        !init the oscillator array
+        allocate(oscm(odim))
+        allocate(osc0(odim))
+        allocate(oscp(odim))
+        allocate(oscmass(odim))  
+        allocate(oscanner(odim))
+        allocate(oscc(odim))
+
+        oscp(:)=0.d0
+        oscm(:)=0.d0
+        osc0(:)=0.d0
+        
+        !actually set by hand
+        oscmass(:)=0.1d0*1822.88d0   !100. a.u.
+        oscc(:)=1.d0 
+        oscanner(:)=0.1d0 !we use opt friction in the subroutine (we do not know dt now) 
+
+        !the code for opt. friction:
+        !do i=1,odim
+           !we use optimized friction here
+        !   oscanner(i)=dt**2*sqrt(oscc(i)/oscmass(i))
+        !end do
 
         return
       end SUBROUTINE DIMER$INIT
@@ -2916,3 +2989,46 @@ subroutine dimer$reread()
 
   return
 end subroutine dimer$reread
+
+subroutine dimer_proposcillator(dt,i,force)
+  use dimer_oscillator_module
+  real(8),intent(in)                 :: dt
+  integer(4),intent(in)              :: i       !which array
+  real(8),intent(inout)              :: force   !extra force
+
+  real(8)                         :: svar1,svar2
+
+  !desription: we use the incoming value as extra force of a driven oscillator.
+  !the return force value is the value of the actual force of the oscillator 
+  !after propagation.
+  !this is useful, because we suppose to have an incoming value which oscillates 
+  !around a mean value. what we need is the mean value. the actual force of the 
+  !driven oscillator (at steady state) will give us this mean value.
+
+  if(i.gt.odim) then
+     stop 'dimer oscillator array out of range'
+  end if
+
+  !we use optimized friction here
+  oscanner(i)=dt**2*sqrt(oscc(i)/oscmass(i))
+
+
+  svar1=(1.d0-oscanner(i))
+  svar2=1.d0/(1.d0+oscanner(i))
+
+  !propagate
+  oscp(i)=(svar2*dt**2/oscmass(i))*force&
+       &-(oscc(i)*dt**2/oscmass(i)-2.d0)*svar2*osc0(i)&
+       &-svar1*svar2*oscm(i)
+
+
+  !switch
+  oscm(i)=osc0(i)
+  osc0(i)=oscp(i)
+
+  !use -1 because we search the steady state
+  force=oscc(i)*osc0(i)
+
+
+  return
+end subroutine dimer_proposcillator
