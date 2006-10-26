@@ -2584,8 +2584,16 @@ END IF
           DO IB2=1,NBH
             FUNC(:,:)=FUNC(:,:)+LAGR(IB1,IB2)*CONJG(PROPSI(:,IB2,:))
           ENDDO
-          EDENMAT1(LMN1,LMN2,IDIM1,IDIM2)=EDENMAT1(LMN1,LMN2,IDIM1,IDIM2) &
+          do idim2=1,ndim
+            do idim1=1,ndim
+              do lmn2=1,lmnx
+                do lmn1=1,lmnx
+                  EDENMAT1(LMN1,LMN2,IDIM1,IDIM2)=EDENMAT1(LMN1,LMN2,IDIM1,IDIM2) &
      &                    +PROPSI(IDIM1,IB1,LMN1)*FUNC(IDIM2,LMN2)
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
         ENDDO
       END IF
 !
