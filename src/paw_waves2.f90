@@ -3354,10 +3354,12 @@ PRINT*,'ITER ',ITER,DIGAM
 !       ==============================================================
 !       ==  COLLECT DATA                                            ==
 !       ==============================================================
-IF(TSUPER_.AND.NDIM_.EQ.2) THEN
-  CALL ERROR$MSG('NONCOLLINEAR WAVE FUNCTIONS AND SUPER WAVE FUNCTIONS')
-  CALL ERROR$MSG('ARE NOT PROPERLY IMPLEMENTED BELOW')
-  CALL ERROR$STOP('WAVES_READPSI')
+IF(Thistask.eq.1) then
+  if(TSUPER_.AND.NDIM_.EQ.2) THEN
+    CALL ERROR$MSG('NONCOLLINEAR WAVE FUNCTIONS AND SUPER WAVE FUNCTIONS')
+    CALL ERROR$MSG('ARE NOT PROPERLY IMPLEMENTED BELOW')
+    CALL ERROR$STOP('WAVES_READPSI')
+  end if
 END IF
               CALL TRACE$PASS('READPSI MARKE 9')
         ALLOCATE(PSIG(NGG,NDIM_))
