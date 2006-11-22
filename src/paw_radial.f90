@@ -4408,7 +4408,7 @@ CALL ERROR$STOP('BESSOV')
       REAL(8)               :: ARG
       REAL(8)               :: XSQ
       REAL(8)               :: FAC
-      INTEGER(4)            :: K,IL,II,ISVAR
+      INTEGER(4)            :: K,IL,II,ISVAR,I
 !     ******************************************************************
 CALL ERROR$MSG('ROUTINE MARKED FOR DELETION')
 CALL ERROR$STOP('BESSOV')

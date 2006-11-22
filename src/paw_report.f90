@@ -17,6 +17,7 @@
       INTEGER(4)   ,INTENT(IN) :: NFIL
       CHARACTER(*) ,INTENT(IN) :: TITLE
       CHARACTER(80)            :: UNDERLINE
+      INTEGER(4)               :: I
 !     ******************************************************************
       UNDERLINE=' '
       DO I=1,LEN(TITLE)
