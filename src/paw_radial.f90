@@ -3048,6 +3048,62 @@ END MODULE SHLOGRADIAL_MODULE
       END      
 !
 !     ...................................................................
+      SUBROUTINE LOGRADIAL$DGLgenc(GID,NR_,nf,i1,i2,A,B,C,D,F)
+!     **                                                               **
+!     **  transforms the equation                                      **
+!     **    [A(r)\partial_r^2+B(r)\partial_r+C(r)]f(r)=d(r)            **
+!     **  into                                                         **
+!     **    [a(r)\partial^2_x+B1(r)\partial_x+C1(x)]f(x)=d1(x)         **
+!     **  with r(x)=r1\exp(\alpha(x-1))                                **
+!     **                                                               **
+!     **  and calls RADIAL_DGLEQUISPACEDGENC to solve the resulting    **
+!     **  DGL on the equi-spaced grid                                  **
+!     **                                                               **
+      USE SHLOGRADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR_
+      INTEGER(4),INTENT(IN) :: Nf
+      INTEGER(4),INTENT(IN) :: i1
+      INTEGER(4),INTENT(IN) :: i2
+      REAL(8)   ,INTENT(IN) :: A(NR_)
+      REAL(8)   ,INTENT(IN) :: B(NR_)
+      complex(8),INTENT(IN) :: C(NR_,nf,nf)
+      complex(8),INTENT(IN) :: D(NR_,nf)
+      complex(8),INTENT(INOUT):: F(NR_,nf)
+      REAL(8)               :: R(NR_)
+      REAL(8)               :: DRDX(NR_)
+      REAL(8)               :: B1(NR_)
+      complex(8)            :: C1(NR_,nf,nf)
+      complex(8)            :: D1(NR_,nf)
+      INTEGER(4)            :: IR,IR1,i,j
+      INTEGER(4)            :: imin,imax
+!     ******************************************************************
+      CALL LOGRADIAL_RESOLVE(GID)
+      IF(NR_.NE.NR) THEN
+         CALL ERROR$MSG('INCONSISTENT NUMBER OF GRID POINTS')
+         CALL ERROR$I4VAL('GID',GID)
+         CALL ERROR$I4VAL('NR',NR)
+         CALL ERROR$I4VAL('NR_',NR_)
+         CALL ERROR$STOP('LOGRADIAL$DGLgenc')
+      END IF
+      CALL LOGRADIAL$R(GID,NR,R)
+      IMIN=MIN(I1,I2)
+      IMAX=MAX(I1,I2)
+      DRDX(IMIN:IMAX)=DEX*R(IMIN:IMAX)
+      B1(IMIN:IMAX)=B(IMIN:IMAX)*DRDX(IMIN:IMAX)-DEX*A(IMIN:IMAX)
+      DRDX(IMIN:IMAX)=DRDX(IMIN:IMAX)**2
+      DO I=1,NF
+        D1(IMIN:IMAX,I)=D(IMIN:IMAX,I)*DRDX(IMIN:IMAX)
+        DO J=1,NF
+          C1(IMIN:IMAX,I,J)=C(IMIN:IMAX,I,J)*DRDX(IMIN:IMAX)
+        ENDDO
+      ENDDO
+      CALL RADIAL_DGLEQUISPACEDGENC(NR,NF,I1,I2,A,B1,C1,D1,F)
+      RETURN
+      END      
+!
+!     ...................................................................
       SUBROUTINE SHLOGRADIAL$VERLETD1(GID,NR_,F,DFDR)
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE

@@ -384,7 +384,7 @@ END MODULE FILEHANDLER_MODULE
 !     ******************************************************************
       IF(.NOT.ALLOCATED(FILE))CALL FILEHANDLER_CREATE
       DO I=1,LASTFILE
-        CALL FILEHANDLER_CLOSE(FILE(I))
+         CALL FILEHANDLER_CLOSE(FILE(I))
       ENDDO
       RETURN
       END

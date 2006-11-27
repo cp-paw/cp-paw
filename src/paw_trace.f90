@@ -23,6 +23,7 @@ CHARACTER(32),SAVE      :: HISTORY(MAXLEVEL)
 INTEGER(4)   ,SAVE      :: LEVEL=0
 INTEGER(4)   ,SAVE      :: THISTASK=0
 INTEGER(4)              :: NTASKS=1
+logical(4)   ,parameter :: tflush=.false.
 CONTAINS
 !**********************************************************************
 !     .................................................................
@@ -75,6 +76,9 @@ END MODULE TRACE_MODULE
       CALL DATE_AND_TIME(DATE,TIME)
       WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5,"TIME",A8," ",A10)') &
      &             THISTASK,MAXMEM/MBYTE,DATE,TIME
+      if(tflush) then
+        call filehandler$closeall()
+      end if
       RETURN 
       END
 !
@@ -105,6 +109,9 @@ END MODULE TRACE_MODULE
      &                  THISTASK,MAXMEM/MBYTE,DATE,TIME
       END IF
       LEVEL=LEVEL-1
+      if(tflush) then
+        call filehandler$closeall()
+      end if
       RETURN 
       END
 !

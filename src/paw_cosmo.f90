@@ -30,12 +30,14 @@ REAL(8),SAVE,ALLOCATABLE :: QRELPOS(:,:)
 REAL(8),SAVE,ALLOCATABLE :: Q0(:)
 REAL(8),SAVE,ALLOCATABLE :: QM(:)
 REAL(8),SAVE,ALLOCATABLE :: QP(:)
+REAL(8),SAVE,ALLOCATABLE :: cutofftheta(:)
 INTEGER,SAVE             :: NPTESS=0
 REAL(8),SAVE,ALLOCATABLE :: RTESS(:,:)
 !== SASCHA - PRINTOUT CHARGES
 LOGICAL(4) ::  TCHARGES
 !======
 !
+! I have introduced a cutofftheta to save theta for printout. This is a fudge.
 CONTAINS
 !
 !     .......................................................................
@@ -1814,6 +1816,8 @@ INTEGER(4) :: NFILINFO,J
       ALLOCATE(THETA(NQ))
       CALL COSMO_CUTOFF(NAT,NQ,RAT,RBAS,RSOLV,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
      &                       ,ZEROTHETA,THETA)
+      if(.not.allocated(cutofftheta))allocate(cutofftheta(nq))
+      cutofftheta(:)=theta(:)
 !
 !     =======================================================================
 !     == NOW CALCULATE TOTAL ENERGY                                        ==
@@ -2007,8 +2011,9 @@ END IF
       RETURN 
       END SUBROUTINE COSMO$INTERFACE
 !
-!     ............................................................................
+!     ........................................................................
       SUBROUTINE COSMO$PRINTOUT()
+!attention !!!!! The area is printed in angstrom **2!!!!
       USE COSMO_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
@@ -2021,7 +2026,7 @@ END IF
       REAL(8)               :: ANGSTROM
       INTEGER(4)            :: I,IAT
       REAL(8)               :: AEZ
-!     ***********************************************************************************
+!     ************************************************************************
       IF (.NOT.TON) RETURN
       PI=4.D0*DATAN(1.D0)
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
@@ -2042,15 +2047,16 @@ END IF
         CALL ATOMLIST$GETR8('Z',IAT,AEZ)
         CALL PERIODICTABLE$GET(NINT(AEZ),'SYMBOL',SYMBOL)
         IF(SYMBOL(2:2).EQ.'_') SYMBOL(2:2)=' '
-        WRITE(NFIL,FMT='(I3,3F20.14,A3,F15.5)')IAT,RAT,SYMBOL,RSOLV(IAT)/ANGSTROM
+        WRITE(NFIL,FMT='(I4,3F19.14,A3,F13.5)')IAT,RAT,trim(SYMBOL),RSOLV(IAT)/ANGSTROM
       ENDDO
       WRITE(NFIL,FMT='("COORD_CAR")')
       DO IAT=1,NAT
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT)
         FACEAREA=4.D0*PI*RSOLV(IAT)/REAL(NQAT(IAT),KIND=8)
         DO I=IQFIRST(IAT),IQFIRST(IAT)+NQAT(IAT)-1
-!          WRITE(NFIL,FMT='(*)')I,IAT,QRELPOS(:,I)+RAT(:),Q0(I),FACEAREA,Q0(I)/FACEAREA
-          WRITE(NFIL,*)I,IAT,QRELPOS(:,I)+RAT(:),Q0(I),FACEAREA,Q0(I)/FACEAREA
+          IF(CUTOFFTHETA(i).LT.1.D-5) CYCLE
+          WRITE(NFIL,fmt='(2i5,8f15.9)')I,IAT,QRELPOS(:,I)+RAT(:),Q0(I)*CUTOFFTHETA(I) &
+     &                     ,FACEAREA*CUTOFFTHETA(I)/angstrom**2,Q0(I)/FACEAREA*angstrom**2,0.d0
         ENDDO
       ENDDO
       CALL FILEHANDLER$CLOSE('COSMO_OUT')
