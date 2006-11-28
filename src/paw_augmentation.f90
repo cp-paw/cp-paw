@@ -758,7 +758,7 @@ STOP
       CALL SETUP$GETR8A('FOFC',NC,FOFI)
       CALL SETUP$GETR8A('EOFC',NC,EOFI)
       CALL SETUP$GETI4A('LOFC',NC,LOFI)
-      SOFI(:)=0.D0
+      SOFI(:)=0
       DO I=1,NC
         NNOFI(I)=0
         DO J=1,I-1
