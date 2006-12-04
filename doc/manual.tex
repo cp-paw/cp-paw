@@ -596,9 +596,24 @@ executable with {\tt dbg} instead of {\tt fast} for debugging purposes
 and one with nothing, with no special flags, which can be used to find
 errors induced by optimization.
 
+You can also obtain information about the executable
+\begin{center}
+\begin{tabular}{ll}
+\verb+--help+ & print help information \\
+\verb+-h+ & print help information \\
+\verb+?+ & print help information \\
+\verb+--version+ & print version information\\
+\verb+--parmfile+ & print parameter file used for compilation\\
+\end{tabular}
+\end{center}
+The version information shall allow to correlation the executable to a
+well-defined version of the source code. The parameter file in
+addition provides information about what libraries are linked and
+which compilation flags have been used etc. This information is
+important to track bugs in the code.
 
 Sometimes it is convenient to write a little wrapper shell-script for
-this command.
+the execution command.
 \begin{verbatim}
 #!/bin/sh
 #===================================================
@@ -2556,6 +2571,22 @@ T_2\times\vec T_3)$ is the volume of the real space unit cell.  }
 \vformat{integer(3)}
 \vrules{optional; mutually exclusive with \texttt{R}}
 \vdefault{2 2 2}}
+
+\mbax{\key{SHIFT} \vdescr{shift is displaces the K-point grid such
+that the $\Gamma$-point is avoided.  The three components of SHIFT
+specify the shift directions into the three lattice vectors.  Each
+component may have the values 0 or 1. For zero, the grid is not
+shifted along the specified direction. For a value of 1, the grid is
+shifted by one-half of the grid spacing along the corresponding
+reciprocal lattice vector.  While the density of the k-point grid is
+not affected by shifting the k-point grid, the k-point convergence is
+apparently faster. Shifting the grid avoids the high-symmetry points.
+Thus, one does not see the band edges, which usually lie on high
+symmetry points.  The computational effort is not much affected by
+shifting the grid.}  
+\vformat{integer(3)} 
+\vrules{optional}
+\vdefault{0 0 0}}
 
 \mbax{\key{K} 
 \vdescr{k-point coordinates $(i_1,i_2,i_3)$ in units of fractions of

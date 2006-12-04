@@ -376,6 +376,7 @@ END MODULE GRAPHICS_MODULE
 !     ==================================================================
 !     == PLOT WAVE FUNCTIONS                                          ==
 !     ==================================================================
+call trace$pass('in graphics$plot: plot wave functions')
       DO I=1,NWAVE
         FILE=WAVEPLOT(I)%FILE
         TITLE=WAVEPLOT(I)%TITLE
@@ -919,13 +920,15 @@ END MODULE GRAPHICS_MODULE
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
 !     ================================================================
+CALL TRACE$PASS('graphics$densityplot: marke 6')
       IF(THISTASK_K.NE.1) WAVEBIG=0.D0
       ALLOCATE(IWORK(NTASKS))
       IWORK=0
       IF(THISTASK_K.EQ.1)IWORK(THISTASK)=THISTASK 
       CALL MPE$COMBINE('MONOMER','+',IWORK)
       DO ITASK=1,NTASKS
-        IF(IWORK(ITASK).EQ.0) CYCLE
+        IF(IWORK(ITASK).EQ.0) CYCLE ! SEND ONLY FROM MASTER OF K
+        IF(IWORK(ITASK).EQ.1) CYCLE ! DO NOT SEND TO THE SAME NODE 
         IF(THISTASK.EQ.IWORK(ITASK)) THEN
 !         == SEND MSG TO TASK 1 OF MONOMER GROUP. ITASK IS THE MSG-TAG
           CALL MPE$SEND('MONOMER',1,ITASK,WAVEBIG)
@@ -936,6 +939,7 @@ END MODULE GRAPHICS_MODULE
           DEALLOCATE(WORK1)
         END IF
       ENDDO
+CALL TRACE$PASS('graphics$densityplot: marke 7')
 !     
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
