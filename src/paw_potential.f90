@@ -1565,3 +1565,84 @@ STRESSC=0.D0
       ENDDO
       RETURN
       END
+!!$!
+!!$!     ..................................................................
+!!$      subroutine potential_densityinterface(nr1start,nr1l,nr1g,nr2,nr3 &
+!!$     &                         ,nrl,ndimd,rho,pot,r0,force,rbas,stress)
+!!$      implicit none
+!!$      INTEGER(4),INTENT(IN)    :: NR1start
+!!$      INTEGER(4),INTENT(IN)    :: NR1l
+!!$      INTEGER(4),INTENT(IN)    :: NR1g
+!!$      INTEGER(4),INTENT(IN)    :: NR2
+!!$      INTEGER(4),INTENT(IN)    :: NR3
+!!$      INTEGER(4),INTENT(IN)    :: NRL
+!!$      INTEGER(4),INTENT(IN)    :: NDIMD
+!!$      INTEGER(4),INTENT(IN)    :: NAT
+!!$      REAL(8)   ,INTENT(IN)    :: RHO(NRL,NDIMD)
+!!$      REAL(8)   ,INTENT(OUT)   :: pot(NRL,NDIMD)
+!!$      REAL(8)   ,INTENT(IN)    :: R0(3,NAT)
+!!$      REAL(8)   ,INTENT(OUT)   :: FORCE(3,NAT)
+!!$      REAL(8)   ,INTENT(IN)    :: RBAS(3,3)
+!!$      REAL(8)   ,INTENT(OUT)   :: STRESS(3,3)    
+!!$      real(8)                  :: dt1(3),dt2(3),dt3(3)
+!!$      real(8)                  :: rgrid(3)
+!!$      real(8)                  :: val
+!!$      real(8)                  :: DR(3)
+!!$      real(8)                  :: F1(3,NAT)
+!!$      integer(4)               :: i1,i2,i3
+!!$      LOGICAL(4)               :: TZERO,TONE
+!!$      real(8)                  :: rvdw(nat)
+!!$      real(8)                  :: rvdwsolv
+!!$      real(8)                  :: vdw(nat)
+!!$      real(8)                  :: rmax2(nat)
+!!$!     ******************************************************************
+!!$      dT1(:)=rbas(:,1)/real(nr1g-1)
+!!$      dT2(:)=rbas(:,2)/real(nr2-1)
+!!$      dT3(:)=rbas(:,3)/real(nr3-1)
+!!$      rmax2(:)=(rvdw(:)+rvdwsolv)**2
+!!$      pot(:,1)=1.d0
+!!$      do i1=ir1start,ir1start_1+nr1l
+!!$        do i2=1,nr2
+!!$          do i3=1,nr3
+!!$            rgrid(:)=dt1(:)*real(i1-1)+dt2(:)*real(i2-1)+dt3(:)*real(i3-1)
+!!$            ir=ir1-ir1start+1+nr2*(ir2-1+nr3*(ir3-1))
+!!$            val=1.d0
+!!$            F1(:,:)=1.d0
+!!$            TZERO=.FALSE.
+!!$            TONE=.TRUE.
+!!$            do iat=1,nat
+!!$              dR(:)=rgrid(:)-r0(:,iat)
+!!$              dis2=sum((DR(:))*2)
+!!$              if(dis2.gt.rmax(iat)) cycle
+!!$              dis=sqrt(dis2)
+!!$              if(dis.le.rvdw(iat)) then
+!!$                VAL=0.d0
+!!$                F1(:,:)=0.d0
+!!$                TZERO=.TRUE.
+!!$                EXIT
+!!$              else 
+!!$                x=(dis-rmin(iat))/rvdwsolv
+!!$                SVAR=(3.d0-2.d0*x)*x**2
+!!$                SVAR2=6.d0*(1.d0-x)*x/rvdwsolv/dis
+!!$                VAL=VAL*SVAR
+!!$                F1(:,:IAT-1)=F1(:,:IAT-1)*SVAR
+!!$                F1(:,IAT)=F1(:,IAT)*DR(:)*svar2
+!!$                F1(:,IAT+1:)=F1(:,IAT+1:)*SVAR
+!!$                TONE=.FALSE.
+!!$              end if
+!!$            enddo
+!!$            IF(TZERO) CYCLE
+!!$            IF(TONE) THEN
+!!$              POT(IR,1)=1.D0
+!!$            ELSE
+!!$              POT(IR,1)=VAL
+!!$              FORCE(:,:)=FORCE(:,:)+F1(:,:)*RHO(IR,1)
+!!$            END IF
+!!$          enddo
+!!$        enddo
+!!$      enddo
+!!$      return
+!!$      end
+    
+
+

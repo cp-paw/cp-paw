@@ -3585,7 +3585,10 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY            ==
 !       ================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'NPRO',1,TCHK)
-        IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_STRC,'NPRO',0,(/10,10,10,10/))
+        if(.not.tchk) then
+          CALL ERROR$MSG('VARIABLE !STRUCTURE!SPERCIES:NPRO IS MANDATORY')
+          CALL ERROR$STOP('STRCIN_SPECIES')
+        end if
         CALL LINKEDLIST$SIZE(LL_STRC,'NPRO',1,LENG)
         ALLOCATE(NPRO(LENG))
         CALL LINKEDLIST$GET(LL_STRC,'NPRO',1,NPRO)

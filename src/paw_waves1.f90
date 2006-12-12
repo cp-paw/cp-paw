@@ -1360,7 +1360,9 @@ call error$stop('waves$etot')
 !     ==================================================================
 CALL TRACE$PASS('BEFORE VOFRHO')
       ALLOCATE(VQLM(LMRXX,NAT))
+if(any(abs(rho(:,:)).gt.huge(tiny)).or.any(abs(rho(:,:)).lt.-huge(tiny))) print*,'rho out of range'
       CALL WAVES_VOFRHO(NRL,NDIMD,RHO,RHOB,NAT,LMRXX,QLM,VQLM)
+if(any(abs(rho(:,:)).gt.huge(tiny)).or.any(abs(rho(:,:)).lt.-huge(tiny))) print*,'pot out of range'
       DEALLOCATE(QLM)
 CALL TRACE$PASS('AFTER VOFRHO')
 !CALL ERROR$STOP('FORCED STOP IN WAVES$ETOT')

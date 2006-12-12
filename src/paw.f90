@@ -1,9 +1,9 @@
 !#IF DEFINED(IBMLICENSE)
 Module version_module
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 447 $'
-character(256):: VERaut='$LastChangedBy: alexp $'
-character(256):: VERdat='$LastChangedDate: 2006-09-06 15:03:24 +0200 (Mi, 06. Sep 2006) $'
+character(256):: VERrev='$LastChangedRevision: 502 $'
+character(256):: VERaut='$LastChangedBy: ptpb $'
+character(256):: VERdat='$LastChangedDate: 2006-12-12 18:29:48 +0100 (Di, 12. Dez 2006) $'
 end Module version_module
 !
 !     ..................................................................
@@ -1014,6 +1014,11 @@ END MODULE STOPIT_MODULE
         CALL ENERGYLIST$RETURN('WAVEFUNCTION KINETIC ENERGY',EKINC)     
         CALL ENERGYLIST$RETURN('BO-WAVEFUNCTION KINETIC ENERGY',EFFEKIN)
         ECONS=ECONS+EKINC-EFFEKIN+EKINP+ETOT
+print*,'ekinc',ekinc
+print*,'effekin',effekin
+print*,'ekinp',ekinp
+print*,'etot',etot
+print*,'econs',econs
 !
 !       == ELECTRON AND ATOM THERMOSTATS ===============================
         CALL ENERGYLIST$RETURN('CELLOSTAT KINETIC',ECELLKIN)     

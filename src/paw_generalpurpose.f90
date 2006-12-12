@@ -1579,3 +1579,136 @@ end if
       ENDDO
       RETURN
       END
+!
+!     ..................................................................
+      subroutine slaterkoster(r,ov,h)
+!     ******************************************************************
+!     ** slater-Koster energy integrals                               **
+!     **  j.c. slater and G.F. Koster, Phys. Rev. 94, 1498 (1954)     **
+!     **                                                              **
+!     **  THE FIRST NINE REAL SPHERICAL HARMONICS ARE:                **
+!     **      YLM(1)=SQRT( 1/( 4*PI))    * 1                          **
+!     **      YLM(2)=SQRT( 3/( 4*PI))    * X / R                      **
+!     **      YLM(3)=SQRT( 3/( 4*PI))    * Z / R                      **
+!     **      YLM(4)=SQRT( 3/( 4*PI))    * Y / R                      **
+!     **      YLM(5)=SQRT(15/(16*PI))    * (  X**2-Y**2  ) /R**2      **
+!     **      YLM(6)=SQRT(60/(16*PI))    * (     X*Z     ) /R**2      **
+!     **      YLM(7)=SQRT( 5/(16*PI))    * ( 3*Z**2-R**2 ) /R**2      **
+!     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2      **
+!     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2      **
+!     ******************************************************************
+      implicit none
+      real(8),intent(in)  :: r(3)
+      real(8),intent(in)  :: ov(10)
+      real(8),intent(out) :: h(9,9)
+      real(8)             :: sss,sps,pps,ppp,sds,pds,pdp,dds,ddp,ddd
+      real(8)             :: l,m,n,l2,m2,n2
+      real(8)             :: svar,sq3,p1,p
+      integer(4)          :: i,j
+!     ******************************************************************
+      sq3=sqrt(3.d0)
+      svar=sqrt(dot_product(r,r))
+      if(svar.lt.1.d-20) then
+        stop 'in slaterkoster: distance=0'
+      end if
+      l=r(1)/svar
+      m=r(2)/svar
+      n=r(3)/svar
+      l2=l**2
+      m2=m**2
+      n2=n**2
+      sss=ov(1)
+      sps=ov(2)
+      pps=ov(3)
+      ppp=ov(4)
+      sds=ov(5)
+      pds=ov(6)
+      pdp=ov(7)
+      dds=ov(8)
+      ddp=ov(9)
+      ddd=ov(10)
+      h(:,:)=0.d0
+!     == s-s block=================================================
+      h(1,1)=sss
+!     == s-p block=================================================
+      h(1,2)=l*sps        
+         h(1,3)=n*sps        
+         h(1,4)=m*sps        
+!     == p-p block=================================================
+      h(2,2)=l2*pps+(1.d0-l2)*ppp
+         h(3,3)=n2*pps+(1.d0-n2)*ppp
+         h(4,4)=m2*pps+(1.d0-m2)*ppp
+      h(2,4)=l*m*(pps-ppp)
+      h(2,3)=l*n*(pps-ppp)
+         h(3,4)=m*n*(pps-ppp)
+!     == s-d block=================================================
+      h(1,9)=sq3*l*m*sds
+         h(1,8)=sq3*m*n*sds
+         h(1,6)=sq3*n*l*sds
+      h(1,5)=0.5d0*sq3*(l2-m2)*sds
+      h(1,7)=(n2-0.5d0*(l2+m2))*sds
+!     == p-d block=================================================
+      h(2,9)=sq3*l2*m*pds+m*(1.d0-2.d0*l2)*pdp        
+        h(4,8)=sq3*m2*n*pds+n*(1.d0-2.d0*m2)*pdp
+        h(3,6)=sq3*n2*l*pds+l*(1.d0-2.d0*n2)*pdp
+      h(2,8)=sq3*l*m*n*pds-2.d0*l*m*n*pdp
+        h(4,6)=sq3*l*m*n*pds-2.d0*l*m*n*pdp
+        h(3,9)=sq3*l*m*n*pds-2.d0*l*m*n*pdp
+      h(2,6)=sq3*l2*n*pds+n*(1.d0-2.d0*l2)*pdp   !x,xz
+        h(4,9)=sq3*m2*l*pds+l*(1.d0-2.d0*m2)*pdp     !y,yx
+        h(3,8)=sq3*n2*m*pds+m*(1.d0-2.d0*n2)*pdp     !z,zy
+      h(2,5)=0.5d0*sq3*l*(l2-m2)*pds+l*(1.d0-l2+m2)*pdp
+      h(4,5)=0.5d0*sq3*m*(l2-m2)*pds-m*(1.d0+l2-m2)*pdp
+      h(3,5)=0.5d0*sq3*n*(l2-m2)*pds-n*(l2-m2)*pdp
+      h(2,7)=l*(n2-0.5d0*(l2+m2))*pds-sq3*l*n2*pdp
+      h(4,7)=m*(n2-0.5d0*(l2+m2))*pds-sq3*m*n2*pdp
+      h(3,7)=n*(n2-0.5d0*(l2+m2))*pds+sq3*n*(l2+m2)*pdp
+!     == d-d block=================================================
+!     **      YLM(5)=SQRT(15/(16*PI))    * (  X**2-Y**2  ) /R**2      **
+!     **      YLM(6)=SQRT(60/(16*PI))    * (     X*Z     ) /R**2      **
+!     **      YLM(7)=SQRT( 5/(16*PI))    * ( 3*Z**2-R**2 ) /R**2      **
+!     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2      **
+!     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2      **
+      h(9,9)=3.d0*l2*m2*dds+(l2+m2-4.d0*l2*m2)*ddp+(n2+l2*m2)*ddd   !xy,xy
+      h(8,8)=3.d0*m2*n2*dds+(m2+n2-4.d0*m2*n2)*ddp+(l2+m2*n2)*ddd   !yz,yz cyc.perm
+      h(6,6)=3.d0*n2*l2*dds+(n2+l2-4.d0*n2*l2)*ddp+(m2+n2*l2)*ddd   !zx,zx cyc.perm
+
+      h(9,8)=3.d0*l*m2*n*dds+l*n*(1-4.d0*m2)*ddp+l*n*(m2-1.d0)*ddd  !xy,yz
+      h(8,6)=3.d0*m*n2*l*dds+m*l*(1-4.d0*n2)*ddp+m*l*(n2-1.d0)*ddd  !yz,zx cyc.perm
+!     h(6,9)=3.d0*n*l2*m*dds+n*m*(1-4.d0*l2)*ddp+n*m*(l2-1.d0)*ddd  
+
+      h(9,6)=3.d0*l2*m*n*dds+m*n*(1-4.d0*l2)*ddp+m*n*(l2-1.d0)*ddd  !xy,xz
+!     h(8,9)=3.d0*m2*n*l*dds+n*l*(1-4.d0*m2)*ddp+n*l*(m2-1.d0)*ddd  !
+!     h(6,8)=3.d0*n2*l*m*dds+l*m*(1-4.d0*n2)*ddp+l*m*(n2-1.d0)*ddd  !
+      h(9,5)=1.5d0*l*m*(l2-m2)*dds+2.d0*l*m*(m2-l2)*ddp &           !xy,x2-y2 
+     &                            +0.5d0*l*m*(l2-m2)*ddd            
+      h(8,5)=1.5d0*m*n*(l2-m2)*dds-m*n*(1.d0+2.d0*(l2-m2))*ddp &    !yz,x2-y2
+     &      +m*n*(1.d0+0.5d0*(l2-m2))*ddd
+      h(6,5)=1.5d0*n*l*(l2-m2)*dds+n*l*(1.d0-2.d0*(l2-m2))*ddp &    !xz,x2-y2
+     &      -n*l*(1.d0-0.5d0*(l2-m2))*ddd
+      h(9,7)=sq3*l*m*(n2-0.5d0*(l2+m2))*dds-2.d0*sq3*l*m*n2*ddp &   !xy,3z2-r2
+     &      +0.5d0*sq3*l*m*(1.d0+n2)*ddd
+      h(8,7)=sq3*m*n*(n2-0.5d0*(l2+m2))*dds+sq3*m*n*(l2+m2-n2)*ddp & !yz,3z2-r2
+     &      -0.5d0*sq3*m*n*(l2+m2)*ddd
+      h(6,7)=sq3*l*n*(n2-0.5d0*(l2+m2))*dds+sq3*l*n*(l2+m2-n2)*ddp & !xz,3z2-r2
+     &      -0.5d0*sq3*l*n*(l2+m2)*ddd
+      h(5,5)=0.75d0*(l2-m2)**2*dds+(l2+m2-(l2-m2)**2)*ddp &          !x2-y2,x2-y2
+     &      +(n2+0.25d0*(l2-m2)**2)*ddd
+      h(5,7)=0.5d0*sq3*(l2-m2)*(n2-0.5d0*(l2+m2))*dds &              !x2-y2,3z2-r2
+     &      +sq3*n2*(m2-l2)*ddp+0.25d0*sq3*(1.d0+n2)*(l2-m2)*ddd
+      h(7,7)=(n2-0.5d0*(l2+m2))**2*dds+3.d0*n2*(l2+m2)*ddp &         !3z2-r2,3z2-r2
+     &      +0.75d0*(l2+m2)**2*ddd
+!
+!     =================================================================
+!     == make h hermitean =============================================
+!     =================================================================
+      do i=1,9
+        p1=(-1.d0)**int(sqrt(real(i)+1.d-6-1.d0))
+        do j=i+1,9
+          p=p1*(-1.d0)**int(sqrt(real(j)+1.d-6-1.d0))
+          h(j,i)=p*h(i,j)+h(j,i)
+          h(i,j)=p*h(j,i)
+        enddo
+      enddo
+      return
+      end

@@ -1605,7 +1605,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 \vdescr{conserve total spin}
 \vformat{logical}
 \vrules{optional}
-\vdefault{.true.}}
+\vdefault{.false.}}
 
 \mbax{\key{EFERMI[EV]}
 \vdescr{chemical potential of the elctrons in eV; only used if fixq=.false.}
@@ -2678,8 +2678,8 @@ shifting the grid.}
     The length of the array determines the maximum angular momentum
     for the augmentation.}
 \vformat{integer array}
-\vrules{Optional}
-\vdefault{(/10,10,10,10,10/)}}
+\vrules{Mandatory}
+\vdefault{None}}
 
 \mbax{\key{FILE} 
 \vdescr{name of the file containing the partial waves

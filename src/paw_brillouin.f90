@@ -90,7 +90,7 @@ END MODULE BRILLOUIN_MODULE
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
       SUBROUTINE BRILLOUIN$TESTING
-      IMPLICIT DOUBLE PRECISION (A-H,P-Z)                               
+      IMPLICIT none
       INTEGER(4),PARAMETER :: NSYMX=50
       INTEGER(4),PARAMETER :: NBX=2
       REAL(8)              :: RBAS(3,3)
@@ -102,6 +102,12 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)   ,ALLOCATABLE:: WGHT(:,:)
       REAL(8)   ,ALLOCATABLE:: A(:,:)
       INTEGER(4)           :: NFIL1=1001
+      real(8)              :: rntot
+      real(8)              :: ef
+      real(8)              :: suma
+      integer(4)           :: nsym ! #(symmetry operations)
+      integer(4)           :: nkp ! #(k-points)
+      integer(4)           :: isym,i,j,nb,ikp,ib
 !     ******************************************************************
                                     call trace$push('BRILLOUIN$TESTING')
 !     ==================================================================
@@ -239,9 +245,13 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ..................................................................
       subroutine brillouin_OPTIMIZE(NKP_,EKP_,WGHT_)
-!      implicit none
+      implicit none
+      integer(4),intent(in) :: nkp_
+      real(8)    :: ekp_(nkp_)
+      real(8)    :: wght_(nkp_)
 !     ******************************************************************
-
+      call error$msg('brillouin_optimize is not yet to be used')
+      call error$stop('brillouin_optimize')
 
       return
       end

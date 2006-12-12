@@ -167,6 +167,7 @@ END MODULE GRAPHICS_MODULE
 !     **  PLOT                                                        **
 !     ******************************************************************
       USE GRAPHICS_MODULE
+      implicit none
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(IN) :: VAL
 !     ******************************************************************
@@ -227,6 +228,7 @@ END MODULE GRAPHICS_MODULE
 !     **  PLOT                                                        **
 !     ******************************************************************
       USE GRAPHICS_MODULE
+      implicit none
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(*),INTENT(IN) :: VAL
 !     ******************************************************************
@@ -286,6 +288,7 @@ END MODULE GRAPHICS_MODULE
 !     **  PLOT                                                        **
 !     ******************************************************************
       USE GRAPHICS_MODULE
+      implicit none
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
       REAL(8)                 :: PI,Y0
@@ -344,6 +347,7 @@ END MODULE GRAPHICS_MODULE
 !     **  PLOT                                                        **
 !     ******************************************************************
       USE GRAPHICS_MODULE
+      implicit none
       CHARACTER(512) ::  FILE
       CHARACTER(128) :: TITLE
       REAL(8)        :: DR
@@ -355,6 +359,7 @@ END MODULE GRAPHICS_MODULE
       CHARACTER(16)  :: TYPE
       REAL(8)        :: E,ELAST
       INTEGER(4)     :: I,IB,IKPT,ISPIN
+      INTEGER(4)     :: nb,nkpt,nspin
       INTEGER(4),ALLOCATABLE :: IBMIN(:,:),IBMAX(:,:)
       REAL(8)   ,ALLOCATABLE :: EB(:,:,:) !(NB,NKPT,NSPIN) E-EXPECTATIONV.
       REAL(8)   ,ALLOCATABLE :: EIGVAL(:,:,:) !(NB,NKPT,NSPIN) E-EIGENVALUES
