@@ -664,8 +664,8 @@ PRINT*,'ATOMS: OPT.FRICTION ',svar,AOPT1AV,AOPT2AV,MIXAOPT
 
       else if (.not.TCHK.and.TCHK3) then
          CALL ERROR$MSG('I CAN NOT PLACE DIMER IN A NON DIMER CALCULATION')
-         CALL ERROR$CHVAL('PLACEDIMER',TCHK3)
-         CALL ERROR$CHVAL('DIMER',TCHK)
+         CALL ERROR$l4VAL('PLACEDIMER',TCHK3)
+         CALL ERROR$l4VAL('DIMER',TCHK)
          CALL ERROR$STOP('ATOMS$PROPAGATE')
     
       else if(TCHK.and..not.TCHK4.and.TCHK2) then
@@ -675,9 +675,13 @@ PRINT*,'ATOMS: OPT.FRICTION ',svar,AOPT1AV,AOPT2AV,MIXAOPT
             CALL DIMER$STRETCH(NAT,X0,Xp) !the second xp is arbitrary
             call DIMER$GET_unmassweighted(Nat*3,X0,R0)
             CALL DIMER$SETL4('PLACEDIMER',.FALSE.)
-         else 
-            CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
-                 &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+         ELSE 
+            CALL ERROR$MSG('ARGUMENT LIST OF ATOMS_PROPAGATE INCONSISTENT')
+            CALL ERROR$MSG('FIX BUG FIRST')
+            CALL ERROR$STOP('ATOMS$PROPAGATE_DIMER')
+! this line must be corrected!!!!
+!            CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
+!                 &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
             
             call DIMER$GET_massweighted(Nat*3,R0,X0)
             call DIMER$GET_massweighted(Nat*3,RP,XP)
@@ -688,9 +692,10 @@ PRINT*,'ATOMS: OPT.FRICTION ',svar,AOPT1AV,AOPT2AV,MIXAOPT
 
       else 
          !=== as usual or dimer images decoupled follow down
-         stop 'THIS COMES FROM THE DIMER MERGE AND SHOULD NOT HAPPEN'
-         CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
-              &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+         call error$msg('THIS COMES FROM THE DIMER MERGE AND SHOULD NOT HAPPEN')
+         call error$stop('atoms$propagate_dimer')
+!        CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
+!              &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
 
 
          !writes the energy for a dimer follwodown calculation 
@@ -1535,7 +1540,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
         END IF
       ENDDO
       CALL ERROR$MSG('ATOM IDENTIFIER NOT RECOGNIZED')
-      CALL ERROR$CHVAL('IDENT_',IDENT_)
+      CALL ERROR$chVAL('IDENT_',IDENT_)
       CALL ERROR$STOP('ATOMLIST$INDEX')
       RETURN
       END

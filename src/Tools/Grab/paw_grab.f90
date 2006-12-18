@@ -17,10 +17,12 @@ CONTAINS
 !
 !........................................................................
 SUBROUTINE SUBSTANCE_ENERGY(NSUBSTANCE,SUBSTANCE,ID,ENERGY)
+implicit none
 INTEGER(4)          ,INTENT(IN) :: NSUBSTANCE
 TYPE(SUBSTANCE_TYPE),INTENT(IN) :: SUBSTANCE(NSUBSTANCE)
 CHARACTER(*)        ,INTENT(IN) :: ID
 REAL(8)             ,INTENT(OUT):: ENERGY
+integer(4)                      :: i
 !**********************************************************************
 DO I=1,NSUBSTANCE
  IF(ID.EQ.SUBSTANCE(I)%NAME) THEN
@@ -293,8 +295,11 @@ END MODULE SUBSTANCE_MODULE
 !     ...................................................................
       SUBROUTINE INITIALIZEFILEHANDLER
       use strings_module
+      implicit none
       CHARACTER(256) :: ROOTNAME
       CHARACTER(256) :: PDOSINNAME
+      integer(4)     :: isvar
+!     *******************************************************************
       IF(IARGC().LT.1) THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
         CALL ERROR$MSG('THE CONTROL FILE NAME MUST BE PROVIDED')

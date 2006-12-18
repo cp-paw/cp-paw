@@ -2425,6 +2425,7 @@ integer(4)                :: j,natm
 !     ..................................................................
       SUBROUTINE DXBALLSTICK(NFIL,IOBJECT0,NAT,COLOR,RAD,POS,NBOND,IBOND,BOXR0,BOXVEC)
       USE STRINGS_MODULE
+      implicit none
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: COLOR(3,NAT)
@@ -2436,6 +2437,10 @@ integer(4)                :: j,natm
       REAL(8)   ,INTENT(IN) :: BOXVEC(3,3)
       INTEGER(4),INTENT(IN) :: IOBJECT0
       CHARACTER(256)        :: LINE
+      integer(4)            :: i1,i2,i3
+      real(8)               :: t1,t2,t3
+      real(8)               :: x,y,z
+!     ****************************************************************
 !     
 !     ================================================================
 !     ==   DATA ARRAY: SIZE OF THE SPHERES                          ==
@@ -3374,6 +3379,7 @@ PRINT*,'COLLECT JUMPS'
 !     **                                                            **
 !     ****************************************************************
       USE LINKEDLIST_MODULE
+      implicit none
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
       INTEGER(4)   ,INTENT(IN) :: NATOM
@@ -3383,6 +3389,7 @@ PRINT*,'COLLECT JUMPS'
       INTEGER(4)               :: N,I
       CHARACTER(16),ALLOCATABLE:: ATOMNAMES(:)
       LOGICAL(4)   ,PARAMETER  :: TPR=.FALSE.
+      integer(4)               :: iat
 !     ****************************************************************
       LL_CNTL=LL_CNTL_
       TSELECT(:)=.TRUE.

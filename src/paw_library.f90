@@ -683,6 +683,11 @@ END MODULE RANDOM_MODULE
       REAL(8)                :: DEV
       INTEGER                :: I
 !     *********************************************************************
+      if(n.eq.1) then
+        e(1)=-a(1,1)/b(1,1)
+        vec(1,1)=1.d0
+        return
+      end if
       LWORK=16*N
       N1=N
       A1=A   !DGGEV OVERWRITES INPUT!!
@@ -1729,6 +1734,10 @@ END MODULE RANDOM_MODULE
       real(8)   ,allocatable:: work(:)
       integer               :: n1,m1,neq1
 !     ******************************************************************
+      if(n.eq.1.and.m.eq.1) then
+        x(1,:)=b(1,:)/a(1,1)
+        return
+      end if
       ldwork=3*min(M,N)+max(2*min(M,N),max(M,N),Neq)
 !     -- use 3*m+3*n+neq
       allocate(work(ldwork))
@@ -1739,7 +1748,6 @@ END MODULE RANDOM_MODULE
       b1=b
       call dgelss(n1,m1,neq1,a1,n1,b1,n1,sing,rcond,irank,work,ldwork,info)
       x=b1
-print*,'irank ',irank,info,n1,m1,neq1
       DEALLOCATE(WORK)
       IF(INFO.GT.0) THEN
         CALL ERROR$MSG('ITH ARGUMENT HAS ILLEGAL VALUE')
@@ -1780,6 +1788,10 @@ print*,'irank ',irank,info,n1,m1,neq1
       real(8)   ,allocatable:: work(:)
       integer               :: n1,m1,neq1
 !     ******************************************************************
+      if(n.eq.1.and.m.eq.1) then
+        x(1,:)=b(1,:)/a(1,1)
+        return
+      end if
       ldwork=3*min(M,N)+max(2*min(M,N),max(M,N),Neq)
 !     -- use 3*m+3*n+neq
       allocate(work(ldwork))

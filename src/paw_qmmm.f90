@@ -46,12 +46,12 @@ TYPE LINK_TYPE
   INTEGER(4)  :: MATOM
   INTEGER(4)  :: SATOM
   REAL(8)     :: ALPHA
-  REAL(8)     :: QAO
-  REAL(8)     :: QSO
-  REAL(8)     :: faO(3)
-  REAL(8)     :: fai(3)
-  REAL(8)     :: fsO(3)
-  REAL(8)     :: fsi(3)
+  REAL(8)     :: QAO    !q-all outer
+  REAL(8)     :: QSO    !q-shadow-outer
+  REAL(8)     :: faO(3) !force-all-outer
+  REAL(8)     :: fai(3) !force-all-inner
+  REAL(8)     :: fsO(3) !force-shadow-outer
+  REAL(8)     :: fsi(3) !force-shadow-inner
   integer(4)  :: shared      ! points to another link bond with shared atoms
 END TYPE LINK_TYPE
 TYPE MAP_TYPE
@@ -865,6 +865,10 @@ end if
         rsip(:)=rsi0(:)*svar1+rsim(:)*svar2+fsi(:)*svar3/ms(iatsi)
 !
 !       ==  enforce constraints ===================================
+!       ==  G_?=rqi-rai
+!       ==  G_?=rsi-rai
+!       ==  G_1=rai+alpha*(rao-rai)-rqo
+!       ==  G_?=rso-rqo
         CHIQO=1.D0/(MASS(IATQO)*(1.D0+annervec(IATQO)))
         CHIQI=1.D0/(MASS(IATQI)*(1.D0+annervec(IATQI)))
         CHIAO=1.D0/(ma(IATAO)*(1.D0+ANNEr))
@@ -872,8 +876,8 @@ end if
         CHISO=1.D0/(ms(IATSO)*(1.D0+ANNEr))
         CHISI=1.D0/(ms(IATSI)*(1.D0+ANNEr))
         MAT(:,:)=0.D0
-        MAT(1,1)=(1.d0-ALPHA)*CHIAI
-        MAT(1,2)=CHIQI+CHIAI
+        MAT(1,1)=(1.d0-ALPHA)*CHIAI ! dg1/drai
+        MAT(1,2)=CHIQI+CHIAI        ! 
         MAT(1,4)=CHIQI
         MAT(2,2)=CHIQI
         MAT(2,4)=CHIQI-CHISI

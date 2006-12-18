@@ -128,6 +128,7 @@
        USE STRINGS_MODULE
        USE LINKEDLIST_MODULE
        USE PERIODICTABLE_MODULE
+       implicit none
        TYPE(LL_TYPE), INTENT(IN) :: LL_CNTL_
        TYPE(LL_TYPE), INTENT(IN) :: LL_STRC_
        TYPE(LL_TYPE)             :: LL_CNTL
@@ -152,6 +153,7 @@
        INTEGER(4)   ,ALLOCATABLE :: BOND(:,:)
        LOGICAL(4)                :: TCHK
        INTEGER(4)                :: NATM
+       INTEGER(4)                :: Iat
        INTEGER(4)                :: IVEC(3)
        real(8)      ,ALLOCATABLE :: scaledrad(:)
 !      ******************************************************************
@@ -803,7 +805,12 @@
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
-      INTEGER ICOLOR(3),ICOLORSTANDARD(3,106)
+      implicit none
+      integer(4),intent(in)  :: iz
+      integer(4),intent(out) :: icolor(3)
+      INTEGER(4)             :: ICOLORSTANDARD(3,106)
+      INTEGER(4)             :: I
+!     ******************************************************************
       DATA (ICOLORSTANDARD(I,  1),I=1,3)/135,125,131/
       DATA (ICOLORSTANDARD(I,  2),I=1,3)/255,228,196/!BISQUE
       DATA (ICOLORSTANDARD(I,  3),I=1,3)/240,248,255/!ALICE BLUE

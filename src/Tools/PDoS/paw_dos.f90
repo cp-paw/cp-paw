@@ -491,9 +491,11 @@ print*,'state ',state%vec(:,:,ib)
 !
 !       ................................................................
         SUBROUTINE ORBITALS$GETORB(NAME_,LENG_,ORBITAL_)
+        implicit none
         CHARACTER(*) ,INTENT(IN) :: NAME_
         INTEGER(4)   ,INTENT(IN) :: LENG_
         COMPLEX(8)   ,INTENT(OUT):: ORBITAL_(LENG_)
+        integer(4)               :: iorb
 !       ****************************************************************
         IF(.NOT.TINI) THEN
           CALL ERROR$MSG('ORBITALS MODULE NOT YET INITIALIZED')
@@ -1607,6 +1609,7 @@ END MODULE READCNTL_MODULE
 !     **                                                              **
 !     **                                                              **
 !     ******************************************************************
+      implicit none
       INTEGER(4)   ,INTENT(IN) :: NE
       REAL(8)      ,INTENT(IN) :: EMIN
       REAL(8)      ,INTENT(IN) :: EMAX
@@ -1632,6 +1635,9 @@ END MODULE READCNTL_MODULE
       CHARACTER(256)       :: CMD
       REAL(8)              :: WGHTX
       REAL(8)              :: WKPT(NKPT)
+      integer(4)           :: ikpt,ispin,ie,ib
+      real(8)              :: svar
+      real(8)              :: e
 !     ******************************************************************
                                  CALL TRACE$PUSH('PUTONGRID')
       CALL CONSTANTS('EV',EV)

@@ -1502,7 +1502,8 @@ END MODULE BESSELTRANSFORM_MODULE
 !     **    FORMULA 10.1.8 AND  10.1.9  FOR   X > 8                   **
 !     **                                                              **
 !     ****************************************** P.E. BLOECHL, 1991 ****
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT real(8) (A-H,O-Z)
+      IMPLICIT integer(4) (i-n)
       INTEGER(4),INTENT(IN) :: L ! MAIN AGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)               :: Y ! BESSL FUNCTION AT X

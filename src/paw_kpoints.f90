@@ -13,13 +13,17 @@
       REAL(8)   ,INTENT(IN) :: RMAX
       INTEGER(4),INTENT(OUT):: NKDIV(3)
       INTEGER(4)            :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
+      real(8)               :: gbas(3,3)
+      real(8)               :: vol,svar
+      integer(4)            :: i
 !     ******************************************************************
-      CALL BOXSPH(RBAS,0.D0,0.D0,0.D0,RMAX &
-     &           ,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
-      NKDIV(1)=MAX1-MIN1+1
-      NKDIV(2)=MAX2-MIN2+1
-      NKDIV(3)=MAX3-MIN3+1
-      RETURN
+      call gbass(rbas,gbas,vol)
+      do i=1,3
+        svar=Rmax*sqrt(dot_product(gbas(:,i),gbas(:,i))) &
+     &           /dot_product(rbas(:,i),gbas(:,i))
+        nkdiv(i)=int(abs(svar+1.d0))
+      enddo
+      return
       END
 !
 !     ..................................................................

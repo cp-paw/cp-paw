@@ -534,7 +534,7 @@
       END
 !
 !     .......................................................SPHLSD.....
-      SUBROUTINE RADIAL_DGLEQUISPACEDGEN(NX,NF,IDIR,A,B,C,D,F)
+      SUBROUTINE RADIAL_DGLEQUISPACEDGEN(NX,NF,I1,i2,A,B,C,D,F)
 !     **                                                              **
 !     **  SOLVES THE DGL SECOND ORDER ON AN EQUISPACED GRID           **
 !     **                                                              **
@@ -549,18 +549,34 @@
 !     **                                                              **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
       IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN) :: IDIR  ! DIRECTION
       INTEGER(4) ,INTENT(IN) :: NX
       INTEGER(4) ,INTENT(IN) :: NF
+      INTEGER(4) ,INTENT(IN) :: i1
+      INTEGER(4) ,INTENT(IN) :: i2
       REAL(8)    ,INTENT(IN) :: A(NX)
       REAL(8)    ,INTENT(IN) :: B(NX)
       REAL(8)    ,INTENT(IN) :: C(NX,NF,NF)
       REAL(8)    ,INTENT(IN) :: D(NX,NF)
       REAL(8)    ,INTENT(INOUT):: F(NX,NF)
       REAL(8)                :: AP(NX),A0(NX),AM(NX)
+      REAL(8)                :: f1(nx,nf)
       INTEGER(4)             :: I
       INTEGER(4)             :: ITEST
+      INTEGER(4)             :: Imin,imax
+      INTEGER(4)             :: Idir
 !     ******************************************************************
+      IF(MIN(I1,I2).LT.1.OR.MAX(I1,I2).GT.NX) THEN
+        CALL ERROR$MSG('INTEGRATION BOUNDS OUT OF RANGE')
+        CALL ERROR$I4VAL('I1',I1)
+        CALL ERROR$I4VAL('I2',I2)
+        CALL ERROR$I4VAL('NX',NX)
+        CALL ERROR$STOP('RADIAL_DGLEQUISPACEDGENC')
+      END IF
+      IMIN=MIN(I1,I2)
+      IMAX=MAX(I1,I2)
+!     == IDIR IS THE DIRECTION OF THE INTEGRATION =======================
+      IDIR=1
+      IF(I2.LT.I1) IDIR=-1
 !     == AP*F(+) + A0*F(0) + AM*F(-) = D
       AP(:)=A(:)+0.5D0*B(:)
       A0(:)=-2.D0*A(:)
@@ -1120,14 +1136,15 @@ PRINT*,'GIDS ',GIDS
       END      
 !
 !     ...................................................................
-      SUBROUTINE RADIAL$DGLGEN(GID,NR,NF,IDIR,A,B,C,D,F)
+      SUBROUTINE RADIAL$DGLGEN(GID,NR,NF,I1,i2,A,B,C,D,F)
 !     **                                                                  **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: NF
-      INTEGER(4),INTENT(IN) :: IDIR
+      INTEGER(4),INTENT(IN) :: i1
+      INTEGER(4),INTENT(IN) :: i2
       REAL(8)   ,INTENT(IN) :: A(NR)
       REAL(8)   ,INTENT(IN) :: B(NR)
       REAL(8)   ,INTENT(IN) :: C(NR,NF,NF)
@@ -1138,9 +1155,9 @@ PRINT*,'GIDS ',GIDS
 !     ******************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
       IF(TYPE.EQ.1) THEN
-        CALL LOGRADIAL$DGLGEN(GIDS,NR,NF,IDIR,A,B,C,D,F)
+        CALL LOGRADIAL$DGLGEN(GIDS,NR,NF,I1,i2,A,B,C,D,F)
       ELSE IF(TYPE.EQ.2) THEN
-        CALL SHLOGRADIAL$DGLGEN(GIDS,NR,NF,IDIR,A,B,C,D,F)
+        CALL SHLOGRADIAL$DGLGEN(GIDS,NR,NF,I1,i2,A,B,C,D,F)
       ELSE
         CALL ERROR$MSG('GRID TYPE NOT RECOGNIZED')
         CALL ERROR$STOP('RADIAL$DGLGEN')
@@ -2488,6 +2505,736 @@ CHARACTER(32):: FILE
       RETURN
       END 
 !
+!     ..................................................................
+      SUBROUTINE RADIAL$NONSPHBOUND_nonso(GID,NR,LMX,LMRX,POT,DREL,G,E &
+     &                             ,NPHI,EB,PHI,TPHI,TOK)
+!     **                                                                  **
+!     **  SOLVES THE RELATIVISTIC RADIAL DIRAC EQUATION FOR THE           **
+!     **  LARGE COMPONENT. DREL=1/MREL-1/M0 IS A MEASURE FOR THE          **
+!     **  RELATIVISTIC EFFECTS, WHERE MREL=M0+(E-V)/2C^2 AND M0 IS THE    **
+!     **  REST MASS. V=POT*Y0 IS THE POTENTIAL.                           **
+!     **  SPIN ORBIT COUPLING IS MEASURED BY SO WHICH CAN HAVE THE VALUES:**
+!     **    SO=0 NO-SPIN ORBIT COUPLING                                   **
+!     **    SO=1 PARALLEL SPIN AND ORBITAL ANGULAR MOMENTUM               **
+!     **  G IS AN INHOMOGENEITY, WHICH MUST BE SET TO ZERO FOR THE        **
+!     **  HOMOGENEOUS SOLUTION.                                           **
+!     **                                                                  **
+!     **  THE SOLUTIONS ARE CALCULATED TO LINEAR ORDER IN DE              **
+!     **  WHERE E+DE IS THE NEW ENERGY OF THE WAVE FUNCTIONS              **
+!     **                                                                  **
+!     **  THE DIFFERENTIAL EQUATION IS SOLVED WITH THE VERLET ALGORITHM   **
+!     **    DPHI/DX=(PHI(+)-PHI(-))/2                                     **
+!     **    D2PHI/DX2=PHI(+)-2PHI(0)+PHI(-)                               **
+!     **  WHERE X IS THE VARIABLE WITH R(X=I)=R_I                         **
+!     **                                                                  **
+!     **  THE NONRELATIVISTIC SOLUTION IS OBTAINED BY SETTINH DREL=0      **
+!     **                                                                  **
+!     **  ATTENTION! THE ROUTINE IS NOT GUARDED AGAINST OVERFLOW DUE      **
+!     **    TO THE EXPONENTIAL INCREASE OF THE SOLUTION                   **
+!     **                                                                  **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID FOR RADIAL GRID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: LMX     ! X#(WAVE FUNCTION ANGULAR MOMENTA
+      INTEGER(4) ,INTENT(IN)     :: LMRX    ! X#(POTENTIAL ANGULAR MOMENTA)
+      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
+!                                           ! DREL= M0/MREL(R)-1
+      REAL(8)    ,INTENT(IN)     :: G(NR,LMX)   !INHOMOGENITY
+      REAL(8)    ,INTENT(IN)     :: E       !ENERGY
+      REAL(8)    ,INTENT(IN)     :: POT(NR,LMRX) !POTENTIAL (RADIAL PART ONLY)
+      INTEGER(4) ,INTENT(IN)     :: NPHI
+      real(8)    ,INTENT(OUT)    :: PHI(NR,LMX,nphi) ! WAVE-FUNCTION
+      real(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: EB(NPHI)
+      LOGICAL(4) ,INTENT(OUT)    :: TOK
+      REAL(8)                    :: DE(NPHI)
+      INTEGER(4)                 :: LX
+      INTEGER(4)                 :: LOX(LMX) ! ANGULAR MOMENTA
+      INTEGER(4)                 :: LM,LM1,LM2,LM3,L,M,IM,IS,IB,IS1,IS2
+      REAL(8)                    :: A(NR)
+      REAL(8)                    :: B(NR)
+      reaL(8)                    :: C(NR,LMX,LMX)
+      REAL(8)                    :: CPOT(NR,LMX,LMX)
+      REAL(8)                    :: CR(LMX,LMX)
+      REAL(8)                    :: CA(LMX,LMX)
+      REAL(8)                    :: D(NR,LMX) 
+      REAL(8)                    :: DR(NR,LMX) 
+      REAL(8)                    :: PHIR(NR,LMX,LMX)
+      REAL(8)                    :: DPHI(NR,LMX)
+      REAL(8)                    :: R(NR) 
+      REAL(8)                    :: AUX(NR),AUX1(NR),AUX2(NR) 
+      COMPLEX(8)                 :: CSVAR
+      REAL(8)                    :: PI
+      REAL(8)                    :: Y0
+      REAL(8)                    :: CG
+      REAL(8)                    :: RDPRIME(NR)
+      INTEGER(4)                 :: IR
+      LOGICAL(4)                 :: THOM
+!      REAL(8)   ,PARAMETER       :: XMAX=1.D+100
+      REAL(8)   ,PARAMETER       :: XMAX=1.D+20
+      REAL(8)                    :: SWKB(NR),SVAR
+      INTEGER(4)                 :: IRCL,IROUT
+      COMPLEX(8),PARAMETER       :: CI=(0.D0,1.D0)
+      LOGICAL(4)                 :: TCHK
+!     ************************************************************************
+      TOK=.FALSE.
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/DSQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+      CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
+      LX=INT(SQRT(LMX-1.D0)+0.1D0)
+      LM=0
+      DO L=0,LX
+        DO M=1,2*L+1
+          LM=LM+1
+          LOX(LM)=L
+        ENDDO
+      ENDDO
+!
+!     ==================================================================
+!     ==  DETERMINE CLASSICAL TURNING POINT                           ==
+!     ==================================================================
+!     == IROUT MUST BE SMALLER OR EQUAL TO NR-1 BECAUSE INHOMOGENEITY
+!     == ON THE LAST GRID POINT DOES NOT CONTRIBUTE TO DIFFERENTIAL 
+!     == EQUATION. IROUT IS SMALLER OR EQUAL TO IRCL
+      IRCL=NR-3   
+!       == R(IRCL) IS THE FIRST GRID POINT INSIDE THE CLASSICAL TURNING POINT
+      IF(E.LT.POT(IRCL,1)*Y0) THEN
+        DO IR=IRCL,1,-1
+          IF(E.GT.POT(IR,1)*Y0) THEN
+            IRCL=IR
+            EXIT
+          END IF
+        ENDDO
+      END IF
+!
+!     ==================================================================
+!     ==  DETERMINE OUTERMOST POINT 'IROUT' FOR INWARD INTEGRATION    ==
+!     ==================================================================
+!     == USE WKB SOLUTION FOR THE SCHR.GL. FOR A CONSTANT POTENTIAL AND L=0
+!     == TO ESTIMATE FACTOR FROM RCL TO OUTERMOST POINT
+      AUX(:IRCL)=0.D0
+      AUX(IRCL+1:)=SQRT(MAX(0.D0,2.D0*(POT(IRCL+1:,1)*Y0-E)))
+      CALL RADIAL$INTEGRATE(GID,NR,AUX,SWKB)
+      SWKB(:)=SWKB(:)-LOG(R(:))
+!     == DETERMINE IROUT WHERE THE WAVE FUNCTION CAN GROW BY A FACTOR 
+!     == OF XMAX FROM THE CLASSICAL TURNING POINT
+      SVAR=LOG(XMAX)
+      IROUT=NR-1
+      DO IR=IRCL,NR
+        IF(SWKB(IR).GT.SVAR) THEN
+          IROUT=IR-1
+          EXIT
+        END IF
+      ENDDO
+!
+!     ==================================================================
+!     ==  PREPARE POTENTIAL-INDEPENDENT ARRAYS                        ==
+!     ==================================================================
+!     == A*D2F/DR2+B*DF/DR+C*F=D
+      A(:)=1.D0+DREL(:)
+!     == AVOID DIVIDE BY ZERO IF THE FIRST GRID POINT IS THE ORIGIN.
+!     == THE FORCES ON THE FIRST GRID POINT ARE NOT USED,
+!     == BECAUSE RADIAL$DGL IS BASED ON THE VERLET ALGORITHM
+!     == THAT CANNOT USE THE FORCES ON THE FIRST AND LAST GRID POINT
+      B(2:)=2.D0*(1.D0+DREL(2:))/R(2:)+RDPRIME(2:)
+      B(1)=B(2)
+      D(:,:)=-2.D0*G(:,:)
+!
+!     ==================================================================
+!     ==  COUPLING BETWEEN WAVE FUNCTION COMPONENTS VIA POTENTIAL     ==
+!     ==================================================================
+      C(:,:,:)=(0.D0,0.D0)
+      DO LM1=1,LMX
+        DO LM2=1,LMX
+          AUX(:)=0.D0
+          DO LM3=1,LMRX
+            CALL CLEBSCH(LM1,LM2,LM3,CG)
+            IF(CG.EQ.0.D0) CYCLE
+            AUX=CG*POT(:,LM3)
+            IF(LM3.EQ.1) AUX(IROUT+1:)=AUX(IROUT)  ! CONSTANT POTENTIAL BEYOND IROUT
+            C(:,LM1,LM2)=C(:,LM1,LM2)+AUX
+          ENDDO
+        ENDDO
+      ENDDO
+      CPOT=C    ! STORE TO EVALUATE KINETIC ENERGY
+      C=-2.D0*C
+!
+!     ==================================================================
+!     ==  KINETIC ENERGY TERM TO C                                    ==
+!     ==================================================================
+      LM=0
+      DO L=0,LX
+        AUX(1)=0.D0
+        AUX(2:)=-(1.D0+DREL(2:))/R(2:)**2 * REAL(L*(L+1),KIND=8)+2.D0*E
+        DO IM=1,2*L+1
+          LM=LM+1
+          C(:,LM,LM)=C(:,LM,LM)+AUX(:)
+        ENDDO
+      ENDDO
+!     ==  AVOID DIVIDE ZEROBYZERO
+      C(1,:,:)=C(2,:,:)
+!
+!     ==================================================================
+!     ==  DETERMINE BOUND STATES                                      ==
+!     ==================================================================
+      CALL RADIAL_XXXR(GID,NR,LMX,IRCL,IROUT,LOX,A,B,C,D,NPHI,DE,PHI,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$STOP('RADIAL_XXXR FINISHED WITH ERROR')
+        CALL ERROR$STOP('RADIAL$NONSPHBOUND')
+      END IF
+!
+!     ==================================================================
+!     ==  SHIFT ENERGIES                                              ==
+!     ==================================================================
+      EB(:)=DE(:)+E
+!
+      TOK=.TRUE.
+      RETURN
+      END 
+!
+!     ..................................................................
+      SUBROUTINE RADIAL_XXXR(GID,NR,NF,IRMATCH,IROUT,LOX,A,B,C,D,NPHI,DE,PHI,TOK)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: NF
+      INTEGER(4),INTENT(IN) :: IRMATCH
+      INTEGER(4),INTENT(IN) :: IROUT
+      INTEGER(4),INTENT(IN) :: LOX(NF)
+      REAL(8)   ,INTENT(IN) :: A(NR)
+      REAL(8)   ,INTENT(IN) :: B(NR)
+      reAL(8)   ,INTENT(IN) :: C(NR,NF,NF)
+      REAl(8)   ,INTENT(IN) :: D(NR,NF)
+      INTEGER(4),INTENT(IN) :: NPHI
+      REAL(8)   ,INTENT(OUT):: DE(NPHI)
+      real(8)   ,INTENT(OUT):: PHI(NR,NF,NPHI)
+      LOGICAL(4),INTENT(OUT):: TOK
+      LOGICAL               :: THOM
+      REAL(8)               :: ALLPHIL(NR,NF,NF)
+      REAL(8)               :: ALLPHIR(NR,NF,NF)
+      REAL(8)               :: PHIL(NR,NF,NPHI)
+      REAL(8)               :: PHIR(NR,NF,NPHI)
+      REAL(8)               :: PHIL_DOT(NR,NF,NPHI)
+      REAL(8)               :: PHIR_DOT(NR,NF,NPHI)
+      REAL(8)               :: PHIWORK2D(NR,NF,NF)
+      INTEGER(4)            :: IF,IF1,IF2,IR
+      REAL(8)               :: HA(NF-NPHI,NF-NPHI),HX(NF-NPHI,NPHI),HB(NF-NPHI,NPHI)
+      REAL(8)               :: ALLKINK_HOM(NF,NF)
+      REAL(8)               :: MAT(NF,NF),VEC(NF)
+      REAL(8)               :: DE1(NPHI)
+      INTEGER(4)            :: IRC
+      REAL(8)               :: KINK_HOM(NPHI,NPHI)
+      REAL(8)               :: KINK_DOT(NPHI,NPHI)
+      REAL(8)               :: KINKC(NPHI,NPHI)
+      REAL(8)               :: HAM(NPHI,NPHI),OV(NPHI,NPHI)
+      REAL(8)               :: DEC(NPHI)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: DHOM(NR,NF)
+      LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
+      REAL(8)               :: BVECS(NF,NF),XVECS(NF,NF)
+      REAL(8)               :: CAUX(NR)
+      REAL(8)               :: CSVAR
+      REAL(8)               :: AUX(NR)
+      REAL(8)               :: SVAR,SVAR1,SVAR2,SVAR3
+      INTEGER(4)            :: I,J
+      INTEGER(4)            :: I1ARR(1)
+      INTEGER(4)            :: L0
+      LOGICAL(4)            :: TSELECT(NF)
+      REAL(8)               :: AMAT(NPHI-1,NPHI-1),BVEC(NPHI-1),XVEC(NPHI-1)
+CHARACTER(32):: FILE
+!     ******************************************************************
+      TOK=.FALSE.
+!PRINT*,'NEW RADIAL_XXXR STARTED',NPHI,NF
+      IF(IROUT+1.GT.NR) THEN
+        CALL ERROR$MSG('IROUT OUT OF RANGE')
+        CALL ERROR$STOP('RADIAL_XXXC')
+      END IF
+      IF(IRMATCH.GT.IROUT) THEN
+        CALL ERROR$MSG('IRMATCH OUT OF RANGE')
+        CALL ERROR$STOP('RADIAL_XXXC')
+      END IF
+      L0=(NPHI-1)/2
+      IF(NPHI.NE.2*L0+1) THEN
+        CALL ERROR$MSG('NPHI MUST BE 2*L0+1')
+        CALL ERROR$i4val('NPHI',nphi)
+        CALL ERROR$i4val('l0',l0)
+        CALL ERROR$STOP('RADIAL_XXXC')
+      END IF
+      CALL RADIAL$R(GID,NR,R)
+      IRC=IRMATCH
+!PRINT*,'IROUT ',IROUT,R(IROUT),IRC,R(IRC)
+!
+!     ==================================================================
+!     ==  OBTAIN HOMOGENEOUS SOLUTION                                 ==
+!     ==================================================================
+!PRINT*,'RADIAL_XXXr: DETERMINE PHI',Lox
+      ALLPHIL(:,:,:)=0.D0
+      ALLPHIR(:,:,:)=0.D0
+      DO IF=1,NF
+        ALLPHIL(1:2,IF,IF)=R(1:2)**LOX(IF)
+        DHOM(:,:)=0.D0
+        CALL RADIAL$DGLGEN(GID,NR,NF,1,IRC+1,A,B,C,DHOM,ALLPHIL(:,:,IF))
+        SVAR=MAXVAL(ABS(ALLPHIL(IRC,:,IF)))
+        ALLPHIL(1:IRC+1,:,IF)=ALLPHIL(1:IRC+1,:,IF)/SVAR
+        DHOM(IROUT,IF)=1.D-8
+        CALL RADIAL$DGLGEN(GID,NR,NF,IROUT+1,IRC-1,A,B,C,DHOM,ALLPHIR(:,:,IF))
+        SVAR=MAXVAL(ABS(ALLPHIR(IRC,:,IF)))
+        ALLPHIR(IRC-1:IROUT+1,:,IF)=ALLPHIR(IRC-1:IROUT+1,:,IF)/SVAR
+      ENDDO
+!
+!     ==================================================================
+!     ==  MAKE PHI_HOM SOLUTIONS CONTINUOUS                           ==
+!     ==================================================================
+!PRINT*,'RADIAL_XXXr: MATCH PHI'
+      MAT(:,:)=ALLPHIR(IRC,:,:)
+!     == MATRIX IS NOT SYMMETRIC. THUS SOLVE WITH SINGULAR VALUE DECOMPOSITION
+      BVECS(:,1:NF)=ALLPHIL(IRC,:,:)
+      CALL LIB$MATRIXSOLVENEW(NF,NF,NF,MAT,XVECS,BVECS)
+      PHIWORK2D(:,:,:)=ALLPHIR(:,:,:)
+      ALLPHIR(:,:,:)=0.D0
+      DO IF1=1,NF
+        DO IF2=1,NF
+          ALLPHIR(:,:,IF1)=ALLPHIR(:,:,IF1)+PHIWORK2D(:,:,IF2)*XVECS(IF2,IF1)
+        ENDDO
+      ENDDO
+!
+!     ==================================================================
+!     == REMOVE KINKS IN NON-RELEVANT ANGULAR MOMENTA CHANNELS        ==
+!     ==================================================================
+!PRINT*,'REMOVE KINKS OF OTHER ANGULAR MOMENTUM CHANNELS OF PHI'
+      I=0
+      DO IF1=1,NF
+        IF(LOX(IF1).EQ.L0) CYCLE
+        I=I+1
+        J=0
+        DO IF2=1,NF
+          IF(LOX(IF2).EQ.L0) CYCLE
+          J=J+1
+          CSVAR=(ALLPHIR(IRC+1,IF1,IF2)-ALLPHIR(IRC-1,IF1,IF2)) &
+     &         -(ALLPHIL(IRC+1,IF1,IF2)-ALLPHIL(IRC-1,IF1,IF2))
+          HA(I,J)=CSVAR
+        ENDDO
+        J=0
+        DO IF2=1,NF
+          IF(LOX(IF2).NE.L0) CYCLE
+          J=J+1
+          CSVAR=(ALLPHIR(IRC+1,IF1,IF2)-ALLPHIR(IRC-1,IF1,IF2)) &
+     &         -(ALLPHIL(IRC+1,IF1,IF2)-ALLPHIL(IRC-1,IF1,IF2))
+          HB(I,J)=-CSVAR
+        ENDDO
+      ENDDO
+      IF(NF.GT.NPHI) THEN
+        CALL LIB$MATRIXSOLVENEW(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
+      END IF
+      PHIL(:,:,:)=0.D0
+      PHIR(:,:,:)=0.D0
+      I=0
+      DO IF1=1,NF
+        IF(LOX(IF1).NE.L0) CYCLE
+        I=I+1
+        PHIL(:IRC+1,:,I)=PHIL(:IRC+1,:,I)+ALLPHIL(:IRC+1,:,IF1)
+        PHIR(IRC-1:IROUT+1,:,I)=PHIR(IRC-1:IROUT+1,:,I) &
+     &                         +ALLPHIR(IRC-1:IROUT+1,:,IF1)
+        J=0
+        DO IF2=1,NF
+          IF(LOX(IF2).EQ.L0) CYCLE
+          J=J+1
+          PHIL(:IRC+1,:,I)=PHIL(:IRC+1,:,I)+ALLPHIL(:IRC+1,:,IF2)*HX(J,I)
+          PHIR(IRC-1:IROUT+1,:,I)=PHIR(IRC-1:IROUT+1,:,I) &
+     &                            +ALLPHIR(IRC-1:IROUT+1,:,IF2)*HX(J,I)
+        ENDDO
+      ENDDO  
+!
+!     ====================================================================
+!     ==   ORTHOGONALIZE PHI                                                ==
+!     ====================================================================
+!PRINT*,'RADIAL_XXXC: ORTHOGONALIZE PHI'
+      DO I=1,NPHI
+!       == ORTHOGONALIZE
+        DO J=1,I-1
+          CAUX(:)=0.D0
+          DO IF=1,NF
+            CAUX(:IRC)=CAUX(:IRC)+PHIL(:IRC,IF,J)*PHIL(:IRC,IF,I)
+            CAUX(IRC+1:IROUT+1)=CAUX(IRC+1:IROUT+1) &
+     &                   +PHIR(IRC+1:IROUT+1,IF,J)*PHIR(IRC+1:IROUT+1,IF,I)
+          ENDDO
+          CAUX(:)=CAUX(:)*R(:)**2
+          AUX(:)=CAUX
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+          CSVAR=SVAR1
+          PHIL(:IRC+1,:,I)=PHIL(:IRC+1,:,I)-PHIL(:IRC+1,:,J)*CSVAR
+          PHIR(IRC-1:IROUT+1,:,I)=PHIR(IRC-1:IROUT+1,:,I)-PHIR(IRC-1:IROUT+1,:,J)*CSVAR
+        ENDDO
+!       ==  NORMALIZE
+        AUX(:)=0.D0
+        DO IF=1,NF
+          AUX(:IRC)=AUX(:IRC)+ABS(PHIL(:IRC,IF,I))**2
+          AUX(IRC+1:IROUT+1)=AUX(IRC+1:IROUT+1) &
+     &                      +ABS(PHIR(IRC+1:IROUT+1,IF,I))**2
+        ENDDO
+        AUX(:)=AUX(:)*R(:)**2
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+        SVAR1=1.D0/SQRT(SVAR1)
+        PHIL(:IRC+1,:,I)=PHIL(:IRC+1,:,I)*SVAR1
+        PHIR(IRC-1:IROUT+1,:,I)=PHIR(IRC-1:IROUT+1,:,I)*SVAR1
+      ENDDO
+!
+!     ====================================================================
+!     ==   TEST CONTINUITY                                              ==
+!     ====================================================================
+!PRINT*,'RADIAL_XXXr: TEST CONTINUITY'
+      SVAR2=0.D0
+      DO IF1=1,NPHI
+        DO IF2=1,NF
+          SVAR1=ABS(PHIL(IRC,IF2,IF1)-PHIR(IRC,IF2,IF1))
+          SVAR2=MAX(SVAR2,SVAR1)
+        ENDDO
+      ENDDO
+!PRINT*,'DEVIATION IN VALUE',SVAR2
+      IF(SVAR2.GT.1.D-6) THEN
+        CALL ERROR$MSG('MATCHING OF PHI FAILED')
+        CALL ERROR$STOP('RADIAL_XXXC')
+      END IF   
+!
+!     == TEST DIFFERENTIABILITY ===================================
+      SVAR2=0.D0
+      DO IF1=1,NPHI
+        DO IF2=1,NF
+          IF(LOX(IF2).EQ.L0) CYCLE
+          SVAR1=ABS( (PHIR(IRC+1,IF2,IF1)-PHIR(IRC-1,IF2,IF1)) &
+     &              -(PHIL(IRC+1,IF2,IF1)-PHIL(IRC-1,IF2,IF1)))
+          SVAR2=MAX(SVAR2,SVAR1)
+        ENDDO
+      ENDDO
+!PRINT*,'DEVIATION IN OTHER DERIVATIVES',SVAR2
+      IF(SVAR2.GT.1.D-6) THEN
+        CALL ERROR$MSG('MATCHING OF DPHI/DR FAILED')
+        CALL ERROR$STOP('RADIAL_XXXC')
+      END IF   
+!     ==  TEST OVERLAP  =============================================
+!      PRINT*,'OVERLAP'
+!!$      DO I=1,NPHI
+!!$        DO J=I,NPHI
+!!$          CAUX(:)=0.D0
+!!$          DO IF=1,NF
+!!$            CAUX(:IRC)=CAUX(:IRC)+PHIL(:IRC,IF,I)*PHIL(:IRC,IF,J)
+!!$            CAUX(IRC+1:)=CAUX(IRC+1:)+PHIR(IRC+1:,IF,I)*PHIR(IRC+1:,IF,J)
+!!$          ENDDO
+!!$          CAUX(:)=CAUX(:)*R(:)**2
+!!$          AUX(:)=CAUX
+!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+!!$          OV(I,J)=SVAR1
+!!$          OV(J,I)=OV(I,J)
+!!$        ENDDO
+!!$      ENDDO
+!!$      DO I=1,NPHI
+!!$        SVAR=1.D0/SQRT(ABS(OV(I,I)))
+!!$        OV(:,I)=OV(:,I)*SVAR
+!!$        OV(I,:)=OV(I,:)*SVAR
+!!$      ENDDO
+!!$!PRINT*,'MARKE A',NPHI
+!!$      DO I=1,NPHI
+!!$        WRITE(*,FMT='(20("(",F10.3,",",F10.3,")"))')OV(I,:)
+!!$      ENDDO
+!!$!PRINT*,'MARKE B',NPHI
+!!$!
+!!$!     ==  PLOT WAVE FUNCTIONS ======================================
+!!$      DO IF1=1,NPHI
+!!$        WRITE(FILE,*)IF1
+!!$        FILE='PHI'//ADJUSTL(FILE)
+!!$        OPEN(8,FILE=FILE,FORM='FORMATTED')
+!!$        REWIND 8
+!!$        DO IR=1,IRC+1
+!!$          WRITE(8,FMT='(80F12.7)')R(IR),PHIL(IR,:,IF1)
+!!$        ENDDO
+!!$        DO IR=IRC-1,MIN(IROUT+1,NR)
+!!$          WRITE(8,FMT='(80F12.7)')R(IR),PHIR(IR,:,IF1)
+!!$        ENDDO
+!!$        CLOSE(8)
+!!$      ENDDO
+!
+!     ==================================================================
+!     ==  DETERMINE PHIDOT                                            ==
+!     ==================================================================
+!PRINT*,'RADIAL_XXXC: DETERMINE PHIDOT'
+      PHIL_DOT(:,:,:)=0.D0
+      PHIR_DOT(:,:,:)=0.D0
+      DO IF=1,NPHI
+        CALL RADIAL$DGLGEN(GID,NR,NF,1,IRC+1,A,B,C,-2.D0*PHIL(:,:,IF) &
+     &                     ,PHIL_DOT(:,:,IF))
+        CALL RADIAL$DGLGEN(GID,NR,NF,IROUT+1,IRC-1,A,B,C,-2.D0*PHIR(:,:,IF) &
+     &                     ,PHIR_DOT(:,:,IF))
+      ENDDO
+!
+!     ==================================================================
+!     ==  MAKE PHI_DOT CONTINUOUS                                     ==
+!     ==================================================================
+!PRINT*,'RADIAL_XXXC: MATCH PHIDOT'
+      MAT(:,:)=ALLPHIR(IRC,:,:)
+      BVECS(:,:NPHI)=PHIL_DOT(IRC,:,:)-PHIR_DOT(IRC,:,:)
+      CALL LIB$MATRIXSOLVENEW(NF,NF,NPHI,MAT,XVECS(:,:NPHI),BVECS(:,:NPHI))
+!
+      DO IF1=1,NPHI
+        DO IF2=1,NF
+          PHIR_DOT(IRC-1:IROUT+1,:,IF1)=PHIR_DOT(IRC-1:IROUT+1,:,IF1) &
+     &                            +ALLPHIR(IRC-1:IROUT+1,:,IF2)*XVECS(IF2,IF1)
+        ENDDO
+      ENDDO
+!
+!     ==================================================================
+!     == REMOVE KINKS IN NON-RELEVANT ANGULAR MOMENTUM CHANNELS        ==
+!     ==================================================================
+!PRINT*,'REMOVE KINKS OF OTHER ANGULAR MOMENTUM CHANNELS OF PHIDOT'
+      I=0
+      DO IF1=1,NF
+        IF(LOX(IF1).EQ.L0) CYCLE
+        I=I+1
+        DO J=1,NPHI
+          CSVAR=(PHIR_DOT(IRC+1,IF1,J)-PHIR_DOT(IRC-1,IF1,J)) &
+     &         -(PHIL_DOT(IRC+1,IF1,J)-PHIL_DOT(IRC-1,IF1,J))
+          HB(I,J)=-CSVAR
+        ENDDO
+      ENDDO
+      IF(NF.GT.NPHI) THEN
+        CALL LIB$MATRIXSOLVENEW(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
+      END IF
+      DO I=1,NPHI
+        J=0
+        DO IF2=1,NF
+          IF(LOX(IF2).EQ.L0) CYCLE
+          J=J+1
+          PHIL_DOT(:IRC+1,:,I)=PHIL_DOT(:IRC+1,:,I)+ALLPHIL(:IRC+1,:,IF2)*HX(J,I)
+          PHIR_DOT(IRC-1:IROUT+1,:,I)=PHIR_DOT(IRC-1:IROUT+1,:,I) &
+     &                               +ALLPHIR(IRC-1:IROUT+1,:,IF2)*HX(J,I)
+        ENDDO
+      ENDDO  
+!
+!     ====================================================================
+!     ==   ORTHOGONALIZE PHIDOT TO PHI                                  ==
+!     ====================================================================
+      DO I=1,NPHI
+        DO J=1,NPHI
+          CAUX(:)=0.D0
+          DO IF=1,NF
+            CAUX(:IRC)=CAUX(:IRC)+PHIL(:IRC,IF,J)*PHIL_DOT(:IRC,IF,I)
+            CAUX(IRC+1:IROUT+1)=CAUX(IRC+1:IROUT+1) &
+     &             +PHIR(IRC+1:IROUT+1,IF,J)*PHIR_DOT(IRC+1:IROUT+1,IF,I)
+          ENDDO
+          CAUX(:)=CAUX(:)*R(:)**2
+          AUX(:)=REAL(CAUX)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+          CSVAR=SVAR1
+          PHIL_DOT(:IRC+1,:,I)=PHIL_DOT(:IRC+1,:,I)-PHIL(:IRC+1,:,J)*CSVAR
+          PHIR_DOT(IRC-1:IROUT+1,:,I)=PHIR_DOT(IRC-1:IROUT+1,:,I)-PHIR(IRC-1:IROUT+1,:,J)*CSVAR
+        ENDDO
+      ENDDO
+!
+!     ====================================================================
+!     ==   TEST CONTINUITY                                              ==
+!     ====================================================================
+!!$PRINT*,'RADIAL_XXXC: TEST CONTINUITY OF PHIDOT'
+!!$      SVAR2=0.D0
+!!$      DO IF1=1,NPHI
+!!$        DO IF2=1,NF
+!!$          SVAR1=ABS(PHIL_DOT(IRC,IF2,IF1)-PHIR_DOT(IRC,IF2,IF1))
+!!$          SVAR2=MAX(SVAR2,SVAR1)
+!!$        ENDDO
+!!$      ENDDO
+!!$PRINT*,'DEVIATION IN VALUE OF PHIDOT ',SVAR2
+!!$      IF(SVAR2.GT.1.D-6) THEN
+!!$        CALL ERROR$MSG('MATCHING FAILED')
+!!$        CALL ERROR$STOP('RADIAL_XXXC')
+!!$      END IF   
+!!$!
+!!$!     == TEST DIFFERENTIABILITY ===================================
+!!$      SVAR2=0.D0
+!!$      DO IF1=1,NPHI
+!!$        DO IF2=1,NF
+!!$          IF(LOX(IF2).EQ.L0) CYCLE
+!!$          SVAR1=ABS( (PHIR_DOT(IRC+1,IF2,IF1)-PHIR_DOT(IRC-1,IF2,IF1)) &
+!!$     &              -(PHIL_DOT(IRC+1,IF2,IF1)-PHIL_DOT(IRC-1,IF2,IF1)))
+!!$          SVAR2=MAX(SVAR2,SVAR1)
+!!$        ENDDO
+!!$      ENDDO
+!!$PRINT*,'DEVIATION IN OTHER DERIVATIVES OF PHIDOT',SVAR2
+!!$      IF(SVAR2.GT.1.D-4) THEN
+!!$        CALL ERROR$MSG('MATCHING OF DPHIDOT/DR FAILED')
+!!$        CALL ERROR$STOP('RADIAL_XXXC')
+!!$      END IF   
+!!$!
+!!$!     =============================================================
+!!$      DO IF1=1,NPHI
+!!$        WRITE(FILE,*)IF1
+!!$        FILE='PHIDOT'//ADJUSTL(FILE)
+!!$        OPEN(8,FILE=FILE,FORM='FORMATTED')
+!!$        REWIND 8
+!!$        DO IR=1,IRC+1
+!!$          WRITE(8,FMT='(80F12.7)')R(IR),REAL(PHIL_DOT(IR,:,IF1)),AIMAG(PHIL_DOT(IR,:,IF1))
+!!$        ENDDO
+!!$        DO IR=IRC-1,MIN(IROUT+1,NR)
+!!$          WRITE(8,FMT='(80F12.7)')R(IR),REAL(PHIR_DOT(IR,:,IF1)),AIMAG(PHIR_DOT(IR,:,IF1))
+!!$        ENDDO
+!!$        CLOSE(8)
+!!$      ENDDO
+!
+!     ==================================================================
+!     ==  REMOVE KINKS BY MIXING PHIDOT INTO PHI                      ==
+!     ==================================================================
+!PRINT*,'RADIAL_XXXC:MATCH KINKS'
+      I=0
+      DO IF2=1,NF
+        IF(LOX(IF2).NE.L0) CYCLE
+        I=I+1
+        KINK_HOM(I,:)=(PHIR(IRC+1,IF2,:)-PHIR(IRC-1,IF2,:)) &
+     &               -(PHIL(IRC+1,IF2,:)-PHIL(IRC-1,IF2,:))
+        KINK_DOT(I,:)=(PHIR_DOT(IRC+1,IF2,:)-PHIR_DOT(IRC-1,IF2,:)) &
+     &               -(PHIL_DOT(IRC+1,IF2,:)-PHIL_DOT(IRC-1,IF2,:))
+      ENDDO
+      CALL LIB$MATRIXSOLVENEW(NPHI,NPHI,NPHI,-KINK_DOT,HAM,KINK_HOM)
+!!$      SVAR=MAXVAL(ABS(KINK_HOM+MATMUL(KINK_DOT,HAM)))
+!!$PRINT*,'REMAINING KINKS ',SVAR
+!     == MAKE PHI DIFFERENTIABLE =========================================
+      DO I=1,NPHI
+        DO J=1,NPHI
+          PHIL(:IRC,:,I)         =PHIL(:IRC,:,I)         +PHIL_DOT(:IRC,:,J)  *HAM(J,I)
+          PHIR(IRC+1:IROUT+1,:,I)=PHIR(IRC+1:IROUT+1,:,I)+PHIR_DOT(IRC+1:IROUT+1,:,J)*HAM(J,I)
+        ENDDO
+      ENDDO
+!     == MAKE PHI DIFFERENTIABLE =========================================
+!!$DO I=1,NPHI
+!!$  WRITE(*,FMT='("HAM ",50("(",2F10.5")   "))')HAM(I,:)
+!!$ENDDO
+!SVAR=0.5D0*MAXVAL(ABS(HAM-TRANSPOSE(CONJG(HAM))))
+!PRINT*,'DEVIATION FROM HERMITICITY',SVAR
+!
+!     ==================================================================
+!     ==  DETERMINE OVERLAP MATRIX                                    ==
+!     ==================================================================
+!!$DO I=1,NPHI
+!!$  WRITE(*,FMT='("H ",50("(",2F10.5")   "))')HAM(I,:)
+!!$ENDDO
+!!$
+!!$      DO I=1,NPHI
+!!$        DO J=I,NPHI
+!!$          CAUX(:)=0.D0
+!!$          DO IF=1,NF
+!!$            CAUX(:IRC)=CAUX(:IRC)+CONJG(PHIL_DOT(:IRC,IF,I))*PHIL_DOT(:IRC,IF,J)
+!!$            CAUX(IRC+1:IROUT+1)=CAUX(IRC+1:IROUT+1) &
+!!$     &             +CONJG(PHIR_DOT(IRC+1:IROUT+1,IF,I))*PHIR_DOT(IRC+1:IROUT+1,IF,J)
+!!$          ENDDO
+!!$          CAUX(:)=CAUX(:)*R(:)**2
+!!$          AUX(:)=REAL(CAUX)
+!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+!!$          AUX(:)=AIMAG(CAUX)
+!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
+!!$          OV(I,J)=CMPLX(SVAR1,SVAR2)
+!!$          OV(J,I)=CONJG(OV(I,J))
+!!$        ENDDO
+!!$      ENDDO
+!!$      OV=MATMUL(TRANSPOSE(CONJG(HAM)),MATMUL(OV,HAM))
+!!$      DO I=1,NPHI
+!!$        OV(I,I)=OV(I,I)+(1.D0,0.D0)
+!!$      ENDDO
+!!$!
+!!$DO I=1,NPHI
+!!$  WRITE(*,FMT='("O ",50("(",2F10.5")   "))')OV(I,:)
+!!$ENDDO
+!
+      DO I=1,NPHI
+        DO J=I,NPHI
+          CAUX(:)=0.D0
+          DO IF=1,NF
+            CAUX(:IRC)=CAUX(:IRC)+PHIL(:IRC,IF,I)*PHIL(:IRC,IF,J)
+            CAUX(IRC+1:IROUT+1)=CAUX(IRC+1:IROUT+1) &
+     &                         +PHIR(IRC+1:IROUT+1,IF,I)*PHIR(IRC+1:IROUT+1,IF,J)
+          ENDDO
+          CAUX(:)=CAUX(:)*R(:)**2
+          AUX(:)=CAUX
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+          OV(I,J)=SVAR1
+          OV(J,I)=OV(I,J)
+        ENDDO
+      ENDDO
+!!$DO I=1,NPHI
+!!$  WRITE(*,FMT='("O ",50("(",2F10.5")   "))')OV(I,:)
+!!$ENDDO
+!
+!     ==================================================================
+!     ==  DETERMINE EIGENSTATES                                       ==
+!     ==================================================================
+      HAM=0.5D0*(HAM+TRANSPOSE(HAM))
+!      CALL LIB$DIAGC8(NPHI,HAM,DE,KINKC)
+      CALL LIB$GENERALEIGENVALUER8(NPHI,HAM,OV,DE,KINKC)
+      PHI(:,:,:)=0.D0
+      DO I=1,NPHI
+        DO J=1,NPHI
+          PHI(:IRC,:,I)         =PHI(:IRC,:,I)         +PHIL(:IRC,:,J)*KINKC(J,I)      
+          PHI(IRC+1:IROUT+1,:,I)=PHI(IRC+1:IROUT+1,:,I)+PHIR(IRC+1:IROUT+1,:,J)*KINKC(J,I)      
+        ENDDO
+      ENDDO
+!PRINT*,'DE',DE
+!!$!
+!!$!     ==================================================================
+!!$!     ==  NORMALIZE SOLUTIONS                                         ==
+!!$!     ==================================================================
+!!$      DO I=1,NPHI
+!!$        AUX(:)=0.D0
+!!$        DO J=1,NF
+!!$          AUX(:)=AUX(:)+ABS(PHI(:,J,I))**2
+!!$        ENDDO
+!!$        AUX(:)=AUX(:)*R(:)**2
+!!$        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+!!$        SVAR=1.D0/SQRT(SVAR)
+!!$        PHI(:,:,I)=PHI(:,:,I)*SVAR
+!!$      ENDDO
+!
+!     ==================================================================
+!     ==  TEST OVERLAP                                                ==
+!     ==================================================================
+!!$      DO IF1=1,NPHI
+!!$        WRITE(FILE,*)IF1
+!!$        FILE='PHIFIN'//ADJUSTL(FILE)
+!!$        OPEN(8,FILE=FILE,FORM='FORMATTED')
+!!$        REWIND 8
+!!$        DO IR=1,IROUT+1
+!!$          WRITE(8,FMT='(80F20.7)')R(IR),REAL(PHI(IR,:,IF1)),AIMAG(PHI(IR,:,IF1))
+!!$        ENDDO
+!!$        CLOSE(8)
+!!$      ENDDO
+!!$!
+!     == TEST ORTHONORMALITY OVERLAP MATRIX
+!!$      DO I=1,NPHI
+!!$        HAM(I,I)=(0.D0,0.D0)
+!!$        DO J=I,NPHI
+!!$          CAUX(:)=0.D0
+!!$          DO IF=1,NF
+!!$            CAUX(:)=CAUX(:)+CONJG(PHI(:,IF,I))*PHI(:,IF,J)
+!!$          ENDDO
+!!$          CAUX(:)=CAUX(:)*R(:)**2
+!!$          AUX=REAL(CAUX)
+!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+!!$          AUX=AIMAG(CAUX)
+!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
+!!$          HAM(I,J)=CMPLX(SVAR1,SVAR2)
+!!$          HAM(J,I)=CONJG(HAM(I,J))
+!!$        ENDDO
+!!$        HAM(I,I)=HAM(I,I)-(1.D0,0.D0)
+!!$      ENDDO
+!!$      DO I=1,NPHI
+!!$        WRITE(*,FMT='("O ",50("(",2F10.5")   "))')HAM(I,:)
+!!$      ENDDO
+         SVAR=MAXVAL(ABS(HAM))
+         PRINT*,'DEVIATION FROM ORTHONORMALITY',SVAR,NF
+!!$      IF(SVAR.GT.0.5D0) THEN
+!!$        CALL ERROR$MSG('WAVE FUNCTIONS NOT ORTHOGONAL')
+!!$        CALL ERROR$STOP('RADIAL_XXXC')
+!!$      END IF
+      TOK=.TRUE.
+      RETURN
+      END 
+!
 !     .....................................................POISON.......
       SUBROUTINE RADIAL$POISSON(GID,NR,L,RHO,V)
 !     ******************************************************************
@@ -2956,13 +3703,14 @@ END MODULE SHLOGRADIAL_MODULE
       END      
 !
 !     ...................................................................
-      SUBROUTINE SHLOGRADIAL$DGLGEN(GID,NR_,NF,IDIR,A,B,C,D,F)
+      SUBROUTINE SHLOGRADIAL$DGLGEN(GID,NR_,NF,i1,i2,A,B,C,D,F)
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR_
       INTEGER(4),INTENT(IN) :: NF
-      INTEGER(4),INTENT(IN) :: IDIR
+      INTEGER(4),INTENT(IN) :: I1
+      INTEGER(4),INTENT(IN) :: I2
       REAL(8)   ,INTENT(IN) :: A(NR_)
       REAL(8)   ,INTENT(IN) :: B(NR_)
       REAL(8)   ,INTENT(IN) :: C(NR_,NF,NF)
@@ -2974,6 +3722,7 @@ END MODULE SHLOGRADIAL_MODULE
       REAL(8)               :: C1(NR_,NF,NF)
       REAL(8)               :: D1(NR_,NF)
       INTEGER(4)            :: IR,IR1,I,J
+      INTEGER(4)            :: Imin,imax
 !     ******************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
@@ -2984,16 +3733,18 @@ END MODULE SHLOGRADIAL_MODULE
          CALL ERROR$STOP('SHLOGRADIAL$DGLGEN')
       END IF
       CALL SHLOGRADIAL$R(GID,NR,R)
-      DRDX(:)=DEX*(R(:)+R1)   
-      B1(:)=B(:)*DRDX(:)-DEX*A(:)
-      DRDX(:)=DRDX(:)**2
+      IMIN=MIN(I1,I2)
+      IMAX=MAX(I1,I2)
+      DRDX(IMIN:IMAX)=DEX*(R(IMIN:IMAX)+R1)   
+      B1(IMIN:IMAX)=B(IMIN:IMAX)*DRDX(IMIN:IMAX)-DEX*A(IMIN:IMAX)
+      DRDX(IMIN:IMAX)=DRDX(IMIN:IMAX)**2
       DO I=1,NF
-        D1(:,I)=D(:,I)*DRDX(:)
+        D1(IMIN:IMAX,I)=D(IMIN:IMAX,I)*DRDX(IMIN:IMAX)
         DO J=1,NF
-          C1(:,I,J)=C(:,I,J)*DRDX(:)
+          C1(IMIN:IMAX,I,J)=C(IMIN:IMAX,I,J)*DRDX(IMIN:IMAX)
         ENDDO
       ENDDO
-      CALL RADIAL_DGLEQUISPACEDGEN(NR,NF,IDIR,A,B1,C1,D1,F)
+      CALL RADIAL_DGLEQUISPACEDGEN(NR,NF,i1,i2,A,B1,C1,D1,F)
       RETURN
       END      
 !
@@ -3035,7 +3786,7 @@ END MODULE SHLOGRADIAL_MODULE
          CALL ERROR$I4VAL('GID',GID)
          CALL ERROR$I4VAL('NR',NR)
          CALL ERROR$I4VAL('NR_',NR_)
-         CALL ERROR$STOP('SHLOGRADIAL$DGL')
+         CALL ERROR$STOP('SHLOGRADIAL$DGLgenc')
       END IF
       CALL SHLOGRADIAL$R(GID,NR,R)
       IMIN=MIN(I1,I2)
@@ -3493,13 +4244,14 @@ END MODULE LOGRADIAL_MODULE
       END      
 !
 !     ...................................................................
-      SUBROUTINE LOGRADIAL$DGLGEN(GID,NR_,NF,IDIR,A,B,C,D,F)
+      SUBROUTINE LOGRADIAL$DGLGEN(GID,NR_,NF,i1,i2,A,B,C,D,F)
       USE LOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR_
       INTEGER(4),INTENT(IN) :: NF
-      INTEGER(4),INTENT(IN) :: IDIR
+      INTEGER(4),INTENT(IN) :: I1
+      INTEGER(4),INTENT(IN) :: I2
       REAL(8)   ,INTENT(IN) :: A(NR_)
       REAL(8)   ,INTENT(IN) :: B(NR_)
       REAL(8)   ,INTENT(IN) :: C(NR_,NF,NF)
@@ -3511,6 +4263,7 @@ END MODULE LOGRADIAL_MODULE
       REAL(8)               :: C1(NR_,NF,NF)
       REAL(8)               :: D1(NR_,NF)
       INTEGER(4)            :: IR,IR1,I,J
+      INTEGER(4)            :: Imin,imax
 !     ******************************************************************
       CALL LOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
@@ -3521,16 +4274,18 @@ END MODULE LOGRADIAL_MODULE
          CALL ERROR$STOP('LOGRADIAL$DGLGEN')
       END IF
       CALL LOGRADIAL$R(GID,NR,R)
-      DRDX(:)=DEX*R(:)   
-      B1(:)=B(:)*DRDX(:)-DEX*A(:)
-      DRDX(:)=DRDX(:)**2
+      IMIN=MIN(I1,I2)
+      IMAX=MAX(I1,I2)
+      DRDX(IMIN:IMAX)=DEX*R(IMIN:IMAX)
+      B1(IMIN:IMAX)=B(IMIN:IMAX)*DRDX(IMIN:IMAX)-DEX*A(IMIN:IMAX)
+      DRDX(IMIN:IMAX)=DRDX(IMIN:IMAX)**2
       DO I=1,NF
-        D1(:,I)=D(:,I)*DRDX(:)
+        D1(IMIN:IMAX,I)=D(IMIN:IMAX,I)*DRDX(IMIN:IMAX)
         DO J=1,NF
-          C1(:,I,J)=C(:,I,J)*DRDX(:)
+          C1(IMIN:IMAX,I,J)=C(IMIN:IMAX,I,J)*DRDX(IMIN:IMAX)
         ENDDO
       ENDDO
-      CALL RADIAL_DGLEQUISPACEDGEN(NR,NF,IDIR,A,B1,C1,D1,F)
+      CALL RADIAL_DGLEQUISPACEDGEN(NR,NF,I1,i2,A,B1,C1,D1,F)
       RETURN
       END      
 !

@@ -163,6 +163,18 @@ CONTAINS
         CALL ERROR$MSG('THISARRAY DOES NOT EXIST') 
         CALL ERROR$STOP('WAVES_SELECTWV')
       END IF 
+      IF(IKPT.Gt.NKPTL) THEN
+        CALL ERROR$MSG('IKPT OUT OF RANGE')
+        CALL ERROR$I4VAL('IKPT',IKPT)
+        CALL ERROR$I4VAL('NKPTL',NKPTL)
+        CALL ERROR$STOP('WAVES_SELECTWV')
+      END IF
+      IF(ISPIN.Gt.NSPIN) THEN
+        CALL ERROR$MSG('ISPIN OUT OF RANGE')
+        CALL ERROR$I4VAL('ISPIN',ISPIN)
+        CALL ERROR$I4VAL('NSPIN',NSPIN)
+        CALL ERROR$STOP('WAVES_SELECTWV')
+      END IF
       THIS=>THISARRAY(IKPT,ISPIN)
       GSET=>THIS%GSET
       RETURN
@@ -4989,12 +5001,20 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
        ENDDO
 !
 !      ==============================================================
-!      ==  OPTMIZATION OF SK                                       ==
+!      ==  OPTMIZATION OF SK. Sk us a pointer ikpt->igroup         ==
 !      ==============================================================
        XLOAD1=HUGE(XLOAD1)
+!      == test different number of subgroups ========================
        DO NGROUPS=1,NTASKS       
-         ALLOCATE(NA(NGROUPS))
-         ALLOCATE(NB(NGROUPS))
+         if(ngroups.gt.nkpt) exit  ! there must not be an empty group
+!        ============================================================
+!        == distribute all k-points into "ngroups" groups          ==
+!        == nb(igroup) is the number of kpoints with real wave     ==
+!        == functions in the group "igroup"; na(igroup is the      == 
+!        == number of complex wave functions                       ==
+!        ============================================================
+         ALLOCATE(NA(NGROUPS)) !#(k-points with complex psi)
+         ALLOCATE(NB(NGROUPS)) !#(k-points with real psi)
          NA(:)=0
          NB(:)=0
          DO IKPT=1,NKPT
@@ -5005,22 +5025,39 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
              NA(IPOS)=NA(IPOS)+1
            END IF
          ENDDO
+!
+!        === reshuffle na and nb to distribute load equally among groups
          CALL WAVES_PREBALANCE(NGROUPS,NA,NB,WA,WB)
+!
+!        == determine pointer sk(ikpt)=igroup
          DO IKPT=1,NKPT
            DO IGROUP=1,NGROUPS
              IF(TINV(IKPT).AND.NB(IGROUP).NE.0) THEN
-               NB(IGROUP)=NB(IGROUP)-1
+               NB(IGROUP)=NB(IGROUP)-1   ! for consistency check
                SK(IKPT)=IGROUP
                EXIT
              ELSE IF(.NOT.TINV(IKPT).AND.NA(IGROUP).NE.0) THEN
-               NA(IGROUP)=NA(IGROUP)-1
+               NA(IGROUP)=NA(IGROUP)-1   ! for consistency check
                SK(IKPT)=IGROUP
                EXIT
              END IF
            ENDDO
          ENDDO
+!
+!        == consistency check =======================================
+         DO IGROUP=1,NGROUPs
+           IF(NB(IGROUP).NE.0.OR.NA(IGROUP).NE.0) THEN
+             CALL ERROR$MSG('INCONSISTENCY DETECTED WITH NA,NB')
+             CALL ERROR$STOP('WAVES_KDISTRIBUTE')
+           END IF
+         ENDDO
          DEALLOCATE(NA)
          DEALLOCATE(NB)
+!
+!        =============================================================
+!        == check if this #(groups) improved the loadbalance        ==
+!        == and discard if not.                                     ==
+!        =============================================================
          ALLOCATE(MG(NGROUPS))
          ALLOCATE(XLOAD(NGROUPS))
          CALL WAVES_LOADPERPROC(NGROUPS,NTASKS,NKPT,WK,WK0,SK,MG,XLOAD)
@@ -5037,8 +5074,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
        ENDDO
        NGROUPS=SIZE(MGSAVE)
        ALLOCATE(MG(NGROUPS))
-       MG(:)=MGSAVE(:)
-       SK=SKSAVE
+       MG(:)=MGSAVE(:)  ! #(procs per group)
+       SK=SKSAVE        ! pointer: ikpt-> igroup
        DEALLOCATE(MGSAVE)
 !
 !      ==============================================================
@@ -5046,22 +5083,43 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !      ==============================================================
        ISVAR=0
        DO I=1,NGROUPS
-         IFIRST(I)=ISVAR+1
+         IFIRST(I)=ISVAR+1   ! first task for this group
          ISVAR=ISVAR+MG(I)
-         ICOLOR(IFIRST(I):ISVAR)=I
+         ICOLOR(IFIRST(I):ISVAR)=I   
        ENDDO
-       IF(ISVAR.NE.NTASKS) THEN
-         STOP 'INCONSISTENT DIVISION'
-       END IF
        DO IKPT=1,NKPT 
          KMAP(IKPT)=IFIRST(SK(IKPT))
        ENDDO
+!
+!      ==============================================================
+!      == checks ====================================================
+!      ==============================================================
+       if(sum(mg).ne.ntasks) then
+         call error$msg('INCONSISTENT DIVISION')
+         call error$stop('waves_kdistribute')
+       end if
+       allocate(na(ntasks))
+       na(:)=0
+       do ikpt=1,nkpt
+         igroup=sk(ikpt)
+         i=ifirst(igroup)
+         j=ifirst(igroup)-1+mg(igroup)
+         na(i:j)=na(i:j)+1
+       enddo
+       do i=1,ntasks
+         if(na(i).eq.0) then
+           call error$msg('task with nkptl=0 is not allowed')
+           call error$msg('reduce number of processors')
+           call error$stop('waves_kdistribute')
+         end if
+       enddo              
+
        RETURN
        END
 !
 !      ...............................................................
        SUBROUTINE WAVES_LOADPERPROC(NGROUPS,NTASKS,NKPT,WK,WK0,SK,MG,XLOAD)
-!      **                                                           **
+!      **  assign to each group a number of processors              **
 !      **                                                           **
 !      **                                                           **
 !      ********************* PETER BLOECHL, TU CLAUSTJAL 2005 *********
@@ -5087,33 +5145,38 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !      ===============================================================
 !      == START UP                                                  ==
 !      ===============================================================
+!      == determine work for each group
        WG(:)=0.D0
        WG0(:)=0.D0
        DO I=1,NKPT
          IF(SK(I).LT.1.OR.SK(I).GT.NGROUPS) THEN
-           STOP 'SK OUT OF RANGE'
+           call error$msg('SK OUT OF RANGE')
+           call error$stop('waves_loadperproc')
          END IF
          WG(SK(I))=WG(SK(I))+WK(I)
          WG0(SK(I))=WG0(SK(I))+WK0(I)
        ENDDO
        IF(NGROUPS.GT.NTASKS) THEN
+         call error$msg('ngroups must be smaller or equal to ntasks')
+         call error$stop('WAVES_LOADPERPROC')
          XLOAD(:)=0
          XLOAD(1:NTASKS)=1.D0
          MG(:)=0
          MG(1:NTASKS)=1
          RETURN
        END IF
-       MG(:)=1
+       MG(:)=1  ! give each group one processor
 ! 
 !      ===============================================================
 !      == ENFORCE SUM RULE                                          ==
 !      ===============================================================
-       NODESLEFT=NTASKS-SUM(MG)
+       NODESLEFT=NTASKS-SUM(MG)  ! #(unoccupied nodes)
        IF(NODESLEFT.LT.0) THEN
-         STOP 'NODESLEFT<0'
+         call error$msg('NODESLEFT<0')
+         call error$stop('waves_loadperproc')
        END IF
        DO I=1,NODESLEFT
-         XLOAD(:)=WG0(:)+WG(:)/MG(:)
+         XLOAD(:)=WG0(:)+WG(:)/MG(:)  !determine load for each group
          IND=MAXLOC(XLOAD)
          IPOS1=IND(1)
          MG(IPOS1)=MG(IPOS1)+1  ! GIVE MAXIMUM LOADED GROUP AN ADDITIONAL NODE
@@ -5123,12 +5186,13 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !      == RESHUFFLE NODES TO REDUCE MAXIMUM LOAD                    ==
 !      ===============================================================
 1000   CONTINUE
-       XLOAD(:)=WG0(:)+WG(:)/MG(:)
+       XLOAD(:)=WG0(:)+WG(:)/MG(:)  ! current work per proc in each group
        IND=MAXLOC(XLOAD)
        IPOS1=IND(1)
-       XLOAD1=XLOAD(IPOS1)
+       XLOAD1=XLOAD(IPOS1)          ! max work per proc
        XLOADTEST(IPOS1)=WG0(IPOS1)+WG(IPOS1)/REAL(MG(IPOS1)+1)
        DO I=1,NGROUPS
+         IF(I.EQ.IPOS1) CYCLE
          IF(MG(I).GT.1) THEN
            XLOADTEST(I)=WG0(I)+WG(I)/REAL(MG(I)-1)
          ELSE
@@ -5181,9 +5245,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
          IND=MAXLOC(XLOAD)
          IPOS1=IND(1)
          XLOAD1=XLOAD(IPOS1)
+!        == IT IS NOT ALLOWED TO REDUCE THE NUMBER OF KPOINTS IN A GROUP TO ZERO
+         if(na(ipos1)+nb(ipos1).eq.1) exit
 !        ==  TRY TO RESHUFFLE FROM THE GROUP WITH THE LARGEST LOAD TO THE OTHERS
 !        ==  XLOADTESTA ESTIMATES THE LOAD WHEN A K-POINT OF TYPE A IS ADDED
-!        ==  XLOADTESTB ESTIMATES THE LOAD WHEN A K-POINT OF TYPE A IS ADDED
+!        ==  XLOADTESTB ESTIMATES THE LOAD WHEN A K-POINT OF TYPE B IS ADDED
          XLOADTESTA(IPOS1)=HUGE(XLOADTESTA)
          XLOADTESTB(IPOS1)=HUGE(XLOADTESTA)
          DO J=1,NGROUPS

@@ -2951,44 +2951,44 @@ SUBROUTINE PLACEROT(NAT,R1,R2,rotdif,R2C)
      return
 end SUBROUTINE PLACEROT
 
-!this is hardwired and only for my use
-subroutine dimer$reread()
-  use DIMER_MODULE
-  implicit none
-  logical(4)                    :: ex
-  integer(4)                    :: nfil,eos
-  character(256)                :: string
-  logical(4)                    :: lvar
-  real(8)                       :: rvar
-
-  nfil=4242
-  INQUIRE (FILE="case.cntlnew", EXIST = EX)
-  IF ( EX ) THEN
-     OPEN (nfil, FILE="case.cntlnew", STATUS="OLD", &
-                  &ACCESS="SEQUENTIAL", ACTION="READ", POSITION="REWIND")
-     do 
-        READ (nfil, FMT="(A)" , ADVANCE="YES" ,IOSTAT=eos) string 
-        if(eos.eq.-1) exit
-        
-        if(trim(adjustl(string)).eq.'optfricpara') then
-           READ (nfil, FMT="(L1)" , ADVANCE="YES" ,IOSTAT= eos) lvar 
-           call dimer$setl4('OPTFRICPARA',lvar)
-           write(dprotfil,*)'OPTFRICPARA SET TO',lvar
-        else if(trim(adjustl(string)).eq.'fricpara') then
-           READ (nfil, FMT="(F)" , ADVANCE="YES" ,IOSTAT= eos) rvar
-           call dimer$setr8('FRICPARA',rvar)
-           write(dprotfil,*)'FRICPARA SET TO',rvar
-        else
-           write(dprotfil,*)'REREAD CONTROLFILE: IDENTIFIER NOT RECOGNIZED:',trim(adjustl(string))
-           !stop
-        end if
-     end do
-     close(nfil)
-     call system('rm -rf case.cntlnew')
-  end IF
-
-  return
-end subroutine dimer$reread
+!!$!this is hardwired and only for my use
+!!$subroutine dimer$reread()
+!!$  use DIMER_MODULE
+!!$  implicit none
+!!$  logical(4)                    :: ex
+!!$  integer(4)                    :: nfil,eos
+!!$  character(256)                :: string
+!!$  logical(4)                    :: lvar
+!!$  real(8)                       :: rvar
+!!$
+!!$  nfil=4242
+!!$  INQUIRE (FILE="case.cntlnew", EXIST = EX)
+!!$  IF ( EX ) THEN
+!!$     OPEN (nfil, FILE="case.cntlnew", STATUS="OLD", &
+!!$                  &ACCESS="SEQUENTIAL", ACTION="READ", POSITION="REWIND")
+!!$     do 
+!!$        READ (nfil, FMT="(A)" , ADVANCE="YES" ,IOSTAT=eos) string 
+!!$        if(eos.eq.-1) exit
+!!$        
+!!$        if(trim(adjustl(string)).eq.'optfricpara') then
+!!$           READ (nfil, FMT="(L1)" , ADVANCE="YES" ,IOSTAT= eos) lvar 
+!!$           call dimer$setl4('OPTFRICPARA',lvar)
+!!$           write(dprotfil,*)'OPTFRICPARA SET TO',lvar
+!!$        else if(trim(adjustl(string)).eq.'fricpara') then
+!!$           READ (nfil, FMT="(F)" , ADVANCE="YES" ,IOSTAT= eos) rvar
+!!$           call dimer$setr8('FRICPARA',rvar)
+!!$           write(dprotfil,*)'FRICPARA SET TO',rvar
+!!$        else
+!!$           write(dprotfil,*)'REREAD CONTROLFILE: IDENTIFIER NOT RECOGNIZED:',trim(adjustl(string))
+!!$           !stop
+!!$        end if
+!!$     end do
+!!$     close(nfil)
+!!$     call system('rm -rf case.cntlnew')
+!!$  end IF
+!!$
+!!$  return
+!!$end subroutine dimer$reread
 
 subroutine dimer_proposcillator(dt,i,force)
   use dimer_oscillator_module
