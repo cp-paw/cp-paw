@@ -732,15 +732,10 @@ options is given in the next section.
  !END
  !ANALYSE 
    !HYPERFINE ATOM='H_1' EFG=T ISOMERSHIFT=T 
-              FERMICONTACT=T ANISOTROPIC=T
-   !END
-   !WAVE FILE='~/density.dx'
-         TYPE='DENSITY' WEIGHTING='TOTAL' FORMAT='ALL'
-   !END
-   !WAVE FILE='~/wavefunction.dx'
-         TYPE='WAVE' 
-     !STATE B=10 K=1 S=1 !END
-   !END
+              FERMICONTACT=T ANISOTROPIC=T   !END
+   !density FILE='./density.dx' TYPE='TOTAL' !END
+   !WAVE FILE='./wavefunction.dx' 
+         TYPE='WAVE' B=10 K=1 S=1 !END
  !END
 !END
 !EOB
@@ -1240,23 +1235,23 @@ each step that reduces the energy}
 %----------------------------------------------------------------------
 \block{!CONTROL!PSIDYN!THERMOSTAT}
 %----------------------------------------------------------------------
-\brules{optional}
-\bdescr{(presently in test phase:\\
-  Thermostat for the wave functions. The thermostat acts like a
-  Nose-Hoover thermostat, but the target temperature is adjusted at
-  each time step according to the estimated Born-Oppenheimer kinetic
-  energy obtained from the instantaneous atomic velocities, the wave
-  function masses and the values of !STRUCTURE!SPECIES:PS$<$G2$>$ and
-  !STRUCTURE!SPECIES:PS$<$G4$>$ provided the structure input file.  Do
-  not use this thermostat without providing PS$<$G2$>$ and PS$<$G4$>$.
-  The target kinetic energy is subtracted from the wave function
-  kinetic energy in the protocol. A friction on the thermostat shall
-  be used to avoid instabilities. The thermostat shall be used only if
-  the atoms are moving.
-  \\
-  Old version: Nos\'e thermostat for constant temperature ensemble for
-  the electrons \cite{Adiabaticity}. The target kinetic energy should
-  be a little (about 50\%) larger than
+\brules{optional} \bdescr{(presently in test phase:\\ Thermostat for
+the wave functions. The thermostat acts like a Nose-Hoover thermostat,
+but it does not aim at constructing a canonical ensemble. Instead it
+starts acting only when the wave function kinetic exceeds the target
+temperature estimated for Born-Oppenheimer kinetic energy. The latter
+obtained from the instantaneous atomic velocities, the wave function
+masses and the values of !STRUCTURE!SPECIES:PS$<$G2$>$ and
+!STRUCTURE!SPECIES:PS$<$G4$>$ provided the structure input file.  Do
+not use this thermostat without providing PS$<$G2$>$ and PS$<$G4$>$.
+If the thermostat kicks in, it reshuffles kinetic energy from the wave
+functions into the atomic motion.  The target kinetic energy is
+subtracted from the wave function kinetic energy in the protocol. A
+friction on the thermostat shall be used to avoid instabilities. The
+thermostat shall be used only if the atoms are moving.  \\ Old
+version: Nos\'e thermostat for constant temperature ensemble for the
+electrons \cite{Adiabaticity}. The target kinetic energy should be a
+little (about 50\%) larger than
   \begin{equation}
      \langle E_{kin}^\Psi\rangle_T=\sum _R
       2{{m_\Psi}\over{M_R}}\tilde{T}_R k_B T ,
@@ -1477,7 +1472,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 %----------------------------------------------------------------------
 \brules{optional} 
 %
-\bdescr{Nos\'e thermostat \cite{Nose} for a constant temperature
+\bdescr{Nos\'e thermostat \cite{Nose} for creating a constant temperature
   ensemble for the ions. When using this thermostat, the friction
   acting indirectly on the atoms, and that results from a friction on
   the wavefunctions, is corrected for by an opposing force
@@ -1496,7 +1491,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 \vdefault{293.15 (=room temperature=20$^o$C)}}
 
 \mbax{\key{$<$EKIN$>$}
-\vdescr{average kinetic energy of the wave functions}
+\vdescr{average kinetic energy of the atoms}
 \vformat{real}
 \vrules{optional}
 \vdefault{see T[K]}}
@@ -1807,7 +1802,7 @@ each step that reduces the energy}
 \vdefault{293.15 (=room temperature=20$^o$C)}}
 
 \mbax{\key{$<$EKIN$>$}
-\vdescr{average kinetic energy of the wave functions}
+\vdescr{average kinetic energy}
 \vformat{real}
 \vrules{optional}
 \vdefault{see T[K]}}
