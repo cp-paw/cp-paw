@@ -302,7 +302,6 @@
       REAL(8)     :: GRHO(NFCT*NAT)
       REAL(8)     :: GRADGRHO(3,NFCT*NAT)
       REAL(8)     :: QMAD(NAT)
-      REAL(8)     :: VMAD(NAT)
       REAL(8)     :: GGINV(NFCT*NAT,NFCT*NAT)
       REAL(8)     :: GG(NFCT*NAT,NFCT*NAT)
       REAL(8)     :: GRADGG(3,NFCT*NAT,NFCT*NAT)
@@ -392,9 +391,7 @@
           DO I=1,NAT*NFCT
             CSVAR=CSVAR-QI(I)*F(IG,I)
           ENDDO
-          SUM=SUM+CSVAR*CONJG(CSVAR)
-!         WRITE(*,FMT='(I3,("(",3F10.5,")"),2("(",2F12.7,")"))')
-!    &         IG,(G(I,IG),I=1,3),RHO(IG),CSVAR
+          SUM=SUM+real(CSVAR*CONJG(CSVAR))
         ENDDO
         SUM=DSQRT(SUM)/DBLE(NGS)
         PRINT*,'LEAST SQUARE ',SUM
@@ -583,18 +580,6 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
         END IF
       END IF
 !
-      IF(TPR) THEN
-        PRINT*,'E    ',E
-        PRINT*,'BACKGROUND CORRECTION: ',EBACKGROUND
-        WRITE(*,FMT='("QMAD",T10,10F10.5)')(QMAD(I),I=1,NAT)
-        WRITE(*,FMT='("VMAD",T10,10F10.5)')(VMAD(I),I=1,NAT)
-        WRITE(*,FMT='("QI",T10,10F10.5)') &
-     &     (QI(I)*GGAMMA(I)*VOL,I=1,NAT*NFCT)
-        WRITE(*,FMT='("VI",T10,10F10.5)')(VI(I),I=1,NAT*NFCT)
-        WRITE(*,FMT='("QLM/Y0",T10,10F10.5)')(QLM(1,IAT)/Y0,IAT=1,NAT)
-        WRITE(*,FMT='("VQLM",T10,10F10.5)')(VQLM(1,IAT),IAT=1,NAT)
-      END IF
-!
 !     ==================================================================
 !     == POTENTIAL                                                    ==
 !     ==================================================================
@@ -674,7 +659,6 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       REAL(8)   ,INTENT(OUT):: FORCE(3,NAT)  ! FORCE
       REAL(8)   ,INTENT(OUT):: VI(NG,NAT)    ! POTENTIAL OF THE GAUSSIAN CHARGES
       REAL(8)               :: VI1(NG,NAT)   
-      REAL(8)               :: ENERGY1       ! ENERGY 
       REAL(8)               :: epot1         ! potential ENERGY contribution
       REAL(8)               :: ekin1         ! kinetic ENERGY contribution 
       REAL(8)               :: FORCE1(3,NAT) ! FORCE

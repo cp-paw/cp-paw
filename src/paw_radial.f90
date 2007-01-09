@@ -16,15 +16,11 @@
       REAL(8)              :: RARR(NR)
       REAL(8)              :: F(NR),DFDR(NR),INTF(NR)
       REAL(8)              :: NUMINTF(NR),NUMDFDR(NR)
-      REAL(8)              :: XEXP
-      REAL(8)              :: RI
       REAL(8)              :: X,VAL,VAL1,DER,INT
-      REAL(8)              :: PI
       INTEGER(4)           :: IR
       INTEGER(4)           :: IGRID
       CHARACTER(10)        :: STRING
 !     ****************************************************************
-      PI=4.D0*DATAN(1.D0)
       CALL RADIAL$NEW('LOG',GID1)
       CALL RADIAL$SETI4(GID1,'NR',NR)
       CALL RADIAL$SETR8(GID1,'DEX',DEX)
@@ -159,9 +155,7 @@
         REAL(8),INTENT(OUT) :: F
         REAL(8),INTENT(OUT) :: DFDR
         REAL(8),INTENT(OUT) :: INTF
-        REAL(8)             :: PI
 !       ****************************************************************
-        PI=4.D0*DATAN(1.D0)
         F=SIN(2.D0*R)
         DFDR=2.D0*COS(2.D0*R)
         INTF=-0.5D0*(COS(2.D0*R)-1.D0)
@@ -174,9 +168,7 @@
         REAL(8),INTENT(OUT) :: F
         REAL(8),INTENT(OUT) :: DFDR
         REAL(8),INTENT(OUT) :: INTF
-        REAL(8)             :: PI
 !       ****************************************************************
-        PI=4.D0*DATAN(1.D0)
         F=COS(2.D0*R)
         DFDR=-2.D0*SIN(2.D0*R)
         INTF=0.5D0*SIN(2.D0*R)
@@ -243,7 +235,7 @@
       REAL(8)               :: DCN(NP)
       REAL(8)               :: DCN1(NP)
       REAL(8)               :: SVAR,VAL,A,B
-      INTEGER(4)            :: I,J,IP,K
+      INTEGER(4)            :: I,J,K
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
 !     ****************************************************************
       FI(:)=FI_(:)
@@ -512,7 +504,6 @@
       REAL(8)    ,INTENT(INOUT):: F(NX)
       REAL(8)                :: AP(NX),A0(NX),AM(NX)
       INTEGER(4)             :: I
-      INTEGER(4)             :: ITEST
 !     ******************************************************************
 !     == AP*F(+) + A0*F(0) + AM*F(-) = D
       AP(:)=A(:)+0.5D0*B(:)
@@ -559,10 +550,7 @@
       REAL(8)    ,INTENT(IN) :: D(NX,NF)
       REAL(8)    ,INTENT(INOUT):: F(NX,NF)
       REAL(8)                :: AP(NX),A0(NX),AM(NX)
-      REAL(8)                :: f1(nx,nf)
       INTEGER(4)             :: I
-      INTEGER(4)             :: ITEST
-      INTEGER(4)             :: Imin,imax
       INTEGER(4)             :: Idir
 !     ******************************************************************
       IF(MIN(I1,I2).LT.1.OR.MAX(I1,I2).GT.NX) THEN
@@ -572,8 +560,7 @@
         CALL ERROR$I4VAL('NX',NX)
         CALL ERROR$STOP('RADIAL_DGLEQUISPACEDGENC')
       END IF
-      IMIN=MIN(I1,I2)
-      IMAX=MAX(I1,I2)
+      f(:,:)=0.d0
 !     == IDIR IS THE DIRECTION OF THE INTEGRATION =======================
       IDIR=1
       IF(I2.LT.I1) IDIR=-1
@@ -581,11 +568,6 @@
       AP(:)=A(:)+0.5D0*B(:)
       A0(:)=-2.D0*A(:)
       AM(:)=A(:)-0.5D0*B(:)
-!PRINT*,'AP ',AP
-!PRINT*,'A0 ',A0
-!PRINT*,'AM ',AM
-!PRINT*,'D ',D
-!PRINT*,'C ',C
       IF(IDIR.GE.0) THEN
         DO I=i1+1,i2-1
           F(I+1,:)=( -(A0(I)+AM(I))*F(I,:) +AM(I)*(F(I,:)-F(I-1,:)) &
@@ -600,8 +582,6 @@
          CALL ERROR$MSG('INVALID VALUE OF IDIR')
          CALL ERROR$STOP('RADIAL_DGLEQUISPACED')
       END IF
-!PRINT*,'F ',F
-!STOP
       RETURN
       END
 !
@@ -637,7 +617,6 @@
       INTEGER(4)             :: I
       INTEGER(4)             :: IMIN,IMAX
       INTEGER(4)             :: IDIR
-      INTEGER(4)             :: ITEST
 !     ******************************************************************
       IF(MIN(I1,I2).LT.1.OR.MAX(I1,I2).GT.NX) THEN
         CALL ERROR$MSG('INTEGRATION BOUNDS OUT OF RANGE')
@@ -1307,8 +1286,6 @@ PRINT*,'GIDS ',GIDS
       REAL(8)                    :: Y0
       REAL(8)                    :: SOFACTOR
       REAL(8)                    :: RDPRIME(NR)
-      INTEGER(4)                 :: IR
-      REAL(8)                    :: RI
       LOGICAL(4)                 :: THOM
 !     ************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -1423,8 +1400,6 @@ PRINT*,'GIDS ',GIDS
       REAL(8)                    :: CG
       REAL(8)                    :: RDPRIME(NR)
       INTEGER(4)                 :: IR
-      LOGICAL(4)                 :: THOM
-!      REAL(8)   ,PARAMETER       :: XMAX=1.D+100
       REAL(8)   ,PARAMETER       :: XMAX=1.D+20
       REAL(8)                    :: SWKB(NR),SVAR
       INTEGER(4)                 :: IRCL,IROUT
@@ -1976,7 +1951,6 @@ PRINT*,'GIDS ',GIDS
       REAL(8)   ,INTENT(OUT):: DE(NPHI)
       COMPLEX(8),INTENT(OUT):: PHI(NR,NF,NPHI)
       LOGICAL(4),INTENT(OUT):: TOK
-      LOGICAL               :: THOM
       COMPLEX(8)            :: ALLPHIL(NR,NF,NF)
       COMPLEX(8)            :: ALLPHIR(NR,NF,NF)
       COMPLEX(8)            :: PHIL(NR,NF,NPHI)
@@ -1987,14 +1961,12 @@ PRINT*,'GIDS ',GIDS
       INTEGER(4)            :: IF,IF1,IF2,IR
       COMPLEX(8)            :: HA(NF-NPHI,NF-NPHI),HX(NF-NPHI,NPHI),HB(NF-NPHI,NPHI)
       COMPLEX(8)            :: ALLKINK_HOM(NF,NF)
-      COMPLEX(8)            :: MAT(NF,NF),VEC(NF)
-      COMPLEX(8)            :: DE1(NPHI)
+      COMPLEX(8)            :: MAT(NF,NF)
       INTEGER(4)            :: IRC
       COMPLEX(8)            :: KINK_HOM(NPHI,NPHI)
       COMPLEX(8)            :: KINK_DOT(NPHI,NPHI)
       COMPLEX(8)            :: KINKC(NPHI,NPHI)
       COMPLEX(8)            :: HAM(NPHI,NPHI),OV(NPHI,NPHI)
-      COMPLEX(8)            :: DEC(NPHI)
       REAL(8)               :: R(NR)
       COMPLEX(8)            :: DHOM(NR,NF)
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
@@ -2002,12 +1974,10 @@ PRINT*,'GIDS ',GIDS
       COMPLEX(8)            :: CAUX(NR)
       COMPLEX(8)            :: CSVAR
       REAL(8)               :: AUX(NR)
-      REAL(8)               :: SVAR,SVAR1,SVAR2,SVAR3
+      REAL(8)               :: SVAR,SVAR1,SVAR2
       INTEGER(4)            :: I,J
-      INTEGER(4)            :: I1ARR(1)
       INTEGER(4)            :: L0
-      LOGICAL(4)            :: TSELECT(NF)
-      COMPLEX(8)            :: AMAT(NPHI-1,NPHI-1),BVEC(NPHI-1),XVEC(NPHI-1)
+      COMPLEX(8)            :: AMAT(NPHI-1,NPHI-1),BVEC(NPHI-1)
 CHARACTER(32):: FILE
 !     ******************************************************************
       TOK=.FALSE.
@@ -2550,7 +2520,6 @@ CHARACTER(32):: FILE
       real(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! p**2/(2m)*WAVE-FUNCTION
       REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! one-particke energies
       LOGICAL(4) ,INTENT(OUT)    :: TOK               ! error flag
-      REAL(8)                    :: DE(NPHI)
       INTEGER(4)                 :: LX
       INTEGER(4)                 :: LOX(LMX) ! ANGULAR MOMENTA
       INTEGER(4)                 :: LM,LM1,LM2,LM3,L,M,IM,IB,ir
@@ -2565,7 +2534,6 @@ CHARACTER(32):: FILE
       REAL(8)                    :: Y0                           !
       REAL(8)                    :: CG
       REAL(8)                    :: RDPRIME(NR)                  !
-      LOGICAL(4)                 :: THOM
       REAL(8)   ,PARAMETER       :: XMAX=1.D+20
       REAL(8)                    :: SWKB(NR),SVAR
       INTEGER(4)                 :: IRCL,IROUT
@@ -2703,7 +2671,6 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(OUT):: DE(NPHI)        ! one-particle eigenvalues
       real(8)   ,INTENT(OUT):: PHI(NR,NF,NPHI) ! wave functions
       LOGICAL(4),INTENT(OUT):: TOK             ! error flag
-      LOGICAL               :: THOM
       REAL(8)               :: ALLPHIL(NR,NF,NF)
       REAL(8)               :: ALLPHIR(NR,NF,NF)
       REAL(8)               :: PHIL(NR,NF,NPHI)
@@ -2714,26 +2681,22 @@ CHARACTER(32):: FILE
       INTEGER(4)            :: IF,IF1,IF2,IR
       REAL(8)               :: HA(NF-NPHI,NF-NPHI),HX(NF-NPHI,NPHI),HB(NF-NPHI,NPHI)
       REAL(8)               :: ALLKINK_HOM(NF,NF)
-      REAL(8)               :: MAT(NF,NF),VEC(NF)
+      REAL(8)               :: MAT(NF,NF)
       REAL(8)               :: DE1(NPHI)
       INTEGER(4)            :: IRC
       REAL(8)               :: KINK_HOM(NPHI,NPHI)
       REAL(8)               :: KINK_DOT(NPHI,NPHI)
       REAL(8)               :: KINKC(NPHI,NPHI)
       REAL(8)               :: HAM(NPHI,NPHI),OV(NPHI,NPHI)
-      REAL(8)               :: DEC(NPHI)
       REAL(8)               :: R(NR)
       REAL(8)               :: DHOM(NR,NF)
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
       REAL(8)               :: BVECS(NF,NF),XVECS(NF,NF)
       REAL(8)               :: AUX(NR)
       REAL(8)               :: SVAR
-!      REAL(8)               :: SVAR1,SVAR2,SVAR3
       INTEGER(4)            :: I,J
-      INTEGER(4)            :: I1ARR(1)
       INTEGER(4)            :: L0
-      LOGICAL(4)            :: TSELECT(NF)
-      REAL(8)               :: AMAT(NPHI-1,NPHI-1),BVEC(NPHI-1),XVEC(NPHI-1)
+      REAL(8)               :: AMAT(NPHI-1,NPHI-1),BVEC(NPHI-1)
 CHARACTER(32):: FILE
 !     ******************************************************************
       TOK=.FALSE.
@@ -3283,8 +3246,6 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(IN) :: RHO(NR) ! CHARGE DENSITY
       REAL(8)   ,INTENT(OUT):: QLM     ! MULTIPOLE MOMENT
       REAL(8)               :: AUX1(NR)
-      REAL(8)               :: XEXP,RI
-      INTEGER(4)            :: IR
       REAL(8)               :: R(NR)
 !     ******************************************************************
       CALL RADIAL$R(GID,NR,R)
@@ -3668,7 +3629,6 @@ END MODULE SHLOGRADIAL_MODULE
       REAL(8)               :: B1(NR_)
       REAL(8)               :: C1(NR_)
       REAL(8)               :: D1(NR_)
-      INTEGER(4)            :: IR,IR1
 !     ******************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
@@ -3706,7 +3666,7 @@ END MODULE SHLOGRADIAL_MODULE
       REAL(8)               :: B1(NR_)
       REAL(8)               :: C1(NR_,NF,NF)
       REAL(8)               :: D1(NR_,NF)
-      INTEGER(4)            :: IR,IR1,I,J
+      INTEGER(4)            :: I,J
       INTEGER(4)            :: Imin,imax
 !     ******************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
@@ -3762,7 +3722,7 @@ END MODULE SHLOGRADIAL_MODULE
       REAL(8)               :: B1(NR_)
       COMPLEX(8)            :: C1(NR_,NF,NF)
       COMPLEX(8)            :: D1(NR_,NF)
-      INTEGER(4)            :: IR,IR1,I,J
+      INTEGER(4)            :: I,J
       INTEGER(4)            :: IMIN,IMAX
 !     ******************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
@@ -4210,7 +4170,6 @@ END MODULE LOGRADIAL_MODULE
       REAL(8)               :: B1(NR_)
       REAL(8)               :: C1(NR_)
       REAL(8)               :: D1(NR_)
-      INTEGER(4)            :: IR,IR1
 !     ******************************************************************
       CALL LOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
@@ -4247,7 +4206,7 @@ END MODULE LOGRADIAL_MODULE
       REAL(8)               :: B1(NR_)
       REAL(8)               :: C1(NR_,NF,NF)
       REAL(8)               :: D1(NR_,NF)
-      INTEGER(4)            :: IR,IR1,I,J
+      INTEGER(4)            :: I,J
       INTEGER(4)            :: Imin,imax
 !     ******************************************************************
       CALL LOGRADIAL_RESOLVE(GID)
@@ -4303,7 +4262,7 @@ END MODULE LOGRADIAL_MODULE
       REAL(8)               :: B1(NR_)
       COMPLEX(8)            :: C1(NR_,NF,NF)
       COMPLEX(8)            :: D1(NR_,NF)
-      INTEGER(4)            :: IR,IR1,I,J
+      INTEGER(4)            :: I,J
       INTEGER(4)            :: IMIN,IMAX
 !     ******************************************************************
       CALL LOGRADIAL_RESOLVE(GID)
@@ -4475,7 +4434,7 @@ CONTAINS
       AA=CM*G1**(L-1.5)
       BB=EXP((L-1.5)*DEX) 
       DO I=1,NP 
-        G(I)=AA*XA(I) 
+        G(I)=real(AA*XA(I) )
         AA=AA*BB 
       ENDDO
       RETURN
@@ -5134,180 +5093,3 @@ END MODULE BESSELTRANSFORM_MODULE
       CALL MATCH(NP,G,GLARGE,DISC)
       RETURN
       END
-!
-!     .....................................................GETF.........
-      SUBROUTINE GETF(NR,F,X,RES)
-!     **                                                              **
-!     **  CALCULATES THE VALUE RES OF THE FUNCTION F AT X             **
-!     **  BY INTERPOLATION BY A THIRD ORDER POLYNOM                   **
-!     **  F(X=I)=F(I)                                                 **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991*****
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NR
-      REAL(8)   ,INTENT(IN) :: F(NR)
-      REAL(8)   ,INTENT(IN) :: X
-      REAL(8)   ,INTENT(OUT):: RES
-      INTEGER(4)            :: INCR
-      REAL(8)               :: XX1,XX2,XX3,XX4
-      REAL(8)               :: P1,P2,P3,P4,P21,P32,P43,P321,P432,P4321
-!     ******************************************************************
-CALL ERROR$MSG('ROUTINE MARKED FOR DELETION')
-CALL ERROR$STOP('BESSOV')
-      INCR=INT(X)
-      INCR=MIN0(INCR,NR-2)
-      INCR=MAX0(INCR,2)
-      XX1=X-DBLE(INCR-1)
-      XX2=XX1-1.D0
-      XX3=XX2-1.D0
-      XX4=XX3-1.D0
-      P1=F(INCR-1)
-      P2=F(INCR)
-      P3=F(INCR+1)
-      P4=F(INCR+2)
-      P21=-XX2*P1+XX1*P2
-      P32=-XX3*P2+XX2*P3
-      P43=-XX4*P3+XX3*P4
-      P321=0.5D0*( -XX3*P21+XX1*P32 )
-      P432=0.5D0*( -XX4*P32+XX2*P43 )
-      P4321=1.D0/3.D0 * ( -XX4*P321+XX1*P432 )
-      RES=P4321
-      RETURN
-      END
-!
-!     .....................................................BESSOV.......
-      SUBROUTINE BESSOV(R1,DEX,NR,F,L,G,RMAX,RES)
-!     **                                                              **
-!     **  CALCULATES THE OVERLAP BETWEEN A SPHERICAL BESSEL FUNCTION  **
-!     **  WITH THE FUNCTION F GIVEN ON AN LOGARITHMIC GRID            **
-!     **  (3-D OVERLAPP)                                              **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991*****
-      IMPLICIT NONE
-      REAL(8)   ,INTENT(IN) :: R1    ! 1. RADIAL GRID POINT
-      REAL(8)   ,INTENT(IN) :: DEX   ! FACTOR BETWEEN SUBSEQUENT GRID POINTS
-      INTEGER(4),INTENT(IN) :: NR    ! #(GRID POINTS)
-      REAL(8)   ,INTENT(IN) :: F(NR) 
-      INTEGER(4),INTENT(IN) :: L     ! MAIN ANGULAR MOMENTUM
-      REAL(8)   ,INTENT(IN) :: G
-      REAL(8)   ,INTENT(IN) :: RMAX
-      REAL(8)   ,INTENT(OUT):: RES
-      REAL(8)               :: FAC(4)
-      INTEGER(4)            :: NSTEP
-      INTEGER(4)            :: I,IR
-      REAL(8)               :: RSTEP
-      REAL(8)               :: X,R
-      REAL(8)               :: VAL
-      REAL(8),EXTERNAL      :: BESSL
-!     ******************************************************************
-CALL ERROR$MSG('ROUTINE MARKED FOR DELETION')
-CALL ERROR$STOP('BESSOV')
-      NSTEP=20.D0*G/6.D0
-      NSTEP=MAX0(NSTEP,400)
-      RSTEP=RMAX/NSTEP
-      FAC(1)=RSTEP*17.D0/48.D0
-      FAC(2)=RSTEP*59.D0/48.D0
-      FAC(3)=RSTEP*43.D0/48.D0
-      FAC(4)=RSTEP*49.D0/48.D0
-      X=1.D0+DLOG(RMAX/R1) / DEX
-      CALL GETF(NR,F,X,VAL)
-      RES=FAC(1)*VAL*BESSL(L,RMAX*G)*RMAX**2
-      DO I=2,4
-        R=RSTEP*DBLE(I-1)
-        X=1.D0+DLOG(R/R1) / DEX
-        CALL GETF(NR,F,X,VAL)
-        RES=RES+FAC(I)*VAL*BESSL(L,R*G)*R**2
-        R=RMAX-R
-        X=1.D0+DLOG(R/R1) / DEX
-        CALL GETF(NR,F,X,VAL)
-        RES=RES+FAC(I)*VAL*BESSL(L,R*G)*R**2
-      ENDDO
-      DO IR=5,NSTEP-3
-        R=RSTEP*DBLE(IR-1)
-        X=1.D0+DLOG(R/R1) / DEX
-        CALL GETF(NR,F,X,VAL)
-        RES=RES+RSTEP*VAL*BESSL(L,R*G)*R**2
-      ENDDO
-      RETURN
-      END
-!
-!     ..............................................BESSL...............
-      FUNCTION BESSL(L,X) RESULT(Y)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATES THE SPHERICAL BESSEL FUNCTION                    **
-!     **  ACCORDING TO ABRAMOWITZ AND STEGUN                          **
-!     **    FORMULA 10.1.2              FOR   X < 8                   **
-!     **    FORMULA 10.1.8 AND  10.1.9  FOR   X > 8                   **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991*****
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
-      INTEGER(4),INTENT(IN) :: L ! MAIN AGULAR MOMENTUM
-      REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
-      REAL(8)               :: Y ! BESSL FUNCTION AT X
-      REAL(8)               :: TRIG(4)
-      REAL(8)               :: FACUL(0:100)
-      REAL(8)   ,PARAMETER  :: TOL=1.D-10
-      REAL(8)               :: PI
-      REAL(8)               :: ARG
-      REAL(8)               :: XSQ
-      REAL(8)               :: FAC
-      INTEGER(4)            :: K,IL,II,ISVAR,I
-!     ******************************************************************
-CALL ERROR$MSG('ROUTINE MARKED FOR DELETION')
-CALL ERROR$STOP('BESSOV')
-      IF(X.GT.DBLE(L)) THEN
-        PI=4.D0*DATAN(1.D0)
-        ARG=X-0.5D0*DBLE(L)*PI
-        TRIG(1)=DSIN(ARG)/X
-        TRIG(2)=DCOS(ARG)/X
-        TRIG(3)=-TRIG(1)
-        TRIG(4)=-TRIG(2)
-        Y=TRIG(1)
-        IF(L.EQ.0) RETURN
-        FACUL(0)=1.D0
-        DO I=1,2*L
-          FACUL(I)=FACUL(I-1)*DBLE(I)
-        ENDDO
-        XSQ=0.5D0/X
-        FAC=1.D0
-        DO K=1,L
-          II=MOD(K,4)+1
-          FAC=FACUL(K+L)/FACUL(K)/FACUL(L-K)*XSQ**K
-!         FAC=FAC*XSQ*DBLE(L+K)/DBLE(K*(L-K))
-          Y=Y+FAC*TRIG(II)
-        ENDDO
-!       II=MOD(L,4)+1
-!       FAC=FAC*XSQ*DBLE(2*L)/DBLE(L)
-!       Y=Y+FAC*TRIG(II)
-        RETURN
-      END IF
-!     ==================================================================
-!     ==  TAYLOR EXPANSION FOR SMALL ARGUMENTS                        ==
-!     ==================================================================
-      ISVAR=1
-      DO IL=1,L
-        ISVAR=ISVAR*(2*IL+1)
-      ENDDO
-      IF(L.NE.0.D0) THEN
-        FAC=X**L/DBLE(ISVAR)
-      ELSE
-        FAC=1.D0/DBLE(ISVAR)
-      END IF
-      Y=FAC
-      XSQ=-0.5D0*X*X
-      ISVAR=2*L+1
-      DO I=1,1000
-        ISVAR=ISVAR+2
-        FAC=FAC*XSQ/DBLE(I*ISVAR)
-        Y=Y+FAC
-        IF(DABS(FAC).LT.TOL) GOTO 9999
-      ENDDO
-      CALL ERROR$MSG('Y NOT CONVERGED')
-      CALL ERROR$I4VAL('L',L)
-      CALL ERROR$R8VAL('X',X)
-      CALL ERROR$STOP('FUNCTION BESSL')
-9999  CONTINUE
-      RETURN
-      END
-

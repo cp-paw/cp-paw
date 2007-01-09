@@ -72,7 +72,6 @@ END MODULE VEXT_MODULE
 !      **                                                             **
 !      *****************************************************************
        USE VEXT_MODULE
-       USE PERIODICTABLE_MODULE
        IMPLICIT NONE
        INTEGER(4)                  :: NAT
        REAL(8)                     :: RBAS(3,3)
@@ -124,10 +123,10 @@ END MODULE VEXT_MODULE
        REAL(8)                     :: E0
        REAL(8)                     :: DR(3)
        REAL(8)                     :: DIS
+       REAL(8)                     :: aez
        REAL(8)                     :: DCOV,DVDW
        REAL(8)                     :: SVAR
        INTEGER(4)                  :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
-       INTEGER(4)                  :: IZ(NAT)
        REAL(8)                     :: RVDW(NAT)
        REAL(8)                     :: RCOV(NAT)
        INTEGER(4)                  :: IAT,IT1,IT2,IT3,ISP
@@ -141,10 +140,10 @@ END MODULE VEXT_MODULE
        DO IAT=1,NAT
          CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
          CALL ATOMTYPELIST$SELECTI4(ISP)
-         CALL ATOMTYPELIST$GETI4('IZ',IZ(IAT))
-         CALL PERIODICTABLE$GET(IZ(IAT),'R(VDW)',RVDW(IAT))
-         CALL PERIODICTABLE$GET(IZ(IAT),'R(COV)',RCOV(IAT))
-         CALL ATOMTYPELIST$UNSELECT
+         CALL SETUP$ISELECT(ISP)
+         CALL SETUP$GETR8('AEZ',AEZ)
+         CALL PERIODICTABLE$GET(AEZ,'R(VDW)',RVDW(IAT))
+         CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV(IAT))
        ENDDO
 !
 !      =================================================================

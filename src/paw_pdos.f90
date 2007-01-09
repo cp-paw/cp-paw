@@ -447,7 +447,6 @@ END MODULE PDOS_MODULE
       INTEGER(4),INTENT(IN)  :: NFIL
       INTEGER(4)             :: ISP,IKPT,ISPIN,IB
       INTEGER(4)             :: LNX1,NB
-      INTEGER(4)             :: NTASKS,THISTASK
       INTEGER(4)             :: IOS
       CHARACTER(82)          :: IOSTATMSG
       CHARACTER(32)          :: FLAG
@@ -544,7 +543,6 @@ END MODULE PDOS_MODULE
       INTEGER(4),INTENT(IN)  :: NFIL
       INTEGER(4)             :: ISP,IKPT,ISPIN,IB
       INTEGER(4)             :: LNX1,NB
-      INTEGER(4)             :: NTASKS,THISTASK
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITE')
 !

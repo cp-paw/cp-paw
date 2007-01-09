@@ -2,28 +2,27 @@
 !     ..................................................................
       SUBROUTINE KPOINTS_NKDIV(RBAS,RMAX,NKDIV)
 !     ******************************************************************
-!     **  calculates the division of the reciprocal unit cell         **
-!     **  consistent with a radius rmax in real space.                **
-!     **  the k-point grid is consistent with a supercell with        **
-!     **  the longest diameter equal to rmax. (check this)            **
+!     **  CALCULATES THE DIVISION OF THE RECIPROCAL UNIT CELL         **
+!     **  CONSISTENT WITH A RADIUS RMAX IN REAL SPACE.                **
+!     **  THE K-POINT GRID IS CONSISTENT WITH A SUPERCELL WITH        **
+!     **  THE LONGEST DIAMETER EQUAL TO RMAX. (CHECK THIS)            **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: RBAS(3,3)
       REAL(8)   ,INTENT(IN) :: RMAX
       INTEGER(4),INTENT(OUT):: NKDIV(3)
-      INTEGER(4)            :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
-      real(8)               :: gbas(3,3)
-      real(8)               :: vol,svar
-      integer(4)            :: i
+      REAL(8)               :: GBAS(3,3)
+      REAL(8)               :: VOL,SVAR
+      INTEGER(4)            :: I
 !     ******************************************************************
-      call gbass(rbas,gbas,vol)
-      do i=1,3
-        svar=Rmax*sqrt(dot_product(gbas(:,i),gbas(:,i))) &
-     &           /dot_product(rbas(:,i),gbas(:,i))
-        nkdiv(i)=int(abs(svar+1.d0))
-      enddo
-      return
+      CALL GBASS(RBAS,GBAS,VOL)
+      DO I=1,3
+        SVAR=RMAX*SQRT(DOT_PRODUCT(GBAS(:,I),GBAS(:,I))) &
+     &           /DOT_PRODUCT(RBAS(:,I),GBAS(:,I))
+        NKDIV(I)=INT(ABS(SVAR+1.D0))
+      ENDDO
+      RETURN
       END
 !
 !     ..................................................................
@@ -43,59 +42,22 @@
       INTEGER(4),INTENT(IN) :: NKPT        ! #(KPOINTS)
       REAL(8)   ,INTENT(OUT):: XK(3,NKPT)  !KPOINT IN RELATIVE COORDINATES
       REAL(8)   ,INTENT(OUT):: WKPT(NKPT)  ! GEOMETRIC K-POINT WEIGHT
-      INTEGER(4)            :: I1,I2,I3
-      INTEGER(4)            :: I1INV,I2INV,I3INV
-      INTEGER(4)            :: N1,N2,N3
-      INTEGER(4)            :: IKPT
-      INTEGER(4)            :: IND,INDINV
-      REAL(8)               :: WGHT,WGHT0
+      REAL(8)               :: DUMMYRBAS(3,3)
+      INTEGER(4)            :: NKPT1
 !     ******************************************************************
-      N1=NKDIV(1)
-      N2=NKDIV(2)
-      N3=NKDIV(3)
-      WGHT0=1.D0/REAL(N1*N2*N3,KIND=8)
-      IKPT=0
-      DO I1=1,N1
-        DO I2=1,N2
-          DO I3=1,N3
-!           ===========================================================
-!           ==  CHECK INVERSION SYMMETRY                             ==
-!           ==  EACH POINT IN THE CELL IS DEFINED BY A SINGLE INTEGER==
-!           ==  LABEL IND=1+[I1-1+N1*(I2-1+N2*I3-1)]                 ==
-!           ===========================================================
-            IF(TINV) THEN
-              I1INV=MOD(N1-(I1+ISHIFT(1)-1),N1)+1
-              I2INV=MOD(N2-(I2+ISHIFT(2)-1),N2)+1
-              I3INV=MOD(N3-(I3+ISHIFT(3)-1),N3)+1
-              IND   =I1   -1+N1*(I2   -1+N2*(I3   -1))
-              INDINV=I1INV-1+N1*(I2INV-1+N2*(I3INV-1))
-              IF(IND.EQ.INDINV) THEN  ! SPECIAL POINT (EQUIV TO ITS INVERSE)
-                WGHT=WGHT0                 
-              ELSE IF(IND.GT.INDINV) THEN 
-                CYCLE ! INVERSE IMAGE IS NOT COUNTED
-              ELSE
-                WGHT=2.D0*WGHT0 ! GENERAL K-POINT GETS THE WEIGHT OF ITS IMAGE
-              END IF
-            ELSE
-              WGHT=WGHT0
-            END IF
-            IKPT=IKPT+1
-            IF(IKPT.GT.NKPT) CYCLE
-            XK(1,IKPT)=REAL(2*(I1-1)+ISHIFT(1),KIND=8)/REAL(2*N1,KIND=8)
-            XK(2,IKPT)=REAL(2*(I2-1)+ISHIFT(2),KIND=8)/REAL(2*N2,KIND=8)
-            XK(3,IKPT)=REAL(2*(I3-1)+ISHIFT(3),KIND=8)/REAL(2*N3,KIND=8)
-            WKPT(IKPT)=WGHT
-!write(*,fmt='(i5,3f10.5,5x,f10.4)')ikpt,xk(:,ikpt),wkpt(ikpt)
-          ENDDO
-        ENDDO
-      ENDDO   
-      IF(IKPT.NE.NKPT) THEN
-        CALL ERROR$MSG('INCONSISTENT #(K-POINTS)')
-        CALL ERROR$I4VAL('NKPT ANTICIPATED',NKPT)
-        CALL ERROR$I4VAL('NKPT ACTUAL     ',IKPT)
-        CALL ERROR$STOP('KPOINTS$KPOINTS')
-      END IF
-!call error$stop('forced stop')
+!     USE SIC UNIT CELL TO OBTAIN RELATIVE COORDINATES
+                               CALL TRACE$PUSH('KPOINTS_KPOINTS')
+      DUMMYRBAS(:,1)=(/1.D0,0.D0,0.D0/)
+      DUMMYRBAS(:,2)=(/0.D0,1.D0,0.D0/)
+      DUMMYRBAS(:,3)=(/0.D0,0.D0,1.D0/)
+      CALL BRILLOUIN$MSHNOSYM(TINV,DUMMYRBAS,NKDIV,ISHIFT)
+      CALL BRILLOUIN$GETI4('NK',NKPT1)
+      IF(NKPT1.NE.NKPT) THEN
+        CALL ERROR$STOP('KPOINTS_KPOINTS')
+      END IF 
+      CALL BRILLOUIN$GETR8A('XK',3*NKPT,XK)
+      CALL BRILLOUIN$GETR8A('WKPT',NKPT,WKPT)
+                                CALL TRACE$POP
       RETURN
       END
 !
@@ -109,39 +71,14 @@
       INTEGER(4),INTENT(IN) :: NKDIV(3)
       INTEGER(4),INTENT(IN) :: ISHIFT(3)   ! DISPLACEMENT AWAY FROM GAMMA
       INTEGER(4),INTENT(OUT):: NKPT
-      INTEGER(4)            :: I1,I2,I3
-      INTEGER(4)            :: I1INV,I2INV,I3INV
-      INTEGER(4)            :: N1,N2,N3
-      INTEGER(4)            :: IKPT
-      INTEGER(4)            :: IND,INDINV
+      REAL(8)               :: DUMMYRBAS(3,3)
 !     ******************************************************************
-!     ******************************************************************
-      N1=NKDIV(1)
-      N2=NKDIV(2)
-      N3=NKDIV(3)
-      NKPT=0
-      DO I1=1,N1
-        DO I2=1,N2
-          DO I3=1,N3
-!           ===========================================================
-!           ==  CHECK INVERSION SYMMETRY                             ==
-!           ==  EACH POINT IN THE CELL IS DEFINED BY A SINGLE INTEGER==
-!           ==  LABEL IND=1+[I1-1+N1*(I2-1+N2*I3-1)]                 ==
-!           ===========================================================
-            IF(TINV) THEN
-              I1INV=MOD(N1-(I1+ISHIFT(1)-1),N1)+1
-              I2INV=MOD(N2-(I2+ISHIFT(2)-1),N2)+1
-              I3INV=MOD(N3-(I3+ISHIFT(3)-1),N3)+1
-              IND   =I1   -1+N1*(I2   -1+N2*(I3   -1))
-              INDINV=I1INV-1+N1*(I2INV-1+N2*(I3INV-1))
-              IF(IND.GT.INDINV) THEN 
-                CYCLE ! INVERSE IMAGE IS NOT COUNTED
-              ENDIF
-            END IF
-            NKPT=NKPT+1
-          ENDDO
-        ENDDO
-      ENDDO   
+      DUMMYRBAS(:,1)=(/1.D0,0.D0,0.D0/)
+      DUMMYRBAS(:,2)=(/0.D0,1.D0,0.D0/)
+      DUMMYRBAS(:,3)=(/0.D0,0.D0,1.D0/)
+      CALL BRILLOUIN$MSHNOSYM(TINV,DUMMYRBAS,NKDIV,ISHIFT)
+      CALL BRILLOUIN$GETI4('NK',NKPT)
+      RETURN
       RETURN
       END
 

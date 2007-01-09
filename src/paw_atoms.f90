@@ -212,8 +212,6 @@ END MODULE ATOMS_MODULE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: ISP,IAT,ISP1
       CHARACTER(LEN=82)     :: STRING
-      CHARACTER(LEN=32)     :: IDENT1
-      REAL(8)               :: X(5)
       REAL(8)               :: U      ! MASS UNIT C12/12
       INTEGER(4)            :: NTASKS,THISTASK
       REAL(8)               :: EFFEMASS(NAT)
@@ -355,18 +353,12 @@ END MODULE ATOMS_MODULE
       USE ATOMS_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
-      INTEGER(4)     :: IAT,I
-      REAL(8)        :: EKIN
-      REAL(8)        :: DEKIN
+      INTEGER(4)     :: IAT
       REAL(8)        :: EMASS,EMASSCG2
-      REAL(8)        :: ENOSEP
       REAL(8)        :: EFFEMASS(NAT)
       REAL(8)        :: REDRMASS(NAT)
       REAL(8)        :: anner1(nat)
-      LOGICAL(4)     :: TCHK
-      INTEGER(4)     :: ITER
       LOGICAL(4)     :: TSTRESS
-      REAL(8)        :: STRESS(3,3)
       REAL(8)        :: CELLFRIC(3,3)
       REAL(8)        :: RBAS(3,3)
       REAL(8)        :: SVAR
@@ -509,18 +501,13 @@ ENDDO
       USE ATOMS_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
-      INTEGER(4)     :: IAT,I
-      REAL(8)        :: EKIN
-      REAL(8)        :: DEKIN
+      INTEGER(4)     :: IAT
       REAL(8)        :: EMASS,EMASSCG2
-      REAL(8)        :: ENOSEP
       REAL(8)        :: EFFEMASS(NAT)
       REAL(8)        :: REDRMASS(NAT)
       REAL(8)        :: anner1(nat)
       LOGICAL(4)     :: TCHK,TCHK2,TCHK3,TCHK4,TCHK5
-      INTEGER(4)     :: ITER
       LOGICAL(4)     :: TSTRESS
-      REAL(8)        :: STRESS(3,3)
       REAL(8)        :: CELLFRIC(3,3)
       REAL(8)        :: RBAS(3,3)
       REAL(8)        :: svar
@@ -751,7 +738,6 @@ ENDDO
       INTEGER(4)     :: IAT,I,J
       LOGICAL(4)     :: TSTRESS
       REAL(8)        :: RP1(3,NAT)
-      REAL(8)        :: STRESS(3,3)
       REAL(8)        :: STRESS1(3,3)
       REAL(8)        :: V(3)
       REAL(8)        :: RBAS(3,3)
@@ -765,8 +751,6 @@ ENDDO
          PRINT*,'********** WARNING FROM DIMER ****************'
          return
       end if
-
-
 ! 
 !     ==================================================================
 !     == CONTROL AND CHANGE STATE OF THIS                             ==
@@ -1207,7 +1191,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       REAL(8)   ,INTENT(IN) :: PSG2(NAT)     ! 
       REAL(8)   ,INTENT(IN) :: PSG4(NAT)     ! 
       REAL(8)   ,INTENT(OUT):: EFFEMASS(NAT) ! MASS RENORMALIZATION
-      REAL(8)               :: SVAR
       INTEGER(4)            :: IAT
 !     ******************************************************************
       DO IAT=1,NAT
@@ -1296,7 +1279,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       REAL(8)   ,INTENT(IN) :: CELLFRIC(3,3) ! FORCE
       REAL(8)   ,INTENT(OUT):: CELLKIN(3,3) ! FORCE
       INTEGER(4)            :: IAT,I,J
-      REAL(8)               :: ANNER1
       REAL(8)               :: SVAR1,SVAR2,SVAR3
       REAL(8)               :: MATP(3,3),MATM(3,3),MATPINV(3,3)
       REAL(8)               :: V(3)
@@ -2124,7 +2106,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       CHARACTER(*),INTENT(IN) :: ID_
       INTEGER(4)  ,INTENT(IN) :: LENG_
       INTEGER(4)  ,INTENT(IN) :: IAT_
-      INTEGER(4)  ,INTENT(IN):: VAL_(LENG_)
+      INTEGER(4)  ,INTENT(IN) :: VAL_(LENG_)
 !     ******************************************************************
       IF(IAT_.GT.NAT) THEN
         CALL ERROR$MSG('ATOM INDEX OUT OF RANGE')
@@ -2235,201 +2217,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       END
 !
 !     ..................................................................
-      SUBROUTINE ATOMLIST$GETALL(ID_,NBYTE_,NAT_,VAL_)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      USE ATOMS_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID_
-      INTEGER(4)  ,INTENT(IN) :: NBYTE_
-      INTEGER(4)  ,INTENT(IN) :: NAT_
-      CHARACTER(1),INTENT(OUT):: VAL_(NBYTE_*NAT_)
-!     ******************************************************************
-      IF(NAT_.NE.NAT) THEN
-        CALL ERROR$MSG('ATOM INDEX OUT OF RANGE')
-        CALL ERROR$I4VAL('NAT_',NAT_)
-        CALL ERROR$I4VAL('NAT',NAT)
-        CALL ERROR$STOP('ATOMLIST$GETALL')
-      END IF
-      IF(ID_.EQ.'NAME') THEN
-        VAL_(:)=TRANSFER(NAME,VAL_,32*NAT)
-      ELSE IF(ID_.EQ.'ISPECIES') THEN
-        VAL_(:)=TRANSFER(ISPECIES,VAL_,4*NAT)
-      ELSE IF(ID_.EQ.'R(0)') THEN
-        VAL_(:)=TRANSFER(R0,VAL_,8*3*NAT)
-      ELSE IF(ID_.EQ.'R(-)') THEN
-        VAL_(:)=TRANSFER(RM,VAL_,8*3*NAT)
-      ELSE IF(ID_.EQ.'R(+)') THEN
-        VAL_(:)=TRANSFER(RP,VAL_,8*3*NAT)
-      ELSE IF(ID_.EQ.'FORCE') THEN
-        VAL_(:)=TRANSFER(FORCE,VAL_,8*3*NAT)
-      ELSE IF(ID_.EQ.'MASS') THEN
-        VAL_(:)=TRANSFER(RMASS,VAL_,8*NAT)
-      ELSE IF(ID_.EQ.'PS<G2>') THEN
-        VAL_(:)=TRANSFER(PSG2,VAL_,8*NAT)
-      ELSE IF(ID_.EQ.'PS<G4>') THEN
-        VAL_(:)=TRANSFER(PSG4,VAL_,8*NAT)
-      ELSE IF(ID_.EQ.'Z') THEN
-        VAL_(:)=TRANSFER(Z,VAL_,8*NAT)
-      ELSE IF(ID_.EQ.'ZVALENCE') THEN
-        VAL_(:)=TRANSFER(ZV,VAL_,8*NAT)
-      ELSE IF(ID_.EQ.'POINTCHARGE') THEN
-!       == KEYWORD SHALL BE REPLACED BY 'Q'
-        VAL_(:)=TRANSFER(CHARGE,VAL_,8*NAT)
-      ELSE IF(ID_.EQ.'Q') THEN
-        VAL_(:)=TRANSFER(CHARGE,VAL_,8*NAT)
-      ELSE 
-        CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID_',ID_)
-        CALL ERROR$STOP('ATOMLIST$GETALL')
-      END IF
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE ATOMLIST$SET(ID_,NBYTE_,IAT_,VAL_)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      USE ATOMS_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID_
-      INTEGER(4)  ,INTENT(IN) :: NBYTE_
-      INTEGER(4)  ,INTENT(IN) :: IAT_
-      CHARACTER(1),INTENT(IN) :: VAL_(NBYTE_)
-      REAL(8)                 :: R8VAL
-!     ******************************************************************
-      IF(IAT_.GT.NAT) THEN
-        CALL ERROR$MSG('ATOM INDEX OUT OF RANGE')
-        CALL ERROR$I4VAL('IAT_',IAT_)
-        CALL ERROR$I4VAL('NAT',NAT)
-        CALL ERROR$STOP('ATOMLIST$SET')
-      END IF
-      IF(ID_.EQ.'NAME') THEN
-        NAME(IAT_)=TRANSFER(VAL_,NAME(1))
-      ELSE IF(ID_.EQ.'ISPECIES') THEN
-        ISPECIES(IAT_)=TRANSFER(VAL_,ISPECIES(1))
-      ELSE IF(ID_.EQ.'R(0)') THEN
-        R0(:,IAT_)=TRANSFER(VAL_,R0,3)
-      ELSE IF(ID_.EQ.'R(-)') THEN
-        RM(:,IAT_)=TRANSFER(VAL_,RM,3)
-      ELSE IF(ID_.EQ.'R(+)') THEN
-        RP(:,IAT_)=TRANSFER(VAL_,RP,3)
-      ELSE IF(ID_.EQ.'FORCE') THEN
-        FORCE(:,IAT_)=TRANSFER(VAL_,FORCE,3)
-      ELSE IF(ID_.EQ.'MASS') THEN
-        RMASS(IAT_)=TRANSFER(VAL_,R8VAL)
-      ELSE IF(ID_.EQ.'PS<G2>') THEN
-        PSG2(IAT_)=TRANSFER(VAL_,R8VAL)
-      ELSE IF(ID_.EQ.'PS<G4>') THEN
-        PSG4(IAT_)=TRANSFER(VAL_,R8VAL)
-      ELSE IF(ID_.EQ.'Z') THEN
-        Z(IAT_)=TRANSFER(VAL_,R8VAL)
-      ELSE IF(ID_.EQ.'ZVALENCE') THEN
-        ZV(IAT_)=TRANSFER(VAL_,R8VAL)
-      ELSE IF(ID_.EQ.'POINTCHARGE') THEN
-!       == KEYWORD SHALL BE REPLACED BY 'Q'
-        CHARGE(IAT_)=TRANSFER(VAL_,R8VAL)
-      ELSE IF(ID_.EQ.'Q') THEN
-        CHARGE(IAT_)=TRANSFER(VAL_,R8VAL)
-      ELSE 
-        CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID_',ID_)
-        CALL ERROR$STOP('ATOMLIST$SET')
-      END IF
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE ATOMLIST$SETALL(ID_,NBYTE_,NAT_,VAL_)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      USE ATOMS_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID_
-      INTEGER(4)  ,INTENT(IN) :: NBYTE_
-      INTEGER(4)  ,INTENT(IN) :: NAT_
-      CHARACTER(1),INTENT(IN) :: VAL_(NBYTE_,NAT_)
-      INTEGER(4)              :: IAT
-!     ******************************************************************
-      IF(NAT_.GT.NAT) THEN
-        CALL ERROR$MSG('ATOM INDEX OUT OF RANGE')
-        CALL ERROR$I4VAL('NAT_',NAT_)
-        CALL ERROR$I4VAL('NAT',NAT)
-        CALL ERROR$STOP('ATOMLIST$SETALL')
-      END IF
-      IF(ID_.EQ.'NAME') THEN
-        NAME=TRANSFER(VAL_,NAME,NAT)
-      ELSE IF(ID_.EQ.'ISPECIES') THEN
-        ISPECIES=TRANSFER(VAL_,ISPECIES,NAT)
-      ELSE IF(ID_.EQ.'R(0)') THEN
-        R0=RESHAPE(TRANSFER(VAL_,R0,3*NAT),(/3,NAT/))
-      ELSE IF(ID_.EQ.'R(-)') THEN
-        RM=RESHAPE(TRANSFER(VAL_,RM,3*NAT),(/3,NAT/))
-      ELSE IF(ID_.EQ.'R(+)') THEN
-        RP=RESHAPE(TRANSFER(VAL_,RP,3*NAT),(/3,NAT/))
-      ELSE IF(ID_.EQ.'FORCE') THEN
-        FORCE=RESHAPE(TRANSFER(VAL_,FORCE,3*NAT),(/3,NAT/))
-       ELSE IF(ID_.EQ.'MASS') THEN
-         RMASS=TRANSFER(VAL_,RMASS,NAT)
-       ELSE IF(ID_.EQ.'PS<G2>') THEN
-         PSG2=TRANSFER(VAL_,PSG2,NAT)
-       ELSE IF(ID_.EQ.'PS<G4>') THEN
-         PSG4=TRANSFER(VAL_,PSG4,NAT)
-       ELSE IF(ID_.EQ.'Z') THEN
-         Z=TRANSFER(VAL_,Z,NAT)
-       ELSE IF(ID_.EQ.'ZVALENCE') THEN
-         ZV=TRANSFER(VAL_,ZV,NAT)
-      ELSE IF(ID_.EQ.'POINTCHARGE') THEN
-!       == KEYWORD SHALL BE REPLACED BY 'Q'
-         CHARGE=TRANSFER(VAL_,CHARGE,NAT)
-      ELSE IF(ID_.EQ.'Q') THEN
-         CHARGE=TRANSFER(VAL_,CHARGE,NAT)
-      ELSE 
-        CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID_',ID_)
-        CALL ERROR$STOP('ATOMLIST$SETALL')
-      END IF
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE ATOMLIST$SETLATTICE(RBAS_)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      USE ATOMS_MODULE
-      IMPLICIT NONE
-      REAL(8),INTENT(IN) :: RBAS_(3,3)
-      REAL(8)            :: RBAS(3,3)
-!     ******************************************************************
-      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION')
-      CALL ERROR$STOP('ATOMLIST$SETLATTICE')
-      RBAS(:,:)=RBAS_(:,:)
-      CALL CELL$GETR8A('T0',9,RBAS)
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE ATOMLIST$LATTICE(RBAS_)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      USE ATOMS_MODULE
-      IMPLICIT NONE
-      REAL(8),INTENT(OUT) :: RBAS_(3,3)
-      REAL(8)             :: RBAS(3,3)
-!     ******************************************************************
-      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION')
-      CALL ERROR$STOP('ATOMLIST$LATTICE')
-!     RBAS_(:,:)=RBAS(:,:)
-!     CALL CELL$GETR8A('T0',9,RBAS_)
-      RETURN
-      END
-!
-!     ..................................................................
       SUBROUTINE ATOMLIST$ORDER
 !     ******************************************************************
 !     **                                                              **
@@ -2526,9 +2313,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       INTEGER(4)  ,INTENT(OUT):: IAT
       INTEGER(4)  ,INTENT(OUT):: IT(3)
       CHARACTER(32)           :: NAME1
-      CHARACTER(32)           :: CHT
       INTEGER(4)              :: ICH
-      LOGICAL(4)              :: TCHK
       INTEGER(4)              :: ISIGN
       INTEGER(4)              :: I,IEND,IPOS
 !     ******************************************************************
@@ -2539,7 +2324,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
         NAME1=NAME(1:IPOS-1)
         IEND=LEN_TRIM(NAME)
         IPOS=IPOS+1
-        TCHK=.TRUE.
         DO I=1,3
 !         = EXTRACT SIGN
           IF(IPOS.GT.IEND) THEN

@@ -2,7 +2,7 @@
       PROGRAM PAW_STRC
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT none
       INTERFACE 
         SUBROUTINE LINKEDLIST$READ(LL_,NFIL,CID_)
         USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
@@ -21,16 +21,20 @@
       REAL(8)                     :: RUNIT        ! LENGTH UNIT ON STRUCTURE FILE
       REAL(8)                     :: RBAS(3,3)    ! LATTICE VECTORS
       CHARACTER(32),ALLOCATABLE   :: NAME(:)      ! ATOM NAMES
+      integer(4)                  :: nat          ! #(atoms in the qm part)
       REAL(8),      ALLOCATABLE   :: R(:,:)       ! ATOMIC POSITIONS
       REAL(8),      ALLOCATABLE   :: Q(:)         ! CHARGES
-      CHARACTER(32),ALLOCATABLE   :: MMNAME(:)      ! ATOM NAMES
-      REAL(8),      ALLOCATABLE   :: MMR(:,:)       ! ATOMIC POSITIONS FOR MM PART OF QM-MM
+      integer(4)                  :: natmm        ! #(atoms of the MM part)
+      CHARACTER(32),ALLOCATABLE   :: MMNAME(:)    ! ATOM NAMES
+      REAL(8),      ALLOCATABLE   :: MMR(:,:)     ! ATOMIC POSITIONS FOR MM PART OF QM-MM
       REAL(8),      ALLOCATABLE   :: MMQ(:)       ! ATOMIC CHARGES MM PART OF QM-MM
-      REAL(8),      ALLOCATABLE   :: RSH(:,:)       ! ATOMIC POSITIONS FOR SHADOW PART OF QM-MM
+      REAL(8),      ALLOCATABLE   :: RSH(:,:)     ! ATOMIC POSITIONS FOR SHADOW PART OF QM-MM
       INTEGER(4),   ALLOCATABLE   :: NEIGH(:,:)   ! NEIGHBOR LIST
       LOGICAL(4)                  :: TQMMM
       INTEGER(4)                  :: IAT,IAT1
       CHARACTER(32)               :: STRING
+      integer(4)                  :: i    
+!     ******************************************************************
       CALL LINKEDLIST$NEW(LL_STRC)
 !
 !     ==================================================================

@@ -72,7 +72,6 @@ END MODULE CONSTRAINTS_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: TYPE_
       CHARACTER(*),INTENT(IN) :: TITLE_
-      LOGICAL(4)              :: TCHK
       CHARACTER(32)           :: TYPE
       CHARACTER(256)          :: STRING
 !     ******************************************************************
@@ -307,12 +306,11 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)   ,INTENT(IN) :: DELT
       INTEGER(4)            :: NAT      ! #(ATOMS)
       INTEGER(4)            :: NUM      ! #(CONSTRAINTS)
-      INTEGER(4)            :: NDEG     ! #(DEGREES OF FREEDOM)
       INTEGER(4)            :: I,II,III,IC
       INTEGER(4)            :: NBYTE
       INTEGER(4)            :: NC1
       INTEGER(4)            :: IAT1,IAT2,IAT3,IAT4,IAT
-      INTEGER(4)            :: IT1(3),IT2(3),IT3(3),IT4(3)
+      INTEGER(4)            :: IT1(3),IT2(3),IT3(3)
       INTEGER(4)            :: NMEMBER
       CHARACTER(32)         :: TYPE
       CHARACTER(256)        :: STRING,STRING1
@@ -321,9 +319,6 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)   ,ALLOCATABLE:: SM(:)    !(NC1)
       REAL(8)   ,ALLOCATABLE:: VEC(:,:) !(3,NAT)
       LOGICAL(4),ALLOCATABLE:: TMEMBER(:) !(NAT)
-      REAL(8)   ,ALLOCATABLE:: A(:)       !(NC)
-      REAL(8)   ,ALLOCATABLE:: B(:,:)     !(3*NAT,NC)
-      REAL(8)   ,ALLOCATABLE:: C(:,:,:)   !(3*NAT,3*NAT,NC)
       REAL(8)   ,ALLOCATABLE:: VF(:)      !(NC1)
       REAL(8)   ,ALLOCATABLE:: RREF(:,:)  !(3*NAT,3*NAT,NC)
       REAL(8)               :: ANNES
@@ -344,7 +339,6 @@ END MODULE CONSTRAINTS_MODULE
       CALL LINKEDLIST$GET(LL_CNSTR,'REFERENCE',1,RREF)
       TSET=.TRUE.
       TREF=.TRUE.
-      NDEG=3*NAT
       IC=0
       CALL LINKEDLIST$SELECT(LL_CNSTR,'~')
       CALL LINKEDLIST$NLISTS(LL_CNSTR,'CONSTRAINT',NUM)
@@ -954,13 +948,13 @@ END MODULE CONSTRAINTS_MODULE
       INTEGER(4)                :: NC1
       INTEGER(4)                :: NUM
       CHARACTER(32)             :: TYPE
-      CHARACTER(32)             :: STRING,STRING1,STRING2
+      CHARACTER(32)             :: STRING,STRING1
       REAL(8)                   :: DIR(3)
       REAL(8)                   :: VEC(3,NAT)
       REAL(8)      ,ALLOCATABLE :: S0(:)            !(NC1)
       REAL(8)                   :: RREF(3,NAT)
       INTEGER(4)                :: IC,I,IAT1,IAT2,IAT3,IAT4,IAT,II,ICI
-      INTEGER(4)                :: IT1(3),IT2(3),IT3(3),IT4(3)
+      INTEGER(4)                :: IT1(3),IT2(3),IT3(3)
 !     ******************************************************************
       A(:)=0.D0
       B(:,:)=0.D0
@@ -1135,8 +1129,8 @@ END MODULE CONSTRAINTS_MODULE
       INTEGER(4)   ,INTENT(IN) :: NFIL
       CHARACTER(*) ,INTENT(IN) :: IDENT_
       INTEGER(4)               :: NUM
-      INTEGER(4)               :: I,J
-      INTEGER(4)               :: IIMAX,II,JMIN,JMAX
+      INTEGER(4)               :: I
+      INTEGER(4)               :: II
       INTEGER(4)               :: NC1
       CHARACTER(32)            :: TYPE
       CHARACTER(256)           :: STRING
@@ -1248,7 +1242,7 @@ END MODULE CONSTRAINTS_MODULE
       LOGICAL(4),INTENT(IN)    :: SETV
       REAL(8)                  :: TBYDELTA
       REAL(8)                  :: T
-      REAL(8)                  :: VF,SF,DELTA2
+      REAL(8)                  :: VF,SF
 !     ******************************************************************
       TBYDELTA=DBLE(ICOUNT-NSTEP)
 !
@@ -1279,7 +1273,6 @@ END MODULE CONSTRAINTS_MODULE
 !     ==  VALUES RELATIVE TO THAT TRAJECTORY                          ==
 !     ==================================================================
       T=TBYDELTA*DELTA
-      DELTA2=DELTA**2
       SF=SF_
       VF=VF_
       IF(SETS.AND.(.NOT.SETV)) VF=0.D0
@@ -1651,7 +1644,7 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)   ,INTENT(IN) :: RMASS(NAT)
       REAL(8)   ,INTENT(IN) :: R0(3,NAT)
       REAL(8)   ,INTENT(OUT):: VALUE_
-      INTEGER(4)            :: IAT,I
+      INTEGER(4)            :: IAT
       REAL(8)               :: DLENG,TMASS,SVAR
       REAL(8)               :: X,Y,Z
 !     ******************************************************************
@@ -1691,7 +1684,7 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)   ,INTENT(OUT):: B(3,NAT)
       REAL(8)   ,INTENT(OUT):: C(3,NAT,3,NAT)
       INTEGER(4)            :: IAT
-      REAL(8)               :: DLENG,TMASS,SVAR
+      REAL(8)               :: DLENG,TMASS
       REAL(8)               :: X,Y,Z
 !     ******************************************************************
       DLENG=DSQRT(X_**2+Y_**2+Z_**2)
@@ -1985,7 +1978,7 @@ U(:)=0.D0
       REAL(8)     ,INTENT(OUT):: VALUE_     ! DISTANCE OF COG'1
       LOGICAL(4)              :: TMEMBER1(NAT)
       LOGICAL(4)              :: TMEMBER2(NAT)
-      INTEGER(4)              :: I,J,IAT
+      INTEGER(4)              :: I,IAT
       REAL(8)                 :: RMASS(NAT)
       REAL(8)                 :: SUMMASS1
       REAL(8)                 :: SUMMASS2
@@ -2072,7 +2065,6 @@ U(:)=0.D0
       REAL(8)                 :: COG1(3)   ! COG OF FIRST GROUP
       REAL(8)                 :: COG2(3)   ! COG OF SECOND GROUP
       REAL(8)                 :: X(3)      ! COG1-COG2
-      REAL(8)                 :: COGSEP    
       REAL(8)                 :: DADX(3)   
       REAL(8)                 :: D2ADX2(3,3)   
       INTEGER(4)              :: I,J,IAT,IAT1,IAT2
@@ -3051,7 +3043,7 @@ U(:)=0.D0
       INTEGER(4)            :: IAT1,IAT2,IAT3
       REAL(8)               :: X21,Y21,Z21
       REAL(8)               :: X31,Y31,Z31
-      REAL(8)               :: X32,Y32,Z32
+!      REAL(8)               :: X32,Y32,Z32
       INTEGER(4)            :: IC,IAT,I,J
       REAL(8)               :: XI1,YI1,ZI1
 !     ******************************************************************
@@ -3064,9 +3056,9 @@ U(:)=0.D0
       X31=R(1,IAT3_)-R(1,IAT1_)
       Y31=R(2,IAT3_)-R(2,IAT1_) 
       Z31=R(3,IAT3_)-R(3,IAT1_)
-      X32=R(1,IAT3_)-R(1,IAT2_)
-      Y32=R(2,IAT3_)-R(2,IAT2_) 
-      Z32=R(3,IAT3_)-R(3,IAT2_)
+!      X32=R(1,IAT3_)-R(1,IAT2_)
+!      Y32=R(2,IAT3_)-R(2,IAT2_) 
+!      Z32=R(3,IAT3_)-R(3,IAT2_)
 !     
       IC=0
 !     ================================================================
@@ -3242,35 +3234,6 @@ U(:)=0.D0
       END IF
       RETURN
       END
-! 
-!     ..................................................................
-      SUBROUTINE CONSTRAINTS_AMASS(NAT,A,B,C,R,RMASS,AMASS)
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NAT
-      REAL(8)   ,INTENT(IN) :: R(3*NAT)
-      REAL(8)   ,INTENT(IN) :: A
-      REAL(8)   ,INTENT(IN) :: B(3*NAT)
-      REAL(8)   ,INTENT(IN) :: C(3*NAT,3*NAT)
-      REAL(8)   ,INTENT(IN) :: RMASS(NAT)
-      REAL(8)   ,INTENT(OUT):: AMASS
-      INTEGER(4)            :: II,IAT,I,J
-      REAL(8)               :: DRI
-!     ******************************************************************     
-      AMASS=0.D0
-      II=0
-      DO IAT=1,NAT
-        DO I=1,3
-          II=II+1
-          DRI=B(II)
-          DO J=1,3*NAT
-            DRI=DRI+C(J,II)*R(J)
-          ENDDO
-          AMASS=AMASS+DRI**2*RMASS(IAT)
-        ENDDO
-      ENDDO         
-     
-      RETURN
-      END
 !
 !     ..................................................................
       SUBROUTINE CONSTRAINTS_APPLY(NX,X0,XP,XMASS,DELT,NC,A,B,C,RLAM)
@@ -3313,7 +3276,6 @@ U(:)=0.D0
       INTEGER(4)               :: THISTASK,NTASKS
       INTEGER(4)               :: IC,IC1,IC2,IC3,I,J,ICOUNT,ITER
       REAL(8)                  :: SVAR
-      REAL(8)                  :: TAUSINGVAL
 !     ******************************************************************
 !
 !     ==================================================================
@@ -3580,7 +3542,6 @@ END IF
         IF(NC.GT.1) THEN
 !         __ CHECK LINEAR DEPENDENCE OF CONSTRAINTS_____________________
           IF(TLINDEP) THEN
-            TAUSINGVAL=1.D-8
             CALL LIB$MATRIXSOLVE(NC,NC,1,RMAT,VEC,VEC)
           ELSE
             CALL LIB$MATRIXSOLVE(NC,NC,1,RMAT,VEC,VEC)

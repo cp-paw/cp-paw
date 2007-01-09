@@ -282,7 +282,7 @@
       implicit none
       integer(4),intent(in) :: lmx
       complex(8),intent(out):: c(lmx,lmx)
-      integer(4)            :: l,m,lm,lmp,lmm,I
+      integer(4)            :: l,m,lmp,lmm,I
       integer(4)            :: lmax
       real(8)               :: fac
       real(8)               :: sqrtinv
@@ -444,9 +444,9 @@
       complex(8)           :: cdagger(lmx,lmx)
       complex(8)           :: mat(lmx,lmx)
       integer(4)           :: i,LM,L,M
+      integer(4)           :: mox(lmx)
       integer(4)           :: LMAX
       REAL(8)              :: SVAR
-      integer(4)           :: LOX(LMX),MOX(LMX)
       complex(8)           :: ci=(0.d0,1.d0)
 !     ***********************************************************************
       LMAX=INT(SQRT(REAL(LMX)+1.D-8))-1
@@ -457,7 +457,6 @@
       DO L=0,LMAX
         DO M=-L,L
           LM=LM+1
-          LOX(LM)=L
           MOX(LM)=M
          ENDDO
       ENDDO

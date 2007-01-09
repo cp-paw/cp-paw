@@ -228,7 +228,6 @@ END MODULE COSMO_MODULE
 !     **                                                                   **
       USE COSMO_MODULE
       IMPLICIT NONE
-      INTEGER(4)       :: ISVAR
       INTEGER(4)       :: IAT,IQ1,IQ2
       REAL(8)          :: SVAR
       REAL(8)          :: PI      
@@ -283,8 +282,8 @@ END MODULE COSMO_MODULE
       ALLOCATE(IQFIRST(NAT))
       ALLOCATE(QRELPOS(3,NQ))
       DO IAT=1,NAT
-        IQ1=1+NPTESS*REAL(IAT-1)
-        IQ2=NPTESS*REAL(IAT)
+        IQ1=1+NPTESS*(IAT-1)
+        IQ2=NPTESS*IAT
         IQFIRST(IAT)=IQ1
         NQAT(IAT)=NPTESS
         QRELPOS(:,IQ1:IQ2)=RTESS(:,:)*RSOLV(IAT)
@@ -354,7 +353,6 @@ END MODULE COSMO_MODULE
       LOGICAL(4)            ,INTENT(OUT) :: TCHK
       TYPE (SEPARATOR_TYPE),PARAMETER    :: MYSEPARATOR &
                  =SEPARATOR_TYPE(2,'COSMO','NONE','JAN2006','NONE')
-      TYPE (SEPARATOR_TYPE)              :: SEPARATOR
       INTEGER(4)                         :: NTASKS,THISTASK
 !     ***********************************************************************
       IF(.NOT.TON) RETURN
@@ -965,8 +963,6 @@ print*,'epauli ',epauli
       REAL(8),INTENT(OUT):: FAT(3,NAT)
       INTEGER            :: NQEFF
       INTEGER            :: IQ
-      REAL(8)            :: QSURF1(NQ)
-      REAL(8)            :: QAT1(NAT)
       REAL(8),ALLOCATABLE:: QEFF(:)
       REAL(8),ALLOCATABLE:: VEFF(:)
       REAL(8),ALLOCATABLE:: REFF(:,:)
@@ -974,7 +970,6 @@ print*,'epauli ',epauli
       REAL(8)            :: ETOT1
       REAL(8)            :: V1(NAT)
       REAL(8)            :: F1(3,NAT)
-REAL(8) :: V1A(NAT),F1A(3,NAT)
 !     ***********************************************************************
       NQEFF=NAT
       DO IQ=1,NQ
@@ -984,8 +979,6 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       ALLOCATE(VEFF(NQEFF))
       ALLOCATE(REFF(3,NQEFF))
       ALLOCATE(FEFF(3,NQEFF))
-!     == REMARK: FOR THE PURE FACE-FACE ELECTROSTATICS SET QAT1 TO ZERO  ==
-!QAT1=0.D0
       CALL COSMO_MAPTOEFF(NAT,NQ,NQEFF,ZEROTHETA &
      &                   ,QBAR,RQ,QATBAR,RAT,QEFF,REFF)
       IF(TISO) THEN
@@ -1036,14 +1029,14 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       COMPLEX(8)            :: EIGR(NBAS)    ! FORM FACTOR
       REAL(8)               :: PI,FOURPI,ROOT2
       REAL(8)               :: VOL
-      REAL(8)               :: RC,X,Y,SVAR,FAC,GFAC
-      INTEGER               :: K,I,IR,IR1,IR2
+      REAL(8)               :: RC,SVAR,FAC
+      INTEGER               :: I,IR,IR1,IR2
       REAL(8)               :: GMAX,RMAX
       INTEGER               :: IG1MIN,IG1MAX
       INTEGER               :: IG2MIN,IG2MAX
       INTEGER               :: IG3MIN,IG3MAX
       INTEGER               :: IG1,IG2,IG3
-      REAL(8)               :: T1,T2,T3,TVEC(3)
+      REAL(8)               :: T1,T2,T3
       REAL(8)               :: GSQUARE,GVEC(3)
       REAL(8)               :: RCG1SQUARE,RCG2SQUARE,RCG3SQUARE
       REAL(8)               :: SINFAC,COSFAC
@@ -1053,7 +1046,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       INTEGER               :: IT2MIN,IT2MAX
       INTEGER(4)            :: IT3MIN,IT3MAX
       INTEGER(4)            :: IT1,IT2,IT3
-      REAL(8)               :: DX,DY,DZ,DLEN
+      REAL(8)               :: DX,DLEN
       REAL(8)               :: RFAC1,RFAC2,DV,QTOT
       REAL(8)               :: GR,G2MAX
       REAL(8)               :: ERFCX
@@ -1426,7 +1419,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       REAL(8)            :: PI
       REAL(8)            :: FACEAREA
       REAL(8)            :: CSELF,CAREA
-      INTEGER(4)         :: I1,IAT,IQ1,IQ
+      INTEGER(4)         :: IAT,IQ1,IQ
       REAL(8)            :: EBLANK
       REAL(8)            :: ENONPOLAR
       REAL(8)            :: ESELF
@@ -1526,7 +1519,7 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       REAL(8),INTENT(OUT):: FAT(3,NAT)
       REAL(8)            :: PI
       REAL(8)            :: TWOBYSQPI
-      INTEGER            :: IAT1,IAT2A,IAT2,IG,IQ,IQ1,IQ2,IN,IT1,IT2,IT3
+      INTEGER            :: IAT1,IAT2,IG,IQ,IQ1,IQ2,IN,IT1,IT2,IT3
       REAL(8)            :: DIS,DIS2,DR(3)
       REAL(8)            :: QSUM,VSUM
       REAL(8)            :: RC1
@@ -1640,7 +1633,6 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       REAL(8),INTENT(IN) :: Q0(NQ)
       REAL(8),INTENT(IN) :: QP(NQ)
       REAL(8),INTENT(OUT):: EKIN
-      REAL(8)            :: SVAR
 !     ***********************************************************************
 !      EKIN=0.5D0*MQ*SUM((QP-QM)**2)/(2.D0*DT)**2
 !     == THE FOLLOWING FORM GIVES A BETTER ENERGY CONSERVATION THAN THE
@@ -1708,7 +1700,6 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
 !     == CHARGES
       REAL(8)   ,ALLOCATABLE   :: QBAR(:)
       REAL(8)   ,ALLOCATABLE   :: RQ(:,:)
-      REAL(8)   ,ALLOCATABLE   :: FQ(:,:)
       REAL(8)   ,ALLOCATABLE   :: FQ1(:,:)
       REAL(8)   ,ALLOCATABLE   :: VQ(:)
       REAL(8)   ,ALLOCATABLE   :: VQ1(:)
@@ -1730,14 +1721,8 @@ REAL(8) :: V1A(NAT),F1A(3,NAT)
       real(8)                  :: dq,de
       REAL(8)                  :: R01(3,NAT_)
       REAL(8)                  :: QMAD1(NG,NAT_)
-      REAL(8)                  :: TESTSTEP=1.D-3
-      INTEGER  ,PARAMETER      :: NTEST=5
-      REAL(8)                  :: E(NTEST)
-      REAL(8)                  :: F(NTEST)
-      LOGICAL                  :: TEST=.TRUE.
       LOGICAL(4)               :: Tchk
-      INTEGER                  :: ITEST
-INTEGER(4) :: NFILINFO,J
+INTEGER(4) :: NFILINFO
 !     ***********************************************************************
       EPOT=0.D0
       EKIN=0.D0
@@ -1792,13 +1777,6 @@ INTEGER(4) :: NFILINFO,J
       QMAD1=QMAD
       R01=R0
 !
-!!$      DO ITEST=1,NTEST
-!!$        R01=R0
-!!$        QMAD1=QMAD
-!!$        IF(TEST) THEN
-!!$          R01(1,1)=R01(1,1)+TESTSTEP*REAL(ITEST-1)
-!!$        END IF
-!!$!
 !     =======================================================================
 !     == SETUP DATA THAT DEPEND ONLY ON POSITIONS BUT NOT THE CHARGES      ==
 !     =======================================================================

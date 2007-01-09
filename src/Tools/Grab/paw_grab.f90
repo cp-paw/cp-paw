@@ -299,6 +299,7 @@ END MODULE SUBSTANCE_MODULE
       CHARACTER(256) :: ROOTNAME
       CHARACTER(256) :: PDOSINNAME
       integer(4)     :: isvar
+      integer(4)     :: iargc
 !     *******************************************************************
       IF(IARGC().LT.1) THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')

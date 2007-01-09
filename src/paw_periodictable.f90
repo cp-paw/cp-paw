@@ -29,6 +29,7 @@ INTERFACE PERIODICTABLE$GET
   MODULE PROCEDURE PERIODICTABLE$GETI4
   MODULE PROCEDURE PERIODICTABLE$SYMBOLGETR8
   MODULE PROCEDURE PERIODICTABLE$SYMBOLGETI4
+  MODULE PROCEDURE PERIODICTABLE$GETBYZR8
 END INTERFACE 
 TYPE ISOTOPE_TYPE
   INTEGER(4)        :: A               ! #(PROTONS)+#(NEUTRONS)
@@ -363,9 +364,11 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       CHARACTER(*),INTENT(OUT):: VAL
 !     ******************************************************************
       CALL PERIODICTABLE_INITIALIZE
-      IF(IZ.GT.NEL) THEN
+      IF(IZ.LT.0.OR.IZ.GT.NEL) THEN
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
-        CALL ERROR$STOP('PERIODICTABLE$GETCH')
+        CALL ERROR$I4VAL('IZ',IZ)
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PERIODICTABLE$GETch')
       END IF
       IF(ID.EQ.'SYMBOL') THEN
         VAL=ELEMENT(IZ)%SYMBOL
@@ -389,9 +392,11 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       INTEGER(4)              :: I
 !     ******************************************************************
       CALL PERIODICTABLE_INITIALIZE
-      IF(IZ.GT.NEL) THEN
+      IF(IZ.LT.0.OR.IZ.GT.NEL) THEN
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
-        CALL ERROR$STOP('PERIODICTABLE$GETR8')
+        CALL ERROR$I4VAL('IZ',IZ)
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PERIODICTABLE$GETr8')
       END IF
       IF(ID.EQ.'R(COV)') THEN
         VAL=ELEMENT(IZ)%RCOV
@@ -441,6 +446,68 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       END SUBROUTINE PERIODICTABLE$GETR8
 !
 !     ...........................................PERIODICTABLE..........
+      SUBROUTINE PERIODICTABLE$GETbyzR8(z,ID,VAL)
+!     ******************************************************************
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      real(8)     ,INTENT(IN) :: Z
+      CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,INTENT(OUT):: VAL
+      INTEGER(4)              :: Iz1,iz2
+      real(8)                 :: c1,c2
+      logical(4)              :: tsubalkali
+!     ******************************************************************
+      CALL PERIODICTABLE_INITIALIZE
+      IF(Z.LT.0.OR.Z.GT.REAL(NEL)) THEN
+        CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
+        CALL ERROR$R8VAL('Z',Z)
+        CALL ERROR$STOP('PERIODICTABLE$GETbyzR8')
+      END IF
+      IZ1=INT(Z)
+      IZ2=IZ1+1
+      C2=Z-REAL(IZ1)
+      C1=1.D0-C2
+      iz2=min(iz2,nel)
+      TSUBALKALI=.FALSE.
+      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'H '
+      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'LI'
+      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'NA'
+      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'K '
+      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'RB'
+      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'CS'
+      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'FR'
+      IF(ID.EQ.'R(COV)') THEN
+        IF(TSUBALKALI) THEN
+          VAL=ELEMENT(IZ2)%RCOV
+        ELSE
+          VAL=C1*ELEMENT(IZ1)%RCOV+C2*ELEMENT(IZ2)%RCOV
+        END IF
+      ELSE IF(ID.EQ.'R(VDW)') THEN
+        IF(TSUBALKALI) THEN
+          VAL=ELEMENT(IZ2)%RVDW
+        ELSE
+          VAL=C1*ELEMENT(IZ1)%RVDW+C2*ELEMENT(IZ2)%RVDW
+        END IF
+      ELSE IF(ID.EQ.'R(ASA)') THEN
+        IF(TSUBALKALI) THEN
+          VAL=ELEMENT(IZ2)%RASA
+        ELSE
+          VAL=C1*ELEMENT(IZ1)%RASA+C2*ELEMENT(IZ2)%RASA
+        END IF
+      ELSE IF(ID.EQ.'MASS') THEN
+        VAL=C1*ELEMENT(IZ1)%MASS+C2*ELEMENT(IZ2)%MASS
+      ELSE IF(ID.EQ.'RNUC') THEN
+        VAL=C1*ELEMENT(IZ1)%RNUC+C2*ELEMENT(IZ2)%RNUC
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PERIODICTABLE$GETBYZR8')
+      END IF
+      RETURN
+      END SUBROUTINE PERIODICTABLE$GETBYZR8
+!
+!     ...........................................PERIODICTABLE..........
       SUBROUTINE PERIODICTABLE$GETI4(IZ,ID,VAL)
 !     **                                                              **
       IMPLICIT NONE
@@ -448,8 +515,10 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(OUT):: VAL
 !     ******************************************************************
-      IF(IZ.GT.NEL) THEN
+      IF(IZ.LT.0.OR.IZ.GT.NEL) THEN
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
+        CALL ERROR$I4VAL('IZ',IZ)
+        CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('PERIODICTABLE$GETI4')
       END IF
       IF(ID.EQ.'Z') THEN

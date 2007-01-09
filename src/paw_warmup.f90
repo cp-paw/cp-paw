@@ -161,7 +161,7 @@ END MODULE WARMUP_MODULE
       REAL(8)          :: XMIN, A, B, TEMPER, TEMPER1,RKAPPA, SVAR, RKB, SXVAR
       INTEGER(4)       :: ISTEP, I, J, NFILO, IPULSE, I1, I2, J1, J2, JC, IC
       INTEGER(4), SAVE :: ITOTAL = 0
-      REAL(8)          :: PI, TWOPI, TOL
+      REAL(8)          :: PI, TWOPI
       INTEGER(4)       :: NG
 !     -----------------------------------------------------------------------
       PI=4.D0*DATAN(1.D0)

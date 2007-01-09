@@ -163,7 +163,7 @@ END MODULE ENERGYLIST_MODULE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: I
 !     ******************************************************************
-      WRITE(NFIL,FMT='("ENERGY REPORT"/"=============")')
+      CALL REPORT$TITLE(NFIL,'ENERGY REPORT')
       DO I=1,NE
         WRITE(NFIL,FMT='(A40,":",F15.7," ",A10)') &
      &        IDENTIFIER(I),ENERGY(I)/UNITVALUE,UNITNAME
@@ -401,7 +401,7 @@ END MODULE ENERGYLIST_MODULE
       INTEGER(4)              :: IGROUP,IAT,NMEM,I
       CHARACTER(32)           :: NAMES(NATOM)
 !     ******************************************************************
-      WRITE(NFIL,FMT='("GROUPLIST REPORT"/"================")')
+      CALL REPORT$TITLE(NFIL,'GROUPLIST REPORT')
       DO IGROUP=1,NGROUP
         NMEM=0
         DO IAT=1,NATOM
@@ -435,7 +435,7 @@ MODULE ATOMTYPELIST_MODULE
 TYPE XXX_TYPE
   CHARACTER(16):: NAME       ! ATOM TYPE NAME
   CHARACTER(16):: FILE       ! SETUP FILE
-  REAL(8)      :: Z          ! ATOMIC NUMBER
+!  REAL(8)      :: Z          ! ATOMIC NUMBER
   REAL(8)      :: VALENCE    ! #(VALENCE ELECTRONS)
   REAL(8)      :: RMASS      ! ATOMIC MASS
   REAL(8)      :: PSG2       ! PARAMETER REQUIRED FOR MASS RENORMALIZATION
@@ -472,7 +472,7 @@ END MODULE ATOMTYPELIST_MODULE
       THISTYPE=0
       DO ITYPE=1,NTYPEX
         XXX(ITYPE)%NAME=' '
-        XXX(ITYPE)%Z=0.D0
+!        XXX(ITYPE)%Z=0.D0
         XXX(ITYPE)%PSG2=0.D0
         XXX(ITYPE)%PSG4=0.D0
         XXX(ITYPE)%VALENCE=0.D0
@@ -613,10 +613,10 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         CALL ERROR$STOP('ATOMTYPELIST$SETR8')
       END IF
 !  
-      IF(ID.EQ.'Z') THEN
-        XXX(THISTYPE)%Z=VAL
-      ELSE IF(ID.EQ.'ZV') THEN
+      IF(ID.EQ.'ZV') THEN
         XXX(THISTYPE)%VALENCE=VAL
+!      else IF(ID.EQ.'Z') THEN
+!        XXX(THISTYPE)%Z=VAL
       ELSE IF(ID.EQ.'M') THEN
         XXX(THISTYPE)%RMASS=VAL
       ELSE IF(ID.EQ.'PS<G2>') THEN
@@ -651,12 +651,11 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$GETR8')
       END IF
-!
-      IF(ID.EQ.'Z') THEN
-        VAL=XXX(THISTYPE)%Z
-      ELSE IF(ID.EQ.'ZV') THEN
+      IF(ID.EQ.'ZV') THEN
         VAL=XXX(THISTYPE)%VALENCE
-      ELSE IF(ID.EQ.'M') THEN
+!      IF(ID.EQ.'Z') THEN
+!        VAL=XXX(THISTYPE)%Z
+       ELSE IF(ID.EQ.'M') THEN
         VAL=XXX(THISTYPE)%RMASS
       ELSE IF(ID.EQ.'PS<G2>') THEN
         VAL=XXX(THISTYPE)%PSG2
@@ -724,8 +723,8 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
 !
       IF(ID.EQ.'LRHOX') THEN
         VAL=XXX(THISTYPE)%LRHOX
-      ELSE IF(ID.EQ.'IZ') THEN
-        VAL=NINT(XXX(THISTYPE)%Z)
+!      ELSE IF(ID.EQ.'IZ') THEN
+!        VAL=NINT(XXX(THISTYPE)%Z)
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
         CALL ERROR$CHVAL('ID',ID)
@@ -880,38 +879,38 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       END IF
       RETURN
       END
-!
-!     ..................................................................
-      SUBROUTINE ATOMTYPELIST$SETZ(ID_,Z)
-!     ******************************************************************
-!     **  SET ATOMIC NUMBER                                           **
-!     ******************************************************************
-      USE ATOMTYPELIST_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID_
-      REAL(8)     ,INTENT(IN) :: Z
-!     ******************************************************************
-      CALL ATOMTYPELIST$SELECT(ID_)
-      CALL ATOMTYPELIST$SETR8('Z',Z)
-      CALL ATOMTYPELIST$UNSELECT
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE ATOMTYPELIST$Z(IDENT1_,Z1)
-!     ******************************************************************
-!     **  RETURN ATOMIC NUMBER                                        **
-!     ******************************************************************
-      USE ATOMTYPELIST_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: IDENT1_
-      REAL(8)     ,INTENT(OUT):: Z1
-!     ******************************************************************
-      CALL ATOMTYPELIST$SELECT(IDENT1_)
-      CALL ATOMTYPELIST$GETR8('Z',Z1)
-      CALL ATOMTYPELIST$UNSELECT
-      RETURN
-      END
+!!$!
+!!$!     ..................................................................
+!!$      SUBROUTINE ATOMTYPELIST$SETZ(ID_,Z)
+!!$!     ******************************************************************
+!!$!     **  SET ATOMIC NUMBER                                           **
+!!$!     ******************************************************************
+!!$      USE ATOMTYPELIST_MODULE
+!!$      IMPLICIT NONE
+!!$      CHARACTER(*),INTENT(IN) :: ID_
+!!$      REAL(8)     ,INTENT(IN) :: Z
+!!$!     ******************************************************************
+!!$      CALL ATOMTYPELIST$SELECT(ID_)
+!!$      CALL ATOMTYPELIST$SETR8('Z',Z)
+!!$      CALL ATOMTYPELIST$UNSELECT
+!!$      RETURN
+!!$      END
+!!$!
+!!$!     ..................................................................
+!!$      SUBROUTINE ATOMTYPELIST$Z(IDENT1_,Z1)
+!!$!     ******************************************************************
+!!$!     **  RETURN ATOMIC NUMBER                                        **
+!!$!     ******************************************************************
+!!$      USE ATOMTYPELIST_MODULE
+!!$      IMPLICIT NONE
+!!$      CHARACTER(*),INTENT(IN) :: IDENT1_
+!!$      REAL(8)     ,INTENT(OUT):: Z1
+!!$!     ******************************************************************
+!!$      CALL ATOMTYPELIST$SELECT(IDENT1_)
+!!$      CALL ATOMTYPELIST$GETR8('Z',Z1)
+!!$      CALL ATOMTYPELIST$UNSELECT
+!!$      RETURN
+!!$      END
 !
 !     ..................................................................
       SUBROUTINE ATOMTYPELIST$SETVALENCE(IDENT1_,Z1)
@@ -1060,7 +1059,8 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       DO ITYPE=1,NTYPE
         WRITE(NFIL,FMT='(A10,T10,F4.1,T15,F4.1,T20,F9.5' &
      &      //',T30,F9.5,T40,F9.5,T52,1X,A)') &
-     &       XXX(ITYPE)%NAME,XXX(ITYPE)%Z,XXX(ITYPE)%VALENCE &
+     &       XXX(ITYPE)%NAME,-1.d0,XXX(ITYPE)%VALENCE &
+!     &       XXX(ITYPE)%NAME,XXX(ITYPE)%Z,XXX(ITYPE)%VALENCE &
      &      ,XXX(ITYPE)%RMASS/U,XXX(ITYPE)%PSG2,XXX(ITYPE)%PSG4 &
      &      ,TRIM(XXX(ITYPE)%FILE)
       ENDDO

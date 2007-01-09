@@ -76,8 +76,9 @@
 %
 \noindent            
 \setcounter{page}{1}
-\footnote{The title picture shows the a chiral Pd complex with P,N ligands,
-  a highly enantio-selective catalyst for allylic amination \cite{Pdcat}.}
+\footnote{The title picture shows the a chiral Pd complex with P,N ligands, a
+  highly enantio-selective catalyst for allylic amination
+  \cite{bloechl96_organometallics15_4125}.}
 \newpage
 \tableofcontents
 %==========================================================================
@@ -118,42 +119,41 @@ copyrighted. You require a valid license to execute it.
 \section{What is the projector augmented wave method?}
 %==========================================================================
 
-The projector augmented wave method \cite{PAW} is an all-electron
-electronic structure method, which allows accurate electronic
-structure calculations and ab-initio molecular dynamics simulations
-on the basis of density functional theory.
+The projector augmented wave method \cite{bloechl94_prb50_17953} is an
+all-electron electronic structure method, which allows accurate electronic
+structure calculations and ab-initio molecular dynamics simulations on the
+basis of density functional theory.
 
 What is all that?
 
-{\bf Density functional theory (DFT)} \cite{KohnSham}. Density
-functional theory describes the ground state of a many-electron system
-by electrons that do not interact other than through an effective
-potential that depends on the electron density. It is based on an
-exact theorem, which specifies that such a description, based on the
-electron density rather than on the electronic many-particle
-wave function, be rigorously possible for ground states. In practice the
-density functional, which also defines the effective potential as a
-functional of the density, is not exactly known. However, highly
-successful approximations have been found. In contrast to Hartree-Fock
-calculations, density functional theory explicitly treats electron
-correlation. The accuracy is typically comparable to that of MP2 calculations,
-i.e. only a few kcal/mol \cite{DFTBenchmarks}.
+{\bf Density functional theory (DFT)}
+\cite{hohenberg64_pr136_864,kohn65_pr140_1133}. Density functional
+theory describes the ground state of a many-electron system by electrons that
+do not interact other than through an effective potential that depends on the
+electron density. It is based on an exact theorem, which specifies that such a
+description, based on the electron density rather than on the electronic
+many-particle wave function, be rigorously possible for ground states. In
+practice the density functional, which also defines the effective potential as
+a functional of the density, is not exactly known. However, highly successful
+approximations have been found. In contrast to Hartree-Fock calculations,
+density functional theory explicitly treats electron correlation. The accuracy
+is typically comparable to that of MP2 calculations, i.e. only a few kcal/mol
+\cite{becke92_jcp97_9173,dickson93_jcp99_3898}.
 
-{\bf Ab-initio molecular dynamics (AIMD)} \cite{CP,CP2,Pastore,Madden}
-is an extension of traditional electronic structure methods which has
-been invented in 1985 by Roberto Car and Michele Parrinello \cite{CP}.
-The best way to think of it is as a series of electronic structure
-calculations, one for each time slice, for always different atomic
-positions. From one time slice to the next, the atomic positions are
-changed according to Newton's equations of motion $M_i\ddot R_i=F_i$.
-Here $M_i$ is the mass of a nucleus, $R_i$ the position, $F_i$ the
-force acting on the nucleus as calculated from the electronic
-structure, and the double-dots stand for the second time derivative.
-Self-consistent iterations at each time step are avoided by a
-dynamical evolution of the wave functions, and thus simulations of
-several picoseconds are possible, which is sufficient to simulate
-directly chemical reactions and diffusion with low barriers or at high
-temperatures.
+{\bf Ab-initio molecular dynamics (AIMD)}
+\cite{car85_prl55_2471,car89_bookchapter_455,pastore91_pra44_6334} is an
+extension of traditional electronic structure methods which has been invented
+in 1985 by Roberto Car and Michele Parrinello \cite{car85_prl55_2471}.  The
+best way to think of it is as a series of electronic structure calculations,
+one for each time slice, for always different atomic positions. From one time
+slice to the next, the atomic positions are changed according to Newton's
+equations of motion $M_i\ddot R_i=F_i$.  Here $M_i$ is the mass of a nucleus,
+$R_i$ the position, $F_i$ the force acting on the nucleus as calculated from
+the electronic structure, and the double-dots stand for the second time
+derivative.  Self-consistent iterations at each time step are avoided by a
+dynamical evolution of the wave functions, and thus simulations of several
+picoseconds are possible, which is sufficient to simulate directly chemical
+reactions and diffusion with low barriers or at high temperatures.
 
 Whereas the basic idea of ab-initio molecular dynamics is to perform
 real-time and finite temperature simulations, it can be used like a
@@ -196,17 +196,16 @@ so that strictly no overlap between atomic orbitals on different sites
 need to be computed.
 
 The PAW method is in principle able to recover rigorously the density
-functional total energy, if plane wave and atomic
-orbital expansions are complete. This provides us with a systematic
-way to improve the basis set errors.  The present implementation
-uses the frozen core approximation, even though the general formalism
-allows extensions in this respect. It provides the correct densities
-and wave functions, and thus allows us to calculate hyperfine
-parameters etc.  Limitations of plane wave basis sets to periodic
-systems (crystals) can easily be overcome by making the unit cell
-sufficiently large and decoupling the long-range
-interactions \cite{Decouple}. Thus the present method can be used to
-study molecules, surfaces, and solids within the same approach.
+functional total energy, if plane wave and atomic orbital expansions are
+complete. This provides us with a systematic way to improve the basis set
+errors.  The present implementation uses the frozen core approximation, even
+though the general formalism allows extensions in this respect. It provides
+the correct densities and wave functions, and thus allows us to calculate
+hyperfine parameters etc.  Limitations of plane wave basis sets to periodic
+systems (crystals) can easily be overcome by making the unit cell sufficiently
+large and decoupling the long-range interactions
+\cite{bloechl95_jcp103_7422}. Thus the present method can be used to study
+molecules, surfaces, and solids within the same approach.
 
 %==========================================================================
 \section{How the code is built}
@@ -250,7 +249,7 @@ need to pick up only a few new things if you want to work with the
 existing tools.
 
 The program allows {\bf parallel processing} using MPI (Message
-Passing Interface) \cite{MPI}. It is (almost) scalable in central
+Passing Interface) \cite{mpi}. It is (almost) scalable in central
 memory and CPU time.  The scalar version program is identical to the
 parallel version with the exception that a dummy interface is used
 instead of MPI.
@@ -276,7 +275,7 @@ other units is often done during printing. The conversion factors are
 provided by a particular agent (see section~\ref{constants}), which is
 based on the values of fundamental physical constants recommended in
 1986 by CODATA (Committee on Data for Science and Technology of the
-International Council of Scientific Unions) \cite{Constants}.
+International Council of Scientific Unions) \cite{mohr00_rmp72_351}.
 
 The program divides work into {\bf three steps: simulation --
   analysis -- visualization}.  The program consists of the simulation
@@ -313,9 +312,9 @@ Visualization is also separated from analysis, because many tools
 exist and the choice is a matter of taste and wealth. The analysis
 tools that come with the CP-PAW code will write data formats for the
 visulatization tools that we currently use. (Those are currently the
-IBM Dataexplorer \cite{Dataexplorer} for 3D representations of the
-wave functions or trajectories, xmgr \cite{XMGR} for x-y plots, and
-Cerius2 \cite{Cerius2} for the analysis of the atomic structure.)
+IBM Dataexplorer \cite{opendx} for 3D representations of the
+wave functions or trajectories, xmgrace \cite{xmgrace} for x-y plots, and
+CryMolCAD\cite{crymolcad} for the analysis of the atomic structure.)
 However, you can easily change the format to adapt them to your
 preferred graphics programs.
 
@@ -910,52 +909,51 @@ zero.}
 %----------------------------------------------------------------------
 \brules{optional}
 \bdescr{selects density functional parameterization; default is Perdew-Zunger
-parameterization of the Ceperley Alder}
+parameterization of the Ceperley Alder quantum Monte Carlo calculation}
 
 \mbax{\key{TYPE} \vdescr{density functional parameterization.
     possible values are:\hfill\break 
     
-    {\bf(1)} Perdew-Zunger parameterization \cite{PerdewZunger} of
-    Ceperley-Alder \cite{CeperleyAlder}; 
+    {\bf(1)} Perdew-Zunger parameterization \cite{perdew81_prb23_5048} of
+    Ceperley-Alder \cite{ceperley80_prl45_566}; 
     
-    {\bf(2)} Perdew-Wang 91 parameterization \cite{PW91L} of
-    Ceperley-Alder \cite{CeperleyAlder}; 
+    {\bf(2)} Perdew-Wang 91 parameterization \cite{perdew92_prb45_13244} of
+    Ceperley-Alder \cite{ceperley80_prl45_566}; 
     
     {\bf(3)} Local exchange (X$_\alpha$ with $\alpha$=2/3); 
 
     {\bf(4)} X-alpha (alpha=0.7); 
     
     {\bf(6)} Local exchange and Becke gradient correction
-    \cite{Becke88} for exchange; 
+    \cite{becke88_pra38_3098} for exchange; 
     
-    {\bf(7)} Perdew-Wang LSD \cite{PW91L} and Becke gradient correction for
-    exchange \cite{Becke88}; 
+    {\bf(7)} Perdew-Wang LSD \cite{perdew92_prb45_13244} and Becke gradient correction for
+    exchange \cite{becke88_pra38_3098}; 
     
-    {\bf(71)} Perdew-Zunger\cite{PerdewZunger} and Becke-88 gradient
-    correction\cite{Becke88};
+    {\bf(71)} Perdew-Zunger\cite{perdew81_prb23_5048} and Becke-88 gradient
+    correction\cite{becke88_pra38_3098};
       
     {\bf(8)} like (7) + Perdew-86 gradient correction for correlation
-    \cite{Perdew86};
+    \cite{perdew86_prb33_8822};
       
-    {\bf (81)} Perdew-Zunger\cite{PerdewZunger} + Becke gradient
-    correction\cite{Becke88} + Perdew86 gradient correction for
-    correlation\cite{Perdew86}; 
+    {\bf (81)} Perdew-Zunger\cite{perdew81_prb23_5048} + Becke gradient
+    correction\cite{becke88_pra38_3098} + Perdew86 gradient correction for
+    correlation\cite{perdew86_prb33_8822};
     
-    {\bf(9)} like (7) + Perdew-Burke Ernzerhof correlation \cite{PBE};
+    {\bf(9)} like (7) + Perdew-Burke Ernzerhof correlation \cite{perdew96_prl77_3865};
 
-    {\bf(10)} Perdew-Burke-Ernzerhof exchange and correlation
-    \cite{PBE};
+    {\bf(10)} Perdew-Burke-Ernzerhof (PBE)exchange and correlation
+    \cite{perdew96_prl77_3865}; Almost identical to PW91
+    GGA\cite{perdew92_prb46_6671} but simpler formulation.
 
-    {\bf(11)} RPBE exchange and correlation, includes Hammer's correction to 
-              Perdew-Burke-Ernzerhof exchange and correlation
-    \cite{PBE,RPBE};}
-     \vformat{integer} 
-     \vrules{optional} 
-     \vdefault{1}}
+    {\bf(11)} RPBE exchange and correlation, includes Hammer's
+              correction\cite{hammer99_prb59_7413} to Perdew-Burke-Ernzerhof
+              exchange and correlation \cite{perdew96_prl77_3865};} \vformat{integer}
+              \vrules{optional} \vdefault{1}}
 
 \ifthenelse{\boolean{private}}{
 \mbax{\key{LDA+U}
-\vdescr{LDA+U \cite{LDA+U}. Present implementation only for Cu.}
+\vdescr{LDA+U \cite{anisimov91_prb44_943,anisimov91_prb44_943}. Present implementation only for Cu.}
 \vformat{logical}
 \vrules{optional}
 \vdefault{F}}
@@ -1054,7 +1052,7 @@ obtained with a plane wave cutoff slightly higher than EPWBUCKET.}
   $c_\alpha=0$ indicates frictionless dynamics, whereas a value of
   $c_\alpha=1$ indicates steepest descent. $\Delta$ is the time step.
   A discussion of the virtues of friction dynamics can be found in
-  Ref. \cite{Acceleration}}
+  Ref. \cite{tassone94_prb50_10561}}
 \mbax{\key{STOP}
 \vdescr{if STOP=true start with zero velocity of the wave functions}
 \vformat{logical}
@@ -1124,7 +1122,8 @@ to estimate the frequency from
   dynamics. If SAFEORTHO=F a new method is used which converges at
   eigenstates of the Hamiltonian, but is energy conserving only if the
   states are sufficiently close to eigenstates. This option allows to
-  calculate excited states or to use the Mermin functional in order to
+  calculate excited states or to use the 
+   Mermin functional\cite{mermin65_pr137_A1441} in order to
   introduce Fermi occupation numbers. It must be used in connection
   with dynamical occupations such as the Mermin functional and the
   tetrahedron method for Brillouin-zone integration.}
@@ -1235,32 +1234,33 @@ each step that reduces the energy}
 %----------------------------------------------------------------------
 \block{!CONTROL!PSIDYN!THERMOSTAT}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{(presently in test phase:\\ Thermostat for
-the wave functions. The thermostat acts like a Nose-Hoover thermostat,
-but it does not aim at constructing a canonical ensemble. Instead it
-starts acting only when the wave function kinetic exceeds the target
-temperature estimated for Born-Oppenheimer kinetic energy. The latter
-obtained from the instantaneous atomic velocities, the wave function
-masses and the values of !STRUCTURE!SPECIES:PS$<$G2$>$ and
-!STRUCTURE!SPECIES:PS$<$G4$>$ provided the structure input file.  Do
-not use this thermostat without providing PS$<$G2$>$ and PS$<$G4$>$.
-If the thermostat kicks in, it reshuffles kinetic energy from the wave
-functions into the atomic motion.  The target kinetic energy is
-subtracted from the wave function kinetic energy in the protocol. A
-friction on the thermostat shall be used to avoid instabilities. The
-thermostat shall be used only if the atoms are moving.  \\ Old
-version: Nos\'e thermostat for constant temperature ensemble for the
-electrons \cite{Adiabaticity}. The target kinetic energy should be a
+\brules{optional} 
+\bdescr{(presently in test phase:\\ 
+Thermostat for the wave functions. The thermostat acts like a Nose-Hoover
+thermostat\cite{nose84_molphys52_255,nose84_jcp81_511,hoover85_pra31_1695}
+, but it does not aim at constructing a canonical ensemble. Instead
+it starts acting only when the wave function kinetic exceeds the target
+temperature estimated for Born-Oppenheimer kinetic
+energy.\cite{bloechl02_prb65_104303} The latter obtained from the
+instantaneous atomic velocities, the wave function masses and the values of
+!STRUCTURE!SPECIES:PS$<$G2$>$ and !STRUCTURE!SPECIES:PS$<$G4$>$ provided the
+structure input file.  Do not use this thermostat without providing PS$<$G2$>$
+and PS$<$G4$>$.  If the thermostat kicks in, it reshuffles kinetic energy from
+the wave functions into the atomic motion.  The target kinetic energy is
+subtracted from the wave function kinetic energy in the protocol. A friction
+on the thermostat shall be used to avoid instabilities. The thermostat shall
+be used only if the atoms are moving.  \\
+Old version: Nos\'e thermostat for constant temperature ensemble for the
+electrons \cite{bloechl92_prb45_9413}.  The target kinetic energy should be a
 little (about 50\%) larger than
   \begin{equation}
      \langle E_{kin}^\Psi\rangle_T=\sum _R
       2{{m_\Psi}\over{M_R}}\tilde{T}_R k_B T ,
   \end{equation}
   where
-  $\tilde{T}_R=\sum_{n}\langle\tilde\Psi_n|-\nabla^2/2|\tilde\Psi_n\rangle$
-  is the kinetic energy of the pseudo wave functions of the
-  corresponding isolated atom and $T$ is the physical temperature of
-  the nuclei.}
+  $\tilde{T}_R=\sum_{n}\langle\tilde\Psi_n|-\nabla^2/2|\tilde\Psi_n\rangle$ is
+  the kinetic energy of the pseudo wave functions of the corresponding
+  isolated atom and $T$ is the physical temperature of the nuclei.}
 
 \mbax{\key{$<$EKIN$>$}
 \vdescr{average kinetic energy of the wave functions. Do not use in
@@ -1472,7 +1472,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 %----------------------------------------------------------------------
 \brules{optional} 
 %
-\bdescr{Nos\'e thermostat \cite{Nose} for creating a constant temperature
+\bdescr{Nos\'e thermostat \cite{nose84_molphys52_255,nose84_jcp81_511,hoover85_pra31_1695} for creating a constant temperature
   ensemble for the ions. When using this thermostat, the friction
   acting indirectly on the atoms, and that results from a friction on
   the wavefunctions, is corrected for by an opposing force
@@ -1537,18 +1537,34 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 %----------------------------------------------------------------------
 \brules{optional} 
 %
-\bdescr{Mermin functional for variable occupations and finite
-  temperature effects of the electron gas. The occupations will
+\bdescr{Describes the treatment of variable occupations of the one-electron
+  energy levels. It allows to describe the occupations as dynamical variables
+  in the framework of the Mermin functional\cite{mermin65_pr137_A1441}, which
+  includes finite temperature effects. The total energy in this case is the
+  free energy and includes an entropic term $-TS$ for the partially occupied
+  orbitals at finite temperatures. The occupations will
   converge to the Fermi distribution function:
   $f_i=(1+e^{-(\epsilon_i-\mu)/kT)})^{-1}$.  The eigenvalues are the
-  $\epsilon_n=\langle\Psi_n|H|\Psi_n\rangle$. Use this option only
-  with eigenstates of the Hamitlonian, i.e. with
-  !CONTROL!PSIDYN:SAFEORTHO=.false. Other wise the results are
-  unpredictable. It is important to initialize the occupations once
-  using START=.TRUE.. (If occupations are close to zero or one, they
-  will take a very long time to move away from these values.)
-  if Start=.false., total charge and total spin is obtained from the
-  restart file and not from the structure input file}
+  $\epsilon_n=\langle\Psi_n|H|\Psi_n\rangle$. 
+
+  In the adiabatic mode of operation also the improved tetrahedron method
+  \cite{bloechl94_prb49_16223}can be used, which is the recommended option for
+  static ground state calculations of metallic systems.
+
+  Use this option (variable occupations) only with
+  eigenstates of the Hamitlonian, i.e. with
+  !CONTROL!PSIDYN:SAFEORTHO=.false. Otherwise the results are
+  unpredictable. 
+
+  It is important to initialize the occupations once using
+  START=.TRUE.. (If occupations are close to zero or one, they will take a
+  very long time to move away from these values.)  if Start=.false., total
+  charge and total spin is obtained from the restart file and not from the
+  structure input file
+
+  Remark the dynocc object has been largely rewrittem 23-28.12.06. 
+  Please report any suspicious observations.
+}
 %
 \mbax{\key{T[K]}
 \vdescr{Temperature of the electrons in Kelvin 
@@ -1563,11 +1579,57 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 \vrules{optional}
 \vdefault{300}}
 %
+\mbax{\key{ADIABATIC} 
+\vdescr{chooses quasi-adiabatic mode for
+  occupations. New energy levels are introduced that approach the energy
+  levels $\epsilon=\frac{\partial E}{\partial f_n}$.in a retarded fashion. The
+  occupations are determined for these retarded energies. Note that in the
+  previous formula the energy also includes the fictitious kinetic
+  energy. This mode of operation does not produce an energy conserving
+  dynamics. It is recommended for static calculations. The current
+  implementation of the tetrahedron method for Brillouin zone integration only
+  works with adiabatic=T.}
+\vformat{logical}
+\vrules{optional}
+\vdefault{.false.}}
+%
+\mbax{\key{RETARD}
+\vdescr{The energy levels used for the Brillouin-zone integration in the
+  adiabatic mode approach the actual enegy levels as
+$\sim\exp(-\frac{1}{r}\frac{t}{\Delta})$.}
+\vformat{real}
+\vrules{optional, used only if !ADIABATIC=T}
+\vdefault{0.}}
+%
+\mbax{\key{TETRA+} \vdescr{if true, the Brillouin zone integration is
+performed with the improved version of the tetrahedron
+method\cite{bloechl94_prb49_16223}. If false, the Brillouin zone integration
+is done by sampling and the Mermin functional. The tetrahedron method is the
+recommended method for metallic systems. However it is not fully variational
+and restricted to the quasi-adiabatic mode.}  
+\vformat{logical}
+\vrules{optional, requires ADIABATIC=T} 
+\vdefault{.false.}}
+%
 \mbax{\key{STOP}
 \vdescr{set velocity for occupation dynamics to zero in the first iteration}
 \vformat{logical}
 \vrules{optional}
 \vdefault{F}}
+%
+\mbax{\key{STARTTYPE}
+\vdescr{defines how the initial occupations are determined.
+\begin{description}
+\item ['X':] Occupations are read from restart file.
+\item ['E':] energies are read from restart file. Occupations are
+constructed using the fermi distribution function.
+\item ['N':] States are filled with $T=0$ assuming absolutely flat bands
+ordered according to increasing energy.
+\end{description}
+}
+\vformat{character}
+\vrules{optional; 'X' incompatible with ADIABATIC=T}
+\vdefault{'N'}}
 %
 \mbax{\key{START}
 \vdescr{Restart occupations, total spin and total charge from Lagrange
@@ -1575,7 +1637,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
   the one-particle energies. If start=.false., the information is read
   from the restart file.}
 \vformat{logical}
-\vrules{optional}
+\vrules{optional, not ised if !CONTROL!MERMIN:STARTTYPE is set.}
 \vdefault{F}}
 %
 \mbax{\key{MOVE}
@@ -1790,7 +1852,7 @@ each step that reduces the energy}
 %----------------------------------------------------------------------
 \brules{optional} 
 %
-\bdescr{Nos\'e thermostat \cite{Nose} to for constant temperature
+\bdescr{Nos\'e thermostat \cite{nose84_molphys52_255,nose84_jcp81_511,hoover85_pra31_1695} to for constant temperature
   ensemble for the QM-MM environment atoms. It has the added option of a friction for
   faster equilibration and faster acceleration from small velocities.
   To regain the original thermostat leave the default FRIC=0.}
@@ -2030,7 +2092,7 @@ original deviation.}
 % %----------------------------------------------------------------------
 % \brules{optional} 
 % %
-% \bdescr{Nos\'e thermostat \cite{Nose} for constant temperature
+% \bdescr{Nos\'e thermostat \cite{nose84_molphys52_255,nose84_jcp81_511,hoover85_pra31_1695} for constant temperature
 %   ensemble for the surface charges of the continuum solvation model. Provided, but not recommended. It is recommended to
 % use instead multiple timestep oversampling with very light fictitious masses for the surface
 % charges instead to prevent unphysical heat transfer between surface charges and wavefunction.}
@@ -2066,11 +2128,9 @@ original deviation.}
 %  potentials. It can be used to optimize the atomic structure before
 %  starting the more accurate electronic structure calculations and to
 %  accelerate convergence of atomic structure by preconditioning.
-%  Presently the potential implemented is the UFF potential described
-%  in (``UFF, a Full periodic table force field for molecular mechanics
-%  and molecular dynamics simulations'', A.K.  Rappe, C.S. Casewit,
-%  K.S.  Colwell, W. A. Goddard III and W.M.  Skiff, J. Am. Chem.
-%  Soc.{\bf 114}, 10024 (1992)). For using the Shadow object it is
+%  Presently the potential implemented is the UFF
+%  potential\cite{rappe92_jacs114_10024}.
+%  For using the Shadow object it is
 %  required that the UFF atomtypes and bonds are specified in the
 %  structure input.}
 %%
@@ -2276,7 +2336,7 @@ original deviation.}
 \brules{optional,multiple} 
 \bdescr{Writes a wave function. The file
   created can then be processed by the paw\_wave tool to produce an
-  input file for the IBM Dataexplorer.  }
+  input file for OPENDX\cite{opendx}}
 
 \mbax{\key{TITLE}
 \vdescr{title of the image. Currently it is not used other than in the printout.}
@@ -2286,7 +2346,7 @@ original deviation.}
 
 \mbax{\key{FILE} 
 \vdescr{full file name of the file to be produced,
-    which can be converted into a input file for the IBM Dataexplorer
+    which can be converted into a input file for OPENDX\cite{opendx}
     using the paw\_wave tool.} 
 \vformat{character} 
 \vrules{mandatory}
@@ -2329,7 +2389,7 @@ relative to the real-space grid used in the calculation.}
 \brules{optional,multiple} 
 \bdescr{Writes a density. The file
   created can then be processed by the paw\_wave tool to produce an
-  input file for the IBM Dataexplorer.  }
+  input file for OPENDX\cite{opendx}.  }
 
 \mbax{\key{TITLE}
 \vdescr{title of the image. Currently it is not used other than in the printout.}
@@ -2339,7 +2399,7 @@ relative to the real-space grid used in the calculation.}
 
 \mbax{\key{FILE} 
 \vdescr{full file name of the file to be produced,
-    which can be converted into a input file for the IBM Dataexplorer
+    which can be converted into a input file for OPENDX\cite{opendx}
     using the paw\_wave tool.} 
 \vformat{character} 
 \vrules{mandatory}
@@ -2408,7 +2468,7 @@ relative to the real-space grid used in the calculation.}
 %----------------------------------------------------------------------
 \brules{optional} \bdescr{Writes the potential. The file
   created can then be processed by the paw\_wave tool to produce an
-  input file for the IBM Dataexplorer.  }
+  input file for OPENDX\cite{opendx}.  }
 
 \mbax{\key{TITLE}
 \vdescr{title of the image. Currently it is not used other than in the printout.}
@@ -2418,7 +2478,7 @@ relative to the real-space grid used in the calculation.}
 
 \mbax{\key{FILE} 
 \vdescr{full file name of the file to be produced,
-    which can be converted into a input file for the IBM Dataexplorer
+    which can be converted into a input file for OPENDX\cite{opendx}
     using the paw\_wave tool.} 
 \vformat{character} 
 \vrules{mandatory}
@@ -2618,12 +2678,23 @@ shifting the grid.}
 \vformat{real}
 \vrules{Mandatory}
 \vdefault{None}} 
+
+\mbax{\key{Z}
+\vdescr{Atomic number. This number is used only to set the default value for the
+  mass.}
+\vformat{real}
+\vrules{optional}
+\vdefault{atomic number as deduced from !STRUCTURE!SPECIES:NAME, if the latter starts
+  from an element symbol}} 
  
 \mbax{\key{M}
-\vdescr{Atomic mass in mass units (u=1822.89~a.u.=$\frac{1}{12}m(^{12}$C$)\approx$m$_p$)}
+\vdescr{Atomic mass in mass units
+  (u=1822.89~a.u.=$\frac{1}{12}m(^{12}$C$)\approx$m$_p$).}
 \vformat{real}
-\vrules{Optional, if ``NAME'' begins with the element symbol.}
-\vdefault{Atomic mass}}
+\vrules{Optional, if either !STRUCTURE!SPECIES:Z is specified, 
+or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
+\vdefault{Atomic mass, as obtained from !STRUCTURE!SPECIES:Z  or, if not
+  present, from !STRUCTURE!SPECIES:NAME}}
 
 \mbax{\key{PSEKIN} 
 \vdescr{[Do not use this option. It works but may be removed in later
@@ -2814,7 +2885,7 @@ polarized calculations (see !STRUCTURE!GENERIC)}
 \block{!STRUCTURE!ISOLATE}
 %----------------------------------------------------------------------
 \brules{optional} \bdescr{Decouples the system electrostatically from
-  its periodic images \cite{Decouple}. Recommended isolated molecules.
+  its periodic images \cite{bloechl95_jcp103_7422}. Recommended isolated molecules.
   Isolate is also required to calculate approximate point charges for
   the QM-MM coupling.}
 %
@@ -3129,12 +3200,14 @@ for this atom. }
 %----------------------------------------------------------------------
 \brules{Optional} \bdescr{Lists all constraints acting on atomic
   positions. The constraints are enforced using the scheme proposed by
-  Ryckaert, Cicotti and Berendsen \cite{Constraints}, which conserves
+  Ryckaert, Cicotti and Berendsen \cite{ryckaert77_jcompphys23_327}, which conserves
   the total energy in a MD simulation. Constraints are used to search
   for transition states, to force a system adiabatically over a
   reaction barrier and, to calculate free energies of reaction at finite
   temperatures, or to map out the total energy in a subspace of the
-  total phase space \cite{HinSi}. If not specified otherwise the value and velocities are given in atomic units. \texttt{LUNIT} is NOT used.}
+  total phase space \cite{bloechl90_prl64_1401}. 
+   If not specified otherwise the value and velocities are given in 
+  atomic units. \texttt{LUNIT} is NOT used.}
 
 %----------------------------------------------------------------------
 \block{!STRUCTURE!CONSTRAINTS!RIGID}
@@ -3892,7 +3965,7 @@ The tool paw\_show allows one to inspect the protocol file. It plots the
 total energy, the instantaneous temperature of the atoms, the
 fictitious kinetic energy of the wave functions, the conserved energy
 versus the time step in picoseconds. This tool requires the xmgr plot
-library.
+library\cite{xmgrace}.
 
 %==========================================================================
 \subsection{Command}
@@ -4086,7 +4159,7 @@ ending and option is one of the following:
 %==========================================================================
 
 The paw\_wave analysis tool converts a waveplot file into a data
-file readable by the IBM Dataexplorer. The paw\_wave analysis tool
+file readable by OPENDX\cite{opendx}. The paw\_wave analysis tool
 requires an input file which is created after setting the options
 ``!CONTROL!ANALYSE!WAVE'' in the control input file of the simulation
 code and the 'strc\_out' file of the simulation code. It can be
@@ -4190,7 +4263,7 @@ largely independent of the system}
 \vdefault{lattice vectors of the calculation}}
 
 %==========================================================================
-\subsection{View data using the IBM Dataexplorer}
+\subsection{View data using OPENDX\cite{opendx}}
 %==========================================================================
 Start the Dataexplorer using
 
@@ -4238,13 +4311,13 @@ Start the Dataexplorer using
 \newpage
 \section{The Trajectory Analysis Tool: ``paw\_tra''}
 %==========================================================================
-This trajectory analysis tool is used to inspect atomic
-trajectories. It allows one to create a movie input file for the IBM
-Dataexplorer, or print the time evolution of selected bond lengths,
-angles, torsions or any combination thereof.
+This trajectory analysis tool is used to inspect atomic trajectories. It
+allows one to create a movie input file for OPENDX\cite{opendx}, or print the
+time evolution of selected bond lengths, angles, torsions or any combination
+thereof.
 
 The time scale is measured in psec. (If you cannot view the ball stick
-model in the Dataexplorer, please convert the dx file globally to
+model in OPENDX\cite{opendx}, please convert the dx file globally to
 lower case.)
 
 %==========================================================================
@@ -4389,13 +4462,13 @@ the paw\_tra tool. I recommend the extension
 \block{!TCNTL!MOVIE}
 %----------------------------------------------------------------------
 \brules{optional} 
-\bdescr{writes a Dataexplorer input file to show the moving atoms as a
+\bdescr{writes a input file for OPENDX\cite{opendx} to show the moving atoms as a
   ball-stick model. Bonds are drawn for every pair of atoms that are
   closer than 1.2 times the sum of the covalent radii.}
 
 \mbax{\key{FORMAT}
 \vdescr{descriptor for the format of the movie file to be created. can
-  be 'DX' (IBM Dataexplorer), 'XYZ' (MSI-WelblabviewerPro)}
+  be 'DX' (OPENDX\cite{opendx}), 'XYZ' (xyz format)}
 \vformat{character} 
 \vrules{optional}
 \vdefault{'DX'}}
@@ -4929,7 +5002,7 @@ The unit for angles is such that $2\pi$ is a full turn.}
 \vdefault{position}}
 
 %==========================================================================
-\subsection{View data using the IBM Dataexplorer}
+\subsection{View data using OPENDX\cite{opendx}}
 %==========================================================================
 Start the Dataexplorer using
 
@@ -5925,12 +5998,12 @@ specified if E is specified. }
 
 The paw\_preopt tool allows to perform a fast but inaccurate structure
 pre-optimization based on force-field molecular dynamics. It reads the
-structure input file (\verb'case.strc') and tries to find bonds in the
-given structure using the covalent radii of the atoms. Then it tries
-to find suitable parameterizations for the atoms using the universal
-force field (UFF) \cite{UFF}. (See also section \ref{sec:UFF}.) Bonds
-and force field parameterizations can also be provided via the input
-files. Atoms to be frozen can be specified.
+structure input file (\verb'case.strc') and tries to find bonds in the given
+structure using the covalent radii of the atoms. Then it tries to find
+suitable parameterizations for the atoms using the universal force field (UFF)
+\cite{rappe92_jacs114_10024}. (See also section \ref{sec:UFF}.) Bonds and
+force field parameterizations can also be provided via the input files. Atoms
+to be frozen can be specified.
 
 Using the parameterization it optimizes the geometry (currently) using
 the conjugate gradient line search algorithm which is also used in
@@ -6339,7 +6412,7 @@ Angles are given in radian ($2\pi~{\rm radian}=360~\deg$).
 
 The following list is produced by the CONSTANTS object.  The data are
 based on a values recommended by The Commitee on Data for Science and
-Technology (CODATA) \cite{Constants}.
+Technology (CODATA) \cite{mohr00_rmp72_351}.
 \begin{verbatim}
 UNITS AND CONSTANTS IN ATOMIC HARTREE UNITS:
 --------------------------------------------
@@ -6655,7 +6728,7 @@ Atomic masses according to IUPAC 1985 (Pure Appl. Chem. 1985, 58,
 1677-1692). Length units are in atomic units. ``R(COV)'' is the covalent radius.
 ``R(ASA)'' is the covalent radius scaled up by about 10\%, consistent
 with the scaling between touching and volume filling spheres in an fcc
-solid. ``R(VDW)'' is the Van der Waals radius \cite{UFF}.
+solid. ``R(VDW)'' is the Van der Waals radius \cite{rappe92_jacs114_10024}.
 
 \small
 \begin{verbatim}
@@ -6785,9 +6858,9 @@ CP 106    1.000  0.000  0.000  0.000 [0 ]
 \section{The Universal Force Field (UFF)\label{sec:UFF}}
 %==========================================================================
 
-The ``Universal Force Field''(UFF)\cite{UFF} is used in the QM-MM
+The ``Universal Force Field''(UFF)\cite{rappe92_jacs114_10024} is used in the QM-MM
 coupling and in the pre-optimization tool paw\_preopt. It has been
-published in \cite{UFF}. Parts of that paper most important for
+published in \cite{rappe92_jacs114_10024}. Parts of that paper most important for
 calculations are given here.
 
 The original UFF has 126 atom types, however in the CP-PAW
@@ -7039,7 +7112,7 @@ atoms
 \end{equation}
 Here the $M_R$ are the true nuclear masses and $C_R$ are the effective
 masses of the wave functions. The second term aims at subtracting the
-fictitious kinetic energy of teh wave functions in a parameterized form.
+fictitious kinetic energy of the wave functions in a parameterized form.
 
 \begin{eqnarray*}
 (M_i-C_i)\ddot{R}_i&=&F_i-(M_i-C_i)\dot{R}_i f_R
@@ -7096,7 +7169,7 @@ total number of electrons.
 %==========================================================================
 If we change the volume of the unit cell, the number of basis
 functions changes abruptly always when a new star of G-vectors enters
-or leaves teh sphere defined by the plane wave cutoff. This abrupt
+or leaves the sphere defined by the plane wave cutoff. This abrupt
 change of the basis set results in abrupt changes of the total energy.
 Thus we obtain a typical saw-tooth behavior of the energy as function
 of volume as shown in Fig.~\ref{fig:sawtooth}.
@@ -7112,16 +7185,17 @@ converged calculation (red). By adding a G-dependent potential the
 plane wave convergence can be artyificially accelerated.}
 \end{figure}
 
-The steps in the total energy vanish if the calculation is fully
-converged in the basis set size, because additional basis functions do
-not lower the total energy. If the function is not converged, the best
-result is obtained by keeping the same plane wave cutoff. However, if
-a the energy obtained at a few points is then fitted to a parabola or
-the murnaghan equation of state, one has to be carefull with the
-steps.
+The steps in the total energy vanish if the calculation is fully converged in
+the basis set size, because additional basis functions do not lower the total
+energy. If the function is not converged, the best result is obtained by
+keeping the same plane wave cutoff. However, if a the energy obtained at a few
+points is then fitted to, for example, a parabola or the Murnaghan equation of
+state\cite{murnaghan44_pnas30_244}, one has to be careful with the steps. A
+step can considerably mess up the fit. In these cases it is better to use a
+larger step size in the lattice constant.
 
 This sawtooth behavior can be suppressed by including an additional
-G-dependent Bucket potential that ensures that the wave function
+G-dependent bucket potential that ensures that the wave function
 coefficients at the plane wave cutoff vanish strictly.
 
 
@@ -7143,10 +7217,11 @@ coefficients at the plane wave cutoff vanish strictly.
 \newpage
 \section{Benchmarks}
 %==========================================================================
-Among the best calculations to compare energies are the calculations
-using Numol by Becke\cite{Beckethermochemistry,DFTBenchmarks}.
-Zero-point vibration energies have been tabulated by
-Pople\cite{Pople}.
+Among the best calculations to compare energies are the calculations using
+Numol by
+Becke\cite{becke92_jcp96_2155,becke92_jcp97_9173,dickson93_jcp99_3898,becke97_jcp107_8554}.
+Zero-point vibration energies and experimental data have been tabulated by
+Pople\cite{pople89_jcp90_5622,curtiss91_jcp94_7221}.
 
 
 \section{Troubleshooting}
@@ -7272,12 +7347,12 @@ keep this list as short as possible.
     whether these choices are accurate. It may affect the result of
     the object "Isolate" that separates isolated molecules from its
     periodic images.
-\item The Becke88 gradient correction for exchange produces
-  unreasonable results if the total density or the spin density is
-  vanishes. In this case small numerical values for the gradient pick
-  up a singularity in the functional form. This may happen for a fully
-  spin polarized system. The cure is to pick another density
-  functional, which does not contain the Becke88 functional.
+\item The Becke88 gradient correction\cite{becke88_pra38_3098}for exchange
+  produces unreasonable results if the total density or the spin density is
+  vanishes. In this case small numerical values for the gradient pick up a
+  singularity in the functional form. This may happen for a fully spin
+  polarized system. The cure is to pick another density functional, which does
+  not contain the Becke88 functional.
 \item In the compiler xlf5.1.1 the code creates a segmentation fault
   in a parallel-synchonization routine. In that case an empirical
   solution is to reduce the optimization from O3 to O. There is no
@@ -7348,8 +7423,6 @@ keep this list as short as possible.
 %\item[W. Kohn and L. J. Sham, Phys. Rev. 140,A1133(1965)] Local
 %  density approximation:
 
-%\item[Perdew-Zunger, (Phys.Rev.B23, p5048(1981))] Parameterizations of
-%  the exchange and correlation energy
 
 %\item[J.P. Perdew, J. A. Chevary, S.H. Vosko, K.A. Jackson,
 %  M.R. pederson, D.J. Singh and C. Fiolhais, Phys. Rev. B,
@@ -7380,11 +7453,7 @@ keep this list as short as possible.
 %  1989) p455-476\hfill\break more extended description on ab-initio
 %  MD. describes the method for orthogonalization in some detail
 
-%\item[G. Pastore, E. Smargiassi and F. Buda, Phys. Rev. A 44, 6334
-%  (1991)] detailed analysis of first principles MD
 
-%\item[D.K. Kremler and P.A. Madden, Mol. Phys. 70, 921 (1990)] Review
-%  article on first principles MD and the pseudopotential approach
 
 %\item[J.-P. Ryckaert, G. Cicotti and H.J.C. Berendsen, J. Comp. Phys.
 %  23.327 (1977)] original paper on treating constraints in a molecular
@@ -7410,10 +7479,6 @@ keep this list as short as possible.
 %  (1993)] Poor man's PAW applied to extract hyperfine parameters from
 %  a pseudopotential calculation.
 
-%\item[Peter E. Bl\"ochl, J. Chem. Phys. {\bf 103} 7422 (1995)]
-%  ``Electrostatic decoupling of plane wave expanded densities
-%  and  derived atomic point charges'',
-%  Description of the isolate option to treat isolated molecules 
 %\end{description}
 % %==========================================================================
 % \section{Applications of the PAW method (until June 1997)}
@@ -7480,10 +7545,6 @@ keep this list as short as possible.
 %   First Principles, P. Carloni, P.E.~Bl\"ochl, P.L.~Orioli, Gazzetta
 %   Chimica Italiana, {\bf 125} 497 (1995).
   
-% \item "Electrostatic Decoupling of Periodic Images of
-%   Plane-Wave-Expanded Densities and Derived Point Charges",
-%   P.E.~Bl\"ochl, J. Chem. Phys. {\bf 103}, 7422 (1995).
-  
 % \item ``Dynamics of Beryllocene''\hfill\break P. Margl, K.  Schwarz
 %   and P.E. Bl\"ochl, J. Chem. Phys. {\bf 103}, 683 (1995).
   
@@ -7537,176 +7598,15 @@ keep this list as short as possible.
 
 %====================================================================
 \newpage
-\begin{thebibliography}{99}
-%0
-\bibitem{Pdcat} ``First-Principles Investigation of Enantioselective
-  Catalysis: Asymmetric Allylic Amination with Pd Complexes Bearing P,
-  N Ligands'', P.E. Bl\"ochl and A. Togni, Organometallics {\bf 15},
-  4125 (1996).
-%1
-\bibitem{PAW}``Projector Augmented Wave Method'', P.E. Bl\"ochl, Phys.
-  Rev. B {\bf 50}, 17953 (1994).
-%2
-\bibitem{KohnSham} ``Inhomogeneous Electron Gas'', P.~Hohenberg and
-  W.~Kohn, Phys. Rev.{\bf 136} B 864 (1964); ``Selfconsistent Equations
-  including exchange and Correlation Effects'', W.~Kohn and L.J.~Sham,
-  Phys. Rev. {\bf 140}, A1133 (1965)
-%3
-\bibitem{DFTBenchmarks} ``Density Functional Thermochemistry~II. The
-  effect of the Perdew-Wang Generalized-Gradient Correlation
-  Correction'', A.D.~Becke, J. Chem. Phys. {\bf 97}, 9173 (1992),
-  ``Basis-set-free local density-functional calculations of geometries
-  of polyatiomic molecules'', R.M.~Dickson and A.D.~Becke,
-  J. Chem. Phys. {\bf 99}, 3898 (1993).
-%4
-\bibitem{CP}``Unified Approach for Molecular Dynamics and Density
-  Functional Theory'', R.~Car and M.~Parrinello, Phys. Rev. Lett. {\bf
-    55}, 2471 (1985).
-%5
-\bibitem{CP2} ``The Unified Approach for Molecular Dynamics and
-  Density Functional Theory'', R. Car and M. Parrinello, in {\it
-    Simple molecular systems at very high density} ed. A. Polian et
-  al. (Plenum, New York, 1989) p455-476.
-%6
-\bibitem{Pastore}G.~Pastore, E.~Smargiassi and F.~Buda, Phys. Rev. A
-  {\bf 44}, 6334 (1991).
-%7
-\bibitem{Madden} ``Molecular Dynamics without Effective Potentials via
-  the Car-Parrinello Approach'', D.K.~Kremler and P.A.~Madden, Mol.
-  Phys. {\bf 70}, 921 (1990).
-%8
-\bibitem{Decouple}``Electrostatic decoupling of plane wave expanded
-  densities and derived atomic point charges'', P.E.~Bl\"ochl, J.
-  Chem. Phys. {\bf 103}, 7422 (1995).
-%9
-\bibitem{MPI} Message Passing Interface. Software for interprocessor
-  communication on parallel computers. See
-  ``http://www.osc.edu/Lam/lam.html\#MPI'' for more information.
-%10
-\bibitem{ESSL} Engineering and Scientific Subroutine Library is a
-  product of IBM. See
-  ``http://direct.boulder.ibm.com/rsdirect/us/software/essl.htm'' for
-  more information.
-%
-\bibitem{grimme04_jcc25_1463}S. Grimme, \textit{Accurate description
-of Van der Waals complexes by density functional theory including
-empirical corrections}, J. Comput. Chem. \textbf{25},1463 (2004).
-%0
-\bibitem{IRC} ``A Formulation of the Reaction Coordinate'' J. Phys.
-  Chem. {\bf 74}, 4161 (1970); ``The Path of Chemical Reactions -- The
-  IRC Approach'' Acc. Chem. Res. {\bf 14}, 363 (1981).
-%11
-\bibitem{Constants}``The Fundamental Physical Constants'' E.R.~Cohen
-  and B.N. Taylor, Physics Today {\bf 49} (Buyers Guide), 9 (1996) and
-  references therein.
-%12
-\bibitem{Dataexplorer} The IBM Visualization Dataexplorer is a
-  general-purpose software package for data visualization and
-  analysis. See ``http://www.opendx.org/'' for information. It is now
-  an open source project and publically available at no cost.
-%13
-\bibitem{XMGR}XMGR is an XY plotting tool written by 
-  Paul~J.~Turner. The development is currently being continued by a group of
-  volunteers.  For information on how to obtain access, see
-  ``http://plasma-gate.weizmann.ac.il/Xmgr/''.
-%14
-\bibitem{Cerius2} Cerius$^2$ is a product of Molecular Simulations
-  Inc. See ``http://www.msi.com/info/products/Cerius2.html'' for more
-  information.
-%15
-\bibitem{PerdewZunger} ``Self-interaction correction to
-  density-functional approximations for many-electron
-  systems'', J.P.~Perdew and A.~Zunger, Phys. Rev. B {\bf 23}, 5048 (1981).
-%16
-\bibitem{CeperleyAlder} ``Ground State of the Electron Gas by a
-  Stochastic Method'' D.M.~Ceperley and B.J.~Alder, Phys. Rev.
-  Lett. {\bf 45}, 566 (1980).
-%17
-\bibitem{GGA91}``Atoms, Molecules, Solids, and Surfaces: Applications
-  of the Generalized Gradient Approximation for Exchange and
-  Correlation'', J.P.~Perdew, J. A. Chevary, S.H.~Vosko, K.A.~Jackson,
-  M.R.~Pederson, D.J.~Singh and C.~Fiolhais, Phys. Rev. B, {\bf 46},
-  6671 (1992-I).
-%17
-\bibitem{PW91L} ``Accurate and simple analytic representation of the
-  electron gas correlation energy'', J.P.~Perdew and Y.~Wang,
-  Phys. Rev.B {\bf 45}, 13244 (1992-I)
-%18
-\bibitem{Becke88}``Density Functional Exchange Energy Approxiamtion
-  with Correct Asymptotic Behavior'', A.D.~Becke, J. Chem. Phys.{\bf
-    96}, 2155 (1992).
-%19
-\bibitem{Perdew86} ``Density-Functional Approximations for the
-  Correlation Energy of the Inhomogeneous Electron Gas'', J.P.~Perdew,
-  Phys. Rev. B {\bf 33}, 8822 (1986)).
-%20
-\bibitem{PBE}``Generalized Gradient Approximation Made Simple'',
-  J.P.~Perdew, K.~Burke and M.~Ernzerhof, Phys. Rev. Lett. {\bf 77},
-  3865 (1996).
-%20
-\bibitem{RPBE}``Improved Adsorption Energies within Density-Functional Theory 
-       using Revised Perdew-Burke-Ernzerhof Functionals'',
-  B. Hammer, L.B. Hansen, and J.K. Norskov, Phys. Rev. B {\bf 59},
-  7413 (1999).
-%21
-\bibitem{Verlet}``Practical Algorithms for Dynamic Simulations'',
-  H.J.C.~Berendsen and W.F.~van Gunsteren, Varenna Notes (1985), p43.
-%22
-\bibitem{Acceleration}``Acceleration schemes for ab-initio molecular
-  dynamics simulations and electronic structure calculations''
-  F.~Tassone, F.~Mauri and R.~Car, Phys. Rev. B {\bf 50}, 10561
-  (1994-I)
-%23
-\bibitem{Adiabaticity}``Adiabaticity in first-principles molecular
-  dynamics'', P.E.~Bl\"ochl and M.~Parrinello, Phys. Rev. B {\bf 45},
-  9413 (1992).
-%24
-\bibitem{Nose}``A unified formulation of the constant temperature
-  molecular dynamics methods'', S.~Nos\'e, J. Chem. Phys. {\bf 81}, 511
-  (1984); ``A molecular dynamics method for simulation in the
-  canonical ensemble'', S.~Nos\'e, Mol.  Phys. {\bf 52}, 255 (1984),
-  ``Canonical Dynamics: Equilibrium phase-space distributions'', W.G.
-  Hoover, Phys. Rev. A {\bf 31}, 1695 (1985).
-%25
-\bibitem{Constraints} ``Numerical Integration of the Cartesian
-  Equations of Motion of Systems with Constraints: Molecular
-  Dynamics of n-Alkanes'' J.-P.~Ryckaert, G.~Cicotti and H.J.C.~Berendsen,
-  J. Comp. Phys. {\bf 23}, 327 (1977).
-%26
-\bibitem{HinSi} ``First-Principles Calculations of Diffusion Constants:
-  Hydrogen in Silicon'', P.E.~Bl\"ochl, C.G.~Van~de~Walle and
-  S.T.~Pantelides, Phys. Rev. Lett. {\bf 64}, 1401 (1990). 
-%27
-\bibitem{UFF} ``UFF, a fully periodic table force field for molecular
-  mechanics and molecular dynamics simulations'' A.K.~Rappe,
-  C.J.~Casewit, K.S.~Colwell, W.A.~Goddard~III, and W.M.~Skiff,
-  J. Am. Chem. Soc. {\bf 114}, 10024 (1992).
-%28
-\bibitem{FreeSoftwareFoundation} For information of software from the
-  free software foundation, see ``http://www.gnu.ai.mit.edu/''
-%??
-\bibitem{LDA+U}``Band Theory and Mott Insulators: Hubbard U instead of
-  Stoner I'', V.I.~Anisimov, J.~Zaanen and 
-O.K.~Andersen, Phys. Rev. B {\bf 44}, 943 (1991).
-%
-\bibitem{MPEGPLAY}``http://www.geom.umn.edu/software/mpeg\_play/''
-%
-\bibitem{MPEGENCODE} ``http://www.imag.fr/Multimedia/archives/unix.html''
-%
-\bibitem{Beckethermochemistry}``Density Functional Thermochemistry I:
-  The effect of exchange-only gradient correction'', A.D. Becke,
-  J.chem. Phys. {\bf 96}, 2155 (1992); ``Density Functional
-  Thermochemistry II: The effect of Perdew Wang generalized-gradient
-  correlation correction'', A.D. Becke, J.chem. Phys. {\bf 97}, 9173
-  (1992);
-%
-\bibitem{Pople} ``Gaussian-1 theory: A general procedure for prediction
-  of molecular energies'' J.A. Pople, M. Head-Gordon and D.J. Fox,
-  J. Chem. Phys. {\bf 90}, 5622 (1989); ``Gaussian-1 theory of
-  molecular energies for second-row compounds'' L.A. Curtiss,
-  C. Jones, G.W. trucks and K. Raghavachari,
-  J. Chem. Phys. {\bf 93}, 2537(1990)
-\end{thebibliography}
+\bibliographystyle{unsrt}
+\bibliography{doc.bib}
+
+%\begin{thebibliography}{99}
+%\bibitem{IRC} ``A Formulation of the Reaction Coordinate'' J. Phys.
+%  Chem. {\bf 74}, 4161 (1970); ``The Path of Chemical Reactions -- The
+%  IRC Approach'' Acc. Chem. Res. {\bf 14}, 363 (1981).
+%\end{thebibliography}
+
 \printindex
 \end{document}
 \bye

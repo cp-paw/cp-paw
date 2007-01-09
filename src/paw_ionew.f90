@@ -157,7 +157,6 @@
       IMPLICIT NONE
       INTEGER(4)          :: NFIL
       INTEGER(4)          :: NFILO
-      INTEGER(4)          :: NSTEP=1
       REAL(8)             :: DELTAT=1.D0
       LOGICAL(4)          :: TCHK
       INTEGER(4)          :: NTASKS,THISTASK

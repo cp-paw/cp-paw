@@ -635,8 +635,6 @@ END MODULE SETUP_MODULE
       IMPLICIT NONE
       REAL(8)   ,PARAMETER  :: TOL=1.D-6
       INTEGER(4)            :: LMRXCUT
-      INTEGER(4)            :: NFILO
-      INTEGER(4)            :: ISP
       INTEGER(4)            :: GID
       INTEGER(4)            :: GIDG
       INTEGER(4)            :: NFIL
@@ -645,14 +643,10 @@ END MODULE SETUP_MODULE
       INTEGER(4),PARAMETER  :: NG=250
       REAL(8)               :: R1,DEX
       INTEGER(4)            :: NR,NRX
-      REAL(8)               :: RI
       INTEGER(4)            :: IR
       INTEGER(4)            :: LN
-!INTEGER(4)            :: IRCCOR
-      REAL(8)               :: XEXP
       LOGICAL(4)            :: TCHK
       INTEGER(4)            :: IRMAX
-      CHARACTER(16)         :: NAME
       INTEGER(4)            :: L,LX,ISVAR,LNOLD,LNX
       INTEGER(4)            :: NC !SANTOS040616
       INTEGER(4)            :: LN1,LN2,LN1A,LN2A
@@ -997,7 +991,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4)     ,INTENT(IN) :: NFIL
       INTEGER(4)                 :: L,NPRO,LN,NPROSUM
       TYPE(THIS_TYPE),POINTER    :: THIS1
-      CHARACTER(32)              ::STRING
+      CHARACTER(32)              :: STRING
       REAL(8)                    :: U
       INTEGER(4)                 :: THISTASK,NTASKS
 !     ******************************************************************
@@ -1066,7 +1060,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ***********************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
-      CALL PERIODICTABLE$GET(NINT(Z),'RNUC',RNUC)
+      CALL PERIODICTABLE$GET(z,'RNUC',RNUC)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
         IF(R(IR).GT.RNUC) THEN
@@ -1085,7 +1079,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     **  READ SETUP                                                  **
 !     ******************************************************************
       IMPLICIT NONE
-      INTEGER(4)           :: NFILO
       INTEGER(4)           :: ISP,NSP1
       CHARACTER(32)        :: NAME
 !     ******************************************************************
@@ -1125,7 +1118,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4),INTENT(IN) :: NRX_
       INTEGER(4),INTENT(IN) :: LNX_
       REAL(8)   ,INTENT(OUT):: AEPHI_(NRX_,LNX_)
-      INTEGER(4)            :: LN,IR,NR
+      INTEGER(4)            :: NR
 !     ******************************************************************
       CALL SETUP$ISELECT(ISP_)
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
@@ -1152,7 +1145,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4),INTENT(IN) :: NRX_
       INTEGER(4),INTENT(IN) :: LNX_
       REAL(8)   ,INTENT(OUT):: PSPHI_(NRX_,LNX_)
-      INTEGER(4)            :: IR,LN,NR
+      INTEGER(4)            :: NR
 !     ******************************************************************
       CALL SETUP$ISELECT(ISP_)
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
@@ -1194,7 +1187,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4),INTENT(IN) :: ISP_
       INTEGER(4),INTENT(IN) :: NRX_
       REAL(8)   ,INTENT(OUT):: PSCORE_(NRX_)
-      INTEGER(4)            :: IR
 !     ******************************************************************
       CALL SETUP$ISELECT(ISP_)
       PSCORE_(:)=THIS%PSCORE(:)
@@ -1211,7 +1203,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4),INTENT(IN) :: ISP_
       INTEGER(4),INTENT(IN) :: NRX_
       REAL(8)   ,INTENT(OUT):: VBAR_(NRX_)
-      INTEGER(4)            :: IR
 !     ******************************************************************
       CALL SETUP$ISELECT(ISP_)
       VBAR_(:)=THIS%VADD(:)
@@ -1462,13 +1453,11 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4),INTENT(IN) :: NG
       REAL(8)   ,INTENT(OUT):: G0(NG)
       REAL(8)   ,INTENT(OUT):: V0(NG)
-      LOGICAL(4)            :: TGAMMA
       REAL(8)   ,PARAMETER  :: EPSILONGAMMA=1.D-7
       REAL(8)               :: PI
       REAL(8)               :: SVAR1,SVAR2,SVAR3,SVAR4
       REAL(8)               :: BGGAUSS,SMGAUSS
-      INTEGER(4)            :: IG,NSTART
-      REAL(8)               :: GI2,XEXP2
+      INTEGER(4)            :: IG
       REAL(8)               :: GARR(NG)
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
@@ -1523,7 +1512,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
                               CALL TRACE$PUSH('INPOT$LNX')
       REWIND NFIL
       READ(NFIL,FMT='(F15.10,F10.5,2I4)')R1,DEX,NR,LNX
-!     READ(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F15.12,I5)')R1,DEX,NR,LNX
                               CALL TRACE$POP
       RETURN
       END
@@ -1562,8 +1550,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       NC=0
       READ(NFIL,ERR=1000,FMT='(F15.10,F10.5,2I4,2F5.2,F15.12,I5)') &
      &               R1,DEX,NR,LNX,PSZ,AEZ,RCSM,NC
-!     READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM,IRCCOR,NC
-!     READ(NFIL,FMT='(F15.10,F10.5,2I4,2F5.2,F20.15,I5)')R1,DEX,NR,LNX
 1000 CONTINUE
                               CALL TRACE$POP
       RETURN
@@ -1605,7 +1591,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)    ,INTENT(OUT) :: FB(NC) ! OCCUPATIONS
       REAL(8)    ,INTENT(OUT) :: EB(NC) ! ONE-PARTICLE ENERGIES
       REAL(8)    ,INTENT(OUT) :: AEPSI(NRX,NC) ! CORE STATES
-      INTEGER(4)              :: NC1
 ! SANTOS040616 END
       REAL(8)                 :: R11,DEX1
       INTEGER(4)              :: NR1,LNX1,I,IR,LN1,LN2,LN

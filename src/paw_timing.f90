@@ -193,7 +193,7 @@ END MODULE TIMING_MODULE
       END
 !    
 !     ..................................................................
-      SUBROUTINE TIMING$PRINT(cid,NFIL,ID_)
+      SUBROUTINE TIMING$PRINT(cid,NFIL)
 !     ******************************************************************
 !     **  REPORT TIMING INFORMATION                                   **
 !     ******************************************************************
@@ -201,23 +201,18 @@ END MODULE TIMING_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: cid  ! communicator id (see mpe)
-      CHARACTER(*),INTENT(IN) :: ID_
       INTEGER(4)  ,INTENT(IN) :: NFIL
-      CHARACTER(32)           :: ID
-      INTEGER(4)              :: IENTRY
       INTEGER(4)              :: I,J
       REAL(8)                 :: TIME
       INTEGER(4)              :: NTASKS,THISTASK  
       REAL(8)                 :: TOTAL     ! TOTAL TIME SINCE LAST RESET ON THISTASK
       REAL(8)                 :: TSUM      ! TIME SUMMED OVER ALL TASKS
-      REAL(8)                 :: TIDLE     ! AVERAGE IDLE TIME
       REAL(8)                 :: TLOCAL    ! TIME USED ON THISTASK
       REAL(8)                 :: TMAX      ! MAX(TIME ON ANY TASK)
       REAL(8)     ,ALLOCATABLE:: TIMEVAL(:)!(NTASKS) TIME ON EACH TASK
       REAL(8)                 :: SVAR
-      INTEGER(4)              :: I1,I2
       INTEGER(4)              :: ISVAR
-      CHARACTER(12)           :: TIMESTRING(2)
+      CHARACTER(15)           :: TIMESTRING(2)
       REAL(8)                 :: PERCENT
       REAL(8)                 :: PERCENTIDLE
       character(64),allocatable:: idarr(:)
@@ -227,8 +222,8 @@ END MODULE TIMING_MODULE
 !     ************************  P.E. BLOECHL, TU-CLAUSTHAL 2005  *******
       CALL TIMING_CLOCK(TIME)
       CALL MPE$QUERY(cid,NTASKS,THISTASK)
-CALL MPE$SYNC('MONOMER')
-print*,thistask,'timing$print start',nfil,time,begintime,cid
+!CALL MPE$SYNC('MONOMER')
+!print*,thistask,'timing$print start',nfil,time,begintime,cid
       IF(.NOT.STARTED) THEN
         CALL ERROR$MSG('WARNING FroM TIMING: CLOCK HAS NOT BEEN STARTED')
         CALL ERROR$MSG('CALL TIMING$START BEFORE ANY OTHER FUNCTON')
@@ -283,7 +278,7 @@ print*,thistask,'timing$print start',nfil,time,begintime,cid
 !       ==================================================================
 !       ==  REPORT ON INDIVIDUAL CLOCKS                                 ==
 !       ==================================================================
-        WRITE(NFIL,FMT='(A,T20," ",A6," ",A12," ",A12," ",A7," ",A7)') &
+        WRITE(NFIL,FMT='(A,T20," ",A10," ",A15," ",A15," ",A7," ",A7)') &
      &         "NAME","#CALLS","TOTAL","PER CALL","T/TOTAL","IDLE"
 !
 !       ================================================================
@@ -331,7 +326,7 @@ print*,thistask,'timing$print start',nfil,time,begintime,cid
 !         ==  WRITE REPORT                                            ==
 !         ==============================================================
           WRITE(NFIL, &
-     &      FMT='(A20," ",I6," ",A12," ",A12," ",F5.1,"% ",F5.1,"%")') &
+     &      FMT='(A20," ",I10," ",A15," ",A15," ",F5.1,"% ",F5.1,"%")') &
      &       CLOCK(I)%NAME,CLOCK(I)%COUNT,(TIMESTRING(J),J=1,2) &
      &      ,PERCENT,PERCENTIDLE
         ENDDO
@@ -374,7 +369,7 @@ PRINT*,THISTASK,'TIMING$PRINT DONE'
 !     ******************************************************************
       IMPLICIT NONE
       REAL(8)      ,INTENT(IN) :: TIME
-      CHARACTER(12),INTENT(OUT):: TIMESTRING 
+      CHARACTER(15),INTENT(OUT):: TIMESTRING 
       INTEGER(4)               :: HOURS,MINUTES,SECONDS,SECONDFRAC
       REAL(8)                  :: SVAR
 !     ******************************************************************
@@ -386,7 +381,7 @@ PRINT*,THISTASK,'TIMING$PRINT DONE'
       SECONDS=INT(SVAR)
       SVAR=SVAR-DBLE(SECONDS)
       SECONDFRAC=INT(SVAR*10.D0)
-      WRITE(TIMESTRING,FMT='(I3,''H'',I2,''M'',I2,''.'',I1,''S'')') &
+      WRITE(TIMESTRING,FMT='(I6,''H'',I2,''M'',I2,''.'',I1,''S'')') &
      &               HOURS,MINUTES,SECONDS,SECONDFRAC
       RETURN
       END

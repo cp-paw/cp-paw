@@ -23,6 +23,7 @@
       DO I=1,LEN(TITLE)
         UNDERLINE(I:I)='='
       ENDDO
+      WRITE(NFIL,*)
       WRITE(NFIL,FMT='(A)')TITLE
       WRITE(NFIL,FMT='(A)')TRIM(UNDERLINE)
       RETURN
@@ -134,7 +135,6 @@ CONTAINS
       LOGICAL(4)           ,INTENT(INOUT):: TCHK
       TYPE (SEPARATOR_TYPE),INTENT(INOUT):: SEPARATOR
       TYPE (SEPARATOR_TYPE)              :: XSEPARATOR
-      INTEGER(4)                         :: NTASKS,THISTASK
       LOGICAL(4)                         :: TCHK1
       INTEGER(4)                         :: I
 !     ******************************************************************
@@ -184,7 +184,6 @@ CONTAINS
       INTEGER(4)           ,INTENT(IN)   :: NFIL
       INTEGER(4)           ,INTENT(IN)   :: NFILO
       LOGICAL(4)           ,INTENT(IN)   :: TCHK
-      INTEGER(4)                         :: NTASKS,THISTASK
 !     ******************************************************************
       WRITE(NFIL)SEPARATOR
       IF(TRIM(SEPARATOR%NAME).EQ.'NONE') THEN
@@ -206,7 +205,6 @@ CONTAINS
       INTEGER(4)           ,INTENT(IN)   :: NFIL
       INTEGER(4)           ,INTENT(IN)   :: NFILO
       TYPE (SEPARATOR_TYPE)              :: SEPARATOR
-      INTEGER(4)                         :: NTASKS,THISTASK
       INTEGER(4)                         :: I,NREC
 !     ******************************************************************
       READ(NFIL)SEPARATOR
@@ -233,7 +231,6 @@ CONTAINS
       TYPE (SEPARATOR_TYPE)              :: SEPARATOR
       INTEGER(4)                         :: NREC,I
       INTEGER(4)                         :: item
-      character(10):: string
 !     ******************************************************************
       ITEM=0
       REWIND NFIL

@@ -262,7 +262,6 @@ CALL TRACE$PASS('DONE')
       CHARACTER(256)               :: VERSIONTEXT
       CHARACTER(512)               :: CNTLNAME
       CHARACTER(512)               :: ROOTNAME
-      CHARACTER(5)                 :: CH5SVAR
       CHARACTER(32)                :: CH32SVAR
       LOGICAL(4)                   :: TEQ
       LOGICAL(4)                   :: TPR=.FALSE.
@@ -298,11 +297,11 @@ CALL TRACE$PASS('DONE')
         WRITE(*,FMT='(T5,A6,T25,"PRINT HELP INFORMATION")')TRIM(CH32SVAR)
         CH32SVAR=-'-H'
         WRITE(*,FMT='(T5,A2,T25,"PRINT HELP INFORMATION")')TRIM(CH32SVAR)
-        WRITE(*,FMT='(t5,"?",T25,"PRINT HELP INFORMATION")')
+        WRITE(*,FMT='(T5,"?",T25,"PRINT HELP INFORMATION")')
         CH32SVAR=-'--VERSION'
-        WRITE(*,FMT='(t5,A9,T25,"PRINT VERSION INFORMATION")')TRIM(CH32SVAR)
+        WRITE(*,FMT='(T5,A9,T25,"PRINT VERSION INFORMATION")')TRIM(CH32SVAR)
         CH32SVAR=-'--PARMFILE'
-        WRITE(*,FMT='(t5,A10,T25,"PRINT PARMFILE")')TRIM(CH32SVAR)
+        WRITE(*,FMT='(T5,A10,T25,"PRINT PARMFILE")')TRIM(CH32SVAR)
         CALL ERROR$NORMALSTOP
       ELSE IF(+CNTLNAME.EQ.'--VERSION') THEN
         CALL PRINTVERSION()
@@ -323,27 +322,27 @@ CALL TRACE$PASS('DONE')
 !       RELATIVE COMPUTATIONAL EFFORT, WHICH DIVIDE THE PROCESSORS AMONG 
 !       INDIVIUDAL MONOMERS.
 
-         !alexp-dimer
-         !=== this is a quick-fix for the dimer
-         !=== later one could read the polymer data from a specific cntl file
+         !ALEXP-DIMER
+         !=== THIS IS A QUICK-FIX FOR THE DIMER
+         !=== LATER ONE COULD READ THE POLYMER DATA FROM A SPECIFIC CNTL FILE
 
          CALL DIMER$SETL4('DIMER',.TRUE.)
-         !--- we split in 2 parts
-         splitkey(1:int(ntasks/2))=1
-         splitkey(int(ntasks/2)+1:ntasks)=2
+         !--- WE SPLIT IN 2 PARTS
+         SPLITKEY(1:INT(NTASKS/2))=1
+         SPLITKEY(INT(NTASKS/2)+1:NTASKS)=2
 
-         !--- we set the name of the cntl-file by hand
-         !    this is almost the same code as below, but ensures that we do not
-         !    have to change the code below for the quick-fix
+         !--- WE SET THE NAME OF THE CNTL-FILE BY HAND
+         !    THIS IS ALMOST THE SAME CODE AS BELOW, BUT ENSURES THAT WE DO NOT
+         !    HAVE TO CHANGE THE CODE BELOW FOR THE QUICK-FIX
          ISVAR=INDEX(CNTLNAME,-'.POLYMER_CNTL',BACK=.TRUE.)
          IF(ISVAR.GT.0) THEN      
-            ROOTNAME=CNTLNAME(1:ISVAR-1)//'_m'//.itos.splitkey(thistask)
+            ROOTNAME=CNTLNAME(1:ISVAR-1)//'_M'//.ITOS.SPLITKEY(THISTASK)
          ELSE
             CALL ERROR$MSG('ROOTNAME FOR POLYMER EMPTY')
             CALL ERROR$STOP('READIN')
          END IF
-         CNTLNAME=trim(adjustl(rootname))//'.cntl'
-         !alexp-dimer end
+         CNTLNAME=TRIM(ADJUSTL(ROOTNAME))//'.CNTL'
+         !ALEXP-DIMER END
 
       ELSE
         SPLITKEY(:)=1
@@ -393,17 +392,14 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL PUTHEADER(NFILO,VERSIONTEXT)
-
-
-
-
+!
 !     ======================================================================
-!     ==  READ BLOCK !DIMER  AND !CONTROL!GENERIC START= (for placedimer) ==
+!     ==  READ BLOCK !DIMER  AND !CONTROL!GENERIC START= (FOR PLACEDIMER) ==
 !     ======================================================================
       CALL DIMER$GETL4('DIMER',TCHK)
-      if(tchk) then
-         call readin_dimer(LL_CNTL)
-      end if
+      IF(TCHK) THEN
+         CALL READIN_DIMER(LL_CNTL)
+      END IF
 !    
 !     ==================================================================
 !     ==  READ BLOCK !GENERIC                                         ==
@@ -511,6 +507,8 @@ CALL TRACE$PASS('DONE')
       END IF
 
                           CALL TRACE$PASS('BLOCK !CONTROL!GENERIC FINISHED')
+!CALL DYNOCC$TEST
+!STOP 'FORCED IN READIN'
 !    
 !     ==================================================================
 !     ==  READ BLOCK !DFT                                             ==
@@ -720,7 +718,6 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)               :: NFILE
       INTEGER(4)               :: ITH
       CHARACTER(32)            :: ID
-      CHARACTER(32)            :: CH32SVAR2
       CHARACTER(256)           :: NAME
       LOGICAL(4)               :: TCHK
 !     ******************************************************************
@@ -784,7 +781,6 @@ CALL TRACE$PASS('DONE')
       IMPLICIT NONE
       LOGICAL(4),PARAMETER :: T=.TRUE.
       LOGICAL(4),PARAMETER :: F=.FALSE.
-      CHARACTER(32)        :: CH32SVAR1
       CHARACTER(32)        :: ID
       INTEGER(4)           :: NTASKS
       INTEGER(4)           :: THISTASK
@@ -991,6 +987,10 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,ILDA)
       CALL DFT$SETI4('TYPE',ILDA)
 !
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'LDA+U',1,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'LDA+U',1,TCHK)
+      CALL LDAPLUSU$SETL4('ON',TCHK)
+!
       CALL LINKEDLIST$EXISTD(LL_CNTL,'VDW',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'VDW',1,TCHK)
       CALL VDW$SETL4('ON',TCHK)
@@ -1082,11 +1082,9 @@ CALL TRACE$PASS('DONE')
       TYPE(LL_TYPE)         :: LL_TEST
       LOGICAL(4)            :: TCHK,TCHK1,TCHK2
       REAL(8)               :: FRICTION
-      REAL(8)               :: SCALE
       LOGICAL(4)            :: TSTOPE
       LOGICAL(4)            :: TRANE
       REAL(8)               :: AMPRE
-      LOGICAL(4)            :: TSTORE    
       REAL(8)               :: EMASS
       REAL(8)               :: EMASSCG2
       REAL(8)               :: DT
@@ -1169,9 +1167,6 @@ CALL TRACE$PASS('DONE')
       IF(TCHK) THEN
         CALL ERROR$MSG('THE PARAMETER STOREPSIR HAS BEEN ELIMINATED')
         CALL ERROR$STOP('READIN_WAVES')         
-!       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'STOREPSIR',0,.TRUE.)
-!       CALL LINKEDLIST$GET(LL_CNTL,'STOREPSIR',1,TSTORE)
-!       CALL WAVES$SETL4('STOREPSIR',TSTORE)
       END IF
 !
 !     ==  SAFEORTHO STRICTLY CONSERVES ENERGY, ==========================
@@ -1245,15 +1240,11 @@ CALL TRACE$PASS('DONE')
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
       LOGICAL(4)               :: TCHK,TCHK1,TCHK2
-      LOGICAL(4)               :: TAUTOR
       REAL(8)                  :: FRICTION
-      REAL(8)                  :: SCALE
       LOGICAL(4)               :: TFOR
-      LOGICAL(4)               :: START
       LOGICAL(4)               :: TSTOPR
       REAL(8)                  :: AMPRP
       LOGICAL(4)               :: TRANP
-      REAL(8)                  :: X
       REAL(8)                  :: CELVIN
       REAL(8)                  :: DT
 !     ******************************************************************
@@ -1366,7 +1357,7 @@ CALL TRACE$PASS('DONE')
       REAL(8)      ,INTENT(IN) :: ANNEU    ! DEFAULT: UPPER FRICTION
       REAL(8)      ,INTENT(IN) :: FACU     ! DEFAULT: SCALE FOR UPPER FRICTION
       TYPE(LL_TYPE)            :: LL_CNTL
-      LOGICAL(4)               :: TCHK,TCHK1,TCHK2
+      LOGICAL(4)               :: TCHK
       REAL(8)                  :: FRICTION
       REAL(8)                  :: SCALE
       REAL(8)      ,PARAMETER  :: ANNEMIN=0.D0
@@ -1612,6 +1603,7 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)            :: IDIAL,NDIAL
       CHARACTER(32)         :: DIALID
       CHARACTER(1)          :: CH1
+      LOGICAL(4)            :: TADIABATIC
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_MERMIN')  
       LL_CNTL=LL_CNTL_
@@ -1650,27 +1642,6 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
       CALL DYNOCC$SETL4('DYN',TON)
 !
-!     == RESTART WITH OCCUPATIONS FROM STRC FILE =======================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'MOVE',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'MOVE',0,.TRUE.)
-      CALL LINKEDLIST$GET(LL_CNTL,'MOVE',0,TCHK)
-      CALL DYNOCC$SETL4('DYN',TCHK)
-!
-!     == RESTART WITH OCCUPATIONS, ENERGIES OR FROM INITIALIZATION =====
-!     == STARTTYPE OVERWRITES START
-      CALL DYNOCC$SETCH('STARTTYPE','X')
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'STARTTYPE',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'STARTTYPE',0,CH1)
-        CALL DYNOCC$SETCH('STARTTYPE',CH1)
-      ELSE
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'START',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'START',0,TCHK)
-          IF(TCHK)CALL DYNOCC$SETCH('STARTTYPE','E')
-        END IF
-      END IF
-!
 !     ==  CONSTANT CHARGE ENSEMBLE =====================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FIXQ',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'FIXQ',0,.TRUE.)
@@ -1682,6 +1653,94 @@ CALL TRACE$PASS('DONE')
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'FIXS',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'FIXS',0,TCHK)
       CALL DYNOCC$SETL4('FIXS',TCHK)
+!
+!     ==  TRUE ELECTRON TEMPERATURE =================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'T[K]',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'T[K]',0,1000.D0)
+      CALL LINKEDLIST$GET(LL_CNTL,'T[K]',0,TEMP)
+      TEMP=TEMP*KELVIN
+      CALL DYNOCC$SETR8('TEMP',TEMP)
+!
+!     ==  FERMI LEVEL (ONLY USED IF FIXQ=.FALSE. =======================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'EFERMI[EV]',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'EFERMI[EV]',0,0.D0)
+      CALL LINKEDLIST$GET(LL_CNTL,'EFERMI[EV]',0,SVAR)
+      SVAR=SVAR*EV
+      CALL DYNOCC$SETR8('EFERMI',SVAR)
+!
+!     ==  MAGNETIC FIELD (ONLY USED IF FIXS=.FALSE. =======================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'MAGFIELD[EV]',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'MAGFIELD[EV]',0,0.D0)
+      CALL LINKEDLIST$GET(LL_CNTL,'MAGFIELD[EV]',0,SVAR)
+      SVAR=SVAR*EV
+      CALL DYNOCC$SETR8('MAGNETICFIELD',SVAR)
+!
+!     ==  ADIABATIC ==================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ADIABATIC',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'ADIABATIC',0,.FALSE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'ADIABATIC',0,TADIABATIC)
+      CALL DYNOCC$SETL4('ADIABATIC',TADIABATIC)
+!
+!     ==  RETARD   ==================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'RETARD',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'RETARD',0,1.d0)
+      CALL LINKEDLIST$GET(LL_CNTL,'RETARD',0,SVAR)
+      IF(SVAR.LE.0.D0) THEN
+          CALL ERROR$MSG('THE VALUE OF RETARD MUST BE POSITIVE')
+          CALL ERROR$R8VAL('RETARD',SVAR)
+          CALL ERROR$STOP('READIN_MERMIN')
+      END IF
+      CALL DYNOCC$SETR8('RETARD',SVAR)
+!
+!     ==  BZITYPE  ==================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'TETRA+',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'TETRA+',0,.FALSE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'TETRA+',0,TCHK)
+      IF(TCHK) THEN
+        IF(.NOT.TADIABATIC) THEN
+          CALL ERROR$MSG('TETRAHEDRON METHOD WORKS ONLY IN QUASI-ADIABATIC MODE')
+          CALL ERROR$MSG('SELECT ADIABATIC=T OR TETRA+=F')
+          CALL ERROR$STOP('READIN_MERMIN')
+        END IF
+        IF(TEMP.GT.KELVIN) THEN
+          CALL ERROR$MSG('TETRAHEDRON METHOD WORKS ONLY FOR ZERO KELVIN')
+          CALL ERROR$MSG('SELECT T[K]=0. OR TETRA+=F')
+          CALL ERROR$R8VAL('T[K]',TEMP/KELVIN)
+          CALL ERROR$STOP('READIN_MERMIN')
+        END IF
+        CALL DYNOCC$SETCH('BZITYPE','TETRA+')
+      ELSE
+        CALL DYNOCC$SETCH('BZITYPE','SAMP')
+      END IF
+!
+!     == RESTART WITH OCCUPATIONS FROM STRC FILE =======================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'MOVE',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'MOVE',0,.TRUE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'MOVE',0,TCHK)
+      CALL DYNOCC$SETL4('DYN',TCHK)
+!
+!     == RESTART WITH OCCUPATIONS, ENERGIES OR FROM INITIALIZATION =====
+!     == STARTTYPE OVERWRITES START
+      IF(TADIABATIC) THEN
+        CALL DYNOCC$SETCH('STARTTYPE','E')
+      ELSE
+        CALL DYNOCC$SETCH('STARTTYPE','X')
+      END IF
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'STARTTYPE',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'STARTTYPE',0,CH1)
+        IF(TADIABATIC.AND.CH1.EQ.'X') THEN
+          CALL ERROR$MSG('STARTTYPE="X" IS INCOMPATIBLE WITH ADIABATIC=T')
+          CALL ERROR$STOP('READIN_MERMIN')
+        END IF
+        CALL DYNOCC$SETCH('STARTTYPE',CH1)
+      ELSE
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'START',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'START',0,TCHK)
+          IF(TCHK)CALL DYNOCC$SETCH('STARTTYPE','E')
+        END IF
+      END IF
 !
 !     ==  FICTITIOUS MASS FOR THE OCCUPATIONS=========================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'M',1,TCHK)
@@ -1695,32 +1754,11 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$GET(LL_CNTL,'FRIC',0,FRICTION)
       CALL DYNOCC$SETR8('FRICTION',FRICTION)
 !
-!     ==  TRUE ELECTRON TEMPERATURE =================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'T[K]',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'T[K]',0,1000.D0)
-      CALL LINKEDLIST$GET(LL_CNTL,'T[K]',0,TEMP)
-      TEMP=TEMP*KELVIN
-      CALL DYNOCC$SETR8('TEMP',TEMP)
-!
 !     ==  INITIAL VELOCITIES OF OCCUPATIONS STOPPED =================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'STOP',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'STOP',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'STOP',0,TCHK)
       CALL DYNOCC$SETL4('STOP',TCHK)
-!
-!     ==  FERMI LEVEL (ONLY USED IF FIXQ=.FALSE. =======================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'EFERMI[EV]',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'EFERMI[EV]',0,0.D0)
-      CALL LINKEDLIST$GET(LL_CNTL,'EFERMI[EV]',0,SVAR)
-      SVAR=SVAR*EV
-      CALL DYNOCC$SETR8('EFERMI',SVAR)
-!
-!     ==  FERMI LEVEL (ONLY USED IF FIXQ=.FALSE. =======================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'MAGFIELD[EV]',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'MAGFIELD[EV]',0,0.D0)
-      CALL LINKEDLIST$GET(LL_CNTL,'MAGFIELD[EV]',0,SVAR)
-      SVAR=SVAR*EV
-      CALL DYNOCC$SETR8('MAGNETICFIELD',SVAR)
 !
 !     ==================================================================
 !     ==  RESOLVE DIALS                                               ==
@@ -1784,7 +1822,6 @@ CALL TRACE$PASS('DONE')
       REAL(8)                  :: P           ! EXTERNAL PRESSURE
       REAL(8)                  :: MASS        ! MASS FOR CELL DFYNAMICS
       REAL(8)                  :: FRIC        ! MASS FOR CELL DFYNAMICS
-      INTEGER(4)               :: I
 !     ******************************************************************
       LL_CNTL=LL_CNTL_
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -2140,10 +2177,7 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)               :: TCHK,TCHK1,TCHK2
       REAL(8)                  :: SVAR
       REAL(8)                  :: FRIC
-      REAL(8)                  :: FRICTION
-      REAL(8)                  :: SCALE
       INTEGER(4)               :: MULTIPLE
-      REAL(8)                  :: KELVIN
       REAL(8)                  :: DT
 !     ******************************************************************
       LL_CNTL=LL_CNTL_
@@ -2369,7 +2403,6 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)            :: IB,IKPT,ISPIN
       REAL(8)               :: DR
       CHARACTER(256)        :: CH256SVAR1
-      CHARACTER(8)          :: CH8SVAR1
       LOGICAL(4)            :: TIMAG
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_ANALYSE_WAVE')  
@@ -2456,10 +2489,8 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)            :: TCHK,TCHK1,TCHK2
       INTEGER(4)            :: NDEN
       INTEGER(4)            :: IDEN
-      INTEGER(4)            :: IB,IKPT,ISPIN
       REAL(8)               :: DR
       CHARACTER(256)        :: CH256SVAR1
-      CHARACTER(8)          :: CH8SVAR1
       CHARACTER(8)          :: TYPE
       LOGICAL(4)            :: TDIAG,TOCC,TCORE
       REAL(8)               :: EMIN,EMAX
@@ -2580,7 +2611,6 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)            :: TCHK
       REAL(8)               :: DR
       CHARACTER(256)        :: CH256SVAR1
-      CHARACTER(8)          :: CH8SVAR1
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_ANALYSE_WAVE')  
       LL_CNTL=LL_CNTL_
@@ -2778,7 +2808,6 @@ CALL TRACE$PASS('DONE')
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
       LOGICAL(4)               :: TON
-      INTEGER(4)               :: NTASKS,THISTASK
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_ANALYSE_OPTIC')  
       LL_CNTL=LL_CNTL_
@@ -2816,7 +2845,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       LOGICAL(4)            :: SVARL
       CHARACTER(32)         :: SVARCH
       REAL(8),ALLOCATABLE   :: SVARV(:)
-      integer(4)            :: nfil
+      INTEGER(4)            :: NFIL
 !     ******************************************************************
 
       CALL TRACE$PUSH('READIN_DIMER')  
@@ -2834,11 +2863,11 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
          CALL DIMER$SETL4('DIMER',.FALSE.)
          CALL TRACE$POP
          RETURN
-      else !we have a dimer block
+      ELSE !WE HAVE A DIMER BLOCK
          CALL DIMER$SETL4('DIMER',.TRUE.)
 
 !     ========INITIALIZE DEFAULT VALUES =====================        
-         call dimer$INIT()
+         CALL DIMER$INIT()
 
          !=== FIND OUT IF WE READ A RESTART FILE -> NO NEED TO PLACE DIMER
          CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -2851,9 +2880,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             CALL LINKEDLIST$GET(LL_CNTL,'START',1,SVARL)
             CALL DIMER$SETL4('PLACEDIMER',SVARL)
          ELSE
-            !the deault is start=f -> restart-file -> do not place the dimer
+            !THE DEAULT IS START=F -> RESTART-FILE -> DO NOT PLACE THE DIMER
             CALL DIMER$SETL4('PLACEDIMER',.FALSE.)
-         end IF
+         END IF
          
 
          !=== NOW READ THE DIMER SETTINGS
@@ -2873,14 +2902,14 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
          IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_CNTL,'KDLENGTH',1,SVARL)
             CALL DIMER$SETL4('KDLENGTH',SVARL)
-         end IF
+         END IF
          
          CALL LINKEDLIST$EXISTD(LL_CNTL,'STRETCHDIST',0,TCHK)
-         IF(TCHK) then
+         IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_CNTL,'STRETCHDIST',1,SVARR)
             CALL DIMER$SETR8('STRETCHDIST',SVARR)
-            CALL DIMER$SETL4('STRETCH',.true.)
-         end IF
+            CALL DIMER$SETL4('STRETCH',.TRUE.)
+         END IF
          
 !     ========CONSTRAINTS ======= ==============================        
          CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -2918,7 +2947,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                END IF
                CALL LINKEDLIST$SELECT(LL_CNTL,'..')            
             END DO
-         end IF
+         END IF
          
 !     ========ITERATION CONTROL==============================        
          CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -2939,7 +2968,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                CALL DIMER$SETR8('DLAMBDA',SVARR)
             END IF
 
-!Deprecated
+!DEPRECATED
 !!$         CALL LINKEDLIST$EXISTD(LL_CNTL,'VITER',0,TCHK)
 !!$         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'VITER',1,CALCVELOCITYITERMAX)
 !!$
@@ -2950,7 +2979,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !!$         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'DROT',1,DROT)
 
 
-         end IF
+         END IF
 
 !     ========MOTION CONTROL ================================        
          CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -2960,7 +2989,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
          IF(TON) THEN
             CALL LINKEDLIST$SELECT(LL_CNTL,'MOTION')
             
-!alex: this is for pclimb-testing!
+!ALEX: THIS IS FOR PCLIMB-TESTING!
             CALL LINKEDLIST$EXISTD(LL_CNTL,'CLIMBPERP',0,TCHK)
             IF(TCHK) THEN
                CALL LINKEDLIST$GET(LL_CNTL,'CLIMBPERP',1,SVARL)
@@ -2973,7 +3002,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                CALL DIMER$SETR8('FORCEDSTEP',SVARR)
             END IF
             
-!alex: this is for pclimb-testing!
+!ALEX: THIS IS FOR PCLIMB-TESTING!
 
 
 
@@ -3073,7 +3102,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                CALL DIMER$SETL4('OPTFRICROT',SVARL)
             END IF
             
-         end IF
+         END IF
          
 !     ========LENGTH CONTROL ================================        
          CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -3112,7 +3141,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                CALL LINKEDLIST$GET(LL_CNTL,'DTOBE',1,SVARR)
                CALL DIMER$SETR8('DMIN',SVARR)
             END IF
-         end IF
+         END IF
          
 
 
@@ -3143,13 +3172,13 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                CALL DIMER$SETV('RTS',SVARV,SVARI)
             END IF
          END IF
-      END IF !from dimer block
+      END IF !FROM DIMER BLOCK
       
       CALL FILEHANDLER$UNIT('DPROT',NFIL)
       CALL DIMER$REPORT_SETTINGS(NFIL)
       CALL TRACE$POP
-      return
-    end SUBROUTINE READIN_DIMER
+      RETURN
+    END SUBROUTINE READIN_DIMER
  
 
 !     .....................................................STRCIN.......
@@ -3173,8 +3202,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)            :: NFILO   ! PROTOCOL FILE UNIT
       INTEGER(4)            :: NFIL
       LOGICAL(4)            :: TCHK
-      REAL(8)               :: RUNIT
-      INTEGER(4)            :: NFREE,NKPT,NAT
+      INTEGER(4)            :: NKPT
 !     ******************************************************************
                           CALL TRACE$PUSH('STRCIN')
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -3358,8 +3386,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)   ,INTENT(OUT):: NKPT
       TYPE(LL_TYPE)            :: LL_STRC
       LOGICAL(4)               :: TCHK,TCHK1
-      INTEGER(4)               :: IKPT
-      INTEGER(4)               :: IXK0(3)
       INTEGER(4)               :: NKDIV(3)
       INTEGER(4)               :: ISHIFT(3)=0
       REAL(8)                  :: RBAS(3,3)
@@ -3367,7 +3393,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)    ,ALLOCATABLE  :: XK(:,:)
       REAL(8)    ,ALLOCATABLE  :: WGHT(:)
       LOGICAL(4)               :: TINV
-      CHARACTER(32)            :: BZITYPE
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_KPOINT')
       LL_STRC=LL_STRC_
@@ -3386,16 +3411,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       TINV=.TRUE. 
 !
 !     ==  READ ACTUAL VALUES  ==========================================
-      CALL LINKEDLIST$EXISTD(LL_STRC,'BZINTEGRATION',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'BZINTEGRATION',0,'MP')
-      CALL LINKEDLIST$GET(LL_STRC,'BZINTEGRATION',1,BZITYPE)
-      IF(BZITYPE.NE.'MP'.AND.BZITYPE.NE.'TETRA+') THEN
-        CALL ERROR$MSG('BZINTEGRATION NOT RECOGNIZED')
-        CALL ERROR$CHVAL('BZINTEGRATION',BZITYPE)
-        CALL ERROR$STOP('STRCIN_KPOINT')
-      END IF
-      CALL DYNOCC$SETCH('BZINTEGRATION',BZITYPE)
-!
       ISHIFT(:)=0
       CALL LINKEDLIST$EXISTD(LL_STRC,'SHIFT',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'SHIFT',1,ISHIFT)
@@ -3433,22 +3448,10 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !     ====================================================================
 !     == DETERMINE K-POINTS AND INTEGRATION WEIGHTS                     ==
 !     ====================================================================
-      IF(BZITYPE.EQ.'MP') THEN
-        CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
-        ALLOCATE(XK(3,NKPT))
-        ALLOCATE(WGHT(NKPT))
-        CALL KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WGHT)
-      ELSE IF(BZITYPE.EQ.'TETRA+') THEN
-        CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
-        CALL BRILLOUIN$GETI4('NL',NKPT)
-        ALLOCATE(XK(3,NKPT))
-        ALLOCATE(WGHT(NKPT))
-        CALL BRILLOUIN$GETR8A('XK',3*NKPT,XK)
-        CALL BRILLOUIN$GETR8A('WKPT',NKPT,WGHT)
-      ELSE
-        CALL ERROR$MSG('BZITYPE NOT RECOGNIZED')
-        CALL ERROR$STOP('STRCIN_KPOINT')
-      END IF
+      CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
+      ALLOCATE(XK(3,NKPT))
+      ALLOCATE(WGHT(NKPT))
+      CALL KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WGHT)
 !
 !     ==  PERFORM ACTIONS  ==============================================
       CALL DYNOCC$SETI4('NKPT',NKPT)
@@ -3479,17 +3482,18 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       CHARACTER(32)            :: SPNAME
       CHARACTER(256)           :: SETUPFILE
       CHARACTER(32)            :: SOFTCORETYPE
-      INTEGER(4)               :: IZ
       INTEGER(4)               :: ISVAR
       REAL(8)                  :: Z
       REAL(8)                  :: SVAR
       REAL(8)                  :: PROTONMASS
       INTEGER(4),ALLOCATABLE   :: NPRO(:)
       INTEGER(4)               :: LENG   
+      REAL(8)                  :: EV
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES')
       LL_STRC=LL_STRC_
       CALL CONSTANTS('U',PROTONMASS)
+      CALL CONSTANTS('EV',EV)
 !
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
@@ -3503,11 +3507,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !       ================================================================
         CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
              CALL ATOMTYPELIST$ADD(SPNAME)
-             CH8SVAR1=SPNAME(1:2)
-             IF(CH8SVAR1(2:2).EQ.'_') CH8SVAR1(2:2)=' '
-             CALL PERIODICTABLE$GET(CH8SVAR1(1:2),'Z',IZ)
-             Z=DBLE(IZ)
-             CALL ATOMTYPELIST$SETZ(SPNAME,Z)
 !
 !       ================================================================
 !       ==  CONNECT SETUP FILE                                        ==
@@ -3542,7 +3541,15 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !       ================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
         IF(.NOT.TCHK) THEN
-          CALL PERIODICTABLE$GET(IZ,'MASS',SVAR)
+          Z=-1.D0
+          CALL LINKEDLIST$EXISTD(LL_STRC,'Z',1,TCHK)
+          IF(TCHK) CALL LINKEDLIST$GET(LL_STRC,'Z',1,Z)
+          if(z.lt.0.d0) then
+            CH8SVAR1=SPNAME(1:2)
+            IF(CH8SVAR1(2:2).EQ.'_') CH8SVAR1(2:2)=' '
+            CALL PERIODICTABLE$GET(CH8SVAR1(1:2),'Z',Z)
+          end if
+          CALL PERIODICTABLE$GET(Z,'MASS',SVAR)
           CALL LINKEDLIST$SET(LL_STRC,'M',0,SVAR/PROTONMASS)
         END IF
         CALL LINKEDLIST$GET(LL_STRC,'M',1,SVAR)
@@ -3585,10 +3592,10 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY            ==
 !       ================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'NPRO',1,TCHK)
-        if(.not.tchk) then
+        IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('VARIABLE !STRUCTURE!SPERCIES:NPRO IS MANDATORY')
           CALL ERROR$STOP('STRCIN_SPECIES')
-        end if
+        END IF
         CALL LINKEDLIST$SIZE(LL_STRC,'NPRO',1,LENG)
         ALLOCATE(NPRO(LENG))
         CALL LINKEDLIST$GET(LL_STRC,'NPRO',1,NPRO)
@@ -3606,6 +3613,40 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL ATOMTYPELIST$SELECT(SPNAME)
         CALL ATOMTYPELIST$SETCH('SOFTCORETYPE',SOFTCORETYPE)
         CALL ATOMTYPELIST$UNSELECT
+!
+!       ================================================================
+!       ================================================================
+!       ==  LDAPLUSU                                                  ==
+!       ================================================================
+!       ================================================================
+        CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$SELECT(LL_STRC,'LDAPLUSU')
+          CALL LDAPLUSU$NEW(NSP)
+          CALL LDAPLUSU$SELECT(ISP)
+          CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
+          SVAR=3.D0
+          CALL LINKEDLIST$EXISTD(LL_STRC,'RCUT',1,TCHK)
+          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
+          CALL LDAPLUSU$SETR8('RCUT',SVAR)
+!            
+          CALL LINKEDLIST$EXISTD(LL_STRC,'DIEL',1,TCHK)
+          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'DIEL',1,SVAR)
+          CALL LDAPLUSU$SETR8('DIEL',SVAR)
+!
+          SVAR=0.D0
+          CALL LINKEDLIST$EXISTD(LL_STRC,'UPAR[EV]',1,TCHK)
+          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'UPAR[EV]',1,SVAR)
+          CALL LDAPLUSU$SETR8('UPAR',SVAR*EV)
+!
+          SVAR=0.D0
+          CALL LINKEDLIST$EXISTD(LL_STRC,'JPAR[EV]',1,TCHK)
+          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'JPAR[EV]',1,SVAR)
+          CALL LDAPLUSU$SETR8('JPAR',SVAR*EV)
+!
+!         == GET OUT OF LDAPLUSU-BLOCK
+          CALL LINKEDLIST$SELECT(LL_STRC,'..')
+        END IF
 !
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
@@ -3677,8 +3718,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
             TCHK=.TRUE.
             CALL ATOMTYPELIST$SELECT(SPECIES)
             CALL ATOMLIST$SETI4('ISPECIES',IAT,ISP)
-            CALL ATOMTYPELIST$GETR8('Z',SVAR)
-            CALL ATOMLIST$SETR8('Z',IAT,SVAR)
+!            CALL ATOMTYPELIST$GETR8('Z',SVAR)
+!            CALL ATOMLIST$SETR8('Z',IAT,SVAR)
             CALL ATOMTYPELIST$GETR8('ZV',SVAR)
             CALL ATOMLIST$SETR8('ZVALENCE',IAT,SVAR)
             CALL ATOMTYPELIST$GETR8('M',SVAR)
@@ -3749,7 +3790,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       REAL(8)                  :: RC
       REAL(8)                  :: RCFAC
       REAL(8)                  :: GMAX2
-      INTEGER(4)               :: NFILO
       LOGICAL(4)               :: DECOUPLE
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_ISOLATE')
@@ -4222,7 +4262,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
       TYPE(LL_TYPE)            :: LL_STRC
-      LOGICAL(4)               :: TCHK,TCHK1,TCHK2,TCHK3
+      LOGICAL(4)               :: TCHK,TCHK1,TCHK2
       INTEGER(4)               :: NAT
       LOGICAL(4)   ,ALLOCATABLE:: TIAT1(:)
       LOGICAL(4)   ,ALLOCATABLE:: TIAT2(:)
@@ -4792,7 +4832,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       INTEGER(4)               :: NUM
       INTEGER(4)               :: ITH
       CHARACTER(32)            :: NAME1,NAME2
-      CHARACTER(256)           :: CH256SVAR1
       LOGICAL                  :: TCHK
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_CONSTRAINTS_ORIENTATION')
@@ -4843,7 +4882,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       INTEGER(4)               :: NUM
       INTEGER(4)               :: ITH
       CHARACTER(32)            :: NAME1,NAME2,NAME3
-      CHARACTER(256)           :: CH256SVAR1
       LOGICAL                  :: TCHK
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_CONSTRAINTS_ORIENTATION')
@@ -4902,8 +4940,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       INTEGER(4)               :: NUM
       INTEGER(4)               :: ITH
       CHARACTER(32)            :: NAME1,NAME2,NAME3,NAME4
-      CHARACTER(256)           :: CH256SVAR1
-      REAL(8)                  :: AXIS(3) 
       LOGICAL                  :: TCHK
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_CONSTRAINTS_ORIENTATION')
@@ -5083,7 +5119,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       INTEGER(4)                  :: IATQ,IATM,IATS,IATM1,IATM2,IATS1,IATS2
       INTEGER(4)                  :: IBONDM,IBONDS,ILINK,I
       INTEGER(4)                  :: IZ
-      LOGICAL(4)                  :: TRC    ! ATOM IS PART OF THE RECTION CENTER OR DUMMY ATOM
       LOGICAL(4)                  :: TCHK
       INTEGER(4)     ,ALLOCATABLE :: LINKARRAY(:,:)
       INTEGER(4)     ,ALLOCATABLE :: MAPARRAY(:,:)

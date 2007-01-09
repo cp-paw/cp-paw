@@ -142,9 +142,6 @@ END MODULE TRAJECTORYIO_MODULE
       INTEGER(4),INTENT(IN)  :: NSTEP_   ! #(TIME STEPS) ON WORK ARRAYS
       INTEGER(4)             :: SIZE
       TYPE(XXX_TYPE),POINTER :: XXX           
-      REAL(8)   ,ALLOCATABLE :: WORK(:,:)
-      INTEGER(4),ALLOCATABLE :: IWORK(:)
-      INTEGER(4)             :: ISTEP
 !     ******************************************************************
       IF(NSTEP_.EQ.NSTEP) RETURN
 !

@@ -283,7 +283,6 @@ END MODULE WAVES_MODULE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       REAL(8)     ,INTENT(OUT):: VAL(LEN)
-      REAL(8)     ,ALLOCATABLE:: EIGVAL(:)
       COMPLEX(8)  ,ALLOCATABLE:: CWORK1(:)
       COMPLEX(8)  ,ALLOCATABLE:: CWORK2(:)
       COMPLEX(8)  ,ALLOCATABLE:: CWORK3(:)
@@ -872,7 +871,7 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
 !PRINT*,'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
 !TINV=.FALSE.
 !       ==  NOT THAT XK REFERS TO THE LOCAL K-POINT INDEX =================
-PRINT*,THISTASK,'BEFORE ',XK(:,IKPTL),TINV
+!PRINT*,THISTASK,'BEFORE ',XK(:,IKPTL),TINV
         CALL PLANEWAVE$INITIALIZE(GSET%ID,'K',RBAS,XK(1,IKPTL),TINV,EPWPSI &
      &                           ,NR1START,NR1L,NR2,NR3)
         CALL PLANEWAVE$SELECT(GSET%ID)
@@ -1066,7 +1065,7 @@ PRINT*,THISTASK,'BEFORE ',XK(:,IKPTL),TINV
 !     ..................................................................
       SUBROUTINE WAVES_DYNOCCSETR8A(ID,LEN,VAL)
 !     **                                                              **
-!     **  GET A REAL(8) ARRAY FROM DYNOCC. THIS ROUTINE IS AN         **
+!     **  set A REAL(8) ARRAY to DYNOCC. THIS ROUTINE IS AN         **
 !     **  INTERFACE BETWEEN WAVES OBJECT AND DYNOCC OBJECT.           **
 !     **  IT IS REQUIRED FOR THE K-POINT PARALLELIZATION, BECAUSE     **
 !     **  EACH NODE ONLY MAINTAINS A FRACTION OF ALL K-POINTS         **
@@ -4906,10 +4905,10 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
                 CSVAR=THIS%PSI0(IG,IDIM,IB)-THIS%PSIM(IG,IDIM,IB)
                 V1=REAL(CSVAR,KIND=8)
                 V2=AIMAG(CSVAR)
-!               SUM=SUM+MARR(IG)*(V1**2+V2**2)
                 SUM=SUM+GSET%MPSI(IG)*(V1**2+V2**2)
               ENDDO
             ENDDO
+            sum=sum/delt**2
 !
             IF(.NOT.TINV) THEN
               EKIN1=EKIN1+SUM*F1
@@ -4936,13 +4935,14 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
      &                   +AIMAG(TPSIP(IG))*AIMAG(TPSIM(IG)))
               ENDDO            
             ENDDO
+            sum=sum/delt**2
             EIG(IB1,IKPT,ISPIN)=EIG(IB1,IKPT,ISPIN)+0.5D0*SUM              
             EIG(IB2,IKPT,ISPIN)=EIG(IB2,IKPT,ISPIN)-0.5D0*SUM              
             EKIN1=EKIN1+SUM*0.5D0*(F1-F2)
           ENDDO
           DEALLOCATE(TPSIP)
           DEALLOCATE(TPSIM)
-          EKIN=EKIN+EKIN1*CELLVOL/DELT**2
+          EKIN=EKIN+EKIN1*CELLVOL
         ENDDO
       ENDDO
 !
@@ -4984,7 +4984,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
        INTEGER(4)            :: SKSAVE(NKPT)
        REAL(8)   ,ALLOCATABLE:: XLOAD(:)
        REAL(8)               :: XLOAD1
-       LOGICAL(4)            :: MASK(NTASKS)
        INTEGER(4)            :: I,J,IKPT,IPOS,IGROUP
        INTEGER(4)            :: ISVAR
        INTEGER(4)            :: IND(1)

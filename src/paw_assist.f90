@@ -5,7 +5,7 @@ MODULE DIALS_MODULE
 !**                                                                   **
 !**  NAME: DIALS                                                      **
 !**                                                                   **
-!**  PURPOSE: CHANGES SLOWLY THE VALUES OF AN OBJECT                  **
+!**  PURPOSE: CHANGES SLOWLY THE VALUES OF AN OBJECT                   **
 !**                                                                   **
 !***********************************************************************
 TYPE DIAL_TYPE
@@ -474,7 +474,6 @@ END MODULE AUTOPILOT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: IDENT_
       INTEGER(4)  ,INTENT(IN) :: VALUE
-      INTEGER(4)              :: I
 !     ******************************************************************
 !     == GLOBAL VARIABLES (NOT SPECIFIC FOR A PARTICULAR AUTOPILOT)
       IF(IDENT_.EQ.'NTOL') THEN

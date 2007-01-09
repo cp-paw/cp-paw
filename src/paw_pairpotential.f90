@@ -29,7 +29,7 @@
       INTEGER(4)             :: NTASKS,THISTASK
       INTEGER(4)             :: LRXX     
       INTEGER(4)             :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
-      INTEGER(4)             :: I1,I2,I3,NPAIR,IND,I,J,LM
+      INTEGER(4)             :: I1,I2,I3,I,J,LM
       INTEGER(4)             :: ISP,ISP1,ISP2,IAT,IAT1,IAT2
       REAL(8)                :: T1,T2,T3,DIS,DIS2,DX,DY,DZ
       REAL(8)                :: EPAIR1,ESELF1,ESELF0,EPAIR0
@@ -353,7 +353,6 @@
       REAL(8)               :: XSL,XBL
       REAL(8)               :: SUMS,SUMB
       REAL(8)               :: SVARS,SVARB
-      REAL(8)               :: ERFX
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       LUP=(2*LRXX+1)

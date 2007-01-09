@@ -1,9 +1,9 @@
 !#IF DEFINED(IBMLICENSE)
 Module version_module
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 502 $'
+character(256):: VERrev='$LastChangedRevision: 508 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2006-12-12 18:29:48 +0100 (Di, 12. Dez 2006) $'
+character(256):: VERdat='$LastChangedDate: 2007-01-09 17:30:55 +0100 (Di, 09. Jan 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -34,6 +34,10 @@ end Module version_module
       INTEGER(4)    :: NTASKS,THISTASK
       COMMON/VERSION/VERSIONTEXT
 !     ******************************************************************
+!     =================================================================
+!     == these lines contain information that can be grepped out of the
+!     == executable. they have no function in the execution of the code.
+!     =================================================================
       VERSIONINFO = '@(#) PAW-VERSION %R% CREATED %U% %E%'
       VERSIONTEXT = 'PROGRAM VERSION %R% CREATED %U% %E%'
 !
@@ -60,7 +64,7 @@ end Module version_module
       END IF
 !     == TIMING MUST BE CALLED BY ALL NODES =========================== 
       CALL TRACE$PASS('BEFORE TIMING')
-      CALL TIMING$PRINT('MONOMER',NFILO,'ALL')
+      CALL TIMING$PRINT('MONOMER',NFILO)
       CALL TRACE$PASS('AFTER TIMING')
       CALL USAGE$REPORT(NFILO)
       CALL TRACE$PASS('AFTER USAGE')
@@ -93,15 +97,11 @@ end Module version_module
 !     ******************************************************************
       IMPLICIT NONE
       LOGICAL(4)   :: TNWSTR
-      LOGICAL(4)   :: TSTOPR
       LOGICAL(4)   :: TSTOP
-      LOGICAL(4)   :: TRANP
       LOGICAL(4)   :: TFIRST
       LOGICAL(4)   :: TLAST
-      LOGICAL(4)   :: TSTOPH
       LOGICAL(4)   :: TPRINT
-      LOGICAL(4)   :: TOLATE,TMERMN
-      CHARACTER(80):: TEXT
+      LOGICAL(4)   :: TMERMN
       INTEGER(4)   :: NFILO     ! FILE UNIT OF PROTOCOL
       INTEGER(4)   :: NFI0      ! TIME STEP COUNTER AT START
       INTEGER(4)   :: NFI       ! TIME STEP COUNTER
@@ -167,7 +167,7 @@ end Module version_module
 !     ==================================================================
       CALL FILEHANDLER$UNIT('PROT',NFILO)
                               CALL TIMING$CLOCKOFF('INITIALIZATION')
-                              CALL TIMING$PRINT('MONOMER',NFILO,'ALL')
+                              CALL TIMING$PRINT('MONOMER',NFILO)
                               CALL TIMING$START
 !
 !     ==================================================================
@@ -222,9 +222,9 @@ end Module version_module
 !     ==================================================================
                               CALL TIMING$CLOCKON('TIMESTEP')
 !     ==USE THE LINE WITH "NOT TSTOP" TO AVOID AN ADDITIONAL LAST TIME STEP
-!     IF(.NOT.TSTOP) CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,TMERMN)
+!     IF(.NOT.TSTOP) CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP)
       CALL DYNOCC$GETL4('DYN',TMERMN)
-      CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,TMERMN)
+      CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP)
                               CALL TIMING$CLOCKOFF('TIMESTEP')
 !
 !     ==================================================================
@@ -357,7 +357,7 @@ end Module version_module
       END
 !
 !     ..................................................................
-      SUBROUTINE TIMESTEP(DELT,TPRINT,NFI,TSTOP,TMERMN)
+      SUBROUTINE TIMESTEP(DELT,TPRINT,NFI,TSTOP)
 !     ******************************************************************      
 !     ******************************************************************      
       USE TIMESTEP_MODULE ,ONLY : DELTAT,ISTEPNUMBER,TNEWTHERMOSTAT
@@ -365,26 +365,18 @@ end Module version_module
       REAL(8)   ,INTENT(IN)   :: DELT   ! TIME STEP
       LOGICAL(4),INTENT(IN)   :: TPRINT ! ON/OFF SWITCH FOR LONG PRINTOUT
       LOGICAL(4),INTENT(IN)   :: TSTOP  ! ON/OFF SWITCH FOR LAST TIME STEP
-      LOGICAL(4),INTENT(IN)   :: TMERMN ! ON/OFF SWITCH FOR MERMIN FUNCTIONAL
       INTEGER(4),INTENT(INOUT):: NFI    ! TIME STEP COUNTER
       INTEGER(4)              :: NFILO
       LOGICAL(4)              :: TFOR   ! ON/OFF SWITCH FOR ATOMIC MOTION
       LOGICAL(4)              :: TGRA   ! ON/OFF SWITCH FOR GRADIENT CORRECTION
-      LOGICAL(4)              :: TSPIN  ! ON/OFF SWITCH FOR SPIN POLARIZATION
-      INTEGER(4)              :: NSPIN
       REAL(8)                 :: ANNEE  ! FRICTION COEFFICIENT FOR WAVE FUNCTIONS
       REAL(8)                 :: ANNER  ! FRICTION COEFFICIENT FOR NUCLEI
-      REAL(8)   ,ALLOCATABLE  :: RHOE(:,:)  !(NNRX1,NSPIN)   
-      LOGICAL(4)              :: TDIAG=.FALSE. !ON/OFF SWITCH FOR WAVE 
-                                        ! FUNCTION DIAGONALIZATION
-      INTEGER(4)              :: NR1,NR2,NR3,NNRX1
       LOGICAL(4)              :: TCHK
       REAL(8)                 :: TEMPINST
       REAL(8)                 :: ENOSE  ! GENERIC THERMOSTAT ENERGY 
       REAL(8)                 :: EKIN   ! GENERIC KINETIC ENERGY
       REAL(8)                 :: SVAR
       LOGICAL(4)              :: TCHK1,TCHK2
-      REAL(8)                 :: STRESS(3,3)
       real(8)                 :: fav,fmax
 !     ******************************************************************      
                               CALL TRACE$PUSH('TIMESTEP')
@@ -424,7 +416,7 @@ end Module version_module
 !     == OCCUPATIONS ===================================================
       CALL DYNOCC$GETR8('EPOT',SVAR)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
-      CALL ENERGYLIST$SET('ELECTRONIC HEAT',SVAR)
+      CALL ENERGYLIST$SET('OCCUPATIONAL ENTROPY TERM (-TS)',SVAR)
 !
 !     ==================================================================
 !     ==================================================================
@@ -716,23 +708,6 @@ END MODULE STOPIT_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE STOPIT$SET(IDENT_,NBYTE_,VAL_)
-!     ****************************************************************** 
-!     **  STOPIT$SET                                                  ** 
-!     ****************************************************************** 
-      USE STOPIT_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN):: IDENT_
-      INTEGER(4)  ,INTENT(IN) :: NBYTE_
-      REAL(8)     ,INTENT(IN) :: VAL_
-!     ****************************************************************** 
-      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION')
-      CALL ERROR$STOP('STOPIT$SET')
-!     CALL LINKEDLIST$SET($LIST,IDENT_,NBYTE_,VAL_)
-      RETURN
-      END
-!
-!     ..................................................................
       SUBROUTINE STOPIT$GETL4(ID_,VAL_)
 !     ****************************************************************** 
 !     **  STOPIT$GET                                                  ** 
@@ -888,7 +863,6 @@ END MODULE STOPIT_MODULE
       INTEGER(4)            :: NAT
       INTEGER(4)            :: NFILO
       INTEGER(4)            :: NFIL
-      REAL(8)               :: GLIB
       INTEGER(4)            :: NTASKS,THISTASK
       REAL(8)               :: PICO
       REAL(8)               :: SECOND
@@ -914,7 +888,6 @@ END MODULE STOPIT_MODULE
       REAL(8)               :: EFFEKIN
       REAL(8)               :: ECELLPOT
       REAL(8)               :: ECELLKIN
-      REAL(8)               :: ESOLV,EKINQ,QFRIC,QTOT
       LOGICAL(4)            :: TCHK,TCHK1
       LOGICAL(4)            :: TQMMM=.FALSE.
       REAL(8)               :: QMMMKIN   ! EKIN OF QM-MM ENVIRONMENT
@@ -930,13 +903,11 @@ END MODULE STOPIT_MODULE
       REAL(8)               :: MM_FRIC
       LOGICAL(4)            :: TCOSMO
       REAL(8)               :: EKINCOSMO,EPOTCOSMO
-      CHARACTER(126):: NAME
 !     ******************************************************************
                               CALL TRACE$PUSH('PRINFO')
       TIME=DBLE(NFI)*DELT
       CALL ATOMLIST$NATOM(NAT)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
-      GLIB=3*NAT-3
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !   
 !     ==================================================================
@@ -1151,11 +1122,11 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
             CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT KINETIC')
             CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT POTENTIAL')
           END IF
-          
+!          
 !         == OCCUPATIONS ================================================
           CALL DYNOCC$GETL4('DYN',TCHK)
           IF(TCHK) THEN
-            CALL ENERGYLIST$PRINTONE(NFILO,'ELECTRONIC HEAT')
+            CALL ENERGYLIST$PRINTONE(NFILO,'OCCUPATIONAL ENTROPY TERM (-TS)')
             CALL ENERGYLIST$PRINTONE(NFILO,'OCCUPATION KINETIC ENERGY')
           end if
 !
@@ -1279,9 +1250,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       REAL(8)                :: OCCKIN
       LOGICAL(4)             :: TQMMM,TCALGARYQMMM
       REAL(8)                :: QMMMKIN,QMMMPOT,QMMMTHERM
-      REAL(8)                :: ESOLV,EKINQ,QFRIC,QTOT
       REAL(8)                :: EEXT
-      INTEGER(4)             :: IAT,JAT
 !     ******************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
@@ -1316,7 +1285,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       ECONS=ECONS+EKINFC
 !     
 !     == OCCUPATIONS =================================================
-      CALL ENERGYLIST$RETURN('ELECTRONIC HEAT',HEAT) ! -T*S_MERMIN
+      CALL ENERGYLIST$RETURN('OCCUPATIONAL ENTROPY TERM (-TS)',HEAT) ! -T*S_MERMIN
       CALL ENERGYLIST$RETURN('OCCUPATION KINETIC ENERGY',OCCKIN)
       ECONS=ECONS+HEAT+OCCKIN
 !     

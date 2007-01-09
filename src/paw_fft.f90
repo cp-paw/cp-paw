@@ -138,14 +138,11 @@ END MODULE PLANEWAVE_MODULE
       USE PLANEWAVE_MODULE
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)  :: NFIL
-      INTEGER(4)              :: ITASK,IG
-      INTEGER(4)              :: NGL
-      REAL(8)    ,ALLOCATABLE :: GVEC(:,:)
+      INTEGER(4)              :: ITASK
       INTEGER(4)              :: ntasks,THISTASK
       integer(4)              :: ntasks1,thistask1
       TYPE (PWPARALLEL_TYPE),POINTER :: THIS1
       character(64)           :: ID
-      character(64)           :: ID0
       LOGICAL(4)              :: TINV
       LOGICAL(4)              :: TSUPER
       REAL(8)                 :: KVEC(3)
@@ -224,20 +221,6 @@ print*,thistask,'icount',icount
         ENDDO
       ENDDO
       deallocate(icount)
-
-!      IF(THISTASK.NE.1) RETURN
-!      CALL REPORT$TITLE(NFIL,'PLANEWAVE')
-!      CALL REPORT$CHVAL(NFIL,'ID',THIS%ID)
-!      CALL REPORT$L4VAL(NFIL,'TINV',THIS%TINV)
-!      CALL REPORT$L4VAL(NFIL,'TSUPER',THIS%TSUPER)
-!      WRITE(NFIL,FMT='("GBASINV*K=(",3F10.5,")")')THIS%KVEC
-!      CALL REPORT$I4VAL(NFIL,'NR1',THIS%NR1,' ')
-!      CALL REPORT$I4VAL(NFIL,'NR2',THIS%NR2,' ')
-!      CALL REPORT$I4VAL(NFIL,'NR3',THIS%NR3,' ')
-!      DO ITASK=1,NTASKS
-!        WRITE(NFIL,FMT='("TASK ",I4," NR1L ",I5," NGL ",I5," NSTRIPEL ",I5)') &
-!           ITASK,THIS%NR1LARR(ITASK),THIS%NGLARR(ITASK),THIS%NSTRIPELARR(ITASK)
-!      ENDDO
       RETURN
       END
 !     
@@ -443,7 +426,6 @@ print*,thistask,'icount',icount
       INTEGER(4)              :: NGL
       LOGICAL(4)              :: SUPER
       INTEGER(4)              :: IG,IGH
-      INTEGER(4)              :: NG
       INTEGER(4)              :: NTASKS,THISTASK
 !     ******************************************************************
       CALL MPE$QUERY(THIS%CID,NTASKS,THISTASK)
@@ -548,7 +530,6 @@ print*,thistask,'icount',icount
       REAL(8)     ,ALLOCATABLE:: GVEC(:,:)
       LOGICAL(4)              :: SUPER
       INTEGER(4)              :: IG,IGH
-      INTEGER(4)              :: NG
       INTEGER(4)              :: NTASKS,THISTASK
 !     ******************************************************************
       CALL MPE$QUERY(THIS%CID,NTASKS,THISTASK)
@@ -733,8 +714,6 @@ print*,thistask,'icount',icount
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       COMPLEX(8)  ,INTENT(OUT):: VAL(LEN)
-      INTEGER(4)              :: NGL
-      REAL(8)     ,ALLOCATABLE:: GVEC(:,:)
 !     ******************************************************************
 !
 !     ==================================================================
@@ -852,7 +831,6 @@ print*,thistask,'icount',icount
       INTEGER(4)             :: MIN1,MAX1
       INTEGER(4)             :: MIN2,MAX2
       INTEGER(4)             :: MIN3,MAX3
-      INTEGER(4)             :: NBELOW,NABOVE
 !     ******************************************************************
       CALL MPE$QUERY(cid,NTASKS,THISTASK)
       CALL GBASS(RBAS,GBAS,VOL)
@@ -1105,14 +1083,11 @@ print*,thistask,'icount',icount
 !
         ALLOCATE(THIS%IGVECH(3,NGL))
         IGH=0
-!PRINT*,'CLEMENS MARKE 1'
         DO IG=1,NGL
           IF(THIS%MINUSG(IG).LT.IG) CYCLE
           IGH=IGH+1
-!PRINT*,'CLEMENS IG,IGH ',IG,IGH
           THIS%IGVECH(:,IGH)=THIS%IGVEC(:,IG)
         ENDDO
-!PRINT*,'CLEMENS MARKE 2'
       ELSE
         NULLIFY(THIS%NGHARR)
       END IF
@@ -1235,12 +1210,9 @@ print*,thistask,'icount',icount
       REAL(8)                :: G1,G2,G3
       REAL(8)                :: T1,T2,T3
       INTEGER(4)             :: MIN1,MIN2,MIN3,MAX1,MAX2,MAX3
-      INTEGER(4)             :: I,J,K,IG,ITO
-      LOGICAL(4)             :: RETURNG
+      INTEGER(4)             :: I,J,K,IG
       REAL(8)                :: G2A(NG)
       REAL(8)                :: GSQUARE
-      INTEGER(4)             :: IWORK(NG)
-      INTEGER(4)             :: IK(3)
       INTEGER(4)             :: ICOUNT,IGARR(3),ISTART,ISTOP
       REAL(8)                :: KARTK(3)
       INTEGER(4)             :: FROM,TO
@@ -1361,11 +1333,10 @@ print*,thistask,'icount',icount
       INTEGER(4)            :: NGROUP
       INTEGER(4),ALLOCATABLE:: NGOFGROUP(:) !(NGROUP)
       INTEGER(4),ALLOCATABLE:: ITASKOFGROUP(:) !(NGROUP)
-      INTEGER(4)            :: IG,I2,I3,IGROUP,IGROUP1,IGROUP2,ISIGN,I
+      INTEGER(4)            :: IG,I2,I3,IGROUP,IGROUP1,IGROUP2,I
       INTEGER(4)            :: ITASK
       INTEGER(4)            :: CHOICE
       INTEGER(4)            :: ONEARR(1)
-      INTEGER(4),ALLOCATABLE:: NSTRIPEOFTASK(:)  !(NGROUP)
       REAL(8)   ,ALLOCATABLE:: COSTOFTASK(:)  !(NGROUP)
       REAL(8)               :: COSTOFG
       REAL(8)               :: COSTOFSTRIPE
@@ -1405,7 +1376,6 @@ print*,thistask,'icount',icount
           END IF
         END IF
       ENDDO         
-!PRINT*,'IGROUPOFYZ ',NGROUP,IGROUPOFYZ
 !
 !     ==================================================================
 !     ==  DETERMINE THE NUMBER OF G-VECTORS IN EACH GROUP             ==
@@ -1540,7 +1510,6 @@ print*,thistask,'icount',icount
       REAL(8)               :: PI
       REAL(8)               :: PHAS1,PHAS2,PHAS3
       INTEGER(4)            :: IRR,IR1,IR2,IR3
-      REAL(8)               :: RCOND,DET(2),AUX(300)
 !     ******************************************************************
 !     == SHORTCUT FOR K=0 ==============================================
       IF(KVEC(1)**2+KVEC(2)**2+KVEC(3)**2.LT.1.D-8) THEN
@@ -1585,11 +1554,8 @@ print*,thistask,'icount',icount
       REAL(8)   ,INTENT(IN)  :: R(3)
       INTEGER(4),INTENT(IN)  :: NGL
       COMPLEX(8),INTENT(OUT) :: EIGR(NGL)
-      INTEGER(4),ALLOCATABLE :: IGVEC(:,:)
-      INTEGER(4)             :: IG,IGH
-      INTEGER(4)             :: NG
       INTEGER(4)             :: NGH
-      INTEGER(4)            :: ntasks,THISTASK
+      INTEGER(4)             :: ntasks,THISTASK
 !     ******************************************************************
       CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
       IF(.NOT.THIS%TSUPER) THEN
@@ -1606,18 +1572,6 @@ print*,thistask,'icount',icount
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$STOP('PLANEWAVE$STRUCTUREFACTOR')
         END IF
-!!$        ALLOCATE(IGVEC(3,NGL))
-!!$        IGH=0
-!!$        DO IG=1,THIS%NGLARR(THISTASK)
-!!$          IF(THIS%MINUSG(IG).LT.IG) CYCLE
-!!$          IGH=IGH+1
-!!$          IGVEC(:,IGH)=THIS%IGVEC(:,IG)
-!!$        ENDDO
-!!$        CALL PLANEWAVE_STRUCTUREFACTOR_OLD(R,THIS%GBAS,THIS%KVEC &
-!!$     &                         ,THIS%NR1,THIS%NR2,THIS%NR3,NGL &
-!!$     &                         ,IGVEC,EIGR)
-!!$         DEALLOCATE(IGVEC)
-!
         CALL PLANEWAVE_STRUCTUREFACTOR(R,THIS%GBAS,THIS%KVEC &
      &                         ,THIS%NR1,THIS%NR2,THIS%NR3,NGL &
      &                         ,THIS%IGVECH,EIGR)
@@ -1722,121 +1676,6 @@ print*,thistask,'icount',icount
         J=IGVEC(2,IG) 
         K=IGVEC(3,IG) 
         EIGR(IG)=DCWORK(I,1)*DCWORK(J,2)*DCWORK(K,3)
-      ENDDO
-      RETURN
-      END
-!
-!     .....................................................PHFAC........
-      SUBROUTINE PLANEWAVE_STRUCTUREFACTOR_OLD(R,GBAS,KVEC,NR1,NR2,NR3,NG &
-     &           ,IGVEC,EIGR)
-!     **                                                              **
-!     **  EVALUATES  EXP(-I*(G+K)*R)                                  **
-!     **                                                              **
-!     **  INPUT:                                                      **
-!     **    R       ATOMIC POSITION                                   **
-!     **    XK      POSITION OF THE K-VECTOR                          **
-!     **    GBAS    RECIPROCAL LATTICE VECTORS                        **
-!     **    NR1,NR2,NR3                                               **
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      REAL(8)   ,INTENT(IN) :: R(3)      ! ATOMIC POSITION
-      REAL(8)   ,INTENT(IN) :: KVEC(3)   ! K-VECTOR
-      REAL(8)   ,INTENT(IN) :: GBAS(3,3) ! REC. LATTICE VECTORS
-      INTEGER(4),INTENT(IN) :: NR1
-      INTEGER(4),INTENT(IN) :: NR2
-      INTEGER(4),INTENT(IN) :: NR3
-      INTEGER(4),INTENT(IN) :: NG        ! #(LOCAL PLANE WAVES)
-      INTEGER(4),INTENT(IN) :: IGVEC(3,NG)
-      COMPLEX(8),INTENT(OUT):: EIGR(NG)  ! E**(I*G*R)
-      INTEGER(4)            :: NRMAX
-      COMPLEX(8),POINTER,SAVE :: DCWORK(:,:)
-      COMPLEX(8)            :: CFACP,CSVARP,CFACM,CSVARM
-      REAL(8)               :: GR1,GR2,GR3
-      REAL(8)               :: RK1,RK2,RK3
-      INTEGER(4)            :: I,IG 
-      REAL(8)               :: KARTK(3)
-      INTEGER(4),SAVE       :: NRMAXSAVE=-1
-!     ******************************************************************
-      NRMAX=MAX(NR1,NR2,NR3)
-      IF(NRMAXSAVE.LT.NRMAX) THEN
-        IF(NRMAXSAVE.NE.-1)DEALLOCATE(DCWORK)
-        ALLOCATE(DCWORK(NRMAX,2))
-        NRMAXSAVE=NRMAX
-      END IF
-      KARTK=MATMUL(GBAS,KVEC)
-!
-!     ==================================================================
-!     ==  FIRST                                                       ==
-!     ==================================================================
-      GR1=GBAS(1,1)*R(1)+GBAS(2,1)*R(2)+GBAS(3,1)*R(3)
-      RK1=R(1)*KARTK(1)
-      CFACP =CMPLX(DCOS(GR1),-DSIN(GR1),8)
-      CSVARP=CMPLX(DCOS(RK1),-DSIN(RK1),8)
-      CFACM=CONJG(CFACP)
-      CSVARM=CSVARP
-      DO I=1,NR1
-        DCWORK(I,1)=CSVARP
-        CSVARP=CSVARP*CFACP
-        DCWORK(I,2)=CSVARM
-        CSVARM=CSVARM*CFACM
-      ENDDO
-      DO IG=1,NG
-        I=IGVEC(1,IG) 
-        IF(I.GE.0) THEN
-          EIGR(IG)=DCWORK(I+1,1)
-        ELSE
-          EIGR(IG)=DCWORK(-I+1,2)
-        END IF
-      ENDDO
-!
-!     ==================================================================
-!     ==  SECOND DIRECTION                                            ==
-!     ==================================================================
-      GR2=GBAS(1,2)*R(1)+GBAS(2,2)*R(2)+GBAS(3,2)*R(3)
-      RK2=R(2)*KARTK(2)
-      CFACP =CMPLX(DCOS(GR2),-DSIN(GR2),8)
-      CSVARP=CMPLX(DCOS(RK2),-DSIN(RK2),8)
-      CFACM =CONJG(CFACP)
-      CSVARM=CSVARP
-      DO I=1,NR2
-        DCWORK(I,1)=CSVARP
-        CSVARP=CSVARP*CFACP
-        DCWORK(I,2)=CSVARM
-        CSVARM=CSVARM*CFACM
-      ENDDO
-      DO IG=1,NG
-        I=IGVEC(2,IG) 
-        IF(I.GE.0) THEN
-          EIGR(IG)=EIGR(IG)*DCWORK(I+1,1)
-        ELSE
-          EIGR(IG)=EIGR(IG)*DCWORK(-I+1,2)
-        END IF
-      ENDDO
-!
-!     ==================================================================
-!     ==  THIRD DIRECTION                                             ==
-!     ==================================================================
-      GR3=GBAS(1,3)*R(1)+GBAS(2,3)*R(2)+GBAS(3,3)*R(3)
-      RK3=R(3)*KARTK(3)
-      CFACP =CMPLX(DCOS(GR3),-DSIN(GR3),8)
-      CSVARP=CMPLX(DCOS(RK3),-DSIN(RK3),8)
-      CFACM =CONJG(CFACP)
-      CSVARM=CSVARP
-      DO I=1,NR3
-        DCWORK(I,1)=CSVARP
-        CSVARP=CSVARP*CFACP
-        DCWORK(I,2)=CSVARM
-        CSVARM=CSVARM*CFACM
-      ENDDO
-      DO IG=1,NG
-        I=IGVEC(3,IG)
-        IF(I.GE.0) THEN
-          EIGR(IG)=EIGR(IG)*DCWORK(I+1,1)
-        ELSE
-          EIGR(IG)=EIGR(IG)*DCWORK(-I+1,2)
-        END IF
       ENDDO
       RETURN
       END
@@ -2174,7 +2013,7 @@ print*,thistask,'icount',icount
       INTEGER(4)                :: NSTRIPEL
       INTEGER(4)                :: NR1LX
       INTEGER(4)                :: NR1L
-      INTEGER(4)                :: ISTRIPE,ISTRIPEL,ITASK
+      INTEGER(4)                :: ISTRIPEL,ITASK
       INTEGER(4)                :: IR1,IR2,IR3,IR1L
       INTEGER(4)                :: IMID,I23
       INTEGER(4)                :: NR3END1,NR3END2
@@ -2342,13 +2181,13 @@ print*,thistask,'icount',icount
       COMPLEX(8)  ,ALLOCATABLE  :: FOFG1(:)
       INTEGER(4)                :: NR1L
       INTEGER(4)                :: NR1LX
-      INTEGER(4)                :: ISTRIPE,ISTRIPEL,ITASK
+      INTEGER(4)                :: ISTRIPEL,ITASK
       INTEGER(4)                :: IR1,IR2,IR3,IR1L
       INTEGER(4)                :: IMID,I23
       INTEGER(4)                :: NR3END1,NR3END2
       INTEGER(4)                :: IND1,IND2
       INTEGER(4)                :: NSTRIPEL
-      INTEGER(4)                :: IG,J,I
+      INTEGER(4)                :: IG
       INTEGER(4)                 :: ntasks,THISTASK
 !     ******************************************************************
       CALL MPE$QUERY(cid,NTASKS,THISTASK)
@@ -2501,9 +2340,7 @@ print*,thistask,'icount',icount
       COMPLEX(8)  ,INTENT(IN)   :: F2(NGL,NDIM,N2)
       COMPLEX(8)  ,INTENT(OUT)  :: MAT(N1,N2)
       INTEGER(4)                :: NGAMMA
-      INTEGER(4)                :: I1,I2,IG,IDIM
-      COMPLEX(8)                :: CSUM
-!     COMPLEX(8)  ,ALLOCATABLE  :: F1M(:,:)
+      INTEGER(4)                :: I1,I2,IDIM
       COMPLEX(8)  ,ALLOCATABLE  :: F2M(:,:)
       LOGICAL(4)  ,PARAMETER    :: TESSL=.TRUE.
 !     ******************************************************************
@@ -2532,85 +2369,6 @@ print*,thistask,'icount',icount
         ENDDO
         DEALLOCATE(F2M)
       END IF
-!     MAT(:,:)=(0.D0,0.D0)
-!     IF(ID.EQ.'') THEN
-!       IF(TESSL) THEN
-!         CALL ZGEMUL(F1,NGL*NDIM,'C',F2,NGL*NDIM,'N',MAT,N1,N1,NDIM*NGL,N2)
-!       ELSE
-!         DO I1=1,N1
-!           DO I2=1,N2
-!             CSUM=CMPLX(0.D0,0.D0,8)
-!             DO IDIM=1,NDIM
-!               DO IG=1,NGL
-!                 CSUM=CSUM+CONJG(F1(IG,IDIM,I1))*F2(IG,IDIM,I2)
-!               ENDDO
-!             ENDDO
-!             MAT(I1,I2)=CSUM
-!           ENDDO
-!         ENDDO
-!       END IF
-!
-!     ==================================================================
-!     == EXPLOIT F1=F2                                                ==
-!     ==================================================================
-!     ELSE IF(ID.EQ.'=') THEN
-!       IF(N1.NE.N2) THEN
-!         CALL ERROR$MSG('N1 AND N2 MUST BE IDENTICAL FOR OPTION "="')
-!         CALL ERROR$STOP('PLANEWAVE$SCALARPRODUCT')
-!       END IF
-!       IF(TESSL) THEN
-!         DO I1=1,N1
-!           CALL ZGEMUL(F1(1,1,I1),NGL*NDIM,'C',F2(1,1,I1),NGL*NDIM,'N' &
-!    &                 ,MAT(I1,I1),N1,N1+1-I1,NDIM*NGL,1)
-!           DO I2=I1+1,N2
-!             MAT(I1,I2)=CONJG(MAT(I2,I1))
-!           ENDDO
-!         ENDDO
-!       ELSE
-!         DO I1=1,N1
-!           DO I2=I1,N2
-!             CSUM=CMPLX(0.D0,0.D0,8)
-!             DO IDIM=1,NDIM
-!               DO IG=1,NGL
-!                 CSUM=CSUM+CONJG(F1(IG,IDIM,I1))*F2(IG,IDIM,I2)
-!               ENDDO
-!             ENDDO
-!             MAT(I1,I2)=CSUM
-!             MAT(I2,I1)=CONJG(CSUM)
-!           ENDDO
-!         ENDDO
-!       END IF
-!
-!     ==================================================================
-!     == BUILD SCALARPRODUCT <F1-|F2+>                                ==
-!     ==================================================================
-!     ELSE IF(ID.EQ.'-') THEN
-!       IF(.NOT.THIS%TINV.OR.THIS%TSUPER) THEN
-!         CALL ERROR$MSG('OPTION - CAN ONLY USED INVERSION SYMMETRY')
-!         CALL ERROR$MSG('AND NOT FOR SUPER WAVE FUNCTIONS')
-!         CALL ERROR$STOP('PLANEWAVE$SCALARPRODUCT')
-!       END IF
-!       ALLOCATE(F1M(NGL,NDIM))
-!       DO I1=1,N1
-!         DO IDIM=1,NDIM
-!           CALL PLANEWAVE$INVERTG(NGL,F1(1,IDIM,I1),F1M(1,IDIM))
-!         ENDDO
-!         IF(TESSL) THEN
-!           CALL ZGEMUL(F1M,NGL*NDIM,'C',F2,NGL*NDIM,'N',MAT(I1,1),N1,1,NDIM*NGL,N2)
-!         ELSE
-!           DO I2=1,N2
-!             CSUM=CMPLX(0.D0,0.D0,8)
-!             DO IDIM=1,NDIM
-!               DO IG=1,NGL
-!                 CSUM=CSUM+CONJG(F1M(IG,IDIM))*F2(IG,IDIM,I2)
-!               ENDDO
-!             ENDDO
-!             MAT(I1,I2)=CSUM
-!           ENDDO
-!         END IF
-!       ENDDO
-!       DEALLOCATE(F1M)
-!     END IF
 !
 !     ==================================================================
 !     ==  COMPLETE FOR SUPERWAVE FUNCTION INTERFACE                   ==
@@ -2659,33 +2417,13 @@ print*,thistask,'icount',icount
       COMPLEX(8)  ,INTENT(INOUT):: F1(NGL,NDIM,N1)
       COMPLEX(8)  ,INTENT(IN)   :: F2(NGL,NDIM,N2)
       COMPLEX(8)  ,INTENT(IN)   :: MAT(N2,N1)
-      INTEGER(4)                :: NGAMMA
-      INTEGER(4)                :: I1,I2,IG,IDIM
-      COMPLEX(8)                :: CSUM
+      INTEGER(4)                :: I2,IDIM
       COMPLEX(8)  ,ALLOCATABLE  :: F2M(:,:,:)
       LOGICAL(4)  ,PARAMETER    :: TESSL=.TRUE.
 !     ******************************************************************
                              CALL TIMING$CLOCKON('PLANEWAVE$ADDPRODUCT')
       IF(ID.EQ.'') THEN
         CALL LIB$ADDPRODUCTC8(.FALSE.,NGL*NDIM,N2,N1,F2,MAT,F1)
-!       IF(TESSL) THEN
-!         CALL ZGEMM('N','N',NGL*NDIM,N1,N2,(1.D0,0.D0) &
-!    &              ,F2,NGL*NDIM,MAT,N2,(1.D0,0.D0),F1,NGL*NDIM)
-!       ELSE
-!         ALLOCATE(F2M(NGL,NDIM,N2))
-!         F2M=F2   ! PRECAUTION FOR F1 AND F2 BEING IDENTICAL
-!         DO I1=1,N1
-!           DO I2=1,N2
-!             CSUM=MAT(I2,I1)
-!             DO IDIM=1,NDIM
-!               DO IG=1,NGL
-!                 F1(IG,IDIM,I1)=F1(IG,IDIM,I1)+F2M(IG,IDIM,I2)*CSUM
-!               ENDDO
-!             ENDDO
-!           ENDDO
-!         ENDDO
-!         DEALLOCATE(F2M)
-!       END IF
 !
 !     ==================================================================
 !     == ALLOW F1=F2                                                  ==
@@ -2696,19 +2434,6 @@ print*,thistask,'icount',icount
           CALL ERROR$STOP('PLANEWAVE$ADDPRODUCT')
         END IF
         CALL LIB$ADDPRODUCTC8(.TRUE.,NGL*NDIM,N2,N1,F2,MAT,F1)
-!       ALLOCATE(F2M(NGL,NDIM,N2))
-!       F2M=F2
-!       DO I1=1,N1
-!         DO I2=1,N2
-!           CSUM=MAT(I2,I1)
-!           DO IDIM=1,NDIM
-!             DO IG=1,NGL
-!               F1(IG,IDIM,I1)=F1(IG,IDIM,I1)+F2M(IG,IDIM,I2)*CSUM
-!             ENDDO
-!           ENDDO
-!         ENDDO
-!       ENDDO
-!       DEALLOCATE(F2M)
 !
 !     ==================================================================
 !     == BUILD SCALARPRODUCT <F1-|F2+>                                ==
@@ -2725,16 +2450,6 @@ print*,thistask,'icount',icount
           ENDDO
         ENDDO
         CALL LIB$ADDPRODUCTC8(.FALSE.,NGL*NDIM,N2,N1,F2M,MAT,F1)
-!       DO I1=1,N1
-!         DO I2=1,N2
-!           CSUM=MAT(I2,I1)
-!           DO IDIM=1,NDIM
-!             DO IG=1,NGL
-!               F1(IG,IDIM,I1)=F1(IG,IDIM,I1)+F2M(IG,IDIM,I2)*CSUM
-!             ENDDO
-!           ENDDO
-!         ENDDO
-!       ENDDO
         DEALLOCATE(F2M)
       END IF
                             CALL TIMING$CLOCKOFF('PLANEWAVE$ADDPRODUCT')
@@ -2761,11 +2476,9 @@ print*,thistask,'icount',icount
       INTEGER(4)  ,INTENT(IN) :: NGLOC
       <TYPE>      ,INTENT(IN) :: XGLOB(NDIM,NGGLOB)
       <TYPE>      ,INTENT(OUT):: XLOC(NDIM,NGLOC)
-      INTEGER(4)              :: MSGLEN
       INTEGER(4)              :: NGSEND
       INTEGER(4)              :: TOTASK
       <TYPE>      ,ALLOCATABLE:: XTMP(:,:)
-      INTEGER(4)              :: NBYTES6
       INTEGER(4)              :: I
       INTEGER(4)              :: NGLX
       INTEGER(4)              :: NG,NGL

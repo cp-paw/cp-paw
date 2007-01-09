@@ -487,7 +487,7 @@ call trace$pass('in graphics$plot: plot wave functions')
       INTEGER(4)                :: NTASKS,THISTASK
       INTEGER(4)                :: NTASKS_k,THISTASK_k
       INTEGER(4)                :: NR1,NR1L,NR2,NR3
-      INTEGER(4)                :: NNR,NNRL
+      INTEGER(4)                :: NNRL
       INTEGER(4)                :: NR1START
       INTEGER(4)                :: NB
       INTEGER(4)                :: NKPT
@@ -506,7 +506,6 @@ call trace$pass('in graphics$plot: plot wave functions')
       REAL(8)       ,ALLOCATABLE:: Z(:)
       REAL(8)       ,ALLOCATABLE:: Q(:)
       INTEGER(4)                :: LMNXX
-      REAL(8)                   :: R1,DEX
       INTEGER(4)                :: NR
       INTEGER(4)                :: LNX
       INTEGER(4)    ,ALLOCATABLE:: LOX(:)    !LNX
@@ -515,7 +514,6 @@ call trace$pass('in graphics$plot: plot wave functions')
       REAL(8)       ,ALLOCATABLE:: PROJ(:)    !LMNXX
       INTEGER(4)                :: LX,LMXX
       REAL(8)       ,ALLOCATABLE:: DRHOL(:,:) !(NR,LMXX)
-      REAL(8)       ,ALLOCATABLE:: DENMAT(:,:) !(LMNXX,LMNXX)
       INTEGER(4)                :: IAT,ISP,LN
       INTEGER(4)                :: NFIL
       INTEGER(4)                :: NR1B,NR2B,NR3B
@@ -540,7 +538,6 @@ call trace$pass('in graphics$plot: plot wave functions')
       CALL WAVES$GETI4('NR1L',NR1L)
       CALL WAVES$GETI4('NR2',NR2)
       CALL WAVES$GETI4('NR3',NR3)
-      NNR=NR1*NR2*NR3
       NNRL=NR1L*NR2*NR3
       CALL WAVES$GETI4('NR1START',NR1START)
       CALL WAVES$GETI4('NB',NB)
@@ -723,7 +720,7 @@ call trace$pass('in graphics$plot: plot wave functions')
       INTEGER(4)                :: NTASKS,THISTASK
       INTEGER(4)                :: NTASKS_k,THISTASK_k
       INTEGER(4)                :: NR1,NR1L,NR2,NR3
-      INTEGER(4)                :: NNR,NNRL
+      INTEGER(4)                :: NNRL
       INTEGER(4)                :: NR1START
       INTEGER(4)                :: NB
       INTEGER(4)                :: NSPIN_,NKPT_ ! DUMMY
@@ -747,16 +744,14 @@ call trace$pass('in graphics$plot: plot wave functions')
       INTEGER(4)    ,ALLOCATABLE:: LOX(:)    !LNX
       REAL(8)       ,ALLOCATABLE:: AEPHI(:,:) !NR,LNX
       REAL(8)       ,ALLOCATABLE:: PSPHI(:,:) !NR,LNX
-      REAL(8)       ,ALLOCATABLE:: PROJ(:)    !LMNXX
-      INTEGER(4)                :: LX,LMXX
+      INTEGER(4)                :: LMXX
       REAL(8)       ,ALLOCATABLE:: DRHOL(:,:) !(NR,LMXX)
       REAL(8)       ,ALLOCATABLE:: DENMAT(:,:) !(LMNXX,LMNXX)
-      INTEGER(4)                :: IAT,ISP,LN,ISPIN,IKPT,IB
+      INTEGER(4)                :: IAT,ISP,ISPIN,IKPT,IB
       REAL(8)                   :: FAC,SPINFAC
       INTEGER(4)                :: NFIL
       REAL(8)      ,ALLOCATABLE :: AECORE(:)
-      REAL(8)                   :: SVAR,XEXP,RI
-      INTEGER(4)                :: I,itask
+      INTEGER(4)                :: itask
       INTEGER(4)                :: NR1B,NR2B,NR3B
       INTEGER(4)                :: GID
       integer(4)   ,allocatable :: iwork(:)
@@ -773,7 +768,6 @@ call trace$pass('in graphics$plot: plot wave functions')
       CALL WAVES$GETI4('NR1L',NR1L)
       CALL WAVES$GETI4('NR2',NR2)
       CALL WAVES$GETI4('NR3',NR3)
-      NNR=NR1*NR2*NR3
       NNRL=NR1L*NR2*NR3
       CALL WAVES$GETI4('NR1START',NR1START)
       CALL WAVES$GETI4('NB',NB)
@@ -1107,15 +1101,13 @@ CALL TRACE$PASS('graphics$densityplot: marke 7')
       REAL(8)                  :: DR(3,3)
       REAL(8)                  :: YLM(LMXX)
       REAL(8)                  :: RVEC(3)
-      REAL(8)                  :: RMAX,RMAX2,RI,SVAR,SVAR1
+      REAL(8)                  :: RMAX,RMAX2,SVAR,SVAR1
       INTEGER(4)               :: IR,LM
       INTEGER(4)               :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
       REAL(8)                  :: T1,T2,T3
       REAL(8)                  :: X1,X2,X3
       INTEGER(4)               :: I1,I2,I3,I11,I21,I31,I
       REAL(8)                  :: DIS,DIS2
-      REAL(8)                  :: XIR
-      REAL(8)                  :: W1,W2
       REAL(8)                  :: R(NR)
 !     ******************************************************************
       CALL RADIAL$R(GID,NR,R)
@@ -1253,7 +1245,7 @@ CALL TRACE$PASS('graphics$densityplot: marke 7')
       REAL(8)   ,INTENT(IN)  :: PSPHI(NR,LNX)
       REAL(8)   ,INTENT(IN)  :: PROJ(LMNX)
       REAL(8)   ,INTENT(OUT) :: DRHOL(NR,LMX)
-      INTEGER(4)             :: LM,IR,LMN,LN,M,L
+      INTEGER(4)             :: LM,LMN,LN,M,L
       REAL(8)                :: SVAR
 !     ******************************************************************
       DRHOL(:,:)=0.D0
@@ -1290,8 +1282,6 @@ CALL TRACE$PASS('graphics$densityplot: marke 7')
       INTEGER(4)                :: I
       INTEGER(4)                :: J      
       INTEGER(4)                :: K
-      INTEGER(4)                :: E1 
-      INTEGER(4)                :: E2   
 !     ******************************************************************
       ALLOCATE(WORKC1(NR1,NR2,NR3))
       WORKC1(:,:,:)=CMPLX(WAVE(:,:,:),KIND=8)
@@ -1410,7 +1400,6 @@ CALL TRACE$PASS('graphics$densityplot: marke 7')
       INTEGER(4)                 :: NRL
       INTEGER(4)                 :: NR1L
       INTEGER(4)                 :: NR1,NR2,NR3
-      CHARACTER(32)              :: STRING
       INTEGER(4)                 :: NFIL
       INTEGER(4)                 :: NAT
       INTEGER(4)                 :: IAT
@@ -1419,12 +1408,6 @@ CALL TRACE$PASS('graphics$densityplot: marke 7')
       REAL(8)   ,ALLOCATABLE     :: Z(:)
       REAL(8)   ,ALLOCATABLE     :: POS(:,:)
       INTEGER(4)                 :: NR
-      INTEGER(4)                 :: LMRX
-      REAL(8)                    :: DEX
-      REAL(8)                    :: R1
-      REAL(8)   ,ALLOCATABLE     :: AEPOT(:,:)
-      REAL(8)   ,ALLOCATABLE     :: PSPOT(:,:)
-      INTEGER(4)                 :: NFILO
       REAL(8)   ,ALLOCATABLE     :: ONECPOT(:,:,:)
       INTEGER(4)                 :: NTASKS,THISTASK
       INTEGER(4)                 :: NR1B,NR2B,NR3B
@@ -1503,7 +1486,6 @@ CALL TRACE$PASS('graphics$densityplot: marke 7')
           CALL ERROR$MSG('ERROR ENTERED WHILE ALLOWING ATOM SPECIFIC RADIAL GRIDS')
           CALL ERROR$STOP('GRAPHICS_CREATEPOT')
         END IF
-!        CALL SETUP$RADGRID(IAT,R1,DEX,NR)
         CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))

@@ -483,7 +483,6 @@ END MODULE FILEHANDLER_MODULE
       TYPE (FILE_TYPE),INTENT(INOUT) :: FILE_
       INTEGER(4)                     :: IERR
       INTEGER(4)                     :: IOS
-      CHARACTER(128)                 :: IOSTATMESSAGE
       LOGICAL(4)                     :: OD
       CHARACTER(9)                   :: ACTION
       CHARACTER(11)                  :: FORM
@@ -659,7 +658,6 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
       TYPE (FILE_TYPE),INTENT(IN) :: FILE_
       INTEGER(4)      ,INTENT(IN) :: IERR
       INTEGER(4)      ,INTENT(IN) :: IOS
-      INTEGER(4)                  :: NFIL
       CHARACTER(9)                :: DEVNULL
       CHARACTER(128)              :: IOSTATMESSAGE
 !     ******************************************************************

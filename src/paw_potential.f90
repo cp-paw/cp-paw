@@ -72,7 +72,6 @@
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       REAL(8)     ,INTENT(IN) :: VAL(LEN)
-      INTEGER(4)              :: I,J,IND
 !     ******************************************************************
       IF(ID.EQ.'RBAS') THEN
         IF(LEN.NE.9) THEN
@@ -157,7 +156,6 @@
       INTEGER(4),INTENT(IN) :: NR2_
       INTEGER(4),INTENT(IN) :: NR3_
       REAL(8)               :: RBAS(3,3)     ! LATTICE VECTORS
-      REAL(8)               :: CELLVOL       ! UNIT CELL VOLUME
       REAL(8)   ,PARAMETER  :: K(3)=(/0.D0,0.D0,0.D0/)
       INTEGER(4)            :: ISP
 !     ******************************************************************
@@ -312,7 +310,7 @@
       INTEGER(4),ALLOCATABLE   :: ISPECIES(:) !(NAT) 
       REAL(8)   ,ALLOCATABLE   :: G2(:)       !(NGL)
       REAL(8)   ,ALLOCATABLE   :: GVEC(:,:)     !(3,NGL)
-      INTEGER(4)               :: IAT,IR
+      INTEGER(4)               :: IR
       INTEGER(4)               :: NAT
       INTEGER(4)               :: NSPIN
       INTEGER(4)               :: ISVAR
@@ -494,11 +492,10 @@ END IF
       REAL(8)                 :: EISOLATE
       REAL(8)                 :: EXC
       REAL(8)                 :: RHOBT
-      COMPLEX(8)              :: RHOTOT,RHOSPN,RHOUP,RHODWN
       REAL(8)                 :: CELLVOL
       REAL(8)                 :: SVAR
-      INTEGER(4)              :: NNR,IR,LRXX,IAT,ISPIN,I,LM
-      INTEGER(4)              :: IC,IG,ISP
+      INTEGER(4)              :: NNR,LRXX,IAT,ISPIN,I,LM
+      INTEGER(4)              :: IG,ISP
       REAL(8)                 :: STRESST(3,3),STRESS1(3,3)
 !     ==  VARIABLES FOR SELF TEST ======================================
       LOGICAL(4),PARAMETER    :: TTEST=.FALSE.
@@ -865,7 +862,7 @@ end if
       COMPLEX(8),ALLOCATABLE  :: EIGR(:)    !(NGL)
       INTEGER(4),PARAMETER    :: NBLOCK=100
       REAL(8)   ,PARAMETER    :: TINY=1.D-300
-      REAL(8)                 :: FAC,SVAR,SVAR1,SVAR2
+      REAL(8)                 :: FAC,SVAR,SVAR1
       REAL(8)                 :: CELLVOL
       REAL(8)                 :: PI,Y0
       INTEGER(4)              :: IG,ISP,IAT,I,J
@@ -1066,10 +1063,9 @@ end if
       COMPLEX(8)              :: CFAC(LMRXX)
       INTEGER(4)              :: NGAMMA  
       COMPLEX(8)              :: CSVAR,CSVAR0,AVAL,BVAL,CVAL,DVAL,CSUM
-      COMPLEX(8)              :: EIGR1
       REAL(8)                 :: VB               !VHAT(GAMMA)
       INTEGER(4)              :: M,L,LM,ISP,IAT,IG,I,J,LM1,LM2
-      REAL(8)                 :: SVAR,SVAR1,SVAR2,FPIBG2
+      REAL(8)                 :: SVAR,SVAR1
       REAL(8)                 :: PI,Y0,FPI
       REAL(8)                 :: CC(3,3)
       COMPLEX(8)              :: P0(3,3,LMRXX),PM(3,3,LMRXX),PT(3,3)
@@ -1164,7 +1160,7 @@ PRINT*,'STRESS PREDICTED ',-REAL(CSVAR,KIND=8)*2.D0*GWEIGHT/3.D0-REAL(CSUM-CSVAR
       IF(TSTRESS) THEN
         DO IG=1,NGL
           IF(IG.NE.NGAMMA) THEN         
-            SVAR=VG(IG)*CONJG(RHO2(IG))
+            SVAR=real(VG(IG)*CONJG(RHO2(IG)))
             SVAR1=SVAR/G2(IG)
             DO I=1,3
               DO J=1,3
@@ -1521,7 +1517,6 @@ STRESSC=0.D0
       REAL(8)               :: YLM(LMXXX)
       INTEGER(4)            :: LX
       INTEGER(4)            :: LM,IG,L,M
-      INTEGER(4)            :: ISTART
       REAL(8)               :: GTOL,GLENG
       REAL(8)               :: Y0
 !     ******************************************************************

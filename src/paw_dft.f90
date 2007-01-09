@@ -1145,7 +1145,7 @@ MODULE EXCHANGE_MODULE
 !**  METHODS:                                                         **
 !**                                                                   **
 !***********************************************************************
-USE DFT_MODULE, ONLY: TSPIN,TSAFE
+USE DFT_MODULE, ONLY: TSAFE,tspin
 USE TABLE1D_MODULE
 LOGICAL(4)         :: TINI=.FALSE.
 !=======================================================================
@@ -1685,7 +1685,7 @@ END MODULE EXCHANGE_MODULE
 !     *****************************************************************
       USE TABLE1D_MODULE
       USE EXCHANGE_MODULE, ONLY : EXFAC,S2FAC,TGRA &
-     &             ,TSAFE,S2TABLE,NS2,FXARRAY,DFXARRAY,D2FXARRAY 
+     &             ,TSAFE,S2TABLE,NS2,FXARRAY,DFXARRAY
       IMPLICIT NONE
       REAL(8),INTENT(IN) :: RHO
       REAL(8),INTENT(IN) :: GRHO2      ! GRAD(RHO)**2
@@ -4068,7 +4068,7 @@ CONTAINS
        REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
        REAL(8),PARAMETER  :: FOURBY9=4.D0/9.D0
        REAL(8)            :: RS,DRS
-       REAL(8)            :: SQRS,RSSQRS,RS2
+       REAL(8)            :: SQRS,RSSQRS
        REAL(8)            :: SVAR1,DSVAR1
        REAL(8)            :: SVAR2,DSVAR2
        REAL(8)            :: SVAR3,DSVAR3
@@ -4081,7 +4081,6 @@ CONTAINS
 !      =================================================================
        SQRS=DSQRT(RS)
        RSSQRS=RS*SQRS
-       RS2=RS*RS
 !      =================================================================
        SVAR1  = -2.D0*A*(1.D0+ALPHA1*RS)
        DSVAR1 = -2.D0*A*ALPHA1
@@ -4128,7 +4127,7 @@ CONTAINS
        REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
        REAL(8),PARAMETER  :: FOURBY9=4.D0/9.D0
        REAL(8)            :: RS,DRS,D2RS
-       REAL(8)            :: SQRS,RSSQRS,RS2
+       REAL(8)            :: SQRS,RSSQRS
        REAL(8)            :: SVAR1,DSVAR1
        REAL(8)            :: SVAR2,DSVAR2,D2SVAR2
        REAL(8)            :: SVAR3,DSVAR3,D2SVAR3
@@ -4141,7 +4140,6 @@ CONTAINS
 !      =================================================================
        SQRS=DSQRT(RS)
        RSSQRS=RS*SQRS
-       RS2=RS*RS
 !      =================================================================
        SVAR1  = -2.D0*A*(1.D0+ALPHA1*RS)
        DSVAR1 = -2.D0*A*ALPHA1
@@ -4195,7 +4193,7 @@ CONTAINS
        REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
        REAL(8),PARAMETER  :: FOURBY9=4.D0/9.D0
        REAL(8)            :: RS,DRS,D2RS,D3RS
-       REAL(8)            :: SQRS,RSSQRS,RS2
+       REAL(8)            :: SQRS,RSSQRS
        REAL(8)            :: SVAR1,DSVAR1
        REAL(8)            :: SVAR2,DSVAR2,D2SVAR2,D3SVAR2
        REAL(8)            :: SVAR3,DSVAR3,D2SVAR3,D3SVAR3
@@ -4208,7 +4206,6 @@ CONTAINS
 !      =================================================================
        SQRS=DSQRT(RS)
        RSSQRS=RS*SQRS
-       RS2=RS*RS
 !      =================================================================
        SVAR1  = -2.D0*A*(1.D0+ALPHA1*RS)
        DSVAR1 = -2.D0*A*ALPHA1
@@ -4813,7 +4810,7 @@ CONTAINS
        REAL(8),INTENT(OUT):: H_TT,H_TR,H_TG,H_RR,H_RG,H_GG
        REAL(8),PARAMETER  :: THREEBY7=3.D0/7.D0
        REAL(8)            :: CC,DCC,D2CC
-       REAL(8)            :: FAC1,FAC2,CEXPO
+       REAL(8)            :: CEXPO
        REAL(8)            :: G2,G3,G4
        REAL(8)            :: EXPO,EXPO_T,EXPO_R
        REAL(8)            :: SVAR1,SVAR3,SVAR4
@@ -4821,8 +4818,6 @@ CONTAINS
 !      =================================================================
 !      ==  CONSTANTS                                                  ==
 !      =================================================================
-       FAC1=2.D0*ALPHA/BETA
-       FAC2=FAC1/BETA
        CEXPO=-100.D0*(KSFAC/KFFAC)**2
 !
 !      =================================================================
@@ -5430,7 +5425,7 @@ END MODULE PBE_MODULE
        REAL(8),INTENT(IN) :: G
        REAL(8),INTENT(OUT):: H
        REAL(8),INTENT(OUT):: H_T,H_E,H_G
-       REAL(8)            :: FAC1,FAC2
+       REAL(8)            :: FAC2
        REAL(8)            :: V,V_E,V_G
        REAL(8)            :: SVAR,DSVAR
        REAL(8)            :: G2,G3
@@ -5443,7 +5438,6 @@ END MODULE PBE_MODULE
 !      ==  CONSTANTS                                                  ==
 !      =================================================================
        FAC2=1.D0/GAMMA   !(2*ALPHA/BETA**2)
-       FAC1=BETA/GAMMA
 !
 !      =================================================================
 !      ==  CALCULATE A(VAR1=E/G3)                                     ==
@@ -5494,7 +5488,7 @@ END MODULE PBE_MODULE
        REAL(8),INTENT(OUT):: H
        REAL(8),INTENT(OUT):: H_T,H_E,H_G
        REAL(8),INTENT(OUT):: H_TT,H_TE,H_TG,H_EE,H_EG,H_GG
-       REAL(8)            :: FAC1,FAC2
+       REAL(8)            :: FAC2
        REAL(8)            :: V,V_E,V_G,V_EG,V_GG
        REAL(8)            :: SVAR,DSVAR,D2SVAR
        REAL(8)            :: G2,G3
@@ -5506,7 +5500,6 @@ END MODULE PBE_MODULE
 !      ==  CONSTANTS                                                  ==
 !      =================================================================
        FAC2=1.D0/GAMMA   !(2*ALPHA/BETA**2)
-       FAC1=BETA/GAMMA
 !
 !      =================================================================
 !      ==  CALCULATE A(VAR1=E/G3)                                     ==
@@ -5576,7 +5569,7 @@ END MODULE PBE_MODULE
        REAL(8),INTENT(OUT):: H_TT,H_TE,H_TG,H_EE,H_EG,H_GG
        REAL(8),INTENT(OUT):: H_TTT,H_TTE,H_TTG,H_TEE,H_TEG,H_TGG
        REAL(8),INTENT(OUT):: H_EEE,H_EEG,H_EGG,H_GGG
-       REAL(8)            :: FAC1,FAC2
+       REAL(8)            :: FAC2
        REAL(8)            :: V,V_E,V_G,V_EG,V_GG,V_EGG,V_GGG
        REAL(8)            :: SVAR,DSVAR,D2SVAR,D3SVAR
        REAL(8)            :: G2,G3
@@ -5590,7 +5583,6 @@ END MODULE PBE_MODULE
 !      ==  CONSTANTS                                                  ==
 !      =================================================================
        FAC2=1.D0/GAMMA   !(2*ALPHA/BETA**2)
-       FAC1=BETA/GAMMA
 !
 !      =================================================================
 !      ==  CALCULATE A(VAR1=E/G3)                                     ==
@@ -5929,12 +5921,11 @@ END MODULE PBE_MODULE
        REAL(8),PARAMETER  :: FOURBY3=4.D0/3.D0
        REAL(8),PARAMETER  :: SEVENBY6=7.D0/6.D0
        REAL(8)            :: RHOT13
-       REAL(8)            :: P13,M13,P23,M23,P43,M43
+       REAL(8)            :: P13,M13,P23,M23
        REAL(8)            :: SIG,SIG_D,SIG_S
        REAL(8)            :: G,G_SIG
        REAL(8)            :: G_S,G_D
        REAL(8)            :: E,E_D,E_S
-       REAL(8)            :: RS,R_D
        REAL(8)            :: T,T_N,T_G,T_D
        REAL(8)            :: T_S
        REAL(8)            :: H0,H0_T,H0_E,H0_G
@@ -5961,8 +5952,6 @@ END MODULE PBE_MODULE
        M13=(1.D0-SIG)**ONEBY3
        P23=P13*P13
        M23=M13*M13
-       P43=P23*P23
-       M43=M23*M23
        G=0.5D0*(P23+M23)
        G_SIG=ONEBY3*(1.D0/P13-1.D0/M13)
 !
@@ -5970,7 +5959,6 @@ END MODULE PBE_MODULE
 !      == T IS T**2 OF EQ. 10                                       ==
 !      ================================================================
        RHOT13=RHOT**ONEBY3
-       RS=RSFAC/RHOT13
        T_N=TFAC/G**2/RHOT13**7
        T=T_N*GRHOT2
        T_G=-2.D0*T/G
@@ -6002,7 +5990,6 @@ END MODULE PBE_MODULE
        G_D=G_SIG*SIG_D
        G_S=G_SIG*SIG_S
 !      == RS(RHOT) ====================================================
-       R_D=-ONEBY3*RS/RHOT
 !      == T(D=RHOT,S=RHOS,N=GRHOT2) ====================================
 !      == WATCH ORDER OF STATEMENTS!! =================================
 !      T=DSQRT(GRHOT2)/(2.D0*G*KSFAC/DSQRT(RSFAC))*RHOT**(-SEVENBY6)
@@ -6042,7 +6029,6 @@ END MODULE PBE_MODULE
        REAL(8)            :: G,G_SIG,G_SIGSIG
        REAL(8)            :: G_S,G_D,G_DD,G_DS,G_SS
        REAL(8)            :: E,E_D,E_S,E_DD,E_DS,E_SS
-       REAL(8)            :: RS,R_D,R_DD
        REAL(8)            :: T,T_N,T_G,T_D,T_DD,T_DN,T_DG,T_GG,T_GN,T_NN
        REAL(8)            :: T_S,T_DS,T_SS,T_SN
        REAL(8)            :: H0,H0_T,H0_E,H0_G
@@ -6082,7 +6068,6 @@ END MODULE PBE_MODULE
 !      == T IS T**2 OF EQ. 10                                       ==
 !      ================================================================
        RHOT13=RHOT**ONEBY3
-       RS=RSFAC/RHOT13
        T_N=TFAC/G**2/RHOT13**7
        T=T_N*GRHOT2
        T_NN=0.D0
@@ -6130,8 +6115,6 @@ END MODULE PBE_MODULE
        G_DS=G_SIGSIG*SIG_D*SIG_S+G_SIG*SIG_DS
        G_SS=G_SIGSIG*SIG_S**2
 !      == RS(RHOT) ====================================================
-       R_D=-ONEBY3*RS/RHOT
-       R_DD=-FOURBY3*R_D/RHOT
 !      == T(D=RHOT,S=RHOS,N=GRHOT2) ====================================
 !      == WATCH ORDER OF STATEMENTS!! =================================
 !      T=DSQRT(GRHOT2)/(2.D0*G*KSFAC/DSQRT(RSFAC))*RHOT**(-SEVENBY6)
@@ -6204,9 +6187,9 @@ END MODULE PBE_MODULE
        REAL(8)            :: E,E_D,E_S,E_DD,E_DS,E_SS
        REAL(8)            :: E_DDD,E_DDS,E_DSS,E_SSS
        REAL(8)            :: T,T_N,T_G,T_D,T_DD,T_DN,T_DG,T_GG,T_GN,T_NN
-       REAL(8)            :: T_DDD,T_DDG,T_DDN,T_DGG,T_DGN,T_DNN,T_GGG,T_GGN,T_GNN,T_NNN
+       REAL(8)            :: T_DDD,T_DDG,T_DDN,T_DGG,T_DGN,T_GGG,T_GGN,T_NNN
        REAL(8)            :: T_S,T_DS,T_SS,T_SN
-       REAL(8)            :: T_DDS,T_DSS,T_DSN,T_SSS,T_SSN,T_SNN
+       REAL(8)            :: T_DDS,T_DSS,T_DSN,T_SSS,T_SSN
        REAL(8)            :: H0,H0_T,H0_E,H0_G
        REAL(8)            :: H0_TT,H0_TE,H0_TG,H0_EE,H0_EG,H0_GG
        REAL(8)            :: H0_TTT,H0_TTE,H0_TTG,H0_TEE,H0_TEG,H0_TGG,H0_EEE,H0_EEG,H0_EGG,H0_GGG
@@ -6268,10 +6251,8 @@ END MODULE PBE_MODULE
        T_DDN=TFAC*GM2   *RM7BY3_DD
        T_DGG=TFAC*GM2_GG*RM7BY3_D  *GRHOT2
        T_DGN=TFAC*GM2_G *RM7BY3_D
-       T_DNN=0.D0
        T_GGG=TFAC*GM2_GGG*RM7BY3    *GRHOT2
        T_GGN=TFAC*GM2_GG *RM7BY3
-       T_GNN=0.D0
        T_NNN=0.D0
 !
 !      ================================================================
@@ -6326,9 +6307,7 @@ END MODULE PBE_MODULE
        T_SSS=T_GGG*G_S**3+T_GG*2.D0*G_S*G_SS+T_GG*G_S*G_SS+T_G*G_SSS
        T_DDN=T_DDN+T_DGN*G_D+T_DGN*G_D+T_GGN*G_D**2+T_GN*G_DD
        T_DSN=T_DGN*G_S+T_GGN*G_D*G_S+T_GN*G_DS
-       T_DNN=0.D0
        T_SSN=T_GGN*G_S**2+T_GN*G_SS
-       T_SNN=0.D0
        T_NNN=0.D0
        T_DD=T_DD+2.D0*T_DG*G_D+T_GG*G_D**2+T_G*G_DD
        T_DS=T_DG*G_S+T_GG*G_S*G_D+T_G*G_DS
