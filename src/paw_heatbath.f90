@@ -209,7 +209,7 @@ END MODULE HEATBATH_MODULE
           SVAR=SVAR+PRO(I,IAT)
         ENDDO
       ENDDO
-      SVAR=1.D0/DSQRT(SVAR)
+      SVAR=1.D0/SQRT(SVAR)
       DO IAT=1,NAT
         DO I=1,3
           PRO(I,IAT)=PRO(I,IAT)*SVAR
@@ -339,13 +339,13 @@ END MODULE HEATBATH_MODULE
 !       ==================================================================
         SVAR=0.D0
         DO I=1,NAT
-          FACTOR=DSQRT(RMASS(I))
+          FACTOR=SQRT(RMASS(I))
           DO J=1,3
             VEC(J,I)=(RP(J,I)-RM(J,I))*FACTOR
             SVAR=SVAR+VEC(J,I)**2
           ENDDO
         ENDDO
-        SVAR=DSQRT(SVAR)
+        SVAR=SQRT(SVAR)
         DO I=1,NAT
           DO J=1,3
             VEC(J,I)=VEC(J,I)/SVAR
@@ -364,7 +364,7 @@ END MODULE HEATBATH_MODULE
             SVAR=SVAR+DELTAV(J,I)**2
           ENDDO
         ENDDO
-        SVAR=DSQRT(SVAR)
+        SVAR=SQRT(SVAR)
         DO I=1,NAT
           DO J=1,3
             DELTAV(J,I)=DELTAV(J,I)/SVAR
@@ -397,7 +397,7 @@ END MODULE HEATBATH_MODULE
 !     == DIVIDE BY SQRT(MASS) BEFORE HANDING IT BACK
 !     ==================================================================
       DO I=1,NAT
-        FACTOR=1.D0/DSQRT(RMASS(I))
+        FACTOR=1.D0/SQRT(RMASS(I))
         DO J=1,3
           DELTAV(J,I)=DELTAV(J,I)*FACTOR
         ENDDO

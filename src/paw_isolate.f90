@@ -315,7 +315,7 @@
       REAL(8)     :: G2,W
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL GBASS(RBAS,GBAS,VOL)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -393,7 +393,7 @@
           ENDDO
           SUM=SUM+real(CSVAR*CONJG(CSVAR))
         ENDDO
-        SUM=DSQRT(SUM)/DBLE(NGS)
+        SUM=SQRT(SUM)/DBLE(NGS)
         PRINT*,'LEAST SQUARE ',SUM
       END IF
 !
@@ -558,7 +558,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
             DIP(I)=DIP(I)+QMAD(IAT)*BAS(I,IAT)
           ENDDO
         ENDDO
-        TDIP=DSQRT(DIP(1)**2+DIP(2)**2+DIP(3)**2)
+        TDIP=SQRT(DIP(1)**2+DIP(2)**2+DIP(3)**2)
         IF(TDIP.GT.1.D-5) THEN
           WRITE(*,FMT='("DIPOLE ",F10.5," DIR= ",3F3.0)') &
      &          TDIP/DEBYE,(DIP(I)/TDIP,I=1,3)
@@ -571,7 +571,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
           DIP(2)=DIP(2)+QLM(4,IAT)
           DIP(3)=DIP(3)+QLM(3,IAT)
         ENDDO
-        TDIP=DSQRT(DIP(1)**2+DIP(2)**2+DIP(3)**2)
+        TDIP=SQRT(DIP(1)**2+DIP(2)**2+DIP(3)**2)
         IF(TDIP.GT.1.D-5) THEN
           WRITE(*,FMT='("DIPOLE ",F10.5," DIR= ",3F3.0)') &
      &            TDIP/DEBYE,(DIP(I)/TDIP,I=1,3)
@@ -935,7 +935,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
           DX=BAS(1,IAT2)-BAS(1,IAT1)
           DY=BAS(2,IAT2)-BAS(2,IAT1)
           DZ=BAS(3,IAT2)-BAS(3,IAT1)
-          DLEN=DSQRT(DX*DX+DY*DY+DZ*DZ)
+          DLEN=SQRT(DX*DX+DY*DY+DZ*DZ)
           IF(IAT1.NE.IAT2) THEN
             RFAC1=1.D0/DLEN
             RFAC2=-1.D0/DLEN**3
@@ -1014,7 +1014,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/DSQRT(FOURPI)
+      Y0=1.D0/SQRT(FOURPI)
       CALL CONSTANTS('DEBYE',DEBYE)
       CALL GBASS(RBAS,GBAS,VOL)
       WRITE(*,FMT='("DIPOLE MOMENT EVALUATION")')
@@ -1035,7 +1035,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       QTOT=QTOT+REAL(RHO(1),KIND=8)*FOURPI/3.D0*RMAX**3
       QTTOT=REAL(RHO(1),KIND=8)*VOL
       DO IG=2,NG
-        G1=DSQRT(G(1,IG)**2+G(2,IG)**2+G(3,IG)**2)
+        G1=SQRT(G(1,IG)**2+G(2,IG)**2+G(3,IG)**2)
         GRMAX=G1*RMAX
         F=(DSIN(GRMAX)-GRMAX*DCOS(GRMAX))/GRMAX**3
         QTOT=QTOT+FOURPI*F*RMAX**3*(2.D0*REAL(RHO(IG),KIND=8))
@@ -1047,7 +1047,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
         D(2)=D(2)+G(2,IG)*FAC
         D(3)=D(3)+G(3,IG)*FAC
       ENDDO
-      DTOT=DSQRT(D(1)**2+D(2)**2+D(3)**2)
+      DTOT=SQRT(D(1)**2+D(2)**2+D(3)**2)
 !
       WRITE(*,FMT='("PLANE WAVE CONTRIBUTRION TO DIPOLE MOMENT:")')
       PRINT*,' QTOT ',QTOT,' QTTOT ',QTTOT
@@ -1073,7 +1073,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     ==================================================================
 !     ==  PRINTOUT                                                    ==
 !     ==================================================================
-      DTOT=DSQRT(D(1)**2+D(2)**2+D(3)**2)
+      DTOT=SQRT(D(1)**2+D(2)**2+D(3)**2)
       D(1)=D(1)/DTOT
       D(2)=D(2)/DTOT
       D(3)=D(3)/DTOT

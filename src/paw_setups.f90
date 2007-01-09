@@ -570,7 +570,7 @@ END MODULE SETUP_MODULE
       GIDG=THIS%GIDG
       NGAMMA=0
       IF(TDER) THEN
-        G=DSQRT(G2(1))
+        G=SQRT(G2(1))
         IF(G.LT.1.D-6) NGAMMA=1
         CALL RADIAL$DERIVATIVE(GIDG,NG,FOFG,G,F(1))
         F(1)=G*F(1)
@@ -578,21 +578,21 @@ END MODULE SETUP_MODULE
           IF(DABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
             F(IG) =F(IG-1)
           ELSE
-            G=DSQRT(G2(IG))
+            G=SQRT(G2(IG))
             IF(G.LT.1.D-6) NGAMMA=IG
             CALL RADIAL$DERIVATIVE(GIDG,NG,FOFG,G,F(IG))
             F(IG)=G*F(IG)
           END IF
         ENDDO
       ELSE
-        G=DSQRT(G2(1))
+        G=SQRT(G2(1))
         IF(G.LT.1.D-6) NGAMMA=1
         CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(1))
         DO IG=2,NG_
           IF(DABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
             F(IG) =F(IG-1)
           ELSE
-            G=DSQRT(G2(IG))
+            G=SQRT(G2(IG))
             IF(G.LT.1.D-6) NGAMMA=IG
             CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(IG))
           END IF
@@ -735,7 +735,7 @@ END MODULE SETUP_MODULE
 !     ==  READ PSEUDOPOTENTIALS AND PSEUDO WAVE FUNCTIONS             ==
 !     ==================================================================
                             CALL TRACE$PASS('READ SETUP FILES')
-      THIS%RCBG=1.D0/DSQRT(0.218D0)
+      THIS%RCBG=1.D0/SQRT(0.218D0)
       
 !      CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
 !     &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &

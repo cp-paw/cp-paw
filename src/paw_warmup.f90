@@ -246,7 +246,7 @@ END MODULE WARMUP_MODULE
 ! ---- COMPUTE NORMALIZED DELTAV
 !      -------------------------
        SVAR=SUM(DELTAVO*DELTAVO)
-       SVAR=1.D0/DSQRT(SVAR)
+       SVAR=1.D0/SQRT(SVAR)
        DELTAVO=DELTAVO*SVAR
        DELTAV=DELTAVO
       ENDIF
@@ -262,7 +262,7 @@ END MODULE WARMUP_MODULE
 !     WHICH IS USED TO REMOVE ALL THE FORCES WHICH POINT
 !     IN THE DIRECTION OF |M|DELTAV>
 !     --------------------------------------------------
-      SVAR=1.D0/DSQRT(SVAR)
+      SVAR=1.D0/SQRT(SVAR)
       RP=RP*SVAR
       IC=0
       DO I1=1,NAT
@@ -324,11 +324,11 @@ END MODULE WARMUP_MODULE
 !     ----------------------------------------------
       A=2.D0/DBLE(NG)/RKB*SUM(MASS*DELTAVO*V)
       B=1.D0/DBLE(NG)/RKB*SUM(DELTAVO*MASS*DELTAVO)
-      XMIN=-A/B/2.D0+DSQRT((A/B)**2/4.D0+RKAPPA/B)
+      XMIN=-A/B/2.D0+SQRT((A/B)**2/4.D0+RKAPPA/B)
       PRINT*,'TEMPERATURE INCREMENT FACTOR ',XMIN
 !
 !     THIS IS THE OTHER SOLUTION, NOT USED
-!     XMIN=-A/B/2.D0-DSQRT((A/B)**2/4.D0+RKAPPA/B)
+!     XMIN=-A/B/2.D0-SQRT((A/B)**2/4.D0+RKAPPA/B)
 !     PRINT*,'XMIN FROM QUAD2 ',XMIN
 !
 !     ----------------------------
@@ -405,13 +405,13 @@ END MODULE WARMUP_MODULE
 !      --------------------------------------------------------
        SVAR=0.D0
        DO I=1,NAT
-        FACTOR=DSQRT(RMASS(I))
+        FACTOR=SQRT(RMASS(I))
         DO J=1,3
          DELTAV(J,I)=(RP(J,I)-RM(J,I))*FACTOR
          SVAR=SVAR+DELTAV(J,I)**2
         ENDDO
        ENDDO
-       SVAR=DSQRT(SVAR)
+       SVAR=SQRT(SVAR)
        DO I=1,NAT
         DO J=1,3
          DELTAV(J,I)=DELTAV(J,I)/SVAR
@@ -447,7 +447,7 @@ END MODULE WARMUP_MODULE
          SVAR=SVAR+DELTAV(J,I)**2
         ENDDO
        ENDDO
-       SVAR=DSQRT(SVAR)
+       SVAR=SQRT(SVAR)
        DO I=1,NAT
         DO J=1,3
          DELTAV(J,I)=DELTAV(J,I)/SVAR
@@ -488,7 +488,7 @@ END MODULE WARMUP_MODULE
 !     DIVIDE BY SQRT(MASS) BEFORE HANDING IT BACK
 !     -------------------------------------------
       DO I=1,NAT
-       FACTOR=1.D0/DSQRT(RMASS(I))
+       FACTOR=1.D0/SQRT(RMASS(I))
        DO J=1,3
         DELTAV(J,I)=DELTAV(J,I)*FACTOR
        ENDDO

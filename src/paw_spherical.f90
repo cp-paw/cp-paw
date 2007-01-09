@@ -52,10 +52,10 @@
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FPI=4.D0*PI
-      SQ2=DSQRT(2.D0)
+      SQ2=SQRT(2.D0)
       IF(LMX.LE.1) THEN
         IF(LMX.LE.0) RETURN
-        YLM(1)=1.D0/DSQRT(FPI)
+        YLM(1)=1.D0/SQRT(FPI)
         RETURN
       END IF
       LX=INT(SQRT(REAL(LMX))-1.D0)
@@ -66,10 +66,10 @@
         CALL ERROR$I4VAL('LX',LX)
         CALL ERROR$STOP('GETYLM')
       END IF
-      DISXY=DSQRT(R(1)**2+R(2)**2)
-      DIS=DSQRT(DISXY**2+R(3)**2)
+      DISXY=SQRT(R(1)**2+R(2)**2)
+      DIS=SQRT(DISXY**2+R(3)**2)
       IF(DABS(DIS).LT.1.D-12) THEN
-        YLM(1)=1.D0/DSQRT(FPI)
+        YLM(1)=1.D0/SQRT(FPI)
         DO LM=2,LMX
           YLM(LM)=0.D0
         ENDDO
@@ -86,7 +86,7 @@
       END IF
       DO L=0,LX
         LM0=L*(L+1)+1
-        FAC=DSQRT(DBLE(2*L+1)/FPI)
+        FAC=SQRT(DBLE(2*L+1)/FPI)
         YLM(LM0)=YLM(LM0)*FAC
         EIMPHI=(1.D0,0.D0)
         DO M=1,L
@@ -106,7 +106,7 @@
 !     ******************************************************************
 !     **                                                              **
 !     **  CALCULATE THE ORDINARY LEGENDRE POLYNOMIALS                 **
-!     **  TIMES THE FACTOR DSQRT((L-M)!/(L+M)!)                       **
+!     **  TIMES THE FACTOR SQRT((L-M)!/(L+M)!)                       **
 !     **                                                              **
 !     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
@@ -119,7 +119,7 @@
       INTEGER(4)               :: LM,L,M,I1,LMM,LMP
       REAL(8)                  :: PMM,CM,C0,CP
 !     ******************************************************************
-      FACT=DSQRT(1.D0-X**2)
+      FACT=SQRT(1.D0-X**2)
       IF(FACT.EQ.0.D0) THEN
         SVAR=-X
         LM=0
@@ -154,7 +154,7 @@
         DO M=1,L
           LMM=I1+M
           LMP=I1-M
-          FACT=FACT*DSQRT(DBLE((L-M+1)*(L+M)))
+          FACT=FACT*SQRT(DBLE((L-M+1)*(L+M)))
           FAC2=-FAC2
           PLM(LMP)=PLM(LMP)/FACT
           PLM(LMM)=FAC2*PLM(LMP)
@@ -600,8 +600,8 @@ END MODULE CLEBSCH_MODULE
       END INTERFACE
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
-      SQ2=DSQRT(2.D0)
-      SQPI=DSQRT(PI)
+      SQ2=SQRT(2.D0)
+      SQPI=SQRT(PI)
       IMAX=4*LMAX+1
       IF(IMAX.GT.50) THEN
         CALL ERROR$MSG('DIMENSIONS IN CLBSCH TO SMALL')
@@ -611,7 +611,7 @@ END MODULE CLEBSCH_MODULE
       SQFACT(0)=1.D0
       DO I=1,IMAX
         FACT(I)=FACT(I-1)*DBLE(I)
-        SQFACT(I)=DSQRT(FACT(I))
+        SQFACT(I)=SQRT(FACT(I))
       ENDDO
 !
 !     ==================================================================
@@ -656,14 +656,14 @@ END MODULE CLEBSCH_MODULE
 !                 ==
                   FAC0=PRECG(L1,L2,L3,FACT,SQFACT)
                   FAC1=0.D0
-               IF(N1.EQ.0.AND.N2.EQ.0)FAC1=FAC1+FAC0/DSQRT(DBLE(2*L3+1))
+               IF(N1.EQ.0.AND.N2.EQ.0)FAC1=FAC1+FAC0/SQRT(DBLE(2*L3+1))
                   FAC1=FAC1+THREEJ(L1, N1,L2, N2,L3, N3,FACT,SQFACT) &
      &                     *(-1.D0)**(N3+IS3) &
      &                     +THREEJ(L1, N1,L2,-N2,L3,-N3,FACT,SQFACT) &
      &                     *(-1.D0)**(N2+IS2) &
      &                     +THREEJ(L1,-N1,L2, N2,L3,-N3,FACT,SQFACT) &
      &                     *(-1.D0)**(N1+IS1)
-                  FAC2=DSQRT( 0.25D0*DBLE((2*L1+1)*(2*L2+1)) ) / SQ2 &
+                  FAC2=SQRT( 0.25D0*DBLE((2*L1+1)*(2*L2+1)) ) / SQ2 &
      &                          *(-1.D0)**(N3+(IS1+IS2+IS3)/2)    !WARNING CAN IS1+IS2+IS3 BE EVEN?
                   IF(M1.EQ.0)FAC2=FAC2/SQ2
                   IF(M2.EQ.0)FAC2=FAC2/SQ2
@@ -690,7 +690,7 @@ END MODULE CLEBSCH_MODULE
         DO LM2=1,LMUP
           DO LM3=1,LMUP
             IF(DABS(CG(LM1,LM2,LM3)).GT.1.D-6) THEN
-              SVAR=CG(LM1,LM2,LM3)*DSQRT(4.D0*PI)
+              SVAR=CG(LM1,LM2,LM3)*SQRT(4.D0*PI)
               WRITE(*,6000)LM1,LM2,LM3,CG(LM1,LM2,LM3),SVAR
 6000          FORMAT(' CG ',3I3,2F10.5)
             END IF
@@ -769,7 +769,7 @@ END MODULE CLEBSCH_MODULE
       IF(2*LTH.NE.LT) THEN
         PRECG=0.D0
       ELSE
-        PRECG=DSQRT(DBLE(2*L3+1)/DBLE(LT+1))*FACT(LTH)/SQFACT(LT) &
+        PRECG=SQRT(DBLE(2*L3+1)/DBLE(LT+1))*FACT(LTH)/SQFACT(LT) &
      &       *SQFACT(LT-2*L1)/FACT(LTH-L1) &
      &       *SQFACT(LT-2*L2)/FACT(LTH-L2) &
      &       *SQFACT(LT-2*L3)/FACT(LTH-L3) &

@@ -1289,7 +1289,7 @@ PRINT*,'GIDS ',GIDS
       LOGICAL(4)                 :: THOM
 !     ************************************************************************
       PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      Y0=1.D0/SQRT(4.D0*PI)
 !     ==================================================================
 !     == SPIN ORBIT COUPLING ===========================================
 !     ==================================================================
@@ -1409,7 +1409,7 @@ PRINT*,'GIDS ',GIDS
 !     ************************************************************************
       TOK=.FALSE.
       PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
       LX=INT(SQRT(REAL(LMX))-1.D0)
@@ -2555,7 +2555,7 @@ CHARACTER(32):: FILE
 !     ************************************************************************
       TOK=.FALSE.
       PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
       LX=INT(SQRT(REAL(LMX))-1.D0)

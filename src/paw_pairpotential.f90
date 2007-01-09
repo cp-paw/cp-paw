@@ -56,7 +56,7 @@
 !     ==================================================================
 !     == ALLOCATE ARRAYS                                              ==
 !     ==================================================================
-      SVAR=DSQRT(DBLE(LMRXX-1))
+      SVAR=SQRT(DBLE(LMRXX-1))
       LRXX=INT(SVAR+1.D-12)
       ALLOCATE(HS(0:2*LRXX+1,0:LRXX))
       ALLOCATE(HB(0:2*LRXX+1,0:LRXX))
@@ -132,7 +132,7 @@
                 DR(2)=DY+RBAS(2,1)*T1+RBAS(2,2)*T2+RBAS(2,3)*T3
                 DR(3)=DZ+RBAS(3,1)*T1+RBAS(3,2)*T2+RBAS(3,3)*T3
                 DIS2 = DR(1)**2 + DR(2)**2 + DR(3)**2
-                DIS=DSQRT(DIS2)
+                DIS=SQRT(DIS2)
                 IF(DIS.GT.RMAX) GOTO 310
                 IF(DIS.LT.1.D-6) GOTO 310
 !               =========================================================
@@ -302,11 +302,11 @@
       ESELF=0.D0
       VQLM(:)=0.D0
       PI=4.D0*DATAN(1.D0)
-      ROOT2=DSQRT(2.D0)
+      ROOT2=SQRT(2.D0)
       RC12S=ROOT2*RCSM
       RC12B=ROOT2*RCBG
-      ES=4.D0*DSQRT(PI)/RC12S
-      EB=4.D0*DSQRT(PI)/RC12B
+      ES=4.D0*SQRT(PI)/RC12S
+      EB=4.D0*SQRT(PI)/RC12B
       E00=ES-EB
       VQLM(1)=2.D0*E00*QLM(1)
       ESELF = E00*QLM(1)**2
@@ -365,13 +365,13 @@
       LUP=(2*LRXX+1)
       NUP=LRXX
       JUP=LRXX
-      RC12S=DSQRT(RCSM1**2+RCSM2**2)
-      RC12B=DSQRT(RCBG1**2+RCBG2**2)
+      RC12S=SQRT(RCSM1**2+RCSM2**2)
+      RC12B=SQRT(RCBG1**2+RCBG2**2)
       XS    = DIS/RC12S
       XB    = DIS/RC12B
       GOFXS = DEXP(-XS**2)
       GOFXB = DEXP(-XB**2)
-      SVAR=DSQRT(PI)/2.D0
+      SVAR=SQRT(PI)/2.D0
       CALL LIB$ERFR8(XS,QLS)
       QLS=SVAR*QLS
       CALL LIB$ERFR8(XB,QLB)
@@ -449,7 +449,7 @@
       REAL(8)                 :: CG,CG123   ! CLEBSCH GORDAN COEFFICIENT
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
-      SQ4PB3=DSQRT(4.D0*PI/3.D0)
+      SQ4PB3=SQRT(4.D0*PI/3.D0)
       LPPXX=2*LRXX+1
       LMPPXX=(LPPXX+1)**2
       CALL GETYLM(LMPPXX,DR,YLM)
@@ -466,12 +466,12 @@
         VQLM2(LM)=0.D0
       ENDDO
 !
-      LRX1=INT(DSQRT(DBLE(LMRX1-1)+1.D-2))
-      LRX2=INT(DSQRT(DBLE(LMRX2-1)+1.D-2))
+      LRX1=INT(SQRT(real(LMRX1-1,kind=8)+1.D-5))
+      LRX2=INT(SQRT(real(LMRX2-1,kind=8)+1.D-5))
       LM1=0
       DFAC1=1.D0
       DO L1=0,LRX1
-        DFAC1=DFAC1*DBLE(2*L1+1)
+        DFAC1=DFAC1*real(2*L1+1,kind=8)
         DO M1=-L1,L1
           LM1=LM1+1
           LM2=0

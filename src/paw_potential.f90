@@ -871,7 +871,7 @@ end if
       COMPLEX(8)              :: CSVAR
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL GBASS(RBAS,GBAS,CELLVOL)
       FORCE(:,:)=0.D0
       STRESS(:,:)=0.D0
@@ -995,7 +995,7 @@ end if
       INTEGER(4)              :: IAT,ISP,IG
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      Y0=1.D0/SQRT(4.D0*PI)
       ALLOCATE(EIGR(NGL))
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
@@ -1074,7 +1074,7 @@ end if
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FPI=4.D0*PI
-      Y0=1.D0/DSQRT(FPI)
+      Y0=1.D0/SQRT(FPI)
       CALL PLANEWAVE$GETI4('NGAMMA',NGAMMA)
 !
       ALLOCATE(EIGR(NGL))
@@ -1544,7 +1544,7 @@ STRESSC=0.D0
         ENDDO
       ENDDO
       DO IG=1,NG
-        GLENG=DSQRT(GVEC(1,IG)**2+GVEC(2,IG)**2+GVEC(3,IG)**2)
+        GLENG=SQRT(GVEC(1,IG)**2+GVEC(2,IG)**2+GVEC(3,IG)**2)
         IF(GLENG.LT.1.D-7) THEN
           YLMOFG(:,IG)=0.D0
           YLMOFG(1,IG)=Y0
