@@ -4632,7 +4632,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !       ================================================================
 !       ==  NOW THE TERM -L*GI*GJ/G**2                                ==
 !       ================================================================
-        L=INT(SQRT(REAL(LM1-1)+0.1))
+        L=INT(SQRT(REAL(LM1-1,kind=8))+1.d-5)
         SVAR=-REAL(L,KIND=8)
         DO IJ=1,6
           DO IG=1,NGL

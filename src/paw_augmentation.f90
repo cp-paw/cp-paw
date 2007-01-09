@@ -682,7 +682,7 @@ STOP
       CALL RADIAL$R(GID,NR,R)
       QLM(:)=0.D0
       DO LM=1,LMRX
-        L=INT(DSQRT(DBLE(LM-1)+.01D0))
+        L=INT(SQRT(real(LM-1,kind=8))+1.d-5)
         DWORK(:)=(AERHO(:,LM)-PSRHO(:,LM))*R(:)**(L+2)
         CALL RADIAL$INTEGRAL(GID,NR,DWORK,QLM(LM))
       ENDDO
@@ -871,7 +871,7 @@ STOP
             II=II+1
             DO LM=1,LMRX
               IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
-              L=INT(SQRT(REAL(LM-1))+1.D-5)
+              L=INT(SQRT(REAL(LM-1,kind=8))+1.D-5)
               FAC=DBLE(L*(L+1))
               XVAL(:,II,1)=XVAL(:,II,1) &
         &         +CG0LL*(GRHO(:,LM,ISPIN1)*GRHO(:,LM,ISPIN2) &
@@ -936,7 +936,7 @@ STOP
 !           == FIRST RESOLVE XVAL(:,II,1) =============================
             DO LM=1,LMRX
               IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
-              L=INT(SQRT(REAL(LM-1))+1.D-5)
+              L=INT(SQRT(REAL(LM-1,kind=8))+1.D-5)
               FAC=DBLE(L*(L+1))
               VRHO(:,LM,ISPIN1)  =VRHO(:,LM,ISPIN1) &
       &                 +CG0LL*FAC/R(:)**2*XDER(:,II,1)*RHO(:,LM,ISPIN2)
@@ -1143,7 +1143,7 @@ STOP
 !     ==================================================================
       ALPHA=1.D0/RCSM**2
       DO LM=1,LMRX
-        L=INT(DSQRT(DBLE(LM-1)+.01D0))
+        L=INT(SQRT(real(LM-1,kind=8))+1.d-5)
         CALL GAUSSN(L,ALPHA,CL)
         SVAR=QLM(LM)*CL
         RHO1(:)=PSRHO(:,LM)+RHOHAT(:,LM)
@@ -1157,7 +1157,7 @@ STOP
 !     ==  ADD EXTERNAL POTENTIAL                                      ==
 !     ==================================================================
       DO LM=1,LMRX
-        L=INT(SQRT(REAL(LM-1)+.01D0))
+        L=INT(SQRT(REAL(LM-1,kind=8))+1.d-5)
         POT(:)=VQLM(LM)*R(:)**L
         PSPOT(:,LM)=PSPOT(:,LM)+POT(:)
 !       == THE FOLLOWING ENERGY DENSITY CANCELS WITH THE PSEUDO TERM
@@ -1243,7 +1243,7 @@ STOP
 !     ==================================================================
 !AUX(:)=0.D0
       DO LM=1,LMRX
-        L=INT(SQRT(REAL(LM-1)+.01D0))
+        L=INT(SQRT(REAL(LM-1,kind=8))+1.d-5)
         CALL RADIAL$POISSON(GID,NR,L,AERHO(:,LM),POT)
         AEE(:)=AEE(:)+0.5D0*POT(:)*AERHO(:,LM)
         AEPOT(:,LM)=AEPOT(:,LM)+POT(:)
@@ -1260,7 +1260,7 @@ STOP
 !     ==  ADD EXTERNAL POTENTIAL                                      ==
 !     ==================================================================
       DO LM=1,LMRX
-        L=INT(SQRT(REAL(LM-1)+.01D0))
+        L=INT(SQRT(REAL(LM-1,kind=8))+1.d-5)
         POT(:)=VQLM(LM)*R(:)**L
         AEPOT(:,LM)=AEPOT(:,LM)+POT(:)
 !       == THE FOLLOWING ENERGY DENSITY CANCELS WITH THE PSEUDO TERM
@@ -2040,7 +2040,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
 !     ******************************************************************
       CALL RADIAL$R(GID,NR,R)
       DO LM=1,LMRX
-        L=INT(DSQRT(DBLE(LM-1)+.01D0))
+        L=INT(SQRT(real(LM-1,kind=8))+1.d-5)
         SVAR=VQLM(LM)
         AEPOT(:,LM)=AEPOT(:,LM)+SVAR*R(:)**L
         PSPOT(:,LM)=PSPOT(:,LM)+SVAR*R(:)**L
@@ -2171,7 +2171,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
 !     ==================================================================
       ALPHA=1.D0/RCSM**2
       DO LM=1,LMRX
-        L=INT(DSQRT(DBLE(LM-1)+.01D0))
+        L=INT(SQRT(real(LM-1,kind=8))+1.d-5)
         CALL GAUSSN(L,ALPHA,CL)
         SVAR=QLM(LM)*CL
         PSRHO(:,LM)=PSRHO(:,LM)+SVAR*DEXP(-ALPHA*R(:)**2)*R(:)**L
@@ -2183,7 +2183,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       AEE(:)=0.D0
       PSE(:)=0.D0
       DO LM=1,LMRX
-        L=INT(DSQRT(DBLE(LM-1)+.01D0))
+        L=INT(SQRT(real(LM-1,kind=8))+1.d-5)
         CALL RADIAL$POISSON(GID,NR,L,AERHO(1,LM),AEDMU)
         CALL RADIAL$POISSON(GID,NR,L,PSRHO(1,LM),PSDMU)
         ALPHA=1.D0/RCSM**2
