@@ -1114,7 +1114,14 @@ STOP
 !     ==  CONSTRUCT COMPENSATION DENSITY                              ==
 !     ==================================================================
       ALPHA=1.D0/RCSM**2
-      LX=INT(SQRT(REAL(LMRX-1)+.01D0))
+      LX=INT(SQRT(REAL(LMRX))-1.D0)   ! lmx=(lx+1)**2
+      IF(LX**2.NE.LMRX) THEN   !LMX=(LX+1)**2
+        CALL ERROR$MSG('LMRX DOES NOT CORRESPOND TO A FULL SHELL')
+        CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
+        CALL ERROR$I4VAL('LMRX',LMRX)
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$STOP('AUGMENTATION_PSHARTREE')
+      END IF
       LM=0
       DO L=0,LX
         CALL GAUSSN(L,ALPHA,CL)
@@ -1313,7 +1320,14 @@ STOP
 !     ==   CALCULATE ELECTROSTATIC POTENTIAL AND ENERGY               ==
 !     ==================================================================
       ALPHA=1.D0/RCSM**2
-      LX=INT(SQRT(REAL(LMRX-1)+.01D0))
+      LX=INT(SQRT(REAL(LMRX))-1.D0) ! lmx=(lx+1)**2
+      IF(LX**2.NE.LMRX) THEN   
+        CALL ERROR$MSG('LMRX DOES NOT CORRESPOND TO A FULL SHELL')
+        CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
+        CALL ERROR$I4VAL('LMRX',LMRX)
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$STOP('AUGMENTATION_ADJUSTVQLM')
+      END IF
       LM=0
       DO L=0,LX
         CALL GAUSSN(L,ALPHA,CL)
