@@ -1413,7 +1413,7 @@ PRINT*,'GIDS ',GIDS
       CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
       LX=INT(SQRT(REAL(LMX))-1.D0)
-      IF(LX**2.NE.LMX) THEN   !LMX=(LX+1)**2
+      IF((LX+1)**2.NE.LMX) THEN   !LMX=(LX+1)**2
         CALL ERROR$MSG('LMX DOES NOT CORRESPOND TO A FULL SHELL')
         CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
         CALL ERROR$I4VAL('LMX',LMX)
@@ -1716,7 +1716,7 @@ PRINT*,'GIDS ',GIDS
       REAL(8)   ,ALLOCATABLE :: E(:)
 !     ************************************************************************
       LX=INT(SQRT(real(LMX))-1.d0) ! lmx=(lx+1)**2
-      if(lx**2.ne.lmx) then
+      if((lx+1)**2.ne.lmx) then
         call error$msg('lmx does not correspond to a full shell')
         call error$msg('or rounding errors produced incorrect results')
         call error$i4val('lmx',lmx)
@@ -2559,7 +2559,7 @@ CHARACTER(32):: FILE
       CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
       LX=INT(SQRT(REAL(LMX))-1.D0)
-      IF(LX**2.NE.LMX) THEN   !LMX=(LX+1)**2
+      IF((LX+1)**2.NE.LMX) THEN   !LMX=(LX+1)**2
         CALL ERROR$MSG('LMX DOES NOT CORRESPOND TO A FULL SHELL')
         CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
         CALL ERROR$I4VAL('LMX',LMX)

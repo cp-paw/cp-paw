@@ -1115,7 +1115,7 @@ STOP
 !     ==================================================================
       ALPHA=1.D0/RCSM**2
       LX=INT(SQRT(REAL(LMRX))-1.D0)   ! lmx=(lx+1)**2
-      IF(LX**2.NE.LMRX) THEN   !LMX=(LX+1)**2
+      IF((LX+1)**2.NE.LMRX) THEN   !LMX=(LX+1)**2
         CALL ERROR$MSG('LMRX DOES NOT CORRESPOND TO A FULL SHELL')
         CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
         CALL ERROR$I4VAL('LMRX',LMRX)
@@ -1321,7 +1321,7 @@ STOP
 !     ==================================================================
       ALPHA=1.D0/RCSM**2
       LX=INT(SQRT(REAL(LMRX))-1.D0) ! lmx=(lx+1)**2
-      IF(LX**2.NE.LMRX) THEN   
+      IF((LX+1)**2.NE.LMRX) THEN   
         CALL ERROR$MSG('LMRX DOES NOT CORRESPOND TO A FULL SHELL')
         CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
         CALL ERROR$I4VAL('LMRX',LMRX)

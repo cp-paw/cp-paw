@@ -59,7 +59,7 @@
         RETURN
       END IF
       LX=INT(SQRT(REAL(LMX))-1.D0)
-      IF(LX**2.NE.LMX) THEN   !LMX=(LX+1)**2
+      IF((LX+1)**2.NE.LMX) THEN   !LMX=(LX+1)**2
         CALL ERROR$MSG('LMX DOES NOT CORRESPOND TO A FULL SHELL')
         CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
         CALL ERROR$I4VAL('LMX',LMX)
@@ -210,7 +210,7 @@
 !      == INITIALIZE YLMROT FOR L=0 AND L=1                           ==
 !      =================================================================
        LX=INT(SQRT(REAL(LMX))-1.D0)
-       IF(LX**2.NE.LMX) THEN   !LMX=(LX+1)**2
+       IF((LX+1)**2.NE.LMX) THEN   !LMX=(LX+1)**2
          CALL ERROR$MSG('LMX DOES NOT CORRESPOND TO A FULL SHELL')
          CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
          CALL ERROR$I4VAL('LMX',LMX)
