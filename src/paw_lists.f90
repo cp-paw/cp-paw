@@ -1054,12 +1054,12 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
 !     ******************************************************************
       CALL CONSTANTS('U',U)
       WRITE(NFIL,FMT='("ATOMTYPELIST"/"============")')
-      WRITE(NFIL,FMT='("NAME",T10,"Z ",T15,"N_VAL",T25,"M[U]"' &
+      WRITE(NFIL,FMT='("NAME",T15,"N_VAL",T25,"M[U]"' &
      &      //',T33,"PS<G2>",T43,"PS<G4>",T52,1X,"FILE_ID")')
       DO ITYPE=1,NTYPE
-        WRITE(NFIL,FMT='(A10,T10,F4.1,T15,F4.1,T20,F9.5' &
+        WRITE(NFIL,FMT='(A10,T15,F4.1,T20,F9.5' &
      &      //',T30,F9.5,T40,F9.5,T52,1X,A)') &
-     &       XXX(ITYPE)%NAME,-1.d0,XXX(ITYPE)%VALENCE &
+     &       XXX(ITYPE)%NAME,XXX(ITYPE)%VALENCE &
 !     &       XXX(ITYPE)%NAME,XXX(ITYPE)%Z,XXX(ITYPE)%VALENCE &
      &      ,XXX(ITYPE)%RMASS/U,XXX(ITYPE)%PSG2,XXX(ITYPE)%PSG4 &
      &      ,TRIM(XXX(ITYPE)%FILE)
