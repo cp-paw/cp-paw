@@ -1,4 +1,5 @@
        program main
+       implicit none
 !      ** program reads an input file and produces a fortran subroutine      **
 !      ** which prints the input file to a specified fortran channel         **
        integer,parameter  :: maxlen=77
@@ -6,7 +7,7 @@
        integer,parameter  :: overheadlen=25
        character(linelen):: line
        character(maxlen) :: lineout
-       integer           :: len
+       integer           :: len,i
 !      **************************************************************************
        write(*,fmt='(A)')'subroutine version$writeparmfile()'
        do

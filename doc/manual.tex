@@ -732,9 +732,12 @@ options is given in the next section.
  !ANALYSE 
    !HYPERFINE ATOM='H_1' EFG=T ISOMERSHIFT=T 
               FERMICONTACT=T ANISOTROPIC=T   !END
-   !density FILE='./density.dx' TYPE='TOTAL' !END
-   !WAVE FILE='./wavefunction.dx' 
-         TYPE='WAVE' B=10 K=1 S=1 !END
+   !DENSITY FILE='./density.ev' TYPE='TOTAL' 
+         DR=0.4 OCC=T DIAG=T CORE=F !END
+   !WAVE FILE='./wavefunction.wv' 
+         DR=0.4 B=10 K=1 S=1 IMAG=F !END
+   !POTENTIAL FILE='./potential.wv'
+         dr=0.4 !END
  !END
 !END
 !EOB

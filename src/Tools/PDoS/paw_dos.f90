@@ -364,6 +364,7 @@ print*,'state ',state%vec(:,:,ib)
       CHARACTER(256) :: ROOTNAME
       CHARACTER(256) :: PDOSINNAME
       INTEGER(4)     :: ISVAR
+      INTEGER(4)     :: IARGC
 !     ******************************************************************
       IF(IARGC().LT.1) THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')

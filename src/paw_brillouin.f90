@@ -311,6 +311,10 @@ END MODULE BRILLOUIN_MODULE
 !       == CALCULATES WEIGHTS FOR A COMPLETELY FILLED BAND.            ==
 !       == ATTENTION DEPENDS ON ACTUAL RBAS                            ==
         CALL BRILLOUIN_SAMFAC(1,THIS%NKP,(/(0.D0,I=1,THIS%NKP)/),1.D0,VAL,THIS)
+        IF(SUM(VAL).NE.1.D0) THEN
+          CALL ERROR$MSG('K-POINT WEIGHTS DO NOT SUM UP TO ONE')
+          CALL ERROR$STOP('BRILLOUIN$GETR8A')
+        END IF
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
         CALL ERROR$CHVAL('ID',ID)
@@ -1219,7 +1223,7 @@ END MODULE BRILLOUIN_MODULE
               ELSE IF(IY(4,I+1).GT.IY(4,I)) THEN
                 NTT=NTT+1
                 THIS%MULT(NTT)=1+INV
-                THIS%IKP(:,NTT)=IY(:,I)
+                THIS%IKP(:,NTT)=IY(:,I+1)
               ELSE 
                 CALL ERROR$MSG('ORDERING FAILED')
                 CALL ERROR$STOP('BRILLOUIN_TETCNT')
@@ -1227,7 +1231,7 @@ END MODULE BRILLOUIN_MODULE
             ELSE IF(IY(3,I+1).GT.IY(3,I)) THEN
               NTT=NTT+1
               THIS%MULT(NTT)=1+INV
-              THIS%IKP(:,NTT)=IY(:,I)
+              THIS%IKP(:,NTT)=IY(:,I+1)
             ELSE 
               CALL ERROR$MSG('ORDERING FAILED')
               CALL ERROR$STOP('BRILLOUIN_TETCNT')
@@ -1235,7 +1239,7 @@ END MODULE BRILLOUIN_MODULE
           ELSE IF(IY(2,I+1).GT.IY(2,I)) THEN
             NTT=NTT+1
             THIS%MULT(NTT)=1+INV
-            THIS%IKP(:,NTT)=IY(:,I)
+            THIS%IKP(:,NTT)=IY(:,I+1)
           ELSE 
             CALL ERROR$MSG('ORDERING FAILED')
             CALL ERROR$STOP('BRILLOUIN_TETCNT')
@@ -1243,7 +1247,7 @@ END MODULE BRILLOUIN_MODULE
         ELSE IF(IY(1,I+1).GT.IY(1,I)) THEN
           NTT=NTT+1
           THIS%MULT(NTT)=1+INV
-          THIS%IKP(:,NTT)=IY(:,I)
+          THIS%IKP(:,NTT)=IY(:,I+1)
         ELSE 
           CALL ERROR$MSG('ORDERING FAILED')
           CALL ERROR$STOP('BRILLOUIN_TETCNT')

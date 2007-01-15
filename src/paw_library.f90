@@ -659,51 +659,71 @@ END MODULE RANDOM_MODULE
 #ENDIF
       END
 !
-!     ......................................................................
-      SUBROUTINE LIB$GENERALEIGENVALUER8(N,A,B,E,VEC)
-!     == SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
-!     **      [A(:,:)+E(I)*B(:,:)]*VEC(:,I)=0                            **
+!     .....................................................................
+      SUBROUTINE LIB$GENERALEIGENVALUER8(N,H,S,E,VEC)
+!     **                                                                 **
+!     ** SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
+!     **      [H(:,:)-E(I)*S(:,:)]*VEC(:,I)=0                            **
 !     ** NOT TESTED!!!!!!                                                **
+!     **                                                                 **
+!     ** REMARK: H AND S MUST BE SYMMETRIC                              **
+!     **         S MUST BE POSITIVE DEFINITE                             **
+!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE               **
+!     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY       **
+!     **                                                                 **
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: N
-      REAL(8)   ,INTENT(IN) :: A(N,N)
-      REAL(8)   ,INTENT(IN) :: B(N,N)
-      REAL(8)   ,INTENT(OUT):: E(N)
-      REAL(8)   ,INTENT(OUT) :: VEC(N,N)
-      INTEGER                :: N1
-      INTEGER                :: LWORK     
-      REAL(8)                :: WORK(16*N)
-      REAL(8)                :: ALPHAR(N)
-      REAL(8)                :: ALPHAI(N)
-      REAL(8)                :: BETA(N)
-      INTEGER                :: INFO
-      REAL(8)                :: A1(N,N)
-      REAL(8)                :: B1(N,N)
-      LOGICAL                :: TTEST=.false.
-      REAL(8)                :: DEV
-      INTEGER                :: I
+      INTEGER(4),INTENT(IN)  :: N
+      REAL(8)   ,INTENT(IN)  :: H(N,N)    ! HAMILTON MATRIX
+      REAL(8)   ,INTENT(IN)  :: S(N,N)    ! OVERLAP MATRIX
+      REAL(8)   ,INTENT(OUT) :: E(N)      ! EIGENVALUES
+      REAL(8)   ,INTENT(OUT) :: VEC(N,N)  ! EIGENVECTORS
+      INTEGER                :: LWORK     ! SIZE OF WORK ARRAY
+      REAL(8)                :: WORK(16*N)! WORK ARRAY FOR LAPACK ROUTINE
+      INTEGER                :: INFO      ! ERROR CODE OF LAPACK ROUTINE
+      REAL(8)                :: B(N,N)    ! COPY OF OVERLAP MATRIX
+      LOGICAL  ,PARAMETER    :: TTEST=.TRUE. ! IF TRUE TEST RESULT
+      REAL(8)                :: DEV       ! DEVIATION
+      INTEGER                :: I 
 !     *********************************************************************
-      if(n.eq.1) then
-        e(1)=-a(1,1)/b(1,1)
-        vec(1,1)=1.d0
-        return
-      end if
-      LWORK=16*N
-      N1=N
-      A1=A   !DGGEV OVERWRITES INPUT!!
-      B1=-B
-      CALL DGGEV('N','V',N1,A1,N1,B1,N1,ALPHAR,ALPHAI,BETA &
-     &           ,VEC,N1,VEC,N1,WORK,LWORK,INFO)
-      IF(ABS(MAXVAL(ALPHAI(:))).GT.0.D0)PRINT*,'MAXVAL(ALPHAI(:))',MAXVAL(ALPHAI(:))
-      E(:)=ALPHAR(:)/BETA(:)
 !
-      IF(ABS(MAXVAL(ALPHAI)).NE.0.D0) THEN
-        print*,'warning:EIGENVALUE PROBLEM HAS COMPLEX EIGENVALUES'
-!        CALL ERROR$MSG('EIGENVALUE PROBLEM HAS COMPLEX EIGENVALUES')
-!        CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+!     ========================================================================
+!     == TAKE CARE OF TRIVIAL CASES                                         ==
+!     ========================================================================
+      IF(N.EQ.1) THEN
+        E(1)=H(1,1)/S(1,1)
+        VEC(1,1)=1.D0
+        RETURN
+      ELSE IF(N.EQ.0) THEN
+        RETURN
       END IF
+!
+!     ========================================================================
+!     == TEST IF INPUT MATRICES ARE SYMMETRIC                               ==
+!     ========================================================================
+      IF(TTEST) THEN
+        DEV=SUM(ABS(H-TRANSPOSE(H)))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('HAMILTON MATRIX NOT SYMMETRIC')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+        END IF
+        DEV=SUM(ABS(S-TRANSPOSE(S)))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('OVERLAP MATRIX NOT SYMMETRIC')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+        END IF
+      END IF
+!
+!     ========================================================================
+!     == CALL LAPACK ROUTINE                                                ==
+!     ========================================================================
+      LWORK=16*N     
+      VEC=H          ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
+      B=S            ! LAPACK ROUTINE OVERWRITES INPUT
+      CALL DSYGV(1,'V','U',N,VEC,N,B,N,E,WORK,LWORK,INFO)
       IF(INFO.LT.0) THEN
-        CALL ERROR$MSG('ITH ARGUMENT OF DGGEV HAS ILLEGAL VALUE')
+        CALL ERROR$MSG('ITH ARGUMENT OF DSYGV HAS ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)
         CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
       ELSE IF(INFO.GT.0) THEN
@@ -711,67 +731,114 @@ END MODULE RANDOM_MODULE
         CALL ERROR$I4VAL('INFO',INFO)
         CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
       END IF
+!
+!     ========================================================================
+!     == TEST RESULT OF THE ROUTINE                                         ==
+!     ========================================================================
       IF(TTEST) THEN
-        DEV=0.D0
+        B=MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))
         DO I=1,N
-          DEV=MAX(DEV,MAXVAL(ABS(MATMUL(A+E(I)*B,VEC(:,I)))))
+          B(I,I)=B(I,I)-1.D0
+          DEV=SUM(ABS(MATMUL(H-E(I)*S,VEC(:,I))))
+          IF(DEV.GT.1.D-7) THEN
+            CALL ERROR$MSG('EIGENVALUE PROBLEM FAILED')
+            CALL ERROR$R8VAL('DEV',DEV)
+            CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+          END IF
         ENDDO
-        PRINT*,'DEV',DEV
-        IF(DEV.GT.1.D-6) THEN
-          CALL ERROR$MSG('GENERAL EIGENVALUE TEST FAILED')
+!       == THIS IS NOT FULFILLED FOR TSYMMETRIC=.FALSE.
+        DEV=SUM(ABS(B))
+        IF(DEV.GT.1.D-7) THEN
+          CALL ERROR$MSG('EIGENSTATES NOT ORTHONORMAL')
           CALL ERROR$R8VAL('DEV',DEV)
           CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
         END IF
       END IF
       RETURN
-      END
+      END SUBROUTINE LIB$GENERALEIGENVALUER8
 !
 !     ......................................................................
-      SUBROUTINE LIB$GENERALEIGENVALUEc8(N,H,O,E,VEC)
-!     == SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
-!     **      [H(:,:)-E(I)*O(:,:)]*VEC(:,I)=0                            **
-!     ** NOT TESTED!!!!!!                                                **
-!     ** remark: h and o must be hermiten, O must be positive definite   **
+      SUBROUTINE LIB$GENERALEIGENVALUEC8(N,H,S,E,VEC)
+!     **                                                                 **
+!     ** SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
+!     **      [H(:,:)-E(I)*S(:,:)]*VEC(:,I)=0                            **
+!     **                                                                 **
+!     ** REMARK: H AND S MUST BE HERMITEANC                              **
+!     **         S MUST BE POSITIVE DEFINITE                             **
+!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE               **
+!     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY       **
+!     **                                                                 **
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
-      complex(8),INTENT(IN) :: H(N,N)
-      complex(8),INTENT(IN) :: O(N,N)
-      real(8)   ,INTENT(OUT):: E(N)
-      complex(8),INTENT(OUT):: VEC(N,N)
-      INTEGER               :: N1
-      INTEGER               :: LdWORK
-      complex(8)            :: WORK(n*N)
-      complex(8)            :: o1(n,N)
-      real(8)               :: rwork(3*n-2)
+      COMPLEX(8),INTENT(IN) :: H(N,N)    ! HAMITON MATRIX
+      COMPLEX(8),INTENT(IN) :: S(N,N)    ! OVERLAP MATRIX
+      REAL(8)   ,INTENT(OUT):: E(N)      ! EIGENVALUES
+      COMPLEX(8),INTENT(OUT):: VEC(N,N)  ! EIGENVECTORS
+      INTEGER               :: LDWORK
+      COMPLEX(8)            :: WORK(N*N)
+      COMPLEX(8)            :: S1(N,N)
+      REAL(8)               :: RWORK(3*N-2)
       INTEGER               :: INFO
-      LOGICAL               :: TTEST=.true.
+      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
       REAL(8)               :: DEV
-      INTEGER               :: I,j
+      INTEGER               :: I
 !     *********************************************************************
+!
+!     ========================================================================
+!     == TEST IF INPUT MATRICES ARE SYMMETRIC                               ==
+!     ========================================================================
+      IF(TTEST) THEN
+        DEV=SUM(ABS(H-TRANSPOSE(CONJG(H))))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('HAMILTON MATRIX NOT HERMITEAN')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+        END IF
+        DEV=SUM(ABS(S-TRANSPOSE(CONJG(S))))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('OVERLAP MATRIX NOT HERMITEAN')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+        END IF
+      END IF
+!
+!     ========================================================================
+!     == CALL LAPACK ROUTINE                                                ==
+!     ========================================================================
       LDWORK=N*N
-      N1=N
-      VEC=H   
-      o1=o
-      CALL ZHEGV(1,'V','U',N1,vec,N1,O1,N1,E,WORK,LDWORK,rWORK,INFO)
+      VEC=H     ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
+      S1=S
+      CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('ITH ARGUMENT OF ZHGEV HAS ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)
         CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
-      ELSE IF(info.gt.0) THEN
-        CALL ERROR$MSG('failed')
+      ELSE IF(INFO.GT.0) THEN
+        CALL ERROR$MSG('FAILED')
         CALL ERROR$I4VAL('INFO',INFO)
         CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
       END IF
+!
+!     ========================================================================
+!     == TEST RESULT OF THE ROUTINE                                         ==
+!     ========================================================================
       IF(TTEST) THEN
+        S1=MATMUL(TRANSPOSE(CONJG(VEC)),MATMUL(S,VEC))
         DEV=0.D0
         DO I=1,N
-          DEV=MAX(DEV,MAXVAL(ABS(MATMUL(H-E(I)*O,VEC(:,I)))))
+          S1(I,I)=S1(I,I)-(1.D0,0.D0)
+          DEV=MAX(DEV,MAXVAL(ABS(MATMUL(H-E(I)*S,VEC(:,I)))))
         ENDDO
-        PRINT*,'DEV',DEV
         IF(DEV.GT.1.D-6) THEN
           CALL ERROR$MSG('GENERAL EIGENVALUE TEST FAILED')
           CALL ERROR$R8VAL('DEV',DEV)
-          CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+        END IF
+        DEV=SUM(ABS(S1))
+        IF(DEV.GT.1.D-7) THEN
+          CALL ERROR$MSG('EIGENSTATES NOT ORTHONORMAL')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
         END IF
       END IF
       RETURN
@@ -1710,7 +1777,7 @@ END MODULE RANDOM_MODULE
 !DGESVF                        SINGULAR VALUE DECOMPOSITION P696
 !DGESVS  LEAST SQUARES SOLUTION USING SINGULAR VALUE DECOMPOSITION P703
 !     ..................................................................
-      SUBROUTINE LIB$MATRIXSOLVEnew(N,M,NEQ,A,X,B)
+      SUBROUTINE LIB$MATRIXSOLVENEW(N,M,NEQ,A,X,B)
 !     ******************************************************************
 !     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
 !     **  WHERE A IS A(N,M)                                           **
@@ -1724,30 +1791,30 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(IN) :: A(N,M)
       REAL(8)   ,INTENT(OUT):: X(M,NEQ)
       REAL(8)   ,INTENT(IN) :: B(N,NEQ)
-      real(8)               :: a1(n,m)
-      real(8)               :: b1(n,neq)
-      integer               :: info
-      real(8)               :: rcond=-1.d0
-      integer               :: ldwork
-      integer               :: irank
-      real(8)               :: sing(n)
-      real(8)   ,allocatable:: work(:)
-      integer               :: n1,m1,neq1
+      REAL(8)               :: A1(N,M)
+      REAL(8)               :: B1(N,NEQ)
+      INTEGER               :: INFO
+      REAL(8)               :: RCOND=-1.D0
+      INTEGER               :: LDWORK
+      INTEGER               :: IRANK
+      REAL(8)               :: SING(N)
+      REAL(8)   ,ALLOCATABLE:: WORK(:)
+      INTEGER               :: N1,M1,NEQ1
 !     ******************************************************************
-      if(n.eq.1.and.m.eq.1) then
-        x(1,:)=b(1,:)/a(1,1)
-        return
-      end if
-      ldwork=3*min(M,N)+max(2*min(M,N),max(M,N),Neq)
-!     -- use 3*m+3*n+neq
-      allocate(work(ldwork))
-      n1=n
-      m1=m
-      neq1=neq
-      a1=a 
-      b1=b
-      call dgelss(n1,m1,neq1,a1,n1,b1,n1,sing,rcond,irank,work,ldwork,info)
-      x=b1
+      IF(N.EQ.1.AND.M.EQ.1) THEN
+        X(1,:)=B(1,:)/A(1,1)
+        RETURN
+      END IF
+      LDWORK=3*MIN(M,N)+MAX(2*MIN(M,N),MAX(M,N),NEQ)
+!     -- USE 3*M+3*N+NEQ
+      ALLOCATE(WORK(LDWORK))
+      N1=N
+      M1=M
+      NEQ1=NEQ
+      A1=A 
+      B1=B
+      CALL DGELSS(N1,M1,NEQ1,A1,N1,B1,N1,SING,RCOND,IRANK,WORK,LDWORK,INFO)
+      X=B1
       DEALLOCATE(WORK)
       IF(INFO.GT.0) THEN
         CALL ERROR$MSG('ITH ARGUMENT HAS ILLEGAL VALUE')
@@ -1761,9 +1828,9 @@ END MODULE RANDOM_MODULE
         CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
       END IF
       RETURN
-      end
+      END
 !     ..................................................................
-      SUBROUTINE LIB$MATRIXSOLVEnewc8(N,M,NEQ,A,X,B)
+      SUBROUTINE LIB$MATRIXSOLVENEWC8(N,M,NEQ,A,X,B)
 !     ******************************************************************
 !     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
 !     **  WHERE A IS A(N,M)                                           **
@@ -1774,40 +1841,40 @@ END MODULE RANDOM_MODULE
       INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: M
       INTEGER(4),INTENT(IN) :: NEQ
-      complex(8),INTENT(IN) :: A(N,M)
-      complex(8),INTENT(OUT):: X(M,NEQ)
-      complex(8),INTENT(IN) :: B(N,NEQ)
-      complex(8)            :: a1(n,m)
-      complex(8)            :: b1(n,neq)
-      integer               :: info
-      real(8)               :: rcond=-1.d0
-      integer               :: ldwork
-      integer               :: irank
-      integer               :: ipivot(n)
-      real(8)               :: sing(n)
-      real(8)   ,allocatable:: work(:)
-      integer               :: n1,m1,neq1
+      COMPLEX(8),INTENT(IN) :: A(N,M)
+      COMPLEX(8),INTENT(OUT):: X(M,NEQ)
+      COMPLEX(8),INTENT(IN) :: B(N,NEQ)
+      COMPLEX(8)            :: A1(N,M)
+      COMPLEX(8)            :: B1(N,NEQ)
+      INTEGER               :: INFO
+      REAL(8)               :: RCOND=-1.D0
+      INTEGER               :: LDWORK
+      INTEGER               :: IRANK
+      INTEGER               :: IPIVOT(N)
+      REAL(8)               :: SING(N)
+      REAL(8)   ,ALLOCATABLE:: WORK(:)
+      INTEGER               :: N1,M1,NEQ1
 !     ******************************************************************
-      if(n.eq.1.and.m.eq.1) then
-        x(1,:)=b(1,:)/a(1,1)
-        return
-      end if
-      ldwork=3*min(M,N)+max(2*min(M,N),max(M,N),Neq)
-!     -- use 3*m+3*n+neq
-      allocate(work(ldwork))
-      n1=n
-      m1=m
-      neq1=neq
-      a1=a 
-      b1=b
-      if(n1.eq.m1) then
-        call zgesv(n1,neq1,a1,n1,ipivot,b1,n1,info)
-        x=b1
-        IF(INFO.lt.0) THEN
+      IF(N.EQ.1.AND.M.EQ.1) THEN
+        X(1,:)=B(1,:)/A(1,1)
+        RETURN
+      END IF
+      LDWORK=3*MIN(M,N)+MAX(2*MIN(M,N),MAX(M,N),NEQ)
+!     -- USE 3*M+3*N+NEQ
+      ALLOCATE(WORK(LDWORK))
+      N1=N
+      M1=M
+      NEQ1=NEQ
+      A1=A 
+      B1=B
+      IF(N1.EQ.M1) THEN
+        CALL ZGESV(N1,NEQ1,A1,N1,IPIVOT,B1,N1,INFO)
+        X=B1
+        IF(INFO.LT.0) THEN
           CALL ERROR$MSG('ITH ARGUMENT HAS ILLEGAL VALUE')
           CALL ERROR$I4VAL('I',-INFO)
           CALL ERROR$STOP('LIB$MATRIXSOLVENEWC8')
-        ELSE IF(INFO.gt.0) THEN
+        ELSE IF(INFO.GT.0) THEN
           CALL ERROR$MSG('PROBLEM IS SINGULAR. NO SOLUTION CAN BE COMPUTED')
           CALL ERROR$I4VAL('I',INFO)
           CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
@@ -1819,7 +1886,7 @@ END MODULE RANDOM_MODULE
       END IF
       DEALLOCATE(WORK)
       RETURN
-      end
+      END
 !
 !     ..................................................................
       SUBROUTINE LIB$MATRIXSOLVE(N,M,NEQ,A,X,B)
@@ -1847,7 +1914,7 @@ END MODULE RANDOM_MODULE
       REAL(8)               :: TAU=1.D-6
       INTEGER(4)            :: INFO
       INTEGER(4)            :: I
-      logical(4)            :: ttest=.false.
+      LOGICAL(4)            :: TTEST=.FALSE.
 !     ******************************************************************
       IF(N.EQ.M) THEN  !MATRIX FACTORIZATION
         ALLOCATE(AFACT(N,N))
@@ -1869,7 +1936,7 @@ END MODULE RANDOM_MODULE
           CALL ERROR$I4VAL('I',INFO)
           CALL ERROR$STOP('LIB$MATRIXSOLVE')
         END IF          
-!!$        == old stuff shall be removed
+!!$        == OLD STUFF SHALL BE REMOVED
 !!$        CALL DGEFA(AFACT,N,N,IPVT,INFO)
 !!$        X=B
 !!$        CALL DGESL(AFACT,N,N,IPVT,X,0)
@@ -1879,7 +1946,7 @@ END MODULE RANDOM_MODULE
       ELSE   !SINGULAR VALUE DECOMPOSITION
 #IF DEFINED(CPPVAR_BLAS_ESSL)
 !       ===========================================================
-!       == singular value decomposion with essl                  ==
+!       == SINGULAR VALUE DECOMPOSION WITH ESSL                  ==
 !       ===========================================================
         NM=MAX(1,MAX(N,M))
         ALLOCATE(AFACT(NM,M))
@@ -1898,7 +1965,7 @@ END MODULE RANDOM_MODULE
         DEALLOCATE(AFACT)
 #ELSE
 !       ===========================================================
-!       == singular value decomposion with lapack driver routine ==
+!       == SINGULAR VALUE DECOMPOSION WITH LAPACK DRIVER ROUTINE ==
 !       ===========================================================
         NM=MAX(1,MAX(N,M))
         ALLOCATE(AFACT(N,M))
@@ -1908,20 +1975,20 @@ END MODULE RANDOM_MODULE
         ALLOCATE(S(M))    !SINGULAR VALUES
         NAUX=3*NM+MAX(2*MIN(M,N),NM,NEQ)
         ALLOCATE(AUX(NAUX))
-!       == call lapack
+!       == CALL LAPACK
         CALL DGELSS(N,M,NEQ,AFACT,NM,BFACT,N,S,TAU,IRANK,AUX,NAUX,INFO) 
-        if(info.lt.0) then
-          call error$msg('i-th argument to dgelsy has illegal value')
-          call error$i4val('i',-info)
-          call error$stop('lib$matrixsolve')
-        else if(info.lt.0) then
-          call error$msg('the algorithm for computing the')
-          call error$msg('Singular value decomposition failed to converge')
-          call error$msg('i off-diagonal elements of an intermediate')
-          call error$msg('bidiagonal form did not converge to zero.')
-          call error$i4val('i',info)
-          call error$stop('lib$matrixsolve')
-        end if
+        IF(INFO.LT.0) THEN
+          CALL ERROR$MSG('I-TH ARGUMENT TO DGELSY HAS ILLEGAL VALUE')
+          CALL ERROR$I4VAL('I',-INFO)
+          CALL ERROR$STOP('LIB$MATRIXSOLVE')
+        ELSE IF(INFO.LT.0) THEN
+          CALL ERROR$MSG('THE ALGORITHM FOR COMPUTING THE')
+          CALL ERROR$MSG('SINGULAR VALUE DECOMPOSITION FAILED TO CONVERGE')
+          CALL ERROR$MSG('I OFF-DIAGONAL ELEMENTS OF AN INTERMEDIATE')
+          CALL ERROR$MSG('BIDIAGONAL FORM DID NOT CONVERGE TO ZERO.')
+          CALL ERROR$I4VAL('I',INFO)
+          CALL ERROR$STOP('LIB$MATRIXSOLVE')
+        END IF
         DEALLOCATE(AUX)
         X(:,:)=BFACT(1:M,:)
         DEALLOCATE(S)
@@ -1930,14 +1997,14 @@ END MODULE RANDOM_MODULE
 #ENDIF
       END IF
 !     =================================================================
-!     ==  test                                                       ==
+!     ==  TEST                                                       ==
 !     =================================================================
-      if(ttest) then
-        allocate(aux(1))
-        aux(:)=maxval(abs(matmul(a,x)-b))
-        write(*,*)'max error of lib$matrixsolve ',aux(1)
-        deallocate(aux)
-      end if
+      IF(TTEST) THEN
+        ALLOCATE(AUX(1))
+        AUX(:)=MAXVAL(ABS(MATMUL(A,X)-B))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ',AUX(1)
+        DEALLOCATE(AUX)
+      END IF
       RETURN
       END
 !

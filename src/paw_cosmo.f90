@@ -1996,47 +1996,368 @@ END IF
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTEGER(4)            :: NFIL
-      CHARACTER(2)          :: SYMBOL
       CHARACTER(10)         :: ID
-      REAL(8)               :: RAT(3)
-      REAL(8)               :: FACEAREA
+      CHARACTER(2)          :: SYMBOL(nat)
+      REAL(8)               :: RAT(3,nat)
+      integer(4)            :: iz(nat)
+      integer(4)            :: itiedto(nq)
+      REAL(8)               :: qpos(3,nat)
+      REAL(8)               :: segmentAREA(nq)
+      REAL(8)               :: qi(nq)
+      REAL(8)               :: vi(nq)
       REAL(8)               :: PI
-      REAL(8)               :: ANGSTROM
-      INTEGER(4)            :: I,IAT
+      REAL(8)               :: facearea
+      INTEGER(4)            :: Iq,IAT,iq1,iq2
+      integer(4)            :: nqcount
       REAL(8)               :: AEZ
+      real(8)               :: ediel
+      real(8)               :: etot
+      real(8)               :: rsolv1
 !     ************************************************************************
       IF (.NOT.TON) RETURN
       PI=4.D0*DATAN(1.D0)
-      CALL CONSTANTS('ANGSTROM',ANGSTROM)
 !      
+!     ==================================================================================
+!     == declare file to file handler                                                 ==
+!     ==================================================================================
       ID='COSMO_OUT'
       CALL FILEHANDLER$SETFILE(ID,.TRUE.,'.COSMO_OUT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
-!
-      CALL FILEHANDLER$UNIT('COSMO_OUT',NFIL)
-      REWIND(NFIL)
-      WRITE(NFIL,FMT='("COORD_RAD")')
-      WRITE(NFIL,FMT='("#ATOM",T10,"X",T20,"Y",T30,"Z",T40,"ELEMENT",T50,"RADIUS [A]")')
+!      
+!     ==================================================================================
+!     == declare file to file handler                                                 ==
+!     ==================================================================================
+      NQCOUNT=0
       DO IAT=1,NAT
-        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT)
+        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,AEZ)
-        CALL PERIODICTABLE$GET(NINT(AEZ),'SYMBOL',SYMBOL)
-        IF(SYMBOL(2:2).EQ.'_') SYMBOL(2:2)=' '
-        WRITE(NFIL,FMT='(I4,3F19.14,A3,F13.5)')IAT,RAT,trim(SYMBOL),RSOLV(IAT)/ANGSTROM
-      ENDDO
-      WRITE(NFIL,FMT='("COORD_CAR")')
-      DO IAT=1,NAT
-        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT)
+        IZ(IAT)=NINT(AEZ)
+        CALL PERIODICTABLE$GET(IZ(IAT),'SYMBOL',SYMBOL(IAT))
+        IF(SYMBOL(iat)(2:2).EQ.'_') SYMBOL(iat)(2:2)=' '
         FACEAREA=4.D0*PI*RSOLV(IAT)/REAL(NQAT(IAT),KIND=8)
-        DO I=IQFIRST(IAT),IQFIRST(IAT)+NQAT(IAT)-1
-          IF(CUTOFFTHETA(i).LT.1.D-5) CYCLE
-          WRITE(NFIL,fmt='(2i5,8f15.9)')I,IAT,QRELPOS(:,I)+RAT(:),Q0(I)*CUTOFFTHETA(I) &
-     &                     ,FACEAREA*CUTOFFTHETA(I)/angstrom**2,Q0(I)/FACEAREA*angstrom**2,0.d0
+        IQ1=IQFIRST(IAT)
+        IQ2=IQ1-1+NQAT(IAT)
+        DO IQ=IQ1,IQ2
+          IF(CUTOFFTHETA(Iq).LT.1.D-5) CYCLE
+          NQCOUNT=NQCOUNT+1
+          ITIEDTO(NQCOUNT)=IAT
+          SEGMENTAREA(NQCOUNT)=FACEAREA*CUTOFFTHETA(IQ)
+          QPOS(:,NQCOUNT)=QRELPOS(:,IQ)+RAT(:,IAT)
+          QI(NQCOUNT)=Q0(IQ)*CUTOFFTHETA(IQ)
+          vi(NQCOUNT)=0.d0
         ENDDO
       ENDDO
+!
+!     ==================================================================================
+!     == WRITE INFORMATION TO FILE                                                    ==
+!     ==================================================================================
+      CALL FILEHANDLER$UNIT('COSMO_OUT',NFIL)
+      CALL COSMO_WRITEOUT(NFIL,NAT,SYMBOL,IZ,RAT,RSOLV &
+     &                    ,NQCOUNT,ITIEDTO(1:NQCOUNT),QI(1:NQCOUNT),vi(1:nqcount) &
+     &                    ,SEGMENTAREA(1:NQCOUNT),QPOS(:,1:NQCOUNT) &
+     &                    ,RSOLV1,ETOT,EDIEL)
       CALL FILEHANDLER$CLOSE('COSMO_OUT')
+      RETURN
+      END
+!
+!     .........................................................................................
+      subroutine cosmo_writeout(nfil,natoms,mtype,nuc,xyz,srad &
+     &                    ,nps,iatsp,qcosc,phic,ar,cosurf &
+     &                    ,rsolv,etot,ediel)
+!     **                                                                                **
+!     **   WRITE COSMO FILE                                                             **
+!     **                                                                                **
+!     **   The a-matrix describes the surface potentials as v(i)=sum_j A_{i,j} q(j)     **
+!     **                                                                                **
+!     ***************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
+      INTEGER(4)  ,INTENT(IN) :: NATOMS        ! #(ATOMS)
+      CHARACTER(*),INTENT(IN) :: MTYPE(NATOMS) ! ELEMENT SYMBOLS FOR EACH ATOM
+      REAL(8)     ,INTENT(IN) :: XYZ(3,NATOMS) ! ATOM COORDINATES
+      INTEGER(4)  ,INTENT(IN) :: NUC(NATOMS)   ! ATOMIC NUMBERS
+      REAL(8)     ,INTENT(IN) :: SRAD(NATOMS)  ! RADIUS OF SURFACE CHARGES 
+      INTEGER(4)  ,INTENT(IN) :: NPS           ! #(SURFACE CHARGES)
+      INTEGER(4)  ,INTENT(IN) :: IATSP(NPS)    ! ATOM TO WHICH A SEGMENT IS TIED
+      REAL(8)     ,INTENT(IN) :: QCOSC(NPS)    ! CORRECTED SCREENING CHARGES
+      REAL(8)     ,INTENT(IN) :: PHIC(NPS)     ! CORRECTED POTENTIAL ON THE SEQMENT
+      REAL(8)     ,INTENT(IN) :: AR(NPS)       ! SEGMENT AREA
+      REAL(8)     ,INTENT(IN) :: COSURF(3,NPS) ! POSITION OF SURFACE SEGMENT
+      REAL(8)     ,INTENT(IN) :: RSOLV         ! SOLVENT RADIUS
+      REAL(8)     ,INTENT(IN) :: ETOT          ! TOTAL ENERGY
+      REAL(8)                 :: EDIEL         ! DIELECTRIC ENERGY
+      REAL(8)                 :: DE            ! outlying charge energy correction
+!     ****************************************************************************
+      IF(LEN(MTYPE(1)).LT.2) THEN
+        STOP 'ERROR 1 IN COSMO$WRITEOUT'
+      END IF
+!
+!     *****************************************************************************
+!     **  print input (not used by cosmotherm)                                   **
+!     *****************************************************************************
+      call cosmo_writeheader(nfil)
+!
+!     *****************************************************************************
+!     **  print final geometry (coordinates and their radii) (used by cosmotherm)**
+!     *****************************************************************************
+      CALL COSMO_WRITECOSMORAD(NFIL,NATOMS,XYZ,MTYPE,SRAD,RSOLV)
+!
+!     *****************************************************************************
+!     **  coordinates in .car format for cosmo-rs  (used by cosmotherm)          **
+!     *****************************************************************************
+      CALL COSMO_WRITECOORDCAR(NFIL,NATOMS,NUC,MTYPE,XYZ)
+!
+!     *****************************************************************************
+!     **  charges                             (not used by cosmotherm)           **
+!     *****************************************************************************
+      call cosmo_writescreeningcharge(nfil)
+
+!     *****************************************************************************
+!     **  energies                             (used by cosmotherm)              **
+!     *****************************************************************************
+      de=0.d0
+      ediel=0.d0   ! not used by cosmotherm
+      call cosmo_writeenergies(nfil,etot,de,ediel)
+!
+!     *****************************************************************************
+!     **  segment information            use by cosmotherm)                      **
+!     *****************************************************************************
+      CALL cosmo_WRITESEGMENT(NFIL,NPS,IATSP,COSURF,QCOSC,AR,PHIC)
+      return
+      END
+!
+!     .............................................................................
+      subroutine cosmo_writeheader(nfil)
+      implicit none
+      INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
+      REAL(8)                 :: EPS=0.d0      ! DIELECTRIC CONSTANT
+      REAL(8)                 :: FEPSI=1.d0    ! (EPS-1)/(EPS+0.5)
+      REAL(8)                 :: RSOLV=0.d0    ! SOLVENT RADIUS
+      INTEGER(4)              :: NPPA=0        !#(BASIS GRID POINTS PER ATOM)
+      INTEGER(4)              :: NSPA=0        !#(SURFACE CHARGES FOR ATOMS OTHER THAN HYDROGEN)
+      INTEGER(4)              :: NSPH=0        !#(SURFACE CHARGES FOR HYDROGEN)
+      REAL(8)                 :: DISEX=0.d0    !DISTANCE THRESHOLD FOR A MATRIX ELEMENTS
+                                               ! 
+      REAL(8)                 :: ROUTF=0.d0    ! FACTOR FOR OUTER CAVITY CONSTRUCTION IN THE OUTLYING CHARGE CORRECTION
+      INTEGER(4)              :: LCAVITY=0     ! O=OPEN CAVITY 1=CLOSED CAVITY
+      REAL(8)                 :: PHSRAN=0.d0   ! AMPLITUDE OF THE CAVITY DE-SYMMETRIZATION
+      REAL(8)                 :: AMPRAN=0.d0   ! PHASE OF THE CAVITY DE-SYMMETRIZATION
+      REAL(8)                 :: DISEX2=0.d0   ! MEAN SQUARE DISTANCE OF TWO SEGMENTS TIMES DISEX
+      INTEGER(4)              :: NPS=0        ! =NPS+NPSHER
+      INTEGER(4)              :: NPSD=0        ! =NPS+NPSHER
+      INTEGER(4)              :: NPSPHER=0     ! #(SEGMENTS ON THE SURFACE FOR THE OUTLYING CHARGE CORRECTION)
+      REAL(8)                 :: VOLUME=0.d0   !??
+      REAL(8)                 :: area=0.d0     ! sum of all segment areas
+      REAL(8)      ,PARAMETER :: ANGSTROM = 1.D0/0.529177249D0 
+!     *****************************************************************************
+      LCAVITY=0    ! 0 FOR OPEN CAVITY ; 1 FOR CLOSED CAVITY
+!     =============================================================================
+!     == write version info                                                      ==
+!     =============================================================================
+      write(nfil,fmt="('CURRENT PROG: CP-PAW, CLAUSTHAL UNIVERSITY OF TECHNOLOGY')") 
+      write(nfil,"('$cosmo')") 
+      if(fepsi.eq.1.d0) then
+         write(nfil,'(a)') '  epsilon=infinity'
+      else
+         write(nfil,'(a,f9.3)') '  epsilon=', eps
+      endif
+
+      write(nfil,'("  nppa=",i5)')     nppa
+      write(nfil,'("  nspa=",i5)')     nspa
+      write(nfil,'("  disex=",g12.6)') disex/angstrom
+      write(nfil,'("  rsolv=",f5.2)')  rsolv/angstrom
+      write(nfil,'("  routf=",f5.2)')  routf
+      if (lcavity .eq. 0) then
+        write(nfil,'("  cavity open")')
+      else
+        write(nfil,'("  cavity closed")')
+      endif
+      write(nfil,'("  amat file=",a)') 'amat.out'  ! amat-file name
+      write(nfil,'("  phsran=",g9.2)') phsran
+      write(nfil,'("  ampran=",g9.2)') ampran
+!
+!     *****************************************************************************
+!     **  calculated parameters and variables in (not used by cosmotherm)        **
+!     *****************************************************************************
+      write(nfil,fmt="('$cosmo_data')")
+      write(nfil,fmt="('  fepsi=',f14.7)")  fepsi
+      write(nfil,fmt="('  disex2=',g12.6)") disex2
+      write(nfil,fmt="('  nsph=',i5)")      nsph
+      write(nfil,fmt="('  nps=',i5)")       nps
+      write(nfil,fmt="('  npsd=',i5)")      npsd
+      write(nfil,fmt="('  npspher=',i5)")   npspher
+      write(nfil,fmt="('  area=',f8.2)")    area
+      write(nfil,fmt="('  volume=',f8.2)")  volume
+      return
+      end
+!
+!     ............................................................................
+      subroutine cosmo_writescreeningcharge(nfil)
+      implicit none
+      integer(4),intent(in) :: nfil
+      real(8)               :: qsumo=0.d0
+      real(8)               :: qsum=0.d0
+!     ****************************************************************************
+      write(nfil,fmt='("$screening_charge")')
+      write(nfil,fmt='("  cosmo      = ",f10.6)')qsum
+      write(nfil,fmt='("  correction = ",f10.6)')qsumo
+      write(nfil,fmt='("  total      = ",f10.6)')qsum+qsumo
+      return
+      end
+!!
+!     .............................................................................
+      SUBROUTINE COSMO_WRITECOSMORAD(NFIL,NATOMS,XYZ,MTYPE,SRAD,RSOLV)
+!     **
+      INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
+      INTEGER(4)  ,INTENT(IN) :: NATOMS        ! #(ATOMS)
+      REAL(8)     ,INTENT(IN) :: XYZ(3,NATOMS) ! ATOM COORDINATES
+      CHARACTER(*),INTENT(IN) :: MTYPE(NATOMS) ! ELEMENT SYMBOLS FOR EACH ATOM
+      REAL(8)     ,INTENT(IN) :: SRAD(NATOMS)  ! RADIUS OF SURFACE CHARGES 
+      REAL(8)     ,INTENT(IN) :: RSOLV         ! SOLVENT RADIUS
+      REAL(8)     ,PARAMETER  :: ANGSTROM = 1.D0/0.529177249D0 
+      integer(4)              :: i,j
+!     *****************************************************************************
+      write(nfil,"('$coord_rad')") 
+      write(nfil,"('#atom',t9,'x',t28,'y',t47,'z',t61,'element  radius [A]')")
+      do i=1,natoms
+          write(nfil,fmt="(1x,i3,3(1x,f18.14),2x,a2,2x,f10.5)") &
+     &                 i,(xyz(j,i),j=1,3),mtype(i)(1:2),(srad(i)-rsolv)/angstrom
+      enddo
+      RETURN
+      END
+!
+!     .............................................................................
+      SUBROUTINE COSMO_WRITECOORDCAR(NFIL,NATOMS,NUC,MTYPE,XYZ)
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
+      INTEGER(4)  ,INTENT(IN) :: NATOMS        ! #(ATOMS)
+      INTEGER(4)  ,INTENT(IN) :: NUC(NATOMS)   ! ATOMIC NUMBERS
+      REAL(8)     ,INTENT(IN) :: XYZ(3,NATOMS) ! ATOM COORDINATES
+      CHARACTER(*),INTENT(IN) :: MTYPE(NATOMS) ! ELEMENT SYMBOLS FOR EACH ATOM
+      REAL(8)     ,PARAMETER  :: ANGSTROM = 1.D0/0.529177249D0 
+      INTEGER(4)  ,ALLOCATABLE:: ICNT(:)
+      INTEGER(4)              :: I
+      CHARACTER(5)            :: LAB1
+      CHARACTER(2)            :: LAB2
+!     *****************************************************************************
+      write(nfil,fmt='("$coord_car")')
+      write(nfil,fmt='("!BIOSYM archive 3")')
+      write(nfil,fmt='("PBC=OFF")')
+      write(nfil,fmt='("coordinates from COSMO calculation")')
+      write(nfil,fmt='("!DATE ")')
+
+      allocate(icnt(maxval(nuc)))
+      icnt(:)=0
+      do i=1,natoms
+        icnt(nuc(i))=icnt(nuc(i))+1  ! atom counter for each element
+        write(lab1,*)icnt(nuc(i))
+        lab1=trim(uc(mtype(i)(1:2)))//adjustl(lab1)
+        lab2=mtype(i)(1:2)
+        lab2(1:1)=uc(lab2(1:1))
+        write(nfil,fmt="(a5,3f15.9,' COSM 1      ',a2,6x,a2,f7.3)") &
+     &                 lab1,xyz(:,i)/angstrom,mtype(i),lab2,0.d0
+      enddo
+      deallocate(icnt)
+      write(nfil,'("end")')
+      write(nfil,'("end")')
+      RETURN
+      contains
+!       .......................................................................
+        FUNCTION LC(IN) RESULT(OUT)
+!       **  makes a string lowercase                                         **
+        CHARACTER(*) ,INTENT(IN) :: IN
+        CHARACTER(82)            :: OUT
+        INTEGER(4)               :: LENgth
+        INTEGER(4)               :: I
+        INTEGER(4)               :: ICH
+!       *******************************************************************
+        OUT=IN
+        LENgth=LEN_TRIM(IN)
+        DO I=1,LENgth
+          ICH=ICHAR(OUT(I:I))
+          IF(ICH.GE.65.AND.ICH.LE.90) THEN
+            OUT(I:I)=ACHAR(ICH-65+97)
+          END IF
+        ENDDO
+        RETURN
+        END FUNCTION LC
+!
+!       .......................................................................
+        FUNCTION uC(IN) RESULT(OUT)
+!       **  makes a string uppercase                                         **
+        CHARACTER(*),INTENT(IN) :: IN
+        CHARACTER(82)           :: OUT
+        INTEGER(4)              :: LENgth
+        INTEGER(4)              :: I
+        INTEGER(4)              :: ICH
+!       *******************************************************************
+        OUT=IN
+        LENgth=LEN_TRIM(IN)
+        DO I=1,LENgth
+          ICH=ICHAR(OUT(I:I))
+          IF(ICH.GE.97.AND.ICH.LE.122) THEN
+            OUT(I:I)=ACHAR(ICH+97+65)
+          END IF
+        ENDDO
+        RETURN
+        END FUNCTION uC
+      END
+!
+!     .............................................................................
+      subroutine cosmo_writeenergies(nfil,etot,de,ediel)
+      implicit none
+      INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
+      REAL(8)     ,INTENT(IN) :: ETOT          ! TOTAL ENERGY
+      REAL(8)     ,INTENT(IN) :: EDIEL         ! DIELECTRIC ENERGY
+      REAL(8)     ,INTENT(IN) :: DE            ! ENERGY CORRECTION
+!     *****************************************************************************
+      write(nfil,fmt='("# Correlated (C) cosmo calculation:")')
+      write(nfil,fmt='("# Total energy: E(SCF)-Ediel(SCF)+E(C)+Ediel(C)")')
+      write(nfil,fmt='("# OC corr.:     outlying charge correction using the")')
+      write(nfil,fmt='("#               correlated density")')
+      write(nfil,fmt='("# ediel:        Ediel(C) using the correlated density")')
+
+      write(nfil,fmt='("$cosmo_energy")')
+      write(nfil,fmt='("  Total energy [a.u.]            =   ", f17.10)')etot
+      write(nfil,fmt='("  Total energy + OC corr. [a.u.] =   ", f17.10)')etot+de
+      write(nfil,fmt='("  Total energy corrected [a.u.]  =   ", f17.10 &
+     &                ," Note: incorrect value contained for downward compatibility")')etot+0.5d0*de
+      write(nfil,fmt='("  Dielectric energy [a.u.]       =   ", f17.10)')ediel
+      write(nfil,fmt='("  Diel. energy + OC corr. [a.u.] =   ", f17.10)')ediel+de
+      return
+      end
+!
+!     .............................................................................
+      subroutine cosmo_WRITESEGMENT(NFIL,NPS,IATSP,COSURF,QCOSC,AR,PHIC)
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
+      INTEGER(4)  ,INTENT(IN) :: NPS           ! #(SURFACE CHARGES)
+      INTEGER(4)  ,INTENT(IN) :: IATSP(NPS)    ! ATOM TO WHICH A SEGMENT IS TIED
+      REAL(8)     ,INTENT(IN) :: QCOSC(NPS)    ! CORRECTED SCREENING CHARGES
+      REAL(8)     ,INTENT(IN) :: PHIC(NPS)     ! CORRECTED POTENTIAL ON THE SEQMENT
+      REAL(8)     ,INTENT(IN) :: AR(NPS)       ! SEGMENT AREA
+      REAL(8)     ,INTENT(IN) :: COSURF(3,NPS) ! POSITION OF SURFACE SEGMENT
+      REAL(8)      ,PARAMETER :: ANGSTROM = 1.D0/0.529177249D0 
+      INTEGER(4)              :: I,J
+!     *****************************************************************************
+      write(nfil,fmt='("$segment_information")')
+      write(nfil,fmt='("# n             - segment number")')
+      write(nfil,fmt='("# atom          - atom associated with segment n")')
+      write(nfil,fmt='("# position      - segment coordinates [a.u.]")')
+      write(nfil,fmt='("# charge        - segment charge (corrected)")')
+      write(nfil,fmt='("# area          - segment area [A**2]")')
+      write(nfil,fmt='("# potential     - solute potential on segment (A length scale)")')
+      write(nfil,fmt='("#")')
+      write(nfil,fmt='("#  n   atom",14x,"position (X, Y, Z)",19x &
+     &                ,"charge         area        charge/area     potential")')
+      write(nfil,fmt='("#")')
+      write(nfil,fmt='("#")')
+      do i=1,nps
+        write(nfil,'(i5,i5,7f15.9)') i,iatsp(i),(cosurf(j,i),j=1,3) &
+     &            ,qcosc(i),ar(i)/angstrom**2,qcosc(i)/(ar(i)/angstrom**2),phic(i)*angstrom
+      enddo
       RETURN
       END
