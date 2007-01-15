@@ -598,13 +598,12 @@ call trace$pass('in graphics$plot: plot wave functions')
       ALLOCATE(Z(NAT))
       ALLOCATE(Q(NAT))
       DO IAT=1,NAT
-       CALL TRACE$PASS('MARKE 3')
         CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
         CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
       ENDDO
-!
+
 !     =================================================================
 !     == ADD 1-C CONTRIBUTION (ONLY TASK1 OF THIS K-GROUP)           ==
 !     =================================================================
@@ -674,7 +673,7 @@ call trace$pass('in graphics$plot: plot wave functions')
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
 !     ================================================================
-                            CALL TRACE$PASS('PRINT')
+CALL TRACE$PASS('PRINT')
       PRINT*,'PRINTING OUT WAVE ',TITLE(1:50)
       IF(THISTASK.EQ.1) THEN
         CALL FILEHANDLER$SETFILE('WAVEPLOT',.FALSE.,TRIM(FILE))
