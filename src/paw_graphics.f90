@@ -167,7 +167,7 @@ END MODULE GRAPHICS_MODULE
 !     **  PLOT                                                        **
 !     ******************************************************************
       USE GRAPHICS_MODULE
-      implicit none
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(IN) :: VAL
 !     ******************************************************************
@@ -228,7 +228,7 @@ END MODULE GRAPHICS_MODULE
 !     **  PLOT                                                        **
 !     ******************************************************************
       USE GRAPHICS_MODULE
-      implicit none
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(*),INTENT(IN) :: VAL
 !     ******************************************************************
@@ -288,7 +288,7 @@ END MODULE GRAPHICS_MODULE
 !     **  PLOT                                                        **
 !     ******************************************************************
       USE GRAPHICS_MODULE
-      implicit none
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
       REAL(8)                 :: PI,Y0
@@ -347,7 +347,7 @@ END MODULE GRAPHICS_MODULE
 !     **  PLOT                                                        **
 !     ******************************************************************
       USE GRAPHICS_MODULE
-      implicit none
+      IMPLICIT NONE
       CHARACTER(512) ::  FILE
       CHARACTER(128) :: TITLE
       REAL(8)        :: DR
@@ -359,7 +359,7 @@ END MODULE GRAPHICS_MODULE
       CHARACTER(16)  :: TYPE
       REAL(8)        :: E,ELAST
       INTEGER(4)     :: I,IB,IKPT,ISPIN
-      INTEGER(4)     :: nb,nkpt,nspin
+      INTEGER(4)     :: NB,NKPT,NSPIN
       INTEGER(4),ALLOCATABLE :: IBMIN(:,:),IBMAX(:,:)
       REAL(8)   ,ALLOCATABLE :: EB(:,:,:) !(NB,NKPT,NSPIN) E-EXPECTATIONV.
       REAL(8)   ,ALLOCATABLE :: EIGVAL(:,:,:) !(NB,NKPT,NSPIN) E-EIGENVALUES
@@ -381,7 +381,7 @@ END MODULE GRAPHICS_MODULE
 !     ==================================================================
 !     == PLOT WAVE FUNCTIONS                                          ==
 !     ==================================================================
-call trace$pass('in graphics$plot: plot wave functions')
+CALL TRACE$PASS('IN GRAPHICS$PLOT: PLOT WAVE FUNCTIONS')
       DO I=1,NWAVE
         FILE=WAVEPLOT(I)%FILE
         TITLE=WAVEPLOT(I)%TITLE
@@ -475,7 +475,7 @@ call trace$pass('in graphics$plot: plot wave functions')
 !     ******************************************************************
 !     **  PLOT                                                        **
 !     ******************************************************************
-      use mpe_module
+      USE MPE_MODULE
       IMPLICIT NONE
       CHARACTER(512),INTENT(IN) :: FILE
       CHARACTER(128),INTENT(IN) :: TITLE
@@ -485,7 +485,7 @@ call trace$pass('in graphics$plot: plot wave functions')
       INTEGER(4)    ,INTENT(IN) :: ISPIN ! SPIN INDEX
       LOGICAL(4)    ,INTENT(IN) :: TIMAG  ! IMAGINARY OR REAL PART
       INTEGER(4)                :: NTASKS,THISTASK
-      INTEGER(4)                :: NTASKS_k,THISTASK_k
+      INTEGER(4)                :: NTASKS_K,THISTASK_K
       INTEGER(4)                :: NR1,NR1L,NR2,NR3
       INTEGER(4)                :: NNRL
       INTEGER(4)                :: NR1START
@@ -518,9 +518,9 @@ call trace$pass('in graphics$plot: plot wave functions')
       INTEGER(4)                :: NFIL
       INTEGER(4)                :: NR1B,NR2B,NR3B
       INTEGER(4)                :: GID    ! GRID ID
-      logical(4)                :: tkgroup
-      logical(4)                :: tsend,treceive
-      integer(4)                :: sendtask
+      LOGICAL(4)                :: TKGROUP
+      LOGICAL(4)                :: TSEND,TRECEIVE
+      INTEGER(4)                :: SENDTASK
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_WAVEPLOT')
 !
@@ -703,7 +703,7 @@ CALL TRACE$PASS('PRINT')
 !     ******************************************************************
 !     **  PLOT                                                        **
 !     ******************************************************************
-      use mpe_module
+      USE MPE_MODULE
       IMPLICIT NONE
       CHARACTER(512),INTENT(IN) :: FILE
       CHARACTER(128),INTENT(IN) :: TITLE
@@ -717,7 +717,7 @@ CALL TRACE$PASS('PRINT')
       INTEGER(4)    ,INTENT(IN) :: IBMIN(NKPT,NSPIN)
       INTEGER(4)    ,INTENT(IN) :: IBMAX(NKPT,NSPIN)
       INTEGER(4)                :: NTASKS,THISTASK
-      INTEGER(4)                :: NTASKS_k,THISTASK_k
+      INTEGER(4)                :: NTASKS_K,THISTASK_K
       INTEGER(4)                :: NR1,NR1L,NR2,NR3
       INTEGER(4)                :: NNRL
       INTEGER(4)                :: NR1START
@@ -750,14 +750,14 @@ CALL TRACE$PASS('PRINT')
       REAL(8)                   :: FAC,SPINFAC
       INTEGER(4)                :: NFIL
       REAL(8)      ,ALLOCATABLE :: AECORE(:)
-      INTEGER(4)                :: itask
+      INTEGER(4)                :: ITASK
       INTEGER(4)                :: NR1B,NR2B,NR3B
       INTEGER(4)                :: GID
-      integer(4)   ,allocatable :: iwork(:)
+      INTEGER(4)   ,ALLOCATABLE :: IWORK(:)
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_DENSITYPLOT')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-      CALL MPE$QUERY('k',NTASKS_k,THISTASK_k)
+      CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
 !
 !     =================================================================
 !     ==  GET GENERIC INFORMATION ABOUT NUMBER AND SIZE OF THE       ==
@@ -828,12 +828,12 @@ CALL TRACE$PASS('PRINT')
       CALL LIB$FFTADJUSTGRD(NR2B)
       CALL LIB$FFTADJUSTGRD(NR3B)
       ALLOCATE(WORK1(NR1,NR2,NR3))
-      CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,work1)
+      CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,WAVE,NR1*NR2*NR3,WORK1)
       DEALLOCATE(WAVE)
       ALLOCATE(WAVEBIG(NR1B,NR2B,NR3B))
-      IF(FACT.eq.1) THEN
-        wavebig=work1
-      else
+      IF(FACT.EQ.1) THEN
+        WAVEBIG=WORK1
+      ELSE
         CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,NR1B,NR2B,NR3B,WORK1,WAVEBIG)
       END IF
       DEALLOCATE(WORK1)
@@ -858,7 +858,7 @@ CALL TRACE$PASS('PRINT')
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
         CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
-      enddo
+      ENDDO
 !
       DO IAT=1,NAT
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
@@ -901,7 +901,7 @@ CALL TRACE$PASS('PRINT')
 !       ================================================================
 !       ==  ADD CORE CHARGE DENSITY                                   ==
 !       ================================================================
-        IF(thistask.eq.1.and.TCORE.AND.(.NOT.(TYPE.EQ.'SPIN'))) THEN
+        IF(THISTASK.EQ.1.AND.TCORE.AND.(.NOT.(TYPE.EQ.'SPIN'))) THEN
           ALLOCATE(AECORE(NR))
           CALL SETUP$AECORE(ISP,NR,AECORE)
           IF(TYPE.EQ.'UP'.OR.TYPE.EQ.'DOWN') AECORE(:)=0.5D0*AECORE(:)
@@ -918,7 +918,7 @@ CALL TRACE$PASS('PRINT')
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
 !     ================================================================
-CALL TRACE$PASS('graphics$densityplot: marke 6')
+CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 6')
       IF(THISTASK_K.NE.1) WAVEBIG=0.D0
       ALLOCATE(IWORK(NTASKS))
       IWORK=0
@@ -937,7 +937,7 @@ CALL TRACE$PASS('graphics$densityplot: marke 6')
           DEALLOCATE(WORK1)
         END IF
       ENDDO
-CALL TRACE$PASS('graphics$densityplot: marke 7')
+CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 7')
 !     
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
@@ -1014,7 +1014,7 @@ CALL TRACE$PASS('graphics$densityplot: marke 7')
       REAL(8)   ,INTENT(INOUT):: DENMAT(LMNXX,LMNXX)
       REAL(8)   ,ALLOCATABLE  :: PROJ(:) ! (LMNXX)  POINTER ($PROJ,PROJ)
       INTEGER(4)              :: LMN1,LMN2
-      logical(4)              :: tkgroup
+      LOGICAL(4)              :: TKGROUP
 !     ******************************************************************
       CALL WAVES$SETI4('IB',IB)
       CALL WAVES$SETI4('IKPT',IKPT)
@@ -1058,7 +1058,7 @@ CALL TRACE$PASS('graphics$densityplot: marke 7')
       REAL(8)   ,INTENT(INOUT):: WAVE(NNR) ! DENSITY
       REAL(8)   ,ALLOCATABLE  :: PSI(:)    ! (NNR)
       INTEGER(4)              :: IR
-      logical(4)              :: tkgroup
+      LOGICAL(4)              :: TKGROUP
 !     ******************************************************************
       CALL WAVES$SETI4('IB',IB)
       CALL WAVES$SETI4('IKPT',IKPT)
