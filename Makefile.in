@@ -362,7 +362,7 @@ ${BINDIR}/${ARCH}/f90pp_tmplts.x: ${F90PPDIR}/f90pp_tmplts.f90
 	${BINDIR}/f90pp -notemplates ${F90PPDIR}/f90pp_tmplts.f90 > \
             ${OBJDIR}/f90pp_tmplts_d.${FEXT} 
 	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
-	${LINK} -o ${BINDIR}/${ARCH}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o
+	${LINK} -o ${BINDIR}/${ARCH}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LLIBS}
 	${OPTRM} ${OBJDIR}/f90pp_tmplts_d.${FEXT}
 
 
@@ -380,7 +380,7 @@ ${BINDIR}/${ARCH}/parmfilewriter.x: ${F90PPDIR}/parmfilewriter.f90
 	${BINDIR}/f90pp -notemplates ${F90PPDIR}/parmfilewriter.f90 > \
             ${OBJDIR}/parmfilewriter_d.${FEXT} 
 	${COMPILE} -o ${OBJDIR}/parmfilewriter.o ${OBJDIR}/parmfilewriter_d.${FEXT}
-	${LINK} -o ${BINDIR}/${ARCH}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o
+	${LINK} -o ${BINDIR}/${ARCH}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o ${LLIBS}
 	${OPTRM} ${OBJDIR}/parmfilewriter_d.${FEXT}
 
 #
