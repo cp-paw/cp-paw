@@ -1564,7 +1564,7 @@ CONTAINS
       TYPE(LL_TYPE)   ,INTENT(IN) :: LL
       TYPE(LLIST_TYPE),POINTER    :: LIST
       INTEGER(4)      ,INTENT(IN) :: NFIL
-      INTEGER(4)                  :: I,LEVEL
+      INTEGER(4)                  :: LEVEL
 !     ******************************************************************
       LIST=>LL%PTR
       WRITE(NFIL,FMT='(72("="),T5," REPORT FOR LINKED LIST: ",A," ")') &
@@ -2221,7 +2221,6 @@ CONTAINS
       INTEGER(4)    ,INTENT(IN) :: NFIL
       TYPE(LL_TYPE) ,INTENT(IN) :: LIST_
       character(*)  ,intent(in) :: cid
-      INTEGER(4)                :: ntasks,thisTASK
       TYPE(LL_TYPE)             :: LIST
       TYPE(BUFF_TYPE)           :: BUFFER
       INTEGER(4)    ,PARAMETER  :: BUFFERSIZE=100000

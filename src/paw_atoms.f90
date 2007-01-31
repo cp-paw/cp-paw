@@ -1485,7 +1485,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       ALLOCATE(PSG2(NAT))    ;PSG2=0.D0
       ALLOCATE(PSG4(NAT))    ;PSG4=0.D0
 !      ALLOCATE(EFFEMASS(NAT));EFFEMASS=0.D0
-      ALLOCATE(Z(NAT))       ;Z=0.D0
+!     ALLOCATE(Z(NAT))       ;Z=0.D0
       ALLOCATE(ZV(NAT))      ;ZV=0.D0
       ALLOCATE(CHARGE(NAT))  ;CHARGE=0.D0
       RETURN
@@ -1546,7 +1546,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
         CALL ERROR$MSG('ATOM INDEX OUT OF RANGE')
         CALL ERROR$I4VAL('IAT_',IAT_)
         CALL ERROR$I4VAL('NAT',NAT)
-        CALL ERROR$STOP('ATOMLIST$GET')
+        CALL ERROR$STOP('ATOMLIST$GETr8a')
       END IF
 !     ==================================================================
 !     == R(0)                                                         ==
@@ -1629,13 +1629,15 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !     ==  ATOMIC NUMBER Z                                             ==
 !     ==================================================================
       ELSE IF(ID_.EQ.'Z') THEN
-        IF(IAT_.EQ.0) THEN
-          IF(LENG_.NE.NAT) GOTO 9000
-          VAL_=Z
-        ELSE 
-           CALL ERROR$MSG('GETR8A DOES NOT HANDLE SCALARS')
-           CALL ERROR$STOP('ATOMLIST$GETR8A')
-        END IF
+        CALL ERROR$MSG('id="z" has been disconnected')
+        CALL ERROR$STOP('ATOMLIST$GETR8A')
+!!$        IF(IAT_.EQ.0) THEN
+!!$          IF(LENG_.NE.NAT) GOTO 9000
+!!$          VAL_=Z
+!!$        ELSE 
+!!$           CALL ERROR$MSG('GETR8A DOES NOT HANDLE SCALARS')
+!!$           CALL ERROR$STOP('ATOMLIST$GETR8A')
+!!$        END IF
 !     ==================================================================
 !     ==  NUMBER OF VALENCE ELECTRONS                                  ==
 !     ==================================================================
@@ -1685,6 +1687,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       CHARACTER(*),INTENT(IN) :: ID_
       INTEGER(4)  ,INTENT(IN) :: IAT_
       REAL(8)     ,INTENT(OUT):: VAL_
+      integer(4)              :: isp
 !     ******************************************************************
       IF(IAT_.LE.0.OR.IAT_.GT.NAT) THEN
         CALL ERROR$MSG('ATOM INDEX OUT OF RANGE')
@@ -1699,9 +1702,13 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       ELSE IF(ID_.EQ.'PS<G4>') THEN
         VAL_=PSG4(IAT_)
       ELSE IF(ID_.EQ.'Z') THEN
-        VAL_=Z(IAT_)
+        CALL ATOMLIST$GETI4('ISPECIES',IAT_,ISP)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('AEZ',VAL_)
       ELSE IF(ID_.EQ.'ZVALENCE') THEN
-        VAL_=ZV(IAT_)
+        CALL ATOMLIST$GETI4('ISPECIES',IAT_,ISP)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('ZV',VAL_)
       ELSE IF(ID_.EQ.'Q') THEN
         VAL_=CHARGE(IAT_)
       ELSE 
@@ -1946,14 +1953,16 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !     ==================================================================
 !     ==  ATOMIC NUMBER Z                                             ==
 !     ==================================================================
-      ELSE IF(ID_.EQ.'Z') THEN
-        IF(IAT_.EQ.0) THEN
-          IF(LENG_.NE.NAT) GOTO 9000
-          Z(:)=VAL_(:)
-        ELSE 
-           CALL ERROR$MSG('SETR8A DOES NOT HANDLE SCALARS')
-           CALL ERROR$STOP('ATOMLIST$SETR8A')
-        END IF
+      ELSE IF(ID_.EQ.'Z') THEN 
+        CALL ERROR$MSG('if="z" has been disconnected')
+        CALL ERROR$STOP('ATOMLIST$SETR8A')
+!!$        IF(IAT_.EQ.0) THEN
+!!$          IF(LENG_.NE.NAT) GOTO 9000
+!!$          Z(:)=VAL_(:)
+!!$        ELSE 
+!!$           CALL ERROR$MSG('SETR8A DOES NOT HANDLE SCALARS')
+!!$           CALL ERROR$STOP('ATOMLIST$SETR8A')
+!!$        END IF
 !     ==================================================================
 !     ==  NUMBER OF VALENCE ELECTRONS                                  ==
 !     ==================================================================
@@ -1995,7 +2004,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
 !
 !     ..................................................................
       SUBROUTINE ATOMLIST$SETR8(ID_,IAT_,VAL_)
-!     ******************************************************************
+!     *****************************************************************
 !     **                                                              **
 !     ******************************************************************
       USE ATOMS_MODULE
@@ -2016,10 +2025,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
         PSG2(IAT_)=VAL_
       ELSE IF(ID_.EQ.'PS<G4>') THEN
         PSG4(IAT_)=VAL_
-      ELSE IF(ID_.EQ.'Z') THEN
-        Z(IAT_)=VAL_
-      ELSE IF(ID_.EQ.'ZVALENCE') THEN
-        ZV(IAT_)=VAL_
       ELSE IF(ID_.EQ.'Q') THEN
         CHARGE(IAT_)=VAL_
       ELSE 
@@ -2199,8 +2204,8 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
         VAL_=TRANSFER(PSG2(IAT_),VAL_,8)
       ELSE IF(ID_.EQ.'PS<G4>') THEN
         VAL_=TRANSFER(PSG4(IAT_),VAL_,8)
-      ELSE IF(ID_.EQ.'Z') THEN
-        VAL_=TRANSFER(Z(IAT_),VAL_,8)
+!!$      ELSE IF(ID_.EQ.'Z') THEN
+!!$        VAL_=TRANSFER(Z(IAT_),VAL_,8)
       ELSE IF(ID_.EQ.'ZVALENCE') THEN
         VAL_=TRANSFER(ZV(IAT_),VAL_,8)
       ELSE IF(ID_.EQ.'POINTCHARGE') THEN
@@ -2233,7 +2238,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       REAL(8)       :: XPSG2       
       REAL(8)       :: XPSG4       
       INTEGER(4)    :: XISPECIES     
-      REAL(8)       :: XZ            
       REAL(8)       :: XZV           
       REAL(8)       :: XCHARGE       
 !     ******************************************************************
@@ -2257,7 +2261,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
               XPSG2        =PSG2(IAT)  
               XPSG4        =PSG4(IAT)  
               XISPECIES    =ISPECIES(IAT)
-              XZ           =Z(IAT)       
               XZV          =ZV(IAT)      
               XCHARGE      =CHARGE(IAT)     
 !             =========
@@ -2270,7 +2273,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
               PSG2(IAT)        =PSG2(IAT1)     
               PSG4(IAT)        =PSG4(IAT1)     
               ISPECIES(IAT)    =ISPECIES(IAT1)   
-              Z(IAT)           =Z(IAT1)          
               ZV(IAT)          =ZV(IAT1)         
               CHARGE(IAT)      =CHARGE(IAT1)     
 !             =========
@@ -2283,7 +2285,6 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
               PSG2(IAT1)        =XPSG2
               PSG4(IAT1)        =XPSG4
               ISPECIES(IAT1)    =XISPECIES    
-              Z(IAT1)           =XZ           
               ZV(IAT1)          =XZV          
               CHARGE(IAT1)      =XCHARGE      
 !             =========

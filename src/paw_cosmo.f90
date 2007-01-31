@@ -1989,7 +1989,7 @@ END IF
       RETURN 
       END SUBROUTINE COSMO$INTERFACE
 !
-!     ........................................................................
+!     ..................................................................
       SUBROUTINE COSMO$PRINTOUT()
 !attention !!!!! The area is printed in angstrom **2!!!!
       USE COSMO_MODULE
@@ -2001,25 +2001,26 @@ END IF
       REAL(8)               :: RAT(3,nat)
       integer(4)            :: iz(nat)
       integer(4)            :: itiedto(nq)
-      REAL(8)               :: qpos(3,nat)
+      REAL(8)               :: qpos(3,nq)
       REAL(8)               :: segmentAREA(nq)
       REAL(8)               :: qi(nq)
       REAL(8)               :: vi(nq)
       REAL(8)               :: PI
       REAL(8)               :: facearea
-      INTEGER(4)            :: Iq,IAT,iq1,iq2
+      INTEGER(4)            :: Iq,IAT,iq1,iq2,isp
       integer(4)            :: nqcount
       REAL(8)               :: AEZ
       real(8)               :: ediel
       real(8)               :: etot
       real(8)               :: rsolv1
-!     ************************************************************************
+!     ******************************************************************
       IF (.NOT.TON) RETURN
       PI=4.D0*DATAN(1.D0)
+
 !      
-!     ==================================================================================
-!     == declare file to file handler                                                 ==
-!     ==================================================================================
+!     ==================================================================
+!     == declare file to file handler                                 ==
+!     ==================================================================
       ID='COSMO_OUT'
       CALL FILEHANDLER$SETFILE(ID,.TRUE.,'.COSMO_OUT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
@@ -2027,33 +2028,38 @@ END IF
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !      
-!     ==================================================================================
-!     == declare file to file handler                                                 ==
-!     ==================================================================================
+!     ==================================================================
+!     == declare file to file handler                                 ==
+!     ==================================================================
       NQCOUNT=0
       DO IAT=1,NAT
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT(:,IAT))
-        CALL ATOMLIST$GETR8('Z',IAT,AEZ)
+        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+        CALL SETUP$AEZ(ISP,AEZ)
         IZ(IAT)=NINT(AEZ)
         CALL PERIODICTABLE$GET(IZ(IAT),'SYMBOL',SYMBOL(IAT))
-        IF(SYMBOL(iat)(2:2).EQ.'_') SYMBOL(iat)(2:2)=' '
+        IF(SYMBOL(IAT)(2:2).EQ.'_') SYMBOL(IAT)(2:2)=' '
         FACEAREA=4.D0*PI*RSOLV(IAT)/REAL(NQAT(IAT),KIND=8)
         IQ1=IQFIRST(IAT)
         IQ2=IQ1-1+NQAT(IAT)
         DO IQ=IQ1,IQ2
-          IF(CUTOFFTHETA(Iq).LT.1.D-5) CYCLE
+          IF(CUTOFFTHETA(IQ).LT.1.D-5) CYCLE
           NQCOUNT=NQCOUNT+1
+          IF(NQCOUNT.GT.NQ) THEN
+            CALL ERROR$MSG('NQCOUNT OUT OF RANGE')
+            CALL ERROR$STOP('COSMO$PRINTOUT')
+          END IF
           ITIEDTO(NQCOUNT)=IAT
           SEGMENTAREA(NQCOUNT)=FACEAREA*CUTOFFTHETA(IQ)
           QPOS(:,NQCOUNT)=QRELPOS(:,IQ)+RAT(:,IAT)
           QI(NQCOUNT)=Q0(IQ)*CUTOFFTHETA(IQ)
-          vi(NQCOUNT)=0.d0
+          VI(NQCOUNT)=0.D0
         ENDDO
       ENDDO
 !
-!     ==================================================================================
-!     == WRITE INFORMATION TO FILE                                                    ==
-!     ==================================================================================
+!     ==================================================================
+!     == WRITE INFORMATION TO FILE                                    ==
+!     ==================================================================
       CALL FILEHANDLER$UNIT('COSMO_OUT',NFIL)
       CALL COSMO_WRITEOUT(NFIL,NAT,SYMBOL,IZ,RAT,RSOLV &
      &                    ,NQCOUNT,ITIEDTO(1:NQCOUNT),QI(1:NQCOUNT),vi(1:nqcount) &
@@ -2063,16 +2069,17 @@ END IF
       RETURN
       END
 !
-!     .........................................................................................
+!     ..................................................................
       subroutine cosmo_writeout(nfil,natoms,mtype,nuc,xyz,srad &
      &                    ,nps,iatsp,qcosc,phic,ar,cosurf &
      &                    ,rsolv,etot,ediel)
-!     **                                                                                **
-!     **   WRITE COSMO FILE                                                             **
-!     **                                                                                **
-!     **   The a-matrix describes the surface potentials as v(i)=sum_j A_{i,j} q(j)     **
-!     **                                                                                **
-!     ***************************************************************************
+!     **                                                              **
+!     **   WRITE COSMO FILE                                           **
+!     **                                                              **
+!     **   The a-matrix describes the surface potentials              **
+!     **   as v(i)=sum_j A_{i,j} q(j)                                 **
+!     **                                                              **
+!     ******************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
       INTEGER(4)  ,INTENT(IN) :: NATOMS        ! #(ATOMS)
@@ -2248,13 +2255,19 @@ END IF
       write(nfil,fmt='("PBC=OFF")')
       write(nfil,fmt='("coordinates from COSMO calculation")')
       write(nfil,fmt='("!DATE ")')
+print*,' 0',nuc
 
       allocate(icnt(maxval(nuc)))
       icnt(:)=0
       do i=1,natoms
+print*,' a',i
         icnt(nuc(i))=icnt(nuc(i))+1  ! atom counter for each element
         write(lab1,*)icnt(nuc(i))
+print*,mtype(i)
+print*,uc(mtype(i))
+print*,lab1
         lab1=trim(uc(mtype(i)(1:2)))//adjustl(lab1)
+print*,'--',lab1
         lab2=mtype(i)(1:2)
         lab2(1:1)=uc(lab2(1:1))
         write(nfil,fmt="(a5,3f15.9,' COSM 1      ',a2,6x,a2,f7.3)") &

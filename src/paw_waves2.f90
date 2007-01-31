@@ -30,17 +30,14 @@
       REAL(8)   ,ALLOCATABLE :: G2(:)        ! SQUARE OF REC. LATTICE VECTORS
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)    ! RECIPROCAL LATTICE VECTORS
       REAL(8)                :: OCCI,OCCJ
-      REAL(8)                :: FAC
       INTEGER(4)             :: NBX
       INTEGER(4)             :: NPRO
-      INTEGER(4)             :: IKPT,ISPIN,IPRO,IAT,ISP,M
-      INTEGER(4)             :: LN1,L1,M1,LMN1,IPRO1
-      INTEGER(4)             :: LN2,L2,M2,LMN2,IPRO2
-      INTEGER(4)             :: IBH,IB,IDIM,IG,I,J
+      INTEGER(4)             :: IKPT,ISPIN,IPRO,IAT,ISP
+      INTEGER(4)             :: IB,IDIM,IG,I,J
       INTEGER(4)             :: NGL,NBH,NB,LMNX,LNX,LMX,LN
       INTEGER(4)             :: NAT,IND
       REAL(8)   ,PARAMETER   :: DSMALL=1.D-12
-      REAL(8)                :: SVAR,DOVER1
+      REAL(8)                :: SVAR
       REAL(8)                :: RBAS(3,3)      ! UNIT CELL
       REAL(8)                :: GBAS(3,3)      ! RECIPROCAL UNIT CELL
       REAL(8)                :: CELLVOL        ! UNIT CELL VOLUME
@@ -242,14 +239,11 @@ END IF
 !         ==  1C-OVERLAP OF <PSI0|PSI0>, <OPSI|PSI0> AND <OPSI|OPSI>  ==
 !         ==============================================================
           ALLOCATE(MAT(NB,NB))
-          CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIM,NBH,NB,NPRO &
-         &                    ,THIS%PROJ,THIS%PROJ,MAT)
+          CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,THIS%PROJ,THIS%PROJ,MAT)
           ALLOCATE(OMAT(NB,NB))
-          CALL WAVES_1COVERLAP(.FALSE.,MAP,NDIM,NBH,NB,NPRO &
-       &                      ,OPROJ,THIS%PROJ,OMAT)
+          CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,OPROJ,THIS%PROJ,OMAT)
           ALLOCATE(OOMAT(NB,NB))
-          CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIM,NBH,NB,NPRO &
-       &                      ,OPROJ,OPROJ,OOMAT)
+          CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,OPROJ,OPROJ,OOMAT)
 !
 !         ==============================================================
 !         ==  NOW ADD OVERLAP OF PSEUDO WAVE FUNCTIONS                ==
@@ -410,7 +404,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO,THIS%PSIM,OPROJ)
             CALL MPE$COMBINE('K','+',OPROJ)
             ALLOCATE(AUXMAT(NB,NB))
-            CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIM,NBH,NB,NPRO,OPROJ,OPROJ,AUXMAT)
+            CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,OPROJ,OPROJ,AUXMAT)
             DEALLOCATE(OPROJ)
             CSUM=(0.D0,0.D0)
             DO I=1,NB
@@ -546,33 +540,21 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
        COMPLEX(8),INTENT(IN)   :: LAMBDA(NB,NB)
        LOGICAL(4),PARAMETER    :: TESSL=.TRUE.
        LOGICAL(4)              :: TINV
-       INTEGER(4)              :: IBH1,IBH2,I,IDIM,IBH
+       INTEGER(4)              :: IBH1,IBH2,I,IDIM
        INTEGER(4)              :: IB1A,IB1B,IB2A,IB2B
        COMPLEX(8),ALLOCATABLE  :: LAMBDA1(:,:)
        COMPLEX(8),ALLOCATABLE  :: LAMBDA2(:,:)
        COMPLEX(8),ALLOCATABLE  :: TPSI(:)
        COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
-       COMPLEX(8)              :: CSVAR,CSVAR1,CSVAR2
+       COMPLEX(8)              :: CSVAR1,CSVAR2
        INTEGER(4)              :: NGLNDIM
 !      *****************************************************************
                                CALL TIMING$CLOCKON('WAVES_ADDOPSI')
        TINV=NBH.NE.NB
        NGLNDIM=NGL*NDIM
        IF(.NOT.TINV) THEN
+!        == psibar=psibar+opsi*lambda =====================================
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA,PSIBAR)
-!        IF(TESSL) THEN
-!          CALL ZGEMM('N','N',NGLNDIM,NBH,NBH,(1.D0,0.D0),OPSI,NGLNDIM &
-!                     ,LAMBDA,NBH,(1.D0,0.D0),PSIBAR,NGLNDIM)
-!        ELSE
-!          DO IBH1=1,NBH
-!            DO IBH2=1,NBH
-!              CSVAR=LAMBDA(IBH2,IBH1)
-!              DO I=1,NGLNDIM
-!                PSIBAR(I,IBH1)=PSIBAR(I,IBH1)+OPSI(I,IBH2)*CSVAR
-!              ENDDO
-!            ENDDO
-!          ENDDO
-!        ENDIF
        ELSE
          ALLOCATE(LAMBDA1(NBH,NBH))
          ALLOCATE(LAMBDA2(NBH,NBH))
@@ -590,19 +572,6 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
          ENDDO
 !        == ADD O|PSI_+>LAMBDA1 =======================================
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA1,PSIBAR)
-!        IF(TESSL) THEN
-!          CALL ZGEMM('N','N',NGLNDIM,NBH,NBH,(1.D0,0.D0),OPSI,NGLNDIM &
-!                     ,LAMBDA1,NBH,(1.D0,0.D0),PSIBAR,NGLNDIM)
-!        ELSE 
-!          DO IBH1=1,NBH
-!            DO IBH2=1,NBH
-!              CSVAR=LAMBDA1(IBH2,IBH1)
-!              DO I=1,NGLNDIM
-!                PSIBAR(I,IBH1)=PSIBAR(I,IBH1)+OPSI(I,IBH2)*CSVAR
-!              ENDDO
-!            ENDDO
-!          ENDDO
-!        END IF
          DEALLOCATE(LAMBDA1)
 !        == INVERT OPSI ================================================
          ALLOCATE(TPSI(NGLNDIM))
@@ -618,19 +587,6 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !
 !        == ADD O|PSI_+>LAMBDA1 =======================================
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA2,PSIBAR)
-!        IF(TESSL) THEN
-!          CALL ZGEMM('N','N',NGLNDIM,NBH,NBH,(1.D0,0.D0),OPSI,NGLNDIM &
-!                     ,LAMBDA2,NBH,(1.D0,0.D0),PSIBAR,NGLNDIM)
-!        ELSE 
-!          DO IBH1=1,NBH
-!            DO IBH2=1,NBH
-!              CSVAR=LAMBDA2(IBH2,IBH1)
-!              DO I=1,NGLNDIM
-!                PSIBAR(I,IBH1)=PSIBAR(I,IBH1)+OPSI(I,IBH2)*CSVAR
-!              ENDDO
-!            ENDDO
-!          ENDDO
-!        END IF
          DEALLOCATE(LAMBDA2)
        END IF
                                CALL TIMING$CLOCKOFF('WAVES_ADDOPSI')
@@ -656,11 +612,10 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
        COMPLEX(8),INTENT(IN)   :: LAMBDA(NB,NB)
        LOGICAL(4),PARAMETER    :: TESSL=.TRUE.
        LOGICAL(4)              :: TINV
-       INTEGER(4)              :: IBH1,IBH2,I,IDIM,IBH
+       INTEGER(4)              :: IBH1,IBH2,IDIM
        INTEGER(4)              :: IB1A,IB1B,IB2A,IB2B
        COMPLEX(8),ALLOCATABLE  :: LAMBDA1(:,:)
        COMPLEX(8),ALLOCATABLE  :: LAMBDA2(:,:)
-       COMPLEX(8),ALLOCATABLE  :: TPSI(:)
        COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
        COMPLEX(8)              :: CSVAR,CSVAR1,CSVAR2
        INTEGER(4)              :: IPRO
@@ -728,10 +683,8 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
        COMPLEX(8),INTENT(IN) :: PSI1(NGL,NDIM,NBH)
        COMPLEX(8),INTENT(IN) :: PSI2(NGL,NDIM,NBH)
        COMPLEX(8),INTENT(OUT):: MAT(NB,NB)
-       INTEGER(4)            :: IBH1,IBH2,IB1,IB2,IDIM,IG
+       INTEGER(4)            :: IBH1,IBH2
        INTEGER(4)            :: IB1A,IB1B,IB2A,IB2B,I,J
-       COMPLEX(8)            :: CSVARPP,CSVARPM,CSVARP,CSVARM
-       COMPLEX(8)            :: CSVAR
        COMPLEX(8),ALLOCATABLE:: TMAT(:,:)
        REAL(8)               :: RE,IM
        REAL(8)               :: MAT2(2,2)
@@ -811,7 +764,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
        END
 !
 !     ..................................................................
-      SUBROUTINE WAVES_1COVERLAP(TID,MAP,NDIM,NBH,NB,NPRO,PROJ1,PROJ2,MAT)
+      SUBROUTINE WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,PROJ1,PROJ2,MAT)
 !     ******************************************************************
 !     **                                                              **
 !     **  CALCULATES THE 1C CONTRIBUTION TO THE OVERLAP MATRIX        **
@@ -821,7 +774,6 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
       USE MPE_MODULE
       USE WAVES_MODULE, ONLY: MAP_TYPE
       IMPLICIT NONE
-      LOGICAL(4)  ,INTENT(IN)   :: TID
       TYPE(MAP_TYPE),INTENT(IN) :: MAP
       INTEGER(4)  ,INTENT(IN)   :: NDIM
       INTEGER(4)  ,INTENT(IN)   :: NBH
@@ -833,9 +785,9 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
       REAL(8)     ,ALLOCATABLE  :: DOVER(:,:)
       INTEGER(4)                :: NTASKS,THISTASK
       INTEGER(4)                :: IAT,ISP
-      INTEGER(4)                :: LMN1,LN1,L1
-      INTEGER(4)                :: LMN2,LN2,L2
-      INTEGER(4)                :: IB1,IB2,IPRO,IPRO1,IPRO2,M
+      INTEGER(4)                :: LN1,L1
+      INTEGER(4)                :: LN2,L2
+      INTEGER(4)                :: IPRO,IPRO1,IPRO2,M
       INTEGER(4)                :: IBH1,IBH2,IDIM,LNX
       INTEGER(4)                :: IB1A,IB1B,IB2A,IB2B,I,J
       COMPLEX(8)                :: CSVAR,CSVAR1,CSVAR2
@@ -950,8 +902,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
        COMPLEX(8)            :: ALPHA(NB,NB)   ! (I>J)=0
        COMPLEX(8)            :: WORK(NB,NB)    
        COMPLEX(8)            :: Z(NB)
-       INTEGER(4)            :: I,J,K,L,N,M
-       INTEGER(4)            :: N0
+       INTEGER(4)            :: I,J,K,L,N
        COMPLEX(8)            :: CSVAR
        REAL(8)               :: SVAR,SVAR1,SVAR2
        REAL(8)               :: MAXDEV
@@ -987,11 +938,12 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !        == NORMALIZE PHI(N)                                          ==
 !        == PHI(N)=PHI(N)+CHI(N)*Z(N)                                 ==
 !        ===============================================================
-!                            CALL TRACE$PASS('NORMALIZE')
-         SVAR=CONJG(B(N,N))*B(N,N)-A(N,N)*C(N,N)-AIMAG(B(N,N))**2
+!changed this to make it simpler PB 070127
+         SVAR=REAL(B(N,N))**2-A(N,N)*C(N,N)
          SVAR1=-REAL(B(N,N),KIND=8)
          IF(SVAR.GE.0.D0) THEN
            SVAR2=SQRT(SVAR)
+!          == choose the sign of the root such result is small
            IF(SVAR1*SVAR2.GE.0.D0) THEN
              Z(N)=SVAR1-SVAR2
            ELSE
@@ -1481,7 +1433,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
 !     **                                                              **
 !     **  IMPOSES THE ORTHOGONALITY CONSTRAINT ONTO THE ELECTRONS     **
 !     **                                                              **
-!     **  NEW VERSION WITH DIAGONALIZATION FOR CHIPSI                    **
+!     **  NEW VERSION WITH DIAGONALIZATION FOR CHIPSI                 **
 !     **                                                              **
 !     **  THE METHOD IS DESCRIBED IN :                                **
 !     **    R.CAR AND M.PARRINELLO, IN "SIMPLE MOLECULAR SYSTEMS      **
@@ -1507,9 +1459,8 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
       COMPLEX(8),INTENT(IN)    :: CHICHI(NB,NB)
       COMPLEX(8),ALLOCATABLE   :: GAMN(:,:)  
       REAL(8)                  :: EIG(NB)
-      INTEGER(4)               :: IND,ITER,I,J,K ! RUNNING VARIABLES
-      INTEGER(4)               :: IMAX,I0,J0   ! AUXILARY VARIABLES
-      REAL(8)                  :: DIGAM,SVAR,FI,FJ,EIGI ! AUXILARY VARIABLES
+      INTEGER(4)               :: ITER,I,J,K ! RUNNING VARIABLES
+      REAL(8)                  :: DIGAM,SVAR,EIGI ! AUXILARY VARIABLES
       COMPLEX(8)               :: HAUX(NB,NB)    
       COMPLEX(8)               :: U(NB,NB)       
       LOGICAL(4)               :: TCONVERGED
@@ -1558,13 +1509,10 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
         IF(TESSL) THEN
 !         __GAMN(I,J) = CHICHI(I,K)*LAMBDA(K,J)___________________________
           CALL LIB$MATMULC8(NB,NB,NB,CHICHI,LAMBDA,HAUX)
-!CALL ZGEMUL(CHICHI,NB,'N',LAMBDA,NB,'N',HAUX,NB,NB,NB,NB)
 !         __HAUX(I,J) = HAUX(I,J)+2*CHIPSI(I,J)___________________________
           HAUX=HAUX+2.D0*CHIPSI
-!CALL ZAXPY(NB*NB,(2.D0,0.D0),CHIPSI,1,HAUX,1)
 !         __GAMN(I,J) = LAMBDA(K,I)*HAUX(K,J)_____________________________
           CALL LIB$SCALARPRODUCTC8(.FALSE.,NB,NB,LAMBDA,NB,HAUX,GAMN)
-!CALL ZGEMUL(LAMBDA,NB,'C',HAUX,NB,'N',GAMN,NB,NB,NB,NB)
 !         __HAUX(I,J) = HAUX(I,J)+2*CHIPSI(I,J)___________________________
           GAMN(:,:)=GAMN(:,:)+PSIPSI(:,:)
 !         __GAMN(I,J) = GAMN(I,J)-1_______________________________________
@@ -1623,10 +1571,8 @@ PRINT*,'ITER ',ITER,DIGAM
         IF(TESSL) THEN
 !         ----  HAUX(I,L)=U(K,I)*H0(K,L)
           CALL LIB$SCALARPRODUCTC8(.FALSE.,NB,NB,U,NB,GAMN,HAUX)
-!CALL ZGEMUL(U,NB,'C',GAMN,NB,'N',HAUX,NB,NB,NB,NB)
 !         ----  GAMN(I,J)=HAUX(I,L)*U(L,I)
           CALL LIB$MATMULC8(NB,NB,NB,HAUX,U,GAMN)
-!CALL ZGEMUL(HAUX,NB,'N',U,NB,'N',GAMN,NB,NB,NB,NB)
 !
 !         ==  MULTIPLY WITH 1/(EIG(I)+EIG(J))
           DO I=1,NB
@@ -1639,10 +1585,8 @@ PRINT*,'ITER ',ITER,DIGAM
 !         == TRANSFORM OVERLAP MATRIX GAMN BACK
 !         ----  HAUX(I,L)=U(K,I)*H0(K,L)
           CALL LIB$MATMULC8(NB,NB,NB,U,GAMN,HAUX)
-!CALL ZGEMUL(U,NB,'N',GAMN,NB,'N',HAUX,NB,NB,NB,NB)
 !         ----  GAMN(I,J)=HAUX(I,L)*U(L,I)
           CALL LIB$DYADSUMC8(NB,NB,NB,HAUX,U,GAMN)
-!CALL ZGEMUL(HAUX,NB,'N',U,NB,'C',GAMN,NB,NB,NB,NB)
         ELSE
           DO I=1,NB
             DO J=1,NB
@@ -1707,35 +1651,6 @@ PRINT*,'ITER ',ITER,DIGAM
 !DO I=1,NB
 !WRITE(*,FMT='("L",I2,20E10.3)')I,GAMN(I,:)
 !ENDDO
-!
-!       ================================================================
-!       ==  ALTERNATIVE                                               ==
-!       ================================================================
-!       DO I=1,NB
-!         FI=F(I)
-!         DO J=I+1,NB
-!           FJ=F(J)
-!           IF(FI+FJ.GT.1.D-6) THEN
-!             FI=1.D0
-!             FJ=0.D0
-!             LAMBDA(J,I)=0.D0
-!           ELSE
-!             IF(FI.LE.FJ) THEN
-!               LAMBDA(I,J)=LAMBDA(J,I)*FI/FJ
-!             ELSE IF(FI.GT.FJ) THEN
-!               LAMBDA(J,I)=LAMBDA(I,J)*FJ/FI
-!             END IF
-!           ENDIF
-!           SVAR=1.D0/(FI*EIG(I)+FJ*EIG(J))
-!           LAMBDA(I,J)=LAMBDA(I,J)-SVAR*GAMN(I,J)*FI
-!           LAMBDA(J,I)=LAMBDA(J,I)-SVAR*GAMN(J,I)*FJ
-!         ENDDO
-!       ENDDO
-!
-!       DO I=1,NB
-!         LAMBDA(I,I)=LAMBDA(I,I)-GAMN(I,I)/(2.D0*EIG(I))
-!       ENDDO
-!
       ENDDO
       CALL ERROR$MSG('LOOP FOR ORTHOGONALIZATION IS NOT CONVERGED')
       CALL ERROR$STOP('WAVES_ORTHO_X_C')
@@ -1774,9 +1689,9 @@ PRINT*,'ITER ',ITER,DIGAM
       REAL(8)   ,INTENT(IN)    :: CHICHI(NB,NB)
       REAL(8)   ,ALLOCATABLE   :: GAMN(:,:)  
       REAL(8)                  :: EIG(NB)
-      INTEGER(4)               :: IND,ITER,I,J ! RUNNING VARIABLES
-      INTEGER(4)               :: IMAX,I0,J0   ! AUXILARY VARIABLES
-      REAL(8)                  :: DIGAM,SVAR,FI,FJ,EIGI ! AUXILARY VARIABLES
+      INTEGER(4)               :: i0,j0,imax
+      INTEGER(4)               :: ITER,I,J ! RUNNING VARIABLES
+      REAL(8)                  :: DIGAM,SVAR,EIGI ! AUXILARY VARIABLES
       REAL(8)                  :: HAUX(NB,NB)    
       REAL(8)                  :: U(NB,NB)       
       REAL(8)                  :: OCCI,OCCJ
@@ -1901,44 +1816,7 @@ PRINT*,'ITER ',ITER,DIGAM
             END IF
           ENDDO
         ENDDO
-!
-!       ================================================================
-!       ==  ALTERNATIVE                                               ==
-!       ================================================================
-!       DO I=1,NB
-!         FI=F(I)
-!         DO J=I+1,NB
-!           FJ=F(J)
-!           IF(FI+FJ.GT.1.D-6) THEN
-!             FI=1.D0
-!             FJ=0.D0
-!             LAMBDA(J,I)=0.D0
-!           ELSE
-!             IF(FI.LE.FJ) THEN
-!               LAMBDA(I,J)=LAMBDA(J,I)*FI/FJ
-!             ELSE IF(FI.GT.FJ) THEN
-!               LAMBDA(J,I)=LAMBDA(I,J)*FJ/FI
-!             END IF
-!           ENDIF
-!           SVAR=1.D0/(FI*EIG(I)+FJ*EIG(J))
-!           LAMBDA(I,J)=LAMBDA(I,J)-SVAR*GAMN(I,J)*FI
-!           LAMBDA(J,I)=LAMBDA(J,I)-SVAR*GAMN(J,I)*FJ
-!         ENDDO
-!       ENDDO
-!
-!       DO I=1,NB
-!         LAMBDA(I,I)=LAMBDA(I,I)-GAMN(I,I)/(2.D0*EIG(I))
-!       ENDDO
-!
       ENDDO
-!      PRINT*,'EIG ',EIG
-!      PRINT*,'OCC ',OCC
-!      DO I=1,NB
-!        DO J=1,NB
-!          WRITE(*,FMT='(2I3,7F10.5)')I,J,LAMBDA(I,J),U(I,J),PSIPSI(I,J) &
-!    &                               ,CHIPSI(I,J),CHICHI(I,J)
-!        ENDDO
-!      ENDDO
       CALL ERROR$MSG('LOOP FOR ORTHOGONALIZATION IS NOT CONVERGED')
       CALL ERROR$STOP('WAVES_ORTHO_X')
       
@@ -1969,9 +1847,8 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4)      ,INTENT(IN) :: NB
       COMPLEX(8)      ,INTENT(INOUT):: PSI(NGL,NDIM,NBH)
       INTEGER(4)                  :: NPRO
-      INTEGER(4)                  :: IDIM,IG,I,J
+      INTEGER(4)                  :: I,J
       INTEGER(4)                  :: IBH1,IBH2,IB1A,IB1B,IB2A,IB2B
-      COMPLEX(8)                  :: CSVAR
       COMPLEX(8)      ,ALLOCATABLE:: X(:,:)
       COMPLEX(8)      ,ALLOCATABLE:: PROJ(:,:,:)
       COMPLEX(8)      ,ALLOCATABLE:: OVERLAP(:,:)
@@ -1979,11 +1856,10 @@ PRINT*,'ITER ',ITER,DIGAM
       COMPLEX(8)      ,ALLOCATABLE:: X1(:,:)
       COMPLEX(8)      ,ALLOCATABLE:: X2(:,:)
       COMPLEX(8)      ,ALLOCATABLE:: PSIINV(:,:,:)
-      COMPLEX(8)      ,ALLOCATABLE:: CWORK(:,:,:)
       COMPLEX(8)                  :: CSVAR1,CSVAR2
       COMPLEX(8)      ,PARAMETER  :: CI=(0.D0,1.D0)
       LOGICAL(4)                  :: TINV
-      REAL(8)                     :: NORM(NB),SVAR
+      REAL(8)                     :: NORM(NB)
       COMPLEX(8)                  :: XTWOBYTWO(2,2)
       LOGICAL(4)      ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)      ,ALLOCATABLE:: SMAP(:)
@@ -2005,7 +1881,7 @@ PRINT*,'ITER ',ITER,DIGAM
       ALLOCATE(OVERLAP(NB,NB))
       ALLOCATE(AUXMAT(NB,NB))
       CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,PSI,PSI,OVERLAP)
-      CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIM,NBH,NB,NPRO,PROJ,PROJ,AUXMAT)
+      CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,PROJ,PROJ,AUXMAT)
       DO J=1,NB
         DO I=1,NB
           OVERLAP(I,J)=OVERLAP(I,J)+AUXMAT(I,J)
@@ -2055,36 +1931,18 @@ PRINT*,'ITER ',ITER,DIGAM
         DEALLOCATE(X)
         ALLOCATE(PSIINV(NGL,NDIM,NBH))
         PSIINV=PSI
+!       == psi_i=psi_i+psi_j*x1_ji+psiinv_j*x2_ji
         CALL PLANEWAVE$ADDPRODUCT(' ',NGL,NDIM,NBH,PSI,NBH,PSIINV,X1)
         CALL PLANEWAVE$ADDPRODUCT('-',NGL,NDIM,NBH,PSI,NBH,PSIINV,X2)
         DEALLOCATE(PSIINV)
-!        DO I=NBH,1,-1
-!          DO J=1,I       !WORKS ONLY FOR TRIANGULAR X
-!            DO IDIM=1,NDIM
-!              DO IG=1,NGL
-!                PSI(IG,IDIM,I)=PSI(IG,IDIM,I) &
-!     &                        +PSI(IG,IDIM,J)   *X1(J,I) &
-!     &                        +PSIINV(IG,IDIM,J)*X2(J,I)
-!              ENDDO
-!            ENDDO
-!          ENDDO
-!        ENDDO         
         DEALLOCATE(X1)
         DEALLOCATE(X2)
       ELSE
         ALLOCATE(PSIINV(NGL,NDIM,NB))
         PSIINV=PSI
+!       == psi_i=psi_i+psi_j*x1_ji
         CALL PLANEWAVE$ADDPRODUCT(' ',NGL,NDIM,NB,PSI,NB,PSIINV,X)
         DEALLOCATE(PSIINV)
-!        DO I=NB,1,-1
-!          DO J=1,I
-!            DO IDIM=1,NDIM
-!              DO IG=1,NGL
-!                PSI(IG,IDIM,I)=PSI(IG,IDIM,I)+PSI(IG,IDIM,J)*X(J,I)
-!              ENDDO
-!            ENDDO
-!          ENDDO
-!       ENDDO         
         DEALLOCATE(X)
       ENDIF
 ! 
@@ -2096,7 +1954,7 @@ PRINT*,'ITER ',ITER,DIGAM
         CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,PSI,PROJ)
         CALL MPE$COMBINE('K','+',PROJ)
         ALLOCATE(AUXMAT(NB,NB))
-        CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIM,NBH,NB,NPRO,PROJ,PROJ,AUXMAT)
+        CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,PROJ,PROJ,AUXMAT)
         DEALLOCATE(PROJ)
         ALLOCATE(OVERLAP(NB,NB))
         CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,PSI,PSI,OVERLAP)
@@ -2262,7 +2120,7 @@ PRINT*,'ITER ',ITER,DIGAM
       REAL(8)   ,INTENT(IN)    :: G2(NG)          ! G**2
       COMPLEX(8),INTENT(INOUT) :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
       INTEGER(4)               :: IB,IG,IDIM
-      REAL(8)                  :: PI,GC,FAC
+      REAL(8)                  :: PI,FAC
       REAL(8)   ,PARAMETER     :: GC2=10.D0
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: REC,RIM
@@ -2305,7 +2163,7 @@ PRINT*,'ITER ',ITER,DIGAM
       REAL(8)   ,INTENT(IN)    :: G2(NG)          ! G**2
       COMPLEX(8),INTENT(OUT)   :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
       INTEGER(4)               :: IB,IG,IDIM
-      REAL(8)                  :: PI,GC,FAC
+      REAL(8)                  :: PI,FAC
       REAL(8)   ,PARAMETER     :: GC2=10.D0
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: REC,RIM
@@ -2352,8 +2210,6 @@ PRINT*,'ITER ',ITER,DIGAM
       REAL(8)   ,PARAMETER  :: MBYTE=2.D0**20
       INTEGER(4)            :: IKPT
       REAL(8)               :: RY
-      REAL(8)               :: SVAR
-      REAL(8)               :: MEMORY
       INTEGER(4)            :: NG
       INTEGER(4)            :: NTASKS,THISTASK
       INTEGER(4)            :: IKPTL
@@ -2434,7 +2290,6 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4),ALLOCATABLE :: IZ(:)
       INTEGER(4)             :: NAT,NSP
       INTEGER(4)             :: NR
-      COMPLEX(8)             :: CSVAR
       INTEGER(4)             :: NB,NBH
       REAL(8)   ,ALLOCATABLE :: XK(:,:)
       COMPLEX(8),ALLOCATABLE :: VEC(:,:,:)      
@@ -2445,14 +2300,12 @@ PRINT*,'ITER ',ITER,DIGAM
       INTEGER(4),ALLOCATABLE :: LOX(:)
       LOGICAL(4)             :: TINV
       REAL(8)                :: RBAS(3,3)
-      INTEGER(4)             :: ISP,IR
+      INTEGER(4)             :: ISP
       INTEGER(4)             :: NTASKS,THISTASK
       INTEGER(4)             :: IB1,IB2,IBH,LN1,LN2,IDIM,IKPT,ISPIN,IPRO
       INTEGER(4)             :: IKPTG
-      INTEGER(4)             :: MSGID
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:)
       CHARACTER(16),ALLOCATABLE :: ATOMID(:)
-      REAL(8)                :: SVAR      
       CHARACTER(32)          :: FLAG='011004'
       INTEGER(4)             :: NBX
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
@@ -2795,8 +2648,6 @@ PRINT*,'ITER ',ITER,DIGAM
            =SEPARATOR_TYPE(0,'WAVES','NONE','AUG1996','NONE')
       TYPE (SEPARATOR_TYPE)            :: SEPARATOR
       INTEGER(4)                       :: THISTASK,NTASKS
-      INTEGER(4)                       :: IKPT,ISPIN
-      INTEGER(4)                       :: NB,NBH
 !     ******************************************************************
               CALL TRACE$PUSH('WAVES$WRITE')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -2834,13 +2685,9 @@ PRINT*,'ITER ',ITER,DIGAM
       TYPE (SEPARATOR_TYPE),PARAMETER  :: SEP_WAVES &
            =SEPARATOR_TYPE(0,'WAVES','NONE','AUG1996','NONE')
       TYPE (SEPARATOR_TYPE)            :: SEPARATOR
-      LOGICAL(4)                       :: TREAD
       REAL(8)              ,ALLOCATABLE:: EIG(:,:,:)
       INTEGER(4)                       :: IKPT,ISPIN,IB
-      INTEGER(4)                       :: NKPT1,NSPIN1,NB1,NBX
-      INTEGER(4)                       :: NB
-      COMPLEX(8)           ,ALLOCATABLE:: TMP(:,:)
-      REAL(8)              ,ALLOCATABLE:: TMPR8(:,:)
+      INTEGER(4)                       :: NBX
       INTEGER(4)                       :: THISTASK,NTASKS
 !     ******************************************************************
                                   CALL TRACE$PUSH('WAVES$READ')
@@ -2900,14 +2747,11 @@ PRINT*,'ITER ',ITER,DIGAM
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)              :: NTASKS,THISTASK
       INTEGER(4)              :: IOS
-      INTEGER(4)              :: IKPT,IKPTL,IKPTG,ISPIN,IB,IDIM,IWAVE
-      INTEGER(4)              :: LEN
-      INTEGER(4)              :: NG1,NGG,NGL,NBH,NB
+      INTEGER(4)              :: IKPT,IKPTG,ISPIN,IB,IDIM,IWAVE
+      INTEGER(4)              :: NGG,NGL,NBH,NB
       LOGICAL(4)              :: TSUPER
       CHARACTER(64)           :: IOSTATMSG
       REAL(8)                 :: XK(3)
-      REAL(8)     ,ALLOCATABLE:: GVECL(:,:)
-      REAL(8)     ,ALLOCATABLE:: GVECG(:,:)
       REAL(8)                 :: GBAS(3,3)
       INTEGER(4)              :: NREC1,ISVAR
       CHARACTER(8)            :: KEY
@@ -3111,10 +2955,8 @@ PRINT*,'ITER ',ITER,DIGAM
       COMPLEX(8)  ,ALLOCATABLE:: PSIG(:,:)
       COMPLEX(8)  ,ALLOCATABLE:: PSITMP(:,:)
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
-      INTEGER(4)              :: ISVAR1
       INTEGER(4)              :: IOS
       CHARACTER(8)            :: KEY
-      LOGICAL(4)              :: TCYCLE
       LOGICAL(4)              :: GBASFIX
       INTEGER(4)              :: IFORMAT
       INTEGER(4) ,ALLOCATABLE :: IGVECG_(:,:)
@@ -3642,7 +3484,7 @@ END IF
       INTEGER(4)  ,INTENT(IN)   :: IKPTG
       INTEGER(4)  ,INTENT(INOUT):: NREC
       INTEGER(4)                :: NTASKS,THISTASK
-      INTEGER(4)                :: ISPIN,I,IKPTL,IKPT
+      INTEGER(4)                :: ISPIN,IKPTL,IKPT
       INTEGER(4)                :: NB
       CHARACTER(8)              :: KEY
       COMPLEX(8)  ,ALLOCATABLE  :: LAMBDA(:,:)
@@ -3980,7 +3822,7 @@ END IF
       REAL(8)   ,INTENT(IN) :: GVECB(3,NGB)
       INTEGER(4),INTENT(OUT):: MAP(NGB)
       INTEGER(4)            :: IG,I
-      REAL(8)   ,ALLOCATABLE:: MAP3D(:,:,:)
+      integer(4),ALLOCATABLE:: MAP3D(:,:,:)
       REAL(8)               :: GBASIN(3,3)
       INTEGER(4)            :: IVEC1(3),IVECA(3,NGA)
       REAL(8)               :: KA(3)
@@ -4493,7 +4335,7 @@ LOGICAL(4):: TCHK
         NBD=2*NB
         NDIMHALF=1
         ALLOCATE(AUXMAT(NBD,NBD))
-        CALL WAVES_1COVERLAP(.TRUE.,MAP,NDIMHALF,NBD,NBD,MAP%NPRO,THIS%PROJ,THIS%PROJ,AUXMAT)
+        CALL WAVES_1COVERLAP(MAP,NDIMHALF,NBD,NBD,MAP%NPRO,THIS%PROJ,THIS%PROJ,AUXMAT)
         CALL WAVES_OVERLAP(.TRUE.,NGL,NDIMHALF,NBD,NBD,THIS%PSI0,THIS%PSI0,QMAT)
         DO J=1,NBD
           DO I=1,NBD
@@ -4519,7 +4361,7 @@ LOGICAL(4):: TCHK
             OPROJ(:,NBH+1:2*NBH,:)=THIS%PROJ
           END IF
         END DO
-        CALL WAVES_1COVERLAP(.TRUE.,MAP,1,NBH*2,NB*2,MAP%NPRO,OPROJ,OPROJ,AUXMAT)
+        CALL WAVES_1COVERLAP(MAP,1,NBH*2,NB*2,MAP%NPRO,OPROJ,OPROJ,AUXMAT)
         DEALLOCATE(OPROJ)
         ALLOCATE(AUXMAT2(NB*2,NB*2))
         DO ISPIN=1,NSPIN
@@ -4667,10 +4509,9 @@ END MODULE TOTALSPIN_MODULE
       INTEGER(4),INTENT(IN) :: NB,NKPT,IKPT,NSPIN
       REAL(8)   ,INTENT(IN) :: OCC(NB,NKPT,NSPIN) 
       COMPLEX(8),INTENT(IN) :: QMAT(2,NB*NSPIN,2,NB*NSPIN) ! Q_I,J,K,L=1/2*<PSI_I,K|PSI_J,K>  
-      COMPLEX(8)            :: SUM,PART,SPINX,SPINY,SPINZ
-      COMPLEX(8)            :: CSVARX,CSVARY,CSVARZ
+      COMPLEX(8)            :: cSUM,PART,SPINX,SPINY,SPINZ
       COMPLEX(8)            :: EXPECTS2
-      REAL(8)               :: IOCC(NB*NSPIN),SVAR
+      REAL(8)               :: IOCC(NB*NSPIN)
       INTEGER(4)            :: I,J,NTASKS,THISTASK,NBD
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
 !     ******************************************************************
@@ -4709,17 +4550,17 @@ END MODULE TOTALSPIN_MODULE
 !     ==================================================================
 !     == NOW ADD THE EXCHANGE-LIKE CONTRIBUTION TO THE SPIN           ==
 !     ==================================================================
-      SUM=0.D0
+      cSUM=0.D0
       DO I=1,NBD
         DO J=1,NBD
           PART=(QMAT(1,I,1,J)-QMAT(2,I,2,J))*(QMAT(1,J,1,I)-QMAT(2,J,2,I)) &
      &        +4.D0*QMAT(1,I,2,J)*QMAT(2,J,1,I)
-          SUM=SUM-PART*SQRT(IOCC(I)*IOCC(J))
+          cSUM=cSUM-PART*SQRT(IOCC(I)*IOCC(J))
         END DO
       END DO
-      PRINT*,'TOTALSPIN: ECHANGE LIKE CONTRIBUTION : ',SUM
+      PRINT*,'TOTALSPIN: ECHANGE LIKE CONTRIBUTION : ',cSUM
       PRINT*,'TOTALSPIN: PART 3/4+X+Y+Z: ',EXPECTS2+SPINX**2+SPINY**2+SPINZ**2
-      SUM=SUM+EXPECTS2+SPINX**2+SPINY**2+SPINZ**2
+      cSUM=cSUM+EXPECTS2+SPINX**2+SPINY**2+SPINZ**2
 !
 !     ==================================================================
 !     == PRINT RESULT                                                 ==
@@ -4728,110 +4569,16 @@ END MODULE TOTALSPIN_MODULE
         PRINT*,'SPIN: 2*<S_X>: ',2.D0*REAL(SPINX,KIND=8),' HBAR'
         PRINT*,'SPIN: 2*<S_Y>: ',2.D0*REAL(SPINY,KIND=8),' HBAR'
         PRINT*,'SPIN: 2*<S_Z>: ',2.D0*REAL(SPINZ,KIND=8),' HBAR'
-        PRINT*,'TOTALSPIN: <S^2>: ',REAL(SUM,KIND=8),' HBAR^2'
-        PRINT*,'SPIN QUATUM NUMBER S=',-0.5+SQRT(0.25+REAL(SUM,KIND=8))
+        PRINT*,'TOTALSPIN: <S^2>: ',REAL(cSUM,KIND=8),' HBAR^2'
+        PRINT*,'SPIN QUATUM NUMBER S=',-0.5+SQRT(0.25+REAL(cSUM,KIND=8))
         IF (IKPT.EQ.1) TOTSPIN=0.D0 ! SUM UP TOTAL SPIN OVER K-POINTS
-        TOTSPIN(1)=TOTSPIN(1)+REAL(SUM,KIND=8)
+        TOTSPIN(1)=TOTSPIN(1)+REAL(cSUM,KIND=8)
         TOTSPIN(2)=TOTSPIN(2)+REAL(SPINX,KIND=8)
         TOTSPIN(3)=TOTSPIN(3)+REAL(SPINY,KIND=8)
         TOTSPIN(4)=TOTSPIN(4)+REAL(SPINZ,KIND=8)
        END IF
        RETURN
        END SUBROUTINE WAVES_TOTALSPIN
-!
-!      .................................................................
-       SUBROUTINE WAVES_TOTALSPIN_OLD(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
-!      *****************************************************************
-!      **  CALCULATES <S^2> IN UNITS OF HBAR^2                        **
-!      **                                                             **
-!      **                                                             **
-!      *****************************************************************
-       USE MPE_MODULE
-       USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES' VERSION
-       IMPLICIT NONE
-       INTEGER(4),INTENT(IN) :: NB,NKPT,IKPT,NSPIN
-       REAL(8)   ,INTENT(IN) :: OCC(NB,NKPT,NSPIN) 
-       COMPLEX(8),INTENT(IN) :: QMAT(2,NB*NSPIN,2,NB*NSPIN) ! Q_I,J,K,L=1/2*<PSI_I,K|PSI_J,K>  
-       COMPLEX(8)            :: SUM,PART,SPINX,SPINY,SPINZ
-       REAL(8)               :: IOCC(NB*NSPIN),SVAR
-       INTEGER(4)            :: I,J,NTASKS,THISTASK,NBD
-       CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION. DO NOT USE ANY MORE')
-       CALL ERROR$STOP('WAVES_TOTALSPIN_OLD')
-       
-       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-
-       DO I=1,NB
-          IOCC(I)=OCC(I,IKPT,1)
-       END DO
-       IF (NSPIN.EQ.2) THEN
-          DO I=NB+1,2*NB
-             IOCC(I)=OCC(I-NB,IKPT,2)
-          END DO
-       END IF
-       NBD=NSPIN*NB !ONE BAND FOR ONE ELECTRON
-
-       SUM=0.D0
-       DO I=1,NBD
-             PART=QMAT(1,I,2,I)+QMAT(2,I,1,I)
-             SUM=SUM+PART*IOCC(I)
-       END DO
-       SPINX=SUM
-
-       SUM=0.D0
-       DO I=1,NBD
-             PART=QMAT(1,I,2,I)-QMAT(2,I,1,I)
-             SUM=SUM+PART*IOCC(I)
-       END DO
-       SPINY=SUM/(0,1)
-
-       SUM=0.D0
-       DO I=1,NBD
-             PART=QMAT(1,I,1,I)-QMAT(2,I,2,I)
-             SUM=SUM+PART*IOCC(I)
-       END DO
-       SPINZ=SUM
-
-
-       SUM=0.D0
-       DO I=1,NBD
-          SUM=SUM+IOCC(I)*0.75D0
-       END DO
-       
-       SUM=SUM+SPINX**2+SPINY**2+SPINZ**2
-       PRINT*,'TOTALSPIN: PART 3/4+X+Y+Z: ',SUM
-       
-       SVAR=SUM
-       DO I=1,NBD
-          DO J=1,NBD
-             PART=-(QMAT(1,I,1,J)-QMAT(2,I,2,J))*(QMAT(1,J,1,I)-QMAT(2,J,2,I))
-             SUM=SUM+PART*SQRT(IOCC(I)*IOCC(J))
-          END DO
-       END DO
-       PRINT*,'TOTALSPIN: PART UP UP    : ',SUM-SVAR
-
-       SVAR=SUM
-       DO I=1,NBD
-          DO J=1,NBD
-             PART=-4.D0*QMAT(1,I,2,J)*QMAT(2,J,1,I)
-             SUM=SUM+PART*SQRT(IOCC(I)*IOCC(J))
-          END DO
-       END DO       
-       PRINT*,'TOTALSPIN: PART DOWN UP  : ',SUM-SVAR
-
-       IF (THISTASK.EQ.1) THEN
-          PRINT*,'SPIN: 2*<S_X>: ',2.D0*REAL(SPINX,KIND=8),' HBAR'
-          PRINT*,'SPIN: 2*<S_Y>: ',2.D0*REAL(SPINY,KIND=8),' HBAR'
-          PRINT*,'SPIN: 2*<S_Z>: ',2.D0*REAL(SPINZ,KIND=8),' HBAR'
-          PRINT*,'TOTALSPIN: <S^2>: ',REAL(SUM,KIND=8),' HBAR^2'
-          PRINT*,'SPIN QUATUM NUMBER S=',-0.5+SQRT(0.25+REAL(SUM,KIND=8))
-          IF (IKPT.EQ.1) TOTSPIN=0.D0 ! SUM UP TOTAL SPIN OVER K-POINTS
-          TOTSPIN(1)=TOTSPIN(1)+DBLE(SUM)
-          TOTSPIN(2)=TOTSPIN(2)+DBLE(SPINX)
-          TOTSPIN(3)=TOTSPIN(3)+DBLE(SPINY)
-          TOTSPIN(4)=TOTSPIN(4)+DBLE(SPINZ)
-       END IF
-       RETURN
-     END SUBROUTINE WAVES_TOTALSPIN_OLD
 !
 !     ..................................................................
       SUBROUTINE WAVES$REPORTSPIN(NFIL)
@@ -4873,22 +4620,22 @@ END MODULE TOTALSPIN_MODULE
       COMPLEX(8)      ,INTENT(IN) :: PSI2(NGL,NDIM,NBH)
       COMPLEX(8)                  :: CSVAR
       INTEGER(4)                  :: IG,IDIM,IB
-      REAL(8)                     :: SUM,SUMTOT
+      REAL(8)                     :: rSUM,SUMTOT
       REAL(8)                     :: RBAS(3,3),GBAS(3,3),CELLVOL
 !     *********************************************************************
       CALL CELL$GETR8A('T0',9,RBAS)
       CALL GBASS(RBAS,GBAS,CELLVOL)
       SUMTOT=0.D0
       DO IB=1,NBH
-        SUM=0.D0
+        rSUM=0.D0
         DO IG=1,NGL
           DO IDIM=1,NDIM
             CSVAR=PSI1(IG,IDIM,IB)-PSI2(IG,IDIM,IB)
-            SUM=SUM+GSET%MPSI(IG)*(REAL(CSVAR,KIND=8)**2+AIMAG(CSVAR)**2)
+            rSUM=rSUM+GSET%MPSI(IG)*(REAL(CSVAR,KIND=8)**2+AIMAG(CSVAR)**2)
           ENDDO
         ENDDO
-        SUMTOT=SUMTOT+SUM
-        WRITE(*,*)' KINETICENERGYTEST ',IB,SUM*CELLVOL/DELT**2,ID
+        SUMTOT=SUMTOT+rSUM
+        WRITE(*,*)' KINETICENERGYTEST ',IB,rSUM*CELLVOL/DELT**2,ID
       ENDDO
         WRITE(*,*)' KINETICENERGYTEST TOTAL',SUMTOT*CELLVOL/DELT**2,ID
       RETURN

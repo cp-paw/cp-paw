@@ -288,7 +288,7 @@ END MODULE WAVES_MODULE
       COMPLEX(8)  ,ALLOCATABLE:: CWORK3(:)
       INTEGER(4)              :: IKPT,ISPIN,IB,IDIM,IBH,IB1,IB2,IG,IR
       INTEGER(4)              :: IPRO,IPRO1,IPRO2,IAT,ISP,L,LN,LMNX,LMN
-      INTEGER(4)              :: NB,NBH,NRL,NPRO,NAT,NGL
+      INTEGER(4)              :: NB,NBH,NRL,NAT,NGL
       COMPLEX(8)              :: CSVAR1,CSVAR2
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       LOGICAL(4)              :: TINV
@@ -470,7 +470,6 @@ END MODULE WAVES_MODULE
         TINV=GSET%TINV
         NB=THIS%NB
         NBH=THIS%NBH
-        NPRO=MAP%NPRO
         NAT=MAP%NAT
 !
         IPRO=0
@@ -742,7 +741,6 @@ END MODULE WAVES_MODULE
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
-      LOGICAL(4)             :: TCHK
       REAL(8)                :: RBAS(3,3) ! LATTICE VECTORS
       REAL(8)                :: GBAS(3,3) ! RECIPROCAL LATTICE VECTORS
       REAL(8)                :: CELLVOL   ! UNIT CELL  VOLUME
@@ -753,7 +751,6 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: NBH
       INTEGER(4)             :: NGL
       INTEGER(4)             :: NRL,NR1L,NR1START,NR2,NR3
-      INTEGER(4)             :: LNXX
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: NFILO
       INTEGER(4)             :: LNX
@@ -1141,56 +1138,38 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       REAL(8)   ,ALLOCATABLE :: QLM(:,:)  !(LMRXX) MULTIPOLE MOMENTS
       REAL(8)   ,ALLOCATABLE :: VQLM(:,:) !(LMRXX) MULTIPOLE POTENTIALS
       REAL(8)   ,ALLOCATABLE :: RHO(:,:)  ! CHARGE DENSITY
-      REAL(8)   ,ALLOCATABLE :: RHO1(:,:) ! AUXILIARY DENSITY ARRAY
-      COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:)     ! <PRO|PSI0>
       COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:) ! 1CENTER DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: EDENMAT(:,:,:,:)! ENERGY-WEIGHTED DENSITY MATRIX
       REAL(8)   ,ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
       REAL(8)   ,ALLOCATABLE :: DO(:,:,:,:)     ! 1CENTER OVERLAP
-      COMPLEX(8),ALLOCATABLE :: DENMAT1(:,:,:)  ! 1CENTER DENSITY MATRIX
-      COMPLEX(8),ALLOCATABLE :: EDENMAT1(:,:,:) ! E-WEIGHTED 1CENTER DENSITY MATRIX
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       REAL(8)   ,ALLOCATABLE :: R(:,:)
       REAL(8)   ,ALLOCATABLE :: FORCE(:,:)
       REAL(8)   ,ALLOCATABLE :: FORCET(:,:)
-      REAL(8)                :: FORCE1(3)
       REAL(8)                :: STRESS1(3,3),STRESS(3,3)
-      REAL(8)                :: STRESST(3,3)
       REAL(8)                :: STRESSKIN(3,3)
       REAL(8)                :: RBAS(3,3) ! REAL SPACE LATTICE VECTORS
-      REAL(8)                :: GBAS(3,3) ! RECIPROCAL SPACE LATTICE VECTORS
       REAL(8)                :: RHOB      ! BACKGROUND DENSITY
-      REAL(8)                :: POTB,POTB1 ! AVERAGE ELECTROSTATIC POTENTIAL
+      REAL(8)                :: POTB      ! AVERAGE ELECTROSTATIC POTENTIAL
       REAL(8)   ,PARAMETER   :: TINY=1.D-300
       INTEGER(4)             :: NGL
       INTEGER(4)             :: NRL
-      INTEGER(4)             :: LMRX
-      REAL(8)                :: EKIN,EKIN1
-      INTEGER(4)             :: IKPT,ISPIN,IAT,ISP,IBH,IB,IG,IR
-      INTEGER(4)             :: L,M,LN,I,J,IJ
-      INTEGER(4)             :: IPRO,IPRO1,IPRO2,IBPRO
+      REAL(8)                :: EKIN
+      INTEGER(4)             :: IKPT,ISPIN,IAT,ISP,IB,IR
+      INTEGER(4)             :: L,M,LN
       INTEGER(4)             :: LMN1,LMN2
-      INTEGER(4)             :: LMNXX,LNX
+      INTEGER(4)             :: LMNXX
       INTEGER(4)             :: NAT
       INTEGER(4)             :: NBH,NBX,NB
       INTEGER(4)             :: LMNX
-      REAL(8)                :: SVAR,SVAR1,SVAR2
-      REAL(8)   ,ALLOCATABLE :: DO1(:,:)
+      REAL(8)                :: SVAR1,SVAR2
       COMPLEX(8),ALLOCATABLE :: HAMILTON(:,:)
       REAL(8)   ,ALLOCATABLE :: EIG(:,:,:)
-      REAL(8)                :: GWEIGHT
-      REAL(8)   ,ALLOCATABLE :: G2(:)      !G**2
-      REAL(8)   ,ALLOCATABLE :: GVEC(:,:)  !GI
-      REAL(8)   ,ALLOCATABLE :: GIJ(:,:)   !GI*GJ/G2 (ONLY FILLED IF TSTRESS!)
-      LOGICAL(4)             :: TINV
       LOGICAL(4)             :: TSTRESS
       LOGICAL(4)             :: TFORCE
       LOGICAL(4)             :: TCHK
-      REAL(8)                :: PI
       COMPLEX(8),ALLOCATABLE :: QMAT(:,:)   
       INTEGER(4)             :: NFILO
-      INTEGER(4)             :: L1,L2,LN1,LN2
-      INTEGER(4)             :: NGAMMA
       LOGICAL(4)             :: TCONV ! MIXER SAYS THAT WAVE FUNCTIONS ARE CONVERGED !KAESTNERCG
       REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
 !     ******************************************************************      
@@ -1369,14 +1348,9 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==================================================================
 !     == POTENTIAL (POTENTIAL IS STORED BACK INTO THE DENSITY ARRAY!) ==
 !     ==================================================================
-CALL TRACE$PASS('BEFORE VOFRHO')
       ALLOCATE(VQLM(LMRXX,NAT))
-IF(ANY(ABS(RHO(:,:)).GT.HUGE(TINY)).OR.ANY(ABS(RHO(:,:)).LT.-HUGE(TINY))) PRINT*,'RHO OUT OF RANGE'
       CALL WAVES_VOFRHO(NRL,NDIMD,RHO,RHOB,NAT,LMRXX,QLM,VQLM)
-IF(ANY(ABS(RHO(:,:)).GT.HUGE(TINY)).OR.ANY(ABS(RHO(:,:)).LT.-HUGE(TINY))) PRINT*,'POT OUT OF RANGE'
       DEALLOCATE(QLM)
-CALL TRACE$PASS('AFTER VOFRHO')
-!CALL ERROR$STOP('FORCED STOP IN WAVES$ETOT')
 
 !      ALLOCATE(FORCET(3,NAT))
 !      ALLOCATE(VQLM(LMRXX,NAT))
@@ -1530,6 +1504,7 @@ END IF
          CALL TIMING$CLOCKON('CG')                                           !KAESTNERCG
          CALL CG$STATE_BY_STATE(MAP%NRL,NDIMD,RHO(:,:),CONVPSI,NAT,LMNXX,DH) !KAESTNERCG
          CALL TIMING$CLOCKOFF('CG')                                          !KAESTNERCG
+         tconv=.false. ! tconv has not been set!!!
          IF(TCONV) CALL STOPIT$SETL4('STOP',.TRUE.)                          !KAESTNERCG
       END IF                                                                 !KAESTNERCG
 !
@@ -2032,7 +2007,6 @@ END IF
       CHARACTER(*),INTENT(IN):: ID
       INTEGER(4)             :: IKPT,ISPIN
       INTEGER(4)             :: NGL
-      INTEGER(4)             :: NB
       INTEGER(4)             :: NBH
       INTEGER(4)             :: NAT
       REAL(8)   ,ALLOCATABLE :: R(:,:)
@@ -2051,7 +2025,6 @@ END IF
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)
           NGL=GSET%NGL
-          NB=THIS%NB
           NBH=THIS%NBH
           IF(ID.EQ.'PSI0') THEN
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,MAP%NPRO &
@@ -2162,8 +2135,7 @@ END IF
       COMPLEX(8),ALLOCATABLE:: PSI1(:,:)
       REAL(8)   ,ALLOCATABLE:: DMAT(:)
       LOGICAL(4)            :: TINV
-      INTEGER(4)            :: IB,IG,IDIM,I,J
-      INTEGER(4)            :: NDIMD
+      INTEGER(4)            :: IB,IG,IDIM
       REAL(8)               :: FP,FM
       REAL(8)   ,PARAMETER  :: DSMALL=1.D-12
       REAL(8)               :: EBUCKET
@@ -2189,7 +2161,6 @@ END IF
 !     ==================================================================
 !     ==  CALCULATE DMAT(G)=F(IB)*PSI^*(G,IB)*PSI(G,IB)               ==
 !     ==================================================================
-      NDIMD=(NDIM*(NDIM+1))/2
       ALLOCATE(DMAT(NGL))
       ALLOCATE(PSI1(NGL,NDIM))
       DMAT(:)=0.D0
@@ -2485,9 +2456,9 @@ END IF
       COMPLEX(8)            :: LAGR(NB,NB)
       LOGICAL(4)            :: TINV
       INTEGER(4)            :: LMN1,LMN2,IDIM1,IDIM2,IB,IB1,IB2
-      REAL(8)               :: SUM,SVAR1,SVAR2,SVAR
+      REAL(8)               :: SVAR1,SVAR2
       COMPLEX(8)            :: CSVAR,CFACR,CFACI,CFAC1,CFAC2
-      INTEGER(4)            :: NDIMD,IDIM
+      INTEGER(4)            :: IDIM,ndimd
       INTEGER(4)            :: NFILO
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
@@ -3357,7 +3328,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)    ,INTENT(IN)   :: R0(3,NAT)
       COMPLEX(8) ,INTENT(IN)   :: PROJ(NDIM,NBH,NPRO)
       COMPLEX(8) ,INTENT(INOUT):: OPSI(NGL,NDIM,NBH) !PSI ON ETRY, OPSI ON EXIT
-      INTEGER(4)               :: IPRO,IAT,ISP,M,LNX,LMNX
+      INTEGER(4)               :: IPRO,IAT,ISP,LNX,LMNX
       COMPLEX(8) ,ALLOCATABLE  :: OPROJ(:,:,:)
       REAL(8)    ,ALLOCATABLE  :: DO(:,:)      ! 1-CENTER OVERLAP
 !     *****************************************************************
@@ -3410,12 +3381,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)   ,INTENT(IN)  :: V(NRL,NDIM**2) ! PSPOT
       COMPLEX(8),INTENT(OUT) :: HPSI(NGL,NDIM,NBH)     ! PSH|PSPSI>
       REAL(8)   ,ALLOCATABLE :: G2(:)          ! G**2
-      INTEGER(4)             :: IC,IDIM1,IDIM2,IB,IR,IG,IDIM
+      INTEGER(4)             :: IB,IR,IG,IDIM
       REAL(8)   ,ALLOCATABLE :: VUPUP(:),VDNDN(:)
       COMPLEX(8),ALLOCATABLE :: VUPDN(:)
       COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:,:)
       COMPLEX(8)             :: PSIUP,PSIDN
-      REAL(8)                :: SVAR
 !     ******************************************************************
 !
 !     ==================================================================
@@ -3524,8 +3494,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8),ALLOCATABLE:: PSI1(:,:)
       REAL(8)   ,ALLOCATABLE:: DMAT(:)
       LOGICAL(4)            :: TINV
-      INTEGER(4)            :: IB,IG,IDIM,I,J,IDIM1,IDIM2
-      INTEGER(4)            :: NDIMD
+      INTEGER(4)            :: IB,IG,IDIM1,IDIM2
       REAL(8)               :: FP,FM
       REAL(8)   ,PARAMETER  :: DSMALL=1.D-12
       REAL(8)               :: EBUCKET
@@ -3553,7 +3522,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     ==================================================================
 !     ==  CALCULATE DMAT(G)=F(IB)*PSI^*(G,IB)*PSI(G,IB)               ==
 !     ==================================================================
-      NDIMD=(NDIM*(NDIM+1))/2
       ALLOCATE(DMAT(NGL))
       ALLOCATE(PSI1(NGL,NDIM))
       DMAT(:)=0.D0
@@ -3696,7 +3664,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8)             :: PSI1(NRL)
       COMPLEX(8)             :: CSVAR
       LOGICAL(4)             :: TINV
-      INTEGER(4)             :: IB,IBH,IDIM1,IDIM2,IR,IC
+      INTEGER(4)             :: IBH,IR
       REAL(8)                :: F1,F2
       REAL(8)                :: RE,IM
       REAL(8)                :: SVAR1,SVAR2
@@ -3945,37 +3913,19 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4),INTENT(IN)   :: LMNX      ! #(PROJECTORS ON THIS SITE)
       COMPLEX(8),INTENT(IN)   :: DEDPROJ(NDIM,NBH,LMNX) ! <P|PSI>
       COMPLEX(8),INTENT(OUT)  :: DEDPRO(NGL,LMNX)    ! DE/D<P|
-      INTEGER(4)              :: IB,IDIM,LMN,IG
+      INTEGER(4)              :: LMN,IG
       COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
       COMPLEX(8),ALLOCATABLE  :: PSIM(:)
       LOGICAL(4),PARAMETER    :: TESSL=.TRUE.
       COMPLEX(8)              :: DEDPROJ1(NDIM,NBH,LMNX) ! CONJG(<P|PSI>)
-      COMPLEX(8)              :: CSVAR
 !     ******************************************************************
 !
 !     ==================================================================
 !     ==  SUPERPOSE WAVE FUNCTION TO OBTAIN DE/D<P|                   ==
 !     ==================================================================
       DEDPROJ1=CONJG(DEDPROJ)
+!     ==  depro=depro+psi*conjg(deproj)
       CALL LIB$MATMULC8(NGL,NDIM*NBH,LMNX,PSI,DEDPROJ1,DEDPRO)
-!     IF(TESSL) THEN
-!        DEDPROJ1=CONJG(DEDPROJ)
-!        CALL ZGEMUL(PSI,NGL,'N',DEDPROJ1,NDIM*NBH,'N',DEDPRO,NGL &
-!    &              ,NGL,NDIM*NBH,LMNX)
-!     ELSE
-!       DEDPRO(:,:)=(0.D0,0.D0)
-!       DO LMN=1,LMNX
-!         DO IB=1,NBH
-!           DO IDIM=1,NDIM
-!             CSVAR=CONJG(DEDPROJ(IDIM,IB,LMN))
-!             DO IG=1,NGL
-!               DEDPRO(IG,LMN)=DEDPRO(IG,LMN)+PSI(IG,IDIM,IB)*CSVAR
-!             ENDDO
-!           ENDDO
-!         ENDDO
-!       ENDDO!
-
-!     END IF
       IF(TINV) THEN
         ALLOCATE(PSIM(NGL))
         DO LMN=1,LMNX
@@ -4111,10 +4061,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8)     ,ALLOCATABLE:: PROPSI1(:) !(LMNX*NDIM*NB)
       COMPLEX(8)     ,ALLOCATABLE:: EIGR(:)    !(NGL)
       INTEGER(4)     ,ALLOCATABLE:: LOX(:)     !(LNXX)
-      COMPLEX(8)                 :: CSVAR
-      REAL(8)                    :: SVAR
       LOGICAL(4)    ,PARAMETER   :: TESSL=.TRUE.
-      INTEGER(4)                 :: IPRO,IBPRO,IAT,LMN,IB,IDIM,IG,II
+      INTEGER(4)                 :: IPRO,IBPRO,IAT,LMN,IB,IDIM,II
       INTEGER(4)                 :: LMNXX,LNXX
       INTEGER(4)                 :: LNX,LMNX,ISP
 !     ******************************************************************
@@ -4170,26 +4118,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             ENDDO
           ENDDO
         ENDDO
+!       == psi=psi+pro*propsi1
         CALL LIB$ADDPRODUCTC8(.FALSE.,NGL,LMNX,NDIM*NB,PRO,PROPSI1,PSI)
-!       IF(TESSL) THEN
-!         CALL ZGEMM('N','T',NGL,NDIM*NB,LMNX,(1.D0,0.D0),PRO,NGL &
-!   &               ,PROPSI1,NDIM*NB,(1.D0,0.D0),PSI,NGL)
-!         CALL ZGEMM('N','N',NGL,NDIM*NB,LMNX,(1.D0,0.D0),PRO,NGL &
-!   &               ,PROPSI1,LMNX,(1.D0,0.D0),PSI,NGL)
-!       ELSE
-!         II=0
-!         DO IB=1,NB
-!           DO IDIM=1,NDIM
-!             DO LMN=1,LMNX
-!               II=II+1  ! II=(LMN,IDIM,IB)
-!               CSVAR=PROPSI1(II)
-!               DO IG=1,NGL
-!                 PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+PRO(IG,LMN)*CSVAR     
-!              ENDDO
-!             ENDDO
-!           ENDDO
-!         ENDDO
-!       END IF
         IPRO=IPRO+LMNX
       ENDDO
       DEALLOCATE(LOX)
@@ -4237,79 +4167,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           DO IG=1,NGL
             SVAR=YLM(IG,LM)*BAREPRO(IG,LN)
             PRO(IG,LMN)=SVAR*CSVAR*EIGR(IG)
-          ENDDO
-        ENDDO
-      ENDDO
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE WAVES_EXPANDPRO_OLD(IPRO1,NPRO &
-     &                          ,NSP,LNX,LNXX,LOX,NAT,ISPECIES,NGL,GVEC &
-     &                          ,NBAREPRO,BAREPRO,LMX,YLM,EIGR,PRO)
-!     ******************************************************************
-!     **                                                              **
-!     **  TAKES THE BARE PROJECTOR FUNCTIONS AND CALCULATES FULL      **
-!     **  PROJECTOR FUNCTIONS WITH STRUCTURE FACTOR AND I**L          **
-!     **                                                              **
-!     **  FOR NDIM.NE.3 FIRST DERIVATIVES ARE CALCULATED              **
-!     **  FOR NDIM.NE.6 SECOND DERIVATIVES ARE CALCULATED             **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (1998)***
-      IMPLICIT NONE
-      INTEGER(4)    ,INTENT(IN) :: IPRO1    ! FIRST PROJECTOR
-      INTEGER(4)    ,INTENT(IN) :: NPRO     ! X#(NUMBER OF PROJECTORS)
-      INTEGER(4)    ,INTENT(IN) :: NSP      ! #(SPECIES)
-      INTEGER(4)    ,INTENT(IN) :: LNX(NSP) ! #(PROJECTORS PER ATOM)
-      INTEGER(4)    ,INTENT(IN) :: LNXX     ! #(PROJECTORS PER ATOM)
-      INTEGER(4)    ,INTENT(IN) :: LOX(LNXX,NSP) ! ANGULAR MOMENTA
-      INTEGER(4)    ,INTENT(IN) :: NAT           ! #(ATOMS)
-      INTEGER(4)    ,INTENT(IN) :: ISPECIES(NAT) ! SPECIES OF THE ATOM
-      INTEGER(4)    ,INTENT(IN) :: NGL           ! #(G-VECTORS(LOCAL))
-      REAL(8)       ,INTENT(IN) :: GVEC(3,NGL)   ! G-VECTORS
-      INTEGER(4)    ,INTENT(IN) :: NBAREPRO      ! X#(NUMBER OF PROJECTORS)
-      REAL(8)       ,INTENT(IN) :: BAREPRO(NGL,NBAREPRO)  ! PROJECTOR FUNCTIONS
-      INTEGER(4)    ,INTENT(IN) :: LMX           ! X#(ANGULAR MOMENTA IN YLM))
-      REAL(8)       ,INTENT(IN) :: YLM(NGL,LMX)  ! CI**(-L)*SPHERICAL HARMONICS
-      COMPLEX(8)    ,INTENT(IN) :: EIGR(NGL,NAT)     ! STRUCTURE FACTORS
-      COMPLEX(8)    ,INTENT(OUT):: PRO(NGL,NPRO) !PROJECTOR FUNCTION
-      COMPLEX(8)    ,PARAMETER  :: CI=(0.D0,1.D0)
-      COMPLEX(8)                :: CSVAR
-      INTEGER(4)                :: NDER
-      INTEGER(4)                :: ICOUNT,IPRO
-      INTEGER(4)                :: IAT,ISP,LMN,LN,IM,L,IG,LM,IBAREPRO
-      LOGICAL(4)                :: TGRAD,TSTRESS
-      REAL(8)                   :: SVAR
-!     ******************************************************************
-!
-!     ==================================================================
-!     ==  START THE LOOP                                              ==
-!     ==================================================================
-      ICOUNT=0
-      IPRO=0
-      DO IAT=1,NAT
-        ISP=ISPECIES(IAT)
-        IBAREPRO=SUM(LNX(1:ISP-1))
-        DO LN=1,LNX(ISP)
-          IBAREPRO=IBAREPRO+1
-          L=LOX(LN,ISP)
-          LM=L**2
-          DO IM=1,2*L+1
-            LM=LM+1
-            IPRO=IPRO+1
-            IF(IPRO.LT.IPRO1) CYCLE
-            ICOUNT=ICOUNT+1
-            IF(ICOUNT.GT.NPRO) RETURN
-!           
-!           ==========================================================
-!           ==  COMPOSE PROJECTOR FUNCTIONS                         ==
-!           ==========================================================
-!           ==  MULTIPLY PROJECTOR WITH STRUCTURE FACTOR ===========
-            CSVAR=(-CI)**L
-            DO IG=1,NGL
-              SVAR=YLM(IG,LM)*BAREPRO(IG,IBAREPRO)
-              PRO(IG,ICOUNT)=SVAR*CSVAR*EIGR(IG,IAT)
-            ENDDO
           ENDDO
         ENDDO
       ENDDO
@@ -4455,13 +4312,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)        ,ALLOCATABLE   :: G2(:)
       REAL(8)        ,ALLOCATABLE   :: GVEC(:,:)
       REAL(8)        ,ALLOCATABLE   :: YLM(:)
-      REAL(8)        ,ALLOCATABLE   :: R(:,:)
-      INTEGER(4)                    :: IG,ISP,IND,LN,IKPT,ISPIN
+      INTEGER(4)                    :: IG,ISP,IND,LN,IKPT
       INTEGER(4)                    :: NBAREPRO,NGL
       REAL(8)                       :: RBAS(3,3),GBAS(3,3),CELLVOL
       INTEGER(4)                    :: LMX
       LOGICAL(4)                    :: TSTRESS
-      REAL(8)       ,ALLOCATABLE    :: WORK(:,:)
       REAL(8)                       :: MING2,MING,DG,ABSG
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES_UPDATEGSET')
@@ -4661,7 +4516,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)   ,ALLOCATABLE:: ARR1(:)
       REAL(8)   ,ALLOCATABLE:: ARR2(:)
       REAL(8)   ,ALLOCATABLE:: ARR3(:)
-      REAL(8)   ,ALLOCATABLE:: GVEC(:,:)
       REAL(8)               :: SVAR1,SVAR2,SVAR3
 !     ******************************************************************
       IF(OPTIMIZERTYPE.EQ.'CG') RETURN                           !KAESTNERCG
@@ -4848,7 +4702,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)               :: RBAS(3,3),GBAS(3,3),CELLVOL
       REAL(8)               :: V1,V2
       REAL(8)               :: F1,F2
-      REAL(8)               :: DOCC
       LOGICAL(4)            :: TINV
       COMPLEX(8)            :: CSVAR
       REAL(8)   ,PARAMETER  :: DSMALL=1.D-12
@@ -5136,9 +4989,9 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
        INTEGER(4)            :: NODESLEFT
        INTEGER(4)            :: IPOS1,IPOS2
        REAL(8)               :: XLOADTEST(NGROUPS) ! LOAD PER PROCESSOR
-       REAL(8)               :: XLOAD1,XLOAD2
+       REAL(8)               :: XLOAD1
        INTEGER(4)            :: IND(1)
-       INTEGER(4)            :: I,J
+       INTEGER(4)            :: I
 !      ***************************************************************
 !
 !      ===============================================================

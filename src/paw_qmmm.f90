@@ -1162,8 +1162,13 @@ print*,'mip',iatai,raip
             I2=I1+2
             FORCE2(I1:I2)=0.D0
           ENDDO
-          ALPHA=-DOT_PRODUCT(FORCE1,FORCE1) &
+          IF(DOT_PRODUCT(FORCE1,FORCE2-FORCE1).GT.1.D-9) THEN
+            ALPHA=-DOT_PRODUCT(FORCE1,FORCE1) &
       &         /DOT_PRODUCT(FORCE1,FORCE2-FORCE1)*ALPHA
+          ELSE
+            ALPHA=1.D-3
+            EXIT
+          END IF
           IF(ALPHA.LT.0.D0) ALPHA=1.D-3
           PRINT*,'INNER ',INNER,ALPHA,DOT_PRODUCT(FORCE1,FORCE2)
         ENDDO

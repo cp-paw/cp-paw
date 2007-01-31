@@ -268,7 +268,7 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),PARAMETER    :: ITEST=1
       LOGICAL(4)              :: TBACK,TSPIN
       REAL(8)                 :: DETOT,PSEHARTREE,AEEHARTREE,COREEXC
-      REAL(8)                 :: EKINNL,ENL,AEEXC,PSEXC,HAMUP,HAMDWN
+      REAL(8)                 :: EKINNL,ENL,AEEXC,PSEXC
       CHARACTER(32)           :: ATOM
       REAL(8)                 :: VQLM1(LMRX)
       REAL(8)                 :: QLM(LMRX)
@@ -385,6 +385,7 @@ END MODULE AUGMENTATION_MODULE
         DECORE=0.D0
       ELSE 
         ALLOCATE(DELTARHO(NR,LMRX,NDIMD))
+        deltah=0.d0
 !        CALL AUGMENTATION_NEWSOFTCORE(SOFTCORETYPE,GID,NR,LMRX,NDIMD,AEZ,LMNX &
 !     &          ,DENMAT,edenmat,VQLM1,RHOB,DELTAH,DELTAO,DELTARHO,DECORE)
         DTKIN=DTKIN+DELTAH
@@ -1726,7 +1727,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       REAL(8)      ,ALLOCATABLE :: AUX(:)    !(NR)
       CHARACTER(32)             :: SPECIES
       LOGICAL(4)                :: TCHK
-      INTEGER(4)                :: LN1,LN2,LMN1,LMN2,IR,IPOT,IDIMD,L1,L2,I
+      INTEGER(4)                :: LN1,LN2,LMN1,LMN2,IPOT,IDIMD,L1,L2,I
       INTEGER(4)                :: GID     ! GRID ID
       REAL(8)      ,ALLOCATABLE :: R(:)    ! RADIAL GRID
 !     ******************************************************************
@@ -1804,15 +1805,6 @@ END MODULE EXPERTNAL1CPOT_MODULE
         DEALLOCATE(R)
         DEALLOCATE(RDEP)
         DEALLOCATE(AUX)
-!OPEN(41,FILE='DUMP',FORM='FORMATTED')
-!DO IR=1,NR
-!  WRITE(41,*)R(IR),(AEPHI(IR,LN1),LN1=1,LNX)
-!ENDDO
-!PRINT*,'LNX ',LNX,' LOX ',LOX
-!DO LN1=1,LNX
-!  PRINT*,'UONE ',UONE(LN1,:)
-!ENDDO
-!STOP
         DEALLOCATE(AEPHI)
 !
 !       ==============================================================
