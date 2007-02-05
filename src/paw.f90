@@ -1,9 +1,9 @@
 !#IF DEFINED(IBMLICENSE)
 Module version_module
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 508 $'
+character(256):: VERrev='$LastChangedRevision: 531 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-01-09 17:30:55 +0100 (Di, 09. Jan 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-02-05 14:25:48 +0100 (Mo, 05. Feb 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -134,7 +134,7 @@ end Module version_module
 !     ==================================================================
 !     ==  INITIALIZE ATOMIC SETUPS                                    ==
 !     ==================================================================
-      CALL SETUP$READ()
+!     CALL SETUP$READ()   !now called from strcin
 !
 !     ==================================================================
 !     ==  INITIALIZE ATOMS OBJECT                                     ==

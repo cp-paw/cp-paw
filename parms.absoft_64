@@ -46,7 +46,7 @@ LIBS="-lU77 -lm  -lfftw -llapack -lf77blas -latlas "
 PLIBS="-lU77 -lm  -lfftw -llapack -lf77blas -latlas -lfmpich -lmtl_common -lvapi -lmosal -lmpga -lmpich "
 #
 #________________________________preprocessor variables
-CPPVAR="-DCPPVAR_U77 -DCPPVAR_FFT_FFTW -DCPPVAR_64BIT "
+CPPVAR="-DCPPVAR_U77 -DCPPVAR_FFT_FFTW "
 #
 #________________________________file extension
 FEXT="f90"

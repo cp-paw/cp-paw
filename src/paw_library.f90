@@ -410,7 +410,6 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT):: AINV(N,N)
       INTEGER(4)            :: NAUX
       REAL(8)               :: AUX(100*N)
-      INTEGER(4)            :: I,J
 #IF DEFINED(CPPVAR_BLAS_ESSL)
       REAL(8)               :: RCOND
       REAL(8)               :: DET(2)
@@ -955,7 +954,6 @@ END MODULE RANDOM_MODULE
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      INCLUDE 'FFTW_F77.I'
       CHARACTER(*),INTENT(IN) :: DIR
       INTEGER(4)  ,INTENT(IN) :: LEN
       INTEGER(4)  ,INTENT(IN) :: NFFT
@@ -964,21 +962,41 @@ END MODULE RANDOM_MODULE
       CHARACTER(4),SAVE       :: DIRSAVE=''
       INTEGER(4)  ,SAVE       :: LENSAVE=0
       INTEGER(4)  ,SAVE       :: NFFTSAVE=0
-      INTEGER(4)  ,SAVE       :: ISIGN
+      INTEGER     ,SAVE       :: ISIGN
       REAL(8)     ,SAVE       :: SCALE
       COMPLEX(8)              :: XDUMMY(LEN,NFFT)
       INTEGER(4)              :: I
       INTEGER(4),SAVE         :: NP=0
       INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
-#IF DEFINED(CPPVAR_64BIT)
       INTEGER(8),SAVE         :: PLANS(NPX,2),PLAN=-1
-#ELSE
-      INTEGER(4),SAVE         :: PLANS(NPX,2),PLAN=-1
-#ENDIF
       LOGICAL                 :: DEF
+!     INCLUDE 'FFTW_F77.I'
+!     ***********  fftw_f77.i *******************************************
+!     This file contains PARAMETER statements for various constants
+!     that can be passed to FFTW routines.  You should include
+!     this file in any FORTRAN program that calls the fftw_f77
+!     routines (either directly or with an #include statement
+!     if you use the C preprocessor).
+      integer,parameter :: FFTW_FORWARD=-1 ! sign in the exponent of the forward ft
+      integer,parameter :: FFTW_BACKWARD=1 ! sign in the exponent of the backward ft
+      integer,parameter :: FFTW_REAL_TO_COMPLEX=-1
+      integer,parameter :: FFTW_COMPLEX_TO_REAL=1
+      integer,parameter :: FFTW_ESTIMATE=0
+      integer,parameter :: FFTW_MEASURE=1
+      integer,parameter :: FFTW_OUT_OF_PLACE=0
+      integer,parameter :: FFTW_IN_PLACE=8
+      integer,parameter :: FFTW_USE_WISDOM=16
+      integer,parameter :: FFTW_THREADSAFE=128
+!     Constants for the MPI wrappers:
+      integer,parameter :: FFTW_TRANSPOSED_ORDER=1
+      integer,parameter :: FFTW_NORMAL_ORDER=0
+      integer,parameter :: FFTW_SCRAMBLED_INPUT=8192
+      integer,parameter :: FFTW_SCRAMBLED_OUTPUT=16384
 !     ******************************************************************
-      XDUMMY=X
 !
+!     ==================================================================
+!     ==  initialize fft                                              ==
+!     ==================================================================
       IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
         IF (DIR.EQ.'GTOR') THEN
           ISIGN=1
@@ -1006,6 +1024,7 @@ END MODULE RANDOM_MODULE
           WRITE(*,*) 'FFTW CREATE PLAN FOR: ', ISIGN,LEN,NP
           NP=NP+1
           IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
+!         CALL FFTW_F77_CREATE_PLAN(PLAN,LEN,fftw_forward,FFTW_MEASURE)
           CALL FFTW_F77_CREATE_PLAN(PLANS(NP,2),LEN,ISIGN,FFTW_MEASURE)
           PLANS(NP,1)=ISIGN*LEN
           PLAN=PLANS(NP,2)
@@ -1018,6 +1037,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     ==  NOW PERFORM FFT                                             ==
 !     ==================================================================
+      XDUMMY=X
       CALL FFTW_F77(PLAN,NFFT,XDUMMY(1,1),1,LEN,Y(1,1),1,LEN)
       IF (DIR.EQ.'RTOG') THEN
         Y(:,:)=Y(:,:)*SCALE

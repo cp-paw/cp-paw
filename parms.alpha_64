@@ -44,7 +44,7 @@ LIBS="-lfftw -lcxml"
 PLIBS="-lfftw -lcxml -lmpich -lfmpich"
 #
 #________________________________preprocessor variables
-CPPVAR="-DCPPVAR_FFT_FFTW -DCPPVAR_64BIT"
+CPPVAR="-DCPPVAR_FFT_FFTW "
 #
 #________________________________file extension
 FEXT="f90"

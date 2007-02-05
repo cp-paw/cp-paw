@@ -389,7 +389,7 @@ ENDDO
       END IF
 ! 
 !     ==================================================================
-!     == CALCULATE EFFECTIVE AND REDUCED MASS
+!     == CALCULATE EFFECTIVE wave function mass AND REDUCED MASS      ==
 !     ==================================================================
       CALL WAVES$GETR8('EMASS',EMASS)
       CALL WAVES$GETR8('EMASSCG2',EMASSCG2)

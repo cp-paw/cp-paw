@@ -731,6 +731,155 @@
       C=1.D0/RINT
       RETURN
       END
+!
+      subroutine cg$test()
+!     **                                                              **
+!     ** test routine for conjugate gradient                          **
+!     **                                                              **
+!     **                                                              **
+      implicit none
+      INTEGER(4), PARAMETER :: N=2
+      REAL(8)               :: R(N),F1(N),F2(N),D1(N),D2(N)
+      REAL(8)               :: e
+      INTEGER(4),PARAMETER  :: NITER=10
+      INTEGER(4)            :: ITER,inner
+      real(8)               :: lambda
+      logical(4)            :: tconv
+!     ******************************************************************
+      R=(/10.D0,2.D0/)
+      CALL ETOT(N,R,E,F1)
+write(*,fmt='(i5," e ",f20.15," r=",2f10.5," f= ",2e10.3)')0,E,r,f1
+      D1=F1
+      DO ITER=1,NITER
+        lambda=1.d-2/SQRT(DOT_PRODUCT(F1,F1))
+        do inner=1,100
+          CALL ETOT(N,R+lambda*d1,E,F2)
+          call cg$linesearch(n,f1,d1,f2,lambda,tconv)
+          if(tconv) exit
+        enddo
+        if(.not.tconv) stop 'not converged'
+        R=R+D1*lambda
+write(*,fmt='(i5," e ",f20.15," r=",2f10.5," f= ",2e10.3)')ITER,E,r,f2
+        CALL cg$NEWDIR(n,f1,d1,f2,d2)
+        F1=F2
+        D1=D2
+      ENDDO         
+      stop
+      contains
+!     ....................................................................
+        SUBROUTINE ETOT(N,R,E,F)
+        integer(4),intent(in) :: n
+        real(8)   ,intent(in) :: R(n)  
+        real(8)   ,intent(OUT):: E
+        real(8)   ,intent(OUT):: F(n)  
+        INTEGER(4),PARAMETER  :: NLOC=2
+        REAL(8)   ,PARAMETER  :: C=2.D0
+        REAL(8)   ,PARAMETER  :: B(NLOC)=(/0.D0,0.D0/)
+        REAL(8)               :: A(NLOC,NLOC)
+!       *********************************************************************
+        a(:,1)=(/2.D+1,0.D0/)
+        a(:,2)=(/0.D0,2.D-3/)
+        IF(N.NE.NLOC) STOP 'ERROR IN ETOT'
+        E=C-DOT_PRODUCT(B,R)+0.5D0*DOT_PRODUCT(R,MATMUL(A,R))
+        F=B-MATMUL(A,R)
+        RETURN
+        END SUBROUTINE ETOT
+      end
+!
+!     ..................................................................
+      subroutine cg$linesearch(n,f1,d1,f2,dlambda,tconv)
+!     **                                                              **
+!     ** conjugate gradient line search                               **
+!     **                                                              **
+!     **  adjusts lambda such that the force at x+d1*lambda           **
+!     **  parallel to the search direction d1 converges to zer        **
+!     **                                                              **
+!     **  x(lambda)=x1+d1*lambda                                      **
+!     **  f(lambda)=f1+lambda (f2-f1)/lambda_in                       **
+!     **  f2=f(lambda_in)                                             **
+!     **  f1=f(lambda=0)                                              **
+!     **                                                              **
+      implicit none
+      integer(4),intent(in)   :: n
+      real(8)   ,intent(in)   :: f1(n)  ! force at x1
+      real(8)   ,intent(in)   :: d1(n)  ! x(LAMBDA)=x1+lambda*d1
+      real(8)   ,intent(in)   :: f2(n)  ! f(LAMBDA) WITH F(LAMBDA)*D1=0
+      real(8)   ,intent(inout):: dlAMBDA  ! NEXT DIRECTION FOR LINE SEARCH
+      logical(4),intent(out)  :: tconv
+      reAL(8)                 :: SVAR1,svar2
+!     ******************************************************************
+      svar1=dot_product(d1,f2)
+      svar2=dot_product(d1,f2-f1)
+      if(dlambda*svar2.lt.0.d0) then
+        dlambda=-svar1/svar2*dlambda
+      else
+print*,'svar2 ',svar2,dlambda
+print*,'warning! hessian not positive definite; switch to stepping'
+!       == correction for wrong curvature
+        if(svar2.gt.0.d0) then
+          dlambda=1.d-2/sqrt(dot_product(d1,d1))
+        else
+          dlambda=-1.d-2/sqrt(dot_product(d1,d1))
+        end if
+      end if
+      tconv=(abs(svar2/svar1).lt.1.d-4)
+      RETURN
+      END
+!
+!     ..................................................................
+      subroutine cg$linesearch_old(n,f1,d1,f2,lambda,tconv)
+!     **                                                              **
+!     ** conjugate gradient line search                               **
+!     **                                                              **
+!     **  adjusts lambda such that the force at x+d1*lambda           **
+!     **  parallel to the search direction d1 converges to zer        **
+!     **                                                              **
+!     **  x(lambda)=x1+d1*lambda                                      **
+!     **  f(lambda)=f1+lambda (f2-f1)/lambda_in                       **
+!     **  f2=f(lambda_in)                                             **
+!     **  f1=f(lambda=0)                                              **
+!     **                                                              **
+      implicit none
+      integer(4),intent(in)   :: n
+      real(8)   ,intent(in)   :: f1(n)  ! force at x1
+      real(8)   ,intent(in)   :: d1(n)  ! x(LAMBDA)=x1+lambda*d1
+      real(8)   ,intent(in)   :: f2(n)  ! f(LAMBDA) WITH F(LAMBDA)*D1=0
+      real(8)   ,intent(inout):: lAMBDA  ! NEXT DIRECTION FOR LINE SEARCH
+      logical(4),intent(out)  :: tconv
+      reAL(8)                 :: SVAR1,svar2
+!     ******************************************************************
+      svar1=dot_product(d1,f1)
+      svar2=dot_product(d1,f2-f1)
+      if(lambda*svar2.lt.0.d0) then
+        lambda=-svar1/svar2*lambda
+      else
+print*,'warning! hessian not positive definite; switch to stepping'
+!       == correction for wrong curvature
+        if(svar1+svar2.gt.0.d0) then
+          lambda=lambda+1.d-2/sqrt(dot_product(d1,d1))
+        else
+          lambda=lambda-1.d-2/sqrt(dot_product(d1,d1))
+        end if
+      end if
+      tconv=(abs((svar2+svar1)/svar1).lt.1.d-4)
+      RETURN
+      END
+!
+!     ..................................................................
+      subroutine cg$newdir(n,f1,d1,f2,d2)
+!     **                                                              **
+!     ** conjugate gradient new search direction                      **
+!     **                                                              **
+      implicit none
+      integer(4),intent(in) :: n
+      real(8)   ,intent(in) :: f1(n)  ! force at x1
+      real(8)   ,intent(in) :: d1(n)  ! x(LAMBDA)=x1+lambda*d1
+      real(8)   ,intent(in) :: f2(n)  ! f(LAMBDA) WITH F(LAMBDA)*D1=0
+      real(8)   ,intent(out):: d2(n)  ! NEXT DIRECTION FOR LINE SEARCH
+!     ******************************************************************
+      d2=f2+d1*dot_product(f2-f1,f2)/dot_product(f1,f1)
+      RETURN
+      END
 !!$!
 !!$!     .....................................................INITDC.......
 !!$      SUBROUTINE INITDC(N,CARRAY)

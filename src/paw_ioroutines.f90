@@ -3239,6 +3239,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
 !    
 !     ==================================================================
+!     ==  READ BLOCK !STRUCTURE!SPECIES                               ==
+!     ==================================================================
+      CALL STRCIN_SPECIES(LL_STRC)
+      call setup$read()
+!    
+!     ==================================================================
 !     ==  READ BLOCK !STRUCTURE!LATTICE                               ==
 !     ==================================================================
       CALL STRCIN_LATTICE(LL_STRC)
@@ -3247,11 +3253,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==  READ BLOCK !STRUCTURE!KPOINT                                ==
 !     ==================================================================
       CALL STRCIN_KPOINT(LL_STRC,NKPT)
-!    
-!     ==================================================================
-!     ==  READ BLOCK !STRUCTURE!SPECIES                               ==
-!     ==================================================================
-      CALL STRCIN_SPECIES(LL_STRC)
 !
 !     ==================================================================
 !     ==  ENTER BLOCK !ATOM                                           ==
@@ -3720,8 +3721,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
             CALL ATOMLIST$SETI4('ISPECIES',IAT,ISP)
 !            CALL ATOMTYPELIST$GETR8('Z',SVAR)
 !            CALL ATOMLIST$SETR8('Z',IAT,SVAR)
-            CALL ATOMTYPELIST$GETR8('ZV',SVAR)
-            CALL ATOMLIST$SETR8('ZVALENCE',IAT,SVAR)
+!            CALL ATOMTYPELIST$GETR8('ZV',SVAR)
+!            CALL ATOMLIST$SETR8('ZVALENCE',IAT,SVAR)
             CALL ATOMTYPELIST$GETR8('M',SVAR)
             CALL ATOMLIST$SETR8('MASS',IAT,SVAR)
             CALL ATOMTYPELIST$GETR8('PS<G2>',SVAR)

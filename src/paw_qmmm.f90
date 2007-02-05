@@ -413,13 +413,13 @@ END MODULE QMMM_MODULE
 !     *****************************************************************
       USE QMMM_MODULE !, only : map_type,nmap,map,link_type,nlink,link
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: NAT      
-      REAL(8)   ,INTENT(IN)  :: POS(3,NAT)
-      REAL(8)   ,INTENT(IN)  :: CHARGE(NAT)
-      REAL(8)   ,INTENT(OUT) :: FORCE(3,NAT)
-      REAL(8)   ,INTENT(OUT) :: POT(NAT)
-      REAL(8)   ,INTENT(OUT) :: DEPOT
-      REAL(8)   ,ALLOCATABLE :: MPOS(:,:)
+      INTEGER(4),INTENT(IN)  :: NAT          ! #(atoms in qm cluster)
+      REAL(8)   ,INTENT(IN)  :: POS(3,NAT)   ! position of qm cluster
+      REAL(8)   ,INTENT(IN)  :: CHARGE(NAT)  ! charges of qm cluster
+      REAL(8)   ,INTENT(OUT) :: FORCE(3,NAT) ! environment forces on qm cluster
+      REAL(8)   ,INTENT(OUT) :: POT(NAT)     ! environment potentials on qm cluster
+      REAL(8)   ,INTENT(OUT) :: DEPOT        ! environment energy
+      REAL(8)   ,ALLOCATABLE :: MPOS(:,:)    ! positions of complete system
       REAL(8)   ,ALLOCATABLE :: MPOSM(:,:)
       REAL(8)   ,ALLOCATABLE :: SPOS(:,:)
       REAL(8)   ,ALLOCATABLE :: SPOSm(:,:)
@@ -523,7 +523,7 @@ scharge(iats)=0.d0
         svar=charge(iatq)-link(ilink)%QsO
         MCHARGE(IATM) =LINK(ILINK)%qAO+ALPHA*svar
         MCHARGE(IATMJ)=charge(iatqJ)+(1.D0-ALPHA)*svar
-!souble counting for shared atoms!
+!double counting for shared atoms!
         SCHARGE(IATS) =CHARGE(IATQ)
         SCHARGE(IATSJ)=CHARGE(IATQJ)
 mcharge(iatm)=0.d0
@@ -595,7 +595,7 @@ PRINT*,'SQ ',SCHARGE
                         CALL TIMING$CLOCKON('QM-MM:NEIGHBORS')
         CALL CLASSICAL$NEIGHBORS
                         CALL TIMING$CLOCKOFF('QM-MM:NEIGHBORS')
-        IF(TADIABATIC) THEN
+        IF(TADIABATIC.and.tmove) THEN
           CALL QMMM_MINIMIZE(TCHK)
         END IF
                         CALL TIMING$CLOCKON('QM-MM:ETOT')
@@ -625,10 +625,10 @@ PRINT*,'SQ ',SCHARGE
           IATM =LINK(ILINK)%MATOM
           IATS =LINK(ILINK)%SATOM
           ALPHA=LINK(ILINK)%ALPHA
-          fa(:,iatq) =fa(:,iatq)+mforce(:,iatm)
+          fa(:,iatq) =fa(:,iatq) +mforce(:,iatm)
           fa(:,iatqj)=fa(:,iatqj)+mforce(:,iatmj)
-          VA(iatq) =va(iatq)+alpha*mpot(iatm)+(1.d0-alpha)*mpot(iatmj)
-          VA(iatqj)=va(iatqj)+mpot(iatmj)
+          VA(iatq)   =va(iatq)   +alpha*mpot(iatm)+(1.d0-alpha)*mpot(iatmj)
+          VA(iatqj)  =va(iatqj)  +mpot(iatmj)
         ENDDO
 !
 !       ==================================================================
@@ -698,6 +698,9 @@ PRINT*,'SQ ',SCHARGE
         ETHERM_QMMM=SVAR*ETHERM_QMMM
         FA(:,:)    =SVAR*FA(:,:)
         VA(:)      =SVAR*VA(:)
+      else
+        ekin_qmmm  = 0.d0
+        etherm_qmmm= 0.d0
       END IF
       DEPOT      =EPOT_QMMM
 PRINT*,'EKIN_QMMM',EKIN_QMMM
@@ -728,8 +731,15 @@ PRINT*,'EKIN_QMMM',EKIN_QMMM
         LINK(ILINK)%FAI(:)=FA(:,IATQJ)
         LINK(ILINK)%FSO(:)=FS(:,IATS)
         LINK(ILINK)%FSI(:)=FS(:,IATSJ)
-        FORCE(:,IATQ)=0.D0
-        FORCE(:,IATQJ)=0.D0
+        if(tadiabatic) then
+          force(:,iatq) =force(:,iatq)+fa(:,iatq)/alpha-fs(:,iats)
+          force(:,iatqj)=force(:,iatqj)+fa(:,iatqj)+fa(:,iatq)*(1.d0-1.d0/alpha)-fs(:,iatsj)
+print*,'force along link',dot_product(force(:,iatq)-force(:,iatqj),pos(:,iatq)-pos(:,iatqj)) &
+  /sqrt(sum((pos(:,iatq)-pos(:,iatqj))**2)),sqrt(sum((pos(:,iatq)-pos(:,iatqj))**2)),ilink,alpha
+        else    ! forces are taken care of in qmmm$propagate
+          FORCE(:,IATQ) =0.D0
+          FORCE(:,IATQJ)=0.D0
+        end if
         ind=link(ilink)%shared
 !check potentials for shared bond more carefully. Here we assume
 !that only the joint atom is shared
@@ -814,7 +824,8 @@ PRINT*,'EKIN_QMMM',EKIN_QMMM
       real(8)                 :: svar,svar1,svar2,svar3
 !     ******************************************************************
                               call trace$push('QMMM$PROPAGATE')
-      IF (.NOT.TON) RETURN
+      IF(.NOT.TON) RETURN
+      if(tadiabatic) return
       CALL CLASSICAL$SELECT('QMMM')
       CALL CLASSICAL$GETI4('NAT',NATM)
       CALL CLASSICAL$SELECT('SHADOW')
@@ -1095,114 +1106,143 @@ print*,'mip',iatai,raip
       USE QMMM_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(OUT):: TCONV
-      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
-      INTEGER(4)            :: NITER=1000
-      REAL(8)   ,PARAMETER  :: TOL=1.D-4
-      REAL(8)   ,PARAMETER  :: DELT=10.D0
-      REAL(8)   ,PARAMETER  :: EKINMAX=0.5D0
-      REAL(8)               :: R0(3,NATM)
-      REAL(8)               :: RP(3,NATM)
-      REAL(8)               :: FORCE(3,NATM)
+      LOGICAL(4),PARAMETER  :: TPR=.false.
+      INTEGER(4),PARAMETER  :: NITER=1000
+      REAL(8)   ,PARAMETER  :: TOL=1.D-3
       REAL(8)               :: FORCE1(3*NATM)
       REAL(8)               :: FORCE2(3*NATM)
+      REAL(8)               :: DIR1(3*NATM)
+      REAL(8)               :: DIR2(3*NATM)
       REAL(8)               :: R1(3*NATM)
       REAL(8)               :: R2(3*NATM)
-      INTEGER(4)            :: ITER,IMAP,ILINK
-      INTEGER(4)            :: IATM,IATMJ
-      REAL(8)               :: EPOTP,EPOT,EKIN,ECON,FMAX
-      REAL(8)               :: ANNELOC
-      REAL(8)               :: ALPHA,SVAR,VEC(3)
-      INTEGER(4)            :: NFILO,I1,I2,INNER
+      INTEGER(4)            :: ITER,INNER
+      REAL(8)               :: EPOT1,EPOT2,FMAX
+      REAL(8)               :: ALPHA,ALPHALAST,dalpha
+      real(8)               :: EPOTLAST,FORCELAST(3*NATM)
+      INTEGER(4)            :: NFILO
+      real(8)               :: svar1,svar2
 !     ******************************************************************
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+!
+!     ================================================================
+!     ==  PREPARE INITIAL STEP                                      ==
+!     ================================================================
       CALL CLASSICAL$SELECT('QMMM')
+      CALL CLASSICAL$GETR8A('R(0)',3*NATM,R1)
+      CALL CLASSICAL$NEIGHBORS
+      CALL ONETOT(NATM,R1,EPOT1,FORCE1)
+      DIR1=FORCE1
+!
 !     ==================================================================
 !     ==  ITERATE                                                     ==
 !     ==================================================================
-      NITER=NATM
-      EPOTP=1.D+8
-      ALPHA=1.D-4
       DO ITER=1,NITER
-        IF(MOD(ITER-1,100).EQ.0)CALL CLASSICAL$NEIGHBORS
-!       ================================================================
-!       ==  PROPAGATE                                                 ==
-!       ================================================================
-        CALL CLASSICAL$GETR8A('R(0)',3*NATM,R1)
-        CALL CLASSICAL$ETOT(EPOT)
-        CALL CLASSICAL$GETR8A('FORCE',3*NATM,FORCE1)
-        DO IMAP=1,NMAP
-          IATM=MAP(IMAP)%MATOM
-          I1=3*(IATM-1)+1
-          I2=I1+2
-          FORCE1(I1:I2)=0.D0
-        ENDDO
-        DO ILINK=1,NLINK
-          IATM=LINK(ILINK)%MATOM
-          I1=3*(IATM-1)+1
-          I2=I1+2
-          FORCE1(I1:I2)=0.D0
-        ENDDO
-!
-!       ================================================================
-!       ==  PERFORM CG LINE SEARCH                                    ==
-!       ================================================================
-        DO INNER=1,3
-          R2(:)=R1(:)+ALPHA*FORCE1(:)
-          CALL CLASSICAL$SETR8A('R(0)',3*NATM,R2)
-          CALL CLASSICAL$ETOT(EPOT)
-          CALL CLASSICAL$GETR8A('FORCE',3*NATM,FORCE2)
-          DO IMAP=1,NMAP
-            IATM=MAP(IMAP)%MATOM
-            I1=3*(IATM-1)+1
-            I2=I1+2
-            FORCE2(I1:I2)=0.D0
-          ENDDO
-          DO ILINK=1,NLINK
-            IATM=LINK(ILINK)%MATOM
-            I1=3*(IATM-1)+1
-            I2=I1+2
-            FORCE2(I1:I2)=0.D0
-          ENDDO
-          IF(DOT_PRODUCT(FORCE1,FORCE2-FORCE1).GT.1.D-9) THEN
-            ALPHA=-DOT_PRODUCT(FORCE1,FORCE1) &
-      &         /DOT_PRODUCT(FORCE1,FORCE2-FORCE1)*ALPHA
-          ELSE
-            ALPHA=1.D-3
-            EXIT
-          END IF
-          IF(ALPHA.LT.0.D0) ALPHA=1.D-3
-          PRINT*,'INNER ',INNER,ALPHA,DOT_PRODUCT(FORCE1,FORCE2)
-        ENDDO
-        R2(:)=R1(:)+ALPHA*FORCE1(:)
+        IF(MOD(ITER,100).EQ.0)CALL CLASSICAL$NEIGHBORS
 !
 !       ================================================================
 !       ==  PRINT                                                     ==
 !       ================================================================
-        FMAX=SQRT(DOT_PRODUCT(FORCE1,FORCE1))
         IF(TPR) THEN
+          FMAX=SQRT(DOT_PRODUCT(FORCE1,FORCE1))
           CALL FILEHANDLER$UNIT('PROT',NFILO)
-          WRITE(NFILO,FMT='("I",I10,"EPOT",E12.5," ALPHA",E15.7' &
-     &         //',"FMAX",E12.5)')ITER,EPOT,ALPHA,FMAX
+          WRITE(NFILO,FMT='("I",I10," EPOT ",E12.5," FMAX ",E12.5)')ITER,EPOT1,FMAX
         END IF
+!
+!       ================================================================
+!       ==  CHECK CONVERGENCE                                         ==
+!       ================================================================
+        FMAX=SQRT(DOT_PRODUCT(FORCE1,FORCE1))
         TCONV=(FMAX.LT.TOL)
         IF(TCONV) EXIT
-        CALL CLASSICAL$SETR8A('R(0)',3*NATM,R2)
+!
+!       ================================================================
+!       ==  PERFORM CG LINE SEARCH  ALONG DIRECTION FORCE1            ==
+!       ================================================================
+        ALPHA=1.D-3/SQRT(SUM(DIR1**2))
+        ALPHALAST=0.D0
+        EPOTLAST=EPOT1
+        FORCELAST=FORCE1
+        DO INNER=1,10000
+          R2(:)=R1(:)+ALPHA*DIR1(:)
+          CALL ONETOT(NATM,R2,EPOT2,FORCE2)
+!
+!         == TRY AGAIN WITH SMALLER STEP IF ENERGY WENT UP ==============
+          IF(EPOT2.GT.EPOTLAST) THEN
+            ALPHA=0.5D0*(ALPHALAST+ALPHA)
+            CYCLE
+          END IF
+!
+!         == REPORT ACCEPTED MOVE ========================================
+!          IF(TPR) THEN
+if(inner.gt.5) then
+            WRITE(NFILO,FMT='("INNER",I6," EPOT ",E12.5," FMAX ",E12.5," ALPHA",F10.5)') &
+       &                    INNER,EPOT2,DOT_PRODUCT(DIR1,FORCE2),ALPHA
+          END IF
+!
+!         == ENERGY WENT DOWN, CALCULATE NEW ALPHA ====================
+          SVAR1=DOT_PRODUCT(DIR1,FORCE2)
+          SVAR2=DOT_PRODUCT(DIR1,FORCE2-FORCELAST)
+          TCONV=(ABS(SVAR1).LT.1.D-5)
+          IF(TCONV) EXIT
+!
+          DALPHA=ALPHA-ALPHALAST          
+          IF(-DALPHA*SVAR2.GT.0.D0) THEN   ! CURVATURE POSITIVE
+            DALPHA=-SVAR1/SVAR2*DALPHA
+          ELSE                             ! STEEPEST DESCENT FOR NEGATIVE CURVATURE
+            DALPHA=SIGN(1.D-2/DOT_PRODUCT(DIR1,DIR1),SVAR2)
+          END IF
+!
+!         == STORE SUCCESSFUL MOVE as reference AND DETERMINE NEW ALPHA ==
+          ALPHALAST=ALPHA
+          EPOTLAST=EPOT2
+          FORCELAST=FORCE2
+          ALPHA=ALPHA+DALPHA
+        ENDDO
+        IF(.NOT.TCONV) THEN
+          CALL ERROR$MSG('LINE SEARCH NOT CONVERGED')
+          CALL ERROR$STOP('QMMM_MINIMIZE')
+        END IF
+!
+!       == choose new search direction ===================================
+        CALL CG$NEWDIR(3*NATM,FORCE1,DIR1,FORCE2,DIR2)
+        R1=R2
+        FORCE1=FORCE2
+        DIR1=DIR2
+        EPOT1=EPOT2
       ENDDO
+!     == END OF  CONVERGENCE LLOOP
+      IF(.NOT.TCONV) THEN
+        CALL ERROR$MSG('LOOP NOT CONVERGED')        
+        CALL ERROR$R8VAL('FMAX',FMAX)        
+        CALL ERROR$STOP('QMMM_MINIMIZE')
+      END IF
       PRINT*,'QMMM$MINIMIZE FINISHED AFTER ',ITER,' ITERATIONS'
-CALL CLASSICAL$GETR8A('R(0)',3*NATM,R0)
-CALL CLASSICAL$GETR8A('FORCE',3*NATM,FORCE)
-DO IMAP=1,NMAP
-  IATM=MAP(IMAP)%MATOM
-  FORCE(:,IATM)=0.D0
-ENDDO
-DO ILINK=1,NLINK
-  IATM=LINK(ILINK)%MATOM
-  FORCE(:,IATM)=0.D0
-ENDDO
-PRINT*,'FORCE FROM QMMM_MINIMIZE'
-DO IATM=1,NATM
-WRITE(*,FMT='(I5,6F10.5)')IATM,R0(:,IATM),FORCE(:,IATM)
-ENDDO
+      CALL CLASSICAL$SETR8A('R(0)',3*NATM,R2)
+      CALL CLASSICAL$ETOT(Epot2)
       RETURN
+      CONTAINS
+!       .................................................................
+        SUBROUTINE ONETOT(NAT,R,E,F)
+        USE QMMM_MODULE ,ONLY : MAP,NMAP,LINK,NLINK,MAP_TYPE,LINK_TYPE
+        IMPLICIT NONE
+        INTEGER(4),INTENT(IN) :: NAT
+        REAL(8)   ,INTENT(IN) :: R(3,NAT)
+        REAL(8)   ,INTENT(OUT):: E
+        REAL(8)   ,INTENT(OUT):: F(3,NAT)
+        INTEGER(4)            :: IMAP,ILINK,I1,I2,IAT
+!       *****************************************************************
+        CALL CLASSICAL$SETR8A('R(0)',3*NAT,R)
+        CALL CLASSICAL$ETOT(E)
+        CALL CLASSICAL$GETR8A('FORCE',3*NAT,F)
+        DO IMAP=1,NMAP
+          IAT=MAP(IMAP)%MATOM
+          F(:,IAT)=0.D0
+        ENDDO
+        DO ILINK=1,NLINK
+          IAT=LINK(ILINK)%MATOM
+          F(:,IAT)=0.D0
+        ENDDO
+        END SUBROUTINE ONETOT
       END   
 !
 !     ................................................................
