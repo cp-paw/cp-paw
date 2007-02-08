@@ -1683,7 +1683,7 @@ CALL TRACE$PASS('DONE')
 !
 !     ==  RETARD   ==================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'RETARD',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'RETARD',0,1.d0)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'RETARD',0,1.D0)
       CALL LINKEDLIST$GET(LL_CNTL,'RETARD',0,SVAR)
       IF(SVAR.LE.0.D0) THEN
           CALL ERROR$MSG('THE VALUE OF RETARD MUST BE POSITIVE')
@@ -3242,7 +3242,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==  READ BLOCK !STRUCTURE!SPECIES                               ==
 !     ==================================================================
       CALL STRCIN_SPECIES(LL_STRC)
-      call setup$read()
+      CALL SETUP$READ()
 !    
 !     ==================================================================
 !     ==  READ BLOCK !STRUCTURE!LATTICE                               ==
@@ -3489,6 +3489,8 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       REAL(8)                  :: PROTONMASS
       INTEGER(4),ALLOCATABLE   :: NPRO(:)
       INTEGER(4)               :: LENG   
+      INTEGER(4),ALLOCATABLE   :: NCORROFL(:)
+      INTEGER(4)               :: MAINLN(2)
       REAL(8)                  :: EV
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES')
@@ -3545,11 +3547,11 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           Z=-1.D0
           CALL LINKEDLIST$EXISTD(LL_STRC,'Z',1,TCHK)
           IF(TCHK) CALL LINKEDLIST$GET(LL_STRC,'Z',1,Z)
-          if(z.lt.0.d0) then
+          IF(Z.LT.0.D0) THEN
             CH8SVAR1=SPNAME(1:2)
             IF(CH8SVAR1(2:2).EQ.'_') CH8SVAR1(2:2)=' '
             CALL PERIODICTABLE$GET(CH8SVAR1(1:2),'Z',Z)
-          end if
+          END IF
           CALL PERIODICTABLE$GET(Z,'MASS',SVAR)
           CALL LINKEDLIST$SET(LL_STRC,'M',0,SVAR/PROTONMASS)
         END IF
@@ -3631,19 +3633,40 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
           CALL LDAPLUSU$SETR8('RCUT',SVAR)
 !            
+          CALL LINKEDLIST$EXISTD(LL_STRC,'NCORROFL',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('NCORROFL IS MANDATORY BUT HAS NOT BEEN SET')
+            CALL ERROR$STOP('STRCIN_SPECIES')
+          END if
+          CALL LINKEDLIST$SIZE(LL_STRC,'NCORROFL',1,LENG)
+          ALLOCATE(NCORROFL(LENG))
+          CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
+          CALL LDAPLUSU$SETI4A('NCORROFL',LENG,NCORROFL)
+          DEALLOCATE(NCORROFL)
+!            
           CALL LINKEDLIST$EXISTD(LL_STRC,'DIEL',1,TCHK)
-          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'DIEL',1,SVAR)
-          CALL LDAPLUSU$SETR8('DIEL',SVAR)
+          IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'DIEL',1,SVAR)
+            CALL LDAPLUSU$SETR8('DIEL',SVAR)
+          END IF
 !
-          SVAR=0.D0
           CALL LINKEDLIST$EXISTD(LL_STRC,'UPAR[EV]',1,TCHK)
-          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'UPAR[EV]',1,SVAR)
-          CALL LDAPLUSU$SETR8('UPAR',SVAR*EV)
+          IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'UPAR[EV]',1,SVAR)
+            CALL LDAPLUSU$SETR8('UPAR',SVAR*EV)
+          END IF
 !
-          SVAR=0.D0
           CALL LINKEDLIST$EXISTD(LL_STRC,'JPAR[EV]',1,TCHK)
-          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'JPAR[EV]',1,SVAR)
-          CALL LDAPLUSU$SETR8('JPAR',SVAR*EV)
+          IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'JPAR[EV]',1,SVAR)
+            CALL LDAPLUSU$SETR8('JPAR',SVAR*EV)
+          END IF
+
+          CALL LINKEDLIST$EXISTD(LL_STRC,'MAINLN',1,TCHK)
+          IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'MAINLN',1,MAINLN)
+            CALL LDAPLUSU$SETI4A('MAINLN',2,MAINLN)
+          END IF
 !
 !         == GET OUT OF LDAPLUSU-BLOCK
           CALL LINKEDLIST$SELECT(LL_STRC,'..')

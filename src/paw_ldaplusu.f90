@@ -1,5 +1,5 @@
-!Todo :
-! dath is still real and should probably be complex like denmat
+!TODO :
+! DATH IS STILL REAL AND SHOULD PROBABLY BE COMPLEX LIKE DENMAT
 
 MODULE LDAPLUSU_MODULE
 TYPE THISTYPE
@@ -9,20 +9,24 @@ INTEGER(4)             :: GID
 INTEGER(4)             :: NR
 INTEGER(4)             :: LNXCHI
 INTEGER(4),POINTER     :: LOXCHI(:)
-INTEGER(4),POINTER     :: norb(:)  ! x(# local functions per angular momentum)
+INTEGER(4),POINTER     :: NORB(:)  ! X(# LOCAL FUNCTIONS PER ANGULAR MOMENTUM)
 INTEGER(4)             :: LRX
 INTEGER(4)             :: NCHI
-REAL(8)   ,POINTER     :: CHI(:,:)
+REAL(8)   ,POINTER     :: CHI(:,:)   ! CORRELATED (HEAD) ORBITALS
+LOGICAL(4)             :: USEDIEL=.FALSE.
+LOGICAL(4)             :: USEUPAR=.FALSE.
+LOGICAL(4)             :: USEJPAR=.FALSE.
 REAL(8)                :: DIEL=1     ! DIELECTRIC CONSTANT
 REAL(8)                :: UPAR=0.D0  ! U-PARAMETER
 REAL(8)                :: JPAR=0.D0  ! J-PARAMETER
-REAL(8)                :: RCUT=0.D0  ! J-PARAMETER
-REAL(8)   ,POINTER     :: ULITTLE(:,:,:,:,:)
-REAL(8)   ,POINTER     :: downfold(:,:)
+INTEGER(4)             :: MAINLN(2)=(/0,0/)  ! DEFINES SHELL TO WHICH UPAR AND JPAR REFER TO
+REAL(8)                :: RCUT=0.D0  ! RADIUS WHERE NODE IN CORRELATED WAVE FUNCTION IS ENFORCED
+REAL(8)   ,POINTER     :: ULITTLE(:,:,:,:,:) ! SLATER INTEGRALS (EXCEPT FACTOR)
+REAL(8)   ,POINTER     :: DOWNFOLD(:,:)      ! MAPS PARTIAL WAVES TO CORRELATED ORBITALS
 END TYPE THISTYPE
 TYPE(THISTYPE),ALLOCATABLE,TARGET :: THISARRAY(:)
 TYPE(THISTYPE),POINTER :: THIS
-LOGICAL(4)             :: TON=.false.
+LOGICAL(4)             :: TON=.FALSE.
 INTEGER(4)             :: NSP=0    ! #(ATOM TYPES)
 INTEGER(4)             :: ISP=0    ! SELECTED ATOM TYPE
 CHARACTER(8)           :: DCTYPE='FLL' ! SPECIFIES TYPE OF DOUBLE COUNTING CORRECTION
@@ -82,7 +86,7 @@ END MODULE LDAPLUSU_MODULE
 !       *****************************************************************************
 CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
 CALL LDAPLUSU$ETOT(ISP,LMNXX,NSPIN,DENMAT_,DETOT,DATH)
-return
+RETURN
         DETOT=0.D0        
         DATH=0.D0
         IF(.NOT.TON) RETURN
@@ -216,10 +220,10 @@ END DO
                               LMNXX,NUE,NUENN,DIM,UIJKL,UPARAMETER,&
                               JPARAMETER,NSPIN,CHOOSEPOT,ELDAUSUMMAND,&
                               DATH,OVER,NOXA,CHOOSENUE)
-print*,' potupdown ',potupdown 
+PRINT*,' POTUPDOWN ',POTUPDOWN 
           DETOT=DETOT+ELDAUSUMMAND
           PRINT*, '================='
-          PRINT*,' total energy ',detot,' in ev: ',DETOT*27.21440D0
+          PRINT*,' TOTAL ENERGY ',DETOT,' IN EV: ',DETOT*27.21440D0
           PRINT*, '=================' 
           DEALLOCATE(UIJKL)
           DEALLOCATE(NUE)
@@ -252,7 +256,7 @@ print*,' potupdown ',potupdown
           END DO
           PRINT*, '======================================='
         END DO
-stop 'forced stop'
+STOP 'FORCED STOP'
         RETURN
         END
 !
@@ -274,30 +278,30 @@ stop 'forced stop'
         REAL(8)   ,INTENT(OUT):: NUE(DIM,DIM,2)
         REAL(8)   ,INTENT(OUT):: NUENN(LMNXX,LMNXX)
         REAL(8)   ,INTENT(IN) :: XALPHA(NR,DIM)
-        INTEGER(4),intent(in) :: NOXA      !NUMBER OF XA
+        INTEGER(4),INTENT(IN) :: NOXA      !NUMBER OF XA
         REAL(8)   ,INTENT(OUT):: OVER(NOXA,LMNXX)
-        REAL(8)   ,intent(in) :: RCUT       !2.33D0      !20.0D0  !2.33     
+        REAL(8)   ,INTENT(IN) :: RCUT       !2.33D0      !20.0D0  !2.33     
         REAL(8)               :: R(NR)
         INTEGER(4)            :: ALPHA,ALPHA2
         REAL(8)               :: NU(LMNXX,LMNXX,2)
         REAL(8)   ,ALLOCATABLE:: XA(:,:)
         INTEGER(4)            :: BETA,BETA2
-        INTEGER(4)            :: SHOAE(LMNXX) ! lm(lmn) for AEPHI
-        INTEGER(4),ALLOCATABLE:: SHOXA(:)     ! lm(lmn) for XA        
-        REAL(8)               :: WORK(NR),svar
+        INTEGER(4)            :: SHOAE(LMNXX) ! LM(LMN) FOR AEPHI
+        INTEGER(4),ALLOCATABLE:: SHOXA(:)     ! LM(LMN) FOR XA        
+        REAL(8)               :: WORK(NR),SVAR
         REAL(8)               :: X(LNX,LNX)
         INTEGER(4)            :: IR
         INTEGER(4)            :: L1,L2
-        INTEGER(4)            :: m
-        INTEGER(4)            :: LN1,LN2,ln
-        INTEGER(4)            :: LM1,LM2,lm
-        INTEGER(4)            :: LMN1,LMN2,lmn
+        INTEGER(4)            :: M
+        INTEGER(4)            :: LN1,LN2,LN
+        INTEGER(4)            :: LM1,LM2,LM
+        INTEGER(4)            :: LMN1,LMN2,LMN
         INTEGER(4)            :: SPIN
 !       *****************************************************************************
         CALL RADIAL$R(GID,NR,R)
-        nue(:,:,:)=0.d0
-        nuenn(:,:)=0.d0
-        over(:,:)=0.d0
+        NUE(:,:,:)=0.D0
+        NUENN(:,:)=0.D0
+        OVER(:,:)=0.D0
         IF(CHOOSENUE.EQ.1) THEN
 !         ===========================================================================
 !         ==  O. BENGONE 'S IMPLEMENTATION                                         ==
@@ -328,7 +332,7 @@ stop 'forced stop'
            ENDDO
          ENDDO
 
-         nue(:,:,:)=0.d0
+         NUE(:,:,:)=0.D0
          LMN1=0
          DO LN1=1,LNX
            L1=LOX(LN1)
@@ -377,7 +381,7 @@ stop 'forced stop'
           DO LN=1,LNX
             DO M=1,2*LOX(LN)+1
               LMN=LMN+1
-              SHOAE(LMN)=LOX(LN)**2+LM     ! (lm)
+              SHOAE(LMN)=LOX(LN)**2+LM     ! (LM)
             END DO
           END DO
 
@@ -392,31 +396,31 @@ stop 'forced stop'
           DO LM1=1,NOXA
             SHOXA(LM1)=9+LM1
           END DO
-!         == truncate xa beyond rcut
+!         == TRUNCATE XA BEYOND RCUT
           DO IR=1,NR
             IF (R(IR).GT.RCUT) THEN
               XA(IR,1)=0.D0
             END IF
           END DO
 
-!         == normalize xa
-          work(:)=XA(:,1)*XA(:,1)*R(:)**(2)
-          CALL RADIAL$INTEGRAL(GID,NR,work,svar)
-          XA(:,1)=XA(:,1)/SQRT(svar)
-          work(:)=XA(:,1)*XA(:,1)*R(:)**(2)
-          CALL RADIAL$INTEGRAL(GID,NR,work,svar)
-          PRINT*, 'RADIALINTEGRAL2',svar
+!         == NORMALIZE XA
+          WORK(:)=XA(:,1)*XA(:,1)*R(:)**(2)
+          CALL RADIAL$INTEGRAL(GID,NR,WORK,SVAR)
+          XA(:,1)=XA(:,1)/SQRT(SVAR)
+          WORK(:)=XA(:,1)*XA(:,1)*R(:)**(2)
+          CALL RADIAL$INTEGRAL(GID,NR,WORK,SVAR)
+          PRINT*, 'RADIALINTEGRAL2',SVAR
 
-!         ==  CALCULATE OVERLAP  <xa|aephi>
+!         ==  CALCULATE OVERLAP  <XA|AEPHI>
           DO LM1=1,NOXA
             LMN1=0
             DO LN1=1,LNX
               DO LM2=1,2*LOX(LN1)+1
                 LMN1=LMN1+1
                 IF(SHOAE(LMN1).EQ.SHOXA(LM1)) THEN
-                  work(:)=AEPHI(:,LN1)*XA(:,LM1)*R(:)**2
-                  CALL RADIAL$INTEGRAL(GID,NR,work,svar) 
-                  OVER(LM1,LMN1)=svar
+                  WORK(:)=AEPHI(:,LN1)*XA(:,LM1)*R(:)**2
+                  CALL RADIAL$INTEGRAL(GID,NR,WORK,SVAR) 
+                  OVER(LM1,LMN1)=SVAR
                 ELSE 
                   OVER(LM1,LMN1)=0.D0
                 END IF
@@ -628,7 +632,7 @@ stop 'forced stop'
         END DO
         
         EU=0.5D0*EU
-        PRINT *, 'b=hubbard ennergy=',EU,' in ev',eu*27.2144D0
+        PRINT *, 'B=HUBBARD ENNERGY=',EU,' IN EV',EU*27.2144D0
         
 !       CALCULATE HUBBARD POTENTIAL
         DO SPIN=1,2
@@ -669,15 +673,15 @@ stop 'forced stop'
 !         ===================================================================
 !         ==  E DC FLL                  
 !         ===================================================================
-print*,'occu ',occu
-print*,'dc parms ',l,uparameter,jparameter,occu
+PRINT*,'OCCU ',OCCU
+PRINT*,'DC PARMS ',L,UPARAMETER,JPARAMETER,OCCU
           EDCFLL=UPARAMETER/2*(OCCUGES**2-OCCUGES) &
       &         -JPARAMETER/2*(OCCU(1)**2-OCCU(1)) &
       &         -JPARAMETER/2*(OCCU(2)**2-OCCU(2))
 !         PRINT*,'E DC OF FLL',EDCFLL*27.2144D0
           EFLLTOT=EU-EDCFLL
           DETOT=EFLLTOT
-PRINT *, 'double counting energy FLL',edcfll,' in ev:',edcfll*27.2144D0 
+PRINT *, 'DOUBLE COUNTING ENERGY FLL',EDCFLL,' IN EV:',EDCFLL*27.2144D0 
 
 !         DC POT FLL
           DO SPIN=1,2
@@ -965,7 +969,7 @@ PRINT *, 'DOUBLE COUNTING ENERGY AMF ',EDCAMF,' IN EV:',EDCAMF*27.2144D0
 !         ===========================================================================
 !         ==  USE AEPHI AS LOCALIZED ORBITAL                                       ==
 !         ===========================================================================
-!         == pick the first partial wave with the correct l as local orbital
+!         == PICK THE FIRST PARTIAL WAVE WITH THE CORRECT L AS LOCAL ORBITAL
           DO LN=1,LNX
             IF(LOX(LN).EQ.L) THEN
               DO M=1,2*L+1
@@ -1017,11 +1021,11 @@ PRINT *, 'DOUBLE COUNTING ENERGY AMF ',EDCAMF,' IN EV:',EDCAMF*27.2144D0
         NSP=NSP_
         ISP=0
         ALLOCATE(THISARRAY(NSP))
-        do isp=1,nsp
-          allocate(thisarray(isp)%norb(10))
-          thisarray(isp)%norb(:)=10
-          thisarray(isp)%norb(1:2)=0 ! per default correlate only d and f-shells
-        enddo
+        DO ISP=1,NSP
+          ALLOCATE(THISARRAY(ISP)%NORB(10))
+          THISARRAY(ISP)%NORB(:)=10
+          THISARRAY(ISP)%NORB(1:2)=0 ! PER DEFAULT CORRELATE ONLY D AND F-SHELLS
+        ENDDO
         RETURN
         END
 !
@@ -1067,10 +1071,31 @@ PRINT *, 'DOUBLE COUNTING ENERGY AMF ',EDCAMF,' IN EV:',EDCAMF*27.2144D0
 
         IF(ID.EQ.'UPAR') THEN
           THIS%UPAR=VAL
+          THIS%USEUPAR=.TRUE.
+          IF(THIS%USEDIEL) THEN
+            CALL ERROR$MSG('DIEL HAS ALREADY BEEN SET')
+            CALL ERROR$MSG('UPAR AND DIEL CANNOT BE USED SIMULTANEOUSLY')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('LDAPLUSU$SETR8')
+          END IF
         ELSE IF(ID.EQ.'JPAR') THEN
           THIS%JPAR=VAL
+          THIS%USEJPAR=.TRUE.
+          IF(THIS%USEDIEL) THEN
+            CALL ERROR$MSG('DIEL HAS ALREADY BEEN SET')
+            CALL ERROR$MSG('JPAR AND DIEL CANNOT BE USED SIMULTANEOUSLY')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('LDAPLUSU$SETR8')
+          END IF
         ELSE IF(ID.EQ.'DIEL') THEN
           THIS%DIEL=VAL
+          THIS%USEDIEL=.TRUE.
+          IF(THIS%USEUPAR.OR.THIS%USEJPAR) THEN
+            CALL ERROR$MSG('UPAR OR JPAR HAVE ALREADY BEEN SET')
+            CALL ERROR$MSG('DIEL AND UPAR OR JPAR CANNOT BE USED SIMULTANEOUSLY')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('LDAPLUSU$SETR8')
+          END IF
         ELSE IF(ID.EQ.'RCUT') THEN
           THIS%RCUT=VAL
         ELSE
@@ -1090,8 +1115,8 @@ PRINT *, 'DOUBLE COUNTING ENERGY AMF ',EDCAMF,' IN EV:',EDCAMF*27.2144D0
 !       *****************************************************************************
         IF(ID.EQ.'ON') THEN
           TON=VAL
-          return
-        end if
+          RETURN
+        END IF
         IF(ISP.EQ.0) THEN
           CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
           CALL ERROR$CHVAL('ID',ID)
@@ -1103,6 +1128,34 @@ PRINT *, 'DOUBLE COUNTING ENERGY AMF ',EDCAMF,' IN EV:',EDCAMF*27.2144D0
           CALL ERROR$MSG('ID NOT RECOGNIZED')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('LDAPLUSU$SETL4')
+        END IF
+        RETURN
+        END 
+!
+!       .............................................................................
+        SUBROUTINE LDAPLUSU$SETI4A(ID,LENG,VAL)
+        USE LDAPLUSU_MODULE
+        IMPLICIT NONE
+        CHARACTER(*),INTENT(IN) :: ID
+        INTEGER(4)  ,INTENT(IN) :: LENG
+        INTEGER(4)  ,INTENT(IN) :: VAL(LENG)
+!       *****************************************************************************
+        IF(ISP.EQ.0) THEN
+          CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LDAPLUSU$SETI4A')
+        END IF
+        IF(ID.EQ.'NCORROFL') THEN
+          DEALLOCATE(THISARRAY(ISP)%NORB)
+          ALLOCATE(THISARRAY(ISP)%NORB(LENG))
+          THIS%NORB=VAL
+!
+        ELSE IF(ID.EQ.'MAINLN') THEN
+          THIS%MAINLN=VAL
+        ELSE
+          CALL ERROR$MSG('ID NOT RECOGNIZED')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LDAPLUSU$SETI4A')
         END IF
         RETURN
         END 
@@ -1146,47 +1199,46 @@ PRINT *, 'DOUBLE COUNTING ENERGY AMF ',EDCAMF,' IN EV:',EDCAMF*27.2144D0
         CHARACTER(8),PARAMETER :: CHITYPE='FROMPHI'
         INTEGER(4),PARAMETER   :: LRX=4
         INTEGER(4),PARAMETER   :: L=2
-        COMPLEX(8),allocatable :: DATH(:,:,:)
+        COMPLEX(8),ALLOCATABLE :: DATH(:,:,:)
         LOGICAL(4)             :: TUFROMPARMS=.FALSE.
         INTEGER(4)             :: GID
         INTEGER(4)             :: NR
         INTEGER(4)             :: LNX
         INTEGER(4),ALLOCATABLE :: LOX(:)
-        INTEGER(4)             :: Nchi
+        INTEGER(4)             :: NCHI
         REAL(8)   ,ALLOCATABLE :: PHITOCHI(:,:)
         INTEGER(4)             :: LNXPHI
         INTEGER(4),ALLOCATABLE :: LOXPHI(:)
-        INTEGER(4)             :: Nphi
+        INTEGER(4)             :: NPHI
         REAL(8)   ,ALLOCATABLE :: U(:,:,:,:)
         COMPLEX(8),ALLOCATABLE :: RHO(:,:,:,:)
         COMPLEX(8),ALLOCATABLE :: HAM(:,:,:,:)
-        COMPLEX(8),allocatable :: matss(:,:,:,:)
-        INTEGER(4)             :: IS1,IS2,I,j,ln,m
-        real(8)                :: pi,svar
-        real(8)                :: upar,jpar,jpar1
+        COMPLEX(8),ALLOCATABLE :: MATSS(:,:,:,:)
+        INTEGER(4)             :: IS1,IS2,I,J,LN,M
+        REAL(8)                :: PI,SVAR
+        REAL(8)                :: UPAR,JPAR,JPAR1
 !       ****************************************************************************
-        if(.not.ton) return
-                              call trace$push('LDAPLUSU$ETOT')
+        IF(.NOT.TON) RETURN
+                              CALL TRACE$PUSH('LDAPLUSU$ETOT')
         CALL LDAPLUSU$SELECT(ISP_)
         IF(.NOT.THIS%TON) RETURN
-        pi=4.d0*datan(1.d0)
+        PI=4.D0*DATAN(1.D0)
         
 !       ============================================================================
 !       ==  CONSTRUCT LOCAL ORBITALS                                              ==
 !       ============================================================================
         IF(.NOT.THIS%TINI) THEN
           CALL LDAPLUSU_CHIFROMPHI()
-!!$print*,'tini ',this%tini
-!!$print*,'ton ',this%ton
-!!$print*,'lnxchi ',this%lnxchi
-!!$print*,'nr     ',this%nr
-!!$print*,'loxchi ',this%loxchi
-!!$print*,'norb   ',this%norb
-!!$print*,'nchi   ',this%nchi
-!!$print*,'diel   ',this%diel
-!!$print*,'upar   ',this%upar
-!!$print*,'jpar   ',this%jpar
-!!$!print*,'ulittle',this%ulittle
+PRINT*,'TINI ',THIS%TINI
+PRINT*,'TON ',THIS%TON
+PRINT*,'LNXCHI ',THIS%LNXCHI
+PRINT*,'NR     ',THIS%NR
+PRINT*,'LOXCHI ',THIS%LOXCHI
+PRINT*,'NORB   ',THIS%NORB
+PRINT*,'NCHI   ',THIS%NCHI
+PRINT*,'DIEL   ',THIS%DIEL
+PRINT*,'UPAR   ',THIS%UPAR
+PRINT*,'JPAR   ',THIS%JPAR
 
 !         ==========================================================================
 !         ==  CALCULATE SMALL U-TENSOR                                            ==
@@ -1196,90 +1248,104 @@ PRINT *, 'DOUBLE COUNTING ENERGY AMF ',EDCAMF,' IN EV:',EDCAMF*27.2144D0
           LNX=THIS%LNXCHI
           ALLOCATE(LOX(LNX))
           LOX=THIS%LOXCHI
-          nchi=THIS%NCHI
+          NCHI=THIS%NCHI
           ALLOCATE(THIS%ULITTLE(LRX+1,LNX,LNX,LNX,LNX))
-          IF(TUFROMPARMS) THEN
-            CALL LDAPLUSU_ULITTLEFROMPARMS(LNX,LOX,LRX,THIS%UPAR,THIS%JPAR,THIS%ULITTLE)
-          ELSE
-            CALL LDAPLUSU_ULITTLE(GID,NR,LRX,LNX,LOX,THIS%CHI,THIS%ULITTLE)
+          CALL LDAPLUSU_ULITTLE(GID,NR,LRX,LNX,LOX,THIS%CHI,THIS%ULITTLE)
+          IF(THIS%USEDIEL.AND.(THIS%USEUPAR.OR.THIS%USEJPAR)) THEN
+            CALL ERROR$MSG('DIEL AND (UPAR.OR.JPAR) ARE INCOMPATIBLE')
+            CALL ERROR$L4VAL('USEDIEL',THIS%USEDIEL)
+            CALL ERROR$L4VAL('USEUPAR',THIS%USEUPAR)
+            CALL ERROR$L4VAL('USEJPAR',THIS%USEJPAR)
+            CALL ERROR$STOP('LDAPLUSU$ETOT')
           END IF
-          this%Ulittle=this%Ulittle/THIS%DIEL
-SVAR=4.D0*PI*THIS%UPAR/THIS%ULITTLE(1,1,1,1,1)
-THIS%ULITTLE=THIS%ULITTLE*SVAR
+          IF(THIS%USEDIEL) THEN
+            THIS%ULITTLE=THIS%ULITTLE/THIS%DIEL
+          ELSE IF(THIS%USEUPAR.OR.THIS%USEJPAR) THEN
+            CALL LDAPLUSU_MODULITTLEWITHPARMS(LNX,LOX,LRX,THIS%USEUPAR,THIS%UPAR &
+       &                           ,THIS%USEJPAR,THIS%JPAR,THIS%MAINLN,THIS%ULITTLE)
+          END IF
         ELSE
           GID=THIS%GID
           NR=THIS%NR
           LNX=THIS%LNXCHI
           ALLOCATE(LOX(LNX))
           LOX=THIS%LOXCHI
-          Nchi=THIS%NCHI
+          NCHI=THIS%NCHI
         END IF
         CALL SETUP$SELECT(ISP)
-        CALL SETUP$lnx(isp,LNXPHI)
-        ALLOCATE(loxphi(lnxphi))
-        CALL SETUP$lofln(isp,lnxphi,LOXPHI)
-        nphi=sum(2*loxphi+1)
+        CALL SETUP$LNX(ISP,LNXPHI)
+        ALLOCATE(LOXPHI(LNXPHI))
+        CALL SETUP$LOFLN(ISP,LNXPHI,LOXPHI)
+        NPHI=SUM(2*LOXPHI+1)
 
 !
 !       ==========================================================================
 !       ==  DOWNFOLD                                                            ==
 !       ==========================================================================
-        allocate(phitochi(nchi,nphi))
-        allocate(rho(nchi,nchi,2,2))
-        ALLOCATE(ham(Nchi,Nchi,2,2))
-        allocate(matss(nphi,nphi,2,2))
-        allocate(dath(nphi,nphi,ndimd))
-        ALLOCATE(U(Nchi,Nchi,Nchi,Nchi))
+        ALLOCATE(PHITOCHI(NCHI,NPHI))
+        ALLOCATE(RHO(NCHI,NCHI,2,2))
+        ALLOCATE(HAM(NCHI,NCHI,2,2))
+        ALLOCATE(MATSS(NPHI,NPHI,2,2))
+        ALLOCATE(DATH(NPHI,NPHI,NDIMD))
+        ALLOCATE(U(NCHI,NCHI,NCHI,NCHI))
 !       == TRANSFORM FROM TOTAL SPIN TO SPIN-SPIN
-        CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,nphi,DENMAT(1:nphi,1:nphi,:),MATSS)
+        CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
 !       == TRANSFORM FROM PHI TO CHI
-        call LDAPLUSU_MAPTOCHI(LNX,LOX,nchi,LNXPHI,LOXPHI,npHI,phitochi)
+        CALL LDAPLUSU_MAPTOCHI(LNX,LOX,NCHI,LNXPHI,LOXPHI,NPHI,PHITOCHI)
+PRINT*,'===================== phitochi ======================'
+do i=1,nchi
+  WRITE(*,FMT='(I3,100F8.3)')nchi,phitochi(I,:)
+enddo
+
         DO IS1=1,2
           DO IS2=1,2
-            rho(:,:,IS1,IS2)=MATMUL(PHITOCHI,MATMUL(matss(:,:,IS1,IS2),transpose(PHITOCHI)))
+            RHO(:,:,IS1,IS2)=MATMUL(PHITOCHI,MATMUL(MATSS(:,:,IS1,IS2),TRANSPOSE(PHITOCHI)))
           ENDDO
         ENDDO
 
+DO IS1=1,2
+  DO IS2=1,2
+    IF(SUM(ABS(RHO(:,:,IS1,IS2))).LT.1.D-3) CYCLE
+    PRINT*,'===================== RHO FOR SPIN',IS1,IS2,' ======================'
+    I=0
+    DO LN=1,LNX
+      DO M=1,2*LOX(LN)+1
+        I=I+1
+        WRITE(*,FMT='(I3,100F8.3)')LOX(LN),REAL(RHO(I,:,IS1,IS2))
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
 do is1=1,2
-do is2=1,2
-if(sum(abs(rho(:,:,is1,is2))).lt.1.d-3) cycle
-PRINT*,'===================== RHO FOR SPIN',IS1,IS2,' ======================'
-i=0
-do ln=1,lnx
-do m=1,2*lox(ln)+1
-i=i+1
-write(*,fmt='(i3,100f8.3)')lox(ln),real(rho(i,:,IS1,IS2))
-ENDDO
-ENDDO
-ENDDO
-ENDDO
+  svar=0.d0
+  do ln=1,nchi
+    svar=svar+rho(ln,ln,is1,is1)
+  enddo
+  print*,'charge= ',svar,' for spin ',is1
+enddo
 !
 !       ==========================================================================
 !       ==  CALCULATE U-TENSOR                                                  ==
 !       ==========================================================================
-        CALL LDAPLUSU_UTENSOR(LRX,Nchi,LNX,LOX,THIS%ULITTLE,U)
-        upar=0.d0
-        jpar=0.d0
-        jpar1=0.d0
-        do i=1,nchi
-          do j=1,nchi
-            upar=upar+u(i,j,i,j)
-            jpar=jpar+u(i,j,i,j)-u(i,j,j,i)
-            if(i.ne.j)jpar1=jpar1+u(i,j,j,i)
-          enddo
-        enddo
-        upar=upar/real(nchi)**2
-        jpar=upar-jpar/real(nchi*(nchi-1))
-        jpar1=jpar1/real(nchi*(nchi-1))*7.d0/5.d0
-print*,'uparameter[ev]    ',upar*27.211d0
-print*,'jparameter[ev](1) ',jpar*27.211d0
-print*,'jparameter[ev](2) ',jpar1*27.211d0
+        CALL LDAPLUSU_UTENSOR(LRX,NCHI,LNX,LOX,THIS%ULITTLE,U)
+        UPAR=0.D0
+        JPAR=0.D0
+        DO I=1,NCHI
+          DO J=1,NCHI
+            UPAR=UPAR+U(I,J,I,J)
+            IF(I.NE.J)JPAR=JPAR+U(I,J,J,I)
+          ENDDO
+        ENDDO
+        UPAR=UPAR/REAL(NCHI)**2
+        JPAR=JPAR/REAL(NCHI*(NCHI-1))*7.D0/5.D0
+PRINT*,'UPARAMETER[EV]    ',UPAR*27.211D0 ,'UPARAMETER    ',UPAR
+PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 
 !
 !       ============================================================================
 !       ==  CALCULATE LDA+U TOTAL ENERGY CONTRIBUTION                             ==
 !       ============================================================================
-        CALL LDAPLUSU_ETOT(DCTYPE,L,upar,JPAR,Nchi,U,RHO,ETOT,HAM)
+        CALL LDAPLUSU_ETOT(DCTYPE,L,UPAR,JPAR,NCHI,U,RHO,ETOT,HAM)
 !
 !       ============================================================================
 !       ==  UPFOLD                                                                ==
@@ -1287,23 +1353,23 @@ print*,'jparameter[ev](2) ',jpar1*27.211d0
 !       == TRANSFORM FROM CHI TO PHI ===============================================
         DO IS1=1,2
           DO IS2=1,2
-            matSS(:,:,IS1,IS2)=MATMUL(TRANSPOSE(PHITOCHI),MATMUL(HAM(:,:,IS1,IS2),PHITOCHI))
+            MATSS(:,:,IS1,IS2)=MATMUL(TRANSPOSE(PHITOCHI),MATMUL(HAM(:,:,IS1,IS2),PHITOCHI))
           ENDDO
         ENDDO
 !
 !       == TRANSFORM FROM (SPIN,SPIN) TO (TOTAL,SPIN) ==============================
-        CALL LDAPLUSU_SPINDENMAT('BACK',NDIMD,LMNXX,DATH,matss)
+        CALL LDAPLUSU_SPINDENMAT('BACK',NDIMD,LMNXX,DATH,MATSS)
 !
 !       == MAKE REAL (THIS IS A FUDGE TO BE FIXED IN AUGMENTATION!)
-        dath_(:,:,:)=(0.d0,0.d0)
-        DATH_(:nphi,:nphi,:)=REAL(DATH)
-!!$do is1=1,ndimd
-!!$PRINT*,'===================== dath FOR SPIN',IS1,IS2,' ======================'
-!!$i=0
-!!$do ln=1,lnxphi
-!!$do m=1,2*loxphi(ln)+1
-!!$i=i+1
-!!$write(*,fmt='(i3,100f8.3)')loxphi(ln),real(dath(i,:,IS1))
+        DATH_(:,:,:)=(0.D0,0.D0)
+        DATH_(:NPHI,:NPHI,:)=REAL(DATH)
+!!$DO IS1=1,NDIMD
+!!$PRINT*,'===================== DATH FOR SPIN',IS1,IS2,' ======================'
+!!$I=0
+!!$DO LN=1,LNXPHI
+!!$DO M=1,2*LOXPHI(LN)+1
+!!$I=I+1
+!!$WRITE(*,FMT='(I3,100F8.3)')LOXPHI(LN),REAL(DATH(I,:,IS1))
 !!$ENDDO
 !!$ENDDO
 !!$ENDDO
@@ -1311,14 +1377,14 @@ print*,'jparameter[ev](2) ',jpar1*27.211d0
 !       ============================================================================
 !       ==  UNSELECT LDAPLUSU                                                     ==
 !       ============================================================================
-        deallocate(u)
-        deallocate(loxphi)
-        deallocate(lox)
-        deallocate(matss)
-        deallocate(rho)
-        deallocate(ham)
+        DEALLOCATE(U)
+        DEALLOCATE(LOXPHI)
+        DEALLOCATE(LOX)
+        DEALLOCATE(MATSS)
+        DEALLOCATE(RHO)
+        DEALLOCATE(HAM)
         CALL LDAPLUSU$SELECT(0)
-                                     call trace$pop()
+                                     CALL TRACE$POP()
         RETURN
         END
 !
@@ -1331,24 +1397,26 @@ print*,'jparameter[ev](2) ',jpar1*27.211d0
         INTEGER(4)            :: GID
         INTEGER(4)            :: NR
         INTEGER(4)            :: LNX
-        INTEGER(4),allocatable:: Lox(:)
-        real(8)   ,allocatable:: phi(:,:)
-        integer(4)            :: lnxchi 
-        integer(4),allocatable:: loxchi(:)
-        real(8)   ,allocatable:: chi(:,:)
-        real(8)   ,allocatable:: a(:,:)
-        REAL(8)   ,ALLOCATABLE:: mat(:,:)
-        REAL(8)   ,ALLOCATABLE:: matinv(:,:)
+        INTEGER(4),ALLOCATABLE:: LOX(:)
+        REAL(8)   ,ALLOCATABLE:: PHI(:,:)
+        INTEGER(4)            :: LNXCHI 
+        INTEGER(4),ALLOCATABLE:: LOXCHI(:)
+        REAL(8)   ,ALLOCATABLE:: CHI(:,:)
+        REAL(8)   ,ALLOCATABLE:: CHI1(:,:)
+        REAL(8)   ,ALLOCATABLE:: A(:,:)
+        REAL(8)   ,ALLOCATABLE:: A1(:,:)
+        REAL(8)   ,ALLOCATABLE:: MAT(:,:)
+        REAL(8)   ,ALLOCATABLE:: MATINV(:,:)
         REAL(8)   ,ALLOCATABLE:: R(:)        
-        REAL(8)   ,ALLOCATABLE:: g(:)        
-        real(8)   ,parameter  :: rcg=0.3d0
-        real(8)   ,allocatable:: aux(:)
-        real(8)               :: svar1,svar2
+        REAL(8)   ,ALLOCATABLE:: G(:)        
+        REAL(8)   ,PARAMETER  :: RCG=0.3D0
+        REAL(8)   ,ALLOCATABLE:: AUX(:)
+        REAL(8)               :: SVAR1,SVAR2
         INTEGER(4)            :: IR
-        integer(4)            :: nx,n,lx,l,ln,lnchi,ln0
-        integer(4)            :: n1,n2,ln1,ln2,l1,l2
+        INTEGER(4)            :: NX,N,LX,L,LN,LNCHI,LN0,NOFL,ISVAR
+        INTEGER(4)            :: N1,N2,LN1,LN2,L1,L2
 !       ****************************************************************************
-                              call trace$push('LDAPLUSU_CHIFROMPHI')
+                              CALL TRACE$PUSH('LDAPLUSU_CHIFROMPHI')
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('GID',GID)
         THIS%GID=GID
@@ -1356,9 +1424,9 @@ print*,'jparameter[ev](2) ',jpar1*27.211d0
         THIS%NR=NR
         CALL SETUP$LNX(ISP,LNX)
         ALLOCATE(LOX(LNX))
-        CALL SETUP$LOFLN(ISP,LNX,lox)
-        allocate(phi(nr,lnx))
-        CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,phi)
+        CALL SETUP$LOFLN(ISP,LNX,LOX)
+        ALLOCATE(PHI(NR,LNX))
+        CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,PHI)
 !
 !       ============================================================================
 !       ==  DIVIDE IN HEAD AN TAIL FUNCTIONS                                      ==
@@ -1366,60 +1434,84 @@ print*,'jparameter[ev](2) ',jpar1*27.211d0
         ALLOCATE(R(NR))
         CALL RADIAL$R(GID,NR,R)
         ALLOCATE(AUX(NR))
-!       == COUNT NUMBER OF CHI FUNCTIONS (PRELIMINARY)
+!       == COUNT NUMBER OF PARTIAL WAVES PER L AS AS ESTIMATE FOR THE NUMBER OF CHI
+!       == COUNT ONLY THOSE ANGULAR MOMENTUM CHANNELS THAT HAVE CORRELATED ORBITALS
         LX=MAXVAL(LOX)
         LNXCHI=0
         DO L=0,LX
-          IF(THIS%NORB(L+1).EQ.0) CYCLE
+          IF(THIS%NORB(L+1).EQ.0) CYCLE  ! FORGET CHANNELS WITHOUT CORRELATED ORBITALS
+          NOFL=0
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
+            NOFL=NOFL+1
             LNXCHI=LNXCHI+1
-           ENDDO
+          ENDDO
+!         == LIMIT THE NUMBER OF CORRELATED ORBITALS TO THE NUMBER OF PARTIAL WAVES 
+!         == MINUS ONE, SO THAT ONE TAIL FUNCTION IS LEFT. 
+!         == HOWEVER, IF THERE IS ONLY A SINGLE PARTIAL WAVE, LEAVE THAT ONE.
+          IF(THIS%NORB(L+1).GT.NOFL-1) THEN
+            ISVAR=MAX(1,NOFL-1)            
+            THIS%NORB(L+1)=MIN(THIS%NORB(L+1),ISVAR) 
+          END IF
         ENDDO
 !
 !       == ORDER ACCORDING TO L ====================================================
         ALLOCATE(LOXCHI(LNXCHI))        
         ALLOCATE(CHI(NR,LNXCHI))        
-        ALLOCATE(A(LNXCHI,LNX))        
+!       == |CHI_I>=SUM_I |PHI_J>A(J,I)
+        ALLOCATE(A(LNX,LNXCHI))        
         A(:,:)=0.D0
         LNCHI=0
         DO L=0,LX
-          IF(THIS%NORB(L+1).EQ.0) CYCLE
+          IF(THIS%NORB(L+1).EQ.0) CYCLE  ! SHELLS WITHIOUT LOCAL ORBITALS ARE IRRELEVANT
           DO LN=1,LNX
-            IF(LOX(LN).NE.L) CYCLE
+            IF(LOX(LN).NE.L) CYCLE  !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
             LNCHI=LNCHI+1
             LOXCHI(LNCHI)=LOX(LN)
             CHI(:,LNCHI)=PHI(:,LN)
-            A(LNCHI,LN)=1.D0
+            A(LN,LNCHI)=1.D0
           ENDDO
         ENDDO
 !
 !       == MAKE HEAD FUNCTION ANTIBONDING WITH NODE AT RCUT ==========================
-        rcut=this%rcut
+        RCUT=THIS%RCUT
         L=-1
         DO LN=1,LNXCHI
-          IF(LOXCHI(LN).EQ.L) CYCLE
+          IF(LOXCHI(LN).NE.L) NOFL=0    ! RESET ORBITAL COUNTER FOR EACH L
           L=LOXCHI(LN)
-          IF(LN+1.GT.LNXCHI) CYCLE
-          IF(LOXCHI(LN+1).NE.L) CYCLE
+          NOFL=NOFL+1
+          IF(NOFL.GT.THIS%NORB(L+1)) CYCLE  !ONLY CORRELATED ORBITALS WILL BE LOCALIZED
+          IF(LN+1.GT.LNXCHI) CYCLE          !CHECK IF THERE IS A TAIL FUNCTION LEFT
+          IF(LOXCHI(LN+1).NE.L) CYCLE       !CHECK IF THERE IS A TAIL FUNCTION LEFT
 !         == IMPOSE NODE CONDITION======================================================
           CALL RADIAL$VALUE(GID,NR,CHI(:,LN),RCUT,SVAR1)
           CALL RADIAL$VALUE(GID,NR,CHI(:,LN+1),RCUT,SVAR2)
           CHI(:,LN)=CHI(:,LN)*SVAR2-CHI(:,LN+1)*SVAR1
-          A(LN,:)=A(LN,:)*SVAR2-A(LN+1,:)*SVAR1
+          A(:,LN)=A(:,LN)*SVAR2-A(:,LN+1)*SVAR1
 !         == CUT AT RCUT           ===================================================
           DO IR=1,NR
             IF(R(IR).GT.RCUT) CHI(IR,LN)=0.D0
+          ENDDO
+!         == ORTHOGONALIZE TO THE LOWER HEAD FUNCTIONS ============================
+          DO LN1=LN-NOFL+1,LN-1
+            AUX(:)=CHI(:,LN)*CHI(:,LN1)*R(:)**2
+            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+            CHI(:,LN)=CHI(:,LN)-CHI(:,LN1)*SVAR1
+            A(:,LN)=A(:,LN)-A(:,LN1)*SVAR1
           ENDDO
 !         == NORMALIZE HEAD FUNCTION =============================================
           AUX(:)=CHI(:,LN)**2*R(:)**2
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
           SVAR1=1.D0/SQRT(SVAR1)
-          A(LN,:)=A(LN,:)*SVAR1
           CHI(:,LN)=CHI(:,LN)*SVAR1
+          A(:,LN)=A(:,LN)*SVAR1
         END DO          
 !
 !       == DELOCALIZE TAIL FUNCTIONS ====================================================
+        ALLOCATE(CHI1(NR,LNXCHI))
+        CHI1(:,:)=CHI(:,:)
+        ALLOCATE(A1(LNX,LNXCHI))        
+        A1(:,:)=A(:,:)
         ALLOCATE(G(NR))
         G(:)=EXP(-(R(:)/RCG)**2)
         L=-1
@@ -1428,118 +1520,121 @@ print*,'jparameter[ev](2) ',jpar1*27.211d0
             L=LOXCHI(LN)
             LN0=LN
             CYCLE
-          END IF   
-!         == MINIMIZE CONTRIBUTION NEAR THE CENTER FOR TAIL FUNCTIONS
+          END IF  
+!         == MINIMIZE CONTRIBUTION NEAR THE CENTER 
           DO LN2=LN0,LN-1
-            AUX(:)=G(:)*CHI(:,LN)*CHI(:,LN2)*R(:)**2
+            AUX(:)=G(:)*CHI1(:,LN)*CHI1(:,LN2)*R(:)**2
             CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
-            AUX(:)=G(:)*CHI(:,LN2)**2*R(:)**2
+            AUX(:)=G(:)*CHI1(:,LN2)**2*R(:)**2
             CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
             SVAR1=SVAR1/SVAR2
-            CHI(:,LN)=CHI(:,LN)-CHI(:,LN2)*SVAR1
-            A(LN,:)=A(LN,:)-A(LN2,:)*SVAR1
+            CHI1(:,LN)=CHI1(:,LN)-CHI1(:,LN2)*SVAR1
+            A1(:,LN)=A1(:,LN)-A1(:,LN2)*SVAR1
           ENDDO
         ENDDO
-
+!       = NOW MAP ONLY TAIL FUNCTIONS BACK AND LEAVE HEAD FUNCTIONS UNTOUCHED        
+        L=-1
+        DO LN=1,LNXCHI
+          IF(LOXCHI(LN).NE.L) THEN
+            L=LOXCHI(LN)
+            NOFL=0
+          END IF  
+          NOFL=NOFL+1
+          IF(NOFL.LE.THIS%NORB(L+1)) CYCLE ! LEAVE HEAD FUNCTIONS ALONE
+          CHI(:,LN)=CHI1(:,LN)
+          A(:,LN)=A1(:,LN)
+        ENDDO
 !
-!       === construct transformation matrix from a ========================================
-        lx=maxval(loxchi)
-        do l=1,lx
+!       === CONSTRUCT TRANSFORMATION MATRIX FROM A ========================================
+        LX=MAXVAL(LOXCHI)
+        DO L=1,LX
 !
-          nx=0
-          do ln=1,lnxchi
-            if(loxchi(ln).eq.l) nx=nx+1
-          enddo
-          if(nx.eq.0) cycle
-if(nx.gt.2) then
-  call error$msg('make also tail functions antibonding')
-  call error$stop('ldaplusu_chifromphi')
-end if
+          NX=0
+          DO LN=1,LNXCHI
+            IF(LOXCHI(LN).EQ.L) NX=NX+1
+          ENDDO
+          IF(NX.EQ.0) CYCLE   
 
-          allocate(mat(nx,nx))
-          allocate(matinv(nx,nx))
+          ALLOCATE(MAT(NX,NX))
+          ALLOCATE(MATINV(NX,NX))
 !          
-          n1=0
-          do ln1=1,lnxchi
-            l1=loxchi(ln1)
-            if(l1.ne.l) cycle
-            n1=n1+1
-            n2=0
-            do ln2=1,lnx
-              l2=lox(ln2)
-              if(l2.ne.l) cycle
-              n2=n2+1
-              mat(n1,n2)=a(ln1,ln2)
-            enddo
-          enddo
-          call lib$invertr8(nx,mat,matinv)
-          n1=0
-          do ln1=1,lnxchi
-            l1=loxchi(ln1)
-            if(l1.ne.l) cycle
-            n1=n1+1
-            n2=0
-            do ln2=1,lnx
-              l2=lox(ln2)
-              if(l2.ne.l) cycle
-              n2=n2+1
-              a(ln1,ln2)=matinv(n1,n2)
-            enddo
-          enddo
-          deallocate(mat)
-          deallocate(matinv)
-        enddo
+          N1=0
+          DO LN1=1,LNXCHI
+            L1=LOXCHI(LN1)
+            IF(L1.NE.L) CYCLE
+            N1=N1+1
+            N2=0
+            DO LN2=1,LNX
+              L2=LOX(LN2)
+              IF(L2.NE.L) CYCLE
+              N2=N2+1
+              MAT(N2,N1)=A(LN2,LN1)
+            ENDDO
+          ENDDO
+          CALL LIB$INVERTR8(NX,MAT,MATINV)
+          N1=0
+          DO LN1=1,LNXCHI
+            L1=LOXCHI(LN1)
+            IF(L1.NE.L) CYCLE
+            N1=N1+1
+            N2=0
+            DO LN2=1,LNX
+              L2=LOX(LN2)
+              IF(L2.NE.L) CYCLE
+              N2=N2+1
+              A(LN1,LN2)=MATINV(N1,N2)
+            ENDDO
+          ENDDO
+          DEALLOCATE(MAT)
+          DEALLOCATE(MATINV)
+        ENDDO
 !
-!       === remove tail functions                         ======================================
-        ln1=0
-        l=-1
-        do ln=1,lnxchi
-          if(l.ne.loxchi(ln)) then
-            l=loxchi(ln)
-            n=0
-            nx=0
-            do ln2=ln,lnxchi
-              if(loxchi(ln2).ne.l) exit
-              nx=nx+1
-            enddo
-            nx=max(1,nx-1)   ! throw out the highest tail function in any case
-            nx=min(nx,this%norb(l+1))
-          end if
-          n=n+1
-          if(n.le.nx) then
-            ln1=ln1+1
-            loxchi(ln1)=loxchi(ln)
-            chi(:,ln1)=chi(:,ln)
-            a(ln1,:)=a(ln,:)
-          end if
-        enddo
-        lnxchi=ln1
+!       === REMOVE TAIL FUNCTIONS                         ======================================
+        LN1=0
+        L=-1
+        DO LN=1,LNXCHI
+          IF(L.NE.LOXCHI(LN)) THEN
+            L=LOXCHI(LN)
+            N=0
+            NX=THIS%NORB(L+1)
+          END IF
+          N=N+1
+          IF(N.LE.NX) THEN
+            LN1=LN1+1
+            LOXCHI(LN1)=LOXCHI(LN)
+            CHI(:,LN1)=CHI(:,LN)
+!           -- A HAS BEEN INVERTED. THEREFORE THE CHI-INDEX IS LEFT 
+!           -- AND THE PHI-INDEX IN ON THE RIGHT HAND SIDE
+            A(LN1,:)=A(LN,:)  
+          END IF
+        ENDDO
+        LNXCHI=LN1
 
-!print*,'== write chi.dat'
-!open(unit=109,file='chi.dat',form='formatted')
-!do ir=1,nr
-!  write(109,*)r(ir),chi(ir,1:lnxchi)
-!enddo
-!close(109)
-!stop 'forced after writing chi'
+!PRINT*,'== WRITE CHI.DAT'
+!OPEN(UNIT=109,FILE='CHI.DAT',FORM='FORMATTED')
+!DO IR=1,NR
+!  WRITE(109,*)R(IR),CHI(IR,1:LNXCHI)
+!ENDDO
+!CLOSE(109)
+!STOP 'FORCED AFTER WRITING CHI'
 !
 !       ============================================================================
 !       ==  CUT OF SUPPORT FUNCTIONS                                              ==
 !       ============================================================================
-        this%lnxchi=lnxchi
-        allocate(this%loxchi(lnxchi))
-        this%loxchi=loxchi(1:lnxchi)
-        this%nchi=sum(2*loxchi(1:lnxchi)+1)
-        allocate(this%chi(nr,lnxchi))
-        this%chi=chi(:,1:lnxchi)
-        allocate(this%downfold(lnxchi,lnx))
-        this%downfold(:,:)=a(:lnxchi,:)
+        THIS%LNXCHI=LNXCHI
+        ALLOCATE(THIS%LOXCHI(LNXCHI))
+        THIS%LOXCHI=LOXCHI(1:LNXCHI)
+        THIS%NCHI=SUM(2*LOXCHI(1:LNXCHI)+1)
+        ALLOCATE(THIS%CHI(NR,LNXCHI))
+        THIS%CHI=CHI(:,1:LNXCHI)
+        ALLOCATE(THIS%DOWNFOLD(LNXCHI,LNX))
+        THIS%DOWNFOLD(:,:)=A(:LNXCHI,:)
 !
 !       ============================================================================
-!       ==  CUT OF SUPPORT FUNCTIONS                                              ==
+!       ==  CLEAN UP                                                              ==
 !       ============================================================================
         DEALLOCATE(R)
-                              call trace$pop()
+                              CALL TRACE$POP()
         RETURN
         END
 !
@@ -1559,7 +1654,7 @@ end if
         COMPLEX(8),INTENT(INOUT):: MAT2(LMNXX,LMNXX,2,2)
         COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
 !       ****************************************************************************
-                              call trace$push('LDAPLUSU_spindenmat')
+                              CALL TRACE$PUSH('LDAPLUSU_SPINDENMAT')
         IF(ID.EQ.'FORWARD') THEN
           MAT2(:,:,:,:)=(0.D0,0.D0)
           IF(NDIMD.EQ.1) THEN
@@ -1597,15 +1692,15 @@ end if
           CALL ERROR$MSG('ID MUST BE EITHER "FORWARD" OR "BACK"')
           CALL ERROR$MSG('LDAPLUSU_SPINDENMAT')
         END IF
-                              call trace$pop()
+                              CALL TRACE$POP()
         RETURN
         END
 
 !
 !       ............................................................................
-        SUBROUTINE LDAPLUSU_MAPTOCHI(LNXCHI,LOXCHI,LMNXCHI,LNXPHI,LOXPHI,LMNXPHI,downfold)
+        SUBROUTINE LDAPLUSU_MAPTOCHI(LNXCHI,LOXCHI,LMNXCHI,LNXPHI,LOXPHI,LMNXPHI,DOWNFOLD)
 !       **                                                                        **
-        use ldaplusu_module
+        USE LDAPLUSU_MODULE
         IMPLICIT NONE
         INTEGER(4),INTENT(IN)   :: LNXCHI
         INTEGER(4),INTENT(IN)   :: LOXCHI(LNXCHI)
@@ -1613,11 +1708,11 @@ end if
         INTEGER(4),INTENT(IN)   :: LNXPHI
         INTEGER(4),INTENT(IN)   :: LOXPHI(LNXPHI)
         INTEGER(4),INTENT(IN)   :: LMNXPHI
-        REAL(8)   ,intent(out)  :: DOWNFOLD(LMNXCHI,LMNXPHI)
+        REAL(8)   ,INTENT(OUT)  :: DOWNFOLD(LMNXCHI,LMNXPHI)
         INTEGER(4)              :: LMN1,LN1,L1,LMN2,LN2,L2,M
 !       ****************************************************************************
-                              call trace$push('LDAPLUSU_maptochi')
-        downfold=0.d0
+                              CALL TRACE$PUSH('LDAPLUSU_MAPTOCHI')
+        DOWNFOLD=0.D0
         LMN1=0
         DO LN1=1,LNXCHI
           L1=LOXCHI(LN1)
@@ -1633,7 +1728,7 @@ end if
           ENDDO
           LMN1=LMN1+2*L1+1
         ENDDO
-                              call trace$pop()
+                              CALL TRACE$POP()
         RETURN
         END
 !
@@ -1658,7 +1753,7 @@ end if
         REAL(8)               :: SVAR
         REAL(8)               :: R(NR)
 !       ****************************************************************************
-                              call trace$push('LDAPLUSU_ulittle')
+                              CALL TRACE$PUSH('LDAPLUSU_ULITTLE')
         CALL RADIAL$R(GID,NR,R)
         ULITTLE=0.D0
         DO LN1=1,LNX
@@ -1669,7 +1764,7 @@ end if
             ISVAR2=ABS(LOX(LN1)-LOX(LN2))
             LMIN=MIN(ISVAR1,ISVAR2)
             LMAX=MAX(ISVAR1,ISVAR2)
-            lmax=min(lmax,lrx)
+            LMAX=MIN(LMAX,LRX)
             DO L=LMIN,LMAX
               CALL RADIAL$POISSON(GID,NR,L,RHO,POT)
               POT(:)=POT(:)*R(:)**2
@@ -1690,45 +1785,122 @@ end if
             ENDDO
           ENDDO
         ENDDO
-                              call trace$pop()
+                              CALL TRACE$POP()
         RETURN
         END
 !
 !       ............................................................................
-        SUBROUTINE LDAPLUSU_ULITTLEFROMPARMS(LNX,LOX,LRX,UPAR,JPAR,ULITTLE)
+        SUBROUTINE LDAPLUSU_MODULITTLEWITHPARMS(LNX,LOX,LRX,USEUPAR,UPAR &
+       &                                       ,USEJPAR,JPAR,MAINLN,ULITTLE)
 !       ** CALCULATES THE INTERACTION ENERGY                                      **
 !       **                                                                        **
         IMPLICIT NONE
         INTEGER(4),INTENT(IN) :: LNX
         INTEGER(4),INTENT(IN) :: LOX(LNX)
         INTEGER(4),INTENT(IN) :: LRX
+        LOGICAL(4),INTENT(IN) :: USEUPAR
+        LOGICAL(4),INTENT(IN) :: USEJPAR
+        INTEGER(4),INTENT(IN) :: MAINLN(2)
         REAL(8)   ,INTENT(IN) :: UPAR
         REAL(8)   ,INTENT(IN) :: JPAR
-        REAL(8)   ,INTENT(OUT):: ULITTLE(LRX+1,LNX,LNX,LNX,LNX)
+        REAL(8)   ,INTENT(INOUT):: ULITTLE(LRX+1,LNX,LNX,LNX,LNX)
         REAL(8)   ,PARAMETER  :: FIVEEIGTH=0.625D0
-        REAL(8)               :: PI
+        REAL(8)               :: PI,FOURPI
         REAL(8)               :: FAC
-        INTEGER(4)            :: L,LN
+        INTEGER(4)            :: L,LN,LNPROBE,N
+        REAL(8)               :: RAWJPAR,RAWUPAR
+        REAL(8)               :: SVAR
 !       ****************************************************************************
         PI=4.D0*DATAN(1.D0)
+        FOURPI=4.D0*PI
+!
+!       =============================================================================
+!       == DETERMIN SHELL TO WHICH UPAR AND JPAR BELONG
+!       =============================================================================
+        LNPROBE=-1
+        N=0
         DO LN=1,LNX
-          IF(LOX(LN).NE.2) THEN
-            CALL ERROR$MSG('THIS ROUTINE IS ONLY IMPLEMENTED FOR THE D-SHELL')
-            CALL ERROR$STOP('LDAPLUSU_ULITTLEFROMPARMS')
+          L=LOX(LNX)
+          IF(L.NE.MAINLN(1)) CYCLE
+          N=N+1
+          IF(N.EQ.MAINLN(2))THEN
+            LNPROBE=LN  
+            EXIT
           END IF
         ENDDO
+        IF(LNX.EQ.1) LNPROBE=1
+        IF(LNPROBE.EQ.-1) THEN
+          CALL ERROR$MSG('LDAPLUSU_MODULITTLEWITHPARMS')
+        END IF
+!
+!       =============================================================================
+!       == SCALE UP ULITTLE TO SATISFY UPAR
+!       =============================================================================
+        IF(USEUPAR) THEN
+          RAWUPAR=ULITTLE(1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)/FOURPI
+          SVAR=UPAR/RAWUPAR
+          ULITTLE=ULITTLE*SVAR
+        END IF
+!
+!       =============================================================================
+!       == SCALE UP JPAR OF THE MAIN SHELL AND SET OTHERS TO ZERO
+!       =============================================================================
+        IF(USEJPAR) THEN
+          IF(LOX(LNPROBE).EQ.2) THEN
+            RAWJPAR=0.D0
+            IF(LRX+1.GT.3) THEN
+              SVAR=1.D0/(14.D0*FOURPI)
+              RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            END IF 
+            IF(LRX+1.GT.5) THEN
+              SVAR=1.D0/(14.D0*FOURPI)
+              RAWJPAR=RAWJPAR+ULITTLE(5,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            END IF
+            IF(RAWJPAR.GT.0.D0) THEN
+              SVAR=JPAR/RAWJPAR
+              ULITTLE(2:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(2:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            END IF
+          ELSE IF(LOX(LNPROBE).EQ.3) THEN
+            RAWJPAR=0.D0
+            IF(LRX+1.GT.3) THEN
+              SVAR=268.D0/(6435.D0*FOURPI)
+              RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            END IF 
+            IF(LRX+1.GT.5) THEN
+              SVAR=195.D0/(6435.D0*FOURPI)
+              RAWJPAR=RAWJPAR+ULITTLE(5,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            END IF
+            IF(LRX+1.GT.7) THEN
+              SVAR=250.D0/(6435.D0*FOURPI)
+              RAWJPAR=RAWJPAR+ULITTLE(7,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            END IF
+            IF(RAWJPAR.GT.0.D0) THEN
+              SVAR=JPAR/RAWJPAR
+              ULITTLE(2:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(2:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            END IF
+          ELSE
+            IF(JPAR.EQ.0) THEN
+              ULITTLE(2:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=0.D0
+            ELSE
+              CALL ERROR$MSG('JPAR.NE.0 CAN ONLY BE SET OF D AND F SHELLS')
+              CALL ERROR$MSG('LDAPLUSU_MODULITTLEWITHPARMS')
+            END IF
+          END IF
+        END IF
+        
 !
 !       =============================================================================
 !       == SET UP ULITTLE
 !       =============================================================================
-        ULITTLE=0.D0
-        DO L=0,LRX
-          FAC=0.D0
-          IF(L.EQ.0)  FAC=UPAR
-          IF(LRX.GE.2)FAC=JPAR*14.D0/(1.D0+FIVEEIGTH)
-          IF(LRX.GE.4)FAC=FIVEEIGTH*JPAR*14.D0/(1.D0+FIVEEIGTH)
-          ULITTLE(L+1,:,:,:,:)=FAC*4.D0*PI/REAL(2*L+1,KIND=8)
-        ENDDO
+!!$
+!!$        ULITTLE=0.D0
+!!$        DO L=0,LRX
+!!$          FAC=0.D0
+!!$          IF(L.EQ.0)  FAC=UPAR
+!!$          IF(LRX.GE.2)FAC=JPAR*14.D0/(1.D0+FIVEEIGTH)
+!!$          IF(LRX.GE.4)FAC=FIVEEIGTH*JPAR*14.D0/(1.D0+FIVEEIGTH)
+!!$          ULITTLE(L+1,:,:,:,:)=FAC*4.D0*PI/REAL(2*L+1,KIND=8)
+!!$        ENDDO
         RETURN
         END
 !
@@ -1748,11 +1920,11 @@ end if
         INTEGER(4)            :: L1,L2,L3,L4
         INTEGER(4)            :: LM1,LM2,LM3,LM4
         INTEGER(4)            :: M1,M2,M3,M4
-        INTEGER(4)            :: L,M,LM,Lx
+        INTEGER(4)            :: L,M,LM,LX
         REAL(8)               :: CG1,CG2
         REAL(8)               :: SVAR
 !       ****************************************************************************
-                              call trace$push('LDAPLUSU_utensor')
+                              CALL TRACE$PUSH('LDAPLUSU_UTENSOR')
         IORB1=0
         DO LN1=1,LNX
           L1=LOX(LN1)
@@ -1787,7 +1959,6 @@ end if
                         LM4=LM4+1
                         IF(LM4.LT.LM2) CYCLE
 !           
-                        
                         LX=MIN(LRX,L2+L4,L1+L3)
                         SVAR=0.D0
                         LM=0
@@ -1811,7 +1982,7 @@ end if
             ENDDO
           ENDDO
         ENDDO
-                              call trace$pop()
+                              CALL TRACE$POP()
         RETURN
         END
 !
@@ -1834,7 +2005,7 @@ end if
         REAL(8)                 :: V(2)
         INTEGER(4)              :: IS,I
 !       ****************************************************************************
-                              call trace$push('LDAPLUSU_etot')
+                              CALL TRACE$PUSH('LDAPLUSU_ETOT')
         ETOT=0.D0
         HAM(:,:,:,:)=(0.D0,0.D0)
 !       =============================================================================
@@ -1858,7 +2029,7 @@ end if
             HAM(I,I,IS,IS)=HAM(I,I,IS,IS)+CMPLX(V(IS),0.D0)
           ENDDO
         ENDDO
-                              call trace$pop()
+                              CALL TRACE$POP()
         RETURN
         END        
 !
@@ -1878,7 +2049,7 @@ end if
         REAL(8)                 :: SVAR,EBLOCK
         INTEGER(4)              :: I,J,K,L,IS1,IS2
 !       ****************************************************************************
-                              call trace$push('LDAPLUSU_interaction')
+                              CALL TRACE$PUSH('LDAPLUSU_INTERACTION')
         RHOT(:,:)=RHO(:,:,1,1)+RHO(:,:,2,2)
         ETOT=0.D0
         HAMT(:,:)=(0.D0,0.D0)
@@ -1888,13 +2059,13 @@ end if
             EBLOCK=0.D0
             DO J=1,NORB
               DO I=1,NORB
-                UIJKL=0.5d0*U(I,J,K,L)
-                SVAR=REAL(RHOT(K,I)*RHOT(L,J))     ! hartree
+                UIJKL=0.5D0*U(I,J,K,L)
+                SVAR=REAL(RHOT(K,I)*RHOT(L,J))     ! HARTREE
                 HAMT(K,I)=HAMT(K,I)+UIJKL*RHOT(L,J)
                 HAMT(L,J)=HAMT(L,J)+UIJKL*RHOT(K,I)
                 DO IS1=1,2
                   DO IS2=1,2
-                    SVAR=SVAR-REAL(RHO(L,I,IS2,IS1)*RHO(K,J,IS1,IS2))  ! exchange
+                    SVAR=SVAR-REAL(RHO(L,I,IS2,IS1)*RHO(K,J,IS1,IS2))  ! EXCHANGE
                     HAM(L,I,IS2,IS1)=HAM(L,I,IS2,IS1)-UIJKL*RHO(K,J,IS1,IS2)
                     HAM(K,J,IS1,IS2)=HAM(K,J,IS1,IS2)-UIJKL*RHO(L,I,IS2,IS1)
                   ENDDO
@@ -1907,7 +2078,7 @@ end if
         ENDDO
         HAM(:,:,1,1)=HAM(:,:,1,1)+HAMT(:,:)
         HAM(:,:,2,2)=HAM(:,:,2,2)+HAMT(:,:)
-                              call trace$pop()
+                              CALL TRACE$POP()
         RETURN
         END
 !
@@ -1925,7 +2096,7 @@ end if
         REAL(8)     ,INTENT(OUT):: V(2)  ! DE/DF
         REAL(8)                 :: FTOT,VTOT,SVAR
 !       ****************************************************************************
-                              call trace$push('LDAPLUSU_DOUBLECOUNTING')
+                              CALL TRACE$PUSH('LDAPLUSU_DOUBLECOUNTING')
 !       =============================================================================
 !       ==  OPTION                                                                 ==
 !       =============================================================================
@@ -1956,7 +2127,7 @@ end if
 !       =============================================================================
         E=-E
         V(:)=-V    
-                              call trace$pop()
+                              CALL TRACE$POP()
         RETURN
         END
 

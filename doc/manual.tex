@@ -954,13 +954,11 @@ parameterization of the Ceperley Alder quantum Monte Carlo calculation}
               exchange and correlation \cite{perdew96_prl77_3865};} \vformat{integer}
               \vrules{optional} \vdefault{1}}
 
-\ifthenelse{\boolean{private}}{
 \mbax{\key{LDA+U}
-\vdescr{LDA+U \cite{anisimov91_prb44_943,anisimov91_prb44_943}. Present implementation only for Cu.}
+\vdescr{LDA+U \cite{anisimov91_prb44_943,anisimov91_prb44_943}.}
 \vformat{logical}
 \vrules{optional}
 \vdefault{F}}
-}{} % end of \ifthenelse
 
 \mbax{\key{VDW}
 \vdescr{Adds van der Waals Interactions\cite{grimme04_jcc25_1463}. 
@@ -2757,6 +2755,64 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vformat{Character} 
 \vrules{Mandatory} 
 \vdefault{First two letters of the atom name}}
+
+%----------------------------------------------------------------------
+{\block{!STRUCTURE!SPECIES!LDAPLUSU}
+%----------------------------------------------------------------------
+\brules{optional} \bdescr{sets the parameters for lda+U
+calculation. Only used when !CONTROL!DFT:LDA+U=T.}
+
+\mbax{\key{NCORROFL} 
+\vdescr{number of correlated orbital shells per angular momentum.  The
+array elements correspond to s,p,d,f shells. For one shell of
+correlated d-orbitals use (0,0,1,0). The number of correlated orbitals
+is reduced to the number of partial waves for this angular momentum
+minus one.  If there is only one partial wave, this one is used as
+correlated orbital. This is however not recommended.}
+\vformat{integer(*)} 
+\vrules{Mandatory} 
+\vdefault{none}}
+
+\mbax{\key{RCUT} 
+\vdescr{Correlated orbitals are constructed so that 
+they have a note at the radius RCUT.}
+\vformat{real} 
+\vrules{optional} 
+\vdefault{covalent radius plus 15\%}}
+
+\mbax{\key{DIEL} 
+\vdescr{relative dielectric constant. The interaction matrix elements are 
+scaled with $1/\epsilon_r$.}
+\vformat{real} 
+\vrules{optional, incompatible with UPAR and JPAR} 
+\vdefault{none}}
+
+\mbax{\key{UPAR[EV]} 
+\vdescr{U-parameter for the orbital shell specified by MAINLN. The
+entire interaction matrix is scaled so that the U-parameter of the
+specified shell has the value UPAR.}
+\vformat{real} 
+\vrules{optional, incompatible with DIEL} 
+\vdefault{none}}
+
+\mbax{\key{JPAR[EV]} 
+\vdescr{J-parameter for the orbital shell specified by MAINLN.
+JPAR=0. resets all slater integrals for the specified shell except the
+first to zero. For d- and f-shells also non-zero values may be
+specified. In that case the slater integrals are rescaled such that
+the specified shell has the value JPAR. The value of U remains
+unchanged.}
+\vformat{real} 
+  \vrules{optional, incompatible with DIEL} 
+\vdefault{none}}
+
+\mbax{\key{MAINLN} \vdescr{Specify the main correlatd orbital shell by
+anguklar momentum $\ell$ (first value) and the index (second) of this
+shell. Example: MAINLN= 2 3 specifies the second correlated orbital
+shell in the f-angular momentum channel.}  
+\vformat{integer(2)}
+\vrules{optional, mandatory with UPAR and JPAR} 
+\vdefault{none}}
 
 %----------------------------------------------------------------------
 \block{!STRUCTURE!ATOM}
