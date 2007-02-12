@@ -1582,7 +1582,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
               L2=LOX(LN2)
               IF(L2.NE.L) CYCLE
               N2=N2+1
-              A(LN1,LN2)=MATINV(N1,N2)
+              A(LN2,LN1)=MATINV(N1,N2)   ! a it transposed so that the indices match
             ENDDO
           ENDDO
           DEALLOCATE(MAT)
@@ -1605,7 +1605,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
             CHI(:,LN1)=CHI(:,LN)
 !           -- A HAS BEEN INVERTED. THEREFORE THE CHI-INDEX IS LEFT 
 !           -- AND THE PHI-INDEX IN ON THE RIGHT HAND SIDE
-            A(LN1,:)=A(LN,:)  
+            A(:,LN1)=A(:,LN)  
           END IF
         ENDDO
         LNXCHI=LN1
@@ -1628,7 +1628,9 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
         ALLOCATE(THIS%CHI(NR,LNXCHI))
         THIS%CHI=CHI(:,1:LNXCHI)
         ALLOCATE(THIS%DOWNFOLD(LNXCHI,LNX))
-        THIS%DOWNFOLD(:,:)=A(:LNXCHI,:)
+        do ln=1,lnxchi
+           THIS%DOWNFOLD(ln,:)=A(:,ln)
+        enddo
 !
 !       ============================================================================
 !       ==  CLEAN UP                                                              ==

@@ -541,6 +541,7 @@ END MODULE WAVES_MODULE
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
+      USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -561,9 +562,10 @@ END MODULE WAVES_MODULE
 !         == CONVERT GLOBAL IKPT INTO LOCAL IKPT =====================
           IKPTL=0
           DO I=1,IKPT
-            IF(KMAP(IKPT).EQ.THISTASK) IKPTL=IKPTL+1
+            IF(KMAP(I).EQ.THISTASK) IKPTL=IKPTL+1
           ENDDO
         END IF
+        CALL MPE$BROADCAST('K',1,iKPTL)
         EXTPNTR%IKPT=IKPTL
 !
       ELSE IF(ID.EQ.'ISPIN') THEN
