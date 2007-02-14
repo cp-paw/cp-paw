@@ -2159,13 +2159,15 @@ END IF
       REAL(8)                 :: VOLUME=0.d0   !??
       REAL(8)                 :: area=0.d0     ! sum of all segment areas
       REAL(8)      ,PARAMETER :: ANGSTROM = 1.D0/0.529177249D0 
+      character(1)            :: dollar
 !     *****************************************************************************
+      dollar=achar(36)
       LCAVITY=0    ! 0 FOR OPEN CAVITY ; 1 FOR CLOSED CAVITY
 !     =============================================================================
 !     == write version info                                                      ==
 !     =============================================================================
       write(nfil,fmt="('CURRENT PROG: CP-PAW, CLAUSTHAL UNIVERSITY OF TECHNOLOGY')") 
-      write(nfil,"('$cosmo')") 
+      write(nfil,"(dollar//'cosmo')") 
       if(fepsi.eq.1.d0) then
          write(nfil,'(a)') '  epsilon=infinity'
       else
@@ -2189,7 +2191,7 @@ END IF
 !     *****************************************************************************
 !     **  calculated parameters and variables in (not used by cosmotherm)        **
 !     *****************************************************************************
-      write(nfil,fmt="('$cosmo_data')")
+      write(nfil,fmt="(dollar//'cosmo_data')")
       write(nfil,fmt="('  fepsi=',f14.7)")  fepsi
       write(nfil,fmt="('  disex2=',g12.6)") disex2
       write(nfil,fmt="('  nsph=',i5)")      nsph
@@ -2207,8 +2209,10 @@ END IF
       integer(4),intent(in) :: nfil
       real(8)               :: qsumo=0.d0
       real(8)               :: qsum=0.d0
+      character(1)            :: dollar
 !     ****************************************************************************
-      write(nfil,fmt='("$screening_charge")')
+      dollar=achar(36)
+      write(nfil,fmt='(dollar//"screening_charge")')
       write(nfil,fmt='("  cosmo      = ",f10.6)')qsum
       write(nfil,fmt='("  correction = ",f10.6)')qsumo
       write(nfil,fmt='("  total      = ",f10.6)')qsum+qsumo
@@ -2226,8 +2230,10 @@ END IF
       REAL(8)     ,INTENT(IN) :: RSOLV         ! SOLVENT RADIUS
       REAL(8)     ,PARAMETER  :: ANGSTROM = 1.D0/0.529177249D0 
       integer(4)              :: i,j
+      character(1)            :: dollar        ! dollar sign
 !     *****************************************************************************
-      write(nfil,"('$coord_rad')") 
+      dollar=achar(36)
+      write(nfil,"(dollar//'coord_rad')") 
       write(nfil,"('#atom',t9,'x',t28,'y',t47,'z',t61,'element  radius [A]')")
       do i=1,natoms
           write(nfil,fmt="(1x,i3,3(1x,f18.14),2x,a2,2x,f10.5)") &
@@ -2249,25 +2255,21 @@ END IF
       INTEGER(4)              :: I
       CHARACTER(5)            :: LAB1
       CHARACTER(2)            :: LAB2
+      character(1)            :: dollar    ! dollar sign
 !     *****************************************************************************
-      write(nfil,fmt='("$coord_car")')
+      dollar=achar(36)
+      write(nfil,fmt='(dollar//"coord_car")')
       write(nfil,fmt='("!BIOSYM archive 3")')
       write(nfil,fmt='("PBC=OFF")')
       write(nfil,fmt='("coordinates from COSMO calculation")')
       write(nfil,fmt='("!DATE ")')
-print*,' 0',nuc
 
       allocate(icnt(maxval(nuc)))
       icnt(:)=0
       do i=1,natoms
-print*,' a',i
         icnt(nuc(i))=icnt(nuc(i))+1  ! atom counter for each element
         write(lab1,*)icnt(nuc(i))
-print*,mtype(i)
-print*,uc(mtype(i))
-print*,lab1
         lab1=trim(uc(mtype(i)(1:2)))//adjustl(lab1)
-print*,'--',lab1
         lab2=mtype(i)(1:2)
         lab2(1:1)=uc(lab2(1:1))
         write(nfil,fmt="(a5,3f15.9,' COSM 1      ',a2,6x,a2,f7.3)") &
@@ -2326,14 +2328,16 @@ print*,'--',lab1
       REAL(8)     ,INTENT(IN) :: ETOT          ! TOTAL ENERGY
       REAL(8)     ,INTENT(IN) :: EDIEL         ! DIELECTRIC ENERGY
       REAL(8)     ,INTENT(IN) :: DE            ! ENERGY CORRECTION
+      character(1)            :: dollar    ! dollar sign
 !     *****************************************************************************
+      dollar=achar(36)
       write(nfil,fmt='("# Correlated (C) cosmo calculation:")')
       write(nfil,fmt='("# Total energy: E(SCF)-Ediel(SCF)+E(C)+Ediel(C)")')
       write(nfil,fmt='("# OC corr.:     outlying charge correction using the")')
       write(nfil,fmt='("#               correlated density")')
       write(nfil,fmt='("# ediel:        Ediel(C) using the correlated density")')
 
-      write(nfil,fmt='("$cosmo_energy")')
+      write(nfil,fmt='(dollar//"cosmo_energy")')
       write(nfil,fmt='("  Total energy [a.u.]            =   ", f17.10)')etot
       write(nfil,fmt='("  Total energy + OC corr. [a.u.] =   ", f17.10)')etot+de
       write(nfil,fmt='("  Total energy corrected [a.u.]  =   ", f17.10 &
@@ -2355,8 +2359,10 @@ print*,'--',lab1
       REAL(8)     ,INTENT(IN) :: COSURF(3,NPS) ! POSITION OF SURFACE SEGMENT
       REAL(8)      ,PARAMETER :: ANGSTROM = 1.D0/0.529177249D0 
       INTEGER(4)              :: I,J
+      character(1)            :: dollar    ! dollar sign
 !     *****************************************************************************
-      write(nfil,fmt='("$segment_information")')
+      dollar=achar(36)
+      write(nfil,fmt='(dollar//"segment_information")')
       write(nfil,fmt='("# n             - segment number")')
       write(nfil,fmt='("# atom          - atom associated with segment n")')
       write(nfil,fmt='("# position      - segment coordinates [a.u.]")')
@@ -2370,7 +2376,7 @@ print*,'--',lab1
       write(nfil,fmt='("#")')
       do i=1,nps
         write(nfil,'(i5,i5,7f15.9)') i,iatsp(i),(cosurf(j,i),j=1,3) &
-     &            ,qcosc(i),ar(i)/angstrom**2,qcosc(i)/(ar(i)/angstrom**2),phic(i)*angstrom
+     &            ,-qcosc(i),ar(i)/angstrom**2,-qcosc(i)/(ar(i)/angstrom**2),-phic(i)*angstrom
       enddo
       RETURN
       END
