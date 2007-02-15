@@ -2167,7 +2167,7 @@ END IF
 !     == write version info                                                      ==
 !     =============================================================================
       write(nfil,fmt="('CURRENT PROG: CP-PAW, CLAUSTHAL UNIVERSITY OF TECHNOLOGY')") 
-      write(nfil,"(dollar//'cosmo')") 
+      write(nfil,'(a)')dollar//'cosmo' 
       if(fepsi.eq.1.d0) then
          write(nfil,'(a)') '  epsilon=infinity'
       else
@@ -2191,7 +2191,7 @@ END IF
 !     *****************************************************************************
 !     **  calculated parameters and variables in (not used by cosmotherm)        **
 !     *****************************************************************************
-      write(nfil,fmt="(dollar//'cosmo_data')")
+      write(nfil,fmt='(A)')dollar//'cosmo_data'
       write(nfil,fmt="('  fepsi=',f14.7)")  fepsi
       write(nfil,fmt="('  disex2=',g12.6)") disex2
       write(nfil,fmt="('  nsph=',i5)")      nsph
@@ -2212,7 +2212,7 @@ END IF
       character(1)            :: dollar
 !     ****************************************************************************
       dollar=achar(36)
-      write(nfil,fmt='(dollar//"screening_charge")')
+      write(nfil,fmt='(A)')dollar//'screening_charge'
       write(nfil,fmt='("  cosmo      = ",f10.6)')qsum
       write(nfil,fmt='("  correction = ",f10.6)')qsumo
       write(nfil,fmt='("  total      = ",f10.6)')qsum+qsumo
@@ -2233,7 +2233,7 @@ END IF
       character(1)            :: dollar        ! dollar sign
 !     *****************************************************************************
       dollar=achar(36)
-      write(nfil,"(dollar//'coord_rad')") 
+      write(nfil,'(A)')dollar//'coord_rad'
       write(nfil,"('#atom',t9,'x',t28,'y',t47,'z',t61,'element  radius [A]')")
       do i=1,natoms
           write(nfil,fmt="(1x,i3,3(1x,f18.14),2x,a2,2x,f10.5)") &
@@ -2258,7 +2258,7 @@ END IF
       character(1)            :: dollar    ! dollar sign
 !     *****************************************************************************
       dollar=achar(36)
-      write(nfil,fmt='(dollar//"coord_car")')
+      write(nfil,fmt='(A)')dollar//'coord_car'
       write(nfil,fmt='("!BIOSYM archive 3")')
       write(nfil,fmt='("PBC=OFF")')
       write(nfil,fmt='("coordinates from COSMO calculation")')
@@ -2337,7 +2337,7 @@ END IF
       write(nfil,fmt='("#               correlated density")')
       write(nfil,fmt='("# ediel:        Ediel(C) using the correlated density")')
 
-      write(nfil,fmt='(dollar//"cosmo_energy")')
+      write(nfil,fmt='(A)')dollar//'cosmo_energy'
       write(nfil,fmt='("  Total energy [a.u.]            =   ", f17.10)')etot
       write(nfil,fmt='("  Total energy + OC corr. [a.u.] =   ", f17.10)')etot+de
       write(nfil,fmt='("  Total energy corrected [a.u.]  =   ", f17.10 &
@@ -2362,7 +2362,7 @@ END IF
       character(1)            :: dollar    ! dollar sign
 !     *****************************************************************************
       dollar=achar(36)
-      write(nfil,fmt='(dollar//"segment_information")')
+      write(nfil,fmt='(A)')dollar//'segment_information'
       write(nfil,fmt='("# n             - segment number")')
       write(nfil,fmt='("# atom          - atom associated with segment n")')
       write(nfil,fmt='("# position      - segment coordinates [a.u.]")')
