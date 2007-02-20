@@ -1,7 +1,7 @@
 #!/bin/bash
 ###################################################################
 ##                                                               ##
-##  name: pawshow                                                ##
+##  name: paw_show                                               ##
 ##                                                               ##
 ##  purpose: pulls out columns from the paw protocoll            ##
 ##                                                               ##
@@ -86,17 +86,9 @@ esac
 if (( $# == 3 )) ;then
   cp ${TEMPDIR}tmp2 $3
 else
-    if (( $2 == -tqt)); then
-	    xmgrace -nxy ${TEMPDIR}tmp2
-    else
-	if (( $2 == -cqc)); then 
-	    xmgrace -nxy ${TEMPDIR}tmp2
-        else
-	    xmgrace ${TEMPDIR}tmp2
-	fi
-    fi
-    rm ${TEMPDIR}tmp2
+  xmgrace ${TEMPDIR}tmp2
 fi
+rm ${TEMPDIR}tmp2
 exit
 
 

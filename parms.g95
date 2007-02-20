@@ -23,9 +23,10 @@ OPTIMIZE="-O2 "
 F77OPTIMIZE="-O2 "
 #
 #________________________________F90 compiler debug flags
-#DEBUG="-g -std=f95 -Wline-truncation -Wobsolent -Wprecision-loss -Wunset-vars -Wuninitialized -Wmissing-intent -Wunused-internal-procs -ftrace=full  -fimplicit-none -fbounds-check -fd-comment"
+#  -g -std=f95 -Wall -Wextra -Wline-truncation -Wobsolent -Wprecision-loss -Wunset-vars 
+#  -Wuninitialized -Wmissing-intent -Wunused-internal-procs 
+#  -ftrace=full  -fimplicit-none -fbounds-check -fd-comment -fendian=little
 DEBUG="-g -std=f95 -Wall -Wextra -ftrace=full  -fimplicit-none -fbounds-check -fd-comment"
-#-fendian=little"
 #
 #________________________________F77 compiler debug flags
 F77DEBUG="-g "

@@ -246,6 +246,7 @@ LOBJS = \
         ${OBJDIR}/paw_report.o \
         ${OBJDIR}/paw_periodictable.o \
         ${OBJDIR}/paw_radial.o \
+        ${OBJDIR}/paw_schroedinger.o \
         ${OBJDIR}/paw_specialfunctions.o \
         ${OBJDIR}/paw_usage.o \
         ${OBJDIR}/paw_selftest.o \

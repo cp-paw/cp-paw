@@ -4025,39 +4025,6 @@ bond.}
 
 %==========================================================================
 \newpage
-\section{The Energy Analysis Tool: ``paw\_show''}
-\label{sec:pawshow}
-%==========================================================================
-The tool paw\_show allows one to inspect the protocol file. It plots the
-total energy, the instantaneous temperature of the atoms, the
-fictitious kinetic energy of the wave functions, the conserved energy
-versus the time step in picoseconds. This tool requires the xmgr plot
-library\cite{xmgrace}.
-
-%==========================================================================
-\subsection{Command}
-%==========================================================================
-
-The calling sequence is
-
-\bigskip\fbox{{\tt paw\_show\ } {\it option\  rootname file}}\bigskip
-
-\noindent where {\it rootname} is the name of the protocol file 
-without the ``.prot'' ending and {\it option} is one of the following:
-\begin{description}
-\item[-t] instantaneous kinetic energy of the nuclei
-\item[-f] fictitious kinetic energy of the wave functions
-\item[-e] the static total energy
-\item[-c] the conserved energy
-\item[-h] prints information about usage of the tool 
-\item[?] prints information about usage of the tool 
-\end{description}
-The optional parameter {\it file} the file to which the data are
-written. If {\it file} is absent, the data are viewed.
-
-
-%==========================================================================
-\newpage
 \section{The Energy Grab Tool: paw\_grab}
 %==========================================================================
 The tool paw\_grab is useful to collect energies from different
@@ -6330,6 +6297,78 @@ are used which are ignored by the main simulation code. The keyword
   atoms. Not yet implemented.}
 
  
+%==========================================================================
+\newpage
+\section{Tools}
+%==========================================================================
+
+%==========================================================================
+\subsection{The Energy Analysis Tool: ``paw\_show''}
+\label{sec:pawshow}
+%==========================================================================
+The tool paw\_show allows one to inspect the protocol file. It plots the
+total energy, the instantaneous temperature of the atoms, the
+fictitious kinetic energy of the wave functions, the conserved energy
+versus the time step in picoseconds. This tool requires the xmgr plot
+library\cite{xmgrace}.
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_show\ } {\it option\  rootname file}}\bigskip
+
+\noindent where {\it rootname} is the name of the protocol file 
+without the ``.prot'' ending and {\it option} is one of the following:
+\begin{description}
+\item[-f] fictitious kinetic energy of the wave functions
+\item[-e] the static total energy
+\item[-c] the conserved energy
+\item[-t] temperature of the atoms in Kelvin
+\item[-ar] friction parameter for the atoms
+\item[-ap] friction parameter for the wave functions
+\item[-h] prints information about usage of the tool 
+\item[?] prints information about usage of the tool 
+\end{description}
+The optional parameter {\it file} the file to which the data are
+written. If {\it file} is absent, the data are viewed.
+
+%==========================================================================
+\subsection{Copy a project: ``paw\_copy''}
+%==========================================================================
+paw\_copy makes a copy of a cp-paw project with a new rootname.
+
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_copy\ } {\it root1 root2}}\bigskip
+
+\noindent where {\it root1} is the root name of the project to be
+copied and root2 is the target foot name.
+
+Specifically, it takes all files beginning with {\it root1} in the
+current directory and copies the files with the same name but {\it
+root1} replaced by {\it root2}.
+
+%==========================================================================
+\subsection{collect energies ``paw\_collect''}
+%==========================================================================
+paw\_collect collects the last total energies from all protocoll files
+in the current directory.
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_collect\ }}
+
+
 %==========================================================================
 \newpage
 \section{Specifications of formatted and unformatted output data files}
