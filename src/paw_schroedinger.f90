@@ -411,7 +411,7 @@
       END SUBROUTINE RADIAL$NONSPHBOUND
 !
 !     ........................................................................
-schroedinger_smallcomponent_c
+!schroedinger_smallcomponent_c
       SUBROUTINE RADIAL_SMALLCOMPONENT(GID,NR,LMX,NPHI,DREL,PHI,SPHI)
 !     **                                                                    **
 !     **                                                                    **
