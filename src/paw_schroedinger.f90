@@ -1270,7 +1270,7 @@ CHARACTER(32):: FILE
       END 
 !
 !     ..................................................................
-      SUBROUTINE RADIAL$NONSPHBOUND_nonso_semilocal_overlap(GID,NR,LMX,LMRX,POT,lxsl,potsl,ovsl,G,Enu &
+      SUBROUTINE RADIAL$NONSPHBOUND_nonso_sloc_ov(GID,NR,LMX,LMRX,POT,lxsl,potsl,ovsl,G,Enu &
      &                             ,NPHI,EB,PHI,TPHI,TOK)
 !     **                                                                  **
 !     **  SOLVES THE nonrelATIVISTIC RADIAL schroedinger EQUATION FOR THE **
