@@ -3183,15 +3183,16 @@ print*,"===DONE==="
         INTEGER(4),       INTENT(IN)  :: NFIL, NFILSTRC
         CHARACTER(103)                 :: line
         CHARACTER(LEN=*), PARAMETER   :: pdb_form='(A6,I5,1X,A5,A4,A1,I4,4X,3F8.3,2F6.2,6X,A4,A2,2X,A1,1X,A12,1X,A7)'
+        CHARACTER(LEN=*), PARAMETER   :: strc_form='(3X,A12,A11,A5,3F13.5,A5)'
         TYPE(PDB_ATOM_TYPE)           :: pdb_atom
         character(6)                  :: dummy
-        CHARACTER(10)                 :: paw_name
+        CHARACTER(11)                 :: paw_name
 
         REWIND(NFIL)
         DO
            READ(NFIL,FMT='(A102)', END=301) LINE
            IF(LINE(1:6).EQ.'ATOM  '.OR.LINE(1:6).EQ.'HETATM') THEN
-              READ(LINE,pdb_form) dummy, pdb_atom
+              READ(LINE,pdb_form)  pdb_atom
               IF(SCAN(PDB_ATOM%NAME(1:1),'1234567890').NE.0) THEN
                  paw_name = pdb_atom%name(2:2)//"_"//pdb_atom%name(3:LEN_TRIM(pdb_atom%name))//&
                       & pdb_atom%name(1:1)//"_"&
@@ -3203,7 +3204,8 @@ print*,"===DONE==="
                  paw_name = pdb_atom%name(1:2)//pdb_atom%name(3:LEN_TRIM(pdb_atom%name))//"_"&
                       &//TRIM(ADJUSTL(.itos.pdb_atom%id))//"'"
               END IF
-              WRITE(NFILSTRC,FMT='(A,3F15.5,A)')"   !ATOM NAME='"//TRIM(ADJUSTL(paw_name))//"  R=",pdb_atom%r(:),"' !END"
+!              WRITE(NFILSTRC,FMT='(A,3F15.5,A)')"   !ATOM NAME='"//TRIM(ADJUSTL(paw_name))//"  R=",pdb_atom%r(:),"' !END"
+              WRITE(NFILSTRC,STRC_FORM) "!ATOM NAME='",TRIM(ADJUSTL(paw_name)),"   R=",pdb_atom%r(:)," !END"
 
            END IF
         END DO

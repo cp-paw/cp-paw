@@ -99,6 +99,8 @@ END MODULE QMMM_MODULE
       REAL(8)     ,ALLOCATABLE :: SQ(:)
       CHARACTER(5),ALLOCATABLE :: MTYPE(:)
       CHARACTER(5),ALLOCATABLE :: STYPE(:)
+      CHARACTER(32),ALLOCATABLE:: mname(:)
+      CHARACTER(32),ALLOCATABLE:: Sname(:)
       integer(4)               :: i
       LOGICAL(4)               :: TCHK
 !     ******************************************************************
@@ -126,11 +128,24 @@ END MODULE QMMM_MODULE
       ALLOCATE(SQ(NATS))
       ALLOCATE(MTYPE(NATM))
       ALLOCATE(STYPE(NATS))
+      ALLOCATE(MNAME(NATM))
+      ALLOCATE(SNAME(NATS))
       CALL CLASSICAL$SELECT('QMMM')
       CALL CLASSICAL$GETR8A('QEL',NATM,MQ)
       CALL CLASSICAL$GETCHA('TYPE',NATM,MTYPE)
+      CALL CLASSICAL$GETCHA('ATOMNAME',NATM,MNAME)
       CALL CLASSICAL$SELECT('SHADOW')
       CALL CLASSICAL$GETCHA('TYPE',NATS,STYPE)
+      CALL CLASSICAL$GETCHA('ATOMNAME',NATS,SNAME)
+
+      DO I=1,SIZE(MNAME)
+         MNAME(I)(1:2)= ADJUSTL(MNAME(I)(1:2))
+         IF(MNAME(I)(2:2).EQ.' ') MNAME(I)(2:2)='_'
+      ENDDO
+      DO I=1,SIZE(SNAME)
+         SNAME(I)= ADJUSTL(SNAME(I)(1:2))
+         IF(SNAME(I)(2:2).EQ.' ') SNAME(I)(2:2)='_'
+      ENDDO
       CALL CLASSICAL$GETR8A('QEL',NATS,SQ)
 !
       DO ILINK=1,NLINK
@@ -139,9 +154,9 @@ END MODULE QMMM_MODULE
         IATQ=LINK(ILINK)%QATOM
         IATS=LINK(ILINK)%SATOM
         IATM=LINK(ILINK)%MATOM
-        CALL PERIODICTABLE$GET(STYPE(IATS)(1:2),'R(COV)',RS)
-        CALL PERIODICTABLE$GET(MTYPE(IATM)(1:2),'R(COV)',RM)
-        CALL PERIODICTABLE$GET(MTYPE(IATMJ)(1:2),'R(COV)',RJ)
+        CALL PERIODICTABLE$GET(SNAME(IATS)(1:2),'R(COV)',RS)
+        CALL PERIODICTABLE$GET(MNAME(IATM)(1:2),'R(COV)',RM)
+        CALL PERIODICTABLE$GET(MNAME(IATMJ)(1:2),'R(COV)',RJ)
         LINK(ILINK)%ALPHA=(RS+RJ)/(RM+RJ)
         LINK(ILINK)%QAO=MQ(IATM)
         LINK(ILINK)%QSO=SQ(IATS)
@@ -153,6 +168,8 @@ END MODULE QMMM_MODULE
       ENDDO
       DEALLOCATE(STYPE)
       DEALLOCATE(MTYPE)
+      DEALLOCATE(MNAME)
+      DEALLOCATE(SNAME)
       DEALLOCATE(MQ)
       DEALLOCATE(SQ)
 !
@@ -497,8 +514,9 @@ END MODULE QMMM_MODULE
         SPOS(:,IATS)=POS(:,IATQ)
         MCHARGE(IATM)=CHARGE(IATQ)
         SCHARGE(IATS)=CHARGE(IATQ)
-mcharge(iatm)=0.d0
-scharge(iats)=0.d0
+!SET TO ZERO TO NEGLECT CHARGES
+! mcharge(iatm)=0.d0
+! scharge(iats)=0.d0
       ENDDO      
 !
 !     =========================================================================
@@ -526,10 +544,12 @@ scharge(iats)=0.d0
 !double counting for shared atoms!
         SCHARGE(IATS) =CHARGE(IATQ)
         SCHARGE(IATSJ)=CHARGE(IATQJ)
-mcharge(iatm)=0.d0
-mcharge(iatmj)=0.d0
-scharge(iats)=0.d0
-scharge(iatsj)=0.d0
+
+!SET TO ZERO TO NEGLECT CHARGES
+!mcharge(iatm)=0.d0
+!mcharge(iatmj)=0.d0
+!scharge(iats)=0.d0
+!scharge(iatsj)=0.d0
       ENDDO
 PRINT*,'MQ ',MCHARGE
 PRINT*,'SQ ',SCHARGE
@@ -1402,4 +1422,4 @@ if(inner.gt.5) then
       DEALLOCATE(RM)
       DEALLOCATE(QEL)
       RETURN
-      END
+    END SUBROUTINE QMMM$READ

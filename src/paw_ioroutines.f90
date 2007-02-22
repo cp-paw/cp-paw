@@ -706,7 +706,7 @@ CALL TRACE$PASS('DONE')
 !
                           CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE READIN
 !
 !     ..................................................................
       SUBROUTINE READIN_FILES(LL_CNTL_)
@@ -834,7 +834,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  INFO FILE   ==================================================
+!     ==  scrap file for test purposes, that allows to write out test data===
       ID=+'INFO'
       CALL FILEHANDLER$SETFILE(ID,T,-'.INFO')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
@@ -3515,7 +3515,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
 !       ==  CONNECT SETUP FILE                                        ==
 !       ================================================================
         CALL LINKEDLIST$GET(LL_STRC,'FILE',1,SETUPFILE)
-call linkedlist$report(ll_strc,6)
              CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
              CH8SVAR1=' '
              WRITE(CH8SVAR1,FMT='(I8)')ISP
@@ -3796,7 +3795,7 @@ call linkedlist$report(ll_strc,6)
 !
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_ATOM
 !
 !     ..................................................................
       SUBROUTINE STRCIN_ISOLATE(LL_STRC_)
@@ -3860,7 +3859,7 @@ call linkedlist$report(ll_strc,6)
       CALL ISOLATE$ONOFF('ON',NFCT,RC,RCFAC,GMAX2,DECOUPLE)
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_ISOLATE
 !
 !     ..................................................................
       SUBROUTINE STRCIN_OCCUP(LL_STRC_,NKPT)
@@ -4095,7 +4094,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_OCCUP
 !
 !     ..................................................................
       SUBROUTINE STRCIN_ORBPOT(LL_STRC_)
@@ -4201,7 +4200,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_ORBPOT
 !
 !     ..................................................................
       SUBROUTINE STRCIN_GROUP(LL_STRC_)
@@ -4274,7 +4273,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_GROUP
 !
 !     ..................................................................
       SUBROUTINE STRCIN_VEXT(LL_STRC_)
@@ -4375,7 +4374,7 @@ call linkedlist$report(ll_strc,6)
       END DO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_VEXT
 !
 !     ..................................................................
       SUBROUTINE STRCIN_CONSTRAINTS_LINEAR(LL_STRC_)
@@ -4432,7 +4431,7 @@ call linkedlist$report(ll_strc,6)
       DEALLOCATE(VEC1)
                              CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_LINEAR
 !
 !     ..................................................................
       SUBROUTINE STRCIN_CONSTRAINTS_BOND(LL_STRC_)
@@ -4470,7 +4469,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_BOND
 !
 !     ..................................................................
       SUBROUTINE STRCIN_CONSTRAINTS_RIGID(LL_STRC_)
@@ -4504,7 +4503,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO 
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_RIGID
 !
 !     ..................................................................     
       SUBROUTINE STRCIN_CONSTRAINTS_FREEZE(LL_STRC_)
@@ -4559,7 +4558,7 @@ call linkedlist$report(ll_strc,6)
                            CALL TRACE$POP
 
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_FREEZE
 !
 !     ..................................................................
       SUBROUTINE STRCIN_CONSTRAINTS_MIDPLANE(LL_STRC_)
@@ -4601,7 +4600,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_MIDPLANE
 
 !
 !     ..................................................................
@@ -4681,7 +4680,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_TRANSLATION
 !
 !     ..................................................................
       SUBROUTINE STRCIN_CONSTRAINTS_ORIENTATION(LL_STRC_)
@@ -4759,7 +4758,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_ORIENTATION
 !
 !     ..................................................................
       SUBROUTINE STRCIN_CONSTRAINTS_ROTATION(LL_STRC_)
@@ -4843,7 +4842,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_ROTATION
 !
 !     ..................................................................
       SUBROUTINE STRCIN_CONSTRAINTS_COGSEP(LL_STRC_)
@@ -4893,7 +4892,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_COGSEP
 !
 !     ..................................................................
       SUBROUTINE STRCIN_CONSTRAINTS_ANGLE(LL_STRC_)
@@ -4951,7 +4950,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_ANGLE
 !
 !     ..................................................................
       SUBROUTINE STRCIN_CONSTRAINTS_TORSION(LL_STRC_)
@@ -5018,7 +5017,7 @@ call linkedlist$report(ll_strc,6)
       ENDDO
                            CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCIN_CONSTRAINTS_TORSION
 !
 !     ................................................................
       SUBROUTINE READMOVABLECONSTRAINT(LL_STRC_)
@@ -5094,7 +5093,7 @@ call linkedlist$report(ll_strc,6)
       END IF
                        CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE READMOVABLECONSTRAINT
 !
 !     ..................................................................
       SUBROUTINE STRCIN_SOLVENT(LL_STRC_)
@@ -5102,7 +5101,9 @@ call linkedlist$report(ll_strc,6)
 !     **                                                              **    
 !     ******************************************************************    
       USE LINKEDLIST_MODULE
+      USE FORCEFIELD_MODULE
       USE PERIODICTABLE_MODULE
+      USE STRINGS_MODULE
       IMPLICIT NONE
       TYPE ATOM_TYPE
         CHARACTER(32)     :: NAME
@@ -5141,13 +5142,16 @@ call linkedlist$report(ll_strc,6)
       TYPE(LINK_TYPE),ALLOCATABLE :: LINK(:)
       TYPE(BOND_TYPE),ALLOCATABLE :: MBOND(:)
       TYPE(BOND_TYPE),ALLOCATABLE :: SBOND(:)
-      INTEGER(4)                  :: IATQ,IATM,IATS,IATM1,IATM2,IATS1,IATS2
-      INTEGER(4)                  :: IBONDM,IBONDS,ILINK,I
+      INTEGER(4)                  :: IATQ,IATM,IATS,IATM1,IATM2,IATS1,IATS2,iat
+      INTEGER(4)                  :: IBONDM,IBONDS,ILINK,I,ires,j,ivar
       INTEGER(4)                  :: IZ
       LOGICAL(4)                  :: TCHK
       INTEGER(4)     ,ALLOCATABLE :: LINKARRAY(:,:)
       INTEGER(4)     ,ALLOCATABLE :: MAPARRAY(:,:)
-      CHARACTER(32)               :: CH32SVAR1
+      CHARACTER(32)               :: CH32SVAR1,dummy
+      CHARACTER(32)               :: ff
+      CHARACTER(255)              :: PARMFILE, TOPFILE, MMFILE
+      CHARACTER(4)                :: resname
 !     ******************************************************************    
                           CALL TRACE$PUSH('STRCIN_SOLVENT')
       LL_STRC=LL_STRC_
@@ -5172,11 +5176,75 @@ call linkedlist$report(ll_strc,6)
 !     CALL LINKEDLIST$REPORT(LL_STRC,6)
 !
 !     ==================================================================
+!     ==  READ FORCEFIELD AND INPUT FILE                              ==
+!     ==================================================================
+!     --- READ IN FORCEFIELD. IF NO FORCEFIELD IS GIVEN USE UFF ----
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')             !MHK
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')     !MHK
+      CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')         !MHK
+      CALL LINKEDLIST$EXISTL(LL_STRC,'FORCEFIELD',1,TCHK)
+      IF(.NOT.TCHK) THEN
+         PRINT*,"WARNING: NO FORCEFIELD SPECIFIED. SWITCH TO UFF."
+         FF='UFF'
+      ELSE
+         CALL LINKEDLIST$SELECT(LL_STRC,'FORCEFIELD')
+         CALL LINKEDLIST$EXISTD(LL_STRC,'FF',1,TCHK)
+         IF(.NOT.TCHK) THEN
+            call error$msg('NO FORCEFIELD SPECIFIED')
+            call error$msg('!structure!qm-mm!forcefield:ff is mandatory')
+            call error$stop('STRCIN_SOLVENT')
+         END IF
+         CALL LINKEDLIST$GET(LL_STRC,'FF',1,FF)
+!        ---- IS MM-FILE SPECIFIED? ---
+         CALL LINKEDLIST$EXISTD(LL_STRC,'MMFILE',1,TCHK)
+         IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'MMFILE',1,MMFILE)
+            CALL FILEHANDLER$SETFILE('MMSTRC',.FALSE.,MMFILE)
+         ELSE
+            CALL FILEHANDLER$SETFILE('MMSTRC',.TRUE.,-'.PDB')
+         END IF
+         CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','STATUS','OLD')
+         CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','POSITION','REWIND')
+         CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','ACTION','READ')
+         CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','FORM','FORMATTED')
+!        ---- IS PARMameter-FILE SPECIFIED? ---
+         CALL LINKEDLIST$EXISTD(LL_STRC,'PARMFILE',1,TCHK)
+         IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'PARMFILE',1,PARMFILE)
+            CALL FORCEFIELD$SETCH('PARMFILE',PARMFILE)
+         END IF
+!        ---- IS TOPology-FILE SPECIFIED? ---
+         CALL LINKEDLIST$EXISTD(LL_STRC,'TOPFILE',1,TCHK)
+         IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'TOPFILE',1,TOPFILE)
+            CALL FORCEFIELD$SETCH('TOPFILE',TOPFILE)
+         END IF
+         CALL LINKEDLIST$SELECT(LL_STRC,'..')
+      END IF
+!   --- TRANSFER FORCE FIELD TYPE TO THE MODULES
+      CALL FORCEFIELD$SETCH('FORCEFIELD',FF)  !is this necessary? check this later!
+      CALL CLASSICAL$SELECT('QMMM')
+      CALL CLASSICAL$SETCH('FF',FF)
+      CALL CLASSICAL$SELECT('SHADOW')
+      CALL CLASSICAL$SETCH('FF',FF)
+!     ==================================================================
+!     ==  READ TOP- AND PARM-FILE IF AMBER FORCEFIELD IS CHOSEN       ==
+!     ==================================================================
+      IF(FF.EQ.'AMBER') THEN
+         CALL FORCEFIELD$READ_PARMFILE
+         CALL FORCEFIELD$READ_TOPFILE
+      END IF
+!     ==================================================================
 !     ==  READ #(ATOMS) AND  #(BONDS)                                 ==
 !     ==================================================================
       CALL ATOMLIST$NATOM(NATQ)
       NATS=NATQ
-      CALL LINKEDLIST$NLISTS(LL_STRC,'ATOM',NATM)
+      IF(FF.EQ.'UFF') THEN
+         CALL LINKEDLIST$NLISTS(LL_STRC,'ATOM',NATM)
+      ELSE IF(FF.EQ.'AMBER') THEN
+         CALL FORCEFIELD$READ_MMSTRC
+         CALL FORCEFIELD$GETI4('NMMATOM',NATM)
+      END IF
       CALL LINKEDLIST$NLISTS(LL_STRC,'LINK',NLINK)
       ALLOCATE(MATOM(NATM))
       ALLOCATE(SATOM(NATS))
@@ -5199,220 +5267,367 @@ call linkedlist$report(ll_strc,6)
 !     ==  READ ATOMS                                                  ==
 !     ==================================================================
 !     ==================================================================
-      IATS=0
-      DO IATM=1,NATM
-        CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',IATM)
-!
-!       ==  ATOM NAME  =================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'NAME',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('VARIABLE !QM-MM!ATOM:NAME NOT FOUND')
-          CALL ERROR$STOP('STRCIN_SOLVENT') 
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'NAME',1,MATOM(IATM)%NAME)
-!
-!       ==  QMATOM  =====================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'QMATOM',1,TCHK)
-        IATQ=0
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_STRC,'QMATOM',1,CH32SVAR1)
-          DO I=1,NATQ
-            IF(CH32SVAR1.EQ.QATOM(I)%NAME) THEN
-              IATQ=I
+      IF (FF.EQ.'UFF') THEN
+        IATS=0
+        DO IATM=1,NATM
+          CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',IATM)
+!    
+!         ==  ATOM NAME  =================================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'NAME',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('VARIABLE !QM-MM!ATOM:NAME NOT FOUND')
+            CALL ERROR$STOP('STRCIN_SOLVENT') 
+          END IF
+          CALL LINKEDLIST$GET(LL_STRC,'NAME',1,MATOM(IATM)%NAME)
+!    
+!         ==  QMATOM  =====================================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'QMATOM',1,TCHK)
+          IATQ=0
+          IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'QMATOM',1,CH32SVAR1)
+            DO I=1,NATQ
+              IF(CH32SVAR1.EQ.QATOM(I)%NAME) THEN
+                IATQ=I
+                EXIT
+              END IF
+            ENDDO
+            IF(IATQ.EQ.0) THEN
+              CALL ERROR$MSG('QMATOM NOT FOUND')
+              CALL ERROR$CHVAL('QMATOM',CH32SVAR1)
+              CALL ERROR$CHVAL('MMATOM',MATOM(IATM)%NAME)
+              CALL ERROR$STOP('STRCIN_SOLVENT')
+            END IF
+            IATS=IATS+1     ! INCREASE COUNTER FOR SHADOW ATOMS
+            IF(IATS.GT.NATS) THEN
+               CALL ERROR$MSG('#(SHADOW ATOMS) LARGER THAN EXPECTED')
+               CALL ERROR$STOP('STRCIN_SOLVENT')
+            END IF
+            SATOM(IATS)%NAME=QATOM(IATQ)%NAME
+            QATOM(IATQ)%QMSATOM=IATM
+            MATOM(IATM)%QMSATOM=IATS
+            SATOM(IATS)%QMSATOM=IATQ
+          ELSE
+            MATOM(IATM)%QMSATOM=0
+          END IF
+!    
+!         ==  FORCE FIELD ATOM TYPE========================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'FFTYPE',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('VARIABLE !QM-MM!ATOM:FFTYPE NOT FOUND')
+            CALL ERROR$STOP('STRCIN_SOLVENT') 
+          END IF
+          CALL LINKEDLIST$GET(LL_STRC,'FFTYPE',1,MATOM(IATM)%FFTYPE)
+          IF(IATQ.NE.0) THEN
+            SATOM(IATS)%FFTYPE=MATOM(IATM)%FFTYPE
+          END IF
+!    
+!         ==  POSITION====================================================
+          IF(IATQ.EQ.0) THEN
+            CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
+            IF(.NOT.TCHK) THEN
+              CALL ERROR$MSG('KEYWORD QM-MM!ATOM:R NOT FOUND')
+              CALL ERROR$STOP('STRCIN_SOLVENT') 
+           END IF
+           CALL LINKEDLIST$GET(LL_STRC,'R',1,MATOM(IATM)%R)
+           MATOM(IATM)%R(:)=MATOM(IATM)%R(:)*UNIT
+         ELSE
+            CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
+            IF(TCHK) THEN
+              CALL ERROR$MSG('R MUST NOT BE SPECIFIED')
+              CALL ERROR$MSG('ATOMIC POSITION IS TAKEN FROM QM ATOM')
+              CALL ERROR$STOP('STRCIN_SOLVENT')
+            END IF
+           MATOM(IATM)%R(:)=QATOM(IATQ)%R
+           SATOM(IATS)%R(:)=QATOM(IATQ)%R
+         END IF
+!    
+!        ==  MASS ========================================================
+         IF(IATQ.EQ.0) THEN 
+            CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
+            IF(TCHK) THEN
+              CALL LINKEDLIST$GET(LL_STRC,'M',1,MATOM(IATM)%M)
+              MATOM(IATM)%M=MATOM(IATM)%M*PROTONMASS
+            ELSE
+              CH32SVAR1=MATOM(IATM)%FFTYPE(1:2)
+              IF(CH32SVAR1(2:2).EQ.'_') CH32SVAR1(2:2)=' '
+              CALL PERIODICTABLE$GET(CH32SVAR1,'Z',IZ)
+              CALL PERIODICTABLE$GET(IZ,'MASS',MATOM(IATM)%M)
+              MATOM(IATM)%M=MATOM(IATM)%M
+            END IF
+          ELSE
+            CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
+            IF(TCHK) THEN
+              CALL ERROR$MSG('M MUST NOT BE SPECIFIED')
+              CALL ERROR$MSG('MASS IS TAKEN FROM QM ATOM')
+              CALL ERROR$STOP('STRCIN_SOLVENT')
+            END IF
+            MATOM(IATM)%M=QATOM(IATQ)%M
+            SATOM(IATS)%M=QATOM(IATQ)%M
+          END IF
+!    
+!         ==  CHARGE ======================================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'Q',1,TCHK)
+          IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'Q',1,MATOM(IATM)%Q)
+            MATOM(IATM)%Q=-MATOM(IATM)%Q
+          ELSE
+            MATOM(IATM)%Q=0.D0
+          END IF
+          CALL LINKEDLIST$SELECT(LL_STRC,'..')
+        ENDDO
+!     ==================================================================
+!     == now amber =====================================================
+!     ==================================================================
+      ELSE IF(FF.EQ.'AMBER') THEN
+        IATS=0
+        DO IATM=1, NATM
+!         ----- READ NAME OF MM-ATOM NAME= <ATOMNAME>_<ID>    
+          MATOM(IATM)%NAME = TRIM(ADJUSTL(MMATOM(IATM)%NAME(1:LEN_TRIM(MMATOM(IATM)%NAME))))&
+     &                     //'_'//TRIM(ADJUSTL(.itos.MMATOM(IATM)%ID))
+
+!         ----- CHECK IF MM ATOM IS QM-ATOM
+          IATQ=0
+          IF(MMATOM(IATM)%FLAG.EQ.'Q') THEN
+            DO I=1,NATQ
+              IF(TRIM(ADJUSTL(MMATOM(IATM)%QMNAME)).EQ.TRIM(ADJUSTL(QATOM(I)%NAME))) THEN
+                IATQ=I
+                EXIT
+              END IF
+            END DO
+            IF(IATQ.EQ.0) THEN
+              CALL ERROR$MSG('QMATOM NOT FOUND')
+              CALL ERROR$CHVAL('QMATOM',MMATOM(IATM)%QMNAME)
+              CALL ERROR$CHVAL('MMATOM',MATOM(IATM)%NAME)
+              CALL ERROR$STOP('STRCIN_SOLVENT')
+            END IF
+            IF(MMATOM(IATM)%FLAG.EQ.'Q') IATS=IATS+1     ! INCREASE COUNTER FOR SHADOW ATOMS
+            IF(IATS.GT.NATS) THEN
+               CALL ERROR$MSG('#(SHADOW ATOMS) LARGER THAN EXPECTED')
+               CALL ERROR$STOP('STRCIN_SOLVENT')
+            END IF
+            SATOM(IATS)%NAME=MMATOM(IATM)%NAME !or QMNAME ? 
+            QATOM(IATQ)%QMSATOM=IATM
+            MATOM(IATM)%QMSATOM=IATS
+            SATOM(IATS)%QMSATOM=IATQ
+          ELSE
+            MATOM(IATM)%QMSATOM=0
+          END IF
+!         ----- READIN FORCEFIELD ATOM TYPE AND ATOM CHARGE
+          CALL FORCEFIELD$GETRESNUMBER(MMATOM(IATM)%RESNAME,IRES)
+          DO I=1,SIZE(TOP_RES(IRES)%ATOM)
+            IF(TRIM(ADJUSTL(TOP_RES(IRES)%ATOM(I)%NAME)).EQ.TRIM(ADJUSTL(MMATOM(IATM)%NAME))) THEN
+              MATOM(IATM)%FFTYPE =  TRIM(ADJUSTL(TOP_RES(IRES)%ATOM(I)%ATOM))
+!             ------  HERE YOU CAN CHOOSE IF THE MM ATOMS GET ZERO CHARGE OR NOT ------------
+              MATOM(IATM)%Q      =  TOP_RES(IRES)%ATOM(I)%CHARGE ! WARNING: CHECK SIGN
+!             -------------------------------------------------------------------------------
               EXIT
             END IF
-          ENDDO
+          END DO
+          IF(IATQ.NE.0) THEN
+            SATOM(IATS)%FFTYPE=MATOM(IATM)%FFTYPE
+          END IF
+!         ----- POSITIONS
           IF(IATQ.EQ.0) THEN
-            CALL ERROR$MSG('QMATOM NOT FOUND')
-            CALL ERROR$CHVAL('QMATOM',CH32SVAR1)
-            CALL ERROR$CHVAL('MMATOM',MATOM(IATM)%NAME)
-            CALL ERROR$STOP('STRCIN_SOLVENT')
-          END IF
-          IATS=IATS+1     ! INCREASE COUNTER FOR SHADOW ATOMS
-          IF(IATS.GT.NATS) THEN
-             CALL ERROR$MSG('#(SHADOW ATOMS) LARGER THAN EXPECTED')
-             CALL ERROR$STOP('STRCIN_SOLVENT')
-          END IF
-          SATOM(IATS)%NAME=QATOM(IATQ)%NAME
-          QATOM(IATQ)%QMSATOM=IATM
-          MATOM(IATM)%QMSATOM=IATS
-          SATOM(IATS)%QMSATOM=IATQ
-        ELSE
-          MATOM(IATM)%QMSATOM=0
-        END IF
-!
-!       ==  FORCE FIELD ATOM TYPE========================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'FFTYPE',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('VARIABLE !QM-MM!ATOM:FFTYPE NOT FOUND')
-          CALL ERROR$STOP('STRCIN_SOLVENT') 
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'FFTYPE',1,MATOM(IATM)%FFTYPE)
-        IF(IATQ.NE.0) THEN
-          SATOM(IATS)%FFTYPE=MATOM(IATM)%FFTYPE
-        END IF
-!
-!       ==  POSITION====================================================
-        IF(IATQ.EQ.0) THEN
-          CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('KEYWORD QM-MM!ATOM:R NOT FOUND')
-            CALL ERROR$STOP('STRCIN_SOLVENT') 
-         END IF
-         CALL LINKEDLIST$GET(LL_STRC,'R',1,MATOM(IATM)%R)
-         MATOM(IATM)%R(:)=MATOM(IATM)%R(:)*UNIT
-       ELSE
-          CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
-          IF(TCHK) THEN
-            CALL ERROR$MSG('R MUST NOT BE SPECIFIED')
-            CALL ERROR$MSG('ATOMIC POSITION IS TAKEN FROM QM ATOM')
-            CALL ERROR$STOP('STRCIN_SOLVENT')
-          END IF
-         MATOM(IATM)%R(:)=QATOM(IATQ)%R
-         SATOM(IATS)%R(:)=QATOM(IATQ)%R
-       END IF
-!
-!      ==  MASS ========================================================
-       IF(IATQ.EQ.0) THEN 
-          CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'M',1,MATOM(IATM)%M)
-            MATOM(IATM)%M=MATOM(IATM)%M*PROTONMASS
+            MATOM(IATM)%R(:) = MMATOM(IATM)%R(:) * UNIT
           ELSE
-            CH32SVAR1=MATOM(IATM)%FFTYPE(1:2)
-            IF(CH32SVAR1(2:2).EQ.'_') CH32SVAR1(2:2)=' '
+            MATOM(IATM)%R(:)=QATOM(IATQ)%R
+            SATOM(IATS)%R(:)=QATOM(IATQ)%R
+          END IF
+!         ----- MASS
+          IF(IATQ.EQ.0) THEN
+            CH32SVAR1 = ADJUSTL(MMATOM(IATM)%ELEMENT)
             CALL PERIODICTABLE$GET(CH32SVAR1,'Z',IZ)
             CALL PERIODICTABLE$GET(IZ,'MASS',MATOM(IATM)%M)
-            MATOM(IATM)%M=MATOM(IATM)%M
+          ELSE
+            MATOM(IATM)%M=QATOM(IATQ)%M
+            SATOM(IATS)%M=QATOM(IATQ)%M
+            SATOM(IATS)%Q=MATOM(IATM)%Q !!! manuel: here is the poodle's core
           END IF
-        ELSE
-          CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
-          IF(TCHK) THEN
-            CALL ERROR$MSG('M MUST NOT BE SPECIFIED')
-            CALL ERROR$MSG('MASS IS TAKEN FROM QM ATOM')
-            CALL ERROR$STOP('STRCIN_SOLVENT')
-          END IF
-          MATOM(IATM)%M=QATOM(IATQ)%M
-          SATOM(IATS)%M=QATOM(IATQ)%M
-        END IF
-!
-!       ==  CHARGE ======================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'Q',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_STRC,'Q',1,MATOM(IATM)%Q)
-          MATOM(IATM)%Q=-MATOM(IATM)%Q
-        ELSE
-          MATOM(IATM)%Q=0.D0
-        END IF
-        CALL LINKEDLIST$SELECT(LL_STRC,'..')
-      ENDDO
+        END DO
+      END IF
+
 !
 !     ==================================================================
 !     ==================================================================
 !     ==  READ LINKS                                                  ==
 !     ==================================================================
 !     ==================================================================
-      CALL LINKEDLIST$NLISTS(LL_STRC,'LINK',NLINK)
-      ALLOCATE(LINK(NLINK))
-      DO ILINK=1,NLINK
-        CALL LINKEDLIST$SELECT(LL_STRC,'LINK',ILINK)
-!
-!       == JOINT ATOM ==================================================
-!       == THE JOINT ATOM IS PRESENT IN THE QM AND THE MM SYSTEM =======
-        CALL LINKEDLIST$EXISTD(LL_STRC,'MMJOINT',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('VARIABLE !QM-MM!LINK:MMJOINT NOT FOUND')
-          CALL ERROR$STOP('STRCIN_SOLVENT') 
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'MMJOINT',1,CH32SVAR1)
-        LINK(ILINK)%MJOINT=0
-        DO IATM=1,NATM
-          IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
-            LINK(ILINK)%MJOINT=IATM
-            EXIT
+      IF(FF.EQ.'UFF') THEN
+        CALL LINKEDLIST$NLISTS(LL_STRC,'LINK',NLINK)
+        ALLOCATE(LINK(NLINK))
+        DO ILINK=1,NLINK
+          CALL LINKEDLIST$SELECT(LL_STRC,'LINK',ILINK)
+!  
+!         == JOINT ATOM ==================================================
+!         == THE JOINT ATOM IS PRESENT IN THE QM AND THE MM SYSTEM =======
+          CALL LINKEDLIST$EXISTD(LL_STRC,'MMJOINT',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('VARIABLE !QM-MM!LINK:MMJOINT NOT FOUND')
+            CALL ERROR$STOP('STRCIN_SOLVENT') 
           END IF
-        ENDDO
-        IF(LINK(ILINK)%MJOINT.EQ.0) THEN
-          CALL ERROR$MSG('!QM-MM!LINK:MMJOINT IS NOT A MM ATOM')
-          CALL ERROR$CHVAL('MMJOINT',CH32SVAR1)
-          CALL ERROR$STOP('STRCIN_SOLVENT') 
-        END IF
-        LINK(ILINK)%SJOINT=MATOM(LINK(ILINK)%MJOINT)%QMSATOM
-        LINK(ILINK)%QJOINT=SATOM(LINK(ILINK)%SJOINT)%QMSATOM
-!
-!       == MM ATOM =====================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'MMATOM',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('VARIABLE !QM-MM!LINK:MMATOM NOT FOUND')
-          CALL ERROR$STOP('STRCIN_SOLVENT') 
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'MMATOM',1,CH32SVAR1)
-        LINK(ILINK)%MATOM=0
-        DO IATM=1,NATM
-          IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
-            LINK(ILINK)%MATOM=IATM
-            EXIT
+          CALL LINKEDLIST$GET(LL_STRC,'MMJOINT',1,CH32SVAR1)
+          LINK(ILINK)%MJOINT=0
+          DO IATM=1,NATM
+            IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
+              LINK(ILINK)%MJOINT=IATM
+              EXIT
+            END IF
+          ENDDO
+          IF(LINK(ILINK)%MJOINT.EQ.0) THEN
+            CALL ERROR$MSG('!QM-MM!LINK:MMJOINT IS NOT A MM ATOM')
+            CALL ERROR$CHVAL('MMJOINT',CH32SVAR1)
+            CALL ERROR$STOP('STRCIN_SOLVENT') 
           END IF
-        ENDDO
-        IF(LINK(ILINK)%MATOM.EQ.0) THEN
-          CALL ERROR$MSG('!QM-MM!LINK:MMATOM IS NOT A MM ATOM')
-          CALL ERROR$CHVAL('MMATOM',CH32SVAR1)
-          CALL ERROR$STOP('STRCIN_SOLVENT') 
-        END IF
-!          
-!       == QM ATOM =====================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'QMATOM',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('VARIABLE !QM-MM!LINK:QMATOM NOT FOUND')
-          CALL ERROR$STOP('STRCIN_SOLVENT') 
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'QMATOM',1,CH32SVAR1)
-        DO IATQ=1,NATQ
-          IF(CH32SVAR1.EQ.QATOM(IATQ)%NAME) THEN
-            LINK(ILINK)%QATOM=IATQ
-            EXIT
+          LINK(ILINK)%SJOINT=MATOM(LINK(ILINK)%MJOINT)%QMSATOM
+          LINK(ILINK)%QJOINT=SATOM(LINK(ILINK)%SJOINT)%QMSATOM
+!  
+!         == MM ATOM =====================================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'MMATOM',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('VARIABLE !QM-MM!LINK:MMATOM NOT FOUND')
+            CALL ERROR$STOP('STRCIN_SOLVENT') 
           END IF
+          CALL LINKEDLIST$GET(LL_STRC,'MMATOM',1,CH32SVAR1)
+          LINK(ILINK)%MATOM=0
+          DO IATM=1,NATM
+            IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
+              LINK(ILINK)%MATOM=IATM
+              EXIT
+            END IF
+          ENDDO
+          IF(LINK(ILINK)%MATOM.EQ.0) THEN
+            CALL ERROR$MSG('!QM-MM!LINK:MMATOM IS NOT A MM ATOM')
+            CALL ERROR$CHVAL('MMATOM',CH32SVAR1)
+            CALL ERROR$STOP('STRCIN_SOLVENT') 
+          END IF
+!            
+!         == QM ATOM =====================================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'QMATOM',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('VARIABLE !QM-MM!LINK:QMATOM NOT FOUND')
+            CALL ERROR$STOP('STRCIN_SOLVENT') 
+          END IF
+          CALL LINKEDLIST$GET(LL_STRC,'QMATOM',1,CH32SVAR1)
+          DO IATQ=1,NATQ
+            IF(CH32SVAR1.EQ.QATOM(IATQ)%NAME) THEN
+              LINK(ILINK)%QATOM=IATQ
+              EXIT
+            END IF
+          ENDDO
+          IF(LINK(ILINK)%QATOM.EQ.0) THEN
+            CALL ERROR$MSG('!QM-MM!LINK:QMATOM IS NOT A QM ATOM')
+            CALL ERROR$CHVAL('QMATOM',CH32SVAR1)
+            CALL ERROR$STOP('STRCIN_SOLVENT') 
+          END IF
+!  
+!         == SHADOW ATOM =================================================
+          IATS=IATS+1
+          IF(IATS.GT.NATS) THEN
+             CALL ERROR$MSG('#(SHADOW ATOMS) LARGER THAN EXPECTED')
+             CALL ERROR$STOP('STRCIN_SOLVENT')
+          END IF
+          LINK(ILINK)%SATOM=IATS
+!  
+!         == SHADOW ATOM FFTYPE ==========================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'SHFFTYPE',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('VARIABLE !QM-MM!LINK!SHFFTYPE NOT FOUND')
+            CALL ERROR$STOP('STRCIN_SOLVENT') 
+          END IF
+          CALL LINKEDLIST$GET(LL_STRC,'SHFFTYPE',1,SATOM(IATS)%FFTYPE)
+!         
+!         == SHADOW ATOM NAME,POSITION,MASS,CHARGE,QMSATOM================
+          IATQ=LINK(ILINK)%QATOM
+          SATOM(IATS)%NAME=QATOM(IATQ)%NAME
+          SATOM(IATS)%R=QATOM(IATQ)%R
+          SATOM(IATS)%M=QATOM(IATQ)%M
+          SATOM(IATS)%Q=QATOM(IATQ)%Q
+!  
+          IATS=LINK(ILINK)%SATOM
+          IATQ=LINK(ILINK)%QATOM
+          IATM=LINK(ILINK)%MATOM
+          SATOM(IATS)%QMSATOM=IATQ
+          QATOM(IATQ)%QMSATOM=IATM
+          MATOM(IATM)%QMSATOM=IATS
+!         
+          CALL LINKEDLIST$SELECT(LL_STRC,'..')
         ENDDO
-        IF(LINK(ILINK)%QATOM.EQ.0) THEN
-          CALL ERROR$MSG('!QM-MM!LINK:QMATOM IS NOT A QM ATOM')
-          CALL ERROR$CHVAL('QMATOM',CH32SVAR1)
-          CALL ERROR$STOP('STRCIN_SOLVENT') 
-        END IF
+!     ===============================================================
+!     =========== AMBER ==== read links =============================
+!     ===============================================================
+      ELSE IF(FF.EQ.'AMBER') THEN
+!       == GET NUMBER OF LINK ATOMS ====================================
+        NLINK=0
+        DO I=1,SIZE(MMATOM)
+          IF(MMATOM(I)%FLAG.EQ.'L') NLINK = NLINK + 1
+        END DO
+        ALLOCATE(LINK(NLINK))
+!       == FILL LINK VARIABLE ==========================================
+        ILINK=0
+        DO I=1,SIZE(MMATOM)
+          IF(MMATOM(I)%FLAG.EQ.'L') THEN
+            ILINK= ILINK + 1
+!           ---- JOINT ATOMS ------------
+            DUMMY=TRIM(ADJUSTL(MMATOM(I)%QMNAME))
+            DO J=1,NATQ
+               IF(TRIM(ADJUSTL(QATOM(J)%NAME)).EQ.TRIM(ADJUSTL(DUMMY))) THEN
+                  LINK(ILINK)%MJOINT=QATOM(J)%QMSATOM
+                  EXIT
+               END IF
+            END DO
+            IF(LINK(ILINK)%MJOINT.EQ.0) THEN
+               CALL ERROR$MSG('!QM-MM!LINK:MMJOINT IS NOT A MM ATOM')
+               CALL ERROR$CHVAL('MMJOINT',CH32SVAR1)
+               CALL ERROR$STOP('STRCIN_SOLVENT') 
+            END IF
+            LINK(ILINK)%SJOINT=MATOM(LINK(ILINK)%MJOINT)%QMSATOM
+            LINK(ILINK)%QJOINT=SATOM(LINK(ILINK)%SJOINT)%QMSATOM
+!           ---- MM ATOM -----------   
+            LINK(ILINK)%MATOM=I
+!           ---- QM ATOM -----------
+            DO IATQ=1,NATQ
+               IF(TRIM(ADJUSTL(MMATOM(I)%LNAME)).EQ.TRIM(ADJUSTL(QATOM(IATQ)%NAME))) THEN
+                  LINK(ILINK)%QATOM=IATQ
+                  EXIT
+               END IF
+            ENDDO
+            IF(LINK(ILINK)%QATOM.EQ.0) THEN
+               CALL ERROR$MSG('!QM-MM!LINK:QMATOM IS NOT A QM ATOM')
+               CALL ERROR$CHVAL('QMATOM',CH32SVAR1)
+               CALL ERROR$STOP('STRCIN_SOLVENT') 
+            END IF
+            IATS=IATS+1
+            IF(IATS.GT.NATS) THEN
+               CALL ERROR$MSG('#(SHADOW ATOMS) LARGER THAN EXPECTED')
+               CALL ERROR$I4VAL('IATS',IATS)
+               CALL ERROR$I4VAL('NATS',NATS)
+               CALL ERROR$STOP('STRCIN_SOLVENT')
+            END IF
+!           ---- SHADOW ATOM -------
+            LINK(ILINK)%SATOM=IATS
+!           ---- SHADOW ATOM FFTYPE-
+            SATOM(IATS)%FFTYPE= 'L1'
+!           ---- SHADOW ATOM NAME,POSITION,MASS,CHARGE,QMSATOM----------------
+            IATQ=LINK(ILINK)%QATOM
+            SATOM(IATS)%NAME='H'!MMATOM(I)%NAME
+            SATOM(IATS)%R=QATOM(IATQ)%R
+            SATOM(IATS)%M=QATOM(IATQ)%M
+            SATOM(IATS)%Q=QATOM(IATQ)%Q
 !
-!       == SHADOW ATOM =================================================
-        IATS=IATS+1
-        IF(IATS.GT.NATS) THEN
-           CALL ERROR$MSG('#(SHADOW ATOMS) LARGER THAN EXPECTED')
-           CALL ERROR$STOP('STRCIN_SOLVENT')
-        END IF
-        LINK(ILINK)%SATOM=IATS
-!
-!       == SHADOW ATOM FFTYPE ==========================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'SHFFTYPE',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('VARIABLE !QM-MM!LINK!SHFFTYPE NOT FOUND')
-          CALL ERROR$STOP('STRCIN_SOLVENT') 
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'SHFFTYPE',1,SATOM(IATS)%FFTYPE)
-!       
-!       == SHADOW ATOM NAME,POSITION,MASS,CHARGE,QMSATOM================
-        IATQ=LINK(ILINK)%QATOM
-        SATOM(IATS)%NAME=QATOM(IATQ)%NAME
-        SATOM(IATS)%R=QATOM(IATQ)%R
-        SATOM(IATS)%M=QATOM(IATQ)%M
-        SATOM(IATS)%Q=QATOM(IATQ)%Q
-!
-        IATS=LINK(ILINK)%SATOM
-        IATQ=LINK(ILINK)%QATOM
-        IATM=LINK(ILINK)%MATOM
-        SATOM(IATS)%QMSATOM=IATQ
-        QATOM(IATQ)%QMSATOM=IATM
-        MATOM(IATM)%QMSATOM=IATS
-!       
-        CALL LINKEDLIST$SELECT(LL_STRC,'..')
-      ENDDO
+            IATS=LINK(ILINK)%SATOM
+            IATQ=LINK(ILINK)%QATOM
+            IATM=LINK(ILINK)%MATOM
+
+            SATOM(IATS)%QMSATOM=IATQ
+            QATOM(IATQ)%QMSATOM=IATM
+            MATOM(IATM)%QMSATOM=IATS
+          END IF
+        END DO
+      END IF
       IF(IATS.NE.NATS) THEN
         CALL ERROR$MSG('CONSISTENCY CHECK IATS FAILED')
+        CALL ERROR$I4VAL('IATS',IATS)
+        CALL ERROR$I4VAL('NATS',NATS)
         CALL ERROR$STOP('STRCIN_SOLVENT')
       END IF
 !
@@ -5421,49 +5636,147 @@ call linkedlist$report(ll_strc,6)
 !     ==  READ BONDS                                                  ==
 !     ==================================================================
 !     ==================================================================
-      CALL LINKEDLIST$NLISTS(LL_STRC,'BOND',NBONDM)
-      ALLOCATE(MBOND(NBONDM))
-      DO IBONDM=1,NBONDM
-        CALL LINKEDLIST$SELECT(LL_STRC,'BOND',IBONDM)
-!       == FIRST ATOM ==================================================
-        MBOND(IBONDM)%ATOM1=0
-        CALL LINKEDLIST$GET(LL_STRC,'ATOM1',1,CH32SVAR1)
-        DO IATM=1,NATM
-          IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
-            MBOND(IBONDM)%ATOM1=IATM
-            EXIT
+      IF(FF.EQ.'UFF') THEN
+        CALL LINKEDLIST$NLISTS(LL_STRC,'BOND',NBONDM)
+        ALLOCATE(MBOND(NBONDM))
+        DO IBONDM=1,NBONDM
+          CALL LINKEDLIST$SELECT(LL_STRC,'BOND',IBONDM)
+!         == FIRST ATOM ==================================================
+          MBOND(IBONDM)%ATOM1=0
+          CALL LINKEDLIST$GET(LL_STRC,'ATOM1',1,CH32SVAR1)
+          DO IATM=1,NATM
+            IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
+              MBOND(IBONDM)%ATOM1=IATM
+              EXIT
+            END IF
+          ENDDO
+          IF(MBOND(IBONDM)%ATOM1.EQ.0) THEN
+            CALL ERROR$MSG('FIRST ATOM IN BOND NOT IN THE M-ATOM LIST')
+            CALL ERROR$CHVAL('ATOM1',CH32SVAR1)
+            CALL ERROR$STOP('STRCIN_SOLVENT; !STRUCTURE!QM-MM!BOND')
+          END IF         
+!   
+!         == SECOND ATOM =================================================
+          MBOND(IBONDM)%ATOM2=0
+          CALL LINKEDLIST$GET(LL_STRC,'ATOM2',1,CH32SVAR1)
+          DO IATM=1,NATM
+            IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
+              MBOND(IBONDM)%ATOM2=IATM
+              EXIT
+            END IF
+          ENDDO
+          IF(MBOND(IBONDM)%ATOM2.EQ.0) THEN
+            CALL ERROR$MSG('SECOND ATOM IN BOND NOT IN THE M-ATOM LIST')
+            CALL ERROR$CHVAL('ATOM2',CH32SVAR1)
+            CALL ERROR$STOP('STRCIN_SOLVENT; !STRUCTURE!QM-MM!BOND')
+          END IF         
+!   
+!         == BOND ORDER ==================================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'BO',1,TCHK)
+          IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'BO',1,MBOND(IBONDM)%BO)
+          ELSE
+            MBOND(IBONDM)%BO=1
+          END IF
+          CALL LINKEDLIST$SELECT(LL_STRC,'..')
+        ENDDo
+!   == AMBER FORCEFIELD : BONDS ====================================================
+      ELSE IF(FF.EQ.'AMBER') THEN
+!       ----- GET NUMBER OF BONDS
+        IAT=1
+        NBONDM=0
+        DO WHILE(IAT.LT.SIZE(MMATOM))
+          resname= MMATOM(IAT)%RESNAME
+          CALL FORCEFIELD$GETRESNUMBER(resname,ivar)
+          IBONDM= SIZE(TOP_RES(IVAR)%BOND)
+          DO I=1,SIZE(TOP_RES(IVAR)%BOND)  !EXCLUDE PEPTIDE BONDS
+            IF(TRIM(TOP_RES(IVAR)%BOND(I)%ATOM1).EQ.'+N  '.OR.TRIM(TOP_RES(IVAR)%BOND(I)%ATOM2)&
+                 &.EQ.'+N  ') IBONDM = IBONDM -1
+            IF(TRIM(TOP_RES(IVAR)%BOND(I)%ATOM1).EQ.'-C  '.OR.TRIM(TOP_RES(IVAR)%BOND(I)%ATOM2)&
+                 &.EQ.'-C  ') IBONDM = IBONDM -1
+          END DO
+!         ----- ONLY IF THE ENTRY BELONGS TO AN AMINO ACID ADD THE PEPTIDE BOND
+          IF(MMATOM(IAT)%KEYWORD.EQ.'ATOM  ') THEN
+             NBONDM= NBONDM + IBONDM +1
+          ELSE
+             NBONDM = NBONDM + IBONDM
+          END IF
+!         -------------
+          IVAR = SIZE(TOP_RES(IVAR)%ATOM)
+          IAT = IAT + IVAR
+!         ----- CHECKS IF THE PEPTIDE CHAIN ID HAS CHANGED. ONLY FOR AMINO ACIDS
+          IF(MMATOM(IAT-1)%KEYWORD.EQ.'ATOM  ') THEN
+             IF(IAT.GE.SIZE(MMATOM)) then
+               NBONDM = NBONDM - 1
+             else
+               IF(MMATOM(IAT-1)%CHAINID.NE.MMATOM(IAT)%CHAINID) NBONDM = NBONDM - 1
+             end if
           END IF
         ENDDO
-        IF(MBOND(IBONDM)%ATOM1.EQ.0) THEN
-          CALL ERROR$MSG('FIRST ATOM IN BOND NOT IN THE M-ATOM LIST')
-          CALL ERROR$CHVAL('ATOM1',CH32SVAR1)
-          CALL ERROR$STOP('STRCIN_SOLVENT; !STRUCTURE!QM-MM!BOND')
-        END IF         
-!
-!       == SECOND ATOM =================================================
-        MBOND(IBONDM)%ATOM2=0
-        CALL LINKEDLIST$GET(LL_STRC,'ATOM2',1,CH32SVAR1)
-        DO IATM=1,NATM
-          IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
-            MBOND(IBONDM)%ATOM2=IATM
-            EXIT
+        ALLOCATE(MBOND(NBONDM))
+        MBOND(:)%ATOM1=0
+        MBOND(:)%ATOM2=0
+        MBOND(:)%BO=0.d0!
+!       ----- READ BONDS FROM MMATOM-ARRAY
+        IAT=1
+        IBONDM=1
+        DO WHILE(IAT.LT.SIZE(MMATOM))
+          RESNAME= MMATOM(IAT)%RESNAME  !WHICH RESIDUE
+          CALL FORCEFIELD$GETRESNUMBER(RESNAME,IVAR)
+          DO I=1,SIZE(TOP_RES(IVAR)%BOND)  !GO OVER ALL BONDS OF THE RESIDUE
+             IF(TRIM(TOP_RES(IVAR)%BOND(I)%ATOM1).EQ.'+N  '.OR.TRIM(TOP_RES(IVAR)%BOND(I)%ATOM2).EQ.'+N  ') CYCLE
+             IF(TRIM(TOP_RES(IVAR)%BOND(I)%ATOM1).EQ.'-C  '.OR.TRIM(TOP_RES(IVAR)%BOND(I)%ATOM2).EQ.'-C  ') CYCLE
+             DO J=IAT, IAT+SIZE(TOP_RES(IVAR)%ATOM)-1 !CHECK ALL ATOMS OF THIS RESIDUE IN MMATOM
+                IF(ADJUSTL(MMATOM(J)%NAME).EQ.TOP_RES(IVAR)%BOND(I)%ATOM1) THEN
+                   MBOND(IBONDM)%ATOM1 = J
+                END IF
+                IF(ADJUSTL(MMATOM(J)%NAME).EQ.TOP_RES(IVAR)%BOND(I)%ATOM2) THEN
+                   MBOND(IBONDM)%ATOM2 = J
+                END IF
+             END DO
+             MBOND(IBONDM)%BO = 1
+             IBONDM = IBONDM + 1
+          END DO
+          IAT= IAT+SIZE(TOP_RES(IVAR)%ATOM)
+          if(iat.gt.size(mmatom)) exit
+!         ---- CONNECT DIFFERENT AMINOACIDS IF THEY ARE IN THE SAME CHAIN
+          IF(MMATOM(IAT)%KEYWORD.EQ.'ATOM  ') THEN
+!sascha check this is the previous version
+!           IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID).OR.(IAT+IVAR.LT.SIZE(MMATOM))) THEN
+!sascha check thhat probably should look like this
+!            IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID).and.(IAT+IVAR.LT.SIZE(MMATOM))) THEN
+!sascha check end
+            IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID)) THEN
+
+!             ---- GET LAST C -ATOM
+              CALL FORCEFIELD$GETRESNUMBER(MMATOM(IAT-1)%RESNAME,IVAR)
+              J=SIZE(TOP_RES(IVAR)%ATOM)
+              DO I= IAT-J, IAT-1
+                IF(TRIM(ADJUSTL(MMATOM(I)%NAME)).EQ.'C') THEN
+                   MBOND(IBONDM)%ATOM1= I
+                   print*,"FLAG: ATOM FOUND! ",mmatom(i)%name, i
+                   EXIT
+                END IF
+              ENDDO
+!             ---- GET NEXT (ACTUAL) N - ATOM  
+              CALL FORCEFIELD$GETRESNUMBER(MMATOM(IAT)%RESNAME,IVAR)
+              J=SIZE(TOP_RES(IVAR)%ATOM)
+              DO I= IAT, IAT+J-1
+                IF(TRIM(ADJUSTL(MMATOM(I)%NAME)).EQ.'N') THEN
+                   MBOND(IBONDM)%ATOM2= I
+                   print*,"FLAG: ATOM FOUND! ",mmatom(i)%name, i
+                   EXIT
+                END IF
+              END DO
+              MBOND(IBONDM)%BO = 1
+              IBONDM = IBONDM + 1
+            END IF
           END IF
-        ENDDO
-        IF(MBOND(IBONDM)%ATOM2.EQ.0) THEN
-          CALL ERROR$MSG('SECOND ATOM IN BOND NOT IN THE M-ATOM LIST')
-          CALL ERROR$CHVAL('ATOM2',CH32SVAR1)
-          CALL ERROR$STOP('STRCIN_SOLVENT; !STRUCTURE!QM-MM!BOND')
-        END IF         
-!
-!       == BOND ORDER ==================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'BO',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_STRC,'BO',1,MBOND(IBONDM)%BO)
-        ELSE
-          MBOND(IBONDM)%BO=1
-        END IF
-        CALL LINKEDLIST$SELECT(LL_STRC,'..')
-      ENDDO
+        END DO
+      END IF
+print*,'marke 5'
+
+
 !
 !     ==================================================================
 !     ==  RESOLVE SHADOW BONDS                                        ==
@@ -5471,21 +5784,29 @@ call linkedlist$report(ll_strc,6)
 !     == COUNT #(SHADOW BONDS) =========================================
       NBONDS=0
       DO IBONDM=1,NBONDM
+print*,'marke 01'
         IATM1=MBOND(IBONDM)%ATOM1
         IATM2=MBOND(IBONDM)%ATOM2
+print*,'marke 02',iatm1,iatm2
         IATS1=MATOM(IATM1)%QMSATOM
         IATS2=MATOM(IATM2)%QMSATOM
+print*,'marke 03'
         IF(IATS1.NE.0.AND.IATS2.NE.0) NBONDS=NBONDS+1
+print*,'marke 04'
       ENDDO
       ALLOCATE(SBOND(NBONDS))
 !
 !     == DETERMINE SHADOW BONDS ========================================
+print*,'marke 1'
       IBONDS=0
       DO IBONDM=1,NBONDM
+print*,'marke 2'
         IATM1=MBOND(IBONDM)%ATOM1
         IATM2=MBOND(IBONDM)%ATOM2
+print*,'marke 3'
         IATS1=MATOM(IATM1)%QMSATOM
         IATS2=MATOM(IATM2)%QMSATOM
+print*,'marke 4'
         IF(IATS1.NE.0.AND.IATS2.NE.0) THEN
           IBONDS=IBONDS+1   ! BOND LIES ENTIRELY IN THE REACTION CENTER
                             ! OR IS A LINK BOND
@@ -5533,6 +5854,7 @@ call linkedlist$report(ll_strc,6)
       CALL QMMM$SETI4A('LINK',6*NLINK,LINKARRAY)
       DEALLOCATE(LINKARRAY)
       DEALLOCATE(MAPARRAY)
+print*,"FLAG: after setting links in QMMM"
 !
 !     ==================================================================
 !     ==  DEFINE CLASSICAL OBJECT                                     ==
@@ -5540,6 +5862,33 @@ call linkedlist$report(ll_strc,6)
       CALL CLASSICAL$SELECT('QMMM')
       CALL STRCIN_SOLVENT_SETM(NATM,MATOM,NBONDM,MBOND)
       CALL CLASSICAL$SELECT('SHADOW')
+
+! print*,"---------------------------"
+! print*,"   MATOM:"
+! do i=1,SIZE(MATOM)
+!    write(*,FMT='(A32, 3F10.4, 2F15.5, A10, I6)')  MATOM(i)
+! END do
+! print*,"---------------------------"
+! print*,"   SATOM:",allocated(SATOM)
+! do i=1,SIZE(SATOM)
+!    write(*,FMT='(I6,A32, 3F10.4, 2F15.5, A10, I6)') i,  SATOM(i)
+! END do
+! print*,"---------------------------"
+! print*,"   QATOM:"
+! do i=1,SIZE(QATOM)
+!    write(*,FMT='(A32, 3F10.4, 2F15.5, A10, I6)')  QATOM(i)
+! END do
+! print*,"---------------------------"
+! print*,"   SBOND:"
+! DO I=1,SIZE(SBOND)
+!    write(*,FMT='(2I8,F5.1)') SBOND(I)
+! END DO
+! print*,"---------------------------"
+! DO I=1,NLINK
+!    write(*,FMT='(6I8)') LINKARRAY(:,I)
+! END DO
+! !IF(ALLOCATED(LINKARRAY)) DEALLOCATE(LINKARRAY)
+! stop 'FORCED STOP IN READIN_SOLVENT'
       CALL STRCIN_SOLVENT_SETM(NATS,SATOM,NBONDS,SBOND)
 !
 !     ==================================================================
@@ -5606,7 +5955,7 @@ call linkedlist$report(ll_strc,6)
         CALL CLASSICAL$SETL4('LONGRANGE',.TRUE.)
         RETURN
         END SUBROUTINE STRCIN_SOLVENT_SETM
-      END
+      END SUBROUTINE STRCIN_SOLVENT
 !
 !     ...................................................................
       SUBROUTINE STRCIN_COSMO(LL_STRC_)
@@ -5804,5 +6153,5 @@ call linkedlist$report(ll_strc,6)
 !
                                       CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE STRCOUT
 

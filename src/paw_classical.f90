@@ -97,6 +97,8 @@ TYPE MD_TYPE
   REAL(8)               :: SIGMA(3,3)
   CHARACTER(32)         :: MDNAME          ! IDENTIFIER FOR SELECTING
   LOGICAL(4)            :: TINI            ! INITALIZED OR NOT
+  CHARACTER(16)         :: FF              ! TIP3P, UFF OR WHATEVER
+  CHARACTER(3) ,POINTER :: RES(:)          ! (NAT)    RESIDUE NAME
   TYPE(MD_TYPE),POINTER :: NEXT            ! LINK TO THE NEXT INSTANCE
 END TYPE MD_TYPE
 TYPE(MD_TYPE) ,POINTER :: MD
@@ -325,7 +327,7 @@ END MODULE CLASSICAL_MODULE
         CALL ERROR$STOP('CLASSICAL$SETR8A')
       END IF
       RETURN
-      END
+    END SUBROUTINE CLASSICAL$SETR8A
 !
 !     .................................................................
       SUBROUTINE CLASSICAL$SETI4A(ID_,LENG_,VAL_)
@@ -468,7 +470,32 @@ END MODULE CLASSICAL_MODULE
         CALL ERROR$STOP('CLASSICAL$SETL4')
       END IF
       RETURN
-      END
+    END SUBROUTINE CLASSICAL$SETL4
+!
+!     .................................................................
+      SUBROUTINE CLASSICAL$SETCH(ID_,VAL_)
+!     *****************************************************************      
+!     **  CLASSICAL$SET                                              **      
+!     *****************************************************************      
+      USE CLASSICAL_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID_
+      CHARACTER(*),INTENT(IN) :: VAL_
+!     *****************************************************************      
+      IF(.NOT.SELECTED) THEN
+        CALL ERROR$MSG('NO CLASSICAL OBJECT SELECTED')
+        CALL ERROR$STOP('CLASSICAL$SETL4')
+      END IF
+      IF(ID_.EQ.'FF') THEN
+        MD%FF=VAL_
+      ELSE
+        CALL ERROR$MSG('INVALID IDENTIFIER')
+        CALL ERROR$CHVAL('ID',ID_)
+        CALL ERROR$CHVAL('SELECTION',MD%FF)
+        CALL ERROR$STOP('CLASSICAL$SETCH')
+      END IF
+      RETURN
+    END SUBROUTINE CLASSICAL$SETCH
 !
 !     .................................................................
       SUBROUTINE CLASSICAL$SETCHA(ID_,LENG_,VAL_)
@@ -489,7 +516,19 @@ END MODULE CLASSICAL_MODULE
 !     =================================================================
 !     == TYPE = ATOM TYPE                                            ==
 !     =================================================================
-      IF(ID_.EQ.'TYPE') THEN
+      IF(ID_.EQ.'RES') THEN
+         IF(MD%NAT.EQ.0) MD%NAT=LENG_
+         IF(LENG_.NE.MD%NAT) THEN
+            CALL ERROR$MSG('INCONSISTENT SIZE')
+            CALL ERROR$CHVAL('ID',ID_)
+            CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
+            CALL ERROR$STOP('CLASSICAL$SETCHA')
+         END IF
+         IF(.NOT.ASSOCIATED(MD%RES))ALLOCATE(MD%RES(MD%NAT))
+         MD%RES=VAL_
+!     write(*,*) 'RESIDUE NAME:  ', MD%RES
+
+      ELSE IF(ID_.EQ.'TYPE') THEN
         IF(MD%NAT.EQ.0) MD%NAT=LENG_
         IF(LENG_.NE.MD%NAT) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -766,13 +805,22 @@ END MODULE CLASSICAL_MODULE
         IF(MD%NAT.EQ.0) MD%NAT=LENG_
         IF(LENG_.NE.MD%NAT) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
-          CALL ERROR$STOP('CLASSICAL$SETCHA')
+          CALL ERROR$STOP('CLASSICAL$GETCHA')
         END IF
         IF(.NOT.ASSOCIATED(MD%TYPE))ALLOCATE(MD%TYPE(MD%NAT))
         VAL_=MD%TYPE
+      ELSE IF(ID_.EQ.'ATOMNAME') THEN
+        IF(MD%NAT.EQ.0) MD%NAT=LENG_
+        IF(LENG_.NE.MD%NAT) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$STOP('CLASSICAL$GETCHA')
+        END IF
+        IF(.NOT.ASSOCIATED(MD%ATNAME))ALLOCATE(MD%ATNAME(MD%NAT))
+        VAL_=MD%ATNAME
       ELSE
         CALL ERROR$MSG('INVALID IDENTIFIER')
-        CALL ERROR$STOP('CLASSICAL$SETCHA')
+        CALL ERROR$STOP('CLASSICAL$GETCHA')
       END IF
       RETURN
       END
@@ -1032,7 +1080,7 @@ END MODULE CLASSICAL_MODULE
       ENDDO
                                CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE CLASSICAL$ETOT
 !
 !     .................................................................
       SUBROUTINE CLASSICAL_DUMMY_POSITION(NAT,TYPE,R,NBOND,INDEX2)
@@ -1081,7 +1129,7 @@ END MODULE CLASSICAL_MODULE
 PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
       ENDDO
       RETURN
-      END
+    END SUBROUTINE CLASSICAL_DUMMY_POSITION
 !
 !     .................................................................
       SUBROUTINE CLASSICAL_DUMMY_FORCE(NAT,TYPE,F,NBOND,INDEX2)
@@ -1128,7 +1176,7 @@ PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
 PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       ENDDO
       RETURN
-      END
+    END SUBROUTINE CLASSICAL_DUMMY_FORCE
 !
 !     .................................................................
       SUBROUTINE CLASSICAL$STOP
@@ -1151,7 +1199,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       MD%RM=MD%R0
                                CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE CLASSICAL$STOP
 !
 !     .................................................................
       SUBROUTINE CLASSICAL$PROPAGATE(DELT,ANNE)
@@ -1199,7 +1247,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       ENDDO
                                CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE CLASSICAL$PROPAGATE
 !
 !     .................................................................
       SUBROUTINE CLASSICAL$EKIN(DELT_,EKIN_)
@@ -1232,7 +1280,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       ENDDO
                                CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE CLASSICAL$EKIN
 !
 !     .................................................................
       SUBROUTINE CLASSICAL$SWITCH
@@ -1387,7 +1435,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       ENDDO
       CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE CLASSICAL$REPORT
 ! 
 !     =================================================================
 !     =================================================================
@@ -1419,7 +1467,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
      &               ,NNB,NBLIST,NPOT,POT)
 !     *****************************************************************
 !     *****************************************************************
-      USE CLASSICAL_MODULE, ONLY : POT_TYPE,NONBOND_TYPE
+      USE CLASSICAL_MODULE, ONLY : POT_TYPE,NONBOND_TYPE, MD
       USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TLONGRANGE
@@ -1598,7 +1646,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 
                             CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE CLASSICAL_ETOTAL
 ! 
 !     ..................................................................
       SUBROUTINE CLASSICAL_testsumrules(nat,R,F)
@@ -1620,7 +1668,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       enddo
       write(*,fmt='("sumrules ",6f15.7)')ftot,d
       return
-      end
+    end SUBROUTINE CLASSICAL_testsumrules
 ! 
 !     ..................................................................
       SUBROUTINE CLASSICAL_ECOULOMB(NAT,R,Q,E,F,V,RBAS,SIGMA &
@@ -2028,7 +2076,7 @@ REAL(8) :: G1,DGDX1
       F4(2)=-F41Y
       F4(3)=-F41Z
       RETURN
-      END      
+    END SUBROUTINE CLASSICAL_EINVERSION
 ! 
 !     =================================================================
 !     =================================================================
@@ -2050,7 +2098,7 @@ REAL(8) :: G1,DGDX1
 !     **                                                              **
 !     **                                                              **
 !     ******************************************************************
-      USE CLASSICAL_MODULE, ONLY : POT_TYPE
+      USE CLASSICAL_MODULE, ONLY : POT_TYPE,MD
       IMPLICIT NONE
       INTEGER(4)   ,PARAMETER    :: NNEIGHX=30
       INTEGER(4)   ,INTENT(IN)   :: NBOND
@@ -2118,7 +2166,18 @@ REAL(8) :: G1,DGDX1
         END IF
         TYPE1=TYPE(IAT1)
         TYPE2=TYPE(IAT2)
-        CALL UFFTABLE$BONDPARMS(TYPE1,TYPE2,BO(IB),ID,X,K,D,TCHK)
+        IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+           CALL UFFTABLE$BONDPARMS(TYPE1,TYPE2,BO(IB),ID,X,K,D,TCHK)
+        ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+           CALL FORCEFIELD$AMBER_BONDPARMS(TYPE1,TYPE2,ID,X,K,D,TCHK)
+!    -------- UFF uses K/2 where AMBER uses K
+           K= 2.d0 * K
+!    ----------------------------------------
+        ELSE
+           CALL ERROR$MSG('FORCEFIELD NOT RECOGNIZED')
+           CALL ERROR$CHVAL('MD%FF',MD%FF)
+           CALL ERROR$STOP('FORCEFIELDSETUP')
+        END IF
 !
 !       =================================================================
 !       == SEARCH WHETHER POTENTIAL ALREADY EXISTS                     ==
@@ -2176,7 +2235,7 @@ REAL(8) :: G1,DGDX1
 !     ================================================================== 
 !     ==  SET BOND ANGLE POTENTIALS                                   ==
 !     ================================================================== 
-     PRINT*,'BEFORE ANGLE-LOOP',NBOND
+!     PRINT*,'BEFORE ANGLE-LOOP',NBOND
       NANGLE=0
       DO IAT2=1,NAT
         NN2=NNEIGH(IAT2)
@@ -2189,7 +2248,16 @@ REAL(8) :: G1,DGDX1
             TYPE1=TYPE(IAT1)
             TYPE2=TYPE(IAT2)
             TYPE3=TYPE(IAT3)
-            CALL UFFTABLE$ANGLEPARMS(TYPE1,TYPE2,TYPE3,BO1,BO3,ID,X,K,TCHK)
+            IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+               CALL UFFTABLE$ANGLEPARMS(TYPE1,TYPE2,TYPE3,BO1,BO3,ID,X,K,TCHK)
+            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+               CALL FORCEFIELD$AMBER_ANGLEPARMS(TYPE1,TYPE2,TYPE3,ID,X,K,TCHK)
+            ELSE
+               CALL ERROR$MSG('FORCEFIELD NOT RECOGNIZED')
+               CALL ERROR$CHVAL('MD%FF',MD%FF)
+               CALL ERROR$STOP('FORCEFIELDSETUP')
+            END IF
+
             IF(.NOT.TCHK) CYCLE
 !
 !           == ADD NEW ANGLE ===========================================
@@ -2221,14 +2289,18 @@ REAL(8) :: G1,DGDX1
               CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE')
               CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
             END IF
-            CALL CLASSICAL_ANGLEPOTA(ID,X,K,POT(NPOT))
+!            IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+               CALL CLASSICAL_ANGLEPOTA(ID,X,K,POT(NPOT))
+!            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+!               CALL FORCEFIELD$AMBER_ANGLEPOTA(ID,X,K,POT(NPOT))
+!            END IF
             INDEX3(4,NANGLE)=NPOT
           ENDDO
         ENDDO
       ENDDO
 !
 !     == TORSIONS ====================================================
-     PRINT*,'BEFORE TORSION-LOOP',NANGLE
+!     PRINT*,'BEFORE TORSION-LOOP: nangle=',NANGLE
 !GOTO 1235
       NTORSION=0
       DO IB=1,NBOND
@@ -2251,8 +2323,17 @@ REAL(8) :: G1,DGDX1
             TYPE4=TYPE(IAT4)
             BO12=0.D0
             BO34=0.D0
-            CALL UFFTABLE$TORSIONPARMS(TYPE1,TYPE2,TYPE3,TYPE4 &
-     &                       ,BO12,BO23,BO34,ID,X,NIJ,K,TCHK)
+            IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+               CALL UFFTABLE$TORSIONPARMS(TYPE1,TYPE2,TYPE3,TYPE4 &
+                    &                       ,BO12,BO23,BO34,ID,X,NIJ,K,TCHK)
+            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+               CALL FORCEFIELD$AMBER_TORSIONPARMS(TYPE1, TYPE2, TYPE3, TYPE4, ID, X, NIJ, K, TCHK)
+            ELSE
+               CALL ERROR$MSG('FORCEFIELD NOT RECOGNIZED')
+               CALL ERROR$CHVAL('MD%FF',MD%FF)
+               CALL ERROR$STOP('FORCEFIELDSETUP')
+            END IF
+               
             IF(.NOT.TCHK) CYCLE
 !
 !           == ADD NEW TORSION =========================================
@@ -2291,58 +2372,60 @@ REAL(8) :: G1,DGDX1
 1235  CONTINUE
 !
 !     == INVERSION =================================================
-     PRINT*,'BEFORE INVERSION-LOOP',NTORSION
-      NINVERSION=0
-!     GOTO 1234  
-      DO IAT=1,NAT
-        NN=NNEIGH(IAT)
-        IF(NN.EQ.3) THEN
-          DO II=1,3
-            IAT2=INEIGH(1+MOD(II-1,3),IAT)
-            IAT3=INEIGH(1+MOD(II  ,3),IAT)
-            IAT4=INEIGH(1+MOD(II+1,3),IAT)
-            TYPE1=TYPE(IAT)
-            TYPE2=TYPE(IAT2)
-            TYPE3=TYPE(IAT3)
-            TYPE4=TYPE(IAT4)
-!            NO BO NEEDED FOR INVERSION                               
-!            BO12=BONEIGH(1+MOD(II-1,3),IAT)
-!            BO13=BONEIGH(1+MOD(II  ,3),IAT)
-!            BO14=BONEIGH(1+MOD(II+1,3),IAT)
-            CALL UFFTABLE$INVERSIONPARMS(TYPE1,TYPE2,TYPE3,TYPE4 &
+!     PRINT*,'BEFORE INVERSION-LOOP',NTORSION
+      IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+        NINVERSION=0
+!       GOTO 1234  
+        DO IAT=1,NAT
+          NN=NNEIGH(IAT)
+          IF(NN.EQ.3) THEN
+            DO II=1,3
+              IAT2=INEIGH(1+MOD(II-1,3),IAT)
+              IAT3=INEIGH(1+MOD(II  ,3),IAT)
+              IAT4=INEIGH(1+MOD(II+1,3),IAT)
+              TYPE1=TYPE(IAT)
+              TYPE2=TYPE(IAT2)
+              TYPE3=TYPE(IAT3)
+              TYPE4=TYPE(IAT4)
+!             NO BO NEEDED FOR INVERSION                               
+!             BO12=BONEIGH(1+MOD(II-1,3),IAT)
+!             BO13=BONEIGH(1+MOD(II  ,3),IAT)
+!             BO14=BONEIGH(1+MOD(II+1,3),IAT)
+              CALL UFFTABLE$INVERSIONPARMS(TYPE1,TYPE2,TYPE3,TYPE4 &
      &              ,ID,X,K,TCHK)
-            IF(.NOT.TCHK) CYCLE
+              IF(.NOT.TCHK) CYCLE
 !
-            NINVERSION=NINVERSION+1
+              NINVERSION=NINVERSION+1
 !     PRINT*,'NINVERSION',NINVERSION
-
-            INDEX5(1,NINVERSION)=IAT
-            INDEX5(2,NINVERSION)=IAT2
-            INDEX5(3,NINVERSION)=IAT3
-            INDEX5(4,NINVERSION)=IAT4
+ 
+              INDEX5(1,NINVERSION)=IAT
+              INDEX5(2,NINVERSION)=IAT2
+              INDEX5(3,NINVERSION)=IAT3
+              INDEX5(4,NINVERSION)=IAT4
 !
-!           == SEARCH WHETHER POTENTIAL ALREADY EXISTS =================
-            TCHK=.FALSE.
-            DO IPOT=1,NPOT
-              IF(ID.EQ.POT(IPOT)%ID) THEN
-                INDEX5(5,NINVERSION)=IPOT
-                TCHK=.TRUE.
-                EXIT
+!             == SEARCH WHETHER POTENTIAL ALREADY EXISTS =================
+              TCHK=.FALSE.
+              DO IPOT=1,NPOT
+                IF(ID.EQ.POT(IPOT)%ID) THEN
+                  INDEX5(5,NINVERSION)=IPOT
+                  TCHK=.TRUE.
+                  EXIT
+                END IF
+              ENDDO
+              IF(TCHK) CYCLE
+!        
+!             == CREATE NEW POTENTIAL IF IT DOES NOTE YET EXIST  =========
+              NPOT=NPOT+1
+              IF(NPOT.GT.NPOTX) THEN
+                CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE')
+                CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
               END IF
+              INDEX5(5,NINVERSION)=NPOT
+              CALL CLASSICAL_INVERSIONPOTA(ID,X,K,POT(NPOT))
             ENDDO
-            IF(TCHK) CYCLE
-!
-!           == CREATE NEW POTENTIAL IF IT DOES NOTE YET EXIST  =========
-            NPOT=NPOT+1
-            IF(NPOT.GT.NPOTX) THEN
-              CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE')
-              CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
-            END IF
-            INDEX5(5,NINVERSION)=NPOT
-            CALL CLASSICAL_INVERSIONPOTA(ID,X,K,POT(NPOT))
-          ENDDO
-        END IF
-      ENDDO
+          END IF
+        ENDDO
+      end if
  1234 CONTINUE
 !
 !     ================================================================== 
@@ -2377,13 +2460,21 @@ REAL(8) :: G1,DGDX1
           IF(NONBOND(I1,I2).EQ.0) THEN
             TYPE1=TYPE(IAT1)
             TYPE2=TYPE(IAT2)
-            CALL UFFTABLE$NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
+            IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+               CALL UFFTABLE$NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
+            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+               CALL FORCEFIELD$AMBER_NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
+            END IF
             NPOT=NPOT+1
             IF(NPOT.GT.NPOTX) THEN
               CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE AT NONBOND')
               CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
             END IF
-            CALL CLASSICAL_NONBONDPOTA(ID,X,D,POT(NPOT))
+            IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+               CALL CLASSICAL_NONBONDPOTA(ID,X,D,POT(NPOT))
+            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+               CALL FORCEFIELD$AMBER_NONBONDPOTA(ID,X,D,POT(NPOT))
+            END IF
             NONBOND(I1,I2)=NPOT
             NONBOND(I2,I1)=NPOT
           END IF
@@ -2391,7 +2482,7 @@ REAL(8) :: G1,DGDX1
       ENDDO
                                   CALL TRACE$POP
       RETURN
-      END
+    END SUBROUTINE CLASSICAL_FORCEFIELDSETUP
 !
 !     ..................................................................
       SUBROUTINE CLASSICAL_COULOMBPOTA(POT)
@@ -2431,7 +2522,7 @@ REAL(8) :: G1,DGDX1
         END IF
       ENDDO
       RETURN
-      END
+    END SUBROUTINE CLASSICAL_COULOMBPOTA
 !
 !     ..................................................................
       SUBROUTINE CLASSICAL_BONDPOTA(ID,RIJ,KIJ,DIJ,POT)
@@ -2579,7 +2670,7 @@ REAL(8) :: G1,DGDX1
         POT%DER(I)=2.D0*B*(X-1.D0)
       ENDDO
       RETURN 
-      END
+    END SUBROUTINE CLASSICAL_ANGLEPOTA
 !
 !     ..................................................................
       SUBROUTINE CLASSICAL_TORSIONPOTA(ID,PHI0,NJK,V,POT)
@@ -2628,7 +2719,7 @@ REAL(8) :: G1,DGDX1
         END IF
       ENDDO
       RETURN
-      END
+    END SUBROUTINE CLASSICAL_TORSIONPOTA
 !
 !     ..................................................................
       SUBROUTINE CLASSICAL_INVERSIONPOTA(ID,GAMMA0,K,POT)
@@ -2757,7 +2848,7 @@ REAL(8) :: G1,DGDX1
         END IF
       ENDDO
       RETURN
-      END
+    END SUBROUTINE CLASSICAL_NONBONDPOTA
 ! 
 !     =================================================================
 !     =================================================================
@@ -3252,7 +3343,7 @@ END MODULE UFFTABLE_MODULE
         TCHK=.FALSE.
         RETURN
         END SUBROUTINE COMPARE
-      END
+      END SUBROUTINE UFFTABLE_BONDSPECIAL
 !
 !     .................................................................
       SUBROUTINE UFFTABLE$ANGLEPARMS(ATOM1,ATOM2,ATOM3,BO1,BO2,ID,THETA,K,TCHK)

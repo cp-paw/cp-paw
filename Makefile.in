@@ -579,6 +579,7 @@ ifeq ($(ALLDEP),T)
 
  ${OBJDIR}/paw_cg.o:               ${OBJDIR}/paw_waves1.o
 
+ ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_forcefield.o
 # ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_fft.o
 # ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_waves.o
 endif
