@@ -560,7 +560,6 @@
         CALL ERROR$I4VAL('NX',NX)
         CALL ERROR$STOP('RADIAL_DGLEQUISPACEDGENC')
       END IF
-      f(:,:)=0.d0
 !     == IDIR IS THE DIRECTION OF THE INTEGRATION =======================
       IDIR=1
       IF(I2.LT.I1) IDIR=-1
@@ -573,11 +572,15 @@
           F(I+1,:)=( -(A0(I)+AM(I))*F(I,:) +AM(I)*(F(I,:)-F(I-1,:)) &
      &               -MATMUL(C(I,:,:),F(I,:)) +D(I,:) )/AP(I)
         ENDDO
+        f(:i1-1,:)=0.d0
+        f(i2+1:,:)=0.d0
       ELSE IF(IDIR.LT.0) THEN
         DO I=i1-1,i2+1,-1
           F(I-1,:)=( -(A0(I)+AP(I))*F(I,:) +AP(I)*(F(I,:)-F(I+1,:)) &
      &               -MATMUL(C(I,:,:),F(I,:)) +D(I,:) )/AM(I)
         ENDDO
+        f(:i2-1,:)=0.d0
+        f(i1+1:,:)=0.d0
       ELSE
          CALL ERROR$MSG('INVALID VALUE OF IDIR')
          CALL ERROR$STOP('RADIAL_DGLEQUISPACED')
@@ -660,10 +663,8 @@
         CALL ERROR$MSG('INVALID VALUE OF IDIR')
         CALL ERROR$STOP('RADIAL_DGLEQUISPACEDGENC')
       END IF
-      F(:,:)=(0.D0,0.D0)
-      DO I=IMIN,IMAX
-        F(I,:)=F1(:,I)
-      ENDDO
+      f(:imin-1,:)=(0.d0,0.d0)
+      f(imax+1:,:)=(0.d0,0.d0)
       RETURN
       END
 !

@@ -1547,41 +1547,10 @@ print*,'warning! overlap not included yet'
       ENDDO
 !
 !     ==================================================================
-!     ==  DETERMINE CLASSICAL TURNING POINT                           ==
+!     ==  DETERMINE CLASSICAL TURNING POINT r(ircl)                   ==
+!     ==   and outmost point for inward integration r(irout)          ==
 !     ==================================================================
-!     == IROUT MUST BE SMALLER OR EQUAL TO NR-1 BECAUSE INHOMOGENEITY
-!     == ON THE LAST GRID POINT DOES NOT CONTRIBUTE TO DIFFERENTIAL 
-!     == EQUATION. IROUT IS SMALLER OR EQUAL TO IRCL
-      IRCL=NR-3   
-!       == R(IRCL) IS THE FIRST GRID POINT INSIDE THE CLASSICAL TURNING POINT
-      IF(Enu.LT.POT(IRCL,1)*Y0) THEN
-        DO IR=IRCL,1,-1
-          IF(Enu.GT.POT(IR,1)*Y0) THEN
-            IRCL=IR
-            EXIT
-          END IF
-        ENDDO
-      END IF
-!
-!     ==================================================================
-!     ==  DETERMINE OUTERMOST POINT 'IROUT' FOR INWARD INTEGRATION    ==
-!     ==================================================================
-!     == USE WKB SOLUTION FOR THE SCHR.GL. FOR A CONSTANT POTENTIAL AND L=0
-!     == TO ESTIMATE FACTOR FROM RCL TO OUTERMOST POINT
-      AUX(:IRCL)=0.D0
-      AUX(IRCL+1:)=SQRT(MAX(0.D0,2.D0*(POT(IRCL+1:,1)*Y0-Enu)))
-      CALL RADIAL$INTEGRATE(GID,NR,AUX,SWKB)
-      SWKB(:)=SWKB(:)-LOG(R(:))
-!     == DETERMINE IROUT WHERE THE WAVE FUNCTION CAN GROW BY A FACTOR 
-!     == OF XMAX FROM THE CLASSICAL TURNING POINT
-      SVAR=LOG(XMAX)
-      IROUT=NR-1
-      DO IR=IRCL,NR
-        IF(SWKB(IR).GT.SVAR) THEN
-          IROUT=IR-1
-          EXIT
-        END IF
-      ENDDO
+      call schroedinger_specialrads(gid,nr,0,xmax,pot(:,1),enu,ircl,irout)
 !
 !     ==================================================================
 !     ==  PREPARE POTENTIAL-INDEPENDENT ARRAYS                        ==
@@ -1633,7 +1602,6 @@ print*,'warning! overlap not included yet'
 !     ==  DETERMINE BOUND STATES                                      ==
 !     ==================================================================
       CALL RADIAL_XXXR(GID,NR,LMX,IRCL,IROUT,LOX,A,B,C,D,NPHI,eb,PHI,TCHK)
-      EB(:)=enu+eb(:) ! change energies relative to eny to absolute energies
       IF(.NOT.TCHK) THEN
         CALL ERROR$STOP('RADIAL_XXXR FINISHED WITH ERROR')
         CALL ERROR$STOP('RADIAL$NONSPHBOUND')
@@ -1642,6 +1610,7 @@ print*,'warning! overlap not included yet'
 !     ==================================================================
 !     ==  SHIFT ENERGIES                                              ==
 !     ==================================================================
+      EB(:)=enu+eb(:) ! change energies relative to eny to absolute energies
 !
       TOK=.TRUE.
       RETURN
@@ -1675,6 +1644,7 @@ print*,'warning! overlap not included yet'
       REAL(8)               :: HA(NF-NPHI,NF-NPHI),HX(NF-NPHI,NPHI),HB(NF-NPHI,NPHI)
       REAL(8)               :: ALLKINK_HOM(NF,NF)
       REAL(8)               :: MAT(NF,NF)
+
       REAL(8)               :: DE1(NPHI)
       INTEGER(4)            :: IRC
       REAL(8)               :: KINK_HOM(NPHI,NPHI)
@@ -1711,7 +1681,6 @@ CHARACTER(32):: FILE
       END IF
       CALL RADIAL$R(GID,NR,R)
       IRC=IRMATCH
-!PRINT*,'IROUT ',IROUT,R(IROUT),IRC,R(IRC)
 !
 !     ==================================================================
 !     ==  OBTAIN HOMOGENEOUS SOLUTION                                 ==
@@ -1739,6 +1708,7 @@ CHARACTER(32):: FILE
 !     == MATRIX IS NOT SYMMETRIC. THUS SOLVE WITH SINGULAR VALUE DECOMPOSITION
       BVECS(:,1:NF)=ALLPHIL(IRC,:,:)
       CALL LIB$MATRIXSOLVENEW(NF,NF,NF,MAT,XVECS,BVECS)
+
       PHIWORK2D(:,:,:)=ALLPHIR(:,:,:)
       ALLPHIR(:,:,:)=0.D0
       DO IF1=1,NF
@@ -1825,80 +1795,6 @@ CHARACTER(32):: FILE
         PHIR(IRC-1:IROUT+1,:,I)=PHIR(IRC-1:IROUT+1,:,I)*SVAR
       ENDDO
 !
-!!$!     ====================================================================
-!!$!     ==   TEST CONTINUITY                                              ==
-!!$!     ====================================================================
-!!$!PRINT*,'RADIAL_XXXr: TEST CONTINUITY'
-!!$      SVAR2=0.D0
-!!$      DO IF1=1,NPHI
-!!$        DO IF2=1,NF
-!!$          SVAR1=ABS(PHIL(IRC,IF2,IF1)-PHIR(IRC,IF2,IF1))
-!!$          SVAR2=MAX(SVAR2,SVAR1)
-!!$        ENDDO
-!!$      ENDDO
-!!$!PRINT*,'DEVIATION IN VALUE',SVAR2
-!!$      IF(SVAR2.GT.1.D-6) THEN
-!!$        CALL ERROR$MSG('MATCHING OF PHI FAILED')
-!!$        CALL ERROR$STOP('RADIAL_XXXC')
-!!$      END IF   
-!!$!
-!!$!     == TEST DIFFERENTIABILITY ===================================
-!!$      SVAR2=0.D0
-!!$      DO IF1=1,NPHI
-!!$        DO IF2=1,NF
-!!$          IF(LOX(IF2).EQ.L0) CYCLE
-!!$          SVAR1=ABS( (PHIR(IRC+1,IF2,IF1)-PHIR(IRC-1,IF2,IF1)) &
-!!$     &              -(PHIL(IRC+1,IF2,IF1)-PHIL(IRC-1,IF2,IF1)))
-!!$          SVAR2=MAX(SVAR2,SVAR1)
-!!$        ENDDO
-!!$      ENDDO
-!!$!PRINT*,'DEVIATION IN OTHER DERIVATIVES',SVAR2
-!!$      IF(SVAR2.GT.1.D-6) THEN
-!!$        CALL ERROR$MSG('MATCHING OF DPHI/DR FAILED')
-!!$        CALL ERROR$STOP('RADIAL_XXXC')
-!!$      END IF   
-!!$!     ==  TEST OVERLAP  =============================================
-!!$!      PRINT*,'OVERLAP'
-!!$      DO I=1,NPHI
-!!$        DO J=I,NPHI
-!!$          CAUX(:)=0.D0
-!!$          DO IF=1,NF
-!!$            CAUX(:IRC)=CAUX(:IRC)+PHIL(:IRC,IF,I)*PHIL(:IRC,IF,J)
-!!$            CAUX(IRC+1:)=CAUX(IRC+1:)+PHIR(IRC+1:,IF,I)*PHIR(IRC+1:,IF,J)
-!!$          ENDDO
-!!$          CAUX(:)=CAUX(:)*R(:)**2
-!!$          AUX(:)=CAUX
-!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
-!!$          OV(I,J)=SVAR1
-!!$          OV(J,I)=OV(I,J)
-!!$        ENDDO
-!!$      ENDDO
-!!$      DO I=1,NPHI
-!!$        SVAR=1.D0/SQRT(ABS(OV(I,I)))
-!!$        OV(:,I)=OV(:,I)*SVAR
-!!$        OV(I,:)=OV(I,:)*SVAR
-!!$      ENDDO
-!!$!PRINT*,'MARKE A',NPHI
-!!$      DO I=1,NPHI
-!!$        WRITE(*,FMT='(20("(",F10.3,",",F10.3,")"))')OV(I,:)
-!!$      ENDDO
-!!$!PRINT*,'MARKE B',NPHI
-!!$!
-!!$!     ==  PLOT WAVE FUNCTIONS ======================================
-!!$      DO IF1=1,NPHI
-!!$        WRITE(FILE,*)IF1
-!!$        FILE='PHI'//ADJUSTL(FILE)
-!!$        OPEN(8,FILE=FILE,FORM='FORMATTED')
-!!$        REWIND 8
-!!$        DO IR=1,IRC+1
-!!$          WRITE(8,FMT='(80F12.7)')R(IR),PHIL(IR,:,IF1)
-!!$        ENDDO
-!!$        DO IR=IRC-1,MIN(IROUT+1,NR)
-!!$          WRITE(8,FMT='(80F12.7)')R(IR),PHIR(IR,:,IF1)
-!!$        ENDDO
-!!$        CLOSE(8)
-!!$      ENDDO
-!
 !     ==================================================================
 !     ==  DETERMINE PHIDOT                                            ==
 !     ==================================================================
@@ -1973,54 +1869,6 @@ CHARACTER(32):: FILE
         ENDDO
       ENDDO
 !
-!     ====================================================================
-!     ==   TEST CONTINUITY                                              ==
-!     ====================================================================
-!!$PRINT*,'RADIAL_XXXC: TEST CONTINUITY OF PHIDOT'
-!!$      SVAR2=0.D0
-!!$      DO IF1=1,NPHI
-!!$        DO IF2=1,NF
-!!$          SVAR1=ABS(PHIL_DOT(IRC,IF2,IF1)-PHIR_DOT(IRC,IF2,IF1))
-!!$          SVAR2=MAX(SVAR2,SVAR1)
-!!$        ENDDO
-!!$      ENDDO
-!!$PRINT*,'DEVIATION IN VALUE OF PHIDOT ',SVAR2
-!!$      IF(SVAR2.GT.1.D-6) THEN
-!!$        CALL ERROR$MSG('MATCHING FAILED')
-!!$        CALL ERROR$STOP('RADIAL_XXXC')
-!!$      END IF   
-!!$!
-!!$!     == TEST DIFFERENTIABILITY ===================================
-!!$      SVAR2=0.D0
-!!$      DO IF1=1,NPHI
-!!$        DO IF2=1,NF
-!!$          IF(LOX(IF2).EQ.L0) CYCLE
-!!$          SVAR1=ABS( (PHIR_DOT(IRC+1,IF2,IF1)-PHIR_DOT(IRC-1,IF2,IF1)) &
-!!$     &              -(PHIL_DOT(IRC+1,IF2,IF1)-PHIL_DOT(IRC-1,IF2,IF1)))
-!!$          SVAR2=MAX(SVAR2,SVAR1)
-!!$        ENDDO
-!!$      ENDDO
-!!$PRINT*,'DEVIATION IN OTHER DERIVATIVES OF PHIDOT',SVAR2
-!!$      IF(SVAR2.GT.1.D-4) THEN
-!!$        CALL ERROR$MSG('MATCHING OF DPHIDOT/DR FAILED')
-!!$        CALL ERROR$STOP('RADIAL_XXXC')
-!!$      END IF   
-!!$!
-!!$!     =============================================================
-!!$      DO IF1=1,NPHI
-!!$        WRITE(FILE,*)IF1
-!!$        FILE='PHIDOT'//ADJUSTL(FILE)
-!!$        OPEN(8,FILE=FILE,FORM='FORMATTED')
-!!$        REWIND 8
-!!$        DO IR=1,IRC+1
-!!$          WRITE(8,FMT='(80F12.7)')R(IR),REAL(PHIL_DOT(IR,:,IF1)),AIMAG(PHIL_DOT(IR,:,IF1))
-!!$        ENDDO
-!!$        DO IR=IRC-1,MIN(IROUT+1,NR)
-!!$          WRITE(8,FMT='(80F12.7)')R(IR),REAL(PHIR_DOT(IR,:,IF1)),AIMAG(PHIR_DOT(IR,:,IF1))
-!!$        ENDDO
-!!$        CLOSE(8)
-!!$      ENDDO
-!
 !     ==================================================================
 !     ==  REMOVE KINKS BY MIXING PHIDOT INTO PHI                      ==
 !     ==================================================================
@@ -2035,8 +1883,6 @@ CHARACTER(32):: FILE
      &               -(PHIL_DOT(IRC+1,IF2,:)-PHIL_DOT(IRC-1,IF2,:))
       ENDDO
       CALL LIB$MATRIXSOLVENEW(NPHI,NPHI,NPHI,-KINK_DOT,HAM,KINK_HOM)
-!!$      SVAR=MAXVAL(ABS(KINK_HOM+MATMUL(KINK_DOT,HAM)))
-!!$PRINT*,'REMAINING KINKS ',SVAR
 !     == MAKE PHI DIFFERENTIABLE =========================================
       DO I=1,NPHI
         DO J=1,NPHI
@@ -2098,6 +1944,8 @@ CHARACTER(32):: FILE
           OV(J,I)=OV(I,J)
         ENDDO
       ENDDO
+!call writephi(gid,nr,'homogeneous',nf,nphi,irc,phil,phir)
+!
 !!$DO I=1,NPHI
 !!$  WRITE(*,FMT='("O ",50("(",2F10.5")   "))')OV(I,:)
 !!$ENDDO
@@ -2173,6 +2021,7 @@ CHARACTER(32):: FILE
 !!$        CALL ERROR$STOP('RADIAL_XXXC')
 !!$      END IF
       TOK=.TRUE.
+call writephi(gid,nr,'final',nf,nphi,irc,phi,phi)
       RETURN
       END SUBROUTINE RADIAL_XXXR
 !
@@ -2706,8 +2555,10 @@ CHARACTER(32):: FILE
       END SUBROUTINE RADIAL_XXXR_OV
 !
 !     ...................................................................
-      subroutine schroedinger_estimateirout(gid,nr,l,xmax,v00,e,irout)
+      subroutine schroedinger_specialrads(gid,nr,l,xmax,v00,e,ircl,irout)
 !     **                                                               **
+!     **  estimate the classical turning point r(ircl)                 **
+!
 !     **  estimate the outermost grid point for inward integration     **
 !     **  from a WKB solution of the Schroedinger equation             **
 !     **                                                               **
@@ -2718,12 +2569,14 @@ CHARACTER(32):: FILE
       real(8)   ,intent(in) :: xmax     ! maximum tolerable ratio of phi 
       real(8)   ,intent(in) :: v00(nr)  ! radial spherical potential
       real(8)   ,intent(in) :: e        ! energy
+      integer(4),intent(out):: ircl     ! classical turning point
       integer(4),intent(out):: irout    ! outermost grid point
       real(8)               :: pi       ! pi
       real(8)               :: y0       ! spherical harmonic for lm=0
       real(8)               :: r(nr)    ! radial grid
       real(8)               :: fac,svar,sumval,xmaxlog
       integer(4)            :: ir
+      logical               :: tchk
 !     *******************************************************************
       pi=4.d0*datan(1.d0)
       y0=1.d0/sqrt(4.d0*pi)
@@ -2732,18 +2585,65 @@ CHARACTER(32):: FILE
       fac=0.5d0*real(l*(l+1),kind=8)
       sumval=0.d0
       irout=1
-      do ir=1,nr
+      ircl=nr
+      tchk=.false.
+      do ir=2,nr-1
         svar=v00(ir)*y0+fac/r(ir)**2-e
         if(svar.lt.0.d0) then
           svar=0.d0
           sumval=0.d0
+          ircl=ir+1
+          cycle
         end if
-        sumval=sumval+sqrt(2.d0*svar)
-        irout=irout-1
-        if(sumval.gt.xmaxlog) exit
+        sumval=sumval+sqrt(2.d0*svar)*0.5d0*(r(ir+1)-r(ir-1))
+        irout=ir-1
+        if(sumval.gt.xmaxlog) then
+          tchk=.true.
+          exit
+        end if
       enddo
-      irout=min(irout,1)
+!     == fix up end of the grid
+      if(.not.tchk) then
+        svar=v00(nr)*y0+fac/r(nr)**2-e
+        sumval=sumval+0.5d0*(r(nr)-r(nr-1))*svar
+        if(sumval.gt.xmaxlog) then
+          irout=nr-1
+        else
+          irout=nr
+        end if
+      end if
       return
       end
 
 
+
+!     ....................................................................
+      subroutine writephi(gid,nr,file,nf,nphi,irc,phil,phir)
+      implicit none
+      integer(4)  ,intent(in) :: gid
+      character(*),intent(in) :: file
+      integer(4)  ,intent(in) :: nr
+      integer(4)  ,intent(in) :: nf
+      integer(4)  ,intent(in) :: irc
+      integer(4)  ,intent(in) :: nphi
+      real(8)     ,intent(in) :: phil(nr,nf,nphi)
+      real(8)     ,intent(in) :: phir(nr,nf,nphi)
+      integer(4)              :: ir,iphi
+      character(32)           :: file1
+      real(8)                 :: r(nr)
+!     **********************************************************************       
+      call radial__r(gid,nr,r)
+      do iphi=1,nphi
+        write(FILE1,fmt='(i1)')IPHI
+        FILE1=TRIM(FILE)//'_'//TRIM(FILE1)//'.DAT'
+        open(100,file=file1)
+        do ir=1,irc
+          write(100,*)r(IR),phil(ir,:,iphi)
+        enddo
+        do ir=irc+1,nr
+          write(100,*)R(IR),phir(ir,:,iphi)
+        enddo
+        close(100)
+      enddo
+      return 
+      end

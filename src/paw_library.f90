@@ -1820,6 +1820,8 @@ END MODULE RANDOM_MODULE
       REAL(8)               :: SING(N)
       REAL(8)   ,ALLOCATABLE:: WORK(:)
       INTEGER               :: N1,M1,NEQ1
+      logical   ,parameter  :: ttest=.true.
+      REAL(8)               :: Svar1,svar2
 !     ******************************************************************
       IF(N.EQ.1.AND.M.EQ.1) THEN
         X(1,:)=B(1,:)/A(1,1)
@@ -1847,6 +1849,21 @@ END MODULE RANDOM_MODULE
         CALL ERROR$I4VAL('I',INFO)
         CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
       END IF
+!
+!     ==================================================================
+!     ==  test                                                        ==
+!     ==================================================================
+      if(ttest) then
+        svar1=maxval(abs(matmul(a,x)-b))
+        svar2=maxval(abs(a))/maxval(abs(b))
+        if(svar1/svar2.gt.1.d-4) then
+          call error$r8val('svar1',svar1)
+          call error$r8val('svar2',svar2)
+          call error$r8val('svar1/svar2',svar1/svar2)
+          call error$stop('lib$matrixsolvenew')
+        end if
+      end if
+
       RETURN
       END
 !     ..................................................................
