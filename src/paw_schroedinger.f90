@@ -1270,7 +1270,7 @@ CHARACTER(32):: FILE
       END 
 !
 !     ..................................................................
-      SUBROUTINE RADIAL$NONSPHBOUND_nonso_sloc_ov(GID,NR,LMX,LMRX,POT,lxsl,potsl,ovsl,G,Enu &
+      SUBROUTINE RADIAL$NONSPHBOUND_nso_sloc_ov(GID,NR,LMX,LMRX,POT,lxsl,potsl,ovsl,G,Enu &
      &                             ,NPHI,EB,PHI,TPHI,TOK)
 !     **                                                                  **
 !     **  SOLVES THE nonrelATIVISTIC RADIAL schroedinger EQUATION FOR THE **
@@ -2704,3 +2704,46 @@ CHARACTER(32):: FILE
       TOK=.TRUE.
       RETURN
       END SUBROUTINE RADIAL_XXXR_OV
+!
+!     ...................................................................
+      subroutine schroedinger_estimateirout(gid,nr,l,xmax,v00,e,irout)
+!     **                                                               **
+!     **  estimate the outermost grid point for inward integration     **
+!     **  from a WKB solution of the Schroedinger equation             **
+!     **                                                               **
+      implicit none
+      integer(4),intent(in) :: gid      ! grid id
+      integer(4),intent(in) :: nr       ! #(radial grid points)
+      integer(4),intent(in) :: l        ! angular momentum
+      real(8)   ,intent(in) :: xmax     ! maximum tolerable ratio of phi 
+      real(8)   ,intent(in) :: v00(nr)  ! radial spherical potential
+      real(8)   ,intent(in) :: e        ! energy
+      integer(4),intent(out):: irout    ! outermost grid point
+      real(8)               :: pi       ! pi
+      real(8)               :: y0       ! spherical harmonic for lm=0
+      real(8)               :: r(nr)    ! radial grid
+      real(8)               :: fac,svar,sumval,xmaxlog
+      integer(4)            :: ir
+!     *******************************************************************
+      pi=4.d0*datan(1.d0)
+      y0=1.d0/sqrt(4.d0*pi)
+      xmaxlog=log(xmax)
+      call radial$r(gid,nr,r)
+      fac=0.5d0*real(l*(l+1),kind=8)
+      sumval=0.d0
+      irout=1
+      do ir=1,nr
+        svar=v00(ir)*y0+fac/r(ir)**2-e
+        if(svar.lt.0.d0) then
+          svar=0.d0
+          sumval=0.d0
+        end if
+        sumval=sumval+sqrt(2.d0*svar)
+        irout=irout-1
+        if(sumval.gt.xmaxlog) exit
+      enddo
+      irout=min(irout,1)
+      return
+      end
+
+
