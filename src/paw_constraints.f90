@@ -3542,9 +3542,9 @@ END IF
         IF(NC.GT.1) THEN
 !         __ CHECK LINEAR DEPENDENCE OF CONSTRAINTS_____________________
           IF(TLINDEP) THEN
-            CALL LIB$MATRIXSOLVE(NC,NC,1,RMAT,VEC,VEC)
+            CALL LIB$MATRIXSOLVEr8(NC,NC,1,RMAT,VEC,VEC)
           ELSE
-            CALL LIB$MATRIXSOLVE(NC,NC,1,RMAT,VEC,VEC)
+            CALL LIB$MATRIXSOLVEr8(NC,NC,1,RMAT,VEC,VEC)
           END IF
         ELSE
           VEC(1)=VEC(1)/RMAT(1,1)
