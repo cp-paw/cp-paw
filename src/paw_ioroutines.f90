@@ -5780,9 +5780,6 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           END IF
         END DO
       END IF
-print*,'marke 5'
-
-
 !
 !     ==================================================================
 !     ==  RESOLVE SHADOW BONDS                                        ==
@@ -5790,29 +5787,21 @@ print*,'marke 5'
 !     == COUNT #(SHADOW BONDS) =========================================
       NBONDS=0
       DO IBONDM=1,NBONDM
-print*,'marke 01'
         IATM1=MBOND(IBONDM)%ATOM1
         IATM2=MBOND(IBONDM)%ATOM2
-print*,'marke 02',iatm1,iatm2
         IATS1=MATOM(IATM1)%QMSATOM
         IATS2=MATOM(IATM2)%QMSATOM
-print*,'marke 03'
         IF(IATS1.NE.0.AND.IATS2.NE.0) NBONDS=NBONDS+1
-print*,'marke 04'
       ENDDO
       ALLOCATE(SBOND(NBONDS))
 !
 !     == DETERMINE SHADOW BONDS ========================================
-print*,'marke 1'
       IBONDS=0
       DO IBONDM=1,NBONDM
-print*,'marke 2'
         IATM1=MBOND(IBONDM)%ATOM1
         IATM2=MBOND(IBONDM)%ATOM2
-print*,'marke 3'
         IATS1=MATOM(IATM1)%QMSATOM
         IATS2=MATOM(IATM2)%QMSATOM
-print*,'marke 4'
         IF(IATS1.NE.0.AND.IATS2.NE.0) THEN
           IBONDS=IBONDS+1   ! BOND LIES ENTIRELY IN THE REACTION CENTER
                             ! OR IS A LINK BOND

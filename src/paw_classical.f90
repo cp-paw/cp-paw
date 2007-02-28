@@ -1523,7 +1523,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
         CALL CLASSICAL_ECOULOMB(NAT,R,Q,ETOT,F,V,RBAS,SIGMA &
      &            ,ITYPE,NTYPE,NONBOND,NNB,NBLIST,NPOT,POT)
       END IF
-!     PRINT*,'COULOMB ',ETOT
+! PRINT*,'COULOMB ',ETOT
 ! 
 !     =================================================================
 !     ==  TWO BODY INTERACTION                                       ==
@@ -1547,7 +1547,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         ENDDO
       ENDDO
-!     PRINT*,'BOND ',ETOT
+! PRINT*,'BOND ',ETOT
 ! 
 !     =================================================================
 !     ==  BOND ANGLE FORCES                                          ==
@@ -1573,7 +1573,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         ENDDO
       ENDDO 
-!     PRINT*,'ANGLE ',ETOT
+! PRINT*,'ANGLE ',ETOT
 ! 
 !     =================================================================
 !     ==  TORSION ANGLE FORCES                                       ==
@@ -1602,7 +1602,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         ENDDO
       ENDDO 
-!     PRINT*,'TORSION ',ETOT
+! PRINT*,'TORSION ',ETOT
 ! 
 !     =================================================================
 !     ==  INVERSION FORCES                                           ==
@@ -1631,7 +1631,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         ENDDO
       ENDDO 
-!      PRINT*,'INVERSION ',ETOT
+!  PRINT*,'INVERSION ',ETOT
 !
 !     ==================================================================
 !     ==  ADD RESULTS FROM ALL TASKS                                  ==
@@ -2537,7 +2537,7 @@ REAL(8) :: G1,DGDX1
       REAL(8)       ,INTENT(IN)  :: DIJ     !FORCE CONSTANT
       TYPE(POT_TYPE),INTENT(OUT) :: POT
       INTEGER(4)    ,PARAMETER   :: NX=1000
-      REAL(8)       ,PARAMETER   :: X1=1.D-6 
+      REAL(8)       ,PARAMETER   :: X1=1.D-4 
       REAL(8)       ,PARAMETER   :: X2=5.D0
       LOGICAL(4)    ,PARAMETER   :: THARMONIC=.TRUE.
       INTEGER(4)                 :: I
@@ -2557,7 +2557,7 @@ REAL(8) :: G1,DGDX1
         IF(THARMONIC) THEN
           POT%VAL(I)=0.5D0*KIJ*(R-RIJ)**2
           POT%DER(I)=KIJ*(R-RIJ)*DRDX
-        ELSE
+        ELSE   !morse type potential
           ALPHA=DSQRT(KIJ/(2.D0*DIJ))
           SVAR=DEXP(-ALPHA*(R-RIJ))
           POT%VAL(I)=DIJ*(SVAR-1.D0)**2
@@ -2873,11 +2873,37 @@ REAL(8) :: G1,DGDX1
       REAL(8)       ,INTENT(IN) :: X
       REAL(8)       ,INTENT(OUT):: F
       REAL(8)       ,INTENT(OUT):: DFDX
-      REAL(8)                   :: D2FDX,D3FDX
+      REAL(8)                   :: D2FDX  ,D3FDX
+!      REAL(8)                   :: D3FDX 
       REAL(8)                   :: XI
       INTEGER(4)                :: IX
       REAL(8)                   :: F1V,F1D,F2V,F2D,DY,SVAR1
+      INTEGER(4)                :: NX
+      REAL(8)                   :: X1 ! FIRST GRID POINT
+      REAL(8)                   :: XN ! LAST GRID POINT
 !     ******************************************************************
+!
+!     ===================================================================
+!     == linearly extrapolate if point falls out of the grid range     ==
+!     ===================================================================
+      NX=POT%NX
+      X1=POT%X1
+      XN=POT%X1+REAL(NX-1,KIND=8)*POT%DX
+!     == LINEAR EXTRAPOLATION ON THE LEFT SIDE
+      IF(X.LT.X1) THEN
+        F=POT%VAL(1)+(X-X1)*POT%DER(1)        
+        DFDX=POT%DER(1)
+        RETURN
+!     == LINEAR EXTRAPOLATION ON THE RIGHT SIDE
+      ELSE IF(X.GT.XN) THEN
+        F=POT%VAL(NX)+(X-XN)*POT%DER(NX)        
+        DFDX=POT%DER(NX)
+        RETURN
+      END IF
+!
+!     ===================================================================
+!     == point is within range:  SPLINE INTERPOLATION                  ==
+!     ===================================================================
       XI=(X-POT%X1)/POT%DX+1.D0
       IX=INT(XI)
       IX=MAX(1,IX)
@@ -2886,7 +2912,7 @@ REAL(8) :: G1,DGDX1
       F2V=POT%VAL(IX+1)
       F1D=POT%DER(IX)*POT%DX
       F2D=POT%DER(IX+1)*POT%DX
-      XI=XI-DBLE(IX)
+      XI=XI-REAL(IX,KIND=8)
       DY=1.D0-XI
 !
 !     == STRAIGHT LINE THROUGH END POINTS =============================
@@ -2906,14 +2932,13 @@ REAL(8) :: G1,DGDX1
       SVAR1=-2.D0*F1D
       F=F+XI*DY*(XI-0.5D0)*SVAR1
       DFDX=DFDX+(-3.D0*XI*(XI-1)-0.5D0)*SVAR1
-      D2FDX=D2FDX+(-6.D0*XI+3.D0)*SVAR1
-      D3FDX=-6.D0*SVAR1
+!      D2FDX=D2FDX+(-6.D0*XI+3.D0)*SVAR1
+!      D3FDX=-6.D0*SVAR1
 !
 !     ==   DF/DX=DF/DI / DX/DI ========================================
- 1000 CONTINUE
       DFDX=DFDX/POT%DX
-      D2FDX=D2FDX/POT%DX**2
-      D3FDX=D3FDX/POT%DX**3
+!      D2FDX=D2FDX/POT%DX**2
+!      D3FDX=D3FDX/POT%DX**3
       RETURN
       END 
 !

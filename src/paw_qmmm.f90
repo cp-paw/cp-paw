@@ -443,9 +443,9 @@ END MODULE QMMM_MODULE
       REAL(8)   ,ALLOCATABLE :: MCHARGE(:)
       REAL(8)   ,ALLOCATABLE :: SCHARGE(:)
       REAL(8)   ,ALLOCATABLE :: MFORCE(:,:)
-      REAL(8)   ,ALLOCATABLE :: SFORCE(:,:)
+!     REAL(8)   ,ALLOCATABLE :: SFORCE(:,:)
       REAL(8)   ,ALLOCATABLE :: MPOT(:)
-      REAL(8)   ,ALLOCATABLE :: SPOT(:)
+!     REAL(8)   ,ALLOCATABLE :: SPOT(:)
       REAL(8)   ,ALLOCATABLE :: FA(:,:)
       REAL(8)   ,ALLOCATABLE :: FS(:,:)
       REAL(8)   ,ALLOCATABLE :: VA(:)
@@ -479,8 +479,8 @@ END MODULE QMMM_MODULE
       ALLOCATE(SPOS(3,NATS))
       ALLOCATE(SPOSm(3,NATS))
       ALLOCATE(SCHARGE(NATS))
-      ALLOCATE(SFORCE(3,NATS))
-      ALLOCATE(SPOT(NATS))
+!     ALLOCATE(SFORCE(3,NATS))
+!     ALLOCATE(SPOT(NATS))
       ALLOCATE(fa(3,NATq))
       ALLOCATE(fs(3,NATs))
       ALLOCATE(va(NATq))
@@ -784,8 +784,8 @@ print*,'force along link',dot_product(force(:,iatq)-force(:,iatqj),pos(:,iatq)-p
       DEALLOCATE(SPOS)
       deALLOCATE(SPOSm)
       DEALLOCATE(SCHARGE)
-      DEALLOCATE(SFORCE)
-      DEALLOCATE(SPOT)
+!      DEALLOCATE(SFORCE)
+!      DEALLOCATE(SPOT)
       deALLOCATE(fa)
       deALLOCATE(fs)
       deALLOCATE(va)
@@ -1059,7 +1059,7 @@ print*,'mip',iatai,raip
       REAL(8)               :: RM(3,NATM)
       REAL(8)               :: RMOLD(3,NATM)
       REAL(8)               :: MASS(NATM)
-      INTEGER(4)            :: IAT,I,K,IMAP,ILINK
+      INTEGER(4)            :: IAT,I,IMAP,ILINK
       REAL(8)               :: SVAR,RAN,SUM
       REAL(8)               :: KELVIN
       INTEGER(4)            :: NFILO
@@ -1127,7 +1127,7 @@ print*,'mip',iatai,raip
       IMPLICIT NONE
       LOGICAL(4),INTENT(OUT):: TCONV
       LOGICAL(4),PARAMETER  :: TPR=.true.
-      INTEGER(4),PARAMETER  :: NITER=1000
+      INTEGER(4),PARAMETER  :: NITER=10000
       REAL(8)   ,PARAMETER  :: TOL=1.D-3
       REAL(8)               :: FORCE1(3*NATM)
       REAL(8)               :: FORCE2(3*NATM)
@@ -1165,7 +1165,8 @@ print*,'mip',iatai,raip
         IF(TPR) THEN
           FMAX=SQRT(DOT_PRODUCT(FORCE1,FORCE1))
           CALL FILEHANDLER$UNIT('PROT',NFILO)
-          WRITE(NFILO,FMT='("I",I10," EPOT ",E12.5," FMAX ",E12.5)')ITER,EPOT1,FMAX
+!          WRITE(NFILO,FMT='("I",I10," EPOT ",E17.10," FMAX ",E12.5)')ITER,EPOT1,FMAX
+          WRITE(*,FMT='("I",I10," EPOT ",E17.10," FMAX ",E12.5)')ITER,EPOT1,FMAX
         END IF
 !
 !       ================================================================
@@ -1178,53 +1179,58 @@ print*,'mip',iatai,raip
 !       ================================================================
 !       ==  PERFORM CG LINE SEARCH  ALONG DIRECTION FORCE1            ==
 !       ================================================================
-        ALPHA=1.D-3/SQRT(SUM(DIR1**2))
-        ALPHALAST=0.D0
-        EPOTLAST=EPOT1
-        FORCELAST=FORCE1
-        DO INNER=1,10000
-          R2(:)=R1(:)+ALPHA*DIR1(:)
-          CALL ONETOT(NATM,R2,EPOT2,FORCE2)
-!
-!         == TRY AGAIN WITH SMALLER STEP IF ENERGY WENT UP ==============
-          IF(EPOT2.GT.EPOTLAST) THEN
-            ALPHA=0.5D0*(ALPHALAST+ALPHA)
-print*,'energy goes up; try again: ',epot2,alpha,alpha/SQRT(SUM(DIR1**2))
-            CYCLE
-          END IF
-!
-!         == REPORT ACCEPTED MOVE ========================================
-          IF(TPR) THEN
-!if(inner.gt.0) then
-            WRITE(NFILO,FMT='("INNER",I6," EPOT ",E12.5," FMAX ",E12.5," ALPHA ",F10.5)') &
-       &                    INNER,EPOT2,DOT_PRODUCT(DIR1,FORCE2),ALPHA
-          END IF
-!
-!         == ENERGY WENT DOWN, CALCULATE NEW ALPHA ====================
-          SVAR1=DOT_PRODUCT(DIR1,FORCE2)
-          SVAR2=DOT_PRODUCT(DIR1,FORCE2-FORCELAST)
-          TCONV=(ABS(SVAR1).LT.1.D-5)
-          IF(TCONV) EXIT
-!
-          DALPHA=ALPHA-ALPHALAST          
-          IF(-DALPHA*SVAR2.GT.0.D0) THEN   ! CURVATURE POSITIVE
-            DALPHA=-SVAR1/SVAR2*DALPHA
-print*,'curvature positive ',dalpha,alpha,alphalast,epot2,iter,inner
-          ELSE                             ! STEEPEST DESCENT FOR NEGATIVE CURVATURE
-            DALPHA=SIGN(1.D-2/DOT_PRODUCT(DIR1,DIR1),SVAR2)
-print*,'curvature negative ',dalpha,alpha,alphalast,epot2,iter,inner
-          END IF
-!
-!         == STORE SUCCESSFUL MOVE as reference AND DETERMINE NEW ALPHA ==
-          ALPHALAST=ALPHA
-          EPOTLAST=EPOT2
-          FORCELAST=FORCE2
-          ALPHA=ALPHA+DALPHA
-        ENDDO
-        IF(.NOT.TCONV) THEN
-          CALL ERROR$MSG('LINE SEARCH NOT CONVERGED')
-          CALL ERROR$STOP('QMMM_MINIMIZE')
-        END IF
+        call QMMM_CG_LINESEARCH(NATm,R1,DIR1,ALPHA)
+        r2=r1+alpha*dir1
+
+!!$!
+!!$        ALPHA=1.D-3/SQRT(SUM(DIR1**2))
+!!$        ALPHALAST=0.D0
+!!$        EPOTLAST=EPOT1
+!!$        FORCELAST=FORCE1
+!!$        DO INNER=1,10000
+!!$          R2(:)=R1(:)+ALPHA*DIR1(:)
+!!$          CALL ONETOT(NATM,R2,EPOT2,FORCE2)
+!!$!
+!!$!         == TRY AGAIN WITH SMALLER STEP IF ENERGY WENT UP ==============
+!!$          IF(EPOT2.GT.EPOTLAST) THEN
+!!$            ALPHA=0.5D0*(ALPHALAST+ALPHA)
+!!$print*,'energy goes up; try again: ',epot2,alpha,alpha/SQRT(SUM(DIR1**2))
+!!$            CYCLE
+!!$          END IF
+!!$!
+!!$!         == REPORT ACCEPTED MOVE ========================================
+!!$          IF(TPR) THEN
+!!$!if(inner.gt.0) then
+!!$            WRITE(NFILO,FMT='("INNER",I6," EPOT ",E12.5," FMAX ",E12.5," ALPHA ",F10.5)') &
+!!$       &                    INNER,EPOT2,DOT_PRODUCT(DIR1,FORCE2),ALPHA
+!!$          END IF
+!!$!
+!!$!         == ENERGY WENT DOWN, CALCULATE NEW ALPHA ====================
+!!$          SVAR1=DOT_PRODUCT(DIR1,FORCE2)
+!!$          SVAR2=DOT_PRODUCT(DIR1,FORCE2-FORCELAST)
+!!$          TCONV=(ABS(SVAR1).LT.1.D-5)
+!!$          IF(TCONV) EXIT
+!!$!
+!!$          DALPHA=ALPHA-ALPHALAST          
+!!$          IF(-DALPHA*SVAR2.GT.0.D0) THEN   ! CURVATURE POSITIVE
+!!$            DALPHA=-SVAR1/SVAR2*DALPHA
+!!$print*,'curvature positive ',dalpha,alpha,alphalast,epot2,iter,inner
+!!$          ELSE                             ! STEEPEST DESCENT FOR NEGATIVE CURVATURE
+!!$            DALPHA=SIGN(1.D-2/DOT_PRODUCT(DIR1,DIR1),SVAR2)
+!!$print*,'curvature negative ',dalpha,alpha,alphalast,epot2,iter,inner
+!!$          END IF
+!!$!
+!!$!         == STORE SUCCESSFUL MOVE as reference AND DETERMINE NEW ALPHA ==
+!!$          ALPHALAST=ALPHA
+!!$          EPOTLAST=EPOT2
+!!$          FORCELAST=FORCE2
+!!$          ALPHA=ALPHA+DALPHA
+!!$        ENDDO
+!!$        IF(.NOT.TCONV) THEN
+!!$          CALL ERROR$MSG('LINE SEARCH NOT CONVERGED')
+!!$          CALL ERROR$STOP('QMMM_MINIMIZE')
+!!$        END IF
+        cALL ONETOT(NATM,R2,EPOT2,FORCE2)
 !
 !       == choose new search direction ===================================
         CALL CG$NEWDIR(3*NATM,FORCE1,DIR1,FORCE2,DIR2)
@@ -1252,7 +1258,7 @@ print*,'curvature negative ',dalpha,alpha,alphalast,epot2,iter,inner
         REAL(8)   ,INTENT(IN) :: R(3,NAT)
         REAL(8)   ,INTENT(OUT):: E
         REAL(8)   ,INTENT(OUT):: F(3,NAT)
-        INTEGER(4)            :: IMAP,ILINK,I1,I2,IAT
+        INTEGER(4)            :: IMAP,ILINK,IAT
 !       *****************************************************************
         CALL CLASSICAL$SETR8A('R(0)',3*NAT,R)
 CALL CLASSICAL$NEIGHBORS
@@ -1267,7 +1273,136 @@ CALL CLASSICAL$NEIGHBORS
           F(:,IAT)=0.D0
         ENDDO
         END SUBROUTINE ONETOT
-      END   
+      END SUBROUTINE QMMM_MINIMIZE
+
+!
+!     ................................................................
+      SUBROUTINE QMMM_CG_LINESEARCH(NAT,RZERO,DIR,ALPHA)
+!     *****************************************************************
+!     **                                                             **
+!     **                                                             **
+!     *****************************************************************
+      USE QMMM_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NAT
+      REAL(8)   ,INTENT(IN) :: RZERO(3,NAT)
+      REAL(8)   ,INTENT(IN) :: DIR(3,NAT)
+      REAL(8)   ,INTENT(OUT):: ALPHA
+      REAL(8)               :: DIRLEN
+      REAL(8)               :: ALPHAM,ALPHA0,ALPHAP
+      REAL(8)               :: EM,E0
+      REAL(8)               :: FM,F0
+      REAL(8)               :: R(3,NAT)
+      REAL(8)               :: FORCE(3,NAT)
+      INTEGER(4)            :: ITER
+      LOGICAL(4)            :: TCONV
+      LOGICAL(4)            :: TPR=.TRUE.
+      INTEGER(4),PARAMETER  :: NITER=10000
+      REAL(8)   ,PARAMETER  :: TOL=1.D-4
+      REAL(8)   ,PARAMETER  :: FIRSTSTEPSIZE=1.D-1
+      REAL(8)               :: CURVATURE,LASTCURVATURE
+      LOGICAL(4)            :: THARMONIC
+REAL(8) :: EHISTORY(NITER)
+REAL(8) :: FHISTORY(NITER)
+REAL(8) :: AHISTORY(NITER)
+!     *****************************************************************
+EHISTORY=0.D0
+FHISTORY=0.D0
+AHISTORY=0.D0
+      DIRLEN=SQRT(SUM(DIR**2))
+      LASTCURVATURE=1.D+10
+      ALPHAM=0.D0
+      R=RZERO
+      CALL ONETOT1(NAT,R,EM,FORCE)
+      FM=SUM(DIR*FORCE)
+      ALPHA0=SIGN(FIRSTSTEPSIZE/DIRLEN,FM)
+      DO ITER=1,NITER
+        R=RZERO+ALPHA0*DIR
+        CALL ONETOT1(NAT,R,E0,FORCE)
+        F0=SUM(DIR*FORCE)
+EHISTORY(ITER)=E0
+FHISTORY(ITER)=F0/dirlen
+AHISTORY(ITER)=ALPHA0*dirlen
+!
+!       == EXCEPTION IF ENERGY GOES UP
+        IF(E0.GT.EM) THEN
+PRINT*,'ENERGY GOES UP ',E0,E0-EM,ALPHA0,ALPHA0-ALPHAM,F0,FM
+          ALPHA0=0.5D0*(ALPHAM+ALPHA0)
+          CYCLE
+        END IF
+
+        IF(TPR) THEN
+          WRITE(*,FMT='("INNER",I6," EPOT ",E12.5," FMAX ",E12.5," ALPHA ",F10.5)') &
+       &                  ITER,E0,F0/DIRLEN,ALPHA0
+        END IF
+!!
+!       == CHECK CONVERGENCE =========================================
+        TCONV=(ABS(F0/DIRLEN).LT.TOL)
+        IF(TCONV) EXIT
+!
+!       == DETERMINE NEW MIXING FACTOR ===============================
+!       == CHECK IF SYSTEM IS IN THE HARMONIC REGIME =================
+!       == IF NOT OR IF CURVATURE IS NEGATIVE, SWITCH TO STEPPING ====
+        CURVATURE=-(F0-FM)/(ALPHA0-ALPHAM)/DIRLEN
+        THARMONIC=(ABS(CURVATURE/LASTCURVATURE-1.D0).LT.0.2)
+        IF(THARMONIC.AND.CURVATURE.GT.0.D0) THEN
+          ALPHAP=(ALPHA0-ALPHAM)/(F0-FM)
+PRINT*,'==',E0,F0,CURVATURE
+          ALPHAP=ALPHAM-FM*ALPHAP
+        ELSE
+PRINT*,'==',E0,F0,CURVATURE,' STEPPING'
+          ALPHAP=ALPHA0+SIGN(FIRSTSTEPSIZE,F0)
+        END IF
+!
+!       == SWITCH  ===================================================
+        FM=F0
+        EM=E0
+        ALPHAM=ALPHA0
+        ALPHA0=ALPHAP
+        LASTCURVATURE=CURVATURE
+      ENDDO
+      IF(.NOT.TCONV) THEN
+OPEN(8,FILE='DUMP')
+REWIND 8
+DO ITER=1,NITER
+WRITE(8,*)ITER,AHISTORY(ITER),EHISTORY(ITER),FHISTORY(ITER)
+ENDDO
+CLOSE(8)
+OPEN(8,FILE='DUMP2')
+REWIND 8
+DO ITER=1,NITER
+WRITE(8,*)AHISTORY(ITER),EHISTORY(ITER),FHISTORY(ITER)
+ENDDO
+CLOSE(8)
+        CALL ERROR$MSG('CG LINE SEARCH NOT CONVERGED')
+        CALL ERROR$STOP('QMMM_CG_LINESEARCH')
+      END IF
+      ALPHA=ALPHA0
+      RETURN
+      CONTAINS
+!       .................................................................
+        SUBROUTINE ONETOT1(NAT,R,E,F)
+        USE QMMM_MODULE ,ONLY : MAP,NMAP,LINK,NLINK,MAP_TYPE,LINK_TYPE
+        IMPLICIT NONE
+        INTEGER(4),INTENT(IN) :: NAT
+        REAL(8)   ,INTENT(IN) :: R(3,NAT)
+        REAL(8)   ,INTENT(OUT):: E
+        REAL(8)   ,INTENT(OUT):: F(3,NAT)
+        INTEGER(4)            :: IMAP,ILINK,IAT
+!       *****************************************************************
+        CALL CLASSICAL$SETR8A('R(0)',3*NAT,R)
+        CALL CLASSICAL$ETOT(E)
+        CALL CLASSICAL$GETR8A('FORCE',3*NAT,F)
+        DO IMAP=1,NMAP
+          IAT=MAP(IMAP)%MATOM
+          F(:,IAT)=0.D0
+        ENDDO
+        DO ILINK=1,NLINK
+          IAT=LINK(ILINK)%MATOM
+          F(:,IAT)=0.D0
+        ENDDO
+        END SUBROUTINE ONETOT1
+      END SUBROUTINE QMMM_CG_LINESEARCH
 !
 !     ................................................................
       SUBROUTINE QMMM$WRITE(NFIL,NFILO,TCHK)
@@ -1280,7 +1415,7 @@ CALL CLASSICAL$NEIGHBORS
       IMPLICIT NONE
       INTEGER(4)            ,INTENT(IN) :: NFIL
       INTEGER(4)            ,INTENT(IN) :: NFILO
-      LOGICAL(4)           ,INTENT(OUT):: TCHK
+      LOGICAL(4)            ,INTENT(OUT):: TCHK
       TYPE (SEPARATOR_TYPE),PARAMETER  :: MYSEPARATOR &
                  =SEPARATOR_TYPE(8,'QM-MM','NONE','AUG1996','NONE')
       TYPE (SEPARATOR_TYPE)            :: SEPARATOR
@@ -1354,7 +1489,6 @@ CALL CLASSICAL$NEIGHBORS
       TYPE (SEPARATOR_TYPE)            :: SEPARATOR
       INTEGER(4)                       :: NTASKS,THISTASK
       INTEGER(4)                       :: NAT
-      INTEGER(4)                       :: I
       REAL(8)              ,ALLOCATABLE:: R0(:,:)
       REAL(8)              ,ALLOCATABLE:: RM(:,:)
       REAL(8)              ,ALLOCATABLE:: QEL(:)
