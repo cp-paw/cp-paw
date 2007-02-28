@@ -1732,3 +1732,109 @@ end if
       enddo
       return
       end
+!*********************************************************************************
+!*********************************************************************************
+!*********************************************************************************
+!****                                                                         ****
+!****   test routines                                                         ****
+!****                                                                         ****
+!****                                                                         ****
+!*********************************************************************************
+!*********************************************************************************
+!*********************************************************************************
+!
+!     ...............................................................................
+      subroutine test_madelung()
+!     **                                                                        **
+!     **  CALCULATE VARIOUS MADELUNG CONSTANTS AND COMPARE WITH                 **
+!     **  "CONDENSED MATTER PHYSICS" BY M.P.MARDER                              **
+!     **                                                                        **
+      integer(4),parameter :: nbas=2
+      real(8)              :: rbas(3,3)
+      real(8)              :: bas(3,nbas)
+      reAL(8)              :: Q(NBAS)
+      reAL(8)              :: EMAD
+      reAL(8)              :: VMAD(NBAS)
+      reAL(8)              :: FMAD(3,NBAS)
+      reAL(8)              :: D,RS,DET
+      reAL(8)              :: PI
+!     ******************************************************************************
+      PI=4.D0*DATAN(1.D0)
+      q(1)=1.d0
+      q(2)=-1.d0
+!
+!     == sodium chloride: 1.74757 =============================================
+      RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
+      RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
+      RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
+      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
+      bas(:,2) =(/0.5d0,0.0d0,0.0d0/)
+      d=sqrt(sum((bas(:,2)-bas(:,1))**2))
+      call MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      write(*,fmt='("Nacl structure",t30,"e=",f10.5,"  dev=",f10.5)')-emad*d,-EMAD*D-1.74757
+!
+!     == CsCl structure: 1.76268 ==============================================
+      RBAS(1,:)=(/1.0D0,0.0D0,0.0D0/)
+      RBAS(2,:)=(/0.0D0,1.0D0,0.0D0/)
+      RBAS(3,:)=(/0.0D0,0.0D0,1.0D0/)
+      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
+      bas(:,2) =(/0.5d0,0.5d0,0.5d0/)
+      d=sqrt(sum((bas(:,2)-bas(:,1))**2))
+      call MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      write(*,fmt='("cscl structure",t30,"e=",f10.5,"  dev=",f10.5)')-emad*d,-EMAD*D-1.76268
+!
+!     == Zns structure: 1.63806 ===============================================
+      RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
+      RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
+      RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
+      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
+      bas(:,2) =(/0.25d0,0.25d0,0.25d0/)
+      d=sqrt(sum((bas(:,2)-bas(:,1))**2))
+      call MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      write(*,fmt='("zns structure",t30,"e=",f10.5,"  dev=",f10.5)')-emad*d,-EMAD*D-1.63806
+!
+!     ========================================================================
+!     == MADELUNG CONSTANTS FOR METALS                                      ==
+!     == ATTENTION THE DEFINITION IS DIFFERENT!!!!                          ==
+!     ========================================================================
+!
+!     == FCC: 1.79186 ========================================================
+      RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
+      RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
+      RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
+      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
+      DET=RBAS(1,1)*(RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)) &
+     &   +RBAS(2,1)*(RBAS(3,2)*RBAS(1,3)-RBAS(1,2)*RBAS(3,3)) &
+     &   +RBAS(3,1)*(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) 
+      RS=(3.D0*DET/(4.D0*PI))**(1.D0/3.D0)
+      call MADELUNG(1,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      write(*,fmt='("fcc structure",t30,"e=",f10.5,"  dev=",f10.5)')-2.D0*emad*RS,-2.D0*EMAD*RS-1.79186
+!
+!     == SIC: 1.76012 ========================================================
+      RBAS(1,:)=(/1.0D0,0.0D0,0.0D0/)
+      RBAS(2,:)=(/0.0D0,1.0D0,0.0D0/)
+      RBAS(3,:)=(/0.0D0,0.0D0,1.0D0/)
+      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
+      DET=RBAS(1,1)*(RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)) &
+     &   +RBAS(2,1)*(RBAS(3,2)*RBAS(1,3)-RBAS(1,2)*RBAS(3,3)) &
+     &   +RBAS(3,1)*(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) 
+      RS=(3.D0*DET/(4.D0*PI))**(1.D0/3.D0)
+      call MADELUNG(1,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      write(*,fmt='("sic structure",t30,"e=",f10.5,"  dev=",f10.5)')-2.D0*emad*RS,-2.D0*EMAD*RS-1.76012
+!
+!     == DIAMOND: 1.67085 ===================================================
+      RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
+      RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
+      RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
+      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
+      bas(:,2) =(/0.25d0,0.25d0,0.25d0/)
+      DET=RBAS(1,1)*(RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)) &
+     &   +RBAS(2,1)*(RBAS(3,2)*RBAS(1,3)-RBAS(1,2)*RBAS(3,3)) &
+     &   +RBAS(3,1)*(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) 
+      DET=0.5D0*DET
+      Q(:)=1.D0
+      RS=(3.D0*DET/(4.D0*PI))**(1.D0/3.D0)
+      call MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      write(*,fmt='("diamond structure",t30,"e=",f10.5,"  dev=",f10.5)')-emad*RS,-EMAD*RS-1.67085
+      return
+      end

@@ -1126,7 +1126,7 @@ print*,'mip',iatai,raip
       USE QMMM_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(OUT):: TCONV
-      LOGICAL(4),PARAMETER  :: TPR=.false.
+      LOGICAL(4),PARAMETER  :: TPR=.true.
       INTEGER(4),PARAMETER  :: NITER=1000
       REAL(8)   ,PARAMETER  :: TOL=1.D-3
       REAL(8)               :: FORCE1(3*NATM)
@@ -1189,13 +1189,14 @@ print*,'mip',iatai,raip
 !         == TRY AGAIN WITH SMALLER STEP IF ENERGY WENT UP ==============
           IF(EPOT2.GT.EPOTLAST) THEN
             ALPHA=0.5D0*(ALPHALAST+ALPHA)
+print*,'energy goes up; try again: ',epot2,alpha,alpha/SQRT(SUM(DIR1**2))
             CYCLE
           END IF
 !
 !         == REPORT ACCEPTED MOVE ========================================
-!          IF(TPR) THEN
-if(inner.gt.5) then
-            WRITE(NFILO,FMT='("INNER",I6," EPOT ",E12.5," FMAX ",E12.5," ALPHA",F10.5)') &
+          IF(TPR) THEN
+!if(inner.gt.0) then
+            WRITE(NFILO,FMT='("INNER",I6," EPOT ",E12.5," FMAX ",E12.5," ALPHA ",F10.5)') &
        &                    INNER,EPOT2,DOT_PRODUCT(DIR1,FORCE2),ALPHA
           END IF
 !
@@ -1208,8 +1209,10 @@ if(inner.gt.5) then
           DALPHA=ALPHA-ALPHALAST          
           IF(-DALPHA*SVAR2.GT.0.D0) THEN   ! CURVATURE POSITIVE
             DALPHA=-SVAR1/SVAR2*DALPHA
+print*,'curvature positive ',dalpha,alpha,alphalast,epot2,iter,inner
           ELSE                             ! STEEPEST DESCENT FOR NEGATIVE CURVATURE
             DALPHA=SIGN(1.D-2/DOT_PRODUCT(DIR1,DIR1),SVAR2)
+print*,'curvature negative ',dalpha,alpha,alphalast,epot2,iter,inner
           END IF
 !
 !         == STORE SUCCESSFUL MOVE as reference AND DETERMINE NEW ALPHA ==
@@ -1252,6 +1255,7 @@ if(inner.gt.5) then
         INTEGER(4)            :: IMAP,ILINK,I1,I2,IAT
 !       *****************************************************************
         CALL CLASSICAL$SETR8A('R(0)',3*NAT,R)
+CALL CLASSICAL$NEIGHBORS
         CALL CLASSICAL$ETOT(E)
         CALL CLASSICAL$GETR8A('FORCE',3*NAT,F)
         DO IMAP=1,NMAP

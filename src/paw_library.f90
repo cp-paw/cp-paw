@@ -1935,7 +1935,6 @@ END MODULE RANDOM_MODULE
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       REAL(8)  ,ALLOCATABLE :: EMAT(:,:)
-      INTEGER(4)            :: I
 !     ******************************************************************
 !
 !     ==================================================================
@@ -2056,9 +2055,10 @@ END MODULE RANDOM_MODULE
       SUBROUTINE LIB_ESSL_DGES(N,M,NEQ,A,X,B)
 !     ******************************************************************
 !     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
-!     **  WHERE A IS A(N,M)                                           **
-!     **  IF A IS NOT SQUARE, THE EQUATION IS SOLVED IN A LEAST       **
-!     **  SQUARE SENSE                                                **
+!     **  WHERE A is a square matrix                                  **
+!     **                                                              **
+!     **  remark: while dges can also handle non-square matrices      **
+!     **     we use it here for this purpose only.                    **
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
@@ -2071,6 +2071,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: IPVT(N)
       INTEGER(4)            :: INFO
       INTEGER(4)            :: I
+      real(8)               :: dev
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
 !     ******************************************************************
       IF(N.NE.M) THEN  !MATRIX FACTORIZATION
@@ -2088,10 +2089,8 @@ END MODULE RANDOM_MODULE
 !     ==  TEST                                                       ==
 !     =================================================================
       IF(TTEST) THEN
-        ALLOCATE(AUX(1))
-        AUX(:)=MAXVAL(ABS(MATMUL(A,X)-B))
-        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ',AUX(1)
-        DEALLOCATE(AUX)
+        dev=MAXVAL(ABS(MATMUL(A,X)-B))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ',dev
       END IF
       RETURN
       END SUBROUTINE LIB_ESSL_DGES
@@ -2210,11 +2209,13 @@ END MODULE RANDOM_MODULE
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
-      COMPLEX(8),INTENT(IN) :: H(N,N)
-      COMPLEX(8),INTENT(IN) :: S(N,N)
+      real(8)   ,INTENT(IN) :: H(N,N)
+      real(8)   ,INTENT(IN) :: S(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
-      COMPLEX(8),INTENT(OUT):: U(N,N)
-      COMPLEX(8)            :: AUX(2*N)
+      real(8)   ,INTENT(OUT):: U(N,N)
+      real(8)               :: h1(n,n)
+      real(8)               :: s1(n,n)
+      real(8)               :: AUX(2*N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)            :: I
       REAL(8)   ,ALLOCATABLE:: EMAT(:,;)
@@ -2224,7 +2225,9 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-      CALL DSYGV(1,WORK1,N,S,N,E,U,N,N,AUX,2N)  !ESSL
+      h1=h
+      s1=s
+      CALL DSYGV(1,h1,N,S1,N,E,U,N,N,AUX,2*N)  !ESSL
 !
 !     ==================================================================
 !     ====  OPTIONAL TEST                                             ==
@@ -2250,7 +2253,7 @@ END MODULE RANDOM_MODULE
       SUBROUTINE LIB_ESSL_DGEGV(N,H,S,E,U)
 !     ******************************************************************
 !     **                                                              **
-!     **  GENERALIZED REAL SYMMETRIC EIGENSYSTEM,                     ** 
+!     **  GENERALIZED REAL non-symmETRIC EIGENSYSTEM,                 ** 
 !     **        HU-SUE=0,                                             **
 !     **  WHERE H AND S ARE REAL, GENERAL MATRICES                    **
 !     **                                                              **
@@ -2261,6 +2264,7 @@ END MODULE RANDOM_MODULE
 !     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE      **
 !     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE          **
 !     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
+!     **   2) Note thAT THE EIGENVECTORS ARE NOT ORTHONORMAL!!!!      **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
@@ -2285,7 +2289,7 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
       H1=H
       S1=S
-      CALL DGEGV(1,WORK1,N,S,N,ALPHA,BETA,U,N,N,AUX,3*N)  !ESSL
+      CALL DGEGV(1,h1,N,S,N,ALPHA,BETA,U,N,N,AUX,3*N)  !ESSL
       DO I=1,N
         IF(BETA.EQ.0.D0) THEN
           CALL ERROR$MSG('EIGENVALUE IS INFINITE')
