@@ -2218,7 +2218,7 @@ END MODULE RANDOM_MODULE
       real(8)               :: AUX(2*N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)            :: I
-      REAL(8)   ,ALLOCATABLE:: EMAT(:,;)
+      REAL(8)   ,ALLOCATABLE:: EMAT(:,:)
       REAL(8)               :: DEV
 !     ******************************************************************
 !
@@ -2280,7 +2280,7 @@ END MODULE RANDOM_MODULE
       REAL(8)               :: AUX(3*N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)            :: I
-      REAL(8)   ,ALLOCATABLE:: EMAT(:,;)
+      REAL(8)   ,ALLOCATABLE:: EMAT(:,:)
       REAL(8)               :: DEV
 !     ******************************************************************
 !
@@ -2291,7 +2291,7 @@ END MODULE RANDOM_MODULE
       S1=S
       CALL DGEGV(1,h1,N,S,N,ALPHA,BETA,U,N,N,AUX,3*N)  !ESSL
       DO I=1,N
-        IF(BETA.EQ.0.D0) THEN
+        IF(BETA(i).EQ.0.D0) THEN
           CALL ERROR$MSG('EIGENVALUE IS INFINITE')
           CALL ERROR$I4VAL('I',I)
           CALL ERROR$STOP('LIB_ESSL_DGEGV')
