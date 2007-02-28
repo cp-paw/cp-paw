@@ -167,6 +167,12 @@ CALL TRACE$PASS('CELL')
       CALL CELL$REPORT(NFILO)
 !
 !     ==================================================================
+!     == COSMO ENVIRONMENT                                           ==
+!     ==================================================================
+CALL TRACE$PASS('COSMO')
+      CALL COSMO$REPORT(NFILO)
+!
+!     ==================================================================
 !     == CLASSICAL ENVIRONMENT                                        ==
 !     ==================================================================
 CALL TRACE$PASS('QMMM')
@@ -2233,7 +2239,7 @@ CALL TRACE$PASS('DONE')
         CALL COSMO$SETI4('MULTIPLE',MULTIPLE)
       END IF
 !
-!     == MULTIPLE TIMESTEPS?  ========================================
+!     == adiabatic or dynamic?========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'ADIABATIC',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'ADIABATIC',0,.FALSE.)
@@ -2258,11 +2264,11 @@ CALL TRACE$PASS('DONE')
 !
 !     == EPSILON = DIELECTRIC CONSTANT ===========================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EPSILON',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'EPSILON',0,1.D12)
+      IF(TCHK) THEN 
+        call error$msg('epsilon for cosmo screening')
+        call error$msg('must be specified in the structure file')
+        call error$stop('readin_cosmo')
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'EPSILON',1,SVAR)
-      CALL COSMO$SETR8('EPSILON',SVAR)
 !
 !     ==  FRIC ===================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
@@ -2272,13 +2278,13 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,FRIC)
       CALL COSMO$SETR8('FRICTION',FRIC)
 !
-!     ==  FRIC ===================================================
+!     ==  vpauli ===================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'VPAULI',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'VPAULI',0,0.D0)
+      IF(TCHK) THEN
+        CALL ERROR$MSG('VPAULI FOR COSMO SCREENING')
+        CALL ERROR$MSG('MUST BE SPECIFIED IN THE STRUCTURE FILE')
+        CALL ERROR$STOP('READIN_COSMO')
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'VPAULI',1,SVAR)
-      CALL COSMO$SETR8('VPAULI',SVAR)
 !
 !     ==  PRINT CHARGES ================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'CHARGES',1,TCHK)
@@ -5965,6 +5971,7 @@ print*,"FLAG: after setting links in QMMM"
       TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
       TYPE(LL_TYPE)            :: LL_STRC
       LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: Tiso
       INTEGER(4)               :: NAT1
       INTEGER(4)               :: IAT1
       INTEGER(4)               :: IAT,NAT
@@ -5972,6 +5979,7 @@ print*,"FLAG: after setting links in QMMM"
       CHARACTER(250)           :: tessfile
       integer(4)               :: nfil
       REAL(8)      ,ALLOCATABLE:: RSOLV(:)
+      real(8)                  :: svar
 !     ******************************************************************
       LL_STRC=LL_STRC_
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
@@ -5983,9 +5991,45 @@ print*,"FLAG: after setting links in QMMM"
       ALLOCATE(RSOLV(NAT))
       RSOLV(:)=0.D0
 !
+!     == CHECK WITH ISOLATE IF CALCULATION IS PERIODIC OR ISOLATED
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$EXISTL(LL_STRC,'ISOLATE',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$SELECT(LL_STRC,'ISOLATE')
+        CALL LINKEDLIST$EXISTD(LL_STRC,'DECOUPLE',0,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_strc,'DECOUPLE',1,TISO)
+        ELSE
+          TISO=.TRUE.
+        END IF
+      ELSE
+        TISO=.FALSE.
+      END IF
+      CALL COSMO$SETL4('PERIODIC',.not.TISO)
+!
+!     == NOW BACK TO COSMO BLOCK
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$SELECT(LL_STRC,'COSMO')
 !
-!     ==  Tesselation file=====================================
+!     == EPSILON = DIELECTRIC CONSTANT ===========================
+      CALL LINKEDLIST$EXISTD(LL_strc,'EPSILON',1,TCHK)
+      IF(.NOT.TCHK) THEN ! USE METALLIC SCREENING AS DEFAULT
+        CALL LINKEDLIST$SET(LL_strc,'EPSILON',0,1.D12)
+      END IF
+      CALL LINKEDLIST$GET(LL_strc,'EPSILON',1,SVAR)
+      CALL COSMO$SETR8('EPSILON',SVAR)
+!
+!     ==  VPAULI ===================================================
+      CALL LINKEDLIST$EXISTD(LL_strc,'VPAULI',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_strc,'VPAULI',0,0.D0)
+      END IF
+      CALL LINKEDLIST$GET(LL_strc,'VPAULI',1,SVAR)
+      CALL COSMO$SETR8('VPAULI',SVAR)
+!
+!     ==  TESSELATION FILE=====================================
       CALL LINKEDLIST$EXISTD(LL_STRC,'TESSFILE',1,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_STRC,'TESSFILE',1,TESSFILE)

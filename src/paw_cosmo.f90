@@ -77,6 +77,44 @@ CONTAINS
 END MODULE COSMO_MODULE
 !
 !     .......................................................................
+      SUBROUTINE COSMO$report(nfil)
+!     **                                                                   **
+!     **                                                                   **
+!     ** 
+      use cosmo_module
+      implicit none
+      integer(4),intent(in) :: nfil
+!     ***********************************************************************
+      IF(.NOT.TON) RETURN
+      call COSMO_INIT()
+      CALL REPORT$TITLE(NFIL,'COSMO')
+      IF(TISO) THEN
+        CALL REPORT$STRING(NFIL,'NON-PERIODIC SYSTEM')
+      ELSE
+        CALL REPORT$STRING(NFIL,'PERIODIC SYSTEM')
+      END IF
+      CALL REPORT$R8VAL(NFIL,'KSELF',KSELF,'A.U.')
+      CALL REPORT$R8VAL(NFIL,'GAMMA (SEC. IV.B IN SENN ET AL.)',GAMMA,'A.U.')
+      CALL REPORT$R8VAL(NFIL,'BETA (SEC. IV.B IN SENN ET AL.) ',BETA,'A.U.')
+      CALL REPORT$R8VAL(NFIL,'FDIEL: (E_R-1)/(E_R+1/2)',FDIEL,'')
+      CALL REPORT$R8VAL(NFIL,'vpauli',vpauli,'H')
+      IF(TADIABATIC) THEN
+        CALL REPORT$STRING(NFIL,'COSMO CHARGES ARE TREATED ADIABATICALLY')
+        IF(ETOL.GT.0.D0)CALL REPORT$R8VAL(NFIL,'ENERGY CONVERGENCE CRITERION',ETOL,'H')
+        IF(QTOL.GT.0.D0)CALL REPORT$R8VAL(NFIL,'CHARGE CONVERGENCE CRITERION',QTOL,'E')
+      else
+        CALL REPORT$STRING(NFIL,'COSMO CHARGES ARE TREATED DYNAMICALLY')
+        CALL REPORT$L4VAL(NFIL,'SET INITIAL VELOCITIES TO ZERO',TSTOP)
+        CALL REPORT$L4VAL(NFIL,'START FROM ZERO CHARGES',START)
+        CALL REPORT$R8VAL(NFIL,'TIME STEP',DT,'A.U.')
+        CALL REPORT$R8VAL(NFIL,'FRICTION',ANNE,' ')
+        CALL REPORT$R8VAL(NFIL,'MASS',QMASS,' ')
+        IF(TMULTIPLE)CALL REPORT$I4VAL(NFIL,'#(MULTIPLE TIME STEPS',NMULTIPLE)
+      END IF                
+      RETURN
+      end
+!
+!     .......................................................................
       SUBROUTINE COSMO$SETR8A(ID,LEN,VAL)
 !     **                                                                   **
       USE COSMO_MODULE
@@ -138,14 +176,13 @@ END MODULE COSMO_MODULE
       ELSE IF(ID.EQ.'KSELF') THEN
         KSELF=VAL
       ELSE IF(ID.EQ.'EPSILON') THEN
-!        FDIEL=(VAL-1)/(VAL+0.5D0)  ! NOT USED
         IF(VAL.LT.1.D-8) THEN
           CALL ERROR$MSG('COSMO WITHOUT DIELECTRIC CONSTANT DOES NOT MAKE SENSE')
           CALL ERROR$MSG('STOPPING TO AVOID DIVIDE BY ZERO')
           CALL ERROR$R8VAL('EPSILONR',VAL)
           CALL ERROR$STOP('COSMO$SETR8')
         END IF
-        FDIEL=(VAL-1)/VAL
+        FDIEL=(VAL-1.d0)/(VAL+0.5d0)
       ELSE IF(ID.EQ.'VPAULI') THEN
         VPAULI=VAL
       ELSE
@@ -603,6 +640,7 @@ END MODULE COSMO_MODULE
             DO IT2=MIN2,MAX2
               DT1(:)=RBAS(:,1)*REAL(IT1)+RBAS(:,2)*REAL(IT2)
               DO IT3=MIN3,MAX3
+!               == dr=(r2+T)-r1
                 DR(:)=DR12(:)+DT1(:)+RBAS(:,3)*REAL(IT3)
                 DIS=SQRT(SUM(DR**2))  ! |R2+T-R1|
                 IF(DIS.GT.RMAX) CYCLE
@@ -847,82 +885,48 @@ END MODULE COSMO_MODULE
       END
 !
 !     .......................................................................
-      SUBROUTINE COSMO_Pauli(NAT,ng,rc,qmad,NQ,RAT,RBAS,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
-     &                       ,ZEROTHETA,vpauli,epauli,FAT,vmad)
+      SUBROUTINE COSMO_Pauli(NAT,ng,rc,vpauli,qmad,epauli,vmad)
 !     **                                                                   **
-!     **  CALCULATES ENERGY CORRESPONDING TO A POTENTIAL ON THE SURFACE    **
-!     **  CHARGES THAT ACT ON THE MODEL CHARE DENSITY                      **
 !     **  this potential shall mimick the pauli repulsion by the solvent.  **
-!     **                                                                   **
 !     **                                                                   ** 
-     IMPLICIT NONE
+      IMPLICIT NONE
       INTEGER,INTENT(IN) :: NAT
       INTEGER,INTENT(IN) :: ng
       real(8),intent(in) :: rc(ng,nat)
-      real(8),intent(in) :: qmad(ng,nat)
-      INTEGER,INTENT(IN) :: NQ
-      INTEGER,INTENT(IN) :: NNX
-      INTEGER,INTENT(IN) :: NNN(NAT)
-      INTEGER,INTENT(IN) :: NNLIST(4,NNX,NAT)
-      REAL(8),INTENT(IN) :: RAT(3,NAT)
-      REAL(8),INTENT(IN) :: RBAS(3,3)
-      INTEGER,INTENT(IN) :: IQFIRST(NAT)
-      INTEGER,INTENT(IN) :: NQAT(NAT)
-      REAL(8),INTENT(IN) :: RQ(3,NQ)     ! ABSOLUTE POSITIONS OF CHARGE
-      LOGICAL,INTENT(in) :: ZEROTHETA(NQ)
       REAL(8),INTENT(in) :: vpauli
+      real(8),intent(in) :: qmad(ng,nat)
       REAL(8),INTENT(OUT):: epauli
-      REAL(8),INTENT(OUT):: FAT(3,NAT)
       REAL(8),INTENT(OUT):: vmad(ng,NAT)
-      INTEGER            :: IAT1,IAT2,IQ
-      REAL(8)            :: DR(3),DIS
-      REAL(8)            :: R2(3)
-      REAL(8)            :: SVAR
-      INTEGER(4)         :: IQ1,IQ2,IN,IT1,IT2,IT3,ig
-      real(8)            :: ffac,rc1
-      real(8)            :: pi,sqpi
+      INTEGER            :: IAT,ig
+      real(8),parameter  :: rvdw=6.d0
+      real(8)            :: x 
+      real(8)            :: pot
+      real(8)            :: fac,pi
 !     ***********************************************************************
       pi=4.d0*datan(1.d0)
-      sqpi=sqrt(pi)
+      fac=4.d0/sqrt(pi)
       epauli=0.D0
-      FAT(:,:)=0.D0
       vmad(:,:)=0.D0
-      DO IAT1=1,NAT
-        IQ1=IQFIRST(IAT1)
-        IQ2=IQFIRST(IAT1)-1+NQAT(IAT1)
-        DO IN=1,NNN(IAT1)
-          IAT2=NNLIST(1,IN,IAT1)
-          IT1 =NNLIST(2,IN,IAT1)
-          IT2 =NNLIST(3,IN,IAT1)
-          IT3 =NNLIST(4,IN,IAT1)
-          R2(:)=RAT(:,IAT2) &
-       &         +RBAS(:,1)*REAL(IT1)+RBAS(:,2)*REAL(IT2)+RBAS(:,3)*REAL(IT3)
-          DO IQ=IQ1,IQ2
-            IF(ZEROTHETA(IQ)) CYCLE
-            DR(:)=R2(:)-RQ(:,IQ)
-            DIS=SQRT(SUM(DR**2))
-            ffac=0.d0
-            do ig=1,ng
-              rc1=rc(ig,iat2)
-              svar=vpauli/(sqpi*rc1)**3*exp(-(dis/rc1)**2)
-              vmad(ig,iat2)=vmad(ig,iat2)+svar
-              svar=svar*qmad(ig,iat2)
-              epauli=epauli+svar
-              ffac=ffac-2.d0/rc1**2*svar
-            enddo
-            FAT(:,IAT2)=FAT(:,IAT2)-SVAR*DR(:)
-            FAT(:,IAT1)=FAT(:,IAT1)+SVAR*DR(:)
-          ENDDO
+      DO IAT=1,NAT
+        do ig=1,ng
+          x=rvdw/(2.d0*rc(ig,iat))
+          if(x.gt.0.75d0) then
+            pot=vpauli*fac*exp(-(2.d0*x)**2)
+          else
+            pot=Vpauli*(1.d0-x**2*(2.d0-x)**3)
+          end if
+          epauli=epauli+qmad(ig,iat)*pot
+          vmad(ig,iat)=vmad(ig,iat)+pot
         ENDDO
       ENDDO
-do iat1=1,nat
-  write(*,*)'qmad ',iat1,qmad(:,iat1)
+do iat=1,nat
+  write(*,*)'qmad ',iat,qmad(:,iat)
 enddo
-do iat1=1,nat
-  write(*,*)'rc ',iat1,rc(:,iat1)
+do iat=1,nat
+  write(*,*)'rc ',iat,rc(:,iat)
 enddo
-do iat1=1,nat
-  write(*,*)'vmad ',iat1,vmad(:,iat1)
+do iat=1,nat
+  write(*,*)'vmad ',iat,vmad(:,iat)
 enddo
 print*,'epauli ',epauli
       RETURN
@@ -981,13 +985,17 @@ print*,'epauli ',epauli
       ALLOCATE(FEFF(3,NQEFF))
       CALL COSMO_MAPTOEFF(NAT,NQ,NQEFF,ZEROTHETA &
      &                   ,QBAR,RQ,QATBAR,RAT,QEFF,REFF)
+print*,'in cosmo_longrange a:',tiso,maxval(qbar)
       IF(TISO) THEN
         CALL COSMO_ISOLATEDHARTREE(NQEFF,REFF,QEFF,ETOT,VEFF,FEFF,DISMIN)
         CALL COSMO_ISOLATEDHARTREE(NAT,RAT,QATBAR,ETOT1,V1,F1,DISMIN)
       ELSE
-        CALL COSMO_MADELUNG(NQEFF,RBAS,REFF,QEFF,ETOT,VEFF,FEFF,DISMIN)
-        CALL COSMO_MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1,DISMIN)
+!        CALL COSMO_MADELUNG(NQEFF,RBAS,REFF,QEFF,ETOT,VEFF,FEFF,DISMIN)
+!        CALL COSMO_MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1,DISMIN)
+CALL MADELUNG(NQEFF,RBAS,REFF,QEFF,ETOT,VEFF,FEFF)
+CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       END IF
+print*,'in cosmo_longrange b:',etot,etot1
       ETOT=ETOT-ETOT1
       VEFF(NQEFF-NAT+1:NQEFF)=VEFF(NQEFF-NAT+1:NQEFF)-V1(:)
       FEFF(:,NQEFF-NAT+1:NQEFF)=FEFF(:,NQEFF-NAT+1:NQEFF)-F1(:,:)
@@ -1894,11 +1902,13 @@ INTEGER(4) :: NFILINFO
         CALL COSMO_PROPAGATE(DT,ANNE,QMASS,NQ,Q0,QM,-VQ,QP)
         CALL COSMO_EKIN(DT,QMASS,NQ,QP,Q0,QM,EKIN1)
         EKIN=EKIN+EKIN1
-WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ekin+epot-de,anne,de,dq
 !
         IF(TADIABATIC) THEN
 !         == check convergence ==============================================
           CALL OPTFRIC$TESTCONV(NQ,QP,Q0,QM,Q2M,ANNE,ANNEM,DT,(/(QMASS,I=1,NQ)/),DQ,DE)
+WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ekin+epot-de,anne,de,dq
+          dq=abs(dq)
+          de=abs(de)
           IF(ETOL.GT.0.AND.QTOL.GT.0) THEN 
             TCONVG=(DQ.LT.QTOL.AND.DE.LT.ETOL)
           ELSE IF(ETOL.GT.0.AND.QTOL.LT.0) THEN 
@@ -1917,6 +1927,8 @@ WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ekin+epot-de,anne,de,dq
             CALL OPTFRIC$UPDATER8('COSMO',NQ,QP,Q0,QM,Q2M,(/(QMASS,i=1,nq)/))
             Q2M=QM
           END IF
+        else
+WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,anne
         END IF
         CALL COSMO_SWITCH(NQ,QP,Q0,QM)
         IF(TMULTIPLE) THEN
@@ -1946,14 +1958,12 @@ WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ekin+epot-de,anne,de,dq
       END IF
 !
 !     =======================================================================
-!     ==  add pauli repulsion                                              ==
+!     ==  ADD PAULI REPULSION                                              ==
 !     =======================================================================
-      call COSMO_Pauli(NAT,ng,rc,qmad,NQ,RAT,RBAS,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
-     &                       ,ZEROTHETA,vpauli,epot1,FAT1,vmad1)
-      epot=epot+epot1
-      force(:,:)=force(:,:)+fat1(:,:)
-      vmad(:,:)=vmad(:,:)+vmad1(:,:)
-print*,'epauli ',epot1
+      CALL COSMO_PAULI(NAT,NG,RC,VPAULI,QMAD1,EPOT1,VMAD1)
+      EPOT=EPOT+EPOT1
+      VMAD(:,:)=VMAD(:,:)+VMAD1(:,:)
+PRINT*,'EPAULI ',EPOT1
 !
 !     =======================================================================
 !     ==  CLOSE DOWN                                                       ==

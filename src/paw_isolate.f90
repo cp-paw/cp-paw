@@ -723,7 +723,6 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     ==================================================================
 !     ==  COUPLE COsmo                                                ==
 !     ==================================================================
-      CALL COSMO$SETL4('PERIODIC',.NOT.TISOLATE)
       CALL COSMO$INTERFACE(NAT,POS,NG,RC,QI,EPOT1,EKIN1,VI1,FORCE1)
       ENERGY=ENERGY+EPOT1
       VI(:,:)=VI(:,:)+VI1(:,:)

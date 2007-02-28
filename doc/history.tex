@@ -127,6 +127,23 @@ have been made in this course. therefore testing will be required.
 
 COSMO can write an input file for COSMOTHERM.
 
+\subsection{Feb. 25, 2007}
+
+Rewrite of the linear algebra routines in paw_library.f90. Test routines have been 
+included for the new routines. They are called by ``call lib\$test()''
+Library specific driver routines are used, which distangles different libraries.
+Has not been tested for ESSL library. Version has been checked into 
+devel_blo/devel version 562.
+
+\subsection{Feb 25.2007}
+
+change in linkedlist\$existd. If a the nth data are searched true was
+only returned, if nth was the total number NUM of data in the list. It has
+been changed so, that the number NUM of elements in the list must be equal
+or larger than nth.
+
+\subsection{next.....}
+
 
 \newpage
 \bibliographystyle{unsrt}

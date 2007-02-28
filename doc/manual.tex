@@ -1952,12 +1952,6 @@ is smaller than etol.}
 Not used for ADIABATIC=F.}
 \vdefault{charge criterion is not used}}
 
-\mbax{\key{EPSILON}
-\vdescr{Dielectric constant of the solvent}
-\vformat{real}
-\vrules{optional}
-\vdefault{10$^12$ (metallic screening)}}
-
 \mbax{\key{FRIC}
 \vdescr{friction for the dynamics of the screening charges}
 \vformat{real}
@@ -1980,13 +1974,8 @@ optimum friction scheme adjusts within RETARD time steps to one-half of the
 original deviation.}
 \vformat{real}
 \vrules{optional, only used in combination with OPTFRIC=T}
-\vdefault{0.d0}}
+\vdefault{0.d0}
 
-\mbax{\key{VPAULI}
-\vdescr{Only for testing purposes!}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.d0}}
 
 % %----------------------------------------------------------------------
 % \block{!CONTROL!CONTINUUM}
@@ -3142,6 +3131,19 @@ for this atom. }
 \vformat{Character}
 \vrules{optional}
 \vdefault{Default tesselation with 60 points.}}
+
+\mbax{\key{EPSILON}
+\vdescr{Dielectric constant of the solvent}
+\vformat{real}
+\vrules{optional}
+\vdefault{10$^12$ (metallic screening)}}
+
+
+\mbax{\key{VPAULI}
+\vdescr{Only for testing purposes!}
+\vformat{real}
+\vrules{optional}
+\vdefault{0.d0}}
 
 %
 %----------------------------------------------------------------------

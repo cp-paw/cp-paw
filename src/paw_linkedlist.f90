@@ -1352,7 +1352,7 @@ CONTAINS
       LIST=>LL%PTR
       CALL LLIST_NDATA(LIST,ID,NUM)
       IF(NTH.GT.0) THEN
-        TCHK=(NUM.EQ.NTH)
+        TCHK=(NUM.GE.NTH)
       ELSE IF(NTH.EQ.0) THEN
         TCHK=(NUM.GT.0)
       ELSE 
@@ -1866,7 +1866,6 @@ CONTAINS
 !     == MAP STORED DATA ONTO VAL ====================================
       VAL=' '
       VAL(1:KIND)=TRANSFER(CHARVAL,MOLD(1:KIND))
-print*,'getchar 3leng,charval',leng,kind,charval
       RETURN
      END SUBROUTINE LINKEDLIST$GETCHR0
 

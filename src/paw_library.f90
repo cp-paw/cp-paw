@@ -413,8 +413,8 @@ END MODULE RANDOM_MODULE
       INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
       REAL(8)   ,INTENT(IN) :: A(N,N)    ! MATRIX TO BE INVERTED
       REAL(8)   ,INTENT(OUT):: AINV(N,N) ! INVERTED MATRIX
-      LOGICAL(4),PARAMETER  :: TTEST=.TRUE. 
-      REAL(8)  ,ALLOCATABLE :: RES(:,:)
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      REAL(8)   ,ALLOCATABLE:: RES(:,:)
       REAL(8)               :: DEV
       INTEGER(4)            :: I
 !     ******************************************************************
@@ -465,7 +465,7 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(IN) :: H(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
       REAL(8)   ,INTENT(OUT):: U(N,N)
-      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       REAL(8)  ,ALLOCATABLE :: EMAT(:,:)
       INTEGER(4)            :: I
@@ -531,7 +531,7 @@ END MODULE RANDOM_MODULE
       COMPLEX(8),INTENT(IN) :: H(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
       COMPLEX(8),INTENT(OUT):: U(N,N)
-      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       COMPLEX(8),ALLOCATABLE:: EMAT(:,:)
       INTEGER(4)            :: I
@@ -584,9 +584,9 @@ END MODULE RANDOM_MODULE
 !     **                                                                 **
 !     **      H*U = S*U*E                                                **
 !     **                                                                 **
-!     ** WITH EIGENVECTORS u THAT ARE ORTHOGONAL IN THE SENSE            **
+!     ** WITH EIGENVECTORS U THAT ARE ORTHOGONAL IN THE SENSE            **
 !     **                                                                 **
-!     **      u^t*s*u=IDENTITY                                           **
+!     **      U^T*S*U=IDENTITY                                           **
 !     **                                                                 **
 !     ** REMARK: H AND S MUST BE SYMMETRIC                               **
 !     **         S MUST BE POSITIVE DEFINITE                             **
@@ -594,16 +594,16 @@ END MODULE RANDOM_MODULE
 !     **             MATMUL(TRANSPOSE(U),MATMUL(S,U))=IDENTITY           **
 !     **                                                                 **
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: N
-      REAL(8)   ,INTENT(IN)  :: H(N,N)    ! HAMILTON MATRIX
-      REAL(8)   ,INTENT(IN)  :: S(N,N)    ! OVERLAP MATRIX
-      REAL(8)   ,INTENT(OUT) :: E(N)      ! EIGENVALUES
-      REAL(8)   ,INTENT(OUT) :: U(N,N)  ! EIGENVECTORS
-      REAL(8)                :: B(N,N)    ! COPY OF OVERLAP MATRIX
-      LOGICAL                :: TSYM
-      LOGICAL  ,PARAMETER    :: TTEST=.FALSE. ! IF TRUE TEST RESULT
-      REAL(8)                :: DEV       ! DEVIATION
-      INTEGER                :: I 
+      INTEGER(4),INTENT(IN) :: N
+      REAL(8)   ,INTENT(IN) :: H(N,N)    ! HAMILTON MATRIX
+      REAL(8)   ,INTENT(IN) :: S(N,N)    ! OVERLAP MATRIX
+      REAL(8)   ,INTENT(OUT):: E(N)      ! EIGENVALUES
+      REAL(8)   ,INTENT(OUT):: U(N,N)    ! EIGENVECTORS
+      REAL(8)               :: B(N,N)    ! COPY OF OVERLAP MATRIX
+      LOGICAL               :: TSYM
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE. ! IF TRUE TEST RESULT
+      REAL(8)               :: DEV       ! DEVIATION
+      INTEGER               :: I 
 !     *********************************************************************
 !
 !     =====================================================================
@@ -688,7 +688,7 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT):: E(N)      ! EIGENVALUES
       COMPLEX(8),INTENT(OUT):: U(N,N)  ! EIGENVECTORS
       COMPLEX(8)            :: S1(N,N)
-      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       INTEGER               :: I
 !     *********************************************************************
@@ -1932,7 +1932,7 @@ END MODULE RANDOM_MODULE
       REAL(8)               :: WORK1((N*(N+1))/2)
       REAL(8)               :: WORK2(2*N)
       INTEGER(4)            :: K,I,J
-      LOGICAL(4)            :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       REAL(8)  ,ALLOCATABLE :: EMAT(:,:)
       INTEGER(4)            :: I
@@ -2014,7 +2014,7 @@ END MODULE RANDOM_MODULE
       REAL(8)               :: TAU=1.D-6
       INTEGER(4)            :: INFO
       INTEGER(4)            :: I
-      LOGICAL(4)            :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)            :: M1,N1
 !     ******************************************************************
 !     ===========================================================
@@ -2071,7 +2071,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: IPVT(N)
       INTEGER(4)            :: INFO
       INTEGER(4)            :: I
-      LOGICAL(4)            :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
 !     ******************************************************************
       IF(N.NE.M) THEN  !MATRIX FACTORIZATION
         CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
@@ -2132,7 +2132,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: K,I,J
       CHARACTER(8)          :: SAV2101
       INTEGER(4)            :: I1,I2
-      LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       COMPLEX(8)            :: CSVAR
       LOGICAL(4)            :: TCHK
       COMPLEX(8),ALLOCATABLE:: WORK3(:,:)
@@ -2215,7 +2215,7 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT):: E(N)
       COMPLEX(8),INTENT(OUT):: U(N,N)
       COMPLEX(8)            :: AUX(2*N)
-      LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)            :: I
       REAL(8)   ,ALLOCATABLE:: EMAT(:,;)
       REAL(8)               :: DEV
@@ -2274,7 +2274,7 @@ END MODULE RANDOM_MODULE
       REAL(8)               :: ALPHA(N)
       REAL(8)               :: BETA(N)
       REAL(8)               :: AUX(3*N)
-      LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)            :: I
       REAL(8)   ,ALLOCATABLE:: EMAT(:,;)
       REAL(8)               :: DEV
@@ -2396,7 +2396,7 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,INTENT(OUT):: U(N,N)
       REAL(8)               :: WORK(3*N)
       INTEGER(4)            :: INFO
-      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       REAL(8)  ,ALLOCATABLE :: EMAT(:,:)
       INTEGER(4)            :: I
@@ -2564,8 +2564,8 @@ END MODULE RANDOM_MODULE
       INTEGER               :: N1,M1,SMLSIZ,MINMN,NLVL
       INTEGER               :: ILAENV
       EXTERNAL              :: ILAENV
-      LOGICAL,PARAMETER     :: TTEST=.TRUE.
-      REAL(8)  ,PARAMETER   :: TOL=1.D-5
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      REAL(8)   ,PARAMETER  :: TOL=1.D-5
       REAL(8)               :: SVAR1,SVAR2
 !     ******************************************************************
       M1=N    ! LAPACK USES M AND N OPPOSITE 
@@ -2652,8 +2652,8 @@ END MODULE RANDOM_MODULE
       INTEGER               :: N1,M1,SMLSIZ,MINMN,NLVL
       INTEGER               :: ILAENV
       EXTERNAL              :: ILAENV
-      LOGICAL,PARAMETER     :: TTEST=.TRUE.
-      REAL(8)  ,PARAMETER   :: TOL=1.D-5
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      REAL(8)   ,PARAMETER  :: TOL=1.D-5
       REAL(8)               :: SVAR1,SVAR2
 !     ******************************************************************
       M1=N    ! LAPACK USES M AND N OPPOSITE 
@@ -2731,7 +2731,7 @@ END MODULE RANDOM_MODULE
       COMPLEX(8)            :: CWORK(2*N)
       REAL(8)               :: RWORK(3*N)
       INTEGER(4)            :: I
-      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       COMPLEX(8),ALLOCATABLE:: RES(:,:)
       INTEGER(4)            :: INFO
 !     ******************************************************************
@@ -2812,7 +2812,7 @@ END MODULE RANDOM_MODULE
       REAL(8)               :: B(N,N)      
       REAL(8)               :: WORK(3*N)
       INTEGER(4)            :: INFO
-      LOGICAL               :: TTEST=.TRUE.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)   ,ALLOCATABLE:: EMAT(:,:)
       REAL(8)               :: DEV
       INTEGER(4)            :: I
