@@ -3424,9 +3424,9 @@ END MODULE RANDOM_MODULE
 !     == WRITE OUTPUT                                               ==
 !     ================================================================
       IF(TPR) THEN
-        WRITE(*)
+        WRITE(*,*)
         WRITE(*,FMT='("E:",10F10.3)')E
-        WRITE(*)
+        WRITE(*,*)
         DO I=1,N
           WRITE(*,FMT='("U:",10F10.3)')U(I,:)
         ENDDO
