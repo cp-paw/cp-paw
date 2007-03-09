@@ -317,6 +317,7 @@
       LOGICAL(4)               :: TGRA
       REAL(8)   ,ALLOCATABLE   :: RHOTEMP(:,:)
       REAL(8)                  :: SVAR
+      real(8)   ,allocatable   :: vext(:)
 !     ******************************************************************
                                 CALL TRACE$PUSH('POTENTIAL$VOFRHO')
                                 CALL TIMING$CLOCKON('POTENTIAL')
@@ -371,6 +372,13 @@
       CALL DFT$GETL4('GC',TGRA)
 !
 !     ==================================================================
+!     == calculate external potential                                 ==
+!     ==================================================================
+!!$      allocate(vext(nrl))
+!!$      subroutine potential_densityinterface(nr1start,nr1l,nr1glob,nr2,nr3 &
+!!$     &                      ,nrl,ndimd,rho,vext,r0,force,rbas,stress)
+!
+!     ==================================================================
 !     == POTENTIAL; BRANCH INTO COLLINEAR AND NON-COLLINEAR CASE      ==
 !     ==================================================================
       IF(NDIMD.EQ.4) THEN
@@ -406,6 +414,12 @@ IF(TSTRESS) THEN
   WRITE(*,FMT='("C+XC STRESS ",3F15.7)')STRESS(2,:)
   WRITE(*,FMT='("C+XC STRESS ",3F15.7)')STRESS(3,:)
 END IF
+!
+!     ==================================================================
+!     == add external potential                                       ==
+!     ==================================================================
+!!$      rho(:,1)=rho(:,1)+vext(:)
+!!$      deallocate(vext)
 !
 !     ==================================================================
 !     == CLOSE DOWN                                                  ==
