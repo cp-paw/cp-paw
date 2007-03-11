@@ -7,20 +7,39 @@
 !**                                                                   **
 !***********************************************************************
 !    
-!     ................................................................. 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$TEST()
+!     **************************************************************************
+!     **                                                                      **
+!     **   TEST ROUTINE FOR RADIAL OBJECT                                     **
+!     **                                                                      **
+!     **   NOTE THAT THE INTEGRATE ROUTINE OF THE OLD OBJECT WAS INACCURATE   **
+!     **   BECAUSE OF ONLY QUADRATIC INERPOLATION TO THE ORIGIN               **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)           :: GID,GID1,GID2
       INTEGER(4),PARAMETER :: NR=250
-      REAL(8)              :: R1=1.056D-4,DEX=0.05D0
+      REAL(8)              :: R1=1.056D-4
+      REAL(8)              :: DEX=0.05D0
       REAL(8)              :: RARR(NR)
-      REAL(8)              :: F(NR),DFDR(NR),INTF(NR)
+      REAL(8)              :: F(NR)
+      REAL(8)              :: DFDR(NR)
+      REAL(8)              :: INTF(NR)
+      REAL(8)              :: XVAL=1.D0
+      REAL(8)              :: FVAL
+      REAL(8)              :: INTFVAL
+      REAL(8)              :: DERFVAL
       REAL(8)              :: NUMINTF(NR),NUMDFDR(NR)
-      REAL(8)              :: X,VAL,VAL1,DER,INT
+      REAL(8)              :: VAL
       INTEGER(4)           :: IR
-      INTEGER(4)           :: IGRID
+      INTEGER(4)           :: IGRID,IFUNC
       CHARACTER(10)        :: STRING
-!     ****************************************************************
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == DEFINE TWO GRIDS                                                     ==
+!     ==========================================================================
       CALL RADIAL$NEW('LOG',GID1)
       CALL RADIAL$SETI4(GID1,'NR',NR)
       CALL RADIAL$SETR8(GID1,'DEX',DEX)
@@ -29,112 +48,89 @@
       CALL RADIAL$SETI4(GID2,'NR',NR)
       CALL RADIAL$SETR8(GID2,'DEX',DEX)
       CALL RADIAL$SETR8(GID2,'R1',R1)
-      DO IGRID=1,3
-        WRITE(*,FMT='("==============================================")')
-        WRITE(*,FMT='("==============================================")')
+      DO IGRID=1,2
         IF(IGRID.EQ.1) THEN
           GID=GID2
           STRING='SHLOG'
-          WRITE(*,FMT='("SHIFTED LOGARITHMIC GRID ",I5)')GID
+          WRITE(*,FMT='(80("=")/80("="),T20,"  shifted log. grid  "/80("="))')
         ELSE IF(IGRID.EQ.2) THEN
           GID=GID1
           STRING='LOG'
-          WRITE(*,FMT='("LOGARITHMIC GRID ",I5)')GID
-        ELSE IF(IGRID.EQ.3) THEN
-          GID=0
-          STRING='OLD'
-          WRITE(*,FMT='("OLD RADIAL OBJECT ",I5)')GID
+          WRITE(*,FMT='(80("=")/80("="),T20,"  log. grid  "/80("="))')
         END IF
-        WRITE(*,FMT='("==============================================")')
-        WRITE(*,FMT='("==============================================")')
         CALL RADIAL$R(GID,NR,RARR)
 !
 !       ==================================================================
 !       == TEST INTEGRATE AND DERIVATIVE FOR THE LOGARITHMIC GRID      ===
 !       ==================================================================
-!       == GAUSS FUNCTION
-        WRITE(*,FMT='("==============================================")')
-        WRITE(*,FMT='("TESTS ON GAUSS FUNCTUION ")')
-        WRITE(*,FMT='("==============================================")')
-        DO IR=1,NR
-          CALL F1(RARR(IR),F(IR),DFDR(IR),INTF(IR))
-        ENDDO
-        CALL RADIAL$INTEGRATE(GID,NR,F,NUMINTF)
-        CALL RADIAL$DERIVE(GID,NR,F,NUMDFDR)
-        PRINT*,' MAX DEV. DERIVATIVE ', MAXVAL(ABS(NUMDFDR-DFDR))
-        PRINT*,' MAX DEV. INTEGRATE  ', MAXVAL(ABS(NUMINTF-INTF))
-        OPEN(100,FILE='TEST-GAUSS-'//TRIM(STRING)//'.DAT')
-        DO IR=1,NR
-          WRITE(100,FMT='(6F25.15)')RARR(IR),F(IR),DFDR(IR),NUMDFDR(IR)-DFDR(IR) &
+        DO IFUNC=1,3
+!
+!         ================================================================
+!         ==  SELECT TRIAL FUNCTION                                     ==
+!         ================================================================
+          IF(IFUNC.EQ.1) THEN
+            WRITE(*,FMT='(80("=")/80("="),T20,"  gAUSS FUNCTION  "/80("="))')
+            DO IR=1,NR
+              CALL RADIAL_TESTF1(RARR(IR),F(IR),DFDR(IR),INTF(IR))
+            ENDDO
+            CALL RADIAL_TESTF1(XVAL,FVAL,DERFVAL,INTFVAL)
+          ELSE IF(IFUNC.EQ.2) THEN
+            WRITE(*,FMT='(80("=")/80("="),T20,"  SINUS FUNCTION  "/80("="))')
+            DO IR=1,NR
+              CALL RADIAL_TESTF2(RARR(IR),F(IR),DFDR(IR),INTF(IR))
+            ENDDO
+            CALL RADIAL_TESTF2(XVAL,FVAL,DERFVAL,INTFVAL)
+          ELSE IF(IFUNC.EQ.3) THEN
+            WRITE(*,FMT='(80("=")/80("="),T20,"  COSINUS FUNCTION  "/80("="))')
+            DO IR=1,NR
+              CALL RADIAL_TESTF3(RARR(IR),F(IR),DFDR(IR),INTF(IR))
+            ENDDO
+            CALL RADIAL_TESTF3(XVAL,FVAL,DERFVAL,INTFVAL)
+          END IF
+!
+!         ================================================================
+!         ==  TEST RADIAL$INTEGRATE                                     ==
+!         ================================================================
+          CALL RADIAL$INTEGRATE(GID,NR,F,NUMINTF)
+          PRINT*,'RADIAL$INTEGRATE: MAX. DEV.=', MAXVAL(ABS(NUMINTF-INTF))
+!
+!         ================================================================
+!         ==  TEST RADIAL$DERIVE                                        ==
+!         ================================================================
+          CALL RADIAL$DERIVE(GID,NR,F,NUMDFDR)
+          PRINT*,'RADIAL$DERIVE: MAX. DEV.=', MAXVAL(ABS(NUMDFDR-DFDR))
+!
+          OPEN(100,FILE='TEST-GAUSS-'//TRIM(STRING)//'.DAT')
+          DO IR=1,NR
+            WRITE(100,FMT='(6F25.15)')RARR(IR),F(IR),DFDR(IR),NUMDFDR(IR)-DFDR(IR) &
        &                            ,INTF(IR),NUMINTF(IR)-INTF(IR)
+          ENDDO
+          CLOSE(100)
+!
+!         ================================================================
+!         ==  TEST RADIAL$INTEGRAL                                      ==
+!         ================================================================
+          CALL RADIAL$INTEGRAL(GID,NR,F,VAL)
+          PRINT*,'RADIAL$INTEGRAL: dEV.=',VAL,VAL-INTF(NR)
+!
+!         ================================================================
+!         ==  TEST RADIAL$VALUE                                         ==
+!         ================================================================
+          CALL RADIAL$VALUE(GID,NR,F,XVAL,VAL)
+          PRINT*,'RADIAL$VALUE: VALUE,DEV ',VAL,val-fval
+!
+!         ================================================================
+!         ==  TEST RADIAL$DERIVATIVE                                    ==
+!         ================================================================
+          CALL RADIAL$DERIVATIVE(GID,NR,F,XVAL,VAL)
+          PRINT*,'RADIAL$DERIVATIVE: VALUE,DEV ',VAL,VAL-DERfval
         ENDDO
-        CLOSE(100)
-        CALL RADIAL$INTEGRAL(GID,NR,F,VAL)
-        PRINT*,'TEST INTEGRAL        ',VAL,VAL-INTF(NR)
-        X=1.D0
-        CALL F1(X,VAL,DER,INT)
-        CALL RADIAL$VALUE(GID,NR,F,1.D0,VAL1)
-        PRINT*,'TEST VALUE           ',VAL1,VAL1-VAL
-        CALL RADIAL$DERIVATIVE(GID,NR,F,1.D0,VAL1)
-        PRINT*,'TEST DERIVATIVE      ',VAL1,VAL1-DER
-!   
-!       ================================================================
-!       == SINUS FUNCTION
-!       ================================================================
-        WRITE(*,FMT='("==============================================")')
-        WRITE(*,FMT='("TESTS ON SINUS FUNCTUION ")')
-        WRITE(*,FMT='("==============================================")')
-        DO IR=1,NR
-          CALL F2(RARR(IR),F(IR),DFDR(IR),INTF(IR))
-        ENDDO
-        CALL RADIAL$INTEGRATE(GID,NR,F,NUMINTF)
-        CALL RADIAL$DERIVE(GID,NR,F,NUMDFDR)
-        PRINT*,' MAX DEV. DERIVE     ', MAXVAL(ABS(NUMDFDR-DFDR))
-        PRINT*,' MAX DEV. INTEGRATE  ', MAXVAL(ABS(NUMINTF-INTF))
-        OPEN(100,FILE='TEST-SIN-'//TRIM(STRING)//'.DAT')
-        DO IR=1,NR
-          WRITE(100,*)RARR(IR),F(IR),DFDR(IR),NUMDFDR(IR)-DFDR(IR) &
-       &                             ,INTF(IR),NUMINTF(IR)-INTF(IR)
-        ENDDO
-        CLOSE(100)
-        X=1.D0
-        CALL F2(X,VAL,DER,INT)
-        CALL RADIAL$VALUE(GID,NR,F,1.D0,VAL1)
-        PRINT*,'TEST VALUE           ',VAL1,VAL1-VAL
-        CALL RADIAL$DERIVATIVE(GID,NR,F,1.D0,VAL1)
-        PRINT*,'TEST DERIVATIVE      ',VAL1,VAL1-DER
-!   
-!       ================================================================
-!       == COSINUS FUNCTION
-!       ================================================================
-        WRITE(*,FMT='("==============================================")')
-        WRITE(*,FMT='("TESTS ON COSINUS FUNCTUION ")')
-        WRITE(*,FMT='("==============================================")')
-        DO IR=1,NR
-          CALL F3(RARR(IR),F(IR),DFDR(IR),INTF(IR))
-        ENDDO
-        CALL RADIAL$INTEGRATE(GID,NR,F,NUMINTF)
-        CALL RADIAL$DERIVE(GID,NR,F,NUMDFDR)
-        PRINT*,' MAX DEV. DERIVATIVE ', MAXVAL(ABS(NUMDFDR-DFDR))
-        PRINT*,' MAX DEV. INTEGRATE  ', MAXVAL(ABS(NUMINTF-INTF))
-        OPEN(100,FILE='TEST-COS-'//TRIM(STRING)//'.DAT')
-        DO IR=1,NR
-          WRITE(100,*)RARR(IR),F(IR),DFDR(IR),NUMDFDR(IR)-DFDR(IR) &
-       &                             ,INTF(IR),NUMINTF(IR)-INTF(IR)
-        ENDDO
-        CLOSE(100)
-        X=1.D0
-        CALL F3(X,VAL,DER,INT)
-        CALL RADIAL$VALUE(GID,NR,F,1.D0,VAL1)
-        PRINT*,'TEST VALUE          ',VAL1,VAL,VAL1-VAL
-        CALL RADIAL$DERIVATIVE(GID,NR,F,1.D0,VAL1)
-        PRINT*,'TEST DERIVATIVE     ',VAL1,DER,VAL1-DER
       ENDDO
       RETURN
       CONTAINS
 !  
 !       ................................................................
-        SUBROUTINE F1(R,F,DFDR,INTF)
+        SUBROUTINE RADIAL_TESTF1(R,F,DFDR,INTF)
         REAL(8),INTENT(IN)  :: R
         REAL(8),INTENT(OUT) :: F
         REAL(8),INTENT(OUT) :: DFDR
@@ -147,10 +143,10 @@
         CALL SPECIALFUNCTION$ERF(R,SVAR)
         INTF=0.5D0*SQRT(PI)*SVAR
         RETURN
-      END SUBROUTINE F1
+        END SUBROUTINE RADIAL_TESTF1
 !
 !       ................................................................
-        SUBROUTINE F2(R,F,DFDR,INTF)
+        SUBROUTINE RADIAL_TESTF2(R,F,DFDR,INTF)
         REAL(8),INTENT(IN)  :: R
         REAL(8),INTENT(OUT) :: F
         REAL(8),INTENT(OUT) :: DFDR
@@ -160,10 +156,10 @@
         DFDR=2.D0*COS(2.D0*R)
         INTF=-0.5D0*(COS(2.D0*R)-1.D0)
         RETURN
-      END SUBROUTINE F2
+        END SUBROUTINE RADIAL_TESTF2
 !
 !       ................................................................
-        SUBROUTINE F3(R,F,DFDR,INTF)
+        SUBROUTINE RADIAL_TESTF3(R,F,DFDR,INTF)
         REAL(8),INTENT(IN)  :: R
         REAL(8),INTENT(OUT) :: F
         REAL(8),INTENT(OUT) :: DFDR
@@ -173,7 +169,7 @@
         DFDR=-2.D0*SIN(2.D0*R)
         INTF=0.5D0*SIN(2.D0*R)
         RETURN
-      END SUBROUTINE F3
+        END SUBROUTINE RADIAL_TESTF3
       END
 
 !***********************************************************************
