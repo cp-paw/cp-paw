@@ -178,7 +178,7 @@ parallel_new:
 # THE PAW TOOLS
 #
 newatom:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
+	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR} \
            ${BINDIR}/${ARCH}/paw_newatom.x 
 #
 atom:

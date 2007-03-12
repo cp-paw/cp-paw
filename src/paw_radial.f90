@@ -52,11 +52,11 @@
         IF(IGRID.EQ.1) THEN
           GID=GID2
           STRING='SHLOG'
-          WRITE(*,FMT='(80("=")/80("="),T20,"  shifted log. grid  "/80("="))')
+          WRITE(*,FMT='(80("=")/80("="),T20,"  SHIFTED LOG. GRID  "/80("="))')
         ELSE IF(IGRID.EQ.2) THEN
           GID=GID1
           STRING='LOG'
-          WRITE(*,FMT='(80("=")/80("="),T20,"  log. grid  "/80("="))')
+          WRITE(*,FMT='(80("=")/80("="),T20,"  LOG. GRID  "/80("="))')
         END IF
         CALL RADIAL$R(GID,NR,RARR)
 !
@@ -69,7 +69,7 @@
 !         ==  SELECT TRIAL FUNCTION                                     ==
 !         ================================================================
           IF(IFUNC.EQ.1) THEN
-            WRITE(*,FMT='(80("=")/80("="),T20,"  gAUSS FUNCTION  "/80("="))')
+            WRITE(*,FMT='(80("=")/80("="),T20,"  GAUSS FUNCTION  "/80("="))')
             DO IR=1,NR
               CALL RADIAL_TESTF1(RARR(IR),F(IR),DFDR(IR),INTF(IR))
             ENDDO
@@ -111,19 +111,19 @@
 !         ==  TEST RADIAL$INTEGRAL                                      ==
 !         ================================================================
           CALL RADIAL$INTEGRAL(GID,NR,F,VAL)
-          PRINT*,'RADIAL$INTEGRAL: dEV.=',VAL,VAL-INTF(NR)
+          PRINT*,'RADIAL$INTEGRAL: DEV.=',VAL,VAL-INTF(NR)
 !
 !         ================================================================
 !         ==  TEST RADIAL$VALUE                                         ==
 !         ================================================================
           CALL RADIAL$VALUE(GID,NR,F,XVAL,VAL)
-          PRINT*,'RADIAL$VALUE: VALUE,DEV ',VAL,val-fval
+          PRINT*,'RADIAL$VALUE: VALUE,DEV ',VAL,VAL-FVAL
 !
 !         ================================================================
 !         ==  TEST RADIAL$DERIVATIVE                                    ==
 !         ================================================================
           CALL RADIAL$DERIVATIVE(GID,NR,F,XVAL,VAL)
-          PRINT*,'RADIAL$DERIVATIVE: VALUE,DEV ',VAL,VAL-DERfval
+          PRINT*,'RADIAL$DERIVATIVE: VALUE,DEV ',VAL,VAL-DERFVAL
         ENDDO
       ENDDO
       RETURN
@@ -521,7 +521,7 @@
       END
 !
 !     .......................................................SPHLSD.....
-      SUBROUTINE RADIAL_DGLEQUISPACEDGEN(NX,NF,I1,i2,A,B,C,D,F)
+      SUBROUTINE RADIAL_DGLEQUISPACEDGEN(NX,NF,I1,I2,A,B,C,D,F)
 !     **                                                              **
 !     **  SOLVES THE DGL SECOND ORDER ON AN EQUISPACED GRID           **
 !     **                                                              **
@@ -538,8 +538,8 @@
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN) :: NX
       INTEGER(4) ,INTENT(IN) :: NF
-      INTEGER(4) ,INTENT(IN) :: i1
-      INTEGER(4) ,INTENT(IN) :: i2
+      INTEGER(4) ,INTENT(IN) :: I1
+      INTEGER(4) ,INTENT(IN) :: I2
       REAL(8)    ,INTENT(IN) :: A(NX)
       REAL(8)    ,INTENT(IN) :: B(NX)
       REAL(8)    ,INTENT(IN) :: C(NX,NF,NF)
@@ -547,7 +547,7 @@
       REAL(8)    ,INTENT(INOUT):: F(NX,NF)
       REAL(8)                :: AP(NX),A0(NX),AM(NX)
       INTEGER(4)             :: I
-      INTEGER(4)             :: Idir
+      INTEGER(4)             :: IDIR
 !     ******************************************************************
       IF(MIN(I1,I2).LT.1.OR.MAX(I1,I2).GT.NX) THEN
         CALL ERROR$MSG('INTEGRATION BOUNDS OUT OF RANGE')
@@ -564,19 +564,19 @@
       A0(:)=-2.D0*A(:)
       AM(:)=A(:)-0.5D0*B(:)
       IF(IDIR.GE.0) THEN
-        DO I=i1+1,i2-1
+        DO I=I1+1,I2-1
           F(I+1,:)=( -(A0(I)+AM(I))*F(I,:) +AM(I)*(F(I,:)-F(I-1,:)) &
      &               -MATMUL(C(I,:,:),F(I,:)) +D(I,:) )/AP(I)
         ENDDO
-        f(:i1-1,:)=0.d0
-        f(i2+1:,:)=0.d0
+        F(:I1-1,:)=0.D0
+        F(I2+1:,:)=0.D0
       ELSE IF(IDIR.LT.0) THEN
-        DO I=i1-1,i2+1,-1
+        DO I=I1-1,I2+1,-1
           F(I-1,:)=( -(A0(I)+AP(I))*F(I,:) +AP(I)*(F(I,:)-F(I+1,:)) &
      &               -MATMUL(C(I,:,:),F(I,:)) +D(I,:) )/AM(I)
         ENDDO
-        f(:i2-1,:)=0.d0
-        f(i1+1:,:)=0.d0
+        F(:I2-1,:)=0.D0
+        F(I1+1:,:)=0.D0
       ELSE
          CALL ERROR$MSG('INVALID VALUE OF IDIR')
          CALL ERROR$STOP('RADIAL_DGLEQUISPACED')
@@ -659,8 +659,8 @@
         CALL ERROR$MSG('INVALID VALUE OF IDIR')
         CALL ERROR$STOP('RADIAL_DGLEQUISPACEDGENC')
       END IF
-      f(:imin-1,:)=(0.d0,0.d0)
-      f(imax+1:,:)=(0.d0,0.d0)
+      F(:IMIN-1,:)=(0.D0,0.D0)
+      F(IMAX+1:,:)=(0.D0,0.D0)
       RETURN
       END
 !
@@ -996,6 +996,32 @@ PRINT*,'GIDS ',GIDS
       RETURN
       END      
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL$XOFR(GID,R0,X0)
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2007 ************
+      USE RADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      REAL(8)   ,INTENT(IN) :: R0
+      REAL(8)   ,INTENT(OUT):: X0
+      INTEGER(4)            :: GIDS
+      INTEGER(4)            :: TYPE
+!     ******************************************************************
+      CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
+      IF(TYPE.EQ.1) THEN
+        CALL LOGRADIAL$XOFR(GIDS,R0,X0)
+      ELSE IF(TYPE.EQ.2) THEN
+        CALL SHLOGRADIAL$XOFR(GIDS,R0,X0) 
+      ELSE
+        CALL ERROR$MSG('GRID TYPE NOT RECOGNIZED')
+        CALL ERROR$I4VAL('GID',GID)
+        CALL ERROR$I4VAL('TYPE',TYPE)
+        CALL ERROR$STOP('RADIAL$XOFR')
+      END IF  
+      RETURN
+      END      
+!
 !     ...................................................................
       SUBROUTINE RADIAL$INTEGRATE(GID,NR,F,G)
 !     **                                                                  **
@@ -1114,15 +1140,15 @@ PRINT*,'GIDS ',GIDS
       END      
 !
 !     ...................................................................
-      SUBROUTINE RADIAL$DGLGEN(GID,NR,NF,I1,i2,A,B,C,D,F)
+      SUBROUTINE RADIAL$DGLGEN(GID,NR,NF,I1,I2,A,B,C,D,F)
 !     **                                                                  **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: NF
-      INTEGER(4),INTENT(IN) :: i1
-      INTEGER(4),INTENT(IN) :: i2
+      INTEGER(4),INTENT(IN) :: I1
+      INTEGER(4),INTENT(IN) :: I2
       REAL(8)   ,INTENT(IN) :: A(NR)
       REAL(8)   ,INTENT(IN) :: B(NR)
       REAL(8)   ,INTENT(IN) :: C(NR,NF,NF)
@@ -1133,9 +1159,9 @@ PRINT*,'GIDS ',GIDS
 !     ******************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
       IF(TYPE.EQ.1) THEN
-        CALL LOGRADIAL$DGLGEN(GIDS,NR,NF,I1,i2,A,B,C,D,F)
+        CALL LOGRADIAL$DGLGEN(GIDS,NR,NF,I1,I2,A,B,C,D,F)
       ELSE IF(TYPE.EQ.2) THEN
-        CALL SHLOGRADIAL$DGLGEN(GIDS,NR,NF,I1,i2,A,B,C,D,F)
+        CALL SHLOGRADIAL$DGLGEN(GIDS,NR,NF,I1,I2,A,B,C,D,F)
       ELSE
         CALL ERROR$MSG('GRID TYPE NOT RECOGNIZED')
         CALL ERROR$STOP('RADIAL$DGLGEN')
@@ -1264,6 +1290,44 @@ PRINT*,'GIDS ',GIDS
       END IF
       CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
       V(:)=V(:)+FAC*R(:)**L*(AUX2(NR)-AUX2(:))
+      RETURN
+      END
+!
+!     ......................................................................
+      SUBROUTINE radial$NUCPOT(GID,NR,Z,POT)
+!     **                                                                  **
+!     **  ELECTROSTATIC POTENTIAL OF A NUCLEUS WITH FINITE RADIUS         **
+!     **  THE NUCLEUS IS CONSIDERED AS A HOMOGENEOUSLY CHARGED SPHERE.    **
+!     **  THE RADIUS IS RELATED  TO THE TOTAL MASS (NUMBER OF NUCLEONS),  **
+!     **  WHICH CAN BE LOOKED UP KNOWING THE ATOMIC NUMBER Z.             **
+!     **                                                                  **
+!     **  the potential is the radial part only and needs to be           **
+!     **  with the spherical harmonic Y0                                  **
+!     **                                                                  **
+!     **                                                                  **
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID      ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR       ! #(RADIAL GRID POINTS)
+      REAL(8)   ,INTENT(IN) :: Z        ! ATOMIC NUMBER
+      REAL(8)   ,INTENT(OUT):: POT(NR)  ! POTENTIAL
+      REAL(8)               :: RNUC     ! NUCLEAR RADIUS
+      REAL(8)               :: R(NR)    ! RADIAL GRID
+      REAL(8)               :: PI,Y0
+      INTEGER(4)            :: IR
+!     ***********************************************************************
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL PERIODICTABLE$GET(z,'RNUC',RNUC)
+      CALL RADIAL$R(GID,NR,R)
+      DO IR=1,NR
+        IF(R(IR).GT.RNUC) THEN
+           POT(IR)=-Z/R(IR)
+        ELSE
+          POT(IR)=-Z/RNUC*(1.5D0-0.5D0*(R(IR)/RNUC)**2)
+        END IF
+      ENDDO
+      POT(:)=POT(:)/Y0
       RETURN
       END
 !
@@ -1525,6 +1589,19 @@ END MODULE SHLOGRADIAL_MODULE
       END      
 !
 !     ...................................................................
+      SUBROUTINE SHLOGRADIAL$XOFR(GID,R0,X0)
+      USE SHLOGRADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      REAL(8)   ,INTENT(IN) :: R0
+      REAL(8)   ,INTENT(OUT):: X0
+!     ******************************************************************
+      CALL SHLOGRADIAL_RESOLVE(GID)
+      X0=1.D0+LOG(R0/R1+1.D0)/DEX
+      RETURN
+      END      
+!
+!     ...................................................................
       SUBROUTINE SHLOGRADIAL$VALUE(GID,NR_,F,R0,F0)
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
@@ -1686,7 +1763,7 @@ END MODULE SHLOGRADIAL_MODULE
       END      
 !
 !     ...................................................................
-      SUBROUTINE SHLOGRADIAL$DGLGEN(GID,NR_,NF,i1,i2,A,B,C,D,F)
+      SUBROUTINE SHLOGRADIAL$DGLGEN(GID,NR_,NF,I1,I2,A,B,C,D,F)
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -1705,7 +1782,7 @@ END MODULE SHLOGRADIAL_MODULE
       REAL(8)               :: C1(NR_,NF,NF)
       REAL(8)               :: D1(NR_,NF)
       INTEGER(4)            :: I,J
-      INTEGER(4)            :: Imin,imax
+      INTEGER(4)            :: IMIN,IMAX
 !     ******************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
@@ -1727,7 +1804,7 @@ END MODULE SHLOGRADIAL_MODULE
           C1(IMIN:IMAX,I,J)=C(IMIN:IMAX,I,J)*DRDX(IMIN:IMAX)
         ENDDO
       ENDDO
-      CALL RADIAL_DGLEQUISPACEDGEN(NR,NF,i1,i2,A,B1,C1,D1,F)
+      CALL RADIAL_DGLEQUISPACEDGEN(NR,NF,I1,I2,A,B1,C1,D1,F)
       RETURN
       END      
 !
@@ -1769,7 +1846,7 @@ END MODULE SHLOGRADIAL_MODULE
          CALL ERROR$I4VAL('GID',GID)
          CALL ERROR$I4VAL('NR',NR)
          CALL ERROR$I4VAL('NR_',NR_)
-         CALL ERROR$STOP('SHLOGRADIAL$DGLgenc')
+         CALL ERROR$STOP('SHLOGRADIAL$DGLGENC')
       END IF
       CALL SHLOGRADIAL$R(GID,NR,R)
       IMIN=MIN(I1,I2)
@@ -2048,6 +2125,19 @@ END MODULE LOGRADIAL_MODULE
       END      
 !
 !     ...................................................................
+      SUBROUTINE LOGRADIAL$XOFR(GID,R0,X0)
+      USE LOGRADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      REAL(8)   ,INTENT(IN) :: R0
+      REAL(8)   ,INTENT(OUT):: X0
+!     ******************************************************************
+      CALL LOGRADIAL_RESOLVE(GID)
+      X0=1.D0+LOG(R0/R1)/DEX
+      RETURN
+      END      
+!
+!     ...................................................................
       SUBROUTINE LOGRADIAL$VALUE(GID,NR_,F,R0,F0)
       USE LOGRADIAL_MODULE
       IMPLICIT NONE
@@ -2226,7 +2316,7 @@ END MODULE LOGRADIAL_MODULE
       END      
 !
 !     ...................................................................
-      SUBROUTINE LOGRADIAL$DGLGEN(GID,NR_,NF,i1,i2,A,B,C,D,F)
+      SUBROUTINE LOGRADIAL$DGLGEN(GID,NR_,NF,I1,I2,A,B,C,D,F)
       USE LOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -2245,7 +2335,7 @@ END MODULE LOGRADIAL_MODULE
       REAL(8)               :: C1(NR_,NF,NF)
       REAL(8)               :: D1(NR_,NF)
       INTEGER(4)            :: I,J
-      INTEGER(4)            :: Imin,imax
+      INTEGER(4)            :: IMIN,IMAX
 !     ******************************************************************
       CALL LOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
@@ -2267,7 +2357,7 @@ END MODULE LOGRADIAL_MODULE
           C1(IMIN:IMAX,I,J)=C(IMIN:IMAX,I,J)*DRDX(IMIN:IMAX)
         ENDDO
       ENDDO
-      CALL RADIAL_DGLEQUISPACEDGEN(NR,NF,I1,i2,A,B1,C1,D1,F)
+      CALL RADIAL_DGLEQUISPACEDGEN(NR,NF,I1,I2,A,B1,C1,D1,F)
       RETURN
       END      
 !
@@ -2472,7 +2562,7 @@ CONTAINS
       AA=CM*G1**(L-1.5)
       BB=EXP((L-1.5)*DEX) 
       DO I=1,NP 
-        G(I)=real(AA*XA(I) )
+        G(I)=REAL(AA*XA(I) )
         AA=AA*BB 
       ENDDO
       RETURN

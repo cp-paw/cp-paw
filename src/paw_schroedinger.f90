@@ -260,6 +260,7 @@
       REAL(8)                    :: SOFACTOR
       REAL(8)                    :: RDPRIME(NR)
       LOGICAL(4)                 :: THOM
+integer(4) :: ir
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -312,6 +313,16 @@
 !     == solve differential equation                                          ==
 !     ==========================================================================
       CALL RADIAL$DGL(GID,IDIR,NR,A,B,C,D,PHI)
+do ir=1,nr
+  if(.not.(phi(ir).gt.0.d0.or.phi(ir).le.0.d0)) then
+    print*,'a ',a
+    print*,'b ',b
+    print*,'c ',c
+    print*,'d ',d
+    print*,'drel ',drel
+    stop 'error stop in shroedinger$spherical'
+ end if
+enddo
       RETURN
       END SUBROUTINE schroedinger$spherical
 !
@@ -2463,6 +2474,75 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
         close(100)
       enddo
       return 
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SCHROEDINGER$DREL(GID,NR,POT,E,DREL)
+!     **                                                                      **
+!     **  DREL IS A MEASURE OF THE RELATIVISTIC CORRECTIONS                   **
+!     **     D:=1/MREL-1/M0                                                   **
+!     **  WHERE MREL IS THE RELATIVISTIC MASS  MREL=M0+(E-POT)/(2C**2)        **
+!     **  AND  M0 IS THE REST MASS                                            **
+!     **                                                                      **
+!     **  REMARKS:                                                            **
+!     **  -  RELATIVISTIC CORRECTIONS FOR EKIN<0 ARE SWITCHED OFF!            **
+!     **                                                                      **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID         ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR          ! #(RADIAL GRID POINTS
+      REAL(8)   ,INTENT(IN) :: POT(NR)     ! POTENTIAL (MULTIPLY WITH Y0!)
+      REAL(8)   ,INTENT(IN) :: E           ! ONE-PARTICLE ENERGY
+      REAL(8)   ,INTENT(OUT):: DREL(NR)    ! RELATIVISTIC CORRECTION 
+      INTEGER(4)            :: IR
+      REAL(8)               :: C           ! SPEED OF LIGHT
+      REAL(8)               :: PI,Y0      
+      REAL(8)               :: DRELDOT(NR)
+!     ***************************************************************************
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL CONSTANTS$GET('C',C)
+      DREL(:)=-1.D0/(1.D0+2.D0*C**2/MAX(E-POT(:)*Y0,0.D0))
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RC,PHASE)
+!     **************************************************************************
+!     **  CALCULATES THE PHASE SHIFT FOR A RADIAL FUNCTION AT RADIUS RC       **
+!     **                                                                      **
+!     **  THE PHASE SHIFT IS DEFINED AS                                       **
+!     **     0.5-1/PI * ATAN (DPHIDR/PHI)+NN                                  **
+!     **  WHERE PHI AND DPHIDR ARE VALUE AND DERIVATIVE OF PHI AT RADIUS RC   **
+!     **  AND NN IS THE NUMBER OF NODES INSIDE RC.                            **
+!     **                                                                      **
+!     **  THIS DEFINITION OF THE PHASE SHIFT DIFFERS FROM THE TERM USED       **
+!     **  IN SCATTERING THEORY                                                **
+!     **                                                                      **
+!     **************************************************************************
+      implicit none
+      integer(4),intent(in) :: gid
+      integer(4),intent(in) :: nr
+      real(8)   ,intent(in) :: phi(nr)
+      real(8)   ,intent(in) :: rc
+      real(8)   ,intent(out):: phase
+      REAL(8)               :: PI
+      REAL(8)               :: R(NR)
+      REAL(8)               :: VAL,DER
+      INTEGER(4)            :: IR
+!     **************************************************************************
+      PI=4.D0*DATAN(1.D0)
+      CALL RADIAL$R(GID,NR,R)
+      CALL RADIAL$VALUE(GID,NR,PHI,RC,VAL)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHI,RC,DER)
+      PHASE=0.5D0-ATAN(DER/VAL)/PI
+      DO IR=3,NR  ! LEAVE OUT FIRST POINT WHICH IS OFTEN ZERO
+        IF(R(IR).GT.RC) THEN
+          IF(PHI(IR-1)*VAL.LT.0.D0)PHASE=PHASE+1.D0
+          EXIT
+        END IF
+        IF(PHI(IR)*PHI(IR-1).LT.0.D0)PHASE=PHASE+1.D0
+      ENDDO
+      return
       end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8

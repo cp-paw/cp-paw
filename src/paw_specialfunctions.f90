@@ -167,18 +167,19 @@
       REAL(8)               :: FAC
       INTEGER(4)            :: I,K,IL,II,ISVAR
 !     ******************************************************************
-      IF(X.GT.DBLE(L)) THEN
-        PI=4.D0*DATAN(1.D0)
-        ARG=X-0.5D0*DBLE(L)*PI
-        TRIG(1)=DSIN(ARG)/X
-        TRIG(2)=DCOS(ARG)/X
+      IF(X.GT.real(L,kind=8)) THEN
+        PI=4.D0*ATAN(1.D0)
+        ARG=X-0.5D0*real(L,kind=8)*PI
+        TRIG(1)=SIN(ARG)/X
+        TRIG(2)=COS(ARG)/X
         TRIG(3)=-TRIG(1)
         TRIG(4)=-TRIG(2)
         Y=TRIG(1)
         IF(L.EQ.0) RETURN
+!       ==  double faculty facul(l)=(2*l)!!
         FACUL(0)=1.D0
         DO I=1,2*L
-          FACUL(I)=FACUL(I-1)*DBLE(I)
+          FACUL(I)=FACUL(I-1)*real(I,kind=8)
         ENDDO
         XSQ=0.5D0/X
         FAC=1.D0
