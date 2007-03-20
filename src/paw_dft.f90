@@ -303,6 +303,17 @@ MODULE DFT_MODULE
      &                          //'(PHYS.REV.B33,P8822(1986))'
 !
 !     ==================================================================
+!     == TYPE 10004:  PBE exchange only                               ==
+!     ==================================================================
+      ELSE IF (IT.EQ.10004) THEN
+        TX=.TRUE.
+        CALL EXCHANGE$SETI4('TYPE',3)
+        TPBE96=.FALSE.
+        TGRATARGET=.TRUE.
+        DESCRIPTION(1)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE ONLY ' &
+     &                          //'(PHYS.REV.LETT 77, 3865 (1996))'
+!
+!     ==================================================================
 !     == ILLEGAL SELECTION                                            ==
 !     ==================================================================
       ELSE
@@ -387,6 +398,7 @@ MODULE DFT_MODULE
         IF(IT.EQ.10001) THEN ;TCHK=.TRUE. ;TGRA=.FALSE. ;END IF
         IF(IT.EQ.10002) THEN ;TCHK=.TRUE. ;TGRA=.FALSE. ;END IF
         IF(IT.EQ.10003) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
+        IF(IT.EQ.10004) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('DFT FUNCTIONAL SELECTION INVALID')
           CALL ERROR$I4VAL('ID',VALUE)
@@ -397,6 +409,25 @@ MODULE DFT_MODULE
         CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('DFT$SETI4')
+      END IF
+      RETURN
+      END
+!
+!     .....................................................DFT..........
+      SUBROUTINE DFT$GETI4(ID,VALUE)
+!     ******************************************************************
+!     ******************************************************************
+      USE DFT_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(OUT):: VALUE
+!     ******************************************************************
+      IF(ID.EQ.'TYPE') THEN
+        VALUE=IT
+      ELSE
+        CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('DFT$GETI4')
       END IF
       RETURN
       END

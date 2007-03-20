@@ -1927,6 +1927,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
         REAL(8)               :: SVAR
 !       ****************************************************************************
                               CALL TRACE$PUSH('LDAPLUSU_UTENSOR')
+        U(:,:,:,:)=0.d0
         IORB1=0
         DO LN1=1,LNX
           L1=LOX(LN1)
@@ -1961,6 +1962,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
                         LM4=LM4+1
                         IF(LM4.LT.LM2) CYCLE
 !           
+                        if(maxval(abs(ulittle(:,ln2,ln4,ln3,ln1))).eq.0.d0) cycle
                         LX=MIN(LRX,L2+L4,L1+L3)
                         SVAR=0.D0
                         LM=0
