@@ -1786,24 +1786,24 @@ END MODULE RANDOM_MODULE
       COMPLEX(8),INTENT(IN) :: A(N,M)
       COMPLEX(8),INTENT(OUT):: X(M,NEQ)
       COMPLEX(8),INTENT(IN) :: B(N,NEQ)
-      COMPLEX(8)            :: A1(N,M)
-      COMPLEX(8)            :: B1(N,NEQ)
-      INTEGER               :: INFO
-      REAL(8)               :: RCOND=-1.D0
-      INTEGER               :: LDWORK
-      INTEGER               :: IRANK
-      INTEGER               :: IPIVOT(N)
-      REAL(8)               :: SING(N)
-      REAL(8)   ,ALLOCATABLE:: WORK(:)
-      INTEGER               :: N1,M1,NEQ1
 !     ******************************************************************
       IF(N.EQ.1.AND.M.EQ.1) THEN
         X(1,:)=B(1,:)/A(1,1)
         RETURN
       END IF
 #IF DEFINED(CPPVAR_BLAS_ESSL)
-      CALL ERROR$MSG('NOT IMPLEMENTED FOR ESSL')
-      CALL ERROR$STOP('LIB$MATRIXSOLVEC8')
+!
+!     ==================================================================
+!     == CALL ESSL DRIVER ROUTINES                                    ==
+!     ==================================================================
+      IF(N.EQ.M) THEN
+        CALL LIB_ESSL_ZGES(N,M,NEQ,A,X,B)
+      ELSE IF(N.LT.M) THEN
+        CALL LIB_ESSL_ZGESVS(N,M,NEQ,A,X,B) 
+      ELSE
+        CALL ERROR$MSG('SYSTEM OF EQUATIONS IS OVER DETERMINED')
+        CALL ERROR$STOP(' LIB$MATRIXSOLVEc8')
+      END IF
 #ELSE 
       IF(N.EQ.M) THEN
         CALL LIB_LAPACK_ZGESV(N,M,NEQ,A,X,B)
@@ -1815,7 +1815,7 @@ END MODULE RANDOM_MODULE
       END IF
 #ENDIF
       RETURN
-      END
+      END SUBROUTINE LIB$MATRIXSOLVEC8
 !
 !ISORT  SORTS ELEMENTS IN A SEQUENCE P904
 !     .................................................................
@@ -2058,6 +2058,55 @@ END MODULE RANDOM_MODULE
       END SUBROUTINE LIB_ESSL_DGESVS
 !
 !     ..................................................................
+      SUBROUTINE LIB_ESSL_ZGESVS(N,M,NEQ,A,X,B)
+!     ******************************************************************
+!     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
+!     **  WHERE A IS A(N,M)                                           **
+!     **  IF A IS NOT SQUARE, THE EQUATION IS SOLVED IN A LEAST       **
+!     **  SQUARE SENSE                                                **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      INTEGER(4),INTENT(IN) :: M
+      INTEGER(4),INTENT(IN) :: NEQ
+      complex(8),INTENT(IN) :: A(N,M)
+      complex(8),INTENT(OUT):: X(M,NEQ)
+      complex(8),INTENT(IN) :: B(N,NEQ)
+      LOGICAL   ,PARAMETER  :: TTEST=.false.
+      COMPLEX(8)            :: APLUSA(M,M)
+      COMPLEX(8)            :: APLUSB(M,NEQ)
+      REAL(8)               :: AMAT(2*M,2*M)
+      REAL(8)               :: BMAT(2*M,NEQ)
+      REAL(8)               :: XMAT(2*M,NEQ)
+      REAL(8)               :: dev
+      complex(8),parameter  :: ci=(0.d0,1.d0)
+!     ******************************************************************
+      APLUSA(:,:)=MATMUL(TRANSPOSE(A),A)
+      AMAT(1:M,1:M)=REAL(APLUSA)
+      AMAT(1:M,M+1:2*M)=real(ci*APLUSA)
+      AMAT(M+1:2*M,1:M)=real(-ci*APLUSA)
+      AMAT(M+1:2*M,M+1:2*M)=REAL(APLUSA)
+      APLUSB(:,:)=MATMUL(TRANSPOSE(A),B)
+      BMAT(1:M,:)=REAL(APLUSB)
+      BMAT(M+1:2*M,:)=real(-ci*APLUSB)
+      CALL LIB_ESSL_DGES(N,M,NEQ,A,X,B)
+!     CALL LIB_LAPACK_DGESV(2*m,2*M,NEQ,Amat,Xmat,Bmat)
+      X=CMPLX(XMAT(1:M,:),XMAT(M+1:2*M,:))
+!     =================================================================
+!     ==  TEST                                                       ==
+!     =================================================================
+      IF(TTEST) THEN
+        dev=MAXVAL(ABS(MATMUL(Amat,Xmat)-Bmat))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ----',dev
+        dev=MAXVAL(ABS(MATMUL(Aplusa,X)-aplusb))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ---+',dev
+        dev=MAXVAL(ABS(MATMUL(A,X)-b))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE --++',dev
+      END IF
+      RETURN
+      END SUBROUTINE LIB_ESSL_ZGESVS
+!
+!     ..................................................................
       SUBROUTINE LIB_ESSL_DGES(N,M,NEQ,A,X,B)
 !     ******************************************************************
 !     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
@@ -2100,6 +2149,52 @@ END MODULE RANDOM_MODULE
       END IF
       RETURN
       END SUBROUTINE LIB_ESSL_DGES
+!
+!     ..................................................................
+      SUBROUTINE LIB_ESSL_ZGES(N,M,NEQ,A,X,B)
+!     ******************************************************************
+!     **  DRIVER ROUTINE FOR ESSL                                     **
+!     **                                                              **
+!     **  SOLVES THE COMPLEX LINEAR EQUATION SYSTEM AX=B              **
+!     **  WHERE A IS A SQUARE MATRIX                                  **
+!     **                                                              **
+!     **  REMARK: WHILE DGES CAN ALSO HANDLE NON-SQUARE MATRICES      **
+!     **     WE USE IT HERE FOR THIS PURPOSE ONLY.                    **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      INTEGER(4),INTENT(IN) :: M
+      INTEGER(4),INTENT(IN) :: NEQ
+      COMPLEX(8),INTENT(IN) :: A(N,M)
+      COMPLEX(8),INTENT(OUT):: X(M,NEQ)
+      COMPLEX(8),INTENT(IN) :: B(N,NEQ)
+      COMPLEX(8)            :: AFACT(N,N)
+      INTEGER(4)            :: IPVT(N)
+      INTEGER(4)            :: INFO
+      INTEGER(4)            :: I
+      REAL(8)               :: DEV
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+!     ******************************************************************
+      IF(N.NE.M) THEN  !MATRIX FACTORIZATION
+        CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
+        CALL ERROR$STOP('LIB_ESSL_DGES')
+      END IF
+      AFACT=A
+!     == GENERAL MATRIX FACTORIZATION =================================
+      CALL ZGEF(AFACT,N,N,IPVT)
+      X=B
+      DO I=1,NEQ
+        CALL ZGES(AFACT,N,N,IPVT,X(:,I),0)
+      ENDDO
+!     =================================================================
+!     ==  TEST                                                       ==
+!     =================================================================
+      IF(TTEST) THEN
+        DEV=MAXVAL(ABS(MATMUL(A,X)-B))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ',DEV
+      END IF
+      RETURN
+      END SUBROUTINE LIB_ESSL_ZGES
 !
 !     ..................................................................
       SUBROUTINE LIB_ESSL_ZHPEV(N,H,E,U)
@@ -3282,6 +3377,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)           :: I
       REAL(8)              :: DEV
       REAL(8)  ,PARAMETER  :: TOL=1.D-10
+      complex(8),parameter :: ci=(0.d0,1.d0)
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
 !     ****************************************************************
       WRITE(*,FMT='("LIB_TEST_MATRIXSOLVEC8")')
@@ -3339,13 +3435,13 @@ END MODULE RANDOM_MODULE
 !
 !     == MAKE INPUT DATA =============================================
       CALL RANDOM_NUMBER(RA)
-      A=RA
+      A=RA-0.5d0
       CALL RANDOM_NUMBER(RA)
-      A=A+RA*CMPLX(0.D0,1.D0)
+      A=A+(RA-0.5d0)*CMPLX(0.D0,1.D0)
       CALL RANDOM_NUMBER(RB)
-      B=RB
+      B=(RB-0.5d0)
       CALL RANDOM_NUMBER(RB)
-      B=B+RB*CMPLX(0.D0,1.D0)
+      B=B+(RB-0.5d0)*CMPLX(0.D0,1.D0)
 !
 !     == WRITE INPUT DATA ============================================
       IF(TPR) THEN
@@ -3369,11 +3465,12 @@ END MODULE RANDOM_MODULE
 !
 !     == TEST RESULT =================================================
       DEV=MAXVAL(ABS(MATMUL(A,X)-B))
+!      DEV=max(MAXVAL(ABS(real(MATMUL(A,X)-B))),MAXVAL(ABS(real(ci*(MATMUL(A,X)-B)))))
       IF(DEV.LT.TOL) THEN
         WRITE(*,FMT='(T5,"OK: DEV=",E10.5)')DEV
       ELSE
         WRITE(*,FMT='(T5,"FAILED: DEV=",E10.5)')DEV
-      END IF        
+      END IF  
       RETURN
       END
 !
