@@ -1,9 +1,9 @@
 !#IF DEFINED(IBMLICENSE)
 Module version_module
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 531 $'
+character(256):: VERrev='$LastChangedRevision: 587 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-02-05 14:25:48 +0100 (Mo, 05. Feb 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-03-22 16:15:00 +0100 (Do, 22. Mär 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -188,7 +188,6 @@ end Module version_module
       TFIRST=.TRUE.
       TLAST=.FALSE.
       TSTOP=.FALSE.
-      CALL TRAJECTORYIO$INITIALIZE(IPRINT)
 1000  CONTINUE
 !
 !     ==================================================================
@@ -236,7 +235,7 @@ end Module version_module
       END IF
 !     __ WRITE TRAJECTORY FROM TEMPORARY BUFFER TO FILE_________________
       IF(TPRINT.OR.TLAST) THEN
-        CALL TRAJECTORYIO$FLUSH
+        CALL TRAJECTORYIO$FLUSHall
       END IF
 !
 !     ==================================================================
@@ -1334,7 +1333,9 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       DWORK(6)=ENOSEE
       DWORK(7)=ENOSEP
       DWORK(8)=HEAT
-      CALL TRAJECTORYIO$ADD('ENERGY-TRAJECTORY',NFI,TIME,8,DWORK)
+      CALL TRAJECTORYIO$SELECT('ENERGY-TRAJECTORY')
+      CALL TRAJECTORYIO$ADD(NFI,TIME,8,DWORK)
+      CALL TRAJECTORYIO$SELECT('NONE')
       DEALLOCATE(DWORK)
 !   
 !     ==================================================================
@@ -1345,7 +1346,9 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       CALL CELL$GETR8A('T(0)',9,DWORK(1:9))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,DWORK(10:9+3*NAT))
       CALL ATOMLIST$GETR8A('Q',0,NAT,DWORK(10+3*NAT:))
-      CALL TRAJECTORYIO$ADD('POSITION-TRAJECTORY',NFI,TIME,9+4*NAT,DWORK)
+      CALL TRAJECTORYIO$select('POSITION-TRAJECTORY')
+      CALL TRAJECTORYIO$ADD(NFI,TIME,9+4*NAT,DWORK)
+      CALL TRAJECTORYIO$SELECT('NONE')
       DEALLOCATE(DWORK)
 !   
 !     ==================================================================
@@ -1355,7 +1358,9 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       ALLOCATE(DWORK(4*NAT))
       CALL ATOMLIST$GETR8A('FORCE',0,3*NAT,DWORK)
       DWORK(3*NAT+1:4*NAT)=0.D0 ! SHALL CONTAIN IN FUTURE THE POTENTIALS
-      CALL TRAJECTORYIO$ADD('FORCE-TRAJECTORY',NFI,TIME,4*NAT,DWORK)
+      CALL TRAJECTORYIO$select('FORCE-TRAJECTORY')
+      CALL TRAJECTORYIO$ADD(NFI,TIME,4*NAT,DWORK)
+      CALL TRAJECTORYIO$SELECT('NONE')
       DEALLOCATE(DWORK)
 
 
@@ -1373,7 +1378,9 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
          CALL CLASSICAL$GETR8A('R(0)',3*NATM,DWORK(10:9+3*NATM))
          CALL CLASSICAL$GETR8A('QEL',NATM,DWORK(10+3*NATM:))
 
-         CALL TRAJECTORYIO$ADD('QMMM-POS-TRA',NFI,TIME,9+4*NATM,DWORK)
+         CALL TRAJECTORYIO$select('QMMM-POS-TRA')
+         CALL TRAJECTORYIO$ADD(NFI,TIME,9+4*NATM,DWORK)
+         CALL TRAJECTORYIO$SELECT('NONE')
          DEALLOCATE(DWORK)
       END IF
 !

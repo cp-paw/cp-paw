@@ -840,7 +840,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  scrap file for test purposes, that allows to write out test data===
+!     ==  SCRAP FILE FOR TEST PURPOSES, THAT ALLOWS TO WRITE OUT TEST DATA===
       ID=+'INFO'
       CALL FILEHANDLER$SETFILE(ID,T,-'.INFO')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
@@ -865,44 +865,36 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
 !
 !     ==  ENERGY TRAJECTORY ============================================
-      ID=+'ENERGY-TRAJECTORY'
-      CALL FILEHANDLER$SETFILE(ID,T,-'_E.TRA')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+      CALL TRAJECTORYIO$NEW(+'ENERGY-TRAJECTORY')
+      CALL TRAJECTORYIO$SELECT('ENERGY-TRAJECTORY')
+      CALL TRAJECTORYIO$SETCH('FILE',-'*_E.TRA')
+      CALL TRAJECTORYIO$SELECT('NONE')
 !
 !     ==  BANDS  TRAJECTORY ============================================
-      ID=+'BANDS-TRAJECTORY'
-      CALL FILEHANDLER$SETFILE(ID,T,-'_B.TRA')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+      CALL TRAJECTORYIO$NEW(+'BANDS-TRAJECTORY')
+      CALL TRAJECTORYIO$SELECT('BANDS-TRAJECTORY')
+      CALL TRAJECTORYIO$SETCH('FILE',-'*B_TRA')
+      CALL TRAJECTORYIO$SELECT('NONE')
+
 !
 !     ==  BANDS  TRAJECTORY ============================================
-      ID=+'POSITION-TRAJECTORY'
-      CALL FILEHANDLER$SETFILE(ID,T,-'_R.TRA')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+      CALL TRAJECTORYIO$NEW(+'POSITION-TRAJECTORY')
+      CALL TRAJECTORYIO$SELECT('POSITION-TRAJECTORY')
+      CALL TRAJECTORYIO$SETCH('FILE',-'*_R.TRA')
+      CALL TRAJECTORYIO$SELECT('NONE')
 !
 !     ==  BANDS  TRAJECTORY ============================================
-      ID=+'QMMM-POS-TRA'
-      CALL FILEHANDLER$SETFILE(ID,T,-'_R.QMMMTRA')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+      CALL TRAJECTORYIO$NEW(+'QMMM-POS-TRA')
+      CALL TRAJECTORYIO$SELECT('QMMM-POS-TRA')
+      CALL TRAJECTORYIO$SETCH('FILE',-'_R.QMMMTRA')
+      CALL TRAJECTORYIO$SELECT('NONE')
 !
 !     ==  FORCE TRAJECTORY ============================================
-      ID=+'FORCE-TRAJECTORY'
-      CALL FILEHANDLER$SETFILE(ID,T,-'_F.TRA')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+      CALL TRAJECTORYIO$NEW(+'FORCE-TRAJECTORY')
+      CALL TRAJECTORYIO$SELECT('FORCE-TRAJECTORY')
+      CALL TRAJECTORYIO$SETCH('FILE',-'*F_TRA')
+      CALL TRAJECTORYIO$SELECT('NONE')
+
 !
 !     ==  FORCE TRAJECTORY ============================================
       ID=+'CONSTRAINTS'
@@ -2239,7 +2231,7 @@ CALL TRACE$PASS('DONE')
         CALL COSMO$SETI4('MULTIPLE',MULTIPLE)
       END IF
 !
-!     == adiabatic or dynamic?========================================
+!     == ADIABATIC OR DYNAMIC?========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'ADIABATIC',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'ADIABATIC',0,.FALSE.)
@@ -2265,9 +2257,9 @@ CALL TRACE$PASS('DONE')
 !     == EPSILON = DIELECTRIC CONSTANT ===========================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EPSILON',1,TCHK)
       IF(TCHK) THEN 
-        call error$msg('epsilon for cosmo screening')
-        call error$msg('must be specified in the structure file')
-        call error$stop('readin_cosmo')
+        CALL ERROR$MSG('EPSILON FOR COSMO SCREENING')
+        CALL ERROR$MSG('MUST BE SPECIFIED IN THE STRUCTURE FILE')
+        CALL ERROR$STOP('READIN_COSMO')
       END IF
 !
 !     ==  FRIC ===================================================
@@ -2278,7 +2270,7 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,FRIC)
       CALL COSMO$SETR8('FRICTION',FRIC)
 !
-!     ==  vpauli ===================================================
+!     ==  VPAULI ===================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'VPAULI',1,TCHK)
       IF(TCHK) THEN
         CALL ERROR$MSG('VPAULI FOR COSMO SCREENING')
@@ -2338,8 +2330,9 @@ CALL TRACE$PASS('DONE')
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
-      TYPE(LL_TYPE)         :: LL_CNTL
-      LOGICAL(4)            :: TCHK
+      TYPE(LL_TYPE)            :: LL_CNTL
+      LOGICAL(4)               :: TCHK
+      INTEGER(4)               :: NSKIP
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_ANALYSE_TRAJECTORIES')  
       LL_CNTL=LL_CNTL_
@@ -2347,6 +2340,14 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'ANALYSE')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TRA')
+
+!
+!     ==================================================================
+!     ==  NUMBER OF SLICES TO BE SKIPPED FROM ALL TRAKJECTORIES       ==
+!     ==================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'NSKIP',0,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'NSKIP',0,0)
+      CALL LINKEDLIST$GET(LL_CNTL,'NSKIP',1,NSKIP)
 !
 !     ==================================================================
 !     == POSITION TRAJECTORY                                          ==
@@ -2354,7 +2355,10 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'R',0,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'R',0,.TRUE.)
       CALL LINKEDLIST$GET(LL_CNTL,'R',1,TCHK)
-      CALL TRAJECTORYIO$ON('POSITION-TRAJECTORY',TCHK)
+      CALL TRAJECTORYIO$SELECT('POSITION-TRAJECTORY')
+      CALL TRAJECTORYIO$SETL4('ON',TCHK)
+      CALL TRAJECTORYIO$SETI4('SKIP',NSKIP)
+      CALL TRAJECTORYIO$SELECT('NONE')
 !
 !     ==================================================================
 !     == QM-MM POSITION TRAJECTORY                                    ==
@@ -2362,7 +2366,10 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'QMMM',0,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'QMMM',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'QMMM',1,TCHK)
-      CALL TRAJECTORYIO$ON('QMMM-POS-TRA',TCHK)
+      CALL TRAJECTORYIO$SELECT('QMMM-POS-TRA')
+      CALL TRAJECTORYIO$SETL4('ON',TCHK)
+      CALL TRAJECTORYIO$SETI4('SKIP',NSKIP)
+      CALL TRAJECTORYIO$SELECT('NONE')
 !
 !     ==================================================================
 !     ==  FORCE TRAJECTORY                                            ==
@@ -2370,7 +2377,10 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FORCE',0,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'FORCE',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'FORCE',1,TCHK)
-      CALL TRAJECTORYIO$ON('FORCE-TRAJECTORY',TCHK)
+      CALL TRAJECTORYIO$SELECT('FORCE-TRAJECTORY')
+      CALL TRAJECTORYIO$SETL4('ON',TCHK)
+      CALL TRAJECTORYIO$SETI4('SKIP',NSKIP)
+      CALL TRAJECTORYIO$SELECT('NONE')
 !
 !     ==================================================================
 !     ==  ENERGY TRAJECTORY                                           ==
@@ -2378,7 +2388,10 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'E',0,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'E',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'E',1,TCHK)
-      CALL TRAJECTORYIO$ON('ENERGY-TRAJECTORY',TCHK)
+      CALL TRAJECTORYIO$SELECT('ENERGY-TRAJECTORY')
+      CALL TRAJECTORYIO$SETL4('ON',TCHK)
+      CALL TRAJECTORYIO$SETI4('SKIP',NSKIP)
+      CALL TRAJECTORYIO$SELECT('NONE')
 !
 !     ==================================================================
 !     ==  ENERGY BANDS                                                ==
@@ -2386,7 +2399,10 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'BANDS',0,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'BANDS',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'BANDS',1,TCHK)
-      CALL TRAJECTORYIO$ON('BANDS-TRAJECTORY',TCHK)
+      CALL TRAJECTORYIO$SELECT('BANDS-TRAJECTORY')
+      CALL TRAJECTORYIO$SETL4('ON',TCHK)
+      CALL TRAJECTORYIO$SETI4('SKIP',NSKIP)
+      CALL TRAJECTORYIO$SELECT('NONE')
 !
                            CALL TRACE$POP
       RETURN
@@ -3643,7 +3659,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           IF(.NOT.TCHK) THEN
             CALL ERROR$MSG('NCORROFL IS MANDATORY BUT HAS NOT BEEN SET')
             CALL ERROR$STOP('STRCIN_SPECIES')
-          END if
+          END IF
           CALL LINKEDLIST$SIZE(LL_STRC,'NCORROFL',1,LENG)
           ALLOCATE(NCORROFL(LENG))
           CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
@@ -5148,16 +5164,16 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       TYPE(LINK_TYPE),ALLOCATABLE :: LINK(:)
       TYPE(BOND_TYPE),ALLOCATABLE :: MBOND(:)
       TYPE(BOND_TYPE),ALLOCATABLE :: SBOND(:)
-      INTEGER(4)                  :: IATQ,IATM,IATS,IATM1,IATM2,IATS1,IATS2,iat
-      INTEGER(4)                  :: IBONDM,IBONDS,ILINK,I,ires,j,ivar
+      INTEGER(4)                  :: IATQ,IATM,IATS,IATM1,IATM2,IATS1,IATS2,IAT
+      INTEGER(4)                  :: IBONDM,IBONDS,ILINK,I,IRES,J,IVAR
       INTEGER(4)                  :: IZ
       LOGICAL(4)                  :: TCHK
       INTEGER(4)     ,ALLOCATABLE :: LINKARRAY(:,:)
       INTEGER(4)     ,ALLOCATABLE :: MAPARRAY(:,:)
-      CHARACTER(32)               :: CH32SVAR1,dummy
-      CHARACTER(32)               :: ff
+      CHARACTER(32)               :: CH32SVAR1,DUMMY
+      CHARACTER(32)               :: FF
       CHARACTER(255)              :: PARMFILE, TOPFILE, MMFILE
-      CHARACTER(4)                :: resname
+      CHARACTER(4)                :: RESNAME
 !     ******************************************************************    
                           CALL TRACE$PUSH('STRCIN_SOLVENT')
       LL_STRC=LL_STRC_
@@ -5196,9 +5212,9 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
          CALL LINKEDLIST$SELECT(LL_STRC,'FORCEFIELD')
          CALL LINKEDLIST$EXISTD(LL_STRC,'FF',1,TCHK)
          IF(.NOT.TCHK) THEN
-            call error$msg('NO FORCEFIELD SPECIFIED')
-            call error$msg('!structure!qm-mm!forcefield:ff is mandatory')
-            call error$stop('STRCIN_SOLVENT')
+            CALL ERROR$MSG('NO FORCEFIELD SPECIFIED')
+            CALL ERROR$MSG('!STRUCTURE!QM-MM!FORCEFIELD:FF IS MANDATORY')
+            CALL ERROR$STOP('STRCIN_SOLVENT')
          END IF
          CALL LINKEDLIST$GET(LL_STRC,'FF',1,FF)
 !        ---- IS MM-FILE SPECIFIED? ---
@@ -5213,13 +5229,13 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
          CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','POSITION','REWIND')
          CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','ACTION','READ')
          CALL FILEHANDLER$SETSPECIFICATION('MMSTRC','FORM','FORMATTED')
-!        ---- IS PARMameter-FILE SPECIFIED? ---
+!        ---- IS PARMAMETER-FILE SPECIFIED? ---
          CALL LINKEDLIST$EXISTD(LL_STRC,'PARMFILE',1,TCHK)
          IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_STRC,'PARMFILE',1,PARMFILE)
             CALL FORCEFIELD$SETCH('PARMFILE',PARMFILE)
          END IF
-!        ---- IS TOPology-FILE SPECIFIED? ---
+!        ---- IS TOPOLOGY-FILE SPECIFIED? ---
          CALL LINKEDLIST$EXISTD(LL_STRC,'TOPFILE',1,TCHK)
          IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_STRC,'TOPFILE',1,TOPFILE)
@@ -5228,7 +5244,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
          CALL LINKEDLIST$SELECT(LL_STRC,'..')
       END IF
 !   --- TRANSFER FORCE FIELD TYPE TO THE MODULES
-      CALL FORCEFIELD$SETCH('FORCEFIELD',FF)  !is this necessary? check this later!
+      CALL FORCEFIELD$SETCH('FORCEFIELD',FF)  !IS THIS NECESSARY? CHECK THIS LATER!
       CALL CLASSICAL$SELECT('QMMM')
       CALL CLASSICAL$SETCH('FF',FF)
       CALL CLASSICAL$SELECT('SHADOW')
@@ -5382,14 +5398,14 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
         ENDDO
 !     ==================================================================
-!     == now amber =====================================================
+!     == NOW AMBER =====================================================
 !     ==================================================================
       ELSE IF(FF.EQ.'AMBER') THEN
         IATS=0
         DO IATM=1, NATM
 !         ----- READ NAME OF MM-ATOM NAME= <ATOMNAME>_<ID>    
           MATOM(IATM)%NAME = TRIM(ADJUSTL(MMATOM(IATM)%NAME(1:LEN_TRIM(MMATOM(IATM)%NAME))))&
-     &                     //'_'//TRIM(ADJUSTL(.itos.MMATOM(IATM)%ID))
+     &                     //'_'//TRIM(ADJUSTL(.ITOS.MMATOM(IATM)%ID))
 
 !         ----- CHECK IF MM ATOM IS QM-ATOM
           IATQ=0
@@ -5411,7 +5427,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
                CALL ERROR$MSG('#(SHADOW ATOMS) LARGER THAN EXPECTED')
                CALL ERROR$STOP('STRCIN_SOLVENT')
             END IF
-            SATOM(IATS)%NAME=MMATOM(IATM)%NAME !or QMNAME ? 
+            SATOM(IATS)%NAME=MMATOM(IATM)%NAME !OR QMNAME ? 
             QATOM(IATQ)%QMSATOM=IATM
             MATOM(IATM)%QMSATOM=IATS
             SATOM(IATS)%QMSATOM=IATQ
@@ -5447,7 +5463,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           ELSE
             MATOM(IATM)%M=QATOM(IATQ)%M
             SATOM(IATS)%M=QATOM(IATQ)%M
-            SATOM(IATS)%Q=MATOM(IATM)%Q !!! manuel: here is the poodle's core
+            SATOM(IATS)%Q=MATOM(IATM)%Q !!! MANUEL: HERE IS THE POODLE'S CORE
           END IF
         END DO
       END IF
@@ -5559,7 +5575,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
         ENDDO
 !     ===============================================================
-!     =========== AMBER ==== read links =============================
+!     =========== AMBER ==== READ LINKS =============================
 !     ===============================================================
       ELSE IF(FF.EQ.'AMBER') THEN
 !       == GET NUMBER OF LINK ATOMS ====================================
@@ -5685,15 +5701,15 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
             MBOND(IBONDM)%BO=1
           END IF
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
-        ENDDo
+        ENDDO
 !   == AMBER FORCEFIELD : BONDS ====================================================
       ELSE IF(FF.EQ.'AMBER') THEN
 !       ----- GET NUMBER OF BONDS
         IAT=1
         NBONDM=0
         DO WHILE(IAT.LT.SIZE(MMATOM))
-          resname= MMATOM(IAT)%RESNAME
-          CALL FORCEFIELD$GETRESNUMBER(resname,ivar)
+          RESNAME= MMATOM(IAT)%RESNAME
+          CALL FORCEFIELD$GETRESNUMBER(RESNAME,IVAR)
           IBONDM= SIZE(TOP_RES(IVAR)%BOND)
           DO I=1,SIZE(TOP_RES(IVAR)%BOND)  !EXCLUDE PEPTIDE BONDS
             IF(TRIM(TOP_RES(IVAR)%BOND(I)%ATOM1).EQ.'+N  '.OR.TRIM(TOP_RES(IVAR)%BOND(I)%ATOM2)&
@@ -5712,17 +5728,17 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           IAT = IAT + IVAR
 !         ----- CHECKS IF THE PEPTIDE CHAIN ID HAS CHANGED. ONLY FOR AMINO ACIDS
           IF(MMATOM(IAT-1)%KEYWORD.EQ.'ATOM  ') THEN
-             IF(IAT.GE.SIZE(MMATOM)) then
+             IF(IAT.GE.SIZE(MMATOM)) THEN
                NBONDM = NBONDM - 1
-             else
+             ELSE
                IF(MMATOM(IAT-1)%CHAINID.NE.MMATOM(IAT)%CHAINID) NBONDM = NBONDM - 1
-             end if
+             END IF
           END IF
         ENDDO
         ALLOCATE(MBOND(NBONDM))
         MBOND(:)%ATOM1=0
         MBOND(:)%ATOM2=0
-        MBOND(:)%BO=0.d0!
+        MBOND(:)%BO=0.D0!
 !       ----- READ BONDS FROM MMATOM-ARRAY
         IAT=1
         IBONDM=1
@@ -5744,14 +5760,14 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
              IBONDM = IBONDM + 1
           END DO
           IAT= IAT+SIZE(TOP_RES(IVAR)%ATOM)
-          if(iat.gt.size(mmatom)) exit
+          IF(IAT.GT.SIZE(MMATOM)) EXIT
 !         ---- CONNECT DIFFERENT AMINOACIDS IF THEY ARE IN THE SAME CHAIN
           IF(MMATOM(IAT)%KEYWORD.EQ.'ATOM  ') THEN
-!sascha check this is the previous version
+!SASCHA CHECK THIS IS THE PREVIOUS VERSION
 !           IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID).OR.(IAT+IVAR.LT.SIZE(MMATOM))) THEN
-!sascha check thhat probably should look like this
-!            IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID).and.(IAT+IVAR.LT.SIZE(MMATOM))) THEN
-!sascha check end
+!SASCHA CHECK THHAT PROBABLY SHOULD LOOK LIKE THIS
+!            IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID).AND.(IAT+IVAR.LT.SIZE(MMATOM))) THEN
+!SASCHA CHECK END
             IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID)) THEN
 
 !             ---- GET LAST C -ATOM
@@ -5760,7 +5776,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
               DO I= IAT-J, IAT-1
                 IF(TRIM(ADJUSTL(MMATOM(I)%NAME)).EQ.'C') THEN
                    MBOND(IBONDM)%ATOM1= I
-                   print*,"FLAG: ATOM FOUND! ",mmatom(i)%name, i
+                   PRINT*,"FLAG: ATOM FOUND! ",MMATOM(I)%NAME, I
                    EXIT
                 END IF
               ENDDO
@@ -5770,7 +5786,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
               DO I= IAT, IAT+J-1
                 IF(TRIM(ADJUSTL(MMATOM(I)%NAME)).EQ.'N') THEN
                    MBOND(IBONDM)%ATOM2= I
-                   print*,"FLAG: ATOM FOUND! ",mmatom(i)%name, i
+                   PRINT*,"FLAG: ATOM FOUND! ",MMATOM(I)%NAME, I
                    EXIT
                 END IF
               END DO
@@ -5849,7 +5865,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       CALL QMMM$SETI4A('LINK',6*NLINK,LINKARRAY)
       DEALLOCATE(LINKARRAY)
       DEALLOCATE(MAPARRAY)
-print*,"FLAG: after setting links in QMMM"
+PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
 !
 !     ==================================================================
 !     ==  DEFINE CLASSICAL OBJECT                                     ==
@@ -5858,32 +5874,32 @@ print*,"FLAG: after setting links in QMMM"
       CALL STRCIN_SOLVENT_SETM(NATM,MATOM,NBONDM,MBOND)
       CALL CLASSICAL$SELECT('SHADOW')
 
-! print*,"---------------------------"
-! print*,"   MATOM:"
-! do i=1,SIZE(MATOM)
-!    write(*,FMT='(A32, 3F10.4, 2F15.5, A10, I6)')  MATOM(i)
-! END do
-! print*,"---------------------------"
-! print*,"   SATOM:",allocated(SATOM)
-! do i=1,SIZE(SATOM)
-!    write(*,FMT='(I6,A32, 3F10.4, 2F15.5, A10, I6)') i,  SATOM(i)
-! END do
-! print*,"---------------------------"
-! print*,"   QATOM:"
-! do i=1,SIZE(QATOM)
-!    write(*,FMT='(A32, 3F10.4, 2F15.5, A10, I6)')  QATOM(i)
-! END do
-! print*,"---------------------------"
-! print*,"   SBOND:"
-! DO I=1,SIZE(SBOND)
-!    write(*,FMT='(2I8,F5.1)') SBOND(I)
+! PRINT*,"---------------------------"
+! PRINT*,"   MATOM:"
+! DO I=1,SIZE(MATOM)
+!    WRITE(*,FMT='(A32, 3F10.4, 2F15.5, A10, I6)')  MATOM(I)
 ! END DO
-! print*,"---------------------------"
+! PRINT*,"---------------------------"
+! PRINT*,"   SATOM:",ALLOCATED(SATOM)
+! DO I=1,SIZE(SATOM)
+!    WRITE(*,FMT='(I6,A32, 3F10.4, 2F15.5, A10, I6)') I,  SATOM(I)
+! END DO
+! PRINT*,"---------------------------"
+! PRINT*,"   QATOM:"
+! DO I=1,SIZE(QATOM)
+!    WRITE(*,FMT='(A32, 3F10.4, 2F15.5, A10, I6)')  QATOM(I)
+! END DO
+! PRINT*,"---------------------------"
+! PRINT*,"   SBOND:"
+! DO I=1,SIZE(SBOND)
+!    WRITE(*,FMT='(2I8,F5.1)') SBOND(I)
+! END DO
+! PRINT*,"---------------------------"
 ! DO I=1,NLINK
-!    write(*,FMT='(6I8)') LINKARRAY(:,I)
+!    WRITE(*,FMT='(6I8)') LINKARRAY(:,I)
 ! END DO
 ! !IF(ALLOCATED(LINKARRAY)) DEALLOCATE(LINKARRAY)
-! stop 'FORCED STOP IN READIN_SOLVENT'
+! STOP 'FORCED STOP IN READIN_SOLVENT'
       CALL STRCIN_SOLVENT_SETM(NATS,SATOM,NBONDS,SBOND)
 !
 !     ==================================================================
@@ -5960,15 +5976,14 @@ print*,"FLAG: after setting links in QMMM"
       TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
       TYPE(LL_TYPE)            :: LL_STRC
       LOGICAL(4)               :: TCHK
-      LOGICAL(4)               :: Tiso
+      LOGICAL(4)               :: TISO
       INTEGER(4)               :: NAT1
       INTEGER(4)               :: IAT1
       INTEGER(4)               :: IAT,NAT
       CHARACTER(32)            :: NAME
-      CHARACTER(250)           :: tessfile
-      integer(4)               :: nfil
+      CHARACTER(250)           :: TESSFILE
       REAL(8)      ,ALLOCATABLE:: RSOLV(:)
-      real(8)                  :: svar
+      REAL(8)                  :: SVAR
 !     ******************************************************************
       LL_STRC=LL_STRC_
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
@@ -5988,14 +6003,14 @@ print*,"FLAG: after setting links in QMMM"
         CALL LINKEDLIST$SELECT(LL_STRC,'ISOLATE')
         CALL LINKEDLIST$EXISTD(LL_STRC,'DECOUPLE',0,TCHK)
         IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_strc,'DECOUPLE',1,TISO)
+          CALL LINKEDLIST$GET(LL_STRC,'DECOUPLE',1,TISO)
         ELSE
           TISO=.TRUE.
         END IF
       ELSE
         TISO=.FALSE.
       END IF
-      CALL COSMO$SETL4('PERIODIC',.not.TISO)
+      CALL COSMO$SETL4('PERIODIC',.NOT.TISO)
 !
 !     == NOW BACK TO COSMO BLOCK
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
@@ -6003,19 +6018,19 @@ print*,"FLAG: after setting links in QMMM"
       CALL LINKEDLIST$SELECT(LL_STRC,'COSMO')
 !
 !     == EPSILON = DIELECTRIC CONSTANT ===========================
-      CALL LINKEDLIST$EXISTD(LL_strc,'EPSILON',1,TCHK)
+      CALL LINKEDLIST$EXISTD(LL_STRC,'EPSILON',1,TCHK)
       IF(.NOT.TCHK) THEN ! USE METALLIC SCREENING AS DEFAULT
-        CALL LINKEDLIST$SET(LL_strc,'EPSILON',0,1.D12)
+        CALL LINKEDLIST$SET(LL_STRC,'EPSILON',0,1.D12)
       END IF
-      CALL LINKEDLIST$GET(LL_strc,'EPSILON',1,SVAR)
+      CALL LINKEDLIST$GET(LL_STRC,'EPSILON',1,SVAR)
       CALL COSMO$SETR8('EPSILON',SVAR)
 !
 !     ==  VPAULI ===================================================
-      CALL LINKEDLIST$EXISTD(LL_strc,'VPAULI',1,TCHK)
+      CALL LINKEDLIST$EXISTD(LL_STRC,'VPAULI',1,TCHK)
       IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_strc,'VPAULI',0,0.D0)
+        CALL LINKEDLIST$SET(LL_STRC,'VPAULI',0,0.D0)
       END IF
-      CALL LINKEDLIST$GET(LL_strc,'VPAULI',1,SVAR)
+      CALL LINKEDLIST$GET(LL_STRC,'VPAULI',1,SVAR)
       CALL COSMO$SETR8('VPAULI',SVAR)
 !
 !     ==  TESSELATION FILE=====================================
