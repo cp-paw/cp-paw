@@ -534,10 +534,8 @@ END MODULE AUGMENTATION_MODULE
       ALLOCATE(DATP(LMNX,LMNX,NDIMD))
       DETOT=0.D0
       datp=0.d0
-      call LDAPLUSU(IAT,gid,NR,LNX,LMNX,Ndimd,LOX &
-       &                   ,AEZ,AEPHI,DENMAT,detot,datp)
-!     CALL LDAPLUSU(NRX,LNX,LMNX,NSPIN,LOX,LNX &
-!     &             ,GID,NR,AEZ,AEPHI,DENMAT,DETOT,DATP)
+      CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+      CALL LDAPLUSU$ETOT(ISP,LMNX,Ndimd,DENMAT,DETOT,DATp)
       DATH(:,:,:)=DATH(:,:,:)+DATP(:,:,:)
       DEALLOCATE(DATP)
       CALL AUGMENTATION_ADD('LDA+U EXCHANGE',DETOT)
@@ -596,8 +594,7 @@ STOP
       END
 !
 !     ..................................................................
-      SUBROUTINE AUGMENTATION_RHO(NR,LNX,LOX,PHI,LMNXX &
-     &                           ,DENMAT,LMRX,RHOL)
+      SUBROUTINE AUGMENTATION_RHO(NR,LNX,LOX,PHI,LMNXX,DENMAT,LMRX,RHOL)
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **

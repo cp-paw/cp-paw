@@ -2810,6 +2810,37 @@ shell in the f-angular momentum channel.}
 \vdefault{none}}
 
 %----------------------------------------------------------------------
+{\block{!STRUCTURE!SPECIES!hybrid}
+%----------------------------------------------------------------------
+\brules{optional} \bdescr{sets the parameters for lda+U
+calculation. Only used when !CONTROL!DFT:LDA+U=T. \textbf{Experimental option!}}
+
+\mbax{\key{NCORROFL} 
+\vdescr{number of correlated orbital shells per angular momentum.  The
+array elements correspond to s,p,d,f shells. For one shell of
+correlated d-orbitals use (0,0,1,0). The number of correlated orbitals
+is reduced to the number of partial waves for this angular momentum
+minus one.  If there is only one partial wave, this one is used as
+correlated orbital. This is however not recommended.}
+\vformat{integer(*)} 
+\vrules{Mandatory} 
+\vdefault{none}}
+
+\mbax{\key{RCUT} 
+\vdescr{Correlated orbitals are constructed so that 
+they have a note at the radius RCUT.}
+\vformat{real} 
+\vrules{optional} 
+\vdefault{covalent radius plus 15\%}}
+
+\mbax{\key{HFweight} 
+\vdescr{weight of HF fock exchange.}
+\vformat{real} 
+\vrules{optional} 
+\vdefault{1/4}}
+
+
+%----------------------------------------------------------------------
 \block{!STRUCTURE!ATOM}
 %----------------------------------------------------------------------
 \brules{mandatory, multiple}

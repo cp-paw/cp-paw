@@ -83,7 +83,7 @@ END MODULE TRAJECTORYIO_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRAJECTORYIO_SETFILE(FILE)
 !     **************************************************************************
-!     **  CHECKS IF BASIC SETTINGS                                               **   
+!     **  define the relevant file                                            **   
 !     **************************************************************************
       USE TRAJECTORYIO_MODULE
       IMPLICIT NONE
@@ -111,7 +111,7 @@ END MODULE TRAJECTORYIO_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRAJECTORYIO_FIRSTTASK(TCHK)
 !     **************************************************************************
-!     **  CHECKS if BASIC SETTINGS                                               **   
+!     **  CHECKS if on the first node of the relevant task group              **   
 !     **************************************************************************
       IMPLICIT NONE
       LOGICAL(4)   ,INTENT(OUT):: TCHK
@@ -131,7 +131,7 @@ END MODULE TRAJECTORYIO_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)              :: TCHK
-!     ******************************************************************
+!     **************************************************************************
       CALL TRAJECTORYIO_FIRSTTASK(TCHK)
       IF(.NOT.TCHK) RETURN   ! RETURN IF NOT ON TASK 1
       IF(.NOT.TINI) THEN
@@ -157,7 +157,7 @@ END MODULE TRAJECTORYIO_MODULE
       END IF 
       THIS%ID   =TRIM(ID)
       THIS%TON  =.FALSE.
-      THIS%NRECX =0
+      THIS%NRECX=100
       THIS%NSIZE=0
       THIS%NREC =0         ! I=0 IMPLIES THAT THE ARRAYS ARE NOT ALLOCATED 
       THIS%SKIP =0         ! AS DEFAULT, NO TIME STEPS ARE SKIPPED
@@ -188,6 +188,7 @@ END MODULE TRAJECTORYIO_MODULE
 !     == UNSELECT ==============================================================
       IF(ID.EQ.'NONE') THEN
         NULLIFY(THIS)
+        return
       END IF
 !
 !     == FIND TRAJECTORYIO AND SELECT
@@ -213,7 +214,7 @@ END MODULE TRAJECTORYIO_MODULE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(IN) :: VAL
       LOGICAL(4)              :: TCHK
-!     ******************************************************************
+!     **************************************************************************
       CALL TRAJECTORYIO_FIRSTTASK(TCHK)
       IF(.NOT.TCHK) RETURN   ! RETURN IF NOT ON TASK 1
       IF(.NOT.ASSOCIATED(THIS)) THEN
@@ -252,6 +253,11 @@ END MODULE TRAJECTORYIO_MODULE
       END IF
 !
       IF(ID.EQ.'NRECX') THEN
+        IF(ASSOCIATED(THIS%ARRAY)) THEN
+          CALL ERROR$MSG('ARRAY ALREADY ALLOCATED. NO CHANGE OF ARRAY-SIZE POSSIBLE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('TRAJECTORYIO$SETI4')
+        END IF
         THIS%NRECX=VAL
       ELSE IF (ID.EQ.'SKIP') THEN
         THIS%SKIP=VAL
@@ -320,11 +326,12 @@ END MODULE TRAJECTORYIO_MODULE
         CALL ERROR$STOP('TRAJECTORYIO$ADD')
       END IF
       IF(.NOT.THIS%TON) RETURN
+                            call trace$push('TRAJECTORYIO$add')
 !
 !     ==========================================================================
 !     == ALLOCATE ARRAY                                                       ==
 !     ==========================================================================
-      IF(.NOT.ALLOCATED(THIS%ARRAY)) THEN
+      IF(.NOT.ASSOCIATED(THIS%ARRAY)) THEN
         IF(THIS%NRECX.LE.0) THEN
           CALL ERROR$MSG('NUMBER OF RECORDS NOT SPECIFIED')
           CALL ERROR$CHVAL('ID',THIS%ID)
@@ -337,9 +344,9 @@ END MODULE TRAJECTORYIO_MODULE
         ALLOCATE(THIS%TIME(NRECX))
       END IF
 !
-!     ==================================================================
-!     == MAP THE ARRAY ON TO INTERNAL ARRAY                           ==
-!     ==================================================================
+!     ==========================================================================
+!     == MAP THE ARRAY ON TO INTERNAL ARRAY                                   ==
+!     ==========================================================================
       NREC=THIS%NREC
       TCHK=(NREC.EQ.0)
       IF(TCHK) TCHK=(ISTEP.GT.THIS%ISTEP(NREC)+THIS%SKIP)
@@ -364,6 +371,7 @@ END MODULE TRAJECTORYIO_MODULE
         THIS%TIME(:)=0.D0
         THIS%ARRAY(:,:)=0.D0
       END IF
+                            call trace$pop
       RETURN
       END
 !
@@ -378,11 +386,16 @@ END MODULE TRAJECTORYIO_MODULE
       INTEGER(4)               :: I
       LOGICAL(4)               :: TCHK
       INTEGER(4)               :: NFIL
-!     ******************************************************************
+!     **************************************************************************
       CALL TRAJECTORYIO_FIRSTTASK(TCHK)
       IF(.NOT.TCHK) RETURN   ! RETURN IF NOT ON TASK 1
+                            call trace$push('TRAJECTORYIO$FLUSHALL')
       THIS1=>FIRST_THIS
       DO WHILE (ASSOCIATED(THIS1))
+        if(.not.this1%ton) Then
+          THIS1=>THIS1%NEXT
+          cycle
+        end if
         CALL FILEHANDLER$UNIT(TRIM(THIS1%ID),NFIL)
         DO I=1,THIS1%NREC
           WRITE(NFIL)THIS1%ISTEP(I),THIS1%TIME(I),THIS1%NSIZE,THIS1%ARRAY(:,I)
@@ -394,5 +407,6 @@ END MODULE TRAJECTORYIO_MODULE
         THIS1%ARRAY(:,:)=0.D0
         THIS1=>THIS1%NEXT
       ENDDO
+                            call trace$pop
       RETURN
       END

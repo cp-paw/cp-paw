@@ -1,3 +1,4 @@
+!     ...1.........2.........3.........4.........5.........6.........7.........8
 !     ==================================================================
 !     ==================================================================
 !     ==================================================================
@@ -3486,13 +3487,13 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
       END
 !     
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_SPECIES(LL_STRC_)
-!     ******************************************************************
-!     **  DEFINES THE ATOMTYPELIST                                    **
-!     **                                                              **
-!     **  REQUIRES PREDEFINED: NOTHING                                **
-!     ****************************************************************** 
+!     **************************************************************************
+!     **  DEFINES THE ATOMTYPELIST                                            **
+!     **                                                                      **
+!     **  REQUIRES PREDEFINED: NOTHING                                        **
+!     ************************************************************************** 
       USE LINKEDLIST_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
@@ -3513,8 +3514,10 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       INTEGER(4)               :: LENG   
       INTEGER(4),ALLOCATABLE   :: NCORROFL(:)
       INTEGER(4)               :: MAINLN(2)
+      logical(4)               :: tldaplusu
+      logical(4)               :: thybrid
       REAL(8)                  :: EV
-!     ******************************************************************
+!     ************************************************************************** 
                            CALL TRACE$PUSH('STRCIN_SPECIES')
       LL_STRC=LL_STRC_
       CALL CONSTANTS('U',PROTONMASS)
@@ -3527,15 +3530,15 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       DO ISP=1,NSP
         CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
 !
-!       ================================================================
-!       ==  SPECIES NAME                                              ==
-!       ================================================================
+!       ========================================================================
+!       ==  SPECIES NAME                                                      ==
+!       ========================================================================
         CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
              CALL ATOMTYPELIST$ADD(SPNAME)
 !
-!       ================================================================
-!       ==  CONNECT SETUP FILE                                        ==
-!       ================================================================
+!       ========================================================================
+!       ==  CONNECT SETUP FILE                                                ==
+!       ========================================================================
         CALL LINKEDLIST$GET(LL_STRC,'FILE',1,SETUPFILE)
              CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
              CH8SVAR1=' '
@@ -3550,9 +3553,9 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
              CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'ACTION','READ')
              CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'FORM','FORMATTED')
 !
-!       ================================================================
-!       ==  #(VALENCE ELECTRONS)                                      ==
-!       ================================================================
+!       ========================================================================
+!       ==  #(VALENCE ELECTRONS)                                              ==
+!       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'ZV',1,TCHK)
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('!STRUCTURE!SPECIES:ZV IS MANDATORY')
@@ -3561,9 +3564,9 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL LINKEDLIST$GET(LL_STRC,'ZV',1,SVAR)
              CALL ATOMTYPELIST$SETVALENCE(SPNAME,SVAR)
 !
-!       ================================================================
-!       ==  ATOMIC MASS                                               ==
-!       ================================================================
+!       ========================================================================
+!       ==  ATOMIC MASS                                                       ==
+!       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
         IF(.NOT.TCHK) THEN
           Z=-1.D0
@@ -3580,9 +3583,9 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL LINKEDLIST$GET(LL_STRC,'M',1,SVAR)
         CALL ATOMTYPELIST$SETMASS(SPNAME,SVAR*PROTONMASS)
 !
-!       ================================================================
-!       ==  KINETIC ENERGY OF THE PSEUDO WAVE FUNCTIONS               ==
-!       ================================================================
+!       ========================================================================
+!       ==  KINETIC ENERGY OF THE PSEUDO WAVE FUNCTIONS                       ==
+!       ========================================================================
         CALL ATOMTYPELIST$SELECT(SPNAME)
         CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G2>',1,TCHK)
         IF(.NOT.TCHK) THEN
@@ -3603,9 +3606,9 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL ATOMTYPELIST$SETR8('PS<G4>',SVAR)
         CALL ATOMTYPELIST$UNSELECT
 !
-!       ================================================================
-!       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY            ==
-!       ================================================================
+!       ========================================================================
+!       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY                    ==
+!       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'LRHOX',1,TCHK)
         IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_STRC,'LRHOX',0,2)
         CALL LINKEDLIST$GET(LL_STRC,'LRHOX',1,ISVAR)
@@ -3613,9 +3616,9 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL ATOMTYPELIST$SETI4('LRHOX',ISVAR)
         CALL ATOMTYPELIST$UNSELECT
 !
-!       ================================================================
-!       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY            ==
-!       ================================================================
+!       ========================================================================
+!       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY                    ==
+!       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'NPRO',1,TCHK)
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('VARIABLE !STRUCTURE!SPERCIES:NPRO IS MANDATORY')
@@ -3629,9 +3632,9 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL ATOMTYPELIST$UNSELECT
         DEALLOCATE(NPRO)
 !
-!       ================================================================
-!       ==  SOFTCORE TYPE                                             ==
-!       ================================================================
+!       ========================================================================
+!       ==  SOFTCORE TYPE                                                     ==
+!       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'SOFTCORE',1,TCHK)
         IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_STRC,'SOFTCORE',0,'NONE')
         CALL LINKEDLIST$GET(LL_STRC,'SOFTCORE',1,SOFTCORETYPE)
@@ -3639,18 +3642,27 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL ATOMTYPELIST$SETCH('SOFTCORETYPE',SOFTCORETYPE)
         CALL ATOMTYPELIST$UNSELECT
 !
-!       ================================================================
-!       ================================================================
-!       ==  LDAPLUSU                                                  ==
-!       ================================================================
-!       ================================================================
-        CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,TCHK)
-        IF(TCHK) THEN
+!       ========================================================================
+!       ========================================================================
+!       ==  LDAPLUSU                                                          ==
+!       ========================================================================
+!       ========================================================================
+        CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,Tldaplusu)
+        CALL LINKEDLIST$EXISTL(LL_STRC,'HYBRID',1,THYBRID)
+        IF(THYBRID.AND.TLDAPLUSU) THEN
+          CALL ERROR$MSG('LDAPLUSU AND HYBRID FUNCTIONAL ARE MUTUALLY EXCLUSIVE')
+          CALL ERROR$MSG('STRCIN_SPECIES')
+        END IF
+!
+        IF(Tldaplusu) THEN
           CALL LINKEDLIST$SELECT(LL_STRC,'LDAPLUSU')
           CALL LDAPLUSU$NEW(NSP)
           CALL LDAPLUSU$SELECT(ISP)
           CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
-          SVAR=3.D0
+          CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U')
+!
+!         == RANGE OF LOCAL ORBITALS ===========================================
+          CALL PERIODICTABLE$GET(Z,'R(ASA)',SVAR)
           CALL LINKEDLIST$EXISTD(LL_STRC,'RCUT',1,TCHK)
           IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
           CALL LDAPLUSU$SETR8('RCUT',SVAR)
@@ -3683,7 +3695,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
             CALL LINKEDLIST$GET(LL_STRC,'JPAR[EV]',1,SVAR)
             CALL LDAPLUSU$SETR8('JPAR',SVAR*EV)
           END IF
-
+!
           CALL LINKEDLIST$EXISTD(LL_STRC,'MAINLN',1,TCHK)
           IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_STRC,'MAINLN',1,MAINLN)
@@ -3694,13 +3706,54 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
         END IF
 !
+!       ========================================================================
+!       ========================================================================
+!       ==  HYBRID FUNCTIONAL                                                 ==
+!       ========================================================================
+!       ========================================================================
+        IF(THYBRID) THEN
+          CALL LINKEDLIST$SELECT(LL_STRC,'HYBRID')
+          CALL LDAPLUSU$NEW(NSP)
+          CALL LDAPLUSU$SELECT(ISP)
+          CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
+          CALL LDAPLUSU$SETCH('FUNCTIONALID','HYBRID')
+!
+!         == RANGE OF LOCAL ORBITALS ===========================================
+          CALL PERIODICTABLE$GET(Z,'R(ASA)',SVAR)
+          CALL LINKEDLIST$EXISTD(LL_STRC,'RCUT',1,TCHK)
+          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
+          CALL LDAPLUSU$SETR8('RCUT',SVAR)
+!
+!         == DEFINE SHELLS IN THE CORRELATED SUB-SPACE =========================            
+          CALL LINKEDLIST$EXISTD(LL_STRC,'NCORROFL',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('NCORROFL IS MANDATORY BUT HAS NOT BEEN SET')
+            CALL ERROR$STOP('STRCIN_SPECIES')
+          END IF
+          CALL LINKEDLIST$SIZE(LL_STRC,'NCORROFL',1,LENG)
+          ALLOCATE(NCORROFL(LENG))
+          CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
+          CALL LDAPLUSU$SETI4A('NCORROFL',LENG,NCORROFL)
+          DEALLOCATE(NCORROFL)
+!
+!         == DEFINE MIXING FOR HYBRID FUNCTIONAL ===============================
+          SVAR=0.25D0
+          CALL LINKEDLIST$EXISTD(LL_STRC,'HFWEIGHT',1,TCHK)
+          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'HFWEIGHT',1,SVAR)
+          CALL LDAPLUSU$SETR8('HFWEIGHT',SVAR)
+!
+!         == GET OUT OF HYBRID-BLOCK ===========================================
+          CALL LINKEDLIST$SELECT(LL_STRC,'..')
+        END IF
+
+!
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
                            CALL TRACE$POP
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_ATOM(LL_STRC_)
 !     ******************************************************************
 !     **  DEFINES THE ATOMLIST                                        **
