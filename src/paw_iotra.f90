@@ -347,11 +347,18 @@ END MODULE TRAJECTORYIO_MODULE
 !     ==========================================================================
 !     == MAP THE ARRAY ON TO INTERNAL ARRAY                                   ==
 !     ==========================================================================
+print*,'marke 0'
       NREC=THIS%NREC
+print*,'marke 1'
       TCHK=(NREC.EQ.0)
-      IF(TCHK) TCHK=(ISTEP.GT.THIS%ISTEP(NREC)+THIS%SKIP)
+print*,'marke 2'
+      IF(.not.TCHK) TCHK=(ISTEP.GT.THIS%ISTEP(NREC)+THIS%SKIP)
+print*,'marke 3'
       IF(.NOT.TCHK) RETURN  ! DO NOT WRITE THIS TIME SLICE
-      THIS%NREC=THIS%NREC+1
+print*,'marke 4'
+print*,'id ',this%id
+print*,'nrec ',nrec,this%nrec,istep,this%skip 
+     THIS%NREC=THIS%NREC+1
       NREC=THIS%NREC
       THIS%ISTEP(NREC)=ISTEP
       THIS%TIME(NREC)=TIME
