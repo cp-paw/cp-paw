@@ -2089,7 +2089,7 @@ END MODULE RANDOM_MODULE
       APLUSB(:,:)=MATMUL(TRANSPOSE(A),B)
       BMAT(1:M,:)=REAL(APLUSB)
       BMAT(M+1:2*M,:)=real(-ci*APLUSB)
-      CALL LIB_ESSL_DGES(N,M,NEQ,A,X,B)
+      CALL LIB_ESSL_DGESVS(2*N,2*M,NEQ,Amat,Xmat,Bmat)
 !     CALL LIB_LAPACK_DGESV(2*m,2*M,NEQ,Amat,Xmat,Bmat)
       X=CMPLX(XMAT(1:M,:),XMAT(M+1:2*M,:))
 !     =================================================================

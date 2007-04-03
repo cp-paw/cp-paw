@@ -1573,12 +1573,14 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 \vformat{real}
 \vrules{optional}
 \vdefault{1000}}
+
 %
 \mbax{\key{M}
 \vdescr{mass for the occupation dynamics. Should be larger than 200.}
 \vformat{real}
 \vrules{optional}
 \vdefault{300}}
+
 %
 \mbax{\key{ADIABATIC} 
 \vdescr{chooses quasi-adiabatic mode for
@@ -1593,6 +1595,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 \vformat{logical}
 \vrules{optional}
 \vdefault{.false.}}
+
 %
 \mbax{\key{RETARD}
 \vdescr{The energy levels used for the Brillouin-zone integration in the
@@ -1974,7 +1977,7 @@ optimum friction scheme adjusts within RETARD time steps to one-half of the
 original deviation.}
 \vformat{real}
 \vrules{optional, only used in combination with OPTFRIC=T}
-\vdefault{0.d0}
+\vdefault{0.d0}}
 
 
 % %----------------------------------------------------------------------
