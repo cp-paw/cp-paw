@@ -4075,6 +4075,7 @@ PRINT*,'WARNING! CODE FUDGED'
       use grid
       use aeatom
       USE PERIODICTABLE_MODULE, ONLY : PERIODICTABLE$GET
+      USE SCHRGL_INTERFACE_MODULE, ONLY : SCHROEDER
       real(8)                :: emin=-100.d0
       real(8)                :: emax=+400.d0
       integer(4)             :: ne=30

@@ -12,7 +12,7 @@ USE LINKEDLIST_MODULE, ONLY: LL_TYPE
 TYPE(LL_TYPE) :: LL_STRC
 TYPE(LL_TYPE) :: LL_CNTL
 CONTAINS
-!       ................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
         SUBROUTINE PUTHEADER(NFILO,VERSIONTEXT)
         USE CLOCK_MODULE
         USE VERSION_MODULE
@@ -52,7 +52,7 @@ CONTAINS
         CALL LOCK$REPORT(NFILO)
         END SUBROUTINE PUTHEADER
 !
-!       ................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
         SUBROUTINE PRINTVERSION()
         USE VERSION_MODULE
         IMPLICIT NONE
@@ -92,7 +92,7 @@ CONTAINS
         END SUBROUTINE WRITEI4
 END MODULE IO_MODULE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE IO$REPORT
       USE IO_MODULE
       IMPLICIT NONE
@@ -239,7 +239,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     .....................................................READIN.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN(NBEG,NOMORE,IPRINT,DELT,TMERMIN,TNWSTR)
 !     **                                                              **
       USE IO_MODULE
@@ -715,7 +715,7 @@ CALL TRACE$PASS('DONE')
       RETURN
     END SUBROUTINE READIN
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_FILES(LL_CNTL_)
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
@@ -782,7 +782,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................     
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STANDARDFILES
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -971,7 +971,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_DFT(LL_CNTL_)
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
@@ -1008,7 +1008,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_FOURIER(LL_CNTL_)
 !     ******************************************************************
 !     ** MODIFIES     : WAVES;POTENTIAL                               ** 
@@ -1080,7 +1080,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_PSIDYN(LL_CNTL_)
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
@@ -1238,7 +1238,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_RDYN(LL_CNTL_)
 !     ******************************************************************
 !     ******************************************************************
@@ -1353,7 +1353,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_AUTO(LL_CNTL_,ID,ANNEL,FACL,ANNEU,FACU)
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
@@ -1410,7 +1410,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_THERMOSTAT(LL_CNTL_,ID,DT,TARGET_,FREQ_)
 !     ******************************************************************
 !     ** REQUIRES SETTING OF                                          **
@@ -1536,7 +1536,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_RDYN_WARMUP(LL_CNTL_)
 !     ******************************************************************
 !     **                                                              **
@@ -1589,7 +1589,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END      
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_MERMIN(LL_CNTL_,TON)
 !     ******************************************************************
 !     **  READ BLOCK !CONTROL!MERMIN                                  **
@@ -1814,7 +1814,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_CELL(LL_CNTL_)
 !     ******************************************************************
 !     **                                                              **
@@ -1886,7 +1886,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END SUBROUTINE READIN_CELL
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_SHADOW(LL_CNTL_)
 !     ******************************************************************
 !     ******************************************************************
@@ -1990,7 +1990,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_QMMM(LL_CNTL_)
 !     ******************************************************************
 !     ******************************************************************
@@ -2085,7 +2085,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_ANALYSE_HYPERFINE(LL_CNTL_)
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
@@ -2135,7 +2135,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_ANALYSE_CORELEVEL(LL_CNTL_)
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
@@ -2174,7 +2174,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_COSMO(LL_CNTL_)
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
@@ -2331,7 +2331,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_ANALYSE_TRAJECTORIES(LL_CNTL_)
 !     ******************************************************************
 !     **  ACTIVATES TRAJECTORY MODULE TO WRITE TRAJECTORIES           **
@@ -2417,7 +2417,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_ANALYSE_WAVE(LL_CNTL_)
 !     ******************************************************************
 !     ==                                                              ==
@@ -2505,7 +2505,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_ANALYSE_DENSITY(LL_CNTL_)
 !     ******************************************************************
 !     ==                                                              ==
@@ -2628,7 +2628,7 @@ CALL TRACE$PASS('DONE')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_ANALYSE_POTENTIAL(LL_CNTL_)
 !     ******************************************************************
 !     ==                                                              ==
@@ -2829,7 +2829,7 @@ CALL TRACE$PASS('DONE')
 !!$      RETURN
 !!$      END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_ANALYSE_OPTIC(LL_CNTL_)
 !     ******************************************************************
 !     ** CALL THE INTERFACES TO WRITE THE DATA FOR THE OPTIC CODE     **
@@ -2860,7 +2860,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       END
 !
 
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_DIMER(LL_CNTL_)
 !     ******************************************************************
 !     **  READ BLOCK !CONTROL!MERMIN                                  **
@@ -3210,15 +3210,14 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL TRACE$POP
       RETURN
     END SUBROUTINE READIN_DIMER
- 
-
-!     .....................................................STRCIN.......
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN
-!     ******************************************************************
-!     **                                                              **
-!     **  READ STRUCTURAL DATA                                        **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1995 ****
+!     **************************************************************************
+!     **                                                                      **
+!     **  READ STRUCTURAL DATA                                                **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1995 ************
       USE IO_MODULE
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
@@ -3234,21 +3233,21 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)            :: NFIL
       LOGICAL(4)            :: TCHK
       INTEGER(4)            :: NKPT
-!     ******************************************************************
+!     **************************************************************************
                           CALL TRACE$PUSH('STRCIN')
       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
-!     ==================================================================
-!     ==  SELECT STRUCTURE FILE AND READ IT INTO THE BUFFER           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  SELECT STRUCTURE FILE AND READ IT INTO THE BUFFER                   ==
+!     ==========================================================================
       CALL LINKEDLIST$NEW(LL_STRC)
       CALL FILEHANDLER$UNIT('STRC',NFIL)
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'MONOMER')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
 !
-!     ==================================================================
-!     ==  ENTER BLOCK !STRUCTURE                                      ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ENTER BLOCK !STRUCTURE                                              ==
+!     ==========================================================================
       
       CALL LINKEDLIST$EXISTL(LL_STRC,'STRUCTURE',1,TCHK)
       IF(.NOT.TCHK) THEN
@@ -3257,37 +3256,37 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       END IF
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
 !    
-!     ==================================================================
-!     ==  READ BLOCK !STRUCTURE!GENERIC                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !STRUCTURE!GENERIC                                       ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$SELECT(LL_STRC,'GENERIC')
 !
-!     ==  READ ACTUAL VALUES  ==========================================
+!     ==  READ ACTUAL VALUES  ==================================================
       CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'LUNIT',0,1.D0)
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
 !    
-!     ==================================================================
-!     ==  READ BLOCK !STRUCTURE!SPECIES                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !STRUCTURE!SPECIES                                       ==
+!     ==========================================================================
       CALL STRCIN_SPECIES(LL_STRC)
       CALL SETUP$READ()
 !    
-!     ==================================================================
-!     ==  READ BLOCK !STRUCTURE!LATTICE                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !STRUCTURE!LATTICE                                       ==
+!     ==========================================================================
       CALL STRCIN_LATTICE(LL_STRC)
 !    
-!     ==================================================================
-!     ==  READ BLOCK !STRUCTURE!KPOINT                                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !STRUCTURE!KPOINT                                        ==
+!     ==========================================================================
       CALL STRCIN_KPOINT(LL_STRC,NKPT)
 !
-!     ==================================================================
-!     ==  ENTER BLOCK !ATOM                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ENTER BLOCK !ATOM                                                   ==
+!     ==========================================================================
       CALL STRCIN_ATOM(LL_STRC)
 !
 !     ==================================================================
@@ -3304,6 +3303,11 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==  ENTER BLOCK !ISOLATE                                        ==
 !     ==================================================================
       CALL STRCIN_ISOLATE(LL_STRC)
+!
+!     ==================================================================
+!     ==  ENTER BLOCK !confine                                        ==
+!     ==================================================================
+      CALL STRCIN_confine(LL_STRC)
 !
 !     ==================================================================
 !     ==  ENTER BLOCK !ORBPOT                                         ==
@@ -3349,7 +3353,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                           CALL TRACE$POP
       RETURN
       END
-!     ..................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_LATTICE(LL_STRC_)
 !     ****************************************************************** 
 !     **  DEFINES LATTICE IN ATOMLIST OBJECT                          **
@@ -3406,6 +3411,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       END
 !
 !     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_KPOINT(LL_STRC_,NKPT)
 !     ******************************************************************
 !     **  DEFINES THE K-POINT INFO OF OCCUPATIONS_MODULE              **
@@ -3880,7 +3886,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_ATOM
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_ISOLATE(LL_STRC_)
 !     ******************************************************************
 !     **  DEFINES THE ISOLATE OBJECT                                  **
@@ -3944,7 +3950,41 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_ISOLATE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE STRCIN_confine(LL_STRC_)
+!     **************************************************************************
+!     **  DEFINES THE confining potential mimicing the pauli repulsion        **
+!     **  of a solvent                                                        **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
+      TYPE(LL_TYPE)            :: LL_STRC
+      LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: TON
+      REAL(8)                  :: svar
+!     **************************************************************************
+                           CALL TRACE$PUSH('STRCIN_ISOLATE')
+      LL_STRC=LL_STRC_
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$EXISTL(LL_STRC,'CONFINE',1,TON)
+      CALL POTENTIAL$SETl4('CONFINE',TON)
+      IF(.NOT.TON) THEN
+        CALL TRACE$POP
+        RETURN
+      END IF
+      CALL LINKEDLIST$SELECT(LL_STRC,'CONFINE',0)
+      
+      CALL LINKEDLIST$EXISTD(LL_STRC,'V0',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'V0',0,20.D0)
+      CALL LINKEDLIST$GET(LL_STRC,'V0',1,SVAR)
+      CALL POTENTIAL$SETR8('VCONFINE',SVAR)
+                           CALL TRACE$POP
+      RETURN
+      END SUBROUTINE STRCIN_CONFINE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_OCCUP(LL_STRC_,NKPT)
 !     ******************************************************************
 !     **  DEFINES THE DYNOCC OBJECT                                   **
@@ -4179,7 +4219,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_OCCUP
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_ORBPOT(LL_STRC_)
 !     ******************************************************************
 !     **  DEFINE GROUPS IN GROUPLIST                                  **
@@ -4285,7 +4325,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_ORBPOT
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_GROUP(LL_STRC_)
 !     ******************************************************************
 !     **  DEFINE GROUPS IN GROUPLIST                                  **
@@ -4358,7 +4398,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_GROUP
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_VEXT(LL_STRC_)
 !     ******************************************************************
 !     **  DEFINE GROUPS IN GROUPLIST                                  **
@@ -4459,7 +4499,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_VEXT
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_LINEAR(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -4516,7 +4556,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_LINEAR
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_BOND(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -4554,7 +4594,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_BOND
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_RIGID(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -4588,7 +4628,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_RIGID
 !
-!     ..................................................................     
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_FREEZE(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -4643,7 +4683,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_FREEZE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_MIDPLANE(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -4686,7 +4726,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
     END SUBROUTINE STRCIN_CONSTRAINTS_MIDPLANE
 
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_TRANSLATION(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -4765,7 +4805,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_TRANSLATION
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_ORIENTATION(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -4843,7 +4883,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_ORIENTATION
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_ROTATION(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -4927,7 +4967,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_ROTATION
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_COGSEP(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -4977,7 +5017,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_COGSEP
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_ANGLE(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -5035,7 +5075,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_ANGLE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_CONSTRAINTS_TORSION(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -5102,7 +5142,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE STRCIN_CONSTRAINTS_TORSION
 !
-!     ................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READMOVABLECONSTRAINT(LL_STRC_)
 !     ******************************************************************
 !     **                                                              **
@@ -5178,7 +5218,7 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
       RETURN
     END SUBROUTINE READMOVABLECONSTRAINT
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_SOLVENT(LL_STRC_)
 !     ******************************************************************    
 !     **                                                              **    
@@ -5975,7 +6015,7 @@ PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
                           CALL TRACE$POP
       RETURN
       CONTAINS
-!       ................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
         SUBROUTINE STRCIN_SOLVENT_SETM(NAT,ATOM,NBOND,BOND)  
 !       ****************************************************************    
 !       **                                                            **    
@@ -6029,7 +6069,7 @@ PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
         END SUBROUTINE STRCIN_SOLVENT_SETM
       END SUBROUTINE STRCIN_SOLVENT
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_COSMO(LL_STRC_)
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
@@ -6139,7 +6179,7 @@ PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
       RETURN
       END
 !
-!     .....................................................STRCOUT......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCOUT
 !     ******************************************************************
 !     **                                                              **

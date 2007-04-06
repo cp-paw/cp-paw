@@ -1,14 +1,14 @@
 //
-// time: Thu Jan  6 21:20:23 2005
+// time: Fri Apr  6 09:49:54 2007
 //
-// version: 3.2.0 (format), 4.3.2 (DX)
+// version: 3.2.0 (format), 4.4.4 (DX)
 //
 //
 //
-// macro reference (direct): AnalyseCut /home/cfoerst/PAW/dx/AnalyseCut.macro.net
+// macro reference (direct): AnalyseCut /home/ptpb/Tree/PAW/devel/dx/AnalyseCut.macro.net
 include "AnalyseCut.macro.net"
 //
-// macro reference (direct): BallStick /home/cfoerst/PAW/dx/BallStick.macro.net
+// macro reference (direct): BallStick /home/ptpb/Tree/PAW/devel/dx/BallStick.macro.net
 include "BallStick.macro.net"
 //
 // MODULE main
@@ -30,8 +30,8 @@ main_AmbientLight_1_out_1 =
     ) [instance: 1, cache: 1];
     // 
     // node FileSelector[1]: x = 419, y = 134, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = "/home/cfoerst/projects/LaAlO@Si/calcs/para/DONE_2Al_dimerox/B_295_K1.dx"
-    // output[2]: visible = 1, type = 32, value = "B_295_K1.dx"
+    // output[1]: visible = 1, type = 32, value = "/home/ptpb/Tree/Projects/Walther/NiO_szustand/NiO_LUMO.dx"
+    // output[2]: visible = 1, type = 32, value = "NiO_LUMO.dx"
     // page group: dx_wave
     //
     // 
@@ -65,13 +65,13 @@ main_Compute_24_out_1 =
     // 
     // node Scalar[3]: x = 827, y = 134, inputs = 11, label = Scalar
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_3"
-    // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.119825
+    // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.3 
     // input[4]: defaulting = 1, visible = 0, type = 3, value = 0
-    // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.0
-    // input[6]: defaulting = 1, visible = 0, type = 5, value = 0.23965
+    // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.00017
+    // input[6]: defaulting = 1, visible = 0, type = 5, value = 2.04965
     // input[7]: defaulting = 1, visible = 0, type = 5, value = 1.0
-    // input[9]: defaulting = 1, visible = 0, type = 1, value = 3
-    // output[1]: visible = 1, type = 5, value = 0.119825
+    // input[9]: defaulting = 1, visible = 0, type = 1, value = 2
+    // output[1]: visible = 1, type = 5, value = 0.3 
     // page group: dx_wave
     //
 main_Scalar_3_out_1[cache: 2] = 
@@ -103,7 +103,7 @@ main_Compute_2_out_1 =
     main_Scalar_3_out_1
     ) [instance: 2, cache: 1];
     // 
-    // node Compute[3]: x = 768, y = 439, inputs = 3, label = Compute
+    // node Compute[3]: x = 767, y = 439, inputs = 3, label = Compute
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "max($0,-$1)"
     // page group: dx_wave
     // expression: value = max(a,-b)
@@ -131,13 +131,13 @@ main_Compute_3_out_1 =
     // 
     // node Vector[2]: x = 755, y = 133, inputs = 11, label = Vector
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Vector_2"
-    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 1 0 1 ]
+    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 0 1 0 ]
     // input[4]: defaulting = 1, visible = 0, type = 3, value = 1
     // input[5]: defaulting = 1, visible = 0, type = 8, value = [ -10.0 -10.0 -10.0 ]
     // input[6]: defaulting = 1, visible = 0, type = 8, value = [ 10.0 10.0 10.0 ]
     // input[7]: defaulting = 1, visible = 0, type = 8, value = [       1        1        1]
     // input[9]: defaulting = 1, visible = 0, type = 8, value = [ 3.0 3.0 3.0 ]
-    // output[1]: visible = 1, type = 8, value = [ 1 0 1 ]
+    // output[1]: visible = 1, type = 8, value = [ 0 1 0 ]
     // page group: dx_wave
     //
     // 
@@ -152,19 +152,19 @@ main_Compute_3_out_1 =
     // page group: dx_wave
     //
     // 
-    // node Scalar[4]: x = 884, y = 132, inputs = 11, label = Scalar
+    // node Scalar[4]: x = 883, y = 132, inputs = 11, label = Scalar
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_4"
-    // input[3]: defaulting = 0, visible = 0, type = 5, value = 1.0 
+    // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.8 
     // input[4]: defaulting = 1, visible = 0, type = 3, value = 0
     // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.1
     // input[6]: defaulting = 1, visible = 0, type = 5, value = 1.0
     // input[7]: defaulting = 1, visible = 0, type = 5, value = 1.0
     // input[9]: defaulting = 1, visible = 0, type = 1, value = 1
-    // output[1]: visible = 1, type = 5, value = 1.0 
+    // output[1]: visible = 1, type = 5, value = 0.8 
     // page group: dx_wave
     //
     // 
-    // node AnalyseCut[1]: x = 840, y = 533, inputs = 5, label = AnalyseCut
+    // node AnalyseCut[1]: x = 880, y = 514, inputs = 5, label = AnalyseCut
     // page group: dx_wave
     //
 main_AnalyseCut_1_out_1 = 
@@ -176,7 +176,7 @@ main_AnalyseCut_1_out_1 =
     main_Scalar_4_out_1
     ) [instance: 1, cache: 1];
     // 
-    // node Import[1]: x = 465, y = 236, inputs = 6, label = Import
+    // node Import[1]: x = 465, y = 235, inputs = 6, label = Import
     // input[2]: defaulting = 1, visible = 1, type = 32, value = "ballstick"
     // page group: dx_wave
     //
@@ -190,25 +190,25 @@ main_Import_1_out_1 =
     main_Import_1_in_6
     ) [instance: 1, cache: 1];
     // 
-    // node BallStick[1]: x = 468, y = 336, inputs = 2, label = BallStick
-    // input[2]: defaulting = 0, visible = 0, type = 1, value = 1
+    // node BallStick[2]: x = 474, y = 442, inputs = 2, label = BallStick
+    // input[2]: defaulting = 0, visible = 1, type = 1, value = 1
     // page group: dx_wave
     //
-main_BallStick_1_out_1 = 
+main_BallStick_2_out_1 = 
     BallStick(
     main_Import_1_out_1,
-    main_BallStick_1_in_2
-    ) [instance: 1, cache: 1];
+    main_BallStick_2_in_2
+    ) [instance: 2, cache: 1];
     // 
     // node Scalar[2]: x = 572, y = 134, inputs = 11, label = Scalar
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_2"
-    // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.04 
+    // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.14 
     // input[4]: defaulting = 1, visible = 0, type = 3, value = 1
-    // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.0
-    // input[6]: defaulting = 1, visible = 0, type = 5, value = 0.17178001
+    // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.00017
+    // input[6]: defaulting = 1, visible = 0, type = 5, value = 2.04965
     // input[7]: defaulting = 1, visible = 0, type = 5, value = 1.0
-    // input[9]: defaulting = 1, visible = 0, type = 1, value = 3
-    // output[1]: visible = 1, type = 5, value = 0.04 
+    // input[9]: defaulting = 1, visible = 0, type = 1, value = 2
+    // output[1]: visible = 1, type = 5, value = 0.14 
     // page group: dx_wave
     //
 main_Scalar_2_out_1[cache: 2] = 
@@ -254,15 +254,15 @@ main_Isosurface_2_out_1 =
     main_Isosurface_2_in_6
     ) [instance: 2, cache: 1];
     // 
-    // node Scalar[5]: x = 951, y = 136, inputs = 11, label = Scalar
+    // node Scalar[5]: x = 948, y = 136, inputs = 11, label = Scalar
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_5"
-    // input[3]: defaulting = 0, visible = 0, type = 5, value = 1.0 
+    // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.5 
     // input[4]: defaulting = 1, visible = 0, type = 3, value = 0
     // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.1
     // input[6]: defaulting = 1, visible = 0, type = 5, value = 1.0
     // input[7]: defaulting = 1, visible = 0, type = 5, value = 1.0
     // input[9]: defaulting = 1, visible = 0, type = 1, value = 1
-    // output[1]: visible = 1, type = 5, value = 1.0 
+    // output[1]: visible = 1, type = 5, value = 0.5 
     // page group: dx_wave
     //
     // 
@@ -327,19 +327,19 @@ main_ClipBox_1_out_1 =
     // 
     // node Selector[1]: x = 1053, y = 11, inputs = 7, label = Selector
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Selector_1"
-    // input[2]: defaulting = 0, visible = 0, type = 32, value = "on" 
-    // input[3]: defaulting = 0, visible = 0, type = 29, value = 1 
+    // input[2]: defaulting = 0, visible = 0, type = 32, value = "off" 
+    // input[3]: defaulting = 0, visible = 0, type = 29, value = 0 
     // input[4]: defaulting = 1, visible = 1, type = 16777248, value = { "on" "off" }
     // input[5]: defaulting = 1, visible = 0, type = 16777245, value = { 1 0 }
-    // output[1]: visible = 1, type = 29, value = 1 
-    // output[2]: visible = 1, type = 32, value = "on" 
+    // output[1]: visible = 1, type = 29, value = 0 
+    // output[2]: visible = 1, type = 32, value = "off" 
     // page group: dx_wave
     //
     // 
     // node Transmitter[3]: x = 473, y = 536, inputs = 1, label = ballstick
     // page group: dx_wave
     //
-ballstick = main_BallStick_1_out_1;
+ballstick = main_BallStick_2_out_1;
     // 
     // node Receiver[2]: x = 1101, y = 89, inputs = 1, label = ballstick
     // page group: dx_wave
@@ -364,12 +364,12 @@ main_Switch_1_out_1 =
     // 
     // node Selector[2]: x = 1162, y = 11, inputs = 7, label = Selector
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Selector_2"
-    // input[2]: defaulting = 0, visible = 0, type = 32, value = "on" 
-    // input[3]: defaulting = 0, visible = 0, type = 29, value = 1 
+    // input[2]: defaulting = 0, visible = 0, type = 32, value = "off" 
+    // input[3]: defaulting = 0, visible = 0, type = 29, value = 0 
     // input[4]: defaulting = 1, visible = 1, type = 16777248, value = { "on" "off" }
     // input[5]: defaulting = 1, visible = 0, type = 16777245, value = { 1 0 }
-    // output[1]: visible = 1, type = 29, value = 1 
-    // output[2]: visible = 1, type = 32, value = "on" 
+    // output[1]: visible = 1, type = 29, value = 0 
+    // output[2]: visible = 1, type = 32, value = "off" 
     // page group: dx_wave
     //
     // 
@@ -396,21 +396,21 @@ main_Switch_2_out_1 =
     // 
     // node Selector[3]: x = 1339, y = 11, inputs = 7, label = Selector
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Selector_3"
-    // input[2]: defaulting = 0, visible = 0, type = 32, value = "off" 
-    // input[3]: defaulting = 0, visible = 0, type = 29, value = 0 
+    // input[2]: defaulting = 0, visible = 0, type = 32, value = "on" 
+    // input[3]: defaulting = 0, visible = 0, type = 29, value = 1 
     // input[4]: defaulting = 1, visible = 1, type = 16777248, value = { "on" "off" }
     // input[5]: defaulting = 1, visible = 0, type = 16777245, value = { 1 0 }
-    // output[1]: visible = 1, type = 29, value = 0 
-    // output[2]: visible = 1, type = 32, value = "off" 
+    // output[1]: visible = 1, type = 29, value = 1 
+    // output[2]: visible = 1, type = 32, value = "on" 
     // page group: dx_wave
     //
     // 
-    // node Transmitter[2]: x = 819, y = 636, inputs = 1, label = PlaneCut
+    // node Transmitter[2]: x = 890, y = 610, inputs = 1, label = PlaneCut
     // page group: dx_wave
     //
 PlaneCut = main_AnalyseCut_1_out_1;
     // 
-    // node Receiver[4]: x = 1343, y = 82, inputs = 1, label = PlaneCut
+    // node Receiver[4]: x = 1341, y = 82, inputs = 1, label = PlaneCut
     // page group: dx_wave
     //
 main_Receiver_4_out_1[cache: 0] = PlaneCut;
@@ -484,14 +484,14 @@ main_Collect_3_out_1 =
     // node Image[1]: x = 201, y = 344, inputs = 49, label = Image
     // input[1]: defaulting = 0, visible = 0, type = 67108863, value = "Image_1"
     // input[4]: defaulting = 0, visible = 0, type = 1, value = 1
-    // input[5]: defaulting = 0, visible = 0, type = 8, value = [21.7318 6.81961 10.9111]
-    // input[6]: defaulting = 0, visible = 0, type = 8, value = [35.3695 134.825 17.2105]
-    // input[7]: defaulting = 1, visible = 0, type = 5, value = 69.0686
-    // input[8]: defaulting = 0, visible = 0, type = 1, value = 654
-    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.781
-    // input[10]: defaulting = 0, visible = 0, type = 8, value = [0.993259 -0.107906 0.0423495]
-    // input[11]: defaulting = 0, visible = 0, type = 5, value = 30.0
-    // input[12]: defaulting = 0, visible = 0, type = 1, value = 1
+    // input[5]: defaulting = 0, visible = 0, type = 8, value = [0.085269 0.085268 -3.00407e-05]
+    // input[6]: defaulting = 0, visible = 0, type = 8, value = [28.2426 95.8002 41.354]
+    // input[7]: defaulting = 0, visible = 0, type = 5, value = 57.8777
+    // input[8]: defaulting = 0, visible = 0, type = 1, value = 717
+    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.732
+    // input[10]: defaulting = 0, visible = 0, type = 8, value = [-0.415527 -0.25499 0.873108]
+    // input[11]: defaulting = 1, visible = 0, type = 5, value = 29.9999
+    // input[12]: defaulting = 0, visible = 0, type = 1, value = 0
     // input[14]: defaulting = 0, visible = 0, type = 1, value = 1
     // input[15]: defaulting = 0, visible = 0, type = 32, value = "none"
     // input[16]: defaulting = 0, visible = 0, type = 32, value = "dots"
@@ -515,10 +515,10 @@ main_Collect_3_out_1 =
     // input[37]: defaulting = 1, visible = 0, type = 16777224, value = NULL
     // input[38]: defaulting = 1, visible = 0, type = 16777248, value = NULL
     // input[39]: defaulting = 0, visible = 0, type = 5, value = 1.0
-    // input[41]: defaulting = 0, visible = 0, type = 32, value = "rotate"
+    // input[41]: defaulting = 0, visible = 0, type = 32, value = "roam"
     // page group: dx_wave
     // depth: value = 24
-    // window: position = (0.3594,0.1035), size = 0.5219x0.5420
+    // window: position = (0.4350,0.0410), size = 0.5221x0.5419
     // internal caching: 1
     //
 main_Image_1_out_1,
@@ -580,7 +580,7 @@ CacheScene(main_Image_1_in_1, main_Image_1_out_1, main_Image_1_out_2);
 }
 main_AmbientLight_1_in_1 = NULL;
 main_AmbientLight_1_out_1 = NULL;
-main_FileSelector_1_out_1 = "/home/cfoerst/projects/LaAlO@Si/calcs/para/DONE_2Al_dimerox/B_295_K1.dx";
+main_FileSelector_1_out_1 = "/home/ptpb/Tree/Projects/Walther/NiO_szustand/NiO_LUMO.dx";
 main_Import_2_in_2 = "density";
 main_Import_2_in_3 = NULL;
 main_Import_2_in_4 = NULL;
@@ -591,7 +591,7 @@ main_Compute_24_in_1 = "abs($0)";
 main_Compute_24_in_3 = NULL;
 main_Compute_24_out_1 = NULL;
 main_Scalar_3_in_1 = "Scalar_3";
-main_Scalar_3_in_3 = 0.119825;
+main_Scalar_3_in_3 = 0.3 ;
 main_Scalar_3_in_4 = NULL;
 main_Scalar_3_in_5 = NULL;
 main_Scalar_3_in_6 = NULL;
@@ -600,7 +600,7 @@ main_Scalar_3_in_8 = NULL;
 main_Scalar_3_in_9 = NULL;
 main_Scalar_3_in_10 = NULL;
 main_Scalar_3_in_11 = NULL;
-main_Scalar_3_out_1 = 0.119825;
+main_Scalar_3_out_1 = 0.3 ;
 main_Compute_2_in_1 = "min($0,$1)";
 main_Compute_2_out_1 = NULL;
 main_Compute_3_in_1 = "max($0,-$1)";
@@ -619,7 +619,7 @@ main_Vector_1_in_11 = NULL;
 main_Vector_1_out_1 = [ 0 0 0 ];
 main_Vector_2_in_1 = "Vector_2";
 main_Vector_2_in_2 = NULL;
-main_Vector_2_in_3 = [ 1 0 1 ];
+main_Vector_2_in_3 = [ 0 1 0 ];
 main_Vector_2_in_4 = NULL;
 main_Vector_2_in_5 = NULL;
 main_Vector_2_in_6 = NULL;
@@ -628,7 +628,7 @@ main_Vector_2_in_8 = NULL;
 main_Vector_2_in_9 = NULL;
 main_Vector_2_in_10 = NULL;
 main_Vector_2_in_11 = NULL;
-main_Vector_2_out_1 = [ 1 0 1 ];
+main_Vector_2_out_1 = [ 0 1 0 ];
 main_Selector_4_in_1 = "Selector_4";
 main_Selector_4_in_2 = "on" ;
 main_Selector_4_in_3 = 1 ;
@@ -639,7 +639,7 @@ main_Selector_4_in_7 = NULL;
 main_Selector_4_out_1 = 1 ;
 main_Scalar_4_in_1 = "Scalar_4";
 main_Scalar_4_in_2 = NULL;
-main_Scalar_4_in_3 = 1.0 ;
+main_Scalar_4_in_3 = 0.8 ;
 main_Scalar_4_in_4 = NULL;
 main_Scalar_4_in_5 = NULL;
 main_Scalar_4_in_6 = NULL;
@@ -648,7 +648,7 @@ main_Scalar_4_in_8 = NULL;
 main_Scalar_4_in_9 = NULL;
 main_Scalar_4_in_10 = NULL;
 main_Scalar_4_in_11 = NULL;
-main_Scalar_4_out_1 = 1.0 ;
+main_Scalar_4_out_1 = 0.8 ;
 main_AnalyseCut_1_out_1 = NULL;
 main_Import_1_in_2 = NULL;
 main_Import_1_in_3 = NULL;
@@ -656,10 +656,10 @@ main_Import_1_in_4 = NULL;
 main_Import_1_in_5 = NULL;
 main_Import_1_in_6 = NULL;
 main_Import_1_out_1 = NULL;
-main_BallStick_1_in_2 = 1;
-main_BallStick_1_out_1 = NULL;
+main_BallStick_2_in_2 = 1;
+main_BallStick_2_out_1 = NULL;
 main_Scalar_2_in_1 = "Scalar_2";
-main_Scalar_2_in_3 = 0.04 ;
+main_Scalar_2_in_3 = 0.14 ;
 main_Scalar_2_in_4 = NULL;
 main_Scalar_2_in_5 = NULL;
 main_Scalar_2_in_6 = NULL;
@@ -668,7 +668,7 @@ main_Scalar_2_in_8 = NULL;
 main_Scalar_2_in_9 = NULL;
 main_Scalar_2_in_10 = NULL;
 main_Scalar_2_in_11 = NULL;
-main_Scalar_2_out_1 = 0.04 ;
+main_Scalar_2_out_1 = 0.14 ;
 main_Compute_4_in_1 = "-$0";
 main_Compute_4_in_3 = NULL;
 main_Compute_4_out_1 = NULL;
@@ -679,7 +679,7 @@ main_Isosurface_2_in_6 = NULL;
 main_Isosurface_2_out_1 = NULL;
 main_Scalar_5_in_1 = "Scalar_5";
 main_Scalar_5_in_2 = NULL;
-main_Scalar_5_in_3 = 1.0 ;
+main_Scalar_5_in_3 = 0.5 ;
 main_Scalar_5_in_4 = NULL;
 main_Scalar_5_in_5 = NULL;
 main_Scalar_5_in_6 = NULL;
@@ -688,7 +688,7 @@ main_Scalar_5_in_8 = NULL;
 main_Scalar_5_in_9 = NULL;
 main_Scalar_5_in_10 = NULL;
 main_Scalar_5_in_11 = NULL;
-main_Scalar_5_out_1 = 1.0 ;
+main_Scalar_5_out_1 = 0.5 ;
 main_Color_3_in_2 = "blue";
 main_Color_3_in_4 = NULL;
 main_Color_3_in_5 = NULL;
@@ -705,13 +705,13 @@ main_Color_1_out_1 = NULL;
 main_Collect_4_out_1 = NULL;
 main_ClipBox_1_out_1 = NULL;
 main_Selector_1_in_1 = "Selector_1";
-main_Selector_1_in_2 = "on" ;
-main_Selector_1_in_3 = 1 ;
+main_Selector_1_in_2 = "off" ;
+main_Selector_1_in_3 = 0 ;
 main_Selector_1_in_4 = NULL;
 main_Selector_1_in_5 = NULL;
 main_Selector_1_in_6 = NULL;
 main_Selector_1_in_7 = NULL;
-main_Selector_1_out_1 = 1 ;
+main_Selector_1_out_1 = 0 ;
 main_Transmitter_3_out_1 = NULL;
 main_Receiver_2_out_1 = NULL;
 main_Switch_1_in_3 = NULL;
@@ -719,25 +719,25 @@ main_Switch_1_in_4 = NULL;
 main_Switch_1_in_5 = NULL;
 main_Switch_1_out_1 = NULL;
 main_Selector_2_in_1 = "Selector_2";
-main_Selector_2_in_2 = "on" ;
-main_Selector_2_in_3 = 1 ;
+main_Selector_2_in_2 = "off" ;
+main_Selector_2_in_3 = 0 ;
 main_Selector_2_in_4 = NULL;
 main_Selector_2_in_5 = NULL;
 main_Selector_2_in_6 = NULL;
 main_Selector_2_in_7 = NULL;
-main_Selector_2_out_1 = 1 ;
+main_Selector_2_out_1 = 0 ;
 main_Transmitter_4_out_1 = NULL;
 main_Receiver_3_out_1 = NULL;
 main_Switch_2_in_3 = NULL;
 main_Switch_2_out_1 = NULL;
 main_Selector_3_in_1 = "Selector_3";
-main_Selector_3_in_2 = "off" ;
-main_Selector_3_in_3 = 0 ;
+main_Selector_3_in_2 = "on" ;
+main_Selector_3_in_3 = 1 ;
 main_Selector_3_in_4 = NULL;
 main_Selector_3_in_5 = NULL;
 main_Selector_3_in_6 = NULL;
 main_Selector_3_in_7 = NULL;
-main_Selector_3_out_1 = 0 ;
+main_Selector_3_out_1 = 1 ;
 main_Transmitter_2_out_1 = NULL;
 main_Receiver_4_out_1 = NULL;
 main_Switch_3_in_3 = NULL;
@@ -1070,14 +1070,14 @@ macro Image(
 main_Image_1_in_1 = "Image_1";
 main_Image_1_in_3 = "X24,,";
 main_Image_1_in_4 = 1;
-main_Image_1_in_5 = [21.7318 6.81961 10.9111];
-main_Image_1_in_6 = [35.3695 134.825 17.2105];
-main_Image_1_in_7 = NULL;
-main_Image_1_in_8 = 654;
-main_Image_1_in_9 = 0.781;
-main_Image_1_in_10 = [0.993259 -0.107906 0.0423495];
-main_Image_1_in_11 = 30.0;
-main_Image_1_in_12 = 1;
+main_Image_1_in_5 = [0.085269 0.085268 -3.00407e-05];
+main_Image_1_in_6 = [28.2426 95.8002 41.354];
+main_Image_1_in_7 = 57.8777;
+main_Image_1_in_8 = 717;
+main_Image_1_in_9 = 0.732;
+main_Image_1_in_10 = [-0.415527 -0.25499 0.873108];
+main_Image_1_in_11 = NULL;
+main_Image_1_in_12 = 0;
 main_Image_1_in_13 = NULL;
 main_Image_1_in_14 = 1;
 main_Image_1_in_15 = "none";
@@ -1105,7 +1105,7 @@ main_Image_1_in_37 = NULL;
 main_Image_1_in_38 = NULL;
 main_Image_1_in_39 = 1.0;
 main_Image_1_in_40 = NULL;
-main_Image_1_in_41 = "rotate";
+main_Image_1_in_41 = "roam";
 main_Image_1_in_42 = NULL;
 main_Image_1_in_43 = NULL;
 main_Image_1_in_44 = NULL;
@@ -1114,6 +1114,6 @@ main_Image_1_in_46 = NULL;
 main_Image_1_in_47 = NULL;
 main_Image_1_in_48 = NULL;
 main_Image_1_in_49 = NULL;
-Executive("product version 4 3 2");
+Executive("product version 4 4 4");
 $sync
 main();

@@ -26,6 +26,7 @@ BINARIES=bin
 # ________________names for the binaries
 NONEBIN="paw.x"
 FASTBIN="paw_fast.x"    
+PROFBIN="paw_prof.x"    
 DEBUGBIN="paw_dbg.x"  
 PARALLELBIN="ppaw_fast.x"
 #
@@ -91,6 +92,7 @@ DEBUGOPTRM="file"
 OBJECTS="Objects"
 NONEDIR="none"  
 FASTDIR="fast"
+PROFDIR="prof"
 DEBUGDIR="debug"       
 PARALLELDIR="$FASTDIR" 
 #

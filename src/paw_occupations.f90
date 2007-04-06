@@ -1112,6 +1112,8 @@ END MODULE DYNOCC_MODULE
        INTEGER(4),INTENT(IN) :: NFIL
        REAL(8)               :: EV
        REAL(8)               :: KELVIN
+       REAL(8)               :: OCC(NB,NKPT,NSPIN)
+       INTEGER(4)            :: ISPIN,IKPT
 !      *****************************************************************
        CALL CONSTANTS('EV',EV)
        CALL CONSTANTS('KB',KELVIN)
@@ -1122,6 +1124,14 @@ END MODULE DYNOCC_MODULE
 !      =================================================================
        IF(.NOT.TDYN) THEN
          CALL REPORT$STRING(NFIL,'FIXED OCCUPATIONS')
+         CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
+         WRITE(NFIL,*)'OCCUPATIONS'
+         DO ISPIN=1,NSPIN
+           DO IKPT=1,NKPT
+             WRITE(NFIL,FMT='("FOR K-POINT: ",I5," AND SPIN ",I1)')IKPT,ISPIN
+             CALL DYNOCC_PREIG('OCC',NFIL,NB,OCC(:,IKPT,ISPIN),WKPT(IKPT))
+           ENDDO
+         ENDDO
          RETURN
        ELSE
          CALL REPORT$STRING(NFIL,'OCCUPATIONS VARIABLE')

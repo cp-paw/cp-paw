@@ -1497,6 +1497,7 @@ CALL TIMING$CLOCKOFF('GRAPHICS 1CPOTENTIAL')
 PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       ENDDO
       DEALLOCATE(ONECPOT)
+1000 continue
 !
 !     ==================================================================
 !     ==  WRITE TO FILE                                               ==

@@ -3011,6 +3011,40 @@ contributing to the fit}
 \vrules{optional}
 \vdefault{.true. (.false. if the block !STRUCTURE!ISOLATE is not present)}}
 
+%
+%----------------------------------------------------------------------
+\block{!STRUCTURE!CONFINE}
+%----------------------------------------------------------------------
+\brules{optional} 
+
+\bdescr{Places a confining potential around the
+  molecule which mimics the Pauli repulsion of a solvent. The
+  potential starts to raise at a radius $r_{in,R}$, chosen equal to
+  the van der Waals radius of the respective atom and reaches the
+  maximum value $V_0$ at a rsadius $r_{out,R}$ equal to twice the Van der
+  Waals radius. The confining potential has the form
+ \begin{eqnarray*}
+ v(\vec{r})=V_0\prod_R f\left(\frac{|\vec{r}-\vec{R}|-r_{in,R}}{r_{out,R}-r_{in,R}}\right)
+ \end{eqnarray*}
+ where $f(x)$ is a differentiable step-like function, that serves to
+ switch off the potential inside the cavity
+\begin{eqnarray*}
+f(x)=\left\lbrace \begin{array}{ll}
+0 &\qquad\textrm{for}\qquad x<0\\
+3x^2-2x^2
+&\qquad\textrm{for}\qquad 0<x<1\\
+1 &\qquad\textrm{for}\qquad 1<x\\
+\end{array}\right.
+\end{eqnarray*}
+}
+
+%
+\mbax{\key{POT}
+\vdescr{Height $V_0$ of the confinement potential}
+\vformat{real}
+\vrules{optional}
+\vdefault{20.}}
+
 \ifthenelse{\boolean{qmmm}}{
 %----------------------------------------------------------------------
 \block{!STRUCTURE!QM-MM}

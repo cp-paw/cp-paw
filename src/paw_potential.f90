@@ -1,6 +1,9 @@
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       MODULE POTENTIAL_MODULE
       LOGICAL(4) :: TINI=.FALSE.  ! PLANE WAVE GRID DEFINED OR NOT
       LOGICAL(4) :: TSET=.FALSE.  ! MODULE DATA DEFINED OR NOT
+      logical(4) :: TCONFINE=.FALSE. ! CONFINING POTENTIAL OR NOT
+      REAL(8)    :: VCONFINE=0.D0
       REAL(8)    :: EPWRHO     ! PLANE WAVE CUTOFF FOR THE DENSITY
       INTEGER(4) :: NR1GLOB    ! #(R-POINTS IN FIRST DIRECTION; ALL TASK)
       INTEGER(4) :: NR1L       ! #(R-POINTS IN FIRST DIRECTION; THIS TASK)
@@ -23,15 +26,34 @@
       LOGICAL(4)              :: TFORCE=.FALSE.
       END MODULE POTENTIAL_MODULE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE POTENTIAL$sETR8(ID,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE POTENTIAL_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,INTENT(in):: VAL
+!     **************************************************************************
+      IF(ID.EQ.'VCONFINE') THEN
+        VCONFINE=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('POTENTIAL$SETR8')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL$GETR8(ID,VALUE)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
       USE POTENTIAL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VALUE
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'EPWRHO') THEN
         VALUE=EPWRHO
       ELSE
@@ -42,19 +64,23 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL$SETL4(ID,VAL)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
       USE POTENTIAL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(IN) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'STRESS') THEN
         TSTRESS=VAL
       ELSE IF(ID.EQ.'FORCE') THEN
         TFORCE=VAL
+      ELSE IF(ID.EQ.'CONFINE') THEN
+!       == APPLIES A REPULSIVE POTENTIAL AROUND THE MOLECULE DESCRIBING THE ====
+!       == PAULI REPULSION OF A SOLVENT ENVIRONMENT ============================
+        Tconfine=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -63,16 +89,16 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL$SETR8A(ID,LEN,VAL)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
       USE POTENTIAL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       REAL(8)     ,INTENT(IN) :: VAL(LEN)
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'RBAS') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE INCONSISTENCY')
@@ -88,13 +114,13 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL$REPORT(NFIL)
-!     ******************************************************************
-!     **                                                              **
-!     **  REPORT ON THE POTENTIAL OBJECT                              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  REPORT ON THE POTENTIAL OBJECT                                      **
+!     **                                                                      **
+!     **************************************************************************
       USE POTENTIAL_MODULE
       IMPLICIT NONE
       INTEGER(4)    :: NFIL
@@ -102,7 +128,7 @@
       REAL(8)       :: RY
       REAL(8)       :: MEMORY
       INTEGER(4)    :: NGG
-!     ******************************************************************
+!     **************************************************************************
       CALL CONSTANTS('RY',RY)
       CALL CONSTANTS('MBYTE',MBYTE)
       CALL REPORT$TITLE(NFIL,'POTENTIAL')
@@ -120,18 +146,22 @@
      &           ,KIND=8)/MBYTE
       CALL REPORT$R8VAL(NFIL,'MEMORY REQUIRED BIG PERMANENT ARRAYS' &
      &           ,MEMORY/MBYTE,'MBYTE')
+      IF(TCONFINE) THEN
+        CALL REPORT$STRING(NFIL,'SOLVENT PAULI-REPULSION INCLUDED')
+        CALL REPORT$R8VAL(NFIL,'HEIGHT OF CONFINING POTENTIAL',VCONFINE,'H')
+      END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL$CLEAR
-!     ******************************************************************
-!     **  CLEAR PERMANENT MEMORY OF THE POTENTIAL OBJECT              **
-!     **  (WILL AUTOMATICALLY BE RECREATED WHEN REQUIRED)             **
-!     ******************************************************************
+!     **************************************************************************
+!     **  CLEAR PERMANENT MEMORY OF THE POTENTIAL OBJECT                      **
+!     **  (WILL AUTOMATICALLY BE RECREATED WHEN REQUIRED)                     **
+!     **************************************************************************
       USE POTENTIAL_MODULE
       IMPLICIT NONE
-!     ******************************************************************
+!     **************************************************************************
                                 CALL TRACE$PUSH('POTENTIAL$CLEAR')
       IF(ALLOCATED(YLMOFG)) DEALLOCATE(YLMOFG)
       IF(ALLOCATED(PSCOREG))DEALLOCATE(PSCOREG)
@@ -143,11 +173,11 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL$INITIALIZE(EPWRHO_,NR1START_,NR1L_,NR2_,NR3_)
-!     ******************************************************************
-!     **  DEFINE GRID FOR FOURIER TRANSFORM                           **
-!     ******************************************************************
+!     **************************************************************************
+!     **  DEFINE GRID FOR FOURIER TRANSFORM                                   **
+!     **************************************************************************
       USE POTENTIAL_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: EPWRHO_
@@ -158,7 +188,7 @@
       REAL(8)               :: RBAS(3,3)     ! LATTICE VECTORS
       REAL(8)   ,PARAMETER  :: K(3)=(/0.D0,0.D0,0.D0/)
       INTEGER(4)            :: ISP
-!     ******************************************************************
+!     **************************************************************************
                                 CALL TRACE$PUSH('POTENTIAL$INITIALIZE')
       IF(TINI) THEN
         CALL ERROR$MSG('POTENTIAL OBJECT IS ALREADY INITIALIZED')
@@ -167,18 +197,18 @@
       TINI=.TRUE.
       TSET=.FALSE.
 !     
-!     ================================================================
-!     ==  MAP INPUT DATA ONTO MODULE                                ==
-!     ================================================================
+!     ==========================================================================
+!     ==  MAP INPUT DATA ONTO MODULE                                          ==
+!     ==========================================================================
       EPWRHO=EPWRHO_
       NR1START=NR1START_
       NR1L=NR1L_
       NR2=NR2_
       NR3=NR3_
 !     
-!     ================================================================
-!     ==  INITIALIZE PLANEWAVE OBJECT                               ==
-!     ================================================================
+!     ==========================================================================
+!     ==  INITIALIZE PLANEWAVE OBJECT                                         ==
+!     ==========================================================================
       CALL CELL$GETR8A('TREF',9,RBAS)
       CALL PLANEWAVE$INITIALIZE('DENSITY','MONOMER',RBAS,K,.TRUE.,EPWRHO &
      &                         ,NR1START,NR1L,NR2,NR3)
@@ -196,7 +226,7 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL_RESET
 !     ******************************************************************
 !     **   RESET PERMANENT DATA OF POTENTIAL_MODULE                   **
@@ -214,7 +244,7 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL_UPDATE(RBAS)
 !     ******************************************************************
 !     **  COLLECTS INTERNAL ARRAYS                                    **
@@ -287,13 +317,15 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL$VOFRHO(NRL,NDIMD,RHO,LMRXX_,NAT_,QLM,VQLM &
      &                           ,R0,FORCE,RBAS,STRESS,RHOB)
-!     ******************************************************************
-!     **  CALCULATE POTENTIAL                                         **
-!     ******************************************************************
+!     **************************************************************************
+!     **  MAIN INTERFACE FOR POTENTIAL OBJECT                                 **
+!     **  CALCULATE POTENTIAL FROM DENSITY                                    **
+!     **************************************************************************
       USE POTENTIAL_MODULE
+      USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NRL
       INTEGER(4),INTENT(IN)    :: NDIMD
@@ -317,8 +349,10 @@
       LOGICAL(4)               :: TGRA
       REAL(8)   ,ALLOCATABLE   :: RHOTEMP(:,:)
       REAL(8)                  :: SVAR
-      real(8)   ,allocatable   :: vext(:)
-!     ******************************************************************
+      real(8)   ,ALLOCATABLE   :: vext(:)
+      real(8)   ,ALLOCATABLE   :: FORCEext (:,:), STRESSext(:,:)
+      real(8)                  :: Eext
+!     **************************************************************************
                                 CALL TRACE$PUSH('POTENTIAL$VOFRHO')
                                 CALL TIMING$CLOCKON('POTENTIAL')
       IF(.NOT.TINI) THEN
@@ -331,7 +365,7 @@
         CALL ERROR$I4VAL('LMRXX',LMRXX)
         CALL ERROR$STOP('POTENTIAL$VOFRHO')
       END IF
-!     == COLLECT FROM ATOMLIST =======================================
+!     == COLLECT FROM ATOMLIST =================================================
       CALL ATOMLIST$NATOM(NAT)
       ALLOCATE(ISPECIES(NAT))
       CALL ATOMLIST$GETI4A('ISPECIES',0,NAT,ISPECIES)
@@ -343,7 +377,7 @@
       END IF
   
 !     
-!     == PLOT DENSITY ================================================
+!     == PLOT DENSITY ==========================================================
 !     IF(TDENSITYTODX(1).AND.TDENSITYTODX(2)) THEN
 !       CALL FILEHANDLER$UNIT('DENSITY.DX',NFIL)
 !       CALL  WRITEDX_DENSITY
@@ -352,10 +386,10 @@
 !       TDENSITYTODX(2)=.FALSE.
 !     END IF
 !     
-!     == CONVERT DENSITY INTO POTENTIAL ==============================
+!     == CONVERT DENSITY INTO POTENTIAL ========================================
       CALL SETUP$NSPECIES(NSP)
 
-!     == COLLECT FROM PLANEWAVE OBJECT =================================
+!     == COLLECT FROM PLANEWAVE OBJECT =========================================
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL PLANEWAVE$GETI4('NGL',NGL)
       ALLOCATE(G2(NGL))
@@ -368,19 +402,27 @@
         CALL ERROR$STOP('POTENTIAL$VOFRHO')
       END IF
       CALL PLANEWAVE$GETI4('NR1',NR1GLOB)
-!     == COLLECT FROM DFT OBJECT =======================================
+!     == COLLECT FROM DFT OBJECT ===============================================
       CALL DFT$GETL4('GC',TGRA)
 !
-!     ==================================================================
-!     == calculate external potential                                 ==
-!     ==================================================================
-!!$      allocate(vext(nrl))
-!!$      subroutine potential_densityinterface(nr1start,nr1l,nr1glob,nr2,nr3 &
-!!$     &                      ,nrl,ndimd,rho,vext,r0,force,rbas,stress)
+!     ==========================================================================
+!     == calculate CONFINING POTENTIAL                                        ==
+!     ==========================================================================
+      IF(TCONFINE) THEN
+         ALLOCATE(VEXT(NRL))
+         ALLOCATE(FORCEEXT(3,NAT))
+         ALLOCATE(STRESSEXT(3,3))
+         CALL POTENTIAL_CONFINE(NAT, NR1GLOB, NR1START, NR1L, NR2, NR3, &
+     &                          VCONFINE, R0, RBAS, RHO, &
+     &                          EEXT, FORCEEXT, STRESSEXT, VEXT)
+         CALL MPE$COMBINE('MONOMER','+',EEXT)
+         CALL ENERGYLIST$SET('SOLVENT PAULI REPULSION', EEXT)
+         CALL ENERGYLIST$ADD('TOTAL ENERGY', EEXT)
+      END IF 
 !
-!     ==================================================================
-!     == POTENTIAL; BRANCH INTO COLLINEAR AND NON-COLLINEAR CASE      ==
-!     ==================================================================
+!     ==========================================================================
+!     == POTENTIAL; BRANCH INTO COLLINEAR AND NON-COLLINEAR CASE              ==
+!     ==========================================================================
       IF(NDIMD.EQ.4) THEN
         NSPIN=2
         ALLOCATE(RHOTEMP(NRL,2))
@@ -415,15 +457,21 @@ IF(TSTRESS) THEN
   WRITE(*,FMT='("C+XC STRESS ",3F15.7)')STRESS(3,:)
 END IF
 !
-!     ==================================================================
-!     == add external potential                                       ==
-!     ==================================================================
-!!$      rho(:,1)=rho(:,1)+vext(:)
-!!$      deallocate(vext)
+!     ==========================================================================
+!     == add external potential                                               ==
+!     ==========================================================================
+      IF(TCONFINE) THEN
+         RHO(:,1) = RHO(:,1) + VEXT(:)
+         FORCE  = FORCE  + FORCEEXT
+         STRESS = STRESS + STRESSEXT
+         DEALLOCATE(VEXT)
+         DEALLOCATE(FORCEEXT)
+         DEALLOCATE(STRESSEXT)
+      END IF 
 !
-!     ==================================================================
-!     == CLOSE DOWN                                                  ==
-!     ==================================================================
+!     ==========================================================================
+!     == CLOSE DOWN                                                           ==
+!     ==========================================================================
       DEALLOCATE(ISPECIES)
       DEALLOCATE(G2)
       DEALLOCATE(GVEC)
@@ -432,25 +480,25 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL_VOFRHO(LMRXX,NRL &
      &                    ,NSP,NAT,ISPECIES,TAU0,FION &
      &                    ,NR1GLOB,NR1,NR2,NR3,RHOE,NDIMD,RBAS &
      &         ,PSCORG,DPSCORG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                    ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
-!     ******************************************************************
-!     **                                                              **
-!     **  THE PLANE WAVE CONTRIBUTION TO TOTAL ENERGY AND FORCES      **
-!     **                                                              **
-!     **  INPUT:                                                      **
-!     **    RHOE           CHARGE DENSITY IN REAL SPACE               **
-!     **                   (SPIN UP AND SPIN DOWN                     **
-!     **                                                              **
-!     **  OUTPUT:                                                     **
-!     **    RHOE           PLANE WAVE POTENTIAL IN REAL SPACE         **
-!     **                   (SPIN UP AND SPIN DOWN)                    **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
+!     **************************************************************************
+!     **                                                                      **
+!     **  THE PLANE WAVE CONTRIBUTION TO TOTAL ENERGY AND FORCES              **
+!     **                                                                      **
+!     **  INPUT:                                                              **
+!     **    RHOE           CHARGE DENSITY IN REAL SPACE                       **
+!     **                   (SPIN UP AND SPIN DOWN                             **
+!     **                                                                      **
+!     **  OUTPUT:                                                             **
+!     **    RHOE           PLANE WAVE POTENTIAL IN REAL SPACE                 **
+!     **                   (SPIN UP AND SPIN DOWN)                            **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1991 ************
       USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4)              :: TSPIN
@@ -519,7 +567,7 @@ END IF
       LOGICAL(4)              :: TBACK
       INTEGER(4)              :: NGAMMA
       LOGICAL(4)              :: TOPTIC
-!     ******************************************************************
+!     **************************************************************************
 !      CALL OPTICS$GETL4('ON',TOPTIC)
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL GBASS(RBAS,GBAS,CELLVOL)
@@ -1577,6 +1625,410 @@ STRESSC=0.D0
       ENDDO
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine potential_confine(nat,nr1g,nr1start,nr1l,nr2,nr3,v0, &
+     &                             rat,rbas,rho,etot,force,stress,pot)
+!     **************************************************************************
+!     **                                                                      **
+!     ** Subroutine for calculation of an empirical potential for COSMO       **
+!     ** calculations that describes Pauli repulsion between the electrons    **
+!     ** of solvent and solute.                                               **
+!     **                                                                      **
+!     **************************************************************************
+      USE PERIODICTABLE_MODULE, ONLY: PERIODICTABLE$GET
+      implicit none
+      integer(4), intent(in)  :: nat                 ! #(atoms)
+      integer(4), intent(in)  :: nr1g                ! global #(grid planes)
+      integer(4), intent(in)  :: nr1start            ! first local grid plane
+      integer(4), intent(in)  :: nr1l                ! local #(grid planes)
+      integer(4), intent(in)  :: nr2   ! #(divisions along 2nd lattice vector)
+      integer(4), intent(in)  :: nr3   ! #(divisions along 3rd lattice vector)
+      real(8),    intent(in)  :: v0                  ! maximum potential
+      real(8),    intent(in)  :: rat(3,nat)          ! atomic positions
+      real(8),    intent(in)  :: rbas(3, 3)             ! lattice vectors
+      real(8),    intent(in)  :: rho(nr1l, nr2, nr3) ! electron density
+
+      real(8),    intent(out) :: etot                ! total energy
+      real(8),    intent(out) :: force(3, nat)           ! force
+      real(8),    intent(out) :: stress(3, 3)        ! stress
+      real(8),    intent(out) :: pot(nr1l, nr2, nr3) ! potential
+      character(2)            :: atom_name           ! to get VDW radius
+      real(8)                 :: r1(nat), r2(nat)    ! VDW radius and 2*r1
+      real(8)                 :: grid_point_volume   ! volume of one grid point
+      real(8)                 :: gridbas(3,3)        ! grid lattice vectors
+      integer(4)              :: min1,max1,min2,max2,min3,max3
+      real(8)                 :: xp(3)               ! relative grid position      
+      real(8)                 :: rp(3)               ! absolute grid position      
+      real(8)                 :: dis                 ! distance from center      
+      real(8)                 :: arg                 ! argument for cutoff func.
+      real(8)                 :: svar                ! auxilary variable
+      real(8)                 :: vec(3)              !                      
+      integer(4)              :: iat,i1,i2,i3,j1,j2,j3 ! iteration variables
+!     **************************************************************************
+!     ==========================================================================
+!     == Default values for radii                                             ==
+!     ==========================================================================
+      DO iat=1,nat
+        CALL ATOMLIST$GETCH('NAME',iat,atom_name)
+        CALL PERIODICTABLE$GET(atom_name,'R(VDW)',r1(iat))
+        r2(iat)=2.d0*r1(iat)
+      END DO 
+      gridbas(:,1)=rbas(:,1)/real(nr1g,kind=8)
+      gridbas(:,2)=rbas(:,2)/real(nr2,kind=8)
+      gridbas(:,3)=rbas(:,3)/real(nr3,kind=8)
+      grid_point_volume=(RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)) * RBAS(1,1) &
+     &                 +(RBAS(3,2)*RBAS(1,3)-RBAS(1,2)*RBAS(3,3)) * RBAS(2,1) &
+     &                 +(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) * RBAS(3,1)  
+      grid_point_volume=ABS(grid_point_volume)/real(nr1g*nr2*nr3,kind=8)
+
+!     =========================================================================
+!     ==  calculate potential and total energy                               ==
+!     =========================================================================
+      pot(:,:,:)=V0
+      do iat=1,nat
+        call boxsph(gridbas,rat(1,iat),rat(2,iat),rat(3,iat),r2(iat) &
+     &             ,min1,max1,min2,max2,min3,max3)
+print*,'minmax ',min1,max1,min2,max2,min3,max3
+        do i1=min1,max1
+          j1=modulo(i1,nr1g)+1
+          j1=j1-(nr1start-1)
+          if(j1.lt.1) cycle
+          if(j1.gt.nr1l) cycle
+          xp(1)=real(i1,kind=8)
+          do i2=min2,max2
+            j2=modulo(i2,nr2)+1
+            xp(2)=real(i2,kind=8)
+            do i3=min3,max3
+              j3=modulo(i3,nr3)+1
+              if(pot(j1,j2,j3).eq.0.d0) cycle
+              xp(3)=real(i3,kind=8)          
+              rp=matmul(gridbas,xp)          ! grid point in absolute coordinates
+              dis=sqrt(sum((rp(:)-rat(:,iat))**2))
+              if(dis.gt.r2(iat)) cycle
+              if(dis.lt.r1(iat)) then
+                pot(j1,j2,j3)=0.d0
+                cycle
+              end if
+              arg=(dis-r1(iat))/(r2(iat)-r1(iat))
+              svar=(3.d0-2.d0*arg)*arg**2
+              pot(j1,j2,j3)=pot(j1,j2,j3)*svar
+            enddo
+          enddo
+        enddo
+      enddo 
+      etot=SUM(pot*rho)*grid_point_volume
+!
+!     =========================================================================
+!     == Calculate forces                                                    ==
+!     =========================================================================
+      force(:,:)=0.d0
+      do iat=1,nat
+        call boxsph(gridbas,rat(1,iat),rat(2,iat),rat(3,iat),r2(iat) &
+     &             ,min1,max1,min2,max2,min3,max3)
+        do i1=min1,max1
+          j1=modulo(i1,nr1g)
+          j1=j1+1-nr1start+1
+          if(j1.lt.1) cycle
+          if(j1.gt.nr1l) cycle
+          xp(1)=real(i1,kind=8)
+          do i2=min2,max2
+            j2=modulo(i2,nr2)+1
+            xp(2)=real(i2,kind=8)
+            do i3=min3,max3
+              j3=modulo(i3,nr3)+1
+              if(pot(j1,j2,j3).eq.0.d0) cycle
+              if(pot(j1,j2,j3).eq.v0) cycle
+              xp(3)=real(i3,kind=8)
+              rp=matmul(gridbas,xp)              ! grid point in absolute coords
+              dis=sqrt(sum((rp(:)-rat(:,iat))**2))
+              if(dis.ge.r2(iat)) cycle
+              if(dis.le.r1(iat)) cycle
+              arg=(dis-r1(iat))/(r2(iat)-r1(iat))
+              if(arg.lt.1.d-8) cycle ! avoid overflow
+              svar=6.d0*(1.d0-arg)/(3.d0-2.d0*arg)/arg  !df/f
+              SVAR=RHO(J1,J2,J3)*POT(J1,J2,J3)*svar
+              vec(:)=(rp(:)-rat(:,iat))/dis
+              force(:,iat)=force(:,iat)-svar*vec(:)
+            enddo
+          enddo
+        enddo
+      enddo 
+      force=force*grid_point_volume
+
+!     =========================================================================
+!     == Calculate stress                                                    ==
+!     =========================================================================
+      stress = 0d0
+      return
+      end subroutine potential_confine
+!
+!     .........................................................................
+      subroutine potential_confine_grieger(nat,nr1g,nr1start,nr1l,nr2,nr3,v0, &
+     &                             r,T,rho,etot,f,stress,pot)
+!     *************************************************************************
+!     **                                                                     **
+!     ** Subroutine for calculation of an empirical potential for COSMO      **
+!     ** calculations that describes Pauli repulsion between the electrons   **
+!     ** of solvent and solute.                                              **
+!     **                                                                     **
+!     *************************************************************************
+      USE PERIODICTABLE_MODULE, ONLY: PERIODICTABLE$GET
+      implicit none
+      integer(4), intent(in)  :: nat                 ! #(atoms)
+      integer(4), intent(in)  :: nr1g                ! global #(grid planes)
+      integer(4), intent(in)  :: nr1start            ! first local grid plane
+      integer(4), intent(in)  :: nr1l                ! local #(grid planes)
+      integer(4), intent(in)  :: nr2   ! #(divisions along 2nd lattice vector)
+      integer(4), intent(in)  :: nr3   ! #(divisions along 3rd lattice vector)
+      real(8),    intent(in)  :: v0                  ! maximum potential
+      real(8),    intent(in)  :: r(3, nat)           ! atomic positions
+      real(8),    intent(in)  :: T(3, 3)             ! lattice vectors
+      real(8),    intent(in)  :: rho(nr1l, nr2, nr3) ! electron density
+
+      real(8),    intent(out) :: etot                ! total energy
+      real(8),    intent(out) :: f(3, nat)           ! force
+      real(8),    intent(out) :: stress(3, 3)        ! stress
+      real(8),    intent(out) :: pot(nr1l, nr2, nr3) ! potential
+
+!     integer(4)              :: ipiv(3)             ! Pivot indices
+!     integer(4)              :: info                ! info variable
+      integer(4)              :: i, atom_nr          ! iteration variables
+      character(2)            :: atom_name           ! to get VDW radius
+
+!     real(8)                 :: T_lu(3, 3)          ! LU fact. of T
+      real(8)                 :: r1(nat), r2(nat)    ! VDW radius and 2*r1
+      real(8)                 :: r_grid(3, nat)      ! atomic grid positions
+      real(8)                 :: length_T(3)         ! Length of lattice vecs
+
+      real(8) :: grid_point_volume          ! volume of one grid point
+!     *************************************************************************
+!     =========================================================================
+!     == Default values for radii                                            ==
+!     =========================================================================
+      DO i=1,nat
+        CALL ATOMLIST$GETCH('NAME',i,atom_name)
+        CALL PERIODICTABLE$GET(atom_name,'R(VDW)',r1(i))
+        r2(i)=2.d0*r1(i)
+      END DO 
+
+!     =========================================================================
+!     == Calculate atomic grid positions                                     ==
+!     =========================================================================
+      CALL LIB$MATRIXSOLVER8(3,3,3,T,r_grid,r)
+      r_grid(1,:) = r_grid(1,:) * nr1g + 1
+      r_grid(2,:) = r_grid(2,:) * nr2  + 1
+      r_grid(3,:) = r_grid(3,:) * nr3  + 1
+
+!     =========================================================================
+!     == Length of lattice vectors                                           ==
+!     =========================================================================
+      length_T(:) = sqrt(T(1, :)**2 + T(2, :)**2 + T(3, :)**2)
+
+!     =========================================================================
+!     == Volume of one grid point                                            ==
+!     =========================================================================
+      grid_point_volume = ABS ( &
+     &  ((T(2, 2)*T(3, 3) - T(3, 2)*T(2, 3)) * T(1, 1)  + &
+     &   (T(3, 2)*T(1, 3) - T(1, 2)*T(3, 3)) * T(2, 1)  + &
+     &   (T(1, 2)*T(2, 3) - T(2, 2)*T(1, 3)) * T(3, 1)) / &
+     &  (nr1g * nr2 * nr3))
+!
+!     =========================================================================
+!     == Calculate forces                                                    ==
+!     =========================================================================
+      do atom_nr=1,nat
+        DO i =1,3
+          CALL potential_confine_calculate(nat, nr1g, nr1start, nr1l, nr2, &
+     &                   nr3, v0, r1, r2, r_grid, T, length_T, atom_nr, i, pot)
+          f(i, atom_nr)=-SUM(pot*rho)*grid_point_volume
+        end do
+      end do
+!
+!     =========================================================================
+!     == Do actual potential calculation                                     ==
+!     =========================================================================
+      CALL potential_confine_calculate(nat, nr1g, nr1start, nr1l, nr2, nr3, &
+     &                              v0, r1, r2, r_grid, T, length_T, 0, 0, pot)
+!
+!     =========================================================================
+!     == Calculate energy                                                    ==
+!     =========================================================================
+      etot=SUM(pot*rho)*grid_point_volume
+
+!     =========================================================================
+!     == Calculate stress                                                    ==
+!     =========================================================================
+      stress = 0d0
+      return
+      end subroutine potential_confine_grieger
+
+!     .........................................................................
+      subroutine potential_confine_calculate(nat, nr1g, nr1start, nr1l, &
+     &   nr2, nr3, v0, r1, r2, r_grid, T, length_T, &
+     &   derive_atom, derive_direction, pot)
+!     *************************************************************************
+!     **                                                                     **
+!     ** Calculate the potential obtained by subroutine confine_potential,   **
+!     ** as well as its spatial derivatives with respect to atom derive_atom **
+!     ** and spatial direction derive_direction.                             **
+!     ** Use derive_atom == 0 if you do not want derivatives!                **
+!     **                                                                     **
+!     *************************************************************************
+      IMPLICIT NONE
+      integer(4), intent(in)  :: nat                 ! #(atoms)
+      integer(4), intent(in)  :: nr1g                ! global #(grid planes)
+      integer(4), intent(in)  :: nr1start            ! first local grid plane
+      integer(4), intent(in)  :: nr1l                ! local #(grid planes)
+      integer(4), intent(in)  :: nr2   ! #(divisions along 2nd lattice vector)
+      integer(4), intent(in)  :: nr3   ! #(divisions along 3rd lattice vector)
+
+      real(8),    intent(in)  :: v0                  ! maximum potential
+      real(8),    intent(in)  :: r1 (nat)            ! Van-der-Waals radius
+      real(8),    intent(in)  :: r2 (nat)            ! r2
+      real(8)                 :: r12(nat)            ! r2 - r1
+
+      real(8),    intent(in)  :: r_grid(3, nat)      ! atomic grid positions
+      real(8),    intent(in)  :: T(3, 3)             ! lattice vectors
+      real(8),    intent(in)  :: length_T(3)         ! Length of lattice vecs
+
+      integer(4), intent(in)  :: derive_atom         ! Atom Nr.  to derive
+      integer(4), intent(in)  :: derive_direction    ! Direction to derive
+
+      real(8),    intent(out) :: pot(nr1l, nr2, nr3) ! potential
+
+      integer(4)              :: i, j, k, l, atom_nr ! iteration variables
+      integer(4)              :: ii, jj, kk, atom_nr2! ditto
+      integer(4)              :: xmin, xmax          ! barriers
+      integer(4)              :: ymin, ymax          ! ditto
+      integer(4)              :: zmin(3), zmax(3)    ! ditto
+      real(8)                 :: c, d, d1, d2, y     ! distances to atomic pos.
+      real(8)                 :: p1, p2, p3          ! axis intercepts
+      real(8)                 :: T_unit(3, 3)        ! T as unit vectors
+
+      real(8) :: cos12, cos13, cos23    ! angles between lattice vectors
+      real(8) :: dx, dy, dz             ! grid increment: length_T(x) / nrx
+!     *************************************************************************
+!     =========================================================================
+!     == Initializations                                                     ==
+!     =========================================================================
+      r12 = r2 - r1
+      IF (derive_atom .eq. 0) THEN
+         pot=v0
+      ELSE
+         pot=0.D0
+      END IF
+      cos12 = DOT_PRODUCT (T(:,1),T(:,2)) / (length_T(1) * length_T(2))
+      cos13 = DOT_PRODUCT (T(:,1),T(:,3)) / (length_T(1) * length_T(3))
+      cos23 = DOT_PRODUCT (T(:,2),T(:,3)) / (length_T(2) * length_T(3))
+      dx = length_T(1) / REAL(nr1g,KIND=8)
+      dy = length_T(2) / REAL(nr2,KIND=8)
+      dz = length_T(3) / REAL(nr3,KIND=8)
+      do i = 1, 3
+        T_unit(:, i) = T(:, i) / length_T(i)
+      end do
+
+!     =========================================================================
+!     == Iteration over grid points for d < r2                               ==
+!     =========================================================================
+!     == atom_nr2 .eq. 0 is added for the atom to be derived ==
+ATOMS: do atom_nr2 = 0, nat
+         IF (atom_nr2.eq.derive_atom) THEN
+            CYCLE ATOMS
+         ELSE IF (atom_nr2.eq.0) THEN
+            atom_nr = derive_atom
+         ELSE
+            atom_nr = atom_nr2
+         END IF
+         xmin = CEILING(r_grid(1,atom_nr) - r2(atom_nr)/dx )
+         xmax =   FLOOR(r_grid(1,atom_nr) + r2(atom_nr)/dx )
+         ii = MODULO (xmin, nr1g) - nr1start
+         if (ii.eq.-nr1start) ii = nr1g - nr1start
+
+ILOOP:   do i = xmin, xmax
+            if (ii .gt. nr1g - nr1start) ii = 1 - nr1start
+            ii = ii + 1
+            if (ii .le. 0 .or. ii .gt. nr1l) cycle ILOOP
+            p1 = dble(i - r_grid(1, atom_nr)) * dx
+            d2 = SQRT(r2(atom_nr)**2 + p1**2 * (cos12**2 - 1)) / dy
+            c  = r_grid(2, atom_nr) - p1 * cos12 / dy
+            ymin = CEILING(c - d2)
+            ymax = FLOOR(c + d2)
+
+            jj = MODULO (ymin, nr2)
+            if (jj .eq. 0) jj = nr2
+
+JLOOP:   do j = ymin, ymax
+            p2 = dble(j - r_grid(2, atom_nr)) * dy
+
+            d2 = SQRT(r2(atom_nr)**2 + p1**2 * (cos13**2 - 1) &
+     &         + p2**2 * (cos23**2 - 1) + 2*p1*p2 * (cos13*cos23 - cos12)) / dz
+            c = r_grid(3, atom_nr) - (p1*cos13 + p2*cos23) / dz
+            zmin(1) = CEILING(c - d2)
+
+            d1 = r1(atom_nr)**2 + p1**2 * (cos13**2 - 1) &
+     &          + p2**2 * (cos23**2 - 1) + 2*p1*p2 * (cos13*cos23 - cos12)
+            if (d1 .lt. 0) then
+               zmax(1) = FLOOR(c + d2)
+               zmin(3) = 1
+               zmax(3) = 0
+               zmin(2) = 1
+               zmax(2) = 0
+            else
+               d1 = SQRT(d1) / dz
+               zmax(1) = FLOOR(c - d1)
+               zmin(2) = CEILING(c + d1)
+               zmax(2) = FLOOR(c + d2)
+               zmin(3) = zmax(1) + 1
+               zmax(3) = zmin(2) - 1
+            end if
+
+KPRELOOP:do l = 1, 2
+            kk = MODULO (zmin(l), nr3)
+            if (kk .eq. 0) kk = nr3
+
+KLOOP:   do k = zmin(l), zmax(l)
+            p3 = dble(k - r_grid(3, atom_nr)) * dz
+
+            d = SQRT (p1**2 + p2**2 + p3**2 &
+     &              + 2*p1*p2*cos12 + 2*p1*p3*cos13 + 2*p2*p3*cos23)
+            y = (d - r1(atom_nr)) / r12(atom_nr)
+
+            if (atom_nr2 .ne. 0) then ! 0 means: derive
+               pot(ii, jj, kk) = &
+     &         pot(ii, jj, kk) * (3d0 * y**2 - 2d0 * y**3)
+            else
+               pot(ii, jj, kk) = - (y - y**2) * (6d0 / (r12(atom_nr) * d)) * &
+     &            (p1 * T_unit(derive_direction, 1) + &
+     &             p2 * T_unit(derive_direction, 2) + &
+     &             p3 * T_unit(derive_direction, 3)) * v0
+            end if
+
+         kk = kk + 1
+         if (kk .gt. nr3) kk = 1
+         end do KLOOP
+         end do KPRELOOP
+
+         if (atom_nr2 .ne. 0) then ! if zero, values are initialized to zero
+            kk = MODULO (zmin(3), nr3)
+            if (kk .eq. 0) kk = nr3
+
+K0LOOP:     do k = zmin(3), zmax(3)
+               pot(ii, jj, kk) = 0d0
+               kk = kk + 1
+               if (kk .gt. nr3) kk = 1
+            end do K0LOOP
+         end if
+
+         jj = jj + 1
+         if (jj .gt. nr2) jj = 1
+         end do JLOOP
+
+         end do ILOOP
+      end do ATOMS
+      return
+      end subroutine potential_confine_calculate
+
 !!$!
 !!$!     ..................................................................
 !!$      subroutine potential_densityinterface(nr1start,nr1l,nr1g,nr2,nr3 &
@@ -1655,6 +2107,5 @@ STRESSC=0.D0
 !!$      enddo
 !!$      return
 !!$      end
-    
 
 
