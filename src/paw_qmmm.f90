@@ -1252,7 +1252,7 @@ print*,'mip',iatai,raip
       CONTAINS
 !       .................................................................
         SUBROUTINE ONETOT(NAT,R,E,F)
-        USE QMMM_MODULE ,ONLY : MAP,NMAP,LINK,NLINK,MAP_TYPE,LINK_TYPE
+!       USE QMMM_MODULE ,ONLY : MAP,NMAP,LINK,NLINK,MAP_TYPE,LINK_TYPE
         IMPLICIT NONE
         INTEGER(4),INTENT(IN) :: NAT
         REAL(8)   ,INTENT(IN) :: R(3,NAT)
@@ -1382,7 +1382,7 @@ CLOSE(8)
       CONTAINS
 !       .................................................................
         SUBROUTINE ONETOT1(NAT,R,E,F)
-        USE QMMM_MODULE ,ONLY : MAP,NMAP,LINK,NLINK,MAP_TYPE,LINK_TYPE
+!        USE QMMM_MODULE ,ONLY : MAP,NMAP,LINK,NLINK,MAP_TYPE,LINK_TYPE
         IMPLICIT NONE
         INTEGER(4),INTENT(IN) :: NAT
         REAL(8)   ,INTENT(IN) :: R(3,NAT)
