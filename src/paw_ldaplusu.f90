@@ -47,12 +47,21 @@ END MODULE LDAPLUSU_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NSP_    ! #(different atom types)
 !     **************************************************************************
+!
+!     ==========================================================================
+!     == do nothing if thisarray is already allocated                         ==
+!     ==========================================================================
       IF(NSP.NE.0) THEN
         IF(NSP_.NE.NSP) THEN
           CALL ERROR$MSG('LDAPLUSU$NEW CANNOT BE CALLED TWICE')
           CALL ERROR$STOP('LDAPLUSU$NEW')
         END IF
+        return
       END IF
+!
+!     ==========================================================================
+!     == create thisarray                                                     ==
+!     ==========================================================================
       NSP=NSP_
       ISP=0
       ALLOCATE(THISARRAY(NSP))
