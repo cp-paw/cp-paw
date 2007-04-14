@@ -1245,20 +1245,20 @@ END MODULE RANDOM_MODULE
 !     ******************************************************************
       IMPLICIT NONE
       CHARACTER(4)            :: DIR
-      INTEGER(4)              :: DIM(3)
+      INTEGER                 :: DIM(3)
       INTEGER(4)              :: N1,N2,N3
       COMPLEX(8)              :: X(N1,N2,N3)
       COMPLEX(8)              :: Y(N1,N2,N3)
-      INTEGER(4)              :: PLAN
       INTEGER(4)  ,SAVE       :: NP=0
       INTEGER(4),PARAMETER    :: NPX=10
-      INTEGER(4)  ,SAVE       :: PLANS(NPX,4)
+      INTEGER(8)              :: PLAN
+      INTEGER(8)  ,SAVE       :: PLANS(NPX,4)
       REAL(8)     ,SAVE       :: SCALE
-      INTEGER(4)  ,SAVE       :: DIMSAVE(3)=0
+      INTEGER     ,SAVE       :: DIMSAVE(3)=0
       CHARACTER(4),SAVE       :: DIRSAVE=''
       LOGICAL                 :: DEF
       INTEGER(4)              :: I
-      INTEGER(4)  ,SAVE       :: ISIGN
+      INTEGER     ,SAVE       :: ISIGN
       INCLUDE 'FFTW_F77.I'
 !     ******************************************************************
       DIM(1)=N1

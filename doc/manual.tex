@@ -2466,7 +2466,7 @@ relative to the real-space grid used in the calculation.}
 %----------------------------------------------------------------------
 \block{!CONTROL!ANALYSE!POTENTIAL}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{Writes the potential. The file
+\brules{optional} \bdescr{Writes the hartree potential. The file
   created can then be processed by the paw\_wave tool to produce an
   input file for OPENDX\cite{opendx}.  }
 
@@ -2485,7 +2485,7 @@ relative to the real-space grid used in the calculation.}
 \vdefault{none}}
 
 \mbax{\key{DR} 
-\vdescr{grid spacing for the output file. rounded to get an integer factor
+\vdescr{grid spacing for the output file. It is rounded to get an integer factor
 relative to the real-space grid used in the calculation.} 
 \vformat{real} 
 \vrules{optional}

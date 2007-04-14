@@ -63,6 +63,7 @@ INTEGER(4)                :: IWAVEPTR=0
 INTEGER(4)                :: IDENSITYPTR=0
 INTEGER(4)                :: IPOTPTR=0
 COMPLEX(8),ALLOCATABLE    :: PWPOT(:)
+real(8)                   :: potshift=0.d0  ! additive constant to be added to pwpot,ae1cpot, ps1cpot
 TYPE(ONECRHO_TYPE),ALLOCATABLE :: ONECPOTARRAY(:)  ! SHALL REPLACE AE1CPOT AND PS1CPOT
 REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)  !(NRX,LMRX,NAT)
 REAL(8)   ,ALLOCATABLE    :: PS1CPOT(:,:,:)  !(NRX,LMRX,NAT)
@@ -326,13 +327,7 @@ END MODULE GRAPHICS_MODULE
 !
       ELSE IF(ID.EQ.'POTSHIFT') THEN 
         IF(IPOTPTR.EQ.0) RETURN
-        IF(ALLOCATED(PWPOT)) THEN
-          PWPOT(:)=PWPOT(:)+VAL
-        END IF
-        IF(ALLOCATED(AE1CPOT).AND.ALLOCATED(PS1CPOT)) THEN
-          AE1CPOT(:,1,:)=AE1CPOT(:,1,:)+VAL/Y0
-          PS1CPOT(:,1,:)=PS1CPOT(:,1,:)+VAL/Y0
-        END IF
+        POTSHIFT=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -834,7 +829,9 @@ CALL TRACE$PASS('PRINT')
       IF(FACT.EQ.1) THEN
         WAVEBIG=WORK1
       ELSE
+print*,'marke 2c',nr1,nr2,nr3,nr1b,nr2b,nr3b
         CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,NR1B,NR2B,NR3B,WORK1,WAVEBIG)
+print*,'marke 2d',nr1l,nr1,nr2,nr3
       END IF
       DEALLOCATE(WORK1)
 !     
@@ -1282,6 +1279,7 @@ CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 7')
       INTEGER(4)                :: J      
       INTEGER(4)                :: K
 !     ******************************************************************
+                           call trace$push('GRAPHICS_REFINEGRID')
       ALLOCATE(WORKC1(NR1,NR2,NR3))
       WORKC1(:,:,:)=CMPLX(WAVE(:,:,:),KIND=8)
       ALLOCATE(WORKC2(NR1,NR2,NR3)) 
@@ -1308,6 +1306,7 @@ CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 7')
       WAVEBIG(:,:,:)=REAL(WORKC2(:,:,:),KIND=8)
       DEALLOCATE(WORKC1)
       DEALLOCATE(WORKC2)
+                                                 call trace$pop()
       RETURN
       END
 !
@@ -1412,6 +1411,7 @@ CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 7')
       INTEGER(4)                 :: NR1B,NR2B,NR3B
       INTEGER(4)                 :: ISP
       INTEGER(4)                 :: GID
+      INTEGER(4)                 :: i,j,k,ind
 !     ******************************************************************
 !COLLECTING OF INFORMATION
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -1444,6 +1444,7 @@ CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 7')
       ALLOCATE(POTENTIAL(NR1B,NR2B,NR3B))
       ALLOCATE(VHARTREE(NRL))
       CALL PLANEWAVE$SUPFFT('GTOR',1,NGL,PWPOT,NRL,VHARTREE)
+      vhartree=vhartree+potshift ! add additive constant to potential
       IF(FACT.EQ.1) THEN
         CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,VHARTREE,NR1*NR2*NR3,POTENTIAL)
       ELSE
@@ -1491,8 +1492,8 @@ CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 7')
         CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
 PRINT*,'INCLUDE AE-CONTRIBUTIONS'
 CALL TIMING$CLOCKON('GRAPHICS 1CPOTENTIAL')
-         CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B,1,NR1B &
-      &           ,POTENTIAL,POS(:,IAT),GID,NRX,LMRXX,ONECPOT(:,:,IAT))
+        CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B,1,NR1B &
+     &           ,POTENTIAL,POS(:,IAT),GID,NRX,LMRXX,ONECPOT(:,:,IAT))
 CALL TIMING$CLOCKOFF('GRAPHICS 1CPOTENTIAL')
 PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       ENDDO
