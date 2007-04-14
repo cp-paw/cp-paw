@@ -954,11 +954,6 @@ parameterization of the Ceperley Alder quantum Monte Carlo calculation}
               exchange and correlation \cite{perdew96_prl77_3865};} \vformat{integer}
               \vrules{optional} \vdefault{1}}
 
-\mbax{\key{LDA+U}
-\vdescr{LDA+U \cite{anisimov91_prb44_943,anisimov91_prb44_943}.}
-\vformat{logical}
-\vrules{optional}
-\vdefault{F}}
 
 \mbax{\key{VDW}
 \vdescr{Adds van der Waals Interactions\cite{grimme04_jcc25_1463}. 
@@ -2758,7 +2753,8 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 {\block{!STRUCTURE!SPECIES!LDAPLUSU}
 %----------------------------------------------------------------------
 \brules{optional} \bdescr{sets the parameters for lda+U
-calculation. Only used when !CONTROL!DFT:LDA+U=T.}
+    calculation\cite{anisimov91_prb44_943,anisimov91_prb44_943}.. Only
+    used when !CONTROL!DFT:LDA+U=T.}
 
 \mbax{\key{NCORROFL} 
 \vdescr{number of correlated orbital shells per angular momentum.  The
