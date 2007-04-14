@@ -152,6 +152,11 @@ Bugfix for plotting electrostatic potential. Symptom: The potential oscillated s
 Cause: POTSHIFT, an additive shift for the potential was added to all Fourier components 
 of the potential instead of its real space values.
 
+\subsection{Apr 14. 2007}
+
+Bugfix in paw_library.f90. plans for fftw calls are now specified as integer(8). 
+(integer(4), and integer did not work and produced a ``Speicherzugriffsfehler'' in the
+ three dimensional fourier transform.)
 
 \newpage
 \bibliographystyle{unsrt}
