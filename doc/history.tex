@@ -158,6 +158,13 @@ Bugfix in paw_library.f90. plans for fftw calls are now specified as integer(8).
 (integer(4), and integer did not work and produced a ``Speicherzugriffsfehler'' in the
  three dimensional fourier transform.)
 
+\subsection{Apr 14. 2007}
+
+Included tool paw_1davpot.x located in src/Tools/Wave. It uses the .wv
+file produced by the !control!analyse!potential option and produces
+the one-dimensional potential averaged over lattice planes. This tool
+can be used to determine work functions and band offsets.
+
 \newpage
 \bibliographystyle{unsrt}
 \bibliography{doc.bib}

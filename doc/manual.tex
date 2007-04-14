@@ -4419,6 +4419,52 @@ Start the Dataexplorer using
 
 %==========================================================================
 \newpage
+\section{Band-Offset and Work-Function Tool: ``paw\_1davpot''}
+%==========================================================================
+The tool ``paw\_1davpot'' produces the one dimensional potential
+obtained by averaging the potential over lattice planes. By comparing
+with the respective bulk calculations one can determine the band
+offsets or work functions.
+
+The tool uses the electrostatic potential produces by the CP-PAW code
+using the option !control!analyse!potential. If the file of the
+resulting potential file is ``case\_pot.wv'',  the calling sequence is
+\begin{center}
+paw\_1davpot.x case\_pot.wv
+\end{center}
+Three files are produced, namely AVPOT100.DAT, AVPOT010.DAT and
+AVPOT001.DAT. The first is an xy file of the averaged potential along
+the normal of the plane spanned by the lattice vectors $\vec{T}_2$ and
+$\vec{T}_3$. The other files contain the corresponding information
+along the two other plane normals.
+
+In order to obtain a band offset from a supercell calculation
+determine first the one-dimensional potential $v_{sup}(z)$ averaged
+over planes parallel to the surface or interface. Next perform a
+calculation of the bulk material using exactly the same geometry
+(including any lateral strain), and determine the averaged potentials
+$v_{bulk A}(z)$ and $v_{bulk,B}$ for the same lattice planes.
+Determine furthermore the Fermi-level or the valence band top in the bulk
+materials $e_{vbt,A}$ and $e_{vbt,B}$.
+
+By forming the corresponding differences, one obtains a spatially
+dependent valence band top $e'_{vbt,A}$ and $e'_{vbt,B}$ 
+for the slab calculation.
+\begin{eqnarray*}
+e'_{vbt,A}(z)=e_{vbt,A}-v_{bulk,A}(z+\Delta z_A)+v_{sup}(z)
+\\
+e'_{vbt,B}(z)=e_{vbt,B}-v_{bulk,A}(z+\Delta z_B)+v_{sup}(z)
+\end{eqnarray*}
+The shift $\Delta z_{A/B}$ are needed to account for the difference in
+z-coordinates for the lattice planes in the bulk and in the supercell.
+
+If the spatially dependent valence band tops converge to a constant
+value in the interior of the slab, this value can be taken as the
+position of the valence band top in the supercell.
+ 
+
+%==========================================================================
+\newpage
 \section{The Trajectory Analysis Tool: ``paw\_tra''}
 %==========================================================================
 This trajectory analysis tool is used to inspect atomic trajectories. It

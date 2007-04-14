@@ -141,7 +141,7 @@ all: debug none fast parallel tools doc
 #
 all_new: debug_new none_new fast_new parallel tools
 #
-tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz
+tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot
 #
 none:   
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
@@ -192,6 +192,10 @@ tra:
 wave:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
            ${BINDIR}/${ARCH}/paw_wave.x 
+#
+1davpot:
+	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
+           ${BINDIR}/${ARCH}/paw_1davpot.x 
 #
 grab:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
@@ -329,6 +333,9 @@ OBJTRA =  \
 # Objects for paw_wave.x
 OBJWAVE=  \
           ${OBJDIR}/paw_wave.o
+# Objects for paw_wave.x
+OBJ1DAVPOT=  \
+          ${OBJDIR}/paw_1davpot.o
 # Objects for paw_grab.x
 OBJGRAB=  \
           ${OBJDIR}/paw_grab.o
@@ -409,6 +416,9 @@ ${BINDIR}/${ARCH}/paw_tra.x: ${OBJTRA} libpaw.a
 ${BINDIR}/${ARCH}/paw_wave.x: ${OBJWAVE} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_wave.x ${OBJWAVE} -lpaw ${LLIBS} 
 #
+${BINDIR}/${ARCH}/paw_1davpot.x: ${OBJ1DAVPOT} libpaw.a
+	${LINK} -o ${BINDIR}/${ARCH}/paw_1davpot.x ${OBJ1DAVPOT} -lpaw ${LLIBS} 
+#
 ${BINDIR}/${ARCH}/paw_grab.x: ${OBJGRAB} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_grab.x ${OBJGRAB} -lpaw ${LLIBS} 
 #
@@ -477,6 +487,11 @@ ${OBJTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
+	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJ1DAVPOT}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
