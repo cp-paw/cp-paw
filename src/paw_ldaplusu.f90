@@ -9,7 +9,7 @@ INTEGER(4)             :: GID          !grid id for radial grid
 INTEGER(4)             :: NR           !#(radial grid points)
 INTEGER(4)             :: LNXCHI       !#(radial functions for local orbitals)
 INTEGER(4),POINTER     :: LOXCHI(:)    !main angular momentum of local orbital
-INTEGER(4),POINTER     :: NORB(:)      !X(# LOCAL FUNCTIONS PER ANGULAR MOMENTUM)
+INTEGER(4),pointer     :: NORB(:)      !X(# LOCAL FUNCTIONS PER ANGULAR MOMENTUM)
 INTEGER(4)             :: LRX          !x(angular momentum in the density)
 REAL(8)                :: RCUT=0.D0    !RADIUS of local orbital
 character(16)          :: functionalid !can be 'lda+u' or 'hybrid'
@@ -66,9 +66,8 @@ END MODULE LDAPLUSU_MODULE
       ISP=0
       ALLOCATE(THISARRAY(NSP))
       DO ISP=1,NSP
-        ALLOCATE(THISARRAY(ISP)%NORB(10))
-        THISARRAY(ISP)%NORB(:)=10
-        THISARRAY(ISP)%NORB(1:2)=0 ! PER DEFAULT CORRELATE ONLY D AND F-SHELLS
+        ALLOCATE(THISARRAY(ISP)%NORB(1))
+        THISARRAY(ISP)%NORB(:)=0  ! PER DEFAULT CORRELATE nothing
       ENDDO
       RETURN
       END
@@ -242,6 +241,54 @@ END MODULE LDAPLUSU_MODULE
       END IF
       RETURN
       END 
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU$REPORT(NFIL)
+!     **                                                                      **
+!     **  REPORTS THE SETTINGS OF THE LDAPLUSU OBJECT                         **
+!     **                                                                      **
+      USE LDAPLUSU_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NFIL
+      TYPE(THISTYPE),POINTER :: THIS1
+      CHARACTER(64)          :: STRING
+      INTEGER(4)             :: L
+!     **************************************************************************
+      IF(.NOT.TON) RETURN
+      CALL REPORT$TITLE(NFIL,'HYBRID FUNCTIONAL')
+      DO ISP=1,NSP
+        THIS1=>THISARRAY(ISP)
+        IF(.NOT.THIS1%TON) CYCLE
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETCH('ID',STRING)
+        CALL REPORT$CHVAL(NFIL,'ATOM TYPE',TRIM(STRING))
+        CALL REPORT$CHVAL(NFIL,'  FUNCTIONAL TYPE',THIS1%FUNCTIONALID)
+        CALL REPORT$R8VAL(NFIL,'  EXTENT OF LOCAL ORBITALS',THIS1%RCUT,'A_0')
+        CALL REPORT$I4VAL(NFIL,'  MAX. ANG.MOMENTUM OF THE DENSITY',THIS1%LRX,' ')
+        DO L=0,SIZE(THIS1%NORB)-1
+          IF(THIS1%NORB(L+1).EQ.0) CYCLE
+          IF(L.EQ.0) THEN
+            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED S-SHELLS',THIS1%NORB(L+1),' ')
+          ELSE IF(L.EQ.1) THEN
+            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED P-SHELLS',THIS1%NORB(L+1),' ')
+          ELSE IF(L.EQ.2) THEN
+            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED D-SHELLS',THIS1%NORB(L+1),' ')
+          ELSE IF(L.EQ.3) THEN
+            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED F-SHELLS',THIS1%NORB(L+1),' ')
+          ELSE 
+            WRITE(STRING,FMT='("  NUMBER OF CORRELATED SHELLS WITH L=",I2)')L+1
+            CALL REPORT$I4VAL(NFIL,STRING,THIS1%NORB(L+1),' ')
+          END IF
+        ENDDO
+        IF(THIS1%FUNCTIONALID.EQ.'  HYBRID') THEN
+          CALL REPORT$R8VAL(NFIL,'  HARTREE-FOCK CONTRIBUTION' &
+     &                           ,THIS1%HFWEIGHT*100,'PERCENT')
+        ELSE IF(THIS1%FUNCTIONALID.EQ.'LDA+U') THEN
+          CALL REPORT$CHVAL(NFIL,'  DOUBLE COUNTING TYPE',DCTYPE)
+        END IF
+      ENDDO
+      RETURN
+      END SUBROUTINE LDAPLUSU$REPORT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU$ETOT(ISP_,LMNXX,NDIMD,DENMAT,ETOT,DATH_)
