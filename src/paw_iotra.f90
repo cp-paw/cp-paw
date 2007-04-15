@@ -396,13 +396,17 @@ print*,'nrec ',nrec,this%nrec,istep,this%skip
 !     **************************************************************************
       CALL TRAJECTORYIO_FIRSTTASK(TCHK)
       IF(.NOT.TCHK) RETURN   ! RETURN IF NOT ON TASK 1
-                            call trace$push('TRAJECTORYIO$FLUSHALL')
+                            CALL TRACE$PUSH('TRAJECTORYIO$FLUSHALL')
       THIS1=>FIRST_THIS
       DO WHILE (ASSOCIATED(THIS1))
-        if(.not.this1%ton) Then
+        IF(.NOT.THIS1%TON) THEN
           THIS1=>THIS1%NEXT
-          cycle
-        end if
+          CYCLE
+        END IF
+        IF(THIS1%NREC.EQ.0) THEN  ! NEEDED TO AVOID PROBLEM BELOW, 
+          THIS1=>THIS1%NEXT       ! WHEN THIS1%ARRAY IS NOT ALLOCATED
+          CYCLE
+        END IF
         CALL FILEHANDLER$UNIT(TRIM(THIS1%ID),NFIL)
         DO I=1,THIS1%NREC
           WRITE(NFIL)THIS1%ISTEP(I),THIS1%TIME(I),THIS1%NSIZE,THIS1%ARRAY(:,I)

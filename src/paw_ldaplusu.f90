@@ -5,6 +5,7 @@ MODULE LDAPLUSU_MODULE
 TYPE THISTYPE
 LOGICAL(4)             :: TINI=.FALSE.
 LOGICAL(4)             :: TON=.FALSE.
+character(8)           :: atomtype=''
 INTEGER(4)             :: GID          !grid id for radial grid
 INTEGER(4)             :: NR           !#(radial grid points)
 INTEGER(4)             :: LNXCHI       !#(radial functions for local orbitals)
@@ -43,9 +44,12 @@ END MODULE LDAPLUSU_MODULE
 !     **  SETS UP THE ARRAYS FOR OPERATION. THIS ROUTINE MUST BE CALLED ONCE  **
 !     **  BEFORE ANY OTHER CALL TO THE LDAPLUSU OBJECT                        **
 !     **                                                                      **
+!     **  attention: changes the setting of setup object                      **
+!     **                                                                      **
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NSP_    ! #(different atom types)
+      character(8)          :: string
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -261,6 +265,7 @@ END MODULE LDAPLUSU_MODULE
         IF(.NOT.THIS1%TON) CYCLE
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETCH('ID',STRING)
+        THISARRAY(ISP)%ATOMTYPE=STRING
         CALL REPORT$CHVAL(NFIL,'ATOM TYPE',TRIM(STRING))
         CALL REPORT$CHVAL(NFIL,'  FUNCTIONAL TYPE',THIS1%FUNCTIONALID)
         CALL REPORT$R8VAL(NFIL,'  EXTENT OF LOCAL ORBITALS',THIS1%RCUT,'A_0')
@@ -388,7 +393,6 @@ PRINT*,'JPAR   ',THIS%JPAR
       ALLOCATE(LOXPHI(LNXPHI))
       CALL SETUP$LOFLN(ISP,LNXPHI,LOXPHI)
       NPHI=SUM(2*LOXPHI+1)
-
 !
 !     ==========================================================================
 !     ==  DOWNFOLD                                                            ==
@@ -428,6 +432,7 @@ DO IS1=1,2
     ENDDO
   ENDDO
 ENDDO
+!
 do is1=1,2
   svar=0.d0
   do ln=1,nchi
@@ -757,10 +762,17 @@ enddo
       do ln=1,lnxchi
          THIS%DOWNFOLD(ln,:)=A(:,ln)
       enddo
+!!$OPEN(10,FILE='CHI_'//TRIM(THIS%ATOMTYPE)//'.DAT')
+!!$rewind 10
+!!$DO Ir=1,NR
+!!$WRITE(10,*)R(Ir),THIS%CHI(Ir,:)
+!!$ENDDO
+!!$CLOSE(10)
 !
 !     ==========================================================================
 !     ==  CLEAN UP                                                            ==
 !     ==========================================================================
+      DEALLOCATE(chi)
       DEALLOCATE(R)
                             CALL TRACE$POP()
       RETURN
@@ -909,6 +921,8 @@ enddo
                 IF(L.GT.MAX(ISVAR1,ISVAR2)) CYCLE
                 AUX(:)=CHI(:,LN3)*CHI(:,LN4)*POT(:)
                 CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+!if(lox(ln1).ne.lox(ln2).or.lox(ln2).ne.lox(ln3).or.lox(ln3).ne.lox(ln4)) svar=0.d0
+!if(lox(ln1)*lox(ln2)*lox(ln3)*lox(ln4).eq.0) svar=0.d0
                 ULITTLE(L+1,LN1,LN2,LN3,LN4)=SVAR
                 ULITTLE(L+1,LN2,LN1,LN3,LN4)=SVAR
                 ULITTLE(L+1,LN1,LN2,LN4,LN3)=SVAR
