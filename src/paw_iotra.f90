@@ -358,7 +358,7 @@ print*,'marke 3'
 print*,'marke 4'
 print*,'id ',this%id
 print*,'nrec ',nrec,this%nrec,istep,this%skip 
-     THIS%NREC=THIS%NREC+1
+      THIS%NREC=THIS%NREC+1
       NREC=THIS%NREC
       THIS%ISTEP(NREC)=ISTEP
       THIS%TIME(NREC)=TIME

@@ -4501,7 +4501,7 @@ END MODULE TOTALSPIN_MODULE
       SUBROUTINE WAVES_TOTALSPIN(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
 !     ******************************************************************
 !     **  CALCULATES <S^2>,<S_X>,<S_Y>,<S_X> IN UNITS OF HBAR^2       **
-!     **                                                              **
+!     **                                    1                          **
 !     **                                                              **
 !     ******************************************************************
       USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES' VERSION

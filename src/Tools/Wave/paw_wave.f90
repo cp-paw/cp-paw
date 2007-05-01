@@ -922,4 +922,28 @@
       ENDDO
       RETURN
       END
+!    
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine writecmcv(nfil,title,rbas,n1,n2,n3,field)
+      implicit none
+      integer(4)  ,intent(in) :: nfil
+      character(*),intent(in) :: title
+      real(8)     ,intent(in) :: rbas(3,3)
+      integer(4)  ,intent(in) :: n1,n2,n3
+      real(8)     ,intent(in) :: field(n1,n2,n3)
+      integer(4)              :: i,j,k
+!     **************************************************************************
+      rewind(nfil)
+      write(nfil,*)title
+      write(nfil,*)n1,n2,n3
+      write(nfil,*)rbas
+      do k=1,n3
+        do j=1,n2
+          do i=1,n1
+            write(nfil,*)field(i,j,k)
+          enddo
+        enddo
+      enddo
+      return
+      end
 

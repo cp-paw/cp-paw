@@ -285,7 +285,7 @@ END MODULE LDAPLUSU_MODULE
             CALL REPORT$I4VAL(NFIL,STRING,THIS1%NORB(L+1),' ')
           END IF
         ENDDO
-        IF(THIS1%FUNCTIONALID.EQ.'  HYBRID') THEN
+        IF(THIS1%FUNCTIONALID.EQ.'HYBRID') THEN
           CALL REPORT$R8VAL(NFIL,'  HARTREE-FOCK CONTRIBUTION' &
      &                           ,THIS1%HFWEIGHT*100,'PERCENT')
         ELSE IF(THIS1%FUNCTIONALID.EQ.'LDA+U') THEN
@@ -328,13 +328,14 @@ END MODULE LDAPLUSU_MODULE
       COMPLEX(8),ALLOCATABLE :: MATSS(:,:,:,:)
       INTEGER(4)             :: IS1,IS2,I,LN,M
       REAL(8)                :: SVAR,etot1
+INTEGER(4)             :: ln1,ln2,ln3,ln4
 !     **************************************************************************
       etot=0.d0
       dath_=0.d0
       IF(.NOT.TON) RETURN
-                            CALL TRACE$PUSH('LDAPLUSU$ETOT')
       CALL LDAPLUSU$SELECT(ISP_)
       IF(.NOT.THIS%TON) RETURN
+                            CALL TRACE$PUSH('LDAPLUSU$ETOT')
 !      
 !     ==========================================================================
 !     ==  CONSTRUCT LOCAL ORBITALS                                            ==
@@ -404,21 +405,32 @@ PRINT*,'JPAR   ',THIS%JPAR
       ALLOCATE(DATH(NPHI,NPHI,NDIMD))
       ALLOCATE(U(NCHI,NCHI,NCHI,NCHI))
 !     == TRANSFORM FROM TOTAL/SPIN TO up/down representation ===================
+!
       CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
 !
 !     == TRANSFORM FROM partial waves phi to local orbitals CHI ================
       CALL LDAPLUSU_MAPTOCHI(LNX,LOX,NCHI,LNXPHI,LOXPHI,NPHI,PHITOCHI)
-PRINT*,'===================== phitochi ======================'
-do i=1,nchi
-  WRITE(*,FMT='(I3,100F8.3)')nchi,phitochi(I,:)
-enddo
-
       DO IS1=1,2
         DO IS2=1,2
           RHO(:,:,IS1,IS2)=MATMUL(PHITOCHI,MATMUL(MATSS(:,:,IS1,IS2),TRANSPOSE(PHITOCHI)))
         ENDDO
       ENDDO
-
+!
+! printout for testing==========================================================
+DO IS1=1,ndimd
+  PRINT*,'===================== denmat FOR SPIN',IS1,' ======================'
+  I=0
+  DO LN=1,LNXphi
+    DO M=1,2*LOXphi(LN)+1
+      I=I+1
+      WRITE(*,FMT='(I3,100F8.3)')LOXphi(LN),REAL(denmat(I,:,IS1))
+    ENDDO
+  ENDDO
+ENDDO
+PRINT*,'===================== phitochi ======================'
+do i=1,nchi
+  WRITE(*,FMT='(I3,100F8.3)')nchi,phitochi(I,:)
+enddo
 DO IS1=1,2
   DO IS2=1,2
     IF(SUM(ABS(RHO(:,:,IS1,IS2))).LT.1.D-3) CYCLE
@@ -441,6 +453,16 @@ do is1=1,2
   print*,'charge= ',svar,' for spin ',is1
 enddo
 !
+do ln1=1,nchi
+  do ln2=1,nchi
+    do ln3=1,nchi
+      do ln4=1,nchi
+        write(*,*)'ulittle',ln1,ln2,ln3,ln4,this%ulittle(:,ln1,ln2,ln3,ln4)
+      enddo
+    enddo
+  enddo
+enddo
+!
 !     ==========================================================================
 !     ==  CALCULATE U-TENSOR                                                  ==
 !     ==========================================================================
@@ -450,6 +472,7 @@ enddo
 !     ==  Hartree Fock interaction ENERGY                                     ==
 !     ==========================================================================
       CALL LDAPLUSU_INTERACTION(Nchi,U,RHO,ETOT,HAM)
+print*,'e(u) ',etot
 !
 !     ==========================================================================
 !     ==  double counting correction                                          ==
@@ -463,12 +486,13 @@ enddo
       ELSE IF(THIS%FUNCTIONALID.EQ.'HYBRID') THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
         call LDAPLUSU_edft(gid,nr,nchi,lnx,lox,this%chi,lrx,rho,etot1,ham1)
+print*,'e(dc) ',etot1
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
         DEALLOCATE(HAM1)
 !       == scale correction with 0.25 according to PBE0
-        etot=0.25d0*etot
-        ham=0.25d0*ham
+        etot=etot*this%hfweight
+        ham=ham*this%hfweight
       ELSE
         CALL ERROR$MSG('FUNCTIONALID NOT RECOGNIZED')
         CALL ERROR$CHVAL('FUNCTIONALID',THIS%FUNCTIONALID)
@@ -512,7 +536,7 @@ enddo
       DEALLOCATE(RHO)
       DEALLOCATE(HAM)
       CALL LDAPLUSU$SELECT(0)
-                                   CALL TRACE$POP()
+                            CALL TRACE$POP()
       RETURN
       END
 !
@@ -569,22 +593,21 @@ enddo
 !     == COUNT ONLY THOSE ANGULAR MOMENTUM CHANNELS THAT HAVE CORRELATED ORBITALS
       LX=MAXVAL(LOX)
       LNXCHI=0
+print*,'chifromphi: ',this%norb(1:lx+1)
       DO L=0,LX
-        IF(THIS%NORB(L+1).EQ.0) CYCLE  ! FORGET CHANNELS WITHOUT CORRELATED ORBITALS
+        IF(THIS%NORB(L+1).EQ.0) CYCLE !ignore CHANNELS WITHOUT CORRELATED ORBITALS
         NOFL=0
         DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE
+          IF(LOX(LN).NE.L) CYCLE !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
           NOFL=NOFL+1
           LNXCHI=LNXCHI+1
         ENDDO
-!       == LIMIT THE NUMBER OF CORRELATED ORBITALS TO THE NUMBER OF PARTIAL WAVES 
-!       == MINUS ONE, SO THAT ONE TAIL FUNCTION IS LEFT. 
-!       == HOWEVER, IF THERE IS ONLY A SINGLE PARTIAL WAVE, LEAVE THAT ONE.
-        IF(THIS%NORB(L+1).GT.NOFL-1) THEN
-          ISVAR=MAX(1,NOFL-1)            
-          THIS%NORB(L+1)=MIN(THIS%NORB(L+1),ISVAR) 
+        IF(THIS%NORB(L).GT.NOFL) THEN
+          CALL ERROR$MSG('#(CORRELATED ORBITALS) EXCEEDS #(PARTIAL WAVES)')
+          CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
         END IF
       ENDDO
+print*,'chifromphi: ',l,nofl,lnxchi
 !
 !     == ORDER ACCORDING TO L ==================================================
       ALLOCATE(LOXCHI(LNXCHI))        
@@ -594,17 +617,23 @@ enddo
       A(:,:)=0.D0
       LNCHI=0
       DO L=0,LX
-        IF(THIS%NORB(L+1).EQ.0) CYCLE  ! SHELLS WITHIOUT LOCAL ORBITALS ARE IRRELEVANT
+        IF(THIS%NORB(L+1).EQ.0) CYCLE !ignore CHANNELS WITHOUT CORRELATED ORBITALS
         DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE  !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
+          IF(LOX(LN).NE.L) CYCLE !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
           LNCHI=LNCHI+1
           LOXCHI(LNCHI)=LOX(LN)
           CHI(:,LNCHI)=PHI(:,LN)
           A(LN,LNCHI)=1.D0
         ENDDO
       ENDDO
+print*,'chifromphi: lnxphi',lnx
+print*,'chifromphi: loxphi',lox
+print*,'chifromphi: lnxchi',lnxchi
+print*,'chifromphi: loxchi',loxchi
 !
+!     ==========================================================================
 !     == MAKE HEAD FUNCTION ANTIBONDING WITH NODE AT RCUT ======================
+!     ==========================================================================
       RCUT=THIS%RCUT
       L=-1
       DO LN=1,LNXCHI
@@ -617,13 +646,21 @@ enddo
 !       == IMPOSE NODE CONDITION================================================
         CALL RADIAL$VALUE(GID,NR,CHI(:,LN),RCUT,SVAR1)
         CALL RADIAL$VALUE(GID,NR,CHI(:,LN+1),RCUT,SVAR2)
+        IF(SVAR1.EQ.0.D0.AND.SVAR2.EQ.0.D0) THEN
+          CALL ERROR$MSG('PARTIAL WAVES ARE TRUNCATED INSIDE OF RCUT')
+          CALL ERROR$MSG('THIS IS A FLAW OF THE IMPLEMENTATION')
+          CALL ERROR$MSG('CHOOSE SMALLER RCUT')
+          CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
+        END IF
         CHI(:,LN)=CHI(:,LN)*SVAR2-CHI(:,LN+1)*SVAR1
         A(:,LN)=A(:,LN)*SVAR2-A(:,LN+1)*SVAR1
+print*,'a ',ln,a(:,ln)
 !       == CUT AT RCUT           ===============================================
         DO IR=1,NR
           IF(R(IR).GT.RCUT) CHI(IR,LN)=0.D0
         ENDDO
 !       == ORTHOGONALIZE TO THE LOWER HEAD FUNCTIONS ===========================
+print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
         DO LN1=LN-NOFL+1,LN-1
           AUX(:)=CHI(:,LN)*CHI(:,LN1)*R(:)**2
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
@@ -638,7 +675,9 @@ enddo
         A(:,LN)=A(:,LN)*SVAR1
       END DO          
 !
-!     == DELOCALIZE TAIL FUNCTIONS =============================================
+!     ==========================================================================
+!     == DELOCALIZE TAIL FUNCTIONS                                            ==
+!     ==========================================================================
       ALLOCATE(CHI1(NR,LNXCHI))
       CHI1(:,:)=CHI(:,:)
       ALLOCATE(A1(LNX,LNXCHI))        
@@ -765,9 +804,10 @@ enddo
 !!$OPEN(10,FILE='CHI_'//TRIM(THIS%ATOMTYPE)//'.DAT')
 !!$rewind 10
 !!$DO Ir=1,NR
-!!$WRITE(10,*)R(Ir),THIS%CHI(Ir,:)
-!!$ENDDO
+!!$WRITE(10,*)R(Ir),CHI(Ir,:)
+!!$eNDDO
 !!$CLOSE(10)
+!!$stop
 !
 !     ==========================================================================
 !     ==  CLEAN UP                                                            ==
@@ -803,14 +843,15 @@ enddo
         ELSE IF(NDIMD.EQ.2) THEN
           MAT2(:,:,1,1)=0.5D0*(MAT1(:,:,1)+MAT1(:,:,2))
           MAT2(:,:,2,2)=0.5D0*(MAT1(:,:,1)-MAT1(:,:,2))
-        ELSE IF (NDIMD.EQ.4) THEN
+        ELSE IF(NDIMD.EQ.4) THEN
           MAT2(:,:,1,1)=0.5D0*(MAT1(:,:,1)+MAT1(:,:,4))
           MAT2(:,:,2,2)=0.5D0*(MAT1(:,:,1)-MAT1(:,:,4))
           MAT2(:,:,1,2)=0.5D0*(MAT1(:,:,2)-CI*MAT1(:,:,3))
           MAT2(:,:,2,1)=0.5D0*(MAT1(:,:,2)+CI*MAT1(:,:,3))
         ELSE
           CALL ERROR$MSG('NDIMD OUT OF RANGE')
-          CALL ERROR$MSG('LDAPLUSU_SPINDENMAT')
+          CALL ERROR$i4val('NDIMD',ndimd)
+          CALL ERROR$stop('LDAPLUSU_SPINDENMAT')
         END IF
       ELSE IF(ID.EQ.'BACK') THEN
         MAT1(:,:,:)=(0.D0,0.D0)
@@ -819,18 +860,19 @@ enddo
         ELSE IF(NDIMD.EQ.2) THEN
           MAT1(:,:,1)=0.5D0*(MAT2(:,:,1,1)+MAT2(:,:,2,2))
           MAT1(:,:,2)=0.5D0*(MAT2(:,:,1,1)-MAT2(:,:,2,2))
-        ELSE IF (NDIMD.EQ.3) THEN
+        ELSE IF(NDIMD.EQ.4) THEN
           MAT1(:,:,1)=0.5D0*(MAT2(:,:,1,1)+MAT2(:,:,2,2))
           MAT1(:,:,2)=0.5D0*(MAT2(:,:,1,2)+MAT2(:,:,2,1))
           MAT1(:,:,3)=-0.5D0*CI*(MAT2(:,:,1,2)-MAT2(:,:,2,1))
           MAT1(:,:,4)=0.5D0*(MAT2(:,:,1,1)-MAT2(:,:,2,2))
         ELSE
           CALL ERROR$MSG('NDIMD OUT OF RANGE')
-          CALL ERROR$MSG('LDAPLUSU_SPINDENMAT')
+          CALL ERROR$i4val('NDIMD',ndimd)
+          CALL ERROR$stop('LDAPLUSU_SPINDENMAT')
         END IF
       ELSE
         CALL ERROR$MSG('ID MUST BE EITHER "FORWARD" OR "BACK"')
-        CALL ERROR$MSG('LDAPLUSU_SPINDENMAT')
+        CALL ERROR$stop('LDAPLUSU_SPINDENMAT')
       END IF
                             CALL TRACE$POP()
       RETURN
@@ -1223,7 +1265,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       REAL(8)                 :: SVAR,EBLOCK
       INTEGER(4)              :: I,J,K,L,IS1,IS2
 !     **************************************************************************
-                                         CALL TRACE$PUSH('LDAPLUSU_INTERACTION')
+                            CALL TRACE$PUSH('LDAPLUSU_INTERACTION')
 !     == SPLIT OFF TOTAL DENSITY FOR HARTREE TERM  =============================
       RHOT(:,:)=RHO(:,:,1,1)+RHO(:,:,2,2)
 !     == DETERMINE INTERACTION ENERGY ==========================================
@@ -1257,7 +1299,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !     ==  ADD CONTRIBUTION FROM HARTREE TERM ===================================
       HAM(:,:,1,1)=HAM(:,:,1,1)+HAMT(:,:)
       HAM(:,:,2,2)=HAM(:,:,2,2)+HAMT(:,:)
-                                                                CALL TRACE$POP()
+                            CALL TRACE$POP()
       RETURN
       END
 !

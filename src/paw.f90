@@ -1,9 +1,9 @@
 !#IF DEFINED(IBMLICENSE)
 Module version_module
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/devel_blo/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 587 $'
+character(256):: VERrev='$LastChangedRevision: 641 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-03-22 16:15:00 +0100 (Do, 22. Mär 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-05-01 20:19:25 +0200 (Di, 01. Mai 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -1362,8 +1362,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       CALL TRAJECTORYIO$ADD(NFI,TIME,4*NAT,DWORK)
       CALL TRAJECTORYIO$SELECT('NONE')
       DEALLOCATE(DWORK)
-
-
 !   
 !     ==================================================================
 !     ==   WRITE POSITION TRAJECTORY FOR QMMM                         ==

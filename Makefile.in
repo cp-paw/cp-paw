@@ -141,7 +141,7 @@ all: debug none fast parallel tools doc
 #
 all_new: debug_new none_new fast_new parallel tools
 #
-tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot
+tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave
 #
 none:   
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
@@ -196,6 +196,10 @@ wave:
 1davpot:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
            ${BINDIR}/${ARCH}/paw_1davpot.x 
+#
+cmcwave:
+	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
+           ${BINDIR}/${ARCH}/paw_cmcwave.x 
 #
 grab:
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
@@ -333,9 +337,12 @@ OBJTRA =  \
 # Objects for paw_wave.x
 OBJWAVE=  \
           ${OBJDIR}/paw_wave.o
-# Objects for paw_wave.x
+# Objects for paw_1davpot.x
 OBJ1DAVPOT=  \
           ${OBJDIR}/paw_1davpot.o
+# Objects for paw_cmcwave.x
+OBJCMCWAVE=  \
+          ${OBJDIR}/paw_cmcwave.o
 # Objects for paw_grab.x
 OBJGRAB=  \
           ${OBJDIR}/paw_grab.o
@@ -419,6 +426,9 @@ ${BINDIR}/${ARCH}/paw_wave.x: ${OBJWAVE} libpaw.a
 ${BINDIR}/${ARCH}/paw_1davpot.x: ${OBJ1DAVPOT} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_1davpot.x ${OBJ1DAVPOT} -lpaw ${LLIBS} 
 #
+${BINDIR}/${ARCH}/paw_cmcwave.x: ${OBJCMCWAVE} libpaw.a
+	${LINK} -o ${BINDIR}/${ARCH}/paw_cmcwave.x ${OBJCMCWAVE} -lpaw ${LLIBS} 
+#
 ${BINDIR}/${ARCH}/paw_grab.x: ${OBJGRAB} libpaw.a
 	${LINK} -o ${BINDIR}/${ARCH}/paw_grab.x ${OBJGRAB} -lpaw ${LLIBS} 
 #
@@ -492,6 +502,11 @@ ${OBJWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJ1DAVPOT}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
+	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJCMCWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
 	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 	${OPTRM} ${OBJDIR}/$*_d.${FEXT}

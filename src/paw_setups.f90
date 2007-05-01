@@ -892,6 +892,7 @@ PRINT*,'RCSM ',THIS%RCSM
 !     == SET VALUES BEYOND A CERTAIN RADIUS EXACTLY TO ZERO           ==
 !     ==================================================================
                             CALL TRACE$PASS('CHECK MAX. RADIUS')
+      CALL RADIAL$R(GID,NR,R)
       IRMAX=0
       DO IR=1,NR
         TCHK=(DABS(THIS%VADD(IR)).LT.TOL)
@@ -900,6 +901,8 @@ PRINT*,'RCSM ',THIS%RCSM
           TCHK=TCHK.AND. &
      &           (DABS(THIS%AEPHI(IR,LN)-THIS%PSPHI(IR,LN)).LT.TOL)
         ENDDO
+!       == LDAPLUSU REQUIRES A SOMEWHAT LARGER RADIUS ==================
+        TCHK=TCHK.AND.(R(IR).GE.6.D0)  
         IF(.NOT.TCHK) IRMAX=IR
       ENDDO
       DO IR=IRMAX+1,NR

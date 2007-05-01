@@ -589,7 +589,7 @@ STOP
 !      DEALLOCATE(DOVER)
       DEALLOCATE(DTKIN)
       DEALLOCATE(R)
-                               CALL TRACE$POP
+                               CALL TRACE$POP()
       RETURN
       END
 !

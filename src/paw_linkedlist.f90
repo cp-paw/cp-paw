@@ -2440,7 +2440,7 @@ CONTAINS
           STCHAR=LINE(I:I)
           ISVAR=IACHAR(STCHAR)
           IF(ISVAR.LT.32) THEN
-            if(isvar.eq.5) then
+            if(isvar.eq.9) then  ! horizontal tab
               line(i:i)=' '
             else
               CALL ERROR$MSG('TABS AND OTHER SPECIAL LETTERS ARE NOT ALLOWED')
