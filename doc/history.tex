@@ -195,6 +195,18 @@ Problem has been fixed in paw_ldaplusu in routine ldaplusu_spindenmat.
 Tesselation files tess_32 tess_122 tess)482 tess_1922 for COSMO
 calculations have been included in the directory ``parameters''.
 
+\subsection{May 3,  2007}
+
+Bugfix in paw_linkedlist.f90: With the ifc91 compiler buffer\$read did
+not read all strings properly. The origin was that an substring
+character array with assumed shape and assumed len parameter has been
+passed to linkedlist\$set.  The problem may be a compiler problem or a
+violation of the fortran standard. New routines
+linkedlist\_setchr1withlength and linkedlist\_getchr1withlength have
+been created, that pass the length of the array explicitely. This may
+also solve the problems we had with the xlf compiler, for which a
+workaround has been implemented. It needs to be checked if the present
+fix also makes the xlf-workaround superfluous.
 
 \newpage
 \bibliographystyle{unsrt}

@@ -1750,6 +1750,60 @@ CONTAINS
       RETURN
       END SUBROUTINE LINKEDLIST$SETCH<RANKID>
 #END TEMPLATE LINKEDLIST$SETCHAR
+!     
+!     ..................................................................
+      SUBROUTINE LINKEDLIST_SETCHr1withlength(LL,ID,NTH,leng,VAL)
+!     ******************************************************************
+!     **                                                              **
+!     **  SPECIFIC INTERFACE FOR LINKEDLIST_SET.                      **
+!     **  SEE LINKEDLIST_SETGENERIC FOR FURTHER INFO.                 **
+!     **                                                              **
+!     **  REMARKS:                                                    **
+!     **    THIS SPECIFIC INTERFACE DIFFERS FROM OTHER SPECIFIC       **
+!     **    INTERFACES BY THE TYPE OF VAL AND THE VALUE OF TYPE       **
+!     **    AND VAL MAY BE ARRAY VALUED OR SCALAR                     **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LL_TYPE)   ,INTENT(IN) :: LL
+      CHARACTER(*)    ,INTENT(IN) :: ID
+      INTEGER(4)      ,INTENT(IN) :: NTH
+      INTEGER(4)      ,intent(in) :: LENG
+      CHARACTER(*)    ,INTENT(IN) :: VAL(leng)
+      TYPE(LLIST_TYPE),POINTER    :: LIST
+      TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
+      CHARACTER(1)    ,POINTER    :: CHARVAL(:)
+      INTEGER(4)                  :: LENVAL
+      CHARACTER(8)                :: STRING
+      integer(4)                  :: isvar1,isvar2
+!     ******************************************************************
+      LIST=>LL%PTR
+      LENVAL=LEN(VAL)
+      WRITE(STRING,FMT='(I8)')LENVAL
+      STRING=ADJUSTL(STRING)
+      ISVAR2=LEN_TRIM(STRING)
+      IF(ISVAR2.GT.6) THEN
+        CALL ERROR$MSG('DATA EXCEEDED SIZE OF CHARACTER VARIABLE STRING')
+        CALL ERROR$STOP('LINKEDLIST$SETCH')
+      END IF
+      ISVAR2=ISVAR2+2
+      STRING='('//TRIM(STRING(1:6))//')'
+      ISVAR1=LEN_TRIM(TYPE%NAME)
+      IF(isvar1+isvar2.GT.8) THEN
+        CALL ERROR$MSG('DATA EXCEEDED SIZE OF CHARACTER VARIABLE STRING')
+        CALL ERROR$STOP('LINKEDLIST_SETCHR1WITHLENGTH')
+      END IF
+      STRING=trim(TYPE%NAME(1:ISVAR1))//ADJUSTL(STRING)
+      ALLOCATE(CHARVAL(LENG*LENVAL))
+!          == IN THE FOLLOWING LINE THE <RANK>(1:LENVAL) WAS REQUIRED
+!          == TO AVOID THAT A BLANK WAS INSERTED AFTER EACH ELEMENT OF VAL
+!     CHARVAL=TRANSFER(VAL(:)(1:LENVAL),CHARVAL) 
+!     == USE AN EXPLICIT COPY FROM THE STRING ARRAY INTO A CHARACTER ARRAY.
+!     == USING TRANSFER DID CORRUPT LONGER STRINGS
+      CALL LINKEDLIST_TRANSFERCHTO1(LENG,VAL,LENG*LENVAL,CHARVAL)
+      CALL LINKEDLIST_SETGENERIC(LIST,ID,NTH,STRING,LENG,CHARVAL)
+      RETURN
+      END SUBROUTINE LINKEDLIST_SETCHR1WITHLENGTH
 
 
 !*************************************************************************
@@ -1939,6 +1993,55 @@ CONTAINS
 !*************************************************************************
 #ENDIF   
 !*************************************************************************
+!     
+!     ..................................................................
+      SUBROUTINE LINKEDLIST_GETCHr1withlength(LL,ID,NTH,leng,VAL)
+!     ******************************************************************
+!     **                                                              **
+!     **  SPECIFIC INTERFACE FOR LINKEDLIST_GET.                      **
+!     **  SEE LINKEDLIST_GETGENERIC FOR FURTHER INFO.                 **
+!     **                                                              **
+!     **  REMARKS:                                                    **
+!     **    THIS SPECIFIC INTERFACE DIFFERS FROM OTHER SPECIFIC       **
+!     **    INTERFACES BY THE TYPE OF VAL AND THE VALUE OF TYPE       **
+!     **    AND VAL MAY BE ARRAY VALUED OR SCALAR                     **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LL_TYPE)   ,INTENT(IN) :: LL
+      CHARACTER(*)    ,INTENT(IN) :: ID
+      INTEGER(4)      ,INTENT(IN) :: NTH
+      INTEGER(4)      ,INTENT(IN) :: leng
+      CHARACTER(*)    ,INTENT(OUT):: VAL(leng)
+      TYPE(LLIST_TYPE),POINTER    :: LIST
+      TYPE(LDATA_TYPE),POINTER    :: DATA
+      TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
+      CHARACTER(1)    ,POINTER    :: CHARVAL(:)
+      CHARACTER(8)                :: STRING
+      CHARACTER(500)              :: MOLD
+      INTEGER(4)                  :: I1,I2,KIND
+!     ******************************************************************
+      LIST=>LL%PTR
+      WRITE(STRING,FMT='(I8)')LEN(VAL)
+      STRING=ADJUSTL(STRING)
+      STRING=TRIM(TYPE%NAME)//'('//TRIM(STRING)//')'
+      CALL LINKEDLIST_GETGENERIC(LIST,ID,NTH,STRING,LENG,CHARVAL)
+!     == CALCULATE LENGTH OF DATA RECEIVED ===========================
+      IF(NTH.EQ.0) THEN
+        CALL LLIST_FINDDATA(LIST,ID,1,DATA)
+      ELSE IF(NTH.GT.0) THEN
+        CALL LLIST_FINDDATA(LIST,ID,NTH,DATA)
+      ELSE
+        CALL ERROR$STOP('LINKEDLIST_GETCHR1WITHLENGTH')
+      END IF
+      STRING=DATA%TYPE
+      I1=INDEX(STRING,'(')
+      I2=INDEX(STRING,')')
+      READ(STRING(I1+1:I2-1),*)KIND
+!     == MAP STORED DATA ONTO VAL ====================================
+      VAL=RESHAPE(TRANSFER(CHARVAL,MOLD(1:KIND),leng),shape(val))
+      RETURN 
+      END SUBROUTINE LINKEDLIST_GETCHR1WITHLENGTH
 !     
 !     ..................................................................
       SUBROUTINE LINKEDLIST$CONVERT(LL,ID,NTH_,TYPE)
@@ -2172,7 +2275,8 @@ CONTAINS
           READ(TYPE(4:INDEX(TYPE,')')-1),*)ISVAR
           ALLOCATE(CHARRAY(LENG))
           CHARRAY(:)=' '
-          CALL LINKEDLIST$GET(LIST,'*',I,CHARRAY(:)(1:ISVAR))
+!         CALL LINKEDLIST$GET(LIST,'*',I,CHARRAY(:)(1:ISVAR))
+          CALL LINKEDLIST_GETchr1withlength(LIST,'*',I,leng,CHARRAY(:)(1:ISVAR))
           DO J=1,LENG
             WRITE(NFIL,*)"'"//TRIM(CHARRAY(J))//"'"
           ENDDO
@@ -2357,7 +2461,8 @@ CONTAINS
               CALL ERROR$I4VAL('MAXIMUM LENGTH',256)
               CALL ERROR$STOP('BUFFER$READ')
             END IF
-            CALL LINKEDLIST$SET(LIST,TRIM(KEY),-1,CHARRAY(:)(1:ISVAR))
+!           CALL LINKEDLIST$SET(LIST,TRIM(KEY),-1,CHARRAY(:)(1:ISVAR))
+            CALL LINKEDLIST_SETchr1withlength(LIST,TRIM(KEY),-1,leng,CHARRAY(:)(1:ISVAR))
             DEALLOCATE(CHARRAY)
           ELSE
             CALL ERROR$MSG('TYPE NOT RECOGNIZED')
