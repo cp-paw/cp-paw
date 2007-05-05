@@ -1,0 +1,69 @@
+# Call this file with
+#
+# PARAMETER FILE FOR CENTRINO DUO 64BIT
+#
+#________________________________architecture (arbitrary name)
+ARCH="g95_guam"
+#
+#________________________________F90 compiler
+COMPILER="g95 -fno-second-underscore "
+#
+#________________________________F77 compiler
+F77COMPILER="g95 -fno-second-underscore"
+#
+#________________________________F90 compiler flags 
+FLAGS=" -c -I/home/tools/libs/fftw-2.1.5/fortran/ -I/home/tools/libs/mpich-1.2.6/include/"
+#
+#________________________________F77 compiler flags
+F77FLAGS="-c "
+#
+#________________________________F90 compiler optimization flags
+#    note that -O2 is standard and safe -O3 can give wrong results (according to the manual)
+OPTIMIZE="-O3 -fshort-circuit -funroll-loops -fomit-frame-pointer  -msse2"
+#
+#________________________________F90 compiler optimization flags with profiling
+#    note that -O2 is standard and safe -O3 can give wrong results (according to the manual)
+PROFOPTIMIZE="-pg -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer  -msse2"
+#
+#________________________________F77 compiler optimization flags
+F77OPTIMIZE="-O3"
+#
+#________________________________F90 compiler debug flags
+#      -Wall -Wextra all warnings on
+#      -fendian=little -fd-comment"
+#      -Wall        switch all warnings on
+#      -Wextra       switch really all warnings on
+DEBUG="-g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
+#
+#________________________________F77 compiler debug flags
+F77DEBUG="-g"
+#
+#________________________________flags for linking 
+LFLAGS="-Wl,-dy"
+#
+#________________________________search directories for linking (sequential)
+#     -L/home/tools/libs/acml3.0.0_64/gnu64/lib/ directory with lapack/blas library
+#     -L/home/tools/libs/fftw-2.1.5/fftw/.libs/  directory with fftw
+LLINK=" -L/home/tools/libs/acml3.0.0_64/gnu64/lib/ -L/home/tools/libs/fftw-2.1.5_no-second-underscore/fftw/.libs/ "
+
+#
+#________________________________search directories for linking (parallel)
+#     -L/home/tools/libs/acml3.0.0_64/gnu64/lib/ directory with lapack/blas library
+#     -L/home/tools/libs/fftw-2.1.5/fftw/.libs/  directory with fftw library
+#     -L/home/alexp/mvapich0.95_devel_g95/lib/   directory with MPI
+#     -L/usr/local/ibgd/driver/infinihost/lib    directory with infiniband drivers
+#
+PLLINK=" -L/home/tools/libs/acml3.0.0_64/gnu64/lib/ -L/home/tools/libs/fftw-2.1.5_no-second-underscore/fftw/.libs/ -L/home/tools/libs/mpich-1.2.6/lib"
+#
+#________________________________external libraries (sequential)
+LIBS="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c"
+#
+#________________________________external libraries (parallel)
+PLIBS="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c -Wl,-dy -lfmpich -Wl,-dy -lmpich"
+#
+#________________________________preprocessor variables
+CPPVAR="-DCPPVAR_FFT_FFTW -DCPPVAR_U77 "
+#
+#________________________________file extension
+FEXT="f90"
+

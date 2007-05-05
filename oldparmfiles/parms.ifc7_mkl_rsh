@@ -2,58 +2,51 @@
 # PARAMETER FILE FOR LINUX/INTEL
 #
 #________________________________architecture (arbitrary name)
-ARCH="g95"
-#
-# DIRECTORIES containing LIBRARIES
-#
-FFTWDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
-MPICHDIR="/home/tools/libs/mpich-1.2.6/"
-LAPACKDIR="/home/tools/libs/acml3.0.0_64/gnu64/lib/"
+ARCH="ifc7_rsh"
 #
 #________________________________F90 compiler
-COMPILER="/tmp/g95/bin/i686-pc-linux-gnu-g95"
+COMPILER="ifc7"
 #
 #________________________________F77 compiler
-F77COMPILER="/tmp/g95/bin/i686-pc-linux-gnu-g95"
+F77COMPILER="ifc7"
 #
 #________________________________F90 compiler flags 
-FLAGS="-c "
+FLAGS="-c -mp -I/home/ptpb/Tree/PAWlibs/mpich_RSH/include -I/home/ptpb/Tree/PAWlibs/fftw-version_unknown/fortran/"
 #
 #________________________________F77 compiler flags
-F77FLAGS="-c "
+F77FLAGS="-c -mp "
 #
 #________________________________F90 compiler optimization flags
-OPTIMIZE="-O2 "
+OPTIMIZE="-O3 "
 #
 #________________________________F77 compiler optimization flags
-F77OPTIMIZE="-O2 "
+F77OPTIMIZE="-O3 "
 #
 #________________________________F90 compiler debug flags
-#  -g -std=f95 -Wall -Wextra -Wline-truncation -Wobsolent -Wprecision-loss -Wunset-vars 
-#  -Wuninitialized -Wmissing-intent -Wunused-internal-procs 
-#  -ftrace=full  -fimplicit-none -fbounds-check -fd-comment -fendian=little
-DEBUG="-g -std=f95 -Wall -Wextra -ftrace=full  -fimplicit-none -fbounds-check -fd-comment"
+DEBUG="-g -C -d4"
 #
 #________________________________F77 compiler debug flags
-F77DEBUG="-g "
+F77DEBUG="-g -C -d4"
 #
 #________________________________flags for linking 
-LFLAGS=" "
-#
+LFLAGS="-Wl,-dn"
+#LFLAGS=" "
+#use this instead of -static!
 #________________________________search directories for linking (sequential)
-LLINK=" "
+LLINK="-L/home/ptpb/Tree/PAWlibs/fftw-version_unknown/fftw/.libs/ -L/opt/intel/mkl72/lib/32 "
 #
 #________________________________search directories for linking (parallel)
-PLLINK=" "
+#PLLINK="-L/home/ptpb/Tree/PAWlibs/fftw-version_unknown/fftw/.libs/ -L/opt/intel/mkl72/lib/32 -L/home/ptpb/Tree/PAWlibs/mpich-1.2.5.2_SSH/lib"
+PLLINK="-L/home/ptpb/Tree/PAWlibs/fftw-version_unknown/fftw/.libs/ -L/opt/intel/mkl72/lib/32 -L/home/ptpb/Tree/PAWlibs/mpich_RSH/lib"
 #
 #________________________________external libraries (sequential)
-LIBS=" -llapack -lblas "
+LIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_ia32 -lguide -lpthread"
 #
 #________________________________external libraries (parallel)
-PLIBS=" -llapack -lblas -lfmpich -lmpich "
+PLIBS=" -Vaxlib -lfftw -lmkl_lapack -lmkl_ia32 -lguide -lpthread -lfmpich -lmpich "
 #
 #________________________________preprocessor variables
-CPPVAR="-DCPPVAR_FFT_PACK "
+CPPVAR="-DCPPVAR_FFT_FFTW -DCPPVAR_U77"
 #
 #________________________________file extension
 FEXT="f90"

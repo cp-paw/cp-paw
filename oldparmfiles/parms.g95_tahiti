@@ -1,0 +1,71 @@
+# Call this file with
+
+#
+# PARAMETER FILE FOR SGI
+#
+#________________________________architecture (arbitrary name)
+ARCH="g95_tahiti"
+#
+#________________________________F90 compiler
+#note that -O2 is standard and safe -O3 can give wrong results (according to the manual)
+COMPILER="g95  "
+#
+#________________________________F77 compiler
+F77COMPILER="g95 "
+#
+#________________________________F90 compiler flags 
+FLAGS=" -c -I/home/tools/fftw-2.1.5/fortran/"
+
+#
+#________________________________F77 compiler flags
+F77FLAGS="-c "
+#
+#________________________________F90 compiler optimization flags
+#OPTIMIZE="-fast "
+OPTIMIZE="-O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -march=centrino -malign-double -msse2"
+#
+#________________________________F77 compiler optimization flags
+#F77OPTIMIZE="-fast "
+F77OPTIMIZE="-O3"
+#
+#________________________________F90 compiler debug flags
+#DEBUG="-g -std=f95 -Wline-truncation -Wobsolent -Wprecision-loss -Wunset-vars -Wuninitialized -Wmissing-intent -Wunused-internal-procs -ftrace=full  -fimplicit-none -fbounds-check -fd-comment"
+DEBUG="-g -std=f95 -Wall -Wextra -ftrace=full  -fimplicit-none -fbounds-check -fd-comment"
+#-fendian=little"
+#
+#________________________________F77 compiler debug flags
+F77DEBUG="-g"
+#
+#________________________________flags for linking 
+#LFLAGS=" -Bstatic -g77libs "
+LFLAGS="-Wl,-dy"
+#
+#________________________________search directories for linking (sequential)
+#LLINK=" -L/home/axel/acml3.0.0_64/gnu64/lib/ -L/home/axel/libs/fftw-2.1.5/fftw/.libs/ -L/usr/lib/gcc-lib/x86_64-redhat-linux/3.2.3/ "
+LLINK=" -L/home/tools/acml3.0.0_64/gnu64/lib/ -L/home/tools/fftw-2.1.5/fftw/.libs/ "
+
+#
+#________________________________search directories for linking (parallel)
+#-L/home/alexp/paw_arch/libs/ATLAS_PGI/lib/Linux_P4SSE2
+#PLLINK=" -L/home/axel/acml3.0.0_64/gnu64/lib/ -L/home/axel/libs/fftw-2.1.5/fftw/.libs/ -L/home/alexp/mvapich0.95_devel_g95/lib/ -L/usr/local/ibgd/driver/infinihost/lib -L/usr/lib/gcc-lib/x86_64-redhat-linux/3.2.3/ "
+PLLINK=" -L/home/tools/acml3.0.0_64/gnu64/lib/ -L/home/tools/fftw-2.1.5/fftw/.libs/ -L/home/alexp/mvapich0.95_devel_g95/lib/ -L/usr/local/ibgd/driver/infinihost/lib"
+
+
+#
+#________________________________external libraries (sequential)
+#LIBS="-lfftw -llapack -lf77blas -latlas  ctype_b_patch.o "
+#LIBS="-lfftw -llapack -lf77blas -latlas  "
+#LIBS="-lfftw -llapack -lblas  "
+LIBS="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c"
+#
+#________________________________external libraries (parallel)
+#PLIBS="-lfftw -llapack -lf77blas -latlas -lfmpich -lmtl_common -lvapi -lmosal -lmpga -lpthread -lmpich"
+#PLIBS="-lfftw -llapack -lblas -lfmpich -lmtl_common -lvapi -lmosal -lmpga -lpthread -lmpich"
+PLIBS="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c -Wl,-dy -lfmpich -Wl,-dy -lmtl_common -Wl,-dy -lvapi -Wl,-dy -lmosal -Wl,-dy -lmpga -Wl,-dy -lpthread -Wl,-dy -lmpich"
+#
+#________________________________preprocessor variables
+CPPVAR="-DCPPVAR_FFT_FFTW -DCPPVAR_U77 -DCPPVAR_64BIT "
+#
+#________________________________file extension
+FEXT="f90"
+

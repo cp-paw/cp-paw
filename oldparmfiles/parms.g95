@@ -4,12 +4,6 @@
 #________________________________architecture (arbitrary name)
 ARCH="g95"
 #
-# DIRECTORIES containing LIBRARIES
-#
-FFTWDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
-MPICHDIR="/home/tools/libs/mpich-1.2.6/"
-LAPACKDIR="/home/tools/libs/acml3.0.0_64/gnu64/lib/"
-#
 #________________________________F90 compiler
 COMPILER="/tmp/g95/bin/i686-pc-linux-gnu-g95"
 #

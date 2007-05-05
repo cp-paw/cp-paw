@@ -7616,6 +7616,40 @@ keep this list as short as possible.
   to set use {\tt paw\_compile ?} to obtain the command line syntax.
 \end{itemize}
 
+%==========================================================================
+\section{Installation}
+%==========================================================================
+This section is under construction!
+
+
+\begin{itemize}
+\item unpack the tarball of the CP-PAW distribution. We will refer to it in the following as ``PAW''
+\item create a configure script in the PAW directory 
+\begin{center}
+\verb+autoconf configure.in >configure+ 
+\end{center}
+\item create a parameter file \textit{parmfile}. There are generic
+  parameter files named for example \verb+parms.g95+,
+  \verb+parms.ifc+, \verb+parms.xlf+, which are compiler specific.
+  Choose the appropriate one and create a copy by appending the name
+  of your computer or environment. For example
+  \verb+parms.g95_mycomputer+. Specify ARCH as for example as
+\verb+''g95_mycomputer''+ and define FFTWDIR,MPICHDIR,LAPACKDIR as the
+locations of the FFTW library for Fourier transforms, the MPI library,
+and the library with algebraic subroutines (lapack and blas).
+\item Create Makefiles by running
+\begin{center}
+\verb+configure -with-parmfile=+\textit{parmfile} 
+\end{center}
+\item include the directory with the executables into your search path.
+\end{itemize}
+
+The directory structure will have the following form
+\begin{center}
+\includegraphics[width=0.8\linewidth]{Figs/PAWdirtree/pawdirtree.eps}
+\end{center}
+
+
 
 \ifthenelse{\boolean{private}}{
 %==========================================================================

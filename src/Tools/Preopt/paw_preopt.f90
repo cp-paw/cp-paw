@@ -661,6 +661,7 @@ END MODULE READ_MODULE
       CHARACTER(256) :: ROOTNAME
       CHARACTER(256) :: INNAME
       INTEGER(4)     :: ISVAR,NFILO
+      integer,external:: iargc
 !     ******************************************************************
       IF(IARGC().LT.1) THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
