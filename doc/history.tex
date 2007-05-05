@@ -208,6 +208,24 @@ also solve the problems we had with the xlf compiler, for which a
 workaround has been implemented. It needs to be checked if the present
 fix also makes the xlf-workaround superfluous.
 
+\subsection{May 5,  2007}
+
+configure scripts changed. configure.in has been replaced by
+configure.ac, the default input for autoconf. Makefile.in has been
+changed a little. The changes affect the parameters in parmfiles. The
+old parmfiles have been placed temporarily in the directory
+oldparmfiles.
+
+the new configure process also creates a version (paw_prof.x) for
+profiling. Create it with ``make prof''.
+
+\subsection{May 5,  2007}
+
+The preopt tool did not work after the amber forcefield had been
+implemented as optional force field in addition to the UFF force
+field. The forcefied UFF was now explicitely set in the preopt tool
+and introduced as default for the classical object.
+
 \newpage
 \bibliographystyle{unsrt}
 \bibliography{doc.bib}

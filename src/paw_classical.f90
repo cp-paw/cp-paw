@@ -97,7 +97,7 @@ TYPE MD_TYPE
   REAL(8)               :: SIGMA(3,3)
   CHARACTER(32)         :: MDNAME          ! IDENTIFIER FOR SELECTING
   LOGICAL(4)            :: TINI            ! INITALIZED OR NOT
-  CHARACTER(16)         :: FF              ! TIP3P, UFF OR WHATEVER
+  CHARACTER(16)         :: FF='UFF'        ! TIP3P, UFF OR WHATEVER
   CHARACTER(3) ,POINTER :: RES(:)          ! (NAT)    RESIDUE NAME
   TYPE(MD_TYPE),POINTER :: NEXT            ! LINK TO THE NEXT INSTANCE
 END TYPE MD_TYPE
