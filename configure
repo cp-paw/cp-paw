@@ -1713,9 +1713,9 @@ xlf90ARCH="ibm"
 #
 # ________________remove preprocessed sources after compilation?
 #                 set to "rm" if yes and to "file" if no
-NONEOPTRM="rm"
-FASTOPTRM="rm"
-PARALLELOPTRM="rm"
+NONEOPTRM="file"
+FASTOPTRM="file"
+PARALLELOPTRM="file"
 DEBUGOPTRM="file"
 PROFOPTRM="file"
 #

@@ -240,7 +240,8 @@ CALL TRACE$PASS('FILEHANDLER')
 !     == FUSH BUFFER OF PROTOCOLL FILE                                ==
 !     ==================================================================
 CALL TRACE$PASS('DONE')
-      IF(THISTASK.EQ.1)CALL LIB$FLUSHFILE(NFILO)
+      CALL FILEHANDLER$CLOSEALL
+!      IF(THISTASK.EQ.1)CALL LIB$FLUSHFILE(NFILO)
                             CALL TRACE$POP
       RETURN
       END
