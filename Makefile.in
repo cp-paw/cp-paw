@@ -1,134 +1,115 @@
 #
-#
 SHELL=/bin/sh
 #
 #########################################################################
 ##                                                                     ##
-##  make an paw executable and a paw library using gmake               ##
-##  ====================================================               ##
+##  make a paw executable and a paw library using gmake                ##
+##  ===================================================                ##
 ##                                                                     ##
 #########################################################################
+##                                                                     ##
+##  Primary targets:                                                   ##
+##                                                                     ##
+##  directory structure                                                ##
+##    @PAWDIR@/bin/@ARCH@       executables                            ##
+##    @PAWDIR@/bin/@ARCH@/none  objects with simple compiler flags     ##
+##    @PAWDIR@/bin/@ARCH@/fast  optimized objects                      ##
+##    @PAWDIR@/bin/@ARCH@/prof  objects for profiling                  ##
+##    @PAWDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
+##    @PAWDIR@/src              sources for CP-PAW main code           ##
+##    @PAWDIR@/src/Tools        directory containing Tools             ##
+##    @PAWDIR@/src/F90PP        directory preprocessor etc             ##
+##                                                                     ##
+##  variables set by autoconf                                          ##
+##    LINK=@LINK@                                                      ##
+##    LLIBS=@LLIBS@                                                    ##
+##                                                                     ##
+##                                                                     ##
+##                                                                     ##
 #########################################################################
-## list of replacements done by configure to convert Makefile.in into  ##
-## make files                                                          ##
+## The following block of variables is set by the configure            ##
+## script (AC_SUBST @...@ and sed-Commands var...)                     ##
 #########################################################################
-#==PAWDIR=@PAWDIR@
-#==COMPILE=@COMPILE@
-#==COMPILE77=@COMPILE77@
-#==LINK=@LINK@
-#==LLINK=@LLINK@
-#==LLINKPARALLEL=@LLINKPARALLEL@
-#==LLIBSPARALLEL=@LLIBSPARALLEL@
-#==LLIBS=@LLIBS@
-#==OBJDIR=@OBJDIR@
-#==SRCDIR=@SRCDIR@
-#==BINDIR=@BINDIR@
-#==FFTW=@FFTW@
-#==FFTWDIR=@FFTWDIR@
-#==MPICHDIR=@MPICHDIR@
-#==TOOLDIR=@TOOLDIR@
-#==NONEDIR=@NONEDIR@
-#==FASTDIR=@FASTDIR@
-#==PARALLELDIR=@PARALLELDIR@
-#==PARALLELNAME=@PARALLELNAME@
-#==DEBUGDIR=@DEBUGDIR@
-#==TOOLCOMP=@TOOLCOMP@
-#==PAWX=@PAWX@
-#==CPPVAR=@CPPVAR@
-#==FEXT=@FEXT@
-#==ARCH=@ARCH@
-#==CPP=@CPP@
-#==MAKE=@MAKE@
-#==xlf90ARCH=@xlf90ARCH@
-#############################################################################
-#  
 #
-# The following block of variables is set by the configure
-# script (AC_SUBST @...@ and sed-Commands var...)
-#
+#___________________________ variables that may appear unresolved 
+BLASDIR=@BLASDIR@
 LAPACKDIR=@LAPACKDIR@
-#___________________________ root directory of FFTW library
-FFTWDIR=@FFTWDIR@
-#___________________________ root directory of MPICH library
-MPICHDIR=@MPICHDIR@
-#___________________________ Fortran90 compiler + compiler flags 
-COMPILE=@COMPILE@
-#___________________________ Fortran77 compiler + compiler flags (for blas) 
-COMPILE77=@COMPILE77@
+FFTDIR=@FFTDIR@
+MPIDIR=@MPIDIR@
 #
-LLINK=@LLINK@
+INCLUDE_FFTW=@INCLUDE_FFTW@
 #
-#############################directory structure of PAW###################
+INCLUDE_MPI=@INCLUDE_MPI@
+#
+SPECIAL=@SPECIAL@
 #___________________________ root directory of the PAW distribution
 PAWDIR=@PAWDIR@
-#___________________________ path to f90pp sources
-F90PPDIR=${SRCDIR}/F90PP
-#___________________________ path to the object files
-OBJDIR=@OBJDIR@
-#___________________________ path to the source files
-SRCDIR=@SRCDIR@
-#___________________________ path to the binaries
-BINDIR=@BINDIR@
-#___________________________ directory name for not optimized objects
-NONEDIR=@NONEDIR@
-#___________________________ directory name for optimized objects
-FASTDIR=@FASTDIR@
-#___________________________ directory name for parallel objects (opt.)
-PARALLELDIR=@PARALLELDIR@
-#___________________________ directory name objects of the debug-binary
-DEBUGDIR=@DEBUGDIR@
-#___________________________ directory name objects of the debug-binary
-PROFDIR=@PROFDIR@
-#___________________________ path to the tool-directory
-TOOLDIR=@TOOLDIR@
-##########################################################################
-#___________________________ the PAW-binary (inclusive path)
-PAWX=@PAWX@
-#___________________________ set to yes, if FFTW is used
-FFTW=@FFTW@
-#___________________________ the extension of files to be compiled
-FEXT=@FEXT@
-#___________________________ the hardware architecture
-ARCH=@ARCH@
 #___________________________ set to T, if this is Makefile.parallel 
 PARALLEL=varPARALLEL
-#___________________________ controls removal of preprocessed sources
-OPTRM=varOPTRM
-#___________________________ extension for parallel Makefile
-PARALLELNAME=@PARALLELNAME@
+#___________________________ Fortran90 compiler + compiler flags 
+COMPILE=@COMPILE@
+#____________________________link flags
+LLINK=@LLINK@
+#___________________________ link flags for parrallel executable
+LLINKPARALLEL=@LLINKPARALLEL@
+#___________________________ libraries for scalar executable
+LLIBS=@LLIBS@
+#___________________________ libraries for parallel executable
+LLIBSPARALLEL=@LLIBSPARALLEL@
+#___________________________ the hardware architecture
+ARCH=@ARCH@
+#___________________________ object type (none,fast,dbg,prof)
+OBJTYPE=varOBJTYPE
+#___________________________ parameters for f90pp
+CPPVAR=@CPPVAR@ 
+#___________________________ the PAW-binary (inclusive path)
+PAWX=@PAWX@
+#___________________________ the extension of files to be compiled
+FEXT=@FEXT@
 #___________________________ the way to compile the tools 
 TOOLCOMP=@TOOLCOMP@
 #___________________________ the GNU make utility
 MAKE=@MAKE@
 #
 ##########################################################################
+#
+#  complete shortcuts to directories etc
+#
+##########################################################################
+#___________________________ path to the object files
+OBJDIR=${PAWDIR}/bin/${ARCH}/Objects/${OBJTYPE}
+#___________________________ path to the binaries
+BINDIR=${PAWDIR}/bin/${ARCH}
+#___________________________ path to the source files
+SRCDIR=${PAWDIR}/src
+#___________________________ path to the tool-directory
+TOOLDIR=${PAWDIR}/src/Tools
+#
+##########################################################################
 ##  define parameters                                                   ##
 ##########################################################################
 #
 # at this point a distinction between parallel and sequential Makefile is
-# made, as differen preprocessor variables have to be used and different
+# made, as different preprocessor variables have to be used and different
 # libraries are linked
 #
 ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
   MODE = _p
-  LLIBS=@LLIBSPARALLEL@
-  LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} @LLINKPARALLEL@
-  F90PPOPT=-DCPPVARIABLE_PARALLEL @CPPVAR@ -arch=${ARCH}
-  #
-  # MPIF.H is an include file for the MPICH-library
-  # for parallel compilation, this file has to be copied into
-  # the object directory
-  #
-  ifneq (${ARCH},@xlf90ARCH@)
-    ifneq (${MPICHDIR},notset)
-      MPICHINCLUDE=cp ${MPICHDIR}/include/mpif.h ${OBJDIR}/mpif.h
-    endif
-  endif
+  LLIBS=${LLIBSPARALLEL}
+  LINK=@LINK@  -I${OBJDIR} -L${OBJDIR} ${LLINKPARALLEL}
+  #___________________________ f90pp command
+  F90PP=${BINDIR}/f90pp ${CPPVAR} -DCPPVARIABLE_PARALLEL 
 else
   MODE = _s
-  LLIBS=@LLIBS@ 
-  LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} @LLINK@ 
-  F90PPOPT=@CPPVAR@ -arch=${ARCH}
+  LLIBS=@LLIBS@
+  LINK=@LINK@ -I${OBJDIR} -L${OBJDIR} ${LLINK} 
+  #___________________________ f90pp command
+  F90PP=${BINDIR}/f90pp ${CPPVAR}
+endif
+ifeq (${SPECIAL},IBM)
+  POE=poe
+else
+  POE=
 endif
 #
 # out of the file src/paw_mpelib.f a parallel _p and
@@ -136,12 +117,33 @@ endif
 #
 MPE = ${OBJDIR}/paw_mpelib$(MODE).o
 #
+##########################################################################
+##  include files                                                       ##
+##########################################################################
+#
 # FFTW_F77.I is an include file for the FFTW-library
 # in case FFTW is linked, this file has to be copied into the 
 # object directory
 # 
-ifeq (${FFTW},yes)
-  FFTWINCLUDE=cp ${FFTWDIR}/fortran/fftw_f77.i ${OBJDIR}/fftw_f77.i
+ifneq ($(strip ${INCLUDE_FFTW}),) 
+  # copy includefile into object directory
+  FFTWINCLUDE=cp ${INCLUDE_FFTW} ${OBJDIR}/fftw_f77.i
+else
+  # not there, just create an empty file
+  FFTWINCLUDE= touch ${OBJDIR}/fftw_f77.i
+endif
+#
+# MPIF.H is an include file for the MPICH-library
+# for parallel compilation, this file has to be copied into
+# the object directory. Not needed for IBM environment
+# the include file is usually named mpif.f90
+#
+ifneq ($(strip ${INCLUDE_MPI}),) 
+  # copy includefile into object directory
+  MPIINCLUDE=cp ${INCLUDE_MPI} ${OBJDIR}/mpif.h
+else
+  # not there, just create an empty file
+  MPIINCLUDE= touch ${OBJDIR}/mpif.h
 endif
 #
 # paw_mpelib.f holds the subroutines necessary for parallel execution
@@ -156,131 +158,7 @@ PAWLIB= ${OBJDIR}/libpaw.a#
 #########################################################################
 ## Definition of the targets                                           ##
 #########################################################################
-#
-# MIND: The Absoft and fort compiler always put the *.mod-files into the
-#       current directory. In order to have them in the object-directories
-#       the user types for example 'make none', wich causes a change
-#       into the object-directory and second call of the Makefile.none
-#       The default is then the compilation of the right binary.
-# 
-#
 default: ${PAWX}
-#
-# THE PAW BINARIES
-#
-all: debug none fast prof parallel tools doc
-#
-# Two targets aim at compiling every PAW-binary (not tool). This
-# is necessary, because the dependencies due to modules just have
-# to be resolved at the very first calculation. In this case the
-# variable ALLDEP is set to T.
-#
-# as the parallel objects are - by default - compiled in the
-# same directory as the optimized sequential ones, there is no 
-# need to resolve the dependencies. Therefore there is no
-# parallel_new in the next list
-#
-all_new: debug_new none_new fast_new prof_new parallel tools
-#
-tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave
-#
-none:   
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${NONEDIR}
-#
-none_new:
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${NONEDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${NONEDIR}
-#
-fast:   
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${FASTDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
-#
-fast_new:   
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${FASTDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${FASTDIR}
-#
-debug:  
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${DEBUGDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
-#
-debug_new:  
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${DEBUGDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR}
-#
-prof:  
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${PROFDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${PROFDIR}
-#
-prof_new:  
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${PROFDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${PROFDIR}
-#
-parallel:
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${PARALLELDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
-#
-parallel_new:
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${PARALLELDIR}; \
-	${MAKE} -f ${PAWDIR}/Makefile.${PARALLELNAME}
-#
-# THE PAW TOOLS
-#
-newatom:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${DEBUGDIR} \
-           ${BINDIR}/${ARCH}/paw_newatom.x 
-#
-atom:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_atom.x 
-#
-tra:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_tra.x 
-#
-wave:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_wave.x 
-#
-1davpot:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_1davpot.x 
-#
-cmcwave:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_cmcwave.x 
-#
-grab:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_grab.x 
-#
-dos:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_dos.x 
-#
-preopt:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_preopt.x 
-#
-converttra:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_converttra.x 
-#
-cleantra:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_cleantra.x 
-#
-strc:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_strc.x 
-#
-toxyz:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_toxyz.x 
-#
-tostrc:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f ${PAWDIR}/Makefile.${TOOLCOMP} \
-           ${BINDIR}/${ARCH}/paw_tostrc.x 
 #
 ##########################################################################
 ##  define object files kept in the library                             ##
@@ -421,38 +299,27 @@ OBJTOSTRC=  \
 #########################################################################
 ##  create preprocessor                                                ##
 #########################################################################
-F90PP: ${BINDIR}/${ARCH}/f90pp_tmplts.x  ${OBJDIR}/version_writeparmfile.o
-${BINDIR}/${ARCH}/f90pp_tmplts.x: ${F90PPDIR}/f90pp_tmplts.f90
-	${BINDIR}/f90pp -notemplates ${F90PPDIR}/f90pp_tmplts.f90 > \
-            ${OBJDIR}/f90pp_tmplts_d.${FEXT} 
+f90pp: ${BINDIR}/f90pp_tmplts.x  ${OBJDIR}/version_writeparmfile.o
+${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/F90PP/f90pp_tmplts.f90
+	${F90PP} -notemplates ${SRCDIR}/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT} 
 	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
-	${LINK} -o ${BINDIR}/${ARCH}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LLIBS}
-	${OPTRM} ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LLIBS}
 
-
-${OBJDIR}/version_writeparmfile.o: ${BINDIR}/${ARCH}/parmfilewriter.x 
-	cat ${PAWDIR}/parms.in_use | ${BINDIR}/${ARCH}/parmfilewriter.x >  ${OBJDIR}/version_writeparmfile.${FEXT}
-	${BINDIR}/f90pp -notemplates ${OBJDIR}/version_writeparmfile.${FEXT}> \
-            ${OBJDIR}/version_writeparmfile_d.${FEXT} 
+${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x 
+	cat ${PAWDIR}/parms.in_use | ${POE} ${BINDIR}/parmfilewriter.x >  ${OBJDIR}/version_writeparmfile.${FEXT}
+	${F90PP} -notemplates ${OBJDIR}/version_writeparmfile.${FEXT}> ${OBJDIR}/version_writeparmfile_d.${FEXT} 
 	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
-#
-#	${OPTRM} ${OBJDIR}/version_writeparmfile_d.${FEXT}
-#	${OPTRM} ${OBJDIR}/version_writeparmfile.${FEXT}
 
-
-${BINDIR}/${ARCH}/parmfilewriter.x: ${F90PPDIR}/parmfilewriter.f90
-	${BINDIR}/f90pp -notemplates ${F90PPDIR}/parmfilewriter.f90 > \
-            ${OBJDIR}/parmfilewriter_d.${FEXT} 
+${BINDIR}/parmfilewriter.x: ${SRCDIR}/F90PP/parmfilewriter.f90
+	${F90PP} -notemplates ${SRCDIR}/F90PP/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT} 
 	${COMPILE} -o ${OBJDIR}/parmfilewriter.o ${OBJDIR}/parmfilewriter_d.${FEXT}
-	${LINK} -o ${BINDIR}/${ARCH}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o ${LLIBS}
-	${OPTRM} ${OBJDIR}/parmfilewriter_d.${FEXT}
-
+	${LINK} -o ${BINDIR}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o ${LLIBS}
 #
 #########################################################################
 ##  link files and produce executable PAWX                             ##
 #########################################################################
 #
-${PAWX} : F90PP ${OBJDIR}/FFTW_F77.I ${OBJDIR}/mpif.h ${LOBJS} \
+${PAWX} : f90pp ${OBJDIR}/FFTW_F77.I ${OBJDIR}/mpif.h ${LOBJS} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJECTS} ${MPE} 
 	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LLIBS}
@@ -460,47 +327,47 @@ ${PAWX} : F90PP ${OBJDIR}/FFTW_F77.I ${OBJDIR}/mpif.h ${LOBJS} \
 #
 # produce executables for the Tools
 #
-${BINDIR}/${ARCH}/paw_newatom.x: ${OBJNEWATOM} libpaw.a ${OBJDIR}/paw_setupread.o
-	${LINK} -o ${BINDIR}/${ARCH}/paw_newatom.x ${OBJNEWATOM} ${OBJDIR}/paw_setupread.o -lpaw ${LLIBS} 
+${BINDIR}/paw_newatom.x: ${OBJNEWATOM} libpaw.a ${OBJDIR}/paw_setupread.o
+	${LINK} -o ${BINDIR}/paw_newatom.x ${OBJNEWATOM} ${OBJDIR}/paw_setupread.o -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_atom.x: ${OBJATOM} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_atom.x ${OBJATOM} -lpaw ${LLIBS} 
+${BINDIR}/paw_atom.x: ${OBJATOM} libpaw.a
+	${LINK} -o ${BINDIR}/paw_atom.x ${OBJATOM} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_tra.x: ${OBJTRA} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_tra.x ${OBJTRA} ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LLIBS} 
+${BINDIR}/paw_tra.x: ${OBJTRA} libpaw.a
+	${LINK} -o ${BINDIR}/paw_tra.x ${OBJTRA} ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_wave.x: ${OBJWAVE} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_wave.x ${OBJWAVE} -lpaw ${LLIBS} 
+${BINDIR}/paw_wave.x: ${OBJWAVE} libpaw.a
+	${LINK} -o ${BINDIR}/paw_wave.x ${OBJWAVE} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_1davpot.x: ${OBJ1DAVPOT} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_1davpot.x ${OBJ1DAVPOT} -lpaw ${LLIBS} 
+${BINDIR}/paw_1davpot.x: ${OBJ1DAVPOT} libpaw.a
+	${LINK} -o ${BINDIR}/paw_1davpot.x ${OBJ1DAVPOT} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_cmcwave.x: ${OBJCMCWAVE} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_cmcwave.x ${OBJCMCWAVE} -lpaw ${LLIBS} 
+${BINDIR}/paw_cmcwave.x: ${OBJCMCWAVE} libpaw.a
+	${LINK} -o ${BINDIR}/paw_cmcwave.x ${OBJCMCWAVE} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_grab.x: ${OBJGRAB} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_grab.x ${OBJGRAB} -lpaw ${LLIBS} 
+${BINDIR}/paw_grab.x: ${OBJGRAB} libpaw.a
+	${LINK} -o ${BINDIR}/paw_grab.x ${OBJGRAB} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_dos.x: ${OBJDOS} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_dos.x ${OBJDOS} -lpaw ${LLIBS} 
+${BINDIR}/paw_dos.x: ${OBJDOS} libpaw.a
+	${LINK} -o ${BINDIR}/paw_dos.x ${OBJDOS} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_preopt.x: ${OBJPRE} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_preopt.x ${OBJPRE}  ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LLIBS}
+${BINDIR}/paw_preopt.x: ${OBJPRE} libpaw.a
+	${LINK} -o ${BINDIR}/paw_preopt.x ${OBJPRE}  ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LLIBS}
 #
-${BINDIR}/${ARCH}/paw_converttra.x: ${OBJCONVERTTRA} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_converttra.x ${OBJCONVERTTRA} -lpaw ${LLIBS} 
+${BINDIR}/paw_converttra.x: ${OBJCONVERTTRA} libpaw.a
+	${LINK} -o ${BINDIR}/paw_converttra.x ${OBJCONVERTTRA} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_cleantra.x: ${OBJCLEANTRA} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_cleantra.x ${OBJCLEANTRA} -lpaw ${LLIBS} 
+${BINDIR}/paw_cleantra.x: ${OBJCLEANTRA} libpaw.a
+	${LINK} -o ${BINDIR}/paw_cleantra.x ${OBJCLEANTRA} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_strc.x: ${OBJSTRC} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_strc.x ${OBJSTRC} -lpaw ${LLIBS} 
+${BINDIR}/paw_strc.x: ${OBJSTRC} libpaw.a
+	${LINK} -o ${BINDIR}/paw_strc.x ${OBJSTRC} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_toxyz.x: ${OBJTOXYZ} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_toxyz.x ${OBJTOXYZ} -lpaw ${LLIBS} 
+${BINDIR}/paw_toxyz.x: ${OBJTOXYZ} libpaw.a
+	${LINK} -o ${BINDIR}/paw_toxyz.x ${OBJTOXYZ} -lpaw ${LLIBS} 
 #
-${BINDIR}/${ARCH}/paw_tostrc.x: ${OBJTOSTRC} libpaw.a
-	${LINK} -o ${BINDIR}/${ARCH}/paw_tostrc.x ${OBJTOSTRC} -lpaw ${LLIBS} 
+${BINDIR}/paw_tostrc.x: ${OBJTOSTRC} libpaw.a
+	${LINK} -o ${BINDIR}/paw_tostrc.x ${OBJTOSTRC} -lpaw ${LLIBS} 
 #
 # copy include files if necessary (controlled by if-statements above)
 #
@@ -508,7 +375,7 @@ ${OBJDIR}/FFTW_F77.I:
 	${FFTWINCLUDE}
 #
 ${OBJDIR}/mpif.h:
-	${MPICHINCLUDE}
+	${MPIINCLUDE}
 #
 #${OBJDIR}/mm_paw_f77.o 
 #########################################################################
@@ -517,88 +384,72 @@ ${OBJDIR}/mpif.h:
 #########################################################################
 #
 #__special rule for parallel interface because of preprocessor___________
-${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*$(MODE)_d.${FEXT}
+${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
+	${F90PP} $< >${OBJDIR}/$*$(MODE)_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #
 #__general rule for object files_________________________________________
 $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 #__compile the tools____________________________________________________
 #
 ${OBJNEWATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atomnew/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atom/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJ1DAVPOT}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJCMCWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJPRE}: ${OBJDIR}/%.o : ${TOOLDIR}/Preopt/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJCONVERTTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJCLEANTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJTOXYZ}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJTOSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
-	${BINDIR}/f90pp ${F90PPOPT} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
-	${OPTRM} ${OBJDIR}/$*_d.${FEXT}
 #########################################################################
 ##  include dependencies through mod files                             ##
 #########################################################################

@@ -186,18 +186,18 @@ spaces. (includes also occurances in text strings.)
 
 \subsection{May 1,  2007}
 
-Bugfix in paw_ldaplusu. For non-collinear calculations, 
+Bugfix in paw\_ldaplusu. For non-collinear calculations, 
 the hybrid functional and LDA+U did not apply the correction to the potential. 
-Problem has been fixed in paw_ldaplusu in routine ldaplusu_spindenmat. 
+Problem has been fixed in paw\_ldaplusu in routine ldaplusu\_spindenmat. 
 
 \subsection{May 1,  2007}
 
-Tesselation files tess_32 tess_122 tess)482 tess_1922 for COSMO
+Tesselation files tess\_32 tess\_122, tess\_482, tess\_1922 for COSMO
 calculations have been included in the directory ``parameters''.
 
 \subsection{May 3,  2007}
 
-Bugfix in paw_linkedlist.f90: With the ifc91 compiler buffer\$read did
+Bugfix in paw\_linkedlist.f90: With the ifc91 compiler buffer\$read did
 not read all strings properly. The origin was that an substring
 character array with assumed shape and assumed len parameter has been
 passed to linkedlist\$set.  The problem may be a compiler problem or a
@@ -216,7 +216,7 @@ changed a little. The changes affect the parameters in parmfiles. The
 old parmfiles have been placed temporarily in the directory
 oldparmfiles.
 
-the new configure process also creates a version (paw_prof.x) for
+the new configure process also creates a version (paw\_prof.x) for
 profiling. Create it with ``make prof''.
 
 \subsection{May 5,  2007}
@@ -225,6 +225,32 @@ The preopt tool did not work after the amber forcefield had been
 implemented as optional force field in addition to the UFF force
 field. The forcefied UFF was now explicitely set in the preopt tool
 and introduced as default for the classical object.
+
+\subsection{May 13,  2007}
+
+Change of configuration procedure.
+\begin{itemize}
+\item configure.ac has been simplified. Obsolete autoconf features removed.
+\item configure must be used with --with-parmfile=. No other variables
+  are allowed.
+\item Makefile.in has been split into Makefile\_targets.in and
+  Makefile.in. Configure uses Makefile\_targets.in to create Makefile
+  in the PAW root directory. This Makefile contains all targets the
+  user can acess directly. Makefile.in is used to create Makefile and
+  Makefile\_parallel in the Object directries bin/\$ARCH/none,
+  bin/\$ARCH/fast, bin/\$ARCH/dbg, bin/\$ARCH/prof.
+\item instead of mpif.h, now the mpif.f90 is used. (the latter creates
+  a module ``MPI'', that is used by the other routines.)
+\item parallel compilation allowed for none,fast,dbg,prof.
+\item processed fortran files remain in the object directories.
+\item there is a function ``make clean'' which removes the files in
+  bin/\$ARCH/none, bin/\$ARCH/fast, bin/\$ARCH/dbg, bin/\$ARCH/prof.
+  In addition it removes all files from the doc directory except the
+  tex files.
+\item there are new parameters for the parmfiles and other ones have
+  been removed.
+\end{itemize}
+   
 
 \newpage
 \bibliographystyle{unsrt}

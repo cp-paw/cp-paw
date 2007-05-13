@@ -34,9 +34,18 @@
 !**                                MODIFIED: PETER E. BLOECHL, (1996) **
 !***********************************************************************
 !
+!=========================================================================
+!==includefile for mpi                                                  ==
+!=========================================================================
+module mpi
+#IFDEF CPPVARIABLE_PARALLEL
+   include 'mpif.h'
+#ENDIF
+end module mpi
+!
 MODULE MPE_MPIF_MODULE
 #IFDEF CPPVARIABLE_PARALLEL
-  include 'mpif.h'
+  use mpi
 #ENDIF
   TYPE THISTYPE
     CHARACTER(128)     :: ID
@@ -280,12 +289,20 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
       INTEGER                    :: FROMTASK0
       INTEGER                    :: IERR
+      character(128)             :: errorstring
+      integer                    :: errorstringlen
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
       CALL MPE$SELECT(CID)
       FROMTASK0=FROMTASK-1
-      CALL MPI_BCAST(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0 &
-     &                ,COMM,IERR)
+print*,'before  MPE$BROADCAST<TYPEID><RANKID> ',' <MPI_TYPE> ',<MPI_TYPE>,<SIZE>
+      CALL MPI_BCAST(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,COMM,IERR)
+!!$      IF(IERR.NE.0) THEN
+!!$        CALL MPI_ERROR_STRING(IERR,ERRORSTRING,ERRORSTRINGLEN)
+!!$        CALL ERROR$MSG('MPI ERROR')
+!!$        CALL ERROR$CHVAL('ERRORSTRING',ERRORSTRING)
+!!$        CALL ERROR$STOP('MPE$BROADCAST<TYPEID><RANKID>')
+!!$      END IF
 #ENDIF
       RETURN
       END SUBROUTINE MPE$BROADCAST<TYPEID><RANKID>
