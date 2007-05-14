@@ -233,9 +233,8 @@ tostrc:
 scripts: 
 	cp ${PAWDIR}/src/Tools/Scripts/* ${BINDIR}
 #
-docs: ${PAWDIR}/doc/manual.tex ${PAWDIR}/doc/history.tex ${PAWDIR}/doc/install.tex ${PAWDIR}/doc/tutorial.tex
+docs: ${PAWDIR}/doc/manual.tex ${PAWDIR}/doc/history.tex ${PAWDIR}/doc/install.tex 
 	cd ${PAWDIR}/doc; latex manual; makeindex manual.idx; latex manual; latex manual; bibtex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
 	cd ${PAWDIR}/doc; latex history; makeindex history.idx; latex history; latex history; bibtex history; latex history; dvips history.dvi; ps2pdf history.ps 
 	cd ${PAWDIR}/doc; latex install; makeindex install.idx; latex install; latex install; bibtex install; latex install; dvips install.dvi; ps2pdf install.ps 
-	cd ${PAWDIR}/doc; latex tutorial; makeindex tutorial.idx; latex tutorial; latex tutorial; bibtex tutorial; latex tutorial; dvips tutorial.dvi; ps2pdf tutorial.ps 
 	

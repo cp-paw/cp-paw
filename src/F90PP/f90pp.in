@@ -63,6 +63,14 @@ F90PPDIR=${PAWDIR}/src/F90PP
 #______________________________final location of the f90pp preprocessor
 BINDIR=${PAWDIR}/bin/$ARCH
 #
+if test "${SPECIAL}" = "IBM" ; then
+  POE_PREFIX=poe
+  poe_SUFFIX='-proc 1 -nodes 1 -rmpool 0'
+else
+  POE_PREFIX=
+  POE_SUFFIX=
+endif
+#
 ########################################################################
 ##                                                                    ##
 ##  resolve command line arguments                                    ##
@@ -120,6 +128,7 @@ DO4="$CPP -P -C $CPPVAR"
 if test "${SPECIAL}" = "IBM" ; then
   # leave xlf compiler directives intact
   DO2="cat" 
+  DO1="${POE_PREFIX} $DO1 ${POE_SUFFIX}"
 fi
 #
 ########################################################################
@@ -127,7 +136,7 @@ fi
 ##  transform source file and send result to standard out             ##
 ##                                                                    ##
 ########################################################################
-$DO1 < $ARG | $DO2 | $DO3 | $DO4 
+${DO1} < $ARG | $DO2 | $DO3 | $DO4 
 exit 0
 
 
