@@ -64,8 +64,8 @@ F90PPDIR=${PAWDIR}/src/F90PP
 BINDIR=${PAWDIR}/bin/$ARCH
 #
 if test "${SPECIAL}" = "IBM" ; then
-  POE_PREFIX=poe
-  poe_SUFFIX='-proc 1 -nodes 1 -rmpool 0'
+  POE_PREFIX='poe'
+  POE_SUFFIX='-proc 1 -nodes 1 -rmpool 0'
 else
   POE_PREFIX=
   POE_SUFFIX=
@@ -129,6 +129,7 @@ if test "${SPECIAL}" = "IBM" ; then
   # leave xlf compiler directives intact
   DO2="cat" 
   DO1="${POE_PREFIX} $DO1 ${POE_SUFFIX}"
+  echo "DO1=$DO1"
 fi
 #
 ########################################################################

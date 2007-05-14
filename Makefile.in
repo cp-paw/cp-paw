@@ -107,9 +107,11 @@ else
   F90PP=${BINDIR}/f90pp ${CPPVAR}
 endif
 ifeq (${SPECIAL},IBM)
-  POE=poe
+  POE_PREFIX=poe
+  POE_SUFFIX=-proc 1 -nodes 1 -rmpool 0
 else
-  POE=
+  POE_PREFIX=
+  POE_SUFFIX=
 endif
 #
 # out of the file src/paw_mpelib.f a parallel _p and
@@ -306,7 +308,7 @@ ${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/F90PP/f90pp_tmplts.f90
 	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LLIBS}
 
 ${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x 
-	cat ${PAWDIR}/parms.in_use | ${POE} ${BINDIR}/parmfilewriter.x >  ${OBJDIR}/version_writeparmfile.${FEXT}
+	cat ${PAWDIR}/parms.in_use | ${POE_PREFIX} ${BINDIR}/parmfilewriter.x ${POE_SUFFIX} >  ${OBJDIR}/version_writeparmfile.${FEXT}
 	${F90PP} -notemplates ${OBJDIR}/version_writeparmfile.${FEXT}> ${OBJDIR}/version_writeparmfile_d.${FEXT} 
 	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
 
