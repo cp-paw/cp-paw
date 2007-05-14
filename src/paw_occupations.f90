@@ -1598,6 +1598,7 @@ ENDDO
 !      =================================================================
        DEKIN=0.D0
        DO ISPIN=1,NSPIN
+         SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
 PRINT*,'TF',IKPT,ISPIN,':',TFROZEN(:,IKPT,ISPIN)
 PRINT*,'X0',IKPT,ISPIN,':',X0(:,IKPT,ISPIN)
@@ -1716,7 +1717,6 @@ PRINT*,'FREEZE STATE B',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN)-1.D0,XM(IB,IKPT,ISPIN)-1
        EPOT=0.D0
        FX(:,:,:)=0.D0
        DO ISPIN=1,NSPIN 
-         SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
            DO IB=1,NB
              IF(TFROZEN(IB,IKPT,ISPIN)) CYCLE
@@ -1745,7 +1745,6 @@ PRINT*,'FREEZE STATE B',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN)-1.D0,XM(IB,IKPT,ISPIN)-1
        SVAR2=1.D0-SVAR1
        SVAR3=(SVAR1/2.D0)*DELTAT**2/MX
        DO ISPIN=1,NSPIN
-         SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
            DO IB=1,NB
              IF(TFROZEN(IB,IKPT,ISPIN)) CYCLE
