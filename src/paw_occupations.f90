@@ -1292,15 +1292,15 @@ END MODULE DYNOCC_MODULE
 !      == OCCURS IN THE FIRST TIME STEP, WHEN STARTING FROM SCRATCH   ==
 !      =================================================================
        IF(.NOT.ALLOCATED(EPS0)) THEN
-PRINT*,'WEIGHTS WITHOUT ALLOCATED EPS0========================='
+!PRINT*,'WEIGHTS WITHOUT ALLOCATED EPS0========================='
          DO ISPIN=1,NSPIN
            DO IKPT=1,NKPT
              DO IB=1,NB
                CALL DYNOCC_FOFX(X0(IB,IKPT,ISPIN),SVAR,DSVAR)
                WGHT(IB,IKPT,ISPIN)=FMAX*WKPT(IKPT)*SVAR
              ENDDO
-PRINT*,'-------------------------WGHT ',IKPT,ISPIN,'-------------------------'
-WRITE(*,FMT='(10F8.3)')WGHT(:,IKPT,ISPIN)
+!PRINT*,'-------------------------WGHT ',IKPT,ISPIN,'-------------------------'
+!WRITE(*,FMT='(10F8.3)')WGHT(:,IKPT,ISPIN)
            ENDDO
          ENDDO
                                    CALL TRACE$POP
@@ -1312,22 +1312,22 @@ WRITE(*,FMT='(10F8.3)')WGHT(:,IKPT,ISPIN)
 !      =================================================================
        IF(TADIABATIC) THEN
          IF(BZITYPE.EQ.'TETRA+') THEN
-PRINT*,'ENERGIES WITH ALLOCATED EPS0========================='
-DO ISPIN=1,NSPIN
-  DO IKPT=1,NKPT
-PRINT*,'-------------------------EPS0 ',IKPT,ISPIN,'-------------------------'
-WRITE(*,FMT='(10F8.3)')EPS0(:,IKPT,ISPIN)
-  ENDDO
-ENDDO
+!PRINT*,'ENERGIES WITH ALLOCATED EPS0========================='
+!DO ISPIN=1,NSPIN
+!  DO IKPT=1,NKPT
+!PRINT*,'-------------------------EPS0 ',IKPT,ISPIN,'-------------------------'
+!WRITE(*,FMT='(10F8.3)')EPS0(:,IKPT,ISPIN)
+!  ENDDO
+!ENDDO
            CALL DYNOCC_TETRAINTERFACE(NSPIN,NKPT,NB,TFIXTOT,TFIXSPIN &
       &               ,FMAX,TOTCHA,SPINCHA,TOTPOT,SPINPOT,EPS0,WGHT)
-PRINT*,'WEIGHTS WITH ALLOCATED EPS0========================='
-DO ISPIN=1,NSPIN
-  DO IKPT=1,NKPT
-PRINT*,'-------------------------WGHT ',IKPT,ISPIN,'-------------------------'
-WRITE(*,FMT='(10F8.3)')WGHT(:,IKPT,ISPIN)
-  ENDDO
-ENDDO
+!!$PRINT*,'WEIGHTS WITH ALLOCATED EPS0========================='
+!!$DO ISPIN=1,NSPIN
+!!$  DO IKPT=1,NKPT
+!!$PRINT*,'-------------------------WGHT ',IKPT,ISPIN,'-------------------------'
+!!$WRITE(*,FMT='(10F8.3)')WGHT(:,IKPT,ISPIN)
+!!$  ENDDO
+!!$ENDDO
          ELSE IF(BZITYPE.EQ.'SAMP') THEN
            CALL DYNOCC_INIOCCBYENERGY(NB,NKPT,NSPIN,FMAX &
       &          ,TEMP,TFIXTOT,TOTCHA,TOTPOT,TFIXSPIN,SPINCHA,SPINPOT &
@@ -1600,8 +1600,8 @@ ENDDO
        DO ISPIN=1,NSPIN
          SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
          DO IKPT=1,NKPT
-PRINT*,'TF',IKPT,ISPIN,':',TFROZEN(:,IKPT,ISPIN)
-PRINT*,'X0',IKPT,ISPIN,':',X0(:,IKPT,ISPIN)
+!!$PRINT*,'TF',IKPT,ISPIN,':',TFROZEN(:,IKPT,ISPIN)
+!!$PRINT*,'X0',IKPT,ISPIN,':',X0(:,IKPT,ISPIN)
            DO IB=1,NB
 !  THE FACTOR 5 IS A CHOSEN PARAMETER
              EREL=(EPSILON(IB,IKPT,ISPIN)-TOTPOT-SIGMA*SPINPOT)/(5.D0*TEMP)
@@ -1609,11 +1609,11 @@ PRINT*,'X0',IKPT,ISPIN,':',X0(:,IKPT,ISPIN)
                IF(ABS(EREL).LT.1.D0) THEN
 !                == UNFREEZE ALL STATES IN THE WINDOW AROUND EFERMI     
                  TFROZEN(IB,IKPT,ISPIN)=.FALSE.
-PRINT*,'UNFREEZE STATE A',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN),XM(IB,IKPT,ISPIN)
+!!$PRINT*,'UNFREEZE STATE A',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN),XM(IB,IKPT,ISPIN)
                ELSE
 !                == UNFREEZE OCCUPIED STATES ABOVE EFERMI OR UNOCCUPIED BELOW =====
                  SVAR=(X0(IB,IKPT,ISPIN)-0.5D0)*EREL
-IF(SVAR.GT.0.D0)PRINT*,'UNFREEZE STATE B',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN),XM(IB,IKPT,ISPIN)
+!!$IF(SVAR.GT.0.D0)PRINT*,'UNFREEZE STATE B',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN),XM(IB,IKPT,ISPIN)
                  IF(SVAR.GT.0.D0)TFROZEN(IB,IKPT,ISPIN)=.FALSE.
                END IF
              ELSE
@@ -1631,7 +1631,7 @@ IF(SVAR.GT.0.D0)PRINT*,'UNFREEZE STATE B',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN),XM(IB,
                    TFROZEN(IB,IKPT,ISPIN)=.TRUE.
                    DEKIN=DEKIN+FMAX*WKPT(IKPT)*0.5D0*MX &
      &                        *((X0(IB,IKPT,ISPIN)-XM(IB,IKPT,ISPIN))/DELTAT)**2
-PRINT*,'FREEZE STATE A',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN),XM(IB,IKPT,ISPIN)
+!!$PRINT*,'FREEZE STATE A',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN),XM(IB,IKPT,ISPIN)
                    X0(IB,IKPT,ISPIN)=0.D0
                    XM(IB,IKPT,ISPIN)=0.D0
                  END IF
@@ -1644,7 +1644,7 @@ PRINT*,'FREEZE STATE A',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN),XM(IB,IKPT,ISPIN)
                     TFROZEN(IB,IKPT,ISPIN)=.TRUE.
                     DEKIN=DEKIN+FMAX*WKPT(IKPT)*0.5D0*MX &
      &                      *((X0(IB,IKPT,ISPIN)-XM(IB,IKPT,ISPIN))/DELTAT)**2
-PRINT*,'FREEZE STATE B',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN)-1.D0,XM(IB,IKPT,ISPIN)-1.D0
+!!$PRINT*,'FREEZE STATE B',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN)-1.D0,XM(IB,IKPT,ISPIN)-1.D0
                     X0(IB,IKPT,ISPIN)=1.D0
                     XM(IB,IKPT,ISPIN)=1.D0
                   END IF
@@ -2165,7 +2165,7 @@ PRINT*,'FREEZE STATE B',IB,IKPT,ISPIN,X0(IB,IKPT,ISPIN)-1.D0,XM(IB,IKPT,ISPIN)-1
 !     **                                                              **
 !     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
-      LOGICAL(4) ,PARAMETER  :: TPR=.TRUE.
+      LOGICAL(4) ,PARAMETER  :: TPR=.false.
       INTEGER(4) ,PARAMETER  :: ITERX=1000   ! MAX #(ITERATIONS)
       REAL(8)    ,PARAMETER  :: TOL=1.D-10    ! TOLERANCE IN #(ELECTRONS)
       INTEGER(4) ,INTENT(IN) :: NBANDS       ! #(BANDS)

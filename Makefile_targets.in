@@ -97,14 +97,16 @@ BINDIR=${PAWDIR}/bin/${ARCH}
 default: all_new
 #
 clean:
-	rm -f ${OBJDIR}/none/*
-	rm -f ${OBJDIR}/none_parallel/*
-	rm -f ${OBJDIR}/fast/*
-	rm -f ${OBJDIR}/fast_parallel/*
-	rm -f ${OBJDIR}/dbg/*
-	rm -f ${OBJDIR}/dbg_parallel/*
-	rm -f ${OBJDIR}/prof/*
-	rm -f ${OBJDIR}/prof_parallel/*
+	find ${OBJDIR}/none/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/none_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/fast/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/fast_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/prof/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/prof_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/dbg/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/dbg_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	rm -f ${BINDIR}/paw*
+	rm -f ${BINDIR}/ppaw*
 	rm -f ${PAWDIR}/doc/*.aux
 	rm -f ${PAWDIR}/doc/*.blg
 	rm -f ${PAWDIR}/doc/*.bbl
@@ -117,6 +119,7 @@ clean:
 	rm -f ${PAWDIR}/doc/*.idx
 	rm -f ${PAWDIR}/doc/*.blg
 	rm -f ${PAWDIR}/doc/*.pdf
+# 
 #
 # THE PAW BINARIES
 #
