@@ -140,12 +140,14 @@ endif
 # the object directory. Not needed for IBM environment
 # the include file is usually named mpif.f90
 #
-ifneq ($(strip ${INCLUDE_MPI}),) 
-  # copy includefile into object directory
-  MPIINCLUDE=cp ${INCLUDE_MPI} ${OBJDIR}/mpif.h
-else
-  # not there, just create an empty file
-  MPIINCLUDE= touch ${OBJDIR}/mpif.h
+ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
+  ifneq ($(strip ${INCLUDE_MPI}),) 
+    # copy includefile into object directory
+    MPIINCLUDE=cp ${INCLUDE_MPI} ${OBJDIR}/mpif.h
+  else
+    # not there, just create an empty file
+    MPIINCLUDE= touch ${OBJDIR}/mpif.h
+  endif
 endif
 #
 # paw_mpelib.f holds the subroutines necessary for parallel execution

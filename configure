@@ -3203,7 +3203,7 @@ fi
 chmod +x $PAWDIR/bin/$ARCH/f90pp
 #
 # substituting to get Makefile.none
-#
+b#
 { echo "$as_me:$LINENO: result: creating Makefile in none" >&5
 echo "${ECHO_T}creating Makefile in none" >&6; }
 sed -e "s%\(PAWX.*=.*\)%\1/paw.x%"\

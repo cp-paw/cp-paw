@@ -280,7 +280,7 @@ AC_OUTPUT()
 chmod +x $PAWDIR/bin/$ARCH/f90pp
 #
 # substituting to get Makefile.none
-#
+b#
 AC_MSG_RESULT(creating Makefile in none)
 sed -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
     -e 's%varPARALLEL%F%'\
