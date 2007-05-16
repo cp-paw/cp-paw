@@ -105,8 +105,8 @@ clean:
 	find ${OBJDIR}/prof_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	find ${OBJDIR}/dbg/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	find ${OBJDIR}/dbg_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	rm -f ${BINDIR}/paw*
-	rm -f ${BINDIR}/ppaw*
+	rm -f ${BINDIR}/paw*.x
+	rm -f ${BINDIR}/ppaw*.x
 	rm -f ${PAWDIR}/doc/*.aux
 	rm -f ${PAWDIR}/doc/*.blg
 	rm -f ${PAWDIR}/doc/*.bbl
@@ -189,49 +189,54 @@ prof_parallel:
 prof_parallel_new:  
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/prof_parallel; ${MAKE} 
 #
+# THE PAW library
+#
+lib:
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
+#
 # THE PAW TOOLS
 #
 newatom:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_newatom.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_newatom.x 
 #
 atom:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_atom.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_atom.x 
 #
 tra:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_tra.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_tra.x 
 #
 wave:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_wave.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_wave.x 
 #
 1davpot:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_1davpot.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_1davpot.x 
 #
 cmcwave:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_cmcwave.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_cmcwave.x 
 #
 grab:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_grab.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_grab.x 
 #
 dos:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_dos.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_dos.x 
 #
 preopt:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_preopt.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_preopt.x 
 #
 converttra:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_converttra.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_converttra.x 
 #
 cleantra:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_cleantra.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_cleantra.x 
 #
 strc:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_strc.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_strc.x 
 #
 toxyz:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_toxyz.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_toxyz.x 
 #
 tostrc:
-	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_tostrc.x 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_tostrc.x 
 #
 scripts: 
 	cp ${PAWDIR}/src/Tools/Scripts/* ${BINDIR}

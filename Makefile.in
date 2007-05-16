@@ -327,50 +327,55 @@ ${PAWX} : f90pp ${OBJDIR}/FFTW_F77.I ${OBJDIR}/mpif.h ${LOBJS} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJECTS} ${MPE} 
 	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LLIBS}
+#
+#########################################################################
+##  build paw library                                                  ##
+#########################################################################
+${PAWLIB}: ${LOBJS} ${MPE} ${OBJDIR}/version_writeparmfile.o 
 	ar -ru $(PAWLIB) $(LOBJS) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 #
 # produce executables for the Tools
 #
-${BINDIR}/paw_newatom.x: ${OBJNEWATOM} libpaw.a ${OBJDIR}/paw_setupread.o
+${BINDIR}/paw_newatom.x: ${OBJNEWATOM} ${PAWLIB} ${OBJDIR}/paw_setupread.o 
 	${LINK} -o ${BINDIR}/paw_newatom.x ${OBJNEWATOM} ${OBJDIR}/paw_setupread.o -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_atom.x: ${OBJATOM} libpaw.a
+${BINDIR}/paw_atom.x: ${OBJATOM} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_atom.x ${OBJATOM} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_tra.x: ${OBJTRA} libpaw.a
+${BINDIR}/paw_tra.x: ${OBJTRA} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_tra.x ${OBJTRA} ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_wave.x: ${OBJWAVE} libpaw.a
+${BINDIR}/paw_wave.x: ${OBJWAVE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_wave.x ${OBJWAVE} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_1davpot.x: ${OBJ1DAVPOT} libpaw.a
+${BINDIR}/paw_1davpot.x: ${OBJ1DAVPOT} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_1davpot.x ${OBJ1DAVPOT} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_cmcwave.x: ${OBJCMCWAVE} libpaw.a
+${BINDIR}/paw_cmcwave.x: ${OBJCMCWAVE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_cmcwave.x ${OBJCMCWAVE} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_grab.x: ${OBJGRAB} libpaw.a
+${BINDIR}/paw_grab.x: ${OBJGRAB} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_grab.x ${OBJGRAB} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_dos.x: ${OBJDOS} libpaw.a
+${BINDIR}/paw_dos.x: ${OBJDOS} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_dos.x ${OBJDOS} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_preopt.x: ${OBJPRE} libpaw.a
+${BINDIR}/paw_preopt.x: ${OBJPRE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_preopt.x ${OBJPRE}  ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LLIBS}
 #
-${BINDIR}/paw_converttra.x: ${OBJCONVERTTRA} libpaw.a
+${BINDIR}/paw_converttra.x: ${OBJCONVERTTRA} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_converttra.x ${OBJCONVERTTRA} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_cleantra.x: ${OBJCLEANTRA} libpaw.a
+${BINDIR}/paw_cleantra.x: ${OBJCLEANTRA} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_cleantra.x ${OBJCLEANTRA} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_strc.x: ${OBJSTRC} libpaw.a
+${BINDIR}/paw_strc.x: ${OBJSTRC} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_strc.x ${OBJSTRC} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_toxyz.x: ${OBJTOXYZ} libpaw.a
+${BINDIR}/paw_toxyz.x: ${OBJTOXYZ} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_toxyz.x ${OBJTOXYZ} -lpaw ${LLIBS} 
 #
-${BINDIR}/paw_tostrc.x: ${OBJTOSTRC} libpaw.a
+${BINDIR}/paw_tostrc.x: ${OBJTOSTRC} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_tostrc.x ${OBJTOSTRC} -lpaw ${LLIBS} 
 #
 # copy include files if necessary (controlled by if-statements above)
@@ -462,6 +467,8 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_strings.o
  ${OBJDIR}/paw_periodictable.o: ${OBJDIR}/paw_strings.o
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_strings.o
+ ${OBJWAVE}:                    ${OBJDIR}/paw_strings.o
+ ${OBJTRA}:                     ${OBJDIR}/paw_strings.o
 #
  ${OBJDIR}/paw_timing.o:        ${OBJDIR}/paw_mpelib${MODE}.o
  ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_mpelib${MODE}.o
@@ -494,9 +501,15 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_constraints.o:   ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_occupations.o:   ${OBJDIR}/paw_linkedlist.o
- ${OBJDIR}/paw_waves1.o:         ${OBJDIR}/paw_linkedlist.o
- ${OBJDIR}/paw_waves2.o:         ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_waves1.o:        ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_efg.o:           ${OBJDIR}/paw_linkedlist.o
+ ${OBJWAVE}:                    ${OBJDIR}/paw_linkedlist.o
+ ${OBJTRA}:                     ${OBJDIR}/paw_linkedlist.o
+
+ ${OBJTRA}:                     ${OBJDIR}/paw_generalpurpose.o
+
+ ${OBJTRA}:                     ${OBJDIR}/paw_periodictable.o
 
  ${OBJDIR}/paw_atoms.o:         ${OBJDIR}/paw_report.o
  ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_report.o
@@ -517,6 +530,8 @@ ifeq ($(ALLDEP),T)
 # ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_fft.o
 # ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_waves.o
  ${OBJDIR}/paw_qmmm.o:          ${OBJDIR}/paw_report.o
+
+ ${OBJDIR}/paw_library.o:      ${OBJDIR}/FFTW_F77.I
 endif
 
 
