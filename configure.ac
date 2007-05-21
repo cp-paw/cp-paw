@@ -259,8 +259,8 @@ fi
 #
 #  copy script files from
 #
-AC_MSG_RESULT(copy scripts into $PAWDIR/bin/$ARCH/)
-cp $PAWDIR/src/Tools/Scripts/* $PAWDIR/bin/$ARCH/
+#AC_MSG_RESULT(copy scripts into $PAWDIR/bin/$ARCH/)
+#cp $PAWDIR/src/Tools/Scripts/* $PAWDIR/bin/$ARCH/
 #
 # create f90pp from f90pp.in and make it executable
 #

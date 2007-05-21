@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/main/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 680 $'
+character(256):: VERrev='$LastChangedRevision: 702 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-05-10 08:57:47 +0200 (Do, 10. Mai 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-05-21 13:29:45 +0200 (Mo, 21. Mai 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -985,17 +985,12 @@ END MODULE STOPIT_MODULE
         CALL ENERGYLIST$RETURN('WAVEFUNCTION KINETIC ENERGY',EKINC)     
         CALL ENERGYLIST$RETURN('BO-WAVEFUNCTION KINETIC ENERGY',EFFEKIN)
         ECONS=ECONS+EKINC-EFFEKIN+EKINP+ETOT
-print*,'ekinc',ekinc
-print*,'effekin',effekin
-print*,'ekinp',ekinp
-print*,'etot',etot
-print*,'econs',econs
 !
 !       == ELECTRON AND ATOM THERMOSTATS ===============================
         CALL ENERGYLIST$RETURN('CELLOSTAT KINETIC',ECELLKIN)     
         CALL ENERGYLIST$RETURN('CELLOSTAT POTENTIAL',ECELLPOT)     
         ECONS=ECONS+ECELLKIN+ECELLPOT
-PRINT*,'ECELLKIN/POT ',ECELLKIN,ECELLPOT,ECELLKIN+ECELLPOT
+!PRINT*,'ECELLKIN/POT ',ECELLKIN,ECELLPOT,ECELLKIN+ECELLPOT
 !
 !       == ELECTRON AND ATOM THERMOSTATS ===============================
         CALL ENERGYLIST$RETURN('ATOM THERMOSTAT',ENOSEP)     
@@ -1108,6 +1103,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
           CALL ENERGYLIST$PRINTONE(NFILO,'WAVEFUNCTION KINETIC ENERGY')     
           CALL ENERGYLIST$PRINTONE(NFILO,'BO-WAVEFUNCTION KINETIC ENERGY')
           CALL ENERGYLIST$PRINTONE(NFILO,'ELECTRON THERMOSTAT')     
+          CALL ENERGYLIST$PRINTONE(NFILO,'EXTERNAL 1CENTER POTENTIAL')     
 !
 !         == Van der Waals energy========================================
           CALL VDW$GETL4('ON',TCHK)

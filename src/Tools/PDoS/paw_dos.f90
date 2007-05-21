@@ -174,6 +174,7 @@ print*,'state ',state%vec(:,:,ib)
       REAL(8)                 :: SUM_(3),SPIN(3,NAT),TOTALSPIN(3)
       REAL(8)    ,ALLOCATABLE :: ANGWGHT(:,:,:) ! (LOX,2,NAT)
       REAL(8)                 :: SUML,ANGLE(NAT),PI
+      real(8)                 :: sigma
 !     ******************************************************************
                                    CALL TRACE$PUSH('REPORT')
       ALLOCATE(ANGWGHT(MAXVAL(LOX)+1,2,NAT))
@@ -183,6 +184,7 @@ print*,'state ',state%vec(:,:,ib)
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
 !PRINT*,'STATE%VEC',IKPT,ISPIN,STATE%VEC(1,:,:)
+          sigma=real(3-2*nspin,kind=8)
           IPRO0=0
           DO IAT=1,NAT
             ISP=ISPECIES(IAT)
@@ -202,21 +204,24 @@ print*,'state ',state%vec(:,:,ib)
                   DO M=1,2*L1+1
                       DO IDIM=1,NDIM
                         SUML=SUML+REAL(CONJG(STATE%VEC(IDIM,IPRO1+M,IB)) &
-     &                     *STATE%VEC(IDIM,IPRO2+M,IB))
+     &                           *STATE%VEC(IDIM,IPRO2+M,IB))
                       END DO
-                      IF(NDIM.EQ.2) THEN
-                        SUM_(1)=SUM_(1)+REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                  *STATE%VEC(2,IPRO2+M,IB)) 
-                        SUM_(2)=SUM_(2)+AIMAG(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                  *STATE%VEC(2,IPRO2+M,IB))
-                        SUM_(3)=SUM_(3)+0.5D0*REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                  *STATE%VEC(1,IPRO2+M,IB)- &
-     &                    CONJG(STATE%VEC(2,IPRO1+M,IB))*STATE%VEC(2,IPRO2+M,IB))
+                      IF(NSPIN.EQ.2.AND.NDIM.EQ.1) THEN
+                        SUM_(3)=SUM_(3)+SIGMA*REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                                  *STATE%VEC(1,IPRO2+M,IB))
+                      ELSE IF(NDIM.EQ.2) THEN
+                        SUM_(1)=SUM_(1)+2.D0*REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                                 *STATE%VEC(2,IPRO2+M,IB)) 
+                        SUM_(2)=SUM_(2)+2.D0*AIMAG(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                                  *STATE%VEC(2,IPRO2+M,IB))
+                        SUM_(3)=SUM_(3)+REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                            *STATE%VEC(1,IPRO2+M,IB) &
+     &                     -CONJG(STATE%VEC(2,IPRO1+M,IB))*STATE%VEC(2,IPRO2+M,IB))
                       END IF
                   ENDDO
                   DO IDIR=1,3
                     SPIN(IDIR,IAT)=SPIN(IDIR,IAT) &
-     &                   +2.D0*STATE%OCC(IB)*SUM_(IDIR)*OV(LN1,LN2,ISP)
+     &                            +STATE%OCC(IB)*SUM_(IDIR)*OV(LN1,LN2,ISP)
                   END DO
                   ANGWGHT(L1+1,ISPIN,IAT)=ANGWGHT(L1+1,ISPIN,IAT)+SUML &
      &                        *STATE%OCC(IB)*OV(LN1,LN2,ISP)
@@ -235,7 +240,7 @@ print*,'state ',state%vec(:,:,ib)
 !     ==================================================================
 !     == CALCULATE SPIN DIRECTION FOR EACH ATOM                       ==
 !     ==================================================================
-      IF(NDIM.EQ.2) THEN
+      IF(NDIM.EQ.2.or.nspin.eq.2) THEN
         DO IAT=1,NAT
           SUML=SPIN(1,IAT)**2+SPIN(2,IAT)**2+SPIN(3,IAT)**2
           DO IDIR=1,3
@@ -275,7 +280,7 @@ print*,'state ',state%vec(:,:,ib)
 !!$     &         0.5D0*(ANGWGHT(3,1,IAT)-ANGWGHT(3,2,IAT)),0.5D0*(ANGWGHT(4,1,IAT)-ANGWGHT(4,2,IAT))
 !!$        END DO
       END IF
-      IF(NDIM.EQ.2) THEN
+      IF(NDIM.EQ.2.or.nspin.eq.2) THEN
         TOTALSPIN(:)=0.D0
         WRITE(NFILO,*)'**** SPIN ANALYSIS ****'
         WRITE(NFILO,*)'  SPIN [HBAR/2] PROJECTED ON        X         Y         Z      TOTAL'
@@ -290,46 +295,47 @@ print*,'state ',state%vec(:,:,ib)
         WRITE(NFILO,FMT='(2X," TOTAL PROJECTED SPIN:      ",4F10.3)') &
      &         TOTALSPIN(1),TOTALSPIN(2),TOTALSPIN(3),SQRT(TOTALSPIN(1)**2+&
      &         TOTALSPIN(2)**2+TOTALSPIN(3)**2)
+      end if
 !
 !     ==================================================================
 !     ==  PRINT ANGLES BETWEEN THE SPINS                              ==
 !     ==================================================================
-      CALL CONSTANTS('PI',PI)
+      if(ndim.eq.2) then
+        CALL CONSTANTS('PI',PI)
 
-!     CHOSE ATOMS WITH SPIN GREATER THAN 0.1 HBAR/2
-      NATSPINANGLE=0
-      ALLOCATE(IATSPINANGLE(NAT))
-      DO IAT1=1,NAT
-        IF(SQRT(SPIN(1,IAT1)**2+SPIN(2,IAT1)**2+SPIN(3,IAT1)**2).LE.0.1D0) CYCLE
-        NATSPINANGLE=NATSPINANGLE+1
-        IATSPINANGLE(NATSPINANGLE)=IAT1
-      END DO
-      IF(NAT.GE.2) THEN
-        WRITE(NFILO,*)'**** ANGLES [DEG] BETWEEN THE SPINS > 0.1 ON THE ATOMS ****'
-!        WRITE(NFILO,FMT='(2X,9X,10A6)')(ATOMID(IAT2),IAT2=NAT,2,-1)
-        WRITE(NFILO,FMT='(T12,A6,T20,A6,T28,A6,T36,A6,T44,A6,T52,A6,T60,A6,T68,A6,T76,A6,T84,A6)')&
-     &        (ATOMID(IATSPINANGLE(IAT2)),IAT2=NATSPINANGLE,2,-1)
-        DO IAT1=1,NATSPINANGLE !SENKRECHT
-          DO IAT2=NATSPINANGLE,IAT1+1,-1   !WAAGRECHT
-            ANGLE(IAT2)=180.D0/PI*ACOS(SPINDIR(1,IATSPINANGLE(IAT1))*SPINDIR(1,IATSPINANGLE(IAT2))+ &
-     &         SPINDIR(2,IATSPINANGLE(IAT1))*SPINDIR(2,IATSPINANGLE(IAT2))+ &
-     &         SPINDIR(3,IATSPINANGLE(IAT1))*SPINDIR(3,IATSPINANGLE(IAT2)))
-          END DO
-          ITEN=NATSPINANGLE
-          DO WHILE (IAT1+1.LE.ITEN)
-            WRITE(NFILO,FMT='(2X,A6,10F8.2)') &
-     &          ATOMID(IATSPINANGLE(IAT1)),(ANGLE(IAT2),IAT2=ITEN,MAX(ITEN-9,IAT1+1),-1)
-            ITEN=ITEN-10
-          ENDDO
-          !WRITE(NFILO,FMT='(2X,A6,10F8.2)')ATOMID(IAT1),(ANGLE(IAT2),IAT2=NAT,IAT1+1,-1)
+!       CHOSE ATOMS WITH SPIN GREATER THAN 0.1 HBAR/2
+        NATSPINANGLE=0
+        ALLOCATE(IATSPINANGLE(NAT))
+        DO IAT1=1,NAT
+          IF(SQRT(SPIN(1,IAT1)**2+SPIN(2,IAT1)**2+SPIN(3,IAT1)**2).LE.0.1D0) CYCLE
+          NATSPINANGLE=NATSPINANGLE+1
+          IATSPINANGLE(NATSPINANGLE)=IAT1
         END DO
-      END IF
-      DEALLOCATE(IATSPINANGLE)
+        IF(NAT.GE.2) THEN
+          WRITE(NFILO,*)'**** ANGLES [DEG] BETWEEN THE SPINS > 0.1 ON THE ATOMS ****'
+!          WRITE(NFILO,FMT='(2X,9X,10A6)')(ATOMID(IAT2),IAT2=NAT,2,-1)
+          WRITE(NFILO,FMT='(T12,A6,T20,A6,T28,A6,T36,A6,T44,A6,T52,A6,T60,A6,T68,A6,T76,A6,T84,A6)')&
+     &        (ATOMID(IATSPINANGLE(IAT2)),IAT2=NATSPINANGLE,2,-1)
+          DO IAT1=1,NATSPINANGLE !SENKRECHT
+            DO IAT2=NATSPINANGLE,IAT1+1,-1   !WAAGRECHT
+              ANGLE(IAT2)=180.D0/PI*ACOS(SPINDIR(1,IATSPINANGLE(IAT1))*SPINDIR(1,IATSPINANGLE(IAT2))+ &
+     &                                   SPINDIR(2,IATSPINANGLE(IAT1))*SPINDIR(2,IATSPINANGLE(IAT2))+ &
+     &                                   SPINDIR(3,IATSPINANGLE(IAT1))*SPINDIR(3,IATSPINANGLE(IAT2)))
+            END DO
+            ITEN=NATSPINANGLE
+            DO WHILE (IAT1+1.LE.ITEN)
+              WRITE(NFILO,FMT='(2X,A6,10F8.2)') &
+     &            ATOMID(IATSPINANGLE(IAT1)),(ANGLE(IAT2),IAT2=ITEN,MAX(ITEN-9,IAT1+1),-1)
+              ITEN=ITEN-10
+            ENDDO
+            !WRITE(NFILO,FMT='(2X,A6,10F8.2)')ATOMID(IAT1),(ANGLE(IAT2),IAT2=NAT,IAT1+1,-1)
+          END DO
+        END IF
+        DEALLOCATE(IATSPINANGLE)
 !
-!     ==================================================================
-!     ==  THIS BLOCK IS INTENDED AS INPUTFILE FOR MOLDEN              ==
-!     ==================================================================
-
+!       ==================================================================
+!       ==  THIS BLOCK IS INTENDED AS INPUTFILE FOR MOLDEN              ==
+!       ==================================================================
         CALL FILEHANDLER$UNIT('MOL',NFIL)
         WRITE(NFIL,*)'[MOLDEN FORMAT]'
         WRITE(NFIL,*)'[GEOMETRIES] XYZ'

@@ -467,8 +467,6 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_strings.o
  ${OBJDIR}/paw_periodictable.o: ${OBJDIR}/paw_strings.o
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_strings.o
- ${OBJWAVE}:                    ${OBJDIR}/paw_strings.o
- ${OBJTRA}:                     ${OBJDIR}/paw_strings.o
 #
  ${OBJDIR}/paw_timing.o:        ${OBJDIR}/paw_mpelib${MODE}.o
  ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_mpelib${MODE}.o
@@ -504,12 +502,6 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_waves1.o:        ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_efg.o:           ${OBJDIR}/paw_linkedlist.o
- ${OBJWAVE}:                    ${OBJDIR}/paw_linkedlist.o
- ${OBJTRA}:                     ${OBJDIR}/paw_linkedlist.o
-
- ${OBJTRA}:                     ${OBJDIR}/paw_generalpurpose.o
-
- ${OBJTRA}:                     ${OBJDIR}/paw_periodictable.o
 
  ${OBJDIR}/paw_atoms.o:         ${OBJDIR}/paw_report.o
  ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_report.o

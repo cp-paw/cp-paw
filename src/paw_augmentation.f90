@@ -17,7 +17,7 @@
 !***********************************************************************
 !***********************************************************************
 MODULE AUGMENTATION_MODULE
-INTEGER(4)  ,PARAMETER :: NE=9
+INTEGER(4)  ,PARAMETER :: NE=10
 CHARACTER(32)          :: ID(NE)
 REAL(8)                :: VAL(NE)
 LOGICAL(4)             :: TINI=.FALSE.
@@ -46,6 +46,7 @@ END MODULE AUGMENTATION_MODULE
       ID(7)='AE1-PS1 KINETIC'         
       ID(8)='LDA+U EXCHANGE'          
       ID(9)='CORE RELAXATION'          
+      ID(10)='EXTERNAL 1CENTER POTENTIAL'          
       DO I=1,NE
         VAL(NE)=0.D0
       ENDDO
@@ -109,7 +110,8 @@ END MODULE AUGMENTATION_MODULE
 !     ==  ID(7)='AE1-PS1 KINETIC' ======================================
 !     ==  ID(8)='LDA+U EXCHANGE' =======================================
 !     ==  ID(9)='CORE RELAXATION' ======================================
-      SVAR=VAL(7)+VAL(1)-VAL(2)+VAL(3)-VAL(4)+VAL(5)-VAL(6)+VAL(8)+VAL(9)
+!     ==  ID(9)='EXTERNAL 1CENTER POTENTIAL' ===========================
+      SVAR=VAL(7)+VAL(1)-VAL(2)+VAL(3)-VAL(4)+VAL(5)-VAL(6)+VAL(8)+VAL(9)+VAL(10)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
       CALL ENERGYLIST$ADD('AE  KINETIC',VAL(7))
       CALL ENERGYLIST$ADD('AE  EXCHANGE-CORRELATION',VAL(1)-VAL(2)+VAL(8))
@@ -548,7 +550,7 @@ END MODULE AUGMENTATION_MODULE
       CALL EXTERNAL1CPOT$APPLY(ATOM,LMNX,NDIMD,DENMAT,DATP,DETOT)
       DATH(:,:,:)=DATH(:,:,:)+DATP(:,:,:)
       DEALLOCATE(DATP)
-      CALL AUGMENTATION_ADD('LDA+U EXCHANGE',DETOT)
+      CALL AUGMENTATION_ADD('EXTERNAL 1CENTER POTENTIAL',DETOT)
 !     
 !     ================================================================
 !     ==  SELF-TEST                                                 ==
@@ -1629,7 +1631,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       REAL(8)          ,INTENT(IN) :: VALUE
       CHARACTER(LEN=32),INTENT(IN) :: ATOM
       CHARACTER(LEN=32),INTENT(IN) :: TYPE
-      INTEGER(4)       ,INTENT(IN) :: IDIMD
+      INTEGER(4)       ,INTENT(IN) :: IDIMD !spin direction or 0
       REAL(8)          ,INTENT(IN) :: RC
       REAL(8)          ,INTENT(IN) :: PWR
 !     ******************************************************************
@@ -1653,6 +1655,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
 !     ******************************************************************
       IF(NPOT.EQ.0) RETURN
 !     CALL REPORT$TITLE(NFIL,"EXTERNAL POTENTIALS ON ORBITALS")
+      WRITE(NFIL,*)
       WRITE(NFIL,FMT='("EXTERNAL POTENTIALS ON ORBITALS"/30("="))')
       DO IPOT=1,NPOT
 !       CALL REPORT$I4VAL(NFIL,"POTENTIAL NR:",IPOT,' ')

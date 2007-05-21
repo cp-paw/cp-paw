@@ -2,7 +2,7 @@
 !***********************************************************************
 !***********************************************************************
 !**                                                                   **
-!**  interfaces to the schroedinger routines                          **
+!**  INTERFACES TO THE SCHROEDINGER ROUTINES                          **
 !**                                                                   **
 !***********************************************************************
 !***********************************************************************
@@ -25,12 +25,12 @@
                                             ! IDIR=-1 INTEGRATE INWARD
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2007 ********
-      call schroedinger$spherical(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHI)
-      return
-      end SUBROUTINE RADIAL$SCHRODINGER
+      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHI)
+      RETURN
+      END SUBROUTINE RADIAL$SCHRODINGER
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL$NONSPHBOUND_nonso(GID,NR,LMX,LMRX,POT,DREL,G,Enu &
+      SUBROUTINE RADIAL$NONSPHBOUND_NONSO(GID,NR,LMX,LMRX,POT,DREL,G,ENU &
      &                             ,NPHI,EB,PHI,TPHI,TOK)
 !     **                                                                  **
 !     **  SOLVES THE RELATIVISTIC RADIAL DIRAC EQUATION FOR THE           **
@@ -65,24 +65,24 @@
       REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
 !                                           ! DREL= M0/MREL(R)-1
       REAL(8)    ,INTENT(IN)     :: G(NR,LMX)   !INHOMOGENITY
-      REAL(8)    ,INTENT(IN)     :: Enu     ! expansion ENERGY
+      REAL(8)    ,INTENT(IN)     :: ENU     ! EXPANSION ENERGY
       REAL(8)    ,INTENT(IN)     :: POT(NR,LMRX) !POTENTIAL (RADIAL PART ONLY)
-      INTEGER(4) ,INTENT(IN)     :: NPHI              ! #(wave functions)
-      real(8)    ,INTENT(OUT)    :: PHI(NR,LMX,nphi)  ! WAVE-FUNCTION
-      real(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! p**2/(2m)*WAVE-FUNCTION
-      REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! one-particke energies
-      LOGICAL(4) ,INTENT(OUT)    :: TOK               ! error flag
+      INTEGER(4) ,INTENT(IN)     :: NPHI              ! #(WAVE FUNCTIONS)
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR,LMX,NPHI)  ! WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! P**2/(2M)*WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! ONE-PARTICKE ENERGIES
+      LOGICAL(4) ,INTENT(OUT)    :: TOK               ! ERROR FLAG
 !     **********************************************************************
-      call schroedinger$lbnd_scalrel(GID,NR,LMX,LMRX,POT,DREL,G,Enu &
+      CALL SCHROEDINGER$LBND_SCALREL(GID,NR,LMX,LMRX,POT,DREL,G,ENU &
      &                             ,NPHI,EB,PHI,TPHI,TOK)
-      return
-      end
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL$NONSPHBOUND_nso_sloc_ov(GID,NR,LMX,LMRX,POT,lxsl,potsl &
-     &                                         ,ovsl,G,Enu,NPHI,EB,PHI,TPHI,TOK)
+      SUBROUTINE RADIAL$NONSPHBOUND_NSO_SLOC_OV(GID,NR,LMX,LMRX,POT,LXSL,POTSL &
+     &                                         ,OVSL,G,ENU,NPHI,EB,PHI,TPHI,TOK)
 !     **                                                                      **
-!     **  SOLVES THE nonrelATIVISTIC RADIAL schroedinger EQUATION FOR THE     **
+!     **  SOLVES THE NONRELATIVISTIC RADIAL SCHROEDINGER EQUATION FOR THE     **
 !     **  G IS AN INHOMOGENEITY, WHICH MUST BE SET TO ZERO FOR THE            **
 !     **  HOMOGENEOUS SOLUTION.                                               **
 !     **                                                                      **
@@ -103,25 +103,25 @@
       INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
       INTEGER(4) ,INTENT(IN)     :: LMX     ! X#(WAVE FUNCTION ANGULAR MOMENTA)
       INTEGER(4) ,INTENT(IN)     :: LMRX    ! X#(POTENTIAL ANGULAR MOMENTA)
-      INTEGER(4) ,INTENT(IN)     :: Lxsl    ! #(semilocal potenials, one per l)
-      REAL(8)    ,INTENT(IN)     :: potsl(NR,Lxsl)  ! semi-local potentials
-      REAL(8)    ,INTENT(IN)     :: ovsl(NR,lxsl)   ! semi-local overlap contribtion
+      INTEGER(4) ,INTENT(IN)     :: LXSL    ! #(SEMILOCAL POTENIALS, ONE PER L)
+      REAL(8)    ,INTENT(IN)     :: POTSL(NR,LXSL)  ! SEMI-LOCAL POTENTIALS
+      REAL(8)    ,INTENT(IN)     :: OVSL(NR,LXSL)   ! SEMI-LOCAL OVERLAP CONTRIBTION
       REAL(8)    ,INTENT(IN)     :: G(NR,LMX)   !INHOMOGENITY
-      REAL(8)    ,INTENT(IN)     :: Enu     ! expansion ENERGY
+      REAL(8)    ,INTENT(IN)     :: ENU     ! EXPANSION ENERGY
       REAL(8)    ,INTENT(IN)     :: POT(NR,LMRX) !POTENTIAL (RADIAL PART ONLY)
-      INTEGER(4) ,INTENT(IN)     :: NPHI              ! #(wave functions)
-      real(8)    ,INTENT(OUT)    :: PHI(NR,LMX,nphi)  ! WAVE-FUNCTION
-      real(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! p**2/(2m)*WAVE-FUNCTION
-      REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! one-particke energies
-      LOGICAL(4) ,INTENT(OUT)    :: TOK               ! error flag
+      INTEGER(4) ,INTENT(IN)     :: NPHI              ! #(WAVE FUNCTIONS)
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR,LMX,NPHI)  ! WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! P**2/(2M)*WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! ONE-PARTICKE ENERGIES
+      LOGICAL(4) ,INTENT(OUT)    :: TOK               ! ERROR FLAG
 !     **************************************************************************
-      call schroedinger$lbnd_sloc(GID,NR,LMX,LMRX,POT,lxsl,potsl &
-     &                                       ,ovsl,G,Enu,NPHI,EB,PHI,TPHI,TOK)
-      return
-      end
+      CALL SCHROEDINGER$LBND_SLOC(GID,NR,LMX,LMRX,POT,LXSL,POTSL &
+     &                                       ,OVSL,G,ENU,NPHI,EB,PHI,TPHI,TOK)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL$NONSPHBOUND(GID,NR,NDIMD,LMX,LMRX,POT,DREL,G,Enu &
+      SUBROUTINE RADIAL$NONSPHBOUND(GID,NR,NDIMD,LMX,LMRX,POT,DREL,G,ENU &
      &                             ,NPHI,EB,PHI,TPHI,SPHI,TSPHI,TOK)
 !     **                                                                  **
 !     **  SOLVES THE RELATIVISTIC RADIAL DIRAC EQUATION FOR THE           **
@@ -157,7 +157,7 @@
       REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
 !                                           ! DREL= M0/MREL(R)-1
       REAL(8)    ,INTENT(IN)     :: G(NR,LMX,2)   !INHOMOGENITY
-      REAL(8)    ,INTENT(IN)     :: Enu       !ENERGY
+      REAL(8)    ,INTENT(IN)     :: ENU       !ENERGY
       REAL(8)    ,INTENT(IN)     :: POT(NR,LMRX,NDIMD) !POTENTIAL (RADIAL PART ONLY)
       INTEGER(4) ,INTENT(IN)     :: NPHI
       COMPLEX(8) ,INTENT(OUT)    :: PHI(NR,LMX,2,NPHI) ! WAVE-FUNCTION
@@ -167,26 +167,26 @@
       REAL(8)    ,INTENT(OUT)    :: EB(NPHI)
       LOGICAL(4) ,INTENT(OUT)    :: TOK
 !     ************************************************************************
-      call schroedinger$lbnd_fullyrel(GID,NR,ndimd,LMX,LMRX,POT,DREL,G,Enu &
-     &                             ,NPHI,EB,PHI,TPHI,sphi,tsphi,TOK)
-      return
-      end SUBROUTINE RADIAL$NONSPHBOUND
+      CALL SCHROEDINGER$LBND_FULLYREL(GID,NR,NDIMD,LMX,LMRX,POT,DREL,G,ENU &
+     &                             ,NPHI,EB,PHI,TPHI,SPHI,TSPHI,TOK)
+      RETURN
+      END SUBROUTINE RADIAL$NONSPHBOUND
 !
 !*******************************************************************************
 !*******************************************************************************
 !*******************************************************************************
 !**                                                                           **
-!**  Beginning of the actual schroedinger object                              **
+!**  BEGINNING OF THE ACTUAL SCHROEDINGER OBJECT                              **
 !**                                                                           **
-!**    schroedinger$spherical                                                 **
+!**    SCHROEDINGER$SPHERICAL                                                 **
 !**                                                                           **
-!**    the lbnd routines determine a set of bound states in a non-spherical   **
-!**    potential using the linear energy expansion of the wave function       **
-!**    about an energy enu                                                    **
+!**    THE LBND ROUTINES DETERMINE A SET OF BOUND STATES IN A NON-SPHERICAL   **
+!**    POTENTIAL USING THE LINEAR ENERGY EXPANSION OF THE WAVE FUNCTION       **
+!**    ABOUT AN ENERGY ENU                                                    **
 !**                                                                           **
-!**      schroedinger$lbnd_sloc     nonrelativastic with semi-local pot       **
-!**      schroedinger$lbnd_scalrel  scalar relativistic (real phi)            **
-!**      schroedinger$lbnd_fullyrel includes spin-orbit coupling (complex phi)**
+!**      SCHROEDINGER$LBND_SLOC     NONRELATIVASTIC WITH SEMI-LOCAL POT       **
+!**      SCHROEDINGER$LBND_SCALREL  SCALAR RELATIVISTIC (REAL PHI)            **
+!**      SCHROEDINGER$LBND_FULLYREL INCLUDES SPIN-ORBIT COUPLING (COMPLEX PHI)**
 !**                                                                           **
 !**                                                                           **
 !**                                                                           **
@@ -198,7 +198,7 @@
 !*******************************************************************************
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE schroedinger$spherical(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHI)
+      SUBROUTINE SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHI)
 !     **                                                                      **
 !     **  SOLVES THE RELATIVISTIC RADIAL DIRAC EQUATION FOR THE               **
 !     **  LARGE COMPONENT. DREL=1/MREL-1/M0 IS A MEASURE FOR THE              **
@@ -260,7 +260,7 @@
       REAL(8)                    :: SOFACTOR
       REAL(8)                    :: RDPRIME(NR)
       LOGICAL(4)                 :: THOM
-integer(4) :: ir
+INTEGER(4) :: IR
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -280,7 +280,7 @@ integer(4) :: ir
       END IF
 !
 !     ==========================================================================
-!     == set up differential equation                                         ==
+!     == SET UP DIFFERENTIAL EQUATION                                         ==
 !     ==========================================================================
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
       CALL RADIAL$R(GID,NR,R)
@@ -298,7 +298,7 @@ integer(4) :: ir
       D(:)=-2.D0*G(:)
 !
 !     ==========================================================================
-!     == boundary conditions                                                  ==
+!     == BOUNDARY CONDITIONS                                                  ==
 !     ==========================================================================
       THOM=MAXVAL(ABS(G(:))).EQ.0.D0
       IF(IDIR.GE.0) THEN
@@ -310,25 +310,25 @@ integer(4) :: ir
       END IF
 !
 !     ==========================================================================
-!     == solve differential equation                                          ==
+!     == SOLVE DIFFERENTIAL EQUATION                                          ==
 !     ==========================================================================
       CALL RADIAL$DGL(GID,IDIR,NR,A,B,C,D,PHI)
-do ir=1,nr
-  if(.not.(phi(ir).gt.0.d0.or.phi(ir).le.0.d0)) then
-    print*,'a ',a
-    print*,'b ',b
-    print*,'c ',c
-    print*,'d ',d
-    print*,'drel ',drel
-    stop 'error stop in shroedinger$spherical'
- end if
-enddo
+DO IR=1,NR
+  IF(.NOT.(PHI(IR).GT.0.D0.OR.PHI(IR).LE.0.D0)) THEN
+    PRINT*,'A ',A
+    PRINT*,'B ',B
+    PRINT*,'C ',C
+    PRINT*,'D ',D
+    PRINT*,'DREL ',DREL
+    STOP 'ERROR STOP IN SHROEDINGER$SPHERICAL'
+ END IF
+ENDDO
       RETURN
-      END SUBROUTINE schroedinger$spherical
+      END SUBROUTINE SCHROEDINGER$SPHERICAL
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE schroedinger$lbnd_scalrel(GID,NR,LMX,LMRX,POT,DREL &
-     &                          ,G,Enu,NPHI,EB,PHI,TPHI,TOK)
+      SUBROUTINE SCHROEDINGER$LBND_SCALREL(GID,NR,LMX,LMRX,POT,DREL &
+     &                          ,G,ENU,NPHI,EB,PHI,TPHI,TOK)
 !     **                                                                      **
 !     **  APPROXIMATE BOUND STATES FOR THE SCALAR-RELATIVISTIC,               **
 !     **  RADIAL DIRAC EQUATION FOR THE LARGE COMPONENT.                      **
@@ -336,11 +336,11 @@ enddo
 !     **  THE SOLUTIONS ARE CALCULATED TO LINEAR ORDER IN (E-ENU)             **
 !     **                                                                      **
 !     **  DREL=1/MREL-1/M0 IS A MEASURE FOR THE RELATIVISTIC EFFECTS,         **
-!     **  WHERE MREL=M0+(E-V)/2C^2 AND M0 IS THE rest mass                    **
+!     **  WHERE MREL=M0+(E-V)/2C^2 AND M0 IS THE REST MASS                    **
 !     **  THE NONRELATIVISTIC SOLUTION IS OBTAINED BY SETTINH DREL=0          **
 !     **                                                                      **
-!     **  the solutions are selected by nphi, from which the dominating       **
-!     **  angular momentum is extracted by nphi=2*l+1.                        **
+!     **  THE SOLUTIONS ARE SELECTED BY NPHI, FROM WHICH THE DOMINATING       **
+!     **  ANGULAR MOMENTUM IS EXTRACTED BY NPHI=2*L+1.                        **
 !     **                                                                      **
 !     **  THE DIFFERENTIAL EQUATION IS SOLVED WITH THE VERLET ALGORITHM       **
 !     **    DPHI/DX=(PHI(+)-PHI(-))/2                                         **
@@ -356,19 +356,19 @@ enddo
       REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
 !                                           ! DREL= M0/MREL(R)-1
       REAL(8)    ,INTENT(IN)     :: G(NR,LMX)   !INHOMOGENITY
-      REAL(8)    ,INTENT(IN)     :: Enu     ! expansion ENERGY
+      REAL(8)    ,INTENT(IN)     :: ENU     ! EXPANSION ENERGY
       REAL(8)    ,INTENT(IN)     :: POT(NR,LMRX) !POTENTIAL (RADIAL PART ONLY)
-      INTEGER(4) ,INTENT(IN)     :: NPHI              ! #(wave functions)
-      real(8)    ,INTENT(OUT)    :: PHI(NR,LMX,nphi)  ! WAVE-FUNCTION
-      real(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! p**2/(2m)*WAVE-FUNCTION
-      REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! one-particke energies
-      LOGICAL(4) ,INTENT(OUT)    :: TOK               ! error flag
+      INTEGER(4) ,INTENT(IN)     :: NPHI              ! #(WAVE FUNCTIONS)
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR,LMX,NPHI)  ! WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! P**2/(2M)*WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! ONE-PARTICKE ENERGIES
+      LOGICAL(4) ,INTENT(OUT)    :: TOK               ! ERROR FLAG
       INTEGER(4)                 :: LX
       INTEGER(4)                 :: LOX(LMX) ! ANGULAR MOMENTA
       INTEGER(4)                 :: LM,LM1,LM2,LM3,L,M,IM
       REAL(8)                    :: A(NR)
       REAL(8)                    :: B(NR)
-      reaL(8)                    :: C(NR,LMX,LMX)
+      REAL(8)                    :: C(NR,LMX,LMX)
       REAL(8)                    :: D(NR,LMX) 
       REAL(8)                    :: R(NR)                        !
       REAL(8)                    :: AUX(NR)
@@ -387,7 +387,7 @@ enddo
         CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
         CALL ERROR$I4VAL('LMX',LMX)
         CALL ERROR$I4VAL('LX',LX)
-        CALL ERROR$STOP('schroedinger$lbnd_scalrel')
+        CALL ERROR$STOP('SCHROEDINGER$LBND_SCALREL')
       END IF
       LM=0
       DO L=0,LX
@@ -398,10 +398,10 @@ enddo
       ENDDO
 !
 !     ==========================================================================
-!     ==  DETERMINE CLASSICAL TURNING POINT r(ircl)                           ==
-!     ==  and outmost point for inward integration r(irout)                   ==
+!     ==  DETERMINE CLASSICAL TURNING POINT R(IRCL)                           ==
+!     ==  AND OUTMOST POINT FOR INWARD INTEGRATION R(IROUT)                   ==
 !     ==========================================================================
-      call schroedinger_specialrads(gid,nr,0,xmax,pot(:,1),enu,ircl,irout)
+      CALL SCHROEDINGER_SPECIALRADS(GID,NR,0,XMAX,POT(:,1),ENU,IRCL,IROUT)
 !
 !     ==========================================================================
 !     ==  PREPARE POTENTIAL-INDEPENDENT ARRAYS                                ==
@@ -435,12 +435,12 @@ enddo
       C=-2.D0*C
 !
 !     ==========================================================================
-!     ==  add KINETIC ENERGY TERM TO C and shift energy zero to enu           ==
+!     ==  ADD KINETIC ENERGY TERM TO C AND SHIFT ENERGY ZERO TO ENU           ==
 !     ==========================================================================
       LM=0
       DO L=0,LX
         AUX(1)=0.D0
-        AUX(2:)=-(1.D0+DREL(2:))/R(2:)**2 * REAL(L*(L+1),KIND=8)+2.D0*Enu
+        AUX(2:)=-(1.D0+DREL(2:))/R(2:)**2 * REAL(L*(L+1),KIND=8)+2.D0*ENU
         DO IM=1,2*L+1
           LM=LM+1
           C(:,LM,LM)=C(:,LM,LM)+AUX(:)
@@ -452,7 +452,7 @@ enddo
 !     ==========================================================================
 !     ==  DETERMINE BOUND STATES                                              ==
 !     ==========================================================================
-      CALL SCHROEDINGER_XXXR(GID,NR,LMX,IRCL,IROUT,LOX,A,B,C,D,NPHI,eb,PHI,TCHK)
+      CALL SCHROEDINGER_XXXR(GID,NR,LMX,IRCL,IROUT,LOX,A,B,C,D,NPHI,EB,PHI,TCHK)
       IF(.NOT.TCHK) THEN
         CALL ERROR$STOP('SCHROEDINGER_XXXR FINISHED WITH ERROR')
         CALL ERROR$STOP('RADIAL$NONSPHBOUND')
@@ -461,7 +461,7 @@ enddo
 !     ==========================================================================
 !     ==  SHIFT ENERGIES                                                      ==
 !     ==========================================================================
-      EB(:)=enu+eb(:) ! change energies relative to eny to absolute energies
+      EB(:)=ENU+EB(:) ! CHANGE ENERGIES RELATIVE TO ENY TO ABSOLUTE ENERGIES
 !
       TOK=.TRUE.
       RETURN
@@ -473,18 +473,18 @@ enddo
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID             ! GRID-ID FOR RADIAL GRID
       INTEGER(4),INTENT(IN) :: NR              ! #(RADIAL GRID POINTS)
-      INTEGER(4),INTENT(IN) :: NF              ! #(angular momenta)
-      INTEGER(4),INTENT(IN) :: IRMATCH         ! matching point for inside-outside integration
-      INTEGER(4),INTENT(IN) :: IROUT           ! outermost point to be considered
-      INTEGER(4),INTENT(IN) :: LOX(NF)         ! angular momenta of wave fyunction components
+      INTEGER(4),INTENT(IN) :: NF              ! #(ANGULAR MOMENTA)
+      INTEGER(4),INTENT(IN) :: IRMATCH         ! MATCHING POINT FOR INSIDE-OUTSIDE INTEGRATION
+      INTEGER(4),INTENT(IN) :: IROUT           ! OUTERMOST POINT TO BE CONSIDERED
+      INTEGER(4),INTENT(IN) :: LOX(NF)         ! ANGULAR MOMENTA OF WAVE FYUNCTION COMPONENTS
       REAL(8)   ,INTENT(IN) :: A(NR)
       REAL(8)   ,INTENT(IN) :: B(NR)
-      reAL(8)   ,INTENT(IN) :: C(NR,NF,NF)
-      REAl(8)   ,INTENT(IN) :: D(NR,NF)
-      INTEGER(4),INTENT(IN) :: NPHI            ! #(wave functions)
-      REAL(8)   ,INTENT(OUT):: DE(NPHI)        ! one-particle eigenvalues
-      real(8)   ,INTENT(OUT):: PHI(NR,NF,NPHI) ! wave functions
-      LOGICAL(4),INTENT(OUT):: TOK             ! error flag
+      REAL(8)   ,INTENT(IN) :: C(NR,NF,NF)
+      REAL(8)   ,INTENT(IN) :: D(NR,NF)
+      INTEGER(4),INTENT(IN) :: NPHI            ! #(WAVE FUNCTIONS)
+      REAL(8)   ,INTENT(OUT):: DE(NPHI)        ! ONE-PARTICLE EIGENVALUES
+      REAL(8)   ,INTENT(OUT):: PHI(NR,NF,NPHI) ! WAVE FUNCTIONS
+      LOGICAL(4),INTENT(OUT):: TOK             ! ERROR FLAG
       REAL(8)               :: ALLPHIL(NR,NF,NF)
       REAL(8)               :: ALLPHIR(NR,NF,NF)
       REAL(8)               :: PHIL(NR,NF,NPHI)
@@ -514,18 +514,18 @@ CHARACTER(32):: FILE
 !PRINT*,'NEW SCHROEDINGER_XXXR STARTED',NPHI,NF
       IF(IROUT+1.GT.NR) THEN
         CALL ERROR$MSG('IROUT OUT OF RANGE')
-        CALL ERROR$STOP('SCHROEDINGER_XXXr')
+        CALL ERROR$STOP('SCHROEDINGER_XXXR')
       END IF
       IF(IRMATCH.GT.IROUT) THEN
         CALL ERROR$MSG('IRMATCH OUT OF RANGE')
-        CALL ERROR$STOP('SCHROEDINGER_XXXr')
+        CALL ERROR$STOP('SCHROEDINGER_XXXR')
       END IF
       L0=(NPHI-1)/2
       IF(NPHI.NE.2*L0+1) THEN
         CALL ERROR$MSG('NPHI MUST BE 2*L0+1')
-        CALL ERROR$i4val('NPHI',nphi)
-        CALL ERROR$i4val('l0',l0)
-        CALL ERROR$STOP('SCHROEDINGER_XXXr')
+        CALL ERROR$I4VAL('NPHI',NPHI)
+        CALL ERROR$I4VAL('L0',L0)
+        CALL ERROR$STOP('SCHROEDINGER_XXXR')
       END IF
       CALL RADIAL$R(GID,NR,R)
       IRC=IRMATCH
@@ -533,7 +533,7 @@ CHARACTER(32):: FILE
 !     ==========================================================================
 !     ==  OBTAIN HOMOGENEOUS SOLUTION                                         ==
 !     ==========================================================================
-!PRINT*,'SCHROEDINGER_XXXr: DETERMINE PHI',Lox
+!PRINT*,'SCHROEDINGER_XXXR: DETERMINE PHI',LOX
       ALLPHIL(:,:,:)=0.D0
       ALLPHIR(:,:,:)=0.D0
       DO IF=1,NF
@@ -551,11 +551,11 @@ CHARACTER(32):: FILE
 !     ==========================================================================
 !     ==  MAKE PHI_HOM SOLUTIONS CONTINUOUS                                   ==
 !     ==========================================================================
-!PRINT*,'SCHROEDINGER_XXXr: MATCH PHI'
+!PRINT*,'SCHROEDINGER_XXXR: MATCH PHI'
       MAT(:,:)=ALLPHIR(IRC,:,:)
 !     == MATRIX IS NOT SYMMETRIC. THUS SOLVE WITH SINGULAR VALUE DECOMPOSITION
       BVECS(:,1:NF)=ALLPHIL(IRC,:,:)
-      CALL LIB$MATRIXSOLVEr8(NF,NF,NF,MAT,XVECS,BVECS)
+      CALL LIB$MATRIXSOLVER8(NF,NF,NF,MAT,XVECS,BVECS)
 
       PHIWORK2D(:,:,:)=ALLPHIR(:,:,:)
       ALLPHIR(:,:,:)=0.D0
@@ -591,7 +591,7 @@ CHARACTER(32):: FILE
         ENDDO
       ENDDO
       IF(NF.GT.NPHI) THEN
-        CALL LIB$MATRIXSOLVEr8(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
+        CALL LIB$MATRIXSOLVER8(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
       END IF
       PHIL(:,:,:)=0.D0
       PHIR(:,:,:)=0.D0
@@ -663,7 +663,7 @@ CHARACTER(32):: FILE
 !PRINT*,'SCHROEDINGER_XXXC: MATCH PHIDOT'
       MAT(:,:)=ALLPHIR(IRC,:,:)
       BVECS(:,:NPHI)=PHIL_DOT(IRC,:,:)-PHIR_DOT(IRC,:,:)
-      CALL LIB$MATRIXSOLVEr8(NF,NF,NPHI,MAT,XVECS(:,:NPHI),BVECS(:,:NPHI))
+      CALL LIB$MATRIXSOLVER8(NF,NF,NPHI,MAT,XVECS(:,:NPHI),BVECS(:,:NPHI))
 !
       DO IF1=1,NPHI
         DO IF2=1,NF
@@ -687,7 +687,7 @@ CHARACTER(32):: FILE
         ENDDO
       ENDDO
       IF(NF.GT.NPHI) THEN
-        CALL LIB$MATRIXSOLVEr8(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
+        CALL LIB$MATRIXSOLVER8(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
       END IF
       DO I=1,NPHI
         J=0
@@ -731,7 +731,7 @@ CHARACTER(32):: FILE
         KINK_DOT(I,:)=(PHIR_DOT(IRC+1,IF2,:)-PHIR_DOT(IRC-1,IF2,:)) &
      &               -(PHIL_DOT(IRC+1,IF2,:)-PHIL_DOT(IRC-1,IF2,:))
       ENDDO
-      CALL LIB$MATRIXSOLVEr8(NPHI,NPHI,NPHI,-KINK_DOT,HAM,KINK_HOM)
+      CALL LIB$MATRIXSOLVER8(NPHI,NPHI,NPHI,-KINK_DOT,HAM,KINK_HOM)
 !     == MAKE PHI DIFFERENTIABLE =========================================
       DO I=1,NPHI
         DO J=1,NPHI
@@ -771,14 +771,14 @@ CHARACTER(32):: FILE
         ENDDO
       ENDDO
       TOK=.TRUE.
-call schroedinger_writephi(gid,nr,'final',nf,nphi,irc,phi,phi)
+CALL SCHROEDINGER_WRITEPHI(GID,NR,'FINAL',NF,NPHI,IRC,PHI,PHI)
       RETURN
       END SUBROUTINE SCHROEDINGER_XXXR
 !
 !     ..................................................................
-!schroedinger$nonspherical_bound_c
-      SUBROUTINE schroedinger$lbnd_fullyrel(GID,NR,ndimd,LMX,LMRX,POT,DREL,G,Enu &
-     &                             ,NPHI,EB,PHI,TPHI,sphi,tsphi,TOK)
+!SCHROEDINGER$NONSPHERICAL_BOUND_C
+      SUBROUTINE SCHROEDINGER$LBND_FULLYREL(GID,NR,NDIMD,LMX,LMRX,POT,DREL,G,ENU &
+     &                             ,NPHI,EB,PHI,TPHI,SPHI,TSPHI,TOK)
 !     **                                                                  **
 !     **  SOLVES THE RELATIVISTIC RADIAL DIRAC EQUATION FOR THE           **
 !     **  LARGE COMPONENT. DREL=1/MREL-1/M0 IS A MEASURE FOR THE          **
@@ -813,7 +813,7 @@ call schroedinger_writephi(gid,nr,'final',nf,nphi,irc,phi,phi)
       REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
 !                                           ! DREL= M0/MREL(R)-1
       REAL(8)    ,INTENT(IN)     :: G(NR,LMX,2)   !INHOMOGENITY
-      REAL(8)    ,INTENT(IN)     :: Enu       !ENERGY
+      REAL(8)    ,INTENT(IN)     :: ENU       !ENERGY
       REAL(8)    ,INTENT(IN)     :: POT(NR,LMRX,NDIMD) !POTENTIAL (RADIAL PART ONLY)
       INTEGER(4) ,INTENT(IN)     :: NPHI
       COMPLEX(8) ,INTENT(OUT)    :: PHI(NR,LMX,2,NPHI) ! WAVE-FUNCTION
@@ -866,10 +866,10 @@ call schroedinger_writephi(gid,nr,'final',nf,nphi,irc,phi,phi)
       ENDDO
 !
 !     ==================================================================
-!     ==  DETERMINE CLASSICAL TURNING POINT r(ircl)                   ==
-!     ==  and outmost point for inward integration r(irout)           ==
+!     ==  DETERMINE CLASSICAL TURNING POINT R(IRCL)                   ==
+!     ==  AND OUTMOST POINT FOR INWARD INTEGRATION R(IROUT)           ==
 !     ==================================================================
-      call schroedinger_specialrads(gid,nr,0,xmax,pot(:,1,1),enu,ircl,irout)
+      CALL SCHROEDINGER_SPECIALRADS(GID,NR,0,XMAX,POT(:,1,1),ENU,IRCL,IROUT)
 !
 !     ==================================================================
 !     ==  PREPARE POTENTIAL-INDEPENDENT ARRAYS                        ==
@@ -927,7 +927,7 @@ call schroedinger_writephi(gid,nr,'final',nf,nphi,irc,phi,phi)
       LM=0
       DO L=0,LX
         AUX(1)=0.D0
-        AUX(2:)=-(1.D0+DREL(2:))/R(2:)**2 * REAL(L*(L+1),KIND=8)+2.D0*Enu
+        AUX(2:)=-(1.D0+DREL(2:))/R(2:)**2 * REAL(L*(L+1),KIND=8)+2.D0*ENU
         DO IM=1,2*L+1
           LM=LM+1
           DO IS=1,2
@@ -939,7 +939,7 @@ call schroedinger_writephi(gid,nr,'final',nf,nphi,irc,phi,phi)
 !     ==================================================================
 !     ==  ADD SPIN ORBIT COUPLING TO E                                ==
 !     ==================================================================
-      CALL schroedinger_LS(LMX,CLS)
+      CALL SCHROEDINGER_LS(LMX,CLS)
 !CLS=0.D0
       AUX(2:)=-RDPRIME(2:)/R(2:)
       AUX(1)=AUX(2)
@@ -971,7 +971,7 @@ call schroedinger_writephi(gid,nr,'final',nf,nphi,irc,phi,phi)
        SPHI=(0.D0,0.D0)
 !      CALL SCHROEDINGER_SMALLCOMPONENT(GID,NR,LMX,NPHI,DREL,PHI,SPHI)
 !
-!!$      CALL schroedinger_SP(LMX,CR,CA)
+!!$      CALL SCHROEDINGER_SP(LMX,CR,CA)
 !!$      CALL CONSTANTS$GET('C',SVAR)
 !!$      A(:)=(1.D0+DREL(:))/(2.D0*SVAR)
 !!$      SPHI(:,:,:,:)=(0.D0,0.D0)
@@ -1011,7 +1011,7 @@ call schroedinger_writephi(gid,nr,'final',nf,nphi,irc,phi,phi)
 !     ==================================================================
 !     ==  SHIFT ENERGIES                                              ==
 !     ==================================================================
-      EB(:)=enu+DE(:)
+      EB(:)=ENU+DE(:)
 !
 !     ==================================================================
 !     ==  DETERMINE TPHI AND TSPHI                                              ==
@@ -1581,10 +1581,10 @@ CHARACTER(32):: FILE
       END 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE schroedinger$lbnd_sloc(GID,NR,LMX,LMRX,POT,lxsl,potsl &
-     &                                         ,ovsl,G,Enu,NPHI,EB,PHI,TPHI,TOK)
+      SUBROUTINE SCHROEDINGER$LBND_SLOC(GID,NR,LMX,LMRX,POT,LXSL,POTSL &
+     &                                         ,OVSL,G,ENU,NPHI,EB,PHI,TPHI,TOK)
 !     **                                                                      **
-!     **  SOLVES THE nonrelATIVISTIC RADIAL schroedinger EQUATION FOR THE     **
+!     **  SOLVES THE NONRELATIVISTIC RADIAL SCHROEDINGER EQUATION FOR THE     **
 !     **  G IS AN INHOMOGENEITY, WHICH MUST BE SET TO ZERO FOR THE            **
 !     **  HOMOGENEOUS SOLUTION.                                               **
 !     **                                                                      **
@@ -1605,24 +1605,24 @@ CHARACTER(32):: FILE
       INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
       INTEGER(4) ,INTENT(IN)     :: LMX     ! X#(WAVE FUNCTION ANGULAR MOMENTA)
       INTEGER(4) ,INTENT(IN)     :: LMRX    ! X#(POTENTIAL ANGULAR MOMENTA)
-      INTEGER(4) ,INTENT(IN)     :: Lxsl    ! #(semilocal potenials, one per l)
-      REAL(8)    ,INTENT(IN)     :: potsl(NR,Lxsl)  ! semi-local potentials
-      REAL(8)    ,INTENT(IN)     :: ovsl(NR,lxsl)   ! semi-local overlap contribtion
+      INTEGER(4) ,INTENT(IN)     :: LXSL    ! #(SEMILOCAL POTENIALS, ONE PER L)
+      REAL(8)    ,INTENT(IN)     :: POTSL(NR,LXSL)  ! SEMI-LOCAL POTENTIALS
+      REAL(8)    ,INTENT(IN)     :: OVSL(NR,LXSL)   ! SEMI-LOCAL OVERLAP CONTRIBTION
       REAL(8)    ,INTENT(IN)     :: G(NR,LMX)   !INHOMOGENITY
-      REAL(8)    ,INTENT(IN)     :: Enu     ! expansion ENERGY
+      REAL(8)    ,INTENT(IN)     :: ENU     ! EXPANSION ENERGY
       REAL(8)    ,INTENT(IN)     :: POT(NR,LMRX) !POTENTIAL (RADIAL PART ONLY)
-      INTEGER(4) ,INTENT(IN)     :: NPHI              ! #(wave functions)
-      real(8)    ,INTENT(OUT)    :: PHI(NR,LMX,nphi)  ! WAVE-FUNCTION
-      real(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! p**2/(2m)*WAVE-FUNCTION
-      REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! one-particke energies
-      LOGICAL(4) ,INTENT(OUT)    :: TOK               ! error flag
+      INTEGER(4) ,INTENT(IN)     :: NPHI              ! #(WAVE FUNCTIONS)
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR,LMX,NPHI)  ! WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! P**2/(2M)*WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! ONE-PARTICKE ENERGIES
+      LOGICAL(4) ,INTENT(OUT)    :: TOK               ! ERROR FLAG
       INTEGER(4)                 :: LX
       INTEGER(4)                 :: LOX(LMX) ! ANGULAR MOMENTA
       INTEGER(4)                 :: LM,LM1,LM2,LM3,L,M,IM
       REAL(8)                    :: A(NR)
       REAL(8)                    :: B(NR)
-      reaL(8)                    :: C(NR,LMX,LMX)
-      reaL(8)                    :: dcde(NR,LMX)
+      REAL(8)                    :: C(NR,LMX,LMX)
+      REAL(8)                    :: DCDE(NR,LMX)
       REAL(8)                    :: D(NR,LMX) 
       REAL(8)                    :: R(NR)                        !
       REAL(8)                    :: AUX(NR)
@@ -1631,7 +1631,7 @@ CHARACTER(32):: FILE
       INTEGER(4)                 :: IRCL,IROUT
       LOGICAL(4)                 :: TCHK
 !     **************************************************************************
-print*,'warning! overlap not included yet'
+PRINT*,'WARNING! OVERLAP NOT INCLUDED YET'
       TOK=.FALSE.
       CALL RADIAL$R(GID,NR,R)
       LX=INT(SQRT(REAL(LMX))-1.D0)
@@ -1651,10 +1651,10 @@ print*,'warning! overlap not included yet'
       ENDDO
 !
 !     ==================================================================
-!     ==  DETERMINE CLASSICAL TURNING POINT r(ircl)                   ==
-!     ==  and outmost point for inward integration r(irout)           ==
+!     ==  DETERMINE CLASSICAL TURNING POINT R(IRCL)                   ==
+!     ==  AND OUTMOST POINT FOR INWARD INTEGRATION R(IROUT)           ==
 !     ==================================================================
-      call schroedinger_specialrads(gid,nr,0,xmax,pot(:,1),enu,ircl,irout)
+      CALL SCHROEDINGER_SPECIALRADS(GID,NR,0,XMAX,POT(:,1),ENU,IRCL,IROUT)
 !
 !     ==================================================================
 !     ==  PREPARE POTENTIAL-INDEPENDENT ARRAYS                        ==
@@ -1672,7 +1672,7 @@ print*,'warning! overlap not included yet'
 !     ==================================================================
 !     ==  COUPLING BETWEEN WAVE FUNCTION COMPONENTS VIA POTENTIAL     ==
 !     ==================================================================
-      dcde=0.d0
+      DCDE=0.D0
       C(:,:,:)=0.D0
       DO LM1=1,LMX
         DO LM2=1,LMX
@@ -1688,47 +1688,47 @@ print*,'warning! overlap not included yet'
       ENDDO
 !
 !     ==================================================================
-!     ==  add semi-local potential                                    ==
+!     ==  ADD SEMI-LOCAL POTENTIAL                                    ==
 !     ==================================================================
-      lm=0
-      do l=0,lxsl
-        do m=1,2*l+1
-          lm=lm+1
-          if(lm.gt.lmx) exit
-          c(:,lm,lm)=c(:,lm,lm)+potsl(:,l+1)-enu*ovsl(:,l+1)
-          dcde(:,lm)=-ovsl(:,l+1)
-        enddo
-      enddo
+      LM=0
+      DO L=0,LXSL
+        DO M=1,2*L+1
+          LM=LM+1
+          IF(LM.GT.LMX) EXIT
+          C(:,LM,LM)=C(:,LM,LM)+POTSL(:,L+1)-ENU*OVSL(:,L+1)
+          DCDE(:,LM)=-OVSL(:,L+1)
+        ENDDO
+      ENDDO
 !
 !     ==================================================================
-!     ==  add KINETIC ENERGY TERM TO C and shift energy zero to enu   ==
+!     ==  ADD KINETIC ENERGY TERM TO C AND SHIFT ENERGY ZERO TO ENU   ==
 !     ==================================================================
       LM=0
       DO L=0,LX
         AUX(1)=0.D0
-        AUX(2:)=0.5d0*REAL(L*(L+1),KIND=8)/R(2:)**2 - Enu
+        AUX(2:)=0.5D0*REAL(L*(L+1),KIND=8)/R(2:)**2 - ENU
         DO IM=1,2*L+1
           LM=LM+1
           C(:,LM,LM)=C(:,LM,LM)+AUX(:)
-          dcde(:,lm)=dcde(:,lm)-1.d0
+          DCDE(:,LM)=DCDE(:,LM)-1.D0
         ENDDO
       ENDDO
 !     ==  AVOID DIVIDE-BY-ZERO
       C(1,:,:)=C(2,:,:)
-      dcde(1,:)=dCde(2,:)
+      DCDE(1,:)=DCDE(2,:)
 !
 !     ==================================================================
-!     ==  scale c                                                     ==
+!     ==  SCALE C                                                     ==
 !     ==================================================================
       C=-2.D0*C
-      dcde=-2.D0*dcde
+      DCDE=-2.D0*DCDE
 !
 !     ==================================================================
 !     ==  DETERMINE BOUND STATES                                      ==
 !     ==================================================================
-!      CALL SCHROEDINGER_XXXR(GID,NR,LMX,IRCL,IROUT,LOX,A,B,C,D,NPHI,eb,PHI,TCHK)
-      CALL SCHROEDINGER_XXXR_OV(GID,NR,LMX,IRCL,IROUT,LOX,A,B,C,dcde,D,NPHI,eb,PHI,TCHK)
-      EB(:)=enu+eb(:) ! change energies relative to eny to absolute energies
+!      CALL SCHROEDINGER_XXXR(GID,NR,LMX,IRCL,IROUT,LOX,A,B,C,D,NPHI,EB,PHI,TCHK)
+      CALL SCHROEDINGER_XXXR_OV(GID,NR,LMX,IRCL,IROUT,LOX,A,B,C,DCDE,D,NPHI,EB,PHI,TCHK)
+      EB(:)=ENU+EB(:) ! CHANGE ENERGIES RELATIVE TO ENY TO ABSOLUTE ENERGIES
       IF(.NOT.TCHK) THEN
         CALL ERROR$STOP('SCHROEDINGER_XXXR FINISHED WITH ERROR')
         CALL ERROR$STOP('RADIAL$NONSPHBOUND')
@@ -1743,24 +1743,24 @@ print*,'warning! overlap not included yet'
       END 
 !
 !     ..................................................................
-      SUBROUTINE SCHROEDINGER_XXXR_Ov(GID,NR,NF,IRMATCH,IROUT,LOX,A,B,C,dcde,D,NPHI,DE,PHI,TOK)
+      SUBROUTINE SCHROEDINGER_XXXR_OV(GID,NR,NF,IRMATCH,IROUT,LOX,A,B,C,DCDE,D,NPHI,DE,PHI,TOK)
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID             ! GRID-ID FOR RADIAL GRID
       INTEGER(4),INTENT(IN) :: NR              ! #(RADIAL GRID POINTS)
-      INTEGER(4),INTENT(IN) :: NF              ! #(angular momenta)
-      INTEGER(4),INTENT(IN) :: IRMATCH         ! matching point for inside-outside integration
-      INTEGER(4),INTENT(IN) :: IROUT           ! outermost point to be considered
-      INTEGER(4),INTENT(IN) :: LOX(NF)         ! angular momenta of wave fyunction components
+      INTEGER(4),INTENT(IN) :: NF              ! #(ANGULAR MOMENTA)
+      INTEGER(4),INTENT(IN) :: IRMATCH         ! MATCHING POINT FOR INSIDE-OUTSIDE INTEGRATION
+      INTEGER(4),INTENT(IN) :: IROUT           ! OUTERMOST POINT TO BE CONSIDERED
+      INTEGER(4),INTENT(IN) :: LOX(NF)         ! ANGULAR MOMENTA OF WAVE FYUNCTION COMPONENTS
       REAL(8)   ,INTENT(IN) :: A(NR)
       REAL(8)   ,INTENT(IN) :: B(NR)
-      reAL(8)   ,INTENT(IN) :: C(NR,NF,NF)
-      reAL(8)   ,INTENT(IN) :: dcde(NR,NF)     ! energy derivative of c
-      REAl(8)   ,INTENT(IN) :: D(NR,NF)        ! inhomogeneity
-      INTEGER(4),INTENT(IN) :: NPHI            ! #(wave functions)
-      REAL(8)   ,INTENT(OUT):: DE(NPHI)        ! one-particle eigenvalues
-      real(8)   ,INTENT(OUT):: PHI(NR,NF,NPHI) ! wave functions
-      LOGICAL(4),INTENT(OUT):: TOK             ! error flag
-      REAL(8)               :: g(NR,NF)
+      REAL(8)   ,INTENT(IN) :: C(NR,NF,NF)
+      REAL(8)   ,INTENT(IN) :: DCDE(NR,NF)     ! ENERGY DERIVATIVE OF C
+      REAL(8)   ,INTENT(IN) :: D(NR,NF)        ! INHOMOGENEITY
+      INTEGER(4),INTENT(IN) :: NPHI            ! #(WAVE FUNCTIONS)
+      REAL(8)   ,INTENT(OUT):: DE(NPHI)        ! ONE-PARTICLE EIGENVALUES
+      REAL(8)   ,INTENT(OUT):: PHI(NR,NF,NPHI) ! WAVE FUNCTIONS
+      LOGICAL(4),INTENT(OUT):: TOK             ! ERROR FLAG
+      REAL(8)               :: G(NR,NF)
       REAL(8)               :: ALLPHIL(NR,NF,NF)
       REAL(8)               :: ALLPHIR(NR,NF,NF)
       REAL(8)               :: PHIL(NR,NF,NPHI)
@@ -1787,21 +1787,21 @@ print*,'warning! overlap not included yet'
 CHARACTER(32):: FILE
 !     **************************************************************************
       TOK=.FALSE.
-PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
+PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
       IF(IROUT+1.GT.NR) THEN
         CALL ERROR$MSG('IROUT OUT OF RANGE')
-        CALL ERROR$STOP('SCHROEDINGER_XXXr_ov')
+        CALL ERROR$STOP('SCHROEDINGER_XXXR_OV')
       END IF
       IF(IRMATCH.GT.IROUT) THEN
         CALL ERROR$MSG('IRMATCH OUT OF RANGE')
-        CALL ERROR$STOP('SCHROEDINGER_XXXr_ov')
+        CALL ERROR$STOP('SCHROEDINGER_XXXR_OV')
       END IF
       L0=(NPHI-1)/2
       IF(NPHI.NE.2*L0+1) THEN
         CALL ERROR$MSG('NPHI MUST BE 2*L0+1')
-        CALL ERROR$i4val('NPHI',nphi)
-        CALL ERROR$i4val('l0',l0)
-        CALL ERROR$STOP('SCHROEDINGER_XXXr_ov')
+        CALL ERROR$I4VAL('NPHI',NPHI)
+        CALL ERROR$I4VAL('L0',L0)
+        CALL ERROR$STOP('SCHROEDINGER_XXXR_OV')
       END IF
       CALL RADIAL$R(GID,NR,R)
       IRC=IRMATCH
@@ -1810,7 +1810,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
 !     ==========================================================================
 !     ==  OBTAIN HOMOGENEOUS SOLUTION                                         ==
 !     ==========================================================================
-!PRINT*,'SCHROEDINGER_XXXr_ov: DETERMINE PHI',Lox
+!PRINT*,'SCHROEDINGER_XXXR_OV: DETERMINE PHI',LOX
       ALLPHIL(:,:,:)=0.D0
       ALLPHIR(:,:,:)=0.D0
       DO IF=1,NF
@@ -1828,11 +1828,11 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
 !     ==========================================================================
 !     ==  MAKE PHI_HOM SOLUTIONS CONTINUOUS                                   ==
 !     ==========================================================================
-!PRINT*,'SCHROEDINGER_XXXr_ov: MATCH PHI'
+!PRINT*,'SCHROEDINGER_XXXR_OV: MATCH PHI'
       MAT(:,:)=ALLPHIR(IRC,:,:)
 !     == MATRIX IS NOT SYMMETRIC. THUS SOLVE WITH SINGULAR VALUE DECOMPOSITION
       BVECS(:,1:NF)=ALLPHIL(IRC,:,:)
-      CALL LIB$MATRIXSOLVEr8(NF,NF,NF,MAT,XVECS,BVECS)
+      CALL LIB$MATRIXSOLVER8(NF,NF,NF,MAT,XVECS,BVECS)
       PHIWORK2D(:,:,:)=ALLPHIR(:,:,:)
       ALLPHIR(:,:,:)=0.D0
       DO IF1=1,NF
@@ -1867,7 +1867,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
         ENDDO
       ENDDO
       IF(NF.GT.NPHI) THEN
-        CALL LIB$MATRIXSOLVEr8(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
+        CALL LIB$MATRIXSOLVER8(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
       END IF
       PHIL(:,:,:)=0.D0
       PHIR(:,:,:)=0.D0
@@ -1898,8 +1898,8 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
           AUX(:)=0.D0
           DO IF=1,NF
             AUX(:IRC)=AUX(:IRC) &
-     &               +0.5d0*dcde(:irc,if)*PHIL(:IRC,IF,J)*PHIL(:IRC,IF,I)
-            AUX(IRC+1:IROUT+1)=AUX(IRC+1:IROUT+1)+0.5d0*dcde(irc+1:irout+1,if) &
+     &               +0.5D0*DCDE(:IRC,IF)*PHIL(:IRC,IF,J)*PHIL(:IRC,IF,I)
+            AUX(IRC+1:IROUT+1)=AUX(IRC+1:IROUT+1)+0.5D0*DCDE(IRC+1:IROUT+1,IF) &
      &                        *PHIR(IRC+1:IROUT+1,IF,J)*PHIR(IRC+1:IROUT+1,IF,I)
           ENDDO
           AUX(:)=AUX(:)*R(:)**2
@@ -1910,9 +1910,9 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
 !       ==  NORMALIZE
         AUX(:)=0.D0
         DO IF=1,NF
-          AUX(:IRC)         =AUX(:IRC)  +0.5d0*dcde(:irc,if)*PHIL(:IRC,IF,I)**2
+          AUX(:IRC)         =AUX(:IRC)  +0.5D0*DCDE(:IRC,IF)*PHIL(:IRC,IF,I)**2
           AUX(IRC+1:IROUT+1)=AUX(IRC+1:IROUT+1) &
-    &                 +0.5d0*dcde(irc+1:irout+1,if)*PHIR(IRC+1:IROUT+1,IF,I)**2
+    &                 +0.5D0*DCDE(IRC+1:IROUT+1,IF)*PHIR(IRC+1:IROUT+1,IF,I)**2
         ENDDO
         AUX(:)=AUX(:)*R(:)**2
         CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
@@ -1928,10 +1928,10 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
       PHIL_DOT(:,:,:)=0.D0
       PHIR_DOT(:,:,:)=0.D0
       DO IF=1,NPHI
-        g(:,:)=-dcde(:,:)*phil(:,:,if)
-        CALL RADIAL$DGLGEN(GID,NR,NF,1,IRC+1,A,B,C,g,PHIL_DOT(:,:,IF))
-        g(:,:)=-dcde(:,:)*phir(:,:,if)
-        CALL RADIAL$DGLGEN(GID,NR,NF,IROUT+1,IRC-1,A,B,C,g,PHIR_DOT(:,:,IF))
+        G(:,:)=-DCDE(:,:)*PHIL(:,:,IF)
+        CALL RADIAL$DGLGEN(GID,NR,NF,1,IRC+1,A,B,C,G,PHIL_DOT(:,:,IF))
+        G(:,:)=-DCDE(:,:)*PHIR(:,:,IF)
+        CALL RADIAL$DGLGEN(GID,NR,NF,IROUT+1,IRC-1,A,B,C,G,PHIR_DOT(:,:,IF))
       ENDDO
 !
 !     ==========================================================================
@@ -1940,7 +1940,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
 !PRINT*,'SCHROEDINGER_XXXC: MATCH PHIDOT'
       MAT(:,:)=ALLPHIR(IRC,:,:)
       BVECS(:,:NPHI)=PHIL_DOT(IRC,:,:)-PHIR_DOT(IRC,:,:)
-      CALL LIB$MATRIXSOLVEr8(NF,NF,NPHI,MAT,XVECS(:,:NPHI),BVECS(:,:NPHI))
+      CALL LIB$MATRIXSOLVER8(NF,NF,NPHI,MAT,XVECS(:,:NPHI),BVECS(:,:NPHI))
 !
       DO IF1=1,NPHI
         DO IF2=1,NF
@@ -1964,7 +1964,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
         ENDDO
       ENDDO
       IF(NF.GT.NPHI) THEN
-        CALL LIB$MATRIXSOLVEr8(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
+        CALL LIB$MATRIXSOLVER8(NF-NPHI,NF-NPHI,NPHI,HA,HX,HB)
       END IF
       DO I=1,NPHI
         J=0
@@ -1985,8 +1985,8 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
           AUX(:)=0.D0
           DO IF=1,NF
             AUX(:IRC)=AUX(:IRC) &
-     &                  +0.5d0*dcde(:irc,if)*PHIL(:IRC,IF,J)*PHIL_DOT(:IRC,IF,I)
-            AUX(IRC+1:IROUT+1)=AUX(IRC+1:IROUT+1)+0.5d0*dcde(irc+1:irout+1,if) &
+     &                  +0.5D0*DCDE(:IRC,IF)*PHIL(:IRC,IF,J)*PHIL_DOT(:IRC,IF,I)
+            AUX(IRC+1:IROUT+1)=AUX(IRC+1:IROUT+1)+0.5D0*DCDE(IRC+1:IROUT+1,IF) &
      &                    *PHIR(IRC+1:IROUT+1,IF,J)*PHIR_DOT(IRC+1:IROUT+1,IF,I)
           ENDDO
           AUX(:)=AUX(:)*R(:)**2
@@ -2000,7 +2000,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
 !     ==========================================================================
 !     ==  REMOVE KINKS BY MIXING PHIDOT INTO PHI                              ==
 !     ==========================================================================
-!PRINT*,'SCHROEDINGER_XXXr_ov:MATCH KINKS'
+!PRINT*,'SCHROEDINGER_XXXR_OV:MATCH KINKS'
       I=0
       DO IF2=1,NF
         IF(LOX(IF2).NE.L0) CYCLE
@@ -2010,7 +2010,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
         KINK_DOT(I,:)=(PHIR_DOT(IRC+1,IF2,:)-PHIR_DOT(IRC-1,IF2,:)) &
      &               -(PHIL_DOT(IRC+1,IF2,:)-PHIL_DOT(IRC-1,IF2,:))
       ENDDO
-      CALL LIB$MATRIXSOLVEr8(NPHI,NPHI,NPHI,-KINK_DOT,HAM,KINK_HOM)
+      CALL LIB$MATRIXSOLVER8(NPHI,NPHI,NPHI,-KINK_DOT,HAM,KINK_HOM)
 !!$      SVAR=MAXVAL(ABS(KINK_HOM+MATMUL(KINK_DOT,HAM)))
 !!$PRINT*,'REMAINING KINKS ',SVAR
 !     == MAKE PHI DIFFERENTIABLE =========================================
@@ -2034,10 +2034,10 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
         DO J=I,NPHI
           AUX(:)=0.D0
           DO IF=1,NF
-            AUX(:IRc)=AUX(:IRC) &
-     &              +0.5d0*dcde(:irc,if)*PHIL(:IRC,IF,I)*PHIL(:IRC,IF,J)
+            AUX(:IRC)=AUX(:IRC) &
+     &              +0.5D0*DCDE(:IRC,IF)*PHIL(:IRC,IF,I)*PHIL(:IRC,IF,J)
             AUX(IRC+1:IROUT+1)=AUX(IRC+1:IROUT+1) &
-     &          +0.5d0*dcde(irc+1:irout+1,if) &
+     &          +0.5D0*DCDE(IRC+1:IROUT+1,IF) &
      &                *PHIR(IRC+1:IROUT+1,IF,I)*PHIR(IRC+1:IROUT+1,IF,J)
           ENDDO
           AUX(:)=AUX(:)*R(:)**2
@@ -2050,9 +2050,9 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
 !     ==================================================================
 !     ==  DETERMINE EIGENSTATES                                       ==
 !     ==================================================================
-!PRINT*,'SCHROEDINGER_XXXr_ov: determine eigenstates'
+!PRINT*,'SCHROEDINGER_XXXR_OV: DETERMINE EIGENSTATES'
       HAM=0.5D0*(HAM+TRANSPOSE(HAM))
-      ov=0.5D0*(ov+TRANSPOSE(ov))
+      OV=0.5D0*(OV+TRANSPOSE(OV))
       CALL LIB$GENERALEIGENVALUER8(NPHI,HAM,OV,DE,KINKC)
       PHI(:,:,:)=0.D0
       DO I=1,NPHI
@@ -2061,77 +2061,78 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
           PHI(IRC+1:IROUT+1,:,I)=PHI(IRC+1:IROUT+1,:,I)+PHIR(IRC+1:IROUT+1,:,J)*KINKC(J,I)      
         ENDDO
       ENDDO
-!PRINT*,'SCHROEDINGER_XXXr_ov: done'
+!PRINT*,'SCHROEDINGER_XXXR_OV: DONE'
       TOK=.TRUE.
       RETURN
-      enD SUBROUTINE SCHROEDINGER_XXXR_OV
+      END SUBROUTINE SCHROEDINGER_XXXR_OV
 !
 !     ...................................................................
-      subroutine schroedinger_specialrads(gid,nr,l,xmax,v00,e,ircl,irout)
+      SUBROUTINE SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,V00,E,IRCL,IROUT)
 !     **                                                               **
-!     **  estimate the classical turning point r(ircl)                 **
-!
-!     **  estimate the outermost grid point for inward integration     **
-!     **  from a WKB solution of the Schroedinger equation             **
+!     **  ESTIMATE THE CLASSICAL TURNING POINT R(IRCL)                 **
 !     **                                                               **
-      implicit none
-      integer(4),intent(in) :: gid      ! grid id
-      integer(4),intent(in) :: nr       ! #(radial grid points)
-      integer(4),intent(in) :: l        ! angular momentum
-      real(8)   ,intent(in) :: xmax     ! maximum tolerable ratio of phi 
-      real(8)   ,intent(in) :: v00(nr)  ! radial spherical potential
-      real(8)   ,intent(in) :: e        ! energy
-      integer(4),intent(out):: ircl     ! classical turning point
-      integer(4),intent(out):: irout    ! outermost grid point
-      real(8)               :: pi       ! pi
-      real(8)               :: y0       ! spherical harmonic for lm=0
-      real(8)               :: r(nr)    ! radial grid
-      real(8)               :: fac,svar,sumval,xmaxlog
-      integer(4)            :: ir
-      logical               :: tchk
+!     **  ESTIMATE THE OUTERMOST GRID POINT FOR INWARD INTEGRATION     **
+!     **  FROM A WKB SOLUTION OF THE SCHROEDINGER EQUATION             **
+!     **                                                               **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID      ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR       ! #(RADIAL GRID POINTS)
+      INTEGER(4),INTENT(IN) :: L        ! ANGULAR MOMENTUM
+      REAL(8)   ,INTENT(IN) :: XMAX     ! MAXIMUM TOLERABLE RATIO OF PHI 
+      REAL(8)   ,INTENT(IN) :: V00(NR)  ! RADIAL SPHERICAL POTENTIAL
+      REAL(8)   ,INTENT(IN) :: E        ! ENERGY
+      INTEGER(4),INTENT(OUT):: IRCL     ! CLASSICAL TURNING POINT
+      INTEGER(4),INTENT(OUT):: IROUT    ! OUTERMOST GRID POINT
+      REAL(8)               :: PI       ! PI
+      REAL(8)               :: Y0       ! SPHERICAL HARMONIC FOR LM=0
+      REAL(8)               :: R(NR)    ! RADIAL GRID
+      REAL(8)               :: FAC,SVAR,SUMVAL,XMAXLOG
+      INTEGER(4)            :: IR
+      LOGICAL               :: TCHK
 !     *******************************************************************
-      pi=4.d0*datan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
-      xmaxlog=log(xmax)
-      call radial$r(gid,nr,r)
-      fac=0.5d0*real(l*(l+1),kind=8)
-      sumval=0.d0
-      irout=1
-      ircl=nr
-      tchk=.false.
-      do ir=2,nr-1
-        svar=v00(ir)*y0+fac/r(ir)**2-e
-        if(svar.lt.0.d0) then   ! kinetic energy positive; do nothing
-          svar=0.d0
-          sumval=0.d0
-          ircl=ir+1        ! rcl will be the first point with positive ekin
-          cycle
-        end if
-        sumval=sumval+sqrt(2.d0*svar)*0.5d0*(r(ir+1)-r(ir-1))
-        irout=ir-1
-        if(sumval.gt.xmaxlog) then
-          tchk=.true.
-          exit
-        end if
-      enddo
-!     == fix up end of the grid
-      if(.not.tchk) then
-        svar=v00(nr)*y0+fac/r(nr)**2-e
-        sumval=sumval+0.5d0*(r(nr)-r(nr-1))*svar
-        if(sumval.gt.xmaxlog) then
-          irout=nr-1
-        else
-!         == the max value ofr irout is nr-1, because irout is used to     ==
-!         == set an inhomogeneity. The solver is not sensitive to the last ==
-!         == grid point                                                    ==
-          irout=nr-1  ! irout is maximum at nr-1
-        end if
-      end if
-      return
-      end
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      XMAXLOG=LOG(XMAX)
+      CALL RADIAL$R(GID,NR,R)
+      FAC=0.5D0*REAL(L*(L+1),KIND=8)
+      SUMVAL=0.D0
+      IROUT=1
+      IRCL=NR
+      TCHK=.FALSE.
+      DO IR=2,NR-1
+        SVAR=V00(IR)*Y0+FAC/R(IR)**2-E
+        IF(SVAR.LT.0.D0) THEN   ! KINETIC ENERGY POSITIVE; DO NOTHING
+          SVAR=0.D0
+          SUMVAL=0.D0
+          IRCL=IR+1        ! RCL WILL BE THE FIRST POINT WITH POSITIVE EKIN
+          CYCLE
+        END IF
+        SUMVAL=SUMVAL+SQRT(2.D0*SVAR)*0.5D0*(R(IR+1)-R(IR-1))
+        IROUT=IR-1
+        IF(SUMVAL.GT.XMAXLOG) THEN
+          TCHK=.TRUE.
+          EXIT
+        END IF
+      ENDDO
+!     == FIX UP END OF THE GRID
+      IF(.NOT.TCHK) THEN
+        SVAR=V00(NR)*Y0+FAC/R(NR)**2-E
+        SUMVAL=SUMVAL+0.5D0*(R(NR)-R(NR-1))*SVAR
+        IF(SUMVAL.GT.XMAXLOG) THEN
+          IROUT=NR-1
+        ELSE
+!         == THE MAX VALUE OFR IROUT IS NR-1, BECAUSE IROUT IS USED TO     ==
+!         == SET AN INHOMOGENEITY. THE SOLVER IS NOT SENSITIVE TO THE LAST ==
+!         == GRID POINT                                                    ==
+          IROUT=NR-1  ! IROUT IS MAXIMUM AT NR-1
+        END IF
+      END IF
+      IRCL=MIN(IRCL,IROUT-1)
+      RETURN
+      END
 !
 !     .......................................................................
-      SUBROUTINE schroedinger_LSOLD(LMX,C)
+      SUBROUTINE SCHROEDINGER_LSOLD(LMX,C)
 !     **                                                                    **
 !     **  SPIN ORBIT MATRIX ELEMENTS                                        **
 !     **                                                                    **
@@ -2153,14 +2154,14 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
       COMPLEX(8),ALLOCATABLE :: H(:,:),U(:,:)
       REAL(8)   ,ALLOCATABLE :: E(:)
 !     ************************************************************************
-      LX=INT(SQRT(real(LMX))-1.d0) ! lmx=(lx+1)**2
-      if((lx+1)**2.ne.lmx) then
-        call error$msg('lmx does not correspond to a full shell')
-        call error$msg('or rounding errors produced incorrect results')
-        call error$i4val('lmx',lmx)
-        call error$i4val('lx',lx)
-        call error$stop('schroedinger_LSOLD')
-      end if
+      LX=INT(SQRT(REAL(LMX))-1.D0) ! LMX=(LX+1)**2
+      IF((LX+1)**2.NE.LMX) THEN
+        CALL ERROR$MSG('LMX DOES NOT CORRESPOND TO A FULL SHELL')
+        CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
+        CALL ERROR$I4VAL('LMX',LMX)
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$STOP('SCHROEDINGER_LSOLD')
+      END IF
       SQR2IN=1.D0/SQRT(2.D0)
 !
 !     ========================================================================
@@ -2295,7 +2296,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
       END SUBROUTINE SCHROEDINGER_LSOLD
 !
 !     .......................................................................
-      SUBROUTINE schroedinger_LS(LMX,C)
+      SUBROUTINE SCHROEDINGER_LS(LMX,C)
 !     **                                                                    **
 !     **  SPIN ORBIT MATRIX ELEMENTS                                        **
 !     **                                                                    **
@@ -2334,19 +2335,19 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
           CALL ERROR$R8VAL('DEVIATION',SVAR)
           CALL ERROR$STOP('RADIAL$LS')
         END IF
-        CALL schroedinger_LSOLD(LMX,CTEST)
+        CALL SCHROEDINGER_LSOLD(LMX,CTEST)
         SVAR=MAXVAL(ABS(C-CTEST))
         IF(SVAR.GT.1.D-7) THEN
           CALL ERROR$MSG('SPIN ORBIT DOES NOT AGREE WITH PREVIOUS')
           CALL ERROR$R8VAL('DEVIATION',SVAR)
-          CALL ERROR$STOP('schroedinger_LS')
+          CALL ERROR$STOP('SCHROEDINGER_LS')
         END IF
       END IF
       RETURN
       END SUBROUTINE SCHROEDINGER_LS
 !
 !     .......................................................................
-      SUBROUTINE schroedinger_SP(LMX,CR,CA)
+      SUBROUTINE SCHROEDINGER_SP(LMX,CR,CA)
 !     **                                                                   **
 !     **  CALCULATES THE MATRICES REQUIRED TO EVALUATE THE SMALL COMPONENT **
 !     **  (POSITRONS) FROM THE SOLUTION OF THE LARGE COMPONENT (ELECTRONS) **
@@ -2384,7 +2385,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
       CA(:,2,:,2)=-RCROSSL(:,:,3)
       CA(:,:,:,:)=-0.5D0*CA(:,:,:,:)
       RETURN
-      END SUBROUTINE schroedinger_SP
+      END SUBROUTINE SCHROEDINGER_SP
 !
 !     ........................................................................
       SUBROUTINE SCHROEDINGER_SMALLCOMPONENT(GID,NR,LMX,NPHI,DREL,PHI,SPHI)
@@ -2402,11 +2403,11 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
       COMPLEX(8)            :: CA(LMX,2,LMX,2)
       REAL(8)               :: A(NR)
       REAL(8)               :: AUX1(NR),AUX2(NR),SVAR
-      complex(8)            :: DPHI(NR,LMX,2)
+      COMPLEX(8)            :: DPHI(NR,LMX,2)
       COMPLEX(8)            :: CSVAR
       INTEGER(4)            :: IB,IS,LM,IS1,IS2,LM1,LM2
 !     ************************************************************************
-      CALL schroedinger_SP(LMX,CR,CA)
+      CALL SCHROEDINGER_SP(LMX,CR,CA)
       CALL CONSTANTS$GET('C',SVAR)
       A(:)=(1.D0+DREL(:))/(2.D0*SVAR)
       SPHI(:,:,:,:)=(0.D0,0.D0)
@@ -2446,35 +2447,35 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
       END
 !
 !     ....................................................................
-      subroutine schroedinger_writephi(gid,nr,file,nf,nphi,irc,phil,phir)
-      implicit none
-      integer(4)  ,intent(in) :: gid
-      character(*),intent(in) :: file
-      integer(4)  ,intent(in) :: nr
-      integer(4)  ,intent(in) :: nf
-      integer(4)  ,intent(in) :: irc
-      integer(4)  ,intent(in) :: nphi
-      real(8)     ,intent(in) :: phil(nr,nf,nphi)
-      real(8)     ,intent(in) :: phir(nr,nf,nphi)
-      integer(4)              :: ir,iphi
-      character(32)           :: file1
-      real(8)                 :: r(nr)
+      SUBROUTINE SCHROEDINGER_WRITEPHI(GID,NR,FILE,NF,NPHI,IRC,PHIL,PHIR)
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID
+      CHARACTER(*),INTENT(IN) :: FILE
+      INTEGER(4)  ,INTENT(IN) :: NR
+      INTEGER(4)  ,INTENT(IN) :: NF
+      INTEGER(4)  ,INTENT(IN) :: IRC
+      INTEGER(4)  ,INTENT(IN) :: NPHI
+      REAL(8)     ,INTENT(IN) :: PHIL(NR,NF,NPHI)
+      REAL(8)     ,INTENT(IN) :: PHIR(NR,NF,NPHI)
+      INTEGER(4)              :: IR,IPHI
+      CHARACTER(32)           :: FILE1
+      REAL(8)                 :: R(NR)
 !     **********************************************************************       
-      call radial$r(gid,nr,r)
-      do iphi=1,nphi
-        write(FILE1,fmt='(i1)')IPHI
+      CALL RADIAL$R(GID,NR,R)
+      DO IPHI=1,NPHI
+        WRITE(FILE1,FMT='(I1)')IPHI
         FILE1=TRIM(FILE)//'_'//TRIM(FILE1)//'.DAT'
-        open(100,file=file1)
-        do ir=1,irc
-          write(100,*)r(IR),phil(ir,:,iphi)
-        enddo
-        do ir=irc+1,nr
-          write(100,*)R(IR),phir(ir,:,iphi)
-        enddo
-        close(100)
-      enddo
-      return 
-      end
+        OPEN(100,FILE=FILE1)
+        DO IR=1,IRC
+          WRITE(100,*)R(IR),PHIL(IR,:,IPHI)
+        ENDDO
+        DO IR=IRC+1,NR
+          WRITE(100,*)R(IR),PHIR(IR,:,IPHI)
+        ENDDO
+        CLOSE(100)
+      ENDDO
+      RETURN 
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SCHROEDINGER$DREL(GID,NR,POT,E,DREL)
@@ -2519,12 +2520,12 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
 !     **  IN SCATTERING THEORY                                                **
 !     **                                                                      **
 !     **************************************************************************
-      implicit none
-      integer(4),intent(in) :: gid
-      integer(4),intent(in) :: nr
-      real(8)   ,intent(in) :: phi(nr)
-      real(8)   ,intent(in) :: rc
-      real(8)   ,intent(out):: phase
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: PHI(NR)
+      REAL(8)   ,INTENT(IN) :: RC
+      REAL(8)   ,INTENT(OUT):: PHASE
       REAL(8)               :: PI
       REAL(8)               :: R(NR)
       REAL(8)               :: VAL,DER
@@ -2542,269 +2543,269 @@ PRINT*,'NEW SCHROEDINGER_XXXR_ov STARTED',NPHI,NF
         END IF
         IF(PHI(IR)*PHI(IR-1).LT.0.D0)PHASE=PHASE+1.D0
       ENDDO
-      return
-      end
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine schroedinger$test()
+      SUBROUTINE SCHROEDINGER$TEST()
 !     **************************************************************************
-!     ** test routine for schroedinger object                                 **
+!     ** TEST ROUTINE FOR SCHROEDINGER OBJECT                                 **
 !     **************************************************************************
-      implicit none
-      integer(4)           :: gid
-      integer(4),parameter :: nr=250
-      integer(4),parameter :: lmrx=9   !#(angular components of the density)
-      integer(4),parameter :: lmx=9    !#(angular momentum components of psi)
-      integer(4),parameter :: nb=3
-      integer(4),parameter :: nbg=5
-      real(8)   ,parameter :: aez=7.d0
-      integer(4)           :: l
-      integer(4)           :: so
-      integer(4)           :: lofi(nb)
-      integer(4)           :: nn(nb)
-      real(8)              :: f(nb)  ! occupation per shell
-      real(8)              :: e(nb)  
-      real(8)              :: ebg(nbg)
-      real(8)              :: phil(nr,lmx,nbg)
-      real(8)              :: phir(nr,lmx,nbg)
-      real(8)              :: phi(nr,lmx,nbg)
-      real(8)              :: tphi(nr,lmx,nbg)
-      real(8)              :: g(nr)
-      real(8)              :: drel(nr)
-      real(8)              :: r(nr)
-      real(8)              :: pot(nr,lmrx)
-      integer(4)           :: ir
-      real(8)              :: pi,y0
+      IMPLICIT NONE
+      INTEGER(4)           :: GID
+      INTEGER(4),PARAMETER :: NR=250
+      INTEGER(4),PARAMETER :: LMRX=9   !#(ANGULAR COMPONENTS OF THE DENSITY)
+      INTEGER(4),PARAMETER :: LMX=9    !#(ANGULAR MOMENTUM COMPONENTS OF PSI)
+      INTEGER(4),PARAMETER :: NB=3
+      INTEGER(4),PARAMETER :: NBG=5
+      REAL(8)   ,PARAMETER :: AEZ=7.D0
+      INTEGER(4)           :: L
+      INTEGER(4)           :: SO
+      INTEGER(4)           :: LOFI(NB)
+      INTEGER(4)           :: NN(NB)
+      REAL(8)              :: F(NB)  ! OCCUPATION PER SHELL
+      REAL(8)              :: E(NB)  
+      REAL(8)              :: EBG(NBG)
+      REAL(8)              :: PHIL(NR,LMX,NBG)
+      REAL(8)              :: PHIR(NR,LMX,NBG)
+      REAL(8)              :: PHI(NR,LMX,NBG)
+      REAL(8)              :: TPHI(NR,LMX,NBG)
+      REAL(8)              :: G(NR)
+      REAL(8)              :: DREL(NR)
+      REAL(8)              :: R(NR)
+      REAL(8)              :: POT(NR,LMRX)
+      INTEGER(4)           :: IR
+      REAL(8)              :: PI,Y0
 !     **************************************************************************
-      pi=4.d0*datan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
 !
-!     == define radial grid
+!     == DEFINE RADIAL GRID
       CALL RADIAL__NEW('LOG',GID)
       CALL RADIAL__SETR8(GID,'R1',1.056D-4)
       CALL RADIAL__SETR8(GID,'DEX',0.05D0)
       CALL RADIAL__SETI4(GID,'NR',NR)
 !
-!     == DEFINE hydrogen-like potential ========================================
+!     == DEFINE HYDROGEN-LIKE POTENTIAL ========================================
       CALL RADIAL__R(GID,NR,R)      
-      pot=0.d0
-      pot(:,1)=-aez/r(:)/y0
+      POT=0.D0
+      POT(:,1)=-AEZ/R(:)/Y0
 !
 !     ==========================================================================
-!     == test schroedinger$spherical                                          ==
+!     == TEST SCHROEDINGER$SPHERICAL                                          ==
 !     ==========================================================================
-!      call schroedinger_testspherical(gid,nr,aez)
+!      CALL SCHROEDINGER_TESTSPHERICAL(GID,NR,AEZ)
 !
 !     ==========================================================================
-!     == test schroedinger$lbnd_scalrel                                   ==
+!     == TEST SCHROEDINGER$LBND_SCALREL                                   ==
 !     ==========================================================================
-!     call schroedinger_testlbnd_scalrel(gid,nr,aez)
+!     CALL SCHROEDINGER_TESTLBND_SCALREL(GID,NR,AEZ)
 !
 !     ==========================================================================
-!     == test RADIAL$NONSPHBOUND_nso_sloc_ov                                  ==
+!     == TEST RADIAL$NONSPHBOUND_NSO_SLOC_OV                                  ==
 !     ==========================================================================
       CALL SCHROEDINGER_TESTLBND_SLOC(GID,NR,AEZ)
 STOP
 !
 !     ==  
-      lofi(:)=(/0,0,1/)
-      nn(:)=(/0,1,0/)
-      f(:)=(/1.d0,0.d0,0.d0/)
-      e(:)=(/-0.5d0,0.125d0,-0.125d0/)
-      e(:)=0.d0
+      LOFI(:)=(/0,0,1/)
+      NN(:)=(/0,1,0/)
+      F(:)=(/1.D0,0.D0,0.D0/)
+      E(:)=(/-0.5D0,0.125D0,-0.125D0/)
+      E(:)=0.D0
 
 !
-!      call SF_CORESTATES_NSPH(GID,NR,LMRX,NB,LOFI,F,NN &
+!      CALL SF_CORESTATES_NSPH(GID,NR,LMRX,NB,LOFI,F,NN &
 !     &                       ,POT,E,LMX,NBG,EBG,PHI,TPHI)
 
-      stop
-      end
+      STOP
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine schroedinger_testlbnd_sloc(gid,nr,aez)
-      implicit none
-      integer(4),intent(in) :: gid
-      integer(4),intent(in) :: nr
-      real(8)   ,intent(in) :: aez
-      integer(4),parameter  :: lmrx=9
-      integer(4),parameter  :: l=1 !angular momentum used in the test
-      integer(4),parameter  :: n=2 !main quantum number used in the test
-      integer(4),parameter  :: lmx=(l+1)**2
-      integer(4),parameter  :: nphi=2*l+1
-      integer(4),parameter  :: lxsl=2
-      real(8)               :: r(nr)    ! radial grid
-      real(8)               :: drel(nr) ! array for relativistic correction
-      real(8)               :: pot(nr,lmrx)
-      real(8)               :: g(nr,lmx)
-      real(8)               :: eb(nphi)
-      real(8)               :: enu
-      real(8)               :: potsl(nr,lxsl)
-      real(8)               :: ovsl(nr,lxsl)
-      real(8)               :: phi(nr,lmx,nphi)
-      real(8)               :: tphi(nr,lmx,nphi)
-      logical(4)            :: tok
-      real(8)               :: pi,y0    ! pi, spherical harmonic for l=0
+      SUBROUTINE SCHROEDINGER_TESTLBND_SLOC(GID,NR,AEZ)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: AEZ
+      INTEGER(4),PARAMETER  :: LMRX=9
+      INTEGER(4),PARAMETER  :: L=1 !ANGULAR MOMENTUM USED IN THE TEST
+      INTEGER(4),PARAMETER  :: N=2 !MAIN QUANTUM NUMBER USED IN THE TEST
+      INTEGER(4),PARAMETER  :: LMX=(L+1)**2
+      INTEGER(4),PARAMETER  :: NPHI=2*L+1
+      INTEGER(4),PARAMETER  :: LXSL=2
+      REAL(8)               :: R(NR)    ! RADIAL GRID
+      REAL(8)               :: DREL(NR) ! ARRAY FOR RELATIVISTIC CORRECTION
+      REAL(8)               :: POT(NR,LMRX)
+      REAL(8)               :: G(NR,LMX)
+      REAL(8)               :: EB(NPHI)
+      REAL(8)               :: ENU
+      REAL(8)               :: POTSL(NR,LXSL)
+      REAL(8)               :: OVSL(NR,LXSL)
+      REAL(8)               :: PHI(NR,LMX,NPHI)
+      REAL(8)               :: TPHI(NR,LMX,NPHI)
+      LOGICAL(4)            :: TOK
+      REAL(8)               :: PI,Y0    ! PI, SPHERICAL HARMONIC FOR L=0
 !     **************************************************************************
-      if(l+1.gt.n) then
-        call error$msg('l+1 must be smaller than n')
-        call error$stop('schroedinger_testlbnd_scalrel')
-      end if
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
+      IF(L+1.GT.N) THEN
+        CALL ERROR$MSG('L+1 MUST BE SMALLER THAN N')
+        CALL ERROR$STOP('SCHROEDINGER_TESTLBND_SCALREL')
+      END IF
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL__R(GID,NR,R)      
 !
 !     ==========================================================================
-!     == set up hydrogen-like potential and bound state energy                ==
+!     == SET UP HYDROGEN-LIKE POTENTIAL AND BOUND STATE ENERGY                ==
 !     ==========================================================================
-      pot(:,:)=0.d0
-      pot(:,1)=-aez/r(:)/y0
-      pot(:,2)=1.d-1*r(:)*exp(-0.1d0*r(:)**2)
-      potsl=0.d0
-      ovsl=0.d0
-      drel(:)=0.d0
-      g(:,:)=0.d0
-      enu=-0.5d0*aez**2/real(n**2,kind=8)   !ground state
-      call RADIAL$NONSPHBOUND_nso_sloc_ov(GID,NR,LMX,LMRX,POT,lxsl,potsl,ovsl,G,Enu &
+      POT(:,:)=0.D0
+      POT(:,1)=-AEZ/R(:)/Y0
+      POT(:,2)=1.D-1*R(:)*EXP(-0.1D0*R(:)**2)
+      POTSL=0.D0
+      OVSL=0.D0
+      DREL(:)=0.D0
+      G(:,:)=0.D0
+      ENU=-0.5D0*AEZ**2/REAL(N**2,KIND=8)   !GROUND STATE
+      CALL RADIAL$NONSPHBOUND_NSO_SLOC_OV(GID,NR,LMX,LMRX,POT,LXSL,POTSL,OVSL,G,ENU &
      &                             ,NPHI,EB,PHI,TPHI,TOK)
 
-      print*,'eb ',eb
-      call schroedinger_writephi(gid,nr,'nsoslocov',lmx,nphi,100,phi,phi)
-      return
-      end
+      PRINT*,'EB ',EB
+      CALL SCHROEDINGER_WRITEPHI(GID,NR,'NSOSLOCOV',LMX,NPHI,100,PHI,PHI)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine schroedinger_testlbnd_scalrel(gid,nr,aez)
-      implicit none
-      integer(4),intent(in) :: gid
-      integer(4),intent(in) :: nr
-      real(8)   ,intent(in) :: aez
-      integer(4),parameter  :: lmrx=9
-      integer(4),parameter  :: l=1 !angular momentum used in the test
-      integer(4),parameter  :: n=2 !main quantum number used in the test
-      integer(4),parameter  :: lmx=(l+1)**2
-      integer(4),parameter  :: nphi=2*l+1
-      real(8)               :: r(nr)    ! radial grid
-      real(8)               :: drel(nr) ! array for relativistic correction
-      real(8)               :: pot(nr,lmrx)
-      real(8)               :: g(nr,lmx)
-      real(8)               :: eb(nphi)
-      real(8)               :: enu
-      real(8)               :: phi(nr,lmx,nphi)
-      real(8)               :: tphi(nr,lmx,nphi)
-      logical(4)            :: tok
-      real(8)               :: pi,y0    ! pi, spherical harmonic for l=0
+      SUBROUTINE SCHROEDINGER_TESTLBND_SCALREL(GID,NR,AEZ)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: AEZ
+      INTEGER(4),PARAMETER  :: LMRX=9
+      INTEGER(4),PARAMETER  :: L=1 !ANGULAR MOMENTUM USED IN THE TEST
+      INTEGER(4),PARAMETER  :: N=2 !MAIN QUANTUM NUMBER USED IN THE TEST
+      INTEGER(4),PARAMETER  :: LMX=(L+1)**2
+      INTEGER(4),PARAMETER  :: NPHI=2*L+1
+      REAL(8)               :: R(NR)    ! RADIAL GRID
+      REAL(8)               :: DREL(NR) ! ARRAY FOR RELATIVISTIC CORRECTION
+      REAL(8)               :: POT(NR,LMRX)
+      REAL(8)               :: G(NR,LMX)
+      REAL(8)               :: EB(NPHI)
+      REAL(8)               :: ENU
+      REAL(8)               :: PHI(NR,LMX,NPHI)
+      REAL(8)               :: TPHI(NR,LMX,NPHI)
+      LOGICAL(4)            :: TOK
+      REAL(8)               :: PI,Y0    ! PI, SPHERICAL HARMONIC FOR L=0
 !     **************************************************************************
-      if(l+1.gt.n) then
-        call error$msg('l+1 must be smaller than n')
-        call error$stop('schroedinger_testlbnd_scalrel')
-      end if
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
+      IF(L+1.GT.N) THEN
+        CALL ERROR$MSG('L+1 MUST BE SMALLER THAN N')
+        CALL ERROR$STOP('SCHROEDINGER_TESTLBND_SCALREL')
+      END IF
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL__R(GID,NR,R)      
 !
 !     ==========================================================================
-!     == set up hydrogen-like potential with an electric field                ==
+!     == SET UP HYDROGEN-LIKE POTENTIAL WITH AN ELECTRIC FIELD                ==
 !     ==========================================================================
-      pot(:,:)=0.d0
-      pot(:,1)=-aez/r(:)/y0
-      pot(:,2)=1.d-1*r(:)*exp(-0.1d0*r(:)**2)
-      drel(:)=0.d0
-      enu=-0.5d0*aez**2/real(n**2,kind=8)   !ground state
-      g(:,:)=0.d0
+      POT(:,:)=0.D0
+      POT(:,1)=-AEZ/R(:)/Y0
+      POT(:,2)=1.D-1*R(:)*EXP(-0.1D0*R(:)**2)
+      DREL(:)=0.D0
+      ENU=-0.5D0*AEZ**2/REAL(N**2,KIND=8)   !GROUND STATE
+      G(:,:)=0.D0
 !
 !     ==========================================================================
-!     == determine nonpsherical bound states                                  ==
+!     == DETERMINE NONPSHERICAL BOUND STATES                                  ==
 !     ==========================================================================
-      call schroedinger$lbnd_scalrel(GID,NR,LMX,LMRX,POT,DREL,G,Enu &
+      CALL SCHROEDINGER$LBND_SCALREL(GID,NR,LMX,LMRX,POT,DREL,G,ENU &
      &                                  ,NPHI,EB,PHI,TPHI,TOK)
 !
 !     ==========================================================================
-!     == write result                                                         ==
+!     == WRITE RESULT                                                         ==
 !     ==========================================================================
-      print*,'eb ',eb
-      call schroedinger_writephi(gid,nr,'lbnd_scalrel',lmx,nphi,100,phi,phi)
-      return
-      end
+      PRINT*,'EB ',EB
+      CALL SCHROEDINGER_WRITEPHI(GID,NR,'LBND_SCALREL',LMX,NPHI,100,PHI,PHI)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine schroedinger_testspherical(gid,nr,aez)
-      implicit none
-      integer(4),intent(in) :: gid
-      integer(4),intent(in) :: nr
-      real(8)   ,intent(in) :: aez
-      integer(4),parameter  :: l=2   !angular momentum used in the test
-      integer(4)            :: n=4   !main quantum number used in the test
-      integer(4)            :: nfil=70
-      integer(4)            :: so
-      real(8)               :: e
-      real(8)               :: r(nr)    ! radial grid
-      real(8)               :: pot(nr)  ! potential
-      real(8)               :: g(nr)    ! inhomogeneity
-      real(8)               :: drel(nr) ! array for relativistic correction
-      integer(4)            :: idir     ! direction of integration
-      real(8)               :: phil(nr) ! wave function from outward integration
-      real(8)               :: phir(nr) ! wave function from inward integration
-      real(8)               :: phi(nr)  ! final wave function
-      real(8)               :: aux(nr)  ! auxiliary array 
-      real(8)               :: xmax=1.d+20 ! max range for wave function 
-      integer(4)            :: ircl     ! classical return radius, max radius 
-      integer(4)            :: irout    ! max radius without creating an overflow
-      integer(4)            :: ir       ! 
-      real(8)               :: pi,y0    ! pi, spherical harmonic for l=0
-      real(8)               :: svar     ! auxiliary variable
+      SUBROUTINE SCHROEDINGER_TESTSPHERICAL(GID,NR,AEZ)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: AEZ
+      INTEGER(4),PARAMETER  :: L=2   !ANGULAR MOMENTUM USED IN THE TEST
+      INTEGER(4)            :: N=4   !MAIN QUANTUM NUMBER USED IN THE TEST
+      INTEGER(4)            :: NFIL=70
+      INTEGER(4)            :: SO
+      REAL(8)               :: E
+      REAL(8)               :: R(NR)    ! RADIAL GRID
+      REAL(8)               :: POT(NR)  ! POTENTIAL
+      REAL(8)               :: G(NR)    ! INHOMOGENEITY
+      REAL(8)               :: DREL(NR) ! ARRAY FOR RELATIVISTIC CORRECTION
+      INTEGER(4)            :: IDIR     ! DIRECTION OF INTEGRATION
+      REAL(8)               :: PHIL(NR) ! WAVE FUNCTION FROM OUTWARD INTEGRATION
+      REAL(8)               :: PHIR(NR) ! WAVE FUNCTION FROM INWARD INTEGRATION
+      REAL(8)               :: PHI(NR)  ! FINAL WAVE FUNCTION
+      REAL(8)               :: AUX(NR)  ! AUXILIARY ARRAY 
+      REAL(8)               :: XMAX=1.D+20 ! MAX RANGE FOR WAVE FUNCTION 
+      INTEGER(4)            :: IRCL     ! CLASSICAL RETURN RADIUS, MAX RADIUS 
+      INTEGER(4)            :: IROUT    ! MAX RADIUS WITHOUT CREATING AN OVERFLOW
+      INTEGER(4)            :: IR       ! 
+      REAL(8)               :: PI,Y0    ! PI, SPHERICAL HARMONIC FOR L=0
+      REAL(8)               :: SVAR     ! AUXILIARY VARIABLE
 !     **************************************************************************
-      if(l+1.gt.n) then
-        call error$msg('l+1 must be smaller than n')
-        call error$stop('schroedinger_testspherical')
-      end if
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
+      IF(L+1.GT.N) THEN
+        CALL ERROR$MSG('L+1 MUST BE SMALLER THAN N')
+        CALL ERROR$STOP('SCHROEDINGER_TESTSPHERICAL')
+      END IF
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL__R(GID,NR,R)      
 !
 !     ==========================================================================
-!     == set up hydrogen-like potential and bound state energy                ==
+!     == SET UP HYDROGEN-LIKE POTENTIAL AND BOUND STATE ENERGY                ==
 !     ==========================================================================
-      pot(:)=-aez/r(:)/y0
-      drel(:)=0.d0
-      e=-0.5d0*aez**2/real(n**2,kind=8)   !ground state
+      POT(:)=-AEZ/R(:)/Y0
+      DREL(:)=0.D0
+      E=-0.5D0*AEZ**2/REAL(N**2,KIND=8)   !GROUND STATE
 !
 !     ==========================================================================
-!     == obtain wave function by integrating outward and inward               ==
+!     == OBTAIN WAVE FUNCTION BY INTEGRATING OUTWARD AND INWARD               ==
 !     ==========================================================================
-      so=0
-      call schroedinger_specialrads(gid,nr,l,xmax,pot(:),e,ircl,irout)
-      idir=1
-      g(:)=0.d0
-      call schroedinger$spherical(GID,nr,POT,DREL,SO,G,L,E,IDIR,PHIl)
-      phil(irout+1:)=0.d0
-      idir=-1
-      g(:)=0.d0
-print*,'irout',irout
-      g(irout-1)=1.d-10
-      call schroedinger$spherical(GID,nr,POT,DREL,SO,G,L,E,IDIR,PHIr)
-      phir(irout+1:)=0.d0
+      SO=0
+      CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT(:),E,IRCL,IROUT)
+      IDIR=1
+      G(:)=0.D0
+      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHIL)
+      PHIL(IROUT+1:)=0.D0
+      IDIR=-1
+      G(:)=0.D0
+PRINT*,'IROUT',IROUT
+      G(IROUT-1)=1.D-10
+      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHIR)
+      PHIR(IROUT+1:)=0.D0
 !
 !     ==========================================================================
-!     == glue wave functions together and normalize all three functions       ==
+!     == GLUE WAVE FUNCTIONS TOGETHER AND NORMALIZE ALL THREE FUNCTIONS       ==
 !     ==========================================================================
-      phir=phir/phir(ircl)
-      phil=phil/phil(ircl)
-      phi(1:ircl)=phil(1:ircl)
-      phi(ircl+1:)=phir(ircl+1:)
-      aux(:)=phi(:)**2*r(:)**2
-      call radial$integral(gid,nr,aux,svar)
-print*,'svar',svar,irout,ircl,phir(ircl-1:ircl+1)
-      phi=phi/sqrt(svar)
-      phil=phil/sqrt(svar)
-      phir=phir/sqrt(svar)
+      PHIR=PHIR/PHIR(IRCL)
+      PHIL=PHIL/PHIL(IRCL)
+      PHI(1:IRCL)=PHIL(1:IRCL)
+      PHI(IRCL+1:)=PHIR(IRCL+1:)
+      AUX(:)=PHI(:)**2*R(:)**2
+      CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+PRINT*,'SVAR',SVAR,IROUT,IRCL,PHIR(IRCL-1:IRCL+1)
+      PHI=PHI/SQRT(SVAR)
+      PHIL=PHIL/SQRT(SVAR)
+      PHIR=PHIR/SQRT(SVAR)
 !
 !     ==========================================================================
-!     == write wave functions to file                                         ==
+!     == WRITE WAVE FUNCTIONS TO FILE                                         ==
 !     ==========================================================================
-      open(nfil,file='testspherical.dat')
-      do ir=1,nr
-        write(nfil,*)r(ir),phi(ir),phil(ir),phir(ir)
-      enddo
-      close(nfil)
-      return
-      end
+      OPEN(NFIL,FILE='TESTSPHERICAL.DAT')
+      DO IR=1,NR
+        WRITE(NFIL,*)R(IR),PHI(IR),PHIL(IR),PHIR(IR)
+      ENDDO
+      CLOSE(NFIL)
+      RETURN
+      END

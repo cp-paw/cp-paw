@@ -105,8 +105,10 @@ clean:
 	find ${OBJDIR}/prof_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	find ${OBJDIR}/dbg/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	find ${OBJDIR}/dbg_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	rm -f ${BINDIR}/paw*.x
-	rm -f ${BINDIR}/ppaw*.x
+	rm -f ${BINDIR}/*.x
+	rm -f ${BINDIR}/paw*
+	rm -f ${BINDIR}/compare_filelist
+	rm -f ${BINDIR}/parmfilewriter.x
 	rm -f ${PAWDIR}/doc/*.aux
 	rm -f ${PAWDIR}/doc/*.blg
 	rm -f ${PAWDIR}/doc/*.bbl
@@ -139,7 +141,7 @@ all_new: dbg_new none_new fast_new prof_new  tools docs
 #
 all_parallel: dbg_parallel none_parallel fast_parallel prof_parallel
 #
-tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave
+tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave scripts
 #
 none:   
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/none; ${MAKE} 

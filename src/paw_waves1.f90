@@ -565,7 +565,7 @@ END MODULE WAVES_MODULE
             IF(KMAP(I).EQ.THISTASK) IKPTL=IKPTL+1
           ENDDO
         END IF
-        CALL MPE$BROADCAST('K',1,iKPTL)
+        CALL MPE$BROADCAST('K',1,IKPTL)
         EXTPNTR%IKPT=IKPTL
 !
       ELSE IF(ID.EQ.'ISPIN') THEN
@@ -1347,6 +1347,13 @@ CALL ERROR$STOP('WAVES$ETOT')
         CALL WAVES_FIXRHOSET(NRL,NDIMD,LMRXX,NAT,QLM,RHO,DENMAT)
       END IF
 !
+!     ==========================================================================
+!     == ANALYSE SPIN DENSITY                                                 ==
+!     ==========================================================================
+      IF(THAMILTON) THEN
+        CALL WAVES$SPINS(NRL,NDIMD,RHO,NAT,LMNXX,DENMAT)
+      END IF
+!
 !     ==================================================================
 !     == POTENTIAL (POTENTIAL IS STORED BACK INTO THE DENSITY ARRAY!) ==
 !     ==================================================================
@@ -1506,7 +1513,7 @@ END IF
          CALL TIMING$CLOCKON('CG')                                           !KAESTNERCG
          CALL CG$STATE_BY_STATE(MAP%NRL,NDIMD,RHO(:,:),CONVPSI,NAT,LMNXX,DH) !KAESTNERCG
          CALL TIMING$CLOCKOFF('CG')                                          !KAESTNERCG
-         tconv=.false. ! tconv has not been set!!!
+         TCONV=.FALSE. ! TCONV HAS NOT BEEN SET!!!
          IF(TCONV) CALL STOPIT$SETL4('STOP',.TRUE.)                          !KAESTNERCG
       END IF                                                                 !KAESTNERCG
 !
@@ -2311,7 +2318,7 @@ END IF
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES$DENMAT')
                               CALL TIMING$CLOCKON('W:DENMAT')
-      IF(NDIMD_.NE.NDIMD.OR.NAT.NE.MAP%NAT) THEN
+      IF(NDIMD_.NE.NDIMD.OR.NAT.NE.MAP%NAT) THEN 
         CALL ERROR$MSG('ARRAY SIZE INCONSISTENT')
         CALL ERROR$STOP('WAVES$DENMAT')
       END IF
@@ -2460,7 +2467,7 @@ END IF
       INTEGER(4)            :: LMN1,LMN2,IDIM1,IDIM2,IB,IB1,IB2
       REAL(8)               :: SVAR1,SVAR2
       COMPLEX(8)            :: CSVAR,CFACR,CFACI,CFAC1,CFAC2
-      INTEGER(4)            :: IDIM,ndimd
+      INTEGER(4)            :: IDIM,NDIMD
       INTEGER(4)            :: NFILO
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
@@ -2780,6 +2787,103 @@ END IF
                               CALL TRACE$POP
       RETURN
       END SUBROUTINE WAVES$MOMENTS
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$SPINS(NRL,NDIMD,RHO,NAT,LMNXX,DENMAT)
+      USE MPE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NRL
+      INTEGER(4),INTENT(IN) :: NDIMD
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: LMNXX
+      REAL(8)   ,INTENT(IN) :: RHO(NRL,NDIMD)      
+      COMPLEX(8),INTENT(IN) :: DENMAT(LMNXX,LMNXX,NDIMD,NAT)
+      INTEGER(4)            :: NTASKS,THISTASK
+      REAL(8)               :: PSSPIN(3)
+      REAL(8)               :: AUGSPIN(3)
+      REAL(8)               :: TOTSPIN(3)
+      INTEGER(4)            :: NR
+      REAL(8)               :: RBAS(3,3),GBAS(3,3),CELLVOL
+      INTEGER(4)            :: IAT
+      INTEGER(4)            :: ISP
+      INTEGER(4)            :: LNX
+      INTEGER(4),ALLOCATABLE:: LOX(:)
+      REAL(8)   ,ALLOCATABLE:: DOVER(:,:)
+      INTEGER(4)            :: L1,L2,LN1,LN2,LMN1,LMN2,M
+      INTEGER(4)            :: NFILO
+!     ***************************************************************************
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+!
+!     ===========================================================================
+!     ==  DETERMINE TOTAL MAGNETIZATION AS INTEGRATED MOMENT DENSITY           ==
+!     ===========================================================================
+      PSSPIN(:)=0.D0
+      IF(NDIMD.EQ.2) THEN
+        PSSPIN(3)=SUM(RHO(:,2))
+      ELSE IF(NDIMD.EQ.4) THEN
+        PSSPIN(1)=SUM(RHO(:,2))
+        PSSPIN(2)=SUM(RHO(:,3))
+        PSSPIN(3)=SUM(RHO(:,4))
+      END IF
+      CALL MPE$COMBINE('MONOMER','+',PSSPIN)
+      NR=NRL
+      CALL MPE$COMBINE('MONOMER','+',NR)
+      CALL CELL$GETR8A('T0',9,RBAS)
+      CALL GBASS(RBAS,GBAS,CELLVOL)
+      PSSPIN(:)=PSSPIN(:)*CELLVOL/REAL(NR,KIND=8)
+!
+!     ===========================================================================
+!     ==  DETERMINE AUGMENTATION PART OF THE SPIN DENSITY                      ==
+!     ===========================================================================
+      AUGSPIN(:)=0.D0
+      DO IAT=1,NAT
+        IF(MOD(IAT-1,NTASKS)+1.NE.THISTASK)  CYCLE
+        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$LNX(ISP,LNX)
+        ALLOCATE(LOX(LNX))
+        CALL SETUP$LOFLN(ISP,LNX,LOX)
+        ALLOCATE(DOVER(LNX,LNX))
+        CALL SETUP$1COVERLAP(ISP,LNX,DOVER)
+        LMN1=0
+        DO LN1=1,LNX
+          L1=LOX(LN1)
+          LMN2=0
+          DO LN2=1,LNX
+            L2=LOX(LN2)
+            IF(L1.EQ.L2) THEN
+              DO M=1,2*L1+1
+                IF(NDIMD.EQ.2) THEN
+                   AUGSPIN(3)=AUGSPIN(3)+REAL(DENMAT(LMN1+M,LMN2+M,2,IAT))*DOVER(LN1,LN2)
+                ELSE IF(NDIMD.EQ.3) THEN
+                  AUGSPIN(1)=AUGSPIN(1)+REAL(DENMAT(LMN1+M,LMN2+M,2,IAT))*DOVER(LN1,LN2)
+                  AUGSPIN(2)=AUGSPIN(2)+REAL(DENMAT(LMN1+M,LMN2+M,3,IAT))*DOVER(LN1,LN2)
+                  AUGSPIN(3)=AUGSPIN(3)+REAL(DENMAT(LMN1+M,LMN2+M,4,IAT))*DOVER(LN1,LN2)
+                END IF
+              ENDDO
+            END IF
+            LMN2=LMN2+2*L2+1
+          ENDDO
+          LMN1=LMN2+2*L1+1
+        ENDDO
+        DEALLOCATE(LOX)
+        DEALLOCATE(DOVER)
+      ENDDO
+      CALL MPE$COMBINE('MONOMER','+',AUGSPIN)
+!
+!     ===========================================================================
+!     ==  REPORT TOTAL SPIN                                                    ==
+!     ===========================================================================
+      TOTSPIN=PSSPIN+AUGSPIN
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+      WRITE(NFILO,FMT='("ABS.VALUE OF INTEGRATED SPIN MOMENT DENSITY",F10.5)') &
+     &                 SQRT(SUM(TOTSPIN(:)**2))
+      WRITE(NFILO,FMT='("DIRECTION OF INTEGRATED SPIN MOMENT DENSITY",3F10.5)') &
+     &                 TOTSPIN/SQRT(SUM(TOTSPIN(:)**2))
+      RETURN
+      END
+
 !
 !     ..................................................................
       SUBROUTINE WAVES$SPHERE(LMNXX,NDIMD_,NAT,LMRXX,RHOB,DENMAT,EDENMAT &
@@ -3926,7 +4030,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     ==  SUPERPOSE WAVE FUNCTION TO OBTAIN DE/D<P|                   ==
 !     ==================================================================
       DEDPROJ1=CONJG(DEDPROJ)
-!     ==  depro=depro+psi*conjg(deproj)
+!     ==  DEPRO=DEPRO+PSI*CONJG(DEPROJ)
       CALL LIB$MATMULC8(NGL,NDIM*NBH,LMNX,PSI,DEDPROJ1,DEDPRO)
       IF(TINV) THEN
         ALLOCATE(PSIM(NGL))
@@ -4120,7 +4224,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             ENDDO
           ENDDO
         ENDDO
-!       == psi=psi+pro*propsi1
+!       == PSI=PSI+PRO*PROPSI1
         CALL LIB$ADDPRODUCTC8(.FALSE.,NGL,LMNX,NDIM*NB,PRO,PROPSI1,PSI)
         IPRO=IPRO+LMNX
       ENDDO
