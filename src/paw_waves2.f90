@@ -3642,14 +3642,17 @@ END IF
 !     ==================================================================
 !     ==  COMMUNICATE                                                 ==
 !     ==================================================================
-!     == CODE IS ONLY EXECUTED ON THE FIRST TASK OF MONOMER-GROUP AND
-!     == THE RELEVANT K-GROUP
-      TKGROUP=.TRUE.
-      IF(THISTASK.EQ.1)TKGROUP=KMAP(IKPTG).EQ.1
+!     == send date from the FIRST TASK OF MONOMER-GROUP 
+!     ==             to THE first tasak of the RELEVANT K-GROUP
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NLAMBDA)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NB_)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NDIM_)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NSPIN_)
+!     TKGROUP=.TRUE.
+!     IF(THISTASK.EQ.1)TKGROUP=KMAP(IKPTG).EQ.1
+!     == kmap contains the task id of the master task in the kgroup =======
+!     == distribute within the k-group ====================================
+      TKGROUP=(KMAP(IKPTG).EQ.THISTASK)
       IF(TKGROUP) THEN
         CALL MPE$BROADCAST('K',1,NLAMBDA)
         CALL MPE$BROADCAST('K',1,NDIM_)
@@ -3660,6 +3663,7 @@ END IF
         ENDDO
         CALL WAVES_SELECTWV(IKPTL,1)
         NB=THIS%NB
+        NBA=MIN(NB,NB_)
       END IF
 !
 !     ==================================================================
@@ -3667,7 +3671,6 @@ END IF
 !     ==================================================================
       IF(THISTASK.EQ.1.OR.THISTASK.EQ.KMAP(IKPTG)) ALLOCATE(LAMBDA(NB_,NB_,NSPIN_))
       IF(TKGROUP) ALLOCATE(LAMBDA2(NB,NB,NSPIN))
-      NBA=MIN(NB,NB_)
       DO I=1,NLAMBDA
         IF(THISTASK.EQ.1) THEN
           DO ISPIN=1,NSPIN_
