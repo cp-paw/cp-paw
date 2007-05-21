@@ -2168,9 +2168,8 @@ fi
 #
 #  copy script files from
 #
-{ echo "$as_me:$LINENO: result: copy scripts into $PAWDIR/bin/$ARCH/" >&5
-echo "${ECHO_T}copy scripts into $PAWDIR/bin/$ARCH/" >&6; }
-cp $PAWDIR/src/Tools/Scripts/* $PAWDIR/bin/$ARCH/
+#AC_MSG_RESULT(copy scripts into $PAWDIR/bin/$ARCH/)
+#cp $PAWDIR/src/Tools/Scripts/* $PAWDIR/bin/$ARCH/
 #
 # create f90pp from f90pp.in and make it executable
 #

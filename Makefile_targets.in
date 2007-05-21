@@ -17,16 +17,19 @@ SHELL=/bin/sh
 ##    none                                                             ##
 ##    none_new                                                         ##
 ##    none_parallel                                                    ##
+##    none_parallel_new                                                ##
 ##    fast                                                             ##
 ##    fast_new                                                         ##
 ##    fast_parallel                                                    ##
 ##    prof                                                             ##
 ##    prof_new                                                         ##
 ##    prof_parallel                                                    ##
+##    prof_parallel_new                                                ##
 ##    dbg                                                              ##
 ##    dbg_new                                                          ##
 ##    dbg_parallel                                                     ##
-##    tools                                                            ##
+##    dbg_parallel_new                                                 ##
+##    tools              all tools                                     ##
 ##    newatom                                                          ##
 ##    atom                                                             ##
 ##    tra                                                              ##
@@ -41,6 +44,7 @@ SHELL=/bin/sh
 ##    strc                                                             ##
 ##    tostrc                                                           ##
 ##    toxyz                                                            ##
+##    docs                documentation                                ##
 ##                                                                     ##
 ##                                                                     ##
 ##  Makefiles                                                          ##
@@ -125,7 +129,7 @@ clean:
 #
 # THE PAW BINARIES
 #
-all: dbg none fast prof tools docs
+all: dbg none fast prof tools
 #
 # Two targets aim at compiling every PAW-binary (not tool). This
 # is necessary, because the dependencies due to modules just have
@@ -137,7 +141,7 @@ all: dbg none fast prof tools docs
 # need to resolve the dependencies. Therefore there is no
 # parallel_new in the next list
 #
-all_new: dbg_new none_new fast_new prof_new  tools docs
+all_new: dbg_new none_new fast_new prof_new  tools 
 #
 all_parallel: dbg_parallel none_parallel fast_parallel prof_parallel
 #
@@ -194,7 +198,7 @@ prof_parallel_new:
 # THE PAW library
 #
 lib:
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
 #
 # THE PAW TOOLS
 #

@@ -59,10 +59,16 @@ compile the sources.  The scripts generated are independent of
 page~\pageref{sub:unpack})
 \item Provide external libraries -- if desired (see pages~\pageref{sub:libs}
 and~\pageref{sec:libs})
-\item Configure your system. This can be done automatically on Linux and AIX
-architectures (invoke \texttt{./configure}; see page~\pageref{sub:auto}) or
-alternatively by the use of parameter files (use \texttt{./configure
---with-parmfile=...}; see page~\pageref{sub:parms})
+\item remove the directory autom4te.cache in the PAW main directory, if one exists
+\item create a configure file by executing \texttt{autoconf}.
+  \texttt{autoconf} uses the file \texttt{configure.ac} as inut file.
+  It needs not be specified as such because this is the default input
+  name. 
+\item Configure your system. This can be done automatically on Linux
+  and AIX architectures (invoke \texttt{./configure --
+    with-parmfile=...}; (see page~\pageref{sub:auto}).  and
+  page~\pageref{sub:parms})
+\item Build the documentation by invoking \texttt{make docs}
 \item Build the binaries by invoking \texttt{make all\_new}
 \item Have fun!
 \end{itemize}

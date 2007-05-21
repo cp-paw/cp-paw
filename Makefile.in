@@ -148,6 +148,9 @@ ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
     # not there, just create an empty file
     MPIINCLUDE= touch ${OBJDIR}/mpif.h
   endif
+else
+  # not needed, just create an empty file to fool dependencies
+  MPIINCLUDE= touch ${OBJDIR}/mpif.h
 endif
 #
 # paw_mpelib.f holds the subroutines necessary for parallel execution
@@ -523,7 +526,7 @@ ifeq ($(ALLDEP),T)
 # ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_waves.o
  ${OBJDIR}/paw_qmmm.o:          ${OBJDIR}/paw_report.o
 
- ${OBJDIR}/paw_library.o:      ${OBJDIR}/FFTW_F77.I
+ ${OBJDIR}/paw_library.o:      ${OBJDIR}/fftw_f77.i
 endif
 
 
