@@ -1384,6 +1384,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==  POTB=-1/OMEGA*INT D^3R(\TILDE{V}+V^1-\TILDE{V}^1) ============
 !     ==  NOTE THAT \INT D^3R \TILDE{V}=0
 !     ===================================================================
+print*,'before waves$addconstantpot'
       CALL WAVES$ADDCONSTANTPOT(NRL,LMNXX,NDIMD,NAT,POTB,RHO,DH,DO)
       CALL GRAPHICS$SETR8('POTSHIFT',POTB)
 !
@@ -2855,7 +2856,7 @@ END IF
             IF(L1.EQ.L2) THEN
               DO M=1,2*L1+1
                 IF(NDIMD.EQ.2) THEN
-                   AUGSPIN(3)=AUGSPIN(3)+REAL(DENMAT(LMN1+M,LMN2+M,2,IAT))*DOVER(LN1,LN2)
+                  AUGSPIN(3)=AUGSPIN(3)+REAL(DENMAT(LMN1+M,LMN2+M,2,IAT))*DOVER(LN1,LN2)
                 ELSE IF(NDIMD.EQ.3) THEN
                   AUGSPIN(1)=AUGSPIN(1)+REAL(DENMAT(LMN1+M,LMN2+M,2,IAT))*DOVER(LN1,LN2)
                   AUGSPIN(2)=AUGSPIN(2)+REAL(DENMAT(LMN1+M,LMN2+M,3,IAT))*DOVER(LN1,LN2)
@@ -2865,7 +2866,7 @@ END IF
             END IF
             LMN2=LMN2+2*L2+1
           ENDDO
-          LMN1=LMN2+2*L1+1
+          LMN1=LMN1+2*L1+1
         ENDDO
         DEALLOCATE(LOX)
         DEALLOCATE(DOVER)
@@ -3923,6 +3924,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4)              :: IB,IB1,IB2,LMN,IDIM
       COMPLEX(8)              :: CSVAR
 !     ******************************************************************
+                               CALL TRACE$PUSH('WAVES_DEDPROJ')
 !
 !     ==================================================================
 !     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==
@@ -3988,6 +3990,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       CALL WAVES_ADDOPROJ(LMNX,NDIM,NBH,NB,DEDPROJ,OPROJ,LAMBDA)
       DEALLOCATE(LAMBDA)
       DEALLOCATE(OPROJ)
+                               CALL TRACE$Pop
       RETURN
       END
 !

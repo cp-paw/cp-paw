@@ -3648,11 +3648,13 @@ END IF
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NB_)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NDIM_)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NSPIN_)
+!     == KMAP CONTAINS THE TASK ID OF THE MASTER TASK IN THE KGROUP =======
+!     == DISTRIBUTE WITHIN THE K-GROUP ====================================
+!     == bugfix: the following two lines are incorrect....
 !     TKGROUP=.TRUE.
 !     IF(THISTASK.EQ.1)TKGROUP=KMAP(IKPTG).EQ.1
-!     == kmap contains the task id of the master task in the kgroup =======
-!     == distribute within the k-group ====================================
-      TKGROUP=(KMAP(IKPTG).EQ.THISTASK)
+      TKGROUP=THISTASK.EQ.KMAP(IKPTG)
+      CALL MPE$BROADCAST('K',1,TKGROUP)
       IF(TKGROUP) THEN
         CALL MPE$BROADCAST('K',1,NLAMBDA)
         CALL MPE$BROADCAST('K',1,NDIM_)
