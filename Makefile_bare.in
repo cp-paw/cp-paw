@@ -63,7 +63,7 @@ OBJTYPE=varOBJTYPE
 #___________________________ parameters for f90pp
 CPPVAR=@CPPVAR@ 
 #___________________________ the PAW-binary (inclusive path)
-PAWX=@PAWX@
+PAWX=@PAWX@/varEXECUTABLE
 #___________________________ the extension of files to be compiled
 FEXT=@FEXT@
 #___________________________ the way to compile the tools 
@@ -123,19 +123,20 @@ MPE = ${OBJDIR}/paw_mpelib$(MODE).o
 ##  include files                                                       ##
 ##########################################################################
 #
-# FFTW_F77.I is an include file for the FFTW-library
+# fftw_f77.i is an include file for the FFTW-library
 # in case FFTW is linked, this file has to be copied into the 
 # object directory
 # 
 ifneq ($(strip ${INCLUDE_FFTW}),) 
-  # copy includefile into object directory
+  # copy includefile into object directory. 
+  # new name is uppercase to allow global uppercasing of fortran code
   FFTWINCLUDE=cp ${INCLUDE_FFTW} ${OBJDIR}/fftw_f77.i
 else
   # not there, just create an empty file
   FFTWINCLUDE= touch ${OBJDIR}/fftw_f77.i
 endif
 #
-# MPIF.H is an include file for the MPICH-library
+# mpif.h is an include file for the MPICH-library
 # for parallel compilation, this file has to be copied into
 # the object directory. Not needed for IBM environment
 # the include file is usually named mpif.f90
@@ -326,7 +327,7 @@ ${BINDIR}/parmfilewriter.x: ${SRCDIR}/F90PP/parmfilewriter.f90
 ##  link files and produce executable PAWX                             ##
 #########################################################################
 #
-${PAWX} : f90pp ${OBJDIR}/FFTW_F77.I ${OBJDIR}/mpif.h ${LOBJS} \
+${PAWX} : f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJECTS} ${MPE} 
 	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LLIBS}
@@ -383,7 +384,7 @@ ${BINDIR}/paw_tostrc.x: ${OBJTOSTRC} ${PAWLIB}
 #
 # copy include files if necessary (controlled by if-statements above)
 #
-${OBJDIR}/FFTW_F77.I:
+${OBJDIR}/fftw_f77.i:
 	${FFTWINCLUDE}
 #
 ${OBJDIR}/mpif.h:

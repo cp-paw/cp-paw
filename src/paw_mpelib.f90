@@ -37,11 +37,12 @@
 !=========================================================================
 !==includefile for mpi                                                  ==
 !=========================================================================
-module mpi
+MODULE MPI
 #IFDEF CPPVARIABLE_PARALLEL
-   include 'mpif.h'
+!  include file is uppercase on purpose. 
+   INCLUDE 'MPIF.H'    
 #ENDIF
-end module mpi
+END MODULE MPI
 !
 MODULE MPE_MPIF_MODULE
 #IFDEF CPPVARIABLE_PARALLEL

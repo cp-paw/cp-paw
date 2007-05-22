@@ -94,6 +94,27 @@ OBJDIR=${PAWDIR}/bin/${ARCH}/Objects
 #___________________________ path to the binaries
 BINDIR=${PAWDIR}/bin/${ARCH}
 #
+DIRS=${PAWDIR}/bin/${ARCH}/Objects/none/Makefile \
+     ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile \
+     ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile \
+     ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile 
+#
+DIRPS=${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile \
+     ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile \
+     ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile \
+     ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile 
+#
+#########################################################################
+## define rule to set up directory structure and make file             ##
+#########################################################################
+${DIRS} : ${PAWDIR}/bin/${ARCH}/Objects/%/Makefile : ${PAWDIR}/Makefile_bare
+	mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/$*
+	sed -e s/varEXECUTABLE/paw_$*.x/g -e s/varPARALLEL/F/g -e s/varOBJTYPE/$*/g $< > $@
+#
+${DIRPS} : ${PAWDIR}/bin/${ARCH}/Objects/%_parallel/Makefile : ${PAWDIR}/Makefile_bare
+	mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/$*_parallel
+	sed -e s/varEXECUTABLE/ppaw_$*.x/g -e s/varPARALLEL/T/g -e s/varOBJTYPE/$*_parallel/g $< > $@
+#
 #########################################################################
 ## Definition of the targets                                           ##
 #########################################################################
@@ -102,13 +123,9 @@ default: all_new
 #
 clean:
 	find ${OBJDIR}/none/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/none_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	find ${OBJDIR}/fast/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/fast_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	find ${OBJDIR}/prof/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/prof_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	find ${OBJDIR}/dbg/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/dbg_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	rm -f ${BINDIR}/*.x
 	rm -f ${BINDIR}/paw*
 	rm -f ${BINDIR}/compare_filelist
@@ -125,6 +142,12 @@ clean:
 	rm -f ${PAWDIR}/doc/*.idx
 	rm -f ${PAWDIR}/doc/*.blg
 	rm -f ${PAWDIR}/doc/*.pdf
+
+clean_parallel:
+	find ${OBJDIR}/none_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/fast_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/prof_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	find ${OBJDIR}/dbg_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 # 
 #
 # THE PAW BINARIES
@@ -147,62 +170,62 @@ all_parallel: dbg_parallel none_parallel fast_parallel prof_parallel
 #
 tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave scripts
 #
-none:   
+none: ${PAWDIR}/bin/${ARCH}/Objects/none/Makefile 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/none; ${MAKE} 
-#
-none_new:
+# 
+none_new: ${PAWDIR}/bin/${ARCH}/Objects/none/Makefile 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/none; ${MAKE} 
 #
-none_parallel:   
+none_parallel:    ${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/none_parallel; ${MAKE} 
 #
-none_parallel_new:   
+none_parallel_new:   ${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile  
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/none_parallel; ${MAKE} 
 #
-fast:   
+fast:     ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/fast; ${MAKE} 
 #
-fast_new:   
+fast_new:     ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/fast; ${MAKE} 
 #
-fast_parallel:
+fast_parallel: ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/fast_parallel; ${MAKE} 
 #
-fast_parallel_new:
+fast_parallel_new: ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/fast_parallel; ${MAKE} 
 #
-dbg:  
+dbg:   ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/dbg;  ${MAKE}
 #
-dbg_new:  
+dbg_new:   ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/dbg; ${MAKE} 
 #
-dbg_parallel:  
+dbg_parallel:   ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/dbg_parallel; ${MAKE} 
 #
-dbg_parallel_new:  
+dbg_parallel_new:  ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile  
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/dbg_parallel; ${MAKE} 
 #
-prof:  
+prof:   ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/prof; ${MAKE} 
 #
-prof_new:  
+prof_new:   ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/prof; ${MAKE} 
 #
-prof_parallel:  
+prof_parallel:   ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/prof_parallel; ${MAKE} 
 #
-prof_parallel_new:  
+prof_parallel_new:   ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/prof_parallel; ${MAKE} 
 #
 # THE PAW library
 #
-lib:
+lib: ${PAWDIR}/bin/${ARCH}/Objects/${TOOLCOMP}/Makefile 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
 #
 # THE PAW TOOLS
 #
-newatom:
+newatom: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_newatom.x 
 #
 atom:
