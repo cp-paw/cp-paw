@@ -2155,6 +2155,16 @@ fi
 { echo "$as_me:$LINENO: result: creating subdirectories and copying shell scripts" >&5
 echo "${ECHO_T}creating subdirectories and copying shell scripts" >&6; }
 mkdir -p  ${PAWDIR}/bin/${ARCH}
+mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/none
+mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/dbg
+mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/prof
+mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/fast
+if test "$TPARALLEL" = "T"; then
+  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/none_parallel
+  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel
+  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel
+  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel
+fi
 #
 #  copy script files from
 #
@@ -3190,6 +3200,94 @@ if test "$no_create" != yes; then
 fi
 
 chmod +x $PAWDIR/bin/$ARCH/f90pp
+#
+# substituting to get Makefile.none
+#
+{ echo "$as_me:$LINENO: result: creating Makefile in none" >&5
+echo "${ECHO_T}creating Makefile in none" >&6; }
+sed -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
+    -e 's%varPARALLEL%F%'\
+    -e 's%varOBJTYPE%none%'\
+    ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none/Makefile
+#
+# substituting to get Makefile_parallel in none
+#
+if test "$TPARALLEL" = "T"; then
+  { echo "$as_me:$LINENO: result: creating Makefile in none_parallel" >&5
+echo "${ECHO_T}creating Makefile in none_parallel" >&6; }
+  sed -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
+      -e 's%varPARALLEL%T%'\
+      -e 's%varOBJTYPE%none_parallel%'\
+      ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile
+fi
+#
+# substituting to get Makefile.fast
+#
+{ echo "$as_me:$LINENO: result: creating Makefile in fast" >&5
+echo "${ECHO_T}creating Makefile in fast" >&6; }
+sed -e "s%\(COMPILE=.*\)%\1 $OPTIMIZE %"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%"\
+    -e 's%varOBJTYPE%fast%'\
+    -e 's%varPARALLEL%F%'\
+    ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile
+#
+# substituting to get Makefile.fast_parallel
+#
+if test "$TPARALLEL" = "T"; then
+  { echo "$as_me:$LINENO: result: creating Makefile_parallel in fast" >&5
+echo "${ECHO_T}creating Makefile_parallel in fast" >&6; }
+  sed -e "s%\(COMPILE=.*\)%\1 $OPTIMIZE %"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%"\
+      -e 's%varOBJTYPE%fast_parallel%'\
+      -e 's%varPARALLEL%T%'\
+      ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile
+fi
+#
+# substituting to get Makefile in dbg
+#
+{ echo "$as_me:$LINENO: result: creating Makefile in dbg" >&5
+echo "${ECHO_T}creating Makefile in dbg" >&6; }
+sed -e "s%\(COMPILE=.*\)%\1 $DEBUG %"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%"\
+    -e 's%varOBJTYPE%dbg%'\
+    -e 's%varPARALLEL%F%'\
+   ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile
+#
+# substituting to get Makefile_parallel in dbg
+#
+if test "$TPARALLEL" = "T"; then
+  { echo "$as_me:$LINENO: result: creating Makefile_parallel in dbg" >&5
+echo "${ECHO_T}creating Makefile_parallel in dbg" >&6; }
+  sed -e "s%\(COMPILE=.*\)%\1 $DEBUG %"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%"\
+      -e 's%varOBJTYPE%dbg_parallel%'\
+      -e 's%varPARALLEL%T%'\
+     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile
+fi
+#
+# substituting to get Makefile in prof
+#
+{ echo "$as_me:$LINENO: result: creating Makefile in prof" >&5
+echo "${ECHO_T}creating Makefile in prof" >&6; }
+sed -e "s%\(COMPILE=.*\)%\1 $PROF %"\
+    -e "s%\(LINK=.*\)%\1 -pg %"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%"\
+    -e 's%varOBJTYPE%prof%'\
+    -e 's%varPARALLEL%F%'\
+     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile
+#
+# substituting to get Makefile_parallel in prof
+#
+if test "$TPARALLEL" = "T"; then
+  { echo "$as_me:$LINENO: result: creating Makefile_parallel in prof" >&5
+echo "${ECHO_T}creating Makefile_parallel in prof" >&6; }
+  sed -e "s%\(COMPILE=.*\)%\1 $PROF %"\
+      -e "s%\(LINK=.*\)%\1 -pg %"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%"\
+      -e 's%varOBJTYPE%prof_parallel%'\
+      -e 's%varPARALLEL%T%'\
+     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile
+fi
 #
 # removal of config.cache
 #

@@ -246,6 +246,16 @@ AC_SUBST(INCLUDE_MPI)
 #
 AC_MSG_RESULT(creating subdirectories and copying shell scripts)
 mkdir -p  ${PAWDIR}/bin/${ARCH} 
+mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/none
+mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/dbg
+mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/prof
+mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/fast
+if test "$TPARALLEL" = "T"; then
+  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/none_parallel
+  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel
+  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel
+  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel
+fi
 #
 #  copy script files from
 #
@@ -268,6 +278,86 @@ AC_CONFIG_FILES(Makefile_bare:Makefile_bare.in)
 #
 AC_OUTPUT()
 chmod +x $PAWDIR/bin/$ARCH/f90pp
+#
+# substituting to get Makefile.none
+#
+AC_MSG_RESULT(creating Makefile in none)
+sed -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
+    -e 's%varPARALLEL%F%'\
+    -e 's%varOBJTYPE%none%'\
+    ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none/Makefile
+#
+# substituting to get Makefile_parallel in none
+#
+if test "$TPARALLEL" = "T"; then
+  AC_MSG_RESULT(creating Makefile in none_parallel)
+  sed -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
+      -e 's%varPARALLEL%T%'\
+      -e 's%varOBJTYPE%none_parallel%'\
+      ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile
+fi
+#
+# substituting to get Makefile.fast
+#
+AC_MSG_RESULT(creating Makefile in fast)
+sed -e "s%\(COMPILE=.*\)%\1 $OPTIMIZE %"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%"\
+    -e 's%varOBJTYPE%fast%'\
+    -e 's%varPARALLEL%F%'\
+    ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile
+#
+# substituting to get Makefile.fast_parallel
+#
+if test "$TPARALLEL" = "T"; then
+  AC_MSG_RESULT(creating Makefile_parallel in fast)
+  sed -e "s%\(COMPILE=.*\)%\1 $OPTIMIZE %"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%"\
+      -e 's%varOBJTYPE%fast_parallel%'\
+      -e 's%varPARALLEL%T%'\
+      ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile
+fi
+#
+# substituting to get Makefile in dbg
+#
+AC_MSG_RESULT(creating Makefile in dbg)
+sed -e "s%\(COMPILE=.*\)%\1 $DEBUG %"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%"\
+    -e 's%varOBJTYPE%dbg%'\
+    -e 's%varPARALLEL%F%'\
+   ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile
+#
+# substituting to get Makefile_parallel in dbg
+#
+if test "$TPARALLEL" = "T"; then
+  AC_MSG_RESULT(creating Makefile_parallel in dbg)
+  sed -e "s%\(COMPILE=.*\)%\1 $DEBUG %"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%"\
+      -e 's%varOBJTYPE%dbg_parallel%'\
+      -e 's%varPARALLEL%T%'\ 
+     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile
+fi
+#
+# substituting to get Makefile in prof
+#
+AC_MSG_RESULT(creating Makefile in prof)
+sed -e "s%\(COMPILE=.*\)%\1 $PROF %"\
+    -e "s%\(LINK=.*\)%\1 -pg %"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%"\
+    -e 's%varOBJTYPE%prof%'\
+    -e 's%varPARALLEL%F%'\
+     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile
+#
+# substituting to get Makefile_parallel in prof
+#
+if test "$TPARALLEL" = "T"; then
+  AC_MSG_RESULT(creating Makefile_parallel in prof)
+  sed -e "s%\(COMPILE=.*\)%\1 $PROF %"\
+      -e "s%\(LINK=.*\)%\1 -pg %"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%"\
+      -e 's%varOBJTYPE%prof_parallel%'\
+      -e 's%varPARALLEL%T%'\
+     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile
+fi
 #
 # removal of config.cache 
 #

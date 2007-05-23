@@ -94,27 +94,6 @@ OBJDIR=${PAWDIR}/bin/${ARCH}/Objects
 #___________________________ path to the binaries
 BINDIR=${PAWDIR}/bin/${ARCH}
 #
-DIRS=${PAWDIR}/bin/${ARCH}/Objects/none/Makefile \
-     ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile \
-     ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile \
-     ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile 
-#
-DIRPS=${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile \
-     ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile \
-     ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile \
-     ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile 
-#
-#########################################################################
-## define rule to set up directory structure and make file             ##
-#########################################################################
-${DIRS} : ${PAWDIR}/bin/${ARCH}/Objects/%/Makefile : ${PAWDIR}/Makefile_bare
-	mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/$*
-	sed -e s/varEXECUTABLE/paw_$*.x/g -e s/varPARALLEL/F/g -e s/varOBJTYPE/$*/g $< > $@
-#
-${DIRPS} : ${PAWDIR}/bin/${ARCH}/Objects/%_parallel/Makefile : ${PAWDIR}/Makefile_bare
-	mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/$*_parallel
-	sed -e s/varEXECUTABLE/ppaw_$*.x/g -e s/varPARALLEL/T/g -e s/varOBJTYPE/$*_parallel/g $< > $@
-#
 #########################################################################
 ## Definition of the targets                                           ##
 #########################################################################
@@ -170,57 +149,57 @@ all_parallel: dbg_parallel none_parallel fast_parallel prof_parallel
 #
 tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave scripts
 #
-none: ${PAWDIR}/bin/${ARCH}/Objects/none/Makefile 
+none: 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/none; ${MAKE} 
 # 
-none_new: ${PAWDIR}/bin/${ARCH}/Objects/none/Makefile 
+none_new: 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/none; ${MAKE} 
 #
-none_parallel:    ${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile 
+none_parallel:    
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/none_parallel; ${MAKE} 
 #
-none_parallel_new:   ${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile  
+none_parallel_new: 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/none_parallel; ${MAKE} 
 #
-fast:     ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile 
+fast:   
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/fast; ${MAKE} 
 #
-fast_new:     ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile 
+fast_new: 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/fast; ${MAKE} 
 #
-fast_parallel: ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile 
+fast_parallel: 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/fast_parallel; ${MAKE} 
 #
-fast_parallel_new: ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile 
+fast_parallel_new: 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/fast_parallel; ${MAKE} 
 #
-dbg:   ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile 
+dbg: 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/dbg;  ${MAKE}
 #
-dbg_new:   ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile 
+dbg_new: 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/dbg; ${MAKE} 
 #
-dbg_parallel:   ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile 
+dbg_parallel:  
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/dbg_parallel; ${MAKE} 
 #
-dbg_parallel_new:  ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile  
+dbg_parallel_new: 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/dbg_parallel; ${MAKE} 
 #
-prof:   ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile 
+prof:
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/prof; ${MAKE} 
 #
-prof_new:   ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile 
+prof_new: 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/prof; ${MAKE} 
 #
-prof_parallel:   ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile 
+prof_parallel: 
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/prof_parallel; ${MAKE} 
 #
-prof_parallel_new:   ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile 
+prof_parallel_new: 
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/prof_parallel; ${MAKE} 
 #
 # THE PAW library
 #
-lib: ${PAWDIR}/bin/${ARCH}/Objects/${TOOLCOMP}/Makefile 
+lib:
 	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
 #
 # THE PAW TOOLS
@@ -228,43 +207,43 @@ lib: ${PAWDIR}/bin/${ARCH}/Objects/${TOOLCOMP}/Makefile
 newatom: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_newatom.x 
 #
-atom:
+atom: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_atom.x 
 #
-tra:
+tra: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_tra.x 
 #
-wave:
+wave: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_wave.x 
 #
-1davpot:
+1davpot: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_1davpot.x 
 #
-cmcwave:
+cmcwave: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_cmcwave.x 
 #
-grab:
+grab: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_grab.x 
 #
-dos:
+dos: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_dos.x 
 #
-preopt:
+preopt: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_preopt.x 
 #
-converttra:
+converttra: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_converttra.x 
 #
-cleantra:
+cleantra: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_cleantra.x 
 #
-strc:
+strc: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_strc.x 
 #
-toxyz:
+toxyz: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_toxyz.x 
 #
-tostrc:
+tostrc: lib
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_tostrc.x 
 #
 scripts: 

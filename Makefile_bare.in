@@ -63,7 +63,7 @@ OBJTYPE=varOBJTYPE
 #___________________________ parameters for f90pp
 CPPVAR=@CPPVAR@ 
 #___________________________ the PAW-binary (inclusive path)
-PAWX=@PAWX@/varEXECUTABLE
+PAWX=@PAWX@
 #___________________________ the extension of files to be compiled
 FEXT=@FEXT@
 #___________________________ the way to compile the tools 
@@ -95,7 +95,7 @@ TOOLDIR=${PAWDIR}/src/Tools
 #
 ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
   MODE = _p
-  LLIBS=${LLIBSPARALLEL}
+  LLIBS=@LLIBSPARALLEL@
   LINK=@LINK@  -I${OBJDIR} -L${OBJDIR} ${LLINKPARALLEL}
   #___________________________ f90pp command
   F90PP=${BINDIR}/f90pp ${CPPVAR} -DCPPVARIABLE_PARALLEL 
