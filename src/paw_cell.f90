@@ -713,6 +713,8 @@ WRITE(*,FMT='("TP ",3F10.5)')TP(3,:)
       IF(THISTASK.EQ.1) THEN
         CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
         WRITE(NFIL)T0(:,:),TM(:,:),TMM(:,:)
+      ELSE
+        TCHK=.FALSE.   !will not be used, but makes the compiler happy.
       END IF
       RETURN
       END

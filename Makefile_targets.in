@@ -147,6 +147,8 @@ all_new: dbg_new none_new fast_new prof_new  tools
 #
 all_parallel: dbg_parallel none_parallel fast_parallel prof_parallel
 #
+all_parallel_new: dbg_parallel_new none_parallel_new fast_parallel_new prof_parallel_new
+#
 tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave scripts
 #
 none: 

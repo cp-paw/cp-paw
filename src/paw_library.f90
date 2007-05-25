@@ -16,6 +16,9 @@
 !**                                                                   **
 !***********************************************************************
 !***********************************************************************
+!cxml= compaq extended math library
+
+
 ! CPPVAR_FFTW      USE FFTW FOR FOURIRT TRANSFORMS
 ! CPPVAR_FFT_ESSL      USE ESSL FOR FOURIER TRANSFORMS
 ! CPPVAR_FFTPACK      USE EXPLICIT FFT
@@ -155,6 +158,40 @@
       END IF
       RETURN
       END
+!
+!     ..................................................................
+      SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+      INTEGER(4)                :: RC
+!     *********************************************************************
+#IF DEFINED(CPPVAR_SUPPORT_XLF)
+      RC=HOSTNM_(HOSTNAME)    ! XLF SUPPORT LIBRARY
+      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+#ELSE
+      HOSTNAME='UNKNOWN'
+!     HOSTNM_=GETHOSTNAME(HOSTNAME,%VAL(LEN(HOSTNAME)))
+#ENDIF
+      RETURN
+      END
+!
+!     ......................................................................
+      SUBROUTINE LIB$FLUSHFILE(N)
+!     *********************************************************************
+!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N     **
+!     *********************************************************************
+      INTEGER(4),INTENT(IN) :: N
+!     *********************************************************************
+#IF DEFINED(CPPVAR_SUPPORT_XLF)
+      CALL FLUSH_(N)  ! XLF USPPORT LIBRARY
+#ELIF DEFINED(CPPVAR_U77)
+      CALL FLUSH(N)   ! FROM ABSOFT SUPPORT LIBRARY (UNDERSCORE)
+#ENDIF
+      RETURN
+      END 
+!
 #IF DEFINED(CPPVAR_LANGEXT_XLF)
 !     ..................................................................
       SUBROUTINE LIB$ERFR8(X,Y)
@@ -404,11 +441,16 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!*******************************************************************************
+!**  external interfaces for lapack/blas calls                                **
+!**  these routines fork into the library specific driver routines            **
+!*******************************************************************************
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$INVERTR8(N,A,AINV)
-!     ******************************************************************
-!     **  INVERTS THE REAL, SQUARE MATRIX A                           **
-!     ******************************************************************
+!     **************************************************************************
+!     **  INVERTS THE REAL, SQUARE MATRIX A                                   **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
       REAL(8)   ,INTENT(IN) :: A(N,N)    ! MATRIX TO BE INVERTED
@@ -417,17 +459,17 @@ END MODULE RANDOM_MODULE
       REAL(8)   ,ALLOCATABLE:: RES(:,:)
       REAL(8)               :: DEV
       INTEGER(4)            :: I
-!     ******************************************************************
-!      == GENERAL MATRIX INVERSE ======================================
+!     **************************************************************************
+!      == GENERAL MATRIX INVERSE ===============================================
 #IF DEFINED(CPPVAR_BLAS_ESSL)
        CALL LIB_ESSL_DGEICD(N,A,AINV)
 #ELSE 
       CALL LIB_LAPACK_DGETRI(N,A,AINV)
 #ENDIF
 !
-!     ==================================================================
-!     == TEST                                                         ==
-!     ==================================================================
+!     ==========================================================================
+!     == TEST                                                                 ==
+!     ==========================================================================
       IF(TTEST) THEN
         ALLOCATE(RES(N,N))
         RES=MATMUL(A,AINV)
@@ -445,21 +487,21 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$DIAGR8(N,H,E,U)
-!     ******************************************************************
-!     **                                                              **
-!     **  DIAGONALIZES THE REAL, SQUARE MATRIX H AFTER SYMMETRIZATION **
-!     **  AND RETURNS EIGENVALUES, AND EIGENVECTORS                   **
-!     **                                                              **
-!     **         U(K,I)*H(K,L)*U(L,J)=DELTA(I,J)*E(I)                 **
-!     **                                                              **
-!     **  REMARKS:                                                    **
-!     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE      **
-!     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE          **
-!     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  DIAGONALIZES THE REAL, SQUARE MATRIX H AFTER SYMMETRIZATION         **
+!     **  AND RETURNS EIGENVALUES, AND EIGENVECTORS                           **
+!     **                                                                      **
+!     **         U(K,I)*H(K,L)*U(L,J)=DELTA(I,J)*E(I)                         **
+!     **                                                                      **
+!     **  REMARKS:                                                            **
+!     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE              **
+!     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE                  **
+!     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES                     **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: H(N,N)
@@ -469,23 +511,23 @@ END MODULE RANDOM_MODULE
       REAL(8)               :: DEV
       REAL(8)  ,ALLOCATABLE :: EMAT(:,:)
       INTEGER(4)            :: I
-!     ******************************************************************
+!     **************************************************************************
 !
-!     ==================================================================
-!     == DIAGONALIZE                                                  ==
-!     ==================================================================
+!     ==========================================================================
+!     == DIAGONALIZE                                                          ==
+!     ==========================================================================
 #IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL LIB_ESSL_DSPEV(N,H,E,U)
 #ELSE
       CALL LIB_LAPACK_DSYEV(N,H,E,U)
 #ENDIF
 !
-!     ==================================================================
-!     == TEST                                                         ==
-!     ==================================================================
+!     ==========================================================================
+!     == TEST                                                                 ==
+!     ==========================================================================
       IF(TTEST) THEN
         ALLOCATE(EMAT(N,N))
-!       == TEST EIGENVALUE EQUATION ====================================
+!       == TEST EIGENVALUE EQUATION ============================================
         EMAT(:,:)=0.D0
         DO I=1,N
           EMAT(I,I)=E(I)
@@ -496,7 +538,7 @@ END MODULE RANDOM_MODULE
           CALL ERROR$R8VAL('DEV',DEV)
           CALL ERROR$STOP('LIB$DIAGR8')
         END IF
-!       == TEST ORTHONORMALITY OF EIGENVECTORS =========================
+!       == TEST ORTHONORMALITY OF EIGENVECTORS =================================
         EMAT=MATMUL(TRANSPOSE(U),U)
         DO I=1,N
           EMAT(I,I)=EMAT(I,I)-1.D0
@@ -511,21 +553,21 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$DIAGC8(N,H,E,U)
-!     ******************************************************************
-!     **                                                              **
-!     **  DIAGONALIZES THE HERMITEAN, SQUARE MATRIX H                 **
-!     **  AND RETURNS EIGENVALUES, AND EIGENVECTORS                   **
-!     **                                                              **
-!     **      CONJG(U(K,I))*H(K,L)*U(L,J)=DELTA(I,J)*E(I)             **
-!     **                                                              **
-!     **  REMARKS:                                                    **
-!     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE      **
-!     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE          **
-!     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  DIAGONALIZES THE HERMITEAN, SQUARE MATRIX H                         **
+!     **  AND RETURNS EIGENVALUES, AND EIGENVECTORS                           **
+!     **                                                                      **
+!     **      CONJG(U(K,I))*H(K,L)*U(L,J)=DELTA(I,J)*E(I)                     **
+!     **                                                                      **
+!     **  REMARKS:                                                            **
+!     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE              **
+!     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE                  **
+!     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES                     **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       COMPLEX(8),INTENT(IN) :: H(N,N)
@@ -535,23 +577,23 @@ END MODULE RANDOM_MODULE
       REAL(8)               :: DEV
       COMPLEX(8),ALLOCATABLE:: EMAT(:,:)
       INTEGER(4)            :: I
-!     ******************************************************************
+!     **************************************************************************
 !
-!     ==================================================================
-!     == DIAGONALIZE                                                  ==
-!     ==================================================================
+!     ==========================================================================
+!     == DIAGONALIZE                                                          ==
+!     ==========================================================================
 #IF DEFINED(CPPVAR_BLAS_ESSL)
       CALL LIB_ESSL_ZHPEV(N,H,E,U)
 #ELSE
       CALL LIB_LAPACK_ZHEEV(N,H,E,U)
 #ENDIF
 !
-!     ==================================================================
-!     == TEST                                                         ==
-!     ==================================================================
+!     ==========================================================================
+!     == TEST                                                                 ==
+!     ==========================================================================
       IF(TTEST) THEN
         ALLOCATE(EMAT(N,N))
-!       == TEST EIGENVALUE EQUATION ====================================
+!       == TEST EIGENVALUE EQUATION ============================================
         EMAT(:,:)=CMPLX(0.D0,0.D0)
         DO I=1,N
           EMAT(I,I)=CMPLX(E(I),0.D0)
@@ -562,7 +604,7 @@ END MODULE RANDOM_MODULE
           CALL ERROR$R8VAL('DEV',DEV)
           CALL ERROR$STOP('LIB$DIAGC8')
         END IF
-!       == TEST ORTHONORMALITY OF EIGENVECTORS =========================
+!       == TEST ORTHONORMALITY OF EIGENVECTORS =================================
         EMAT=MATMUL(TRANSPOSE(CONJG(U)),U)
         DO I=1,N
           EMAT(I,I)=EMAT(I,I)-CMPLX(1.D0,0.D0)
@@ -577,22 +619,24 @@ END MODULE RANDOM_MODULE
       RETURN
       END
 !
-!     .....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GENERALEIGENVALUER8(N,H,S,E,U)
-!     **                                                                 **
-!     ** SOLVES THE GENERALIZED, REAL, SYMMETRIC EIGENVALUE PROBLEM      **
-!     **                                                                 **
-!     **      H*U = S*U*E                                                **
-!     **                                                                 **
-!     ** WITH EIGENVECTORS U THAT ARE ORTHOGONAL IN THE SENSE            **
-!     **                                                                 **
-!     **      U^T*S*U=IDENTITY                                           **
-!     **                                                                 **
-!     ** REMARK: H AND S MUST BE SYMMETRIC                               **
-!     **         S MUST BE POSITIVE DEFINITE                             **
-!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE               **
-!     **             MATMUL(TRANSPOSE(U),MATMUL(S,U))=IDENTITY           **
-!     **                                                                 **
+!     **************************************************************************
+!     **                                                                      **
+!     ** SOLVES THE GENERALIZED, REAL, SYMMETRIC EIGENVALUE PROBLEM           **
+!     **                                                                      **
+!     **      H*U = S*U*E                                                     **
+!     **                                                                      **
+!     ** WITH EIGENVECTORS U THAT ARE ORTHOGONAL IN THE SENSE                 **
+!     **                                                                      **
+!     **      U^T*S*U=IDENTITY                                                **
+!     **                                                                      **
+!     ** REMARK: H AND S MUST BE SYMMETRIC                                    **
+!     **         S MUST BE POSITIVE DEFINITE                                  **
+!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE                    **
+!     **             MATMUL(TRANSPOSE(U),MATMUL(S,U))=IDENTITY                **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: H(N,N)    ! HAMILTON MATRIX
@@ -604,11 +648,11 @@ END MODULE RANDOM_MODULE
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE. ! IF TRUE TEST RESULT
       REAL(8)               :: DEV       ! DEVIATION
       INTEGER               :: I 
-!     *********************************************************************
+!     **************************************************************************
 !
-!     =====================================================================
-!     == TAKE CARE OF TRIVIAL CASES                                      ==
-!     =====================================================================
+!     ==========================================================================
+!     == TAKE CARE OF TRIVIAL CASES                                           ==
+!     ==========================================================================
       IF(N.EQ.1) THEN
         E(1)=H(1,1)/S(1,1)
         U(1,1)=1.D0
@@ -617,9 +661,9 @@ END MODULE RANDOM_MODULE
         RETURN
       END IF
 !
-!     =====================================================================
-!     == TEST IF INPUT MATRICES ARE SYMMETRIC                            ==
-!     =====================================================================
+!     ==========================================================================
+!     == TEST IF INPUT MATRICES ARE SYMMETRIC                                 ==
+!     ==========================================================================
       DEV=MAXVAL(ABS(H-TRANSPOSE(H)))
       TSYM=(DEV.LT.1.D-5)
       IF(.NOT.TSYM) THEN
@@ -635,9 +679,9 @@ END MODULE RANDOM_MODULE
         CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
       END IF
 !
-!     =====================================================================
-!     == DIAGONALIZE                                                     ==
-!     =====================================================================
+!     ==========================================================================
+!     == DIAGONALIZE                                                          ==
+!     ==========================================================================
 #IF DEFINED(CPPVAR_BLAS_ESSL)
       IF(TSYM) THEN
         CALL LIB_ESSL_DSYGV(N,H,S,E,U)
@@ -648,11 +692,11 @@ END MODULE RANDOM_MODULE
       CALL LIB_LAPACK_DSYGV(N,H,S,E,U)
 #ENDIF
 !
-!     =====================================================================
-!     == TEST RESULT OF THE ROUTINE                                      ==
-!     =====================================================================
+!     ==========================================================================
+!     == TEST RESULT OF THE ROUTINE                                           ==
+!     ==========================================================================
       IF(TTEST) THEN
-!       == CHECK ORTHONORMALITY OF EIGENVECTORS ===========================
+!       == CHECK ORTHONORMALITY OF EIGENVECTORS ================================
         B=MATMUL(TRANSPOSE(U),MATMUL(S,U))
         DO I=1,N
           B(I,I)=B(I,I)-1.D0
@@ -663,7 +707,7 @@ END MODULE RANDOM_MODULE
           CALL ERROR$R8VAL('DEV',DEV)
           CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
         END IF
-!       == CHECK EIGENVALUE PROBLEM =======================================
+!       == CHECK EIGENVALUE PROBLEM ============================================
         DO I=1,N
           DEV=SUM(ABS(MATMUL(H-E(I)*S,U(:,I))))
           IF(DEV.GT.1.D-7) THEN
@@ -676,17 +720,19 @@ END MODULE RANDOM_MODULE
       RETURN
       END SUBROUTINE LIB$GENERALEIGENVALUER8
 !
-!     ......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GENERALEIGENVALUEC8(N,H,S,E,U)
-!     **                                                                 **
-!     ** SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
-!     **      [H(:,:)-E(I)*S(:,:)]*U(:,I)=0                            **
-!     **                                                                 **
-!     ** REMARK: H AND S MUST BE HERMITEANC                              **
-!     **         S MUST BE POSITIVE DEFINITE                             **
-!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE               **
-!     **             MATMUL(TRANSPOSE(U),MATMUL(S,U))=IDENTITY       **
-!     **                                                                 **
+!     **************************************************************************
+!     **                                                                      **
+!     ** SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM        **
+!     **      [H(:,:)-E(I)*S(:,:)]*U(:,I)=0                                   **
+!     **                                                                      **
+!     ** REMARK: H AND S MUST BE HERMITEANC                                   **
+!     **         S MUST BE POSITIVE DEFINITE                                  **
+!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE                    **
+!     **             MATMUL(TRANSPOSE(U),MATMUL(S,U))=IDENTITY                **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       COMPLEX(8),INTENT(IN) :: H(N,N)    ! HAMITON MATRIX
@@ -697,11 +743,11 @@ END MODULE RANDOM_MODULE
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       INTEGER               :: I
-!     *********************************************************************
+!     **************************************************************************
 !
-!     ========================================================================
-!     == TEST IF INPUT MATRICES ARE SYMMETRIC                               ==
-!     ========================================================================
+!     ==========================================================================
+!     == TEST IF INPUT MATRICES ARE SYMMETRIC                                 ==
+!     ==========================================================================
       DEV=SUM(ABS(H-TRANSPOSE(CONJG(H))))
       IF(DEV.GT.1.D-8) THEN
         CALL ERROR$MSG('HAMILTON MATRIX NOT HERMITEAN')
@@ -749,684 +795,6 @@ END MODULE RANDOM_MODULE
       END IF
       RETURN
       END
-
-!
-!     ..................................................................
-      SUBROUTINE LIB$FFTC8(DIR,LEN,NFFT,X,Y)                  
-!     ******************************************************************
-!     **  1-D FFT                                                     **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
-!     **                                                              **
-!     **  PACKAGES THE ESSL ROUTINE DCFT                              **
-!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                     **
-!     **                                                              **
-!     **  USE FFTW AS STANDARD                                        **
-!     **  USE FFTESSL IF ESSL IS INSTALLED                            **
-!     **  USE FFTPACK AS BACKUP IF C-ROUTINES CANNOT BE LINKED OR     **
-!     **      FFTW IS NOT AVAILABLE                                   **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: DIR
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      INTEGER(4)  ,INTENT(IN) :: NFFT
-      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
-      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-!     *******************************************************************
-#IF DEFINED(CPPVAR_FFT_ESSL)
-      CALL LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
-#ELIF DEFINED(CPPVAR_FFT_FFTW)
-      CALL LIB_FFTW(DIR,LEN,NFFT,X,Y)
-#ELIF DEFINED(CPPVAR_FFT_PACK)
-      CALL LIB_FFTPACK(DIR,LEN,NFFT,X,Y)
-#ELIF DEFINED(CPPVAR_FFT_CXML)
-      CALL LIB_FFTCXML(DIR,LEN,NFFT,X,Y)
-#ELSE
-      CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
-      CALL ERROR$STOP('LIB$FFTC8')
-#ENDIF
-
-      RETURN
-      END
-!
-#IF DEFINED(CPPVAR_FFT_CXML)
-!
-!  ATTENTION !!!
-!  DO NOT USE !!
-!  CLEMENS FOERST
-!     ..................................................................
-      SUBROUTINE LIB_FFTCXML(DIR,LEN,NFFT,X,Y)                  
-!     ******************************************************************
-!     **  1-D FFT                                                     **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
-!     **                                                              **
-!     **  PACKAGES THE ESSL ROUTINE DCFT                              **
-!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                     **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      INCLUDE 'DXMLDEF.FOR'
-      RECORD /DXML_Z_FFT_STRUCTURE/  :: FFT_STRUCT
-      CHARACTER(1)            :: DIR1
-      INTEGER(4)              :: STATUS 
-      CHARACTER(*),INTENT(IN) :: DIR
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      INTEGER(4)  ,INTENT(IN) :: NFFT
-      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
-      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-      CHARACTER(4),SAVE       :: DIRSAVE=''
-      INTEGER(4)  ,SAVE       :: LENSAVE=0
-      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
-      REAL(8)     ,SAVE       :: SCALE
-      INTEGER(4)              :: I
-!     ******************************************************************
-!
-!      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE.OR.NFFT.NE.NFFTSAVE) THEN
-
-         IF(DIR.EQ.'GTOR') THEN
-            DIR1='B'
-         ELSE IF(DIR.EQ.'RTOG') THEN
-            DIR1='F'
-         ELSE 
-            CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-            CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-            CALL ERROR$CHVAL('DIR',TRIM(DIR))
-            CALL ERROR$STOP('FFT')
-         END IF
-
-!         DIRSAVE=DIR
-!         LENSAVE=LEN
-!         NFFTSAVE=NFFT
-!      END IF
-      STATUS=ZFFT_INIT(LEN,FFT_STRUCT,.TRUE.)
-      DO I=1,NFFT
-         STATUS=ZFFT_APPLY('C','C',DIR1,X(:,I),Y(:,I),FFT_STRUCT,1)
-      END DO
-      STATUS=ZFFT_EXIT_GRP(FFT_STRUCT)
-      RETURN
-      END
-#ENDIF
-!
-#IF DEFINED(CPPVAR_FFT_FFTW)
-!     ..................................................................
-      SUBROUTINE LIB_FFTW(DIR,LEN,NFFT,X,Y)                  
-!     ******************************************************************
-!     **  1-D FFT                                                     **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
-!     **                                                              **
-!     **  PACKAGES THE ESSL ROUTINE DCFT                              **
-!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                     **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: DIR
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      INTEGER(4)  ,INTENT(IN) :: NFFT
-      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
-      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-      CHARACTER(4),SAVE       :: DIRSAVE=''
-      INTEGER(4)  ,SAVE       :: LENSAVE=0
-      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
-      INTEGER     ,SAVE       :: ISIGN
-      REAL(8)     ,SAVE       :: SCALE
-      COMPLEX(8)              :: XDUMMY(LEN,NFFT)
-      INTEGER(4)              :: I
-      INTEGER(4),SAVE         :: NP=0
-      INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
-      INTEGER(8),SAVE         :: PLANS(NPX,2),PLAN=-1
-      LOGICAL                 :: DEF
-!     INCLUDE 'FFTW_F77.I'
-!     ***********  FFTW_F77.I *******************************************
-!     THIS FILE CONTAINS PARAMETER STATEMENTS FOR VARIOUS CONSTANTS
-!     THAT CAN BE PASSED TO FFTW ROUTINES.  YOU SHOULD INCLUDE
-!     THIS FILE IN ANY FORTRAN PROGRAM THAT CALLS THE FFTW_F77
-!     ROUTINES (EITHER DIRECTLY OR WITH AN #INCLUDE STATEMENT
-!     IF YOU USE THE C PREPROCESSOR).
-      INTEGER,PARAMETER :: FFTW_FORWARD=-1 ! SIGN IN THE EXPONENT OF THE FORWARD FT
-      INTEGER,PARAMETER :: FFTW_BACKWARD=1 ! SIGN IN THE EXPONENT OF THE BACKWARD FT
-      INTEGER,PARAMETER :: FFTW_REAL_TO_COMPLEX=-1
-      INTEGER,PARAMETER :: FFTW_COMPLEX_TO_REAL=1
-      INTEGER,PARAMETER :: FFTW_ESTIMATE=0
-      INTEGER,PARAMETER :: FFTW_MEASURE=1
-      INTEGER,PARAMETER :: FFTW_OUT_OF_PLACE=0
-      INTEGER,PARAMETER :: FFTW_IN_PLACE=8
-      INTEGER,PARAMETER :: FFTW_USE_WISDOM=16
-      INTEGER,PARAMETER :: FFTW_THREADSAFE=128
-!     CONSTANTS FOR THE MPI WRAPPERS:
-      INTEGER,PARAMETER :: FFTW_TRANSPOSED_ORDER=1
-      INTEGER,PARAMETER :: FFTW_NORMAL_ORDER=0
-      INTEGER,PARAMETER :: FFTW_SCRAMBLED_INPUT=8192
-      INTEGER,PARAMETER :: FFTW_SCRAMBLED_OUTPUT=16384
-!     ******************************************************************
-!
-!     ==================================================================
-!     ==  INITIALIZE FFT                                              ==
-!     ==================================================================
-      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
-        IF (DIR.EQ.'GTOR') THEN
-          ISIGN=1
-        ELSE IF (DIR.EQ.'RTOG') THEN
-          ISIGN=-1
-        ELSE
-          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-          CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('1D-FFTW')
-        END IF
-!
-!       == FIND PLAN IN THE LIST
-        DEF=.FALSE.
-        DO I=1,NP
-          IF((LEN*ISIGN).EQ.PLANS(I,1)) THEN
-            DEF=.TRUE.
-            PLAN=PLANS(I,2)
-            EXIT
-          END IF
-        END DO
-!
-!       == CREATE NEW PLAN IF NOT IN THE LIST ==========================
-        IF(.NOT.DEF) THEN
-          WRITE(*,*) 'FFTW CREATE PLAN FOR: ', ISIGN,LEN,NP
-          NP=NP+1
-          IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
-!         CALL FFTW_F77_CREATE_PLAN(PLAN,LEN,FFTW_FORWARD,FFTW_MEASURE)
-          CALL FFTW_F77_CREATE_PLAN(PLANS(NP,2),LEN,ISIGN,FFTW_MEASURE)
-          PLANS(NP,1)=ISIGN*LEN
-          PLAN=PLANS(NP,2)
-        END IF
-        LENSAVE=LEN
-        DIRSAVE=DIR
-        SCALE=1.D0/REAL(LEN,KIND=8)
-      END IF
-!
-!     ==================================================================
-!     ==  NOW PERFORM FFT                                             ==
-!     ==================================================================
-      XDUMMY=X
-      CALL FFTW_F77(PLAN,NFFT,XDUMMY(1,1),1,LEN,Y(1,1),1,LEN)
-      IF (DIR.EQ.'RTOG') THEN
-        Y(:,:)=Y(:,:)*SCALE
-      END IF
-      RETURN
-      END
-#ENDIF
-!
-!DCFT:  1-D FFT P765
-#IF DEFINED(CPPVAR_FFT_ESSL)
-!     ..................................................................
-      SUBROUTINE LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
-!     ******************************************************************
-!     **  1-D FFT                                                     **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
-!     **                                                              **
-!     **  PACKAGES THE ESSL ROUTINE DCFT                              **
-!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                     **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: DIR
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      INTEGER(4)  ,INTENT(IN) :: NFFT
-      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
-      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-      INTEGER(4)  ,PARAMETER  :: NAUX1=20000
-      INTEGER(4)  ,PARAMETER  :: NAUX2=20000
-      REAL(8)     ,SAVE       :: AUX2(NAUX2)
-      REAL(8)     ,SAVE       :: AUX1(NAUX1)
-      CHARACTER(4),SAVE       :: DIRSAVE=''
-      INTEGER(4)  ,SAVE       :: LENSAVE=0
-      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
-      INTEGER(4)  ,SAVE       :: ISIGN
-      REAL(8)     ,SAVE       :: SCALE
-      INTEGER(4)              :: IFFT,I
-!     ******************************************************************
-!  
-!     ==================================================================
-!     == INITIALIZATION PHASE                                         ==
-!     ==================================================================
-      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE.OR.NFFT.NE.NFFTSAVE) THEN
-        IF(LEN.GT.8192) THEN
-          CALL ERROR$MSG('FFT TOO LONG')
-          CALL ERROR$I4VAL('LEN',LEN)
-          CALL ERROR$STOP('FFT')
-        END IF
-        IF(DIR.EQ.'GTOR') THEN
-          ISIGN=-1
-          SCALE=1.D0
-        ELSE IF(DIR.EQ.'RTOG') THEN
-          ISIGN=1
-          SCALE=1.D0/REAL(LEN,KIND=8)
-        ELSE 
-          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-          CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('FFT')
-        END IF
-        CALL DCFT(1,X,1,LEN,Y,1,LEN,LEN,NFFT,ISIGN,SCALE,AUX1,NAUX1,AUX2,NAUX2)
-        DIRSAVE=DIR
-        LENSAVE=LEN
-        NFFTSAVE=NFFT
-      END IF
-!  
-!     ==================================================================
-!     == FOURIER TRANSFORM                                            ==
-!     ==================================================================
-      CALL DCFT(0,X,1,LEN,Y,1,LEN,LEN,NFFT,ISIGN,SCALE,AUX1,NAUX1,AUX2,NAUX2)
-      RETURN
-      END
-#ENDIF
-!
-!DCFT:  1-D FFT P765
-#IF DEFINED(CPPVAR_FFT_PACK)
-!     ..................................................................
-      SUBROUTINE LIB_FFTPACK(DIR,LEN,NFFT,X,Y)                  
-!     ******************************************************************
-!     **  1-D FFT                                                     **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
-!     **                                                              **
-!     **  PACKAGES THE ESSL ROUTINE DCFT                              **
-!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                     **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: DIR
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      INTEGER(4)  ,INTENT(IN) :: NFFT
-      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
-      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-      INTEGER(4)  ,PARAMETER  :: NAUX2=2000
-      REAL(8)     ,SAVE       :: AUX2(NAUX2)
-      INTEGER(4)  ,SAVE       :: IAUX(30)
-      REAL(8)                 :: SEQUENCE(2*LEN)
-      CHARACTER(4),SAVE       :: DIRSAVE=''
-      INTEGER(4)  ,SAVE       :: LENSAVE=0
-      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
-      INTEGER(4)  ,SAVE       :: ISIGN
-      REAL(8)     ,SAVE       :: SCALE
-      INTEGER(4)              :: IFFT,I
-!     ******************************************************************
-!  
-!     ==================================================================
-!     == INITIALIZATION PHASE                                         ==
-!     ==================================================================
-      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
-        IF(DIR.EQ.'GTOR') THEN
-          ISIGN=-1
-          SCALE=1.D0
-        ELSE IF(DIR.EQ.'RTOG') THEN
-          ISIGN=1
-          SCALE=1.D0/REAL(LEN,KIND=8)
-        ELSE 
-          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-          CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('LIB_FFTPACK')
-        END IF
-        DIRSAVE=DIR
-        LENSAVE=LEN
-        IF(LEN.EQ.1) RETURN
-        IF(NAUX2.LT.2*LEN) THEN
-          CALL ERROR$MSG('AUXILIARY ARRAY TOO SMALL: INCREASE NAUX2')
-          CALL ERROR$I4VAL('NAUX2',NAUX2)
-          CALL ERROR$I4VAL('2*LEN',2*LEN)
-          CALL ERROR$STOP('LIB_FFTPACK')
-        END IF
-        CALL CFFTI(LEN,AUX2,IAUX)
-      END IF
-!  
-!     ==================================================================
-!     == FOURIER TRANSFORM                                            ==
-!     ==================================================================
-      IF(LEN.EQ.1) RETURN
-      IF(ISIGN.EQ.1) THEN
-        DO IFFT=1,NFFT
-          DO I=1,LEN
-            SEQUENCE(2*I-1)= REAL(X(I,IFFT),KIND=8)
-            SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
-          ENDDO
-          CALL CFFTF(LEN,SEQUENCE,AUX2,IAUX)
-          DO I=1,LEN
-            Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I),KIND=8)*SCALE
-          ENDDO
-        ENDDO
-      ELSE
-        DO IFFT=1,NFFT
-          DO I=1,LEN
-            SEQUENCE(2*I-1)= REAL(X(I,IFFT),KIND=8)
-            SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
-          ENDDO
-          CALL CFFTB(LEN,SEQUENCE,AUX2,IAUX)
-          DO I=1,LEN
-            Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I),KIND=8)*SCALE
-          ENDDO
-        ENDDO
-      END IF
-      RETURN
-      END
-#ENDIF
-!
-!     ...................................................FESSL..........
-      SUBROUTINE LIB$FFTADJUSTGRD(NR)
-!     ******************************************************************
-!     **  THIS ROUTINE RETURNS THE ALLOWED FOURIER TRANSFORM LENGTH   ** 
-!     **  THAT IS EQUAL OR LARGER THAN THE LENGTH SUPPLIED, BUT       ** 
-!     **  BUT OTHERWISE AS SMALL AS POSSIBLE.                         **
-!     ******************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(INOUT):: NR
-      INTEGER(4),PARAMETER  :: MAXI=300
-      LOGICAL(4),SAVE       :: TINIT=.TRUE.
-      INTEGER(4),SAVE       :: COUNT
-      INTEGER(4),SAVE       :: IFR(MAXI)
-      INTEGER(4)            :: H,I,J,K,M
-      INTEGER(4)            :: ISVAR
-      REAL(8)               :: SVAR
-!     ******************************************************************
-      IF (TINIT) THEN
-        TINIT=.FALSE.
-#IF DEFINED(CPPVAR_FFT_ESSL)
-!       == ALLOWED LENGTH FOR THE ESSL FFT =============================
-        COUNT=0
-        OUTER: DO H=1,25
-          DO I=0,2
-            DO J=0,1
-              DO K=0,1
-                DO M=0,1
-                  IF(COUNT.GE.MAXI) EXIT OUTER
-                  SVAR = 2.D0**H * 3.D0**I * 5.D0**J * 7.D0**K *11.D0**M
-                  IF(SVAR.GT.37748736.D0) CYCLE
-                  COUNT=COUNT+1
-                  IFR(COUNT)=NINT(SVAR)
-                ENDDO
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO OUTER
-#ELIF DEFINED(CPPVAR_FFT_FFTW)
-        COUNT=0
-        OUTER: DO H=1,25
-          DO I=0,2
-            DO J=0,1
-              DO K=0,1
-                DO M=0,1
-                  IF(COUNT.GE.MAXI) EXIT OUTER
-                  SVAR = 2.D0**H * 3.D0**I * 5.D0**J * 7.D0**K *11.D0**M
-                  IF(SVAR.GT.37748736.D0) CYCLE
-                  COUNT=COUNT+1
-                  IFR(COUNT)=NINT(SVAR)
-                ENDDO
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO OUTER
-#ELSE
-!       == THE GENERAL LENGTH HAS BEEN REMOVED BECAUSE PASSF AND PASSB
-!       == DO NOT WORK
-        COUNT=0
-        OUTER: DO H=1,25
-          DO I=0,4
-            DO J=0,2
-              IF(COUNT.GE.MAXI) EXIT OUTER
-              SVAR = 2.D0**H * 3.D0**I * 5.D0**J 
-              IF(SVAR.GT.37748736.D0) CYCLE
-              COUNT=COUNT+1
-              IFR(COUNT)=NINT(SVAR)
-            ENDDO
-          ENDDO
-        ENDDO OUTER
-#ENDIF
-        DO I=1,COUNT
-          DO J=I+1,COUNT
-            IF(IFR(I).GT.IFR(J)) THEN
-              ISVAR=IFR(I)
-              IFR(I)=IFR(J)
-              IFR(J)=ISVAR
-            END IF
-          ENDDO
-        ENDDO
-      ENDIF
-!
-      DO I=2,COUNT
-        IF(IFR(I).GE.NR) THEN
-          NR=IFR(I)
-          RETURN
-        END IF
-      ENDDO
-      CALL ERROR$MSG('REQUESTED GRIDPOINT OUT OF RANGE')
-      CALL ERROR$I4VAL('NR',NR)
-      CALL ERROR$STOP('PLANEWAVE$ADJUSTFFTGRD')
-      STOP
-      END
-!
-!     ..................................................................
-      SUBROUTINE LIB$3DFFTC8(DIR,N1,N2,N3,X,Y)
-!     ******************************************************************
-!     **  3-D FFT                                                     **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
-!     **                                                              **
-!     **    USES THE 3D FFTW ROUTINES                                 **
-!     **                                        CLEMENS FOERST, 2001  **
-!     ******************************************************************
-      IMPLICIT NONE
-      CHARACTER(4)            :: DIR
-      INTEGER(4)              :: N1,N2,N3
-      COMPLEX(8)              :: X(N1,N2,N3)
-      COMPLEX(8)              :: Y(N1,N2,N3)
-!     ******************************************************************
-#IF DEFINED(CPPVAR_FFT_ESSL)
-      CALL LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
-#ELIF DEFINED(CPPVAR_FFT_FFTW)
-      CALL LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
-#ELIF DEFINED(CPPVAR_FFT_PACK)
-      CALL LIB_3DFFTPACK(DIR,N1,N2,N3,X,Y)
-#ELSE
-      CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
-      CALL ERROR$STOP('LIB$3DFFTC8')
-#ENDIF
-      RETURN
-      END
-!
-#IF DEFINED(CPPVAR_FFT_FFTW)
-!     ..................................................................
-      SUBROUTINE LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
-!     ******************************************************************
-!     **  3-D FFT                                                     **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
-!     **                                                              **
-!     **    USES THE 3D FFTW ROUTINES                                 **
-!     **                                        CLEMENS FOERST, 2001  **
-!     ******************************************************************
-      IMPLICIT NONE
-      CHARACTER(4)            :: DIR
-      INTEGER                 :: DIM(3)
-      INTEGER(4)              :: N1,N2,N3
-      COMPLEX(8)              :: X(N1,N2,N3)
-      COMPLEX(8)              :: Y(N1,N2,N3)
-      INTEGER(4)  ,SAVE       :: NP=0
-      INTEGER(4),PARAMETER    :: NPX=10
-      INTEGER(8)              :: PLAN
-      INTEGER(8)  ,SAVE       :: PLANS(NPX,4)
-      REAL(8)     ,SAVE       :: SCALE
-      INTEGER     ,SAVE       :: DIMSAVE(3)=0
-      CHARACTER(4),SAVE       :: DIRSAVE=''
-      LOGICAL                 :: DEF
-      INTEGER(4)              :: I
-      INTEGER     ,SAVE       :: ISIGN
-      INCLUDE 'FFTW_F77.I'
-!     ******************************************************************
-      DIM(1)=N1
-      DIM(2)=N2
-      DIM(3)=N3
-      IF(DIM(1).NE.DIMSAVE(1).OR.DIM(2).NE.DIMSAVE(2).OR. &
-     &  DIM(3).NE.DIMSAVE(3).OR.DIR.NE.DIRSAVE) THEN
-        IF (DIR.EQ.'GTOR') THEN
-          ISIGN=1
-        ELSE IF (DIR.EQ.'RTOG') THEN
-          ISIGN=-1
-        ELSE
-          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-          CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('3D-FFTW')
-        END IF
-!
-!       == FIND PLAN IN THE LIST
-        DEF=.FALSE.
-        DO I=1,NP
-          IF((DIM(1)*ISIGN).EQ.PLANS(I,1).AND.(DIM(2)*ISIGN).EQ.PLANS(I,2)&
-     &                     .AND.(DIM(3)*ISIGN).EQ.PLANS(I,3)) THEN
-            DEF=.TRUE.
-            PLAN=PLANS(I,4)
-            EXIT
-          END IF
-        END DO
-!
-!       == CREATE NEW PLAN IF NOT IN THE LIST ==========================
-        IF(.NOT.DEF) THEN
-          WRITE(*,*) '3D-FFTW CREATE PLAN FOR: ', ISIGN,DIM
-          NP=NP+1
-          IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
-          CALL FFTWND_F77_CREATE_PLAN(PLAN,3,DIM,ISIGN,FFTW_ESTIMATE)
-          PLANS(NP,1:3)=ISIGN*DIM
-          PLANS(NP,4)=PLAN
-        END IF
-        DIMSAVE=DIM
-        DIRSAVE=DIR
-        IF(DIR.EQ.'RTOG') SCALE=1.D0/REAL(N1*N2*N3,KIND=8)
-      END IF
-!
-!     ==================================================================
-!     ==  NOW PERFORM FFT                                             ==
-!     ==================================================================
-      CALL FFTWND_F77_ONE(PLAN,X,Y)
-      IF (DIR.EQ.'RTOG') Y=Y*SCALE
-      RETURN
-      END
-!
-#ELIF DEFINED(CPPVAR_FFT_ESSL)
-!     ..................................................................
-      SUBROUTINE LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
-!     ******************************************************************
-!     **  3-D FFT                                                     **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
-!     **                                                              **
-!     **    USES THE 3D FFT ROUTINE OF ESSL DCFT3                     **
-!     **                                        PETER BLOECHL, 2001   **
-!     ******************************************************************
-!     **    NOT TESTED                                                **
-      IMPLICIT NONE
-      CHARACTER(4)            :: DIR
-      INTEGER(4)              :: DIM(3)
-      INTEGER(4)              :: N1,N2,N3
-      COMPLEX(8)              :: X(N1,N2,N3)
-      COMPLEX(8)              :: Y(N1,N2,N3)
-      INTEGER(4)              :: NAUX       
-      REAL(8)   ,ALLOCATABLE  :: AUX(:)
-      INTEGER(4)              :: ISIGN
-      REAL(8)                 :: SCALE
-      INTEGER(4)              :: S,PSI,LAMBDA
-!     ******************************************************************
-      NAUX=60000
-      IF(N1.GT.2048) NAUX=NAUX+4.56*N1
-      IF(N3.LT.252) THEN
-        IF(N2.GE.252) THEN
-          S=MIN(64,N1)
-          LAMBDA=(2*N2+256)*(S+4.56)
-          NAUX=NAUX+LAMBDA
-        END IF
-      ELSE
-        IF(N2.GE.252) THEN
-          S=MIN(64,N1*N2)
-          PSI=(2*N3+256)*(S+4.56)
-          NAUX=NAUX+PSI
-        ELSE
-          S=MIN(64,N1*N2)
-          PSI=(2*N3+256)*(S+4.56)
-          S=MIN(64,N1)
-          LAMBDA=(2*N2+256)*(S+4.56)
-          NAUX=NAUX+MAX(PSI,LAMBDA)
-        END IF
-      END IF
-      IF (DIR.EQ.'GTOR') THEN
-        ISIGN=1
-        SCALE=1.D0
-      ELSE IF (DIR.EQ.'RTOG') THEN
-        ISIGN=-1
-        SCALE=1.D0/REAL(N1*N2*N3,KIND=8)
-      ELSE
-        CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-        CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-        CALL ERROR$CHVAL('DIR',TRIM(DIR))
-        CALL ERROR$STOP('3D-FFTW')
-      END IF
-      ALLOCATE(AUX(NAUX))
-      CALL DCFT3(X,N1,N1*N2,Y,N1,N1*N2,N1,N2,N3,ISIGN,SCALE,AUX,NAUX)
-      DEALLOCATE(AUX)
-      RETURN
-      END
-!
-#ELIF DEFINED(CPPVAR_FFT_PACK)
-!     ..................................................................
-      SUBROUTINE LIB_3DFFTPACK(DIR,N1,N2,N3,X,Y)
-!     ******************************************************************
-!     **  3-D FFT                                                     **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
-!     **                                                              **
-!     **    USES THE 3D FFT ROUTINE OF ESSL DCFT3                     **
-!     **                                        PETER BLOECHL, 2001   **
-!     ******************************************************************
-!     **    NOT TESTED                                                **
-      IMPLICIT NONE
-      CHARACTER(4)            :: DIR
-      INTEGER(4)              :: DIM(3)
-      INTEGER(4)              :: N1,N2,N3
-      COMPLEX(8)              :: X(N1,N2,N3)
-      COMPLEX(8)              :: Y(N1,N2,N3)
-      COMPLEX(8)              :: WORK1(N1*N2*N3),WORK2(N1*N2*N3)
-      INTEGER(4)              :: I,J,K,IND
-!     ******************************************************************
-      CALL LIB_FFTPACK(DIR,N1,N2*N3,X,WORK2)
-      IND=0
-      DO K=1,N3
-        DO J=1,N2
-          DO I=1,N1
-            IND=IND+1
-            WORK1(J+N2*(K-1+N1*(I-1)))=WORK2(IND)
-          ENDDO
-        ENDDO
-      ENDDO
-      CALL LIB_FFTPACK(DIR,N2,N1*N3,WORK1,WORK2)
-      IND=0
-      DO I=1,N1
-        DO K=1,N3
-          DO J=1,N2
-            IND=IND+1
-            WORK1(K+N3*(I-1+N1*(J-1)))=WORK2(IND)
-          ENDDO
-        ENDDO
-      ENDDO
-      CALL LIB_FFTPACK(DIR,N3,N1*N2,WORK1,WORK2)
-      IND=0
-      DO J=1,N2
-        DO I=1,N1
-          DO K=1,N3
-            IND=IND+1
-            Y(I,J,K)=WORK2(IND)
-          ENDDO
-        ENDDO
-      ENDDO
-      RETURN
-      END
-#ENDIF
 !
 !DGEMUL: MATRIX MULTIPLICATION P441
 !     ..................................................................
@@ -1844,40 +1212,879 @@ END MODULE RANDOM_MODULE
 #ENDIF
       RETURN
       END
+
 !
-!     ..................................................................
-      SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
-      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
-      INTEGER(4)                :: RC
-!     *********************************************************************
-#IF DEFINED(CPPVAR_SUPPORT_XLF)
-      RC=HOSTNM_(HOSTNAME)    ! XLF SUPPORT LIBRARY
-      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+!*******************************************************************************
+!**  external interfaces for fourier transform calls                          **
+!**  these routines fork into the library specific driver routines            **
+!*******************************************************************************
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$FFTADJUSTGRD(NR)
+!     **************************************************************************
+!     **  THIS ROUTINE RETURNS THE ALLOWED FOURIER TRANSFORM LENGTH           ** 
+!     **  THAT IS EQUAL OR LARGER THAN THE LENGTH SUPPLIED, BUT               ** 
+!     **  BUT OTHERWISE AS SMALL AS POSSIBLE.                                 **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(INOUT):: NR
+      INTEGER(4),PARAMETER  :: MAXI=300
+      LOGICAL(4),SAVE       :: TINIT=.TRUE.
+      INTEGER(4),SAVE       :: COUNT
+      INTEGER(4),SAVE       :: IFR(MAXI)
+      INTEGER(4)            :: H,I,J,K,M
+      INTEGER(4)            :: ISVAR
+      REAL(8)               :: SVAR
+!     **************************************************************************
+      IF (TINIT) THEN
+        TINIT=.FALSE.
+#IF DEFINED(CPPVAR_FFT_ESSL)
+!       == ALLOWED LENGTH FOR THE ESSL FFT =====================================
+        COUNT=0
+        OUTER: DO H=1,25
+          DO I=0,2
+            DO J=0,1
+              DO K=0,1
+                DO M=0,1
+                  IF(COUNT.GE.MAXI) EXIT OUTER
+                  SVAR = 2.D0**H * 3.D0**I * 5.D0**J * 7.D0**K *11.D0**M
+                  IF(SVAR.GT.37748736.D0) CYCLE
+                  COUNT=COUNT+1
+                  IFR(COUNT)=NINT(SVAR)
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO OUTER
+#ELIF DEFINED(CPPVAR_FFT_FFTW)
+        COUNT=0
+        OUTER: DO H=1,25
+          DO I=0,2
+            DO J=0,1
+              DO K=0,1
+                DO M=0,1
+                  IF(COUNT.GE.MAXI) EXIT OUTER
+                  SVAR = 2.D0**H * 3.D0**I * 5.D0**J * 7.D0**K *11.D0**M
+                  IF(SVAR.GT.37748736.D0) CYCLE
+                  COUNT=COUNT+1
+                  IFR(COUNT)=NINT(SVAR)
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO OUTER
 #ELSE
-      HOSTNAME='UNKNOWN'
-!     HOSTNM_=GETHOSTNAME(HOSTNAME,%VAL(LEN(HOSTNAME)))
+!       == THE GENERAL LENGTH HAS BEEN REMOVED BECAUSE PASSF AND PASSB =========
+!       == DO NOT WORK =========================================================
+        COUNT=0
+        OUTER: DO H=1,25
+          DO I=0,4
+            DO J=0,2
+              IF(COUNT.GE.MAXI) EXIT OUTER
+              SVAR = 2.D0**H * 3.D0**I * 5.D0**J 
+              IF(SVAR.GT.37748736.D0) CYCLE
+              COUNT=COUNT+1
+              IFR(COUNT)=NINT(SVAR)
+            ENDDO
+          ENDDO
+        ENDDO OUTER
 #ENDIF
+        DO I=1,COUNT
+          DO J=I+1,COUNT
+            IF(IFR(I).GT.IFR(J)) THEN
+              ISVAR=IFR(I)
+              IFR(I)=IFR(J)
+              IFR(J)=ISVAR
+            END IF
+          ENDDO
+        ENDDO
+      ENDIF
+!
+      DO I=2,COUNT
+        IF(IFR(I).GE.NR) THEN
+          NR=IFR(I)
+          RETURN
+        END IF
+      ENDDO
+      CALL ERROR$MSG('REQUESTED GRIDPOINT OUT OF RANGE')
+      CALL ERROR$I4VAL('NR',NR)
+      CALL ERROR$STOP('PLANEWAVE$ADJUSTFFTGRD')
+      STOP
+      END
+!
+!     ..........................................................................
+      SUBROUTINE LIB$FFTC8(DIR,LEN,NFFT,X,Y)                  
+!     **************************************************************************
+!     **  1-D FFT                                                             **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)                    **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)                    **
+!     **                                                                      **
+!     **  PACKAGES THE ESSL ROUTINE DCFT                                      **
+!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                             **
+!     **                                                                      **
+!     **  USE FFTW AS STANDARD                                                **
+!     **  USE FFTESSL IF ESSL IS INSTALLED                                    **
+!     **  USE FFTPACK AS BACKUP IF C-ROUTINES CANNOT BE LINKED OR             **
+!     **      FFTW IS NOT AVAILABLE                                           **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: DIR
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      INTEGER(4)  ,INTENT(IN) :: NFFT
+      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
+      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
+!     **************************************************************************
+#IF DEFINED(CPPVAR_FFT_ESSL)
+      CALL LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
+#ELIF DEFINED(CPPVAR_FFT_FFTW)
+      CALL LIB_FFTW(DIR,LEN,NFFT,X,Y)
+#ELIF DEFINED(CPPVAR_FFT_FFTW3)
+      CALL LIB_FFTW3(DIR,LEN,NFFT,X,Y)
+#ELIF DEFINED(CPPVAR_FFT_PACK)
+      CALL LIB_FFTPACK(DIR,LEN,NFFT,X,Y)
+#ELIF DEFINED(CPPVAR_FFT_CXML)
+      CALL LIB_FFTCXML(DIR,LEN,NFFT,X,Y)
+#ELSE
+      CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
+      CALL ERROR$STOP('LIB$FFTC8')
+#ENDIF
+
       RETURN
       END
 !
-!     ......................................................................
-      SUBROUTINE LIB$FLUSHFILE(N)
-!     *********************************************************************
-!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N     **
-!     *********************************************************************
-      INTEGER(4),INTENT(IN) :: N
-!     *********************************************************************
-#IF DEFINED(CPPVAR_SUPPORT_XLF)
-      CALL FLUSH_(N)  ! XLF USPPORT LIBRARY
-#ELIF DEFINED(CPPVAR_U77)
-      CALL FLUSH(N)   ! FROM ABSOFT SUPPORT LIBRARY (UNDERSCORE)
+!     ..........................................................................
+      SUBROUTINE LIB$3DFFTC8(DIR,N1,N2,N3,X,Y)
+!     **************************************************************************
+!     **  3-D FFT                                                             **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)                    **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)                    **
+!     **                                                                      **
+!     **    USES THE 3D FFTW ROUTINES                                         **
+!     **                                        CLEMENS FOERST, 2001          **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(4)            :: DIR
+      INTEGER(4)              :: N1,N2,N3
+      COMPLEX(8)              :: X(N1,N2,N3)
+      COMPLEX(8)              :: Y(N1,N2,N3)
+!     **************************************************************************
+#IF DEFINED(CPPVAR_FFT_ESSL)
+      CALL LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
+#ELIF DEFINED(CPPVAR_FFT_FFTW)
+      CALL LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
+#ELIF DEFINED(CPPVAR_FFT_FFTW3)
+      CALL LIB_3DFFTW3(DIR,N1,N2,N3,X,Y)
+#ELIF DEFINED(CPPVAR_FFT_PACK)
+      CALL LIB_3DFFTPACK(DIR,N1,N2,N3,X,Y)
+#ELSE
+      CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
+      CALL ERROR$STOP('LIB$3DFFTC8')
 #ENDIF
       RETURN
-      END 
+      END
 
+!
+!*******************************************************************************
+!**  driver routines for the fourier transforms from the CXML package         **
+!**    compaq extended math library  (CXML)                                   **
+!**                                                                           **
+!**  DO not use! (Clemens Foerst)                                             **
+!**                                                                           **
+!*******************************************************************************
+!
+#IF DEFINED(CPPVAR_FFT_CXML)
+!
+!     ..........................................................................
+      SUBROUTINE LIB_FFTCXML(DIR,LEN,NFFT,X,Y)                  
+!     **************************************************************************
+!     **  1-D FFT                                                     **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
+!     **                                                              **
+!     **  PACKAGES THE ESSL ROUTINE DCFT                              **
+!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                     **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      INCLUDE 'DXMLDEF.FOR'
+      RECORD /DXML_Z_FFT_STRUCTURE/  :: FFT_STRUCT
+      CHARACTER(1)            :: DIR1
+      INTEGER(4)              :: STATUS 
+      CHARACTER(*),INTENT(IN) :: DIR
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      INTEGER(4)  ,INTENT(IN) :: NFFT
+      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
+      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
+      CHARACTER(4),SAVE       :: DIRSAVE=''
+      INTEGER(4)  ,SAVE       :: LENSAVE=0
+      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
+      REAL(8)     ,SAVE       :: SCALE
+      INTEGER(4)              :: I
+!     ******************************************************************
+!
+!      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE.OR.NFFT.NE.NFFTSAVE) THEN
+
+         IF(DIR.EQ.'GTOR') THEN
+            DIR1='B'
+         ELSE IF(DIR.EQ.'RTOG') THEN
+            DIR1='F'
+         ELSE 
+            CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+            CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+            CALL ERROR$CHVAL('DIR',TRIM(DIR))
+            CALL ERROR$STOP('FFT')
+         END IF
+
+!         DIRSAVE=DIR
+!         LENSAVE=LEN
+!         NFFTSAVE=NFFT
+!      END IF
+      STATUS=ZFFT_INIT(LEN,FFT_STRUCT,.TRUE.)
+      DO I=1,NFFT
+         STATUS=ZFFT_APPLY('C','C',DIR1,X(:,I),Y(:,I),FFT_STRUCT,1)
+      END DO
+      STATUS=ZFFT_EXIT_GRP(FFT_STRUCT)
+      RETURN
+      END
+#ENDIF
+!
+!*******************************************************************************
+!**  driver routines for the Fourier transforms from the fftw package         **
+!**                                                                           **
+!*******************************************************************************
+#IF DEFINED(CPPVAR_FFT_FFTW)
+!     ..........................................................................
+      SUBROUTINE LIB_FFTW(DIR,LEN,NFFT,X,Y)                  
+!     **************************************************************************
+!     **  1-D FFT                                                             **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)                    **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)                    **
+!     **                                                                      **
+!     **  PACKAGES THE ESSL ROUTINE DCFT                                      **
+!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                             **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: DIR
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      INTEGER(4)  ,INTENT(IN) :: NFFT
+      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
+      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
+      CHARACTER(4),SAVE       :: DIRSAVE=''
+      INTEGER(4)  ,SAVE       :: LENSAVE=0
+      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
+      INTEGER     ,SAVE       :: ISIGN
+      REAL(8)     ,SAVE       :: SCALE
+      COMPLEX(8)              :: XDUMMY(LEN,NFFT)
+      INTEGER(4)              :: I
+      INTEGER(4),SAVE         :: NP=0
+      INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
+      INTEGER(8),SAVE         :: PLANS(NPX,2),PLAN=-1
+      LOGICAL                 :: DEF
+      INCLUDE 'FFTW_F77.I'
+!     ***********  FFTW_F77.I *******************************************
+!     THIS FILE CONTAINS PARAMETER STATEMENTS FOR VARIOUS CONSTANTS
+!     THAT CAN BE PASSED TO FFTW ROUTINES.  YOU SHOULD INCLUDE
+!     THIS FILE IN ANY FORTRAN PROGRAM THAT CALLS THE FFTW_F77
+!     ROUTINES (EITHER DIRECTLY OR WITH AN #INCLUDE STATEMENT
+!     IF YOU USE THE C PREPROCESSOR).
+!      INTEGER,PARAMETER :: FFTW_FORWARD=-1 ! SIGN IN THE EXPONENT OF THE FORWARD FT
+!      INTEGER,PARAMETER :: FFTW_BACKWARD=1 ! SIGN IN THE EXPONENT OF THE BACKWARD FT
+!      INTEGER,PARAMETER :: FFTW_REAL_TO_COMPLEX=-1
+!      INTEGER,PARAMETER :: FFTW_COMPLEX_TO_REAL=1
+!      INTEGER,PARAMETER :: FFTW_ESTIMATE=0
+!      INTEGER,PARAMETER :: FFTW_MEASURE=1
+!      INTEGER,PARAMETER :: FFTW_OUT_OF_PLACE=0
+!      INTEGER,PARAMETER :: FFTW_IN_PLACE=8
+!      INTEGER,PARAMETER :: FFTW_USE_WISDOM=16
+!      INTEGER,PARAMETER :: FFTW_THREADSAFE=128
+!     CONSTANTS FOR THE MPI WRAPPERS:
+!      INTEGER,PARAMETER :: FFTW_TRANSPOSED_ORDER=1
+!      INTEGER,PARAMETER :: FFTW_NORMAL_ORDER=0
+!      INTEGER,PARAMETER :: FFTW_SCRAMBLED_INPUT=8192
+!      INTEGER,PARAMETER :: FFTW_SCRAMBLED_OUTPUT=16384
+!     **************************************************************************
+!
+!     ==========================================================================
+!     ==  INITIALIZE FFT                                                      ==
+!     ==========================================================================
+      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
+        IF (DIR.EQ.'GTOR') THEN
+          ISIGN=1
+        ELSE IF (DIR.EQ.'RTOG') THEN
+          ISIGN=-1
+        ELSE
+          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+          CALL ERROR$CHVAL('DIR',TRIM(DIR))
+          CALL ERROR$STOP('1D-FFTW')
+        END IF
+!
+!       == FIND PLAN IN THE LIST ===============================================
+        DEF=.FALSE.
+        DO I=1,NP
+          IF((LEN*ISIGN).EQ.PLANS(I,1)) THEN
+            DEF=.TRUE.
+            PLAN=PLANS(I,2)
+            EXIT
+          END IF
+        END DO
+!
+!       == CREATE NEW PLAN IF NOT IN THE LIST ==================================
+        IF(.NOT.DEF) THEN
+          WRITE(*,*) 'FFTW CREATE PLAN FOR: ', ISIGN,LEN,NP
+          NP=NP+1
+          IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
+!         CALL FFTW_F77_CREATE_PLAN(PLAN,LEN,FFTW_FORWARD,FFTW_MEASURE)
+          CALL FFTW_F77_CREATE_PLAN(PLANS(NP,2),LEN,ISIGN,FFTW_MEASURE)
+          PLANS(NP,1)=ISIGN*LEN
+          PLAN=PLANS(NP,2)
+        END IF
+        LENSAVE=LEN
+        DIRSAVE=DIR
+        SCALE=1.D0/REAL(LEN,KIND=8)
+      END IF
+!
+!     ==========================================================================
+!     ==  NOW PERFORM FFT                                                     ==
+!     ==========================================================================
+      XDUMMY=X
+      CALL FFTW_F77(PLAN,NFFT,XDUMMY(1,1),1,LEN,Y(1,1),1,LEN)
+      IF (DIR.EQ.'RTOG') THEN
+        Y(:,:)=Y(:,:)*SCALE
+      END IF
+      RETURN
+      END
+!
+!     ..........................................................................
+      SUBROUTINE LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
+!     **************************************************************************
+!     **  3-D FFT                                                             **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)                    **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)                    **
+!     **                                                                      **
+!     **    USES THE 3D FFTW ROUTINES                                         **
+!     **                                        CLEMENS FOERST, 2001          **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(4)            :: DIR
+      INTEGER                 :: DIM(3)
+      INTEGER(4)              :: N1,N2,N3
+      COMPLEX(8)              :: X(N1,N2,N3)
+      COMPLEX(8)              :: Y(N1,N2,N3)
+      INTEGER(4)  ,SAVE       :: NP=0
+      INTEGER(4),PARAMETER    :: NPX=10
+      INTEGER(8)              :: PLAN
+      INTEGER(8)  ,SAVE       :: PLANS(NPX,4)
+      REAL(8)     ,SAVE       :: SCALE
+      INTEGER     ,SAVE       :: DIMSAVE(3)=0
+      CHARACTER(4),SAVE       :: DIRSAVE=''
+      LOGICAL                 :: DEF
+      INTEGER(4)              :: I
+      INTEGER     ,SAVE       :: ISIGN
+      INCLUDE 'FFTW_F77.I'
+!     **************************************************************************
+      DIM(1)=N1
+      DIM(2)=N2
+      DIM(3)=N3
+      IF(DIM(1).NE.DIMSAVE(1).OR.DIM(2).NE.DIMSAVE(2).OR. &
+     &  DIM(3).NE.DIMSAVE(3).OR.DIR.NE.DIRSAVE) THEN
+        IF (DIR.EQ.'GTOR') THEN
+          ISIGN=1
+        ELSE IF (DIR.EQ.'RTOG') THEN
+          ISIGN=-1
+        ELSE
+          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+          CALL ERROR$CHVAL('DIR',TRIM(DIR))
+          CALL ERROR$STOP('3D-FFTW')
+        END IF
+!
+!       == FIND PLAN IN THE LIST
+        DEF=.FALSE.
+        DO I=1,NP
+          IF((DIM(1)*ISIGN).EQ.PLANS(I,1).AND.(DIM(2)*ISIGN).EQ.PLANS(I,2)&
+     &                     .AND.(DIM(3)*ISIGN).EQ.PLANS(I,3)) THEN
+            DEF=.TRUE.
+            PLAN=PLANS(I,4)
+            EXIT
+          END IF
+        END DO
+!
+!       == CREATE NEW PLAN IF NOT IN THE LIST ==================================
+        IF(.NOT.DEF) THEN
+          WRITE(*,*) '3D-FFTW CREATE PLAN FOR: ', ISIGN,DIM
+          NP=NP+1
+          IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
+          CALL FFTWND_F77_CREATE_PLAN(PLAN,3,DIM,ISIGN,FFTW_ESTIMATE)
+          PLANS(NP,1:3)=ISIGN*DIM
+          PLANS(NP,4)=PLAN
+        END IF
+        DIMSAVE=DIM
+        DIRSAVE=DIR
+        IF(DIR.EQ.'RTOG') SCALE=1.D0/REAL(N1*N2*N3,KIND=8)
+      END IF
+!
+!     ==========================================================================
+!     ==  NOW PERFORM FFT                                                     ==
+!     ==========================================================================
+      CALL FFTWND_F77_ONE(PLAN,X,Y)
+      IF (DIR.EQ.'RTOG') Y=Y*SCALE
+      RETURN
+      END
+#ENDIF
+#IF DEFINED(CPPVAR_FFT_FFTW3)
+!
+!*******************************************************************************
+!**  DRIVER ROUTINES FOR THE FOURIER TRANSFORMS FROM THE FFTW3 PACKAGE        **
+!**                                                                           **
+!**  NOTE THAT THE CALLS TO FFTW3 ARE NOT COMPATIBLE WITH FFTW2,              **
+!**  WHICH IS CALLED HERE AS FFTW                                             **
+!**                                                                           **
+!**               HTTP://WWW.FFTW.ORG/                                        **
+!*******************************************************************************
+!     ..........................................................................
+      SUBROUTINE LIB_FFTW3(DIR,LEN,NFFT,X,Y)                  
+!     **************************************************************************
+!     **  1-D FFT                                                             **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)                    **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)                    **
+!     **                                                                      **
+!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                             **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: DIR
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      INTEGER(4)  ,INTENT(IN) :: NFFT
+      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
+      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
+      REAL(8)     ,SAVE       :: SCALE
+      COMPLEX(8)              :: XDUMMY(LEN,NFFT)
+      INTEGER(4)              :: I
+      INTEGER(4),SAVE         :: NP=0
+      INTEGER(8),SAVE         :: PLAN=-1
+      INTEGER                 :: ISUCCESS
+      LOGICAL    ,SAVE        :: TINI=.FALSE.
+      integer                 :: inembed(len)
+      integer                 :: onembed(len)
+      INCLUDE 'FFTW_F77.I'
+!     ***********  FFTW_F77.I **************************************************
+!     ** THIS FILE IS A COPY OF FFTW3.F SUPPLIED WITH THE FFTW VERSION 3      **
+!     **                                                                      **
+!     ** THE NAME OF THE COPY IS INHERITED FROM FFTW VERSION 2                **
+!     **************************************************************************
+      CALL ERROR$MSG('THE FFTW3 INTERFACES ARE UNDER DEVELOPMENT')
+      CALL ERROR$MSG('AND NOT YET READY FOR USE')
+      CALL ERROR$STOP('LIB_FFTW3')
+      IF(.NOT.TINI) THEN
+!       == ATTEMPT TO IMPORTS PRE-CALCULATED WISDOM.
+!       == ON UNIX SYSTEMS THE WISDOM SHOULD BE IN /ETC/EETF/WISDOM
+!       == IT IS CREATED WITH THE STAND-ALLONE PROGRAM FFTW_WISDOM SUPPLIED WITH FFTW
+        CALL DFFTW_IMPORT_SYSTEM_WISDOM(ISUCCESS)
+        TINI=.TRUE.
+      END IF
+!
+!     ==========================================================================
+!     ==  CREATE PLAN FOR FFT                                                 ==
+!     ==========================================================================
+!     == A PLAN IS SPECIFIC TO THE INPUT AND OUTPUT POINTER VARIABLES
+!     == ATTENTION!! THE ROUTINE WITH PARAMETER FFTW_MEASURE OVERWRITES INPUT AND OUTPUT!
+!     == HENCE USE A LOCAL ARRAY XDUMMY THAT IS REWRITTEN BEFORE EXECUTION.
+      INEMBED(:)=LEN
+      ONEMBED(:)=LEN
+      IF(DIR.EQ.'RTOG') THEN
+        CALL DFFTW_PLAN_MANY_DFT(PLAN,LEN,LEN,NFFT,XDUMMY,INEMBED,1,NP &
+     &                          ,Y,ONEMBED,1,NP,FFTW_FORWARD,FFTW_MEASURE)
+      ELSE IF (DIR.EQ.'GTOR') THEN
+        CALL DFFTW_PLAN_MANY_DFT(PLAN,LEN,LEN,NFFT,XDUMMY,INEMBED,1,NP &
+     &                          ,Y,ONEMBED,1,NP,FFTW_BACKWARD,FFTW_MEASURE)
+      ELSE
+        CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+        CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+        CALL ERROR$CHVAL('DIR',TRIM(DIR))
+        CALL ERROR$STOP('1D-FFTW')
+      END IF  
+!
+!     ==========================================================================
+!     ==  EXECUTE FOURIER TRANSFORM                                           ==
+!     ==========================================================================
+      XDUMMY=X
+      CALL DFFTW_EXECUTE(PLAN)
+!
+!     ==========================================================================
+!     ==  SCALE RESULT                                                        ==
+!     ==========================================================================
+      IF (DIR.EQ.'RTOG') THEN
+        SCALE=1.D0/REAL(LEN,KIND=8)
+        Y(:,:)=Y(:,:)*SCALE
+      END IF
+      RETURN
+      END
+!
+!     ..........................................................................
+      SUBROUTINE LIB_3DFFTW3(DIR,N1,N2,N3,X,Y)
+!     **************************************************************************
+!     **  3-D FFT                                                             **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)                    **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)                    **
+!     **                                                                      **
+!     **    USES THE 3D FFTW ROUTINES                                         **
+!     **                                        CLEMENS FOERST, 2001          **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(4)            :: DIR
+      INTEGER                 :: DIM(3)
+      INTEGER(4)              :: N1,N2,N3
+      COMPLEX(8)              :: X(N1,N2,N3)
+      COMPLEX(8)              :: Y(N1,N2,N3)
+      INTEGER(4)  ,SAVE       :: NP=0
+      INTEGER(4),PARAMETER    :: NPX=10
+      INTEGER(8)              :: PLAN
+      INTEGER(8)  ,SAVE       :: PLANS(NPX,4)
+      REAL(8)     ,SAVE       :: SCALE
+      INTEGER     ,SAVE       :: DIMSAVE(3)=0
+      CHARACTER(4),SAVE       :: DIRSAVE=''
+      LOGICAL                 :: DEF
+      INTEGER(4)              :: I
+      INTEGER     ,SAVE       :: ISIGN
+      INTEGER                 :: ISUCCESS
+      LOGICAL    ,SAVE        :: TINI=.FALSE.
+      INCLUDE 'FFTW3.f'
+!     **************************************************************************
+      call error$msg('the fftw3 interfaces are under development')
+      call error$msg('and not yet ready for use')
+      call error$stop('lib_3dfftw3')
+      IF(.NOT.TINI) THEN
+!       == ATTEMPT TO IMPORTS PRE-CALCULATED WISDOM.
+!       == ON UNIX SYSTEMS THE WISDOM SHOULD BE IN /ETC/EETF/WISDOM
+!       == IT IS CREATED WITH THE STAND-ALLONE PROGRAM FFTW_WISDOM SUPPLIED WITH FFTW
+        CALL DFFTW_IMPORT_SYSTEM_WISDOM(ISUCCESS)
+        TINI=.TRUE.
+      END IF
+!
+!     ==========================================================================
+!     ==  CREATE PLAN FOR FFT                                                 ==
+!     ==========================================================================
+!     == A PLAN IS SPECIFIC TO THE INPUT AND OUTPUT POINTER VARIABLES
+!     == ATTENTION!! THE ROUTINE WITH PARAMETER FFTW_MEASURE OVERWRITES INPUT AND OUTPUT!
+!     == HENCE USE A LOCAL ARRAY XDUMMY THAT IS REWRITTEN BEFORE EXECUTION.
+      IF(DIR.EQ.'RTOG') THEN
+        CALL DFFTW_PLAN_DFT_3D(PLAN,n1,n2,n3,XDUMMY,Y,FFTW_FORWARD,FFTW_MEASURE)
+      ELSE IF (DIR.EQ.'GTOR') THEN
+        CALL DFFTW_PLAN_DFT_3D(PLAN,n1,n2,n3,XDUMMY,Y,FFTW_backward,FFTW_MEASURE)
+      ELSE
+        CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+        CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+        CALL ERROR$CHVAL('DIR',TRIM(DIR))
+        CALL ERROR$STOP('1D-FFTW')
+      END IF  
+!
+!     ==========================================================================
+!     ==  EXECUTE FOURIER TRANSFORM                                           ==
+!     ==========================================================================
+      XDUMMY=X
+      call dfftw_execute(plan)
+!
+!     ==========================================================================
+!     ==  scale result                                                        ==
+!     ==========================================================================
+      IF (DIR.EQ.'RTOG') THEN
+        SCALE=1.D0/REAL(N1*N2*N3,KIND=8)
+        Y=Y*SCALE
+      END IF
+      RETURN
+      END
+#ENDIF
+!
+!*******************************************************************************
+!**  driver routines for the Fourier transforms from the                      **
+!**     ENGINEERING AND SCIENTIFIC SUBROUTINE LIBRARY (ESSL)                  **
+!**                                                                           **
+!**  ESSL is a commercial package from IBM                                    **
+!*******************************************************************************
+!DCFT:  1-D FFT P765
+#IF DEFINED(CPPVAR_FFT_ESSL)
+!     ..................................................................
+      SUBROUTINE LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
+!     ******************************************************************
+!     **  1-D FFT                                                     **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
+!     **                                                              **
+!     **  PACKAGES THE ESSL ROUTINE DCFT                              **
+!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                     **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: DIR
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      INTEGER(4)  ,INTENT(IN) :: NFFT
+      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
+      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
+      INTEGER(4)  ,PARAMETER  :: NAUX1=20000
+      INTEGER(4)  ,PARAMETER  :: NAUX2=20000
+      REAL(8)     ,SAVE       :: AUX2(NAUX2)
+      REAL(8)     ,SAVE       :: AUX1(NAUX1)
+      CHARACTER(4),SAVE       :: DIRSAVE=''
+      INTEGER(4)  ,SAVE       :: LENSAVE=0
+      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
+      INTEGER(4)  ,SAVE       :: ISIGN
+      REAL(8)     ,SAVE       :: SCALE
+      INTEGER(4)              :: IFFT,I
+!     ******************************************************************
+!  
+!     ==================================================================
+!     == INITIALIZATION PHASE                                         ==
+!     ==================================================================
+      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE.OR.NFFT.NE.NFFTSAVE) THEN
+        IF(LEN.GT.8192) THEN
+          CALL ERROR$MSG('FFT TOO LONG')
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$STOP('FFT')
+        END IF
+        IF(DIR.EQ.'GTOR') THEN
+          ISIGN=-1
+          SCALE=1.D0
+        ELSE IF(DIR.EQ.'RTOG') THEN
+          ISIGN=1
+          SCALE=1.D0/REAL(LEN,KIND=8)
+        ELSE 
+          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+          CALL ERROR$CHVAL('DIR',TRIM(DIR))
+          CALL ERROR$STOP('FFT')
+        END IF
+        CALL DCFT(1,X,1,LEN,Y,1,LEN,LEN,NFFT,ISIGN,SCALE,AUX1,NAUX1,AUX2,NAUX2)
+        DIRSAVE=DIR
+        LENSAVE=LEN
+        NFFTSAVE=NFFT
+      END IF
+!  
+!     ==================================================================
+!     == FOURIER TRANSFORM                                            ==
+!     ==================================================================
+      CALL DCFT(0,X,1,LEN,Y,1,LEN,LEN,NFFT,ISIGN,SCALE,AUX1,NAUX1,AUX2,NAUX2)
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
+!     ******************************************************************
+!     **  3-D FFT                                                     **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
+!     **                                                              **
+!     **    USES THE 3D FFT ROUTINE OF ESSL DCFT3                     **
+!     **                                        PETER BLOECHL, 2001   **
+!     ******************************************************************
+!     **    NOT TESTED                                                **
+      IMPLICIT NONE
+      CHARACTER(4)            :: DIR
+      INTEGER(4)              :: DIM(3)
+      INTEGER(4)              :: N1,N2,N3
+      COMPLEX(8)              :: X(N1,N2,N3)
+      COMPLEX(8)              :: Y(N1,N2,N3)
+      INTEGER(4)              :: NAUX       
+      REAL(8)   ,ALLOCATABLE  :: AUX(:)
+      INTEGER(4)              :: ISIGN
+      REAL(8)                 :: SCALE
+      INTEGER(4)              :: S,PSI,LAMBDA
+!     ******************************************************************
+      NAUX=60000
+      IF(N1.GT.2048) NAUX=NAUX+4.56*N1
+      IF(N3.LT.252) THEN
+        IF(N2.GE.252) THEN
+          S=MIN(64,N1)
+          LAMBDA=(2*N2+256)*(S+4.56)
+          NAUX=NAUX+LAMBDA
+        END IF
+      ELSE
+        IF(N2.GE.252) THEN
+          S=MIN(64,N1*N2)
+          PSI=(2*N3+256)*(S+4.56)
+          NAUX=NAUX+PSI
+        ELSE
+          S=MIN(64,N1*N2)
+          PSI=(2*N3+256)*(S+4.56)
+          S=MIN(64,N1)
+          LAMBDA=(2*N2+256)*(S+4.56)
+          NAUX=NAUX+MAX(PSI,LAMBDA)
+        END IF
+      END IF
+      IF (DIR.EQ.'GTOR') THEN
+        ISIGN=1
+        SCALE=1.D0
+      ELSE IF (DIR.EQ.'RTOG') THEN
+        ISIGN=-1
+        SCALE=1.D0/REAL(N1*N2*N3,KIND=8)
+      ELSE
+        CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+        CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+        CALL ERROR$CHVAL('DIR',TRIM(DIR))
+        CALL ERROR$STOP('3D-FFTW')
+      END IF
+      ALLOCATE(AUX(NAUX))
+      CALL DCFT3(X,N1,N1*N2,Y,N1,N1*N2,N1,N2,N3,ISIGN,SCALE,AUX,NAUX)
+      DEALLOCATE(AUX)
+      RETURN
+      END
+#ENDIF
+!
+!
+!*******************************************************************************
+!**  driver routines for the Fourier transforms from the                      **
+!**     FFTPACK package                                                       **
+!**                                                                           **
+!**  FFTPACK is a Fortran subroutine library of Fast Fourier Transform        **
+!**  developed at the National Center for Atmospheric Research.               **
+!**                                                                           **
+!**   FFTPACK5 is distributed under the GNU General Public License            **
+!**   from http://www.cisl.ucar.edu/css/software/fftpack5/index.html          **
+!**                                                                           **
+!*******************************************************************************
+#IF DEFINED(CPPVAR_FFT_PACK)
+!     ..................................................................
+      SUBROUTINE LIB_FFTPACK(DIR,LEN,NFFT,X,Y)                  
+!     ******************************************************************
+!     **  1-D FFT                                                     **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
+!     **                                                              **
+!     **  PACKAGES THE ESSL ROUTINE DCFT                              **
+!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                     **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: DIR
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      INTEGER(4)  ,INTENT(IN) :: NFFT
+      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
+      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
+      INTEGER(4)  ,PARAMETER  :: NAUX2=2000
+      REAL(8)     ,SAVE       :: AUX2(NAUX2)
+      INTEGER(4)  ,SAVE       :: IAUX(30)
+      REAL(8)                 :: SEQUENCE(2*LEN)
+      CHARACTER(4),SAVE       :: DIRSAVE=''
+      INTEGER(4)  ,SAVE       :: LENSAVE=0
+      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
+      INTEGER(4)  ,SAVE       :: ISIGN
+      REAL(8)     ,SAVE       :: SCALE
+      INTEGER(4)              :: IFFT,I
+!     ******************************************************************
+!  
+!     ==================================================================
+!     == INITIALIZATION PHASE                                         ==
+!     ==================================================================
+      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
+        IF(DIR.EQ.'GTOR') THEN
+          ISIGN=-1
+          SCALE=1.D0
+        ELSE IF(DIR.EQ.'RTOG') THEN
+          ISIGN=1
+          SCALE=1.D0/REAL(LEN,KIND=8)
+        ELSE 
+          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+          CALL ERROR$CHVAL('DIR',TRIM(DIR))
+          CALL ERROR$STOP('LIB_FFTPACK')
+        END IF
+        DIRSAVE=DIR
+        LENSAVE=LEN
+        IF(LEN.EQ.1) RETURN
+        IF(NAUX2.LT.2*LEN) THEN
+          CALL ERROR$MSG('AUXILIARY ARRAY TOO SMALL: INCREASE NAUX2')
+          CALL ERROR$I4VAL('NAUX2',NAUX2)
+          CALL ERROR$I4VAL('2*LEN',2*LEN)
+          CALL ERROR$STOP('LIB_FFTPACK')
+        END IF
+        CALL CFFTI(LEN,AUX2,IAUX)
+      END IF
+!  
+!     ==================================================================
+!     == FOURIER TRANSFORM                                            ==
+!     ==================================================================
+      IF(LEN.EQ.1) RETURN
+      IF(ISIGN.EQ.1) THEN
+        DO IFFT=1,NFFT
+          DO I=1,LEN
+            SEQUENCE(2*I-1)= REAL(X(I,IFFT),KIND=8)
+            SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
+          ENDDO
+          CALL CFFTF(LEN,SEQUENCE,AUX2,IAUX)
+          DO I=1,LEN
+            Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I),KIND=8)*SCALE
+          ENDDO
+        ENDDO
+      ELSE
+        DO IFFT=1,NFFT
+          DO I=1,LEN
+            SEQUENCE(2*I-1)= REAL(X(I,IFFT),KIND=8)
+            SEQUENCE(2*I  )=AIMAG(X(I,IFFT))
+          ENDDO
+          CALL CFFTB(LEN,SEQUENCE,AUX2,IAUX)
+          DO I=1,LEN
+            Y(I,IFFT)=CMPLX(SEQUENCE(2*I-1),SEQUENCE(2*I),KIND=8)*SCALE
+          ENDDO
+        ENDDO
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_3DFFTPACK(DIR,N1,N2,N3,X,Y)
+!     ******************************************************************
+!     **  3-D FFT                                                     **
+!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)            **
+!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)            **
+!     **                                                              **
+!     **    USES THE 3D FFT ROUTINE OF ESSL DCFT3                     **
+!     **                                        PETER BLOECHL, 2001   **
+!     ******************************************************************
+!     **    NOT TESTED                                                **
+      IMPLICIT NONE
+      CHARACTER(4)            :: DIR
+      INTEGER(4)              :: DIM(3)
+      INTEGER(4)              :: N1,N2,N3
+      COMPLEX(8)              :: X(N1,N2,N3)
+      COMPLEX(8)              :: Y(N1,N2,N3)
+      COMPLEX(8)              :: WORK1(N1*N2*N3),WORK2(N1*N2*N3)
+      INTEGER(4)              :: I,J,K,IND
+!     ******************************************************************
+      CALL LIB_FFTPACK(DIR,N1,N2*N3,X,WORK2)
+      IND=0
+      DO K=1,N3
+        DO J=1,N2
+          DO I=1,N1
+            IND=IND+1
+            WORK1(J+N2*(K-1+N1*(I-1)))=WORK2(IND)
+          ENDDO
+        ENDDO
+      ENDDO
+      CALL LIB_FFTPACK(DIR,N2,N1*N3,WORK1,WORK2)
+      IND=0
+      DO I=1,N1
+        DO K=1,N3
+          DO J=1,N2
+            IND=IND+1
+            WORK1(K+N3*(I-1+N1*(J-1)))=WORK2(IND)
+          ENDDO
+        ENDDO
+      ENDDO
+      CALL LIB_FFTPACK(DIR,N3,N1*N2,WORK1,WORK2)
+      IND=0
+      DO J=1,N2
+        DO I=1,N1
+          DO K=1,N3
+            IND=IND+1
+            Y(I,J,K)=WORK2(IND)
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
+#ENDIF
 #IF DEFINED(CPPVAR_BLAS_ESSL)
 !***********************************************************************
 !***********************************************************************
