@@ -1041,6 +1041,7 @@ END MODULE MPE_MODULE
       THIS%RECEIVETAG(:)=0
       NULLIFY(THIS%NEXT)
       CALL MPE$SELECT('~')
+      call mpi_pcontrol(1,ierr)
 #ENDIF
       RETURN
       END

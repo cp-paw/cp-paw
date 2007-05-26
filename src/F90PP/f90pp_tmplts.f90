@@ -325,7 +325,6 @@ END MODULE TEMPLATE_MODULE
       INTEGER(4),PARAMETER :: LINELENG=256
       INTEGER(4),PARAMETER :: NLINEX=100000
       CHARACTER(LINELENG)  :: BUFFER(NLINEX)
-      CHARACTER(LINELENG)  :: BUFFERdummy
       INTEGER(4)           :: NLINE
       INTEGER(4)           :: I
 !     ******************************************************************

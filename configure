@@ -604,12 +604,12 @@ CPP
 PAWDIR
 ARCH
 SPECIAL
-COMPILE
-LINK
-LLINK
-LLINKPARALLEL
-LLIBSPARALLEL
-LLIBS
+COMPILE_SCALAR
+COMPILE_PARALLEL
+LINK_SCALAR
+LINK_PARALLEL
+LIBS_SCALAR
+LIBS_PARALLEL
 FEXT
 TOOLCOMP
 CPPVAR
@@ -618,8 +618,8 @@ BLASDIR
 LAPACKDIR
 FFTDIR
 MPIDIR
-INCLUDE_FFTW
-INCLUDE_MPI
+FFT_HEADER
+MPI_HEADER
 LIBOBJS
 LTLIBOBJS'
 ac_subst_files=''
@@ -1656,7 +1656,6 @@ TOOLCOMP="dbg"
 #
 # the PAWDIR is determined automatically, the rest follows
 #
-PAWDIR=`pwd`
 #
 # process command line arguments
 #
@@ -1873,51 +1872,43 @@ CPP="$CPP $CPPOPT"
 ##                                                                        ##
 ############################################################################
 #
-# copy current parameter file to "parms.in_use"
-#
-{ echo "$as_me:$LINENO: result: copy $PARMFILE to parms.in_use" >&5
-echo "${ECHO_T}copy $PARMFILE to parms.in_use" >&6; }
-cp $PARMFILE ${PAWDIR}/parms.in_use
-#
 { echo "$as_me:$LINENO: result: resolve $PARMFILE" >&5
 echo "${ECHO_T}resolve $PARMFILE" >&6; }
 if test "$PARMFILE" != notset; then
   ARCH=`grep '^ARCH' $PARMFILE | cut -d'"' -f2`
   TPARALLEL=`grep '^TPARALLEL' $PARMFILE | cut -d'"' -f2`
-  COMPILER=`grep '^COMPILER' $PARMFILE | cut -d'"' -f2`
-  FLAGS=`grep '^FLAGS' $PARMFILE | cut -d'"' -f2`
-  OPTIMIZE=`grep '^OPTIMIZE' $PARMFILE | cut -d'"' -f2`
-  DEBUG=`grep '^DEBUG' $PARMFILE | cut -d'"' -f2`
-  PROF=`grep '^PROF' $PARMFILE | cut -d'"' -f2`
-  LFLAGS=`grep '^LFLAGS' $PARMFILE | cut -d'"' -f2`
-  LLINK=`grep '^LLINK' $PARMFILE | cut -d'"' -f2`
-  PLLINK=`grep '^PLLINK' $PARMFILE | cut -d'"' -f2`
-  LIBS=`grep '^LIBS=' $PARMFILE | cut -d'"' -f2`
-  PLIBS=`grep '^PLIBS' $PARMFILE | cut -d'"' -f2`
+  COMPILER_SCALAR=`grep '^COMPILER_SCALAR' $PARMFILE | cut -d'"' -f2`
+  COMPILER_PARALLEL=`grep '^COMPILER_PARALLEL' $PARMFILE | cut -d'"' -f2`
+  FFLAGS_STD=`grep '^FFLAGS_STD' $PARMFILE | cut -d'"' -f2`
+  FFLAGS_OPT=`grep '^FFLAGS_OPT' $PARMFILE | cut -d'"' -f2`
+  FFLAGS_DBG=`grep '^FFLAGS_DBG' $PARMFILE | cut -d'"' -f2`
+  FFLAGS_PROF=`grep '^FFLAGS_PROF' $PARMFILE | cut -d'"' -f2`
+  LFLAGS_SCALAR=`grep '^LFLAGS_SCALAR' $PARMFILE | cut -d'"' -f2`
+  LFLAGS_PARALLEL=`grep '^LFLAGS_PARALLEL' $PARMFILE | cut -d'"' -f2`
+  LIBS_SCALAR=`grep '^LIBS_SCALAR=' $PARMFILE | cut -d'"' -f2`
+  LIBS_PARALLEL=`grep '^LIBS_PARALLEL' $PARMFILE | cut -d'"' -f2`
   CPPVAR=`grep '^CPPVAR' $PARMFILE | cut -d'"' -f2`
   FEXT=`grep '^FEXT' $PARMFILE | cut -d'"' -f2`
   BLASDIR=`grep '^BLASDIR' $PARMFILE | cut -d'"' -f2`
   LAPACKDIR=`grep '^LAPACKDIR' $PARMFILE | cut -d'"' -f2`
   FFTDIR=`grep '^FFTDIR' $PARMFILE | cut -d'"' -f2`
   MPIDIR=`grep '^MPIDIR' $PARMFILE | cut -d'"' -f2`
-  INCLUDE_FFTW=`grep '^INCLUDE_FFTW' $PARMFILE | cut -d'"' -f2`
-  INCLUDE_MPI=`grep '^INCLUDE_MPI' $PARMFILE | cut -d'"' -f2`
+  FFT_HEADER=`grep '^FFT_HEADER' $PARMFILE | cut -d'"' -f2`
+  MPI_HEADER=`grep '^MPI_HEADER' $PARMFILE | cut -d'"' -f2`
   SPECIAL=`grep '^SPECIAL' $PARMFILE | cut -d'"' -f2`
   #
   # compose final variables
   #
-  COMPILE="$COMPILER $FLAGS"
-  LINK="$COMPILER $LFLAGS"
-  LLINK="$LLINK"
-  LLINKPARALLEL="$PLLINK"
-  LLIBS="$LIBS"
-  LLIBSPARALLEL="$PLIBS"
-  LLIBSPARALLEL="$LLIBSPARALLEL $USERLIBS"
+  PAWDIR=`pwd`
+  OBJDIR="$OBJDIR/$ARCH/Objects"
+  PAWX="$PAWDIR/bin/$ARCH"
+  COMPILE_SCALAR="$COMPILER_SCALAR"
+  COMPILE_PARALLEL="$COMPILER_PARALLEL"
+  LINK_SCALAR="$COMPILER_SCALAR $LFLAGS_SCALAR"
+  LINK_PARALLEL="$COMPILER_PARALLEL $LFLAGS_PARALLEL"
   CPPVAR="$CPPVAR"
   FEXT="$FEXT"
   ARCH="$ARCH"
-  OBJDIR="$OBJDIR/$ARCH/Objects"
-  PAWX="$PAWDIR/bin/$ARCH"
   #
   # if no parameter file is given, the script will search for the
   # values needed.
@@ -1940,6 +1931,13 @@ CPP="$CPP -traditional"
 ##  check if files are present                                         ##
 ##                                                                     ##
 #########################################################################
+echo '${MPI_HEADER}'
+cat >>confdefs.h <<\_ACEOF
+#define XX ${MPI_HEADER}
+_ACEOF
+
+echo ${XX}
+echo '============================='
 if test "$TPARALLEL" = "T"; then
   #________mpi include file
   if test  -n "$MPIDIR"  ; then
@@ -1982,45 +1980,12 @@ echo "${ECHO_T}name of the mpi directory: $MPIDIR" >&6; }
 echo "$as_me: error: mpi directory not found" >&2;}
    { (exit 1); exit 1; }; }
     fi
-    { echo "$as_me:$LINENO: result: check MPI include file" >&5
-echo "${ECHO_T}check MPI include file" >&6; }
-    as_ac_File=`echo "ac_cv_file_$INCLUDE_MPI" | $as_tr_sh`
-{ echo "$as_me:$LINENO: checking for $INCLUDE_MPI" >&5
-echo $ECHO_N "checking for $INCLUDE_MPI... $ECHO_C" >&6; }
-if { as_var=$as_ac_File; eval "test \"\${$as_var+set}\" = set"; }; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  test "$cross_compiling" = yes &&
-  { { echo "$as_me:$LINENO: error: cannot check for file existence when cross compiling" >&5
-echo "$as_me: error: cannot check for file existence when cross compiling" >&2;}
-   { (exit 1); exit 1; }; }
-if test -r "$INCLUDE_MPI"; then
-  eval "$as_ac_File=yes"
-else
-  eval "$as_ac_File=no"
-fi
-fi
-ac_res=`eval echo '${'$as_ac_File'}'`
-	       { echo "$as_me:$LINENO: result: $ac_res" >&5
-echo "${ECHO_T}$ac_res" >&6; }
-if test `eval echo '${'$as_ac_File'}'` = yes; then
-
-cat >>confdefs.h <<_ACEOF
-#define `echo "HAVE_$INCLUDE_MPI" | $as_tr_cpp` 1
-_ACEOF
-
-ERROR=F
-else
-  ERROR=T
-fi
-
-    if test "$ERROR" = "T"; then
-      { echo "$as_me:$LINENO: result: name of the mpi include file: $MPIDIR" >&5
-echo "${ECHO_T}name of the mpi include file: $MPIDIR" >&6; }
-      { { echo "$as_me:$LINENO: error: mpi include file not found" >&5
-echo "$as_me: error: mpi include file not found" >&2;}
-   { (exit 1); exit 1; }; }
-    fi
+##    AC_MSG_RESULT(check MPI include file)
+##    AC_CHECK_FILES($MPI_HEADER,ERROR=F,ERROR=T)
+##    if test ["$ERROR" = "T"]; then
+##      AC_MSG_RESULT(name of the mpi include file: $MPIDIR)
+##      AC_MSG_ERROR(mpi include file not found)
+##    fi
   else
     # mpidir is empty. error or ok?
     if test "$SPECIAL"="IBM" ; then
@@ -2075,45 +2040,12 @@ echo "${ECHO_T}name of the FFT directory: $FFTDIR" >&6; }
 echo "$as_me: error: FFT directory not found" >&2;}
    { (exit 1); exit 1; }; }
   fi
-  { echo "$as_me:$LINENO: result: check FFTW include file" >&5
-echo "${ECHO_T}check FFTW include file" >&6; }
-  as_ac_File=`echo "ac_cv_file_$INCLUDE_FFTW" | $as_tr_sh`
-{ echo "$as_me:$LINENO: checking for $INCLUDE_FFTW" >&5
-echo $ECHO_N "checking for $INCLUDE_FFTW... $ECHO_C" >&6; }
-if { as_var=$as_ac_File; eval "test \"\${$as_var+set}\" = set"; }; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  test "$cross_compiling" = yes &&
-  { { echo "$as_me:$LINENO: error: cannot check for file existence when cross compiling" >&5
-echo "$as_me: error: cannot check for file existence when cross compiling" >&2;}
-   { (exit 1); exit 1; }; }
-if test -r "$INCLUDE_FFTW"; then
-  eval "$as_ac_File=yes"
-else
-  eval "$as_ac_File=no"
-fi
-fi
-ac_res=`eval echo '${'$as_ac_File'}'`
-	       { echo "$as_me:$LINENO: result: $ac_res" >&5
-echo "${ECHO_T}$ac_res" >&6; }
-if test `eval echo '${'$as_ac_File'}'` = yes; then
-
-cat >>confdefs.h <<_ACEOF
-#define `echo "HAVE_$INCLUDE_FFTW" | $as_tr_cpp` 1
-_ACEOF
-
-ERROR=F
-else
-  ERROR=T
-fi
-
-  if test "$ERROR" = "T"; then
-    { echo "$as_me:$LINENO: result: name of the fftw include file: $INCLUDE_FFTW" >&5
-echo "${ECHO_T}name of the fftw include file: $INCLUDE_FFTW" >&6; }
-    { { echo "$as_me:$LINENO: error: fftw include file not found" >&5
-echo "$as_me: error: fftw include file not found" >&2;}
-   { (exit 1); exit 1; }; }
-  fi
+##  AC_MSG_RESULT(check FFT include file)
+##  AC_CHECK_FILES($FFT_HEADER,ERROR=F,ERROR=T)
+##  if test ["$ERROR" = "T"]; then
+##    AC_MSG_RESULT(name of the fftw include file: $FFT_HEADER)
+##    AC_MSG_ERROR(fftw include file not found)
+##  fi
 fi
 #
 #########################################################################
@@ -2149,6 +2081,12 @@ fi
 ##  create Makefiles and f90pp                                         ##
 ##                                                                     ##
 #########################################################################
+#
+# copy current parameter file to "parms.in_use"
+#
+{ echo "$as_me:$LINENO: result: copy $PARMFILE to parms.in_use" >&5
+echo "${ECHO_T}copy $PARMFILE to parms.in_use" >&6; }
+cp $PARMFILE ${PAWDIR}/parms.in_use
 #
 # creating subdirectories
 #
@@ -2847,12 +2785,12 @@ CPP!$CPP$ac_delim
 PAWDIR!$PAWDIR$ac_delim
 ARCH!$ARCH$ac_delim
 SPECIAL!$SPECIAL$ac_delim
-COMPILE!$COMPILE$ac_delim
-LINK!$LINK$ac_delim
-LLINK!$LLINK$ac_delim
-LLINKPARALLEL!$LLINKPARALLEL$ac_delim
-LLIBSPARALLEL!$LLIBSPARALLEL$ac_delim
-LLIBS!$LLIBS$ac_delim
+COMPILE_SCALAR!$COMPILE_SCALAR$ac_delim
+COMPILE_PARALLEL!$COMPILE_PARALLEL$ac_delim
+LINK_SCALAR!$LINK_SCALAR$ac_delim
+LINK_PARALLEL!$LINK_PARALLEL$ac_delim
+LIBS_SCALAR!$LIBS_SCALAR$ac_delim
+LIBS_PARALLEL!$LIBS_PARALLEL$ac_delim
 FEXT!$FEXT$ac_delim
 TOOLCOMP!$TOOLCOMP$ac_delim
 CPPVAR!$CPPVAR$ac_delim
@@ -2861,8 +2799,8 @@ BLASDIR!$BLASDIR$ac_delim
 LAPACKDIR!$LAPACKDIR$ac_delim
 FFTDIR!$FFTDIR$ac_delim
 MPIDIR!$MPIDIR$ac_delim
-INCLUDE_FFTW!$INCLUDE_FFTW$ac_delim
-INCLUDE_MPI!$INCLUDE_MPI$ac_delim
+FFT_HEADER!$FFT_HEADER$ac_delim
+MPI_HEADER!$MPI_HEADER$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
@@ -3205,7 +3143,8 @@ chmod +x $PAWDIR/bin/$ARCH/f90pp
 #
 { echo "$as_me:$LINENO: result: creating Makefile in none" >&5
 echo "${ECHO_T}creating Makefile in none" >&6; }
-sed -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
+sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_STD %"\
+    -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
     -e 's%varPARALLEL%F%'\
     -e 's%varOBJTYPE%none%'\
     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none/Makefile
@@ -3215,7 +3154,8 @@ sed -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
 if test "$TPARALLEL" = "T"; then
   { echo "$as_me:$LINENO: result: creating Makefile in none_parallel" >&5
 echo "${ECHO_T}creating Makefile in none_parallel" >&6; }
-  sed -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_STD %"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
       -e 's%varPARALLEL%T%'\
       -e 's%varOBJTYPE%none_parallel%'\
       ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile
@@ -3225,7 +3165,7 @@ fi
 #
 { echo "$as_me:$LINENO: result: creating Makefile in fast" >&5
 echo "${ECHO_T}creating Makefile in fast" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $OPTIMIZE %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_OPT %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%"\
     -e 's%varOBJTYPE%fast%'\
     -e 's%varPARALLEL%F%'\
@@ -3236,7 +3176,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $OPTIMIZE %"\
 if test "$TPARALLEL" = "T"; then
   { echo "$as_me:$LINENO: result: creating Makefile_parallel in fast" >&5
 echo "${ECHO_T}creating Makefile_parallel in fast" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $OPTIMIZE %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_OPT %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%"\
       -e 's%varOBJTYPE%fast_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -3247,7 +3187,7 @@ fi
 #
 { echo "$as_me:$LINENO: result: creating Makefile in dbg" >&5
 echo "${ECHO_T}creating Makefile in dbg" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $DEBUG %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_DBG %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%"\
     -e 's%varOBJTYPE%dbg%'\
     -e 's%varPARALLEL%F%'\
@@ -3258,7 +3198,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $DEBUG %"\
 if test "$TPARALLEL" = "T"; then
   { echo "$as_me:$LINENO: result: creating Makefile_parallel in dbg" >&5
 echo "${ECHO_T}creating Makefile_parallel in dbg" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $DEBUG %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_DBG %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%"\
       -e 's%varOBJTYPE%dbg_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -3269,7 +3209,7 @@ fi
 #
 { echo "$as_me:$LINENO: result: creating Makefile in prof" >&5
 echo "${ECHO_T}creating Makefile in prof" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $PROF %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_PROF %"\
     -e "s%\(LINK=.*\)%\1 -pg %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%"\
     -e 's%varOBJTYPE%prof%'\
@@ -3281,7 +3221,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $PROF %"\
 if test "$TPARALLEL" = "T"; then
   { echo "$as_me:$LINENO: result: creating Makefile_parallel in prof" >&5
 echo "${ECHO_T}creating Makefile_parallel in prof" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $PROF %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_PROF %"\
       -e "s%\(LINK=.*\)%\1 -pg %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%"\
       -e 's%varOBJTYPE%prof_parallel%'\
@@ -3298,55 +3238,77 @@ fi
 ##                      print summary                                  ##
 ##                                                                     ##
 #########################################################################
-{ echo "$as_me:$LINENO: result: -------------------------------------" >&5
-echo "${ECHO_T}-------------------------------------" >&6; }
-{ echo "$as_me:$LINENO: result: printing out of summary              " >&5
-echo "${ECHO_T}printing out of summary              " >&6; }
-{ echo "$as_me:$LINENO: result: -------------------------------------" >&5
-echo "${ECHO_T}-------------------------------------" >&6; }
-{ echo "$as_me:$LINENO: result: architecture                   : $ARCH" >&5
-echo "${ECHO_T}architecture                   : $ARCH" >&6; }
-{ echo "$as_me:$LINENO: result: MAKE command                   : $MAKE" >&5
-echo "${ECHO_T}MAKE command                   : $MAKE" >&6; }
-{ echo "$as_me:$LINENO: result: CPP command                    : $CPP" >&5
-echo "${ECHO_T}CPP command                    : $CPP" >&6; }
-{ echo "$as_me:$LINENO: result: preprocessor variables         : $CPPVAR" >&5
-echo "${ECHO_T}preprocessor variables         : $CPPVAR" >&6; }
+{ echo "$as_me:$LINENO: result: ---------------------------------------------------------------" >&5
+echo "${ECHO_T}---------------------------------------------------------------" >&6; }
+{ echo "$as_me:$LINENO: result: -----------------------SUMMARY---------------------------------" >&5
+echo "${ECHO_T}-----------------------SUMMARY---------------------------------" >&6; }
+{ echo "$as_me:$LINENO: result: ---------------------------------------------------------------" >&5
+echo "${ECHO_T}---------------------------------------------------------------" >&6; }
 { echo "$as_me:$LINENO: result: directory of distribution      : $PAWDIR" >&5
 echo "${ECHO_T}directory of distribution      : $PAWDIR" >&6; }
+{ echo "$as_me:$LINENO: result: directory with binaries        : $PAWDIR/bin/$ARCH" >&5
+echo "${ECHO_T}directory with binaries        : $PAWDIR/bin/$ARCH" >&6; }
+{ echo "$as_me:$LINENO: result: architecture                   : $ARCH" >&5
+echo "${ECHO_T}architecture                   : $ARCH" >&6; }
+{ echo "$as_me:$LINENO: result: preprocessor variables         : $CPPVAR" >&5
+echo "${ECHO_T}preprocessor variables         : $CPPVAR" >&6; }
 { echo "$as_me:$LINENO: result: architecture name              : $ARCH" >&5
 echo "${ECHO_T}architecture name              : $ARCH" >&6; }
 { echo "$as_me:$LINENO: result: parallel environment           : $TPARALLEL" >&5
 echo "${ECHO_T}parallel environment           : $TPARALLEL" >&6; }
-{ echo "$as_me:$LINENO: result: F90 compile command            : $COMPILE" >&5
-echo "${ECHO_T}F90 compile command            : $COMPILE" >&6; }
-{ echo "$as_me:$LINENO: result: F90 optimize options           : $OPTIMIZE" >&5
-echo "${ECHO_T}F90 optimize options           : $OPTIMIZE" >&6; }
-{ echo "$as_me:$LINENO: result: F90 debug flags                : $DEBUG" >&5
-echo "${ECHO_T}F90 debug flags                : $DEBUG" >&6; }
-{ echo "$as_me:$LINENO: result: F90 profiling flags            : $PROF" >&5
-echo "${ECHO_T}F90 profiling flags            : $PROF" >&6; }
-{ echo "$as_me:$LINENO: result: F90 linking flags              : $LFLAGS" >&5
-echo "${ECHO_T}F90 linking flags              : $LFLAGS" >&6; }
-{ echo "$as_me:$LINENO: result: search directories (sequential): $LLINK" >&5
-echo "${ECHO_T}search directories (sequential): $LLINK" >&6; }
-{ echo "$as_me:$LINENO: result: search directories (parallel)  : $LLINKPARALLEL" >&5
-echo "${ECHO_T}search directories (parallel)  : $LLINKPARALLEL" >&6; }
-{ echo "$as_me:$LINENO: result: external libraries (sequential): $LLIBS" >&5
-echo "${ECHO_T}external libraries (sequential): $LLIBS" >&6; }
-{ echo "$as_me:$LINENO: result: external libraries (parallel)  : $LLIBSPARALLEL" >&5
-echo "${ECHO_T}external libraries (parallel)  : $LLIBSPARALLEL" >&6; }
+{ echo "$as_me:$LINENO: result: compile command (scalar)       : $COMPILE_SCALAR" >&5
+echo "${ECHO_T}compile command (scalar)       : $COMPILE_SCALAR" >&6; }
 { echo "$as_me:$LINENO: result: F90 file extension             : $FEXT" >&5
 echo "${ECHO_T}F90 file extension             : $FEXT" >&6; }
+{ echo "$as_me:$LINENO: result: compile flags (none)           : $FFLAGS_STD" >&5
+echo "${ECHO_T}compile flags (none)           : $FFLAGS_STD" >&6; }
+{ echo "$as_me:$LINENO: result: compile flags (fast)           : $FFLAGS_OPT" >&5
+echo "${ECHO_T}compile flags (fast)           : $FFLAGS_OPT" >&6; }
+{ echo "$as_me:$LINENO: result: compile flags (dbg)            : $FFLAGS_DBG" >&5
+echo "${ECHO_T}compile flags (dbg)            : $FFLAGS_DBG" >&6; }
+{ echo "$as_me:$LINENO: result: compile flags (prof)           : $FFLAGS_PROF" >&5
+echo "${ECHO_T}compile flags (prof)           : $FFLAGS_PROF" >&6; }
+{ echo "$as_me:$LINENO: result: link command w.flags (scalar)  : $LINK_SCALAR" >&5
+echo "${ECHO_T}link command w.flags (scalar)  : $LINK_SCALAR" >&6; }
+{ echo "$as_me:$LINENO: result: external libraries (scalar)    : $LIBS_SCALAR" >&5
+echo "${ECHO_T}external libraries (scalar)    : $LIBS_SCALAR" >&6; }
+#AC_MSG_RESULT(---------------------------------------------------------------)
+#AC_MSG_RESULT(--------------external libraries-------------------------------)
+#AC_MSG_RESULT(---------------------------------------------------------------)
 { echo "$as_me:$LINENO: result: blas library                   : $BLASDIR" >&5
 echo "${ECHO_T}blas library                   : $BLASDIR" >&6; }
 { echo "$as_me:$LINENO: result: lapack library                 : $LAPACKDIR" >&5
 echo "${ECHO_T}lapack library                 : $LAPACKDIR" >&6; }
 { echo "$as_me:$LINENO: result: libs for Fourier transforms    : $FFTDIR" >&5
 echo "${ECHO_T}libs for Fourier transforms    : $FFTDIR" >&6; }
-{ echo "$as_me:$LINENO: result: mpi library                    : $MPIDIR" >&5
+if test "$TPARALLEL" = "T"; then
+#  AC_MSG_RESULT(---------------------------------------------------------------)
+#  AC_MSG_RESULT(--------------specifics for parallel environment---------------)
+#  AC_MSG_RESULT(---------------------------------------------------------------)
+  { echo "$as_me:$LINENO: result: parallel envirnment considered : yes" >&5
+echo "${ECHO_T}parallel envirnment considered : yes" >&6; }
+  { echo "$as_me:$LINENO: result: compile command (parallel)     : $COMPILE_PARALLEL" >&5
+echo "${ECHO_T}compile command (parallel)     : $COMPILE_PARALLEL" >&6; }
+  { echo "$as_me:$LINENO: result: link command w. flags(parallel): $LINK_PARALLEL" >&5
+echo "${ECHO_T}link command w. flags(parallel): $LINK_PARALLEL" >&6; }
+  { echo "$as_me:$LINENO: result: external libraries (parallel)  : $LIBS_PARALLEL" >&5
+echo "${ECHO_T}external libraries (parallel)  : $LIBS_PARALLEL" >&6; }
+  { echo "$as_me:$LINENO: result: mpi library                    : $MPIDIR" >&5
 echo "${ECHO_T}mpi library                    : $MPIDIR" >&6; }
-{ echo "$as_me:$LINENO: result: -------------------------------------" >&5
-echo "${ECHO_T}-------------------------------------" >&6; }
-{ echo "$as_me:$LINENO: result: configuration completed successfully!" >&5
-echo "${ECHO_T}configuration completed successfully!" >&6; }
+else
+  { echo "$as_me:$LINENO: result: parallel envirnment considered : no" >&5
+echo "${ECHO_T}parallel envirnment considered : no" >&6; }
+fi
+#AC_MSG_RESULT(---------------------------------------------------------------)
+#AC_MSG_RESULT(--------------environment related------------------------------)
+#AC_MSG_RESULT(---------------------------------------------------------------)
+{ echo "$as_me:$LINENO: result: MAKE command                   : $MAKE" >&5
+echo "${ECHO_T}MAKE command                   : $MAKE" >&6; }
+{ echo "$as_me:$LINENO: result: CPP command                    : $CPP" >&5
+echo "${ECHO_T}CPP command                    : $CPP" >&6; }
+{ echo "$as_me:$LINENO: result: ---------------------------------------------------------------" >&5
+echo "${ECHO_T}---------------------------------------------------------------" >&6; }
+{ echo "$as_me:$LINENO: result: ----done!---configuration completed successfully!--------------" >&5
+echo "${ECHO_T}----done!---configuration completed successfully!--------------" >&6; }
+{ echo "$as_me:$LINENO: result: ---------------------------------------------------------------" >&5
+echo "${ECHO_T}---------------------------------------------------------------" >&6; }

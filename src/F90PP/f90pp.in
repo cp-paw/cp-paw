@@ -78,6 +78,7 @@ fi
 ########################################################################
 OPTIONS=$@
 TEMPLATES=T
+CPPVAR=""
 for i in $OPTIONS; do
   case $i in
     -D*)                    # variables for c-preprocessor 
