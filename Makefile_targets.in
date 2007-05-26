@@ -8,69 +8,73 @@ SHELL=/bin/sh
 ##                                                                     ##
 #########################################################################
 ##                                                                     ##
-##  Primary targets:                                                   ##
-##    default                                                          ##
-##    all                                                              ##
-##    all_new                                                          ##
-##    all_parallel                                                     ##
-##    all_parallel_new                                                 ##
-##    none                                                             ##
-##    none_new                                                         ##
-##    none_parallel                                                    ##
-##    none_parallel_new                                                ##
-##    fast                                                             ##
-##    fast_new                                                         ##
-##    fast_parallel                                                    ##
-##    prof                                                             ##
-##    prof_new                                                         ##
-##    prof_parallel                                                    ##
-##    prof_parallel_new                                                ##
-##    dbg                                                              ##
-##    dbg_new                                                          ##
-##    dbg_parallel                                                     ##
-##    dbg_parallel_new                                                 ##
-##    tools              all tools                                     ##
-##    newatom                                                          ##
-##    atom                                                             ##
-##    tra                                                              ##
-##    wave                                                             ##
-##    1davpot                                                          ##
-##    cmcwave                                                          ##
-##    grab                                                             ##
-##    dos                                                              ##
-##    preopt                                                           ##
-##    converttra                                                       ##
-##    cleantra                                                         ##
-##    strc                                                             ##
-##    tostrc                                                           ##
-##    toxyz                                                            ##
+##  collective targets:                                                ##
+##                                                                     ##
+##    default           everything exept parallel                      ##
+##    clean             cleans up everything                           ##
+##    small             makes a set for the average user               ##
+##                      (avoids none,dbg,prof)                         ##
+##    all               everything exept parallel                      ##
+##    all_new         everything except parallel with full dependencies##
+##    tools          all tools                                     ##
+##                                                                     ##
+#########################################################################
+##                                                                     ##
+##  Individual targets                                                 ##
+##                                                                     ##
+##    none              paw executable (standard compilation)          ##
+##    fast              paw executable (optimizer)                     ##
+##    dbg               paw executable (debugging)                     ##
+##    prof              paw executable (profiling)                     ##
+##                                                                     ##
+##    for the above four targets x there are versions                  ##
+##      x_new           :  like x, but contains all dependencies       ##
+##      x_parallel      :  like x, but for parallel executable         ##
+##      x_parallel_new  : like x_new, but for parallel executable      ##
+##      clean_x:        : clean up                                     ##
+##      clean_x_parallel: clean up for parallel executable             ##
+##                                                                     ##
+##   the parallel versions exist only if a TPARALLEL=T has been        ##
+##   specified in the parameter file                                   ##
+##                                                                     ##
+##    lib                the paw library                               ##
+##                                                                     ##
+##    newatom, atom, tra, wave, 1davpot, cmcwave, grab,dos, preopt     ##
+##    converttra, cleantra, strc, tostrc, toxyz
+##        (targets for tools)                                          ##
+##                                                                     ##
+##    scripts                                                          ##
+##                                                                     ##
 ##    docs                documentation                                ##
 ##                                                                     ##
+##    for all targets x listed above there is a function clean_x.      ##
+##    Exeptions are default, clean and targets containing new          ##
 ##                                                                     ##
-##  Makefiles                                                          ##
-##    @PAWDIR@/Makefile    generic makefile                            ##
-##                Derived from Makefile_targets.in.                    ##
-##                Is always called. It redirects to the othe Makefiles ##
-##                in the object directories                            ##
-##    @PAWDIR@/bin/@ARCH@/none/Makefile                                ##
-##    @PAWDIR@/bin/@ARCH@/none/Makefile_parallel                       ##
-##    @PAWDIR@/bin/@ARCH@/fast/Makefile                                ##
-##    @PAWDIR@/bin/@ARCH@/fast/Makefile_parallel                       ##
-##    @PAWDIR@/bin/@ARCH@/dbg/Makefile                                 ##
-##    @PAWDIR@/bin/@ARCH@/dbg/Makefile_parallel                        ##
-##    @PAWDIR@/bin/@ARCH@/prof/Makefile                                ##
-##    @PAWDIR@/bin/@ARCH@/prof/Makefile_parallel                       ##
+#########################################################################
 ##                                                                     ##
 ##  directory structure                                                ##
-##    @PAWDIR@/bin/@ARCH@       executables                            ##
+##    @PAWDIR@/bin/@ARCH@       containes executables                  ##
+##    @PAWDIR@/bin/@ARCH@/none_parallel                                ##
 ##    @PAWDIR@/bin/@ARCH@/none  objects with simple compiler flags     ##
+##    @PAWDIR@/bin/@ARCH@/fast_parallel                                ##
 ##    @PAWDIR@/bin/@ARCH@/fast  optimized objects                      ##
+##    @PAWDIR@/bin/@ARCH@/prof_parallel                                ##
 ##    @PAWDIR@/bin/@ARCH@/prof  objects for profiling                  ##
+##    @PAWDIR@/bin/@ARCH@/dbg_parallel                                 ##
 ##    @PAWDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
-##    @PAWDIR@/src              sources for CP-PAW main code           ##
-##    @PAWDIR@/src/Tools        directory containing Tools             ##
-##    @PAWDIR@/src/F90PP        directory preprocessor etc             ##
+##    @PAWDIR@/src              contains sources for CP-PAW main code  ##
+##    @PAWDIR@/src/Tools        contains sources of Tools              ##
+##    @PAWDIR@/src/F90PP        contains sources for preprocessor etc  ##
+##    @PAWDIR@/docs             containes documentation                ##
 ##                                                                     ##
+#########################################################################
+##  makefile basics
+#########################################################################
+## $(addprefix prefix,list) returns list with prefix prepended to each member
+## $(addsuffix suffix,list) returns list with suffix appended to each member
+## $@                       name of the current target
+#########################################################################
+#
 #########################################################################
 ## The following block of variables is set by the configure            ##
 ## script (AC_SUBST @...@ and sed-Commands var...)                     ##
@@ -80,35 +84,117 @@ PAWDIR=@PAWDIR@
 #___________________________ the hardware architecture
 ARCH=@ARCH@
 #___________________________ the way to compile the tools 
-TOOLCOMP=@TOOLCOMP@
+TOOLCOMP=fast
 #___________________________ the GNU make utility
 MAKE=@MAKE@
 #
+PENV=@TPARALLEL@
+#
 ##########################################################################
-#
 #  complete shortcuts to directories etc
-#
 ##########################################################################
 #___________________________ path to the object files
 OBJDIR=${PAWDIR}/bin/${ARCH}/Objects
 #___________________________ path to the binaries
 BINDIR=${PAWDIR}/bin/${ARCH}
 #
+OBJTYPES_SCALAR=fast dbg none prof
+OBJTYPES_PRIMARY_SCALAR=fast
+ifeq (${PENV},T)
+  OBJTYPES=${OBJTYPES_SCALAR} $(addsuffix _parallel,${OBJTYPES_SCALAR}) 
+  OBJTYPES_PRIMARY=${OBJTYPES_PRIMARY_SCALAR} $(addsuffix _parallel,${OBJTYPES_PRIMARY_SCALAR}) 
+else
+  OBJTYPES=${OBJTYPES_SCALAR} 
+  OBJTYPES_PRIMARY=${OBJTYPES_PRIMARY_SCALAR} 
+endif
+TOOLS=newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave 
+SCRIPTS=scripts
+#
 #########################################################################
-## Definition of the targets                                           ##
+## Definition of the collective targets                                ##
 #########################################################################
 #
 default: all_new
 #
-clean:
-	find ${OBJDIR}/none/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/fast/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/prof/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/dbg/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	rm -f ${BINDIR}/*.x
-	rm -f ${BINDIR}/paw*
-	rm -f ${BINDIR}/compare_filelist
-	rm -f ${BINDIR}/parmfilewriter.x
+clean: clean_all
+#
+#---------------------------------------------------------------------------
+#-- "all" makes a complete installation. all_new includes all dependencies
+#---------------------------------------------------------------------------
+all: ${OBJTYTPES} tools docs 
+#
+all_new: $(addsuffix _new,${OBJTYPES}) tools docs
+#
+clean_all: $(addprefix clean_,${OBJTYPES} tools)
+#
+#---------------------------------------------------------------------------
+#-- "small" is directed to the production user. just makes the optimized  --
+#-- executables, tools and documentation. Uses all dependencies           --
+#---------------------------------------------------------------------------
+#
+small: $(addsuffix _new,${OBJTYPES_PRIMARY}) tools docs 
+#
+clean_small: $(addprefix clean_,${OBJTYPES_PRIMARY} tools docs)
+#
+#---------------------------------------------------------------------------
+#-- make all tools in one go                                              --
+#---------------------------------------------------------------------------
+tools: ${TOOLS} ${SCRIPTS}
+#
+clean_tools: $(addprefix clean_,${TOOLS} ${SCRIPTS})
+#
+#########################################################################
+## specific target rules                                               ##
+#########################################################################
+#
+#---------------------------------------------------------------------------
+#--          make binaries                                                --
+#-- (none,fast,dbg,prof,none_parallel,fast_parallel,dbg_parallel,prof_parallel)
+#---------------------------------------------------------------------------
+${OBJTYPES}:
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/$@; ${MAKE} 
+#
+$(addsuffix _new,${OBJTYPES}):
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/$(subst _new,,$@); ${MAKE} 
+#
+$(addprefix clean_,${OBJTYPES}):
+	cd ${OBJDIR}/$(subst clean_,,$@); ${MAKE} clean
+#
+#---------------------------------------------------------------------------
+#--          PAW library libpaw.a                                         --
+#---------------------------------------------------------------------------
+lib:
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
+#
+lib_new:
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
+#
+#---------------------------------------------------------------------------
+#--          Tools and scripts                                            --
+#---------------------------------------------------------------------------
+${TOOLS}: lib_new
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_$@.x 
+#
+$(addprefix clean_,{TOOLS}):
+	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile $@
+#
+scripts: 
+	cp ${PAWDIR}/src/Tools/Scripts/* ${BINDIR}
+#
+clean_scripts:
+	rm -f ${BINDIR}/compare_filelist ${BINDIR}/paw_collect ${BINDIR}/paw_copy    ${BINDIR}/paw_ext_copy  
+	rm -f ${BINDIR}/paw_run          ${BINDIR}/paw         ${BINDIR}/paw_compare ${BINDIR}/paw_distribution  
+	rm -f ${BINDIR}/paw_mpeg_encode  ${BINDIR}/paw_show
+#
+#---------------------------------------------------------------------------
+#--          Documentation                                                --
+#---------------------------------------------------------------------------
+docs: ${PAWDIR}/doc/manual.tex ${PAWDIR}/doc/history.tex ${PAWDIR}/doc/install.tex 
+	cd ${PAWDIR}/doc; latex manual; makeindex manual.idx; latex manual; latex manual; bibtex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
+	cd ${PAWDIR}/doc; latex history; makeindex history.idx; latex history; latex history; bibtex history; latex history; dvips history.dvi; ps2pdf history.ps 
+	cd ${PAWDIR}/doc; latex install; makeindex install.idx; latex install; latex install; bibtex install; latex install; dvips install.dvi; ps2pdf install.ps
+#
+clean_docs:
 	rm -f ${PAWDIR}/doc/*.aux
 	rm -f ${PAWDIR}/doc/*.blg
 	rm -f ${PAWDIR}/doc/*.bbl
@@ -121,138 +207,3 @@ clean:
 	rm -f ${PAWDIR}/doc/*.idx
 	rm -f ${PAWDIR}/doc/*.blg
 	rm -f ${PAWDIR}/doc/*.pdf
-
-clean_parallel:
-	find ${OBJDIR}/none_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/fast_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/prof_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-	find ${OBJDIR}/dbg_parallel/* -maxdepth 0 \! -name Makefile -exec rm {} \;
-# 
-#
-# THE PAW BINARIES
-#
-all: dbg none fast prof tools
-#
-# Two targets aim at compiling every PAW-binary (not tool). This
-# is necessary, because the dependencies due to modules just have
-# to be resolved at the very first calculation. In this case the
-# variable ALLDEP is set to T.
-#
-# as the parallel objects are - by default - compiled in the
-# same directory as the optimized sequential ones, there is no 
-# need to resolve the dependencies. Therefore there is no
-# parallel_new in the next list
-#
-all_new: dbg_new none_new fast_new prof_new  tools 
-#
-all_parallel: dbg_parallel none_parallel fast_parallel prof_parallel
-#
-all_parallel_new: dbg_parallel_new none_parallel_new fast_parallel_new prof_parallel_new
-#
-tools: 	 newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave scripts
-#
-none: 
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/none; ${MAKE} 
-# 
-none_new: 
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/none; ${MAKE} 
-#
-none_parallel:    
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/none_parallel; ${MAKE} 
-#
-none_parallel_new: 
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/none_parallel; ${MAKE} 
-#
-fast:   
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/fast; ${MAKE} 
-#
-fast_new: 
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/fast; ${MAKE} 
-#
-fast_parallel: 
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/fast_parallel; ${MAKE} 
-#
-fast_parallel_new: 
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/fast_parallel; ${MAKE} 
-#
-dbg: 
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/dbg;  ${MAKE}
-#
-dbg_new: 
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/dbg; ${MAKE} 
-#
-dbg_parallel:  
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/dbg_parallel; ${MAKE} 
-#
-dbg_parallel_new: 
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/dbg_parallel; ${MAKE} 
-#
-prof:
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/prof; ${MAKE} 
-#
-prof_new: 
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/prof; ${MAKE} 
-#
-prof_parallel: 
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/prof_parallel; ${MAKE} 
-#
-prof_parallel_new: 
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/prof_parallel; ${MAKE} 
-#
-# THE PAW library
-#
-lib:
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
-#
-# THE PAW TOOLS
-#
-newatom: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_newatom.x 
-#
-atom: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_atom.x 
-#
-tra: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_tra.x 
-#
-wave: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_wave.x 
-#
-1davpot: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_1davpot.x 
-#
-cmcwave: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_cmcwave.x 
-#
-grab: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_grab.x 
-#
-dos: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_dos.x 
-#
-preopt: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_preopt.x 
-#
-converttra: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_converttra.x 
-#
-cleantra: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_cleantra.x 
-#
-strc: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_strc.x 
-#
-toxyz: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_toxyz.x 
-#
-tostrc: lib
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_tostrc.x 
-#
-scripts: 
-	cp ${PAWDIR}/src/Tools/Scripts/* ${BINDIR}
-#
-docs: ${PAWDIR}/doc/manual.tex ${PAWDIR}/doc/history.tex ${PAWDIR}/doc/install.tex 
-	cd ${PAWDIR}/doc; latex manual; makeindex manual.idx; latex manual; latex manual; bibtex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
-	cd ${PAWDIR}/doc; latex history; makeindex history.idx; latex history; latex history; bibtex history; latex history; dvips history.dvi; ps2pdf history.ps 
-	cd ${PAWDIR}/doc; latex install; makeindex install.idx; latex install; latex install; bibtex install; latex install; dvips install.dvi; ps2pdf install.ps 
-	

@@ -1,0 +1,47 @@
+===============================================
+==  CP-PAW distribution                      ==
+===============================================
+
+Installation:
+-------------
+1) decide on an architecture name ARCH such as "g95_blechtrottel".
+   It is recommended use the convention ARCH=compilername_computername
+   where you replaced compilername and computer name according to your system
+1) make a copy of the example parameter file "parms.example" named "parms.ARCH", 
+2) edit the new parameter file "parms.${ARCH}" following the instructions given therein
+3) execute "./configure --with-parmfile=parms.${ARCH}"
+4) execute "make small" or "make all_new". 
+   (all_new will also create executables for debugging etc.)
+
+The CP-PAW executable will be
+   bin/${ARCH}/paw_fast.x
+   bin/${ARCH}/paw_fast_parallel.x
+
+The documentation will be
+   doc/manual.pdf
+   doc/history.pdf
+   doc/tutorial.pdf
+   doc/manual.pdf  (corrently not yet useful)
+
+Prerequisites:
+--------------
+Your directory should look like this
+
+configure            configure file
+configure.ac         (nogt needed input file for creating configure with autoconf)
+doc                  documantation directory
+dx                   data explorer programs
+Makefile_bare.in     used by configure to create makefiles
+Makefile_targets.in  used by configure to create makefiles
+parameters           parameter directory
+parms.example        example parameter file
+src                  source directory
+
+Copyright:
+----------
+Use of this package requires a valid license from Clausthal University of Technology.
+See https://orion.pt.tu-clausthal.de/paw/ for more information.
+
+
+Have fun, 
+Peter Bloechl

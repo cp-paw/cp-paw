@@ -611,9 +611,9 @@ LINK_PARALLEL
 LIBS_SCALAR
 LIBS_PARALLEL
 FEXT
-TOOLCOMP
 CPPVAR
 PAWX
+TPARALLEL
 BLASDIR
 LAPACKDIR
 FFTDIR
@@ -1640,9 +1640,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 #   $PAWDIR/bin/$ARCH/fast    Objects compiled with optimizer
 #
 # PAWDIR will be set automatically after this block!
-#
-#_________________way to compile the PAW-tools
-TOOLCOMP="dbg"
 #
 #######################################################################
 #######################################################################
@@ -2792,9 +2789,9 @@ LINK_PARALLEL!$LINK_PARALLEL$ac_delim
 LIBS_SCALAR!$LIBS_SCALAR$ac_delim
 LIBS_PARALLEL!$LIBS_PARALLEL$ac_delim
 FEXT!$FEXT$ac_delim
-TOOLCOMP!$TOOLCOMP$ac_delim
 CPPVAR!$CPPVAR$ac_delim
 PAWX!$PAWX$ac_delim
+TPARALLEL!$TPARALLEL$ac_delim
 BLASDIR!$BLASDIR$ac_delim
 LAPACKDIR!$LAPACKDIR$ac_delim
 FFTDIR!$FFTDIR$ac_delim

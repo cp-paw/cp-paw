@@ -71,8 +71,6 @@ endif
 PAWX=@PAWX@
 #___________________________ the extension of files to be compiled
 FEXT=@FEXT@
-#___________________________ the way to compile the tools 
-TOOLCOMP=@TOOLCOMP@
 #___________________________ the GNU make utility
 MAKE=@MAKE@
 #
@@ -145,6 +143,10 @@ PAWLIB= ${OBJDIR}/libpaw.a#
 ## Definition of the targets                                           ##
 #########################################################################
 default: ${PAWX}
+#
+clean:
+	find ${OBJDIR}/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	rm -f ${PAWX}
 #
 ##########################################################################
 ##  define object files kept in the library                             ##
@@ -316,49 +318,93 @@ ${PAWX} : f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} \
 ${PAWLIB}: ${LOBJS} ${MPE} ${OBJDIR}/version_writeparmfile.o 
 	ar -ru $(PAWLIB) $(LOBJS) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 #
-# produce executables for the Tools
+#########################################################################
+##  build Tools                                                        ##
+#########################################################################
 #
 ${BINDIR}/paw_newatom.x: ${OBJNEWATOM} ${PAWLIB} ${OBJDIR}/paw_setupread.o 
 	${LINK} -o ${BINDIR}/paw_newatom.x ${OBJNEWATOM} ${OBJDIR}/paw_setupread.o -lpaw ${LIBS} 
 #
+clean_newatom:
+	rm -f ${OBJNEWATOM} ${BINDIR}/paw_newatom.x
+#
 ${BINDIR}/paw_atom.x: ${OBJATOM} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_atom.x ${OBJATOM} -lpaw ${LIBS} 
+#
+clean_atom:
+	rm -f ${OBJATOM}; rm -f ${BINDIR}/paw_atom.x
 #
 ${BINDIR}/paw_tra.x: ${OBJTRA} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_tra.x ${OBJTRA} ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LIBS} 
 #
+clean_tra:
+	rm -f ${OBTRA}; rm -f ${BINDIR}/paw_tra.x
+#
 ${BINDIR}/paw_wave.x: ${OBJWAVE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_wave.x ${OBJWAVE} -lpaw ${LIBS} 
+#
+clean_wave:
+	rm -f ${OBJWAVE}; rm -f ${BINDIR}/paw_wave.x
 #
 ${BINDIR}/paw_1davpot.x: ${OBJ1DAVPOT} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_1davpot.x ${OBJ1DAVPOT} -lpaw ${LIBS} 
 #
+clean_1davpot:
+	rm -f ${OBJ1DAVPOT}; rm -f ${BINDIR}/paw_1davpot.x
+#
 ${BINDIR}/paw_cmcwave.x: ${OBJCMCWAVE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_cmcwave.x ${OBJCMCWAVE} -lpaw ${LIBS} 
+#
+clean_cmcwave:
+	rm -f ${OBJCMCWAVE}; rm -f ${BINDIR}/paw_cmcwave.x
 #
 ${BINDIR}/paw_grab.x: ${OBJGRAB} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_grab.x ${OBJGRAB} -lpaw ${LIBS} 
 #
+clean_grab:
+	rm -f ${OBJGRAB}; rm -f ${BINDIR}/paw_grab.x
+#
 ${BINDIR}/paw_dos.x: ${OBJDOS} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_dos.x ${OBJDOS} -lpaw ${LIBS} 
+#
+clean_dos:
+	rm -f ${OBJDOS}; rm -f ${BINDIR}/paw_dos.x
 #
 ${BINDIR}/paw_preopt.x: ${OBJPRE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_preopt.x ${OBJPRE}  ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -lpaw ${LIBS}
 #
+clean_preopt:
+	rm -f ${OBJPRE}; rm -f ${BINDIR}/paw_preopt.x
+#
 ${BINDIR}/paw_converttra.x: ${OBJCONVERTTRA} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_converttra.x ${OBJCONVERTTRA} -lpaw ${LIBS} 
+#
+clean_converttra:
+	rm -f ${OBJCONVERTTRA}; rm -f ${BINDIR}/paw_converttra.x
 #
 ${BINDIR}/paw_cleantra.x: ${OBJCLEANTRA} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_cleantra.x ${OBJCLEANTRA} -lpaw ${LIBS} 
 #
+clean_cleantra:
+	rm -f ${OBJCLEANTRA}; rm -f ${BINDIR}/paw_cleantra.x
+#
 ${BINDIR}/paw_strc.x: ${OBJSTRC} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_strc.x ${OBJSTRC} -lpaw ${LIBS} 
+#
+clean_strc:
+	rm -f ${OBJSTRC}; rm -f ${BINDIR}/paw_strc.x
 #
 ${BINDIR}/paw_toxyz.x: ${OBJTOXYZ} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_toxyz.x ${OBJTOXYZ} -lpaw ${LIBS} 
 #
+clean_toxyz:
+	rm -f ${OBJTOXYZ}; rm -f ${BINDIR}/paw_toxyz.x
+#
 ${BINDIR}/paw_tostrc.x: ${OBJTOSTRC} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_tostrc.x ${OBJTOSTRC} -lpaw ${LIBS} 
+#
+clean_tostrc:
+	rm -f ${OBJTOSTRC}; rm -f ${BINDIR}/paw_tostrc.x
 #
 # copy include files if necessary (controlled by if-statements above)
 #

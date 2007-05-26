@@ -27,9 +27,6 @@ AC_INIT(src)
 #
 # PAWDIR will be set automatically after this block!
 #
-#_________________way to compile the PAW-tools
-TOOLCOMP="dbg"         
-#
 #######################################################################
 #######################################################################
 ##                                                                   ##
@@ -221,9 +218,9 @@ AC_SUBST(LINK_PARALLEL)
 AC_SUBST(LIBS_SCALAR)
 AC_SUBST(LIBS_PARALLEL)
 AC_SUBST(FEXT)
-AC_SUBST(TOOLCOMP)
 AC_SUBST(CPPVAR)
 AC_SUBST(PAWX)     
+AC_SUBST(TPARALLEL)
 #
 AC_SUBST(BLASDIR)     
 AC_SUBST(LAPACKDIR)     
