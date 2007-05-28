@@ -271,6 +271,19 @@ PDoS tool also writes the spin for collinear calculations.
 Included FFTW3 interface routines in paw\_library. They are not tested
 and still blocked from usage.
 
+\subsection{May 28,  2007}
+
+Bugfix in paw_graphics.f90. it was not possible to write the density in a parallel environment.
+
+\subsection{May 28,  2007}
+
+paw_trace.f90 also writes into files .trace_i. where $i$ is the
+task-id in a parallel environment. This avoids that the trace
+information is incomplete after a crash, because the information is
+not written in time to standard output.
+
+
+
 
 \newpage
 \bibliographystyle{unsrt}
