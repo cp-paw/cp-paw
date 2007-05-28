@@ -824,9 +824,7 @@ CALL TRACE$PASS('PRINT')
       IF(FACT.EQ.1) THEN
         WAVEBIG=WORK1
       ELSE
-print*,'marke 2c',nr1,nr2,nr3,nr1b,nr2b,nr3b
         CALL GRAPHICS_REFINEGRID(NR1,NR2,NR3,NR1B,NR2B,NR3B,WORK1,WAVEBIG)
-print*,'marke 2d',nr1l,nr1,nr2,nr3
       END IF
       DEALLOCATE(WORK1)
 !     
@@ -910,7 +908,6 @@ print*,'marke 2d',nr1l,nr1,nr2,nr3
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
 !     ================================================================
-CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 6')
       IF(THISTASK_K.NE.1) WAVEBIG=0.D0
       ALLOCATE(IWORK(NTASKS))
       IWORK=0
@@ -918,18 +915,17 @@ CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 6')
       CALL MPE$COMBINE('MONOMER','+',IWORK)
       DO ITASK=1,NTASKS
         IF(IWORK(ITASK).EQ.0) CYCLE ! SEND ONLY FROM MASTER OF K
-        IF(IWORK(ITASK).EQ.1) CYCLE ! DO NOT SEND TO THE SAME NODE 
-        IF(THISTASK.EQ.IWORK(ITASK)) THEN
+        IF(ITASK.EQ.1) CYCLE ! DO NOT SEND TO THE SAME NODE 
+        IF(THISTASK.EQ.ITASK) THEN
 !         == SEND MSG TO TASK 1 OF MONOMER GROUP. ITASK IS THE MSG-TAG
           CALL MPE$SEND('MONOMER',1,ITASK,WAVEBIG)
         ELSE IF(THISTASK.EQ.1) THEN
           ALLOCATE(WORK1(NR1B,NR2B,NR3B))
-          CALL MPE$RECEIVE('MONOMER',IWORK(THISTASK),ITASK,WORK1)
+          CALL MPE$RECEIVE('MONOMER',ITASK,ITASK,WORK1)
           WAVEBIG=WAVEBIG+WORK1
           DEALLOCATE(WORK1)
         END IF
       ENDDO
-CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 7')
 !     
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
@@ -1008,10 +1004,7 @@ CALL TRACE$PASS('GRAPHICS$DENSITYPLOT: MARKE 7')
       INTEGER(4)              :: LMN1,LMN2
       LOGICAL(4)              :: TKGROUP
 !     ******************************************************************
-      CALL WAVES$SETI4('IB',IB)
-      CALL WAVES$SETI4('IKPT',IKPT)
-      CALL WAVES$SETI4('ISPIN',ISPIN)
-      CALL WAVES$STATESELECTED(IB,IKPT,ISPIN,TKGROUP)
+      CALL WAVES$selectSTATEpointer(IB,IKPT,ISPIN,TKGROUP)
       IF(.NOT.TKGROUP) RETURN
       ALLOCATE(PROJ(LMNXX))
       CALL WAVES$SETL4('TIM',.TRUE.)

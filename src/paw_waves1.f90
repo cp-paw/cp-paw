@@ -203,6 +203,30 @@ END MODULE WAVES_MODULE
       END
 !
 !     ..................................................................
+      SUBROUTINE WAVES$SELECTSTATEPOINTER(IB,IKPT,ISPIN,TCHK)
+!     *******************************************************************
+!     **  selects a specific state or waves$get.. routines.            **
+!     **  if the present task does not have information on this state  **
+!     **  tchk will be false. Otherwise it will be true                **
+!     *******************************************************************
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: IB
+      INTEGER(4),INTENT(IN) :: IKPT
+      INTEGER(4),INTENT(IN) :: ISPIN
+      LOGICAL(4),INTENT(OUT):: TCHK
+!     ******************************************************************
+      CALL WAVES$SETI4('IKPT',IKPT)
+      CALL WAVES$SETI4('ISPIN',ISPIN)
+      CALL WAVES$SETI4('IB',IB)
+      TCHK=.TRUE.
+      TCHK=TCHK.AND.EXTPNTR%IKPT.NE.0
+      TCHK=TCHK.AND.EXTPNTR%ISPIN.NE.0
+      TCHK=TCHK.AND.EXTPNTR%IB.NE.0
+      RETURN
+      END
+!
+!     ..................................................................
       SUBROUTINE WAVES$SETR8(ID,VAL)
 !     ******************************************************************
 !     **  WAVES$SETR8A                                                **
@@ -242,7 +266,7 @@ END MODULE WAVES_MODULE
 !     ..................................................................
       SUBROUTINE WAVES$GETR8(ID,VAL)
 !     ******************************************************************
-!     **  WAVES$GETR8A                                                **
+!     **  WAVES$GETR8                                                **
 !     ******************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -447,6 +471,7 @@ END MODULE WAVES_MODULE
 !     ================================================================
       ELSE IF(ID.EQ.'<PSPSI|PRO>') THEN
         IKPT=EXTPNTR%IKPT   ! IKPT REFERS TO LOCAL KPOINTS
+print*,'waves$getr8a marke 0',ikpt
         IF(IKPT.EQ.0) THEN
           CALL ERROR$MSG('STATE NOT AVAILABLE ON THIS TASK')
           CALL ERROR$MSG('THIS ERROR OCCURS ONLY FOR PARALLEL JOBS')
@@ -461,6 +486,7 @@ END MODULE WAVES_MODULE
         ELSE
           IDIM=1
         END IF
+print*,'waves$getr8a marke 1',ikpt,ispin,ib
         CALL WAVES_SELECTWV(IKPT,ISPIN)
         IF(.NOT.ASSOCIATED(THIS%EIGVEC)) THEN
           CALL ERROR$MSG('EIGENSTATES NOT AVAILABLE')
@@ -487,6 +513,7 @@ END MODULE WAVES_MODULE
         ENDDO
         LMNX=IPRO2-IPRO1+1
 !
+print*,'waves$getr8a marke 2',tinv
         ALLOCATE(CWORK1(LMNX))
         CWORK1(:)=(0.D0,0.D0)
         IF(TINV) THEN
@@ -511,6 +538,7 @@ END MODULE WAVES_MODULE
             ENDDO
           ENDDO             
         END IF
+print*,'waves$getr8a marke 2'
         IF(LMNX.GT.LEN) THEN
           CALL ERROR$MSG('SIZE INCONSISTENT')
           CALL ERROR$CHVAL('ID',ID)

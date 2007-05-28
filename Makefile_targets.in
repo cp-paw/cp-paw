@@ -87,7 +87,7 @@ ARCH=@ARCH@
 TOOLCOMP=fast
 #___________________________ the GNU make utility
 MAKE=@MAKE@
-#
+#___________________________ parallel environment?
 PENV=@TPARALLEL@
 #
 ##########################################################################

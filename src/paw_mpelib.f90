@@ -65,6 +65,13 @@ MODULE MPE_MPIF_MODULE
   INTEGER,POINTER :: RECEIVETAG(:)
   TYPE(THISTYPE),POINTER :: FIRSTTHIS
   TYPE(THISTYPE),POINTER :: this
+!__DATATYPES CONNECTED WITH KIND PARAMETERS
+!__FOR MPI1: USE INTEGER(4)=INTEGER*4, REAL(8)=INTEGER*8, COMPLEX(8)=COMPLEX*16
+!__FOR MPI2: RECALCULATE VALUES IN MPE$INIT
+  INTEGER,SAVE    :: MY_MPITYPE_INTEGER_KIND4=MPI_INTEGER4
+  INTEGER,SAVE    :: MY_MPITYPE_REAL_KIND4=MPI_real4
+  INTEGER,SAVE    :: MY_MPITYPE_REAL_KIND8=MPI_REAL8
+  INTEGER,SAVE    :: MY_MPITYPE_COMPLEX_KIND8=MPI_double_complex
 END MODULE MPE_MPIF_MODULE
 !      ..................................................................
        SUBROUTINE MPE$SELECT(CID)
@@ -111,9 +118,9 @@ CONTAINS
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #TEMPLATE MPE$COMBINE
 (<TYPEID><TYPE><MPI_TYPE>)
-                =([C8],[COMPLEX(8)][MPI_DOUBLE_COMPLEX])
-                 ([R8],[REAL(8)][MPI_REAL8])
-                 ([I4],[INTEGER(4)][MPI_INTEGER4])
+                =([C8],[COMPLEX(8)][MY_MPITYPE_COMPLEX_KIND8])
+                 ([R8],[REAL(8)][MY_MPITYPE_REAL_KIND8])
+                 ([I4],[INTEGER(4)][MY_MPITYPE_INTEGER_KIND4])
 (<RANKID><SIZE><RESHAPE(VAL)><RANK>)
                  =([R0],[1],[VAL],[])
                  =([R1],[SIZE(VAL)],[RESHAPE(VAL,(/LENG/))],[(:)])
@@ -163,17 +170,13 @@ CONTAINS
 !     == PERFORM OPERATION                                           ==
 !     =================================================================
       IF(OPERATION.EQ.'+')THEN
-        CALL MPI_ALLREDUCE(WORK,VAL,LENG &
-     &           ,<MPI_TYPE>,MPI_SUM,COMM,IERR)
+        CALL MPI_ALLREDUCE(WORK,VAL,LENG,<MPI_TYPE>,MPI_SUM,COMM,IERR)
       ELSE IF(OPERATION.EQ.'*')THEN
-        CALL MPI_ALLREDUCE(WORK,VAL,LENG &
-     &           ,<MPI_TYPE>,MPI_PROD,COMM,IERR)
+        CALL MPI_ALLREDUCE(WORK,VAL,LENG,<MPI_TYPE>,MPI_PROD,COMM,IERR)
       ELSE IF(OPERATION.EQ.'MAX')THEN
-        CALL MPI_ALLREDUCE(WORK,VAL,LENG &
-     &           ,<MPI_TYPE>,MPI_MAX,COMM,IERR)
+        CALL MPI_ALLREDUCE(WORK,VAL,LENG,<MPI_TYPE>,MPI_MAX,COMM,IERR)
       ELSE IF(OPERATION.EQ.'MIN')THEN
-        CALL MPI_ALLREDUCE(WORK,VAL,LENG &
-     &           ,<MPI_TYPE>,MPI_MIN,COMM,IERR)
+        CALL MPI_ALLREDUCE(WORK,VAL,LENG,<MPI_TYPE>,MPI_MIN,COMM,IERR)
       ELSE
         CALL ERROR$MSG('OPERATION NOT SUPPORTED')
         CALL ERROR$STOP('MPE$COMBINE')
@@ -258,10 +261,10 @@ CONTAINS
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #TEMPLATE MPE$BROADCAST
 (<TYPEID><TYPE><MPI_TYPE>)
-                =([C8],[COMPLEX(8)][MPI_DOUBLE_COMPLEX])
-                 ([R8],[REAL(8)][MPI_REAL8])
-                 ([R4],[REAL(4)][MPI_REAL4])
-                 ([I4],[INTEGER(4)][MPI_INTEGER4])
+                =([C8],[COMPLEX(8)][MY_MPITYPE_COMPLEX_KIND8])
+                 ([R8],[REAL(8)][MY_MPITYPE_REAL_KIND8])
+                 ([R4],[REAL(4)][MY_MPITYPE_REAL_KIND4])
+                 ([I4],[INTEGER(4)][MY_MPITYPE_INTEGER_KIND4])
                  ([L4],[LOGICAL(4)][MPI_LOGICAL])
 (<RANKID><SIZE><RANK>)
                  =([R0],[1],[])
@@ -296,7 +299,7 @@ CONTAINS
 #IFDEF CPPVARIABLE_PARALLEL
       CALL MPE$SELECT(CID)
       FROMTASK0=FROMTASK-1
-print*,'before  MPE$BROADCAST<TYPEID><RANKID> ',' <MPI_TYPE> ',<MPI_TYPE>,<SIZE>
+!print*,'before  MPE$BROADCAST<TYPEID><RANKID> ',' <MPI_TYPE> ',<MPI_TYPE>,<SIZE>
       CALL MPI_BCAST(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,COMM,IERR)
       IF(IERR.NE.0) THEN
         CALL MPI_ERROR_STRING(IERR,ERRORSTRING,ERRORSTRINGLEN)
@@ -382,10 +385,10 @@ CONTAINS
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #TEMPLATE MPE$SENDRECEIVE
 (<TYPEID><TYPE><MPI_TYPE>)
-                =([C8],[COMPLEX(8)][MPI_DOUBLE_COMPLEX])
-                 ([R8],[REAL(8)][MPI_REAL8])
-                 ([R4],[REAL(4)][MPI_REAL4])
-                 ([I4],[INTEGER(4)][MPI_INTEGER4])
+                =([C8],[COMPLEX(8)][MY_MPITYPE_COMPLEX_KIND8])
+                 ([R8],[REAL(8)][MY_MPITYPE_REAL_KIND8])
+                 ([R4],[REAL(4)][MY_MPITYPE_REAL_KIND4])
+                 ([I4],[INTEGER(4)][MY_MPITYPE_INTEGER_KIND4])
                  ([L4],[LOGICAL(4)][MPI_LOGICAL])
 (<RANKID><SIZE><RANK>)
                  =([R0],[1],[])
@@ -563,10 +566,10 @@ CONTAINS
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #TEMPLATE MPE$SEND
 (<TYPEID><TYPE><MPI_TYPE>)
-                =([C8],[COMPLEX(8)][MPI_DOUBLE_COMPLEX])
-                 ([R8],[REAL(8)][MPI_REAL8])
-                 ([R4],[REAL(4)][MPI_REAL4])
-                 ([I4],[INTEGER(4)][MPI_INTEGER4])
+                =([C8],[COMPLEX(8)][MY_MPITYPE_COMPLEX_KIND8])
+                 ([R8],[REAL(8)][MY_MPITYPE_REAL_KIND8])
+                 ([R4],[REAL(4)][MY_MPITYPE_REAL_KIND4])
+                 ([I4],[INTEGER(4)][MY_MPITYPE_INTEGER_KIND4])
                  ([L4],[LOGICAL(4)][MPI_LOGICAL])
 (<RANKID><SIZE><RANK>)
                  =([R0],[1],[])
@@ -603,11 +606,14 @@ CONTAINS
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF  CPPVARIABLE_PARALLEL
+integer(4):: nfiltrace
+CALL FILEHANDLER$UNIT('TRACE',NFILTRACE)
       CALL MPE$SELECT(CID)
       TOTASK0=TOTASK-1
       TAGSTD=TAG
-      CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASK0,TAGSTD &
-     &               ,COMM,IERR)
+write(nfiltrace,*)'before send',totask0,tagstd
+       CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASK0,TAGSTD,COMM,IERR)
+write(nfiltrace,*)'after send'
 #ELSE
       CALL ERROR$MSG('MPE$SEND MUST NOT BE CALLED IN SCALAR MODE')
       CALL ERROR$STOP('MPE$SEND<TYPEID><RANKID>')
@@ -707,10 +713,10 @@ CONTAINS
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #TEMPLATE MPE$RECEIVE
 (<TYPEID><TYPE><MPI_TYPE>)
-                =([C8],[COMPLEX(8)][MPI_DOUBLE_COMPLEX])
-                 ([R8],[REAL(8)][MPI_REAL8])
-                 ([R4],[REAL(4)][MPI_REAL4])
-                 ([I4],[INTEGER(4)][MPI_INTEGER4])
+                =([C8],[COMPLEX(8)][MY_MPITYPE_COMPLEX_KIND8])
+                 ([R8],[REAL(8)][MY_MPITYPE_REAL_KIND8])
+                 ([R4],[REAL(4)][MY_MPITYPE_REAL_KIND4])
+                 ([I4],[INTEGER(4)][MY_MPITYPE_INTEGER_KIND4])
                  ([L4],[LOGICAL(4)][MPI_LOGICAL])
 (<RANKID><SIZE><RANK>)
                  =([R0],[1],[])
@@ -839,10 +845,10 @@ CONTAINS
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #TEMPLATE MPE$TRANSPOSE
 (<TYPEID><TYPE><MPI_TYPE>)
-                =([C8],[COMPLEX(8)][MPI_DOUBLE_COMPLEX])
-                 ([R8],[REAL(8)][MPI_REAL8])
-                 ([R4],[REAL(4)][MPI_REAL4])
-                 ([I4],[INTEGER(4)][MPI_INTEGER4])
+                =([C8],[COMPLEX(8)][MY_MPITYPE_COMPLEX_KIND8])
+                 ([R8],[REAL(8)][MY_MPITYPE_REAL_KIND8])
+                 ([R4],[REAL(4)][MY_MPITYPE_REAL_KIND4])
+                 ([I4],[INTEGER(4)][MY_MPITYPE_INTEGER_KIND4])
                  ([L4],[LOGICAL(4)][MPI_LOGICAL])
 (<RANKID><SIZE><RANK>)
                  =([R1],[SIZE(VAL)],[(:)])
@@ -911,10 +917,10 @@ CONTAINS
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #TEMPLATE MPE$GATHER
 (<TYPEID><TYPE><MPI_TYPE>)
-                =([C8],[COMPLEX(8)][MPI_DOUBLE_COMPLEX])
-                 ([R8],[REAL(8)][MPI_REAL8])
-                 ([R4],[REAL(4)][MPI_REAL4])
-                 ([I4],[INTEGER(4)][MPI_INTEGER4])
+                =([C8],[COMPLEX(8)][MY_MPITYPE_COMPLEX_KIND8])
+                 ([R8],[REAL(8)][MY_MPITYPE_REAL_KIND8])
+                 ([R4],[REAL(4)][MY_MPITYPE_REAL_KIND4])
+                 ([I4],[INTEGER(4)][MY_MPITYPE_INTEGER_KIND4])
                  ([L4],[LOGICAL(4)][MPI_LOGICAL])
 (<RANKID><SIZE><RANK><RANK+1><RANK,1>)
                  =([R0],[1]          ,[]             ,[(:)]            ,[(1)])            
@@ -996,6 +1002,11 @@ END MODULE MPE_MODULE
       INTEGER     ,PARAMETER   :: MBYTE=2**20
       INTEGER     ,PARAMETER   :: BUFFER_SIZE=6*MBYTE
       CHARACTER(1),POINTER     :: BUFFER(:)
+      real(4)                  :: xreal4
+      real(8)                  :: xreal8
+      complex(8)               :: xcomplex8
+      integer(4)               :: xinteger4
+      integer                  :: size
 !     ******************************************************************
       IF(TINI) THEN
         CALL ERROR$MSG('MPE$INIT MUST ONLY BE CALLED ONCE')
@@ -1042,6 +1053,16 @@ END MODULE MPE_MODULE
       NULLIFY(THIS%NEXT)
       CALL MPE$SELECT('~')
       call mpi_pcontrol(1,ierr)
+#IFDEF CPPVAR_MPI2
+      CALL MPI_SIZEOF(INTEGER4,SIZE,IERR)
+      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_INTEGER,SIZE,My_MPITYPE_INTEGER_kind4,IERR)
+      CALL MPI_SIZEOF(XREAL4,SIZE,IERR)
+      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_REAL,SIZE,MY_MPITYPE_REAL_kind4,IERR)
+      CALL MPI_SIZEOF(XREAL8,SIZE,IERR)
+      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_REAL,SIZE,MY_MPITYPE_REAL_kind8,IERR)
+      CALL MPI_SIZEOF(XCOMPLEX8,SIZE,IERR)
+      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_COMPLEX,SIZE,MY_MPITYPE_COMPLEX_KIND8,IERR)
+#ENDIF
 #ENDIF
       RETURN
       END
@@ -1264,3 +1285,42 @@ END MODULE MPE_MODULE
       END IF
       RETURN
       END SUBROUTINE MPE_COUNTTAGS
+! 
+!     .....................................................................
+      SUBROUTINE MPE$REPORT(NFIL)
+      USE MPE_MODULE
+      USE MPE_MPIF_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NFIL
+      TYPE(THISTYPE),pointer :: CURRENT
+      INTEGER(4)             :: NTASKS_WORLD
+      INTEGER(4)             :: THISTASK_WORLD
+      INTEGER(4)             :: NTASKS_CURRENT
+      INTEGER(4)             :: THISTASK_CURRENT
+      INTEGER(4),ALLOCATABLE :: ICOLOR(:)
+      INTEGER(4)             :: I
+      CHARACTER(128)         :: CID
+!     *********************************************************************
+#IFDEF CPPVARIABLE_PARALLEL
+      CALL MPE$QUERY('~',NTASKS_WORLD,THISTASK_WORLD)
+      ALLOCATE(ICOLOR(NTASKS_WORLD))      
+      DO I=1,NTASKS_WORLD
+        ICOLOR(I)=I
+      ENDDO
+      CALL REPORT$TITLE(NFIL,'MPE-REPORT')
+      WRITE(NFIL,FMT='(A10,20I4/T20,20I4)')'CID\TASKID',ICOLOR
+      CURRENT=>FIRSTTHIS
+      DO 
+        CID=CURRENT%ID
+        CALL MPE$QUERY(CID,NTASKS_CURRENT,THISTASK_CURRENT)
+        ICOLOR(:)=0
+        ICOLOR(THISTASK_WORLD)=THISTASK_WORLD
+        CALL MPE$BROADCAST(CID,1,ICOLOR(THISTASK_WORLD))
+        CALL MPE$COMBINE('~','+',ICOLOR)
+        WRITE(NFIL,FMT='(A10,20I4/T20,20I4)')CID,ICOLOR
+        IF(.NOT.ASSOCIATED(CURRENT%NEXT)) EXIT 
+        CURRENT=>CURRENT%NEXT
+      ENDDO
+#ENDIF
+      RETURN
+      END

@@ -126,14 +126,16 @@ END TYPE PWPARALLEL_TYPE
 LOGICAL(4)                     :: TINI=.FALSE.
 TYPE (PWPARALLEL_TYPE),POINTER :: THIS
 END MODULE PLANEWAVE_MODULE
-!***********************************************************************
+!*******************************************************************************
 !     
-!     .................................................................
-      SUBROUTINE PLANEWAVE$REPORT(NFIL)
-!     ******************************************************************
-!     **  PLANEWAVE$REPORT DEASCRIBED THE SETTING FOR THE             **
-!     **  THE SELECTED PLANEWAVE OBJECT                               **
-!     ******************************************************************
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PLANEWAVE$REPORT(nfiL)
+!     **************************************************************************
+!     **  report settings of the planewave instances                          **
+!     **                                                                      **
+!     **  Note, that instances may exist on only a portion of all tasks        **
+!     **                                                                      **
+!     **************************************************************************
       use mpe_module
       USE PLANEWAVE_MODULE
       IMPLICIT NONE
@@ -150,10 +152,14 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)              :: i,j
       integer(4),allocatable  :: icount(:)
       integer(4),allocatable  :: iwork(:,:)
-!     ******************************************************************
+!     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
-!     == FIND OUT, HOW MANY INSTANCES ON EACH TASK HAVE THIS TASK AS THE MAIN TASK
+!     ==========================================================================
+!     == DETERMINE THE MAIN TASKS FOR ALL INSTANCES.                          ==
+!     == TASK ITASK IS RESPONSIBLE (IS MAIN TASK) FOR ICOUNT(ITASK) INSTANCES.==
+!     == THE NUMBER OF INSTANCES IS SUM(ICOUNT).                              ==
+!     ==========================================================================
       ALLOCATE(ICOUNT(NTASKS))
       ICOUNT(:)=0
       THIS1=>THIS
@@ -164,13 +170,20 @@ END MODULE PLANEWAVE_MODULE
         IF(ASSOCIATED(THIS,THIS1)) EXIT
       ENDDO
       CALL MPE$COMBINE('MONOMER','+',ICOUNT)
-print*,thistask,'icount',icount
 !
+!     ==========================================================================
+!     == now loop over all instances                                          ==
+!     ==========================================================================
       DO ITASK=1,NTASKS
-        IF(THISTASK.NE.ITASK.AND.THISTASK.NE.1) CYCLE
+!       __only main tasks of instances report information_______________________
+        if(icount(itask).eq.0) cycle  
+!       __only main task of an instance and first task of monomer communicate___
+        IF(THISTASK.NE.ITASK.AND.THISTASK.NE.1) CYCLE 
         THIS1=>THIS
+!       __loop over all instances that have itask as main task__________________
         DO I=1,ICOUNT(ITASK)
           IF(THISTASK.EQ.ITASK) THEN
+!           __loop until an instance with main task itask has been identified___
             do 
               CALL MPE$QUERY(THIS1%CID,NTASKS1,THISTASK1)
               if(thistask1.eq.1) exit
@@ -185,6 +198,7 @@ print*,thistask,'icount',icount
             NR3=THIS1%NR3
             CALL MPE$QUERY(THIS1%CID,NTASKS1,THISTASK1)
           END IF
+!         __communicate information to the first task of monomer________________
           CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,ID)
           CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,TINV)
           CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,TSUPER)
@@ -193,6 +207,14 @@ print*,thistask,'icount',icount
           CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,NR2)
           CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,NR3)
           CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,ntasks1)
+          ALLOCATE(IWORK(NTASKS1,3))
+          IF(THISTASK.EQ.ITASK) THEN
+            IWORK(:,1)=THIS1%NR1LARR(:)          
+            IWORK(:,2)=THIS1%NGLARR(:)          
+            IWORK(:,3)=THIS1%NSTRIPELARR(:)          
+          END IF
+          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,iwork)
+!         __write information___________________________________________________
           IF(THISTASK.EQ.1) THEN
             CALL REPORT$TITLE(NFIL,'PLANEWAVE')
             CALL REPORT$CHVAL(NFIL,'ID',ID)
@@ -202,17 +224,9 @@ print*,thistask,'icount',icount
             CALL REPORT$I4VAL(NFIL,'NR1',NR1,' ')
             CALL REPORT$I4VAL(NFIL,'NR2',NR2,' ')
             CALL REPORT$I4VAL(NFIL,'NR3',NR3,' ')
-          END IF
-          ALLOCATE(IWORK(NTASKS1,3))
-          IF(THISTASK.EQ.ITASK) THEN
-            IWORK(:,1)=THIS1%NR1LARR(:)          
-            IWORK(:,2)=THIS1%NGLARR(:)          
-            IWORK(:,3)=THIS1%NSTRIPELARR(:)          
-          END IF
-          CALL MPE$SENDRECEIVE('MONOMER',ITASK,1,iwork)
-          if(thistask.eq.1) then
-            DO J=1,ntasks1
-              WRITE(NFIL,FMT='("TASK ",I4," NR1L ",I5," NGL ",I5," NSTRIPEL ",I5)') &
+            CALL REPORT$I4VAL(NFIL,'BELONGS TO TASK GROUP '//TRIM(THIS1%CID)//' WITH MAIN TASK',ITASK,' ')
+            DO J=1,NTASKS1
+              WRITE(NFIL,FMT='("SUB-TASK ",I4," NR1L ",I5," NGL ",I5," NSTRIPEL ",I5)') &
               J,IWORK(J,1),IWORK(J,2),IWORK(J,3)
             ENDDO
           END IF

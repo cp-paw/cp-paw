@@ -1,13 +1,4 @@
 @PROCESS NOOPTIMIZE
-!!$workaround   !
-!!$workaround   ! MIND: THIS VERSION OF PAW_LINKEDLIST.F90 INCLUDES SOME CHANGES IN 
-!!$workaround   !       ORDER TO CICRUMVENT COMPILER BUGS OF THE IBM XLF90 COMPILER
-!!$workaround   !       IF THE PREPROCESSOR VARIABLE XLFWORKAROUND IS SET, A WORK-AROUND 
-!!$workaround   !       VERSION IS COMPILED.
-!!$workaround   !
-!!$workaround   #DEFINE XLFWORKAROUND
-!
-!
 !***********************************************************************
 !**                                                                   **
 !**  NAME: LLIST                                                      **
@@ -882,18 +873,6 @@ END INTERFACE
 INTERFACE LINKEDLIST$GET
 #   MODULE TEMPLATE LINKEDLIST$GETNUM
 #   MODULE TEMPLATE LINKEDLIST$GETCHAR
-!
-!
-! MIND THAT MODULE PROCEDURE HAS TO BE PUT "BY HAND" IN BOTH CASES 
-! AS THE F90PP_TMPLTS.X ONLY RESOLVES THE FIRST TEMPLATE DEFINITION
-! WHICH IS THE ONE FOR THE WORKAROUND AND DOES NOT INCLUDE THE 
-! DEFINITION OF $GETCHR0. IF THE WHOLE WORKAROUND CONSTRUCTION IS 
-! REMOVED, ALSO REMOVE THE WHOLE IF-ELSE-ENDIF BLOCK!
-!!$workaround   #IF DEFINED(XLFWORKAROUND)
-!!$workaround       MODULE PROCEDURE LINKEDLIST$GETCHR0
-!!$workaround   #ELSE
-!!$workaround     MODULE PROCEDURE LINKEDLIST$GETCHR0
-!!$workaround   #ENDIF
 END INTERFACE 
 CONTAINS
 !     
@@ -1671,15 +1650,7 @@ CONTAINS
       LIST=>LL%PTR
       LENG=<SIZE>
       CALL LINKEDLIST_GETGENERIC(LIST,ID,NTH,TYPE%NAME,LENG,CHARVAL)
-!!$workaround   ! MIND:
-!!$workaround   ! WORKAROUND FOR IBM XLF COMPILER (64 BIT COMPILATION MODE)  
-!!$workaround   ! AUTHOR: JOHANNES SCHIMPL
-!!$workaround   !      WRITE(LINE,*) TRANSFER(CHARVAL,VAL)
-!!$workaround   !      READ(LINE,*) VAL
-!!$workaround   ! -> GIVES PROBLEMS WITH LARGE CASES
-!!$workaround   !ORIG: CODE
       VAL=<RESHAPE(>TRANSFER(CHARVAL,VAL)<RESHAPE)>
-!
       RETURN 
       END SUBROUTINE LINKEDLIST$GET<TYPEID><RANKID>
 #END TEMPLATE LINKEDLIST$GETNUM
@@ -1804,128 +1775,6 @@ CONTAINS
       CALL LINKEDLIST_SETGENERIC(LIST,ID,NTH,STRING,LENG,CHARVAL)
       RETURN
       END SUBROUTINE LINKEDLIST_SETCHR1WITHLENGTH
-
-
-!!$workaround   !*************************************************************************
-!!$workaround   #IF DEFINED(XLFWORKAROUND)
-!!$workaround   !*************************************************************************
-!!$workaround   
-!!$workaround   #TEMPLATE LINKEDLIST$GETCHAR
-!!$workaround   (<RANKID>,<SIZE>,<,SIZE>,<RESHAPE(><RESHAPE)><RANK>)
-!!$workaround       =([R1][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:)])
-!!$workaround        ([R2][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:)])
-!!$workaround        ([R3][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:)])
-!!$workaround        ([R4][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:)])
-!!$workaround        ([R5][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:,:)])
-!!$workaround        ([R6][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:,:,:)])
-!!$workaround   #BODY
-!!$workaround   !     
-!!$workaround   !     ..................................................................
-!!$workaround         SUBROUTINE LINKEDLIST$GETCH<RANKID>(LL,ID,NTH,VAL)
-!!$workaround   !     ******************************************************************
-!!$workaround   !     **                                                              **
-!!$workaround   !     **  SPECIFIC INTERFACE FOR LINKEDLIST_GET.                      **
-!!$workaround   !     **  SEE LINKEDLIST_GETGENERIC FOR FURTHER INFO.                 **
-!!$workaround   !     **                                                              **
-!!$workaround   !     **  REMARKS:                                                    **
-!!$workaround   !     **    THIS SPECIFIC INTERFACE DIFFERS FROM OTHER SPECIFIC       **
-!!$workaround   !     **    INTERFACES BY THE TYPE OF VAL AND THE VALUE OF TYPE       **
-!!$workaround   !     **    AND VAL MAY BE ARRAY VALUED OR SCALAR                     **
-!!$workaround   !     **                                                              **
-!!$workaround   !     ******************************************************************
-!!$workaround         IMPLICIT NONE
-!!$workaround         TYPE(LL_TYPE)   ,INTENT(IN) :: LL
-!!$workaround         CHARACTER(*)    ,INTENT(IN) :: ID
-!!$workaround         INTEGER(4)      ,INTENT(IN) :: NTH
-!!$workaround         CHARACTER(*)    ,INTENT(OUT):: VAL<RANK>
-!!$workaround         TYPE(LLIST_TYPE),POINTER    :: LIST
-!!$workaround         TYPE(LDATA_TYPE),POINTER    :: DATA
-!!$workaround         TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
-!!$workaround         CHARACTER(1)    ,POINTER    :: CHARVAL(:)
-!!$workaround         CHARACTER(8)                :: STRING
-!!$workaround         CHARACTER(500)              :: MOLD
-!!$workaround         INTEGER(4)                  :: LENG
-!!$workaround         INTEGER(4)                  :: I1,I2,KIND
-!!$workaround   !     ******************************************************************
-!!$workaround   !
-!!$workaround         LIST=>LL%PTR
-!!$workaround         LENG=<SIZE>
-!!$workaround         WRITE(STRING,FMT='(I8)')LEN(VAL)
-!!$workaround         STRING=ADJUSTL(STRING)
-!!$workaround         STRING=TRIM(TYPE%NAME)//'('//TRIM(STRING)//')'
-!!$workaround         CALL LINKEDLIST_GETGENERIC(LIST,ID,NTH,STRING,LENG,CHARVAL)
-!!$workaround   !     == CALCULATE LENGTH OF DATA RECEIVED ===========================
-!!$workaround         IF(NTH.EQ.0) THEN
-!!$workaround           CALL LLIST_FINDDATA(LIST,ID,1,DATA)
-!!$workaround         ELSE IF(NTH.GT.0) THEN
-!!$workaround           CALL LLIST_FINDDATA(LIST,ID,NTH,DATA)
-!!$workaround         ELSE
-!!$workaround           CALL ERROR$STOP('LINKEDLIST$GETCH<RANKID>')
-!!$workaround         END IF
-!!$workaround         STRING=DATA%TYPE
-!!$workaround         I1=INDEX(STRING,'(')
-!!$workaround         I2=INDEX(STRING,')')
-!!$workaround         READ(STRING(I1+1:I2-1),*)KIND
-!!$workaround   !     == MAP STORED DATA ONTO VAL ====================================
-!!$workaround         VAL=<RESHAPE(>TRANSFER(CHARVAL,MOLD(1:KIND)<,SIZE>)<RESHAPE)>
-!!$workaround         RETURN 
-!!$workaround         END SUBROUTINE LINKEDLIST$GETCH<RANKID>
-!!$workaround   #END TEMPLATE LINKEDLIST$GETCHAR
-!!$workaround   !
-!!$workaround   !     ..................................................................
-!!$workaround         SUBROUTINE LINKEDLIST$GETCHR0(LL,ID,NTH,VAL)
-!!$workaround   !     ******************************************************************
-!!$workaround   !     **                                                              **
-!!$workaround   !     **  SPECIFIC INTERFACE FOR LINKEDLIST_GET.                      **
-!!$workaround   !     **  SEE LINKEDLIST_GETGENERIC FOR FURTHER INFO.                 **
-!!$workaround   !     **                                                              **
-!!$workaround   !     **  REMARKS:                                                    **
-!!$workaround   !     **    THIS SPECIFIC INTERFACE DIFFERS FROM OTHER SPECIFIC       **
-!!$workaround   !     **    INTERFACES BY THE TYPE OF VAL AND THE VALUE OF TYPE       **
-!!$workaround   !     **    AND VAL MAY BE ARRAY VALUED OR SCALAR                     **
-!!$workaround   !     **                                                              **
-!!$workaround   !     ******************************************************************
-!!$workaround         IMPLICIT NONE
-!!$workaround         TYPE(LL_TYPE)   ,INTENT(IN) :: LL
-!!$workaround         CHARACTER(*)    ,INTENT(IN) :: ID
-!!$workaround         INTEGER(4)      ,INTENT(IN) :: NTH
-!!$workaround         CHARACTER(*)    ,INTENT(OUT):: VAL
-!!$workaround         TYPE(LLIST_TYPE),POINTER    :: LIST
-!!$workaround         TYPE(LDATA_TYPE),POINTER    :: DATA
-!!$workaround         TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
-!!$workaround         CHARACTER(1)    ,POINTER    :: CHARVAL(:)
-!!$workaround         CHARACTER(8)                :: STRING
-!!$workaround         CHARACTER(500)              :: MOLD
-!!$workaround         INTEGER(4)                  :: LENG
-!!$workaround         INTEGER(4)                  :: I1,I2,KIND
-!!$workaround   !     ******************************************************************
-!!$workaround         LIST=>LL%PTR
-!!$workaround         LENG=1
-!!$workaround         WRITE(STRING,FMT='(I8)')LEN(VAL)
-!!$workaround         STRING=ADJUSTL(STRING)
-!!$workaround         STRING=TRIM(TYPE%NAME)//'('//TRIM(STRING)//')'
-!!$workaround         CALL LINKEDLIST_GETGENERIC(LIST,ID,NTH,STRING,LENG,CHARVAL)
-!!$workaround   !     == CALCULATE LENGTH OF DATA RECEIVED ===========================
-!!$workaround         IF(NTH.EQ.0) THEN
-!!$workaround           CALL LLIST_FINDDATA(LIST,ID,1,DATA)
-!!$workaround         ELSE IF(NTH.GT.0) THEN
-!!$workaround           CALL LLIST_FINDDATA(LIST,ID,NTH,DATA)
-!!$workaround         ELSE
-!!$workaround           CALL ERROR$STOP('LINKEDLIST$GETCH<RANKID>')
-!!$workaround         END IF
-!!$workaround         STRING=DATA%TYPE
-!!$workaround         I1=INDEX(STRING,'(')
-!!$workaround         I2=INDEX(STRING,')')
-!!$workaround         READ(STRING(I1+1:I2-1),*)KIND
-!!$workaround   !     == MAP STORED DATA ONTO VAL ====================================
-!!$workaround         VAL=' '
-!!$workaround         VAL(1:KIND)=TRANSFER(CHARVAL,MOLD(1:KIND))
-!!$workaround         RETURN
-!!$workaround        END SUBROUTINE LINKEDLIST$GETCHR0
-!!$workaround   
-!!$workaround   !*************************************************************************
-!!$workaround   #ELSE   
-!!$workaround   !*************************************************************************
 !
 #TEMPLATE LINKEDLIST$GETCHAR
 (<RANKID>,<SIZE>,<,SIZE>,<RESHAPE(><RESHAPE)><RANK>)
@@ -1989,10 +1838,6 @@ CONTAINS
       RETURN 
       END SUBROUTINE LINKEDLIST$GETCH<RANKID>
 #END TEMPLATE LINKEDLIST$GETCHAR
-
-!!$workaround   !*************************************************************************
-!!$workaround   #ENDIF   
-!!$workaround   !*************************************************************************
 !     
 !     ..................................................................
       SUBROUTINE LINKEDLIST_GETCHr1withlength(LL,ID,NTH,leng,VAL)
