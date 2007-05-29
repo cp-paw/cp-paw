@@ -96,7 +96,7 @@ CPP="$CPP $CPPOPT"
 
 ############################################################################
 ##                                                                        ##
-##                  check for fortran compiler                            ##
+##                  check for fortran compilers                           ##
 ##            currently not used                                          ##
 ############################################################################
 # g95  compiler (Open source)
@@ -104,22 +104,19 @@ AC_CHECK_PROG(EXIST_COMPILER_G95,g95,yes,no)
 # xlf90 compiler (IBM)
 AC_CHECK_PROG(EXIST_COMPILER_XLF90,xlf90,yes,no)
 # ifort/ifc (Intel)
-AC_CHECK_PROG(EXIST_COMPILER_ifort,ifort,yes,no)
-AC_CHECK_PROG(EXIST_COMPILER_ifc,ifc,yes,no)
+AC_CHECK_PROG(EXIST_COMPILER_IFORT,ifort,yes,no)
+AC_CHECK_PROG(EXIST_COMPILER_IFC,ifc,yes,no)
 # f90 (Absoft)
-AC_CHECK_PROG(EXIST_COMPILER_f90,f90,yes,no)
+AC_CHECK_PROG(EXIST_COMPILER_F90,f90,yes,no)
 # fort (F90)
-AC_CHECK_PROG(EXIST_COMPILER_fort,fort,yes,no)
+AC_CHECK_PROG(EXIST_COMPILER_FORT,fort,yes,no)
 #
 ############################################################################
 ##                                                                        ##
 ##                  check for libraries                                   ##
 ##               currently not used                                       ##
 ############################################################################
-AC_CHECK_PROG(EXIST_COMPILER_fort,fort,yes,no)
-
-
-
+#
 ############################################################################
 ##                                                                        ##
 ##                  resolve parameter file                                ##
@@ -270,6 +267,7 @@ cp $PARMFILE ${PAWDIR}/parms.in_use
 #
 AC_MSG_RESULT(creating subdirectories and copying shell scripts)
 mkdir -p  ${PAWDIR}/bin/${ARCH} 
+mkdir -p  ${PAWDIR}/doc
 mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/none
 mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/dbg
 mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/prof

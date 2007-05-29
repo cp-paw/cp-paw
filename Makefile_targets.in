@@ -121,7 +121,7 @@ clean: clean_all
 #---------------------------------------------------------------------------
 #-- "all" makes a complete installation. all_new includes all dependencies
 #---------------------------------------------------------------------------
-all: ${OBJTYTPES} tools docs 
+all: ${OBJTYPES} tools docs 
 #
 all_new: $(addsuffix _new,${OBJTYPES}) tools docs
 #
