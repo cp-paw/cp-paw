@@ -988,9 +988,9 @@ print*,'mip',iatai,raip
       INTEGER(4)            :: IATM,IATQ,IATQJ,iats
       REAL(8)               :: ALPHA
 !     *****************************************************************
-                              call trace$push('qmmm$ekin')
       EKIN=0.D0
       IF (.NOT. TON) RETURN
+                              CALL TRACE$PUSH('QMMM$EKIN')
 !
       CALL ATOMLIST$GETR8A('R(+)',0,3*NATQ,QRP)
       CALL ATOMLIST$GETR8A('R(-)',0,3*NATQ,QRM)

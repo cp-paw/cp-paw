@@ -273,16 +273,23 @@ and still blocked from usage.
 
 \subsection{May 28,  2007}
 
-Bugfix in paw_graphics.f90. it was not possible to write the density in a parallel environment.
+Bugfix in paw\_graphics.f90. it was not possible to write the density
+in a parallel environment.
 
 \subsection{May 28,  2007}
 
-paw_trace.f90 also writes into files .trace_i. where $i$ is the
+paw\_trace.f90 also writes into files trace\_i. where $i$ is the
 task-id in a parallel environment. This avoids that the trace
 information is incomplete after a crash, because the information is
 not written in time to standard output.
 
-
+\subsection{May 28,  2007}
+ 
+A routine to extract the dependencies from the fortran codes has been
+written. (src/F90PP/findependencies.f90, src/F90PP/finddep). The
+dependencies have been included in the Makefiles. This makes tha
+targets ...\_new unnecessary. Dependencies for the documentation have
+been included to avoid frequent recompiling.
 
 
 \newpage

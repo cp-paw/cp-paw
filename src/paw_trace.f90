@@ -24,14 +24,15 @@ INTEGER(4)   ,SAVE      :: LEVEL=0
 INTEGER(4)   ,SAVE      :: THISTASK=0
 INTEGER(4)              :: NTASKS=1
 logical(4)   ,parameter :: tflush=.false.
-CONTAINS
-!**********************************************************************
+END MODULE TRACE_MODULE
 !     .................................................................
       SUBROUTINE TRACE_FIRST
       USE STRINGS_MODULE
+      use trace_module
       IMPLICIT NONE
       CHARACTER(128)    :: TRACEFILE
       character(8)      :: id
+      integer(4)        :: nfiltrace
 !     *****************************************************************
       CALL MPE$QUERY('~',NTASKS,THISTASK)
 !
@@ -39,18 +40,19 @@ CONTAINS
 !     == DEFINE FILE FOR TRACE INFORMATION                          ==
 !     ==================================================================
       WRITE(TRACEFILE,*)THISTASK
-      TRACEFILE=-'.TRACE_'//TRIM(ADJUSTL(TRACEFILE))
+      TRACEFILE=-'TRACE_'//TRIM(ADJUSTL(TRACEFILE))
       ID=+'TRACE'
-      CALL FILEHANDLER$SETFILE(ID,.TRUE.,TRIM(TRACEFILE))
+      CALL FILEHANDLER$SETFILE(ID,.FALSE.,TRIM(TRACEFILE))
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
-!      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
-
-      TFIRST=.TRUE.
+      CALL FILEHANDLER$UNIT(ID,NFILTRACE)
+      REWIND NFILTRACE
+      WRITE(NFILTRACE,*) 'TRACE FILE'
+!
+      TFIRST=.false.
       END SUBROUTINE TRACE_FIRST
-END MODULE TRACE_MODULE
 !
 !     .................................................................
       SUBROUTINE TRACE$SETL4(ID,VAL)
@@ -66,7 +68,7 @@ END MODULE TRACE_MODULE
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('TRAVCE$SETL4')
+        CALL ERROR$STOP('TRACE$SETL4')
       END IF
       RETURN
       END
@@ -137,7 +139,6 @@ END MODULE TRACE_MODULE
      &              THISTASK,LEVEL,HISTORY(LEVEL)
         WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5,"TIME",a8," ",a10)') &
      &                THISTASK,MAXMEM/MBYTE,DATE,TIME
-        HISTORY(LEVEL)=' '
       ELSE                  
         WRITE(*,FMT='("TRACE-POP(",I3,"): LEVEL=",I3)')THISTASK,LEVEL
         WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5,"TIME",a8," ",a10)') &
@@ -153,7 +154,6 @@ END MODULE TRACE_MODULE
      &              THISTASK,LEVEL,HISTORY(LEVEL)
         WRITE(nfiltrace,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5,"TIME",a8," ",a10)') &
      &                THISTASK,MAXMEM/MBYTE,DATE,TIME
-        HISTORY(LEVEL)=' '
       ELSE                  
         WRITE(nfiltrace,FMT='("TRACE-POP(",I3,"): LEVEL=",I3)')THISTASK,LEVEL
         WRITE(nfiltrace,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5,"TIME",a8," ",a10)') &
@@ -170,6 +170,7 @@ END MODULE TRACE_MODULE
 !     =======================================================================
 !     == reduce level indicator by one                                     ==
 !     =======================================================================
+      HISTORY(LEVEL)=' '
       LEVEL=LEVEL-1
       RETURN 
       END

@@ -175,7 +175,7 @@ lib_new:
 ${TOOLS}: lib_new
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_$@.x 
 #
-$(addprefix clean_,{TOOLS}):
+$(addprefix clean_,${TOOLS}):
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile $@
 #
 scripts: 
@@ -189,12 +189,18 @@ clean_scripts:
 #---------------------------------------------------------------------------
 #--          Documentation                                                --
 #---------------------------------------------------------------------------
-docs: ${PAWDIR}/doc/manual.tex ${PAWDIR}/doc/history.tex ${PAWDIR}/doc/install.tex 
+docs: ${PAWDIR}/doc/manual.pdf ${PAWDIR}/doc/history.pdf ${PAWDIR}/doc/install.pdf 
+#
+${PAWDIR}/doc/manual.pdf :  ${PAWDIR}/doc/manual.tex 
 	cd ${PAWDIR}/doc; latex manual; makeindex manual.idx; latex manual; latex manual; bibtex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
+#
+${PAWDIR}/doc/history.pdf :  ${PAWDIR}/doc/history.tex 
 	cd ${PAWDIR}/doc; latex history; makeindex history.idx; latex history; latex history; bibtex history; latex history; dvips history.dvi; ps2pdf history.ps 
+#
+${PAWDIR}/doc/install.pdf :  ${PAWDIR}/doc/install.tex 
 	cd ${PAWDIR}/doc; latex install; makeindex install.idx; latex install; latex install; bibtex install; latex install; dvips install.dvi; ps2pdf install.ps
 #
-clean_docs:
+clean_docs: 
 	rm -f ${PAWDIR}/doc/*.aux
 	rm -f ${PAWDIR}/doc/*.blg
 	rm -f ${PAWDIR}/doc/*.bbl
