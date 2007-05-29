@@ -601,6 +601,12 @@ host_alias
 target_alias
 MAKE
 CPP
+EXIST_COMPILER_G95
+EXIST_COMPILER_XLF90
+EXIST_COMPILER_ifort
+EXIST_COMPILER_ifc
+EXIST_COMPILER_f90
+EXIST_COMPILER_fort
 PAWDIR
 ARCH
 SPECIAL
@@ -611,7 +617,7 @@ LINK_PARALLEL
 LIBS_SCALAR
 LIBS_PARALLEL
 FEXT
-CPPVAR
+CPPFLAGS
 PAWX
 TPARALLEL
 BLASDIR
@@ -1865,6 +1871,291 @@ CPP="$CPP $CPPOPT"
 
 ############################################################################
 ##                                                                        ##
+##                  check for fortran compiler                            ##
+##            currently not used                                          ##
+############################################################################
+# g95  compiler (Open source)
+# Extract the first word of "g95", so it can be a program name with args.
+set dummy g95; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_EXIST_COMPILER_G95+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$EXIST_COMPILER_G95"; then
+  ac_cv_prog_EXIST_COMPILER_G95="$EXIST_COMPILER_G95" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_EXIST_COMPILER_G95="yes"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_EXIST_COMPILER_G95" && ac_cv_prog_EXIST_COMPILER_G95="no"
+fi
+fi
+EXIST_COMPILER_G95=$ac_cv_prog_EXIST_COMPILER_G95
+if test -n "$EXIST_COMPILER_G95"; then
+  { echo "$as_me:$LINENO: result: $EXIST_COMPILER_G95" >&5
+echo "${ECHO_T}$EXIST_COMPILER_G95" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+# xlf90 compiler (IBM)
+# Extract the first word of "xlf90", so it can be a program name with args.
+set dummy xlf90; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_EXIST_COMPILER_XLF90+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$EXIST_COMPILER_XLF90"; then
+  ac_cv_prog_EXIST_COMPILER_XLF90="$EXIST_COMPILER_XLF90" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_EXIST_COMPILER_XLF90="yes"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_EXIST_COMPILER_XLF90" && ac_cv_prog_EXIST_COMPILER_XLF90="no"
+fi
+fi
+EXIST_COMPILER_XLF90=$ac_cv_prog_EXIST_COMPILER_XLF90
+if test -n "$EXIST_COMPILER_XLF90"; then
+  { echo "$as_me:$LINENO: result: $EXIST_COMPILER_XLF90" >&5
+echo "${ECHO_T}$EXIST_COMPILER_XLF90" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+# ifort/ifc (Intel)
+# Extract the first word of "ifort", so it can be a program name with args.
+set dummy ifort; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_EXIST_COMPILER_ifort+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$EXIST_COMPILER_ifort"; then
+  ac_cv_prog_EXIST_COMPILER_ifort="$EXIST_COMPILER_ifort" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_EXIST_COMPILER_ifort="yes"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_EXIST_COMPILER_ifort" && ac_cv_prog_EXIST_COMPILER_ifort="no"
+fi
+fi
+EXIST_COMPILER_ifort=$ac_cv_prog_EXIST_COMPILER_ifort
+if test -n "$EXIST_COMPILER_ifort"; then
+  { echo "$as_me:$LINENO: result: $EXIST_COMPILER_ifort" >&5
+echo "${ECHO_T}$EXIST_COMPILER_ifort" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+# Extract the first word of "ifc", so it can be a program name with args.
+set dummy ifc; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_EXIST_COMPILER_ifc+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$EXIST_COMPILER_ifc"; then
+  ac_cv_prog_EXIST_COMPILER_ifc="$EXIST_COMPILER_ifc" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_EXIST_COMPILER_ifc="yes"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_EXIST_COMPILER_ifc" && ac_cv_prog_EXIST_COMPILER_ifc="no"
+fi
+fi
+EXIST_COMPILER_ifc=$ac_cv_prog_EXIST_COMPILER_ifc
+if test -n "$EXIST_COMPILER_ifc"; then
+  { echo "$as_me:$LINENO: result: $EXIST_COMPILER_ifc" >&5
+echo "${ECHO_T}$EXIST_COMPILER_ifc" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+# f90 (Absoft)
+# Extract the first word of "f90", so it can be a program name with args.
+set dummy f90; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_EXIST_COMPILER_f90+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$EXIST_COMPILER_f90"; then
+  ac_cv_prog_EXIST_COMPILER_f90="$EXIST_COMPILER_f90" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_EXIST_COMPILER_f90="yes"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_EXIST_COMPILER_f90" && ac_cv_prog_EXIST_COMPILER_f90="no"
+fi
+fi
+EXIST_COMPILER_f90=$ac_cv_prog_EXIST_COMPILER_f90
+if test -n "$EXIST_COMPILER_f90"; then
+  { echo "$as_me:$LINENO: result: $EXIST_COMPILER_f90" >&5
+echo "${ECHO_T}$EXIST_COMPILER_f90" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+# fort (F90)
+# Extract the first word of "fort", so it can be a program name with args.
+set dummy fort; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_EXIST_COMPILER_fort+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$EXIST_COMPILER_fort"; then
+  ac_cv_prog_EXIST_COMPILER_fort="$EXIST_COMPILER_fort" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_EXIST_COMPILER_fort="yes"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_EXIST_COMPILER_fort" && ac_cv_prog_EXIST_COMPILER_fort="no"
+fi
+fi
+EXIST_COMPILER_fort=$ac_cv_prog_EXIST_COMPILER_fort
+if test -n "$EXIST_COMPILER_fort"; then
+  { echo "$as_me:$LINENO: result: $EXIST_COMPILER_fort" >&5
+echo "${ECHO_T}$EXIST_COMPILER_fort" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+#
+############################################################################
+##                                                                        ##
+##                  check for libraries                                   ##
+##               currently not used                                       ##
+############################################################################
+# Extract the first word of "fort", so it can be a program name with args.
+set dummy fort; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_EXIST_COMPILER_fort+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$EXIST_COMPILER_fort"; then
+  ac_cv_prog_EXIST_COMPILER_fort="$EXIST_COMPILER_fort" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_EXIST_COMPILER_fort="yes"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_EXIST_COMPILER_fort" && ac_cv_prog_EXIST_COMPILER_fort="no"
+fi
+fi
+EXIST_COMPILER_fort=$ac_cv_prog_EXIST_COMPILER_fort
+if test -n "$EXIST_COMPILER_fort"; then
+  { echo "$as_me:$LINENO: result: $EXIST_COMPILER_fort" >&5
+echo "${ECHO_T}$EXIST_COMPILER_fort" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+
+
+
+############################################################################
+##                                                                        ##
 ##                  resolve parameter file                                ##
 ##                                                                        ##
 ############################################################################
@@ -1876,15 +2167,15 @@ if test "$PARMFILE" != notset; then
   TPARALLEL=`grep '^TPARALLEL' $PARMFILE | cut -d'"' -f2`
   COMPILER_SCALAR=`grep '^COMPILER_SCALAR' $PARMFILE | cut -d'"' -f2`
   COMPILER_PARALLEL=`grep '^COMPILER_PARALLEL' $PARMFILE | cut -d'"' -f2`
-  FFLAGS_STD=`grep '^FFLAGS_STD' $PARMFILE | cut -d'"' -f2`
-  FFLAGS_OPT=`grep '^FFLAGS_OPT' $PARMFILE | cut -d'"' -f2`
-  FFLAGS_DBG=`grep '^FFLAGS_DBG' $PARMFILE | cut -d'"' -f2`
-  FFLAGS_PROF=`grep '^FFLAGS_PROF' $PARMFILE | cut -d'"' -f2`
-  LFLAGS_SCALAR=`grep '^LFLAGS_SCALAR' $PARMFILE | cut -d'"' -f2`
-  LFLAGS_PARALLEL=`grep '^LFLAGS_PARALLEL' $PARMFILE | cut -d'"' -f2`
+  FCFLAGS_NONE=`grep '^FCFLAGS_NONE' $PARMFILE | cut -d'"' -f2`
+  FCFLAGS_OPT=`grep '^FCFLAGS_OPT' $PARMFILE | cut -d'"' -f2`
+  FCFLAGS_DBG=`grep '^FCFLAGS_DBG' $PARMFILE | cut -d'"' -f2`
+  FCFLAGS_PROF=`grep '^FCFLAGS_PROF' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_SCALAR=`grep '^LDFLAGS_SCALAR' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_PARALLEL=`grep '^LDFLAGS_PARALLEL' $PARMFILE | cut -d'"' -f2`
   LIBS_SCALAR=`grep '^LIBS_SCALAR=' $PARMFILE | cut -d'"' -f2`
   LIBS_PARALLEL=`grep '^LIBS_PARALLEL' $PARMFILE | cut -d'"' -f2`
-  CPPVAR=`grep '^CPPVAR' $PARMFILE | cut -d'"' -f2`
+  CPPFLAGS=`grep '^CPPFLAGS' $PARMFILE | cut -d'"' -f2`
   FEXT=`grep '^FEXT' $PARMFILE | cut -d'"' -f2`
   BLASDIR=`grep '^BLASDIR' $PARMFILE | cut -d'"' -f2`
   LAPACKDIR=`grep '^LAPACKDIR' $PARMFILE | cut -d'"' -f2`
@@ -1901,9 +2192,9 @@ if test "$PARMFILE" != notset; then
   PAWX="$PAWDIR/bin/$ARCH"
   COMPILE_SCALAR="$COMPILER_SCALAR"
   COMPILE_PARALLEL="$COMPILER_PARALLEL"
-  LINK_SCALAR="$COMPILER_SCALAR $LFLAGS_SCALAR"
-  LINK_PARALLEL="$COMPILER_PARALLEL $LFLAGS_PARALLEL"
-  CPPVAR="$CPPVAR"
+  LINK_SCALAR="$COMPILER_SCALAR $LDFLAGS_SCALAR"
+  LINK_PARALLEL="$COMPILER_PARALLEL $LDFLAGS_PARALLEL"
+  CPPFLAGS="$CPPFLAGS"
   FEXT="$FEXT"
   ARCH="$ARCH"
   #
@@ -2779,6 +3070,12 @@ host_alias!$host_alias$ac_delim
 target_alias!$target_alias$ac_delim
 MAKE!$MAKE$ac_delim
 CPP!$CPP$ac_delim
+EXIST_COMPILER_G95!$EXIST_COMPILER_G95$ac_delim
+EXIST_COMPILER_XLF90!$EXIST_COMPILER_XLF90$ac_delim
+EXIST_COMPILER_ifort!$EXIST_COMPILER_ifort$ac_delim
+EXIST_COMPILER_ifc!$EXIST_COMPILER_ifc$ac_delim
+EXIST_COMPILER_f90!$EXIST_COMPILER_f90$ac_delim
+EXIST_COMPILER_fort!$EXIST_COMPILER_fort$ac_delim
 PAWDIR!$PAWDIR$ac_delim
 ARCH!$ARCH$ac_delim
 SPECIAL!$SPECIAL$ac_delim
@@ -2789,7 +3086,7 @@ LINK_PARALLEL!$LINK_PARALLEL$ac_delim
 LIBS_SCALAR!$LIBS_SCALAR$ac_delim
 LIBS_PARALLEL!$LIBS_PARALLEL$ac_delim
 FEXT!$FEXT$ac_delim
-CPPVAR!$CPPVAR$ac_delim
+CPPFLAGS!$CPPFLAGS$ac_delim
 PAWX!$PAWX$ac_delim
 TPARALLEL!$TPARALLEL$ac_delim
 BLASDIR!$BLASDIR$ac_delim
@@ -2802,7 +3099,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 60; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 66; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -3140,7 +3437,7 @@ chmod +x $PAWDIR/bin/$ARCH/f90pp
 #
 { echo "$as_me:$LINENO: result: creating Makefile in none" >&5
 echo "${ECHO_T}creating Makefile in none" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_STD %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
     -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
     -e 's%varPARALLEL%F%'\
     -e 's%varOBJTYPE%none%'\
@@ -3151,7 +3448,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_STD %"\
 if test "$TPARALLEL" = "T"; then
   { echo "$as_me:$LINENO: result: creating Makefile in none_parallel" >&5
 echo "${ECHO_T}creating Makefile in none_parallel" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_STD %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
       -e 's%varPARALLEL%T%'\
       -e 's%varOBJTYPE%none_parallel%'\
@@ -3162,7 +3459,7 @@ fi
 #
 { echo "$as_me:$LINENO: result: creating Makefile in fast" >&5
 echo "${ECHO_T}creating Makefile in fast" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_OPT %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%"\
     -e 's%varOBJTYPE%fast%'\
     -e 's%varPARALLEL%F%'\
@@ -3173,7 +3470,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_OPT %"\
 if test "$TPARALLEL" = "T"; then
   { echo "$as_me:$LINENO: result: creating Makefile_parallel in fast" >&5
 echo "${ECHO_T}creating Makefile_parallel in fast" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_OPT %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%"\
       -e 's%varOBJTYPE%fast_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -3184,7 +3481,7 @@ fi
 #
 { echo "$as_me:$LINENO: result: creating Makefile in dbg" >&5
 echo "${ECHO_T}creating Makefile in dbg" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_DBG %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%"\
     -e 's%varOBJTYPE%dbg%'\
     -e 's%varPARALLEL%F%'\
@@ -3195,7 +3492,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_DBG %"\
 if test "$TPARALLEL" = "T"; then
   { echo "$as_me:$LINENO: result: creating Makefile_parallel in dbg" >&5
 echo "${ECHO_T}creating Makefile_parallel in dbg" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_DBG %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%"\
       -e 's%varOBJTYPE%dbg_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -3206,7 +3503,7 @@ fi
 #
 { echo "$as_me:$LINENO: result: creating Makefile in prof" >&5
 echo "${ECHO_T}creating Makefile in prof" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_PROF %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
     -e "s%\(LINK=.*\)%\1 -pg %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%"\
     -e 's%varOBJTYPE%prof%'\
@@ -3218,7 +3515,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_PROF %"\
 if test "$TPARALLEL" = "T"; then
   { echo "$as_me:$LINENO: result: creating Makefile_parallel in prof" >&5
 echo "${ECHO_T}creating Makefile_parallel in prof" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_PROF %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
       -e "s%\(LINK=.*\)%\1 -pg %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%"\
       -e 's%varOBJTYPE%prof_parallel%'\
@@ -3247,8 +3544,8 @@ echo "${ECHO_T}directory of distribution      : $PAWDIR" >&6; }
 echo "${ECHO_T}directory with binaries        : $PAWDIR/bin/$ARCH" >&6; }
 { echo "$as_me:$LINENO: result: architecture                   : $ARCH" >&5
 echo "${ECHO_T}architecture                   : $ARCH" >&6; }
-{ echo "$as_me:$LINENO: result: preprocessor variables         : $CPPVAR" >&5
-echo "${ECHO_T}preprocessor variables         : $CPPVAR" >&6; }
+{ echo "$as_me:$LINENO: result: preprocessor variables         : $CPPFLAGS" >&5
+echo "${ECHO_T}preprocessor variables         : $CPPFLAGS" >&6; }
 { echo "$as_me:$LINENO: result: architecture name              : $ARCH" >&5
 echo "${ECHO_T}architecture name              : $ARCH" >&6; }
 { echo "$as_me:$LINENO: result: parallel environment           : $TPARALLEL" >&5
@@ -3257,14 +3554,14 @@ echo "${ECHO_T}parallel environment           : $TPARALLEL" >&6; }
 echo "${ECHO_T}compile command (scalar)       : $COMPILE_SCALAR" >&6; }
 { echo "$as_me:$LINENO: result: F90 file extension             : $FEXT" >&5
 echo "${ECHO_T}F90 file extension             : $FEXT" >&6; }
-{ echo "$as_me:$LINENO: result: compile flags (none)           : $FFLAGS_STD" >&5
-echo "${ECHO_T}compile flags (none)           : $FFLAGS_STD" >&6; }
-{ echo "$as_me:$LINENO: result: compile flags (fast)           : $FFLAGS_OPT" >&5
-echo "${ECHO_T}compile flags (fast)           : $FFLAGS_OPT" >&6; }
-{ echo "$as_me:$LINENO: result: compile flags (dbg)            : $FFLAGS_DBG" >&5
-echo "${ECHO_T}compile flags (dbg)            : $FFLAGS_DBG" >&6; }
-{ echo "$as_me:$LINENO: result: compile flags (prof)           : $FFLAGS_PROF" >&5
-echo "${ECHO_T}compile flags (prof)           : $FFLAGS_PROF" >&6; }
+{ echo "$as_me:$LINENO: result: compile flags (none)           : $FCFLAGS_NONE" >&5
+echo "${ECHO_T}compile flags (none)           : $FCFLAGS_NONE" >&6; }
+{ echo "$as_me:$LINENO: result: compile flags (fast)           : $FCFLAGS_OPT" >&5
+echo "${ECHO_T}compile flags (fast)           : $FCFLAGS_OPT" >&6; }
+{ echo "$as_me:$LINENO: result: compile flags (dbg)            : $FCFLAGS_DBG" >&5
+echo "${ECHO_T}compile flags (dbg)            : $FCFLAGS_DBG" >&6; }
+{ echo "$as_me:$LINENO: result: compile flags (prof)           : $FCFLAGS_PROF" >&5
+echo "${ECHO_T}compile flags (prof)           : $FCFLAGS_PROF" >&6; }
 { echo "$as_me:$LINENO: result: link command w.flags (scalar)  : $LINK_SCALAR" >&5
 echo "${ECHO_T}link command w.flags (scalar)  : $LINK_SCALAR" >&6; }
 { echo "$as_me:$LINENO: result: external libraries (scalar)    : $LIBS_SCALAR" >&5

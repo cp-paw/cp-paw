@@ -97,12 +97,26 @@ CPP="$CPP $CPPOPT"
 ############################################################################
 ##                                                                        ##
 ##                  check for fortran compiler                            ##
-##                                                                        ##
+##            currently not used                                          ##
 ############################################################################
-AC_CHECK_PROGS(COMPILER, $AbsoftF90 $CompaqF90 $IBMF90,no)
-if test "$COMPILER" = "no"; then 
-  AC_MSG_ERROR(no valid compiler (f90,fort,xlf90) found)
-fi	
+# g95  compiler (Open source)
+AC_CHECK_PROG(EXIST_COMPILER_G95,g95,yes,no)
+# xlf90 compiler (IBM)
+AC_CHECK_PROG(EXIST_COMPILER_XLF90,xlf90,yes,no)
+# ifort/ifc (Intel)
+AC_CHECK_PROG(EXIST_COMPILER_ifort,ifort,yes,no)
+AC_CHECK_PROG(EXIST_COMPILER_ifc,ifc,yes,no)
+# f90 (Absoft)
+AC_CHECK_PROG(EXIST_COMPILER_f90,f90,yes,no)
+# fort (F90)
+AC_CHECK_PROG(EXIST_COMPILER_fort,fort,yes,no)
+#
+############################################################################
+##                                                                        ##
+##                  check for libraries                                   ##
+##               currently not used                                       ##
+############################################################################
+AC_CHECK_PROG(EXIST_COMPILER_fort,fort,yes,no)
 
 
 
@@ -118,15 +132,15 @@ if test "$PARMFILE" != notset; then
   TPARALLEL=`grep '^TPARALLEL' $PARMFILE | cut -d'"' -f2`
   COMPILER_SCALAR=`grep '^COMPILER_SCALAR' $PARMFILE | cut -d'"' -f2`
   COMPILER_PARALLEL=`grep '^COMPILER_PARALLEL' $PARMFILE | cut -d'"' -f2`
-  FFLAGS_STD=`grep '^FFLAGS_STD' $PARMFILE | cut -d'"' -f2`
-  FFLAGS_OPT=`grep '^FFLAGS_OPT' $PARMFILE | cut -d'"' -f2`
-  FFLAGS_DBG=`grep '^FFLAGS_DBG' $PARMFILE | cut -d'"' -f2`
-  FFLAGS_PROF=`grep '^FFLAGS_PROF' $PARMFILE | cut -d'"' -f2`
-  LFLAGS_SCALAR=`grep '^LFLAGS_SCALAR' $PARMFILE | cut -d'"' -f2`
-  LFLAGS_PARALLEL=`grep '^LFLAGS_PARALLEL' $PARMFILE | cut -d'"' -f2`
+  FCFLAGS_NONE=`grep '^FCFLAGS_NONE' $PARMFILE | cut -d'"' -f2`
+  FCFLAGS_OPT=`grep '^FCFLAGS_OPT' $PARMFILE | cut -d'"' -f2`
+  FCFLAGS_DBG=`grep '^FCFLAGS_DBG' $PARMFILE | cut -d'"' -f2`
+  FCFLAGS_PROF=`grep '^FCFLAGS_PROF' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_SCALAR=`grep '^LDFLAGS_SCALAR' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_PARALLEL=`grep '^LDFLAGS_PARALLEL' $PARMFILE | cut -d'"' -f2`
   LIBS_SCALAR=`grep '^LIBS_SCALAR=' $PARMFILE | cut -d'"' -f2`
   LIBS_PARALLEL=`grep '^LIBS_PARALLEL' $PARMFILE | cut -d'"' -f2`
-  CPPVAR=`grep '^CPPVAR' $PARMFILE | cut -d'"' -f2`
+  CPPFLAGS=`grep '^CPPFLAGS' $PARMFILE | cut -d'"' -f2`
   FEXT=`grep '^FEXT' $PARMFILE | cut -d'"' -f2`
   BLASDIR=`grep '^BLASDIR' $PARMFILE | cut -d'"' -f2`
   LAPACKDIR=`grep '^LAPACKDIR' $PARMFILE | cut -d'"' -f2`
@@ -143,9 +157,9 @@ if test "$PARMFILE" != notset; then
   PAWX="$PAWDIR/bin/$ARCH"
   COMPILE_SCALAR="$COMPILER_SCALAR"
   COMPILE_PARALLEL="$COMPILER_PARALLEL"
-  LINK_SCALAR="$COMPILER_SCALAR $LFLAGS_SCALAR"
-  LINK_PARALLEL="$COMPILER_PARALLEL $LFLAGS_PARALLEL"
-  CPPVAR="$CPPVAR"
+  LINK_SCALAR="$COMPILER_SCALAR $LDFLAGS_SCALAR"
+  LINK_PARALLEL="$COMPILER_PARALLEL $LDFLAGS_PARALLEL"
+  CPPFLAGS="$CPPFLAGS"
   FEXT="$FEXT"
   ARCH="$ARCH"
   #
@@ -230,7 +244,7 @@ AC_SUBST(LINK_PARALLEL)
 AC_SUBST(LIBS_SCALAR)
 AC_SUBST(LIBS_PARALLEL)
 AC_SUBST(FEXT)
-AC_SUBST(CPPVAR)
+AC_SUBST(CPPFLAGS)
 AC_SUBST(PAWX)     
 AC_SUBST(TPARALLEL)
 #
@@ -292,7 +306,7 @@ chmod +x $PAWDIR/bin/$ARCH/f90pp
 # substituting to get Makefile.none
 #
 AC_MSG_RESULT(creating Makefile in none)
-sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_STD %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
     -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
     -e 's%varPARALLEL%F%'\
     -e 's%varOBJTYPE%none%'\
@@ -302,7 +316,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_STD %"\
 #
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile in none_parallel)
-  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_STD %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
       -e 's%varPARALLEL%T%'\
       -e 's%varOBJTYPE%none_parallel%'\
@@ -312,7 +326,7 @@ fi
 # substituting to get Makefile.fast
 #
 AC_MSG_RESULT(creating Makefile in fast)
-sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_OPT %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%"\
     -e 's%varOBJTYPE%fast%'\
     -e 's%varPARALLEL%F%'\
@@ -322,7 +336,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_OPT %"\
 #
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile_parallel in fast)
-  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_OPT %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%"\
       -e 's%varOBJTYPE%fast_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -332,7 +346,7 @@ fi
 # substituting to get Makefile in dbg
 #
 AC_MSG_RESULT(creating Makefile in dbg)
-sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_DBG %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%"\
     -e 's%varOBJTYPE%dbg%'\
     -e 's%varPARALLEL%F%'\
@@ -342,7 +356,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_DBG %"\
 #
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile_parallel in dbg)
-  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_DBG %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%"\
       -e 's%varOBJTYPE%dbg_parallel%'\
       -e 's%varPARALLEL%T%'\ 
@@ -352,7 +366,7 @@ fi
 # substituting to get Makefile in prof
 #
 AC_MSG_RESULT(creating Makefile in prof)
-sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_PROF %"\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
     -e "s%\(LINK=.*\)%\1 -pg %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%"\
     -e 's%varOBJTYPE%prof%'\
@@ -363,7 +377,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_PROF %"\
 #
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile_parallel in prof)
-  sed -e "s%\(COMPILE=.*\)%\1 $FFLAGS_PROF %"\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
       -e "s%\(LINK=.*\)%\1 -pg %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%"\
       -e 's%varOBJTYPE%prof_parallel%'\
@@ -386,15 +400,15 @@ AC_MSG_RESULT(---------------------------------------------------------------)
 AC_MSG_RESULT(directory of distribution      : $PAWDIR)
 AC_MSG_RESULT(directory with binaries        : $PAWDIR/bin/$ARCH)
 AC_MSG_RESULT(architecture                   : $ARCH)
-AC_MSG_RESULT(preprocessor variables         : $CPPVAR)
+AC_MSG_RESULT(preprocessor variables         : $CPPFLAGS)
 AC_MSG_RESULT(architecture name              : $ARCH)
 AC_MSG_RESULT(parallel environment           : $TPARALLEL)
 AC_MSG_RESULT(compile command (scalar)       : $COMPILE_SCALAR)
 AC_MSG_RESULT(F90 file extension             : $FEXT)
-AC_MSG_RESULT(compile flags (none)           : $FFLAGS_STD)
-AC_MSG_RESULT(compile flags (fast)           : $FFLAGS_OPT)
-AC_MSG_RESULT(compile flags (dbg)            : $FFLAGS_DBG)
-AC_MSG_RESULT(compile flags (prof)           : $FFLAGS_PROF)
+AC_MSG_RESULT(compile flags (none)           : $FCFLAGS_NONE)
+AC_MSG_RESULT(compile flags (fast)           : $FCFLAGS_OPT)
+AC_MSG_RESULT(compile flags (dbg)            : $FCFLAGS_DBG)
+AC_MSG_RESULT(compile flags (prof)           : $FCFLAGS_PROF)
 AC_MSG_RESULT(link command w.flags (scalar)  : $LINK_SCALAR)
 AC_MSG_RESULT(external libraries (scalar)    : $LIBS_SCALAR)
 #AC_MSG_RESULT(---------------------------------------------------------------)

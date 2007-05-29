@@ -7,7 +7,7 @@
 ##                                                                                     ##
 ##  none:                                                                              ##
 ##    compile: $COMPILER_... $FLAGS_... sources                                        ##
-##    link:    $COMPILER_... $LFLAGS -o objects $LIBS_....                             ##
+##    link:    $COMPILER_... $LDFLAGS -o objects $LIBS_....                             ##
 ##                                                                                     ##
 #########################################################################################
 #
@@ -118,7 +118,7 @@ COMPILER_PARALLEL="${MPIDIR}/bin/mpif90 -mpilog -fno-second-underscore "
 #########################################################################################
 ##___________________________standard compiler flags___________________________________##
 ##                                                                                     ##
-FFLAGS_STD="-c "
+FCFLAGS_NONE="-c "
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
 ##  includes generic flags for compilations as opposed to linking.                     ##
@@ -131,7 +131,7 @@ FFLAGS_STD="-c "
 #########################################################################################
 #________________________________compiler flags for optimization_______________________##
 ##                                                                                     ##
-FFLAGS_OPT="-c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2"
+FCFLAGS_OPT="-c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2"
 # -max-frame-size=n
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
@@ -146,7 +146,7 @@ FFLAGS_OPT="-c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2"
 #########################################################################################
 ##________________________________compiler flags for  profiling________________________##
 ##                                                                                     ##
-FFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
+FCFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
 ##  special compiler options for the paw_prof and ppaw_prof executable                 ##
@@ -161,7 +161,7 @@ FFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
 #########################################################################################
 #________________________________compiler flags for debugging__________________________##
 ##                                                                                     ##
-FFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
+FCFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
 ##  special compiler options for the paw_dbg and ppaw_dbg executable                   ##
@@ -172,14 +172,14 @@ FFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
 #
 #########################################################################################
 #________________________________flags for linking_____________________________________##
-LFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/"
+LDFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/"
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
 ##                                                                                     ##
 ##  the link command for scalar exectuable will be:                                    ##
-##    "COMPILE LFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -oexecutable objects LLIBS"       ##
+##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -oexecutable objects LLIBS"       ##
 ##  the link command for parallel exectuable will be:                                  ##
-##    "COMPILE LFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -L{MPIDIR} -oexecutable objects LLIBS"  ##
+##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -L{MPIDIR} -oexecutable objects LLIBS"  ##
 ##  ${OBJDIR} is bin/${ARCH}/Objects/${TYPE} relative to the main PAW directory        ##
 ##   and where ${TYPE} is either "none", "none_parallel", "fast", "fast_parallel", etc.##
 ##                                                                                     ##
@@ -187,15 +187,15 @@ LFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.
 #
 #########################################################################################
 #________________________________flags for linking_____________________________________##
-LFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/mpe/lib"
+LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/mpe/lib"
 #  -L${MPIDIR}/lib"
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
 ##                                                                                     ##
 ##  the link command for scalar executable will be:                                    ##
-##    "COMPILE LFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -oexecutable objects LLIBS"       ##
+##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -oexecutable objects LLIBS"       ##
 ##  the link command for parallel executable will be:                                  ##
-##    "COMPILE LFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -L{MPIDIR} -oexecutable objects LLIBS"  ##
+##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -L{MPIDIR} -oexecutable objects LLIBS"  ##
 ##  ${OBJDIR} is bin/${ARCH}/Objects/${TYPE} relative to the main PAW directory        ##
 ##   and where ${TYPE} is either "none", "none_parallel", "fast", "fast_parallel", etc.##
 ##                                                                                     ##
@@ -224,7 +224,7 @@ LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c -Wl,-dy -lmpe -Wl,-dy
 #########################################################################################
 ##________________________________preprocessor variables_______________________________##
 ##                                                                                     ##
-CPPVAR="-DCPPVAR_FFT_FFTW  -DCPPVAR_U77 "
+CPPFLAGS="-DCPPVAR_FFT_FFTW  -DCPPVAR_U77 "
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
 ##  library selectors for FFT                                                          ##
