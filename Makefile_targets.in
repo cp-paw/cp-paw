@@ -121,9 +121,9 @@ clean: clean_all
 #---------------------------------------------------------------------------
 #-- "all" makes a complete installation. all_new includes all dependencies
 #---------------------------------------------------------------------------
-all: ${OBJTYPES} tools docs 
+all: ${OBJTYPES} tools 
 #
-all_new: $(addsuffix _new,${OBJTYPES}) tools docs
+all_new: $(addsuffix _new,${OBJTYPES}) tools 
 #
 clean_all: $(addprefix clean_,${OBJTYPES} tools)
 #
@@ -132,9 +132,9 @@ clean_all: $(addprefix clean_,${OBJTYPES} tools)
 #-- executables, tools and documentation. Uses all dependencies           --
 #---------------------------------------------------------------------------
 #
-small: $(addsuffix _new,${OBJTYPES_PRIMARY}) tools docs 
+small: $(addsuffix _new,${OBJTYPES_PRIMARY}) tools 
 #
-clean_small: $(addprefix clean_,${OBJTYPES_PRIMARY} tools docs)
+clean_small: $(addprefix clean_,${OBJTYPES_PRIMARY} tools)
 #
 #---------------------------------------------------------------------------
 #-- make all tools in one go                                              --

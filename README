@@ -10,6 +10,7 @@ Installation:
 1) make a copy of the example parameter file "parms.example" named "parms.ARCH", 
 2) edit the new parameter file "parms.${ARCH}" following the instructions given therein
 3) execute "./configure --with-parmfile=parms.${ARCH}"
+4) execute "make docs" 
 4) execute "make small" 
 
 The CP-PAW executable will be
@@ -19,7 +20,6 @@ The CP-PAW executable will be
 The documentation will be
    doc/manual.pdf
    doc/history.pdf
-   doc/tutorial.pdf
    doc/manual.pdf  (corrently not yet useful)
 
 Prerequisites:
@@ -27,12 +27,13 @@ Prerequisites:
 Your directory should look like this
 
 configure            configure file
-configure.ac         (nogt needed input file for creating configure with autoconf)
+configure.ac         (not needed: input file for creating configure with autoconf)
 dx                   data explorer programs
 Makefile_bare.in     used by configure to create makefiles
 Makefile_targets.in  used by configure to create makefiles
 parameters           parameter directory
 parms.example        example parameter file
+parms.g95
 src                  source directory
 
 Copyright:

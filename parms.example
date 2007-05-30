@@ -63,7 +63,6 @@ MPIDIR="/opt/mpich-1.2.6/"
 ## fft      (do not not fftw version 3)                                                ##
 ## mpi      (do not use mpi2)                                                          ##
 ##                                                                                     ##
-#LAPACKDIR="/home/tools/libs/acml3.0.0_64/gnu64/lib/"
 ##                                                                                     ##
 #########################################################################################
 #

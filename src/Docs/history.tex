@@ -291,6 +291,13 @@ dependencies have been included in the Makefiles. This makes tha
 targets ...\_new unnecessary. Dependencies for the documentation have
 been included to avoid frequent recompiling.
 
+\subsection{May 28,  2007}
+
+Change of configuration procedure.
+
+The names of the variables in the parmfile have been changed to be
+compatible with common standards.
+
 \subsection{May 29,  2007}
 
 The source files for the documentation have been copied into src/Docs.
@@ -298,6 +305,19 @@ During installation the files are copied into the doc directory, where
 they are compiled. The doc directory has been removed from the
 repository. It will be recreated each time!
 
+\subsection{May 30,  2007}
+
+reworked paw\_trace.f. Trace files are written only if trace is
+switched on explicitely.  The object can be set temporarily silent. It
+obtained a function to return if a trace file is attached, which
+allows to write arbitrary information into the trace files. It
+obtained functions to report numbers into the trace information, only
+if the trace object is on.
+
+\subsection{May 30,  2007}
+
+the target ``docs'' has been removed from the targets ``all'',
+``all\_new'' and ``small''.
 
 
 \newpage
