@@ -453,10 +453,10 @@ do is1=1,2
   print*,'charge= ',svar,' for spin ',is1
 enddo
 !
-do ln1=1,nchi
-  do ln2=1,nchi
-    do ln3=1,nchi
-      do ln4=1,nchi
+do ln1=1,lnx
+  do ln2=1,lnx
+    do ln3=1,lnx
+      do ln4=1,lnx
         write(*,*)'ulittle',ln1,ln2,ln3,ln4,this%ulittle(:,ln1,ln2,ln3,ln4)
       enddo
     enddo
@@ -602,7 +602,7 @@ print*,'chifromphi: ',this%norb(1:lx+1)
           NOFL=NOFL+1
           LNXCHI=LNXCHI+1
         ENDDO
-        IF(THIS%NORB(L).GT.NOFL) THEN
+        IF(THIS%NORB(L+1).GT.NOFL) THEN
           CALL ERROR$MSG('#(CORRELATED ORBITALS) EXCEEDS #(PARTIAL WAVES)')
           CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
         END IF

@@ -10,8 +10,7 @@ Installation:
 1) make a copy of the example parameter file "parms.example" named "parms.ARCH", 
 2) edit the new parameter file "parms.${ARCH}" following the instructions given therein
 3) execute "./configure --with-parmfile=parms.${ARCH}"
-4) execute "make small" or "make all_new". 
-   (all_new will also create executables for debugging etc.)
+4) execute "make small" 
 
 The CP-PAW executable will be
    bin/${ARCH}/paw_fast.x
@@ -29,7 +28,6 @@ Your directory should look like this
 
 configure            configure file
 configure.ac         (nogt needed input file for creating configure with autoconf)
-doc                  documantation directory
 dx                   data explorer programs
 Makefile_bare.in     used by configure to create makefiles
 Makefile_targets.in  used by configure to create makefiles
