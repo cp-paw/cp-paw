@@ -192,13 +192,13 @@ clean_scripts:
 docs: ${PAWDIR}/doc/manual.pdf ${PAWDIR}/doc/history.pdf ${PAWDIR}/doc/install.pdf
 #
 ${PAWDIR}/doc/manual.pdf :  ${PAWDIR}/doc/manual.tex  ${PAWDIR}/doc/doc.bib ${PAWDIR}/doc/Figs
-	cd ${PAWDIR}/doc; latex manual; makeindex manual.idx; latex manual; latex manual; bibtex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
+	cd ${PAWDIR}/doc; latex manual; makeindex manual.idx; latex manual;  bibtex manual; latex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
 #
 ${PAWDIR}/doc/history.pdf :  ${PAWDIR}/doc/history.tex ${PAWDIR}/doc/doc.bib
-	cd ${PAWDIR}/doc; latex history; makeindex history.idx; latex history; latex history; bibtex history; latex history; dvips history.dvi; ps2pdf history.ps 
+	cd ${PAWDIR}/doc; latex history; makeindex history.idx; latex history; bibtex history; latex history; latex history; dvips history.dvi; ps2pdf history.ps 
 #
 ${PAWDIR}/doc/install.pdf :  ${PAWDIR}/doc/install.tex ${PAWDIR}/doc/doc.bib
-	cd ${PAWDIR}/doc; latex install; makeindex install.idx; latex install; latex install; bibtex install; latex install; dvips install.dvi; ps2pdf install.ps
+	cd ${PAWDIR}/doc; latex install; makeindex install.idx; latex install; bibtex install; latex install; latex install; dvips install.dvi; ps2pdf install.ps
 #
 #  dependencies for documentation
 #
@@ -218,15 +218,4 @@ ${PAWDIR}/doc/Figs :${PAWDIR}/src/Docs/Figs
 	cp -r ${PAWDIR}/src/Docs/Figs ${PAWDIR}/doc/Figs
 #
 clean_docs: 
-	rm -f ${PAWDIR}/doc/*.aux
-	rm -f ${PAWDIR}/doc/*.blg
-	rm -f ${PAWDIR}/doc/*.bbl
-	rm -f ${PAWDIR}/doc/*.ind
-	rm -f ${PAWDIR}/doc/*.ps
-	rm -f ${PAWDIR}/doc/*.ilg
-	rm -f ${PAWDIR}/doc/*.log
-	rm -f ${PAWDIR}/doc/*.toc
-	rm -f ${PAWDIR}/doc/*.dvi
-	rm -f ${PAWDIR}/doc/*.idx
-	rm -f ${PAWDIR}/doc/*.blg
-	rm -f ${PAWDIR}/doc/*.pdf
+	rm -f ${PAWDIR}/doc/*
