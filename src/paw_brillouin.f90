@@ -1,75 +1,75 @@
 !
-!.......................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE BRILLOUIN_MODULE
-!***********************************************************************
-!**                                                                   **
-!**  NAME: BRILLOUIN                                                  **
-!**                                                                   **
-!**  PURPOSE: BRILLOUIN ZONE INTEGRATION USING THE IMPROVED VERSION   **
-!**    OF THE TETRAHEDRON METHOD                                      **
-!**                                                                   **
-!**  DESCRIPTION:                                                     **
-!**    BRILLOUIN$MSH CREATE INFORMATION WHICH IS ONLY DEPENDENT       **
-!**    ON THE STRUCTURE OF THE CRYSTAL. THIS FUNCTION IS EXECUTED     **
-!**    BEFORE THE SELFCONSITENCY ITERATIONS. THE IRREDUCIBLE K-POINTS **
-!**    ARE THEN AVAILABLE THROUGH THE $GET.. INTERFACE                ** 
-!**                                                                   **
-!**    BRILLOUIN$DOS IS EXECUTED IN EACH SELFCONSISTENCY ITERATION.   **
-!**    THEY NEED AS INPUT THE ENERGY EIGENVALUES EB AND THE NUMBER OF **
-!**    OCCUPIED STATES RNTOT. FOR SPIN POLARIZED CALCULATIONS TREAT   **
-!**    SPIN UP AND SPIN DOWN AS SEPARATE BANDS. OUTPUT ARE THE        **
-!**    WEIGHTS WGHT. THE INTEGRATION OF AN ARBITRARY FUNCTION A(N,K)  **
-!**    OVER THE OCCUPIED STATES IS PERFORMED BY SUMMATION             **
-!**            <A>=SUM OVER K AND N OF WGHT(N,K)*A(N,K)               **
-!**    WHERE THE SUM RUNS OVER OCCUPIED AND! UNOCCUPIED STATES.       **
-!**    THE WEIGHTS CONTAIN BOTH THE GEOMETRICAL WEIGHT AND THE        **
-!**    INFLUENCE OF THE FERMI FUNCTION.                               **
-!**                                                                   **
-!**    A) FOR INSULATORS THE METHOD IS IDENTICAL TO THE SPECIAL POINT **
-!**       SCHEME OF MONKHORST AND PACK.                               **
-!**    B) FOR METALS IT IS IDENTICAL TO THE "TRADITIONAL" TETRAHEDRON **
-!**       METHOD OF ANDERSEN AND JEPSEN, IF THE CORRECTION IS SWITCHED**
-!**       OFF.                                                        **
-!**    C) WITH THE CORRECTION ALSO THE RESULTS FOR METALS ARE         **
-!**       COMPARABLE TO THAT OBTAINED FOR INSULATORS                  **
-!**                                                                   **
-!**    THE CORRECTION FORMULA FOR LINEAR INTERPOLATION CAN BE SWITCHED**
-!**    ON AND OFF BY THE PARAMETER "ICOR" IN THE SUBROUTINE "WEIGHTS" **
-!**                                                                   **
-!**    THE SYMMETRY OPERATIONS USED AS INPUT ARE TABULATED IN:        **
-!**      C.J.BRADLEY AND A.P.CRACKNELL,                               **
-!**      THE MATHEMATICAL THEORY OF SYMMETRY IN SOLIDS,               **
-!**      OXFORD 1972                                                  **
-!**                                                                   **
-!**    SOMETIMES THE ROUTINE HAS PROBLEMS FINDING THE FERMI LEVEL,    **
-!**    IF THE FERMI LEVEL IS PINNED A TETRAHEDRON WITH IDENTICAL      **
-!**    ENERGIES ON ALL 4 CORNERS, WHICH LEADS TO A DELTA PEAK IN THE  **
-!**    DENSITIES OF STATES. IN THIS CASE ONE SHOULD INCREASE THE K-MESH,
-!**    OR CHANGE THE K-MESH FROM AN EVEN NUMBER OF DIVISIONS FOR THE  ** 
-!**    RECIPROCAL LATTICE VECTORS TO AN ODD NUMBER OR VICE VERSA.     **
-!**                                                                   **
-!**    THE FERMI LEVEL IS DETERMINED TO AN ACCURACY OF 1.E-5 IN THE   **
-!**    NUMBER OF STATES. THIS TOLERANCE CAN BE MODIFIED BY CHANGING   **
-!**    THE SETTING OF THE PARAMETER "TOLMAX" IN SUBROUTINE DOS.       **
-!**                                                                   **
-!**    THE GRID OF K-POINTS MAY OR MAY NOT INCLUDE THE GAMMA POINT    **
-!**    SWITCH USING TSHIFT IN BRILLOUIN_REDUZ                         **
-!**                                                                   **
-!**  FUNCTIONS:                                                       **
-!**    BRILLOUIN$MSH                                                  **
-!**    BRILLOUIN$DOS                                                  **
-!**    BRILLOUIN$GETI4                                                **
-!**    BRILLOUIN$GETR8A                                               **
-!**                                                                   **
-!**  USAGE:                                                           **
-!**    1) DEFINE LATTICE AND SYMMETRY OPERATIONS USING BRILLOUIN$MSH. **
-!**    2) OBTAIN THE IRREDUCIBLE K-POINTS USING                       **
-!**           BRILLOUIN$GETI4('NK',NK)                                **
-!**           BRILLOIIN$GETR8A('K',3*NK,K)                            **
-!**    3) CALCULATE ONE-PARTICLE ENERGIES AT THE K-POINTS             **
-!**    4) OBTAIN SAMPLING WEIGHTS USING BRILLOUIN$DOS                 **
-!**                                                                   **
-!***********************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  NAME: BRILLOUIN                                                          **
+!**                                                                           **
+!**  PURPOSE: BRILLOUIN ZONE INTEGRATION USING THE IMPROVED VERSION           **
+!**    OF THE TETRAHEDRON METHOD                                              **
+!**                                                                           **
+!**  DESCRIPTION:                                                             **
+!**    BRILLOUIN$MSH CREATE INFORMATION WHICH IS ONLY DEPENDENT               **
+!**    ON THE STRUCTURE OF THE CRYSTAL. THIS FUNCTION IS EXECUTED             **
+!**    BEFORE THE SELFCONSITENCY ITERATIONS. THE IRREDUCIBLE K-POINTS         **
+!**    ARE THEN AVAILABLE THROUGH THE $GET.. INTERFACE                        **
+!**                                                                           **
+!**    BRILLOUIN$DOS IS EXECUTED IN EACH SELFCONSISTENCY ITERATION.           **
+!**    THEY NEED AS INPUT THE ENERGY EIGENVALUES EB AND THE NUMBER OF         **
+!**    OCCUPIED STATES RNTOT. FOR SPIN POLARIZED CALCULATIONS TREAT           **
+!**    SPIN UP AND SPIN DOWN AS SEPARATE BANDS. OUTPUT ARE THE                **
+!**    WEIGHTS WGHT. THE INTEGRATION OF AN ARBITRARY FUNCTION A(N,K)          **
+!**    OVER THE OCCUPIED STATES IS PERFORMED BY SUMMATION                     **
+!**            <A>=SUM OVER K AND N OF WGHT(N,K)*A(N,K)                       **
+!**    WHERE THE SUM RUNS OVER OCCUPIED AND! UNOCCUPIED STATES.               **
+!**    THE WEIGHTS CONTAIN BOTH THE GEOMETRICAL WEIGHT AND THE                **
+!**    INFLUENCE OF THE FERMI FUNCTION.                                       **
+!**                                                                           **
+!**    A) FOR INSULATORS THE METHOD IS IDENTICAL TO THE SPECIAL POINT         **
+!**       SCHEME OF MONKHORST AND PACK.                                       **
+!**    B) FOR METALS IT IS IDENTICAL TO THE "TRADITIONAL" TETRAHEDRON         **
+!**       METHOD OF ANDERSEN AND JEPSEN, IF THE CORRECTION IS SWITCHED        **
+!**       OFF.                                                                **
+!**    C) WITH THE CORRECTION ALSO THE RESULTS FOR METALS ARE                 **
+!**       COMPARABLE TO THAT OBTAINED FOR INSULATORS                          **
+!**                                                                           **
+!**    THE CORRECTION FORMULA FOR LINEAR INTERPOLATION CAN BE SWITCHED        **
+!**    ON AND OFF BY THE PARAMETER "ICOR" IN THE SUBROUTINE "WEIGHTS"         **
+!**                                                                           **
+!**    THE SYMMETRY OPERATIONS USED AS INPUT ARE TABULATED IN:                **
+!**      C.J.BRADLEY AND A.P.CRACKNELL,                                       **
+!**      THE MATHEMATICAL THEORY OF SYMMETRY IN SOLIDS,                       **
+!**      OXFORD 1972                                                          **
+!**                                                                           **
+!**    SOMETIMES THE ROUTINE HAS PROBLEMS FINDING THE FERMI LEVEL,            **
+!**    IF THE FERMI LEVEL IS PINNED A TETRAHEDRON WITH IDENTICAL              **
+!**    ENERGIES ON ALL 4 CORNERS, WHICH LEADS TO A DELTA PEAK IN THE          **
+!**    DENSITIES OF STATES. IN THIS CASE ONE SHOULD INCREASE THE K-MESH,      **
+!**    OR CHANGE THE K-MESH FROM AN EVEN NUMBER OF DIVISIONS FOR THE          **
+!**    RECIPROCAL LATTICE VECTORS TO AN ODD NUMBER OR VICE VERSA.             **
+!**                                                                           **
+!**    THE FERMI LEVEL IS DETERMINED TO AN ACCURACY OF 1.E-5 IN THE           **
+!**    NUMBER OF STATES. THIS TOLERANCE CAN BE MODIFIED BY CHANGING           **
+!**    THE SETTING OF THE PARAMETER "TOLMAX" IN SUBROUTINE DOS.               **
+!**                                                                           **
+!**    THE GRID OF K-POINTS MAY OR MAY NOT INCLUDE THE GAMMA POINT            **
+!**    SWITCH USING TSHIFT IN BRILLOUIN_REDUZ                                 **
+!**                                                                           **
+!**  FUNCTIONS:                                                               **
+!**    BRILLOUIN$MSH                                                          **
+!**    BRILLOUIN$DOS                                                          **
+!**    BRILLOUIN$GETI4                                                        **
+!**    BRILLOUIN$GETR8A                                                       **
+!**                                                                           **
+!**  USAGE:                                                                   **
+!**    1) DEFINE LATTICE AND SYMMETRY OPERATIONS USING BRILLOUIN$MSH.         **
+!**    2) OBTAIN THE IRREDUCIBLE K-POINTS USING                               **
+!**           BRILLOUIN$GETI4('NK',NK)                                        **
+!**           BRILLOIIN$GETR8A('K',3*NK,K)                                    **
+!**    3) CALCULATE ONE-PARTICLE ENERGIES AT THE K-POINTS                     **
+!**    4) OBTAIN SAMPLING WEIGHTS USING BRILLOUIN$DOS                         **
+!**                                                                           **
+!*******************************************************************************
 TYPE THIS_TYPE
   INTEGER(4)             :: NKP      ! #(IRREDUCIBLE KPOINTS)
   INTEGER(4)             :: NTET     ! #(IRREDUCIBLE TETRAHEDRA)
@@ -83,12 +83,14 @@ END TYPE THIS_TYPE
 TYPE(THIS_TYPE) :: THIS
 END MODULE BRILLOUIN_MODULE
 !
-!-----------------------------------------------------------------------
-!-----------------------------------------------------------------------
-!----  BLOCK TEST                                                   ----
-!----  TEST SUBROUTINE                                              ----
-!-----------------------------------------------------------------------
-!-----------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!----  BLOCK TEST                                                           ----
+!----  TEST SUBROUTINE                                                      ----
+!-------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$TESTING
       IMPLICIT none
       INTEGER(4),PARAMETER :: NSYMX=50
@@ -107,20 +109,20 @@ END MODULE BRILLOUIN_MODULE
       integer(4)           :: nsym ! #(symmetry operations)
       integer(4)           :: nkp ! #(k-points)
       integer(4)           :: isym,i,j,nb,ikp,ib
-!     ******************************************************************
+!     **************************************************************************
                                     call trace$push('BRILLOUIN$TESTING')
-!     ==================================================================
-!     ==  READ LATTICE VECTORS                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ LATTICE VECTORS                                                ==
+!     ==========================================================================
       OPEN(UNIT=NFIL1,FILE='TEST.IN')
       rewind nfil1
 !     ==== RBAS(I,J) = REAL SPACE LATTICE VECTORS (I=X,Y,Z)
       DO I=1,3
         READ(NFIL1,*)RBAS(:,I)
       ENDDO
-!     ==================================================================
-!     ==  INPUT OF SYMMETRY OPERATIONS                                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  INPUT OF SYMMETRY OPERATIONS                                        ==
+!     ==========================================================================
       READ(NFIL1,*)IARB(:)
 !     ==  NSYM = NUMBER OF SYMMETRY OPERATIONS
       READ(NFIL1,*)NSYM
@@ -136,16 +138,17 @@ END MODULE BRILLOUIN_MODULE
       NSYM=NSYM*2
 !     == NKP = NUMBER OF K-POINTS IN THE WHOLE UNIT CELL
       READ(NFIL1,*)NKP
-!     ==================================================================
-!     ==  FIND IRREDUCIBLE K-POINTS AND TETRAHEDRA                    ==
-!     ==================================================================
+!
+!     ==========================================================================
+!     ==  FIND IRREDUCIBLE K-POINTS AND TETRAHEDRA                            ==
+!     ==========================================================================
 !      CALL BRILLOUIN$MSH(RBAS,NKP,NSYM,IIO,IARB)
 
       call BRILLOUIN$MSHNOSYM(.true.,RBAS,(/5,5,5/),(/1,1,1/))
  
-!     ==================================================================
-!     ==  CALCULATE ENERGIES AT THE IRREDUCIBLE K-POINTS              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE ENERGIES AT THE IRREDUCIBLE K-POINTS                      ==
+!     ==========================================================================
       CALL BRILLOUIN$GETI4('NK',NKP)
       ALLOCATE(BK(3,NKP))
       CALL BRILLOUIN$GETR8A('K',3*NKP,BK)
@@ -176,14 +179,14 @@ END MODULE BRILLOUIN_MODULE
         ENDDO
       ENDDO
  
-!     ==================================================================
-!     ==  CALCULATE WEIGHTS                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE WEIGHTS                                                   ==
+!     ==========================================================================
       CALL BRILLOUIN$DOS(NB,NKP,EB,WGHT,RNTOT,EF)
  
-!     ==================================================================
-!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF F(K)                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF F(K)                          ==
+!     ==========================================================================
       SUMA=0.D0
       DO IKP=1,NKP
         DO IB=1,NB
@@ -191,23 +194,25 @@ END MODULE BRILLOUIN_MODULE
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     ==  PRINT OUT                                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PRINT OUT                                                           ==
+!     ==========================================================================
       PRINT*,'INTEGRAL OF A : ',SUMA 
 !
-!     ==================================================================
-!     ==  test derivatives                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  test derivatives                                                    ==
+!     ==========================================================================
       CALL brillouin_testweightandder
 
                                     call trace$pop
       END SUBROUTINE BRILLOUIN$TESTING
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       subroutine brillouin_testweightandder
-!     ** test routine for brillouin$weightander                       **
-!     ** checks derivatives against numerical derivatives             **
+!     **************************************************************************
+!     ** test routine for brillouin$weightander                               **
+!     ** checks derivatives against numerical derivatives                     **
+!     **************************************************************************
       implicit none
       real(8) :: vol=1.d0
       real(8) :: e0(4)=(/2.d0,1.d0,0.d0,3.d0/)
@@ -221,7 +226,7 @@ END MODULE BRILLOUIN_MODULE
       real(8) :: wghtarr(4,2,4)
       real(8) :: dwghttest(4,4)
       integer(4) :: I,J,k
-!     ******************************************************************
+!     **************************************************************************
       do k=1,3
         ef=0.3+real(k-1,kind=8)
         print*,'now test weightandder case ',k,ef
@@ -242,27 +247,27 @@ END MODULE BRILLOUIN_MODULE
       return
       end
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       subroutine brillouin_OPTIMIZE(NKP_,EKP_,WGHT_)
       implicit none
       integer(4),intent(in) :: nkp_
       real(8)    :: ekp_(nkp_)
       real(8)    :: wght_(nkp_)
-!     ******************************************************************
+!     **************************************************************************
       call error$msg('brillouin_optimize is not yet to be used')
       call error$stop('brillouin_optimize')
 
       return
       end
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$SETR8A(ID,LEN,VAL)
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       REAL(8)     ,INTENT(OUT):: VAL(LEN)
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'RBAS')THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -277,7 +282,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$GETR8A(ID,LEN,VAL)
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
@@ -327,13 +332,13 @@ END MODULE BRILLOUIN_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$GETI4(ID,VAL)
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(OUT):: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'NK') THEN
         VAL=THIS%NKP
       ELSE
@@ -343,37 +348,40 @@ END MODULE BRILLOUIN_MODULE
       END IF
       RETURN
       END
-!     ------------------------------------------------------------------
-!     ------------------------------------------------------------------
-!     ----                                                         -----
-!     ----  BLOCK ARBMSH:                                          -----
-!     ----                                                         -----
-!     ----  READS SYMMETRYELEMENTS AND FINDS IRR. K-POINTS         -----
-!     ----  AND TETRAHEDRA, USED IN THE BRILLOUIN ZONE INTEGRATION -----
-!     ----                                                         -----
-!     ------------------------------------------------------------------
-!     ------------------------------------------------------------------
-!     .....................................................ARBMSH.......
+!
+!===============================================================================
+!===============================================================================
+!====                                                                       ====
+!====  BLOCK ARBMSH:                                                        ====
+!====                                                                       ====
+!====  READS SYMMETRYELEMENTS AND FINDS IRR. K-POINTS                       ====
+!====  AND TETRAHEDRA, USED IN THE BRILLOUIN ZONE INTEGRATION               ====
+!====                                                                       ====
+!===============================================================================
+!===============================================================================
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$MSH(RBAS,NGKP,NSYM,IIO,IARB)
-!     **                                                              **
-!     **  CALCULATE IRREDUCIBLE K-POINTS                              **
-!     **  AND FINDS INEQUIVALENT TETRAHEDRA                           **
-!     **  FOR BRILLOUIN ZONE INTEGRATION                              **
-!     **                                                              **
-!     **  REMARKS:                                                    **
-!     **    1) IARB: DEPENDENCIES FOR DIVISIONS OF RECIPROCAL         **
-!     **       LATTICE VECTORS.                                       **
-!     **                ( IF IARB(1)=1 THEN 1ST AND 2ND LATTICE       **
-!     **                  VECTORS ARE DIVIDED BY AN EQUAL NUMBER;     **
-!     **                  IF IARB(2)=1 THEN SAME FOR 2ND AND 3RD;     **
-!     **                  IF IARB(3)=1 THEN SAME FOR 3RD AND 1ST)     **
-!     **                                                              **
-!     **   AUTHOR: PETER E. BLOECHL                                   **
-!     **                                                              **
-!     **   SUBROUTINES USED:                                          **
-!     **     GBASS,BASDIV,REDUZ,ZUORD,TETDIV,TETCNT,ORD1              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATE IRREDUCIBLE K-POINTS                                      **
+!     **  AND FINDS INEQUIVALENT TETRAHEDRA                                   **
+!     **  FOR BRILLOUIN ZONE INTEGRATION                                      **
+!     **                                                                      **
+!     **  REMARKS:                                                            **
+!     **    1) IARB: DEPENDENCIES FOR DIVISIONS OF RECIPROCAL                 **
+!     **       LATTICE VECTORS.                                               **
+!     **                ( IF IARB(1)=1 THEN 1ST AND 2ND LATTICE               **
+!     **                  VECTORS ARE DIVIDED BY AN EQUAL NUMBER;             **
+!     **                  IF IARB(2)=1 THEN SAME FOR 2ND AND 3RD;             **
+!     **                  IF IARB(3)=1 THEN SAME FOR 3RD AND 1ST)             **
+!     **                                                                      **
+!     **   AUTHOR: PETER E. BLOECHL                                           **
+!     **                                                                      **
+!     **   SUBROUTINES USED:                                                  **
+!     **     GBASS,BASDIV,REDUZ,ZUORD,TETDIV,TETCNT,ORD1                      **
+!     **                                                                      **
+!     **************************************************************************
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: RBAS(3,3)  ! LATTICE VECTORS (REAL SPACE)
@@ -397,7 +405,7 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4)            :: TET0(3,4,6)
       REAL(8)               :: DUMMY
       LOGICAL(4)            :: TCHK
-!     ******************************************************************
+!     **************************************************************************
                                    call trace$push('BRILLOUIN$MSH') 
       THIS%RBAS=RBAS
       INV=0
@@ -483,27 +491,29 @@ END MODULE BRILLOUIN_MODULE
                                    call trace$pop
       RETURN                                                            
       END                                                               
-!     .....................................................ARBMSH.......
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
-!     **                                                              **
-!     **  CALCULATE IRREDUCIBLE K-POINTS                              **
-!     **  AND FINDS INEQUIVALENT TETRAHEDRA                           **
-!     **  FOR BRILLOUIN ZONE INTEGRATION                              **
-!     **                                                              **
-!     **  REMARKS:                                                    **
-!     **    1) IARB: DEPENDENCIES FOR DIVISIONS OF RECIPROCAL         **
-!     **       LATTICE VECTORS.                                       **
-!     **                ( IF IARB(1)=1 THEN 1ST AND 2ND LATTICE       **
-!     **                  VECTORS ARE DIVIDED BY AN EQUAL NUMBER;     **
-!     **                  IF IARB(2)=1 THEN SAME FOR 2ND AND 3RD;     **
-!     **                  IF IARB(3)=1 THEN SAME FOR 3RD AND 1ST)     **
-!     **                                                              **
-!     **   AUTHOR: PETER E. BLOECHL                                   **
-!     **                                                              **
-!     **   SUBROUTINES USED:                                          **
-!     **     GBASS,BASDIV,REDUZ,ZUORD,TETDIV,TETCNT,ORD1              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATE IRREDUCIBLE K-POINTS                                      **
+!     **  AND FINDS INEQUIVALENT TETRAHEDRA                                   **
+!     **  FOR BRILLOUIN ZONE INTEGRATION                                      **
+!     **                                                                      **
+!     **  REMARKS:                                                            **
+!     **    1) IARB: DEPENDENCIES FOR DIVISIONS OF RECIPROCAL                 **
+!     **       LATTICE VECTORS.                                               **
+!     **                ( IF IARB(1)=1 THEN 1ST AND 2ND LATTICE               **
+!     **                  VECTORS ARE DIVIDED BY AN EQUAL NUMBER;             **
+!     **                  IF IARB(2)=1 THEN SAME FOR 2ND AND 3RD;             **
+!     **                  IF IARB(3)=1 THEN SAME FOR 3RD AND 1ST)             **
+!     **                                                                      **
+!     **   AUTHOR: PETER E. BLOECHL                                           **
+!     **                                                                      **
+!     **   SUBROUTINES USED:                                                  **
+!     **     GBASS,BASDIV,REDUZ,ZUORD,TETDIV,TETCNT,ORD1                      **
+!     **                                                                      **
+!     **************************************************************************
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TINV       ! FLAG FOR TIME INVERSION SYMMETRY
@@ -625,7 +635,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN                                                            
       END                                                               
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_BASDIV(N,NMSHP,GBAS,IARB)                              
 !     **                                                              **
 !     **  BASDIV DETERMINES DIVISION OF BASEVECTORS OF REC. LATT.     **
@@ -712,10 +722,8 @@ END MODULE BRILLOUIN_MODULE
      &        ,3I5)')N(:)
       RETURN                                                            
       END                                                               
-
-
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_REDUZ(N,NMSHP,ISHIFT,NSYM,IO,NUM)
 !     **                                                              **
 !     **  REDUZ CREATES THE RELATION BETWEEN THE MESHPOINTS AND       **
@@ -820,25 +828,26 @@ END MODULE BRILLOUIN_MODULE
       ENDdo
                              call trace$pop()
       RETURN                                                            
-      END                                                               !
+      END                                                               
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_CHECKSHIFT(ISHIFT,NSYM,IO,TCHK)
-!     **                                                              **
-!     **  CHECKSHIFT CHECKS THE CONSISTENCY OF A K-GRID SHIFT WITH    **
-!     **  THE SYMMETRY OPERATIONS                                      **
-!     **  INPUT :                                                     **
-!     **    N           NUMBER OF DIVISIONS OF REC. LATTICE VECTORS   **
-!     **    NSYM        NUMBER OF SYMMETRY OPERATIONS                 **
-!     **    IO          SYMMETRY OPERATIONS (BASIS ARE REC. LATT. VEC.)*
-!     **  OUTPUT :                                                    **
-!     **    TCHK        FLAG FOR CONSISTENCY OF THE SHIFT             **
-!     **  REMARKS :                                                   **
-!     **    THE MAPPING FROM COORDINATES TO NUMBERS IS GIVEN BY :     **
-!     **   (X,Y,Z)=RBAS*(I,J,K)                                       **
-!     **   (I,J,K)  <->  NUM = I*(N(2)+1)*(N(3)+1)+J*(N(3)+1)+K+1     **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  CHECKSHIFT CHECKS THE CONSISTENCY OF A K-GRID SHIFT WITH            **
+!     **  THE SYMMETRY OPERATIONS                                             **
+!     **  INPUT :                                                             **
+!     **    N           NUMBER OF DIVISIONS OF REC. LATTICE VECTORS           **
+!     **    NSYM        NUMBER OF SYMMETRY OPERATIONS                         **
+!     **    IO          SYMMETRY OPERATIONS (BASIS ARE REC. LATT. VEC.)       **
+!     **  OUTPUT :                                                            **
+!     **    TCHK        FLAG FOR CONSISTENCY OF THE SHIFT                     **
+!     **  REMARKS :                                                           **
+!     **    THE MAPPING FROM COORDINATES TO NUMBERS IS GIVEN BY :             **
+!     **   (X,Y,Z)=RBAS*(I,J,K)                                               **
+!     **   (I,J,K)  <->  NUM = I*(N(2)+1)*(N(3)+1)+J*(N(3)+1)+K+1             **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISHIFT(3)
       INTEGER(4),INTENT(IN) :: NSYM
@@ -881,7 +890,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN                                                            
       END                                                               
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_ZUORD(NMSHP,NUM,N,ISHIFT,IDKP,NKP,XK)             
 !     **                                                              **
 !     **  ZUORD CREATES A RELATION BETWEEN "IRREDUCIBLE POINTS" AND   **
@@ -967,7 +976,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN                                                            
       END                                                               
 !
-!     .....................................................TETDIV...... 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_TETDIV(N,GBAS,TET0)                                    
 !     ******************************************************************
 !     **                                                             ** 
@@ -1080,7 +1089,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN                                                            
       END                                                               
 !
-!     .....................................................TETCNT.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_TETCNT(NMSHP,NUM,TET0,N,INV,THIS)
 !     **                                                              **
 !     **  TETCNT CALCULATES ALL DIFFERENT TETRAHEDRA AND COUNTS THEM  **
@@ -1281,7 +1290,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN
       END
 !
-!     .....................................................ORD1.........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_ORD1(NMAX,IX)
 !     ******************************************************************
 !     **                                                              **
@@ -1377,7 +1386,8 @@ END MODULE BRILLOUIN_MODULE
 !     ----                                                         -----
 !     ------------------------------------------------------------------
 !     ------------------------------------------------------------------
-!     .....................................................DOS..........
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$DOS(NB,NKP,EB,WGHT,RNTOT,EF)
 !     **                                                              **
 !     **  CALCULATES THE SAMPLING WEIGHTS FROM TETRAHEDRON INTEGRATION**
@@ -1438,7 +1448,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN                                                            
       END                                                               
 !
-!     .....................................................EFERMI.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_EFERMI(RNTOT,EF,TOLMAX,NB,NKP,EB,THIS)
 !     **                                                              **
 !     **  CALCUALTES THE FERMILEVEL BY INTEGRATION OF THE TOTAL       **
@@ -1553,7 +1563,8 @@ END MODULE BRILLOUIN_MODULE
                                   call trace$pop()
       RETURN                                                            
       END                                                               
-!     .....................................................EFI..........
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_EFI(RNTOT,TOL,EFERMI,EMIN,EMAX,NP,NOS,SOS)             
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: NP     ! #(ENERGY GRID POINTS)
@@ -1619,7 +1630,8 @@ END MODULE BRILLOUIN_MODULE
                             call trace$pop()
       RETURN                                                            
       END                                                               
-!     .....................................................TOTNOS.......
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_TOTNOS(VOL,E_,EMIN,EMAX,NP,NOS,SOS)                     
 !     **                                                              **
 !     **  CALCULATES THE INTEGRATED DOS                               **
@@ -1743,7 +1755,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN                                                            
       END                                                               
 !
-!     .....................................................SAMFAC.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_SAMFAC(NB,NKP,EB,EF,WGHT,THIS)
 !     ******************************************************************
 !     **                                                              **
@@ -1792,7 +1804,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN                                                            
       END                                                               
 !
-!     .....................................................SAMFAC.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_SAMFACANDDER(NB,NKP,EB,EF,WGHT,DWGHT,THIS)
 !     ******************************************************************
 !     **                                                              **
@@ -1846,7 +1858,7 @@ END MODULE BRILLOUIN_MODULE
       RETURN                                                            
       END                                                               
 !
-!     .....................................................WHEIGT.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_WEIGHT(VOL,E_,EF,WGHT)                                  
 !     ******************************************************************
 !     **                                                              **
@@ -1994,17 +2006,17 @@ END MODULE BRILLOUIN_MODULE
       RETURN                                                            
       END                                                               
 !
-!     .....................................................WHEIGT.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_WEIGHTandder(VOL,E_,EF,WGHT,dwght)                                  
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATES THE WEIGHTS FOR TETRAHEDRON-SAMPLING             **
-!     **  CORRESPONDING TO INTEGRATION OVER ONE TETRAHEDRON           **
-!     **                                                              **
-!     **  CORRECTION FOR THE NONLINEAR SHAPE INCLUDED IF ICOR=1       **
-!     **                                                              **
-!     **  AUTHOR : P.BLOECHL                                          **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATES THE WEIGHTS FOR TETRAHEDRON-SAMPLING                     **
+!     **  CORRESPONDING TO INTEGRATION OVER ONE TETRAHEDRON                   **
+!     **                                                                      **
+!     **  CORRECTION FOR THE NONLINEAR SHAPE INCLUDED IF ICOR=1               **
+!     **                                                                      **
+!     **  AUTHOR : P.BLOECHL                                                  **
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8)  ,INTENT(IN) :: VOL      ! WEIGHT OF THIS TETRAHEDRON
       REAL(8)  ,INTENT(IN) :: EF       ! FERMI LEVEL
@@ -2027,12 +2039,13 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4)           :: I,J,IP,N,M,K
       REAL(8)              :: DA,DB,DC
       REAL(8)              :: VOL14
-!     ******************************************************************
+!     **************************************************************************
       E(:)=E_(:)
       WGHT(:)=0.D0
-!     ------------------------------------------------------------------
-!     --  INTEGRATION WITHOUT FERMISURFACE                            --
-!     ------------------------------------------------------------------
+!
+!     ==========================================================================
+!     ==  INTEGRATION WITHOUT FERMISURFACE                            ==========
+!     ==========================================================================
       X=MIN(E(1),E(2),E(3),E(4))                                      
       IF(X.GE.EF) RETURN
       X=MAX(E(1),E(2),E(3),E(4))                                      
@@ -2044,9 +2057,10 @@ END MODULE BRILLOUIN_MODULE
         dwght(:,:)=0.d0
         RETURN                                                          
       END IF                                                            
-!     ------------------------------------------------------------------
-!     --  ORDER ENERGIES                                              --
-!     ------------------------------------------------------------------
+!
+!     ==========================================================================
+!     ==  ORDER ENERGIES                                                      ==
+!     ==========================================================================
 !     -- INDEX HOLDS THE ORIGINAL POSITION OF THE ENERGIES AND WEIGHTS  
       DO I=1,4                                                      
         INDEX(I)=I                                                        
@@ -2066,9 +2080,9 @@ END MODULE BRILLOUIN_MODULE
         END IF                                                            
       ENDDO
 !
-!     ------------------------------------------------------------------
-!     --  CALCULATE UNCORRECTED INTEGRAL AS MEANVALUE                 --
-!     ------------------------------------------------------------------
+!     ==========================================================================
+!     ==  CALCULATE UNCORRECTED INTEGRAL AS MEANVALUE                         ==
+!     ==========================================================================
       E21=E(2)-E(1)                                                     
       E31=E(3)-E(1)                                                     
       E41=E(4)-E(1)                                                     
@@ -2118,9 +2132,9 @@ END MODULE BRILLOUIN_MODULE
         DDOS(:)=12.d0*DVPRIME(:)/de
         DDOS(1)=ddos(1)+dos/de
 !
-!     ======================================================================
-!     == second case e1,e2<ef<e3,e4                                       ==
-!     ======================================================================
+!     ==========================================================================
+!     == second case e1,e2<ef<e3,e4                                           ==
+!     ==========================================================================
       ELSE IF(EF.GT.E(2).AND.EF.LT.E(3)) THEN                           
         DE1=EF-E(1)                                                     
         DE2=EF-E(2)                                                     
@@ -2248,9 +2262,9 @@ END MODULE BRILLOUIN_MODULE
        &       +db*(-1.d0/e41)*de2 &
        &       +dc*(-1.d0/e41-1.d0/e42+1.d0/(e31+e42))*de2**2 
 !
-!     ======================================================================
-!     == last case                                                        ==
-!     ======================================================================
+!     ==========================================================================
+!     == last case                                                            ==
+!     ==========================================================================
       ELSE IF(EF.GE.E(3).AND.EF.LT.E(4)) THEN                           
         DE=E(4)-EF                                                      
         VPRIME=.25D0*VOL*DE**3/(E41*E42*E43)                            
@@ -2297,9 +2311,10 @@ END MODULE BRILLOUIN_MODULE
         CALL ERROR$MSG('ERROR')
         CALL ERROR$STOP('BRILLOUIN_WEIGHT')
       END IF                                                            
-!     ------------------------------------------------------------------
-!     --  ADD CORRECTION FOR QUADRATIC DEVIATION                      --
-!     ------------------------------------------------------------------
+!
+!     ==========================================================================
+!     ==  ADD CORRECTION FOR QUADRATIC DEVIATION                              ==
+!     ==========================================================================
       IF(ICOR.EQ.1) THEN                                                
         DO M=1,4                                                    
           DO N=1,4                                                    
@@ -2310,9 +2325,10 @@ END MODULE BRILLOUIN_MODULE
           ENDDO
         ENDDO
       END IF                                                            
-!     ------------------------------------------------------------------
-!     --  REORDER WEIGHTS                                             --
-!     ------------------------------------------------------------------
+!
+!     ==========================================================================
+!     ==  REORDER WEIGHTS                                                     ==
+!     ==========================================================================
       DO I=1,4                                                      
         FA(INDEX(I))=WGHT(I)                                              
         FB(INDEX(I))=E(I)                                                 

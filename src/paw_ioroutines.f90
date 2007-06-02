@@ -3413,14 +3413,13 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       RETURN
       END
 !
-!     ..................................................................
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_KPOINT(LL_STRC_,NKPT)
-!     ******************************************************************
-!     **  DEFINES THE K-POINT INFO OF OCCUPATIONS_MODULE              **
-!     **                                                              **
-!     **  REQUIRES PREDEFINED: NOTHING                                **
-!     ******************************************************************
+!     **************************************************************************
+!     **  DEFINES THE K-POINT INFO OF OCCUPATIONS_MODULE                      **
+!     **                                                                      **
+!     **  REQUIRES PREDEFINED: NOTHING                                        ** 
+!     **************************************************************************
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
@@ -3433,25 +3432,47 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)                  :: RMAX
       REAL(8)    ,ALLOCATABLE  :: XK(:,:)
       REAL(8)    ,ALLOCATABLE  :: WGHT(:)
-      LOGICAL(4)               :: TINV
-!     ******************************************************************
+      LOGICAL(4)               :: TINV     ! exploit time inversion symmetry
+      integer(4)               :: nspin
+!     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_KPOINT')
       LL_STRC=LL_STRC_
+!
+!     ==========================================================================
+!     == check if calculation is non-collinear                                ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$SELECT(LL_STRC,'OCCUPATIONS')
+      CALL LINKEDLIST$EXISTD(LL_STRC,'NSPIN',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'NSPIN',0,1)
+      CALL LINKEDLIST$GET(LL_STRC,'NSPIN',1,NSPIN)
+      IF(NSPIN.NE.1.AND.NSPIN.NE.2.AND.NSPIN.NE.3) THEN
+        CALL ERROR$MSG('NUMBER OF SPINS OUT OF RANGE')
+        CALL ERROR$I4VAL('NSPIN',NSPIN)
+        CALL ERROR$STOP('STRCIN_KPOINT')
+      END IF 
+      if(nspin.eq.3) then 
+        tinv=.false.  ! time inversion symmetry cannot be exploited in the 
+                      ! with the pauli equation
+      else
+        TINV=.TRUE. 
+      end if    
+!
+!     ==========================================================================
+!     == now enter k-point block                                              ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$EXISTL(LL_STRC,'KPOINTS',1,TCHK)
       CALL LINKEDLIST$SELECT(LL_STRC,'KPOINTS')
-!     == SET DEFAULT ===================================================
+!     == SET DEFAULT ===========================================================
       IF(.NOT.TCHK) THEN
         NKDIV(:)=1
         CALL LINKEDLIST$SET(LL_STRC,'DIV',0,NKDIV) 
       END IF
 !
-!FALSE FOR NON-COLLINEAR DESCRIPTION
-PRINT*,'WARNING FROM STRCIN_KPOINT!'
-      TINV=.TRUE. 
-!
-!     ==  READ ACTUAL VALUES  ==========================================
+!     ==  READ ACTUAL VALUES  ==================================================
       ISHIFT(:)=0
       CALL LINKEDLIST$EXISTD(LL_STRC,'SHIFT',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'SHIFT',1,ISHIFT)
@@ -3463,16 +3484,16 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         CALL ERROR$STOP('STRCIN_KPOINT')
       END IF
 !
-!     ====================================================================
-!     == DETERMINE DIVISIONS NKDIV OF RECIPROCAL UNIT CELL              ==
-!     ====================================================================
+!     ==========================================================================
+!     == DETERMINE DIVISIONS NKDIV OF RECIPROCAL UNIT CELL                    ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
       CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK1)
       IF(TCHK1.AND.TCHK) THEN
         CALL ERROR$MSG('!SPECIES!KPOINTS:R AND DIV ARE MUTUALLY EXCLUSIVE')
         CALL ERROR$STOP('STRCIN_KPOINT')
       ELSE IF(TCHK) THEN
-!       == K-POINT GRID DEFINED BY R =====================================
+!       == K-POINT GRID DEFINED BY R ===========================================
         CALL CELL$GETR8A('TREF',9,RBAS)
         CALL LINKEDLIST$GET(LL_STRC,'R',1,RMAX)
         CALL KPOINTS_NKDIV(RBAS,RMAX,NKDIV)
@@ -3486,15 +3507,15 @@ PRINT*,'WARNING FROM STRCIN_KPOINT!'
         NKDIV(:)=2.D0
       END IF
 !
-!     ====================================================================
-!     == DETERMINE K-POINTS AND INTEGRATION WEIGHTS                     ==
-!     ====================================================================
+!     ==========================================================================
+!     == DETERMINE K-POINTS AND INTEGRATION WEIGHTS                           ==
+!     ==========================================================================
       CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
       ALLOCATE(XK(3,NKPT))
       ALLOCATE(WGHT(NKPT))
       CALL KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WGHT)
 !
-!     ==  PERFORM ACTIONS  ==============================================
+!     ==  PERFORM ACTIONS  =====================================================
       CALL DYNOCC$SETI4('NKPT',NKPT)
       CALL DYNOCC$SETR8A('XK',3*NKPT,XK) 
       CALL DYNOCC$SETR8A('WKPT',NKPT,WGHT)

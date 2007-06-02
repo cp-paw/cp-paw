@@ -1022,10 +1022,13 @@ PRINT*,'GIDS ',GIDS
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$INTEGRATE(GID,NR,F,G)
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **                                                                      **
+!     **  determines the indefinite integral (antiderivative) of F            **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR

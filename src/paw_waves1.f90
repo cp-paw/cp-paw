@@ -1366,6 +1366,10 @@ CALL ERROR$STOP('WAVES$ETOT')
       CALL WAVES$MOMENTS(NAT,LMRXX,NDIMD,LMNXX,DENMAT,QLM)
 !
 !     ==================================================================
+!     == prepare snapshot of spin trajectory                          ==
+!     ==================================================================
+!
+!     ==================================================================
 !     == OVERWRITE DENSITY TO FOR FIXED POTENTIAL CALC.               ==
 !     ==================================================================
       IF(TFIXRHO) THEN
@@ -1378,9 +1382,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==========================================================================
 !     == ANALYSE SPIN DENSITY                                                 ==
 !     ==========================================================================
-      IF(THAMILTON) THEN
-        CALL WAVES$SPINS(NRL,NDIMD,RHO,NAT,LMNXX,DENMAT)
-      END IF
+      CALL WAVES$SPINS(NRL,NDIMD,RHO,NAT,LMNXX,DENMAT)
 !
 !     ==================================================================
 !     == POTENTIAL (POTENTIAL IS STORED BACK INTO THE DENSITY ARRAY!) ==
@@ -2309,19 +2311,19 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$DENMAT(LMNXX,NDIMD_,NAT,DENMAT,EDENMAT)
-!     ******************************************************************
-!     **                                                              **
-!     **  EVALUATES ONE-CENTER DENSITY MATRIX FROM THE ACTUAL         **
-!     **  PROJECTIONS <PRO|PSI> IN THE WAVES OBJECT                   **
-!     **                                                              **
-!     **  ONE-CENTER DENSITY MATRICES                                 **
-!     **  SPIN RESTRICTED NSPIN=1;NDIM=1: (TOTAL)                     **
-!     **  SPIN POLARIZED  NSPIN=2;NDIM=1: (TOTAL,SPIN_Z)              **
-!     **  NONCOLLINEAR    NSPIN=1;NDIM=2: (TOTAL,SPIN_X,SPIN_Y,SPIN_Z)**
-!     **                                                              **
-!     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATES ONE-CENTER DENSITY MATRIX FROM THE ACTUAL                 **
+!     **  PROJECTIONS <PRO|PSI> IN THE WAVES OBJECT                           **
+!     **                                                                      **
+!     **  ONE-CENTER DENSITY MATRICES                                         **
+!     **  SPIN RESTRICTED NSPIN=1;NDIM=1: (TOTAL)                             **
+!     **  SPIN POLARIZED  NSPIN=2;NDIM=1: (TOTAL,SPIN_Z)                      **
+!     **  NONCOLLINEAR    NSPIN=1;NDIM=2: (TOTAL,SPIN_X,SPIN_Y,SPIN_Z)        **
+!     **                                                                      **
+!     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -2344,7 +2346,7 @@ END IF
       COMPLEX(8)             :: CSVAR1,CSVAR2
       INTEGER(4)             :: NTASKS,THISTASK
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
-!     ******************************************************************
+!     **************************************************************************
                               CALL TRACE$PUSH('WAVES$DENMAT')
                               CALL TIMING$CLOCKON('W:DENMAT')
       IF(NDIMD_.NE.NDIMD.OR.NAT.NE.MAP%NAT) THEN 
@@ -2352,16 +2354,16 @@ END IF
         CALL ERROR$STOP('WAVES$DENMAT')
       END IF
 !
-!     ==================================================================
-!     ==  GET OCCUPATIONS FROM DYNOCC OBJECT                          ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  GET OCCUPATIONS FROM DYNOCC OBJECT                                  ==
+!     ==========================================================================
       CALL DYNOCC$GETI4('NB',NBX)
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
 !
-!     ==================================================================
-!     ==                                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       CALL MPE$QUERY('K',NTASKS,THISTASK)
       DENMAT(:,:,:,:)=(0.D0,0.D0)
       EDENMAT(:,:,:,:)=(0.D0,0.D0)
@@ -2413,10 +2415,10 @@ END IF
       CALL MPE$COMBINE('MONOMER','+',DENMAT)
       CALL MPE$COMBINE('MONOMER','+',EDENMAT)
 !
-!     ==================================================================
-!     ==  CONVERT SPIN-UP AND SPIN-DOWN DENSITY MATRIX INTO           ==
-!     ==  TOTAL AND SPIN DENSITY MATRICES                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CONVERT SPIN-UP AND SPIN-DOWN DENSITY MATRIX INTO                   ==
+!     ==  TOTAL AND SPIN DENSITY MATRICES                                     ==
+!     ==========================================================================
       IF(NSPIN.EQ.2) THEN
         DO IAT=1,NAT
           ISP=MAP%ISP(IAT)
@@ -2437,9 +2439,9 @@ END IF
         ENDDO
       END IF
 !
-!     ==================================================================
-!     ==  PRINT FOR TEST                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PRINT FOR TEST                                                      ==
+!     ==========================================================================
       IF(TPRINT) THEN
         WRITE(*,FMT='("TEST PRINT FROM WAVES$DENMAT")')
         DO IAT=1,NAT
@@ -2460,24 +2462,23 @@ END IF
      RETURN
      END SUBROUTINE WAVES$DENMAT
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,LAMBDA,PROPSI &
      &                       ,DENMAT,EDENMAT)
-!     ******************************************************************
-!     **                                                              **
-!     **  EVALUATE ONE-CENTER DENSITY MATRIX                          **
-!     **             <P_I|PSI_N>F_N<PSI_N|P_J>                        **
-!     **  FROM PROJECTIONS <P|PSI> AND THE OCCUPATIONS                **
-!     **                                                              **
-!     **  FOR NDIM=2,NDIMD=4:  SPINOR WAVE FUNCTIONS                  **
-!     **  THE DENSITY MATRIX ON RETURN CONTAINS THE TOTAL DENSITY     **
-!     **  AND THE X,Y,Z SPIN DENSITY                                  **
-!     **                                                              **
-!     **                                                              **
-!     **  SUPERWAVE FUNCTIONS ARE DEFINED AS: PSI=PSI1+I*PSI2         **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (1999)***
-!RELEASED: 8.OCT.99
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATE ONE-CENTER DENSITY MATRIX                                  **
+!     **             <P_I|PSI_N>F_N<PSI_N|P_J>                                **
+!     **  FROM PROJECTIONS <P|PSI> AND THE OCCUPATIONS                        **
+!     **                                                                      **
+!     **  FOR NDIM=2,NDIMD=4:  SPINOR WAVE FUNCTIONS                          **
+!     **  THE DENSITY MATRIX ON RETURN CONTAINS THE TOTAL DENSITY             **
+!     **  AND THE X,Y,Z SPIN DENSITY                                          **
+!     **                                                                      **
+!     **                                                                      **
+!     **  SUPERWAVE FUNCTIONS ARE DEFINED AS: PSI=PSI1+I*PSI2                 **
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1999)***********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NDIM   ! #(SPINOR COMPONENTS)
       INTEGER(4),INTENT(IN) :: NBH    ! #(WAVE FUNCTIONS
@@ -2500,14 +2501,14 @@ END IF
       INTEGER(4)            :: NFILO
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
-!     ******************************************************************
+!     **************************************************************************
       NDIMD=NDIM**2
       DENMAT(:,:,:)=(0.D0,0.D0)
       EDENMAT(:,:,:)=(0.D0,0.D0)
 !
-!     ==================================================================
-!     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT        ==
+!     ==========================================================================
       CALL PLANEWAVE$GETL4('TINV',TINV)
       IF(TINV) THEN
         IF(NBH.NE.(NB+1)/2) THEN
@@ -2521,9 +2522,9 @@ END IF
         END IF
       END IF
 !
-!     ==================================================================
-!     ==  SUM UP THE DENSITY MATRIX                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  SUM UP THE DENSITY MATRIX                                           ==
+!     ==========================================================================
 !     == SUPER WAVE FUNCTIONS FOR TINV=TRUE
 !     ==   <P|PSI1+I*PSI2>(F1+F2)/2<PSI1-I*PSI2|P>
 !     == + <P|PSI1+I*PSI2>(F1-F2)/2<PSI1+I*PSI2|P>
@@ -2532,7 +2533,7 @@ END IF
 !     == IMAGINARY PART IS DROPPED
       DENMAT1(:,:,:,:)=(0.D0,0.D0)
       DO IB=1,NBH
-!       == FIND OCCUPATION OF THE STATE ===============================
+!       == FIND OCCUPATION OF THE STATE ========================================
         IF(TINV) THEN
           SVAR1=0.5D0*(OCC(2*IB-1)+OCC(2*IB))
           SVAR2=0.5D0*(OCC(2*IB-1)-OCC(2*IB))
@@ -2567,9 +2568,9 @@ END IF
         DENMAT1(:,:,:,:)=REAL(DENMAT1(:,:,:,:),KIND=8)
       END IF
 !
-!     ==================================================================
-!     == NOW SUM UP EDENMAT  <P|PSITILDE>*LAMBDA*<PSITILDE|P>         ==
-!     ==================================================================
+!     ==========================================================================
+!     == NOW SUM UP EDENMAT  <P|PSITILDE>*LAMBDA*<PSITILDE|P>                 ==
+!     ==========================================================================
       DO IB2=1,NB
         LAGR(:,IB2)=LAMBDA(:,IB2)*OCC(IB2)
       ENDDO
@@ -2584,7 +2585,7 @@ END IF
             CFAC2=0.5D0*(CFACR+CI*CFACI)
             DO IDIM=1,NDIM
               FUNC(:,IDIM)=FUNC(:,IDIM)+CFAC1*PROPSI(IDIM,IB2,:) &
-     &                         +CFAC2*CONJG(PROPSI(IDIM,IB2,:))
+     &                                 +CFAC2*CONJG(PROPSI(IDIM,IB2,:))
             ENDDO
           ENDDO
           DO IDIM2=1,NDIM
@@ -2613,7 +2614,7 @@ END IF
               DO LMN2=1,LMNX
                 DO LMN1=1,LMNX
                   EDENMAT1(LMN1,LMN2,IDIM1,IDIM2)=EDENMAT1(LMN1,LMN2,IDIM1,IDIM2) &
-     &                    +PROPSI(IDIM1,IB1,LMN1)*FUNC(LMN2,IDIM2)
+     &                                 +PROPSI(IDIM1,IB1,LMN1)*FUNC(LMN2,IDIM2)
                 ENDDO
               ENDDO
             ENDDO
@@ -2621,17 +2622,17 @@ END IF
         ENDDO
       END IF
 !
-!     ==================================================================
-!     == MAP DENSITY MATRIX ONTO TOTAL AND SPIN DENSITY               ==
-!     ==================================================================
-      IF(NDIM.EQ.1) THEN  !== TOTAL DENSITY ===========================
+!     ==========================================================================
+!     == MAP DENSITY MATRIX ONTO TOTAL AND SPIN DENSITY                       ==
+!     ==========================================================================
+      IF(NDIM.EQ.1) THEN  !== TOTAL DENSITY ====================================
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
             DENMAT(LMN1,LMN2,1)=DENMAT1(LMN1,LMN2,1,1)
             EDENMAT(LMN1,LMN2,1)=EDENMAT1(LMN1,LMN2,1,1)
           ENDDO
         ENDDO
-      ELSE IF(NDIM.EQ.2) THEN  !== TOTAL DENSITY, X,Y,Z SPIN DENSITY ==
+      ELSE IF(NDIM.EQ.2) THEN  !== TOTAL DENSITY, X,Y,Z SPIN DENSITY ===========
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
             CSVAR=DENMAT1(LMN1,LMN2,1,1)+DENMAT1(LMN1,LMN2,2,2)
@@ -2657,9 +2658,9 @@ END IF
         ENDDO
       END IF
 !
-!     ==================================================================
-!     == SYMMETRIZE DENSITY MATRIX                                    ==
-!     ==================================================================
+!     ==========================================================================
+!     == SYMMETRIZE DENSITY MATRIX (density matrix must be hermitean)         ==
+!     ==========================================================================
       DO IDIM=1,NDIMD
         DO LMN1=1,LMNX
           DO LMN2=LMN1+1,LMNX
@@ -2674,9 +2675,9 @@ END IF
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     == PRINOUT FOR TEST                                             ==
-!     ==================================================================
+!     ==========================================================================
+!     == PRINtOUT FOR TEST                                                    ==
+!     ==========================================================================
       IF(TPR) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         DO IDIM=1,NDIMD
@@ -2692,14 +2693,14 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$RHO(NRL,NDIMD_,RHO)
-!     ******************************************************************
-!     **                                                              **
-!     **  EVALUATES PSEUDO-DENSITY FROM THE ACTUAL PSEUDO WAVE        **
-!     **  FUNCTIONS                                                   **
-!     **                                                              **
-!     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATES PSEUDO-DENSITY FROM THE ACTUAL PSEUDO WAVE                **
+!     **  FUNCTIONS                                                           **
+!     **                                                                      **
+!     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -2711,7 +2712,7 @@ END IF
       INTEGER(4)             :: NBX        
       REAL(8)  ,ALLOCATABLE  :: OCC(:,:,:) 
       REAL(8)                :: SVAR1,SVAR2
-!     ******************************************************************
+!     **************************************************************************
                               CALL TRACE$PUSH('WAVES$RHO')
                               CALL TIMING$CLOCKON('W:RHO')
       IF(NDIMD_.NE.NDIMD.OR.NRL.NE.MAP%NRL) THEN
@@ -2820,7 +2821,9 @@ END IF
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SPINS(NRL,NDIMD,RHO,NAT,LMNXX,DENMAT)
+!      USE WAVES_MODULE, only : map 
       USE MPE_MODULE
+      USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NRL
       INTEGER(4),INTENT(IN) :: NDIMD
@@ -2832,17 +2835,109 @@ END IF
       REAL(8)               :: PSSPIN(3)
       REAL(8)               :: AUGSPIN(3)
       REAL(8)               :: TOTSPIN(3)
-      INTEGER(4)            :: NR
+      integer(4)            :: gid     ! grid id for radial grid
+      INTEGER(4)            :: NR      ! #(radial grid points)
+      real(8)   ,ALLOCATABLE:: R(:)    ! radial grid
       REAL(8)               :: RBAS(3,3),GBAS(3,3),CELLVOL
       INTEGER(4)            :: IAT
+      real(8)               :: aez     ! atomic number
       INTEGER(4)            :: ISP
       INTEGER(4)            :: LNX
       INTEGER(4),ALLOCATABLE:: LOX(:)
       REAL(8)   ,ALLOCATABLE:: DOVER(:,:)
-      INTEGER(4)            :: L1,L2,LN1,LN2,LMN1,LMN2,M
+      INTEGER(4)            :: L1,L2,LN1,LN2,LMN1,LMN2,M,IR,IDIMD
+      real(8)               :: cm(ndimd,nat)
+      real(8)               :: cm1(ndimd)   ! charge and moment
+      real(8)   ,ALLOCATABLE:: WORK(:), work1(:)
+      real(8)   ,ALLOCATABLE:: AEPHI(:,:)
+      real(8)               :: rad  !approximate asa radius of the atom
       INTEGER(4)            :: NFILO
 !     ***************************************************************************
+                            call trace$push('WAVES$SPINS')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+!
+!     ===========================================================================
+!     ==  DETERMINE spins on the individual atoms                              ==
+!     ===========================================================================
+      cm(:,:)=0.d0
+      DO IAT=1,NAT
+        IF(MOD(IAT-1,NTASKS)+1.NE.THISTASK)  CYCLE
+        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$LNX(ISP,LNX)
+        ALLOCATE(LOX(LNX))
+        CALL SETUP$LOFLN(ISP,LNX,LOX)
+        CALL SETUP$GETR8('AEZ',AEZ)
+        CALL PERIODICTABLE$GET(AEZ,'R(ASA)',RAD)
+!
+!       ========================================================================
+!       ==  DETERMINE OVERLAP OF PARTIALWAVES WITHIN ASA SPHERE               ==
+!       ========================================================================
+        CALL SETUP$GETI4('GID',GID)
+        CALL RADIAL$GETI4(GID,'NR',NR)
+        allocate(r(nr))
+        CALL RADIAL$r(GID,nr,r)
+        allocate(aephi(nr,lnx))
+        CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
+        ALLOCATE(DOVER(LNX,LNX))
+        ALLOCATE(WORK(NR))
+        ALLOCATE(WORK1(NR))
+        DOVER(:,:)=0.D0
+        DO LN1=1,LNX
+          DO LN2=LN1,LNX
+            IF(LOX(LN1).NE.LOX(LN2)) CYCLE
+            WORK(:)=AEPHI(:,LN1)*AEPHI(:,LN2)*R(:)**2
+            CALL RADIAL$INTEGRATE(GID,NR,WORK,WORK1)
+            CALL RADIAL$VALUE(GID,NR,WORK1,RAD,DOVER(LN1,LN2))
+            DOVER(LN2,LN1)=DOVER(LN1,LN2)
+          ENDDO
+        ENDDO
+        DEALLOCATE(WORK1)
+        DEALLOCATE(WORK)
+        DEALLOCATE(AEPHI)
+        DEALLOCATE(R)
+!
+!       ========================================================================
+!       ==  DETERMINE CHARGE AND SPIN PROJECTIONS                             ==
+!       ========================================================================
+        cm1(:)=0.D0
+        LMN1=0
+        DO LN1=1,LNX
+          L1=LOX(LN1)
+          LMN2=0
+          DO LN2=1,LNX
+            L2=LOX(LN2)
+            IF(L1.EQ.L2) THEN
+              DO M=1,2*L1+1
+                cm1(:)=cm1(:)+REAL(DENMAT(LMN1+M,LMN2+M,:,IAT))*dOVER(LN1,LN2)
+              ENDDO
+            END IF
+            LMN2=LMN2+2*L2+1
+          ENDDO
+          LMN1=LMN1+2*L1+1
+        ENDDO
+        cm(:,iat)=cm(:,iat)+cm1(:)
+        DEALLOCATE(LOX)
+        DEALLOCATE(DOVER)
+!!$DO IDIMD=1,NDIMD
+!!$  PRINT*,'DENMAT FOR ATOM ',AEZ,' AND IDIMD=',IDIMD
+!!$  DO LMN1=1,SUM(2*LOX(:)+1)
+!!$    WRITE(*,FMT='(15F10.3)')REAL(DENMAT(LMN1,:,IDIMD,IAT))
+!!$  ENDDO
+!!$ENDDO
+      ENDDO
+      CALL MPE$COMBINE('MONOMER','+',CM)
+      CALL ATOMLIST$SETR8A('CHARGEANDMOMENTS',0,4*NAT,CM)
+PRINT*, 'CHARGE AND SPINS '
+DO IAT=1,NAT
+  CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+  CALL SETUP$ISELECT(ISP)
+  CALL SETUP$GETR8('AEZ',AEZ)
+  WRITE(*,*)IAT,aez,cm(:,IAT)
+ENDDO
+                                   call trace$pop()
+return
+
 !
 !     ===========================================================================
 !     ==  DETERMINE TOTAL MAGNETIZATION AS INTEGRATED MOMENT DENSITY           ==
@@ -2885,7 +2980,7 @@ END IF
               DO M=1,2*L1+1
                 IF(NDIMD.EQ.2) THEN
                   AUGSPIN(3)=AUGSPIN(3)+REAL(DENMAT(LMN1+M,LMN2+M,2,IAT))*DOVER(LN1,LN2)
-                ELSE IF(NDIMD.EQ.3) THEN
+                ELSE IF(NDIMD.EQ.4) THEN
                   AUGSPIN(1)=AUGSPIN(1)+REAL(DENMAT(LMN1+M,LMN2+M,2,IAT))*DOVER(LN1,LN2)
                   AUGSPIN(2)=AUGSPIN(2)+REAL(DENMAT(LMN1+M,LMN2+M,3,IAT))*DOVER(LN1,LN2)
                   AUGSPIN(3)=AUGSPIN(3)+REAL(DENMAT(LMN1+M,LMN2+M,4,IAT))*DOVER(LN1,LN2)
@@ -2910,6 +3005,7 @@ END IF
      &                 SQRT(SUM(TOTSPIN(:)**2))
       WRITE(NFILO,FMT='("DIRECTION OF INTEGRATED SPIN MOMENT DENSITY",3F10.5)') &
      &                 TOTSPIN/SQRT(SUM(TOTSPIN(:)**2))
+                                   call trace$pop()
       RETURN
       END
 

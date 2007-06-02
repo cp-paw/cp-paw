@@ -1577,21 +1577,23 @@ STOP
 
 
 !
-!.......................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE EXPERTNAL1CPOT_MODULE
-!**                                                                   **
-!**  APPLIES AN EXTERNAL POTENTIAL ACTING ON THE ELECTRONS            **
-!**  WITHIN THE AUGMENTATION REGION                                   **
-!**                                                                   **
-!**    IDIMD EXTERNALLY THIS INDEX REFERS TO                          **
-!**             0: TOTAL  FOR NDIMD=1,2,4                             **
-!**             1: SZ FOR NDIMD=2                                     **
-!**             1: SX FOR NDIMD=4                                     **
-!**             2: SY FPR NDIMD=4                                     **
-!**             3: SZ FPR NDIMD=4                                     **
-!**          INTERNALLY THE VALUE IS RAISED BY ONE SO THAT IT         **
-!**          CORRESPONDS TO THE INDEXING                              **
-!**                                                                   **
+!*******************************************************************************
+!**                                                                           **
+!**  APPLIES AN EXTERNAL POTENTIAL ACTING ON THE ELECTRONS                    **
+!**  WITHIN THE AUGMENTATION REGION                                           **
+!**                                                                           **
+!**    IDIMD EXTERNALLY THIS INDEX REFERS TO                                  **
+!**             0: TOTAL  FOR NDIMD=1,2,4                                     **
+!**             1: SZ FOR NDIMD=2                                             **
+!**             1: SX FOR NDIMD=4                                             **
+!**             2: SY FPR NDIMD=4                                             **
+!**             3: SZ FPR NDIMD=4                                             **
+!**          INTERNALLY THE VALUE IS RAISED BY ONE SO THAT IT                 **
+!**          CORRESPONDS TO THE INDEXING                                      **
+!**                                                                           **
+!*******************************************************************************
 TYPE EXTPOT
   REAL(8)          :: VALUE
   CHARACTER(LEN=32):: ATOM
@@ -1604,27 +1606,29 @@ INTEGER(4)             :: NPOT=0
 INTEGER(4)             :: NPOTX=0
 INTEGER(4),PARAMETER   :: DNPOT=5
 TYPE (EXTPOT), ALLOCATABLE :: POT(:)
+!*******************************************************************************
 CONTAINS
-!  .....................................................................
-   SUBROUTINE CREATE
-   TYPE (EXTPOT),ALLOCATABLE :: TMPPOT(:)
-   IF(NPOT.LT.NPOTX) RETURN
-   IF(ALLOCATED(POT)) THEN
-     ALLOCATE(TMPPOT(NPOTX))
-     TMPPOT=POT
-     DEALLOCATE(POT)
-     NPOTX=NPOTX+DNPOT
-     ALLOCATE(POT(NPOTX))
-     POT(1:NPOT)=TMPPOT(1:NPOT)
-     DEALLOCATE(TMPPOT)
-   ELSE
-     NPOTX=DNPOT
-     ALLOCATE(POT(NPOTX))
-   END IF          
-   END SUBROUTINE CREATE
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      sUBROUTINE CREATE
+      TYPE (EXTPOT),ALLOCATABLE :: TMPPOT(:)
+!     **************************************************************************
+      IF(NPOT.LT.NPOTX) RETURN
+      IF(ALLOCATED(POT)) THEN
+        ALLOCATE(TMPPOT(NPOTX))
+        TMPPOT=POT
+        DEALLOCATE(POT)
+        NPOTX=NPOTX+DNPOT
+        ALLOCATE(POT(NPOTX))
+        POT(1:NPOT)=TMPPOT(1:NPOT)
+        DEALLOCATE(TMPPOT)
+      ELSE
+        NPOTX=DNPOT
+        ALLOCATE(POT(NPOTX))
+      END IF          
+      END SUBROUTINE CREATE
 END MODULE EXPERTNAL1CPOT_MODULE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE EXTERNAL1CPOT$SETPOT(ATOM,TYPE,IDIMD,VALUE,RC,PWR)
       USE EXPERTNAL1CPOT_MODULE
       IMPLICIT NONE
@@ -1634,7 +1638,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       INTEGER(4)       ,INTENT(IN) :: IDIMD !spin direction or 0
       REAL(8)          ,INTENT(IN) :: RC
       REAL(8)          ,INTENT(IN) :: PWR
-!     ******************************************************************
+!     **************************************************************************
       CALL CREATE
       NPOT=NPOT+1
       POT(NPOT)%ATOM =ATOM
@@ -1646,13 +1650,13 @@ END MODULE EXPERTNAL1CPOT_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE EXTERNAL1CPOT$REPORT(NFIL)
       USE EXPERTNAL1CPOT_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: IPOT
-!     ******************************************************************
+!     **************************************************************************
       IF(NPOT.EQ.0) RETURN
 !     CALL REPORT$TITLE(NFIL,"EXTERNAL POTENTIALS ON ORBITALS")
       WRITE(NFIL,*)
@@ -1674,7 +1678,8 @@ END MODULE EXPERTNAL1CPOT_MODULE
       ENDDO
       RETURN
       CONTAINS
-!       ................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
         SUBROUTINE WRITECH(NFIL,NAME,VALUE)
         INTEGER(4)       ,INTENT(IN) :: NFIL
         CHARACTER(LEN=*),INTENT(IN) :: NAME
@@ -1682,7 +1687,8 @@ END MODULE EXPERTNAL1CPOT_MODULE
         WRITE(NFIL,FMT='(55("."),": ",T1,A,T58,A)')NAME,TRIM(VALUE)
         RETURN
         END SUBROUTINE WRITECH
-!       ................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
         SUBROUTINE WRITER8(NFIL,NAME,VALUE,UNIT)
         INTEGER(4)       ,INTENT(IN) :: NFIL
         CHARACTER(LEN=*),INTENT(IN) :: NAME
@@ -1691,7 +1697,8 @@ END MODULE EXPERTNAL1CPOT_MODULE
         WRITE(NFIL,FMT='(55("."),": ",T1,A,T58,F10.5," ",A)')NAME,VALUE,UNIT
         RETURN
         END SUBROUTINE WRITER8
-!       ................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
         SUBROUTINE WRITEI4(NFIL,NAME,VALUE,UNIT)
         INTEGER(4)       ,INTENT(IN) :: NFIL
         CHARACTER(LEN=*),INTENT(IN) :: NAME
@@ -1702,10 +1709,12 @@ END MODULE EXPERTNAL1CPOT_MODULE
         END SUBROUTINE WRITEI4
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE EXTERNAL1CPOT$APPLY(ATOM,LMNX,NDIMD,DENMAT,DATH,ETOT)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **  total energy and one-center hamiltonian contributions from          **
+!     **  external potential                                                  **
+!     **************************************************************************
       USE EXPERTNAL1CPOT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)   :: ATOM
@@ -1730,25 +1739,29 @@ END MODULE EXPERTNAL1CPOT_MODULE
       INTEGER(4)                :: LN1,LN2,LMN1,LMN2,IPOT,IDIMD,L1,L2,I
       INTEGER(4)                :: GID     ! GRID ID
       REAL(8)      ,ALLOCATABLE :: R(:)    ! RADIAL GRID
-!     ******************************************************************
+      logical(4)                :: tactive
+      INTEGER(4)                :: NFILTRACE
+!     **************************************************************************
       DATH(:,:,:)=0.D0
       ETOT=0.D0
 !
-!     ==================================================================
-!     ==  SELECT POTENTIAL                                            ==  
-!     ==================================================================
+!     ==========================================================================
+!     ==  SELECT POTENTIAL                                                    ==
+!     ==========================================================================
 !     == DETERMINE ID OF THE ATOM TYPE (SPECIES)
       CALL ATOMLIST$INDEX(ATOM,IAT)
       CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
 !
+      tactive=.false.
       DO IPOT=1,NPOT
         POT1=POT(IPOT)
         TCHK=(ATOM.EQ.POT1%ATOM.OR.SPECIES.EQ.POT1%ATOM)
         IF(.NOT.TCHK) CYCLE
+        tactive=.true.
 !
-!       ==================================================================
-!       ==  UNSCRAMBLE TYPE                                             ==  
-!       ==================================================================
+!       ========================================================================
+!       ==  UNSCRAMBLE TYPE                                                   ==  
+!       ========================================================================
         IF(TRIM(POT1%TYPE).EQ.'S') THEN
           LANG=0
         ELSE IF(TRIM(POT1%TYPE).EQ.'P') THEN
@@ -1764,9 +1777,9 @@ END MODULE EXPERTNAL1CPOT_MODULE
           CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
         END IF
 !
-!       ==================================================================
-!       == COLLECT PARTIAL WAVES                                        ==
-!       ==================================================================
+!       ========================================================================
+!       == COLLECT PARTIAL WAVES                                              ==
+!       ========================================================================
         CALL ATOMLIST$INDEX(ATOM,IAT)
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
         CALL SETUP$ISELECT(ISP)
@@ -1781,13 +1794,19 @@ END MODULE EXPERTNAL1CPOT_MODULE
         ALLOCATE(AEPHI(NR,LNX))
         CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
 !
+!       ========================================================================
+!       == specify shape of the external potential                            ==
+!       ========================================================================
         ALLOCATE(RDEP(NR))
         ALLOCATE(AUX(NR))
         RDEP(:)=POT1%VALUE*EXP(-(R(:)/POT1%RC)**POT1%PWR)
 !
+!       ========================================================================
+!       == determine scalar products with partial waves                       ==
+!       == uone(ln1,ln1)=<aephi(ln1)|u(r)|aephi(ln2)>                         ==
+!       ========================================================================
         ALLOCATE(UONE(LNX,LNX))
         UONE(:,:)=0.D0
-!
         LMN1=0
         DO LN1=1,LNX
           IF(.NOT.(LANG.EQ.LOX(LN1).OR.LANG.EQ.-1)) CYCLE
@@ -1807,9 +1826,9 @@ END MODULE EXPERTNAL1CPOT_MODULE
         DEALLOCATE(AUX)
         DEALLOCATE(AEPHI)
 !
-!       ==============================================================
-!       ==  CALCULATE ONE-CENTER HAMILTONIAN                        ==
-!       ==============================================================
+!       ========================================================================
+!       ==  CALCULATE ONE-CENTER HAMILTONIAN                                  ==
+!       ========================================================================
         IF(POT1%IDIMD.LT.1.OR.POT1%IDIMD.GT.NDIMD) THEN
           CALL ERROR$MSG('VALUE OF POT1%IDIMD NOT RECOGNIZED')
           CALL ERROR$I4VAL('POT1%IDIMD',POT1%IDIMD)
@@ -1824,10 +1843,12 @@ END MODULE EXPERTNAL1CPOT_MODULE
               LMN2=0
               DO LN2=1,LNX
                 L2=LOX(LN2)
-                DO I=1,2*L1+1
-                  DATH(LMN1+I,LMN2+I,IDIMD)=DATH(LMN1+I,LMN2+I,IDIMD) &
-       &                                   +UONE(LN1,LN2)
-                ENDDO
+                if(l1.eq.l2) then
+                  DO I=1,2*L1+1
+                    DATH(LMN1+I,LMN2+I,IDIMD)=DATH(LMN1+I,LMN2+I,IDIMD) &
+       &                                     +UONE(LN1,LN2)
+                  ENDDO
+                end if
                 LMN2=LMN2+2*L2+1
               ENDDO
               LMN1=LMN1+2*L1+1
@@ -1838,9 +1859,34 @@ END MODULE EXPERTNAL1CPOT_MODULE
         DEALLOCATE(LOX)
       ENDDO
 !
-!     ==============================================================
-!     ==  CALCULATE TOTAL ENERGY                                  ==
-!     ==============================================================
+!     ==========================================================================
+!     ==  return if no potential for this atom found                          ==
+!     ==========================================================================
+      if(.not.tactive) return
+
+CALL TRACE$GETL4('TRACEFILE',TCHK)
+IF(TCHK) THEN
+  CALL FILEHANDLER$UNIT('TRACE',NFILTRACE)
+  WRITE(NFILTRACE,*)'DENSITY MATRIX IN EXTERNAL1CPOT. ATOM ',POT1%ATOM 
+  write(nfiltrace,*)trim(atom),trim(species),lnx,lmnx
+  DO IDIMD=1,NDIMD
+    WRITE(NFILTRACE,*)'IDIMD',IDIMD
+    DO LMN1=1,LMNX
+      WRITE(NFILTRACE,FMT='(20f10.3)')REAL(DENMAT(LMN1,:,IDIMD))  
+    ENDDO
+  ENDDO
+  WRITE(NFILTRACE,*)'DELTA HAMILTONIAN FROM EXTERNAL1CPOT'
+  DO IDIMD=1,NDIMD
+    WRITE(NFILTRACE,*)'IDIMD',IDIMD
+    DO LMN1=1,LMNX
+      WRITE(NFILTRACE,FMT='(20F10.3)')DATH(LMN1,:,IDIMD) 
+    ENDDO
+  ENDDO
+END IF
+!
+!     ==========================================================================
+!     ==  CALCULATE TOTAL ENERGY                                              ==
+!     ==========================================================================
       ETOT=0.D0
       DO IDIMD=1,NDIMD
         DO LMN1=1,LMNX

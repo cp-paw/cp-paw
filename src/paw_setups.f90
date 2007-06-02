@@ -225,6 +225,8 @@ END MODULE SETUP_MODULE
 !     ******************************************************************
       IF(ID.EQ.'ID') THEN
         VAL=THIS%ID
+PRINT*,'FROM SETUP$GETCH ',THIS%ID
+PRINT*,'FROM SETUP$GETCH ',VAL
       else IF(ID.EQ.'SOFTCORETYPE') THEN
         VAL=THIS%SOFTCORETYPE
       ELSE

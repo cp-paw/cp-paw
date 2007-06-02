@@ -2656,9 +2656,13 @@ PRINT*,'ITER ',ITER,DIGAM
       TCHK=.TRUE.
       SEPARATOR=SEP_WAVES
       SEPARATOR%NREC=-1
+call trace$pass('waves$write marke 1')
       CALL WAVES_WRITEPSI(NFIL,SEPARATOR%NREC)
+call trace$pass('waves$write marke 2')
       IF(THISTASK.EQ.1)CALL RESTART$WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+call trace$pass('waves$write marke 3')
       CALL WAVES_WRITEPSI(NFIL,SEPARATOR%NREC)
+call trace$pass('waves$write marke 4')
               CALL TRACE$POP
       RETURN
       END

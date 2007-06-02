@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/main/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 717 $'
+character(256):: VERrev='$LastChangedRevision: 731 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-05-28 16:06:50 +0200 (Mo, 28. Mai 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-06-02 15:57:50 +0200 (Sa, 02. Jun 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -1347,12 +1347,13 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     ==   WRITE POSITION TRAJECTORY                                  ==
 !     ==================================================================
                               CALL TRACE$PASS('BEFORE R-TRAJECTORY')
-      ALLOCATE(DWORK(9+4*NAT))
+      ALLOCATE(DWORK(9+8*NAT))
       CALL CELL$GETR8A('T(0)',9,DWORK(1:9))
-      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,DWORK(10:9+3*NAT))
-      CALL ATOMLIST$GETR8A('Q',0,NAT,DWORK(10+3*NAT:))
-      CALL TRAJECTORYIO$select('POSITION-TRAJECTORY')
-      CALL TRAJECTORYIO$ADD(NFI,TIME,9+4*NAT,DWORK)
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,DWORK(9+1:9+3*NAT))
+      CALL ATOMLIST$GETR8A('Q',0,NAT,DWORK(9+3*NAT+1:9+3*nat+nat))
+      CALL ATOMLIST$GETR8A('CHARGEANDMOMENTS',0,4*NAT,DWORK(9+3*NAT+NAT+1:9+3*NAT+NAT+4*NAT))
+      CALL TRAJECTORYIO$SELECT('POSITION-TRAJECTORY')
+      CALL TRAJECTORYIO$ADD(NFI,TIME,9+8*NAT,DWORK)
       CALL TRAJECTORYIO$SELECT('NONE')
       DEALLOCATE(DWORK)
 !   
