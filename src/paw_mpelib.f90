@@ -301,8 +301,9 @@ CONTAINS
 #IFDEF CPPVARIABLE_PARALLEL
       CALL MPE$SELECT(CID)
       FROMTASK0=FROMTASK-1
-!print*,'before  MPE$BROADCAST<TYPEID><RANKID> ',' <MPI_TYPE> ',<MPI_TYPE>,<SIZE>
+!print*,'before  MPE$BROADCAST<TYPEID><RANKID> ',' <MPI_TYPE> ',<MPI_TYPE>,<SIZE>,val,comm
       CALL MPI_BCAST(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,COMM,IERR)
+!print*,'after  MPE$BROADCAST<TYPEID><RANKID> ',' <MPI_TYPE> ',<MPI_TYPE>,<SIZE>,val,comm
       IF(IERR.NE.0) THEN
         CALL MPI_ERROR_STRING(IERR,ERRORSTRING,ERRORSTRINGLEN)
         CALL ERROR$MSG('MPI ERROR')
@@ -608,14 +609,10 @@ CONTAINS
       INTEGER                    :: IERR
 !     ******************************************************************
 #IFDEF  CPPVARIABLE_PARALLEL
-integer(4):: nfiltrace
-CALL FILEHANDLER$UNIT('TRACE',NFILTRACE)
       CALL MPE$SELECT(CID)
       TOTASK0=TOTASK-1
       TAGSTD=TAG
-write(nfiltrace,*)'before send',totask0,tagstd
-       CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASK0,TAGSTD,COMM,IERR)
-write(nfiltrace,*)'after send'
+      CALL MPI_SEND(VAL,<SIZE>,<MPI_TYPE>,TOTASK0,TAGSTD,COMM,IERR)
 #ELSE
       CALL ERROR$MSG('MPE$SEND MUST NOT BE CALLED IN SCALAR MODE')
       CALL ERROR$STOP('MPE$SEND<TYPEID><RANKID>')
@@ -1105,6 +1102,7 @@ END MODULE MPE_MODULE
       THIS=>THIS%NEXT
       THIS%ID=NEWCID
       NULLIFY(THIS%NEXT)
+!print*,'mpe$new',this%id,thistask,icolor
       CALL MPI_COMM_SPLIT(COMM,ICOLOR(THISTASK),THISTASK-1,NEWCOMM,IERR)
       COMM=NEWCOMM
       THIS%COMM=COMM
@@ -1112,6 +1110,7 @@ END MODULE MPE_MODULE
       THIS%NTASKS=ntasks
       CALL MPI_COMM_RANK(COMM,THISTASK,IERR)
       thistask=thistask+1
+!print*,'mpe$new',this%id,thistask
       THIS%THISTASK=thistask
       ALLOCATE(THIS%SENDTAG(NTASKS))
       ALLOCATE(THIS%RECEIVETAG(NTASKS))
@@ -1300,7 +1299,7 @@ END MODULE MPE_MODULE
       INTEGER(4)             :: NTASKS_CURRENT
       INTEGER(4)             :: THISTASK_CURRENT
       INTEGER(4),ALLOCATABLE :: ICOLOR(:)
-      INTEGER(4)             :: I
+      INTEGER(4)             :: I,isvar
       CHARACTER(128)         :: CID
 !     *********************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
@@ -1317,12 +1316,22 @@ END MODULE MPE_MODULE
         CALL MPE$QUERY(CID,NTASKS_CURRENT,THISTASK_CURRENT)
         ICOLOR(:)=0
         ICOLOR(THISTASK_WORLD)=THISTASK_WORLD
+!print*,'marke 1 ',trim(cid),thistask_world,thistask_current,':',icolor
         CALL MPE$BROADCAST(CID,1,ICOLOR(THISTASK_WORLD))
+!!$isvar=ICOLOR(THISTASK_WORLD)
+!!$print*,'marke 1a ',trim(cid),thistask_world,thistask_current,':',isvar
+!!$CALL MPE$BROADCAST(CID,1,Isvar)
+!!$print*,'marke 1b ',trim(cid),thistask_world,thistask_current,':',isvar
+!!$ICOLOR(THISTASK_WORLD)=isvar
+!print*,'marke 2 ',trim(cid),thistask_world,thistask_current,':',icolor
         CALL MPE$COMBINE('~','+',ICOLOR)
+!print*,'marke 3 ',trim(cid),thistask_world,thistask_current,':',icolor
         WRITE(NFIL,FMT='(A10,20I4/T20,20I4)')CID,ICOLOR
         IF(.NOT.ASSOCIATED(CURRENT%NEXT)) EXIT 
         CURRENT=>CURRENT%NEXT
       ENDDO
+      deallocate(icolor)
+!call error$normalstop
 #ENDIF
       RETURN
       END

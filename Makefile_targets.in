@@ -84,7 +84,7 @@ PAWDIR=@PAWDIR@
 #___________________________ the hardware architecture
 ARCH=@ARCH@
 #___________________________ the way to compile the tools 
-TOOLCOMP=fast
+TOOLCOMP=dbg
 #___________________________ the GNU make utility
 MAKE=@MAKE@
 #___________________________ parallel environment?

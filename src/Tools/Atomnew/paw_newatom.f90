@@ -2,19 +2,18 @@
 ! IT IS NOT CLEAR WHICH REFERENCE ENERGY SHOULD BE TAKEN FOR DREL
 ! DERIVATIVE DOES NOT HANDLE THE FIRST POINT RIGHT?
 ! INCLUDE SMALL COMPONENT FOR NORMALIZATION AND DENSITY
+!
+!   RCUT/RCOV MUST NOT BE TOO SMALL
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       PROGRAM TEST
+!     **************************************************************************
+!     ** NEW ATOMIC PROGRAM FOR THE CALCULATIONS OF ATOMIC SETUPS FOR PAW     **
+!     **************************************************************************
       USE PERIODICTABLE_MODULE
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE LINKEDLIST$WRITE(LL_,NFIL,CID_)
-        USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
-        TYPE(LL_TYPE),INTENT(IN) :: LL_
-        INTEGER(4)   ,INTENT(IN) :: NFIL
-        CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
-        END SUBROUTINE LINKEDLIST$WRITE
-      END INTERFACE
       INTERFACE 
         SUBROUTINE LINKEDLIST$READ(LL_,NFIL,CID_)
         USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
@@ -23,28 +22,26 @@
         CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
         END SUBROUTINE LINKEDLIST$READ
       END INTERFACE
-      TYPE(LL_TYPE) :: LL_STP
-      TYPE(LL_TYPE) :: LL_CNTL
-      INTEGER(4)             :: NR
-      INTEGER(4)             :: GID
-      REAL(8)                :: AEZ
-      CHARACTER(2)           :: ELEMENTSYMBOL
-      REAL(8)                :: PSZ
-      REAL(8)   ,ALLOCATABLE :: AEPOT(:)
-      REAL(8)   ,ALLOCATABLE :: DREL(:)
-      INTEGER(4)             :: NB
+      TYPE(LL_TYPE)          :: LL_CNTL   ! INPUT LINKED-LIST
+      INTEGER(4)             :: NR        ! #(RADIAL GRID POINTS)
+      INTEGER(4)             :: GID       ! RADIAL GRID ID
+      REAL(8)                :: AEZ       ! ATOMIC NUMBER
+      REAL(8)   ,ALLOCATABLE :: AEPOT(:)  ! ALL-ELECTRON ATOM
+      REAL(8)   ,ALLOCATABLE :: DREL(:)   ! RELATIVISTIC CORRECTION
+      INTEGER(4)             :: NB        ! #(ATOMIC STATES)
       INTEGER(4),ALLOCATABLE :: LOFI(:)
       INTEGER(4),ALLOCATABLE :: SOFI(:)
       INTEGER(4),ALLOCATABLE :: NNOFI(:)
       REAL(8)   ,ALLOCATABLE :: FOFI(:)
       REAL(8)   ,ALLOCATABLE :: EOFI(:)
       LOGICAL   ,ALLOCATABLE :: TCORE(:)
-      INTEGER(4)             :: IB,JB,IR,IB1,IB2,L1,L2,I1,I2
+      INTEGER(4)             :: IB,JB,IR
       REAL(8)   ,ALLOCATABLE :: RHOADD(:)
       REAL(8)   ,ALLOCATABLE :: R(:)    ! RADIAL GROD
       REAL(8)   ,ALLOCATABLE :: RCL(:)
-      REAL(8)                :: RCUT    ! PARTIAL WAVES TRUNCATED AT THIS RADIUS
-      INTEGER(4)             :: IRCUT
+      INTEGER(4)             :: IRCUT ! PARTIAL WAVES TRUNCATED AT THIS RADIUS
+      REAL(8)                :: RBOX
+      integer(4)             :: irbox
       REAL(8)                :: RCOV
       REAL(8)                :: Y0,PI
       INTEGER(4)             :: NC      ! #(CORE STATES)
@@ -76,9 +73,7 @@
       REAL(8)   ,ALLOCATABLE :: DO(:,:,:)
       REAL(8)   ,ALLOCATABLE :: DH(:,:,:)
       REAL(8)   ,ALLOCATABLE :: AUX(:)
-      REAL(8)   ,ALLOCATABLE :: WORK1(:),WORK2(:),WORK3(:),WORK2D(:,:)
-      REAL(8)                :: R1,DEX
-      REAL(8)                :: DMIN,DMAX,RX
+      REAL(8)   ,ALLOCATABLE :: WORK2D(:,:)
       REAL(8)   ,ALLOCATABLE :: G(:)
       REAL(8)   ,ALLOCATABLE :: PHI2(:,:)
       REAL(8)   ,ALLOCATABLE :: PHI3(:,:)
@@ -88,201 +83,59 @@
       REAL(8)   ,ALLOCATABLE :: TRANSPROINV(:,:,:)
       REAL(8)   ,ALLOCATABLE :: TRANSPHIINV(:,:,:)
       REAL(8)   ,ALLOCATABLE :: PROPSIBAR(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: SMAT(:,:)
       REAL(8)   ,ALLOCATABLE :: SVEC(:)
       REAL(8)                :: SVAR
       LOGICAL(4)             :: TCHK
       CHARACTER(32)          :: EXT
-      INTEGER(4)             :: ISVAR
       INTEGER(4)             :: NFIL
-      INTEGER(4)             :: IDFT
-      INTEGER(4)             :: LNX
-      INTEGER(4),ALLOCATABLE :: LOX(:)
-      CHARACTER(128)         :: CNTLNAME
-      CHARACTER(128)         :: ROOTNAME
-      INTEGER(4)             :: I
       INTEGER(4)             :: NFILO
-      LOGICAL(4)             :: TLOG=.TRUE.
-      INTEGER(4)             :: GID2
-      INTEGER(4)             :: NR2,IAUG
+      INTEGER(4)             :: IAUG
       REAL(8)                :: EV
       REAL(8)                :: SVAR1,SVAR2
       INTEGER(4)             ::ISVAR1ARR(1)  ! USED TO RESHAPE AN ARRAY OF LENGTH 1
       CHARACTER(16)          :: PSEUDOPARTIALWAVEMETHOD
-!     ****************************************************************
+      character(16)          :: id
+      logical(4) ,parameter  :: trel=.false.
+!     **************************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS('EV',EV)
-!     =================================================================
-!     ==  DEFINE FILES                                               ==
-!     =================================================================
-      CALL GETARG(1,CNTLNAME)
-      I=INDEX(CNTLNAME,'.',BACK=.TRUE.)
-      ROOTNAME=CNTLNAME(1:I-1)
-      CALL FILEHANDLER$SETROOT(ROOTNAME)
-      CALL FILEHANDLER$SETFILE('PROT',.FALSE.,TRIM(ROOTNAME)//-'.PROT')
-      CALL FILEHANDLER$SETSPECIFICATION('PROT','STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION('PROT','POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION('PROT','ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION('PROT','FORM','FORMATTED')
-!
+      CALL ATTACHFILES()
       CALL FILEHANDLER$UNIT('PROT',NFILO)
+      CALL TRACE$SETL4('ON',.TRUE.)
+      CALL TRACE$SETL4('ON',.false.)
 !
-!     ==================================================================
-!     == DEFINE INPUT FILE                                            ==
-!     ==================================================================
-      CALL FILEHANDLER$SETFILE('INPUT',.FALSE.,TRIM(ROOTNAME)//-'.ACNTL')
-      CALL FILEHANDLER$SETSPECIFICATION('INPUT','STATUS','OLD')
-      CALL FILEHANDLER$SETSPECIFICATION('INPUT','POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION('INPUT','ACTION','READ')
-      CALL FILEHANDLER$SETSPECIFICATION('INPUT','FORM','FORMATTED')
-!
+!     ==========================================================================
+!     == READ INPUT FILE INTO LINKEDLIST LL_CNTL                              ==
+!     ==========================================================================
       CALL LINKEDLIST$NEW(LL_CNTL)
       CALL FILEHANDLER$UNIT('INPUT',NFIL)
       CALL LINKEDLIST$READ(LL_CNTL,NFIL)
 !
-!CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-!CALL LINKEDLIST$REPORT(LL_CNTL,NFILO)
-!
-!     ==================================================================
-!     == DEFINE SETUP FILE                                            ==
-!     ==================================================================
-      CALL FILEHANDLER$SETFILE('SETUP',.FALSE.,TRIM(ROOTNAME)//-'.STP')
-      CALL FILEHANDLER$SETSPECIFICATION('SETUP','STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION('SETUP','POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION('SETUP','ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION('SETUP','FORM','FORMATTED')
-!
-!     ================================================================
-!     == IDENTIFY ATOM                                              ==
-!     ================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
-      CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
-
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'AEZ',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'AEZ',1,AEZ)
-        CALL PERIODICTABLE$GET(NINT(AEZ),'SYMBOL',ELEMENTSYMBOL)
-      ELSE
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'EL',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('EITHER AEZ OR EL NEEDS TO BE SPECIFIED')
-          CALL ERROR$STOP('MAIN')
-        END IF
-        CALL LINKEDLIST$GET(LL_CNTL,'EL',1,ELEMENTSYMBOL)
-        CALL PERIODICTABLE$GET(ELEMENTSYMBOL,'Z',AEZ)
-      END IF
-!
-      CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
-!
-      CALL REPORT$TITLE(NFILO,'ELEMENT')
-      CALL REPORT$CHVAL(NFILO,'ELEMENT',ELEMENTSYMBOL)
-      CALL REPORT$R8VAL(NFILO,'Z',AEZ,'')
-!
-!     ================================================================
-!     == DEFINE RADIAL GRID
-!     ================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
-      CALL LINKEDLIST$SELECT(LL_CNTL,'GRID')
-      DMIN=5.D-6
-      DMAX=5.D-1
-      RX=1.056D-4*EXP(5.D-2*249.D0)
-      CALL LINKEDLIST$GET(LL_CNTL,'DMIN',1,DMIN)
-      CALL LINKEDLIST$GET(LL_CNTL,'DMAX',1,DMAX)
-      CALL LINKEDLIST$GET(LL_CNTL,'RMAX',1,RX)
-      CALL LINKEDLIST$GET(LL_CNTL,'RCUT/RCOV',1,RCUT)
-      RCUT=RCUT*RCOV   ! PROJECTORS AND PARTIAL WAVES TRUNCATED BEYOND THIS POINT
-!
-!     == DEFINE GRID ==================================================
-      CALL GRIDPARAMETERS(DMIN,DMAX,RX,R1,DEX,NR)
-      CALL RADIAL$NEW('SHLOG',GID)
-      CALL RADIAL$SETR8(GID,'R1',R1)
-      CALL RADIAL$SETR8(GID,'DEX',DEX)
-      CALL RADIAL$SETI4(GID,'NR',NR)
-      ALLOCATE(R(NR))
-      CALL RADIAL$R(GID,NR,R)
-      DO IR=1,NR
-        IRCUT=IR
-        IF(R(IR).GT.RCUT) EXIT
-      ENDDO
-!
-!     == REPORT GRID ==================================================
-      CALL REPORT$TITLE(NFILO,'RADIAL GRID')
-      CALL REPORT$R8VAL(NFILO,'R1',R1,'A0')
-      CALL REPORT$R8VAL(NFILO,'DEX',DEX,'')
-      CALL REPORT$I4VAL(NFILO,'#(RADIAL GRID POINTS)',NR,'')
-      CALL REPORT$R8VAL(NFILO,'INNERMOST SPACING',DMIN,'A0')
-      CALL REPORT$R8VAL(NFILO,'OUTERMOST SPACING',DMAX,'A0')
-      CALL REPORT$R8VAL(NFILO,'OUTERMOST GRID POINT',RX,'A0')
-      CALL REPORT$R8VAL(NFILO,'TRUNCATION RADIUS',RCUT,'A0')
-      CALL REPORT$R8VAL(NFILO,'COVALENT RADIUS',RCOV,'A0')
-!
-!     ================================================================
-!     == DEFINE DFT FUNCTIONAL
-!     ================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
-      CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
-      CALL LINKEDLIST$GET(LL_CNTL,'DFT',1,IDFT)
-!
-      CALL DFT$SETI4('TYPE',IDFT)
-      CALL DFT$SETL4('SPIN',.FALSE.)
-!
-!     == REPORT =====================================================
-      CALL DFT$REPORT(NFILO)
-!
-!     ================================================================
-!     == DEFINE STATES AND THEIR OCCUPATIONS
-!     ================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
-      CALL LINKEDLIST$NLISTS(LL_CNTL,'STATE',NB)
+!     ==========================================================================
+!     == READ CONTROL FILE                                                    ==
+!     ==========================================================================
+      CALL READCNTL_DIMENSIONS(LL_CNTL,NB,LMAX,NAUGX)
       ALLOCATE(LOFI(NB))
       ALLOCATE(SOFI(NB))
       ALLOCATE(NNOFI(NB))
       ALLOCATE(FOFI(NB))
       ALLOCATE(TCORE(NB))
+      CALL READCNTL1(LL_CNTL,NB,AEZ,RCOV,RBOX,GID,NR,IRCUT,LOFI,SOFI,NNOFI,FOFI,TCORE)
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+      do ir=1,nr
+        irbox=ir
+        if(r(ir).gt.rbox) exit
+      enddo
       NC=0
       DO IB=1,NB
-        CALL LINKEDLIST$SELECT(LL_CNTL,'STATE',IB)
-!       == MAIN ANGULAR MOMENTUM QUANTUM NUMBER
-        CALL LINKEDLIST$GET(LL_CNTL,'L',1,LOFI(IB))
-!       == #(NODES) PRINCIPAL QUANTUM NUMBER IS READ AND CONVERTED
-        CALL LINKEDLIST$GET(LL_CNTL,'N',1,NNOFI(IB))
-        NNOFI(IB)=NNOFI(IB)-LOFI(IB)-1
-!       == SOFI DESCRIBES SPIN-ORBIT COUPLING:
-!       ==  0: NO SPIN ORBIT COUPLING
-!       ==  1: PARALLEL SPIN AND ORBITAL ANGULAR MOMENTUM
-!       == -1: ANTIPARALLEL SPIN AND ORBITAL ANGULAR MOMENTUM
-        SOFI(IB)=0
-!       == OCCUPATION
-        FOFI(IB)=2.D0*REAL(2*LOFI(IB)+1)
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'F',1,TCHK)
-!       == SPECIFY IF CORE OR VALENCE
-        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'F',1,FOFI(IB))
-        CALL LINKEDLIST$GET(LL_CNTL,'CORE',1,TCORE(IB))
         IF(TCORE(IB)) NC=NC+1
-        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-      ENDDO
-      DO IB=1,NC
-        IF(.NOT.TCORE(IB)) THEN
-          CALL ERROR$MSG('CORE STATES MUST PRECEED VALENCE STATES')
-          CALL ERROR$I4VAL('NC',NC)
-          CALL ERROR$I4VAL('IB',IB)
-          CALL ERROR$STOP('MAIN')
-        END IF
-      ENDDO
-      CALL REPORT$TITLE(NFILO,'INPUT ON STATES')
-      DO IB=1,NB
-        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2)') &
-     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB)
       ENDDO
 !
-!     ================================================================
-!     == PERFORM SELF CONSISTENT ALL-ELECTRON CALCULATION           ==
-!     ================================================================
+!     ==========================================================================
+!     == PERFORM SELF CONSISTENT ALL-ELECTRON CALCULATION                     ==
+!     ==========================================================================
       ALLOCATE(EOFI(NB)) 
       ALLOCATE(DREL(NR))
       ALLOCATE(AEPOT(NR))      
@@ -290,9 +143,10 @@
 !
       CALL RADIAL$NUCPOT(GID,NR,AEZ,AEPOT)
       RHOADD=0.D0
-      CALL AESCF(GID,NR,NB,LOFI,SOFI,FOFI,NNOFI,AEZ,RHOADD,DREL,AEPOT,EOFI)
+call trace$pass('all-electron scf calculation')
+      CALL AESCF(GID,NR,NB,trel,LOFI,SOFI,FOFI,NNOFI,AEZ,RHOADD,rbox,DREL,AEPOT,EOFI)
 !
-!     == REPORT ======================================================== 
+!     == REPORT ================================================================
       CALL REPORT$TITLE(NFILO,'EIGENSTATES AFTER SCF CALCULATION')
       DO IB=1,NB
         WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2 &
@@ -301,20 +155,27 @@
       ENDDO
       DEALLOCATE(RHOADD)
 !
-!     ================================================================
-!     == CALCULATE CORE AND VALENCE DENSITY           
-!     ================================================================
+!     ==========================================================================
+!     == CALCULATE CORE AND VALENCE DENSITY                                   ==
+!     ==========================================================================
       ALLOCATE(AERHOC(NR))
       ALLOCATE(AERHOV(NR))
 !
-      CALL AERHO('FULL',GID,NR,NC,LOFI(1:NC),SOFI(1:NC),FOFI(1:NC),NNOFI(1:NC) &
-     &          ,DREL,AEPOT,AERHOC,EOFI(1:NC))
+call trace$pass('determine core density')
+      IF(TREL) THEN
+        ID='FULL'
+      ELSE
+        ID='NONREL'
+      END IF
+      CALL AERHO(id,GID,NR,NC,LOFI(1:NC),SOFI(1:NC),FOFI(1:NC),NNOFI(1:NC) &
+     &          ,rbox,DREL,AEPOT,AERHOC,EOFI(1:NC))
 !
 !     == RELATIVISTIC CORRECTION WILL BE USED FROM THE VALENCE STATES
-      CALL AERHO('FULL',GID,NR,NB-NC,LOFI(NC+1:NB),SOFI(NC+1:NB),FOFI(NC+1:NB) &
-     &          ,NNOFI(NC+1:NB),DREL,AEPOT,AERHOV,EOFI(NC+1:NB))
+call trace$pass('determine valence density')
+      CALL AERHO(id,GID,NR,NB-NC,LOFI(NC+1:NB),SOFI(NC+1:NB),FOFI(NC+1:NB) &
+     &          ,NNOFI(NC+1:NB),rbox,DREL,AEPOT,AERHOV,EOFI(NC+1:NB))
 !
-!     == REPORT ======================================================
+!     == REPORT ================================================================
       WRITE(NFILO,FMT='("EIGENSTATES AFTER NON-SCF CALCULATION IN SCF POT")')
       DO IB=1,NB
         WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2 &
@@ -322,15 +183,20 @@
      &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB),EOFI(IB)/EV
       ENDDO
 !
-!     ================================================================
-!     == CALCULATE NODELESS WAVE FUNCTIONS
-!     ================================================================
+!     ==========================================================================
+!     == CALCULATE NODELESS WAVE FUNCTIONS                                    ==
+!     ==========================================================================
       ALLOCATE(UOFI(NR,NB))  ; UOFI=0.D0
       ALLOCATE(TUOFI(NR,NB)) ; TUOFI=0.D0
-      CALL NODELESS('EFFZORA',GID,NR,NB,LOFI,SOFI,NNOFI,DREL,AEPOT &
+      IF(TREL) THEN
+        ID='EFFZORA'
+      ELSE
+        ID='NONREL'
+      END IF
+      CALL NODELESS(ID,GID,NR,NB,LOFI,SOFI,NNOFI,RBOX,DREL,AEPOT &
      &             ,UOFI,TUOFI,EOFI)
 !
-!     == REPORT =======================================================
+!     == REPORT ================================================================
       WRITE(NFILO,FMT='("EIGENSTATES FROM NODELESS CALCULATION")')
       DO IB=1,NB
         WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2 &
@@ -339,146 +205,50 @@
       ENDDO
 !     CALL HAMTEST(GID,NR,AEPOT,NB,LOFI,SOFI,UOFI,TUOFI)
 !
-!     ================================================================
-!     == SELF-CONSISTENT ATOM FINISHED; WRITE RESULT                ==
-!     ================================================================
+!     ==========================================================================
+!     == SELF-CONSISTENT ATOM FINISHED; WRITE RESULT                          ==
+!     ==========================================================================
       CALL WRITEPHI('ALLNODELESS.DAT',GID,NR,NB,UOFI)
       CALL WRITEPHI('ALLNODELESS_T.DAT',GID,NR,NB,TUOFI)
 !
-!     ================================================================
-!     == TOTAL ENERGY                                               ==
-!     ================================================================
+!     ==========================================================================
+!     == TOTAL ENERGY                                                         ==
+!     ==========================================================================
       CALL AEETOT(GID,NR,NB,AEZ,NC,EOFI,FOFI,AERHOC,AERHOV,AEPOT)
 !
-!     ================================================================
-!     ================================================================
-!     == DEFINE AUGMENTATION                     
-!     ================================================================
-!     ================================================================
+!     ==========================================================================
+!     ==========================================================================
+!     == DEFINE AUGMENTATION                                                  ==
+!     ==========================================================================
+!     ==========================================================================
 !
-!     ================================================================
-!     ==  PSEUDO CORE                                               ==
-!     ================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
-      CALL LINKEDLIST$SELECT(LL_CNTL,'PSCORE')
-      CALL LINKEDLIST$GET(LL_CNTL,'RC/RCOV',1,RC_CORE)!CUTOFF RADIUS FOR CORE PSEUDIZATION
-      RC_CORE=RC_CORE*RCOV
-      CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,POW_CORE)  !POWER FOR CORE PSEUDIZATION
-      CALL LINKEDLIST$GET(LL_CNTL,'VAL0',1,VAL0_CORE)  !VALUE AT THE ORIGIN FOR CORE PSEUDIZATION
-      VAL0_CORE=VAL0_CORE/Y0
-
+!     ==========================================================================
+!     ==  read information from control input file                            ==
+!     ==========================================================================
+      ALLOCATE(NPRO(LMAX+1))
+      ALLOCATE(RCL(LMAX+1))
+      CALL READCNTL2(LL_CNTL,LMAX,RCOV,RC_CORE,POW_CORE,VAL0_CORE &
+     &              ,RC_POT,POW_POT,VAL0_POT,RCSM,PSEUDOPARTIALWAVEMETHOD,NPRO,RCL)
+!
+!     ==========================================================================
+!     == CONSTRUCT PSEUDO CORE                                                ==
+!     ==========================================================================
       ALLOCATE(PSRHOC(NR))
       CALL PSEUDIZE(GID,NR,POW_CORE,VAL0_CORE,RC_CORE,AERHOC,PSRHOC)
 !
-!     == REPORT ======================================================
-      CALL REPORT$TITLE(NFILO,'PSEUDO CORE DENSITY')
-      CALL REPORT$R8VAL(NFILO,'RC',RC_CORE,'')
-      CALL REPORT$I4VAL(NFILO,'POWER',POW_CORE,'')
-      CALL REPORT$R8VAL(NFILO,'VAL(0)',VAL0_CORE*Y0,'')
-!
-!     ================================================================
-!     ==  PSEUDO POTENTIAL                                          ==
-!     ================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
-      CALL LINKEDLIST$SELECT(LL_CNTL,'VTILDE')
-      CALL LINKEDLIST$GET(LL_CNTL,'RC/RCOV',1,RC_POT)!CUTOFF RADIUS FOR POTENTIAL PSEUDIZATION
-      RC_POT=RC_POT*RCOV
-      CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,POW_POT)  !POWER FOR POTENTIAL PSEUDIZATION 
-      CALL LINKEDLIST$GET(LL_CNTL,'VAL0',1,VAL0_POT)  !VALUE AT THE ORIGIN FOR POTENTIAL PSEUDIZATION
-      VAL0_POT=VAL0_POT/Y0
-!
+!     ==========================================================================
+!     ==  CONSTRUCT PSEUDO POTENTIAL                                          ==
+!     ==========================================================================
       ALLOCATE(PSPOT(NR))
       CALL PSEUDIZE(GID,NR,POW_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
 !
-!     == REPORT ======================================================
-      CALL REPORT$TITLE(NFILO,'PSEUDO POTENTIAL')
-      CALL REPORT$R8VAL(NFILO,'RC',RC_POT,'')
-      CALL REPORT$I4VAL(NFILO,'POWER',POW_POT,'')
-      CALL REPORT$R8VAL(NFILO,'VAL(0)',VAL0_POT*Y0,'')
-!
-!     ================================================================
-!     ==  COMPENSATION GAUSSIAN                                     ==
-!     ================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
-      CALL LINKEDLIST$SELECT(LL_CNTL,'COMPENSATE')
-      CALL LINKEDLIST$GET(LL_CNTL,'RC/RCOV',1,RCSM)  
-      RCSM=RCSM*RCOV
-!
-      CALL REPORT$TITLE(NFILO,'COMPENSATION DENSITY')
-      CALL REPORT$R8VAL(NFILO,'RC',RCSM,'')
-      SVAR=AEZ-SUM(FOFI(1:NC))       
-      SVAR=SVAR*EXP(-(RCOV/RCSM)**2)/(SQRT(PI)*RCSM)**3
-      CALL REPORT$R8VAL(NFILO,'VALUE AT THE COVALENT RADIUS',SVAR,'')
-!
-!     ================================================================
-!     ==  AUGMENTATION                                              ==
-!     ================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
-      CALL LINKEDLIST$SELECT(LL_CNTL,'AUGMENTATION')
-      PSEUDOPARTIALWAVEMETHOD='HBS'
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'PSEUDOMETHOD',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'PSEUDOMETHOD' &
-     &                                   ,1,PSEUDOPARTIALWAVEMETHOD)
-      IF(PSEUDOPARTIALWAVEMETHOD.NE.'HBS'.AND. &
-     &   PSEUDOPARTIALWAVEMETHOD.NE.'KRESSE') THEN
-        CALL ERROR$MSG('ILLEGAL VALUE FOR PSEUDIZATION METHOD')
-        CALL ERROR$CHVAL('PSEUDOPARTIALWAVEMETHOD',PSEUDOPARTIALWAVEMETHOD)
-        CALL ERROR$STOP('MAIN')
-      END IF
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'NPRO',1,TCHK)
-      LMAX=2
-      IF(TCHK) THEN
-        CALL LINKEDLIST$SIZE(LL_CNTL,'NPRO',1,LMAX)
-        LMAX=LMAX-1
-      END IF
-!
-      ALLOCATE(NPRO(LMAX+1))
-      NPRO=2
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'NPRO',1,NPRO)
-!
-      ALLOCATE(RCL(LMAX+1))
-      RCL(:)=RCOV
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'RC/RCOV',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'RC/RCOV',1,RCL)
-      RCL(:)=RCL(:)*RCOV
-!
-      CALL REPORT$TITLE(NFILO,'AUGMENTATION')
-      CALL REPORT$I4VAL(NFILO,'LMAX',LMAX,'')
-      DO L=0,LMAX
-        IF(L.EQ.0) THEN
-          CALL REPORT$I4VAL(NFILO,'#(PROJECTORS)FOR L=0',NPRO(L+1),'')
-        ELSE IF(L.EQ.1) THEN
-          CALL REPORT$I4VAL(NFILO,'#(PROJECTORS)FOR L=1',NPRO(L+1),'')
-        ELSE IF(L.EQ.2) THEN
-          CALL REPORT$I4VAL(NFILO,'#(PROJECTORS)FOR L=2',NPRO(L+1),'')
-        ELSE IF(L.EQ.3) THEN
-          CALL REPORT$I4VAL(NFILO,'#(PROJECTORS)FOR L=3',NPRO(L+1),'')
-        END IF
-      ENDDO
-      DO L=0,LMAX
-        IF(L.EQ.0) THEN
-          CALL REPORT$R8VAL(NFILO,'CUTOFF FOR L=0',RCL(L+1),'')
-        ELSE IF(L.EQ.1) THEN
-          CALL REPORT$R8VAL(NFILO,'CUTOFF FOR L=1',RCL(L+1),'')
-        ELSE IF(L.EQ.2) THEN
-          CALL REPORT$R8VAL(NFILO,'CUTOFF FOR L=2',RCL(L+1),'')
-        ELSE IF(L.EQ.3) THEN
-          CALL REPORT$R8VAL(NFILO,'CUTOFF FOR L=3',RCL(L+1),'')
-        END IF
-      ENDDO
-!
-!     ================================================================
-!     == ALLOCATE ARRAYS
-!     ================================================================
+!     ==========================================================================
+!     == ALLOCATE ARRAYS                                                      ==
+!     ==========================================================================
       ALLOCATE(PSRHOV(NR))
       ALLOCATE(VADD(NR))
       ALLOCATE(UC(NR))
       ALLOCATE(AUX(NR))
-!
 !
       NAUGX=MAXVAL(NPRO)
       ALLOCATE(AEPHI(NR,NAUGX,LMAX+1))  ; AEPHI=0.D0
@@ -499,14 +269,14 @@
       ALLOCATE(EGRID(NAUGX,LMAX+1))
       ALLOCATE(PSPHISAVE(NR,NAUGX,LMAX+1))
 !
-!     ================================================================
-!     == CONSTRUCT PARTIAL WAVES AND PROJECTORS FOR EACH L          ==
-!     ================================================================
+!     ==========================================================================
+!     == CONSTRUCT PARTIAL WAVES AND PROJECTORS FOR EACH L                    ==
+!     ==========================================================================
       PSRHOV(:)=0.D0
       DO L=0,LMAX
         WRITE(NFILO,FMT='(30("="),2X,"L=",I1,2X,30("="))')L
         NAUG=NPRO(L+1)
-!       == EXT IS USED AS ENDING FOR PRINTOUTS OF L-DEPENDENT FUNCTIONS
+!       == EXT IS USED AS ENDING FOR PRINTOUTS OF L-DEPENDENT FUNCTIONS ========
         IF(L.EQ.0) THEN
           EXT='_S.DAT'
         ELSE IF (L.EQ.1) THEN
@@ -519,9 +289,9 @@
 !
 !ATTENTION CURRENTLY NPRO MUST BE THE SAME FOR ALL L!!!!
 !
-!       =================================================================
-!       ==  DETERMINE HIGHEST NODELESS CORE WAVE FUNCTION UC            ==
-!       =================================================================
+!       ========================================================================
+!       ==  DETERMINE HIGHEST NODELESS CORE WAVE FUNCTION UC                  ==
+!       ========================================================================
         UC(:)=0.D0
 !
 !       == DETERMINE HIGHEST CORE STATE UC
@@ -558,15 +328,15 @@
 !
         CALL REPORT$I4VAL(NFILO,'NN OF HIGHEST CORE STATES ',NNSTART-1,'')
 !
-!       =================================================================
-!       ==  DETERMINE NODELESS ENERGY EXPANSION COEFFICIENTS           ==
-!       =================================================================
+!       ========================================================================
+!       ==  DETERMINE NODELESS ENERGY EXPANSION COEFFICIENTS                  ==
+!       ========================================================================
 !       USE RELATIVISTIC CORRECTIONS FROM ABOVE
         SO=0
         DO IB=1,NAUG
           IF(IB.LE.NNEND) THEN
             NN=IB-1
-            CALL ONENODELESS('BOUND',GID,NR,L,NN,SO,DREL,AEPOT,UC &
+            CALL ONENODELESS('BOUND',GID,NR,L,NN,SO,rbox,DREL,AEPOT,UC &
        &                    ,EGRID(IB,L+1),UPHI(:,IB,L+1),TUPHI(:,IB,L+1))
             CALL REPORT$R8VAL(NFILO,'ENERGY SUPPORT GRID POINT (BOUND)' & 
        &                           ,EGRID(IB,L+1),'H')
@@ -576,7 +346,7 @@
             ELSE
               EGRID(IB,L+1)=EGRID(NNEND,L+1)+0.5D0*REAL(IB-NNEND,KIND=8)**2
             END IF
-            CALL ONENODELESS('SCATT',GID,NR,L,NN,SO,DREL,AEPOT,UC &
+            CALL ONENODELESS('SCATT',GID,NR,L,NN,SO,rbox,DREL,AEPOT,UC &
        &                    ,EGRID(IB,L+1),UPHI(:,IB,L+1),TUPHI(:,IB,L+1))
             CALL REPORT$R8VAL(NFILO,'ENERGY SUPPORT GRID POINT (UNBOUND)' &
        &                           ,EGRID(IB,L+1),'H')
@@ -584,26 +354,26 @@
           END IF
         ENDDO
 !
-!       =================================================================
-!       ==  ALL ELECTRON FUNCTIONS BY CORE ORTHOGONALIZATION           ==
-!       =================================================================
+!       ========================================================================
+!       ==  ALL ELECTRON FUNCTIONS BY CORE ORTHOGONALIZATION                  ==
+!       ========================================================================
         CALL COREORTHOGONALIZE(GID,NR,NC,LOFI(1:NC),SOFI(1:NC) &
       &                      ,UOFI(:,1:NC),TUOFI(:,1:NC) &
       &                      ,L,NAUG,UPHI(:,:,L+1),TUPHI(:,:,L+1) &
       &                      ,AEPHI(:,:,L+1),TAEPHI(:,:,L+1))
 !
-!       =================================================================
-!       ==  CHOSE NORM OF PARTIAL WAVES                                ==
-!       =================================================================
+!       ========================================================================
+!       ==  CHOSE NORM OF PARTIAL WAVES                                       ==
+!       ========================================================================
         DO IB=1,NAUG
-!         __ ONLY BOUND STATES CAN BE NORMALIZED. _______________________
-!         __ FOR UNBOUND STATES THE BOUNDARY CONDITIONS AT THE NUCLEUS __
-!         __ ARE KEPT IDENTICAL TO THAT OF THE HIGHEST BOUND STATE ______
+!         __ ONLY BOUND STATES CAN BE NORMALIZED. ______________________________
+!         __ FOR UNBOUND STATES THE BOUNDARY CONDITIONS AT THE NUCLEUS _________
+!         __ ARE KEPT IDENTICAL TO THAT OF THE HIGHEST BOUND STATE _____________
           IF(IB.LE.NNEND) THEN
             CALL RADIAL$INTEGRAL(GID,NR,(AEPHI(:,IB,L+1)*R(:))**2,SVAR)
             SVAR=1.D0/SQRT(SVAR)
           ELSE
-!           == CHOOSE 5TH POINT TO AVOID DIVIDEING BY SMALL NUMBERS FOR L.NEQ.0
+!           == CHOOSE 5TH POINT TO AVOID DIVIDING BY SMALL NUMBERS FOR L.NEQ.0 =
             IF(IB.EQ.1) THEN
               SVAR=R(5)**L/AEPHI(5,IB,L+1)
             ELSE
@@ -616,9 +386,9 @@
           TAEPHI(:,IB,L+1)=TAEPHI(:,IB,L+1)*SVAR
         ENDDO
 !
-!       =================================================================
-!       ==  CONSTRUCT PS PARTIAL WAVES                                 ==
-!       =================================================================
+!       ========================================================================
+!       ==  CONSTRUCT PS PARTIAL WAVES                                        ==
+!       ========================================================================
         PSPHI(:,:,L+1)=UPHI(:,:,L+1)
         TPSPHI(:,:,L+1)=TUPHI(:,:,L+1)
         RC=RCL(L+1)
@@ -638,35 +408,36 @@ PSEUDOPARTIALWAVEMETHOD='KRESSE'
           CALL ERROR$STOP('ATOM')
         END IF
 !
-!       =================================================================
-!       ==  WRITE PSEUDOPOTENTIAL FOR EACH PARTIAL WAVE                ==
-!       =================================================================
+!       ========================================================================
+!       ==  WRITE PSEUDOPOTENTIAL FOR EACH PARTIAL WAVE                       ==
+!       ========================================================================
 PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
         ALLOCATE(WORK2D(NR,NAUG))
+        work2d=0.d0
         DO IB=1,NAUG
-          WORK2D(:,IB)=-TPSPHI(:,IB,L+1)/PSPHI(:,IB,L+1)+EGRID(IB,L+1)
+          WORK2D(:irbox,IB)=-TPSPHI(:irbox,IB,L+1)/PSPHI(:irbox,IB,L+1)+EGRID(IB,L+1)
         ENDDO
         CALL WRITEPHI('PSPOTOFPHI'//TRIM(EXT),GID,NR,NAUG,WORK2D)
         DEALLOCATE(WORK2D)
 !
-!       =================================================================
-!       ==  CONSTRUCT BARE PROJECTOR FUNCTIONS                         ==
-!       =================================================================
+!       ========================================================================
+!       ==  CONSTRUCT BARE PROJECTOR FUNCTIONS                                ==
+!       ========================================================================
         CALL BAREPROJECTORS(GID,NR,L,EGRID(:,L+1),PSPOT,10.D0,NAUG &
        &     ,PSPHI(:,:,L+1),TPSPHI(:,:,L+1),PRO(:,:,L+1))
 !
-!       =================================================================
-!       ==  CONSTRUCT 1C KINETIC ENERGY AND OVERLAP                    ==
-!       =================================================================
+!       ========================================================================
+!       ==  CONSTRUCT 1C KINETIC ENERGY AND OVERLAP                           ==
+!       ========================================================================
         CALL DTDO(GID,NR,NAUG,AEPHI(:,:,L+1),TAEPHI(:,:,L+1) &
        &         ,PSPHI(:,:,L+1),TPSPHI(:,:,L+1),DT(:,:,L+1),DO(:,:,L+1))
         CALL MAKEDATH(GID,NR,AEPOT,PSPOT,L,NAUG,AEPHI(:,:,L+1),PSPHI(:,:,L+1) &
        &             ,DT(:,:,L+1),DH(:,:,L+1))
 !
-!       ======================================================================
-!       == ADD TO PSEUDO DENSITY (MUST BE DONE BEFORE BIORTHOGONALIZATION)  ==
-!       == ASSUMES THAT THERE IS ONE PARTIAL WAVE FOR EACH OCCUPIED STATE   ==
-!       ======================================================================
+!       ========================================================================
+!       == ADD TO PSEUDO DENSITY (MUST BE DONE BEFORE BIORTHOGONALIZATION)    ==
+!       == ASSUMES THAT THERE IS ONE PARTIAL WAVE FOR EACH OCCUPIED STATE     ==
+!       ========================================================================
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
           IAUG=NNOFI(IB)-NNSTART+1
@@ -676,9 +447,9 @@ PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
           PSRHOV(:)=PSRHOV(:)+SVAR*PSPHI(:,IAUG,L+1)**2
         ENDDO
 !
-!       =================================================================
-!       ==  TEST RESULT BY RECALCULATING PSPHI FROM BARE PROJECTORS
-!       =================================================================
+!       ========================================================================
+!       ==  TEST RESULT BY RECALCULATING PSPHI FROM BARE PROJECTORS           ==
+!       ========================================================================
         WRITE(NFILO,FMT='(72("=")/72("="),T20,"  BARE QUANTITIES DONE: TESTS...  "/72("="))')
         ALLOCATE(PHI2(NR,NAUG))
         ALLOCATE(PHI3(NR,NAUG))
@@ -689,11 +460,13 @@ PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
           G(:)=PRO(:,IB,L+1)
           CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,0,G,L,EGRID(IB,L+1) &
        &                        ,1,PHI2(:,IB))
-!         == ENSURE SAME NORM AS PSPHI BY ADDING THE HOMOGENEOUS SOLUTION
+!         == ENSURE SAME NORM AS PSPHI BY ADDING THE HOMOGENEOUS SOLUTION ======
           G=0.D0
           CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,0,G,L,EGRID(IB,L+1) &
        &                        ,1,PHI3(:,IB))
-          ISVAR1ARR=MAXLOC(ABS(PSPHI(:,IB,L+1)))
+          phi2(irbox:,ib)=0.d0
+          phi3(irbox:,ib)=0.d0
+          ISVAR1ARR=MAXLOC(ABS(PSPHI(:ircut-1,IB,L+1)))
           IR=MIN(ISVAR1ARR(1),IRCUT-1)
           SVAR=(PSPHI(IR,IB,L+1)-PHI2(IR,IB))/PHI3(IR,IB)
           PHI2(:,IB)=PHI2(:,IB)+PHI3(:,IB)*SVAR
@@ -711,12 +484,12 @@ PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
         DEALLOCATE(PHI3) 
         DEALLOCATE(PHI2)
 !
-!       =================================================================
-!       ==  TEST SCHROEDINGER EQUATION FOR AEPHI AND PSPHI             ==
-!       =================================================================
+!       ========================================================================
+!       ==  TEST SCHROEDINGER EQUATION FOR AEPHI AND PSPHI                    ==
+!       ========================================================================
         ALLOCATE(PHI2(NR,NAUG))
         ALLOCATE(PHI3(NR,NAUG))
-!       == PHI2 AND PHI3 MUST VANISH IF EVERYTHING IS OK
+!       == PHI2 AND PHI3 MUST VANISH IF EVERYTHING IS OK =======================
         DO IB=1,NAUG
           PHI2(:,IB)=TAEPHI(:,IB,L+1) &
       &             +(AEPOT(:)*Y0-EGRID(IB,L+1))*AEPHI(:,IB,L+1)
@@ -729,7 +502,7 @@ PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
             PROPSIBAR(IB,JB,L+1)=SVAR
           ENDDO
         ENDDO
-!       == TEST IF [T+VTILDE-E+|PRO>(DH-EDO)<PRO|]|PHI>=0
+!       == TEST IF [T+VTILDE-E+|PRO>(DH-EDO)<PRO|]|PHI>=0 ======================
         WRITE(NFILO,FMT='("TEST SCHROEDINGER EQUATION FOR BARE WAVE FUNCTIONS")')
         WRITE(NFILO,FMT='("....THE FOLLOWING VALUES MUST VANISH")')
         WRITE(NFILO,FMT='(T11,"[T+V-E]|PHI>",T31,"[T+PSV-E]|PSPHI>-|PRO>")') 
@@ -750,10 +523,10 @@ PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
         DEALLOCATE(PHI3)
         WRITE(NFILO,FMT='(72("=")/72("="),T20,"TESTS DONE"/72("="))')
 !
-!       ======================================================================
-!       == TRUNCATE PARTIAL WAVES TO AVOID NUMERICAL ERRORS WITH EXPONENTIAL
-!       == INCREASE
-!       ======================================================================
+!       ========================================================================
+!       == TRUNCATE PARTIAL WAVES TO AVOID NUMERICAL ERRORS WITH EXPONENTIAL  ==
+!       == INCREASE                                                           ==
+!       ========================================================================
         UPHI(IRCUT:,:,L+1)=0.D0
         TUPHI(IRCUT:,:,L+1)=0.D0
         AEPHI(IRCUT:,:,L+1)=0.D0
@@ -762,9 +535,9 @@ PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
         TPSPHI(IRCUT:,:,L+1)=0.D0
         PRO(IRCUT:,:,L+1)=0.D0
 !
-!       ======================================================================
-!       == BARE QUANTITIES FINISHED. WRITE RESULT...                        ==
-!       ======================================================================
+!       ========================================================================
+!       == BARE QUANTITIES FINISHED. WRITE RESULT...                          ==
+!       ========================================================================
 !       == BAREAUGMENT CONTAINS AE,NODELESS, AND PS PARTIAL WAVES
         ALLOCATE(WORK2D(NR,3*NAUG))
         WORK2D(:,1:NAUG)=AEPHI(:,:,L+1)
@@ -774,9 +547,9 @@ PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
         DEALLOCATE(WORK2D)
         CALL WRITEPHI('BAREPRO'//TRIM(EXT),GID,NR,NAUG,PRO(:,:,L+1))
 !
-!       =================================================================
-!       ==  ENSURE BIORTHOGONALIZATION CONDITION                       ==
-!       =================================================================
+!       ========================================================================
+!       ==  ENSURE BIORTHOGONALIZATION CONDITION                              ==
+!       ========================================================================
 PSPHISAVE(:,:,L+1)=PSPHI(:,:,L+1)
         CALL BIORTHOMATRICES(GID,NR,L,NAUG,PSPHI(:,:,L+1),PRO(:,:,L+1) &
        &                    ,TRANSPHI(:,:,L+1),TRANSPRO(:,:,L+1))
@@ -818,9 +591,9 @@ PRINT*,'WRITE FILES'
         CALL WRITEPHI('PSPHI_T'//TRIM(EXT),GID,NR,NAUG,TPSPHI(:,:,L+1))
         CALL WRITEPHI('PRO'//TRIM(EXT),GID,NR,NAUG,PRO(:,:,L+1))
 !
-!       =================================================================
-!       ==  TEST SCATTERING PROPERTIES                                 ==
-!       =================================================================
+!       ========================================================================
+!       ==  TEST SCATTERING PROPERTIES                                        ==
+!       ========================================================================
 !!$PRINT*,'TEST1'
 !!$DO IB=1,NAUG
 !!$!   -- <P|PHIBAR>=<P|PHI>/TPHI=1/TPHI
@@ -844,17 +617,17 @@ PRINT*,'TEST2'
        END IF
 !      STOP 'IN TEST OK'
 !
-!       =================================================================
-!       ==  TEST SCATTERING PROPERTIES                                 ==
-!       =================================================================
+!       ========================================================================
+!       ==  TEST SCATTERING PROPERTIES                                        ==
+!       ========================================================================
         CALL TESTPHASESHIFT(GID,NR,L,AEPOT,PSPOT,NAUG,PRO(:,:,L+1) &
        &                        ,DH(:,:,L+1),DO(:,:,L+1))
       ENDDO
 PRINT*,'================LOOP DONE========================'
 !
-!     ===================================================================
-!     ==  UNSCREENING                                                  ==
-!     ===================================================================
+!     ==========================================================================
+!     ==  UNSCREENING                                                         ==
+!     ==========================================================================
       CALL UNSCREEN(GID,NR,AEZ,AERHOC+AERHOV,PSRHOC+PSRHOV,PSPOT,RCSM,VADD)
 !     == TEST
       ALLOCATE(WORK2D(NR,3))
@@ -866,19 +639,511 @@ PRINT*,'================LOOP DONE========================'
       CALL WRITEPHI('PSRHOV.DAT',GID,NR,1,PSRHOV)
       CALL WRITECOMPARE('AERHO-PSRHO.DAT',GID,NR,1,AERHOV+AERHOC,PSRHOV+PSRHOC)
 !
-!     ===================================================================
-!     ==  CALCULATE TOTAL ENERGY                                       ==
-!     ===================================================================
-      CALL PSETOTSHELL(GID,NR,AEZ,PSRHOC,AERHOC,PSPOT &
-     &                      ,NB,NC,LMAX,NAUGX,NPRO,LOFI,FOFI,EOFI &
-     &                      ,PRO,AEPHI,PSPHI,RCSM,DT,DH,DO,VADD)
+!     ==========================================================================
+!     ==  CALCULATE TOTAL ENERGY                                              ==
+!     ==========================================================================
+      CALL PSETOTSHELL(GID,NR,AEZ,rbox,PSRHOC,AERHOC,PSPOT &
+     &                ,NB,NC,LMAX,NAUGX,NPRO,LOFI,FOFI,EOFI &
+     &                ,PRO,AEPHI,PSPHI,RCSM,DT,DH,DO,VADD)
 !
-!     ===================================================================
-!     ==  WRITE TO FILE                                                ==
-!     ===================================================================
+!     ==========================================================================
+!     ==  WRITE SETUP TO FILE                                                 ==
+!     ==========================================================================
+print*,'writing setup.....'
+      CALL WRITESETUP(GID,NR,AEZ,NB,NC,LOFI,NNOFI,FOFI,EOFI,UOFI,TUOFI &
+     &                     ,AEPOT,PSPOT,PSRHOC,AERHOC,VADD,RCSM &
+     &                     ,NPRO,NAUGX,LMAX,AEPHI,PSPHI,PRO,UPHI,TUPHI,DT,DO,DH)
+!
+!     ==========================================================================
+!     ==  READ SETUP FILE AGAIN AS CONSISTENCY CHECK                          ==
+!     ==========================================================================
+print*,'testing setupfile.....'
+      CALL TESTSETUPREAD()
+print*,'done....'
+      STOP
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATTACHFILES()
+!     **************************************************************************
+!     **                                                                      **
+!     **  READS THE NAME OF THE CONTROL FILE FROM THE ARGUMENT LIST AND       **
+!     **  DEFINES THE FILES IN THE FILEHANDLER OBJECT                         **
+!     **                                                                      **
+!     **  THE FILES DEFINED ARE                                               **
+!     **    PROT     PROTOCOLL FILE                                           **
+!     **    INPUT    CONTROL FILE X.ACNTL                                     **
+!     **    STP      SETU OUTPUT FILE                                         **
+!     **                                                                      **
+!     **************************************************************************
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      CHARACTER(128)         :: CNTLNAME
+      CHARACTER(128)         :: ROOTNAME
+      INTEGER(4)             :: I
+!     **************************************************************************
+
+!     ==========================================================================
+!     ==  COLLECT INPUT ARGUMENT AND DEFINES ROOTNAME                         ==
+!     ==========================================================================
+      CALL GETARG(1,CNTLNAME)
+      I=INDEX(CNTLNAME,'.',BACK=.TRUE.)
+      ROOTNAME=CNTLNAME(1:I-1)
+      CALL FILEHANDLER$SETROOT(ROOTNAME)
+!
+!     ==========================================================================
+!     ==  ATTACH PROTOCOLL FILE  X.PROT                                       ==
+!     ==========================================================================
+      CALL FILEHANDLER$SETFILE('PROT',.FALSE.,TRIM(ROOTNAME)//-'.PROT')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','FORM','FORMATTED')
+!
+!     ==========================================================================
+!     == DEFINE AND READ INPUT FILE X.ACNTL                                   ==
+!     ==========================================================================
+      CALL FILEHANDLER$SETFILE('INPUT',.FALSE.,TRIM(ROOTNAME)//-'.ACNTL')
+      CALL FILEHANDLER$SETSPECIFICATION('INPUT','STATUS','OLD')
+      CALL FILEHANDLER$SETSPECIFICATION('INPUT','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('INPUT','ACTION','READ')
+      CALL FILEHANDLER$SETSPECIFICATION('INPUT','FORM','FORMATTED')
+!
+!     ==========================================================================
+!     == DEFINE SETUP FILE                                                    ==
+!     ==========================================================================
+      CALL FILEHANDLER$SETFILE('SETUP',.FALSE.,TRIM(ROOTNAME)//-'.STP')
+      CALL FILEHANDLER$SETSPECIFICATION('SETUP','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('SETUP','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('SETUP','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('SETUP','FORM','FORMATTED')
+!
+!     ==========================================================================
+!     == ATTACH SETUP FILE AS INPUT FILE FOR TESTING                          ==
+!     ==========================================================================
+      CALL FILEHANDLER$SETFILE('SETUP_IN',.FALSE.,TRIM(ROOTNAME)//-'.STP')
+      CALL FILEHANDLER$SETSPECIFICATION('SETUP_IN','STATUS','OLD')
+      CALL FILEHANDLER$SETSPECIFICATION('SETUP_IN','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('SETUP_IN','ACTION','READ')
+      CALL FILEHANDLER$SETSPECIFICATION('SETUP_IN','FORM','FORMATTED')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE READCNTL_DIMENSIONS(LL_CNTL,NB,LMAX,NAUGX)
+!     **************************************************************************
+!     ** EXTRACT DIMENSION FROM INPUT CONTROL FILE                            **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_CNTL
+      INTEGER(4)   ,INTENT(OUT)   :: NB
+      INTEGER(4)   ,INTENT(OUT)   :: LMAX
+      INTEGER(4)   ,INTENT(OUT)   :: NAUGX
+      LOGICAL(4)                  :: TCHK
+      INTEGER(4)  ,ALLOCATABLE    :: NPRO(:)
+!     **************************************************************************
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'STATE',NB)
+!
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      CALL LINKEDLIST$SELECT(LL_CNTL,'AUGMENTATION')
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'NPRO',1,TCHK)
+      LMAX=2
+      IF(TCHK) THEN
+        CALL LINKEDLIST$SIZE(LL_CNTL,'NPRO',1,LMAX)
+        LMAX=LMAX-1
+      END IF
+      ALLOCATE(NPRO(LMAX+1))
+      NPRO=2
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'NPRO',1,NPRO)
+      NAUGX=MAXVAL(NPRO)
+      DEALLOCATE(NPRO)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE READCNTL1(LL_CNTL,NB,AEZ,RCOV,RBOX,GID,NR,IRCUT,LOFI,SOFI &
+     &                   ,NNOFI,FOFI,TCORE)
+!     **************************************************************************
+!     ** READ INPUT FILE FOR ATOMIC CALCULATION                               **
+!     **************************************************************************
+      USE PERIODICTABLE_MODULE
+      USE LINKEDLIST_MODULE
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_CNTL
+      INTEGER(4)   ,INTENT(IN)    :: NB
+      REAL(8)     ,INTENT(OUT)    :: AEZ
+      INTEGER(4)  ,INTENT(OUT)    :: IRCUT
+      REAL(8)     ,INTENT(OUT)    :: RBOX     ! ATOM IS ENCLOSED IN A HARD BOX
+      INTEGER(4)  ,INTENT(OUT)    :: GID
+      INTEGER(4)  ,INTENT(OUT)    :: NR
+      INTEGER(4)  ,INTENT(OUT)    :: LOFI(NB)
+      INTEGER(4)  ,INTENT(OUT)    :: SOFI(NB)
+      INTEGER(4)  ,INTENT(OUT)    :: NNOFI(NB)
+      REAL(8)    ,INTENT(OUT)     :: FOFI(NB)
+      LOGICAL(4) ,INTENT(OUT)     :: TCORE(NB)
+      CHARACTER(2)                :: ELEMENTSYMBOL
+      REAL(8)                     :: RCOV
+      REAL(8)                     :: RCUT
+      LOGICAL(4)                  :: TCHK
+      REAL(8)                     :: DMIN,DMAX,RX
+      INTEGER(4)                  :: NFILO
+      INTEGER(4)                  :: IDFT
+      INTEGER(4)                  :: NC
+      INTEGER(4)                  :: IB,IR
+      REAL(8)                     :: R1,DEX
+      REAL(8)     ,ALLOCATABLE    :: R(:)
+!     **************************************************************************
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
+
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'AEZ',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'AEZ',1,AEZ)
+        CALL PERIODICTABLE$GET(NINT(AEZ),'SYMBOL',ELEMENTSYMBOL)
+      ELSE
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'EL',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('EITHER AEZ OR EL NEEDS TO BE SPECIFIED')
+          CALL ERROR$STOP('MAIN')
+        END IF
+        CALL LINKEDLIST$GET(LL_CNTL,'EL',1,ELEMENTSYMBOL)
+        CALL PERIODICTABLE$GET(ELEMENTSYMBOL,'Z',AEZ)
+      END IF
+!
+      CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
+!
+      CALL REPORT$TITLE(NFILO,'ELEMENT')
+      CALL REPORT$CHVAL(NFILO,'ELEMENT',ELEMENTSYMBOL)
+      CALL REPORT$R8VAL(NFILO,'Z',AEZ,'')
+!
+!     ==========================================================================
+!     == DEFINE RADIAL GRID                                                   ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      CALL LINKEDLIST$SELECT(LL_CNTL,'GRID')
+      DMIN=5.D-6
+      DMAX=5.D-1
+      RX=1.056D-4*EXP(5.D-2*249.D0)
+      CALL LINKEDLIST$GET(LL_CNTL,'DMIN',1,DMIN)
+      CALL LINKEDLIST$GET(LL_CNTL,'DMAX',1,DMAX)
+      CALL LINKEDLIST$GET(LL_CNTL,'RMAX',1,RX)
+!
+!     == DEFINE GRID ===========================================================
+      CALL GRIDPARAMETERS(DMIN,DMAX,RX,R1,DEX,NR)
+      CALL RADIAL$NEW('SHLOG',GID)
+      CALL RADIAL$SETR8(GID,'R1',R1)
+      CALL RADIAL$SETR8(GID,'DEX',DEX)
+      CALL RADIAL$SETI4(GID,'NR',NR)
+!
+!     == REPORT GRID ===========================================================
+      CALL REPORT$TITLE(NFILO,'RADIAL GRID')
+      CALL REPORT$R8VAL(NFILO,'R1',R1,'A0')
+      CALL REPORT$R8VAL(NFILO,'DEX',DEX,'')
+      CALL REPORT$I4VAL(NFILO,'#(RADIAL GRID POINTS)',NR,'')
+      CALL REPORT$R8VAL(NFILO,'INNERMOST SPACING',DMIN,'A0')
+      CALL REPORT$R8VAL(NFILO,'OUTERMOST SPACING',DMAX,'A0')
+      CALL REPORT$R8VAL(NFILO,'OUTERMOST GRID POINT',RX,'A0')
+      CALL REPORT$R8VAL(NFILO,'COVALENT RADIUS',RCOV,'A0')
+!
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     == atom is inclosed in a box with radius rbox                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'RBOX/RCOV',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'RBOX/RCOV',1,RBOX)
+        RBOX=RBOX*RCOV   ! PROJECTORS AND PARTIAL WAVES TRUNCATED BEYOND THIS POINT
+      ELSE
+        RBOX=R(NR)
+      END IF
+      CALL REPORT$R8VAL(NFILO,'BOX RADIUS',RBOX,'A0')
+!
+!     ==========================================================================
+!     == DEFINE RADIUS UP TO WHICH THE DATA ARE STORED                        ==
+!     ==========================================================================
+      CALL LINKEDLIST$GET(LL_CNTL,'RCUT/RCOV',1,RCUT)
+      RCUT=RCUT*RCOV   ! PROJECTORS AND PARTIAL WAVES TRUNCATED BEYOND THIS POINT
+      CALL REPORT$R8VAL(NFILO,'TRUNCATION RADIUS',RCUT,'A0')
+      DO IR=1,NR
+        IRCUT=IR
+        IF(R(IR).GT.RCUT) EXIT
+      ENDDO
+      IF(RCUT.GT.RBOX) THEN
+        CALL ERROR$MSG('RCUT MUST BE SMALLER OR EQUAL TO RBOX')
+        CALL ERROR$MSG('DO NOT ASK ME WHY....')
+        CALL ERROR$STOP('READCNTL1')
+      END IF
+!
+!     ==========================================================================
+!     == DEFINE DFT FUNCTIONAL                                                ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
+      CALL LINKEDLIST$GET(LL_CNTL,'DFT',1,IDFT)
+!
+      CALL DFT$SETI4('TYPE',IDFT)
+      CALL DFT$SETL4('SPIN',.FALSE.)
+!
+!     == REPORT ================================================================
+      CALL DFT$REPORT(NFILO)
+!
+!     ==========================================================================
+!     == DEFINE STATES AND THEIR OCCUPATIONS                                  ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      NC=0
+      DO IB=1,NB
+        CALL LINKEDLIST$SELECT(LL_CNTL,'STATE',IB)
+!       == MAIN ANGULAR MOMENTUM QUANTUM NUMBER
+        CALL LINKEDLIST$GET(LL_CNTL,'L',1,LOFI(IB))
+!       == #(NODES) PRINCIPAL QUANTUM NUMBER IS READ AND CONVERTED
+        CALL LINKEDLIST$GET(LL_CNTL,'N',1,NNOFI(IB))
+        NNOFI(IB)=NNOFI(IB)-LOFI(IB)-1
+!       == SOFI DESCRIBES SPIN-ORBIT COUPLING:
+!       ==  0: NO SPIN ORBIT COUPLING
+!       ==  1: PARALLEL SPIN AND ORBITAL ANGULAR MOMENTUM
+!       == -1: ANTIPARALLEL SPIN AND ORBITAL ANGULAR MOMENTUM
+        SOFI(IB)=0
+!       == OCCUPATION
+        FOFI(IB)=2.D0*REAL(2*LOFI(IB)+1)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'F',1,TCHK)
+!       == SPECIFY IF CORE OR VALENCE
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'F',1,FOFI(IB))
+        CALL LINKEDLIST$GET(LL_CNTL,'CORE',1,TCORE(IB))
+        IF(TCORE(IB)) NC=NC+1
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+      ENDDO
+      DO IB=1,NC
+        IF(.NOT.TCORE(IB)) THEN
+          CALL ERROR$MSG('CORE STATES MUST PRECEED VALENCE STATES')
+          CALL ERROR$I4VAL('NC',NC)
+          CALL ERROR$I4VAL('IB',IB)
+          CALL ERROR$STOP('MAIN')
+        END IF
+      ENDDO
+      CALL REPORT$TITLE(NFILO,'INPUT ON STATES')
+      DO IB=1,NB
+        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2)') &
+     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE READCNTL2(LL_CNTL,LMAX,RCOV,RC_CORE,POW_CORE,VAL0_CORE &
+     &                    ,RC_POT,POW_POT,VAL0_POT,RCSM,PSEUDOPARTIALWAVEMETHOD &
+     &                    ,NPRO,RCL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_CNTL
+      INTEGER(4)   ,INTENT(IN)    :: LMAX
+      REAL(8)      ,INTENT(IN)    :: RCOV
+      REAL(8)      ,INTENT(OUT)   :: RC_CORE,VAL0_CORE
+      INTEGER(4)   ,INTENT(OUT)   :: POW_CORE
+      REAL(8)      ,INTENT(OUT)   :: RC_POT,VAL0_POT
+      INTEGER(4)   ,INTENT(OUT)   :: POW_POT
+      REAL(8)      ,INTENT(OUT)   :: RCSM
+      INTEGER(4)   ,INTENT(OUT)   :: NPRO(LMAX+1)
+      REAL(8)      ,INTENT(OUT)   :: RCL(LMAX+1)
+      CHARACTER(*) ,INTENT(OUT)   :: PSEUDOPARTIALWAVEMETHOD
+      REAL(8)                     :: PI,Y0
+      REAL(8)                     :: SVAR
+      INTEGER(4)                  :: NFILO
+      INTEGER(4)                  :: L
+      LOGICAL(4)                  :: TCHK
+!     **************************************************************************
+      PI=4.D0*DATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+!
+!     ==========================================================================
+!     == COLLECT PARAMETERS FOR CORE PSUEDIZATION                             ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      CALL LINKEDLIST$SELECT(LL_CNTL,'PSCORE')
+      CALL LINKEDLIST$GET(LL_CNTL,'RC/RCOV',1,RC_CORE)!CUTOFF RADIUS FOR CORE PSEUDIZATION
+      RC_CORE=RC_CORE*RCOV
+      CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,POW_CORE)  !POWER FOR CORE PSEUDIZATION
+      CALL LINKEDLIST$GET(LL_CNTL,'VAL0',1,VAL0_CORE)  !VALUE AT THE ORIGIN FOR CORE PSEUDIZATION
+      VAL0_CORE=VAL0_CORE/Y0
+!
+!     == REPORT ================================================================
+      CALL REPORT$TITLE(NFILO,'PSEUDO CORE DENSITY')
+      CALL REPORT$R8VAL(NFILO,'RC',RC_CORE,'')
+      CALL REPORT$I4VAL(NFILO,'POWER',POW_CORE,'')
+      CALL REPORT$R8VAL(NFILO,'VAL(0)',VAL0_CORE*Y0,'')
+!
+!     ==========================================================================
+!     == COLLECT PARAMETERS FOR POTENTIAL PSEUDIZATION                        ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      CALL LINKEDLIST$SELECT(LL_CNTL,'VTILDE')
+      CALL LINKEDLIST$GET(LL_CNTL,'RC/RCOV',1,RC_POT)!CUTOFF RADIUS FOR POTENTIAL PSEUDIZATION
+      RC_POT=RC_POT*RCOV
+      CALL LINKEDLIST$GET(LL_CNTL,'POWER',1,POW_POT)  !POWER FOR POTENTIAL PSEUDIZATION 
+      CALL LINKEDLIST$GET(LL_CNTL,'VAL0',1,VAL0_POT)  !VALUE AT THE ORIGIN FOR POTENTIAL PSEUDIZATION
+      VAL0_POT=VAL0_POT/Y0
+!
+!     == REPORT ================================================================
+      CALL REPORT$TITLE(NFILO,'PSEUDO POTENTIAL')
+      CALL REPORT$R8VAL(NFILO,'RC',RC_POT,'')
+      CALL REPORT$I4VAL(NFILO,'POWER',POW_POT,'')
+      CALL REPORT$R8VAL(NFILO,'VAL(0)',VAL0_POT*Y0,'')
+!
+!     ==========================================================================
+!     ==  COMPENSATION GAUSSIAN                                               ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      CALL LINKEDLIST$SELECT(LL_CNTL,'COMPENSATE')
+      CALL LINKEDLIST$GET(LL_CNTL,'RC/RCOV',1,RCSM)  
+      RCSM=RCSM*RCOV
+!
+!     == REPORT ================================================================
+      CALL REPORT$TITLE(NFILO,'COMPENSATION DENSITY')
+      CALL REPORT$R8VAL(NFILO,'RC',RCSM,'')
+      SVAR=EXP(-(RCOV/RCSM)**2)/(SQRT(PI)*RCSM)**3
+      CALL REPORT$R8VAL(NFILO,'VALUE AT THE COVALENT RADIUS',SVAR,'')
+!
+!     ==========================================================================
+!     ==  PSEUDIZATION ALGORITHM FOR PSEUDO PARTIAL WAVES                     ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ACNTL')  
+      CALL LINKEDLIST$SELECT(LL_CNTL,'AUGMENTATION')
+      PSEUDOPARTIALWAVEMETHOD='HBS'
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'PSEUDOMETHOD',1,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'PSEUDOMETHOD' &
+     &                                   ,1,PSEUDOPARTIALWAVEMETHOD)
+      IF(PSEUDOPARTIALWAVEMETHOD.NE.'HBS'.AND. &
+     &   PSEUDOPARTIALWAVEMETHOD.NE.'KRESSE') THEN
+        CALL ERROR$MSG('ILLEGAL VALUE FOR PSEUDIZATION METHOD')
+        CALL ERROR$CHVAL('PSEUDOPARTIALWAVEMETHOD',PSEUDOPARTIALWAVEMETHOD)
+        CALL ERROR$STOP('MAIN')
+      END IF
+!
+!     ==========================================================================
+!     ==  NORB                                                                ==
+!     ==========================================================================
+      CALL REPORT$TITLE(NFILO,'AUGMENTATION')
+      CALL REPORT$I4VAL(NFILO,'LMAX',LMAX,'')
+!
+      NPRO=2
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'NPRO',1,NPRO)
+      DO L=0,LMAX
+        IF(L.EQ.0) THEN
+          CALL REPORT$I4VAL(NFILO,'#(PROJECTORS)FOR L=0',NPRO(L+1),'')
+        ELSE IF(L.EQ.1) THEN
+          CALL REPORT$I4VAL(NFILO,'#(PROJECTORS)FOR L=1',NPRO(L+1),'')
+        ELSE IF(L.EQ.2) THEN
+          CALL REPORT$I4VAL(NFILO,'#(PROJECTORS)FOR L=2',NPRO(L+1),'')
+        ELSE IF(L.EQ.3) THEN
+          CALL REPORT$I4VAL(NFILO,'#(PROJECTORS)FOR L=3',NPRO(L+1),'')
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     ==  RCL                                                                 ==
+!     ==========================================================================
+      RCL(:)=RCOV
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'RC/RCOV',1,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'RC/RCOV',1,RCL)
+      RCL(:)=RCL(:)*RCOV
+      DO L=0,LMAX
+        IF(L.EQ.0) THEN
+          CALL REPORT$R8VAL(NFILO,'CUTOFF FOR L=0',RCL(L+1),'')
+        ELSE IF(L.EQ.1) THEN
+          CALL REPORT$R8VAL(NFILO,'CUTOFF FOR L=1',RCL(L+1),'')
+        ELSE IF(L.EQ.2) THEN
+          CALL REPORT$R8VAL(NFILO,'CUTOFF FOR L=2',RCL(L+1),'')
+        ELSE IF(L.EQ.3) THEN
+          CALL REPORT$R8VAL(NFILO,'CUTOFF FOR L=3',RCL(L+1),'')
+        END IF
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WRITESETUP(GID,NR,AEZ,NB,NC,LOFI,NNOFI,FOFI,EOFI,UOFI,TUOFI &
+     &                     ,AEPOT,PSPOT,PSRHOC,AERHOC,VADD,RCSM &
+     &                     ,NPRO,NAUGX,LMAX,AEPHI,PSPHI,PRO,UPHI,TUPHI,DT,DO,DH)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE LINKEDLIST$WRITE(LL_,NFIL,CID_)
+        USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
+        TYPE(LL_TYPE),INTENT(IN) :: LL_
+        INTEGER(4)   ,INTENT(IN) :: NFIL
+        CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
+        END SUBROUTINE LINKEDLIST$WRITE
+      END INTERFACE
+      INTEGER(4)   ,INTENT(IN)    :: GID
+      INTEGER(4)   ,INTENT(IN)    :: NR
+      REAL(8)      ,INTENT(IN)    :: AEZ
+      REAL(8)                     :: PSZ
+      INTEGER(4)   ,INTENT(IN)    :: NB
+      INTEGER(4)   ,INTENT(IN)    :: NC
+      INTEGER(4)   ,INTENT(IN)    :: LOFI(NB)
+      INTEGER(4)   ,INTENT(IN)    :: NNOFI(NB)
+      REAL(8)      ,INTENT(IN)    :: FOFI(NB)
+      REAL(8)      ,INTENT(IN)    :: EOFI(NB)
+      REAL(8)      ,INTENT(IN)    :: UOFI(NR,NB)
+      REAL(8)      ,INTENT(IN)    :: TUOFI(NR,NB)
+      REAL(8)      ,INTENT(IN)    :: AEPOT(NR)
+      REAL(8)      ,INTENT(IN)    :: PSPOT(NR)
+      REAL(8)      ,INTENT(IN)    :: PSRHOC(NR)
+      REAL(8)      ,INTENT(IN)    :: AERHOC(NR)
+      REAL(8)      ,INTENT(IN)    :: VADD(NR)
+      REAL(8)      ,INTENT(IN)    :: RCSM
+      INTEGER(4)   ,INTENT(IN)    :: NPRO(LMAX+1)
+      INTEGER(4)   ,INTENT(IN)    :: NAUGX
+      INTEGER(4)   ,INTENT(IN)    :: LMAX
+      REAL(8)      ,INTENT(IN)    :: AEPHI(NR,NAUGX,LMAX+1)
+      REAL(8)      ,INTENT(IN)    :: PSPHI(NR,NAUGX,LMAX+1)
+      REAL(8)      ,INTENT(IN)    :: PRO(NR,NAUGX,LMAX+1)
+      REAL(8)      ,INTENT(IN)    :: UPHI(NR,NAUGX,LMAX+1)
+      REAL(8)      ,INTENT(IN)    :: TUPHI(NR,NAUGX,LMAX+1)
+      REAL(8)      ,INTENT(IN)    :: DT(NAUGX,NAUGX,LMAX+1)
+      REAL(8)      ,INTENT(IN)    :: DO(NAUGX,NAUGX,LMAX+1)
+      REAL(8)      ,INTENT(IN)    :: DH(NAUGX,NAUGX,LMAX+1)
+      TYPE(LL_TYPE)               :: LL_STP
+      REAL(8)                     :: R1
+      REAL(8)                     :: DEX
+      LOGICAL(4)  ,PARAMETER      :: TLOG=.TRUE.
+      INTEGER(4)                  :: NR2
+      INTEGER(4)                  :: GID2
+      INTEGER(4)                  :: IDFT
+      INTEGER(4)                  :: LNX
+      INTEGER(4)                  :: L,IB,IB1,IB2,L1,L2,I1,I2
+      INTEGER(4)                  :: ISVAR
+      INTEGER(4) ,ALLOCATABLE     :: LOX(:)
+      REAL(8)    ,ALLOCATABLE     :: AUX(:)
+      REAL(8)    ,ALLOCATABLE     :: WORK1(:),WORK2(:),WORK3(:)
+      INTEGER(4)                  :: NFIL
+!     **************************************************************************
       CALL LINKEDLIST$NEW(LL_STP)
 !
-!     == GRID  ======================================
+!     == GRID  =================================================================
+      CALL RADIAL$GETR8(GID,'R1',R1)
+      CALL RADIAL$GETR8(GID,'DEX',DEX)
       CALL LINKEDLIST$SELECT(LL_STP,'~')
       CALL LINKEDLIST$SELECT(LL_STP,'SETUP')
       CALL LINKEDLIST$SELECT(LL_STP,'GRID')
@@ -887,6 +1152,7 @@ PRINT*,'================LOOP DONE========================'
         CALL LINKEDLIST$SET(LL_STP,'R1',0,R1)
         CALL LINKEDLIST$SET(LL_STP,'DEX',0,DEX)
         CALL LINKEDLIST$SET(LL_STP,'NR',0,NR)
+        ALLOCATE(AUX(NR))
       ELSE
         CALL RADIAL$NEW('LOG',GID2)
         CALL RADIAL$SETR8(GID2,'R1',1.056D-4)
@@ -897,18 +1163,18 @@ PRINT*,'================LOOP DONE========================'
         CALL LINKEDLIST$SET(LL_STP,'R1',0,1.056D-4)
         CALL LINKEDLIST$SET(LL_STP,'DEX',0,5.D-2)
         CALL LINKEDLIST$SET(LL_STP,'NR',0,NR2)
-        DEALLOCATE(AUX)
         ALLOCATE(AUX(NR2))
       END IF
 !
-!     == GENERIC ======================================
+!     == GENERIC ===============================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~')
       CALL LINKEDLIST$SELECT(LL_STP,'SETUP')
       CALL LINKEDLIST$SELECT(LL_STP,'GENERIC')
+      CALL DFT$GETI4('TYPE',IDFT)
       CALL LINKEDLIST$SET(LL_STP,'IDFT',0,IDFT)
       CALL LINKEDLIST$SET(LL_STP,'AEZ',0,AEZ)
 !
-!     == AUGMENTATION ======================================
+!     == AUGMENTATION ==========================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~')
       CALL LINKEDLIST$SELECT(LL_STP,'SETUP')
       CALL LINKEDLIST$SELECT(LL_STP,'AESCF')
@@ -942,7 +1208,7 @@ PRINT*,'================LOOP DONE========================'
         ENDDO
       END IF
 !
-!     == AUGMENTATION ======================================
+!     == AUGMENTATION ==========================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~')
       CALL LINKEDLIST$SELECT(LL_STP,'SETUP')
       CALL LINKEDLIST$SELECT(LL_STP,'AUGMENTATION')
@@ -991,7 +1257,7 @@ PRINT*,'================LOOP DONE========================'
       ENDDO
       CALL LINKEDLIST$SET(LL_STP,'LOX',0,LOX)
 !
-!     == SET MATRIX ELEMENTS ===========================================
+!     == SET MATRIX ELEMENTS ===================================================
       ALLOCATE(WORK1(LNX*LNX))
       ALLOCATE(WORK2(LNX*LNX))
       ALLOCATE(WORK3(LNX*LNX))
@@ -1040,27 +1306,32 @@ PRINT*,'================LOOP DONE========================'
         CALL RADIAL$CHANGEGRID(GID,NR,VADD,GID2,NR2,AUX)
         CALL LINKEDLIST$SET(LL_STP,'VADD',0,AUX)
       END IF
+      DEALLOCATE(AUX)
 !
-!     ==  WRITE TO FILE ================================================
+!     ==========================================================================
+!     ==  WRITE SETUP TO FILE                                                 ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('SETUP',NFIL)
       CALL LINKEDLIST$SELECT(LL_STP,'~')
       CALL LINKEDLIST$WRITE(LL_STP,NFIL)
-!     ==  CHECK CONTENTS ================================================
-      CALL LINKEDLIST$SELECT(LL_STP,'~')
+!
+!     ==  CHECK CONTENTS =======================================================
+!     CALL LINKEDLIST$SELECT(LL_STP,'~')
 !     CALL LINKEDLIST$REPORT(LL_STP,NFILO)
+!
       CALL FILEHANDLER$CLOSE('SETUP')
-
-      CALL TESTSETUPREAD(ROOTNAME)
-      STOP
+      RETURN
       END
 !
-!     ......................................................................
-      SUBROUTINE TESTSETUPREAD(ROOTNAME)
-!     **                                                                  **
-!     **                                                                  **
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TESTSETUPREAD()
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ROOTNAME
       INTEGER(4)              :: NR       ! #(RDIAL GRID POINTS)
       INTEGER(4)              :: NFIL
       INTEGER(4)              :: NFILO
@@ -1075,19 +1346,9 @@ PRINT*,'================LOOP DONE========================'
       REAL(8)                 :: RCSM
       REAL(8)   ,ALLOCATABLE  :: PSCORE(:)
       REAL(8)   ,ALLOCATABLE  :: AECORE(:)
-!     **********************************************************************
-PRINT*,' START READING SETUP FILE'
+!     **************************************************************************
 !
-!     ==================================================================
-!     == DEFINE INPUT FILE                                            ==
-!     ==================================================================
-      CALL FILEHANDLER$SETFILE('INPUT1',.FALSE.,TRIM(ROOTNAME)//-'.STP')
-      CALL FILEHANDLER$SETSPECIFICATION('INPUT1','STATUS','OLD')
-      CALL FILEHANDLER$SETSPECIFICATION('INPUT1','POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION('INPUT1','ACTION','READ')
-      CALL FILEHANDLER$SETSPECIFICATION('INPUT1','FORM','FORMATTED')
-!
-      CALL FILEHANDLER$UNIT('INPUT1',NFIL)
+      CALL FILEHANDLER$UNIT('SETUP_IN',NFIL)
       CALL SETUPREAD$NEW(NFIL,TCHK)
       IF(.NOT.TCHK) THEN
         CALL ERROR$STOP('TESTREAD')
@@ -1185,10 +1446,10 @@ PRINT*,' START READING SETUP FILE'
       RETURN
       END
 !
-!     ......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITEPHI(FILE,GID,NR,NPHI,PHI)
-!     **                                                                  **
-!     **                                                                  **
+!     **                                                                      **
+!     **                                                                      **
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: FILE
       INTEGER(4)  ,INTENT(IN) :: GID      ! GRID ID
@@ -1197,7 +1458,7 @@ PRINT*,' START READING SETUP FILE'
       REAL(8)     ,INTENT(IN) :: PHI(NR,NPHI)
       INTEGER(4)              :: IR
       REAL(8)                 :: R(NR)
-!     ***********************************************************
+!     **************************************************************************
       CALL RADIAL$R(GID,NR,R)
       OPEN(100,FILE=FILE)
       DO IR=1,NR
@@ -1207,10 +1468,10 @@ PRINT*,' START READING SETUP FILE'
       RETURN
       END
 !
-!     ......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITECOMPARE(FILE,GID,NR,NPHI,PHI1,PHI2)
-!     **                                                                  **
-!     **                                                                  **
+!     **                                                                      **
+!     **                                                                      **
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: FILE
       INTEGER(4)  ,INTENT(IN) :: GID      ! GRID ID
@@ -1220,7 +1481,7 @@ PRINT*,' START READING SETUP FILE'
       REAL(8)     ,INTENT(IN) :: PHI2(NR,NPHI)
       INTEGER(4)              :: IR
       REAL(8)                 :: R(NR)
-!     ***********************************************************
+!     **************************************************************************
       CALL RADIAL$R(GID,NR,R)
       OPEN(100,FILE=FILE)
       DO IR=1,NR
@@ -1230,10 +1491,10 @@ PRINT*,' START READING SETUP FILE'
       RETURN
       END
 !
-!     ......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TESTPHASESHIFT(GID,NR,L,AEPOT,PSPOT,NAUG,PRO,DH,DO)
-!     **                                                                  **
-!     **                                                                  **
+!     **                                                                      **
+!     **                                                                      **
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID      ! GRID ID
       INTEGER(4) ,INTENT(IN)     :: NR       ! #(RDIAL GRID POINTS)
@@ -1257,7 +1518,7 @@ PRINT*,' START READING SETUP FILE'
       INTEGER(4)                 :: SO
       INTEGER(4)                 :: IE,NPRO
       REAL(8)                    :: E
-!     ***********************************************************************
+!     ***************************************************************************
       CALL RADIAL$R(GID,NR,R)
       DO IE=1,NE
         E=EMIN+(EMAX-EMIN)/REAL(NE-1)*REAL(IE-1)
@@ -1343,7 +1604,7 @@ PRINT*,' START READING SETUP FILE'
       REAL(8)                   :: KI(NZEROS)
       REAL(8)                   :: A11,A12,A21,A22,DET
       REAL(8)                   :: AINV11,AINV12,AINV21,AINV22
-      REAL(8)                   :: V1,V2,V3,C1,C2,C3,C1A,C2A,C1B,C2B
+      REAL(8)                   :: V1,V2,C1,C2,C3,C1A,C2A,C1B,C2B
       REAL(8)                   :: DTJ1,DTJ2,DTJ3
       REAL(8)                   :: SVAR1,SVAR2,FAC
       INTEGER(4)                :: IB
@@ -1351,7 +1612,7 @@ PRINT*,' START READING SETUP FILE'
       REAL(8)                   :: SUPTPHI(NR,NB)
       REAL(8)                   :: SHIFT
       REAL(8)                   :: X1,XDEX
-      INTEGER(4)                :: NX1,GIDX
+      INTEGER(4)                :: GIDX
       INTEGER(4)                :: IRMATCH
       REAL(8)                   :: X(NX)
 REAL(8) :: D2JLDR2(NR)
@@ -2049,17 +2310,19 @@ ENDDO
       END
 !
 !     ......................................................................
-      SUBROUTINE AESCF(GID,NR,NB,LOFI,SO,F,NN,Z,RHOADD,DREL,POT,EOFI)
+      SUBROUTINE AESCF(GID,NR,NB,trel,LOFI,SO,F,NN,Z,RHOADD,rbox,DREL,POT,EOFI)
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID
       INTEGER(4) ,INTENT(IN)     :: NR
       INTEGER(4) ,INTENT(IN)     :: NB        ! #(STATES)
+      logical(4) ,intent(in)     :: trel
       INTEGER(4) ,INTENT(IN)     :: LOFI(NB)  !ANGULAR MOMENTUM
       INTEGER(4) ,INTENT(IN)     :: SO(NB)    !SWITCH FOR SPIN-ORBIT COUP.
       REAL(8)    ,INTENT(IN)     :: F(NB)     !OCCUPATION
       INTEGER(4) ,INTENT(IN)     :: NN(NB)    !#(NODES)
       REAL(8)    ,INTENT(IN)     :: Z         !ATOMIC NUMBER
       REAL(8)    ,INTENT(IN)     :: RHOADD(NR)! FIXED CONTRIBUTION OF DENSITY
+      REAL(8)    ,INTENT(in)     :: rbox      !atom enclosed in a box 
       REAL(8)    ,INTENT(OUT)    :: DREL(NR)  !RELATIVISTIC CORRECTION
       REAL(8)    ,INTENT(INOUT)  :: POT(NR)   !POTENTIAL
       REAL(8)    ,INTENT(OUT)    :: EOFI(NB)  !ONE-PARTICLE ENERGIES
@@ -2075,8 +2338,15 @@ ENDDO
       REAL(8)                    :: EH,EXC
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
       REAL(8)                    :: POTIN(NR)
+      integer(4)                 :: irbox
+      integer(4)                 :: ir
 !     ***********************************************************************
       CALL RADIAL$R(GID,NR,R)
+      irbox=0
+      do ir=1,nr
+        irbox=ir
+        if(r(ir).gt.rbox) exit
+      enddo
       EOFI=0.D0
       EREF=0.D0
       XAV=0.D0
@@ -2088,8 +2358,12 @@ ENDDO
         CALL MYMIXPOT('ON',GID,NR,POT,XMAX,XAV)
       END IF
       DO ITER=1,NITER
-        CALL SCHROEDINGER$DREL(GID,NR,POT,EREF,DREL)
-        CALL AERHO('FULL',GID,NR,NB,LOFI,SO,F,NN,DREL,POT,RHO,EOFI)
+        if(trel) then
+          CALL SCHROEDINGER$DREL(GID,NR,POT,EREF,DREL)
+        else
+          drel=0.d0
+        end if
+        CALL AERHO('FULL',GID,NR,NB,LOFI,SO,F,NN,rbox,drEL,POT,RHO,EOFI)
         RHO(:)=RHO(:)+RHOADD(:)
         EREF=EOFI(NB)
 !
@@ -2322,7 +2596,7 @@ PRINT*,'XMAX ',XMAX,XAV
       END
 !
 !     ......................................................................
-      SUBROUTINE NODELESS(ID,GID,NR,NB,LOFI,SO,NN,DREL,POT,PHI,TPHI,E)
+      SUBROUTINE NODELESS(ID,GID,NR,NB,LOFI,SO,NN,rbox,DREL,POT,PHI,TPHI,E)
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)    :: ID
       INTEGER(4) ,INTENT(IN)     :: GID
@@ -2331,6 +2605,7 @@ PRINT*,'XMAX ',XMAX,XAV
       INTEGER(4) ,INTENT(IN)     :: LOFI(NB)  !ANGULAR MOMENTUM
       INTEGER(4) ,INTENT(IN)     :: SO(NB)    !SWITCH FOR SPIN-ORBIT COUP.
       INTEGER(4) ,INTENT(IN)     :: NN(NB)    !#(NODES)
+      REAL(8)    ,INTENT(IN)     :: rbox      !box radius
       REAL(8)    ,INTENT(IN)     :: DREL(NR)  !RELATIVISTIC CORRECTION
       REAL(8)    ,INTENT(IN)     :: POT(NR)   !POTENTIAL
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NB)   !WAVE FUNCTIONS
@@ -2379,7 +2654,7 @@ PRINT*,'XMAX ',XMAX,XAV
         ELSE IF(ID.EQ.'EFFZORA') THEN
           DREL1(:)=DREL(:)
         END IF
-        CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),DREL1,G,0,POT,E(IB),PHI(:,IB))
+        CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),rbox,DREL1,G,0,POT,E(IB),PHI(:,IB))
         TPHI(:,IB)=G(:)+(E(IB)-POT(:)*Y0)*PHI(:,IB)
 !
 !       =================================================================
@@ -2403,7 +2678,7 @@ PRINT*,'XMAX ',XMAX,XAV
       END
 !
 !     ......................................................................
-      SUBROUTINE ONENODELESS(ID,GID,NR,L,NN,SO,DREL,POT,PHIC,E,PHI,TPHI)
+      SUBROUTINE ONENODELESS(ID,GID,NR,L,NN,SO,rbox,DREL,POT,PHIC,E,PHI,TPHI)
 !     **                                                                  **
 !     **  CALCULATES THE NODELESS FUNCTIONS FOR A GIVEN NODE-LESS         **
 !     **  CORE FUNCTION PHIC                                              **
@@ -2424,25 +2699,34 @@ PRINT*,'XMAX ',XMAX,XAV
       REAL(8)    ,INTENT(IN)     :: DREL(NR)  !RELATIVISTIC CORRECTION
       REAL(8)    ,INTENT(IN)     :: POT(NR)   !POTENTIAL
       REAL(8)    ,INTENT(IN)     :: PHIC(NR)  !HIGHEST NODELESS CORE FUNCTION
+      REAL(8)    ,INTENT(IN)     :: rbox      !box radius
       REAL(8)    ,INTENT(INOUT)  :: E         !EXPANSION ENERGY
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE FUNCTIONS
       REAL(8)    ,INTENT(OUT)    :: TPHI(NR)!KINETIC ENERGY*WAVE FUNCTIONS
-      INTEGER(4)                 :: IB
+      INTEGER(4)                 :: IB,ir
+      INTEGER(4)                 :: Irbox
       REAL(8)                    :: PI,Y0
+      REAL(8)                    :: r(nr)
 !     ***********************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
+      call radial$r(gid,nr,r)
+      DO IR=1,NR
+        IRBOX=IR
+        IF(R(IR).GT.RBOX) EXIT
+      ENDDO
       IF(ID.EQ.'BOUND') THEN
-        CALL BOUNDSTATE(GID,NR,L,SO,DREL,PHIC,NN,POT,E,PHI)
+        CALL BOUNDSTATE(GID,NR,L,SO,rbox,DREL,PHIC,NN,POT,E,PHI)
       ELSE IF(ID.EQ.'SCATT') THEN
         CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,PHIC,L,E,1,PHI)
+        phi(irbox:)=0.d0
       END IF
       TPHI(:)=PHIC(:)+(E-POT(:)*Y0)*PHI(:)
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE AERHO(ID,GID,NR,NB,LOFI,SO,F,NN,DREL,POT,RHO,E)
+      SUBROUTINE AERHO(ID,GID,NR,NB,LOFI,SO,F,NN,rbox,DREL,POT,RHO,E)
 !     **                                                                      **
 !     **  DETERMINES THE DENSITY FOR A GIVEN POTENTIAL AND A SPECIFIED SET    **
 !     **  OF WAVE FUNCTIONS.                                                  **
@@ -2469,6 +2753,7 @@ PRINT*,'XMAX ',XMAX,XAV
       INTEGER(4) ,INTENT(IN)     :: SO(NB)    !SWITCH FOR SPIN-ORBIT COUP.
       INTEGER(4) ,INTENT(IN)     :: NN(NB)    !#(NODES)
       REAL(8)    ,INTENT(IN)     :: F(NB)     !OCCUPATION
+      REAL(8)    ,INTENT(IN)     :: rbox      !atom enclosed in a box
       REAL(8)    ,INTENT(INOUT)  :: DREL(NR)  !RELATIVISTIC CORRECTION
       REAL(8)    ,INTENT(IN)     :: POT(NR)   !POTENTIAL
       REAL(8)    ,INTENT(OUT)    :: RHO(NR)   !DENSITY
@@ -2508,7 +2793,7 @@ PRINT*,'XMAX ',XMAX,XAV
          ELSE IF(ID.EQ.'NONREL') THEN
            DREL(:)=0.D0 
          END IF
-         CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),DREL,G,NN(IB),POT,E(IB),PHI)
+         CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),rbox,DREL,G,NN(IB),POT,E(IB),PHI)
          AUX(:)=(R(:)*PHI(:))**2
          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
          PHI(:)=PHI(:)/SQRT(SVAR)
@@ -2544,7 +2829,7 @@ PRINT*,'XMAX ',XMAX,XAV
       END
 !
 !     ......................................................................
-      SUBROUTINE BOUNDSTATE(GID,NR,L,SO,DREL,G,NN,POT,E,PHI)
+      SUBROUTINE BOUNDSTATE(GID,NR,L,SO,rbox,DREL,G,NN,POT,E,PHI)
 !     **                                                                  **
 !     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND     **
 !     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                 **
@@ -2564,6 +2849,7 @@ PRINT*,'XMAX ',XMAX,XAV
       INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
       INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
       INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+      REAL(8)    ,INTENT(IN)     :: rbox    ! box radius
       REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
       REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
       INTEGER(4) ,INTENT(IN)     :: NN      !#(NODES)
@@ -2577,7 +2863,6 @@ PRINT*,'XMAX ',XMAX,XAV
       REAL(8)                    :: DER,DERO
       REAL(8)                    :: R(NR)
       REAL(8)                    :: PHIHOM(NR),PHIINHOM(NR),GHOM(NR)
-      INTEGER(4)                 :: NN1
       INTEGER(4) ,PARAMETER      :: NITER=100
       INTEGER(4)                 :: I,IR
       INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
@@ -2587,12 +2872,20 @@ PRINT*,'XMAX ',XMAX,XAV
       REAL(8)   ,PARAMETER       :: XMAX=1.D+20 ! MAXIMUM FACTOR IN THE WAVE FUNCTION
       REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
       LOGICAL(4)                 :: THOM
-      REAL(8)                    :: AUX(NR),AUX1(NR)
-      INTEGER(4)                 :: IROUT,IRCL
+      REAL(8)                    :: rout
+      REAL(8)                    :: val
+      INTEGER(4)                 :: IROUT,IRCL,irbox
 !     *********************************************************************
+                                 call trace$push('boundstate')
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
+      irbox=1
+      do ir=1,nr
+        irbox=ir
+        if(r(ir).gt.rbox) exit
+      enddo
+!          
       ISTART=1
       X0=E
       DX=1.D-2
@@ -2605,6 +2898,8 @@ PRINT*,'XMAX ',XMAX,XAV
 !       ==  CUT OFF THE POTENTIAL                                            ==
 !       =======================================================================
         CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
+        rout=min(r(irout),rbox)
+        irout=min(irout,irbox)
         POT1(:)=POT(:)
         POT1(IROUT:)=POT(IROUT)
 !
@@ -2624,13 +2919,8 @@ PRINT*,'XMAX ',XMAX,XAV
 !       =======================================================================
 !       == ESTIMATE PHASE SHIFT                                              ==
 !       =======================================================================
-        NN1=0
-        DO IR=3,IROUT
-          IF(PHI(IR)*PHI(IR-1).LT.0.D0) NN1=NN1+1
-        ENDDO
-        Z0=-1.D0
-        IF(NN1.GT.NN) Z0=1.D0
-!WRITE(*,FMT='("ITER",4I5,4E20.10)')I,L,NN1,NN,E,2.D0*DX,PHI(IROUT),Z0
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,Phi,Rout,z0)
+        z0=z0-real(NN+1)
         IF(ABS(2.D0*DX).LE.TOL) EXIT
 !       =====================================================================
 !       ==  BISECTION                                                      ==
@@ -2656,25 +2946,33 @@ PRINT*,'XMAX ',XMAX,XAV
 !     =======================================================================
 !     ==  INTEGRATE INWARD                                                 ==
 !     =======================================================================
-      IDIR=-1
-      GHOM(:)=0.D0
-      GHOM(IROUT)=1.D-8
-      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
-      IF(.NOT.THOM) THEN     
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
-      ELSE
-        PHIINHOM(:)=0.D0
-      END IF
+      if(irmatch.lt.irout) then
+        IDIR=-1
+        GHOM(:)=0.D0
+        GHOM(IROUT)=1.D-8
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
+        IF(.NOT.THOM) THEN     
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
+        ELSE
+          PHIINHOM(:)=0.D0
+        END IF
+!
+!       =======================================================================
+!       ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
+!       =======================================================================
+        SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
+        PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
+        CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+        CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+        SVAR=(DERO-DER)/PHI(IRMATCH)
+        PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+      end if
 !
 !     =======================================================================
-!     ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
+!     ==  set wave function to zero beyond rbox                            ==
 !     =======================================================================
-      SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
-      PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
-      CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
-      CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
-      SVAR=(DERO-DER)/PHI(IRMATCH)
-      PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+      phi(irout:)=0.d0
+!
 DO IR=1,NR
   IF(.NOT.(PHI(IR).GT.0.D0.OR.PHI(IR).LE.0.D0)) THEN
     PRINT*,'ERROR'
@@ -2692,20 +2990,22 @@ DO IR=1,NR
     CALL ERROR$STOP('BOUNDSTATE')
   END IF
 ENDDO
+                                 call trace$pop()
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO,DH,DO,G,PHI)
-!     **                                                              **
-!     **  SOLVES THE RADIAL PAW -SCHROEDINGER EQUATION.               **
-!     **    (T+VTILDE-E+|P>(DH-E*DO<P|]|PHI>=|G>                      **
-!     **  WHERE T IS THE NONRELATIVISTIC KINETIC ENERGY.              **
-!     **                                                              **
-!     **    DH=<AEPHI|T+V|AEPHI>-<PSPHI|T+VTILDE|PSPHI>               **
-!     **    DO=<AEPHI|AEPHI>-<PSPHI|PSPHI>                            **
-!     **                                                              **
-!     **                                                              **
+!     **************************************************************************
+!     **                                                                      **
+!     **  SOLVES THE RADIAL PAW -SCHROEDINGER EQUATION.                       **
+!     **    (T+VTILDE-E+|P>(DH-E*DO<P|]|PHI>=|G>                              **
+!     **  WHERE T IS THE NONRELATIVISTIC KINETIC ENERGY.                      **
+!     **                                                                      **
+!     **    DH=<AEPHI|T+V|AEPHI>-<PSPHI|T+VTILDE|PSPHI>                       **
+!     **    DO=<AEPHI|AEPHI>-<PSPHI|PSPHI>                                    **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: GID     !GRID ID
       INTEGER(4)  ,INTENT(IN) :: NR      ! #(RADIAL GRID POINTS
@@ -2735,7 +3035,7 @@ ENDDO
       INTEGER(4)              :: SO
 INTEGER(4)              :: IR
 REAL(8)                 :: PI,Y0
-!     ******************************************************************
+!     **************************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
@@ -2927,7 +3227,7 @@ REAL(8)                 :: PI,Y0
       END
 !
 !     ...................................................................
-      SUBROUTINE PSETOTSHELL(GID,NR,AEZ,PSRHOC,AERHOC,PSPOT &
+      SUBROUTINE PSETOTSHELL(GID,NR,AEZ,rbox,PSRHOC,AERHOC,PSPOT &
      &                      ,NB,NC,LMAX,NAUG,NPRO,LOFI,FOFI,EOFI &
      &                      ,PRO1,AEPHI1,PSPHI1,RCSM,DTKIN1,DH1,DO1,VADD)
 !     **                                                               **
@@ -2936,6 +3236,7 @@ REAL(8)                 :: PI,Y0
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       REAL(8),   INTENT(IN) :: AEZ
+      REAL(8),   INTENT(IN) :: rbox
       REAL(8),   INTENT(IN) :: PSRHOC(NR)
       REAL(8),   INTENT(IN) :: AERHOC(NR)
       REAL(8),   INTENT(IN) :: PSPOT(NR)
@@ -2970,6 +3271,7 @@ REAL(8)                 :: PI,Y0
       INTEGER(4)            :: L1,L2,LN1,LN2,IPRO,IPRO1,IPRO2,IB,I,IR
       INTEGER(4)            :: L,NN
       INTEGER(4)            :: IRMATCH
+      INTEGER(4)            :: IRbox
       REAL(8)               :: DREL(NR)
       REAL(8)               :: AUX(NR)
       INTEGER(4),ALLOCATABLE:: LOX(:)
@@ -2986,6 +3288,11 @@ REAL(8)                 :: PI,Y0
       CALL RADIAL$R(GID,NR,R)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL REPORT$TITLE(NFILO,'EIGENSTATES FROM PAW CALCULATION')
+      irbox=1
+      do ir=1,nr
+        if(r(ir).gt.rbox) exit
+        irbox=ir
+      enddo
 !
 !     ===================================================================================
 !     == FIND PAW BOUND STATE BY BISECTION                                             ==
@@ -3005,12 +3312,6 @@ REAL(8)                 :: PI,Y0
         IRMATCH=10.D0
         DO IR=1,NR
           DO I=1,NPRO(L+1)
-IF(I.GT.NAUG) THEN
-  CALL ERROR$MSG('ARRAY BOUNDS VIOLATED')
-  CALL ERROR$I4VAL('I',I)
-  CALL ERROR$I4VAL('NAUG',NAUG)
-  CALL ERROR$STOP('PSETOTSHELL')
-END IF
             IF(ABS(PRO1(IR,I,L+1)).GT.1.D-12) IRMATCH=IR
           ENDDO
         ENDDO
@@ -3032,7 +3333,7 @@ END IF
           CALL PAWDER(GID,NR,L,E,PSPOT,NPRO(L+1),PRO1(:,1:NPRO(L+1),L+1) &
                     ,DH1(1:NPRO(L+1),1:NPRO(L+1),L+1),DO1(1:NPRO(L+1),1:NPRO(L+1),L+1) &
        &            ,G,PSPSI(:,IB-NC))
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPSI(:,IB-NC),R(NR),F0)
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPSI(:,IB-NC),Rbox,F0)
           F0=F0-DF0
           CALL BISEC(ISTART,IBI,X0,F0,DX,XM,YM)
           IF(ABS(DX).LE.TOL) EXIT
@@ -3040,16 +3341,22 @@ END IF
         IF(ABS(DX).GT.TOL) THEN
           CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
           CALL ERROR$MSG('BOUND STATE NOT FOUND')
-          CALL ERROR$STOP('BOUNDSTATE')
+          CALL ERROR$STOP('PSETOTSHELL')
         END IF
         WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2," E[H]=",F15.9)') &
      &              L,0,0,FOFI(IB),E
+
 !
 !       == INTEGRATE INWARD TO AVOID EXPONENTIALLY INCREASING FUNCTION
-        G=0.D0
-        DREL=0.D0
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,0,G,L,E,-1,AUX)
-        PSPSI(IRMATCH:,IB-NC)=AUX(IRMATCH:)*PSPSI(IRMATCH,IB-NC)/AUX(IRMATCH)
+        if(irmatch.lt.irbox) then
+          G=0.D0
+          G(IRBOX)=1.D-8
+          DREL=0.D0
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,0,G,L,E,-1,AUX)
+          PSPSI(IRMATCH:,IB-NC)=AUX(IRMATCH:)*PSPSI(IRMATCH,IB-NC)/AUX(IRMATCH)
+        else
+          pspsi(irbox:,ib-nc)=0.d0
+        end if
 !
 !       == NORMALIZE WAVE FUNCTION
         DO IPRO=1,NPRO(L+1)
@@ -3059,7 +3366,13 @@ END IF
         AUX(:)=PSPSI(:,IB-NC)**2*R(:)**2
         CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
         SVAR=SVAR+DOT_PRODUCT(PROJ(:NPRO(L+1)) &
-     &           ,MATMUL(DO1(:NPRO(L+1),:NPRO(L+1),L+1),PROJ(1:NPRO(L+1))))
+     &           ,MATMUL(DO1(:NPRO(L+1),:NPRO(L+1),L+1),PROJ(:NPRO(L+1))))
+        IF(SVAR.LE.0.D0) THEN
+          CALL ERROR$MSG('NEGATIVE NORM')
+          CALL ERROR$I4VAL('IB',IB)
+          CALL ERROR$R8VAL('SVAR',SVAR)
+          CALL ERROR$STOP('PSETOTSHELL')
+        END IF
         PSPSI(:,IB-NC)=PSPSI(:,IB-NC)/SQRT(SVAR)
         PROJ(:)=PROJ(:)/SQRT(SVAR)
 
@@ -3113,17 +3426,20 @@ END IF
 !     ====================================================================
 !     ==  TOTAL ENERGY                                                  ==
 !     ====================================================================
+PRINT*,'LNX ',LNX
       CALL PSETOT(GID,NR,AEZ,PSRHOC,AERHOC &
      &                 ,NB-NC,LOFI(NC+1:NB),FOFI(NC+1:NB),PSPSI,TPSPSI &
      &                 ,LNX,LOX,PRO,AEPHI,PSPHI,RCSM,DTKIN,VADD)
       RETURN
       END
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PSETOT(GID,NR,AEZ,PSRHOC,AERHOC,NB,LOFI,FOFI,PSPSI,TPSPSI &
      &                 ,LNX,LOX,PRO,AEPHI,PSPHI,RCSM,DTKIN,VADD)
+!     **************************************************************************
 !     **                                                               **
 !     **                                                               **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
@@ -3162,16 +3478,17 @@ END IF
       REAL(8)               :: PSEADD,PSEADD1
       REAL(8)               :: ETOT
       REAL(8)               :: POT(NR)
-!     *******************************************************************
+!     **************************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       C0LL=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
+      CALL WRITEPHI('test.dat',GID,NR,NB,pspsi)
 !
-!     ===================================================================
-!     == DENSITY MATRIX ==================================================
-!     ===================================================================
+!     ==========================================================================
+!     == DENSITY MATRIX                                                       ==
+!     ==========================================================================
       DENMAT(:,:)=0.D0
       DO IB=1,NB
         PROJ(:)=0.D0
@@ -3191,14 +3508,14 @@ DO LN=1,LNX
    WRITE(*,FMT='(10F10.5)')DENMAT(LN,:)
 ENDDO
 !
-!     ===================================================================
-!     == MULTIPOLE MOMENT=================================================
-!     ===================================================================
+!     ==========================================================================
+!     == MULTIPOLE MOMENT                                                     ==
+!     ==========================================================================
       AUX(:)=(AERHOC(:)-PSRHOC(:))/Y0
       DO LN1=1,LNX
         DO LN2=1,LNX
           AUX(:)=AUX(:)+DENMAT(LN1,LN2) &
-     &            *(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
+     &                 *(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
         ENDDO
       ENDDO
       AUX(:)=AUX(:)*R(:)**2
@@ -3207,9 +3524,9 @@ ENDDO
 !TAKE CARE OF FACTOR YLM!!!!
 PRINT*,'COMPENSATION CHARGE ',QLM*Y0
 !
-!     ===================================================================
-!     == KINETIC ENERGY AND CHARGE DENSITY ==============================
-!     ===================================================================
+!     ==========================================================================
+!     == KINETIC ENERGY AND CHARGE DENSITY                                    ==
+!     ==========================================================================
       PSRHO(:)=PSRHOC
       AUX(:)=0.D0
       DO IB=1,NB

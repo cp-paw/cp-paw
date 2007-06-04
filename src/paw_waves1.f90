@@ -5199,6 +5199,25 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
          END IF
        ENDDO              
 
+       do i=1,ntasks
+         if(icolor(i).eq.0) then
+           call error$msg('icolor has an element zero')
+           call error$i4val('i',i)
+           call error$i4val('icolor(i)',icolor(i))
+           call error$stop('WAVES_KDISTRIBUTE')
+         end if
+       enddo
+       do i=1,nkpt
+         if(kmap(i).eq.0) then
+           call error$msg('kmap has an element zero')
+           call error$i4val('i',i)
+           call error$i4val('kmap(i)',kmap(i))
+           call error$stop('WAVES_KDISTRIBUTE')
+         end if
+       enddo
+print*,'icolor ',icolor
+print*,'kmap ',kmap
+
        RETURN
        END
 !
