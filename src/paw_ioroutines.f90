@@ -356,12 +356,12 @@ CALL TRACE$PASS('DONE')
          !    HAVE TO CHANGE THE CODE BELOW FOR THE QUICK-FIX
          ISVAR=INDEX(CNTLNAME,-'.POLYMER_CNTL',BACK=.TRUE.)
          IF(ISVAR.GT.0) THEN      
-            ROOTNAME=CNTLNAME(1:ISVAR-1)//'_M'//.ITOS.SPLITKEY(THISTASK)
+            ROOTNAME=CNTLNAME(1:ISVAR-1)//-'_M'//.ITOS.SPLITKEY(THISTASK)
          ELSE
             CALL ERROR$MSG('ROOTNAME FOR POLYMER EMPTY')
             CALL ERROR$STOP('READIN')
          END IF
-         CNTLNAME=TRIM(ADJUSTL(ROOTNAME))//'.CNTL'
+         CNTLNAME=TRIM(ADJUSTL(ROOTNAME))//-'.CNTL'
          !ALEXP-DIMER END
 
       ELSE
@@ -3135,8 +3135,69 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                CALL LINKEDLIST$GET(LL_CNTL,'OPTFRICROT',1,SVARL)
                CALL DIMER$SETL4('OPTFRICROT',SVARL)
             END IF
+
+
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'TMAXPARA',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'TMAXPARA',1,SVARR)
+               CALL DIMER$SETR8('TMAXPARA',SVARR)
+            END IF
+
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'TMAXPERP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'TMAXPERP',1,SVARR)
+               CALL DIMER$SETR8('TMAXPERP',SVARR)
+            END IF
+
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'TMAXROT',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'TMAXROT',1,SVARR)
+               CALL DIMER$SETR8('TMAXROT',SVARR)
+            END IF
+
+
+
+            !ForceAutopilot
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FAUTOPARA',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FAUTOPARA',1,SVARL)
+               CALL DIMER$SETL4('FAUTOPARA',SVARL)
+            END IF
             
-         END IF
+
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FAUTOPERP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FAUTOPERP',1,SVARL)
+               CALL DIMER$SETL4('FAUTOPERP',SVARL)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FAUTOROT',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FAUTOROT',1,SVARL)
+               CALL DIMER$SETL4('FAUTOROT',SVARL)
+            END IF
+
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC(+)PARA',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FRIC(+)PARA',1,SVARR)
+               CALL DIMER$SETR8('FRICAUTOPARA',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC(+)PERP',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FRIC(+)PERP',1,SVARR)
+               CALL DIMER$SETR8('FRICAUTOPERP',SVARR)
+            END IF
+            
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC(+)ROT',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'FRIC(+)ROT',1,SVARR)
+               CALL DIMER$SETR8('FRICAUTOROT',SVARR)
+            END IF
+            
+            
+         end IF
+
          
 !     ========LENGTH CONTROL ================================        
          CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -3168,6 +3229,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             IF(TCHK) THEN
                CALL LINKEDLIST$GET(LL_CNTL,'DSTEP',1,SVARR)
                CALL DIMER$SETR8('DSTEP',SVARR)
+            END IF
+
+            CALL LINKEDLIST$EXISTD(LL_CNTL,'NSTEPS',0,TCHK)
+            IF(TCHK) THEN
+               CALL LINKEDLIST$GET(LL_CNTL,'NSTEPS',1,SVARI)
+               CALL DIMER$SETI4('NSTEPS',SVARI)
             END IF
             
             CALL LINKEDLIST$EXISTD(LL_CNTL,'DTOBE',0,TCHK)

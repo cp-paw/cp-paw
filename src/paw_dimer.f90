@@ -17,6 +17,9 @@ real(8)                       :: RCDIFF    !difference in dimer center position
 real(8),allocatable,save            :: RC(:)        !dimer center position
 real(8),allocatable,save            :: RCOLD(:)     !dimer center position in last step
 real(8)                       :: DSTEP     !d=d-dstep
+integer(4)                    :: NSTEPS
+real(8)                       :: stepfact
+logical(4)                    :: tinitstepfact=.false.
 real(8)                       :: DMIN    !the minimal dimer length (no further reducement of d)
 real(8)                       :: wdownfact
 real(8),allocatable           :: F1W(:) !the weighted force
@@ -51,11 +54,18 @@ real(8)                       :: STRETCHDIST
 
 real(8)                       :: fmpara,fmperp,fmrot,fricpara,fricperp,fricrot
 logical(4)                    :: optfricpara,optfricperp,optfricrot
+logical(4)                    :: fautopara,fautoperp,fautorot
+real(8)                       :: fricautopara,fricautoperp,fricautorot
 real(8),allocatable           :: frotm(:),fperpm(:),fparam(:)
 real(8)                       :: CONSTRSTEP !max step for constraint
 real(8)                       :: ekinparam
 real(8)                       :: ekinperpm
 real(8)                       :: ekinrotm 
+real(8)                       :: Tparam
+real(8)                       :: Tperpm
+real(8)                       :: Trotm 
+real(8)                       :: tfact=2.d0/(3.166679d-6) !per deg. of freedom; to do: get k from paw constants
+
 !========================================================
   TYPE DIMER_CONSTR_TYPE
      CHARACTER(32)                    :: ID        !KEYWORD
@@ -92,8 +102,9 @@ real(8)                       :: ekinrotm
 
   real(8),allocatable      :: g1(:)
   real(8),allocatable      :: g2(:)
-    
+  integer(4)               :: steps=0
 
+  real(8)                  :: etot,etot2 !for ts estimation
 end MODULE DIMER_MODULE
 
 module dimer_oscillator_module
@@ -105,6 +116,16 @@ module dimer_oscillator_module
   real(8),allocatable       :: oscanner(:)
   real(8),allocatable       :: oscc(:) !the harmonic potential
 end module dimer_oscillator_module
+
+module dimer_estimatets_module
+  real(8),allocatable       :: z1m(:)                  
+  real(8),allocatable       :: z2m(:)                  
+  real(8),allocatable       :: em(:)                  
+  real(8),allocatable       :: eorthom(:)                  
+  real(8)                   :: fparam
+  real(8)                   :: fperpm
+end module dimer_estimatets_module
+
 
 
 
@@ -189,6 +210,7 @@ end subroutine dimer_init_files
       REAL(8)               :: F1(nat*3),F2(nat*3) !FORCE FROM POTENTIAL
       integer(4)            :: NVAL,WORLD_ID,NWORLDTASKS
       INTEGER(4)            :: IAT
+
       CELLKIN=0.D0
       CELLKIN1=0.0d0
       CELLKIN2=0.0d0
@@ -206,7 +228,9 @@ end subroutine dimer_init_files
 
 
          if(thistask.eq.1) then
-
+            !get total energy from last step for TS estimate
+            call ENERGYLIST$RETURN('TOTAL ENERGY',etot)
+            
             !only 1st task in dimer has to do the following
             DIM=nat*3 !we need this TO INITIALIZE DIM because nat is read after dimer!
             MM(:,:)=0.0d0
@@ -237,12 +261,14 @@ end subroutine dimer_init_files
                call MPE$SEND('~',1,42,R1_)
                call MPE$SEND('~',1,43,R1)
                call MPE$SEND('~',1,44,F1)
+               call MPE$SEND('~',1,45,etot)
                
             else
                !we are WORLD_ID 1
                call MPE$RECEIVE('~',NVAL,42,R2_)
                call MPE$RECEIVE('~',NVAL,43,R2)
                call MPE$RECEIVE('~',NVAL,44,F2)
+               call MPE$RECEIVE('~',NVAL,45,etot2)
             end if
 
 
@@ -345,6 +371,7 @@ end subroutine dimer_init_files
       integer(4)               :: i,j,IAT
       logical(4)               :: perpfirst,parafirst,rotfirst
       real(8)                  :: fp1,fp2
+      real(8)                  :: s1,s2,a,b,c,d_
       !******************************************************************
 
       CELLKIN1=0.0d0
@@ -489,7 +516,7 @@ end subroutine dimer_init_files
       !calc unit vector in dimer direction
 
         SVAR=dot_product((R1-R2),(R1-R2))
-        SVARV=(R2-R1)/SVAR
+        SVARV=(R1-R2)/SVAR
 
         !project the forces on that direction
         fp1=dot_product(SVARV,F1)
@@ -497,37 +524,32 @@ end subroutine dimer_init_files
         write(dprotfil,*)"DIMER FORCES: I1: ",fp1," I2: ",fp2
 
 
-!should be handeled using the new omega2 code        
-!!$        write(dprotfil,*)"****************************************"
-!!$        write(dprotfil,*)"*               DIMER                  *"
-!!$        write(dprotfil,*)"*     Estimate for TS Coordinates      *"
-!!$        write(dprotfil,*)"****************************************"
-!!$!alexdebug        RTSOLD=RTS
-!!$        !--- estimate the saddlepoint by the null of the parallel forces
-!!$        !    for fp2>fp1 we have no negative slope and the TS predictes the
-!!$        !    min!
-!!$        if(fp2.gt.fp1) then
-!!$           write(dprotfil,*)"WARNING: POSITIVE SLOPE!"
-!!$        end if
-!!$
-!!$        RTS_=R1+SVARV*(-fp1*SVAR/(fp2-fp1))
-!!$        do i=1,dim
-!!$           write(dprotfil,*)RTS_(i)
-!!$        end do
-!!$        RTSOLD=RTSOLD-RTS_
-!!$        write(dprotfil,*)"TS ESTIMATE FROM DIMER CHANGED ABOUT ",sqrt(dot_product(RTSOLD,RTSOLD))
-!!$        write(dprotfil,*)"****************************************"
-!!$
-!!$        rts=rts
-!!$        RTSOLD=RTS_
-!!$        RTS_=R1P+(R2P-R1P)/2
-!!$        do i=1,dim
-!!$           write(dprotfil,*)RTS_(i)
-!!$        end do
-!!$        RTSOLD=RTSOLD-RTS_
-!!$        write(dprotfil,*)"TS ESTIMATE FROM DIMER CHANGED ABOUT ",sqrt(dot_product(RTSOLD,RTSOLD))
-!!$        write(dprotfil,*)"****************************************"
-      
+        write(dprotfil,*)"****************************************"
+        write(dprotfil,*)"*               DIMER                  *"
+        write(dprotfil,*)"*     Estimate for TS Coordinates      *"
+        write(dprotfil,*)"****************************************"
+        !alexdebug        RTSOLD=RTS
+        !--- estimate the saddlepoint by the null of the parallel forces
+        !    for fp2>fp1 we have no negative slope and the TS predictes the
+        !    min!
+        if(fp2*fp1.gt.0.d0) then 
+           write(dprotfil,*)"WARNING: POSITIVE SLOPE!"
+        end if
+
+        RTS_=R1-SVARV*(-fp1*SVAR/(fp2-fp1))
+        do i=1,(dim-2),3
+           write(dprotfil,FMT='(F15.5,A2,F15.5,A2,F15.5)')RTS_(i),',',RTS_(i+1),',',RTS_(i+2)
+        end do
+        RTSOLD=RTSOLD-RTS_
+        write(dprotfil,*)"TS ESTIMATE FROM DIMER CHANGED ABOUT ",sqrt(dot_product(RTSOLD,RTSOLD))
+        write(dprotfil,*)"****************************************"
+
+
+
+        !=========================================================
+        !========  ESTIMATE TS IN UNMASSWEIGHTED SPACE   =========
+        !=========================================================
+        call DIMER$ESTIMATETS(DIM,R1,R2,F1,F2,etot,etot2)
 
 
 
@@ -608,24 +630,45 @@ end subroutine dimer_init_files
              &acos(dot_product(svarv,angledir))&
              &*180.d0/(4.0*atan(1.0d0))
 
-      !=========================================================
-      !==========   THE DIMER'S LENGTH CONTROL       ===========
-      !=========================================================
-      RCDIFF=sqrt(dot_product(R1NC+(R2NC-R1NC)/2.0d0-(R1+(R2-R1)/2.0d0),&
-           &R1NC+(R2NC-R1NC)/2.0d0-(R1+(R2-R1)/2.0d0)))
 
-      if(DLFLEX.and.RCDIFF.lt.RCDIFFMIN) lc=lc+1 !increase counter
-      if(DLFLEX.and.RCDIFF.gt.RCDIFFMIN) lc=0 !reset counter
+        !=========================================================
+        !==========   THE DIMER'S LENGTH CONTROL       ===========
+        !=========================================================
+        write(dprotfil,*)"DIMER: INITIALIZED STEPFACT check ",tinitstepfact
+        if(.not.tinitstepfact) then
+           !init stepfact if needed:
+           if(nsteps.gt.0) then
+              stepfact=(dmin/D)**(real(1,kind=8)/real(nsteps,kind=8))
+              write(dprotfil,*)"DIMER: INITIALIZED STEPFACT TO ",stepfact
+           end if
+           tinitstepfact=.true.
+        end if
 
-      if(DLFLEX.and.lc.ge.lcs.and.((D-DSTEP).gt.DMIN)) then !shorten the length
-         !shorten dimer
-         sqdimerdist=(D-DSTEP)**2
-         D=D-DSTEP
-         SQD=SQDIMERDIST
-         write(dprotfil,*)"DIMER: DIMER_PROPAGATE: SHORTEND DIMER LENGTH TO ",SQRT(SQDIMERDIST)
-         !reset counter
-         lc=0
-      end if
+        RCDIFF=sqrt(dot_product(R1NC+(R2NC-R1NC)/2.0d0-(R1+(R2-R1)/2.0d0),&
+             &R1NC+(R2NC-R1NC)/2.0d0-(R1+(R2-R1)/2.0d0)))
+
+        if(DLFLEX.and.RCDIFF.lt.RCDIFFMIN) lc=lc+1 !increase counter
+        if(DLFLEX.and.RCDIFF.gt.RCDIFFMIN) lc=0 !reset counter
+
+        if(DLFLEX.and.lc.ge.lcs.and.((D-DSTEP).gt.DMIN)) then !shorten the length
+           if(nsteps.eq.0) then !we use dstep as stepsize
+              !shorten dimer
+              sqdimerdist=(D-DSTEP)**2
+              D=D-DSTEP
+              SQD=SQDIMERDIST
+              write(dprotfil,*)"DIMER: DIMER_PROPAGATE: SHORTEND DIMER LENGTH TO ",SQRT(SQDIMERDIST)
+           else
+              !shorten dimer %-tual such that after nsteps we have DMIN 
+              if((d-d*stepfact).le.dstep) then
+                 sqdimerdist=(D*stepfact)**2
+                 D=D*stepfact
+                 SQD=SQDIMERDIST
+                 write(dprotfil,*)"DIMER: DIMER_PROPAGATE: % SHORTEND DIMER LENGTH TO ",SQRT(SQDIMERDIST)
+              end if
+           end if
+           !reset counter
+           lc=0
+        end if
 
       if(DLFLEX.and.lc.ge.lcs.and.((D+DSTEP).lt.DMIN)) then !lengthen the dimer
          sqdimerdist=(D+DSTEP)**2
@@ -659,7 +702,156 @@ end subroutine dimer_init_files
     end SUBROUTINE DIMER_PROPAGATE
 
 
+!##################################################################
+SUBROUTINE DIMER$ESTIMATETS(N,R1,R2,F1,F2,etot,etot2)
+!##################################################################
+  use dimer_estimatets_module 
+  integer(4),intent(in)          :: N   !the dimensionality
+  real(8),intent(in)             :: r1(n)
+  real(8),intent(in)             :: r2(n)
+  real(8),intent(in)             :: f1(n)
+  real(8),intent(in)             :: f2(n)
+  real(8),intent(in)             :: etot
+  real(8),intent(in)             :: etot2
+  real(8)                        :: z10(n),z20(n)
+  real(8)                        :: e0(n)
+  real(8)                        :: f1ortho(n)
+  real(8)                        :: f2ortho(n)
+  real(8)                        :: eortho0(n)
+  real(8)                        :: cpara,cperp
+  real(8)                        :: fpara0,fperp0
+  real(8)                        :: spara,sperp
+  real(8)                        :: s1,s2,a,b,c,d_
+  real(8)                        :: dist
+  real(8)                        :: rvar1,rvar2
+  real(8)                        :: ets
+  real(8)                        :: xmax
 
+
+
+  if(.not.allocated(z1m)) allocate(z1m(n))
+  if(.not.allocated(z2m)) allocate(z2m(n))
+  if(.not.allocated(em)) allocate(em(n))
+  if(.not.allocated(eorthom)) allocate(eorthom(n))
+
+  z10(:)=(r1(:)+r2(:))/2.d0
+  z20(:)=r1(:)-r2(:)
+  dist=sqrt(dot_product(z20(:),z20(:)))
+
+  e0(:)=z20(:)/sqrt(dot_product(z20(:),z20(:)))
+  
+  
+  !=====================================================================
+  !==    determine the forces (directions referenced on image1)       ==
+  !==    we project on em directions                                  ==
+  !=====================================================================
+  f1ortho(:)=f1(:)-em(:)*dot_product(em(:),f1(:))
+  f2ortho(:)=f2(:)-em(:)*dot_product(em(:),f2(:))
+  
+  eortho0(:)=0.5d0*(f1ortho+f2ortho)/sqrt(dot_product(0.5d0*(f1ortho+f2ortho),&
+       &0.5d0*(f1ortho+f2ortho)))
+  
+  
+  fpara0=dot_product(em(:),(f1(:)+f2(:)))
+  fperp0=dot_product(eorthom,0.5d0*(f1(:)+f2(:)))
+
+
+
+
+
+
+  !============================================================================
+  !==    estimate etot in between image1 and 2 using a 3rd order polynomial ===
+  !============================================================================
+  !--- the slope parallel to the dimer
+  s1=-dot_product(e0(:),(f1(:)))
+  s2=-dot_product(e0(:),(f2(:)))
+
+  d_=etot
+  c=s1
+  a=-(2.d0*etot2+s2*dist+c*dist-2.d0*d_)/(-dist)**3
+  b=(s2-c-3.d0*a*dist**2)/(-2.d0*dist)
+
+  rvar1=-b/(3.d0*a)
+  if(rvar1**2-(c/(3.d0*a)).lt.0.d0) then
+     print*,'Error: value in sqrt negative!'
+     rvar2=sqrt(rvar1**2-(c/(3.d0*a)))
+  else
+     rvar2=sqrt(rvar1**2-(c/(3.d0*a)))
+  end if
+
+  if(s1*s2.lt.0.d0) then
+     !forces with opposite sign
+     if(rvar1+rvar2.lt.0.d0.and.rvar1+rvar2.gt.-dist) then
+        xmax=rvar1+rvar2
+     else
+        xmax=rvar1-rvar2
+     end if
+  else
+     !forces with same sign
+     if(s1.gt.0d0) then !both forces negative
+        if((rvar1+rvar2).gt.0.d0) then
+           xmax=rvar1+rvar2
+        else
+           xmax=rvar1-rvar2
+        end if
+     else !both forces positive
+        if((rvar1+rvar2).lt.-dist) then
+           xmax=rvar1+rvar2
+        else
+           xmax=rvar1-rvar2
+        end if
+     end if
+  end if
+
+
+  ets=a*xmax**3+b*xmax**2+c*xmax+d_
+  if(ets.lt.etot.or.ets.lt.etot2) then
+     print*,'Ets is smaller than etot or etot2!'
+  end if
+
+  print*,xmax
+  print*,s1,s2
+  print*,'ETOT1&2',etot,etot2
+  print*,'ETS ESTIMATE: ',ets
+
+
+
+  !=====================================================================
+  !==    estimate using deltaF - seems not be be exact enough!!!      ==
+  !=====================================================================
+
+  !==    determine the distances (directions referenced on image1)    ==
+  spara=dot_product(em,z10-z1m)
+  sperp=sqrt(dot_product((z10-z1m)-spara*em,(z10-z1m)-spara*em))
+  
+  cpara=-(fpara0-fparam)/spara
+  cperp=-(fperp0-fperpm)/sperp
+  
+  print*,fpara0,fparam,spara
+  print*,fperp0,fperpm,sperp
+  print*,'TS ESTIMATION: C VALUES',cpara,cperp
+  
+  !=== estimate F=0
+  print*,'TSDISTPARA',fpara0/cpara
+  print*,'TSDISTPERP',fperp0/cperp
+  
+  
+  
+  !=== keep some values for next turn
+  !=== we need to project them now on e0 (which is em for next cycle)
+  z1m=z10
+  z2m=z20
+  em=e0
+  eorthom=eortho0
+  !=== we need to project them now on e0 (which is em for next cycle)
+  fparam=dot_product(e0(:),(f1(:)+f2(:)))
+  fperpm=dot_product(eortho0,0.5d0*(f1(:)+f2(:)))
+  
+
+
+
+end SUBROUTINE DIMER$ESTIMATETS
 
 
 
@@ -1376,7 +1568,7 @@ SUBROUTINE DIMER$WRITEENERGYTRA(dim_,RP)
   real(8)                    :: ENERGY
   real(8)                    :: dist    !the distance to the transition state
   integer(4)                 :: nfil
-  real(8)                    :: etot
+  real(8)                    :: etot_
 
   if(firsttra) then
      firsttra=.false.
@@ -1432,7 +1624,8 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
 !ATTENTION: depends on not massweighted forces!!!         
 !      ** determines the optimal friction                    **
 !      ** supposing an harmonic potential                    **
-         use dimer_module ,only: dprotfil,ekinparam,ekinperpm,ekinrotm
+         use dimer_module ,only: dprotfil,ekinparam,ekinperpm,ekinrotm,Tparam,Tperpm,Trotm,&
+              &tfact,steps,fautopara,fautoperp,fautorot,fricautopara,fricautoperp,fricautorot
        implicit none
        integer(4),intent(in) :: n                                  ! 3*nat
        real(8)   ,intent(in) :: dt                                 ! timestep
@@ -1455,6 +1648,8 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        real(8)               :: vec1(n)
        real(8)               :: ekinpara,ekinperp,ekinrot
        real(8)               :: cpara,cperp,crot
+       real(8)               :: tpara,tperp,trot
+       real(8)               :: tfperp,tfrot
 !      ****************************************************************
        y10(:)=(x10(:)+x20(:))/2.d0
        y20(:)=x10(:)-x20(:)
@@ -1477,19 +1672,19 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        fperp0(:)=0.5d0*(f1ortho(:)+f2ortho(:))
 
 
-       if(dot_product(f1ortho(:),f2ortho(:)).lt.0.0d0) then
-          !antiparallel
-          if(dot_product(f1ortho(:),f1ortho(:)).lt.dot_product(f2ortho(:),f2ortho(:))) then
-             frot0(:)=f1ortho(:)
-          else if(dot_product(f1ortho(:),f1ortho(:)).gt.dot_product(f2ortho(:),f2ortho(:))) then
-             frot0(:)=-f2ortho(:)!- because we reference all on image one!!!
-          else
-             frot0(:)=0.0d0
-          end if
-       else
+!!$       if(dot_product(f1ortho(:),f2ortho(:)).lt.0.0d0) then
+!!$          !antiparallel
+!!$          if(dot_product(f1ortho(:),f1ortho(:)).lt.dot_product(f2ortho(:),f2ortho(:))) then
+!!$             frot0(:)=f1ortho(:)
+!!$          else if(dot_product(f1ortho(:),f1ortho(:)).gt.dot_product(f2ortho(:),f2ortho(:))) then
+!!$             frot0(:)=-f2ortho(:)!- because we reference all on image one!!!
+!!$          else
+!!$             frot0(:)=0.0d0
+!!$          end if
+!!$       else
           !parallel
           frot0(:)=0.5d0*(f1ortho(:)-f2ortho(:))
-       end if
+!        end if
 
        write(dprotfil,*)'perpforces',sqrt(dot_product(fperp0(:),fperp0(:)))
        write(dprotfil,*)'paraforces',sqrt(dot_product(fpara0(:),fpara0(:)))
@@ -1625,25 +1820,76 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        Ekinpara=abs(0.5d0*mpara*dot_product(xpara(:),xpara(:)))/dt**2
        Ekinperp=abs(0.5d0*mperp*dot_product(xperp(:),xperp(:)))/dt**2
        Ekinrot=abs(0.5d0*mrot*dot_product(xrot(:),xrot(:)))/dt**2
+       tfperp=tfact/real(n-1,kind=8)
+       tfrot=tfact/real(n,kind=8)
+       Tpara=ekinpara*tfact
+       Tperp=ekinperp*tfperp
+       Trot=ekinrot*tfrot
 
-       print*,'ekin:',ekinpara,ekinperp,ekinrot
-       if(ekinpara.gt.ekinparam) then
-          paraanner=0.5d0*dt*(ekinpara-ekinparam-dot_product(0.5d0*fpara0(:),xpara(:)))&
-               &*dt/dot_product(xpara(:),xpara(:))
-          print*,'used friction:',paraanner
+
+       print*,'Temperature',tpara,tperp,trot
+       print*,'Ekin:',ekinpara,ekinperp,ekinrot
+       print*,'maxt:',tparam,tperpm,trotm
+
+       if(tpara.gt.tparam) then
+          !          paraanner=0.5d0*dt*(ekinpara-ekinparam-dot_product(0.5d0*fpara0(:),xpara(:)))&
+          !               &*dt/dot_product(xpara(:),xpara(:))
+          !new testcode:we have optfric from above and add \Delta E
+          svar=abs(0.5d0*dt*dt*(ekinpara-tparam/tfact)/(dot_product(xpara(:),xpara(:))*mpara))
+          paraanner=paraanner+svar
+          print*,'corrected parallel friction: (value/delta)',paraanner,svar
        end if
 
-       if(ekinperp.gt.ekinperpm) then
-          perpanner=0.5d0*dt*(ekinperp-ekinperpm-dot_product(0.5d0*fperp0(:),xperp(:)))&
-               &*dt/dot_product(xperp(:),xperp(:))
-          print*,'used friction:',perpanner
+       if(tperp.gt.tperpm) then
+          !perpanner=0.5d0*dt*(ekinperp-ekinperpm-dot_product(0.5d0*fperp0(:),xperp(:)))&
+          !     &*dt/dot_product(xperp(:),xperp(:))
+          svar=abs(0.5d0*dt*dt*(ekinperp-tperpm/tfperp)/(dot_product(xperp(:),xperp(:))*mperp))
+          perpanner=perpanner+svar
+          print*,'corrected perp friction: (value/delta)',perpanner,svar
        end if
 
-       if(ekinrot.gt.ekinrotm) then
-          rotanner=0.5d0*dt*(ekinrot-ekinrotm-dot_product(0.5d0*frot0(:),xrot(:)))&
-               &*dt/dot_product(xrot(:),xrot(:))
-          print*,'used friction:',rotanner
+       if(trot.gt.trotm) then
+          !rotanner=0.5d0*dt*(ekinrot-ekinrotm-dot_product(0.5d0*frot0(:),xrot(:)))&
+          !     &*dt/dot_product(xrot(:),xrot(:))
+          svar=abs(0.5d0*dt*dt*(ekinrot-trotm/tfrot)/(dot_product(xrot(:),xrot(:))*mrot))
+          rotanner=rotanner+svar
+          print*,'corrected rot friction: (value/delta)',rotanner,svar
        end if
+
+
+!      =====================================================================
+!      ==                  USE FORCE AUTOPILOT                            ==
+!      =====================================================================
+       !calc 10 steps (do not quench start-up wriggles)
+       if(steps.gt.10) then
+          if(fautopara) then
+             print*,'dirpara',dot_product(xpara,fpara0)
+             if((dot_product(xpara,fpara0).gt.0.d0).and.(paraanner.lt.fricautopara)) then
+                paraanner=fricautopara
+                print*,'force autopilot corrected para friction'
+             end if
+          end if
+
+          if(fautoperp) then
+             print*,'dirperp',dot_product(xperp,fperp0)
+             if((dot_product(xperp,fperp0).lt.0.d0).and.(perpanner.lt.fricautoperp)) then
+                perpanner=fricautoperp
+                print*,'force autopilot corrected perp friction'
+             end if
+          end if
+
+          if(fautorot) then
+             print*,'dirrot',dot_product(xrot,frot0)
+             if((dot_product(xrot,frot0).lt.0.d0).and.(rotanner.lt.fricautorot)) then
+                rotanner=fricautorot
+                print*,'force autopilot corrected rot friction'
+             end if
+          end if
+       else
+          steps=steps+1
+       end if
+
+
 
 
 !      =====================================================================
@@ -1867,6 +2113,18 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
         CONSTRSTEP=VAL_
       ELSE IF(ID_.EQ.'DLAMBDA') THEN
         DLAMBDA=VAL_
+      ELSE IF(ID_.EQ.'TMAXPARA') THEN
+        Tparam=VAL_
+      ELSE IF(ID_.EQ.'TMAXROT') THEN
+        Trotm=VAL_
+      ELSE IF(ID_.EQ.'TMAXPERP') THEN
+        Tperpm=VAL_
+      ELSE IF(ID_.EQ.'FRICAUTOPARA') THEN
+        fricautopara=VAL_
+      ELSE IF(ID_.EQ.'FRICAUTOPERP') THEN
+        fricautoperp=VAL_
+      ELSE IF(ID_.EQ.'FRICAUTOROT') THEN
+        fricautorot=VAL_
 
 !alex: this is for pclimb-testing!
       ELSE IF(ID_.EQ.'FORCEDSTEP') THEN
@@ -2033,6 +2291,13 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
         OPTFRICROT=VAL_
       ELSE IF(ID_.EQ.'DLFLEX') THEN
         DLFLEX=VAL_
+      ELSE IF(ID_.EQ.'FAUTOPARA') THEN
+        FAUTOPARA=VAL_
+      ELSE IF(ID_.EQ.'FAUTOPERP') THEN
+        FAUTOPERP=VAL_
+      ELSE IF(ID_.EQ.'FAUTOROT') THEN
+        FAUTOROT=VAL_
+
 !alex: this is for pclimb-testing!
       ELSE IF(ID_.EQ.'CLIMBPERP') THEN
        CLIMBPERP =VAL_
@@ -2086,6 +2351,8 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
 !     ******************************************************************
       IF(ID_.EQ.'CLACMULTIPLIERITERMAX') THEN
         CALCMULTIPLIERITERMAX=VAL_
+      ELSE IF(ID_.EQ.'NSTEPS') THEN
+        NSTEPS=VAL_
       ELSE IF(ID_.EQ.'LCS') THEN
         LCS=VAL_
 !      ELSE IF(ID_.EQ.'STRETCH') THEN
@@ -2215,6 +2482,7 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
         lcs                   =   1       !how many steps with no ch.of dimercent. bef. shorten sqd
         RCDIFFMIN             =   0.0001  !difference in dimer center position below lc=lc+1 
         DSTEP                 =   0.0050   !d=d-dstep
+        NSTEPS                =   0       !if 0 we use dstep
         DMIN                  =   0.4d0   !the minimal dimer length (no further reducement of d)
         DLFLEX                =  .false.  !flexible dimer length
         KDLENGTH              =  .false.   !keep the length of the startup
@@ -2239,10 +2507,16 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
         optfricperp           = .false.
         optfricrot            = .false.  
         constrstep            = 0.01d0
-        ekinparam             = 5.d0
-        ekinperpm             = 5.d0
-        ekinrotm              = 5.d0
+        tparam                = 500.d0
+        tperpm                = 500.d0
+        trotm                 = 500.d0
         
+        FAUTOPARA             =.false.
+        FAUTOPERP             =.false.
+        FAUTOROT              =.false.
+        FRICAUTOPARA          = 0.05d0
+        FRICAUTOPERP          = 0.05d0
+        FRICAUTOROT           = 0.05d0
 
 !alex: this is for pclimb-testing!
         CLIMBPERP             = .false.
@@ -2338,6 +2612,7 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
       write(nfil,*) "lcs ",lcs                     
       write(nfil,*) "RCDIFFMIN ",RCDIFFMIN              
       write(nfil,*) "DSTEP ",DSTEP                   
+      write(nfil,*) "NSTEPS ",NSTEPS                   
       write(nfil,*) "DMIN ",DMIN                   
       write(nfil,*) "DLFLEX ",DLFLEX                  
       write(nfil,*) "KDLENGTH ",KDLENGTH               
@@ -2360,6 +2635,16 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
       write(nfil,*)"optfricpara ",optfricpara
       write(nfil,*)"optfricperp ",optfricperp
       write(nfil,*)"optfricrot ",optfricrot
+      write(nfil,*)"FAUTOPARA", FAUTOPARA   
+      write(nfil,*)"FAUTOPERP",  FAUTOPERP  
+      write(nfil,*)"FAUTOROT",    FAUTOROT
+      write(nfil,*)"FRICAUTOPARA",FRICAUTOPARA 
+      write(nfil,*)"FRICAUTOPERP",FRICAUTOPERP
+      write(nfil,*)"FRICAUTOROT",FRICAUTOROT
+
+      write(nfil,*)"TMAXPARA ",tparam
+      write(nfil,*)"TMAXPERP ",tperpm
+      write(nfil,*)"TMAXROT ",trotm
       write(nfil,*)"CONSTRSTEP ",CONSTRSTEP
       !REPORT THE CONSTRAINTS
       IF(ASSOCIATED(ELDEST_D)) THEN
@@ -2383,7 +2668,7 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
       write(nfil,*)"FORCEDSTEP ",FORCEDSTEP
       write(nfil,*)"TFIRSTCLIMBSTEP ",TFIRSTCLIMBSTEP
       !alex: this is for pclimb-testing!
-      
+
       write(nfil,*)"========================================================"
     END SUBROUTINE DIMER$REPORT_SETTINGS
     
@@ -2990,13 +3275,13 @@ end SUBROUTINE PLACEROT
 !!$  return
 !!$end subroutine dimer$reread
 
+
 subroutine dimer_proposcillator(dt,i,force)
   use dimer_oscillator_module
   real(8),intent(in)                 :: dt
   integer(4),intent(in)              :: i       !which array
   real(8),intent(inout)              :: force   !extra force
-
-  real(8)                         :: svar1,svar2
+  real(8)                            :: svar1,svar2
 
   !desription: we use the incoming value as extra force of a driven oscillator.
   !the return force value is the value of the actual force of the oscillator 

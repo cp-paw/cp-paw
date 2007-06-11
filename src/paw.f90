@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/main/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 731 $'
+character(256):: VERrev='$LastChangedRevision: 750 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-06-02 15:57:50 +0200 (Sa, 02. Jun 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-06-11 18:39:51 +0200 (Mo, 11. Jun 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -128,11 +128,13 @@ end Module version_module
 !     ====  READ CONTROL INPUT DATA FILE "CNTL"                     ====
 !     ==================================================================
       CALL READIN(NBEG,NOMORE,IPRINT,DELT,TMERMN,TNWSTR)
+
 !
 !     ==================================================================
 !     ==  READ STRUCTURAL DATA FROM FILE "STRC"                       ==
 !     ==================================================================
       CALL STRCIN
+
 
 !     ==================================================================
 !     ==  SET DIMER DIMENSION                                         ==
