@@ -129,10 +129,9 @@ DO4="$CPP -P -C $CPPVAR"
 if test "${SPECIAL}" = "IBM" ; then
   # leave xlf compiler directives intact
   DO2="cat" 
-  if test "$DO1" = "cat" ; then
+  if test "$DO1" != "cat" ; then
     DO1="${POE_PREFIX} $DO1 ${POE_SUFFIX}"
   fi
-  echo "DO1=$DO1"
 fi
 #
 ########################################################################

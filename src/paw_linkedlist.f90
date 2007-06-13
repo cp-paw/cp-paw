@@ -772,17 +772,26 @@ END MODULE LLIST_MODULE
       CHARACTER(*),INTENT(OUT)  :: TO(TOSIZE)
       CHARACTER(1),INTENT(IN)   :: FROM(NFROM)
       INTEGER(4)                :: I,J,IJ
-      INTEGER(4)                :: TOLEN
+      INTEGER(4)                :: TOLEN,fromlen
 !     ******************************************************************
       TOLEN=LEN(TO)
+      fromlen=nfrom/tosize
+      if(fromlen*tosize.ne.nfrom) then
+        call error$msg('inconsistent array sizes')
+        call error$stop('LINKEDLIST_TRANSFERCHFROM1')
+      end if
       IJ=0
       DO I=1,TOSIZE
         TO(I)=' '
-        DO J=1,TOLEN
+        DO J=1,fromlen
           IJ=IJ+1
           TO(I)(J:J)=FROM(IJ)
         ENDDO
       ENDDO
+!print*,'chfrom1',tosize,tolen,nfrom
+!do i=1,tosize
+!  print*,'chfrom1',i,' |',to(i),'|'
+!enddo
       RETURN
       END SUBROUTINE LINKEDLIST_TRANSFERCHFROM1
 !
@@ -1772,6 +1781,7 @@ CONTAINS
 !     == USE AN EXPLICIT COPY FROM THE STRING ARRAY INTO A CHARACTER ARRAY.
 !     == USING TRANSFER DID CORRUPT LONGER STRINGS
       CALL LINKEDLIST_TRANSFERCHTO1(LENG,VAL,LENG*LENVAL,CHARVAL)
+!      CHARVAL=TRANSFER(VAL(:)(1:LENVAL),CHARVAL) 
       CALL LINKEDLIST_SETGENERIC(LIST,ID,NTH,STRING,LENG,CHARVAL)
       RETURN
       END SUBROUTINE LINKEDLIST_SETCHR1WITHLENGTH
@@ -1834,7 +1844,9 @@ CONTAINS
       I2=INDEX(STRING,')')
       READ(STRING(I1+1:I2-1),*)KIND
 !     == MAP STORED DATA ONTO VAL ====================================
-      VAL=<RESHAPE(>TRANSFER(CHARVAL,MOLD(1:KIND)<,SIZE>)<RESHAPE)>
+!      val=' '
+!      VAL=<RESHAPE(>TRANSFER(CHARVAL,MOLD(1:KIND)<,SIZE>)<RESHAPE)>
+      call LINKEDLIST_TRANSFERCHFROM1(kind*leng,charval,leng,val)
       RETURN 
       END SUBROUTINE LINKEDLIST$GETCH<RANKID>
 #END TEMPLATE LINKEDLIST$GETCHAR
@@ -1884,7 +1896,8 @@ CONTAINS
       I2=INDEX(STRING,')')
       READ(STRING(I1+1:I2-1),*)KIND
 !     == MAP STORED DATA ONTO VAL ====================================
-      VAL=RESHAPE(TRANSFER(CHARVAL,MOLD(1:KIND),leng),shape(val))
+!      VAL=RESHAPE(TRANSFER(CHARVAL,MOLD(1:KIND),leng),shape(val))
+      call LINKEDLIST_TRANSFERCHFROM1(kind*leng,charval,leng,val)
       RETURN 
       END SUBROUTINE LINKEDLIST_GETCHR1WITHLENGTH
 !     
