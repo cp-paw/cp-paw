@@ -35,18 +35,19 @@
 !***********************************************************************
 !
 !=========================================================================
-!==includefile for mpi                                                  ==
+!==INCLUDEFILE FOR MPI                                                  ==
 !=========================================================================
-MODULE MPI
+MODULE MPI_MINE
 #IFDEF CPPVARIABLE_PARALLEL
-!  include file is uppercase on purpose. 
+!  INCLUDE FILE IS UPPERCASE ON PURPOSE. 
    INCLUDE 'MPIF.H'    
 #ENDIF
-END MODULE MPI
+END MODULE MPI_MINE
 !
 MODULE MPE_MPIF_MODULE
 #IFDEF CPPVARIABLE_PARALLEL
-  use mpi
+  USE MPI_MINE
+!  USE MPI
 #ENDIF
   TYPE THISTYPE
     CHARACTER(128)     :: ID
@@ -61,18 +62,67 @@ MODULE MPE_MPIF_MODULE
   INTEGER         :: COMM
   INTEGER         :: NTASKS
   INTEGER         :: THISTASK
+  INTEGER         :: THISTASK_WORLD
   INTEGER,POINTER :: SENDTAG(:)
   INTEGER,POINTER :: RECEIVETAG(:)
   TYPE(THISTYPE),POINTER :: FIRSTTHIS
-  TYPE(THISTYPE),POINTER :: this
+  TYPE(THISTYPE),POINTER :: THIS
 #IFDEF CPPVARIABLE_PARALLEL
 !__DATATYPES CONNECTED WITH KIND PARAMETERS
 !__FOR MPI1: USE INTEGER(4)=INTEGER*4, REAL(8)=INTEGER*8, COMPLEX(8)=COMPLEX*16
 !__FOR MPI2: RECALCULATE VALUES IN MPE$INIT
   INTEGER,SAVE    :: MY_MPITYPE_INTEGER_KIND4=MPI_INTEGER4
-  INTEGER,SAVE    :: MY_MPITYPE_REAL_KIND4=MPI_real4
+  INTEGER,SAVE    :: MY_MPITYPE_REAL_KIND4=MPI_REAL4
   INTEGER,SAVE    :: MY_MPITYPE_REAL_KIND8=MPI_REAL8
-  INTEGER,SAVE    :: MY_MPITYPE_COMPLEX_KIND8=MPI_double_complex
+  INTEGER,SAVE    :: MY_MPITYPE_COMPLEX_KIND8=MPI_DOUBLE_COMPLEX
+CONTAINS
+!     .............................................................................
+      SUBROUTINE MPE_CHARTOASCII(LENCH,STRING,LENI,IASCII)
+      IMPLICIT  NONE
+      CHARACTER(*),INTENT(IN) :: STRING(LENCH)
+      INTEGER     ,INTENT(IN) :: LENCH
+      INTEGER     ,INTENT(IN) :: LENI
+      INTEGER(4)  ,INTENT(OUT):: IASCII(LENI)
+      INTEGER(4)              :: LENG,I,J,K
+!     *******************************************************************************
+      LENG=LEN(STRING)
+      IF(LENG*LENCH.NE.LENI) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY SIZES')
+        CALL ERROR$STOP('MPE_CHARTOASCII')
+      END IF
+      K=0
+      DO I=1,LENCH
+        DO J=1,LENG
+          K=K+1
+          IASCII(K)=ICHAR(STRING(I)(J:J))
+        ENDDO
+      ENDDO
+      RETURN
+      END SUBROUTINE MPE_CHARTOASCII
+!
+!     .............................................................................
+      SUBROUTINE MPE_CHARFROMASCII(LENCH,STRING,LENI,IASCII)
+      IMPLICIT  NONE
+      CHARACTER(*),INTENT(OUT):: STRING(LENCH)
+      INTEGER     ,INTENT(IN) :: LENCH
+      INTEGER     ,INTENT(IN) :: LENI
+      INTEGER(4)  ,INTENT(IN) :: IASCII(LENI)
+      INTEGER(4)              :: LENG,I,J,K
+!     *******************************************************************************
+      LENG=LEN(STRING)
+      IF(LENG*LENCH.NE.LENI) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY SIZES')
+        CALL ERROR$STOP('MPE_CHARFROMASCII')
+      END IF
+      K=0
+      DO I=1,LENCH
+        DO J=1,LENG
+          K=K+1
+          STRING(I)(J:J)=CHAR(IASCII(K))
+        ENDDO
+      ENDDO
+      RETURN
+      END SUBROUTINE MPE_CHARFROMASCII
 #ENDIF
 END MODULE MPE_MPIF_MODULE
 !      ..................................................................
@@ -94,7 +144,7 @@ END MODULE MPE_MPIF_MODULE
            COMM=THIS%COMM
            SENDTAG=>THIS%SENDTAG
            RECEIVETAG=>THIS%RECEIVETAG
-           exit
+           EXIT
          ELSE
            IF(ASSOCIATED(THIS%NEXT)) THEN
              THIS=>THIS%NEXT
@@ -295,15 +345,17 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
       INTEGER                    :: FROMTASK0
       INTEGER                    :: IERR
-      character(128)             :: errorstring
-      integer                    :: errorstringlen
+      CHARACTER(128)             :: ERRORSTRING
+      INTEGER                    :: ERRORSTRINGLEN
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
       CALL MPE$SELECT(CID)
       FROMTASK0=FROMTASK-1
-!print*,'before  MPE$BROADCAST<TYPEID><RANKID> ',' <MPI_TYPE> ',<MPI_TYPE>,<SIZE>,val,comm
+PRINT*,THISTASK_WORLD,TRIM(THIS%ID),THISTASK,'BEFORE  MPE$BROADCAST<TYPEID><RANKID> ' &
+&     ,VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,COMM
       CALL MPI_BCAST(VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,COMM,IERR)
-!print*,'after  MPE$BROADCAST<TYPEID><RANKID> ',' <MPI_TYPE> ',<MPI_TYPE>,<SIZE>,val,comm
+PRINT*,THISTASK_WORLD,TRIM(THIS%ID),THISTASK,'AFTER  MPE$BROADCAST<TYPEID><RANKID> ' &
+&     ,VAL,<SIZE>,<MPI_TYPE>,FROMTASK0,COMM,IERR
       IF(IERR.NE.0) THEN
         CALL MPI_ERROR_STRING(IERR,ERRORSTRING,ERRORSTRINGLEN)
         CALL ERROR$MSG('MPI ERROR')
@@ -403,7 +455,7 @@ CONTAINS
                  =([R6],[SIZE(VAL)],[(:,:,:,:,:,:)])
 #BODY
 !     ..................................................................
-      SUBROUTINE MPE$SENDRECEIVE<TYPEID><RANKID>(CID,FROMTASK,TOTASK,VAL,msgid_)
+      SUBROUTINE MPE$SENDRECEIVE<TYPEID><RANKID>(CID,FROMTASK,TOTASK,VAL,MSGID_)
 !     ******************************************************************
 !     **                                                              **
 !     **  NAME: MPE$SENDRECEIVE                                       **
@@ -422,8 +474,8 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN)    :: FROMTASK
       INTEGER(4)  ,INTENT(IN)    :: TOTASK
       <TYPE>      ,INTENT(INOUT) :: VAL<RANK>
-      character(*),intent(in),optional :: msgid_
-      character(32)              :: msgid
+      CHARACTER(*),INTENT(IN),OPTIONAL :: MSGID_
+      CHARACTER(32)              :: MSGID
       INTEGER                    :: TOTASK0
       INTEGER                    :: FROMTASK0
       INTEGER                    :: TAGSTD
@@ -435,12 +487,12 @@ CONTAINS
       IF(PRESENT(MSGID_)) THEN
         MSGID=MSGID_
         CALL MPE$SENDRECEIVECH(CID,FROMTASK,TOTASK,MSGID)
-        IF(trim(MSGID).NE.MSGID_) THEN
+        IF(TRIM(MSGID).NE.MSGID_) THEN
           CALL ERROR$I4VAL('THISTASK',THISTASK)
           CALL ERROR$I4VAL('FROMTASK',FROMTASK)
           CALL ERROR$I4VAL('TOTASK',TOTASK)
           CALL ERROR$CHVAL('MSGID_',MSGID_)
-          CALL ERROR$CHVAL('MSGID',trim(MSGID))
+          CALL ERROR$CHVAL('MSGID',TRIM(MSGID))
           CALL ERROR$STOP('MPE$SENDRECEIVE<TYPEID><RANKID>')
         END IF
       END IF
@@ -541,8 +593,7 @@ CONTAINS
       IF(THISTASK.EQ.FROMTASK) THEN
         CALL MPE_COUNTTAGS('SEND',TOTASK,TAGSTD)
         TOTASK0=TOTASK-1
-        CALL MPI_SEND(VAL,LEN(VAL),MPI_CHARACTER,TOTASK0,TAGSTD &
-     &               ,COMM,IERR)
+        CALL MPI_SEND(VAL,LEN(VAL),MPI_CHARACTER,TOTASK0,TAGSTD,COMM,IERR)
       ELSE IF(THISTASK.EQ.TOTASK) THEN
         CALL MPE_COUNTTAGS('RECEIVE',FROMTASK,TAGSTD)
         FROMTASK0=FROMTASK-1
@@ -895,7 +946,6 @@ CONTAINS
         ALLOCATE(VAL1(LENG))
                                    ! VAL1=RESHAPE(VAL,(/LENG/))
         VAL1(:)=TRANSFER(VAL,VAL1) ! RESHAPE FAILED FOR THE PATHSCALE COMPILER
-        CALL MPE$SYNC(CID)
         CALL MPI_ALLTOALL(VAL1,LENG1,<MPI_TYPE>,VAL,LENG1,<MPI_TYPE> &
      &                  ,COMM,IERR)
         DEALLOCATE(VAL1)
@@ -931,7 +981,7 @@ CONTAINS
                  =([R6],[SIZE(INVAL)],[(:,:,:,:,:,:)],[(:,:,:,:,:,:,:)],[(:,:,:,:,:,:,1)])
 #BODY
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MPE$GATHER<TYPEID><RANKID>(CID,TOTASK,INVAL,OUTVAL)
 !     ******************************************************************
 !     **                                                              **
@@ -1000,12 +1050,13 @@ END MODULE MPE_MODULE
       INTEGER                  :: IERR
       INTEGER     ,PARAMETER   :: MBYTE=2**20
       INTEGER     ,PARAMETER   :: BUFFER_SIZE=6*MBYTE
-      CHARACTER(1),POINTER     :: BUFFER(:)
-      real(4)                  :: xreal4
-      real(8)                  :: xreal8
-      complex(8)               :: xcomplex8
-      integer(4)               :: xinteger4
-      integer                  :: size
+!      CHARACTER(1),POINTER    :: BUFFER(:)
+      INTEGER(4),POINTER       :: BUFFER(:)
+      REAL(4)                  :: XREAL4
+      REAL(8)                  :: XREAL8
+      COMPLEX(8)               :: XCOMPLEX8
+      INTEGER(4)               :: XINTEGER4
+      INTEGER                  :: SIZE
 !     ******************************************************************
       IF(TINI) THEN
         CALL ERROR$MSG('MPE$INIT MUST ONLY BE CALLED ONCE')
@@ -1029,16 +1080,18 @@ END MODULE MPE_MODULE
 !     ==  PROVIDE A BUFFER TO BUFFER MESSAGES                       ==
 !     ==  SENT WITH MPI_NSEND AND MPI_IBSEND                        ==
 !     ================================================================
-      ALLOCATE(BUFFER(BUFFER_SIZE))
+      SIZE=1+INT(REAL(8*BUFFER_SIZE)/REAL(BIT_SIZE(BUFFER)))
+      ALLOCATE(BUFFER(SIZE))
       CALL MPI_BUFFER_ATTACH(BUFFER,BUFFER_SIZE,IERR)
 !     
 !     ================================================================
 !     ==  DETERMINE #(TASKS) AND NUMBER OF THIS TASK                ==
 !     ================================================================
-      comm=mpi_comm_world
+      COMM=MPI_COMM_WORLD
       CALL MPI_COMM_SIZE(COMM,NTASKS,IERR)
       CALL MPI_COMM_RANK(COMM,THISTASK,IERR)
       THISTASK= THISTASK+1
+      THISTASK_WORLD=THISTASK
       ALLOCATE(FIRSTTHIS)
       THIS=>FIRSTTHIS
       THIS%ID='~'
@@ -1051,14 +1104,14 @@ END MODULE MPE_MODULE
       THIS%RECEIVETAG(:)=0
       NULLIFY(THIS%NEXT)
       CALL MPE$SELECT('~')
-      call mpi_pcontrol(1,ierr)
+      CALL MPI_PCONTROL(1,IERR)
 #IFDEF CPPVAR_MPI2
       CALL MPI_SIZEOF(INTEGER4,SIZE,IERR)
-      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_INTEGER,SIZE,My_MPITYPE_INTEGER_kind4,IERR)
+      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_INTEGER,SIZE,MY_MPITYPE_INTEGER_KIND4,IERR)
       CALL MPI_SIZEOF(XREAL4,SIZE,IERR)
-      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_REAL,SIZE,MY_MPITYPE_REAL_kind4,IERR)
+      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_REAL,SIZE,MY_MPITYPE_REAL_KIND4,IERR)
       CALL MPI_SIZEOF(XREAL8,SIZE,IERR)
-      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_REAL,SIZE,MY_MPITYPE_REAL_kind8,IERR)
+      CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_REAL,SIZE,MY_MPITYPE_REAL_KIND8,IERR)
       CALL MPI_SIZEOF(XCOMPLEX8,SIZE,IERR)
       CALL MPI_TYPE_MATCH_SIZE(MPI_TYPECLASS_COMPLEX,SIZE,MY_MPITYPE_COMPLEX_KIND8,IERR)
 #ENDIF
@@ -1078,7 +1131,7 @@ END MODULE MPE_MODULE
       CHARACTER(*),INTENT(IN)  :: CID
       CHARACTER(*),INTENT(IN)  :: NEWCID
       INTEGER     ,INTENT(IN)  :: NTASKS_
-      INTEGER     ,INTENT(IN)  :: ICOLOR_(NTASKS)
+      INTEGER(4)  ,INTENT(IN)  :: ICOLOR_(NTASKS)
       INTEGER(4)               :: IERR
       INTEGER(4)               :: I
       INTEGER(4)               :: NEWCOMM
@@ -1093,25 +1146,25 @@ END MODULE MPE_MODULE
       ICOLOR(:)=ICOLOR_(:)
 !
 !     ===================================================================
-!     == the broadcast command is to ensure that icolor is identical   ==
-!     == on all tasks and to ensure that mpe$new is executed on all    ==
-!     == nodes of the corresponding group                              ==
+!     == THE BROADCAST COMMAND IS TO ENSURE THAT ICOLOR IS IDENTICAL   ==
+!     == ON ALL TASKS AND TO ENSURE THAT MPE$NEW IS EXECUTED ON ALL    ==
+!     == NODES OF THE CORRESPONDING GROUP                              ==
 !     ===================================================================
       CALL MPE$BROADCAST(CID,1,ICOLOR)
       ALLOCATE(THIS%NEXT)
       THIS=>THIS%NEXT
       THIS%ID=NEWCID
       NULLIFY(THIS%NEXT)
-!print*,'mpe$new',this%id,thistask,icolor
+!PRINT*,'MPE$NEW',THIS%ID,THISTASK,ICOLOR
       CALL MPI_COMM_SPLIT(COMM,ICOLOR(THISTASK),THISTASK-1,NEWCOMM,IERR)
       COMM=NEWCOMM
       THIS%COMM=COMM
       CALL MPI_COMM_SIZE(COMM,NTASKS,IERR)
-      THIS%NTASKS=ntasks
+      THIS%NTASKS=NTASKS
       CALL MPI_COMM_RANK(COMM,THISTASK,IERR)
-      thistask=thistask+1
-!print*,'mpe$new',this%id,thistask
-      THIS%THISTASK=thistask
+      THISTASK=THISTASK+1
+!PRINT*,'MPE$NEW',THIS%ID,THISTASK
+      THIS%THISTASK=THISTASK
       ALLOCATE(THIS%SENDTAG(NTASKS))
       ALLOCATE(THIS%RECEIVETAG(NTASKS))
       THIS%SENDTAG(:)=0
@@ -1203,56 +1256,55 @@ END MODULE MPE_MODULE
 #ENDIF
       RETURN
       END
-!
-!     ..................................................................
-      SUBROUTINE MPE$ISPARALLEL(IPARALLEL)
-!     ******************************************************************
-!     ** MPE$ISPARALLEL                                               **
-!     ******************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(OUT) :: IPARALLEL      
-!     ******************************************************************
-#IFDEF CPPVARIABLE_PARALLEL
-      IPARALLEL=1
-#ELSE
-      IPARALLEL=0
-#ENDIF
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE MPE$INDEX(CID,INVAL,OUTVAL,SIZE)
-!     ******************************************************************
-!     **                                                              **
-!     ** MPE$INDEX                                                    **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     ** 2 TASKS AOUT(TASK1) := (1,8), AOUT(TASK2) := (4,9)           **
-!     **         ARES(TASK1)  = (1,4), AOUT(TASK2)  = (8,9)           **
-!     **                                                              **
-!     ******************************************************************
-      USE MPE_MPIF_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)  :: CID   ! COMMUNICATOR ID
-      INTEGER(4)  ,INTENT(IN)  :: SIZE
-      CHARACTER(1),INTENT(IN)  :: INVAL(SIZE)
-      CHARACTER(1),INTENT(OUT) :: OUTVAL(SIZE)
-      INTEGER                  :: SIZESTD
-      INTEGER                  :: IERR
-!     ******************************************************************
-      CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION')
-      CALL ERROR$STOP('MPE$INDEX')
-#IFDEF CPPVARIABLE_PARALLEL
-      CALL MPE$SELECT(CID)
-      SIZESTD=SIZE
-      CALL MPI_ALLTOALL(INVAL,SIZESTD,MPI_BYTE,OUTVAL,SIZESTD &
-     &                  ,MPI_BYTE,COMM,IERR)
-#ELSE
-      OUTVAL(:)=INVAL(:)
-#ENDIF
-      RETURN
-      END
+!!$!
+!!$!     ..................................................................
+!!$      SUBROUTINE MPE$ISPARALLEL(IPARALLEL)
+!!$!     ******************************************************************
+!!$!     ** MPE$ISPARALLEL                                               **
+!!$!     ******************************************************************
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(OUT) :: IPARALLEL      
+!!$!     ******************************************************************
+!!$#IFDEF CPPVARIABLE_PARALLEL
+!!$      IPARALLEL=1
+!!$#ELSE
+!!$      IPARALLEL=0
+!!$#ENDIF
+!!$      RETURN
+!!$      END
+!!$!
+!!$!     ..................................................................
+!!$      SUBROUTINE MPE$INDEX(CID,INVAL,OUTVAL,SIZE)
+!!$!     ******************************************************************
+!!$!     **                                                              **
+!!$!     ** MPE$INDEX                                                    **
+!!$!     **                                                              **
+!!$!     **                                                              **
+!!$!     **                                                              **
+!!$!     ** 2 TASKS AOUT(TASK1) := (1,8), AOUT(TASK2) := (4,9)           **
+!!$!     **         ARES(TASK1)  = (1,4), AOUT(TASK2)  = (8,9)           **
+!!$!     **                                                              **
+!!$!     ******************************************************************
+!!$      USE MPE_MPIF_MODULE
+!!$      IMPLICIT NONE
+!!$      CHARACTER(*),INTENT(IN)  :: CID   ! COMMUNICATOR ID
+!!$      INTEGER(4)  ,INTENT(IN)  :: SIZE
+!!$      CHARACTER(1),INTENT(IN)  :: INVAL(SIZE)
+!!$      CHARACTER(1),INTENT(OUT) :: OUTVAL(SIZE)
+!!$      INTEGER                  :: SIZESTD
+!!$      INTEGER                  :: IERR
+!!$!     ******************************************************************
+!!$      CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION')
+!!$      CALL ERROR$STOP('MPE$INDEX')
+!!$#IFDEF CPPVARIABLE_PARALLEL
+!!$      CALL MPE$SELECT(CID)
+!!$      SIZESTD=SIZE
+!!$      CALL MPI_ALLTOALL(INVAL,SIZESTD,MPI_BYTE,OUTVAL,SIZESTD,MPI_BYTE,COMM,IERR)
+!!$#ELSE
+!!$      OUTVAL(:)=INVAL(:)
+!!$#ENDIF
+!!$      RETURN
+!!$      END
 ! 
 !     .....................................................................
       SUBROUTINE MPE_COUNTTAGS(ID,OTHERTASK,TAG)
@@ -1271,14 +1323,14 @@ END MODULE MPE_MODULE
         SENDTAG(TOTASK)=SENDTAG(TOTASK)+1
         IF(SENDTAG(TOTASK).GT.MAXTAG) SENDTAG(TOTASK)=1
         TAG=FROMTASK+NTASKS*(TOTASK-1+NTASKS*SENDTAG(TOTASK))
-!print*,'sendtag ',thistask,othertask,'::',sendtag,'--',tag
+!PRINT*,'SENDTAG ',THISTASK,OTHERTASK,'::',SENDTAG,'--',TAG
       ELSE IF(ID.EQ.'RECEIVE') THEN
         FROMTASK=OTHERTASK
         TOTASK=THISTASK
         RECEIVETAG(FROMTASK)=RECEIVETAG(FROMTASK)+1
         IF(RECEIVETAG(FROMTASK).GT.MAXTAG) RECEIVETAG(FROMTASK)=1
         TAG=FROMTASK+NTASKS*(TOTASK-1+NTASKS*RECEIVETAG(FROMTASK))
-!print*,'receivetag ',thistask,othertask,'::',receivetag,'--',tag
+!PRINT*,'RECEIVETAG ',THISTASK,OTHERTASK,'::',RECEIVETAG,'--',TAG
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED') 
         CALL ERROR$MSG('ALLOWED VALUES ARE SEND AND RECEIVE')
@@ -1293,17 +1345,18 @@ END MODULE MPE_MODULE
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NFIL
-      TYPE(THISTYPE),pointer :: CURRENT
+      TYPE(THISTYPE),POINTER :: CURRENT
       INTEGER(4)             :: NTASKS_WORLD
-      INTEGER(4)             :: THISTASK_WORLD
+      INTEGER(4)             :: THISTASK_WORLD1
       INTEGER(4)             :: NTASKS_CURRENT
       INTEGER(4)             :: THISTASK_CURRENT
       INTEGER(4),ALLOCATABLE :: ICOLOR(:)
-      INTEGER(4)             :: I,isvar
+      INTEGER(4)             :: I,ISVAR
       CHARACTER(128)         :: CID
 !     *********************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
-      CALL MPE$QUERY('~',NTASKS_WORLD,THISTASK_WORLD)
+                          CALL TRACE$PUSH('MPE$REPORT')
+      CALL MPE$QUERY('~',NTASKS_WORLD,THISTASK_WORLD1)
       ALLOCATE(ICOLOR(NTASKS_WORLD))      
       DO I=1,NTASKS_WORLD
         ICOLOR(I)=I
@@ -1316,22 +1369,14 @@ END MODULE MPE_MODULE
         CALL MPE$QUERY(CID,NTASKS_CURRENT,THISTASK_CURRENT)
         ICOLOR(:)=0
         ICOLOR(THISTASK_WORLD)=THISTASK_WORLD
-!print*,'marke 1 ',trim(cid),thistask_world,thistask_current,':',icolor
         CALL MPE$BROADCAST(CID,1,ICOLOR(THISTASK_WORLD))
-!!$isvar=ICOLOR(THISTASK_WORLD)
-!!$print*,'marke 1a ',trim(cid),thistask_world,thistask_current,':',isvar
-!!$CALL MPE$BROADCAST(CID,1,Isvar)
-!!$print*,'marke 1b ',trim(cid),thistask_world,thistask_current,':',isvar
-!!$ICOLOR(THISTASK_WORLD)=isvar
-!print*,'marke 2 ',trim(cid),thistask_world,thistask_current,':',icolor
         CALL MPE$COMBINE('~','+',ICOLOR)
-!print*,'marke 3 ',trim(cid),thistask_world,thistask_current,':',icolor
         WRITE(NFIL,FMT='(A10,20I4/T20,20I4)')CID,ICOLOR
         IF(.NOT.ASSOCIATED(CURRENT%NEXT)) EXIT 
         CURRENT=>CURRENT%NEXT
       ENDDO
-      deallocate(icolor)
-!call error$normalstop
+      DEALLOCATE(ICOLOR)
+                                  CALL TRACE$POP()
 #ENDIF
       RETURN
       END

@@ -40,7 +40,7 @@
       REAL(8)   ,ALLOCATABLE :: R(:)    ! RADIAL GROD
       REAL(8)   ,ALLOCATABLE :: RCL(:)
       INTEGER(4)             :: IRCUT ! PARTIAL WAVES TRUNCATED AT THIS RADIUS
-      REAL(8)                :: RBOX
+      REAL(8)                :: RBOX    ! atom is calculated in a box with radius rbox
       integer(4)             :: irbox
       REAL(8)                :: RCOV
       REAL(8)                :: Y0,PI
@@ -95,11 +95,14 @@
       INTEGER(4)             ::ISVAR1ARR(1)  ! USED TO RESHAPE AN ARRAY OF LENGTH 1
       CHARACTER(16)          :: PSEUDOPARTIALWAVEMETHOD
       character(16)          :: id
-      logical(4) ,parameter  :: trel=.false.
+      logical(4) ,parameter  :: trel=.false.  !switch between relativistic and non-relativistic
 !     **************************************************************************
       PI=4.D0*DATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS('EV',EV)
+!     ==========================================================================
+!     == connect standard files to the filehandler (reads input argument)
+!     ==========================================================================
       CALL ATTACHFILES()
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL TRACE$SETL4('ON',.TRUE.)
@@ -114,6 +117,13 @@
 !
 !     ==========================================================================
 !     == READ CONTROL FILE                                                    ==
+!     ==    rbox: atom is calculated in a hard box with radius rbox ,         ==
+!     ==          i.e.phi(rbox)=0                                             ==
+!     ==    ircut: partial waves are set to zero beyond ircut                 ==
+!     ==           default defined by rbox                                    ==
+!     ==    rcov : scale factor for input values                              ==
+!     ==           used for test of localizatiuon of compensation charge      ==
+!     ==           default value for rcl (cutoff for partial wave constr.)    ==
 !     ==========================================================================
       CALL READCNTL_DIMENSIONS(LL_CNTL,NB,LMAX,NAUGX)
       ALLOCATE(LOFI(NB))
@@ -160,12 +170,11 @@ call trace$pass('all-electron scf calculation')
 !     ==========================================================================
       ALLOCATE(AERHOC(NR))
       ALLOCATE(AERHOV(NR))
-!
-call trace$pass('determine core density')
       IF(TREL) THEN
         ID='FULL'
       ELSE
         ID='NONREL'
+        drel=0.d0
       END IF
       CALL AERHO(id,GID,NR,NC,LOFI(1:NC),SOFI(1:NC),FOFI(1:NC),NNOFI(1:NC) &
      &          ,rbox,DREL,AEPOT,AERHOC,EOFI(1:NC))
@@ -174,6 +183,8 @@ call trace$pass('determine core density')
 call trace$pass('determine valence density')
       CALL AERHO(id,GID,NR,NB-NC,LOFI(NC+1:NB),SOFI(NC+1:NB),FOFI(NC+1:NB) &
      &          ,NNOFI(NC+1:NB),rbox,DREL,AEPOT,AERHOV,EOFI(NC+1:NB))
+!cALL AERHO(id,GID,NR,NB,LOFI,SOFI,FOFI &
+!&          ,NNOFI,rbox,DREL,AEPOT,AERHOV,EOFI)
 !
 !     == REPORT ================================================================
       WRITE(NFILO,FMT='("EIGENSTATES AFTER NON-SCF CALCULATION IN SCF POT")')
@@ -197,6 +208,8 @@ call trace$pass('determine valence density')
      &             ,UOFI,TUOFI,EOFI)
 !
 !     == REPORT ================================================================
+!     == SMALL DEVIATIONS FOR THE HIGHEST STATES ARE PRESENT IF THE BOX RADIUS =
+!     == RBOX IS CHOSEN TOO SMALL. =============================================
       WRITE(NFILO,FMT='("EIGENSTATES FROM NODELESS CALCULATION")')
       DO IB=1,NB
         WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2 &
@@ -464,8 +477,8 @@ PRINT*,'V0',-(TPSPHI(1,:,L+1)/PSPHI(1,:,L+1)-EGRID(:,L+1))/Y0
           G=0.D0
           CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,0,G,L,EGRID(IB,L+1) &
        &                        ,1,PHI3(:,IB))
-          phi2(irbox:,ib)=0.d0
-          phi3(irbox:,ib)=0.d0
+          phi2(irbox+1:,ib)=0.d0
+          phi3(irbox+1:,ib)=0.d0
           ISVAR1ARR=MAXLOC(ABS(PSPHI(:ircut-1,IB,L+1)))
           IR=MIN(ISVAR1ARR(1),IRCUT-1)
           SVAR=(PSPHI(IR,IB,L+1)-PHI2(IR,IB))/PHI3(IR,IB)
@@ -864,15 +877,25 @@ print*,'done....'
         CALL LINKEDLIST$GET(LL_CNTL,'RBOX/RCOV',1,RBOX)
         RBOX=RBOX*RCOV   ! PROJECTORS AND PARTIAL WAVES TRUNCATED BEYOND THIS POINT
       ELSE
-        RBOX=R(NR)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'RBOX',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'RBOX',1,RBOX)
+        ELSE
+          RBOX=R(NR)
+        END IF
       END IF
       CALL REPORT$R8VAL(NFILO,'BOX RADIUS',RBOX,'A0')
 !
 !     ==========================================================================
 !     == DEFINE RADIUS UP TO WHICH THE DATA ARE STORED                        ==
 !     ==========================================================================
-      CALL LINKEDLIST$GET(LL_CNTL,'RCUT/RCOV',1,RCUT)
-      RCUT=RCUT*RCOV   ! PROJECTORS AND PARTIAL WAVES TRUNCATED BEYOND THIS POINT
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'RCUT/RCOV',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'RCUT/RCOV',1,RCUT)
+        RCUT=RCUT*RCOV   ! PROJECTORS AND PARTIAL WAVES TRUNCATED BEYOND THIS POINT
+      ELSE
+        RCUT=RBOX
+      end if
       CALL REPORT$R8VAL(NFILO,'TRUNCATION RADIUS',RCUT,'A0')
       DO IR=1,NR
         IRCUT=IR
@@ -2340,6 +2363,7 @@ ENDDO
       REAL(8)                    :: POTIN(NR)
       integer(4)                 :: irbox
       integer(4)                 :: ir
+      character(32)              :: id
 !     ***********************************************************************
       CALL RADIAL$R(GID,NR,R)
       irbox=0
@@ -2358,12 +2382,14 @@ ENDDO
         CALL MYMIXPOT('ON',GID,NR,POT,XMAX,XAV)
       END IF
       DO ITER=1,NITER
-        if(trel) then
+        IF(TREL) THEN
           CALL SCHROEDINGER$DREL(GID,NR,POT,EREF,DREL)
-        else
-          drel=0.d0
-        end if
-        CALL AERHO('FULL',GID,NR,NB,LOFI,SO,F,NN,rbox,drEL,POT,RHO,EOFI)
+          ID='FULL'
+        ELSE
+          DREL=0.D0
+          ID='NONREL'
+        END IF
+        CALL AERHO(ID,GID,NR,NB,LOFI,SO,F,NN,RBOX,DREL,POT,RHO,EOFI)
         RHO(:)=RHO(:)+RHOADD(:)
         EREF=EOFI(NB)
 !
@@ -2858,7 +2884,7 @@ PRINT*,'XMAX ',XMAX,XAV
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
       INTEGER(4)                 :: ISTART,IBI
       REAL(8)                    :: X0,DX,XM,ZM,Z0
-      REAL(8)    ,PARAMETER      :: TOL=1.D-8
+      REAL(8)    ,PARAMETER      :: TOL=1.D-12
       REAL(8)                    :: PI,Y0
       REAL(8)                    :: DER,DERO
       REAL(8)                    :: R(NR)
@@ -3498,6 +3524,9 @@ PRINT*,'LNX ',LNX
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
           PROJ(LN)=SVAR
         ENDDO
+print*,'pspsi ',sum(pspsi(:,ib))
+print*,'lox',lox
+print*,'proj',proj(:lnx)
         DO LN1=1,LNX
           DO LN2=1,LNX
             DENMAT(LN1,LN2)=DENMAT(LN1,LN2)+FOFI(IB)*PROJ(LN1)*PROJ(LN2)

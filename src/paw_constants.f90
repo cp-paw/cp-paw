@@ -65,9 +65,9 @@ MODULE CONSTANTS_MODULE
 !** CANDELA ....                                                      **
 !**********************************************************************=
 TYPE CONSTANT
-  CHARACTER*32 :: NAME
-  REAL(8)      :: VALUE
-  CHARACTER*64 :: DESCRIPTION
+  CHARACTER(32) :: NAME
+  REAL(8)       :: VALUE
+  CHARACTER(64) :: DESCRIPTION
 END TYPE CONSTANT
 INTEGER(4)    ,PARAMETER :: NCX=100
 INTEGER(4)               :: NC   ! ACTUAL #(CONSTANTS)

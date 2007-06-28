@@ -1425,6 +1425,7 @@ CLOSE(8)
       REAL(8)               ,ALLOCATABLE:: QEL(:)
       INTEGER(4)                        :: NTASKS,THISTASK
 !     ******************************************************************
+      tchk=.false.
       IF(.NOT.TON) RETURN
 !
 !     == WRITE SHADOW ======

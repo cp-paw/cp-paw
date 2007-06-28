@@ -55,6 +55,14 @@ AC_ARG_WITH(cpp,--with-cpp=LOCATION\
 AC_ARG_WITH(parmfile,--with-parmfile=PARMFILE\
   specify parameterfile - no automatic configuration,
             PARMFILE=$withval,PARMFILE=notset)
+if test "$PARMFILE" = "notset"; then
+ AC_MSG_ERROR(parmfile must be specified: use option --with-parmfile=parmfile)
+else
+ AC_CHECK_FILE($PARMFILE,TCHK="T",TCHK="F")
+ if test "$TCHK" = "F"; then
+   AC_MSG_ERROR(parmfile $PARMFILE not found)
+ fi
+fi
 #
 # Check for GNU make utility
 #

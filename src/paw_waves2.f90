@@ -108,9 +108,9 @@ IF(1.EQ.1) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
 ELSE
           ALLOCATE(THIS%OPSI(NGL,NDIM,NBH))
           THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
-!$$$$$$$$$$$$$$$$$$$$$$$$ FROM HERE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+!++++++++++++++++++++++++ FROM HERE +++++++++++++++++++++++++++++++++++++
           CALL WAVES_OPSI(NB,NBH,NPRO,NAT,NGL,R0,THIS%PROJ,THIS%OPSI)
-!$$$$$$$$$$$$$$$$$$$$$$$$ TO HERE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+!++++++++++++++++++++++++ TO HERE +++++++++++++++++++++++++++++++++++++++
 END IF
 !
 !         ==============================================================
@@ -2965,7 +2965,7 @@ call trace$pass('waves$write marke 4')
       INTEGER(4)              :: IFORMAT
       INTEGER(4) ,ALLOCATABLE :: IGVECG_(:,:)
       REAL(8)                 :: XG1,XG2,XG3
-      INTEGER(4)              :: NWAVE
+      INTEGER(4)              :: NWAVE,nfilo
       INTEGER(4) ,ALLOCATABLE :: MINUSG(:)
       LOGICAL(4)              :: TCHK
       COMPLEX(8)              :: F1,F2
@@ -3135,7 +3135,12 @@ call trace$pass('waves$write marke 4')
 !       ==  FOR ALL TASKS IF THERE ARE ALREADY BETTER DATA FOR THIS K-POINT
 !       ==  OR, IF DATA ARE READ, ON ALL TASKS THAT ARE NOT INVOLVED     ==
 !       ===================================================================
-        IF(TSKIP.OR.(.NOT.(THISTASK.EQ.1.OR.TKGROUP))) THEN
+!CALL FILEHANDLER$UNIT('PROT',NFILO)
+!write(nfilo,*)thistask,tkgroup,'ikpt',ikpt_
+!call mpe$report(nfilo)
+!call mpe$sync('~')
+!       IF(TSKIP.OR.(.NOT.(THISTASK.EQ.1.OR.TKGROUP))) THEN
+        IF(TSKIP) THEN
           IF(ALLOCATED(GVECG_))DEALLOCATE(GVECG_)
           IF(ALLOCATED(MINUSG))DEALLOCATE(MINUSG)
           CYCLE
@@ -3155,9 +3160,9 @@ call trace$pass('waves$write marke 4')
           DO I=1,IKPTG
             IF(KMAP(I).EQ.KMAP(IKPTG)) IKPTL=IKPTL+1
           ENDDO            
-         ELSE
-           IKPTL=0 ! MAKE SURE THE FIRST MONOMER-TASK CANNOT USE IT
-         END IF
+        ELSE
+          IKPTL=0 ! MAKE SURE THE FIRST MONOMER-TASK CANNOT USE IT
+        END IF
 !
 !       == SET DATA FOR FURTHER USE ==================================
         IF(TKGROUP) THEN
@@ -3436,6 +3441,10 @@ END IF
         END IF
         CALL WAVES_READLAMBDA(NFIL,IKPTG,.FALSE.)
       ENDDO
+!CALL FILEHANDLER$UNIT('PROT',NFILO)
+!call mpe$report(nfilo)
+!call mpe$sync('~')
+!call error$normalstop
 !
 !     ==================================================================
 !     ==  COMPLETE K-POINTS                                           ==
@@ -4507,7 +4516,7 @@ END MODULE TOTALSPIN_MODULE
       END SUBROUTINE WAVES_TOTALSPINRESET
 !
 !     ..................................................................
-      SUBROUTINE WAVES_TOTALSPIN(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
+      SUBROUTINE WAVES_TOTALSPIN(nbx,NB,NKPT,IKPT,NSPIN,OCC,QMAT)
 !     ******************************************************************
 !     **  CALCULATES <S^2>,<S_X>,<S_Y>,<S_X> IN UNITS OF HBAR^2       **
 !     **                                    1                          **
@@ -4515,8 +4524,8 @@ END MODULE TOTALSPIN_MODULE
 !     ******************************************************************
       USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES' VERSION
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NB,NKPT,IKPT,NSPIN
-      REAL(8)   ,INTENT(IN) :: OCC(NB,NKPT,NSPIN) 
+      INTEGER(4),INTENT(IN) :: nbx,NB,NKPT,IKPT,NSPIN
+      REAL(8)   ,INTENT(IN) :: OCC(NBx,NKPT,NSPIN) 
       COMPLEX(8),INTENT(IN) :: QMAT(2,NB*NSPIN,2,NB*NSPIN) ! Q_I,J,K,L=1/2*<PSI_I,K|PSI_J,K>  
       COMPLEX(8)            :: cSUM,PART,SPINX,SPINY,SPINZ
       COMPLEX(8)            :: EXPECTS2
@@ -4539,9 +4548,9 @@ END MODULE TOTALSPIN_MODULE
 !     ==================================================================
 !     == SPIN EXPECTATION VALUE OF THE SLATER DETERMINANT             ==
 !     ==================================================================
-      SPINX=0.D0
-      SPINY=0.D0
-      SPINZ=0.D0
+      SPINX=(0.D0,0.d0)
+      SPINY=(0.D0,0.d0)
+      SPINZ=(0.D0,0.d0)
       DO I=1,NBD
         SPINX=SPINX+(QMAT(1,I,2,I)+QMAT(2,I,1,I))*IOCC(I)
         SPINY=SPINY-CI*(QMAT(1,I,2,I)-QMAT(2,I,1,I))*IOCC(I)
@@ -4551,20 +4560,17 @@ END MODULE TOTALSPIN_MODULE
 !     ==================================================================
 !     == EXPECTATION VALUE OF S**2 OF THE SLATER DETERMINANT          ==
 !     ==================================================================
-      EXPECTS2=0.D0
-      DO I=1,NBD
-        EXPECTS2=EXPECTS2+IOCC(I)*0.75D0
-      END DO
+      EXPECTS2=0.75d0*cmplx(sum(iocc),0.d0)
 !
 !     ==================================================================
 !     == NOW ADD THE EXCHANGE-LIKE CONTRIBUTION TO THE SPIN           ==
 !     ==================================================================
-      cSUM=0.D0
+      cSUM=(0.D0,0.d0)
       DO I=1,NBD
         DO J=1,NBD
           PART=(QMAT(1,I,1,J)-QMAT(2,I,2,J))*(QMAT(1,J,1,I)-QMAT(2,J,2,I)) &
      &        +4.D0*QMAT(1,I,2,J)*QMAT(2,J,1,I)
-          cSUM=cSUM-PART*SQRT(IOCC(I)*IOCC(J))
+          cSUM=cSUM-PART*cmplx(SQRT(abs(IOCC(I)*IOCC(J))),0.d0)
         END DO
       END DO
       PRINT*,'TOTALSPIN: ExCHANGE LIKE CONTRIBUTION : ',cSUM

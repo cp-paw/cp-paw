@@ -331,6 +331,24 @@ non-collinear calculations.
 The position trajectory has been extended to include also the
 integrated valence density and spin density for each ``ASA'' sphere.
 
+\subsection{June 17,  2007}
+
+The MPI module specified by CP-PAW has been renamed to avoid conflicts
+with the MPI module of the MPI library itself.  In future the user has
+to include the mpi module mpi.mod explicitely in the compiler call or
+use mpif90, best with the -choicemod option. If an mpi module is not
+supplied with the distribution, the module mpi\_mine in paw\_mpelib.f90
+can be modified to include the mpif90.h file as before.
+
+\subsection{June 27,  2007}
+
+Bugfix in paw\_waves2.f90 in waves\_read, line 3146. The code messed up
+the color table for the k-parallelization. The loop is now executed on
+all nodes and the code-snippets for the first and the kgroup nodes are
+selected individually. I did not follow up what exactly caused the
+bug, but the change solved the problem.
+
+
 \newpage
 \bibliographystyle{unsrt}
 \bibliography{doc.bib}

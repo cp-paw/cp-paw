@@ -387,8 +387,10 @@ end subroutine dimer_init_files
       !========================================
       call DIMER$GET_massweighted(dim,R1,X1)
       call DIMER$GET_massweighted(dim,R2,X2)
-      SQDIMERDIST=dot_product((X1-X2),(X1-X2)) !REMEMBER: SQDIMERDIST IS THE *ACTUAL* DISTANCE**2, SQD=D*D IS THE DESIRED DISTANCE**2
-      write(dprotfil,*)"DIMER PROPAGATE: DIMERDISTANCE= ",sqrt(sqdimerdist),"  UNMW= ",sqrt(dot_product(R1-R2,R1-R2))
+!REMEMBER: SQDIMERDIST IS THE *ACTUAL* DISTANCE**2, SQD=D*D IS THE DESIRED DISTANCE**2
+      SQDIMERDIST=dot_product((X1-X2),(X1-X2)) 
+      write(dprotfil,*)"DIMER PROPAGATE: DIMERDISTANCE= ",sqrt(sqdimerdist) &
+     &                ,"  UNMW= ",sqrt(dot_product(R1-R2,R1-R2))
 
 
       !===============================================
@@ -1145,8 +1147,8 @@ end SUBROUTINE PLACE_DIMER
           
           if(svar3.lt.0.d0) then
              write(dprotfil,*)'======lagrangeparameter: sqrt negative!======='
-             print*,'d2',d2,(dot_product(y2bar(:),y2bar(:))-d2),dot_product(y20(:),y20(:))
-             print*,'dprod',(dot_product(y2bar(:),y2bar(:))-d2),dot_product(y2bar(:),y2bar(:))
+             print*,'d2',d2,dot_product(y2bar(:),y2bar(:))-d2,dot_product(y20(:),y20(:))
+             print*,'dprod',dot_product(y2bar(:),y2bar(:))-d2,dot_product(y2bar(:),y2bar(:))
              print*,'mfrac',mfrac
              print*,svar1,svar1**2,svar2,svar3
              stop 'lagrangeparameter negative'

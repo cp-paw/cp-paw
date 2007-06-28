@@ -120,7 +120,7 @@ endif
 ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
   ifneq ($(strip ${MPI_HEADER}),) 
     # copy includefile into object directory
-    MPIINCLUDE=cp ${MPI_HEADER} ${OBJDIR}/mpif.h
+    MPIINCLUDE=cp ${MPI_HEADER} ${OBJDIR}/mpif.h 
   else
     # not there, just create an empty file
     MPIINCLUDE= touch ${OBJDIR}/mpif.h

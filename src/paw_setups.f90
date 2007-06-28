@@ -1423,27 +1423,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       END
 !
 !     ..................................................................
-      SUBROUTINE SETUP$RADGRID(ISP_,R1_,DEX_,NR_)
-!     ******************************************************************
-!     **  RETURN THE  PARAMETERS DETERMINING THE RADIAL GRID          **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      REAL(8)   ,INTENT(OUT):: R1_
-      REAL(8)   ,INTENT(OUT):: DEX_
-      INTEGER(4),INTENT(OUT):: NR_
-!     ******************************************************************
-      CALL ERROR$MSG('INTERFACE MARKED FOR DELETION!')
-      CALL ERROR$MSG('R1,DEX,NR IS OWNED BY RADIAL OBJECT')
-      CALL ERROR$STOP('SETUP$RADGRID')
-!      R1_=R1
-!      DEX_=DEX
-!      NR_=NR
-      RETURN  
-      END
-!
-!     ..................................................................
       SUBROUTINE SETUP_COMPOFG(RCBG,RCSM,GIDG,NG,G0,V0)
 !     ******************************************************************
 !     **                                                              **

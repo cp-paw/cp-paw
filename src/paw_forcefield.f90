@@ -304,8 +304,9 @@ END MODULE FORCEFIELD_MODULE
               END IF
            ENDDO
 101        OK1=.FALSE.
-           WRITE(*,FMT='(A,I4,3XA,I4,3X,A,I4,3X,A,I4,3X,A,I4)') "#NBOND=",NBOND,"#NANGLE=",NANGLE,&
-                "#NTORSION=",NTORSION,"#NIMPTORSION=",NIMPTORSION,"#NVDW=",NVDW
+           WRITE(*,FMT='(A,I4,3X,A,I4,3X,A,I4,3X,A,I4,3X,A,I4)') &
+      &          "#NBOND=",NBOND,"#NANGLE=",NANGLE &
+      &         ,"#NTORSION=",NTORSION,"#NIMPTORSION=",NIMPTORSION,"#NVDW=",NVDW
 !STOP 'FORCED STOP in READ PARMFILE'           
            ALLOCATE(BOND_PARMS(NBOND))
            ALLOCATE(ANGLE_PARMS(NANGLE))
@@ -1472,7 +1473,8 @@ integer :: nfilinfo
          
          
 !          ! first run: R(+) = R(0)
-!          MD%RP(:,:) = MD%R0(:,:)  ! eigentlich sollte das nicht hier geschehen, es gibt bestimmt eine andere funktion, die das macht
+!          MD%RP(:,:) = MD%R0(:,:)  ! eigentlich sollte das nicht hier geschehen, 
+!                                   ! es gibt bestimmt eine andere funktion, die das macht
          
 !          INIT=.TRUE.
 !       end if ! end of the initialisation

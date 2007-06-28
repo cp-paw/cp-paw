@@ -457,6 +457,9 @@ ENDDO
         CALL ERROR$STOP('SCHROEDINGER_XXXR FINISHED WITH ERROR')
         CALL ERROR$STOP('RADIAL$NONSPHBOUND')
       END IF
+tphi=0.d0
+call error$msg('tphi is not calculated')
+call error$stop('SCHROEDINGER$LBND_SCALREL')
 !
 !     ==========================================================================
 !     ==  SHIFT ENERGIES                                                      ==
@@ -1733,6 +1736,9 @@ PRINT*,'WARNING! OVERLAP NOT INCLUDED YET'
         CALL ERROR$STOP('SCHROEDINGER_XXXR FINISHED WITH ERROR')
         CALL ERROR$STOP('RADIAL$NONSPHBOUND')
       END IF
+tphi=0.d0
+call error$msg('tphi is not calculated')
+call error$stop('SCHROEDINGER$LBND_SLOC')
 !
 !     ==================================================================
 !     ==  SHIFT ENERGIES                                              ==

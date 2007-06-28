@@ -803,6 +803,7 @@ END MODULE DYNOCC_MODULE
       LOGICAL(4)                   :: TNEW=.TRUE.
 !     ******************************************************************
                           CALL TRACE$PUSH('OCCUPATIONS$WRITE')
+      tchk=.false.
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(TNEW) THEN
         IF(THISTASK.EQ.1) THEN

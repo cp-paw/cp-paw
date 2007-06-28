@@ -392,6 +392,7 @@ END MODULE COSMO_MODULE
                  =SEPARATOR_TYPE(2,'COSMO','NONE','JAN2006','NONE')
       INTEGER(4)                         :: NTASKS,THISTASK
 !     ***********************************************************************
+      tchk=.false.
       IF(.NOT.TON) RETURN
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !

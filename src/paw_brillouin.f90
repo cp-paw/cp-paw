@@ -261,15 +261,15 @@ END MODULE BRILLOUIN_MODULE
       end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BRILLOUIN$SETR8A(ID,LEN,VAL)
+      SUBROUTINE BRILLOUIN$SETR8A(ID,LENG,VAL)
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      REAL(8)     ,INTENT(OUT):: VAL(LEN)
+      INTEGER(4)  ,INTENT(IN) :: LENG
+      REAL(8)     ,INTENT(in) :: VAL(LENG)
 !     **************************************************************************
       IF(ID.EQ.'RBAS')THEN
-        IF(LEN.NE.9) THEN
+        IF(LENG.NE.9) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$STOP('BRILLOUIN$SETR8A')
         END IF
@@ -283,18 +283,18 @@ END MODULE BRILLOUIN_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BRILLOUIN$GETR8A(ID,LEN,VAL)
+      SUBROUTINE BRILLOUIN$GETR8A(ID,LENG,VAL)
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      REAL(8)     ,INTENT(OUT):: VAL(LEN)
+      INTEGER(4)  ,INTENT(IN) :: LENG
+      REAL(8)     ,INTENT(OUT):: VAL(LENG)
       INTEGER(4)              :: I
       REAL(8)                 :: GBAS(3,3)
       REAL(8)                 :: SVAR
 !     ******************************************************************
       IF(ID.EQ.'K') THEN
-        IF(3*THIS%NKP.NE.LEN) THEN
+        IF(3*THIS%NKP.NE.LENG) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$STOP('BRILLOUIN$GETR8A')
         END IF
@@ -304,14 +304,14 @@ END MODULE BRILLOUIN_MODULE
         ENDDO
 !
       ELSE IF(ID.EQ.'XK') THEN
-        IF(3*THIS%NKP.NE.LEN) THEN
+        IF(3*THIS%NKP.NE.LENG) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$STOP('BRILLOUIN$GETR8A')
         END IF
-        VAL(:)=RESHAPE(THIS%XK,(/LEN/))
+        VAL(:)=RESHAPE(THIS%XK,(/LENG/))
 !
       ELSE IF(ID.EQ.'WKPT') THEN
-        IF(THIS%NKP.NE.LEN) THEN
+        IF(THIS%NKP.NE.LENG) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$STOP('BRILLOUIN$GETR8A')
         END IF

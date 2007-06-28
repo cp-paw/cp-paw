@@ -1690,6 +1690,42 @@ else
   PARMFILE=notset
 fi
 
+if test "$PARMFILE" = "notset"; then
+ { { echo "$as_me:$LINENO: error: parmfile must be specified: use option --with-parmfile=parmfile" >&5
+echo "$as_me: error: parmfile must be specified: use option --with-parmfile=parmfile" >&2;}
+   { (exit 1); exit 1; }; }
+else
+ as_ac_File=`echo "ac_cv_file_$PARMFILE" | $as_tr_sh`
+{ echo "$as_me:$LINENO: checking for $PARMFILE" >&5
+echo $ECHO_N "checking for $PARMFILE... $ECHO_C" >&6; }
+if { as_var=$as_ac_File; eval "test \"\${$as_var+set}\" = set"; }; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  test "$cross_compiling" = yes &&
+  { { echo "$as_me:$LINENO: error: cannot check for file existence when cross compiling" >&5
+echo "$as_me: error: cannot check for file existence when cross compiling" >&2;}
+   { (exit 1); exit 1; }; }
+if test -r "$PARMFILE"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+ac_res=`eval echo '${'$as_ac_File'}'`
+	       { echo "$as_me:$LINENO: result: $ac_res" >&5
+echo "${ECHO_T}$ac_res" >&6; }
+if test `eval echo '${'$as_ac_File'}'` = yes; then
+  TCHK="T"
+else
+  TCHK="F"
+fi
+
+ if test "$TCHK" = "F"; then
+   { { echo "$as_me:$LINENO: error: parmfile $PARMFILE not found" >&5
+echo "$as_me: error: parmfile $PARMFILE not found" >&2;}
+   { (exit 1); exit 1; }; }
+ fi
+fi
 #
 # Check for GNU make utility
 #

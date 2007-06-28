@@ -26,7 +26,7 @@
       INTEGER(4)            :: NFILSTDOUT=6
 !     ******************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-!     CALL FILEHANDLER$UNIT('PROT',NFILO)
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
       NFILO=NFILSTDOUT
       WRITE(NFILO,FMT='("READING RESTART FILE")')
 !

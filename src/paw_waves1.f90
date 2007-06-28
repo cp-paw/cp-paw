@@ -1285,8 +1285,6 @@ CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
       IF(TFIRST) THEN
         CALL WAVES$PROJECTIONS('PSI0')
       END IF
-
-
       IF(TFIRST) TFIRST=.FALSE.
                               CALL TIMING$CLOCKON('WAVES$ETOT')
 !
@@ -1364,6 +1362,7 @@ CALL ERROR$STOP('WAVES$ETOT')
       ALLOCATE(QLM(LMRXX,NAT))
       NAT=MAP%NAT
       CALL WAVES$MOMENTS(NAT,LMRXX,NDIMD,LMNXX,DENMAT,QLM)
+
 !
 !     ==================================================================
 !     == prepare snapshot of spin trajectory                          ==
@@ -1606,7 +1605,7 @@ CALL TIMING$CLOCKON('W:EXPECT')
           NGL=GSET%NGL         
           ALLOCATE(QMAT(2*NB*NSPIN,2*NB*NSPIN))
           CALL WAVES_SPINOROVERLAP(NBH,NB,IKPT,QMAT)
-          CALL WAVES_TOTALSPIN(NB,NKPT,IKPT,NSPIN,OCC,QMAT)
+          CALL WAVES_TOTALSPIN(nbx,NB,NKPT,IKPT,NSPIN,OCC,QMAT)
           DEALLOCATE(QMAT)
         END DO
         DEALLOCATE(OCC)
