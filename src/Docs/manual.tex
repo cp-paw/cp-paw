@@ -3401,9 +3401,20 @@ given direction.}
 %----------------------------------------------------------------------
 \block{!STRUCTURE!CONSTRAINTS!ROTATION}
 %----------------------------------------------------------------------
-\brules{optional,multiple}
-\bdescr{Supresses the angular momentum of a group of atoms in a
-given direction. Do not use this option. (see oriantation)}
+\brules{optional,multiple} 
+
+\bdescr{Supresses the angular momentum $\vec{L}$ of a group of atoms
+  in a given direction $\vec{e}$ in the reference frame of the center
+  of gravity $\vec{R}_C(t)$ of the specified group.Thus the constraint
+  enforces
+  \begin{eqnarray*}
+    \vec{e}\vec{L}=\vec{e}\sum_R M_R\left(\vec{R}_R(t)-R_C(t)\right)
+\times\left(\dot{\vec{R}}_R-\dot{\vec{R}}_C\right) =0
+  \end{eqnarray*}
+  Note, that this constraint cannot be represented as a hypersurface
+  in phase space. It should not be used for phase space sampling or
+  transition state searches. For those purposes, use the ORIENTATION
+  constraint.}
 
 \mbax{\key{GROUP}
 \vdescr{Name of group to be fixed in space.}

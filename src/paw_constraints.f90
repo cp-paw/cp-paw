@@ -1778,12 +1778,12 @@ END MODULE CONSTRAINTS_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CONSTRAINTS_ROT$VALUE &
      &           (NAT,X_,Y_,Z_,TMEMBER,R0,RM,DELTA,RMASS,VALUE_)
-!     ******************************************************************
-!     **  CONSERVE ANGULAR MOMENTUM                                   **
-!     ****************************************************************** 
+!     **************************************************************************
+!     **  enforce angular momentum to be zero                                 **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: X_,Y_,Z_
@@ -1799,57 +1799,60 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)               :: COG(3)
       REAL(8)               :: DX0,DY0,DZ0
       REAL(8)               :: DXM,DYM,DZM
-!     ******************************************************************
-      XLEN=DSQRT(X_**2+Y_**2+Z_**2)
-      X=X_/XLEN
-      Y=Y_/XLEN
-      Z=Z_/XLEN
-!     == CALCULATE CENTER OF GRAVITY FROM REFERENCE POSITIONS ==========
-      TOTM=0.D0
-      COG(1)=0.D0
-      COG(2)=0.D0
-      COG(3)=0.D0
-      DO IAT=1,NAT
-        IF(TMEMBER(IAT)) THEN
-          TOTM=TOTM+RMASS(IAT)
-          COG(1)=COG(1)+RMASS(IAT)*R0(1,IAT)
-          COG(2)=COG(2)+RMASS(IAT)*R0(2,IAT)
-          COG(3)=COG(3)+RMASS(IAT)*R0(3,IAT)
-        END IF
-      ENDDO
-      COG(1)=COG(1)/TOTM
-      COG(2)=COG(2)/TOTM
-      COG(3)=COG(3)/TOTM
-!
-      VALUE_=0.D0
-      DO IAT=1,NAT
-        IF(TMEMBER(IAT)) THEN
-          DX0=R0(1,IAT)-COG(1)
-          DY0=R0(2,IAT)-COG(2)
-          DZ0=R0(3,IAT)-COG(3)
-          DXM=RM(1,IAT)-COG(1)
-          DYM=RM(2,IAT)-COG(2)
-          DZM=RM(3,IAT)-COG(3)
-          VALUE_=VALUE_+RMASS(IAT)*((Y*DZ0-Z*DY0)*DXM &
-     &                             *(Z*DX0-X*DZ0)*DYM &
-     &                             *(X*DY0-Y*DX0)*DZM)
-        END IF
-      ENDDO
-      VALUE_=VALUE_/DELTA
+!     **************************************************************************
+!     == CHANGED BY P. BLOECHL July 13, 2007. THIS ROUTINE SHALL ENFORCE THE 
+!     == ANGULAR MOMENTUM TO BE ZERO and not to a constant value. THEREFORE 
+!     == THE VALUE SHALL BE EQUAL TO ZERO AND NOT EQUAL TO THE ANGULAR MOMENTUM.
+      value_=0.d0
+!!$      XLEN=DSQRT(X_**2+Y_**2+Z_**2)
+!!$      X=X_/XLEN
+!!$      Y=Y_/XLEN
+!!$      Z=Z_/XLEN
+!!$!     == CALCULATE CENTER OF GRAVITY FROM REFERENCE POSITIONS ==========
+!!$      TOTM=0.D0
+!!$      COG(:)=0.D0
+!!$      DO IAT=1,NAT
+!!$        IF(TMEMBER(IAT)) THEN
+!!$          TOTM=TOTM+RMASS(IAT)
+!!$          COG(:)=COG(:)+RMASS(IAT)*R0(:,IAT)
+!!$        END IF
+!!$      ENDDO
+!!$      COG(:)=COG(:)/TOTM
+!!$!
+!!$      VALUE_=0.D0
+!!$      DO IAT=1,NAT
+!!$        IF(TMEMBER(IAT)) THEN
+!!$          DX0=R0(1,IAT)-COG(1)
+!!$          DY0=R0(2,IAT)-COG(2)
+!!$          DZ0=R0(3,IAT)-COG(3)
+!!$          DXM=RM(1,IAT)-COG(1)
+!!$          DYM=RM(2,IAT)-COG(2)
+!!$          DZM=RM(3,IAT)-COG(3)
+!!$          VALUE_=VALUE_+RMASS(IAT)*((Y*DZ0-Z*DY0)*DXM &
+!!$     &                             *(Z*DX0-X*DZ0)*DYM &
+!!$     &                             *(X*DY0-Y*DX0)*DZM)
+!!$        END IF
+!!$      ENDDO
+!!$      VALUE_=VALUE_/DELTA
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CONSTRAINTS_ROT$SET(NAT,X_,Y_,Z_,TMEMBER,R0,DELTA,RMASS,A,B,C)
-!     ******************************************************************
-!     **  SET A AND B FOR ANGULAR MOMENTUM CONSTRAINT                 **
-!     **  PMARGL:                                                     **
-!     **  CAUTION!!! THIS ROUTINE CREATES A SINGULARITY IN            **
-!     **  CONSTRAINTS_APPLY IF THE DIRECTIONAL VECTOR X,Y,Z POINTS    **
-!     **  IN THE CIRECTION OF R0-COG, WHICH HAPPENS QUITE FREQUENTLY, **
-!     **  ESPECIALLY AT THE ONSET OF A SIMULATION.                    **
-!     **  THERE IS PROBABLY A WAY AROUND THAT IN CONSTRAINTS_APPLY    **
-!     ******************************************************************
+!     **************************************************************************
+!     **  SET A AND B FOR ANGULAR MOMENTUM CONSTRAINT                         **
+!     **                                                                      **
+!     **  THE ANGULAR MOMENTUM IS SET TO ZERO IN THE REFERENCE FRAME OF THE   **
+!     **  CENTER OF GRAVITY. THUS ROTATION AND TRANSLATIONS CAN BE ENFORCES   **
+!     **  INDEPENDENTLY                                                       **
+!     **                                                                      **
+!     **  PMARGL:                                                             **
+!     **  CAUTION!!! THIS ROUTINE CREATES A SINGULARITY IN                    **
+!     **  CONSTRAINTS_APPLY IF THE DIRECTIONAL VECTOR X,Y,Z POINTS            **
+!     **  IN THE CIRECTION OF R0-COG, WHICH HAPPENS QUITE FREQUENTLY,         **
+!     **  ESPECIALLY AT THE ONSET OF A SIMULATION.                            **
+!     **  THERE IS PROBABLY A WAY AROUND THAT IN CONSTRAINTS_APPLY            **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: X_,Y_,Z_
@@ -1861,61 +1864,56 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)   ,INTENT(OUT):: B(3,NAT)
       REAL(8)   ,INTENT(OUT):: C(3,NAT,3,NAT)
       INTEGER(4)            :: IAT
-      REAL(8)               :: XLEN,X,Y,Z
-      REAL(8)               :: TOTM
-      REAL(8)               :: COG(3)
+      REAL(8)               :: XLEN
+      REAL(8)               :: X,Y,Z ! normalized rotation axis
+      REAL(8)               :: TOTM  ! total mass 
+      REAL(8)               :: COG(3)! center of gravity
       REAL(8)               :: U(3)
       REAL(8)               :: DX,DY,DZ
-!     ******************************************************************
-       XLEN=DSQRT(X_**2+Y_**2+Z_**2)
-       X=X_/XLEN
-       Y=Y_/XLEN
-       Z=Z_/XLEN
-!      == CALCULATE CENTER OF GRAVITY =================================
-       TOTM=0.D0
-       COG(1)=0.D0
-       COG(2)=0.D0
-       COG(3)=0.D0
-       DO IAT=1,NAT
-         IF(TMEMBER(IAT)) THEN
-           TOTM=TOTM+RMASS(IAT)
-           COG(1)=COG(1)+RMASS(IAT)*R0(1,IAT)
-           COG(2)=COG(2)+RMASS(IAT)*R0(2,IAT)
-           COG(3)=COG(3)+RMASS(IAT)*R0(3,IAT)
-         END IF
-       ENDDO
-       COG(1)=COG(1)/TOTM
-       COG(2)=COG(2)/TOTM
-       COG(3)=COG(3)/TOTM
+!     **************************************************************************
+      A=0.d0
+      B(:,:)=0.d0
+      C(:,:,:,:)=0.d0
+!
+!     == determine normalized rotation axis ====================================
+      XLEN=DSQRT(X_**2+Y_**2+Z_**2)
+      X=X_/XLEN
+      Y=Y_/XLEN
+      Z=Z_/XLEN
+!
+!     == CALCULATE CENTER OF GRAVITY COG and total mass totm ===================
+      TOTM=0.D0
+      COG(:)=0.D0
+      DO IAT=1,NAT
+        IF(TMEMBER(IAT)) THEN
+          TOTM=TOTM+RMASS(IAT)
+          COG(:)=COG(:)+RMASS(IAT)*R0(:,IAT)
+        END IF
+      ENDDO
+      COG(:)=COG(:)/TOTM
 !     
-       CALL CONSTRAINTS_INIT(3*NAT,A,B,C)
-       U(1)=0.D0
-       U(2)=0.D0
-       U(3)=0.D0
-       DO IAT=1,NAT
-         IF(TMEMBER(IAT)) THEN
-           DX=R0(1,IAT)-COG(1)
-           DY=R0(2,IAT)-COG(2)
-           DZ=R0(3,IAT)-COG(3)
-           B(1,IAT)=RMASS(IAT)*(Y*DZ-Z*DY)
-           B(2,IAT)=RMASS(IAT)*(Z*DX-X*DZ)
-           B(3,IAT)=RMASS(IAT)*(X*DY-Y*DX)
-           U(1)=U(1)+RMASS(IAT)*B(1,IAT)
-           U(2)=U(2)+RMASS(IAT)*B(2,IAT)
-           U(3)=U(3)+RMASS(IAT)*B(3,IAT)
-         END IF
-       ENDDO
-       U(1)=U(1)/TOTM
-       U(2)=U(2)/TOTM
-       U(3)=U(3)/TOTM
-U(:)=0.D0
-       DO IAT=1,NAT
-         IF(TMEMBER(IAT)) THEN
-           B(1,IAT)=(B(1,IAT)-U(1))/DELTA
-           B(2,IAT)=(B(2,IAT)-U(2))/DELTA
-           B(3,IAT)=(B(3,IAT)-U(3))/DELTA
-         END IF
-       ENDDO
+!     ===  M*(AXIS X (R-COG))
+      CALL CONSTRAINTS_INIT(3*NAT,A,B,C)
+      U(:)=0.D0
+      DO IAT=1,NAT
+        IF(TMEMBER(IAT)) THEN
+          DX=R0(1,IAT)-COG(1)
+          DY=R0(2,IAT)-COG(2)
+          DZ=R0(3,IAT)-COG(3)
+          B(1,IAT)=RMASS(IAT)*(Y*DZ-Z*DY)
+          B(2,IAT)=RMASS(IAT)*(Z*DX-X*DZ)
+          B(3,IAT)=RMASS(IAT)*(X*DY-Y*DX)
+          U(:)=U(:)+B(:,IAT)
+        END IF
+      ENDDO
+!
+!     === SUBTRACT TRANSLATIONAL MOTION =========================================
+      U(:)=U(:)/TOTM
+      DO IAT=1,NAT
+        IF(TMEMBER(IAT)) THEN
+          B(:,IAT)=(B(:,IAT)-U(:)*RMASS(IAT))/DELTA
+        END IF
+      ENDDO
         
       RETURN
       END
