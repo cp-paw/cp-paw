@@ -86,7 +86,7 @@ esac
 if (( $# == 3 )) ;then
   cp ${TEMPDIR}tmp2 $3
 else
-  xmgrace ${TEMPDIR}tmp2
+  xmgrace -nxy ${TEMPDIR}tmp2
 fi
 rm ${TEMPDIR}tmp2
 exit

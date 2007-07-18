@@ -1,3 +1,4 @@
+!     ...1.........2.........3.........4.........5.........6.........7.........8
 MODULE FORCEFIELD_MODULE
 !*******************************************************************************
 !*  FORCEFIELD_MODULE                                                          *
@@ -9,6 +10,7 @@ MODULE FORCEFIELD_MODULE
 !*                                                                             *
 !*  FUNCTIONS:                                                                 *
 !*    FORCEFIELD$SETCH                                                         *
+!*    FORCEFIELD$GETCH                                                         *
 !*    FORCEFIELD$GETI4                                                         *
 !*    FORCEFIELD$GETRESNUMBER                                                  *
 !*    FORCEFIELD$READ_PARMFILE                                                 *
@@ -22,7 +24,10 @@ MODULE FORCEFIELD_MODULE
 !*    FORCEFIELD$DELETEATOM     (=> RESNUMBER, ATOMNAME   )                    *
 !*                                                                             *
 !*  FORCEFIELD AMBER SPECIFIC ROUTINES:                                        *
-!*    AMBER$BONDPARMS                                                          *
+!*    FORCEFIELD$AMBER_BONDPARMS                                               *
+!*    FORCEFIELD$AMBER_ANGLEPARMS                                              *
+!*    FORCEFIELD$AMBER_TORSIONPARMS                                            *
+!*    FORCEFIELD$AMBER_NONBONDPARMS                                            *
 !*                                                                             *
 !*******************************************WRITTEN BY SASCHA HEMMEN, 2006******
 
@@ -120,7 +125,14 @@ MODULE FORCEFIELD_MODULE
      CHARACTER(7)         :: LNAME
   END TYPE PDB_ATOM_TYPE
 
-CHARACTER(LEN=*), PARAMETER           :: pdb_form='(A6,I5,1X,A5,A4,A1,I4,4X,3F8.3,2F6.2,6X,A4,A2,2X,A1,1X,A12,1X,A7)'
+!---- DATA TYPE FOR THE CONECT DATA
+  TYPE PDB_CONECT_TYPE
+     CHARACTER(6)         :: KEYWORD
+     INTEGER(4)           :: CATOM, ATOM1, ATOM2, ATOM3, ATOM4
+  END TYPE PDB_CONECT_TYPE
+
+
+  CHARACTER(LEN=*), PARAMETER           :: pdb_form='(A6,I5,1X,A5,A4,A1,I4,4X,3F8.3,2F6.2,6X,A4,A2,2X,A1,1X,A12,1X,A7)'
      
   TYPE(FF_BOND_TYPE),       ALLOCATABLE :: bond_parms(:)
   TYPE(FF_ANGLE_TYPE),      ALLOCATABLE :: angle_parms(:)
@@ -129,13 +141,14 @@ CHARACTER(LEN=*), PARAMETER           :: pdb_form='(A6,I5,1X,A5,A4,A1,I4,4X,3F8.
   TYPE(FF_VDW_TYPE),        ALLOCATABLE :: vdw_parms(:)
   INTEGER                               :: NBOND,NANGLE,NTORSION,NIMPTORSION,NVDW
 
-TYPE(TOP_MASSES_TYPE),    ALLOCATABLE :: masses(:)
-TYPE(RES_TYPE),           ALLOCATABLE :: TOP_RES(:)
-CHARACTER(16)                         :: FORCEFIELD
-CHARACTER(255)                        :: FF_PARMS= '/home/mkremer/PAW/forcefields/amber/cornell_all.prm'
-CHARACTER(255)                        :: FF_TOP=   '/home/mkremer/PAW/forcefields/amber/cornell_all.rtf'
-INTEGER                               :: NRES, NPATCH
-TYPE(PDB_ATOM_TYPE),      ALLOCATABLE :: MMATOM(:)
+  TYPE(TOP_MASSES_TYPE),    ALLOCATABLE :: masses(:)
+  TYPE(RES_TYPE),           ALLOCATABLE :: TOP_RES(:)
+  CHARACTER(16)                         :: FORCEFIELD
+  CHARACTER(255)                        :: FF_PARMS= '/home/shemmen/PAW/forcefields/amber/cornell_all.prm'
+  CHARACTER(255)                        :: FF_TOP=   '/home/shemmen/PAW/forcefields/amber/cornell_all.rtf'
+  INTEGER                               :: NRES, NPATCH
+  TYPE(PDB_ATOM_TYPE),      ALLOCATABLE :: MMATOM(:)
+  TYPE(PDB_CONECT_TYPE),    ALLOCATABLE :: MMCONECT(:)
 
 END MODULE FORCEFIELD_MODULE
 !
@@ -189,7 +202,40 @@ END MODULE FORCEFIELD_MODULE
         RETURN
       END SUBROUTINE FORCEFIELD$GETCH
 !
-
+!     .................................................................
+      SUBROUTINE FORCEFIELD$GETCHA(ID_,LENG_,VAL_)
+!     *****************************************************************      
+!     **  FORCEFIELD$GET                                             **      
+!     *****************************************************************      
+        USE FORCEFIELD_MODULE
+        IMPLICIT NONE
+        CHARACTER(*),INTENT(IN) :: ID_
+        INTEGER(4)  ,INTENT(IN) :: LENG_
+        CHARACTER(*),INTENT(OUT):: VAL_(LENG_)
+!     *****************************************************************      
+        IF(ID_.EQ.'RESNAME') THEN
+           IF(LENG_.NE.SIZE(MMATOM)) THEN
+              CALL ERROR$MSG('INCONSISTENT SIZE')
+              CALL ERROR$CHVAL('ID_',ID_)
+              CALL ERROR$I4VAL('LENG_',LENG_)
+              CALL ERROR$STOP('FORCEFIELD$GETCHA')
+           END IF
+           VAL_=MMATOM(:)%RESNAME
+        ELSE IF(ID_.EQ.'NAME') THEN
+           IF(LENG_.NE.SIZE(MMATOM)) THEN
+              CALL ERROR$MSG('INCONSISTENT SIZE')
+              CALL ERROR$CHVAL('ID_',ID_)
+              CALL ERROR$I4VAL('LENG_',LENG_)
+              CALL ERROR$STOP('FORCEFIELD$GETCHA')
+           END IF
+           VAL_=MMATOM(:)%NAME       
+        ELSE
+           CALL ERROR$MSG('INVALID IDENTIFIER')
+           CALL ERROR$STOP('FORCEFIELD$GETCHA')
+        END IF
+        RETURN
+      END SUBROUTINE FORCEFIELD$GETCHA
+!
 !     .................................................................. 
       SUBROUTINE FORCEFIELD$GETI4(ID_,VAL_)
 !     ******************************************************************
@@ -209,6 +255,32 @@ END MODULE FORCEFIELD_MODULE
         END IF
         RETURN
       END SUBROUTINE FORCEFIELD$GETI4
+!
+!     .................................................................. 
+      SUBROUTINE FORCEFIELD$GETI4A(ID_,LENG_,VAL_)
+!     ******************************************************************
+!     **                                                              **
+!     ******************************************************************
+        USE FORCEFIELD_MODULE
+        IMPLICIT NONE
+        CHARACTER(*),INTENT(IN) :: ID_
+        INTEGER(4)  ,INTENT(IN) :: LENG_
+        INTEGER(4)  ,INTENT(OUT):: VAL_(LENG_)
+!     ******************************************************************
+        IF(ID_.EQ.'RESSEQ') THEN
+           IF(LENG_.NE.SIZE(MMATOM)) THEN
+              CALL ERROR$MSG('INCONSISTANT SIZE')
+              CALL ERROR$CHVAL('ID_',ID_)
+              CALL ERROR$I4VAL('LENG_',LENG_)
+              CALL ERROR$STOP('FORCEFIELD$GETI4A')
+           END IF
+           VAL_=MMATOM(:)%RESSEQ
+        ELSE
+           CALL ERROR$MSG('INVALID IDENTIFIER')
+           CALL ERROR$STOP('FORCEFIELD$GETI4A')
+        END IF
+        RETURN
+      END SUBROUTINE FORCEFIELD$GETI4A
 !
 !     .................................................................. 
       SUBROUTINE FORCEFIELD$GETRESNUMBER(ID_,VAL_)
@@ -304,9 +376,8 @@ END MODULE FORCEFIELD_MODULE
               END IF
            ENDDO
 101        OK1=.FALSE.
-           WRITE(*,FMT='(A,I4,3X,A,I4,3X,A,I4,3X,A,I4,3X,A,I4)') &
-      &          "#NBOND=",NBOND,"#NANGLE=",NANGLE &
-      &         ,"#NTORSION=",NTORSION,"#NIMPTORSION=",NIMPTORSION,"#NVDW=",NVDW
+           WRITE(*,FMT='(A,I4,3XA,I4,3X,A,I4,3X,A,I4,3X,A,I4)') "#NBOND=",NBOND,"#NANGLE=",NANGLE,&
+                "#NTORSION=",NTORSION,"#NIMPTORSION=",NIMPTORSION,"#NVDW=",NVDW
 !STOP 'FORCED STOP in READ PARMFILE'           
            ALLOCATE(BOND_PARMS(NBOND))
            ALLOCATE(ANGLE_PARMS(NANGLE))
@@ -347,7 +418,6 @@ END MODULE FORCEFIELD_MODULE
                          & IMPTORSION_PARMS(ISTEP)%ATOM2, IMPTORSION_PARMS(ISTEP)%ATOM3, IMPTORSION_PARMS(ISTEP)%ATOM4, &
                          & IMPTORSION_PARMS(ISTEP)%F_CONST, IMPTORSION_PARMS(ISTEP)%PERIODICY, IMPTORSION_PARMS(ISTEP)%PHASE
                  ENDDO
-                 
               END IF
               
               IF(LINE(1:9).EQ.'NONBONDED') THEN
@@ -371,7 +441,7 @@ END MODULE FORCEFIELD_MODULE
                     END IF
                  ENDDO
               END IF
-           ENDDO
+           END DO
         ELSE
            CALL ERROR$MSG('FORCEFIELD TYPE IS NOT KNOWN')
            CALL ERROR$CHVAL('FORCEFIELD',FORCEFIELD)
@@ -485,7 +555,8 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
 
            IF(+LINE(1:3).EQ.'RES') THEN  !ENTER i-th RESIDUE
               I = I + 1
-              ALLOCATE(BONDS(2* SIZE(TOP_RES(I)%BOND) * 5)) !AUXILLARY ARRAY TO SAVE THE BOND ENTRIES.
+              ALLOCATE(BONDS(3* SIZE(TOP_RES(I)%BOND) * 5)) !AUXILLARY ARRAY TO SAVE THE BOND ENTRIES.
+                                                            !CHECK IF THE ARRAY IS BIG ENOUGH!
               DO
                  READ(NFIL,FMT='(A255)') LINE
                  IF(LINE(1:4).EQ.'ATOM') THEN !READ ATOM DATA FROM LINE, WRITE IT TO TOP_RES AND READ NEXT LINE
@@ -536,7 +607,6 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
                        READ(NFIL,FMT='(A255)') LINE
                     ENDDO
                  END IF
-
                  IF(LINE(1:5).EQ.'PATCH') THEN
 !               ---- COPY BONDS TO NEW ALLOCATED TOP_RES(I)%BOND
                     DEALLOCATE(TOP_RES(I)%BOND)
@@ -869,21 +939,27 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
 !     **  WARNING: AT THIS STAGE NO CONECT ENTRIES ARE TREATED        **
 !     ******************************************************************
         USE FORCEFIELD_MODULE
+        USE STRINGS_MODULE
         IMPLICIT NONE
-        INTEGER                               :: NFIL, NATOM, NHETATM
+        INTEGER                               :: NFIL, NATOM, NHETATM, NCONECT
         LOGICAL                               :: TCHK
         CHARACTER(102)                        :: LINE, DUMMY
-!        CHARACTER(LEN=*), PARAMETER           :: pdb_form='(A6,I5,1X,A4,A1,A4,A1,I4,4X,3F8.3,2F6.2,6X,A4,A2,2X,A1,1X,A12,1X,A7)'
-        INTEGER                               :: I, IATOM, IHETATM
+        CHARACTER(12)                         :: ID
+        CHARACTER(LEN=*), PARAMETER           :: con_form='(A6,5I5)'  !FORMAT STRING TO READ THE CONECT ENTRIES IN THE PDB FILE
+        INTEGER                               :: I, IATOM, IHETATM, ICONECT
                                CALL TRACE$PUSH('READ_MMSTRC')
+!     ==  MM STRUCTURE FILE  ===========================================
         CALL FILEHANDLER$UNIT('MMSTRC',NFIL)
+        REWIND(NFIL)
         TCHK=.TRUE.
         NATOM=0
         NHETATM=0
+        NCONECT=0
         DO
            READ(NFIL,FMT='(A102)',END=201) LINE
            IF(LINE(1:6).EQ.'ATOM  ') NATOM = NATOM + 1
            IF(LINE(1:6).EQ.'HETATM') NHETATM = NHETATM + 1
+           IF(LINE(1:6).EQ.'CONECT') NCONECT = NCONECT + 1
         END DO
 201     REWIND(NFIL)
         IF(ALLOCATED(MMATOM)) THEN
@@ -891,8 +967,15 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
            CALL ERROR$STOP('FORCEFIELD$READ_MMSTRC')
         END IF
         ALLOCATE(MMATOM(NATOM+NHETATM))
+        ALLOCATE(MMCONECT(NCONECT))
+        MMCONECT(:)%CATOM=0
+        MMCONECT(:)%ATOM1=0
+        MMCONECT(:)%ATOM2=0
+        MMCONECT(:)%ATOM3=0
+        MMCONECT(:)%ATOM4=0
         IATOM=0
         IHETATM=0
+        ICONECT=0
         DO 
            READ(NFIL,FMT='(A102)',END=202) LINE
            IF(LINE(1:6).EQ.'ATOM  ') THEN 
@@ -903,12 +986,23 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
               IHETATM = IHETATM + 1
               READ(LINE,pdb_form) MMATOM(NATOM+IHETATM)
            END IF
+           IF(LINE(1:6).EQ.'CONECT') THEN
+              ICONECT = ICONECT + 1
+              READ(LINE,CON_FORM) MMCONECT(ICONECT)
+           END IF
         END DO
+! print*,"--------DEBUG--------"
+! DO I=1,SIZE(MMCONECT)
+!    write(*,con_form) MMCONECT(I)
+! END DO
+! print*,"---------------------"
+! STOP
+
 202     DO I=1, SIZE(MMATOM)
 !     ----- if you use 'reduce' to fix pdb-files then you get atomnames like 3HG1 instead of HG13. this loop shall fix this
-           dummy = mmatom(i)%NAME
-           IF(scan(dummy,'1234567890').eq.1) THEN
-              mmatom(i)%name = ' '//TRIM(dummy(2:len(dummy))) // dummy(1:1)
+           DUMMY = MMATOM(I)%NAME
+           IF(SCAN(DUMMY,'1234567890').EQ.1) THEN
+              MMATOM(I)%NAME = ' '//TRIM(DUMMY(2:LEN(DUMMY))) // DUMMY(1:1)
            END if
 !     ----- IF ELEMENT COLUMN IS EMPTY COPY ELEMENT NAME FROM ATOM NAME
            IF(MMATOM(I)%ELEMENT.EQ.' ') THEN
@@ -932,24 +1026,24 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
 !     ******************************************************************
         USE LINKEDLIST_MODULE
         USE FORCEFIELD_MODULE
+        USE STRINGS_MODULE
         IMPLICIT NONE
-        TYPE(LL_TYPE)                         :: LL_STRC
         INTEGER                               :: NFIL, NATOM
         INTEGER                               :: IATOM
         REAL(8), ALLOCATABLE                  :: R(:,:)
         REAL(8)                               :: UNIT
         LOGICAL(4)                            :: TCHK
+        CHARACTER(LEN=*), PARAMETER           :: con_form='(A6,5I5)'  !FORMAT STRING TO WRITE THE CONECT ENTRIES IN THE PDB FILE
 
                      call trace$push('FORCEFIELD$WRITE_MMSTRC')
-        CALL LINKEDLIST$NEW(LL_STRC)
-        CALL FILEHANDLER$UNIT('STRC',NFIL)
-        CALL LINKEDLIST$READ(LL_STRC,NFIL,'MONOMER')
-        CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
-        CALL LINKEDLIST$SELECT(LL_STRC,'GENERIC')
-        CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT',1,TCHK)
-        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'LUNIT',0,1.D0)
-        CALL LINKEDLIST$GET(LL_STRC,'LUNIT',1,UNIT)
-        CALL LINKEDLIST$SELECT(LL_STRC,'~')
+        CALL CONSTANTS$GET('ANGSTROM',UNIT)
+                     
+        CALL FILEHANDLER$SETFILE('MMSTRC_OUT',.TRUE.,-'.PDB_OUT')
+        CALL FILEHANDLER$SETSPECIFICATION('MMSTRC_OUT','STATUS','REPLACE')
+        CALL FILEHANDLER$SETSPECIFICATION('MMSTRC_OUT','POSITION','REWIND')
+        CALL FILEHANDLER$SETSPECIFICATION('MMSTRC_OUT','ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION('MMSTRC_OUT','FORM','FORMATTED')
+
         CALL FILEHANDLER$UNIT('MMSTRC_OUT',NFIL)
         NATOM=SIZE(MMATOM)
         ALLOCATE(R(3,NATOM))
@@ -959,6 +1053,11 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
            MMATOM(IATOM)%R=R(:,IATOM) / UNIT
            WRITE(NFIL,pdb_form) MMATOM(IATOM)
         END DO
+        IF(SIZE(MMCONECT).GT.0) THEN
+           DO IATOM=1,SIZE(MMCONECT)
+              WRITE(NFIL,CON_FORM) MMCONECT(IATOM)
+           END DO
+        END IF
         DEALLOCATE(R)
                      call trace$POP
         RETURN
@@ -982,7 +1081,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
         INTEGER                        :: I
         REAL(8)                        :: ANGSTROM
         REAL(8)                        :: KCALBYMOL
-                        cALL TRACE$PUSH('AMBER_BONDPARMS')
+!                        cALL TRACE$PUSH('AMBER_BONDPARMS')
 !        PRINT*,"TYPES: ",TYPE1, TYPE2
         D=70.D0                   ! BOND DISSOCIATION ENERGY (ONLY FOR NON-HARMONIC)
         TCHK=.FALSE.
@@ -1018,7 +1117,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
         K=K*KCALBYMOL/ANGSTROM**2
         TCHK=(K.GT.1.D-6)
         RETURN
-                      CALL TRACE$POP
+!                      CALL TRACE$POP
       END SUBROUTINE FORCEFIELD$AMBER_BONDPARMS
 
 !     ******************************************************************
@@ -1038,7 +1137,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
         REAL(8)                    :: ZI,ZK
         REAL(8)                    :: RIJ,RJK,RIK,BETA
         LOGICAL(4)                 :: TCHK1
-                         CALL TRACE$PUSH('AMBER_ANGLEPARMS')
+!                         CALL TRACE$PUSH('AMBER_ANGLEPARMS')
 !     ******************************************************************
         PI=4.D0*DATAN(1.D0)
 !     ==================================================================
@@ -1078,7 +1177,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
 !     ==  TEST FOR ZERO POTENTIALS                                    ==
 !     ==================================================================
         TCHK=(K.GT.1.D-6)
-                      CALL TRACE$POP
+!                      CALL TRACE$POP
         RETURN
       END SUBROUTINE FORCEFIELD$AMBER_ANGLEPARMS
 
@@ -1104,7 +1203,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
 
 integer   :: nfilinfo
 
-                      CALL TRACE$PUSH('AMBER_ANGLEPOTA')
+!                      CALL TRACE$PUSH('AMBER_ANGLEPOTA')
 !     ******************************************************************
         PI=4.D0*DATAN(1.D0)
         X1 =  -PI
@@ -1131,7 +1230,7 @@ integer   :: nfilinfo
 !         print*,"FLAG FORCED STOP ANGLEPOT INFO"
 !         STOP
 ! !-----------------------
-                      CALL TRACE$POP
+!                      CALL TRACE$POP
         RETURN 
       END SUBROUTINE FORCEFIELD$AMBER_ANGLEPOTA
 !
@@ -1155,7 +1254,7 @@ integer   :: nfilinfo
         REAL(8)                   :: PI, KCALBYMOL
         INTEGER                   :: I,J,ITORS
 !     **********************************************************************
-                      CALL TRACE$PUSH('AMBER_TORSIONPARMS')
+!                      CALL TRACE$PUSH('AMBER_TORSIONPARMS')
         PI=4.D0*DATAN(1.D0)
         ITORS = 0
 !     ---- Here I try to find the right parameters. The problem is that there are
@@ -1230,7 +1329,7 @@ integer   :: nfilinfo
         PHI0=0.D0
         VBARRIER=0.D0
         TCHK=.FALSE.
-                      CALL TRACE$POP
+!                      CALL TRACE$POP
         RETURN
       END SUBROUTINE FORCEFIELD$AMBER_TORSIONPARMS
 
@@ -1251,7 +1350,7 @@ integer   :: nfilinfo
         INTEGER                    :: I
         LOGICAL(4)                 :: T1, T2
 !     ******************************************************************
-                      CALL TRACE$PUSH('AMBER_NONBONDPARMS')
+!                      CALL TRACE$PUSH('AMBER_NONBONDPARMS')
         T1=.FALSE.
         T2=.FALSE.
         DO I=1, SIZE(VDW_PARMS)
@@ -1290,7 +1389,7 @@ integer   :: nfilinfo
         RIJ=RIJ*ANGSTROM
         DIJ=DIJ*KCALBYMOL
         TCHK=(DIJ.GT.1.D-8)
-                      CALL TRACE$POP
+!                      CALL TRACE$POP
         RETURN
       END SUBROUTINE FORCEFIELD$AMBER_NONBONDPARMS
 !
@@ -1318,7 +1417,7 @@ integer   :: nfilinfo
       REAL(8)                   :: R,X,DRDX
       LOGICAL(4)                :: TCHK
 integer :: nfilinfo
-                      CALL TRACE$PUSH('AMBER_NONBONDPOTA')
+!                      CALL TRACE$PUSH('AMBER_NONBONDPOTA')
 !     ******************************************************************
 !     ==  WE USE A LENNARD-JONES 6-12 POTENTIAL =======================
       POT%ID=ID
@@ -1340,6 +1439,9 @@ integer :: nfilinfo
          END IF
       ENDDO
 !
+!PETER
+      POT%VAL(NX)=POT%VAL(NX-1)+0.5D0*POT%DER(NX-1)*POT%DX
+      POT%DER(NX)=0.D0
 
 !     ==================================================================
 !     == CHOP OF THE INNER NEGATIVE DIVERGENCE OF THE POTENTIAL       ==
@@ -1360,14 +1462,15 @@ integer :: nfilinfo
 !         DO I=1,POT%NX
 !            X=POT%X1+POT%DX*DBLE(I-1)
 !            SVAR6= 1.d0/X
-!            WRITE(nfilinfo,FMT='(F15.10,2D20.10)') SVAR6, POT%VAL(I), POT%DER(I)
+! !           WRITE(nfilinfo,FMT='(F15.10,2D20.10)') SVAR6, POT%VAL(I), POT%DER(I)
+!            WRITE(NFILINFO,FMT='(I8,2F15.6)') I, POT%VAL(I), POT%DER(I)
 !         END DO
 !         print*,"FLAG POT%ID=",POT%ID
 !         print*,"FLAG DIJ=",DIJ, "   RIJ=",RIJ
-!         print*,"FLAG FORCED STOP TORSIONPOT INFO"
+!         print*,"FLAG FORCED STOP AMBER_NONBONDPOTA INFO" 
 !         STOP
 ! !-----------------------------------
-                      CALL TRACE$POP
+!                      CALL TRACE$POP
       RETURN
     END SUBROUTINE FORCEFIELD$AMBER_NONBONDPOTA
        
@@ -1473,8 +1576,7 @@ integer :: nfilinfo
          
          
 !          ! first run: R(+) = R(0)
-!          MD%RP(:,:) = MD%R0(:,:)  ! eigentlich sollte das nicht hier geschehen, 
-!                                   ! es gibt bestimmt eine andere funktion, die das macht
+!          MD%RP(:,:) = MD%R0(:,:)  ! eigentlich sollte das nicht hier geschehen, es gibt bestimmt eine andere funktion, die das macht
          
 !          INIT=.TRUE.
 !       end if ! end of the initialisation

@@ -62,6 +62,7 @@ TYPE MD_TYPE
   REAL(8)      ,POINTER :: RMASS(:)       !(NAT)    ATOMIC MASSES
   CHARACTER(5) ,POINTER :: TYPE(:)        !(NAT)    ATOM TYPE
   CHARACTER(30),POINTER :: ATNAME(:)      !(NAT)    ATOM NAME
+  CHARACTER(2), POINTER :: ELEMENT(:)     !(NAT)    ELEMENT SYMBOL
   REAL(8)      ,POINTER :: QEL(:)         !(NAT)    POINT CHARGE
   INTEGER(4)            :: NBOND               
   INTEGER(4)   ,POINTER :: INDEX2(:,:)    ! (3,NBOND)     
@@ -106,6 +107,7 @@ TYPE(MD_TYPE) ,POINTER :: MDFIRST
 LOGICAL(4)             :: TINI=.FALSE.
 LOGICAL(4)             :: SELECTED=.FALSE.
 REAL(8)     ,PARAMETER :: RCLONGRANGE=100.D0
+INTEGER(4)             :: LOD  !level of detail for printout
 END MODULE CLASSICAL_MODULE
 !     ..................................................................
       SUBROUTINE CLASSICAL$SELECT(ID_)
@@ -145,6 +147,7 @@ END MODULE CLASSICAL_MODULE
       NULLIFY(MD%RMASS)
       NULLIFY(MD%TYPE)
       NULLIFY(MD%ATNAME)
+      NULLIFY(MD%ELEMENT)
       NULLIFY(MD%QEL)
       MD%NBOND=0
       NULLIFY(MD%INDEX2)
@@ -396,6 +399,12 @@ END MODULE CLASSICAL_MODULE
 !     =================================================================
       ELSE IF(ID_.EQ.'NBOND') THEN
         MD%NBOND=VAL_
+!
+!     =================================================================
+!     == LOD  LEVEL OF DETAIL FOR THE OUTPUT                         ==
+!     =================================================================
+      ELSE IF(ID_.EQ.'LOD') THEN
+         LOD=VAL_
       ELSE
         CALL ERROR$MSG('INVALID IDENTIFIER')
         CALL ERROR$CHVAL('ID',ID_)
@@ -548,6 +557,16 @@ END MODULE CLASSICAL_MODULE
         END IF
         IF(.NOT.ASSOCIATED(MD%ATNAME))ALLOCATE(MD%ATNAME(MD%NAT))
         MD%ATNAME=VAL_
+      ELSE IF(ID_.EQ.'ELEMENT') THEN
+        IF(MD%NAT.EQ.0) MD%NAT=LENG_
+        IF(LENG_.NE.MD%NAT) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
+          CALL ERROR$STOP('CLASSICAL$SETCHA')
+        END IF
+        IF(.NOT.ASSOCIATED(MD%ELEMENT))ALLOCATE(MD%ELEMENT(MD%NAT))
+        MD%ELEMENT=VAL_
       ELSE
         CALL ERROR$MSG('INVALID IDENTIFIER')
         CALL ERROR$CHVAL('ID',ID_)
@@ -555,7 +574,7 @@ END MODULE CLASSICAL_MODULE
         CALL ERROR$STOP('CLASSICAL$SETCHA')
       END IF
       RETURN
-      END
+      END SUBROUTINE CLASSICAL$SETCHA
 !
 !     .................................................................
       SUBROUTINE CLASSICAL$GETR8A(ID_,LENG_,VAL_)
@@ -818,6 +837,15 @@ END MODULE CLASSICAL_MODULE
         END IF
         IF(.NOT.ASSOCIATED(MD%ATNAME))ALLOCATE(MD%ATNAME(MD%NAT))
         VAL_=MD%ATNAME
+      ELSE IF(ID_.EQ.'ELEMENT') THEN
+        IF(MD%NAT.EQ.0) MD%NAT=LENG_
+        IF(LENG_.NE.MD%NAT) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$STOP('CLASSICAL$GETCHA')
+        END IF
+        IF(.NOT.ASSOCIATED(MD%ELEMENT))ALLOCATE(MD%ELEMENT(MD%NAT))
+        VAL_=MD%ELEMENT
       ELSE
         CALL ERROR$MSG('INVALID IDENTIFIER')
         CALL ERROR$STOP('CLASSICAL$GETCHA')
@@ -1377,62 +1405,70 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==  REPORT ATOMIC POSITIONS                                     ==
 !     ==================================================================
       WRITE(NFIL,FMT='(''=== POSITIONS IN ANGSTROM ===; NAT='',I10)')MD%NAT
-      CALL CONSTANTS('U',PRTONM)
-      CALL CONSTANTS('ANGSTROM',ANGSTROM)
-      DO IAT=1,MD%NAT
-        WRITE(NFIL,FMT='(I3,1X,A,"R=",3F10.5,2X' &
-     &                  //',"A ;M=",F10.5,"U"," Q ",F10.5)') &
-     &       IAT,MD%TYPE(IAT),(MD%R0(I,IAT)/ANGSTROM,I=1,3),MD%RMASS(IAT)/PRTONM,MD%QEL(IAT)
-      ENDDO
+      IF(LOD.GE.2) THEN
+         CALL CONSTANTS('U',PRTONM)
+         CALL CONSTANTS('ANGSTROM',ANGSTROM)
+         DO IAT=1,MD%NAT
+            WRITE(NFIL,FMT='(I3,1X,A,"R=",3F10.5,2X' &
+            &                  //',"A ;M=",F10.5,"U"," Q[E] ",F10.5)') &
+            &       IAT,MD%TYPE(IAT),(MD%R0(I,IAT)/ANGSTROM,I=1,3),MD%RMASS(IAT)/PRTONM,-MD%QEL(IAT)
+         ENDDO
+      END IF
 !
 !     ==================================================================
 !     ==  REPORT BONDS                                                ==
 !     ==================================================================
       WRITE(NFIL,FMT='(''===  BONDS IN ANGSTROM  ===; NBOND='',I10)')MD%NBOND
-      CALL CONSTANTS('ANGSTROM',ANGSTROM)
-      DO IB=1,MD%NBOND
-        IAT1=MD%INDEX2(1,IB)
-        IAT2=MD%INDEX2(2,IB)
-        D=0.D0
-        DO I=1,3
-          D=D+(MD%R0(I,IAT1)-MD%R0(I,IAT2))**2
-        ENDDO
-        D=DSQRT(D)
-        WRITE(NFIL,FMT='(2I5,F10.5," A")')IAT1,IAT2,D/ANGSTROM
-      ENDDO
+      IF(LOD.GE.3) THEN
+         CALL CONSTANTS('ANGSTROM',ANGSTROM)
+         DO IB=1,MD%NBOND
+            IAT1=MD%INDEX2(1,IB)
+            IAT2=MD%INDEX2(2,IB)
+            D=0.D0
+            DO I=1,3
+               D=D+(MD%R0(I,IAT1)-MD%R0(I,IAT2))**2
+            ENDDO
+            D=DSQRT(D)
+            WRITE(NFIL,FMT='(2I5,F10.5," A")')IAT1,IAT2,D/ANGSTROM
+         ENDDO
+      END IF
 !
 !     ==================================================================
 !     ==  REPORT BOND ANGLES                                          ==
 !     ==================================================================
       WRITE(NFIL,FMT='(''===  ANGLES IN DEGREE  ===; NANGLE='',I10)')MD%NANGLE
-      PI=4.D0*DATAN(1.D0)
-      DO IA=1,MD%NANGLE
-        IAT1=MD%INDEX3(1,IA)
-        IAT2=MD%INDEX3(2,IA)
-        IAT3=MD%INDEX3(3,IA)
-        DX1=MD%R0(1,IAT1)-MD%R0(1,IAT2)
-        DY1=MD%R0(2,IAT1)-MD%R0(2,IAT2)
-        DZ1=MD%R0(3,IAT1)-MD%R0(3,IAT2)
-        DX2=MD%R0(1,IAT3)-MD%R0(1,IAT2)
-        DY2=MD%R0(2,IAT3)-MD%R0(2,IAT2)
-        DZ2=MD%R0(3,IAT3)-MD%R0(3,IAT2)
-        D11=DX1*DX1+DY1*DY1+DZ1*DZ1
-        D12=DX1*DX2+DY1*DY2+DZ1*DZ2
-        D22=DX2*DX2+DY2*DY2+DZ2*DZ2
-        A=D12/DSQRT(D11*D22)
-        A=DACOS(A)/(2.D0*PI)*360.D0
-        WRITE(NFIL,FMT='(3I5,F10.5)')IAT1,IAT2,IAT3,A
-      ENDDO
+      IF(LOD.GE.3) THEN
+         PI=4.D0*DATAN(1.D0)
+         DO IA=1,MD%NANGLE
+            IAT1=MD%INDEX3(1,IA)
+            IAT2=MD%INDEX3(2,IA)
+            IAT3=MD%INDEX3(3,IA)
+            DX1=MD%R0(1,IAT1)-MD%R0(1,IAT2)
+            DY1=MD%R0(2,IAT1)-MD%R0(2,IAT2)
+            DZ1=MD%R0(3,IAT1)-MD%R0(3,IAT2)
+            DX2=MD%R0(1,IAT3)-MD%R0(1,IAT2)
+            DY2=MD%R0(2,IAT3)-MD%R0(2,IAT2)
+            DZ2=MD%R0(3,IAT3)-MD%R0(3,IAT2)
+            D11=DX1*DX1+DY1*DY1+DZ1*DZ1
+            D12=DX1*DX2+DY1*DY2+DZ1*DZ2
+            D22=DX2*DX2+DY2*DY2+DZ2*DZ2
+            A=D12/DSQRT(D11*D22)
+            A=DACOS(A)/(2.D0*PI)*360.D0
+            WRITE(NFIL,FMT='(3I5,F10.5)')IAT1,IAT2,IAT3,A
+         ENDDO
+      END IF
 !
 !     ==================================================================
 !     ==  REPORT BOND POTENTIALS                                      ==
 !     ==================================================================
       WRITE(NFIL,FMT='(''===  POTENTIALS  ===; NPOT='',I10)')MD%NPOT
-      DO IPOT=1,MD%NPOT
-        WRITE(NFIL,FMT='(I5,1X,A)')IPOT,MD%POT(IPOT)%ID
-!       WRITE(NFIL,FMT='(10F8.3)')(MD%POT(IPOT)%VAL(I),I=1,MD%POT(IPOT)%NX,10)
-!       WRITE(NFIL,FMT='(10F8.3)')(MD%POT(IPOT)%DER(I),I=1,MD%POT(IPOT)%NX,10)
-      ENDDO
+      IF(LOD.GE.4) THEN
+         DO IPOT=1,MD%NPOT
+            WRITE(NFIL,FMT='(I5,1X,A)')IPOT,MD%POT(IPOT)%ID
+!            WRITE(NFIL,FMT='(10F8.3)')(MD%POT(IPOT)%VAL(I),I=1,MD%POT(IPOT)%NX,10)
+!            WRITE(NFIL,FMT='(10F8.3)')(MD%POT(IPOT)%DER(I),I=1,MD%POT(IPOT)%NX,10)
+         ENDDO
+      END IF
       CALL TRACE$POP
       RETURN
     END SUBROUTINE CLASSICAL$REPORT
@@ -2139,7 +2175,7 @@ REAL(8) :: G1,DGDX1
       INTEGER(4)                 :: NN,II,ISVAR,II1,II3,I1,I2,NIJ
       REAL(8)                    :: X,K,D
 !     ******************************************************************
-                                  CALL TRACE$PUSH('CLASSICAL_UFFINITIALIZE')
+                                  CALL TRACE$PUSH('CLASSICAL_FORCEFIELDSETUP')
       NPOT=0
 !     ================================================================== 
 !     ==  SET UP ELECTROSTATIC POTENTIAL                              ==

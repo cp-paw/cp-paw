@@ -854,14 +854,6 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  STRUCTURE FILE  FOR MM PART====================================
-      ID=+'MMSTRC_OUT'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.PDB_OUT')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
-!
 !     ==  SCRAP FILE FOR TEST PURPOSES, THAT ALLOWS TO WRITE OUT TEST DATA===
       ID=+'INFO'
       CALL FILEHANDLER$SETFILE(ID,T,-'.INFO')
@@ -2009,6 +2001,7 @@ CALL TRACE$PASS('DONE')
       REAL(8)               :: KELVIN
       REAL(8)               :: DT
       INTEGER(4)            :: MULTIPLE
+      INTEGER(4)            :: LOD
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_QMMM')  
       LL_CNTL=LL_CNTL_
@@ -2074,6 +2067,14 @@ CALL TRACE$PASS('DONE')
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'ADIABATIC',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'ADIABATIC',0,TCHK)
       CALL QMMM$SETL4('ADIABATIC',TCHK)
+!     == LEVEL OF DETAIL FOR THE OUTPUT =================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'LOD',1,TCHK)
+      LOD=10        !DEFAULT IS 10. IF LOD.GE.10 THEN YOU GET THE FULL OUTPUT
+      IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'LOD',1,LOD)
+      CALL CLASSICAL$SELECT('QMMM')
+      CALL CLASSICAL$SETI4('LOD',LOD)
+      CALL CLASSICAL$SELECT('SHADOW')
+      CALL CLASSICAL$SETI4('LOD',LOD)
 !      
 !     ==================================================================
 !     ==  !CONTROL!QM-MM!AUTO                                         ==
@@ -5328,6 +5329,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         REAL(8)           :: Q
         REAL(8)           :: M
         CHARACTER(5)      :: FFTYPE
+        CHARACTER(2)      :: ELEMENT
         INTEGER(4)        :: QMSATOM   ! M-ATOM FOR Q ATOM
                                        ! S ATOM FOR M-ATOM
                                        ! Q ATOM FOR S ATOM
@@ -5348,9 +5350,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       TYPE(LL_TYPE),INTENT(IN)    :: LL_STRC_
       TYPE(LL_TYPE)               :: LL_STRC
       REAL(8)                     :: UNIT
-      REAL(8)                     :: PROTONMASS
+      REAL(8)                     :: PROTONMASS, ANGSTROM
       INTEGER(4)                  :: NATQ,NATM,NATS
-      INTEGER(4)                  :: NBONDM,NBONDS
+      INTEGER(4)                  :: NBONDM,NBONDS,NCONECT
       INTEGER(4)                  :: NLINK
       INTEGER(4)                  :: NMAP
       TYPE(ATOM_TYPE),ALLOCATABLE :: QATOM(:)
@@ -5360,9 +5362,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       TYPE(BOND_TYPE),ALLOCATABLE :: MBOND(:)
       TYPE(BOND_TYPE),ALLOCATABLE :: SBOND(:)
       INTEGER(4)                  :: IATQ,IATM,IATS,IATM1,IATM2,IATS1,IATS2,IAT
-      INTEGER(4)                  :: IBONDM,IBONDS,ILINK,I,IRES,J,IVAR
+      INTEGER(4)                  :: IBONDM,IBONDS,ILINK,I,IRES,J,IVAR,ICONECT
       INTEGER(4)                  :: IZ
       LOGICAL(4)                  :: TCHK
+      LOGICAL(4)     ,ALLOCATABLE :: TFREEZE(:)
       INTEGER(4)     ,ALLOCATABLE :: LINKARRAY(:,:)
       INTEGER(4)     ,ALLOCATABLE :: MAPARRAY(:,:)
       CHARACTER(32)               :: CH32SVAR1,DUMMY
@@ -5373,6 +5376,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                           CALL TRACE$PUSH('STRCIN_SOLVENT')
       LL_STRC=LL_STRC_
       CALL CONSTANTS('U',PROTONMASS)
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
 !    
 !     ==================================================================
 !     ==  READ UNIT FROM BLOCK !STRUCTURE!GENERIC                     ==
@@ -5597,10 +5601,13 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==================================================================
       ELSE IF(FF.EQ.'AMBER') THEN
         IATS=0
+        ALLOCATE(TFREEZE(NATM))
+        TFREEZE(:)=.FALSE.       !ALL ATOMS ARE FREE BY DEFAULT
         DO IATM=1, NATM
 !         ----- READ NAME OF MM-ATOM NAME= <ATOMNAME>_<ID>    
           MATOM(IATM)%NAME = TRIM(ADJUSTL(MMATOM(IATM)%NAME(1:LEN_TRIM(MMATOM(IATM)%NAME))))&
      &                     //'_'//TRIM(ADJUSTL(.ITOS.MMATOM(IATM)%ID))
+          MATOM(IATM)%ELEMENT=TRIM(ADJUSTL(MMATOM(IATM)%ELEMENT))
 
 !         ----- CHECK IF MM ATOM IS QM-ATOM
           IATQ=0
@@ -5623,6 +5630,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                CALL ERROR$STOP('STRCIN_SOLVENT')
             END IF
             SATOM(IATS)%NAME=MMATOM(IATM)%NAME !OR QMNAME ? 
+            SATOM(IATS)%ELEMENT=TRIM(ADJUSTL(MMATOM(IATM)%ELEMENT))
             QATOM(IATQ)%QMSATOM=IATM
             MATOM(IATM)%QMSATOM=IATS
             SATOM(IATS)%QMSATOM=IATQ
@@ -5635,7 +5643,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             IF(TRIM(ADJUSTL(TOP_RES(IRES)%ATOM(I)%NAME)).EQ.TRIM(ADJUSTL(MMATOM(IATM)%NAME))) THEN
               MATOM(IATM)%FFTYPE =  TRIM(ADJUSTL(TOP_RES(IRES)%ATOM(I)%ATOM))
 !             ------  HERE YOU CAN CHOOSE IF THE MM ATOMS GET ZERO CHARGE OR NOT ------------
-              MATOM(IATM)%Q      =  TOP_RES(IRES)%ATOM(I)%CHARGE ! WARNING: CHECK SIGN
+              MATOM(IATM)%Q      =  - TOP_RES(IRES)%ATOM(I)%CHARGE 
 !             -------------------------------------------------------------------------------
               EXIT
             END IF
@@ -5643,14 +5651,14 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           IF(IATQ.NE.0) THEN
             SATOM(IATS)%FFTYPE=MATOM(IATM)%FFTYPE
           END IF
-!         ----- POSITIONS
+!         ----- POSITIONS -----------------------------
           IF(IATQ.EQ.0) THEN
-            MATOM(IATM)%R(:) = MMATOM(IATM)%R(:) * UNIT
+            MATOM(IATM)%R(:) = MMATOM(IATM)%R(:) * ANGSTROM
           ELSE
             MATOM(IATM)%R(:)=QATOM(IATQ)%R
             SATOM(IATS)%R(:)=QATOM(IATQ)%R
           END IF
-!         ----- MASS
+!         ----- MASS ----------------------------------
           IF(IATQ.EQ.0) THEN
             CH32SVAR1 = ADJUSTL(MMATOM(IATM)%ELEMENT)
             CALL PERIODICTABLE$GET(CH32SVAR1,'Z',IZ)
@@ -5660,6 +5668,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             SATOM(IATS)%M=QATOM(IATQ)%M
             SATOM(IATS)%Q=MATOM(IATM)%Q !!! MANUEL: HERE IS THE POODLE'S CORE
           END IF
+!         ----- IS ATOM FIXED ? -----------------------
+          IF(+MMATOM(IATM)%FLAG.EQ.'F') TFREEZE(IATM)=.TRUE. 
         END DO
       END IF
 
@@ -5773,6 +5783,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     =========== AMBER ==== READ LINKS =============================
 !     ===============================================================
       ELSE IF(FF.EQ.'AMBER') THEN
+                        CALL TRACE$PASS('READING LINK ATOMS IN AMBER')
 !       == GET NUMBER OF LINK ATOMS ====================================
         NLINK=0
         DO I=1,SIZE(MMATOM)
@@ -5827,6 +5838,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !           ---- SHADOW ATOM NAME,POSITION,MASS,CHARGE,QMSATOM----------------
             IATQ=LINK(ILINK)%QATOM
             SATOM(IATS)%NAME='H'!MMATOM(I)%NAME
+            SATOM(IATS)%ELEMENT='H '
             SATOM(IATS)%R=QATOM(IATQ)%R
             SATOM(IATS)%M=QATOM(IATQ)%M
             SATOM(IATS)%Q=QATOM(IATQ)%Q
@@ -5902,6 +5914,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ----- GET NUMBER OF BONDS
         IAT=1
         NBONDM=0
+        NCONECT=0
+!       ----- read #bonds from the topology informations
         DO WHILE(IAT.LT.SIZE(MMATOM))
           RESNAME= MMATOM(IAT)%RESNAME
           CALL FORCEFIELD$GETRESNUMBER(RESNAME,IVAR)
@@ -5915,7 +5929,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !         ----- ONLY IF THE ENTRY BELONGS TO AN AMINO ACID ADD THE PEPTIDE BOND
           IF(MMATOM(IAT)%KEYWORD.EQ.'ATOM  ') THEN
              NBONDM= NBONDM + IBONDM +1
-          ELSE
+          ELSE IF(MMATOM(IAT)%KEYWORD.EQ.'HETATM') THEN
              NBONDM = NBONDM + IBONDM
           END IF
 !         -------------
@@ -5930,7 +5944,18 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
              END IF
           END IF
         ENDDO
-        ALLOCATE(MBOND(NBONDM))
+!             ----- read #bonds from the CONECT information
+        DO I=1,SIZE(MMCONECT)
+           IVAR=0
+           IF(MMCONECT(I)%CATOM.EQ.0) CYCLE
+           IF(MMCONECT(I)%ATOM4.NE.0) IVAR=IVAR+1
+           IF(MMCONECT(I)%ATOM3.NE.0) IVAR=IVAR+1
+           IF(MMCONECT(I)%ATOM2.NE.0) IVAR=IVAR+1
+           IF(MMCONECT(I)%ATOM1.NE.0) IVAR=IVAR+1
+           NCONECT=NCONECT+IVAR
+        END DO
+print*,"FLAG: ",NBONDM,NCONECT
+        ALLOCATE(MBOND(NBONDM+NCONECT))
         MBOND(:)%ATOM1=0
         MBOND(:)%ATOM2=0
         MBOND(:)%BO=0.D0!
@@ -5951,18 +5976,13 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                    MBOND(IBONDM)%ATOM2 = J
                 END IF
              END DO
-             MBOND(IBONDM)%BO = 1
+             MBOND(IBONDM)%BO = 1.d0
              IBONDM = IBONDM + 1
           END DO
           IAT= IAT+SIZE(TOP_RES(IVAR)%ATOM)
           IF(IAT.GT.SIZE(MMATOM)) EXIT
 !         ---- CONNECT DIFFERENT AMINOACIDS IF THEY ARE IN THE SAME CHAIN
           IF(MMATOM(IAT)%KEYWORD.EQ.'ATOM  ') THEN
-!SASCHA CHECK THIS IS THE PREVIOUS VERSION
-!           IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID).OR.(IAT+IVAR.LT.SIZE(MMATOM))) THEN
-!SASCHA CHECK THHAT PROBABLY SHOULD LOOK LIKE THIS
-!            IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID).AND.(IAT+IVAR.LT.SIZE(MMATOM))) THEN
-!SASCHA CHECK END
             IF((MMATOM(IAT-1)%CHAINID.EQ.MMATOM(IAT)%CHAINID)) THEN
 
 !             ---- GET LAST C -ATOM
@@ -5988,7 +6008,41 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
               MBOND(IBONDM)%BO = 1
               IBONDM = IBONDM + 1
             END IF
-          END IF
+         END IF
+        END DO
+
+        ICONECT=NBONDM
+        DO I=1,SIZE(MMCONECT)
+           IF(MMCONECT(I)%CATOM.NE.0) THEN
+              IF(MMCONECT(I)%ATOM4.NE.0) THEN
+                 ICONECT=ICONECT+1
+                 MBOND(ICONECT)%ATOM1=MMCONECT(I)%CATOM
+                 MBOND(ICONECT)%ATOM2=MMCONECT(I)%ATOM4
+                 MBOND(ICONECT)%BO=1
+                 CYCLE
+              END IF
+              IF(MMCONECT(I)%ATOM3.NE.0) THEN
+                 ICONECT=ICONECT+1
+                 MBOND(ICONECT)%ATOM1=MMCONECT(I)%CATOM
+                 MBOND(ICONECT)%ATOM2=MMCONECT(I)%ATOM3
+                 MBOND(ICONECT)%BO=1
+                 CYCLE
+              END IF
+              IF(MMCONECT(I)%ATOM2.NE.0) THEN
+                 ICONECT=ICONECT+1
+                 MBOND(ICONECT)%ATOM1=MMCONECT(I)%CATOM
+                 MBOND(ICONECT)%ATOM2=MMCONECT(I)%ATOM2
+                 MBOND(ICONECT)%BO=1
+                 CYCLE
+              END IF
+              IF(MMCONECT(I)%ATOM1.NE.0) THEN
+                 ICONECT=ICONECT+1
+                 MBOND(ICONECT)%ATOM1=MMCONECT(I)%CATOM
+                 MBOND(ICONECT)%ATOM2=MMCONECT(I)%ATOM1
+                 MBOND(ICONECT)%BO=1
+                 CYCLE
+              END IF
+           END IF
         END DO
       END IF
 !
@@ -6066,23 +6120,27 @@ PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
 !     ==  DEFINE CLASSICAL OBJECT                                     ==
 !     ==================================================================
       CALL CLASSICAL$SELECT('QMMM')
+      CALL CLASSICAL$SETL4A('TFREEZE',NATM,TFREEZE)
       CALL STRCIN_SOLVENT_SETM(NATM,MATOM,NBONDM,MBOND)
-      CALL CLASSICAL$SELECT('SHADOW')
-
-! PRINT*,"---------------------------"
-! PRINT*,"   MATOM:"
-! DO I=1,SIZE(MATOM)
-!    WRITE(*,FMT='(A32, 3F10.4, 2F15.5, A10, I6)')  MATOM(I)
-! END DO
-! PRINT*,"---------------------------"
-! PRINT*,"   SATOM:",ALLOCATED(SATOM)
-! DO I=1,SIZE(SATOM)
-!    WRITE(*,FMT='(I6,A32, 3F10.4, 2F15.5, A10, I6)') I,  SATOM(I)
-! END DO
-! PRINT*,"---------------------------"
-! PRINT*,"   QATOM:"
-! DO I=1,SIZE(QATOM)
-!    WRITE(*,FMT='(A32, 3F10.4, 2F15.5, A10, I6)')  QATOM(I)
+! print*,"---------------------------"
+! print*,"   MATOM:"
+! do i=1,SIZE(MATOM)
+!    write(*,FMT='(A32, 3F10.4, 2F15.5, A10, A2, I6)')  MATOM(i)
+! END do
+! print*,"---------------------------"
+! print*,"   SATOM:",allocated(SATOM)
+! do i=1,SIZE(SATOM)
+!    write(*,FMT='(I6,A32, 3F10.4, 2F15.5, A10, A2, I6)') i,  SATOM(i)
+! END do
+! print*,"---------------------------"
+! print*,"   QATOM:"
+! do i=1,SIZE(QATOM)
+!    write(*,FMT='(A32, 3F10.4, 2F15.5, A10, A2, I6)')  QATOM(i)
+! END do
+! print*,"---------------------------"
+! print*,"   MBOND:",SIZE(MBOND)
+! DO I=1,SIZE(MBOND)
+!    write(*,FMT='(2I8,F5.1)') MBOND(I)
 ! END DO
 ! PRINT*,"---------------------------"
 ! PRINT*,"   SBOND:"
@@ -6095,6 +6153,8 @@ PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
 ! END DO
 ! !IF(ALLOCATED(LINKARRAY)) DEALLOCATE(LINKARRAY)
 ! STOP 'FORCED STOP IN READIN_SOLVENT'
+
+      CALL CLASSICAL$SELECT('SHADOW')
       CALL STRCIN_SOLVENT_SETM(NATS,SATOM,NBONDS,SBOND)
 !
 !     ==================================================================
@@ -6121,6 +6181,7 @@ PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
         TYPE(BOND_TYPE),INTENT(IN) :: BOND(NBOND)
         INTEGER(4)                 :: IAT,IBOND
         CHARACTER(32)              :: ATOMNAME(NAT)
+        CHARACTER(2)               :: ELEMENT(NAT)
         REAL(8)                    :: R(3,NAT)
         REAL(8)                    :: MASS(NAT)
         REAL(8)                    :: CHARGE(NAT)
@@ -6138,6 +6199,7 @@ PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
           CHARGE(IAT)=ATOM(IAT)%Q
           FFTYPE(IAT)=ATOM(IAT)%FFTYPE
           ATOMNAME(IAT)=ATOM(IAT)%NAME
+          ELEMENT(IAT)=ATOM(IAT)%ELEMENT
         ENDDO
         CALL CLASSICAL$SETI4('NAT',NAT)
         CALL CLASSICAL$SETR8A('R(0)',3*NAT,R)
@@ -6146,6 +6208,7 @@ PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
         CALL CLASSICAL$SETR8A('QEL',NAT,CHARGE)
         CALL CLASSICAL$SETCHA('TYPE',NAT,FFTYPE)
         CALL CLASSICAL$SETCHA('ATOMNAME',NAT,ATOMNAME)
+        CALL CLASSICAL$SETCHA('ELEMENT',NAT,ELEMENT)
 !
 !       ================================================================
 !       ==  SEND BOND INFORMATION TO CLASSICAL OBJECT                 ==
