@@ -1004,6 +1004,127 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       FOURPI=4.D0*PI
 !
 !     ==========================================================================
+!     == DETERMINe SHELL TO WHICH UPAR AND JPAR BELONG                        ==
+!     ==========================================================================
+      LNPROBE=-1
+      N=0
+      DO LN=1,LNX
+        L=LOX(LNX)
+        IF(L.NE.MAINLN(1)) CYCLE
+        N=N+1
+        IF(N.EQ.MAINLN(2))THEN
+          LNPROBE=LN  
+          EXIT
+        END IF
+      ENDDO
+      IF(LNX.EQ.1) LNPROBE=1
+      IF(LNPROBE.EQ.-1) THEN
+        CALL ERROR$MSG('LDAPLUSU_MODULITTLEWITHPARMS')
+      END IF
+!
+!     ==========================================================================
+!     == SCALE UP ULITTLE TO SATISFY UPAR                                     ==
+!     ==========================================================================
+      IF(USEUPAR) THEN
+        RAWUPAR=ULITTLE(1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)/FOURPI
+        SVAR=UPAR/RAWUPAR
+!       == all shells of orbitals are scaled so that the specified shell has the
+!       == specified value of U
+        ULITTLE=ULITTLE*SVAR
+      END IF
+!
+!     ==========================================================================
+!     == SCALE UP JPAR OF THE MAIN SHELL AND SET OTHERS TO ZERO               ==
+!     ==========================================================================
+      IF(USEJPAR) THEN
+        IF(LOX(LNPROBE).EQ.1) THEN
+          RAWJPAR=0.D0
+!       == p-shell ====================================================================
+          IF(LRX+1.Ge.3) THEN
+!           == use f^2=5*J and u(l+1,...)=4pi/(2l+1)=4*pi/3
+!           == f0,f2,f4 are slater integrals
+            SVAR=3.d0/fourpi/5.d0
+            RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            SVAR=JPAR/RAWJPAR
+            ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+          END IF 
+!
+!       == d-shell ====================================================================
+        else IF(LOX(LNPROBE).EQ.2) THEN
+          RAWJPAR=0.D0
+          IF(LRX+1.Ge.3) THEN
+!           == use f^2=14/(1+0.625)*J and u(l+1,...)=4pi/(2l+1)
+!           == f0,f2,f4 are slater integrals
+            SVAR=5.d0/fourpi*1.625/14.d0
+            RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            SVAR=JPAR/RAWJPAR
+!           == f^4/f_2=0.625 should be automatically satisfied
+            ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+          END IF 
+!
+!       == f-shell ====================================================================
+        ELSE IF(LOX(LNPROBE).EQ.3) THEN
+          RAWJPAR=0.D0
+          IF(LRX+1.GT.3) THEN
+            SVAR=7.d0/fourpi*(268.D0+195d0*0.668d0+250*0.494)/6435.D0
+            RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+            ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
+          END IF 
+!
+!       == jpar is set to zero for s and for l>3
+        ELSE
+          IF(JPAR.EQ.0) THEN
+            ULITTLE(2:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=0.D0
+          ELSE
+            CALL ERROR$MSG('JPAR.NE.0 CAN ONLY BE SET OF D AND F SHELLS')
+            CALL ERROR$MSG('LDAPLUSU_MODULITTLEWITHPARMS')
+          END IF
+        END IF
+      END IF
+      
+!
+!     ==========================================================================
+!     == SET UP ULITTLE                                                       ==
+!     ==========================================================================
+!!$
+!!$      ULITTLE=0.D0
+!!$      DO L=0,LRX
+!!$        FAC=0.D0
+!!$        IF(L.EQ.0)  FAC=UPAR
+!!$        IF(LRX.GE.2)FAC=JPAR*14.D0/(1.D0+FIVEEIGTH)
+!!$        IF(LRX.GE.4)FAC=FIVEEIGTH*JPAR*14.D0/(1.D0+FIVEEIGTH)
+!!$        ULITTLE(L+1,:,:,:,:)=FAC*4.D0*PI/REAL(2*L+1,KIND=8)
+!!$      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU_MODULITTLEWITHPARMS_o(LNX,LOX,LRX,USEUPAR,UPAR &
+     &                                       ,USEJPAR,JPAR,MAINLN,ULITTLE)
+!     **                                                                      **
+!     ** Buggy version shall be removed !                                     **
+!     ** CALCULATES THE INTERACTION ENERGY                                    **
+!     **                                                                      **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LNX
+      INTEGER(4),INTENT(IN) :: LOX(LNX)
+      INTEGER(4),INTENT(IN) :: LRX
+      LOGICAL(4),INTENT(IN) :: USEUPAR
+      LOGICAL(4),INTENT(IN) :: USEJPAR
+      INTEGER(4),INTENT(IN) :: MAINLN(2)
+      REAL(8)   ,INTENT(IN) :: UPAR
+      REAL(8)   ,INTENT(IN) :: JPAR
+      REAL(8)   ,INTENT(INOUT):: ULITTLE(LRX+1,LNX,LNX,LNX,LNX)
+      REAL(8)   ,PARAMETER  :: FIVEEIGTH=0.625D0
+      REAL(8)               :: PI,FOURPI
+      INTEGER(4)            :: L,LN,LNPROBE,N
+      REAL(8)               :: RAWJPAR,RAWUPAR
+      REAL(8)               :: SVAR
+!     **************************************************************************
+      PI=4.D0*DATAN(1.D0)
+      FOURPI=4.D0*PI
+!
+!     ==========================================================================
 !     == DETERMIN SHELL TO WHICH UPAR AND JPAR BELONG                         ==
 !     ==========================================================================
       LNPROBE=-1
@@ -1220,7 +1341,9 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
             IF(I.NE.J)JPAR=JPAR+U(I,J,J,I)
           ENDDO
         ENDDO
+!       == factor (2l+1)**2 is the number of elements of the utensor contributing
         UPAR=UPAR/REAL(2*L+1)**2
+!       == factor 2l(2l+1) is the number of elements of the utensor contributing
         JPAR=JPAR/REAL(2*L*(2*L+1))*7.D0/5.D0
 PRINT*,'UPARAMETER[EV]    ',UPAR*27.211D0 ,'UPARAMETER    ',UPAR
 PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
