@@ -20,7 +20,11 @@
          do while (len.gt.0)
            lineout="write(*,fmt='(A)')'"//trim(line(1:maxlen-overheadlen))//"'"
            write(*,fmt='(A)')trim(lineout)
-           line=line(maxlen-overheadlen+1:len)
+           if(len.gt.maxlen-overheadlen+1) then
+              line=line(maxlen-overheadlen+1:len)
+           else
+              line=''
+           end if
            len=len_trim(line)
          enddo
        enddo  

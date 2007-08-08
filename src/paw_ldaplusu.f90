@@ -27,7 +27,7 @@ REAL(8)                :: JPAR=0.D0         !J-PARAMETER
 !==  intermediate storage from initualization ================================== 
 INTEGER(4)             :: NCHI              !#(local orbitals)
 REAL(8)   ,POINTER     :: CHI(:,:)          !local (HEAD) ORBITALS
-REAL(8)   ,POINTER     :: ULITTLE(:,:,:,:,:)!SLATER INTEGRALS (EXCEPT FACTOR)
+REAL(8)   ,POINTER     :: ULITTLE(:,:,:,:,:)!SLATER INTEGRALS 
 REAL(8)   ,POINTER     :: DOWNFOLD(:,:)     !MAPS PARTIAL WAVES TO local ORBITALS
 END TYPE THISTYPE
 TYPE(THISTYPE),ALLOCATABLE,TARGET :: THISARRAY(:)
@@ -921,7 +921,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_ULITTLE(GID,NR,LRX,LNX,LOX,CHI,ULITTLE)
 !     **                                                                      **
-!     ** Slater integrals. (Attention: different pre-factors)                 **
+!     ** Slater integrals.                                                    **
 !     **                                                                      **
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -939,6 +939,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       REAL(8)               :: AUX(NR)
       REAL(8)               :: SVAR
       REAL(8)               :: R(NR)
+      REAL(8)               :: pi,fourpi
 !     **************************************************************************
                             CALL TRACE$PUSH('LDAPLUSU_ULITTLE')
       CALL RADIAL$R(GID,NR,R)
@@ -974,6 +975,16 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
           ENDDO
         ENDDO
       ENDDO
+!
+!     ==========================================================================
+!     == add factor consistent with definition of Slater integrals            ==
+!     ==========================================================================
+      pi=4.d0*atan(1.d0)
+      fourpi=4.d0*pi
+      do l=0,lrx
+        ulittle(l+1,:,:,:,:)=ulittle(l+1,:,:,:,:)*real(2*l+1,kind=8)/fourpi
+      enddo
+
                             CALL TRACE$POP()
       RETURN
       END
@@ -1026,7 +1037,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
 !     == SCALE UP ULITTLE TO SATISFY UPAR                                     ==
 !     ==========================================================================
       IF(USEUPAR) THEN
-        RAWUPAR=ULITTLE(1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)/FOURPI
+        RAWUPAR=ULITTLE(1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)
         SVAR=UPAR/RAWUPAR
 !       == all shells of orbitals are scaled so that the specified shell has the
 !       == specified value of U
@@ -1043,7 +1054,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
           IF(LRX+1.Ge.3) THEN
 !           == use f^2=5*J and u(l+1,...)=4pi/(2l+1)=4*pi/3
 !           == f0,f2,f4 are slater integrals
-            SVAR=3.d0/fourpi/5.d0
+            SVAR=1.d0/5.d0
             RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
             SVAR=JPAR/RAWJPAR
             ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
@@ -1055,7 +1066,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
           IF(LRX+1.Ge.3) THEN
 !           == use f^2=14/(1+0.625)*J and u(l+1,...)=4pi/(2l+1)
 !           == f0,f2,f4 are slater integrals
-            SVAR=5.d0/fourpi*1.625/14.d0
+            SVAR=1.625/14.d0
             RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
             SVAR=JPAR/RAWJPAR
 !           == f^4/f_2=0.625 should be automatically satisfied
@@ -1066,7 +1077,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
         ELSE IF(LOX(LNPROBE).EQ.3) THEN
           RAWJPAR=0.D0
           IF(LRX+1.GT.3) THEN
-            SVAR=7.d0/fourpi*(268.D0+195d0*0.668d0+250*0.494)/6435.D0
+            SVAR=(268.D0+195d0*0.668d0+250*0.494)/6435.D0
             RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
             ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
           END IF 
@@ -1147,7 +1158,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
 !     == SCALE UP ULITTLE TO SATISFY UPAR                                     ==
 !     ==========================================================================
       IF(USEUPAR) THEN
-        RAWUPAR=ULITTLE(1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)/FOURPI
+        RAWUPAR=ULITTLE(1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)
         SVAR=UPAR/RAWUPAR
         ULITTLE=ULITTLE*SVAR
       END IF
@@ -1234,8 +1245,13 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       INTEGER(4)            :: L,M,LM,LX
       REAL(8)               :: CG1,CG2
       REAL(8)               :: SVAR
+      REAL(8)               :: pi,fourpi
+      real(8)               :: fourpiby2lplus1
 !     **************************************************************************
                             CALL TRACE$PUSH('LDAPLUSU_UTENSOR')
+      pi=4.d0*atan(1.d0)
+      fourpi=4.d0*pi
+!
       U(:,:,:,:)=0.d0
       IORB1=0
       DO LN1=1,LNX
@@ -1276,11 +1292,12 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
                       SVAR=0.D0
                       LM=0
                       DO L=0,LX
+                        FOURPIBY2LPLUS1=FOURPI/REAL(2*L+1,KIND=8)
                         DO M=1,2*L+1
                           LM=LM+1
                           CALL CLEBSCH(LM2,LM4,LM,CG1)
                           CALL CLEBSCH(LM3,LM1,LM,CG2)
-                          SVAR=SVAR+CG1*CG2*ULITTLE(L+1,LN2,LN4,LN3,LN1)
+                          SVAR=SVAR+FOURPIBY2LPLUS1*CG1*CG2*ULITTLE(L+1,LN2,LN4,LN3,LN1)
                         ENDDO
                       ENDDO
                       U(IORB1,IORB2,IORB3,IORB4)=SVAR

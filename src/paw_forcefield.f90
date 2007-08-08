@@ -1576,8 +1576,8 @@ integer :: nfilinfo
          
          
 !          ! first run: R(+) = R(0)
-!          MD%RP(:,:) = MD%R0(:,:)  ! eigentlich sollte das nicht hier geschehen, es gibt bestimmt eine andere funktion, die das macht
-         
+!          MD%RP(:,:) = MD%R0(:,:)  ! eigentlich sollte das nicht hier geschehen, 
+!                                   ! es gibt bestimmt eine andere funktion, die das macht
 !          INIT=.TRUE.
 !       end if ! end of the initialisation
       
