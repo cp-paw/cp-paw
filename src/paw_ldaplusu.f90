@@ -5,30 +5,34 @@ MODULE LDAPLUSU_MODULE
 TYPE THISTYPE
 LOGICAL(4)             :: TINI=.FALSE.
 LOGICAL(4)             :: TON=.FALSE.
-character(8)           :: atomtype=''
-INTEGER(4)             :: GID          !grid id for radial grid
-INTEGER(4)             :: NR           !#(radial grid points)
-INTEGER(4)             :: LNXCHI       !#(radial functions for local orbitals)
-INTEGER(4),POINTER     :: LOXCHI(:)    !main angular momentum of local orbital
-INTEGER(4),pointer     :: NORB(:)      !X(# LOCAL FUNCTIONS PER ANGULAR MOMENTUM)
-INTEGER(4)             :: LRX          !x(angular momentum in the density)
-REAL(8)                :: RCUT=0.D0    !RADIUS of local orbital
-character(16)          :: functionalid !can be 'lda+u' or 'hybrid'
-!== settings specifically for hybrid functional ================================
-real(8)                :: hfweight=0.d0!contribution of exact exchange
-!== settings specifically for lda+u
+CHARACTER(8)           :: ATOMTYPE=''
+INTEGER(4)             :: GID          !GRID ID FOR RADIAL GRID
+INTEGER(4)             :: NR           !#(RADIAL GRID POINTS)
+INTEGER(4)             :: LNXCHI       !#(RADIAL FUNCTIONS FOR LOCAL ORBITALS)
+INTEGER(4),POINTER     :: LOXCHI(:)    !MAIN ANGULAR MOMENTUM OF LOCAL ORBITAL
+INTEGER(4),POINTER     :: NORB(:)      !X(# LOCAL FUNCTIONS PER ANGULAR MOMENTUM)
+INTEGER(4)             :: LRX          !X(ANGULAR MOMENTUM IN THE DENSITY)
+REAL(8)                :: RCUT=0.D0    !RADIUS OF LOCAL ORBITAL
+CHARACTER(16)          :: FUNCTIONALID !CAN BE 'LDA+U' OR 'HYBRID'
+!== SETTINGS SPECIFICALLY FOR HYBRID FUNCTIONAL ================================
+REAL(8)                :: HFWEIGHT=0.D0!CONTRIBUTION OF EXACT EXCHANGE
+!== SETTINGS SPECIFICALLY FOR LDA+U
 INTEGER(4)             :: MAINLN(2)=(/0,0/) !SHELL TO WHICH UPAR AND JPAR REFER TO
 LOGICAL(4)             :: USEDIEL=.FALSE.
 LOGICAL(4)             :: USEUPAR=.FALSE.
 LOGICAL(4)             :: USEJPAR=.FALSE.
+LOGICAL(4)             :: USEFRATIO42=.FALSE.
+LOGICAL(4)             :: USEFRATIO62=.FALSE.
 REAL(8)                :: DIEL=1            !DIELECTRIC CONSTANT
 REAL(8)                :: UPAR=0.D0         !U-PARAMETER
 REAL(8)                :: JPAR=0.D0         !J-PARAMETER
-!==  intermediate storage from initualization ================================== 
-INTEGER(4)             :: NCHI              !#(local orbitals)
-REAL(8)   ,POINTER     :: CHI(:,:)          !local (HEAD) ORBITALS
+REAL(8)                :: FRATIO42=0.D0     ! RATIO OF SLATER INTEGRALS F4 AND F2
+REAL(8)                :: FRATIO62=0.D0     ! RATIO OF SLATER INTEGRALS F6 AND F2
+!==  INTERMEDIATE STORAGE FROM INITUALIZATION ================================== 
+INTEGER(4)             :: NCHI              !#(LOCAL ORBITALS)
+REAL(8)   ,POINTER     :: CHI(:,:)          !LOCAL (HEAD) ORBITALS
 REAL(8)   ,POINTER     :: ULITTLE(:,:,:,:,:)!SLATER INTEGRALS 
-REAL(8)   ,POINTER     :: DOWNFOLD(:,:)     !MAPS PARTIAL WAVES TO local ORBITALS
+REAL(8)   ,POINTER     :: DOWNFOLD(:,:)     !MAPS PARTIAL WAVES TO LOCAL ORBITALS
 END TYPE THISTYPE
 TYPE(THISTYPE),ALLOCATABLE,TARGET :: THISARRAY(:)
 TYPE(THISTYPE),POINTER :: THIS
@@ -44,34 +48,33 @@ END MODULE LDAPLUSU_MODULE
 !     **  SETS UP THE ARRAYS FOR OPERATION. THIS ROUTINE MUST BE CALLED ONCE  **
 !     **  BEFORE ANY OTHER CALL TO THE LDAPLUSU OBJECT                        **
 !     **                                                                      **
-!     **  attention: changes the setting of setup object                      **
+!     **  ATTENTION: CHANGES THE SETTING OF SETUP OBJECT                      **
 !     **                                                                      **
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NSP_    ! #(different atom types)
-      character(8)          :: string
+      INTEGER(4),INTENT(IN) :: NSP_    ! #(DIFFERENT ATOM TYPES)
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == do nothing if thisarray is already allocated                         ==
+!     == DO NOTHING IF THISARRAY IS ALREADY ALLOCATED                         ==
 !     ==========================================================================
       IF(NSP.NE.0) THEN
         IF(NSP_.NE.NSP) THEN
           CALL ERROR$MSG('LDAPLUSU$NEW CANNOT BE CALLED TWICE')
           CALL ERROR$STOP('LDAPLUSU$NEW')
         END IF
-        return
+        RETURN
       END IF
 !
 !     ==========================================================================
-!     == create thisarray                                                     ==
+!     == CREATE THISARRAY                                                     ==
 !     ==========================================================================
       NSP=NSP_
       ISP=0
       ALLOCATE(THISARRAY(NSP))
       DO ISP=1,NSP
         ALLOCATE(THISARRAY(ISP)%NORB(1))
-        THISARRAY(ISP)%NORB(:)=0  ! PER DEFAULT CORRELATE nothing
+        THISARRAY(ISP)%NORB(:)=0  ! PER DEFAULT CORRELATE NOTHING
       ENDDO
       RETURN
       END
@@ -83,7 +86,7 @@ END MODULE LDAPLUSU_MODULE
 !     **                                                                      **
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_  ! unique index of the atom type
+      INTEGER(4),INTENT(IN) :: ISP_  ! UNIQUE INDEX OF THE ATOM TYPE
 !     **************************************************************************
       ISP=ISP_
       IF(ISP.GT.NSP) THEN
@@ -132,6 +135,24 @@ END MODULE LDAPLUSU_MODULE
         IF(THIS%USEDIEL) THEN
           CALL ERROR$MSG('DIEL HAS ALREADY BEEN SET')
           CALL ERROR$MSG('JPAR AND DIEL CANNOT BE USED SIMULTANEOUSLY')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LDAPLUSU$SETR8')
+        END IF
+      ELSE IF(ID.EQ.'F4/F2') THEN
+        THIS%FRATIO42=VAL
+        THIS%USEFRATIO42=.TRUE.
+        IF(THIS%USEDIEL) THEN
+          CALL ERROR$MSG('DIEL HAS ALREADY BEEN SET')
+          CALL ERROR$MSG('FRATIO42 AND DIEL CANNOT BE USED SIMULTANEOUSLY')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LDAPLUSU$SETR8')
+        END IF
+      ELSE IF(ID.EQ.'F6/F2') THEN
+        THIS%FRATIO62=VAL
+        THIS%USEFRATIO62=.TRUE.
+        IF(THIS%USEDIEL) THEN
+          CALL ERROR$MSG('DIEL HAS ALREADY BEEN SET')
+          CALL ERROR$MSG('FRATIO62 AND DIEL CANNOT BE USED SIMULTANEOUSLY')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('LDAPLUSU$SETR8')
         END IF
@@ -252,11 +273,13 @@ END MODULE LDAPLUSU_MODULE
 !     **  REPORTS THE SETTINGS OF THE LDAPLUSU OBJECT                         **
 !     **                                                                      **
       USE LDAPLUSU_MODULE
+      USE CONSTANTS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NFIL
       TYPE(THISTYPE),POINTER :: THIS1
       CHARACTER(64)          :: STRING
       INTEGER(4)             :: L
+      REAL(8)                :: EV
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       CALL REPORT$TITLE(NFIL,'HYBRID FUNCTIONAL')
@@ -289,6 +312,11 @@ END MODULE LDAPLUSU_MODULE
           CALL REPORT$R8VAL(NFIL,'  HARTREE-FOCK CONTRIBUTION' &
      &                           ,THIS1%HFWEIGHT*100,'PERCENT')
         ELSE IF(THIS1%FUNCTIONALID.EQ.'LDA+U') THEN
+          CALL CONSTANTS('EV',EV)
+          CALL REPORT$R8VAL(NFIL,'  U-PARAMETER',THIS1%UPAR/EV,'EV')
+          CALL REPORT$R8VAL(NFIL,'  J-PARAMETER',THIS1%JPAR/EV,'EV')
+          CALL REPORT$R8VAL(NFIL,'  F4/F2',THIS1%FRATIO42,'')
+          CALL REPORT$R8VAL(NFIL,'  F6/F2',THIS1%FRATIO62,'')
           CALL REPORT$CHVAL(NFIL,'  DOUBLE COUNTING TYPE',DCTYPE)
         END IF
       ENDDO
@@ -314,7 +342,7 @@ END MODULE LDAPLUSU_MODULE
       INTEGER(4)             :: GID
       INTEGER(4)             :: NR
       INTEGER(4)             :: LNX
-      INTEGER(4)             :: Lmrx
+      INTEGER(4)             :: LMRX
       INTEGER(4),ALLOCATABLE :: LOX(:)
       INTEGER(4)             :: NCHI
       REAL(8)   ,ALLOCATABLE :: PHITOCHI(:,:)
@@ -327,11 +355,11 @@ END MODULE LDAPLUSU_MODULE
       COMPLEX(8),ALLOCATABLE :: HAM1(:,:,:,:)
       COMPLEX(8),ALLOCATABLE :: MATSS(:,:,:,:)
       INTEGER(4)             :: IS1,IS2,I,LN,M
-      REAL(8)                :: SVAR,etot1
-INTEGER(4)             :: ln1,ln2,ln3,ln4
+      REAL(8)                :: SVAR,ETOT1
+INTEGER(4)             :: LN1,LN2,LN3,LN4
 !     **************************************************************************
-      etot=0.d0
-      dath_=0.d0
+      ETOT=0.D0
+      DATH_=0.D0
       IF(.NOT.TON) RETURN
       CALL LDAPLUSU$SELECT(ISP_)
       IF(.NOT.THIS%TON) RETURN
@@ -342,8 +370,8 @@ INTEGER(4)             :: ln1,ln2,ln3,ln4
 !     ==========================================================================
       IF(.NOT.THIS%TINI) THEN
         CALL SETUP$LMRX(ISP_,LMRX)
-        this%lrx=INT(SQRT(REAL(LMrX)+1.D-8))-1
-        lrx=this%lrx
+        THIS%LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
+        LRX=THIS%LRX
 !
         CALL LDAPLUSU_CHIFROMPHI()
 PRINT*,'TINI ',THIS%TINI
@@ -377,13 +405,15 @@ PRINT*,'JPAR   ',THIS%JPAR
         IF(THIS%USEDIEL) THEN
           THIS%ULITTLE=THIS%ULITTLE/THIS%DIEL
         ELSE IF(THIS%USEUPAR.OR.THIS%USEJPAR) THEN
-          CALL LDAPLUSU_MODULITTLEWITHPARMS(LNX,LOX,LRX,THIS%USEUPAR,THIS%UPAR &
-     &                           ,THIS%USEJPAR,THIS%JPAR,THIS%MAINLN,THIS%ULITTLE)
+          CALL LDAPLUSU_MODULITTLEWITHPARMS(LNX,LOX,LRX &
+     &         ,THIS%USEUPAR,THIS%UPAR,THIS%USEJPAR,THIS%JPAR &
+     &         ,THIS%USEFRATIO42,THIS%FRATIO42,THIS%USEFRATIO62,THIS%FRATIO62 &
+     &         ,THIS%MAINLN,THIS%ULITTLE)
         END IF
       ELSE
         GID=THIS%GID
         NR=THIS%NR
-        lrx=this%lrx
+        LRX=THIS%LRX
         LNX=THIS%LNXCHI
         ALLOCATE(LOX(LNX))
         LOX=THIS%LOXCHI
@@ -404,11 +434,11 @@ PRINT*,'JPAR   ',THIS%JPAR
       ALLOCATE(MATSS(NPHI,NPHI,2,2))
       ALLOCATE(DATH(NPHI,NPHI,NDIMD))
       ALLOCATE(U(NCHI,NCHI,NCHI,NCHI))
-!     == TRANSFORM FROM TOTAL/SPIN TO up/down representation ===================
+!     == TRANSFORM FROM TOTAL/SPIN TO UP/DOWN REPRESENTATION ===================
 !
       CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
 !
-!     == TRANSFORM FROM partial waves phi to local orbitals CHI ================
+!     == TRANSFORM FROM PARTIAL WAVES PHI TO LOCAL ORBITALS CHI ================
       CALL LDAPLUSU_MAPTOCHI(LNX,LOX,NCHI,LNXPHI,LOXPHI,NPHI,PHITOCHI)
       DO IS1=1,2
         DO IS2=1,2
@@ -416,21 +446,21 @@ PRINT*,'JPAR   ',THIS%JPAR
         ENDDO
       ENDDO
 !
-! printout for testing==========================================================
-DO IS1=1,ndimd
-  PRINT*,'===================== denmat FOR SPIN',IS1,' ======================'
+! PRINTOUT FOR TESTING==========================================================
+DO IS1=1,NDIMD
+  PRINT*,'===================== DENMAT FOR SPIN',IS1,' ======================'
   I=0
-  DO LN=1,LNXphi
-    DO M=1,2*LOXphi(LN)+1
+  DO LN=1,LNXPHI
+    DO M=1,2*LOXPHI(LN)+1
       I=I+1
-      WRITE(*,FMT='(I3,100F8.3)')LOXphi(LN),REAL(denmat(I,:,IS1))
+      WRITE(*,FMT='(I3,100F8.3)')LOXPHI(LN),REAL(DENMAT(I,:,IS1))
     ENDDO
   ENDDO
 ENDDO
-PRINT*,'===================== phitochi ======================'
-do i=1,nchi
-  WRITE(*,FMT='(I3,100F8.3)')nchi,phitochi(I,:)
-enddo
+PRINT*,'===================== PHITOCHI ======================'
+DO I=1,NCHI
+  WRITE(*,FMT='(I3,100F8.3)')NCHI,PHITOCHI(I,:)
+ENDDO
 DO IS1=1,2
   DO IS2=1,2
     IF(SUM(ABS(RHO(:,:,IS1,IS2))).LT.1.D-3) CYCLE
@@ -445,23 +475,23 @@ DO IS1=1,2
   ENDDO
 ENDDO
 !
-do is1=1,2
-  svar=0.d0
-  do ln=1,nchi
-    svar=svar+real(rho(ln,ln,is1,is1))
-  enddo
-  print*,'charge= ',svar,' for spin ',is1
-enddo
+DO IS1=1,2
+  SVAR=0.D0
+  DO LN=1,NCHI
+    SVAR=SVAR+REAL(RHO(LN,LN,IS1,IS1))
+  ENDDO
+  PRINT*,'CHARGE= ',SVAR,' FOR SPIN ',IS1
+ENDDO
 !
-do ln1=1,lnx
-  do ln2=1,lnx
-    do ln3=1,lnx
-      do ln4=1,lnx
-        write(*,*)'ulittle',ln1,ln2,ln3,ln4,this%ulittle(:,ln1,ln2,ln3,ln4)
-      enddo
-    enddo
-  enddo
-enddo
+DO LN1=1,LNX
+  DO LN2=1,LNX
+    DO LN3=1,LNX
+      DO LN4=1,LNX
+        WRITE(*,*)'ULITTLE',LN1,LN2,LN3,LN4,THIS%ULITTLE(:,LN1,LN2,LN3,LN4)
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
 !
 !     ==========================================================================
 !     ==  CALCULATE U-TENSOR                                                  ==
@@ -469,30 +499,30 @@ enddo
       CALL LDAPLUSU_UTENSOR(LRX,NCHI,LNX,LOX,THIS%ULITTLE,U)
 !
 !     ==========================================================================
-!     ==  Hartree Fock interaction ENERGY                                     ==
+!     ==  HARTREE FOCK INTERACTION ENERGY                                     ==
 !     ==========================================================================
-      CALL LDAPLUSU_INTERACTION(Nchi,U,RHO,ETOT,HAM)
-print*,'e(u) ',etot
+      CALL LDAPLUSU_INTERACTION(NCHI,U,RHO,ETOT,HAM)
+PRINT*,'E(U) ',ETOT
 !
 !     ==========================================================================
-!     ==  double counting correction                                          ==
+!     ==  DOUBLE COUNTING CORRECTION                                          ==
 !     ==========================================================================
       IF(THIS%FUNCTIONALID.EQ.'LDA+U') THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
-        CALL LDAPLUSU_DCLDAPLUSU(DCTYPE,lnx,lox,NCHI,U,RHO,ETOT1,HAM1)
+        CALL LDAPLUSU_DCLDAPLUSU(DCTYPE,LNX,LOX,NCHI,U,RHO,ETOT1,HAM1)
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
         DEALLOCATE(HAM1)
       ELSE IF(THIS%FUNCTIONALID.EQ.'HYBRID') THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
-        call LDAPLUSU_edft(gid,nr,nchi,lnx,lox,this%chi,lrx,rho,etot1,ham1)
-print*,'e(dc) ',etot1
+        CALL LDAPLUSU_EDFT(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,RHO,ETOT1,HAM1)
+PRINT*,'E(DC) ',ETOT1
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
         DEALLOCATE(HAM1)
-!       == scale correction with 0.25 according to PBE0
-        etot=etot*this%hfweight
-        ham=ham*this%hfweight
+!       == SCALE CORRECTION WITH 0.25 ACCORDING TO PBE0
+        ETOT=ETOT*THIS%HFWEIGHT
+        HAM=HAM*THIS%HFWEIGHT
       ELSE
         CALL ERROR$MSG('FUNCTIONALID NOT RECOGNIZED')
         CALL ERROR$CHVAL('FUNCTIONALID',THIS%FUNCTIONALID)
@@ -543,8 +573,8 @@ print*,'e(dc) ',etot1
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_CHIFROMPHI()
 !     **                                                                      **
-!     **  defines transformation from partial waves to local orbitals.        **
-!     **  the result is stored without magnetic quantum numbers.              **
+!     **  DEFINES TRANSFORMATION FROM PARTIAL WAVES TO LOCAL ORBITALS.        **
+!     **  THE RESULT IS STORED WITHOUT MAGNETIC QUANTUM NUMBERS.              **
 !     **                                                                      **
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
@@ -593,9 +623,9 @@ print*,'e(dc) ',etot1
 !     == COUNT ONLY THOSE ANGULAR MOMENTUM CHANNELS THAT HAVE CORRELATED ORBITALS
       LX=MAXVAL(LOX)
       LNXCHI=0
-print*,'chifromphi: ',this%norb(1:lx+1)
+PRINT*,'CHIFROMPHI: ',THIS%NORB(1:LX+1)
       DO L=0,LX
-        IF(THIS%NORB(L+1).EQ.0) CYCLE !ignore CHANNELS WITHOUT CORRELATED ORBITALS
+        IF(THIS%NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
         NOFL=0
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
@@ -607,7 +637,7 @@ print*,'chifromphi: ',this%norb(1:lx+1)
           CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
         END IF
       ENDDO
-print*,'chifromphi: ',l,nofl,lnxchi
+PRINT*,'CHIFROMPHI: ',L,NOFL,LNXCHI
 !
 !     == ORDER ACCORDING TO L ==================================================
       ALLOCATE(LOXCHI(LNXCHI))        
@@ -617,7 +647,7 @@ print*,'chifromphi: ',l,nofl,lnxchi
       A(:,:)=0.D0
       LNCHI=0
       DO L=0,LX
-        IF(THIS%NORB(L+1).EQ.0) CYCLE !ignore CHANNELS WITHOUT CORRELATED ORBITALS
+        IF(THIS%NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
           LNCHI=LNCHI+1
@@ -626,10 +656,10 @@ print*,'chifromphi: ',l,nofl,lnxchi
           A(LN,LNCHI)=1.D0
         ENDDO
       ENDDO
-print*,'chifromphi: lnxphi',lnx
-print*,'chifromphi: loxphi',lox
-print*,'chifromphi: lnxchi',lnxchi
-print*,'chifromphi: loxchi',loxchi
+PRINT*,'CHIFROMPHI: LNXPHI',LNX
+PRINT*,'CHIFROMPHI: LOXPHI',LOX
+PRINT*,'CHIFROMPHI: LNXCHI',LNXCHI
+PRINT*,'CHIFROMPHI: LOXCHI',LOXCHI
 !
 !     ==========================================================================
 !     == MAKE HEAD FUNCTION ANTIBONDING WITH NODE AT RCUT ======================
@@ -654,13 +684,13 @@ print*,'chifromphi: loxchi',loxchi
         END IF
         CHI(:,LN)=CHI(:,LN)*SVAR2-CHI(:,LN+1)*SVAR1
         A(:,LN)=A(:,LN)*SVAR2-A(:,LN+1)*SVAR1
-print*,'a ',ln,a(:,ln)
+PRINT*,'A ',LN,A(:,LN)
 !       == CUT AT RCUT           ===============================================
         DO IR=1,NR
           IF(R(IR).GT.RCUT) CHI(IR,LN)=0.D0
         ENDDO
 !       == ORTHOGONALIZE TO THE LOWER HEAD FUNCTIONS ===========================
-print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
+PRINT*,'CHIFROMPHI: LN',LN,LN-NOFL+1,LN-1
         DO LN1=LN-NOFL+1,LN-1
           AUX(:)=CHI(:,LN)*CHI(:,LN1)*R(:)**2
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
@@ -752,7 +782,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
             L2=LOX(LN2)
             IF(L2.NE.L) CYCLE
             N2=N2+1
-            A(LN2,LN1)=MATINV(N1,N2) ! a it transposed so that the indices match
+            A(LN2,LN1)=MATINV(N1,N2) ! A IT TRANSPOSED SO THAT THE INDICES MATCH
           ENDDO
         ENDDO
         DEALLOCATE(MAT)
@@ -798,21 +828,21 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       ALLOCATE(THIS%CHI(NR,LNXCHI))
       THIS%CHI=CHI(:,1:LNXCHI)
       ALLOCATE(THIS%DOWNFOLD(LNXCHI,LNX))
-      do ln=1,lnxchi
-         THIS%DOWNFOLD(ln,:)=A(:,ln)
-      enddo
+      DO LN=1,LNXCHI
+         THIS%DOWNFOLD(LN,:)=A(:,LN)
+      ENDDO
 !!$OPEN(10,FILE='CHI_'//TRIM(THIS%ATOMTYPE)//'.DAT')
-!!$rewind 10
-!!$DO Ir=1,NR
-!!$WRITE(10,*)R(Ir),CHI(Ir,:)
-!!$eNDDO
+!!$REWIND 10
+!!$DO IR=1,NR
+!!$WRITE(10,*)R(IR),CHI(IR,:)
+!!$ENDDO
 !!$CLOSE(10)
-!!$stop
+!!$STOP
 !
 !     ==========================================================================
 !     ==  CLEAN UP                                                            ==
 !     ==========================================================================
-      DEALLOCATE(chi)
+      DEALLOCATE(CHI)
       DEALLOCATE(R)
                             CALL TRACE$POP()
       RETURN
@@ -821,9 +851,9 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_SPINDENMAT(ID,NDIMD,LMNXX,MAT1,MAT2)
 !     **                                                                      **
-!     ** IF="FORWARD": CONVERTS DENSITY MATRIX MAT1 from                      **
+!     ** IF="FORWARD": CONVERTS DENSITY MATRIX MAT1 FROM                      **
 !     **   (TOTAL,SPIN) REPRESENTATION INTO (SPIN,SPIN) REPRESENTATION MAT2   **
-!     ** IF="BACK": CONVERTS HAMILTON MATRIX MAT2 from                        **
+!     ** IF="BACK": CONVERTS HAMILTON MATRIX MAT2 FROM                        **
 !     **   (TOTAL,SPIN) REPRESENTATION INTO (SPIN,SPIN) REPRESENTATION MAT2   **
 !     **                                                                      **
       IMPLICIT NONE
@@ -850,8 +880,8 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
           MAT2(:,:,2,1)=0.5D0*(MAT1(:,:,2)+CI*MAT1(:,:,3))
         ELSE
           CALL ERROR$MSG('NDIMD OUT OF RANGE')
-          CALL ERROR$i4val('NDIMD',ndimd)
-          CALL ERROR$stop('LDAPLUSU_SPINDENMAT')
+          CALL ERROR$I4VAL('NDIMD',NDIMD)
+          CALL ERROR$STOP('LDAPLUSU_SPINDENMAT')
         END IF
       ELSE IF(ID.EQ.'BACK') THEN
         MAT1(:,:,:)=(0.D0,0.D0)
@@ -867,12 +897,12 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
           MAT1(:,:,4)=0.5D0*(MAT2(:,:,1,1)-MAT2(:,:,2,2))
         ELSE
           CALL ERROR$MSG('NDIMD OUT OF RANGE')
-          CALL ERROR$i4val('NDIMD',ndimd)
-          CALL ERROR$stop('LDAPLUSU_SPINDENMAT')
+          CALL ERROR$I4VAL('NDIMD',NDIMD)
+          CALL ERROR$STOP('LDAPLUSU_SPINDENMAT')
         END IF
       ELSE
         CALL ERROR$MSG('ID MUST BE EITHER "FORWARD" OR "BACK"')
-        CALL ERROR$stop('LDAPLUSU_SPINDENMAT')
+        CALL ERROR$STOP('LDAPLUSU_SPINDENMAT')
       END IF
                             CALL TRACE$POP()
       RETURN
@@ -883,8 +913,8 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       SUBROUTINE LDAPLUSU_MAPTOCHI(LNXCHI,LOXCHI,LMNXCHI &
      &                            ,LNXPHI,LOXPHI,LMNXPHI,DOWNFOLD)
 !     **                                                                      **
-!     **  expands transformation from partial waves to local orbitals         **
-!     **  to full size                                                        **
+!     **  EXPANDS TRANSFORMATION FROM PARTIAL WAVES TO LOCAL ORBITALS         **
+!     **  TO FULL SIZE                                                        **
 !     **                                                                      **
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
@@ -921,7 +951,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_ULITTLE(GID,NR,LRX,LNX,LOX,CHI,ULITTLE)
 !     **                                                                      **
-!     ** Slater integrals.                                                    **
+!     ** SLATER INTEGRALS.                                                    **
 !     **                                                                      **
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -939,7 +969,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       REAL(8)               :: AUX(NR)
       REAL(8)               :: SVAR
       REAL(8)               :: R(NR)
-      REAL(8)               :: pi,fourpi
+      REAL(8)               :: PI,FOURPI
 !     **************************************************************************
                             CALL TRACE$PUSH('LDAPLUSU_ULITTLE')
       CALL RADIAL$R(GID,NR,R)
@@ -964,8 +994,8 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
                 IF(L.GT.MAX(ISVAR1,ISVAR2)) CYCLE
                 AUX(:)=CHI(:,LN3)*CHI(:,LN4)*POT(:)
                 CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-!if(lox(ln1).ne.lox(ln2).or.lox(ln2).ne.lox(ln3).or.lox(ln3).ne.lox(ln4)) svar=0.d0
-!if(lox(ln1)*lox(ln2)*lox(ln3)*lox(ln4).eq.0) svar=0.d0
+!IF(LOX(LN1).NE.LOX(LN2).OR.LOX(LN2).NE.LOX(LN3).OR.LOX(LN3).NE.LOX(LN4)) SVAR=0.D0
+!IF(LOX(LN1)*LOX(LN2)*LOX(LN3)*LOX(LN4).EQ.0) SVAR=0.D0
                 ULITTLE(L+1,LN1,LN2,LN3,LN4)=SVAR
                 ULITTLE(L+1,LN2,LN1,LN3,LN4)=SVAR
                 ULITTLE(L+1,LN1,LN2,LN4,LN3)=SVAR
@@ -977,13 +1007,13 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       ENDDO
 !
 !     ==========================================================================
-!     == add factor consistent with definition of Slater integrals            ==
+!     == ADD FACTOR CONSISTENT WITH DEFINITION OF SLATER INTEGRALS            ==
 !     ==========================================================================
-      pi=4.d0*atan(1.d0)
-      fourpi=4.d0*pi
-      do l=0,lrx
-        ulittle(l+1,:,:,:,:)=ulittle(l+1,:,:,:,:)*real(2*l+1,kind=8)/fourpi
-      enddo
+      PI=4.D0*ATAN(1.D0)
+      FOURPI=4.D0*PI
+      DO L=0,LRX
+        ULITTLE(L+1,:,:,:,:)=ULITTLE(L+1,:,:,:,:)*REAL(2*L+1,KIND=8)/FOURPI
+      ENDDO
 
                             CALL TRACE$POP()
       RETURN
@@ -991,7 +1021,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_MODULITTLEWITHPARMS(LNX,LOX,LRX,USEUPAR,UPAR &
-     &                                       ,USEJPAR,JPAR,MAINLN,ULITTLE)
+     &   ,USEJPAR,JPAR,USEFRATIO42,FRATIO42,USEFRATIO62,FRATIO62,MAINLN,ULITTLE)
 !     **                                                                      **
 !     ** CALCULATES THE INTERACTION ENERGY                                    **
 !     **                                                                      **
@@ -1001,21 +1031,26 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       INTEGER(4),INTENT(IN) :: LRX
       LOGICAL(4),INTENT(IN) :: USEUPAR
       LOGICAL(4),INTENT(IN) :: USEJPAR
+      LOGICAL(4),INTENT(IN) :: USEFRATIO42
+      LOGICAL(4),INTENT(IN) :: USEFRATIO62
       INTEGER(4),INTENT(IN) :: MAINLN(2)
-      REAL(8)   ,INTENT(IN) :: UPAR
-      REAL(8)   ,INTENT(IN) :: JPAR
+      REAL(8)   ,INTENT(INOUT):: UPAR
+      REAL(8)   ,INTENT(INOUT):: JPAR
+      REAL(8)   ,INTENT(INOUT):: FRATIO42
+      REAL(8)   ,INTENT(INOUT):: FRATIO62
       REAL(8)   ,INTENT(INOUT):: ULITTLE(LRX+1,LNX,LNX,LNX,LNX)
       REAL(8)   ,PARAMETER  :: FIVEEIGTH=0.625D0
       REAL(8)               :: PI,FOURPI
       INTEGER(4)            :: L,LN,LNPROBE,N
       REAL(8)               :: RAWJPAR,RAWUPAR
       REAL(8)               :: SVAR
+      REAL(8)               :: XL(LRX+1)
 !     **************************************************************************
       PI=4.D0*DATAN(1.D0)
       FOURPI=4.D0*PI
 !
 !     ==========================================================================
-!     == DETERMINe SHELL TO WHICH UPAR AND JPAR BELONG                        ==
+!     == DETERMINE SHELL TO WHICH UPAR AND JPAR BELONG                        ==
 !     ==========================================================================
       LNPROBE=-1
       N=0
@@ -1039,60 +1074,63 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       IF(USEUPAR) THEN
         RAWUPAR=ULITTLE(1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)
         SVAR=UPAR/RAWUPAR
-!       == all shells of orbitals are scaled so that the specified shell has the
-!       == specified value of U
+!       == ALL SHELLS OF ORBITALS ARE SCALED SO THAT THE SPECIFIED SHELL HAS THE
+!       == SPECIFIED VALUE OF U
         ULITTLE=ULITTLE*SVAR
+      ELSE
+        UPAR=ULITTLE(1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)
       END IF
 !
 !     ==========================================================================
-!     == SCALE UP JPAR OF THE MAIN SHELL AND SET OTHERS TO ZERO               ==
+!     == CALCULATE J-PARAMETER                                                ==
 !     ==========================================================================
-      IF(USEJPAR) THEN
-        IF(LOX(LNPROBE).EQ.1) THEN
-          RAWJPAR=0.D0
-!       == p-shell ====================================================================
-          IF(LRX+1.Ge.3) THEN
-!           == use f^2=5*J and u(l+1,...)=4pi/(2l+1)=4*pi/3
-!           == f0,f2,f4 are slater integrals
-            SVAR=1.d0/5.d0
-            RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
-            SVAR=JPAR/RAWJPAR
-            ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
-          END IF 
+      CALL LDAPLUSU_JEXPANSION(MAINLN(1),LRX,XL)
+      IF(.NOT.USEJPAR) THEN
+!       == CALCULATE J-PARAMETER
+        JPAR=0.D0
+        DO L=1,LRX   !EXCLUDE L=0
+          JPAR=JPAR+ULITTLE(L+1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*XL(L+1)
+        ENDDO
+      END IF
 !
-!       == d-shell ====================================================================
-        else IF(LOX(LNPROBE).EQ.2) THEN
-          RAWJPAR=0.D0
-          IF(LRX+1.Ge.3) THEN
-!           == use f^2=14/(1+0.625)*J and u(l+1,...)=4pi/(2l+1)
-!           == f0,f2,f4 are slater integrals
-            SVAR=1.625/14.d0
-            RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
-            SVAR=JPAR/RAWJPAR
-!           == f^4/f_2=0.625 should be automatically satisfied
-            ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
-          END IF 
-!
-!       == f-shell ====================================================================
-        ELSE IF(LOX(LNPROBE).EQ.3) THEN
-          RAWJPAR=0.D0
-          IF(LRX+1.GT.3) THEN
-            SVAR=(268.D0+195d0*0.668d0+250*0.494)/6435.D0
-            RAWJPAR=RAWJPAR+ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
-            ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=ULITTLE(3:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*SVAR
-          END IF 
-!
-!       == jpar is set to zero for s and for l>3
+!     ==========================================================================
+!     == FIX UP RATIOS OF SLATER INTEGRALS  F4/F2 AND F6/F2                   ==
+!     ==========================================================================
+      IF(MAINLN(1).GE.2.AND.LRX.GT.4) THEN
+        IF(USEFRATIO42) THEN
+          ULITTLE(5,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=FRATIO42 &
+    &             *ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)
         ELSE
-          IF(JPAR.EQ.0) THEN
-            ULITTLE(2:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=0.D0
-          ELSE
-            CALL ERROR$MSG('JPAR.NE.0 CAN ONLY BE SET OF D AND F SHELLS')
-            CALL ERROR$MSG('LDAPLUSU_MODULITTLEWITHPARMS')
-          END IF
+          FRATIO42=ULITTLE(5,LNPROBE,LNPROBE,LNPROBE,LNPROBE) &
+    &             /ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)
         END IF
+      ELSE
+        FRATIO42=0.D0
       END IF
-      
+      IF(MAINLN(1).GE.3.AND.LRX.GT.6) THEN
+        IF(USEFRATIO62) THEN
+          ULITTLE(7,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=FRATIO62 &
+    &             *ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)
+        ELSE
+          FRATIO62=ULITTLE(7,LNPROBE,LNPROBE,LNPROBE,LNPROBE) &
+    &             /ULITTLE(3,LNPROBE,LNPROBE,LNPROBE,LNPROBE)
+        END IF
+      ELSE
+        FRATIO62=0.D0
+      END IF
+!
+!     ==========================================================================
+!     == FIX JPAR                                                             ==
+!     ==========================================================================
+      RAWJPAR=0.D0
+      DO L=1,LRX   !EXCLUDE L=0
+        RAWJPAR=RAWJPAR+ULITTLE(L+1,LNPROBE,LNPROBE,LNPROBE,LNPROBE)*XL(L+1)
+      ENDDO
+      IF(RAWJPAR.NE.0.D0) THEN
+        SVAR=JPAR/RAWJPAR
+        ULITTLE(2:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)=SVAR &
+    &                 *ULITTLE(2:,LNPROBE,LNPROBE,LNPROBE,LNPROBE)
+      END IF
 !
 !     ==========================================================================
 !     == SET UP ULITTLE                                                       ==
@@ -1110,10 +1148,10 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU_MODULITTLEWITHPARMS_o(LNX,LOX,LRX,USEUPAR,UPAR &
+      SUBROUTINE LDAPLUSU_MODULITTLEWITHPARMS_O(LNX,LOX,LRX,USEUPAR,UPAR &
      &                                       ,USEJPAR,JPAR,MAINLN,ULITTLE)
 !     **                                                                      **
-!     ** Buggy version shall be removed !                                     **
+!     ** BUGGY VERSION SHALL BE REMOVED !                                     **
 !     ** CALCULATES THE INTERACTION ENERGY                                    **
 !     **                                                                      **
       IMPLICIT NONE
@@ -1228,7 +1266,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_UTENSOR(LRX,NORB,LNX,LOX,ULITTLE,U)
 !     **                                                                      **
-!     ** CALCULATES THE U-tensor                                              **
+!     ** CALCULATES THE U-TENSOR                                              **
 !     **                                                                      **
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LRX
@@ -1245,14 +1283,14 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       INTEGER(4)            :: L,M,LM,LX
       REAL(8)               :: CG1,CG2
       REAL(8)               :: SVAR
-      REAL(8)               :: pi,fourpi
-      real(8)               :: fourpiby2lplus1
+      REAL(8)               :: PI,FOURPI
+      REAL(8)               :: FOURPIBY2LPLUS1
 !     **************************************************************************
                             CALL TRACE$PUSH('LDAPLUSU_UTENSOR')
-      pi=4.d0*atan(1.d0)
-      fourpi=4.d0*pi
+      PI=4.D0*ATAN(1.D0)
+      FOURPI=4.D0*PI
 !
-      U(:,:,:,:)=0.d0
+      U(:,:,:,:)=0.D0
       IORB1=0
       DO LN1=1,LNX
         L1=LOX(LN1)
@@ -1287,7 +1325,7 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
                       LM4=LM4+1
                       IF(LM4.LT.LM2) CYCLE
 !         
-                      if(maxval(abs(ulittle(:,ln2,ln4,ln3,ln1))).eq.0.d0) cycle
+                      IF(MAXVAL(ABS(ULITTLE(:,LN2,LN4,LN3,LN1))).EQ.0.D0) CYCLE
                       LX=MIN(LRX,L2+L4,L1+L3)
                       SVAR=0.D0
                       LM=0
@@ -1317,14 +1355,14 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU_dcldaplusu(ID,lnx,lox,Nchi,U,RHO,ETOT,HAM)
+      SUBROUTINE LDAPLUSU_DCLDAPLUSU(ID,LNX,LOX,NCHI,U,RHO,ETOT,HAM)
 !     **                                                                      **
-!     **  calculates the correlation energy from utensor and density matrix   **
+!     **  CALCULATES THE CORRELATION ENERGY FROM UTENSOR AND DENSITY MATRIX   **
 !     **                                                                      **
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID     ! ID FOR DOUBLE COUNTING CORRECTION
-      INTEGER(4)  ,INTENT(IN) :: Lnx    !                     
-      INTEGER(4)  ,INTENT(IN) :: Lox(lnx) ! angular momentum  
+      INTEGER(4)  ,INTENT(IN) :: LNX    !                     
+      INTEGER(4)  ,INTENT(IN) :: LOX(LNX) ! ANGULAR MOMENTUM  
       INTEGER(4)  ,INTENT(IN) :: NCHI   ! BASIS-SET SIZE              
       REAL(8)     ,INTENT(IN) :: U(NCHI,NCHI,NCHI,NCHI) ! U TENSOR
       COMPLEX(8)  ,INTENT(IN) :: RHO(NCHI,NCHI,2,2) ! DENSITY MATRIX
@@ -1335,9 +1373,9 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
       REAL(8)                 :: E
       REAL(8)                 :: F(2)
       REAL(8)                 :: V(2)
-      INTEGER(4)              :: IS,I,j,ln
-      INTEGER(4)              :: nchi1,nchi2
-      INTEGER(4)              :: l
+      INTEGER(4)              :: IS,I,J,LN
+      INTEGER(4)              :: NCHI1,NCHI2
+      INTEGER(4)              :: L
 !     **************************************************************************
                             CALL TRACE$PUSH('LDAPLUSU_ETOT')
       ETOT=0.D0
@@ -1358,9 +1396,9 @@ print*,'chifromphi: ln',ln,ln-nofl+1,ln-1
             IF(I.NE.J)JPAR=JPAR+U(I,J,J,I)
           ENDDO
         ENDDO
-!       == factor (2l+1)**2 is the number of elements of the utensor contributing
+!       == FACTOR (2L+1)**2 IS THE NUMBER OF ELEMENTS OF THE UTENSOR CONTRIBUTING
         UPAR=UPAR/REAL(2*L+1)**2
-!       == factor 2l(2l+1) is the number of elements of the utensor contributing
+!       == FACTOR 2L(2L+1) IS THE NUMBER OF ELEMENTS OF THE UTENSOR CONTRIBUTING
         JPAR=JPAR/REAL(2*L*(2*L+1))*7.D0/5.D0
 PRINT*,'UPARAMETER[EV]    ',UPAR*27.211D0 ,'UPARAMETER    ',UPAR
 PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
@@ -1390,14 +1428,14 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_INTERACTION(NORB,U,RHO,ETOT,HAM)
 !     **                                                                      **
-!     ** CALCULATES THE hartree and exchange energy from the u-tensor u       **
-!     ** and the density matrix rho.                                          **
+!     ** CALCULATES THE HARTREE AND EXCHANGE ENERGY FROM THE U-TENSOR U       **
+!     ** AND THE DENSITY MATRIX RHO.                                          **
 !     **                                                                      **
       IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN) :: NORB                   ! bASIS-SET SIZE              
+      INTEGER(4)  ,INTENT(IN) :: NORB                   ! BASIS-SET SIZE              
       REAL(8)     ,INTENT(IN) :: U(NORB,NORB,NORB,NORB) ! U TENSOR
       COMPLEX(8)  ,INTENT(IN) :: RHO(NORB,NORB,2,2)     ! DENSITY MATRIX
-      REAL(8)     ,INTENT(OUT):: ETOT                   ! energy
+      REAL(8)     ,INTENT(OUT):: ETOT                   ! ENERGY
       COMPLEX(8)  ,INTENT(OUT):: HAM(NORB,NORB,2,2)     ! DE/D(DENMAT)        
       REAL(8)                 :: UIJKL
       COMPLEX(8)              :: RHOT(NORB,NORB)
@@ -1489,35 +1527,35 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU_edft(gid,nr,lmnx,lnx,lox,chi,lrx,denmat,etot,ham)
+      SUBROUTINE LDAPLUSU_EDFT(GID,NR,LMNX,LNX,LOX,CHI,LRX,DENMAT,ETOT,HAM)
 !     **                                                                      **
-!     ** DOUBLE COUNTING CORRECTION for the hybrid functional                 **
+!     ** DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                 **
 !     **                                                                      **
       IMPLICIT NONE
-      integer(4)  ,intent(in) :: gid
-      integer(4)  ,intent(in) :: nr
-      integer(4)  ,intent(in) :: lrx
-      INTEGER(4)  ,INTENT(IN) :: lmnx       ! #(local orbitals)
-      INTEGER(4)  ,INTENT(IN) :: lnx        ! #(radial functions)
-      INTEGER(4)  ,INTENT(IN) :: lox(lnx)   ! main angular momentum of local orb.
-      real(8)     ,intent(in) :: chi(nr,lnx)
-      COMPLEX(8)  ,INTENT(IN) :: denmat(lmnx,lmnx,2,2) ! DENSITY MATRIX
+      INTEGER(4)  ,INTENT(IN) :: GID
+      INTEGER(4)  ,INTENT(IN) :: NR
+      INTEGER(4)  ,INTENT(IN) :: LRX
+      INTEGER(4)  ,INTENT(IN) :: LMNX       ! #(LOCAL ORBITALS)
+      INTEGER(4)  ,INTENT(IN) :: LNX        ! #(RADIAL FUNCTIONS)
+      INTEGER(4)  ,INTENT(IN) :: LOX(LNX)   ! MAIN ANGULAR MOMENTUM OF LOCAL ORB.
+      REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)
+      COMPLEX(8)  ,INTENT(IN) :: DENMAT(LMNX,LMNX,2,2) ! DENSITY MATRIX
       REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
-      COMPLEX(8)  ,INTENT(OUT):: HAM(lmnx,lmnx,2,2)  ! DEtot/D(RHO^*)        
-      complex(8)              :: denmat1(lmnx,lmnx,4)
-      complex(8)              :: ham1(lmnx,lmnx,4)
-      real(8)                 :: r(nr)
-      real(8)     ,allocatable:: rho(:,:,:)
-      real(8)     ,allocatable:: pot(:,:,:)
-      real(8)                 :: edensity(nr)
-      real(8)                 :: aux(nr),svar
-      integer(4)              :: lmrx,l
-      integer(4)              :: idim,lm
-      complex(8)  ,parameter  :: ci=(0.d0,1.d0)
-      integer(4)  ,parameter  :: ndimd=4
+      COMPLEX(8)  ,INTENT(OUT):: HAM(LMNX,LMNX,2,2)  ! DETOT/D(RHO^*)        
+      COMPLEX(8)              :: DENMAT1(LMNX,LMNX,4)
+      COMPLEX(8)              :: HAM1(LMNX,LMNX,4)
+      REAL(8)                 :: R(NR)
+      REAL(8)     ,ALLOCATABLE:: RHO(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: POT(:,:,:)
+      REAL(8)                 :: EDENSITY(NR)
+      REAL(8)                 :: AUX(NR),SVAR
+      INTEGER(4)              :: LMRX,L
+      INTEGER(4)              :: IDIM,LM
+      COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
+      INTEGER(4)  ,PARAMETER  :: NDIMD=4
 !     **************************************************************************
-      lmrx=(lrx+1)**2
-      etot=0.d0
+      LMRX=(LRX+1)**2
+      ETOT=0.D0
 !
 !     ==========================================================================
 !     ==  TRANSFORM DENSITY MATRIX FROM UP/DOWN TO TOTAL/SPIN                 ==
@@ -1530,9 +1568,9 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !     ==========================================================================
 !     ==  CALCULATE DENSITY                                                   ==
 !     ==========================================================================
-      allocate(rho(nr,lmrx,4))
-      DO IDIM=1,ndimd
-        CALL AUGMENTATION_RHO(NR,lnx,LOX,CHI &
+      ALLOCATE(RHO(NR,LMRX,4))
+      DO IDIM=1,NDIMD
+        CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
      &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHO(:,:,IDIM))
       ENDDO
 !
@@ -1540,7 +1578,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
 !     ==========================================================================
       ALLOCATE(POT(NR,LMRX,NDIMD))
-      pot(:,:,:)=0.d0
+      POT(:,:,:)=0.D0
 !     == EXCHANGE ENERGY AND POTENTIAL =========================================
       CALL DFT$SETL4('XCONLY',.TRUE.)
       CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOT,POT)
@@ -1556,16 +1594,16 @@ PRINT*,'EXC ',ETOT
         EDENSITY(:)=EDENSITY(:)+0.5D0*AUX(:)*RHO(:,LM,1)
       ENDDO
       CALL RADIAL$R(GID,NR,R)
-      edensity=edensity*r(:)**2
+      EDENSITY=EDENSITY*R(:)**2
       CALL RADIAL$INTEGRAL(GID,NR,EDENSITY,SVAR)
-print*,'eh ',svar
+PRINT*,'EH ',SVAR
       ETOT=ETOT+SVAR
 !
 !     ==========================================================================
 !     ==  CALCULATE HAMILTONIAN IN TOTAL/SPIN REPRESENTATION                  ==
 !     ==========================================================================
       CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
-      deALLOCATE(POT)
+      DEALLOCATE(POT)
 !
 !     ==========================================================================
 !     ==  TRANSFORM HAMILTONIAN FROM TOTAL/SPIN TO UP/DOWN                    ==
@@ -1578,12 +1616,12 @@ print*,'eh ',svar
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ldaplusu_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX &
+      SUBROUTINE LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX &
      &                          ,AEPOT,AEPHI,DATH)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATES THE EXPECTATION VALUE OF                                 **
-!     **  THE ONE-CENTER POTENTIALS WITH THE local orbitals                   **
+!     **  THE ONE-CENTER POTENTIALS WITH THE LOCAL ORBITALS                   **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -1596,7 +1634,7 @@ print*,'eh ',svar
       INTEGER(4),INTENT(IN) :: LMNX
       REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRX,NDIMD)
       REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX)
-      complex(8),INTENT(OUT):: DATH(LMNX,LMNX,NDIMD)
+      COMPLEX(8),INTENT(OUT):: DATH(LMNX,LMNX,NDIMD)
       INTEGER(4)            :: LMN1,LMN2
       INTEGER(4)            :: LN1,LN2
       INTEGER(4)            :: LM1,LM2,LM3
@@ -1644,7 +1682,7 @@ print*,'eh ',svar
               DO ISPIN=1,NDIMD
                 DWORK1(:)=AEDMU(:,ISPIN)*AEPHI(:,LN1)*AEPHI(:,LN2)*R(:)**2
                 CALL RADIAL$INTEGRAL(GID,NR,DWORK1,SVAR)
-                DATH(LMN1,LMN2,ISPIN)=DATH(LMN1,LMN2,ISPIN)+cmplx(SVAR,0.d0)
+                DATH(LMN1,LMN2,ISPIN)=DATH(LMN1,LMN2,ISPIN)+CMPLX(SVAR,0.D0)
               ENDDO
             ENDDO
           ENDDO
@@ -1652,3 +1690,51 @@ print*,'eh ',svar
       ENDDO
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU_JEXPANSION(LSHELL,LRHOX,XL)
+!     **                                                                      **
+!     **  DETERMINES THE EXPANSION COEFFICIENTS OF THE J-PARAMETER            **
+!     **  IN SLATER INTEGRALS. THE J-PARAMETER REFERS TO THE SHELL WITH       **
+!     **  MAIN ANGULAR MOMETUM "LSHELL". THE EXPANSION COEFFICIENTS ARE       **
+!     **  DETERMINED UP TO ANGULAR MOMENTUM LRHOX.                            **
+!     **                                                                      **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LSHELL
+      INTEGER(4),INTENT(IN) :: LRHOX
+      REAL(8)   ,INTENT(OUT):: XL(LRHOX+1)
+      REAL(8)               :: PI
+      INTEGER(4)            :: LPRIME,M1,M2,MPRIME,LM1,LM2,LMPRIME
+      REAL(8)               :: SVAR,CG
+!     **************************************************************************      
+      PI=4.D0*ATAN(1.D0)
+      XL(:)=0.D0
+      DO LPRIME=1,LRHOX
+        SVAR=0.D0
+        DO M1=1,2*LSHELL+1
+          DO M2=1,2*LSHELL+1
+            LM1=LSHELL**2+M1
+            LM2=LSHELL**2+M2
+            DO MPRIME=1,2*LPRIME+1
+              LMPRIME=LPRIME**2+MPRIME
+              CALL CLEBSCH(LM1,LM2,LMPRIME,CG)
+              SVAR=SVAR+CG**2
+            ENDDO
+          ENDDO
+        ENDDO
+        XL(LPRIME+1)=4.D0*PI/REAL(2*LPRIME+1,KIND=8)*SVAR
+      ENDDO
+      XL(:)=XL(:)/REAL(2*LSHELL*(2*LSHELL+1),KIND=8)
+!
+!     ==========================================================================
+!     == REPORT RESULT                                                        ==
+!     ==========================================================================
+!!$      WRITE(*,FMT='("J-PARAMETER EXPANSION COEFFICIENTS IN SLATER INTEGRALS")')
+!!$      WRITE(*,FMT='("ANGULAR MOMENTUM SHELL FOR J: L=",I5)')LSHELL
+!!$      DO LPRIME=1,LRHOX
+!!$        WRITE(*,FMT='("X(",I2,")=",F10.5))')LPRIME,XL(LPRIME+1)
+!!$      ENDDO
+!!$STOP
+      RETURN
+      END
+

@@ -101,14 +101,27 @@
       RETURN
       END
 !
-!     .....................................................PLGNDR.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PLGNDR(LMX,LX,X,PLM)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATE THE ORDINARY LEGENDRE POLYNOMIALS                 **
-!     **  TIMES THE FACTOR SQRT((L-M)!/(L+M)!)                       **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATE THE associated legendre POLYNOMIALS multiplied with       **
+!     **  SQRT((L-M)!/(L+M)!).                                                **
+!     **                                                                      **
+!     **  REmark                                                              **
+!     **    1) lm(l,m)=l(l+1)-m+1                                             **
+!     **    2) the routine plays with                                         **
+!     **                                                                      **
+!     **  THE ASSOCIATED LEGENDRE POLYNOMIALS ARE DEFINED  FOR NON-NEGATIVE M **
+!     **    P_{L,M}=(-1)^M/(2^L*L!) (1-X^2)^{M/2) (D/DX)^{M+L} (1-X^2)^L      **
+!     **  AND FOR NEGATIVE M AS                                               **
+!     **    P_{L,-M}=(-1)^M  (L-M)!/(L+M)! P_{L,M}                            **
+!     **                                                                      **
+!     **                                                                      **
+!     **  p_{l,l}=(-1)^l (2l-1)!! (1-x^2)^{l/2}                               **
+!     **                                                                      **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1991 ************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN)  :: LMX
       INTEGER(4)  ,INTENT(IN)  :: LX
@@ -118,7 +131,7 @@
       REAL(8)                  :: SVAR
       INTEGER(4)               :: LM,L,M,I1,LMM,LMP
       REAL(8)                  :: PMM,CM,C0,CP
-!     ******************************************************************
+!     **************************************************************************
       FACT=SQRT(1.D0-X**2)
       IF(FACT.EQ.0.D0) THEN
         SVAR=-X
@@ -131,22 +144,37 @@
           ENDDO
         ENDDO
       END IF
+!
+!     ==========================================================================
+!     == DETERMINE ASSOCIATED LEGENDRE POLYNOMIALS FOR M.GE.0                 ==
+!     == USE P_{M,M}(X)=(-1)^M  (2*M-1)!!  [SQRT(1-X^2)]^M                    ==
+!     == AND THE RECURRENCE RELATION                                          ==
+!     ==    (L-M)*P_{L,M}(X)=X*(2L-1)*P_{L-1,M}(X)-(L+M-1)*P_{L-2,M}(X)       ==
+!     == THE INDICES ARE MAPPED ACCORDING TO                                  ==
+!     ==    LM(L,M)=L(L+1)-M+1                                                ==
+!     ==========================================================================
       PMM=1.D0
       DO M=0,LX
         CM=0.D0
         C0=PMM
-        LM=M**2+1
+        LM=M**2+1   ! LM=1,2,5,10   
         PLM(LM)=C0
         DO L=M+1,LX
-          LM=LM+2*L
+          LM=LM+2*L    
+!         == RECURRENCE RELATION OF ASSOCIATED LEGENDRE POLYNOMIALS ============
           CP=(X*DBLE(2*L-1)*C0-DBLE(L+M-1)*CM)/DBLE(L-M)
           PLM(LM)=CP
           CM=C0
           C0=CP
         ENDDO
+!       ==  DETERMINE P_{M,M}(X) ITERATIVELY ===================================
         PMM=-DBLE(2*M+1)*FACT*PMM
       ENDDO
 !
+!     ==========================================================================
+!     ==  multiply factor sqrt[(l+m)!/(l-m)!]
+!     ==  and complete for m<0                                                ==
+!     ==========================================================================
       DO L=1,LX
         I1=L*(L+1)+1
         FACT=1.D0
@@ -154,8 +182,8 @@
         DO M=1,L
           LMM=I1+M
           LMP=I1-M
-          FACT=FACT*SQRT(DBLE((L-M+1)*(L+M)))
-          FAC2=-FAC2
+          FACT=FACT*SQRT(DBLE((L-M+1)*(L+M)))  ! fact=sqrt[(l+m)!/(l-m)!]
+          FAC2=-FAC2                           ! fac2=(-1)^m
           PLM(LMP)=PLM(LMP)/FACT
           PLM(LMM)=FAC2*PLM(LMP)
         ENDDO

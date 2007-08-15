@@ -2781,21 +2781,45 @@ scaled with $1/\epsilon_r$.}
 \vrules{optional, incompatible with UPAR and JPAR} 
 \vdefault{none}}
 
-\mbax{\key{UPAR[EV]} 
-\vdescr{U-parameter for the orbital shell specified by MAINLN. The
-entire interaction matrix is scaled so that the U-parameter of the
-specified shell has the value UPAR.}
+\mbax{\key{UPAR[EV]} \vdescr{U-parameter for the orbital shell
+    specified by MAINLN. The entire interaction matrix is scaled so
+    that the U-parameter of the specified shell has the value UPAR.
+    (The U-parameter is identical to the Slater integral $F^0$}
+  \vformat{real} \vrules{optional, incompatible with DIEL}
+  \vdefault{none}}
+
+\mbax{\key{JPAR[EV]} \vdescr{J-parameter for the orbital shell
+    specified by MAINLN.  The Slater integrals $F^2,F^4,\ldots$ are
+    rescaled. The U and J-parameters are defined as
+\begin{eqnarray*}
+U&=&\frac{1}{(2\ell+1)^2}\sum_{m_1,m_2}U_{m_1,m_2,m_1,m_2}
+\\
+J&=&U-\frac{1}{2\ell(2\ell+1)}\sum_{m_1,m_2}\left(U_{m_1,m_2,m_1,m_2}-
+U_{m_1,m_2,m_2,m_1}\right)
+\end{eqnarray*}
+and the U-tensor matrix elements are defined from the correlated
+orbitals $\chi_i(\vec{r})$ as
+\begin{eqnarray*}
+U_{i,j,k,l}=\int d^3r\int d^3r'\;
+\frac{e^2\chi_i^*(\vec{r})\chi_j^*(\vec{r'})\chi_k(\vec{r})\chi_l(\vec{r'})}
+{4\pi\epsilon_0|\vec{r}-\vec{r'}|}
+\end{eqnarray*}
+This expression defines the default value.
+}
 \vformat{real} 
-\vrules{optional, incompatible with DIEL} 
+  \vrules{optional, incompatible with DIEL} 
 \vdefault{none}}
 
-\mbax{\key{JPAR[EV]} 
-\vdescr{J-parameter for the orbital shell specified by MAINLN.
-JPAR=0. resets all slater integrals for the specified shell except the
-first to zero. For d- and f-shells also non-zero values may be
-specified. In that case the slater integrals are rescaled such that
-the specified shell has the value JPAR. The value of U remains
-unchanged.}
+\mbax{\key{F4/F2} \vdescr{changes the Slater integral $F^4$ of the
+    main shell relative to $F^2$. The Slater integrals are rescaled to
+    leave the J-parameter untouched.}
+\vformat{real} 
+  \vrules{optional, incompatible with DIEL} 
+\vdefault{none}}
+
+\mbax{\key{F6/F2} \vdescr{Changes the Slater integral $F^6$ of the
+    main shell relative to $F^2$. The Slater integrals are rescaled to
+    leave the J-parameter untouched.}
 \vformat{real} 
   \vrules{optional, incompatible with DIEL} 
 \vdefault{none}}
