@@ -1551,6 +1551,8 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)              :: IDIM,LM
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)  ,PARAMETER  :: NDIMD=4
+ REAL(8)     ,ALLOCATABLE:: RHOtest(:,:,:)
+ REAL(8)     ,ALLOCATABLE:: POTtest(:,:,:)
 !     **************************************************************************
       LMRX=(LRX+1)**2
       ETOT=0.D0
@@ -1579,7 +1581,20 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       POT(:,:,:)=0.D0
 !     == EXCHANGE ENERGY AND POTENTIAL =========================================
       CALL DFT$SETL4('XCONLY',.TRUE.)
+if(1.eq.1) then
       CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOT,POT)
+else
+ ALLOCATE(RHOtest(NR,LMRX,2))
+ rhotest(:,:,1)=rho(:,:,1)
+ rhotest(:,:,2)=rho(:,:,4)
+ ALLOCATE(pottest(NR,LMRX,2))
+ CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHOtest,ETOT,POTtest)
+ pot(:,:,:)=0.d0
+ pot(:,:,1)=pottest(:,:,1)
+ pot(:,:,4)=pottest(:,:,2)
+ deallocate(rhotest)
+ deallocate(pottest)
+end if
       CALL DFT$SETL4('XCONLY',.FALSE.)
 PRINT*,'EXC ',ETOT
 !
