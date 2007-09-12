@@ -2161,6 +2161,7 @@ echo "${ECHO_T}resolve $PARMFILE" >&6; }
 if test "$PARMFILE" != notset; then
   ARCH=`grep '^ARCH' $PARMFILE | cut -d'"' -f2`
   TPARALLEL=`grep '^TPARALLEL' $PARMFILE | cut -d'"' -f2`
+  TUPPERCASEMOD=`grep '^TUPPERCASEMOD' $PARMFILE | cut -d'"' -f2`
   COMPILER_SCALAR=`grep '^COMPILER_SCALAR' $PARMFILE | cut -d'"' -f2`
   COMPILER_PARALLEL=`grep '^COMPILER_PARALLEL' $PARMFILE | cut -d'"' -f2`
   FCFLAGS_NONE=`grep '^FCFLAGS_NONE' $PARMFILE | cut -d'"' -f2`
@@ -2193,10 +2194,9 @@ if test "$PARMFILE" != notset; then
   CPPFLAGS="$CPPFLAGS"
   FEXT="$FEXT"
   ARCH="$ARCH"
-  #
-  # if no parameter file is given, the script will search for the
-  # values needed.
-  #
+  if test "$TUPPERCASEMOD" != "T"; then
+    TUPPERCASEMOD="F"
+  fi
 else
    { { echo "$as_me:$LINENO: error: No Parameter file. Specify --with-parmfile=parameterfile" >&5
 echo "$as_me: error: No Parameter file. Specify --with-parmfile=parameterfile" >&2;}
@@ -3430,6 +3430,23 @@ fi
 
 chmod +x $PAWDIR/bin/$ARCH/f90pp
 #
+# substituting to accept lowercase module files
+# default are uppercase module file names with lowercase extension
+#
+if test "$TUPPERCASEMOD" = "F"; then
+  { echo "$as_me:$LINENO: result: modify makefile_bare for lowercase module files" >&5
+echo "${ECHO_T}modify makefile_bare for lowercase module files" >&6; }
+#  sed -e 's%\([[:space]].*.mod\)%\L\1%'\
+# pattern matching: [^\/] do not match a slash;
+#                   (/string/) save string for later use as /1
+#                   \L make expression lowercase
+# sed command       s%stringa%stringb%g  replace stringa by stringb
+  sed -e 's%\([^\/]*.mod\)%\L\1%'\
+      ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
+  cp  ${PAWDIR}/Makefile_bare_tmp  ${PAWDIR}/Makefile_bare
+  rm  -f ${PAWDIR}/Makefile_bare_tmp
+fi
+#
 # substituting to get Makefile.none
 #
 { echo "$as_me:$LINENO: result: creating Makefile in none" >&5
@@ -3563,6 +3580,8 @@ echo "${ECHO_T}compile flags (prof)           : $FCFLAGS_PROF" >&6; }
 echo "${ECHO_T}link command w.flags (scalar)  : $LINK_SCALAR" >&6; }
 { echo "$as_me:$LINENO: result: external libraries (scalar)    : $LIBS_SCALAR" >&5
 echo "${ECHO_T}external libraries (scalar)    : $LIBS_SCALAR" >&6; }
+{ echo "$as_me:$LINENO: result: uppercase module names?        : $TUPPERCASEMOD" >&5
+echo "${ECHO_T}uppercase module names?        : $TUPPERCASEMOD" >&6; }
 #AC_MSG_RESULT(---------------------------------------------------------------)
 #AC_MSG_RESULT(--------------external libraries-------------------------------)
 #AC_MSG_RESULT(---------------------------------------------------------------)

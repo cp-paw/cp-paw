@@ -1750,9 +1750,7 @@ INTEGER(4) :: NFILINFO
 !     == READ RESTART FILE, TESSELATION FILES ETC                          ==
 !     =======================================================================
       CALL CELL$GETR8A('T0',9,RBAS)
-print*,'marke 1'
       CALL COSMO_INIT()
-print*,'marke 2'
 !
       IF(NAT_.NE.NAT) THEN
         CALL ERROR$MSG("INCONSISTENT NUMBER OF ATOMS")
@@ -1837,10 +1835,8 @@ print*,'marke 2'
         DO IAT=1,NAT
           QATBAR(IAT)=FDIEL*SUM(QMAD1(:,IAT))
         ENDDO 
-print*,'marke 3'
         CALL COSMO_LONGRANGE(TISO,RBAS,NQ,NAT,DISMIN,ZEROTHETA,QBAR,RQ,QATBAR,RAT &
      &                      ,EPOT1,VQ1,FQ1,VAT1,FAT1)
-print*,'marke 4'
         DO IAT=1,NAT
           IQ1=IQFIRST(IAT)
           IQ2=IQ1-1+NQAT(IAT)

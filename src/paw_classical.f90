@@ -3612,27 +3612,27 @@ END MODULE UFFTABLE_MODULE
 !     ==================================================================
 !     == EVALUATE STANDARD TORSION POTENTIALS    =======================
 !     ==================================================================
-      DATA CHEL( 1)/'C_'/USP3( 1)/2.119/IGRP( 1)/4/IPER( 1)/2/
-      DATA CHEL( 2)/'N_'/USP3( 2)/0.450/IGRP( 2)/5/IPER( 2)/2/
-      DATA CHEL( 3)/'O_'/USP3( 3)/0.018/IGRP( 3)/6/IPER( 3)/2/
-      DATA CHEL( 4)/'SI'/USP3( 4)/1.225/IGRP( 4)/4/IPER( 4)/3/
-      DATA CHEL( 5)/'P_'/USP3( 5)/2.400/IGRP( 5)/5/IPER( 5)/3/
-      DATA CHEL( 6)/'S_'/USP3( 6)/0.484/IGRP( 6)/6/IPER( 6)/3/
-      DATA CHEL( 7)/'GE'/USP3( 7)/0.701/IGRP( 7)/4/IPER( 7)/4/
-      DATA CHEL( 8)/'AS'/USP3( 8)/1.500/IGRP( 8)/5/IPER( 8)/4/
-      DATA CHEL( 9)/'SE'/USP3( 9)/0.335/IGRP( 9)/6/IPER( 9)/4/
-      DATA CHEL(10)/'SN'/USP3(10)/0.199/IGRP(10)/4/IPER(10)/5/
-      DATA CHEL(11)/'SB'/USP3(11)/1.100/IGRP(11)/5/IPER(11)/5/
-      DATA CHEL(12)/'TE'/USP3(12)/0.300/IGRP(12)/6/IPER(12)/5/
-      DATA CHEL(13)/'PB'/USP3(13)/0.100/IGRP(13)/4/IPER(13)/6/
-      DATA CHEL(14)/'BI'/USP3(14)/1.000/IGRP(14)/5/IPER(14)/6/
-      DATA CHEL(15)/'PO'/USP3(15)/0.300/IGRP(15)/6/IPER(15)/6/
-      DATA CHEL(16)/'B_'/USP3(16)/0.000/IGRP(16)/3/IPER(16)/2/
-      DATA CHEL(17)/'AL'/USP3(17)/0.000/IGRP(17)/3/IPER(17)/3/
-      DATA CHEL(18)/'GA'/USP3(18)/0.000/IGRP(18)/3/IPER(18)/4/
-      DATA CHEL(19)/'IN'/USP3(19)/0.000/IGRP(19)/3/IPER(19)/5/
-      DATA CHEL(20)/'TL'/USP3(20)/0.000/IGRP(20)/3/IPER(20)/6/
-      DATA USP2/2.D0,1.25D0,0.70,0.2D0,0.1D0/
+      CHEL( 1)='C_' ;  USP3( 1)=2.119 ;  IGRP( 1)=4 ;  IPER( 1)=2
+      CHEL( 2)='N_' ;  USP3( 2)=0.450 ;  IGRP( 2)=5 ;  IPER( 2)=2
+      CHEL( 3)='O_' ;  USP3( 3)=0.018 ;  IGRP( 3)=6 ;  IPER( 3)=2
+      CHEL( 4)='SI' ;  USP3( 4)=1.225 ;  IGRP( 4)=4 ;  IPER( 4)=3
+      CHEL( 5)='P_' ;  USP3( 5)=2.400 ;  IGRP( 5)=5 ;  IPER( 5)=3
+      CHEL( 6)='S_' ;  USP3( 6)=0.484 ;  IGRP( 6)=6 ;  IPER( 6)=3
+      CHEL( 7)='GE' ;  USP3( 7)=0.701 ;  IGRP( 7)=4 ;  IPER( 7)=4
+      CHEL( 8)='AS' ;  USP3( 8)=1.500 ;  IGRP( 8)=5 ;  IPER( 8)=4
+      CHEL( 9)='SE' ;  USP3( 9)=0.335 ;  IGRP( 9)=6 ;  IPER( 9)=4
+      CHEL(10)='SN' ;  USP3(10)=0.199 ;  IGRP(10)=4 ;  IPER(10)=5
+      CHEL(11)='SB' ;  USP3(11)=1.100 ;  IGRP(11)=5 ;  IPER(11)=5
+      CHEL(12)='TE' ;  USP3(12)=0.300 ;  IGRP(12)=6 ;  IPER(12)=5
+      CHEL(13)='PB' ;  USP3(13)=0.100 ;  IGRP(13)=4 ;  IPER(13)=6
+      CHEL(14)='BI' ;  USP3(14)=1.000 ;  IGRP(14)=5 ;  IPER(14)=6
+      CHEL(15)='PO' ;  USP3(15)=0.300 ;  IGRP(15)=6 ;  IPER(15)=6
+      CHEL(16)='B_' ;  USP3(16)=0.000 ;  IGRP(16)=3 ;  IPER(16)=2
+      CHEL(17)='AL' ;  USP3(17)=0.000 ;  IGRP(17)=3 ;  IPER(17)=3
+      CHEL(18)='GA' ;  USP3(18)=0.000 ;  IGRP(18)=3 ;  IPER(18)=4
+      CHEL(19)='IN' ;  USP3(19)=0.000 ;  IGRP(19)=3 ;  IPER(19)=5
+      CHEL(20)='TL' ;  USP3(20)=0.000 ;  IGRP(20)=3 ;  IPER(20)=6
+      USP2=(/2.D0,1.25D0,0.7d0,0.2D0,0.1D0/)
 !     == ASSIGN GROUP AND PERIOD AND DETERMINE SP3-SP3 TORSIONAL BARRIERS
       SVAR1=0.D0
       SVAR2=0.D0
@@ -4326,7 +4326,7 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)               :: NATEXCL,NBONDEXCL
       REAL(8)                  :: ALAT,DET
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       TWOPI=2.D0*PI
 !
 !     ==================================================================
@@ -4613,7 +4613,6 @@ END MODULE UFFTABLE_MODULE
 !       ================================================================
         CALL CLASSICAL$SWITCH
       ENDDO
- 1000 CONTINUE
       PRINT*,'CLASSICAL$MINIMIZE CONVERGED AFTER ',ITER,' ITERATIONS'
       CALL CLASSICAL$SETR8A('MASS',NAT,RMASS)
       DEALLOCATE(RMASS)
@@ -4862,7 +4861,7 @@ END MODULE UFFTABLE_MODULE
       REAL(8)                   :: XI,PI,PHI,DPHIDX
       INTEGER(4)                :: IX
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       POT%NX=1000
       ALLOCATE(POT%VAL(POT%NX))
       ALLOCATE(POT%DER(POT%NX))

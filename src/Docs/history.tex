@@ -363,6 +363,59 @@ Changed pawldaplusu, so that the J parameter are calculated correctly.
 Now it is also possible to enforce $F^4/F^2$ and $F^6/F^2$. Where
 $F^\ell$ are the Slater integrals of the main shell.
 
+\subsection{August 22,  2007}
+
+Dependencies during installation corrected. The make file did not work
+efficient for some compilers such as ifc7, because the compiler
+produces uppercase module file names with lowercase extension, while
+the make file assumed all lowercase module file names as used by the
+g95 compiler. The configure.ac has been modified so that it can accept
+a new parameter ``TUPPERCASEMOD'' from the parameter file. If its
+value is true, the make file assumes ifc7-like module file names.
+otherwise lowercase module file names are assumed.
+
+\subsection{August 22,  2007}
+
+In ldaplusu the double counting term still used some old,l-dependent
+definitions for the u and j-parameter. Now the general definition has
+been included.
+
+\subsection{August 22,  2007}
+
+There was an inconsistency in the manual for the confining potential
+!structure!confine. The manual asked correctly for a parameter ``POT''
+while the code was looking for ``V0''. Now the code has been changed
+to ``POT'' as well.
+
+\subsection{August 31,  2007}
+
+The make file construction did not treat the upper/lowercase module
+names properly. The configure.ac has been modified. It is necessary to
+use the new configure script of to run autoconf with the new
+configure.ac.
+
+\subsection{August 31,  2007}
+
+minor Bugfix: The variable ``kread'' in subroutine waves_read in file
+paw_waves2.f90 has not been fully initialized, which resulted in
+unpredictable crashes.
+
+\subsection{August 31,  2007}
+
+Minor Bugfix: I changed the position of trace\$push in routine
+qmmm\$propagate. 
+
+\subsection{September 12,  2007}
+
+Fixed the Parrinello-Rahman option. Further testing is stilll needed. I
+went back to the original Parrinllo-Rahman implementation.  Only
+constant pressure and no constant stress calculations are possible.
+The formulation has been changed so that the wave functions are not
+scaled with the unit cell.  This scaling will be done by the
+orthogonalization.
+
+
+
 \newpage
 \bibliographystyle{unsrt}
 \bibliography{doc.bib}

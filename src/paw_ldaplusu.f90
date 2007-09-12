@@ -1393,13 +1393,11 @@ PRINT*,'CHIFROMPHI: LN',LN,LN-NOFL+1,LN-1
         DO I=NCHI1,NCHI2
           DO J=NCHI1,NCHI2
             UPAR=UPAR+U(I,J,I,J)
-            IF(I.NE.J)JPAR=JPAR+U(I,J,J,I)
+            JPAR=JPAR+U(I,J,I,J)-U(I,J,J,I)
           ENDDO
         ENDDO
-!       == FACTOR (2L+1)**2 IS THE NUMBER OF ELEMENTS OF THE UTENSOR CONTRIBUTING
-        UPAR=UPAR/REAL(2*L+1)**2
-!       == FACTOR 2L(2L+1) IS THE NUMBER OF ELEMENTS OF THE UTENSOR CONTRIBUTING
-        JPAR=JPAR/REAL(2*L*(2*L+1))*7.D0/5.D0
+        upar=upar/real((2*l+1)**2,kind=8)
+        jpar=upar-jpar/real(2*l*(2*l+1),kind=8)
 PRINT*,'UPARAMETER[EV]    ',UPAR*27.211D0 ,'UPARAMETER    ',UPAR
 PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !

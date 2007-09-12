@@ -77,7 +77,7 @@ TYPE GSET_TYPE
   REAL(8)   ,POINTER :: YLM(:,:)   ! (NGL,LMXX) REAL SPHERICAL HARMONICS
   REAL(8)   ,POINTER :: SYLM(:,:,:)! (NGL,LMXX,6) STRAINED SPHERICAL HARMONICS
   REAL(8)   ,POINTER :: MPSI(:)    ! (NGL) WAVE FUNCTION MASS
-  REAL(8)   ,POINTER :: DMPSI(:)   ! (NGL) DMPSI/DT
+!pb070802  REAL(8)   ,POINTER :: DMPSI(:)   ! (NGL) DMPSI/DT
   REAL(8)   ,POINTER :: BUCKET(:)  ! BUCKET POTENTIAL
   REAL(8)   ,POINTER :: DBUCKET(:) ! 1/G* DBUCKET/DG
 END TYPE GSET_TYPE
@@ -471,7 +471,6 @@ END MODULE WAVES_MODULE
 !     ================================================================
       ELSE IF(ID.EQ.'<PSPSI|PRO>') THEN
         IKPT=EXTPNTR%IKPT   ! IKPT REFERS TO LOCAL KPOINTS
-print*,'waves$getr8a marke 0',ikpt
         IF(IKPT.EQ.0) THEN
           CALL ERROR$MSG('STATE NOT AVAILABLE ON THIS TASK')
           CALL ERROR$MSG('THIS ERROR OCCURS ONLY FOR PARALLEL JOBS')
@@ -486,7 +485,6 @@ print*,'waves$getr8a marke 0',ikpt
         ELSE
           IDIM=1
         END IF
-print*,'waves$getr8a marke 1',ikpt,ispin,ib
         CALL WAVES_SELECTWV(IKPT,ISPIN)
         IF(.NOT.ASSOCIATED(THIS%EIGVEC)) THEN
           CALL ERROR$MSG('EIGENSTATES NOT AVAILABLE')
@@ -513,7 +511,6 @@ print*,'waves$getr8a marke 1',ikpt,ispin,ib
         ENDDO
         LMNX=IPRO2-IPRO1+1
 !
-print*,'waves$getr8a marke 2',tinv
         ALLOCATE(CWORK1(LMNX))
         CWORK1(:)=(0.D0,0.D0)
         IF(TINV) THEN
@@ -538,7 +535,6 @@ print*,'waves$getr8a marke 2',tinv
             ENDDO
           ENDDO             
         END IF
-print*,'waves$getr8a marke 2'
         IF(LMNX.GT.LEN) THEN
           CALL ERROR$MSG('SIZE INCONSISTENT')
           CALL ERROR$CHVAL('ID',ID)
@@ -912,7 +908,7 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
         NULLIFY(GSET%YLM)
         NULLIFY(GSET%SYLM)
         NULLIFY(GSET%MPSI)
-        NULLIFY(GSET%DMPSI)
+!pb070802        NULLIFY(GSET%DMPSI)
         NULLIFY(GSET%BUCKET)
         NULLIFY(GSET%DBUCKET)
       ENDDO
@@ -1296,9 +1292,9 @@ CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
       CALL ENERGYLIST$SET('PS  KINETIC',EKIN)
       CALL ENERGYLIST$ADD('AE  KINETIC',EKIN)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EKIN)
-!D WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(1,:)
-!D WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(2,:)
-!D WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(3,:)
+!!$WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(1,:)
+!!$WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(2,:)
+!!$WRITE(*,FMT='("KIN STRESS ",3F15.7)')STRESS(3,:)
 !
 !     ==================================================================
 !     == ONE-CENTER DENSITY MATRICES                                  ==
@@ -1413,7 +1409,6 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==  POTB=-1/OMEGA*INT D^3R(\TILDE{V}+V^1-\TILDE{V}^1) ============
 !     ==  NOTE THAT \INT D^3R \TILDE{V}=0
 !     ===================================================================
-print*,'before waves$addconstantpot'
       CALL WAVES$ADDCONSTANTPOT(NRL,LMNXX,NDIMD,NAT,POTB,RHO,DH,DO)
       CALL GRAPHICS$SETR8('POTSHIFT',POTB)
 !
@@ -1434,73 +1429,73 @@ print*,'before waves$addconstantpot'
 !     ==================================================================
 !     == PRINTOUT FOR TESTING 
 !     ==================================================================
-IF(NSPIN.EQ.2) THEN
-  DO IAT=1,NAT
-    ISP=MAP%ISP(IAT)
-    LMNX=MAP%LMNX(ISP)
-    DO ISPIN=1,NDIMD
-      WRITE(*,FMT='("D ======== ATOM ",I2," SPIN ",I2," =========")')IAT,ISPIN
-      LMN1=0.D0
-      DO LN=1,MAP%LNX(ISP)
-        L=MAP%LOX(LN,ISP)
-        IF(L.NE.2) THEN
-          LMN1=LMN1+2*L+1
-          CYCLE
-        END IF
-        WRITE(*,FMT='("=",I1,10E10.3)') &
-             LN,(REAL(DENMAT(LMN1+M,LMN1+M,ISPIN,IAT),KIND=8),M=1,2*L+1)
-        LMN1=LMN1+2*L+1
-      ENDDO
-    ENDDO
-    DO ISPIN=1,NDIMD
-      WRITE(*,FMT='("H======== ATOM",I2," SPIN ",I2," =========")')IAT,ISPIN
-      LMN1=0.D0
-      DO LN=1,MAP%LNX(ISP)
-        L=MAP%LOX(LN,ISP)
-        IF(L.NE.2) THEN
-          LMN1=LMN1+2*L+1
-          CYCLE
-        END IF
-        WRITE(*,FMT='("=",I2,10E10.3)') &
-             LN,(DH(LMN1+M,LMN1+M,ISPIN,IAT),M=1,2*L+1)
-        LMN1=LMN1+2*L+1
-      ENDDO
-    ENDDO
-  ENDDO 
-ELSE
-  DO IAT=1,NAT
-    ISP=MAP%ISP(IAT)
-    LMNX=MAP%LMNX(ISP)
-    DO ISPIN=1,NDIMD
-!      WRITE(*,FMT='("D======== ATOM ",I2," SPIN ",I2," =========")')IAT,ISPIN
-      LMN1=0.D0
-      DO LN=1,MAP%LNX(ISP)
-        L=MAP%LOX(LN,ISP)
-        IF(L.NE.2) THEN
-          LMN1=LMN1+2*L+1
-          CYCLE
-        END IF
-!        WRITE(*,FMT='("=",I2,10E10.3)') &
-!             LN,(REAL(DENMAT(LMN1+M,LMN1+M,ISPIN,IAT),KIND=8),M=1,2*L+1)
-        LMN1=LMN1+2*L+1
-      ENDDO
-    ENDDO
-    DO ISPIN=1,NDIMD
-!      WRITE(*,FMT='("H ======== ATOM ",I2," SPIN ",I2," =========")')IAT,ISPIN
-      LMN1=0.D0
-      DO LN=1,MAP%LNX(ISP)
-        L=MAP%LOX(LN,ISP)
-        IF(L.NE.2) THEN
-!          LMN1=LMN1+2*L+1
-!          CYCLE
-        END IF
-!        WRITE(*,FMT='("=",I2,10E10.3)') &
-!             LN,(DH(LMN1+M,LMN1+M,ISPIN,IAT),M=1,2*L+1)
-        LMN1=LMN1+2*L+1
-      ENDDO
-    ENDDO
-  ENDDO 
-END IF
+!!$IF(NSPIN.EQ.2) THEN
+!!$  DO IAT=1,NAT
+!!$    ISP=MAP%ISP(IAT)
+!!$    LMNX=MAP%LMNX(ISP)
+!!$    DO ISPIN=1,NDIMD
+!!$      WRITE(*,FMT='("D ======== ATOM ",I2," SPIN ",I2," =========")')IAT,ISPIN
+!!$      LMN1=0.D0
+!!$      DO LN=1,MAP%LNX(ISP)
+!!$        L=MAP%LOX(LN,ISP)
+!!$        IF(L.NE.2) THEN
+!!$          LMN1=LMN1+2*L+1
+!!$          CYCLE
+!!$        END IF
+!!$        WRITE(*,FMT='("=",I1,10E10.3)') &
+!!$             LN,(REAL(DENMAT(LMN1+M,LMN1+M,ISPIN,IAT),KIND=8),M=1,2*L+1)
+!!$        LMN1=LMN1+2*L+1
+!!$      ENDDO
+!!$    ENDDO
+!!$    DO ISPIN=1,NDIMD
+!!$      WRITE(*,FMT='("H======== ATOM",I2," SPIN ",I2," =========")')IAT,ISPIN
+!!$      LMN1=0.D0
+!!$      DO LN=1,MAP%LNX(ISP)
+!!$        L=MAP%LOX(LN,ISP)
+!!$        IF(L.NE.2) THEN
+!!$          LMN1=LMN1+2*L+1
+!!$          CYCLE
+!!$        END IF
+!!$        WRITE(*,FMT='("=",I2,10E10.3)') &
+!!$             LN,(DH(LMN1+M,LMN1+M,ISPIN,IAT),M=1,2*L+1)
+!!$        LMN1=LMN1+2*L+1
+!!$      ENDDO
+!!$    ENDDO
+!!$  ENDDO 
+!!$ELSE
+!!$  DO IAT=1,NAT
+!!$    ISP=MAP%ISP(IAT)
+!!$    LMNX=MAP%LMNX(ISP)
+!!$    DO ISPIN=1,NDIMD
+!!$!      WRITE(*,FMT='("D======== ATOM ",I2," SPIN ",I2," =========")')IAT,ISPIN
+!!$      LMN1=0.D0
+!!$      DO LN=1,MAP%LNX(ISP)
+!!$        L=MAP%LOX(LN,ISP)
+!!$        IF(L.NE.2) THEN
+!!$          LMN1=LMN1+2*L+1
+!!$          CYCLE
+!!$        END IF
+!!$!        WRITE(*,FMT='("=",I2,10E10.3)') &
+!!$!             LN,(REAL(DENMAT(LMN1+M,LMN1+M,ISPIN,IAT),KIND=8),M=1,2*L+1)
+!!$        LMN1=LMN1+2*L+1
+!!$      ENDDO
+!!$    ENDDO
+!!$    DO ISPIN=1,NDIMD
+!!$!      WRITE(*,FMT='("H ======== ATOM ",I2," SPIN ",I2," =========")')IAT,ISPIN
+!!$      LMN1=0.D0
+!!$      DO LN=1,MAP%LNX(ISP)
+!!$        L=MAP%LOX(LN,ISP)
+!!$        IF(L.NE.2) THEN
+!!$!          LMN1=LMN1+2*L+1
+!!$!          CYCLE
+!!$        END IF
+!!$!        WRITE(*,FMT='("=",I2,10E10.3)') &
+!!$!             LN,(DH(LMN1+M,LMN1+M,ISPIN,IAT),M=1,2*L+1)
+!!$        LMN1=LMN1+2*L+1
+!!$      ENDDO
+!!$    ENDDO
+!!$  ENDDO 
+!!$END IF
       DEALLOCATE(VQLM)
       DEALLOCATE(DENMAT)
       DEALLOCATE(EDENMAT)
@@ -1533,7 +1528,9 @@ END IF
 !     == FORCES AND STRESSES                                          ==
 !     ==================================================================
       IF(TFORCE.OR.TSTRESS) THEN
-        CALL WAVES$FORCE(NAT,LMNXX,NDIMD,DH,FORCE,STRESS)
+        stress1(:,:)=0.d0
+        CALL WAVES$FORCE(NAT,LMNXX,NDIMD,DH,FORCE,STRESS1)
+        stress=stress+stress1
       END IF
 !
 !     ==================================================================
@@ -1656,12 +1653,12 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       CALL ATOMLIST$SETR8A('FORCE',0,3*NAT,FORCE)
       DEALLOCATE(FORCET)
 !     == STRESS ========================================================
-!D WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(1,:)
-!D WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(2,:)
-!D WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(3,:)
-!D WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(1,:)
-!D WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(2,:)
-!D WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
+!!$WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(1,:)
+!!$WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(2,:)
+!!$WRITE(*,FMT='("RBAS ",3F15.7)')RBAS(3,:)
+!!$WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(1,:)
+!!$WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(2,:)
+!!$WRITE(*,FMT='("AFTER WAVES STRESS ",3F15.7)')STRESS(3,:)
       CALL CELL$GETR8A('STRESS_I',9,STRESS1)
       STRESS=STRESS1-STRESS  ! IN THIS ROUTINE STRESS=+DE/DEPSILON!
       CALL CELL$SETR8A('STRESS_I',9,STRESS)
@@ -2927,13 +2924,13 @@ END IF
       ENDDO
       CALL MPE$COMBINE('MONOMER','+',CM)
       CALL ATOMLIST$SETR8A('CHARGEANDMOMENTS',0,4*NAT,CM)
-PRINT*, 'CHARGE AND SPINS '
-DO IAT=1,NAT
-  CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-  CALL SETUP$ISELECT(ISP)
-  CALL SETUP$GETR8('AEZ',AEZ)
-  WRITE(*,*)IAT,aez,cm(:,IAT)
-ENDDO
+!!$PRINT*, 'CHARGE AND SPINS '
+!!$DO IAT=1,NAT
+!!$  CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+!!$  CALL SETUP$ISELECT(ISP)
+!!$  CALL SETUP$GETR8('AEZ',AEZ)
+!!$  WRITE(*,*)IAT,aez,cm(:,IAT)
+!!$ENDDO
                                    call trace$pop()
 return
 
@@ -3252,7 +3249,7 @@ return
               ENDDO
             ENDDO
           ELSE
-            GIJ(:,:)=0
+            GIJ(:,:)=0.d0
           END IF
 !
 !         ===============================================================
@@ -4155,7 +4152,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     ==================================================================
 !     ==  SUPERPOSE WAVE FUNCTION TO OBTAIN DE/D<P|                   ==
 !     ==================================================================
-      DEDPROJ1=CONJG(DEDPROJ)
+      DEDPROJ1=CONJG(DEDPROJ)   !transpose assuming a hermitean matrix
 !     ==  DEPRO=DEPRO+PSI*CONJG(DEPROJ)
       CALL LIB$MATMULC8(NGL,NDIM*NBH,LMNX,PSI,DEDPROJ1,DEDPRO)
       IF(TINV) THEN
@@ -4531,15 +4528,23 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_UPDATEGSET()
-!     ******************************************************************
-!     **                                                              **
-!     **  THIS ROUTINE MUST BE CALLED INITIALLY AND AFTER EACH        **
-!     **  CHANGE OF THE CELL-SHAPE.                                   **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (1999)***
-      USE WAVES_MODULE
+!     **************************************************************************
+!     **                                                                      **
+!     **  THIS ROUTINE MUST BE CALLED INITIALLY AND AFTER EACH                **
+!     **  CHANGE OF THE CELL-SHAPE.                                           **
+!     **                                                                      **
+!     **    gset%pro projector functions  gradient                            **
+!     **    gset%dpro                                                         **
+!     **    gset%ylm                                                          **
+!     **    gset%sylm                                                         **
+!     **    gset%bucket                                                      **
+!     **    gset%dbucket                                                      **
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1999)***********
+      USE WAVES_MODULE, ONLY : GSET_TYPE,GSET,map,tbucket,epwpsi0,d2epwpsi &
+     &                         ,nkptl,waves_selectwv 
       IMPLICIT NONE
       REAL(8)        ,ALLOCATABLE   :: G2(:)
       REAL(8)        ,ALLOCATABLE   :: GVEC(:,:)
@@ -4749,6 +4754,10 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)   ,ALLOCATABLE:: ARR2(:)
       REAL(8)   ,ALLOCATABLE:: ARR3(:)
       REAL(8)               :: SVAR1,SVAR2,SVAR3
+      logical(4)            :: tstress
+      real(8)               :: fricmat(3,3)
+      real(8)  ,allocatable :: gvec(:,:)
+      real(8)  ,allocatable :: anneevec(:)
 !     ******************************************************************
       IF(OPTIMIZERTYPE.EQ.'CG') RETURN                           !KAESTNERCG
                               CALL TRACE$PUSH('WAVES$PROPAGATE')
@@ -4770,6 +4779,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     ==================================================================
 !     ==  PROPAGATE WAVE FUNCTIONS (PUT PSI(+) INTO PSIM)             ==
 !     ==================================================================
+      CALL CELL$GETL4('MOVE',TSTRESS)
       DO IKPT=1,NKPTL
         CALL WAVES_SELECTWV(IKPT,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
@@ -4778,14 +4788,28 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         ALLOCATE(ARR1(NGL))
         ALLOCATE(ARR2(NGL))
         ALLOCATE(ARR3(NGL))
-        IF(ASSOCIATED(GSET%DMPSI)) THEN
-          DO IG=1,NGL
-!PB         SVAR1=1.D0+ANNEE+GSET%DMPSI(IG)
-            SVAR1=1.D0+ANNEE
-            ARR1(IG)=2.D0/SVAR1
-            ARR2(IG)=1.D0-ARR1(IG)
-            ARR3(IG)=-DELT**2/GSET%MPSI(IG)/SVAR1
-          ENDDO
+        IF(TSTRESS) THEN
+          CALL CELL$GETR8A('FRICMAT',9,FRICMAT) !\ALPHADOT*DELTA/2
+          allocate(gvec(3,ngl))
+          CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+          allocate(anneevec(ngl))
+          CALL WAVES_DMPSI(.false.,ANNEE,FRICMAT,NGl,GVEC &
+     &                      ,EMASS,EMASSCG2,gset%DBUCKET,ANNEEVEC)
+!          CALL WAVES_DMPSI(TSTRESS,ANNEE,FRICMAT,NGl,GVEC &
+!     &                      ,EMASS,EMASSCG2,gset%DBUCKET,ANNEEVEC)
+          deallocate(gvec)
+          ARR1(:)=2.D0/(1.D0+ANNEEVEC(:))
+          ARR2(:)=1.D0-ARR1(:)
+          ARR3(:)=-DELT**2/(1.D0+ANNEEVEC(:))/GSET%MPSI(:)
+          deallocate(anneevec)
+!pb070802        IF(ASSOCIATED(GSET%DMPSI)) THEN
+!pb070802          DO IG=1,NGL
+!pb070802!PB         SVAR1=1.D0+ANNEE+GSET%DMPSI(IG)
+!pb070802            SVAR1=1.D0+ANNEE
+!pb070802            ARR1(IG)=2.D0/SVAR1
+!pb070802            ARR2(IG)=1.D0-ARR1(IG)
+!pb070802            ARR3(IG)=-DELT**2/GSET%MPSI(IG)/SVAR1
+!pb070802          ENDDO
         ELSE
           SVAR1=2.D0/(1.D0+ANNEE)
           SVAR2=1.D0-SVAR1
@@ -4839,8 +4863,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       USE MPE_MODULE
       IMPLICIT NONE
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)
-      REAL(8)   ,ALLOCATABLE :: DG2(:)
-      REAL(8)                :: FRICMAT(3,3)
+!pb070802      REAL(8)   ,ALLOCATABLE :: DG2(:)
+!pb070802      REAL(8)                :: FRICMAT(3,3)
       REAL(8)                :: G2
       REAL(8)                :: FAC1
       INTEGER(4)             :: IKPT,IG
@@ -4848,11 +4872,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       LOGICAL(4)             :: TSTRESS
 !     ******************************************************************
       CALL CELL$GETL4('ON',TSTRESS)
-      IF(TSTRESS) THEN
-        CALL CELL$GETR8A('FRICMAT',9,FRICMAT) !\ALPHADOT*DELTA/2
-      ELSE
-        FRICMAT=0.D0
-      END IF
+!pb070802      IF(TSTRESS) THEN
+!pb070802        CALL CELL$GETR8A('FRICMAT',9,FRICMAT) !\ALPHADOT*DELTA/2
+!pb070802      ELSE
+!pb070802        FRICMAT=0.D0
+!pb070802      END IF
       FAC1=EMASS*2.D0*EMASSCG2
       DO IKPT=1,NKPTL
         CALL WAVES_SELECTWV(IKPT,1)
@@ -4862,33 +4886,33 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           ALLOCATE(GVEC(3,NGL))
           CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
           IF(.NOT.ASSOCIATED(GSET%MPSI)) ALLOCATE(GSET%MPSI(NGL))
-          IF(.NOT.ASSOCIATED(GSET%DMPSI))ALLOCATE(GSET%DMPSI(NGL))
-          ALLOCATE(DG2(NGL))
-          DO IG=1,NGL
-            DG2(IG)=FRICMAT(1,1)     *GVEC(1,IG)*GVEC(1,IG) &
-    &              +FRICMAT(1,2)*2.D0*GVEC(1,IG)*GVEC(2,IG) &
-    &              +FRICMAT(1,3)*2.D0*GVEC(1,IG)*GVEC(3,IG) &
-    &              +FRICMAT(2,2)     *GVEC(2,IG)*GVEC(2,IG) &
-    &              +FRICMAT(2,3)*2.D0*GVEC(2,IG)*GVEC(3,IG) &
-    &              +FRICMAT(3,3)     *GVEC(3,IG)*GVEC(3,IG)
-          ENDDO
+!pb070802    IF(.NOT.ASSOCIATED(GSET%DMPSI))ALLOCATE(GSET%DMPSI(NGL))
+!pb070802    ALLOCATE(DG2(NGL))
+!pb070802    DO IG=1,NGL
+!pb070802      DG2(IG)=FRICMAT(1,1)     *GVEC(1,IG)*GVEC(1,IG) &
+!pb070802   &        +FRICMAT(1,2)*2.D0*GVEC(1,IG)*GVEC(2,IG) &
+!pb070802   &        +FRICMAT(1,3)*2.D0*GVEC(1,IG)*GVEC(3,IG) &
+!pb070802   &        +FRICMAT(2,2)     *GVEC(2,IG)*GVEC(2,IG) &
+!pb070802   &        +FRICMAT(2,3)*2.D0*GVEC(2,IG)*GVEC(3,IG) &
+!pb070802   &        +FRICMAT(3,3)     *GVEC(3,IG)*GVEC(3,IG)
+!PB070802 ENDDO
 !         == MASS ======================================================
           DO IG=1,NGL
             G2=GVEC(1,IG)**2+GVEC(2,IG)**2+GVEC(3,IG)**2
             GSET%MPSI(IG) =EMASS*(1.D0+EMASSCG2*G2)
-            GSET%DMPSI(IG)=EMASS*EMASSCG2*2.D0*DG2(IG)
+!pb070802   GSET%DMPSI(IG)=EMASS*EMASSCG2*2.D0*DG2(IG)
           END DO
 !         == ADD MASS FOR BUCKET POTENTIAL =============================
           IF(TBUCKET) THEN
             DO IG=1,NGL
-              GSET%MPSI(IG) =GSET%MPSI(IG) +FAC1*GSET%BUCKET(IG)
-              GSET%DMPSI(IG)=GSET%DMPSI(IG)+FAC1*GSET%DBUCKET(IG)*DG2(IG)
+              GSET%MPSI(IG) =GSET%MPSI(IG) +FAC1*GSET%BUCKET(IG) 
+!pb070802     GSET%DMPSI(IG)=GSET%DMPSI(IG)+FAC1*GSET%DBUCKET(IG)*DG2(IG)
             ENDDO
           END IF
-          DEALLOCATE(DG2)
+!pb070802 DEALLOCATE(DG2)
           DEALLOCATE(GVEC)
         ELSE 
-          IF(ASSOCIATED(GSET%DMPSI))DEALLOCATE(GSET%DMPSI)
+!pb070802 IF(ASSOCIATED(GSET%DMPSI))DEALLOCATE(GSET%DMPSI)   
           IF(.NOT.ASSOCIATED(GSET%MPSI)) THEN
             ALLOCATE(GVEC(3,NGL))
             CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
@@ -4905,6 +4929,47 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             END IF
           END IF
         END IF
+      ENDDO
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE WAVES_dmpsi(tstress,annee,fricmat,ng,gvec &
+     &                      ,emass,emasscg2,dbucket,anneevec)
+!     ******************************************************************
+!     **                                                              **
+!     **                                                              **
+!     **                                                              **
+!     **                                                              **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      LOGICAL(4),INTENT(IN)  :: TSTRESS             
+      REAL(8)   ,INTENT(IN)  :: ANNEE
+      REAL(8)   ,INTENT(IN)  :: FRICMAT(3,3)
+      INTEGER(4),INTENT(IN)  :: NG
+      REAL(8)   ,INTENT(IN)  :: GVEC(3,NG)
+      REAL(8)   ,INTENT(IN)  :: emass
+      REAL(8)   ,INTENT(IN)  :: emasscg2
+      REAL(8)   ,INTENT(IN)  :: DBUCKET(NG)
+      REAL(8)   ,INTENT(OUT) :: ANNEEVEC(NG)
+      REAL(8)                :: FAC1,fac2,svar
+      INTEGER(4)             :: IG
+!     ******************************************************************
+      IF(.NOT.TSTRESS) THEN
+        anneevec(:)=annee
+        return
+      END IF
+      fac1=annee-0.5d0*(fricmat(1,1)+fricmat(2,2)+fricmat(3,3))
+      FAC2=-0.5d0*EMASS*2.D0*EMASSCG2
+      DO IG=1,NG
+        svar=FRICMAT(1,1)     *GVEC(1,IG)*GVEC(1,IG) &
+     &      +FRICMAT(1,2)*2.D0*GVEC(1,IG)*GVEC(2,IG) &
+     &      +FRICMAT(1,3)*2.D0*GVEC(1,IG)*GVEC(3,IG) &
+     &      +FRICMAT(2,2)     *GVEC(2,IG)*GVEC(2,IG) &
+     &      +FRICMAT(2,3)*2.D0*GVEC(2,IG)*GVEC(3,IG) &
+     &      +FRICMAT(3,3)     *GVEC(3,IG)*GVEC(3,IG)
+        ANNEEVEC(IG)=fac1+FAC2*svar*(1.D0+DBUCKET(IG))
       ENDDO
       RETURN
       END

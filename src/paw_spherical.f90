@@ -865,7 +865,6 @@ END MODULE SPHERICALCCMAT_MODULE
 !     ******************************************************************
       IF(ALLOCATED(THIS))DEALLOCATE(THIS)
       LRXX=MAX(INT(SQRT(REAL(LM_-1,KIND=8)+DSMALL)),2)
-PRINT*,'INITIALIZE TO LRXX ',LRXX
       LMRXX=(LRXX+1)**2
       ALLOCATE(THIS(LMRXX))
       DO LM=1,LMRXX

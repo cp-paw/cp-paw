@@ -135,6 +135,7 @@ AC_MSG_RESULT(resolve $PARMFILE)
 if test "$PARMFILE" != notset; then
   ARCH=`grep '^ARCH' $PARMFILE | cut -d'"' -f2`
   TPARALLEL=`grep '^TPARALLEL' $PARMFILE | cut -d'"' -f2`
+  TUPPERCASEMOD=`grep '^TUPPERCASEMOD' $PARMFILE | cut -d'"' -f2`
   COMPILER_SCALAR=`grep '^COMPILER_SCALAR' $PARMFILE | cut -d'"' -f2`
   COMPILER_PARALLEL=`grep '^COMPILER_PARALLEL' $PARMFILE | cut -d'"' -f2`
   FCFLAGS_NONE=`grep '^FCFLAGS_NONE' $PARMFILE | cut -d'"' -f2`
@@ -167,10 +168,9 @@ if test "$PARMFILE" != notset; then
   CPPFLAGS="$CPPFLAGS"
   FEXT="$FEXT"
   ARCH="$ARCH"
-  #
-  # if no parameter file is given, the script will search for the
-  # values needed.
-  #
+  if test "$TUPPERCASEMOD" != "T"; then 
+    TUPPERCASEMOD="F"
+  fi
 else
    AC_MSG_ERROR(No Parameter file. Specify --with-parmfile=parameterfile)
 fi     # end of block "without parmfile" #--------------------------------------
@@ -309,6 +309,22 @@ AC_CONFIG_FILES(Makefile_bare:Makefile_bare.in)
 AC_OUTPUT()
 chmod +x $PAWDIR/bin/$ARCH/f90pp
 #
+# substituting to accept lowercase module files
+# default are uppercase module file names with lowercase extension
+#
+if test "$TUPPERCASEMOD" = "F"; then
+  AC_MSG_RESULT(modify makefile_bare for lowercase module files)
+#  sed -e 's%\([[:space]].*.mod\)%\L\1%'\
+# pattern matching: [^\/] do not match a slash; 
+#                   (/string/) save string for later use as /1
+#                   \L make expression lowercase
+# sed command       s%stringa%stringb%g  replace stringa by stringb 
+  sed -e 's%\([[^\/]]*.mod\)%\L\1%'\
+      ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
+  cp  ${PAWDIR}/Makefile_bare_tmp  ${PAWDIR}/Makefile_bare
+  rm  -f ${PAWDIR}/Makefile_bare_tmp
+fi
+#
 # substituting to get Makefile.none
 #
 AC_MSG_RESULT(creating Makefile in none)
@@ -417,6 +433,7 @@ AC_MSG_RESULT(compile flags (dbg)            : $FCFLAGS_DBG)
 AC_MSG_RESULT(compile flags (prof)           : $FCFLAGS_PROF)
 AC_MSG_RESULT(link command w.flags (scalar)  : $LINK_SCALAR)
 AC_MSG_RESULT(external libraries (scalar)    : $LIBS_SCALAR)
+AC_MSG_RESULT(uppercase module names?        : $TUPPERCASEMOD)
 #AC_MSG_RESULT(---------------------------------------------------------------)
 #AC_MSG_RESULT(--------------external libraries-------------------------------)
 #AC_MSG_RESULT(---------------------------------------------------------------)

@@ -1,30 +1,32 @@
-!***********************************************************************
-!**  OBJECT CELL : PARRINELLO RAHMAN                                  **
-!**  USAGE                                                            **
-!**    ==  INITIALIZE: ================================               **
-!**    SET MANDATORY DT,TREF,TMASS                                    **
-!**    SET OPTINALLY: STRESS,PRESSURE,FRIC                            **
-!**    GET('T0',9,T0)                                                 **
-!**    ==  LOOP: ======================================               **
-!**    --  CALCULATE STRESS                                           **
-!**    SETR8A('STRESS_I',9,STRESS)                                    **
-!**    PROPAGATE                                                      **
-!**    GET('FRICMAT',9,U)                                             **
-!**    -- ADD OTHERFRICTION TERMS TO U                                **
-!**    -- U=U*DT/2                                                    **
-!**    -- PROPAGATE POSITIONS                                         **
-!**       R(+)=(1+U)**(-1)[2R(0)-(1-U)R(-)+F*DT^2/M                   **
-!**    GET('MAPTOCELL',3,U)                                           **
-!**    -- RP=U*RP ; R0=U*R0 ; RM=U*RM                                 **
-!**    -- RBAS=T0                                                     **
-!**    GET('EKIN',EKIN)                                               **
-!**    GET('EPOT',EPOT)                                               **
-!**    SWITCH                                                         **
-!**    GET('T0',9,T0)                                                 **
-!**                                                                   **
-!***********************************************************************
+!........1.........2.........3.........4.........5.........6.........7.........8
+!*******************************************************************************
+!**  OBJECT CELL : PARRINELLO RAHMAN                                          **
+!**  USAGE                                                                    **
+!**    ==  INITIALIZE: ================================                       **
+!**    SET MANDATORY DT,TREF,TMASS                                            **
+!**    SET OPTINALLY: STRESS,PRESSURE,FRIC                                    **
+!**    GET('T0',9,T0)                                                         **
+!**    ==  LOOP: ======================================                       **
+!**    --  CALCULATE STRESS                                                   **
+!**    SETR8A('STRESS_I',9,STRESS)                                            **
+!**    PROPAGATE                                                              **
+!**    GET('FRICMAT',9,U)                                                     **
+!**    -- ADD OTHERFRICTION TERMS TO U                                        **
+!**    -- U=U*DT/2                                                            **
+!**    -- PROPAGATE POSITIONS                                                 **
+!**       R(+)=(1+U)**(-1)[2R(0)-(1-U)R(-)+F*DT^2/M                           **
+!**    GET('MAPTOCELL',3,U)                                                   **
+!**    -- RP=U*RP ; R0=U*R0 ; RM=U*RM                                         **
+!**    -- RBAS=T0                                                             **
+!**    GET('EKIN',EKIN)                                                       **
+!**    GET('EPOT',EPOT)                                                       **
+!**    SWITCH                                                                 **
+!**    GET('T0',9,T0)                                                         **
+!**                                                                           **
+!*******************************************************************************
 MODULE CELL_MODULE
 IMPLICIT NONE
+logical(4) :: tpARRINELLORAHMAN=.TRUE.
 LOGICAL(4) :: TINIT=.FALSE.
 LOGICAL(4) :: TON  =.FALSE.      ! USED TO REQUEST INTERNAL STRESS
 LOGICAL(4) :: TMOVE=.FALSE.      ! PROPAGATE UNIT CELL
@@ -35,10 +37,10 @@ REAL(8)    :: DELTAT=0.D0
 REAL(8)    :: FRIC=0.D0
 REAL(8)    :: STRESS_I(3,3)=0.D0 ! INTERNAL STRESS TENSOR
 REAL(8)    :: KINSTRESS(3,3)=0.D0 ! INTERNAL STRESS TENSOR
-REAL(8)    :: TP(3,3)
-REAL(8)    :: T0(3,3)            ! ACTUAL CELL 
-REAL(8)    :: TM(3,3)
-REAL(8)    :: TMM(3,3)
+REAL(8)    :: TP(3,3)=0.D0
+REAL(8)    :: T0(3,3)=0.D0        ! ACTUAL CELL 
+REAL(8)    :: TM(3,3)=0.D0
+REAL(8)    :: TMM(3,3)=0.D0
 REAL(8)    :: TMASS              ! MASS FOR THE UNIT CELL DYNAMICS
 LOGICAL(4) :: TPROPAGATED=.FALSE.
 REAL(8)    :: EPOT=0.D0          ! POTENTIAL ENERGY
@@ -50,18 +52,25 @@ LOGICAL(4) :: TSTOP=.FALSE.      ! RESET VELOCITIES TO ZERO
 REAL(8)    :: SIGMA(3,3)      ! 
 REAL(8)    :: TREFINV(3,3)    ! 
 CONTAINS
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL_INITIALIZE()
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4) :: I
       REAL(8)    :: SVAR
-!     ******************************************************************
+!     **************************************************************************
       IF(TINIT) RETURN
       TINIT=.TRUE.
 !
 !     ==================================================================
 !     ==  CALCULATE TREFINV                                           ==
 !     ==================================================================
+      IF(SUM(TREF**2).EQ.0.D0) THEN
+        CALL ERROR$MSG('REFERENCE CELL NOT SET')
+        CALL ERROR$STOP('CELL_INITIALIZE')
+      END IF
       VREF=TREF(1,1) * (TREF(2,2)*TREF(3,3)-TREF(3,2)*TREF(2,3)) &
      &    +TREF(2,1) * (TREF(3,2)*TREF(1,3)-TREF(1,2)*TREF(3,3)) &
      &    +TREF(3,1) * (TREF(1,2)*TREF(2,3)-TREF(2,2)*TREF(1,3))
@@ -70,25 +79,18 @@ CONTAINS
 !     ==================================================================
 !     ==  SET DEFAULT CELL IF NOT DEFINED OTHERWISE                ==
 !     ==================================================================
-      SVAR=T0(1,1) * (T0(2,2)*T0(3,3)-T0(3,2)*T0(2,3)) &
-     &    +T0(2,1) * (T0(3,2)*T0(1,3)-T0(1,2)*T0(3,3)) &
-     &    +T0(3,1) * (T0(1,2)*T0(2,3)-T0(2,2)*T0(1,3))
-      IF(SVAR.EQ.0.D0) THEN
+      IF(SUM(T0**2).EQ.0.D0) THEN   ! T0 IS NOT SET
         T0=TREF
         TM=T0
         TMM=TM
-      ELSE
-        SVAR=TM(1,1) * (TM(2,2)*TM(3,3)-TM(3,2)*TM(2,3)) &
-     &      +TM(2,1) * (TM(3,2)*TM(1,3)-TM(1,2)*TM(3,3)) &
-     &      +TM(3,1) * (TM(1,2)*TM(2,3)-TM(2,2)*TM(1,3))
-        IF(SVAR.EQ.0.D0) THEN
+      ELSE                          ! T0 IS SET
+        IF(SUM(TM**2).EQ.0.D0) THEN ! T0 IS SET BUT TM IS NOT     
           TM=T0
           TMM=TM
-        ELSE 
-          SVAR=TMM(1,1) * (TMM(2,2)*TMM(3,3)-TMM(3,2)*TMM(2,3)) &
-     &        +TMM(2,1) * (TMM(3,2)*TMM(1,3)-TMM(1,2)*TMM(3,3)) &
-     &        +TMM(3,1) * (TMM(1,2)*TMM(2,3)-TMM(2,2)*TMM(1,3))
-          IF(SVAR.EQ.0) TMM=TM
+        ELSE                        ! T0 AND TM ARE SET
+          IF(SUM(TMM**2).EQ.0) THEN ! T0 AND TM ARE SET, BUT TMM IS NOT
+            TMM=2.D0*TM-T0
+          END IF
         END IF
       END IF
       TP=2.D0*T0-TM
@@ -105,16 +107,32 @@ CONTAINS
       DO I=1,3
         SIGMA(I,I)=SIGMA(I,I)-SVAR
       END DO
+!
+!     ==========================================================================
+!     ==  OTHER CHECKS                                                        ==
+!     ==========================================================================
+      IF(DELTAT.EQ.0.D0) THEN
+        CALL ERROR$MSG('TIME STEP HAS NOT BEEN SET')
+        CALL ERROR$STOP('CELL_INITIALIZE')
+      END IF
+      IF(TMASS.EQ.0.D0) THEN
+        CALL ERROR$MSG('CELL-MASS HAS NOT BEEN SET')
+        CALL ERROR$STOP('CELL_INITIALIZE')
+      END IF
+!
       RETURN
       END SUBROUTINE CELL_INITIALIZE
 END MODULE CELL_MODULE
 !
-!     .........................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$REPORT(NFIL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
-!     *****************************************************************
+!     **************************************************************************
       IF(.NOT.TON) RETURN
       CALL REPORT$TITLE(NFIL,'UNIT CELL')
       CALL REPORT$L4VAL(NFIL,'DYNAMICAL UNIT CELL',TMOVE) 
@@ -128,8 +146,11 @@ END MODULE CELL_MODULE
       WRITE(NFIL,FMT='(3F10.5,T35,3F10.5)')TREF(3,:),STRESS(3,:)
       END SUBROUTINE CELL$REPORT
 !
-!     .........................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$CONVERT(DT,B,TREF,PERIOD,MASS,FRICTION)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8),INTENT(IN) :: DT ! TIME STEP
       REAL(8),INTENT(IN) :: B  ! BULK MODULUS
@@ -152,13 +173,16 @@ END MODULE CELL_MODULE
       RETURN
       END
 !
-!     .........................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$SETL4(ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(IN) :: VAL
-!     *****************************************************************
+!     **************************************************************************
 !
 !     =================================================================
 !     ==  CALCULATE PRESSURE                                         ==
@@ -192,13 +216,16 @@ END MODULE CELL_MODULE
       RETURN
       END SUBROUTINE CELL$SETL4
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$GETL4(ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(OUT):: VAL
-!     *****************************************************************
+!     **************************************************************************
 !
 !     =================================================================
 !     ==  CALCULATE PRESSURE AND STRESS                              ==
@@ -223,8 +250,11 @@ END MODULE CELL_MODULE
       RETURN
       END SUBROUTINE CELL$GETL4
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$SETR8(ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -266,13 +296,16 @@ END MODULE CELL_MODULE
       RETURN
       END SUBROUTINE CELL$SETR8
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$GETR8(ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
-!     ******************************************************************
+!     **************************************************************************
 !
 !     =================================================================
 !     ==  POTENTIAL ENERGY                                           ==
@@ -313,8 +346,11 @@ END MODULE CELL_MODULE
       RETURN
       END SUBROUTINE CELL$GETR8
 !
-!     .........................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$SETR8A(ID,LEN,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -333,6 +369,7 @@ END MODULE CELL_MODULE
           CALL ERROR$STOP('CELL$SETR8A')
         END IF
         TREF=RESHAPE(VAL,(/3,3/))
+
 !
 !     ==================================================================
 !     ==  EXTERNAL STRESS TENSOR                                      ==
@@ -405,19 +442,22 @@ END MODULE CELL_MODULE
       RETURN
       END SUBROUTINE CELL$SETR8A
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$GETR8A(ID,LEN,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       REAL(8)     ,INTENT(OUT):: VAL(LEN)
       REAL(8)                 :: AMAT(3,3)
-!     ******************************************************************
+!     **************************************************************************
 !
-!     ==================================================================
-!     ==  CELL VECTORS                                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CELL VECTORS                                                        ==
+!     ==========================================================================
       IF(ID.EQ.'T0'.OR.ID.EQ.'T(0)') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
@@ -427,26 +467,31 @@ END MODULE CELL_MODULE
         END IF
         VAL=RESHAPE(T0,(/9/))
 !
-!     ==================================================================
-!     ==  CELL VECTORS FOR THE NEXT TIME STEP                         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CELL VECTORS FOR THE NEXT TIME STEP                                 ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'TP'.OR.ID.EQ.'T(+)') THEN
-        CALL CELL_INITIALIZE()
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$I4VAL('LEN',LEN)
           CALL ERROR$STOP('CELL$GETR8A')
         END IF
+        IF(.NOT.TON) THEN
+          CALL ERROR$MSG('CELL DYNAMICS IS NOT SWITCHED ON')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('CELL$GETR8A')
+        END IF 
+        CALL CELL_INITIALIZE()
         IF(TINIT) THEN
           VAL=RESHAPE(TP,(/9/))
         ELSE
           VAL=RESHAPE(TREF,(/9/))
         END IF
 !
-!     ==================================================================
-!     ==  REFERENCE CELL VECTORS                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  REFERENCE CELL VECTORS                                              ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'TREF') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
@@ -456,9 +501,9 @@ END MODULE CELL_MODULE
         END IF
         VAL=RESHAPE(TREF,(/9/))
 !
-!     ==================================================================
-!     ==  STRESS                                                      ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  STRESS                                                              ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'STRESS_I') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
@@ -468,11 +513,10 @@ END MODULE CELL_MODULE
         END IF
         VAL=RESHAPE(STRESS_I,(/9/))
 !
-!     ==================================================================
-!     ==  FRICTION MATRIX FOR ATOM DYNAMICS                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  FRICTION MATRIX FOR ATOM DYNAMICS                                   ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'FRICMAT') THEN
-        CALL CELL_INITIALIZE()
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
           CALL ERROR$CHVAL('ID',ID)
@@ -480,7 +524,8 @@ END MODULE CELL_MODULE
           CALL ERROR$STOP('CELL$GETR8A')
         END IF
         IF(TON) THEN
-          CALL LIB$INVERTR8(3,T0,AMAT)
+          CALL CELL_INITIALIZE()
+         CALL LIB$INVERTR8(3,T0,AMAT)
           AMAT=MATMUL(TP-TM,AMAT)/(2.D0*DELTAT)
           AMAT=AMAT+TRANSPOSE(AMAT)
           AMAT=AMAT*0.5D0*DELTAT
@@ -489,11 +534,10 @@ END MODULE CELL_MODULE
           VAL=0.D0
         ENDIF
 !
-!     ==================================================================
-!     ==  MATRIX TO MAP POSITIONS INTO NEW UNIT CELL                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  MATRIX TO MAP POSITIONS INTO NEW UNIT CELL                          ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'MAPTOCELL') THEN
-        CALL CELL_INITIALIZE()
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
           CALL ERROR$CHVAL('ID',ID)
@@ -501,6 +545,13 @@ END MODULE CELL_MODULE
           CALL ERROR$STOP('CELL$GETR8A')
         END IF
         IF(TON) THEN
+          CALL CELL_INITIALIZE()
+          IF(.NOT.TPROPAGATED) THEN
+            CALL ERROR$MSG('MAPTOCELL IS NOT AVAILABLE')
+            CALL ERROR$MSG('CELL HAS NOT YET BEEN PROPAGATED')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('CELL$GETR8A')
+          END IF
           CALL LIB$INVERTR8(3,T0,AMAT)
           AMAT=MATMUL(TP,AMAT)
           VAL=RESHAPE(AMAT,(/9/))
@@ -508,9 +559,9 @@ END MODULE CELL_MODULE
           VAL=(/1.D0,0.D0,0.D0,0.D0,1.D0,0.D0,0.D0,0.D0,1.D0/)
         END IF
 !
-!     ==================================================================
-!     ==  DONE                                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DONE                                                                ==
+!     ==========================================================================
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -519,17 +570,23 @@ END MODULE CELL_MODULE
       RETURN
       END SUBROUTINE CELL$GETR8A
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$STOP()
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
-!     ******************************************************************
+!     **************************************************************************
       TSTOP=.TRUE.
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$PROPAGATE()
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
       REAL(8)    :: AMAT(3,3)
@@ -540,13 +597,11 @@ END MODULE CELL_MODULE
       REAL(8)    :: ALPHADOT(3,3)
       REAL(8)    :: XPMAT(3,3),XMMAT(3,3)
       REAL(8)    :: ONE(3,3)
-      REAL(8)    :: SVAR
+      REAL(8)    :: stress_ext(3,3)
+      REAL(8)    :: SVAR,SVAR1,SVAR2,SVAR3
       INTEGER(4) :: I,ITER
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.TON) RETURN
-WRITE(*,FMT='("STRESS_I ",3F10.5)')STRESS_I(1,:)
-WRITE(*,FMT='("STRESS_I ",3F10.5)')STRESS_I(2,:)
-WRITE(*,FMT='("STRESS_I ",3F10.5)')STRESS_I(3,:)
       IF(.NOT.TMOVE) RETURN
       CALL CELL_INITIALIZE()
       IF(TSTOP) THEN
@@ -562,76 +617,76 @@ WRITE(*,FMT='("STRESS_I ",3F10.5)')STRESS_I(3,:)
      &  +T0(3,1)*(T0(1,2)*T0(2,3)-T0(1,3)*T0(2,2)) 
       IF(ABS(V0).GT.1.D+10*ABS(VREF)) THEN
         CALL ERROR$MSG('CELL DYNAMICS UNSTABLE')
-!       CALL ERROR$R8AVAL('CELL',T0)
+       CALL ERROR$R8VAL('CELL',T0)
         CALL ERROR$R8VAL('VOLUME ',V0)
         CALL ERROR$R8VAL('REFERENCE VOLUME ',VREF)
         CALL ERROR$STOP('CELL_PROPAGATE')
       END IF
-!     == EXTERNAL STRESS ===============================================
-      AMAT=MATMUL(SIGMA,TRANSPOSE(TREFINV))
-      AMAT=MATMUL(TREFINV,AMAT)
-      AMAT=MATMUL(SIGMA,TRANSPOSE(T0))
-      AMAT=MATMUL(T0,AMAT)
-      AMAT=AMAT*VREF       
-      EPOT=0.5D0*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
-      AMAT=-AMAT
-!     == EXTERNAL PRESSURE =============================================
-      AMAT=AMAT-ONE*PRESSURE*V0  ! -PV - V_0 T0*SIGMA*T0^T
-      EPOT=EPOT+PRESSURE*V0
-!     == STRESS_I ======================================================
-      AMAT=AMAT+STRESS_I+KINSTRESS  ! -DE/DALPHA -PV +V T0*SIGMA*T0^T
-!     == STRESS PER VOLUME**2 ==========================================
-      AMAT=AMAT/V0**2
-!  
-!     ==PROPAGATE ======================================================
-      AMAT=AMAT/TMASS  ! ACCELERATION
-      CALL LIB$INVERTR8(3,T0,T0INV)
-      ALPHAM=MATMUL(TM,T0INV)-ONE
-      ALPHA0=0.D0
-      ALPHAP=-ALPHAM
-      DO ITER=1,100
+      IF(TPARRINELLORAHMAN) THEN
+!       == ENERGY AND STRESS OF THE VOLUME RESERVOIR. THE ENTHALPY IS  H=E+PV
+        EPOT=PRESSURE*V0
+        STRESS_EXT(:,:)=-PRESSURE*V0*ONE
+!       == PROPAGATE LATTICE VECTORS ================================================
+        SVAR1=2.D0/(1.D0+FRIC)
+        SVAR2=1.D0-SVAR1
+        SVAR3=DELTAT**2/TMASS/(1.D0+FRIC)
+        CALL LIB__INVERTR8(3,T0,T0INV)
+        TP=SVAR1*T0+SVAR2*TM+SVAR3*MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
+!       == CALCULATE KINETIC ENERGY 
+        EKIN=0.5D0*TMASS*SUM((TP-TM)**2)/(2.D0*DELTAT)**2
+      ELSE 
+!       == EXTERNAL STRESS ===============================================
+!        AMAT=MATMUL(SIGMA,TRANSPOSE(TREFINV))
+!        AMAT=MATMUL(TREFINV,AMAT)
+!   
+        AMAT=MATMUL(SIGMA,TRANSPOSE(T0))
+        AMAT=MATMUL(T0,AMAT)
+        AMAT=AMAT*VREF       
+        EPOT=0.5D0*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
+        AMAT=-AMAT
+!       == EXTERNAL PRESSURE =============================================
+        AMAT=AMAT-ONE*PRESSURE*V0  ! -PV - V_0 T0*SIGMA*T0^T
+        EPOT=EPOT+PRESSURE*V0
+!       == STRESS_I ======================================================
+        AMAT=AMAT+STRESS_I+KINSTRESS  ! -DE/DALPHA -PV +V T0*SIGMA*T0^T
+!       == STRESS PER VOLUME**2 ==========================================
+        AMAT=AMAT/V0**2
+!    
+!       ==PROPAGATE ======================================================
+        AMAT=AMAT/TMASS  ! ACCELERATION
+        CALL LIB$INVERTR8(3,T0,T0INV)
+        ALPHAM=MATMUL(TM,T0INV)-ONE
+        ALPHA0=0.D0
+        ALPHAP=-ALPHAM
+        DO ITER=1,100
+          ALPHADOT=(ALPHAP-ALPHAM)/(2.D0*DELTAT)
+          BMAT=ALPHADOT-ONE*(ALPHADOT(1,1)+ALPHADOT(2,2)+ALPHADOT(3,3))
+          BMAT=BMAT+TRANSPOSE(BMAT)
+          BMAT=-BMAT*0.5D0*DELTAT  ! FRICTION CONSTANT
+          XPMAT=(1.D0+FRIC)*ONE+BMAT         
+          XMMAT=(1.D0-FRIC)*ONE-BMAT         
+          CMAT=MATMUL(TRANSPOSE(ALPHADOT),ALPHADOT)
+          CMAT=(CMAT-ONE*(CMAT(1,1)+CMAT(2,2)+CMAT(3,3)))  ! SIGN CHANGED. PB
+          CALL LIB$INVERTR8(3,XPMAT,XPMAT)
+          ALPHAP=MATMUL(2.D0*ALPHA0-MATMUL(ALPHAM,XMMAT) &
+       &               +DELTAT**2*(AMAT+CMAT),XPMAT)
+        END DO
+        TP=MATMUL(ONE+ALPHAP,T0)
+!   
+!       ==  KINETIC ENERGY  ==============================================
         ALPHADOT=(ALPHAP-ALPHAM)/(2.D0*DELTAT)
-        BMAT=ALPHADOT-ONE*(ALPHADOT(1,1)+ALPHADOT(2,2)+ALPHADOT(3,3))
-        BMAT=BMAT+TRANSPOSE(BMAT)
-        BMAT=-BMAT*0.5D0*DELTAT  ! FRICTION CONSTANT
-        XPMAT=(1.D0+FRIC)*ONE+BMAT         
-        XMMAT=(1.D0-FRIC)*ONE-BMAT         
-        CMAT=MATMUL(TRANSPOSE(ALPHADOT),ALPHADOT)
-        CMAT=-(CMAT-ONE*(CMAT(1,1)+CMAT(2,2)+CMAT(3,3)))
-        CALL LIB$INVERTR8(3,XPMAT,XPMAT)
-        ALPHAP=MATMUL(2.D0*ALPHA0-MATMUL(ALPHAM,XMMAT) &
-     &               +DELTAT**2*(AMAT+CMAT),XPMAT)
-      END DO
-      TP=MATMUL(ONE+ALPHAP,T0)
-!
-!     ==  KINETIC ENERGY  ==============================================
-      ALPHADOT=(ALPHAP-ALPHAM)/(2.D0*DELTAT)
-      AMAT=MATMUL(ALPHADOT,TRANSPOSE(ALPHADOT))
-      EKIN=0.5D0*TMASS*V0**2*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
-PRINT*,'CELL-EKIN ',EKIN
-PRINT*,'CELL-EPOT ',EPOT
-AMAT=-0.5D0*MATMUL(MATMUL(STRESS_I,TP-TM),TREFINV)
-SVAR=0.D0
-DO I=1,3
-  SVAR=SVAR+AMAT(I,I)
-ENDDO
-PRINT*,'CELL-SYS  ',SVAR
-PRINT*,'CELL-ETOT ',EKIN+EPOT
-WRITE(*,FMT='("TM ",3F10.5)')TM(1,:)
-WRITE(*,FMT='("TM ",3F10.5)')TM(2,:)
-WRITE(*,FMT='("TM ",3F10.5)')TM(3,:)
-WRITE(*,FMT='("T0 ",3F10.5)')T0(1,:)
-WRITE(*,FMT='("T0 ",3F10.5)')T0(2,:)
-WRITE(*,FMT='("T0 ",3F10.5)')T0(3,:)
-WRITE(*,FMT='("TP ",3F10.5)')TP(1,:)
-WRITE(*,FMT='("TP ",3F10.5)')TP(2,:)
-WRITE(*,FMT='("TP ",3F10.5)')TP(3,:)
+        AMAT=MATMUL(ALPHADOT,TRANSPOSE(ALPHADOT))
+        EKIN=0.5D0*TMASS*V0**2*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
+      end if
       TPROPAGATED=.TRUE.
       RETURN
       END SUBROUTINE CELL$PROPAGATE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$SWITCH()
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
 !     ******************************************************************
@@ -653,8 +708,11 @@ WRITE(*,FMT='("TP ",3F10.5)')TP(3,:)
       RETURN
       END SUBROUTINE CELL$SWITCH
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$READ(NFIL,NFILO,TCHK)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE RESTART_INTERFACE
       USE CELL_MODULE
       USE MPE_MODULE
@@ -674,7 +732,6 @@ WRITE(*,FMT='("TP ",3F10.5)')TP(3,:)
       CALL MPE$BROADCAST('MONOMER',1,TCHK)
       IF(.NOT.TCHK) RETURN
 !
-!
 !     ==================================================================
 !     ==  READ DATA                                                   ==
 !     ==================================================================
@@ -683,18 +740,19 @@ WRITE(*,FMT='("TP ",3F10.5)')TP(3,:)
           CALL ERROR$MSG('VERSION INCONSISTENCY')
           CALL ERROR$STOP('CELL$READ')
         END IF        
-        READ(NFIL)T0,TM
+        READ(NFIL)T0,TM,TMM
       END IF
       CALL MPE$BROADCAST('MONOMER',1,T0)
       CALL MPE$BROADCAST('MONOMER',1,TM)
+      CALL MPE$BROADCAST('MONOMER',1,TMM)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$WRITE(NFIL,NFILO,TCHK)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE CELL_MODULE
       USE RESTART_INTERFACE
       IMPLICIT NONE
@@ -714,12 +772,7 @@ WRITE(*,FMT='("TP ",3F10.5)')TP(3,:)
         CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
         WRITE(NFIL)T0(:,:),TM(:,:),TMM(:,:)
       ELSE
-        TCHK=.FALSE.   !will not be used, but makes the compiler happy.
+        TCHK=.FALSE.   !WILL NOT BE USED, BUT MAKES THE COMPILER HAPPY.
       END IF
       RETURN
       END
-
-
-
-
-

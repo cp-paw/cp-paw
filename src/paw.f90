@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/main/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 775 $'
+character(256):: VERrev='$LastChangedRevision: 796 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-07-18 17:46:59 +0200 (Mi, 18. Jul 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-09-12 16:33:32 +0200 (Mi, 12. Sep 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -484,7 +484,7 @@ end Module version_module
 !     ==================================================================
 ! 
 !     ==================================================================
-!     ==  PROPAGATE NUCLEI                                            ==
+!     ==  PROPAGATE NUCLEI (CONSTRAINTS FOLLLOW LATER...)             ==
 !     ==================================================================
 !---dimermerge fix      
       CALL DIMER$GETL4('DIMER',TCHK)
@@ -494,7 +494,6 @@ end Module version_module
          CALL ATOMS$PROPAGATE()
       END IF
 !---end dimermerge fix      
-      CALL ATOMS$CONSTRAINTS()
 ! 
 !     ==================================================================
 !     ==  PROPAGATE UNIT CELL                                         ==
@@ -503,6 +502,11 @@ end Module version_module
       CALL CELL$GETR8('EPOT',SVAR)
       CALL ENERGYLIST$SET('CELLOSTAT POTENTIAL',SVAR)     
       CALL ENERGYLIST$ADD('CONSTANT ENERGY',SVAR)
+! 
+!     ==================================================================
+!     ==  apply constraints to atomic coordinates                     ==
+!     ==================================================================
+      CALL ATOMS$CONSTRAINTS()
 ! 
 !     ==================================================================
 !     ==  PROPAGATE WAVE FUNCTIONS                                    ==
@@ -619,7 +623,7 @@ end Module version_module
 !     ==================================================================
 !     ==================================================================
       call atoms$forcecriterion(fav,fmax)
-print*,'force fav=',fav,' fmax=',fmax
+!print*,'force fav=',fav,' fmax=',fmax
 !
 !     ==================================================================
 !     ==================================================================
@@ -653,9 +657,9 @@ print*,'force fav=',fav,' fmax=',fmax
 !     == TURN DIALS                                                   ==
 !     ==================================================================
       CALL DIALS$APPLY
-                              CALL TRACE$POP
+                              CALL TRACE$POP()
       RETURN
-      END
+      END SUBROUTINE TIMESTEP
 !
 !     ...................................................STOPIT.........
 MODULE STOPIT_MODULE

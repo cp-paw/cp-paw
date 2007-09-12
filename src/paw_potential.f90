@@ -451,11 +451,11 @@
      &                        ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
       END IF
 !
-IF(TSTRESS) THEN
-  WRITE(*,FMT='("C+XC STRESS ",3F15.7)')STRESS(1,:)
-  WRITE(*,FMT='("C+XC STRESS ",3F15.7)')STRESS(2,:)
-  WRITE(*,FMT='("C+XC STRESS ",3F15.7)')STRESS(3,:)
-END IF
+!IF(TSTRESS) THEN
+!  WRITE(*,FMT='("C+XC STRESS ",3F15.7)')STRESS(1,:)
+!  WRITE(*,FMT='("C+XC STRESS ",3F15.7)')STRESS(2,:)
+!  WRITE(*,FMT='("C+XC STRESS ",3F15.7)')STRESS(3,:)
+!END IF
 !
 !     ==========================================================================
 !     == add external potential                                               ==
@@ -762,11 +762,11 @@ END IF
       CALL POTENTIAL_XC(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3,CELLVOL &
      &                 ,RHOE,GRHO,EXC,TSTRESS,STRESS1)
       STRESST(:,:)=STRESST(:,:)+STRESS1(:,:)
-if(tstress) then
-  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(1,:)
-  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(2,:)
-  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(3,:)
-end if
+!!$if(tstress) then
+!!$  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(1,:)
+!!$  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(2,:)
+!!$  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(3,:)
+!!$end if
                            CALL TIMING$CLOCKOFF('VOFRHO: XC-POTENTIAL')
 !
 !     ==================================================================
@@ -1185,10 +1185,10 @@ end if
 !     ==================================================================
       IF(NGAMMA.NE.0) THEN
         RHOB=-REAL(RHO2(NGAMMA),KIND=8)
-PRINT*,'gweight',GWEIGHT,'rhob',rhob
-PRINT*,'RHOB  FROM VOFRHO_HARTREE',RHOB*GWEIGHT
-PRINT*,'Q(RHO) FROM VOFRHO_HARTREE',RHO(NGAMMA)*GWEIGHT
-PRINT*,'Q(RHO2) FROM VOFRHO_HARTREE',RHO2(NGAMMA)*GWEIGHT
+!!$PRINT*,'gweight',GWEIGHT,'rhob',rhob
+!!$PRINT*,'RHOB  FROM VOFRHO_HARTREE',RHOB*GWEIGHT
+!!$PRINT*,'Q(RHO) FROM VOFRHO_HARTREE',RHO(NGAMMA)*GWEIGHT
+!!$PRINT*,'Q(RHO2) FROM VOFRHO_HARTREE',RHO2(NGAMMA)*GWEIGHT
         RHO2(NGAMMA)=(0.D0,0.D0)   !
       ELSE 
         RHOB=0.D0
@@ -1198,12 +1198,12 @@ PRINT*,'Q(RHO2) FROM VOFRHO_HARTREE',RHO2(NGAMMA)*GWEIGHT
 !     ==   CALCULATE ENERGY                                           ==
 !     ==================================================================
       CSUM=(0.D0,0.D0)
-      CSVAR=0.D0
+!!$CSVAR=0.D0
       DO IG=1,NGL
         IF(IG.NE.NGAMMA) THEN
           VG(IG)=RHO2(IG)*FPI/G2(IG)
           CSUM=CSUM+0.5D0*CONJG(RHO2(IG))*VG(IG)+CONJG(RHO(IG))*POT(IG)
-CSVAR=CSVAR+0.5D0*CONJG(RHO2(IG))*VG(IG)
+!!$CSVAR=CSVAR+0.5D0*CONJG(RHO2(IG))*VG(IG)
           POT(IG)=POT(IG)+VG(IG)
         ELSE 
           VG(IG)=-VB
@@ -1212,9 +1212,9 @@ CSVAR=CSVAR+0.5D0*CONJG(RHO2(IG))*VG(IG)
         END IF
       ENDDO
       EHARTREE=REAL(CSUM,KIND=8)
-PRINT*,'PURE HARTREE ENERGY ',REAL(CSVAR,KIND=8)*2.D0*GWEIGHT
-PRINT*,'RHO*POT ',REAL(CSUM-CSVAR,KIND=8)*2.D0*GWEIGHT
-PRINT*,'STRESS PREDICTED ',-REAL(CSVAR,KIND=8)*2.D0*GWEIGHT/3.D0-REAL(CSUM-CSVAR,KIND=8)*2.D0*GWEIGHT
+!!$PRINT*,'PURE HARTREE ENERGY ',REAL(CSVAR,KIND=8)*2.D0*GWEIGHT
+!!$PRINT*,'RHO*POT ',REAL(CSUM-CSVAR,KIND=8)*2.D0*GWEIGHT
+!!$PRINT*,'STRESS PREDICTED ',-REAL(CSVAR,KIND=8)*2.D0*GWEIGHT/3.D0-REAL(CSUM-CSVAR,KIND=8)*2.D0*GWEIGHT
 !
 !     == NOW TAKE CARE OF STRESSES =====================================
 !     == INTEGRATION WEIGHT IS DONE LATER ==============================
@@ -1689,7 +1689,7 @@ STRESSC=0.D0
       do iat=1,nat
         call boxsph(gridbas,rat(1,iat),rat(2,iat),rat(3,iat),r2(iat) &
      &             ,min1,max1,min2,max2,min3,max3)
-print*,'minmax ',min1,max1,min2,max2,min3,max3
+!print*,'minmax ',min1,max1,min2,max2,min3,max3
         do i1=min1,max1
           j1=modulo(i1,nr1g)+1
           j1=j1-(nr1start-1)

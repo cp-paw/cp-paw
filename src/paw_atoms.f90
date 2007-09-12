@@ -1,6 +1,6 @@
 !.................................................................... 
-MODULE ATOMS_MODULE
-!*****E******************************************************************
+MODULE atoms_module
+!***********************************************************************
 !**                                                                   **
 !**  NAME: ATOMS                                                      **
 !**                                                                   **
@@ -24,9 +24,9 @@ MODULE ATOMS_MODULE
 !**    NEXT: 'PROPAGATED WITHOUT CONSTRAINTS'                         **
 !**                                                                   **
 !******************PETER E. BLOECHL, IBM RESEARCH LABORATORY (1996)*****
-REAL(8)          :: DELT=0.D0      ! TIME STEP
+real(8)          :: DELT=0.D0      ! TIME STEP
 REAL(8)          :: AMPRE=0.D0     ! TARGET TEMPERATURE FOR RANDOMIZATION
-REAL(8)          :: ANNER=0.D0     ! FRICTION
+REAL(8)          :: ANNER=0.D0     ! FRIcTION
 LOGICAL(4)       :: TSTOP=.FALSE.  ! ZERO INITIAL VELOCITIES
 LOGICAL(4)       :: TDYN=.TRUE.    ! ATOMIC MOTION IS SWITCHED OFF
 LOGICAL(4)       :: TRANDOMIZE=.FALSE.  ! RANDOMIZE INITIAL VELOCITIES
@@ -52,7 +52,6 @@ REAL(8)      ,ALLOCATABLE :: ZV(:)
 REAL(8)      ,ALLOCATABLE :: CHARGE(:)
 REAL(8)      ,ALLOCATABLE :: CHARGEANDMOMENTS(:,:)  ! CHARGE AND MAGNETIC MOMENTS INTEGRATED
                                                   ! OVER ASS SPHERE (JUST STORING FOR TRAJECTORY)
-REAL(8)                   :: CELLKIN(3,3) ! SUM M*RDOT_I*RDOT_J
 CHARACTER(128)            :: STATEOFTHIS='NOT INITIALIZED'
 ! THE FOLLOWING IS REQUIRED TO ESTIMATE THE OPTIMUM FRICTIONS ON THE ATOMS
 REAL(8)                   :: AOPT1AV       ! AOPT=SQRT(AOPT1AV/AOPT2AV)
@@ -366,10 +365,10 @@ END MODULE ATOMS_MODULE
       REAL(8)        :: SVAR
 !     ******************************************************************
                               CALL TRACE$PUSH('ATOMS$PROPAGATE')
-PRINT*,'FORCES FROM ATOMS$PROPAGATE',MAXVAL(ABS(FORCE))
-DO IAT=1,NAT
-  WRITE(*,FMT='("FORCE ",I3,3F15.10)')IAT,FORCE(:,IAT)
-ENDDO
+!!$PRINT*,'FORCES FROM ATOMS$PROPAGATE',MAXVAL(ABS(FORCE))
+!!$DO IAT=1,NAT
+!!$  WRITE(*,FMT='("FORCE ",I3,3F15.10)')IAT,FORCE(:,IAT)
+!!$ENDDO
 ! 
 !     ==================================================================
 !     == CONTROL AND CHANGE STATE OF THIS                             ==
@@ -425,7 +424,6 @@ PRINT*,'ATOMS: OPT.FRICTION ',SVAR,AOPT1AV,AOPT2AV,MIXAOPT
       IF(TNONEGATIVEFRICTION) THEN
         ANNERVEC0(:)=MAX(ANNERVEC0,0.D0)
       END IF
-PRINT*,'ATOMS$PROPAGATE MARKE 1'
 ! 
 !     ==================================================================
 !     == STOP ATOMIC MOTION
@@ -434,30 +432,24 @@ PRINT*,'ATOMS$PROPAGATE MARKE 1'
         RM(:,:)=R0(:,:)
         TSTOP=.FALSE.
       END IF
-PRINT*,'ATOMS$PROPAGATE MARKE 2'
 !
 !     ==================================================================
 !     == RANDOMIZE VELOCITIES
 !     ==================================================================
       IF(TRANDOMIZE) THEN
-PRINT*,'TRANDOMIZE ',TRANDOMIZE
         CALL ATOMS_RANDOMIZEVELOCITY(NAT,RMASS,RM,AMPRE,DELT)
         CALL MPE$BROADCAST('MONOMER',1,RM)
         TRANDOMIZE=.FALSE.
       END IF 
-PRINT*,'ATOMS$PROPAGATE MARKE 3'
 ! 
 !     ==================================================================
 !     ==  SET REFERENCE STRUCTURE  FOR CONSTRAINTS                    ==
 !     ==================================================================
-PRINT*,'TCONSTRAINTREFERENCE',TCONSTRAINTREFERENCE
       IF(.NOT.TCONSTRAINTREFERENCE) THEN
         CALL CELL$GETR8A('T(0)',9,RBAS)
         CALL CONSTRAINTS$SETREFERENCE(RBAS,NAT,R0,RM,REDRMASS,DELT)
-PRINT*,'TCONSTRAINTREFERENCE IS SET'
         TCONSTRAINTREFERENCE=.TRUE.
       END IF
-PRINT*,'ATOMS$PROPAGATE MARKE 4'
 ! 
 !     == PRECONDITIONING =============================================
 !     CALL SHADOW$PRECONDITION(NAT,RMASS,R0,FORCE)
@@ -465,15 +457,13 @@ PRINT*,'ATOMS$PROPAGATE MARKE 4'
 !     == SYMMETRIZE FORCE ============================================
       CALL SYMMETRIZE$FORCE(NAT,FORCE)
 ! 
-!     ================================================================
+!     =================================================================
 !     ==  PROPAGATE ATOMS                                           ==
 !     ================================================================
-CELLFRIC=0.D0
-TSTRESS=.FALSE.
-!     CALL CELL$GETL4('MOVE',TSTRESS)
-!     IF(TSTRESS) CALL CELL$GETR8A('FRICMAT',9,CELLFRIC)
+      CALL CELL$GETL4('MOVE',TSTRESS)
+      IF(TSTRESS) CALL CELL$GETR8A('FRICMAT',9,CELLFRIC)
       CALL ATOMS_PROPAGATE(NAT,DELT,REDRMASS,ANNERVEC0 &
-   &                      ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+   &                      ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC)
 !
 !     ==================================================================
 !     == TAKE CARE OF LINK BONDS AS CONSTRAINTS                       ==
@@ -485,13 +475,9 @@ TSTRESS=.FALSE.
 !     == WARMUP SYSTEM                                                ==
 !     ==================================================================
       CALL PAW_WARMUP_APPLY
-DO IAT=1,NAT
-  WRITE(*,FMT='("RM ",I3,3F15.10)')IAT,RM(:,IAT)
-  WRITE(*,FMT='("R0 ",I3,3F15.10)')IAT,R0(:,IAT)
-  WRITE(*,FMT='("RP ",I3,3F15.10)')IAT,RP(:,IAT)
-ENDDO
                             CALL TRACE$POP
       RETURN
+
       END
 
 
@@ -511,6 +497,7 @@ ENDDO
       LOGICAL(4)     :: TCHK,TCHK2,TCHK3,TCHK4,TCHK5
       LOGICAL(4)     :: TSTRESS
       REAL(8)        :: CELLFRIC(3,3)
+      REAL(8)        :: CELLKIN(3,3)  ! SHOULD BE REMOVED 
       REAL(8)        :: RBAS(3,3)
       REAL(8)        :: SVAR
       REAL(8)        :: X0(NAT*3),XP(NAT*3) !MASSWEIGHTED COORDINATES FOR THE DIMER
@@ -611,7 +598,7 @@ PRINT*,'ATOMS: OPT.FRICTION ',SVAR,AOPT1AV,AOPT2AV,MIXAOPT
       !ALEXP-DIMER 
       !THE OLD CALL WAS JUST  THE ONE BELOW
       !CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
-      !&                      ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+      !&                      ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC)
 
 
       !THIS IS A HARDWIRED REREAD OF SOME CNTL PARAMETERS
@@ -670,7 +657,7 @@ PRINT*,'ATOMS: OPT.FRICTION ',SVAR,AOPT1AV,AOPT2AV,MIXAOPT
             CALL ERROR$STOP('ATOMS$PROPAGATE_DIMER')
 ! THIS LINE MUST BE CORRECTED!!!!
 !            CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
-!                 &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+!                 &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC)
             
             CALL DIMER$GET_MASSWEIGHTED(NAT*3,R0,X0)
             CALL DIMER$GET_MASSWEIGHTED(NAT*3,RP,XP)
@@ -684,7 +671,7 @@ PRINT*,'ATOMS: OPT.FRICTION ',SVAR,AOPT1AV,AOPT2AV,MIXAOPT
          CALL ERROR$MSG('THIS COMES FROM THE DIMER MERGE AND SHOULD NOT HAPPEN')
          CALL ERROR$STOP('ATOMS$PROPAGATE_DIMER')
 !        CALL ATOMS_PROPAGATE(NAT,DELT,ANNER,ANNEE,RMASS,EFFEMASS &
-!              &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC,CELLKIN)
+!              &                   ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC)
 
 
          !WRITES THE ENERGY FOR A DIMER FOLLWODOWN CALCULATION 
@@ -719,10 +706,6 @@ ENDDO
                             CALL TRACE$POP
       RETURN
     END SUBROUTINE ATOMS$PROPAGATE_DIMER
-
-
-
-
 !
 !     ..................................................................
       SUBROUTINE ATOMS$CONSTRAINTS
@@ -737,6 +720,7 @@ ENDDO
       REAL(8)        :: REDRMASS(NAT)
       LOGICAL(4)     :: TCHK
       REAL(8)        :: MAPTOCELL(3,3)
+      REAL(8)        :: MAPTOCELLinv(3,3)
       INTEGER(4)     :: IAT,I,J
       LOGICAL(4)     :: TSTRESS
       REAL(8)        :: RP1(3,NAT)
@@ -744,7 +728,6 @@ ENDDO
       REAL(8)        :: V(3)
       REAL(8)        :: RBAS(3,3)
 !     ******************************************************************
-
       CALL DIMER$GETL4('DIMER',TCHK)
       IF(TCHK) THEN
          PRINT*,'********** WARNING FROM DIMER ****************'
@@ -771,8 +754,6 @@ ENDDO
       IF(.NOT.TDYN) THEN
         CALL TRACE$POP ;RETURN
       END IF
-
-
 ! 
 !     ==================================================================
 !     == CALCULATE EFFECTIVE AND REDUCED MASS
@@ -787,8 +768,9 @@ ENDDO
 !     ==================================================================
 !     == MAP NEW COORDINATES INTO THE NEXT UNIT CELL                  ==
 !     ==================================================================
+      CALL CELL$GETL4('MOVE',TSTRESS)
 PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
-TSTRESS=.FALSE.
+!TSTRESS=.FALSE.
       IF(TSTRESS) THEN
         CALL CELL$GETR8A('MAPTOCELL',9,MAPTOCELL)
         DO IAT=1,NAT
@@ -811,53 +793,90 @@ TSTRESS=.FALSE.
 !     == MAP NEW COORDINATES BACK INTO THE CURRENT UNIT CELL          ==
 !     ==================================================================
       IF(TSTRESS) THEN
-        CALL LIB$INVERTR8(3,MAPTOCELL,MAPTOCELL)
-!CALL INVERT(3,MAPTOCELL,MAPTOCELL)
+        CALL LIB$INVERTR8(3,MAPTOCELL,MAPTOCELLINV)
         DO IAT=1,NAT
-          RP(:,IAT)=MATMUL(MAPTOCELL,RP1(:,IAT))
+          RP(:,IAT)=MATMUL(MAPTOCELLINV,RP1(:,IAT))
         ENDDO
       ELSE
         DO IAT=1,NAT
           RP(:,IAT)=RP1(:,IAT)
         ENDDO
       END IF
-!
-!     ==================================================================
-!     == ADD KINETIC FRICTION TO STRESS                               ==
-!     ==================================================================
-      STRESS1=0.D0
-      DO IAT=1,NAT
-        DO I=1,3
-          V(I)=(RP(I,IAT)-RM(I,IAT))/(2.D0*DELT)
-        ENDDO
-        DO I=1,3
-          DO J=1,3
-            STRESS1(I,J)=STRESS1(I,J)+REDRMASS(IAT)*V(I)*V(J)
-          ENDDO
-        ENDDO
-      ENDDO
-      CALL CELL$SETR8A('KINSTRESS',9,STRESS1)
-WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(1,:)
-WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(2,:)
-WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
-!
                             CALL TRACE$POP
       RETURN
       END
 !
-!     .................................................................. 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMS$EKIN(EKIN_)
-!     ******************************************************************
-!     **  CALCULATE KINETIC ENERGY                                    **
-!     ******************************************************************
+!     **************************************************************************
+!     **  CALCULATE KINETIC ENERGY                                            **
+!     **************************************************************************
       USE ATOMS_MODULE
       IMPLICIT NONE
       REAL(8),INTENT(OUT) :: EKIN_
       REAL(8)             :: DEKIN
-!     ******************************************************************
+!     **************************************************************************
       CALL ATOMS_EKIN(NAT,DELT,RMASS,RM,RP,EKIN_)
       CALL QMMM$DEKIN(DELT,DEKIN)   !CORRECTION FOR LINK ATOMS
       EKIN_=EKIN_+DEKIN
+!
+!     ==================================================================
+!     == ADD KINETIC FRICTION TO STRESS                               ==
+!     ==================================================================
+      call ATOMS$KINETICSTRESS()
+!
+      RETURN
+      END
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMS$KINETICSTRESS()
+!     **************************************************************************
+!     **  CALCULATE IDEAL-GAS CONTRIBUTION TO THE INTERNAL STRESS             **
+!     **  (=STRESS ORIGINATING FROM THE KINETIC ENERGY OF THE ATOMS)          **
+!     **     
+!     **  STRESS IS COMMUNICATED DIRECTLY TO THE CELL OBJECT
+!     **************************************************************************
+      USE ATOMS_MODULE, ONLY : NAT,rmass,rm,rp,DELT,PSG2,PSG4
+      IMPLICIT NONE
+      REAL(8)             :: STRESS(3,3)
+      REAL(8)             :: V(3)
+      logical(4)          :: tstress
+      INTEGER(4)          :: IAT,I,J      
+      REAL(8)             :: EMASS,EMASSCG2
+      REAL(8)             :: EFFEMASS(NAT)   !EFFECTIVE MASS OF THE WAVE FUNCTIONS
+      REAL(8)             :: REDRMASS(NAT)   !REDUCED MASS   
+!     **************************************************************************
+      CALL CELL$GETL4('MOVE',TSTRESS)
+      IF(.NOT.TSTRESS) THEN
+        STRESS=0.D0
+        CALL CELL$SETR8A('KINSTRESS',9,STRESS)
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == CALCULATE REDUCED MASS                                               ==
+!     ==========================================================================
+      CALL WAVES$GETR8('EMASS',EMASS)
+      CALL WAVES$GETR8('EMASSCG2',EMASSCG2)
+      CALL ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
+      DO IAT=1,NAT
+        REDRMASS(IAT)=RMASS(IAT)-EFFEMASS(IAT)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  CALCULATE STRESS                                                    ==
+!     ==========================================================================
+      STRESS(:,:)=0.D0
+      DO IAT=1,NAT
+        V(:)=(RP(:,IAT)-RM(:,IAT))/(2.D0*DELT)
+        DO I=1,3
+          DO J=1,3
+            STRESS(I,J)=STRESS(I,J)+REDRMASS(IAT)*V(I)*V(J)
+          ENDDO
+        ENDDO
+      ENDDO
+!
+      CALL CELL$SETR8A('KINSTRESS',9,STRESS)
       RETURN
       END
 !
@@ -1112,14 +1131,16 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       FORCE(:,:)=0.D0
       CALL QMMM$SWITCH
 !
+!     ==================================================================
+!     == transform trajectory for the new reference cell              ==
+!     ==================================================================
       CALL CELL$GETL4('MOVE',TSTRESS)
       IF(TSTRESS) THEN
         CALL CELL$GETR8A('MAPTOCELL',9,MAPTOCELL)
         DO IAT=1,NAT
-          DRPM(:)=RP(:,IAT)-RM(:,IAT)
           R0(:,IAT)=MATMUL(MAPTOCELL,R0(:,IAT))
           RM(:,IAT)=MATMUL(MAPTOCELL,RM(:,IAT))
-          RP(:,IAT)=RM(:,IAT)+DRPM(:)
+          RP(:,IAT)=MATMUL(MAPTOCELL,RP(:,IAT))
         ENDDO
       END IF
       IF(.NOT.TDYN) RETURN
@@ -1134,6 +1155,7 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       R0(:,:)=RP(:,:)
       RP(:,:)=2.D0*R0(:,:)-RM(:,:)
       ANNERVECM(:)=ANNERVEC0(:)
+!
       CALL CONSTRAINTS$SWITCH()
       RETURN
       END
@@ -1254,20 +1276,20 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMS_PROPAGATE(NAT,DT,RMASS,ANNERVEC,FORCE,R0,RM,RP &
-     &                 ,TSTRESS,CELLFRIC,CELLKIN)
-!     ******************************************************************
-!     **                                                              **
-!     **  PROPAGATES THE ATOMIC POSITIONS ACCORDING TO                **
-!     **  THE VERLET ALGORITHM WITH A FRICTION DETERMINED BY ANNER    **
-!     **                                                              **
-!     **    R(+) = ( 2*R(0)-(1-ANNER)*R(-)+F*DELT**2/M ) / (1+ANNER)  **
-!     **                                                              **
-!     **  FOR ANNER=0 VERLET WITHOUT FRICTION IS OBTAINED,            **
-!     **  FOR ANNER=1 STEEPEST DESCENT                                **
-!     **                                                              **
-!     ******************************************************************
+     &                          ,TSTRESS,CELLFRIC)
+!     **************************************************************************
+!     **                                                                      **
+!     **  PROPAGATES THE ATOMIC POSITIONS ACCORDING TO                        **
+!     **  THE VERLET ALGORITHM WITH A FRICTION DETERMINED BY ANNER            **
+!     **                                                                      **
+!     **    R(+) = ( 2*R(0)-(1-ANNER)*R(-)+F*DELT**2/M ) / (1+ANNER)          **
+!     **                                                                      **
+!     **  FOR ANNER=0 VERLET WITHOUT FRICTION IS OBTAINED,                    **
+!     **  FOR ANNER=1 STEEPEST DESCENT                                        **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT           ! #(ATOMS)
       REAL(8)   ,INTENT(IN) :: DT            ! TIME STEP
@@ -1279,51 +1301,36 @@ WRITE(*,FMT='("KIN-STRESS ",3F10.5)')STRESS1(3,:)
       REAL(8)   ,INTENT(IN) :: FORCE(3,NAT)  ! FORCE
       LOGICAL(4),INTENT(IN) :: TSTRESS
       REAL(8)   ,INTENT(IN) :: CELLFRIC(3,3) ! FORCE
-      REAL(8)   ,INTENT(OUT):: CELLKIN(3,3) ! FORCE
-      INTEGER(4)            :: IAT,I,J
+      INTEGER(4)            :: IAT,I
       REAL(8)               :: SVAR1,SVAR2,SVAR3
       REAL(8)               :: MATP(3,3),MATM(3,3),MATPINV(3,3)
-      REAL(8)               :: V(3)
-!     ******************************************************************
-      CELLKIN=0.D0
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == propagate for a constant unit cell                                   ==
+!     ==========================================================================
       IF(.NOT.TSTRESS) THEN
         DO IAT=1,NAT
-!         ==  PROPAGATE ==================================================
           SVAR1=2.D0/(1.D0+ANNERVEC(IAT))
           SVAR2=1.D0-SVAR1
           SVAR3=DT**2/RMASS(IAT)/(1.D0+ANNERVEC(IAT))
-          DO I=1,3
-            RP(I,IAT)=SVAR1*R0(I,IAT)+SVAR2*RM(I,IAT)+SVAR3*FORCE(I,IAT)
-            V(I)=(RP(I,IAT)-RM(I,IAT))/(2.D0*DT)
-          ENDDO
-          DO I=1,3
-            DO J=1,3
-              CELLKIN(I,J)=CELLKIN(I,J)+RMASS(IAT)*V(I)*V(J)
-            ENDDO
-          ENDDO
+          RP(:,IAT)=SVAR1*R0(:,IAT)+SVAR2*RM(:,IAT)+SVAR3*FORCE(:,IAT)
         ENDDO
+!
+!     ==========================================================================
+!     == propagate for a dynamical unit cell                                  ==
+!     ==========================================================================
       ELSE 
         DO IAT=1,NAT
-!         ==  PROPAGATE ==================================================
+          MATP(:,:)=CELLFRIC(:,:)
+          MATM(:,:)=-CELLFRIC(:,:)
           DO I=1,3 
-            DO J=1,3
-              MATP(I,J)=CELLFRIC(I,J)
-              MATM(I,J)=-CELLFRIC(I,J)
-            ENDDO
             MATP(I,I)=1.D0+ANNERVEC(IAT)+MATP(I,I)
             MATM(I,I)=1.D0-ANNERVEC(IAT)+MATM(I,I)
           ENDDO
           CALL LIB$INVERTR8(3,MATP,MATPINV)
           RP(:,IAT)=MATMUL(MATPINV,2.D0*R0(:,IAT)-MATMUL(MATM,RM(:,IAT)) &
      &                                  +FORCE(:,IAT)*DT**2/RMASS(IAT))
-          DO I=1,3
-            V(I)=(RP(I,IAT)-RM(I,IAT))/(2.D0*DT)
-          ENDDO
-          DO I=1,3
-            DO J=1,3
-              CELLKIN(I,J)=CELLKIN(I,J)+RMASS(IAT)*V(I)*V(J)
-            ENDDO
-          ENDDO
         ENDDO
       END IF
       RETURN

@@ -118,20 +118,20 @@ END IF
 !         ==============================================================
           ALLOCATE(MARR(NGL))
           CALL PLANEWAVE$GETR8A('G2',NGL,MARR)
-          IF(ASSOCIATED(GSET%DMPSI)) THEN
-            DO IG=1,NGL
-!             SVAR=1.D0+ANNEE+GSET%DMPSI(IG)
-              SVAR=1.D0+ANNEE 
-              MARR(IG)=DELT**2/(SVAR*GSET%MPSI(IG))
-            ENDDO
-          ELSE
+!pb070802          IF(ASSOCIATED(GSET%DMPSI)) THEN
+!pb070802            DO IG=1,NGL
+!pb070802!             SVAR=1.D0+ANNEE+GSET%DMPSI(IG)
+!pb070802              SVAR=1.D0+ANNEE 
+!pb070802              MARR(IG)=DELT**2/(SVAR*GSET%MPSI(IG))
+!pb070802            ENDDO
+!pb070802          ELSE
             SVAR=DELT**2/(1.D0+ANNEE)
             DO IG=1,NGL
 !MARR(IG)=EMASS*(1.D0+EMASSCG2*MARR(IG))  !OLD VERSION
 !MARR(IG)=DELT**2/(MARR(IG)*(1.D0+ANNEE))
               MARR(IG)=SVAR/GSET%MPSI(IG)
             ENDDO
-          END IF
+!pb070802          END IF
           DO IB=1,NBH
             DO IDIM=1,NDIM
               DO IG=1,NGL
@@ -155,17 +155,18 @@ END IF
         CALL CELL$GETR8A('MAPTOCELL',9,MAPTOCELL)
         CALL ATOMLIST$GETR8A('R(-)',0,3*NAT,RM)
         DO IAT=1,NAT
-          RP(:,IAT)=RP(:,IAT)-RM(:,IAT)+MATMUL(MAPTOCELL,RM(:,IAT))
+!change          RP(:,IAT)=RP(:,IAT)-RM(:,IAT)+MATMUL(MAPTOCELL,RM(:,IAT))
+          rp(:,iat)=matmul(maptocell,rp(:,iat))
         ENDDO
 !       ==  SCALING FACTOR FOR WAVE FUNCTIONS ==========================
         CALL GBASS(RBAS,GBAS,CELLVOL)
-        CELLSCALE=MAPTOCELL(1,1)*(MAPTOCELL(2,2)*MAPTOCELL(3,3)  &
-     &                           -MAPTOCELL(3,2)*MAPTOCELL(2,3)) &
-     &           +MAPTOCELL(2,1)*(MAPTOCELL(3,2)*MAPTOCELL(1,3)  &
-     &                           -MAPTOCELL(1,2)*MAPTOCELL(3,3)) &
-     &           +MAPTOCELL(3,1)*(MAPTOCELL(1,2)*MAPTOCELL(2,3)  &
-     &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
-        CELLSCALE=1.D0/SQRT(CELLSCALE)
+!!$        CELLSCALE=MAPTOCELL(1,1)*(MAPTOCELL(2,2)*MAPTOCELL(3,3)  &
+!!$     &                           -MAPTOCELL(3,2)*MAPTOCELL(2,3)) &
+!!$     &           +MAPTOCELL(2,1)*(MAPTOCELL(3,2)*MAPTOCELL(1,3)  &
+!!$     &                           -MAPTOCELL(1,2)*MAPTOCELL(3,3)) &
+!!$     &           +MAPTOCELL(3,1)*(MAPTOCELL(1,2)*MAPTOCELL(2,3)  &
+!!$     &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
+!!$        CELLSCALE=1.D0/SQRT(CELLSCALE)
 !       == NOW K-POINT DEPENDENT DATA ==================================
         DO IKPT=1,NKPTL
           CALL WAVES_SELECTWV(IKPT,1)
@@ -203,11 +204,11 @@ END IF
           DEALLOCATE(GVEC)
 !
 !         == RESCALE WAVE FUNCTIONS ====================================
-          DO ISPIN=1,NSPIN
-            CALL WAVES_SELECTWV(IKPT,ISPIN)
-            THIS%PSIM(:,:,:)=THIS%PSIM(:,:,:)*CELLSCALE
-            THIS%OPSI(:,:,:)=THIS%OPSI(:,:,:)*CELLSCALE 
-          ENDDO
+!          DO ISPIN=1,NSPIN
+!            CALL WAVES_SELECTWV(IKPT,ISPIN)
+!            THIS%PSIM(:,:,:)=THIS%PSIM(:,:,:)*CELLSCALE
+!            THIS%OPSI(:,:,:)=THIS%OPSI(:,:,:)*CELLSCALE 
+!          ENDDO
         ENDDO
       ELSE
         CELLSCALE=1.D0
@@ -370,9 +371,9 @@ END IF
 !         ==================================================================
           CALL WAVES_ADDOPSI(NGL,NDIM,NBH,NB,THIS%PSIM,THIS%OPSI,LAMBDA)
           DEALLOCATE(THIS%OPSI)
-PRINT*,'WARNING FROM WAVES$ORTHOGONALIZE:'
-PRINT*,'MAKE SURE THAT PDOS AND GRAPHICS PICK UP A CONSISTENT SET OF '
-PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
+!PRINT*,'WARNING FROM WAVES$ORTHOGONALIZE:'
+!PRINT*,'MAKE SURE THAT PDOS AND GRAPHICS PICK UP A CONSISTENT SET OF '
+!PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
           CALL WAVES_ADDOPROJ(NPRO,NDIM,NBH,NB,THIS%PROJ,OPROJ,LAMBDA)
           DEALLOCATE(OPROJ)
 !
@@ -444,7 +445,7 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
       DEALLOCATE(OCC)
 !
 !     ==================================================================
-!     ==  NOW TRANSFORM MACK INTO ORIGINAL CELL                       ==
+!     ==  NOW TRANSFORM BACK INTO ORIGINAL CELL                       ==
 !     ==================================================================
       IF(TSTRESS) THEN
         CALL CELL$GETR8A('T0',9,RBAS)
@@ -452,10 +453,10 @@ PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
           CALL WAVES_SELECTWV(IKPT,1)
           CALL PLANEWAVE$SELECT(GSET%ID)
           CALL PLANEWAVE$SETR8A('RBAS',9,RBAS)
-          DO ISPIN=1,NSPIN
-            CALL WAVES_SELECTWV(IKPT,ISPIN)
-            THIS%PSIM(:,:,:)=THIS%PSIM(:,:,:)/CELLSCALE
-          ENDDO   
+!          DO ISPIN=1,NSPIN
+!            CALL WAVES_SELECTWV(IKPT,ISPIN)
+!            THIS%PSIM(:,:,:)=THIS%PSIM(:,:,:)/CELLSCALE
+!          ENDDO   
         ENDDO
       END IF
       DEALLOCATE(RP)
@@ -2008,16 +2009,16 @@ PRINT*,'ITER ',ITER,DIGAM
       CALL CELL$GETL4('MOVE',TSTRESS)
       WAVEEKIN1=0.D0
       WAVEEKIN2=0.D0
-      IF(TSTRESS) THEN
-        CALL CELL$GETR8A('MAPTOCELL',9,MAPTOCELL)
-        CELLSCALE=MAPTOCELL(1,1)*(MAPTOCELL(2,2)*MAPTOCELL(3,3)  &
-     &                           -MAPTOCELL(3,2)*MAPTOCELL(2,3)) &
-     &           +MAPTOCELL(2,1)*(MAPTOCELL(3,2)*MAPTOCELL(1,3)  &
-     &                           -MAPTOCELL(1,2)*MAPTOCELL(3,3)) &
-     &           +MAPTOCELL(3,1)*(MAPTOCELL(1,2)*MAPTOCELL(2,3)  &
-     &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
-        CELLSCALE=1.D0/SQRT(CELLSCALE)
-      ENDIF
+!      IF(TSTRESS) THEN
+!        CALL CELL$GETR8A('MAPTOCELL',9,MAPTOCELL)
+!        CELLSCALE=MAPTOCELL(1,1)*(MAPTOCELL(2,2)*MAPTOCELL(3,3)  &
+!     &                           -MAPTOCELL(3,2)*MAPTOCELL(2,3)) &
+!     &           +MAPTOCELL(2,1)*(MAPTOCELL(3,2)*MAPTOCELL(1,3)  &
+!     &                           -MAPTOCELL(1,2)*MAPTOCELL(3,3)) &
+!     &           +MAPTOCELL(3,1)*(MAPTOCELL(1,2)*MAPTOCELL(2,3)  &
+!     &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
+!        CELLSCALE=1.D0/SQRT(CELLSCALE)
+!      ENDIF
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -2025,10 +2026,10 @@ PRINT*,'ITER ',ITER,DIGAM
           TPSI=>THIS%PSI0
           THIS%PSI0=>THIS%PSIM
           THIS%PSIM=>TPSI
-          IF(TSTRESS) THEN
-            THIS%PSI0=THIS%PSI0*CELLSCALE
-            THIS%PSIM=THIS%PSIM*CELLSCALE
-          END IF
+!          IF(TSTRESS) THEN
+!            THIS%PSI0=THIS%PSI0*CELLSCALE
+!            THIS%PSIM=THIS%PSIM*CELLSCALE
+!          END IF
 !
 !         ==============================================================
 !         == EXTRAPOLATE LAGRANGE MULTIPLIERS                         ==
@@ -3022,9 +3023,10 @@ call trace$pass('waves$write marke 4')
       CALL DYNOCC$GETR8A('XK',3*NKPT,XK) !K-POINTS IN RELATIVE COORDINATES
       GBASFIX=.FALSE.
       TREAD(:)=.FALSE.
+      kread(:,:)=0.d0
       DO IKPT_=1,NKPT_   ! LOOP OVER ALL K-POINTS ON THE FILE
 !PRINT*,THISTASK,'=================== READPSI MARKE 1 IKPT_=',IKPT_,'====================='
-!       == FIND OUT IF DATA ARE YTO BE READ AND TO WHICH K-GROUP THEY BELONG
+!       == FIND OUT IF DATA ARE TO BE READ AND TO WHICH K-GROUP THEY BELONG
 !
 !       ================================================================
 !       ==  READ COORDINATES OF THE WAVE FUNCTIONS                    ==
@@ -3165,6 +3167,7 @@ call trace$pass('waves$write marke 4')
         END IF
 !
 !       == SET DATA FOR FURTHER USE ==================================
+        NGG=1
         IF(TKGROUP) THEN
           CALL WAVES_SELECTWV(IKPTL,1)
           CALL PLANEWAVE$SELECT(GSET%ID)
@@ -3441,10 +3444,6 @@ END IF
         END IF
         CALL WAVES_READLAMBDA(NFIL,IKPTG,.FALSE.)
       ENDDO
-!CALL FILEHANDLER$UNIT('PROT',NFILO)
-!call mpe$report(nfilo)
-!call mpe$sync('~')
-!call error$normalstop
 !
 !     ==================================================================
 !     ==  COMPLETE K-POINTS                                           ==

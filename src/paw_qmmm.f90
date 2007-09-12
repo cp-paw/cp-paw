@@ -858,9 +858,9 @@ print*,'force along link',dot_product(force(:,iatq)-force(:,iatqj),pos(:,iatq)-p
       real(8)                 :: dr(3)
       real(8)                 :: svar,svar1,svar2,svar3
 !     ******************************************************************
-                              call trace$push('QMMM$PROPAGATE')
       IF(.NOT.TON) RETURN
-      if(tadiabatic) return
+      IF(TADIABATIC) RETURN
+                              CALL TRACE$PUSH('QMMM$PROPAGATE')
       CALL CLASSICAL$SELECT('QMMM')
       CALL CLASSICAL$GETI4('NAT',NATM)
       CALL CLASSICAL$SELECT('SHADOW')

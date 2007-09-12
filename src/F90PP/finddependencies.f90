@@ -26,10 +26,21 @@
       integer(4)           :: i,j,k,ipos
       integer(4)           :: ipos_use,ipos_module
       character(128)       :: dependency
+      character(4)         :: dotmod,srcslash
+      character(2)         :: dotf,doto
 !     *******************************************************************
+      DOTF='.F'
+      DOTO='.O'
+      DOTMOD='.MOD'
+      SRCSLASH='SRC/'
+      CALL DOWNCASE(DOTF)
+      CALL DOWNCASE(DOTO)
+      CALL DOWNCASE(DOTMOD)
+      CALL DOWNCASE(SRCSLASH)
+!     ======================================================================
       call getarg(1,file)
 !     == consider only fortan files
-      ipos=index(file,'.f')
+      ipos=index(file,dotf)
       if(ipos.eq.0) stop
 !     ==  remove backup files of emacs
       ipos=index(file,'~')
@@ -40,7 +51,7 @@
 !     ================================================================
 !     == write filename relative to the PAW main directory                 
 !     ================================================================
-      ipos=index(file,'src/')
+      ipos=index(file,srcslash)
       print*,'## file:',trim(file(ipos:))
 
 !     ================================================================
@@ -142,12 +153,12 @@
 !     == convert into module file names                                ==
 !     ===================================================================
       do i=1,nmd
-        moduledefined(i)=trim(moduledefined(i))//'.mod'
-        call downcase(moduledefined(i))
+        call upcase(moduledefined(i))
+        moduledefined(i)=trim(moduledefined(i))//dotmod
       enddo
       do i=1,nmu
-        moduleused(i)=trim(moduleused(i))//'.mod'
-        call downcase(moduleused(i))
+        call upcase(moduleused(i))
+        moduleused(i)=trim(moduleused(i))//dotmod
       enddo
 !
 !     ===================================================================
@@ -157,7 +168,7 @@
       ipos=index(file,'/',.true.)
       if(ipos.ne.0)file=adjustl(file(ipos+1:))
 !     == strip extension
-      ipos=index(file,'.f')
+      ipos=index(file,dotf)
       if(ipos.eq.0) stop 'error 1'
       file=file(1:ipos-1)
 !     == attach mode to mpelib
@@ -167,7 +178,7 @@
         file=trim(file)//'${MODE}'
       end if
 !
-      file='${OBJDIR}/'//trim(file)//'.o'
+      file='${OBJDIR}/'//trim(file)//doto
       do i=1,nmu
         dependency=trim(file)//' : '//trim(moduleused(i))
         write(*,*) dependency
@@ -176,7 +187,7 @@
         dependency=trim(moduledefined(i))//' : '//trim(file)
         write(*,*) dependency
       enddo
-      return
+      stop
       end
 !
 !     .....................................................................

@@ -869,6 +869,13 @@ the restart file is time consuming.}
 \vrules{optional}
 \vdefault{100}}
 
+\mbax{\key{TRACE}
+\vdescr{provides trace information when entering or leaving
+subroutines under trace control. Used for debugging purposes.}
+\vformat{logical}
+\vrules{optional}
+\vdefault{.false.}}
+
 \mbax{\key{ENDIAN} \vdescr{defines whether unformatted files are
 written in little endian as typical on intel computers or in big
 endian as on ibm computers. The value can be
@@ -1748,11 +1755,11 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
 \vrules{optional}
 \vdefault{0.0}}
 %
-\mbax{\key{STRESS}
-\vdescr{external stress}
-\vformat{real(9)}
-\vrules{optional}
-\vdefault{9$\times$0.0}}
+% \mbax{\key{STRESS}
+% \vdescr{external stress}
+% \vformat{real(9)}
+% \vrules{optional}
+% \vdefault{9$\times$0.0}}
 %
 %----------------------------------------------------------------------
 \block{!CONTROL!QM-MM}
@@ -2825,8 +2832,8 @@ This expression defines the default value.
 \vdefault{none}}
 
 \mbax{\key{MAINLN} \vdescr{Specify the main correlatd orbital shell by
-anguklar momentum $\ell$ (first value) and the index (second) of this
-shell. Example: MAINLN= 2 3 specifies the second correlated orbital
+angular momentum $\ell$ (first value) and the index (second) of this
+shell. Example: MAINLN= 3 1 specifies the first correlated orbital
 shell in the f-angular momentum channel.}  
 \vformat{integer(2)}
 \vrules{optional, mandatory with UPAR and JPAR} 
@@ -6667,11 +6674,20 @@ protocol file.
 %==========================================================================
 \subsubsection{Position Trajectory}
 %==========================================================================
-In the position trajectory ``{\it root}\_r.tra'', LEN is four times
-the number of atoms and array are the atomic positions starting x,y,z
-of the first atom, x,y,z of the second and so fourth until the last
-atom followed by the point charges on the atoms beginning with the
-first atom.
+In the position trajectory ``{\it root}\_r.tra''. The length of each
+item is $LEN=9+8*N$, where $N$ is the number of atoms. The data on
+``ARRAY'' are arranged as follows:
+\begin{enumerate}
+\item $\mathbf{T}$: lattice vectors ($3\times3$ data)
+\item $\vec{R}$: atomic positions ($3\times N$ data)
+\item $Q$: point charges (N) as obtained from Gaussian fit ($N$ data)
+\item $q,\vec{m}$ Charges and moments as obtained from integrating the
+  one-center density over a ``atomic sphere'' radius. ($4\times N$ data)
+\end{enumerate}
+
+
+
+
 
 %==========================================================================
 \newpage

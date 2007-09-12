@@ -268,6 +268,11 @@ CALL TRACE$PASS('DONE')
         CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
         END SUBROUTINE LINKEDLIST$READ
       END INTERFACE
+      interface
+        integer(4) function iargc()
+        end function iargc
+      end interface
+#      INTEGER                      :: IARGC   ! RETURNS #(COMMAND LINE OPTIONS)
       INTEGER(4)     ,INTENT(OUT)  :: NBEG
       INTEGER(4)     ,INTENT(OUT)  :: NOMORE
       INTEGER(4)     ,INTENT(OUT)  :: IPRINT
@@ -286,12 +291,11 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)                   :: TEQ
       LOGICAL(4)                   :: TPR=.FALSE.
       INTEGER(4)                   :: ISVAR
-      INTEGER                      :: IARGC   ! RETURNS #(COMMAND LINE OPTIONS)
       INTEGER                      :: NTASKS,THISTASK
       INTEGER(4)                   :: LEN
       INTEGER(4)                   :: RUNTIME(3)
       INTEGER(4)   ,ALLOCATABLE    :: SPLITKEY(:)
-      EXTERNAL IARGC
+#      EXTERNAL IARGC
       COMMON/VERSION/VERSIONTEXT
 !     ******************************************************************
                           CALL TRACE$PUSH('READIN')
@@ -1874,9 +1878,11 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'STRESS',1,TCHK)
       STRESS(:,:)=0.D0
       IF(TCHK) THEN
+        CALL ERROR$MSG('THE OPTION !CONTROL!CELL:STRESS HAS BEEN DISABLED')
+        CALL ERROR$STOP('READIN_CELL')
         CALL LINKEDLIST$GET(LL_CNTL,'STRESS',1,STRESS)
       END IF
-      CALL CELL$SETR8A('STRESS',9,STRESS)
+!      CALL CELL$SETR8A('STRESS',9,STRESS)
 !
       RETURN
       END SUBROUTINE READIN_CELL
@@ -4083,9 +4089,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       END IF
       CALL LINKEDLIST$SELECT(LL_STRC,'CONFINE',0)
       
-      CALL LINKEDLIST$EXISTD(LL_STRC,'V0',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'V0',0,20.D0)
-      CALL LINKEDLIST$GET(LL_STRC,'V0',1,SVAR)
+      CALL LINKEDLIST$EXISTD(LL_STRC,'POT',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'POT',0,20.D0)
+      CALL LINKEDLIST$GET(LL_STRC,'POT',1,SVAR)
       CALL POTENTIAL$SETR8('VCONFINE',SVAR)
                            CALL TRACE$POP
       RETURN
