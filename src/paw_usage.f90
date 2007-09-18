@@ -54,9 +54,8 @@
 !     =================================================================
 !     == COLLECT ON EACH NODE                                        == 
 !     =================================================================
-      CALL LIB$GETUSAGE('CPUTIME',LOCARRAY(1))
-      CALL LIB$GETUSAGE('USRTIME',LOCARRAY(2))
-      CALL LIB$GETUSAGE('SYSTIME',LOCARRAY(3))
+      CALL LIB$ETIME(LOCARRAY(2),LOCARRAY(3))
+      LOCARRAY(1)=LOCARRAY(2)+LOCARRAY(3)
       CALL LIB$GETUSAGE('MAXMEM',LOCARRAY(4))
       CALL LIB$GETUSAGE('SWAPRATE',LOCARRAY(5))
       CALL LIB$GETUSAGE('SWITCHRATE',LOCARRAY(6))
@@ -78,7 +77,7 @@
         WRITE(NFIL,FMT='(30("."),T1,"#(PROCESSORS)",T30,I10)')NTASKS
         WRITE(NFIL,FMT='(30("."),T1,"CPU TIME PER CPU",T30,F10.2," SEC")')LOCARRAY(1)
         WRITE(NFIL,FMT='(30("."),T1,"%(USER TIME)",T30,F10.5)')LOCARRAY(2)/CPUTIME
-        WRITE(NFIL,FMT='(30("."),T1,"%(SYSTEM TIME)",T30,F10.5)')LOCARRAY(3)/CPUTIME
+        WRITE(NFIL,FMT='(30("."),T1,"%(SYSTEM TIME)",T30,F10.5)')LOCARRAY(2)/CPUTIME
         WRITE(NFIL,FMT='(30("."),T1,"MAX. MEMORY",T30,F10.5," MBYTE")')LOCARRAY(4)/MBYTE
         WRITE(NFIL,FMT='(30("."),T1,"#(SWAPS)/SEC",T30,F10.5)')LOCARRAY(5)
         WRITE(NFIL,FMT='(30("."),T1,"#(CONTEXT SWITCHES)/SEC",T30,F10.5)')LOCARRAY(6)

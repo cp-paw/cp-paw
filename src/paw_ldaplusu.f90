@@ -1551,6 +1551,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)              :: IDIM,LM
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)  ,PARAMETER  :: NDIMD=4
+integer(4) :: lmrx1
  REAL(8)     ,ALLOCATABLE:: RHOtest(:,:,:)
  REAL(8)     ,ALLOCATABLE:: POTtest(:,:,:)
 !     **************************************************************************
@@ -1568,7 +1569,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !     ==========================================================================
 !     ==  CALCULATE DENSITY                                                   ==
 !     ==========================================================================
-      ALLOCATE(RHO(NR,LMRX,4))
+      ALLOCATE(RHO(NR,LMRX,ndimd))
       DO IDIM=1,NDIMD
         CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
      &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHO(:,:,IDIM))
@@ -1581,9 +1582,31 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       POT(:,:,:)=0.D0
 !     == EXCHANGE ENERGY AND POTENTIAL =========================================
       CALL DFT$SETL4('XCONLY',.TRUE.)
-if(1.eq.1) then
+if(1.eq.0) then
       CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOT,POT)
-else
+else if(1.eq.1) then
+  lmrx1=min(9,lmrx)
+  ALLOCATE(RHOtest(NR,LMRX1,4))
+  ALLOCATE(pottest(NR,LMRX1,4))
+  rhotest(:,:,:)=rho(:,:lmrx1,:)
+!this works:  rhotest(:,2:,2:4)=0.d0
+!  rhotest(:,5:,2:4)=0.d0
+do idim=1,ndimd
+ do lm=1,lmrx1
+  print*,'rhotest ',idim,lm,rhotest(:,lm,idim)
+ enddo
+enddo
+  CALL AUGMENTATION_XC(GID,NR,LMRX1,4,RHOtest,ETOT,POTtest)
+do idim=2,ndimd
+ do lm=1,lmrx1
+  print*,'potest ',idim,lm,pottest(:,lm,idim)
+ enddo
+enddo
+  pot(:,:,:)=0.d0
+  pot(:,:lmrx1,:)=pottest(:,:,:)
+ deallocate(rhotest)
+ deallocate(pottest)
+else 
  ALLOCATE(RHOtest(NR,LMRX,2))
  rhotest(:,:,1)=rho(:,:,1)
  rhotest(:,:,2)=rho(:,:,4)

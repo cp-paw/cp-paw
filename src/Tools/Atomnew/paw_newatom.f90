@@ -14,14 +14,6 @@
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE LINKEDLIST$READ(LL_,NFIL,CID_)
-        USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
-        TYPE(LL_TYPE),INTENT(IN) :: LL_
-        INTEGER(4)   ,INTENT(IN) :: NFIL
-        CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
-        END SUBROUTINE LINKEDLIST$READ
-      END INTERFACE
       logical   ,parameter   :: tphidots=.true.
       TYPE(LL_TYPE)          :: LL_CNTL   ! INPUT LINKED-LIST
       INTEGER(4)             :: NR        ! #(RADIAL GRID POINTS)
@@ -114,7 +106,7 @@
 !     ==========================================================================
       CALL LINKEDLIST$NEW(LL_CNTL)
       CALL FILEHANDLER$UNIT('INPUT',NFIL)
-      CALL LINKEDLIST$READ(LL_CNTL,NFIL)
+      CALL LINKEDLIST$READ(LL_CNTL,NFIL,'~')
 !
 !     ==========================================================================
 !     == READ CONTROL FILE                                                    ==
@@ -1192,14 +1184,6 @@ print*,'done....'
 !     **************************************************************************
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE LINKEDLIST$WRITE(LL_,NFIL,CID_)
-        USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
-        TYPE(LL_TYPE),INTENT(IN) :: LL_
-        INTEGER(4)   ,INTENT(IN) :: NFIL
-        CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
-        END SUBROUTINE LINKEDLIST$WRITE
-      END INTERFACE
       INTEGER(4)   ,INTENT(IN)    :: GID
       INTEGER(4)   ,INTENT(IN)    :: NR
       REAL(8)      ,INTENT(IN)    :: AEZ
@@ -1418,7 +1402,7 @@ print*,'done....'
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('SETUP',NFIL)
       CALL LINKEDLIST$SELECT(LL_STP,'~')
-      CALL LINKEDLIST$WRITE(LL_STP,NFIL)
+      CALL LINKEDLIST$WRITE(LL_STP,NFIL,'~')
 !
 !     ==  CHECK CONTENTS =======================================================
 !     CALL LINKEDLIST$SELECT(LL_STP,'~')

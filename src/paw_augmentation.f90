@@ -693,44 +693,46 @@ STOP
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOIN,EXC,VXC)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATES THE EXCHANGE AND CORRELATION ENERGY              **
-!     **  FOR A DENSITY GIVEN ON A RADIAL LOGARITHMIC GRID            **
-!     **  TIMES REAL SPHERICAL HARMONICS                              **
-!     **                                                              **
-!     **  THE TOTAL ENERGY IS AN EXPANSION ABOUT THE                  **
-!     **  SPHERICAL CONTRIBUTION OF THE DENSITY UP TO QUADRATIC       **
-!     **  ORDER IN THE NON-SPHERICAL CONTRIBUTIONS                    **
-!     **                                                              **
-!     **  EXC = EXC(XVAL(L=0)*Y0)                                     **
-!     **      + 0.5 * D2[EXC]/D[XVAL(L=0)*Y0]**2 * XVAL(L>0)**2       **
-!     **                                                              **
-!     **  WHERE XVAL=(/RHOT,RHOS,GRHOT**2,GRHOS**2,GRHOT*GRHOS/)      **
-!     **  IS AN SPHERICAL HARMONICS EXPANSION ON THE RADIAL GRID.     **
-!     **                                                              **
-!     **  DEPENDECIES:                                                **
-!     **    DFT                                                       **
-!     **    TIMING                                                    **
-!     **    TRACE                                                     **
-!     **                                                              **
-!     **  REMARKS: THE GRADIENTS ARE CORRECT ONLY IF DFT SUPPORTS     **
-!     **    THIRD DERIVATIVES OF THE XC-ENERGY                        **
-!     **   - WHEN USING SELFTEST ON THIS ROUTINE, THEN                **
-!     **     D(EXC)/DRHO(I)=POT(I)*DEX*R(I)**3                        **
-!     **     AND THE VALUES AT LARGE RADII MUST BE SURPRESSED         **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1996 ****
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATES THE EXCHANGE AND CORRELATION ENERGY                      **
+!     **  FOR A DENSITY GIVEN ON A RADIAL LOGARITHMIC GRID                    **
+!     **  TIMES REAL SPHERICAL HARMONICS                                      **
+!     **                                                                      **
+!     **  THE TOTAL ENERGY IS AN EXPANSION ABOUT THE                          **
+!     **  SPHERICAL CONTRIBUTION OF THE DENSITY UP TO QUADRATIC               **
+!     **  ORDER IN THE NON-SPHERICAL CONTRIBUTIONS                            **
+!     **                                                                      **
+!     **  EXC = EXC(XVAL(L=0)*Y0)                                             **
+!     **      + 0.5 * D2[EXC]/D[XVAL(L=0)*Y0]**2 * XVAL(L>0)**2               **
+!     **                                                                      **
+!     **  WHERE XVAL=(/RHOT,RHOS,GRHOT**2,GRHOS**2,GRHOT*GRHOS/)              **
+!     **  IS AN SPHERICAL HARMONICS EXPANSION ON THE RADIAL GRID.             **
+!     **                                                                      **
+!     **  DEPENDECIES:                                                        **
+!     **    DFT                                                               **
+!     **    TIMING                                                            **
+!     **    TRACE                                                             **
+!     **                                                                      **
+!     **  REMARKS: THE GRADIENTS ARE CORRECT ONLY IF DFT SUPPORTS             **
+!     **    THIRD DERIVATIVES OF THE XC-ENERGY                                **
+!     **   - WHEN USING SELFTEST ON THIS ROUTINE, THEN                        **
+!     **     D(EXC)/DRHO(I)=POT(I)*DEX*R(I)**3                                **
+!     **     AND THE VALUES AT LARGE RADII MUST BE SURPRESSED                 **
+!     **                                                                      **
+!     **  REMARK: FOR A COLLINEAR DENSITY THE ROUTINE GIVES DIFFERENT RESULTS **
+!     **          WITH NDIMD=2 AND NDIMD=4 DUE TO THE TAYLOR EXPANSION IN     **
+!     **          ANGULAR MOMENTUM EXPANSIONS                                 **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1996 ************
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TNS=.TRUE. ! NON-SPHERICAL CONTRIBUTIONS ON
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: LMRX
-      INTEGER(4),INTENT(IN) :: NDIMD
+      INTEGER(4),INTENT(IN) :: NDIMD      ! can be 1,2,4
       REAL(8)   ,INTENT(IN) :: RHOIN(NR,LMRX,NDIMD)
       REAL(8)   ,INTENT(OUT):: EXC
       REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
@@ -761,13 +763,13 @@ STOP
       REAL(8)               :: WORK2(NR)
       REAL(8)               :: WORK3(NR)
       REAL(8)   ,PARAMETER  :: TINY=1.D-300
-!     ******************************************************************
+!     **************************************************************************
       CALL TRACE$PUSH('AUGMENTATION_XC')
       EXC=0.D0
 !
-!     ==================================================================
-!     ==   CALCULATE SOME CONSTANTS NEEDED LATER                      ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
+!     ==========================================================================
       CALL DFT$GETL4('GC',TGRA)
       PI=4.D0*DATAN(1.D0)
       FOURPI=4.D0*PI
@@ -775,9 +777,9 @@ STOP
       CG0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
-!     ==================================================================
-!     ==  OBTAIN SPIN DENSITY                                         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  OBTAIN SPIN DENSITY                                                 ==
+!     ==========================================================================
       NSPIN=1
       IF(NDIMD.GT.1) NSPIN=2
       ALLOCATE(RHO(NR,LMRX,NSPIN))
@@ -787,8 +789,12 @@ STOP
       IF(NDIMD.EQ.2) THEN
         RHO(:,:,2)=RHOIN(:,:,2)
       ELSE IF(NDIMD.EQ.4) THEN
+!       == HERE WE NEED TO CALCULATE THE ABSOLUTE VALUE OF THE SPIN DENSITY ====
+!       == IN AN ANGULAR MOMENTUM EXPANSION. THIS IS ONLY POSSIBLE APPROXIMATELY
+!       == USING A TAYLOR EXPANSION ABOUT THE SPHERICAL PART OF THE SQUARE =====
+!       == OF THE SPIN DENSITY. ================================================
         ALLOCATE(B(NR,LMRX))
-!       == EVALUATE SQUARE OF THE SPIN DENSITY =========================
+!       == EVALUATE SQUARE OF THE SPIN DENSITY =================================
         DO LM1=1,LMRX
           B(:,LM1)=0.D0
         ENDDO
@@ -839,9 +845,9 @@ STOP
         IF(NSPIN.EQ.2) THEN; IMAX=2; ELSE; IMAX=1; END IF
       END IF
 !
-!     ==================================================================
-!     ==  CALCULATE RADIAL GRADIENT OF THE DENSITY                    ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE RADIAL GRADIENT OF THE DENSITY                            ==
+!     ==========================================================================
       CALL TRACE$PASS('BEFORE GRADIENTS')
       IF(TGRA) THEN
         GRHO(:,:,:)=0.D0

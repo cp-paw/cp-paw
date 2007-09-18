@@ -2,7 +2,6 @@
       PROGRAM PAW_TOSTRC
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-
       IMPLICIT none
       TYPE(LL_TYPE)               :: LL_STRC
       INTEGER(4)                  :: NFIL

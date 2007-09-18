@@ -23,14 +23,14 @@ CONTAINS
         CHARACTER(32)            :: HOSTNAME
 !       ****************************************************************
         WRITE(NFILO,FMT='()')
-        WRITE(NFILO,FMT='(72("*"))')
-        WRITE(NFILO,FMT='(72("*"),T15' &
+        WRITE(NFILO,FMT='(80("*"))')
+        WRITE(NFILO,FMT='(80("*"),T15' &
      &              //',"                CP-PAW                     ")')
-        WRITE(NFILO,FMT='(72("*"),T15' &
+        WRITE(NFILO,FMT='(80("*"),T15' &
      &           //',"     FIRST PRINCIPLES MOLECULAR DYNAMICS      ")')
-        WRITE(NFILO,FMT='(72("*"),T15' &
+        WRITE(NFILO,FMT='(80("*"),T15' &
      &           //',"   WITH THE PROJECTOR AUGMENTED WAVE METHOD   ")')
-        WRITE(NFILO,FMT='(72("*"))')
+        WRITE(NFILO,FMT='(80("*"))')
         WRITE(NFILO,FMT='(T10' &
      &           //',"P.E. BLOECHL, (C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT)")')
         WRITE(NFILO,FMT='(T10' &
@@ -260,19 +260,6 @@ CALL TRACE$PASS('DONE')
       USE STRINGS_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE LINKEDLIST$READ(LL_,NFIL,CID_)
-        USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
-        TYPE(LL_TYPE),INTENT(IN) :: LL_
-        INTEGER(4)   ,INTENT(IN) :: NFIL
-        CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
-        END SUBROUTINE LINKEDLIST$READ
-      END INTERFACE
-      interface
-        integer(4) function iargc()
-        end function iargc
-      end interface
-#      INTEGER                      :: IARGC   ! RETURNS #(COMMAND LINE OPTIONS)
       INTEGER(4)     ,INTENT(OUT)  :: NBEG
       INTEGER(4)     ,INTENT(OUT)  :: NOMORE
       INTEGER(4)     ,INTENT(OUT)  :: IPRINT
@@ -295,7 +282,6 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)                   :: LEN
       INTEGER(4)                   :: RUNTIME(3)
       INTEGER(4)   ,ALLOCATABLE    :: SPLITKEY(:)
-#      EXTERNAL IARGC
       COMMON/VERSION/VERSIONTEXT
 !     ******************************************************************
                           CALL TRACE$PUSH('READIN')
@@ -305,12 +291,13 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
       CALL MPE$QUERY('~',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
-        IF (IARGC().LT.1) THEN
+        call lib$nargs(isvar)
+        IF (isvar.LT.1) THEN
           CALL ERROR$MSG('THE NAME OF THE CONTROLFILE')
           CALL ERROR$MSG('MUST BE GIVEN AS ARGUMENT')
           CALL ERROR$STOP('READIN')
         END IF
-        CALL GETARG(1,CNTLNAME)
+        CALL LIB$GETARG(1,CNTLNAME)
       END IF
       CALL MPE$BROADCAST('~',1,CNTLNAME)
       IF(+CNTLNAME.EQ.'--HELP'.OR.+CNTLNAME.EQ.'-H'.OR.+CNTLNAME.EQ.'?') THEN
@@ -3298,14 +3285,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       USE IO_MODULE
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE LINKEDLIST$READ(LL_,NFIL,CID_)
-        USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
-        TYPE(LL_TYPE),INTENT(IN) :: LL_
-        INTEGER(4)   ,INTENT(IN) :: NFIL
-        CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
-        END SUBROUTINE LINKEDLIST$READ
-      END INTERFACE
       INTEGER(4)            :: NFILO   ! PROTOCOL FILE UNIT
       INTEGER(4)            :: NFIL
       LOGICAL(4)            :: TCHK
@@ -6364,14 +6343,6 @@ PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
       USE IO_MODULE, ONLY : LL_STRC
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE LINKEDLIST$WRITE(LL_,NFIL,CID_)
-        USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
-        TYPE(LL_TYPE),INTENT(IN) :: LL_
-        INTEGER(4)   ,INTENT(IN) :: NFIL
-        CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
-        END SUBROUTINE LINKEDLIST$WRITE
-      END INTERFACE
       INTEGER(4)               :: NFIL
       INTEGER(4)               :: NAT
       INTEGER(4)               :: NATMM

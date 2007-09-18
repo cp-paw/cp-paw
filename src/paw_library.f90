@@ -67,6 +67,226 @@
 !#DEFINE CPPVAR_BLAS_EXPLICIT
 !#ENDIF 
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$GETARG(IPOS,ARG)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 ==
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: IPOS
+      CHARACTER(*),INTENT(OUT) :: ARG
+      INTEGER                  :: IPOSSTD
+!     **************************************************************************
+#IF DEFINED(CPPVAR_COMPILER_G95)
+      CALL LIB_G95_GETARG(IPOS,ARG)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+      CALL LIB_IFC_GETARG(IPOS,ARG)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+      CALL LIB_IFC7_GETARG(IPOS,ARG)
+#ELSE    ! NO EXPLICIT INTERFACE; let us HOPE FOR THE BEST....
+      CALL GETARG(IPOSstd,ARG)
+#ENDIF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$NARGS(NARGS)
+!     **************************************************************************
+!     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(OUT) :: NARGS
+!     **************************************************************************
+#IF DEFINED(CPPVAR_COMPILER_G95)
+      CALL LIB_G95_NARGS(NARGS)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+      CALL LIB_IFC_NARGS(NARGS)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+      CALL LIB_IFC7_NARGS(NARGS)
+#ELSE          ! NO EXPLICIT INTERFACE; let us HOPE FOR THE BEST....
+      NARGS=IARGC()
+#ENDIF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$etime(usrtime,systime)
+!     **************************************************************************
+!     **  RETURNS THE user and system time of the current process             **
+!     **                                                                      **
+!     **    usrtime is the elapsed cpu time in seconds used by the user code  **
+!     **    systime is the elapsed cpu time in seconds used by                **
+!     **                                          calls to the operating system**
+!     **                                                                      **
+!     **    TIME FOR IO, WHERE THE PROCESSOR IS IDLE IS NOT ACCOUNTED FOR!!!  **
+!     **************************************************************************
+      IMPLICIT NONE
+      real(8)   ,INTENT(OUT) :: usrtime
+      real(8)   ,INTENT(OUT) :: systime
+      REAL                   :: TARRAY(2),RESULT
+!     **************************************************************************
+#IF DEFINED(CPPVAR_COMPILER_g95)
+      call LIB_G95_ETIME(USRTIME,SYSTIME)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+      call lib_ifc_etime(usrtime,systime)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+      call lib_ifc7_etime(usrtime,systime)
+#ELSE  ! NO EXPLICIT INTERFACE; let us HOPE FOR THE BEST....
+      RESULT=ETIME(TARRAY)
+      USRtime=TARRAY(1)
+      systime=TARRAY(2)
+#ENDIF
+      RETURN
+      END
+#IF DEFINED(CPPVAR_COMPILER_IFC)
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_ifc_NARGS(NARGS)
+!     **************************************************************************
+!     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
+!     **************************************************************************
+      USE IFPORT          !INCLUDE FORTRAN PORTABILITY FUNCTIONS
+      IMPLICIT NONE
+      INTEGER(4),INTENT(OUT) :: NARGS
+!     **************************************************************************
+      NARGS=IARGC()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_ifc_GETARG(IPOS,ARG)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 ==
+!     **************************************************************************
+      USE IFPORT          !INCLUDE FORTRAN PORTABILITY FUNCTIONS
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: IPOS
+      CHARACTER(*),INTENT(OUT) :: ARG
+      INTEGER                  :: IPOSSTD
+!     **************************************************************************
+      IPOSSTD=IPOS
+      CALL GETARG(IPOSSTD,ARG)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine lib_ifc_etime(usrtime,systime)
+      use ifport
+      implicit none
+      real(8),intent(out) :: usrtime
+      real(8),intent(out) :: systime
+      real(4)             :: tarray(2)
+      real(4)             :: result
+!     **************************************************************************
+      result=etime(tarray)
+      usrtime=tarray(1)
+      systime=tarray(2)
+      return
+      end
+#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_IFC7_ETIME(USRTIME,SYSTIME)
+      IMPLICIT NONE
+      INTERFACE 
+        REAL(4) FUNCTION ETIME(TARRAY)
+        REAL(4),OPTIONAL,INTENT(OUT) :: TARRAY(2)
+        END FUNCTION ETIME
+      END INTERFACE
+      REAL(8),INTENT(OUT) :: USRTIME
+      REAL(8),INTENT(OUT) :: SYSTIME
+      REAL(4)             :: TARRAY(2)
+      REAL(4)             :: RESULT      
+!     **************************************************************************
+      RESULT=ETIME(TARRAY)
+      usrtime=tarray(1)
+      systime=tarray(2)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_IFC7_GETARG(IPOS,ARG)
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE GETARG(POS,VALUE)
+        INTEGER(4)      ,INTENT(IN) :: POS
+        CHARACTER(LEN=*),INTENT(OUT):: VALUE
+        END SUBROUTINE GETARG
+      END INTERFACE
+      INTEGER(4)      ,INTENT(IN)  :: IPOS
+      CHARACTER(LEN=*),INTENT(OUT) :: ARG
+!     **************************************************************************
+      CALL GETARG(IPOS,ARG)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_IFC7_NARGS(NARGS)
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER(4) FUNCTION IARGC()
+        END FUNCTION IARGC
+      END INTERFACE
+      INTEGER(4),INTENT(OUT) :: NARGS
+!     **************************************************************************
+      NARGS=IARGC()
+PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
+      RETURN
+      END
+#ELIF DEFINED(CPPVAR_COMPILER_G95)
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_G95_ETIME(USRTIME,SYSTIME)
+      IMPLICIT NONE
+      INTERFACE 
+        REAL FUNCTION ETIME(TARRAY)
+        REAL,OPTIONAL,INTENT(OUT) :: TARRAY(2)
+        END FUNCTION ETIME
+      END INTERFACE
+      REAL(8),INTENT(OUT) :: USRTIME
+      REAL(8),INTENT(OUT) :: SYSTIME
+      REAL                :: TARRAY(2)
+      REAL                :: RESULT      
+!     **************************************************************************
+      RESULT=ETIME(TARRAY)
+      usrtime=tarray(1)
+      systime=tarray(2)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_G95_GETARG(IPOS,ARG)
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE GETARG(POS,VALUE)
+        INTEGER         ,INTENT(IN) :: POS
+        CHARACTER(LEN=*),INTENT(OUT):: VALUE
+        END SUBROUTINE GETARG
+      END INTERFACE
+      INTEGER(4),INTENT(IN)         :: IPOS
+      character(len=*) ,INTENT(OUT) :: ARG
+      integer                       :: pos
+!     **************************************************************************
+      POS=IPOS
+      CALL GETARG(POS,ARG)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_G95_NARGS(NARGS)
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER FUNCTION IARGC()
+        END FUNCTION IARGC
+      END INTERFACE
+      INTEGER(4),INTENT(OUT) :: NARGS
+!     **************************************************************************
+      NARGS=IARGC()
+      RETURN
+      END
+#ENDIF
+
+!
 !     .................................................................
       SUBROUTINE LIB$GETUSAGE(ID,VALUE)
 !     *****************************************************************

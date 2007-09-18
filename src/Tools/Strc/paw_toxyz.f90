@@ -6,14 +6,6 @@
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE LINKEDLIST$READ(LL_,NFIL,CID_)
-        USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
-        TYPE(LL_TYPE),INTENT(IN) :: LL_
-        INTEGER(4)   ,INTENT(IN) :: NFIL
-        CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
-        END SUBROUTINE LINKEDLIST$READ
-      END INTERFACE
       TYPE(LL_TYPE)               :: LL_STRC
       INTEGER(4)                  :: NFIL,I,NAT
       LOGICAL                     :: TSTRCOUT=.FALSE.
@@ -146,7 +138,7 @@
 !     == READ STRUCTURE FILE                                          ==
 !     ==================================================================
       CALL FILEHANDLER$UNIT('STRC',NFIL)
-      CALL LINKEDLIST$READ(LL_STRC,NFIL)
+      CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
 !
 !     ==================================================================
 !     == GET CONVERSION FACOTOR                                       ==

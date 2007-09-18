@@ -1838,3 +1838,16 @@ end if
       write(*,fmt='("diamond structure",t30,"e=",f10.5,"  dev=",f10.5)')-emad*RS,-EMAD*RS-1.67085
       return
       end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine testkindmodel()
+      implicit none
+      logical    :: tchk
+      tchk=.true.
+      tchk=tchk.and.(bit_size(1_4).eq.32)
+      tchk=tchk.and.(bit_size(1_8).eq.64)
+      if(.not.tchk) then
+        call error$stop('testkindmodel')
+      end if
+      return
+      end

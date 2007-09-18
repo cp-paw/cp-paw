@@ -107,14 +107,6 @@ END MODULE TRAJECTORY_MODULE
       USE LINKEDLIST_MODULE
       USE TRAJECTORY_MODULE
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE LINKEDLIST$READ(LL_,NFIL,CID_)
-        USE LINKEDLIST_MODULE, ONLY: LL_TYPE 
-        TYPE(LL_TYPE),INTENT(IN) :: LL_
-        INTEGER(4)   ,INTENT(IN) :: NFIL
-        CHARACTER(*) ,INTENT(IN),OPTIONAL :: CID_ ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
-        END SUBROUTINE LINKEDLIST$READ
-      END INTERFACE
       TYPE(LL_TYPE)  :: LL_CNTL
       TYPE(LL_TYPE)  :: LL_STRC
       CHARACTER(256) :: FILE
@@ -150,7 +142,7 @@ END MODULE TRAJECTORY_MODULE
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('CNTL',NFIL)
       CALL LINKEDLIST$NEW(LL_CNTL)
-      CALL LINKEDLIST$READ(LL_CNTL,NFIL)
+      CALL LINKEDLIST$READ(LL_CNTL,NFIL,'~')
 !
 !     ==========================================================================
 !     ==  RESET FILE NAME FOR STRUCTURE FILE IF REQUESTED                     ==
@@ -262,7 +254,7 @@ END MODULE TRAJECTORY_MODULE
 !     ==================================================================
       CALL FILEHANDLER$UNIT('STRC',NFIL)
       CALL LINKEDLIST$NEW(LL_STRC)
-      CALL LINKEDLIST$READ(LL_STRC,NFIL)
+      CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
 !
 !     ==================================================================

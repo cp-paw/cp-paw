@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/main/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 796 $'
+character(256):: VERrev='$LastChangedRevision: 800 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-09-12 16:33:32 +0200 (Mi, 12. Sep 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-09-18 18:14:49 +0200 (Di, 18. Sep 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -75,15 +75,14 @@ end Module version_module
       CALL TRACE$PASS('BEFORE TIMING')
       CALL TIMING$PRINT('MONOMER',NFILO)
       CALL TRACE$PASS('AFTER TIMING')
-      CALL USAGE$REPORT(NFILO)
-      CALL TRACE$PASS('AFTER USAGE')
+      CALL MPE$CLOCKREPORT(NFILO)
 !
 !     ==PRINTING IS ALLOWED ONLY ON THE FIRST TASK =====================
       IF(THISTASK.EQ.1) THEN
         CALL CLOCK$NOW(DATIME)        
-        WRITE(NFILO,FMT='(72("="))')
-        WRITE(NFILO,FMT='(72("="),T15,"  PROGRAM FINISHED ",A32,"  ")')DATIME
-        WRITE(NFILO,FMT='(72("="))')
+        WRITE(NFILO,FMT='(80("="))')
+        WRITE(NFILO,FMT='(80("="),T15,"  PROGRAM FINISHED ",A32,"  ")')DATIME
+        WRITE(NFILO,FMT='(80("="))')
       END IF
 !
 !     ==================================================================
@@ -245,6 +244,17 @@ end Module version_module
 !     __ WRITE TRAJECTORY FROM TEMPORARY BUFFER TO FILE_________________
       IF(TPRINT.OR.TLAST) THEN
         CALL TRAJECTORYIO$FLUSHall
+      END IF
+!
+!     ==================================================================
+!     == RESET CLOCKS FOR TIMING                                      ==
+!     == THIS IS DONE AFTER THE FIRST ITERATION TO AVOID COUNTING     ==
+!     == THE TIME FOR SELF-INITIALIZATION OF OBJECTS                  ==
+!     ==================================================================
+      IF(TFIRST) THEN
+        CALL TIMING$START
+      else
+        call timing$count
       END IF
 !
 !     ==================================================================

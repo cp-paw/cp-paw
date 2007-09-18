@@ -2977,15 +2977,12 @@ call trace$pass('waves$write marke 4')
 !     ******************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
 !     ==================================================================
 !     ==  READ SIZES                                                  ==
 !     ==================================================================
       IF(THISTASK.EQ.1) THEN
-!       IFORMAT=1
-!        READ(NFIL,ERR=100)NKPT_,NSPIN_,RBAS
-!        IFORMAT=2
-! 100    CONTINUE
         NWAVE=2
         IFORMAT=0
         READ(NFIL,ERR=100)NKPT_,NSPIN_
@@ -2998,6 +2995,10 @@ call trace$pass('waves$write marke 4')
  100    CONTINUE
         IF(IFORMAT.EQ.0) THEN
           CALL ERROR$MSG('FORMAT NOT RECOGNIZED')
+          CALL ERROR$STOP('WAVES_READPSI')
+        END IF
+        IF(IFORMAT.NE.2) THEN
+          CALL ERROR$MSG('OLD FORMATS ARE NO MORE SUPPORTED')
           CALL ERROR$STOP('WAVES_READPSI')
         END IF
       END IF
@@ -3018,14 +3019,12 @@ call trace$pass('waves$write marke 4')
 !     ==================================================================
 !     ==  LOOP OVER K-POINTS AND SPINS                                ==
 !     ==================================================================
-              CALL TRACE$PASS('READPSI MARKE 5')
       ALLOCATE(XK(3,NKPT))
       CALL DYNOCC$GETR8A('XK',3*NKPT,XK) !K-POINTS IN RELATIVE COORDINATES
       GBASFIX=.FALSE.
       TREAD(:)=.FALSE.
       kread(:,:)=0.d0
       DO IKPT_=1,NKPT_   ! LOOP OVER ALL K-POINTS ON THE FILE
-!PRINT*,THISTASK,'=================== READPSI MARKE 1 IKPT_=',IKPT_,'====================='
 !       == FIND OUT IF DATA ARE TO BE READ AND TO WHICH K-GROUP THEY BELONG
 !
 !       ================================================================
@@ -3137,15 +3136,12 @@ call trace$pass('waves$write marke 4')
 !       ==  FOR ALL TASKS IF THERE ARE ALREADY BETTER DATA FOR THIS K-POINT
 !       ==  OR, IF DATA ARE READ, ON ALL TASKS THAT ARE NOT INVOLVED     ==
 !       ===================================================================
-!CALL FILEHANDLER$UNIT('PROT',NFILO)
-!write(nfilo,*)thistask,tkgroup,'ikpt',ikpt_
 !call mpe$report(nfilo)
-!call mpe$sync('~')
-!       IF(TSKIP.OR.(.NOT.(THISTASK.EQ.1.OR.TKGROUP))) THEN
+caLL MPE$SYNC('MONOMER')
         IF(TSKIP) THEN
           IF(ALLOCATED(GVECG_))DEALLOCATE(GVECG_)
           IF(ALLOCATED(MINUSG))DEALLOCATE(MINUSG)
-          CYCLE
+          CYCLE   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<cycle! here<<<<
         END IF
         CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NDIM_)
         CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NB_)
@@ -3193,17 +3189,11 @@ call trace$pass('waves$write marke 4')
         END IF
         IF(THISTASK.EQ.1)DEALLOCATE(GVECG_)
         DEALLOCATE(GVECG)
-!!$DO IG=1,NGG
-!!$  IF(MAPG(IG).NE.IG) THEN
-!!$     PRINT*,'MAPG ',IKPT_,IG,MAPG(IG),NGG,NGG_
-!!$  END IF
-!!$ENDDO
 !       --------------------------------------------------------------
 !       == THE FIRST TASK KNOWS:
 !       ==   NGG,MAPG,MINUSG
 !       ==   NGG_,NDIM_,NB_,TSUPER_
 !       --------------------------------------------------------------
-              CALL TRACE$PASS('MARKE 7')
 !       
 !       ==============================================================
 !       ==  COLLECT DATA                                            ==
@@ -3604,13 +3594,13 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_READLAMBDA(NFIL,IKPTG,TSKIP)
-!     ******************************************************************
-!     **                                                              **
-!     **  WRITE WAVE FUNCTIONS TO RESTART FILE                        **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  WRITE WAVE FUNCTIONS TO RESTART FILE                                **
+!     **                                                                      **
+!     **************************************************************************
       USE WAVES_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
@@ -3626,13 +3616,13 @@ END IF
       COMPLEX(8)   ,ALLOCATABLE:: LAMBDA(:,:,:)
       COMPLEX(8)   ,ALLOCATABLE:: LAMBDA2(:,:,:)
       LOGICAL(4)               :: TKGROUP
-!     ******************************************************************
+!     **************************************************************************
                            CALL TRACE$PUSH('WAVES_READLAMBDA')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
-!     ==================================================================
-!     == READ AND BROADCAST HISTORY-DEPTH OF LAGRANGE PARAMETERS      ==
-!     ==================================================================
+!     ==========================================================================
+!     == READ AND BROADCAST HISTORY-DEPTH OF LAGRANGE PARAMETERS              ==
+!     ==========================================================================
       IF(THISTASK.EQ.1) THEN
         READ(NFIL)KEY,NB_,NDIM_,NSPIN_,NLAMBDA  !<<<<<<<<<<<<<<<<<<<<<<<<<<
         IF(KEY.NE.'LAMBDA') THEN
@@ -3651,18 +3641,18 @@ END IF
         RETURN
       END IF
 !
-!     ==================================================================
-!     ==  COMMUNICATE                                                 ==
-!     ==================================================================
-!     == send date from the FIRST TASK OF MONOMER-GROUP 
-!     ==             to THE first tasak of the RELEVANT K-GROUP
+!     ==========================================================================
+!     ==  COMMUNICATE                                                         ==
+!     ==========================================================================
+!     == SEND DATE FROM THE FIRST TASK OF MONOMER-GROUP 
+!     ==             TO THE FIRST TASAK OF THE RELEVANT K-GROUP
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NLAMBDA)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NB_)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NDIM_)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NSPIN_)
 !     == KMAP CONTAINS THE TASK ID OF THE MASTER TASK IN THE KGROUP =======
 !     == DISTRIBUTE WITHIN THE K-GROUP ====================================
-!     == bugfix: the following two lines are incorrect....
+!     == BUGFIX: THE FOLLOWING TWO LINES ARE INCORRECT....
 !     TKGROUP=.TRUE.
 !     IF(THISTASK.EQ.1)TKGROUP=KMAP(IKPTG).EQ.1
       TKGROUP=THISTASK.EQ.KMAP(IKPTG)
@@ -3670,6 +3660,7 @@ END IF
       IF(TKGROUP) THEN
         CALL MPE$BROADCAST('K',1,NLAMBDA)
         CALL MPE$BROADCAST('K',1,NDIM_)
+        CALL MPE$BROADCAST('K',1,NB_)
         CALL MPE$BROADCAST('K',1,NSPIN_)
         IKPTL=0
         DO I=1,IKPTG
@@ -3680,10 +3671,12 @@ END IF
         NBA=MIN(NB,NB_)
       END IF
 !
-!     ==================================================================
-!     ==  READ AND FOLD DOWN                                          ==
-!     ==================================================================
-      IF(THISTASK.EQ.1.OR.THISTASK.EQ.KMAP(IKPTG)) ALLOCATE(LAMBDA(NB_,NB_,NSPIN_))
+!     ==========================================================================
+!     ==  READ AND FOLD DOWN                                                  ==
+!     ==========================================================================
+      IF(THISTASK.EQ.1.OR.THISTASK.EQ.KMAP(IKPTG)) THEN
+        ALLOCATE(LAMBDA(NB_,NB_,NSPIN_))
+      END IF
       IF(TKGROUP) ALLOCATE(LAMBDA2(NB,NB,NSPIN))
       DO I=1,NLAMBDA
         IF(THISTASK.EQ.1) THEN
@@ -3693,14 +3686,16 @@ END IF
         END IF
         CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),LAMBDA)
 !
-!       ==============================================================
-!       ==  TRANSFORM BETWEEN DATA MODELS                           ==
-!       ==============================================================
+!       ========================================================================
+!       ==  TRANSFORM BETWEEN DATA MODELS (COPY INTO LAMBDA2)                 ==
+!       ========================================================================
         IF(THISTASK.EQ.KMAP(IKPTG)) THEN  ! RESULT WILL BE COMMUNICATED LATER
           LAMBDA2=(0.D0,0.D0)
           IF(NSPIN.EQ.NSPIN_.AND.NDIM.EQ.NDIM_) THEN
             LAMBDA2(1:NBA,1:NBA,:)=LAMBDA(1:NBA,1:NBA,:)
           ELSE
+CALL ERROR$MSG('OPTION TEMPORARILY DISABLED')
+CALL ERROR$STOP('WAVES_READLAMBDA')
 !           == FROM NON-SPIN POLARIZED CALCULATION =====================
             IF(NDIM_.EQ.1.AND.NSPIN_.EQ.1) THEN
               IF(NDIM.EQ.1.AND.NSPIN.EQ.2) THEN

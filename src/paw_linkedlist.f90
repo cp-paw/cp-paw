@@ -2868,7 +2868,7 @@ CONTAINS
 END MODULE BUFFER_MODULE
 !     
 !     ..................................................................
-      SUBROUTINE LINKEDLIST$READ(LL_,NFIL,cid_)
+      SUBROUTINE LINKEDLIST$READ(LL_,NFIL,cid)
 !     ******************************************************************
 !     **                                                              **
 !     **  CREATES A HOME DIRECTORY FOR THE LIST                       **
@@ -2886,19 +2886,16 @@ END MODULE BUFFER_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE)   ,INTENT(IN) :: LL_
       INTEGER(4)      ,INTENT(IN) :: NFIL
-      CHARACTER(*)    ,INTENT(IN),optional :: CID_ ! RELEVANT PROCESSOR GROUP (SEE mpe OBECT)
+      CHARACTER(*)    ,INTENT(IN) :: CID ! RELEVANT PROCESSOR GROUP (SEE mpe OBECT)
       TYPE(LL_TYPE)               :: LL
-      character(128)              :: cid
 !     ******************************************************************
-      cid='~'
-      if(present(cid_)) cid=cid_
       LL=LL_
       CALL BUFFER$READ(LL,NFIL,cid)
       RETURN
       END SUBROUTINE LINKEDLIST$READ
 !     
 !     ..................................................................
-      SUBROUTINE LINKEDLIST$WRITE(LL,NFIL,cid_)
+      SUBROUTINE LINKEDLIST$WRITE(LL,NFIL,cid)
 !     ******************************************************************
 !     **                                                              **
 !     **  CREATES A HOME DIRECTORY FOR THE LIST                       **
@@ -2915,12 +2912,9 @@ END MODULE BUFFER_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE)   ,INTENT(IN) :: LL
       INTEGER(4)      ,INTENT(IN) :: NFIL
-      CHARACTER(*)    ,INTENT(IN),optional :: CID_ ! RELEVANT PROCESSOR GROUP (SEE mpe OBECT)
+      CHARACTER(*)    ,INTENT(IN) :: CID ! RELEVANT PROCESSOR GROUP (SEE mpe OBECT)
       integer(4)                  :: ntasks,thistask
-      character(128)              :: cid
 !     ******************************************************************
-      cid='~'
-      if(present(cid_)) cid=cid_
       call mpe$query(cid,ntasks,thistask)
       if(thistask.eq.1) then
         CALL BUFFER$WRITE(LL,NFIL,cid)
