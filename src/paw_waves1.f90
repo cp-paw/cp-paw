@@ -1527,6 +1527,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==================================================================
 !     == FORCES AND STRESSES                                          ==
 !     ==================================================================
+      force=0.d0
       IF(TFORCE.OR.TSTRESS) THEN
         stress1(:,:)=0.d0
         CALL WAVES$FORCE(NAT,LMNXX,NDIMD,DH,FORCE,STRESS1)

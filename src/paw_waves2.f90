@@ -2657,13 +2657,9 @@ PRINT*,'ITER ',ITER,DIGAM
       TCHK=.TRUE.
       SEPARATOR=SEP_WAVES
       SEPARATOR%NREC=-1
-call trace$pass('waves$write marke 1')
       CALL WAVES_WRITEPSI(NFIL,SEPARATOR%NREC)
-call trace$pass('waves$write marke 2')
       IF(THISTASK.EQ.1)CALL RESTART$WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
-call trace$pass('waves$write marke 3')
       CALL WAVES_WRITEPSI(NFIL,SEPARATOR%NREC)
-call trace$pass('waves$write marke 4')
               CALL TRACE$POP
       RETURN
       END
@@ -2923,7 +2919,7 @@ call trace$pass('waves$write marke 4')
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES_READPSI(NFIL)
+      SUBROUTINE WAVES_READPSI_OLD(NFIL)
 !     ******************************************************************
 !     **                                                              **
 !     **  WRITE WAVE FUNCTIONS TO RESTART FILE                        **
@@ -3676,6 +3672,8 @@ END IF
 !     ==========================================================================
       IF(THISTASK.EQ.1.OR.THISTASK.EQ.KMAP(IKPTG)) THEN
         ALLOCATE(LAMBDA(NB_,NB_,NSPIN_))
+      else
+        allocate(lambda(1,1,1))
       END IF
       IF(TKGROUP) ALLOCATE(LAMBDA2(NB,NB,NSPIN))
       DO I=1,NLAMBDA
@@ -4649,3 +4647,274 @@ END MODULE TOTALSPIN_MODULE
         WRITE(*,*)' KINETICENERGYTEST TOTAL',SUMTOT*CELLVOL/DELT**2,ID
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_READPSI(NFIL)
+!     ******************************************************************
+!     **                                                              **
+!     **  WRITE WAVE FUNCTIONS TO RESTART FILE                        **
+!     **                                                              **
+!     ******************************************************************
+      USE MPE_MODULE
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL 
+      INTEGER(4)              :: NTASKS,THISTASK
+      INTEGER(4)              :: NKPT_,NSPIN_
+      INTEGER(4)              :: NGG_,NDIM_,NB_,NBH_
+      INTEGER(4)              :: NGG,NGL,NBH
+      LOGICAL(4)              :: TSUPER_,TSUPER
+      INTEGER(4)              :: IBH
+      INTEGER(4)              :: IB,IDIM,IG,ISPIN,I
+      INTEGER(4)              :: IKPTG,IKPTL
+      INTEGER(4)              :: IWAVE
+      REAL(8)                 :: K_(3)       ! K-POINT ON FILE IN RELATIVE COORDINATES
+      REAL(8)                 :: GBAS_(3,3)  ! REC. LATT. VECT. ON FILE
+      REAL(8)     ,ALLOCATABLE:: GVECG_(:,:) ! G-VECTORS ON FILE
+      REAL(8)     ,ALLOCATABLE:: GVECG(:,:)  ! G-VECTORS (GLOBAL)
+      REAL(8)     ,ALLOCATABLE:: GVECL(:,:)  ! G-VECTORS (LOCAL)
+      REAL(8)                 :: RBAS(3,3)
+      REAL(8)                 :: SVAR
+      INTEGER(4)  ,ALLOCATABLE:: MAPG(:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSItmp(:,:,:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSIL(:,:,:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSIG(:,:)
+      COMPLEX(8)  ,ALLOCATABLE:: PSIin(:,:)
+      COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
+      INTEGER(4)              :: IOS
+      CHARACTER(8)            :: KEY
+      INTEGER(4) ,ALLOCATABLE :: IGVECG_(:,:)
+      REAL(8)                 :: XG1,XG2,XG3
+      INTEGER(4)              :: NWAVE
+      INTEGER(4)              :: nfilo
+      INTEGER(4)              :: isvar
+      LOGICAL(4)              :: TKGROUP
+!     ******************************************************************
+                               CALL TRACE$PUSH('WAVES_READPSI')
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+!
+!     ==================================================================
+!     ==  READ SIZES                                                  ==
+!     ==   NWAVE=2 PSI AND PSIDOT; NWAVE=1: ONLY PSI                  ==
+!     ==================================================================
+      IF(THISTASK.EQ.1) THEN
+        READ(NFIL,ERR=100)NKPT_,NSPIN_,RBAS,NWAVE
+ 100    CONTINUE
+      END IF
+      CALL MPE$BROADCAST('MONOMER',1,NSPIN_)
+      CALL MPE$BROADCAST('MONOMER',1,NKPT_)
+      CALL MPE$BROADCAST('MONOMER',1,RBAS)
+      CALL MPE$BROADCAST('MONOMER',1,NWAVE)
+      IF(NKPT.NE.NKPT_) THEN
+        CALL ERROR$msg('KPOINT SETS ARE FIXED')
+        CALL ERROR$i4val('nkpt on file',nkpt_)
+        CALL ERROR$i4val('nkpt expected',nkpt)
+        CALL ERROR$STOP('WAVES_READPSI')
+      END IF
+!
+!     ==================================================================
+!     ==  LOOP OVER K-POINTS AND SPINS                                ==
+!     ==================================================================
+      DO IKPTG=1,NKPT_   ! LOOP OVER ALL K-POINTS ON THE FILE
+        TKGROUP=(THISTASK.EQ.KMAP(IKPTG))
+        CALL MPE$BROADCAST('K',1,TKGROUP)
+!
+!       ========================================================================
+!       == COLLECT INFORMATION OF THE REQUIRED FORMAT                         ==
+!       ========================================================================
+        IF(TKGROUP) THEN
+          IKPTL=0
+          DO I=1,IKPTG
+            IF(KMAP(I).EQ.KMAP(IKPTG)) IKPTL=IKPTL+1
+          ENDDO            
+          CALL WAVES_SELECTWV(IKPTL,1)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          NGL=GSET%NGL
+          NBH=THIS%NBH
+          CALL PLANEWAVE$GETI4('NGG',NGG)
+          CALL PLANEWAVE$GETL4('TINV',TSUPER)
+        ELSE
+          IKPTL=0
+          NGG=1
+          NGl=0
+          Nbh=0
+          TSUPER=.FALSE.
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NGG)
+!
+!       ================================================================
+!       ==  READ COORDINATES OF THE WAVE FUNCTIONS                    ==
+!       ================================================================
+        IF(THISTASK.EQ.1) THEN
+!
+          READ(NFIL)KEY,NGG_,NDIM_,NB_,TSUPER_   !<<<<<<<<<<<<<<<<<<<<<<
+          IF(KEY.NE.'PSI') THEN
+            CALL ERROR$MSG('ID IS NOT "PSI"')
+            CALL ERROR$MSG('FILE IS CORRUPTED')
+            CALL ERROR$I4VAL('IKPTG',IKPTG)
+            CALL ERROR$STOP('WAVES_READPSI')
+          END IF
+!
+          ALLOCATE(IGVECG_(3,NGG_))
+          READ(NFIL)K_,IGVECG_ !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+!
+          CALL GBASS(RBAS,GBAS_,SVAR)
+          ALLOCATE(GVECG_(3,NGG_))
+          DO IG=1,NGG_
+            XG1=REAL(IGVECG_(1,IG),KIND=8)+K_(1)
+            XG2=REAL(IGVECG_(2,IG),KIND=8)+K_(2)
+            XG3=REAL(IGVECG_(3,IG),KIND=8)+K_(3)
+            DO I=1,3
+              GVECG_(I,IG)=GBAS_(I,1)*XG1+GBAS_(I,2)*XG2+GBAS_(I,3)*XG3
+            ENDDO
+          ENDDO
+          DEALLOCATE(IGVECG_)
+        ELSE
+          KEY=''
+          NGG_=0
+          TSUPER_=.FALSE.
+          NDIM_=0
+          NB_=0
+          K_(:)=-999999999.D0
+        END IF
+!
+!       == NOW COMMUNICATE TO K-GROUP
+        CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NDIM_)
+        CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NB_)
+        CALL MPE$SENDRECEIVE('MONOMER',1,kmAP(IKPTG),tsuper_)
+        IF(TKGROUP) THEN
+          CALL MPE$BROADCAST('K',1,NDIM_)
+          CALL MPE$BROADCAST('K',1,NB_)
+        END IF
+        NBH_=NB_
+        IF(TSUPER_)NBH_=(NB_+1)/2
+!       
+!       ==============================================================
+!       ==  DEFINE G-VECTOR MAPPING OF THE ARRAYS                   ==
+!       ==============================================================
+!       == COLLECT G-VECTORS ON THE FIRST TASK OF K-GROUP
+        ALLOCATE(GVECG(3,NGG))
+        IF(TKGROUP) THEN
+          ALLOCATE(GVECL(3,NGL))
+          CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVECL)
+          CALL PLANEWAVE$COLLECTR8(3,NGL,GVECL,NGG,GVECG)
+          DEALLOCATE(GVECL)
+        END IF
+!       == SEND FROM TASK1 OF K-GROUP TO TASK1 OF MONOMER
+        CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,GVECG)
+!
+!       == CALCULATE MAPPING ARRAY FOR G-VECTOR MAPPING ==============
+        IF(THISTASK.EQ.1) THEN
+          ALLOCATE(MAPG(NGG))
+          CALL WAVES_MAPG(NGG_,GBAS_,GVECG_,NGG,GVECG,MAPG)
+          DEALLOCATE(GVECG_)
+        END IF
+        DEALLOCATE(GVECG)
+!       
+!       ==============================================================
+!       ==  COLLECT DATA                                            ==
+!       ==============================================================
+        IF(THISTASK.EQ.1) ALLOCATE(PSIIN(NGG_,NDIM_))
+        ALLOCATE(PSIG(NGG,NDIM_))
+        IF(TKGROUP) ALLOCATE(PSIl(NGl,NDIM_,nbh_,nspin_))
+!
+        DO IWAVE=1,NWAVE  ! LOOP OVER PSI (AND PSIDOT )
+!       
+!         ==============================================================
+!         ==  READ WAVE FUNCTIONS FROM FILE AND DISTRIBUTE TO KGROUP  ==
+!         ==============================================================
+          DO ISPIN=1,NSPIN_  ! SUM OVER SPIN COMPONENTS 
+            DO IB=1,NBH_
+              IF(THISTASK.EQ.1) THEN 
+                READ(NFIL,ERR=9999,IOSTAT=IOS)PSIIN !<<<<<<<<<<<<<<<<<<<
+!
+!               == MAP G-VECTORS ONTO THEIR FINAL DESTINATION  ========
+                DO IDIM=1,NDIM_
+                  DO IG=1,NGG
+                    IF(MAPG(IG).NE.0) THEN
+                       PSIG(IG,IDIM)=PSIIN(MAPG(IG),IDIM)
+                    ELSE
+                       PSIG(IG,IDIM)=(0.D0,0.D0)
+                    END IF
+                  ENDDO
+                ENDDO
+              END IF
+!
+!             == SEND TO TKGROUP AND DISTRIBUTE
+              CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),PSIG)
+!
+              IF(TKGROUP) THEN
+                DO IDIM=1,NDIM_
+                  CALL PLANEWAVE$DISTRIBUTEC8(1,NGG,PSIG(1,IDIM),NGL,PSIL(1,IDIM,IB,ISPIN))
+                ENDDO
+              end if
+            ENDDO
+          ENDDO
+!       
+!         ==============================================================
+!         ==  CHANGE FORMAT                                           ==
+!         ==============================================================
+          IF(TKGROUP) THEN
+            IF(.NOT.(TSUPER.EQV.TSUPER_)) THEN
+              CALL ERROR$MSG('TRANSFORMATION BETWEEN REGULAR ..')
+              CALL ERROR$MSG('... AND SUPER WAVE FUNCTIONS NOT IMPLEMENTED')
+              CALL ERROR$STOP('WAVES_READPSI')
+            END IF
+            IF(NDIM_.NE.NDIM) THEN
+              CALL ERROR$MSG('TRANSFORMATION BETWEEN REGULAR ..')
+              CALL ERROR$MSG('... AND SUPER WAVE FUNCTIONS NOT IMPLEMENTED')
+              CALL ERROR$STOP('WAVES_READPSI')
+            END IF
+            ALLOCATE(PSItmp(NGL,NDIM,NBH,NSPIN))
+!           == COPY RANDOM WAVE FUNCTIONS INTO HOLDING SPACE
+            DO ISPIN=1,NSPIN
+              CALL WAVES_SELECTWV(IKPTL,ISPIN)
+              CALL PLANEWAVE$SELECT(GSET%ID)
+              IF(IWAVE.EQ.1) THEN
+                PSItmp(:,:,:,ISPIN)=THIS%PSI0(:,:,:)
+              ELSE
+                PSItmp(:,:,:,ISPIN)=THIS%PSIM(:,:,:)
+              END IF
+            ENDDO
+!
+!           == COPY WAVE FUNCTIONS FROM THE FILE INTO THE HOLDING SPACE
+            ISPIN=MIN(NSPIN,NSPIN_)
+            IBH=MIN(NBH,NBH_)
+            IDIM=MIN(NDIM,NDIM_)
+            PSItmp(:,1:IDIM,1:IBH,1:ISPIN)=PSIL(:,1:IDIM,1:IBH,1:ISPIN)
+            IF(NSPIN_.EQ.1.AND.NSPIN.EQ.2) THEN
+              PSItmp(:,:,:,2)=PSItmp(:,:,:,1)
+            END IF
+!
+!           == COPY HOLDING SPACE INTO THE MEMORY ===========================
+            DO ISPIN=1,NSPIN
+              CALL WAVES_SELECTWV(IKPTL,ISPIN)
+              CALL PLANEWAVE$SELECT(GSET%ID)
+              IF(IWAVE.EQ.1) THEN
+                THIS%PSI0(:,:,:)=PSItmp(:,:,:,ISPIN)
+              ELSE
+                THIS%PSIM(:,:,:)=PSItmp(:,:,:,ISPIN)
+              END IF
+            ENDDO
+            DEALLOCATE(PSItmp)
+          END IF
+        ENDDO  ! END LOOP OVER WAVES
+        IF(THISTASK.EQ.1) DEALLOCATE(MAPG)
+        IF(THISTASK.EQ.1) DEALLOCATE(PSIIN)
+        DEALLOCATE(PSIG)
+        IF(TKGROUP) DEALLOCATE(PSIL)
+!
+        CALL WAVES_READLAMBDA(NFIL,IKPTG,.FALSE.)
+      ENDDO    ! END LOOK OVER K-POINTS
+!
+!     ==================================================================
+!     ==  CLOSE DOWN                                                  ==
+!     ==================================================================
+                               CALL TRACE$POP
+      RETURN
+ 9999 CONTINUE
+      CALL ERROR$MSG('ERROR WHILE READING FROM FILE')
+      CALL ERROR$I4VAL('IOS',IOS)
+      CALL ERROR$STOP('WAVES_READPSI')
+      end SUBROUTINE WAVES_READPSI
