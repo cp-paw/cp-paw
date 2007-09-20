@@ -139,8 +139,8 @@ LOGICAL(4)  :: TSTRESSX=.FALSE.
 !========================================================================
 INTEGER(4)      ,SAVE     :: NKPTL         ! #(LOCAL K-POINTS)
 INTEGER(4)      ,POINTER  :: KMAP(:)
-REAL(8)                   :: WAVEEKIN1=0.D0
-REAL(8)                   :: WAVEEKIN2=0.D0
+REAL(8)                   :: WAVEEKIN1=0.D0   ! calculated in waves$etot
+REAL(8)                   :: WAVEEKIN2=0.D0   ! calulated in waves$orthogonalize
 TYPE(WVSET_TYPE),POINTER  :: THISARRAY(:,:)   ! (NKPTL,NSPIN)
 TYPE(WVSET_TYPE),POINTER  :: THIS            ! CURRENT SET OF WAVES
 TYPE(GSET_TYPE) ,POINTER  :: GSET            ! CURRENT SET OF GSET
@@ -1270,6 +1270,8 @@ CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
 !
 !     ==================================================================
 !     == GRAMM-SCHMIDT ORTHOGONALIZATION OF INITIAL WAVE FUNCTIONS    ==
+!     == ATTENTION THIS REORTHOGONALIZATION MAY GIVE THE              ==
+!     == AN UNCONTROLLED KICK AFTER RESTARTING                        ==
 !     ==================================================================
       IF(TFIRST) THEN
         CALL WAVES$GRAMMSCHMIDT()
@@ -2009,13 +2011,16 @@ END IF
       INTEGER(4)             :: NB
       INTEGER(4)             :: NBH
       INTEGER(4)             :: NAT
-      REAL(8)   ,ALLOCATABLE :: R(:,:)
+      REAL(8)   ,ALLOCATABLE :: R0(:,:)
+      REAL(8)   ,ALLOCATABLE :: Rm(:,:)
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES$GRAMMSCHMIDT')
                               CALL TIMING$CLOCKON('W:GRAMSCHMIDT')
       NAT=MAP%NAT
-      ALLOCATE(R(3,NAT))
-      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)
+      ALLOCATE(R0(3,NAT))
+      ALLOCATE(Rm(3,NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+      CALL ATOMLIST$GETR8A('R(-)',0,3*NAT,Rm)
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -2023,8 +2028,8 @@ END IF
           NGL=GSET%NGL
           NB=THIS%NB
           NBH=THIS%NBH
-          CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSI0)
-          CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,THIS%PSIM)
+          CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NB,THIS%PSI0)
+          CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,Rm,NGL,NDIM,NBH,NB,THIS%PSIM)
         ENDDO
       ENDDO
                               CALL TIMING$CLOCKOFF('W:GRAMSCHMIDT')

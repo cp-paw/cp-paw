@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/main/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 800 $'
+character(256):: VERrev='$LastChangedRevision: 802 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-09-18 18:14:49 +0200 (Di, 18. Sep 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-09-20 11:40:01 +0200 (Do, 20. Sep 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -552,7 +552,6 @@ end Module version_module
           CALL ATOMS$EFFEKIN(EKIN)
           CALL THERMOSTAT$SETR8('TARGET',EKIN)
         END IF
-!       CALL ENERGYLIST$RETURN('WAVEFUNCTION KINETIC ENERGY',EKIN)
         CALL WAVES$GETR8('EKIN(PSI)',EKIN)
         CALL THERMOSTAT$SETR8('EKIN(SYSTEM)',EKIN)
         CALL THERMOSTAT$PROPAGATE()

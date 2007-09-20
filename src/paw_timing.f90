@@ -370,8 +370,8 @@ END MODULE TIMING_MODULE
               end if
             enddo
           enddo
-          percent=(usrtime1+systime1)/(usrtime+systime)*100
-          percentsys=systime1/(usrtime1+systime)*100
+          percent=(usrtime1+systime1)/(usrtime+systime)*100.d0
+          percentsys=systime1/(usrtime1+systime1+tiny(systime1))*100.d0
           time=usrtime1+systime1
           CALL TIMING_CONVERT(TIME,TIMESTRING(1))
           time=(usrtime1+systime1)/clock(1)%count
