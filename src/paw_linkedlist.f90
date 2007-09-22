@@ -741,15 +741,28 @@ END MODULE LLIST_MODULE
 !!$      RETURN
 !!$      END SUBROUTINE LINKEDLIST_TRANSFERCHARRTO1
 !!$!END MODULE LINKEDLIST_TRANSFERCH_MODULE
-!
+!...............................................................
+MODULE LINKEDLIST_TRANSFERCH_MODULE
+PUBLIC LINKEDLIST_TRANSFERCHTO1
+PUBLIC LINKEDLIST_TRANSFERCHFROM1
+INTERFACE LINKEDLIST_TRANSFERCHTO1
+  MODULE PROCEDURE LINKEDLIST_TRANSFERCHvalTO1
+  MODULE PROCEDURE LINKEDLIST_TRANSFERCHARRTO1
+END INTERFACE 
+INTERFACE LINKEDLIST_TRANSFERCHfrom1
+  MODULE PROCEDURE LINKEDLIST_TRANSFERCHvalfrom1
+  MODULE PROCEDURE LINKEDLIST_TRANSFERCHARRfrom1
+END INTERFACE 
+CONTAINS
+
 !     ..................................................................
-      SUBROUTINE LINKEDLIST_TRANSFERCHTO1(FROMSIZE,FROM,NTO,TO)
-      INTEGER(4)  ,INTENT(IN)   :: NTO
-      INTEGER(4)  ,INTENT(IN)   :: FROMSIZE
-      CHARACTER(*),INTENT(IN)   :: FROM(FROMSIZE)
-      CHARACTER(1),INTENT(OUT)  :: TO(NTO)
-      INTEGER(4)                :: I,J,IJ
-      INTEGER(4)                :: FROMLEN
+      SUBROUTINE LINKEDLIST_TRANSFERCHarrTO1(FROMSIZE,FROM,NTO,TO)
+      INTEGER(4)             ,INTENT(IN)  :: NTO
+      INTEGER(4)             ,INTENT(IN)  :: FROMSIZE
+      CHARACTER(*)           ,INTENT(IN)  :: FROM(FROMSIZE)
+      CHARACTER(1)           ,INTENT(OUT) :: TO(NTO)
+      INTEGER(4)                          :: I,J,IJ
+      INTEGER(4)                          :: FROMLEN
 !     ******************************************************************
       FROMLEN=LEN(FROM)
       IJ=0
@@ -763,10 +776,46 @@ END MODULE LLIST_MODULE
         TO(I)=' '
       ENDDO
       RETURN
-      END SUBROUTINE LINKEDLIST_TRANSFERCHTO1
+      END SUBROUTINE LINKEDLIST_TRANSFERCHARRTO1
 !
 !     ..................................................................
-      SUBROUTINE LINKEDLIST_TRANSFERCHFROM1(NFROM,FROM,TOSIZE,TO)
+      SUBROUTINE LINKEDLIST_TRANSFERCHvalTO1(fromsize,FROM,NTO,TO)
+      INTEGER(4)  ,INTENT(IN)   :: NTO
+      INTEGER(4)  ,INTENT(IN)   :: fromsize   !not needed
+      CHARACTER(*),INTENT(IN)   :: FROM
+      CHARACTER(1),INTENT(OUT)  :: TO(NTO)
+      INTEGER(4)                :: I
+      INTEGER(4)                :: FROMLEN
+!     ******************************************************************
+      FROMLEN=LEN(FROM)
+      DO i=1,FROMLEN
+        TO(i)=FROM(i:i)
+      ENDDO
+      DO i=fromlen+1,NTO
+        TO(i)=' '
+      ENDDO
+      RETURN
+      END SUBROUTINE LINKEDLIST_TRANSFERCHVALTO1
+!
+!     ..................................................................
+      SUBROUTINE LINKEDLIST_TRANSFERCHvalFROM1(NFROM,FROM,TOSIZE,TO)
+      INTEGER(4)  ,INTENT(IN)   :: NFROM
+      INTEGER(4)  ,INTENT(IN)   :: TOSIZE  !not used
+      CHARACTER(*),INTENT(OUT)  :: TO
+      CHARACTER(1),INTENT(IN)   :: FROM(NFROM)
+      INTEGER(4)                :: I
+      INTEGER(4)                :: TOLEN,fromlen
+!     ******************************************************************
+      TOLEN=LEN(TO)
+      TO=' '
+      DO i=1,nfrom
+        TO(i:i)=FROM(I)
+      ENDDO
+      RETURN
+      END SUBROUTINE LINKEDLIST_TRANSFERCHVALFROM1
+!
+!     ..................................................................
+      SUBROUTINE LINKEDLIST_TRANSFERCHarrFROM1(NFROM,FROM,TOSIZE,TO)
       INTEGER(4)  ,INTENT(IN)   :: NFROM
       INTEGER(4)  ,INTENT(IN)   :: TOSIZE
       CHARACTER(*),INTENT(OUT)  :: TO(TOSIZE)
@@ -788,12 +837,9 @@ END MODULE LLIST_MODULE
           TO(I)(J:J)=FROM(IJ)
         ENDDO
       ENDDO
-!print*,'chfrom1',tosize,tolen,nfrom
-!do i=1,tosize
-!  print*,'chfrom1',i,' |',to(i),'|'
-!enddo
       RETURN
-      END SUBROUTINE LINKEDLIST_TRANSFERCHFROM1
+      END SUBROUTINE LINKEDLIST_TRANSFERCHARRFROM1
+end MODULE LINKEDLIST_TRANSFERCH_MODULE
 !
 !.......................................................................
 !***********************************************************************
@@ -854,6 +900,7 @@ END MODULE LLIST_MODULE
 !***********************************************************************
 MODULE LINKEDLIST_MODULE
 USE LLIST_MODULE
+use LINKEDLIST_TRANSFERCH_MODULE
 TYPE LL_TYPE
  TYPE(LLIST_TYPE),POINTER :: PTR
 END TYPE LL_TYPE
@@ -1668,12 +1715,12 @@ CONTAINS
 (<RANKID>,<SIZE>,<RESHAPE(><RESHAPE)><RANK>)
               =([R0],[1],[],[],[])
                ([R1],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:)])
-               ([R2],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:)])
-               ([R3],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:,:)])
-               ([R4],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:,:,:)])
-               ([R5],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:,:,:,:)])
-               ([R6],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:,:,:,:,:)])
 #BODY
+!!$               ([R2],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:)])
+!!$               ([R3],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:,:)])
+!!$               ([R4],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:,:,:)])
+!!$               ([R5],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:,:,:,:)])
+!!$               ([R6],[SIZE(VAL)][RESHAPE(][,SHAPE(VAL))],[(:,:,:,:,:,:)])
 !     
 !     ..................................................................
       SUBROUTINE LINKEDLIST$SETCH<RANKID>(LL,ID,NTH,VAL)
@@ -1790,12 +1837,12 @@ CONTAINS
 (<RANKID>,<SIZE>,<,SIZE>,<RESHAPE(><RESHAPE)><RANK>)
     =([R0][1]        []          []        []            [])
      ([R1][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:)])
-     ([R2][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:)])
-     ([R3][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:)])
-     ([R4][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:)])
-     ([R5][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:,:)])
-     ([R6][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:,:,:)])
 #BODY
+!!$     ([R2][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:)])
+!!$     ([R3][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:)])
+!!$     ([R4][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:)])
+!!$     ([R5][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:,:)])
+!!$     ([R6][SIZE(VAL)][,SIZE(VAL)][RESHAPE(][,SHAPE(VAL))][(:,:,:,:,:,:)])
 !     
 !     ..................................................................
       SUBROUTINE LINKEDLIST$GETCH<RANKID>(LL,ID,NTH,VAL)

@@ -764,7 +764,7 @@ END IF
        RETURN
        END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,PROJ1,PROJ2,MAT)
 !     ******************************************************************
 !     **                                                              **
@@ -784,96 +784,150 @@ END IF
       COMPLEX(8)  ,INTENT(IN)   :: PROJ2(NDIM,NBH,NPRO) ! <P|PSI2>
       COMPLEX(8)  ,INTENT(OUT)  :: MAT(NB,NB)
       REAL(8)     ,ALLOCATABLE  :: DOVER(:,:)
+      complex(8)  ,allocatable  :: proj1a(:,:,:)  !(ndim,nbh,nprox)
+      complex(8)  ,allocatable  :: proj2a(:,:,:)  !(ndim,nbh,nprox)
+      complex(8)                :: cmat1(nbh,nbh),cmat2(nbh,nbh)
       INTEGER(4)                :: NTASKS,THISTASK
+      INTEGER(4)                :: Nprox
+      INTEGER(4)                :: lmnx
       INTEGER(4)                :: IAT,ISP
       INTEGER(4)                :: LN1,L1
       INTEGER(4)                :: LN2,L2
-      INTEGER(4)                :: IPRO,IPRO1,IPRO2,M
-      INTEGER(4)                :: IBH1,IBH2,IDIM,LNX
-      INTEGER(4)                :: IB1A,IB1B,IB2A,IB2B,I,J
-      COMPLEX(8)                :: CSVAR,CSVAR1,CSVAR2
-      REAL(8)                   :: RE1,IM1,RE2,IM2
-      REAL(8)                   :: RMAT(2,2)
+      INTEGER(4)                :: IPRO,iprox,IPRO1,IPRO2,M
+      INTEGER(4)                :: IBH1,IBH2,ib1,ib2,IDIM,LNX
+      COMPLEX(8)                :: CSVAR1,CSVAR2
+      real(8)                   :: svar
       LOGICAL(4)                :: TINV
-!     ******************************************************************
+!     **************************************************************************
       CALL MPE$QUERY('K',NTASKS,THISTASK)
       MAT(:,:)=(0.D0,0.D0)
       TINV=NB.NE.NBH
+!
+!     ==========================================================================     
+!     == DETERMINE, HOW MANY PROJECTIONS ARE TREATED ON THE CURRENT PROCESSOR ==
+!     ==========================================================================
+      IF(NTASKS.EQ.1) THEN
+        NPROX=NPRO
+      ELSE 
+        NPROX=0
+        DO IAT=1,MAP%NAT
+          IF(MOD(IAT-1,NTASKS).NE.THISTASK-1) CYCLE
+          ISP=MAP%ISP(IAT)
+!         __ SELECTION FOR PARALLEL PROCESSING____________________________
+          NPROX=NPROX+MAP%LMNX(ISP)
+        ENDDO
+      END IF
+!
+!     ==========================================================================     
+!     == LIMIT PROJ1 AND PROJ2 TO THE TERMS REQUIRED ON THE CURRENT PROCESSOR ==
+!     == PROJ2A=DO*<P|PSI>                                                    ==
+!     ==========================================================================
+      ALLOCATE(PROJ1A(NDIM,NBH,NPROX))
+      ALLOCATE(PROJ2A(NDIM,NBH,NPROX))
+      PROJ1A(:,:,:)=(0.D0,0.D0)
+      PROJ2A(:,:,:)=(0.D0,0.D0)
       IPRO=0
+      IPROX=0
       DO IAT=1,MAP%NAT
         ISP=MAP%ISP(IAT)
-!       __ SELECTION FOR PARALLEL PROCESSING____________________________
+!       __ SELECTION FOR PARALLEL PROCESSING____________________________________
         IF(MOD(IAT-1,NTASKS).NE.THISTASK-1) THEN
           IPRO=IPRO+MAP%LMNX(ISP)
           CYCLE
         END IF
-!       __ NOW CONTINUE_________________________________________________
+        LMNX=MAP%LMNX(ISP)
+!
+!       == FOLD DOWN INDEX ARRAY ===============================================
+!
+        PROJ1A(:,:,IPROX+1:IPROX+LMNX)=PROJ1(:,:,IPRO+1:IPRO+LMNX)
+!
+!       == FOLD DOWN INDEX ARRAY FOR PROJ2 AND MULTIPLY WITH DOVER =============
         LNX=MAP%LNX(ISP)
         ALLOCATE(DOVER(LNX,LNX))
         CALL SETUP$1COVERLAP(ISP,LNX,DOVER)
 !
-        DO IBH1=1,NBH
-          DO IBH2=1,NBH
-            CSVAR1=(0.D0,0.D0)
-            CSVAR2=(0.D0,0.D0)
-            IPRO1=IPRO
-            DO LN1=1,LNX
-              L1=MAP%LOX(LN1,ISP)
-              IPRO2=IPRO
-              DO LN2=1,LNX
-                L2=MAP%LOX(LN2,ISP)
-                IF(L1.EQ.L2) THEN
-                  CSVAR=(0.D0,0.D0)
-                  DO IDIM=1,NDIM
-                    DO M=1,2*L1+1
-                      CSVAR=CSVAR + CONJG(PROJ1(IDIM,IBH1,IPRO1+M)) &
-     &                            *       PROJ2(IDIM,IBH2,IPRO2+M)
-                    ENDDO
-                  ENDDO
-                  CSVAR1=CSVAR1+CSVAR*DOVER(LN1,LN2)
-                  IF(TINV) THEN
-                    CSVAR=(0.D0,0.D0)
-                    DO IDIM=1,NDIM
-                      DO M=1,2*L1+1
-                        CSVAR=CSVAR + PROJ1(IDIM,IBH1,IPRO1+M) &
-     &                              * PROJ2(IDIM,IBH2,IPRO2+M)
-                      ENDDO
-                    ENDDO
-                    CSVAR2=CSVAR2+CSVAR*DOVER(LN1,LN2)
-                  END IF
-                END IF
-                IPRO2=IPRO2+2*L2+1
-              ENDDO
-              IPRO1=IPRO1+2*L1+1
-            ENDDO
-
-            IF(.NOT.TINV) THEN
-              MAT(IBH1,IBH2)=MAT(IBH1,IBH2)+CSVAR1
-            ELSE
-              RE1=  REAL(CSVAR1,KIND=8)
-              IM1= AIMAG(CSVAR1)
-              RE2=  REAL(CSVAR2,KIND=8)
-              IM2=-AIMAG(CSVAR2)  ! COMPLEX CONJUGATE OF CSVAR2 USED
-              RMAT(1,1)=0.5D0*( RE1+RE2)
-              RMAT(1,2)=0.5D0*( IM1-IM2)
-              RMAT(2,1)=0.5D0*(-IM1-IM2)
-              RMAT(2,2)=0.5D0*( RE1-RE2)
-              IB1A=2*IBH1-1
-              IB1B=MIN(2*IBH1,NB)
-              IB2A=2*IBH2-1
-              IB2B=MIN(2*IBH2,NB)
-              DO I=IB1A,IB1B
-                DO J=IB2A,IB2B
-                  MAT(I,J)=MAT(I,J)+CMPLX(RMAT(I-IB1A+1,J-IB2A+1),0.D0,8)
-                ENDDO
-              ENDDO
+        IPRO1=IPROX
+        DO LN1=1,LNX
+          L1=MAP%LOX(LN1,ISP)
+          IPRO2=IPRO
+          DO LN2=1,LNX
+            L2=MAP%LOX(LN2,ISP)
+            IF(L1.EQ.L2) THEN
+             PROJ2A(:,:,IPRO1+1:ipro1+2*l1+1)=PROJ2A(:,:,IPRO1+1:ipro1+2*l1+1) &
+      &                        +DOVER(LN1,LN2)*PROJ2(:,:,IPRO2+1:ipro2+2*l1+1)
             END IF
+            IPRO2=IPRO2+2*L2+1
           ENDDO
+          IPRO1=IPRO1+2*L1+1
         ENDDO
         DEALLOCATE(DOVER)
-        IPRO=IPRO+MAP%LMNX(ISP)
+        IPRO=IPRO+LMNX
+        IPROX=IPROx+LMNX
       ENDDO
-      CALL MPE$COMBINE('K','+',MAT)
+!
+!     ==========================================================================     
+!     ==  MAT(I,J)= SUM_{K,L} <PSI_I|P_K>   * [ DO(K,L)*<P_L|PSI_J>]          ==
+!     ==          = SUM_{K}   PROJ1A^*(K,I) *   PROJ2A(K,J)                   ==
+!     ==========================================================================
+      IF(.NOT.TINV) THEN
+        MAT(:,:)=(0.D0,0.D0)
+        DO IBH1=1,NBH
+          DO IBH2=1,NBH
+            DO IPRO1=1,NPROX
+              DO IDIM=1,NDIM
+                MAT(IBH1,IBH2)=MAT(IBH1,IBH2) &
+     &                   +CONJG(PROJ1A(IDIM,IBH1,IPRO1))*PROJ2A(IDIM,IBH2,IPRO1)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+        CALL MPE$COMBINE('K','+',MAT)
+      ELSE
+        CMAT1(:,:)=(0.D0,0.D0)
+        CMAT2(:,:)=(0.D0,0.D0)
+        DO IBH1=1,NBH
+          DO IBH2=1,NBH
+            DO IPRO1=1,NPROX
+              DO IDIM=1,NDIM
+                CMAT1(IBH1,IBH2)=CMAT1(IBH1,IBH2) &
+    &                   +CONJG(PROJ1A(IDIM,IBH1,IPRO1))*PROJ2A(IDIM,IBH2,IPRO1)
+                IF(TINV) THEN
+                  CMAT2(IBH1,IBH2)=CMAT2(IBH1,IBH2) &
+    &                          +PROJ1A(IDIM,IBH1,IPRO1)*PROJ2A(IDIM,IBH2,IPRO1)
+                END IF
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+        CALL MPE$COMBINE('K','+',CMAT1)
+        CALL MPE$COMBINE('K','+',CMAT2)
+      END IF
+      deALLOCATE(PROJ1A)
+      deALLOCATE(PROJ2A)
+!
+!     ==========================================================================     
+!     ==  UNRAVEL SUPER WAVE FUNCTIONS  PSISUP=PSI1+CI*PSI2 WITH REAL PSI1/2  ==
+!     == CMAT1=CONJG(PSISUP)*PSISUP=PSI1*PSI1+PSI2*PSI2+I[PSI1*PSI2-PSI2*PSI1]==
+!     == CMAT2=      PSISUP *PSISUP=PSI1*PSI1-PSI2*PSI2+I[PSI1*PSI2+PSI2*PSI1]==
+!     == => 0.5*[CMAT1+CMAT2]=PSI1*PSI1+I*PSI1*PSI2                           ==
+!     ==    0.5*[CMAT1-CMAT2]=PSI2*PSI2-I*PSI2*PSI1                           ==
+!     ==========================================================================
+      IF(TINV) THEN
+        MAT(:,:)=(0.D0,0.d0)
+        DO IBH2=THISTASK,NBH,NTASKS   ! PARALLELIZED LOOP_______________________
+          IB2=2*(IBH2-1)
+          DO IBH1=1,NBH
+            IB1=2*(IBH1-1)
+            CSVAR1=0.5D0*(CMAT1(IBH1,IBH2)+CMAT2(IBH1,IBH2))
+            CSVAR2=0.5D0*(CMAT1(IBH1,IBH2)-CMAT2(IBH1,IBH2))
+            MAT(IB1+1,IB2+1)=REAL(CSVAR1,KIND=8)
+            MAT(IB1+1,IB2+2)=AIMAG(CSVAR1)
+            MAT(IB1+2,IB2+1)=-AIMAG(CSVAR2)
+            MAT(IB1+2,IB2+2)=REAL(CSVAR2,KIND=8)
+          ENDDO
+        ENDDO
+        CALL MPE$COMBINE('K','+',MAT)
+      ENDIF  
       RETURN
       END
 !
@@ -1766,7 +1820,7 @@ END IF
         DIGAM=DABS(GAMN(I0,J0))
 !       PRINT*,'ITER ',ITER,I0,J0,DIGAM,NCON
         IF(DIGAM.LT.EPS) GOTO 9000
-PRINT*,'ITER ',ITER,DIGAM
+!PRINT*,'ITER ',ITER,DIGAM
 !
 !       ==================================================================
 !       ==  OBTAIN CHANGE OF THE LAMBDA MATRIX                          ==
