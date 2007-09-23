@@ -2003,6 +2003,9 @@ END IF
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **
+!     **  remark: I is important to do the orthogonalization with the **
+!     **    consistent set of atomic positions.                        **
+!     **                                                              **
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -2018,9 +2021,9 @@ END IF
                               CALL TIMING$CLOCKON('W:GRAMSCHMIDT')
       NAT=MAP%NAT
       ALLOCATE(R0(3,NAT))
-      ALLOCATE(Rm(3,NAT))
+      ALLOCATE(RM(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-      CALL ATOMLIST$GETR8A('R(-)',0,3*NAT,Rm)
+      CALL ATOMLIST$GETR8A('R(-)',0,3*NAT,RM)
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -2029,7 +2032,7 @@ END IF
           NB=THIS%NB
           NBH=THIS%NBH
           CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NB,THIS%PSI0)
-          CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,Rm,NGL,NDIM,NBH,NB,THIS%PSIM)
+          CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,RM,NGL,NDIM,NBH,NB,THIS%PSIM)
         ENDDO
       ENDDO
                               CALL TIMING$CLOCKOFF('W:GRAMSCHMIDT')
@@ -4339,7 +4342,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         IBPRO=1+SUM(MAP%LNX(1:ISP-1))
         CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
         CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
-     &                      ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM,EIGR,PRO)
+     &              ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM,EIGR,PRO)
 !
 !       ===============================================================
 !       ==  |PSI>=|PSI>+|PRO>PROPSI                                  ==
