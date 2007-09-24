@@ -2164,15 +2164,18 @@ END IF
       RETURN
       END
 !
-!     ......................................................RANWAV......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_RANDOMIZE(NG,NDIM,NB,AMPLITUDE,G2,PSI)
-!     ******************************************************************
-!     **                                                              **
-!     **  CREATE RANDOM WAVE FUNCTIONS                                **
-!     **                                                              **
-!     **  THE MAXIMUM WEIGHT OF THE WAVE FUNCTIONS AT EPW[RY]=GC2     **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (1991)***
+!     **************************************************************************
+!     **                                                                      **
+!     **  CREATE RANDOM WAVE FUNCTIONS                                        **
+!     **                                                                      **
+!     **  THE MAXIMUM WEIGHT OF THE WAVE FUNCTIONS AT EPW[RY]=GC2             **
+!     **                                                                      **
+!     **  if the parameter tdeterministic is set to true, the result          **
+!     **  is independent of the parallelization                               **
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1991)***********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NB              ! #(BANDS)
       INTEGER(4),INTENT(IN)    :: NG              ! #(PLANE WAVES),MAX
@@ -2180,31 +2183,73 @@ END IF
       REAL(8)   ,INTENT(IN)    :: AMPLITUDE       ! SCALE FACTOR
       REAL(8)   ,INTENT(IN)    :: G2(NG)          ! G**2
       COMPLEX(8),INTENT(INOUT) :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
-      INTEGER(4)               :: IB,IG,IDIM
+      INTEGER(4)               :: IB,IG,IDIM,i
       REAL(8)                  :: PI,FAC
       REAL(8)   ,PARAMETER     :: GC2=10.D0
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: REC,RIM
-!     ******************************************************************
+      logical(4)               :: tdeterministic=.true.
+      integer(4),parameter     :: nran=1000
+      integer(8)               :: m,ran
+      REAL(8)  ,save           :: xran(nran)
+      INTEGER(4)               :: Isvar
+!     **************************************************************************
       PI=4.D0*DATAN(1.D0)
+!     ==========================================================================
+!     == create a seried of nran pseudo-random numbers                        ==
+!     ==========================================================================
+      IF(TDETERMINISTIC) THEN
+        M=2_8**31_8-1_8
+        RAN=1
+        DO I=1,NRAN
+          RAN=MODULO(16807*RAN,M)
+          XRAN(I)=REAL(RAN,KIND=8)/REAL(M,KIND=8)
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     == determine envelope function of the random numbers to avoid large     ==
+!     == contributions with large kinetic energy                              ==
+!     ==========================================================================
       FAC=2.D0*SQRT(PI*GC2)
       FAC=FAC**3/REAL(NDIM,KIND=8)*(2.D0/3.D0)
       FAC=AMPLITUDE/FAC
       DO IG=1,NG
         SCALE(IG)=FAC*EXP(-0.5D0*G2(IG)/GC2)
       ENDDO
-      CALL LIB$RANDOMSEED
-      DO IB=1,NB
-        DO IDIM=1,NDIM
-          DO IG=1,NG
-            CALL LIB$RANDOM(REC)
-            CALL LIB$RANDOM(RIM)
-            REC=2.D0*REC-1.D0
-            RIM=2.D0*RIM-1.D0
-            PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM,KIND=8)*SCALE(IG)
+!
+!     ==========================================================================
+!     == select random numbers                                                ==
+!     ==========================================================================
+      if(tdeterministic) then
+        DO IB=1,NB
+          DO IDIM=1,NDIM
+            DO IG=1,NG
+              isvar=1+int(modulo(g2(ig)*real(idim*ib*nran,kind=8),real(nran,kind=8)))
+              rec=xran(isvar)
+!             == the factor pi is only to make rim different from rec ==========
+              isvar=1+int(modulo(pi*g2(ig)*real(idim*ib*nran,kind=8),real(nran,kind=8)))
+              rim=xran(isvar)
+              REC=2.D0*REC-1.D0
+              RIM=2.D0*RIM-1.D0
+              PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM,KIND=8)*SCALE(IG)
+            ENDDO
           ENDDO
         ENDDO
-      ENDDO
+      else 
+        CALL LIB$RANDOMSEED
+        DO IB=1,NB
+          DO IDIM=1,NDIM
+            DO IG=1,NG
+              CALL LIB$RANDOM(REC)
+              CALL LIB$RANDOM(RIM)
+              REC=2.D0*REC-1.D0
+              RIM=2.D0*RIM-1.D0
+              PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM,KIND=8)*SCALE(IG)
+            ENDDO
+          ENDDO
+        ENDDO
+      end if
       RETURN
       END
 !
@@ -4747,7 +4792,6 @@ END MODULE TOTALSPIN_MODULE
       REAL(8)                 :: XG1,XG2,XG3
       INTEGER(4)              :: NWAVE
       INTEGER(4)              :: nfilo
-      INTEGER(4)              :: isvar
       LOGICAL(4)              :: TKGROUP
 !     ******************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
