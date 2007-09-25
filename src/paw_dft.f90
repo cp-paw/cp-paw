@@ -201,7 +201,7 @@ MODULE DFT_MODULE
      &                          //'(PHYS.REV.B33,P8822(1986))'
 !
 !     ==========================================================================
-!     == TYPE 8:  LSD + BECKE GC + PERDEW86                                   ==
+!     == TYPE 81:  LSD + BECKE GC + PERDEW86                                   ==
 !     ==========================================================================
       ELSE IF (IT.EQ.81) THEN
         TX=.TRUE.
@@ -274,9 +274,22 @@ MODULE DFT_MODULE
         DESCRIPTION(2)='PERDEW-WANG 91 GGA FOR EXCHANGE AND CORRELATION ' &
      &                          //'(PHYS.REV.B 46, 6671 (1992))'
 !
-!     ==========================================================================
-!     == TYPE 5001:  LOCAL HF+ BECKE XC-GC+ LYP88 CORRELATION                 ==
-!     ==========================================================================
+!     ==================================================================
+!     == TYPE 13:  LSD + RevPBE-GC                                     ==
+!     ==================================================================
+      ELSE IF (IT.EQ.13) THEN
+        TX=.TRUE.
+        CALL EXCHANGE$SETI4('TYPE',5)
+        TPBE96=.TRUE.
+        TGRATARGET=.TRUE.
+        DESCRIPTION(1)='PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
+     &                          //'(PHYS.REV.B 45, 13244 (1992-I))'
+        DESCRIPTION(2)='RevPBE of Y. Zhang and W. Yang GGA FOR EXCHANGE AND CORRELATION ' &
+     &                          //'(PHYS.REV.LETT 80, 890 (1998))'
+!
+!     ==================================================================
+!     == TYPE 5001:  LOCAL HF+ BECKE XC-GC+ LYP88 CORRELATION          ==
+!     ==================================================================
       ELSE IF (IT.EQ.5001) THEN
         TX=.TRUE.
         CALL EXCHANGE$SETI4('TYPE',2)
@@ -314,13 +327,25 @@ MODULE DFT_MODULE
         TPERDEW=.TRUE.
         TGRATARGET=.TRUE.
         DESCRIPTION(1)='NO EXCHANGE AND NO LOCAL CORRELATION! (TEST OPTION) '
-        DESCRIPTION(3)='PERDEW GRADIENT CORRECTION FOR CORRELATION ' &
+        DESCRIPTION(2)='PERDEW GRADIENT CORRECTION FOR CORRELATION ' &
      &                          //'(PHYS.REV.B33,P8822(1986))'
 !
-!     ==========================================================================
-!     == TYPE 10004:  PBE exchange only                                       ==
-!     ==========================================================================
+!     ============================================================================
+!     == TYPE 10004:  CORRELATION (RPBE-TYPE11 OR PBE-TYPE10 OR RevPBE-TYPE-13) ==
+!     ============================================================================
       ELSE IF (IT.EQ.10004) THEN
+        TPBE96=.TRUE.
+        TGRATARGET=.TRUE.
+        DESCRIPTION(1)='NO EXCHANGE !  (TEST OPTION) ' 
+        DESCRIPTION(2)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE AND CORRELATION ' &
+     &                          //'(PHYS.REV.B 46, 6671 (1992-I))'
+        DESCRIPTION(3)='HAMMER-HANSEN-NORSKOV RPBE-GGA FOR EXCHANGE AND CORRELATION ' &
+     &                          //'(PHYS.REV.B 59, 7413 (1999))'
+!
+!     ==========================================================================
+!     == TYPE 10005:  PBE exchange only                                       ==
+!     ==========================================================================
+      ELSE IF (IT.EQ.10005) THEN
         TX=.TRUE.
         CALL EXCHANGE$SETI4('TYPE',3)
         TPBE96=.FALSE.
@@ -329,8 +354,30 @@ MODULE DFT_MODULE
      &                          //'(PHYS.REV.LETT 77, 3865 (1996))'
 !
 !     ==========================================================================
-!     == ILLEGAL SELECTION                                                    ==
+!     == TYPE 10006:  CORRELATION - PW91-GC(PERDEW WANG PARAMETERIZATION)     ==
 !     ==========================================================================
+      ELSE IF(IT.EQ.10006) THEN
+        TPW91G=.TRUE.        
+        TGRATARGET=.TRUE.
+        DESCRIPTION(1)='NO EXCHANGE! (TEST OPTION) '
+        DESCRIPTION(2)='PERDEW-WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
+     &                          //'(PHYS.REV.B 45, 13244 (1992-I))'
+!   
+!
+!     ==========================================================================
+!     == TYPE 10007:  RPBE exchange only                                       ==
+!     ==========================================================================
+      ELSE IF (IT.EQ.10007) THEN
+        TX=.TRUE.
+        CALL EXCHANGE$SETI4('TYPE',4)
+        TPBE96=.FALSE.
+        TGRATARGET=.TRUE.
+        DESCRIPTION(1)='HAMMER-HANSEN-NORSKOV RPBE-GGA FOR EXCHANGE AND CORRELATION ' &
+     &                          //'(PHYS.REV.B 59, 7413 (1999))'
+!     
+!
+!     ==========================================================================
+!     == ILLEGAL SELECTION                                            ==
       ELSE
         CALL ERROR$MSG('CHOICE OF FUNCTIONAL NOT DEFINED')
         CALL ERROR$I4VAL('IT',IT)
@@ -413,11 +460,15 @@ MODULE DFT_MODULE
         IF(IT.EQ.10) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.11) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.12) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
+        IF(IT.EQ.13) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.5001) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.10001) THEN ;TCHK=.TRUE. ;TGRA=.FALSE. ;END IF
         IF(IT.EQ.10002) THEN ;TCHK=.TRUE. ;TGRA=.FALSE. ;END IF
         IF(IT.EQ.10003) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
-        IF(IT.EQ.10004) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
+        IF(IT.EQ.10004) THEN ;TCHK=.TRUE. ;TGRA=.TRUE. ;END IF
+        IF(IT.EQ.10005) THEN ;TCHK=.TRUE. ;TGRA=.TRUE. ;END IF
+        IF(IT.EQ.10006) THEN ;TCHK=.TRUE. ;TGRA=.TRUE. ;END IF
+        IF(IT.EQ.10007) THEN ;TCHK=.TRUE. ;TGRA=.TRUE. ;END IF
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('DFT FUNCTIONAL SELECTION INVALID')
           CALL ERROR$I4VAL('ID',VALUE)
@@ -1303,6 +1354,11 @@ CONTAINS
         TGRA=.TRUE.
         FXTYPE='RPBE'
         IPAR=3       ! SELECT PARAMETERS CONSISTENT WITH PBE EXCHANGE
+      ELSE IF(ITYPE.EQ.5) THEN
+!       == LOCAL EXCHANGE + revPBE GRADIENT CORRECTION ================        
+        TGRA=.TRUE.
+        FXTYPE='PBE'
+        IPAR=4       ! SELECT PARAMETERS CONSISTENT WITH reVPBE EXCHANGE
       ELSE IF(ITYPE.EQ.32) THEN
 !       == LOCAL EXCHANGE ==============================================
 !       == + PBE96 GRADIENT CORRECTION CORRECT LONG-RANGE SCALING ======
@@ -1348,6 +1404,21 @@ CONTAINS
 !       == KAPPA IS CHOSEN TO SATISFY THE LIEB OXFORD BOUND  ============
 !       == EX(GRHO->INFTY)=EX(GRHO=0)*KAPPA =============================
         KAPPA=0.804D0
+      ELSE IF(IPAR.EQ.4) THEN
+!       ================================================================
+!       == PARAMETERS FROM reVPBE PAPER                               ==
+!       == THE PARAMETERS MAKE SENS ONLY IN CONNECTION WITH THE       ==
+!       == PBE CORRELATION FUNCTIONAL                                 ==
+!       == KAPPA MAKES SENSE ONLY WITH THE SIMPLE FORM                ==
+!       ================================================================
+!       == MU IS CHOSEN TO CANCEL THE GRADIENT DEPENDENCE OF ===========
+!       == THE PBE CORRELATION IN THE SMALL GRADIENT LIMIT AND RHOS=0 ==
+        NU=16.D0/PI*(3*PI**2)**(1.D0/3.D0)
+        BETA=NU*CC0
+        MU=BETA*PI**2/3.D0
+!       == KAPPA IS CHOSEN TO SATISFY THE LIEB OXFORD BOUND  ============
+!       == EX(GRHO->INFTY)=EX(GRHO=0)*KAPPA =============================
+        KAPPA=1.245D0
       ELSE
         CALL ERROR$MSG('AT LEAST ONE PARAMETER SET MUST BE SELECTED')
         CALL ERROR$STOP('EXCHANGE_INITIALIZE')

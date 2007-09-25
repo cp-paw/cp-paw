@@ -341,6 +341,12 @@ END MODULE OPTFRIC_MODULE
       DXDF=DXDF/DT**2
 !     == DX2=(X0-XM)**2 ======================================================
       DX2=SUM((X0(:)-XM(:))**2)
+!     == avoid divide by zero for x0=xm ====================================
+      if(dxdf.eq.0.d0) then
+        de=huge(de)
+        dx=huge(dx)
+        return
+      end if
 !     == DE IS THE ESTIMATE OF THE ENERGY DIFFERENCE TO THE MINIMUM
       DE=-0.5D0*DX2*F02/DXDF
 !     == DX IS THE ESTIMATED DISTANCE FROM THE MINIMUM

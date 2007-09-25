@@ -2175,7 +2175,7 @@ END IF
 !     **  if the parameter tdeterministic is set to true, the result          **
 !     **  is independent of the parallelization                               **
 !     **                                                                      **
-!     *******************************************P.E. BLOECHL, (1991)***********
+!     *******************************************P.E. BLOECHL, (1991,2007)******
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NB              ! #(BANDS)
       INTEGER(4),INTENT(IN)    :: NG              ! #(PLANE WAVES),MAX
@@ -2188,28 +2188,31 @@ END IF
       REAL(8)   ,PARAMETER     :: GC2=10.D0
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: REC,RIM
-      logical(4)               :: tdeterministic=.true.
-      integer(4),parameter     :: nran=1000
-      integer(8)               :: m,ran
-      REAL(8)  ,save           :: xran(nran)
-      INTEGER(4)               :: Isvar
+      LOGICAL(4),parameter     :: TDETERMINISTIC=.TRUE.
+      logical(4),save          :: tini=.false.
+      INTEGER(4),PARAMETER     :: NRAN=1000
+      REAL(8)  ,SAVE           :: XRAN(NRAN)
+      INTEGER(4)               :: ISVAR
 !     **************************************************************************
       PI=4.D0*DATAN(1.D0)
 !     ==========================================================================
-!     == create a seried of nran pseudo-random numbers                        ==
+!     == CREATE A SERIED OF NRAN PSEUDO-RANDOM NUMBERS                        ==
 !     ==========================================================================
-      IF(TDETERMINISTIC) THEN
-        M=2_8**31_8-1_8
-        RAN=1
-        DO I=1,NRAN
-          RAN=MODULO(16807*RAN,M)
-          XRAN(I)=REAL(RAN,KIND=8)/REAL(M,KIND=8)
-        ENDDO
+      if(.not.tini) then
+        IF(TDETERMINISTIC) THEN
+          DO I=1,NRAN
+!           == CONSTRUCT A FIXED SERIES OF RANDOM NUMBERS USING
+!           == THE WELL-DEFINED MINIMAL STANDARD LINEAR CONGRUENTIAL
+!           == RANDOM NUMBER GENERATOR (IN PAW_GENERALPURPOSE.F90)
+            CALL RANDOM_MSLNG(XRAN(I))
+          ENDDO
+        end if
+        tini=.true.
       END IF
 !
 !     ==========================================================================
-!     == determine envelope function of the random numbers to avoid large     ==
-!     == contributions with large kinetic energy                              ==
+!     == DETERMINE ENVELOPE FUNCTION OF THE RANDOM NUMBERS TO AVOID LARGE     ==
+!     == CONTRIBUTIONS WITH LARGE KINETIC ENERGY                              ==
 !     ==========================================================================
       FAC=2.D0*SQRT(PI*GC2)
       FAC=FAC**3/REAL(NDIM,KIND=8)*(2.D0/3.D0)

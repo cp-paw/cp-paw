@@ -920,16 +920,16 @@ END MODULE COSMO_MODULE
           vmad(ig,iat)=vmad(ig,iat)+pot
         ENDDO
       ENDDO
-do iat=1,nat
-  write(*,*)'qmad ',iat,qmad(:,iat)
-enddo
-do iat=1,nat
-  write(*,*)'rc ',iat,rc(:,iat)
-enddo
-do iat=1,nat
-  write(*,*)'vmad ',iat,vmad(:,iat)
-enddo
-print*,'epauli ',epauli
+!!$do iat=1,nat
+!!$  write(*,*)'qmad ',iat,qmad(:,iat)
+!!$enddo
+!!$do iat=1,nat
+!!$  write(*,*)'rc ',iat,rc(:,iat)
+!!$enddo
+!!$do iat=1,nat
+!!$  write(*,*)'vmad ',iat,vmad(:,iat)
+!!$enddo
+!!$print*,'epauli ',epauli
       RETURN
       END
 !
@@ -986,7 +986,7 @@ print*,'epauli ',epauli
       ALLOCATE(FEFF(3,NQEFF))
       CALL COSMO_MAPTOEFF(NAT,NQ,NQEFF,ZEROTHETA &
      &                   ,QBAR,RQ,QATBAR,RAT,QEFF,REFF)
-print*,'in cosmo_longrange a:',tiso,maxval(qbar)
+! print*,'in cosmo_longrange a:',tiso,maxval(qbar)
       IF(TISO) THEN
         CALL COSMO_ISOLATEDHARTREE(NQEFF,REFF,QEFF,ETOT,VEFF,FEFF,DISMIN)
         CALL COSMO_ISOLATEDHARTREE(NAT,RAT,QATBAR,ETOT1,V1,F1,DISMIN)
@@ -996,7 +996,7 @@ print*,'in cosmo_longrange a:',tiso,maxval(qbar)
 CALL MADELUNG(NQEFF,RBAS,REFF,QEFF,ETOT,VEFF,FEFF)
 CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       END IF
-print*,'in cosmo_longrange b:',etot,etot1
+! print*,'in cosmo_longrange b:',etot,etot1
       ETOT=ETOT-ETOT1
       VEFF(NQEFF-NAT+1:NQEFF)=VEFF(NQEFF-NAT+1:NQEFF)-V1(:)
       FEFF(:,NQEFF-NAT+1:NQEFF)=FEFF(:,NQEFF-NAT+1:NQEFF)-F1(:,:)
@@ -1725,9 +1725,9 @@ print*,'in cosmo_longrange b:',etot,etot1
       LOGICAL                  :: TCONVG
       REAL(8)                  :: SVAR
       INTEGER                  :: NITER
-
       REAL(8)                  :: annem  ! previous friction factor
       real(8)                  :: dq,de
+      real(8)    ,allocatable  :: work(:)
       REAL(8)                  :: R01(3,NAT_)
       REAL(8)                  :: QMAD1(NG,NAT_)
       LOGICAL(4)               :: Tchk
@@ -1906,7 +1906,10 @@ INTEGER(4) :: NFILINFO
 !
         IF(TADIABATIC) THEN
 !         == check convergence ==============================================
+          allocate(work(nq))
+          work(:)=qmass
           CALL OPTFRIC$TESTCONV(NQ,QP,Q0,QM,Q2M,ANNE,ANNEM,DT,(/(QMASS,I=1,NQ)/),DQ,DE)
+          deallocate(work)
 WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ekin+epot-de,anne,de,dq
           dq=abs(dq)
           de=abs(de)
@@ -1925,7 +1928,10 @@ WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ekin+epot-de,anne,de,dq
 !         == update optimized friction
           CALL OPTFRIC$GETL4('ON',TCHK)
           IF(TCHK) THEN
-            CALL OPTFRIC$UPDATER8('COSMO',NQ,QP,Q0,QM,Q2M,(/(QMASS,i=1,nq)/))
+            allocate(work(nq))
+            work(:)=qmass
+            CALL OPTFRIC$UPDATER8('COSMO',NQ,QP,Q0,QM,Q2M,work)
+            deallocate(work)
             Q2M=QM
           END IF
         else
@@ -1964,7 +1970,7 @@ WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,anne
       CALL COSMO_PAULI(NAT,NG,RC,VPAULI,QMAD1,EPOT1,VMAD1)
       EPOT=EPOT+EPOT1
       VMAD(:,:)=VMAD(:,:)+VMAD1(:,:)
-PRINT*,'EPAULI ',EPOT1
+!PRINT*,'EPAULI ',EPOT1
 !
 !     =======================================================================
 !     ==  CLOSE DOWN                                                       ==
@@ -2279,7 +2285,7 @@ END IF
       icnt(:)=0
       do i=1,natoms
         icnt(nuc(i))=icnt(nuc(i))+1  ! atom counter for each element
-        write(lab1,*)icnt(nuc(i))
+        write(lab1,fmt='(a5)')icnt(nuc(i))
         lab1=trim(uc(mtype(i)(1:2)))//adjustl(lab1)
         lab2=mtype(i)(1:2)
         lab2(1:1)=uc(lab2(1:1))

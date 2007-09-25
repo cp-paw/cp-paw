@@ -1840,14 +1840,32 @@ end if
       end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine testkindmodel()
-      implicit none
-      logical    :: tchk
-      tchk=.true.
-      tchk=tchk.and.(bit_size(1_4).eq.32)
-      tchk=tchk.and.(bit_size(1_8).eq.64)
-      if(.not.tchk) then
-        call error$stop('testkindmodel')
-      end if
-      return
-      end
+      SUBROUTINE RANDOM_MSLNG(RAN)
+!     **************************************************************************
+!     ** MINIMAL STANDARD LINEAR CONGRUENTIAL RANDOM NUMBER GENERATOR         **
+!     ** S.K.PARK AND K.W.MILLER, COMMUNICATIONS OF THE ACM, 31, 1192 (1988)  **
+!     **                                                                      **
+!     ** THIS VERSION ONLY WORKS IF HUGE(SEED).GE.2147483647                  **
+!     **                                                                      **
+!     ** IF IT WORKS CORRECTLY THE SEED IN STEP 10000 IS 1043618065           **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(OUT):: RAN
+      INTEGER(4),PARAMETER  :: M=2147483647  !=2_8**31-1_8
+      INTEGER(4),PARAMETER  :: A=16807
+      INTEGER(4),PARAMETER  :: Q=127773    !=INT(M/A)
+      INTEGER(4),PARAMETER  :: R=2836      !=MOD(M,A)
+      INTEGER(4),SAVE       :: SEED=1
+      INTEGER(4)            :: HI,LO,TEST
+!     **********************************************************
+      HI=INT(SEED/Q)
+      LO=MOD(SEED,Q)
+      TEST=A*LO-R*HI
+      IF(TEST.GT.0) THEN
+        SEED=TEST
+      ELSE
+        SEED=TEST+M
+      END IF
+      RAN=REAL(SEED,8)/REAL(M,8)
+      RETURN
+      END
