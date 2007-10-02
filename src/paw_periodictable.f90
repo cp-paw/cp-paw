@@ -446,7 +446,7 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       END SUBROUTINE PERIODICTABLE$GETR8
 !
 !     ...........................................PERIODICTABLE..........
-      SUBROUTINE PERIODICTABLE$GETbyzR8(z,ID,VAL)
+      SUBROUTINE PERIODICTABLE$GETBYZR8(Z,ID,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
@@ -462,7 +462,8 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       IF(Z.LT.0.OR.Z.GT.REAL(NEL)) THEN
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
         CALL ERROR$R8VAL('Z',Z)
-        CALL ERROR$STOP('PERIODICTABLE$GETbyzR8')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PERIODICTABLE$GETBYZR8')
       END IF
       IZ1=INT(Z)
       IZ2=IZ1+1

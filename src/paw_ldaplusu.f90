@@ -528,6 +528,7 @@ PRINT*,'E(DC) ',ETOT1
         CALL ERROR$CHVAL('FUNCTIONALID',THIS%FUNCTIONALID)
         CALL ERROR$STOP('LDAPLUSU$ETOT')
       END IF
+print*,'marke 1'
 !
 !     ==========================================================================
 !     ==  UPFOLD                                                              ==
@@ -1551,9 +1552,13 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)              :: IDIM,LM
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)  ,PARAMETER  :: NDIMD=4
-integer(4) :: lmrx1
+integer(4) :: lmrx1,ir
+integer(4) :: imethod
  REAL(8)     ,ALLOCATABLE:: RHOtest(:,:,:)
  REAL(8)     ,ALLOCATABLE:: POTtest(:,:,:)
+ REAL(8)     ,ALLOCATABLE:: RHOtest2(:,:,:)
+ REAL(8)     ,ALLOCATABLE:: POTtest2(:,:,:)
+ REAL(8)                 :: etot2
 !     **************************************************************************
       LMRX=(LRX+1)**2
       ETOT=0.D0
@@ -1582,42 +1587,54 @@ integer(4) :: lmrx1
       POT(:,:,:)=0.D0
 !     == EXCHANGE ENERGY AND POTENTIAL =========================================
       CALL DFT$SETL4('XCONLY',.TRUE.)
-if(1.eq.0) then
+!
+!===============================================================================
+!==== dangerous code!!!!                                                    ====
+!==== this formulation is based on a noncollinear formulation, which        ====
+!==== yields different results from a collinear formulation even for        ====
+!==== a collinear density                                                   ====
+!====                                                                       ====
+!==== different versions are implemented                                    ====
+!==== 1) default noncollinear method                                        ====
+!==== 2) a collinear method (which is compared on the fly with the          ====
+!====    noncollinear method                                                ====
+!===============================================================================
       CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOT,POT)
-else if(1.eq.1) then
-  lmrx1=min(9,lmrx)
-  ALLOCATE(RHOtest(NR,LMRX1,4))
-  ALLOCATE(pottest(NR,LMRX1,4))
-  rhotest(:,:,:)=rho(:,:lmrx1,:)
-!this works:  rhotest(:,2:,2:4)=0.d0
-!  rhotest(:,5:,2:4)=0.d0
-do idim=1,ndimd
- do lm=1,lmrx1
-  print*,'rhotest ',idim,lm,rhotest(:,lm,idim)
- enddo
-enddo
-  CALL AUGMENTATION_XC(GID,NR,LMRX1,4,RHOtest,ETOT,POTtest)
-do idim=2,ndimd
- do lm=1,lmrx1
-  print*,'potest ',idim,lm,pottest(:,lm,idim)
- enddo
-enddo
-  pot(:,:,:)=0.d0
-  pot(:,:lmrx1,:)=pottest(:,:,:)
- deallocate(rhotest)
- deallocate(pottest)
-else 
- ALLOCATE(RHOtest(NR,LMRX,2))
- rhotest(:,:,1)=rho(:,:,1)
- rhotest(:,:,2)=rho(:,:,4)
- ALLOCATE(pottest(NR,LMRX,2))
- CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHOtest,ETOT,POTtest)
- pot(:,:,:)=0.d0
- pot(:,:,1)=pottest(:,:,1)
- pot(:,:,4)=pottest(:,:,2)
- deallocate(rhotest)
- deallocate(pottest)
-end if
+imethod=0
+!imethod=1
+      if(imethod.eq.1) then
+!       == collinear method with collinear density
+        ALLOCATE(RHOtest(NR,LMRX,2))
+        ALLOCATE(pottest(NR,LMRX,2))
+        pottest(:,:,1)=0.d0
+        rhotest(:,:,1)=rho(:,:,1)
+        rhotest(:,:,2)=rho(:,:,4)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHOtest,ETOT,POTtest)
+        pot(:,:,:)=0.d0
+        pot(:,:,1)=pottest(:,:,1)
+        pot(:,:,4)=pottest(:,:,2)
+        deallocate(rhotest)
+        deallocate(pottest)
+!
+!      else if(imethod.eq.2) then
+!       == noncollinear method with collinear density ==========================
+        ALLOCATE(RHOtest2(NR,LMRX,ndimd))
+        ALLOCATE(pottest2(NR,LMRX,ndimd))
+        rhotest2(:,:,:)=0.d0
+        pottest2(:,:,:)=0.d0
+        rhotest2(:,:,1)=rho(:,:,1)
+        rhotest2(:,:,4)=rho(:,:,4)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOtest2,ETOT2,POTtest2)
+!print*,'ldaplusutest',etot2-etot,maxval(abs(pottest2-pot)),maxloc(abs(pottest2-pot))
+!        etot=etot2
+!        pot(:,:,:)=pottest2(:,:,:)
+        deallocate(rhotest2)
+        deallocate(pottest2)
+!
+      else if(imethod.eq.3) then
+!       == comparison ==========================================================
+
+      end if
       CALL DFT$SETL4('XCONLY',.FALSE.)
 PRINT*,'EXC ',ETOT
 !

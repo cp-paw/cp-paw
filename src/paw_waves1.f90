@@ -784,6 +784,7 @@ END MODULE WAVES_MODULE
       INTEGER(4),ALLOCATABLE :: ICOLOR(:)
       LOGICAL(4),ALLOCATABLE :: TINVARR(:)
       LOGICAL(4)             :: TKGROUP
+      INTEGER(4)             :: i,j,k
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES$INITIALIZE')
 !     
@@ -914,7 +915,7 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       ENDDO
       DEALLOCATE(XK)
       CALL WAVES_UPDATEGSET()
-!     
+!
 !     ==================================================================
 !     ==  EVALUATE NUMBER OF G-VECTORS ETC. ON LOCAL PROCESSOR        ==
 !     ==================================================================
@@ -937,11 +938,20 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
           NGL=GSET%NGL
           ALLOCATE(THIS%PSI0(NGL,NDIM,NBH))
           ALLOCATE(THIS%PSIM(NGL,NDIM,NBH))
+          this%psi0(:,:,:)=(0.d0,0.d0)
+          this%psim(:,:,:)=(0.d0,0.d0)
           ALLOCATE(G2(NGL))
           CALL PLANEWAVE$GETR8A('G2',NGL,G2)
           CALL WAVES_INITIALIZERANDOM(NGL,NDIM,NBH,G2,THIS%PSI0)
           DEALLOCATE(G2)
-          THIS%PSIM=THIS%PSI0
+          do i=1,nbh
+            do j=1,ndim
+              do k=1,ngl
+                THIS%PSIM(k,j,i)=THIS%PSI0(k,j,i)
+              enddo
+            enddo
+          enddo
+!          THIS%PSIM=THIS%PSI0 ! THIS STATEMENT GAVE PROBLEMS WITH IFC10
 !         == ALLOCATE LAGRANGE MULTIPLYERS =============================
           NULLIFY(THIS%HPSI)
           NULLIFY(THIS%OPSI)

@@ -1957,8 +1957,9 @@ END IF
       ALLOCATE(SMAP(NB))
       DO I=1,NB
         SMAP(I)=I
-      ENDDO
-      ALLOCATE(X(NB,NB))
+      ENDDO 
+     ALLOCATE(X(NB,NB))
+!== Speicherzugriffsfehler ifc10
       CALL WAVES_ORTHO_Y_C(NB,OVERLAP,OVERLAP,OVERLAP,X,SMAP)
       DEALLOCATE(OVERLAP)
       DEALLOCATE(SMAP)
@@ -2196,7 +2197,7 @@ END IF
 !     **************************************************************************
       PI=4.D0*DATAN(1.D0)
 !     ==========================================================================
-!     == CREATE A SERIED OF NRAN PSEUDO-RANDOM NUMBERS                        ==
+!     == CREATE A SERIEs OF NRAN PSEUDO-RANDOM NUMBERS                        ==
 !     ==========================================================================
       if(.not.tini) then
         IF(TDETERMINISTIC) THEN
@@ -2271,31 +2272,76 @@ END IF
       INTEGER(4),INTENT(IN)    :: NDIM            ! #(PLANE WAVES),MAX
       REAL(8)   ,INTENT(IN)    :: G2(NG)          ! G**2
       COMPLEX(8),INTENT(OUT)   :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
-      INTEGER(4)               :: IB,IG,IDIM
+      INTEGER(4)               :: IB,IG,IDIM,i
       REAL(8)                  :: PI,FAC
       REAL(8)   ,PARAMETER     :: GC2=10.D0
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: REC,RIM
+      LOGICAL(4),parameter     :: TDETERMINISTIC=.TRUE.
+      logical(4),save          :: tini=.false.
+      INTEGER(4),PARAMETER     :: NRAN=1000
+      REAL(8)  ,SAVE           :: XRAN(NRAN)
+      INTEGER(4)               :: ISVAR
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
+!     ==========================================================================
+!     == CREATE A SERIEs OF NRAN PSEUDO-RANDOM NUMBERS                        ==
+!     ==========================================================================
+      if(.not.tini) then
+        IF(TDETERMINISTIC) THEN
+          DO I=1,NRAN
+!           == CONSTRUCT A FIXED SERIES OF RANDOM NUMBERS USING
+!           == THE WELL-DEFINED MINIMAL STANDARD LINEAR CONGRUENTIAL
+!           == RANDOM NUMBER GENERATOR (IN PAW_GENERALPURPOSE.F90)
+            CALL RANDOM_MSLNG(XRAN(I))
+          ENDDO
+        end if
+        tini=.true.
+      END IF
+!
+!     ==========================================================================
+!     == DETERMINE ENVELOPE FUNCTION OF THE RANDOM NUMBERS TO AVOID LARGE     ==
+!     == CONTRIBUTIONS WITH LARGE KINETIC ENERGY                              ==
+!     ==========================================================================
       FAC=2.D0*SQRT(PI*GC2)
       FAC=FAC**3/REAL(NDIM,KIND=8)*(2.D0/3.D0)
       FAC=1.D0/FAC
       DO IG=1,NG
         SCALE(IG)=FAC*EXP(-0.5D0*G2(IG)/GC2)
       ENDDO
-      CALL LIB$RANDOMSEED
-      DO IB=1,NB
-        DO IDIM=1,NDIM
-          DO IG=1,NG
-            CALL LIB$RANDOM(REC)
-            CALL LIB$RANDOM(RIM)
-            REC=2.D0*REC-1.D0
-            RIM=2.D0*RIM-1.D0
-            PSI(IG,IDIM,IB)=CMPLX(REC,RIM,KIND=8)*SCALE(IG)
+!
+!     ==========================================================================
+!     == select random numbers                                                ==
+!     ==========================================================================
+      if(tdeterministic) then
+        DO IB=1,NB
+          DO IDIM=1,NDIM
+            DO IG=1,NG
+              isvar=1+int(modulo(g2(ig)*real(idim*ib*nran,kind=8),real(nran,kind=8)))
+              rec=xran(isvar)
+!             == the factor pi is only to make rim different from rec ==========
+              isvar=1+int(modulo(pi*g2(ig)*real(idim*ib*nran,kind=8),real(nran,kind=8)))
+              rim=xran(isvar)
+              REC=2.D0*REC-1.D0
+              RIM=2.D0*RIM-1.D0
+              PSI(IG,IDIM,IB)=CMPLX(REC,RIM,KIND=8)*SCALE(IG)
+            ENDDO
           ENDDO
         ENDDO
-      ENDDO
+      else 
+        CALL LIB$RANDOMSEED
+        DO IB=1,NB
+          DO IDIM=1,NDIM
+            DO IG=1,NG
+              CALL LIB$RANDOM(REC)
+              CALL LIB$RANDOM(RIM)
+              REC=2.D0*REC-1.D0
+              RIM=2.D0*RIM-1.D0
+              PSI(IG,IDIM,IB)=CMPLX(REC,RIM,KIND=8)*SCALE(IG)
+            ENDDO
+          ENDDO
+        ENDDO
+      end if
       RETURN
       END
 !

@@ -3656,18 +3656,24 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
              CALL ATOMTYPELIST$SETVALENCE(SPNAME,SVAR)
 !
 !       ========================================================================
+!       ==  ATOMIC number                                                     ==
+!       ========================================================================
+        Z=-1.D0
+        CALL LINKEDLIST$EXISTD(LL_STRC,'Z',1,TCHK)
+        IF(.NOT.TCHK)  THEN
+!         == EXTRACT ATOMIC NUMBER FROM ELEMENT NAME ===========================
+          CH8SVAR1=SPNAME(1:2)
+          IF(CH8SVAR1(2:2).EQ.'_') CH8SVAR1(2:2)=' '
+          CALL PERIODICTABLE$GET(CH8SVAR1(1:2),'Z',Z)
+          CALL LINKEDLIST$SET(LL_STRC,'Z',0,Z)
+        END IF
+        CALL LINKEDLIST$GET(LL_STRC,'Z',1,Z)
+!
+!       ========================================================================
 !       ==  ATOMIC MASS                                                       ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
         IF(.NOT.TCHK) THEN
-          Z=-1.D0
-          CALL LINKEDLIST$EXISTD(LL_STRC,'Z',1,TCHK)
-          IF(TCHK) CALL LINKEDLIST$GET(LL_STRC,'Z',1,Z)
-          IF(Z.LT.0.D0) THEN
-            CH8SVAR1=SPNAME(1:2)
-            IF(CH8SVAR1(2:2).EQ.'_') CH8SVAR1(2:2)=' '
-            CALL PERIODICTABLE$GET(CH8SVAR1(1:2),'Z',Z)
-          END IF
           CALL PERIODICTABLE$GET(Z,'MASS',SVAR)
           CALL LINKEDLIST$SET(LL_STRC,'M',0,SVAR/PROTONMASS)
         END IF
