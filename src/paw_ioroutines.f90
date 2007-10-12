@@ -731,8 +731,11 @@ CALL TRACE$PASS('DONE')
       CHARACTER(32)            :: ID
       CHARACTER(256)           :: NAME
       LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: Tmod
+      integer(4)               :: thistask,ntasks
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_FILES')  
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       LL_CNTL=LL_CNTL_
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
@@ -779,7 +782,11 @@ CALL TRACE$PASS('DONE')
         END IF
 !     
 !       == PERFORM ACTIONS ===========================================
-        CALL FILEHANDLER$SETFILE(+ID,TCHK,NAME)
+        TMOD=.TRUE.
+        IF(THISTASK.NE.1.AND.ID.EQ.'PROT') TMOD=.FALSE.
+        IF(TMOD) THEN
+          CALL FILEHANDLER$SETFILE(+ID,TCHK,NAME)
+        END IF
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO
                            CALL TRACE$POP
@@ -1863,13 +1870,12 @@ CALL TRACE$PASS('DONE')
 !     
 !     == STRESS ========================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'STRESS',1,TCHK)
-      STRESS(:,:)=0.D0
       IF(TCHK) THEN
         CALL ERROR$MSG('THE OPTION !CONTROL!CELL:STRESS HAS BEEN DISABLED')
         CALL ERROR$STOP('READIN_CELL')
-        CALL LINKEDLIST$GET(LL_CNTL,'STRESS',1,STRESS)
+!       CALL LINKEDLIST$GET(LL_CNTL,'STRESS',1,STRESS)
+!       CALL CELL$SETR8A('STRESS',9,STRESS)
       END IF
-!      CALL CELL$SETR8A('STRESS',9,STRESS)
 !
       RETURN
       END SUBROUTINE READIN_CELL
@@ -2473,6 +2479,7 @@ CALL TRACE$PASS('DONE')
         CALL LINKEDLIST$EXISTD(LL_CNTL,'B',1,TCHK)
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('BAND INDEX IS MANDATORY')
+          CALL ERROR$CHVAL('FILE',CH256SVAR1)
           CALL ERROR$STOP('READIN_ANALAYSE_WAVE')
         END IF
         CALL LINKEDLIST$GET(LL_CNTL,'B',1,IB)

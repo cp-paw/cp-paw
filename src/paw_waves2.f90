@@ -964,8 +964,10 @@ END IF
        LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
        REAL(8)   ,PARAMETER  :: TOL=1.D-10
        INTEGER(4)            :: NU,NU0,IU,JU
+       real(8)               :: r8small
 !      *****************************************************************
                              CALL TRACE$PUSH('WAVES_ORTHO_Y_C')
+       r8small=tiny(r8small)
 !
 !      =================================================================
 !      ==  INITIALIZE                                                 ==
@@ -1008,7 +1010,7 @@ END IF
            PRINT*,'ORTHOGONALIZATION FAILED! TRYING BEST APPROXIMATION...',svar
            Z(N)=SVAR1
          END IF
-         Z(N)=Z(N)/REAL(C(N,N),KIND=8)
+         Z(N)=Z(N)/REAL(C(N,N)+r8small,KIND=8)
 !
 !        ===============================================================
 !        == NOW UPDATE MATRICES                                       ==
@@ -1047,7 +1049,7 @@ END IF
          ENDDO
          DO IU=NU+1,NB
            I=MAP(IU)
-           Z(I)=-CONJG(A(I,N)/B(N,N))
+           Z(I)=-CONJG(A(I,N)/(B(N,N)+r8small))
          ENDDO
 !               CALL TRACE$PASS('ORTHOGONALIZE HIGHER PHIS TO THIS PHI')
 !
@@ -1115,7 +1117,7 @@ END IF
            I=MAP(IU)
 !          == |CHI(J)>=|CHI(J)>+|CHI(N)>*Z(J) ==========================
 !          == B(M,N)+B(N,N)*DELTA(M)=0
-           Z(I)=-CONJG(B(I,N)/B(N,N))
+           Z(I)=-CONJG(B(I,N)/(B(N,N)+r8small))
          ENDDO
          NU0=NU+1   !SET N0=N+1 FOR FAST CALCULATION AND N0=1 FOR TESTS
 !N0=1
@@ -1269,8 +1271,10 @@ END IF
        REAL(8)               :: TEST1(NB,NB)
        REAL(8)               :: TEST2(NB,NB)
        INTEGER(4)            :: MAP(NB)
+       real(8)               :: r8small
 !      *****************************************************************
                              CALL TRACE$PUSH('WAVES_ORTHO_Y')
+       r8small=100.d0*tiny(r8small)
 !
 !      =================================================================
 !      ==  INITIALIZE                                                 ==
@@ -1302,12 +1306,12 @@ END IF
 !        == PHI(N)=PHI(N)+CHI(N)*SVAR                                 ==
 !        ===============================================================
                              CALL TRACE$PASS('NORMALIZE')
-         SVAR=1.D0-PHIPHI(N,N)*CHICHI(N,N)/CHIPHI(N,N)**2
+         SVAR=1.D0-PHIPHI(N,N)*CHICHI(N,N)/(CHIPHI(N,N)+r8small)**2
          IF(SVAR.GT.0.D0) THEN
-           SVAR=CHIPHI(N,N)/CHICHI(N,N)*(SQRT(SVAR)-1.D0)             
+           SVAR=CHIPHI(N,N)/(CHICHI(N,N)+r8small)*(SQRT(SVAR)-1.D0)             
          ELSE
            PRINT*,'ORTHOGONALIZATION FAILED! TRYING BEST APPROXIMATION...'
-           SVAR=-CHIPHI(N,N)/CHICHI(N,N)
+           SVAR=-CHIPHI(N,N)/(CHICHI(N,N)+r8small)
          END IF       
          DO I=1,NB
            RLAMBDA(I,N)=RLAMBDA(I,N)+ALPHA(I,N)*SVAR
@@ -1334,7 +1338,7 @@ END IF
          DO MU=NU+1,NB
            M=MAP(MU)
 !          == PHIPHI(N,M)+CHIPHI(N,N)*DELTA(M)=0  ======================
-           DELTA(M)=-PHIPHI(N,M)/CHIPHI(N,N)
+           DELTA(M)=-PHIPHI(N,M)/(CHIPHI(N,N)+r8small)
            DO IU=1,NU
              I=MAP(IU)
              RLAMBDA(I,M)=RLAMBDA(I,M)+ALPHA(I,N)*DELTA(M)
@@ -1368,7 +1372,7 @@ END IF
            M=MAP(MU)
 !          == |CHI(M)>=|CHI(M)>+|CHI(N)>*DELTA(M) ============================
 !          == CHIPHI(M,N)+CHIPHI(N,N)*DELTA(M)=0
-           DELTA(M)=-CHIPHI(M,N)/CHIPHI(N,N)
+           DELTA(M)=-CHIPHI(M,N)/(CHIPHI(N,N)+r8small)
          ENDDO
          DO MU=NU+1,NB
            M=MAP(MU)
@@ -2257,33 +2261,38 @@ END IF
       RETURN
       END
 !
-!     ......................................................RANWAV......
-      SUBROUTINE WAVES_INITIALIZERANDOM(NG,NDIM,NB,G2,PSI)
-!     ******************************************************************
-!     **                                                              **
-!     **  CREATE RANDOM WAVE FUNCTIONS                                **
-!     **                                                              **
-!     **  THE MAXIMUM WEIGHT OF THE WAVE FUNCTIONS AT EPW[RY]=GC2     **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (1991)***
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_INITIALIZERANDOM(NG,NDIM,NB,G,PSI)
+!     **************************************************************************
+!     **                                                                      **
+!     **  CREATE RANDOM WAVE FUNCTIONS                                        **
+!     **                                                                      **
+!     **  THE MAXIMUM WEIGHT OF THE WAVE FUNCTIONS AT EPW[RY]=GC2             **
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1991)***********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NB              ! #(BANDS)
       INTEGER(4),INTENT(IN)    :: NG              ! #(PLANE WAVES),MAX
       INTEGER(4),INTENT(IN)    :: NDIM            ! #(PLANE WAVES),MAX
-      REAL(8)   ,INTENT(IN)    :: G2(NG)          ! G**2
+      REAL(8)   ,INTENT(IN)    :: G(3,NG)         ! G
       COMPLEX(8),INTENT(OUT)   :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
-      INTEGER(4)               :: IB,IG,IDIM,i
-      REAL(8)                  :: PI,FAC
-      REAL(8)   ,PARAMETER     :: GC2=10.D0
-      REAL(8)                  :: SCALE(NG)
-      REAL(8)                  :: REC,RIM
-      LOGICAL(4),parameter     :: TDETERMINISTIC=.TRUE.
-      logical(4),save          :: tini=.false.
+      LOGICAL(4),SAVE          :: TINI=.FALSE.
+      LOGICAL(4),PARAMETER     :: TDETERMINISTIC=.TRUE.
       INTEGER(4),PARAMETER     :: NRAN=1000
-      REAL(8)  ,SAVE           :: XRAN(NRAN)
+      REAL(8)   ,SAVE          :: XRAN(NRAN)
+      REAL(8)   ,PARAMETER     :: GC2=10.D0
+      REAL(8)                  :: G2
+      INTEGER(4)               :: IB,IG,IDIM,I
+      REAL(8)                  :: PI,FAC
+      REAL(8)                  :: SCALE(NG)
+      REAL(8)                  :: randarr(NG)
+      REAL(8)                  :: REC,RIM
       INTEGER(4)               :: ISVAR
-!     ******************************************************************
+      real(8)                  :: svar,ran,gx,gy,gz
+      real(8)                  :: rsmall
+!     **************************************************************************
       PI=4.D0*DATAN(1.D0)
+      rsmall=100.d0*tiny(rsmall)
 !     ==========================================================================
 !     == CREATE A SERIEs OF NRAN PSEUDO-RANDOM NUMBERS                        ==
 !     ==========================================================================
@@ -2307,7 +2316,23 @@ END IF
       FAC=FAC**3/REAL(NDIM,KIND=8)*(2.D0/3.D0)
       FAC=1.D0/FAC
       DO IG=1,NG
-        SCALE(IG)=FAC*EXP(-0.5D0*G2(IG)/GC2)
+!       == envelope function that attenuates high-G components
+        G2=G(1,IG)**2+G(2,IG)**2+G(3,IG)**2
+        SCALE(IG)=FAC*EXP(-0.5D0*G2/GC2)
+!       == create a random-like number depending on the angle
+        SVAR=1.D0/SQRT(G2+rsmall)
+!       == map g-components onto interval [-1,1]
+        GX=SVAR*G(1,IG)
+        GY=SVAR*G(2,IG)
+        GZ=SVAR*G(3,IG)
+!       == MAP ONTO NUMBERS in the interval [0.1]
+        GX=0.5D0*(1.D0+GX)
+        GY=0.5D0*(1.D0+GY)
+        GZ=0.5D0*(1.D0+GZ)
+        RAN=    XRAN(1+INT(GX*REAL(NRAN-1)))
+        RAN=RAN*XRAN(1+INT(GY*REAL(NRAN-1)))
+        RAN=RAN*XRAN(1+INT(GZ*REAL(NRAN-1)))
+        RANDARR(IG)=RAN
       ENDDO
 !
 !     ==========================================================================
@@ -2317,10 +2342,10 @@ END IF
         DO IB=1,NB
           DO IDIM=1,NDIM
             DO IG=1,NG
-              isvar=1+int(modulo(g2(ig)*real(idim*ib*nran,kind=8),real(nran,kind=8)))
+              isvar=1+int(modulo(randarr(ig)*real(idim*ib*nran,kind=8),real(nran-1,kind=8)))
               rec=xran(isvar)
 !             == the factor pi is only to make rim different from rec ==========
-              isvar=1+int(modulo(pi*g2(ig)*real(idim*ib*nran,kind=8),real(nran,kind=8)))
+              isvar=1+int(modulo(pi*randarr(ig)*real(idim*ib*nran,kind=8),real(nran-1,kind=8)))
               rim=xran(isvar)
               REC=2.D0*REC-1.D0
               RIM=2.D0*RIM-1.D0

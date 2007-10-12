@@ -1607,13 +1607,18 @@ $\sim\exp(-\frac{1}{r}\frac{t}{\Delta})$.}
 \vrules{optional, used only if !ADIABATIC=T}
 \vdefault{0.}}
 %
-\mbax{\key{TETRA+} \vdescr{if true, the Brillouin zone integration is
-performed with the improved version of the tetrahedron
-method\cite{bloechl94_prb49_16223}. If false, the Brillouin zone integration
-is done by sampling and the Mermin functional. The tetrahedron method is the
-recommended method for metallic systems. However it is not fully variational
-and restricted to the quasi-adiabatic mode.}  
-\vformat{logical}
+\mbax{\key{TETRA+} 
+\vdescr{if true, the Brillouin zone integration is performed with the
+improved version of the tetrahedron
+method\cite{bloechl94_prb49_16223}. If false, the Brillouin zone
+integration is done by sampling and the Mermin functional. The
+tetrahedron method is the recommended method for metallic
+systems. However it is not fully variational and restricted to the
+quasi-adiabatic mode. The tetrahedron method usually causes problems
+when only 1 k-point is used, because this results in delta-function
+peaks of the density of states. In that case it is better to use
+TETRA=false and a finite temperature.}
+\vformat{logical} 
 \vrules{optional, requires ADIABATIC=T} 
 \vdefault{.false.}}
 %
@@ -1720,10 +1725,9 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
 %----------------------------------------------------------------------
 \brules{optional; default is fixed unit cell, and no stress
   calculation} 
-\bdescr{This option is not fully implemented: Do not use!.  Invokes
-  pressure and stress calculation, and Parrinello-Rahman dynamics of
-  the unit cell, if requested. The cell dynamics is governed by the
-  equation....  .}
+\bdescr{This option is experimental!.  Invokes
+  pressure calculation, and Parrinello-Rahman dynamics of
+  the unit cell, if requested. }
 %
 \mbax{\key{MOVE}
 \vdescr{Dynamical evulution of the unit cell.}

@@ -1096,7 +1096,9 @@ exit
         up0 = up(1:4)
         DO IR=2,4
           U(IR)=U(ir-1)+0.5*(UP(ir)+up(ir-1))
+!print*,'marke 1b',ir,up(ir-1),upp(ir),upp(ir-1)
           UP(IR)=Up(ir-1)+0.5*(UPp(ir)+upp(ir-1))
+!print*,'marke 1c'
           UPP(IR)=(DEX+FRP(IR)-2.0*dex*gamma)*UP(IR) &
     &         +(CF(IR)+FR(IR)+dex*gamma*(DEX+FRP(IR))-(dex*gamma)**2)*U(IR) &
     &         +CG(IR)/r(ir)**gamma

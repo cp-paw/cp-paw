@@ -8,13 +8,13 @@ MODULE TRAJECTORYIO_MODULE
 !**    ARRAY, AND WRITES IT IN CHUNKS TO FILE                                 **
 !**                                                                           **
 !**  FUNCTIONS:                                                               **
-!**    TRAJECTORYIO$new(id)                                                   **
-!**    TRAJECTORYIO$select(id)                                                **
-!**    TRAJECTORYIO$setl4(id,val)                                             **
-!**    TRAJECTORYIO$seti4(id,val)                                             **
-!**    TRAJECTORYIO$setch(id,val)                                             **
-!**    TRAJECTORYIO$ADD(istep,TIME,NSIZE,ARRAY)                               **
-!**    TRAJECTORYIO$FLUSHall                                                  **
+!**    TRAJECTORYIO$NEW(ID)                                                   **
+!**    TRAJECTORYIO$SELECT(ID)                                                **
+!**    TRAJECTORYIO$SETL4(ID,VAL)                                             **
+!**    TRAJECTORYIO$SETI4(ID,VAL)                                             **
+!**    TRAJECTORYIO$SETCH(ID,VAL)                                             **
+!**    TRAJECTORYIO$ADD(ISTEP,TIME,NSIZE,ARRAY)                               **
+!**    TRAJECTORYIO$FLUSHALL                                                  **
 !**                                                                           **
 !**  TYPICAL USE:                                                             **
 !**    1) SET UP A NEW INSTANCE:                                              **
@@ -83,7 +83,7 @@ END MODULE TRAJECTORYIO_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRAJECTORYIO_SETFILE(FILE)
 !     **************************************************************************
-!     **  define the relevant file                                            **   
+!     **  DEFINE THE RELEVANT FILE                                            **   
 !     **************************************************************************
       USE TRAJECTORYIO_MODULE
       IMPLICIT NONE
@@ -111,7 +111,7 @@ END MODULE TRAJECTORYIO_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRAJECTORYIO_FIRSTTASK(TCHK)
 !     **************************************************************************
-!     **  CHECKS if on the first node of the relevant task group              **   
+!     **  CHECKS IF ON THE FIRST NODE OF THE RELEVANT TASK GROUP              **   
 !     **************************************************************************
       IMPLICIT NONE
       LOGICAL(4)   ,INTENT(OUT):: TCHK
@@ -188,7 +188,7 @@ END MODULE TRAJECTORYIO_MODULE
 !     == UNSELECT ==============================================================
       IF(ID.EQ.'NONE') THEN
         NULLIFY(THIS)
-        return
+        RETURN
       END IF
 !
 !     == FIND TRAJECTORYIO AND SELECT
@@ -277,7 +277,7 @@ END MODULE TRAJECTORYIO_MODULE
       USE TRAJECTORYIO_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      character(*),INTENT(IN) :: VAL
+      CHARACTER(*),INTENT(IN) :: VAL
       LOGICAL(4)              :: TCHK
 !     **************************************************************************
       CALL TRAJECTORYIO_FIRSTTASK(TCHK)
@@ -326,7 +326,7 @@ END MODULE TRAJECTORYIO_MODULE
         CALL ERROR$STOP('TRAJECTORYIO$ADD')
       END IF
       IF(.NOT.THIS%TON) RETURN
-                            call trace$push('TRAJECTORYIO$add')
+                            CALL TRACE$PUSH('TRAJECTORYIO$ADD')
 !
 !     ==========================================================================
 !     == ALLOCATE ARRAY                                                       ==
@@ -349,8 +349,11 @@ END MODULE TRAJECTORYIO_MODULE
 !     ==========================================================================
       NREC=THIS%NREC
       TCHK=(NREC.EQ.0)
-      IF(.not.TCHK) TCHK=(ISTEP.GT.THIS%ISTEP(NREC)+THIS%SKIP)
-      IF(.NOT.TCHK) RETURN  ! DO NOT WRITE THIS TIME SLICE
+      IF(.NOT.TCHK) TCHK=(ISTEP.GT.THIS%ISTEP(NREC)+THIS%SKIP)
+      IF(.NOT.TCHK) THEN
+        CALL TRACE$POP
+        RETURN  ! DO NOT WRITE THIS TIME SLICE
+      END IF
       THIS%NREC=THIS%NREC+1
       NREC=THIS%NREC
       THIS%ISTEP(NREC)=ISTEP
@@ -371,7 +374,7 @@ END MODULE TRAJECTORYIO_MODULE
         THIS%TIME(:)=0.D0
         THIS%ARRAY(:,:)=0.D0
       END IF
-                            call trace$pop
+                            CALL TRACE$POP
       RETURN
       END
 !
@@ -411,6 +414,6 @@ END MODULE TRAJECTORYIO_MODULE
         THIS1%ARRAY(:,:)=0.D0
         THIS1=>THIS1%NEXT
       ENDDO
-                            call trace$pop
+                            CALL TRACE$POP
       RETURN
       END

@@ -147,7 +147,7 @@ END MODULE TRACE_MODULE
       CALL USAGE$GET('MAXMEM',MAXMEM)
       CALL DATE_AND_TIME(DATE,TIME)
       LEVEL=LEVEL+1
-      IF(LEVEL.LT.MAXLEVEL)THEN
+      IF(LEVEL.Le.MAXLEVEL)THEN
         HISTORY(LEVEL)=CURRENT_
       END IF
 !
@@ -155,7 +155,7 @@ END MODULE TRACE_MODULE
 !     == WRITE INFORMATION INTO STANDARD OUT                                  ==
 !     ==========================================================================
       IF(.NOT.TRACESWITCH%SILENT) THEN
-        WRITE(*,FMT='("TRACE-PUSH(",I3,"): LEVEL=",I3," INTO ",A)') &
+        WRITE(*,FMT='("TRACE-PUSH(",I3,"): LEVEL=",I5," INTO ",A)') &
      &           THISTASK,LEVEL,CURRENT_
         WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5 &
      &            ," TIME",A8," ",A10)') &
@@ -167,7 +167,7 @@ END MODULE TRACE_MODULE
 !     ==========================================================================
       IF(TRACESWITCH%WRITETRACEFILE.AND..NOT.TRACESWITCH%SILENT) THEN
         CALL FILEHANDLER$UNIT('TRACE',NFILTRACE)
-        WRITE(NFILTRACE,FMT='("TRACE-PUSH(",I3,"): LEVEL=",I3," INTO ",A)') &
+        WRITE(NFILTRACE,FMT='("TRACE-PUSH(",I3,"): LEVEL=",I5," INTO ",A)') &
      &           THISTASK,LEVEL,CURRENT_
         WRITE(NFILTRACE,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5 &
      &                       ," TIME",A8," ",A10)') &
@@ -206,13 +206,13 @@ END MODULE TRACE_MODULE
 !     ==========================================================================
       IF(.NOT.TRACESWITCH%SILENT) THEN
         IF(LEVEL.GE.1.AND.LEVEL.LE.MAXLEVEL)THEN
-          WRITE(*,FMT='("TRACE-POP (",I3,"): LEVEL=",I3," FROM ",A)') &
+          WRITE(*,FMT='("TRACE-POP (",I3,"): LEVEL=",I5," FROM ",A)') &
      &                THISTASK,LEVEL,HISTORY(LEVEL)
           WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5 &
      &                 ," TIME",A8," ",A10)') &
      &                  THISTASK,MAXMEM/MBYTE,DATE,TIME
         ELSE                  
-          WRITE(*,FMT='("TRACE-POP(",I3,"): LEVEL=",I3)')THISTASK,LEVEL
+          WRITE(*,FMT='("TRACE-POP(",I3,"): LEVEL=",I5)')THISTASK,LEVEL
           WRITE(*,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5 &
      &                 ," TIME",A8," ",A10)') &
      &                    THISTASK,MAXMEM/MBYTE,DATE,TIME
@@ -225,13 +225,13 @@ END MODULE TRACE_MODULE
       IF(TRACESWITCH%WRITETRACEFILE.AND..NOT.TRACESWITCH%SILENT) THEN
         CALL FILEHANDLER$UNIT('TRACE',NFILTRACE)
         IF(LEVEL.GE.1.AND.LEVEL.LE.MAXLEVEL)THEN
-          WRITE(NFILTRACE,FMT='("TRACE-POP (",I3,"): LEVEL=",I3," FROM ",A)') &
+          WRITE(NFILTRACE,FMT='("TRACE-POP (",I3,"): LEVEL=",I5," FROM ",A)') &
      &                THISTASK,LEVEL,HISTORY(LEVEL)
           WRITE(NFILTRACE,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5 &
      &                         ," TIME",A8," ",A10)') &
      &                        THISTASK,MAXMEM/MBYTE,DATE,TIME
         ELSE                  
-          WRITE(NFILTRACE,FMT='("TRACE-POP(",I3,"): LEVEL=",I3)')THISTASK,LEVEL
+          WRITE(NFILTRACE,FMT='("TRACE-POP(",I3,"): LEVEL=",I5)')THISTASK,LEVEL
           WRITE(NFILTRACE,FMT='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5 &
      &                        ," TIME",A8," ",A10)') &
      &                  THISTASK,MAXMEM/MBYTE,DATE,TIME
@@ -248,7 +248,7 @@ END MODULE TRACE_MODULE
 !     ==========================================================================
 !     == REDUCE LEVEL INDICATOR BY ONE                                        ==
 !     ==========================================================================
-      HISTORY(LEVEL)=' '
+      IF(LEVEL.LE.MAXLEVEL)HISTORY(LEVEL)=' '
       LEVEL=LEVEL-1
       RETURN 
       END

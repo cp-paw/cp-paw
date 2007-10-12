@@ -1630,14 +1630,16 @@ PRINT*,'TYPE ',TYPE
         CALL LINKEDLIST$SELECT(LL_CNTL,'WAVE',IWAVE)
         CALL LINKEDLIST$GET(LL_CNTL,'L',1,LPHI(IWAVE))
         CALL LINKEDLIST$EXISTD(LL_CNTL,'N',1,TCHK1)
+        n=0
         IF(TCHK1) CALL LINKEDLIST$GET(LL_CNTL,'N',1,N)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'E',1,TCHK2)
+        e=0.d0
         IF(TCHK2) CALL LINKEDLIST$GET(LL_CNTL,'E',1,E)
         IF((TCHK1.AND.TCHK2).OR..NOT.(TCHK1.OR.TCHK2)) THEN
           CALL ERROR$MSG('EITHER N OR E MUST BE SPECIFIED')
           CALL ERROR$STOP('PARTIALWAVES')
         END IF
-PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
+!PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
         IF(TCHK1) THEN
 !         ==============================================================
 !         == CALCULATE AE-WAVE FUNCTIONS TO BE PSEUDIZED              ==
@@ -2104,7 +2106,9 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
       REAL(8)                 :: SMAT(NPRO,NPRO)
       REAL(8)                 :: PHITEST(NR,3),DLTEST(NPRO),ETEST,DPOT(NR,NPRO)
       INTEGER(4)              :: NFILO
+      real(8)                 :: r8small
 !     ******************************************************************
+      r8small=100.d0*tiny(r8small)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10,"MAKE PROJECTORS FOR L=",I5," "/72("-"))')L
       PI=4.D0*DATAN(1.D0)
@@ -2116,20 +2120,40 @@ PRINT*,'IN PARTIALWAVES: ',TCHK1,TCHK2,LPHI(IWAVE),N,E
         RI=RI*XEXP
         R(IR)=RI
       ENDDO
+print*,'marke 1b',raug,r1,dex,dlog(raug/r1)
       IRAUG=INT(2.D0+DLOG(RAUG/R1)/DEX)
+print*,'marke 1b',raug,r1,dex,dlog(raug/r1),iraug
+      iraug=min(iraug,nr)
+print*,'marke 1c',npro,iraug,raug
       IF(TTEST) THEN
         DO N1=1,NPRO
+print*,'marke 1d',n1
+print*,'marke 1d1a',R(IRAUG)
+print*,'marke 1d1a',PSPHI(IRAUG,2,N1)
+print*,'marke 1d1a',PSPHI(IRAUG,1,N1)
+!print*,psphi(:,1,n1)
+print*,'marke 1d1a',dltest(n1)
+print*,'marke 1d1a',R(IRAUG)*PSPHI(IRAUG,2,N1)/PSPHI(IRAUG,1,N1)
           DLTEST(N1)=R(IRAUG)*PSPHI(IRAUG,2,N1)/PSPHI(IRAUG,1,N1)
-          DPOT(:,N1)=-0.5D0*PSPHI(:,3,N1)/PSPHI(:,1,N1)+PSPOT(:)*Y0-ELN(N1)
+print*,'marke 1e',n1
+print*,'marke 1d1a',eln
+          DPOT(:,N1)=-0.5D0*PSPHI(:,3,N1)/(PSPHI(:,1,N1)+r8small)+PSPOT(:)*Y0-ELN(N1)
+print*,'marke 1f',n1
           DPOT(:,N1)=-DPOT(:,N1)/Y0
+print*,'marke 1g',n1
           DPOT(IRAUG+1:,N1)=0.D0
+print*,'marke 1h',n1
         ENDDO
       END IF
+print*,'marke 1d'
 !
 !     ==================================================================
 !     ==  DEFINE NORMALIZATION OF PARTIAL WAVES                       ==
 !     ==  SO THAT <AEPHI|THETA|AEPHI>=1                               ==
 !     ==================================================================
+print*,'marke 1'
+print*,'npro'
+print*,'marke 2'
       DO N1=1,NPRO
         DO IR=1,NR
           AUX1(IR)=(R(IR)*AEPHI(IR,1,N1))**2

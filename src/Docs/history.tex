@@ -396,8 +396,8 @@ configure.ac.
 
 \subsection{August 31,  2007}
 
-minor Bugfix: The variable ``kread'' in subroutine waves_read in file
-paw_waves2.f90 has not been fully initialized, which resulted in
+minor Bugfix: The variable ``kread'' in subroutine waves\_read in file
+paw\_waves2.f90 has not been fully initialized, which resulted in
 unpredictable crashes.
 
 \subsection{August 31,  2007}
@@ -416,7 +416,7 @@ orthogonalization.
 
 \subsection{September 19,  2007}
 
-The routine waves_readpsi has been rewritten to fix the startip
+The routine waves\_readpsi has been rewritten to fix the startip
 problem.  The option to switch between k-point sets and between
 different spin treatments (unpolarized, collinear and non-collinear)
 has been removed.
@@ -435,6 +435,13 @@ the same irrespective of the number of tasks in the parallelization.
 
 Fixed a subtle bug writing an output file for cosmo. (the bug only occurred with ifc.)
 it only resulted in crashes.
+
+\subsection{September 25,  2007}
+
+The change for the random wave function from sept. 24, 2007 resulted
+in spherical initial wave functions. The symmetry made the convergence
+much worse. Now I implemented that the initial wave functions also have a
+random angular dependence.
 
 \newpage
 \bibliographystyle{unsrt}

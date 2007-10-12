@@ -473,7 +473,10 @@ LOGICAL(4),PARAMETER :: TTEST=.FALSE.
 !           == EVALUATE ELECTRIC FIELD GRADIENTS                      ==
 !           == V(I,J) = D2V(R)/(DI*DJ)                                ==
 !           ============================================================
-IF(TTEST)ALLOCATE(WORK(6,NG));WORK=0.D0
+IF(TTEST) then 
+  ALLOCATE(WORK(6,NG))
+  WORK=0.D0
+end if
             DO I=1,3
               DO J=1,3
                 V(I,J)=0.D0

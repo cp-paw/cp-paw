@@ -772,6 +772,7 @@ END MODULE WAVES_MODULE
       REAL(8)                :: CELLVOL   ! UNIT CELL  VOLUME
       REAL(8)   ,ALLOCATABLE :: XK(:,:)   ! K-POINTS IN RELATIVE COORDINATES
       REAL(8)   ,ALLOCATABLE :: G2(:)     ! G**2
+      REAL(8)   ,ALLOCATABLE :: Gvec(:,:)     ! G vector
       INTEGER(4)             :: LN,ISP,IKPT,ISPIN,IAT,IKPTG,IKPTL
       INTEGER(4)             :: NB
       INTEGER(4)             :: NBH
@@ -939,18 +940,18 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
           ALLOCATE(THIS%PSI0(NGL,NDIM,NBH))
           ALLOCATE(THIS%PSIM(NGL,NDIM,NBH))
           this%psi0(:,:,:)=(0.d0,0.d0)
-          this%psim(:,:,:)=(0.d0,0.d0)
-          ALLOCATE(G2(NGL))
-          CALL PLANEWAVE$GETR8A('G2',NGL,G2)
-          CALL WAVES_INITIALIZERANDOM(NGL,NDIM,NBH,G2,THIS%PSI0)
-          DEALLOCATE(G2)
-          do i=1,nbh
-            do j=1,ndim
-              do k=1,ngl
-                THIS%PSIM(k,j,i)=THIS%PSI0(k,j,i)
-              enddo
-            enddo
-          enddo
+          THIS%PSIM(:,:,:)=(0.D0,0.D0)
+          ALLOCATE(GVEC(3,NGL))
+          CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+          CALL WAVES_INITIALIZERANDOM(NGL,NDIM,NBH,GVEC,THIS%PSI0)
+          DEALLOCATE(GVEC)
+          DO I=1,NBH
+            DO J=1,NDIM
+              DO K=1,NGL
+                THIS%PSIM(K,J,I)=THIS%PSI0(K,J,I)
+              ENDDO
+            ENDDO
+          ENDDO
 !          THIS%PSIM=THIS%PSI0 ! THIS STATEMENT GAVE PROBLEMS WITH IFC10
 !         == ALLOCATE LAGRANGE MULTIPLYERS =============================
           NULLIFY(THIS%HPSI)
