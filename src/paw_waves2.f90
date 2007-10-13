@@ -2193,27 +2193,9 @@ END IF
       REAL(8)   ,PARAMETER     :: GC2=10.D0
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: REC,RIM
-      LOGICAL(4),parameter     :: TDETERMINISTIC=.TRUE.
-      logical(4),save          :: tini=.false.
-      INTEGER(4),PARAMETER     :: NRAN=1000
-      REAL(8)  ,SAVE           :: XRAN(NRAN)
       INTEGER(4)               :: ISVAR
 !     **************************************************************************
       PI=4.D0*DATAN(1.D0)
-!     ==========================================================================
-!     == CREATE A SERIEs OF NRAN PSEUDO-RANDOM NUMBERS                        ==
-!     ==========================================================================
-      if(.not.tini) then
-        IF(TDETERMINISTIC) THEN
-          DO I=1,NRAN
-!           == CONSTRUCT A FIXED SERIES OF RANDOM NUMBERS USING
-!           == THE WELL-DEFINED MINIMAL STANDARD LINEAR CONGRUENTIAL
-!           == RANDOM NUMBER GENERATOR (IN PAW_GENERALPURPOSE.F90)
-            CALL RANDOM_MSLNG(XRAN(I))
-          ENDDO
-        end if
-        tini=.true.
-      END IF
 !
 !     ==========================================================================
 !     == DETERMINE ENVELOPE FUNCTION OF THE RANDOM NUMBERS TO AVOID LARGE     ==
@@ -2225,39 +2207,18 @@ END IF
       DO IG=1,NG
         SCALE(IG)=FAC*EXP(-0.5D0*G2(IG)/GC2)
       ENDDO
-!
-!     ==========================================================================
-!     == select random numbers                                                ==
-!     ==========================================================================
-      if(tdeterministic) then
-        DO IB=1,NB
-          DO IDIM=1,NDIM
-            DO IG=1,NG
-              isvar=1+int(modulo(g2(ig)*real(idim*ib*nran,kind=8),real(nran,kind=8)))
-              rec=xran(isvar)
-!             == the factor pi is only to make rim different from rec ==========
-              isvar=1+int(modulo(pi*g2(ig)*real(idim*ib*nran,kind=8),real(nran,kind=8)))
-              rim=xran(isvar)
-              REC=2.D0*REC-1.D0
-              RIM=2.D0*RIM-1.D0
-              PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM,KIND=8)*SCALE(IG)
-            ENDDO
+      CALL LIB$RANDOMSEED
+      DO IB=1,NB
+        DO IDIM=1,NDIM
+          DO IG=1,NG
+            CALL LIB$RANDOM(REC)
+            CALL LIB$RANDOM(RIM)
+            REC=2.D0*REC-1.D0
+            RIM=2.D0*RIM-1.D0
+            PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM,KIND=8)*SCALE(IG)
           ENDDO
         ENDDO
-      else 
-        CALL LIB$RANDOMSEED
-        DO IB=1,NB
-          DO IDIM=1,NDIM
-            DO IG=1,NG
-              CALL LIB$RANDOM(REC)
-              CALL LIB$RANDOM(RIM)
-              REC=2.D0*REC-1.D0
-              RIM=2.D0*RIM-1.D0
-              PSI(IG,IDIM,IB)=PSI(IG,IDIM,IB)+CMPLX(REC,RIM,KIND=8)*SCALE(IG)
-            ENDDO
-          ENDDO
-        ENDDO
-      end if
+      ENDDO
       RETURN
       END
 !
@@ -2277,17 +2238,17 @@ END IF
       REAL(8)   ,INTENT(IN)    :: G(3,NG)         ! G
       COMPLEX(8),INTENT(OUT)   :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
       LOGICAL(4),SAVE          :: TINI=.FALSE.
-      LOGICAL(4),PARAMETER     :: TDETERMINISTIC=.TRUE.
+      LOGICAL(4),PARAMETER     :: TDETERMINISTIC=.true.
       INTEGER(4),PARAMETER     :: NRAN=1000
       REAL(8)   ,SAVE          :: XRAN(NRAN)
-      REAL(8)   ,PARAMETER     :: GC2=10.D0
+      REAL(8)   ,PARAMETER     :: GC2=3.D0
       REAL(8)                  :: G2
       INTEGER(4)               :: IB,IG,IDIM,I
       REAL(8)                  :: PI,FAC
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: randarr(NG)
       REAL(8)                  :: REC,RIM
-      INTEGER(4)               :: ISVAR
+      INTEGER(4)               :: ISVAR,ind
       real(8)                  :: svar,ran,gx,gy,gz
       real(8)                  :: rsmall
 !     **************************************************************************
@@ -2329,9 +2290,9 @@ END IF
         GX=0.5D0*(1.D0+GX)
         GY=0.5D0*(1.D0+GY)
         GZ=0.5D0*(1.D0+GZ)
-        RAN=    XRAN(1+INT(GX*REAL(NRAN-1)))
-        RAN=RAN*XRAN(1+INT(GY*REAL(NRAN-1)))
-        RAN=RAN*XRAN(1+INT(GZ*REAL(NRAN-1)))
+        RAN=XRAN(1+INT(GX*REAL(NRAN-1)))
+        RAN=XRAN(1+INT(ran*GY*REAL(NRAN-1)))
+        RAN=XRAN(1+INT(ran*GZ*REAL(NRAN-1)))
         RANDARR(IG)=RAN
       ENDDO
 !
@@ -2339,13 +2300,18 @@ END IF
 !     == select random numbers                                                ==
 !     ==========================================================================
       if(tdeterministic) then
+        ind=0
         DO IB=1,NB
           DO IDIM=1,NDIM
+            ind=ind+2
+            if(ind+1.gt.nran) ind=1
             DO IG=1,NG
-              isvar=1+int(modulo(randarr(ig)*real(idim*ib*nran,kind=8),real(nran-1,kind=8)))
+              svar=0.5d0*(xran(ind)*randarr(ig))
+              isvar=1+int(svar*real(nran,kind=8))
               rec=xran(isvar)
 !             == the factor pi is only to make rim different from rec ==========
-              isvar=1+int(modulo(pi*randarr(ig)*real(idim*ib*nran,kind=8),real(nran-1,kind=8)))
+              svar=0.5d0*(xran(ind+1)*randarr(ig))
+              isvar=1+int(svar*real(nran,kind=8))
               rim=xran(isvar)
               REC=2.D0*REC-1.D0
               RIM=2.D0*RIM-1.D0
