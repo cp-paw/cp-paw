@@ -1,16 +1,17 @@
 !
-!***********************************************************************
-!***********************************************************************
-!**                                                                   **
-!** CONTINUATION OF WAVES OBJECT: SEE PAW_WAVES1.F90 FOR HEADER       **
-!**                                                                   **
-!***********************************************************************
-!***********************************************************************
-!     ..................................................................
+!*******************************************************************************
+!*******************************************************************************
+!**                                                                           **
+!** CONTINUATION OF WAVES OBJECT: SEE PAW_WAVES1.F90 FOR HEADER               **
+!**                                                                           **
+!*******************************************************************************
+!*******************************************************************************
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$ORTHOGONALIZE()
-!     ******************************************************************
-!     ** ENFORCES THE ORTHONORMALITY CONDITION OF THE WAVE FUNCTIONS  **
-!     ******************************************************************
+!     **************************************************************************
+!     ** ENFORCES THE ORTHONORMALITY CONDITION OF THE WAVE FUNCTIONS          **
+!     **************************************************************************
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -52,25 +53,25 @@
       REAL(8)   ,ALLOCATABLE :: RMAT(:,:),ROMAT(:,:),ROOMAT(:,:),RLAMBDA(:,:)
       INTEGER(4),ALLOCATABLE :: SMAP(:)
       INTEGER(4)             :: I1,J1,K
-!     ******************************************************************
+!     **************************************************************************
                              CALL TRACE$PUSH('WAVES$ORTHOGONALIZE')
                              CALL TIMING$CLOCKON('WAVES$ORTHOGONALIZE')
       NPRO=MAP%NPRO
       NAT=MAP%NAT
       CALL CELL$GETL4('MOVE',TSTRESS)
 !
-!     ==================================================================
-!     == COLLECT OCCUPATIONS                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     == COLLECT OCCUPATIONS                                                  ==
+!     ==========================================================================
       CALL DYNOCC$GETI4('NB',NBX)
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
       ALLOCATE(R0(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
 !
-!     ==================================================================
-!     ==  CALCULATE FORCE OF CONSTRAINT                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE FORCE OF CONSTRAINT                                       ==
+!     ==========================================================================
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -80,9 +81,9 @@
           NB=THIS%NB
 IF(1.EQ.1) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
 !
-!         ==============================================================
-!         ==  EVALUATE  DO<P|PSI>  ASSUMING <PRO|PSI> IS STILL VALID  ==
-!         ==============================================================
+!         ======================================================================
+!         ==  EVALUATE  DO<P|PSI>  ASSUMING <PRO|PSI> IS STILL VALID          ==
+!         ======================================================================
           ALLOCATE(OPROJ(NDIM,NBH,NPRO))
           OPROJ(:,:,:)=(0.D0,0.D0)
           IPRO=1
@@ -113,9 +114,9 @@ ELSE
 !++++++++++++++++++++++++ TO HERE +++++++++++++++++++++++++++++++++++++++
 END IF
 !
-!         ==============================================================
-!         ==  DIVIDE BY WAVE FUNCTION MASS                            ==
-!         ==============================================================
+!         ======================================================================
+!         ==  DIVIDE BY WAVE FUNCTION MASS                                    ==
+!         ======================================================================
           ALLOCATE(MARR(NGL))
           CALL PLANEWAVE$GETR8A('G2',NGL,MARR)
 !pb070802          IF(ASSOCIATED(GSET%DMPSI)) THEN
@@ -156,7 +157,7 @@ END IF
         CALL ATOMLIST$GETR8A('R(-)',0,3*NAT,RM)
         DO IAT=1,NAT
 !change          RP(:,IAT)=RP(:,IAT)-RM(:,IAT)+MATMUL(MAPTOCELL,RM(:,IAT))
-          rp(:,iat)=matmul(maptocell,rp(:,iat))
+           rp(:,iat)=matmul(maptocell,rp(:,iat))
         ENDDO
 !       ==  SCALING FACTOR FOR WAVE FUNCTIONS ==========================
         CALL GBASS(RBAS,GBAS,CELLVOL)
@@ -174,7 +175,7 @@ END IF
           NGL=GSET%NGL
           CALL PLANEWAVE$SETR8A('RBAS',9,RBAS)
 !
-!         ==  UPDATE PROJECTOR FUNCTIONS ===============================
+!         ==  UPDATE PROJECTOR FUNCTIONS =======================================
           ALLOCATE(G2(NGL))
           CALL PLANEWAVE$GETR8A('G2',NGL,G2)
           IND=0
@@ -188,7 +189,7 @@ END IF
           ENDDO
           DEALLOCATE(G2)
 !
-!         ==  UPDATE SPHERICAL HARMONICS  ==============================
+!         ==  UPDATE SPHERICAL HARMONICS  ======================================
           ALLOCATE(GVEC(3,NGL))
           CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
           LMX=MAP%LMX
@@ -199,11 +200,11 @@ END IF
           ENDDO        
           DEALLOCATE(YLM)
 !
-!         == NOW THE STRAINED SPHERICAL HARMONICS ======================
+!         == NOW THE STRAINED SPHERICAL HARMONICS ==============================
           CALL WAVES_STRAINEDYLM(NGL,LMX,GVEC,GSET%YLM,GSET%SYLM)
           DEALLOCATE(GVEC)
 !
-!         == RESCALE WAVE FUNCTIONS ====================================
+!         == RESCALE WAVE FUNCTIONS ============================================
 !          DO ISPIN=1,NSPIN
 !            CALL WAVES_SELECTWV(IKPT,ISPIN)
 !            THIS%PSIM(:,:,:)=THIS%PSIM(:,:,:)*CELLSCALE
@@ -214,9 +215,9 @@ END IF
         CELLSCALE=1.D0
       END IF
 !
-!     ==================================================================
-!     ==  NOW ORTHOGONALIZE                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  NOW ORTHOGONALIZE                                                   ==
+!     ==========================================================================
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -225,20 +226,20 @@ END IF
           NBH=THIS%NBH
           NB=THIS%NB
 !
-!         ==============================================================
-!         ==  CALCULATE PROJECTIONS FOR THE NEW POSITIONS             ==
-!         ==============================================================
+!         ======================================================================
+!         ==  CALCULATE PROJECTIONS FOR THE NEW POSITIONS                     ==
+!         ======================================================================
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
-     &                                             ,THIS%PSIM,THIS%PROJ)
+     &                                                     ,THIS%PSIM,THIS%PROJ)
           CALL MPE$COMBINE('K','+',THIS%PROJ)
           ALLOCATE(OPROJ(NDIM,NBH,NPRO))
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
-     &                                                 ,THIS%OPSI,OPROJ)
+     &                                                         ,THIS%OPSI,OPROJ)
           CALL MPE$COMBINE('K','+',OPROJ)
 !
-!         ==============================================================
-!         ==  1C-OVERLAP OF <PSI0|PSI0>, <OPSI|PSI0> AND <OPSI|OPSI>  ==
-!         ==============================================================
+!         ======================================================================
+!         ==  1C-OVERLAP OF <PSI0|PSI0>, <OPSI|PSI0> AND <OPSI|OPSI>          ==
+!         ======================================================================
           ALLOCATE(MAT(NB,NB))
           CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,THIS%PROJ,THIS%PROJ,MAT)
           ALLOCATE(OMAT(NB,NB))
@@ -246,26 +247,23 @@ END IF
           ALLOCATE(OOMAT(NB,NB))
           CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,OPROJ,OPROJ,OOMAT)
 !
-!         ==============================================================
-!         ==  NOW ADD OVERLAP OF PSEUDO WAVE FUNCTIONS                ==
-!         ==============================================================
+!         ======================================================================
+!         ==  NOW ADD OVERLAP OF PSEUDO WAVE FUNCTIONS                        ==
+!         ======================================================================
           ALLOCATE(AUXMAT(NB,NB))
-          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB &
-      &                     ,THIS%PSIM,THIS%PSIM,AUXMAT)
+          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM,THIS%PSIM,AUXMAT)
           DO I=1,NB
             DO J=1,NB
               MAT(I,J)=MAT(I,J)+AUXMAT(I,J)
             ENDDO
           ENDDO
-          CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB &
-      &                     ,THIS%OPSI,THIS%PSIM,AUXMAT)
+          CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB,THIS%OPSI,THIS%PSIM,AUXMAT)
           DO I=1,NB
             DO J=1,NB
               OMAT(I,J)=OMAT(I,J)+AUXMAT(I,J)
             ENDDO
           ENDDO
-          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB &
-       &                    ,THIS%OPSI,THIS%OPSI,AUXMAT)
+          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%OPSI,THIS%OPSI,AUXMAT)
           DO I=1,NB
             DO J=1,NB
               OOMAT(I,J)=OOMAT(I,J)+AUXMAT(I,J)
@@ -273,9 +271,9 @@ END IF
           ENDDO
           DEALLOCATE(AUXMAT)
 !
-!         ==================================================================
-!         ==  CALCULATE LAGRANGE PARAMETERS                               ==
-!         ==================================================================
+!         ======================================================================
+!         ==  CALCULATE LAGRANGE PARAMETERS                                   ==
+!         ======================================================================
           ALLOCATE(LAMBDA(NB,NB))
           LAMBDA(:,:)=THIS%RLAM0(:,:)
           DO I=1,NB
@@ -366,9 +364,9 @@ END IF
           DEALLOCATE(OOMAT)
           IF(.NOT.TSAFEORTHO)DEALLOCATE(SMAP)
 !
-!         ==================================================================
-!         ==  CALCULATE |PSI(+)>=|PSI>+|CHI>LAMBDA                        ==
-!         ==================================================================
+!         ======================================================================
+!         ==  CALCULATE |PSI(+)>=|PSI>+|CHI>LAMBDA                            ==
+!         ======================================================================
           CALL WAVES_ADDOPSI(NGL,NDIM,NBH,NB,THIS%PSIM,THIS%OPSI,LAMBDA)
           DEALLOCATE(THIS%OPSI)
 !PRINT*,'WARNING FROM WAVES$ORTHOGONALIZE:'
@@ -377,29 +375,30 @@ END IF
           CALL WAVES_ADDOPROJ(NPRO,NDIM,NBH,NB,THIS%PROJ,OPROJ,LAMBDA)
           DEALLOCATE(OPROJ)
 !
-!         ==================================================================
-!         ==  map lambda onto rlam0                                       ==
-!         ==================================================================
-!         == MASS IS NOT INCLUDED HERE (MASS TENSOR IS TAKEN CARE OF IN   ==
-!         == PSIBAR AND (1/M)O|PSI>                                       ==
-!         ==================================================================
-!         == RLAM0 IS DEFINED VIA THE EQUATION OF MOTION                  ==
-!         ==         M|PSIDOTDOT>=-H|PSI>+O|PSI>*RLAM0                    ==
-!         == RLAM0(I,J)*OCC(J) IS THE LAGRANGE PARAMETER, WHICH IS        ==
-!         == HERMITEAN. ITS MATRIX ELEMENTS INVOLVING UNOCCUPIED STATES   ==
-!         == VANISHES.                                                    ==
-!         == RLAM0 IS NOT HERMITEAN! FOR A SYSTEM AT REST THE RELATION    ==
-!         ==        RLAM0=<PSI|H|PSI>                                     ==
-!         == HOLDS. THEN THE MATRIX FOR STATES WITH DIFFERENT OCCUPATIONS ==
-!         == VANISH.                                                      ==
-!         ==================================================================
+!         ======================================================================
+!         ======================================================================
+!         ==  map lambda onto rlam0                                           ==
+!         ======================================================================
+!         == MASS IS NOT INCLUDED HERE (MASS TENSOR IS TAKEN CARE OF IN       ==
+!         == PSIBAR AND (1/M)O|PSI>                                           ==
+!         ======================================================================
+!         == RLAM0 IS DEFINED VIA THE EQUATION OF MOTION                      ==
+!         ==         M|PSIDOTDOT>=-H|PSI>+O|PSI>*RLAM0                        ==
+!         == RLAM0(I,J)*OCC(J) IS THE LAGRANGE PARAMETER, WHICH IS            ==
+!         == HERMITEAN. ITS MATRIX ELEMENTS INVOLVING UNOCCUPIED STATES       ==
+!         == VANISHES.                                                        ==
+!         == RLAM0 IS NOT HERMITEAN! FOR A SYSTEM AT REST THE RELATION        ==
+!         ==        RLAM0=<PSI|H|PSI>                                         ==
+!         == HOLDS. THEN THE MATRIX FOR STATES WITH DIFFERENT OCCUPATIONS     ==
+!         == VANISH.                                                          ==
+!         ======================================================================
           IF(.NOT.ASSOCIATED(THIS%RLAM0))ALLOCATE(THIS%RLAM0(NB,NB))
           THIS%RLAM0(:,:)=LAMBDA(:,:)
           DEALLOCATE(LAMBDA)
 !
-!         ==================================================================
-!         ==  TEST ORTHONORMALITY                                         ==
-!         ==================================================================
+!         ======================================================================
+!         ==  TEST ORTHONORMALITY                                             ==
+!         ======================================================================
           IF(TTEST) THEN
             ALLOCATE(OPROJ(NDIM,NBH,NPRO))
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO,THIS%PSIM,OPROJ)
@@ -472,7 +471,7 @@ END IF
       RETURN
       END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE WAVES_OPROJ(LNX,LOX,DO,NDIM,LMNX,NB,PROJ,OPROJ)
 !      *****************************************************************
 !      **                                                             **
@@ -522,7 +521,7 @@ END IF
        RETURN
        END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE WAVES_ADDOPSI(NGL,NDIM,NBH,NB,PSIBAR,OPSI,LAMBDA)
 !      *****************************************************************
 !      **                                                             **
@@ -594,7 +593,7 @@ END IF
        RETURN
        END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE WAVES_ADDOPROJ(NPRO,NDIM,NBH,NB,PROJ,OPROJ,LAMBDA)
 !      *****************************************************************
 !      **                                                             **
@@ -3627,7 +3626,7 @@ END IF
       INTEGER(4)  ,INTENT(IN)   :: IKPTG
       INTEGER(4)  ,INTENT(INOUT):: NREC
       INTEGER(4)                :: NTASKS,THISTASK
-      INTEGER(4)                :: ISPIN,IKPTL,IKPT
+      INTEGER(4)                :: ISPIN,IKPTL,IKPT,i
       INTEGER(4)                :: NB
       CHARACTER(8)              :: KEY
       COMPLEX(8)  ,ALLOCATABLE  :: LAMBDA(:,:)
@@ -3688,7 +3687,7 @@ END IF
           END IF
           CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,LAMBDA)
           IF(THISTASK.EQ.1) THEN
-            WRITE(NFIL)THIS%RLAM0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            WRITE(NFIL)lambda !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             NREC=NREC+1
           END IF
         ENDDO

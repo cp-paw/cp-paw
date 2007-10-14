@@ -77,7 +77,7 @@ CONTAINS
       CALL LIB$INVERTR8(3,TREF,TREFINV)
 !
 !     ==================================================================
-!     ==  SET DEFAULT CELL IF NOT DEFINED OTHERWISE                ==
+!     ==  SET DEFAULT CELL IF NOT DEFINED OTHERWISE                   ==
 !     ==================================================================
       IF(SUM(T0**2).EQ.0.D0) THEN   ! T0 IS NOT SET
         T0=TREF
@@ -94,6 +94,11 @@ CONTAINS
         END IF
       END IF
       TP=2.D0*T0-TM
+      IF(TSTOP) THEN
+        TMM=T0
+        TM=T0
+        TP=T0
+      END IF
 !
 !     ===================================================================
 !     ==  CALCULATE SIGMA MATRIX EQ 2.24                               ==
@@ -600,11 +605,22 @@ END MODULE CELL_MODULE
       REAL(8)    :: stress_ext(3,3)
       REAL(8)    :: SVAR,SVAR1,SVAR2,SVAR3
       INTEGER(4) :: I,ITER
+      logical(4),parameter :: donothing=.false.
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       IF(.NOT.TMOVE) RETURN
       CALL CELL_INITIALIZE()
+if(donothing) then
+  tmm=t0
+  tm=t0
+  tp=t0
+  ekin=0.d0
+  epot=0.d0
+  TPROPAGATED=.TRUE.
+  return
+end if
       IF(TSTOP) THEN
+        TMm=T0
         TM=T0
         TSTOP=.FALSE.
       END IF
@@ -617,7 +633,7 @@ END MODULE CELL_MODULE
      &  +T0(3,1)*(T0(1,2)*T0(2,3)-T0(1,3)*T0(2,2)) 
       IF(ABS(V0).GT.1.D+10*ABS(VREF)) THEN
         CALL ERROR$MSG('CELL DYNAMICS UNSTABLE')
-       CALL ERROR$R8VAL('CELL',T0)
+        CALL ERROR$R8VAL('CELL',T0)
         CALL ERROR$R8VAL('VOLUME ',V0)
         CALL ERROR$R8VAL('REFERENCE VOLUME ',VREF)
         CALL ERROR$STOP('CELL_PROPAGATE')
