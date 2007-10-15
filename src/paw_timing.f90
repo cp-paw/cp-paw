@@ -512,10 +512,10 @@ END MODULE TIMING_MODULE
 !     ***************************************************************
       IMPLICIT NONE
       REAL(8) ,intent(out) :: SECONDS
-      INTEGER(4)           :: COUNT
-      INTEGER(4)           :: COUNTRATE
-      INTEGER(4)           :: COUNTMAX
-      INTEGER(4),SAVE      :: COUNTTURN=0
+      INTEGER              :: COUNT
+      INTEGER              :: COUNTRATE
+      INTEGER              :: COUNTMAX
+      INTEGER,SAVE         :: COUNTTURN=0
       REAL(8)              :: COUNTCYCLE
       REAL(8)   ,SAVE      :: CURRENT=0.D0
 !     ***************************************************************
