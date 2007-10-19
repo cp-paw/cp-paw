@@ -1,71 +1,45 @@
-!***********************************************************************
-!***********************************************************************
-!**                                                                   **
-!**  INTERFACES TO SCIENTIFIC LIBRARY ROUTINES                        **
-!**  USES THE ESSL LIBRARY                                            **
-!**                                                                   **
-!**  ALL EXTERNAL LIBRARIES ARE ONLY CALLED VIA THESE INTERFACES.     **
-!**  THIS ALLOWS TO MAINTAIN DIFFERENT EXTERNAL LIBRARIES.            **
-!**                                                                   **
-!**  GENERIC INTERFACES BRANCH INTO LIBRARY SPECIFIC INTERFACES.      **
-!**  SPECIFIC LIBRARIES ARE SELECTED BY THE PREPROCESSOR STATEMENTS   **
-!**  INTERFACES TO ROUTINES OF SPECIFIC LIBRARIES ARE KEPT SEPARATE.  **
-!**  COMPILE WITH INLINE OPTION TO REDUCE OVERHEAD.                   **
-!**                                                                   **
-!**  TEST THE INTERFACES USING THE ROUTINE LIB$TEST() (NOT COMPLETE)  **
-!**                                                                   **
-!***********************************************************************
-!***********************************************************************
-!cxml= compaq extended math library
-
-
-! CPPVAR_FFTW      USE FFTW FOR FOURIRT TRANSFORMS
-! CPPVAR_FFT_ESSL      USE ESSL FOR FOURIER TRANSFORMS
-! CPPVAR_FFTPACK      USE EXPLICIT FFT
+!*******************************************************************************
+!*******************************************************************************
+!****                                                                      *****
+!****  INTERFACES-ROUTINES FOR EXTERNAL LIBRARIES                          *****
+!****                                                                      *****
+!****  ALL EXTERNAL LIBRARIES ARE ONLY CALLED VIA THESE INTERFACES.        *****
+!****                                                                      *****
+!****  SPECIFIC LIBRARIES ARE SELECTED BY THE PREPROCESSOR STATEMENTS      *****
+!****                                                                      *****
+!****  CONTAINS:                                                           *****
+!****    1) FORTRAN SUPPORT LIBRARIES                                      *****
+!****    2) LAPACK/BLAS LIBRARIES                                          *****
+!****    3) FOURIER TRANSFORM LIBRARIES                                    *****
+!****    4) SOME OTHER                                                     *****
+!****                                                                      *****
+!****  THE INTERFACES SHALL BE TESTED USING LIB$TEST                       *****
+!****                                                                      *****
+!*******************************************************************************
+!*******************************************************************************
 !
-! CPPVAR_BLAS_ATLAS    USE ATLAS BLAS
-! CPPVAR_BLAS_ESSL     USE ESSL
-! CPPVAR_BLAS_EXPLICIT USE EXPLICIT BLAS
-!
-! CPPVAR_LANGEXT_XLF   LANGUAGE EXTENSIONS XLF
-!
-! CPPVAR_SUPPORT_XLF
-! CPPVAR_U77
-! CPPVAR_SUPPORT_DEC
-!
-! CPPVAR_ERF_EXPLICIT  USE EXPLICIT ERF AND ERFC
-! CPPVAR_ERF_IMPLICIT  USE IMPLICIT ERF AND ERFC
-!
-! CPPVAR_USAGE_EXIST  C-ROUTINE GETRUSAGE AVAILABLE
-!
-!=============== ENVIRONMENT ABSOFT COMPILER =========================
-!    IT ASSUMES THE ATLAS LAPACK AND BLAS ROUTINES TO BE LINKED
-!    IT ASSUMES THE ABSOFT SUPPORT LIBRARY LIBU77.A  TO BE LINKED
-!    IT ASSUMES THE FAST FOURIER TRANSFORM LIBRARY LIBFFTW.A  TO BE LINKED
-!#IF DEFINED(CPPVARIABLE_ABS)
-!#DEFINE CPPVAR_FFTW
-!#DEFINE CPPVAR_BLAS_ATLAS
-!#DEFINE CPPVAR_U77
-!=============== ENVIRONMENT IBM AIX ===================================
-!    IT ASSUMES THE ESSL LIBRARY TO BE LINKED
-!    IT USES XLF SPECIFIC SUPPORT ROUTINES AND LANGUAGE EXTENSIONS
-!#ELIF DEFINED(CPPVARIABLE_XLF)
-!#DEFINE CPPVAR_FFT_ESSL
-!#DEFINE CPPVAR_BLAS_ESSL 
-!#DEFINE CPPVAR_SUPPORT_XLF
-!#DEFINE CPPVAR_LANGEXT_XLF  
-!#DEFINE CPPVAR_USAGE_EXIST
-!#UNDEFINE EXLICITERF
-!=============== ENVIRONMENT DEC ALPHA =================================
-!#ELIF DEFINED(CPPVARIABLE_DEC)
-!#DEFINE CPPVAR_FFTW
-!#DEFINE CPPVAR_BLAS_ATLAS
-!=============== FREE ENVIRONMENT ===== =================================
-! MAKES NO ASSUMPTIONS ABOUT THE ENVIRONMENT
-!#ELSE
-!#DEFINE CPPVAR_FFTPACK
-!#DEFINE CPPVAR_BLAS_EXPLICIT
-!#ENDIF 
+!*******************************************************************************
+!*******************************************************************************
+!****                                                                      *****
+!****              INTERFACES TO THE SUPPORT LIBRARIES                     *****
+!****                                                                      *****
+!****  GETARG (GETARG)                                                     *****
+!****  NARGS (IARGC)                                                       *****
+!****  SYSTEM (SYSTEM)                                                     *****
+!****  ETIME   (ETIME)                                                     *****
+!****  GETHOSTNM (HOSTNM)                                                  *****
+!****  FLUSH (FLUSH)                                                       *****
+!****                                                                      *****
+!****                                                                      *****
+!****  REMARKS:                                                            *****
+!****    THE XLF SUPPORT ROUTINES CARRY ONE TRAILING UNDERSCORE            *****
+!****                                                                      *****
+!****    THE SUPPORT LIBRARY ROUTINES OF FORTRAN DIFFER SLIGHTLY FROM      *****
+!****    COMPILER TO COMPILER (ARGUMENT TYPES)                             *****
+!****                                                                      *****
+!****                                                                      *****
+!*******************************************************************************
+!*******************************************************************************
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GETARG(IPOS,ARG)
@@ -83,8 +57,13 @@
       CALL LIB_IFC_GETARG(IPOS,ARG)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC7)
       CALL LIB_IFC7_GETARG(IPOS,ARG)
-#ELSE    ! NO EXPLICIT INTERFACE; let us HOPE FOR THE BEST....
-      CALL GETARG(IPOSstd,ARG)
+#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+      CALL LIB_ABSOFT_GETARG(IPOS,ARG)
+#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+      CALL LIB_XLF_GETARG(IPOS,ARG)
+#ELSE    
+      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+      CALL GETARG(IPOSSTD,ARG)
 #ENDIF
       RETURN
       END
@@ -103,45 +82,131 @@
       CALL LIB_IFC_NARGS(NARGS)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC7)
       CALL LIB_IFC7_NARGS(NARGS)
-#ELSE          ! NO EXPLICIT INTERFACE; let us HOPE FOR THE BEST....
+#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+      CALL LIB_ABSOFT_NARGS(NARGS)
+#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+      CALL LIB_XLF_NARGS(NARGS)
+#ELSE          
+      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       NARGS=IARGC()
 #ENDIF
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$etime(usrtime,systime)
+      SUBROUTINE LIB$ETIME(USRTIME,SYSTIME)
 !     **************************************************************************
-!     **  RETURNS THE user and system time of the current process             **
+!     **  RETURNS THE USER AND SYSTEM TIME OF THE CURRENT PROCESS             **
 !     **                                                                      **
-!     **    usrtime is the elapsed cpu time in seconds used by the user code  **
-!     **    systime is the elapsed cpu time in seconds used by                **
-!     **                                          calls to the operating system**
+!     **    USRTIME IS THE ELAPSED CPU TIME IN SECONDS USED BY THE USER CODE  **
+!     **    SYSTIME IS THE ELAPSED CPU TIME IN SECONDS USED BY                **
+!     **                                          CALLS TO THE OPERATING SYSTEM**
 !     **                                                                      **
 !     **    TIME FOR IO, WHERE THE PROCESSOR IS IDLE IS NOT ACCOUNTED FOR!!!  **
 !     **************************************************************************
       IMPLICIT NONE
-      real(8)   ,INTENT(OUT) :: usrtime
-      real(8)   ,INTENT(OUT) :: systime
+      REAL(8)   ,INTENT(OUT) :: USRTIME
+      REAL(8)   ,INTENT(OUT) :: SYSTIME
       REAL                   :: TARRAY(2),RESULT
 !     **************************************************************************
-#IF DEFINED(CPPVAR_COMPILER_g95)
-      call LIB_G95_ETIME(USRTIME,SYSTIME)
+#IF DEFINED(CPPVAR_COMPILER_G95)
+      CALL LIB_G95_ETIME(USRTIME,SYSTIME)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      call lib_ifc_etime(usrtime,systime)
+      CALL LIB_IFC_ETIME(USRTIME,SYSTIME)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-      call lib_ifc7_etime(usrtime,systime)
-#ELSE  ! NO EXPLICIT INTERFACE; let us HOPE FOR THE BEST....
+      CALL LIB_IFC7_ETIME(USRTIME,SYSTIME)
+#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+      CALL LIB_ABSOFT_ETIME(USRTIME,SYSTIME)
+#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+      CALL LIB_XLF_ETIME(USRTIME,SYSTIME)
+#ELSE  
+      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RESULT=ETIME(TARRAY)
-      USRtime=TARRAY(1)
-      systime=TARRAY(2)
+      USRTIME=TARRAY(1)
+      SYSTIME=TARRAY(2)
 #ENDIF
       RETURN
       END
+!
+!     ..................................................................
+      SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+      INTEGER(4)                :: RC
+!     *********************************************************************
+#IF DEFINED(CPPVAR_COMPILER_G95)
+      CALL LIB_G95_GETHOSTNAME(HOSTNAME)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+      CALL LIB_IFC_GETHOSTNAME(HOSTNAME)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+      CALL LIB_IFC7_GETHOSTNAME(HOSTNAME)
+#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+      CALL LIB_ABSOFT_GETHOSTNAME(HOSTNAME)
+#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+      CALL LIB_XLF_GETHOSTNAME(HOSTNAME)
+#ELSE
+      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+      RC=HOSTNM(HOSTNAME)    
+      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+#ENDIF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB$SYSTEM(COMMAND)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      CHARACTER(*),INTENT(IN)   :: COMMAND
+      INTEGER                   :: RC
+!     *********************************************************************
+#IF DEFINED(CPPVAR_COMPILER_G95)
+      CALL LIB_G95_SYSTEM(COMMAND)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+      CALL LIB_IFC_SYSTEM(COMMAND)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+      CALL LIB_IFC7_SYSTEM(COMMAND)
+#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+      CALL LIB_ABSOFT_SYSTEM(COMMAND)
+#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+      CALL LIB_XLF_SYSTEM(COMMAND)
+#ELSE
+      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+      RC=SYSTEM(COMMAND)
+#ENDIF
+      RETURN
+      END
+!
+!     ......................................................................
+      SUBROUTINE LIB$FLUSHFILE(N)
+!     *********************************************************************
+!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N     **
+!     *********************************************************************
+      INTEGER(4),INTENT(IN) :: N
+!     *********************************************************************
+#IF DEFINED(CPPVAR_COMPILER_G95)
+      CALL LIB_G95_FLUSH(N)   
+#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+      CALL LIB_IFC_FLUSH(N)   
+#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+      CALL LIB_IFC7_FLUSH(N)   
+#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+      CALL LIB_ABSOFT_FLUSH(N)   
+#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+      CALL LIB_XLF_FLUSH(N)   
+#ELSE
+      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+      CALL FLUSH_(N)  ! XLF USPPORT LIBRARY
+#ENDIF
+      RETURN
+      END 
+
 #IF DEFINED(CPPVAR_COMPILER_IFC)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_ifc_NARGS(NARGS)
+      SUBROUTINE LIB_IFC_NARGS(NARGS)
 !     **************************************************************************
 !     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
 !     **************************************************************************
@@ -154,7 +219,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_ifc_GETARG(IPOS,ARG)
+      SUBROUTINE LIB_IFC_GETARG(IPOS,ARG)
 !     **************************************************************************
 !     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 ==
 !     **************************************************************************
@@ -170,23 +235,76 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine lib_ifc_etime(usrtime,systime)
-      use ifport
-      implicit none
-      real(8),intent(out) :: usrtime
-      real(8),intent(out) :: systime
-      real(4)             :: tarray(2)
-      real(4)             :: result
+      SUBROUTINE LIB_IFC_ETIME(USRTIME,SYSTIME)
 !     **************************************************************************
-      result=etime(tarray)
-      usrtime=tarray(1)
-      systime=tarray(2)
-      return
-      end
+!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!     **************************************************************************
+      USE IFPORT
+      IMPLICIT NONE
+      REAL(8),INTENT(OUT) :: USRTIME
+      REAL(8),INTENT(OUT) :: SYSTIME
+      REAL(4)             :: TARRAY(2)
+      REAL(4)             :: RESULT
+!     **************************************************************************
+      RESULT=ETIME(TARRAY)
+      USRTIME=TARRAY(1)
+      SYSTIME=TARRAY(2)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_IFC_SYSTEM(COMMAND)
+      USE IFPORT
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: COMMAND
+      INTEGER(4)              :: RC
+!     **************************************************************************
+      RC=SYSTEM(COMMAND)
+      IF(RC.NE.0) THEN
+        CALL ERROR$MSG('SYSTEM CALL FAILED')
+        CALL ERROR$I4VAL('RC',RC)
+        CALL ERROR$STOP('LIB_G95_SYSTEM')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_IFC_GETHOSTNAME(HOSTNAME)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      USE IFPORT
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+      INTEGER(4)                :: RC
+!     *********************************************************************
+      RC=HOSTNAM(HOSTNAME)    
+      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+      HOSTNAME='UNKNOWN'
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_IFC_FLUSH(NFIL)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      USE IFPORT
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)       :: NFIL
+      INTEGER(4)                     :: LUNIT
+!     *********************************************************************
+      LUNIT=NFIL
+      CALL FLUSH(LUNIT)
+      RETURN
+      END
 #ELIF DEFINED(CPPVAR_COMPILER_IFC7)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_ETIME(USRTIME,SYSTIME)
+!     **************************************************************************
+!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         REAL(4) FUNCTION ETIME(TARRAY)
@@ -199,8 +317,8 @@
       REAL(4)             :: RESULT      
 !     **************************************************************************
       RESULT=ETIME(TARRAY)
-      usrtime=tarray(1)
-      systime=tarray(2)
+      USRTIME=TARRAY(1)
+      SYSTIME=TARRAY(2)
       RETURN
       END
 !
@@ -233,10 +351,72 @@
 PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_IFC7_SYSTEM(COMMAND)
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER(4) FUNCTION SYSTEM(STRING)
+        CHARACTER*(*) ,INTENT(IN) :: STRING
+        END FUNCTION SYSTEM
+      END INTERFACE
+      CHARACTER(*),INTENT(IN) :: COMMAND
+      INTEGER(4)              :: RC
+!     **************************************************************************
+      RC=SYSTEM(COMMAND)
+      IF(RC.NE.0) THEN
+        CALL ERROR$MSG('SYSTEM CALL FAILED')
+        CALL ERROR$I4VAL('RC',RC)
+        CALL ERROR$STOP('LIB_G95_SYSTEM')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_IFC7_GETHOSTNAME(HOSTNAME)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE HOSTNM(STRING)
+        CHARACTER(*) ,INTENT(OUT) :: STRING
+        END FUNCTION HOSTNM
+      END INTERFACE
+      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+      INTEGER(4)                :: RC
+!     *********************************************************************
+      RC=HOSTNM(HOSTNAME)    
+      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+      HOSTNAME='UNKNOWN'
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_IFC7_FLUSH(NFIL)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE FLUSH(LUNIT)
+        INTEGER,INTENT(IN) :: LUNIT
+        END SUBROUTINE FLUSH
+      END INTERFACE
+      INTEGER(4),INTENT(IN)       :: NFIL
+      INTEGER                     :: LUNIT
+!     *********************************************************************
+      LUNIT=NFIL
+      CALL FLUSH(LUNIT)
+      RETURN
+      END
 #ELIF DEFINED(CPPVAR_COMPILER_G95)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_ETIME(USRTIME,SYSTIME)
+!     **************************************************************************
+!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         REAL FUNCTION ETIME(TARRAY)
@@ -249,8 +429,8 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
       REAL                :: RESULT      
 !     **************************************************************************
       RESULT=ETIME(TARRAY)
-      usrtime=tarray(1)
-      systime=tarray(2)
+      USRTIME=TARRAY(1)
+      SYSTIME=TARRAY(2)
       RETURN
       END
 !
@@ -264,8 +444,8 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
         END SUBROUTINE GETARG
       END INTERFACE
       INTEGER(4),INTENT(IN)         :: IPOS
-      character(len=*) ,INTENT(OUT) :: ARG
-      integer                       :: pos
+      CHARACTER(LEN=*) ,INTENT(OUT) :: ARG
+      INTEGER                       :: POS
 !     **************************************************************************
       POS=IPOS
       CALL GETARG(POS,ARG)
@@ -282,6 +462,301 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
       INTEGER(4),INTENT(OUT) :: NARGS
 !     **************************************************************************
       NARGS=IARGC()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_G95_SYSTEM(COMMAND)
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER FUNCTION SYSTEM(STRING)
+        CHARACTER*(*) ,INTENT(IN) :: STRING
+        END FUNCTION SYSTEM
+      END INTERFACE
+      CHARACTER(*),INTENT(IN) :: COMMAND
+      INTEGER(4)              :: RC
+!     **************************************************************************
+      RC=SYSTEM(COMMAND)
+      IF(RC.NE.0) THEN
+        CALL ERROR$MSG('SYSTEM CALL FAILED')
+        CALL ERROR$I4VAL('RC',RC)
+        CALL ERROR$STOP('LIB_G95_SYSTEM')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_G95_GETHOSTNAME(HOSTNAME)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER FUNCTION HOSTNM(STRING)
+        CHARACTER*(*) ,INTENT(IN) :: STRING
+        END FUNCTION HOSTNM
+      END INTERFACE
+      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+      INTEGER(4)                :: RC
+!     *********************************************************************
+      RC=HOSTNM(HOSTNAME)    
+      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+      HOSTNAME='UNKNOWN'
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_G95_FLUSH(NFIL)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE FLUSH(LUNIT)
+        INTEGER,INTENT(IN) :: LUNIT
+        END SUBROUTINE FLUSH
+      END INTERFACE
+      INTEGER(4),INTENT(IN)       :: NFIL
+      INTEGER                     :: LUNIT
+!     *********************************************************************
+      LUNIT=NFIL
+      CALL FLUSH(LUNIT)
+      RETURN
+      END
+#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_ABSOFT_ETIME(USRTIME,SYSTIME)
+!     **                                                                      **
+!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!     **                                                                      **
+      IMPLICIT NONE
+      INTERFACE 
+        REAL*4 FUNCTION ETIME(TARRAY)
+        REAL*4,INTENT(OUT) :: TARRAY(2)
+        END FUNCTION ETIME
+      END INTERFACE
+      REAL(8),INTENT(OUT) :: USRTIME
+      REAL(8),INTENT(OUT) :: SYSTIME
+      REAL*4              :: TARRAY(2)
+      REAL*4              :: RESULT      
+!     **************************************************************************
+      RESULT=ETIME(TARRAY)
+      USRTIME=TARRAY(1)
+      SYSTIME=TARRAY(2)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_ABSOFT_GETARG(IPOS,ARG)
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE GETARG(POS,VALUE)
+        INTEGER*4       ,INTENT(IN) :: POS
+        CHARACTER(LEN=*),INTENT(OUT):: VALUE
+        END SUBROUTINE GETARG
+      END INTERFACE
+      INTEGER(4),INTENT(IN)         :: IPOS
+      CHARACTER(LEN=*) ,INTENT(OUT) :: ARG
+      INTEGER*4                     :: POS
+!     **************************************************************************
+      POS=IPOS
+      CALL GETARG(POS,ARG)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_ABSOFT_NARGS(NARGS)
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER*4 FUNCTION IARGC()
+        END FUNCTION IARGC
+      END INTERFACE
+      INTEGER(4),INTENT(OUT) :: NARGS
+!     **************************************************************************
+      NARGS=IARGC()
+PRINT*,'NARGS ',NARGS,IARGC()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_ABSOFT_SYSTEM(COMMAND)
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER*4 FUNCTION SYSTEM(STRING)
+        CHARACTER*(*) ,INTENT(IN) :: STRING
+        END FUNCTION SYSTEM
+      END INTERFACE
+      CHARACTER(*),INTENT(IN) :: COMMAND
+      INTEGER(4)              :: RC
+!     **************************************************************************
+      RC=SYSTEM(COMMAND)
+      IF(RC.NE.0) THEN
+        CALL ERROR$MSG('SYSTEM CALL FAILED')
+        CALL ERROR$I4VAL('RC',RC)
+        CALL ERROR$STOP('LIB_ABSOFT_SYSTEM')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_ABSOFT_GETHOSTNAME(HOSTNAME)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER*4 FUNCTION HOSTNM(STRING)
+        CHARACTER*(*) ,INTENT(IN) :: STRING
+        END FUNCTION HOSTNM
+      END INTERFACE
+      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+      INTEGER(4)                :: RC
+!     *********************************************************************
+      RC=HOSTNM(HOSTNAME)    
+      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+      HOSTNAME='UNKNOWN'
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_ABSOFT_FLUSH(NFIL)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE FLUSH(LUNIT)
+        INTEGER*4,INTENT(IN) :: LUNIT
+        END SUBROUTINE FLUSH
+      END INTERFACE
+      INTEGER(4),INTENT(IN)       :: NFIL
+      INTEGER*4                   :: LUNIT
+!     *********************************************************************
+      LUNIT=NFIL
+      CALL FLUSH(LUNIT)
+      RETURN
+      END
+#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_XLF_ETIME(USRTIME,SYSTIME)
+!     **                                                                      **
+!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!     **                                                                      **
+      IMPLICIT NONE
+      TYPE TB_TYPE
+        SEQUENCE
+        REAL(4) :: USRTIME
+        REAL(4) :: SYSTIME
+      END TYPE TB_TYPE
+!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
+!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
+!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
+!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
+!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
+      INTERFACE 
+        REAL*4 FUNCTION ETIME(TARRAY)
+        REAL*4,INTENT(OUT) :: TARRAY(2)
+        END FUNCTION ETIME
+      END INTERFACE
+      REAL(8),INTENT(OUT) :: USRTIME
+      REAL(8),INTENT(OUT) :: SYSTIME
+      TYPE(TB_TYPE)       :: ETIME_STRUCT
+      REAL*4              :: RESULT      
+!     **************************************************************************
+      RESULT=ETIME_(ETIME_STRUCT)
+      USRTIME=ETIME_STRUCT%USRTIME
+      SYSTIME=ETIME_STRUCT%SYSTIME
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_XLF_GETARG(IPOS,ARG)
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE GETARG(POS,VALUE)
+        INTEGER(4)       ,INTENT(IN) :: POS
+        CHARACTER(LEN=*),INTENT(OUT):: VALUE
+        END SUBROUTINE GETARG
+      END INTERFACE
+      INTEGER(4),INTENT(IN)         :: IPOS
+      CHARACTER(LEN=*) ,INTENT(OUT) :: ARG
+!     **************************************************************************
+      CALL GETARG(IPOS,ARG)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_XLF_NARGS(NARGS)
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER(4) FUNCTION IARGC()
+        END FUNCTION IARGC
+      END INTERFACE
+      INTEGER(4),INTENT(OUT) :: NARGS
+!     **************************************************************************
+      NARGS=IARGC()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_XLF_SYSTEM(COMMAND)
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER*4 FUNCTION SYSTEM(STRING)
+        CHARACTER*(*) ,INTENT(IN) :: STRING
+        END FUNCTION SYSTEM
+      END INTERFACE
+      CHARACTER(*),INTENT(IN) :: COMMAND
+      INTEGER(4)              :: RC
+!     **************************************************************************
+      RC=SYSTEM(COMMAND)
+      IF(RC.NE.0) THEN
+        CALL ERROR$MSG('SYSTEM CALL FAILED')
+        CALL ERROR$I4VAL('RC',RC)
+        CALL ERROR$STOP('LIB_ABSOFT_SYSTEM')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_XLF_GETHOSTNAME(HOSTNAME)
+!     *********************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
+!     *********************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER(4) FUNCTION HOSTNM_(STRING)
+        CHARACTER(32) ,INTENT(IN) :: STRING
+        END FUNCTION HOSTNM
+      END INTERFACE
+      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+      CHARACTER(32)             :: HOSTNAME1
+      INTEGER(4)                :: RC
+!     *********************************************************************
+      RC=HOSTNM_(HOSTNAME1)    
+      HOSTNAME=HOSTNAME1
+      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE LIB_XLF_FLUSH(NFIL)
+!     *********************************************************************
+!     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                        **
+!     *********************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE FLUSH_(LUNIT)
+        INTEGER(4),INTENT(IN) :: LUNIT
+        END SUBROUTINE FLUSH_
+      END INTERFACE
+      INTEGER(4),INTENT(IN)       :: NFIL
+      INTEGER(4)                  :: LUNIT
+!     *********************************************************************
+      LUNIT=NFIL
+      CALL FLUSH_(LUNIT)
       RETURN
       END
 #ENDIF
@@ -378,39 +853,6 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
       END IF
       RETURN
       END
-!
-!     ..................................................................
-      SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
-      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
-      INTEGER(4)                :: RC
-!     *********************************************************************
-#IF DEFINED(CPPVAR_SUPPORT_XLF)
-      RC=HOSTNM_(HOSTNAME)    ! XLF SUPPORT LIBRARY
-      IF(RC.NE.0)HOSTNAME='UNKNOWN'
-#ELSE
-      HOSTNAME='UNKNOWN'
-!     HOSTNM_=GETHOSTNAME(HOSTNAME,%VAL(LEN(HOSTNAME)))
-#ENDIF
-      RETURN
-      END
-!
-!     ......................................................................
-      SUBROUTINE LIB$FLUSHFILE(N)
-!     *********************************************************************
-!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N     **
-!     *********************************************************************
-      INTEGER(4),INTENT(IN) :: N
-!     *********************************************************************
-#IF DEFINED(CPPVAR_SUPPORT_XLF)
-      CALL FLUSH_(N)  ! XLF USPPORT LIBRARY
-#ELIF DEFINED(CPPVAR_U77)
-      CALL FLUSH(N)   ! FROM ABSOFT SUPPORT LIBRARY (UNDERSCORE)
-#ENDIF
-      RETURN
-      END 
 !
 #IF DEFINED(CPPVAR_LANGEXT_XLF)
 !     ..................................................................
@@ -662,8 +1104,8 @@ END MODULE RANDOM_MODULE
       END
 !
 !*******************************************************************************
-!**  external interfaces for lapack/blas calls                                **
-!**  these routines fork into the library specific driver routines            **
+!**  EXTERNAL INTERFACES FOR LAPACK/BLAS CALLS                                **
+!**  THESE ROUTINES FORK INTO THE LIBRARY SPECIFIC DRIVER ROUTINES            **
 !*******************************************************************************
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -888,14 +1330,14 @@ END MODULE RANDOM_MODULE
       TSYM=(DEV.LT.1.D-5)
       IF(.NOT.TSYM) THEN
         CALL ERROR$MSG('HAMILTONIAN NOT SYMMETRIC')
-        call error$r8val('dev',dev)
+        CALL ERROR$R8VAL('DEV',DEV)
         CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
       END IF
       DEV=MAXVAL(ABS(S-TRANSPOSE(S)))
       TSYM=TSYM.AND.(DEV.LT.1.D-5)
       IF(.NOT.TSYM) THEN
         CALL ERROR$MSG('OVERLAP MATRIX NOT SYMMETRIC')
-        call error$r8val('dev',dev)
+        CALL ERROR$R8VAL('DEV',DEV)
         CALL ERROR$STOP('LIB$GENERALEIGENVALUER8')
       END IF
 !
@@ -1390,7 +1832,7 @@ END MODULE RANDOM_MODULE
         CALL LIB_ESSL_ZGESVS(N,M,NEQ,A,X,B) 
       ELSE
         CALL ERROR$MSG('SYSTEM OF EQUATIONS IS OVER DETERMINED')
-        CALL ERROR$STOP(' LIB$MATRIXSOLVEc8')
+        CALL ERROR$STOP(' LIB$MATRIXSOLVEC8')
       END IF
 #ELSE 
       IF(N.EQ.M) THEN
@@ -1435,8 +1877,8 @@ END MODULE RANDOM_MODULE
 
 !
 !*******************************************************************************
-!**  external interfaces for fourier transform calls                          **
-!**  these routines fork into the library specific driver routines            **
+!**  EXTERNAL INTERFACES FOR FOURIER TRANSFORM CALLS                          **
+!**  THESE ROUTINES FORK INTO THE LIBRARY SPECIFIC DRIVER ROUTINES            **
 !*******************************************************************************
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -1606,10 +2048,10 @@ END MODULE RANDOM_MODULE
 
 !
 !*******************************************************************************
-!**  driver routines for the fourier transforms from the CXML package         **
-!**    compaq extended math library  (CXML)                                   **
+!**  DRIVER ROUTINES FOR THE FOURIER TRANSFORMS FROM THE CXML PACKAGE         **
+!**    COMPAQ EXTENDED MATH LIBRARY  (CXML)                                   **
 !**                                                                           **
-!**  DO not use! (Clemens Foerst)                                             **
+!**  DO NOT USE! (CLEMENS FOERST)                                             **
 !**                                                                           **
 !*******************************************************************************
 !
@@ -1670,7 +2112,7 @@ END MODULE RANDOM_MODULE
 #ENDIF
 !
 !*******************************************************************************
-!**  driver routines for the Fourier transforms from the fftw package         **
+!**  DRIVER ROUTINES FOR THE FOURIER TRANSFORMS FROM THE FFTW PACKAGE         **
 !**                                                                           **
 !*******************************************************************************
 #IF DEFINED(CPPVAR_FFT_FFTW)
@@ -1887,8 +2329,8 @@ END MODULE RANDOM_MODULE
       INTEGER(8),SAVE         :: PLAN=-1
       INTEGER                 :: ISUCCESS
       LOGICAL    ,SAVE        :: TINI=.FALSE.
-      integer                 :: inembed(len)
-      integer                 :: onembed(len)
+      INTEGER                 :: INEMBED(LEN)
+      INTEGER                 :: ONEMBED(LEN)
       INCLUDE 'FFTW_F77.I'
 !     ***********  FFTW_F77.I **************************************************
 !     ** THIS FILE IS A COPY OF FFTW3.F SUPPLIED WITH THE FFTW VERSION 3      **
@@ -1971,11 +2413,11 @@ END MODULE RANDOM_MODULE
       INTEGER     ,SAVE       :: ISIGN
       INTEGER                 :: ISUCCESS
       LOGICAL    ,SAVE        :: TINI=.FALSE.
-      INCLUDE 'FFTW3.f'
+      INCLUDE 'FFTW3.F'
 !     **************************************************************************
-      call error$msg('the fftw3 interfaces are under development')
-      call error$msg('and not yet ready for use')
-      call error$stop('lib_3dfftw3')
+      CALL ERROR$MSG('THE FFTW3 INTERFACES ARE UNDER DEVELOPMENT')
+      CALL ERROR$MSG('AND NOT YET READY FOR USE')
+      CALL ERROR$STOP('LIB_3DFFTW3')
       IF(.NOT.TINI) THEN
 !       == ATTEMPT TO IMPORTS PRE-CALCULATED WISDOM.
 !       == ON UNIX SYSTEMS THE WISDOM SHOULD BE IN /ETC/EETF/WISDOM
@@ -1991,9 +2433,9 @@ END MODULE RANDOM_MODULE
 !     == ATTENTION!! THE ROUTINE WITH PARAMETER FFTW_MEASURE OVERWRITES INPUT AND OUTPUT!
 !     == HENCE USE A LOCAL ARRAY XDUMMY THAT IS REWRITTEN BEFORE EXECUTION.
       IF(DIR.EQ.'RTOG') THEN
-        CALL DFFTW_PLAN_DFT_3D(PLAN,n1,n2,n3,XDUMMY,Y,FFTW_FORWARD,FFTW_MEASURE)
+        CALL DFFTW_PLAN_DFT_3D(PLAN,N1,N2,N3,XDUMMY,Y,FFTW_FORWARD,FFTW_MEASURE)
       ELSE IF (DIR.EQ.'GTOR') THEN
-        CALL DFFTW_PLAN_DFT_3D(PLAN,n1,n2,n3,XDUMMY,Y,FFTW_backward,FFTW_MEASURE)
+        CALL DFFTW_PLAN_DFT_3D(PLAN,N1,N2,N3,XDUMMY,Y,FFTW_BACKWARD,FFTW_MEASURE)
       ELSE
         CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
         CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
@@ -2005,10 +2447,10 @@ END MODULE RANDOM_MODULE
 !     ==  EXECUTE FOURIER TRANSFORM                                           ==
 !     ==========================================================================
       XDUMMY=X
-      call dfftw_execute(plan)
+      CALL DFFTW_EXECUTE(PLAN)
 !
 !     ==========================================================================
-!     ==  scale result                                                        ==
+!     ==  SCALE RESULT                                                        ==
 !     ==========================================================================
       IF (DIR.EQ.'RTOG') THEN
         SCALE=1.D0/REAL(N1*N2*N3,KIND=8)
@@ -2019,10 +2461,10 @@ END MODULE RANDOM_MODULE
 #ENDIF
 !
 !*******************************************************************************
-!**  driver routines for the Fourier transforms from the                      **
+!**  DRIVER ROUTINES FOR THE FOURIER TRANSFORMS FROM THE                      **
 !**     ENGINEERING AND SCIENTIFIC SUBROUTINE LIBRARY (ESSL)                  **
 !**                                                                           **
-!**  ESSL is a commercial package from IBM                                    **
+!**  ESSL IS A COMMERCIAL PACKAGE FROM IBM                                    **
 !*******************************************************************************
 !DCFT:  1-D FFT P765
 #IF DEFINED(CPPVAR_FFT_ESSL)
@@ -2154,14 +2596,14 @@ END MODULE RANDOM_MODULE
 !
 !
 !*******************************************************************************
-!**  driver routines for the Fourier transforms from the                      **
-!**     FFTPACK package                                                       **
+!**  DRIVER ROUTINES FOR THE FOURIER TRANSFORMS FROM THE                      **
+!**     FFTPACK PACKAGE                                                       **
 !**                                                                           **
-!**  FFTPACK is a Fortran subroutine library of Fast Fourier Transform        **
-!**  developed at the National Center for Atmospheric Research.               **
+!**  FFTPACK IS A FORTRAN SUBROUTINE LIBRARY OF FAST FOURIER TRANSFORM        **
+!**  DEVELOPED AT THE NATIONAL CENTER FOR ATMOSPHERIC RESEARCH.               **
 !**                                                                           **
-!**   FFTPACK5 is distributed under the GNU General Public License            **
-!**   from http://www.cisl.ucar.edu/css/software/fftpack5/index.html          **
+!**   FFTPACK5 IS DISTRIBUTED UNDER THE GNU GENERAL PUBLIC LICENSE            **
+!**   FROM HTTP://WWW.CISL.UCAR.EDU/CSS/SOFTWARE/FFTPACK5/INDEX.HTML          **
 !**                                                                           **
 !*******************************************************************************
 #IF DEFINED(CPPVAR_FFT_PACK)
@@ -2496,39 +2938,39 @@ END MODULE RANDOM_MODULE
       INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: M
       INTEGER(4),INTENT(IN) :: NEQ
-      complex(8),INTENT(IN) :: A(N,M)
-      complex(8),INTENT(OUT):: X(M,NEQ)
-      complex(8),INTENT(IN) :: B(N,NEQ)
-      LOGICAL   ,PARAMETER  :: TTEST=.false.
+      COMPLEX(8),INTENT(IN) :: A(N,M)
+      COMPLEX(8),INTENT(OUT):: X(M,NEQ)
+      COMPLEX(8),INTENT(IN) :: B(N,NEQ)
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       COMPLEX(8)            :: APLUSA(M,M)
       COMPLEX(8)            :: APLUSB(M,NEQ)
       REAL(8)               :: AMAT(2*M,2*M)
       REAL(8)               :: BMAT(2*M,NEQ)
       REAL(8)               :: XMAT(2*M,NEQ)
-      REAL(8)               :: dev
-      complex(8),parameter  :: ci=(0.d0,1.d0)
+      REAL(8)               :: DEV
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
 !     ******************************************************************
       APLUSA(:,:)=MATMUL(TRANSPOSE(A),A)
       AMAT(1:M,1:M)=REAL(APLUSA)
-      AMAT(1:M,M+1:2*M)=real(ci*APLUSA)
-      AMAT(M+1:2*M,1:M)=real(-ci*APLUSA)
+      AMAT(1:M,M+1:2*M)=REAL(CI*APLUSA)
+      AMAT(M+1:2*M,1:M)=REAL(-CI*APLUSA)
       AMAT(M+1:2*M,M+1:2*M)=REAL(APLUSA)
       APLUSB(:,:)=MATMUL(TRANSPOSE(A),B)
       BMAT(1:M,:)=REAL(APLUSB)
-      BMAT(M+1:2*M,:)=real(-ci*APLUSB)
-      CALL LIB_ESSL_DGESVS(2*N,2*M,NEQ,Amat,Xmat,Bmat)
-!     CALL LIB_LAPACK_DGESV(2*m,2*M,NEQ,Amat,Xmat,Bmat)
+      BMAT(M+1:2*M,:)=REAL(-CI*APLUSB)
+      CALL LIB_ESSL_DGESVS(2*N,2*M,NEQ,AMAT,XMAT,BMAT)
+!     CALL LIB_LAPACK_DGESV(2*M,2*M,NEQ,AMAT,XMAT,BMAT)
       X=CMPLX(XMAT(1:M,:),XMAT(M+1:2*M,:))
 !     =================================================================
 !     ==  TEST                                                       ==
 !     =================================================================
       IF(TTEST) THEN
-        dev=MAXVAL(ABS(MATMUL(Amat,Xmat)-Bmat))
-        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ----',dev
-        dev=MAXVAL(ABS(MATMUL(Aplusa,X)-aplusb))
-        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ---+',dev
-        dev=MAXVAL(ABS(MATMUL(A,X)-b))
-        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE --++',dev
+        DEV=MAXVAL(ABS(MATMUL(AMAT,XMAT)-BMAT))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ----',DEV
+        DEV=MAXVAL(ABS(MATMUL(APLUSA,X)-APLUSB))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ---+',DEV
+        DEV=MAXVAL(ABS(MATMUL(A,X)-B))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE --++',DEV
       END IF
       RETURN
       END SUBROUTINE LIB_ESSL_ZGESVS
@@ -2537,10 +2979,10 @@ END MODULE RANDOM_MODULE
       SUBROUTINE LIB_ESSL_DGES(N,M,NEQ,A,X,B)
 !     ******************************************************************
 !     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
-!     **  WHERE A is a square matrix                                  **
+!     **  WHERE A IS A SQUARE MATRIX                                  **
 !     **                                                              **
-!     **  remark: while dges can also handle non-square matrices      **
-!     **     we use it here for this purpose only.                    **
+!     **  REMARK: WHILE DGES CAN ALSO HANDLE NON-SQUARE MATRICES      **
+!     **     WE USE IT HERE FOR THIS PURPOSE ONLY.                    **
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
@@ -2553,7 +2995,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)            :: IPVT(N)
       INTEGER(4)            :: INFO
       INTEGER(4)            :: I
-      real(8)               :: dev
+      REAL(8)               :: DEV
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
 !     ******************************************************************
       IF(N.NE.M) THEN  !MATRIX FACTORIZATION
@@ -2571,8 +3013,8 @@ END MODULE RANDOM_MODULE
 !     ==  TEST                                                       ==
 !     =================================================================
       IF(TTEST) THEN
-        dev=MAXVAL(ABS(MATMUL(A,X)-B))
-        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ',dev
+        DEV=MAXVAL(ABS(MATMUL(A,X)-B))
+        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ',DEV
       END IF
       RETURN
       END SUBROUTINE LIB_ESSL_DGES
@@ -2737,13 +3179,13 @@ END MODULE RANDOM_MODULE
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
-      real(8)   ,INTENT(IN) :: H(N,N)
-      real(8)   ,INTENT(IN) :: S(N,N)
+      REAL(8)   ,INTENT(IN) :: H(N,N)
+      REAL(8)   ,INTENT(IN) :: S(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
-      real(8)   ,INTENT(OUT):: U(N,N)
-      real(8)               :: h1(n,n)
-      real(8)               :: s1(n,n)
-      real(8)               :: AUX(2*N)
+      REAL(8)   ,INTENT(OUT):: U(N,N)
+      REAL(8)               :: H1(N,N)
+      REAL(8)               :: S1(N,N)
+      REAL(8)               :: AUX(2*N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)            :: I
       REAL(8)   ,ALLOCATABLE:: EMAT(:,:)
@@ -2753,9 +3195,9 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-      h1=h
-      s1=s
-      CALL DSYGV(1,h1,N,S1,N,E,U,N,N,AUX,2*N)  !ESSL
+      H1=H
+      S1=S
+      CALL DSYGV(1,H1,N,S1,N,E,U,N,N,AUX,2*N)  !ESSL
 !
 !     ==================================================================
 !     ====  OPTIONAL TEST                                             ==
@@ -2781,7 +3223,7 @@ END MODULE RANDOM_MODULE
       SUBROUTINE LIB_ESSL_DGEGV(N,H,S,E,U)
 !     ******************************************************************
 !     **                                                              **
-!     **  GENERALIZED REAL non-symmETRIC EIGENSYSTEM,                 ** 
+!     **  GENERALIZED REAL NON-SYMMETRIC EIGENSYSTEM,                 ** 
 !     **        HU-SUE=0,                                             **
 !     **  WHERE H AND S ARE REAL, GENERAL MATRICES                    **
 !     **                                                              **
@@ -2792,7 +3234,7 @@ END MODULE RANDOM_MODULE
 !     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE      **
 !     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE          **
 !     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
-!     **   2) Note thAT THE EIGENVECTORS ARE NOT ORTHONORMAL!!!!      **
+!     **   2) NOTE THAT THE EIGENVECTORS ARE NOT ORTHONORMAL!!!!      **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
@@ -2817,9 +3259,9 @@ END MODULE RANDOM_MODULE
 !     ==================================================================
       H1=H
       S1=S
-      CALL DGEGV(1,h1,N,S,N,ALPHA,BETA,U,N,N,AUX,3*N)  !ESSL
+      CALL DGEGV(1,H1,N,S,N,ALPHA,BETA,U,N,N,AUX,3*N)  !ESSL
       DO I=1,N
-        IF(BETA(i).EQ.0.D0) THEN
+        IF(BETA(I).EQ.0.D0) THEN
           CALL ERROR$MSG('EIGENVALUE IS INFINITE')
           CALL ERROR$I4VAL('I',I)
           CALL ERROR$STOP('LIB_ESSL_DGEGV')
@@ -3804,7 +4246,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)           :: I
       REAL(8)              :: DEV
       REAL(8)  ,PARAMETER  :: TOL=1.D-10
-      complex(8),parameter :: ci=(0.d0,1.d0)
+      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
 !     ****************************************************************
       WRITE(*,FMT='("LIB_TEST_MATRIXSOLVEC8")')
@@ -3862,13 +4304,13 @@ END MODULE RANDOM_MODULE
 !
 !     == MAKE INPUT DATA =============================================
       CALL RANDOM_NUMBER(RA)
-      A=RA-0.5d0
+      A=RA-0.5D0
       CALL RANDOM_NUMBER(RA)
-      A=A+(RA-0.5d0)*CMPLX(0.D0,1.D0)
+      A=A+(RA-0.5D0)*CMPLX(0.D0,1.D0)
       CALL RANDOM_NUMBER(RB)
-      B=(RB-0.5d0)
+      B=(RB-0.5D0)
       CALL RANDOM_NUMBER(RB)
-      B=B+(RB-0.5d0)*CMPLX(0.D0,1.D0)
+      B=B+(RB-0.5D0)*CMPLX(0.D0,1.D0)
 !
 !     == WRITE INPUT DATA ============================================
       IF(TPR) THEN
@@ -3892,7 +4334,7 @@ END MODULE RANDOM_MODULE
 !
 !     == TEST RESULT =================================================
       DEV=MAXVAL(ABS(MATMUL(A,X)-B))
-!      DEV=max(MAXVAL(ABS(real(MATMUL(A,X)-B))),MAXVAL(ABS(real(ci*(MATMUL(A,X)-B)))))
+!      DEV=MAX(MAXVAL(ABS(REAL(MATMUL(A,X)-B))),MAXVAL(ABS(REAL(CI*(MATMUL(A,X)-B)))))
       IF(DEV.LT.TOL) THEN
         WRITE(*,FMT='(T5,"OK: DEV=",E10.5)')DEV
       ELSE
@@ -4041,7 +4483,7 @@ END MODULE RANDOM_MODULE
 !     ================================================================
 !     == TEST RESULT                                                ==
 !     ================================================================
-!     == TEST EIGENVALUE PROBLEM
+!     == Test EIGENVALUE PROBLEM
       EMAT=0.D0
       DO I=1,N
         EMAT(I,I)=CMPLX(E(I),0.D0)

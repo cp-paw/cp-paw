@@ -513,19 +513,22 @@ END MODULE TIMING_MODULE
       IMPLICIT NONE
       REAL(8) ,intent(out) :: SECONDS
       INTEGER              :: COUNT
+      INTEGER,save         :: COUNTprev=0
       INTEGER              :: COUNTRATE
       INTEGER              :: COUNTMAX
       INTEGER,SAVE         :: COUNTTURN=0
-      REAL(8)              :: COUNTCYCLE
-      REAL(8)   ,SAVE      :: CURRENT=0.D0
+      real(8)              :: rcount
 !     ***************************************************************
       CALL SYSTEM_CLOCK(COUNT,COUNTRATE,COUNTMAX)
-      COUNTCYCLE=REAL(COUNTMAX)/REAL(COUNTRATE)
-      SECONDS=REAL(COUNT)/REAL(COUNTRATE)+COUNTCYCLE*REAL(COUNTTURN)
-      IF(SECONDS.LT.CURRENT) THEN
+!     == CHECK REPEATCYCLE OF COUNT
+      IF(COUNT.LT.COUNTPREV) THEN
         COUNTTURN=COUNTTURN+1
       END IF
-      CURRENT=SECONDS
+      COUNTPREV=COUNT
+! 
+!     == OPERATIONS ARE DONE IN REAL MODE TO AVOID OVERFLOWS ==========
+      RCOUNT=REAL(COUNT)+REAL(COUNTMAX)*REAL(COUNTTURN)
+      SECONDS=RCOUNT/REAL(COUNTRATE)
       RETURN
       END SUBROUTINE TIMING_CLOCK
 !    
@@ -541,13 +544,13 @@ END MODULE TIMING_MODULE
       INTEGER(4)               :: HOURS,MINUTES,SECONDS,SECONDFRAC
       REAL(8)                  :: SVAR
 !     ******************************************************************
-      SVAR=TIME
-      HOURS=INT(SVAR/3600.D0)
-      SVAR=SVAR-DBLE(3600*HOURS)
+      SVAR   =TIME
+      HOURS  =INT(SVAR/3600.D0)
+      SVAR   =SVAR-DBLE(3600*HOURS)
       MINUTES=INT(SVAR/60.D0)
-      SVAR=SVAR-DBLE(60*MINUTES) 
+      SVAR   =SVAR-DBLE(60*MINUTES) 
       SECONDS=INT(SVAR)
-      SVAR=SVAR-DBLE(SECONDS)
+      SVAR   =SVAR-DBLE(SECONDS)
       SECONDFRAC=INT(SVAR*10.D0)
       WRITE(TIMESTRING,FMT='(I6,''H'',I2,''M'',I2,''.'',I1,''S'')') &
      &               HOURS,MINUTES,SECONDS,SECONDFRAC

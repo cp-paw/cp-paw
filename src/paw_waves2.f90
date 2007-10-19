@@ -103,7 +103,14 @@ IF(1.EQ.1) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
 !         ==  ADD  |PSI>+|P>DO<P|PSI>                                 ==
 !         ==============================================================
           ALLOCATE(THIS%OPSI(NGL,NDIM,NBH))
-          THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
+!         == THIS LOOP IS DONE EXPLICIT, BECAUSE THE IFC10 COULD NOT HANDLE IT
+          DO IB=1,NBH
+            DO IDIM=1,NDIM
+              DO IG=1,NGL
+                THIS%OPSI(IG,IDIM,IB)=THIS%PSI0(IG,IDIM,IB)
+              ENDDO
+            ENDDO
+          ENDDO
           CALL WAVES_ADDPRO(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NPRO,THIS%OPSI,OPROJ)
           DEALLOCATE(OPROJ)
 ELSE
@@ -960,13 +967,14 @@ END IF
        COMPLEX(8)            :: CSVAR
        REAL(8)               :: SVAR,SVAR1,SVAR2
        REAL(8)               :: MAXDEV
-       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+       LOGICAL   ,PARAMETER  :: TTEST=.false.
        REAL(8)   ,PARAMETER  :: TOL=1.D-10
        INTEGER(4)            :: NU,NU0,IU,JU
        real(8)               :: r8small
 !      *****************************************************************
                              CALL TRACE$PUSH('WAVES_ORTHO_Y_C')
-       r8small=tiny(r8small)
+       r8small=tiny(r8small)*1.d+5
+       r8small=1.d-10
 !
 !      =================================================================
 !      ==  INITIALIZE                                                 ==
@@ -995,7 +1003,7 @@ END IF
 !        == PHI(N)=PHI(N)+CHI(N)*Z(N)                                 ==
 !        ===============================================================
 !changed this to make it simpler PB 070127
-         SVAR=REAL(B(N,N))**2-A(N,N)*C(N,N)
+         SVAR = REAL(B(N,N))**2-A(N,N)*C(N,N)
          SVAR1=-REAL(B(N,N),KIND=8)
          IF(SVAR.GE.0.D0) THEN
            SVAR2=SQRT(SVAR)
@@ -1010,6 +1018,15 @@ END IF
            Z(N)=SVAR1
          END IF
          Z(N)=Z(N)/REAL(C(N,N)+r8small,KIND=8)
+!        == test for NaNs (NAN = Not a number)
+         IF(SVAR.NE.SVAR) THEN
+print*,'marke 1',n,b(n,n),a(n,n),c(n,n)
+print*,'marke 2',n,b(n,n)**2-a(n,n)*c(n,n)
+print*,'phiphi',(phiphi(i,i),i=1,nb)
+print*,'a     ',(a(i,i),i=1,nb)
+           CALL ERROR$MSG('NAN DETECTED')
+           CALL ERROR$STOP('WAVES_ORTHO_Y_C')
+         END IF
 !
 !        ===============================================================
 !        == NOW UPDATE MATRICES                                       ==
@@ -1050,17 +1067,16 @@ END IF
            I=MAP(IU)
            Z(I)=-CONJG(A(I,N)/(B(N,N)+r8small))
          ENDDO
-!               CALL TRACE$PASS('ORTHOGONALIZE HIGHER PHIS TO THIS PHI')
 !
 !        ===============================================================
 !        == NOW UPDATE MATRICES                                       ==
 !        ===============================================================
          NU0=NU+1   !SET N0=N FOR FAST CALCULATION AND N0=1 FOR TESTS
 !N0=1
-         DO I=1,NB
 !          == A(N,M)+B(N,N)*DELTA(M)=0  ======================
-           DO JU=NU0,NB
-             J=MAP(JU)
+         DO JU=NU0,NB
+           J=MAP(JU)
+           DO I=1,NB
              X(I,J)=X(I,J)+ALPHA(I,N)*Z(J)
            ENDDO
          ENDDO           
@@ -1089,6 +1105,7 @@ END IF
              B(I,J)=B(I,J)+C(I,N)*Z(J)
            ENDDO
          ENDDO
+!
          IF(TTEST) THEN
            DO IU=1,NU
              I=MAP(IU)
@@ -1132,6 +1149,10 @@ END IF
              B(I,J)=B(I,J)+CONJG(Z(I))*B(N,J)
            ENDDO 
          ENDDO
+!if(abs(b(n,n)).gt.huge(b)) then
+! print*,b(n,n),z
+! call error$stop('error')
+!end if
          WORK(:,:)=0.D0
          DO IU=NU0,NB
            I=MAP(IU)
