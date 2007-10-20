@@ -61,6 +61,8 @@
       CALL LIB_ABSOFT_GETARG(IPOS,ARG)
 #ELIF DEFINED(CPPVAR_COMPILER_XLF)
       CALL LIB_XLF_GETARG(IPOS,ARG)
+#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+      CALL LIB_PGI_GETARG(IPOS,ARG)
 #ELSE    
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       CALL GETARG(IPOSSTD,ARG)
@@ -86,6 +88,8 @@
       CALL LIB_ABSOFT_NARGS(NARGS)
 #ELIF DEFINED(CPPVAR_COMPILER_XLF)
       CALL LIB_XLF_NARGS(NARGS)
+#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+      CALL LIB_PGI_NARGS(NARGS)
 #ELSE          
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       NARGS=IARGC()
@@ -119,6 +123,8 @@
       CALL LIB_ABSOFT_ETIME(USRTIME,SYSTIME)
 #ELIF DEFINED(CPPVAR_COMPILER_XLF)
       CALL LIB_XLF_ETIME(USRTIME,SYSTIME)
+#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+      CALL LIB_PGI_ETIME(USRTIME,SYSTIME)
 #ELSE  
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RESULT=ETIME(TARRAY)
@@ -128,14 +134,14 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **************************************************************************
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
-!     *********************************************************************
+!     **************************************************************************
 #IF DEFINED(CPPVAR_COMPILER_G95)
       CALL LIB_G95_GETHOSTNAME(HOSTNAME)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC)
@@ -146,6 +152,8 @@
       CALL LIB_ABSOFT_GETHOSTNAME(HOSTNAME)
 #ELIF DEFINED(CPPVAR_COMPILER_XLF)
       CALL LIB_XLF_GETHOSTNAME(HOSTNAME)
+#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+      CALL LIB_PGI_GETHOSTNAME(HOSTNAME)
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RC=HOSTNM(HOSTNAME)    
@@ -154,11 +162,11 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$SYSTEM(COMMAND)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **************************************************************************
       CHARACTER(*),INTENT(IN)   :: COMMAND
       INTEGER                   :: RC
 !     *********************************************************************
@@ -172,6 +180,8 @@
       CALL LIB_ABSOFT_SYSTEM(COMMAND)
 #ELIF DEFINED(CPPVAR_COMPILER_XLF)
       CALL LIB_XLF_SYSTEM(COMMAND)
+#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+      CALL LIB_PGI_SYSTEM(COMMAND)
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RC=SYSTEM(COMMAND)
@@ -179,13 +189,13 @@
       RETURN
       END
 !
-!     ......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$FLUSHFILE(N)
-!     *********************************************************************
-!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N     **
-!     *********************************************************************
+!     **************************************************************************
+!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N          **
+!     **************************************************************************
       INTEGER(4),INTENT(IN) :: N
-!     *********************************************************************
+!     **************************************************************************
 #IF DEFINED(CPPVAR_COMPILER_G95)
       CALL LIB_G95_FLUSH(N)   
 #ELIF DEFINED(CPPVAR_COMPILER_IFC)
@@ -196,6 +206,8 @@
       CALL LIB_ABSOFT_FLUSH(N)   
 #ELIF DEFINED(CPPVAR_COMPILER_XLF)
       CALL LIB_XLF_FLUSH(N)   
+#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+      CALL LIB_PGI_FLUSH(N)   
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       CALL FLUSH_(N)  ! XLF USPPORT LIBRARY
@@ -209,6 +221,11 @@
       SUBROUTINE LIB_IFC_NARGS(NARGS)
 !     **************************************************************************
 !     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
+!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
+!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
 !     **************************************************************************
       USE IFPORT          !INCLUDE FORTRAN PORTABILITY FUNCTIONS
       IMPLICIT NONE
@@ -222,6 +239,11 @@
       SUBROUTINE LIB_IFC_GETARG(IPOS,ARG)
 !     **************************************************************************
 !     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 ==
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
+!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
+!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
 !     **************************************************************************
       USE IFPORT          !INCLUDE FORTRAN PORTABILITY FUNCTIONS
       IMPLICIT NONE
@@ -237,7 +259,12 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC_ETIME(USRTIME,SYSTIME)
 !     **************************************************************************
-!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
+!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
+!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
 !     **************************************************************************
       USE IFPORT
       IMPLICIT NONE
@@ -253,7 +280,15 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_IFC_SYSTEM(COMMAND)
+      SUBROUTINE LIB_IFC_SYSTEM(COMMAND) 
+!     **************************************************************************
+!     **  ISSUES A SHELL COMMAND                                              **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
+!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
+!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
+!     **************************************************************************
       USE IFPORT
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: COMMAND
@@ -268,32 +303,42 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC_GETHOSTNAME(HOSTNAME)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
+!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
+!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
+!     **************************************************************************
       USE IFPORT
       IMPLICIT NONE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
-!     *********************************************************************
+!     **************************************************************************
       RC=HOSTNAM(HOSTNAME)    
       IF(RC.NE.0)HOSTNAME='UNKNOWN'
       HOSTNAME='UNKNOWN'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC_FLUSH(NFIL)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                             **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
+!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
+!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
+!     **************************************************************************
       USE IFPORT
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)       :: NFIL
-      INTEGER(4)                     :: LUNIT
-!     *********************************************************************
+      INTEGER(4)                  :: LUNIT
+!     **************************************************************************
       LUNIT=NFIL
       CALL FLUSH(LUNIT)
       RETURN
@@ -304,6 +349,10 @@
       SUBROUTINE LIB_IFC7_ETIME(USRTIME,SYSTIME)
 !     **************************************************************************
 !     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER  (IFC7 AND EARLIER)         **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC7. THERE IS A CHANGE TO    **
+!     **           IFC10, THEREFORE THERE IS ANOTHER EXPLICIT INTERFACE IFC)  **
 !     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
@@ -324,6 +373,13 @@
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_GETARG(IPOS,ARG)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER  (IFC7 AND EARLIER)         **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC7. THERE IS A CHANGE TO    **
+!     **           IFC10, THEREFORE THERE IS ANOTHER EXPLICIT INTERFACE IFC)  **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE GETARG(POS,VALUE)
@@ -340,6 +396,13 @@
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_NARGS(NARGS)
+!     **************************************************************************
+!     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER  (IFC7 AND EARLIER)         **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC7. THERE IS A CHANGE TO    **
+!     **           IFC10, THEREFORE THERE IS ANOTHER EXPLICIT INTERFACE IFC)  **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER(4) FUNCTION IARGC()
@@ -348,12 +411,18 @@
       INTEGER(4),INTENT(OUT) :: NARGS
 !     **************************************************************************
       NARGS=IARGC()
-PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_SYSTEM(COMMAND)
+!     **************************************************************************
+!     **  ISSUES A SHELL COMMAND                                              **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER  (IFC7 AND EARLIER)         **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC7. THERE IS A CHANGE TO    **
+!     **           IFC10, THEREFORE THERE IS ANOTHER EXPLICIT INTERFACE IFC)  **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER(4) FUNCTION SYSTEM(STRING)
@@ -372,11 +441,15 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_GETHOSTNAME(HOSTNAME)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER  (IFC7 AND EARLIER)         **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC7. THERE IS A CHANGE TO    **
+!     **           IFC10, THEREFORE THERE IS ANOTHER EXPLICIT INTERFACE IFC)  **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE HOSTNM(STRING)
@@ -392,11 +465,15 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_FLUSH(NFIL)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                             **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER  (IFC7 AND EARLIER)         **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC7. THERE IS A CHANGE TO    **
+!     **           IFC10, THEREFORE THERE IS ANOTHER EXPLICIT INTERFACE IFC)  **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE FLUSH(LUNIT)
@@ -415,7 +492,9 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_ETIME(USRTIME,SYSTIME)
 !     **************************************************************************
-!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
@@ -436,6 +515,11 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_GETARG(IPOS,ARG)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE GETARG(POS,VALUE)
@@ -454,6 +538,11 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_NARGS(NARGS)
+!     **************************************************************************
+!     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER FUNCTION IARGC()
@@ -467,6 +556,11 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_SYSTEM(COMMAND)
+!     **************************************************************************
+!     **  ISSUES A SHELL COMMAND                                              **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER FUNCTION SYSTEM(STRING)
@@ -485,11 +579,13 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_GETHOSTNAME(HOSTNAME)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER FUNCTION HOSTNM(STRING)
@@ -505,11 +601,13 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_FLUSH(NFIL)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                             **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE FLUSH(LUNIT)
@@ -527,9 +625,11 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_ABSOFT_ETIME(USRTIME,SYSTIME)
+!     **************************************************************************
+!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
 !     **                                                                      **
-!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
-!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE ABSOFT COMPILER                          **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         REAL*4 FUNCTION ETIME(TARRAY)
@@ -549,6 +649,11 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_ABSOFT_GETARG(IPOS,ARG)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE ABSOFT COMPILER                          **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE GETARG(POS,VALUE)
@@ -567,6 +672,11 @@ PRINT*,'NARGS FROM LIB_IFC7_NARGS',NARGS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_ABSOFT_NARGS(NARGS)
+!     **************************************************************************
+!     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE ABSOFT COMPILER                          **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER*4 FUNCTION IARGC()
@@ -581,6 +691,11 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_ABSOFT_SYSTEM(COMMAND)
+!     **************************************************************************
+!     **  ISSUES A SHELL COMMAND                                              **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE ABSOFT COMPILER                          **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER*4 FUNCTION SYSTEM(STRING)
@@ -599,11 +714,13 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_ABSOFT_GETHOSTNAME(HOSTNAME)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE ABSOFT COMPILER                          **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER*4 FUNCTION HOSTNM(STRING)
@@ -612,18 +729,20 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END INTERFACE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
-!     *********************************************************************
+!     **************************************************************************
       RC=HOSTNM(HOSTNAME)    
       IF(RC.NE.0)HOSTNAME='UNKNOWN'
       HOSTNAME='UNKNOWN'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_ABSOFT_FLUSH(NFIL)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                             **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE ABSOFT COMPILER                          **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE FLUSH(LUNIT)
@@ -641,9 +760,11 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_XLF_ETIME(USRTIME,SYSTIME)
+!     **************************************************************************
+!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
 !     **                                                                      **
-!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
-!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE XLF COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       TYPE TB_TYPE
         SEQUENCE
@@ -673,6 +794,11 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_XLF_GETARG(IPOS,ARG)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE XLF COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE GETARG(POS,VALUE)
@@ -689,6 +815,11 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_XLF_NARGS(NARGS)
+!     **************************************************************************
+!     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE XLF COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER(4) FUNCTION IARGC()
@@ -702,6 +833,11 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_XLF_SYSTEM(COMMAND)
+!     **************************************************************************
+!     **  ISSUES A SHELL COMMAND                                              **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE XLF COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER*4 FUNCTION SYSTEM(STRING)
@@ -720,11 +856,13 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_XLF_GETHOSTNAME(HOSTNAME)
-!     *********************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                **
-!     *********************************************************************
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE XLF COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         INTEGER(4) FUNCTION HOSTNM_(STRING)
@@ -734,18 +872,20 @@ PRINT*,'NARGS ',NARGS,IARGC()
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       CHARACTER(32)             :: HOSTNAME1
       INTEGER(4)                :: RC
-!     *********************************************************************
+!     **************************************************************************
       RC=HOSTNM_(HOSTNAME1)    
       HOSTNAME=HOSTNAME1
       IF(RC.NE.0)HOSTNAME='UNKNOWN'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_XLF_FLUSH(NFIL)
-!     *********************************************************************
-!     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                        **
-!     *********************************************************************
+!     **************************************************************************
+!     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                             **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE XLF COMPILER                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE FLUSH_(LUNIT)
@@ -757,6 +897,155 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     *********************************************************************
       LUNIT=NFIL
       CALL FLUSH_(LUNIT)
+      RETURN
+      END
+#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_PGI_ETIME(USRTIME,SYSTIME)
+!     **************************************************************************
+!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
+!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
+!     **************************************************************************
+!      USE DFPORT
+      IMPLICIT NONE
+!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
+!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
+!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
+!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
+!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
+      INTERFACE 
+        REAL FUNCTION ETIME(TARRAY)
+        REAL,INTENT(OUT) :: TARRAY(2)
+        END FUNCTION ETIME
+      END INTERFACE
+      REAL(8),INTENT(OUT) :: USRTIME
+      REAL(8),INTENT(OUT) :: SYSTIME
+      REAL                :: RESULT      
+      REAL                :: TARRAY(2)   
+!     **************************************************************************
+      RESULT=ETIME(TARRAY)
+      USRTIME=TARRAY(1)
+      SYSTIME=TARRAY(2)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_PGI_GETARG(IPOS,ARG)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
+!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
+!     **************************************************************************
+!      USE DFPORT
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE GETARG(POS,VALUE)
+        INTEGER(4)       ,INTENT(IN) :: POS
+        CHARACTER(LEN=*),INTENT(OUT):: VALUE
+        END SUBROUTINE GETARG
+      END INTERFACE
+      INTEGER(4),INTENT(IN)         :: IPOS
+      CHARACTER(LEN=*) ,INTENT(OUT) :: ARG
+!     **************************************************************************
+      CALL GETARG(IPOS,ARG)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_PGI_NARGS(NARGS)
+!     **************************************************************************
+!     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
+!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
+!     **************************************************************************
+!      USE DFPORT
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER(4) FUNCTION IARGC()
+        END FUNCTION IARGC
+      END INTERFACE
+      INTEGER(4),INTENT(OUT) :: NARGS
+!     **************************************************************************
+      NARGS=IARGC()
+print*,'nargs ',nargs,iargc()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_PGI_SYSTEM(COMMAND)
+!     **************************************************************************
+!     **  ISSUES A SHELL COMMAND                                              **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
+!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
+!     **************************************************************************
+!      USE DFPORT
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER FUNCTION SYSTEM(STRING)
+        CHARACTER(*) ,INTENT(IN) :: STRING
+        END FUNCTION SYSTEM
+      END INTERFACE
+      CHARACTER(*),INTENT(IN) :: COMMAND
+      INTEGER(4)              :: RC
+!     **************************************************************************
+      RC=SYSTEM(COMMAND)
+      IF(RC.NE.0) THEN
+        CALL ERROR$MSG('SYSTEM CALL FAILED')
+        CALL ERROR$I4VAL('RC',RC)
+        CALL ERROR$STOP('LIB_PGI_SYSTEM')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_PGI_GETHOSTNAME(HOSTNAME)
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
+!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
+!     **************************************************************************
+!      USE DFPORT
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER FUNCTION HOSTNM(STRING)
+        CHARACTER*(*) ,INTENT(IN) :: STRING
+        END FUNCTION HOSTNM
+      END INTERFACE
+      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+      INTEGER                   :: RC
+!     **************************************************************************
+      RC=HOSTNM(HOSTNAME)    
+      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_PGI_FLUSH(NFIL)
+!     **************************************************************************
+!     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                             **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
+!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
+!     **************************************************************************
+!      USE DFPORT
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE FLUSH(LUNIT)
+        INTEGER,INTENT(IN) :: LUNIT
+        END SUBROUTINE FLUSH
+      END INTERFACE
+      INTEGER(4),INTENT(IN)       :: NFIL
+      INTEGER                     :: LUNIT
+!     **************************************************************************
+      LUNIT=NFIL
+      CALL FLUSH(LUNIT)
       RETURN
       END
 #ENDIF

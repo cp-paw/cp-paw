@@ -5,7 +5,7 @@
 Installation:
 -------------
 1) decide on an architecture name ARCH such as "g95_blechtrottel".
-   It is recommended use the convention ARCH=compilername_computername
+   It is recommended to use the convention ARCH=compilername_computername
    where you replaced compilername and computer name according to your system
 1) make a copy of the example parameter file "parms.example" named "parms.ARCH", 
 2) edit the new parameter file "parms.${ARCH}" following the instructions given therein
