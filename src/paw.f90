@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/main/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 815 $'
+character(256):: VERrev='$LastChangedRevision: 829 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-10-12 11:07:37 +0200 (Fr, 12. Okt 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-10-22 11:51:19 +0200 (Mo, 22. Okt 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -799,7 +799,7 @@ END MODULE STOPIT_MODULE
             CMD=CHAR(114)//CHAR(109)//' '//EXITFILE
 !           CALL ERROR$MSG('SYSTEM CALL REMOVED FOR ABSOFT')
 !           CALL ERROR$STOP('STOPIT$UPDATE')
-            CALL SYSTEM(CMD)
+            CALL lib$SYSTEM(CMD)
           END IF
           EXITFILEREMOVED=.TRUE.
         END IF

@@ -17,7 +17,7 @@
 !****                                                                      *****
 !*******************************************************************************
 !*******************************************************************************
-!
+! 
 !*******************************************************************************
 !*******************************************************************************
 !****                                                                      *****
@@ -369,7 +369,7 @@
       USRTIME=TARRAY(1)
       SYSTIME=TARRAY(2)
       RETURN
-      END
+      END SUBROUTINE LIB_IFC7_ETIME
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_GETARG(IPOS,ARG)
@@ -383,16 +383,16 @@
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE GETARG(POS,VALUE)
-        INTEGER(4)      ,INTENT(IN) :: POS
-        CHARACTER(LEN=*),INTENT(OUT):: VALUE
+        INTEGER(4)     ,INTENT(IN) :: POS
+        CHARACTER(*)   ,INTENT(OUT):: VALUE
         END SUBROUTINE GETARG
       END INTERFACE
       INTEGER(4)      ,INTENT(IN)  :: IPOS
-      CHARACTER(LEN=*),INTENT(OUT) :: ARG
+      CHARACTER(*)    ,INTENT(OUT) :: ARG
 !     **************************************************************************
       CALL GETARG(IPOS,ARG)
       RETURN
-      END
+      END SUBROUTINE LIB_IFC7_GETARG
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_NARGS(NARGS)
@@ -412,7 +412,7 @@
 !     **************************************************************************
       NARGS=IARGC()
       RETURN
-      END
+      END SUBROUTINE LIB_IFC7_NARGS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_SYSTEM(COMMAND)
@@ -426,7 +426,7 @@
       IMPLICIT NONE
       INTERFACE 
         INTEGER(4) FUNCTION SYSTEM(STRING)
-        CHARACTER*(*) ,INTENT(IN) :: STRING
+        CHARACTER(*) ,INTENT(IN) :: STRING
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
@@ -439,7 +439,7 @@
         CALL ERROR$STOP('LIB_G95_SYSTEM')
       END IF
       RETURN
-      END
+      END SUBROUTINE LIB_IFC7_SYSTEM
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_GETHOSTNAME(HOSTNAME)
@@ -454,16 +454,14 @@
       INTERFACE 
         SUBROUTINE HOSTNM(STRING)
         CHARACTER(*) ,INTENT(OUT) :: STRING
-        END FUNCTION HOSTNM
+        END SUBROUTINE HOSTNM
       END INTERFACE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
 !     *********************************************************************
-      RC=HOSTNM(HOSTNAME)    
-      IF(RC.NE.0)HOSTNAME='UNKNOWN'
-      HOSTNAME='UNKNOWN'
+      call HOSTNM(HOSTNAME)    
       RETURN
-      END
+      END SUBROUTINE LIB_IFC7_GETHOSTNAME
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_FLUSH(NFIL)
@@ -486,7 +484,7 @@
       LUNIT=NFIL
       CALL FLUSH(LUNIT)
       RETURN
-      END
+      END SUBROUTINE LIB_IFC7_FLUSH
 #ELIF DEFINED(CPPVAR_COMPILER_G95)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
