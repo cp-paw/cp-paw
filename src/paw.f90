@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/main/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 829 $'
+character(256):: VERrev='$LastChangedRevision: 832 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-10-22 11:51:19 +0200 (Mo, 22. Okt 2007) $'
+character(256):: VERdat='$LastChangedDate: 2007-10-23 00:17:05 +0200 (Di, 23. Okt 2007) $'
 end Module version_module
 !
 !     ..................................................................
@@ -924,6 +924,7 @@ END MODULE STOPIT_MODULE
       REAL(8)               :: MM_FRIC
       LOGICAL(4)            :: TCOSMO
       REAL(8)               :: EKINCOSMO,EPOTCOSMO
+      character(8)          :: FFTYPE
 !     ******************************************************************
                               CALL TRACE$PUSH('PRINFO')
       TIME=DBLE(NFI)*DELT
@@ -1238,7 +1239,10 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     ==================================================================
       CALL STRCOUT
       CALL QMMM$GETL4('ON',TQMMM)
-      IF(TQMMM) CALL FORCEFIELD$WRITE_MMSTRC
+      IF(TQMMM) THEN
+        CALL FORCEFIELD$GETCH('FORCEFIELD',FFTYPE)
+        IF(FFTYPE.EQ.'AMBER')CALL FORCEFIELD$WRITE_MMSTRC
+      END IF
                               CALL TRACE$POP
       RETURN
       END

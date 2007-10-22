@@ -5022,7 +5022,7 @@ END MODULE TOTALSPIN_MODULE
 !         ==  CHANGE FORMAT                                           ==
 !         ==============================================================
           IF(TKGROUP) THEN
-            IF(.NOT.(TSUPER.EQV.TSUPER_)) THEN
+            IF(TSUPER.nEQV.TSUPER_) THEN
               CALL ERROR$MSG('TRANSFORMATION BETWEEN REGULAR ..')
               CALL ERROR$MSG('... AND SUPER WAVE FUNCTIONS NOT IMPLEMENTED')
               CALL ERROR$L4VAL('TSUPER_ ON FILE',TSUPER_)

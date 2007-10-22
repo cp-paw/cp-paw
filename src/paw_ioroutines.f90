@@ -492,7 +492,7 @@ CALL TRACE$PASS('DONE')
         CALL LINKEDLIST$SIZE(LL_CNTL,'RUNTIME',1,LEN)
         IF(LEN.LT.1.OR.LEN.GT.3) THEN
           CALL ERROR$MSG('ILLEGAL LENGTH FOR RUNTIME! ALLOWED LENGTH: ')
-          CALL ERROR$MSG('1 - SECOUNDS')
+          CALL ERROR$MSG('1 - SECONDS')
           CALL ERROR$MSG('2 - MINUTES SECOUNDS')
           CALL ERROR$MSG('3 - HOURS MINUTES SECOUNDS')
           CALL ERROR$I4VAL('LENGTH:',LEN)
@@ -851,6 +851,20 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
+!
+!     ==  MOVIE FILE FOR QMMM MULTIPLE TIMESTEPS =======================
+      CALL FILEHANDLER$SETFILE('MMMOVIE',.TRUE.,-'.MMMOVIE.XYZ')
+      CALL FILEHANDLER$SETSPECIFICATION('MMMOVIE','STATUS','REPLACE')
+      CALL FILEHANDLER$SETSPECIFICATION('MMMOVIE','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('MMMOVIE','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('MMMOVIE','FORM','FORMATTED')
+!
+!     ==  MOVIE FILE FOR QMMM MULTIPLE TIMESTEPS =======================
+      CALL FILEHANDLER$SETFILE('SMOVIE',.TRUE.,-'.SMOVIE.XYZ')
+      CALL FILEHANDLER$SETSPECIFICATION('SMOVIE','STATUS','REPLACE')
+      CALL FILEHANDLER$SETSPECIFICATION('SMOVIE','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('SMOVIE','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('SMOVIE','FORM','FORMATTED')
 !
 !     ==  SCRAP FILE FOR TEST PURPOSES, THAT ALLOWS TO WRITE OUT TEST DATA===
       ID=+'INFO'
@@ -1995,12 +2009,13 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)            :: TCHK
       LOGICAL(4)            :: TON
       LOGICAL(4)            :: TSTOP
+      LOGICAL(4)            :: TMOVIE
       REAL(8)               :: AMPRE
       REAL(8)               :: FRICTION
       REAL(8)               :: KELVIN
       REAL(8)               :: DT
       INTEGER(4)            :: MULTIPLE
-      INTEGER(4)            :: LOD
+      INTEGER(4)            :: LOD, NSKIP
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_QMMM')  
       LL_CNTL=LL_CNTL_
@@ -2041,6 +2056,18 @@ CALL TRACE$PASS('DONE')
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'MULTIPLE',0,1)
       CALL LINKEDLIST$GET(LL_CNTL,'MULTIPLE',1,MULTIPLE)
       CALL QMMM$SETI4('MULTIPLE',MULTIPLE)
+!  
+!     == CREATE MOVIE FILE FROM OVERSAMPLING ===========================
+      IF(TCHK.AND.(MULTIPLE.GE.2)) THEN
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'MOVIE',1,TMOVIE)
+         IF(.NOT.TMOVIE)CALL LINKEDLIST$SET(LL_CNTL,'MOVIE',0,.FALSE.)
+         CALL LINKEDLIST$GET(LL_CNTL,'MOVIE',1,TMOVIE)
+         CALL QMMM$SETL4('MOVIE',TMOVIE)
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'SKIP',1,TCHK)
+         IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'SKIP',0,0)
+         CALL LINKEDLIST$GET(LL_CNTL,'SKIP',1,NSKIP)
+         CALL QMMM$SETI4('SKIP',NSKIP)
+      END IF
 !
 !     == START WITH ZERO INITIAL VELOCITIES ============================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'STOP',1,TCHK)
@@ -5382,6 +5409,11 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CHARACTER(32)               :: FF
       CHARACTER(255)              :: PARMFILE, TOPFILE, MMFILE
       CHARACTER(4)                :: RESNAME
+      REAL(8)                     :: MMO(3)            !ORIGIN OF THE MM BOX
+      REAL(8)                     :: MMVEC_tmp(3,3)    !TRANSLATION VECTOR OF THE MM BOX
+      REAL(8)                     :: MMVEC(9)
+      REAL(8)                     :: MMS(3)            !ORIGIN OF THE MM SPHERE
+      REAL(8)                     :: MSR(1)            !BOUNDARY RADIUS OF MM SPHERE
 !     ******************************************************************    
                           CALL TRACE$PUSH('STRCIN_SOLVENT')
       LL_STRC=LL_STRC_
@@ -5406,6 +5438,56 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
 !     CALL LINKEDLIST$REPORT(LL_STRC,6)
 !
+!     ==================================================================
+!     ==  READ MMSPHERE                           HF   02/2007        ==
+!     ==================================================================
+
+      MMS=0.d0
+      MSR=1000.d0
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
+      CALL LINKEDLIST$EXISTL(LL_STRC,'MMSPHERE',1,TCHK)
+      IF(TCHK) THEN
+         CALL LINKEDLIST$SELECT(LL_STRC,'MMSPHERE')
+         CALL LINKEDLIST$EXISTD(LL_STRC,'O',1,TCHK)      
+         IF(.NOT.TCHK) THEN
+            PRINT*,"WARNING: NO MMSPHERE ORIGIN SPECIFIED. SWITCH TO 0,0,0!"
+            MMS=0.D0
+         ELSE
+            CALL LINKEDLIST$GET(LL_STRC,'O',1,MMS)
+            CALL CONSTANTS("ANGSTROM",ANGSTROM)
+            MMS(:)=MMS(:)*ANGSTROM ! CONVERT TO ATOMIC UNITS
+         END IF
+
+         CALL LINKEDLIST$EXISTD(LL_STRC,'RADIUS[A]',1,TCHK)
+         IF(.NOT.TCHK) THEN
+            PRINT*,"WARNING: NO BOUNDARY RADIUS SPECIFIED. SWITCH TO 1000a0!"
+            MSR=1000.d0
+         ELSE
+            CALL LINKEDLIST$GET(LL_STRC,'RADIUS[A]',1,MSR)
+            CALL CONSTANTS("ANGSTROM",ANGSTROM)
+            MSR=MSR*ANGSTROM ! CONVERT TO ATOMIC UNITS
+            print*,"************************************************"
+            print*,"ORIGIN [AU] :",MMS
+            print*,"ORIGIN [A] :",MMS/ANGSTROM
+            print*,"BOUNDARY RADIUS [AU] :",MSR
+            print*,"BOUNDARY RADIUS [A] :",MSR/ANGSTROM
+            print*,"************************************************"
+         END IF
+      END IF
+! WARNING: CLASSICAL SYSTEM (QMMM or SHADOW) must be selected before writing variables
+!!!!      CALL CLASSICAL$SELECT('QMMM')
+!!!!            CALL CLASSICAL$SETL4('MMSPHERE',.TRUE.)
+!!!!      CALL CLASSICAL$SETR8A('MMS',3,MMS)
+!!!!      CALL CLASSICAL$SETR8A('MSR',1,MSR)
+!!!!      CALL CLASSICAL$SELECT('SHADOW')
+!!!!            CALL CLASSICAL$SETL4('MMSPHERE',.TRUE.)
+!!!!      CALL CLASSICAL$SETR8A('MMS',3,MMS)
+!!!!      CALL CLASSICAL$SETR8A('MSR',1,MSR)
+!STOP 'FORCED STOP'
+
+
 !     ==================================================================
 !     ==  READ FORCEFIELD AND INPUT FILE                              ==
 !     ==================================================================
@@ -5488,6 +5570,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL ATOMLIST$GETCH('NAME',IATQ,QATOM(IATQ)%NAME)
         CALL ATOMLIST$GETR8A('R(0)',IATQ,3,QATOM(IATQ)%R)
         CALL ATOMLIST$GETR8('MASS',IATQ,QATOM(IATQ)%M)
+        QATOM(IATQ)%ELEMENT=QATOM(IATQ)%NAME(1:2)
+        IF(QATOM(IATQ)%ELEMENT(2:2).EQ.'_') QATOM(IATQ)%ELEMENT(2:2)=' '
         QATOM(IATQ)%FFTYPE=' '
         QATOM(IATQ)%Q=0.D0
         QATOM(IATQ)%QMSATOM=0
@@ -5500,6 +5584,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==================================================================
       IF (FF.EQ.'UFF') THEN
         IATS=0
+        ALLOCATE(TFREEZE(NATM))
+        TFREEZE(:)=.FALSE.       !ALL ATOMS ARE FREE BY DEFAULT
         DO IATM=1,NATM
           CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',IATM)
 !    
@@ -5510,6 +5596,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             CALL ERROR$STOP('STRCIN_SOLVENT') 
           END IF
           CALL LINKEDLIST$GET(LL_STRC,'NAME',1,MATOM(IATM)%NAME)
+!==============================================================================
+!CHECK THIS:                                                                  *
+          MATOM(IATM)%ELEMENT=MATOM(IATM)%NAME(1:2)                          !*
+          IF(MATOM(IATM)%ELEMENT(2:2).EQ.'_') MATOM(IATM)%ELEMENT(2:2)=' '   !*
+print*,"ELEMENT: ", MATOM(IATM)%ELEMENT, IATM
+!==============================================================================
 !    
 !         ==  QMATOM  =====================================================
           CALL LINKEDLIST$EXISTD(LL_STRC,'QMATOM',1,TCHK)
@@ -5534,6 +5626,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                CALL ERROR$STOP('STRCIN_SOLVENT')
             END IF
             SATOM(IATS)%NAME=QATOM(IATQ)%NAME
+!==================================
+            SATOM(IATS)%ELEMENT= QATOM(IATQ)%ELEMENT
+print*,"SELEMENT= ",SATOM(IATS)%ELEMENT, IATS
+!==================================
             QATOM(IATQ)%QMSATOM=IATM
             MATOM(IATM)%QMSATOM=IATS
             SATOM(IATS)%QMSATOM=IATQ
@@ -5607,7 +5703,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
         ENDDO
 !     ==================================================================
-!     == NOW AMBER =====================================================
+!     == READ AMBER ATOMS ==============================================
 !     ==================================================================
       ELSE IF(FF.EQ.'AMBER') THEN
         IATS=0
@@ -5618,7 +5714,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           MATOM(IATM)%NAME = TRIM(ADJUSTL(MMATOM(IATM)%NAME(1:LEN_TRIM(MMATOM(IATM)%NAME))))&
      &                     //'_'//TRIM(ADJUSTL(.ITOS.MMATOM(IATM)%ID))
           MATOM(IATM)%ELEMENT=TRIM(ADJUSTL(MMATOM(IATM)%ELEMENT))
-
+!
 !         ----- CHECK IF MM ATOM IS QM-ATOM
           IATQ=0
           IF(MMATOM(IATM)%FLAG.EQ.'Q') THEN
@@ -5653,7 +5749,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             IF(TRIM(ADJUSTL(TOP_RES(IRES)%ATOM(I)%NAME)).EQ.TRIM(ADJUSTL(MMATOM(IATM)%NAME))) THEN
               MATOM(IATM)%FFTYPE =  TRIM(ADJUSTL(TOP_RES(IRES)%ATOM(I)%ATOM))
 !             ------  HERE YOU CAN CHOOSE IF THE MM ATOMS GET ZERO CHARGE OR NOT ------------
-              MATOM(IATM)%Q      =  - TOP_RES(IRES)%ATOM(I)%CHARGE 
+              MATOM(IATM)%Q      = -TOP_RES(IRES)%ATOM(I)%CHARGE  
 !             -------------------------------------------------------------------------------
               EXIT
             END IF
@@ -5663,7 +5759,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           END IF
 !         ----- POSITIONS -----------------------------
           IF(IATQ.EQ.0) THEN
-            MATOM(IATM)%R(:) = MMATOM(IATM)%R(:) * ANGSTROM
+            MATOM(IATM)%R(:)= MMATOM(IATM)%R(:) * ANGSTROM
           ELSE
             MATOM(IATM)%R(:)=QATOM(IATQ)%R
             SATOM(IATS)%R(:)=QATOM(IATQ)%R
@@ -5776,6 +5872,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !         == SHADOW ATOM NAME,POSITION,MASS,CHARGE,QMSATOM================
           IATQ=LINK(ILINK)%QATOM
           SATOM(IATS)%NAME=QATOM(IATQ)%NAME
+!=============================================0
+          SATOM(IATS)%ELEMENT='H '
+!=============================================0
           SATOM(IATS)%R=QATOM(IATQ)%R
           SATOM(IATS)%M=QATOM(IATQ)%M
           SATOM(IATS)%Q=QATOM(IATQ)%Q
@@ -5856,7 +5955,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             IATS=LINK(ILINK)%SATOM
             IATQ=LINK(ILINK)%QATOM
             IATM=LINK(ILINK)%MATOM
-
+!
             SATOM(IATS)%QMSATOM=IATQ
             QATOM(IATQ)%QMSATOM=IATM
             MATOM(IATM)%QMSATOM=IATS
@@ -5875,6 +5974,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==  READ BONDS                                                  ==
 !     ==================================================================
 !     ==================================================================
+      NCONECT=0
       IF(FF.EQ.'UFF') THEN
         CALL LINKEDLIST$NLISTS(LL_STRC,'BOND',NBONDM)
         ALLOCATE(MBOND(NBONDM))
@@ -5924,7 +6024,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ----- GET NUMBER OF BONDS
         IAT=1
         NBONDM=0
-        NCONECT=0
 !       ----- read #bonds from the topology informations
         DO WHILE(IAT.LT.SIZE(MMATOM))
           RESNAME= MMATOM(IAT)%RESNAME
@@ -5944,7 +6043,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           END IF
 !         -------------
           IVAR = SIZE(TOP_RES(IVAR)%ATOM)
-          IAT = IAT + IVAR
+          IAT  = IAT + IVAR
 !         ----- CHECKS IF THE PEPTIDE CHAIN ID HAS CHANGED. ONLY FOR AMINO ACIDS
           IF(MMATOM(IAT-1)%KEYWORD.EQ.'ATOM  ') THEN
              IF(IAT.GE.SIZE(MMATOM)) THEN
@@ -6061,7 +6160,7 @@ print*,"FLAG: ",NBONDM,NCONECT
 !     ==================================================================
 !     == COUNT #(SHADOW BONDS) =========================================
       NBONDS=0
-      DO IBONDM=1,NBONDM
+      DO IBONDM=1,NBONDM+NCONECT
         IATM1=MBOND(IBONDM)%ATOM1
         IATM2=MBOND(IBONDM)%ATOM2
         IATS1=MATOM(IATM1)%QMSATOM
@@ -6072,7 +6171,7 @@ print*,"FLAG: ",NBONDM,NCONECT
 !
 !     == DETERMINE SHADOW BONDS ========================================
       IBONDS=0
-      DO IBONDM=1,NBONDM
+      DO IBONDM=1,NBONDM+NCONECT
         IATM1=MBOND(IBONDM)%ATOM1
         IATM2=MBOND(IBONDM)%ATOM2
         IATS1=MATOM(IATM1)%QMSATOM
@@ -6125,6 +6224,7 @@ print*,"FLAG: ",NBONDM,NCONECT
       DEALLOCATE(LINKARRAY)
       DEALLOCATE(MAPARRAY)
 PRINT*,"FLAG: AFTER SETTING LINKS IN QMMM"
+NBONDM=NBONDM+NCONECT
 !
 !     ==================================================================
 !     ==  DEFINE CLASSICAL OBJECT                                     ==

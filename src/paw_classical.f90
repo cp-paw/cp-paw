@@ -1327,8 +1327,9 @@ END MODULE CLASSICAL_MODULE
       CALL CLASSICAL_ETOTAL(MD%NAT,MD%R0,MD%QEL,MD%ITYPE,EPOT &
      &             ,MD%FORCE,MD%VEL,MD%RBAS0,MD%SIGMA &
      &             ,MD%TLONGRANGE &
-     &             ,MD%NBOND,MD%INDEX2,MD%NANGLE,MD%INDEX3,MD%NTORSION,MD%INDEX4 &
-     &             ,MD%NINVERSION,MD%INDEX5,MD%NTYPE,MD%NONBOND &
+     &             ,MD%NBOND,MD%INDEX2,md%bond,MD%NANGLE,MD%INDEX3,md%angle &
+     &             ,MD%NTORSION,MD%INDEX4,md%torsion &
+     &             ,MD%NINVERSION,MD%INDEX5,md%inversion,MD%NTYPE,MD%NONBOND &
      &             ,MD%NNB,MD%IBLIST,MD%NPOT,MD%POT)
 !
 !     ==================================================================
@@ -1758,7 +1759,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     *****************************************************************
 !     *****************************************************************
       USE CLASSICAL_MODULE, ONLY : POT_TYPE,NONBOND_TYPE, MD &
-     &                    ,BOND_TYPE,ANGLE_TYPE,TORSION_TYPE,INVERSION_TYPE
+     &                ,BOND_TYPE,ANGLE_TYPE,TORSION_TYPE,INVERSION_TYPE
       USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TLONGRANGE
@@ -1819,13 +1820,14 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
         CALL CLASSICAL_ECOULOMB(NAT,R,Q,ETOT,F,V,RBAS,SIGMA &
      &            ,ITYPE,NTYPE,NONBOND,NNB,NBLIST,NPOT,POT)
       END IF
-! PRINT*,'COULOMB ',ETOT
+ PRINT*,'COULOMB ',ETOT
 ! 
 !     =================================================================
 !     ==  TWO BODY INTERACTION                                       ==
 !     =================================================================
 !     PRINT*,'BOND',NBOND,ETOT
       ICOUNT=0
+
 
       DO I2BODY=1,NBOND
         ICOUNT=ICOUNT+1
@@ -1855,7 +1857,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         ENDDO
       ENDDO
-! PRINT*,'BOND ',ETOT
+ PRINT*,'BOND ',ETOT
 ! 
 !     =================================================================
 !     ==  BOND ANGLE FORCES                                          ==
@@ -1898,7 +1900,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         ENDDO
       ENDDO 
-! PRINT*,'ANGLE ',ETOT
+ PRINT*,'ANGLE ',ETOT
 ! 
 !     =================================================================
 !     ==  TORSION ANGLE FORCES                                       ==
@@ -1949,7 +1951,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         ENDDO
       ENDDO 
-! PRINT*,'TORSION ',ETOT
+ PRINT*,'TORSION ',ETOT
 ! 
 !     =================================================================
 !     ==  INVERSION FORCES                                           ==
@@ -2000,7 +2002,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         ENDDO
       ENDDO 
-!  PRINT*,'INVERSION ',ETOT
+  PRINT*,'INVERSION ',ETOT
 !
 !     ==================================================================
 !     ==  ADD RESULTS FROM ALL TASKS                                  ==
@@ -2716,7 +2718,11 @@ REAL(8) :: G1,DGDX1
         IAT2=BOND(IB)%IAT1
         IAT3=BOND(IB)%IAT2
         IT2(:)=0
-        IT3(:)=BOND(IB)%IT2(:)
+        IF(ASSOCIATED(BOND(IB)%IT2)) THEN
+          IT3(:)=BOND(IB)%IT2(:)
+        ELSE
+          IT3(:)=0
+        END IF
         BO23=BO(IB)
         NN2=NNEIGH(IAT2)
         NN3=NNEIGH(IAT3)
@@ -4757,7 +4763,8 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       LOGICAL(4)            :: TCHK
       LOGICAL(4),PARAMETER  :: TPR=.TRUE.
       INTEGER(4)            :: LARGEST    ! LARGEST NUMBER ON EXLCUSION FILE
-      INTEGER(4)            :: IB,IANGLE,IAT1,IAT2,I,I1,I2,IMAX,ISVAR,IT1,IT2,IT3
+      INTEGER(4)            :: IB,IANGLE,IAT1,IAT2,I,I1,I2,IMAX,ISVAR
+      integer(4)            :: it(3),it1(3),it3(3)
 !     **************************************************************************
       LARGEST=1+(1+2*MAXDIV)**3+NAT**2+1
       IF(LARGEST.GT.HUGE(IEXCLUSION)) THEN
@@ -4776,25 +4783,24 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
         IAT2=BOND(IB)%IAT2
         NEXCLUSION=NEXCLUSION+1
         IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
-          IT1=BOND(IB)%IT2(1)
-          IT2=BOND(IB)%IT2(2)
-          IT3=BOND(IB)%IT2(3)
+          it(:)=0
+          if(ASSOCIATED(BOND(IB)%IT2)) then
+            it(:)=BOND(IB)%IT2(:)
+          end if
           IF(IAT2.LT.IAT1) THEN
             ISVAR=IAT2-1+NAT*(IAT1-1)
           ELSE
             ISVAR=IAT1-1+NAT*(IAT2-1)
-            IT1=-IT1 
-            IT2=-IT2
-            IT3=-IT3 
+            IT(:)=-it(:)
           END IF
-          IF(ABS(IT1).GT.MAXDIV.OR.ABS(IT2).GT.MAXDIV.OR.ABS(IT3).GT.MAXDIV) THEN
+          IF(ABS(IT(1)).GT.MAXDIV.OR.ABS(IT(2)).GT.MAXDIV.OR.ABS(IT(3)).GT.MAXDIV) THEN
             CALL ERROR$MSG('BOND TRANSLATIONS TOO LARGE')
             CALL ERROR$MSG('CANNOT HANDLE AT PRESENT')
             CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
           END IF
-          ISVAR=(IT1+MAXDIV)+(1+2*MAXDIV)*((IT2+MAXDIV) &
-     &                      +(1+2*MAXDIV)*((IT3+MAXDIV) &
-     &                      +(1+2*MAXDIV)*ISVAR))
+          ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
+     &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
+     &                        +(1+2*MAXDIV)*ISVAR))
           IEXCLUSION(NEXCLUSION)=1+ISVAR
         END IF
       ENDDO
@@ -4807,25 +4813,25 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
         IAT2=INDEX3(3,IANGLE)
         NEXCLUSION =NEXCLUSION+1
         IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
-          IT1=ANGLE(IANGLE)%IT3(1)-ANGLE(IANGLE)%IT1(1)
-          IT2=ANGLE(IANGLE)%IT3(2)-ANGLE(IANGLE)%IT1(2)
-          IT3=ANGLE(IANGLE)%IT3(3)-ANGLE(IANGLE)%IT1(3)
+          IT1(:)=0
+          IT3(:)=0
+          IF(ASSOCIATED(ANGLE(IANGLE)%IT1)) IT1(:)=ANGLE(IANGLE)%IT1(:)
+          IF(ASSOCIATED(ANGLE(IANGLE)%IT3)) IT3(:)=ANGLE(IANGLE)%IT3(:)
+          IT(:)=IT3(:)-IT1(:)
           IF(IAT1.LT.IAT2) THEN
             ISVAR=IAT1-1+NAT*(IAT2-1)
           ELSE
             ISVAR=IAT2-1+NAT*(IAT1-1)
-            IT1=-IT1 
-            IT2=-IT2
-            IT3=-IT3 
+            IT(:)=-IT(:)
           END IF
-          IF(ABS(IT1).GT.MAXDIV.OR.ABS(IT2).GT.MAXDIV.OR.ABS(IT3).GT.MAXDIV) THEN
+          IF(ABS(IT(1)).GT.MAXDIV.OR.ABS(IT(2)).GT.MAXDIV.OR.ABS(IT(3)).GT.MAXDIV) THEN
             CALL ERROR$MSG('BOND TRANSLATIONS TOO LARGE')
             CALL ERROR$MSG('CANNOT HANDLE AT PRESENT')
             CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
           END IF
-          ISVAR=(IT1+MAXDIV)+(1+2*MAXDIV)*((IT2+MAXDIV) &
-     &                      +(1+2*MAXDIV)*((IT3+MAXDIV) &
-     &                      +(1+2*MAXDIV)*ISVAR))
+          ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
+     &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
+     &                        +(1+2*MAXDIV)*ISVAR))
           IEXCLUSION(NEXCLUSION)=1+ISVAR
         END IF
       ENDDO

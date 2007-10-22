@@ -1,3 +1,5 @@
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       MODULE ISOLATE_MODULE
 !     ******************************************************************
 !     **                                                              **
@@ -188,7 +190,7 @@
 !     ==================================================================
 !     == CALCULATE FIT FUNCTIONS                                      ==
 !     ==================================================================
-      ALLOCATE(F(NGS,NFCT,NAT))
+      ALLOCATE(F(max(NGS,1),NFCT,NAT))
       ALLOCATE(EIGR(NG))
       DO IAT=1,NAT
         CALL PLANEWAVE$STRUCTUREFACTOR(POS(1,IAT),NG,EIGR)
@@ -351,18 +353,25 @@
 !     ==  GRADGRHO(I)=<NABLA*F(I)|RHO>  GRADGG(I,J)=<NABLA*F(I)|F(J)> ==
 !     ==================================================================
                               CALL TIMING$CLOCKON('ISOLATE_A_DOT')
-      DO I=1,NAT*NFCT
-!       ____GRHO(I)=<F(I)|W|RHO>________________________________________
-        CALL ISOLATE_DOT(NGS,G,F(1,I),RHO,VOL,GRHO(I),GRADGRHO(1,I))
-        DO J=I,NAT*NFCT
-!         ____GG(I,J)=<F(I)|W|F(J)>_____________________________________
-          CALL ISOLATE_DOT(NGS,G,F(1,I),F(1,J),VOL,GG(I,J),GRADGG(1,I,J))
-          GG(J,I)=GG(I,J)
-          GRADGG(1,J,I)=-GRADGG(1,I,J)
-          GRADGG(2,J,I)=-GRADGG(2,I,J)
-          GRADGG(3,J,I)=-GRADGG(3,I,J)
+      IF(NGS.NE.0) THEN
+        DO I=1,NAT*NFCT
+!         ____GRHO(I)=<F(I)|W|RHO>________________________________________
+          CALL ISOLATE_DOT(NGS,G,F(1,I),RHO,VOL,GRHO(I),GRADGRHO(1,I))
+          DO J=I,NAT*NFCT
+!           ____GG(I,J)=<F(I)|W|F(J)>_____________________________________
+            CALL ISOLATE_DOT(NGS,G,F(1,I),F(1,J),VOL,GG(I,J),GRADGG(1,I,J))
+            GG(J,I)=GG(I,J)
+            GRADGG(1,J,I)=-GRADGG(1,I,J)
+            GRADGG(2,J,I)=-GRADGG(2,I,J)
+            GRADGG(3,J,I)=-GRADGG(3,I,J)
+          ENDDO
         ENDDO
-      ENDDO
+      ELSE
+        GRHO(:)=0.D0
+        GRADGRHO(:,:)=0.D0
+        GG(:,:)=0.D0
+        GRADGG(:,:,:)=0.D0 
+      END IF
       CALL MPE$COMBINE('MONOMER','+',GRHO)
       CALL MPE$COMBINE('MONOMER','+',GRADGRHO)
       CALL MPE$COMBINE('MONOMER','+',GG)
@@ -393,7 +402,7 @@
           ENDDO
           SUM=SUM+real(CSVAR*CONJG(CSVAR))
         ENDDO
-        SUM=SQRT(SUM)/DBLE(NGS)
+        SUM=SQRT(SUM)/(real(NGS)+1.d-10)
         PRINT*,'LEAST SQUARE ',SUM
       END IF
 !
@@ -798,17 +807,18 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       RETURN
       END
 !
-!     ...............................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ISOLATE_LOWERNUMBER(G2MAX,NG,G2,NGS)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     ** DETERMINES THE NUMBER OF g-VECTOR WITHIN A GIVEN RADIUS              **
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: G2MAX
       INTEGER(4),INTENT(IN) :: NG
       REAL(8)   ,INTENT(IN) :: G2(NG)
       INTEGER(4),INTENT(OUT):: NGS
       INTEGER(4)            :: IG
-!     ******************************************************************
+!     **************************************************************************
       NGS=0
       DO IG=1,NG
         IF(G2(IG).LT.G2MAX) NGS=NGS+1
@@ -816,10 +826,10 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       RETURN
       END     
 !
-!     ...............................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ISOLATE_MAPLOWER(G2MAX,NG,G2,NGS,MAP)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: G2MAX
       INTEGER(4),INTENT(IN) :: NG
@@ -827,7 +837,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       INTEGER(4),INTENT(IN) :: NGS
       INTEGER(4),INTENT(OUT):: MAP(NGS)
       INTEGER(4)            :: IG,IGS
-!     ******************************************************************
+!     **************************************************************************
       IGS=0
       DO IG=1,NG
         IF(G2(IG).LT.G2MAX) THEN
