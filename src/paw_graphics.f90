@@ -337,6 +337,7 @@ END MODULE GRAPHICS_MODULE
 !     **  PLOT                                                        **
 !     ******************************************************************
       USE GRAPHICS_MODULE
+USE mpe_MODULE
       IMPLICIT NONE
       CHARACTER(512) ::  FILE
       CHARACTER(128) :: TITLE
@@ -371,7 +372,6 @@ END MODULE GRAPHICS_MODULE
 !     ==================================================================
 !     == PLOT WAVE FUNCTIONS                                          ==
 !     ==================================================================
-CALL TRACE$PASS('IN GRAPHICS$PLOT: PLOT WAVE FUNCTIONS')
       DO I=1,NWAVE
         FILE=WAVEPLOT(I)%FILE
         TITLE=WAVEPLOT(I)%TITLE
@@ -633,38 +633,26 @@ CALL TRACE$PASS('IN GRAPHICS$PLOT: PLOT WAVE FUNCTIONS')
           DEALLOCATE(PSPHI)
         ENDDO  
       END IF
+
 !     
 !     ================================================================
 !     ==  SEND INFO TO FIRST TASK OF MONOMER                        ==
 !     ================================================================
       CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      SENDTASK=0
       TSEND=TKGROUP.AND.THISTASK_K.EQ.1
-      TRECEIVE=THISTASK.EQ.1
-!     == DO NOTHING IF thistask is receiving and sending
-!     == DO NOTHING IF thistask is neither receiving nor sending
-      IF(TSEND.neqv.TRECEIVE) THEN
-        SENDTASK=0
-        IF(TSEND) SENDTASK=THISTASK
-        CALL MPE$COMBINE('MONOMER','+',SENDTASK)
-        IF(TSEND) THEN
-          CALL MPE$SEND('MONOMER',1,1,NR1B)
-          CALL MPE$SEND('MONOMER',1,2,NR2B)
-          CALL MPE$SEND('MONOMER',1,3,NR3B)
-          CALL MPE$SEND('MONOMER',1,4,WAVEBIG)
-        ELSE IF(TRECEIVE) THEN
-          CALL MPE$RECEIVE('MONOMER',SENDTASK,1,NR1B)
-          CALL MPE$RECEIVE('MONOMER',SENDTASK,2,NR2B)
-          CALL MPE$RECEIVE('MONOMER',SENDTASK,3,NR3B)
-          CALL MPE$RECEIVE('MONOMER',SENDTASK,4,WAVEBIG)
-        END IF
-      END IF
+      IF(TSEND) SENDTASK=THISTASK
+      CALL MPE$COMBINE('MONOMER','+',SENDTASK)
+      CALL MPE$SENDRECEIVE('MONOMER',SENDTASK,1,NR1B)
+      CALL MPE$SENDRECEIVE('MONOMER',SENDTASK,1,NR2B)
+      CALL MPE$SENDRECEIVE('MONOMER',SENDTASK,1,NR3B)
+      CALL MPE$SENDRECEIVE('MONOMER',SENDTASK,1,WAVEBIG)
 !     
 !     ================================================================
 !     ==  PRINT WAVE                                                ==
 !     ================================================================
-CALL TRACE$PASS('PRINT')
-      PRINT*,'PRINTING OUT WAVE ',TITLE(1:50)
+      PRINT*,thistask,'PRINTING OUT WAVE ',TITLE(1:50)
       IF(THISTASK.EQ.1) THEN
         CALL FILEHANDLER$SETFILE('WAVEPLOT',.FALSE.,TRIM(FILE))
         CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','UNFORMATTED')

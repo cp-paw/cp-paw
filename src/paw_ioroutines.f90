@@ -5414,6 +5414,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)                     :: MMVEC(9)
       REAL(8)                     :: MMS(3)            !ORIGIN OF THE MM SPHERE
       REAL(8)                     :: MSR(1)            !BOUNDARY RADIUS OF MM SPHERE
+      real(8)                     :: t(9)
 !     ******************************************************************    
                           CALL TRACE$PUSH('STRCIN_SOLVENT')
       LL_STRC=LL_STRC_
@@ -5547,6 +5548,23 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
          CALL FORCEFIELD$READ_PARMFILE
          CALL FORCEFIELD$READ_TOPFILE
       END IF
+!
+!     ==================================================================
+!     ==  READ CELL VECTORS                                           ==
+!     ==================================================================
+      CALL LINKEDLIST$EXISTL(LL_STRC,'LATTICE',1,TCHK)
+      IF(TCHK) THEN
+         CALL LINKEDLIST$SELECT(LL_STRC,'LATTICE')
+         CALL LINKEDLIST$EXISTD(LL_STRC,'T',1,TCHK)
+         IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'T',1,T)
+         ELSE
+            T=(/1.d+4,0.d0,0.d0,0.d0,1.d+4,0.d0,0.d0,0.d0,1.d+4/)
+         END IF
+         CALL CLASSICAL$SETR8A('CELL(0)',9,T)
+         CALL LINKEDLIST$SELECT(LL_STRC,'..')
+      END IF
+!
 !     ==================================================================
 !     ==  READ #(ATOMS) AND  #(BONDS)                                 ==
 !     ==================================================================
