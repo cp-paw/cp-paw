@@ -4556,13 +4556,16 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)        ,INTENT(IN) :: IEXCLUSION(NEXCL)
       INTEGER(4)                    :: EXCLUSION
       REAL(8)                       :: RMAX2
-      INTEGER(4)                    :: iat,IAT1,IAT2,NN,i
+      INTEGER(4)                    :: iat,IAT1,IAT2,iat2a,iat2b,NN,i
       INTEGER(4)                    :: THISTASK,NTASKS,ICOUNT
       INTEGER(4)                    :: IEX
       LOGICAL(4)                    :: TEXCLUSION
+      LOGICAL(4)                    :: Tchk
       REAL(8)                       :: D(3),D2
       INTEGER(4)                    :: IT,IT0,IT1,IT2,IT3
       INTEGER(4)                    :: I1,i2,i3
+      INTEGER(4)                    :: j1,j2,j3
+      integer(4)                    :: itvec(3)
       INTEGER(4)                    :: ITI(3,(1+2*MAXDIV)**3)
       REAL(8)                       :: TI(3,(1+2*MAXDIV)**3)
       LOGICAL(4)                    :: TT((1+2*MAXDIV)**3)
@@ -4657,7 +4660,7 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
           DO I2=MIN2,MAX2-1
             J2=MODULO(I2,NDIV(2))
             IT2=(I2-J2)/NDIV(2)
-            DO I2=MIN3,MAX3-1
+            DO I3=MIN3,MAX3-1
               J3=MODULO(I3,NDIV(3))
               IT3=(I3-J3)/NDIV(3)
               IAT2A=FIRST(J1,J2,J3)
