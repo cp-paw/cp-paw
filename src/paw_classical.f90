@@ -4583,32 +4583,36 @@ CALL ERROR$MSG('THIS ROUTINE DOES NOT FUNCTION YET')
 CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
 !
 !     ==========================================================================
-!     == DETERMINE ALL ATOMS IN A GIVEN BOX                                   ==
+!     == divide the unit cell into boxes and attribute each atom to a box     ==
 !     ==========================================================================
       call lib$invertr8(3,rbas,rbasinv)
       ALLOCATE(NATINBOX(NDIV(1),NDIV(2),NDIV(3)))
       NATINBOX(:,:,:)=0
       DO IAT=1,NAT
+!       == transform coordinates to relative coordinates
         X(:)=MATMUL(RBASINV,R(:,IAT))
-!       == EXTRACT LATTICE TRANSLATIONS ========================================
+!       == map atoms into first unit cell and keep the lattice translation =====
 !       == R-RBAS*IT LIES IN THE FIRST UNIT CELL ===============================
         DO I=1,3
           IF(X(I).GE.0.D0) THEN  ! ROUND DOWN
-            ITr(I,IAT)=INT(X(I))
+            ITR(I,IAT)=INT(X(I))
           ELSE
-            ITr(I,IAT)=INT(X(I))-1
+            ITR(I,IAT)=INT(X(I))-1
           END IF
         ENDDO
-        X(:)=X(:)-REAL(ITr(:,IAT))
+        X(:)=X(:)-REAL(ITR(:,IAT))
 !       == IDENTIFY SUB-BOX ====================================================
         IDIV(:,IAT)=INT(X(:)*REAL(NDIV(:),KIND=8))
         I1=1+IDIV(1,IAT)
         I2=1+IDIV(2,IAT)
         I3=1+IDIV(3,IAT)
+!       == increase the atom counter of the respective box =====================
         NATINBOX(I1,I2,I3)=NATINBOX(I1,I2,I3)+1
       ENDDO
 !
-!     =========================================================================
+!     ==========================================================================
+!     ==  first(i,j,k) points to the first atom in the given box              ==
+!     ==========================================================================
       ALLOCATE(FIRST(NDIV(1),NDIV(2),NDIV(3)))
       I=0
       DO I3=1,NDIV(3)
@@ -4619,6 +4623,10 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
           ENDDO
         ENDDO
       ENDDO
+!
+!     ==========================================================================
+!     ==  iatpnt points from the atoms in a given box to the bare atom index  ==
+!     ==========================================================================
       ALLOCATE(CURRENT(NDIV(1),NDIV(2),NDIV(3)))
       CURRENT=FIRST
       DO IAT=1,NAT
@@ -4629,26 +4637,85 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
         CURRENT(I1,I2,I3)=CURRENT(I1,I2,I3)+1
       ENDDO
 !
-!     ==================================================================
-!     == SET UP NEIGHBORLIST                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     == SET UP NEIGHBORLIST                                                  ==
+!     ==========================================================================
       RMAX2=RCLONGRANGE**2
       NNB=0
-      do i=1,3
-        tbox(:,i)=rbas(:,i)/real(ndiv(i),kind=8)
-      enddo
+      DO I=1,3
+        TBOX(:,I)=RBAS(:,I)/REAL(NDIV(I),KIND=8)
+      ENDDO
       DO IAT1=1,NAT
-        x0=r(1,iat)
-        y0=r(2,iat)
-        z0=r(3,iat)
-        call boxsph(RBAS,X0,Y0,Z0,Rclongrange,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
-
-      enddo
-
+        X0=R(1,IAT)
+        Y0=R(2,IAT)
+        Z0=R(3,IAT)
+        CALL BOXSPH(RBAS,X0,Y0,Z0,RCLONGRANGE,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
+!       == LOOP OVER BOXES IN THE NEIGHBORHOOD ================================
+        DO I1=MIN1,MAX1-1
+          J1=MODULO(I1,NDIV(1))
+          IT1=(I1-J1)/NDIV(1)
+          DO I2=MIN2,MAX2-1
+            J2=MODULO(I2,NDIV(2))
+            IT2=(I2-J2)/NDIV(2)
+            DO I2=MIN3,MAX3-1
+              J3=MODULO(I3,NDIV(3))
+              IT3=(I3-J3)/NDIV(3)
+              IAT2A=FIRST(J1,J2,J3)
+              IAT2B=IAT2A-1+NATINBOX(J1,J2,J3)
+              DO I=IAT2A,IAT2B
+                IAT2=IATPNT(I)
+                ITVEC(1)=IT1-ITR(1,IAT2)
+                ITVEC(2)=IT2-ITR(2,IAT2)
+                ITVEC(3)=IT3-ITR(3,IAT2)
+                D(:)=R(:,IAT2)+MATMUL(RBAS,REAL(ITVEC,KIND=8))-R(:,IAT1)
+                D2=SUM(D(:)**2)
+                IF(D2.LT.RMAX2) CYCLE
+                NNB=NNB+1
+                IF(NNB.LE.NNBX) THEN
+                  NBLIST(NNB)%IAT1=IAT1
+                  NBLIST(NNB)%IAT2=IAT2
+                  NBLIST(NNB)%EXCLUDE=.FALSE. ! WILL BE DETERMINED LATER....
+                  TCHK=(ITVEC(1).NE.0).OR.(ITVEC(2).NE.0).OR.(ITVEC(3).NE.0)
+                  IF(ASSOCIATED(NBLIST(NNB)%IT)) THEN
+                    IF(TCHK) THEN
+                      NBLIST(NNB)%IT(:)=ITVEC(:)
+                    ELSE
+                      DEALLOCATE(NBLIST(NNB)%IT)
+                    END IF
+                  ELSE
+                    IF(TCHK) THEN
+                      ALLOCATE(NBLIST(NNB)%IT(3))
+                      NBLIST(NNB)%IT(:)=ITVEC(:)
+                    END IF
+                  END IF                               
+                END IF
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
 !
-!     ==================================================================
-!     == TRANSLATION VECTORS                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     == SET EXCLUSION FLAGS                                                  ==
+!     ==========================================================================
+      IEX=1
+      EXCLUSION=IEXCLUSION(IEX)
+      DO IAT1=1,NAT
+        DO IAT2=1,IAT1-1
+          IT0=(1+2*MAXDIV)**3*(IAT2-1+NAT*(IAT1-1))
+          DO IT=1,(1+2*MAXDIV)**3
+            TEXCLUSION=(EXCLUSION.EQ.IT0+IT)
+            IF(TEXCLUSION) THEN
+              IEX=IEX+1
+              EXCLUSION=IEXCLUSION(IEX)
+            END IF
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == TRANSLATION VECTORS                                                  ==
+!     ==========================================================================
       IT=0
       DO IT1=-MAXDIV,MAXDIV
         DO IT2=-MAXDIV,MAXDIV

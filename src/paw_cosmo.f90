@@ -2285,7 +2285,7 @@ END IF
       icnt(:)=0
       do i=1,natoms
         icnt(nuc(i))=icnt(nuc(i))+1  ! atom counter for each element
-        write(lab1,fmt='(a5)')icnt(nuc(i))
+        write(lab1,fmt='(i5)')icnt(nuc(i))
         lab1=trim(uc(mtype(i)(1:2)))//adjustl(lab1)
         lab2=mtype(i)(1:2)
         lab2(1:1)=uc(lab2(1:1))
