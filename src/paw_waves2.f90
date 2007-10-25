@@ -5022,6 +5022,9 @@ END MODULE TOTALSPIN_MODULE
 !         ==  CHANGE FORMAT                                           ==
 !         ==============================================================
           IF(TKGROUP) THEN
+print*,'transfer(tsuper,ibh)',transfer(tsuper,ibh)
+print*,'transfer(tsuper_,ibh)',transfer(tsuper_,ibh)
+print*,'tsuper ',tsuper,'tsuper_ ',tsuper_,'TSUPER.EQV.TSUPER_',TSUPER.EQV.TSUPER_
             IF(TSUPER.nEQV.TSUPER_) THEN
               CALL ERROR$MSG('TRANSFORMATION BETWEEN REGULAR ..')
               CALL ERROR$MSG('... AND SUPER WAVE FUNCTIONS NOT IMPLEMENTED')

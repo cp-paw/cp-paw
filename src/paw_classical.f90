@@ -20,7 +20,7 @@ MODULE CLASSICAL_MODULE
 !**      QEL      CHARGES ON THE ATOMS                               **
 !**      TYPE     ATOM SYMBOL FOR UFF                                **
 !**      NBOND    NUMBER OF BONDS                                    **
-!**      INDEX2   BONDS                                              **
+!**      bond     bonds                                              **
 !**                                                                  **
 !**  ITERATE                                                         **
 !**   1. SELECT THE PROPER DATASET IF ANOTHER COULD BE SELECTED      **
@@ -107,7 +107,6 @@ TYPE MD_TYPE
   CHARACTER(2), POINTER :: ELEMENT(:)     !(NAT)    ELEMENT SYMBOL
   REAL(8)      ,POINTER :: QEL(:)         !(NAT)    POINT CHARGE
   INTEGER(4)            :: NBOND               
-  INTEGER(4)   ,POINTER :: INDEX2(:,:)    ! (3,NBOND)     
   TYPE(BOND_TYPE),POINTER :: BOND(:)      !(NBOND)
   LOGICAL(4)            :: MOVECELL       ! SWITCH FOR VARIABLE CELL SHAPE
   REAL(8)      ,POINTER :: RBAS0(:,:)     ! LATTICE VECTORS
@@ -121,13 +120,10 @@ TYPE MD_TYPE
   INTEGER(4)   ,POINTER :: ITYPE(:)       !(NAT)          
   REAL(8)      ,POINTER :: BO(:)          !(NBOND)           
   INTEGER(4)            :: NANGLE              
-  INTEGER(4)   ,POINTER :: INDEX3(:,:)    !(4,NANGLE)    
   TYPE(ANGLE_TYPE),POINTER :: ANGLE(:)    !(NANGLE)
   INTEGER(4)            :: NTORSION            
-  INTEGER(4)   ,POINTER :: INDEX4(:,:)    !(4,NTORSION)  
   TYPE(TORSION_TYPE),POINTER :: TORSION(:)        !(NTORSION)
   INTEGER(4)            :: NINVERSION          
-  INTEGER(4)   ,POINTER :: INDEX5(:,:)    !(4,NINVERSION)
   TYPE(INVERSION_TYPE),POINTER :: INVERSION(:)      !(NINVERSION)
   INTEGER(4)            :: NTYPE               
   INTEGER(4)   ,POINTER :: NONBOND(:,:)   !(NTYPE,NTYPE)
@@ -283,7 +279,6 @@ END MODULE CLASSICAL_MODULE
       NULLIFY(MD%ELEMENT)
       NULLIFY(MD%QEL)
       MD%NBOND=0
-      NULLIFY(MD%INDEX2)
       NULLIFY(MD%BOND)
       MD%MOVECELL=.FALSE.
       NULLIFY(MD%RBAS0)
@@ -296,13 +291,10 @@ END MODULE CLASSICAL_MODULE
       NULLIFY(MD%ITYPE)
       NULLIFY(MD%BO)
       MD%NANGLE=0
-      NULLIFY(MD%INDEX3)
       NULLIFY(MD%ANGLE)
       MD%NTORSION=0
-      NULLIFY(MD%INDEX4)
       NULLIFY(MD%TORSION)
       MD%NINVERSION=0
-      NULLIFY(MD%INDEX5)
       NULLIFY(MD%INVERSION)
       MD%NTYPE=0
       NULLIFY(MD%NONBOND)
@@ -490,6 +482,8 @@ END MODULE CLASSICAL_MODULE
 !     == INDEX2 = ARRAY DEFINING COVALENT BONDS                      ==
 !     =================================================================
       IF(ID_.EQ.'INDEX2') THEN
+call error$msg('the interface index2 should be replaced by bond')
+call error$stop('CLASSICAL$SETI4A')
         IF(MD%NBOND.EQ.0)MD%NBOND=LENG_/2
         IF(LENG_.NE.2*MD%NBOND) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -499,10 +493,6 @@ END MODULE CLASSICAL_MODULE
           CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
           CALL ERROR$STOP('CLASSICAL$SETI4A')
         END IF
-!       == HERE THE OLDIMPLEMENTATION WITH INDEX2
-        IF(.NOT.ASSOCIATED(MD%INDEX2))ALLOCATE(MD%INDEX2(3,MD%NBOND))
-        MD%INDEX2(3,:)=0
-        MD%INDEX2(1:2,:)=RESHAPE(VAL_,(/2,MD%NBOND/))
 !       == HERE THE NEW IMPLEMENTATION WITH BOND
         IF(.NOT.ASSOCIATED(MD%BOND))ALLOCATE(MD%BOND(MD%NBOND))
         CALL CLASSICAL_ZERO_BOND(MD%NBOND,MD%BOND)
@@ -524,15 +514,10 @@ END MODULE CLASSICAL_MODULE
           CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
           CALL ERROR$STOP('CLASSICAL$SETI4A')
         END IF
-        IF(.NOT.ASSOCIATED(MD%INDEX2))ALLOCATE(MD%INDEX2(3,MD%NBOND))
         IF(.NOT.ASSOCIATED(MD%BOND))ALLOCATE(MD%BOND(MD%NBOND))
         CALL CLASSICAL_ZERO_BOND(MD%NBOND,MD%BOND)
         DO I=1,MD%NBOND
           I0=5*(I-1)
-          MD%INDEX2(1,I)=VAL_(I0+1)
-          MD%INDEX2(2,I)=VAL_(I0+2)
-          MD%INDEX2(3,I)=0
-!
           MD%BOND(I)%IAT1=VAL_(I0+1)
           MD%BOND(I)%IAT2=VAL_(I0+2)
           IT(:)=VAL_(I0+3:I0+5)
@@ -941,19 +926,13 @@ END MODULE CLASSICAL_MODULE
 !     == INDEX2 = ARRAY DEFINING COVALENT BONDS                      ==
 !     =================================================================
       IF(ID_.EQ.'INDEX2') THEN
+call error$msg('the interface index2 should be replaced by bond')
+call error$stop('CLASSICAL$GETI4A')
         IF(LENG_.NE.2*MD%NBOND) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$CHVAL('ID',ID_)
           CALL ERROR$STOP('CLASSICAL$GETI4A')
         END IF
-!       == OLD
-        IF(.NOT.ASSOCIATED(MD%INDEX2)) THEN
-          CALL ERROR$MSG('INDEX2 NOT ALLOCATED')
-          CALL ERROR$CHVAL('ID',ID_)
-          CALL ERROR$STOP('CLASSICAL$GETI4A')
-        END IF
-        VAL_=RESHAPE(MD%INDEX2(1:2,:),(/2*MD%NBOND/))
-!       == NEW
         IF(.NOT.ASSOCIATED(MD%BOND)) THEN
           CALL ERROR$MSG('BOND NOT ALLOCATED')
           CALL ERROR$CHVAL('ID',ID_)
@@ -963,6 +942,10 @@ END MODULE CLASSICAL_MODULE
           VAL_(2*(I-1)+1)=MD%BOND(I)%IAT1
           VAL_(2*(I-1)+2)=MD%BOND(I)%IAT2
         ENDDO
+!
+!     =================================================================
+!     == bond: ARRAY DEFINING COVALENT BONDS                      ==
+!     =================================================================
       ELSE IF(ID_.EQ.'BOND') THEN
         IF(LENG_.NE.5*MD%NBOND) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -1086,9 +1069,6 @@ END MODULE CLASSICAL_MODULE
       INTEGER(4) :: NTYPEX
       INTEGER(4) :: NPOTX
       INTEGER(4),ALLOCATABLE :: NONBOND(:,:)
-      INTEGER(4),ALLOCATABLE :: INDEX3(:,:)
-      INTEGER(4),ALLOCATABLE :: INDEX4(:,:)
-      INTEGER(4),ALLOCATABLE :: INDEX5(:,:)
       TYPE(ANGLE_TYPE)    ,ALLOCATABLE :: ANGLE(:)
       TYPE(TORSION_TYPE)  ,ALLOCATABLE :: TORSION(:)
       TYPE(INVERSION_TYPE),ALLOCATABLE :: INVERSION(:)
@@ -1114,7 +1094,6 @@ END MODULE CLASSICAL_MODULE
       TCHK=TCHK.AND.(ASSOCIATED(MD%TYPE))
       TCHK=TCHK.AND.(ASSOCIATED(MD%QEL))
       TCHK=TCHK.AND.(MD%NBOND.GT.0)
-      TCHK=TCHK.AND.(ASSOCIATED(MD%INDEX2))
       TCHK=TCHK.AND.(ASSOCIATED(MD%BOND))
       TCHK=TCHK.AND.(ASSOCIATED(MD%BO))
       IF(.NOT.TCHK) THEN
@@ -1125,7 +1104,6 @@ END MODULE CLASSICAL_MODULE
         CALL ERROR$L4VAL('MASS',ASSOCIATED(MD%RMASS))
         CALL ERROR$L4VAL('FFTYPE',ASSOCIATED(MD%TYPE))
         CALL ERROR$L4VAL('QEL',ASSOCIATED(MD%QEL))
-        CALL ERROR$L4VAL('INDEX2',ASSOCIATED(MD%INDEX2))
         CALL ERROR$L4VAL('BOND',ASSOCIATED(MD%BOND))
         CALL ERROR$L4VAL('BOND ORDER',ASSOCIATED(MD%BO))
         CALL ERROR$STOP('CLASSICAL_INITIALIZE')
@@ -1162,10 +1140,6 @@ END MODULE CLASSICAL_MODULE
       NINVERSIONX=MD%NAT*3
       NTYPEX=MD%NAT
       NPOTX=500
-      ALLOCATE(INDEX3(4,NANGLEX))
-      ALLOCATE(INDEX4(5,NTORSIONX))
-      ALLOCATE(INDEX5(5,NINVERSIONX))
-!
       ALLOCATE(ANGLE(NANGLEX))
       ALLOCATE(TORSION(NTORSIONX))
       ALLOCATE(INVERSION(NINVERSIONX))
@@ -1176,27 +1150,16 @@ END MODULE CLASSICAL_MODULE
       ALLOCATE(NONBOND(NTYPEX,NTYPEX))
       ALLOCATE(MD%POT(NPOTX))
       ALLOCATE(MD%ITYPE(MD%NAT))
-      CALL CLASSICAL_FORCEFIELDSETUP(MD%NBOND,MD%INDEX2,MD%BOND,MD%BO &
+      CALL CLASSICAL_FORCEFIELDSETUP(MD%NBOND,MD%BOND,MD%BO &
      &             ,MD%NAT,MD%TYPE,MD%ITYPE &
-     &             ,NANGLEX,MD%NANGLE,INDEX3,ANGLE &
-     &             ,NTORSIONX,MD%NTORSION,INDEX4,TORSION &
-     &             ,NINVERSIONX,MD%NINVERSION,INDEX5,INVERSION &
+     &             ,NANGLEX,MD%NANGLE,ANGLE &
+     &             ,NTORSIONX,MD%NTORSION,TORSION &
+     &             ,NINVERSIONX,MD%NINVERSION,INVERSION &
      &             ,NTYPEX,MD%NTYPE,NONBOND &
      &             ,NPOTX,MD%NPOT,MD%POT)
       ALLOCATE(MD%NONBOND(MD%NTYPE,MD%NTYPE))
       MD%NONBOND(:,:)=NONBOND(1:MD%NTYPE,1:MD%NTYPE)
       DEALLOCATE(NONBOND)
-!     == OLD
-      ALLOCATE(MD%INDEX3(4,MD%NANGLE))
-      ALLOCATE(MD%INDEX4(5,MD%NTORSION))
-      ALLOCATE(MD%INDEX5(5,MD%NINVERSION))
-      MD%INDEX3=INDEX3(:,1:MD%NANGLE)
-      MD%INDEX4=INDEX4(:,1:MD%NTORSION)
-      MD%INDEX5=INDEX5(:,1:MD%NINVERSION)
-      DEALLOCATE(INDEX3)
-      DEALLOCATE(INDEX4)
-      DEALLOCATE(INDEX5)
-!     == NEW
       ALLOCATE(MD%ANGLE(MD%NANGLE))
       ALLOCATE(MD%TORSION(MD%NTORSION))
       ALLOCATE(MD%INVERSION(MD%NINVERSION))
@@ -1221,19 +1184,19 @@ END MODULE CLASSICAL_MODULE
         MD%MAXDIV=1
       END IF
 !   
-!     ==================================================================
-!     ==  CALCULATE EXCLUSIONS                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE EXCLUSIONS                                                ==
+!     ==========================================================================
 !     == FIRST COUNT THE NUMBER OF EXCLUSIONS ....
       MD%NEXCL=1
       ALLOCATE(MD%EXCLUSION(MD%NEXCL))
       ISVAR=MD%NEXCL
-      CALL CLASSICAL_EXCLUSIONS(MD%NAT,MD%NBOND,MD%INDEX2,MD%BOND,MD%NANGLE,MD%INDEX3,MD%ANGLE &
+      CALL CLASSICAL_EXCLUSIONS(MD%NAT,MD%NBOND,MD%BOND,MD%NANGLE,MD%ANGLE &
      &               ,MD%MAXDIV,ISVAR,MD%NEXCL,MD%EXCLUSION)
       DEALLOCATE(MD%EXCLUSION)
 !     == NOW CALCULATE EXCLUSIONS
       ALLOCATE(MD%EXCLUSION(MD%NEXCL))
-      CALL CLASSICAL_EXCLUSIONS(MD%NAT,MD%NBOND,MD%INDEX2,MD%BOND,MD%NANGLE,MD%INDEX3,MD%ANGLE &
+      CALL CLASSICAL_EXCLUSIONS(MD%NAT,MD%NBOND,MD%BOND,MD%NANGLE,MD%ANGLE &
      &               ,MD%MAXDIV,MD%NEXCL,ISVAR,MD%EXCLUSION)
 !
 !     ==================================================================
@@ -1318,7 +1281,7 @@ END MODULE CLASSICAL_MODULE
 !     ==================================================================
 !     ==  TAKE CARE OF FORCES ACTING ON DUMMY ATOMS                   ==
 !     ==================================================================
-      CALL CLASSICAL_DUMMY_POSITION(MD%NAT,MD%TYPE,MD%R0,MD%NBOND,MD%INDEX2,MD%BOND)
+      CALL CLASSICAL_DUMMY_POSITION(MD%NAT,MD%TYPE,MD%R0,MD%NBOND,MD%BOND)
 !
 !     ==================================================================
 !     ==  NOW CALCULATE TOTAL ENERGY AND FORCES                       ==
@@ -1327,15 +1290,15 @@ END MODULE CLASSICAL_MODULE
       CALL CLASSICAL_ETOTAL(MD%NAT,MD%R0,MD%QEL,MD%ITYPE,EPOT &
      &             ,MD%FORCE,MD%VEL,MD%RBAS0,MD%SIGMA &
      &             ,MD%TLONGRANGE &
-     &             ,MD%NBOND,MD%INDEX2,md%bond,MD%NANGLE,MD%INDEX3,md%angle &
-     &             ,MD%NTORSION,MD%INDEX4,md%torsion &
-     &             ,MD%NINVERSION,MD%INDEX5,md%inversion,MD%NTYPE,MD%NONBOND &
+     &             ,MD%NBOND,md%bond,MD%NANGLE,md%angle &
+     &             ,MD%NTORSION,md%torsion &
+     &             ,MD%NINVERSION,md%inversion,MD%NTYPE,MD%NONBOND &
      &             ,MD%NNB,MD%IBLIST,MD%NPOT,MD%POT)
 !
 !     ==================================================================
 !     ==  TAKE CARE OF FORCES ACTING ON DUMMY ATOMS                   ==
 !     ==================================================================
-      CALL CLASSICAL_DUMMY_FORCE(MD%NAT,MD%TYPE,MD%FORCE,MD%NBOND,MD%INDEX2,MD%BOND)
+      CALL CLASSICAL_DUMMY_FORCE(MD%NAT,MD%TYPE,MD%FORCE,MD%NBOND,MD%BOND)
 !
 !     ==================================================================
 !     ==                                                              ==
@@ -1355,7 +1318,7 @@ END MODULE CLASSICAL_MODULE
     END SUBROUTINE CLASSICAL$ETOT
 !
 !     .................................................................
-      SUBROUTINE CLASSICAL_DUMMY_POSITION(NAT,TYPE,R,NBOND,INDEX2,BOND)
+      SUBROUTINE CLASSICAL_DUMMY_POSITION(NAT,TYPE,R,NBOND,BOND)
 !     *****************************************************************      
 !     ** CALCULATE DUMMY ATOM POSITIONS                              **      
 !     **                                                             **      
@@ -1375,7 +1338,6 @@ END MODULE CLASSICAL_MODULE
       CHARACTER(5),INTENT(IN)   :: TYPE(NAT)
       REAL(8)     ,INTENT(INOUT):: R(3,NAT)
       INTEGER(4)  ,INTENT(IN)   :: NBOND
-      INTEGER(4)  ,INTENT(IN)   :: INDEX2(3,NBOND)
       TYPE(BOND_TYPE),INTENT(IN):: BOND(NBOND)
       INTEGER(4)                :: IAT,IBOND
       INTEGER(4)                :: NN,IAT1,IAT2
@@ -1387,8 +1349,6 @@ END MODULE CLASSICAL_MODULE
         R0=0.D0
         NN=0
         DO IBOND=1,NBOND
-          IAT1=INDEX2(1,IBOND) 
-          IAT2=INDEX2(2,IBOND) 
           IAT1=BOND(IBOND)%IAT1
           IAT2=BOND(IBOND)%IAT2
           IF(IAT1.EQ.IAT) THEN
@@ -1408,7 +1368,7 @@ PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
     END SUBROUTINE CLASSICAL_DUMMY_POSITION
 !
 !     .................................................................
-      SUBROUTINE CLASSICAL_DUMMY_FORCE(NAT,TYPE,F,NBOND,INDEX2,BOND)
+      SUBROUTINE CLASSICAL_DUMMY_FORCE(NAT,TYPE,F,NBOND,BOND)
 !     *****************************************************************      
 !     ** CALCULATE DUMMY ATOM FORCES                                 **      
 !     *****************************************************************      
@@ -1418,7 +1378,6 @@ PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
       CHARACTER(5),INTENT(IN)   :: TYPE(NAT)
       REAL(8)     ,INTENT(INOUT):: F(3,NAT)
       INTEGER(4)  ,INTENT(IN)   :: NBOND
-      INTEGER(4)  ,INTENT(IN)   :: INDEX2(3,NBOND)
       TYPE(BOND_TYPE),INTENT(IN):: BOND(NBOND)
       INTEGER(4)                :: IAT,IBOND
       INTEGER(4)                :: NN,IAT1,IAT2
@@ -1429,8 +1388,6 @@ PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
      &     TYPE(IAT).NE.'PIR'.AND.TYPE(IAT).NE.'CIR') CYCLE
         NN=0.D0
         DO IBOND=1,NBOND
-          IAT1=INDEX2(1,IBOND)
-          IAT2=INDEX2(2,IBOND)
           IAT1=BOND(IBOND)%IAT1
           IAT2=BOND(IBOND)%IAT2
           IF(IAT1.EQ.IAT) THEN
@@ -1444,8 +1401,6 @@ PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
         F0(:)=F(:,IAT)/DBLE(NN)
         F(:,IAT)=0.D0
         DO IBOND=1,NBOND
-          IAT1=INDEX2(1,IBOND)
-          IAT2=INDEX2(2,IBOND)
           IAT1=BOND(IBOND)%IAT1
           IAT2=BOND(IBOND)%IAT2
           IF(IAT1.EQ.IAT) THEN
@@ -1677,8 +1632,8 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       IF(LOD.GE.3) THEN
          CALL CONSTANTS('ANGSTROM',ANGSTROM)
          DO IB=1,MD%NBOND
-            IAT1=MD%INDEX2(1,IB)
-            IAT2=MD%INDEX2(2,IB)
+            IAT1=MD%bond(ib)%iat1
+            IAT2=MD%bond(ib)%iat2
             D=0.D0
             DO I=1,3
                D=D+(MD%R0(I,IAT1)-MD%R0(I,IAT2))**2
@@ -1695,9 +1650,9 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       IF(LOD.GE.3) THEN
          PI=4.D0*DATAN(1.D0)
          DO IA=1,MD%NANGLE
-            IAT1=MD%INDEX3(1,IA)
-            IAT2=MD%INDEX3(2,IA)
-            IAT3=MD%INDEX3(3,IA)
+            IAT1=MD%angle(ia)%iat1
+            IAT2=MD%angle(ia)%iat2
+            IAT3=MD%angle(ia)%iat3
             DX1=MD%R0(1,IAT1)-MD%R0(1,IAT2)
             DY1=MD%R0(2,IAT1)-MD%R0(2,IAT2)
             DZ1=MD%R0(3,IAT1)-MD%R0(3,IAT2)
@@ -1753,8 +1708,8 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     .................................................................
       SUBROUTINE CLASSICAL_ETOTAL(NAT,R,Q,ITYPE,ETOT,F,V,RBAS,SIGMA &
      &               ,TLONGRANGE &
-     &               ,NBOND,INDEX2,BOND,NANGLE,INDEX3,ANGLE,NTORSION,INDEX4,TORSION &
-     &               ,NINVERSION,INDEX5,INVERSION,NTYPE,NONBOND &
+     &               ,NBOND,BOND,NANGLE,ANGLE,NTORSION,TORSION &
+     &               ,NINVERSION,INVERSION,NTYPE,NONBOND &
      &               ,NNB,NBLIST,NPOT,POT)
 !     *****************************************************************
 !     *****************************************************************
@@ -1773,16 +1728,12 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       REAL(8)   ,INTENT(OUT):: SIGMA(3,3)
       INTEGER(4),INTENT(IN) :: ITYPE(NAT)
       INTEGER(4),INTENT(IN) :: NBOND
-      INTEGER(4),INTENT(IN) :: INDEX2(3,NBOND)
       TYPE(BOND_TYPE),INTENT(IN) :: BOND(NBOND)
       INTEGER(4),INTENT(IN) :: NANGLE
-      INTEGER(4),INTENT(IN) :: INDEX3(4,NANGLE)
       TYPE(ANGLE_TYPE),INTENT(IN) :: ANGLE(NANGLE)
       INTEGER(4),INTENT(IN) :: NTORSION
-      INTEGER(4),INTENT(IN) :: INDEX4(5,NTORSION)
       TYPE(TORSION_TYPE),INTENT(IN) :: TORSION(NTORSION)
       INTEGER(4),INTENT(IN) :: NINVERSION
-      INTEGER(4),INTENT(IN) :: INDEX5(5,NINVERSION)
       TYPE(INVERSION_TYPE),INTENT(IN) :: INVERSION(NINVERSION)
       INTEGER(4),INTENT(IN) :: NNB
       TYPE(NONBOND_TYPE),INTENT(IN) :: NBLIST(NNB)
@@ -1832,11 +1783,6 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       DO I2BODY=1,NBOND
         ICOUNT=ICOUNT+1
         IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE ! DISTRIBUTE ONTO TASKS
-!       == OLD
-        IAT1=INDEX2(1,I2BODY)
-        IAT2=INDEX2(2,I2BODY)
-        IPOT=INDEX2(3,I2BODY)
-!       == NEW
         IAT1=BOND(I2BODY)%IAT1
         IAT2=BOND(I2BODY)%IAT2
         IPOT=BOND(I2BODY)%IPOT
@@ -1866,10 +1812,6 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       DO IANGLE=1,NANGLE
         ICOUNT=ICOUNT+1
         IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE
-        IAT1=INDEX3(1,IANGLE)
-        IAT2=INDEX3(2,IANGLE)
-        IAT3=INDEX3(3,IANGLE)
-        IPOT=INDEX3(4,IANGLE)
         IAT1=ANGLE(IANGLE)%IAT1
         IAT2=ANGLE(IANGLE)%IAT2
         IAT3=ANGLE(IANGLE)%IAT3
@@ -1909,15 +1851,11 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       DO ITORSION=1,NTORSION
         ICOUNT=ICOUNT+1
         IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE
-        IAT1=INDEX4(1,ITORSION)
-        IAT2=INDEX4(2,ITORSION)
-        IAT3=INDEX4(3,ITORSION)
-        IAT4=INDEX4(4,ITORSION)
-        IPOT=INDEX4(5,ITORSION)
         IAT1=TORSION(ITORSION)%IAT1
         IAT2=TORSION(ITORSION)%IAT2
         IAT3=TORSION(ITORSION)%IAT3
         IAT4=TORSION(ITORSION)%IAT4
+        Ipot=TORSION(ITORSION)%Ipot
         R1(:)=R(:,IAT1)
         R2(:)=R(:,IAT2)
         R3(:)=R(:,IAT3)
@@ -1960,15 +1898,11 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       DO IINV=1,NINVERSION
         ICOUNT=ICOUNT+1
         IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE
-        IAT1=INDEX5(1,IINV)
-        IAT2=INDEX5(2,IINV)
-        IAT3=INDEX5(3,IINV)
-        IAT4=INDEX5(4,IINV)
-        IPOT=INDEX5(5,IINV)
         IAT1=INVERSION(IINV)%IAT1
         IAT2=INVERSION(IINV)%IAT2
         IAT3=INVERSION(IINV)%IAT3
         IAT4=INVERSION(IINV)%IAT4
+        Ipot=INVERSION(IINV)%Ipot
         R1(:)=R(:,IAT1)
         R2(:)=R(:,IAT2)
         R3(:)=R(:,IAT3)
@@ -2458,11 +2392,11 @@ REAL(8) :: G1,DGDX1
 !     =================================================================
 !
 !     ..................................................................
-      SUBROUTINE CLASSICAL_FORCEFIELDSETUP(NBOND,INDEX2,BOND,BO &
+      SUBROUTINE CLASSICAL_FORCEFIELDSETUP(NBOND,BOND,BO &
      &                 ,NAT,TYPE,ITYPE &
-     &                 ,NANGLEX,NANGLE,INDEX3,ANGLE &
-     &                 ,NTORSIONX,NTORSION,INDEX4,TORSION &
-     &                 ,NINVERSIONX,NINVERSION,INDEX5,INVERSION &
+     &                 ,NANGLEX,NANGLE,ANGLE &
+     &                 ,NTORSIONX,NTORSION,TORSION &
+     &                 ,NINVERSIONX,NINVERSION,INVERSION &
      &                 ,NTYPEX,NTYPE,NONBOND &
      &                 ,NPOTX,NPOT,POT)
 !     ******************************************************************
@@ -2475,7 +2409,6 @@ REAL(8) :: G1,DGDX1
       IMPLICIT NONE
       INTEGER(4)   ,PARAMETER    :: NNEIGHX=30
       INTEGER(4)   ,INTENT(IN)   :: NBOND
-      INTEGER(4)   ,INTENT(INOUT):: INDEX2(3,NBOND)
       TYPE(BOND_TYPE),INTENT(INOUT) :: BOND(NBOND)
       REAL(8)      ,INTENT(IN)   :: BO(NBOND)
       INTEGER(4)   ,INTENT(IN)   :: NAT
@@ -2483,15 +2416,12 @@ REAL(8) :: G1,DGDX1
       INTEGER(4)   ,INTENT(OUT)  :: ITYPE(NAT)
       INTEGER(4)   ,INTENT(IN)   :: NANGLEX
       INTEGER(4)   ,INTENT(OUT)  :: NANGLE
-      INTEGER(4)   ,INTENT(INOUT):: INDEX3(4,NANGLEX)
       TYPE(ANGLE_TYPE),INTENT(OUT) :: ANGLE(NANGLEX)
       INTEGER(4)   ,INTENT(IN)   :: NTORSIONX
       INTEGER(4)   ,INTENT(OUT)  :: NTORSION
-      INTEGER(4)   ,INTENT(OUT)  :: INDEX4(5,NTORSIONX)
       TYPE(TORSION_TYPE),INTENT(OUT) :: TORSION(NTORSIONX)
       INTEGER(4)   ,INTENT(IN)   :: NINVERSIONX
       INTEGER(4)   ,INTENT(OUT)  :: NINVERSION
-      INTEGER(4)   ,INTENT(OUT)  :: INDEX5(5,NINVERSIONX)
       TYPE(INVERSION_TYPE),INTENT(OUT) :: INVERSION(NINVERSIONX)
       INTEGER(4)   ,INTENT(IN)   :: NTYPEX
       INTEGER(4)   ,INTENT(OUT)  :: NTYPE
@@ -2534,8 +2464,6 @@ REAL(8) :: G1,DGDX1
 !       =================================================================
 !       == WRITE IDENTIFIER FOR THE POTENTIAL ===========================
 !       =================================================================
-!!$        IAT1=INDEX2(1,IB)
-!!$        IAT2=INDEX2(2,IB)
         IAT1=BOND(IB)%IAT1
         IAT2=BOND(IB)%IAT2
 !
@@ -2568,7 +2496,6 @@ REAL(8) :: G1,DGDX1
         TCHK=.FALSE.
         DO IPOT=1,NPOT
           IF(ID.EQ.POT(IPOT)%ID) THEN
-            INDEX2(3,IB)=IPOT
             BOND(IB)%IPOT=IPOT
             TCHK=.TRUE.
             EXIT
@@ -2583,7 +2510,6 @@ REAL(8) :: G1,DGDX1
           CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
         END IF
         CALL CLASSICAL_BONDPOTA(ID,X,K,D,POT(NPOT))
-        INDEX2(3,IB)=NPOT
         BOND(IB)%IPOT=NPOT
       ENDDO
 !
@@ -2593,8 +2519,6 @@ REAL(8) :: G1,DGDX1
       NNEIGH(:)=0
       INEIGH(:,:)=0
       DO IB=1,NBOND
-        IAT1=INDEX2(1,IB)
-        IAT2=INDEX2(2,IB)
         IAT1=BOND(IB)%IAT1
         IAT2=BOND(IB)%IAT2
         IF(ASSOCIATED(BOND(IB)%IT2)) THEN
@@ -2662,10 +2586,6 @@ REAL(8) :: G1,DGDX1
               CALL ERROR$OVERFLOW('NANGLE',NANGLE,NANGLEX)
               CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
             END IF
-            INDEX3(1,NANGLE)=IAT1
-            INDEX3(2,NANGLE)=IAT2
-            INDEX3(3,NANGLE)=IAT3
-            INDEX3(4,NANGLE)=0
             ANGLE(NANGLE)%IAT1=IAT1
             ANGLE(NANGLE)%IAT2=IAT2
             ANGLE(NANGLE)%IAT3=IAT3
@@ -2683,7 +2603,6 @@ REAL(8) :: G1,DGDX1
             TCHK=.FALSE.
             DO IPOT=1,NPOT
               IF(ID.EQ.POT(IPOT)%ID) THEN
-                INDEX3(4,NANGLE)=IPOT
                 ANGLE(NANGLE)%IPOT=IPOT
                 TCHK=.TRUE.
                 EXIT
@@ -2702,7 +2621,6 @@ REAL(8) :: G1,DGDX1
 !            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
 !               CALL FORCEFIELD$AMBER_ANGLEPOTA(ID,X,K,POT(NPOT))
 !            END IF
-            INDEX3(4,NANGLE)=NPOT
             ANGLE(NANGLE)%IPOT=NPOT
           ENDDO
         ENDDO
@@ -2713,8 +2631,6 @@ REAL(8) :: G1,DGDX1
 !GOTO 1235
       NTORSION=0
       DO IB=1,NBOND
-!        IAT2=INDEX2(1,IB)
-!        IAT3=INDEX2(2,IB)
         IAT2=BOND(IB)%IAT1
         IAT3=BOND(IB)%IAT2
         IT2(:)=0
@@ -2779,10 +2695,6 @@ REAL(8) :: G1,DGDX1
               CALL ERROR$MSG('NUMBER OF TORSIONS LARGER THAN MAXIMUM')
               CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
             END IF
-            INDEX4(1,NTORSION)=IAT1
-            INDEX4(2,NTORSION)=IAT2
-            INDEX4(3,NTORSION)=IAT3
-            INDEX4(4,NTORSION)=IAT4
             TORSION(NTORSION)%IAT1=IAT1
             TORSION(NTORSION)%IAT2=IAT2
             TORSION(NTORSION)%IAT3=IAT3
@@ -2805,7 +2717,6 @@ REAL(8) :: G1,DGDX1
             TCHK=.FALSE.
             DO IPOT=1,NPOT
               IF(ID.EQ.POT(IPOT)%ID) THEN
-                INDEX4(5,NTORSION)=IPOT
                 TORSION(NTORSION)%IPOT=IPOT
                 TCHK=.TRUE.
                 EXIT
@@ -2820,7 +2731,6 @@ REAL(8) :: G1,DGDX1
               CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
             END IF
             CALL CLASSICAL_TORSIONPOTA(ID,X,NIJ,K,POT(NPOT))
-            INDEX4(5,NTORSION)=NPOT
             TORSION(NTORSION)%IPOT=NPOT
           ENDDO
         ENDDO
@@ -2858,10 +2768,6 @@ REAL(8) :: G1,DGDX1
               NINVERSION=NINVERSION+1
 !     PRINT*,'NINVERSION',NINVERSION
  
-              INDEX5(1,NINVERSION)=IAT
-              INDEX5(2,NINVERSION)=IAT2
-              INDEX5(3,NINVERSION)=IAT3
-              INDEX5(4,NINVERSION)=IAT4
               INVERSION%IAT1=IAT
               INVERSION%IAT2=IAT2
               INVERSION%IAT3=IAT3
@@ -2883,7 +2789,6 @@ REAL(8) :: G1,DGDX1
               TCHK=.FALSE.
               DO IPOT=1,NPOT
                 IF(ID.EQ.POT(IPOT)%ID) THEN
-                  INDEX5(5,NINVERSION)=IPOT
                   INVERSION%IPOT=IPOT
                   TCHK=.TRUE.
                   EXIT
@@ -2897,7 +2802,6 @@ REAL(8) :: G1,DGDX1
                 CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE')
                 CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
               END IF
-              INDEX5(5,NINVERSION)=NPOT
               INVERSION%IPOT=NPOT
               CALL CLASSICAL_INVERSIONPOTA(ID,X,K,POT(NPOT))
             ENDDO
@@ -4801,7 +4705,7 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       END                
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE CLASSICAL_EXCLUSIONS(NAT,NBOND,INDEX2,BOND,NANGLE,INDEX3,ANGLE &
+      SUBROUTINE CLASSICAL_EXCLUSIONS(NAT,NBOND,BOND,NANGLE,ANGLE &
      &                     ,MAXDIV,NEXCLUSIONX,NEXCLUSION,IEXCLUSION)
 !     **************************************************************************
 !     **  NON-BOND INTERACTIONS SUCH AS VAN DER WAALS AND COULOMB INTERACTION **
@@ -4819,17 +4723,15 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
 !     **************************************************************************
       USE CLASSICAL_MODULE, ONLY : BOND_TYPE,ANGLE_TYPE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NAT
-      INTEGER(4),INTENT(IN) :: NBOND
-      INTEGER(4),INTENT(IN) :: INDEX2(3,NBOND)
-      TYPE(BOND_TYPE),INTENT(IN) :: BOND(NBOND)
-      INTEGER(4),INTENT(IN) :: NANGLE
-      INTEGER(4),INTENT(IN) :: INDEX3(4,NANGLE)
-      TYPE(ANGLE_TYPE),INTENT(IN) :: ANGLE(NANGLE)
-      INTEGER(4),INTENT(IN) :: MAXDIV
-      INTEGER(4),INTENT(IN) :: NEXCLUSIONX
-      INTEGER(4),INTENT(OUT):: NEXCLUSION
-      INTEGER(4),INTENT(OUT):: IEXCLUSION(NEXCLUSIONX)
+      INTEGER(4)       ,INTENT(IN) :: NAT
+      INTEGER(4)       ,INTENT(IN) :: NBOND
+      TYPE(BOND_TYPE)  ,INTENT(IN) :: BOND(NBOND)
+      INTEGER(4)       ,INTENT(IN) :: NANGLE
+      TYPE(ANGLE_TYPE) ,INTENT(IN) :: ANGLE(NANGLE)
+      INTEGER(4)       ,INTENT(IN) :: MAXDIV
+      INTEGER(4)       ,INTENT(IN) :: NEXCLUSIONX
+      INTEGER(4)       ,INTENT(OUT):: NEXCLUSION
+      INTEGER(4)       ,INTENT(OUT):: IEXCLUSION(NEXCLUSIONX)
       LOGICAL(4)            :: TCHK
       LOGICAL(4),PARAMETER  :: TPR=.TRUE.
       INTEGER(4)            :: LARGEST    ! LARGEST NUMBER ON EXLCUSION FILE
@@ -4847,8 +4749,6 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
 !     ==  FIND BOND EXCLUSIONS                                               ==
 !     ==========================================================================
       DO IB=1,NBOND
-        IAT1=INDEX2(1,IB)
-        IAT2=INDEX2(2,IB)
         IAT1=BOND(IB)%IAT1
         IAT2=BOND(IB)%IAT2
         NEXCLUSION=NEXCLUSION+1
@@ -4879,8 +4779,8 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
 !     ==  FIND ANGLE EXLCUSIONS                                               ==
 !     ==========================================================================
       DO IANGLE=1,NANGLE
-        IAT1=INDEX3(1,IANGLE)
-        IAT2=INDEX3(3,IANGLE)
+        IAT1=angle(iangle)%iat1
+        IAT2=angle(iangle)%iat3
         NEXCLUSION =NEXCLUSION+1
         IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
           IT1(:)=0
@@ -5029,14 +4929,12 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       REAL(8)     ,ALLOCATABLE :: QELS(:)        !(NATS)
       REAL(8)     ,ALLOCATABLE :: RMASSS(:)      !(NATS)
       CHARACTER(5),ALLOCATABLE :: TYPES(:)       !(NATS)
-      INTEGER(4)  ,ALLOCATABLE :: IBONDS(:,:)    !(3,NBONDS)
       INTEGER(4)  ,ALLOCATABLE :: IBONDSNEW(:,:)    !(6,NBONDS)
       REAL(8)     ,ALLOCATABLE :: BOS(:)         !(NBONDS)
       REAL(8)     ,ALLOCATABLE :: R0(:,:)        !(3,NAT)
       REAL(8)     ,ALLOCATABLE :: QEL(:)         !(NAT)
       REAL(8)     ,ALLOCATABLE :: RMASS(:)       !(NAT)
       CHARACTER(5),ALLOCATABLE :: TYPE(:)        !(NAT)
-      INTEGER(4)  ,ALLOCATABLE :: IBOND(:,:)     !(3,NBOND)
       INTEGER(4)  ,ALLOCATABLE :: IBONDNEW(:,:)     !(6,NBOND) (IAT1,IAT2,IT2(3),IPOT)
       REAL(8)     ,ALLOCATABLE :: BO(:)          !(NBOND)
       REAL(8)     ,ALLOCATABLE :: REXCL(:,:)     !(3,NATEXCL)
@@ -5068,14 +4966,12 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       ALLOCATE(TYPE(NAT))
       ALLOCATE(QEL(NAT))
       ALLOCATE(RMASS(NAT))
-      ALLOCATE(IBOND(3,NBOND))
       ALLOCATE(IBONDNEW(6,NBOND))
       ALLOCATE(BO(NBOND))
       CALL CLASSICAL$GETR8A('R(0)',3*NAT,R0)
       CALL CLASSICAL$GETCHA('TYPE',NAT,TYPE)
       CALL CLASSICAL$GETR8A('QEL',NAT,QEL)
       CALL CLASSICAL$GETR8A('MASS',NAT,RMASS)
-      CALL CLASSICAL$GETI4A('INDEX2',3*NBOND,IBOND)
       CALL CLASSICAL$GETI4A('BOND',5*NBOND,IBONDNEW)
       CALL CLASSICAL$GETR8A('BONDORDER',NBOND,BO)
 !
@@ -5173,7 +5069,6 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       ALLOCATE(TYPES(NATS))
       ALLOCATE(RMASSS(NATS))
       ALLOCATE(QELS(NATS))
-      ALLOCATE(IBONDS(3,NBONDS))
       ALLOCATE(IBONDSNEW(6,NBONDS))
       ALLOCATE(BOS(NBONDS))
 !
@@ -5181,7 +5076,6 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       CALL CLASSICAL$GETCHA('TYPE',NATEXCL,TYPES)
       CALL CLASSICAL$GETR8A('MASS',NATEXCL,RMASSS)
       CALL CLASSICAL$GETR8A('QEL',NATEXCL,QELS)
-      CALL CLASSICAL$GETI4A('INDEX2',3*NBONDEXCL,IBONDS)
       CALL CLASSICAL$GETI4A('BOND',5*NBONDEXCL,IBONDSNEW)
       CALL CLASSICAL$GETR8A('BONDORDER',NBONDEXCL,BOS)
 !
@@ -5192,9 +5086,6 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       DO IMOL=1,NMOL
         DO IB=1,NBOND
           IBS=IBS+1
-          IBONDS(1,IBS)=IBOND(1,IB)+NAT*(IMOL-1)+NATEXCL
-          IBONDS(2,IBS)=IBOND(2,IB)+NAT*(IMOL-1)+NATEXCL
-          IBONDS(3,IBS)=0.D0
           IBONDSNEW(1,IBS)=IBONDNEW(1,IB)+NAT*(IMOL-1)+NATEXCL
           IBONDSNEW(2,IBS)=IBONDNEW(2,IB)+NAT*(IMOL-1)+NATEXCL
           IBONDSNEW(3:5,IBS)=IBONDNEW(3:5,IB)
@@ -5241,10 +5132,8 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       CALL CLASSICAL$SETCHA('TYPE',NATS,TYPES)
       CALL CLASSICAL$SETR8A('MASS',NATS,RMASSS)
       CALL CLASSICAL$SETI4('NBOND',NBONDS)
-      CALL CLASSICAL$SETI4A('INDEX2',3*NBONDS,IBONDS)
-      CALL CLASSICAL$SETI4A('BOND',5*NBONDS,IBONDS)
+      CALL CLASSICAL$SETI4A('BOND',5*NBONDS,IBONDSnew)
       CALL CLASSICAL$SETR8A('BONDORDER',NBONDS,BOS)
-      DEALLOCATE(IBONDS)
       DEALLOCATE(IBONDSNEW)
       DEALLOCATE(BOS)
       DEALLOCATE(R0S)
@@ -5256,7 +5145,6 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       DEALLOCATE(TYPE)
       DEALLOCATE(QEL)
       DEALLOCATE(RMASS)
-      DEALLOCATE(IBOND)
       DEALLOCATE(IBONDNEW)
       DEALLOCATE(BO)
       RETURN
