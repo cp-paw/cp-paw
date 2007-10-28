@@ -2092,6 +2092,58 @@ IC C    N    CAT  HT3   0.0000  0.0000  -60.0000  0.0000  0.0000
 PATCH FIRST NONE LAST NONE
 
 
+RESI F40           0.00   ! FE4S4 Cluster in Fe-Protein of Nitrogenase
+GROUP
+ATOM FE1  F1     0.58962   ! F1 => Iron Atom from Fe-protein
+ATOM FE2  F1     0.50238
+ATOM FE3  F1     0.67589 
+ATOM FE4  F1     0.62129
+ATOM S1   SF    -0.49360   ! SF => Sulfur Atom from Fe-protein
+ATOM S2   SF    -0.53668   
+ATOM S3   SF    -0.50046  
+ATOM S4   SF    -0.47483
+
+BOND  FE1  S1  FE1  S2  FE1  S3  FE2  S1  FE2  S2  FE2  S4
+BOND  FE3  S2  FE3  S3  FE3  S4  FE4  S1  FE4  S3  FE4  S4
+
+PATCHING FIRST NONE LAST NONE
+
+
+RESI F41           1.00   ! FE4S4+ Cluster in Fe-Protein of Nitrogenase
+GROUP
+ATOM FE1  F1     0.55544   ! F1 => Iron Atom from Fe-protein
+ATOM FE2  F1     0.50385
+ATOM FE3  F1     0.60374 
+ATOM FE4  F1     0.53793
+ATOM S1   SF    -0.47193   ! SF => Sulfur Atom from Fe-protein
+ATOM S2   SF    -0.53362   
+ATOM S3   SF    -0.46561  
+ATOM S4   SF    -0.44395
+
+BOND  FE1  S1  FE1  S2  FE1  S3  FE2  S1  FE2  S2  FE2  S4
+BOND  FE3  S2  FE3  S3  FE3  S4  FE4  S1  FE4  S3  FE4  S4
+
+PATCHING FIRST NONE LAST NONE
+
+
+RESI F42          2.00   ! FE4S4++ Cluster in Fe-Protein of Nitrogenase
+GROUP
+ATOM FE1  F1     0.50338   ! F1  => Iron Atom from Fe-protein
+ATOM FE2  F1     0.47933
+ATOM FE3  F1     0.52426 
+ATOM FE4  F1     0.47595
+ATOM S1   SF    -0.43098   ! SF => Sulfur Atom from Fe-protein
+ATOM S2   SF    -0.48505   
+ATOM S3   SF    -0.40951  
+ATOM S4   SF    -0.39147
+
+BOND  FE1  S1  FE1  S2  FE1  S3  FE2  S1  FE2  S2  FE2  S4
+BOND  FE3  S2  FE3  S3  FE3  S4  FE4  S1  FE4  S3  FE4  S4
+
+PATCHING FIRST NONE LAST NONE
+
+
+
 RESI WAT          0.00   ! TIPS3P WATER MODEL  
                          ! GENERATE USING NOANGLE NODIHEDRAL
 GROUP   
@@ -2100,7 +2152,7 @@ ATOM H1   HW      0.417
 ATOM H2   HW      0.417  
 BOND OH2  H1     OH2  H2    H1   H2    ! THE LAST BOND IS NEEDED FOR SHAKE
 ANGLE H1 OH2 H2    ! REQUIRED
-PATCHING FIRS NONE LAST NONE   
+PATCHING FIRST NONE LAST NONE   
  
 
 RESI WA2          0.00   ! TIPS3P WATER MODEL  
@@ -2117,6 +2169,11 @@ PATCHING FIRS NONE LAST NONE
 RESI CIP      1.00 ! Sodium Ion
 GROUP   
 ATOM NA   IP  1.00
+PATCHING FIRST NONE LAST NONE   
+
+RESI LIN      0.00 ! Dummy Hydrogen Atom
+GROUP   
+ATOM HL   L1  0.40
 PATCHING FIRST NONE LAST NONE   
 
 

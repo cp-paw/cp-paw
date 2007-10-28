@@ -147,7 +147,7 @@ CALL TRACE$PASS('DFT')
       CALL DFT$REPORT(NFILO)
 !
 !     ==================================================================
-!     == ldaplusu                                                     ==
+!     == LDAPLUSU                                                     ==
 !     ==================================================================
 CALL TRACE$PASS('LDAPLUSU')
       CALL LDAPLUSU$REPORT(NFILO)
@@ -231,7 +231,7 @@ CALL TRACE$PASS('DIALS')
       CALL DIALS$REPORT(NFILO)
 !
 !     ==================================================================
-!     == parallelization (MPE)                                        ==
+!     == PARALLELIZATION (MPE)                                        ==
 !     ==================================================================
 CALL TRACE$PASS('MPE')
       CALL MPE$REPORT(NFILO)
@@ -291,8 +291,8 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
       CALL MPE$QUERY('~',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
-        call lib$nargs(isvar)
-        IF (isvar.LT.1) THEN
+        CALL LIB$NARGS(ISVAR)
+        IF (ISVAR.LT.1) THEN
           CALL ERROR$MSG('THE NAME OF THE CONTROLFILE')
           CALL ERROR$MSG('MUST BE GIVEN AS ARGUMENT')
           CALL ERROR$STOP('READIN')
@@ -731,8 +731,8 @@ CALL TRACE$PASS('DONE')
       CHARACTER(32)            :: ID
       CHARACTER(256)           :: NAME
       LOGICAL(4)               :: TCHK
-      LOGICAL(4)               :: Tmod
-      integer(4)               :: thistask,ntasks
+      LOGICAL(4)               :: TMOD
+      INTEGER(4)               :: THISTASK,NTASKS
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_FILES')  
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -3185,7 +3185,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 
 
 
-            !ForceAutopilot
+            !FORCEAUTOPILOT
             CALL LINKEDLIST$EXISTD(LL_CNTL,'FAUTOPARA',0,TCHK)
             IF(TCHK) THEN
                CALL LINKEDLIST$GET(LL_CNTL,'FAUTOPARA',1,SVARL)
@@ -3224,7 +3224,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             END IF
             
             
-         end IF
+         END IF
 
          
 !     ========LENGTH CONTROL ================================        
@@ -3395,9 +3395,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL STRCIN_ISOLATE(LL_STRC)
 !
 !     ==================================================================
-!     ==  ENTER BLOCK !confine                                        ==
+!     ==  ENTER BLOCK !CONFINE                                        ==
 !     ==================================================================
-      CALL STRCIN_confine(LL_STRC)
+      CALL STRCIN_CONFINE(LL_STRC)
 !
 !     ==================================================================
 !     ==  ENTER BLOCK !ORBPOT                                         ==
@@ -3519,14 +3519,14 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)                  :: RMAX
       REAL(8)    ,ALLOCATABLE  :: XK(:,:)
       REAL(8)    ,ALLOCATABLE  :: WGHT(:)
-      LOGICAL(4)               :: TINV     ! exploit time inversion symmetry
-      integer(4)               :: nspin
+      LOGICAL(4)               :: TINV     ! EXPLOIT TIME INVERSION SYMMETRY
+      INTEGER(4)               :: NSPIN
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_KPOINT')
       LL_STRC=LL_STRC_
 !
 !     ==========================================================================
-!     == check if calculation is non-collinear                                ==
+!     == CHECK IF CALCULATION IS NON-COLLINEAR                                ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
@@ -3539,15 +3539,15 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL ERROR$I4VAL('NSPIN',NSPIN)
         CALL ERROR$STOP('STRCIN_KPOINT')
       END IF 
-      if(nspin.eq.3) then 
-        tinv=.false.  ! time inversion symmetry cannot be exploited in the 
-                      ! with the pauli equation
-      else
+      IF(NSPIN.EQ.3) THEN 
+        TINV=.FALSE.  ! TIME INVERSION SYMMETRY CANNOT BE EXPLOITED IN THE 
+                      ! WITH THE PAULI EQUATION
+      ELSE
         TINV=.TRUE. 
-      end if    
+      END IF    
 !
 !     ==========================================================================
-!     == now enter k-point block                                              ==
+!     == NOW ENTER K-POINT BLOCK                                              ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
@@ -3639,8 +3639,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)               :: LENG   
       INTEGER(4),ALLOCATABLE   :: NCORROFL(:)
       INTEGER(4)               :: MAINLN(2)
-      logical(4)               :: tldaplusu
-      logical(4)               :: thybrid
+      LOGICAL(4)               :: TLDAPLUSU
+      LOGICAL(4)               :: THYBRID
       REAL(8)                  :: EV
 !     ************************************************************************** 
                            CALL TRACE$PUSH('STRCIN_SPECIES')
@@ -3690,7 +3690,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
              CALL ATOMTYPELIST$SETVALENCE(SPNAME,SVAR)
 !
 !       ========================================================================
-!       ==  ATOMIC number                                                     ==
+!       ==  ATOMIC NUMBER                                                     ==
 !       ========================================================================
         Z=-1.D0
         CALL LINKEDLIST$EXISTD(LL_STRC,'Z',1,TCHK)
@@ -3778,7 +3778,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ==  LDAPLUSU                                                          ==
 !       ========================================================================
 !       ========================================================================
-        CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,Tldaplusu)
+        CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,TLDAPLUSU)
         CALL LINKEDLIST$EXISTL(LL_STRC,'HYBRID',1,THYBRID)
         IF(THYBRID.AND.TLDAPLUSU) THEN
           CALL ERROR$MSG('LDAPLUSU AND HYBRID FUNCTIONAL ARE MUTUALLY EXCLUSIVE')
@@ -3788,7 +3788,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL LDAPLUSU$SETL4('ON',.TRUE.)
         END IF
 !
-        IF(Tldaplusu) THEN
+        IF(TLDAPLUSU) THEN
           CALL LINKEDLIST$SELECT(LL_STRC,'LDAPLUSU')
           CALL LDAPLUSU$NEW(NSP)
           CALL LDAPLUSU$SELECT(ISP)
@@ -4083,10 +4083,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
     END SUBROUTINE STRCIN_ISOLATE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE STRCIN_confine(LL_STRC_)
+      SUBROUTINE STRCIN_CONFINE(LL_STRC_)
 !     **************************************************************************
-!     **  DEFINES THE confining potential mimicing the pauli repulsion        **
-!     **  of a solvent                                                        **
+!     **  DEFINES THE CONFINING POTENTIAL MIMICING THE PAULI REPULSION        **
+!     **  OF A SOLVENT                                                        **
 !     **************************************************************************
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
@@ -4094,14 +4094,14 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       TYPE(LL_TYPE)            :: LL_STRC
       LOGICAL(4)               :: TCHK
       LOGICAL(4)               :: TON
-      REAL(8)                  :: svar
+      REAL(8)                  :: SVAR
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_ISOLATE')
       LL_STRC=LL_STRC_
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$EXISTL(LL_STRC,'CONFINE',1,TON)
-      CALL POTENTIAL$SETl4('CONFINE',TON)
+      CALL POTENTIAL$SETL4('CONFINE',TON)
       IF(.NOT.TON) THEN
         CALL TRACE$POP
         RETURN
@@ -5383,6 +5383,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         INTEGER(4)        :: ATOM1
         INTEGER(4)        :: ATOM2
         REAL(8)           :: BO
+        INTEGER(4)        :: IT(3)
       END TYPE BOND_TYPE
       TYPE(LL_TYPE),INTENT(IN)    :: LL_STRC_
       TYPE(LL_TYPE)               :: LL_STRC
@@ -5406,15 +5407,17 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)     ,ALLOCATABLE :: LINKARRAY(:,:)
       INTEGER(4)     ,ALLOCATABLE :: MAPARRAY(:,:)
       CHARACTER(32)               :: CH32SVAR1,DUMMY
+      CHARACTER(40)               :: CH40SVAR
       CHARACTER(32)               :: FF
       CHARACTER(255)              :: PARMFILE, TOPFILE, MMFILE
       CHARACTER(4)                :: RESNAME
       REAL(8)                     :: MMO(3)            !ORIGIN OF THE MM BOX
-      REAL(8)                     :: MMVEC_tmp(3,3)    !TRANSLATION VECTOR OF THE MM BOX
+      REAL(8)                     :: MMVEC_TMP(3,3)    !TRANSLATION VECTOR OF THE MM BOX
       REAL(8)                     :: MMVEC(9)
       REAL(8)                     :: MMS(3)            !ORIGIN OF THE MM SPHERE
       REAL(8)                     :: MSR(1)            !BOUNDARY RADIUS OF MM SPHERE
-      real(8)                     :: t(9)
+      REAL(8)                     :: T(9)
+      INTEGER(4)                  :: ITVEC(3)
 !     ******************************************************************    
                           CALL TRACE$PUSH('STRCIN_SOLVENT')
       LL_STRC=LL_STRC_
@@ -5443,8 +5446,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==  READ MMSPHERE                           HF   02/2007        ==
 !     ==================================================================
 
-      MMS=0.d0
-      MSR=1000.d0
+      MMS=0.D0
+      MSR=1000.D0
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
@@ -5463,21 +5466,21 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 
          CALL LINKEDLIST$EXISTD(LL_STRC,'RADIUS[A]',1,TCHK)
          IF(.NOT.TCHK) THEN
-            PRINT*,"WARNING: NO BOUNDARY RADIUS SPECIFIED. SWITCH TO 1000a0!"
-            MSR=1000.d0
+            PRINT*,"WARNING: NO BOUNDARY RADIUS SPECIFIED. SWITCH TO 1000A0!"
+            MSR=1000.D0
          ELSE
             CALL LINKEDLIST$GET(LL_STRC,'RADIUS[A]',1,MSR)
             CALL CONSTANTS("ANGSTROM",ANGSTROM)
             MSR=MSR*ANGSTROM ! CONVERT TO ATOMIC UNITS
-            print*,"************************************************"
-            print*,"ORIGIN [AU] :",MMS
-            print*,"ORIGIN [A] :",MMS/ANGSTROM
-            print*,"BOUNDARY RADIUS [AU] :",MSR
-            print*,"BOUNDARY RADIUS [A] :",MSR/ANGSTROM
-            print*,"************************************************"
+            PRINT*,"************************************************"
+            PRINT*,"ORIGIN [AU] :",MMS
+            PRINT*,"ORIGIN [A] :",MMS/ANGSTROM
+            PRINT*,"BOUNDARY RADIUS [AU] :",MSR
+            PRINT*,"BOUNDARY RADIUS [A] :",MSR/ANGSTROM
+            PRINT*,"************************************************"
          END IF
       END IF
-! WARNING: CLASSICAL SYSTEM (QMMM or SHADOW) must be selected before writing variables
+! WARNING: CLASSICAL SYSTEM (QMMM OR SHADOW) MUST BE SELECTED BEFORE WRITING VARIABLES
 !!!!      CALL CLASSICAL$SELECT('QMMM')
 !!!!            CALL CLASSICAL$SETL4('MMSPHERE',.TRUE.)
 !!!!      CALL CLASSICAL$SETR8A('MMS',3,MMS)
@@ -5559,7 +5562,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
          IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_STRC,'T',1,T)
          ELSE
-            T=(/1.d+4,0.d0,0.d0,0.d0,1.d+4,0.d0,0.d0,0.d0,1.d+4/)
+            T=(/1.D+4,0.D0,0.D0,0.D0,1.D+4,0.D0,0.D0,0.D0,1.D+4/)
          END IF
          CALL CLASSICAL$SETR8A('CELL(0)',9,T)
          CALL LINKEDLIST$SELECT(LL_STRC,'..')
@@ -5618,7 +5621,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !CHECK THIS:                                                                  *
           MATOM(IATM)%ELEMENT=MATOM(IATM)%NAME(1:2)                          !*
           IF(MATOM(IATM)%ELEMENT(2:2).EQ.'_') MATOM(IATM)%ELEMENT(2:2)=' '   !*
-print*,"ELEMENT: ", MATOM(IATM)%ELEMENT, IATM
+PRINT*,"ELEMENT: ", MATOM(IATM)%ELEMENT, IATM
 !==============================================================================
 !    
 !         ==  QMATOM  =====================================================
@@ -5646,7 +5649,7 @@ print*,"ELEMENT: ", MATOM(IATM)%ELEMENT, IATM
             SATOM(IATS)%NAME=QATOM(IATQ)%NAME
 !==================================
             SATOM(IATS)%ELEMENT= QATOM(IATQ)%ELEMENT
-print*,"SELEMENT= ",SATOM(IATS)%ELEMENT, IATS
+PRINT*,"SELEMENT= ",SATOM(IATS)%ELEMENT, IATS
 !==================================
             QATOM(IATQ)%QMSATOM=IATM
             MATOM(IATM)%QMSATOM=IATS
@@ -6000,7 +6003,9 @@ print*,"SELEMENT= ",SATOM(IATS)%ELEMENT, IATS
           CALL LINKEDLIST$SELECT(LL_STRC,'BOND',IBONDM)
 !         == FIRST ATOM ==================================================
           MBOND(IBONDM)%ATOM1=0
-          CALL LINKEDLIST$GET(LL_STRC,'ATOM1',1,CH32SVAR1)
+          CALL LINKEDLIST$GET(LL_STRC,'ATOM1',1,CH40SVAR)
+          CALL STRCIN_RESOLVEEXTENDEDNAME(CH40SVAR,CH32SVAR1,ITVEC)
+          MBOND(IBONDM)%IT(:)=-ITVEC(:)     
           DO IATM=1,NATM
             IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
               MBOND(IBONDM)%ATOM1=IATM
@@ -6015,7 +6020,9 @@ print*,"SELEMENT= ",SATOM(IATS)%ELEMENT, IATS
 !   
 !         == SECOND ATOM =================================================
           MBOND(IBONDM)%ATOM2=0
-          CALL LINKEDLIST$GET(LL_STRC,'ATOM2',1,CH32SVAR1)
+          CALL LINKEDLIST$GET(LL_STRC,'ATOM2',1,CH40SVAR)
+          CALL STRCIN_RESOLVEEXTENDEDNAME(CH40SVAR,CH32SVAR1,ITVEC)
+          MBOND(IBONDM)%IT(:)=MBOND(IBONDM)%IT(:)+ITVEC
           DO IATM=1,NATM
             IF(CH32SVAR1.EQ.MATOM(IATM)%NAME) THEN
               MBOND(IBONDM)%ATOM2=IATM
@@ -6042,7 +6049,7 @@ print*,"SELEMENT= ",SATOM(IATS)%ELEMENT, IATS
 !       ----- GET NUMBER OF BONDS
         IAT=1
         NBONDM=0
-!       ----- read #bonds from the topology informations
+!       ----- READ #BONDS FROM THE TOPOLOGY INFORMATIONS
         DO WHILE(IAT.LT.SIZE(MMATOM))
           RESNAME= MMATOM(IAT)%RESNAME
           CALL FORCEFIELD$GETRESNUMBER(RESNAME,IVAR)
@@ -6071,7 +6078,7 @@ print*,"SELEMENT= ",SATOM(IATS)%ELEMENT, IATS
              END IF
           END IF
         ENDDO
-!             ----- read #bonds from the CONECT information
+!             ----- READ #BONDS FROM THE CONECT INFORMATION
         DO I=1,SIZE(MMCONECT)
            IVAR=0
            IF(MMCONECT(I)%CATOM.EQ.0) CYCLE
@@ -6081,7 +6088,7 @@ print*,"SELEMENT= ",SATOM(IATS)%ELEMENT, IATS
            IF(MMCONECT(I)%ATOM1.NE.0) IVAR=IVAR+1
            NCONECT=NCONECT+IVAR
         END DO
-print*,"FLAG: ",NBONDM,NCONECT
+PRINT*,"FLAG: ",NBONDM,NCONECT
         ALLOCATE(MBOND(NBONDM+NCONECT))
         MBOND(:)%ATOM1=0
         MBOND(:)%ATOM2=0
@@ -6103,7 +6110,7 @@ print*,"FLAG: ",NBONDM,NCONECT
                    MBOND(IBONDM)%ATOM2 = J
                 END IF
              END DO
-             MBOND(IBONDM)%BO = 1.d0
+             MBOND(IBONDM)%BO = 1.D0
              IBONDM = IBONDM + 1
           END DO
           IAT= IAT+SIZE(TOP_RES(IVAR)%ATOM)
@@ -6200,6 +6207,7 @@ print*,"FLAG: ",NBONDM,NCONECT
           SBOND(IBONDS)%ATOM1=IATS1
           SBOND(IBONDS)%ATOM2=IATS2
           SBOND(IBONDS)%BO=MBOND(IBONDM)%BO
+          SBOND(IBONDS)%IT=MBOND(IBONDM)%IT
         END IF
       ENDDO
 !
@@ -6250,25 +6258,25 @@ NBONDM=NBONDM+NCONECT
       CALL CLASSICAL$SELECT('QMMM')
       CALL CLASSICAL$SETL4A('TFREEZE',NATM,TFREEZE)
       CALL STRCIN_SOLVENT_SETM(NATM,MATOM,NBONDM,MBOND)
-! print*,"---------------------------"
-! print*,"   MATOM:"
-! do i=1,SIZE(MATOM)
-!    write(*,FMT='(A32, 3F10.4, 2F15.5, A10, A2, I6)')  MATOM(i)
-! END do
-! print*,"---------------------------"
-! print*,"   SATOM:",allocated(SATOM)
-! do i=1,SIZE(SATOM)
-!    write(*,FMT='(I6,A32, 3F10.4, 2F15.5, A10, A2, I6)') i,  SATOM(i)
-! END do
-! print*,"---------------------------"
-! print*,"   QATOM:"
-! do i=1,SIZE(QATOM)
-!    write(*,FMT='(A32, 3F10.4, 2F15.5, A10, A2, I6)')  QATOM(i)
-! END do
-! print*,"---------------------------"
-! print*,"   MBOND:",SIZE(MBOND)
+! PRINT*,"---------------------------"
+! PRINT*,"   MATOM:"
+! DO I=1,SIZE(MATOM)
+!    WRITE(*,FMT='(A32, 3F10.4, 2F15.5, A10, A2, I6)')  MATOM(I)
+! END DO
+! PRINT*,"---------------------------"
+! PRINT*,"   SATOM:",ALLOCATED(SATOM)
+! DO I=1,SIZE(SATOM)
+!    WRITE(*,FMT='(I6,A32, 3F10.4, 2F15.5, A10, A2, I6)') I,  SATOM(I)
+! END DO
+! PRINT*,"---------------------------"
+! PRINT*,"   QATOM:"
+! DO I=1,SIZE(QATOM)
+!    WRITE(*,FMT='(A32, 3F10.4, 2F15.5, A10, A2, I6)')  QATOM(I)
+! END DO
+! PRINT*,"---------------------------"
+! PRINT*,"   MBOND:",SIZE(MBOND)
 ! DO I=1,SIZE(MBOND)
-!    write(*,FMT='(2I8,F5.1)') MBOND(I)
+!    WRITE(*,FMT='(2I8,F5.1)') MBOND(I)
 ! END DO
 ! PRINT*,"---------------------------"
 ! PRINT*,"   SBOND:"
@@ -6314,8 +6322,8 @@ NBONDM=NBONDM+NCONECT
         REAL(8)                    :: MASS(NAT)
         REAL(8)                    :: CHARGE(NAT)
         CHARACTER(5)               :: FFTYPE(NAT)
-        INTEGER(4)                 :: INDEX2(2,NBOND)
         REAL(8)                    :: BO(NBOND)
+        INTEGER(4)                 :: I5VEC(5,NBOND)
 !       ****************************************************************    
 !
 !       ================================================================
@@ -6342,17 +6350,83 @@ NBONDM=NBONDM+NCONECT
 !       ==  SEND BOND INFORMATION TO CLASSICAL OBJECT                 ==
 !       ================================================================
         DO IBOND=1,NBOND
-          INDEX2(1,IBOND)=BOND(IBOND)%ATOM1
-          INDEX2(2,IBOND)=BOND(IBOND)%ATOM2
+          I5VEC(1,IBOND)=BOND(IBOND)%ATOM1
+          I5VEC(2,IBOND)=BOND(IBOND)%ATOM2
+          I5VEC(3:5,IBOND)=BOND(IBOND)%IT(:)
           BO(IBOND)=BOND(IBOND)%BO
         ENDDO
         CALL CLASSICAL$SETI4('NBOND',NBOND)
-        CALL CLASSICAL$SETI4A('INDEX2',2*NBOND,INDEX2)
+        CALL CLASSICAL$SETI4A('BOND',5*NBOND,I5VEC)
         CALL CLASSICAL$SETR8A('BONDORDER',NBOND,BO)
         CALL CLASSICAL$SETL4('LONGRANGE',.TRUE.)
         RETURN
         END SUBROUTINE STRCIN_SOLVENT_SETM
       END SUBROUTINE STRCIN_SOLVENT
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE STRCIN_RESOLVEEXTENDEDNAME(XNAME,NAME,IT)
+!     **************************************************************************
+!     **  RESOLVES THE EXTENDED ATOM NAME NOTATION, WHICH INCLUDES            **
+!     **  A LATTICE TRANSLATION                                               **
+!     **                                                                      **
+!     **  THE EXTENDED NOTATION INCLUDES AN INTEGER LATTICE TRANSLATIONS      **
+!     **  IN THE ATOM NAME FOLLOWING A COLON                                  **
+!     **                                                                      **
+!     **   'O_23:+1-1+1'  ATOM 'O_23' SHIFTED BY RBAS(:,1)-RBAS(:,2)+RBAS(:,3)**
+!     **                                                                      **
+!     **   THE '+'SIGNS ARE NOT REQUIRED.                                     **
+!     **   ONLY SINGLE-DIGIT TRANSLATIONS ARE PERMITTED                       **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: XNAME  ! EXTENDED ATOM NAME
+      CHARACTER(*),INTENT(OUT):: NAME   ! NON-EXTENDED ATOM NAME
+      INTEGER(4)  ,INTENT(OUT):: IT(3)  ! INTEGER LATTICE TRANSLATIONS
+      INTEGER(4)              :: ICOLON ! POSITION OF THE COLON IN XNAME
+      INTEGER(4)              :: IPOS,IND,SGN
+      INTEGER(4)              :: ICH    ! ASCII NUMBER OF THE SELECTED LETTER
+!     **************************************************************************
+      ICOLON=INDEX(XNAME,':')
+!     == RETURN IF NO TRANSLATION VECTOR GIVEN =================================
+      IF(ICOLON.EQ.0) THEN
+        NAME=XNAME
+        IT(:)=0
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == RESOLVE EXTENDED ATOM NAME                                           ==
+!     ==========================================================================
+      NAME=XNAME(:ICOLON-1)
+      IPOS=ICOLON+1
+      IND=0
+      DO WHILE(IND.LT.3) 
+        ICH=IACHAR(XNAME(IPOS:IPOS))
+!       ==  IACHAR('+')=43; IACHAR('-')=45; IACHAR('0')=48; IACHAR('1')=49;...
+        IF(ICH.GE.48.AND.ICH.LE.57) THEN
+          IND=IND+1
+          IT(IND)=SGN*(ICH-48)
+          SGN=+1
+        ELSE IF(ICH.EQ.43) THEN
+          SGN=+1
+        ELSE IF(ICH.EQ.45) THEN
+          SGN=-1
+        ELSE
+          CALL ERROR$MSG('ILLEGAL CHARACTER IN EXTENDED ATOM NOTATION')  
+          CALL ERROR$CHVAL('EXT. NAME ',XNAME)
+          CALL ERROR$CHVAL('ILLEGAL CHARACTER ',XNAME(IPOS:IPOS))
+          CALL ERROR$STOP('STRCIN_RESOLVEEXTENDEDNAME')
+        END IF
+        IPOS=IPOS+1
+      ENDDO
+      IF(XNAME(IPOS:).NE.' ') THEN
+        CALL ERROR$MSG('LETTERS FOUND BEYOND END OF EXTENDED ATOM NOTATION')  
+        CALL ERROR$CHVAL('EXT. NAME ',XNAME)
+        CALL ERROR$CHVAL('ADDITIONAL LETTERS ',XNAME(IPOS:))
+        CALL ERROR$STOP('STRCIN_RESOLVEEXTENDEDNAME')
+      END IF
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_COSMO(LL_STRC_)
