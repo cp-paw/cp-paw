@@ -4352,6 +4352,7 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)                    :: ITI(3,(1+2*MAXDIV)**3)
       REAL(8)                       :: TI(3,(1+2*MAXDIV)**3)
       LOGICAL(4)                    :: TT((1+2*MAXDIV)**3)
+      INTEGER(4)                    :: ISVAR
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
@@ -4380,10 +4381,17 @@ END MODULE UFFTABLE_MODULE
       IEX=1
       EXCLUSION=IEXCLUSION(IEX)
       DO IAT1=1,NAT
-        DO IAT2=1,IAT1-1
+        DO IAT2=1,IAT1
           D(:)=R(:,IAT2)-R(:,IAT1)
           IT0=(1+2*MAXDIV)**3*(IAT2-1+NAT*(IAT1-1))
           DO IT=1,(1+2*MAXDIV)**3
+!           == ONLY PAIRS THAT ARE DISTINCT UNDER TRANSLATION ARE ======
+!           == CONSIDERED ==============================================
+            IF(IAT2.EQ.IAT1) THEN
+!             __ INDEX OF THE TRANSLATION (0,0,0)_______________________
+              ISVAR=1+MAXDIV+(2*MAXDIV+1)*(MAXDIV+(2*MAXDIV+1)*MAXDIV)
+              IF(IT.GE.ISVAR) CYCLE
+            END IF
             TEXCLUSION=(EXCLUSION.EQ.IT0+IT)
             IF(TEXCLUSION) THEN
               IEX=IEX+1
