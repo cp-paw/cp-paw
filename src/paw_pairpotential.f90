@@ -96,11 +96,9 @@
         ESELF0=ESELF0+ESELF1
       ENDDO
 !
-!
 !     ==================================================================
 !     ==  CALCULATE PAIR TERM OF PSEUDOCHARGE (ENERGY AND FORCE)      ==
 !     ==================================================================
-!
       EPAIR0=0.D0
       STRESS=0.D0
       DO IAT1=THISTASK,NAT,NTASKS
@@ -159,6 +157,7 @@
                   FORCE(I,IAT1)=FORCE(I,IAT1)-FORCE1(I)
                   FORCE(I,IAT2)=FORCE(I,IAT2)+FORCE1(I)
                 ENDDO
+!               == this stress tensor is not exactly symmetric !
                 DO I=1,3
                   DO J=1,3
                     STRESS(I,J)=STRESS(I,J)-FORCE1(I)*DR(J)

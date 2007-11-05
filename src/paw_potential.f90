@@ -698,10 +698,6 @@
       VQLM(:,:)=VQLM(:,:)+VQLM1(:,:)
       STRESS(:,:)=STRESS(:,:)+STRESS1(:,:)
                                 CALL TIMING$CLOCKOFF('VOFRHO: PAIRP')
-!PRINT*,'PAIRP. ENERGY ',EPAIR
-!WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(1,:)
-!WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(2,:)
-!WRITE(*,FMT='("PAIRP STRESS ",3F15.7)')STRESS1(3,:)
 !
 !     ==================================================================
 !     ==  ISOLATE CHARGE DENSITY FROM PERIODIC IMAGES                 ==
@@ -762,11 +758,6 @@
       CALL POTENTIAL_XC(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3,CELLVOL &
      &                 ,RHOE,GRHO,EXC,TSTRESS,STRESS1)
       STRESST(:,:)=STRESST(:,:)+STRESS1(:,:)
-!!$if(tstress) then
-!!$  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(1,:)
-!!$  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(2,:)
-!!$  WRITE(*,FMT='("XC STRESS ",3F15.7)')STRESS1(3,:)
-!!$end if
                            CALL TIMING$CLOCKOFF('VOFRHO: XC-POTENTIAL')
 !
 !     ==================================================================
@@ -811,9 +802,6 @@
      &              ,NGL,G2,GVEC,RHOG(1,1),PSCORG,DPSCORG)
       FIONT=FIONT+FORCE1
       STRESST=STRESST+STRESS1
-!WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(1,:)
-!WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(2,:)
-!WRITE(*,FMT='("CORE STRESS ",3F15.7)')STRESS1(3,:)
       CALL TIMING$CLOCKOFF('VOFRHO: FORCE ON PS-CORE')
 !
 !     ==================================================================
@@ -1132,7 +1120,7 @@
       REAL(8)                 :: CC(3,3)
       COMPLEX(8)              :: P0(3,3,LMRXX),PM(3,3,LMRXX),PT(3,3)
       REAL(8)   ,PARAMETER    :: TINY=1.D-300
-      REAL(8)                 :: STRESSA(3,3),STRESSB(3,3),STRESSC(3,3)
+!      REAL(8)                 :: STRESSA(3,3),STRESSB(3,3),STRESSC(3,3)
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       FPI=4.D0*PI
@@ -1235,13 +1223,6 @@
           STRESS(I,I)=STRESS(I,I)-EHARTREE
         ENDDO
       ENDIF
-
-!WRITE(*,FMT='("MAXWELL STRESS ",3F15.7)')STRESS(1,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL STRESS ",3F15.7)')STRESS(2,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL STRESS ",3F15.7)')STRESS(3,:)*2.D0*GWEIGHT
-STRESSA=0.D0
-STRESSB=0.D0
-STRESSC=0.D0
 !
 !     ==================================================================
 !     ==   CALCULATE FORCES AND TOTAL ENERGY                          ==
@@ -1310,6 +1291,7 @@ STRESSC=0.D0
           FORCE(3,IAT)=FORCE(3,IAT)-GVEC(3,IG)*SVAR
 !         == NOW STRESSES ==============================================
           IF(TSTRESS) THEN
+! CAUTION PT IS NOT EXACTLY SYMMETRIC
             DO LM=1,LMRX(ISP)
               PT(:,:)=PT(:,:)+(P0(:,:,LM)+PM(:,:,LM)*G2(IG))*YLMOFG(LM,IG) 
             ENDDO
@@ -1322,24 +1304,15 @@ STRESSC=0.D0
                 STRESS(I,J)=STRESS(I,J)- REAL(PT(I,J)*AVAL,KIND=8) &
      &                                 - GVEC(I,IG)*GVEC(J,IG)*SVAR
 !
-                STRESSA(I,J)=STRESSA(I,J)- REAL(PT(I,J)*AVAL,KIND=8) 
-                STRESSB(I,J)=STRESSB(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(DVAL,KIND=8)/(G2(IG)+TINY)
-                STRESSC(I,J)=STRESSC(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(BVAL*CSUM,KIND=8)/(G2(IG)+TINY)
+!                STRESSA(I,J)=STRESSA(I,J)- REAL(PT(I,J)*AVAL,KIND=8) 
+!                STRESSB(I,J)=STRESSB(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(DVAL,KIND=8)/(G2(IG)+TINY)
+!                STRESSC(I,J)=STRESSC(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(BVAL*CSUM,KIND=8)/(G2(IG)+TINY)
               ENDDO
             ENDDO
             PT(:,:)=0.D0  ! RESET FOR NEXT G-VECTOR
           END IF
         ENDDO
       ENDDO
-!WRITE(*,FMT='("MAXWELL++  STRESS ",3F15.7)')STRESSA(1,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL++  STRESS ",3F15.7)')STRESSA(2,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL++  STRESS ",3F15.7)')STRESSA(3,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSB(1,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSB(2,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSB(3,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSC(1,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSC(2,:)*2.D0*GWEIGHT
-!WRITE(*,FMT='("MAXWELL+++ STRESS ",3F15.7)')STRESSC(3,:)*2.D0*GWEIGHT
 !
 !     ==================================================================
 !     ==  MULTIPLY WITH INTEGRATION WEIGHT                            ==

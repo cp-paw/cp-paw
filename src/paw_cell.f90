@@ -603,6 +603,7 @@ END MODULE CELL_MODULE
       REAL(8)    :: XPMAT(3,3),XMMAT(3,3)
       REAL(8)    :: ONE(3,3)
       REAL(8)    :: stress_ext(3,3)
+REAL(8)    :: mat33(3,3)
       REAL(8)    :: SVAR,SVAR1,SVAR2,SVAR3
       INTEGER(4) :: I,ITER
       logical(4),parameter :: donothing=.false.
@@ -628,6 +629,15 @@ end if
       DO I=1,3
         ONE(I,I)=1.D0
       ENDDO
+!
+!     ==========================================================================
+!     == ensure that stress-tensor is symmetric                               ==
+!     ==========================================================================
+!     == the stresses from potential_hartree and from paw_pairpotential are
+!     == not exactly symmetric
+      STRESS_I=0.5D0*(STRESS_I+TRANSPOSE(STRESS_I))
+      KINSTRESS=0.5D0*(KINSTRESS+TRANSPOSE(KINSTRESS))
+!
       V0=T0(1,1)*(T0(2,2)*T0(3,3)-T0(2,3)*T0(3,2)) &
      &  +T0(2,1)*(T0(3,2)*T0(1,3)-T0(3,3)*T0(1,2)) &
      &  +T0(3,1)*(T0(1,2)*T0(2,3)-T0(1,3)*T0(2,2)) 
@@ -638,6 +648,7 @@ end if
         CALL ERROR$R8VAL('REFERENCE VOLUME ',VREF)
         CALL ERROR$STOP('CELL_PROPAGATE')
       END IF
+
       IF(TPARRINELLORAHMAN) THEN
 !       == ENERGY AND STRESS OF THE VOLUME RESERVOIR. THE ENTHALPY IS  H=E+PV
         EPOT=PRESSURE*V0
