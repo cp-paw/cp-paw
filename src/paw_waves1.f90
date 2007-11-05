@@ -5321,6 +5321,7 @@ PRINT*,'KMAP ',KMAP
        REAL(8)               :: XLOAD1
        INTEGER(4)            :: IND(1)
        INTEGER(4)            :: I
+       real(8)   ,parameter  :: r8large=1.d+20
 !      ***************************************************************
 !
 !      ===============================================================
@@ -5417,7 +5418,7 @@ PRINT*,'KMAP ',KMAP
        REAL(8)                  :: XLOAD1,XLOAD2A,XLOAD2B
        INTEGER(4)               :: IPOS1,IPOS2A,IPOS2B
        INTEGER(4)               :: J,ICOUNT
-       real(8)   ,parameter     :: r8large=1.d=20
+       real(8)   ,parameter     :: r8large=1.d-20
 !      ***************************************************************
        ICOUNT=0
        DO ICOUNT=1,100
