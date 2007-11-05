@@ -3206,7 +3206,7 @@ RETURN
       REAL(8)                :: STRESS1(3,3)
       REAL(8)                :: SVAR
       REAL(8)                :: R(3,NAT)
-      REAL(8)                :: RSMALL
+      REAL(8)   ,parameter   :: RSMALL=1.d-20
 !     ******************************************************************
                               CALL TRACE$PUSH('WAVES$FORCE')
                               CALL TIMING$CLOCKON('W:FORCE')
@@ -3218,7 +3218,6 @@ RETURN
         CALL ERROR$MSG('VALUE OF NDIMD INCONSISTENT WITH ITS DEFINITION')
         CALL ERROR$STOP('WAVES$FORCE')
       END IF
-      RSMALL=TINY(RSMALL)*1.D+2
 !
 !     ==================================================================
 !     ==  GET OCCUPATIONS FROM DYNOCC OBJECT                          ==
@@ -4677,9 +4676,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)                       :: CC(3,3)
       REAL(8)                       :: SVAR
       REAL(8)                       :: GIJ(NGL,6)
-      REAL(8)                       :: RSMALL
+      REAL(8)        ,parameter     :: RSMALL=1.d-20
 !     ******************************************************************
-      RSMALL=TINY(RSMALL)*1.D+2
 !
 !     ==================================================================
 !     ==  PREPARE GI*GJ/G2                                            ==

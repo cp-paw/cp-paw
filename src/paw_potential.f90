@@ -2,7 +2,7 @@
       MODULE POTENTIAL_MODULE
       LOGICAL(4) :: TINI=.FALSE.  ! PLANE WAVE GRID DEFINED OR NOT
       LOGICAL(4) :: TSET=.FALSE.  ! MODULE DATA DEFINED OR NOT
-      logical(4) :: TCONFINE=.FALSE. ! CONFINING POTENTIAL OR NOT
+      LOGICAL(4) :: TCONFINE=.FALSE. ! CONFINING POTENTIAL OR NOT
       REAL(8)    :: VCONFINE=0.D0
       REAL(8)    :: EPWRHO     ! PLANE WAVE CUTOFF FOR THE DENSITY
       INTEGER(4) :: NR1GLOB    ! #(R-POINTS IN FIRST DIRECTION; ALL TASK)
@@ -27,13 +27,13 @@
       END MODULE POTENTIAL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE POTENTIAL$sETR8(ID,VAL)
+      SUBROUTINE POTENTIAL$SETR8(ID,VAL)
 !     **************************************************************************
 !     **************************************************************************
       USE POTENTIAL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      REAL(8)     ,INTENT(in):: VAL
+      REAL(8)     ,INTENT(IN):: VAL
 !     **************************************************************************
       IF(ID.EQ.'VCONFINE') THEN
         VCONFINE=VAL
@@ -80,7 +80,7 @@
       ELSE IF(ID.EQ.'CONFINE') THEN
 !       == APPLIES A REPULSIVE POTENTIAL AROUND THE MOLECULE DESCRIBING THE ====
 !       == PAULI REPULSION OF A SOLVENT ENVIRONMENT ============================
-        Tconfine=VAL
+        TCONFINE=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -349,9 +349,9 @@
       LOGICAL(4)               :: TGRA
       REAL(8)   ,ALLOCATABLE   :: RHOTEMP(:,:)
       REAL(8)                  :: SVAR
-      real(8)   ,ALLOCATABLE   :: vext(:)
-      real(8)   ,ALLOCATABLE   :: FORCEext (:,:), STRESSext(:,:)
-      real(8)                  :: Eext
+      REAL(8)   ,ALLOCATABLE   :: VEXT(:)
+      REAL(8)   ,ALLOCATABLE   :: FORCEEXT (:,:), STRESSEXT(:,:)
+      REAL(8)                  :: EEXT
 !     **************************************************************************
                                 CALL TRACE$PUSH('POTENTIAL$VOFRHO')
                                 CALL TIMING$CLOCKON('POTENTIAL')
@@ -406,7 +406,7 @@
       CALL DFT$GETL4('GC',TGRA)
 !
 !     ==========================================================================
-!     == calculate CONFINING POTENTIAL                                        ==
+!     == CALCULATE CONFINING POTENTIAL                                        ==
 !     ==========================================================================
       IF(TCONFINE) THEN
          ALLOCATE(VEXT(NRL))
@@ -458,7 +458,7 @@
 !END IF
 !
 !     ==========================================================================
-!     == add external potential                                               ==
+!     == ADD EXTERNAL POTENTIAL                                               ==
 !     ==========================================================================
       IF(TCONFINE) THEN
          RHO(:,1) = RHO(:,1) + VEXT(:)
@@ -595,16 +595,16 @@
 !ENDDO
 !SVAR=SVAR !*CELLVOL
 !CALL MPE$COMBINE('MONOMER','+',SVAR)
-!ngamma=nrl
-!CALL MPE$COMBINE('MONOMER','+',ngamma)
-!svar=svar/real(ngamma,kind=8)
+!NGAMMA=NRL
+!CALL MPE$COMBINE('MONOMER','+',NGAMMA)
+!SVAR=SVAR/REAL(NGAMMA,KIND=8)
 !PRINT*,'CHARGE BEFORE TRANSFORM ',SVAR
 
       ALLOCATE(RHOG(NGL,NSPIN))
       CALL PLANEWAVE$SUPFFT('RTOG',NSPIN,NGL,RHOG,NRL,RHOE)
 
 !CALL PLANEWAVE$GETI4('NGAMMA',NGAMMA)
-!if(ngamma.ne.0)PRINT*,'RHOG(1) A ',RHOG(NGAMMA,1) !*CELLVOL
+!IF(NGAMMA.NE.0)PRINT*,'RHOG(1) A ',RHOG(NGAMMA,1) !*CELLVOL
 !STOP
 !
 !     ==================================================================
@@ -707,7 +707,7 @@
       EISOLATE=0.D0
       FORCE1(:,:)=0.D0
       VQLM1(:,:)=0.D0
-!     __ isolate may set rhobt to zero _________________________________
+!     __ ISOLATE MAY SET RHOBT TO ZERO _________________________________
       CALL ISOLATE(NSP,NAT,ISPECIES,TAU0,RBAS,FORCE1,EISOLATE &
      &            ,LMRXX,LMRX,QLM,VQLM1,RHOBT,NGL,RHOG(1,1),VHARTREE)
       FION(:,:)=FION(:,:)+FORCE1(:,:)
@@ -846,9 +846,9 @@
       CALL ENERGYLIST$ADD('AE  EXCHANGE-CORRELATION',EXC)
       CALL ENERGYLIST$ADD('PS  EXCHANGE-CORRELATION',EXC)
 !   
-!     == eisolate contains the energy contributions from isolate,      ==
-!     == cosmo, qmmm etc. the corresponding energylist contributions   ==
-!     == are already taken are off in isolate_interface                ==
+!     == EISOLATE CONTAINS THE ENERGY CONTRIBUTIONS FROM ISOLATE,      ==
+!     == COSMO, QMMM ETC. THE CORRESPONDING ENERGYLIST CONTRIBUTIONS   ==
+!     == ARE ALREADY TAKEN ARE OFF IN ISOLATE_INTERFACE                ==
 !
 !     ==================================================================
 !     ==  SELFTEST                                                    ==
@@ -911,7 +911,7 @@
       REAL(8)                 :: GBAS(3,3)
       COMPLEX(8),ALLOCATABLE  :: EIGR(:)    !(NGL)
       INTEGER(4),PARAMETER    :: NBLOCK=100
-      REAL(8)   ,PARAMETER    :: TINY=1.D-300
+      REAL(8)   ,PARAMETER    :: R8SMALL=1.D-20
       REAL(8)                 :: FAC,SVAR,SVAR1
       REAL(8)                 :: CELLVOL
       REAL(8)                 :: PI,Y0
@@ -939,7 +939,7 @@
             FORCE1(I)=FORCE1(I)+SVAR*GVEC(I,IG)
           ENDDO
 !         == STRESSES =================================================
-          SVAR1=-REAL(CONJG(VTEMP(IG))*DPSCORG(IG,ISP)*EIGR(IG),KIND=8)/(G2(IG)+TINY)
+          SVAR1=-REAL(CONJG(VTEMP(IG))*DPSCORG(IG,ISP)*EIGR(IG),KIND=8)/(G2(IG)+R8SMALL)
           DO I=1,3
             DO J=1,3
               STRESS1(I,J)=STRESS1(I,J)+GVEC(I,IG)*GVEC(J,IG)*SVAR1
@@ -1119,7 +1119,7 @@
       REAL(8)                 :: PI,Y0,FPI
       REAL(8)                 :: CC(3,3)
       COMPLEX(8)              :: P0(3,3,LMRXX),PM(3,3,LMRXX),PT(3,3)
-      REAL(8)   ,PARAMETER    :: TINY=1.D-300
+      REAL(8)   ,PARAMETER    :: R8SMALL=1.D-20
 !      REAL(8)                 :: STRESSA(3,3),STRESSB(3,3),STRESSC(3,3)
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
@@ -1173,7 +1173,7 @@
 !     ==================================================================
       IF(NGAMMA.NE.0) THEN
         RHOB=-REAL(RHO2(NGAMMA),KIND=8)
-!!$PRINT*,'gweight',GWEIGHT,'rhob',rhob
+!!$PRINT*,'GWEIGHT',GWEIGHT,'RHOB',RHOB
 !!$PRINT*,'RHOB  FROM VOFRHO_HARTREE',RHOB*GWEIGHT
 !!$PRINT*,'Q(RHO) FROM VOFRHO_HARTREE',RHO(NGAMMA)*GWEIGHT
 !!$PRINT*,'Q(RHO2) FROM VOFRHO_HARTREE',RHO2(NGAMMA)*GWEIGHT
@@ -1210,7 +1210,7 @@
       IF(TSTRESS) THEN
         DO IG=1,NGL
           IF(IG.NE.NGAMMA) THEN         
-            SVAR=real(VG(IG)*CONJG(RHO2(IG)))
+            SVAR=REAL(VG(IG)*CONJG(RHO2(IG)))
             SVAR1=SVAR/G2(IG)
             DO I=1,3
               DO J=1,3
@@ -1298,15 +1298,15 @@
             BVAL=DG0(IG,ISP)*CONJG(VG(IG))+DV0(IG,ISP)*CONJG(RHO2(IG)) 
             BVAL=BVAL*EIGR(IG)
             DVAL=DVBARG(IG,ISP)*Y0*EIGR(IG)*CONJG(RHO2(IG))
-            SVAR=REAL(DVAL+BVAL*CSUM,KIND=8)/(G2(IG)+TINY)
+            SVAR=REAL(DVAL+BVAL*CSUM,KIND=8)/(G2(IG)+R8SMALL)
             DO I=1,3
               DO J=1,3
                 STRESS(I,J)=STRESS(I,J)- REAL(PT(I,J)*AVAL,KIND=8) &
      &                                 - GVEC(I,IG)*GVEC(J,IG)*SVAR
 !
 !                STRESSA(I,J)=STRESSA(I,J)- REAL(PT(I,J)*AVAL,KIND=8) 
-!                STRESSB(I,J)=STRESSB(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(DVAL,KIND=8)/(G2(IG)+TINY)
-!                STRESSC(I,J)=STRESSC(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(BVAL*CSUM,KIND=8)/(G2(IG)+TINY)
+!                STRESSB(I,J)=STRESSB(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(DVAL,KIND=8)/(G2(IG)+R8SMALL)
+!                STRESSC(I,J)=STRESSC(I,J)- GVEC(I,IG)*GVEC(J,IG)*REAL(BVAL*CSUM,KIND=8)/(G2(IG)+R8SMALL)
               ENDDO
             ENDDO
             PT(:,:)=0.D0  ! RESET FOR NEXT G-VECTOR
@@ -1600,474 +1600,474 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine potential_confine(nat,nr1g,nr1start,nr1l,nr2,nr3,v0, &
-     &                             rat,rbas,rho,etot,force,stress,pot)
+      SUBROUTINE POTENTIAL_CONFINE(NAT,NR1G,NR1START,NR1L,NR2,NR3,V0, &
+     &                             RAT,RBAS,RHO,ETOT,FORCE,STRESS,POT)
 !     **************************************************************************
 !     **                                                                      **
-!     ** Subroutine for calculation of an empirical potential for COSMO       **
-!     ** calculations that describes Pauli repulsion between the electrons    **
-!     ** of solvent and solute.                                               **
+!     ** SUBROUTINE FOR CALCULATION OF AN EMPIRICAL POTENTIAL FOR COSMO       **
+!     ** CALCULATIONS THAT DESCRIBES PAULI REPULSION BETWEEN THE ELECTRONS    **
+!     ** OF SOLVENT AND SOLUTE.                                               **
 !     **                                                                      **
 !     **************************************************************************
       USE PERIODICTABLE_MODULE, ONLY: PERIODICTABLE$GET
-      implicit none
-      integer(4), intent(in)  :: nat                 ! #(atoms)
-      integer(4), intent(in)  :: nr1g                ! global #(grid planes)
-      integer(4), intent(in)  :: nr1start            ! first local grid plane
-      integer(4), intent(in)  :: nr1l                ! local #(grid planes)
-      integer(4), intent(in)  :: nr2   ! #(divisions along 2nd lattice vector)
-      integer(4), intent(in)  :: nr3   ! #(divisions along 3rd lattice vector)
-      real(8),    intent(in)  :: v0                  ! maximum potential
-      real(8),    intent(in)  :: rat(3,nat)          ! atomic positions
-      real(8),    intent(in)  :: rbas(3, 3)             ! lattice vectors
-      real(8),    intent(in)  :: rho(nr1l, nr2, nr3) ! electron density
+      IMPLICIT NONE
+      INTEGER(4), INTENT(IN)  :: NAT                 ! #(ATOMS)
+      INTEGER(4), INTENT(IN)  :: NR1G                ! GLOBAL #(GRID PLANES)
+      INTEGER(4), INTENT(IN)  :: NR1START            ! FIRST LOCAL GRID PLANE
+      INTEGER(4), INTENT(IN)  :: NR1L                ! LOCAL #(GRID PLANES)
+      INTEGER(4), INTENT(IN)  :: NR2   ! #(DIVISIONS ALONG 2ND LATTICE VECTOR)
+      INTEGER(4), INTENT(IN)  :: NR3   ! #(DIVISIONS ALONG 3RD LATTICE VECTOR)
+      REAL(8),    INTENT(IN)  :: V0                  ! MAXIMUM POTENTIAL
+      REAL(8),    INTENT(IN)  :: RAT(3,NAT)          ! ATOMIC POSITIONS
+      REAL(8),    INTENT(IN)  :: RBAS(3, 3)             ! LATTICE VECTORS
+      REAL(8),    INTENT(IN)  :: RHO(NR1L, NR2, NR3) ! ELECTRON DENSITY
 
-      real(8),    intent(out) :: etot                ! total energy
-      real(8),    intent(out) :: force(3, nat)           ! force
-      real(8),    intent(out) :: stress(3, 3)        ! stress
-      real(8),    intent(out) :: pot(nr1l, nr2, nr3) ! potential
-      character(2)            :: atom_name           ! to get VDW radius
-      real(8)                 :: r1(nat), r2(nat)    ! VDW radius and 2*r1
-      real(8)                 :: grid_point_volume   ! volume of one grid point
-      real(8)                 :: gridbas(3,3)        ! grid lattice vectors
-      integer(4)              :: min1,max1,min2,max2,min3,max3
-      real(8)                 :: xp(3)               ! relative grid position      
-      real(8)                 :: rp(3)               ! absolute grid position      
-      real(8)                 :: dis                 ! distance from center      
-      real(8)                 :: arg                 ! argument for cutoff func.
-      real(8)                 :: svar                ! auxilary variable
-      real(8)                 :: vec(3)              !                      
-      integer(4)              :: iat,i1,i2,i3,j1,j2,j3 ! iteration variables
+      REAL(8),    INTENT(OUT) :: ETOT                ! TOTAL ENERGY
+      REAL(8),    INTENT(OUT) :: FORCE(3, NAT)           ! FORCE
+      REAL(8),    INTENT(OUT) :: STRESS(3, 3)        ! STRESS
+      REAL(8),    INTENT(OUT) :: POT(NR1L, NR2, NR3) ! POTENTIAL
+      CHARACTER(2)            :: ATOM_NAME           ! TO GET VDW RADIUS
+      REAL(8)                 :: R1(NAT), R2(NAT)    ! VDW RADIUS AND 2*R1
+      REAL(8)                 :: GRID_POINT_VOLUME   ! VOLUME OF ONE GRID POINT
+      REAL(8)                 :: GRIDBAS(3,3)        ! GRID LATTICE VECTORS
+      INTEGER(4)              :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
+      REAL(8)                 :: XP(3)               ! RELATIVE GRID POSITION      
+      REAL(8)                 :: RP(3)               ! ABSOLUTE GRID POSITION      
+      REAL(8)                 :: DIS                 ! DISTANCE FROM CENTER      
+      REAL(8)                 :: ARG                 ! ARGUMENT FOR CUTOFF FUNC.
+      REAL(8)                 :: SVAR                ! AUXILARY VARIABLE
+      REAL(8)                 :: VEC(3)              !                      
+      INTEGER(4)              :: IAT,I1,I2,I3,J1,J2,J3 ! ITERATION VARIABLES
 !     **************************************************************************
 !     ==========================================================================
-!     == Default values for radii                                             ==
+!     == DEFAULT VALUES FOR RADII                                             ==
 !     ==========================================================================
-      DO iat=1,nat
-        CALL ATOMLIST$GETCH('NAME',iat,atom_name)
-        CALL PERIODICTABLE$GET(atom_name,'R(VDW)',r1(iat))
-        r2(iat)=2.d0*r1(iat)
+      DO IAT=1,NAT
+        CALL ATOMLIST$GETCH('NAME',IAT,ATOM_NAME)
+        CALL PERIODICTABLE$GET(ATOM_NAME,'R(VDW)',R1(IAT))
+        R2(IAT)=2.D0*R1(IAT)
       END DO 
-      gridbas(:,1)=rbas(:,1)/real(nr1g,kind=8)
-      gridbas(:,2)=rbas(:,2)/real(nr2,kind=8)
-      gridbas(:,3)=rbas(:,3)/real(nr3,kind=8)
-      grid_point_volume=(RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)) * RBAS(1,1) &
+      GRIDBAS(:,1)=RBAS(:,1)/REAL(NR1G,KIND=8)
+      GRIDBAS(:,2)=RBAS(:,2)/REAL(NR2,KIND=8)
+      GRIDBAS(:,3)=RBAS(:,3)/REAL(NR3,KIND=8)
+      GRID_POINT_VOLUME=(RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)) * RBAS(1,1) &
      &                 +(RBAS(3,2)*RBAS(1,3)-RBAS(1,2)*RBAS(3,3)) * RBAS(2,1) &
      &                 +(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) * RBAS(3,1)  
-      grid_point_volume=ABS(grid_point_volume)/real(nr1g*nr2*nr3,kind=8)
+      GRID_POINT_VOLUME=ABS(GRID_POINT_VOLUME)/REAL(NR1G*NR2*NR3,KIND=8)
 
 !     =========================================================================
-!     ==  calculate potential and total energy                               ==
+!     ==  CALCULATE POTENTIAL AND TOTAL ENERGY                               ==
 !     =========================================================================
-      pot(:,:,:)=V0
-      do iat=1,nat
-        call boxsph(gridbas,rat(1,iat),rat(2,iat),rat(3,iat),r2(iat) &
-     &             ,min1,max1,min2,max2,min3,max3)
-!print*,'minmax ',min1,max1,min2,max2,min3,max3
-        do i1=min1,max1
-          j1=modulo(i1,nr1g)+1
-          j1=j1-(nr1start-1)
-          if(j1.lt.1) cycle
-          if(j1.gt.nr1l) cycle
-          xp(1)=real(i1,kind=8)
-          do i2=min2,max2
-            j2=modulo(i2,nr2)+1
-            xp(2)=real(i2,kind=8)
-            do i3=min3,max3
-              j3=modulo(i3,nr3)+1
-              if(pot(j1,j2,j3).eq.0.d0) cycle
-              xp(3)=real(i3,kind=8)          
-              rp=matmul(gridbas,xp)          ! grid point in absolute coordinates
-              dis=sqrt(sum((rp(:)-rat(:,iat))**2))
-              if(dis.gt.r2(iat)) cycle
-              if(dis.lt.r1(iat)) then
-                pot(j1,j2,j3)=0.d0
-                cycle
-              end if
-              arg=(dis-r1(iat))/(r2(iat)-r1(iat))
-              svar=(3.d0-2.d0*arg)*arg**2
-              pot(j1,j2,j3)=pot(j1,j2,j3)*svar
-            enddo
-          enddo
-        enddo
-      enddo 
-      etot=SUM(pot*rho)*grid_point_volume
+      POT(:,:,:)=V0
+      DO IAT=1,NAT
+        CALL BOXSPH(GRIDBAS,RAT(1,IAT),RAT(2,IAT),RAT(3,IAT),R2(IAT) &
+     &             ,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
+!PRINT*,'MINMAX ',MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
+        DO I1=MIN1,MAX1
+          J1=MODULO(I1,NR1G)+1
+          J1=J1-(NR1START-1)
+          IF(J1.LT.1) CYCLE
+          IF(J1.GT.NR1L) CYCLE
+          XP(1)=REAL(I1,KIND=8)
+          DO I2=MIN2,MAX2
+            J2=MODULO(I2,NR2)+1
+            XP(2)=REAL(I2,KIND=8)
+            DO I3=MIN3,MAX3
+              J3=MODULO(I3,NR3)+1
+              IF(POT(J1,J2,J3).EQ.0.D0) CYCLE
+              XP(3)=REAL(I3,KIND=8)          
+              RP=MATMUL(GRIDBAS,XP)          ! GRID POINT IN ABSOLUTE COORDINATES
+              DIS=SQRT(SUM((RP(:)-RAT(:,IAT))**2))
+              IF(DIS.GT.R2(IAT)) CYCLE
+              IF(DIS.LT.R1(IAT)) THEN
+                POT(J1,J2,J3)=0.D0
+                CYCLE
+              END IF
+              ARG=(DIS-R1(IAT))/(R2(IAT)-R1(IAT))
+              SVAR=(3.D0-2.D0*ARG)*ARG**2
+              POT(J1,J2,J3)=POT(J1,J2,J3)*SVAR
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO 
+      ETOT=SUM(POT*RHO)*GRID_POINT_VOLUME
 !
 !     =========================================================================
-!     == Calculate forces                                                    ==
+!     == CALCULATE FORCES                                                    ==
 !     =========================================================================
-      force(:,:)=0.d0
-      do iat=1,nat
-        call boxsph(gridbas,rat(1,iat),rat(2,iat),rat(3,iat),r2(iat) &
-     &             ,min1,max1,min2,max2,min3,max3)
-        do i1=min1,max1
-          j1=modulo(i1,nr1g)
-          j1=j1+1-nr1start+1
-          if(j1.lt.1) cycle
-          if(j1.gt.nr1l) cycle
-          xp(1)=real(i1,kind=8)
-          do i2=min2,max2
-            j2=modulo(i2,nr2)+1
-            xp(2)=real(i2,kind=8)
-            do i3=min3,max3
-              j3=modulo(i3,nr3)+1
-              if(pot(j1,j2,j3).eq.0.d0) cycle
-              if(pot(j1,j2,j3).eq.v0) cycle
-              xp(3)=real(i3,kind=8)
-              rp=matmul(gridbas,xp)              ! grid point in absolute coords
-              dis=sqrt(sum((rp(:)-rat(:,iat))**2))
-              if(dis.ge.r2(iat)) cycle
-              if(dis.le.r1(iat)) cycle
-              arg=(dis-r1(iat))/(r2(iat)-r1(iat))
-              if(arg.lt.1.d-8) cycle ! avoid overflow
-              svar=6.d0*(1.d0-arg)/(3.d0-2.d0*arg)/arg  !df/f
-              SVAR=RHO(J1,J2,J3)*POT(J1,J2,J3)*svar
-              vec(:)=(rp(:)-rat(:,iat))/dis
-              force(:,iat)=force(:,iat)-svar*vec(:)
-            enddo
-          enddo
-        enddo
-      enddo 
-      force=force*grid_point_volume
+      FORCE(:,:)=0.D0
+      DO IAT=1,NAT
+        CALL BOXSPH(GRIDBAS,RAT(1,IAT),RAT(2,IAT),RAT(3,IAT),R2(IAT) &
+     &             ,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
+        DO I1=MIN1,MAX1
+          J1=MODULO(I1,NR1G)
+          J1=J1+1-NR1START+1
+          IF(J1.LT.1) CYCLE
+          IF(J1.GT.NR1L) CYCLE
+          XP(1)=REAL(I1,KIND=8)
+          DO I2=MIN2,MAX2
+            J2=MODULO(I2,NR2)+1
+            XP(2)=REAL(I2,KIND=8)
+            DO I3=MIN3,MAX3
+              J3=MODULO(I3,NR3)+1
+              IF(POT(J1,J2,J3).EQ.0.D0) CYCLE
+              IF(POT(J1,J2,J3).EQ.V0) CYCLE
+              XP(3)=REAL(I3,KIND=8)
+              RP=MATMUL(GRIDBAS,XP)              ! GRID POINT IN ABSOLUTE COORDS
+              DIS=SQRT(SUM((RP(:)-RAT(:,IAT))**2))
+              IF(DIS.GE.R2(IAT)) CYCLE
+              IF(DIS.LE.R1(IAT)) CYCLE
+              ARG=(DIS-R1(IAT))/(R2(IAT)-R1(IAT))
+              IF(ARG.LT.1.D-8) CYCLE ! AVOID OVERFLOW
+              SVAR=6.D0*(1.D0-ARG)/(3.D0-2.D0*ARG)/ARG  !DF/F
+              SVAR=RHO(J1,J2,J3)*POT(J1,J2,J3)*SVAR
+              VEC(:)=(RP(:)-RAT(:,IAT))/DIS
+              FORCE(:,IAT)=FORCE(:,IAT)-SVAR*VEC(:)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO 
+      FORCE=FORCE*GRID_POINT_VOLUME
 
 !     =========================================================================
-!     == Calculate stress                                                    ==
+!     == CALCULATE STRESS                                                    ==
 !     =========================================================================
-      stress = 0d0
-      return
-      end subroutine potential_confine
+      STRESS = 0D0
+      RETURN
+      END SUBROUTINE POTENTIAL_CONFINE
 !
 !     .........................................................................
-      subroutine potential_confine_grieger(nat,nr1g,nr1start,nr1l,nr2,nr3,v0, &
-     &                             r,T,rho,etot,f,stress,pot)
+      SUBROUTINE POTENTIAL_CONFINE_GRIEGER(NAT,NR1G,NR1START,NR1L,NR2,NR3,V0, &
+     &                             R,T,RHO,ETOT,F,STRESS,POT)
 !     *************************************************************************
 !     **                                                                     **
-!     ** Subroutine for calculation of an empirical potential for COSMO      **
-!     ** calculations that describes Pauli repulsion between the electrons   **
-!     ** of solvent and solute.                                              **
+!     ** SUBROUTINE FOR CALCULATION OF AN EMPIRICAL POTENTIAL FOR COSMO      **
+!     ** CALCULATIONS THAT DESCRIBES PAULI REPULSION BETWEEN THE ELECTRONS   **
+!     ** OF SOLVENT AND SOLUTE.                                              **
 !     **                                                                     **
 !     *************************************************************************
       USE PERIODICTABLE_MODULE, ONLY: PERIODICTABLE$GET
-      implicit none
-      integer(4), intent(in)  :: nat                 ! #(atoms)
-      integer(4), intent(in)  :: nr1g                ! global #(grid planes)
-      integer(4), intent(in)  :: nr1start            ! first local grid plane
-      integer(4), intent(in)  :: nr1l                ! local #(grid planes)
-      integer(4), intent(in)  :: nr2   ! #(divisions along 2nd lattice vector)
-      integer(4), intent(in)  :: nr3   ! #(divisions along 3rd lattice vector)
-      real(8),    intent(in)  :: v0                  ! maximum potential
-      real(8),    intent(in)  :: r(3, nat)           ! atomic positions
-      real(8),    intent(in)  :: T(3, 3)             ! lattice vectors
-      real(8),    intent(in)  :: rho(nr1l, nr2, nr3) ! electron density
+      IMPLICIT NONE
+      INTEGER(4), INTENT(IN)  :: NAT                 ! #(ATOMS)
+      INTEGER(4), INTENT(IN)  :: NR1G                ! GLOBAL #(GRID PLANES)
+      INTEGER(4), INTENT(IN)  :: NR1START            ! FIRST LOCAL GRID PLANE
+      INTEGER(4), INTENT(IN)  :: NR1L                ! LOCAL #(GRID PLANES)
+      INTEGER(4), INTENT(IN)  :: NR2   ! #(DIVISIONS ALONG 2ND LATTICE VECTOR)
+      INTEGER(4), INTENT(IN)  :: NR3   ! #(DIVISIONS ALONG 3RD LATTICE VECTOR)
+      REAL(8),    INTENT(IN)  :: V0                  ! MAXIMUM POTENTIAL
+      REAL(8),    INTENT(IN)  :: R(3, NAT)           ! ATOMIC POSITIONS
+      REAL(8),    INTENT(IN)  :: T(3, 3)             ! LATTICE VECTORS
+      REAL(8),    INTENT(IN)  :: RHO(NR1L, NR2, NR3) ! ELECTRON DENSITY
 
-      real(8),    intent(out) :: etot                ! total energy
-      real(8),    intent(out) :: f(3, nat)           ! force
-      real(8),    intent(out) :: stress(3, 3)        ! stress
-      real(8),    intent(out) :: pot(nr1l, nr2, nr3) ! potential
+      REAL(8),    INTENT(OUT) :: ETOT                ! TOTAL ENERGY
+      REAL(8),    INTENT(OUT) :: F(3, NAT)           ! FORCE
+      REAL(8),    INTENT(OUT) :: STRESS(3, 3)        ! STRESS
+      REAL(8),    INTENT(OUT) :: POT(NR1L, NR2, NR3) ! POTENTIAL
 
-!     integer(4)              :: ipiv(3)             ! Pivot indices
-!     integer(4)              :: info                ! info variable
-      integer(4)              :: i, atom_nr          ! iteration variables
-      character(2)            :: atom_name           ! to get VDW radius
+!     INTEGER(4)              :: IPIV(3)             ! PIVOT INDICES
+!     INTEGER(4)              :: INFO                ! INFO VARIABLE
+      INTEGER(4)              :: I, ATOM_NR          ! ITERATION VARIABLES
+      CHARACTER(2)            :: ATOM_NAME           ! TO GET VDW RADIUS
 
-!     real(8)                 :: T_lu(3, 3)          ! LU fact. of T
-      real(8)                 :: r1(nat), r2(nat)    ! VDW radius and 2*r1
-      real(8)                 :: r_grid(3, nat)      ! atomic grid positions
-      real(8)                 :: length_T(3)         ! Length of lattice vecs
+!     REAL(8)                 :: T_LU(3, 3)          ! LU FACT. OF T
+      REAL(8)                 :: R1(NAT), R2(NAT)    ! VDW RADIUS AND 2*R1
+      REAL(8)                 :: R_GRID(3, NAT)      ! ATOMIC GRID POSITIONS
+      REAL(8)                 :: LENGTH_T(3)         ! LENGTH OF LATTICE VECS
 
-      real(8) :: grid_point_volume          ! volume of one grid point
+      REAL(8) :: GRID_POINT_VOLUME          ! VOLUME OF ONE GRID POINT
 !     *************************************************************************
 !     =========================================================================
-!     == Default values for radii                                            ==
+!     == DEFAULT VALUES FOR RADII                                            ==
 !     =========================================================================
-      DO i=1,nat
-        CALL ATOMLIST$GETCH('NAME',i,atom_name)
-        CALL PERIODICTABLE$GET(atom_name,'R(VDW)',r1(i))
-        r2(i)=2.d0*r1(i)
+      DO I=1,NAT
+        CALL ATOMLIST$GETCH('NAME',I,ATOM_NAME)
+        CALL PERIODICTABLE$GET(ATOM_NAME,'R(VDW)',R1(I))
+        R2(I)=2.D0*R1(I)
       END DO 
 
 !     =========================================================================
-!     == Calculate atomic grid positions                                     ==
+!     == CALCULATE ATOMIC GRID POSITIONS                                     ==
 !     =========================================================================
-      CALL LIB$MATRIXSOLVER8(3,3,3,T,r_grid,r)
-      r_grid(1,:) = r_grid(1,:) * nr1g + 1
-      r_grid(2,:) = r_grid(2,:) * nr2  + 1
-      r_grid(3,:) = r_grid(3,:) * nr3  + 1
+      CALL LIB$MATRIXSOLVER8(3,3,3,T,R_GRID,R)
+      R_GRID(1,:) = R_GRID(1,:) * NR1G + 1
+      R_GRID(2,:) = R_GRID(2,:) * NR2  + 1
+      R_GRID(3,:) = R_GRID(3,:) * NR3  + 1
 
 !     =========================================================================
-!     == Length of lattice vectors                                           ==
+!     == LENGTH OF LATTICE VECTORS                                           ==
 !     =========================================================================
-      length_T(:) = sqrt(T(1, :)**2 + T(2, :)**2 + T(3, :)**2)
+      LENGTH_T(:) = SQRT(T(1, :)**2 + T(2, :)**2 + T(3, :)**2)
 
 !     =========================================================================
-!     == Volume of one grid point                                            ==
+!     == VOLUME OF ONE GRID POINT                                            ==
 !     =========================================================================
-      grid_point_volume = ABS ( &
+      GRID_POINT_VOLUME = ABS ( &
      &  ((T(2, 2)*T(3, 3) - T(3, 2)*T(2, 3)) * T(1, 1)  + &
      &   (T(3, 2)*T(1, 3) - T(1, 2)*T(3, 3)) * T(2, 1)  + &
      &   (T(1, 2)*T(2, 3) - T(2, 2)*T(1, 3)) * T(3, 1)) / &
-     &  (nr1g * nr2 * nr3))
+     &  (NR1G * NR2 * NR3))
 !
 !     =========================================================================
-!     == Calculate forces                                                    ==
+!     == CALCULATE FORCES                                                    ==
 !     =========================================================================
-      do atom_nr=1,nat
-        DO i =1,3
-          CALL potential_confine_calculate(nat, nr1g, nr1start, nr1l, nr2, &
-     &                   nr3, v0, r1, r2, r_grid, T, length_T, atom_nr, i, pot)
-          f(i, atom_nr)=-SUM(pot*rho)*grid_point_volume
-        end do
-      end do
+      DO ATOM_NR=1,NAT
+        DO I =1,3
+          CALL POTENTIAL_CONFINE_CALCULATE(NAT, NR1G, NR1START, NR1L, NR2, &
+     &                   NR3, V0, R1, R2, R_GRID, T, LENGTH_T, ATOM_NR, I, POT)
+          F(I, ATOM_NR)=-SUM(POT*RHO)*GRID_POINT_VOLUME
+        END DO
+      END DO
 !
 !     =========================================================================
-!     == Do actual potential calculation                                     ==
+!     == DO ACTUAL POTENTIAL CALCULATION                                     ==
 !     =========================================================================
-      CALL potential_confine_calculate(nat, nr1g, nr1start, nr1l, nr2, nr3, &
-     &                              v0, r1, r2, r_grid, T, length_T, 0, 0, pot)
+      CALL POTENTIAL_CONFINE_CALCULATE(NAT, NR1G, NR1START, NR1L, NR2, NR3, &
+     &                              V0, R1, R2, R_GRID, T, LENGTH_T, 0, 0, POT)
 !
 !     =========================================================================
-!     == Calculate energy                                                    ==
+!     == CALCULATE ENERGY                                                    ==
 !     =========================================================================
-      etot=SUM(pot*rho)*grid_point_volume
+      ETOT=SUM(POT*RHO)*GRID_POINT_VOLUME
 
 !     =========================================================================
-!     == Calculate stress                                                    ==
+!     == CALCULATE STRESS                                                    ==
 !     =========================================================================
-      stress = 0d0
-      return
-      end subroutine potential_confine_grieger
+      STRESS = 0D0
+      RETURN
+      END SUBROUTINE POTENTIAL_CONFINE_GRIEGER
 
 !     .........................................................................
-      subroutine potential_confine_calculate(nat, nr1g, nr1start, nr1l, &
-     &   nr2, nr3, v0, r1, r2, r_grid, T, length_T, &
-     &   derive_atom, derive_direction, pot)
+      SUBROUTINE POTENTIAL_CONFINE_CALCULATE(NAT, NR1G, NR1START, NR1L, &
+     &   NR2, NR3, V0, R1, R2, R_GRID, T, LENGTH_T, &
+     &   DERIVE_ATOM, DERIVE_DIRECTION, POT)
 !     *************************************************************************
 !     **                                                                     **
-!     ** Calculate the potential obtained by subroutine confine_potential,   **
-!     ** as well as its spatial derivatives with respect to atom derive_atom **
-!     ** and spatial direction derive_direction.                             **
-!     ** Use derive_atom == 0 if you do not want derivatives!                **
+!     ** CALCULATE THE POTENTIAL OBTAINED BY SUBROUTINE CONFINE_POTENTIAL,   **
+!     ** AS WELL AS ITS SPATIAL DERIVATIVES WITH RESPECT TO ATOM DERIVE_ATOM **
+!     ** AND SPATIAL DIRECTION DERIVE_DIRECTION.                             **
+!     ** USE DERIVE_ATOM == 0 IF YOU DO NOT WANT DERIVATIVES!                **
 !     **                                                                     **
 !     *************************************************************************
       IMPLICIT NONE
-      integer(4), intent(in)  :: nat                 ! #(atoms)
-      integer(4), intent(in)  :: nr1g                ! global #(grid planes)
-      integer(4), intent(in)  :: nr1start            ! first local grid plane
-      integer(4), intent(in)  :: nr1l                ! local #(grid planes)
-      integer(4), intent(in)  :: nr2   ! #(divisions along 2nd lattice vector)
-      integer(4), intent(in)  :: nr3   ! #(divisions along 3rd lattice vector)
+      INTEGER(4), INTENT(IN)  :: NAT                 ! #(ATOMS)
+      INTEGER(4), INTENT(IN)  :: NR1G                ! GLOBAL #(GRID PLANES)
+      INTEGER(4), INTENT(IN)  :: NR1START            ! FIRST LOCAL GRID PLANE
+      INTEGER(4), INTENT(IN)  :: NR1L                ! LOCAL #(GRID PLANES)
+      INTEGER(4), INTENT(IN)  :: NR2   ! #(DIVISIONS ALONG 2ND LATTICE VECTOR)
+      INTEGER(4), INTENT(IN)  :: NR3   ! #(DIVISIONS ALONG 3RD LATTICE VECTOR)
 
-      real(8),    intent(in)  :: v0                  ! maximum potential
-      real(8),    intent(in)  :: r1 (nat)            ! Van-der-Waals radius
-      real(8),    intent(in)  :: r2 (nat)            ! r2
-      real(8)                 :: r12(nat)            ! r2 - r1
+      REAL(8),    INTENT(IN)  :: V0                  ! MAXIMUM POTENTIAL
+      REAL(8),    INTENT(IN)  :: R1 (NAT)            ! VAN-DER-WAALS RADIUS
+      REAL(8),    INTENT(IN)  :: R2 (NAT)            ! R2
+      REAL(8)                 :: R12(NAT)            ! R2 - R1
 
-      real(8),    intent(in)  :: r_grid(3, nat)      ! atomic grid positions
-      real(8),    intent(in)  :: T(3, 3)             ! lattice vectors
-      real(8),    intent(in)  :: length_T(3)         ! Length of lattice vecs
+      REAL(8),    INTENT(IN)  :: R_GRID(3, NAT)      ! ATOMIC GRID POSITIONS
+      REAL(8),    INTENT(IN)  :: T(3, 3)             ! LATTICE VECTORS
+      REAL(8),    INTENT(IN)  :: LENGTH_T(3)         ! LENGTH OF LATTICE VECS
 
-      integer(4), intent(in)  :: derive_atom         ! Atom Nr.  to derive
-      integer(4), intent(in)  :: derive_direction    ! Direction to derive
+      INTEGER(4), INTENT(IN)  :: DERIVE_ATOM         ! ATOM NR.  TO DERIVE
+      INTEGER(4), INTENT(IN)  :: DERIVE_DIRECTION    ! DIRECTION TO DERIVE
 
-      real(8),    intent(out) :: pot(nr1l, nr2, nr3) ! potential
+      REAL(8),    INTENT(OUT) :: POT(NR1L, NR2, NR3) ! POTENTIAL
 
-      integer(4)              :: i, j, k, l, atom_nr ! iteration variables
-      integer(4)              :: ii, jj, kk, atom_nr2! ditto
-      integer(4)              :: xmin, xmax          ! barriers
-      integer(4)              :: ymin, ymax          ! ditto
-      integer(4)              :: zmin(3), zmax(3)    ! ditto
-      real(8)                 :: c, d, d1, d2, y     ! distances to atomic pos.
-      real(8)                 :: p1, p2, p3          ! axis intercepts
-      real(8)                 :: T_unit(3, 3)        ! T as unit vectors
+      INTEGER(4)              :: I, J, K, L, ATOM_NR ! ITERATION VARIABLES
+      INTEGER(4)              :: II, JJ, KK, ATOM_NR2! DITTO
+      INTEGER(4)              :: XMIN, XMAX          ! BARRIERS
+      INTEGER(4)              :: YMIN, YMAX          ! DITTO
+      INTEGER(4)              :: ZMIN(3), ZMAX(3)    ! DITTO
+      REAL(8)                 :: C, D, D1, D2, Y     ! DISTANCES TO ATOMIC POS.
+      REAL(8)                 :: P1, P2, P3          ! AXIS INTERCEPTS
+      REAL(8)                 :: T_UNIT(3, 3)        ! T AS UNIT VECTORS
 
-      real(8) :: cos12, cos13, cos23    ! angles between lattice vectors
-      real(8) :: dx, dy, dz             ! grid increment: length_T(x) / nrx
+      REAL(8) :: COS12, COS13, COS23    ! ANGLES BETWEEN LATTICE VECTORS
+      REAL(8) :: DX, DY, DZ             ! GRID INCREMENT: LENGTH_T(X) / NRX
 !     *************************************************************************
 !     =========================================================================
-!     == Initializations                                                     ==
+!     == INITIALIZATIONS                                                     ==
 !     =========================================================================
-      r12 = r2 - r1
-      IF (derive_atom .eq. 0) THEN
-         pot=v0
+      R12 = R2 - R1
+      IF (DERIVE_ATOM .EQ. 0) THEN
+         POT=V0
       ELSE
-         pot=0.D0
+         POT=0.D0
       END IF
-      cos12 = DOT_PRODUCT (T(:,1),T(:,2)) / (length_T(1) * length_T(2))
-      cos13 = DOT_PRODUCT (T(:,1),T(:,3)) / (length_T(1) * length_T(3))
-      cos23 = DOT_PRODUCT (T(:,2),T(:,3)) / (length_T(2) * length_T(3))
-      dx = length_T(1) / REAL(nr1g,KIND=8)
-      dy = length_T(2) / REAL(nr2,KIND=8)
-      dz = length_T(3) / REAL(nr3,KIND=8)
-      do i = 1, 3
-        T_unit(:, i) = T(:, i) / length_T(i)
-      end do
+      COS12 = DOT_PRODUCT (T(:,1),T(:,2)) / (LENGTH_T(1) * LENGTH_T(2))
+      COS13 = DOT_PRODUCT (T(:,1),T(:,3)) / (LENGTH_T(1) * LENGTH_T(3))
+      COS23 = DOT_PRODUCT (T(:,2),T(:,3)) / (LENGTH_T(2) * LENGTH_T(3))
+      DX = LENGTH_T(1) / REAL(NR1G,KIND=8)
+      DY = LENGTH_T(2) / REAL(NR2,KIND=8)
+      DZ = LENGTH_T(3) / REAL(NR3,KIND=8)
+      DO I = 1, 3
+        T_UNIT(:, I) = T(:, I) / LENGTH_T(I)
+      END DO
 
 !     =========================================================================
-!     == Iteration over grid points for d < r2                               ==
+!     == ITERATION OVER GRID POINTS FOR D < R2                               ==
 !     =========================================================================
-!     == atom_nr2 .eq. 0 is added for the atom to be derived ==
-ATOMS: do atom_nr2 = 0, nat
-         IF (atom_nr2.eq.derive_atom) THEN
+!     == ATOM_NR2 .EQ. 0 IS ADDED FOR THE ATOM TO BE DERIVED ==
+ATOMS: DO ATOM_NR2 = 0, NAT
+         IF (ATOM_NR2.EQ.DERIVE_ATOM) THEN
             CYCLE ATOMS
-         ELSE IF (atom_nr2.eq.0) THEN
-            atom_nr = derive_atom
+         ELSE IF (ATOM_NR2.EQ.0) THEN
+            ATOM_NR = DERIVE_ATOM
          ELSE
-            atom_nr = atom_nr2
+            ATOM_NR = ATOM_NR2
          END IF
-         xmin = CEILING(r_grid(1,atom_nr) - r2(atom_nr)/dx )
-         xmax =   FLOOR(r_grid(1,atom_nr) + r2(atom_nr)/dx )
-         ii = MODULO (xmin, nr1g) - nr1start
-         if (ii.eq.-nr1start) ii = nr1g - nr1start
+         XMIN = CEILING(R_GRID(1,ATOM_NR) - R2(ATOM_NR)/DX )
+         XMAX =   FLOOR(R_GRID(1,ATOM_NR) + R2(ATOM_NR)/DX )
+         II = MODULO (XMIN, NR1G) - NR1START
+         IF (II.EQ.-NR1START) II = NR1G - NR1START
 
-ILOOP:   do i = xmin, xmax
-            if (ii .gt. nr1g - nr1start) ii = 1 - nr1start
-            ii = ii + 1
-            if (ii .le. 0 .or. ii .gt. nr1l) cycle ILOOP
-            p1 = dble(i - r_grid(1, atom_nr)) * dx
-            d2 = SQRT(r2(atom_nr)**2 + p1**2 * (cos12**2 - 1)) / dy
-            c  = r_grid(2, atom_nr) - p1 * cos12 / dy
-            ymin = CEILING(c - d2)
-            ymax = FLOOR(c + d2)
+ILOOP:   DO I = XMIN, XMAX
+            IF (II .GT. NR1G - NR1START) II = 1 - NR1START
+            II = II + 1
+            IF (II .LE. 0 .OR. II .GT. NR1L) CYCLE ILOOP
+            P1 = DBLE(I - R_GRID(1, ATOM_NR)) * DX
+            D2 = SQRT(R2(ATOM_NR)**2 + P1**2 * (COS12**2 - 1)) / DY
+            C  = R_GRID(2, ATOM_NR) - P1 * COS12 / DY
+            YMIN = CEILING(C - D2)
+            YMAX = FLOOR(C + D2)
 
-            jj = MODULO (ymin, nr2)
-            if (jj .eq. 0) jj = nr2
+            JJ = MODULO (YMIN, NR2)
+            IF (JJ .EQ. 0) JJ = NR2
 
-JLOOP:   do j = ymin, ymax
-            p2 = dble(j - r_grid(2, atom_nr)) * dy
+JLOOP:   DO J = YMIN, YMAX
+            P2 = DBLE(J - R_GRID(2, ATOM_NR)) * DY
 
-            d2 = SQRT(r2(atom_nr)**2 + p1**2 * (cos13**2 - 1) &
-     &         + p2**2 * (cos23**2 - 1) + 2*p1*p2 * (cos13*cos23 - cos12)) / dz
-            c = r_grid(3, atom_nr) - (p1*cos13 + p2*cos23) / dz
-            zmin(1) = CEILING(c - d2)
+            D2 = SQRT(R2(ATOM_NR)**2 + P1**2 * (COS13**2 - 1) &
+     &         + P2**2 * (COS23**2 - 1) + 2*P1*P2 * (COS13*COS23 - COS12)) / DZ
+            C = R_GRID(3, ATOM_NR) - (P1*COS13 + P2*COS23) / DZ
+            ZMIN(1) = CEILING(C - D2)
 
-            d1 = r1(atom_nr)**2 + p1**2 * (cos13**2 - 1) &
-     &          + p2**2 * (cos23**2 - 1) + 2*p1*p2 * (cos13*cos23 - cos12)
-            if (d1 .lt. 0) then
-               zmax(1) = FLOOR(c + d2)
-               zmin(3) = 1
-               zmax(3) = 0
-               zmin(2) = 1
-               zmax(2) = 0
-            else
-               d1 = SQRT(d1) / dz
-               zmax(1) = FLOOR(c - d1)
-               zmin(2) = CEILING(c + d1)
-               zmax(2) = FLOOR(c + d2)
-               zmin(3) = zmax(1) + 1
-               zmax(3) = zmin(2) - 1
-            end if
+            D1 = R1(ATOM_NR)**2 + P1**2 * (COS13**2 - 1) &
+     &          + P2**2 * (COS23**2 - 1) + 2*P1*P2 * (COS13*COS23 - COS12)
+            IF (D1 .LT. 0) THEN
+               ZMAX(1) = FLOOR(C + D2)
+               ZMIN(3) = 1
+               ZMAX(3) = 0
+               ZMIN(2) = 1
+               ZMAX(2) = 0
+            ELSE
+               D1 = SQRT(D1) / DZ
+               ZMAX(1) = FLOOR(C - D1)
+               ZMIN(2) = CEILING(C + D1)
+               ZMAX(2) = FLOOR(C + D2)
+               ZMIN(3) = ZMAX(1) + 1
+               ZMAX(3) = ZMIN(2) - 1
+            END IF
 
-KPRELOOP:do l = 1, 2
-            kk = MODULO (zmin(l), nr3)
-            if (kk .eq. 0) kk = nr3
+KPRELOOP:DO L = 1, 2
+            KK = MODULO (ZMIN(L), NR3)
+            IF (KK .EQ. 0) KK = NR3
 
-KLOOP:   do k = zmin(l), zmax(l)
-            p3 = dble(k - r_grid(3, atom_nr)) * dz
+KLOOP:   DO K = ZMIN(L), ZMAX(L)
+            P3 = DBLE(K - R_GRID(3, ATOM_NR)) * DZ
 
-            d = SQRT (p1**2 + p2**2 + p3**2 &
-     &              + 2*p1*p2*cos12 + 2*p1*p3*cos13 + 2*p2*p3*cos23)
-            y = (d - r1(atom_nr)) / r12(atom_nr)
+            D = SQRT (P1**2 + P2**2 + P3**2 &
+     &              + 2*P1*P2*COS12 + 2*P1*P3*COS13 + 2*P2*P3*COS23)
+            Y = (D - R1(ATOM_NR)) / R12(ATOM_NR)
 
-            if (atom_nr2 .ne. 0) then ! 0 means: derive
-               pot(ii, jj, kk) = &
-     &         pot(ii, jj, kk) * (3d0 * y**2 - 2d0 * y**3)
-            else
-               pot(ii, jj, kk) = - (y - y**2) * (6d0 / (r12(atom_nr) * d)) * &
-     &            (p1 * T_unit(derive_direction, 1) + &
-     &             p2 * T_unit(derive_direction, 2) + &
-     &             p3 * T_unit(derive_direction, 3)) * v0
-            end if
+            IF (ATOM_NR2 .NE. 0) THEN ! 0 MEANS: DERIVE
+               POT(II, JJ, KK) = &
+     &         POT(II, JJ, KK) * (3D0 * Y**2 - 2D0 * Y**3)
+            ELSE
+               POT(II, JJ, KK) = - (Y - Y**2) * (6D0 / (R12(ATOM_NR) * D)) * &
+     &            (P1 * T_UNIT(DERIVE_DIRECTION, 1) + &
+     &             P2 * T_UNIT(DERIVE_DIRECTION, 2) + &
+     &             P3 * T_UNIT(DERIVE_DIRECTION, 3)) * V0
+            END IF
 
-         kk = kk + 1
-         if (kk .gt. nr3) kk = 1
-         end do KLOOP
-         end do KPRELOOP
+         KK = KK + 1
+         IF (KK .GT. NR3) KK = 1
+         END DO KLOOP
+         END DO KPRELOOP
 
-         if (atom_nr2 .ne. 0) then ! if zero, values are initialized to zero
-            kk = MODULO (zmin(3), nr3)
-            if (kk .eq. 0) kk = nr3
+         IF (ATOM_NR2 .NE. 0) THEN ! IF ZERO, VALUES ARE INITIALIZED TO ZERO
+            KK = MODULO (ZMIN(3), NR3)
+            IF (KK .EQ. 0) KK = NR3
 
-K0LOOP:     do k = zmin(3), zmax(3)
-               pot(ii, jj, kk) = 0d0
-               kk = kk + 1
-               if (kk .gt. nr3) kk = 1
-            end do K0LOOP
-         end if
+K0LOOP:     DO K = ZMIN(3), ZMAX(3)
+               POT(II, JJ, KK) = 0D0
+               KK = KK + 1
+               IF (KK .GT. NR3) KK = 1
+            END DO K0LOOP
+         END IF
 
-         jj = jj + 1
-         if (jj .gt. nr2) jj = 1
-         end do JLOOP
+         JJ = JJ + 1
+         IF (JJ .GT. NR2) JJ = 1
+         END DO JLOOP
 
-         end do ILOOP
-      end do ATOMS
-      return
-      end subroutine potential_confine_calculate
+         END DO ILOOP
+      END DO ATOMS
+      RETURN
+      END SUBROUTINE POTENTIAL_CONFINE_CALCULATE
 
 !!$!
 !!$!     ..................................................................
-!!$      subroutine potential_densityinterface(nr1start,nr1l,nr1g,nr2,nr3 &
-!!$     &                         ,nrl,ndimd,rho,pot,r0,force,rbas,stress)
-!!$      implicit none
-!!$      INTEGER(4),INTENT(IN)    :: NR1start
-!!$      INTEGER(4),INTENT(IN)    :: NR1l
-!!$      INTEGER(4),INTENT(IN)    :: NR1g
+!!$      SUBROUTINE POTENTIAL_DENSITYINTERFACE(NR1START,NR1L,NR1G,NR2,NR3 &
+!!$     &                         ,NRL,NDIMD,RHO,POT,R0,FORCE,RBAS,STRESS)
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN)    :: NR1START
+!!$      INTEGER(4),INTENT(IN)    :: NR1L
+!!$      INTEGER(4),INTENT(IN)    :: NR1G
 !!$      INTEGER(4),INTENT(IN)    :: NR2
 !!$      INTEGER(4),INTENT(IN)    :: NR3
 !!$      INTEGER(4),INTENT(IN)    :: NRL
 !!$      INTEGER(4),INTENT(IN)    :: NDIMD
 !!$      INTEGER(4),INTENT(IN)    :: NAT
 !!$      REAL(8)   ,INTENT(IN)    :: RHO(NRL,NDIMD)
-!!$      REAL(8)   ,INTENT(OUT)   :: pot(NRL,NDIMD)
+!!$      REAL(8)   ,INTENT(OUT)   :: POT(NRL,NDIMD)
 !!$      REAL(8)   ,INTENT(IN)    :: R0(3,NAT)
 !!$      REAL(8)   ,INTENT(OUT)   :: FORCE(3,NAT)
 !!$      REAL(8)   ,INTENT(IN)    :: RBAS(3,3)
 !!$      REAL(8)   ,INTENT(OUT)   :: STRESS(3,3)    
-!!$      real(8)                  :: dt1(3),dt2(3),dt3(3)
-!!$      real(8)                  :: rgrid(3)
-!!$      real(8)                  :: val
-!!$      real(8)                  :: DR(3)
-!!$      real(8)                  :: F1(3,NAT)
-!!$      integer(4)               :: i1,i2,i3
+!!$      REAL(8)                  :: DT1(3),DT2(3),DT3(3)
+!!$      REAL(8)                  :: RGRID(3)
+!!$      REAL(8)                  :: VAL
+!!$      REAL(8)                  :: DR(3)
+!!$      REAL(8)                  :: F1(3,NAT)
+!!$      INTEGER(4)               :: I1,I2,I3
 !!$      LOGICAL(4)               :: TZERO,TONE
-!!$      real(8)                  :: rvdw(nat)
-!!$      real(8)                  :: rvdwsolv
-!!$      real(8)                  :: vdw(nat)
-!!$      real(8)                  :: rmax2(nat)
+!!$      REAL(8)                  :: RVDW(NAT)
+!!$      REAL(8)                  :: RVDWSOLV
+!!$      REAL(8)                  :: VDW(NAT)
+!!$      REAL(8)                  :: RMAX2(NAT)
 !!$!     ******************************************************************
-!!$      dT1(:)=rbas(:,1)/real(nr1g-1)
-!!$      dT2(:)=rbas(:,2)/real(nr2-1)
-!!$      dT3(:)=rbas(:,3)/real(nr3-1)
-!!$      rmax2(:)=(rvdw(:)+rvdwsolv)**2
-!!$      pot(:,1)=1.d0
-!!$      do i1=ir1start,ir1start_1+nr1l
-!!$        do i2=1,nr2
-!!$          do i3=1,nr3
-!!$            rgrid(:)=dt1(:)*real(i1-1)+dt2(:)*real(i2-1)+dt3(:)*real(i3-1)
-!!$            ir=ir1-ir1start+1+nr2*(ir2-1+nr3*(ir3-1))
-!!$            val=1.d0
-!!$            F1(:,:)=1.d0
+!!$      DT1(:)=RBAS(:,1)/REAL(NR1G-1)
+!!$      DT2(:)=RBAS(:,2)/REAL(NR2-1)
+!!$      DT3(:)=RBAS(:,3)/REAL(NR3-1)
+!!$      RMAX2(:)=(RVDW(:)+RVDWSOLV)**2
+!!$      POT(:,1)=1.D0
+!!$      DO I1=IR1START,IR1START_1+NR1L
+!!$        DO I2=1,NR2
+!!$          DO I3=1,NR3
+!!$            RGRID(:)=DT1(:)*REAL(I1-1)+DT2(:)*REAL(I2-1)+DT3(:)*REAL(I3-1)
+!!$            IR=IR1-IR1START+1+NR2*(IR2-1+NR3*(IR3-1))
+!!$            VAL=1.D0
+!!$            F1(:,:)=1.D0
 !!$            TZERO=.FALSE.
 !!$            TONE=.TRUE.
-!!$            do iat=1,nat
-!!$              dR(:)=rgrid(:)-r0(:,iat)
-!!$              dis2=sum((DR(:))*2)
-!!$              if(dis2.gt.rmax(iat)) cycle
-!!$              dis=sqrt(dis2)
-!!$              if(dis.le.rvdw(iat)) then
-!!$                VAL=0.d0
-!!$                F1(:,:)=0.d0
+!!$            DO IAT=1,NAT
+!!$              DR(:)=RGRID(:)-R0(:,IAT)
+!!$              DIS2=SUM((DR(:))*2)
+!!$              IF(DIS2.GT.RMAX(IAT)) CYCLE
+!!$              DIS=SQRT(DIS2)
+!!$              IF(DIS.LE.RVDW(IAT)) THEN
+!!$                VAL=0.D0
+!!$                F1(:,:)=0.D0
 !!$                TZERO=.TRUE.
 !!$                EXIT
-!!$              else 
-!!$                x=(dis-rmin(iat))/rvdwsolv
-!!$                SVAR=(3.d0-2.d0*x)*x**2
-!!$                SVAR2=6.d0*(1.d0-x)*x/rvdwsolv/dis
+!!$              ELSE 
+!!$                X=(DIS-RMIN(IAT))/RVDWSOLV
+!!$                SVAR=(3.D0-2.D0*X)*X**2
+!!$                SVAR2=6.D0*(1.D0-X)*X/RVDWSOLV/DIS
 !!$                VAL=VAL*SVAR
 !!$                F1(:,:IAT-1)=F1(:,:IAT-1)*SVAR
-!!$                F1(:,IAT)=F1(:,IAT)*DR(:)*svar2
+!!$                F1(:,IAT)=F1(:,IAT)*DR(:)*SVAR2
 !!$                F1(:,IAT+1:)=F1(:,IAT+1:)*SVAR
 !!$                TONE=.FALSE.
-!!$              end if
-!!$            enddo
+!!$              END IF
+!!$            ENDDO
 !!$            IF(TZERO) CYCLE
 !!$            IF(TONE) THEN
 !!$              POT(IR,1)=1.D0
@@ -2075,10 +2075,10 @@ K0LOOP:     do k = zmin(3), zmax(3)
 !!$              POT(IR,1)=VAL
 !!$              FORCE(:,:)=FORCE(:,:)+F1(:,:)*RHO(IR,1)
 !!$            END IF
-!!$          enddo
-!!$        enddo
-!!$      enddo
-!!$      return
-!!$      end
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
+!!$      RETURN
+!!$      END
 
 

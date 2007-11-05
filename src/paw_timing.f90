@@ -238,100 +238,89 @@ END MODULE TIMING_MODULE
       USE TIMING_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: cid  ! communicator id (see mpe)
-      INTEGER(4)  ,INTENT(IN) :: NFIL
-      INTEGER(4)              :: I,J,k,l
-      REAL(8)                 :: TIME
-      INTEGER(4)              :: NTASKS,THISTASK  
-      REAL(8)                 :: TOTAL     ! TOTAL TIME SINCE LAST RESET ON THISTASK
-      REAL(8)                 :: TSUM      ! TIME SUMMED OVER ALL TASKS
-      REAL(8)                 :: TLOCAL    ! TIME USED ON THISTASK
-      REAL(8)                 :: TMAX      ! MAX(TIME ON ANY TASK)
-      REAL(8)     ,ALLOCATABLE:: TIMEVAL(:)!(NTASKS) TIME ON EACH TASK
-      REAL(8)                 :: SVAR
-      INTEGER(4)              :: ISVAR
-      CHARACTER(15)           :: TIMESTRING(2)
-      REAL(8)                 :: PERCENT
-      REAL(8)                 :: PERCENTidle
-      REAL(8)                 :: PERCENTsys
-      CHARACTER(64),ALLOCATABLE:: IDARR(:)
-      REAL(8)      ,ALLOCATABLE:: TARR(:)
-      REAL(8)      ,ALLOCATABLE:: TARRALL(:,:)
-      INTEGER(4)   ,ALLOCATABLE:: ICOUNTARR(:)
+      CHARACTER(*)    ,INTENT(IN)  :: CID  ! COMMUNICATOR ID (SEE MPE)
+      INTEGER(4)      ,INTENT(IN)  :: NFIL
+      INTEGER(4)                   :: I,J,K
+      INTEGER(4)                   :: NTASKS,THISTASK  
+      CHARACTER(15)                :: TIMESTRING(2)
+      REAL(8)                      :: TIME
+      REAL(8)                      :: PERCENT
+      REAL(8)                      :: PERCENTSYS
+      REAL(8)         ,PARAMETER   :: R8SMALL=1.D-20
       LOGICAL(4)                   :: ONCLOCK(NENTRYX)
-      real(8)                      :: wallclock,wallclock1
-      real(8)                      :: usrtime,usrtime1
-      real(8)                      :: systime,systime1
-      integer(4)                   :: count,count1
+      REAL(8)                      :: WALLCLOCK,WALLCLOCK1
+      REAL(8)                      :: USRTIME,USRTIME1
+      REAL(8)                      :: SYSTIME,SYSTIME1
+      INTEGER(4)                   :: COUNT,COUNT1
       TYPE(CLOCK_TYPE),ALLOCATABLE :: CLOCKARRAY(:,:)
-      character(32)   ,allocatable :: namearray(:,:)
-      character(32)                :: names(nentryx)
-      real(8)         ,allocatable :: timearray(:,:)
-      real(8)                      :: times(nentryx)
-      integer(4)      ,allocatable :: countarray(:,:)
-      integer(4)                   :: counts(nentryx)
-!     ************************  P.E. BLOECHL, CLAUSTHAL/Goslar 2005  ***********
+      CHARACTER(32)   ,ALLOCATABLE :: NAMEARRAY(:,:)
+      CHARACTER(32)                :: NAMES(NENTRYX)
+      REAL(8)         ,ALLOCATABLE :: TIMEARRAY(:,:)
+      REAL(8)                      :: TIMES(NENTRYX)
+      INTEGER(4)      ,ALLOCATABLE :: COUNTARRAY(:,:)
+      INTEGER(4)                   :: COUNTS(NENTRYX)
+!     ************************  P.E. BLOECHL, CLAUSTHAL/GOSLAR 2005  ***********
       IF(.NOT.STARTED) THEN
-        CALL ERROR$MSG('WARNING FroM TIMING: CLOCK HAS NOT BEEN STARTED')
+        CALL ERROR$MSG('WARNING FROM TIMING: CLOCK HAS NOT BEEN STARTED')
         CALL ERROR$MSG('CALL TIMING$START BEFORE ANY OTHER FUNCTON')
         CALL ERROR$STOP('TIMIMG')
       END IF
-      CALL MPE$QUERY(cid,NTASKS,THISTASK)
+      CALL MPE$QUERY(CID,NTASKS,THISTASK)
 ! 
 !     ==========================================================================
-!     == stop all clocks                                                      ==
+!     == STOP ALL CLOCKS                                                      ==
 !     ==========================================================================
       DO I=1,NENTRY
         ONCLOCK(I)=CLOCK(I)%RUNNING
-        if(onclock(i))CALL TIMING$CLOCKOFF(CLOCK(I)%NAME)
+        IF(ONCLOCK(I))CALL TIMING$CLOCKOFF(CLOCK(I)%NAME)
       ENDDO
 !     == CORRECT TOTAL ITERATION COUNT IF SET MANUALLY
       IF(CLOCK(1)%COUNT.GT.1)CLOCK(1)%COUNT=CLOCK(1)%COUNT-1
 ! 
 !     ==========================================================================
-!     == collect information from other processes                             ==
-!     == data are filled into clockarray                                      ==
+!     == COLLECT INFORMATION FROM OTHER PROCESSES                             ==
+!     == DATA ARE FILLED INTO CLOCKARRAY                                      ==
 !     ==========================================================================
-      if(thistask.eq.1)allocate(clockarray(nentryx,ntasks))
-      allocate(namearray(nentryx,ntasks))
-      allocate(timearray(nentryx,ntasks))
-      allocate(countarray(nentryx,ntasks))
-      names(:)=''
+      IF(THISTASK.EQ.1)ALLOCATE(CLOCKARRAY(NENTRYX,NTASKS))
+      ALLOCATE(NAMEARRAY(NENTRYX,NTASKS))
+      ALLOCATE(TIMEARRAY(NENTRYX,NTASKS))
+      ALLOCATE(COUNTARRAY(NENTRYX,NTASKS))
+      NAMES(:)=''
       TIMES(:)=0.D0
-      counts(:)=0
+      COUNTS(:)=0
 !
-      names(1:nentry)=clock(1:nentry)%name
-      CALL MPE$GATHER(CID,1,names,namearray)  ! need a gather routine for strings!!!
-      if(thistask.eq.1)CLOCKARRAY(:,:)%NAME=NAMEARRAY(:,:)
+      NAMES(1:NENTRY)=CLOCK(1:NENTRY)%NAME
+      CALL MPE$GATHER(CID,1,NAMES,NAMEARRAY)  ! NEED A GATHER ROUTINE FOR STRINGS!!!
+      IF(THISTASK.EQ.1)CLOCKARRAY(:,:)%NAME=NAMEARRAY(:,:)
 !
       TIMES(1:NENTRY)=CLOCK(1:NENTRY)%USED
       CALL MPE$GATHER(CID,1,TIMES,TIMEARRAY)
-      if(thistask.eq.1)CLOCKARRAY(:,:)%USED=TIMEARRAY(:,:)
+      IF(THISTASK.EQ.1)CLOCKARRAY(:,:)%USED=TIMEARRAY(:,:)
 !
       TIMES(1:NENTRY)=CLOCK(1:NENTRY)%WALLCLOCK
       CALL MPE$GATHER(CID,1,TIMES,TIMEARRAY)
-      if(thistask.eq.1)CLOCKARRAY(:,:)%WALLCLOCK=TIMEARRAY(:,:)
+      IF(THISTASK.EQ.1)CLOCKARRAY(:,:)%WALLCLOCK=TIMEARRAY(:,:)
 !
       TIMES(1:NENTRY)=CLOCK(1:NENTRY)%USRTIME
       CALL MPE$GATHER(CID,1,TIMES,TIMEARRAY)
-      if(thistask.eq.1)CLOCKARRAY(:,:)%USRTIME=TIMEARRAY(:,:)
+      IF(THISTASK.EQ.1)CLOCKARRAY(:,:)%USRTIME=TIMEARRAY(:,:)
 !
       TIMES(1:NENTRY)=CLOCK(1:NENTRY)%SYSTIME
       CALL MPE$GATHER(CID,1,TIMES,TIMEARRAY)
-      if(thistask.eq.1)CLOCKARRAY(:,:)%SYSTIME=TIMEARRAY(:,:)
+      IF(THISTASK.EQ.1)CLOCKARRAY(:,:)%SYSTIME=TIMEARRAY(:,:)
 !
       COUNTS(1:NENTRY)=CLOCK(1:NENTRY)%COUNT
       CALL MPE$GATHER(CID,1,COUNTS,COUNTARRAY)
-      if(thistask.eq.1)CLOCKARRAY(:,:)%COUNT=COUNTARRAY(:,:)
+      IF(THISTASK.EQ.1)CLOCKARRAY(:,:)%COUNT=COUNTARRAY(:,:)
 !
       DEALLOCATE(NAMEARRAY)
       DEALLOCATE(TIMEARRAY)
       DEALLOCATE(COUNTARRAY)
 !
 !     ==================================================================
-!     ==  print information                                           ==
+!     ==  PRINT INFORMATION                                           ==
 !     ==================================================================
-      if(thistask.eq.1) then
+      IF(THISTASK.EQ.1) THEN
         WRITE(NFIL,FMT='(/''RUN-TIME REPORT''/''==============='')')
         WALLCLOCK=SUM(CLOCKARRAY(1,:)%WALLCLOCK)
         USRTIME=SUM(CLOCKARRAY(1,:)%USRTIME)
@@ -352,157 +341,44 @@ END MODULE TIMING_MODULE
         WRITE(NFIL,FMT='(T1,A,T25,A15,T40,A15'// &
      &                   ',T56,A7,T64,A7,T72,A9)') &
      &           'ID','TOTAL CPU','CPU/#ITER','CPU/TOT' &
-     &           ,'SYS/CPU','#CALLS/#iter'
+     &           ,'SYS/CPU','#CALLS/#ITER'
         WRITE(NFIL,FMT='(80("-"))')
         DO I=1,NENTRY
           WALLCLOCK1=CLOCKARRAY(I,1)%WALLCLOCK
-          usrtime1=clockarray(i,1)%usrtime
-          systime1=clockarray(i,1)%systime
-          count1=clockarray(i,1)%count
-          do k=2,ntasks
-            do j=1,nentryx
-              if(clockarray(i,1)%name.eq.clockarray(j,k)%name) then
-                wallclock1=wallclock1+clockarray(j,k)%wallclock
-                usrtime1=usrtime1+clockarray(j,k)%usrtime
-                systime1=systime1+clockarray(j,k)%systime
-                count1=count1+clockarray(j,k)%count
-                exit
-              end if
-            enddo
-          enddo
-          percent=(usrtime1+systime1)/(usrtime+systime)*100.d0
-          percentsys=systime1/(usrtime1+systime1+tiny(systime1))*100.d0
-          time=usrtime1+systime1
+          USRTIME1=CLOCKARRAY(I,1)%USRTIME
+          SYSTIME1=CLOCKARRAY(I,1)%SYSTIME
+          COUNT1=CLOCKARRAY(I,1)%COUNT
+          DO K=2,NTASKS
+            DO J=1,NENTRYX
+              IF(CLOCKARRAY(I,1)%NAME.EQ.CLOCKARRAY(J,K)%NAME) THEN
+                WALLCLOCK1=WALLCLOCK1+CLOCKARRAY(J,K)%WALLCLOCK
+                USRTIME1=USRTIME1+CLOCKARRAY(J,K)%USRTIME
+                SYSTIME1=SYSTIME1+CLOCKARRAY(J,K)%SYSTIME
+                COUNT1=COUNT1+CLOCKARRAY(J,K)%COUNT
+                EXIT
+              END IF
+            ENDDO
+          ENDDO
+          PERCENT=(USRTIME1+SYSTIME1)/(USRTIME+SYSTIME)*100.D0
+          PERCENTSYS=SYSTIME1/(USRTIME1+SYSTIME1+R8SMALL)*100.D0
+          TIME=USRTIME1+SYSTIME1
           CALL TIMING_CONVERT(TIME,TIMESTRING(1))
-          time=(usrtime1+systime1)/clock(1)%count
+          TIME=(USRTIME1+SYSTIME1)/CLOCK(1)%COUNT
           CALL TIMING_CONVERT(TIME,TIMESTRING(2))
-          WRITE(NFIL,FMT='(25("."),t1,A,t25,A15,t40,A15'// &
-     &                   ',t58,i3," %",t66,i3," %",t72,i9)') &
-     &           trim(CLOCK(I)%NAME),(TIMESTRING(J),J=1,2) &
-     &          ,nint(PERCENT),nint(percentsys) &
-     &          ,nint(real(count1)/real(clock(1)%count*NTASKS))
-        enddo
-        deallocate(clockarray)
-      end if
-!
-!!$!     ==========================================================================
-!!$!     ==  here the old routine                                                ==
-!!$!     ==========================================================================
-!!$!
-!!$      CALL TIMING_CLOCK(TIME)
-!!$!
-!!$!     ==================================================================
-!!$!     ==  collect timing information from all nodes                   ==
-!!$!     ==================================================================
-!!$!     == THE FIRST TASK DECIDES, WHICH CLOCKS ARE REPORTED
-!!$      ISVAR=NENTRY
-!!$      CALL MPE$BROADCAST(CID,1,ISVAR)
-!!$      ALLOCATE(IDARR(ISVAR))
-!!$      ALLOCATE(TARR(ISVAR))
-!!$      ALLOCATE(TARRALL(ISVAR,NTASKS))
-!!$      ALLOCATE(ICOUNTARR(ISVAR))
-!!$      IF(THISTASK.EQ.1) THEN
-!!$        DO I=1,NENTRY
-!!$          IDARR(I)=CLOCK(I)%NAME
-!!$        ENDDO
-!!$      END IF
-!!$      CALL MPE$BROADCAST(CID,1,IDARR)
-!!$      TARR(:)=0.D0
-!!$      ICOUNTARR(:)=0
-!!$      DO I=1,ISVAR
-!!$        DO J=1,NENTRY
-!!$          IF(CLOCK(J)%NAME.EQ.IDARR(I)) THEN
-!!$            TARR(I)=TARR(I)+CLOCK(J)%USED
-!!$            IF(CLOCK(J)%RUNNING)TARR(I)=TARR(I)+TIME
-!!$            ICOUNTARR(I)=ICOUNTARR(I)+CLOCK(I)%COUNT
-!!$          END IF
-!!$        ENDDO
-!!$      ENDDO
-!!$      CALL MPE$GATHER(CID,1,TARR,TARRALL)
-!!$      CALL MPE$COMBINE(CID,'+',ICOUNTARR)
-!!$      DEALLOCATE(IDARR)
-!!$      DEALLOCATE(TARR)
-!!$!
-!!$!     ==================================================================
-!!$!     ==  REPORT GLOBAL TIMING                                        ==
-!!$!     ==================================================================
-!!$      IF(THISTASK.EQ.1) THEN
-!!$        TLOCAL=TIME-BEGINTIME
-!!$        WRITE(NFIL,FMT='(/''RUN-TIME REPORT''/''==============='')')
-!!$        CALL TIMING_CONVERT(TLOCAL,TIMESTRING(1))
-!!$        WRITE(NFIL,FMT='(''CPU TIME ON FIRST TASK : '',A12)')TIMESTRING(1)
-!!$        CALL TIMING_CONVERT(TLOCAL*REAL(NTASKS,KIND=8),TIMESTRING(1))
-!!$        WRITE(NFIL,FMT='(''TOTAL CPU TIME         : '',A12)')TIMESTRING(1)
-!!$        WRITE(NFIL,FMT='(''NUMBER OF PROCESSORS   : '',I4)')NTASKS
-!!$        TOTAL=TLOCAL*REAL(NTASKS)  ! USED TO OBTAIN PERCENTAGE OIF INDIVIDUAL CLOCKS
-!!$!
-!!$!       ==================================================================
-!!$!       ==  REPORT ON INDIVIDUAL CLOCKS                                 ==
-!!$!       ==================================================================
-!!$        WRITE(NFIL,FMT='(A,T20," ",A10," ",A15," ",A15," ",A7," ",A7)') &
-!!$     &         "NAME","#CALLS","TOTAL","PER CALL","T/TOTAL","IDLE"
-!!$!
-!!$!       ================================================================
-!!$!       ==  ANALYSIS AND PRINTOUT ONLY ON TASK 1                      ==
-!!$!       ================================================================
-!!$        ALLOCATE(TIMEVAL(NTASKS))
-!!$        DO I=1,NENTRY
-!!$          TIMEVAL(:)=TARRALL(I,:)
-!!$!
-!!$          TMAX=0.D0
-!!$          TSUM = 0.D0
-!!$          DO J=1,NTASKS
-!!$            TSUM=TSUM+TIMEVAL(J)
-!!$            TMAX=MAX(TMAX,TIMEVAL(J))
-!!$          ENDDO
-!!$          IF(TSUM.EQ.0.D0) CYCLE  ! NO REPORT IF NO TIME HAS BEEN SPENT
-!!$          TMAX=MAX(1.D-10,TMAX)    ! AVOID DIVIDE-BY-ZERO
-!!$          PERCENTIDLE=100*(TMAX-TSUM/REAL(NTASKS,KIND=8))/TMAX
-!!$!
-!!$!         ==============================================================
-!!$!         ==  PERCENTAGE OF IDLING TIME AND TOTAL CPU TIME TIME USED  ==
-!!$!         ==============================================================
-!!$          CALL TIMING_CONVERT(TSUM,TIMESTRING(1))
-!!$!
-!!$!         ==============================================================
-!!$!         ==  TIME PER CALL                                           ==
-!!$!         ==============================================================
-!!$          IF(CLOCK(I)%COUNT.NE.0) THEN
-!!$            SVAR=TSUM/REAL(ICOUNTARR(I),KIND=8)
-!!$          ELSE
-!!$            SVAR=0.D0
-!!$          END IF
-!!$          CALL TIMING_CONVERT(SVAR,TIMESTRING(2))
-!!$!
-!!$!         ==============================================================
-!!$!         ==  PERCENTAGE OF TOTAL TIME USED SINCE STARTING THE CLOCKS ==
-!!$!         ==============================================================
-!!$          IF(TSUM.NE.0.D0) THEN
-!!$            PERCENT=TSUM/TOTAL*100.D0
-!!$          ELSE
-!!$            PERCENT=0
-!!$          END IF
-!!$!
-!!$!         ==============================================================
-!!$!         ==  WRITE REPORT                                            ==
-!!$!         ==============================================================
-!!$          WRITE(NFIL, &
-!!$     &      FMT='(A20," ",I10," ",A15," ",A15," ",F5.1,"% ",F5.1,"%")') &
-!!$     &       CLOCK(I)%NAME,CLOCK(I)%COUNT,(TIMESTRING(J),J=1,2) &
-!!$     &      ,PERCENT,PERCENTIDLE
-!!$        ENDDO
-!!$        DEALLOCATE(TIMEVAL)
-!!$!     
-!!$      END IF
-!!$      DEALLOCATE(TARRALL)
-!!$      DEALLOCATE(ICOUNTARR)
-!!$PRINT*,THISTASK,'TIMING$PRINT DONE'
+          WRITE(NFIL,FMT='(25("."),T1,A,T25,A15,T40,A15'// &
+     &                   ',T58,I3," %",T66,I3," %",T72,I9)') &
+     &           TRIM(CLOCK(I)%NAME),(TIMESTRING(J),J=1,2) &
+     &          ,NINT(PERCENT),NINT(PERCENTSYS) &
+     &          ,NINT(REAL(COUNT1)/REAL(CLOCK(1)%COUNT*NTASKS))
+        ENDDO
+        DEALLOCATE(CLOCKARRAY)
+      END IF
 ! 
 !     ==========================================================================
-!     == restart all clocks that were running (reset original state)          ==
+!     == RESTART ALL CLOCKS THAT WERE RUNNING (RESET ORIGINAL STATE)          ==
 !     ==========================================================================
       DO I=1,NENTRY
-        if(ONCLOCK(I))CALL TIMING$CLOCKON(CLOCK(I)%NAME)
+        IF(ONCLOCK(I))CALL TIMING$CLOCKON(CLOCK(I)%NAME)
       ENDDO
       RETURN
       END  
@@ -511,13 +387,13 @@ END MODULE TIMING_MODULE
       SUBROUTINE TIMING_CLOCK(SECONDS)
 !     ***************************************************************
       IMPLICIT NONE
-      REAL(8) ,intent(out) :: SECONDS
+      REAL(8) ,INTENT(OUT) :: SECONDS
       INTEGER              :: COUNT
-      INTEGER,save         :: COUNTprev=0
+      INTEGER,SAVE         :: COUNTPREV=0
       INTEGER              :: COUNTRATE
       INTEGER              :: COUNTMAX
       INTEGER,SAVE         :: COUNTTURN=0
-      real(8)              :: rcount
+      REAL(8)              :: RCOUNT
 !     ***************************************************************
       CALL SYSTEM_CLOCK(COUNT,COUNTRATE,COUNTMAX)
 !     == CHECK REPEATCYCLE OF COUNT

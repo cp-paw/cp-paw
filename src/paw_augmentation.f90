@@ -766,7 +766,6 @@ STOP
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
       REAL(8)               :: WORK3(NR)
-      REAL(8)               :: R8SMALL
 !     **************************************************************************
       CALL TRACE$PUSH('AUGMENTATION_XC')
       EXC=0.D0
@@ -775,7 +774,6 @@ STOP
 !     ==========================================================================
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
-      R8SMALL=10.D0*TINY(1.D0)
       CALL DFT$GETL4('GC',TGRA)
       PI=4.D0*DATAN(1.D0)
       FOURPI=4.D0*PI
@@ -1055,7 +1053,7 @@ STOP
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
       REAL(8)               :: WORK3(NR)
-      REAL(8)               :: R8SMALL
+      REAL(8)   ,parameter  :: R8SMALL=1.d-20
 !     **************************************************************************
       CALL TRACE$PUSH('AUGMENTATION_XC')
       EXC=0.D0
@@ -1064,7 +1062,6 @@ STOP
 !     ==========================================================================
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
-      R8SMALL=10.D0*TINY(1.D0)
       CALL DFT$GETL4('GC',TGRA)
       PI=4.D0*DATAN(1.D0)
       FOURPI=4.D0*PI
@@ -1391,12 +1388,11 @@ STOP
       REAL(8)                    :: Q(NR)
       REAL(8)                    :: VQ(NR)
       REAL(8)                    :: PI,Y0
-      REAL(8)                    :: r8small
+      REAL(8)     ,parameter     :: r8small=1.d-20
       INTEGER(4)                 :: ISIG,LM
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
-      r8small=10.d0*tiny(1.d0)
       RHO2(:,:,:)=0.D0
       POT4(:,:,:)=0.D0
 !
