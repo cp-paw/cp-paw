@@ -6,8 +6,8 @@ LOGICAL,SAVE             :: TISO=.TRUE.   ! TREATS AS ISOLATED CLUSTER/ PERIODIC
 LOGICAL,SAVE             :: TSTOP=.FALSE.  ! SETS INITIAL VELOCITIES TO ZERO
 LOGICAL,SAVE             :: TADIABATIC=.FALSE.  ! MINIMIZATION IN EACH STEP
 LOGICAL,SAVE             :: TMULTIPLE=.FALSE.   !MULTIPLE TIME STEP DYNAMOCS
-REAL(8),SAVE             :: eTOL=-1.d0  ! energy TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
-REAL(8),SAVE             :: qTOL=-1.d0  ! charge TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
+REAL(8),SAVE             :: ETOL=-1.D0  ! ENERGY TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
+REAL(8),SAVE             :: QTOL=-1.D0  ! CHARGE TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
 
 !==  PARAMETERS THAT DEFINE THE ENERGY FUNCTIONAL
 REAL(8),SAVE             :: DT=10.D0        ! TIME STEP
@@ -21,7 +21,7 @@ REAL(8),SAVE             :: FDIEL=1.D0    ! (E_R-1)/(E_R+0.5)
 INTEGER,SAVE             :: NAT=0
 REAL(8),SAVE,ALLOCATABLE :: RSOLV(:) !(NAT) SOLVATION RADIUS
 REAL(8),SAVE             :: DISMIN
-REAL(8),SAVE             :: vpauli=0.d0
+REAL(8),SAVE             :: VPAULI=0.D0
 !== 
 INTEGER                  :: NQ=0     !#(CHARGES)=SUM(NQAT)
 INTEGER,SAVE,ALLOCATABLE :: NQAT(:)
@@ -30,14 +30,14 @@ REAL(8),SAVE,ALLOCATABLE :: QRELPOS(:,:)
 REAL(8),SAVE,ALLOCATABLE :: Q0(:)
 REAL(8),SAVE,ALLOCATABLE :: QM(:)
 REAL(8),SAVE,ALLOCATABLE :: QP(:)
-REAL(8),SAVE,ALLOCATABLE :: cutofftheta(:)
+REAL(8),SAVE,ALLOCATABLE :: CUTOFFTHETA(:)
 INTEGER,SAVE             :: NPTESS=0
 REAL(8),SAVE,ALLOCATABLE :: RTESS(:,:)
 !== SASCHA - PRINTOUT CHARGES
 LOGICAL(4) ::  TCHARGES
 !======
 !
-! I have introduced a cutofftheta to save theta for printout. This is a fudge.
+! I HAVE INTRODUCED A CUTOFFTHETA TO SAVE THETA FOR PRINTOUT. THIS IS A FUDGE.
 CONTAINS
 !
 !     .......................................................................
@@ -77,16 +77,16 @@ CONTAINS
 END MODULE COSMO_MODULE
 !
 !     .......................................................................
-      SUBROUTINE COSMO$report(nfil)
+      SUBROUTINE COSMO$REPORT(NFIL)
 !     **                                                                   **
 !     **                                                                   **
 !     ** 
-      use cosmo_module
-      implicit none
-      integer(4),intent(in) :: nfil
+      USE COSMO_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NFIL
 !     ***********************************************************************
       IF(.NOT.TON) RETURN
-      call COSMO_INIT()
+      CALL COSMO_INIT()
       CALL REPORT$TITLE(NFIL,'COSMO')
       IF(TISO) THEN
         CALL REPORT$STRING(NFIL,'NON-PERIODIC SYSTEM')
@@ -97,12 +97,12 @@ END MODULE COSMO_MODULE
       CALL REPORT$R8VAL(NFIL,'GAMMA (SEC. IV.B IN SENN ET AL.)',GAMMA,'A.U.')
       CALL REPORT$R8VAL(NFIL,'BETA (SEC. IV.B IN SENN ET AL.) ',BETA,'A.U.')
       CALL REPORT$R8VAL(NFIL,'FDIEL: (E_R-1)/(E_R+1/2)',FDIEL,'')
-      CALL REPORT$R8VAL(NFIL,'vpauli',vpauli,'H')
+      CALL REPORT$R8VAL(NFIL,'VPAULI',VPAULI,'H')
       IF(TADIABATIC) THEN
         CALL REPORT$STRING(NFIL,'COSMO CHARGES ARE TREATED ADIABATICALLY')
         IF(ETOL.GT.0.D0)CALL REPORT$R8VAL(NFIL,'ENERGY CONVERGENCE CRITERION',ETOL,'H')
         IF(QTOL.GT.0.D0)CALL REPORT$R8VAL(NFIL,'CHARGE CONVERGENCE CRITERION',QTOL,'E')
-      else
+      ELSE
         CALL REPORT$STRING(NFIL,'COSMO CHARGES ARE TREATED DYNAMICALLY')
         CALL REPORT$L4VAL(NFIL,'SET INITIAL VELOCITIES TO ZERO',TSTOP)
         CALL REPORT$L4VAL(NFIL,'START FROM ZERO CHARGES',START)
@@ -112,7 +112,7 @@ END MODULE COSMO_MODULE
         IF(TMULTIPLE)CALL REPORT$I4VAL(NFIL,'#(MULTIPLE TIME STEPS',NMULTIPLE,' ')
       END IF                
       RETURN
-      end
+      END
 !
 !     .......................................................................
       SUBROUTINE COSMO$SETR8A(ID,LEN,VAL)
@@ -182,7 +182,7 @@ END MODULE COSMO_MODULE
           CALL ERROR$R8VAL('EPSILONR',VAL)
           CALL ERROR$STOP('COSMO$SETR8')
         END IF
-        FDIEL=(VAL-1.d0)/(VAL+0.5d0)
+        FDIEL=(VAL-1.D0)/(VAL+0.5D0)
       ELSE IF(ID.EQ.'VPAULI') THEN
         VPAULI=VAL
       ELSE
@@ -392,7 +392,7 @@ END MODULE COSMO_MODULE
                  =SEPARATOR_TYPE(2,'COSMO','NONE','JAN2006','NONE')
       INTEGER(4)                         :: NTASKS,THISTASK
 !     ***********************************************************************
-      tchk=.false.
+      TCHK=.FALSE.
       IF(.NOT.TON) RETURN
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
@@ -600,6 +600,7 @@ END MODULE COSMO_MODULE
       INTEGER(4)          :: FROM,TO
       INTEGER(4)          :: ISVAR
       INTEGER             :: IN,IAT1,IAT2,IT1,IT2,IT3
+      REAL(8)             :: R8LARGE=1.D+20
 !     ***********************************************************************
 !
 !     =======================================================================
@@ -621,7 +622,7 @@ END MODULE COSMO_MODULE
 !     ==  DETERMINE DISTANCE MATRIX AND SORT NEIGGHBORS                    ==
 !     =======================================================================
       NNN(:)=0.D0
-      DISARR(:,:)=HUGE(DISARR)
+      DISARR(:,:)=R8LARGE
       NNLIST(:,:,:)=0
       DO IAT1=1,NAT
         DO IAT2=1,IAT1
@@ -641,7 +642,7 @@ END MODULE COSMO_MODULE
             DO IT2=MIN2,MAX2
               DT1(:)=RBAS(:,1)*REAL(IT1)+RBAS(:,2)*REAL(IT2)
               DO IT3=MIN3,MAX3
-!               == dr=(r2+T)-r1
+!               == DR=(R2+T)-R1
                 DR(:)=DR12(:)+DT1(:)+RBAS(:,3)*REAL(IT3)
                 DIS=SQRT(SUM(DR**2))  ! |R2+T-R1|
                 IF(DIS.GT.RMAX) CYCLE
@@ -845,7 +846,7 @@ END MODULE COSMO_MODULE
       INTEGER,INTENT(IN) :: IQFIRST(NAT)
       INTEGER,INTENT(IN) :: NQAT(NAT)
       REAL(8),INTENT(IN) :: RQ(3,NQ)     ! ABSOLUTE POSITIONS OF CHARGE
-      LOGICAL,INTENT(in) :: ZEROTHETA(NQ)
+      LOGICAL,INTENT(IN) :: ZEROTHETA(NQ)
       REAL(8),INTENT(IN) :: THETA(NQ)
       REAL(8),INTENT(IN) :: VTHETA(NQ)
       REAL(8),INTENT(OUT):: FAT(3,NAT)
@@ -886,50 +887,50 @@ END MODULE COSMO_MODULE
       END
 !
 !     .......................................................................
-      SUBROUTINE COSMO_Pauli(NAT,ng,rc,vpauli,qmad,epauli,vmad)
+      SUBROUTINE COSMO_PAULI(NAT,NG,RC,VPAULI,QMAD,EPAULI,VMAD)
 !     **                                                                   **
-!     **  this potential shall mimick the pauli repulsion by the solvent.  **
+!     **  THIS POTENTIAL SHALL MIMICK THE PAULI REPULSION BY THE SOLVENT.  **
 !     **                                                                   ** 
       IMPLICIT NONE
       INTEGER,INTENT(IN) :: NAT
-      INTEGER,INTENT(IN) :: ng
-      real(8),intent(in) :: rc(ng,nat)
-      REAL(8),INTENT(in) :: vpauli
-      real(8),intent(in) :: qmad(ng,nat)
-      REAL(8),INTENT(OUT):: epauli
-      REAL(8),INTENT(OUT):: vmad(ng,NAT)
-      INTEGER            :: IAT,ig
-      real(8),parameter  :: rvdw=6.d0
-      real(8)            :: x 
-      real(8)            :: pot
-      real(8)            :: fac,pi
+      INTEGER,INTENT(IN) :: NG
+      REAL(8),INTENT(IN) :: RC(NG,NAT)
+      REAL(8),INTENT(IN) :: VPAULI
+      REAL(8),INTENT(IN) :: QMAD(NG,NAT)
+      REAL(8),INTENT(OUT):: EPAULI
+      REAL(8),INTENT(OUT):: VMAD(NG,NAT)
+      INTEGER            :: IAT,IG
+      REAL(8),PARAMETER  :: RVDW=6.D0
+      REAL(8)            :: X 
+      REAL(8)            :: POT
+      REAL(8)            :: FAC,PI
 !     ***********************************************************************
-      pi=4.d0*datan(1.d0)
-      fac=4.d0/sqrt(pi)
-      epauli=0.D0
-      vmad(:,:)=0.D0
+      PI=4.D0*DATAN(1.D0)
+      FAC=4.D0/SQRT(PI)
+      EPAULI=0.D0
+      VMAD(:,:)=0.D0
       DO IAT=1,NAT
-        do ig=1,ng
-          x=rvdw/(2.d0*rc(ig,iat))
-          if(x.gt.0.75d0) then
-            pot=vpauli*fac*exp(-(2.d0*x)**2)
-          else
-            pot=Vpauli*(1.d0-x**2*(2.d0-x)**3)
-          end if
-          epauli=epauli+qmad(ig,iat)*pot
-          vmad(ig,iat)=vmad(ig,iat)+pot
+        DO IG=1,NG
+          X=RVDW/(2.D0*RC(IG,IAT))
+          IF(X.GT.0.75D0) THEN
+            POT=VPAULI*FAC*EXP(-(2.D0*X)**2)
+          ELSE
+            POT=VPAULI*(1.D0-X**2*(2.D0-X)**3)
+          END IF
+          EPAULI=EPAULI+QMAD(IG,IAT)*POT
+          VMAD(IG,IAT)=VMAD(IG,IAT)+POT
         ENDDO
       ENDDO
-!!$do iat=1,nat
-!!$  write(*,*)'qmad ',iat,qmad(:,iat)
-!!$enddo
-!!$do iat=1,nat
-!!$  write(*,*)'rc ',iat,rc(:,iat)
-!!$enddo
-!!$do iat=1,nat
-!!$  write(*,*)'vmad ',iat,vmad(:,iat)
-!!$enddo
-!!$print*,'epauli ',epauli
+!!$DO IAT=1,NAT
+!!$  WRITE(*,*)'QMAD ',IAT,QMAD(:,IAT)
+!!$ENDDO
+!!$DO IAT=1,NAT
+!!$  WRITE(*,*)'RC ',IAT,RC(:,IAT)
+!!$ENDDO
+!!$DO IAT=1,NAT
+!!$  WRITE(*,*)'VMAD ',IAT,VMAD(:,IAT)
+!!$ENDDO
+!!$PRINT*,'EPAULI ',EPAULI
       RETURN
       END
 !
@@ -986,7 +987,7 @@ END MODULE COSMO_MODULE
       ALLOCATE(FEFF(3,NQEFF))
       CALL COSMO_MAPTOEFF(NAT,NQ,NQEFF,ZEROTHETA &
      &                   ,QBAR,RQ,QATBAR,RAT,QEFF,REFF)
-! print*,'in cosmo_longrange a:',tiso,maxval(qbar)
+! PRINT*,'IN COSMO_LONGRANGE A:',TISO,MAXVAL(QBAR)
       IF(TISO) THEN
         CALL COSMO_ISOLATEDHARTREE(NQEFF,REFF,QEFF,ETOT,VEFF,FEFF,DISMIN)
         CALL COSMO_ISOLATEDHARTREE(NAT,RAT,QATBAR,ETOT1,V1,F1,DISMIN)
@@ -996,7 +997,7 @@ END MODULE COSMO_MODULE
 CALL MADELUNG(NQEFF,RBAS,REFF,QEFF,ETOT,VEFF,FEFF)
 CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       END IF
-! print*,'in cosmo_longrange b:',etot,etot1
+! PRINT*,'IN COSMO_LONGRANGE B:',ETOT,ETOT1
       ETOT=ETOT-ETOT1
       VEFF(NQEFF-NAT+1:NQEFF)=VEFF(NQEFF-NAT+1:NQEFF)-V1(:)
       FEFF(:,NQEFF-NAT+1:NQEFF)=FEFF(:,NQEFF-NAT+1:NQEFF)-F1(:,:)
@@ -1521,7 +1522,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       REAL(8),INTENT(IN) :: Q(NQ)   ! Q*THETA
       REAL(8),INTENT(OUT):: VQ(NQ)   ! DE/D(Q*THETA)
       REAL(8),INTENT(IN) :: QRELPOS(3,NQ)
-      REAL(8),INTENT(IN) :: RC(NG,nat)
+      REAL(8),INTENT(IN) :: RC(NG,NAT)
       REAL(8),INTENT(IN) :: RAT(3,NAT)
       REAL(8),INTENT(IN) :: QMAD(NG,NAT)
       REAL(8),INTENT(OUT):: VMAD(NG,NAT)
@@ -1556,7 +1557,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
         QSUM=SUM(Q(IQ1:IQ2))
         VSUM=0.D0
         DO IG=1,NG
-          RC1=RC(IG,iat1)
+          RC1=RC(IG,IAT1)
           CALL LIB$ERFR8(DIS/RC1,GAUSSINT)
           VINT=(GAUSSINT-1.D0)/DIS
 !         == FOR THE PURE ATOM-SURF ENERGY USE VINT=GAUSSINT/DIS  ======
@@ -1585,7 +1586,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
             DIS2=SUM(DR(:)**2)
             DIS=SQRT(DIS2)
             DO IG=1,NG
-              RC1=RC(IG,iat2)
+              RC1=RC(IG,IAT2)
 ! IF(DIS/RC1.GT.5.D0*RC1) CYCLE
               CALL LIB$ERFR8(DIS/RC1,GAUSSINT)
               DGAUSSINTDR=TWOBYSQPI*EXP(-DIS2/RC1**2)/RC1
@@ -1725,12 +1726,12 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       LOGICAL                  :: TCONVG
       REAL(8)                  :: SVAR
       INTEGER                  :: NITER
-      REAL(8)                  :: annem  ! previous friction factor
-      real(8)                  :: dq,de
-      real(8)    ,allocatable  :: work(:)
+      REAL(8)                  :: ANNEM  ! PREVIOUS FRICTION FACTOR
+      REAL(8)                  :: DQ,DE
+      REAL(8)    ,ALLOCATABLE  :: WORK(:)
       REAL(8)                  :: R01(3,NAT_)
       REAL(8)                  :: QMAD1(NG,NAT_)
-      LOGICAL(4)               :: Tchk
+      LOGICAL(4)               :: TCHK
 INTEGER(4) :: NFILINFO
 !     ***********************************************************************
       EPOT=0.D0
@@ -1754,7 +1755,7 @@ INTEGER(4) :: NFILINFO
 !
       IF(NAT_.NE.NAT) THEN
         CALL ERROR$MSG("INCONSISTENT NUMBER OF ATOMS")
-        CALL ERROR$STOP("COsmo$interface")
+        CALL ERROR$STOP("COSMO$INTERFACE")
       END IF
 !
 !     =======================================================================
@@ -1765,7 +1766,7 @@ INTEGER(4) :: NFILINFO
         CALL OPTFRIC$SELECT('COSMO')
         CALL OPTFRIC$GETL4('ON',TCHK) 
         ALLOCATE(Q2M(NQ))
-        q2m(:)=qm(:)
+        Q2M(:)=QM(:)
       END IF
       IF(TMULTIPLE) THEN
         NITER=NMULTIPLE
@@ -1803,8 +1804,8 @@ INTEGER(4) :: NFILINFO
       ALLOCATE(THETA(NQ))
       CALL COSMO_CUTOFF(NAT,NQ,RAT,RBAS,RSOLV,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
      &                       ,ZEROTHETA,THETA)
-      if(.not.allocated(cutofftheta))allocate(cutofftheta(nq))
-      cutofftheta(:)=theta(:)
+      IF(.NOT.ALLOCATED(CUTOFFTHETA))ALLOCATE(CUTOFFTHETA(NQ))
+      CUTOFFTHETA(:)=THETA(:)
 !
 !     =======================================================================
 !     == NOW CALCULATE TOTAL ENERGY                                        ==
@@ -1897,7 +1898,7 @@ INTEGER(4) :: NFILINFO
 !       == MAGIC NUMBER DT**2/M=1/1000                                     ==
         IF(TADIABATIC) THEN
           CALL OPTFRIC$GETL4('ON',TCHK)
-          annem=anne
+          ANNEM=ANNE
           IF(TCHK) CALL OPTFRIC$GETR8('FRIC',ANNE)
         END IF
         CALL COSMO_PROPAGATE(DT,ANNE,QMASS,NQ,Q0,QM,-VQ,QP)
@@ -1905,14 +1906,14 @@ INTEGER(4) :: NFILINFO
         EKIN=EKIN+EKIN1
 !
         IF(TADIABATIC) THEN
-!         == check convergence ==============================================
-          allocate(work(nq))
-          work(:)=qmass
+!         == CHECK CONVERGENCE ==============================================
+          ALLOCATE(WORK(NQ))
+          WORK(:)=QMASS
           CALL OPTFRIC$TESTCONV(NQ,QP,Q0,QM,Q2M,ANNE,ANNEM,DT,(/(QMASS,I=1,NQ)/),DQ,DE)
-          deallocate(work)
-WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ekin+epot-de,anne,de,dq
-          dq=abs(dq)
-          de=abs(de)
+          DEALLOCATE(WORK)
+WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,EKIN+EPOT-DE,ANNE,DE,DQ
+          DQ=ABS(DQ)
+          DE=ABS(DE)
           IF(ETOL.GT.0.AND.QTOL.GT.0) THEN 
             TCONVG=(DQ.LT.QTOL.AND.DE.LT.ETOL)
           ELSE IF(ETOL.GT.0.AND.QTOL.LT.0) THEN 
@@ -1923,19 +1924,19 @@ WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ekin+epot-de,anne,de,dq
             CALL ERROR$MSG('QTOL OR ETOL MUST BE SET FOR ADIABATIC OPTION') 
             CALL ERROR$STOP('COSMO$INTERFACE')
           END IF
-          tconvg=tconvg.and.(iter.ge.3)
+          TCONVG=TCONVG.AND.(ITER.GE.3)
           IF(TCONVG)EXIT
-!         == update optimized friction
+!         == UPDATE OPTIMIZED FRICTION
           CALL OPTFRIC$GETL4('ON',TCHK)
           IF(TCHK) THEN
-            allocate(work(nq))
-            work(:)=qmass
-            CALL OPTFRIC$UPDATER8('COSMO',NQ,QP,Q0,QM,Q2M,work)
-            deallocate(work)
+            ALLOCATE(WORK(NQ))
+            WORK(:)=QMASS
+            CALL OPTFRIC$UPDATER8('COSMO',NQ,QP,Q0,QM,Q2M,WORK)
+            DEALLOCATE(WORK)
             Q2M=QM
           END IF
-        else
-WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,anne
+        ELSE
+WRITE(*,FMT='(I5,10F20.10)')ITER,EKIN,EPOT,EKIN+EPOT,ANNE
         END IF
         CALL COSMO_SWITCH(NQ,QP,Q0,QM)
         IF(TMULTIPLE) THEN
@@ -2008,35 +2009,35 @@ END IF
 !
 !     ..................................................................
       SUBROUTINE COSMO$PRINTOUT()
-!attention !!!!! The area is printed in angstrom **2!!!!
+!ATTENTION !!!!! THE AREA IS PRINTED IN ANGSTROM **2!!!!
       USE COSMO_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTEGER(4)            :: NFIL
       CHARACTER(10)         :: ID
-      CHARACTER(2)          :: SYMBOL(nat)
-      REAL(8)               :: RAT(3,nat)
-      integer(4)            :: iz(nat)
-      integer(4)            :: itiedto(nq)
-      REAL(8)               :: qpos(3,nq)
-      REAL(8)               :: segmentAREA(nq)
-      REAL(8)               :: qi(nq)
-      REAL(8)               :: vi(nq)
+      CHARACTER(2)          :: SYMBOL(NAT)
+      REAL(8)               :: RAT(3,NAT)
+      INTEGER(4)            :: IZ(NAT)
+      INTEGER(4)            :: ITIEDTO(NQ)
+      REAL(8)               :: QPOS(3,NQ)
+      REAL(8)               :: SEGMENTAREA(NQ)
+      REAL(8)               :: QI(NQ)
+      REAL(8)               :: VI(NQ)
       REAL(8)               :: PI
-      REAL(8)               :: facearea
-      INTEGER(4)            :: Iq,IAT,iq1,iq2,isp
-      integer(4)            :: nqcount
+      REAL(8)               :: FACEAREA
+      INTEGER(4)            :: IQ,IAT,IQ1,IQ2,ISP
+      INTEGER(4)            :: NQCOUNT
       REAL(8)               :: AEZ
-      real(8)               :: ediel
-      real(8)               :: etot
-      real(8)               :: rsolv1
+      REAL(8)               :: EDIEL
+      REAL(8)               :: ETOT
+      REAL(8)               :: RSOLV1
 !     ******************************************************************
       IF (.NOT.TON) RETURN
       PI=4.D0*DATAN(1.D0)
 
 !      
 !     ==================================================================
-!     == declare file to file handler                                 ==
+!     == DECLARE FILE TO FILE HANDLER                                 ==
 !     ==================================================================
       ID='COSMO_OUT'
       CALL FILEHANDLER$SETFILE(ID,.TRUE.,'.COSMO_OUT')
@@ -2046,7 +2047,7 @@ END IF
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !      
 !     ==================================================================
-!     == declare file to file handler                                 ==
+!     == DECLARE FILE TO FILE HANDLER                                 ==
 !     ==================================================================
       NQCOUNT=0
       DO IAT=1,NAT
@@ -2079,7 +2080,7 @@ END IF
 !     ==================================================================
       CALL FILEHANDLER$UNIT('COSMO_OUT',NFIL)
       CALL COSMO_WRITEOUT(NFIL,NAT,SYMBOL,IZ,RAT,RSOLV &
-     &                    ,NQCOUNT,ITIEDTO(1:NQCOUNT),QI(1:NQCOUNT),vi(1:nqcount) &
+     &                    ,NQCOUNT,ITIEDTO(1:NQCOUNT),QI(1:NQCOUNT),VI(1:NQCOUNT) &
      &                    ,SEGMENTAREA(1:NQCOUNT),QPOS(:,1:NQCOUNT) &
      &                    ,RSOLV1,ETOT,EDIEL)
       CALL FILEHANDLER$CLOSE('COSMO_OUT')
@@ -2087,14 +2088,14 @@ END IF
       END
 !
 !     ..................................................................
-      subroutine cosmo_writeout(nfil,natoms,mtype,nuc,xyz,srad &
-     &                    ,nps,iatsp,qcosc,phic,ar,cosurf &
-     &                    ,rsolv,etot,ediel)
+      SUBROUTINE COSMO_WRITEOUT(NFIL,NATOMS,MTYPE,NUC,XYZ,SRAD &
+     &                    ,NPS,IATSP,QCOSC,PHIC,AR,COSURF &
+     &                    ,RSOLV,ETOT,EDIEL)
 !     **                                                              **
 !     **   WRITE COSMO FILE                                           **
 !     **                                                              **
-!     **   The a-matrix describes the surface potentials              **
-!     **   as v(i)=sum_j A_{i,j} q(j)                                 **
+!     **   THE A-MATRIX DESCRIBES THE SURFACE POTENTIALS              **
+!     **   AS V(I)=SUM_J A_{I,J} Q(J)                                 **
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
@@ -2113,128 +2114,128 @@ END IF
       REAL(8)     ,INTENT(IN) :: RSOLV         ! SOLVENT RADIUS
       REAL(8)     ,INTENT(IN) :: ETOT          ! TOTAL ENERGY
       REAL(8)                 :: EDIEL         ! DIELECTRIC ENERGY
-      REAL(8)                 :: DE            ! outlying charge energy correction
+      REAL(8)                 :: DE            ! OUTLYING CHARGE ENERGY CORRECTION
 !     ****************************************************************************
       IF(LEN(MTYPE(1)).LT.2) THEN
         STOP 'ERROR 1 IN COSMO$WRITEOUT'
       END IF
 !
 !     *****************************************************************************
-!     **  print input (not used by cosmotherm)                                   **
+!     **  PRINT INPUT (NOT USED BY COSMOTHERM)                                   **
 !     *****************************************************************************
-      call cosmo_writeheader(nfil)
+      CALL COSMO_WRITEHEADER(NFIL)
 !
 !     *****************************************************************************
-!     **  print final geometry (coordinates and their radii) (used by cosmotherm)**
+!     **  PRINT FINAL GEOMETRY (COORDINATES AND THEIR RADII) (USED BY COSMOTHERM)**
 !     *****************************************************************************
       CALL COSMO_WRITECOSMORAD(NFIL,NATOMS,XYZ,MTYPE,SRAD,RSOLV)
 !
 !     *****************************************************************************
-!     **  coordinates in .car format for cosmo-rs  (used by cosmotherm)          **
+!     **  COORDINATES IN .CAR FORMAT FOR COSMO-RS  (USED BY COSMOTHERM)          **
 !     *****************************************************************************
       CALL COSMO_WRITECOORDCAR(NFIL,NATOMS,NUC,MTYPE,XYZ)
 !
 !     *****************************************************************************
-!     **  charges                             (not used by cosmotherm)           **
+!     **  CHARGES                             (NOT USED BY COSMOTHERM)           **
 !     *****************************************************************************
-      call cosmo_writescreeningcharge(nfil)
+      CALL COSMO_WRITESCREENINGCHARGE(NFIL)
 
 !     *****************************************************************************
-!     **  energies                             (used by cosmotherm)              **
+!     **  ENERGIES                             (USED BY COSMOTHERM)              **
 !     *****************************************************************************
-      de=0.d0
-      ediel=0.d0   ! not used by cosmotherm
-      call cosmo_writeenergies(nfil,etot,de,ediel)
+      DE=0.D0
+      EDIEL=0.D0   ! NOT USED BY COSMOTHERM
+      CALL COSMO_WRITEENERGIES(NFIL,ETOT,DE,EDIEL)
 !
 !     *****************************************************************************
-!     **  segment information            use by cosmotherm)                      **
+!     **  SEGMENT INFORMATION            USE BY COSMOTHERM)                      **
 !     *****************************************************************************
-      CALL cosmo_WRITESEGMENT(NFIL,NPS,IATSP,COSURF,QCOSC,AR,PHIC)
-      return
+      CALL COSMO_WRITESEGMENT(NFIL,NPS,IATSP,COSURF,QCOSC,AR,PHIC)
+      RETURN
       END
 !
 !     .............................................................................
-      subroutine cosmo_writeheader(nfil)
-      implicit none
+      SUBROUTINE COSMO_WRITEHEADER(NFIL)
+      IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
-      REAL(8)                 :: EPS=0.d0      ! DIELECTRIC CONSTANT
-      REAL(8)                 :: FEPSI=1.d0    ! (EPS-1)/(EPS+0.5)
-      REAL(8)                 :: RSOLV=0.d0    ! SOLVENT RADIUS
+      REAL(8)                 :: EPS=0.D0      ! DIELECTRIC CONSTANT
+      REAL(8)                 :: FEPSI=1.D0    ! (EPS-1)/(EPS+0.5)
+      REAL(8)                 :: RSOLV=0.D0    ! SOLVENT RADIUS
       INTEGER(4)              :: NPPA=0        !#(BASIS GRID POINTS PER ATOM)
       INTEGER(4)              :: NSPA=0        !#(SURFACE CHARGES FOR ATOMS OTHER THAN HYDROGEN)
       INTEGER(4)              :: NSPH=0        !#(SURFACE CHARGES FOR HYDROGEN)
-      REAL(8)                 :: DISEX=0.d0    !DISTANCE THRESHOLD FOR A MATRIX ELEMENTS
+      REAL(8)                 :: DISEX=0.D0    !DISTANCE THRESHOLD FOR A MATRIX ELEMENTS
                                                ! 
-      REAL(8)                 :: ROUTF=0.d0    ! FACTOR FOR OUTER CAVITY CONSTRUCTION IN THE OUTLYING CHARGE CORRECTION
+      REAL(8)                 :: ROUTF=0.D0    ! FACTOR FOR OUTER CAVITY CONSTRUCTION IN THE OUTLYING CHARGE CORRECTION
       INTEGER(4)              :: LCAVITY=0     ! O=OPEN CAVITY 1=CLOSED CAVITY
-      REAL(8)                 :: PHSRAN=0.d0   ! AMPLITUDE OF THE CAVITY DE-SYMMETRIZATION
-      REAL(8)                 :: AMPRAN=0.d0   ! PHASE OF THE CAVITY DE-SYMMETRIZATION
-      REAL(8)                 :: DISEX2=0.d0   ! MEAN SQUARE DISTANCE OF TWO SEGMENTS TIMES DISEX
+      REAL(8)                 :: PHSRAN=0.D0   ! AMPLITUDE OF THE CAVITY DE-SYMMETRIZATION
+      REAL(8)                 :: AMPRAN=0.D0   ! PHASE OF THE CAVITY DE-SYMMETRIZATION
+      REAL(8)                 :: DISEX2=0.D0   ! MEAN SQUARE DISTANCE OF TWO SEGMENTS TIMES DISEX
       INTEGER(4)              :: NPS=0        ! =NPS+NPSHER
       INTEGER(4)              :: NPSD=0        ! =NPS+NPSHER
       INTEGER(4)              :: NPSPHER=0     ! #(SEGMENTS ON THE SURFACE FOR THE OUTLYING CHARGE CORRECTION)
-      REAL(8)                 :: VOLUME=0.d0   !??
-      REAL(8)                 :: area=0.d0     ! sum of all segment areas
+      REAL(8)                 :: VOLUME=0.D0   !??
+      REAL(8)                 :: AREA=0.D0     ! SUM OF ALL SEGMENT AREAS
       REAL(8)      ,PARAMETER :: ANGSTROM = 1.D0/0.529177249D0 
-      character(1)            :: dollar
+      CHARACTER(1)            :: DOLLAR
 !     *****************************************************************************
-      dollar=achar(36)
+      DOLLAR=ACHAR(36)
       LCAVITY=0    ! 0 FOR OPEN CAVITY ; 1 FOR CLOSED CAVITY
 !     =============================================================================
-!     == write version info                                                      ==
+!     == WRITE VERSION INFO                                                      ==
 !     =============================================================================
-      write(nfil,fmt="('CURRENT PROG: CP-PAW, CLAUSTHAL UNIVERSITY OF TECHNOLOGY')") 
-      write(nfil,'(a)')dollar//'cosmo' 
-      if(fepsi.eq.1.d0) then
-         write(nfil,'(a)') '  epsilon=infinity'
-      else
-         write(nfil,'(a,f9.3)') '  epsilon=', eps
-      endif
+      WRITE(NFIL,FMT="('CURRENT PROG: CP-PAW, CLAUSTHAL UNIVERSITY OF TECHNOLOGY')") 
+      WRITE(NFIL,'(A)')DOLLAR//'COSMO' 
+      IF(FEPSI.EQ.1.D0) THEN
+         WRITE(NFIL,'(A)') '  EPSILON=INFINITY'
+      ELSE
+         WRITE(NFIL,'(A,F9.3)') '  EPSILON=', EPS
+      ENDIF
 
-      write(nfil,'("  nppa=",i5)')     nppa
-      write(nfil,'("  nspa=",i5)')     nspa
-      write(nfil,'("  disex=",g12.6)') disex/angstrom
-      write(nfil,'("  rsolv=",f5.2)')  rsolv/angstrom
-      write(nfil,'("  routf=",f5.2)')  routf
-      if (lcavity .eq. 0) then
-        write(nfil,'("  cavity open")')
-      else
-        write(nfil,'("  cavity closed")')
-      endif
-      write(nfil,'("  amat file=",a)') 'amat.out'  ! amat-file name
-      write(nfil,'("  phsran=",g9.2)') phsran
-      write(nfil,'("  ampran=",g9.2)') ampran
+      WRITE(NFIL,'("  NPPA=",I5)')     NPPA
+      WRITE(NFIL,'("  NSPA=",I5)')     NSPA
+      WRITE(NFIL,'("  DISEX=",G12.6)') DISEX/ANGSTROM
+      WRITE(NFIL,'("  RSOLV=",F5.2)')  RSOLV/ANGSTROM
+      WRITE(NFIL,'("  ROUTF=",F5.2)')  ROUTF
+      IF (LCAVITY .EQ. 0) THEN
+        WRITE(NFIL,'("  CAVITY OPEN")')
+      ELSE
+        WRITE(NFIL,'("  CAVITY CLOSED")')
+      ENDIF
+      WRITE(NFIL,'("  AMAT FILE=",A)') 'AMAT.OUT'  ! AMAT-FILE NAME
+      WRITE(NFIL,'("  PHSRAN=",G9.2)') PHSRAN
+      WRITE(NFIL,'("  AMPRAN=",G9.2)') AMPRAN
 !
 !     *****************************************************************************
-!     **  calculated parameters and variables in (not used by cosmotherm)        **
+!     **  CALCULATED PARAMETERS AND VARIABLES IN (NOT USED BY COSMOTHERM)        **
 !     *****************************************************************************
-      write(nfil,fmt='(A)')dollar//'cosmo_data'
-      write(nfil,fmt="('  fepsi=',f14.7)")  fepsi
-      write(nfil,fmt="('  disex2=',g12.6)") disex2
-      write(nfil,fmt="('  nsph=',i5)")      nsph
-      write(nfil,fmt="('  nps=',i5)")       nps
-      write(nfil,fmt="('  npsd=',i5)")      npsd
-      write(nfil,fmt="('  npspher=',i5)")   npspher
-      write(nfil,fmt="('  area=',f8.2)")    area
-      write(nfil,fmt="('  volume=',f8.2)")  volume
-      return
-      end
+      WRITE(NFIL,FMT='(A)')DOLLAR//'COSMO_DATA'
+      WRITE(NFIL,FMT="('  FEPSI=',F14.7)")  FEPSI
+      WRITE(NFIL,FMT="('  DISEX2=',G12.6)") DISEX2
+      WRITE(NFIL,FMT="('  NSPH=',I5)")      NSPH
+      WRITE(NFIL,FMT="('  NPS=',I5)")       NPS
+      WRITE(NFIL,FMT="('  NPSD=',I5)")      NPSD
+      WRITE(NFIL,FMT="('  NPSPHER=',I5)")   NPSPHER
+      WRITE(NFIL,FMT="('  AREA=',F8.2)")    AREA
+      WRITE(NFIL,FMT="('  VOLUME=',F8.2)")  VOLUME
+      RETURN
+      END
 !
 !     ............................................................................
-      subroutine cosmo_writescreeningcharge(nfil)
-      implicit none
-      integer(4),intent(in) :: nfil
-      real(8)               :: qsumo=0.d0
-      real(8)               :: qsum=0.d0
-      character(1)            :: dollar
+      SUBROUTINE COSMO_WRITESCREENINGCHARGE(NFIL)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NFIL
+      REAL(8)               :: QSUMO=0.D0
+      REAL(8)               :: QSUM=0.D0
+      CHARACTER(1)            :: DOLLAR
 !     ****************************************************************************
-      dollar=achar(36)
-      write(nfil,fmt='(A)')dollar//'screening_charge'
-      write(nfil,fmt='("  cosmo      = ",f10.6)')qsum
-      write(nfil,fmt='("  correction = ",f10.6)')qsumo
-      write(nfil,fmt='("  total      = ",f10.6)')qsum+qsumo
-      return
-      end
+      DOLLAR=ACHAR(36)
+      WRITE(NFIL,FMT='(A)')DOLLAR//'SCREENING_CHARGE'
+      WRITE(NFIL,FMT='("  COSMO      = ",F10.6)')QSUM
+      WRITE(NFIL,FMT='("  CORRECTION = ",F10.6)')QSUMO
+      WRITE(NFIL,FMT='("  TOTAL      = ",F10.6)')QSUM+QSUMO
+      RETURN
+      END
 !!
 !     .............................................................................
       SUBROUTINE COSMO_WRITECOSMORAD(NFIL,NATOMS,XYZ,MTYPE,SRAD,RSOLV)
@@ -2246,16 +2247,16 @@ END IF
       REAL(8)     ,INTENT(IN) :: SRAD(NATOMS)  ! RADIUS OF SURFACE CHARGES 
       REAL(8)     ,INTENT(IN) :: RSOLV         ! SOLVENT RADIUS
       REAL(8)     ,PARAMETER  :: ANGSTROM = 1.D0/0.529177249D0 
-      integer(4)              :: i,j
-      character(1)            :: dollar        ! dollar sign
+      INTEGER(4)              :: I,J
+      CHARACTER(1)            :: DOLLAR        ! DOLLAR SIGN
 !     *****************************************************************************
-      dollar=achar(36)
-      write(nfil,'(A)')dollar//'coord_rad'
-      write(nfil,"('#atom',t9,'x',t28,'y',t47,'z',t61,'element  radius [A]')")
-      do i=1,natoms
-          write(nfil,fmt="(1x,i3,3(1x,f18.14),2x,a2,2x,f10.5)") &
-     &                 i,(xyz(j,i),j=1,3),mtype(i)(1:2),(srad(i)-rsolv)/angstrom
-      enddo
+      DOLLAR=ACHAR(36)
+      WRITE(NFIL,'(A)')DOLLAR//'COORD_RAD'
+      WRITE(NFIL,"('#ATOM',T9,'X',T28,'Y',T47,'Z',T61,'ELEMENT  RADIUS [A]')")
+      DO I=1,NATOMS
+          WRITE(NFIL,FMT="(1X,I3,3(1X,F18.14),2X,A2,2X,F10.5)") &
+     &                 I,(XYZ(J,I),J=1,3),MTYPE(I)(1:2),(SRAD(I)-RSOLV)/ANGSTROM
+      ENDDO
       RETURN
       END
 !
@@ -2272,43 +2273,43 @@ END IF
       INTEGER(4)              :: I
       CHARACTER(5)            :: LAB1
       CHARACTER(2)            :: LAB2
-      character(1)            :: dollar    ! dollar sign
+      CHARACTER(1)            :: DOLLAR    ! DOLLAR SIGN
 !     *****************************************************************************
-      dollar=achar(36)
-      write(nfil,fmt='(A)')dollar//'coord_car'
-      write(nfil,fmt='("!BIOSYM archive 3")')
-      write(nfil,fmt='("PBC=OFF")')
-      write(nfil,fmt='("coordinates from COSMO calculation")')
-      write(nfil,fmt='("!DATE ")')
+      DOLLAR=ACHAR(36)
+      WRITE(NFIL,FMT='(A)')DOLLAR//'COORD_CAR'
+      WRITE(NFIL,FMT='("!BIOSYM ARCHIVE 3")')
+      WRITE(NFIL,FMT='("PBC=OFF")')
+      WRITE(NFIL,FMT='("COORDINATES FROM COSMO CALCULATION")')
+      WRITE(NFIL,FMT='("!DATE ")')
 
-      allocate(icnt(maxval(nuc)))
-      icnt(:)=0
-      do i=1,natoms
-        icnt(nuc(i))=icnt(nuc(i))+1  ! atom counter for each element
-        write(lab1,fmt='(i5)')icnt(nuc(i))
-        lab1=trim(uc(mtype(i)(1:2)))//adjustl(lab1)
-        lab2=mtype(i)(1:2)
-        lab2(1:1)=uc(lab2(1:1))
-        write(nfil,fmt="(a5,3f15.9,' COSM 1      ',a2,6x,a2,f7.3)") &
-     &                 lab1,xyz(:,i)/angstrom,mtype(i),lab2,0.d0
-      enddo
-      deallocate(icnt)
-      write(nfil,'("end")')
-      write(nfil,'("end")')
+      ALLOCATE(ICNT(MAXVAL(NUC)))
+      ICNT(:)=0
+      DO I=1,NATOMS
+        ICNT(NUC(I))=ICNT(NUC(I))+1  ! ATOM COUNTER FOR EACH ELEMENT
+        WRITE(LAB1,FMT='(I5)')ICNT(NUC(I))
+        LAB1=TRIM(UC(MTYPE(I)(1:2)))//ADJUSTL(LAB1)
+        LAB2=MTYPE(I)(1:2)
+        LAB2(1:1)=UC(LAB2(1:1))
+        WRITE(NFIL,FMT="(A5,3F15.9,' COSM 1      ',A2,6X,A2,F7.3)") &
+     &                 LAB1,XYZ(:,I)/ANGSTROM,MTYPE(I),LAB2,0.D0
+      ENDDO
+      DEALLOCATE(ICNT)
+      WRITE(NFIL,'("END")')
+      WRITE(NFIL,'("END")')
       RETURN
-      contains
+      CONTAINS
 !       .......................................................................
         FUNCTION LC(IN) RESULT(OUT)
-!       **  makes a string lowercase                                         **
+!       **  MAKES A STRING LOWERCASE                                         **
         CHARACTER(*) ,INTENT(IN) :: IN
         CHARACTER(82)            :: OUT
-        INTEGER(4)               :: LENgth
+        INTEGER(4)               :: LENGTH
         INTEGER(4)               :: I
         INTEGER(4)               :: ICH
 !       *******************************************************************
         OUT=IN
-        LENgth=LEN_TRIM(IN)
-        DO I=1,LENgth
+        LENGTH=LEN_TRIM(IN)
+        DO I=1,LENGTH
           ICH=ICHAR(OUT(I:I))
           IF(ICH.GE.65.AND.ICH.LE.90) THEN
             OUT(I:I)=ACHAR(ICH-65+97)
@@ -2318,54 +2319,54 @@ END IF
         END FUNCTION LC
 !
 !       .......................................................................
-        FUNCTION uC(IN) RESULT(OUT)
-!       **  makes a string uppercase                                         **
+        FUNCTION UC(IN) RESULT(OUT)
+!       **  MAKES A STRING UPPERCASE                                         **
         CHARACTER(*),INTENT(IN) :: IN
         CHARACTER(82)           :: OUT
-        INTEGER(4)              :: LENgth
+        INTEGER(4)              :: LENGTH
         INTEGER(4)              :: I
         INTEGER(4)              :: ICH
 !       *******************************************************************
         OUT=IN
-        LENgth=LEN_TRIM(IN)
-        DO I=1,LENgth
+        LENGTH=LEN_TRIM(IN)
+        DO I=1,LENGTH
           ICH=ICHAR(OUT(I:I))
           IF(ICH.GE.97.AND.ICH.LE.122) THEN
             OUT(I:I)=ACHAR(ICH+97+65)
           END IF
         ENDDO
         RETURN
-        END FUNCTION uC
+        END FUNCTION UC
       END
 !
 !     .............................................................................
-      subroutine cosmo_writeenergies(nfil,etot,de,ediel)
-      implicit none
+      SUBROUTINE COSMO_WRITEENERGIES(NFIL,ETOT,DE,EDIEL)
+      IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
       REAL(8)     ,INTENT(IN) :: ETOT          ! TOTAL ENERGY
       REAL(8)     ,INTENT(IN) :: EDIEL         ! DIELECTRIC ENERGY
       REAL(8)     ,INTENT(IN) :: DE            ! ENERGY CORRECTION
-      character(1)            :: dollar    ! dollar sign
+      CHARACTER(1)            :: DOLLAR    ! DOLLAR SIGN
 !     *****************************************************************************
-      dollar=achar(36)
-      write(nfil,fmt='("# Correlated (C) cosmo calculation:")')
-      write(nfil,fmt='("# Total energy: E(SCF)-Ediel(SCF)+E(C)+Ediel(C)")')
-      write(nfil,fmt='("# OC corr.:     outlying charge correction using the")')
-      write(nfil,fmt='("#               correlated density")')
-      write(nfil,fmt='("# ediel:        Ediel(C) using the correlated density")')
+      DOLLAR=ACHAR(36)
+      WRITE(NFIL,FMT='("# CORRELATED (C) COSMO CALCULATION:")')
+      WRITE(NFIL,FMT='("# TOTAL ENERGY: E(SCF)-EDIEL(SCF)+E(C)+EDIEL(C)")')
+      WRITE(NFIL,FMT='("# OC CORR.:     OUTLYING CHARGE CORRECTION USING THE")')
+      WRITE(NFIL,FMT='("#               CORRELATED DENSITY")')
+      WRITE(NFIL,FMT='("# EDIEL:        EDIEL(C) USING THE CORRELATED DENSITY")')
 
-      write(nfil,fmt='(A)')dollar//'cosmo_energy'
-      write(nfil,fmt='("  Total energy [a.u.]            =   ", f17.10)')etot
-      write(nfil,fmt='("  Total energy + OC corr. [a.u.] =   ", f17.10)')etot+de
-      write(nfil,fmt='("  Total energy corrected [a.u.]  =   ", f17.10 &
-     &                ," Note: incorrect value contained for downward compatibility")')etot+0.5d0*de
-      write(nfil,fmt='("  Dielectric energy [a.u.]       =   ", f17.10)')ediel
-      write(nfil,fmt='("  Diel. energy + OC corr. [a.u.] =   ", f17.10)')ediel+de
-      return
-      end
+      WRITE(NFIL,FMT='(A)')DOLLAR//'COSMO_ENERGY'
+      WRITE(NFIL,FMT='("  TOTAL ENERGY [A.U.]            =   ", F17.10)')ETOT
+      WRITE(NFIL,FMT='("  TOTAL ENERGY + OC CORR. [A.U.] =   ", F17.10)')ETOT+DE
+      WRITE(NFIL,FMT='("  TOTAL ENERGY CORRECTED [A.U.]  =   ", F17.10 &
+     &                ," NOTE: INCORRECT VALUE CONTAINED FOR DOWNWARD COMPATIBILITY")')ETOT+0.5D0*DE
+      WRITE(NFIL,FMT='("  DIELECTRIC ENERGY [A.U.]       =   ", F17.10)')EDIEL
+      WRITE(NFIL,FMT='("  DIEL. ENERGY + OC CORR. [A.U.] =   ", F17.10)')EDIEL+DE
+      RETURN
+      END
 !
 !     .............................................................................
-      subroutine cosmo_WRITESEGMENT(NFIL,NPS,IATSP,COSURF,QCOSC,AR,PHIC)
+      SUBROUTINE COSMO_WRITESEGMENT(NFIL,NPS,IATSP,COSURF,QCOSC,AR,PHIC)
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
       INTEGER(4)  ,INTENT(IN) :: NPS           ! #(SURFACE CHARGES)
@@ -2376,24 +2377,24 @@ END IF
       REAL(8)     ,INTENT(IN) :: COSURF(3,NPS) ! POSITION OF SURFACE SEGMENT
       REAL(8)      ,PARAMETER :: ANGSTROM = 1.D0/0.529177249D0 
       INTEGER(4)              :: I,J
-      character(1)            :: dollar    ! dollar sign
+      CHARACTER(1)            :: DOLLAR    ! DOLLAR SIGN
 !     *****************************************************************************
-      dollar=achar(36)
-      write(nfil,fmt='(A)')dollar//'segment_information'
-      write(nfil,fmt='("# n             - segment number")')
-      write(nfil,fmt='("# atom          - atom associated with segment n")')
-      write(nfil,fmt='("# position      - segment coordinates [a.u.]")')
-      write(nfil,fmt='("# charge        - segment charge (corrected)")')
-      write(nfil,fmt='("# area          - segment area [A**2]")')
-      write(nfil,fmt='("# potential     - solute potential on segment (A length scale)")')
-      write(nfil,fmt='("#")')
-      write(nfil,fmt='("#  n   atom",14x,"position (X, Y, Z)",19x &
-     &                ,"charge         area        charge/area     potential")')
-      write(nfil,fmt='("#")')
-      write(nfil,fmt='("#")')
-      do i=1,nps
-        write(nfil,'(i5,i5,7f15.9)') i,iatsp(i),(cosurf(j,i),j=1,3) &
-     &            ,-qcosc(i),ar(i)/angstrom**2,-qcosc(i)/(ar(i)/angstrom**2),-phic(i)*angstrom
-      enddo
+      DOLLAR=ACHAR(36)
+      WRITE(NFIL,FMT='(A)')DOLLAR//'SEGMENT_INFORMATION'
+      WRITE(NFIL,FMT='("# N             - SEGMENT NUMBER")')
+      WRITE(NFIL,FMT='("# ATOM          - ATOM ASSOCIATED WITH SEGMENT N")')
+      WRITE(NFIL,FMT='("# POSITION      - SEGMENT COORDINATES [A.U.]")')
+      WRITE(NFIL,FMT='("# CHARGE        - SEGMENT CHARGE (CORRECTED)")')
+      WRITE(NFIL,FMT='("# AREA          - SEGMENT AREA [A**2]")')
+      WRITE(NFIL,FMT='("# POTENTIAL     - SOLUTE POTENTIAL ON SEGMENT (A LENGTH SCALE)")')
+      WRITE(NFIL,FMT='("#")')
+      WRITE(NFIL,FMT='("#  N   ATOM",14X,"POSITION (X, Y, Z)",19X &
+     &                ,"CHARGE         AREA        CHARGE/AREA     POTENTIAL")')
+      WRITE(NFIL,FMT='("#")')
+      WRITE(NFIL,FMT='("#")')
+      DO I=1,NPS
+        WRITE(NFIL,'(I5,I5,7F15.9)') I,IATSP(I),(COSURF(J,I),J=1,3) &
+     &            ,-QCOSC(I),AR(I)/ANGSTROM**2,-QCOSC(I)/(AR(I)/ANGSTROM**2),-PHIC(I)*ANGSTROM
+      ENDDO
       RETURN
       END

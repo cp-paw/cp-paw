@@ -5146,6 +5146,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
        INTEGER(4)            :: SKSAVE(NKPT)
        REAL(8)   ,ALLOCATABLE:: XLOAD(:)
        REAL(8)               :: XLOAD1
+       real(8)   ,parameter  :: r8large=1.d+20
        INTEGER(4)            :: I,J,IKPT,IPOS,IGROUP
        INTEGER(4)            :: ISVAR
        INTEGER(4)            :: IND(1)
@@ -5164,7 +5165,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !      ==============================================================
 !      ==  OPTMIZATION OF SK. SK US A POINTER IKPT->IGROUP         ==
 !      ==============================================================
-       XLOAD1=HUGE(XLOAD1)
+       XLOAD1=r8large
 !      == TEST DIFFERENT NUMBER OF SUBGROUPS ========================
        DO NGROUPS=1,NTASKS       
          IF(NGROUPS.GT.NKPT) EXIT  ! THERE MUST NOT BE AN EMPTY GROUP
@@ -5376,7 +5377,7 @@ PRINT*,'KMAP ',KMAP
          IF(MG(I).GT.1) THEN
            XLOADTEST(I)=WG0(I)+WG(I)/REAL(MG(I)-1)
          ELSE
-           XLOADTEST(I)=HUGE(XLOADTEST)
+           XLOADTEST(I)=r8large
          END IF
        ENDDO
        IND=MINLOC(XLOADTEST)
@@ -5416,6 +5417,7 @@ PRINT*,'KMAP ',KMAP
        REAL(8)                  :: XLOAD1,XLOAD2A,XLOAD2B
        INTEGER(4)               :: IPOS1,IPOS2A,IPOS2B
        INTEGER(4)               :: J,ICOUNT
+       real(8)   ,parameter     :: r8large=1.d=20
 !      ***************************************************************
        ICOUNT=0
        DO ICOUNT=1,100
@@ -5432,15 +5434,15 @@ PRINT*,'KMAP ',KMAP
 !        ==  XLOADTESTB ESTIMATES THE LOAD WHEN A K-POINT OF TYPE B IS ADDED
 !        ==  THE FACTOR IN THE FOLLOWING LINE IS BECAUSE THE PGI COMPILER DOES
 !        ==  NOT HANDLE MINLOC WITH THE LARGEST POSSIBLE VALUE.
-         XLOADTESTA(IPOS1)=HUGE(XLOADTESTA)*1.D-1   
-         XLOADTESTB(IPOS1)=HUGE(XLOADTESTA)*1.D-1
+         XLOADTESTA(IPOS1)=r8large
+         XLOADTESTB(IPOS1)=r8large
          DO J=1,NGROUPS
            IF(J.EQ.IPOS1) CYCLE
            XLOADTESTA(J)=XLOAD(J)+WA
            XLOADTESTB(J)=XLOAD(J)+WB
          ENDDO
-         IF(NA(IPOS1).EQ.0) XLOADTESTA=HUGE(XLOADTESTA)*1.d-1
-         IF(NB(IPOS1).EQ.0) XLOADTESTB=HUGE(XLOADTESTB)*1.d-1
+         IF(NA(IPOS1).EQ.0) XLOADTESTA=r8large
+         IF(NB(IPOS1).EQ.0) XLOADTESTB=r8large
          IND=MINLOC(XLOADTESTA)
          IPOS2A=IND(1)       
          XLOAD2A=XLOADTESTA(IPOS2A)
