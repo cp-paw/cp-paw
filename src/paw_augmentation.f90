@@ -285,7 +285,7 @@ END MODULE AUGMENTATION_MODULE
       CHARACTER(32)           :: SOFTCORETYPE
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     ==================================================================
 !     ==  COLLECT ATOM-TYPE SPECIFIC INFORMATION FROM SETUP OBJECT    ==
@@ -455,21 +455,23 @@ END MODULE AUGMENTATION_MODULE
       CALL RADIAL$INTEGRAL(GID,NR,DWORK1,POTB)
       DEALLOCATE(DWORK1)
 !
-!     ================================================================
-!     ==  SEND DENSITIES TO HYPERFINE-PARAMETER OBJECT              ==
-!     ================================================================
+!     ==========================================================================
+!     ==  SEND DENSITIES TO HYPERFINE-PARAMETER OBJECT                        ==
+!     ==========================================================================
       CALL AUGMENTATION_FEEDHYPERFINE(GID,NR,LMRX,NDIMD &
      &         ,IAT,AERHO,AECORE,PSRHO,PSCORE,AEHPOT,PSHPOT)
 !     
-!     ================================================================
-!     ==  SEND DENSITIES AND POTENTIALS TO GRAPHICS OBJECT          ==
-!     ================================================================
-      CALL GRAPHICS$SET1CPOT('AE',IAT,GID,NR,NR,LMRX,AEHPOT)
-      CALL GRAPHICS$SET1CPOT('PS',IAT,GID,NR,NR,LMRX,PSHPOT)
+!     ==========================================================================
+!     ==  SEND DENSITIES AND POTENTIALS TO GRAPHICS OBJECT                    ==
+!     ==========================================================================
+      CALL GRAPHICS$SET1CPOT('HARTREE','AE',IAT,GID,NR,NR,LMRX,AEHPOT)
+      CALL GRAPHICS$SET1CPOT('HARTREE','PS',IAT,GID,NR,NR,LMRX,PSHPOT)
+      CALL GRAPHICS$SET1CPOT('TOT','AE',IAT,GID,NR,NR,LMRX,AETOTPOT(:,:,1))
+      CALL GRAPHICS$SET1CPOT('TOT','PS',IAT,GID,NR,NR,LMRX,PSTOTPOT(:,:,1))
 !     
-!     ================================================================
-!     ==  EVALUATE CORE SHIFTS                                      ==
-!     ================================================================
+!     ==========================================================================
+!     ==  EVALUATE CORE SHIFTS                                                ==
+!     ==========================================================================
       CALL CORE_CORESHIFTS(IAT,ISP,GID,NR,LMRX,AETOTPOT)
 !
       DEALLOCATE(AEHPOT)
@@ -677,8 +679,8 @@ STOP
       INTEGER(4)            :: LM,L,IR
       REAL(8)               :: R(NR)
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       QLM(:)=0.D0
       DO LM=1,LMRX
@@ -775,9 +777,9 @@ STOP
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
       CALL DFT$GETL4('GC',TGRA)
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/DSQRT(FOURPI)
+      Y0=1.D0/SQRT(FOURPI)
       CG0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
@@ -797,7 +799,7 @@ STOP
 !       == IN AN ANGULAR MOMENTUM EXPANSION. THIS IS ONLY POSSIBLE APPROXIMATELY
 !       == USING A TAYLOR EXPANSION ABOUT THE SPHERICAL PART OF THE SQUARE =====
 !       == OF THE SPIN DENSITY. ================================================
-        vrho(:,:,:)=0.d0
+        VRHO(:,:,:)=0.D0
         CALL AUGMENTATION_NCOLLTRANS('RHO',NR,LMRX,RHOIN,RHO,VRHO,VXC)
       END IF
 !
@@ -1053,7 +1055,7 @@ STOP
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
       REAL(8)               :: WORK3(NR)
-      REAL(8)   ,parameter  :: R8SMALL=1.d-20
+      REAL(8)   ,PARAMETER  :: R8SMALL=1.D-20
 !     **************************************************************************
       CALL TRACE$PUSH('AUGMENTATION_XC')
       EXC=0.D0
@@ -1063,9 +1065,9 @@ STOP
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
       CALL DFT$GETL4('GC',TGRA)
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/DSQRT(FOURPI)
+      Y0=1.D0/SQRT(FOURPI)
       CG0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
@@ -1388,7 +1390,7 @@ STOP
       REAL(8)                    :: Q(NR)
       REAL(8)                    :: VQ(NR)
       REAL(8)                    :: PI,Y0
-      REAL(8)     ,parameter     :: r8small=1.d-20
+      REAL(8)     ,PARAMETER     :: R8SMALL=1.D-20
       INTEGER(4)                 :: ISIG,LM
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -1403,7 +1405,7 @@ STOP
 !
       DO ISIG=1,3
         DO LM=1,LMRX
-          A(:,LM,ISIG)=RHO4(:,LM,ISIG+1)/(Q(:)+r8small)
+          A(:,LM,ISIG)=RHO4(:,LM,ISIG+1)/(Q(:)+R8SMALL)
         ENDDO
       ENDDO
 !
@@ -1436,7 +1438,7 @@ STOP
 !     -- CALCULATE VQ ----------------------------------------------------------
       VQ(:)=0.D0
       DO LM=1,LMRX
-        VQ(:)=VQ(:)+POT2(:,LM,2)*RHO2(:,LM,2)/(Q(:)+r8small)
+        VQ(:)=VQ(:)+POT2(:,LM,2)*RHO2(:,LM,2)/(Q(:)+R8SMALL)
       ENDDO
 !     -- CALCULATE VA ----------------------------------------------------------
       DO ISIG=1,3
@@ -1505,7 +1507,7 @@ STOP
       REAL(8)                :: SVAR
       INTEGER(4)             :: LM,L,M,LX
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==================================================================
@@ -1616,7 +1618,7 @@ STOP
       INTEGER(4)             :: LM
       INTEGER(4)             :: L
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
@@ -1906,8 +1908,8 @@ STOP
 !!$      IF(NDIMD.NE.1) THEN
 !!$        CALL ERROR$STOP('AUGMENTATION_CORELEVELS')
 !!$      END IF
-!!$      PI=4.D0*DATAN(1.D0)
-!!$      C000=1/DSQRT(4.D0*PI)
+!!$      PI=4.D0*ATAN(1.D0)
+!!$      C000=1/SQRT(4.D0*PI)
 !!$!
 !!$!     ==================================================================
 !!$!     ==  READ CORE LEVELS                                            ==
@@ -1930,7 +1932,7 @@ STOP
 !!$!     ==================================================================
 !!$!     ==  RADIAL GRID R2=R**2                                         ==
 !!$!     ==================================================================
-!!$      XEXP=DEXP(DEX)
+!!$      XEXP=EXP(DEX)
 !!$      RI=R1/XEXP
 !!$      DO IR=1,NR
 !!$        RI=RI*XEXP
@@ -2320,7 +2322,7 @@ END IF
       REAL(8)               :: PI
       REAL(8)               :: FAC,X,SVAR1
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FAC=4.D0*PI/DBLE(2*L+1)*RC**DBLE(L+2)
       X=R/RC
       CALL DG2NDX(L+1,X,SVAR1)
@@ -2347,11 +2349,11 @@ END IF
       REAL(8)               :: ERFX
       INTEGER(4)            :: I
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       X2=X*X
       CALL LIB$ERFR8(X,ERFX)
-      V=0.5D0*DSQRT(PI)*ERFX
-      GAUSS=DEXP(-X2)
+      V=0.5D0*SQRT(PI)*ERFX
+      GAUSS=EXP(-X2)
       FAC1=0.5D0
       FAC2=0.5D0*X
       DO I=1,N
@@ -2429,13 +2431,13 @@ END IF
 !!$     &                    ,AEZ,IR,4.D0 &
 !!$     &                     ,AEPOT,PHI,GINH,DLG)
 !!$            DIN=RCLOFB(IB)*PHI(IR,2)/PHI(IR,1)
-!!$            DIN=NNOFB(IB)+0.5D0+DATAN(DIN)/PI            
+!!$            DIN=NNOFB(IB)+0.5D0+ATAN(DIN)/PI            
 !!$            TFORWARD=.FALSE.
 !!$            CALL SCHROEDER(TFORWARD,.FALSE.,R1,DEX,NR,LOFB(IB),EOFB(IB) &
 !!$     &                    ,AEZ,IR,4.D0 &
 !!$     &                     ,AEPOT,PHI,GINH,DLG)
 !!$            DOUT=RCLOFB(IB)*PHI(IR,2)/PHI(IR,1)
-!!$            DIN=0.5D0+DATAN(DOUT)/PI            
+!!$            DIN=0.5D0+ATAN(DOUT)/PI            
 !!$            Y0=DIN-DOUT
 !!$            TCONV=ABS(DX).LT.TOLB
 !!$            IF(TCONV) EXIT
@@ -2515,9 +2517,9 @@ END IF
         EB=0.D0
         RETURN
       END IF
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
-      SVAR=-2.D0*PI*RHOB/3.D0*DSQRT(4.D0*PI)
+      SVAR=-2.D0*PI*RHOB/3.D0*SQRT(4.D0*PI)
       WORK(:)=SVAR*RHO(:)*R(:)**4
       POT(:)=POT(:)+SVAR*R(:)**2 ! POTENTIAL OF THE BACKGROUND
       CALL RADIAL$INTEGRAL(GID,NR,WORK,EB)
@@ -2616,7 +2618,7 @@ END IF
         L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
         CALL GAUSSN(L,ALPHA,CL)
         SVAR=QLM(LM)*CL
-        PSRHO(:,LM)=PSRHO(:,LM)+SVAR*DEXP(-ALPHA*R(:)**2)*R(:)**L
+        PSRHO(:,LM)=PSRHO(:,LM)+SVAR*EXP(-ALPHA*R(:)**2)*R(:)**L
       ENDDO
 !
 !     ==================================================================
@@ -2631,7 +2633,7 @@ END IF
         ALPHA=1.D0/RCSM**2
         CALL GAUSSN(L,ALPHA,CL)
 !       == ADD COMPENSATION DENSITY AND ITS POTENTIAL ================
-        GAUSSIAN(:)=CL*DEXP(-ALPHA*R(:)**2)*R(:)**L
+        GAUSSIAN(:)=CL*EXP(-ALPHA*R(:)**2)*R(:)**L
 !
 !       == CALCULATE TOTAL ENERGY AND POTENTIAL ======================
         AEE(:)=AEE(:)+0.5D0*AEDMU(:)*AERHO(:,LM)*R(:)**2

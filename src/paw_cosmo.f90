@@ -50,7 +50,7 @@ CONTAINS
       REAL(8) :: X,Y
 !     ***********************************************************************
       IF(X.GT.-0.9D0) THEN
-        Y= 1.0D0 - DEXP(-(X+0.9D0)**48.D0)
+        Y= 1.0D0 - EXP(-(X+0.9D0)**48.D0)
       ELSE
         Y= 0.D0
       ENDIF
@@ -68,7 +68,7 @@ CONTAINS
 !     ***********************************************************************
       IF(X.GT.-0.9D0) THEN
         ARG=X+0.9D0
-        SVAR=DEXP(-ARG**48.D0)
+        SVAR=EXP(-ARG**48.D0)
         Y = 48.D0*ARG**47.D0*SVAR/(1.D0-SVAR)
       ELSE
         Y = 0.D0
@@ -270,7 +270,7 @@ END MODULE COSMO_MODULE
       REAL(8)          :: PI      
 !     ***********************************************************************
       IF(TINI) RETURN
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     =======================================================================
 !     == CHECK IF TESSELATION FILE HAS BEEN READ                           ==
@@ -905,7 +905,7 @@ END MODULE COSMO_MODULE
       REAL(8)            :: POT
       REAL(8)            :: FAC,PI
 !     ***********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FAC=4.D0/SQRT(PI)
       EPAULI=0.D0
       VMAD(:,:)=0.D0
@@ -1069,7 +1069,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       COMPLEX(8)            :: RHOK,CSVAR
       REAL(8)               :: B,C  ! FACTORS FOR CLOSE CONTACT POTENTIAL
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       ROOT2=SQRT(2.D0)
       B=2.D0/DISMIN
@@ -1164,7 +1164,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
                 RHOK=RHOK+EIGR(IR)*Q(IR)
               ENDDO  
               SVAR=-0.5D0*GSQUARE*RC**2
-              RHOK=RHOK*FAC*DEXP(SVAR)/GSQUARE
+              RHOK=RHOK*FAC*EXP(SVAR)/GSQUARE
               DO IR1=1,NBAS
                 CSVAR=CONJG(EIGR(IR1))*RHOK
                 SINFAC=-AIMAG(CSVAR)
@@ -1211,7 +1211,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
               DO IT3=IT3MIN,IT3MAX
                 T3=DBLE(IT3)
                 DR(:)=DR12(:)+RBAS(:,1)*T1+RBAS(:,2)*T2+RBAS(:,3)*T3  
-                DLEN=DSQRT(DOT_PRODUCT(DR,DR))
+                DLEN=SQRT(DOT_PRODUCT(DR,DR))
                 IF(DLEN.LT.RMAX) THEN
 !                 == THIS IS TIME CRITICAL
                   IF(IR1.EQ.IR2 &
@@ -1226,8 +1226,8 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
 !                   ==    RFAC2=[AC**2*DP(DLEN*FAC)/D(DLEN*FAC)]/DLEN
                       CALL LIB$ERFCR8(DLEN*FAC,ERFCX)
                       RFAC1=ERFCX/DLEN
-                      RFAC2=-(RFAC1+FAC*2.D0/DSQRT(PI) &
-     &                               *DEXP(-(FAC*DLEN)**2))/DLEN**2
+                      RFAC2=-(RFAC1+FAC*2.D0/SQRT(PI) &
+     &                               *EXP(-(FAC*DLEN)**2))/DLEN**2
                     ELSE
                       RFAC1=B+C*DLEN
                       RFAC2=C/DLEN
@@ -1434,7 +1434,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       REAL(8)            :: ENONPOLAR
       REAL(8)            :: ESELF
 !     **********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     ======================================================================
 !     ==  ZERO OUT ARRAYS                                                 ==
@@ -1539,7 +1539,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       REAL(8)            :: VINT,DVINTDR
       REAL(8)            :: SVAR
 !     ***********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       TWOBYSQPI=2.D0/SQRT(PI)
       EPOT=0.D0
       VMAD(:,:)=0.D0
@@ -2033,7 +2033,7 @@ END IF
       REAL(8)               :: RSOLV1
 !     ******************************************************************
       IF (.NOT.TON) RETURN
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 
 !      
 !     ==================================================================

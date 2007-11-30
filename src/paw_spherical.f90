@@ -50,7 +50,7 @@
       REAL(8)                 :: FAC,SVAR
       INTEGER(4)              :: LMM,LMP
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FPI=4.D0*PI
       SQ2=SQRT(2.D0)
       IF(LMX.LE.1) THEN
@@ -68,7 +68,7 @@
       END IF
       DISXY=SQRT(R(1)**2+R(2)**2)
       DIS=SQRT(DISXY**2+R(3)**2)
-      IF(DABS(DIS).LT.1.D-12) THEN
+      IF(ABS(DIS).LT.1.D-12) THEN
         YLM(1)=1.D0/SQRT(FPI)
         DO LM=2,LMX
           YLM(LM)=0.D0
@@ -228,7 +228,7 @@
          SVAR=ROT(1,1)*(ROT(2,2)*ROT(3,3)-ROT(2,3)*ROT(3,2)) &
       &      +ROT(1,2)*(ROT(2,3)*ROT(3,1)-ROT(2,1)*ROT(3,3)) &
       &      +ROT(1,3)*(ROT(2,1)*ROT(3,2)-ROT(2,2)*ROT(3,1))
-         IF(DABS(SVAR-1.D0).GT.1.D-12) THEN
+         IF(ABS(SVAR-1.D0).GT.1.D-12) THEN
            CALL ERROR$MSG('ROTATION MATRIX NOT UNITARY')
            CALL ERROR$STOP('YLMROT')
          END IF
@@ -391,7 +391,7 @@
       REAL(8)               :: PI,SQ4PIBY3
       INTEGER(4)            :: LM1,LM2
 !     ***********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       SQ4PIBY3=SQRT(4.D0*PI/3.D0)
       DO LM1=1,LMX
         DO LM2=1,LMX
@@ -627,7 +627,7 @@ END MODULE CLEBSCH_MODULE
         END
       END INTERFACE
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       SQ2=SQRT(2.D0)
       SQPI=SQRT(PI)
       IMAX=4*LMAX+1
@@ -717,7 +717,7 @@ END MODULE CLEBSCH_MODULE
       DO LM1=1,LMUP
         DO LM2=1,LMUP
           DO LM3=1,LMUP
-            IF(DABS(CG(LM1,LM2,LM3)).GT.1.D-6) THEN
+            IF(ABS(CG(LM1,LM2,LM3)).GT.1.D-6) THEN
               SVAR=CG(LM1,LM2,LM3)*SQRT(4.D0*PI)
               WRITE(*,6000)LM1,LM2,LM3,CG(LM1,LM2,LM3),SVAR
 6000          FORMAT(' CG ',3I3,2F10.5)
@@ -875,7 +875,7 @@ END MODULE SPHERICALCCMAT_MODULE
         THIS(LM)%LM20(:)=0
         THIS(LM)%LM2M(:)=0
       ENDDO
-      FOURPIBY3=16.D0*DATAN(1.D0)/3.D0  !4PI/3
+      FOURPIBY3=16.D0*ATAN(1.D0)/3.D0  !4PI/3
 !
 !     ==================================================================
       DO LM1=1,LMRXX

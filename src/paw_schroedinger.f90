@@ -2096,7 +2096,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
       INTEGER(4)            :: IR
       LOGICAL               :: TCHK
 !     *******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       XMAXLOG=LOG(XMAX)
       CALL RADIAL$R(GID,NR,R)
@@ -2505,7 +2505,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
       REAL(8)               :: PI,Y0      
       REAL(8)               :: DRELDOT(NR)
 !     ***************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',C)
       DREL(:)=-1.D0/(1.D0+2.D0*C**2/MAX(E-POT(:)*Y0,0.D0))
@@ -2537,7 +2537,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
       REAL(8)               :: VAL,DER
       INTEGER(4)            :: IR
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$VALUE(GID,NR,PHI,RC,VAL)
       CALL RADIAL$DERIVATIVE(GID,NR,PHI,RC,DER)
@@ -2583,7 +2583,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
       INTEGER(4)           :: IR
       REAL(8)              :: PI,Y0
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
 !
 !     == DEFINE RADIAL GRID

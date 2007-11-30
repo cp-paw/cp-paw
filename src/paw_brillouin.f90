@@ -672,7 +672,7 @@ END MODULE BRILLOUIN_MODULE
 !     == FIND UPPER LIMIT FOR THE LENGTH OF SUBLATTICE VECTORS        ==
 !     ==================================================================
       DO I=1,3                                                       
-        BETR(I)=DSQRT(GBAS(I,1)**2+GBAS(I,2)**2+GBAS(I,3)**2)             
+        BETR(I)=SQRT(GBAS(I,1)**2+GBAS(I,2)**2+GBAS(I,3)**2)             
       ENDDO
       SVAR=(real(NMSHP,kind=8)/(BETR(1)*BETR(2)*BETR(3)))**(1.D0/3.D0)         
       DO I=1,3                                                       
@@ -686,16 +686,16 @@ END MODULE BRILLOUIN_MODULE
         N(2)=N(1)                                                       
         N(3)=N(1)                                                       
       ELSE IF(IARB(1).EQ.1) THEN                                        
-        N(1)=INT(DSQRT(RN(1)*RN(2))+OPAR)                               
+        N(1)=INT(SQRT(RN(1)*RN(2))+OPAR)                               
         N(2)=N(1)                                                       
         N(3)=INT(RN(3))                                                 
       ELSE IF(IARB(2).EQ.1) THEN                                        
-        N(1)=INT(DSQRT(RN(1)*RN(3))+OPAR)                               
+        N(1)=INT(SQRT(RN(1)*RN(3))+OPAR)                               
         N(2)=INT(RN(2))                                                 
         N(3)=N(1)                                                       
       ELSE IF (IARB(3).EQ.1) THEN                                       
         N(1)=INT(RN(1))                                                 
-        N(2)=INT(DSQRT(RN(2)*RN(3))+OPAR)                               
+        N(2)=INT(SQRT(RN(2)*RN(3))+OPAR)                               
         N(3)=N(2)                                                       
       ELSE                                                              
         N(1)=INT(RN(1)+OPAR)                                            
@@ -1275,7 +1275,7 @@ END MODULE BRILLOUIN_MODULE
       DO I=1,THIS%NTET
         SUMA=SUMA+THIS%VOL*real(THIS%MULT(I),kind=8)
       ENDDO
-      IF(DABS(SUMA-1.D0).GT.1.D-5) THEN                                  
+      IF(ABS(SUMA-1.D0).GT.1.D-5) THEN                                  
         CALL ERROR$MSG('SUMRULE NOT FULLFILLED')
         CALL ERROR$MSG('SUM SHOULD BE EQUAL TO 1')
         CALL ERROR$R8VAL('SUM',SUMA)

@@ -170,7 +170,7 @@ END MODULE CELL_MODULE
 !     *****************************************************************
       CALL ERROR$MSG('NOT FULLY IMPLEMENTED: DO NOT USE')
       CALL ERROR$STOP('CELL$CONVERT')
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       CALL GBASS(TREF,AMAT,VOL)
       OMEGA=2.D0*PI/PERIOD
       MASS=9.D0*B/(OMEGA*VOL)**2

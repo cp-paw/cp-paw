@@ -2127,8 +2127,8 @@ END MODULE DYNOCC_MODULE
              DO IKPT=1,NKPT
                DO IB=1,NB
                  SVAR=(EPSILON(IB,IKPT,ISPIN)-(TOTPOT+SIGMA*SPINPOT))/TEMP
-                 IF(DABS(SVAR).LT.55.D0) THEN
-                   X0(IB,IKPT,ISPIN)=1.D0/(1.D0+DEXP(SVAR))
+                 IF(ABS(SVAR).LT.55.D0) THEN
+                   X0(IB,IKPT,ISPIN)=1.D0/(1.D0+EXP(SVAR))
                  ELSE
                    X0(IB,IKPT,ISPIN)=0.5D0*(1.D0+DSIGN(1.D0,SVAR))
                  END IF
@@ -2241,13 +2241,13 @@ END MODULE DYNOCC_MODULE
               SVAR=(EIG(IB,IKPT,ISPIN)-CHMPOT)/TEMP
               IF(SVAR.GT.+50.D0)SVAR=+50.D0
               IF(SVAR.LT.-50.D0)SVAR=-50.D0
-              F(IB,IKPT,ISPIN)=1.D0/(1.D0+DEXP(SVAR))*FMAX
+              F(IB,IKPT,ISPIN)=1.D0/(1.D0+EXP(SVAR))*FMAX
               SUMV=SUMV+F(IB,IKPT,ISPIN)*WKPT(IKPT)
             ENDDO
           ENDDO
         ENDDO
         DQ=SUMV-TOTCHA
-        IF(DABS(DQ).LT.TOL) GOTO 110
+        IF(ABS(DQ).LT.TOL) GOTO 110
         X0=CHMPOT
         Y0=DQ
         CALL BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)

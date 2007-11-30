@@ -200,7 +200,7 @@
         DO IGS=1,NGS
           IG=MAP(IGS)
           DO IFCT=1,NFCT
-            F(IGS,IFCT,IAT)=EIGR(IG)*DEXP(DECAY(IFCT)*G2(IG))/OMEGA
+            F(IGS,IFCT,IAT)=EIGR(IG)*EXP(DECAY(IFCT)*G2(IG))/OMEGA
           ENDDO
         ENDDO
       ENDDO
@@ -316,7 +316,7 @@
       REAL(8)     :: DEBYE
       REAL(8)     :: G2,W
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL GBASS(RBAS,GBAS,VOL)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -1021,7 +1021,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       REAL(8)               :: G1
       INTEGER(4)            :: I,IG,IAT
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       Y0=1.D0/SQRT(FOURPI)
       CALL CONSTANTS('DEBYE',DEBYE)
@@ -1046,10 +1046,10 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       DO IG=2,NG
         G1=SQRT(G(1,IG)**2+G(2,IG)**2+G(3,IG)**2)
         GRMAX=G1*RMAX
-        F=(DSIN(GRMAX)-GRMAX*DCOS(GRMAX))/GRMAX**3
+        F=(SIN(GRMAX)-GRMAX*COS(GRMAX))/GRMAX**3
         QTOT=QTOT+FOURPI*F*RMAX**3*(2.D0*REAL(RHO(IG),KIND=8))
 !
-        F=(3.D0*DSIN(GRMAX)-3.D0*GRMAX*DCOS(GRMAX)-GRMAX**2*DSIN(GRMAX)) &
+        F=(3.D0*SIN(GRMAX)-3.D0*GRMAX*COS(GRMAX)-GRMAX**2*SIN(GRMAX)) &
      &      /GRMAX**5
         FAC=FOURPI*F*RMAX**5*(-2.D0*AIMAG(RHO(IG)))
         D(1)=D(1)+G(1,IG)*FAC

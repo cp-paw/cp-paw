@@ -577,7 +577,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
         CALL RADIAL$DERIVATIVE(GIDG,NG,FOFG,G,F(1))
         F(1)=G*F(1)
         DO IG=2,NG_
-          IF(DABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
+          IF(ABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
             F(IG) =F(IG-1)
           ELSE
             G=SQRT(G2(IG))
@@ -591,7 +591,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
         IF(G.LT.1.D-6) NGAMMA=1
         CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(1))
         DO IG=2,NG_
-          IF(DABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
+          IF(ABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
             F(IG) =F(IG-1)
           ELSE
             G=SQRT(G2(IG))
@@ -606,7 +606,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
 !     == CORRECT EXTRAPOLATION TO THE GAMMA POINT                     ==
 !     ==================================================================
       IF(NGAMMA.NE.0) THEN
-        PI=4.D0*DATAN(1.D0)
+        PI=4.D0*ATAN(1.D0)
         IF(TDER) THEN
           NGAMMA=0.D0
         ELSE
@@ -661,7 +661,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
       REAL(8)               :: SVAR
 !     ******************************************************************
                             CALL TRACE$PUSH('SETUP_READ')
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO SETUP SELECTED')
@@ -897,11 +897,11 @@ PRINT*,'RCSM ',THIS%RCSM
       CALL RADIAL$R(GID,NR,R)
       IRMAX=0
       DO IR=1,NR
-        TCHK=(DABS(THIS%VADD(IR)).LT.TOL)
-        TCHK=TCHK.AND.(DABS(THIS%PSCORE(IR)-THIS%AECORE(IR)).LT.TOL)
+        TCHK=(ABS(THIS%VADD(IR)).LT.TOL)
+        TCHK=TCHK.AND.(ABS(THIS%PSCORE(IR)-THIS%AECORE(IR)).LT.TOL)
         DO LN=1,THIS%LNX
           TCHK=TCHK.AND. &
-     &           (DABS(THIS%AEPHI(IR,LN)-THIS%PSPHI(IR,LN)).LT.TOL)
+     &           (ABS(THIS%AEPHI(IR,LN)-THIS%PSPHI(IR,LN)).LT.TOL)
         ENDDO
 !       == LDAPLUSU REQUIRES A SOMEWHAT LARGER RADIUS ==================
         TCHK=TCHK.AND.(R(IR).GE.6.D0)  
@@ -947,13 +947,13 @@ PRINT*,'RCSM ',THIS%RCSM
 !     ==================================================================
 !     ==  PERFORM BESSELTRANSFORMS                                    ==
 !     ==================================================================
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       Y0=1.D0/SQRT(FOURPI)
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
       CALL RADIAL$GETR8(GID,'DEX',DEX)
-      G1=GMAX*DEXP(-DEX*DBLE(NG-1))
+      G1=GMAX*EXP(-DEX*DBLE(NG-1))
       CALL RADIAL$NEW('LOG',GIDG)
       THIS%GIDG=GIDG
       CALL RADIAL$SETI4(GIDG,'NR',NG)
@@ -1063,7 +1063,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: PI,Y0
       INTEGER(4)            :: IR
 !     ***********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL PERIODICTABLE$GET(z,'RNUC',RNUC)
       CALL RADIAL$R(GID,NR,R)
@@ -1444,15 +1444,15 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4)            :: IG
       REAL(8)               :: GARR(NG)
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       SVAR1=-0.25D0*RCBG**2
       SVAR2=-0.25D0*RCSM**2
       SVAR3=4.D0*PI
       SVAR4=-4.D0*PI*SVAR3
       CALL RADIAL$R(GIDG,NG,GARR)
       DO IG=1,NG
-        BGGAUSS=DEXP(SVAR1*GARR(IG)**2)
-        SMGAUSS=DEXP(SVAR2*GARR(IG)**2)
+        BGGAUSS=EXP(SVAR1*GARR(IG)**2)
+        SMGAUSS=EXP(SVAR2*GARR(IG)**2)
         G0(IG)=SVAR3*BGGAUSS
         V0(IG)=SVAR4*(BGGAUSS-SMGAUSS)/GARR(IG)**2
       ENDDO
@@ -1475,10 +1475,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ******************************************************************
       TCHKG=.TRUE.
       TCHKR=.TRUE.
-      CHECK=-1.D0/CELLVOL*DEXP(-0.25D0*(RC*GMAX)**2)
-      IF(DABS(CHECK).GT.TOL) TCHKG=.FALSE. 
-      CHECK=-DEXP(-(RMAX/RC)**2)
-      IF(DABS(CHECK).GT.TOL) TCHKR=.FALSE. 
+      CHECK=-1.D0/CELLVOL*EXP(-0.25D0*(RC*GMAX)**2)
+      IF(ABS(CHECK).GT.TOL) TCHKG=.FALSE. 
+      CHECK=-EXP(-(RMAX/RC)**2)
+      IF(ABS(CHECK).GT.TOL) TCHKR=.FALSE. 
       RETURN
       END
 !

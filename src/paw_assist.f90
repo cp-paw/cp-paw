@@ -1,4 +1,3 @@
-!#IF DEFINED(IBMLICENSE)
 !........................................................AUTOPI..........
 MODULE DIALS_MODULE 
 !***********************************************************************
@@ -78,10 +77,10 @@ CONTAINS
         REAL(8)         ,INTENT(IN)  :: DT     ! TIME STEP
         REAL(8)                      :: CHANGE
         REAL(8)                      :: LEFT
-        CHANGE=DABS(DIAL_%RATE*DT)
+        CHANGE=ABS(DIAL_%RATE*DT)
         LEFT=DIAL_%FINAL-DIAL_%ACTUAL
 !       == AVOID OVERSHOOTING  =========================================
-        CHANGE=MIN(CHANGE,DABS(LEFT))
+        CHANGE=MIN(CHANGE,ABS(LEFT))
 !       == DETERMINE DIRECTION OF CHANGE================================
         CHANGE=SIGN(CHANGE,LEFT)
 !       == RESET ACTUAL VALUE ==========================================
@@ -322,20 +321,20 @@ END MODULE AUTOPILOT_MODULE
       DO I=1,NAUTO
         IF(.NOT.CONTROL(I)%ON) CYCLE
         IF(ABS(CONTROL(I)%LOWERFRICTION-CONTROL(I)%UPPERFRICTION).LE.DSMALL &
-     &    .AND.DABS(CONTROL(I)%LOWERFACTOR-1.D0).GT.DSMALL &
-     &    .AND.DABS(CONTROL(I)%UPPERFACTOR-1.D0).GT.DSMALL) THEN
+     &    .AND.ABS(CONTROL(I)%LOWERFACTOR-1.D0).GT.DSMALL &
+     &    .AND.ABS(CONTROL(I)%UPPERFACTOR-1.D0).GT.DSMALL) THEN
           CALL REPORT$R8VAL(NFIL,'CONSTANT FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
                                     ,CONTROL(I)%LOWERFRICTION,' ')
         ELSE
           CALL REPORT$R8VAL(NFIL,'LOWER FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
                                     ,CONTROL(I)%LOWERFRICTION,' ')
-          IF(DABS(CONTROL(I)%LOWERFACTOR-1.D0).GT.DSMALL) THEN
+          IF(ABS(CONTROL(I)%LOWERFACTOR-1.D0).GT.DSMALL) THEN
             CALL REPORT$R8VAL(NFIL,'SCALING FACTOR OF LOWER FRICTION FOR ' &
    &                    //TRIM(CONTROL(I)%NAME),CONTROL(I)%LOWERFACTOR,' ')
           END IF
           CALL REPORT$R8VAL(NFIL,'UPPER FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
                                     ,CONTROL(I)%UPPERFRICTION,' ')
-          IF(DABS(CONTROL(I)%UPPERFACTOR-1.D0).GT.DSMALL) THEN
+          IF(ABS(CONTROL(I)%UPPERFACTOR-1.D0).GT.DSMALL) THEN
             CALL REPORT$R8VAL(NFIL,'SCALING FACTOR OF UPPER FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
                                     ,CONTROL(I)%UPPERFACTOR,' ')
           END IF
@@ -373,7 +372,7 @@ END MODULE AUTOPILOT_MODULE
         ITER=1
       ELSE
         TSTOP=.FALSE.
-        IF(DABS(ETOT-EMARK).GT.ETOL) THEN
+        IF(ABS(ETOT-EMARK).GT.ETOL) THEN
           ITER=1
           EMARK=ETOT
         ELSE 

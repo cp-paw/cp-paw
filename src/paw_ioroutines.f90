@@ -1106,7 +1106,7 @@ CALL TRACE$PASS('DONE')
 !     ******************************************************************
                            CALL TRACE$PUSH('READIN_PSIDYN')  
       LL_CNTL=LL_CNTL_
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     ==================================================================
 !     ==  READ BLOCK GENERIC                                          ==
@@ -4188,7 +4188,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         END IF
         TOTSPIN=0.D0
       ELSE
-        IF(DABS(TOTSPIN).GT.1.D-6.AND.NSPIN.EQ.1) THEN
+        IF(ABS(TOTSPIN).GT.1.D-6.AND.NSPIN.EQ.1) THEN
           CALL ERROR$MSG('NONZERO SPIN[HBAR] IS INCOMPATIBLE WITH NSPIN=1')
           CALL ERROR$STOP('STRCIN_OCCUP')
         END IF
@@ -5290,7 +5290,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)                  :: PI
       INTEGER(4)               :: ISVAR
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       LL_STRC=LL_STRC_
                        CALL TRACE$PUSH('READMOVABLECONSTRAINT')
 !     

@@ -1575,7 +1575,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           FMAX_=FMAX_+MD%FORCE(I,IAT)**2
         ENDDO
       ENDDO
-      FMAX_=DSQRT(FMAX_)
+      FMAX_=SQRT(FMAX_)
       RETURN
       END
 !
@@ -1638,7 +1638,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
             DO I=1,3
                D=D+(MD%R0(I,IAT1)-MD%R0(I,IAT2))**2
             ENDDO
-            D=DSQRT(D)
+            D=SQRT(D)
             WRITE(NFIL,FMT='(2I5,F10.5," A")')IAT1,IAT2,D/ANGSTROM
          ENDDO
       END IF
@@ -1648,7 +1648,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==================================================================
       WRITE(NFIL,FMT='(''===  ANGLES IN DEGREE  ===; NANGLE='',I10)')MD%NANGLE
       IF(LOD.GE.3) THEN
-         PI=4.D0*DATAN(1.D0)
+         PI=4.D0*ATAN(1.D0)
          DO IA=1,MD%NANGLE
             IAT1=MD%angle(ia)%iat1
             IAT2=MD%angle(ia)%iat2
@@ -1662,7 +1662,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
             D11=DX1*DX1+DY1*DY1+DZ1*DZ1
             D12=DX1*DX2+DY1*DY2+DZ1*DZ2
             D22=DX2*DX2+DY2*DY2+DZ2*DZ2
-            A=D12/DSQRT(D11*D22)
+            A=D12/SQRT(D11*D22)
             A=DACOS(A)/(2.D0*PI)*360.D0
             WRITE(NFIL,FMT='(3I5,F10.5)')IAT1,IAT2,IAT3,A
          ENDDO
@@ -2017,7 +2017,7 @@ REAL(8) :: G1,DGDX1
 !     ******************************************************************
                                CALL TRACE$PUSH('CLASSICAL_ECOULOMB')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       ICOUNT=0   ! USED TO DISTRIBUTE TASKS
       DO IIB=1,NNB
 !       == DISTRIBUTE OVER TASKS
@@ -2042,7 +2042,7 @@ REAL(8) :: G1,DGDX1
         END IF
         X=D1*D1+D2*D2+D3*D3
         IF(X.LT.1.D-20) X=1.D-20
-        X=1.D0/DSQRT(X)
+        X=1.D0/SQRT(X)
         FAC=0.D0
 !         
 !       ============================================================
@@ -2114,7 +2114,7 @@ REAL(8) :: G1,DGDX1
       D1=R2(1)-R1(1)
       D2=R2(2)-R1(2)
       D3=R2(3)-R1(3)
-      X=1.D0/DSQRT(D1*D1+D2*D2+D3*D3)
+      X=1.D0/SQRT(D1*D1+D2*D2+D3*D3)
       CALL VALUE(POT,X,E,DEDX)
       FAC=-DEDX*X*X*X
       SVAR=FAC*D1
@@ -2252,7 +2252,7 @@ REAL(8) :: G1,DGDX1
         F4(:)=0.D0
         RETURN
       END IF
-      ROOTUUVVINV=1.D0/DSQRT(UU*VV)
+      ROOTUUVVINV=1.D0/SQRT(UU*VV)
 !     == X IS THE COS(PHI) WHERE PHI IS THE ANGLE BETWEEN U AND V ======
       X=UV*ROOTUUVVINV
 !
@@ -2346,7 +2346,7 @@ REAL(8) :: G1,DGDX1
       END IF
       R41L=R41X*R41X+R41Y*R41Y+R41Z*R41Z  !R41L=(R4-R1)**2
       UR41=UX*R41X+UY*R41Y+UZ*R41Z
-      FAC=1.D0/DSQRT(UL*R41L)
+      FAC=1.D0/SQRT(UL*R41L)
       X=UR41*FAC
 !
       CALL VALUE(POT,X,E,DEDX)
@@ -2885,7 +2885,7 @@ REAL(8) :: G1,DGDX1
       REAL(8)                    :: PI
       REAL(8)                    :: ERFX
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       POT%ID='COULOMB WITH GAUSS CUTOFF'
       POT%NX=NX
       POT%X1=X1
@@ -2940,8 +2940,8 @@ REAL(8) :: G1,DGDX1
           POT%VAL(I)=0.5D0*KIJ*(R-RIJ)**2
           POT%DER(I)=KIJ*(R-RIJ)*DRDX
         ELSE   !MORSE TYPE POTENTIAL
-          ALPHA=DSQRT(KIJ/(2.D0*DIJ))
-          SVAR=DEXP(-ALPHA*(R-RIJ))
+          ALPHA=SQRT(KIJ/(2.D0*DIJ))
+          SVAR=EXP(-ALPHA*(R-RIJ))
           POT%VAL(I)=DIJ*(SVAR-1.D0)**2
           POT%DER(I)=DIJ*2.D0*(SVAR-1.D0)*(-ALPHA*SVAR)*DRDX
         END IF
@@ -2969,7 +2969,7 @@ REAL(8) :: G1,DGDX1
       REAL(8)                    :: PI
       REAL(8)                    :: X
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     ==================================================================
 !     ==  DETERMINE FOURIER COMPONENTS                                ==
@@ -2992,9 +2992,9 @@ REAL(8) :: G1,DGDX1
 !     == USE COS(2X)=2*COS(X)**2-1 TO GET A POLYNOMIAL IN COS(X) =======
 !     == V=(C0-C2) + C1*COS(X) + 2*C2*COS(X)**2  =======================
 !     == THE MINIMUM IS AT COS(THETA) AND THE VALUE AT THE MINIMUM IS ZERO
-        C(2)=KIJK/(4.D0*DSIN(THETA0)**2)
-        C(1)=-4.D0*C(2)*DCOS(THETA0)
-        C(0)=C(2)*(2.D0*DCOS(THETA0)**2+1.D0)
+        C(2)=KIJK/(4.D0*SIN(THETA0)**2)
+        C(1)=-4.D0*C(2)*COS(THETA0)
+        C(0)=C(2)*(2.D0*COS(THETA0)**2+1.D0)
       END IF
 !
 !     ==================================================================
@@ -3133,7 +3133,7 @@ REAL(8) :: G1,DGDX1
       REAL(8)                    :: X0,GAMMA,X,FAC
       REAL(8)                    :: C0,C1,C2,PI
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       POT%ID=ID
       POT%NX=NX
       POT%X1=X1
@@ -3610,13 +3610,13 @@ END MODULE UFFTABLE_MODULE
 !     ==================================================================
 !     == BOND ORDER CORRECTION : EQ.3                                 ==
 !     ==================================================================
-      RBO=-0.1332D0*(RI+RJ)*DLOG(BO)
+      RBO=-0.1332D0*(RI+RJ)*LOG(BO)
 !
 !     ==================================================================
 !     == ELECTRONEGATIVITY CORRECTION EQ.4                            ==
 !     == ATTENTION! WRONG SIGN IN THE UFF PAPER (CORRECTED HERE)      ==
 !     ==================================================================
-      REN=-RI*RJ*(DSQRT(ENCI)-DSQRT(ENCJ))**2/(ENCI*RI+ENCJ*RJ)
+      REN=-RI*RJ*(SQRT(ENCI)-SQRT(ENCJ))**2/(ENCI*RI+ENCJ*RJ)
 !
       R=RI+RJ+RBO+REN               ! BOND DISTANCE
       RETURN
@@ -3781,7 +3781,7 @@ END MODULE UFFTABLE_MODULE
       REAL(8)                    :: RIJ,RJK,RIK,BETA
       LOGICAL(4)                 :: TCHK1
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     ==================================================================
 !     ==  SCAN SPECIAL RULES                                          ==
@@ -3797,9 +3797,9 @@ END MODULE UFFTABLE_MODULE
         CALL UFFTABLE$GET(ATOM2,'THETA',THETA); THETA=THETA/180.D0*PI
         CALL UFFTABLE_BONDLENGTH(ATOM1,ATOM2,BO1,RIJ)
         CALL UFFTABLE_BONDLENGTH(ATOM2,ATOM3,BO2,RJK)
-        RIK=DSQRT(RIJ**2+RJK**2-2.D0*RIJ*RJK*DCOS(THETA))
+        RIK=SQRT(RIJ**2+RJK**2-2.D0*RIJ*RJK*COS(THETA))
         BETA=664.12/(RIJ*RJK)
-        K=BETA*ZI*ZK*RIJ*RJK/RIK**5*(3.D0*RIJ*RJK*DSIN(THETA)**2-RIK**2*DCOS(THETA))
+        K=BETA*ZI*ZK*RIJ*RJK/RIK**5*(3.D0*RIJ*RJK*SIN(THETA)**2-RIK**2*COS(THETA))
       END IF
 !
 !     ==================================================================
@@ -3856,7 +3856,7 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)              :: I
       REAL(8)                 :: PI
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       RULE(1)=ANGLERULE_TYPE('C_R  ','CPR  ','X    ', 90.D0,100.D0)
       RULE(2)=ANGLERULE_TYPE('CPR  ','C_R  ','X    ',180.D0,100.D0)
       RULE(3)=ANGLERULE_TYPE('C_R  ','CPR  ','C_R  ', 72.D0,  0.D0)
@@ -3951,7 +3951,7 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)                :: IHYB2,IHYB3
       REAL(8)                   :: PHI,X,KCALBYMOL,DPHIDX,VJK,SVAR11,FAC,PHIJK,SVAR12
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       TCHK=.TRUE.
       TPR=.FALSE.
 !
@@ -3998,14 +3998,14 @@ END MODULE UFFTABLE_MODULE
           IPER3=IPER(I)
         END IF
       ENDDO
-      VSP3=DSQRT(SVAR1*SVAR2)
+      VSP3=SQRT(SVAR1*SVAR2)
 !
 !     == DETERMINE SP2-SP2 TORSIONAL BARRIERS
       SVAR1=0.D0
       SVAR2=0.D0
       IF(IPER2-1.GE.1) SVAR1=USP2(IPER2-1)
       IF(IPER3-1.GE.1) SVAR2=USP2(IPER3-1)
-      VSP2=5.D0*DSQRT(SVAR1*SVAR2)*(1.D0+4.18D0*DLOG(BO23))
+      VSP2=5.D0*SQRT(SVAR1*SVAR2)*(1.D0+4.18D0*LOG(BO23))
 !
 !     ==================================================================
 !     == DETERMINE HYBRIDIZATION                                      ==
@@ -4107,7 +4107,7 @@ END MODULE UFFTABLE_MODULE
           ELSE
             SVAR12=6.8D0
           END IF
-          VBARRIER=DSQRT(SVAR11*SVAR12)
+          VBARRIER=SQRT(SVAR11*SVAR12)
           NJK=2
           PHI0=0.5D0*PI
         END IF
@@ -4119,7 +4119,7 @@ END MODULE UFFTABLE_MODULE
         NJK=6
         PHI0=0.D0
 !       == EXCEPTIONS =================================================
-        IF(DABS(BO23-1.D0).LE.1.D-1) THEN
+        IF(ABS(BO23-1.D0).LE.1.D-1) THEN
 !       == CENTRAL BOND IS SINGLE
             IF(((TYPE1(3:3).EQ.'2'.OR.TYPE1(3:3).EQ.'R').AND.IHYB2.EQ.2).OR. &
      &         ((TYPE4(3:3).EQ.'2'.OR.TYPE4(3:3).EQ.'R').AND.IHYB3.EQ.2)) THEN
@@ -4204,7 +4204,7 @@ END MODULE UFFTABLE_MODULE
       REAL(8)                    :: PI
       INTEGER(4)                 :: I
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       TCHK=.TRUE.
 !
 !     ==================================================================
@@ -4306,8 +4306,8 @@ END MODULE UFFTABLE_MODULE
       CALL UFFTABLE$GET(ATOM1,'D',DI)
       CALL UFFTABLE$GET(ATOM2,'D',DJ)
 !
-      RIJ=DSQRT(XI*XJ)
-      DIJ=DSQRT(DI*DJ)
+      RIJ=SQRT(XI*XJ)
+      DIJ=SQRT(DI*DJ)
       WRITE(ID,FMT='(A1,2A5, " X=",F5.2," D=",F5.4)') &
      &              'N ',ATOM1,ATOM2,RIJ,DIJ
 !
@@ -4896,7 +4896,7 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
         DR(:)=R(:,IAT)-RCENT(:)
         D2=DOT_PRODUCT(DR,DR)
         IF(D2.GT.RAD2) THEN
-          D=DSQRT(D2)
+          D=SQRT(D2)
           FAC=(D-RAD)/D*ALPHA
           DF(:)=-FAC*DR(:)
           FCENT(:)=FCENT(:)-DF(:)
@@ -5504,7 +5504,7 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       DO IX=2,POT%NX-1
         XI=POT%X1+POT%DX*DBLE(IX-1)
         PHI=DACOS(XI)
-        DPHIDX=-1.D0/DSIN(PHI)
+        DPHIDX=-1.D0/SIN(PHI)
         POT%VAL(IX)=0.5D0*STRENGTH*(PHI-PHI0)**2
         POT%DER(IX)=STRENGTH*(PHI-PHI0)*DPHIDX
       ENDDO

@@ -39,7 +39,7 @@
       REAL(8)     ,INTENT(IN) :: VALUE
       CHARACTER(*),INTENT(IN) :: UNIT
 !     ******************************************************************
-      IF(DABS(VALUE).LT.1.D+3.AND.DABS(VALUE).GT.1.D-3) THEN
+      IF(ABS(VALUE).LT.1.D+3.AND.ABS(VALUE).GT.1.D-3) THEN
         WRITE(NFIL,FMT='(55("."),": ",T1,A,T58,F10.5," ",A)')NAME,VALUE,UNIT
       ELSE
         WRITE(NFIL,FMT='(55("."),": ",T1,A,T58,ES10.2," ",A)')NAME,VALUE,UNIT

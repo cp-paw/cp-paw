@@ -137,9 +137,9 @@
       REAL(8)                 :: AUX(NR)
       REAL(8)                 :: r(NR)
       REAL(8)                 :: VEC(NPRO)
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
-      XEXP=DEXP(DEX)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      XEXP=EXP(DEX)
       ri=r1/xexp
       do ir=1,nr
         ri=ri*xexp
@@ -152,11 +152,11 @@
       MCH=4
       DO IPRO=1,NPRO
         DO IR=4,NR
-          IF(DABS(PRO(IR,IPRO)).GT.1.D-12)MCH=MAX(MCH,IR)
+          IF(ABS(PRO(IR,IPRO)).GT.1.D-12)MCH=MAX(MCH,IR)
         ENDDO
       ENDDO
       MCH=MIN(MCH,NR-4)
-      IF(R1*DEXP(DEX*DBLE(MCH-1)).GT.BOXRADIUS) THEN
+      IF(R1*EXP(DEX*DBLE(MCH-1)).GT.BOXRADIUS) THEN
          call error$STOP('PAWBOUNDSTATE')
       END IF
 !
@@ -236,10 +236,10 @@
           SVAR=SVAR+VEC(I1)*DO(I1,I2)*VEC(I2)
         ENDDO
       ENDDO
-      SVAR=1.D0/DSQRT(SVAR)
+      SVAR=1.D0/SQRT(SVAR)
       PHI(:,:)=PHI(:,:)*SVAR
       STEP(:)=STEP(:)*SVAR
-      IF(DABS(STEP(3)).GT.1.D-3) THEN
+      IF(ABS(STEP(3)).GT.1.D-3) THEN
         PRINT*,'WARNING FRom PAWBOUNDSTATE:',STEP(3),DE
       END IF
 !
@@ -286,7 +286,7 @@
       REAL(8)                 :: DET(2),RCOND,AUX1(NAUX)
       REAL(8)                 :: AUX(NR)
       REAL(8)                 :: RI,XEXP
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
 !
 !     ==================================================================
 !     ==  TEST                                                        ==
@@ -294,7 +294,7 @@
       DO I1=1,NPRO
         DO IR=MCH+1,NR
 exit
-          IF(DABS(PRO(IR,I1)).GT.1.D-6) THEN
+          IF(ABS(PRO(IR,I1)).GT.1.D-6) THEN
             CALL ERROR$MSG('WARNING FROM PAWDER PRO DOES NOT VANISH OUTSIDE')
             CALL ERROR$I4VAL('L',L)
             CALL ERROR$I4VAL('IPRO',I1)
@@ -496,7 +496,7 @@ exit
       INTEGER(4)  :: IR
       INTEGER(4)  :: ID=5
       WRITE(*,*)'WRITIT:',TEXT
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -539,7 +539,7 @@ exit
       real(8)                 :: rout,VAL,DER,LOGDER
       real(8)                 :: pi,svar,rcl
 !     ******************************************************************
-      pi=4.d0*datan(1.d0)
+      pi=4.d0*atan(1.d0)
 !
 !     ==================================================================
 !     == ESTIMATE ENERGY OF THE BOUND STATE BY SHOOTING OUTWARD       ==
@@ -573,7 +573,7 @@ exit
         ENDDO
         VAL=PHI(IROUT,1)
         DER=PHI(IROUT,2)
-        LOGDER=DATAN(-ROUT*DER/VAL)/PI+REAL(NNODE)+0.5D0
+        LOGDER=ATAN(-ROUT*DER/VAL)/PI+REAL(NNODE)+0.5D0
         SVAR=LOGDER-(REAL(NN,KIND=8)+0.5D0)
         IF(SVAR.GT.0.D0) THEN
           EUP=E
@@ -671,9 +671,9 @@ exit
       REAL(8)                  :: R(NR)
       REAL(8)                  :: phi1x(3),phi1dotx(3)
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
-      XEXP=DEXP(DEX)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -689,9 +689,9 @@ exit
       ENDDO
       MCH=MIN(NR-4,MCH)
       if(present(dlg)) then
-        MCH=MIN(nr-4,INT(1.D0+DLOG(BOXRADIUS/R1)/DEX)+2)
+        MCH=MIN(nr-4,INT(1.D0+LOG(BOXRADIUS/R1)/DEX)+2)
       ELSE
-        MCH=MIN(MCH,INT(1.D0+DLOG(BOXRADIUS/R1)/DEX)-4)
+        MCH=MIN(MCH,INT(1.D0+LOG(BOXRADIUS/R1)/DEX)-4)
       END IF
 !
 !     ==================================================================
@@ -711,7 +711,7 @@ exit
         CALL SCHROEDER(.FALSE.,.TRUE.,R1,DEX,NR,L,E,AEZ,MCH,BOXRADIUS &
      &                     ,POT,PHI2,GINH)
       END IF
-      IF(DABS(PHI2(MCH,1)).LT.1.D-6) THEN
+      IF(ABS(PHI2(MCH,1)).LT.1.D-6) THEN
         PRINT*,'PHI2 IS ZERO: PHI2=',PHI2(MCH,:)
         STOP
       END IF
@@ -761,7 +761,7 @@ exit
 !     == NORMALIZE                                                    ==
 !     ==================================================================
       CALL OLDRADIAL$INTEGRAL(R1,DEX,NR,(R(:)*PHI(:,1))**2,SVAR)
-      SVAR=1.D0/DSQRT(SVAR)
+      SVAR=1.D0/SQRT(SVAR)
       PHI(:,:)=PHI(:,:)*SVAR
       STEP(:)=STEP(:)*SVAR
 !     print*,'step ',step/phi(mch,1)
@@ -838,13 +838,13 @@ exit
       INTEGER(4)               :: N1,N2
       REAL(8)                  :: PI,Y0
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
 !
 !     ==================================================================
 !     ==  RADIAL GRID                                                 ==
 !     ==================================================================
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -959,8 +959,8 @@ exit
       REAL(8)              :: DVI
       REAL(8)              :: SVAR
       INTEGER(4)           :: IR
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
 !
 !     ==================================================================
 !     ==  COEFFICIENT ARRAY FOR U IN DIFFERENTIAL EQ.                 ==
@@ -987,10 +987,10 @@ exit
 !     ==  CALCULATE DV/DR FOR DARWIN CORRECTION                       ==
 !     ==================================================================
       IF(L .EQ. 0) THEN
-        GAMMA=DSQRT(1.0D0-FSS*AEZ**2)
+        GAMMA=SQRT(1.0D0-FSS*AEZ**2)
       ELSE
-        GAMMA=(L*DSQRT(L**2-FSS*AEZ**2) & 
-     &   + (L+1)*DSQRT((L+1)**2-FSS*AEZ**2))/(2*L+1)
+        GAMMA=(L*SQRT(L**2-FSS*AEZ**2) & 
+     &   + (L+1)*SQRT((L+1)**2-FSS*AEZ**2))/(2*L+1)
       END IF
       DV(1)=(-50.D0*Y0*POT(1)+96.D0*Y0*POT(2)-72.D0*Y0*POT(3) &
      &       +32.D0*Y0*POT(4)- 6.D0*Y0*POT(5))/(24.D0*DEX*R(1))
@@ -1158,10 +1158,10 @@ exit
       END IF
       IF(AEZ.GT.0) THEN
          IF(L .EQ. 0) THEN
-            GAMMA=DSQRT(1.0D0-FSS*AEZ**2)
+            GAMMA=SQRT(1.0D0-FSS*AEZ**2)
          ELSE
-!$$$            GAMMA=(    L*DSQRT(   L**2 -FSS*AEZ**2)+ &
-!$$$     &           (L+1)*DSQRT((L+1)**2-FSS*AEZ**2)   )/(2*L+1)
+!$$$            GAMMA=(    L*SQRT(   L**2 -FSS*AEZ**2)+ &
+!$$$     &           (L+1)*SQRT((L+1)**2-FSS*AEZ**2)   )/(2*L+1)
             gamma = sqrt(1.0+l*(l+1)-FSS*AEZ**2)
 !cwk I have changed for gamma as defined in Koelling-Harmon
          END IF
@@ -1251,10 +1251,10 @@ exit
       END IF
       IF(AEZ.GT.0) THEN
         IF(L .EQ. 0) THEN
-          GAMMA=DSQRT(1.0D0-FSS*AEZ**2)
+          GAMMA=SQRT(1.0D0-FSS*AEZ**2)
         ELSE
-          GAMMA=(    L*DSQRT(   L**2 -FSS*AEZ**2)+ &
-     &           (L+1)*DSQRT((L+1)**2-FSS*AEZ**2)   )/(2*L+1)
+          GAMMA=(    L*SQRT(   L**2 -FSS*AEZ**2)+ &
+     &           (L+1)*SQRT((L+1)**2-FSS*AEZ**2)   )/(2*L+1)
         END IF
       ELSE
         GAMMA=L+1
@@ -1588,7 +1588,7 @@ exit
         REAL(8), INTENT(IN) :: X
         COMPLEX(8)          :: Y
         REAL(8)             :: SVAR
-        SVAR=DSQRT(ABS(X))
+        SVAR=SQRT(ABS(X))
         IF(X.GE.0) THEN
           Y=cmplx(SVAR,0.D0)
         ELSE IF(X.LT.0) THEN
@@ -1759,7 +1759,7 @@ exit
         REAL(8), INTENT(IN) :: X
         COMPLEX(8)          :: Y
         REAL(8)             :: SVAR
-        SVAR=DSQRT(ABS(X))
+        SVAR=SQRT(ABS(X))
         IF(X.GE.0) THEN
           Y=cmplx(SVAR,0.D0)
         ELSE IF(X.LT.0) THEN

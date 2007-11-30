@@ -171,7 +171,7 @@
       REAL(8)     ,PARAMETER      :: ANGSTROM=1.8897259926D0
 
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       OK1=.TRUE.
       OK2=.FALSE.
       NAT=0
@@ -381,7 +381,7 @@
       REAL(8)                 :: ALPHA,BETA,GAMMA ! ANGLES BETWEEN LATTICE VECTORS
       INTEGER(4)              :: IAT,I,J,IBOND,isvar,iat1,iat2
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     ==================================================================
 !     == READ HEADER                                                  ==

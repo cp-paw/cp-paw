@@ -728,7 +728,7 @@
 !     ==================================================================
 !     ==  GRAPHICS  PARAMETERS                                        ==
 !     ==================================================================
-      CALL GRAPHICS$SETPWPOT('ELECTROSTATIC',NGL,VHARTREE)
+      CALL GRAPHICS$SETPWPOT('HARTREE',NGL,VHARTREE)
 !
 !     ==================================================================
 !     ==  TRANSFORM  TOTAL CHARGE DENSITY AND POTENTIAL TO REAL SPACE ==
@@ -793,6 +793,8 @@
          RHOG(IG,1)=RHOG(IG,1)+VHARTREE(IG)
       ENDDO
       DEALLOCATE(VHARTREE)
+!
+      CALL GRAPHICS$SETPWPOT('TOT',NGL,RHOG(1,1))
 !
 !     ==================================================================
 !     == CALCULATE FORCE ON THE PSEUDO CORE                           ==
@@ -920,7 +922,7 @@
       REAL(8)                 :: STRESS1(3,3)
       COMPLEX(8)              :: CSVAR
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL GBASS(RBAS,GBAS,CELLVOL)
       FORCE(:,:)=0.D0
@@ -1044,7 +1046,7 @@
       REAL(8)                 :: PI,Y0
       INTEGER(4)              :: IAT,ISP,IG
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       ALLOCATE(EIGR(NGL))
       DO IAT=1,NAT
@@ -1122,7 +1124,7 @@
       REAL(8)   ,PARAMETER    :: R8SMALL=1.D-20
 !      REAL(8)                 :: STRESSA(3,3),STRESSB(3,3),STRESSC(3,3)
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FPI=4.D0*PI
       Y0=1.D0/SQRT(FPI)
       CALL PLANEWAVE$GETI4('NGAMMA',NGAMMA)
@@ -1555,7 +1557,7 @@
       REAL(8)               :: GTOL,GLENG
       REAL(8)               :: Y0
 !     ******************************************************************
-      Y0=1.D0/SQRT(16.D0*DATAN(1.D0))  ! =1/SQRT(4*PI)
+      Y0=1.D0/SQRT(16.D0*ATAN(1.D0))  ! =1/SQRT(4*PI)
       LX=INT(SQRT(REAL(LMX))-1.D0)
       IF((LX+1)**2.NE.LMX) THEN   !LMX=(LX+1)**2
         CALL ERROR$MSG('LMX DOES NOT CORRESPOND TO A FULL SHELL')

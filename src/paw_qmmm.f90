@@ -814,7 +814,7 @@ print*,'force along link',dot_product(force(:,iatq)-force(:,iatqj),pos(:,iatq)-p
         DO IATQ=1,NAT
           WRITE(*,FMT='("IAT ",I3,"|R|",F10.5," R ",3F10.5," CHA ",F10.5)') &
      &         IATQ,0.D0,POS(:,IATQ),CHARGE(IATQ)
-          SVAR=DSQRT(DOT_PRODUCT(FORCE(:,IATQ),FORCE(:,IATQ)))
+          SVAR=SQRT(DOT_PRODUCT(FORCE(:,IATQ),FORCE(:,IATQ)))
           WRITE(*,FMT='("IAT ",I3,"|F|",F10.5," F ",3F10.5," POT ",F10.5)') &
      &         IATQ,SVAR,FORCE(:,IATQ),POT(IATQ)
         ENDDO
@@ -1088,7 +1088,7 @@ print*,'mip',iatai,raip
 !     ==  CHANGE VELOCITIES                                           ==
 !     ==================================================================
       DO IAT=1,NATM
-        SVAR=DSQRT(AMPRE/MASS(IAT))*DELTAT
+        SVAR=SQRT(AMPRE/MASS(IAT))*DELTAT
         DO I=1,3
           CALL GAUSS_RANDOM_NUMBER(RAN)
           RM(I,IAT) = RM(I,IAT) + SVAR*RAN

@@ -739,7 +739,7 @@ END MODULE STRCIO_MODULE
       REAL(8)                 :: ANGSTROM
       INTEGER(4)              :: NEIGH1(8)
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
 !
 !     ==================================================================
@@ -825,7 +825,7 @@ END MODULE STRCIO_MODULE
       CHARACTER(53)           :: STRING
       CHARACTER(1)            :: CH1
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       NEIGH(:,:)=0
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
 !

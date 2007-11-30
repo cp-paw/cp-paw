@@ -661,7 +661,7 @@ MODULE DFT_MODULE
         VAL(1)=RHOTMIN
       END IF
 
-      IF(DABS(VAL(2)).GE.VAL(1)-RHOTMIN) THEN
+      IF(ABS(VAL(2)).GE.VAL(1)-RHOTMIN) THEN
         VAL(2)=MAX(VAL(2),-VAL(1)+RHOTMIN)
         VAL(2)=MIN(VAL(2),VAL(1)-RHOTMIN)
       END IF
@@ -813,7 +813,7 @@ MODULE DFT_MODULE
         VAL(1)=RHOTMIN
       END IF
 
-      IF(DABS(VAL(2)).GE.VAL(1)-RHOTMIN) THEN
+      IF(ABS(VAL(2)).GE.VAL(1)-RHOTMIN) THEN
         VAL(2)=MAX(VAL(2),-VAL(1)+RHOTMIN)
         VAL(2)=MIN(VAL(2),VAL(1)-RHOTMIN)
       END IF
@@ -977,7 +977,7 @@ MODULE DFT_MODULE
         VAL(1)=RHOTMIN
       END IF
 
-      IF(DABS(VAL(2)).GE.VAL(1)-RHOTMIN) THEN
+      IF(ABS(VAL(2)).GE.VAL(1)-RHOTMIN) THEN
         VAL(2)=MAX(VAL(2),-VAL(1)+RHOTMIN)
         VAL(2)=MIN(VAL(2),VAL(1)-RHOTMIN)
       END IF
@@ -1374,7 +1374,7 @@ CONTAINS
 !     =================================================================
 !     ==  CALCULATE PARAMETERS                                       ==
 !     =================================================================
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       KFFAC=(3.D0*PI**2)**(1.D0/3.D0)     ! KF=KFFAC/RS
       EXFAC=-3.D0/(4.D0*PI)*KFFAC         ! EX_LOC(NT)=EXFAC*RHO**(4/3)
       S2FAC=0.25D0/KFFAC**2               ! PREFACTOR FOR THE REDUCED GRADIENT
@@ -1866,7 +1866,7 @@ END MODULE EXCHANGE_MODULE
       EX=0.D0
       EX_R=0.D0
       EX_G=0.D0
-      IF(DABS(RHO).LT.1.D-50) RETURN  !#
+      IF(ABS(RHO).LT.1.D-50) RETURN  !#
 !     
 !     =================================================================
 !     == POWERS OF RHO**(1/3)                                        ==
@@ -2233,9 +2233,9 @@ END MODULE EXCHANGE_MODULE
 !       ===============================================================
         CS2=ALPHAB2*S2
         IF(CS2.GT.1.D-20) THEN
-          CS=DSQRT(CS2)
-          CSH=DSQRT(1.D0+CS2)
-          ASNH=DLOG(CS+CSH)    ! =S+O(S**3)
+          CS=SQRT(CS2)
+          CSH=SQRT(1.D0+CS2)
+          ASNH=LOG(CS+CSH)    ! =S+O(S**3)
           SASNH   =CS*ASNH     ! 
           SASNH_S =0.5D0*(ASNH/CS+1.D0/CSH)
           SASNH=SASNH/ALPHAB2
@@ -2312,9 +2312,9 @@ END MODULE EXCHANGE_MODULE
 !       ===============================================================
         CS2=ALPHAB2*S2
         IF(CS2.GT.1.D-3) THEN
-          CS=DSQRT(CS2)
-          CSH=DSQRT(1.D0+CS2)
-          ASNH=DLOG(CS+CSH)    ! =S+O(S**3)
+          CS=SQRT(CS2)
+          CSH=SQRT(1.D0+CS2)
+          ASNH=LOG(CS+CSH)    ! =S+O(S**3)
           SASNH   =CS*ASNH     ! 
           SASNH_S =0.5D0*(ASNH/CS+1.D0/CSH)
           SASNH_SS=0.25D0/CS2*(1.D0/CSH**3-ASNH/CS) 
@@ -2401,9 +2401,9 @@ END MODULE EXCHANGE_MODULE
 !       ===============================================================
         CS2=ALPHAB2*S2
        IF(CS2.GT.1.D-3) THEN
-          CS=DSQRT(CS2)
-          CSH=DSQRT(1.D0+CS2)
-          ASNH=DLOG(CS+CSH)    ! =S+O(S**3)
+          CS=SQRT(CS2)
+          CSH=SQRT(1.D0+CS2)
+          ASNH=LOG(CS+CSH)    ! =S+O(S**3)
           SASNH   =CS*ASNH     ! 
           SASNH_S =0.5D0*(ASNH/CS+1.D0/CSH)
           SASNH_SS=0.25D0/CS2*(1.D0/CSH**3-ASNH/CS) 
@@ -2499,7 +2499,7 @@ CONTAINS
       IMPLICIT NONE
       REAL(8)    :: PI
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       RSFAC=(3.D0/(4.D0*PI))**(1.D0/3.D0)
       FACF=1.D0/(2.D0**(4.D0/3.D0)-2.D0)
       FACDF=FACF*4.D0/3.D0
@@ -2559,7 +2559,7 @@ END MODULE PERDEWZUNGER_MODULE
 !     == THE HIGH DENSITY LIMIT  (RS<1)                               ==
 !     ==================================================================
       IF(RS.LT.1.D0) THEN
-        RSLN  =DLOG(RS)
+        RSLN  =LOG(RS)
         RSLNRS=RS*RSLN
         ECU = RHOT*(BU + DU*RS + (AU+CU*RS)*RSLN)
         VCU = ONEBY3 *(-AU+3.D0*BU - (CU-2.D0*DU)*RS &
@@ -2652,7 +2652,7 @@ END MODULE PERDEWZUNGER_MODULE
 !     == THE HIGH DENSITY LIMIT  (RS<1)                               ==
 !     ==================================================================
       IF(RS.LT.1.D0) THEN
-        RSLN  =DLOG(RS)
+        RSLN  =LOG(RS)
         RSLNRS=RS*RSLN
         ECU = RHOT*(BU + DU*RS + (AU+CU*RS)*RSLN)
         VCU = ONEBY3 *(-AU+3.D0*BU - (CU-2.D0*DU)*RS &
@@ -2763,7 +2763,7 @@ END MODULE PERDEWZUNGER_MODULE
 !     == THE HIGH DENSITY LIMIT  (RS<1)                               ==
 !     ==================================================================
       IF(RS.LT.1.D0) THEN
-        RSLN  =DLOG(RS)
+        RSLN  =LOG(RS)
         RSLNRS=RS*RSLN
         ECU = RHOT*(BU + DU*RS + (AU+CU*RS)*RSLN)
         VCU = ONEBY3 *(-AU+3.D0*BU - (CU-2.D0*DU)*RS &
@@ -3163,8 +3163,8 @@ END MODULE PERDEWZUNGER_MODULE
       ZP2=ZP*ZP
       ZU3=ZU2*ZU
       ZP3=ZP2*ZP
-      ULN=DLOG(1.D0+1.D0/ZU)
-      PLN=DLOG(1.D0+1.D0/ZP)
+      ULN=LOG(1.D0+1.D0/ZU)
+      PLN=LOG(1.D0+1.D0/ZP)
       FOFZU=(1.D0+ZU3)*ULN+0.5D0*ZU-ZU2-ONEBY3
       FOFZP=(1.D0+ZP3)*PLN+0.5D0*ZP-ZP2-ONEBY3
       ARRU=ARRU-0.5D0*CPBH*RHOT*FOFZU
@@ -3238,7 +3238,7 @@ CONTAINS
       INTEGER(4)     :: I
       REAL(8)        :: PI
 !     ****************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       RSFAC=(3.D0/(4.D0*PI))**(1.D0/3.D0)
 !
 !     ================================================================
@@ -3577,7 +3577,7 @@ END MODULE PERDEW_MODULE
       DD  = FIVEBY6*(SIGP23-SIGM23)
 !
 !     == 1/D AND DERIVATIVES
-      ONEBYD=1.D0/DSQRT(D)
+      ONEBYD=1.D0/SQRT(D)
       DONEBYD=-0.5D0*ONEBYD*DD/D
 !
       RETURN
@@ -3627,7 +3627,7 @@ END MODULE PERDEW_MODULE
       D2D = FIVEBY9*(1.D0/SIGP13+1.D0/SIGM13)
 !
 !     == 1/D AND DERIVATIVES
-      ONEBYD=1.D0/DSQRT(D)
+      ONEBYD=1.D0/SQRT(D)
       DONEBYD=-0.5D0*ONEBYD*DD/D
       D2ONEBYD=-0.5D0*(3.D0*DONEBYD*DD+ONEBYD*D2D)/D
 !
@@ -3682,7 +3682,7 @@ END MODULE PERDEW_MODULE
       D3D = -FIVEBY27*(1.D0/SIGP43-1.D0/SIGM43)
 !
 !     == 1/D AND DERIVATIVES
-      ONEBYD=1.D0/DSQRT(D)
+      ONEBYD=1.D0/SQRT(D)
       DONEBYD=-0.5D0*ONEBYD*DD/D
       D2ONEBYD=-0.5D0*(3.D0*DONEBYD*DD+ONEBYD*D2D)/D
       D3ONEBYD=-0.5D0*(5.D0*D2ONEBYD*DD+4.D0*DONEBYD*D2D+ONEBYD*D3D)/D
@@ -3738,9 +3738,9 @@ END MODULE PERDEW_MODULE
 !     ==================================================================
 !     ==  GRADIENT DEPENDENCE: XPHI (EQ.9)                            ==
 !     ==================================================================
-      G    =DSQRT(GRHOT2)
+      G    =SQRT(GRHOT2)
       G_W  =G/(2.D0*GRHOT2)    !D(AGRHOT)/D(G2)
-      XPHI=DEXP(ARRPE1*G)
+      XPHI=EXP(ARRPE1*G)
       XPHI_R=G*DARRPE1*XPHI
       XPHI_W=G_W*ARRPE1*XPHI
 !
@@ -3834,10 +3834,10 @@ END MODULE PERDEW_MODULE
 !     ==================================================================
 !     ==  GRADIENT DEPENDENCE: XPHI (EQ.9)                            ==
 !     ==================================================================
-      G    =DSQRT(GRHOT2)
+      G    =SQRT(GRHOT2)
       G_W  =         G/(2.D0*GRHOT2)    !D(AGRHOT)/D(G2)
       G_WW =      -G_W/(2.D0*GRHOT2)
-      XPHI=DEXP(ARRPE1*G)
+      XPHI=EXP(ARRPE1*G)
       XPHI_R=G*DARRPE1*XPHI
       XPHI_W=G_W*ARRPE1*XPHI
       XPHI_RR=G*(D2ARRPE1*XPHI+DARRPE1*XPHI_R)
@@ -3962,11 +3962,11 @@ END MODULE PERDEW_MODULE
 !     ==================================================================
 !     ==  GRADIENT DEPENDENCE: XPHI (EQ.9)                            ==
 !     ==================================================================
-      G    =DSQRT(GRHOT2)
+      G    =SQRT(GRHOT2)
       G_W  =         G/(2.D0*GRHOT2)    !D(AGRHOT)/D(G2)
       G_WW =      -G_W/(2.D0*GRHOT2)
       G_WWW=-3.D0*G_WW/(2.D0*GRHOT2)
-      XPHI=DEXP(ARRPE1*G)
+      XPHI=EXP(ARRPE1*G)
       XPHI_R=G*DARRPE1*XPHI
       XPHI_W=G_W*ARRPE1*XPHI
       XPHI_RR=G*(D2ARRPE1*XPHI+DARRPE1*XPHI_R)
@@ -4172,7 +4172,7 @@ CONTAINS
        REAL(8)       :: ECX,DECX,D2ECX,D3ECX
        INTEGER(4)    :: I
 !      *****************************************************************
-       PI=4.D0*DATAN(1.D0)
+       PI=4.D0*ATAN(1.D0)
        RSFAC=(3.D0/(4.D0*PI))**(1.D0/3.D0)
        FFAC=1.D0/(2.D0**(4.D0/3.D0)-2.D0)
        DFFAC=4.D0/3.D0*FFAC
@@ -4240,7 +4240,7 @@ CONTAINS
 !      =================================================================
 !      == CALCULATE DERIVATIVE WITH RESPECT TO RS                    ==
 !      =================================================================
-       SQRS=DSQRT(RS)
+       SQRS=SQRT(RS)
        RSSQRS=RS*SQRS
 !      =================================================================
        SVAR1  = -2.D0*A*(1.D0+ALPHA1*RS)
@@ -4252,7 +4252,7 @@ CONTAINS
        SVAR3  =1.D0+1.D0/SVAR2
        DSVAR3 =-DSVAR2/SVAR2**2
 !      =================================================================
-       SVAR4  =DLOG(SVAR3)
+       SVAR4  =LOG(SVAR3)
        DSVAR4 =DSVAR3/SVAR3
 !      =================================================================
        EC=SVAR1*SVAR4
@@ -4299,7 +4299,7 @@ CONTAINS
 !      =================================================================
 !      == CALCULATE DERIVATIVE WITH RESPECT TO RS                    ==
 !      =================================================================
-       SQRS=DSQRT(RS)
+       SQRS=SQRT(RS)
        RSSQRS=RS*SQRS
 !      =================================================================
        SVAR1  = -2.D0*A*(1.D0+ALPHA1*RS)
@@ -4313,7 +4313,7 @@ CONTAINS
        DSVAR3 =-DSVAR2/SVAR2**2
        D2SVAR3=-D2SVAR2/SVAR2**2+2.D0*SVAR2*DSVAR3**2
 !      =================================================================
-       SVAR4  =DLOG(SVAR3)
+       SVAR4  =LOG(SVAR3)
        DSVAR4 =DSVAR3/SVAR3
        D2SVAR4=D2SVAR3/SVAR3-DSVAR4**2
 !      =================================================================
@@ -4365,7 +4365,7 @@ CONTAINS
 !      =================================================================
 !      == CALCULATE DERIVATIVE WITH RESPECT TO RS                    ==
 !      =================================================================
-       SQRS=DSQRT(RS)
+       SQRS=SQRT(RS)
        RSSQRS=RS*SQRS
 !      =================================================================
        SVAR1  = -2.D0*A*(1.D0+ALPHA1*RS)
@@ -4382,7 +4382,7 @@ CONTAINS
        D3SVAR3=-D3SVAR2/SVAR2**2+2.D0*D2SVAR2*DSVAR2/SVAR2**3 &
       &        +2.D0*DSVAR2*DSVAR3**2+4.D0*SVAR2*DSVAR3*D2SVAR3
 !      =================================================================
-       SVAR4  =DLOG(SVAR3)
+       SVAR4  =LOG(SVAR3)
        DSVAR4 =DSVAR3/SVAR3
        D2SVAR4=D2SVAR3/SVAR3-DSVAR4**2
        D3SVAR4=D3SVAR3/SVAR3-D2SVAR3*DSVAR3/SVAR3**2-2.D0*DSVAR4*D2SVAR4
@@ -4932,7 +4932,7 @@ LOGICAL(4)         :: TINI=.FALSE.
 REAL(8)            :: PI
 REAL(8)            :: RSFAC   ! RS=RSFAC*RHO**(-1/3)
 REAL(8)            :: KFFAC   ! KF= KFFAC/RS
-REAL(8)            :: KSFAC   ! KS=KSFAC/DSQRT(RS)
+REAL(8)            :: KSFAC   ! KS=KSFAC/SQRT(RS)
 REAL(8)            :: TFAC    ! T2=TFAC*GRHO2/G**2*RHOT**(-7/3)
 REAL(8),PARAMETER  :: CC0=4.235D-3
 REAL(8)            :: NU      
@@ -4944,10 +4944,10 @@ CONTAINS
 !      .................................................................
        SUBROUTINE PERDEWWANG91G_INITIALIZE
        IMPLICIT NONE 
-       PI=4.D0*DATAN(1.D0)
+       PI=4.D0*ATAN(1.D0)
        RSFAC=(3.D0/(4.D0*PI))**(1.D0/3.D0) ! RS=RSFAC*RHOT**(-1/3)
        KFFAC=(2.25D0*PI)**(1.D0/3.D0)      ! KF=KFFAC/RS
-       KSFAC=DSQRT(4.D0*KFFAC/PI)          ! KS=KSFAC/DSQRT(RS)
+       KSFAC=SQRT(4.D0*KFFAC/PI)          ! KS=KSFAC/SQRT(RS)
        TFAC=0.25D0*RSFAC/KSFAC**2          ! T2=TFAC*GRHO2/G**2*RHOT**(-7/3)
        NU=(16.D0/PI)*(3.D0*PI**2)**(1.D0/3.D0)
        BETA=NU*CC0
@@ -5013,7 +5013,7 @@ CONTAINS
        SVAR1=CC-CC0-THREEBY7*CX
        EXPO_T=CEXPO*G4*RS
        EXPO_R=CEXPO*G4*T2
-       SVAR3=NU*SVAR1*DEXP(EXPO)
+       SVAR3=NU*SVAR1*EXP(EXPO)
        SVAR4=DCC/SVAR1+EXPO_R
        H   =SVAR3*G3*T2
        H_T =SVAR3*G3*(1.D0+EXPO)
@@ -5072,7 +5072,7 @@ CONTAINS
        V=E/G3
 !      == CHECK WHETHER EXPONENTIAL OVERFLOWS
        IF(-FAC2*V.GT.100.D0) THEN
-         SVAR=DLOG(1.D0+FAC1*T2)/FAC2
+         SVAR=LOG(1.D0+FAC1*T2)/FAC2
          DSVAR=FAC1/(1.D0+FAC1*T2)/FAC2
          D2SVAR=-FAC2*DSVAR**2
          H=G3*SVAR
@@ -5088,7 +5088,7 @@ CONTAINS
 PRINT*,'SHORTCUT FOR H0'
          RETURN
        END IF
-       SVAR=DEXP(-FAC2*V)
+       SVAR=EXP(-FAC2*V)
        AI  =(SVAR-1.D0)/FAC1
        AI_V =-FAC2/FAC1*SVAR
        AI_VV=-FAC2*AI_V
@@ -5122,7 +5122,7 @@ PRINT*,'SHORTCUT FOR H0'
 !      =================================================================
 !      ==  CALCULATE H(T,V,G)                                        ==
 !      =================================================================
-       SVAR=DLOG(1.D0+SVAR1)/FAC2
+       SVAR=LOG(1.D0+SVAR1)/FAC2
        DSVAR=1.D0/(1.D0+SVAR1)/FAC2
        D2SVAR=-FAC2*DSVAR*DSVAR
        H   =      G3*SVAR
@@ -5449,7 +5449,7 @@ PRINT*,'SHORTCUT FOR H0'
        R_DD=-FOURBY3*R_D/RHOT
 !      == T(D=RHOT,S=RHOS,N=GRHO2) ====================================
 !      == WATCH ORDER OF STATEMENTS!! =================================
-!      T=DSQRT(GRHO2)/(2.D0*G*KSFAC/DSQRT(RSFAC))*RHOT**(-SEVENBY6)
+!      T=SQRT(GRHO2)/(2.D0*G*KSFAC/SQRT(RSFAC))*RHOT**(-SEVENBY6)
        T_DD=T_DD+2.D0*T_DG*G_D+T_GG*G_D**2+T_G*G_DD
        T_DS=T_DG*G_S+T_GG*G_S*G_D+T_G*G_DS
        T_DN=T_DN+T_GN*G_D
@@ -5527,7 +5527,7 @@ LOGICAL(4)         :: TINI=.FALSE.
 REAL(8)            :: PI
 REAL(8)            :: RSFAC   ! RS=RSFAC*RHO**(-1/3)
 REAL(8)            :: KFFAC   ! KF= KFFAC*RHO**(4/3)
-REAL(8)            :: KSFAC   ! KS=KSFAC/DSQRT(RS)
+REAL(8)            :: KSFAC   ! KS=KSFAC/SQRT(RS)
 REAL(8)            :: TFAC    ! T2=TFAC*GRHO2/G**2*RHOT**(-7/3)
 REAL(8)            :: GAMMA   ! (1-LOG(2))/PI**2
 REAL(8)            :: KAPPA=0.804D0
@@ -5544,12 +5544,12 @@ END MODULE PBE_MODULE
        SUBROUTINE PBE_INITIALIZE
        USE PBE_MODULE
        IMPLICIT NONE 
-       PI=4.D0*DATAN(1.D0)
+       PI=4.D0*ATAN(1.D0)
        RSFAC=(3.D0/(4.D0*PI))**(1.D0/3.D0) ! RS=RSFAC*RHOT**(-1/3)
        KFFAC=(3.D0*PI**2)**(1.D0/3.D0)      ! KF=KFFAC/RS
-       KSFAC=DSQRT(4.D0*KFFAC/PI)          ! KS=KSFAC/DSQRT(RS)
+       KSFAC=SQRT(4.D0*KFFAC/PI)          ! KS=KSFAC/SQRT(RS)
        TFAC=0.25D0*RSFAC/KSFAC**2          ! T2=TFAC*GRHO2/G**2*RHOT**(-7/3)
-       GAMMA=(1.D0-DLOG(2.D0))/PI**2
+       GAMMA=(1.D0-LOG(2.D0))/PI**2
        NU=16.D0/PI*(3*PI**2)**(1.D0/3.D0)
        BETA=NU*CC0
        MU=BETA*PI**2/3.D0
@@ -5613,7 +5613,7 @@ END MODULE PBE_MODULE
 !      =================================================================
 !      ==  CALCULATE H(T,V,G)                                        ==
 !      =================================================================
-       SVAR=DLOG(1.D0+SVAR1)/FAC2
+       SVAR=LOG(1.D0+SVAR1)/FAC2
        DSVAR=1.D0/(1.D0+SVAR1)/FAC2
        H   =      G3*SVAR
        H_G = 3.D0*G2*SVAR
@@ -5676,7 +5676,7 @@ END MODULE PBE_MODULE
 !      =================================================================
 !      ==  CALCULATE H(T,V,G)                                        ==
 !      =================================================================
-       SVAR=DLOG(1.D0+SVAR1)/FAC2
+       SVAR=LOG(1.D0+SVAR1)/FAC2
        DSVAR=1.D0/(1.D0+SVAR1)/FAC2
        D2SVAR=-FAC2*DSVAR*DSVAR
        H   =      G3*SVAR
@@ -5760,7 +5760,7 @@ END MODULE PBE_MODULE
 !      =================================================================
 !      ==  CALCULATE H(T,V,G)                                        ==
 !      =================================================================
-       SVAR=DLOG(1.D0+SVAR1)/FAC2
+       SVAR=LOG(1.D0+SVAR1)/FAC2
        DSVAR=1.D0/(1.D0+SVAR1)/FAC2
        D2SVAR=-FAC2*DSVAR*DSVAR
        D3SVAR=-2.D0*FAC2*DSVAR*D2SVAR
@@ -5855,7 +5855,7 @@ END MODULE PBE_MODULE
 !      =================================================================
 !      == 1/A=(EXP(-FAC2*V)-1)/FAC1 AND DERIVATIVES WITH RESPECT TO V ==       
 !      =================================================================
-       AI    =DEXP(-FAC2*V)/FAC1
+       AI    =EXP(-FAC2*V)/FAC1
        AI_V  =-FAC2*AI
        AI=AI-1.D0/FAC1
 !
@@ -5924,7 +5924,7 @@ END MODULE PBE_MODULE
 !      =================================================================
 !      == 1/A=(EXP(-FAC2*V)-1)/FAC1 AND DERIVATIVES WITH RESPECT TO V ==       
 !      =================================================================
-       AI    =DEXP(-FAC2*V)/FAC1
+       AI    =EXP(-FAC2*V)/FAC1
        AI_V  =-FAC2*AI
        AI_VV =-FAC2*AI_V
        AI=AI-1.D0/FAC1
@@ -6011,7 +6011,7 @@ END MODULE PBE_MODULE
 !      =================================================================
 !      == 1/A=(EXP(-FAC2*V)-1)/FAC1 AND DERIVATIVES WITH RESPECT TO V ==       
 !      =================================================================
-       AI    =DEXP(-FAC2*V)/FAC1
+       AI    =EXP(-FAC2*V)/FAC1
        AI_V  =-FAC2*AI
        AI_VV =-FAC2*AI_V
        AI_VVV=-FAC2*AI_VV
@@ -6153,7 +6153,7 @@ END MODULE PBE_MODULE
 !      == RS(RHOT) ====================================================
 !      == T(D=RHOT,S=RHOS,N=GRHOT2) ====================================
 !      == WATCH ORDER OF STATEMENTS!! =================================
-!      T=DSQRT(GRHOT2)/(2.D0*G*KSFAC/DSQRT(RSFAC))*RHOT**(-SEVENBY6)
+!      T=SQRT(GRHOT2)/(2.D0*G*KSFAC/SQRT(RSFAC))*RHOT**(-SEVENBY6)
        T_S=T_G*G_S
        T_D=T_D+T_G*G_D
 !      == TRANSFORM H0 ================================================        
@@ -6278,7 +6278,7 @@ END MODULE PBE_MODULE
 !      == RS(RHOT) ====================================================
 !      == T(D=RHOT,S=RHOS,N=GRHOT2) ====================================
 !      == WATCH ORDER OF STATEMENTS!! =================================
-!      T=DSQRT(GRHOT2)/(2.D0*G*KSFAC/DSQRT(RSFAC))*RHOT**(-SEVENBY6)
+!      T=SQRT(GRHOT2)/(2.D0*G*KSFAC/SQRT(RSFAC))*RHOT**(-SEVENBY6)
        T_DD=T_DD+2.D0*T_DG*G_D+T_GG*G_D**2+T_G*G_DD
        T_DS=T_DG*G_S+T_GG*G_S*G_D+T_G*G_DS
        T_DN=T_DN+T_GN*G_D
@@ -6649,7 +6649,7 @@ CONTAINS
 !     ******************************************************************
       IF(TINI) RETURN
       TINI=.TRUE.
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       CF=(3.D0*PI*PI)**(2.D0/3.D0)*3.D0/10.D0
       CF2=CF*2.D0**(11.D0/3.D0)*A*B
       AB=A*B/72.D0

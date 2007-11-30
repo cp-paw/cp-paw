@@ -457,7 +457,7 @@ LOGICAL(4),PARAMETER :: TTEST=.FALSE.
                                 CALL TRACE$PUSH('HYPERFINE$SETPWPOT')
 !     == GET PLANE WAVE CUTOFF AN CONVERT TO MAX. G-VECTOR LENGTH
       CALL POTENTIAL$GETR8('EPWRHO',GMAX)
-      GMAX=DSQRT(2.D0*GMAX)
+      GMAX=SQRT(2.D0*GMAX)
 !
       CALL ATOMLIST$NATOM(NAT)
       DO IAT=1,NAT
@@ -487,9 +487,9 @@ end if
 !             __-1 FROM DERIVATIVE = I**2
 !             __ 2 FROM ADDING COMPLEX CONJUGATE
               SVAR1=0.D0
-              GLEN=DSQRT(G(1,IG)**2+G(2,IG)**2+G(3,IG)**2)
+              GLEN=SQRT(G(1,IG)**2+G(2,IG)**2+G(3,IG)**2)
 !             == SVAR DAMPS OUT HIGH FREQUENCY OSCILLATIONS OF THE POTENTIAL 
-              SVAR1=1.D0/(1.D0+DEXP(GLEN+3.D0-GMAX))  !MAY NOT BE A GOOD CHOICE
+              SVAR1=1.D0/(1.D0+EXP(GLEN+3.D0-GMAX))  !MAY NOT BE A GOOD CHOICE
 IF(TTEST) SVAR1=1.D0
               SVAR1=-2.D0*REAL(EXP(+CI*GR)*VOFG(IG),KIND=8)*SVAR1
               SVAR2=G(1,IG)*SVAR1
@@ -587,7 +587,7 @@ END IF
 !     ********************************************************************
       IF(.NOT.(TWAKE.AND. TPW)) RETURN
                                 CALL TRACE$PUSH('HYPERFINE$SETPWRHO')
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       IF(IDENT_.NE.'TOT'.AND.IDENT_.NE.'SPIN') THEN
         CALL ERROR$MSG('IDENT_ MUST BE EITHER TOT OR SPIN')
         CALL ERROR$CHVAL('IDENT_',IDENT_)
@@ -717,8 +717,8 @@ END IF
 !     ================================================================
 !     ==  PREPARE SOME CONSTANTS NEEDED LATER                       ==
 !     ================================================================
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL MPE$QUERY('MONOMER',NTASKNUM,NTASKID)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
@@ -1025,7 +1025,7 @@ END IF
       REAL(8)             :: TR
       REAL(8)             :: ONEBY3=1.D0/3.D0
 !     ****************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       SQ15=SQRT(15.D0)
       SQ5=SQRT(5.D0)
       SQ60=SQRT(60.D0)
@@ -1162,7 +1162,7 @@ END IF
       RT=Z*ALPHA**2    !THOMSON RADIUS
       RTH=0.5D0*RT
       LAMBDA=SQRT(1.D0-(ALPHA*Z)**2)
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       IF(TTEST) THEN
         PRINT*,'Z      ',Z
         PRINT*,'RT     ',RT

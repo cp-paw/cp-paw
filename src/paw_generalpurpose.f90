@@ -16,13 +16,13 @@
       REAL(8)                 :: PI
       REAL(8)                 :: DEGREE
       REAL(8)                 :: COSA,COSB,COSG,SING
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       DEGREE=2.D0*PI/360.D0
       IF(SWITCH) THEN
         COSA=COS(ALPHA*DEGREE)
         COSB=COS(BETA *DEGREE)
         COSG=COS(GAMMA*DEGREE)
-        SING=DSQRT(1.D0-COSG**2)
+        SING=SQRT(1.D0-COSG**2)
         T(1,1)=A
         T(2,1)=0.D0   
         T(3,1)=0.D0   
@@ -31,11 +31,11 @@
         T(3,2)=0.D0   
         T(1,3)=C*COSB
         T(2,3)=C*(COSA-COSB*COSG)/SING
-        T(3,3)=C*DSQRT(SING**2+2.D0*COSA*COSB*COSG-COSA**2-COSB**2)/SING
+        T(3,3)=C*SQRT(SING**2+2.D0*COSA*COSB*COSG-COSA**2-COSB**2)/SING
       ELSE
-        A=DSQRT(T(1,1)**2+T(2,1)**2+T(3,1)**2)      
-        B=DSQRT(T(1,2)**2+T(2,2)**2+T(3,2)**2)      
-        C=DSQRT(T(1,3)**2+T(2,3)**2+T(3,3)**2)      
+        A=SQRT(T(1,1)**2+T(2,1)**2+T(3,1)**2)      
+        B=SQRT(T(1,2)**2+T(2,2)**2+T(3,2)**2)      
+        C=SQRT(T(1,3)**2+T(2,3)**2+T(3,3)**2)      
         COSA=(T(1,2)*T(1,3)+T(2,2)*T(2,3)+T(3,2)*T(3,3))/(B*C)
         COSB=(T(1,1)*T(1,3)+T(2,1)*T(2,3)+T(3,1)*T(3,3))/(A*C)
         COSG=(T(1,1)*T(1,2)+T(2,1)*T(2,2)+T(3,1)*T(3,2))/(A*B)
@@ -60,7 +60,7 @@
 !     ******************************************************************
       B=(0.69395656D0/Z)**BY3
       X=R/B
-      XS=DSQRT(X)
+      XS=SQRT(X)
       T=Z/(1.0D0+XS*(0.02747D0 - X*(0.1486D0 - 0.007298D0*X)) &
      &      + X*(1.243D0 + X*(0.2302D0 + 0.006944D0*X)))
       IF(T .LT. 1.0D0) T=1.0D0
@@ -86,7 +86,7 @@
       REAL(8)              :: FAC
       INTEGER(4)           :: I,J
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       GBAS(1,1) = RBAS(2,2)*RBAS(3,3) - RBAS(3,2)*RBAS(2,3)
       GBAS(2,1) = RBAS(3,2)*RBAS(1,3) - RBAS(1,2)*RBAS(3,3)
       GBAS(3,1) = RBAS(1,2)*RBAS(2,3) - RBAS(2,2)*RBAS(1,3)
@@ -108,7 +108,7 @@
           GBAS(I,J)=GBAS(I,J)*FAC
         ENDDO
       ENDDO
-      DET=DABS(DET)
+      DET=ABS(DET)
       RETURN
       END
 !
@@ -183,9 +183,9 @@
 !     ==================================================================
 !     ==                                                              ==
 !     ==================================================================
-      XN1=DSQRT(G1(1)**2+G1(2)**2+G1(3)**2)*RMAX
-      XN2=DSQRT(G2(1)**2+G2(2)**2+G2(3)**2)*RMAX
-      XN3=DSQRT(G3(1)**2+G3(2)**2+G3(3)**2)*RMAX
+      XN1=SQRT(G1(1)**2+G1(2)**2+G1(3)**2)*RMAX
+      XN2=SQRT(G2(1)**2+G2(2)**2+G2(3)**2)*RMAX
+      XN3=SQRT(G3(1)**2+G3(2)**2+G3(3)**2)*RMAX
       XP0=G1(1)*X0+G1(2)*Y0+G1(3)*Z0
       YP0=G2(1)*X0+G2(2)*Y0+G2(3)*Z0
       ZP0=G3(1)*X0+G3(2)*Y0+G3(3)*Z0
@@ -441,7 +441,7 @@
              W(I)=W(I)-RI(I,J)*RL(J)
            ENDDO
          ENDDO
-         WTOT=DSQRT(W(1)**2+W(2)**2+W(3)**2)
+         WTOT=SQRT(W(1)**2+W(2)**2+W(3)**2)
 !
          IF(WTOT.LT.TOL.OR.ITER.GT.ITERX) GOTO 2000
          CALL ROTATIONMATRIX(W,ROT)       
@@ -544,7 +544,7 @@
        REAL(8)                :: SVAR
        INTEGER(4)             :: I,J,K
 !      *****************************************************************
-       ABSPHI=DSQRT(PHI(1)**2+PHI(2)**2+PHI(3)**2)
+       ABSPHI=SQRT(PHI(1)**2+PHI(2)**2+PHI(3)**2)
 !
 !      =================================================================
 !      == RETURN IDENTITY IF ANGLE=0                                  ==
@@ -567,7 +567,7 @@
 !      =================================================================
 !      == TREAT ROTATION ABOUT Z-AXIS EXTRA                           ==
 !      =================================================================
-       IF(DABS(R1(3,1)-1.D0).LT.TOL) THEN
+       IF(ABS(R1(3,1)-1.D0).LT.TOL) THEN
          R(1,1)=COSPHI         
          R(1,2)=-SINPHI
          R(1,3)=0.D0
@@ -578,7 +578,7 @@
          R(3,2)=0.D0
          R(3,3)=1.D0
          RETURN
-       ELSE IF(DABS(R1(3,1)+1.D0).LT.TOL) THEN
+       ELSE IF(ABS(R1(3,1)+1.D0).LT.TOL) THEN
          R(1,1)=COSPHI
          R(1,2)=SINPHI
          R(1,3)=0.D0
@@ -594,7 +594,7 @@
 !      =================================================================
 !      == SET UP ORTHONORMAL TRIAL VECTORS                            ==
 !      =================================================================
-       SVAR=1.D0/DSQRT(R1(1,1)**2+R1(2,1)**2)
+       SVAR=1.D0/SQRT(R1(1,1)**2+R1(2,1)**2)
        R1(1,2)=R1(2,1)*SVAR
        R1(2,2)=-R1(1,1)*SVAR
        R1(3,2)=0.D0
@@ -718,7 +718,7 @@
       REAL(8)               :: RINT
       INTEGER(4)            :: K,IFAC,I
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 !     ==================================================================
 !     ==  CALCULATE INT(DR): R**(2*L+2) *EXP(-ALPHA * R**2)           ==
 !     ==  SEE BRONSTEIN P66.                                          ==
@@ -728,7 +728,7 @@
       DO I=2,K
         IFAC=IFAC*(2*I-1)
       ENDDO
-      RINT=DSQRT(PI/(4.D0*ALPHA))*DBLE(IFAC)/(2.D0*ALPHA)**K
+      RINT=SQRT(PI/(4.D0*ALPHA))*DBLE(IFAC)/(2.D0*ALPHA)**K
       C=1.D0/RINT
       RETURN
       END
@@ -1117,7 +1117,7 @@ end if
 !     WRITE(*,FMT='("IND ",9I9)')IND
       DO I=1,LEN-1
         IF(IND(I+1)+1.EQ.IND(I)) THEN
-          IF(DABS(CRIT(IND(I+1))-CRIT(IND(I))).LE.0) THEN
+          IF(ABS(CRIT(IND(I+1))-CRIT(IND(I))).LE.0) THEN
             ISVAR=IND(I)
             IND(I)=IND(I+1)
             IND(I+1)=ISVAR
@@ -1364,7 +1364,7 @@ end if
       REAL(8)               :: ERFCX
 !     INTEGER(4)            :: NTASKNUM,ITASK,ICOUNT
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       ROOT2=SQRT(2.D0)
 !
@@ -1414,7 +1414,7 @@ end if
         CALL ERROR$MSG('R-cutoff NOT FOUND')
         CALL ERROR$STOP('MADELUNG')
  200    CONTINUE
-        RC=DSQRT(C1/(2.D0*PI*C2))*VOL**(1.D0/3.D0)
+        RC=SQRT(C1/(2.D0*PI*C2))*VOL**(1.D0/3.D0)
         GMAX=C1/RC
         RMAX=C2*RC
 !       WRITE(*,FMT='(''RC='',F10.5,'' RMAX='',F10.5,'' GMAX='',F10.5)')
@@ -1475,7 +1475,7 @@ end if
             IF(GSQUARE.LE.G2MAX.AND.GSQUARE.GT.1.D-7) THEN 
               FAC=2.D0*FOURPI/VOL*0.5D0
               SVAR=-0.5D0*GSQUARE*RC**2
-              GFAC=FAC*DEXP(SVAR)/GSQUARE
+              GFAC=FAC*EXP(SVAR)/GSQUARE
 !             ========================================================
 !             == this is the first time-critical part 
 !             == can be streamlined:
@@ -1534,7 +1534,7 @@ end if
                 DX=DR1+RBAS(1,1)*T1+RBAS(1,2)*T2+RBAS(1,3)*T3  
                 DY=DR2+RBAS(2,1)*T1+RBAS(2,2)*T2+RBAS(2,3)*T3  
                 DZ=DR3+RBAS(3,1)*T1+RBAS(3,2)*T2+RBAS(3,3)*T3  
-                DLEN=DSQRT(DX*DX+DY*DY+DZ*DZ)
+                DLEN=SQRT(DX*DX+DY*DY+DZ*DZ)
                 IF(DLEN.LT.RMAX) THEN
 !                 == this is time critical
                   IF(IR1.EQ.IR2 &
@@ -1548,8 +1548,8 @@ end if
 !                   ==    rfac2=[ac**2*dp(dlen*fac)/d(dlen*fac)]/dlen
                     CALL LIB$ERFCR8(DLEN*FAC,ERFCX)
                     RFAC1=ERFCX/DLEN
-                    RFAC2=-(RFAC1+FAC*2.D0/DSQRT(PI) &
-     &                               *DEXP(-(FAC*DLEN)**2))/DLEN**2
+                    RFAC2=-(RFAC1+FAC*2.D0/SQRT(PI) &
+     &                               *EXP(-(FAC*DLEN)**2))/DLEN**2
                   END IF
                   RFAC1=0.5D0*RFAC1
                   RFAC2=0.5D0*RFAC2*Q12
@@ -1759,7 +1759,7 @@ end if
       reAL(8)              :: D,RS,DET
       reAL(8)              :: PI
 !     ******************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       q(1)=1.d0
       q(2)=-1.d0
 !

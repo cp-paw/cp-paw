@@ -300,7 +300,7 @@
 !     ******************************************************************
       ESELF=0.D0
       VQLM(:)=0.D0
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       ROOT2=SQRT(2.D0)
       RC12S=ROOT2*RCSM
       RC12B=ROOT2*RCBG
@@ -360,7 +360,7 @@
       REAL(8)               :: SUMS,SUMB
       REAL(8)               :: SVARS,SVARB
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       LUP=(2*LRXX+1)
       NUP=LRXX
       JUP=LRXX
@@ -368,8 +368,8 @@
       RC12B=SQRT(RCBG1**2+RCBG2**2)
       XS    = DIS/RC12S
       XB    = DIS/RC12B
-      GOFXS = DEXP(-XS**2)
-      GOFXB = DEXP(-XB**2)
+      GOFXS = EXP(-XS**2)
+      GOFXB = EXP(-XB**2)
       SVAR=SQRT(PI)/2.D0
       CALL LIB$ERFR8(XS,QLS)
       QLS=SVAR*QLS
@@ -447,7 +447,7 @@
       REAL(8)                 :: FOFR
       REAL(8)                 :: CG,CG123   ! CLEBSCH GORDAN COEFFICIENT
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       SQ4PB3=SQRT(4.D0*PI/3.D0)
       LPPXX=2*LRXX+1
       LMPPXX=(LPPXX+1)**2
@@ -492,7 +492,7 @@
                 DO M3=-L3,L3
                   LM3=LM3+1
                   CALL CLEBSCH(LM1,LM2,LM3,CG123)
-                  IF(DABS(CG123).GT.1.D-5) THEN
+                  IF(ABS(CG123).GT.1.D-5) THEN
                     SVAR=CG123*FOFR*YLM(LM3)
                     EPAIR=EPAIR+SVAR*QLMT1*QLMT2
                     VQLM1(LM1)=VQLM1(LM1)+SVAR*QLMT2

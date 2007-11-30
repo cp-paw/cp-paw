@@ -86,7 +86,7 @@
       REAL(8)                :: RI
       INTEGER(4)             :: IR
 !     ******************************************************************
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
 !
 !     ==================================================================
 !     == FORM DERIVATIVE ON THE EQUI SPACED X-GRID                    ==
@@ -151,7 +151,7 @@
         CALL ERROR$STOP('OLDRADIAL$INTEGRATE')
       END IF
       F(:)=F1(:)
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
 !     ==================================================================
 !     ==  INTEGRATE FROM ZERO TO THE FIRST GRID-POINT                 ==
 !     ==  EXTRAPOLATION BY A POLYNOMIAL OF 2. ORDER (QUADRATIC)       ==
@@ -247,7 +247,7 @@
       DO IR=1,NR
         F(IR)=F1(IR)
       ENDDO
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
 !     ==================================================================
 !     ==  INTEGRATE FROM ZERO TO THE FIRST GRID-POINT                 ==
 !     ==  EXTRAPOLATION BY A POLYNOMIAL OF 2. ORDER (QUADRATIC)       ==
@@ -319,7 +319,7 @@
         CALL ERROR$STOP('OLDRADIAL$INTEGRATE')
       END IF
       F(:)=F1(:)
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
 !     ==================================================================
 !     ==  INTEGRATE FROM ZERO TO THE FIRST GRID-POINT                 ==
 !     ==  EXTRAPOLATION BY A POLYNOMIAL OF 2. ORDER (QUADRATIC)       ==
@@ -370,7 +370,7 @@
 
       IR=MIN(INT(LOG(RAD/R1)/DEX),NR-3)
       DO IINT=1,4
-        RINT(IINT)=R1*DEXP((IR-1+IINT-1)*DEX)
+        RINT(IINT)=R1*EXP((IR-1+IINT-1)*DEX)
         GINT(IINT)=G(IR-1+IINT)
       END DO
       CALL RADIAL_INTERPOLATE(4,RINT,GINT,RAD,VAL)      
@@ -425,7 +425,7 @@ CALL ERROR$STOP('OLDRADIAL$INTEGRAL2')
       DO IR=1,NR
         F(IR)=F1(IR)
       ENDDO
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       I1=MIN(INT(LOG(R/R1)/DEX),1)
 !      
 !     ==================================================================
@@ -498,15 +498,15 @@ CALL ERROR$STOP('OLDRADIAL$INTEGRAL2')
       REAL(8)               :: XEXP
       INTEGER(4)            :: IP,I
 !     ******************************************************************
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       IF(R0.GT.R1) THEN
-        IP=INT(1.D0+DLOG(R0/R1)/DEX-0.5D0*DBLE(NP))+1
+        IP=INT(1.D0+LOG(R0/R1)/DEX-0.5D0*DBLE(NP))+1
         IP=MAX(IP,1)
       ELSE
         IP=1
       END IF
       IP=MIN(IP,NR-NP+1)
-      RI(1)=R1*DEXP(DEX*DBLE(IP-1))
+      RI(1)=R1*EXP(DEX*DBLE(IP-1))
       DO I=2,NP
         RI(I)=RI(I-1)*XEXP
       ENDDO
@@ -576,15 +576,15 @@ CALL ERROR$STOP('OLDRADIAL$INTEGRAL2')
       REAL(8)               :: XEXP
       INTEGER(4)            :: IP,I
 !     ******************************************************************
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       IF(R0.GT.R1) THEN
-        IP=INT(1.D0+DLOG(R0/R1)/DEX-0.5D0*DBLE(NP))+1
+        IP=INT(1.D0+LOG(R0/R1)/DEX-0.5D0*DBLE(NP))+1
         IP=MAX(IP,1)
       ELSE
         IP=1
       END IF
       IP=MIN(IP,NR-NP+1)
-      RI(1)=R1*DEXP(DEX*DBLE(IP-1))
+      RI(1)=R1*EXP(DEX*DBLE(IP-1))
       DO I=2,NP
         RI(I)=RI(I-1)*XEXP
       ENDDO
@@ -677,8 +677,8 @@ CALL ERROR$STOP('OLDRADIAL$INTEGRAL2')
       REAL(8)               :: RI,FAC
       INTEGER(4)            :: IR
 !     ******************************************************************
-      XEXP=DEXP(DEX)
-      PI=4.D0*DATAN(1.D0)
+      XEXP=EXP(DEX)
+      PI=4.D0*ATAN(1.D0)
 !
       RI=R1/XEXP
       DO IR=1,NR
@@ -728,7 +728,7 @@ CALL ERROR$STOP('OLDRADIAL$INTEGRAL2')
       REAL(8)               :: XEXP,RI
       INTEGER(4)            :: IR
 !     ******************************************************************
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -800,7 +800,7 @@ CONTAINS
 !     ******************************************************************
       NH=NP/2
       NHP=NH+1
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       RIX=R1**(L+1.5)
       XEXPX=EXP((L+1.5)*DEX) 
       DO I=1,NP 
@@ -935,7 +935,7 @@ CONTAINS
       INTEGER(4)             :: I,JJ
       REAL(8)                :: AA,BB,T,DT,CM
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       NH=NP/2
       NHP=NH+1
 
@@ -1470,22 +1470,22 @@ END MODULE BESSELTRANSFORM_MODULE
       FAC(2)=RSTEP*59.D0/48.D0
       FAC(3)=RSTEP*43.D0/48.D0
       FAC(4)=RSTEP*49.D0/48.D0
-      X=1.D0+DLOG(RMAX/R1) / DEX
+      X=1.D0+LOG(RMAX/R1) / DEX
       CALL GETF(NR,F,X,VAL)
       RES=FAC(1)*VAL*BESSL(L,RMAX*G)*RMAX**2
       DO I=2,4
         R=RSTEP*DBLE(I-1)
-        X=1.D0+DLOG(R/R1) / DEX
+        X=1.D0+LOG(R/R1) / DEX
         CALL GETF(NR,F,X,VAL)
         RES=RES+FAC(I)*VAL*BESSL(L,R*G)*R**2
         R=RMAX-R
-        X=1.D0+DLOG(R/R1) / DEX
+        X=1.D0+LOG(R/R1) / DEX
         CALL GETF(NR,F,X,VAL)
         RES=RES+FAC(I)*VAL*BESSL(L,R*G)*R**2
       ENDDO
       DO IR=5,NSTEP-3
         R=RSTEP*DBLE(IR-1)
-        X=1.D0+DLOG(R/R1) / DEX
+        X=1.D0+LOG(R/R1) / DEX
         CALL GETF(NR,F,X,VAL)
         RES=RES+RSTEP*VAL*BESSL(L,R*G)*R**2
       ENDDO
@@ -1517,7 +1517,7 @@ END MODULE BESSELTRANSFORM_MODULE
       INTEGER(4)            :: K,IL,II,ISVAR
 !     ******************************************************************
       IF(X.GT.DBLE(L)) THEN
-        PI=4.D0*DATAN(1.D0)
+        PI=4.D0*ATAN(1.D0)
         ARG=X-0.5D0*DBLE(L)*PI
         TRIG(1)=DSIN(ARG)/X
         TRIG(2)=DCOS(ARG)/X
@@ -1561,7 +1561,7 @@ END MODULE BESSELTRANSFORM_MODULE
         ISVAR=ISVAR+2
         FAC=FAC*XSQ/DBLE(I*ISVAR)
         Y=Y+FAC
-        IF(DABS(FAC).LT.TOL) GOTO 9999
+        IF(ABS(FAC).LT.TOL) GOTO 9999
       ENDDO
       CALL ERROR$MSG('Y NOT CONVERGED')
       CALL ERROR$I4VAL('L',L)

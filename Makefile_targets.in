@@ -189,7 +189,7 @@ clean_scripts:
 #---------------------------------------------------------------------------
 #--          Documentation                                                --
 #---------------------------------------------------------------------------
-docs: ${PAWDIR}/doc/manual.pdf ${PAWDIR}/doc/history.pdf ${PAWDIR}/doc/install.pdf
+docs: ${PAWDIR}/doc/manual.pdf ${PAWDIR}/doc/history.pdf ${PAWDIR}/doc/install.pdf ${PAWDIR}/doc/Examples
 #
 ${PAWDIR}/doc/manual.pdf :  ${PAWDIR}/doc/manual.tex  ${PAWDIR}/doc/doc.bib ${PAWDIR}/doc/Figs
 	cd ${PAWDIR}/doc; latex manual; makeindex manual.idx; latex manual;  bibtex manual; latex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
@@ -216,6 +216,9 @@ ${PAWDIR}/doc/doc.bib :${PAWDIR}/src/Docs/doc.bib
 #
 ${PAWDIR}/doc/Figs :${PAWDIR}/src/Docs/Figs
 	cp -r ${PAWDIR}/src/Docs/Figs ${PAWDIR}/doc/Figs
+#
+${PAWDIR}/doc/Examples :${PAWDIR}/src/Docs/Examples
+	cp -r ${PAWDIR}/src/Docs/Examples ${PAWDIR}/doc/Examples
 #
 clean_docs: 
 	rm -f ${PAWDIR}/doc/*

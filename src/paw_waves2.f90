@@ -1490,13 +1490,13 @@ print*,'a     ',(a(i,i),i=1,nb)
        ENDDO
        DO I=1,NB
          DO J=1,NB
-           IF(DABS(TEST(I,J)-PHIPHI(I,J)).GT.1.D-7) THEN
+           IF(ABS(TEST(I,J)-PHIPHI(I,J)).GT.1.D-7) THEN
 !             PRINT*,'ERROR IN PHIPHI FOR ',I,J,PHIPHI(I,J),TEST(I,J)
            END IF
-           IF(DABS(TEST1(I,J)-CHIPHI(J,I)).GT.1.D-7) THEN
+           IF(ABS(TEST1(I,J)-CHIPHI(J,I)).GT.1.D-7) THEN
 !             PRINT*,'ERROR IN CHIPHI FOR ',I,J,CHIPHI(J,I),TEST1(I,J)
            END IF
-           IF(DABS(TEST2(I,J)-CHICHI(I,J)).GT.1.D-7) THEN
+           IF(ABS(TEST2(I,J)-CHICHI(I,J)).GT.1.D-7) THEN
 !             PRINT*,'ERROR IN CHICHI FOR ',I,J,CHICHI(I,J),TEST2(I,J)
            END IF
          ENDDO
@@ -1841,7 +1841,7 @@ print*,'a     ',(a(i,i),i=1,nb)
         IMAX=IDAMAX(NB*NB,GAMN(1,1),1)
         J0=(IMAX-1)/NB+1
         I0=IMAX-(J0-1)*NB
-        DIGAM=DABS(GAMN(I0,J0))
+        DIGAM=ABS(GAMN(I0,J0))
 !       PRINT*,'ITER ',ITER,I0,J0,DIGAM,NCON
         IF(DIGAM.LT.EPS) GOTO 9000
 !PRINT*,'ITER ',ITER,DIGAM
@@ -2215,7 +2215,7 @@ print*,'a     ',(a(i,i),i=1,nb)
       REAL(8)                  :: REC,RIM
       INTEGER(4)               :: ISVAR
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     ==========================================================================
 !     == DETERMINE ENVELOPE FUNCTION OF THE RANDOM NUMBERS TO AVOID LARGE     ==
@@ -2272,7 +2272,7 @@ print*,'a     ',(a(i,i),i=1,nb)
       real(8)                  :: svar,ran,gx,gy,gz
       real(8)                  :: rsmall
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       rsmall=100.d0*tiny(rsmall)
 !     ==========================================================================
 !     == CREATE A SERIEs OF NRAN PSEUDO-RANDOM NUMBERS                        ==
@@ -4920,6 +4920,13 @@ END MODULE TOTALSPIN_MODULE
             CALL ERROR$I4VAL('IKPTG',IKPTG)
             CALL ERROR$STOP('WAVES_READPSI')
           END IF
+!         __ reading a logical can fill up insignificant bits, which causes
+!         __ problems with some compilers. (->.eqv. ; .neqv)
+          if(tsuper_) then
+             tsuper_=.true.
+          else
+             tsuper_=.false.
+          end if
 !
           ALLOCATE(IGVECG_(3,NGG_))
           READ(NFIL)K_,IGVECG_ !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -5024,7 +5031,14 @@ END MODULE TOTALSPIN_MODULE
           IF(TKGROUP) THEN
 print*,'transfer(tsuper,ibh)',transfer(tsuper,ibh)
 print*,'transfer(tsuper_,ibh)',transfer(tsuper_,ibh)
-print*,'tsuper ',tsuper,'tsuper_ ',tsuper_,'TSUPER.EQV.TSUPER_',TSUPER.EQV.TSUPER_
+print*,'tsuper ',tsuper,'tsuper_ ',tsuper_,'TSUPER.EQV.TSUPER_',TSUPER.EQV.TSUPER_,'TSUPER.nEQV.TSUPER_',TSUPER.nEQV.TSUPER_
+            IF((TSUPER.EQV.TSUPER_).AND.(TSUPER.NEQV.TSUPER_)) THEN
+              CALL ERROR$MSG('COMPILER BUG! SHUTTING DOWN..')
+              CALL ERROR$MSG('.EQV. OR .NEQ. DO NOT TEST ONLY THE RELEVANT BIT')
+              CALL ERROR$MSG('A.EQV.B AND A.NEQV.B CAN BE  BOTH TRUE')
+              CALL ERROR$STOP('WAVES_READPSI')
+            end if
+
             IF(TSUPER.nEQV.TSUPER_) THEN
               CALL ERROR$MSG('TRANSFORMATION BETWEEN REGULAR ..')
               CALL ERROR$MSG('... AND SUPER WAVE FUNCTIONS NOT IMPLEMENTED')

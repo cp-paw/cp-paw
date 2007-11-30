@@ -419,7 +419,7 @@ PRINT*,'JPAR   ',THIS%JPAR
         LOX=THIS%LOXCHI
         NCHI=THIS%NCHI
       END IF
-      CALL SETUP$SELECT(ISP)
+      CALL SETUP$ISELECT(ISP)
       CALL SETUP$LNX(ISP,LNXPHI)
       ALLOCATE(LOXPHI(LNXPHI))
       CALL SETUP$LOFLN(ISP,LNXPHI,LOXPHI)
@@ -748,7 +748,7 @@ PRINT*,'CHIFROMPHI: LN',LN,LN-NOFL+1,LN-1
 !
 !     === CONSTRUCT TRANSFORMATION MATRIX FROM A ===============================
       LX=MAXVAL(LOXCHI)
-      DO L=1,LX
+      DO L=0,LX
 !
         NX=0
         DO LN=1,LNXCHI
@@ -1047,7 +1047,7 @@ PRINT*,'CHIFROMPHI: LN',LN,LN-NOFL+1,LN-1
       REAL(8)               :: SVAR
       REAL(8)               :: XL(LRX+1)
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
 !
 !     ==========================================================================
@@ -1171,7 +1171,7 @@ PRINT*,'CHIFROMPHI: LN',LN,LN-NOFL+1,LN-1
       REAL(8)               :: RAWJPAR,RAWUPAR
       REAL(8)               :: SVAR
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
 !
 !     ==========================================================================

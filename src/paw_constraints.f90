@@ -1334,7 +1334,7 @@ END MODULE CONSTRAINTS_MODULE
       DO I=1,3
         VALUE=VALUE+(R0(I,IAT1)-(R0(I,IAT2)+T2(I)))**2
       ENDDO
-      VALUE=DSQRT(VALUE)
+      VALUE=SQRT(VALUE)
       RETURN      
       END
 !
@@ -1368,7 +1368,7 @@ END MODULE CONSTRAINTS_MODULE
 !     ==================================================================
 !     == CALCULATE VALUE AND FIRST TWO DERIVATIVES OF D=|R_2-R_2|     ==
 !     ==================================================================
-      DIS=DSQRT(DOT_PRODUCT(DR,DR))
+      DIS=SQRT(DOT_PRODUCT(DR,DR))
       A=DIS
       DO I=1,3
         DI=DR(I)/DIS
@@ -1571,7 +1571,7 @@ END MODULE CONSTRAINTS_MODULE
           DO IAT20=IAT1,NAT
             DO I2=1,3
               SVAR=C(I1,IAT10,I2,IAT20)-C(I2,IAT20,I1,IAT10)
-              IF(DABS(SVAR).GT.1.D-3) THEN
+              IF(ABS(SVAR).GT.1.D-3) THEN
                 WRITE(*,FMT='("CTEST",4I3,3F10.5)')I1,IAT10,I2,IAT20 &
      &               ,C(I1,IAT10,I2,IAT20),C(I2,IAT20,I1,IAT10),SVAR
               END IF
@@ -1687,7 +1687,7 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)               :: DLENG,TMASS
       REAL(8)               :: X,Y,Z
 !     ******************************************************************
-      DLENG=DSQRT(X_**2+Y_**2+Z_**2)
+      DLENG=SQRT(X_**2+Y_**2+Z_**2)
       X=X_/DLENG
       Y=Y_/DLENG
       Z=Z_/DLENG
@@ -1737,7 +1737,7 @@ END MODULE CONSTRAINTS_MODULE
 !     =================================================================
 !     == NORMALIZE ANGLE VECTOR                                      ==
 !     =================================================================
-      PHILEN=DSQRT(PHI(1)**2+PHI(2)**2+PHI(3)**2)
+      PHILEN=SQRT(PHI(1)**2+PHI(2)**2+PHI(3)**2)
       PHIX=PHI(1)/PHILEN
       PHIY=PHI(2)/PHILEN
       PHIZ=PHI(3)/PHILEN
@@ -1804,7 +1804,7 @@ END MODULE CONSTRAINTS_MODULE
 !     == ANGULAR MOMENTUM TO BE ZERO and not to a constant value. THEREFORE 
 !     == THE VALUE SHALL BE EQUAL TO ZERO AND NOT EQUAL TO THE ANGULAR MOMENTUM.
       value_=0.d0
-!!$      XLEN=DSQRT(X_**2+Y_**2+Z_**2)
+!!$      XLEN=SQRT(X_**2+Y_**2+Z_**2)
 !!$      X=X_/XLEN
 !!$      Y=Y_/XLEN
 !!$      Z=Z_/XLEN
@@ -1876,7 +1876,7 @@ END MODULE CONSTRAINTS_MODULE
       C(:,:,:,:)=0.d0
 !
 !     == determine normalized rotation axis ====================================
-      XLEN=DSQRT(X_**2+Y_**2+Z_**2)
+      XLEN=SQRT(X_**2+Y_**2+Z_**2)
       X=X_/XLEN
       Y=Y_/XLEN
       Z=Z_/XLEN
@@ -2030,7 +2030,7 @@ END MODULE CONSTRAINTS_MODULE
       DO I=1,3
         SVAR=SVAR+(COG1(I)-COG2(I))**2.D0
       ENDDO
-      VALUE_=DSQRT(SVAR)
+      VALUE_=SQRT(SVAR)
       PRINT*,'COG GROUP1: ',TMEMBER1
       PRINT*,'COG GROUP2: ',TMEMBER2
       PRINT*,'COG  VALUE: ',VALUE_
@@ -2428,7 +2428,7 @@ END MODULE CONSTRAINTS_MODULE
       COSPHI=C/D       !=COS(PHI)
       PHI=DACOS(COSPHI)
 !     --- CALCULATE DERIVATIVE OF ARCCOS
-      SINPHI=DSQRT(1.D0-COSPHI**2)
+      SINPHI=SQRT(1.D0-COSPHI**2)
       V=-1.D0/SINPHI                 !=-SIN(PHI)=D(ACOS(PHI))/D(COSPHI)
 ! --- CALCULATE FIRST DERIVATIVES OF G=A*B
       DO I=1,9
@@ -2662,11 +2662,11 @@ END MODULE CONSTRAINTS_MODULE
 ! --- CALCULATE FIRST DERIVATIVES
 ! ----------------------------------------------------------------
 ! --- CALCULATE DERIVATIVE OF ARCCOS
-      IF (DABS(DABS(COVERD)-1.D0) < 1.D-9) THEN
+      IF (ABS(ABS(COVERD)-1.D0) < 1.D-9) THEN
         PRINT*,'WARNING: DERIVATIVE OF TORSION AT ZERO AND PI IS UNDEFINED!'
         V=0.D0
       ELSE
-        V=-1.D0/DSQRT(1.D0-(COVERD)**2.D0)
+        V=-1.D0/SQRT(1.D0-(COVERD)**2.D0)
       ENDIF
 ! --- CALCULATE DPDX
 ! --- ZERO OUT SPARSE MATRIX
@@ -3227,7 +3227,7 @@ END MODULE CONSTRAINTS_MODULE
           SVAR=SVAR+0.5D0*R(I)*C(I,J)*R(J)
         ENDDO
       ENDDO
-      IF(DABS(SVAR).GT.TOL) THEN
+      IF(ABS(SVAR).GT.TOL) THEN
         WRITE(*,FMT='("TEST",3E15.5)')SVAR
       END IF
       RETURN
@@ -3299,7 +3299,7 @@ END MODULE CONSTRAINTS_MODULE
           PRINT*,'CONSTRAINT ',IC
           DO I=1,NX
             DO J=1,NX
-              IF(DABS(C(I,J,IC)).GT.1.D-6) &
+              IF(ABS(C(I,J,IC)).GT.1.D-6) &
      &           WRITE(*,FMT='("I,J",2I5," C ",F10.5)')I,J,C(I,J,IC)
             ENDDO
           ENDDO
@@ -3321,7 +3321,7 @@ END MODULE CONSTRAINTS_MODULE
           G(I,IC)=G(I,IC)*DELT**2/XMASS(I)
           SVAR=SVAR+G(I,IC)**2
         ENDDO
-        SCALE(IC)=1.D0/DSQRT(SVAR)
+        SCALE(IC)=1.D0/SQRT(SVAR)
         DO I=1,NX
           G(I,IC)=G(I,IC)*SCALE(IC)
         ENDDO
@@ -3347,7 +3347,7 @@ END MODULE CONSTRAINTS_MODULE
           DO I=1,NX
             SVAR=SVAR+G(I,IC1)*G(I,IC2)
           ENDDO
-          IF(DABS(SVAR).GT.0.99D0) THEN
+          IF(ABS(SVAR).GT.0.99D0) THEN
             TLINDEP=.TRUE.
             GOTO 90
           END IF
@@ -3522,7 +3522,7 @@ END IF
 !       ==  TEST CONVERGENCE
         SVAR=0.D0
         DO IC=1,NC
-          SVAR=MAX(SVAR,DABS(VEC(IC)))
+          SVAR=MAX(SVAR,ABS(VEC(IC)))
         ENDDO
         TCONV=(SVAR.LT.TOL)
 !       PRINT*,'DEVIATION IN CONSTRAINT',ABS(VEC)
@@ -3604,7 +3604,7 @@ END IF
           IF(TPR) THEN
             PRINT*,'CONSTRAINT TEST ',IC,SVAR
           END IF
-          IF(DABS(SVAR).GT.TOL) THEN
+          IF(ABS(SVAR).GT.TOL) THEN
             CALL ERROR$MSG('CONSTRAINT TEST FAILED')
             CALL ERROR$I4VAL('IC (CONSTRAINT NO.)',IC)
             CALL ERROR$R8VAL('ERROR',SVAR)

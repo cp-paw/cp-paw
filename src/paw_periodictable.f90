@@ -221,8 +221,8 @@ CONTAINS
 !     ==================================================================
 !     ==  MAP INTO ELEMENT AND CONVERT TO ATOMIC UNITS                ==
 !     ==================================================================
-      PI=4.D0*DATAN(1.D0)
-      FACASA=4.D0/DSQRT(2.D0)*(3.D0/(16.D0*PI))**(1.D0/3.D0)
+      PI=4.D0*ATAN(1.D0)
+      FACASA=4.D0/SQRT(2.D0)*(3.D0/(16.D0*PI))**(1.D0/3.D0)
       DO I=0,NEL
         ELEMENT(I)%SYMBOL=SET(I)%SYMBOL
         ELEMENT(I)%MASS=SET(I)%MASS*U

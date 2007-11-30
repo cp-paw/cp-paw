@@ -90,7 +90,7 @@
       character(16)          :: id
       logical(4) ,parameter  :: trel=.false.  !switch between relativistic and non-relativistic
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS('EV',EV)
 !     ==========================================================================
@@ -1062,7 +1062,7 @@ print*,'done....'
       INTEGER(4)                  :: L
       LOGICAL(4)                  :: TCHK
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
@@ -1488,7 +1488,7 @@ print*,'done....'
       INTEGER(4)              :: IR
       REAL(8)                 :: RH,GRHO2,VXC,VGXC,EXC,DUMMY1,DUMMY2,DUMMY3
 !     ************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
@@ -1706,7 +1706,7 @@ print*,'done....'
       REAL(8)                   :: X(NX)
 REAL(8) :: D2JLDR2(NR)
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$NEW('SHLOG',GIDX)
       XDEX=1.D-5
       X1=XMAX/XDEX/REAL(NX)
@@ -1947,7 +1947,7 @@ PRINT*,'KI ',KI
       REAL(8)                    :: SVAR,SVAR1
       REAL(8)                    :: RCMATCH
 !     ***********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       RCMATCH=2.D0*RC  !MATCH SUFFICIENTLY FAR OUT TO AVOID PROBLEMS WITH
@@ -2026,7 +2026,7 @@ PRINT*,'CONSTRUCTPSPHI1',IB
       REAL(8)                    :: SVAR
       REAL(8)                    :: PI,Y0
 !     ***********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       DO IB=1,NAUG
@@ -2387,7 +2387,7 @@ ENDDO
       REAL(8)                    :: R(NR)
       LOGICAL(4)                 :: TTEST=.TRUE.
 !     *********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       DO IB=1,NAUG
         PRO(:,IB)=TPSPHI(:,IB)+(PSPOT(:)*Y0-E(IB))*PSPHI(:,IB)
@@ -2444,7 +2444,7 @@ ENDDO
       REAL(8)                    :: R(NR)
       LOGICAL(4)                 :: TTEST=.TRUE.
 !     *********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       DO IB=1,1
         PRO(:,IB)=TPSPHI(:,IB)+(PSPOT(:)*Y0-E(IB))*PSPHI(:,IB)
@@ -2674,9 +2674,9 @@ PRINT*,'XMAX ',XMAX,XAV
       REAL(8)               :: DUMMY1,DUMMY2,DUMMY3
       INTEGER(4)            :: IR
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/DSQRT(FOURPI)
+      Y0=1.D0/SQRT(FOURPI)
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==================================================================
@@ -2774,7 +2774,7 @@ PRINT*,'XMAX ',XMAX,XAV
         XMAX=MAXVAL(ABS(AUX(:)))
         XAV=SUM(AUX(:)**2)
         SVAR1=REAL(NR,KIND=8)
-        XAV=DSQRT(XAV/SVAR1)
+        XAV=SQRT(XAV/SVAR1)
 !       ================================================================
 !       ==  CALCULATE MIXING FACTOR BETA                              ==
 !       ================================================================
@@ -2866,7 +2866,7 @@ PRINT*,'XMAX ',XMAX,XAV
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('NODELESS')
       ENDIF
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       DO IB=1,NB
@@ -2948,7 +2948,7 @@ PRINT*,'XMAX ',XMAX,XAV
       REAL(8)                    :: PI,Y0
       REAL(8)                    :: r(nr)
 !     ***********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       call radial$r(gid,nr,r)
       DO IR=1,NR
@@ -3015,7 +3015,7 @@ PRINT*,'XMAX ',XMAX,XAV
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('AESCF')
       ENDIF
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       C0LL=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
@@ -3117,7 +3117,7 @@ PRINT*,'XMAX ',XMAX,XAV
       INTEGER(4)                 :: IROUT,IRCL,irbox
 !     *********************************************************************
                                  call trace$push('boundstate')
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       irbox=1
@@ -3276,7 +3276,7 @@ ENDDO
 INTEGER(4)              :: IR
 REAL(8)                 :: PI,Y0
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
@@ -3523,7 +3523,7 @@ REAL(8)                 :: PI,Y0
       REAL(8)   ,ALLOCATABLE:: PSPHI(:,:)
       INTEGER(4)            :: NFILO
 !     *******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -3716,7 +3716,7 @@ PRINT*,'LNX ',LNX
       REAL(8)               :: ETOT
       REAL(8)               :: POT(NR)
 !     **************************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       C0LL=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)

@@ -137,7 +137,7 @@
         REAL(8),INTENT(OUT) :: INTF
         REAL(8)             :: PI,SVAR
 !       ****************************************************************
-        PI=4.D0*DATAN(1.D0)
+        PI=4.D0*ATAN(1.D0)
         F=EXP(-R**2)
         DFDR=-2.D0*R*F
         CALL SPECIALFUNCTION$ERF(R,SVAR)
@@ -1276,7 +1276,7 @@ PRINT*,'GIDS ',GIDS
       REAL(8)               :: PI
       REAL(8)               :: FAC
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
       AUX1(:)=RHO(:)*R(:)**(L+2) 
       CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
@@ -1319,7 +1319,7 @@ PRINT*,'GIDS ',GIDS
       REAL(8)               :: PI,Y0
       INTEGER(4)            :: IR
 !     ***********************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL PERIODICTABLE$GET(z,'RNUC',RNUC)
       CALL RADIAL$R(GID,NR,R)
@@ -1441,7 +1441,7 @@ END MODULE SHLOGRADIAL_MODULE
       R1=GRIDARRAY(GID)%R1
       DEX=GRIDARRAY(GID)%DEX
       NR=GRIDARRAY(GID)%NR
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       IF(.NOT.ASSOCIATED(GRIDARRAY(GID)%R)) THEN
         ALLOCATE(GRIDARRAY(GID)%R(NR))
         RI=R1/XEXP
@@ -1990,7 +1990,7 @@ END MODULE LOGRADIAL_MODULE
       R1=GRIDARRAY(GID)%R1
       DEX=GRIDARRAY(GID)%DEX
       NR=GRIDARRAY(GID)%NR
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RETURN
       END
 !
@@ -2537,7 +2537,7 @@ CONTAINS
 !     ******************************************************************
       NH=NP/2
       NHP=NH+1
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       RIX=R1**(L+1.5)
       XEXPX=EXP((L+1.5)*DEX) 
       DO I=1,NP 
@@ -2672,7 +2672,7 @@ CONTAINS
       INTEGER(4)             :: I,JJ
       REAL(8)                :: AA,BB,T,DT,CM
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       NH=NP/2
       NHP=NH+1
 

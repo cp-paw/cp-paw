@@ -1187,7 +1187,7 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
 !     ******************************************************************
       SUM=0.D0
       DO IAT=1,NAT
-        SVAR=DSQRT(2.D0*EBATH/RMASS(IAT))*DELT
+        SVAR=SQRT(2.D0*EBATH/RMASS(IAT))*DELT
         DO I=1,3
           CALL GAUSS_RANDOM_NUMBER(RAN)
           RM(I,IAT) = RM(I,IAT) + SVAR*RAN

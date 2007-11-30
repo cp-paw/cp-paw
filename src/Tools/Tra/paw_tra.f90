@@ -2697,7 +2697,7 @@ integer(4)                :: j,natm
       DT0(:)=0.D0
       DO ISTEP=1,NSTEP
          DR=TRA%R(:,IAT1,ISTEP)-TRA%R(:,IAT2,ISTEP)+DT0(:)
-         DIS=DSQRT(DR(1)**2+DR(2)**2+DR(3)**2)
+         DIS=SQRT(DR(1)**2+DR(2)**2+DR(3)**2)
 !        == LOOK FOR SHORTEST DISTANCE OF ALL PERIODIC IMAGES ==========
  1000    CONTINUE
          DO I=-1,1
@@ -2716,7 +2716,7 @@ integer(4)                :: j,natm
            ENDDO
          ENDDO
 !        == CALCULATE DISTANCE =========================================
-         DIS=DSQRT(DR(1)**2+DR(2)**2+DR(3)**2)
+         DIS=SQRT(DR(1)**2+DR(2)**2+DR(3)**2)
          ARRAY(ISTEP)=DIS
       ENDDO
       RETURN
@@ -2762,7 +2762,7 @@ integer(4)                :: j,natm
          D11=DR1(1)**2+DR1(2)**2+DR1(3)**2
          D22=DR2(1)**2+DR2(2)**2+DR2(3)**2
          D12=DR1(1)*DR2(1)+DR1(2)*DR2(2)+DR1(3)*DR2(3)
-         SVAR=D12/DSQRT(D11*D22)
+         SVAR=D12/SQRT(D11*D22)
          ARRAY(ISTEP)=ACOS(SVAR)
       ENDDO
       RETURN
@@ -2801,7 +2801,7 @@ integer(4)                :: j,natm
 !RBASINV=RBAS
 !CALL DGEICD(RBASINV,3,3,0,RCOND,DET,AUX,NAUX) !ESSL MATRIX INVERSION
       call lib$invertr8(3,rbas,rbasinv)
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       PREV=0.D0
       DO ISTEP=1,NSTEP
          DR12=TRA%R(:,IAT2,ISTEP)-TRA%R(:,IAT1,ISTEP)
@@ -2830,7 +2830,7 @@ integer(4)                :: j,natm
          D11=V1(1)**2+V1(2)**2+V1(3)**2
          D22=V2(1)**2+V2(2)**2+V2(3)**2
          D12=V1(1)*V2(1)+V1(2)*V2(2)+V1(3)*V2(3)
-         SVAR=D12/DSQRT(D11*D22)
+         SVAR=D12/SQRT(D11*D22)
          ARRAY(ISTEP)=ACOS(SVAR)
          SVAR=DR23(1)*(V1(2)*V2(3)-V1(3)*V2(2)) &
         &    +DR23(2)*(V1(3)*V2(1)-V1(1)*V2(3)) &
@@ -3276,7 +3276,7 @@ PRINT*,'COLLECT JUMPS'
      &     +RBAS(:,1)*DBLE(BOND(NB)%IT(1)) &
      &     +RBAS(:,2)*DBLE(BOND(NB)%IT(2)) &
      &     +RBAS(:,3)*DBLE(BOND(NB)%IT(3))
-      BOND(NB)%DIS=DSQRT(DOT_PRODUCT(DR,DR))/(RCOV(IAT1)+RCOV(IAT2))
+      BOND(NB)%DIS=SQRT(DOT_PRODUCT(DR,DR))/(RCOV(IAT1)+RCOV(IAT2))
       RETURN
       END
 !
@@ -3498,7 +3498,7 @@ PRINT*,'COLLECT JUMPS'
       REAL(8)                 :: VEC(3),SVAR,RBASNEU(3,3)
       REAL(8)                 :: ANGSTROM
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       NEIGH(:,:)=0
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
 !
@@ -3511,9 +3511,9 @@ PRINT*,'COLLECT JUMPS'
         RBASINV(3,:)=RBAS(:,1).DYAD.RBAS(:,2)
         DET=DOT_PRODUCT(RBAS(:,1),RBASINV(1,:))
         RBASINV=RBASINV/DET
-        A=DSQRT(DOT_PRODUCT(RBAS(:,1),RBAS(:,1)))
-        B=DSQRT(DOT_PRODUCT(RBAS(:,2),RBAS(:,2)))
-        C=DSQRT(DOT_PRODUCT(RBAS(:,3),RBAS(:,3)))
+        A=SQRT(DOT_PRODUCT(RBAS(:,1),RBAS(:,1)))
+        B=SQRT(DOT_PRODUCT(RBAS(:,2),RBAS(:,2)))
+        C=SQRT(DOT_PRODUCT(RBAS(:,3),RBAS(:,3)))
         GAMMA =ACOS(DOT_PRODUCT(RBAS(:,1),RBAS(:,2))/(A*B))
         ALPHA =ACOS(DOT_PRODUCT(RBAS(:,2),RBAS(:,3))/(B*C))
         BETA  =ACOS(DOT_PRODUCT(RBAS(:,3),RBAS(:,1))/(C*A))

@@ -814,7 +814,7 @@ END MODULE PLANEWAVE_MODULE
       TINV=.TRUE.
       DO I=1,3
         SVAR=MODULO(KVEC(I),0.5D0)
-        TINV=TINV.AND.(DABS(SVAR).LT.DSMALL)
+        TINV=TINV.AND.(ABS(SVAR).LT.DSMALL)
       ENDDO
       RETURN
       END
@@ -848,7 +848,7 @@ END MODULE PLANEWAVE_MODULE
 !     ******************************************************************
       CALL MPE$QUERY(cid,NTASKS,THISTASK)
       CALL GBASS(RBAS,GBAS,VOL)
-      RAD=DSQRT(2.D0*EPW)+1.D-6
+      RAD=SQRT(2.D0*EPW)+1.D-6
       CALL BOXSPH(GBAS,0.D0,0.D0,0.D0,RAD &
      &           ,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
       NR1G=MAX1-MIN1+1
@@ -1127,7 +1127,7 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)             :: I,J,K
       REAL(8)                :: KARTK(3)
 !     ******************************************************************
-      RAD=DSQRT(2.D0*EPW)+1.D-6
+      RAD=SQRT(2.D0*EPW)+1.D-6
       KARTK(:)=MATMUL(GBAS,KVEC)
       CALL BOXSPH(GBAS,-KARTK(1),-KARTK(2),-KARTK(3),RAD &
      &           ,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
@@ -1237,7 +1237,7 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
 !     ==  FIND ALL LATTICE VECTORS WITH 0.5*G**2 < EPW                ==
 !     ==================================================================
-      RAD=DSQRT(2.D0*EPW)+1.D-6
+      RAD=SQRT(2.D0*EPW)+1.D-6
       CALL BOXSPH(GBAS,-KARTK(1),-KARTK(2),-KARTK(3),RAD &
      &           ,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
 !     ==================================================================
@@ -1531,13 +1531,13 @@ END MODULE PLANEWAVE_MODULE
         RETURN
       END IF        
 !     == NOW OTHER K-POINTS ============================================
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       PHAS1=2.D0*PI * KVEC(1) / DBLE(NR1)
       PHAS2=2.D0*PI * KVEC(2) / DBLE(NR2)
       PHAS3=2.D0*PI * KVEC(3) / DBLE(NR3)
-      DEIK1=CMPLX(DCOS(PHAS1),DSIN(PHAS1),8)
-      DEIK2=CMPLX(DCOS(PHAS2),DSIN(PHAS2),8)
-      DEIK3=CMPLX(DCOS(PHAS3),DSIN(PHAS3),8)
+      DEIK1=CMPLX(COS(PHAS1),SIN(PHAS1),8)
+      DEIK2=CMPLX(COS(PHAS2),SIN(PHAS2),8)
+      DEIK3=CMPLX(COS(PHAS3),SIN(PHAS3),8)
       EIKR3=(1.D0,0.D0)
       IRR=0
       DO IR3=1,NR3
@@ -1639,8 +1639,8 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
       GR1=GBAS(1,1)*R(1)+GBAS(2,1)*R(2)+GBAS(3,1)*R(3)
       RK1=R(1)*KARTK(1)
-      CFACP =CMPLX(DCOS(GR1),-DSIN(GR1),8)
-      CSVARP=CMPLX(DCOS(RK1),-DSIN(RK1),8)
+      CFACP =CMPLX(COS(GR1),-SIN(GR1),8)
+      CSVARP=CMPLX(COS(RK1),-SIN(RK1),8)
       CFACM=CONJG(CFACP)
       CSVARM=CSVARP
       DO I=1,NR1
@@ -1655,8 +1655,8 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
       GR2=GBAS(1,2)*R(1)+GBAS(2,2)*R(2)+GBAS(3,2)*R(3)
       RK2=R(2)*KARTK(2)
-      CFACP =CMPLX(DCOS(GR2),-DSIN(GR2),8)
-      CSVARP=CMPLX(DCOS(RK2),-DSIN(RK2),8)
+      CFACP =CMPLX(COS(GR2),-SIN(GR2),8)
+      CSVARP=CMPLX(COS(RK2),-SIN(RK2),8)
       CFACM =CONJG(CFACP)
       CSVARM=CSVARP
       DO I=1,NR2
@@ -1671,8 +1671,8 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
       GR3=GBAS(1,3)*R(1)+GBAS(2,3)*R(2)+GBAS(3,3)*R(3)
       RK3=R(3)*KARTK(3)
-      CFACP =CMPLX(DCOS(GR3),-DSIN(GR3),8)
-      CSVARP=CMPLX(DCOS(RK3),-DSIN(RK3),8)
+      CFACP =CMPLX(COS(GR3),-SIN(GR3),8)
+      CSVARP=CMPLX(COS(RK3),-SIN(RK3),8)
       CFACM =CONJG(CFACP)
       CSVARM=CSVARP
       DO I=1,NR3

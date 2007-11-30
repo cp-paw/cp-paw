@@ -188,7 +188,7 @@
         CALL STACK$ALLOCATE(8,$WORK2,3*NAT)
         II=0
         DO IAT=1,NAT
-          SVAR=1.D0/DSQRT(RMASS_(IAT))
+          SVAR=1.D0/SQRT(RMASS_(IAT))
           DO I=1,3
             II=II+1
             WORK(II)=SVAR
@@ -222,15 +222,15 @@
         W2IN=2.D0*OMEGA1**2
         W2OUT=OMEGA2**2
         DO I=1,3*NAT
-          SVAR2=DABS(W2(I)/W2IN)
+          SVAR2=ABS(W2(I)/W2IN)
           IF(SVAR2.LT.1.D-10) THEN
             W2(I)=0.D0
           ELSE IF(SVAR2.LT.1.D-2) THEN
             W2(I)=W2OUT/W2IN
           ELSE IF(SVAR2.GT.1.D+2) THEN
-            W2(I)=2.D0*W2OUT/DABS(W2(I))
+            W2(I)=2.D0*W2OUT/ABS(W2(I))
           ELSE 
-            SVAR=DEXP(W2(I)/W2IN)
+            SVAR=EXP(W2(I)/W2IN)
             W2(I)=2.D0*W2OUT/W2(I)*(SVAR-1.D0)/(SVAR+1.D0)
           END IF
         ENDDO
@@ -274,13 +274,13 @@
 !       W2OUT=WOUT_**2
 !       DO I=1,3*NAT
 !         SVAR1=W2(I)
-!         SVAR2=DABS(W2(I)/W2IN)
+!         SVAR2=ABS(W2(I)/W2IN)
 !         IF(SVAR2.LT.1.D-2) THEN
 !           W2(I)=W2OUT/W2IN
 !         ELSE IF(SVAR2.GT.1.D+2) THEN
 !           W2(I)=2.D0*W2OUT/W2(I)
 !         ELSE 
-!           SVAR=DEXP(W2(I)/W2IN)
+!           SVAR=EXP(W2(I)/W2IN)
 !           W2(I)=2.D0*W2OUT/W2(I)*(SVAR-1.D0)/(SVAR+1.D0)
 !         END IF
 !         WRITE(*,FMT='("W2BEF",E15.5,"W2AFT",2E15.5)')SVAR1,W2(I),SVAR2
@@ -297,7 +297,7 @@
 !       == |F>= M**{-1/2)|U_J> MAX(1,W2MAX/W2_J) <U_J|M**(+1/2)|F>    ==
 !       ================================================================
         DO IAT=1,NAT
-          SVAR=DSQRT(RMASS_(IAT))
+          SVAR=SQRT(RMASS_(IAT))
           DO I=1,3
             FORCE_(I,IAT)=FORCE_(I,IAT)*SVAR
           ENDDO
@@ -349,7 +349,7 @@
         DO I=1,3*NAT
           SUM=SUM+VEC(I,J)**2
         ENDDO
-        IF(SUM.NE.0.D0) SUM=1.D0/DSQRT(SUM)
+        IF(SUM.NE.0.D0) SUM=1.D0/SQRT(SUM)
         DO I=1,3*NAT
           VEC(I,J)=VEC(I,J)*SUM
         ENDDO

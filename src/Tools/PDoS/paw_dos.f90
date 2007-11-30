@@ -678,14 +678,14 @@ print*,'state ',state%vec(:,:,ib)
         ELSE IF(TRIM(TYPE).EQ.'PY') THEN
           ORB(4)=FAC
         ELSE IF(TRIM(TYPE).EQ.'SP1') THEN
-          ORB(1)=FAC*DSQRT(1.D0/2.D0)
-          ORB(3)=FAC*DSQRT(1.D0/2.D0)
+          ORB(1)=FAC*SQRT(1.D0/2.D0)
+          ORB(3)=FAC*SQRT(1.D0/2.D0)
         ELSE IF(TRIM(TYPE).EQ.'SP2') THEN
-          ORB(1)=FAC*DSQRT(1.D0/3.D0)
-          ORB(3)=FAC*DSQRT(2.D0/3.D0)
+          ORB(1)=FAC*SQRT(1.D0/3.D0)
+          ORB(3)=FAC*SQRT(2.D0/3.D0)
         ELSE IF(TRIM(TYPE).EQ.'SP3') THEN
-          ORB(1)=FAC*DSQRT(1.D0/4.D0)
-          ORB(3)=FAC*DSQRT(3.D0/4.D0)
+          ORB(1)=FAC*SQRT(1.D0/4.D0)
+          ORB(3)=FAC*SQRT(3.D0/4.D0)
         ELSE IF(TRIM(TYPE).EQ.'DX2-Y2') THEN
           ORB(5)=FAC
         ELSE IF(TRIM(TYPE).EQ.'DXZ') THEN
@@ -1742,8 +1742,8 @@ END MODULE READCNTL_MODULE
       DO ISPIN=1,NSPIN
         DO IOCC=1,2
           DO IE=1,NE
-            IF(DABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
-            IF(DABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
+            IF(ABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
+            IF(ABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
           ENDDO
         ENDDO
       ENDDO
@@ -1776,8 +1776,8 @@ END MODULE READCNTL_MODULE
 !       DO IOCC=1,2
 !         DO ISPIN=1,NSPIN
 !           DO IE=1,NE
-!             IF(DABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
-!             IF(DABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
+!             IF(ABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
+!             IF(ABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
 !           ENDDO
 !         ENDDO
 !       ENDDO

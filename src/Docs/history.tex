@@ -443,6 +443,26 @@ in spherical initial wave functions. The symmetry made the convergence
 much worse. Now I implemented that the initial wave functions also have a
 random angular dependence.
 
+\subsection{November,  2007}
+
+Interfaces for the Fourier transforms of ACML included. Interfaces for
+Ultility libraries for Pathscale etc.
+
+\subsection{November,  2007}
+
+Bugfix in paw_ldaplusu.f90. A loop for transformation matrix to local
+orbitals started with l=1 instead of l=0.
+
+\subsection{November 25,  2007}
+
+After reading the wave function the logical variable tsuper_ is
+redefined, so that insignificant bits are properly set. Apparently,
+the insignificant bits are written differently from compiler to
+compiler. Some logical operations such as .eqv. and .neqv. are,
+depending on the compiler, sensitive to all bits or only the
+significant one. This resulted in errors.
+
+
 \newpage
 \bibliographystyle{unsrt}
 \bibliography{doc.bib}

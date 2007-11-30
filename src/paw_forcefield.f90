@@ -1139,7 +1139,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
         LOGICAL(4)                 :: TCHK1
 !                         CALL TRACE$PUSH('AMBER_ANGLEPARMS')
 !     ******************************************************************
-        PI=4.D0*DATAN(1.D0)
+        PI=4.D0*ATAN(1.D0)
 !     ==================================================================
 !     ==  APPLY GENERAL RULE                                          ==
 !     ==================================================================
@@ -1205,7 +1205,7 @@ integer   :: nfilinfo
 
 !                      CALL TRACE$PUSH('AMBER_ANGLEPOTA')
 !     ******************************************************************
-        PI=4.D0*DATAN(1.D0)
+        PI=4.D0*ATAN(1.D0)
         X1 =  -PI
         X2 =  PI
 !     ==================================================================
@@ -1255,7 +1255,7 @@ integer   :: nfilinfo
         INTEGER                   :: I,J,ITORS
 !     **********************************************************************
 !                      CALL TRACE$PUSH('AMBER_TORSIONPARMS')
-        PI=4.D0*DATAN(1.D0)
+        PI=4.D0*ATAN(1.D0)
         ITORS = 0
 !     ---- Here I try to find the right parameters. The problem is that there are
 !          more than one possibilities. E.g. one can have X-CT-CT-X or OS-CT-CT-OH.
@@ -1377,7 +1377,7 @@ integer   :: nfilinfo
            CALL ERROR$STOP('FORCEFIELD$AMBER_NONBONDPARMS')
         END IF
         RIJ=XI+XJ
-        DIJ=DSQRT(DI*DJ)
+        DIJ=SQRT(DI*DJ)
         WRITE(ID,FMT='(A1,2A5, " X=",F5.2," D=",F8.4)') &
              &              'N ',ATOM1,ATOM2,RIJ,DIJ
 !

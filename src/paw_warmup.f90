@@ -164,7 +164,7 @@ END MODULE WARMUP_MODULE
       REAL(8)          :: PI, TWOPI
       INTEGER(4)       :: NG
 !     -----------------------------------------------------------------------
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       TWOPI=2.D0*PI
       NG=3*NAT
 !     ----------------------------------------------------
@@ -302,7 +302,7 @@ END MODULE WARMUP_MODULE
 !     -------------------------------------------
 !     CHECK ORTHOGONALITY BETWEEN FORCE AND M|DV>
 !     -------------------------------------------
-      IF (DABS(SXVAR).GT.1D-7) THEN
+      IF (ABS(SXVAR).GT.1D-7) THEN
        CALL ERROR$MSG('FAILED TO ORTHOGONALIZE FORCES AND M|DV>')
        CALL ERROR$STOP('ATOMIC:MM_WARMUPAPPLY')
       ENDIF
@@ -352,7 +352,7 @@ END MODULE WARMUP_MODULE
       V=(RP-R0)/DELT
       TEMPER=SUM(MASS*V**2.D0)/(DBLE(NG)*RKB)
 !
-      IF (DABS(TEMPER-TEMPER1-RKAPPA).GT.1.D-5) THEN
+      IF (ABS(TEMPER-TEMPER1-RKAPPA).GT.1.D-5) THEN
        CALL ERROR$MSG('WARMUP: DESIRED DELTA T NOT EFFECTED')
       CALL ERROR$STOP('IN WARMUP_APPLY')
       ENDIF
@@ -476,7 +476,7 @@ END MODULE WARMUP_MODULE
          SVAR=SVAR+RCHECK(J,I)*DELTAV(J,I)
         ENDDO
        ENDDO
-       IF (DABS(SVAR).GT.1.D-10) THEN
+       IF (ABS(SVAR).GT.1.D-10) THEN
         CALL ERROR$MSG('FAILED TO FIND ORTHOGONAL VELOCITIES!')
         CALL ERROR$STOP('IN WARMUP')
        ENDIF

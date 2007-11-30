@@ -220,7 +220,7 @@ END MODULE THERMOSTAT_MODULE
       IF(.NOT.THIS%ON) RETURN
 !
       CALL CONSTANTS('KB',KELVIN)
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       CALL REPORT$TITLE(NFIL,'THERMOSTAT: '//TRIM(THIS%ID))
       IF(THIS%STOP) THEN
         CALL REPORT$CHVAL(NFIL,'INITIAL VELOCITIES SET TO','ZERO')
@@ -260,7 +260,7 @@ END MODULE THERMOSTAT_MODULE
       REAL(8)               :: OMEGA0
       REAL(8)               :: ALPHA
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       OMEGA0=2.D0*PI/PERIOD
       Q=4.D0*TARGET/OMEGA0**2   ! OMEGA0=SQRT(4*<T>/Q)
       ALPHA=1.D0/OMEGA0         ! CRITICAL DAMPING
@@ -364,7 +364,7 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
 !     ==================================================================
 !     ==  ADJUST DIRECT THERMOSTAT PARAMETERS                         ==
 !     ==================================================================
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       PERIOD=PI*SQRT(THIS%Q/THIS%EKIN_TARGET)
       IF(PERIOD.LT.3.D0*THIS%DT) THEN
         PRINT*,'WARNING! THERMOSTAT HAS TOO LARGE TIME STEP'

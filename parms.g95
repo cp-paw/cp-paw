@@ -229,7 +229,7 @@ LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c -Wl,-dy -lmpe -Wl,-dy
 #########################################################################################
 ##________________________________preprocessor variables_______________________________##
 ##                                                                                     ##
-CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW  -DCPPVAR_U77 "
+CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLAS_BLAS"
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
 ##  library selectors for FFT                                                          ##

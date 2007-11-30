@@ -158,7 +158,7 @@ CONTAINS
 !     ==================================================================
 !     == DIMENSION LESS CONSTANTS                                     ==
 !     ==================================================================
-      PI=4.D0*DATAN(1.D0) ;
+      PI=4.D0*ATAN(1.D0) ;
       NC=NC+1;XXX(NC)=CONSTANT('PI',PI,'PI')
       NC=NC+1;XXX(NC)=CONSTANT('ALPHA',ALPHA,'FINE STRUCTURE CONSTANT')
       NC=NC+1;XXX(NC)=CONSTANT('MBYTE',2.D0**20,'MEGA BYTE')

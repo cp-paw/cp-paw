@@ -209,7 +209,7 @@
       INTEGER(4)              :: IAT,I,J
       REAL(8)                 :: VEC(3),SVAR,RBASNEU(3,3)
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       NEIGH(:,:)=0
 !
 !     ==================================================================
@@ -221,9 +221,9 @@
         RBASINV(3,:)=RBAS(:,1).DYAD.RBAS(:,2)
         DET=DOT_PRODUCT(RBAS(:,1),RBASINV(1,:))
         RBASINV=RBASINV/DET
-        A=DSQRT(DOT_PRODUCT(RBAS(:,1),RBAS(:,1)))
-        B=DSQRT(DOT_PRODUCT(RBAS(:,2),RBAS(:,2)))
-        C=DSQRT(DOT_PRODUCT(RBAS(:,3),RBAS(:,3)))
+        A=SQRT(DOT_PRODUCT(RBAS(:,1),RBAS(:,1)))
+        B=SQRT(DOT_PRODUCT(RBAS(:,2),RBAS(:,2)))
+        C=SQRT(DOT_PRODUCT(RBAS(:,3),RBAS(:,3)))
         GAMMA =ACOS(DOT_PRODUCT(RBAS(:,1),RBAS(:,2))/(A*B))
         ALPHA =ACOS(DOT_PRODUCT(RBAS(:,2),RBAS(:,3))/(B*C))
         BETA  =ACOS(DOT_PRODUCT(RBAS(:,3),RBAS(:,1))/(C*A))

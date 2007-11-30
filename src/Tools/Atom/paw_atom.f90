@@ -21,7 +21,7 @@ CONTAINS
           REAL(8)    :: XEXP
           INTEGER(4) :: IR
           IF(.NOT.ALLOCATED(RGRID))ALLOCATE(RGRID(NR))
-          XEXP=DEXP(DEX)
+          XEXP=EXP(DEX)
           RI=R1/XEXP
           DO IR=1,NR
             RI=RI*XEXP
@@ -507,7 +507,7 @@ END MODULE PROJECTION
 !     ==================================================================
 !     ==  DEFINE RADIAL GRID                                          ==
 !     ==  POSSIBLE CHOICE :                                           ==
-!     ==  DEX=0.0244 .. NR=DLOG(7200.0D0*AEZ)/DEX .. R1=0.00625D0/AEZ ==
+!     ==  DEX=0.0244 .. NR=LOG(7200.0D0*AEZ)/DEX .. R1=0.00625D0/AEZ ==
 !     ==  DEX=0.05   .. NR=250                  .. R1=1.056E-4        ==
 !     ==================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -595,8 +595,8 @@ END MODULE PROJECTION
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10 &
      &                 ," ALL-ELECTRON SCF CALCULATION "/72("-"))')
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       C0LL=Y0
       NV=NB-NC
 !
@@ -707,14 +707,14 @@ PRINT*,'AFTER AESCF'
       REAL(8)               :: AUX2(NR)
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       C0LL=Y0
 !
 !     ==================================================================
 !     ==  GENERATE R-GRID                                             ==
 !     ==================================================================
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -856,7 +856,7 @@ PRINT*,'AFTER AESCF'
           CALL ERROR$MSG('INCONSISTENT NUMBER OF GRIDPOINTS')
           CALL ERROR$STOP('MIXPOT')
         END IF
-        XEXP=DEXP(DEX)
+        XEXP=EXP(DEX)
 !       ================================================================
 !       == COPY POT INTO NEWPOTIN                                     ==
 !       ================================================================
@@ -877,7 +877,7 @@ PRINT*,'AFTER AESCF'
           XAV=XAV+TEST**2*RI**2
           SVAR1=SVAR1+RI**2
         ENDDO
-        XAV=DSQRT(XAV/SVAR1)
+        XAV=SQRT(XAV/SVAR1)
 !       ================================================================
 !       ==  CALCULATE MIXING FACTOR BETA                              ==
 !       ================================================================
@@ -975,10 +975,10 @@ PRINT*,'AFTER AESCF'
       REAL(8)               :: DUMMY1,DUMMY2,DUMMY3
       INTEGER(4)            :: IR
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/DSQRT(FOURPI)
-      XEXP=DEXP(DEX)
+      Y0=1.D0/SQRT(FOURPI)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -1057,11 +1057,11 @@ PRINT*,'AFTER AESCF'
       REAL(8)               :: RMAX,PHI1,PHI2,X1,X2,X3,F1,F2,F3
       REAL(8)               :: RI
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       Y0=1.D0/SQRT(FOURPI)
       C0LL=Y0
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -1227,9 +1227,9 @@ PRINT*,'RHOT ',RHOV(1:4)+RHOC(1:4)
 !     ==  DETERMINE MAXIMUM OF THE VALENCE WAVE FUNCTIONS  =============
       DO IB=NC+1,NB
         RMAX=0.D0
-        PHI1=DABS(PHI(NR,1,IB))
+        PHI1=ABS(PHI(NR,1,IB))
         DO IR=NR-2,1,-1
-          PHI2=DABS(PHI(IR,1,IB))
+          PHI2=ABS(PHI(IR,1,IB))
           IF(PHI2.LT.PHI1) THEN
             RMAX=R(IR+1)
             X1=R(IR)
@@ -1405,9 +1405,9 @@ PRINT*,'TYPE ',TYPE
       REAL(8)                   :: CUT(NR)
       REAL(8)                   :: FAC
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
-      XEXP=DEXP(DEX)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      XEXP=EXP(DEX)
       IRC=NINT(1.D0+LOG(RC/R1)/DEX)
       RI=R1/XEXP
       DO IR=1,NR
@@ -1474,10 +1474,10 @@ PRINT*,'TYPE ',TYPE
       INTEGER(4)                :: IR
       REAL(8)                   :: RI,XEXP,RIN,XEXPN
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
-      IRC=INT(1.D0+DLOG(RC/R1)/DEX)
-      XEXP=DEXP(DEX)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      IRC=INT(1.D0+LOG(RC/R1)/DEX)
+      XEXP=EXP(DEX)
       DO IR=1,NR
         PSPOT(IR)=AEPOT(IR)
       ENDDO
@@ -1678,7 +1678,7 @@ PRINT*,'TYPE ',TYPE
 !         == FOR A GIVEN ONE-PARTICLE ENERGY                          ==
 !         ==============================================================
 !         == FIXED ENERGY CALCULATION ==================================
-          IRAUG=int(1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX+1.D0)
+          IRAUG=int(1.D0+LOG(AUGMENTATIONRADIUS/R1)/DEX+1.D0)
           CALL SCHROEDER(.TRUE.,.TRUE.,R1,DEX,NR,LPHI(IWAVE),E,AEZ &
      &              ,IRAUG+5,AUGMENTATIONRADIUS,AEPOT,AEPHI(:,:,IWAVE),AUX)
 !         == REPORT NUMBER OF NODES TO LINKEDLIST ======================
@@ -1710,7 +1710,7 @@ PRINT*,'TYPE ',TYPE
           CALL LINKEDLIST$GET(LL_CNTL,'RC',1,RC)
           CALL LINKEDLIST$CONVERT(LL_CNTL,'LAMBDA',1,'R(8)')
           CALL LINKEDLIST$GET(LL_CNTL,'LAMBDA',1,RLAMBDA)
-          CUT(:)=DEXP(-(RGRID(:)/RC)**RLAMBDA)
+          CUT(:)=EXP(-(RGRID(:)/RC)**RLAMBDA)
           TNORM=.FALSE. !   CALL LINKEDLIST$GET(LL_CNTL,'NORMALIZE',1,TNORM)
           CALL REPORT$STRING(NFILO,'HAMANN-BACHELET-SCHLUTER-LIKE CONSTRUCTION')
           CALL REPORT$STRING(NFILO,'V(R)=V_PS(R)+C EXP[-(R/R_C)^LAMBDA] WITH ADJUSTABLE C')
@@ -1725,7 +1725,7 @@ PRINT*,'TYPE ',TYPE
           CALL ERROR$MSG('OPTION NOT RECOGNIZED')
           CALL ERROR$STOP('PARTIALWAVES')
         END IF
-        IRAUG=INT(1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX)
+        IRAUG=INT(1.D0+LOG(AUGMENTATIONRADIUS/R1)/DEX)
         CUT(IRAUG+1:NR)=0.D0
         CALL HBS(R1,DEX,NR,AUGMENTATIONRADIUS,CUT,TNORM &
      &            ,PSPOT,LPHI(IWAVE),E &
@@ -1775,15 +1775,15 @@ PRINT*,'TYPE ',TYPE
       REAL(8) :: ETEST,DLGTEST,PHITEST(NR,3),EOLD,ALPHA
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
-      XEXP=DEXP(DEX)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
         R(IR)=RI
       ENDDO
-      IRMT=INT(1.D0+DLOG(RMT/R1)/DEX)
+      IRMT=INT(1.D0+LOG(RMT/R1)/DEX)
       IF(IRMT.GT.NR) THEN
         CALL ERROR$STOP('HBS')
       END IF
@@ -1793,7 +1793,7 @@ PRINT*,'TYPE ',TYPE
 !     == NUMBER OF NODES OF THE PS WAVE FUNCTIONS IS THAT OF THE =====
 !     == AE WAVE FUNCTIONS MINUS THE NUMBER OF NODES OF THE   
 !     == HIGHEST CORE WAVE FUNCTION  
-!     == ARCCOT= PI/2-DATAN(X)
+!     == ARCCOT= PI/2-ATAN(X)
 !     ================================================================
       CALL PHASESHIFT(R1,DEX,NR,RMT,AEPHI,PHASAE)
 !     
@@ -1820,8 +1820,8 @@ PRINT*,'TYPE ',TYPE
         CALL OLDRADIAL$VALUE(R1,DEX,NR,AUX,RMT,SVAR)
         CALL OLDRADIAL$VALUE(R1,DEX,NR,PSPHI(:,1),RMT,PHI1)
         CALL OLDRADIAL$VALUE(R1,DEX,NR,PSPHI(:,2),RMT,PHI2)
-        IF(DABS(PHASPS-NINT(PHASPS)).GT.0.1D0) THEN
-          DPRE=-0.5D0*PI*(RMT*PHI1/DSIN(PHASPS*PI))**2/SVAR &
+        IF(ABS(PHASPS-NINT(PHASPS)).GT.0.1D0) THEN
+          DPRE=-0.5D0*PI*(RMT*PHI1/SIN(PHASPS*PI))**2/SVAR &
      &            *(PHASAE-PHASPS-DBLE(NODEC+1))
         ELSE
 !         __APPROXIMATIVE FORMULA NEAR THE ANTIBONDING STATE _________
@@ -1829,17 +1829,17 @@ PRINT*,'TYPE ',TYPE
           DPRE=-0.5D0*PI*(RMT*PHI2)**2/SVAR &
      &         *(PHASAE-PHASPS-DBLE(NODEC+1))
         END IF
-        IF(DABS(DPRE).LT.TOL) GOTO 1000
+        IF(ABS(DPRE).LT.TOL) GOTO 1000
 !        WRITE(NFILO,FMT='(" PREFAC ",F7.3," DE ",E10.3 &
 !     &               ," PHASAE ",F5.3," PHASEPS ",F5.3)') &
 !     &               PREFAC*Y0,DPRE*SVAR,PHASAE,PHASPS
       
 !       == RESTRICT STEPS OF PREFAC TO BE SMALLER THAN DPREX      ====
-        IF(DABS(DPRE).GT.DPREX) THEN
+        IF(ABS(DPRE).GT.DPREX) THEN
           IF(DPRE*(PREFAC-PREOLD).LT.0.D0) THEN
             DPREX=0.5D0*DPREX
           END IF
-          DPRE=DPREX*DPRE/DABS(DPRE)
+          DPRE=DPREX*DPRE/ABS(DPRE)
         END IF
         PREOLD=PREFAC
         PREFAC=PREFAC+DPRE
@@ -1895,12 +1895,12 @@ PRINT*,'TYPE ',TYPE
         REAL(8)               :: DLGTEST,PHASPS,ETEST,EOLD
         INTEGER(4)            :: ITER,IR
 !       ****************************************************************
-        XEXP=DEXP(DEX)
+        XEXP=EXP(DEX)
         R(1)=R1
         DO IR=2,NR
           R(IR)=R(IR-1)*XEXP
         ENDDO
-        IRMT=INT(1.D0+DLOG(RMT/R1)/DEX)
+        IRMT=INT(1.D0+LOG(RMT/R1)/DEX)
 !
 !       ================================================================
 !       ==  WRITE TARGET INFORMATION                                  ==
@@ -1944,7 +1944,7 @@ PRINT*,'TYPE ',TYPE
           CALL AEBOUNDSTATE(R1,DEX,NR,L,ETEST,0.D0,RMT &
      &         ,POT,PHITEST,DLG=DLGTEST)
 !         PRINT*,'ETEST',ETEST,EOLD,EOLD-ETEST
-          IF(DABS(EOLD-ETEST).LT.1.D-12) GOTO 1100
+          IF(ABS(EOLD-ETEST).LT.1.D-12) GOTO 1100
           ETEST=EOLD+ALPHA*(ETEST-EOLD)
         ENDDO
         CALL ERROR$MSG('LOOP NOT CONVERGED')
@@ -1955,7 +1955,7 @@ PRINT*,'TYPE ',TYPE
         WRITE(NFILO,FMT='("NEW ENERGY=",T30,F20.12)')ETEST
         WRITE(NFILO,FMT='("NEW LOGARITHMIC DERIVATIVE ",T30,F20.12)')RMT*PHI2/PHI1
         WRITE(NFILO,FMT='("PHASESHIFT(NONODES)=",T30,F20.12)') &
-     &        0.5D0-DATAN(PHI2/PHI1)/PI
+     &        0.5D0-ATAN(PHI2/PHI1)/PI
         WRITE(NFILO,FMT='(72("-")/72("-"),T10," TEST PARTIAL WAVES FINISHED "/72("-"))')
         RETURN
       END SUBROUTINE TEST
@@ -1971,12 +1971,12 @@ PRINT*,'TYPE ',TYPE
         INTEGER(4)            :: IX,IR
         REAL(8)               :: PI
         REAL(8)               :: PHI1,PHI2
-        PI=4.D0*DATAN(1.D0)
+        PI=4.D0*ATAN(1.D0)
         CALL OLDRADIAL$VALUE(R1,DEX,NR,PHI(:,1),R,PHI1)
         CALL OLDRADIAL$VALUE(R1,DEX,NR,PHI(:,2),R,PHI2)
-        PHASE=0.5D0-DATAN(PHI2/PHI1)/PI
+        PHASE=0.5D0-ATAN(PHI2/PHI1)/PI
 !
-        IX=INT(1.D0+DLOG(R/R1)/DEX)
+        IX=INT(1.D0+LOG(R/R1)/DEX)
         DO IR=1,IX-1
           IF(PHI(IR,1)*PHI(IR+1,1).LT.0.D0) PHASE=PHASE+1.D0
         ENDDO
@@ -2007,7 +2007,7 @@ PRINT*,'TYPE ',TYPE
       INTEGER(4)             :: IRMT=230
       REAL(8), PARAMETER     :: RMT=3.5D0
 !     ******************************************************************
-      IRMT=int(2.D0+DLOG(RMT/R1)/DEX)
+      IRMT=int(2.D0+LOG(RMT/R1)/DEX)
       LMAX=MAXVAL(LPHI)
       DO L=0,LMAX
 !       == HOW MANY PROJECTORS FOR THIS ANGULAR MOMENTUM? ==============
@@ -2111,18 +2111,18 @@ PRINT*,'TYPE ',TYPE
       r8small=100.d0*tiny(r8small)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10,"MAKE PROJECTORS FOR L=",I5," "/72("-"))')L
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
 !
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
         R(IR)=RI
       ENDDO
-print*,'marke 1b',raug,r1,dex,dlog(raug/r1)
-      IRAUG=INT(2.D0+DLOG(RAUG/R1)/DEX)
-print*,'marke 1b',raug,r1,dex,dlog(raug/r1),iraug
+print*,'marke 1b',raug,r1,dex,log(raug/r1)
+      IRAUG=INT(2.D0+LOG(RAUG/R1)/DEX)
+print*,'marke 1b',raug,r1,dex,log(raug/r1),iraug
       iraug=min(iraug,nr)
 print*,'marke 1c',npro,iraug,raug
       IF(TTEST) THEN
@@ -2159,7 +2159,7 @@ print*,'marke 2'
           AUX1(IR)=(R(IR)*AEPHI(IR,1,N1))**2
         ENDDO
         CALL OLDRADIAL$INTEGRAL(R1,DEX,IRAUG,AUX1,SVAR)
-        SVAR=1.D0/DSQRT(SVAR)
+        SVAR=1.D0/SQRT(SVAR)
         DO I=1,3
           AEPHI(:,I,N1)=AEPHI(:,I,N1)*SVAR
           PSPHI(:,I,N1)=PSPHI(:,I,N1)*SVAR
@@ -2237,7 +2237,7 @@ print*,'marke 2'
         CALL OLDRADIAL$INTEGRAL(R1,DEX,IRAUG,AUX1,SVAR)
         DENL=DENL/SVAR
 !
-        IF(DABS(DENL).LT.1.D-5) THEN
+        IF(ABS(DENL).LT.1.D-5) THEN
           DO IR=1,NR
             AUX1(IR)=(R(IR)*PRO(IR,N1))**2
           ENDDO
@@ -2250,7 +2250,7 @@ print*,'marke 2'
           PRINT*,'<PHI|PHI>=',SVAR1,' <PRO|PRO>= ',SVAR2
           SVAR=R(IRAUG)/2.D0
           DO IR=1,NR
-            PRO(IR,N1)=PSPHI(IR,1,N1)*DEXP(-(R(IR)/SVAR)**6)
+            PRO(IR,N1)=PSPHI(IR,1,N1)*EXP(-(R(IR)/SVAR)**6)
           ENDDO
           PRINT*,' PROJECTOR IS REPLACED'
         END IF
@@ -2327,7 +2327,7 @@ CALL OLDRADIAL$INTEGRAL(R1,DEX,nr,AUX1,SVAR)
           AUX1(IR)=(R(IR)*AEPHI(IR,1,N1))**2
         ENDDO
         CALL OLDRADIAL$INTEGRAL(R1,DEX,IRAUG,AUX1,SVAR)
-        SVAR=1.D0/DSQRT(SVAR)
+        SVAR=1.D0/SQRT(SVAR)
         DO I=1,3
           DO IR=1,NR
             PSPHI(IR,I,N1)=PSPHI(IR,I,N1)*SVAR
@@ -2450,11 +2450,11 @@ REAL(8)   ,ALLOCATABLE :: AEPHI1(:,:,:),PSPHI1(:,:,:)
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10," MAKE VHAT "/72("-"))')
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI) 
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI) 
       C0LL=Y0
-      IRAUG=int(1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX+1.D0)
-      XEXP=DEXP(DEX)
+      IRAUG=int(1.D0+LOG(AUGMENTATIONRADIUS/R1)/DEX+1.D0)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -2493,7 +2493,7 @@ CALL PROJECTION$POT(L,NWAVE1,AEPHIL=AEPHI1,PSPHIL=PSPHI1)
               ITER=ITER+1
               CALL PAWBOUNDSTATE(R1,DEX,NR,L,E,OUTERBOXRADIUS &
      &                      ,PSPOT,NWAVE1,PRO1,DATH1,DO1,PSPSI)
-              CONVG=DABS(EOLD-E).LT.TOL
+              CONVG=ABS(EOLD-E).LT.TOL
               EOLD=E
               IF(ITER.GT.50) THEN
                  CALL ERROR$MSG('LOOP NOT CONVERGED')
@@ -2520,7 +2520,7 @@ CALL PROJECTION$POT(L,NWAVE1,AEPHIL=AEPHI1,PSPHIL=PSPHI1)
               ENDDO
             ENDDO
             CALL REPORT$R8VAL(NFILO,"NORM (REMOVE THIS)",SUM,' ')
-            SVAR=1.D0/DSQRT(SUM)
+            SVAR=1.D0/SQRT(SUM)
             PSPSI(:,:)=PSPSI(:,:)*SVAR
             PROJ(:)=PROJ(:)*SUM
 !
@@ -2587,7 +2587,7 @@ PRINT*,'PSRHO IN VHAT ',RHO(1:4)
 !     ==================================================================
 !     ==  TRUNCATE VHAT OUTSIDE AUGMENTATION RADIUS                   ==
 !     ==================================================================
-      IRAUG=INT(1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX)
+      IRAUG=INT(1.D0+LOG(AUGMENTATIONRADIUS/R1)/DEX)
       DO IR=150,250,5
 !       PRINT*,R(IR),VHAT(IR)*Y0
       ENDDO
@@ -2657,10 +2657,10 @@ PRINT*,'PSRHO IN VHAT ',RHO(1:4)
 !     ==================================================================
 !     ==  PREPARE SOME COMMON CONSTANTS                               ==
 !     ==================================================================
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI) 
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI) 
       C0LL=Y0
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -2703,7 +2703,7 @@ PRINT*,'PSRHO IN VHAT ',RHO(1:4)
             ITER=ITER+1
             CALL PAWBOUNDSTATE(R1,DEX,NR,L,E,OUTERBOXRADIUS &
      &                    ,PSPOT,NWAVE1,PRO1,DATH1,DO1,PSPSI)
-            CONVG=DABS(EOLD-E).LT.TOL
+            CONVG=ABS(EOLD-E).LT.TOL
             EOLD=E
             IF(ITER.GT.50) THEN
                CALL ERROR$MSG('LOOP NOT CONVERGED')
@@ -2719,7 +2719,7 @@ PRINT*,'PSRHO IN VHAT ',RHO(1:4)
 !         ============================================================
           PSIR(:)=0.D0
           PSIR(1:NR)=PSPSI(:,1)
-          G1=SQRT(200.D0)/DEXP(NG*DEX)
+          G1=SQRT(200.D0)/EXP(NG*DEX)
           CALL BESSELTRANSFORM(L,NG,R1,G1,DEX,PSIR,PSIG,DISC)
           PSIG(:)=PSIG(:)*SQRT(2.D0/PI)
 !         
@@ -2766,7 +2766,7 @@ PRINT*,'PSRHO IN VHAT ',RHO(1:4)
                 SVAR=SVAR+PROJ(I1)*DO1(I1,I2)*PROJ(I2)
               ENDDO
             ENDDO
-            SVAR=1.D0/DSQRT(SVAR)
+            SVAR=1.D0/SQRT(SVAR)
             PSIR(:)=PSIR(:)*SVAR
             PROJ(:)=PROJ(:)*SVAR
 !
@@ -2862,10 +2862,10 @@ PRINT*,'PSRHO IN VHAT ',RHO(1:4)
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10," MAKEVHAT "/72("-"))')
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI) 
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI) 
       C0LL=Y0
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -2898,7 +2898,7 @@ PRINT*,'QAUG ',QAUG,AEZ,SVAR*4.D0*PI*Y0
               ITER=ITER+1
               CALL PAWBOUNDSTATE(R1,DEX,NR,L,E,OUTERBOXRADIUS &
      &                      ,PSPOT,NWAVE1,PRO1,DATH1,DO1,PSPSI)
-              CONVG=DABS(EOLD-E).LT.TOL
+              CONVG=ABS(EOLD-E).LT.TOL
               EOLD=E
               IF(ITER.GT.50) THEN
                  CALL ERROR$MSG('LOOP NOT CONVERGED')
@@ -2961,7 +2961,7 @@ PRINT*,'QAUG ',QAUG,AEZ,SVAR*4.D0*PI*Y0
 !     ==================================================================
 !     ==  TRUNCATE VHAT OUTSIDE AUGMENTATION RADIUS                   ==
 !     ==================================================================
-      IRAUG=INT(2.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX)
+      IRAUG=INT(2.D0+LOG(AUGMENTATIONRADIUS/R1)/DEX)
       DO IR=150,250,5
 !       PRINT*,R(IR),VHAT(IR)*Y0
       ENDDO
@@ -2990,8 +2990,8 @@ PRINT*,'WARNING! CODE FUDGED'
       REAL(8)                :: PI,Y0
       REAL(8)                :: AEPOT1,PSPOT1,AECORE1,PSCORE1,VHAT1
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
 !
 !     ==================================================================
 !     ==  WRITE POTENTIALS                                            ==
@@ -3039,9 +3039,9 @@ PRINT*,'WARNING! CODE FUDGED'
       INTEGER(4)             :: NPRO,IPRO
       INTEGER(4)             :: L
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI)
-      XEXP=DEXP(DEX)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -3151,11 +3151,11 @@ PRINT*,'WARNING! CODE FUDGED'
       INTEGER(4)          :: NFILO,NFIL
       REAL(8)             :: SVAR
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       C0LL=Y0
       FOURPI=4.D0*PI
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -3196,7 +3196,7 @@ PRINT*,'WARNING! CODE FUDGED'
 !     == ELECTROSTATIC ENERGY
       CALL GAUSSN(0,1.D0/RCSMALL**2,SVAR)
       DO IR=1,NR
-        RHO(IR)=RHO(IR)+QLM*SVAR*DEXP(-(R(IR)/RCSMALL)**2)
+        RHO(IR)=RHO(IR)+QLM*SVAR*EXP(-(R(IR)/RCSMALL)**2)
       ENDDO
       CALL OLDRADIAL$POISSON(R1,DEX,NR,0,RHO,POT)
       AUX1(:)=0.5D0*RHO(:)*POT(:)*R(:)**2
@@ -3228,7 +3228,7 @@ PRINT*,'WARNING! CODE FUDGED'
 !     == ELECTROSTATIC ENERGY
       CALL GAUSSN(0,1.D0/RCSMALL**2,SVAR)
       DO IR=1,NR
-        RHO(IR)=RHO(IR)+QLM*SVAR*DEXP(-(R(IR)/RCSMALL)**2)
+        RHO(IR)=RHO(IR)+QLM*SVAR*EXP(-(R(IR)/RCSMALL)**2)
       ENDDO
       CALL OLDRADIAL$POISSON(R1,DEX,NR,0,RHO,POT)
       AUX1(:)=0.5D0*RHO(:)*POT(:)*R(:)**2
@@ -3344,10 +3344,10 @@ PRINT*,'WARNING! CODE FUDGED'
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(72("-")/72("-"),T10," PAWATOM (UNDER CONSTRUCTION) "/72("-"))')
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*PI) 
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI) 
       C0LL=Y0
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
@@ -3384,7 +3384,7 @@ PRINT*,'WARNING! CODE FUDGED'
               ITER=ITER+1
               CALL PAWBOUNDSTATE(R1,DEX,NR,L,E,OUTERBOXRADIUS &
      &                      ,PSPOT,NWAVE1,PRO1,DATH1,DO1,PSPSI)
-              CONVG=DABS(EOLD-E).LT.TOL
+              CONVG=ABS(EOLD-E).LT.TOL
               EOLD=E
               IF(ITER.GT.50) THEN
                 CALL ERROR$MSG('LOOP NOT CONVERGED')
@@ -3529,9 +3529,9 @@ PRINT*,'WARNING! CODE FUDGED'
 !     ================================================================
 !     ==  PREPARE CONSTANTS                                         ==
 !     ================================================================
-      XEXP=DEXP(DEX)
-      PI=4.D0*DATAN(1.D0)
-      Y0=1.D0/DSQRT(4.D0*Y0)
+      XEXP=EXP(DEX)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*Y0)
       C0LL=Y0
       R(1)=R1/XEXP
       DO IR=2,NR
@@ -3837,14 +3837,14 @@ PRINT*,'WARNING! CODE FUDGED'
 !     ==================================================================
 !     ==  PREPARE SOME COMMON CONSTANTS                               ==
 !     ==================================================================
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       DO IR=1,NR
         RI=RI*XEXP
         R(IR)=RI
       ENDDO
-!     IRAUG=INT(1.D0+DLOG(AUGMENTATIONRADIUS/R1)/DEX)
-      IRAUG=INT(1.D0+DLOG(RPHASE/R1)/DEX)
+!     IRAUG=INT(1.D0+LOG(AUGMENTATIONRADIUS/R1)/DEX)
+      IRAUG=INT(1.D0+LOG(RPHASE/R1)/DEX)
 !
 !     ==================================================================
 !     ==  COLLECT DATA FORM LINKEDLIST                                ==
@@ -4036,12 +4036,12 @@ PRINT*,'WARNING! CODE FUDGED'
         REAL(8)               :: PI
         REAL(8)               :: PHI1,PHI2
 !       ****************************************************************
-        PI=4.D0*DATAN(1.D0)
+        PI=4.D0*ATAN(1.D0)
         CALL OLDRADIAL$VALUE(R1,DEX,NR,PHI(:,1),R,PHI1)
         CALL OLDRADIAL$VALUE(R1,DEX,NR,PHI(:,2),R,PHI2)
-        PHASE=0.5D0-DATAN(PHI2/PHI1)/PI
+        PHASE=0.5D0-ATAN(PHI2/PHI1)/PI
 !
-        IX=INT(1.D0+DLOG(R/R1)/DEX)
+        IX=INT(1.D0+LOG(R/R1)/DEX)
         DO IR=1,IX-1
           IF(PHI(IR,1)*PHI(IR+1,1).LT.0.D0) PHASE=PHASE+1.D0
 !          IF(PHI(IR,1)*PHI(IR+1,1).LT.0.D0) PRINT*,'NODEAT ',IR
@@ -4062,10 +4062,10 @@ PRINT*,'WARNING! CODE FUDGED'
       INTEGER(4)               :: IR
       REAL(8)                  :: PI,Y0
 !     *******************************************************************
-      PI=4.D0*DATAN(1.D0)
+      PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       WRITE(NFILO,FMT='(A)')TRIM(TEXT)
-      XEXP=DEXP(DEX)
+      XEXP=EXP(DEX)
       RI=R1/XEXP
       WRITE(NFILO,FMT='(A5,2A20)')'IR','RI',F(IR)*Y0
       DO IR=1,NR
@@ -4116,7 +4116,7 @@ PRINT*,'WARNING! CODE FUDGED'
 !     == define radial grid                                  ==
 !     =========================================================
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
-      IRlast=INT(1.D0+DLOG(rcov/R1)/DEX)+4
+      IRlast=INT(1.D0+LOG(rcov/R1)/DEX)+4
 print*,'aez',aez,rcov,irlast
       do ir=1,np
         rp(ir)=rcov/real(np-1)*real(ir-1)
