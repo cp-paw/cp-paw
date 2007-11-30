@@ -60,12 +60,12 @@ INTEGER(4)                :: IWAVEPTR=0
 INTEGER(4)                :: IDENSITYPTR=0
 INTEGER(4)                :: IPOTPTR=0
 COMPLEX(8),ALLOCATABLE    :: PWPOT(:)
-COMPLEX(8),ALLOCATABLE    :: PWtotPOT(:)
+COMPLEX(8),ALLOCATABLE    :: PWTOTPOT(:)
 REAL(8)                   :: POTSHIFT=0.D0  ! ADDITIVE CONSTANT TO BE ADDED TO PWPOT,AE1CPOT, PS1CPOT
 REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)  !(NRX,LMRX,NAT)
 REAL(8)   ,ALLOCATABLE    :: PS1CPOT(:,:,:)  !(NRX,LMRX,NAT)
-REAL(8)   ,ALLOCATABLE    :: AE1CtotPOT(:,:,:)  !(NRX,LMRX,NAT)
-REAL(8)   ,ALLOCATABLE    :: PS1CtotPOT(:,:,:)  !(NRX,LMRX,NAT)
+REAL(8)   ,ALLOCATABLE    :: AE1CTOTPOT(:,:,:)  !(NRX,LMRX,NAT)
+REAL(8)   ,ALLOCATABLE    :: PS1CTOTPOT(:,:,:)  !(NRX,LMRX,NAT)
 INTEGER(4)                :: LMRXX=0    !INITIALLY NOT SET
 INTEGER(4)                :: NRX=0
 INTEGER(4)                :: NGL=0
@@ -1316,7 +1316,7 @@ USE MPE_MODULE
         IF(.NOT.ALLOCATED(PWPOT)) ALLOCATE(PWPOT(NGL))
         PWPOT(:)=VHARTREE(:)
       ELSE IF(ID.EQ.'TOT') THEN
-        IF(.NOT.ALLOCATED(PWtotPOT)) ALLOCATE(PWTOTPOT(NGL))
+        IF(.NOT.ALLOCATED(PWTOTPOT)) ALLOCATE(PWTOTPOT(NGL))
         PWTOTPOT(:)=VHARTREE(:)
       ELSE 
         CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -1327,13 +1327,13 @@ USE MPE_MODULE
       END
 !
 !     ....................................................................
-      SUBROUTINE GRAPHICS$SET1CPOT(id,IDENT_,IAT_,GID,NR,NRX_,LMRX,POT)
+      SUBROUTINE GRAPHICS$SET1CPOT(ID,IDENT_,IAT_,GID,NR,NRX_,LMRX,POT)
 !     ********************************************************************
 !     **  USE 1-CENTER POTENTIAL FOR ELECTRIC FIELD GRADIENTS          **
 !     ********************************************************************
       USE GRAPHICS_MODULE
       IMPLICIT NONE
-      CHARACTER(*) ,INTENT(IN) :: id  ! CAN BE 'hartree' OR 'tot' 
+      CHARACTER(*) ,INTENT(IN) :: ID  ! CAN BE 'HARTREE' OR 'TOT' 
       CHARACTER(*) ,INTENT(IN) :: IDENT_  ! CAN BE 'AE' OR 'PS' 
       INTEGER(4)   ,INTENT(IN) :: IAT_    ! ATOM INDEX (SEE ATOMLIST)
       INTEGER(4)   ,INTENT(IN) :: GID
@@ -1471,7 +1471,7 @@ USE MPE_MODULE
         DEALLOCATE(WORK)
       END IF
       DEALLOCATE(VHARTREE)
-call GRAPHICS_TOM()
+CALL GRAPHICS_TOM()
 !
 !     ==================================================================
 !     ==  ONE-CENTER CONTRIBUTIONS                                    ==
@@ -1538,15 +1538,15 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
 !     **                                                                      **
 !     **                                                                      **
 !     **                                                                      **
-!     ** assumes that a dimeric molecule is alligned in the z-axis and that   **
-!     ** the lattice vectors point into the cartesian coordinate axes         **
+!     ** ASSUMES THAT A DIMERIC MOLECULE IS ALLIGNED IN THE Z-AXIS AND THAT   **
+!     ** THE LATTICE VECTORS POINT INTO THE CARTESIAN COORDINATE AXES         **
 !     **                                                                      **
 !     **************************************************************************
-      USE GRAPHICS_MODULE ! ,only: pwpot,ngl
+      USE GRAPHICS_MODULE ! ,ONLY: PWPOT,NGL
       USE MPE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      LOGICAL(4), PARAMETER :: TTOM=.TRUE.
+      LOGICAL(4), PARAMETER :: TTOM=.FALSE.
       REAL(8)               :: GVEC(3,NGL)
       REAL(8)               :: RCENTER(3)
       INTEGER(4)            :: NAT
@@ -1554,102 +1554,102 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       INTEGER(4)            :: NR
       CHARACTER(16)         :: ID
       INTEGER(4)            :: NFIL
-      real(8)   ,PARAMETER  :: r1a=1.d-4
-      real(8)   ,PARAMETER  :: r1b=1.d-4
-      real(8)   ,PARAMETER  :: dexa=0.05d0
-      real(8)   ,PARAMETER  :: dexb=0.05d0
-      INTEGER(4),PARAMETER  :: NRa=250
-      INTEGER(4),PARAMETER  :: NRb=250
-      integer(4)            :: np
-      REAL(8)   ,allocatable:: POT2D(:)   !(np)
-      REAL(8)   ,allocatable:: RVEC(:,:)  !(3,np)
-      REAL(8)   ,allocatable:: Rab(:,:)   !(2,np)
-      integer(4),allocatable:: ij(:,:)    !(2,np)
-      real(8)   ,allocatable:: onecpot(:,:)
-      REAL(8)               :: ra,rb
-      INTEGER(4)            :: I,J,IAT,IG,ISP,lm,ip
-      integer(4)            :: nrb1
-      integer(4)            :: lmrx                  
-      real(8)   ,allocatable:: ylm(:)
-      REAL(8)               :: SVAR,svar1,GR
+      REAL(8)   ,PARAMETER  :: R1A=1.D-4
+      REAL(8)   ,PARAMETER  :: R1B=1.D-4
+      REAL(8)   ,PARAMETER  :: DEXA=0.05D0
+      REAL(8)   ,PARAMETER  :: DEXB=0.05D0
+      INTEGER(4),PARAMETER  :: NRA=250
+      INTEGER(4),PARAMETER  :: NRB=250
+      INTEGER(4)            :: NP
+      REAL(8)   ,ALLOCATABLE:: POT2D(:)   !(NP)
+      REAL(8)   ,ALLOCATABLE:: RVEC(:,:)  !(3,NP)
+      REAL(8)   ,ALLOCATABLE:: RAB(:,:)   !(2,NP)
+      INTEGER(4),ALLOCATABLE:: IJ(:,:)    !(2,NP)
+      REAL(8)   ,ALLOCATABLE:: ONECPOT(:,:)
+      REAL(8)               :: RA,RB
+      INTEGER(4)            :: I,J,IAT,IG,ISP,LM,IP
+      INTEGER(4)            :: NRB1
+      INTEGER(4)            :: LMRX                  
+      REAL(8)   ,ALLOCATABLE:: YLM(:)
+      REAL(8)               :: SVAR,SVAR1,GR
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      integer(4)            :: ntasks,thistask
-      real(8)               :: rat(3,2)
-      real(8)               :: dr(3)
-      real(8)               :: atomdistance
-      real(8)               :: dis
-      real(8)               :: za,zb
+      INTEGER(4)            :: NTASKS,THISTASK
+      REAL(8)               :: RAT(3,2)
+      REAL(8)               :: DR(3)
+      REAL(8)               :: ATOMDISTANCE
+      REAL(8)               :: DIS
+      REAL(8)               :: ZA,ZB
 !     **************************************************************************
       IF(.NOT.TTOM) RETURN
-      CALL MPE$QUERY('monomer',NTASKS,THISTASK)
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     ==========================================================================
-!     ==  create real space grid for the potential                            ==
+!     ==  CREATE REAL SPACE GRID FOR THE POTENTIAL                            ==
 !     ==========================================================================
-!     == get distance of atoms =================================================
+!     == GET DISTANCE OF ATOMS =================================================
       CALL ATOMLIST$NATOM(NAT)
-      IF(NAT.gt.2) THEN
+      IF(NAT.GT.2) THEN
         CALL ERROR$STOP('GRAPHICS_TOM')
       END IF
       DO IAT=1,NAT
-        CALL ATOMLIST$GETR8A('R(0)',IAT,3,rat(:,iat))
-      enddo
-      if(nat.eq.1) then
-        rat(:,2)=rat(:,1)
-      end if
-      atomdistance=sqrt(sum((rat(:,2)-rat(:,1))**2))
+        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT(:,IAT))
+      ENDDO
+      IF(NAT.EQ.1) THEN
+        RAT(:,2)=RAT(:,1)
+      END IF
+      ATOMDISTANCE=SQRT(SUM((RAT(:,2)-RAT(:,1))**2))
 !
-!     == count the number of grid points =====================================
-      np=0
+!     == COUNT THE NUMBER OF GRID POINTS =====================================
+      NP=0
       DO I=1,NRA
         RA=R1A*EXP(DEXA*REAL(I-1,KIND=8))
         DO J=1,NRB
           RB=R1B*EXP(DEXB*REAL(J-1,KIND=8))
-          IF(ABS(Ra-atomdistance).GT.rb) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
-          IF(ABS(RB-atomdistance).GT.ra) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
-          np=np+1
-        enddo
-      enddo
-      if(nat.eq.1) np=nra
+          IF(ABS(RA-ATOMDISTANCE).GT.RB) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
+          IF(ABS(RB-ATOMDISTANCE).GT.RA) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
+          NP=NP+1
+        ENDDO
+      ENDDO
+      IF(NAT.EQ.1) NP=NRA
 !
-!     == allocate arrays  ====================================================
-      allocate(pot2d(np))
-      allocate(rvec(3,np))
-      allocate(ij(2,np))
-      allocate(rab(2,np))
+!     == ALLOCATE ARRAYS  ====================================================
+      ALLOCATE(POT2D(NP))
+      ALLOCATE(RVEC(3,NP))
+      ALLOCATE(IJ(2,NP))
+      ALLOCATE(RAB(2,NP))
 !
-!     ==  creat grid points ==================================================
-      ip=0
+!     ==  CREAT GRID POINTS ==================================================
+      IP=0
       DO I=1,NRA
         RA=R1A*EXP(DEXA*REAL(I-1,KIND=8))
-        if(nat.eq.2) then
+        IF(NAT.EQ.2) THEN
           DO J=1,NRB
             RB=R1B*EXP(DEXB*REAL(J-1,KIND=8))
-            IF(ABS(Ra-atomdistance).GT.rb) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
-            IF(ABS(RB-atomdistance).GT.ra) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
-            ip=ip+1
-            rab(1,ip)=ra
-            rab(2,ip)=rb
-            ij(1,ip)=i
-            ij(2,ip)=j
-            RVEC(3,Ip)=(atomdistance**2+RA**2-RB**2)/(2.D0*atomdistance)
-            RVEC(1,Ip)=SQRT(RA**2-RVEC(3,ip)**2)
-            RVEC(2,Ip)=0.D0
+            IF(ABS(RA-ATOMDISTANCE).GT.RB) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
+            IF(ABS(RB-ATOMDISTANCE).GT.RA) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
+            IP=IP+1
+            RAB(1,IP)=RA
+            RAB(2,IP)=RB
+            IJ(1,IP)=I
+            IJ(2,IP)=J
+            RVEC(3,IP)=(ATOMDISTANCE**2+RA**2-RB**2)/(2.D0*ATOMDISTANCE)
+            RVEC(1,IP)=SQRT(RA**2-RVEC(3,IP)**2)
+            RVEC(2,IP)=0.D0
           ENDDO
-        else
-          ip=ip+1
-          ij(1,ip)=i
-          ij(2,ip)=0
-          rab(1,ip)=ra
-          rab(2,ip)=0.d0
-          RVEC(1,Ip)=0.d0
-          RVEC(2,Ip)=0.d0
-          RVEC(3,Ip)=RA
-        end if
+        ELSE
+          IP=IP+1
+          IJ(1,IP)=I
+          IJ(2,IP)=0
+          RAB(1,IP)=RA
+          RAB(2,IP)=0.D0
+          RVEC(1,IP)=0.D0
+          RVEC(2,IP)=0.D0
+          RVEC(3,IP)=RA
+        END IF
       ENDDO
 !
 !     ==========================================================================
-!     == CHECK IF POTENTIAL IS AVAILABLE and get it                           ==
+!     == CHECK IF POTENTIAL IS AVAILABLE AND GET IT                           ==
 !     ==========================================================================
       IF(.NOT.ALLOCATED(PWTOTPOT)) THEN
         CALL ERROR$STOP('GRAPHICS_TOM')
@@ -1661,20 +1661,20 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
 !     ==  TRANSFORM PLANE WAVE PART ONTO A 2-DIMENSIONAL GRID               ==
 !     ==  COULD BE REPLACED BY A TWO-D FFT
 !     ========================================================================
-      DO Ip=1,np
+      DO IP=1,NP
         SVAR=0.D0
         DO IG=1,NGL
-          GR=DOT_PRODUCT(GVEC(:,IG),RVEC(:,Ip))
+          GR=DOT_PRODUCT(GVEC(:,IG),RVEC(:,IP))
           SVAR=SVAR+REAL(PWTOTPOT(IG)*EXP(CI*GR))
         ENDDO
-        POT2D(ip)=SVAR
+        POT2D(IP)=SVAR
       ENDDO
 !
 !     ==========================================================================
 !     == NOW LOOP OVER ATOMS                                                  ==
 !     ==========================================================================
-      za=0.d0
-      zb=0.d0
+      ZA=0.D0
+      ZB=0.D0
       DO IAT=1,NAT
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,RCENTER)
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
@@ -1688,26 +1688,26 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
           CALL SETUP$GETR8('AEZ',ZB)
         END IF
         ALLOCATE(ONECPOT(NR,LMRXX))
-        ALLOCATE(ylm(lmrx))
-        ONECPOT(:,:)=AE1CTOTPOT(:,:LMRX,IAT)-PS1cTOTPOT(:,:LMRX,IAT)
-        DO Ip=1,Np
-          IF(MOD(Ip-1,NTASKS).NE.THISTASK-1) CYCLE   !PARALLELIZATION
-          DR(:)=RVEC(:,Ip)-RCENTER(:)
+        ALLOCATE(YLM(LMRX))
+        ONECPOT(:,:)=AE1CTOTPOT(:,:LMRX,IAT)-PS1CTOTPOT(:,:LMRX,IAT)
+        DO IP=1,NP
+          IF(MOD(IP-1,NTASKS).NE.THISTASK-1) CYCLE   !PARALLELIZATION
+          DR(:)=RVEC(:,IP)-RCENTER(:)
           DIS=MAX(1.D-8,SQRT(SUM(DR**2)))
-          CALL GETYLM(LMrX,DR,YLM)
+          CALL GETYLM(LMRX,DR,YLM)
           SVAR=0.D0
-          DO LM=1,LMrX
+          DO LM=1,LMRX
             CALL RADIAL$VALUE(GID,NR,ONECPOT(1,LM),DIS,SVAR1)
             SVAR=SVAR+SVAR1*YLM(LM)
           ENDDO
-          POT2D(Ip)=POT2D(Ip)+SVAR
+          POT2D(IP)=POT2D(IP)+SVAR
         ENDDO
-        dealLOCATE(ylm)
-        dealLOCATE(onecpot)
+        DEALLOCATE(YLM)
+        DEALLOCATE(ONECPOT)
       ENDDO
 !
 !     ==========================================================================
-!     ==  now sum over all processors                                         ==
+!     ==  NOW SUM OVER ALL PROCESSORS                                         ==
 !     ==========================================================================
       CALL MPE$COMBINE('MONOMER','+',POT2D)
 !
@@ -1726,13 +1726,13 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
 !     ========================================================================
 !     ==  PRINT RESULT                                                      ==
 !     ========================================================================
-      WRITE(NFIL,FMT='(2f10.5,i5,f10.5)')R1A,DEXA,NRA,ZA
-      WRITE(NFIL,FMT='(2f10.5,i5,f10.5)')R1B,DEXB,NRB,ZB
-      WRITE(NFIL,FMT='(F15.5,i5)')ATOMDISTANCE,np
-      DO Ip=1,Np
-!        WRITE(NFIL,FMT='(2I5,3F15.5)')IJ(:,IP),rab(:,ip),POT2D(IP)
-!        WRITE(NFIL,FMT='(3F15.5)')rab(2,ip),POT2D(IP) 
-        WRITE(NFIL,FMT='(2I5,F15.5)')IJ(:,ip),POT2D(IP)
+      WRITE(NFIL,FMT='(2F10.5,I5,F10.5)')R1A,DEXA,NRA,ZA
+      WRITE(NFIL,FMT='(2F10.5,I5,F10.5)')R1B,DEXB,NRB,ZB
+      WRITE(NFIL,FMT='(F15.5,I5)')ATOMDISTANCE,NP
+      DO IP=1,NP
+!        WRITE(NFIL,FMT='(2I5,3F15.5)')IJ(:,IP),RAB(:,IP),POT2D(IP)
+!        WRITE(NFIL,FMT='(3F15.5)')RAB(2,IP),POT2D(IP) 
+        WRITE(NFIL,FMT='(2I5,F15.5)')IJ(:,IP),POT2D(IP)
      ENDDO
       CALL FILEHANDLER$CLOSE(ID)
       RETURN
