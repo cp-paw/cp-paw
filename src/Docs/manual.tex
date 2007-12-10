@@ -1759,6 +1759,22 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
 \vrules{optional}
 \vdefault{0.0}}
 %
+\mbax{\key{CONSTRAINTTYPE}
+\vdescr{Constraints on the cell dynamics. Allowed values are the
+following:
+\begin{itemize}
+\item 'ISOTROPIC' only allows isotropic expansions and contractions.
+\item 'NOSHEAR' allows anisotropic expansions and contractions but no
+shearing.
+\item 'FREE' does not restrict the dynamics other than to remove the
+rotation from the stress tensor.
+\item 'NOSTRESS' sets the stresses to zero. (Only used for tests).
+\end{itemize}
+}
+\vformat{character}
+\vrules{optional}
+\vdefault{'FREE'}}
+%
 % \mbax{\key{STRESS}
 % \vdescr{external stress}
 % \vformat{real(9)}

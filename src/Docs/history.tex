@@ -450,17 +450,29 @@ Ultility libraries for Pathscale etc.
 
 \subsection{November,  2007}
 
-Bugfix in paw_ldaplusu.f90. A loop for transformation matrix to local
+Bugfix in paw\_ldaplusu.f90. A loop for transformation matrix to local
 orbitals started with l=1 instead of l=0.
 
 \subsection{November 25,  2007}
 
-After reading the wave function the logical variable tsuper_ is
+After reading the wave function the logical variable tsuper\_ is
 redefined, so that insignificant bits are properly set. Apparently,
 the insignificant bits are written differently from compiler to
 compiler. Some logical operations such as .eqv. and .neqv. are,
 depending on the compiler, sensitive to all bits or only the
 significant one. This resulted in errors.
+
+\subsection{December 4,  2007}
+
+Included new installation instructions in Docs. (still in German)
+
+\subsection{December 9,  2007}
+
+Included a constraints for the variable cell shape dynamics. It is now
+possible to restrict the cell dynamics to isotropic expansions or
+reductions or to remove shear componentsof the dynamics.
+
+The installation description has been partly translated.
 
 
 \newpage

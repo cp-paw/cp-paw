@@ -27,6 +27,8 @@
 MODULE CELL_MODULE
 IMPLICIT NONE
 logical(4) :: tpARRINELLORAHMAN=.TRUE.
+! CONSTRAINTTYPE CAN BE 'NONE','ISOTROPIC','NOSHEAR','FREE'
+CHARACTER(32) :: CONSTRAINTTYPE='FREE'
 LOGICAL(4) :: TINIT=.FALSE.
 LOGICAL(4) :: TON  =.FALSE.      ! USED TO REQUEST INTERNAL STRESS
 LOGICAL(4) :: TMOVE=.FALSE.      ! PROPAGATE UNIT CELL
@@ -144,6 +146,7 @@ END MODULE CELL_MODULE
       CALL REPORT$R8VAL(NFIL,'MASS',TMASS,'A.U.') 
       CALL REPORT$R8VAL(NFIL,'FRICTION',FRIC,'DT/2') 
       CALL REPORT$R8VAL(NFIL,'EXTERNAL PRESSURE',PRESSURE,'A.U.') 
+      CALL REPORT$CHVAL(NFIL,'CONSTRAINTYPE',CONSTRAINTTYPE) 
       CALL REPORT$R8VAL(NFIL,'REFERENCE VOLUME',VREF,'A.U.') 
       WRITE(NFIL,FMT='("REFERENCE UNIT CELL",T35," STRESS ")')
       WRITE(NFIL,FMT='(3F10.5,T35,3F10.5)')TREF(1,:),STRESS(1,:)
@@ -177,6 +180,34 @@ END MODULE CELL_MODULE
       FRICTION=OMEGA*DT
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CELL$SETCH(ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE CELL_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(*),INTENT(IN) :: VAL
+!     **************************************************************************
+!
+!     =================================================================
+!     ==  CALCULATE PRESSURE                                         ==
+!     =================================================================
+      IF(ID.EQ.'CONSTRAINTTYPE') THEN
+        CONSTRAINTTYPE=VAL
+!
+!     =================================================================
+!     ==  DONE                                                       ==
+!     =================================================================
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('CELL$SETCH')
+      END IF
+      RETURN
+      END SUBROUTINE CELL$SETCH
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$SETL4(ID,VAL)
@@ -605,8 +636,12 @@ END MODULE CELL_MODULE
       REAL(8)    :: stress_ext(3,3)
 REAL(8)    :: mat33(3,3)
       REAL(8)    :: SVAR,SVAR1,SVAR2,SVAR3
-      INTEGER(4) :: I,ITER
+      INTEGER(4) :: I,j,ITER,IC1,IC2
       logical(4),parameter :: donothing=.false.
+      integer(4) :: nconstraint !#(constraints)
+      real(8)   ,ALLOCATABLE :: constraintproject(:,:,:)    ! (3,3,nc)
+      real(8)   ,ALLOCATABLE :: A(:,:),X(:),B(:)
+      REAL(8)                :: smat1(3,3),smat2(3,3),smat3(3,3)
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       IF(.NOT.TMOVE) RETURN
@@ -634,9 +669,65 @@ end if
 !     == ensure that stress-tensor is symmetric                               ==
 !     ==========================================================================
 !     == the stresses from potential_hartree and from paw_pairpotential are
-!     == not exactly symmetric
+!     == not exactly symmetric. The antisymmetric part resuls in a rotation
+!     == therefore we remove it here
       STRESS_I=0.5D0*(STRESS_I+TRANSPOSE(STRESS_I))
       KINSTRESS=0.5D0*(KINSTRESS+TRANSPOSE(KINSTRESS))
+!
+!     ==========================================================================
+!     == CONSTRAINTS                                                          ==
+!     ==========================================================================
+      IF(CONSTRAINTTYPE.EQ.'ISOTROPIC') THEN
+        nconstraint=5
+        allocate(constraintproject(3,3,nconstraint))
+        constraintproject(:,:,:)=0.d0
+        constraintproject(1,2,1)=1.d0
+        constraintproject(2,1,1)=1.d0
+        constraintproject(1,3,2)=1.d0
+        constraintproject(3,1,2)=1.d0
+        constraintproject(2,3,3)=1.d0
+        constraintproject(3,2,3)=1.d0
+        constraintproject(1,1,4)=1.d0
+        constraintproject(2,2,4)=-1.d0
+        constraintproject(2,2,5)=1.d0
+        constraintproject(3,3,5)=-1.d0
+!
+!!$        SVAR1=(STRESS_I(1,1)+STRESS_i(2,2)+STRESS_i(3,3))/3.D0
+!!$        SVAR2=(KINSTRESS(1,1)+KINSTRESS(2,2)+KINSTRESS(3,3))/3.D0
+!!$        STRESS_i(:,:)=0.D0
+!!$        KINSTRESS(:,:)=0.D0
+!!$        DO I=1,3
+!!$          STRESS_I(I,I)=SVAR1
+!!$          KINSTRESS(I,I)=SVAR2
+!!$        ENDDO
+      ELSE IF(CONSTRAINTTYPE.EQ.'NOSHEAR') THEN
+        nconstraint=3
+        allocate(constraintproject(3,3,nconstraint))
+        constraintproject(:,:,:)=0.d0
+        constraintproject(1,2,1)=1.d0
+        constraintproject(2,1,1)=1.d0
+        constraintproject(1,3,2)=1.d0
+        constraintproject(3,1,2)=1.d0
+        constraintproject(2,3,3)=1.d0
+        constraintproject(3,2,3)=1.d0
+!!$        DO I=1,3
+!!$          DO J=1,3
+!!$            IF(I.EQ.J) CYCLE
+!!$            STRESS_I(I,J)=0.D0
+!!$            KINSTRESS(I,J)=0.D0
+!!$          ENDDO
+!!$        ENDDO
+      ELSE IF(CONSTRAINTTYPE.EQ.'NOSTRESS') THEN
+        nconstraint=0
+        STRESS_I(:,:)=0.D0
+        KINSTRESS(:,:)=0.D0
+      ELSE IF(CONSTRAINTTYPE.EQ.'FREE') THEN
+        nconstraint=0
+      ELSE
+        CALL ERROR$MSG('CONSTRAINTTYPE NOT RECOGNIZED')
+        CALL ERROR$CHVAL('CONSTRAINTTYPE',CONSTRAINTTYPE)
+        CALL ERROR$STOP('CELL$PROPAGATE')
+      END IF
 !
       V0=T0(1,1)*(T0(2,2)*T0(3,3)-T0(2,3)*T0(3,2)) &
      &  +T0(2,1)*(T0(3,2)*T0(1,3)-T0(3,3)*T0(1,2)) &
@@ -659,6 +750,42 @@ end if
         SVAR3=DELTAT**2/TMASS/(1.D0+FRIC)
         CALL LIB__INVERTR8(3,T0,T0INV)
         TP=SVAR1*T0+SVAR2*TM+SVAR3*MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
+!       == CONSTRAINTS ========================================================
+        IF(NCONSTRAINT.GT.0) THEN        
+          ALLOCATE(B(NCONSTRAINT))
+          ALLOCATE(X(NCONSTRAINT))
+          ALLOCATE(A(NCONSTRAINT,NCONSTRAINT))
+          SMAT1(:,:)=MATMUL(TP,T0INV)
+          SMAT2(:,:)=MATMUL(TRANSPOSE(T0INV),T0INV)
+          DO IC1=1,NCONSTRAINT
+            B(IC1)=0.D0
+            DO I=1,3
+              DO J=1,3
+                B(IC1)=B(IC1)+SMAT1(I,J)*CONSTRAINTPROJECT(I,J,IC1)
+              ENDDO
+            ENDDO
+            SMAT3(:,:)=MATMUL(CONSTRAINTPROJECT(:,:,IC1),SMAT2(:,:))
+            DO IC2=1,NCONSTRAINT
+              A(IC1,IC2)=0.D0
+              DO I=1,3
+                DO J=1,3
+                  A(IC1,IC2)=A(IC1,IC2)+SMAT3(I,J)*CONSTRAINTPROJECT(I,J,IC2)
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+          CALL LIB$MATRIXSOLVER8(NCONSTRAINT,NCONSTRAINT,1,A,X,B)
+          DO IC1=1,NCONSTRAINT
+            TP(:,:)=TP(:,:)-MATMUL(CONSTRAINTPROJECT(:,:,IC1),TRANSPOSE(T0INV))*X(IC1)
+          ENDDO
+          DEALLOCATE(B)
+          DEALLOCATE(A)
+          DEALLOCATE(CONSTRAINTPROJECT)
+        END IF
+!WRITE(*,FMT='(A10,3F10.5,5X,3F10.5,4X,3F10.5)')'TM',TM
+!WRITE(*,FMT='(A10,3F10.5,5X,3F10.5,4X,3F10.5)')'T0',T0
+!write(*,fmt='(a10,3f10.5,5x,3f10.5,4x,3f10.5)')'tp',tp
+!write(*,fmt='(a10,3f10.5,5x,3f10.5,4x,3f10.5)')'stress',STRESS_I+KINSTRESS+STRESS_EXT
 !       == CALCULATE KINETIC ENERGY 
         EKIN=0.5D0*TMASS*SUM((TP-TM)**2)/(2.D0*DELTAT)**2
       ELSE 

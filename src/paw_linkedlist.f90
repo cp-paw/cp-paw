@@ -797,49 +797,66 @@ CONTAINS
       RETURN
       END SUBROUTINE LINKEDLIST_TRANSFERCHVALTO1
 !
-!     ..................................................................
-      SUBROUTINE LINKEDLIST_TRANSFERCHvalFROM1(NFROM,FROM,TOSIZE,TO)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LINKEDLIST_TRANSFERCHVALFROM1(NFROM,FROM,TOSIZE,TO)
+!     **************************************************************************
+!     **  map a character(1) array onto a string                              **
+!     **************************************************************************
       INTEGER(4)  ,INTENT(IN)   :: NFROM
-      INTEGER(4)  ,INTENT(IN)   :: TOSIZE  !not used
-      CHARACTER(*),INTENT(OUT)  :: TO
       CHARACTER(1),INTENT(IN)   :: FROM(NFROM)
+      INTEGER(4)  ,INTENT(IN)   :: TOSIZE  !NOT USED
+      CHARACTER(*),INTENT(OUT)  :: TO
       INTEGER(4)                :: I
-      INTEGER(4)                :: TOLEN,fromlen
-!     ******************************************************************
+      INTEGER(4)                :: TOLEN
+!     **************************************************************************
       TOLEN=LEN(TO)
+      IF(TOLEN.LT.NFROM) THEN
+        CALL ERROR$MSG('INCONSISTENT SIZE')
+        CALL ERROR$STOP('LINKEDLIST_TRANSFERCHVALFROM1')
+      END IF
       TO=' '
-      DO i=1,nfrom
+      DO I=1,NFROM
         TO(i:i)=FROM(I)
       ENDDO
       RETURN
       END SUBROUTINE LINKEDLIST_TRANSFERCHVALFROM1
 !
-!     ..................................................................
-      SUBROUTINE LINKEDLIST_TRANSFERCHarrFROM1(NFROM,FROM,TOSIZE,TO)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LINKEDLIST_TRANSFERCHARRFROM1(NFROM,FROM,TOSIZE,TO)
+!     **************************************************************************
+!     **  map a character(1) array onto a string array                        **
+!     **************************************************************************
       INTEGER(4)  ,INTENT(IN)   :: NFROM
+      CHARACTER(1),INTENT(IN)   :: FROM(NFROM)
       INTEGER(4)  ,INTENT(IN)   :: TOSIZE
       CHARACTER(*),INTENT(OUT)  :: TO(TOSIZE)
-      CHARACTER(1),INTENT(IN)   :: FROM(NFROM)
       INTEGER(4)                :: I,J,IJ
-      INTEGER(4)                :: TOLEN,fromlen
-!     ******************************************************************
+      INTEGER(4)                :: TOLEN,FROMLEN
+!     **************************************************************************
+!     == DIVIDE THE CHARACTER ARRAY INTO TOSIZE EQUAL-SIZED CHUNKS =============
+      FROMLEN=NFROM/TOSIZE
+      IF(FROMLEN*TOSIZE.NE.NFROM) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY SIZES')
+        CALL ERROR$STOP('LINKEDLIST_TRANSFERCHARRFROM1')
+      END IF
+!     == ENSURE THAT THE CHARACTER STRINGS ARE LARGE ENOUGH ====================
       TOLEN=LEN(TO)
-      fromlen=nfrom/tosize
-      if(fromlen*tosize.ne.nfrom) then
-        call error$msg('inconsistent array sizes')
-        call error$stop('LINKEDLIST_TRANSFERCHFROM1')
-      end if
+      IF(TOLEN.LT.NFROM) THEN
+        CALL ERROR$MSG('INCONSISTENT SIZE')
+        CALL ERROR$STOP('LINKEDLIST_TRANSFERCHARRFROM1')
+      END IF
+!     == NOW DO THE MAPPING ====================================================
       IJ=0
       DO I=1,TOSIZE
         TO(I)=' '
-        DO J=1,fromlen
+        DO J=1,FROMLEN
           IJ=IJ+1
           TO(I)(J:J)=FROM(IJ)
         ENDDO
       ENDDO
       RETURN
       END SUBROUTINE LINKEDLIST_TRANSFERCHARRFROM1
-end MODULE LINKEDLIST_TRANSFERCH_MODULE
+END MODULE LINKEDLIST_TRANSFERCH_MODULE
 !
 !.......................................................................
 !***********************************************************************
@@ -1701,7 +1718,6 @@ CONTAINS
       TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE(<TYPEDEF>)
       CHARACTER(1)    ,POINTER    :: CHARVAL(:)
       INTEGER(4)                  :: LENG
-      CHARACTER(256)              :: LINE
 !     ******************************************************************
       LIST=>LL%PTR
       LENG=<SIZE>
@@ -1867,7 +1883,7 @@ CONTAINS
       TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
       CHARACTER(1)    ,POINTER    :: CHARVAL(:)
       CHARACTER(8)                :: STRING
-      CHARACTER(500)              :: MOLD
+!     CHARACTER(500)              :: MOLD
       INTEGER(4)                  :: LENG
       INTEGER(4)                  :: I1,I2,KIND
 !     ******************************************************************
@@ -1922,7 +1938,7 @@ CONTAINS
       TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
       CHARACTER(1)    ,POINTER    :: CHARVAL(:)
       CHARACTER(8)                :: STRING
-      CHARACTER(500)              :: MOLD
+!     CHARACTER(500)              :: MOLD
       INTEGER(4)                  :: I1,I2,KIND
 !     ******************************************************************
       LIST=>LL%PTR

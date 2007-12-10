@@ -1836,6 +1836,7 @@ CALL TRACE$PASS('DONE')
       REAL(8)                  :: P           ! EXTERNAL PRESSURE
       REAL(8)                  :: MASS        ! MASS FOR CELL DFYNAMICS
       REAL(8)                  :: FRIC        ! MASS FOR CELL DFYNAMICS
+      character(32)            :: ch32val
 !     ******************************************************************
       LL_CNTL=LL_CNTL_
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -1853,8 +1854,16 @@ CALL TRACE$PASS('DONE')
       END IF
       CALL CELL$SETL4('MOVE',TMOVE)
 !
-!     ==  NOR FURTHER DATA REQUIRED IF NOT MOVING ======================
+!     ==  NO FURTHER DATA REQUIRED IF NOT MOVING ======================
       IF(.NOT.TMOVE) RETURN
+!
+!     == CONSTRAINTS ON THE CELL DYNAMICS =============================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'CONSTRAINTTYPE',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SET(LL_CNTL,'CONSTRAINTTYPE',1,'FREE')
+      END IF
+      CALL LINKEDLIST$GET(LL_CNTL,'CONSTRAINTTYPE',1,CH32VAL)
+      CALL CELL$SETCH('CONSTRAINTTYPE',CH32VAL)
 !
 !     == MASS IF DYNAMICAL =============================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)

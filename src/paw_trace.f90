@@ -37,9 +37,6 @@ END MODULE TRACE_MODULE
       USE STRINGS_MODULE
       USE TRACE_MODULE
       IMPLICIT NONE
-      CHARACTER(128)    :: TRACEFILE
-      CHARACTER(8)      :: ID
-      INTEGER(4)        :: NFILTRACE
 !     **************************************************************************
       CALL MPE$QUERY('~',NTASKS,THISTASK)
 !

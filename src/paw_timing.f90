@@ -251,7 +251,7 @@ END MODULE TIMING_MODULE
       REAL(8)                      :: WALLCLOCK,WALLCLOCK1
       REAL(8)                      :: USRTIME,USRTIME1
       REAL(8)                      :: SYSTIME,SYSTIME1
-      INTEGER(4)                   :: COUNT,COUNT1
+      INTEGER(4)                   :: COUNT1
       TYPE(CLOCK_TYPE),ALLOCATABLE :: CLOCKARRAY(:,:)
       CHARACTER(32)   ,ALLOCATABLE :: NAMEARRAY(:,:)
       CHARACTER(32)                :: NAMES(NENTRYX)

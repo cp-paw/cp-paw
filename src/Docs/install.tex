@@ -1,484 +1,548 @@
-\documentclass[a4paper,10pt]{article}
+\documentclass[a4paper,10pt]{report}
+%\usepackage[T1]{fontenc} % on some systems T1 looks ugly
+%\usepackage[cyr]{aeguill}
+\usepackage[utf8]{inputenc} 
+\usepackage{ucs} 
+\usepackage{times} 
+\usepackage{graphicx} 
+\usepackage{makeidx}
+\makeindex
+%\usepackage{german}
+\usepackage{color}
+\pagestyle{empty}
+\defä{\"a} \defÄ{\"A} \defü{\"u} \defÜ{\"U} \defö{\"o} \defÖ{\"O} \defß{\ss}
+\addtolength{\topmargin}{-.5in}        % repairing LaTeX's huge margins...
+\addtolength{\textheight}{1in}        % more margin hacking
+\addtolength{\textwidth}{1.5in}
+\addtolength{\oddsidemargin}{-0.75in}
+\addtolength{\evensidemargin}{-0.75in}
+\newcommand{\myspec}[1]{\textbf{\textit{#1}}}
+\newcommand{\mytt}[1]{{\tt #1}}
 
-\usepackage{parskip}
-\usepackage[bf,small]{caption2}
-\usepackage{tocloft}
 
-\setlength{\textwidth}{145mm}
-\setlength{\oddsidemargin}{10mm}
-\setlength{\evensidemargin}{5mm}
-\setlength{\topmargin}{0mm}
-\setlength{\textheight}{220mm}
+% \usepackage[pdftex]{graphicx}
+% \DeclareGraphicsExtensions{.png,.pdf,.jpg,.jpeg}
+% \usepackage[pdftex,
+% bookmarks=true,
+% bookmarksnumbered=true,
+% pdfpagemode=None,
+% pdfstartview=FitH,
+% pdfpagelayout=SinglePage,
+% colorlinks=true,
+% urlcolor=magenta,
+% pdfborder={0 0 0}
+% ]{hyperref}
 
-\newcommand{\PAW}{\textsc{PAW}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%interesting settings for the page layout
+
+%\setlength{\hoffset}{-18pt}
+%\setlength{\oddsidemargin}{0pt}  % left margin, odd pages
+%\setlength{\evensidemargin}{9pt}  % left margin, even pages
+%\setlength{\marginparwidth}{54pt} 
+%\setlength{\textwidth}{481pt}  % set the text width to about 17cm
+%\setlength{\marginparsep}{7pt}
+%\setlength{\topmargin}{0pt}  % no margin on top
+%\setlength{\headheight}{13pt}
+%\setlength{\headsep}{10pt} 
+%\setlength{\footskip}{27pt}
+%\setlength{\textheight}{700pt}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% miscalleneous packages
+
+% \usepackage[frenchb]{babel} % use this if you are French
+% \usepackage{verbatim} % include eg: source code easily
+% \usepackage[utf8]{inputenc} or \usepackage[latin1]{inputenc}
+
+% If you are on Fedora Core you may have problems with accents
+% in this case replace the accentuated characters like this :
+%
+%  é -> \'e
+%  è -> \`e
+%  ê -> \^e and so on
+%
+% To automate the replacement you can make yourself a script
+% here is a handy command-line for doing this :
+% perl -pi -e "s/é/\\\'e/g" main.tex
+
+\usepackage{amsmath}
+% math extension - one probably wants to use symbols like '[' (written as '$[$')
+% or $\epsilon$
+
+% see mymacros.sty - print nice chapter headers
+%\usepackage{mymacros}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% headers and footers for your document
+\usepackage{fancyheadings}
+
+% count the number of pages for display on footer
+\usepackage{lastpage}
+
+% width of the line for headers and footers
+\headrulewidth 0.5pt
+\footrulewidth 0.5pt
+%\addtolength{\headwidth}{\marginparsep}
+
+% uncomment the following lines for headers
+% the following command need picture files : "logo-school.jpg" 
+% and "logo-company.jpg" in the project directory
+%
+%        \lhead{\sl \includegraphics[height=1.1cm]{logo-school}}
+%        \chead{}
+%        \rhead{\sl \includegraphics[height=1.2cm]{logo-company}}
 
 
-\title{\hrulefill \\ {\Large \bf Installation guide for the \\} 
-                  {\Huge \bf PAW-Code} \\ \vspace*{-0.3cm} \hrulefill}
-\author{\small  Clemens F\"orst and Peter E. Bl\"ochl\\ 
-        \small Clausthal University of Technology \\ 
+\usepackage{ucs}
+\usepackage[utf8]{inputenc}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%document headers and footers
+\lhead{}
+\chead{}
+\rhead{}
+\lfoot{TU-Clausthal}
+\cfoot{\thepage/\pageref{LastPage}}
+\rfoot{ \today } % -> \rfoot{\number\month/\number\day/\number\year} 
+\pagestyle{fancyplain}
+
+
+
+\title{{\bfseries\Huge
+\hrulefill\\
+\hrulefill CP-PAW\hrulefill\\
+\hrulefill Installation Guide\hrulefill\\
+\hrulefill\\}
+\hfill\\
+\includegraphics[width=9cm]{Figs/big.eps}
 }
-\date{}
-
-
+\date{\hrulefill\\Peter~E.~Bl\"ochl, Clausthal University of Technology\\(\today)}
 
 \begin{document}
 \maketitle
 \tableofcontents
 
-\section{Initial Remarks}
-This installation guide for the CP-PAW code has been written
-originally by Clemens F\"orst, who also implemented the installation
-procedures used by the current version of CP-PAW. Clemens was also
-reponsible for making the code compatible with a wide range of
-different architectures. After Clemens left us, this installation
-guide has not been updated for a while. Connected with some
-modifications of the installation procedure, we are working on this
-guide again. However the guide is currently badly out of phase.
-Therefore, please consult us directly in case of problems.
+%======================================================
+\chapter{Preface}
+%======================================================
+This installation guide goes back to a version of Clemens F\"orst, who
+was the first to set up a rather comfortable installation procedure.
+After Clemens left our group, I changed the installation procedure. In
+this process I also undid some goodies that Clemens introduced,
+because I was a complete newcomer to configure scripts.
 
-The installation is based on Makefiles and a configure shell-script
-generated by the GNU \texttt{autoconf} tool for the creation of
-automatic configuration scripts~\cite{autoconf,autoconf2}.  This open
-source software is included in Linux distributions, on other
-architectures you might have to download and compile the sources.  The
-scripts generated are independent of \texttt{autoconf} when they are
-run. Users do not need to have \texttt{autoconf} installed!
+After changing the installation in 2007, it was necessary to write a
+new installation guide. The first step was taken by Axel Ehrich. Then
+I took over.
 
-The \textsc{PAW}-Code has been ported to the following architectures 
-\textbf{Editor: This list is not up-to-date.}
+As of now the Guide is still written partly in German. The translation
+is still in progress.
+
+I want to thank everybody, who contributed to the installation
+procedure and this guide.
+
+Peter Bl\"ochl
+
+%======================================================
+\chapter{Installation Guide}
+%======================================================
+%======================================================
+\label{sec:vollstinst}
+%=====================================================
+
+%=====================================================
+\section{Obtain the PAW distribution}
+%=====================================================
+The distribution of the CP-PAW code can be obtained from the CP-PAW
+web page\index{CP-PAW web page}
+\begin{center}
+\mytt{https://orion.pt.tu-clausthal.de/paw}
+\end{center}
+following the link ``Download''. Access to the PAW distribution is
+restricted to users with a valid license. You can apply for a license
+on the same web-page. With a valid password you can obtain the codes
+and the so-called ``SETUP-files''\index{setup file}, which are needed
+to perform PAW calculations.
+
+After you have given you Login name and Password you have reached the
+``CP-PAW Download Page''. Following the link ``Sources'' on that page
+you will find the actual distributions. We will denote it in the
+following as \myspec{paw-distribution}\index{paw-distribution}. You
+should always use the newest version. Even though it is called Beta,
+it is currentlt our most safe version. The reason for naming it Beta
+was to leav the option for a more stringent level.)
+
+The \myspec{paw-distribution} is a gzipped tar file. You can see the
+contents using the command
+\begin{center} 
+\mytt{tar tvfz} \myspec{paw-distribution}\mytt{.tgz}
+\end{center}
+The archive is expanded into the current directory exactly the way it
+is listed here with the command
+\begin{center}
+\mytt{tar xvfz }\myspec{paw-distribution}\mytt{.tgz}
+\end{center}
+The directory created this way, whihc may be named ``paw-beta'' will
+be denoted as \myspec{paw-directory}.
+
+
+On other linux systems it may necessary to change the extension of the
+file from \mytt{.tgz} to \mytt{.tar.gz}. Then one can unzip the file
+with the command
+\begin{center}
+\mytt{gunzip } \myspec{paw-distribution}.tar.gz
+\end{center}
+The unzipped file is expanded with the command.
+\begin{center}
+\mytt{tar xvf } \myspec{paw-distribution}.tar
+\end{center}
+
+The directory \myspec{paw-directory} should look like this:
+\begin{verbatim}
+configure
+configure.ac
+dx
+Makefile_bare.in
+Makefile_targets.in
+parameters
+parms.example
+parms.g95
+README
+src
+\end{verbatim}
+
+%=====================================================
+\subsection{Download the Setup files}
+%=====================================================
+Once the PAW distribution has been obtained, download the so-called
+setup files from the PAW Download page. This Tar file is similarly
+expanded into a directory \myspec{paw-setupdir}. These data files will
+be needed later to execute the CP-PAW code.
+
+%=====================================================
+\section{Installation of Compiler und Libraries}
+%=====================================================
+One needs
+\begin{enumerate}
+\item a Fortran90 compiler, 
+\item a numerical library for linear algebra, which corresponds to
+BLAS\index{BLAS}. Examples are BLAS, ACML, MKL, ESSL.
+\item a numerical library for linear algebra, which corresponds to
+LAPACK\index{LAPACK}. Examples are LAPACK, ACML, MKL, ESSL.
+\item a numerical library for Fast Fourier Transforms (FFT) such as
+FFTW, ACML, MKL, ESSL.
+\item An implementation of the Message Passing Interface
+MPI\index{Mesasage Passing interface}\index{MPI}. Examples are MPICH
+and MVAPICH.\index{MPICH}\index{MPICH}
+\item depending on the, compiler a separate utility library is required.
+\end{enumerate}
+These items shall be installed. The reader should consult section
+\ref{sec:software}, which contains additional information.
+
+%=====================================================
+\section{Adapt the parameter file}
+%=====================================================
+Now the distribution needs to be configured. The configuration
+creates a set of make files, which are adapted to your system and
+which take care of the final installation. More information about
+configuring in general can be found in section
+\ref{sec:configurebackground}.
+
+The configure script\index{configure} needs a parameter file
+``\myspec{parmfile}''\index{parameter file}\index{parmfile}, which
+needs to be adapted. One should start with one of the examples listed
+in the appendix \ref{sec:parmfiles}. The reader should then proceed to
+section~\ref{sec:parmfile}, which contains a detailed description of
+the parameters.
+
+Note, that the format of the parameter file may not yet be final. Please
+consult the current installation file.
+
+%=====================================================
+\section{Konfigurieren}
+%=====================================================
+Once the parameter file has been set up the configuration is done with the command
+\begin{center}
+\verb+./configure --with-parmfile=+\myspec{parmfile}
+\end{center}
+which is executed in the \myspec{paw-directory}. This process will
+create a set of make files and a subdirectory tree 
+\begin{center}
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}
+\end{center}
+within \myspec{paw-directory}.  The name \myspec{arch} should be
+unique and allows to maintain several installations simultaneously.
+
+
+A successful configuration is indicated by a line
+\begin{verbatim}
+----done!---configuration completed successfully!--------------
+\end{verbatim}
+A typical printout of a configuration can be found in
+appendix~\ref{sec:printoutconfigure}.
+
+
+%=====================================================
+\section{Make}
+%=====================================================
+Next, one executes the command
+\begin{center}
+\mytt{make}
+\end{center}
+in the \myspec{paw-directory}. This compiles the sources and prepares
+the executables.
+
+In the beginning it may be wise to do the installation in small steps
+so that Problems are observed early. The following sequence may be sensible
+\begin{verbatim}
+make docs
+make none
+make fast
+make fast_parallel
+make tools
+make 
+\end{verbatim}
+
+The documentation is found in \myspec{paw-directory}\mytt{/doc}.  The
+binaries are, for example,
+\myspec{paw-directory}\mytt{/}\myspec{arch}\mytt{/paw\_fast.x}.
+
+It is possible that optimization creates erroneous results. Therefore
+the results of \mytt{/paw\_fast.x} should be compared once with
+\mytt{/paw\_fast.x}. The latter does not contain optimization flags.
+
+This completes the installation.
+
+
+
+%======================================================
+\chapter{Required software}
+\label{sec:software}
+%======================================================
 \begin{itemize}
-\item IBM: xlf compiler and ESSL library
-\item Intel/x86: g95 compiler
-\item Intel/i386: ifc compiler
-%\item Intel/AMD based hardware using the Absoft \texttt{f90}
-%  compiler~\cite{f90} (there is also a running Version compiled with the
-%texttt{pgf90}, but this still has to be tested).  
-\item Alpha workstations using Compaq's \texttt{fort}, which can be
-  downloaded for free under the \textit{Enthusiast and Education}
-  license~\cite{fort}. (This has not been tested for a long time and
-  may no more be true.)
+\item In section \ref{sec:compiler} we will provide information on the
+installation of a FORTRAN compiler.
+\item In section \ref{sec:libs} we will describe the installation of
+numerical libraries and the Message Passing Interface.
+\item  In section \ref{sec:utility} we will discuss the Utility library.
+\end{itemize}
+
+\noindent In addition to the above one will need
+\begin{itemize}
+\item a GNU C-preprocessor \mytt{cpp}
+\item the GNU make tool. (Under the AIX operating system , the GNU
+Make is named \mytt{gmake}. The default \mytt{make} of AIX will not
+work with our make files.)
+\end{itemize}
+
+%======================================================
+\section{FORTRAN Compiler}
+\label{sec:compiler}
+%======================================================
+PAW is written in FORTRAN90. Later compiler versions such as FORTRAN95
+and probably FORTRAN2003 can be used as well. 
+
+In teh following, we will mention some compilers that we have gained
+experience with.
+ 
+%====================================================
+\subsection{G95}
+\label{sec:g95}
+%====================================================
+\begin{itemize}
+\item License: Open source (GNU Licence)
+\item Source: \textit{http://www.g95.org}
+\item Problems: 
+\begin{itemize}
+\item We found it necessary to link the g2c library with G95. I found
+a statement saying that this is no more required, though.
+\end{itemize}
+\end{itemize}
+
+%====================================================
+\subsection{PGI Fortran Compiler}
+%====================================================
+\begin{itemize}
+\item Suppplier: The Portland Group
+\item Source: \textit{http://www.pgroup.com/}
+\item Lizence: commercial
+\item Problems: non known Problems
+\item Remarks:
+\begin{itemize}
+\item The distribution of the PGI compiler already contains
+precompiled librarues such as LAPACK, ACML, BLAS, MPICH.
+\end{itemize}
+\end{itemize}
+
+%====================================================
+\subsection{IFORT}
+%====================================================
+\begin{itemize}
+\item Supplier: Intel
+\item Source: Register on the page \textit{https://welcome.intel.com/Login.aspx}.
+Then search for  ``Intel Fortran Compiler''.
+\item Problems: 
+\begin{itemize}
+\item using the interprocedural optimization IPO the IFORT can produce
+very large code. This caused the system to exceed the stack size. The
+result was completely unpredictable behavior. If this is a problem
+increase the stack size with \mytt{ulimit -s unlimited}. The stack
+size can be controlled with \mytt{ulimit -a}.
+\end{itemize}
+\item Remarks:
+\begin{itemize}
+\item Very fast.
+\end{itemize}
 \end{itemize}
 
 
-\section{mini-HOWTO}
-
+%====================================================
+\subsection{XLF Compiler}
+%====================================================
 \begin{itemize}
-\item Get the source code (see page~\pageref{sub:pre})
-\item Unpack the distribution: \texttt{tar -xvzf PAW\_YYYYMMDD.tar.gz} (see
-page~\pageref{sub:unpack})
-\item Provide external libraries -- if desired (see pages~\pageref{sub:libs}
-and~\pageref{sec:libs})
-\item Configure your system. This can be done automatically on Linux
-  and AIX architectures (invoke \texttt{./configure --
-    with-parmfile=...}; (see page~\pageref{sub:auto}).  and
-  page~\pageref{sub:parms})
-\item Build the documentation using \texttt{make docs}. (You can skip
-  this step, because it will be done automatically in the next step.
-  However in case of problems, the documentation may already be handy.)
-\item Build the system using \texttt{make small} or by \texttt{all\_new}.
-\item Have fun!
+\item Supplier: IBM
+\item Source: \textit{http://www-306.ibm.com/software/awdtools/fortran/xlfortran/features/xlf-linux.html}
+\item Lizence: commercial
+\item Remark: Only for the Power architecture of IBM
+\item Problems: no known problems
 \end{itemize}
 
-\section{Create a configure file}
-
-The normal user does not need to change the configure file. This
-section is aimed at the developers. The configure script is created
-automatically by the \texttt{autoconf}
-package~\cite{autoconf,autoconf2} with the help of a input file
-\texttt{configure.ac} supplied by the user.
+%====================================================
+\subsection{GFORTRAN}
+%====================================================
 \begin{itemize}
-\item remove the directory autom4te.cache in the PAW main directory, if one exists
-\item create a configure file by executing \texttt{autoconf}.
-  \texttt{autoconf} uses the file \texttt{configure.ac} as inut file.
-  It needs not be specified as such because this is the default input
-  name. 
-\end{itemize}
-
-\section{Going into detail}
-
-\subsubsection*{Prerequisites}
-\label{sub:pre}
-You need 
-\begin{itemize}
-\item a tarball of the CP-PAW distribution. The tar ball can be
-  downloaded from the CP-PAW webpage if you have a valid license. 
-\item a directory with atomic setup files used by the CP-PAW code. You
-  can create them yourself with the atomic code in the distribiution.
-  However the existing files may be good for a start. It is also
-  available from the CP-PAW webpage.
+\item Supplier: Free Software Foundation
+\item Source\textit{http://gcc.gnu.org/fortran/}
+\item Problems: We did not succed to compile PAW with gfortran.
 \end{itemize}
 
 
-Before starting to compile the \PAW\ code you must ensure, that one of the
-supported compilers is installed on your system.
+%====================================================
+\subsection{Absoft Fortran}
+%====================================================
 \begin{itemize}
-\item g95 (Open source) \texttt{http://g95.sourceforge.net/}
-\item \texttt{ifc},\texttt{ifort} (Intel) Available free for Linux
-\item \texttt{xlf90} (IBM)
-\item  \texttt{f90} (Absoft) (currently not supported)
-\item \texttt{fort} (Compaq)(\texttt{f90} on TruUNIX)  (currently not supported)
+\item Supplier: Absoft
+\item http://www.absoft.com/
+\item Problems: We did not succed to compile PAW with gfortran.
 \end{itemize}
 
-In addition you will need 
-\begin{itemize}
-\item the GNU C Preprocessor \texttt{cpp} and 
-\item the GNU \texttt{make} (\texttt{gmake} on IBM! The ``normal''  make will crash when
-interpreting the Makefiles) tool~\cite{make} are installed on your system.
-\end{itemize}
 
-Furthermore you will need the following libraries. They are not
-supplied with the CP-PAW distribution. You will need:
-\begin{itemize}
-\item one of the following fast Fourier transform libraries
-\begin{itemize}
-\item FFTW2 (Open source). FFTW3 is not compatible with FFTWx with x<3. FFTW3 is not yet supported.
-\item ESSL (IBM)
-\end{itemize}
-\item some (Basic Linear Algebra Subprograms) BLAS
-  \texttt{http://www.netlib.org/blas/}. Examples are
-\begin{itemize}
-\item ACML (AMD core math library) for AMD Athlon und Opteron CPUs
-  unter Linux und Windows.\texttt{http://developer.amd.com/acml.jsp}
-\item MKL (Intel Math Kernel Library), for Intel Pentium und Itanium CPUs unter Linux und Windows.
-\item ATLAS (Automatically Tuned Linear Algebra Software) an open
-  source implementation of BLAS
-  \texttt{http://math-atlas.sourceforge.net/}
-\item ESSL (IBM's Engineering and Scientific Subroutine Library), for
-  the PowerPC architecture under AIX and Linux.
-  \texttt{http://publib.boulder.ibm.com/infocenter/clresctr/vxrx/index.jsp?topic=/com.ibm.cluster.essl.doc/esslbooks.html}.
-  ESSL does not have the same calling sequence as BLAS, but special
-  interfaces exist in CP-PAW.
-\end{itemize}
-\item a (Linear Algebra Package) Lapack library.
-  http://www.netlib.org/lapack/. These driver routines for the BLAS
-  libraries are usually contained in the linear algebra packages.
-\item a MPI (Message Passing Interface) library, if you plan to use a
-  parallel computer.
-\begin{itemize}
-\item MPICH
-\item MVAPICH
-\item LAMMPI
-\end{itemize}
-\end{itemize}
+%====================================================
+\section{Utility Library}
+\label{sec:utility}
+%====================================================
+There are a few routines that are not part of teh fortran standard but
+which are supplied by all compilers in similar form as
+library. Sometimes they are treated like instrinsic functions as
+Fortran extensions without the need to link a library.
 
-\subsubsection*{Unpack the Distribution}
-\label{sub:unpack}
-Change into the directory, where the \PAW\ directory shall be located.
-A sort of standard procedure would be to have one directory which
-includes all the \PAW\ distributions, e.g. \texttt{Archive\_PAW} in
-your home directory.  The reason for that is the fact that new
-versions are released on a regular basis. It may be reasonable to keep
-a few older distributions: While we are improving our processes to
-filter out any new bugs, before we place a version on the web-page, it
-may be handy to have a version to compare to if you observe anything
-strange. It is convenient to make a soft link from some common place
-to a particular version in the archive.
+Die Utility Bibliothek is named differently by different supplierst. IBM calls it
+``Service and Utility Library'', Intel calls it ``Portability
+Routines''. Traditional it is called  Utility Library U77, where 77
+is related to the  Fortran77 Standard.
 
-The PAW distribution is named something like \texttt{paw\_beta\_rev625}.
-The name allows us to uniquely identify the version you downloaded. It
-may be sensible to place it under this name into the PAW\_archive.
+Even though the library calls are nearly identical, they differ in the
+kind parameter of the arguments. In order to avoid the corresponding
+problems the CP-PAW code contains interfaces to the utility library
+for the individual compilers. The specific interfaces are selected via
+the C-preprocessor, if the corresponding parameters have been set in
+the paameter file.
 
-As a first step you have to change to your e.g. \texttt{Archive\_PAW} directory
-and unpack the tarball by typing
-\begin{verbatim}
-tar -xvzf paw\_beta\_rev123.tar.gz
-\end{verbatim}
-On non-Linux machines you might have to unzip first by
-\begin{verbatim}
-gunzip paw\_beta\_rev123.tar.gz
-\end{verbatim}
-in order to unpack with
-\begin{verbatim}
-tar -xvf paw\_beta\_rev123.tar
-\end{verbatim}
-Change into the directory created.
-\begin{verbatim}
-cd paw\_beta\_rev123
-\end{verbatim}
-When typing
-\begin{verbatim}
-ls -l
-\end{verbatim}
-you should find the following files and directories.
-\begin{verbatim}
-  -rwxr-xr-x  1 myuid mygroup  99946 23. Mai 16:46 configure
-  -rw-r--r--  1 myuid mygroup  14859 23. Mai 16:46 configure.ac
-  drwxr-xr-x  4 myuid mygroup   4096 19. Apr 09:15 doc
-  drwxr-xr-x  3 myuid mygroup   4096 19. Apr 09:15 dx
-  -rw-r--r--  1 myuid mygroup  21173 23. Mai 16:46 Makefile_bare.in
-  -rw-r--r--  1 myuid mygroup  11633 23. Mai 16:46 Makefile_targets.in
-  drwxr-xr-x  3 myuid mygroup   4096 15. Mai 17:28 oldparmfiles
-  drwxr-xr-x  3 myuid mygroup   4096  3. Mai 19:50 parameters
-  -rw-r--r--  1 myuid mygroup   1845 15. Mai 17:28 parms.example
-  drwxr-xr-x  5 myuid mygroup   4096 21. Mai 19:59 src
-  -rw-r--r--  1 myuid mygroup   1658 26. Mai 19:00 README
-\end{verbatim}
+Consult the user guide of the corresponding compiler to find out if
+If a utility library needs to be linked.
 
-
-
-\subsubsection*{Use External Libraries?}
-\label{sub:libs}
-The next step concerns the libraries.  
-
-
-
-In principle the sequential \PAW-Code
-can be compiled completely standalone, which means, that no external ($\equiv$
-not part of the \PAW-src directory) libraries have to be linked.  By specifying
-\begin{verbatim}
---without-libs
-\end{verbatim}
-as an option to the configure script the code will be compiled standalone.
-This will, however, result in a major loss of performance compared to versions
-using numerical libraries.
-
-On IBM's and Alpha workstations, the numerical libraries \texttt{essl} and
-\texttt{cxml} respectively will be linked automatically if available.  On Intel
-based hardware we use the \mbox{ATLAS} \mbox{BLAS} and the \mbox{FFTW} Fast
-Fourier transforms. Both packages are open source.  Section~\ref{sec:libs}
-contains short installation guides.
-
-On AIX architectures and in the case of manual configuration, it is the task of
-the user to take care of the include files.  Mind that the code looks for
-\texttt{mpif.h} and \texttt{FFTW\_F77.I} (uppercase!) in the object directories
-(e.g. bin/intel/Objects/*) as MPI and FFTW include file respectively.  The
-latter is of course only needed, when FFTW is used as FFT library.
-
-No parallel compilation will be possible unless an MPI(CH) distribution is
-specified or installed in the default path (see section~\ref{sec:libs}).  In
-any case, the script will create a \texttt{Makefile.parallel} to allow expert
-users to make changes -- without those, one will get an error during
-compilation of the parallel binary.  
-
-
-\subsubsection*{Automatical Configuration under Linux and AIX}
-\label{sub:auto}
-Invoking
-\begin{verbatim}
-./configure
-\end{verbatim}
-checks the availability of compiler, GNU \texttt{make} and the C Preprocessor
-\texttt{cpp}.  If one of them is not found, the script will give an error
-message and terminate.  On some machines this might be due to the fact, that
-\texttt{make}/\texttt{gmake} or \texttt{cpp} are not in your path.  In this
-case find out where they are lying (e.g. use '\texttt{locate cpp}' or
-'\texttt{find / -name cpp}') and either add the corresponding paths to your
-\texttt{PATH} shell variable or invoke \texttt{configure} together with
-\begin{verbatim}
---with-cpp=...
-\end{verbatim}
-or
-\begin{verbatim}
---with-make=...
-\end{verbatim}
-where the \ldots\ are replaced by the full path (e.g. \texttt{/lib/cpp} for
-most Linux architectures).  Mind that for some new \texttt{cpp}-versions you
-have to specify
-\begin{verbatim}
---with-cppoptions=-traditional
-\end{verbatim}
-in order to prevent him to terminate multiline character statements.  This
-would cause error messages like this:
-\begin{verbatim}
-          WRITE(NFILO,FMT='(/5X,"NFI",3X,"TIME",1X,"TEMP",3X,"EKINC"   &'
-                                                                       ^
-cf90-314 f90fe: ERROR PRINFO, 
-File = /homer/cfoerst/PAW/bin/intel/Objects/debug/paw_d.f90, 
-Line = 884, Column = 72
-  Unknown edit descriptor "&" has been detected.
-\end{verbatim}
-
-
-Concerning the compiler flags for compilation and linking, defaults are set in
-the \texttt{configure}-script.  Especially on IBM hardware users might want to
-add architecture specific flags. This can be done using
-\begin{verbatim}
---with-cflags=...
---with-lflags=...
---with-llibs=...
-\end{verbatim}
-for compiler and linker flags as well as libraries respectively. The
-\texttt{--with-llibs} option has to be specified like a command line option for
-the compiler (e.g. -lmpi).  When specifying more than one option use double
-quotes, for example
-\begin{verbatim}
---with-cflags="-option1 -option2"
-\end{verbatim}
-Default parameters for the Absoft \texttt{f90} are
-\begin{verbatim}
-CFLAGS="-c -YEXT_NAMES=LCS -YEXT_SFX=_"
-CFLAGS_OPTIMIZED="-c -YEXT_NAMES=LCS -YEXT_SFX=_ -B100 -O"
-LFLAGS=""
-\end{verbatim}
-For Compaq \texttt{fort}:
-\begin{verbatim}
-CFLAGS="-c"
-CFLAGS_OPTIMIZED="-c -O3"
-LFLAGS=""
-\end{verbatim}
-On IBM architectures 
-\begin{verbatim}
-CFLAGS="-qlanglvl=90STD -c -qhalt=e -qextchk"
-CFLAGS_OPTIMIZED="-qlanglvl=90STD -c -qhalt=e -qextchk -O3 -Q+clebsch \
-                  -qfloat=rsqrt:hssngl:rsqrt -qmaxmem=-1 -qarch=auto"
-LFLAGS="-bmaxdata:0x70000000 -bloadmap:loadmap -qextchk"
-\end{verbatim}
-is used as default. Mind that \texttt{-qarch=auto} is set which implies that
-the binaries are compiled for the given architecture. If you want to
-cross-compile for other IBM hardware you will have to change this option (see
-section~\ref{sec:hack}.  The flags specified by the user will be appended to
-the ones listed above.  If you want to eliminate or change one of the default
-options, have a look in section~\ref{sec:hack}.
-
-\subsubsection*{Manual Configuration}
-\label{sub:parms}
-
-If, for some reason, the automatical configuration does not work on your
-hardware -- e.g. you are using TruUNIX for Alphas or you want to override one
-of the default compiler flags, which cannot be done by command line options to
-the \texttt{configure}-script -- the alternative way to configure is via
-parameter files.
-
-After determining the \texttt{make} tool and \texttt{cpp}, the
-\texttt{configure}-script will read in the necessary parameters from the file
-specified. Mind that the script does not check the correctness. The parameters
-are just processed. Check the configuration summary!
-
-A few samples files are included in the distribution (\texttt{parms.*}).  Invoke 
-\begin{verbatim}
-./configure --with-parmfile=YOURPARAMETERFILE
-\end{verbatim}
-to have one read in.  In the sample files every line is commented. Concering
-the format, it is necessary that the variable name starts at the beginning of a
-line, that the arguments are enlosed by double quotes and that there is no
-carriage return in multiline arguments.
-
-
-\subsubsection*{Build the Binaries}
-The \texttt{configure}-script produces a number of Makefiles and a \texttt{bin}
-directory.  As a final step you type
-\begin{verbatim}
-make all_new
-\end{verbatim}
-or -- if necessary -- the full path to your GNU \texttt{make} utility to build
-the whole distribution including the tools for analysis. This includes all
-binaries listed in table~\ref{tab:bins}.
-
-\begin{table}[h]
-\centering
-\begin{tabular}{|c|l|l|l|} \hline
-          & binary       & target & target for first compilation \\ \hline \hline
-          & {\tt paw.x}        & none   & none\_new \\
-          & {\tt paw\_dbg.x}    & debug  & debug\_new \\
-          & {\tt paw\_fast.x}   & fast   & fast\_new \\
-\raisebox{4.5ex}[-4.5ex]{\PAW}  & {\tt ppaw\_fast.x}  & parallel & parallel\_new \\ \hline
-          & {\tt paw\_atom.x}  & atom & \ --  \\
-          & {\tt paw\_tra.x}   & tra  & \ -- \\
-          & {\tt paw\_wave.x}  & wave & \ -- \\
-          & {\tt paw\_grab.x}  & grab & \ -- \\
-          & {\tt paw\_dos.x}  & dos & \ -- \\
-          & {\tt paw\_converttra.x} & converttra & \ -- \\
-          & {\tt paw\_cleantra.x }  & cleantra   & \ -- \\
-          & {\tt paw\_strc.x}       & strc       & \ -- \\
-\raisebox{11.5ex}[-11.5ex]{Tools}  & {\tt paw\_tostrc.x}     & tostrc     & \ -- \\ \hline
-\end{tabular}
-\caption{Binaries and corresponding targets}
-\label{tab:bins}
-\end{table}
-
-Alternatively you can select a specific binary by invoking
-\begin{verbatim}
-make
-\end{verbatim}
-together with the corresponding \emph{target} (see table~\ref{tab:bins}).  If
-you compile a binary for the first time, you will have to use the \emph{target
-for first compilation} as dependencies due to the modules have to be
-resolved. After that and for the Tools it is sufficient to use just the target.
-Other possible targets are \texttt{tools} to compile all tools and of course
-\texttt{all} to recompile all binaries.
-
-To find the binaries change to the \texttt{bin} directory which has been
-created by the \texttt{configure} script.  There you will find at least one
-subdirectory out of \texttt{intel, alpha} and \texttt{ibm}.  This distinction
-is made to be able to use one \PAW\ directory to compile for different
-architectures.
-
-For Linux systems: If you encounter an error like 
-\begin{verbatim}
-/homer/cfoerst/PAW/lib/ATLAS/lib/Linux_ATHLON/libf77blas.a(xerbla.o): 
-In function `xerbla_':
-xerbla.o(.text+0x17): undefined reference to `s_wsfe'
-xerbla.o(.text+0x27): undefined reference to `do_fio'
-xerbla.o(.text+0x3a): undefined reference to `do_fio'
-xerbla.o(.text+0x3f): undefined reference to `e_wsfe'
-xerbla.o(.text+0x4e): undefined reference to `s_stop'
-collect2: ld returned 1 exit status
-\end{verbatim}
-while linking the objects, rerun the configure script with the
-\texttt{--with-llibs=-lg2c} option or add \texttt{-lg2c} to the corresponding
-line of your \texttt{parms.*}-file.
-
-
-
-\section{Using External Libraries}
+%====================================================
+\newpage
+\section{Numerical Libraries}
 \label{sec:libs}
+%====================================================
 
-For a given \PAW\ distribution, the default directory to search for external
-libraries is the \texttt{lib} directory (not \texttt{/lib}!). Is is created by typing
+CP-PAW depends on numerical libraries for the following three
+purposes. Often they are combined in asingle library.
+\begin{itemize}
+\item Basic Linear Algebra Subroutines (BLAS)\index{BLAS}:
+mathematical library for elementary vector-matrix operations such as
+vector and matrix multiplications.
+\item Lineare Algebra PACKage (LAPACK)\index{LAPACK}: more complex
+matrix operations such as eigenvalue solvers.
+\item Fast Fourier Transformation Library (FFT):
+As the name says: Fast Fourier transformations
+\end{itemize}
+These libraries are to a large part responsible for the efficiency of
+the CP-PAW calculations.
+
+F\"ur die Linearen Algebra Routinen gibt es Standardpakete, n\"amlich
+das Linear Algebra PACKage (LAPACK) und die Basic Linear Algebra
+Subprograms (BLAS) . Die Beschreibung der LAPACK-Routinen findet man
+unter 
 \begin{verbatim}
-mkdir lib
+http://www.netlib.org/lapack/ 
 \end{verbatim}
-This does not imply, that everybody is supposed to have the libraries there and
-recompile them for every new distribution.
-
-The usual way would be to install them in some central directory (e.g. the
-previously mentioned \texttt{Archive\_PAW}) and make a link from the
-\texttt{lib} directory to the various root directions of the library
-distributions.  Default are \texttt{ATLAS}, \texttt{fftw-intel} and
-\texttt{fftw-alpha} as well as \texttt{mpich-intel} and \texttt{mpich-alpha} or
-in general \texttt{mpich-\$ARCH}.
-Change to the \texttt{lib} directory and type for example
+und die von BLAS unter
 \begin{verbatim}
-ln -s /home/clemens/lib/mpich-1.2.1 mpich-intel
+http://www.netlib.org/blas/
 \end{verbatim}
-to set a link from the actual directory to \texttt{mpich-intel}.  Once created,
-this link directory can be copied using \texttt{cp -a} into every new
-distribution. The \texttt{-a} option preserves links.
+ Diese stellen sozusagen einen Standard f\"ur entsprechende
+Bibliotheken dar.
+
+Diese Pakete sind zum Teil in speziellen Bibliotheken enthalten.
+\begin{itemize}
+\item IBM Engineering and Scientific Software Library (ESSL)
+\item AMD Core Math Library (ACML)
+\item Intel Math Kernel Library (MKL)
+\end{itemize}
+
+Es ist ratsam, nicht die mit dem Operating System mitgeliefereten
+Bibliotheken zu nutzen, sondern diese m\"oglichst selber auf dem
+Zielsystem zu Kompilieren. Dies erzeugt schnellere Binaries.
+
+Wir legen selbst erzeugte Bibliotheken in einer Directory
+\mytt{/home/tools} auf dem jeweiligen Rechner ab. Dies hat Vorteile
+bei der Installation von Parallelrechnern, bei denen die Bibliotheken
+nur auf dem Frontendrechner vorgehalten werden.
+
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+LAPACK& BLAS & FFT\\
+\hline
+LAPACK & ATLAS & FFTW\\
+ACML & ACML & FFTW\\
+ACML & ACML & ACML\\
+MKL & MKL & FFTW(MKL)\\
+MKL & MKL & FFTW\\
+ESSL & ESSL & ESSL\\
+\hline
+\end{tabular}
+\end{center}
 
 
-Alternatively one could specify the root directories of the library
-distributions by using the following command line options for the
-\texttt{configure} script:
-\begin{verbatim}
---with-mpichdir=...
---with-atlasdir=...
---with-fftwdir=...
-\end{verbatim}
-where \ldots\ are replaced by the the directory (e.g. \texttt{/home/clemens/mpich-1.2.1}).  
 
-Tarballs of the libraries are distributed together with the \PAW-Code or can
-alternatively be found at~\cite{mpich,atlas,fftw}.  Unpack them and proceed as
-stated in the following subsections.  Of course you are free to choose other
-parameters -- this is just the way we do it.
 
-If you want to use precompiled external libraries which are not arranged in the
-initial directory structure of the distribution, you will have to specify the
-directory of the libraries (\texttt{lib*.a}) in the parameter file.
-
-\subsection{ATLAS}
-
-This subsection just holds information to compile the ATLAS library on Intel
-compatible hardware, because on all other architectures optimized BLAS
-libraries are present and linked automatically by the configure script.
-
+%====================================================
+\subsection{ATLAS-BLAS}
+%====================================================
+\begin{itemize}
+\item Supplier: Open Source
+\item Name: ATLAS=Automatically Tuned Linear Algebra Software
+\item License: Open Source
+\item Source \textit{http://math-atlas.sourceforge.net/}
+\item Funktions: BLAS
+\item Installation:
+\begin{itemize}
+\item 
 After unpacking the ATLAS distribution type make and follow the
-instructions. Always use the default value ([y] or [n] by just typing ENTER) until you arrive at
+instructions. Always use the default value ([y] or [n] by just typing
+ENTER) until you arrive at
 \begin{verbatim}
 use express setup? [y]:
 \end{verbatim}
-Enter \texttt{no} and proceed taking the defaults if you like so.  
-Use \texttt{f90} as  \textsc{Fortran77} compiler (just needed to compile the wrappers). As \texttt{F77 FLAGS} use
+Enter \texttt{no} and proceed taking the defaults if you like so.  Use
+\texttt{f90} as \textsc{Fortran77} compiler (just needed to compile
+the wrappers). As \texttt{F77 FLAGS} use
 \begin{verbatim}
 -YEXT_NAMES=LCS -YEXT_SFX=_ -O
 \end{verbatim}
@@ -494,123 +558,937 @@ If you have compiled an ATLAS BLAS for different architectures (e.g. Pentium
 and ATHLON), the corresponding libraries will be in different subdirectories of
 the ATLAS distribution. You find these subdirectories in \texttt{ATLAS/lib}.
 If there is just one, the configure script will chose it
-automatically. Otherwise it will take the first in the list unless you specify
-\begin{verbatim}
---with-atlasarch=...
-\end{verbatim}
-where the \ldots\ are replaced by the name of the subdirectory (e.g. \texttt{Linux\_ATHLON}).
+automatically. 
+\end{itemize}
+\end{itemize}
 
+%====================================================
+\subsection{LAPACK}
+%====================================================
+\begin{itemize}
+\item Name: LAPACK=Linear Algebra PACKage
+\item Source: http://www.netlib.org/lapack/
+\item Funktions: LAPACK
+\item Reamrk: This library is not recommended. It si better to use the libraries specifically tuned to your hardware.
+\item Installation:
+\begin{enumerate}
+\item Download \textit{lapack-lite-3.1.1.tgz} von
+http://www.netlib.org/lapack/index.html
+\item gunzip and untar the file
+\item Copy and edit the file LAPACK/make.inc.example to LAPACK/make.inc.
+\item Edit the file LAPACK/Makefile (see
+http://www.netlib.org/lapack/lawn81/node13.html)
+\item type make
+\end{enumerate}
+\end{itemize}
 
+%====================================================
 \subsection{FFTW}
-
-\begin{description}
-\item[Absoft \texttt{f90}:] As a first step you have to set the shell variable
-\texttt{CPPFLAGS}. Depending on the shell you are using, this is done by
-{\footnotesize
+\label{sec:FFTWinstall}
+%====================================================
+\begin{itemize}
+\item Supplier: Massachusetts Institute of Technology (MIT)
+\item Name: FFTW=Fastest Fourier Transform in the West
+\item Source: \mytt{http://www.fftw.org/download.html}
+\item Reamrk
+\begin{itemize}
+\item The versions FFTW2 und FFTW3 are not compatible. Currently we only support FFTW2.
+\end{itemize}
+\item Installation:
+\begin{enumerate}
+\item download FFTW 2.1.5 from \mytt{http://www.fftw.org/download.html}.
+\item Archiv mit \mytt{tar -xvzf Dateiname} entpacken
+ \item Den Befehl \mytt{./configure --enable-i386-hacks} ausf\"uhren.
+ The option \mytt{--enable-i386-hacks} takes advantage if rge gcc/x86
+ specific performance hacks. (Beim core2duo muss die Option
+ \mytt{--enable-i386-hacks} weggelassen werden!)
+\item Folgende Zeile in der \textit{fftw/config.h} ändern (am Ende der Datei):\\
 \begin{verbatim}
-setenv CPPFLAGS "-DFFTW_FORTRANIZE_LOWERCASE -DFFTW_FORTRANIZE_EXTRA_UNDERSCORE"
+ \#define F77_FUNC_(name,NAME) name ## __
 \end{verbatim}
-}
-or
-{\footnotesize
+ dort den letzten Unterstrich entfernen, so dass daraus die folgende Zeile wird:
 \begin{verbatim}
-export CPPFLAGS="-DFFTW_FORTRANIZE_LOWERCASE -DFFTW_FORTRANIZE_EXTRA_UNDERSCORE"
+  \#define F77_FUNC_(name,NAME) name ## _ 
 \end{verbatim}
-}
-Then invoke
-\begin{verbatim}
-./configure --enable-i386-hacks
-\end{verbatim}
-to take advantage of the \texttt{gcc}/x86 specific performance hacks. A
-\texttt{make} afterwards builds the distribution.
+ \item  Den Befehl \textit{make} ausführen
+\end{enumerate}
+\end{itemize}
 
 
-\end{description}
+%====================================================
+\subsection{ACML}
+\label{sec:acml}
+%====================================================
+\begin{itemize}
+\item Name: ACML=AMD Core Math Library
+\item Supplier: AMD
+\item Source: \mytt{http://developer.amd.com/acml.jsp}
+\item Contains: FFT, LAPACK, BLAS
+\item Installation: Untar the archive after downaloading and follow
+the installation instructions.
+\end{itemize}
 
+
+
+%====================================================
+\subsection{MKL}
+%====================================================
+\begin{itemize}
+\item Supplier: Intel
+\item Name: MKL=Math Kernel Library\index{MKL}
+\item Source: \mytt{http://www.intel.com/cd/software/products/asmo-na/eng/307757.htm}
+\item Installation:
+\begin{enumerate}
+\item Register at \mytt{https://welcome.intel.com/Login.aspx}
+\item http://www.intel.com/cd/software/products/asmo-na/eng/307757.htm
+\end{enumerate}
+\item When using the MKL, the library ``pthread'' must be linked. (See
+also appendix~\ref{sec:problempthread})
+\end{itemize}
+
+
+%====================================================
+\subsubsection{FFTW der MKL}
+%====================================================
+Die MKL enth\"alt ein Interface f\"ur FFTW Aufrufe, und stellt damit
+auch die Routinen f\"ur Fouriertransformationen zu Verf\"ugung.
+
+Um die FFTW von der MKL nutzen zu können, muss man in das
+Unterverzeichnis \textit{interfaces/fftw2xf} der MKL wechseln und dort
+das Kommando \textit{make} ausführen. Benötigt wird dafür der Intel
+Fortran Compiler und der Intel C Compiler.  Es wird dann die
+Bibliothek \textit{libfftw2xf\_intel.a} im entsprechenden
+\textit{mkl-libs} Verzeichnis erzeugt, welche in PAW eingebunden
+werden kann, indem man die fftw Pfade im Parameterfile anpasst.
+Desweiteren muss unter den Punkten \textit{LIBS\_SCALAR }und
+\textit{LIBS\_PARALLEL} der Wert \textit{fftw} durch
+\textit{fftw2xf\_intel }ersetzt werden.
+
+
+%====================================================
+\subsection{ESSL}
+%====================================================
+\begin{itemize}
+\item Supplier: IBM
+\item Source: \mytt{http://www-03.ibm.com/systems/p/software/essl/index.html}
+\item Anmerkung: 
+\begin{itemize}
+\item Nur f\"ur IBM Hardware. Nur f\"ur AIX operating
+system oder Linux f\"ur Power achitekture.
+\item ESSL verwendet nicht dieselben Calling sequences wie LAPACK und
+BLAS. PAW besitzt aber spezielle Interfaces f\"ur ESSL.
+\end{itemize}
+\item Covers: FFT, LAPACK, BLAS
+\end{itemize}
+
+%====================================================
+\newpage
+\section{Message Passing Interface}
+%====================================================
+Das MPI (Message Passing Interface) ist ein Protokoll, um ein
+verteiltes (paralleles) Rechnen zu ermöglichen.  Das MPI muss so
+compiliert sein, das seine Funktiosaufrufe mit einem Underscore
+funktionieren!
+
+Die meisten Hardware Hersteller bieten eigene MPI Implementierungen
+an. Es gibt aber auch freie MPI implementierungen wie MPICH und Open
+MPI\textit{http://www.open-mpi.org/}. Unsere Erfahrungen beschr\"anken
+sich auf MPICH bzw MVAPICH, sowie die MPI von IBM.
+
+%====================================================
 \subsection{MPICH}
+\label{sec:mpich}
+%====================================================
+MPICH ist eine freie Implementierung des MPI für Ethernet.
 
-\begin{description}
-%%%%%%%%%%%%%%%%%%%%%%%
-\item[Absoft \texttt{f90}:] Change into the root directory of the distribution and type
+\begin{itemize}
+\item Hersteller: Argonne National Laboratory and Missisippi State University
+\item Source http://www-unix.mcs.anl.gov/mpi/mpich1/
+\item Anmerkungen:
+\begin{itemize}
+\item Inzwischen existitert eine neue Implementierung MPICH2, die
+heute empfohlen wird. Sie unterst\"utzt Cluster aus Single und SMP Knoten.
+MPICH2 kann unter
+\textit{http://www-unix.mcs.anl.gov/mpi/mpich2/index.htm}
+heruntergeladen werden.
+\end{itemize}
+\item Installation:
+\begin{enumerate}
+\item Download der neuesten version unter
+\begin{center}
+\textit{http://www-unix.mcs.anl.gov/mpi/mpich1/}
+\end{center}
+\item Nach dem Entpacken kann man mit folgendem Script MPI für PAW compilieren:
 \begin{verbatim}
-./configure -opt= -f90="f90 -YEXT_NAMES=LCS -YEXT_SFX=_" 
-                  -f77="f77 -f -N15" -rsh=/usr/bin/rsh 
+#!/bin/sh
+export F90=g95
+export F90FLAGS=-fno-second-underscore
+export FC=g95
+export FFLAGS=-fno-second-underscore
+export FLINKER=g95
+export RSHCOMMAND=ssh
+./configure --enable-f77
 \end{verbatim}
-in one line, if \texttt{/usr/bin/rsh} is the path to your remote shell binary.
-On the Linux machines (SuSE) here in Clausthal the script does not find
-\texttt{rsh} otherwise.  After the script has finished, type
+F\"ur Pathscale
 \begin{verbatim}
-make
+#!/bin/sh
+export CC=pathcc
+export FC=pathf90 
+export F90=pathf90 
+export F90FLAGS=-fno-second-underscore 
+export FFLAGS=-fno-second-underscore
+export FLINKER=pathf90
+export RSHCOMMAND=ssh
+./configure -c++=pathcc -opt=-O3 --enable-f90 --enable-f90modules \
+            --with-romio --disable-weak-symbols 
 \end{verbatim}
- With some tarballs of the \texttt{mpich-1.2.1} distribution, there might be an
-error after a short time: {\footnotesize
+
+
+
+\item \textit{make} ausf\"uhren
+\end{enumerate}
+\end{itemize}
+
+%====================================================
+\subsection{MVAPICH}
+\label{sec:mvapich}
+%====================================================
+Freie MPI Implementierung für ein Infiniband Netzwerk. Sie basiert auf MPICH.
+\begin{itemize}
+\item Hersteller: Ohio State University
+\item Source \textit{http://mvapich.cse.ohio-state.edu/}
+\end{itemize}
+
+
+%====================================================
+\chapter{The Parameter File}
+\label{sec:parmfile}
+%====================================================
+
+The parameter file is needed for the configuration of the compilation
+process of CP-PAW. The parameter file selects the compiler, its
+options, the numerical libraries, etc. 
+
+An example is given in the following
+section~\ref{sec:parms.example} and discussed later.
+
+%============================================================================
+\section{Example for a Parameter File}
+\label{sec:parms.example}
+%============================================================================
 \begin{verbatim}
-make[4]: execvp: /fiji/clemens/paw_00000000/lib/mpich-1.2.1/bin/mpicc: Keine Berechtigung 
-make[4]: *** [close.o] Error 127 
-Make failed in directory mpi-io
-make[3]: *** [mpiolib] Error 1 
-make[2]: *** [mpio] Error 2 
-make[1]: *** [mpi-modules] Error 2 
-make: *** [mpi] Error 2
+################################################################################
+##_______________________architecture (arbitrary name)________________________##
+ARCH="g95_guam"
+##______________________flag for uppercase or lower case module file names____##
+TUPPERCASEMOD="F"
+##______________________flag for parallelization______________________________##
+TPARALLEL="T"
+##_______special rules for the configure script and f90 preprocessor__________##
+SPECIAL="none"
+##__________________DIRECTORIES containing LIBRARIES__________________________##
+BLASDIR=""
+LAPACKDIR="/home/tools/libs/acml3.0.0_64/gnu64/lib/"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/home/tools/libs/mpich-1.2.6/"
+##________________________ include file for fftw______________________________##
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+##_________________________________ include file for mpi "mpif.f90"___________##
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+##_______F90 compiler and linker for scalar executables_______________________##
+COMPILER_SCALAR="g95 -fno-second-underscore "
+##_______F90 compiler and linker for parallel executables_____________________##
+COMPILER_PARALLEL="g95 -fno-second-underscore "
+##__________________standard compiler flags___________________________________##
+FCFLAGS_NONE="-c "
+#_______________________compiler flags for optimization_______________________##
+FCFLAGS_OPT="-c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2"
+##_______________________compiler flags for  profiling________________________##
+FCFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
+#_______________________compiler flags for debugging__________________________##
+FCFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
+#_______________________flags for linking_____________________________________##
+LDFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR}  \
+                 -L${FFTDIR}/fftw/.libs/"
+#_______________________flags for linking_____________________________________##
+LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                  -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/mpe/lib"
+#________________________external libraries (sequential)______________________##
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c"
+#___________________external libraries (parallel)_____________________________## 
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c -Wl,-dy -lmpe \
+               -Wl,-dy -llmpe"
+#________________________preprocessor variables_______________________________## 
+CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW \
+          -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLAS_BLAS"
+#________________________file extension_______________________________________## 
+FEXT="f90"
+################################################################################
 \end{verbatim}
-}
-Just type
+%$
+
+%============================================================================
+\section{Explanation of the Variables in the  Parameter File}
+%============================================================================
+\subsection{\mytt{ARCH}}
+%
+The value is a directory name, which will be created as
+\begin{center}
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}
+\end{center}
+This directory will contain all executables. It will also contain
+subdirectories with the object files, module files,etc.
+
+\subsection{\mytt{TUPPERCASEMOD}}
+
+Different compilers name the module files either with uppercase
+letters or lowercase letters. By specifying \mytt{TUPPERCASEMOD='T'}
+for uppercase letters or \mytt{TUPPERCASEMOD='F'} for lowercase
+letters the make files are able to detect the correct dependencies.
+An incorrect setting will result in unnecessary compilation of files
+that are unaffected by a certain change of the source code.
+
+To find out about the proper setting, compile first with an arbitrary value.
+Then inspect the module files created with the command
+\begin{center}
+\mytt{ls} \myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/fast/*.mod}
+\end{center}
+and adapt the parameter file correspondingly.
+
+\subsection{\mytt{TPARALELL}}
+%
+This logical variable specifies if an executable for parallel computers shall
+be built.  A requirement is a corresponding MPI library.  Specify
+\mytt{TPARALELL='F'} to create only sequential libraries.
+
+\subsection{\mytt{SPECIAL}}
+%
+Leave the setting \mytt{SPECIAL=' '}. It is a flag for special rules
+in the make files.
+
+\subsection{\mytt{BLASDIR},\mytt{LAPACKDIR},\mytt{FFTDIR},\mytt{MPIDIR}}
+
+This set of variables specifies the path for the various
+libraries. These variables can be used within the parameter file. They
+are not used themselfes by the make files.
+
+The reason for this construction is that configure does not recognize
+intermediate variables in the parameter file. The variables defined
+here will be specified in the make files, so that their values can be used.
+
+%========================================================
+\subsection{\mytt{FFT\_HEADER}}
+%========================================================
+Path to the include file \mytt{fftw\_f77.i} for the FFTW library.
+This file contains constants , that need passed to the FFTW routines.
+
+If FFTW2 is used as described in section~\ref{sec:FFTWinstall}, no change is needed.
+
+%================================================================================
+\subsection{\mytt{MPI\_HEADER}}
+%================================================================================
+Path to the include file \mytt{mpif.h} for MPI. This file must be
+supplied by the MPI Distribution. No change is required if MPICH is
+used.
+
+\textcolor{red}{ Was ist wenn das file nicht existiert, aber auch
+nicht ben\"otigt wird?}
+
+Newer versions such as MPICH-2 offer a module file, which is more
+consistent with the Fortran90 standard. This file includes explicit
+interfaces for the Fortran calls to MPI. Unfortunately, only a small
+subset of the interfaces require by CP-PAW are supported. This is the
+reason to use the more conventional method of an include file to set
+the MPI-specific parameters.
+
+%================================================================================
+\subsection{\mytt{COMPILER}}
+%================================================================================
+
+This variable specifies the command to call the compiler for the
+sequential and the parallel executables.
+
+Compiler options that are used generally can be integrated here with
+the compiler as in the present example: The G95 compiler used in this
+example requires the option \textit{-fno-second-underscore} in order
+to link the libraries properly.
+
+%================================================================================
+\subsection{\mytt{FCFLAGS\_NONE}, \mytt{FCFLAGS\_OPT}, 
+\mytt{FCFLAGS\_DBG}, \mytt{FCFLAGS\_PROF}}
+%================================================================================
+
+Here the compiler options are specified. Different sets of compiler
+options are used to create different executables.
+\begin{itemize}
+\item FCFLAGS\_NONE: The most simple set of compiler options. The
+executables are to explore the dependency on the compiler options. In
+particular to test the results of a highly optimized version.  
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+sequential executable &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/paw.x}\\
+ parallel executable: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/ppaw.x}\\
+sequential object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/none}\\
+parallel object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/none\_parallel}\\
+\hline
+\end{tabular}
+\end{center}
+\item FCFLAGS\_OPT: This set of compiler options should be the highest
+level of optimization.  The resulting exectubles shall be the ones to
+be used during normal production.  
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+sequential executable &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/paw\_fast.x}\\
+ parallel executable: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/ppaw\_fast.x}\\
+sequential object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/fast}\\
+parallel object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/fast\_parallel}\\
+\hline
+\end{tabular}
+\end{center}
+\item FCFLAGS\_DBG: The is teh set of compiler option for
+debugging. Besides the parameter -g it should include all reasonable tests
+such as array-bound checking. No optimization shall be selected.
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+sequential executable &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/paw\_dbg.x}\\
+ parallel executable: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/ppaw\_dbg.x}\\
+sequential object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/dbg}\\
+parallel object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/dbg\_parallel}\\
+\hline
+\end{tabular}
+\end{center}
+\item FCFLAGS\_PROF: This is the set of compiler options for profiling.
+The parameters should include the parameter ``-pg'' and all optimizations.
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+sequential executable &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/paw\_prof.x}\\
+ parallel executable: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/ppaw\_prof.x}\\
+sequential object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/prof}\\
+parallel object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/prof\_parallel}\\
+\hline
+\end{tabular}
+\end{center}
+\end{itemize}
+The compiler options depend on the compiler. Some, use fro
+optimizations, also depend on the computer architecture and the CPU.
+
+%================================================================================
+\subsection{\mytt{LDFLAGS\_SCALAR},\mytt{LDFLAGS\_PARALLEL}}
+%================================================================================
+\mytt{LDFLAGS\_PARALLEL} is used only, if \mytt{TPARALLEL=''T''}.
+
+These are the parameter sets for the loader. In particular one
+specifies the search paths for the libraries. The libraries may differ
+for the sequential and the parallel executable.
+
+%================================================================================
+\subsection{\mytt{LIBS\_SCALAR},\mytt{LIBS\_PARALLEL}}
+%================================================================================
+\mytt{LIBS\_PARALLEL} is used only, if \mytt{TPARALLEL=''T''}.
+
+This variable specifies the libraries that should be linked.
+
+With \mytt{-Wl,-dn} and \mytt{-Wl-dy} one specifies whether the
+libraries are linked statically or dynamically.  A statically linked
+library -lfoo points to libfoo.a A dynamically linked library -lfoo
+points to libfoo.so The default should be to link dynamically. However
+some libraries cannot be linked dynamically. If the executable is to
+be osed on a different computer, static linking is mandatory.
+
+The library g2c is needed by the G95 compiler. The library is
+contained foer SUSE Linux in the package \textit{compat-g77}.
+
+The MKL library also requires the libraries ``\mytt{libguide}'' and
+``\mytt{libpthread}''. pthread is a native linux library used by
+libguide. libguide provides multithreading support within MKL. It is
+important that pthread is specified as last item in the link line.
 \begin{verbatim}
-chmod +x bin/*
+-lmkl_lapack -lmkl_em64t -lguide -lpthread
 \end{verbatim}
-to make the files in the \texttt{bin} directory executable and rerun \texttt{make}.
-%%%%%%%%%%%%%%%%%%%%
-\item[Compaq \texttt{fort}:] Make sure, that there is a link from
-\texttt{fort77} to \texttt{fort} as the \texttt{configure}-script of MPICH just
-searches for \texttt{fort77}.  I've reported this bug - maybe it will be
-corrected in the next release.  On the Linux-Alpha machines here in Clausthal
-this link had to be made by hand.
+
+When linking the atlas blas library, one does need to specify
+\mytt{-lf77blas -latlas}. ATLAS is a C-library and f77blas is a
+Fortran interface to the C-subroutines. 
+
+
+%================================================================================
+\subsection{\mytt{CPPFLAGS}}
+%================================================================================
+
+Flags for the C-preprozessor. Using these flags, the C-preprozessor
+selects certain code segments. They are mostly used to select the
+interfaced to external libraries.  The interfaces are located in
+\myspec{PAW-directory}\mytt{/src/paw\_library.f90}.
+
+\begin{itemize}
+\item The variable \mytt{-DCPPVAR\_COMPILER\_}\textit{foo} selects the
+interface to the Utility library. The Utility library contains Fortran
+interfaces to system routines, which are written in C and which are
+part of the operating system Allowed values are
+\begin{itemize}
+\item \verb+CPPVAR_COMPILER_G95+
+\item \verb+CPPVAR_COMPILER_IFC+
+\item \verb+CPPVAR_COMPILER_IFC7+
+\item \verb+CPPVAR_COMPILER_ABSOFT+
+\item \verb+CPPVAR_COMPILER_XLF+
+\item \verb+CPPVAR_COMPILER_PGI+
+\item \verb+CPPVAR_COMPILER_PATHSCALE+
+\end{itemize}
+\item The variable \verb+CPPVAR_FFT_foo+ selects the interfaces to the
+Fourier transform library. Allowed values are:
+\begin{itemize}
+\item \verb+CPPVAR_FFT_FFTW+
+\item \verb+CPPVAR_FFT_ESSL+
+\item \verb+CPPVAR_FFT_ACML+
+\end{itemize}
+\item The variable \verb+CPPVAR_LAPACK_foo+ selects the interfaces to
+the LAPACK routines or equivalent library routines.
+
+Allowed values for \verb+CPPVAR_LAPACK_foo+ are:
+\begin{itemize}
+\item \verb+CPPVAR_LAPACK_ESSL+
+\item \verb+CPPVAR_LAPACK_LAPACK+: Default behavior. The LAPACK interfaces are used.
+\end{itemize}
+\item The variable \verb+CPPVAR_BLAS_foo+ selects the interfaces to
+BLAS routines or equivalenter library routines. 
+
+Allowed values for \verb+CPPVAR_BLAS_foo+ are:
+\begin{itemize}
+\item \verb+CPPVAR_BLAS_ESSL+
+\item \verb+CPPVAR_BLAS_BLAS+: Default behavior. The BLAS interfaces are used.
+\end{itemize}
+\end{itemize}
+
+%================================================================================
+\subsection{\mytt{FEXT}}
+%================================================================================
+Extension expected by the compiler for the source code files. It is
+usually ``f90'' or ``f95''.
+
+
+%================================================================================
+\chapter{Liste der Targets des Make files}
+%================================================================================
+
+Das Makefile erkennt die folgenden Targets:
+\begin{itemize}
+\item {none} Erzeugt ein sequentielles Binary ohne Optimierungen.
+Hiermit sollte beim erstmalligen installieren angefangen werden.
+\item {dbg}
+\item {fast} Mit dem Kommando \textit{make fast} werden im Verzeichnis\textit{
+bin/\$arch} die Objekte und die Programmdateien für ein sequentielles
+Binary erzeugt.
+
+\item {prof}
+\item {none\_parallel}
+\item {dbg\_parallel}
+\item {fast\_parallel}
+\item {prof\_parallel}
+\item  {clean}
+\item {clean\_none}
+\item {clean\_dbg}
+\item {clean\_fast}
+\item {clean\_prof}
+\item {tools}
+\item {docs}
+\end{itemize}
+
+
+
+%================================================================================
+\chapter{Problems und other Remarks}
+%================================================================================
+%================================================================================
+\section{Stack-size exceeded}
+%================================================================================
+Unpredictable behavior can occur if the
+stack-size is exceeded. In the bash shell the stack size can be
+increased using the command
 \begin{verbatim}
-ln -s binary linkname
+ulimit -s unlimited
 \end{verbatim}
-If you are not root on the machine, a possibility would be to put the link into
- your \texttt{$\tilde{}$/bin}-directory and add it to the \texttt{PATH} shell variable.  
+ This is apparently a problem of the operating system. It can be
+caused by certain optimizations such as inlining. The latter increases
+the code size.
 
-Another way of fixing the problem is searching \texttt{fort77} in the MPICH
-\texttt{configure}-script and change it to \texttt{fort}.  Watch the output of
-the script to check whether the compiler has been found.
+%================================================================================
+\section{No core dump}
+%================================================================================
+If the code crashes without creating a core dump,
+the limit for the core file size must be increased using the command
+\begin{verbatim}
+ulimit -c unlimited
+\end{verbatim}
 
-For the rest, typing \texttt{./configure} and \texttt{make} works out.
+%================================================================================
+\section{Second underscore}
+%================================================================================
+The compiler translates Fortran names such as subroutine names or
+variable names into internal symbols. Typically the compiler appends a
+single underscore to each name, in order to distinguish them from
+other names. However, some compilers deviate from this standard, if
+the fortran name already contains one underscore. In the latter case
+two underscores are attached instead of one. This is the so-called
+``second-underscore'' convention.
+\begin{center}
+``G95 follows the f2c convention of adding an underscore to public
+names, or two underscores if the name contains an underscore.'' Diese
+Konvention kann \"ublicherweise durch Compilerflags ge\"andert werden.
+\end{center}
 
-\end{description}
+In the following table we denote the ``second-underscore'' as ``su''
+and the ``no-second-underscore'' as ``nsu''.
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+Fortran Name & Symbol su & Symbol nsu\\
+\hline
+\verb+abc+ & \verb+abc_+ &\verb+abc_+\\
+\verb+a_b_c+ & \verb+a_b_c__+& \verb+a_b_c_+\\
+\verb+abc_+ & \verb+abc___+& \verb+abc__+ \\
+\verb+a_b_c_+ & \verb+a_b_c___+& \verb+a_b_c__+\\
+\hline
+\end{tabular}
+\end{center}
+
+Apparently there are problems if one links a library, that has been
+created with a different underscoring convention than the rest of the
+code.
+
+Many external libraries are written in C and have a fortran wrapper.
+It is important that this wrapper has been compiled with thes same
+underscoring convention.
+
+In order to explore the symbols that have been created and to check if
+they are matching, one can inspect the symbol tables using the
+command, as described in section~\ref{sec:nm}.
+
+%====================================================
+\section{Symbol tables of object files and libraries}
+\label{sec:nm}
+%====================================================
+In order to explore which library routines are called by an object
+file and which are available in a library one can inspect the symbol
+tables.
+
+The commmand
+\begin{verbatim}
+nm foo.o
+\end{verbatim}
+ prints the symbol table of the object file foo.o.
+Similarly one can inspect a library with 
+\begin{verbatim}
+nm foo.a
+\end{verbatim}
 
 
 
 
+%====================================================
+\section{Runtime error in viacheck.c, \mytt{code=VAPI\_RETRY\_EXC\_ERR}}
+%====================================================
+The routine viacheck.c is part of MVAPICH, the MPI implementation for
+Infiniband networks. The error means that the Infiniband Reliable
+Connection retry Coundf was exceeded. This may occur if there is a bad
+cable or port on the hardware. It may also occur if the code undergoes
+a segmentation fault, so that the job is not stopped on all nodes. On
+those nodes the job fails, because it does not receive the required
+response.
 
-\section{Making your own changes to the installation scripts}
-\label{sec:hack}
+%====================================================
+\section{Missing library pthread}
+\label{sec:problempthread}
+%====================================================
+\mytt{libpthread} is a system library required by the MKL library.
 
-\subsection{Why this effort}
+Under the SUSE-Linux we had problems with the pthread library.  The
+static SUSE pthread library\\ (\mytt{/usr/lib/libpthread.a}) is
+buggy. The problem is usually solved by linking the pthread library
+dynamically, that is with ``\mytt{-Wl,-dy -lpthread}''.  Another
+workaround has been to use the pthread library from Debian or Redhat.
+This library is copied to, for example,
+\mytt{/usr/lib/libpthread-debian.a}, and then linked using
+\mytt{-lpthread-debian} instead of \mytt{-lpthread}.
 
-The new installation scheme shall help the user to compile the \PAW-Code
-without having to find out about a lot of parameters himself.  Basically there
-are the compiler flags and the preprocessor variables as well as the various
-directories.  
 
-Concerning the first two one might want to have a look at the
-\texttt{src/paw\_library.f} file.  It is the interface for library calls of the
-code.  Depending on the architecture and the libraries installed, different
-routines have to be called.  This behavior is controlled by preprocessor
-variables.  Another example would be the file \texttt{src/paw\_mpelib.f} where
-a distinction between sequential and parallel compilation is made.  The
-libraries to be linked must of course be the same as the one chosen by the
-preprocessor.
+%====================================================
+\section{Missing library g2c}
+\label{sec:problemg2c}
+%====================================================
+If the linker complains about ``undefined references'' in
+``\mytt{xerbla.o}'' it is a sign that the g2c library is missing or
+not linked properly.
 
-The following subsections are just intended to give a short introduction,
-please stick to the documentation in the files for further information.
+``\mytt{g2c}'' is the GNU Fortran-to-C converter, which is the basis
+of the G77 compiler. In older times, this converter was called
+``\mytt{f2c}'' (libf2c). The library ``\mytt{g2c} is usually part of
+``\mytt{g77}'' or the ``\mytt{gfortran}'' package.
 
-\subsection{The \texttt{configure.in}-script}
 
-The innermost part of the new scheme is the \texttt{configure.in} file.  It is
-written in the macro language of the GNU \texttt{autoconf}
-tool~\cite{autoconf,autoconf2}.  I have tried to put a lot of comments into
-this file, so I expect it to be readable.
+I found the following remark on the WWW.
+
+``Library g2c is the Fortran 77 shared library needed to run Fortran 77
+dynamically linked programs. The library is no longer needed with the
+new family of Fortran (native) compilers like g95.  To correct the
+error, we searched first of all for the shared version of g2c in
+/usr/lib*:''
+
+
+%================================================================================
+\section{MPI: rsh versus ssh}
+%================================================================================
+The parallelization requires a method to communicate between different
+machines.  Two possibilities exist, namely via rsh and ssh. rsh is a
+bit faster and ssh is a lot safer. Therefore the use of ssh is
+strongly recommended.
+
+%================================================================================
+\section{Dynamic versus static linking}
+%================================================================================
+Libraries can be linked dynamically or statically. A statically linked
+library is completely integrated with the binary. If the binary is to
+be used on another computer, it is important to link the libraries statically.
+
+The code size is smaller when the libraries are linked dynamically,
+that is during runtime. In that case only an interface to a shared
+library is integrated into the binary. If one copiesthe executable to
+another machine, it is important that the shared libraries are
+available and identical to those on the original machine.
+
+The preferred mode is dynamic linking.
+
+It is possible to convert a static library into a dynamic library. Use teh command
+\begin{verbatim}
+ls -z allextract *.a *.so
+\end{verbatim}
+
+
+
+%================================================================================
+\section{Multiple definition of \ldots}
+%================================================================================
+\begin{itemize}
+\item (To \mytt{paw\_...} This problem should be absent in the current implementation.
+The possible cause is that paw routines are linked twice, once
+directly and once as part of the paw librart libpaw.a. This may happen
+when linking the PAW tools.
+\item Do not link both, blas and mkl (or blas and acml). Both contain the BLAS routines
+\end{itemize}
+
+
+%================================================================================
+\section{Cannot find lf77blas}
+%================================================================================
+
+Set the correct path to the library libf77blas.a. It is part of the ATLAS package. 
+
+
+%================================================================================
+\section{PMPI\_Allreduce}
+%================================================================================
+This problem is related to the PATHSCALE compiler:
+
+If the linker complains that it does not find routines starting with
+PMPI it helps if one also links the library \verb+libpmpich+. The
+library commands are the
+``\verb+-lfmpich -lmpich -lpmpich+''. (Solution obviously for MPICH
+only.)
+
+%================================================================================
+\section{Linker flag -I does not work}
+%================================================================================
+Some time ago the ABSOFT compiler did not accept the -l flag to set
+the search path include files. The current installation procedure
+takes care of this.
+
+%================================================================================
+\section{cannot find -lvapi}
+%================================================================================
+vapi is a library used by the infiniband drivers. (Infiniband is a
+network protocoll that can be used by MPI). 
+
+The solution is to link vapi dynamically. \mytt{-Wl,-dy -lvapi}.
+
+
+
+%================================================================================
+\section{Cannot find library gcc\_s}
+%================================================================================
+This problem is related to the PATHSCALE compiler:
+
+Simply add ``\verb+-lgcc_s+'' to the list of libraries.It may be
+necessary to supply also the path. On my system itr is in
+``\verb+-L/usr/lib64/gcc/x86_64-suse-linux/4.1.2/+''.
+
+%================================================================================
+\section{\mytt{P4\_GLOBMEMSIZE}}
+%================================================================================
+For a parallel job, I obtain the following error message:
+\begin{verbatim}
+p1_6605: (2.488281) xx_shmalloc: returning NULL; requested 4767920 bytes
+p1_6605: (2.488281) p4_shmalloc returning NULL; request = 4767920 bytes
+You can increase the amount of memory by setting the environment variable
+P4_GLOBMEMSIZE (in bytes); the current size is 4194304
+p1_6605:  p4_error: alloc_p4_msg failed: 0
+\end{verbatim}
+
+Include a statement into your .bashrc file to increase the variable
+\mytt{P4\_GLOBMEMSIZE}
+\begin{verbatim}
+export P4_GLOBMEMSIZE=16777216
+\end{verbatim}
+This seems to be the maximum error one can use under linux.
+
+%The value should not be larger than the kernel predefined max
+%shared memory value. The latter value can be checked by the command
+%\begin{verbatim}
+%/sbin/sysctl kernel.shmmax
+%\end{verbatim}
+%(shmmax may be shmax on other systems.)
+
+%================================================================================
+\section{Resources exhausted}
+%================================================================================
+If many parallel jobs are run ok and suddenly parallel jobs crash run the following script.
+\begin{verbatim}
+#/bin/sh
+ipcs -m | awk '/^ *0x/ {print $2 }' | xargs -n 50 ipcrm shm
+ipcs -s | awk '/^ *0x/ {print $2 }' | xargs -n 50 ipcrm sem
+\end{verbatim}
+
+%================================================================================
+\section{FFTW}
+%================================================================================
+
+FFTW version 3 (FFTW3) is not compatible with older versions
+(FFTW2). FFTW3 cannot yet be used with PAW.
+
+%================================================================================
+\section{Informationen \"uber das System}
+%================================================================================
+Um zum die richtigen Compiler und Bibliotheken herunterzuladen und
+f\"ur bestimmte Lizenzen, sind einige Informationen uber das aktuelle
+System notwendig.
+
+%================================================================================
+\subsection{Rechnername}
+%================================================================================
+\begin{itemize}
+\item  ``\mytt{hostname}'' provides the computer name.
+\item  ``\mytt{hostname -i}'' provides the computer name. provides the IP addresses
+\item  ``\mytt{hostname -d}'' provides the internet domain name.
+\end{itemize}
+
+\subsection{MAC Adress}
+
+Die Media Access Control (MAC) Adresse oder Ethernet ID wird manchmal
+ben\"otigt um eine Lizenz speziell f\"ur einen Rechner ausstellen zu
+k\"onnen. Sie ist eine eindeutige Nummer f\"ur jede Netzwerkkarte.  Die
+MAC Adresse besteht aus 6 Byte und wird h\"aufig hexadezimal
+geschrieben, z.B. \mytt{08:00:20:AE:FD:7E}.
+
+Um die MAC Adresse zu erhalten, f\"uhrt man das Kommando
+\begin{verbatim}
+/sbin/ifconfig -a
+\end{verbatim}
+aus. Man erh\"alt information zu allen Netzwerkkarten. Die
+Ethernet Hardware Adresse  ist die MAC Adresse.
+
+\subsection{Rechnerarchitektur}
+Das Linux Kommando ``\mytt{arch}'' oder ``\mytt{uname -m}'' lieferet die
+Rechnerarchitektur. z.B. x86\_64.
+
+Die wichtigsten Rechnerarchitekturen sind:
+\begin{itemize}
+\item IA-32 (Intel Architecture 32bit), i386, x86 ist die seit 87 von
+Intel verwendete Prozessorarchitektur bis zur Einf\"uhrung der 64bit
+Rechner.
+\item x86-64, AMD64, EM64T, IA-32e, x64 Architektur der ersten 64-bit
+Prozessoren von AMD. EM64T steht f\"ur ``Extended Memory 64 Technology''.
+\item IA-64 ist die volkommen neue 64 Architektur von Intel. Sie kommt
+bei den Itanium Prozessoren zum Einsatz. IA-64 steht f\"ur ``Intel
+Architecture 64''.
+\item POWER ist die Architektur der RISC Prozessoren von IBM.
+Power steht hier für Performance optimized with enhanced RISC)
+\end{itemize}
+
+\subsection{Linux version}
+
+Unter Suse erh\"alt man die Versionsnummer durch
+\verb+cat /etc/SuSE-release+.  Die Kernel version erh\"alt man durch
+\verb+uname -r+
+
+%==================================================================================
+\section{Hintergrund zum Configure Skript}
+\label{sec:configurebackground}
+%==================================================================================
+Es mag von Interesse sein sein, zu verstehen, woher das configure
+script kommt, welches die Konfiguration vornimmt. 
+
+%==================================================================================
+\subsection{What does the configure script do}
+%================================================================================
+The configuration helps the user to compile the PAW-Code without
+having to find out about a lot of parameters himself.  The configure
+script explores the availability of the compilers and libraries, and
+it sets the corresponding compiler flags and preprocessor
+variables. In the current version, however, we have to specify most
+parameters explicitely in a parameter file.
+
+The configure script uses the parameter file \myspec{parmfile} in
+order to construct the necessary Makefiles from corresponding
+templates. The templates in use are
+\begin{itemize}
+\item \mytt{Makefile\_targets.in} is converted in the \mytt{Makefile}
+located in the \myspec{PAW-directory}. This is the primary makefile
+executed by the user.
+\item \mytt{Makefile\_bare.in} is converted into \mytt{Makefile\_bare}
+located in the \myspec{PAW-directory}. However this make file is never
+executed itself, but it is itself only a template for the makefiles located in the directories
+\begin{center}
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/}\myspec{type}
+\end{center}
+where \myspec{type} is one of \mytt{none},\mytt{dbg}, \mytt{fast},
+\mytt{prof}, \mytt{none\_parallel}, \mytt{dbg\_parallel},
+\mytt{fast\_parallel}, \mytt{prof\_parallel}.
+\end{itemize}
+
+The configure script makes a copy of the templates for the Makefiles
+and replaces strings of the type \mytt{@VARIABLE@} in the copy of the
+template by the corresponding value. The variables are identifies by
+the two \mytt{@} at the beginning and the end.
+
+In addition, the configure script constructs a directory Tree that will
+hold the specific makefiles, objects, binaries etc.
+
+%==================================================================================
+\subsection{How the configure script is constructed}
+%==================================================================================
+
+The configure script is constructed with the help of the GNU
+\mytt{autoconf} tool . The \mytt{autoconf} tool uses an input file
+\mytt{configure.ac}, which describes the configuration process in the
+\mytt{autoconf} macro language.
 
 Especially important is the first part with the \emph{user adaptable
 variables}. Here all the values can be set - the rest of the script just uses
@@ -618,97 +1496,306 @@ the variables.  This is the place to make permanent changes to the installation
 scheme (e.g. change the default compiler flags).
 
 By invoking
-\begin{verbatim}
-autoconf
-\end{verbatim}
-in the \PAW\ directory the \texttt{configure} file -- which is a
+\begin{center}
+\mytt{autoconf}
+\end{center}
+in the PAW directory the \texttt{configure} file -- which is a
 \texttt{/bin/sh} script -- will be generated.
 
 
-\subsection{The \texttt{Makefile.in} and the \texttt{Makefile.*}}
-
-When \texttt{configure} is executed it determines the necessary variables (or
-they are set by command line options) and replaces the
+\appendix
+%================================================================================
+\newpage
+\chapter{Output produced by the configure script}
+\label{sec:printoutconfigure}
+%================================================================================
+If the configure script completes successfully, the output looks like this.
 \begin{verbatim}
-@VARIABLENAME@
+checking for parms.g95_guam... yes
+check for make
+checking for gmake... gmake
+checking for cpp... cpp
+checking for g95... yes
+checking for xlf90... no
+checking for ifort... no
+checking for ifc... no
+checking for f90... yes
+checking for fort... no
+resolve parms.g95_guam
+${MPI_HEADER}
+
+=============================
+check MPI directory
+checking for /home/tools/libs/mpich-1.2.6/... yes
+check FFT directory
+checking for /home/tools/libs/fftw-2.1.5_no-second-underscore/... yes
+copy parms.g95_guam to parms.in_use
+creating subdirectories and copying shell scripts
+configure: creating ./config.status
+config.status: creating /home/ptpb/Tree/PAW/main/bin/g95_guam/f90pp
+config.status: creating Makefile
+config.status: creating Makefile_bare
+modify makefile_bare for lowercase module files
+creating Makefile in none
+creating Makefile in none_parallel
+creating Makefile in fast
+creating Makefile_parallel in fast
+creating Makefile in dbg
+creating Makefile_parallel in dbg
+creating Makefile in prof
+creating Makefile_parallel in prof
+---------------------------------------------------------------
+-----------------------SUMMARY---------------------------------
+---------------------------------------------------------------
+directory of distribution      : /home/ptpb/Tree/PAW/main
+directory with binaries        : /home/ptpb/Tree/PAW/main/bin/g95_guam
+architecture                   : g95_guam
+preprocessor variables         : -DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW  -DCPPVAR_LAPACK_LAPACK
+architecture name              : g95_guam
+parallel environment           : T
+compile command (scalar)       : g95 -fno-second-underscore
+F90 file extension             : f90
+compile flags (none)           : -c
+compile flags (fast)           : -c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2
+compile flags (dbg)            : -c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check
+compile flags (prof)           : -c -pg -O3 -fshort-circuit -funroll-loops  -msse2
+link command w.flags (scalar)  : g95 -fno-second-underscore  -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/
+external libraries (scalar)    : -Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c
+uppercase module names?        : F
+blas library                   :
+lapack library                 : /home/tools/libs/acml3.0.0_64/gnu64/lib/
+libs for Fourier transforms    : /home/tools/libs/fftw-2.1.5_no-second-underscore/
+parallel envirnment considered : yes
+compile command (parallel)     : g95 -fno-second-underscore
+link command w. flags(parallel): g95 -fno-second-underscore  -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/lib
+external libraries (parallel)  : -Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c -Wl,-dy -lfmpich -Wl,-dy -lmpich
+mpi library                    : /home/tools/libs/mpich-1.2.6/
+MAKE command                   : gmake
+CPP command                    : cpp  -traditional
+---------------------------------------------------------------
+----done!---configuration completed successfully!--------------
+---------------------------------------------------------------
 \end{verbatim}
-strings in the \texttt{Makefile.in} by the actual values to produce the
-\texttt{Makefile.*}.  Some parameters which are different for every
-\texttt{Makefile.*} are set by \texttt{sed}-commands.  Although in
-\texttt{Makefile.in}, only the first part will be interesting to implement
-changes.  I hope that the documentation there is sufficient as well.
+%
+%================================================================================
+\newpage
+\chapter{Examples for Parameter Files}
+\label{sec:parmfiles}
+%================================================================================
 
-The \texttt{Makefile.*} control the compilation of the various binaries.
-Changes made to these files will be lost after the next execution of the
-\texttt{configure} script.  They are, however, well suited for temporary
-changes which cannot be made through command line options to the configure
-script.
-
-
-
-
-\section{Problems and Bugs}
-
-These scripts have been tested on all architectures available to me.  There
-they have worked out fine so far.  If you, however, experience problems, have
-suggestions or if you find bugs, I will be pleased to help.  Just send an email
-together with a detailed description of the problem and the output of the
-\texttt{configure}-script and \texttt{Makefile} to:
-
-\underline{\texttt{clemens.foerst@tuwien.ac.at}}
-
-\clearpage
-\section*{List of}
-\addcontentsline{toc}{section}{List of}
-
-\subsection*{command line options for \texttt{configure}}
-\addcontentsline{toc}{subsection}{command line options for \texttt{configure}}
-
+%=======================================================================
+\subsection{Example of a Parameter File for a Simple Installation}
+\label{sec:parmfilesimple}
+%=======================================================================
+This is a simple example for a parameter file
 \begin{verbatim}
---without-libs            do NOT use external numerical libraries
---with-fftwdir=DIR        root directory of FFTW distribution
---with-mpidir=DIR         root directory of MPICH distribution
---with-atlasdir=DIR       root directory of ATLAS distribution
---with-atlasarch=ARCH     architecture for wich ATLAS blas was compiled 
---with-make=LOCATION      location of the GNU make utility (if not in path)
---with-cpp=LOCATION       location of the GNU C Preprocessor (if not in path)
---with-cppoptions=OPTIONS options for the GNU C Preprocessor
---with-cflags=FLAGS       specify additional compiler flags
---with-lflags=LFLAGS      specify additional compiler flags for linking
---with-llibs=LLIBS        specify additional libraries to be linked
---with-parmfile=PARMFILE  specify parameter file -- no automatic configuration
---help                    gives this list
+ARCH="G95_mycomputer"
+TPARALLEL="T"
+TUPPERCASEMOD="F"
+TPARALLEL="T"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/opt/acml4.0.1/libs/acml3.0.0_64/gnu64/lib/"
+FFTDIR=""     
+MPIDIR="/opt/mpich-1.2.6/"
+FFT_HEADER=" "   
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="g95 -fno-second-underscore "
+COMPILER_PARALLEL="g95 -fno-second-underscore "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2"
+FCFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
+FCFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
+LDFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} "
+LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR}  -L${MPIDIR}/lib"
+LIBS_SCALAR="-Wl,-dn -lacml -Wl,-dy -lg2c"
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c \
+            -Wl,-dy -lfmpich -Wl,-dy -lmpich"
+CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_ACML  \
+    -DCPPVAR_LAPACK_LAPACK "-DCPPVAR_BLAS_BLAS "
+FEXT="f90"
 \end{verbatim}
 
-\subsection*{preprocessor variables}
-\addcontentsline{toc}{subsection}{preprocessor variables}
-
+%================================================================================
+\section{Parameter File for G95}
+%================================================================================
 \begin{verbatim}
-CPPVAR_FFT_PACK           use internal FFT routines
-CPPVAR_FFT_FFTW           use FFTW FFT routines
-CPPVAR_FFT_ESSL           use ESSL FFT routines
-CPPVAR_BLAS_ESSL          use ESSL syntax for BLAS/LAPACK calls 
-CPPVAR_SUPPORT_XLF        xlf support routines exist 
-CPPVAR_USAGE_EXIST        getrusage exists
-CPPVAR_LANGEXT_XLF        use xlf language extensions
-CPPVAR_U77                U77 library exists
-CPPVAR_ENDIAN             activated automatic conversion between 
-                          little and big endian binary format of 
-                          unformatted files. Works only for selected
-                          Compilers (Absoft, Compaq)
+ARCH="g95_guam"
+TUPPERCASEMOD="F"
+TPARALLEL="T"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/home/tools/libs/acml3.0.0_64/gnu64/lib/"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/home/tools/libs/mpich-1.2.6/"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="g95 -fno-second-underscore "
+COMPILER_PARALLEL="g95 -fno-second-underscore "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2"
+FCFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
+FCFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
+LDFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR}\
+      -L${FFTDIR}/fftw/.libs/"
+LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+        -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/lib"
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c"
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c \
+         -Wl,-dy -lfmpich -Wl,-dy -lmpich"
+CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW  \
+         -DCPPVAR_LAPACK_LAPACK "-DCPPVAR_BLAS_BLAS "
+FEXT="f90"
+\end{verbatim}
+
+%================================================================================
+\newpage
+\section{Parameter  File for IFORT}
+%================================================================================
+\begin{verbatim}
+ARCH="ifc10_guam"
+TUPPERCASEMOD="F"
+TPARALLEL="T"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/opt/intel/mkl/9.1/lib/em64t/"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/home/tools/libs/mpich-1.2.6_ifc10/"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="ifc10"
+COMPILER_PARALLEL="${MPIDIR}/bin/mpif90 -choicemod "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O2 -fast -finline-functions -finline-limit=50"
+FCFLAGS_PROF="-c -pg -O3 "
+FCFLAGS_DBG="-c -g -check bounds -check format -check pointers \
+            -check uninit -debug full -debug-parameters all \
+            -fp-stack-check -ftrapuv -stand f95 -traceback \
+             -warn declarations"
+LDFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                -L${FFTDIR}/fftw/.libs/"
+LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                  -L${FFTDIR}/fftw/.libs/"
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dn -lmkl_lapack -Wl,-dn -lmkl_em64t \
+             -Wl,-dn -lguide  -Wl,-dy -lpthread  -Wl,-dy -lg2c"
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lmkl_lapack -Wl,-dn -lmkl_em64t \
+               -Wl,-dn -lguide  -Wl,-dy -lpthread -Wl,-dy -lg2c "
+CPPFLAGS="-DCPPVAR_COMPILER_IFC -DCPPVAR_FFT_FFTW \
+           -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLASK_BLAS "
+FEXT="f90"
+\end{verbatim}
+%================================================================================
+\newpage
+\section{Parameter File for PGI}
+%================================================================================
+\begin{verbatim}
+ARCH="pgi_guam"
+TUPPERCASEMOD="F"
+TPARALLEL="T"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/opt/pgi/linux86-64/7.1/lib"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/opt/pgi/linux86-64/7.1/mpi/mpich/"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="pgf90 -fpic"
+COMPILER_PARALLEL="pgf90 -fpic"
+FCFLAGS_NONE=" -c "
+FCFLAGS_OPT="-c -fast -fastsse -Mipa=fast,inline"
+FCFLAGS_PROF="-c -pg -fast -fastsse -Mipa=fast,inline"
+FCFLAGS_DBG="-c -g -Mlist -m -C -Mbounds "
+LDFLAGS_SCALAR=" -g77libs -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                -L${FFTDIR}/fftw/.libs/"
+LDFLAGS_PARALLEL="-g77libs -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                 -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/lib"
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dy -lacml  "
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dy -lacml  -Wl,-dy -lfmpich -Wl,-dy -lmpich"
+CPPFLAGS="-DCPPVAR_COMPILER_PGI -DCPPVAR_FFT_FFTW \
+          -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLAS_BLAS"
+FEXT="f90"
+\end{verbatim}
+
+%================================================================================
+\newpage
+\section{Parameter File for PATHSCALE}
+%================================================================================
+\begin{verbatim}
+ARCH="pathscale_guam"
+TUPPERCASEMOD="T"
+TPARALLEL="T"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/opt/acml4.0.1/pathscale64/lib/"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/opt/mpich-1.2.7p1_pathscale_ssh"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="pathf95 -fno-second-underscore  "
+COMPILER_PARALLEL="pathf95 -fno-second-underscore  "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O3   -OPT:Ofast -fno-math-errno -ffast-math "
+FCFLAGS_PROF="-c -pg -O3 -profile "
+FCFLAGS_DBG="-c -C -g -Wall "
+LDFLAGS_SCALAR="-ipa -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+              -L${FFTDIR}/fftw/.libs/ -L/usr/lib64/gcc/x86_64-suse-linux/4.1.2/ "
+LDFLAGS_PARALLEL="-ipa -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+           -L${FFTDIR}/fftw/.libs/  -L/usr/lib64/gcc/x86_64-suse-linux/4.1.2/ \
+            -L${MPIDIR}/lib "
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lgcc_s "
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml  -Wl,-dy -lfmpich \
+               -Wl,-dy -lmpich -lpmpich -Wl,-dy -lgcc_s"
+CPPFLAGS="-DCPPVAR_COMPILER_PATHSCALE -DCPPVAR_FFT_ACML  \
+          -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLAS_BLAS "
+FEXT="f90"
 \end{verbatim}
 
 
-\addcontentsline{toc}{section}{References}
-\begin{thebibliography}{99}
-\bibitem{f90} www.absoft.com
-\bibitem{fort} www.compaq.com/fortran
-\bibitem{autoconf} www.gnu.org/software/autoconf/autoconf.html
-\bibitem{autoconf2} www.gnu.org/manual
-\bibitem{mpich} www-unix.mcs.anl.gov/mpi/mpich/download.html
-\bibitem{atlas} www.netlib.org/atlas
-\bibitem{fftw} www.fftw.org
-\bibitem{make} www.gnu.org/software/make/make.html
-\end{thebibliography}
 
+%================================================================================
+\newpage
+\chapter{Input Data Files}
+%================================================================================
+%================================================================================
+\section{Control Input File}
+%================================================================================
+\begin{verbatim}
+!CONTROL
+ !GENERIC  TRACE=f DT=10.0 NSTEP=180 NWRITE=100 START=t !END
+ !DFT    TYPE=10 !END
+ !FOURIER EPWPSI=20 CDUAL=2 !END
+ !PSIDYN  FRIC=0.005
+    !AUTO FRIC(-)=0.3 FACT(-)=0.97
+          FRIC(+)=0.3 FACT(+)=1. !END
+ !END
+!END
+!EOB
+\end{verbatim}
+
+%================================================================================
+\section{Structure Input File}
+%================================================================================
+\begin{verbatim}
+!STRUCTURE
+  !GENERIC LUNIT=10.26 !END
+  !KPOINTS DIV=1 1 1 !END
+  !OCCUPATIONS EMPTY=5 NSPIN=1  !END
+  !LATTICE T= 0.00000  0.50000  0.50000
+              0.50000  0.00000  0.50000
+              0.50000  0.50000  0.00000 !END
+  !SPECIES NAME= 'Si' ZV=4. M=5.  NPRO= 2 2 1 lrhox=2
+           FILE='si_.75_6.0.out'  
+  !END
+  !ATOM   NAME= 'Si_1'  R= 0.00  0.00 0.00 !END
+  !ATOM   NAME= 'Si_2'  R= 0.25  0.25 0.25 !END
+!END
+!EOB
+\end{verbatim}
+
+The string \mytt{'si\_.75\_6.0.out'} needs to be adjusted. It specifies a setup file.
+
+
+\printindex
 \end{document}
+
+
