@@ -5411,7 +5411,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)                  :: IATQ,IATM,IATS,IATM1,IATM2,IATS1,IATS2,IAT
       INTEGER(4)                  :: IBONDM,IBONDS,ILINK,I,IRES,J,IVAR,ICONECT
       INTEGER(4)                  :: IZ
-      LOGICAL(4)                  :: TCHK
+      LOGICAL(4)                  :: TCHK,tchk2
       LOGICAL(4)     ,ALLOCATABLE :: TFREEZE(:)
       INTEGER(4)     ,ALLOCATABLE :: LINKARRAY(:,:)
       INTEGER(4)     ,ALLOCATABLE :: MAPARRAY(:,:)
@@ -5564,15 +5564,27 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==================================================================
 !     ==  READ CELL VECTORS                                           ==
 !     ==================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')             !MHK
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')     !MHK
+      CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')         !MHK
       CALL LINKEDLIST$EXISTL(LL_STRC,'LATTICE',1,TCHK)
       IF(TCHK) THEN
          CALL LINKEDLIST$SELECT(LL_STRC,'LATTICE')
          CALL LINKEDLIST$EXISTD(LL_STRC,'T',1,TCHK)
+         CALL LINKEDLIST$EXISTD(LL_STRC,'T[A]',1,TCHK2)
+         IF(TCHK.AND.TCHK2) THEN
+           CALL ERROR$MSG('SPECIFY EITHER T= OR T[A]=, BUT NOT BOTH')
+           CALL ERROR$STOP('STRCIN_SOLVENT')
+         END IF
          IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_STRC,'T',1,T)
+         ELSE IF(TCHK2) THEN
+            CALL LINKEDLIST$GET(LL_STRC,'T[A]',1,T)
+            T(:) = T(:) * ANGSTROM
          ELSE
             T=(/1.D+4,0.D0,0.D0,0.D0,1.D+4,0.D0,0.D0,0.D0,1.D+4/)
          END IF
+         CALL CLASSICAL$SELECT('QMMM')
          CALL CLASSICAL$SETR8A('CELL(0)',9,T)
          CALL LINKEDLIST$SELECT(LL_STRC,'..')
       END IF
@@ -6101,6 +6113,9 @@ PRINT*,"FLAG: ",NBONDM,NCONECT
         ALLOCATE(MBOND(NBONDM+NCONECT))
         MBOND(:)%ATOM1=0
         MBOND(:)%ATOM2=0
+        DO I=1,SIZE(MBOND)
+           MBOND(I)%IT(:)=0
+        END DO
         MBOND(:)%BO=0.D0!
 !       ----- READ BONDS FROM MMATOM-ARRAY
         IAT=1

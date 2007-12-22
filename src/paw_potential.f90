@@ -780,6 +780,7 @@
         ENDDO
       ENDDO        
       DEALLOCATE(CWORK)
+
 !
 !     ==================================================================
 !     == SEND POTENTIAL TO OPTICS CODE                                ==
@@ -794,6 +795,7 @@
       ENDDO
       DEALLOCATE(VHARTREE)
 !
+!     == PASS COMPLETE EFFECTIVE POTENTIAL TO THE GRAPHICS MODULE=======
       CALL GRAPHICS$SETPWPOT('TOT',NGL,RHOG(1,1))
 !
 !     ==================================================================

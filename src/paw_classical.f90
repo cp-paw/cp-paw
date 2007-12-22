@@ -1597,6 +1597,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       REAL(8)                :: DX2,DY2,DZ2
       REAL(8)                :: D11,D22,D12
       REAL(8)                :: X
+      REAL(8)                :: dr(3)
       INTEGER(4)             :: NTASKS,THISTASK
 !     *****************************************************************      
                                CALL TRACE$PUSH('CLASSICAL$REPORT')
@@ -1630,17 +1631,22 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==================================================================
       WRITE(NFIL,FMT='(''===  BONDS IN ANGSTROM  ===; NBOND='',I10)')MD%NBOND
       IF(LOD.GE.3) THEN
-         CALL CONSTANTS('ANGSTROM',ANGSTROM)
-         DO IB=1,MD%NBOND
-            IAT1=MD%bond(ib)%iat1
-            IAT2=MD%bond(ib)%iat2
-            D=0.D0
-            DO I=1,3
-               D=D+(MD%R0(I,IAT1)-MD%R0(I,IAT2))**2
-            ENDDO
-            D=SQRT(D)
+        CALL CONSTANTS('ANGSTROM',ANGSTROM)
+        DO IB=1,MD%NBOND
+          IAT1=MD%BOND(IB)%IAT1
+          IAT2=MD%BOND(IB)%IAT2
+          DR(:)=MD%R0(:,IAT1)-MD%R0(:,IAT2)
+          IF(ASSOCIATED(MD%BOND(IB)%IT2)) THEN
+            DR(:)=DR(:)-MD%RBAS0(:,1)*REAL(MD%BOND(IB)%IT2(1),KIND=8)
+            DR(:)=DR(:)-MD%RBAS0(:,2)*REAL(MD%BOND(IB)%IT2(2),KIND=8)
+            DR(:)=DR(:)-MD%RBAS0(:,3)*REAL(MD%BOND(IB)%IT2(3),KIND=8)
+            D=SQRT(SUM(DR(:)**2))
+            WRITE(NFIL,FMT='(2I5,F10.5," A; IT=",3I5)')IAT1,IAT2,D/ANGSTROM,MD%BOND(IB)%IT2
+          ELSE
+            D=SQRT(SUM(DR(:)**2))
             WRITE(NFIL,FMT='(2I5,F10.5," A")')IAT1,IAT2,D/ANGSTROM
-         ENDDO
+          END IF
+        ENDDO
       END IF
 !
 !     ==================================================================
@@ -2595,7 +2601,7 @@ REAL(8) :: G1,DGDX1
               ANGLE(NANGLE)%IT1(:)=IT1(:)
             END IF
             IF(IT3(1).NE.0.OR.IT3(2).NE.0.OR.IT3(3).NE.0) THEN
-              ALLOCATE(ANGLE(NANGLE)%IT1(3))
+              ALLOCATE(ANGLE(NANGLE)%IT3(3))
               ANGLE(NANGLE)%IT3(:)=IT3(:)
             END IF
 !
@@ -4323,7 +4329,7 @@ END MODULE UFFTABLE_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE CLASSICAL_NEIGHBORS(NAT,R,RBAS,NNBX,NNB,NBLIST &
+      SUBROUTINE CLASSICAL_NEIGHBORS_old(NAT,R,RBAS,NNBX,NNB,NBLIST &
      &                              ,MAXDIV,NEXCL,IEXCLUSION)
 !     **************************************************************************
 !     **  CALCULATE A NEIGHBORLIST                                            **
@@ -4448,7 +4454,7 @@ END MODULE UFFTABLE_MODULE
       END                
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE CLASSICAL_NEIGHBORS_NEW(NAT,R,RBAS,NNBX,NNB,NBLIST &
+      SUBROUTINE CLASSICAL_NEIGHBORS(NAT,R,RBAS,NNBX,NNB,NBLIST &
      &                              ,MAXDIV,NEXCL,IEXCLUSION)
 !     **************************************************************************
 !     **  CALCULATE A NEIGHBORLIST                                            **
@@ -4494,8 +4500,6 @@ END MODULE UFFTABLE_MODULE
       integer(4)                    :: min1,max1,min2,max2,min3,max3
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-CALL ERROR$MSG('THIS ROUTINE DOES NOT FUNCTION YET')
-CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
 !
 !     ==========================================================================
 !     == divide the unit cell into boxes and attribute each atom to a box     ==
@@ -4517,11 +4521,13 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
         ENDDO
         X(:)=X(:)-REAL(ITR(:,IAT))
 !       == IDENTIFY SUB-BOX ====================================================
+!       == idiv are the numbers of sub-box translations pointing to the origin==
+!       == of the respective sub=box ===========================================
         IDIV(:,IAT)=INT(X(:)*REAL(NDIV(:),KIND=8))
         I1=1+IDIV(1,IAT)
         I2=1+IDIV(2,IAT)
         I3=1+IDIV(3,IAT)
-!       == increase the atom counter of the respective box =====================
+!       == increase the atom counter of the respective sub-box =================
         NATINBOX(I1,I2,I3)=NATINBOX(I1,I2,I3)+1
       ENDDO
 !
@@ -4542,15 +4548,17 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
 !     ==========================================================================
 !     ==  iatpnt points from the atoms in a given box to the bare atom index  ==
 !     ==========================================================================
+      iatpnt(:)=0
       ALLOCATE(CURRENT(NDIV(1),NDIV(2),NDIV(3)))
-      CURRENT=FIRST
+      CURRENT(:,:,:)=FIRST(:,:,:)  ! A SUB-BOX-SPECIFIC ATOM POINTER
       DO IAT=1,NAT
-        I1=IDIV(1,IAT)
-        I2=IDIV(2,IAT)
-        I3=IDIV(3,IAT)
+        I1=IDIV(1,IAT)+1
+        I2=IDIV(2,IAT)+1
+        I3=IDIV(3,IAT)+1
         IATPNT(CURRENT(I1,I2,I3))=IAT
         CURRENT(I1,I2,I3)=CURRENT(I1,I2,I3)+1
       ENDDO
+      DEALLOCATE(CURRENT)
 !
 !     ==========================================================================
 !     == SET UP NEIGHBORLIST                                                  ==
@@ -4558,23 +4566,26 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       RMAX2=RCLONGRANGE**2
       NNB=0
       DO I=1,3
-        TBOX(:,I)=RBAS(:,I)/REAL(NDIV(I),KIND=8)
+        TBOX(:,I)=RBAS(:,I)/REAL(NDIV(I),KIND=8) ! SUB-BOX TRANSLATION VECTORS
       ENDDO
       DO IAT1=1,NAT
-        X0=R(1,IAT)
-        Y0=R(2,IAT)
-        Z0=R(3,IAT)
-        CALL BOXSPH(RBAS,X0,Y0,Z0,RCLONGRANGE,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
+        X0=R(1,IAT1)
+        Y0=R(2,IAT1)
+        Z0=R(3,IAT1)
+        CALL BOXSPH(tbox,X0,Y0,Z0,RCLONGRANGE,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
 !       == LOOP OVER BOXES IN THE NEIGHBORHOOD ================================
-        DO I1=MIN1,MAX1-1
+        DO I1=MIN1-1,MAX1
           J1=MODULO(I1,NDIV(1))
           IT1=(I1-J1)/NDIV(1)
-          DO I2=MIN2,MAX2-1
+          J1=J1+1
+          DO I2=MIN2-1,MAX2
             J2=MODULO(I2,NDIV(2))
             IT2=(I2-J2)/NDIV(2)
-            DO I3=MIN3,MAX3-1
+            J2=J2+1
+            DO I3=MIN3-1,MAX3
               J3=MODULO(I3,NDIV(3))
               IT3=(I3-J3)/NDIV(3)
+              J3=J3+1
               IAT2A=FIRST(J1,J2,J3)
               IAT2B=IAT2A-1+NATINBOX(J1,J2,J3)
               DO I=IAT2A,IAT2B
@@ -4582,6 +4593,18 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
                 ITVEC(1)=IT1-ITR(1,IAT2)
                 ITVEC(2)=IT2-ITR(2,IAT2)
                 ITVEC(3)=IT3-ITR(3,IAT2)
+!               == AVOID DOUBLE COUNTING=======================================
+                IF(IAT2.GT.IAT1) CYCLE
+                IF(IAT2.EQ.IAT1) THEN
+                  IF(ITVEC(1).GT.0) CYCLE
+                  IF(ITVEC(1).EQ.0) THEN
+                    IF(ITVEC(2).GT.0) CYCLE
+                    IF(ITVEC(2).EQ.0) THEN
+                      IF(ITVEC(3).GT.0) CYCLE
+                    END IF
+                  END IF
+                END IF   
+!               == distance criterion =========================================
                 D(:)=R(:,IAT2)+MATMUL(RBAS,REAL(ITVEC,KIND=8))-R(:,IAT1)
                 D2=SUM(D(:)**2)
                 IF(D2.LT.RMAX2) CYCLE
@@ -4603,93 +4626,26 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
                       NBLIST(NNB)%IT(:)=ITVEC(:)
                     END IF
                   END IF                               
+                  EXCLUSION=1+(ITVEC(1)+MAXDIV)+(1+2*MAXDIV)*((ITVEC(2)+MAXDIV) &
+               &                               +(1+2*MAXDIV)*((ITVEC(3)+MAXDIV) &
+               &                               +(1+2*MAXDIV)*(IAT1-1+NAT*(IAT2-1))))
+
+                  NBLIST(NNB)%EXCLUDE=.FALSE.
+                  do iex=1,nexcl
+                    if(iexclusion(iex).lt.exclusion) cycle !exclusions are inclreasing
+                    if(iexclusion(iex).eq.exclusion) then
+                      NBLIST(NNB)%EXCLUDE=.true. 
+                    else 
+                      NBLIST(NNB)%EXCLUDE=.FALSE.
+                    end if  
+                    exit
+                  enddo
                 END IF
               ENDDO
             ENDDO
           ENDDO
         ENDDO
       ENDDO
-!
-!     ==========================================================================
-!     == SET EXCLUSION FLAGS                                                  ==
-!     ==========================================================================
-      IEX=1
-      EXCLUSION=IEXCLUSION(IEX)
-      DO IAT1=1,NAT
-        DO IAT2=1,IAT1-1
-          IT0=(1+2*MAXDIV)**3*(IAT2-1+NAT*(IAT1-1))
-          DO IT=1,(1+2*MAXDIV)**3
-            TEXCLUSION=(EXCLUSION.EQ.IT0+IT)
-            IF(TEXCLUSION) THEN
-              IEX=IEX+1
-              EXCLUSION=IEXCLUSION(IEX)
-            END IF
-          ENDDO
-        ENDDO
-      ENDDO
-!
-!     ==========================================================================
-!     == TRANSLATION VECTORS                                                  ==
-!     ==========================================================================
-      IT=0
-      DO IT1=-MAXDIV,MAXDIV
-        DO IT2=-MAXDIV,MAXDIV
-          DO IT3=-MAXDIV,MAXDIV
-            IT=IT+1
-            TI(:,IT)=RBAS(:,1)*DBLE(IT1)+RBAS(:,2)*DBLE(IT2)+RBAS(:,3)*DBLE(IT3)
-            ITI(1,IT)=IT1
-            ITI(2,IT)=IT2
-            ITI(3,IT)=IT3
-            TT(IT)=(IT1.NE.0.OR.IT2.NE.0.OR.IT3.NE.0)
-          ENDDO
-        ENDDO
-      ENDDO
-!
-!     ==================================================================
-!     == SET UP NEIGHBORLIST                                          ==
-!     ==================================================================
-      RMAX2=RCLONGRANGE**2
-      NNB=0
-      IEX=1
-      EXCLUSION=IEXCLUSION(IEX)
-      DO IAT1=1,NAT
-        DO IAT2=1,IAT1-1
-          D(:)=R(:,IAT2)-R(:,IAT1)
-          IT0=(1+2*MAXDIV)**3*(IAT2-1+NAT*(IAT1-1))
-          DO IT=1,(1+2*MAXDIV)**3
-            TEXCLUSION=(EXCLUSION.EQ.IT0+IT)
-            IF(TEXCLUSION) THEN
-              IEX=IEX+1
-              EXCLUSION=IEXCLUSION(IEX)
-            END IF
-            D2=(D(1)+TI(1,IT))**2+(D(2)+TI(2,IT))**2+(D(3)+TI(3,IT))**2
-            IF(D2.LT.RMAX2) THEN
-              NNB=NNB+1
-              IF(NNB.LE.NNBX) THEN
-                NBLIST(NNB)%IAT1=IAT1
-                NBLIST(NNB)%IAT2=IAT2
-                NBLIST(NNB)%EXCLUDE=TEXCLUSION
-                IF(ASSOCIATED(NBLIST(NNB)%IT)) THEN
-                  IF(TT(IT)) THEN
-                    NBLIST(NNB)%IT(:)=ITI(:,IT)
-                  ELSE
-                    DEALLOCATE(NBLIST(NNB)%IT)
-                  END IF
-                ELSE
-                  IF(TT(IT)) THEN
-                    ALLOCATE(NBLIST(NNB)%IT(3))
-                    NBLIST(NNB)%IT(:)=ITI(:,IT)
-                  END IF
-                END IF                               
-              END IF
-            END IF
-          ENDDO
-        ENDDO
-      ENDDO
-      IF(EXCLUSION.NE.-1) THEN
-        CALL ERROR$MSG('NOT ALL EXCLUSIONS HAVE BEEN TOUCHED')
-        CALL ERROR$STOP('CLASSICAL_NEIGHBORS')
-      END IF
 !
 !     ==================================================================
 !     ==  IF ARRAY TOO SMALL RETURN WITH AN UNUSABLE NEIGHBORLIST     ==
@@ -4706,7 +4662,13 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
       IF(TPR) THEN
         PRINT*,' NUMBER OF NEIGHBORS ',NNB
         DO NN=1,MIN(NNB,NNBX)
-          PRINT*,NBLIST(NN)%IAT1,NBLIST(NN)%IAT2
+          if(associated(nblist(nn)%it)) then         
+            write(*,fmt='("NN: iat1=",i5," iat2=",i5," T=",3i5)') &
+     &           NBLIST(NN)%IAT1,NBLIST(NN)%IAT2,NBLIST(NN)%It
+          else
+            write(*,fmt='("NN: iat1=",i5," iat2=",i5)') &
+                 NBLIST(NN)%IAT1,NBLIST(NN)%IAT2
+          end if
         ENDDO        
       END IF
       RETURN
@@ -4765,7 +4727,7 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
           if(ASSOCIATED(BOND(IB)%IT2)) then
             it(:)=BOND(IB)%IT2(:)
           end if
-          IF(IAT2.LT.IAT1) THEN
+          IF(IAT2.ge.IAT1) THEN
             ISVAR=IAT2-1+NAT*(IAT1-1)
           ELSE
             ISVAR=IAT1-1+NAT*(IAT2-1)
@@ -4774,6 +4736,10 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
           IF(ABS(IT(1)).GT.MAXDIV.OR.ABS(IT(2)).GT.MAXDIV.OR.ABS(IT(3)).GT.MAXDIV) THEN
             CALL ERROR$MSG('BOND TRANSLATIONS TOO LARGE')
             CALL ERROR$MSG('CANNOT HANDLE AT PRESENT')
+            CALL ERROR$I4VAL('MAXDIV',MAXDIV)
+            CALL ERROR$I4VAL('IT(1)',IT(1))
+            CALL ERROR$I4VAL('IT(2)',IT(2))
+            CALL ERROR$I4VAL('IT(3)',IT(3))
             CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
           END IF
           ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
@@ -4805,6 +4771,10 @@ CALL ERROR$STOP('CLASSICAL_NEIGHBORS_NEW')
           IF(ABS(IT(1)).GT.MAXDIV.OR.ABS(IT(2)).GT.MAXDIV.OR.ABS(IT(3)).GT.MAXDIV) THEN
             CALL ERROR$MSG('BOND TRANSLATIONS TOO LARGE')
             CALL ERROR$MSG('CANNOT HANDLE AT PRESENT')
+            CALL ERROR$I4VAL('MAXDIV',MAXDIV)
+            CALL ERROR$I4VAL('IT(1)',IT(1))
+            CALL ERROR$I4VAL('IT(2)',IT(2))
+            CALL ERROR$I4VAL('IT(3)',IT(3))
             CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
           END IF
           ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &

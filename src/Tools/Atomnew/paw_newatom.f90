@@ -88,13 +88,13 @@
       INTEGER(4)             ::ISVAR1ARR(1)  ! USED TO RESHAPE AN ARRAY OF LENGTH 1
       CHARACTER(16)          :: PSEUDOPARTIALWAVEMETHOD
       character(16)          :: id
-      logical(4) ,parameter  :: trel=.false.  !switch between relativistic and non-relativistic
+      logical(4) ,parameter  :: trel=.true.  !switch between relativistic and non-relativistic
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS('EV',EV)
 !     ==========================================================================
-!     == connect standard files to the filehandler (reads input argument)
+!     == connect standard files to the filehandler (reads input argument)     ==
 !     ==========================================================================
       CALL ATTACHFILES()
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -176,7 +176,7 @@ call trace$pass('all-electron scf calculation')
 call trace$pass('determine valence density')
       CALL AERHO(id,GID,NR,NB-NC,LOFI(NC+1:NB),SOFI(NC+1:NB),FOFI(NC+1:NB) &
      &          ,NNOFI(NC+1:NB),rbox,DREL,AEPOT,AERHOV,EOFI(NC+1:NB))
-!cALL AERHO(id,GID,NR,NB,LOFI,SOFI,FOFI &
+!call AERHO(id,GID,NR,NB,LOFI,SOFI,FOFI &
 !&          ,NNOFI,rbox,DREL,AEPOT,AERHOV,EOFI)
 !
 !     == REPORT ================================================================
@@ -3046,9 +3046,12 @@ PRINT*,'XMAX ',XMAX,XAV
 !     == DETERMINE RELATIVISTIC CORRECTION                                    ==
 !     ==========================================================================
       IF(ID.EQ.'FULL') THEN
-        EKIN(:)=EKIN(:)/RHO(:)
-        EKIN2(:)=EKIN2(:)/RHO(:)
-        EKIN2(:)=SQRT(EKIN2(:)-EKIN(:)**2)
+        AUX(:)=MAX(RHO(:),1.D-6)
+        AUX=1.D0/AUX
+        EKIN(:)=EKIN(:)*AUX(:)
+        EKIN2(:)=EKIN2(:)*AUX(:)
+        EKIN2(:)=MAX(EKIN2(:)-EKIN(:)**2,0.D0)
+        EKIN2(:)=SQRT(EKIN2(:))
         DO IR=1,NR
           IF(RHO(IR).LT.1.D-5) THEN
             EKIN(IR)=0.D0
@@ -3193,6 +3196,188 @@ PRINT*,'XMAX ',XMAX,XAV
         CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
         IF(.NOT.THOM) THEN     
           CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
+        ELSE
+          PHIINHOM(:)=0.D0
+        END IF
+!
+!       =======================================================================
+!       ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
+!       =======================================================================
+        SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
+        PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
+        CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+        CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+        SVAR=(DERO-DER)/PHI(IRMATCH)
+        PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+      end if
+!
+!     =======================================================================
+!     ==  set wave function to zero beyond rbox                            ==
+!     =======================================================================
+      phi(irout:)=0.d0
+!
+DO IR=1,NR
+  IF(.NOT.(PHI(IR).GT.0.D0.OR.PHI(IR).LE.0.D0)) THEN
+    PRINT*,'ERROR'
+!    PRINT*,'PHIIN',PHI(:IRMATCH-1)
+!    PRINT*,'PHIOUT',PHI(IRMATCH:)
+    PRINT*,'SVAR ',SVAR
+    PRINT*,'IROUT,IRCL ',IROUT,IRCL,NR
+    PRINT*,'R,PHI ',R(IR),PHI(IR)
+    OPEN(UNIT=8,FILE='XXX.DAT')
+    DO I=1,NR
+      WRITE(8,*)I,R(I),PHIHOM(I),POT1(I)*Y0
+    ENDDO
+    CLOSE(8)      
+    CALL ERROR$MSG('PHI CONTAINS NANS')
+    CALL ERROR$STOP('BOUNDSTATE')
+  END IF
+ENDDO
+                                 call trace$pop()
+      RETURN
+      END
+!
+!     ......................................................................
+      SUBROUTINE BOUNDSTATEX(GID,NR,L,SO,rbox,DREL,G,NN,POT,E,PHI)
+!     **                                                                  **
+!     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND     **
+!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                 **
+!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G            **
+!     **                                                                  **
+!     **  FIRST, THE ENERGY IS DETERMINED BY BISECTION ON THE             **
+!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.     **
+!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.     **
+!     **                                                                  **
+!     **  SECONDLY, THE SCHROEDINGER EQUATION IS SOLVED INWARD, AND       **
+!     **  MATCHED WITH VALUE, EITHER AT THE CLASSICAL TURNING POINT       **
+!     **  OR A SPECIFIED RADIUS, WHATEVER IS SMALLER.                     **
+!     **                                                                  **
+!     **                                                                  **
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+      REAL(8)    ,INTENT(IN)     :: rbox    ! box radius
+      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
+      REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
+      INTEGER(4) ,INTENT(IN)     :: NN      !#(NODES)
+      REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL
+      REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      INTEGER(4)                 :: ISTART,IBI
+      REAL(8)                    :: X0,DX,XM,ZM,Z0
+      REAL(8)    ,PARAMETER      :: TOL=1.D-12
+      REAL(8)                    :: PI,Y0
+      REAL(8)                    :: DER,DERO
+      REAL(8)                    :: R(NR)
+      REAL(8)                    :: PHIHOM(NR),phihom2(nr),PHIINHOM(NR),GHOM(NR)
+      INTEGER(4) ,PARAMETER      :: NITER=100
+      INTEGER(4)                 :: I,IR
+      INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
+      INTEGER(4)                 :: IRMATCH 
+      REAL(8)                    :: SVAR
+      REAL(8)                    :: POT1(NR)
+      REAL(8)   ,PARAMETER       :: XMAX=1.D+20 ! MAXIMUM FACTOR IN THE WAVE FUNCTION
+      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
+      LOGICAL(4)                 :: THOM
+      REAL(8)                    :: rout
+      REAL(8)                    :: val,VAL1,VAL2
+      INTEGER(4)                 :: IROUT,IRCL,irbox
+!     *********************************************************************
+                                 call trace$push('boundstate')
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+      irbox=1
+      do ir=1,nr
+        irbox=ir
+        if(r(ir).gt.rbox) exit
+      enddo
+!          
+      ISTART=1
+      X0=E
+      DX=1.D-2
+      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      DO I=1,NITER
+        E=X0
+!        E=MIN(X0,EMAX)
+!
+!       =======================================================================
+!       ==  CUT OFF THE POTENTIAL                                            ==
+!       =======================================================================
+        CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
+        rout=min(r(irout),rbox)
+        irout=min(irout,irbox)
+        POT1(:)=POT(:)
+        POT1(IROUT:)=POT(IROUT)
+!
+!       =======================================================================
+!       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
+!       =======================================================================
+        IDIR=1
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHI)
+!       == CHECK FOR OVERFLOW
+        IF(.NOT.(PHI(IROUT).GT.0.OR.PHI(IROUT).LE.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('NN',NN)
+          CALL ERROR$STOP('BOUNDSTATE')
+        END IF
+!
+!       =======================================================================
+!       == ESTIMATE PHASE SHIFT                                              ==
+!       =======================================================================
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,Phi,Rout,z0)
+        z0=z0-real(NN+1)
+        IF(ABS(2.D0*DX).LE.TOL) EXIT
+!       =====================================================================
+!       ==  BISECTION                                                      ==
+!       =====================================================================
+        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      ENDDO
+      IF(ABS(DX).GT.TOL) THEN
+        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
+        CALL ERROR$MSG('BOUND STATE NOT FOUND')
+        CALL ERROR$STOP('BOUNDSTATE')
+      END IF
+!
+!     =======================================================================
+!     ==  DETERMINE MATCHING POINT                                         ==
+!     =======================================================================
+      THOM=MAXVAL(ABS(G(:))).EQ.0.D0
+      IRMATCH=IRCL
+      IF(R(IRCL).GT.5.D0) THEN
+        CALL RADIAL$XOFR(GID,5.D0,SVAR)
+        IRMATCH=INT(SVAR)
+      END IF
+!
+!     =======================================================================
+!     ==  INTEGRATE INWARD                                                 ==
+!     =======================================================================
+      if(irmatch.lt.irout) then
+        IDIR=-1
+        GHOM(:)=0.D0
+        ir=min(irout+3,nr)
+        GHOM(IR)=1.D-8
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
+        ghom=0.d0
+        ir=min(irout+10,nr)
+        GHOM(IR)=1.D-8
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM2)
+        CALL RADIAL$VALUE(GID,NR,PHIHOM,Rbox,VAL1)
+        CALL RADIAL$VALUE(GID,NR,PHIHOM2,Rbox,VAL2)
+        if(val2.ne.0.d0) then
+          SVAR=-VAL1/VAL2
+          PHIHOM(:)=PHIHOM(:)+SVAR*PHIHOM2(:)
+        end if
+        IF(.NOT.THOM) THEN     
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
+          if(val2.ne.0.d0) then
+            CALL RADIAL$VALUE(GID,NR,PHIINHOM,rbox,VAL1)
+            SVAR=-VAL1/VAL2
+            PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM2(:)
+          end if
         ELSE
           PHIINHOM(:)=0.D0
         END IF
@@ -4043,5 +4228,3 @@ DEALLOCATE(W)
        DEALLOCATE(DY)
        RETURN
        END
-
-
