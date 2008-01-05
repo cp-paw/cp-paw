@@ -1905,12 +1905,12 @@ END MODULE DYNOCC_MODULE
            SPINPOT=0.D0
            DO ISPIN=1,NSPIN
              SIGMA=REAL(3-2*ISPIN,KIND=8)
-             WORK1(:,:)=EPSILON(:,:,ISPIN)
+             WORK1(:nb,:)=EPSILON(:,:,ISPIN)
              Q0=0.5D0*(TOTCHA+SIGMA*SPINCHA)
-             CALL BRILLOUIN$DOS(NB,NKPT,WORK1,WORK2,Q0,V0)
+             CALL BRILLOUIN$DOS(NB,NKPT,WORK1(1:nb,:),WORK2(:nb,:),Q0,V0)
              TOTPOT=TOTPOT+0.5D0*V0
              SPINPOT=SPINPOT-0.5D0*SIGMA*V0
-             WGHT(:,:,ISPIN)=FMAX*WORK2(:,:)
+             WGHT(:,:,ISPIN)=FMAX*WORK2(:nb,:)
            ENDDO
 !
          ELSE IF(TFIXTOT.AND..NOT.TFIXSPIN) THEN

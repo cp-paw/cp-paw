@@ -439,10 +439,10 @@ which are supplied by all compilers in similar form as
 library. Sometimes they are treated like instrinsic functions as
 Fortran extensions without the need to link a library.
 
-Die Utility Bibliothek is named differently by different supplierst. IBM calls it
-``Service and Utility Library'', Intel calls it ``Portability
-Routines''. Traditional it is called  Utility Library U77, where 77
-is related to the  Fortran77 Standard.
+The Utility Bibliothek is named differently by different
+suppliers. IBM calls it ``Service and Utility Library'', Intel calls
+it ``Portability Routines''. Traditional it is called Utility Library
+U77, where 77 is related to the Fortran77 Standard.
 
 Even though the library calls are nearly identical, they differ in the
 kind parameter of the arguments. In order to avoid the corresponding
@@ -474,35 +474,35 @@ As the name says: Fast Fourier transformations
 These libraries are to a large part responsible for the efficiency of
 the CP-PAW calculations.
 
-F\"ur die Linearen Algebra Routinen gibt es Standardpakete, n\"amlich
-das Linear Algebra PACKage (LAPACK) und die Basic Linear Algebra
-Subprograms (BLAS) . Die Beschreibung der LAPACK-Routinen findet man
-unter 
+There are standardized packages for the linear algebra routines,
+namely the Linear Algebra PACKage (LAPACK) and the Basic Linear
+Algebra Subprograms (BLAS) . The documentation for the LAPACK-Routines
+can be found at
 \begin{verbatim}
 http://www.netlib.org/lapack/ 
 \end{verbatim}
-und die von BLAS unter
+and the ones for BLAS at
 \begin{verbatim}
 http://www.netlib.org/blas/
 \end{verbatim}
- Diese stellen sozusagen einen Standard f\"ur entsprechende
-Bibliotheken dar.
+These two are a kind of standard for many other packages.
 
-Diese Pakete sind zum Teil in speziellen Bibliotheken enthalten.
+These packages are contained in libraries
+such as
 \begin{itemize}
 \item IBM Engineering and Scientific Software Library (ESSL)
 \item AMD Core Math Library (ACML)
 \item Intel Math Kernel Library (MKL)
 \end{itemize}
 
-Es ist ratsam, nicht die mit dem Operating System mitgeliefereten
-Bibliotheken zu nutzen, sondern diese m\"oglichst selber auf dem
-Zielsystem zu Kompilieren. Dies erzeugt schnellere Binaries.
+It is adviseable, not to use the libraries supplied by the operating system, but to complile them 
+on the hardware, on which one intends to use them. These binaries are usually faster.
 
-Wir legen selbst erzeugte Bibliotheken in einer Directory
-\mytt{/home/tools} auf dem jeweiligen Rechner ab. Dies hat Vorteile
-bei der Installation von Parallelrechnern, bei denen die Bibliotheken
-nur auf dem Frontendrechner vorgehalten werden.
+We found it useful to place all these libraries, that we created for
+the current hardware into a directory \mytt{/home/tools} on the
+specific computer. The advantage is that it facilitates installation
+on parallel computer clusters, where the libraries are kept only on the
+frontend.
 
 \begin{center}
 \begin{tabular}{|l|l|l|}
@@ -590,7 +590,7 @@ http://www.netlib.org/lapack/lawn81/node13.html)
 \item Supplier: Massachusetts Institute of Technology (MIT)
 \item Name: FFTW=Fastest Fourier Transform in the West
 \item Source: \mytt{http://www.fftw.org/download.html}
-\item Reamrk
+\item Remark
 \begin{itemize}
 \item The versions FFTW2 und FFTW3 are not compatible. Currently we only support FFTW2.
 \end{itemize}
@@ -600,17 +600,17 @@ http://www.netlib.org/lapack/lawn81/node13.html)
 \item Archiv mit \mytt{tar -xvzf Dateiname} entpacken
  \item Den Befehl \mytt{./configure --enable-i386-hacks} ausf\"uhren.
  The option \mytt{--enable-i386-hacks} takes advantage if rge gcc/x86
- specific performance hacks. (Beim core2duo muss die Option
- \mytt{--enable-i386-hacks} weggelassen werden!)
-\item Folgende Zeile in der \textit{fftw/config.h} ändern (am Ende der Datei):\\
+ specific performance hacks. (For the core2duo the option
+ \mytt{--enable-i386-hacks} must be left out!)
+\item Change the following line in the file \textit{fftw/config.h} (At the end of the file):\\
 \begin{verbatim}
  \#define F77_FUNC_(name,NAME) name ## __
 \end{verbatim}
- dort den letzten Unterstrich entfernen, so dass daraus die folgende Zeile wird:
+ Remove the last underscore so that the line reads as
 \begin{verbatim}
   \#define F77_FUNC_(name,NAME) name ## _ 
 \end{verbatim}
- \item  Den Befehl \textit{make} ausführen
+ \item  execute the command \textit{make}
 \end{enumerate}
 \end{itemize}
 
@@ -650,20 +650,19 @@ also appendix~\ref{sec:problempthread})
 %====================================================
 \subsubsection{FFTW der MKL}
 %====================================================
-Die MKL enth\"alt ein Interface f\"ur FFTW Aufrufe, und stellt damit
-auch die Routinen f\"ur Fouriertransformationen zu Verf\"ugung.
+The MKL contains an interface for FFTW calls and also supplies the
+Routines for Fourier transforms.
 
-Um die FFTW von der MKL nutzen zu können, muss man in das
-Unterverzeichnis \textit{interfaces/fftw2xf} der MKL wechseln und dort
-das Kommando \textit{make} ausführen. Benötigt wird dafür der Intel
-Fortran Compiler und der Intel C Compiler.  Es wird dann die
-Bibliothek \textit{libfftw2xf\_intel.a} im entsprechenden
-\textit{mkl-libs} Verzeichnis erzeugt, welche in PAW eingebunden
-werden kann, indem man die fftw Pfade im Parameterfile anpasst.
-Desweiteren muss unter den Punkten \textit{LIBS\_SCALAR }und
-\textit{LIBS\_PARALLEL} der Wert \textit{fftw} durch
-\textit{fftw2xf\_intel }ersetzt werden.
-
+In order to be able to use the FFTW of the MKL, one executes the
+command \textit{make} from within the subdirectory
+\textit{interfaces/fftw2xf} of the MKL directory This step requires
+the intel fortran compiler and the intel C compiler.  The make command
+constructs the library \textit{libfftw2xf\_intel.a} in the
+corresponding directory \textit{mkl-libs}. In order to use this
+library the paw-parameter file must be adapted. First one has to
+adjust the value of \mytt{FFTDIR}.  Then one has to replace the value
+\textit{fftw} by \textit{fftw2xf\_intel} in the variables
+\textit{LIBS\_SCALAR } and \textit{LIBS\_PARALLEL}.
 
 %====================================================
 \subsection{ESSL}
@@ -675,8 +674,8 @@ Desweiteren muss unter den Punkten \textit{LIBS\_SCALAR }und
 \begin{itemize}
 \item Nur f\"ur IBM Hardware. Nur f\"ur AIX operating
 system oder Linux f\"ur Power achitekture.
-\item ESSL verwendet nicht dieselben Calling sequences wie LAPACK und
-BLAS. PAW besitzt aber spezielle Interfaces f\"ur ESSL.
+\item ESSL does not use the same calling sequences as LAPACK and
+BLAS. However, PAW has a special interface for ESSL.
 \end{itemize}
 \item Covers: FFT, LAPACK, BLAS
 \end{itemize}
@@ -685,40 +684,38 @@ BLAS. PAW besitzt aber spezielle Interfaces f\"ur ESSL.
 \newpage
 \section{Message Passing Interface}
 %====================================================
-Das MPI (Message Passing Interface) ist ein Protokoll, um ein
-verteiltes (paralleles) Rechnen zu ermöglichen.  Das MPI muss so
-compiliert sein, das seine Funktiosaufrufe mit einem Underscore
-funktionieren!
+The MPI (Message Passing Interface) is a protocoll, that allows a
+distributed/parallel computing. The MPI must be compiled such that its
+calls work with a single underscore.
 
-Die meisten Hardware Hersteller bieten eigene MPI Implementierungen
-an. Es gibt aber auch freie MPI implementierungen wie MPICH und Open
-MPI\textit{http://www.open-mpi.org/}. Unsere Erfahrungen beschr\"anken
-sich auf MPICH bzw MVAPICH, sowie die MPI von IBM.
+Most hardware suppliers offer their own MPI implementations. 
+There are also freely available MPI implementations, such as  MPICH and Open
+MPI\textit{http://www.open-mpi.org/}. Our experiences are limited to
+ MPICH,  MVAPICH, and the MPI of IBM.
 
 %====================================================
 \subsection{MPICH}
 \label{sec:mpich}
 %====================================================
-MPICH ist eine freie Implementierung des MPI für Ethernet.
+MPICH is a free implementation of the MPI for  ethernet networks.
 
 \begin{itemize}
-\item Hersteller: Argonne National Laboratory and Missisippi State University
+\item Supplier: Argonne National Laboratory and Missisippi State University
 \item Source http://www-unix.mcs.anl.gov/mpi/mpich1/
-\item Anmerkungen:
+\item Remarks:
 \begin{itemize}
-\item Inzwischen existitert eine neue Implementierung MPICH2, die
-heute empfohlen wird. Sie unterst\"utzt Cluster aus Single und SMP Knoten.
-MPICH2 kann unter
-\textit{http://www-unix.mcs.anl.gov/mpi/mpich2/index.htm}
-heruntergeladen werden.
+\item There is a new implementation of MPICH called MPICH2. According
+to the supplier this is the currently recommendent implementation.
+MPICH2 can be downloaded from
+\textit{http://www-unix.mcs.anl.gov/mpi/mpich2/index.htm}.
 \end{itemize}
 \item Installation:
 \begin{enumerate}
-\item Download der neuesten version unter
+\item Download of the most recent version from
 \begin{center}
 \textit{http://www-unix.mcs.anl.gov/mpi/mpich1/}
 \end{center}
-\item Nach dem Entpacken kann man mit folgendem Script MPI für PAW compilieren:
+\item After unpacking, one can compile the MPI for PAW using the following script.
 \begin{verbatim}
 #!/bin/sh
 export F90=g95
@@ -729,7 +726,7 @@ export FLINKER=g95
 export RSHCOMMAND=ssh
 ./configure --enable-f77
 \end{verbatim}
-F\"ur Pathscale
+For Pathscale
 \begin{verbatim}
 #!/bin/sh
 export CC=pathcc
@@ -743,9 +740,7 @@ export RSHCOMMAND=ssh
             --with-romio --disable-weak-symbols 
 \end{verbatim}
 
-
-
-\item \textit{make} ausf\"uhren
+\item execute \textit{make}.
 \end{enumerate}
 \end{itemize}
 
@@ -753,10 +748,10 @@ export RSHCOMMAND=ssh
 \subsection{MVAPICH}
 \label{sec:mvapich}
 %====================================================
-Freie MPI Implementierung für ein Infiniband Netzwerk. Sie basiert auf MPICH.
+MPICH is a free implementation of the MPI for  Infiniband networks.
 \begin{itemize}
-\item Hersteller: Ohio State University
-\item Source \textit{http://mvapich.cse.ohio-state.edu/}
+\item Supplier: Ohio State University
+\item Source: \textit{http://mvapich.cse.ohio-state.edu/}
 \end{itemize}
 
 
@@ -1087,19 +1082,15 @@ usually ``f90'' or ``f95''.
 
 
 %================================================================================
-\chapter{Liste der Targets des Make files}
+\chapter{List of Targets of the Make file}
 %================================================================================
 
-Das Makefile erkennt die folgenden Targets:
+The makefile recognizes the following targets:
 \begin{itemize}
-\item {none} Erzeugt ein sequentielles Binary ohne Optimierungen.
-Hiermit sollte beim erstmalligen installieren angefangen werden.
-\item {dbg}
-\item {fast} Mit dem Kommando \textit{make fast} werden im Verzeichnis\textit{
-bin/\$arch} die Objekte und die Programmdateien für ein sequentielles
-Binary erzeugt.
-
-\item {prof}
+\item {none} Creates a sequential binary without optimizations. 
+\item {dbg} Creates a sequential binary for debugging
+\item {fast} Creates an optimized, sequential binary.
+\item {prof} Creates an optimized, sequential binary for profiling
 \item {none\_parallel}
 \item {dbg\_parallel}
 \item {fast\_parallel}
@@ -1152,8 +1143,9 @@ two underscores are attached instead of one. This is the so-called
 ``second-underscore'' convention.
 \begin{center}
 ``G95 follows the f2c convention of adding an underscore to public
-names, or two underscores if the name contains an underscore.'' Diese
-Konvention kann \"ublicherweise durch Compilerflags ge\"andert werden.
+names, or two underscores if the name contains an underscore.'' This
+convention can usually be changed by setting the corresponding
+compiler flags.
 \end{center}
 
 In the following table we denote the ``second-underscore'' as ``su''
@@ -1384,11 +1376,11 @@ FFTW version 3 (FFTW3) is not compatible with older versions
 (FFTW2). FFTW3 cannot yet be used with PAW.
 
 %================================================================================
-\section{Informationen \"uber das System}
+\section{Information about your system}
 %================================================================================
-Um zum die richtigen Compiler und Bibliotheken herunterzuladen und
-f\"ur bestimmte Lizenzen, sind einige Informationen uber das aktuelle
-System notwendig.
+In order to download the correct compilers and libraries, or to obtain
+certain licenses, you need to know some information about your current
+system.
 
 %================================================================================
 \subsection{Rechnername}
@@ -1401,49 +1393,49 @@ System notwendig.
 
 \subsection{MAC Adress}
 
-Die Media Access Control (MAC) Adresse oder Ethernet ID wird manchmal
-ben\"otigt um eine Lizenz speziell f\"ur einen Rechner ausstellen zu
-k\"onnen. Sie ist eine eindeutige Nummer f\"ur jede Netzwerkkarte.  Die
-MAC Adresse besteht aus 6 Byte und wird h\"aufig hexadezimal
-geschrieben, z.B. \mytt{08:00:20:AE:FD:7E}.
+The Media Access Control (MAC) adress or Ethernet ID is sometimes used
+to request a license for a particular computer. The MAC address is a
+unique identifier for each networkcard. The MAC address consists of 6
+Byte and is expressed in hexadecimal numbers.  An example is
+\mytt{08:00:20:AE:FD:7E}.
 
-Um die MAC Adresse zu erhalten, f\"uhrt man das Kommando
+In order to obtain the  MAC adress, execute
 \begin{verbatim}
 /sbin/ifconfig -a
 \end{verbatim}
-aus. Man erh\"alt information zu allen Netzwerkkarten. Die
-Ethernet Hardware Adresse  ist die MAC Adresse.
+One obtaines a list for all network cards. The number of the ethernet
+hardware address is the MAC address of the computer.
 
 \subsection{Rechnerarchitektur}
-Das Linux Kommando ``\mytt{arch}'' oder ``\mytt{uname -m}'' lieferet die
-Rechnerarchitektur. z.B. x86\_64.
+The Linux command ``\mytt{arch}'' or ``\mytt{uname -m}'' supplies the
+machine architecture, such as. x86\_64.
 
-Die wichtigsten Rechnerarchitekturen sind:
+The most important computer architectures are
 \begin{itemize}
-\item IA-32 (Intel Architecture 32bit), i386, x86 ist die seit 87 von
-Intel verwendete Prozessorarchitektur bis zur Einf\"uhrung der 64bit
-Rechner.
-\item x86-64, AMD64, EM64T, IA-32e, x64 Architektur der ersten 64-bit
-Prozessoren von AMD. EM64T steht f\"ur ``Extended Memory 64 Technology''.
-\item IA-64 ist die volkommen neue 64 Architektur von Intel. Sie kommt
-bei den Itanium Prozessoren zum Einsatz. IA-64 steht f\"ur ``Intel
-Architecture 64''.
-\item POWER ist die Architektur der RISC Prozessoren von IBM.
-Power steht hier für Performance optimized with enhanced RISC)
+\item IA-32 (Intel Architecture 32bit), i386, x86 is the processor
+architecture used by Intel since 1987 until the 64bit computers have
+been introduced.
+\item x86-64, AMD64, EM64T, IA-32e, x64:  Architecture of the first 64-bit
+prozessors of  AMD. EM64T stands for ``Extended Memory 64 Technology''.
+\item IA-64 is the completely new 64bit architekture of Intel. It is
+used in the Itanium prozessors. IA-64 stands for ``Intel Architecture
+64''.
+\item POWER is the architecture of IBM's RISC prozessors.
+Power stands for ``Performance Optimized With Enhanced RISC''
 \end{itemize}
 
 \subsection{Linux version}
 
-Unter Suse erh\"alt man die Versionsnummer durch
-\verb+cat /etc/SuSE-release+.  Die Kernel version erh\"alt man durch
+In the Suse distribution of linux one obtains the versionsnumber using
+\verb+cat /etc/SuSE-release+.  The kernel version is obtained using
 \verb+uname -r+
 
 %==================================================================================
 \section{Hintergrund zum Configure Skript}
 \label{sec:configurebackground}
 %==================================================================================
-Es mag von Interesse sein sein, zu verstehen, woher das configure
-script kommt, welches die Konfiguration vornimmt. 
+It may be of interest to understand what the configure script does,
+which takes care of the configuration.
 
 %==================================================================================
 \subsection{What does the configure script do}
