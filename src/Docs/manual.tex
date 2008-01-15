@@ -7526,16 +7526,8 @@ coefficients at the plane wave cutoff vanish strictly.
 
 %==========================================================================
 \newpage
-\section{Benchmarks}
-%==========================================================================
-Among the best calculations to compare energies are the calculations using
-Numol by
-Becke\cite{becke92_jcp96_2155,becke92_jcp97_9173,dickson93_jcp99_3898,becke97_jcp107_8554}.
-Zero-point vibration energies and experimental data have been tabulated by
-Pople\cite{pople89_jcp90_5622,curtiss91_jcp94_7221}.
-
-
 \section{Troubleshooting}
+%==========================================================================
 
 \subsection{Errors in the input data}
 
@@ -7580,27 +7572,6 @@ STOP IN STRCIN; !STRUCTURE!LATTICE
 \end{verbatim}
 
 \end{itemize}
-\subsubsection{Changes of Input data}
-
-Here a list of syntactic changes for the input data. Although I am
-trying to keep this list complete, please consult the description of
-the input data to make sure.
-
-\begin{enumerate}
-\item !CONTROL!GENERIC:STOREPSIR \break$\rightarrow$ !CONTROL!PSIDYN:STOREPSIR
-\item !CONTROL!PSIDYN:AUTO \break$\rightarrow$ !CONTROL!PSIDYN!AUTO
-\item !CONTROL!RDYN:AUTO \break$\rightarrow$ !CONTROL!RDYN!AUTO
-\item !CONTROL!FILES!FILE:IDENT \break$\rightarrow$ !CONTROL!FILES!FILE:ID
-\item !STRUCTURE!GENERIC:NBAND \break$\rightarrow$ !STRUCTURE!OCCUPATIONS:NBAND
-\item !STRUCTURE!GENERIC:NSPIN \break$\rightarrow$ !STRUCTURE!OCCUPATIONS:NSPIN
-\item !STRUCTURE!GENERIC:CHARGE[-QEL]\break$\rightarrow$ !STRUCTURE!OCCUPATIONS:CHARGE[E]
-\item !STRUCTURE!GENERIC:SPIN[-QEL] \break$\rightarrow$ !STRUCTURE!OCCUPATIONS:SPIN[HBAR]
-\item !STRUCTURE!OCCUP \break$\rightarrow$ !STRUCTURE!OCCUPATIONS!STATE
-\item !CNTL!PSIDYN:SAVEORTHO \break$\rightarrow$ !CNTL!PSIDYN:SAFEORTHO
-\item !CNTL!ANALYSE!BOX disabled
-\item !CONTROL!RNOSE \break$\rightarrow$ !CONTROL!RDYN!THERMOSTAT
-\item !CONTROL!PSINOSE \break$\rightarrow$ !CONTROL!PSIDYN!THERMOSTAT
-\end{enumerate}
 
 \subsection{Runtime errors}
 
@@ -7690,36 +7661,13 @@ keep this list as short as possible.
 %==========================================================================
 \section{Installation}
 %==========================================================================
-This section is under construction!
-
-
-\begin{itemize}
-\item unpack the tarball of the CP-PAW distribution. We will refer to it in the following as ``PAW''
-\item create a configure script in the PAW directory 
-\begin{center}
-\verb+autoconf configure.in >configure+ 
-\end{center}
-\item create a parameter file \textit{parmfile}. There are generic
-  parameter files named for example \verb+parms.g95+,
-  \verb+parms.ifc+, \verb+parms.xlf+, which are compiler specific.
-  Choose the appropriate one and create a copy by appending the name
-  of your computer or environment. For example
-  \verb+parms.g95_mycomputer+. Specify ARCH as for example as
-\verb+''g95_mycomputer''+ and define FFTWDIR,MPICHDIR,LAPACKDIR as the
-locations of the FFTW library for Fourier transforms, the MPI library,
-and the library with algebraic subroutines (lapack and blas).
-\item Create Makefiles by running
-\begin{center}
-\verb+configure -with-parmfile=+\textit{parmfile} 
-\end{center}
-\item include the directory with the executables into your search path.
-\end{itemize}
+The installation is described the in the installation guide also
+contained in the documentation.
 
 The directory structure will have the following form
 \begin{center}
 \includegraphics[width=0.8\linewidth]{Figs/PAWdirtree/pawdirtree.eps}
 \end{center}
-
 
 
 \ifthenelse{\boolean{private}}{

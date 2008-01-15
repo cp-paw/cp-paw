@@ -1724,7 +1724,7 @@
               ARG=(DIS-R1(IAT))/(R2(IAT)-R1(IAT))
               IF(ARG.LT.1.D-8) CYCLE ! AVOID OVERFLOW
               SVAR=6.D0*(1.D0-ARG)/(3.D0-2.D0*ARG)/ARG  !DF/F
-              SVAR=RHO(J1,J2,J3)*POT(J1,J2,J3)*SVAR
+              SVAR=RHO(J1,J2,J3)*POT(J1,J2,J3)*SVAR/(R2(IAT)-R1(IAT))
               VEC(:)=(RP(:)-RAT(:,IAT))/DIS
               FORCE(:,IAT)=FORCE(:,IAT)-SVAR*VEC(:)
             ENDDO

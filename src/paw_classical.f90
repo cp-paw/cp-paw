@@ -117,6 +117,7 @@ TYPE MD_TYPE
   INTEGER(4)            :: MAXDIV         ! MAX TRANSLATIONS FOR EXCLUSION FILE
   INTEGER(4)            :: NEXCL          ! #(EXCLUSIONS)
   INTEGER(4)   ,POINTER :: EXCLUSION(:)   ! EXCLUSIONS
+  INTEGER(4)   ,POINTER :: I2FIRST(:)     !(NAT)
   INTEGER(4)   ,POINTER :: ITYPE(:)       !(NAT)          
   REAL(8)      ,POINTER :: BO(:)          !(NBOND)           
   INTEGER(4)            :: NANGLE              
@@ -288,6 +289,7 @@ END MODULE CLASSICAL_MODULE
       MD%MAXDIV=0
       MD%NEXCL=0
       NULLIFY(MD%EXCLUSION)
+      NULLIFY(MD%I2FIRST)
       NULLIFY(MD%ITYPE)
       NULLIFY(MD%BO)
       MD%NANGLE=0
@@ -1187,17 +1189,18 @@ call error$stop('CLASSICAL$GETI4A')
 !     ==========================================================================
 !     ==  CALCULATE EXCLUSIONS                                                ==
 !     ==========================================================================
+      ALLOCATE(MD%i2first(MD%Nat))
 !     == FIRST COUNT THE NUMBER OF EXCLUSIONS ....
       MD%NEXCL=1
       ALLOCATE(MD%EXCLUSION(MD%NEXCL))
       ISVAR=MD%NEXCL
       CALL CLASSICAL_EXCLUSIONS(MD%NAT,MD%NBOND,MD%BOND,MD%NANGLE,MD%ANGLE &
-     &               ,MD%MAXDIV,ISVAR,MD%NEXCL,MD%EXCLUSION)
+     &               ,MD%MAXDIV,ISVAR,MD%NEXCL,MD%EXCLUSION,md%i2first)
       DEALLOCATE(MD%EXCLUSION)
 !     == NOW CALCULATE EXCLUSIONS
       ALLOCATE(MD%EXCLUSION(MD%NEXCL))
       CALL CLASSICAL_EXCLUSIONS(MD%NAT,MD%NBOND,MD%BOND,MD%NANGLE,MD%ANGLE &
-     &               ,MD%MAXDIV,MD%NEXCL,ISVAR,MD%EXCLUSION)
+     &               ,MD%MAXDIV,MD%NEXCL,ISVAR,MD%EXCLUSION,md%i2first)
 !
 !     ==================================================================
 !     == CALCULATE NEIGHBORLIST                                       ==
@@ -1209,7 +1212,7 @@ call error$stop('CLASSICAL$GETI4A')
         NULLIFY(MD%IBLIST(I)%IT)
       ENDDO      
       CALL CLASSICAL_NEIGHBORS(MD%NAT,MD%R0,MD%RBAS0,MD%NNBX,MD%NNB,MD%IBLIST &
-     &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION)
+     &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION,md%i2first)
       DEALLOCATE(MD%IBLIST)
       MD%NNBX=MD%NNB
       ALLOCATE(MD%IBLIST(MD%NNBX))
@@ -1217,7 +1220,7 @@ call error$stop('CLASSICAL$GETI4A')
         NULLIFY(MD%IBLIST(I)%IT)
       ENDDO      
       CALL CLASSICAL_NEIGHBORS(MD%NAT,MD%R0,MD%RBAS0,MD%NNBX,MD%NNB,MD%IBLIST &
-     &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION)
+     &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION,md%i2first)
 
                                CALL TRACE$POP
       RETURN
@@ -1243,7 +1246,7 @@ call error$stop('CLASSICAL$GETI4A')
 !     ==  NOW CALCULATE NEIGBORLIST                                   ==
 !     ==================================================================
       CALL CLASSICAL_NEIGHBORS(MD%NAT,MD%R0,MD%RBAS0,MD%NNBX,MD%NNB,MD%IBLIST &
-     &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION)
+     &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION,md%i2first)
       IF(MD%NNB.GT.MD%NNBX) THEN
         MD%NNBX=MD%NNB
         DEALLOCATE(MD%IBLIST)
@@ -1252,7 +1255,7 @@ call error$stop('CLASSICAL$GETI4A')
           NULLIFY(MD%IBLIST(I)%IT)
         ENDDO      
         CALL CLASSICAL_NEIGHBORS(MD%NAT,MD%R0,MD%RBAS0,MD%NNBX,MD%NNB,MD%IBLIST &
-     &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION)
+     &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION,md%i2first)
       END IF
                                CALL TRACE$POP
       RETURN
@@ -1597,7 +1600,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       REAL(8)                :: DX2,DY2,DZ2
       REAL(8)                :: D11,D22,D12
       REAL(8)                :: X
-      REAL(8)                :: dr(3)
+      REAL(8)                :: dr(3),dr1(3),dr2(3)
       INTEGER(4)             :: NTASKS,THISTASK
 !     *****************************************************************      
                                CALL TRACE$PUSH('CLASSICAL$REPORT')
@@ -1659,12 +1662,24 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
             IAT1=MD%angle(ia)%iat1
             IAT2=MD%angle(ia)%iat2
             IAT3=MD%angle(ia)%iat3
-            DX1=MD%R0(1,IAT1)-MD%R0(1,IAT2)
-            DY1=MD%R0(2,IAT1)-MD%R0(2,IAT2)
-            DZ1=MD%R0(3,IAT1)-MD%R0(3,IAT2)
-            DX2=MD%R0(1,IAT3)-MD%R0(1,IAT2)
-            DY2=MD%R0(2,IAT3)-MD%R0(2,IAT2)
-            DZ2=MD%R0(3,IAT3)-MD%R0(3,IAT2)
+            Dr1(:)=MD%R0(:,IAT1)-MD%R0(:,IAT2)
+            IF(ASSOCIATED(MD%angle(ia)%IT1)) THEN
+              DR1(:)=DR1(:)+MD%RBAS0(:,1)*REAL(MD%angle(ia)%IT1(1),KIND=8)
+              DR1(:)=DR1(:)+MD%RBAS0(:,2)*REAL(MD%angle(ia)%IT1(2),KIND=8)
+              DR1(:)=DR1(:)+MD%RBAS0(:,3)*REAL(MD%angle(ia)%IT1(3),KIND=8)
+            end if
+            Dr2(:)=MD%R0(:,IAT3)-MD%R0(:,IAT2)
+            IF(ASSOCIATED(MD%angle(ia)%IT3)) THEN
+              DR2(:)=DR2(:)+MD%RBAS0(:,1)*REAL(MD%angle(ia)%IT3(1),KIND=8)
+              DR2(:)=DR2(:)+MD%RBAS0(:,2)*REAL(MD%angle(ia)%IT3(2),KIND=8)
+              DR2(:)=DR2(:)+MD%RBAS0(:,3)*REAL(MD%angle(ia)%IT3(3),KIND=8)
+            end if
+            dx1=dr1(1)
+            dy1=dr1(2)
+            dz1=dr1(3)
+            dx2=dr2(1)
+            dy2=dr2(2)
+            dz2=dr2(3)
             D11=DX1*DX1+DY1*DY1+DZ1*DZ1
             D12=DX1*DX2+DY1*DY2+DZ1*DZ2
             D22=DX2*DX2+DY2*DY2+DZ2*DZ2
@@ -4455,7 +4470,7 @@ END MODULE UFFTABLE_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CLASSICAL_NEIGHBORS(NAT,R,RBAS,NNBX,NNB,NBLIST &
-     &                              ,MAXDIV,NEXCL,IEXCLUSION)
+     &                              ,MAXDIV,NEXCL,IEXCLUSION,i2first)
 !     **************************************************************************
 !     **  CALCULATE A NEIGHBORLIST                                            **
 !     **                                                                      **
@@ -4472,6 +4487,7 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)        ,INTENT(IN) :: MAXDIV
       INTEGER(4)        ,INTENT(IN) :: NEXCL
       INTEGER(4)        ,INTENT(IN) :: IEXCLUSION(NEXCL)
+      INTEGER(4)        ,INTENT(IN) :: i2first(nat)
       INTEGER(4)                    :: EXCLUSION
       REAL(8)                       :: RMAX2
       INTEGER(4)                    :: iat,IAT1,IAT2,iat2a,iat2b,NN,i
@@ -4600,19 +4616,18 @@ END MODULE UFFTABLE_MODULE
                   IF(ITVEC(1).EQ.0) THEN
                     IF(ITVEC(2).GT.0) CYCLE
                     IF(ITVEC(2).EQ.0) THEN
-                      IF(ITVEC(3).GT.0) CYCLE
+                      IF(ITVEC(3).Ge.0) CYCLE
                     END IF
                   END IF
                 END IF   
 !               == distance criterion =========================================
                 D(:)=R(:,IAT2)+MATMUL(RBAS,REAL(ITVEC,KIND=8))-R(:,IAT1)
                 D2=SUM(D(:)**2)
-                IF(D2.LT.RMAX2) CYCLE
+                IF(D2.GT.RMAX2) CYCLE
                 NNB=NNB+1
                 IF(NNB.LE.NNBX) THEN
                   NBLIST(NNB)%IAT1=IAT1
                   NBLIST(NNB)%IAT2=IAT2
-                  NBLIST(NNB)%EXCLUDE=.FALSE. ! WILL BE DETERMINED LATER....
                   TCHK=(ITVEC(1).NE.0).OR.(ITVEC(2).NE.0).OR.(ITVEC(3).NE.0)
                   IF(ASSOCIATED(NBLIST(NNB)%IT)) THEN
                     IF(TCHK) THEN
@@ -4626,20 +4641,35 @@ END MODULE UFFTABLE_MODULE
                       NBLIST(NNB)%IT(:)=ITVEC(:)
                     END IF
                   END IF                               
+!         == if isvar=iat1-1+nat*(iat2-1)+...
+!         == then 1) it is the translation of iat1
+!         ==      2) iat1.ge.iat2
                   EXCLUSION=1+(ITVEC(1)+MAXDIV)+(1+2*MAXDIV)*((ITVEC(2)+MAXDIV) &
                &                               +(1+2*MAXDIV)*((ITVEC(3)+MAXDIV) &
                &                               +(1+2*MAXDIV)*(IAT1-1+NAT*(IAT2-1))))
+                  iat2a=i2first(iat2)
+                  nblist(nnb)%exclude=.false.
+                  do iex=iat2a,nexcl
+                     if(iexclusion(iex).lt.exclusion) cycle
+                     if(iexclusion(iex).eq.exclusion) then
+                        NBLIST(NNB)%EXCLUDE=.true. 
+                     ELSE
+                        NBLIST(NNB)%EXCLUDE=.FALSE.
+                     end if
+                     exit
+                  end do
+!
 
-                  NBLIST(NNB)%EXCLUDE=.FALSE.
-                  do iex=1,nexcl
-                    if(iexclusion(iex).lt.exclusion) cycle !exclusions are inclreasing
-                    if(iexclusion(iex).eq.exclusion) then
-                      NBLIST(NNB)%EXCLUDE=.true. 
-                    else 
-                      NBLIST(NNB)%EXCLUDE=.FALSE.
-                    end if  
-                    exit
-                  enddo
+!!$                  NBLIST(NNB)%EXCLUDE=.FALSE.
+!!$                  do iex=1,nexcl
+!!$                    if(iexclusion(iex).lt.exclusion) cycle !exclusions are inclreasing
+!!$                    if(iexclusion(iex).eq.exclusion) then
+!!$                      NBLIST(NNB)%EXCLUDE=.true. 
+!!$                    else 
+!!$                      NBLIST(NNB)%EXCLUDE=.FALSE.
+!!$                    end if  
+!!$                    exit
+!!$                  enddo
                 END IF
               ENDDO
             ENDDO
@@ -4676,7 +4706,7 @@ END MODULE UFFTABLE_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CLASSICAL_EXCLUSIONS(NAT,NBOND,BOND,NANGLE,ANGLE &
-     &                     ,MAXDIV,NEXCLUSIONX,NEXCLUSION,IEXCLUSION)
+     &                     ,MAXDIV,NEXCLUSIONX,NEXCLUSION,IEXCLUSION,i2first)
 !     **************************************************************************
 !     **  NON-BOND INTERACTIONS SUCH AS VAN DER WAALS AND COULOMB INTERACTION **
 !     **  MUST NOT BE CALCULATED THAT ARE CONNECTED VIA TWO BONDS OR LESS.    **
@@ -4702,6 +4732,7 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)       ,INTENT(IN) :: NEXCLUSIONX
       INTEGER(4)       ,INTENT(OUT):: NEXCLUSION
       INTEGER(4)       ,INTENT(OUT):: IEXCLUSION(NEXCLUSIONX)
+      INTEGER(4)       ,INTENT(OUT):: I2first(nat)
       LOGICAL(4)            :: TCHK
       LOGICAL(4),PARAMETER  :: TPR=.TRUE.
       INTEGER(4)            :: LARGEST    ! LARGEST NUMBER ON EXLCUSION FILE
@@ -4727,7 +4758,7 @@ END MODULE UFFTABLE_MODULE
           if(ASSOCIATED(BOND(IB)%IT2)) then
             it(:)=BOND(IB)%IT2(:)
           end if
-          IF(IAT2.ge.IAT1) THEN
+          IF(IAT2.GE.IAT1) THEN 
             ISVAR=IAT2-1+NAT*(IAT1-1)
           ELSE
             ISVAR=IAT1-1+NAT*(IAT2-1)
@@ -4742,6 +4773,7 @@ END MODULE UFFTABLE_MODULE
             CALL ERROR$I4VAL('IT(3)',IT(3))
             CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
           END IF
+!         == it is the translation o9f the  atom iat1 if isvar=iat1-1+nat*(iat2-1)
           ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
      &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
      &                        +(1+2*MAXDIV)*ISVAR))
@@ -4762,10 +4794,10 @@ END MODULE UFFTABLE_MODULE
           IF(ASSOCIATED(ANGLE(IANGLE)%IT1)) IT1(:)=ANGLE(IANGLE)%IT1(:)
           IF(ASSOCIATED(ANGLE(IANGLE)%IT3)) IT3(:)=ANGLE(IANGLE)%IT3(:)
           IT(:)=IT3(:)-IT1(:)
-          IF(IAT1.LT.IAT2) THEN
-            ISVAR=IAT1-1+NAT*(IAT2-1)
-          ELSE
+          IF(IAT2.ge.IAT1) THEN
             ISVAR=IAT2-1+NAT*(IAT1-1)
+          ELSE
+            ISVAR=IAT1-1+NAT*(IAT2-1)
             IT(:)=-IT(:)
           END IF
           IF(ABS(IT(1)).GT.MAXDIV.OR.ABS(IT(2)).GT.MAXDIV.OR.ABS(IT(3)).GT.MAXDIV) THEN
@@ -4777,6 +4809,9 @@ END MODULE UFFTABLE_MODULE
             CALL ERROR$I4VAL('IT(3)',IT(3))
             CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
           END IF
+!         == if isvar=iat1-1+nat*(iat2-1)+...
+!         == then 1) it is the translation of iat1
+!         ==      2) iat1.ge.iat2
           ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
      &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
      &                        +(1+2*MAXDIV)*ISVAR))
@@ -4824,6 +4859,22 @@ END MODULE UFFTABLE_MODULE
       IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
         IEXCLUSION(NEXCLUSION:)=-1
       END IF
+!
+!     ==================================================================
+!     ==  MAKE AN ARRAY....                                           ==
+!     ==================================================================
+!         == if isvar=iat1-1+nat*(iat2-1)+...
+!         == then 1) it is the translation of iat1
+!         ==      2) iat1.ge.iat2
+      I2FIRST(:)=0
+      DO I=1,NEXCLUSION
+        IAT2=1+INT(REAL(IEXCLUSION(I))/REAL(((1+2*MAXDIV)**3*NAT)))
+        IF(I2FIRST(IAT2).EQ.0) I2FIRST(IAT2)=I
+      ENDDO
+      IF(I2FIRST(NAT).EQ.0)I2FIRST(NAT)=NEXCLUSION
+      DO IAT2=NAT-1,1,-1
+        IF(I2FIRST(IAT2).EQ.0)I2FIRST(IAT2)=I2FIRST(IAT2+1)
+      ENDDO
 !
 !     ==================================================================
 !     ==  PRINTOUT IF REQUESTED                                       ==

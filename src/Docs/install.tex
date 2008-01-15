@@ -276,6 +276,9 @@ create a set of make files and a subdirectory tree
 within \myspec{paw-directory}.  The name \myspec{arch} should be
 unique and allows to maintain several installations simultaneously.
 
+\begin{center}
+\includegraphics[width=0.6\linewidth]{Figs/PAWdirtree/pawdirtree.eps}
+\end{center}
 
 A successful configuration is indicated by a line
 \begin{verbatim}
@@ -599,8 +602,8 @@ http://www.netlib.org/lapack/lawn81/node13.html)
 \item download FFTW 2.1.5 from \mytt{http://www.fftw.org/download.html}.
 \item Archiv mit \mytt{tar -xvzf Dateiname} entpacken
  \item Den Befehl \mytt{./configure --enable-i386-hacks} ausf\"uhren.
- The option \mytt{--enable-i386-hacks} takes advantage if rge gcc/x86
- specific performance hacks. (For the core2duo the option
+ The option \mytt{--enable-i386-hacks} takes advantage of the
+ gcc/x86-specific performance hacks. (For the core2duo the option
  \mytt{--enable-i386-hacks} must be left out!)
 \item Change the following line in the file \textit{fftw/config.h} (At the end of the file):\\
 \begin{verbatim}
@@ -858,7 +861,7 @@ be built.  A requirement is a corresponding MPI library.  Specify
 
 \subsection{\mytt{SPECIAL}}
 %
-Leave the setting \mytt{SPECIAL=' '}. It is a flag for special rules
+Leave the setting \mytt{SPECIAL='none'}. It is a flag for special rules
 in the make files.
 
 \subsection{\mytt{BLASDIR},\mytt{LAPACKDIR},\mytt{FFTDIR},\mytt{MPIDIR}}
@@ -1609,6 +1612,7 @@ FEXT="f90"
 \end{verbatim}
 
 %================================================================================
+\newpage
 \section{Parameter File for G95}
 %================================================================================
 \begin{verbatim}
