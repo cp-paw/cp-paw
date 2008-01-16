@@ -57,6 +57,7 @@ TYPE NONBOND_TYPE               ! NONBOND NEIGBORLIST ITEM
   INTEGER(4)         :: IAT2    ! INDEX OF SECOND ATOM
   INTEGER(4),POINTER :: IT(:)   ! INTEGER LATTICE TRANSLATION OF SECOND ATOM
   LOGICAL(4)         :: EXCLUDE ! BOND EXCLUSION
+  LOGICAL(4)         :: TONEFOUR
 END TYPE NONBOND_TYPE
 !
 TYPE BOND_TYPE                  ! BOND ITEM
@@ -107,6 +108,10 @@ TYPE MD_TYPE
   CHARACTER(2), POINTER :: ELEMENT(:)     !(NAT)    ELEMENT SYMBOL
   REAL(8)      ,POINTER :: QEL(:)         !(NAT)    POINT CHARGE
   INTEGER(4)            :: NBOND               
+  INTEGER(4)   ,POINTER :: INDEX2(:,:)    ! (3,NBOND)
+  REAL(8)      ,POINTER :: R0_T3P(:,:,:)  !(3,3,NAT/3)
+  REAL(8)      ,POINTER :: RP_T3P(:,:,:)  !(3,3,NAT/3) 
+  CHARACTER(1) ,POINTER :: FIXMHK(:)      ! which QM-MM atoms are fixed?        
   TYPE(BOND_TYPE),POINTER :: BOND(:)      !(NBOND)
   LOGICAL(4)            :: MOVECELL       ! SWITCH FOR VARIABLE CELL SHAPE
   REAL(8)      ,POINTER :: RBAS0(:,:)     ! LATTICE VECTORS
@@ -116,7 +121,7 @@ TYPE MD_TYPE
   TYPE(NONBOND_TYPE),POINTER :: IBLIST(:) ! NEIGHBOR LIST
   INTEGER(4)            :: MAXDIV         ! MAX TRANSLATIONS FOR EXCLUSION FILE
   INTEGER(4)            :: NEXCL          ! #(EXCLUSIONS)
-  INTEGER(4)   ,POINTER :: EXCLUSION(:)   ! EXCLUSIONS
+  INTEGER(4)   ,POINTER :: EXCLUSION(:,:) ! EXCLUSIONS
   INTEGER(4)   ,POINTER :: I2FIRST(:)     !(NAT)
   INTEGER(4)   ,POINTER :: ITYPE(:)       !(NAT)          
   REAL(8)      ,POINTER :: BO(:)          !(NBOND)           
@@ -131,7 +136,9 @@ TYPE MD_TYPE
   INTEGER(4)            :: NPOT                
   TYPE(POT_TYPE),POINTER:: POT(:)         !(NPOT)
   LOGICAL(4)            :: TLONGRANGE          
+  REAL(8)               :: SCALEONEFOUR   ! SCALEFACTOR OF 1-4 VDW INTERACTIONS (E.G. AMBER)
   LOGICAL(4)   ,POINTER :: TFREEZE(:)     !(NAT)        
+  LOGICAL(4)            :: TMMSPHERE=.FALSE.
 !                                     
 ! == DATA ===UNNING ====UNNING ====================
   REAL(8)      ,POINTER :: RP(:,:)         !(3,NAT)   
@@ -144,6 +151,10 @@ TYPE MD_TYPE
   CHARACTER(16)         :: FF='UFF'        ! TIP3P, UFF OR WHATEVER
   CHARACTER(3) ,POINTER :: RES(:)          ! (NAT)    RESIDUE NAME
   TYPE(MD_TYPE),POINTER :: NEXT            ! LINK TO THE NEXT INSTANCE
+  REAL(8)      ,POINTER         ::MMO(:)   !ORIGIN OF THE MM BOX
+  REAL(8)      ,POINTER         ::MMVEC(:) !SIZE OF THE MM BOX
+  REAL(8)      ,POINTER         ::MMS(:)   !ORIGIN OF THE MM SPHERE
+  REAL(8)      ,POINTER         ::MSR(:)   !SIZE OF THE MM SPHERE
 END TYPE MD_TYPE
 TYPE(MD_TYPE) ,POINTER :: MD
 TYPE(MD_TYPE) ,POINTER :: MDFIRST
@@ -283,6 +294,8 @@ END MODULE CLASSICAL_MODULE
       NULLIFY(MD%BOND)
       MD%MOVECELL=.FALSE.
       NULLIFY(MD%RBAS0)
+      NULLIFY(MD%MMO)
+      NULLIFY(MD%MMVEC)
       MD%NNBX=0
       MD%NNB=0
       NULLIFY(MD%IBLIST)
@@ -303,6 +316,7 @@ END MODULE CLASSICAL_MODULE
       MD%NPOT=0
       NULLIFY(MD%POT)
       MD%TLONGRANGE=.TRUE.
+      MD%TMMSPHERE=.FALSE.
       NULLIFY(MD%TFREEZE)
       NULLIFY(MD%RP)
       NULLIFY(MD%RM)
@@ -311,6 +325,9 @@ END MODULE CLASSICAL_MODULE
       MD%SIGMA(:,:)=0.D0
       MD%TINI=.FALSE.
       NULLIFY(MD%NEXT)
+      NULLIFY(MD%RES)
+      NULLIFY(MD%MMS)
+      NULLIFY(MD%MSR)
       RETURN
       END
 !
@@ -366,6 +383,27 @@ END MODULE CLASSICAL_MODULE
         END IF
         IF(.NOT.ASSOCIATED(MD%RM))ALLOCATE(MD%RM(3,MD%NAT))
         MD%RM=RESHAPE(VAL_,(/3,MD%NAT/))
+!     =================================================================
+!     ==  MMO = ORIGIN OF THE MM BOX                                 ==
+!     ==  MMVEC = SIZE OF THE MM BOX
+!     =================================================================
+      ELSE IF(ID_.EQ.'MMO') THEN
+        IF(.NOT.ASSOCIATED(MD%MMO))ALLOCATE(MD%MMO(3))
+        MD%MMO=VAL_
+      ELSE IF(ID_.EQ.'MMVEC') THEN
+        IF(.NOT.ASSOCIATED(MD%MMVEC)) ALLOCATE(MD%MMVEC(9))
+        MD%MMVEC=VAL_
+
+!     =================================================================
+!     ==  MMS = ORIGIN OF MMSPHERE                               ==
+!     ==  MSR = BOUNDARY RADIUS OF MMSPHERE
+!     =================================================================
+      ELSE IF(ID_.EQ.'MMS') THEN
+        IF(.NOT.ASSOCIATED(MD%MMS))ALLOCATE(MD%MMS(3))
+        MD%MMS=VAL_
+      ELSE IF(ID_.EQ.'MSR') THEN
+        IF(.NOT.ASSOCIATED(MD%MSR))ALLOCATE(MD%MSR(1))
+        MD%MSR=VAL_ 
 !
 !     =================================================================
 !     ==  R(+) = POSITIONS OF THE NEXT TIME STEP                     ==
@@ -637,6 +675,8 @@ call error$stop('CLASSICAL$SETI4A')
 !     =================================================================
       IF(ID_.EQ.'LONGRANGE') THEN
         MD%TLONGRANGE=VAL_
+      ELSE IF(ID_.EQ.'MMSPHERE') THEN 
+         MD%TMMSPHERE=VAL_
       ELSE
         CALL ERROR$MSG('INVALID IDENTIFIER')
         CALL ERROR$CHVAL('ID',ID_)
@@ -809,6 +849,25 @@ call error$stop('CLASSICAL$SETI4A')
         VAL_=RESHAPE(MD%RP,(/3*MD%NAT/))
 !
 !     =================================================================
+!     == CELL(0) = CELL SHAPE OF THE MM SYSTEM                       ==
+!     =================================================================
+      ELSE IF(ID_.EQ.'CELL(0)') THEN
+         IF(LENG_.NE.9) THEN
+            CALL ERROR$MSG('INCONSISTENT NUMBER OF CELL VECTORS')
+            CALL ERROR$CHVAL('ID_',ID_)
+            CALL ERROR$I4VAL('LENG_',LENG_)
+            CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
+            CALL ERROR$STOP('CLASSICAL$GETR8A')
+         END IF
+         IF(.NOT.ASSOCIATED(MD%RBAS0)) THEN
+            CALL ERROR$MSG('NOT ALLOCATED')
+            CALL ERROR$CHVAL('ID_',ID_)
+            CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
+            CALL ERROR$STOP('CLASSICAL$GETR8A')
+         END IF
+         VAL_=RESHAPE(MD%RBAS0,(/9/))
+!
+!     =================================================================
 !     == MASS = ATOMIC MASSES                                        ==
 !     =================================================================
       ELSE IF(ID_.EQ.'MASS') THEN
@@ -861,6 +920,40 @@ call error$stop('CLASSICAL$SETI4A')
           CALL ERROR$STOP('CLASSICAL$GETR8A')
         END IF
         VAL_=RESHAPE(MD%RM,(/3*MD%NAT/))
+
+!     =================================================================
+!     ==  MMS = ORIGIN OF MMSPHERE                               ==
+!     ==  MSR = BOUNDARY RADIUS OF MMSPHERE
+!     =================================================================
+     ELSE IF(ID_.EQ.'MMS') THEN
+        IF(LENG_.NE. SIZE(MD%MMS)) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
+          CALL ERROR$STOP('CLASSICAL$GETR8A')
+       END IF
+       IF(.NOT.ASSOCIATED(MD%MMS))THEN
+          CALL ERROR$MSG('NOT ALLOCATED')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
+          CALL ERROR$STOP('CLASSICAL$GETR8A')
+       END IF
+       VAL_=MD%MMS
+
+     ELSE IF(ID_.EQ.'MSR') THEN
+        IF(LENG_.NE. SIZE(MD%MSR)) THEN
+          CALL ERROR$MSG('NOT ALLOCATED')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
+          CALL ERROR$STOP('CLASSICAL$GETR8A')
+       END IF
+       IF(.NOT.ASSOCIATED(MD%MSR))THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$CHVAL('SELECTION',MD%MDNAME)
+          CALL ERROR$STOP('CLASSICAL$GETR8A')
+       END IF      
+       VAL_=MD%MSR       
 !
 !     =================================================================
 !     ==  FORCE= POSITIONS OF THE PREVIOUS TIME STEP                 ==
@@ -1138,7 +1231,7 @@ call error$stop('CLASSICAL$GETI4A')
 !     ==  DEFINE POTENTIALS FOR                                               ==
 !     ==========================================================================
       NANGLEX=12*MD%NAT   !THE VALUE OF 12 IS PROBABLY NOT THE OPTIMUM CHOICE
-      NTORSIONX=6*MD%NBOND
+      NTORSIONX=9*MD%NBOND
       NINVERSIONX=MD%NAT*3
       NTYPEX=MD%NAT
       NPOTX=500
@@ -1192,15 +1285,17 @@ call error$stop('CLASSICAL$GETI4A')
       ALLOCATE(MD%i2first(MD%Nat))
 !     == FIRST COUNT THE NUMBER OF EXCLUSIONS ....
       MD%NEXCL=1
-      ALLOCATE(MD%EXCLUSION(MD%NEXCL))
+      ALLOCATE(MD%EXCLUSION(2,MD%NEXCL))
       ISVAR=MD%NEXCL
       CALL CLASSICAL_EXCLUSIONS(MD%NAT,MD%NBOND,MD%BOND,MD%NANGLE,MD%ANGLE &
-     &               ,MD%MAXDIV,ISVAR,MD%NEXCL,MD%EXCLUSION,md%i2first)
+     &               ,MD%NTORSION,MD%TORSION,MD%MAXDIV,ISVAR,MD%NEXCL &
+     &               ,MD%EXCLUSION,md%i2first)
       DEALLOCATE(MD%EXCLUSION)
 !     == NOW CALCULATE EXCLUSIONS
-      ALLOCATE(MD%EXCLUSION(MD%NEXCL))
+      ALLOCATE(MD%EXCLUSION(2,MD%NEXCL))
       CALL CLASSICAL_EXCLUSIONS(MD%NAT,MD%NBOND,MD%BOND,MD%NANGLE,MD%ANGLE &
-     &               ,MD%MAXDIV,MD%NEXCL,ISVAR,MD%EXCLUSION,md%i2first)
+     &               ,MD%NTORSION,MD%TORSION,MD%MAXDIV,MD%NEXCL,ISVAR &
+     &               ,MD%EXCLUSION,md%i2first)
 !
 !     ==================================================================
 !     == CALCULATE NEIGHBORLIST                                       ==
@@ -1210,9 +1305,12 @@ call error$stop('CLASSICAL$GETI4A')
       ALLOCATE(MD%IBLIST(MD%NNBX))
       DO I=1,MD%NNBX
         NULLIFY(MD%IBLIST(I)%IT)
-      ENDDO      
+      ENDDO    
       CALL CLASSICAL_NEIGHBORS(MD%NAT,MD%R0,MD%RBAS0,MD%NNBX,MD%NNB,MD%IBLIST &
-     &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION,md%i2first)
+     &                        ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION,md%i2first)
+      DO I=1,MD%NNBX
+        IF(ASSOCIATED(MD%IBLIST(I)%IT))DEALLOCATE(MD%IBLIST(I)%IT)
+      ENDDO    
       DEALLOCATE(MD%IBLIST)
       MD%NNBX=MD%NNB
       ALLOCATE(MD%IBLIST(MD%NNBX))
@@ -1248,6 +1346,9 @@ call error$stop('CLASSICAL$GETI4A')
       CALL CLASSICAL_NEIGHBORS(MD%NAT,MD%R0,MD%RBAS0,MD%NNBX,MD%NNB,MD%IBLIST &
      &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION,md%i2first)
       IF(MD%NNB.GT.MD%NNBX) THEN
+        DO I=1,MD%NNBX
+          IF(ASSOCIATED(MD%IBLIST(I)%IT))DEALLOCATE(MD%IBLIST(I)%IT)
+        ENDDO    
         MD%NNBX=MD%NNB
         DEALLOCATE(MD%IBLIST)
         ALLOCATE(MD%IBLIST(MD%NNBX))
@@ -1449,10 +1550,13 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     *****************************************************************      
       USE CLASSICAL_MODULE
       IMPLICIT NONE
-      REAL(8)   ,INTENT(IN) :: DELT
-      REAL(8)   ,INTENT(IN) :: ANNE
-      INTEGER(4)            :: IAT,I
-      REAL(8)               :: SVAR1,SVAR2,SVAR3
+      REAL(8)   ,INTENT(IN)   :: DELT
+      REAL(8)   ,INTENT(IN)   :: ANNE
+      INTEGER(4)              :: IAT,I,NATM,NH2O,N
+      REAL(8)                 :: SVAR1,SVAR2,SVAR3
+      INTEGER(4)  ,ALLOCATABLE::NUMBER(:)
+      CHARACTER(4),ALLOCATABLE::NAME(:),ATOM(:)
+      REAL(8)     ,ALLOCATABLE::H2O(:,:),H2OO(:,:)
 !     *****************************************************************      
                                CALL TRACE$PUSH('CLASSICAL$PROPAGATE')
       IF(.NOT.SELECTED) THEN
@@ -1486,6 +1590,115 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         END IF
       ENDDO
+
+!     =================================================================
+!     == TIP3P new                                                   ==
+!     =================================================================
+IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+       CALL FORCEFIELD$GETI4('NMMATOM',NATM)
+       ALLOCATE(NUMBER(NATM))
+       ALLOCATE(NAME(NATM))
+       ALLOCATE(ATOM(NATM))
+       CALL FORCEFIELD$GETI4A('RESSEQ',NATM,NUMBER)
+       CALL FORCEFIELD$GETCHA('RESNAME',NATM,NAME)
+       CALL FORCEFIELD$GETCHA('NAME',NATM,ATOM)
+       
+       N=0
+       NH2O=0
+       DO I=1,NATM
+          IF (NAME(I) .EQ. 'WA2') THEN
+             N=N+1
+             IF (N .EQ. 3) THEN
+                NH2O=NH2O+1
+                N=0
+             END IF
+          END IF
+       END DO
+
+       ALLOCATE(H2O(3,3))
+       H2O(:,:)=0.D0
+       ALLOCATE(H2OO(3,3))
+       H2OO(:,:)=0.D0
+!      =====SEND SINGLE H2O TO TIP3P=====================================
+       I=1
+       DO WHILE (I .LT. NATM)
+          IF (.NOT. MD%TFREEZE(I)) THEN
+             IF ((NUMBER(I) .EQ. NUMBER(I+1)) .AND. (NUMBER(I+1) .EQ. NUMBER(I+2))) THEN
+                IF (ATOM(I) .EQ. ' OH2') THEN   ! 1ST ATOM O
+                    H2O(1,:)=MD%RP(:,I) ! 1ST ATOM O
+                    H2O(2,:)=MD%RP(:,I+1) ! 2ND ATOM H
+                    H2O(3,:)=MD%RP(:,I+2) ! 3RD ATOM H
+                    H2OO(1,:)=MD%R0(:,I) ! 1ST ATOM O
+                    H2OO(2,:)=MD%R0(:,I+1) ! 2ND ATOM H
+                    H2OO(3,:)=MD%R0(:,I+2) ! 3RD ATOM H
+!print*,"FLAG: I=",I
+                    CALL FORCEFIELD$TIP3PNEW(H2O,H2OO,10)
+
+                    MD%RP(:,I)=H2O(1,:)     ! NEW POS. 1ST ATOM
+                    MD%RP(:,I+1)=H2O(2,:)   ! NEW POS. 2ND ATOM
+                    MD%RP(:,I+2)=H2O(3,:)   ! NEW POS. 3RD ATOM
+
+                ELSE IF (ATOM(I+1) .EQ. ' OH2') THEN ! 2ND ATOM O
+                    H2O(1,:)=MD%RP(:,I+1)! 1ST ATOM O
+                    H2O(2,:)=MD%RP(:,I) ! 2ND ATOM H
+                    H2O(3,:)=MD%RP(:,I+2) ! 3RD ATOM H
+
+                    H2OO(1,:)=MD%R0(:,I+1)! 1ST ATOM O
+                    H2OO(2,:)=MD%R0(:,I) ! 2ND ATOM H
+                    H2OO(3,:)=MD%R0(:,I+2) ! 3RD ATOM H
+
+!print*,"FLAG: I=",I
+                    CALL FORCEFIELD$TIP3PNEW(H2O,H2OO,10)
+
+                    MD%RP(:,I+1)=H2O(1,:)     ! NEW POS. 1ST ATOM
+                    MD%RP(:,I)=H2O(2,:)   ! NEW POS. 2ND ATOM
+                    MD%RP(:,I+2)=H2O(3,:)   ! NEW POS. 3RD ATOM
+
+
+
+                ELSE IF (ATOM(I+2) .EQ. ' OH2') THEN ! 3RD ATOM O 
+
+                    H2O(1,:)=MD%RP(:,I+2) ! 1ST ATOM O
+                    H2O(2,:)=MD%RP(:,I) ! 2ND ATOM H
+                    H2O(3,:)=MD%RP(:,I+1) ! 3RD ATOM H
+
+                    H2OO(1,:)=MD%R0(:,I+2) ! 1ST ATOM O
+                    H2OO(2,:)=MD%R0(:,I) ! 2ND ATOM H
+                    H2OO(3,:)=MD%R0(:,I+1) ! 3RD ATOM H
+
+!print*,"FLAG: I=",I
+                    CALL FORCEFIELD$TIP3PNEW(H2O,H2OO,10)
+
+                    MD%RP(:,I+2)=H2O(1,:)     ! NEW POS. 1ST ATOM
+                    MD%RP(:,I)=H2O(2,:)   ! NEW POS. 2ND ATOM
+                    MD%RP(:,I+1)=H2O(3,:)   ! NEW POS. 3RD ATOM
+                END IF
+            
+! PRINT *,'***********TIP3P********************'
+! PRINT *,'I',I
+! PRINT *,'NATM',NATM
+! PRINT *,'NH2O',NH2O
+! PRINT *,'NUMBER:',NUMBER(:)
+! PRINT *,'NAME: ',NAME(:)
+! PRINT *,'ATOM: ',ATOM(:)
+! PRINT *,'H2O(:)',H2O(:,:)
+! PRINT *,'***********TIP3P********************'
+                I=I+3
+              ELSE
+                I=I+1
+              END IF
+          ELSE
+             I=I+1
+          END IF   
+
+       END DO
+    END IF
+
+
+!STOP
+
+
+
                                CALL TRACE$POP
       RETURN
     END SUBROUTINE CLASSICAL$PROPAGATE
@@ -1531,7 +1744,9 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       USE CLASSICAL_MODULE
       IMPLICIT NONE
       INTEGER(4)             :: IAT,I
-!     *****************************************************************      
+      LOGICAL(4)             :: TCHK
+!     ***************************************************************** 
+                             CALL TRACE$PUSH('CLASSICAL$SWITCH')           
       IF(.NOT.SELECTED) THEN
         CALL ERROR$MSG('CLASSICAL OBJECT NOT SELECTED')
         CALL ERROR$STOP('CLASSICAL$ETOT')
@@ -1541,6 +1756,8 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     ==================================================================
 !     ==  NOW CALCULATE TOTAL ENERGY AND FORCES                       ==
 !     ==================================================================
+   IF(MD%MDNAME.EQ.'SHADOW') THEN
+!**************** begin old *************************** 
       DO IAT=1,MD%NAT
         DO I=1,3
           MD%RM(I,IAT)=MD%R0(I,IAT)
@@ -1549,8 +1766,25 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           MD%FORCE(I,IAT)=0.D0
         ENDDO
       ENDDO
+!**************** end old *****************************
+  ELSE
+      TCHK=MD%TMMSPHERE
+      IF(TCHK) THEN
+         CALL FORCEFIELD$MMSPHERE
+      ELSE
+         DO IAT=1,MD%NAT
+            DO I=1,3
+               MD%RM(I,IAT)=MD%R0(I,IAT)
+               MD%R0(I,IAT)=MD%RP(I,IAT)
+               MD%RP(I,IAT)=0.D0
+               MD%FORCE(I,IAT)=0.D0
+            ENDDO
+         ENDDO
+      END IF
+   END IF
+!
       RETURN
-      END
+      END SUBROUTINE CLASSICAL$SWITCH
 !
 !     .................................................................
       SUBROUTINE CLASSICAL$MAXFORCE(FMAX_)
@@ -1792,7 +2026,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
         CALL CLASSICAL_ECOULOMB(NAT,R,Q,ETOT,F,V,RBAS,SIGMA &
      &            ,ITYPE,NTYPE,NONBOND,NNB,NBLIST,NPOT,POT)
       END IF
- PRINT*,'COULOMB ',ETOT
+! PRINT*,'COULOMB ',ETOT
 ! 
 !     =================================================================
 !     ==  TWO BODY INTERACTION                                       ==
@@ -2007,7 +2241,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     **  ATTENTION! THE RESULT IS DISTRIBUTED OVER ALL TASKS         **
 !     **                                                              **
 !     ******************************************************************
-      USE CLASSICAL_MODULE, ONLY : POT_TYPE,NONBOND_TYPE
+      USE CLASSICAL_MODULE, ONLY : POT_TYPE,NONBOND_TYPE,md
       IMPLICIT NONE
       INTEGER(4)        ,INTENT(IN)   :: NAT
       REAL(8)           ,INTENT(IN)   :: R(3,NAT)    ! ATOMIC POSITIONS
@@ -2034,7 +2268,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
       REAL(8)                         :: DE2,DEDX
       INTEGER(4)                      :: THISTASK,NTASKS,ICOUNT
       REAL(8)                         :: T1,T2,T3
-REAL(8) :: G1,DGDX1
+LOGICAL(4) :: TONEFOUR   
 !     ******************************************************************
                                CALL TRACE$PUSH('CLASSICAL_ECOULOMB')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -2048,6 +2282,7 @@ REAL(8) :: G1,DGDX1
         IAT1=NBLIST(IIB)%IAT1
         IAT2=NBLIST(IIB)%IAT2
         TEXCL=NBLIST(IIB)%EXCLUDE
+        TONEFOUR=NBLIST(IIB)%TONEFOUR
         Q1=Q(IAT1)
         Q2=Q(IAT2)
         D1=R(1,IAT2)-R(1,IAT1)
@@ -2071,9 +2306,27 @@ REAL(8) :: G1,DGDX1
 !       ==  ASSUMES A CHARGE DISTRIBUTION WITH ATOM-CENTERED      ==
 !       ==  GAUSSIANS  RHO(R)=SUM Q_I*G(R-R_I)                    ==
 !       ============================================================
-        RC=4.D0
-        CALL VALUE(POT(1),RC*X,G,DGDX)   ! POT(1) OF ONE CONTAINS THE COULOMB POTENTIAL
-        G=G/RC
+        IF(.NOT.TEXCL) THEN
+          RC=1.D0     ! RC IS MEANT FOR USE WITH THE POTENTIAL OF GAUSSIANS 
+                      ! INSTEAD OF POINHT CHARGES TO SCALE THE WIDTH OF THE GAUSSIANS
+          CALL VALUE(POT(1),RC*X,G,DGDX)   ! POT(1) CONTAINS THE COULOMB POTENTIAL
+                      ! FOR ATOM PAIRS WITHOUT BOND EXCLUSIONS
+          G=G/RC
+        ELSE    ! SPECIAL TREATMENT OF THE ELECTROSTATIC OF EXCLUDED PAIRS
+          IF(TONEFOUR) THEN   ! COULOMB INTERACTION FOR 1-4 EXCLUSIONS
+            RC=1.D0     ! RC IS MEANT FOR USE WITH THE POTENTIAL OF GAUSSIANS 
+                        ! INSTEAD OF POINHT CHARGES TO SCALE THE WIDTH OF THE GAUSSIANS
+            CALL VALUE(POT(2),RC*X,G,DGDX)   ! POT(1) CONTAINS THE COULOMB POTENTIAL
+                      ! FOR ATOM PAIRS WITHOUT BOND EXCLUSIONS
+            G=G/RC
+          ELSE ! COULOMB INTERACTION FOR 1-2 AND 1-3 EXCLUSIONS
+            RC=1.D0     ! RC IS MEANT FOR USE WITH THE POTENTIAL OF GAUSSIANS 
+                        ! INSTEAD OF POINHT CHARGES TO SCALE THE WIDTH OF THE GAUSSIANS
+            CALL VALUE(POT(3),RC*X,G,DGDX)   ! POT(1) CONTAINS THE COULOMB POTENTIAL
+                      ! FOR ATOM PAIRS WITHOUT BOND EXCLUSIONS
+            G=G/RC
+          END IF
+        END IF
         E=E+Q1*Q2*G
         FAC=FAC+Q1*Q2*DGDX           
         V(IAT1)=V(IAT1)+Q2*G
@@ -2082,11 +2335,15 @@ REAL(8) :: G1,DGDX1
 !       ============================================================
 !       ==  LENNARD JONES INTERACTION                             ==
 !       ============================================================
-        IF(.NOT.TEXCL) THEN
+        IF((.NOT.TEXCL).or.tonefour) THEN
           ITYPE1=ITYPE(IAT1)
           ITYPE2=ITYPE(IAT2)
           IPOT=NONBOND(ITYPE1,ITYPE2)
           CALL VALUE(POT(IPOT),X,DE2,DEDX)
+          IF(TONEFOUR) THEN  ! amber scales the 1-4 vdw interaction 
+            DE2=DE2*md%SCALEONEFOUR
+            DEDX=DEDX*md%SCALEONEFOUR
+          END IF
           E=E+DE2
           FAC=FAC+DEDX
         END IF
@@ -2468,14 +2725,54 @@ REAL(8) :: G1,DGDX1
       REAL(8)                    :: SVAR
       INTEGER(4)                 :: NN,II,ISVAR,II1,II3,I1,I2,NIJ
       REAL(8)                    :: X,K,D
+      logical(4),parameter       :: tfourier=.false.
 !     ******************************************************************
                                   CALL TRACE$PUSH('CLASSICAL_FORCEFIELDSETUP')
       NPOT=0
 !     ================================================================== 
-!     ==  SET UP ELECTROSTATIC POTENTIAL                              ==
+!     ==  SET UP ELECTROSTATIC POTENTIAL for longranged interactions  ==
 !     ================================================================== 
       NPOT=NPOT+1
-      CALL CLASSICAL_COULOMBPOTA(POT(NPOT))   
+      IF(MD%FF.EQ.'UFF') THEN
+        CALL CLASSICAL_COULOMBPOTB(POT(NPOT))   ! INTERACTING GAUSSIANS
+      ELSE IF(MD%FF.EQ.'AMBER') THEN
+        CALL CLASSICAL_COULOMBPOTA(POT(NPOT))   ! pure coulomb
+      END IF
+!
+!     ================================================================== 
+!     ==  SET UP ELECTROSTATIC POTENTIAL for 1-4 interactions         ==
+!     ================================================================== 
+      NPOT=NPOT+1
+      IF(MD%FF.EQ.'UFF') THEN
+        CALL CLASSICAL_COULOMBPOTB(POT(NPOT))   ! INTERACTING GAUSSIANS
+      ELSE IF(MD%FF.EQ.'AMBER') THEN
+        CALL CLASSICAL_COULOMBPOTA(POT(NPOT))   ! PURE COULOMB
+        POT(NPOT)%VAL(:)=POT(NPOT)%VAL(:)/1.2D0
+        POT(NPOT)%DER(:)=POT(NPOT)%DER(:)/1.2D0
+        POT(NPOT)%ID=POT(NPOT)%ID//'(SCALED BY 5/6)'
+      END IF
+!
+!     ================================================================== 
+!     ==  SET UP ELECTROSTATIC POTENTIAL for 1-2 and 1-3 interactions ==
+!     ================================================================== 
+      NPOT=NPOT+1
+      IF(MD%FF.EQ.'UFF') THEN
+        CALL CLASSICAL_COULOMBPOTb(POT(NPOT))   ! interacting gaussians
+      ELSE IF(MD%FF.EQ.'AMBER') THEN
+        CALL CLASSICAL_COULOMBPOTb(POT(NPOT))   ! interacting Gaussians
+!       POT(NPOT)%ID='constant potential with value -1 Hartree '
+!       pot*npot)%val(:)=-1.d0
+!       pot*npot)%der(:)=0.d0
+      END IF
+!
+!     ================================================================== 
+!     ==  set scaling of 1-4 vdw interactions                         ==
+!     ================================================================== 
+      IF(MD%FF.EQ.'UFF') THEN
+        md%SCALEONEFOUR=1.D0
+      ELSE IF(MD%FF.EQ.'AMBER') THEN
+        md%SCALEONEFOUR=0.5D0
+      END IF
 !     
 !     ================================================================== 
 !     ==  PREPARE BOND INDEX ARRAYS AND SET BOND DISTANCE POTENTIALS  ==
@@ -2637,11 +2934,16 @@ REAL(8) :: G1,DGDX1
               CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE')
               CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
             END IF
-!            IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+            IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
                CALL CLASSICAL_ANGLEPOTA(ID,X,K,POT(NPOT))
-!            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
-!               CALL FORCEFIELD$AMBER_ANGLEPOTA(ID,X,K,POT(NPOT))
-!            END IF
+            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+               IF(TFOURIER) THEN
+                  K=2.d0*K  ! here we use K^F = 2*K^H/N^2 (N=1)
+                  CALL CLASSICAL_ANGLEPOTA(ID,X,K,POT(NPOT))
+               ELSE
+                  CALL FORCEFIELD$AMBER_ANGLEPOTA(ID,X,K,POT(NPOT))
+               END IF
+            END IF
             ANGLE(NANGLE)%IPOT=NPOT
           ENDDO
         ENDDO
@@ -2714,6 +3016,8 @@ REAL(8) :: G1,DGDX1
             NTORSION=NTORSION+1
             IF(NTORSION.GT.NTORSIONX) THEN
               CALL ERROR$MSG('NUMBER OF TORSIONS LARGER THAN MAXIMUM')
+              CALL ERROR$I4VAL('NTORSION',NTORSION)
+              CALL ERROR$I4VAL('NTORSIONX',NTORSIONX)
               CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
             END IF
             TORSION(NTORSION)%IAT1=IAT1
@@ -2751,7 +3055,11 @@ REAL(8) :: G1,DGDX1
               CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE')
               CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
             END IF
-            CALL CLASSICAL_TORSIONPOTA(ID,X,NIJ,K,POT(NPOT))
+            IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+               CALL CLASSICAL_TORSIONPOTA(ID,X,NIJ,K,POT(NPOT))
+            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+               CALL FORCEFIELD$AMBER_TORSIONPOTA(ID,X,NIJ,K,POT(NPOT))
+            END IF
             TORSION(NTORSION)%IPOT=NPOT
           ENDDO
         ENDDO
@@ -2868,18 +3176,23 @@ REAL(8) :: G1,DGDX1
             ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
                CALL FORCEFIELD$AMBER_NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
             END IF
-            NPOT=NPOT+1
-            IF(NPOT.GT.NPOTX) THEN
-              CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE AT NONBOND')
-              CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
+            IF(TCHK) THEN
+               NPOT=NPOT+1
+               IF(NPOT.GT.NPOTX) THEN
+                  CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE AT NONBOND')
+                  CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
+               END IF
+               IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+                  CALL CLASSICAL_NONBONDPOTA(ID,X,D,POT(NPOT))
+               ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+                  CALL FORCEFIELD$AMBER_NONBONDPOTA(ID,X,D,POT(NPOT))
+               END IF
+               NONBOND(I1,I2)=NPOT
+               NONBOND(I2,I1)=NPOT
+            ELSE
+               NONBOND(I1,I2)=-1
+               NONBOND(I2,I1)=-1
             END IF
-            IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
-               CALL CLASSICAL_NONBONDPOTA(ID,X,D,POT(NPOT))
-            ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
-               CALL FORCEFIELD$AMBER_NONBONDPOTA(ID,X,D,POT(NPOT))
-            END IF
-            NONBOND(I1,I2)=NPOT
-            NONBOND(I2,I1)=NPOT
           END IF
         ENDDO
       ENDDO
@@ -2906,7 +3219,60 @@ REAL(8) :: G1,DGDX1
       REAL(8)                    :: PI
       REAL(8)                    :: ERFX
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
+      PI=4.D0*DATAN(1.D0)
+      POT%ID='COULOMB WITH 1/R'
+      POT%NX=NX
+      POT%X1=X1
+      POT%DX=(X2-X1)/DBLE(POT%NX-1)
+      ALLOCATE(POT%VAL(POT%NX))
+      ALLOCATE(POT%DER(POT%NX))
+      DO I=1,POT%NX
+        X=POT%X1+POT%DX*DBLE(I-1)
+        IF(X.NE.0.D0) THEN
+          CALL LIB$ERFR8(1.D0/X,ERFX)
+!           POT%VAL(I)=X*ERFX    
+!           POT%DER(I)=ERFX-2.D0/(X*SQRT(PI))*EXP(-1.D0/X**2) 
+          POT%VAL(I)=X
+          POT%DER(I)=1.d0
+       ELSE
+          POT%VAL(I)=0.D0
+          POT%DER(I)=1.D0
+        END IF
+      ENDDO
+!      
+!       call filehandler$unit('INFO',nfilinfo)
+!       DO I=1,POT%NX
+!          X=POT%X1+POT%DX*DBLE(I-1)
+!          IF(X.NE.0.d0) THEN
+!             WRITE(NFILINFO,FMT='(3F15.6)') 1/X,POT%VAL(I),POT%DER(I)
+!          END IF
+!       END DO
+!       STOP 'FORCED STOP IN CLASSICAL_COULOMBPOTA'
+!         
+      RETURN
+    END SUBROUTINE CLASSICAL_COULOMBPOTA
+!
+!     ..................................................................
+      SUBROUTINE CLASSICAL_COULOMBPOTB(POT)
+!     ******************************************************************
+!     **                                                              **
+!     **  RETURNS RC*F(RC/R) AS FUNCTION OF X=RC/R                    **
+!     **  WHERE RC*F(RC/R) APPROACHES 1/R FOR R->INFTY                **
+!     **                                                              **
+!     ******************************************************************
+      USE CLASSICAL_MODULE, ONLY: POT_TYPE
+      IMPLICIT NONE
+      TYPE(POT_TYPE),INTENT(OUT) :: POT
+      INTEGER(4)    ,PARAMETER   :: NX=1000
+      REAL(8)       ,PARAMETER   :: X1=0.D0
+      REAL(8)       ,PARAMETER   :: X2=5.D0
+      INTEGER(4)                 :: I
+      REAL(8)                    :: X,R,DRDX,SVAR,ALPHA
+      REAL(8)                    :: PI
+      REAL(8)                    :: ERFX
+integer(4) :: nfilinfo
+!     ******************************************************************
+      PI=4.D0*DATAN(1.D0)
       POT%ID='COULOMB WITH GAUSS CUTOFF'
       POT%NX=NX
       POT%X1=X1
@@ -2925,7 +3291,7 @@ REAL(8) :: G1,DGDX1
         END IF
       ENDDO
       RETURN
-    END SUBROUTINE CLASSICAL_COULOMBPOTA
+    END SUBROUTINE CLASSICAL_COULOMBPOTB
 !
 !     ..................................................................
       SUBROUTINE CLASSICAL_BONDPOTA(ID,RIJ,KIJ,DIJ,POT)
@@ -4344,131 +4710,6 @@ END MODULE UFFTABLE_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE CLASSICAL_NEIGHBORS_old(NAT,R,RBAS,NNBX,NNB,NBLIST &
-     &                              ,MAXDIV,NEXCL,IEXCLUSION)
-!     **************************************************************************
-!     **  CALCULATE A NEIGHBORLIST                                            **
-!     **                                                                      **
-!     **************************************************************************
-      USE CLASSICAL_MODULE, ONLY : NONBOND_TYPE,RCLONGRANGE
-      IMPLICIT NONE
-      LOGICAL(4)        ,PARAMETER  :: TPR=.FALSE.
-      INTEGER(4)        ,INTENT(IN) :: NAT
-      REAL(8)           ,INTENT(IN) :: R(3,NAT)
-      REAL(8)           ,INTENT(IN) :: RBAS(3,3)
-      INTEGER(4)        ,INTENT(IN) :: NNBX
-      INTEGER(4)        ,INTENT(OUT):: NNB
-      TYPE(NONBOND_TYPE),INTENT(OUT):: NBLIST(NNBX)
-      INTEGER(4)        ,INTENT(IN) :: MAXDIV
-      INTEGER(4)        ,INTENT(IN) :: NEXCL
-      INTEGER(4)        ,INTENT(IN) :: IEXCLUSION(NEXCL)
-      INTEGER(4)                    :: EXCLUSION
-      REAL(8)                       :: RMAX2
-      INTEGER(4)                    :: IAT1,IAT2,NN
-      INTEGER(4)                    :: THISTASK,NTASKS,ICOUNT
-      INTEGER(4)                    :: IEX
-      LOGICAL(4)                    :: TEXCLUSION
-      REAL(8)                       :: D(3),D2
-      INTEGER(4)                    :: IT,IT0,IT1,IT2,IT3
-      INTEGER(4)                    :: ITI(3,(1+2*MAXDIV)**3)
-      REAL(8)                       :: TI(3,(1+2*MAXDIV)**3)
-      LOGICAL(4)                    :: TT((1+2*MAXDIV)**3)
-      INTEGER(4)                    :: ISVAR
-!     **************************************************************************
-      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-!
-!     ==================================================================
-!     == TRANSLATION VECTORS                                          ==
-!     ==================================================================
-      IT=0
-      DO IT1=-MAXDIV,MAXDIV
-        DO IT2=-MAXDIV,MAXDIV
-          DO IT3=-MAXDIV,MAXDIV
-            IT=IT+1
-            TI(:,IT)=RBAS(:,1)*DBLE(IT1)+RBAS(:,2)*DBLE(IT2)+RBAS(:,3)*DBLE(IT3)
-            ITI(1,IT)=IT1
-            ITI(2,IT)=IT2
-            ITI(3,IT)=IT3
-            TT(IT)=(IT1.NE.0.OR.IT2.NE.0.OR.IT3.NE.0)
-          ENDDO
-        ENDDO
-      ENDDO
-!
-!     ==================================================================
-!     == SET UP NEIGHBORLIST                                          ==
-!     ==================================================================
-      RMAX2=RCLONGRANGE**2
-      NNB=0
-      IEX=1
-      EXCLUSION=IEXCLUSION(IEX)
-      DO IAT1=1,NAT
-        DO IAT2=1,IAT1
-          D(:)=R(:,IAT2)-R(:,IAT1)
-          IT0=(1+2*MAXDIV)**3*(IAT2-1+NAT*(IAT1-1))
-          DO IT=1,(1+2*MAXDIV)**3
-!           == ONLY PAIRS THAT ARE DISTINCT UNDER TRANSLATION ARE ======
-!           == CONSIDERED ==============================================
-            IF(IAT2.EQ.IAT1) THEN
-!             __ INDEX OF THE TRANSLATION (0,0,0)_______________________
-              ISVAR=1+MAXDIV+(2*MAXDIV+1)*(MAXDIV+(2*MAXDIV+1)*MAXDIV)
-              IF(IT.GE.ISVAR) CYCLE
-            END IF
-            TEXCLUSION=(EXCLUSION.EQ.IT0+IT)
-            IF(TEXCLUSION) THEN
-              IEX=IEX+1
-              EXCLUSION=IEXCLUSION(IEX)
-            END IF
-            D2=(D(1)+TI(1,IT))**2+(D(2)+TI(2,IT))**2+(D(3)+TI(3,IT))**2
-            IF(D2.LT.RMAX2) THEN
-              NNB=NNB+1
-              IF(NNB.LE.NNBX) THEN
-                NBLIST(NNB)%IAT1=IAT1
-                NBLIST(NNB)%IAT2=IAT2
-                NBLIST(NNB)%EXCLUDE=TEXCLUSION
-                IF(ASSOCIATED(NBLIST(NNB)%IT)) THEN
-                  IF(TT(IT)) THEN
-                    NBLIST(NNB)%IT(:)=ITI(:,IT)
-                  ELSE
-                    DEALLOCATE(NBLIST(NNB)%IT)
-                  END IF
-                ELSE
-                  IF(TT(IT)) THEN
-                    ALLOCATE(NBLIST(NNB)%IT(3))
-                    NBLIST(NNB)%IT(:)=ITI(:,IT)
-                  END IF
-                END IF                               
-              END IF
-            END IF
-          ENDDO
-        ENDDO
-      ENDDO
-      IF(EXCLUSION.NE.-1) THEN
-        CALL ERROR$MSG('NOT ALL EXCLUSIONS HAVE BEEN TOUCHED')
-        CALL ERROR$STOP('CLASSICAL_NEIGHBORS')
-      END IF
-!
-!     ==================================================================
-!     ==  IF ARRAY TOO SMALL RETURN WITH AN UNUSABLE NEIGHBORLIST     ==
-!     ==================================================================
-      IF(NNB.GT.NNBX) THEN
-        NBLIST(:)%IAT1=0
-        NBLIST(:)%IAT2=0
-        RETURN
-      END IF
-!
-!     ==================================================================
-!     ==================================================================
-!     ==================================================================
-      IF(TPR) THEN
-        PRINT*,' NUMBER OF NEIGHBORS ',NNB
-        DO NN=1,MIN(NNB,NNBX)
-          PRINT*,NBLIST(NN)%IAT1,NBLIST(NN)%IAT2
-        ENDDO        
-      END IF
-      RETURN
-      END                
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CLASSICAL_NEIGHBORS(NAT,R,RBAS,NNBX,NNB,NBLIST &
      &                              ,MAXDIV,NEXCL,IEXCLUSION,i2first)
 !     **************************************************************************
@@ -4486,7 +4727,7 @@ END MODULE UFFTABLE_MODULE
       TYPE(NONBOND_TYPE),INTENT(OUT):: NBLIST(NNBX)
       INTEGER(4)        ,INTENT(IN) :: MAXDIV
       INTEGER(4)        ,INTENT(IN) :: NEXCL
-      INTEGER(4)        ,INTENT(IN) :: IEXCLUSION(NEXCL)
+      INTEGER(4)        ,INTENT(IN) :: IEXCLUSION(2,NEXCL)
       INTEGER(4)        ,INTENT(IN) :: i2first(nat)
       INTEGER(4)                    :: EXCLUSION
       REAL(8)                       :: RMAX2
@@ -4516,6 +4757,7 @@ END MODULE UFFTABLE_MODULE
       integer(4)                    :: min1,max1,min2,max2,min3,max3
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      nblist(:)%tonefour=.false.
 !
 !     ==========================================================================
 !     == divide the unit cell into boxes and attribute each atom to a box     ==
@@ -4610,13 +4852,13 @@ END MODULE UFFTABLE_MODULE
                 ITVEC(2)=IT2-ITR(2,IAT2)
                 ITVEC(3)=IT3-ITR(3,IAT2)
 !               == AVOID DOUBLE COUNTING=======================================
-                IF(IAT2.GT.IAT1) CYCLE
+                IF(IAT1.GT.IAT2) CYCLE
                 IF(IAT2.EQ.IAT1) THEN
-                  IF(ITVEC(1).GT.0) CYCLE
-                  IF(ITVEC(1).EQ.0) THEN
+                  IF(ITVEC(3).GT.0) CYCLE
+                  IF(ITVEC(3).EQ.0) THEN
                     IF(ITVEC(2).GT.0) CYCLE
                     IF(ITVEC(2).EQ.0) THEN
-                      IF(ITVEC(3).Ge.0) CYCLE
+                      IF(ITVEC(1).Ge.0) CYCLE
                     END IF
                   END IF
                 END IF   
@@ -4644,32 +4886,25 @@ END MODULE UFFTABLE_MODULE
 !         == if isvar=iat1-1+nat*(iat2-1)+...
 !         == then 1) it is the translation of iat1
 !         ==      2) iat1.ge.iat2
+                  nblist(nnb)%exclude=.false.
+                  if(abs(itvec(1)).gt.maxdiv) cycle                  
+                  if(abs(itvec(2)).gt.maxdiv) cycle                  
+                  if(abs(itvec(3)).gt.maxdiv) cycle                  
                   EXCLUSION=1+(ITVEC(1)+MAXDIV)+(1+2*MAXDIV)*((ITVEC(2)+MAXDIV) &
                &                               +(1+2*MAXDIV)*((ITVEC(3)+MAXDIV) &
-               &                               +(1+2*MAXDIV)*(IAT1-1+NAT*(IAT2-1))))
-                  iat2a=i2first(iat2)
-                  nblist(nnb)%exclude=.false.
+               &                               +(1+2*MAXDIV)*(IAT2-1+NAT*(IAT1-1))))
+                  iat2a=i2first(iat1)
                   do iex=iat2a,nexcl
-                     if(iexclusion(iex).lt.exclusion) cycle
-                     if(iexclusion(iex).eq.exclusion) then
+                     if(iexclusion(1,iex).lt.exclusion) cycle
+                     if(iexclusion(1,iex).eq.exclusion) then
                         NBLIST(NNB)%EXCLUDE=.true. 
+                        NBLIST(NNB)%tonefour=(iexclusion(2,iex).eq.1)
                      ELSE
                         NBLIST(NNB)%EXCLUDE=.FALSE.
+                        NBLIST(NNB)%tonefour=.false.
                      end if
                      exit
                   end do
-!
-
-!!$                  NBLIST(NNB)%EXCLUDE=.FALSE.
-!!$                  do iex=1,nexcl
-!!$                    if(iexclusion(iex).lt.exclusion) cycle !exclusions are inclreasing
-!!$                    if(iexclusion(iex).eq.exclusion) then
-!!$                      NBLIST(NNB)%EXCLUDE=.true. 
-!!$                    else 
-!!$                      NBLIST(NNB)%EXCLUDE=.FALSE.
-!!$                    end if  
-!!$                    exit
-!!$                  enddo
                 END IF
               ENDDO
             ENDDO
@@ -4696,17 +4931,17 @@ END MODULE UFFTABLE_MODULE
             write(*,fmt='("NN: iat1=",i5," iat2=",i5," T=",3i5)') &
      &           NBLIST(NN)%IAT1,NBLIST(NN)%IAT2,NBLIST(NN)%It
           else
-            write(*,fmt='("NN: iat1=",i5," iat2=",i5)') &
-                 NBLIST(NN)%IAT1,NBLIST(NN)%IAT2
+            write(*,fmt='("NN: iat1=",i5," iat2=",i5,"EXCL:",L4)') &
+                 NBLIST(NN)%IAT1,NBLIST(NN)%IAT2,NBLIST(NN)%EXCLUDE
           end if
         ENDDO        
       END IF
       RETURN
-      END                
+      END SUBROUTINE CLASSICAL_NEIGHBORS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE CLASSICAL_EXCLUSIONS(NAT,NBOND,BOND,NANGLE,ANGLE &
-     &                     ,MAXDIV,NEXCLUSIONX,NEXCLUSION,IEXCLUSION,i2first)
+      SUBROUTINE CLASSICAL_EXCLUSIONS(NAT,NBOND,BOND,NANGLE,ANGLE,NTORSION &
+     &               ,TORSION,MAXDIV,NEXCLUSIONX,NEXCLUSION,IEXCLUSION,i2first)
 !     **************************************************************************
 !     **  NON-BOND INTERACTIONS SUCH AS VAN DER WAALS AND COULOMB INTERACTION **
 !     **  MUST NOT BE CALCULATED THAT ARE CONNECTED VIA TWO BONDS OR LESS.    **
@@ -4721,23 +4956,27 @@ END MODULE UFFTABLE_MODULE
 !     **  1+(IT1+2)+5*((IT2+2)+5*(IT3+2)+5*((IAT1-1)+NAT*(IAT2-1)             **
 !     **  SO THAT IAT1>IAT2                                                   **
 !     **************************************************************************
-      USE CLASSICAL_MODULE, ONLY : BOND_TYPE,ANGLE_TYPE
+      USE CLASSICAL_MODULE, ONLY : BOND_TYPE,ANGLE_TYPE,TORSION_TYPE,MD
       IMPLICIT NONE
       INTEGER(4)       ,INTENT(IN) :: NAT
       INTEGER(4)       ,INTENT(IN) :: NBOND
       TYPE(BOND_TYPE)  ,INTENT(IN) :: BOND(NBOND)
       INTEGER(4)       ,INTENT(IN) :: NANGLE
       TYPE(ANGLE_TYPE) ,INTENT(IN) :: ANGLE(NANGLE)
+      INTEGER(4)       ,INTENT(IN) :: Ntorsion
+      TYPE(torsion_TYPE) ,INTENT(IN) :: torsion(Ntorsion)
       INTEGER(4)       ,INTENT(IN) :: MAXDIV
       INTEGER(4)       ,INTENT(IN) :: NEXCLUSIONX
       INTEGER(4)       ,INTENT(OUT):: NEXCLUSION
-      INTEGER(4)       ,INTENT(OUT):: IEXCLUSION(NEXCLUSIONX)
+      INTEGER(4)       ,INTENT(OUT):: IEXCLUSION(2,NEXCLUSIONX)
       INTEGER(4)       ,INTENT(OUT):: I2first(nat)
       LOGICAL(4)            :: TCHK
       LOGICAL(4),PARAMETER  :: TPR=.TRUE.
       INTEGER(4)            :: LARGEST    ! LARGEST NUMBER ON EXLCUSION FILE
-      INTEGER(4)            :: IB,IANGLE,IAT1,IAT2,I,I1,I2,IMAX,ISVAR
-      integer(4)            :: it(3),it1(3),it3(3)
+      INTEGER(4)            :: IB,IANGLE,IAT1,IAT2,I,I1,I2,IMAX,ISVAR,ITORSION
+      integer(4)            :: it(3),it1(3),it3(3),IT4(3)
+      REAL(8)               :: WORK(NEXCLUSIONX)
+      INTEGER(4)            :: FROM, TO, ISVAR1, ISVAR2
 !     **************************************************************************
       LARGEST=1+(1+2*MAXDIV)**3+NAT**2+1
       IF(LARGEST.GT.HUGE(IEXCLUSION)) THEN
@@ -4745,6 +4984,9 @@ END MODULE UFFTABLE_MODULE
         CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
       END IF
       NEXCLUSION=0
+      iexclusion(1,:)=-1
+      IEXCLUSION(2,:)=1   ! 1 stands for "this is a 1-4 exclusion"
+                          ! 0 stands for "this is a 1-2 or 1-3 exclusion"
 !
 !     ==========================================================================
 !     ==  FIND BOND EXCLUSIONS                                               ==
@@ -4760,6 +5002,19 @@ END MODULE UFFTABLE_MODULE
           end if
           IF(IAT2.GE.IAT1) THEN 
             ISVAR=IAT2-1+NAT*(IAT1-1)
+            if(iat2.eq.iat1) then
+              if(it(3).gt.0) then
+                it(:)=-it(:)
+              else if(it(3).eq.0)  then
+                if(it(2).gt.0) then
+                  it(:)=-it(:)
+                else if(it(2).eq.0)  then
+                  if(it(1).gt.0) then
+                    it(:)=-it(:)
+                  end if
+                end if
+              end if
+            end if
           ELSE
             ISVAR=IAT1-1+NAT*(IAT2-1)
             IT(:)=-it(:)
@@ -4777,7 +5032,8 @@ END MODULE UFFTABLE_MODULE
           ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
      &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
      &                        +(1+2*MAXDIV)*ISVAR))
-          IEXCLUSION(NEXCLUSION)=1+ISVAR
+          IEXCLUSION(1,NEXCLUSION)=1+ISVAR
+          IEXCLUSION(2,NEXCLUSION)=0   ! 0 stands for "this is a 1-2 or 1-3 exclusion"
         END IF
       ENDDO
 !
@@ -4794,8 +5050,21 @@ END MODULE UFFTABLE_MODULE
           IF(ASSOCIATED(ANGLE(IANGLE)%IT1)) IT1(:)=ANGLE(IANGLE)%IT1(:)
           IF(ASSOCIATED(ANGLE(IANGLE)%IT3)) IT3(:)=ANGLE(IANGLE)%IT3(:)
           IT(:)=IT3(:)-IT1(:)
-          IF(IAT2.ge.IAT1) THEN
+          IF(IAT2.GE.IAT1) THEN
             ISVAR=IAT2-1+NAT*(IAT1-1)
+            IF(IAT2.EQ.IAT1) THEN
+              IF(IT(3).gT.0) THEN
+                IT(:)=-IT(:)
+              ELSE IF(IT(3).EQ.0)  THEN
+                IF(IT(2).gT.0) THEN
+                  IT(:)=-IT(:)
+                ELSE IF(IT(2).EQ.0)  THEN
+                  IF(IT(1).gT.0) THEN
+                    IT(:)=-IT(:)
+                  END IF
+                END IF
+              END IF
+            END IF
           ELSE
             ISVAR=IAT1-1+NAT*(IAT2-1)
             IT(:)=-IT(:)
@@ -4815,9 +5084,75 @@ END MODULE UFFTABLE_MODULE
           ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
      &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
      &                        +(1+2*MAXDIV)*ISVAR))
-          IEXCLUSION(NEXCLUSION)=1+ISVAR
+          IEXCLUSION(1,NEXCLUSION)=1+ISVAR
+          IEXCLUSION(2,NEXCLUSION)=0   ! 0 stands for "this is a 1-2 or 1-3 exclusion"
         END IF
       ENDDO
+!
+!     ==========================================================================
+!     ==  FIND torsion EXcLUSIONS                                             ==
+!     ==========================================================================
+PRINT*,"FLAG: NTORSION=",NTORSION
+      IF(MD%FF.NE.'UFF') THEN
+         DO ITORSION=1,NTORSION
+            IAT1=TORSION(ITORSION)%IAT1
+            IAT2=TORSION(ITORSION)%IAT4
+            NEXCLUSION =NEXCLUSION+1
+            IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
+               IT1(:)=0
+               IT4(:)=0
+               IF(ASSOCIATED(TORSION(ITORSION)%IT1)) IT1(:)=TORSION(ITORSION)%IT1(:)
+               IF(ASSOCIATED(TORSION(ITORSION)%IT4)) IT4(:)=TORSION(ITORSION)%IT4(:)
+               IT(:)=IT4(:)-IT1(:)
+               IF(IAT2.GE.IAT1) THEN
+                  ISVAR=IAT2-1+NAT*(IAT1-1)
+                  IF(IAT2.EQ.IAT1) THEN
+                     IF(IT(3).gT.0) THEN
+                        IT(:)=-IT(:)
+                     ELSE IF(IT(3).EQ.0)  THEN
+                        IF(IT(2).gT.0) THEN
+                           IT(:)=-IT(:)
+                        ELSE IF(IT(2).EQ.0)  THEN
+                           IF(IT(1).gT.0) THEN
+                              IT(:)=-IT(:)
+                           END IF
+                        END IF
+                     END IF
+                  END IF
+               ELSE
+                  ISVAR=IAT1-1+NAT*(IAT2-1)
+                  IT(:)=-IT(:)
+               END IF
+               IF(ABS(IT(1)).GT.MAXDIV.OR.ABS(IT(2)).GT.MAXDIV.OR.ABS(IT(3)).GT.MAXDIV) THEN
+                  CALL ERROR$MSG('BOND TRANSLATIONS TOO LARGE')
+                  CALL ERROR$MSG('CANNOT HANDLE AT PRESENT')
+                  CALL ERROR$I4VAL('MAXDIV',MAXDIV)
+                  CALL ERROR$I4VAL('IT(1)',IT(1))
+                  CALL ERROR$I4VAL('IT(2)',IT(2))
+                  CALL ERROR$I4VAL('IT(3)',IT(3))
+                  CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
+               END IF
+!         == if isvar=iat1-1+nat*(iat2-1)+...
+!         == then 1) it is the translation of iat1
+!         ==      2) iat1.ge.iat2
+               ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
+                    &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
+                    &                        +(1+2*MAXDIV)*ISVAR))
+               IEXCLUSION(1,NEXCLUSION)=1+ISVAR
+! do not set iexclsuion (2,nexcl...) to avoid overwriting 1-2 and 1-3 exclusions
+! it is set to 1 before the 1-2 and 1-3 exclusions are evaluates
+
+! print*,"FLAG: ANGLE EXCLUSION FOUND: ",IAT1, IAT2
+! c=iexclusion(nexclusion)
+! a= maxdiv
+! b= (1+2*maxdiv)
+! d= INT( (REAL(c - 1 - a - b*a - a*b**2))/REAL(b**3) +1 - NAT*(IAT1-1))
+! e= INT( (REAL(c-1-a-b*a-a*b**2)) / REAL(NAT*B**3) + REAL(1)/REAL(NAT) - REAL(IAT2)/REAL(NAT) + 1)
+! print*,"FLAG: ANGLEEXCL: ", IAT1, IAT2, C, D, E 
+!print*,"FLAG: ANGLEEXCL: ",nexclusion,IAT1, IAT2, it(:),IEXCLUSION(NEXCLUSION),nat,maxdiv
+            END IF
+         ENDDO
+      END IF
 !
 !     ==========================================================================
 !     ==  RETURN THE NUMBER OF EXCLUSIONS IF GREATER THAN MAXIMUM             ==
@@ -4832,17 +5167,34 @@ END MODULE UFFTABLE_MODULE
 !     ==  SORT IN INCREASING MAGNITUDE                                        ==
 !     ==========================================================================
       IF(NEXCLUSION.GT.1) THEN
-        CALL LIB$SORTI4(NEXCLUSION,IEXCLUSION)
+       WORK(:)=REAL(IEXCLUSION(1,:))
+       CALL SORT$SET(NEXCLUSION,WORK)
+       CALL SORT$RESTART()
+       CALL SORT$FLIP(FROM,TO)
+       DO WHILE (FROM.NE.0.OR.TO.NE.0)
+         IF(TO.EQ.0) THEN
+           ISVAR1=IEXCLUSION(1,FROM)
+           ISVAR2=IEXCLUSION(2,FROM)
+         ELSE IF(FROM.EQ.0) THEN
+           IEXCLUSION(1,TO)=ISVAR1
+           IEXCLUSION(2,TO)=ISVAR2
+         ELSE
+           IEXCLUSION(1,TO)=IEXCLUSION(1,FROM)
+           IEXCLUSION(2,TO)=IEXCLUSION(2,FROM)
+         END IF
+         CALL SORT$FLIP(FROM,TO)
+       ENDDO
+       CALL SORT$UNSET
 !
 !       ==  EXCLUDE DOUBLE EXCLUSIONS ==========================================
         I1=1
         DO I=2,NEXCLUSION
-          IF(IEXCLUSION(I1).NE.IEXCLUSION(I)) THEN
+          IF(IEXCLUSION(1,I1).NE.IEXCLUSION(1,I)) THEN
             I1=I1+1
-            IEXCLUSION(I1)=IEXCLUSION(I)        
+            IEXCLUSION(1,I1)=IEXCLUSION(1,I)        
           ELSE
-            IAT2=(IEXCLUSION(I)-1)/NAT+1
-            IAT1=IEXCLUSION(I)-NAT*(IAT2-1)
+            IAT2=(IEXCLUSION(1,I)-1)/NAT+1
+            IAT1=IEXCLUSION(1,I)-NAT*(IAT2-1)
             PRINT*,'DOUBLE EXCLUSION BETWEEN ATOMS:',IAT1,IAT2
           END IF
         ENDDO
@@ -4857,7 +5209,7 @@ END MODULE UFFTABLE_MODULE
 !     ==========================================================================
       NEXCLUSION=NEXCLUSION+1
       IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
-        IEXCLUSION(NEXCLUSION:)=-1
+        IEXCLUSION(1,NEXCLUSION)=-1
       END IF
 !
 !     ==================================================================
@@ -4868,20 +5220,51 @@ END MODULE UFFTABLE_MODULE
 !         ==      2) iat1.ge.iat2
       I2FIRST(:)=0
       DO I=1,NEXCLUSION
-        IAT2=1+INT(REAL(IEXCLUSION(I))/REAL(((1+2*MAXDIV)**3*NAT)))
+        IAT2=1+INT(REAL(IEXCLUSION(1,I))/REAL(((1+2*MAXDIV)**3*NAT)))
         IF(I2FIRST(IAT2).EQ.0) I2FIRST(IAT2)=I
       ENDDO
       IF(I2FIRST(NAT).EQ.0)I2FIRST(NAT)=NEXCLUSION
       DO IAT2=NAT-1,1,-1
         IF(I2FIRST(IAT2).EQ.0)I2FIRST(IAT2)=I2FIRST(IAT2+1)
       ENDDO
+! print*,'i2first',i2first
+! print*,"i   i2first(i)"
+! do i=1,nat
+!    print*,i,"   ",i2first(i)
+! end do
+! do  i=1,nexclusion-1
+!   c=iexclusion(i)-1
+!   iat1=1+c/((1+2*MAXDIV)**3*NAT)
+!   c=c-(iat1-1)*(1+2*MAXDIV)**3*NAT
+!   iat2=1+c/(1+2*MAXDIV)**3
+!   c=c-(iat2-1)*(1+2*MAXDIV)**3
+!   it(3)=c/(1+2*MAXDIV)**2-maxdiv
+!   c=c-(it(3)+maxdiv)*(1+2*MAXDIV)**2
+!   it(2)=c/(1+2*MAXDIV)-maxdiv
+!   c=c-(it(2)+maxdiv)*(1+2*MAXDIV)
+!   it(1)=c-maxdiv
+!   ISVAR=IAT2-1+NAT*(IAT1-1)
+!   ISVAR=(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
+!  &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
+!  &                        +(1+2*MAXDIV)*ISVAR))
+!   isvar=1+isvar
+!   print*,"exclusion: ",i,IAT1,IAT2,it(:),IEXCLUSION(i)
+!   if(IAT2.eq.1+INT(REAL(IEXCLUSION(I)-1)/REAL(((1+2*MAXDIV)**3*NAT)))) THEN
+!      CALL ERROR$STOP('--------')
+!   end if
+!   if(isvar.ne.IEXCLUSION(i)) then
+!     call error$stop('.......')
+!   end if
+! enddo
+! !stop 'forced'
+
 !
 !     ==================================================================
 !     ==  PRINTOUT IF REQUESTED                                       ==
 !     ==================================================================
       IF(TPR) THEN
         IMAX=MIN(NEXCLUSION,NEXCLUSIONX)
-        PRINT*,'IEXCLUSION',IEXCLUSION(1:IMAX)
+        PRINT*,'IEXCLUSION',IEXCLUSION(1,1:IMAX)
       END IF
       RETURN
       END                

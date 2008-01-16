@@ -5638,12 +5638,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             CALL ERROR$STOP('STRCIN_SOLVENT') 
           END IF
           CALL LINKEDLIST$GET(LL_STRC,'NAME',1,MATOM(IATM)%NAME)
-!==============================================================================
-!CHECK THIS:                                                                  *
           MATOM(IATM)%ELEMENT=MATOM(IATM)%NAME(1:2)                          !*
           IF(MATOM(IATM)%ELEMENT(2:2).EQ.'_') MATOM(IATM)%ELEMENT(2:2)=' '   !*
-PRINT*,"ELEMENT: ", MATOM(IATM)%ELEMENT, IATM
-!==============================================================================
 !    
 !         ==  QMATOM  =====================================================
           CALL LINKEDLIST$EXISTD(LL_STRC,'QMATOM',1,TCHK)

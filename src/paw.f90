@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/main/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 832 $'
+character(256):: VERrev='$LastChangedRevision: 869 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2007-10-23 00:17:05 +0200 (Di, 23. Okt 2007) $'
+character(256):: VERdat='$LastChangedDate: 2008-01-16 17:22:10 +0100 (Mi, 16. Jan 2008) $'
 end Module version_module
 !
 !     ..................................................................
@@ -1241,7 +1241,11 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       CALL QMMM$GETL4('ON',TQMMM)
       IF(TQMMM) THEN
         CALL FORCEFIELD$GETCH('FORCEFIELD',FFTYPE)
-        IF(FFTYPE.EQ.'AMBER')CALL FORCEFIELD$WRITE_MMSTRC
+        IF(FFTYPE.EQ.'AMBER') THEN
+           CALL FORCEFIELD$WRITE_MMSTRC
+        ELSE IF(FFTYPE.EQ.'UFF') THEN
+           CALL FORCEFIELD$WRITE_UFFSTRC
+        END IF
       END IF
                               CALL TRACE$POP
       RETURN

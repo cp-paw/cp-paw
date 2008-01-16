@@ -664,9 +664,9 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
 !     ..................................................................
       SUBROUTINE FORCEFIELD_READPATCHRESIDUE
 !     ******************************************************************
-!     **  COPIES THE VARIABLE TOP_RES(ISOURCE) OF TYPE RES_TYPE       **
-!     **  INTO TOP_RES(ITARGET). THE TARGET WILL BE DEALLOCATED AND   **
-!     **  ALLOCATED AGAIN WITH THE RIGHT NUMBER OF ENTRIES            **
+!     **  READS THE PATCH ENTRIES IN THE TOPLOGY FILE AND COMPLETES   **
+!     **  THE TOP_RES ARRAY. THE PATCH ENTRIES WILL BE CREATED BY THE **
+!     **  FORCEFIELD$COPYRES SUBROUTINE                               **
 !     ******************************************************************
         USE FORCEFIELD_MODULE
         USE STRINGS_MODULE
@@ -936,7 +936,6 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
       SUBROUTINE FORCEFIELD$READ_MMSTRC
 !     ******************************************************************
 !     **  READS THE MM-SYSTEM FROM A PDB FILE.                        **
-!     **  WARNING: AT THIS STAGE NO CONECT ENTRIES ARE TREATED        **
 !     ******************************************************************
         USE FORCEFIELD_MODULE
         USE STRINGS_MODULE
@@ -946,7 +945,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
         CHARACTER(102)                        :: LINE, DUMMY
         CHARACTER(12)                         :: ID
         CHARACTER(LEN=*), PARAMETER           :: con_form='(A6,5I5)'  !FORMAT STRING TO READ THE CONECT ENTRIES IN THE PDB FILE
-        INTEGER                               :: I, IATOM, IHETATM, ICONECT
+        INTEGER                               :: I, J, IATOM, IHETATM, ICONECT
                                CALL TRACE$PUSH('READ_MMSTRC')
 !     ==  MM STRUCTURE FILE  ===========================================
         CALL FILEHANDLER$UNIT('MMSTRC',NFIL)
@@ -978,19 +977,39 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
         ICONECT=0
         DO 
            READ(NFIL,FMT='(A102)',END=202) LINE
+!          ---- READ THE ATOM ENTRIES-----------------------
            IF(LINE(1:6).EQ.'ATOM  ') THEN 
               IATOM = IATOM + 1
               READ(LINE,pdb_form) MMATOM(IATOM)
            END IF
+!          ---- READ THE HETATM ENTRIES---------------------
            IF(LINE(1:6).EQ.'HETATM') THEN
               IHETATM = IHETATM + 1
               READ(LINE,pdb_form) MMATOM(NATOM+IHETATM)
            END IF
+!          ---- READ THE CONECT ENTRIES---------------------
            IF(LINE(1:6).EQ.'CONECT') THEN
               ICONECT = ICONECT + 1
               READ(LINE,CON_FORM) MMCONECT(ICONECT)
            END IF
         END DO
+202 CONTINUE
+!
+!       -------------------------------------------------------------------------
+!       -  THE CONECT ENTRIS HAVE THE INDEX NUMBER OF THE ATOMS BUT NOT THE     -
+!       -  NUMBER OF THE ATOM IN THE MMATOM ARRAY. HERE WE CHANGE THIS TO THE   -
+!       -  CORRECT NUMBER.                                                      -
+!       -------------------------------------------------------------------------
+        DO I=1,SIZE(MMCONECT)
+           DO J=1,SIZE(MMATOM)
+              IF(MMCONECT(I)%CATOM.EQ.MMATOM(J)%ID) MMCONECT(I)%CATOM=J
+              IF(MMCONECT(I)%ATOM1.EQ.MMATOM(J)%ID) MMCONECT(I)%ATOM1=J
+              IF(MMCONECT(I)%ATOM2.EQ.MMATOM(J)%ID) MMCONECT(I)%ATOM2=J
+              IF(MMCONECT(I)%ATOM3.EQ.MMATOM(J)%ID) MMCONECT(I)%ATOM3=J
+              IF(MMCONECT(I)%ATOM4.EQ.MMATOM(J)%ID) MMCONECT(I)%ATOM4=J
+           END DO
+        END DO
+!       -------------------------------------------------------------------------
 ! print*,"--------DEBUG--------"
 ! DO I=1,SIZE(MMCONECT)
 !    write(*,con_form) MMCONECT(I)
@@ -998,7 +1017,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
 ! print*,"---------------------"
 ! STOP
 
-202     DO I=1, SIZE(MMATOM)
+        DO I=1, SIZE(MMATOM)
 !     ----- if you use 'reduce' to fix pdb-files then you get atomnames like 3HG1 instead of HG13. this loop shall fix this
            DUMMY = MMATOM(I)%NAME
            IF(SCAN(DUMMY,'1234567890').EQ.1) THEN
@@ -1017,24 +1036,24 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
                      CALL TRACE$POP
         RETURN
       END SUBROUTINE FORCEFIELD$READ_MMSTRC
-
+!
 !     ..................................................................
       SUBROUTINE FORCEFIELD$WRITE_MMSTRC
 !     ******************************************************************
 !     **  WRITES THE MM-SYSTEM INTO A PDB FILE.                       **
-!     **  WARNING: AT THIS STAGE NO CONECT ENTRIES ARE TREATED        **
 !     ******************************************************************
         USE LINKEDLIST_MODULE
         USE FORCEFIELD_MODULE
         USE STRINGS_MODULE
         IMPLICIT NONE
         INTEGER                               :: NFIL, NATOM
-        INTEGER                               :: IATOM
-        REAL(8), ALLOCATABLE                  :: R(:,:)
+        INTEGER                               :: IATOM, I, J
+        REAL(8),                  ALLOCATABLE :: R(:,:)
         REAL(8)                               :: UNIT
         LOGICAL(4)                            :: TCHK
-        CHARACTER(LEN=*), PARAMETER           :: con_form='(A6,5I5)'  !FORMAT STRING TO WRITE THE CONECT ENTRIES IN THE PDB FILE
-
+        CHARACTER(LEN=*),           PARAMETER :: con_form='(A6,5I5)'  !FORMAT STRING TO WRITE THE CONECT ENTRIES IN THE PDB FILE
+        TYPE(PDB_CONECT_TYPE),    ALLOCATABLE :: CONECT_OUT(:)
+!
                      call trace$push('FORCEFIELD$WRITE_MMSTRC')
         CALL CONSTANTS$GET('ANGSTROM',UNIT)
                      
@@ -1047,23 +1066,94 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
         CALL FILEHANDLER$UNIT('MMSTRC_OUT',NFIL)
         NATOM=SIZE(MMATOM)
         ALLOCATE(R(3,NATOM))
+        I=SIZE(MMCONECT)
+        ALLOCATE(CONECT_OUT(I))
+        CONECT_OUT(:)=MMCONECT(:)
         CALL CLASSICAL$SELECT('QMMM')
         CALL CLASSICAL$GETR8A('R(0)',3*NATOM,R)
         DO IATOM=1,NATOM 
            MMATOM(IATOM)%R=R(:,IATOM) / UNIT
            WRITE(NFIL,pdb_form) MMATOM(IATOM)
         END DO
+!       --------REWRITE THE MMCONECT DATA INTO CONECT_OUT WITH INDEX NUMBERS----------
+!       --------INSTEAD OF ARRAY NUMBERS----------------------------------------------
+        DO I=1,SIZE(CONECT_OUT)
+           DO J=1,SIZE(MMATOM)
+              IF(CONECT_OUT(I)%CATOM.EQ.J) CONECT_OUT(I)%CATOM=MMATOM(J)%ID
+              IF(CONECT_OUT(I)%ATOM1.EQ.J) CONECT_OUT(I)%ATOM1=MMATOM(J)%ID
+              IF(CONECT_OUT(I)%ATOM2.EQ.J) CONECT_OUT(I)%ATOM2=MMATOM(J)%ID
+              IF(CONECT_OUT(I)%ATOM3.EQ.J) CONECT_OUT(I)%ATOM3=MMATOM(J)%ID
+              IF(CONECT_OUT(I)%ATOM4.EQ.J) CONECT_OUT(I)%ATOM4=MMATOM(J)%ID
+           END DO
+        END DO
+!       ------------------------------------------------------------------------------
         IF(SIZE(MMCONECT).GT.0) THEN
            DO IATOM=1,SIZE(MMCONECT)
-              WRITE(NFIL,CON_FORM) MMCONECT(IATOM)
+              WRITE(NFIL,CON_FORM) CONECT_OUT(IATOM)
            END DO
         END IF
         DEALLOCATE(R)
+        DEALLOCATE(CONECT_OUT)
                      call trace$POP
         RETURN
       END SUBROUTINE FORCEFIELD$WRITE_MMSTRC
+! 
 !     ..................................................................
+      SUBROUTINE FORCEFIELD$WRITE_UFFSTRC
+!     ******************************************************************
+!     **  WRITES THE MM-SYSTEM INTO A STRC FILE FORMAT.               **
+!     ******************************************************************
+        USE LINKEDLIST_MODULE
+        USE FORCEFIELD_MODULE
+        USE STRINGS_MODULE
+        IMPLICIT NONE
+        INTEGER                               :: NFIL, NATOM
+        INTEGER                               :: IATOM, I, J
+        REAL(8),                  ALLOCATABLE :: R(:,:)
+        CHARACTER(12),            ALLOCATABLE :: ATOMNAME(:)
+        REAL(8)                               :: UNIT
+        LOGICAL(4)                            :: TCHK
+        REAL(8)                               :: LATTICE(9)
 
+        CALL CONSTANTS$GET('ANGSTROM',UNIT)
+                     
+        CALL FILEHANDLER$SETFILE('UFFSTRC_OUT',.TRUE.,-'.UFF.STRC_OUT')
+        CALL FILEHANDLER$SETSPECIFICATION('UFFSTRC_OUT','STATUS','REPLACE')
+        CALL FILEHANDLER$SETSPECIFICATION('UFFSTRC_OUT','POSITION','REWIND')
+        CALL FILEHANDLER$SETSPECIFICATION('UFFSTRC_OUT','ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION('UFFSTRC_OUT','FORM','FORMATTED')
+
+        CALL FILEHANDLER$UNIT('UFFSTRC_OUT',NFIL)
+        WRITE(NFIL,*) "!STRUCTURE"
+        WRITE(NFIL,*) "   !GENERIC LUNIT=",UNIT, "   !END"
+        
+        CALL CLASSICAL$GETR8A('CELL(0)',9,LATTICE)
+        LATTICE(:) = LATTICE(:) / UNIT
+        WRITE(NFIL,*) "   !LATTICE"
+        WRITE(NFIL,*) "      T= ", LATTICE(1), LATTICE(2), LATTICE(3)
+        WRITE(NFIL,*) "         ", LATTICE(4), LATTICE(5), LATTICE(6)
+        WRITE(NFIL,*) "         ", LATTICE(7), LATTICE(8), LATTICE(9)
+        WRITE(NFIL,*) "   !END"
+
+        CALL CLASSICAL$GETI4('NAT',NATOM)
+        ALLOCATE(R(3,NATOM))
+        ALLOCATE(ATOMNAME(NATOM))
+        CALL CLASSICAL$GETR8A('R(0)',3*NATOM,R)
+        CALL CLASSICAL$GETCHA('ATOMNAME',NATOM,ATOMNAME)
+        DO IATOM=1,NATOM 
+           WRITE(NFIL,FMT='(A16,A12,A4,3F10.5,A5)')  "    !ATOM NAME='",ATOMNAME(IATOM), &
+                &                                    "' R=",R(:,IATOM)/UNIT, " !END"
+        END DO
+
+        WRITE(NFIL,*) "!END"
+        WRITE(NFIL,*) "!EOB"
+        WRITE(NFIL,*) " "
+
+        DEALLOCATE(R)
+        DEALLOCATE(ATOMNAME)
+!        
+      END SUBROUTINE FORCEFIELD$WRITE_UFFSTRC
+!      
 !*************************************************************************************
 !******   AMBER SPECIFIC ROUTINES                *************************************
 !*************************************************************************************
@@ -1098,6 +1188,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
            CALL ERROR$MSG('BOND PAIR NOT FOUND!')
            CALL ERROR$CHVAL('TYPE1: ',TYPE1)
            CALL ERROR$CHVAL('TYPE2: ',TYPE2)
+           CALL ERROR$MSG('CHECK IAT1 AND IAT2 IN CLASSICAL_FORCEFIELDSETUP')
            CALL ERROR$STOP('FORCEFIELD$AMBER_BONDPARMS')
         END IF
 !     ==================================================================
@@ -1116,8 +1207,8 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
         D=D*KCALBYMOL
         K=K*KCALBYMOL/ANGSTROM**2
         TCHK=(K.GT.1.D-6)
-        RETURN
 !                      CALL TRACE$POP
+        RETURN
       END SUBROUTINE FORCEFIELD$AMBER_BONDPARMS
 
 !     ******************************************************************
@@ -1145,9 +1236,11 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
 !     ==================================================================
         TCHK=.FALSE.
         DO I=1, SIZE(ANGLE_PARMS)
-           IF(ANGLE_PARMS(I)%ATOM2.EQ.ATOM2) THEN
-              IF((ANGLE_PARMS(I)%ATOM1.EQ.ATOM1.AND.ANGLE_PARMS(I)%ATOM3.EQ.ATOM3).OR.&
-                   (ANGLE_PARMS(I)%ATOM1.EQ.ATOM3.AND.ANGLE_PARMS(I)%ATOM3.EQ.ATOM1)) THEN
+           IF(TRIM(ADJUSTL(ANGLE_PARMS(I)%ATOM2)).EQ.TRIM(ADJUSTL(ATOM2))) THEN
+              IF((TRIM(ADJUSTL(ANGLE_PARMS(I)%ATOM1)).EQ.TRIM(ADJUSTL(ATOM1))&
+              &   .AND.TRIM(ADJUSTL(ANGLE_PARMS(I)%ATOM3)).EQ.TRIM(ADJUSTL(ATOM3))).OR.&
+              &   (TRIM(ADJUSTL(ANGLE_PARMS(I)%ATOM1)).EQ.TRIM(ADJUSTL(ATOM3)).AND.&
+              &   TRIM(ADJUSTL(ANGLE_PARMS(I)%ATOM3)).EQ.TRIM(ADJUSTL(ATOM1)))) THEN
                  K= ANGLE_PARMS(I)%F_CONST
                  THETA= ANGLE_PARMS(I)%THETA_EQUI
                  THETA= THETA / 180.d0 * PI
@@ -1182,7 +1275,6 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
       END SUBROUTINE FORCEFIELD$AMBER_ANGLEPARMS
 
 
-
       SUBROUTINE FORCEFIELD$AMBER_ANGLEPOTA(ID,THETA0,KIJK,POT)
 !     ******************************************************************
 !     **  AMBER USES E_angle= K_theta * (THETA - THETA0) ** 2         **
@@ -1206,8 +1298,8 @@ integer   :: nfilinfo
 !                      CALL TRACE$PUSH('AMBER_ANGLEPOTA')
 !     ******************************************************************
         PI=4.D0*ATAN(1.D0)
-        X1 =  -PI
-        X2 =  PI
+        X1 =  -1.d0!0.d0
+        X2 =   1.d0!2.d0*PI
 !     ==================================================================
 !     ==  DETERMINE ARRAY SIZE ETC                                    ==
 !     ==================================================================
@@ -1218,16 +1310,21 @@ integer   :: nfilinfo
         ALLOCATE(POT%VAL(POT%NX))
         ALLOCATE(POT%DER(POT%NX))
         DO I=1,POT%NX
-           THETA=POT%X1+POT%DX*DBLE(I-1) 
+!           THETA=POT%X1+POT%DX*DBLE(I-1) 
+           X=POT%X1+POT%DX*DBLE(I-1) 
+           THETA=ACOS(X)
            POT%VAL(I)=KIJK*(THETA-THETA0)**2
-           POT%DER(I)=2*KIJK*(THETA-THETA0)
+           POT%DER(I)=2*KIJK*(THETA-THETA0)*(-1.d0/sin(THETA))
         END DO
 ! !---- DEBUG remove this later
 !         CALL FILEHANDLER$UNIT('INFO',nfilinfo)
 !         DO I=1,POT%NX
-!            WRITE(nfilinfo,FMT='(I8,2F15.7)') I, POT%VAL(I), POT%DER(I)
+!            X=POT%X1+POT%DX*DBLE(I-1)
+!            THETA=ACOS(X)
+!            WRITE(nfilinfo,FMT='(3F15.7)') X, POT%VAL(I), POT%DER(I)
 !         END DO
 !         print*,"FLAG FORCED STOP ANGLEPOT INFO"
+!         print*,POT%ID
 !         STOP
 ! !-----------------------
 !                      CALL TRACE$POP
@@ -1332,7 +1429,58 @@ integer   :: nfilinfo
 !                      CALL TRACE$POP
         RETURN
       END SUBROUTINE FORCEFIELD$AMBER_TORSIONPARMS
-
+!
+      SUBROUTINE FORCEFIELD$AMBER_TORSIONPOTA(ID,PHI0,NJK,V,POT)
+        USE CLASSICAL_MODULE,ONLY: POT_TYPE
+        IMPLICIT NONE
+        CHARACTER(*)  ,INTENT(IN) :: ID   !POTENTIAL IDENTIFIER
+        REAL(8)       ,INTENT(IN) :: PHI0 !IDEAL TORSION ANGLE
+        INTEGER(4)    ,INTENT(IN) :: NJK  !MULTIPLICITY OF MINIMA
+        REAL(8)       ,INTENT(IN) :: V    !TORSIONAL BARRIER HEIGHT
+        TYPE(POT_TYPE),INTENT(OUT):: POT
+        INTEGER(4)    ,PARAMETER  :: NX=101
+        REAL(8)       ,PARAMETER  :: X1=-1.D0
+        REAL(8)       ,PARAMETER  :: X2=+1.D0
+        INTEGER(4)                :: I
+        REAL(8)                   :: PHI
+        REAL(8)                   :: X
+integer(4)  :: nfilinfo
+!     ******************************************************************
+        POT%ID=ID
+        POT%NX=NX
+        POT%X1=X1
+        POT%DX=(X2-X1)/DBLE(POT%NX-1) 
+        ALLOCATE(POT%VAL(POT%NX))
+        ALLOCATE(POT%DER(POT%NX))
+!
+!     ==================================================================
+!     == CALCULATE POTENTIAL                                          ==
+!     ==================================================================
+        DO I=1,POT%NX
+           X=POT%X1+DBLE(I-1)*POT%DX
+           X=MIN(1.D0,X)
+           PHI=ACOS(X)
+           POT%VAL(I)=0.5D0*V*(1.D0-COS(DBLE(NJK)*(PHI-PHI0)))
+           IF(I.NE.1.AND.I.NE.POT%NX) THEN
+              POT%DER(I)=-0.5D0*V*DBLE(NJK)*SIN(DBLE(NJK)*(PHI-PHI0))/SIN(PHI)
+           ELSE   ! AVOID DIVIDE BY ZERO AT THE END POINTS
+              POT%DER(I)=-0.5D0*V*DBLE(NJK)**2*COS(DBLE(NJK)*(PHI-PHI0))/COS(PHI)
+           END IF
+        ENDDO
+! !---- DEBUG remove this later
+!         CALL FILEHANDLER$UNIT('INFO',nfilinfo)
+!         DO I=1,POT%NX
+!            X=POT%X1+POT%DX*DBLE(I-1)
+!            PHI=ACOS(X)
+!            WRITE(nfilinfo,FMT='(3F15.7)') X, POT%VAL(I), POT%DER(I)
+!         END DO
+!         print*,"FLAG FORCED STOP TORSIONPOT INFO"
+!         print*,POT%ID
+!         STOP
+! !-----------------------
+        RETURN
+      END SUBROUTINE FORCEFIELD$AMBER_TORSIONPOTA
+!
 !     ..................................................................
       SUBROUTINE FORCEFIELD$AMBER_NONBONDPARMS(ATOM1,ATOM2,ID,RIJ,DIJ,TCHK)
 !     ******************************************************************
@@ -1353,6 +1501,23 @@ integer   :: nfilinfo
 !                      CALL TRACE$PUSH('AMBER_NONBONDPARMS')
         T1=.FALSE.
         T2=.FALSE.
+        TCHK=.TRUE.
+!      ---- AVOID POTENTIALS BETWEEN HW-HW and HW-OW. TCHK WILL BE FALSE-----------
+!      ---- THIS WILL SET NONBOND(I1,I2)=-1 in CLASSICAL_FORCEFIELD_SETUP----------
+!      ---- AND THE INTERACTION WILL BE IGNORED IN CLASSICAL_ECOULOMB--------------
+        IF( (TRIM(ADJUSTL(ATOM1)).EQ.'OW'.AND.TRIM(ADJUSTL(ATOM2)).EQ.'HW').OR. &
+          & (TRIM(ADJUSTL(ATOM1)).EQ.'HW'.AND.TRIM(ADJUSTL(ATOM2)).EQ.'OW').OR. &
+          & (TRIM(ADJUSTL(ATOM1)).EQ.'HW'.AND.TRIM(ADJUSTL(ATOM2)).EQ.'HW')     &
+!      ---- REMOVE L1 (DUMMY ATOM) FROM THE LIST OF VDW INTERACTIONS---------------
+!          & .OR.(TRIM(ADJUSTL(ATOM1)).EQ.'L1'.OR.TRIM(ADJUSTL(ATOM2)).EQ.'L1')  &
+!      ----------------------------------------------------------------------------
+          & ) THEN
+           TCHK=.FALSE.
+           RIJ=0.d0
+           DIJ=0.d0
+           RETURN
+        END IF
+!      -----------------------------------------------------------------------------
         DO I=1, SIZE(VDW_PARMS)
            IF(TRIM(ADJUSTL(ATOM1)).EQ.TRIM(ADJUSTL(VDW_PARMS(I)%ATOM1))) THEN
               XI= VDW_PARMS(I)%RMIN
@@ -1365,19 +1530,19 @@ integer   :: nfilinfo
               T2=.TRUE.
            END IF
         END DO
-        IF((.NOT.T1).OR.(.NOT.T2)) THEN
 ! print*,"VANDERWAALS"
 ! print*,"ATOM1", ATOM1
 ! print*,"ATOM2", ATOM2
 ! print*,T1,T2
-!stop
+! stop
+        IF((.NOT.T1).OR.(.NOT.T2)) THEN
            CALL ERROR$MSG('ATOM TYPE NOT FOUND')
            CALL ERROR$CHVAL('ATOM1= ',ATOM1)
            CALL ERROR$CHVAL('ATOM2= ',ATOM2)
            CALL ERROR$STOP('FORCEFIELD$AMBER_NONBONDPARMS')
         END IF
         RIJ=XI+XJ
-        DIJ=SQRT(DI*DJ)
+        DIJ=DSQRT(DI*DJ)
         WRITE(ID,FMT='(A1,2A5, " X=",F5.2," D=",F8.4)') &
              &              'N ',ATOM1,ATOM2,RIJ,DIJ
 !
@@ -1388,7 +1553,7 @@ integer   :: nfilinfo
         CALL CONSTANTS('KCAL/MOL',KCALBYMOL)
         RIJ=RIJ*ANGSTROM
         DIJ=DIJ*KCALBYMOL
-        TCHK=(DIJ.GT.1.D-8)
+!        TCHK=(DIJ.GT.1.D-8)
 !                      CALL TRACE$POP
         RETURN
       END SUBROUTINE FORCEFIELD$AMBER_NONBONDPARMS
@@ -1438,8 +1603,6 @@ integer :: nfilinfo
             POT%DER(I)=0.D0
          END IF
       ENDDO
-!
-!PETER
       POT%VAL(NX)=POT%VAL(NX-1)+0.5D0*POT%DER(NX-1)*POT%DX
       POT%DER(NX)=0.D0
 
@@ -1472,261 +1635,507 @@ integer :: nfilinfo
 ! !-----------------------------------
 !                      CALL TRACE$POP
       RETURN
-    END SUBROUTINE FORCEFIELD$AMBER_NONBONDPOTA
-       
+      END SUBROUTINE FORCEFIELD$AMBER_NONBONDPOTA
+!       
+!     ..................................................................
+
+!     ..................................................................
+      SUBROUTINE FORCEFIELD$PRINTFRAME(NFIL,ITER,NAT,ATOM,R_,F_)
+!     ******************************************************************
+!     **                                                              **
+!     **  WRITES THE ATOM COORDINATES R(3,NAT) AND FORCES ACTING      **
+!     **  ON THE ATOMS TO FILE NUMBER NFIL IN A .MOVIE.XYZ FORMAT     **
+!     **                                                              **
+!     ******************************************************************
+        IMPLICIT NONE
+        INTEGER(4),      INTENT(IN) :: NFIL
+        INTEGER(4),      INTENT(IN) :: ITER
+        INTEGER(4),      INTENT(IN) :: NAT
+        CHARACTER(2),    INTENT(IN) :: ATOM(NAT)
+        REAL(8),         INTENT(IN) :: R_(3,NAT)
+        REAL(8),         INTENT(IN) :: F_(3,NAT)
+        REAL(8)                     :: R(3,NAT), F(3,NAT)
+        INTEGER(4)                  :: I
+        REAL(8)                     :: ANGSTROM
+!
+        CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
+        R=R_
+        F=F_
+        WRITE(NFIL,FMT='(I10)') NAT
+        WRITE(NFIL,FMT='(A10,I10)')  "NONAME",ITER
+        DO I=1,NAT
+           R(:,I)=R(:,I)/ANGSTROM
+           F(:,I)=R(:,I)/ANGSTROM
+           WRITE(NFIL,FMT='(A2,6F11.5)') ATOM(I), R(:,I), F(:,I)
+        END DO
+!        
+        RETURN
+      END SUBROUTINE FORCEFIELD$PRINTFRAME
+!       
+!     ..................................................................
+
+
 
 ! !*************************************************************************************
 ! !******   TIP3P SPECIFIC ROUTINES                *************************************
 ! !*************************************************************************************
      
-! !     ................................................................
-!     SUBROUTINE FORCEFIELD$TIP3P(NITER_)
-! !     ********************************************************************
-! !     **                                                                **
-! !     **    SORT THE ATOMS, WRITE THEM INTO NEW ARRAYS R0_T3P(:,:,:),   **
-! !     **                                                                **
-! !     **    CALCULATE THE CONSTRAINTS WITH THE LAGRANGIAN MULTIPLIERS   **
-! !     **                                                                **
-! !     **    AND WRITE THE COORDINATES BACK TO THE NORMAL ARRAYS         **
-! !     **                                                                **
-! !     ********************************************************************   
-!       USE CLASSICAL_MODULE
-!       USE PERIODICTABLE_MODULE
-!       IMPLICIT NONE
-!       INTEGER(4)  ,INTENT(IN)   :: NITER_ ! Number of iterations for the constraints
-!       INTEGER(4)  ,ALLOCATABLE,  SAVE  :: b(:,:) ! intern variable to sort the atoms to groups - useful for the constraints
-!       INTEGER(4)  ,SAVE         :: b_temp(3)
-!       INTEGER(4)                :: i,j,k,n,m
-!       REAL(8)                   :: mh       !=1837.94d0          ! hydrogen mass
-!       REAL(8)                   :: mo       !=29174.74d0         ! oxygen mass
-!       REAL(8)     ,PARAMETER    :: dOH=(0.9572d0*1.889726d0)     ! OH distance
-!       REAL(8)     ,PARAMETER    :: dHH=(1.514207d0*1.889726d0)   ! HH distance
-!       REAL(8)     ,SAVE         :: C(3)                          ! Constraints
-!       REAL(8)     ,SAVE         :: LAMBDA(3)                     ! Lagrange multiplier
-!       REAL(8)     ,SAVE         :: nablag10(9), nablag20(9), nablag30(9)  ! gradient(0)
-!       REAL(8)     ,SAVE         :: nablag1p(9), nablag2p(9), nablag3p(9)  ! gradient(+)
-!       INTEGER(4)                :: NMOL                          ! Number of molecules
-!       REAL(8)     ,SAVE         :: RP9(9)                        ! intern variable for the coordinates
-!       REAL(8)     ,SAVE         :: MM(9,9), MMINV(9,9)           ! mass matrix
-!       REAL(8)     ,SAVE         :: A(3,3), AINV(3,3)             ! system matrix for calculating lambda
-!       INTEGER(4)                :: NITER                         ! # of interations for the constraints
-!       LOGICAL     ,SAVE         :: INIT=.FALSE.                  ! check if initialisation is already done
-!       real(8)     ,parameter    :: tol=1.d-8
-!                       CALL TRACE$PUSH('TIP3P')
-!       NMOL=(MD%NAT)/3 ! one water molecule has three atoms
-!       NITER=NITER_    ! set the number of constraint iterations
 
-!       CALL PERIODICTABLE$GET(1, 'MASS', mh) ! get the hydrogen mass
-!       CALL PERIODICTABLE$GET(8, 'MASS', mo) ! get the oxygen mass
+!*************************************************************************************************************
+! TIP3P NEW - ONLY SINGLE H20 ARE CORRECTED
+!*************************************************************************************************************
+
+SUBROUTINE FORCEFIELD$TIP3PNEW(WATER_,WATERO_, NITER_)
+
+  USE CLASSICAL_MODULE
+  USE PERIODICTABLE_MODULE
+  IMPLICIT NONE
+
+  INTEGER(4)     ,INTENT(IN)    :: NITER_ ! NUMBER OF ITERATIONS FOR THE CONSTRAINTS
+  REAL(8)        ,INTENT(IN)    :: WATERO_(3,3)!R(0) POS. OF WATER
+  REAL(8)        ,INTENT(INOUT) :: WATER_(3,3) !R(+) POS. OF WATER
+
+  REAL(8)                       ::MH,MO,THETA,PI,ANGSTROM,DOH,DHH
+  REAL(8)        ,PARAMETER     ::DOH1=0.9572D0,DHH1=1.514207D0 ! BOND LENGTH IN ANGSTROM
+  REAL(8)        ,PARAMETER     ::TOL=1.D-7
+  REAL(8)                       ::MM(9,9),MMINV(9,9),C(3),WATER(3,3),WATERO(3,3)
+  REAL(8)                       ::A(3,3),AINV(3,3),LAMBDA(3),H2OP(9)
+  REAL(8)                       ::NABLAG10(9),NABLAG20(9),NABLAG30(9),NABLAG1P(9),NABLAG2P(9),NABLAG3P(9)
+  INTEGER(4)                    ::I,NITER
+                                         CALL TRACE$PUSH('TIP3PNEW')
+
+  PI=4.D0*ATAN(1.D0)
+
+!print*,"FLAG: IN ",WATER_
+  CALL PERIODICTABLE$GET(1,'MASS',MH)
+  CALL PERIODICTABLE$GET(8,'MASS',MO)
+  CALL CONSTANTS('ANGSTROM',ANGSTROM)
+
+  DOH=DOH1*ANGSTROM
+  DHH=DHH1*ANGSTROM
+
+  !******* MASS MATRIX ***************
+  MM(:,:)=0.D0
+  DO I = 1,3
+     MM(I,I)= MO
+  END DO
+  DO I = 4,9
+     MM(I,I)= MH
+  END DO
+
+  !******* INVERT MMATRIX ************
+
+  CALL LIB$INVERTR8(9,MM,MMINV)
+
+  ! WRITE CONSTRAINTS INTO THE VECTOR C(:)
+  NITER=NITER_
+  WATER(:,:)=WATER_(:,:)
+  WATERO(:,:)=WATERO_(:,:)
+
+  DO  I = 1,NITER
+     CALL TIP3PG(WATER(1,:),WATER(2,:),DOH,C(1))
+     CALL TIP3PG(WATER(1,:),WATER(3,:),DOH,C(2))
+     CALL TIP3PG(WATER(2,:),WATER(3,:),DHH,C(3))
+     CALL TIP3PNABLAGN(WATERO,NABLAG10,NABLAG20,NABLAG30)
+     CALL TIP3PNABLAGN(WATER,NABLAG1P,NABLAG2P,NABLAG3P)
+     A(1,1)=DOT_PRODUCT(NABLAG10(:),MATMUL(MMINV(:,:),NABLAG1P(:)))
+     A(1,2)=DOT_PRODUCT(NABLAG20(:),MATMUL(MMINV(:,:),NABLAG1P(:)))
+     A(1,3)=DOT_PRODUCT(NABLAG30(:),MATMUL(MMINV(:,:),NABLAG1P(:)))
+     A(2,1)=DOT_PRODUCT(NABLAG10(:),MATMUL(MMINV(:,:),NABLAG2P(:)))
+     A(2,2)=DOT_PRODUCT(NABLAG20(:),MATMUL(MMINV(:,:),NABLAG2P(:)))
+     A(2,3)=DOT_PRODUCT(NABLAG30(:),MATMUL(MMINV(:,:),NABLAG2P(:)))
+     A(3,1)=DOT_PRODUCT(NABLAG10(:),MATMUL(MMINV(:,:),NABLAG3P(:)))
+     A(3,2)=DOT_PRODUCT(NABLAG20(:),MATMUL(MMINV(:,:),NABLAG3P(:)))
+     A(3,3)=DOT_PRODUCT(NABLAG30(:),MATMUL(MMINV(:,:),NABLAG3P(:)))     
+
+     CALL LIB$INVERTR8(3,A,AINV)
+     LAMBDA(:)=MATMUL(AINV(:,:),C(:))
+    
+     H2OP(1)=WATER(1,1)
+     H2OP(2)=WATER(1,2)
+     H2OP(3)=WATER(1,3)
+     H2OP(4)=WATER(2,1)
+     H2OP(5)=WATER(2,2)
+     H2OP(6)=WATER(2,3)
+     H2OP(7)=WATER(3,1)
+     H2OP(8)=WATER(3,2)
+     H2OP(9)=WATER(3,3)
+
+     H2OP(:)= H2OP(:) - LAMBDA(1)*MATMUL(MMINV(:,:),NABLAG10(:)) &
+                    &  - LAMBDA(2)*MATMUL(MMINV(:,:),NABLAG20(:)) &
+                    &   - LAMBDA(3)*MATMUL(MMINV(:,:),NABLAG30(:))
+
+     WATER(1,1)=H2OP(1)
+     WATER(1,2)=H2OP(2)
+     WATER(1,3)=H2OP(3)
+     WATER(2,1)=H2OP(4)
+     WATER(2,2)=H2OP(5)
+     WATER(2,3)=H2OP(6)
+     WATER(3,1)=H2OP(7)
+     WATER(3,2)=H2OP(8)
+     WATER(3,3)=H2OP(9)
+
+!PRINT *,'***********************************'
+!PRINT *,'NITER: ',I
+!PRINT *,'C(:) :',C(:)
+!THETA=ACOS(DOT_PRODUCT((WATER(2,:)-WATER(1,:)),(WATER(3,:)-WATER(1,:)))&
+!           &/SQRT(DOT_PRODUCT((WATER(2,:)-WATER(1,:)),(WATER(2,:)-WATER(1,:)))&
+!           &  *DOT_PRODUCT((WATER(3,:)-WATER(1,:)),(WATER(3,:)-WATER(1,:)))))
+!PRINT *,'THETA: ',(THETA/PI)*180
+!PRINT *,'LAMBDA(:) :',LAMBDA(:)
+!PRINT *,'***********************************'
+
+     IF((ABS(LAMBDA(1)) .LT. TOL) .AND. (ABS(LAMBDA(2)) .LT. TOL) .AND. (ABS(LAMBDA(3)) .LT. TOL)) THEN
+         GOTO 2001
+     END IF
+  END DO
+
+2001 CONTINUE  
+  
+  WATER_(:,:)=WATER(:,:)
+!print*,"FLAG: OUT= ",WATER_
+  CALL TRACE$POP
+  RETURN
+END SUBROUTINE FORCEFIELD$TIP3PNEW
+
+     SUBROUTINE TIP3PNABLAGN(R,nablag1,nablag2,nablag3)
+       IMPLICIT NONE
+       REAL(8),INTENT(IN)     :: R(3,3)
+       REAL(8),INTENT(OUT)    :: nablag1(9), nablag2(9), nablag3(9)
+       INTEGER(4)             :: I
+
+       DO i=1,3
+          nablag1(i) = 2.0d0 * (R(1,I) - R(2,I))
+          nablag1(i+3) = -2.0d0 * (R(1,I) - R(2,I))
+          nablag1(i+6) = 0.D0
+       END DO
+
+       DO i=1,3
+          nablag2(i) = 2.0d0 * (R(1,I) - R(3,I))
+          nablag2(i+3) = 0.D0
+          nablag2(i+6) = -2.0d0 * (R(1,I) - R(3,I))
+       END DO
+
+       DO i=1,3
+          nablag3(i) = 0.D0
+          nablag3(i+3) = 2.0d0 * (R(2,I) - R(3,I))
+          nablag3(i+6) = -2.0d0 * (R(2,I) - R(3,I))
+       END DO
+
+       RETURN
+     END SUBROUTINE TIP3PNABLAGN
+
+     SUBROUTINE TIP3PNABLAG(NMOL,IMOL,R,nablag1,nablag2,nablag3)
+       IMPLICIT NONE
+       REAL(8),INTENT(IN)     :: R(3,3,nmol)
+       REAL(8),INTENT(OUT)    :: nablag1(9), nablag2(9), nablag3(9)
+       INTEGER(4)             :: i
+       INTEGER(4),INTENT(IN)  :: nmol, imol
+
+       DO i=1,3
+          nablag1(i) = 2.0d0 * (R(i,1,imol) - R(i,2,imol))
+          nablag1(i+3) = -2.0d0 * (R(i,1,imol) - R(i,2,imol))
+          nablag1(i+6) = 0
+       END DO
+
+       DO i=1,3
+          nablag2(i) = 2.0d0 * (R(i,1,imol) - R(i,3,imol))
+          nablag2(i+3) = 0
+          nablag2(i+6) = -2.0d0 * (R(i,1,imol) - R(i,3,imol))
+       END DO
+
+       DO i=1,3
+          nablag3(i) = 0
+          nablag3(i+3) = 2.0d0 * (R(i,2,imol) - R(i,3,imol))
+          nablag3(i+6) = -2.0d0 * (R(i,2,imol) - R(i,3,imol))
+       END DO
+
+       RETURN
+     END SUBROUTINE TIP3PNABLAG
+
+     SUBROUTINE TIP3PG(r1,r2,d12,g)
+       IMPLICIT NONE
+       REAL(8),INTENT(IN)     :: r1(3)
+       REAL(8),INTENT(IN)     :: r2(3)
+       REAL(8),INTENT(IN)     :: d12
+       REAL(8),INTENT(OUT)    :: g
+       REAL(8)                :: d(3)
+
+       d(:) = r1(:)-r2(:)         
+       g = d(1)**2 + d(2)**2 + d(3)**2 - d12**2
+
+       RETURN
+     END SUBROUTINE TIP3PG
+
+    SUBROUTINE CROSS_PRODUCT_NORM(VEC1, VEC2, VEC3)
+
+      IMPLICIT NONE
+      REAL(8) ,INTENT(IN)    ::VEC1(3)
+      REAL(8) ,INTENT(IN)    ::VEC2(3)
+      REAL(8) ,INTENT(OUT)   ::VEC3(3)
+
+               CALL TRACE$PUSH('CROSS_PRODUCT_NORM')
+
+      VEC3(1) = VEC1(2)*VEC2(3) - VEC1(3)*VEC2(2)
+      VEC3(2) = VEC1(3)*VEC2(1) - VEC1(1)*VEC2(3)
+      VEC3(3) = VEC1(1)*VEC2(2) - VEC1(2)*VEC2(1)
+  
+      VEC3 = VEC3 / SQRT(DOT_PRODUCT(VEC3,VEC3))
+
+
+               CALL TRACE$POP
+      RETURN
+
+    END SUBROUTINE CROSS_PRODUCT_NORM
+
+
+     SUBROUTINE FORCEFIELD$MMSPHERE
+      USE CLASSICAL_MODULE
+      USE FORCEFIELD_MODULE
+
+      IMPLICIT NONE
+      INTEGER(4)                  :: I,S
+      REAL(8)                     :: mms(3)
+      REAL(8)                     :: msr(1)
+      REAL(8)                     :: OP
+      REAL(8)                     :: PRORP(3),DELTA(3)
+
+               CALL TRACE$PUSH('FORCEFIELD$MMSPHERE')
+
+!       do i=1,size(mmatom)
+!          md%rm(:,i)= md%r0(:,i)
+!          md%r0(:,i)= md%rp(:,i)
+!          md%rp(:,i)= 0.d0
+!       End do
+!       return
+
+!print*,"MMSPHERE: FLAG: ",MD%MDNAME
+
+!CALL CLASSICAL$SELECT('QMMM')
+
+     mms(:)=MD%MMS(:)
+     msr(1)=MD%MSR(1)
+
+     I=1
+     DO WHILE (I .LE. SIZE(MMATOM))             !SEARCH IN PDB FILE
+
+        IF (MMATOM(I)%RESNAME .EQ. 'WA2' .AND. (MMATOM(I)%FLAG .NE. 'F')) THEN    !RESIDUE NAME = WA2 AND ATOM NOT FIXED
+          OP=SQRT((MD%MMS(1)-MD%RP(1,I))**2+(MD%MMS(2)-MD%RP(2,I))**2+(MD%MMS(3)-MD%RP(3,I))**2) !DISTANCE ATOM TO ORIGIN
+            IF (OP .GE. msr(1))THEN       !BOUNDARY RADIUS <= OR
+               IF ((MMATOM(I)%RESSEQ .EQ. MMATOM(I+1)%RESSEQ) .AND.(MMATOM(I)%RESSEQ .EQ. MMATOM(I+2)%RESSEQ))THEN !ATOM1 >= BOUNDARY
+             !CALLCULATION OF NEW POSITION 
+                  DO S=I,I+2
+                     PRORP(:)=(DOT_PRODUCT(MD%RP(:,S),MD%R0(:,S))/DOT_PRODUCT(MD%RP(:,S),MD%RP(:,S)))*MD%RP(:,S)      !PROJECTION OF R(0) ONTO R(+)
+                     DELTA(:)=MD%RP(:,S)-PRORP(:)      !DELTA OF BOTH VECTORS
+                     MD%R0(:,S)=MD%R0(:,S)+2*DELTA(:)  ! NEW R(0)
+                     MD%RM(:,S)=MD%R0(:,S)             ! R(-) = R(0)NEU
+                     MD%R0(:,S)=MD%RP(:,S)             ! R(0) = R(+)
+                    !MD%RP(:,S)=0.D0
+                    MD%FORCE(:,S)=-MD%FORCE(:,S)
+                  END DO             
+                 I=I+3
+               ELSE IF ((MMATOM(I)%RESSEQ .EQ. MMATOM(I-1)%RESSEQ) .AND.(MMATOM(I)%RESSEQ .EQ. MMATOM(I+1)%RESSEQ))THEN  !ATOM2 >= BOUNDARY
+                !CALLCULATION OF NEW POSITION 
+               
+                  DO S=I-1,I+1
+                     PRORP(:)=(DOT_PRODUCT(MD%RP(:,S),MD%R0(:,S))/DOT_PRODUCT(MD%RP(:,S),MD%RP(:,S)))*MD%RP(:,S)      !PROJECTION OF R(0) ONTO R(+)
+                     DELTA(:)=MD%RP(:,S)-PRORP(:)      !DELTA OF BOTH VECTORS
+                     MD%R0(:,S)=MD%R0(:,S)+2*DELTA(:)  ! NEW R(0)
+                     MD%RM(:,S)=MD%R0(:,S)             ! R(-) = R(0)NEU
+                     MD%R0(:,S)=MD%RP(:,S)             ! R(0) = R(+)
+                     MD%FORCE(:,S)=-MD%FORCE(:,S)                 
+                  END DO                   
+
+                  I=I+2
+               ELSE IF ((MMATOM(I)%RESSEQ .EQ. MMATOM(I-1)%RESSEQ) .AND.(MMATOM(I)%RESSEQ .EQ. MMATOM(I-2)%RESSEQ))THEN  !ATOM3 >= BOUNDARY
+                !CALLCULATION OF NEW POSITION 
+                  DO S=I-2,I
+                     PRORP(:)=(DOT_PRODUCT(MD%RP(:,S),MD%R0(:,S))/DOT_PRODUCT(MD%RP(:,S),MD%RP(:,S)))*MD%RP(:,S)      !PROJECTION OF R(0) ONTO R(+)
+                     DELTA(:)=MD%RP(:,S)-PRORP(:)      !DELTA OF BOTH VECTORS
+                     MD%R0(:,S)=MD%R0(:,S)+2*DELTA(:)  ! NEW R(0)
+                     MD%RM(:,S)=MD%R0(:,S)             ! R(-) = R(0)NEU
+                     MD%R0(:,S)=MD%RP(:,S)             ! R(0) = R(+)
+                     MD%FORCE(:,S)=-MD%FORCE(:,S)
+                  END DO  
+                  I=I+1
+               END IF
+            ELSE
+              I=I+1
+            END IF
+
+         ElSE
+           I=I+1
+         END IF
+             
+     END DO
+!print*,"FLAG: AFTER FIRST DO LOOP IN MMSPHERE"
+
+     I=1
+     DO WHILE (I .LE. SIZE(MMATOM))
+        IF (MMATOM(I)%RESNAME .EQ. 'WA2' .AND. (MMATOM(I)%FLAG .NE. 'F')) THEN    !RESIDUE NAME = WA2 AND ATOM NOT FIXED
+          OP=SQRT((MD%MMS(1)-MD%RP(1,I))**2+(MD%MMS(2)-MD%RP(2,I))**2+(MD%MMS(3)-MD%RP(3,I))**2) !DISTANCE ATOM TO ORIGIN
+
+            IF (OP .LT. msr(1)) THEN
+                MD%RM(:,I)=MD%R0(:,I)
+                MD%R0(:,I)=MD%RP(:,I)
+                MD%RP(:,I)=0.D0
+                MD%FORCE(:,I)=0.D0
+                I=I+1
+            ELSE
+               MD%RP(:,I)=0.D0
+               MD%FORCE(:,I)=0.D0
+               I=I+1
+            END IF
+!new
+        ELSE IF (MMATOM(I)%FLAG .NE. 'F') THEN
+           MD%RM(:,I)=MD%R0(:,I)
+           MD%R0(:,I)=MD%RP(:,I)
+           MD%RP(:,I)=0.D0
+           MD%FORCE(:,I)=0.D0
+           I=I+1
+        ELSE
+           MD%R0(:,I)=MD%RM(:,I)
+           MD%FORCE(:,I)=0.D0
+           I=I+1
+        END IF
+
+     END DO
+
+! do i=1,size(mmatom)
+!    write(*,FMT='(3F10.5)') MD%RM(:,I)
+!    write(*,FMT='(3F10.5)') MD%R0(:,I)
+!    write(*,FMT='(3F10.5)') MD%RP(:,I)
+! END do
+! STOP
+
+
+               CALL TRACE$POP
+     END SUBROUTINE FORCEFIELD$MMSPHERE
+
+
+
+
+
+
+
+     SUBROUTINE FORCEFIELD$SWITCH(ATOM)
+      USE CLASSICAL_MODULE
+      USE FORCEFIELD_MODULE
+
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)      ::ATOM
+      INTEGER(4)                  :: I
+
+
+               CALL TRACE$PUSH('FORCEFIELD$SWITCH') 
+
+        DO I=1,3
+          MD%RM(I,ATOM)=MD%R0(I,ATOM)
+          MD%R0(I,ATOM)=MD%RP(I,ATOM)
+          MD%RP(I,ATOM)=0.D0
+          MD%FORCE(I,ATOM)=0.D0
+        ENDDO
+               CALL TRACE$POP
+        RETURN
+
+     END SUBROUTINE FORCEFIELD$SWITCH
+
+
+    SUBROUTINE FORCEFIELD$OUT(ATOM,OUT)
+
+      USE CLASSICAL_MODULE
+      USE FORCEFIELD_MODULE
+
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)      ::ATOM
+      LOGICAL(4) ,INTENT(OUT)     ::OUT
+      INTEGER(4)                  ::I
+      REAL(8)                     ::OP
+
+      OUT= .FALSE.
       
-!       IF(.NOT.INIT) THEN ! if INIT=.FALSE. do the initialisation first
-         
-!          ALLOCATE(MD%RP(3,MD%NAT))  ! ############################################## ACHTUNG HIERBEI !!!!!!##########
-!          ALLOCATE(b(3,MD%NBOND))
-!          ALLOCATE(MD%R0_T3P(3,3,(MD%NAT)/3))  ! MD%NAT/3 should be the same as MD%NBOND/2 in the case of pure water
-!          ALLOCATE(MD%RP_T3P(3,3,(MD%NAT)/3))
-         
-!          !***********SORTROUTINE 1**************************************************
-!          ! sort the atoms in groups of three: better handling for the constraints
-!          !**************************************************************************
-!          ! set the entries of the array b to -1
-!          do i=1,3
-!             do j=1, MD%NBOND
-!                b(i,j) = -1
-!             end do
-!          end do
+      IF (TRIM(ADJUSTL(MD%TYPE(ATOM))) .EQ. 'OW') THEN
+         OP=SQRT((MD%MMS(1)-MD%RP(1,ATOM))**2+(MD%MMS(2)-MD%RP(2,ATOM))**2+(MD%MMS(3)-MD%RP(3,ATOM))**2)
+         IF (MD%MSR(1) .LE. OP) THEN
+            OUT= .TRUE.
+         END IF
+      END IF
 
-!          b(1,1) = MD%INDEX2(1,1)
-!          b(2,1) = MD%INDEX2(2,1)
-!          k=2
-!          do j = 2, MD%NBOND        ! j=2, because the first entries are already made
-!             do n = 1, (MD%NBOND/2) ! that's a bit dangerouse. for pure water it will work because every molecule has two bonds
-!                do m = 1, 2         ! only the first 2 columns have to be checked
-!                   if(MD%INDEX2(1,j).eq.b(m,n)) then
-!                      b(3,n) = MD%INDEX2(2,j)
-!                      goto 4321
-!                   elseif(MD%INDEX2(2,j).eq.b(m,n)) then
-!                      b(3,n) = MD%INDEX2(1,j)
-!                      goto 4321
-!                   end if
-!                end do
-!             end do
-!             b(1,k) = MD%INDEX2(1,j)
-!             b(2,k) = MD%INDEX2(2,j)
-!             k = k + 1
-! 4321     end do
+    END SUBROUTINE FORCEFIELD$OUT   
 
-!          !***********SORTROUTINE 2**************************************************
-!          ! places the oxygen atom on the first position
-!          !**************************************************************************
-!          do i=1,(MD%NBOND/2)
-!             b_temp(1) = b(1,i)
-!             b_temp(2) = b(2,i)
-!             b_temp(3) = b(3,i)
-!             if(MD%TYPE(b(1,i))(1:1).eq.'H') then ! oxygen not on first position
-!                if(MD%TYPE(b(2,i))(1:1).eq.'H') then ! oxygen on third position
-!                   b(1,i) = b_temp(3)
-!                   b(3,i) = b_temp(1)
-!                elseif(MD%TYPE(b(2,i))(1:1).eq.'O') then ! oxygen on second position
-!                   b(1,i) = b_temp(2)
-!                   b(2,i) = b_temp(1)
-!                end if
-!             end if
-!          end do
-         
-         
-!          ! first run: R(+) = R(0)
-!          MD%RP(:,:) = MD%R0(:,:)  ! eigentlich sollte das nicht hier geschehen, 
-!                                   ! es gibt bestimmt eine andere funktion, die das macht
-!          INIT=.TRUE.
-!       end if ! end of the initialisation
+
+
+    SUBROUTINE FORCEFIELD$FIX(ATOM,FIX)
+
+      USE CLASSICAL_MODULE
+      USE FORCEFIELD_MODULE
+
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)      ::ATOM
+      LOGICAL(4) ,INTENT(OUT)     ::FIX
+      INTEGER(4)                  :: I
+
+      FIX = .FALSE.
       
-!       !****************************************************************************
-!       ! write the spatial coordinates to the new .._T3P arrays
-!       !****************************************************************************
-!       do i=1, (MD%NAT)/3
-!          MD%R0_T3P(1,1,i) = MD%R0(1,b(1,i))  ! oxygen x coordinate
-!          MD%R0_T3P(2,1,i) = MD%R0(2,b(1,i))  ! oxygen y coordinate
-!          MD%R0_T3P(3,1,i) = MD%R0(3,b(1,i))  ! oxygen z coordinate
-!          MD%R0_T3P(1,2,i) = MD%R0(1,b(2,i))  ! hydrogen_1 x coordinate
-!          MD%R0_T3P(2,2,i) = MD%R0(2,b(2,i))  ! hydrogen_1 y coordinate
-!          MD%R0_T3P(3,2,i) = MD%R0(3,b(2,i))  ! hydrogen_1 z coordinate
-!          MD%R0_T3P(1,3,i) = MD%R0(1,b(3,i))  ! hydrogen_2 x coordinate
-!          MD%R0_T3P(2,3,i) = MD%R0(2,b(3,i))  ! hydrogen_2 y coordinate
-!          MD%R0_T3P(3,3,i) = MD%R0(3,b(3,i))  ! hydrogen_2 z coordinate
-         
-!          MD%RP_T3P(1,1,i) = MD%RP(1,b(1,i))  ! oxygen x coordinate
-!          MD%RP_T3P(2,1,i) = MD%RP(2,b(1,i))  ! oxygen y coordinate
-!          MD%RP_T3P(3,1,i) = MD%RP(3,b(1,i))  ! oxygen z coordinate
-!          MD%RP_T3P(1,2,i) = MD%RP(1,b(2,i))  ! hydrogen_1 x coordinate
-!          MD%RP_T3P(2,2,i) = MD%RP(2,b(2,i))  ! hydrogen_1 y coordinate
-!          MD%RP_T3P(3,2,i) = MD%RP(3,b(2,i))  ! hydrogen_1 z coordinate
-!          MD%RP_T3P(1,3,i) = MD%RP(1,b(3,i))  ! hydrogen_2 x coordinate
-!          MD%RP_T3P(2,3,i) = MD%RP(2,b(3,i))  ! hydrogen_2 y coordinate
-!          MD%RP_T3P(3,3,i) = MD%RP(3,b(3,i))  ! hydrogen_2 z coordinate
-!       end do
+      IF (MMATOM(ATOM)%FLAG .EQ. 'F') THEN
+         FIX=.TRUE.
+      END IF
+
+      RETURN
+
+    END SUBROUTINE FORCEFIELD$FIX
+
+
+    SUBROUTINE FORCEFIELD$SWITCH_O(ATOM)
+
+      USE CLASSICAL_MODULE
+      USE FORCEFIELD_MODULE
+
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)      ::ATOM
+      INTEGER(4)                  ::I
+      REAL(8)                     ::PRORP(3),DELTA(3),A
       
-!       !******************************************************************************
-!       ! initialise the mass matrix MM(:,:)
-!       !******************************************************************************
-!       do i=1,3
-!          MM(i,i) = mo
-!       end do
-!       do i=4,9
-!          MM(i,i) = mh
-!       end do
-!       !******************************************************************************
-!       ! invert the mass matrix MM(:,:) -> MMINV(:,:)
-!       !******************************************************************************
-!       CALL LIB$INVERTR8(9,MM,MMINV)
+      A=DOT_PRODUCT(MD%RP(:,ATOM),(MD%RP(:,ATOM)-MD%R0(:,ATOM)))/DOT_PRODUCT(MD%RP(:,ATOM),MD%RP(:,ATOM))
+      !A=1.D0
+
+      IF (A .GE. 0) THEN
+         DO I=ATOM,ATOM+2
+            PRORP(:)=(DOT_PRODUCT(MD%RP(:,I),MD%R0(:,I))/DOT_PRODUCT(MD%RP(:,I),MD%RP(:,I)))*MD%RP(:,I)     !PROJECTION OF R(0) ONTO R(+)
+            DELTA(:)=MD%RP(:,I)-PRORP(:)      !DELTA OF BOTH VECTORS
+
+            MD%R0(:,I)=MD%R0(:,I)+2*DELTA(:)  ! NEW R(0)
+            MD%RM(:,I)=MD%R0(:,I)             ! R(-) = R(0)NEU
+            MD%R0(:,I)=MD%RP(:,I)             ! R(0) = R(+)
+            MD%FORCE(:,I)=0.D0
+         END DO
+      ELSE
+         DO I=ATOM,ATOM+2
+            CALL FORCEFIELD$SWITCH(ATOM)
+         END DO
+      END IF
+
+      RETURN
+
+    END SUBROUTINE FORCEFIELD$SWITCH_O   
+
+
+
+    SUBROUTINE FORCEFIELD$SWITCH_F(ATOM)
+
+      USE CLASSICAL_MODULE
+      USE FORCEFIELD_MODULE
+
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)      ::ATOM
+      INTEGER(4)                  :: I
       
-!       DO i=1,NMOL
-!          DO j=1,NITER ! because the three constraints are coupled
-!             !******************************************************************************
-!             ! write the constraints into the vector C(:)
-!             !******************************************************************************
-!             CALL TIP3PG(MD%RP_T3P(:,1,i), MD%RP_T3P(:,2,i), DOH, C(1))
-!             CALL TIP3PG(MD%RP_T3P(:,1,i), MD%RP_T3P(:,3,i), DOH, C(2))
-!             CALL TIP3PG(MD%RP_T3P(:,2,i), MD%RP_T3P(:,3,i), DHH, C(3))
-!             !******************************************************************************
-!             ! write the derivations of the constraints into the 
-!             ! nine-dimensional vectors nablag..(:)
-!             !******************************************************************************
-!             CALL TIP3PNABLAG(NMOL, i, MD%R0_T3P, nablag10, nablag20, nablag30)
-!             CALL TIP3PNABLAG(NMOL, i, MD%R0_T3P, nablag1p, nablag2p, nablag3p)
-!             !******************************************************************************
-!             ! fill and invert the system matrix A(:,:)
-!             !******************************************************************************
-!             A(1,1) = dot_product(nablag10,matmul(MMINV(:,:),nablag1p))
-!             A(1,2) = dot_product(nablag20,matmul(MMINV(:,:),nablag1p))
-!             A(1,3) = dot_product(nablag30,matmul(MMINV(:,:),nablag1p))
-!             A(2,1) = dot_product(nablag10,matmul(MMINV(:,:),nablag2p))
-!             A(2,2) = dot_product(nablag20,matmul(MMINV(:,:),nablag2p))
-!             A(2,3) = dot_product(nablag30,matmul(MMINV(:,:),nablag2p))
-!             A(3,1) = dot_product(nablag10,matmul(MMINV(:,:),nablag3p))
-!             A(3,2) = dot_product(nablag20,matmul(MMINV(:,:),nablag3p))
-!             A(3,3) = dot_product(nablag30,matmul(MMINV(:,:),nablag3p))
-!             CALL LIB$INVERTR8(3,A,AINV)
-!             LAMBDA(:) = matmul(AINV(:,:),C(:))
-!             write(*,*) 'NITER   LAMBDA', j, LAMBDA
-!             !stop
-!             !******************************************************************************
-!             ! correct the (+) coordinates with the constraints term
-!             !******************************************************************************
-!             RP9(1)=MD%RP_T3P(1,1,i)
-!             RP9(2)=MD%RP_T3P(2,1,i)
-!             RP9(3)=MD%RP_T3P(3,1,i)
-!             RP9(4)=MD%RP_T3P(1,2,i)
-!             RP9(5)=MD%RP_T3P(2,2,i)
-!             RP9(6)=MD%RP_T3P(3,2,i)
-!             RP9(7)=MD%RP_T3P(1,3,i)
-!             RP9(8)=MD%RP_T3P(2,3,i)
-!             RP9(9)=MD%RP_T3P(3,3,i)
-            
-!             RP9(:)=RP9(:) - LAMBDA(1)*matmul(MMINV(:,:),nablag10(:)) &
-!                  &- LAMBDA(2)*matmul(MMINV(:,:),nablag20(:)) &
-!                  &- LAMBDA(3)*matmul(MMINV(:,:),nablag30(:))
-            
-!             MD%RP_T3P(1,1,i)=RP9(1)
-!             MD%RP_T3P(2,1,i)=RP9(2)
-!             MD%RP_T3P(3,1,i)=RP9(3)
-!             MD%RP_T3P(1,2,i)=RP9(4)
-!             MD%RP_T3P(2,2,i)=RP9(5)
-!             MD%RP_T3P(3,2,i)=RP9(6)
-!             MD%RP_T3P(1,3,i)=RP9(7)
-!             MD%RP_T3P(2,3,i)=RP9(8)
-!             MD%RP_T3P(3,3,i)=RP9(9)
-            
-!             IF(ABS(LAMBDA(1)).LT.TOL.AND.ABS(LAMBDA(2)).LT.TOL.AND.ABS(LAMBDA(3)).LT.TOL) GOTO 1010
-            
-            
-!          END DO ! end of NITER
-! 1010     CONTINUE
-         
-!       END DO ! end of NMOL
-!                       CALL TRACE$POP
-      
-!     END SUBROUTINE FORCEFIELD$TIP3P
+      DO I=ATOM,ATOM+2
+         !MD%R0(:,I)=MD%RM(:,I)
+         !MD%RP(:,I)=0.D0
+         MD%FORCE(:,I)=0.D0
+      END DO
 
-!     SUBROUTINE TIP3PNABLAG(NMOL,IMOL,R,nablag1,nablag2,nablag3)
-!       IMPLICIT NONE
-!       REAL(8),INTENT(IN)     :: R(3,3,nmol)
-!       REAL(8),INTENT(OUT)    :: nablag1(9), nablag2(9), nablag3(9)
-!       INTEGER(4)             :: i
-!       INTEGER(8),INTENT(IN)  :: nmol, imol
+      RETURN
 
-!       DO i=1,3
-!          nablag1(i) = 2.0d0 * (R(i,1,imol) - R(i,2,imol))
-!          nablag1(i+3) = -2.0d0 * (R(i,1,imol) - R(i,2,imol))
-!          nablag1(i+6) = 0
-!       END DO
-
-!       DO i=1,3
-!          nablag2(i) = 2.0d0 * (R(i,1,imol) - R(i,3,imol))
-!          nablag2(i+3) = 0
-!          nablag2(i+6) = -2.0d0 * (R(i,1,imol) - R(i,3,imol))
-!       END DO
-
-!       DO i=1,3
-!          nablag3(i) = 0
-!          nablag3(i+3) = 2.0d0 * (R(i,2,imol) - R(i,3,imol))
-!          nablag3(i+6) = -2.0d0 * (R(i,2,imol) - R(i,3,imol))
-!       END DO
-
-!       RETURN
-!     END SUBROUTINE TIP3PNABLAG
-
-!     SUBROUTINE TIP3PG(r1,r2,d12,g)
-!       IMPLICIT NONE
-!       REAL(8),INTENT(IN)     :: r1(3)
-!       REAL(8),INTENT(IN)     :: r2(3)
-!       REAL(8),INTENT(IN)     :: d12
-!       REAL(8),INTENT(OUT)    :: g
-!       REAL(8)                :: d(3)
-
-!       d(:) = r1(:)-r2(:)         
-!       g = d(1)**2 + d(2)**2 + d(3)*2 - d12**2
-
-!       RETURN
-!     END SUBROUTINE TIP3PG
-
+    END SUBROUTINE FORCEFIELD$SWITCH_F
