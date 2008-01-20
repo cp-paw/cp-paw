@@ -372,6 +372,7 @@ ENDDO
       REAL(8)                    :: D(NR,LMX) 
       REAL(8)                    :: R(NR)                        !
       REAL(8)                    :: AUX(NR)
+      REAL(8)                    :: cpot(nr,lmx,lmx)
       REAL(8)                    :: CG
       REAL(8)                    :: RDPRIME(NR)                  !
       REAL(8)   ,PARAMETER       :: XMAX=1.D+20
@@ -432,6 +433,7 @@ ENDDO
           ENDDO
         ENDDO
       ENDDO
+      cpot=c   ! keep potential to determine the kinetic energy
       C=-2.D0*C
 !
 !     ==========================================================================
@@ -457,15 +459,27 @@ ENDDO
         CALL ERROR$STOP('SCHROEDINGER_XXXR FINISHED WITH ERROR')
         CALL ERROR$STOP('RADIAL$NONSPHBOUND')
       END IF
-tphi=0.d0
-call error$msg('tphi is not calculated')
-call error$stop('SCHROEDINGER$LBND_SCALREL')
 !
 !     ==========================================================================
 !     ==  SHIFT ENERGIES                                                      ==
 !     ==========================================================================
       EB(:)=ENU+EB(:) ! CHANGE ENERGIES RELATIVE TO ENY TO ABSOLUTE ENERGIES
 !
+!     ==========================================================================
+!     ==  DETERMINE TPHI AND TSPHI                                            ==
+!     ==========================================================================
+!     -- BETTER DIRECTLY WORK OUT THE KINETIC ENERGY BECAUSE  THE 
+!     -- SCHROEDINGER EQUATION IS FULFILLED ONLY TO FIRST ORDER IN DE
+      CALL ERROR$MSG('THIS ROUTINE (THAT IS TKIN) IS NOT TESTED')
+      CALL ERROR$STOP('SCHROEDINGER$LBND_SCALREL')
+      DO IB=1,NPHI
+        TPHI(:,:,:,IB)=EB(IB)*PHI(:,:,:,IB)
+        DO LM1=1,LMX
+          DO LM2=1,LMX
+            TPHI(:,LM1,IB)=TPHI(:,LM1,IB)-CPOT(:,LM1,LM2)*PHI(:,LM2,IB)
+          ENDDO
+        ENDDO
+      ENDDO
       TOK=.TRUE.
       RETURN
       END 
@@ -659,7 +673,6 @@ CHARACTER(32):: FILE
      &                     ,PHIR_DOT(:,:,IF))
       ENDDO
 !
-!     ...1.........2.........3.........4.........5.........6.........7.........8
 !     ==========================================================================
 !     ==  MAKE PHI_DOT CONTINUOUS                                             ==
 !     ==========================================================================
@@ -774,7 +787,7 @@ CHARACTER(32):: FILE
         ENDDO
       ENDDO
       TOK=.TRUE.
-CALL SCHROEDINGER_WRITEPHI(GID,NR,'FINAL',NF,NPHI,IRC,PHI,PHI)
+!CALL SCHROEDINGER_WRITEPHI(GID,NR,'FINAL',NF,NPHI,IRC,PHI,PHI)
       RETURN
       END SUBROUTINE SCHROEDINGER_XXXR
 !
@@ -2072,14 +2085,20 @@ PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
       RETURN
       END SUBROUTINE SCHROEDINGER_XXXR_OV
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,V00,E,IRCL,IROUT)
-!     **                                                               **
-!     **  ESTIMATE THE CLASSICAL TURNING POINT R(IRCL)                 **
-!     **                                                               **
-!     **  ESTIMATE THE OUTERMOST GRID POINT FOR INWARD INTEGRATION     **
-!     **  FROM A WKB SOLUTION OF THE SCHROEDINGER EQUATION             **
-!     **                                                               **
+!     **************************************************************************
+!     **  1) ESTIMATE THE CLASSICAL TURNING POINT R(IRCL).                    **
+!     **  2) ESTIMATE THE OUTERMOST GRID POINT R(IROUT) FOR INWARD INTEGRATION**
+!     **     FROM A WKB SOLUTION OF THE SCHROEDINGER EQUATION. THE CRITERION  **
+!     **     IROUT IS THAT THE SOLUTION GROWS FROM R(IROUT) TO R(IRCL)        **
+!     **     BY A FACTOR OF LESS THAN XMAX,                                    **
+!     **                                                                      **
+!     **  REMARK: IT IS NOT POSSIBLE TO CHOOSE THE INNERMOST CLASSICAL        **
+!     **    TURNING POINT, BECAUSE OTHERWISE WE MUST EXPLICITELY DESCRIBE     **
+!     **    THE MATCHING OF THE WKB SOLUTIONS AT THE OUTER TURNING POINTS     **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID      ! GRID ID
       INTEGER(4),INTENT(IN) :: NR       ! #(RADIAL GRID POINTS)
@@ -2092,27 +2111,41 @@ PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
       REAL(8)               :: PI       ! PI
       REAL(8)               :: Y0       ! SPHERICAL HARMONIC FOR LM=0
       REAL(8)               :: R(NR)    ! RADIAL GRID
+      REAL(8)               :: tkin(NR)    ! radial kinetic energy
       REAL(8)               :: FAC,SVAR,SUMVAL,XMAXLOG
       INTEGER(4)            :: IR
       LOGICAL               :: TCHK
-!     *******************************************************************
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       XMAXLOG=LOG(XMAX)
       CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     ==  determine the radial kinetic energy                                 ==
+!     ==========================================================================
       FAC=0.5D0*REAL(L*(L+1),KIND=8)
+      tkin(2:)=E-V00(2:)*Y0-FAC/R(2:)**2  ! tkin=e-veff
+      tkin(1)=tkin(2)  ! avoid divide-by-zero for r(1)=0    
+!
+!     ==========================================================================
+!     ==  identify classical turning point as the outermost point, where      ==
+!     ==  the kinetic energy switches from positive to negative values        == 
+!     ==========================================================================
       SUMVAL=0.D0
       IROUT=1
       IRCL=NR
       TCHK=.FALSE.
       DO IR=2,NR-1
-        SVAR=V00(IR)*Y0+FAC/R(IR)**2-E
+        SVAR=-tkin(ir)
         IF(SVAR.LT.0.D0) THEN   ! KINETIC ENERGY POSITIVE; DO NOTHING
           SVAR=0.D0
           SUMVAL=0.D0
-          IRCL=IR+1        ! RCL WILL BE THE FIRST POINT WITH POSITIVE EKIN
+          ircL=IR+1        ! RCL WILL BE THE FIRST POINT WITH POSITIVE EKIN
           CYCLE
         END IF
+!       == sumval is the approximate integral of the momentum from the =========
+!       == classical turning point outward =====================================
         SUMVAL=SUMVAL+SQRT(2.D0*SVAR)*0.5D0*(R(IR+1)-R(IR-1))
         IROUT=IR-1
         IF(SUMVAL.GT.XMAXLOG) THEN
@@ -2120,16 +2153,18 @@ PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
           EXIT
         END IF
       ENDDO
-!     == FIX UP END OF THE GRID
+!     ==========================================================================
+!     == FIX UP END OF THE GRID                                               ==
+!     ==========================================================================
       IF(.NOT.TCHK) THEN
-        SVAR=V00(NR)*Y0+FAC/R(NR)**2-E
+        SVAR=-tkin(nr)
         SUMVAL=SUMVAL+0.5D0*(R(NR)-R(NR-1))*SVAR
         IF(SUMVAL.GT.XMAXLOG) THEN
           IROUT=NR-1
         ELSE
-!         == THE MAX VALUE OFR IROUT IS NR-1, BECAUSE IROUT IS USED TO     ==
-!         == SET AN INHOMOGENEITY. THE SOLVER IS NOT SENSITIVE TO THE LAST ==
-!         == GRID POINT                                                    ==
+!         == THE MAX VALUE OFR IROUT IS NR-1, BECAUSE IROUT IS USED TO        ==
+!         == SET AN INHOMOGENEITY. THE SOLVER IS NOT SENSITIVE TO THE LAST    ==
+!         == GRID POINT                                                       ==
           IROUT=NR-1  ! IROUT IS MAXIMUM AT NR-1
         END IF
       END IF

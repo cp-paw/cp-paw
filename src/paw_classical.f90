@@ -2339,13 +2339,15 @@ LOGICAL(4) :: TONEFOUR
           ITYPE1=ITYPE(IAT1)
           ITYPE2=ITYPE(IAT2)
           IPOT=NONBOND(ITYPE1,ITYPE2)
-          CALL VALUE(POT(IPOT),X,DE2,DEDX)
-          IF(TONEFOUR) THEN  ! amber scales the 1-4 vdw interaction 
-            DE2=DE2*md%SCALEONEFOUR
-            DEDX=DEDX*md%SCALEONEFOUR
-          END IF
-          E=E+DE2
-          FAC=FAC+DEDX
+          if(ipot.gt.0) then
+            CALL VALUE(POT(IPOT),X,DE2,DEDX)
+            IF(TONEFOUR) THEN  ! amber scales the 1-4 vdw interaction 
+              DE2=DE2*md%SCALEONEFOUR
+              DEDX=DEDX*md%SCALEONEFOUR
+            END IF
+            E=E+DE2
+            FAC=FAC+DEDX
+          end if
         END IF
 !       
 !       ============================================================
