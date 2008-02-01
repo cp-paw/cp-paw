@@ -2859,6 +2859,19 @@ shell in the f-angular momentum channel.}
 \vrules{optional, mandatory with UPAR and JPAR} 
 \vdefault{none}}
 
+\mbax{\key{OLD} \vdescr{Switches to the old formulation of LDA+U
+according to Bengone et al., Phys. Rev. B. 62, 16392 (1992). Specify
+exactly one angular momentum shell as correlated orbitals. Specify
+RCUT to the muffin tin or atomic sphere radius if you want compare to
+LAPW or LMTO results. Specify UPAE[EV]. (This option is used for
+comparisons only. It is not fully supported or compatible with all other options.} 
+\vformat{integer(2)}
+\vrules{optional, mandatory with UPAR and JPAR} 
+\vdefault{none}}
+
+
+
+
 %----------------------------------------------------------------------
 {\block{!STRUCTURE!SPECIES!hybrid}
 %----------------------------------------------------------------------

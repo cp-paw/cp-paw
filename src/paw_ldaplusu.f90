@@ -13,7 +13,7 @@ INTEGER(4),POINTER     :: LOXCHI(:)    !MAIN ANGULAR MOMENTUM OF LOCAL ORBITAL
 INTEGER(4),POINTER     :: NORB(:)      !X(# LOCAL FUNCTIONS PER ANGULAR MOMENTUM)
 INTEGER(4)             :: LRX          !X(ANGULAR MOMENTUM IN THE DENSITY)
 REAL(8)                :: RCUT=0.D0    !RADIUS OF LOCAL ORBITAL
-CHARACTER(16)          :: FUNCTIONALID !CAN BE 'LDA+U' OR 'HYBRID'
+CHARACTER(16)          :: FUNCTIONALID !CAN BE 'LDA+U','LDA+U(OLD)' OR 'HYBRID'
 !== SETTINGS SPECIFICALLY FOR HYBRID FUNCTIONAL ================================
 REAL(8)                :: HFWEIGHT=0.D0!CONTRIBUTION OF EXACT EXCHANGE
 !== SETTINGS SPECIFICALLY FOR LDA+U
@@ -250,7 +250,7 @@ END MODULE LDAPLUSU_MODULE
         CALL ERROR$STOP('LDAPLUSU$SETCH')
       END IF
       IF(ID.EQ.'FUNCTIONALID') THEN
-        IF(VAL.NE.'LDA+U'.AND.VAL.NE.'HYBRID') THEN
+        IF(VAL.NE.'LDA+U'.AND.VAL.NE.'LDA+U(OLD)'.AND.VAL.NE.'HYBRID') THEN
           CALL ERROR$MSG('ILLEGAL VALUE FOR FUNCTIONALID')
           CALL ERROR$CHVAL('FUNCTIONALID',VAL)
           CALL ERROR$CHVAL('ID',ID)
@@ -311,7 +311,8 @@ END MODULE LDAPLUSU_MODULE
         IF(THIS1%FUNCTIONALID.EQ.'HYBRID') THEN
           CALL REPORT$R8VAL(NFIL,'  HARTREE-FOCK CONTRIBUTION' &
      &                           ,THIS1%HFWEIGHT*100,'PERCENT')
-        ELSE IF(THIS1%FUNCTIONALID.EQ.'LDA+U') THEN
+        ELSE IF(THIS1%FUNCTIONALID.EQ.'LDA+U' &
+     &      .OR.THIS1%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
           CALL CONSTANTS('EV',EV)
           CALL REPORT$R8VAL(NFIL,'  U-PARAMETER',THIS1%UPAR/EV,'EV')
           CALL REPORT$R8VAL(NFIL,'  J-PARAMETER',THIS1%JPAR/EV,'EV')
@@ -438,13 +439,18 @@ PRINT*,'JPAR   ',THIS%JPAR
 !
       CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
 !
-!     == TRANSFORM FROM PARTIAL WAVES PHI TO LOCAL ORBITALS CHI ================
-      CALL LDAPLUSU_MAPTOCHI(LNX,LOX,NCHI,LNXPHI,LOXPHI,NPHI,PHITOCHI)
-      DO IS1=1,2
-        DO IS2=1,2
-          RHO(:,:,IS1,IS2)=MATMUL(PHITOCHI,MATMUL(MATSS(:,:,IS1,IS2),TRANSPOSE(PHITOCHI)))
+      IF(THIS%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
+        CALL LDAPLUSU_DENMATFLAPW('FORWARD',NPHI,MATSS,NCHI,RHO)
+      ELSE
+!       == TRANSFORM FROM PARTIAL WAVES PHI TO LOCAL ORBITALS CHI ================
+        CALL LDAPLUSU_MAPTOCHI(LNX,LOX,NCHI,LNXPHI,LOXPHI,NPHI,PHITOCHI)
+        DO IS1=1,2
+          DO IS2=1,2
+            RHO(:,:,IS1,IS2)=MATMUL(PHITOCHI,MATMUL(MATSS(:,:,IS1,IS2),TRANSPOSE(PHITOCHI)))
+          ENDDO
         ENDDO
-      ENDDO
+      END IF
+
 !
 ! PRINTOUT FOR TESTING==========================================================
 DO IS1=1,NDIMD
@@ -507,7 +513,7 @@ PRINT*,'E(U) ',ETOT
 !     ==========================================================================
 !     ==  DOUBLE COUNTING CORRECTION                                          ==
 !     ==========================================================================
-      IF(THIS%FUNCTIONALID.EQ.'LDA+U') THEN
+      IF(THIS%FUNCTIONALID.EQ.'LDA+U'.OR.THIS%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
         CALL LDAPLUSU_DCLDAPLUSU(DCTYPE,LNX,LOX,NCHI,U,RHO,ETOT1,HAM1)
         ETOT=ETOT-ETOT1
@@ -528,17 +534,21 @@ PRINT*,'E(DC) ',ETOT1
         CALL ERROR$CHVAL('FUNCTIONALID',THIS%FUNCTIONALID)
         CALL ERROR$STOP('LDAPLUSU$ETOT')
       END IF
-print*,'marke 1'
+PRINT*,'MARKE 1'
 !
 !     ==========================================================================
 !     ==  UPFOLD                                                              ==
 !     ==========================================================================
-!     == TRANSFORM FROM CHI TO PHI =============================================
-      DO IS1=1,2
-        DO IS2=1,2
-          MATSS(:,:,IS1,IS2)=MATMUL(TRANSPOSE(PHITOCHI),MATMUL(HAM(:,:,IS1,IS2),PHITOCHI))
+      IF(THIS%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
+        CALL LDAPLUSU_DENMATFLAPW('BACK',NPHI,MATSS,NCHI,HAM)
+      ELSE
+!       == TRANSFORM FROM CHI TO PHI =============================================
+        DO IS1=1,2
+          DO IS2=1,2
+            MATSS(:,:,IS1,IS2)=MATMUL(TRANSPOSE(PHITOCHI),MATMUL(HAM(:,:,IS1,IS2),PHITOCHI))
+          ENDDO
         ENDDO
-      ENDDO
+      END IF
 !
 !     == TRANSFORM FROM (SPIN,SPIN) TO (TOTAL,SPIN) ============================
       CALL LDAPLUSU_SPINDENMAT('BACK',NDIMD,LMNXX,DATH,MATSS)
@@ -790,7 +800,9 @@ PRINT*,'CHIFROMPHI: LN',LN,LN-NOFL+1,LN-1
         DEALLOCATE(MATINV)
       ENDDO
 !
+!     ==========================================================================
 !     === REMOVE TAIL FUNCTIONS ================================================
+!     ==========================================================================
       LN1=0
       L=-1
       DO LN=1,LNXCHI
@@ -1397,8 +1409,8 @@ PRINT*,'CHIFROMPHI: LN',LN,LN-NOFL+1,LN-1
             JPAR=JPAR+U(I,J,I,J)-U(I,J,J,I)
           ENDDO
         ENDDO
-        upar=upar/real((2*l+1)**2,kind=8)
-        jpar=upar-jpar/real(2*l*(2*l+1),kind=8)
+        UPAR=UPAR/REAL((2*L+1)**2,KIND=8)
+        JPAR=UPAR-JPAR/REAL(2*L*(2*L+1),KIND=8)
 PRINT*,'UPARAMETER[EV]    ',UPAR*27.211D0 ,'UPARAMETER    ',UPAR
 PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !
@@ -1552,13 +1564,13 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)              :: IDIM,LM
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)  ,PARAMETER  :: NDIMD=4
-integer(4) :: lmrx1,ir
-integer(4) :: imethod
- REAL(8)     ,ALLOCATABLE:: RHOtest(:,:,:)
- REAL(8)     ,ALLOCATABLE:: POTtest(:,:,:)
- REAL(8)     ,ALLOCATABLE:: RHOtest2(:,:,:)
- REAL(8)     ,ALLOCATABLE:: POTtest2(:,:,:)
- REAL(8)                 :: etot2
+INTEGER(4) :: LMRX1,IR
+INTEGER(4) :: IMETHOD
+ REAL(8)     ,ALLOCATABLE:: RHOTEST(:,:,:)
+ REAL(8)     ,ALLOCATABLE:: POTTEST(:,:,:)
+ REAL(8)     ,ALLOCATABLE:: RHOTEST2(:,:,:)
+ REAL(8)     ,ALLOCATABLE:: POTTEST2(:,:,:)
+ REAL(8)                 :: ETOT2
 !     **************************************************************************
       LMRX=(LRX+1)**2
       ETOT=0.D0
@@ -1574,7 +1586,7 @@ integer(4) :: imethod
 !     ==========================================================================
 !     ==  CALCULATE DENSITY                                                   ==
 !     ==========================================================================
-      ALLOCATE(RHO(NR,LMRX,ndimd))
+      ALLOCATE(RHO(NR,LMRX,NDIMD))
       DO IDIM=1,NDIMD
         CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
      &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHO(:,:,IDIM))
@@ -1589,52 +1601,52 @@ integer(4) :: imethod
       CALL DFT$SETL4('XCONLY',.TRUE.)
 !
 !===============================================================================
-!==== dangerous code!!!!                                                    ====
-!==== this formulation is based on a noncollinear formulation, which        ====
-!==== yields different results from a collinear formulation even for        ====
-!==== a collinear density                                                   ====
+!==== DANGEROUS CODE!!!!                                                    ====
+!==== THIS FORMULATION IS BASED ON A NONCOLLINEAR FORMULATION, WHICH        ====
+!==== YIELDS DIFFERENT RESULTS FROM A COLLINEAR FORMULATION EVEN FOR        ====
+!==== A COLLINEAR DENSITY                                                   ====
 !====                                                                       ====
-!==== different versions are implemented                                    ====
-!==== 1) default noncollinear method                                        ====
-!==== 2) a collinear method (which is compared on the fly with the          ====
-!====    noncollinear method                                                ====
+!==== DIFFERENT VERSIONS ARE IMPLEMENTED                                    ====
+!==== 1) DEFAULT NONCOLLINEAR METHOD                                        ====
+!==== 2) A COLLINEAR METHOD (WHICH IS COMPARED ON THE FLY WITH THE          ====
+!====    NONCOLLINEAR METHOD                                                ====
 !===============================================================================
       CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOT,POT)
-imethod=0
-!imethod=1
-      if(imethod.eq.1) then
-!       == collinear method with collinear density
-        ALLOCATE(RHOtest(NR,LMRX,2))
-        ALLOCATE(pottest(NR,LMRX,2))
-        pottest(:,:,1)=0.d0
-        rhotest(:,:,1)=rho(:,:,1)
-        rhotest(:,:,2)=rho(:,:,4)
-        CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHOtest,ETOT,POTtest)
-        pot(:,:,:)=0.d0
-        pot(:,:,1)=pottest(:,:,1)
-        pot(:,:,4)=pottest(:,:,2)
-        deallocate(rhotest)
-        deallocate(pottest)
+IMETHOD=0
+!IMETHOD=1
+      IF(IMETHOD.EQ.1) THEN
+!       == COLLINEAR METHOD WITH COLLINEAR DENSITY
+        ALLOCATE(RHOTEST(NR,LMRX,2))
+        ALLOCATE(POTTEST(NR,LMRX,2))
+        POTTEST(:,:,1)=0.D0
+        RHOTEST(:,:,1)=RHO(:,:,1)
+        RHOTEST(:,:,2)=RHO(:,:,4)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHOTEST,ETOT,POTTEST)
+        POT(:,:,:)=0.D0
+        POT(:,:,1)=POTTEST(:,:,1)
+        POT(:,:,4)=POTTEST(:,:,2)
+        DEALLOCATE(RHOTEST)
+        DEALLOCATE(POTTEST)
 !
-!      else if(imethod.eq.2) then
-!       == noncollinear method with collinear density ==========================
-        ALLOCATE(RHOtest2(NR,LMRX,ndimd))
-        ALLOCATE(pottest2(NR,LMRX,ndimd))
-        rhotest2(:,:,:)=0.d0
-        pottest2(:,:,:)=0.d0
-        rhotest2(:,:,1)=rho(:,:,1)
-        rhotest2(:,:,4)=rho(:,:,4)
-        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOtest2,ETOT2,POTtest2)
-!print*,'ldaplusutest',etot2-etot,maxval(abs(pottest2-pot)),maxloc(abs(pottest2-pot))
-!        etot=etot2
-!        pot(:,:,:)=pottest2(:,:,:)
-        deallocate(rhotest2)
-        deallocate(pottest2)
+!      ELSE IF(IMETHOD.EQ.2) THEN
+!       == NONCOLLINEAR METHOD WITH COLLINEAR DENSITY ==========================
+        ALLOCATE(RHOTEST2(NR,LMRX,NDIMD))
+        ALLOCATE(POTTEST2(NR,LMRX,NDIMD))
+        RHOTEST2(:,:,:)=0.D0
+        POTTEST2(:,:,:)=0.D0
+        RHOTEST2(:,:,1)=RHO(:,:,1)
+        RHOTEST2(:,:,4)=RHO(:,:,4)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOTEST2,ETOT2,POTTEST2)
+!PRINT*,'LDAPLUSUTEST',ETOT2-ETOT,MAXVAL(ABS(POTTEST2-POT)),MAXLOC(ABS(POTTEST2-POT))
+!        ETOT=ETOT2
+!        POT(:,:,:)=POTTEST2(:,:,:)
+        DEALLOCATE(RHOTEST2)
+        DEALLOCATE(POTTEST2)
 !
-      else if(imethod.eq.3) then
-!       == comparison ==========================================================
+      ELSE IF(IMETHOD.EQ.3) THEN
+!       == COMPARISON ==========================================================
 
-      end if
+      END IF
       CALL DFT$SETL4('XCONLY',.FALSE.)
 PRINT*,'EXC ',ETOT
 !
@@ -1790,4 +1802,130 @@ PRINT*,'EH ',SVAR
 !!$STOP
       RETURN
       END
+
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU_DENMATFLAPW(ID,NPHI,UPFOLDED,NCHI,DOWNFOLDED)
+!     **************************************************************************      
+!     **                                                                      **
+!     **  DETERMINES THE ORBITAL OCCUPATIONS FOR A CONVENTIONAL  LDA+U TYPE   **
+!     **  CALCULATION ACCORDING TO EQ. 9 OF BENGONE ET AL. PRB62, 16392 (2000)**
+!     **  AND ITS BACK TRANSFORM                                              **
+!     **                                                                      **
+!     **************************************************************************      
+      USE LDAPLUSU_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: ID   ! CAN BE 'FORWARD' OR 'BACK'
+      INTEGER(4)  ,INTENT(IN)    :: NPHI
+      INTEGER(4)  ,INTENT(IN)    :: NCHI 
+      COMPLEX(8)  ,INTENT(INOUT) :: UPFOLDED(NPHI,NPHI,2,2)
+      COMPLEX(8)  ,INTENT(INOUT) :: DOWNFOLDED(NCHI,NCHI,2,2)
+      INTEGER(4)                 :: GID
+      INTEGER(4)                 :: NR
+      INTEGER(4)                 :: LNXCHI
+      INTEGER(4)                 :: LNXPHI
+      INTEGER(4)  ,ALLOCATABLE   :: LOXPHI(:)
+      INTEGER(4)  ,ALLOCATABLE   :: LOXCHI(:)
+      REAL(8)     ,ALLOCATABLE   :: R(:)       ! RADIAL GRID
+      REAL(8)     ,ALLOCATABLE   :: PHI(:,:)   ! PARTIAL WAVES
+      REAL(8)                    :: RCUT
+      REAL(8)     ,ALLOCATABLE   :: OVER(:,:)
+      REAL(8)     ,ALLOCATABLE   :: AUX1(:),AUX2(:)
+      REAL(8)                    :: VAL
+      INTEGER(4)                 :: LN1,LN2      
+      INTEGER(4)                 :: L1,L2      
+      INTEGER(4)                 :: M1,M2     
+      INTEGER(4)                 :: IS1,IS2
+      INTEGER(4)                 :: LMN1,LMN2
+      INTEGER(4)                 :: LCHI
+!     **************************************************************************      
+      IF(ID.NE.'FORWARD'.AND. ID.NE.'BACK') THEN
+        CALL ERROR$MSG('ILLEGAL VALUE FOR ID')
+        CALL ERROR$MSG('ALLOWED VALUES ARE "FORWARD" AND "BACK"')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LDAPLUSU_DENMATFLAPW')
+      END IF
+      GID=THIS%GID
+      NR=THIS%NR
+      LNXCHI=THIS%LNXCHI
+      ALLOCATE(LOXCHI(LNXCHI))
+      LOXCHI=THIS%LOXCHI
+      RCUT=THIS%RCUT
+!
+!     ==========================================================================
+!     ==  CHECK IF ONLY ONE CORRELATED ORBITAL PER L                          ==
+!     ==========================================================================
+      IF(LNXCHI.NE.1) THEN
+        CALL ERROR$STOP('LDAPLUSU_DENMATFLAPW')
+      END IF
+!
+!     ==========================================================================
+!     ==  DETERMINE PROJECTED OVERLAP MATRIX ELEMENTS                         ==
+!     ==========================================================================
+      ALLOCATE(OVER(LNXPHI,LNXPHI))
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R) 
+      CALL SETUP$ISELECT(ISP)
+      CALL SETUP$LNX(ISP,LNXPHI)
+      ALLOCATE(LOXPHI(LNXPHI))
+      CALL SETUP$LOFLN(ISP,LNXPHI,LOXPHI)
+      ALLOCATE(PHI(NR,LNXPHI))
+      CALL SETUP$AEPARTIALWAVES(ISP,NR,LNXPHI,PHI)
+      ALLOCATE(AUX1(NR))
+      ALLOCATE(AUX2(NR))
+      OVER(:,:)=0.D0
+      DO LN1=1,LNXPHI
+        L1=LOXPHI(LN1)
+        DO LN2=LN1,LNXPHI
+          L2=LOXPHI(LN2)
+          IF(L1.NE.L2) THEN
+            AUX1(:)=R(:)**2*PHI(:,LN1)*PHI(:,LN2)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+            CALL RADIAL$VALUE(GID,NR,AUX2,RCUT,VAL)
+            OVER(LN1,LN2)=VAL
+            OVER(LN2,LN1)=VAL
+          END IF
+        ENDDO
+      ENDDO
+      DEALLOCATE(AUX1)
+      DEALLOCATE(AUX2)
+      DEALLOCATE(PHI)
+      DEALLOCATE(R)
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      IF(ID.EQ.'FORWARD') THEN
+        DOWNFOLDED(:,:,:,:)=0.D0
+      ELSE
+        UPFOLDED(:,:,:,:)=0.D0
+      END IF
+      LCHI=LOXCHI(1)
+      DO IS1=1,2
+        DO IS2=1,2
+          LMN1=0
+          DO LN1=1,LNXPHI                
+            L1=LOXCHI(LN1)
+            DO M1=1,2*L1+1
+              LMN1=LMN1+1
+              LMN2=0
+              DO LN2=1,LNXPHI                
+                L2=LOXCHI(LN2)
+                DO M2=1,2*L2+1
+                  LMN2=LMN2+1
+                  IF(ID.EQ.'FORWARD') THEN
+                    DOWNFOLDED(M1,M2,IS1,IS2)=DOWNFOLDED(M1,M2,IS1,IS2) &
+    &                                  +UPFOLDED(LMN1,LMN2,IS1,IS2)*OVER(LN1,LN2)
+                  ELSE
+                    UPFOLDED(LMN1,LMN2,IS1,IS2)=DOWNFOLDED(M1,M2,IS1,IS2)*OVER(LN1,LN2)
+                  END IF
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO                    
+      DEALLOCATE(OVER)
+      RETURN
+      END
+
 

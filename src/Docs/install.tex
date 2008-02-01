@@ -1379,6 +1379,65 @@ FFTW version 3 (FFTW3) is not compatible with older versions
 (FFTW2). FFTW3 cannot yet be used with PAW.
 
 %================================================================================
+\section{Logical not treated correctly}
+%================================================================================
+The implementation of logical variables and their tests are apparently
+not unique between compilers. 
+\begin{itemize}
+\item a logical variable is true if its bit-representation is nonzero
+and it is false if its value is zero
+\item a logical variable is true if its bit-representation is an odd
+number and it is false of it is an even number.
+\end{itemize}
+The first option seems to be the standard.  The PGF compiler provides
+a compiler switch '-Munixlogical' to select the first option over the
+second. The second is a default.
+
+%================================================================================
+\section{File format: Little- and Big-Endian}
+%================================================================================
+Files can be written either in little-endian or in big-endian
+format. These formats define the order with which the bytes of an
+integer are written. In the Big-endian format the bytes are written
+the way we write numbers, namely with the bits orderes in importance
+from right to left. In the big-endian format the bytes are written in
+reverse order. The little-endian format is common for the Intel
+architecture, while the power-PC architecture uses the big-endian
+format by default.
+
+Files written in one format are read incorrectly on an architecture
+that uses the other.
+
+The big-endian format corresponds to the normal binary representation
+with the most significant bits are written to the left of the less
+significant bits.
+\begin{eqnarray}
+\underbrace{i_{32}i_{31}i_{30}i_{9}i_{28}i_{27}i_{26}i_{25}}_{1.Byte}
+\qquad
+\underbrace{i_{24}i_{23}i_{22}i_{21}i_{20}i_{19}i_{18}i_{17}}_{2. Byte}
+\qquad
+\underbrace{i_{16}i_{15}i_{14}i_{13}i_{12}i_{11}i_{10}i_{9}}_{3. Byte}
+\qquad
+\underbrace{i_{8}i_{7}i_{6}i_{5}i_{4}i_{3}i_{2}i_{1}}_{4. Byte}
+\\
+=\sum_{j=1}^{32} i_j\cdot 2^{j-1}
+\end{eqnarray}
+The big-endian is used in the Power-PC architechure as default.
+
+The Intel architecture uses the little-endian format
+\begin{eqnarray}
+\underbrace{i_{8}i_{7}i_{6}i_{5}i_{4}i_{3}i_{2}i_{1}}_{4. Byte}
+\qquad
+\underbrace{i_{16}i_{15}i_{14}i_{13}i_{12}i_{11}i_{10}i_{9}}_{3. Byte}
+\qquad
+\underbrace{i_{24}i_{23}i_{22}i_{21}i_{20}i_{19}i_{18}i_{17}}_{2. Byte}
+\qquad
+\underbrace{i_{32}i_{31}i_{30}i_{9}i_{28}i_{27}i_{26}i_{25}}_{1.Byte}
+\\
+=\sum_{j=1}^{32} i_j\cdot 2^{j-1}
+\end{eqnarray}
+
+%================================================================================
 \section{Information about your system}
 %================================================================================
 In order to download the correct compilers and libraries, or to obtain
@@ -1587,7 +1646,6 @@ This is a simple example for a parameter file
 ARCH="G95_mycomputer"
 TPARALLEL="T"
 TUPPERCASEMOD="F"
-TPARALLEL="T"
 SPECIAL="none"
 BLASDIR=""
 LAPACKDIR="/opt/acml4.0.1/libs/acml3.0.0_64/gnu64/lib/"

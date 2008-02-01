@@ -365,7 +365,7 @@ ENDDO
       LOGICAL(4) ,INTENT(OUT)    :: TOK               ! ERROR FLAG
       INTEGER(4)                 :: LX
       INTEGER(4)                 :: LOX(LMX) ! ANGULAR MOMENTA
-      INTEGER(4)                 :: LM,LM1,LM2,LM3,L,M,IM
+      INTEGER(4)                 :: LM,LM1,LM2,LM3,L,M,IM,ib
       REAL(8)                    :: A(NR)
       REAL(8)                    :: B(NR)
       REAL(8)                    :: C(NR,LMX,LMX)
@@ -473,7 +473,7 @@ ENDDO
       CALL ERROR$MSG('THIS ROUTINE (THAT IS TKIN) IS NOT TESTED')
       CALL ERROR$STOP('SCHROEDINGER$LBND_SCALREL')
       DO IB=1,NPHI
-        TPHI(:,:,:,IB)=EB(IB)*PHI(:,:,:,IB)
+        TPHI(:,:,IB)=EB(IB)*PHI(:,:,IB)
         DO LM1=1,LMX
           DO LM2=1,LMX
             TPHI(:,LM1,IB)=TPHI(:,LM1,IB)-CPOT(:,LM1,LM2)*PHI(:,LM2,IB)
@@ -2115,6 +2115,7 @@ PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
       REAL(8)               :: FAC,SVAR,SUMVAL,XMAXLOG
       INTEGER(4)            :: IR
       LOGICAL               :: TCHK
+      logical(4),parameter  :: tinner=.false.
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -2132,27 +2133,49 @@ PRINT*,'NEW SCHROEDINGER_XXXR_OV STARTED',NPHI,NF
 !     ==  identify classical turning point as the outermost point, where      ==
 !     ==  the kinetic energy switches from positive to negative values        == 
 !     ==========================================================================
-      SUMVAL=0.D0
-      IROUT=1
-      IRCL=NR
-      TCHK=.FALSE.
-      DO IR=2,NR-1
-        SVAR=-tkin(ir)
-        IF(SVAR.LT.0.D0) THEN   ! KINETIC ENERGY POSITIVE; DO NOTHING
-          SVAR=0.D0
-          SUMVAL=0.D0
-          ircL=IR+1        ! RCL WILL BE THE FIRST POINT WITH POSITIVE EKIN
-          CYCLE
-        END IF
-!       == sumval is the approximate integral of the momentum from the =========
-!       == classical turning point outward =====================================
-        SUMVAL=SUMVAL+SQRT(2.D0*SVAR)*0.5D0*(R(IR+1)-R(IR-1))
-        IROUT=IR-1
-        IF(SUMVAL.GT.XMAXLOG) THEN
-          TCHK=.TRUE.
-          EXIT
-        END IF
-      ENDDO
+      if(tinner) then
+        ircl=nr
+        do ir=2,nr
+          if(tkin(ir-1).lt.0.d0.and.tkin(ir).ge.0.d0) then
+            ircl=ir+1
+            exit
+          end if
+        enddo
+        sumval=0.d0
+        do ir=ircl,nr
+          svar=-tkin(ir)
+          if(svar.le.0.d0) cycle
+          SUMVAL=SUMVAL+SQRT(2.D0*SVAR)*0.5D0*(R(IR+1)-R(IR-1))
+          IROUT=IR-1
+          IF(SUMVAL.GT.XMAXLOG) THEN
+            TCHK=.TRUE.
+            EXIT
+          END IF
+        enddo
+      else
+        SUMVAL=0.D0
+        IROUT=1
+        IRCL=NR
+        TCHK=.FALSE.
+        DO IR=2,NR-1
+          SVAR=-tkin(ir)
+          IF(SVAR.LT.0.D0) THEN   ! KINETIC ENERGY POSITIVE; DO NOTHING
+            SVAR=0.D0
+            SUMVAL=0.D0
+            ircL=IR+1        ! RCL WILL BE THE FIRST POINT WITH POSITIVE EKIN
+            CYCLE
+          END IF
+!         == sumval is the approximate integral of the momentum from the =========
+!         == classical turning point outward =====================================
+          SUMVAL=SUMVAL+SQRT(2.D0*SVAR)*0.5D0*(R(IR+1)-R(IR-1))
+          IROUT=IR-1
+          IF(SUMVAL.GT.XMAXLOG) THEN
+            TCHK=.TRUE.
+            EXIT
+          END IF
+        ENDDO
+      end if
+!
 !     ==========================================================================
 !     == FIX UP END OF THE GRID                                               ==
 !     ==========================================================================
