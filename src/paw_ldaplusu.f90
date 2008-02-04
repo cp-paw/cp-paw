@@ -1904,14 +1904,15 @@ PRINT*,'EH ',SVAR
         DO IS2=1,2
           LMN1=0
           DO LN1=1,LNXPHI                
-            L1=LOXCHI(LN1)
+            L1=LOXpHI(LN1)
             DO M1=1,2*L1+1
               LMN1=LMN1+1
               LMN2=0
               DO LN2=1,LNXPHI                
-                L2=LOXCHI(LN2)
+                L2=LOXpHI(LN2)
                 DO M2=1,2*L2+1
                   LMN2=LMN2+1
+                  if(l1.ne.lchi.or.l2.ne.lchi) cycle
                   IF(ID.EQ.'FORWARD') THEN
                     DOWNFOLDED(M1,M2,IS1,IS2)=DOWNFOLDED(M1,M2,IS1,IS2) &
     &                                  +UPFOLDED(LMN1,LMN2,IS1,IS2)*OVER(LN1,LN2)
