@@ -1861,7 +1861,6 @@ PRINT*,'EH ',SVAR
 !     ==========================================================================
 !     ==  DETERMINE PROJECTED OVERLAP MATRIX ELEMENTS                         ==
 !     ==========================================================================
-      ALLOCATE(OVER(LNXPHI,LNXPHI))
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R) 
       CALL SETUP$ISELECT(ISP)
@@ -1870,6 +1869,7 @@ PRINT*,'EH ',SVAR
       CALL SETUP$LOFLN(ISP,LNXPHI,LOXPHI)
       ALLOCATE(PHI(NR,LNXPHI))
       CALL SETUP$AEPARTIALWAVES(ISP,NR,LNXPHI,PHI)
+      ALLOCATE(OVER(LNXPHI,LNXPHI))
       ALLOCATE(AUX1(NR))
       ALLOCATE(AUX2(NR))
       OVER(:,:)=0.D0
@@ -1877,7 +1877,7 @@ PRINT*,'EH ',SVAR
         L1=LOXPHI(LN1)
         DO LN2=LN1,LNXPHI
           L2=LOXPHI(LN2)
-          IF(L1.NE.L2) THEN
+          IF(L1.eq.L2) THEN
             AUX1(:)=R(:)**2*PHI(:,LN1)*PHI(:,LN2)
             CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
             CALL RADIAL$VALUE(GID,NR,AUX2,RCUT,VAL)
