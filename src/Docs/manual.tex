@@ -1200,20 +1200,6 @@ one-particle energies takes place.
   system is not converged, even if the total energy is virtually
   constant, and a constant friction should be used.}
 
-\mbax{\key{FRIC(+)}
-\vdescr{start value for the friction factor $c_\alpha$ used for
-increasing energy}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.3}}
-
-\mbax{\key{FACT(+)}
-\vdescr{factor multiplied with the friction factor FRIC(+) in 
-each step that reduces the energy}
-\vformat{real}
-\vrules{optional}
-\vdefault{1.0}}
-
 \mbax{\key{FRIC(-)}
 \vdescr{start value for the friction factor $c_\alpha$ used for
 decreasing energy}
@@ -1227,6 +1213,20 @@ each step that reduces the energy}
 \vformat{real}
 \vrules{optional}
 \vdefault{0.97}}
+
+\mbax{\key{FRIC(+)}
+\vdescr{start value for the friction factor $c_\alpha$ used for
+increasing energy}
+\vformat{real}
+\vrules{optional}
+\vdefault{0.3}}
+
+\mbax{\key{FACT(+)}
+\vdescr{factor multiplied with the friction factor FRIC(+) in 
+each step that reduces the energy}
+\vformat{real}
+\vrules{optional}
+\vdefault{1.0}}
 
 \mbax{\key{MINFRIC}
 \vdescr{minimum friction used}
@@ -1405,12 +1405,26 @@ See Sec.~\ref{sec:optfric} for further information.}
   problem that can even result in a heating up of the electrons. In this
   case, switch to constant friction.}
 
+\mbax{\key{FRIC(-)}
+\vdescr{start value for the friction factor $c_\alpha$ used for
+decreasing energy}
+\vformat{real}
+\vrules{optional}
+\vdefault{0.0}}
+
+\mbax{\key{FACT(-)}
+\vdescr{factor multiplied with the friction factor FRIC(-) in 
+each step that reduces the energy}
+\vformat{real}
+\vrules{optional}
+\vdefault{1.0}}
+
 \mbax{\key{FRIC(+)}
 \vdescr{start value for the friction factor $c_\alpha$ used for
 increasing energy}
 \vformat{real}
 \vrules{optional}
-\vdefault{0.8}}
+\vdefault{0.01}}
 
 \mbax{\key{FACT(+)}
 \vdescr{factor multiplied with the friction factor FRIC(+) in 
@@ -1418,20 +1432,6 @@ each step that reduces the energy}
 \vformat{real}
 \vrules{optional}
 \vdefault{1.0}}
-
-\mbax{\key{FRIC(-)}
-\vdescr{start value for the friction factor $c_\alpha$ used for
-decreasing energy}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.3}}
-
-\mbax{\key{FACT(-)}
-\vdescr{factor multiplied with the friction factor FRIC(-) in 
-each step that reduces the energy}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.97}}
 
 \mbax{\key{MINFRIC}
 \vdescr{minimum friction used}

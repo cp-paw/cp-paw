@@ -470,8 +470,8 @@ ENDDO
 !     ==========================================================================
 !     -- BETTER DIRECTLY WORK OUT THE KINETIC ENERGY BECAUSE  THE 
 !     -- SCHROEDINGER EQUATION IS FULFILLED ONLY TO FIRST ORDER IN DE
-      CALL ERROR$MSG('THIS ROUTINE (THAT IS TKIN) IS NOT TESTED')
-      CALL ERROR$STOP('SCHROEDINGER$LBND_SCALREL')
+!      CALL ERROR$MSG('THIS ROUTINE (THAT IS TKIN) IS NOT TESTED')
+!      CALL ERROR$STOP('SCHROEDINGER$LBND_SCALREL')
       DO IB=1,NPHI
         TPHI(:,:,IB)=EB(IB)*PHI(:,:,IB)
         DO LM1=1,LMX
@@ -546,6 +546,7 @@ CHARACTER(32):: FILE
       END IF
       CALL RADIAL$R(GID,NR,R)
       IRC=IRMATCH
+
 !
 !     ==========================================================================
 !     ==  OBTAIN HOMOGENEOUS SOLUTION                                         ==
@@ -787,6 +788,25 @@ CHARACTER(32):: FILE
         ENDDO
       ENDDO
       TOK=.TRUE.
+!
+!     ==================================================================
+!     ==  Test                                                        ==
+!     ==================================================================
+print*,'overlap ',nphi,matmul(transpose(kinkc),matmul(ov,kinkc))
+      DO I=1,NPHI
+        DO J=I,NPHI
+          AUX(:)=0.D0
+          DO IF=1,NF
+            AUX(:)=AUX(:)+PHI(:,IF,I)*PHI(:,IF,J)
+          ENDDO
+          AUX(:)=AUX(:)*R(:)**2
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+          OV(I,J)=SVAR
+          OV(J,I)=OV(I,J)
+        ENDDO
+      ENDDO
+print*,'overlap2 ',nphi,ov
+
 !CALL SCHROEDINGER_WRITEPHI(GID,NR,'FINAL',NF,NPHI,IRC,PHI,PHI)
       RETURN
       END SUBROUTINE SCHROEDINGER_XXXR

@@ -1335,7 +1335,7 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!RDYN!AUTO                               ==
 !     ==================================================================
-      CALL READIN_AUTO(LL_CNTL,'ATOMS',1.D-2,1.D0,0.1D0,1.D0)
+      CALL READIN_AUTO(LL_CNTL,'ATOMS',0.d0,1.D0,1.d-2,1.D0)
 !
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!RDYN!THERMOSTAT                         ==
