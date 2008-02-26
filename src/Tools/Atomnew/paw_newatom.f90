@@ -3317,7 +3317,7 @@ ENDDO
       REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
       LOGICAL(4)                 :: THOM
       REAL(8)                    :: rout
-      REAL(8)                    :: val
+      REAL(8)                    :: val,val1,val2
       INTEGER(4)                 :: IROUT,IRCL,irbox
 !     *********************************************************************
                                  call trace$push('boundstate')
