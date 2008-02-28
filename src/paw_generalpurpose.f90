@@ -696,6 +696,168 @@
       RETURN
       END
 !
+!..................................................................................
+MODULE BROYDEN_MODULE
+LOGICAL(4)         :: TON=.FALSE.
+INTEGER(4)         :: NSTEPX=0
+INTEGER(4)         :: NSTEP=0
+INTEGER(4)         :: NX=0
+REAL(8)            :: ALPHA
+REAL(8),ALLOCATABLE :: XPREV(:,:)
+REAL(8),ALLOCATABLE :: YPREV(:,:)
+REAL(8),ALLOCATABLE :: WEIGHT(:)
+END MODULE BROYDEN_MODULE
+!      .............................................................................
+       SUBROUTINE BROYDEN$NEW(NX_,NSTEPX_,ALPHA_)
+       USE BROYDEN_MODULE
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN)    :: NX_
+       INTEGER(4),INTENT(IN)    :: NSTEPX_
+       REAL(8)   ,INTENT(IN)    :: ALPHA_
+!      *****************************************************************************
+       IF(TON) THEN
+         CALL ERROR$MSG('BROYDEN OBJECT ALREADY IN USE')
+         CALL ERROR$STOP('BROYDEN$NEW')
+       END IF
+       TON=.TRUE.
+       NSTEP=0
+       NX=NX_
+       NSTEPX=NSTEPX_
+       ALPHA=ALPHA_
+       ALLOCATE(XPREV(NX,NSTEPX))
+       ALLOCATE(YPREV(NX,NSTEPX))
+       ALLOCATE(WEIGHT(NX))
+       WEIGHT(:)=1.D0
+       XPREV(:,:)=0.D0
+       YPREV(:,:)=0.D0
+       RETURN
+       END
+!      .............................................................................
+       SUBROUTINE BROYDEN$CLEAR
+       USE BROYDEN_MODULE
+       IMPLICIT NONE
+!      *****************************************************************************
+       IF(.NOT.TON) THEN
+         CALL ERROR$MSG('BROYDEN OBJECT NOT ACTIVE')
+         CALL ERROR$MSG('CALL BROYDEN$NEW FIRST')
+         CALL ERROR$STOP('BROYDEN$CLEAR')
+       END IF
+       TON=.FALSE.
+       NSTEPX=0
+       NSTEP=0
+       NX=0
+       ALPHA=0.D0
+       DEALLOCATE(XPREV)
+       DEALLOCATE(YPREV)
+       DEALLOCATE(WEIGHT)
+       RETURN
+       END
+!
+!      .............................................................................
+       SUBROUTINE BROYDEN$SETWEIGHT(NX_,WEIGHT_)
+       USE BROYDEN_MODULE
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN) :: NX_
+       REAL(8)   ,INTENT(IN)  :: WEIGHT_(NX_)
+!      *****************************************************************************
+       IF(.NOT.TON) THEN
+         CALL ERROR$MSG('BROYDEN OBJECT NOT ACTIVE')
+         CALL ERROR$MSG('CALL BROYDEN$NEW FIRST')
+         CALL ERROR$STOP('BROYDEN$SETWEIGHT')
+       END IF
+       IF(NX_.NE.NX) THEN
+         CALL ERROR$MSG('SIZE INCONSISTENT')
+         CALL ERROR$STOP('BROYDEN$SETWEIGHT')
+       END IF
+       WEIGHT(:)=WEIGHT_(:)
+       RETURN
+       END
+!
+!      .............................................................................
+       SUBROUTINE BROYDEN$STEP(NX_,X,Y)
+       USE BROYDEN_MODULE
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN)    :: NX_
+       REAL(8)   ,INTENT(INOUT) :: X(NX_)
+       REAL(8)   ,INTENT(IN)    :: Y(NX_)
+       REAL(8)   ,ALLOCATABLE   :: DX(:,:)
+       REAL(8)   ,ALLOCATABLE   :: DY(:,:)
+       REAL(8)   ,ALLOCATABLE   :: B(:,:)
+       REAL(8)   ,ALLOCATABLE   :: BINV(:,:)
+       REAL(8)                  :: WY(NX_)
+       INTEGER(4)               :: I
+!      *****************************************************************************
+       IF(.NOT.TON) THEN
+         CALL ERROR$MSG('BROYDEN OBJECT NOT ACTIVE')
+         CALL ERROR$MSG('CALL BROYDEN$NEW FIRST')
+         CALL ERROR$STOP('BROYDEN$STEP')
+       END IF
+       IF(NX_.NE.NX) THEN
+         CALL ERROR$MSG('SIZE INCONSISTENT')
+         CALL ERROR$STOP('BROYDEN$STEP')
+       END IF
+!PRINT*,'NSTEP',NSTEP
+!
+!      =================================================================
+!      == APPLY WEIGHTING                                             ==
+!      =================================================================
+       WY(:)=WEIGHT(:)*Y(:)
+!
+!      =================================================================
+!      == SIMPLE MIXING IN THE FIRST STEP                             ==
+!      =================================================================
+       IF(NSTEP.EQ.0) THEN
+         IF(NSTEPX.GT.0)THEN
+           NSTEP=1
+           XPREV(:,1)=X(:)     
+           YPREV(:,1)=WY(:)     
+         END IF
+         X=X+ALPHA*WY
+         RETURN
+       END IF
+!
+!      =================================================================
+!      == DETERMINE INVERSE HESSIAN ALPHA+DX OTIMES DY                ==
+!      =================================================================
+       ALLOCATE(DX(NX,NSTEP))
+       ALLOCATE(DY(NX,NSTEP))
+       DO I=1,NSTEP
+         DY(:,I)=YPREV(:,I)-WY(:)  
+         DX(:,I)=XPREV(:,I)-X(:)+ALPHA*DY(:,I)
+       ENDDO
+       ALLOCATE(B(NSTEP,NSTEP))
+       ALLOCATE(BINV(NSTEP,NSTEP))
+       B=MATMUL(TRANSPOSE(DY),DY)   !OVERLAP MATRIX OF DY
+!PRINT*,'B',B
+       CALL LIB$INVERTR8(NSTEP,B,BINV)           
+!ALLOCATE(W(NX,NSTEP))
+!W=MATMUL(DY,BINV)            !NEW DY IS BIORTHONORMAL TO OLD DY
+!PRINT*,'W ',MATMUL(TRANSPOSE(W),DY)
+!DEALLOCATE(W)
+       DY=MATMUL(DY,BINV)            !NEW DY IS BIORTHONORMAL TO OLD DY
+       DEALLOCATE(B)
+       DEALLOCATE(BINV)
+!
+!      =================================================================
+!      == STORE HISTORY                                               ==
+!      =================================================================
+       IF(NSTEP.LT.NSTEPX)NSTEP=NSTEP+1
+       DO I=NSTEP,2,-1
+         YPREV(:,I)=YPREV(:,I-1)
+         XPREV(:,I)=XPREV(:,I-1)
+       ENDDO
+       XPREV(:,1)=X(:)     
+       YPREV(:,1)=WY(:)     
+!
+!      =================================================================
+!      == PREDICT NEW VECTOR                                          ==
+!      =================================================================
+       X=X+ALPHA*WY-MATMUL(DX,MATMUL(TRANSPOSE(DY),WY))
+       DEALLOCATE(DX)
+       DEALLOCATE(DY)
+       RETURN
+       END
+!
 !     .....................................................GAUSSN.......
       SUBROUTINE GAUSSN(L,ALPHA,C)
 !     ******************************************************************

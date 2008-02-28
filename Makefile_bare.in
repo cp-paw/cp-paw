@@ -242,7 +242,8 @@ OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 OBJLATTICE = \
           ${OBJDIR}/paw_lattice.o
 OBJTEST = \
-          ${OBJDIR}/paw_test.o
+          ${OBJDIR}/paw_test.o \
+          ${OBJDIR}/paw_testlib.o
 # Objects for atomic setup tool
 OBJNEWATOM = \
           ${OBJDIR}/paw_newatom.o
