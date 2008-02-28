@@ -158,8 +158,8 @@ if test "$PARMFILE" != notset; then
   #  
   # compose final variables
   #
-  PAWDIR=`pwd`
-  OBJDIR="$OBJDIR/$ARCH/Objects"
+  PAWDIR=`pwd`  # This is for absolute paths  
+#  OBJDIR="$OBJDIR/$ARCH/Objects"
   PAWX="$PAWDIR/bin/$ARCH"
   COMPILE_SCALAR="$COMPILER_SCALAR"
   COMPILE_PARALLEL="$COMPILER_PARALLEL"

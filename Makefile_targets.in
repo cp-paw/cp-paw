@@ -80,6 +80,7 @@ SHELL=/bin/sh
 ## script (AC_SUBST @...@ and sed-Commands var...)                     ##
 #########################################################################
 #___________________________ root directory of the PAW distribution
+# 
 PAWDIR=@PAWDIR@
 #___________________________ the hardware architecture
 ARCH=@ARCH@

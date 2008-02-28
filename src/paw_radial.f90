@@ -1280,7 +1280,7 @@ PRINT*,'GIDS ',GIDS
       CALL RADIAL$R(GID,NR,R)
       AUX1(:)=RHO(:)*R(:)**(L+2) 
       CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-      FAC=4.D0*PI/DBLE(2*L+1)
+      FAC=4.D0*PI/real(2*L+1,kind=8)
 !     ==  R(1)=0 THERE IS A PRODUCT OF ZERO AND INFINITY ===============
       IF(R(1).EQ.0.D0) THEN
         V(1)=0.D0
