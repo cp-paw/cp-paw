@@ -492,12 +492,23 @@
       END INTERFACE
       INTEGER(4),INTENT(IN)       :: NFIL
       INTEGER                     :: LUNIT
-!     *********************************************************************
+!     **************************************************************************
       LUNIT=NFIL
       CALL FLUSH(LUNIT)
       RETURN
       END SUBROUTINE LIB_IFC7_FLUSH
 #ELIF DEFINED(CPPVAR_COMPILER_G95)
+!     **************************************************************************
+!     ** G95 OFFERS THE USUAL SUPPORT FUNCTIONS AS INTRINSIC FUNCTION         **
+!     ** EXTENSIONS. THESE MUST BE ADRESSED WITHOUT AN EXPLICIT INTERFACE     **
+!     ** TO AVOID THAT AN EXTERNAL LIBRARY IS CALLED INSTEAD.                 **
+!     **                                                                      **
+!     ** using the extensions is incompatible with the -std95 flag of the     **
+!     ** fortran compiler!                                                    **
+!     **                                                                      **
+!     ** SOME OF THE ROUTINES ARE ALSO AVAILABLE AS INTRINSIC FUNCTIONS OF    **
+!     ** FORTRAN 2003.                                                        **
+!     **************************************************************************
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_ETIME(USRTIME,SYSTIME)
@@ -507,11 +518,11 @@
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
-      INTERFACE 
-        REAL FUNCTION ETIME(TARRAY)
-        REAL,OPTIONAL,INTENT(OUT) :: TARRAY(2)
-        END FUNCTION ETIME
-      END INTERFACE
+!!$      INTERFACE 
+!!$        REAL FUNCTION ETIME(TARRAY)
+!!$        REAL,OPTIONAL,INTENT(OUT) :: TARRAY(2)
+!!$        END FUNCTION ETIME
+!!$      END INTERFACE
       REAL(8),INTENT(OUT) :: USRTIME
       REAL(8),INTENT(OUT) :: SYSTIME
       REAL                :: TARRAY(2)
@@ -531,18 +542,27 @@
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE GETARG(POS,VALUE)
-        INTEGER         ,INTENT(IN) :: POS
-        CHARACTER(LEN=*),INTENT(OUT):: VALUE
-        END SUBROUTINE GETARG
-      END INTERFACE
+!!$    ! do not use the interface because this is a intrinsic function extension
+!!$    ! in g95
+!!$      INTERFACE 
+!!$        SUBROUTINE GETARG(POS,VALUE)
+!!$        INTEGER         ,INTENT(IN) :: POS
+!!$        CHARACTER(LEN=*),INTENT(OUT):: VALUE
+!!$        END SUBROUTINE GETARG
+!!$      END INTERFACE
       INTEGER(4),INTENT(IN)         :: IPOS
       CHARACTER(LEN=*) ,INTENT(OUT) :: ARG
       INTEGER                       :: POS
+      INTEGER                       :: len,st
 !     **************************************************************************
       POS=IPOS
-      CALL GETARG(POS,ARG)
+!      CALL GETARG(POS,ARG)
+!     ==  USE  FORTRAN 2003 INTRINSIC FUNCTION
+      CALL GET_COMMAND_ARGUMENT(POS,ARG,LEN,ST)
+      IF(ST.NE.0) THEN
+        CALL ERROR$MSG('ARGUMENT NOT PRESENT')
+        CALL ERROR$STOP('LIB_G95_GETARG')
+      END IF 
       RETURN
       END
 !
@@ -554,13 +574,14 @@
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
-      INTERFACE 
-        INTEGER FUNCTION IARGC()
-        END FUNCTION IARGC
-      END INTERFACE
+!!$      INTERFACE 
+!!$        INTEGER FUNCTION IARGC()
+!!$        END FUNCTION IARGC
+!!$      END INTERFACE
       INTEGER(4),INTENT(OUT) :: NARGS
 !     **************************************************************************
-      NARGS=IARGC()
+!!$      NARGS=IARGC()
+      nargs=command_argument_count()
       RETURN
       END
 !
@@ -572,11 +593,11 @@
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
-      INTERFACE 
-        INTEGER FUNCTION SYSTEM(STRING)
-        CHARACTER*(*) ,INTENT(IN) :: STRING
-        END FUNCTION SYSTEM
-      END INTERFACE
+!!$      INTERFACE 
+!!$        INTEGER FUNCTION SYSTEM(STRING)
+!!$        CHARACTER*(*) ,INTENT(IN) :: STRING
+!!$        END FUNCTION SYSTEM
+!!$      END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
       INTEGER(4)              :: RC
 !     **************************************************************************
@@ -597,11 +618,11 @@
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
-      INTERFACE 
-        INTEGER FUNCTION HOSTNM(STRING)
-        CHARACTER*(*) ,INTENT(IN) :: STRING
-        END FUNCTION HOSTNM
-      END INTERFACE
+!!$      INTERFACE 
+!!$        INTEGER FUNCTION HOSTNM(STRING)
+!!$        CHARACTER*(*) ,INTENT(IN) :: STRING
+!!$        END FUNCTION HOSTNM
+!!$      END INTERFACE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
 !     *********************************************************************
@@ -619,11 +640,11 @@
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
-      INTERFACE 
-        SUBROUTINE FLUSH(LUNIT)
-        INTEGER,INTENT(IN) :: LUNIT
-        END SUBROUTINE FLUSH
-      END INTERFACE
+!!$      INTERFACE 
+!!$        SUBROUTINE FLUSH(LUNIT)
+!!$        INTEGER,INTENT(IN) :: LUNIT
+!!$        END SUBROUTINE FLUSH
+!!$      END INTERFACE
       INTEGER(4),INTENT(IN)       :: NFIL
       INTEGER                     :: LUNIT
 !     *********************************************************************

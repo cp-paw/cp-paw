@@ -166,7 +166,7 @@ FCFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
 #########################################################################################
 #________________________________compiler flags for debugging__________________________##
 ##                                                                                     ##
-FCFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
+FCFLAGS_DBG="-c -g  -Wall -ftrace=full  -fimplicit-none -fbounds-check"
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
 ##  special compiler options for the paw_dbg and ppaw_dbg executable                   ##

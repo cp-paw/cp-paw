@@ -348,7 +348,7 @@ work with our make files.)
 PAW is written in FORTRAN90. Later compiler versions such as FORTRAN95
 and probably FORTRAN2003 can be used as well. 
 
-In teh following, we will mention some compilers that we have gained
+In the following, we will mention some compilers that we have gained
 experience with.
  
 %====================================================
@@ -360,8 +360,9 @@ experience with.
 \item Source: \textit{http://www.g95.org}
 \item Problems: 
 \begin{itemize}
-\item We found it necessary to link the g2c library with G95. I found
-a statement saying that this is no more required, though.
+\item The -std95 -std2003 compiler flags must be avoided, so that the
+intrinsic function extensions can be used. In that case the g2c
+library is not required.
 \end{itemize}
 \end{itemize}
 
