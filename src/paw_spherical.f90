@@ -604,8 +604,8 @@ END MODULE CLEBSCH_MODULE
       INTEGER(4),INTENT(IN) :: LMXX
       INTEGER(4),INTENT(IN) :: LMAX
       REAL(8)   ,INTENT(OUT):: CG(LMXX,LMXX,LMXX)
-      REAL(8)               :: FACT(0:50)
-      REAL(8)               :: SQFACT(0:50)
+      REAL(8)               :: FACT(0:170) !upper limit is max in real(8)
+      REAL(8)               :: SQFACT(0:170)
       REAL(8)               :: PI,SQPI,SQ2
       INTEGER(4)            :: I,IMAX
       INTEGER(4)            :: LM1,L1,M1,N1,IS1
@@ -617,13 +617,13 @@ END MODULE CLEBSCH_MODULE
       INTERFACE
         DOUBLE PRECISION FUNCTION THREEJ(L1,M1,L2,M2,L3,M3,FACT,SQFACT)
         INTEGER(4),INTENT(IN) :: L1,M1,L2,M2,L3,M3
-        REAL(8)   ,INTENT(IN) :: FACT(0:50),SQFACT(0:50)
+        REAL(8)   ,INTENT(IN) :: FACT(0:170),SQFACT(0:170)
         END
       END INTERFACE
       INTERFACE
         DOUBLE PRECISION FUNCTION PRECG(L1,L2,L3,FACT,SQFACT)
         INTEGER(4),INTENT(IN) :: L1,L2,L3
-        REAL(8)   ,INTENT(IN) :: FACT(0:50),SQFACT(0:50)
+        REAL(8)   ,INTENT(IN) :: FACT(0:170),SQFACT(0:170)
         END
       END INTERFACE
 !     ******************************************************************
@@ -631,8 +631,13 @@ END MODULE CLEBSCH_MODULE
       SQ2=SQRT(2.D0)
       SQPI=SQRT(PI)
       IMAX=4*LMAX+1
-      IF(IMAX.GT.50) THEN
+      IF(IMAX.GT.150) THEN
+!       == PREVISIOUSLY IT WAS TESTED FOR IMAX.GE.50 ====================
+!       == POSSIBLY THE RESULTS ARE INACCURATE BEYOND THIS VALUE ========
         CALL ERROR$MSG('DIMENSIONS IN CLBSCH TO SMALL')
+        CALL ERROR$MSG('FACTORIAL PRODUCES OVERFLOW FOR I>170')
+        CALL ERROR$I4VAL('FACTORIAL REQUESTED UP TO',IMAX)
+        CALL ERROR$I4VAL('MAX L REQUESTED',LMAX)
         CALL ERROR$STOP('CLBSCH')
       END IF
       FACT(0)=1.D0
