@@ -1063,7 +1063,7 @@ CONTAINS
 !     **  STORES A DATA                                               **
 !     **                                                              **
 !     **  WILDCARDS:                                                  **
-!     **    1) NTH=0 ATTACH DATA TO THE FIST ITEM AND CREATE ONE      **
+!     **    1) NTH=0 ATTACH DATA TO THE FIrST ITEM AND CREATE ONE      **
 !     **       IF NECCESARY                                           **
 !     **    2) NTH<0 APPENDS DATA ENTRY AND ATTACHES DATA THERE       **
 !     **    3) '*' APPLIES TO ANY ID                                  **
