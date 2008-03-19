@@ -1,65 +1,65 @@
-!.......................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE DYNOCC_MODULE
-!***********************************************************************
-!**                                                                   **
-!**  NAME: DYNOCC                                                     **
-!**                                                                   **
-!**  PURPOSE: ORGANIZES THE OCCUPATIONS OF THE ONE-PARTICLE STATES    **
-!**                                                                   **
-!**  FUNCTIONS:                                                       **
-!**    DYNOCC$CREATE                                                  **
-!**    DYNOCC$SET                                                     **
-!**    DYNOCC$GET                                                     **
-!**    DYNOCC$STOP                                                    **
-!**    DYNOCC$INIOCC                                                  **
-!**    DYNOCC$MODOCC                                                  **
-!**    DYNOCC$PROPAGATE                                               **
-!**    DYNOCC$SWITCH                                                  **
-!**    DYNOCC$REPORT                                                  **
-!**                                                                   **
-!**  REMARKS:                                                         **
-!**    THE OCCUPATIONS F ARE DIRECTLY RELATED TO THE DYNAMICAL        **
-!**    VARIABLES X BY F=3*X**2-2*X**3                                 **
-!**                                                                   **
-!**  LOGICAL INPUT HIRARCHY:                                          **
-!**    NB,NKPT,NSPIN                                                  **
-!**    SUMOFZ                                                         **
-!**    TDYN                                                           **
-!**    IF(TDYN) THEN                                                  **
-!**      TEMP,MX,DELAT,ANNEX,TSTOP,FREEZE                             **
-!**      TFIXTOT                                                      **
-!**      TFIXSPIN                                                     **
-!**      IF(TFIXTOT) THEN                                             **
-!**        TOTCHA   (ON INPUT AS EXCESS CHARGE)                       **
-!**      ELSE                                                         **
-!**        TOTPOT                                                     **
-!**      END IF                                                       **
-!**      IF(TFIXSPIN) THEN                                            **
-!**        SPINCHA                                                    **
-!**      ELSE                                                         **
-!**        SPINPOT                                                    **
-!**      END IF                                                       **
-!**    ELSE                                                           **
-!**      OCC                                                          **
-!**    END IF                                                         **
-!**    STARTTYPE                                                      **
-!**                                                                   **
-!**    FOUR DIFFERENT STARTTYPE ARE POSSIBLE:                         **
-!**      'X' READS THE OCCUPATION VARIABLES FROM RESTART FILE         **
-!**      'E' READS THE ENERGIES FROM RESTART FILE                     **
-!**      'N' FILLS STATES ACCORDING TO BAND NUMBER AND DYNOCC$MODOCC  **
-!**                                                                   **
-!**    THE DEFAULT OCCUPATIONS CORRESPOND TO STARTTYPE='N'.           **
-!**    IT FILLS THE BANDS CONSISTENT WITH THE TOTAL CHARGE AND SPIN   **
-!**    ASSUMING FLAT BANDS. THEN THEY ARE MODIFIED BY DYNOCC$MODOCC   **
-!**    (DYNOCC$MODOCC ALSO ADJUSTS THE TOTAL CHARGE AND SPIN!)        **
-!**    FOR STARTTYPE='E' OR 'X' THE RESTART FILE IS READ AND THE      **
-!**    OCCUPATIONS ARE OVERWRITTEN. IF STARTTYPE='X' THE OCCUPATIONS  **
-!**    ARE READ FROM FILE. FOR STARTTYPE='E' THE ENERGIES ARE READ    **
-!**    FROM FILE AND THE OCCUPATIONS ARE CREATED NEW USING THE        **
-!**    TEMPERATURE, THE TOTAL CHARGE OR SPIN (OR SPINPOT).            **
-!**                                                                   **
-!******************************************* PETER E. BLOECHL, 1996 *****
+!*******************************************************************************
+!**                                                                           **
+!**  NAME: DYNOCC                                                             **
+!**                                                                           **
+!**  PURPOSE: ORGANIZES THE OCCUPATIONS OF THE ONE-PARTICLE STATES            **
+!**                                                                           **
+!**  FUNCTIONS:                                                               **
+!**    DYNOCC$CREATE                                                          **
+!**    DYNOCC$SET                                                             **
+!**    DYNOCC$GET                                                             **
+!**    DYNOCC$STOP                                                            **
+!**    DYNOCC$INIOCC                                                          **
+!**    DYNOCC$MODOCC                                                          **
+!**    DYNOCC$PROPAGATE                                                       **
+!**    DYNOCC$SWITCH                                                          **
+!**    DYNOCC$REPORT                                                          **
+!**                                                                           **
+!**  REMARKS:                                                                 **
+!**    THE OCCUPATIONS F ARE DIRECTLY RELATED TO THE DYNAMICAL                **
+!**    VARIABLES X BY F=3*X**2-2*X**3                                         **
+!**                                                                           **
+!**  LOGICAL INPUT HIRARCHY:                                                  **
+!**    NB,NKPT,NSPIN                                                          **
+!**    SUMOFZ                                                                 **
+!**    TDYN                                                                   **
+!**    IF(TDYN) THEN                                                          **
+!**      TEMP,MX,DELAT,ANNEX,TSTOP,FREEZE                                     **
+!**      TFIXTOT                                                              **
+!**      TFIXSPIN                                                             **
+!**      IF(TFIXTOT) THEN                                                     **
+!**        TOTCHA   (ON INPUT AS EXCESS CHARGE)                               **
+!**      ELSE                                                                 **
+!**        TOTPOT                                                             **
+!**      END IF                                                               **
+!**      IF(TFIXSPIN) THEN                                                    **
+!**        SPINCHA                                                            **
+!**      ELSE                                                                 **
+!**        SPINPOT                                                            **
+!**      END IF                                                               **
+!**    ELSE                                                                   **
+!**      OCC                                                                  **
+!**    END IF                                                                 **
+!**    STARTTYPE                                                              **
+!**                                                                           **
+!**    FOUR DIFFERENT STARTTYPE ARE POSSIBLE:                                 **
+!**      'X' READS THE OCCUPATION VARIABLES FROM RESTART FILE                 **
+!**      'E' READS THE ENERGIES FROM RESTART FILE                             **
+!**      'N' FILLS STATES ACCORDING TO BAND NUMBER AND DYNOCC$MODOCC          **
+!**                                                                           **
+!**    THE DEFAULT OCCUPATIONS CORRESPOND TO STARTTYPE='N'.                   **
+!**    IT FILLS THE BANDS CONSISTENT WITH THE TOTAL CHARGE AND SPIN           **
+!**    ASSUMING FLAT BANDS. THEN THEY ARE MODIFIED BY DYNOCC$MODOCC           **
+!**    (DYNOCC$MODOCC ALSO ADJUSTS THE TOTAL CHARGE AND SPIN!)                **
+!**    FOR STARTTYPE='E' OR 'X' THE RESTART FILE IS READ AND THE              **
+!**    OCCUPATIONS ARE OVERWRITTEN. IF STARTTYPE='X' THE OCCUPATIONS          **
+!**    ARE READ FROM FILE. FOR STARTTYPE='E' THE ENERGIES ARE READ            **
+!**    FROM FILE AND THE OCCUPATIONS ARE CREATED NEW USING THE                **
+!**    TEMPERATURE, THE TOTAL CHARGE OR SPIN (OR SPINPOT).                    **
+!**                                                                           **
+!******************************************* PETER E. BLOECHL, 1996 ************
 CHARACTER(1):: STARTTYPE       ! CAN BE 'N','E','X'
 INTEGER(4)  :: NB=0            ! #(BANDS)
 INTEGER(4)  :: NKPT=0          ! #(K-POINTS)
@@ -110,19 +110,19 @@ REAL(8)                :: DEVENERGY  ! ESTIMATED DEVIATION FROM THE GROUND STATE
 REAL(8)                :: MAXDEVOCC  ! MAX DEVIATION OF STATE OCCUPATIONS
 END MODULE DYNOCC_MODULE
 !
-!      .................................................................
+!      ..1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC_FOFX(X,F,DF)
-!      **                                                             **
-!      **  EVALUATES THE OCCUPATIONS FROM THE DYNAMICAL VARIABLES     **
-!      **                                                             **
-!      *****************************************************************
+!      **                                                                     **
+!      **  EVALUATES THE OCCUPATIONS FROM THE DYNAMICAL VARIABLES             **
+!      **                                                                     **
+!      *************************************************************************
        IMPLICIT NONE
        REAL(8),INTENT(IN) :: X
        REAL(8),INTENT(OUT):: F
        REAL(8),INTENT(OUT):: DF   !DF/DX
        LOGICAL(4),SAVE    :: TNEW=.TRUE.
        REAL(8)   ,SAVE    :: PI
-!      *****************************************************************
+!      *************************************************************************
        IF(TNEW) THEN
          PI=4.D0*ATAN(1.D0)
          TNEW=.FALSE.
@@ -796,41 +796,59 @@ END MODULE DYNOCC_MODULE
       INTEGER(4)       ,INTENT(IN) :: NFILO
       LOGICAL(4)       ,INTENT(OUT):: TCHK
       TYPE(SEPARATOR_TYPE),PARAMETER :: MYSEPARATOR &
+          =SEPARATOR_TYPE(6,'OCCUPATIONS','NONE','MAR2008',' ')
+      TYPE(SEPARATOR_TYPE),PARAMETER :: OLD2SEPARATOR &
           =SEPARATOR_TYPE(4,'OCCUPATIONS','NONE','OCT2003',' ')
       TYPE(SEPARATOR_TYPE),PARAMETER :: OLDSEPARATOR &
           =SEPARATOR_TYPE(3,'OCCUPATIONS','NONE','AUG1996',' ')
       INTEGER(4)                   :: NTASKS,THISTASK
       LOGICAL(4)                   :: TNEW=.TRUE.
+      LOGICAL(4)                   :: TNEW1=.TRUE.
+      integer(4)       ,parameter  :: formattype=1
 !     ******************************************************************
                           CALL TRACE$PUSH('OCCUPATIONS$WRITE')
       tchk=.false.
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-      IF(TNEW) THEN
+
+      IF(formattype.eq.1) THEN
         IF(THISTASK.EQ.1) THEN
           CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
           WRITE(NFIL)NB,NKPT,NSPIN
           WRITE(NFIL)X0(:,:,:)
           WRITE(NFIL)XM(:,:,:)
+          WRITE(NFIL)EPS0(:,:,:)
+          WRITE(NFIL)EPSm(:,:,:)
           WRITE(NFIL)EPSILON(:,:,:)
         END IF
-      ELSE
+      ELSE IF(FORMATTYPE.EQ.2) THEN
+        IF(THISTASK.EQ.1) THEN
+          CALL RESTART$WRITESEPARATOR(OLD2SEPARATOR,NFIL,NFILO,TCHK)
+          WRITE(NFIL)NB,NKPT,NSPIN
+          WRITE(NFIL)X0(:,:,:)
+          WRITE(NFIL)XM(:,:,:)
+          WRITE(NFIL)EPSILON(:,:,:)
+        END IF
+      ELSE IF(FORMATTYPE.EQ.3) THEN
         IF(THISTASK.EQ.1) THEN
           CALL RESTART$WRITESEPARATOR(OLDSEPARATOR,NFIL,NFILO,TCHK)
           WRITE(NFIL)NB,NKPT,NSPIN
           WRITE(NFIL)X0(:,:,:)
           WRITE(NFIL)XM(:,:,:)
         END IF
+      ELSE
+        CALL ERROR$MSG('INVALID VALUE OF FORMATTYPE')
+        CALL ERROR$stop('DYNOCC$WRITE')
       END IF
                            CALL TRACE$POP
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DYNOCC$READ(NFIL,NFILO,TCHK)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      USE DYNOCC_MODULE
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+     USE DYNOCC_MODULE
       USE RESTART_INTERFACE
       USE MPE_MODULE
       IMPLICIT NONE
@@ -838,12 +856,16 @@ END MODULE DYNOCC_MODULE
       INTEGER(4)         ,INTENT(IN) :: NFILO
       LOGICAL(4)         ,INTENT(OUT):: TCHK
       TYPE(SEPARATOR_TYPE),PARAMETER :: MYSEPARATOR &
+          =SEPARATOR_TYPE(6,'OCCUPATIONS','NONE','MAR2008',' ')
+      TYPE(SEPARATOR_TYPE),PARAMETER :: OLD2SEPARATOR &
           =SEPARATOR_TYPE(4,'OCCUPATIONS','NONE','OCT2003',' ')
       TYPE(SEPARATOR_TYPE),PARAMETER :: OLDSEPARATOR &
           =SEPARATOR_TYPE(3,'OCCUPATIONS','NONE','AUG1996',' ')
       TYPE(SEPARATOR_TYPE)           :: SEPARATOR 
       REAL(8)            ,ALLOCATABLE:: TMP0(:,:,:)
       REAL(8)            ,ALLOCATABLE:: TMPM(:,:,:)
+      REAL(8)            ,ALLOCATABLE:: TMPE0(:,:,:)
+      REAL(8)            ,ALLOCATABLE:: TMPEm(:,:,:)
       REAL(8)            ,ALLOCATABLE:: TMPE(:,:,:)
       INTEGER(4)                     :: NB1,NKPT1,NSPIN1
       INTEGER(4)                     :: NTASKS,THISTASK
@@ -851,7 +873,8 @@ END MODULE DYNOCC_MODULE
       REAL(8)                        :: SVAR,DSVAR
       LOGICAL(4)                     :: TOLD
       INTEGER(4)                     :: NFIL1
-!     ******************************************************************
+      character(8)                   :: formattype
+!     **************************************************************************
                           CALL TRACE$PUSH('DYNOCC$READ')
       IF(STARTTYPE.EQ.' ') THEN
         CALL ERROR$MSG('STARTTYPE NOT SPECIFIED')
@@ -862,6 +885,9 @@ END MODULE DYNOCC_MODULE
         RETURN
       END IF
 !
+!     ==========================================================================
+!     == check if file is positioned at the correct position                  ==
+!     ==========================================================================
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       SEPARATOR=MYSEPARATOR
       IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
@@ -870,9 +896,25 @@ END MODULE DYNOCC_MODULE
         CALL TRACE$POP ;RETURN
       END IF
       TRESTARTFILEPRESENT=.TRUE.
+!
+!     ==========================================================================
+!     == identify version of the restart file                                 ==
+!     ==========================================================================
+      formattype=separator%version
+      if(formattype.EQ.'MAR2008') then
+      else if(formattype.EQ.'OCT2003') then
+      else if(formattype.EQ.'AUG1996') then
+      else 
+        CALL ERROR$MSG('could not identify VALUE OF FORMATTYPE')
+        CALL ERROR$STOP('DYNOCC$read')
+      end if
+!
+!     ==========================================================================
+!     == catch inconsistencies                                                ==
+!     ==========================================================================
 !     == CHECK IF RESTART FILE FORMAT FROM AUGUST 1996 =================
       TOLD=(SEPARATOR%VERSION.EQ.'AUG1996')
-      IF ((STARTTYPE.EQ.'E').AND.(TOLD)) THEN
+      IF ((STARTTYPE.EQ.'E').AND.(formattype.eq.'AUG1996')) THEN
         CALL FILEHANDLER$UNIT('PROT',NFIL1)
         WRITE(NFIL1,*)
         WRITE(NFIL1,'("**********************************************")')
@@ -889,34 +931,59 @@ END MODULE DYNOCC_MODULE
 !     ==================================================================
 !     == READ DATA                                                    ==
 !     ==================================================================
+      IF(.NOT.ALLOCATED(EPS0)) THEN
+        ALLOCATE(EPSM(NB,NKPT,NSPIN))
+        ALLOCATE(EPS0(NB,NKPT,NSPIN))
+        ALLOCATE(EPSP(NB,NKPT,NSPIN))
+      END IF
       X0(:,:,:)=0.D0
       XM(:,:,:)=0.D0
       IF(THISTASK.EQ.1) THEN
-        IF((SEPARATOR%VERSION.NE.MYSEPARATOR%VERSION).AND.(.NOT.TOLD)) THEN
-          CALL ERROR$MSG('VERSION NOT RECOGNIZED')
-          CALL ERROR$CHVAL('VERSION',SEPARATOR%VERSION)
-          CALL ERROR$STOP('DYNOCC$READ')
-        END IF
         READ(NFIL)NB1,NKPT1,NSPIN1
         ALLOCATE(TMP0(NB1,NKPT1,NSPIN1))
         ALLOCATE(TMPM(NB1,NKPT1,NSPIN1))
-        IF(.NOT.TOLD)ALLOCATE(TMPE(NB1,NKPT1,NSPIN1))
-        READ(NFIL)TMP0(:,:,:)
-        READ(NFIL)TMPM(:,:,:)
-        IF(.NOT.TOLD)READ(NFIL)TMPE(:,:,:)
-!
-!       ================================================================
-!       == DISCARD SUPERFLOUS DATA AND MAP INTO ARRAY                 ==
-!       ================================================================
+        ALLOCATE(TMPE(NB1,NKPT1,NSPIN1))
+        ALLOCATE(TMPE0(NB1,NKPT1,NSPIN1))
+        ALLOCATE(TMPEm(NB1,NKPT1,NSPIN1))
         NB1=MIN(NB1,NB)
         NKPT1=MIN(NKPT1,NKPT)
         NSPIN1=MIN(NSPIN1,NSPIN)
-        X0(1:NB1,1:NKPT1,1:NSPIN1)=TMP0(1:NB1,1:NKPT1,1:NSPIN1)
-        XM(1:NB1,1:NKPT1,1:NSPIN1)=TMPM(1:NB1,1:NKPT1,1:NSPIN1)
-        IF(.NOT.TOLD)EPSILON(1:NB1,1:NKPT1,1:NSPIN1)=TMPE(1:NB1,1:NKPT1,1:NSPIN1)
+        IF(FORMATTYPE.EQ.'MAR2008') THEN
+          READ(NFIL)TMP0(:,:,:)
+          READ(NFIL)TMPM(:,:,:)
+          READ(NFIL)TMPE0(:,:,:)
+          READ(NFIL)TMPEM(:,:,:)
+          READ(NFIL)TMPE(:,:,:)
+          X0(1:NB1,1:NKPT1,1:NSPIN1)=TMP0(1:NB1,1:NKPT1,1:NSPIN1)
+          XM(1:NB1,1:NKPT1,1:NSPIN1)=TMPM(1:NB1,1:NKPT1,1:NSPIN1)
+          EPS0(1:NB1,1:NKPT1,1:NSPIN1)=TMPE0(1:NB1,1:NKPT1,1:NSPIN1)
+          EPSm(1:NB1,1:NKPT1,1:NSPIN1)=TMPEm(1:NB1,1:NKPT1,1:NSPIN1)
+          epsp(:,:,:)=eps0(:,:,:)
+          EPSILON(1:NB1,1:NKPT1,1:NSPIN1)=TMPE(1:NB1,1:NKPT1,1:NSPIN1)
+        ELSE IF(FORMATTYPE.EQ.'OCT2003') THEN
+          READ(NFIL)TMP0(:,:,:)
+          READ(NFIL)TMPM(:,:,:)
+          READ(NFIL)TMPE(:,:,:)
+          X0(1:NB1,1:NKPT1,1:NSPIN1)=TMP0(1:NB1,1:NKPT1,1:NSPIN1)
+          XM(1:NB1,1:NKPT1,1:NSPIN1)=TMPM(1:NB1,1:NKPT1,1:NSPIN1)
+          EPSILON(1:NB1,1:NKPT1,1:NSPIN1)=TMPE(1:NB1,1:NKPT1,1:NSPIN1)
+          EPSM(:,:,:)=EPSILON(:,:,:)
+          EPS0(:,:,:)=EPSILON(:,:,:)
+          EPSP(:,:,:)=EPSILON(:,:,:)
+        ELSE IF(FORMATTYPE.EQ.'AUG1996') THEN
+          READ(NFIL)TMP0(:,:,:)
+          READ(NFIL)TMPM(:,:,:)
+          X0(1:NB1,1:NKPT1,1:NSPIN1)=TMP0(1:NB1,1:NKPT1,1:NSPIN1)
+          XM(1:NB1,1:NKPT1,1:NSPIN1)=TMPM(1:NB1,1:NKPT1,1:NSPIN1)
+          EPSM(:,:,:)=EPSILON(:,:,:)
+          EPS0(:,:,:)=EPSILON(:,:,:)
+          EPSP(:,:,:)=EPSILON(:,:,:)
+        END IF
         DEALLOCATE(TMP0)
         DEALLOCATE(TMPM)
-        IF(.NOT.TOLD)DEALLOCATE(TMPE)
+        DEALLOCATE(TMPEm)
+        DEALLOCATE(TMPE0)
+        DEALLOCATE(TMPE)
 !
 !       ================================================================
 !       == AUGMENT MISSING DATA                                       ==
@@ -924,12 +991,16 @@ END MODULE DYNOCC_MODULE
         DO IKPT=NKPT1+1,NKPT
           X0(:,IKPT,:)=X0(:,1,:)
           XM(:,IKPT,:)=XM(:,1,:)
-          IF(.NOT.TOLD)EPSILON(:,IKPT,:)=EPSILON(:,1,:)
+          EPSILON(:,IKPT,:)=EPSILON(:,1,:)
+          EPS0(:,IKPT,:)=EPS0(:,1,:)
+          EPSm(:,IKPT,:)=EPSm(:,1,:)
         ENDDO
         IF(NSPIN1.EQ.1.AND.NSPIN.EQ.2) THEN
           X0(:,:,2)=X0(:,:,1)
           XM(:,:,2)=XM(:,:,1)
-          IF(.NOT.TOLD)EPSILON(:,:,2)=EPSILON(:,:,1)
+          EPSILON(:,:,2)=EPSILON(:,:,1)
+          EPS0(:,:,2)=EPS0(:,:,1)
+          EPSm(:,:,2)=EPSm(:,:,1)
         END IF
       END IF
 !
@@ -938,20 +1009,15 @@ END MODULE DYNOCC_MODULE
 !     ==================================================================
       CALL MPE$BROADCAST('MONOMER',1,X0)
       CALL MPE$BROADCAST('MONOMER',1,XM)
-      IF(.NOT.TOLD)CALL MPE$BROADCAST('MONOMER',1,EPSILON)
-      IF(.NOT.ALLOCATED(EPS0)) THEN
-        ALLOCATE(EPSM(NB,NKPT,NSPIN))
-        ALLOCATE(EPS0(NB,NKPT,NSPIN))
-        ALLOCATE(EPSP(NB,NKPT,NSPIN))
-      END IF
-      EPSM(:,:,:)=EPSILON(:,:,:)
-      EPS0(:,:,:)=EPSILON(:,:,:)
-      EPSP(:,:,:)=EPSILON(:,:,:)
+      CALL MPE$BROADCAST('MONOMER',1,EPSILON)
+      CALL MPE$BROADCAST('MONOMER',1,EPS0)
+      CALL MPE$BROADCAST('MONOMER',1,EPSm)
 !
 !     ==================================================================
 !     == CONVERT ENERGIES INTO OCCUPATIONS                            ==
 !     ==================================================================
-      IF(STARTTYPE.EQ.'E'.AND.BZITYPE.EQ.'SAMP'.AND.(.NOT.TOLD)) THEN
+      IF(STARTTYPE.EQ.'E'.AND.BZITYPE.EQ.'SAMP' &
+     &             .AND.(FORMATTYPE.NE.'AUG1996')) THEN
 !       == NOT SUITABLE FOR TETRAHEDRON METHOD BECAUSE IT FAILS FOR T=0
         CALL DYNOCC_INIOCCBYENERGY(NB,NKPT,NSPIN,FMAX &
       &          ,TEMP,TFIXTOT,TOTCHA,TOTPOT,TFIXSPIN,SPINCHA,SPINPOT &
@@ -1273,7 +1339,7 @@ END MODULE DYNOCC_MODULE
 !      ** USES X0 FOR TADIABATIC=FALSE.                               **
 !      ** USES EPS0 FOR TADIABATIC=TRUE                               **
 !      **                                                             **
-!      ** IS ONLY EXECUTED ONE PER TIME STEP.                         **
+!      ** IS ONLY EXECUTED ONCE PER TIME STEP.                         **
 !      ** IS ONLY EXECUTED IF WGHT IS NOT ALLOCATED. WGHT  IS         **
 !      ** DEALLOCATED IN DYNOCC$SWITCH                               **
 !      **                                                             **
@@ -1456,11 +1522,19 @@ END MODULE DYNOCC_MODULE
        RETURN 
        END
 !
-!      .................................................................
+!      ..1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC$PROPAGATE()
-!      *****************************************************************
-!      **                                                             **
-!      *****************************************************************
+!      *************************************************************************
+!      ** propagate occupation variables                                      **
+!      **                                                                     **
+!      ** Two different modes of operation:                                   **
+!      ** 1)tadiabatic=true: uses epsm/0/p as variables and propagates        **
+!      **     using retardation                                               **
+!      **                                                                     **
+!      ** 2)tadiabatic=.false: uses xm/0/p as variables and propagates        **
+!      **     dynamically using mermin functional                             **
+!      **                                                                     **
+!      *************************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE
        REAL(8)   ,PARAMETER :: DSMALL=1.D-5
@@ -1481,7 +1555,7 @@ END MODULE DYNOCC_MODULE
        REAL(8)              :: EREL
        REAL(8)              :: DEKIN
        REAL(8)              :: DF(NB,NKPT,NSPIN)
-!      *****************************************************************
+!      *************************************************************************
        EKIN=0.D0
        EPOT=0.D0
        TPROPAGATED=.TRUE.
@@ -1491,9 +1565,9 @@ END MODULE DYNOCC_MODULE
        END IF
                               CALL TRACE$PUSH('DYNOCC$PROPAGATE')
 !
-!      =================================================================
-!      ==  CHECK DATA                                                 ==
-!      =================================================================
+!      =========================================================================
+!      ==  CHECK DATA                                                         ==
+!      =========================================================================
        IF(NSPIN.EQ.1) THEN
          TFIXSPIN=.FALSE.
          SPINPOT=0.D0
@@ -1519,10 +1593,10 @@ END MODULE DYNOCC_MODULE
          END IF
        END IF
 !
-!      =================================================================
-!      ==  TRANSFORM TRAJECTORY BACK INTO THE INTERVAL [0,1] BY       ==
-!      ==  TRANSLATION BY 2 AND MIRROR AT X=0 AND X=1                 ==
-!      =================================================================
+!      =========================================================================
+!      ==  TRANSFORM TRAJECTORY BACK INTO THE INTERVAL [0,1] BY               ==
+!      ==  TRANSLATION BY 2 AND MIRROR AT X=0 AND X=1                         ==
+!      =========================================================================
        DO ISPIN=1,NSPIN
          DO IKPT=1,NKPT
            DO IB=1,NB
@@ -1543,9 +1617,9 @@ END MODULE DYNOCC_MODULE
          ENDDO
        ENDDO
 !
-!      =================================================================
-!      ==  ESTIMATE TOTPOT FROM T=0                                   ==
-!      =================================================================
+!      =========================================================================
+!      ==  ESTIMATE TOTPOT FROM T=0                                           ==
+!      =========================================================================
        CALL DYNOCC_WGHT()
        IF(BZITYPE.EQ.'TETRA+') THEN
          CALL DYNOCC_TETRAINTERFACE(NSPIN,NKPT,NB,TFIXTOT,TFIXSPIN &
@@ -1571,20 +1645,20 @@ END MODULE DYNOCC_MODULE
        MAXDEVOCC=MAXVAL(ABS(DF))
        DEVENERGY=SUM(DF*EPSILON)
 !
-!        ===============================================================
-!        ==  PROPAGATE ENERGIES FOR ADIABATIC CALCULATION             ==
-!        ===============================================================
-         EPSP=EPS0+(EPSILON-EPS0)/RETARD
-!        IF(TMPSIDOT2)EPSP=EPSP+MPSIDOT2/RETARD
+!      =========================================================================
+!      ==  PROPAGATE ENERGIES FOR ADIABATIC CALCULATION                       ==
+!      =========================================================================
+       EPSP=EPS0+(EPSILON-EPS0)/RETARD
+!      IF(TMPSIDOT2)EPSP=EPSP+MPSIDOT2/RETARD
 !
-!      =================================================================
-!      ==  RETURN FOR QUASI ADIABATIC CALCULATION                     ==
-!      =================================================================
+!      =========================================================================
+!      ==  RETURN FOR QUASI ADIABATIC CALCULATION                             ==
+!      =========================================================================
        IF(TADIABATIC) THEN
 !
-!        ===============================================================
-!        ==  DETERMINE OCCUPATION VARIABLES FOR THE NEXT TIME STEP    ==
-!        ===============================================================
+!        =======================================================================
+!        ==  DETERMINE OCCUPATION VARIABLES FOR THE NEXT TIME STEP            ==
+!        =======================================================================
          IF(BZITYPE.EQ.'SAMP') THEN
            CALL DYNOCC_INIOCCBYENERGY(NB,NKPT,NSPIN,FMAX &
       &          ,TEMP,TFIXTOT,TOTCHA,TOTPOT,TFIXSPIN,SPINCHA,SPINPOT &
@@ -1594,9 +1668,14 @@ END MODULE DYNOCC_MODULE
                               CALL TRACE$POP()
        END IF
 !
-!      =================================================================
-!      ==  FREEZE/UNFREEZE OCCUPATIONS                                ==
-!      =================================================================
+!      =========================================================================
+!      == HERE THE ADIABATIC OPTION IS FINISHED.THE FOLLOWING IS FOR THE      ==
+!      == DYNAMICAL OCCUPATIONS USING THE MERMIN FUNCTIONAL                   ==
+!      =========================================================================
+!
+!      =========================================================================
+!      ==  FREEZE/UNFREEZE OCCUPATIONS                                        ==
+!      =========================================================================
        DEKIN=0.D0
        DO ISPIN=1,NSPIN
          SIGMA=DBLE(3-2*ISPIN)   ! SPIN DIRECTION       
@@ -1862,11 +1941,12 @@ END MODULE DYNOCC_MODULE
       RETURN
       END
 !
-!      .................................................................
+!      ..1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC_TETRAINTERFACE(NSPIN,NKPT,NB,TFIXTOT,TFIXSPIN &
       &                ,FMAX,TOTCHA,SPINCHA,TOTPOT,SPINPOT,EPSILON,WGHT)
-!      ********************************************************************
-!      ********************************************************************
+!      *************************************************************************
+!      **  evaluates the integration weights from known energy eigenvalues    **
+!      *************************************************************************
        IMPLICIT NONE
        INTEGER(4),INTENT(IN)   :: NSPIN
        INTEGER(4),INTENT(IN)   :: NKPT
@@ -1885,7 +1965,7 @@ END MODULE DYNOCC_MODULE
        REAL(8)                 :: SIGMA
        REAL(8)                 :: Q0,V0
        INTEGER(4)              :: ISPIN
-!      ********************************************************************
+!      *************************************************************************
                            CALL TRACE$PUSH('DYNOCC_TETRAINTERFACE')
                            CALL TIMING$CLOCKON('TETRAHEDRON METHOD')
        IF(NSPIN.EQ.1) THEN

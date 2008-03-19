@@ -2870,6 +2870,16 @@ print*,'a     ',(a(i,i),i=1,nb)
                                   CALL TRACE$Pop
         RETURN
       end if
+!
+!     ==================================================================
+!     == update gset to account for a change of the lattice vectors 
+!     == by a cell$read. Ensure that cell$read is called before waves$read!
+!     ==================================================================
+      CALL WAVES_UPDATEGSET()
+!
+!     ==================================================================
+!     == read wave functions and Lagrange parameters                  ==
+!     ==================================================================
       CALL WAVES_READPSI(NFIL)
 !
 !     ==================================================================
@@ -4012,18 +4022,18 @@ LOGICAL(4):: TCHK
 !     ==================================================================
       G(:)=MATMUL(GBASIN,GVECA(:,1))
       IVEC1=NINT(G)
-      DO I=1,3
-        IVEC1(I)=NINT(G(I))
-      ENDDO
-      G=REAL(NINT(G),KIND=8)
+!!$      DO I=1,3
+!!$        IVEC1(I)=NINT(G(I))
+!!$      ENDDO
+!!$      G=REAL(NINT(G),KIND=8)
       G(:)=MATMUL(GBASA,REAL(IVEC1,KIND=8))
       KA(:)=GVECA(:,1)-G(:)
 !
 !     ==================================================================
 !     == DIMENSION AND ALLOCATE 3-D GRID                              ==
 !     ==================================================================
-      MING=0
-      MAXG=0
+      MING=+10000
+      MAXG=-10000
       DO IG=1,NGA
         IVECA(:,IG)=NINT(MATMUL(GBASIN,GVECA(:,IG)-KA(:)))
         DO I=1,3

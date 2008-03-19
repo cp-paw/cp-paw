@@ -561,7 +561,7 @@ END MODULE CELL_MODULE
         END IF
         IF(TON) THEN
           CALL CELL_INITIALIZE()
-         CALL LIB$INVERTR8(3,T0,AMAT)
+          CALL LIB$INVERTR8(3,T0,AMAT)
           AMAT=MATMUL(TP-TM,AMAT)/(2.D0*DELTAT)
           AMAT=AMAT+TRANSPOSE(AMAT)
           AMAT=AMAT*0.5D0*DELTAT
@@ -750,6 +750,16 @@ end if
         SVAR3=DELTAT**2/TMASS/(1.D0+FRIC)
         CALL LIB__INVERTR8(3,T0,T0INV)
         TP=SVAR1*T0+SVAR2*TM+SVAR3*MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
+print*,'==cell$propagate nconstraint ',nconstraint
+print*,'==cell$propagate constrainttype ',constrainttype
+print*,'==cell$propagate stress_I ',stress_I
+print*,'==cell$propagate kinstress ',kinstress
+print*,'==cell$propagate stress_ext ',stress_ext
+print*,'==cell$propagate facts ',tmass,fric,deltat,svar1,svar2,svar3
+print*,'==cell$propagate tm ',tm
+print*,'==cell$propagate t0 ',t0
+print*,'==cell$propagate tp ',tp
+print*,'==cell$propagate ft ',MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
 !       == CONSTRAINTS ========================================================
         IF(NCONSTRAINT.GT.0) THEN        
           ALLOCATE(B(NCONSTRAINT))
