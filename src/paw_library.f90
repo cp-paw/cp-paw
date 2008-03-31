@@ -65,6 +65,8 @@
       CALL LIB_PGI_GETARG(IPOS,ARG)
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_GETARG(IPOS,ARG)
+#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+      CALL LIB_sun_GETARG(IPOS,ARG)
 #ELSE    
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       CALL GETARG(IPOSSTD,ARG)
@@ -94,6 +96,8 @@
       CALL LIB_PGI_NARGS(NARGS)
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_NARGS(NARGS)
+#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+      CALL LIB_SUN_NARGS(NARGS)
 #ELSE          
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       NARGS=IARGC()
@@ -131,6 +135,8 @@
       CALL LIB_PGI_ETIME(USRTIME,SYSTIME)
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_ETIME(USRTIME,SYSTIME)
+#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+      CALL LIB_sun_ETIME(USRTIME,SYSTIME)
 #ELSE  
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RESULT=ETIME(TARRAY)
@@ -162,6 +168,8 @@
       CALL LIB_PGI_GETHOSTNAME(HOSTNAME)
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_GETHOSTNAME(HOSTNAME)
+#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+      CALL LIB_sun_GETHOSTNAME(HOSTNAME)
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RC=HOSTNM(HOSTNAME)    
@@ -192,6 +200,8 @@
       CALL LIB_PGI_SYSTEM(COMMAND)
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_SYSTEM(COMMAND)
+#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+      CALL LIB_sun_SYSTEM(COMMAND)
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RC=SYSTEM(COMMAND)
@@ -220,6 +230,8 @@
       CALL LIB_PGI_FLUSH(N)   
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_FLUSH(N)   
+#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+      CALL LIB_SUN_FLUSH(N)   
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       CALL FLUSH_(N)  ! XLF USPPORT LIBRARY
@@ -1212,9 +1224,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                             **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
-!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
 !     **************************************************************************
-!      USE DFPORT
       IMPLICIT NONE
       INTERFACE 
         SUBROUTINE FLUSH(LUNIT)
@@ -1223,6 +1233,144 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END INTERFACE
       INTEGER(4),INTENT(IN)       :: NFIL
       INTEGER                     :: LUNIT
+!     **************************************************************************
+      LUNIT=NFIL
+      CALL FLUSH(LUNIT)
+      RETURN
+      END
+#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_SUN_ETIME(USRTIME,SYSTIME)
+!     **************************************************************************
+!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE SUN COMPILER                             **
+!     **************************************************************************
+      IMPLICIT NONE
+!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
+!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
+!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
+!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
+!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
+      INTERFACE 
+        REAL FUNCTION ETIME(TARRAY)
+        REAL,INTENT(OUT) :: TARRAY(2)
+        END FUNCTION ETIME
+      END INTERFACE
+      REAL(8),INTENT(OUT) :: USRTIME
+      REAL(8),INTENT(OUT) :: SYSTIME
+      REAL                :: RESULT      
+      REAL                :: TARRAY(2)   
+!     **************************************************************************
+      RESULT=ETIME(TARRAY)
+      USRTIME=TARRAY(1)
+      SYSTIME=TARRAY(2)
+      RETURN
+      END SUBROUTINE LIB_SUN_ETIME
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_SUN_GETARG(IPOS,ARG)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE GETARG(POS,VALUE)
+        INTEGER(4)      ,INTENT(IN) :: POS
+        CHARACTER(LEN=*),INTENT(OUT):: VALUE
+        END SUBROUTINE GETARG
+      END INTERFACE
+      INTEGER(4),INTENT(IN)         :: IPOS
+      CHARACTER(LEN=*) ,INTENT(OUT) :: ARG
+!     **************************************************************************
+      CALL GETARG(IPOS,ARG)
+      RETURN
+      END SUBROUTINE LIB_SUN_GETARG
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_SUN_NARGS(NARGS)
+!     **************************************************************************
+!     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER(4) FUNCTION IARGC()
+        END FUNCTION IARGC
+      END INTERFACE
+      INTEGER(4),INTENT(OUT) :: NARGS
+!     **************************************************************************
+      NARGS=IARGC()
+PRINT*,'NARGS ',NARGS,IARGC()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_SUN_SYSTEM(COMMAND)
+!     **************************************************************************
+!     **  ISSUES A SHELL COMMAND                                              **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **************************************************************************
+!      USE DFPORT
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER FUNCTION SYSTEM(STRING)
+        CHARACTER(*) ,INTENT(IN) :: STRING
+        END FUNCTION SYSTEM
+      END INTERFACE
+      CHARACTER(*),INTENT(IN) :: COMMAND
+      INTEGER(4)              :: RC
+!     **************************************************************************
+      RC=SYSTEM(COMMAND)
+      IF(RC.NE.0) THEN
+        CALL ERROR$MSG('SYSTEM CALL FAILED')
+        CALL ERROR$I4VAL('RC',RC)
+        CALL ERROR$STOP('LIB_SUN_SYSTEM')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_SUN_GETHOSTNAME(HOSTNAME)
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        INTEGER FUNCTION HOSTNM(STRING)
+        CHARACTER*(*) ,INTENT(IN) :: STRING
+        END FUNCTION HOSTNM
+      END INTERFACE
+      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+      INTEGER                   :: RC
+!     **************************************************************************
+      RC=HOSTNM(HOSTNAME)    
+      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_SUN_FLUSH(NFIL)
+!     **************************************************************************
+!     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                             **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTERFACE 
+        SUBROUTINE FLUSH(LUNIT)
+        INTEGER,INTENT(IN) :: LUNIT
+        END SUBROUTINE FLUSH
+      END INTERFACE
+      INTEGER(4),INTENT(IN)       :: NFIL
+      INTEGER(4)                     :: LUNIT
 !     **************************************************************************
       LUNIT=NFIL
       CALL FLUSH(LUNIT)
