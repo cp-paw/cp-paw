@@ -238,6 +238,12 @@ OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 #
 # Definition of objects for the compilation of the PAW-tools
 #
+# Objects for test code
+OBJLATTICE = \
+          ${OBJDIR}/paw_lattice.o
+OBJTEST = \
+          ${OBJDIR}/paw_test.o \
+          ${OBJDIR}/paw_testlib.o
 # Objects for atomic setup tool
 OBJNEWATOM = \
           ${OBJDIR}/paw_newatom.o
@@ -321,6 +327,18 @@ ${PAWLIB}: ${LOBJS} ${MPE} ${OBJDIR}/version_writeparmfile.o
 #########################################################################
 ##  build Tools                                                        ##
 #########################################################################
+#
+${BINDIR}/paw_test.x: ${OBJTEST} ${PAWLIB} 
+	${LINK} -o ${BINDIR}/paw_test.x ${OBJTEST} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_test:
+	rm -f ${OBJTEST} ${BINDIR}/paw_test.x
+#
+${BINDIR}/paw_lattice.x: ${OBJLATTICE} ${PAWLIB} ${OBJDIR}/paw_setupread.o
+	${LINK} -o ${BINDIR}/paw_lattice.x ${OBJLATTICE} ${OBJDIR}/paw_setupread.o -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_lattice:
+	rm -f ${OBJLATTICE} ${BINDIR}/paw_lattice.x
 #
 ${BINDIR}/paw_newatom.x: ${OBJNEWATOM} ${PAWLIB} ${OBJDIR}/paw_setupread.o
 	${LINK} -o ${BINDIR}/paw_newatom.x ${OBJNEWATOM} ${OBJDIR}/paw_setupread.o -L${OBJDIR} -lpaw ${LIBS}
@@ -431,6 +449,14 @@ $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 #__compile the tools____________________________________________________
+#
+${OBJTEST}: ${OBJDIR}/%.o : ${TOOLDIR}/Test/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJLATTICE}: ${OBJDIR}/%.o : ${TOOLDIR}/Atomnew/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJNEWATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atomnew/%.f90
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
@@ -801,6 +827,17 @@ endif
  ## file:src/Tools/Atom/build.f90
  ${OBJDIR}/build.o : STRINGS_MODULE.mod
  ${OBJDIR}/build.o : PERIODICTABLE_MODULE.mod
+ ## file:src/Tools/Atom/inboudaryfromkaras.f90
+ ## file:src/Tools/Test/paw_test.f90
+ ${OBJDIR}/paw_test.o : PERIODICTABLE_MODULE.mod
+ ${OBJDIR}/paw_test.o : LINKEDLIST_MODULE.mod
+ ${OBJDIR}/paw_test.o : STRINGS_MODULE.mod
+ BROYDEN_MODULE.mod : ${OBJDIR}/paw_test.o
+ ## file:src/Tools/Atomnew/paw_lattice.f90
+ ${OBJDIR}/paw_lattice.o : PERIODICTABLE_MODULE.mod
+ ${OBJDIR}/paw_lattice.o : LINKEDLIST_MODULE.mod
+ ${OBJDIR}/paw_lattice.o : STRINGS_MODULE.mod
+ BROYDEN_MODULE.mod : ${OBJDIR}/paw_lattice.o
  ## file:src/Tools/Atomnew/paw_newatom.f90
  ${OBJDIR}/paw_newatom.o : PERIODICTABLE_MODULE.mod
  ${OBJDIR}/paw_newatom.o : LINKEDLIST_MODULE.mod
