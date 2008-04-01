@@ -108,7 +108,7 @@ else
   OBJTYPES=${OBJTYPES_SCALAR} 
   OBJTYPES_PRIMARY=${OBJTYPES_PRIMARY_SCALAR} 
 endif
-TOOLS=newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave lattice test
+TOOLS=newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave 
 SCRIPTS=scripts
 #
 #########################################################################
