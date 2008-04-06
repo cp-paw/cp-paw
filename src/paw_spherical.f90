@@ -15,28 +15,75 @@
 !**                                                                   **
 !***********************************************************************
 !
-!     .....................................................GETYLM.......
+!..........................................................CLBSCH........
+MODULE spherical_MODULE
+INTEGER(4)          :: LMXX=0
+REAL(8),ALLOCATABLE :: GAUNTMAT(:,:,:)
+END MODULE spherical_MODULE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ROTATEYLM(LMX,ROT,YLMROT)
+!     **************************************************************************
+!     ** old interface for spherical$rotateylm                                **
+!     **************************************************************************
+      implicit none
+      integer(4),intent(in) :: lmx
+      real(8)   ,intent(in) :: rot(3,3)
+      real(8)   ,intent(out):: ylmrot(lmx,lmx)
+!     **************************************************************************
+      call spherical$ROTATEYLM(LMX,ROT,YLMROT)
+      return
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GETYLM(LMX,R,YLM)
+!     **************************************************************************
+!     ** OLD INTERFACE FOR SPHERICAL$YLM                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)   :: LMX
+      REAL(8),   INTENT(IN)   :: R(3)
+      REAL(8),   INTENT(OUT)  :: YLM(LMX)
+!     **************************************************************************
+      CALL SPHERICAL$YLM(LMX,R,YLM)
+      RETURN
+      END
+!
+!     ....................................................CLBSCH........
+      SUBROUTINE CLEBSCH(LM1,LM2,LM3,CG)
 !     ******************************************************************
-!     **                                                              **
-!     **  CALCULATE REAL SPHERICAL HARMONICS YLM AT POINT R           **
-!     **  THE SPHERICAL HARMONICS ARE ORDERD WITH INDICES             **
-!     **        LM(L,M)=1+L**2+L-M                                    **
-!     **                                                              **
-!     **  THE FIRST NINE REAL SPHERICAL HARMONICS ARE:                **
-!     **      YLM(1)=SQRT( 1/( 4*PI))    * 1                          **
-!     **      YLM(2)=SQRT( 3/( 4*PI))    * X / R                      **
-!     **      YLM(3)=SQRT( 3/( 4*PI))    * Z / R                      **
-!     **      YLM(4)=SQRT( 3/( 4*PI))    * Y / R                      **
-!     **      YLM(5)=SQRT(15/(16*PI))    * (  X**2-Y**2  ) /R**2      **
-!     **      YLM(6)=SQRT(60/(16*PI))    * (     X*Z     ) /R**2      **
-!     **      YLM(7)=SQRT( 5/(16*PI))    * ( 3*Z**2-R**2 ) /R**2      **
-!     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2      **
-!     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2      **
-!     **                                                              **
-!     **                                         P.E. BLOECHL, (1991) **
-!     **                                                              **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LM1
+      INTEGER(4),INTENT(IN) :: LM2
+      INTEGER(4),INTENT(IN) :: LM3
+      REAL(8)   ,INTENT(OUT):: CG
 !     ******************************************************************
+      call spherical$gaunt(lm1,lm2,lm3,cg)
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE spherical$YLM(LMX,R,YLM)
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATE REAL SPHERICAL HARMONICS YLM AT POINT R                   **
+!     **  THE SPHERICAL HARMONICS ARE ORDERD WITH INDICES                     **
+!     **        LM(L,M)=1+L**2+L-M                                            **
+!     **                                                                      **
+!     **  THE FIRST NINE REAL SPHERICAL HARMONICS ARE:                        **
+!     **      YLM(1)=SQRT( 1/( 4*PI))    * 1                                  **
+!     **      YLM(2)=SQRT( 3/( 4*PI))    * X / R                              **
+!     **      YLM(3)=SQRT( 3/( 4*PI))    * Z / R                              **
+!     **      YLM(4)=SQRT( 3/( 4*PI))    * Y / R                              **
+!     **      YLM(5)=SQRT(15/(16*PI))    * (  X**2-Y**2  ) /R**2              **
+!     **      YLM(6)=SQRT(60/(16*PI))    * (     X*Z     ) /R**2              **
+!     **      YLM(7)=SQRT( 5/(16*PI))    * ( 3*Z**2-R**2 ) /R**2              **
+!     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2              **
+!     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2              **
+!     **                                                                      **
+!     **                                         P.E. BLOECHL, (1991)         **
+!     **                                                                      **
+!     **************************************************************************    
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: LMX
       REAL(8),   INTENT(IN)   :: R(3)
@@ -49,7 +96,7 @@
       INTEGER(4)              :: L,LM0,M,LM
       REAL(8)                 :: FAC,SVAR
       INTEGER(4)              :: LMM,LMP
-!     ******************************************************************
+!     **************************************************************************    
       PI=4.D0*ATAN(1.D0)
       FPI=4.D0*PI
       SQ2=SQRT(2.D0)
@@ -192,7 +239,7 @@
       END
 !
 !     ..................................................................
-      SUBROUTINE ROTATEYLM(LMX,ROT,YLMROT)
+      SUBROUTINE spherical$ROTATEYLM(LMX,ROT,YLMROT)
 !     **                                                              **
 !     **  PRODUCES A LMX*LMX MATRIX YLMROT                            **
 !     **  THAT TRANSFORMS A COEFFICIENT VECTOR C_LM                   **
@@ -230,7 +277,7 @@
       &      +ROT(1,3)*(ROT(2,1)*ROT(3,2)-ROT(2,2)*ROT(3,1))
          IF(ABS(SVAR-1.D0).GT.1.D-12) THEN
            CALL ERROR$MSG('ROTATION MATRIX NOT UNITARY')
-           CALL ERROR$STOP('YLMROT')
+           CALL ERROR$STOP('spherical$rotatYLM')
          END IF
        END IF
 !
@@ -243,7 +290,7 @@
          CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
          CALL ERROR$I4VAL('LMX',LMX)
          CALL ERROR$I4VAL('LX',LX)
-         CALL ERROR$STOP('ROTATEYLM')
+         CALL ERROR$STOP('spherical$rotatYLM')
        END IF
        YLMROT(:,:)=(0.D0,0.D0)
        IF(LX.GE.0)YLMROT(1,1)=1.D0
@@ -551,23 +598,13 @@
       RETURN
       END
 !
-!..........................................................CLBSCH........
-MODULE CLEBSCH_MODULE
-INTEGER(4)          :: LMXX=0
-REAL(8),ALLOCATABLE :: CGMAT(:,:,:)
-END MODULE CLEBSCH_MODULE
-!
-!     ....................................................CLBSCH........
-      SUBROUTINE CLEBSCH(LM1,LM2,LM3,CG)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATE CLEBSCH GORDAN COEFFICIENTS FOR REAL SPHERICAL    **
-!     **  HARMONICS.                                                  **
-!     **                                                              **
-!     **    Y(LM1)*Y(LM2)= SUM(LM3|CG(LM1,LM2,LM3)*Y(LM3))            **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
-      USE CLEBSCH_MODULE
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
+!     **************************************************************************
+!     **  CALCULATE gaunt COEFFICIENT FOR REAL SPHERICAL HARMONICS.           **
+!     **    Y(LM1)*Y(LM2)= SUM(LM3|CG(LM1,LM2,LM3)*Y(LM3))                    **
+!     ****************************************** P.E. BLOECHL, 1991 ************
+      USE spherical_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LM1
       INTEGER(4),INTENT(IN) :: LM2
@@ -575,30 +612,26 @@ END MODULE CLEBSCH_MODULE
       REAL(8)   ,INTENT(OUT):: CG
       INTEGER(4)            :: LM123X
       INTEGER(4)            :: LMAX
-!     ******************************************************************
+!     **************************************************************************
       LM123X=MAX(LM1,LM2,LM3)
       IF(LM123X.GT.LMXX) THEN
         LMAX=INT(SQRT(REAL(LM123X-1)+0.01))
         LMAX=MAX(4,LMAX)
         LMXX=(LMAX+1)**2
-        IF(ALLOCATED(CGMAT))DEALLOCATE(CGMAT)
-        ALLOCATE(CGMAT(LMXX,LMXX,LMXX))
-        CALL CLBSCH(LMXX,LMAX,CGMAT)
+        IF(ALLOCATED(GAUNTMAT))DEALLOCATE(GAUNTMAT)
+        ALLOCATE(GAUNTMAT(LMXX,LMXX,LMXX))
+        CALL spherical_gauntmatrix(LMXX,LMAX,GAUNTMAT)
       END IF
-      CG=CGMAT(LM1,LM2,LM3)
+      CG=GAUNTMAT(LM1,LM2,LM3)
       RETURN
       END
 !
-!     ....................................................CLBSCH........
-      SUBROUTINE CLBSCH(LMXX,LMAX,CG)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATE CLEBSCH GORDAN COEFFICIENTS FOR REAL SPHERICAL    **
-!     **  HARMONICS.                                                  **
-!     **                                                              **
-!     **    Y(LM1)*Y(LM2)= SUM(LM3|CG(LM1,LM2,LM3)*Y(LM3))            **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE spherical_gauntmatrix(LMXX,LMAX,CG)
+!     **************************************************************************
+!     **  CALCULATE matrix of gaunt COEFFICIENTS FOR REAL SPHERICAL HARMONICS **
+!     **    Y(LM1)*Y(LM2)= SUM(LM3|CG(LM1,LM2,LM3)*Y(LM3))                    **
+!     ****************************************** P.E. BLOECHL, 1991 ************
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       INTEGER(4),INTENT(IN) :: LMXX
@@ -626,7 +659,7 @@ END MODULE CLEBSCH_MODULE
         REAL(8)   ,INTENT(IN) :: FACT(0:170),SQFACT(0:170)
         END
       END INTERFACE
-!     ******************************************************************
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       SQ2=SQRT(2.D0)
       SQPI=SQRT(PI)
