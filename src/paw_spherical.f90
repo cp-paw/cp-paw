@@ -179,7 +179,9 @@ END MODULE spherical_MODULE
       INTEGER(4)               :: LM,L,M,I1,LMM,LMP
       REAL(8)                  :: PMM,CM,C0,CP
 !     **************************************************************************
-      FACT=SQRT(1.D0-X**2)
+      FACT=1.D0-X**2
+      FACT=MAX(FACT,0.D0)  ! avoid numerical problem that 1-1**2 < 0
+      FACT=SQRT(fact)
       IF(FACT.EQ.0.D0) THEN
         SVAR=-X
         LM=0

@@ -16,7 +16,7 @@ TYPE ION_TYPE
   REAL(8)   ,POINTER :: EBG(:)
   REAL(8)   ,POINTER :: FBG(:)
   REAL(8)   ,POINTER :: AEPOT(:,:)   !(NR,LMRX)
-  REAL(8)   ,POINTER :: VEMB(:,:)  !(NR,LMRX)
+  REAL(8)   ,POINTER :: VEMB(:,:)    !(NR,LMRX)
   REAL(8)   ,POINTER :: AERHO(:,:)   !(NR,LMRX)
   REAL(8)   ,POINTER :: XCPOT(:,:)   !(NR,LMRX)
   REAL(8)   ,POINTER :: XCEDEN(:)    !(NR)
@@ -78,6 +78,7 @@ TYPE(THISTYPE),TARGET,SAVE :: THISARR(NATX)
 TYPE(THISTYPE),POINTER     :: THIS
 LOGICAL(4)    ,PARAMETER   :: TREL=.FALSE.
 LOGICAL(4)    ,SAVE        :: TSPECIAL=.FALSE.
+integer(4)    ,SAVE        :: gidoneatom=0
 END MODULE ONEATOM_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       PROGRAM MAIN
@@ -148,13 +149,16 @@ END MODULE ONEATOM_MODULE
 !STOP
 !
 !     ==========================================================================        
-!     ==                                                                      ==        
+!     ==  THIS IS FOR SESM                                                    ==        
 !     ==========================================================================        
-      CALL BIGONE()
+!      CALL BIGONE()
+!
+!     ==========================================================================
+!     ==  THIS IS FOR SIMPLE SESM                                             ==
+!     ==========================================================================
+      CALL LATTICE()
       RETURN
       END SUBROUTINE DEBUG_PETERS_NONSPH
-
-
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BIGONE()
@@ -461,14 +465,14 @@ PRINT*,'SCF OF DEFORMED ION...........................................'
         WRITE(NFILO,FMT='(72("="))')
         WRITE(NFILO,FMT='(72("="),T20," ENERGIES OF THE DEFORMED ION ")')
         WRITE(NFILO,FMT='("EDEFORM =",F10.5," H")')DETOT-THISARR(IAT1)%EREF
-        WRITE(NFILO,FMT='("EDEFORM =",F10.5," ev")')(DETOT-THISARR(IAT1)%EREF)/ev
+        WRITE(NFILO,FMT='("EDEFORM =",F10.5," EV")')(DETOT-THISARR(IAT1)%EREF)/EV
         WRITE(NFILO,FMT='("EION    =",F10.5," H")')DETOT
         WRITE(NFILO,FMT='("EKIN    =",F10.5," H")')EKIN
         WRITE(NFILO,FMT='("EHARTREE=",F10.5," H")')EH
         WRITE(NFILO,FMT='("EXC     =",F10.5," H")')EXC
         DO IBG=1,NBG
           WRITE(NFILO,FMT='(I3,"OCC=",F5.2," E[H]=",F10.5," E[EV]=",F10.5)') &
-       &                  IBg,fbg(ibg),Ebg(IBg),Ebg(IBg)/EV
+       &                  IBG,FBG(IBG),EBG(IBG),EBG(IBG)/EV
         ENDDO
         WRITE(NFILO,FMT='(72("="))')
 !
@@ -1002,8 +1006,8 @@ PRINT*,'CALCULATING HAMILTON AND OVERLAPMATRIX ...'
       REAL(8)    ,INTENT(OUT)   :: FBG(NBG)        ! OCCUPATIONS
       REAL(8)    ,INTENT(OUT)   :: PHI(NR,LMX,NBG) ! WAVE FUNCTIONS
       REAL(8)    ,INTENT(OUT)   :: TPHI(NR,LMX,NBG)! KINETIC ENERGY TIMES PHI
-      reaL(8)                   :: AEPHI(NR,LMX,NBG)
-      reaL(8)                   :: tAEPHI(NR,LMX,NBG)
+      REAL(8)                   :: AEPHI(NR,LMX,NBG)
+      REAL(8)                   :: TAEPHI(NR,LMX,NBG)
       REAL(8)    ,ALLOCATABLE   :: POTIN(:,:)
       REAL(8)    ,ALLOCATABLE   :: RHOTOT(:,:)
       REAL(8)                   :: POTOUT(NR,LMRX)
@@ -1087,7 +1091,7 @@ PRINT*,'CALCULATING HAMILTON AND OVERLAPMATRIX ...'
 !       ========================================================================        
         AEPHI=PHI
         TAEPHI=PHI
-        CALL SCF_COREORTHO(GID,NR,NC,LOFI,phic,tphic,NBG,NCG,LMX,AEPHI,TAEPHI)
+        CALL SCF_COREORTHO(GID,NR,NC,LOFI,PHIC,TPHIC,NBG,NCG,LMX,AEPHI,TAEPHI)
 !!$
 !!$
 !!$
@@ -1739,7 +1743,10 @@ PRINT*,'ONEATOM_NEW ..............................',IAT
 !     ==========================================================================
 !     ==  DEFINE RADIAL GRID                                                  ==
 !     ==========================================================================
-      CALL RADIAL$NEW('SHLOG',GID)
+      IF(GIDONEATOM.EQ.0) then
+        CALL RADIAL$NEW('SHLOG',GIDONEATOM)
+      END IF
+      GID=GIDONEATOM
       THIS%GID=GID
       CALL RADIAL$SETR8(GID,'R1',R1)
       CALL RADIAL$SETR8(GID,'DEX',DEX)
@@ -2531,9 +2538,7 @@ PRINT*,'TESTING ONEATOM.................................'
  CALL WRITEPHI('PHI',GID,NR,1,PHI(:,IB))
         CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
  CALL WRITEPHI('AUX1',GID,NR,1,AUX1)
-PRINT*,'SVAR ',SVAR,IB,L,THIS%NLC,RAD
         PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
-PRINT*,'OVER'
 !
 !       == PERFORM CALCULATION WITH INHOMOGENEITY   ============================
         POTIN=THIS%AEPOT
@@ -3832,7 +3837,7 @@ ENDDO
           COSALPHA=(DIS+P*COSTHETA)/X
           SINTHETA=SQRT(1.D0-COSTHETA**2)
 !         == START RECURSION FOR ASSOCIATED LEGENDRE POLYNOMIALS WITH P_LL
-          CALL PLGNDR(LMX1,LX1,COSALPHA,PLM1)
+          CALL PLGNDR(LMX1,LX1,COSALPHA,PLM1) 
           CALL PLGNDR(LMX2,LX2,COSTHETA,PLM2)
           DO LM1=1,LMX1
             CALL RADIAL$VALUE(GID,NR,FINR(:,LM1),X,FONE(LM1))
@@ -4115,3 +4120,195 @@ PRINT*,'DONE'
 RETURN
 END
 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LATTICE()
+      USE ONEATOM_MODULE
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: NAT=2
+      REAL(8)              :: AEZARR(NAT)
+      REAL(8)              :: RBASFCC(3,3)
+      REAL(8)              :: RBAS(3,3)
+      REAL(8)              :: POS(3,NAT)
+      REAL(8)              :: ALAT
+      REAL(8)              :: RCOV(NAT)
+      REAL(8)              :: Q(NAT)
+      REAL(8)              :: RAD0(NAT)
+      REAL(8)              :: RAD(NAT)
+      REAL(8)              :: ETOT
+      INTEGER(4)           :: IAT,ip,if
+      integer(4),parameter :: np=40
+      integer(4),parameter :: nf=40
+      real(8)              :: x(np)
+      real(8)              :: y(np,nf)
+!     **************************************************************************
+      AEZARR(:)=(/12.D0,8.D0/)
+      ALAT=4.214D0/0.529177d0
+      RBASFCC(:,1)=(/0.0D0,0.5D0,0.5D0/)
+      RBASFCC(:,2)=(/0.5D0,0.0D0,0.5D0/)
+      RBASFCC(:,3)=(/0.5D0,0.5D0,0.0D0/)
+      POS(:,:)=0.D0
+      POS(1,2)=0.5D0
+      RBAS=RBASFCC*ALAT
+      POS=POS*ALAT
+      Q(:)=(/-2.d0,2.d0/)
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      CALL DFT$SETI4('TYPE',2)
+      CALL DFT$SETL4('SPIN',.FALSE.)
+      DO IAT=1,NAT
+        CALL ONEATOM$NEW(IAT,AEZARR(IAT))
+        CALL PERIODICTABLE$GET(NINT(AEZARR(IAT)),'R(COV)',RCOV(IAT))
+      ENDDO
+      rad0(:)=rcov(:)
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      open(unit=8,file='lattice_gnu.dat')
+      do ip=1,np
+        x(ip)=rad0(2)+0.2d0*real(ip-1)
+        do if=1,nf
+          rad(2)=x(ip)
+          rad(1)=2.0d0+0.2d0*real(if-1)
+          CALL LATTICE$ENERGY(NAT,RBAS,POS,Q,RAD,ETOT)
+          y(ip,if)=etot          
+          write(8,FMT='(30f10.5)')rad(1),rad(2),etot
+        enddo
+      enddo
+      close(8)
+      open(unit=8,file='lattice.dat')
+      do ip=1,np
+        write(8,FMT='(30f10.5)')x(ip),y(ip,:)
+      enddo
+      close(8)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LATTICE$ENERGY(NAT,RBAS,POS,Q,RAD,ETOT)
+      USE ONEATOM_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NAT
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      REAL(8)   ,INTENT(IN) :: POS(3,NAT)
+      REAL(8)   ,INTENT(IN) :: Q(NAT)
+      REAL(8)   ,INTENT(IN) :: RAD(NAT)
+      REAL(8)   ,INTENT(OUT):: ETOT
+      REAL(8)               :: DEDQ(NAT),DEDQ1(NAT),DEDRAD(NAT),FORCE(3,NAT)
+      INTEGER(4),parameter  :: ndiv=2
+      INTEGER(4)            :: IAT,IAT1,IAT2,it1,it2,it3
+      INTEGER(4)            :: NR
+      INTEGER(4)            :: GID
+      REAL(8)               :: DETOT
+      REAL(8)               :: DIS,DR(3)
+      REAL(8)   ,ALLOCATABLE:: R(:)
+      REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:),RHO(:),POT(:)
+      REAL(8)               :: VAL
+      REAL(8)               :: PI,y0
+      LOGICAL(4),PARAMETER  :: TPR=.true.
+      INTEGER(4)            :: nfilo
+!     **************************************************************************
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+      PI=4.D0*ATAN(1.D0)
+      y0=1.d0/sqrt(4.d0*pi)
+      GID=GIDONEATOM
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+      DO IAT=2,NAT
+        IF(GID.NE.THISARR(IAT)%GID) THEN
+          CALL ERROR$MSG('GRID ID MUST BE UNIQUE')
+          CALL ERROR$I4VAL('GID1',GID)
+          CALL ERROR$I4VAL('GID2',THISARR(IAT)%GID)
+          CALL ERROR$STOP('LATTICE$ENERGY')
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ENERGY OF COMPRESSED IONS                                           ==
+!     ==========================================================================
+      ETOT=0.D0
+      DO IAT=1,NAT
+        CALL ONEATOM(IAT,Q(IAT),RAD(IAT),DETOT,DEDQ(IAT),DEDRAD(IAT))
+      IF(TPR)WRITE(NFILO,FMT='(50("."),T1,"INDIVIDUAL ION-ENERGY",T50,F10.5)')DETOT
+        ETOT=ETOT+DETOT
+      ENDDO
+      IF(TPR)WRITE(NFILO,FMT='(50("."),T1,"TOTAL ION-ENERGY",T50,F10.5)')ETOT
+!
+!     ==========================================================================
+!     == MADELUNG ENERGY                                                      ==
+!     ==========================================================================
+      CALL MADELUNG(NAT,RBAS,POS,Q,DETOT,DEDQ1,FORCE)
+! POT(:)=MATMUL(MADMAT,Q)/SCALE
+! ETOT(:)=0.5D0*DOT_PRODUCT(POT,Q)
+      DEDQ=DEDQ+DEDQ1
+!      PRESSURE=ETOT/(3.D0*VOL)
+      ETOT=ETOT+DETOT
+      IF(TPR)WRITE(NFILO,FMT='(50("."),T1,"MADELUNG ENERGY",T50,F10.5)')DETOT
+!
+!     ==========================================================================
+!     == ELECTROSTATIC OVERLAP ENERGY AND PAULI REPULSION                     ==
+!     ==========================================================================
+      ALLOCATE(AUX(NR))
+      ALLOCATE(AUX1(NR))
+      ALLOCATE(RHO(NR))
+      ALLOCATE(POT(NR))
+      DETOT=0.D0
+      DO IAT1=1,NAT
+        DO IAT2=IAT1,NAT
+          DO IT1=-NDIV,NDIV
+            DO IT2=-NDIV,NDIV
+              DO IT3=-NDIV,NDIV
+                IF(IAT1.EQ.IAT2) THEN
+                  IF(IT1.LT.0) CYCLE
+                  IF(IT1.EQ.0) THEN
+                    IF(IT2.LT.0) CYCLE
+                    IF(IT2.EQ.0) THEN
+                      IF(IT3.LE.0) CYCLE
+                    END IF
+                  END IF
+                END IF
+                DR(:)=RBAS(:,1)*REAL(IT1)+RBAS(:,2)*REAL(IT2)+RBAS(:,3)*REAL(IT3)
+                DR(:)=POS(:,IAT2)-POS(:,IAT1)+DR(:)
+                DIS=SQRT(SUM(DR(:)**2))
+                IF(DIS.GT.RAD(IAT1)+RAD(IAT2)) CYCLE
+                AUX(:)=THISARR(IAT1)%RHO(:)
+                CALL SPHERICAL$SHIFTCENTER(GID,NR,DR,1,AUX,1,RHO)
+                POT(:)=THISARR(IAT2)%AEPOT(:)+THISARR(IAT2)%ETAPAULI(:,2)
+                AUX(:)=RHO(:)*POT(:)*R(:)**2
+                CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+                CALL RADIAL$VALUE(GID,NR,AUX,RAD(IAT2),VAL)
+                DETOT=DETOT+VAL-q(iat1)*q(iat2)/dis
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      IF(TPR)WRITE(NFILO,FMT='(50("."),T1,"ELECTROSTATIC OVERLAP",T50,F10.5)')DETOT
+      etot=etot+detot
+      DEALLOCATE(AUX)
+      DEALLOCATE(AUX1)
+      DEALLOCATE(RHO)
+!!$iat2=1
+!!$POT(:)=THISARR(IAT2)%AEPOT(:)+THISARR(IAT2)%ETAPAULI(:,1)-Q(iat2)/r(:)/y0
+!!$call writephi('vemb1',gid,nr,1,pot)
+!!$iat2=2
+!!$POT(:)=THISARR(IAT2)%AEPOT(:)+THISARR(IAT2)%ETAPAULI(:,1)-Q(iat2)/r(:)/y0
+!!$call writephi('vemb2',gid,nr,1,pot)
+!!$call writephi('etapauli1',gid,nr,1,THISARR(1)%ETAPAULI(:,1))
+!!$call writephi('etapauli2',gid,nr,1,THISARR(2)%ETAPAULI(:,1))
+!!$call writephi('aepot1',gid,nr,1,THISARR(1)%aepot(:))
+!!$call writephi('aepot2',gid,nr,1,THISARR(2)%aepot(:))
+!!$stop
+      DEALLOCATE(POT)
+!
+!     ==========================================================================
+!     == TRANSFORM RADIUS DERIVATIVE IN VOLUME DERIVATIVE                     ==
+!     ==========================================================================
+      IF(TPR)WRITE(NFILO,FMT='(50("."),T1,"TOTAL ENERGY",T50,F10.5)')ETOT
+      DEDRAD=DEDRAD/(4.D0*PI*RAD**2)
+      RETURN
+      END
