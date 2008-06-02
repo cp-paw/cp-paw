@@ -2355,6 +2355,8 @@ END IF
       COMPLEX(8)             :: CSVAR1,CSVAR2
       INTEGER(4)             :: NTASKS,THISTASK
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
+      real(8)   ,allocatable :: xk(:,:)
+      logical(4)             :: tinv
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$DENMAT')
                               CALL TIMING$CLOCKON('W:DENMAT')
@@ -2416,7 +2418,6 @@ END IF
           ENDDO
         ENDDO
       ENDDO
-      DEALLOCATE(OCC)
 !     == THE PROJECTIONS ARE IDENTICAL AND COMPLETE FOR EACH K-GROUP
 !     == EACH K-GROUP HOLDS ONLY THE WAVE FUNCTIONS BELONGING TO IT.
 !     == EACH PROCESSOR OF EACH K-GROUP ONLY ADDS UP A FRACTION OF THE PROJECTIONS
@@ -2466,10 +2467,32 @@ END IF
         ENDDO
       END IF
 !
+!     ==========================================================================
+!     ==  now calculate off-site density matrix                               ==
+!     ==========================================================================
+      CALL LOCALIZE$SWITCHCHIDENMAT(.TRUE.)
+      ALLOCATE(XK(3,NKPTL))
+      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          NBH=THIS%NBH
+          NB=THIS%NB
+          TINV=GSET%TINV
+          CALL LOCALIZE$CHIDENMAT(XK(:,IKPT),TINV,NB,OCC(1,IKPT,ISPIN),NDIM,NBH,MAP%NPRO,this%PROJ)
+        ENDDO
+      ENDDO
+      DEALLOCATE(XK)
+      call LOCALIZE$reportCHIDENMAT(6)
+      call LOCALIZE$nlexchange()
+stop 'forced stop in waves$denmat'
+!
+      DEALLOCATE(OCC)
                               CALL TIMING$CLOCKOFF('W:DENMAT')
                               CALL TRACE$POP
-     RETURN
-     END SUBROUTINE WAVES$DENMAT
+      RETURN
+      END SUBROUTINE WAVES$DENMAT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,LAMBDA,PROPSI &
@@ -4257,7 +4280,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             DO LMN=1,LMNX
               II=II+1    ! II=(LMN,IDIM,IB)
               PROPSI(IDIM,IB,IPRO-1+LMN)=PROPSI1(II)
-!PRINT*,'IAT,LMN,PROPSI',IAT,LMN,IB,PROPSI1(II)
             ENDDO
           ENDDO
         ENDDO
@@ -4268,12 +4290,13 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       DEALLOCATE(PROPSI1)
       DEALLOCATE(EIGR)
       DEALLOCATE(GVEC)
-!DO IB=1,NB
-!  DO LMN=1,LMNX
-!     PRINT*,'PROPSI ',IB,LMN,PROPSI(1,IB,LMN)
-!  ENDDO
-!ENDDO
-!STOP
+!!$DO IB=1,NB
+!!$  print*,'psi '
+!!$  DO LMN=1,LMNX
+!!$     PRINT*,'PROPSI ',IB,LMN,PROPSI(1,IB,LMN)
+!!$  ENDDO
+!!$ENDDO
+!!$STOP
                                CALL TIMING$CLOCKOFF('WAVES_PROJECTIONS')
       RETURN
       END

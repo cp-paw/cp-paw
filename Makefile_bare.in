@@ -229,7 +229,8 @@ OBJECTS3 = \
            ${OBJDIR}/paw_cg.o \
            ${OBJDIR}/paw_kpoints.o \
            ${OBJDIR}/paw_vext.o \
-           ${OBJDIR}/paw_vdw.o
+           ${OBJDIR}/paw_vdw.o \
+           ${OBJDIR}/paw_localize.o 
 #           ${OBJDIR}/paw_pdos.o
 #          ${OBJDIR}/paw_optic.o \
 #

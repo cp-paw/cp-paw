@@ -72,6 +72,11 @@ TYPE THISTYPE
   REAL(8)   ,POINTER :: POTXC(:)
   REAL(8)   ,POINTER :: UDOT(:,:)     ! HIGHEST NODLESS PHIDOT FUNCTION
   REAL(8)   ,POINTER :: UN(:,:)       ! HIGHEST NODLESS VALENCE STATE PER L
+  REAL(8)   ,POINTER :: Uc(:,:)       ! HIGHEST NODLESS core state
+  REAL(8)   ,POINTER :: UBOX(:,:)
+  REAL(8)   ,POINTER :: TUBOX(:,:)
+  REAL(8)   ,POINTER :: PHIBOX(:,:)
+  REAL(8)   ,POINTER :: TPHIBOX(:,:)
 END TYPE THISTYPE
 INTEGER(4)    ,PARAMETER   :: NATX=10
 TYPE(THISTYPE),TARGET,SAVE :: THISARR(NATX)
@@ -393,7 +398,7 @@ PRINT*,'CONSTRUCTING EMBEDDING POTENTIAL..........................'
         DEALLOCATE(VEMB)
         DEALLOCATE(RHOEXT)
       ENDDO
-      CALL WRITEPHI('VEMBEDDING.DAT',GID,NR,LMREPX,ION(1)%VEMB)
+!      CALL WRITEPHI('VEMBEDDING.DAT',GID,NR,LMREPX,ION(1)%VEMB)
 !
 !     ============================================================================
 !     == SELF-CONSISTENT CALCULATION OF THE DEFORMED ION                        ==
@@ -477,7 +482,7 @@ PRINT*,'SCF OF DEFORMED ION...........................................'
         WRITE(NFILO,FMT='(72("="))')
 !
 !       == MAP RESULT ONTO ION STRUCTURE =========================================
-        CALL WRITEPHI('POTIN.DAT',GID,NR,LMRX,POT)
+!        CALL WRITEPHI('POTIN.DAT',GID,NR,LMRX,POT)
         ALLOCATE(ION(IAT1)%EBG(NBG))
         ALLOCATE(ION(IAT1)%FBG(NBG))
         ALLOCATE(ION(IAT1)%PHI(NR,LMX,NBG))
@@ -505,18 +510,18 @@ PRINT*,'SCF OF DEFORMED ION...........................................'
 !     ============================================================================
 !     == INSPECT RESULTS                                                        ==
 !     ============================================================================
-      IAT1=1
-      LMRX=(ION(IAT1)%LRHOX+1)**2
-      DO IBG=1,NBG
-        WRITE(STRING,*)IBG
-        STRING='PHI'//TRIM(ADJUSTL(STRING))//'.DAT'
-        CALL WRITEPHI(STRING,GID,NR,LMX,ION(IAT1)%PHI(:,:,IBG))
-        WRITE(STRING,*)IBG
-        STRING='PHINLS'//TRIM(ADJUSTL(STRING))//'.DAT'
-        CALL WRITEPHI(STRING,GID,NR,LMX,ION(IAT1)%PHINLS(:,:,IBG))
-      ENDDO
-      CALL WRITEPHI('AEPOT.DAT',GID,NR,LMRX,ION(IAT1)%AEPOT)
-      CALL WRITEPHI('AERHO.DAT',GID,NR,LMRX,ION(IAT1)%AERHO)
+!!$      IAT1=1
+!!$      LMRX=(ION(IAT1)%LRHOX+1)**2
+!!$      DO IBG=1,NBG
+!!$        WRITE(STRING,*)IBG
+!!$        STRING='PHI'//TRIM(ADJUSTL(STRING))//'.DAT'
+!!$        CALL WRITEPHI(STRING,GID,NR,LMX,ION(IAT1)%PHI(:,:,IBG))
+!!$        WRITE(STRING,*)IBG
+!!$        STRING='PHINLS'//TRIM(ADJUSTL(STRING))//'.DAT'
+!!$        CALL WRITEPHI(STRING,GID,NR,LMX,ION(IAT1)%PHINLS(:,:,IBG))
+!!$      ENDDO
+!!$      CALL WRITEPHI('AEPOT.DAT',GID,NR,LMRX,ION(IAT1)%AEPOT)
+!!$      CALL WRITEPHI('AERHO.DAT',GID,NR,LMRX,ION(IAT1)%AERHO)
 !
 !     ==========================================================================
 !     == DETERMINE HARTREE ENERGY                                             ==
@@ -617,13 +622,13 @@ PRINT*,'CALCULATING H|\PHI>....'
         DO IR=1,NR
           IF(RHO(IR,1)*Y0.LT.1.D-6) FOUT(IR,:)=0.D0
         ENDDO
- CALL WRITEPHI('XCPOT.DAT',GID,NR,LMRX,FOUT)
+! CALL WRITEPHI('XCPOT.DAT',GID,NR,LMRX,FOUT)
         POT=POT+FOUT
         TESTPOTXC(:,:)=FOUT(:,:)
         XCEDEN(:,1)=XCEDEN(:,1)-ION(IAT1)%XCEDEN(:)+AUX
- CALL WRITEPHI('XCEDEN.DAT',GID,NR,LMRX,XCEDEN)
- CALL WRITEPHI('XCEDEN1.DAT',GID,NR,1,ION(1)%XCEDEN)
- CALL WRITEPHI('XCEDEN2.DAT',GID,NR,1,ION(2)%XCEDEN)
+! CALL WRITEPHI('XCEDEN.DAT',GID,NR,LMRX,XCEDEN)
+! CALL WRITEPHI('XCEDEN1.DAT',GID,NR,1,ION(1)%XCEDEN)
+! CALL WRITEPHI('XCEDEN2.DAT',GID,NR,1,ION(2)%XCEDEN)
 !
 !       ========================================================================
 !       == CORRECT XC ENERGY                                                  ==
@@ -641,22 +646,22 @@ PRINT*,'CALCULATING H|\PHI>....'
         DO LM1=1,LMRX
           AUX(:)=AUX(:)+RHOS(:,LM1)*XCEDEN(:,LM1)
         ENDDO
- CALL WRITEPHI('WXCEDEN.DAT',GID,NR,1,AUX)
- CALL WRITEPHI('WGHT.DAT',GID,NR,LMRX,RHOS)
+! CALL WRITEPHI('WXCEDEN.DAT',GID,NR,1,AUX)
+! CALL WRITEPHI('WGHT.DAT',GID,NR,LMRX,RHOS)
         CALL RADIAL$INTEGRAL(GID,NR,AUX*R(:)**2,SVAR)
         EXC=EXC+FOURPI*SVAR*Y0
 !
 PRINT*,' EXC?? ',FOURPI*SVAR*Y0
-IF(IAT1.EQ.1) THEN
-  CALL WRITEPHI('VTOTC1.DAT',GID,NR,LMRX,POT)
-  CALL WRITEPHI('RHOTOTC1.DAT',GID,NR,LMRX,RHO)
-  CALL WRITEPHI('RHOSC1.DAT',GID,NR,LMRX,RHOS)
-  CALL WRITEPHI('RHOS1.DAT',GID,NR,1,ION(IAT1)%AERHO(:,1))
-ELSE IF(IAT1.EQ.2) THEN
-  CALL WRITEPHI('VTOTC2.DAT',GID,NR,LMRX,POT)
-  CALL WRITEPHI('RHOTOTC2.DAT',GID,NR,LMRX,RHO)
-  CALL WRITEPHI('RHOSC2.DAT',GID,NR,LMRX,RHOS)
-END IF
+!!$IF(IAT1.EQ.1) THEN
+!!$  CALL WRITEPHI('VTOTC1.DAT',GID,NR,LMRX,POT)
+!!$  CALL WRITEPHI('RHOTOTC1.DAT',GID,NR,LMRX,RHO)
+!!$  CALL WRITEPHI('RHOSC1.DAT',GID,NR,LMRX,RHOS)
+!!$  CALL WRITEPHI('RHOS1.DAT',GID,NR,1,ION(IAT1)%AERHO(:,1))
+!!$ELSE IF(IAT1.EQ.2) THEN
+!!$  CALL WRITEPHI('VTOTC2.DAT',GID,NR,LMRX,POT)
+!!$  CALL WRITEPHI('RHOTOTC2.DAT',GID,NR,LMRX,RHO)
+!!$  CALL WRITEPHI('RHOSC2.DAT',GID,NR,LMRX,RHOS)
+!!$END IF
         HPHI(:,:,:)=0.D0
         TESTHHARTREEPHI(:,:,:)=0.D0
         TESTHXCPHI(:,:,:)=0.D0
@@ -1123,11 +1128,11 @@ PRINT*,'CALCULATING HAMILTON AND OVERLAPMATRIX ...'
 !!$            ENDDO
 !!$          ENDDO
 !!$        ENDDO
-DO IBG=1,NBG
-WRITE(STRING,*)IBG
-STRING='PHI'//TRIM(ADJUSTL(STRING))//'.DAT'
-CALL WRITEPHI(STRING,GID,NR,LMX,PHI(:,:,IBG))
-ENDDO
+!!$DO IBG=1,NBG
+!!$WRITE(STRING,*)IBG
+!!$STRING='PHI'//TRIM(ADJUSTL(STRING))//'.DAT'
+!!$CALL WRITEPHI(STRING,GID,NR,LMX,PHI(:,:,IBG))
+!!$ENDDO
 !!$!  
 !!$!       ========================================================================        
 !!$!       == NORMALIZE STATES TO ACCOUNT FOR POOR NUMERICS                      ==
@@ -1891,7 +1896,7 @@ PRINT*,'EOFI FROM AE ',EOFI(1:NB)
           UAT(NR-2:,IB)=0.D0
         END IF
       ENDDO
-      CALL WRITEPHI('UAT1.DAT',GID,NR,NB,UAT)
+!      CALL WRITEPHI('UAT1.DAT',GID,NR,NB,UAT)
 PRINT*,'EOFI FROM NODELESS ',EOFI(1:NB)
       DEALLOCATE(AUX)
 !
@@ -1982,16 +1987,16 @@ PRINT*,'EOFI FROM NODELESS ',EOFI(1:NB)
 !     ==========================================================================
 !     == DETERMINE CORE REPULSION POTENTIAL                                   ==
 !     ==========================================================================
-      CALL ONEATOM_CORE(IAT)
+!      CALL ONEATOM_CORE(IAT)
 !
 !     ==========================================================================
 !     ==  WRITE ANALYSIS FILES                                                ==
 !     ==========================================================================
-      CALL WRITEPHI('PHIAT.DAT',GID,NR,THIS%NB,THIS%PHIAT)
-      CALL WRITEPHI('UAT.DAT',GID,NR,THIS%NB,THIS%UAT)
-      CALL WRITEPHI('ETAC.DAT',GID,NR,THIS%NLC,THIS%ETACPAULI)
-      CALL WRITEPHI('VCPAULI.DAT',GID,NR,THIS%NLC,THIS%VCPAULI)
-      CALL WRITEPHI('OCPAULI.DAT',GID,NR,THIS%NLC,THIS%OCPAULI)
+!!$      CALL WRITEPHI('PHIAT.DAT',GID,NR,THIS%NB,THIS%PHIAT)
+!!$      CALL WRITEPHI('UAT.DAT',GID,NR,THIS%NB,THIS%UAT)
+!!$      CALL WRITEPHI('ETAC.DAT',GID,NR,THIS%NLC,THIS%ETACPAULI)
+!!$      CALL WRITEPHI('VCPAULI.DAT',GID,NR,THIS%NLC,THIS%VCPAULI)
+!!$      CALL WRITEPHI('OCPAULI.DAT',GID,NR,THIS%NLC,THIS%OCPAULI)
 PRINT*,'ONEATOM_NEW DONE..........................',IAT
       RETURN
       END
@@ -2079,30 +2084,21 @@ PRINT*,'ONEATOM_NEW DONE..........................',IAT
         L=IL-1
 !
 !       =========================================================================
-!       == CONSTRUCT HIGHEST NODELESS CORE STATE                               ==
-!       =========================================================================
-!!$        IC=0
-!!$        DO IB=1,NC
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          IC=IB
-!!$          EXIT
-!!$        ENDDO
-!
-!       =========================================================================
 !       == FIND ENERGY E OF BONDING STATE                                      ==
 !       =========================================================================
-!!$        DO I=NC+1,NB
-!!$          IF(LOFI(I).NE.L) CYCLE
-!!$          IB=I
-!!$          EXIT
-!!$        ENDDO
         IB=THIS%IBBOND(L+1)
-        IC=IB-1
-        IF(IC.GT.0) THEN
-          UN(:)=THIS%UAT(:,IC)
-        ELSE
-          UN(:)=0.D0
-        END IF        
+        do i=1,ib-1
+          if(lofi(i).ne.l) cycle
+          ic=i
+        enddo
+        if(ic.eq.0) then
+!         == no core state -> no core repulsion.... =============================
+          THIS%VCPAULI(:,IL)=0.d0
+          THIS%OCPAULI(:,IL)=0.d0
+          THIS%ETACPAULI(:,IL)=0.d0
+          cycle
+        end if
+        UN(:)=THIS%Ubox(:,IC)
         IF(IB.EQ.0) THEN
           E=0.D0
           GOTO 1000
@@ -2116,7 +2112,6 @@ PRINT*,'ONEATOM_NEW DONE..........................',IAT
           CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%ATOMPOT,THIS%DREL,0,UN,L,E,1,PHI)
           CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RCOV,Z0)
           Z0=Z0-0.5D0
-!PRINT*,'E,Z0 ',E,Z0,EOFI(IB)
           IF(ABS(2.D0*DX).LE.TOL) EXIT
           CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
         ENDDO
@@ -2176,8 +2171,8 @@ PRINT*,'ENERGY OF THE BINDING STATE FOR L= ',L,E
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IAT
-      REAL(8)   ,INTENT(IN) :: Q
-      REAL(8)   ,INTENT(IN) :: RAD
+      REAL(8)   ,INTENT(IN) :: Q    ! charge in electron charges
+      REAL(8)   ,INTENT(IN) :: RAD  ! radius of the spherical box
       REAL(8)   ,INTENT(OUT):: ETOT
       REAL(8)   ,INTENT(OUT):: DEDQ
       REAL(8)   ,INTENT(OUT):: DEDRAD
@@ -2200,7 +2195,10 @@ PRINT*,'ENERGY OF THE BINDING STATE FOR L= ',L,E
       REAL(8)   ,ALLOCATABLE:: RHO(:)
       REAL(8)   ,ALLOCATABLE:: DREL(:)
       REAL(8)   ,ALLOCATABLE:: PHI(:,:)
+      REAL(8)   ,ALLOCATABLE:: TPHI(:,:)
       REAL(8)   ,ALLOCATABLE:: PHI1(:,:)
+      REAL(8)   ,ALLOCATABLE:: UBOX(:,:)
+      REAL(8)   ,ALLOCATABLE:: TUBOX(:,:)
       REAL(8)   ,ALLOCATABLE:: PHIDOT(:)
       REAL(8)   ,ALLOCATABLE:: G(:)
       REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:)
@@ -2215,7 +2213,7 @@ PRINT*,'ENERGY OF THE BINDING STATE FOR L= ',L,E
       REAL(8)               :: X0,Z0,DX,XM,ZM,E
       REAL(8)               :: XMAX
       LOGICAL(4)            :: CONVG
-      INTEGER(4)            :: IB,IR,ITER,IRBOX,IL,L,LMAX
+      INTEGER(4)            :: IB,IR,ITER,IRBOX,IL,L,LMAX,ncount
       INTEGER(4)            :: IC
       INTEGER(4),PARAMETER  :: NITER=100
       REAL(8)   ,PARAMETER  :: TOL=1.D-5
@@ -2267,6 +2265,7 @@ REAL(8)    :: DEG,SVAR1
       ALLOCATE(DREL(NR));        DREL=THIS%DREL
       ALLOCATE(RHO(NR))
       ALLOCATE(PHI(NR,NB));      PHI(:,:)=0.D0
+      ALLOCATE(tPHI(NR,NB));     tPHI(:,:)=0.D0
       ALLOCATE(PHIDOT(NR))
       ALLOCATE(G(NR))
       ALLOCATE(AUX(NR))
@@ -2276,24 +2275,26 @@ REAL(8)    :: DEG,SVAR1
       XMAX=0.D0
       CONVG=.FALSE.
       CALL BROYDEN$NEW(NR,4,1.D0)
-      POTIN=AEPOT
+      POTIN=AEPOT   ! start with atomic potential
       DO ITER=1,NITER
-        DO IB=NC+1,NB
+        DO IB=1,NB
           G(:)=0.D0
           CALL BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RAD,DREL,G,NNOFI(IB),POTIN,EOFI(IB),PHI(:,IB))
+!         == normalize wave functions ==========================================
           AUX(:)=(R(:)*PHI(:,IB))**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
           PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
+!         == kinetic energy times wave function ================================
+          TPHI(:,IB)=-(potin(:)*Y0-EOFI(IB))*PHI(:,IB)        
         ENDDO
 !
 !       == DETERMINE OCCUPATIONS ===============================================
-        QVALENCE=AEZ+Q-REAL(SUM(2*(2*LOFI(1:NC)+1)),KIND=8)
-        CALL ONEATOM_OPTF(NB-NC,QVALENCE,KBT,LOFI(NC+1:NB),EOFI(NC+1:NB),FOFI(NC+1:NB),DEDQ)
+        CALL ONEATOM_OPTF(NB,aez+q,KBT,LOFI,EOFI,FOFI,DEDQ)
 !
 !       == DETERMINE DENSITY ===================================================
-        RHO(:)=THIS%RHOCORE(:)
-        DO IB=NC+1,NB
+        RHO(:)=0.d0
+        DO IB=1,NB
           RHO(:)=RHO(:)+FOFI(IB)*C0LL*PHI(:,IB)**2
         ENDDO
 !
@@ -2321,22 +2322,56 @@ REAL(8)    :: DEG,SVAR1
         CALL ERROR$STOP('ONEATOM')
       END IF
 !
+!     == map wave functions onto this ==========================================
+      IF(.NOT.ASSOCIATED(THIS%PHIBOX))ALLOCATE(THIS%PHIBOX(NR,NB))
+      IF(.NOT.ASSOCIATED(THIS%TPHIBOX))ALLOCATE(THIS%TPHIBOX(NR,NB))
+      THIS%PHIBOX(:,:)=PHI(:,:)
+      THIS%TPHIBOX(:,:)=TPHI(:,:)
+!
+!     ==========================================================================
+!     == CALCULATE NODELESS WAVE FUNCTIONS                                    ==
+!     ==========================================================================
+      ALLOCATE(UBOX(NR,NB))
+      ALLOCATE(TUBOX(NR,NB))
+      DO IB=1,NB
+        IC=0
+        DO I=1,IB-1
+          IF(LOFI(I).NE.LOFI(IB))CYCLE
+          IC=I
+        ENDDO
+        IF(IC.EQ.0) THEN
+          UBOX(:,IB)=PHI(:,IB)
+          TUBOX(:,IB)=TPHI(:,IB)
+        ELSE 
+          G=UBOX(:,IC)
+          AUX(:)=0.D0
+          CALL BOUNDSTATE(GID,NR,LOFI(IB),0,RAD,AUX,G,0,AEPOT,EOFI(IB),UBOX(:,IB))
+          TUBOX(:,IB)=G(:)+(EOFI(IB)-AEPOT(:)*Y0)*UBOX(:,IB)        
+        END IF
+      ENDDO
+!
+!     == map wave functions onto this ==========================================
+      IF(.NOT.ASSOCIATED(THIS%UBOX))ALLOCATE(THIS%UBOX(NR,NB))
+      IF(.NOT.ASSOCIATED(THIS%TUBOX))ALLOCATE(THIS%TUBOX(NR,NB))
+      THIS%UBOX(:,:)=UBOX(:,:)
+      THIS%TUBOX(:,:)=TUBOX(:,:)
+!
 !     ==========================================================================
 !     == CALCULATE PRESSURE                                                   ==
 !     ==========================================================================
       DEDRAD=0.D0
-      DO IB=NC+1,NB
+      DO IB=1,NB
         IF(FOFI(IB).EQ.0.D0) CYCLE
         CALL RADIAL$DERIVATIVE(GID,NR,PHI(:,IB),RAD,DER)
-        IF(DER.EQ.0.D0) CYCLE  ! AVOID CORE WAVE FUNCTIONS
-        G(:)=0.D0
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POTIN,DREL,SOFI(IB),G,LOFI(IB),EOFI(IB),1,PHI(:,IB))
-! NORMALIZATION NOT REQUIRED
- AUX=R (:)**2*PHI(:,IB)**2
- CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
- CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
- PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
-!
+        IF(abs(DER).lt.1.d-8) CYCLE  ! AVOID CORE WAVE FUNCTIONS
+!!$        G(:)=0.D0
+!!$        CALL SCHROEDINGER$SPHERICAL(GID,NR,POTIN,DREL,SOFI(IB),G,LOFI(IB),EOFI(IB),1,PHI(:,IB))
+!!$! NORMALIZATION NOT REQUIRED
+!!$ AUX=R (:)**2*PHI(:,IB)**2
+!!$ CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$ CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
+!!$ PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
+!!$!
         CALL RADIAL$VALUE(GID,NR,PHI(:,IB),RAD,VAL)
         CALL RADIAL$DERIVATIVE(GID,NR,PHI(:,IB),RAD,DER)
         G(:)=PHI(:,IB)         
@@ -2354,15 +2389,15 @@ REAL(8)    :: DEG,SVAR1
 !     ==========================================================================
 !     == CALCULATE TOTAL ENERGY                                               ==
 !     ==========================================================================
-      AUX(:)=(RHO(:)-THIS%RHOCORE(:))*AEPOT(:)*R(:)**2
+      AUX(:)=RHO(:)*AEPOT(:)*R(:)**2
       CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
       CALL RADIAL$VALUE(GID,NR,AUX1,RAD,SVAR)
-      EKIN=THIS%EKINC+SUM(EOFI(NC+1:NB)*FOFI(NC+1:NB))-SVAR
+      EKIN=SUM(EOFI*FOFI)-SVAR
       CALL MYVOFRHOWITHRAD(GID,NR,RAD,AEZ,RHO,AUX,AUX1,EH,EXC)
       ETOT=EKIN+EH+EXC-THIS%EREF
 !     == ENTROPY TERM OF THE ELECTRONS
       TS=0.D0
-      DO IB=NC+1,NB
+      DO IB=1,NB
         SVAR=REAL(2*(2*LOFI(IB)+1),KIND=8)
         F=FOFI(IB)/SVAR
         IF(F.LT.1.D-50) CYCLE
@@ -2391,6 +2426,11 @@ REAL(8)    :: DEG,SVAR1
       WRITE(NFILO,FMT='(72("="))')
 !
 !     ==========================================================================
+!     == DETERMINE CORE REPULSION POTENTIAL                                   ==
+!     ==========================================================================
+      CALL ONEATOM_CORE(IAT)
+!
+!     ==========================================================================
 !     == CALCULATE REPULSIVE POTENTIAL FOR EACH ANGULAR MOMENTUM              ==
 !     ==========================================================================
 PRINT*,'IN ONEATOM: CONSTRUCTING NODELESS WAVE FUNCTIONS .............'
@@ -2400,40 +2440,21 @@ PRINT*,'IN ONEATOM: CONSTRUCTING NODELESS WAVE FUNCTIONS .............'
       ALLOCATE(UDOT(NR,LMAX+1))
       DO IL=1,LMAX+1
         L=IL-1
-!
-!       =========================================================================
-!       == CONSTRUCT HIGHES NODELESS CORE STATE                                ==
-!       =========================================================================
-!!$        IC=0
-!!$        DO IB=1,NC
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          IC=IB
-!!$        ENDDO
-!!$        IF(IC.NE.0) THEN
-!!$          UN(:,IL)=THIS%UAT(:,IC)
-!!$        ELSE
-!!$          UN(:,IL)=0.D0
-!!$        END IF
-!
-!       =========================================================================
-!       == FIND BINDING ENERGY E                                               ==
-!       =========================================================================
-!!$        DO I=NC+1,NB
-!!$          IF(LOFI(I).NE.L) CYCLE
-!!$          IB=I
-!!$          EXIT
-!!$        ENDDO
-        IB=THIS%IBBOND(L+1)
+        IB=THIS%IBBOND(L+1)   ! band index of lowest valence state per l
         IC=0
         DO I=1,IB-1
           IF(LOFI(I).EQ.L)IC=I
         ENDDO
         IF(IC.GT.0) THEN
-          UN(:,IL)=THIS%UAT(:,IC)
+          UN(:,IL)=THIS%Ubox(:,IC)
         ELSE
           UN(:,IL)=0.D0
         END IF
 PRINT*,'IB,IC ',IB,IC
+!
+!       ========================================================================
+!       == DETERMINE VALENCE BOUND STATE IN THE BOX (ANTIBONDING)             ==
+!       ========================================================================
         IF(IB.EQ.0) THEN
           E=0.D0
           GOTO 1000
@@ -2518,7 +2539,7 @@ PRINT*,'ENERGY OF VALENCE STATE ',L,EOFI(IB),E
 !     == TEST                                                                 ==
 !     ==========================================================================
 PRINT*,'TESTING ONEATOM.................................'
-      CALL WRITEPHI('PHIBEFORE.DAT',GID,NR,NB-NC,PHI(:,NC+1:NB))
+!      CALL WRITEPHI('PHIBEFORE.DAT',GID,NR,NB-NC,PHI(:,NC+1:NB))
       ALLOCATE(PHI1(NR,NB));PHI1(:,:)=0.D0
       DO IB=NC+1,NB
         L=THIS%LOFI(IB)
@@ -2534,10 +2555,10 @@ PRINT*,'TESTING ONEATOM.................................'
         AUX(:)=R(:)**2*PHI(:,IB)**2
 !        IF(L+1.LE.THIS%NLC) AUX(:)=AUX(:)*(1.D0+THIS%OCPAULI(:,L+1))
         CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
- CALL WRITEPHI('AUX',GID,NR,1,AUX)
- CALL WRITEPHI('PHI',GID,NR,1,PHI(:,IB))
+! CALL WRITEPHI('AUX',GID,NR,1,AUX)
+! CALL WRITEPHI('PHI',GID,NR,1,PHI(:,IB))
         CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
- CALL WRITEPHI('AUX1',GID,NR,1,AUX1)
+! CALL WRITEPHI('AUX1',GID,NR,1,AUX1)
         PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
 !
 !       == PERFORM CALCULATION WITH INHOMOGENEITY   ============================
@@ -2554,8 +2575,6 @@ PRINT*,'TESTING ONEATOM.................................'
         PHI1(:,IB)=PHI1(:,IB)/SQRT(SVAR)
 
       ENDDO
-      CALL WRITEPHI('PHI_WITHPOT.DAT',GID,NR,NB-NC,PHI(:,NC+1:NB))
-      CALL WRITEPHI('PHI_WITHU.DAT',GID,NR,NB-NC,PHI1(:,NC+1:NB))
 !
 !     ==========================================================================
 !     == WRAP UP                                                              ==
@@ -2565,7 +2584,45 @@ PRINT*,'TESTING ONEATOM.................................'
       DEALLOCATE(UDOT)
       DEALLOCATE(POTH)
       DEALLOCATE(POTXC)
+! call ONEATOM_WRITE(THIS)
+PRINT*,'ONEATOM done.................................'
       RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ONEATOM_WRITE(THIS)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE ONEATOM_MODULE, ONLY : THISTYPE
+      IMPLICIT NONE
+      type(thistype),intent(in) :: this
+      INTEGER(4) :: GID
+      INTEGER(4) :: NR
+      INTEGER(4) :: NLC
+      INTEGER(4) :: NB
+!     **************************************************************************
+      GID=THIS%GID
+      NR=THIS%NR
+      NLC=THIS%NLC
+      NB=THIS%NB
+      IF(ASSOCIATED(THIS%ATOMPOT))CALL WRITEPHI('ATOMPOT',GID,NR,1,THIS%ATOMPOT)
+      IF(ASSOCIATED(THIS%ETAPAULI))CALL WRITEPHI('ETAPAULI',GID,NR,NLC,THIS%ETAPAULI)
+      IF(ASSOCIATED(THIS%ETACPAULI))CALL WRITEPHI('ETACPAULI',GID,NR,NLC,THIS%ETACPAULI)
+      IF(ASSOCIATED(THIS%VCPAULI))CALL WRITEPHI('VCPAULI',GID,NR,NLC,THIS%VCPAULI)
+      IF(ASSOCIATED(THIS%OCPAULI))CALL WRITEPHI('OCPAULI',GID,NR,NLC,THIS%OCPAULI)
+      IF(ASSOCIATED(THIS%PHIAT))CALL WRITEPHI('PHIAT',GID,NR,NB,THIS%PHIAT)
+      IF(ASSOCIATED(THIS%UAT))CALL WRITEPHI('UAT',GID,NR,NB,THIS%UAT)
+      IF(ASSOCIATED(THIS%RHO))CALL WRITEPHI('RHO',GID,NR,1,THIS%RHO)
+      IF(ASSOCIATED(THIS%AEPOT))CALL WRITEPHI('AEPOT',GID,NR,1,THIS%AEPOT)
+      IF(ASSOCIATED(THIS%POTH))CALL WRITEPHI('POTH',GID,NR,1,THIS%POTH)
+      IF(ASSOCIATED(THIS%POTXC))CALL WRITEPHI('POTXC',GID,NR,1,THIS%POTXC)
+      IF(ASSOCIATED(THIS%UN))CALL WRITEPHI('UN',GID,NR,NLC,THIS%UN)
+      IF(ASSOCIATED(THIS%UDOT))CALL WRITEPHI('UDOT',GID,NR,NLC,THIS%UDOT)
+      IF(ASSOCIATED(THIS%UC))CALL WRITEPHI('UC',GID,NR,NLC,THIS%UC)
+      IF(ASSOCIATED(THIS%UBOX))CALL WRITEPHI('UBOX',GID,NR,Nb,THIS%UBOX)
+      IF(ASSOCIATED(THIS%PHIBOX))CALL WRITEPHI('PHIBOX',GID,NR,Nb,THIS%PHIBOX)
+      STOP 'stop IN ONEATOM_WRITE'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -3314,7 +3371,7 @@ POTS(:,ITER)=POT
         ARRAY(:,2)=(EKIN+POT(:))*Y0
         ARRAY(:,3)=(EKIN+POT(:))*Y0+EKIN2(:)
         ARRAY(:,4)=(EKIN+POT(:))*Y0-EKIN2(:)
-        CALL WRITEPHI('EKIN.DAT',GID,NR,4,ARRAY)
+!        CALL WRITEPHI('EKIN.DAT',GID,NR,4,ARRAY)
       END IF
       RETURN
       END
@@ -4069,11 +4126,11 @@ ENDDO
       ALLOCATE(FOUT2(NR,LMX2))
 PRINT*,'PETER'
       CALL SPHERICAL$SHIFTCENTER(GID,NR,-DR,LMX1,FIN,LMX2,FOUT1)
-      CALL WRITEPHI('FOUT1.DAT',GID,NR,LMX2,FOUT1)
+!      CALL WRITEPHI('FOUT1.DAT',GID,NR,LMX2,FOUT1)
 PRINT*,'ALEX'
       CALL SPHERICAL$TRANSFORM(GID,NR,DR,LMX1,LMX2,FIN,FOUT2)
-      CALL WRITEPHI('FOUT2.DAT',GID,NR,LMX2,FOUT2)
-      CALL WRITEPHI('FOUTDIFF.DAT',GID,NR,LMX2,FOUT2-FOUT1)
+!      CALL WRITEPHI('FOUT2.DAT',GID,NR,LMX2,FOUT2)
+!      CALL WRITEPHI('FOUTDIFF.DAT',GID,NR,LMX2,FOUT2-FOUT1)
       DEALLOCATE(FIN)     
       DEALLOCATE(FOUT1)     
       DEALLOCATE(FOUT2)
@@ -4137,8 +4194,8 @@ END
       REAL(8)              :: RAD(NAT)
       REAL(8)              :: ETOT
       INTEGER(4)           :: IAT,ip,if
-      integer(4),parameter :: np=40
-      integer(4),parameter :: nf=40
+      integer(4),parameter :: np=30
+      integer(4),parameter :: nf=1
       real(8)              :: x(np)
       real(8)              :: y(np,nf)
 !     **************************************************************************
@@ -4169,7 +4226,7 @@ END
 !     ==========================================================================
       open(unit=8,file='lattice_gnu.dat')
       do ip=1,np
-        x(ip)=rad0(2)+0.2d0*real(ip-1)
+        x(ip)=7.8d0+0.2d0*real(ip-1)
         do if=1,nf
           rad(2)=x(ip)
           rad(1)=2.0d0+0.2d0*real(if-1)
@@ -4206,7 +4263,7 @@ END
       REAL(8)               :: DIS,DR(3)
       REAL(8)   ,ALLOCATABLE:: R(:)
       REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:),RHO(:),POT(:)
-      REAL(8)               :: VAL
+      REAL(8)               :: VAL,VAL1,VAL2
       REAL(8)               :: PI,y0
       LOGICAL(4),PARAMETER  :: TPR=.true.
       INTEGER(4)            :: nfilo
@@ -4275,13 +4332,47 @@ END
                 DR(:)=POS(:,IAT2)-POS(:,IAT1)+DR(:)
                 DIS=SQRT(SUM(DR(:)**2))
                 IF(DIS.GT.RAD(IAT1)+RAD(IAT2)) CYCLE
+!               == TRANSFORM DENSITY OF ATOM 1 TO SITE OF ATOM 2 ===========================
                 AUX(:)=THISARR(IAT1)%RHO(:)
                 CALL SPHERICAL$SHIFTCENTER(GID,NR,DR,1,AUX,1,RHO)
-                POT(:)=THISARR(IAT2)%AEPOT(:)+THISARR(IAT2)%ETAPAULI(:,2)
+                POT(:)=THISARR(IAT2)%ETAPAULI(:,1)+0.5D0*THISARR(IAT2)%POTXC(:)+0.5D0*(THISARR(IAT2)%POTH(:)-Q(IAT2)/Y0/R(:))
                 AUX(:)=RHO(:)*POT(:)*R(:)**2
                 CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-                CALL RADIAL$VALUE(GID,NR,AUX,RAD(IAT2),VAL)
-                DETOT=DETOT+VAL-q(iat1)*q(iat2)/dis
+                CALL RADIAL$VALUE(GID,NR,AUX1,RAD(IAT2),VAL)
+                DETOT=DETOT+VAL
+!               == TAKE CARE OF NUCLEUS ======================================================
+                POT(:)=THISARR(IAT2)%POTH(:)-Q(IAT2)/Y0/R(:)
+                CALL RADIAL$VALUE(GID,NR,POT,DIS,VAL)
+                DETOT=DETOT-0.5D0*VAL*Y0*THISARR(IAT1)%AEZ/DIS
+!               == TAKE CARE OF OVERLAP WITH NEIGBORING NUCLEUS ===============================
+                IF(RAD(IAT1).GT.DIS) THEN
+                   AUX(:)=THISARR(IAT1)%RHO(:)*Q(IAT2)/Y0*(1.D0/R(:)-1.D0/DIS)*R**2
+                   CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+                   CALL RADIAL$VALUE(GID,NR,AUX1,DIS,VAL1)
+                   CALL RADIAL$VALUE(GID,NR,AUX1,RAD(IAT1),VAL2)
+                   DETOT=DETOT+0.5D0*(VAL2-VAL1)
+                END IF
+! 
+!               == TRANSFORM DENSITY OF ATOM 2 TO SITE OF ATOM 1 ===========================
+                AUX(:)=THISARR(IAT2)%RHO(:)
+                CALL SPHERICAL$SHIFTCENTER(GID,NR,-DR,1,AUX,1,RHO)
+                POT(:)=THISARR(IAT1)%ETAPAULI(:,1)+0.5D0*THISARR(IAT1)%POTXC(:)+0.5D0*(THISARR(IAT1)%POTH(:)-Q(IAT1)/Y0/R(:))
+                AUX(:)=RHO(:)*POT(:)*R(:)**2
+                CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+                CALL RADIAL$VALUE(GID,NR,AUX1,RAD(IAT1),VAL)
+                DETOT=DETOT+VAL
+!               == TAKE CARE OF NUCLEUS ======================================================
+                POT(:)=THISARR(IAT1)%POTH(:)-Q(IAT1)/Y0/R(:)
+                CALL RADIAL$VALUE(GID,NR,POT,DIS,VAL)
+                DETOT=DETOT-0.5D0*VAL*Y0*THISARR(IAT2)%AEZ/DIS
+!               == TAKE CARE OF OVERLAP WITH NEIGBORING NUCLEUS ===============================
+                IF(RAD(IAT2).GT.DIS) THEN
+                   AUX(:)=THISARR(IAT2)%RHO(:)*Q(IAT1)/Y0*(1.D0/R(:)-1.D0/DIS)*R**2
+                   CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+                   CALL RADIAL$VALUE(GID,NR,AUX1,DIS,VAL1)
+                   CALL RADIAL$VALUE(GID,NR,AUX1,RAD(IAT2),VAL2)
+                   DETOT=DETOT+0.5D0*(VAL2-VAL1)
+                END IF
               ENDDO
             ENDDO
           ENDDO
@@ -4292,17 +4383,6 @@ END
       DEALLOCATE(AUX)
       DEALLOCATE(AUX1)
       DEALLOCATE(RHO)
-!!$iat2=1
-!!$POT(:)=THISARR(IAT2)%AEPOT(:)+THISARR(IAT2)%ETAPAULI(:,1)-Q(iat2)/r(:)/y0
-!!$call writephi('vemb1',gid,nr,1,pot)
-!!$iat2=2
-!!$POT(:)=THISARR(IAT2)%AEPOT(:)+THISARR(IAT2)%ETAPAULI(:,1)-Q(iat2)/r(:)/y0
-!!$call writephi('vemb2',gid,nr,1,pot)
-!!$call writephi('etapauli1',gid,nr,1,THISARR(1)%ETAPAULI(:,1))
-!!$call writephi('etapauli2',gid,nr,1,THISARR(2)%ETAPAULI(:,1))
-!!$call writephi('aepot1',gid,nr,1,THISARR(1)%aepot(:))
-!!$call writephi('aepot2',gid,nr,1,THISARR(2)%aepot(:))
-!!$stop
       DEALLOCATE(POT)
 !
 !     ==========================================================================

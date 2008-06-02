@@ -1,3 +1,5 @@
+! For heavy atoms the code crashes if the grid reached too far out
+!
 ! MIXPOT COULD USE SOME PRECONDITIONING OR BROYDEN
 ! IT IS NOT CLEAR WHICH REFERENCE ENERGY SHOULD BE TAKEN FOR DREL
 ! DERIVATIVE DOES NOT HANDLE THE FIRST POINT RIGHT?
@@ -329,6 +331,15 @@ call trace$pass('determine valence density')
           END IF
         ENDDO
 ! THE LOWEST STATE OF EACH ANGULAR MOMENTUM SHALL BE A BOUND STATE.
+        if(nnend+1.gt.naug) then
+          CALL ERROR$MSG('NNEND TOO LARGE (NNEND+1>NAUG)')
+          CALL ERROR$MSG('PROBABLY THE NUMBER OF PROJECTORS DIFFERS FOR DIFFERENT L-VALUES')
+          CALL ERROR$MSG('THIS IS NOT YET SUPPORTED')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('NNEND',NNEND)
+          CALL ERROR$I4VAL('NAUG',NAUG)
+          CALL ERROR$STOP('MAIN')
+        END IF 
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('LOWEST VALENCE STATE NOT FOUND')
           CALL ERROR$I4VAL('L',L)
@@ -461,8 +472,14 @@ PSEUDOPARTIALWAVEMETHOD='KRESSE'
 !       ========================================================================
         ALLOCATE(WORK2D(NR,NAUG))
         work2d=0.d0
-        DO IB=1,NAUG
-          WORK2D(:irbox,IB)=-TPSPHI(:irbox,IB,L+1)/PSPHI(:irbox,IB,L+1)+EGRID(IB,L+1)
+        do ir=1,irbox
+          DO IB=1,NAUG
+            if(psphi(ir,ib,l+1).ne.0.d0) then
+              WORK2D(ir,IB)=-TPSPHI(ir,IB,L+1)/PSPHI(ir,IB,L+1)+EGRID(IB,L+1)
+            else
+             work2d(ir,ib)=0.d0
+           end if
+          enddo
         ENDDO
         CALL WRITEPHI('PSPOTOFPHI'//TRIM(EXT),GID,NR,NAUG,WORK2D)
         DEALLOCATE(WORK2D)
@@ -2308,6 +2325,12 @@ ENDDO
       real(8)                    :: bandwidth
 !     *********************************************************************
       CALL RADIAL$R(GID,NR,R)
+      IF(NNEND+1.GT.NAUG) THEN
+        CALL ERROR$MSG('NNEND TOO LARGE (NNEND+1>NAUG)')
+        CALL ERROR$I4VAL('NNEND',NNEND)
+        CALL ERROR$I4VAL('NAUG',NAUG)
+        CALL ERROR$STOP('BIORTHOMATRICES_TAYLOR')
+      END IF
 !     =====================================================================
 !     == rescale partial waves
 !     =====================================================================
