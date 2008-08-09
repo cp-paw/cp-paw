@@ -2466,27 +2466,27 @@ END IF
           ENDDO
         ENDDO
       END IF
-!
-!     ==========================================================================
-!     ==  now calculate off-site density matrix                               ==
-!     ==========================================================================
-      CALL LOCALIZE$SWITCHCHIDENMAT(.TRUE.)
-      ALLOCATE(XK(3,NKPTL))
-      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
-      DO IKPT=1,NKPTL
-        DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)
-          NBH=THIS%NBH
-          NB=THIS%NB
-          TINV=GSET%TINV
-          CALL LOCALIZE$CHIDENMAT(XK(:,IKPT),TINV,NB,OCC(1,IKPT,ISPIN),NDIM,NBH,MAP%NPRO,this%PROJ)
-        ENDDO
-      ENDDO
-      DEALLOCATE(XK)
-      call LOCALIZE$reportCHIDENMAT(6)
-      call LOCALIZE$nlexchange()
-stop 'forced stop in waves$denmat'
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  now calculate off-site density matrix                               ==
+!!$!     ==========================================================================
+!!$      CALL LOCALIZE$SWITCHCHIDENMAT(.TRUE.)
+!!$      ALLOCATE(XK(3,NKPTL))
+!!$      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
+!!$      DO IKPT=1,NKPTL
+!!$        DO ISPIN=1,NSPIN
+!!$          CALL WAVES_SELECTWV(IKPT,ISPIN)
+!!$          CALL PLANEWAVE$SELECT(GSET%ID)
+!!$          NBH=THIS%NBH
+!!$          NB=THIS%NB
+!!$          TINV=GSET%TINV
+!!$          CALL LOCALIZE$CHIDENMAT(XK(:,IKPT),TINV,NB,OCC(1,IKPT,ISPIN),NDIM,NBH,MAP%NPRO,this%PROJ)
+!!$        ENDDO
+!!$      ENDDO
+!!$      DEALLOCATE(XK)
+!!$      call LOCALIZE$reportCHIDENMAT(6)
+!!$      call LOCALIZE$nlexchange()
+!!$stop 'forced stop in waves$denmat'
 !
       DEALLOCATE(OCC)
                               CALL TIMING$CLOCKOFF('W:DENMAT')

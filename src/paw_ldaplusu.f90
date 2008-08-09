@@ -33,6 +33,7 @@ INTEGER(4)             :: NCHI              !#(LOCAL ORBITALS)
 REAL(8)   ,POINTER     :: CHI(:,:)          !LOCAL (HEAD) ORBITALS
 REAL(8)   ,POINTER     :: ULITTLE(:,:,:,:,:)!SLATER INTEGRALS 
 REAL(8)   ,POINTER     :: DOWNFOLD(:,:)     !MAPS PARTIAL WAVES TO LOCAL ORBITALS
+REAL(8)   ,POINTER     :: CVX(:,:)          !CORE VALENCE EXCHANGE 
 END TYPE THISTYPE
 TYPE(THISTYPE),ALLOCATABLE,TARGET :: THISARRAY(:)
 TYPE(THISTYPE),POINTER :: THIS
@@ -184,7 +185,7 @@ END MODULE LDAPLUSU_MODULE
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      REAL(8)     ,INTENT(out):: VAL
+      REAL(8)     ,INTENT(OUT):: VAL
 !     **************************************************************************
       IF(ISP.EQ.0) THEN
         CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
@@ -268,8 +269,8 @@ END MODULE LDAPLUSU_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LENG
-      INTEGER(4)  ,INTENT(out) :: VAL(LENG)
-      integer(4)               :: isvar
+      INTEGER(4)  ,INTENT(OUT) :: VAL(LENG)
+      INTEGER(4)               :: ISVAR
 !     **************************************************************************
       IF(ISP.EQ.0) THEN
         CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
@@ -495,8 +496,8 @@ PRINT*,'JPAR   ',THIS%JPAR
       ALLOCATE(MATSS(NPHI,NPHI,2,2))
       ALLOCATE(DATH(NPHI,NPHI,NDIMD))
       ALLOCATE(U(NCHI,NCHI,NCHI,NCHI))
-!     == TRANSFORM FROM TOTAL/SPIN TO UP/DOWN REPRESENTATION ===================
 !
+!     == TRANSFORM FROM TOTAL/SPIN TO UP/DOWN REPRESENTATION ===================
       CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
 !
       IF(THIS%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
@@ -510,7 +511,6 @@ PRINT*,'JPAR   ',THIS%JPAR
           ENDDO
         ENDDO
       END IF
-
 !
 ! PRINTOUT FOR TESTING==========================================================
 DO IS1=1,NDIMD
@@ -571,6 +571,16 @@ ENDDO
 PRINT*,'E(U) ',ETOT
 !
 !     ==========================================================================
+!     ==  CORE VALENCE EXCHANGE INTERACTION                                   ==
+!     ==========================================================================
+      ALLOCATE(HAM1(NCHI,NCHI,2,2))
+      CALL LDAPLUSU_CVX(NCHI,LNX,LOX,RHO,THIS%CVX,ETOT1,HAM1)
+PRINT*,'ETOT FROM CORE VALENCE EXCHANGE ',ETOT1
+      ETOT=ETOT+ETOT1
+      HAM=HAM+HAM1
+      DEALLOCATE(HAM1)
+!
+!     ==========================================================================
 !     ==  DOUBLE COUNTING CORRECTION                                          ==
 !     ==========================================================================
       IF(THIS%FUNCTIONALID.EQ.'LDA+U'.OR.THIS%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
@@ -579,6 +589,7 @@ PRINT*,'E(U) ',ETOT
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
         DEALLOCATE(HAM1)
+!
       ELSE IF(THIS%FUNCTIONALID.EQ.'HYBRID') THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
         CALL LDAPLUSU_EDFT(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,RHO,ETOT1,HAM1)
@@ -657,15 +668,9 @@ PRINT*,'E(DC) ',ETOT1
       INTEGER(4)            :: LNXCHI 
       INTEGER(4),ALLOCATABLE:: LOXCHI(:)
       REAL(8)   ,ALLOCATABLE:: CHI(:,:)
-      REAL(8)   ,ALLOCATABLE:: CHI1(:,:)
       REAL(8)   ,ALLOCATABLE:: A(:,:)
-      REAL(8)   ,ALLOCATABLE:: A1(:,:)
       REAL(8)   ,ALLOCATABLE:: MAT(:,:)
-      REAL(8)   ,ALLOCATABLE:: MATINV(:,:)
       REAL(8)   ,ALLOCATABLE:: R(:)        
-      REAL(8)   ,ALLOCATABLE:: G(:)        
-      REAL(8)   ,PARAMETER  :: RCG=0.3D0
-      REAL(8)   ,ALLOCATABLE:: AUX(:)
       REAL(8)               :: SVAR1,SVAR2
       INTEGER(4)            :: IR
       INTEGER(4)            :: NX,N,LX,L,LN,LNCHI,LN0,NOFL,ISVAR
@@ -673,8 +678,6 @@ PRINT*,'E(DC) ',ETOT1
       INTEGER(4)            :: NORB(4)
       REAL(8)   ,ALLOCATABLE:: AMAT(:,:),BMAT(:,:)
 !     **************************************************************************
-!!$INTEGER(4) ::LNXPHI
-!!$REAL(8),ALLOCATABLE :: CHIFROMPHI(:,:),PROCHI(:,:)
                             CALL TRACE$PUSH('LDAPLUSU_CHIFROMPHI')
       CALL SETUP$ISELECT(ISP)
       CALL SETUP$GETI4('GID',GID)
@@ -722,6 +725,14 @@ PRINT*,'E(DC) ',ETOT1
         THIS%CHI(IR:,:)=0.D0
       ENDDO
 !
+!     == DETERMINE CORE-VALENCE EXCHANGE =========================================
+      IF(ASSOCIATED(THIS%CVX))DEALLOCATE(THIS%CVX)
+      ALLOCATE(THIS%CVX(LNXCHI,LNXCHI))
+      ALLOCATE(MAT(LNX,LNX))
+      CALL SETUP$GETR8A('CVX',LNX**2,MAT)
+      THIS%CVX(:,:)=MATMUL(TRANSPOSE(AMAT),MATMUL(MAT,AMAT))
+      DEALLOCATE(MAT)
+!
 !     == STORE DOWNFOLD MATRIX ===================================================
       IF(ASSOCIATED(THIS%DOWNFOLD))DEALLOCATE(THIS%DOWNFOLD)
       ALLOCATE(THIS%DOWNFOLD(LNXCHI,LNX))
@@ -737,251 +748,6 @@ PRINT*,'E(DC) ',ETOT1
 !ENDDO
                             CALL TRACE$POP()
       RETURN      
-!========================================================================
-!!$      CALL SETUP$ISELECT(ISP)
-!!$      CALL SETUP$GETI4('GID',GID)
-!!$      THIS%GID=GID
-!!$      CALL RADIAL$GETI4(GID,'NR',NR)
-!!$      THIS%NR=NR
-!!$      CALL SETUP$LNX(ISP,LNX)
-!!$      ALLOCATE(LOX(LNX))
-!!$      CALL SETUP$LOFLN(ISP,LNX,LOX)
-!!$      ALLOCATE(PHI(NR,LNX))
-!!$      CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,PHI)
-!!$!
-!!$!
-!!$!     ==========================================================================
-!!$!     ==  DIVIDE IN HEAD AN TAIL FUNCTIONS                                    ==
-!!$!     ==========================================================================
-!!$      ALLOCATE(R(NR))
-!!$      CALL RADIAL$R(GID,NR,R)
-!!$      ALLOCATE(AUX(NR))
-!!$!     == COUNT NUMBER OF PARTIAL WAVES PER L AS AS ESTIMATE FOR THE NUMBER OF CHI
-!!$!     == COUNT ONLY THOSE ANGULAR MOMENTUM CHANNELS THAT HAVE CORRELATED ORBITALS
-!!$!     == INCLUDE ALSO THE TAIL FUNCTIONS. THEY WILL BE REMOVED FROM THE SET LATER
-!!$      LX=MAXVAL(LOX)
-!!$      LNXCHI=0
-!!$      DO L=0,LX
-!!$        IF(THIS%NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-!!$        NOFL=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
-!!$          NOFL=NOFL+1
-!!$          LNXCHI=LNXCHI+1
-!!$        ENDDO
-!!$        IF(THIS%NORB(L+1).GT.NOFL) THEN
-!!$          CALL ERROR$MSG('#(CORRELATED ORBITALS) EXCEEDS #(PARTIAL WAVES)')
-!!$          CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
-!!$        END IF
-!!$      ENDDO
-!!$PRINT*,'CHIFROMPHI: ',L,NOFL,LNXCHI
-!!$!
-!!$!     == ORDER ACCORDING TO L ==================================================
-!!$      ALLOCATE(LOXCHI(LNXCHI))        
-!!$      ALLOCATE(CHI(NR,LNXCHI))        
-!!$!     == SET UP STARTING VALUE FOR THE LOCAL ORBITALS, I.E. PARTIAL WAVES
-!!$!     == |CHI_I>=SUM_I |PHI_J>A(J,I)
-!!$!     == LOCAL ORBITALS WITH THE SAME L STAND NEXT TO EACH OTHER!
-!!$      ALLOCATE(A(LNX,LNXCHI))        
-!!$      A(:,:)=0.D0
-!!$      LNCHI=0
-!!$      DO L=0,LX
-!!$        IF(THIS%NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
-!!$          LNCHI=LNCHI+1
-!!$          LOXCHI(LNCHI)=LOX(LN)    !ANGULAR MOMENTUM FOR THE LOCAL ORBITALS
-!!$          CHI(:,LNCHI)=PHI(:,LN)
-!!$          A(LN,LNCHI)=1.D0
-!!$        ENDDO
-!!$      ENDDO
-!!$PRINT*,'CHIFROMPHI: LNXPHI',LNX
-!!$PRINT*,'CHIFROMPHI: LOXPHI',LOX
-!!$PRINT*,'CHIFROMPHI: LNXCHI',LNXCHI
-!!$PRINT*,'CHIFROMPHI: LOXCHI',LOXCHI
-!!$!
-!!$!     ==========================================================================
-!!$!     == MAKE HEAD FUNCTION ANTIBONDING WITH NODE AT RCUT ======================
-!!$!     ==========================================================================
-!!$      RCUT=THIS%RCUT
-!!$      L=-1
-!!$      DO LN=1,LNXCHI
-!!$        IF(LOXCHI(LN).NE.L) NOFL=0    ! RESET ORBITAL COUNTER FOR EACH L
-!!$        L=LOXCHI(LN)
-!!$        NOFL=NOFL+1
-!!$        IF(NOFL.GT.THIS%NORB(L+1)) CYCLE  !ONLY CORRELATED ORBITALS WILL BE LOCALIZED
-!!$        IF(LN+1.GT.LNXCHI) CYCLE          !CHECK IF THERE IS A TAIL FUNCTION LEFT
-!!$        IF(LOXCHI(LN+1).NE.L) CYCLE       !CHECK IF THERE IS A TAIL FUNCTION LEFT
-!!$!       == IMPOSE NODE CONDITION================================================
-!!$        CALL RADIAL$VALUE(GID,NR,CHI(:,LN),RCUT,SVAR1)
-!!$        CALL RADIAL$VALUE(GID,NR,CHI(:,LN+1),RCUT,SVAR2)
-!!$        IF(SVAR1.EQ.0.D0.AND.SVAR2.EQ.0.D0) THEN
-!!$          CALL ERROR$MSG('PARTIAL WAVES ARE TRUNCATED INSIDE OF RCUT')
-!!$          CALL ERROR$MSG('THIS IS A FLAW OF THE IMPLEMENTATION')
-!!$          CALL ERROR$MSG('CHOOSE SMALLER RCUT')
-!!$          CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
-!!$        END IF
-!!$        CHI(:,LN)=CHI(:,LN)*SVAR2-CHI(:,LN+1)*SVAR1
-!!$        A(:,LN)=A(:,LN)*SVAR2-A(:,LN+1)*SVAR1
-!!$PRINT*,'A ',LN,A(:,LN)
-!!$!       == CUT AT RCUT           ===============================================
-!!$        DO IR=1,NR
-!!$          IF(R(IR).GT.RCUT) CHI(IR,LN)=0.D0
-!!$        ENDDO
-!!$!       == ORTHOGONALIZE TO THE LOWER HEAD FUNCTIONS ===========================
-!!$PRINT*,'CHIFROMPHI: LN',LN,LN-NOFL+1,LN-1
-!!$        DO LN1=LN-NOFL+1,LN-1
-!!$          AUX(:)=CHI(:,LN)*CHI(:,LN1)*R(:)**2
-!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
-!!$          CHI(:,LN)=CHI(:,LN)-CHI(:,LN1)*SVAR1
-!!$          A(:,LN)=A(:,LN)-A(:,LN1)*SVAR1
-!!$        ENDDO
-!!$!       == NORMALIZE HEAD FUNCTION =============================================
-!!$        AUX(:)=CHI(:,LN)**2*R(:)**2
-!!$        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
-!!$        SVAR1=1.D0/SQRT(SVAR1)
-!!$        CHI(:,LN)=CHI(:,LN)*SVAR1
-!!$        A(:,LN)=A(:,LN)*SVAR1
-!!$      END DO          
-!!$!
-!!$!     ==========================================================================
-!!$!     == DELOCALIZE TAIL FUNCTIONS                                            ==
-!!$!     ==========================================================================
-!!$      ALLOCATE(CHI1(NR,LNXCHI))
-!!$      CHI1(:,:)=CHI(:,:)
-!!$      ALLOCATE(A1(LNX,LNXCHI))        
-!!$      A1(:,:)=A(:,:)
-!!$      ALLOCATE(G(NR))
-!!$      G(:)=EXP(-(R(:)/RCG)**2)
-!!$      L=-1
-!!$      DO LN=1,LNXCHI
-!!$        IF(LOXCHI(LN).NE.L) THEN
-!!$          L=LOXCHI(LN)
-!!$          LN0=LN
-!!$          CYCLE
-!!$        END IF  
-!!$!       == MINIMIZE CONTRIBUTION NEAR THE CENTER 
-!!$        DO LN2=LN0,LN-1
-!!$          AUX(:)=G(:)*CHI1(:,LN)*CHI1(:,LN2)*R(:)**2
-!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
-!!$          AUX(:)=G(:)*CHI1(:,LN2)**2*R(:)**2
-!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
-!!$          SVAR1=SVAR1/SVAR2
-!!$          CHI1(:,LN)=CHI1(:,LN)-CHI1(:,LN2)*SVAR1
-!!$          A1(:,LN)=A1(:,LN)-A1(:,LN2)*SVAR1
-!!$        ENDDO
-!!$      ENDDO
-!!$!     = NOW MAP ONLY TAIL FUNCTIONS BACK AND LEAVE HEAD FUNCTIONS UNTOUCHED        
-!!$      L=-1
-!!$      DO LN=1,LNXCHI
-!!$        IF(LOXCHI(LN).NE.L) THEN
-!!$          L=LOXCHI(LN)
-!!$          NOFL=0
-!!$        END IF  
-!!$        NOFL=NOFL+1
-!!$        IF(NOFL.LE.THIS%NORB(L+1)) CYCLE ! LEAVE HEAD FUNCTIONS ALONE
-!!$        CHI(:,LN)=CHI1(:,LN)
-!!$        A(:,LN)=A1(:,LN)
-!!$      ENDDO
-!!$!
-!!$!     === CONSTRUCT TRANSFORMATION MATRIX FROM A ===============================
-!!$      LX=MAXVAL(LOXCHI)
-!!$      DO L=0,LX
-!!$!
-!!$        NX=0
-!!$        DO LN=1,LNXCHI
-!!$          IF(LOXCHI(LN).EQ.L) NX=NX+1
-!!$        ENDDO
-!!$        IF(NX.EQ.0) CYCLE   
-!!$
-!!$        ALLOCATE(MAT(NX,NX))
-!!$        ALLOCATE(MATINV(NX,NX))
-!!$!        
-!!$        N1=0
-!!$        DO LN1=1,LNXCHI
-!!$          L1=LOXCHI(LN1)
-!!$          IF(L1.NE.L) CYCLE
-!!$          N1=N1+1
-!!$          N2=0
-!!$          DO LN2=1,LNX
-!!$            L2=LOX(LN2)
-!!$            IF(L2.NE.L) CYCLE
-!!$            N2=N2+1
-!!$            MAT(N2,N1)=A(LN2,LN1)
-!!$          ENDDO
-!!$        ENDDO
-!!$        CALL LIB$INVERTR8(NX,MAT,MATINV)
-!!$        N1=0
-!!$        DO LN1=1,LNXCHI
-!!$          L1=LOXCHI(LN1)
-!!$          IF(L1.NE.L) CYCLE
-!!$          N1=N1+1
-!!$          N2=0
-!!$          DO LN2=1,LNX
-!!$            L2=LOX(LN2)
-!!$            IF(L2.NE.L) CYCLE
-!!$            N2=N2+1
-!!$            A(LN2,LN1)=MATINV(N1,N2) ! A IT TRANSPOSED SO THAT THE INDICES MATCH
-!!$          ENDDO
-!!$        ENDDO
-!!$        DEALLOCATE(MAT)
-!!$        DEALLOCATE(MATINV)
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     === REMOVE TAIL FUNCTIONS ================================================
-!!$!     ==========================================================================
-!!$      LN1=0
-!!$      L=-1
-!!$      DO LN=1,LNXCHI
-!!$        IF(L.NE.LOXCHI(LN)) THEN
-!!$          L=LOXCHI(LN)
-!!$          N=0
-!!$          NX=THIS%NORB(L+1)
-!!$        END IF
-!!$        N=N+1
-!!$        IF(N.LE.NX) THEN
-!!$          LN1=LN1+1
-!!$          LOXCHI(LN1)=LOXCHI(LN)
-!!$          CHI(:,LN1)=CHI(:,LN)
-!!$!         -- A HAS BEEN INVERTED. THEREFORE THE CHI-INDEX IS LEFT 
-!!$!         -- AND THE PHI-INDEX IN ON THE RIGHT HAND SIDE
-!!$          A(:,LN1)=A(:,LN)  
-!!$        END IF
-!!$      ENDDO
-!!$      LNXCHI=LN1
-!!$
-!!$!PRINT*,'== WRITE CHI.DAT'
-!!$!OPEN(UNIT=109,FILE='CHI.DAT',FORM='FORMATTED')
-!!$!DO IR=1,NR
-!!$!  WRITE(109,*)R(IR),CHI(IR,1:LNXCHI)
-!!$!ENDDO
-!!$!CLOSE(109)
-!!$!STOP 'FORCED AFTER WRITING CHI'
-!!$!
-!!$!     ==========================================================================
-!!$!     ==  CUT OF SUPPORT FUNCTIONS                                            ==
-!!$!     ==========================================================================
-!!$      THIS%LNXCHI=LNXCHI
-!!$      ALLOCATE(THIS%LOXCHI(LNXCHI))
-!!$      THIS%LOXCHI=LOXCHI(1:LNXCHI)
-!!$      THIS%NCHI=SUM(2*LOXCHI(1:LNXCHI)+1)
-!!$      ALLOCATE(THIS%CHI(NR,LNXCHI))
-!!$      THIS%CHI=CHI(:,1:LNXCHI)
-!!$      IF(ASSOCIATED(THIS%DOWNFOLD))DEALLOCATE(THIS%DOWNFOLD)
-!!$      ALLOCATE(THIS%DOWNFOLD(LNXCHI,LNX))
-!!$      DO LN=1,LNXCHI
-!!$         THIS%DOWNFOLD(LN,:)=A(:,LN)
-!!$      ENDDO
-!!$
-!!$!
-!!$!     ==========================================================================
-!!$!     ==  CLEAN UP                                                            ==
-!!$!     ==========================================================================
-!!$      DEALLOCATE(CHI)
-!!$      DEALLOCATE(R)
-!!$                            CALL TRACE$POP()
-!!$      RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -2049,6 +1815,43 @@ PRINT*,'EH ',SVAR
         ENDDO
       ENDDO                    
       DEALLOCATE(OVER)
+      RETURN
+      END
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU_CVX(NCHI,LNX,LOX,RHO,DH,ETOT,HAM)
+!     **************************************************************************
+!     ** ADD THE CORE VALENCE EXCHANGE POTENTIAL                              **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NCHI
+      INTEGER(4),INTENT(IN) :: LNX
+      INTEGER(4),INTENT(IN) :: LOX(LNX)
+      COMPLEX(8),INTENT(IN) :: RHO(NCHI,NCHI,2,2)
+      REAL(8)   ,INTENT(IN) :: DH(LNX,LNX)
+      REAL(8)   ,INTENT(OUT):: ETOT
+      COMPLEX(8),INTENT(OUT):: HAM(NCHI,NCHI,2,2)
+      INTEGER(4)            :: LN1,LN2,LMN1,LMN2,LMN1A,LMN2A
+      INTEGER(4)            :: L,IM
+!     **************************************************************************
+      ETOT=0.D0
+      HAM(:,:,:,:)=(0.D0,0.D0)
+      DO LN1=1,LNX
+        L=LOX(LN1)
+        DO LN2=1,LNX
+          IF(LOX(LN2).NE.L) CYCLE
+          LMN1A=SUM(LOX(1:LN1-1))
+          LMN2A=SUM(LOX(1:LN2-1))
+          DO IM=1,2*L+1
+            LMN1=LMN1A+IM
+            LMN2=LMN2A+IM
+            ETOT=ETOT+(RHO(LMN1,LMN2,1,1)+RHO(LMN1,LMN2,2,2))*DH(LN2,LN1)
+            HAM(LMN1,LMN2,1,1)=HAM(LMN1,LMN2,1,1)+DH(LN1,LN2)
+            HAM(LMN1,LMN2,2,2)=HAM(LMN1,LMN2,2,2)+DH(LN1,LN2)
+         ENDDO
+        ENDDO
+      ENDDO
       RETURN
       END
 

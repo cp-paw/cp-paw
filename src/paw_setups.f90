@@ -1,9 +1,10 @@
-!=======================================================================
-!=======================================================================
-!=======================================================================
-!====      FORMFACTORS                                              ====
-!=======================================================================
-!=======================================================================
+!===============================================================================
+!===============================================================================
+!===============================================================================
+!====      FORMFACTORS                                                      ====
+!===============================================================================
+!===============================================================================
+!===============================================================================
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE SETUP_MODULE
@@ -48,8 +49,8 @@ MODULE SETUP_MODULE
 !**    SETI4A('NOFLCHI',4,NOFL)                                               **
 !**    GETI4('LNXCHI',LNXCHI)                                                 **
 !**    GETI4A('LOXCHI',LNXCHI,LOXCHI)                                         **
-!**    GETr8A('AMATCHI',LNXPHI*LNXCHI,AMAT)                                   **
-!**    GETr8A('BMATCHI',LNXCHI*LNXPHI,BMAT)                                   **
+!**    GETR8A('AMATCHI',LNXPHI*LNXCHI,AMAT)                                   **
+!**    GETR8A('BMATCHI',LNXCHI*LNXPHI,BMAT)                                   **
 !**                                                                           **
 !**                                              P.E. BLOECHL, (1991-2008)    **
 !*******************************************************************************
@@ -122,16 +123,16 @@ END TYPE FASTACCESS_TYPE
 TYPE(FASTACCESS_TYPE),ALLOCATABLE :: FASTACCESS(:)
 END MODULE SETUP_MODULE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$ISELECT(I)
-!     ******************************************************************
-!     **  SELECTS A SETUP PER INTEGER INDEX                           **
-!     ******************************************************************
+!     **************************************************************************
+!     **  SELECTS A SETUP PER INTEGER INDEX                                   **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: I
       INTEGER(4)            :: J
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ALLOCATED(FASTACCESS)) THEN
         IF(.NOT.ASSOCIATED(FIRST)) THEN
           CALL ERROR$MSG('NO SETUPS DEFINED')
@@ -161,16 +162,16 @@ END MODULE SETUP_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$SELECT(ID)
-!     ******************************************************************
-!     **  SELECTS A SETUP PER ID                                      **
-!     **  AND CREATES A NEW, IF IT DOES NOT EXIST                     **
-!     ******************************************************************
+!     **************************************************************************
+!     **  SELECTS A SETUP PER ID                                              **
+!     **  AND CREATES A NEW, IF IT DOES NOT EXIST                             **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-!     ******************************************************************
+!     **************************************************************************
 !
 !     == CHECK IF ALREADY SELECTED
       IF(ASSOCIATED(THIS)) THEN
@@ -243,7 +244,7 @@ END MODULE SETUP_MODULE
       RETURN
       END 
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$GETCH(ID,VAL)
 !     ******************************************************************
 !     **  COLLECTS INTERNAL DATA                                      **
@@ -470,21 +471,26 @@ PRINT*,'FROM SETUP$GETCH ',VAL
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$GETR8A(ID,LEN,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
       INTEGER(4)               :: NR
-!     ******************************************************************
+      INTEGER(4)               :: lrhox
+!     **************************************************************************
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
+!
+!     ==========================================================================
+!     == PROJECTOR FUNCTIONS                                                  ==
+!     ==========================================================================
       IF(ID.EQ.'PRO') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -492,6 +498,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%PRO,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'AEPHI') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -499,6 +509,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%AEPHI,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'PSPHI') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -506,6 +520,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%PSPHI,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'NDLSPHI') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -513,6 +531,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%UPHI,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'NDLSTPHI') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -520,6 +542,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%TUPHI,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'AECORE') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -527,6 +553,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=THIS%AECORE
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'PSCORE') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -534,6 +564,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=THIS%PSCORE
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'VADD') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -542,6 +576,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=THIS%VADD
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'DEKIN') THEN
         IF(LEN.NE.THIS%LNX**2) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -549,6 +587,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%DTKIN,(/LEN/))
+!
+!     ==========================================================================
+!     ==  overlap difference matrix elements <aepsi|aepsi>-<pspsi|pspsi>      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'DO') THEN
         IF(LEN.NE.THIS%LNX**2) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -556,7 +598,27 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%DOVER,(/LEN/))
+!
+!     ==========================================================================
+!     ==  core valence exchange matrix elements                               ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'CVX') THEN
+        IF(LEN.NE.THIS%LNX**2) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+!
+!       == calculate core-valence exchange matrix elements =====================
+        lrhox=int(sqrt(real(this%lmrx-1)+1.d-8))
+        CALL SETUP_CVXMAT(this%GID,NR,this%LNX,THIS%LOX,THIS%AEPHI &
+     &                   ,this%NC,THIS%LB,THIS%AEPSI,LRHOX,VAL)
+!
 ! SANTOS040616 BEGIN
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'FB') THEN
         IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -564,6 +626,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%FB,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'EB') THEN
         IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -571,6 +637,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%EB,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'AECOREPSI') THEN
         IF(LEN.NE.THIS%NC*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -578,6 +648,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%AEPSI,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'ATOMICAEPOT') THEN
         IF(LEN.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -586,6 +660,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
         END IF
         VAL(:)=THIS%AEPOT(:)
 ! SANTOS040616 END
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'FOFC') THEN
         IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -596,6 +674,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
         END IF
         VAL=RESHAPE(THIS%FB,(/LEN/))
 !     == ATOMIC ENERGIES OF THE CORE STATES ===========================
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'EOFC') THEN
         IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -603,6 +685,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%EB,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'NUCPOT') THEN
         IF(LEN.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -610,6 +696,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         CALL SETUP_NUCPOT(THIS%GID,NR,THIS%AEZ,VAL)
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'AMATCHI') THEN
         CALL SETUP_RENEWLOCORB()
         IF(LEN.NE.THIS%LOCORBLNX*THIS%LNX) THEN
@@ -618,6 +708,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%LOCORBAMAT,(/LEN/))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'BMATCHI') THEN
         CALL SETUP_RENEWLOCORB()
         IF(LEN.NE.THIS%LOCORBLNX*THIS%LNX) THEN
@@ -626,6 +720,10 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%LOCORBBMAT,(/LEN/))
+!
+!     ==========================================================================
+!     ==  WRONG ID                                                            ==
+!     ==========================================================================
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -634,7 +732,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
       RETURN
       END  
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$GETFOFG(ID,TDER,IND,NG_,G2,CELLVOL,F)
 !     ******************************************************************
 !     **                                                              **
@@ -743,7 +841,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_READ
 !     ******************************************************************
 !     **  READ SELECTED SETUP                                         **
@@ -881,7 +979,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
         CALL SETUPREAD$GETI4A('LOFC',NC,THIS%LB)
         CALL SETUPREAD$GETR8A('FOFC',NC,THIS%FB)
         CALL SETUPREAD$GETR8A('EOFC',NC,THIS%EB)
-        THIS%AEPSI=0.D0
+        CALL SETUPREAD$GETR8A('AEPSICORE',nrx*NC,THIS%AEPSI)
       ELSE
         CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
      &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &
@@ -1776,12 +1874,12 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4)             :: LN,L,I,NR
 !     **************************************************************************
       IF(THIS%LOCORBINI) RETURN
-print*,'a1',THIS%LOCORBNOFL
-print*,'a2',THIS%LOCORBlnx
+PRINT*,'A1',THIS%LOCORBNOFL
+PRINT*,'A2',THIS%LOCORBLNX
 !
 !     == REALLOCATE DATA =======================================================
       IF(SUM(THIS%LOCORBNOFL).NE.THIS%LOCORBLNX) THEN
-print*,'b'
+PRINT*,'B'
         THIS%LOCORBLNX=SUM(THIS%LOCORBNOFL)
         IF(ASSOCIATED(THIS%LOCORBLOX)) DEALLOCATE(THIS%LOCORBLOX)
         IF(ASSOCIATED(THIS%LOCORBAMAT)) DEALLOCATE(THIS%LOCORBAMAT)
@@ -1790,11 +1888,11 @@ print*,'b'
         ALLOCATE(THIS%LOCORBAMAT(THIS%LNX,THIS%LOCORBLNX))
         ALLOCATE(THIS%LOCORBBMAT(THIS%LOCORBLNX,THIS%LNX))
       END IF
-print*,'c'
+PRINT*,'C'
 !
 !     == RECALCULATE LOCAL ORBITALS ============================================
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
-      CALL SETUP_CHIFROMPHI(THIS%GID,NR,this%lnx,THIS%LOX,THIS%AEPHI &
+      CALL SETUP_CHIFROMPHI(THIS%GID,NR,THIS%LNX,THIS%LOX,THIS%AEPHI &
      &                 ,THIS%LOCORBNOFL,THIS%LOCORBRAD,THIS%LOCORBLNX &
      &                 ,THIS%LNX,THIS%LOCORBLOX,THIS%LOCORBAMAT,THIS%LOCORBBMAT)
       RETURN
@@ -1843,7 +1941,7 @@ print*,'c'
       INTEGER(4)            :: N1,N2,LN1,LN2,L1,L2
       CHARACTER(64)         :: FILE
 !     **************************************************************************
-                            CALL TRACE$PUSH('setup_CHIFROMPHI')
+                            CALL TRACE$PUSH('SETUP_CHIFROMPHI')
 !
 !     ==========================================================================
 !     ==  COLLECT DATA FROM SETUP OBJECT                                      ==
@@ -2104,3 +2202,111 @@ print*,'c'
                             CALL TRACE$POP()
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_CVXMAT(GID,NR,LNX,LOX,AEPHI,NC,LOFC,PSIC,LRHOX,MAT)
+!     **************************************************************************
+!     **  CORE-VALENCE EXCHANGE MATRIX ELEMENTS                               **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: LNX
+      INTEGER(4),INTENT(IN) :: LOX(LNX)      ! ANGULAR MOMENTA OF PARTIAL WAVES
+      REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX) ! AE PARTIAL WAVES
+      INTEGER(4),INTENT(IN) :: NC            ! #(CORE STATES)
+      INTEGER(4),INTENT(IN) :: LOFC(NC)      ! ANGULAR MOMENTA OF CORE STATES
+      REAL(8)   ,INTENT(IN) :: PSIC(NR,NC)   ! CORE STATES
+      INTEGER(4),INTENT(IN) :: LRHOX         ! max angular momentum of density
+      REAL(8)   ,INTENT(OUT):: MAT(LNX,LNX)  ! core valence x matrix elements
+      INTEGER(4)            :: LX  ! MAX ANGULAR MOMENTUM PARTIAL WAVES
+      INTEGER(4)            :: LMX ! MAX #(ANGULAR MOMENTA) OF PARTIAL WAVES
+      INTEGER(4)            :: LCX ! HIGHEST ANGULAR MOMENTUM OF CORE STATES
+      REAL(8)               :: CG
+      REAL(8)               :: RHO1(NR)
+      REAL(8)               :: AUX(NR),POT(NR)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: VAL
+      REAL(8)   ,ALLOCATABLE:: FACTOR(:,:,:)
+      INTEGER(4)            :: LMCA
+      INTEGER(4)            :: LM1,LC,LRHO,LMC1A,IMC,LMC,LMRHOA,IMRHO,LMRHO
+      INTEGER(4)            :: LN1,L1,IC,LN2,L2
+      LOGICAL(4),PARAMETER  :: TPRINT=.false.
+!     **************************************************************************
+      LX=MAXVAL(LOX)
+      LMX=(LX+1)**2
+      LCX=MAXVAL(LOFC)
+      ALLOCATE(FACTOR(LX+1,LRHOX+1,LCX+1))
+      CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     == INCLUDE ANGULAR INTEGRATIONS                                         ==
+!     ==========================================================================
+      FACTOR=0.D0
+      DO L1=0,LX
+        LM1=L1**2+1
+        DO LC=0,LCX
+          DO LRHO=0,LRHOX
+            LMCA=LC**2
+            DO IMC=1,2*LC+1
+              LMC=LMCA+IMC
+              LMRHOA=LRHO**2
+              DO IMRHO=1,2*LRHO+1
+                LMRHO=LMRHOA+IMRHO
+                CALL SPHERICAL$GAUNT(LM1,LMC,LMRHO,CG)
+                FACTOR(L1+1,LRHO+1,LC+1)=FACTOR(L1+1,LRHO+1,LC+1)+CG**2
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == WORK OUT RADIAL INTEGRATIONS                                         ==
+!     ==========================================================================
+      MAT(:,:)=0.D0
+      DO LN1=1,LNX
+        L1=LOX(LN1)
+        DO IC=1,NC
+          LC=LOFC(IC)
+          RHO1(:)=AEPHI(:,LN1)*PSIC(:,IC)
+          DO LRHO=0,LRHOX
+            CALL RADIAL$POISSON(GID,NR,LRHO,RHO1,POT)
+            DO LN2=1,LN1  ! MATRIX IS SYMMETRIC
+              L2=LOX(LN2)
+              IF(L2.NE.L1) CYCLE
+              AUX(:)=R(:)**2*POT(:)*PSIC(:,IC)*AEPHI(:,LN2)
+              CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
+              MAT(LN1,LN2)=MAT(LN1,LN2)-FACTOR(L1+1,LRHO+1,LC+1)*VAL
+              MAT(LN2,LN1)=MAT(LN1,LN2)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(FACTOR)
+!
+!     ==========================================================================
+!     ==  WRITE FOR TEST PURPOSES                                             ==
+!     ==========================================================================
+      IF(TPRINT) THEN
+        PRINT*,'NOW THE MATRIX FOR THE CORE VALENCE EXCHANGE INTERACTION'
+        DO LN1=1,LNX
+          L1=LOX(LN1)
+          DO LN2=1,LNX
+            L2=LOX(LN2)
+            WRITE(*,FMT='(4I3,10F18.10)')LN1,L1,LN2,L2,MAT(LN1,LN2)
+          ENDDO
+        ENDDO
+        STOP
+      END IF
+      RETURN
+      END      
+     
+
+
+
+
+
+
+

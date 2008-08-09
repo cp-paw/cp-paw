@@ -243,7 +243,7 @@
 !     **  WITH R**L FROM THE INSIDE AND FROM THE OUTSIDE WITH VALUE ZERO      **
 !     **  AND FINITE SLOPE                                                    **
 !     **                                                                      **
-!     **  THE NONRELATIVISTIC SOLUTION IS OBTAINED BY SETTINH DREL=0          **
+!     **  THE NONRELATIVISTIC SOLUTION IS OBTAINED BY SETTINg DREL=0          **
 !     **                                                                      **
 !     **  ATTENTION! THE ROUTINE IS NOT GUARDED AGAINST OVERFLOW DUE          **
 !     **    TO THE EXPONENTIAL INCREASE OF THE SOLUTION                       **

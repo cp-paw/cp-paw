@@ -34,57 +34,6 @@ TYPE ION_TYPE
   REAL(8)            :: EXC
 END TYPE ION_TYPE
 END MODULE SESM_MODULE
-!
-!........1.........2.........3.........4.........5.........6.........7.........8
-MODULE ONEATOM_MODULE
-TYPE THISTYPE
-  INTEGER(4)         :: GID
-  INTEGER(4)         :: NR
-  REAL(8)            :: AEZ=-1.D0
-  REAL(8)            :: EREF
-  INTEGER(4)         :: NB
-  INTEGER(4)         :: NC
-  REAL(8)   ,POINTER :: ATOMPOT(:)
-  REAL(8)            :: EKINC
-  REAL(8)   ,POINTER :: RHOCORE(:)
-  INTEGER(4)         :: NLC             ! NUMBER CORE ANGULAR MOMENTA
-  INTEGER(4),POINTER :: IBBOND(:)       ! BAND INDEX OF LOWEST VALENCE STATE PER L
-  REAL(8)   ,POINTER :: ETAPAULI(:,:)   ! VALENCE REPULSION POTENTIAL
-  REAL(8)   ,POINTER :: ETACPAULI(:,:)  ! CORE REPULSION POTENTIAL
-  REAL(8)   ,POINTER :: VCPAULI(:,:)    ! CORE REPULSION POTENTIAL
-  REAL(8)   ,POINTER :: OCPAULI(:,:)    ! CORE REPULSION POTENTIAL
-  REAL(8)   ,POINTER :: PHIAT(:,:)      ! ATOMIC WAVE FUNCTIONS
-  REAL(8)   ,POINTER :: TPHIAT(:,:)     ! ATOMIC WAVE FUNCTIONS
-  REAL(8)   ,POINTER :: UAT(:,:)        ! NODELESS ATOMIC WAVE FUNCTIONS
-! == FROM HERE INFORMATION DEPENDING ON CHARGE AND RADIUS
-  REAL(8)            :: Q
-  REAL(8)            :: RAD
-  REAL(8)            :: DEDRAD
-  REAL(8)            :: DEDQ
-  INTEGER(4),POINTER :: LOFI(:)
-  INTEGER(4),POINTER :: NNOFI(:)
-  REAL(8)   ,POINTER :: FOFI(:)
-  REAL(8)   ,POINTER :: EOFI(:)
-  REAL(8)   ,POINTER :: DREL(:)
-  REAL(8)   ,POINTER :: RHO(:)     
-  REAL(8)   ,POINTER :: AEPOT(:)
-  REAL(8)   ,POINTER :: POTH(:)
-  REAL(8)   ,POINTER :: POTXC(:)
-  REAL(8)   ,POINTER :: UDOT(:,:)     ! HIGHEST NODLESS PHIDOT FUNCTION
-  REAL(8)   ,POINTER :: UN(:,:)       ! HIGHEST NODLESS VALENCE STATE PER L
-  REAL(8)   ,POINTER :: Uc(:,:)       ! HIGHEST NODLESS core state
-  REAL(8)   ,POINTER :: UBOX(:,:)
-  REAL(8)   ,POINTER :: TUBOX(:,:)
-  REAL(8)   ,POINTER :: PHIBOX(:,:)
-  REAL(8)   ,POINTER :: TPHIBOX(:,:)
-END TYPE THISTYPE
-INTEGER(4)    ,PARAMETER   :: NATX=10
-TYPE(THISTYPE),TARGET,SAVE :: THISARR(NATX)
-TYPE(THISTYPE),POINTER     :: THIS
-LOGICAL(4)    ,PARAMETER   :: TREL=.FALSE.
-LOGICAL(4)    ,SAVE        :: TSPECIAL=.FALSE.
-integer(4)    ,SAVE        :: gidoneatom=0
-END MODULE ONEATOM_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       PROGRAM MAIN
       CALL DEBUG_PETERS_NONSPH()
@@ -126,6 +75,7 @@ END MODULE ONEATOM_MODULE
       CHARACTER(10)             :: ROOTNAME='SESM'
       REAL(8)    ,ALLOCATABLE   :: POTREP(:,:)
       REAL(8)                   :: AEZ
+      REAL(8)                   :: rad
       REAL(8)                   :: DR(3),VAL,DR2(3)
       REAL(8)                   :: CG,PI,Y0
       REAL(8)    ,ALLOCATABLE   :: FIN(:,:),FOUT(:,:)
@@ -152,16 +102,31 @@ END MODULE ONEATOM_MODULE
 !      CALL TESTTRANSFORM()
 !      CALL COMPARETRANSFORM()
 !STOP
+CALL DFT$SETI4('TYPE',2)
+CALL DFT$SETL4('SPIN',.FALSE.)
+rad=2.d0
+print*,'=========================== fader ==================================='
+CALL X_ONEATOM$NEW(1,8.d0)
+CALL X_ONEATOM(1,0.D0,RAD,DETOT,DEDQ,DEDRAD)
+print*,'rad ',rad
+print*,'detot ',detot
+print*,'=========================== peter ==================================='
+CALL ONEATOM$NEW(1,8.d0)
+CALL ONEATOM(1,0.D0,RAD,DETOT,DEDQ,DEDRAD)
+print*,'rad ',rad
+print*,'detot ',detot
+stop
+
 !
 !     ==========================================================================        
 !     ==  THIS IS FOR SESM                                                    ==        
 !     ==========================================================================        
-!      CALL BIGONE()
+      CALL BIGONE()
 !
 !     ==========================================================================
-!     ==  THIS IS FOR SIMPLE SESM                                             ==
+!     ==  THIS IS FOR SIMPLE SESM (Rolf's project)                            ==
 !     ==========================================================================
-      CALL LATTICE()
+!      CALL LATTICE()
       RETURN
       END SUBROUTINE DEBUG_PETERS_NONSPH
 !
@@ -319,6 +284,8 @@ PRINT*,'RAD(IAT1)',RAD(IAT1)
 PRINT*,'IAT,ETOT ',IAT1,DETOT
 !       == SELECT NUMBER OF CORE STATES
         NC=THISARR(IAT1)%NC
+print*,'nc ',nc
+print*,'lofi ',thisarr(iat1)%lofi
         ION(IAT1)%NCG=SUM(2*THISARR(IAT1)%LOFI(1:NC)+1)
       ENDDO
 !!$      CALL WRITEPHI('ETAPAULI.DAT',GID,NR,2,THISARR(1)%ETAPAULI(:,:))
@@ -1215,7 +1182,8 @@ PRINT*,'CALCULATING HAMILTON AND OVERLAPMATRIX ...'
 !       ========================================================================        
 !       == PRINT WAVE FUNCTIONS                                               ==
 !       ========================================================================        
-        WRITE(*,FMT='("ITER",I5," EBG: ",20F10.5)')ITER,EBG,FBG
+        WRITE(*,FMT='("ITER",I5," EBG: ",20F10.5)')ITER,EBG(nc+1:)
+        WRITE(*,FMT='("ITER",I5," fBG: ",20F10.5)')ITER,fBG(nc+1:)
 !  
 !       ========================================================================        
 !       == MIX POTENTIALS                                                     ==
@@ -1686,1005 +1654,6 @@ PRINT*,'CALCULATING HAMILTON AND OVERLAPMATRIX ...'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ONEATOM$NEW(IAT,AEZ)
-!     **************************************************************************
-!     ** INITIALIZES AN ATOM                                                  **
-!     **************************************************************************
-      USE ONEATOM_MODULE
-      USE PERIODICTABLE_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: IAT
-      REAL(8)   ,INTENT(IN)  :: AEZ          ! ATOMIC NUMBER
-      REAL(8)   ,PARAMETER   :: R1=1.056D-4  ! INNERMOST POINT OF RADIAL GRID
-      REAL(8)   ,PARAMETER   :: DEX=0.05D0   ! LOG SPACING OF RADIAL GRID
-      INTEGER(4),PARAMETER   :: NR=250       ! #(RADIAL GRID POINTS)
-      LOGICAL(4),PARAMETER   :: TFROZENCORE=.TRUE.
-      INTEGER(4)             :: GID          ! GRID ID
-      INTEGER(4)             :: NS(10),NP(10),ND(10),NF(10)
-      INTEGER(4)             :: SOFI(19)
-      INTEGER(4)             :: LOFI(19)
-      INTEGER(4)             :: NNOFI(19)
-      REAL(8)                :: FOFI(19)
-      REAL(8)                :: EOFI(19)
-      REAL(8)                :: RBOX
-      REAL(8)                :: EV
-      REAL(8)                :: SVAR
-      INTEGER(4)             :: NB       ! #(STATES IN OCCUPIED SHELLS)
-      INTEGER(4)             :: NC       ! #(CORE STATES)
-      REAL(8)   ,ALLOCATABLE :: AEPOT(:)
-      REAL(8)   ,ALLOCATABLE :: DREL(:)
-      REAL(8)   ,ALLOCATABLE :: RHOADD(:)
-      REAL(8)   ,ALLOCATABLE :: RHOCORE(:)
-      REAL(8)   ,ALLOCATABLE :: RHOVALENCE(:)
-      REAL(8)   ,ALLOCATABLE :: AUX(:)
-      REAL(8)   ,ALLOCATABLE :: PHI(:)
-      REAL(8)   ,ALLOCATABLE :: PHIAT(:,:)
-      REAL(8)   ,ALLOCATABLE :: TPHIAT(:,:)
-      REAL(8)   ,ALLOCATABLE :: UAT(:,:)
-      REAL(8)   ,ALLOCATABLE :: TUAT(:,:)
-      REAL(8)   ,ALLOCATABLE :: R(:)
-      REAL(8)                :: ETOT,DEDQ,DEDRAD,EKINC
-      REAL(8)                :: EBAND,EPOT,EKIN,EXC,EH
-      REAL(8)   ,PARAMETER   :: Q=0.D0
-      REAL(8)                :: RAD
-      REAL(8)                :: PI,C0LL,Y0
-      INTEGER(4)             :: L,IB,ISVAR,IC,IB2
-      INTEGER(4)             :: NFILO
-!     **************************************************************************
-PRINT*,'ONEATOM_NEW ..............................',IAT
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      C0LL=1.D0/SQRT(4.D0*PI)
-      CALL CONSTANTS('EV',EV)
-      IF(IAT.GT.NATX) THEN
-        CALL ERROR$MSG('ATOM INDEX OUT OF RANGE')
-        CALL ERROR$STOP('ONEATOM$NEW')
-      END IF
-      CALL FILEHANDLER$UNIT('PROT',NFILO)
-
-      THIS=>THISARR(IAT)
-      THIS%AEZ=AEZ
-!
-!     ==========================================================================
-!     ==  DEFINE RADIAL GRID                                                  ==
-!     ==========================================================================
-      IF(GIDONEATOM.EQ.0) then
-        CALL RADIAL$NEW('SHLOG',GIDONEATOM)
-      END IF
-      GID=GIDONEATOM
-      THIS%GID=GID
-      CALL RADIAL$SETR8(GID,'R1',R1)
-      CALL RADIAL$SETR8(GID,'DEX',DEX)
-      CALL RADIAL$SETI4(GID,'NR',NR)
-      THIS%NR=NR
-      ALLOCATE(R(NR))
-      CALL RADIAL$R(GID,NR,R)
-      RBOX=R(NR-3)
-      WRITE(NFILO,FMT='(72("="),T30,"  ATOM NR. ",I5,"  ")')IAT
-      WRITE(NFILO,FMT='("ISOLATED ATOM IN A BOX WITH RADIUS ",F5.2," A.U")')RBOX
-!
-!     ==========================================================================
-!     ==  DEFINE BANDS                                                        ==
-!     ==========================================================================
-      LOFI( 1)=0   ! 1S
-      LOFI( 2)=0   ! 2S
-      LOFI( 3)=1   ! 2P
-      LOFI( 4)=0   ! 3S
-      LOFI( 5)=1   ! 3P
-      LOFI( 6)=0   ! 4S
-      LOFI( 7)=2   ! 3D
-      LOFI( 8)=1   ! 4P
-      LOFI( 9)=0   ! 5S
-      LOFI(10)=2   ! 4D
-      LOFI(11)=1   ! 5P
-      LOFI(12)=0   ! 6S
-      LOFI(13)=3   ! 4F
-      LOFI(14)=2   ! 5D
-      LOFI(15)=1   ! 6P
-      LOFI(16)=0   ! 7S
-      LOFI(17)=3   ! 5F
-      LOFI(18)=2   ! 6D
-      LOFI(19)=1   ! 7P
-!
-!     == DETERMINE NUMBER OF NODES ===================================
-      DO L=0,3
-        ISVAR=0
-        DO IB=1,19
-          IF(LOFI(IB).NE.L) CYCLE
-          NNOFI(IB)=ISVAR
-          ISVAR=ISVAR+1
-        ENDDO
-      ENDDO
-!
-!     == OCCUPATIONS  AND NUMBER OF BANDS===============================
-      FOFI(:)=0.D0
-      SVAR=AEZ
-      DO IB=1,19
-        FOFI(IB)=MIN(SVAR,REAL(2*(2*LOFI(IB)+1),KIND=8))
-        SVAR=SVAR-FOFI(IB)
-      ENDDO
-!
-!     == DETERMINE THE NUMBER OF CORE STATES =============================
-      NB=19
-      DO IB=1,19
-        IF(LOFI(IB).NE.0) CYCLE
-        IF(FOFI(IB).NE.0.D0) NC=IB-1
-        IF(FOFI(IB).EQ.0.D0) THEN
-          NB=IB-1   ! INCLUDE AT LEAST ONE EMPTY ORBITAL TO FACILITATE FERMI LEVEL SEARCH
-          EXIT
-        END IF
-      ENDDO
-!     == SET POINTER TO LOWEST VALENCE STATE PER L ======================
-      L=MAXVAL(LOFI(1:NB))
-      ALLOCATE(THIS%IBBOND(L+1))
-      THIS%IBBOND(:)=0
-      DO IB=NC+1,NB
-        L=LOFI(IB)
-        IF(THIS%IBBOND(L+1).EQ.0) THIS%IBBOND(L+1)=IB
-      ENDDO
-PRINT*,'IBBOND',THIS%IBBOND
-!
-!     == SWITCH FROM FROZEN CORE TO ALL-ELECTRON ==============================
-      IF(.NOT.TFROZENCORE)NC=0
-!
-!     == MAP ON THIS ==================================================
-      THIS%NB=NB
-      THIS%NC=NC
-      ALLOCATE(THIS%LOFI(NB))
-      ALLOCATE(THIS%NNOFI(NB))
-      ALLOCATE(THIS%FOFI(NB))
-      THIS%LOFI=LOFI
-      THIS%NNOFI=NNOFI
-      THIS%FOFI=FOFI
-!
-!     ==========================================================================
-!     ==  DETERMINE ATOMIC POTENTIAL                                          ==
-!     ==========================================================================
-PRINT*,'AEZ',AEZ
-PRINT*,'CORE'
-DO IB=1,NC
-  PRINT*,IB,LOFI(IB),NNOFI(IB),FOFI(IB)
-ENDDO
-PRINT*,'VALENCE'
-DO IB=NC+1,NB
-  PRINT*,IB,LOFI(IB),NNOFI(IB),FOFI(IB)
-ENDDO
-      ALLOCATE(AEPOT(NR))
-      CALL RADIAL$NUCPOT(GID,NR,AEZ,AEPOT)
-      ALLOCATE(DREL(NR))
-      DREL(:)=0.D0
-      ALLOCATE(RHOADD(NR))
-      RHOADD=0.D0
-      SOFI(:)=0
-      EOFI(:)=0.D0
-      CALL AESCF(GID,NR,NB,TREL,LOFI,SOFI,FOFI,NNOFI,AEZ,RHOADD,RBOX,DREL,AEPOT,EOFI)
-PRINT*,'EOFI FROM AESCF ',EOFI(1:NB)
-!
-!     ==========================================================================
-!     == CONSTRUCT ATOMIC WAVE FUNCTIONS
-!     ==========================================================================
-      ALLOCATE(PHIAT(NR,NB))
-      ALLOCATE(TPHIAT(NR,NB))
-      ALLOCATE(AUX(NR))
-      DO IB=1,NB
-        AUX(:)=0.D0 !INHOMOGENITY
-        CALL BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,AUX,NNOFI(IB),AEPOT,EOFI(IB),PHIAT(:,IB))
-        TPHIAT(:,IB)=-(AEPOT(:)*Y0-EOFI(IB))*PHIAT(:,IB)        
-        PHIAT(NR-2:,IB)=0.D0
-        AUX(:)=(R(:)*PHIAT(:,IB))**2
-        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-        PHIAT(:,IB)=PHIAT(:,IB)/SQRT(SVAR)
-      ENDDO
-PRINT*,'EOFI FROM AE ',EOFI(1:NB)
-!
-!     ==========================================================================
-!     == CONSTRUCT NODELESS ATOMIC WAVE FUNCTIONS
-!     ==========================================================================
-      ALLOCATE(UAT(NR,NB))
-      DO IB=1,NB
-        IC=0
-        DO IB2=1,IB-1
-          IF(LOFI(IB2).NE.LOFI(IB)) CYCLE
-          IC=IB2
-          EXIT
-        ENDDO
-        IF(IC.EQ.0) THEN
-          UAT(:,IB)=PHIAT(:,IB)
-        ELSE
-          AUX(:)=UAT(:,IC) !INHOMOGENITY
-          CALL BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,AUX,0,AEPOT,EOFI(IB),UAT(:,IB))
-          UAT(NR-2:,IB)=0.D0
-        END IF
-      ENDDO
-!      CALL WRITEPHI('UAT1.DAT',GID,NR,NB,UAT)
-PRINT*,'EOFI FROM NODELESS ',EOFI(1:NB)
-      DEALLOCATE(AUX)
-!
-!     ==========================================================================
-!     == CORE DENSITY
-!     ==========================================================================
-      ALLOCATE(RHOCORE(NR))
-      RHOCORE(:)=0.D0
-      DO IB=1,NC
-        RHOCORE(:)=RHOCORE(:)+FOFI(IB)*C0LL*PHIAT(:,IB)**2
-      ENDDO
-!
-!     ==========================================================================
-!     == VALENCE DENSITY DENSITY
-!     ==========================================================================
-      ALLOCATE(RHOVALENCE(NR))
-      RHOVALENCE(:)=0.D0
-      DO IB=NC+1,NB
-        RHOVALENCE(:)=RHOVALENCE(:)+FOFI(IB)*C0LL*PHIAT(:,IB)**2
-      ENDDO
-!
-!     ==========================================================================
-!     == CORE KINETIC ENERGY                                                  ==
-!     ==========================================================================
-      ALLOCATE(AUX(NR))
-      AUX(:)=R(:)**2*AEPOT(:)*RHOCORE(:)
-      CALL RADIAL$INTEGRAL(GID,NR,AUX,EKINC)
-      EKINC=-EKINC
-      DO IB=1,NC
-        EKINC=EKINC+FOFI(IB)*EOFI(IB)
-      ENDDO
-      DEALLOCATE(AUX)
-!
-!     ==========================================================================
-!     == DETERMINE TOTAL ENERGY                                               ==
-!     ==========================================================================
-      ALLOCATE(AUX(NR))
-      CALL MYVOFRHO(GID,NR,AEZ,RHOCORE+RHOVALENCE,AUX,EH,EXC)
-      DEALLOCATE(AUX)
-      EBAND=SUM(EOFI*FOFI)
-      CALL RADIAL$INTEGRAL(GID,NR,R(:)**2*AEPOT(:)*(RHOCORE(:)+RHOVALENCE(:)),EPOT)
-      EKIN=EBAND-EPOT
-      ETOT=EKIN+EH+EXC
-!
-!     ==========================================================================
-!     == MAP DATA ONTO "THIS"                                                 ==
-!     ==========================================================================
-      THIS%EREF=ETOT
-      THIS%EKINC=EKINC
-      ALLOCATE(THIS%EOFI(NB))
-      THIS%EOFI(1:NB)=EOFI(1:NB)
-      ALLOCATE(THIS%ATOMPOT(NR))
-      THIS%ATOMPOT(:)=AEPOT(:)
-      DEALLOCATE(AEPOT)
-      ALLOCATE(THIS%RHOCORE(NR))
-      THIS%RHOCORE(:)=RHOCORE(:)
-      DEALLOCATE(RHOCORE)
-      ALLOCATE(THIS%DREL(NR))
-      THIS%DREL=DREL
-      DEALLOCATE(DREL)
-      ALLOCATE(THIS%PHIAT(NR,NB))
-      THIS%PHIAT(:,:)=PHIAT(:,:)
-      DEALLOCATE(PHIAT)
-      ALLOCATE(THIS%TPHIAT(NR,NB))
-      THIS%TPHIAT(:,:)=TPHIAT(:,:)
-      DEALLOCATE(TPHIAT)
-      ALLOCATE(THIS%UAT(NR,NB))
-      THIS%UAT(:,:)=UAT(:,:)
-      DEALLOCATE(UAT)
-!
-!     ==========================================================================
-!     == REPORT ================================================================
-!     ==========================================================================
-      WRITE(NFILO,FMT='("EIGENSTATES AFTER NON-SCF CALCULATION IN SCF POT")')
-      DO IB=1,NB
-        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2 &
-     &                ," E[H]=",F20.9," E[EV]=",F20.9)') &
-     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB),EOFI(IB)/EV
-      ENDDO
-      WRITE(NFILO,FMT='("AESCF  EBAND ",F10.5)')EBAND
-      WRITE(NFILO,FMT='("AESCF  EPOT  ",F10.5)')EPOT
-      WRITE(NFILO,FMT='("AESCF  EKIN  ",F10.5)')EKIN
-      WRITE(NFILO,FMT='("AESCF  EH    ",F10.5)')EH
-      WRITE(NFILO,FMT='("AESCF  EXC   ",F10.5)')EXC
-      WRITE(NFILO,FMT='("AESCF  ETOT  ",F10.5)')ETOT
-      WRITE(NFILO,FMT='(72("="))')
-!
-!     ==========================================================================
-!     == DETERMINE CORE REPULSION POTENTIAL                                   ==
-!     ==========================================================================
-!      CALL ONEATOM_CORE(IAT)
-!
-!     ==========================================================================
-!     ==  WRITE ANALYSIS FILES                                                ==
-!     ==========================================================================
-!!$      CALL WRITEPHI('PHIAT.DAT',GID,NR,THIS%NB,THIS%PHIAT)
-!!$      CALL WRITEPHI('UAT.DAT',GID,NR,THIS%NB,THIS%UAT)
-!!$      CALL WRITEPHI('ETAC.DAT',GID,NR,THIS%NLC,THIS%ETACPAULI)
-!!$      CALL WRITEPHI('VCPAULI.DAT',GID,NR,THIS%NLC,THIS%VCPAULI)
-!!$      CALL WRITEPHI('OCPAULI.DAT',GID,NR,THIS%NLC,THIS%OCPAULI)
-PRINT*,'ONEATOM_NEW DONE..........................',IAT
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ONEATOM_CORE(IAT)
-!     **************************************************************************
-!     **************************************************************************
-      USE ONEATOM_MODULE
-      USE PERIODICTABLE_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: IAT
-      REAL(8)               :: AEZ
-      INTEGER(4)            :: GID
-      INTEGER(4)            :: NR
-      INTEGER(4)            :: NB
-      INTEGER(4)            :: NC
-      REAL(8)               :: RCOV
-      REAL(8)   ,ALLOCATABLE:: R(:)
-      INTEGER(4)            :: LMAX
-      INTEGER(4),ALLOCATABLE:: LOFI(:)
-      REAL(8)   ,ALLOCATABLE:: ETACPAULI(:)
-      REAL(8)   ,ALLOCATABLE:: OCPAULI(:)
-      REAL(8)   ,ALLOCATABLE:: VCPAULI(:)
-      REAL(8)   ,ALLOCATABLE:: UN(:)
-      REAL(8)   ,ALLOCATABLE:: UDOT(:)
-      REAL(8)   ,ALLOCATABLE:: UDDOT(:)
-      REAL(8)   ,ALLOCATABLE:: PHI(:)
-      REAL(8)   ,ALLOCATABLE:: DREL(:)
-      REAL(8)   ,ALLOCATABLE:: G(:)
-      REAL(8)               :: E
-      REAL(8)               :: X0,DX,XM,Z0,ZM
-      INTEGER(4)            :: ISTART,IBI
-      INTEGER(4)            :: NLC
-      INTEGER(4),PARAMETER  :: NITER=100
-      REAL(8)   ,PARAMETER  :: TOL=1.D-6
-      INTEGER(4)            :: I,IL,L,IC,IB,IR
-      REAL(8)               :: PI,Y0
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      THIS=>THISARR(IAT)
-      AEZ=THIS%AEZ
-      GID=THIS%GID
-      NR=THIS%NR
-      NB=THIS%NB
-      NC=THIS%NC
-      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-      ALLOCATE(DREL(NR))
-      DREL(:)=THIS%DREL(:)
-      ALLOCATE(LOFI(NB))
-      LOFI(:)=THIS%LOFI(:)
-!
-!     ==========================================================================
-!     ==  DEFINE RADIAL GRID                                                  ==
-!     ==========================================================================
-      ALLOCATE(R(NR))
-      CALL RADIAL$R(GID,NR,R)
-!
-!     ==========================================================================
-!     ==  ALLOCATE POINTERS                                                   ==
-!     ==========================================================================
-      NLC=MAXVAL(LOFI(1:NC))+1
-      IF(NC.EQ.0) NLC=0
-      THIS%NLC=NLC
-      IF(.NOT.ASSOCIATED(THIS%ETACPAULI))ALLOCATE(THIS%ETACPAULI(NR,NLC))
-      IF(.NOT.ASSOCIATED(THIS%VCPAULI))ALLOCATE(THIS%VCPAULI(NR,NLC))
-      IF(.NOT.ASSOCIATED(THIS%OCPAULI))ALLOCATE(THIS%OCPAULI(NR,NLC))
-      THIS%ETACPAULI=0.D0
-      THIS%VCPAULI=0.D0
-      THIS%OCPAULI=0.D0
-!
-!     ==========================================================================
-!     ==  ALLOCATE WORK ARRAYS                                                ==
-!     ==========================================================================
-      ALLOCATE(ETACPAULI(NR))
-      ALLOCATE(OCPAULI(NR))
-      ALLOCATE(VCPAULI(NR))
-      ALLOCATE(UDOT(NR))
-      ALLOCATE(UDDOT(NR))
-      ALLOCATE(UN(NR))
-      ALLOCATE(PHI(NR))
-      ALLOCATE(G(NR))
-      DO IL=1,NLC
-        L=IL-1
-!
-!       =========================================================================
-!       == FIND ENERGY E OF BONDING STATE                                      ==
-!       =========================================================================
-        IB=THIS%IBBOND(L+1)
-        do i=1,ib-1
-          if(lofi(i).ne.l) cycle
-          ic=i
-        enddo
-        if(ic.eq.0) then
-!         == no core state -> no core repulsion.... =============================
-          THIS%VCPAULI(:,IL)=0.d0
-          THIS%OCPAULI(:,IL)=0.d0
-          THIS%ETACPAULI(:,IL)=0.d0
-          cycle
-        end if
-        UN(:)=THIS%Ubox(:,IC)
-        IF(IB.EQ.0) THEN
-          E=0.D0
-          GOTO 1000
-        END IF
-        ISTART=1
-        X0=THIS%EOFI(IB)
-        DX=-1.D-3
-        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-        DO I=1,NITER
-          E=X0
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%ATOMPOT,THIS%DREL,0,UN,L,E,1,PHI)
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RCOV,Z0)
-          Z0=Z0-0.5D0
-          IF(ABS(2.D0*DX).LE.TOL) EXIT
-          CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-        ENDDO
-        IF(ABS(DX).GT.TOL) THEN
-          CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
-          CALL ERROR$MSG('BOUND STATE NOT FOUND')
-          CALL ERROR$STOP('ONEATOM')
-        END IF
-PRINT*,'ENERGY OF THE BINDING STATE FOR L= ',L,E
-1000 CONTINUE
-!
-!       ========================================================================
-!       == DETERMINE CORE REPULSION POTENTIAL                                 ==
-!       ========================================================================
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%ATOMPOT,THIS%DREL,0,UN,LOFI(IB) &
-     &                                                        ,E,1,UDOT)
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%ATOMPOT,THIS%DREL,0,UDOT,LOFI(IB) &
-     &                                                        ,E,1,UDDOT)
-!       ==  AVOID DIVIDE BY ZERO IF UDOT=0 NEAR THE NUCLEUS
-        I=1
-        DO IR=1,NR
-          IF(UDOT(IR).NE.0.D0) THEN
-            I=IR
-            EXIT
-          END IF
-        ENDDO
-!       == NOW CONSTRUCT PAULI POTENTIAL
-        ETACPAULI(I:)=-UN(I:)/UDOT(I:)/Y0
-        ETACPAULI(1:I)=ETACPAULI(I)
-!       ==  AVOID DIVIDE BY ZERO IF UDOT=0 NEAR THE NUCLEUS
-        I=1
-        DO IR=1,NR
-          IF(UDDOT(IR).NE.0.D0) THEN
-            I=IR
-            EXIT
-          END IF
-        ENDDO
-!       == CONSTRUCT OCPAULI=-DETA/DE ==========================================
-        OCPAULI(I:)=-ETACPAULI(I:)*UDDOT(I:)/UDOT(I:)
-        OCPAULI(1:I)=OCPAULI(I)
-!       == CONSTRUCT VCPAULI=ETA+E*OCPAULI ====================================
-        VCPAULI(:)=ETACPAULI(:)+E*OCPAULI(:)
-        THIS%VCPAULI(:,IL)=VCPAULI
-        THIS%OCPAULI(:,IL)=OCPAULI
-        THIS%ETACPAULI(:,IL)=ETACPAULI
-      ENDDO
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ONEATOM(IAT,Q,RAD,ETOT,DEDQ,DEDRAD)
-!     **************************************************************************
-!     **  THE TEMPERATURE MUST NOT BE TOO SMALL. OTHERWISE DEDQ CANNOT BE     **
-!     **  ACCURATELY DETERMINED                                               **
-!     **************************************************************************
-      USE ONEATOM_MODULE
-      USE PERIODICTABLE_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: IAT
-      REAL(8)   ,INTENT(IN) :: Q    ! charge in electron charges
-      REAL(8)   ,INTENT(IN) :: RAD  ! radius of the spherical box
-      REAL(8)   ,INTENT(OUT):: ETOT
-      REAL(8)   ,INTENT(OUT):: DEDQ
-      REAL(8)   ,INTENT(OUT):: DEDRAD
-      INTEGER(4)            :: GID
-      INTEGER(4)            :: NR
-      INTEGER(4)            :: NB
-      INTEGER(4)            :: NC
-      REAL(8)               :: AEZ
-      REAL(8)               :: QVALENCE
-      INTEGER(4),ALLOCATABLE:: LOFI(:)
-      INTEGER(4),ALLOCATABLE:: SOFI(:)
-      INTEGER(4),ALLOCATABLE:: NNOFI(:)
-      REAL(8)   ,ALLOCATABLE:: EOFI(:)
-      REAL(8)   ,ALLOCATABLE:: FOFI(:)
-      REAL(8)   ,ALLOCATABLE:: AEPOT(:)
-      REAL(8)   ,ALLOCATABLE:: POTIN(:)
-      REAL(8)   ,ALLOCATABLE:: POTH(:)
-      REAL(8)   ,ALLOCATABLE:: POTXC(:)
-      REAL(8)   ,ALLOCATABLE:: RHOADD(:)
-      REAL(8)   ,ALLOCATABLE:: RHO(:)
-      REAL(8)   ,ALLOCATABLE:: DREL(:)
-      REAL(8)   ,ALLOCATABLE:: PHI(:,:)
-      REAL(8)   ,ALLOCATABLE:: TPHI(:,:)
-      REAL(8)   ,ALLOCATABLE:: PHI1(:,:)
-      REAL(8)   ,ALLOCATABLE:: UBOX(:,:)
-      REAL(8)   ,ALLOCATABLE:: TUBOX(:,:)
-      REAL(8)   ,ALLOCATABLE:: PHIDOT(:)
-      REAL(8)   ,ALLOCATABLE:: G(:)
-      REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:)
-      REAL(8)   ,ALLOCATABLE:: R(:)
-      REAL(8)   ,ALLOCATABLE:: ETAPAULI(:,:)
-      REAL(8)   ,ALLOCATABLE:: UDOT(:,:)
-      REAL(8)   ,ALLOCATABLE:: UN(:,:)
-      REAL(8)               :: SVAR,DER,VAL,DERDOT,VALDOT
-      REAL(8)               :: PI,C0LL,Y0
-      REAL(8)               :: EKIN,EH,EXC
-      INTEGER(4)            :: IBI,ISTART
-      REAL(8)               :: X0,Z0,DX,XM,ZM,E
-      REAL(8)               :: XMAX
-      LOGICAL(4)            :: CONVG
-      INTEGER(4)            :: IB,IR,ITER,IRBOX,IL,L,LMAX,ncount
-      INTEGER(4)            :: IC
-      INTEGER(4),PARAMETER  :: NITER=100
-      REAL(8)   ,PARAMETER  :: TOL=1.D-5
-      REAL(8)   ,PARAMETER  :: KBT=1.D-3
-      REAL(8)               :: TS,F
-      REAL(8)               :: RCOV
-      REAL(8)               :: EV
-      INTEGER(4)            :: NFILO
-INTEGER(4) :: I,J
-REAL(8)    :: DEG,SVAR1
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      C0LL=1.D0/SQRT(4.D0*PI)
-      Y0=1.D0/SQRT(4.D0*PI)
-      CALL CONSTANTS('EV',EV)
-      THIS=>THISARR(IAT)
-      GID=THIS%GID
-      NR=THIS%NR
-      AEZ=THIS%AEZ      
-      NB=THIS%NB
-      NC=THIS%NC
-      ALLOCATE(LOFI(NB))
-      ALLOCATE(NNOFI(NB))
-      ALLOCATE(EOFI(NB))
-      ALLOCATE(FOFI(NB))
-      ALLOCATE(SOFI(NB))
-      LOFI(:)=THIS%LOFI(:)
-      NNOFI(:)=THIS%NNOFI(:)
-      EOFI(:)=THIS%EOFI(:)
-      FOFI(:)=THIS%FOFI(:)
-      SOFI(:)=0.D0
-      ALLOCATE(R(NR))
-      CALL RADIAL$R(GID,NR,R)
-      DO IR=1,NR
-        IRBOX=IR
-        IF(R(IR).GE.RAD) EXIT
-      ENDDO
-      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)      
-      CALL FILEHANDLER$UNIT('PROT',NFILO)
-      WRITE(NFILO,FMT='(72("="),T30,"  ATOM NR. ",I5,"  ")')IAT
-      WRITE(NFILO,FMT='("ISOLATED ATOM IN A BOX WITH RADIUS ",F5.2," A.U")')RAD
-!
-!     ==========================================================================
-!     ==  OBTAIN SELF-CONSISTENT POTENTIAL                                    ==
-!     ==========================================================================
-      ALLOCATE(AEPOT(NR));       AEPOT(:)=THIS%ATOMPOT(:)
-      ALLOCATE(POTIN(NR));       POTIN(:)=AEPOT(:)
-      ALLOCATE(RHOADD(NR));      RHOADD=0.D0
-      ALLOCATE(DREL(NR));        DREL=THIS%DREL
-      ALLOCATE(RHO(NR))
-      ALLOCATE(PHI(NR,NB));      PHI(:,:)=0.D0
-      ALLOCATE(tPHI(NR,NB));     tPHI(:,:)=0.D0
-      ALLOCATE(PHIDOT(NR))
-      ALLOCATE(G(NR))
-      ALLOCATE(AUX(NR))
-      ALLOCATE(AUX1(NR))
-      ALLOCATE(POTH(NR))
-      ALLOCATE(POTXC(NR))
-      XMAX=0.D0
-      CONVG=.FALSE.
-      CALL BROYDEN$NEW(NR,4,1.D0)
-      POTIN=AEPOT   ! start with atomic potential
-      DO ITER=1,NITER
-        DO IB=1,NB
-          G(:)=0.D0
-          CALL BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RAD,DREL,G,NNOFI(IB),POTIN,EOFI(IB),PHI(:,IB))
-!         == normalize wave functions ==========================================
-          AUX(:)=(R(:)*PHI(:,IB))**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
-          PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
-!         == kinetic energy times wave function ================================
-          TPHI(:,IB)=-(potin(:)*Y0-EOFI(IB))*PHI(:,IB)        
-        ENDDO
-!
-!       == DETERMINE OCCUPATIONS ===============================================
-        CALL ONEATOM_OPTF(NB,aez+q,KBT,LOFI,EOFI,FOFI,DEDQ)
-!
-!       == DETERMINE DENSITY ===================================================
-        RHO(:)=0.d0
-        DO IB=1,NB
-          RHO(:)=RHO(:)+FOFI(IB)*C0LL*PHI(:,IB)**2
-        ENDDO
-!
-!       == DETERMINE OUTPUT POTENTIAL ==========================================
-        CALL MYVOFRHOWITHRAD(GID,NR,RAD,AEZ,RHO,POTH,POTXC,EH,EXC)
-        AEPOT=POTH+POTXC
-!
-!       == EXIT IF CONVERGED ===================================================
-        IF(CONVG) THEN
-          CALL BROYDEN$CLEAR
-          EXIT
-        END IF
-!
-!       == POTENTIAL MIXING ====================================================
-!       == THE POTENTIAL IS SET EQUAL BEYOND THE BOX RADIUS, BECAUSE OTHERWISE
-!       == THIS REGION DETERMINES THE CONVERGENCE ==============================
-!        POTIN(IRBOX:)=AEPOT(IRBOX:)
-        XMAX=MAXVAL(ABS(AEPOT-POTIN)) 
-        CALL BROYDEN$STEP(NR,POTIN,(AEPOT-POTIN))
-        CONVG=(XMAX.LT.TOL)
-      ENDDO
-      IF(.NOT.CONVG) THEN
-        CALL BROYDEN$CLEAR
-        CALL ERROR$MSG('SELFCONSISTENCY LOOP NOT CONVERGED')
-        CALL ERROR$STOP('ONEATOM')
-      END IF
-!
-!     == map wave functions onto this ==========================================
-      IF(.NOT.ASSOCIATED(THIS%PHIBOX))ALLOCATE(THIS%PHIBOX(NR,NB))
-      IF(.NOT.ASSOCIATED(THIS%TPHIBOX))ALLOCATE(THIS%TPHIBOX(NR,NB))
-      THIS%PHIBOX(:,:)=PHI(:,:)
-      THIS%TPHIBOX(:,:)=TPHI(:,:)
-!
-!     ==========================================================================
-!     == CALCULATE NODELESS WAVE FUNCTIONS                                    ==
-!     ==========================================================================
-      ALLOCATE(UBOX(NR,NB))
-      ALLOCATE(TUBOX(NR,NB))
-      DO IB=1,NB
-        IC=0
-        DO I=1,IB-1
-          IF(LOFI(I).NE.LOFI(IB))CYCLE
-          IC=I
-        ENDDO
-        IF(IC.EQ.0) THEN
-          UBOX(:,IB)=PHI(:,IB)
-          TUBOX(:,IB)=TPHI(:,IB)
-        ELSE 
-          G=UBOX(:,IC)
-          AUX(:)=0.D0
-          CALL BOUNDSTATE(GID,NR,LOFI(IB),0,RAD,AUX,G,0,AEPOT,EOFI(IB),UBOX(:,IB))
-          TUBOX(:,IB)=G(:)+(EOFI(IB)-AEPOT(:)*Y0)*UBOX(:,IB)        
-        END IF
-      ENDDO
-!
-!     == map wave functions onto this ==========================================
-      IF(.NOT.ASSOCIATED(THIS%UBOX))ALLOCATE(THIS%UBOX(NR,NB))
-      IF(.NOT.ASSOCIATED(THIS%TUBOX))ALLOCATE(THIS%TUBOX(NR,NB))
-      THIS%UBOX(:,:)=UBOX(:,:)
-      THIS%TUBOX(:,:)=TUBOX(:,:)
-!
-!     ==========================================================================
-!     == CALCULATE PRESSURE                                                   ==
-!     ==========================================================================
-      DEDRAD=0.D0
-      DO IB=1,NB
-        IF(FOFI(IB).EQ.0.D0) CYCLE
-        CALL RADIAL$DERIVATIVE(GID,NR,PHI(:,IB),RAD,DER)
-        IF(abs(DER).lt.1.d-8) CYCLE  ! AVOID CORE WAVE FUNCTIONS
-!!$        G(:)=0.D0
-!!$        CALL SCHROEDINGER$SPHERICAL(GID,NR,POTIN,DREL,SOFI(IB),G,LOFI(IB),EOFI(IB),1,PHI(:,IB))
-!!$! NORMALIZATION NOT REQUIRED
-!!$ AUX=R (:)**2*PHI(:,IB)**2
-!!$ CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$ CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
-!!$ PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
-!!$!
-        CALL RADIAL$VALUE(GID,NR,PHI(:,IB),RAD,VAL)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHI(:,IB),RAD,DER)
-        G(:)=PHI(:,IB)         
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POTIN,DREL,SOFI(IB),G,LOFI(IB),EOFI(IB),1,PHIDOT)
-! == ORTHONORMALIZATION IS NOT NECESSARY =======
-  AUX=R (:)**2*PHI(:,IB)*PHIDOT(:)
-  CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-  CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
-  PHIDOT(:)=PHIDOT(:)-PHI(:,IB)*SVAR
-        CALL RADIAL$VALUE(GID,NR,PHIDOT,RAD,VALDOT)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHIDOT,RAD,DERDOT)
-        DEDRAD=DEDRAD-FOFI(IB)*DER/VALDOT
-      ENDDO
-!
-!     ==========================================================================
-!     == CALCULATE TOTAL ENERGY                                               ==
-!     ==========================================================================
-      AUX(:)=RHO(:)*AEPOT(:)*R(:)**2
-      CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-      CALL RADIAL$VALUE(GID,NR,AUX1,RAD,SVAR)
-      EKIN=SUM(EOFI*FOFI)-SVAR
-      CALL MYVOFRHOWITHRAD(GID,NR,RAD,AEZ,RHO,AUX,AUX1,EH,EXC)
-      ETOT=EKIN+EH+EXC-THIS%EREF
-!     == ENTROPY TERM OF THE ELECTRONS
-      TS=0.D0
-      DO IB=1,NB
-        SVAR=REAL(2*(2*LOFI(IB)+1),KIND=8)
-        F=FOFI(IB)/SVAR
-        IF(F.LT.1.D-50) CYCLE
-        IF(1.D0-F.LT.1.D-50) CYCLE
-        TS=TS+KBT*SVAR*(F*LOG(F)+(1.D0-F)*LOG(1.D0-F))
-      ENDDO   
-      ETOT=ETOT+TS   
-!
-!     ==========================================================================
-!     == REPORT ================================================================
-!     ==========================================================================
-      WRITE(NFILO,FMT='("EIGENSTATES AFTER NON-SCF CALCULATION IN SCF POT")')
-      DO IB=NC+1,NB
-        WRITE(NFILO,FMT='("L=",I2," NN=",I2," SO=",I2," F=",F5.2 &
-     &                ," E[H]=",F20.9," E[EV]=",F20.9)') &
-     &              LOFI(IB),NNOFI(IB),SOFI(IB),FOFI(IB),EOFI(IB),EOFI(IB)/EV
-      ENDDO
-      WRITE(NFILO,FMT='("ONEATOM  ETOT-AT  ",F10.5)')ETOT
-      WRITE(NFILO,FMT='("ONEATOM  ETOT     ",F10.5)')ETOT+THIS%EREF
-      WRITE(NFILO,FMT='("ONEATOM  EKIN     ",F10.5)')EKIN
-      WRITE(NFILO,FMT='("ONEATOM  EHARTREE ",F10.5)')EH
-      WRITE(NFILO,FMT='("ONEATOM  EXC      ",F10.5)')EXC
-      WRITE(NFILO,FMT='("ONEATOM  ETS      ",F10.5)')TS
-      WRITE(NFILO,FMT='("ONEATOM  DE/DRAD  ",F10.5)')DEDRAD
-      WRITE(NFILO,FMT='("ONEATOM  DE/DQ    ",F10.5)')DEDQ
-      WRITE(NFILO,FMT='(72("="))')
-!
-!     ==========================================================================
-!     == DETERMINE CORE REPULSION POTENTIAL                                   ==
-!     ==========================================================================
-      CALL ONEATOM_CORE(IAT)
-!
-!     ==========================================================================
-!     == CALCULATE REPULSIVE POTENTIAL FOR EACH ANGULAR MOMENTUM              ==
-!     ==========================================================================
-PRINT*,'IN ONEATOM: CONSTRUCTING NODELESS WAVE FUNCTIONS .............'
-      LMAX=MAXVAL(LOFI(1:NB))
-      ALLOCATE(ETAPAULI(NR,LMAX+1))
-      ALLOCATE(UN(NR,LMAX+1))
-      ALLOCATE(UDOT(NR,LMAX+1))
-      DO IL=1,LMAX+1
-        L=IL-1
-        IB=THIS%IBBOND(L+1)   ! band index of lowest valence state per l
-        IC=0
-        DO I=1,IB-1
-          IF(LOFI(I).EQ.L)IC=I
-        ENDDO
-        IF(IC.GT.0) THEN
-          UN(:,IL)=THIS%Ubox(:,IC)
-        ELSE
-          UN(:,IL)=0.D0
-        END IF
-PRINT*,'IB,IC ',IB,IC
-!
-!       ========================================================================
-!       == DETERMINE VALENCE BOUND STATE IN THE BOX (ANTIBONDING)             ==
-!       ========================================================================
-        IF(IB.EQ.0) THEN
-          E=0.D0
-          GOTO 1000
-        END IF
-        ISTART=1
-        X0=EOFI(IB)
-        DX=-1.D-3
-        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-        DO I=1,NITER
-          E=X0
-          G(:)=UN(:,IL)
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,POTIN,DREL,0,G,L,E,1,PHI)
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RCOV,Z0)
-          Z0=Z0-0.5D0
-          IF(ABS(2.D0*DX).LE.TOL) EXIT
-          CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-        ENDDO
-        IF(ABS(DX).GT.TOL) THEN
-          CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
-          CALL ERROR$MSG('BOUND STATE NOT FOUND')
-          CALL ERROR$STOP('ONEATOM')
-        END IF
-1000 CONTINUE
-PRINT*,'ENERGY OF THE BINDING STATE FOR L= ',L,E
-!
-!       ========================================================================
-!       == DETERMINE VALENCE BOUND STATE IN THE BOX (ANTIBONDING)             ==
-!       ========================================================================
-        G=UN(:,IL)
-        CALL BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RAD,DREL,G,0 &
-     &                                             ,POTIN,EOFI(IB),UN(:,IL))
-PRINT*,'ENERGY OF VALENCE STATE ',L,EOFI(IB),E
-!
-!       ========================================================================
-!       == DETERMINE VALENCE REPULSION POTENTIAL                              ==
-!       ========================================================================
-        G=UN(:,IL)
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POTIN,DREL,SOFI(IB),G,LOFI(IB) &
-     &                                                        ,E,1,UDOT(:,IL))
-!       ==  AVOID DIVIDE BY ZERO IF UDOT=0 NEAR THE NUCLEUS
-        I=1
-        DO IR=1,NR
-          IF(UDOT(IR,IL).NE.0.D0) THEN
-            I=IR
-            EXIT
-          END IF
-        ENDDO
-!       == NOW CONSTRUCT PAULI POTENTIAL
-        ETAPAULI(I:,IL)=-UN(I:,IL)/UDOT(I:,IL)/Y0
-        ETAPAULI(1:I,IL)=ETAPAULI(I,IL)
-      ENDDO
-!
-!     ==========================================================================
-!     == MAP DATA BACK TO THIS                                                ==
-!     ==========================================================================
-      IF(.NOT.ASSOCIATED(THIS%ETAPAULI))ALLOCATE(THIS%ETAPAULI(NR,LMAX+1))
-      ETAPAULI(IRBOX:,:)=0.D0
-      THIS%ETAPAULI(:,:)=ETAPAULI(:,:)
-      IF(.NOT.ASSOCIATED(THIS%UDOT))ALLOCATE(THIS%UDOT(NR,LMAX+1))
-      THIS%UDOT=UDOT
-      IF(.NOT.ASSOCIATED(THIS%UN))ALLOCATE(THIS%UN(NR,LMAX+1))
-      THIS%UN=UN
-      IF(.NOT.ASSOCIATED(THIS%RHO))ALLOCATE(THIS%RHO(NR))
-      THIS%RHO=0.D0
-      THIS%RHO(1:IRBOX-1)=RHO(1:IRBOX-1)
-      IF(.NOT.ASSOCIATED(THIS%AEPOT))ALLOCATE(THIS%AEPOT(NR))
-      THIS%AEPOT(:)=0.D0
-      THIS%AEPOT(:)=POTIN(1:IRBOX-1)
-      IF(.NOT.ASSOCIATED(THIS%POTH))ALLOCATE(THIS%POTH(NR))
-      THIS%POTH(:)=POTH(:)
-      IF(.NOT.ASSOCIATED(THIS%POTXC))ALLOCATE(THIS%POTXC(NR))
-      THIS%POTXC(:)=POTXC(:)
-
-      THIS%EOFI(:)=EOFI(:)
-      THIS%FOFI(:)=FOFI(:)
-      THIS%RAD=RAD
-      THIS%Q=Q
-      THIS%DEDRAD=DEDRAD
-      THIS%DEDQ=DEDQ
-!
-!     ==========================================================================
-!     == TEST                                                                 ==
-!     ==========================================================================
-PRINT*,'TESTING ONEATOM.................................'
-!      CALL WRITEPHI('PHIBEFORE.DAT',GID,NR,NB-NC,PHI(:,NC+1:NB))
-      ALLOCATE(PHI1(NR,NB));PHI1(:,:)=0.D0
-      DO IB=NC+1,NB
-        L=THIS%LOFI(IB)
-        E=THIS%EOFI(IB)
-!       == PERFORM CALCULATION WITH PAULI POTENTIAL ============================
-        POTIN=THIS%AEPOT
-        G=0.D0
-        IF(L+1.LE.THIS%NLC) THEN
-          POTIN=POTIN+THIS%VCPAULI(:,L+1) -E*THIS%OCPAULI(:,L+1)
-!          G=THIS%UAT(:,L+1)
-        END IF
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POTIN,DREL,0,G,L,E,1,PHI(:,IB))
-        AUX(:)=R(:)**2*PHI(:,IB)**2
-!        IF(L+1.LE.THIS%NLC) AUX(:)=AUX(:)*(1.D0+THIS%OCPAULI(:,L+1))
-        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-! CALL WRITEPHI('AUX',GID,NR,1,AUX)
-! CALL WRITEPHI('PHI',GID,NR,1,PHI(:,IB))
-        CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
-! CALL WRITEPHI('AUX1',GID,NR,1,AUX1)
-        PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
-!
-!       == PERFORM CALCULATION WITH INHOMOGENEITY   ============================
-        POTIN=THIS%AEPOT
-        G=0.D0
-        IF(L+1.LE.THIS%NLC) THEN
-          G=THIS%UAT(:,L+1)
-        END IF
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POTIN,DREL,0,G,L,E,1,PHI1(:,IB))
-        AUX(:)=R(:)**2*PHI1(:,IB)**2
-        IF(L+1.LE.THIS%NLC) AUX(:)=AUX(:)*(1.D0+THIS%OCPAULI(:,L+1))
-        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-        CALL RADIAL$VALUE(GID,NR,AUX1(:),RAD,SVAR)
-        PHI1(:,IB)=PHI1(:,IB)/SQRT(SVAR)
-
-      ENDDO
-!
-!     ==========================================================================
-!     == WRAP UP                                                              ==
-!     ==========================================================================
-      DEALLOCATE(ETAPAULI)
-      DEALLOCATE(UN)
-      DEALLOCATE(UDOT)
-      DEALLOCATE(POTH)
-      DEALLOCATE(POTXC)
-! call ONEATOM_WRITE(THIS)
-PRINT*,'ONEATOM done.................................'
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ONEATOM_WRITE(THIS)
-!     **************************************************************************
-!     **                                                                      **
-!     **************************************************************************
-      USE ONEATOM_MODULE, ONLY : THISTYPE
-      IMPLICIT NONE
-      type(thistype),intent(in) :: this
-      INTEGER(4) :: GID
-      INTEGER(4) :: NR
-      INTEGER(4) :: NLC
-      INTEGER(4) :: NB
-!     **************************************************************************
-      GID=THIS%GID
-      NR=THIS%NR
-      NLC=THIS%NLC
-      NB=THIS%NB
-      IF(ASSOCIATED(THIS%ATOMPOT))CALL WRITEPHI('ATOMPOT',GID,NR,1,THIS%ATOMPOT)
-      IF(ASSOCIATED(THIS%ETAPAULI))CALL WRITEPHI('ETAPAULI',GID,NR,NLC,THIS%ETAPAULI)
-      IF(ASSOCIATED(THIS%ETACPAULI))CALL WRITEPHI('ETACPAULI',GID,NR,NLC,THIS%ETACPAULI)
-      IF(ASSOCIATED(THIS%VCPAULI))CALL WRITEPHI('VCPAULI',GID,NR,NLC,THIS%VCPAULI)
-      IF(ASSOCIATED(THIS%OCPAULI))CALL WRITEPHI('OCPAULI',GID,NR,NLC,THIS%OCPAULI)
-      IF(ASSOCIATED(THIS%PHIAT))CALL WRITEPHI('PHIAT',GID,NR,NB,THIS%PHIAT)
-      IF(ASSOCIATED(THIS%UAT))CALL WRITEPHI('UAT',GID,NR,NB,THIS%UAT)
-      IF(ASSOCIATED(THIS%RHO))CALL WRITEPHI('RHO',GID,NR,1,THIS%RHO)
-      IF(ASSOCIATED(THIS%AEPOT))CALL WRITEPHI('AEPOT',GID,NR,1,THIS%AEPOT)
-      IF(ASSOCIATED(THIS%POTH))CALL WRITEPHI('POTH',GID,NR,1,THIS%POTH)
-      IF(ASSOCIATED(THIS%POTXC))CALL WRITEPHI('POTXC',GID,NR,1,THIS%POTXC)
-      IF(ASSOCIATED(THIS%UN))CALL WRITEPHI('UN',GID,NR,NLC,THIS%UN)
-      IF(ASSOCIATED(THIS%UDOT))CALL WRITEPHI('UDOT',GID,NR,NLC,THIS%UDOT)
-      IF(ASSOCIATED(THIS%UC))CALL WRITEPHI('UC',GID,NR,NLC,THIS%UC)
-      IF(ASSOCIATED(THIS%UBOX))CALL WRITEPHI('UBOX',GID,NR,Nb,THIS%UBOX)
-      IF(ASSOCIATED(THIS%PHIBOX))CALL WRITEPHI('PHIBOX',GID,NR,Nb,THIS%PHIBOX)
-      STOP 'stop IN ONEATOM_WRITE'
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ONEATOM_OPTF(N,Q,KBT,L,E,F,MU)
-!     **************************************************************************
-!     **  DETERMINE OCCUPATIONS FOR A GIVEN CHARGE AND TEMPERATURE            **
-!     **                                                                      **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: N       ! #(ANGULAR MOMENTUM SHELLS)
-      REAL(8)   ,INTENT(IN) :: Q       ! TOTAL NUMBER OF ELECTRONS
-      REAL(8)   ,INTENT(IN) :: KBT     ! TEMPERATURE AS K_B*T
-      INTEGER(4),INTENT(IN) :: L(N)    ! MAIN ANGULAR MOMENTUM QUANTUM NUMBER
-      REAL(8)   ,INTENT(IN) :: E(N)    ! ENERGY EIGENVALUE
-      REAL(8)   ,INTENT(OUT):: F(N)    ! NUMBER OF ELECTRONS PER SHELL
-      REAL(8)   ,INTENT(OUT):: MU      ! CHEMICAL POTENTIAL
-      REAL(8)               :: MUMIN,MUMAX
-      REAL(8)               :: QMAX
-      REAL(8)               :: DQ
-      REAL(8)               :: X
-      INTEGER(4),PARAMETER  :: NITER=1000
-      REAL(8)   ,PARAMETER  :: QTOL=1.D-10
-      INTEGER(4)            :: ITER,I
-!     **************************************************************************
-      MUMIN=MINVAL(E)-10.D0*KBT
-      MUMAX=MAXVAL(E)+10.D0*KBT
-      QMAX=2.D0*REAL(SUM(2*L(:)+1),KIND=8)
-      IF(Q.LT.0.D0.OR.Q.GT.QMAX) THEN
-        CALL ERROR$MSG('CHARGE OUT OF RANGE')
-        CALL ERROR$R8VAL('Q',Q)
-        CALL ERROR$R8VAL('QMIN',0.D0)
-        CALL ERROR$R8VAL('QMAX',QMAX)
-        CALL ERROR$STOP('ONEATOM_OPTF')
-      END IF
-      DO ITER=1,NITER
-        MU=0.5D0*(MUMIN+MUMAX)
-        DO I=1,N
-          X=(E(I)-MU)/KBT
-          IF(X.GT.50.D0) THEN
-            F(I)=0.D0
-          ELSE IF(X.LT.-50.D0) THEN
-            F(I)=REAL(2*(2*L(I)+1),KIND=8)
-          ELSE
-            F(I)=REAL(2*(2*L(I)+1),KIND=8)/(1.D0+EXP(X))
-          END IF
-        ENDDO
-        DQ=SUM(F)-Q
-        IF(ABS(DQ).LT.QTOL) EXIT
-        IF(DQ.GT.0.D0) THEN
-          MUMAX=MU
-        ELSE
-          MUMIN=MU
-        END IF
-      ENDDO
-      IF(ABS(DQ).GT.QTOL) THEN
-        CALL ERROR$MSG('LOOP NOT CONVERGED')
-        CALL ERROR$MSG('ONEATOM_OPTF')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SCF_OPTF(N,Q,KBT,E,F,MU)
 !     **************************************************************************
 !     **  DETERMINE OCCUPATIONS FOR A GIVEN CHARGE AND TEMPERATURE            **
@@ -2737,154 +1706,6 @@ PRINT*,'ONEATOM done.................................'
         CALL ERROR$MSG('LOOP NOT CONVERGED')
         CALL ERROR$MSG('SCF_OPTF')
       END IF
-      RETURN
-      END
-!
-!     .....................................................VOUT.........
-      SUBROUTINE MYVOFRHOWITHRAD(GID,NR,RAD,AEZ,RHO,POTH,POTXC,EH,EXC)
-!     ******************************************************************
-!     **                                                              **
-!     **  ELECTROSTATIC AND EXCHANGE-CORRELATION POTENTIAL            **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      REAL(8),   INTENT(IN) :: AEZ
-      REAL(8),   INTENT(IN) :: RAD
-      REAL(8),   INTENT(IN) :: RHO(NR)
-      REAL(8),   INTENT(OUT):: POTH(NR)
-      REAL(8),   INTENT(OUT):: POTXC(NR)
-      REAL(8),   INTENT(OUT):: EH
-      REAL(8),   INTENT(OUT):: EXC
-      REAL(8)               :: ALPHA
-      REAL(8),   PARAMETER  :: RHOMIN=1.D-2
-      REAL(8)               :: PI
-      REAL(8)               :: FOURPI
-      REAL(8)               :: Y0
-      REAL(8)               :: RHO1(NR)
-      REAL(8)               :: AUX(NR)
-      REAL(8)               :: AUX1(NR)
-      REAL(8)               :: RHOPLUS(NR)
-      REAL(8)               :: DRHOPLUSDRHO(NR)
-      REAL(8)               :: EDEN(NR)
-      REAL(8)               :: GRHO(NR)
-      REAL(8)               :: R(NR)
-      REAL(8)               :: VGXC,VXC,EXC1,RH,GRHO2
-      REAL(8)               :: DUMMY1,DUMMY2,DUMMY3
-      REAL(8)               :: EVAL,MUVAL
-      REAL(8)               :: SVAR
-      REAL(8)               :: F,X,DF,YP,YM,NBYF,DFDN
-      INTEGER(4)            :: IR,IRBOX
-      REAL(8)               :: Q
-!     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
-      FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
-      CALL RADIAL$R(GID,NR,R)
-      DO IR=1,NR
-        IRBOX=IR
-        IF(R(IR).GE.RAD) EXIT
-      ENDDO
-!
-!     ==================================================================
-!     ==  TOTAL CHARGE                                                ==
-!     ==================================================================
-      AUX(:)=4.D0*PI*RHO(:)*R(:)**2*Y0
-      CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-      CALL RADIAL$VALUE(GID,NR,AUX1,RAD,Q)
-      Q=Q-AEZ
-!
-!     ==================================================================
-!     ==  TOTAL POTENTIAL                                             ==
-!     ==================================================================
-      RHO1=RHO
-      IR=MIN(IRBOX+3,NR)
-      RHO1(IR:)=0.D0
-      CALL RADIAL$NUCPOT(GID,NR,AEZ,POTH)
-      EDEN(:)=0.5D0*RHO1(:)*POTH(:)
-      CALL RADIAL$POISSON(GID,NR,0,RHO1,AUX)
-      POTH(:)=POTH(:)+AUX(:)
-      CALL RADIAL$VALUE(GID,NR,POTH,RAD,SVAR)
-      SVAR=Q/RAD/Y0-SVAR
-      POTH(1:IRBOX-1)=POTH(1:IRBOX-1)+SVAR
-      POTH(IRBOX:NR)=Q/R(IRBOX:NR)/Y0
-      EDEN(:)=EDEN(:)+0.5D0*RHO1(:)*POTH(:)
-!
-      EDEN(:)=EDEN(:)*R(:)**2
-      CALL RADIAL$INTEGRATE(GID,NR,EDEN,AUX1)
-      CALL RADIAL$VALUE(GID,NR,AUX1,RAD,EH)
-!
-!     ==================================================================
-!     ==  EXCHANGE CORRELATION
-!     ==================================================================
-!!$      RHO1(:IRBOX)=RHO(:)
-!!$      RHO1(IRBOX:)=0.D0     
-!!$      ALPHA=LOG(2.D0)/RHOMIN
-!!$      DO IR=1,NR
-!!$        X=RHO1(IR)*Y0
-!!$        IF(R(IR).GT.RAD) X=0.D0
-!!$        IF(ALPHA*X.GT.30.D0) THEN
-!!$          F=X
-!!$          DF=1.D0
-!!$        ELSE
-!!$          YP=EXP(ALPHA*X)
-!!$          YM=1.D0/YP
-!!$          F=LOG(YP+YM)/ALPHA
-!!$          DF=(YP-YM)/(YP+YM)
-!!$        END IF
-!!$        RHOPLUS(IR)=F/Y0
-!!$        DRHOPLUSDRHO(IR)=DF/Y0
-!!$      ENDDO
-!!$
-!!$      CALL RADIAL$DERIVE(GID,NR,RHOPLUS(:),GRHO)
-!
-      CALL RADIAL$DERIVE(GID,NR,RHO,GRHO)
-!
-      DO IR=1,NR
-        RH=RHO(IR)*Y0
-        GRHO2=(Y0*GRHO(IR))**2
-        CALL DFT(RH,0.D0,GRHO2,0.D0,0.D0,EXC1,VXC,DUMMY1,VGXC,DUMMY2,DUMMY3)
-        EDEN(IR)=4.D0*PI*EXC1   ! ANGULAR INTEGRATION ALREADY INCLUDED
-        POTXC(IR)=VXC/Y0
-        GRHO(IR)=VGXC*2.D0*GRHO(IR)
-      ENDDO
-      CALL RADIAL$DERIVE(GID,NR,GRHO(:),AUX)
-      POTXC(:)=POTXC(:)-AUX
-      IF(R(1).GT.1.D+10) THEN
-         POTXC(:)=POTXC(:)-2.D0/R(:)*GRHO(:)
-      ELSE
-        POTXC(2:)=POTXC(2:)-2.D0/R(2:)*GRHO(2:)
-        POTXC(1)=POTXC(1)-2.D0/R(2)*GRHO(2)
-        POTXC(1)=POTXC(2)
-      END IF
-!
-!!$      DO IR=1,NR
-!!$        EVAL=EDEN(IR)/(4.D0*PI)
-!!$        MUVAL=POTXC(IR)*Y0
-!!$!       ==  N/F(N) =============================
-!!$        NBYF=RHO1(IR)/RHOPLUS(IR)
-!!$        DFDN=DRHOPLUSDRHO(IR)*Y0
-!!$        SVAR=(1.D0-NBYF*DFDN)/RHOPLUS(IR)
-!!$        EDEN(IR)=NBYF*EVAL
-!!$        POTXC(IR)=NBYF*MUVAL+SVAR*EVAL
-!!$        EDEN(IR)=EDEN(IR)*4.D0*PI
-!!$        POTXC(IR)=POTXC(IR)/Y0
-!!$      ENDDO
-!
-!     == EXCHANGE CORRELATION POTENTIAL IS SET TO ZERO OUTSIDE THE BOX. 
-!     == OTHERWISE IT WILL HAVE A CONSTANT VALUE IN THE ZERO-DENSITY REGION
-      POTXC(IRBOX:)=0.D0
-      EDEN(:)=EDEN(:)*R(:)**2
-      CALL RADIAL$INTEGRATE(GID,NR,EDEN,AUX1)
-      CALL RADIAL$VALUE(GID,NR,AUX1,RAD,EXC)
-!
-!     ==========================================================================
-!     ==  CUT OF POTENTIAL FOTR LOW DENSITIES                                 ==
-!     ==========================================================================
-      DO IR=1,NR
-        IF(RHO(IR)*Y0.LT.1.D-6) POTXC(IR)=0.D0
-      ENDDO
       RETURN
       END
 !
@@ -2959,844 +1780,6 @@ END MODULE STRUCTURE_MODULE
       RETURN
       END
 
-!
-!     ......................................................................
-      SUBROUTINE AESCF(GID,NR,NB,TREL,LOFI,SO,F,NN,Z,RHOADD,RBOX,DREL,POT,EOFI)
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)     :: GID
-      INTEGER(4) ,INTENT(IN)     :: NR
-      INTEGER(4) ,INTENT(IN)     :: NB        ! #(STATES)
-      LOGICAL(4) ,INTENT(IN)     :: TREL
-      INTEGER(4) ,INTENT(IN)     :: LOFI(NB)  !ANGULAR MOMENTUM
-      INTEGER(4) ,INTENT(IN)     :: SO(NB)    !SWITCH FOR SPIN-ORBIT COUP.
-      REAL(8)    ,INTENT(IN)     :: F(NB)     !OCCUPATION
-      INTEGER(4) ,INTENT(IN)     :: NN(NB)    !#(NODES)
-      REAL(8)    ,INTENT(IN)     :: Z         !ATOMIC NUMBER
-      REAL(8)    ,INTENT(IN)     :: RHOADD(NR)! FIXED CONTRIBUTION OF DENSITY
-      REAL(8)    ,INTENT(IN)     :: RBOX      !ATOM ENCLOSED IN A BOX 
-      REAL(8)    ,INTENT(OUT)    :: DREL(NR)  !RELATIVISTIC CORRECTION
-      REAL(8)    ,INTENT(INOUT)  :: POT(NR)   !POTENTIAL
-      REAL(8)    ,INTENT(OUT)    :: EOFI(NB)  !ONE-PARTICLE ENERGIES
-      REAL(8)                    :: R(NR)
-      REAL(8)                    :: RHO(NR)
-      REAL(8)                    :: EREF
-      INTEGER(4)                 :: ITER
-      INTEGER(4)                 :: NITER=50
-      REAL(8)                    :: XAV,XMAX
-      LOGICAL(4)                 :: CONVG
-      REAL(8)   ,PARAMETER       :: TOL=1.D-5
-      INTEGER(4)                  :: NFILO
-      REAL(8)                    :: EH,EXC
-      LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
-      REAL(8)                    :: POTIN(NR)
-      REAL(8)                    :: SVAR
-      INTEGER(4)                 :: IRBOX
-      INTEGER(4)                 :: IR
-      CHARACTER(32)              :: ID
-REAL(8)                    :: POTS(NR,100)
-!     ***********************************************************************
-      CALL RADIAL$R(GID,NR,R)
-      IRBOX=0
-      DO IR=1,NR
-        IRBOX=IR
-        IF(R(IR).GT.RBOX) EXIT
-      ENDDO
-      EOFI=0.D0
-      EREF=0.D0
-      XAV=0.D0
-      XMAX=0.D0
-      CONVG=.FALSE.
-      IF(TBROYDEN) THEN
-        CALL BROYDEN$NEW(NR,4,1.D-1)
-      ELSE
-        CALL MYMIXPOT('ON',GID,NR,POT,XMAX,XAV)
-      END IF
-      DO ITER=1,NITER
-        IF(TREL) THEN
-          CALL SCHROEDINGER$DREL(GID,NR,POT,EREF,DREL)
-          ID='FULL'
-        ELSE
-          DREL=0.D0
-          ID='NONREL'
-        END IF
-POTS(:,ITER)=POT
-        CALL AERHO(ID,GID,NR,NB,LOFI,SO,F,NN,RBOX,DREL,POT,RHO,EOFI)
-        RHO(:)=RHO(:)+RHOADD(:)
-        EREF=EOFI(NB)
-!
-!       ================================================================
-!       ==  EXIT IF CONVERGED                                         ==
-!       ================================================================
-        IF(CONVG) THEN
-          CALL FILEHANDLER$UNIT('PROT',NFILO)
-          CALL REPORT$I4VAL(NFILO,"SCF LOOP CONVERGED AFTER ",ITER," ITERATIONS")
-          CALL REPORT$R8VAL(NFILO,'AV. DIFF BETWEEN IN- AND OUTPUT POTENTIAL',XAV,'H')
-          CALL REPORT$R8VAL(NFILO,'MAXIMUM  OF (VIN-VOUT)*R^2',XMAX,'H')
-          IF(TBROYDEN) THEN
-            CALL BROYDEN$CLEAR
-          ELSE
-            CALL MYMIXPOT('OFF',GID,NR,POT,XMAX,XAV)
-          END IF
-          RETURN
-        END IF
-
-!       ====================================================================
-!       == CALCULATE OUTPUT POTENTIAL                                     ==
-!       ====================================================================
-        IF(TBROYDEN) POTIN=POT
-        CALL MYVOFRHO(GID,NR,Z,RHO,POT,EH,EXC)
-!
-!       ================================================================
-!       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD     ==
-!       ================================================================
-        IF(TBROYDEN) THEN
-          XAV=SQRT(DOT_PRODUCT(POT-POTIN,POT-POTIN)/REAL(NR,KIND=8))
-          XMAX=MAXVAL(ABS(POT-POTIN)) 
-          CALL BROYDEN$STEP(NR,POTIN,(POT-POTIN))
-          POT=POTIN
-       ELSE
-          CALL MYMIXPOT('GO',GID,NR,POT,XMAX,XAV)
-        END IF
-!PRINT*,'XMAX ',XMAX,XAV
-        CONVG=(XMAX.LT.TOL)
-      ENDDO
-      CALL WRITEPHI('POTS.DAT',GID,NR,10,POTS(:,1:10))
-      CALL ERROR$MSG('SELFCONSISTENCY LOOP NOT CONVERGED')
-      CALL ERROR$STOP('AESCF')
-      RETURN
-      END
-!
-!     .....................................................VOUT.........
-      SUBROUTINE MYVOFRHO(GID,NR,AEZ,RHO,POT,EH,EXC)
-!     ******************************************************************
-!     **                                                              **
-!     **  ELECTROSTATIC AND EXCHANGE-CORRELATION POTENTIAL            **
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      REAL(8),   INTENT(IN) :: AEZ
-      REAL(8),   INTENT(IN) :: RHO(NR)
-      REAL(8),   INTENT(OUT):: POT(NR)
-      REAL(8),   INTENT(OUT):: EH
-      REAL(8),   INTENT(OUT):: EXC
-      REAL(8)               :: PI
-      REAL(8)               :: FOURPI
-      REAL(8)               :: Y0
-      REAL(8)               :: AUX(NR)
-      REAL(8)               :: EDEN(NR)
-      REAL(8)               :: GRHO(NR)
-      REAL(8)               :: R(NR)
-      REAL(8)               :: POTXC(NR)
-      REAL(8)               :: VGXC,VXC,EXC1,RH,GRHO2
-      REAL(8)               :: DUMMY1,DUMMY2,DUMMY3
-      INTEGER(4)            :: IR
-!     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
-      FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
-      CALL RADIAL$R(GID,NR,R)
-!
-!     ==================================================================
-!     ==  TOTAL POTENTIAL                                             ==
-!     ==================================================================
-      EDEN=0.D0
-      CALL RADIAL$POISSON(GID,NR,0,RHO,POT)
-      EDEN(:)=EDEN(:)+0.5D0*RHO(:)*POT(:)
-      CALL RADIAL$NUCPOT(GID,NR,AEZ,AUX)
-      POT(:)=POT(:)+AUX(:)
-      EDEN(:)=EDEN(:)+RHO(:)*AUX(:)
-      EDEN(:)=EDEN(:)*R(:)**2
-      CALL RADIAL$INTEGRAL(GID,NR,EDEN,EH)
-!
-!     ==================================================================
-!     ==  EXCHANGE CORRELATION
-!     ==================================================================
-      CALL RADIAL$DERIVE(GID,NR,RHO(:),GRHO)
-      DO IR=1,NR
-        RH=RHO(IR)*Y0
-        GRHO2=(Y0*GRHO(IR))**2
-        CALL DFT(RH,0.D0,GRHO2,0.D0,0.D0,EXC1,VXC,DUMMY1,VGXC,DUMMY2,DUMMY3)
-        EDEN(IR)=4.D0*PI*EXC1   ! ANGULAR INTEGRATION ALREADY INCLUDED
-        POTXC(IR)=VXC/Y0
-        GRHO(IR)=VGXC*2.D0*GRHO(IR)
-      ENDDO
-      CALL RADIAL$DERIVE(GID,NR,GRHO(:),AUX)
-      POTXC(:)=POTXC(:)-AUX
-      IF(R(1).GT.1.D+10) THEN
-         POTXC(:)=POTXC(:)-2.D0/R(:)*GRHO(:)
-      ELSE
-        POTXC(2:)=POTXC(2:)-2.D0/R(2:)*GRHO(2:)
-        POTXC(1)=POTXC(1)-2.D0/R(2)*GRHO(2)
-        POTXC(1)=POTXC(2)
-      END IF
-      EDEN(:)=EDEN(:)*R(:)**2
-      CALL RADIAL$INTEGRAL(GID,NR,EDEN,EXC)
-!
-!     ==========================================================================
-!     ==  CUT OF POTENTIAL FOR LOW DENSITIES                                  ==
-!     ==========================================================================
-      DO IR=1,NR
-        IF(RHO(IR)*Y0.LT.1.D-6) POTXC(IR)=0.D0
-      ENDDO
-!
-!     ==========================================================================
-!     ==  NOW ADD MASSAGED XCHANGE POTENTIAL TO HARTREE POTENTIAL             ==
-!     ==========================================================================
-      POT=POT+POTXC
-      RETURN
-      END
-!
-!     ..................................................................
-      SUBROUTINE MYMIXPOT(SWITCH,GID,NR,POT,XMAX,XAV)
-!     ******************************************************************
-!     **                                                              **
-!     **  MIX POTENTIAL USING D.G.ANDERSEN'S METHOD                   **
-!     **                                                              **
-!     **  1) INITIALIZE WITH SWITCH='ON'                              **
-!     **     STORES THE FIRST INPUT POTENTIAL <-POT                   **
-!     **     ALLOCATES  INTERNAL ARRAYS                               **
-!     **                                                              **
-!     **  2) ITERATE WITH WITH SWITCH='GO'                            **
-!     **     RECEIVES THE OUTPUT POTENTIAL    <-POT           E       **
-!     **     CALCULATES NEW INPUT POTENTIAL   ->POT                   **
-!     **     STORES THE NEW INPUT POTENTIAL                           **
-!     **                                                              **
-!     **  3) CLEAR MEMORY WITH SWITCH='OFF'                           **
-!     **                                                              **
-!     **  WARNING! DO NOT USE SIMULTANEOUSLY FOR TOW DIFFERENT SCHEMES**
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)   :: SWITCH !CAN BE 'ON', 'GO' OR 'OFF'
-      INTEGER(4)  ,INTENT(IN)   :: GID
-      INTEGER(4)  ,INTENT(IN)   :: NR
-      REAL(8)     ,INTENT(INOUT):: POT(NR) ! 
-      REAL(8)     ,INTENT(OUT)  :: XMAX    ! MAX.|R**2*(VOUT-VIN)|
-      REAL(8)     ,INTENT(OUT)  :: XAV     ! <R**2(VOUT-VIN)**2>
-      REAL(8)     ,PARAMETER    :: ALPHA=1.D-1 !MIXING PARAMETER
-      CHARACTER(8)       ,SAVE :: STATUS='OFF'
-      LOGICAL(4)         ,SAVE :: TSTART
-      INTEGER(4)         ,SAVE :: NRSAVE
-      REAL(8),ALLOCATABLE,SAVE :: OLDPOTIN(:)
-      REAL(8),ALLOCATABLE,SAVE :: OLDPOTOUT(:)
-      REAL(8),ALLOCATABLE,SAVE :: NEWPOTOUT(:)
-      REAL(8),ALLOCATABLE,SAVE :: NEWPOTIN(:)
-      REAL(8)                  :: BETA
-      REAL(8)                  :: SVAR1,SVAR2
-      REAL(8)                  :: R(NR)
-      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
-!     ******************************************************************
-      CALL RADIAL$R(GID,NR,R)
-      IF(SWITCH.EQ.'GO') THEN
-        IF(NR.NE.NRSAVE) THEN
-          CALL ERROR$MSG('INCONSISTENT NUMBER OF GRIDPOINTS')
-          CALL ERROR$STOP('MIXPOT')
-        END IF
-!       ================================================================
-!       == COPY POT INTO NEWPOTIN                                     ==
-!       ================================================================
-        NEWPOTOUT(:)=POT(:)
-!       ================================================================
-!       == CALCULATE MAX AND VARIANCE OF POTOUT-POTIN                 ==
-!       ================================================================
-        AUX(:)=NEWPOTOUT(:)-NEWPOTIN(:)
-        XMAX=MAXVAL(ABS(AUX(:)))
-        XAV=SUM(AUX(:)**2)
-        SVAR1=REAL(NR,KIND=8)
-        XAV=SQRT(XAV/SVAR1)
-!       ================================================================
-!       ==  CALCULATE MIXING FACTOR BETA                              ==
-!       ================================================================
-        IF(TSTART) THEN
-          TSTART=.FALSE.
-          BETA=0.D0
-        ELSE
-          AUX1(:)=NEWPOTOUT(:)-NEWPOTIN(:)
-          AUX2(:)=OLDPOTOUT(:)-OLDPOTIN(:)
-          AUX(:)=AUX1(:)-AUX2(:)
-          SVAR1=SUM(AUX1(:)*AUX(:))
-          SVAR2=SUM(AUX(:)**2)
-          BETA=SVAR1/SVAR2
-        END IF
-!       ================================================================
-!       == MIX POTENTIALS                                             ==
-!       ================================================================
-        AUX1(:)=(1.D0-BETA)*NEWPOTIN(:) + BETA*OLDPOTIN(:)
-        AUX2(:)=(1.D0-BETA)*NEWPOTOUT(:)+ BETA*OLDPOTOUT(:)
-        POT(:)=AUX1(:) + ALPHA*(AUX2(:)-AUX1(:))
-        OLDPOTIN(:) =NEWPOTIN(:)
-        OLDPOTOUT(:)=NEWPOTOUT(:)
-        NEWPOTIN(:) =POT(:)
-!
-!     ==================================================================
-!     == INITIALIZE MIXING                                            ==
-!     ==================================================================
-      ELSE IF(SWITCH.EQ.'ON') THEN
-        IF(TRIM(STATUS).NE.'OFF') THEN
-          DEALLOCATE(OLDPOTIN)
-          DEALLOCATE(OLDPOTOUT)
-          DEALLOCATE(NEWPOTIN)
-          DEALLOCATE(NEWPOTOUT)
-        END IF
-        NRSAVE=NR
-        ALLOCATE(OLDPOTIN(NRSAVE))
-        ALLOCATE(OLDPOTOUT(NRSAVE))
-        ALLOCATE(NEWPOTIN(NRSAVE))
-        ALLOCATE(NEWPOTOUT(NRSAVE))
-        TSTART=.TRUE.
-        STATUS='ON'
-        OLDPOTOUT(:)=0.D0
-        OLDPOTIN(:) =0.D0
-        NEWPOTOUT(:)=0.D0
-        NEWPOTIN(:) =POT(:)
-!
-!     ==================================================================
-!     == CLEAR ARRAYS                                                 ==
-!     ==================================================================
-      ELSE IF(SWITCH.EQ.'OFF') THEN
-        DEALLOCATE(OLDPOTIN)
-        DEALLOCATE(OLDPOTOUT)
-        DEALLOCATE(NEWPOTIN)
-        DEALLOCATE(NEWPOTOUT)
-        TSTART=.FALSE.
-        STATUS='OFF'
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE AERHO(ID,GID,NR,NB,LOFI,SO,F,NN,RBOX,DREL,POT,RHO,E)
-!     **                                                                      **
-!     **  DETERMINES THE DENSITY FOR A GIVEN POTENTIAL AND A SPECIFIED SET    **
-!     **  OF WAVE FUNCTIONS.                                                  **
-!     **  UPDATES THE ONE-PARTICLE ENERGIES AND RELATIVISTIC CORRECTION "DREL"**
-!     **                                                                      **
-!     **  THE ORBITALS ARE SPECIFIED BY ANGULAR MOMENTUM "LOFI",              **
-!     **                             THE NUMBER OF NODES "NN",                **
-!     **                             AND THE SPIN ORBIT PARAMETER "SO"        **
-!     **                                                                      **
-!     **  VALUES OF ID:                                                       **
-!     **    NONREL: NONRELATIVISTIC CALCULATION, DREL=0 IS RETURNED           **
-!     **    EFFZORA: THE RELATIVISTIC CORRECTIONS ARE TAKEN FROM INPUT        **
-!     **            AND REMAIN UNCHANED                                       **
-!     **    FULL: PERFORMS RELATIVISTIC CALCULATION USING DREL FROM INPUT     **
-!     **          AND RECALCULATES DREL FROM THE MEAN KINETIC ENERGY DENSITY  **
-!     **          DIVIDED BY THE DENSITY.                                     **
-!     **                                                                      **
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)    :: ID
-      INTEGER(4) ,INTENT(IN)     :: GID       ! GRID ID
-      INTEGER(4) ,INTENT(IN)     :: NR        ! #(RADIAL GRID POINTS)
-      INTEGER(4) ,INTENT(IN)     :: NB        ! #(STATES)
-      INTEGER(4) ,INTENT(IN)     :: LOFI(NB)  !ANGULAR MOMENTUM
-      INTEGER(4) ,INTENT(IN)     :: SO(NB)    !SWITCH FOR SPIN-ORBIT COUP.
-      INTEGER(4) ,INTENT(IN)     :: NN(NB)    !#(NODES)
-      REAL(8)    ,INTENT(IN)     :: F(NB)     !OCCUPATION
-      REAL(8)    ,INTENT(IN)     :: RBOX      !ATOM ENCLOSED IN A BOX
-      REAL(8)    ,INTENT(INOUT)  :: DREL(NR)  !RELATIVISTIC CORRECTION
-      REAL(8)    ,INTENT(IN)     :: POT(NR)   !POTENTIAL
-      REAL(8)    ,INTENT(OUT)    :: RHO(NR)   !DENSITY
-      REAL(8)    ,INTENT(INOUT)  :: E(NB)     !ONE-PARTICLE ENERGIES
-      REAL(8)                    :: R(NR)     !RADIAL GRID POINTS
-      REAL(8)                    :: G(NR)     !INHOMOGENEITY (NOT USED)
-      REAL(8)                    :: AUX(NR),AUX1(NR)
-      REAL(8)                    :: PHI(NR)
-      REAL(8)                    :: EKIN(NR)
-      REAL(8)                    :: EKIN2(NR)
-      REAL(8)                    :: ARRAY(NR,5)
-      INTEGER(4)                 :: IB,IR
-      REAL(8)                    :: SVAR
-      REAL(8)                    :: C0LL,PI,Y0
-!     **************************************************************************
-      IF(ID.NE.'FULL'.AND.ID.NE.'EFFZORA'.AND.ID.NE.'NONREL') THEN
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$MSG('ALLOWED VALUES ARE "FULL",EFFZORA","NONREL"')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('AESCF')
-      ENDIF
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      C0LL=1.D0/SQRT(4.D0*PI)
-      CALL RADIAL$R(GID,NR,R)
-!
-!     ==========================================================================
-!     == DETERMINE BOUND STATES FOR A GIVEN POTENTIAL AND ADD TO DENSITY      ==
-!     ==========================================================================
-      RHO(:)=0.D0
-      EKIN(:)=0.D0
-      EKIN2(:)=0.D0
-      DO IB=1,NB
-         G(:)=0.D0
-         IF(ID.EQ.'FULL') THEN
-           CALL SCHROEDINGER$DREL(GID,NR,POT,E(IB),DREL)
-         ELSE IF(ID.EQ.'NONREL') THEN
-           DREL(:)=0.D0 
-         END IF
-         CALL BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),RBOX,DREL,G,NN(IB),POT,E(IB),PHI)
-         AUX(:)=(R(:)*PHI(:))**2
-         CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-         CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
-         PHI(:)=PHI(:)/SQRT(SVAR)
-         RHO(:)  =RHO(:)  +F(IB)*C0LL         *PHI(:)**2
-         EKIN(:) =EKIN(:) +F(IB)*C0LL*E(IB)   *PHI(:)**2
-         EKIN2(:)=EKIN2(:)+F(IB)*C0LL*E(IB)**2*PHI(:)**2
-      ENDDO
-      DO IR=1,NR
-        IF(R(IR).GT.RBOX) RHO(IR)=0.D0
-      ENDDO
-!
-!     ==========================================================================
-!     == DETERMINE RELATIVISTIC CORRECTION                                    ==
-!     ==========================================================================
-      IF(ID.EQ.'FULL') THEN
-        AUX(:)=MAX(RHO(:),1.D-6)
-        AUX=1.D0/AUX
-        EKIN(:)=EKIN(:)*AUX(:)
-        EKIN2(:)=EKIN2(:)*AUX(:)
-        EKIN2(:)=MAX(EKIN2(:)-EKIN(:)**2,0.D0)
-        EKIN2(:)=SQRT(EKIN2(:))
-        DO IR=1,NR
-          IF(RHO(IR).LT.1.D-5) THEN
-            EKIN(IR)=0.D0
-            EKIN2(IR)=0.D0
-          END IF
-        ENDDO
-        EKIN(:)=EKIN(:)/Y0-POT(:)
-        CALL SCHROEDINGER$DREL(GID,NR,-EKIN,0.D0,DREL)
-      END IF
-      IF(ID.EQ.'FULL') THEN
-        ARRAY(:,1)=POT(:)*Y0
-        ARRAY(:,2)=(EKIN+POT(:))*Y0
-        ARRAY(:,3)=(EKIN+POT(:))*Y0+EKIN2(:)
-        ARRAY(:,4)=(EKIN+POT(:))*Y0-EKIN2(:)
-!        CALL WRITEPHI('EKIN.DAT',GID,NR,4,ARRAY)
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BOUNDSTATE(GID,NR,L,SO,RBOX,DREL,G,NN,POT,E,PHI)
-!     **************************************************************************
-!     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND         **
-!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                     **
-!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G                **
-!     **                                                                      **
-!     **  FIRST, THE ENERGY IS DETERMINED BY BISECTION ON THE                 **
-!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.         **
-!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.         **
-!     **                                                                      **
-!     **  SECONDLY, THE SCHROEDINGER EQUATION IS SOLVED INWARD, AND           **
-!     **  MATCHED WITH VALUE, EITHER AT THE CLASSICAL TURNING POINT           **
-!     **  OR A SPECIFIED RADIUS, WHATEVER IS SMALLER.                         **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
-      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
-      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
-      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
-      REAL(8)    ,INTENT(IN)     :: RBOX    ! BOX RADIUS
-      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
-      REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
-      INTEGER(4) ,INTENT(IN)     :: NN      !#(NODES)
-      REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL
-      REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
-      REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
-      INTEGER(4)                 :: ISTART,IBI
-      REAL(8)                    :: X0,DX,XM,ZM,Z0
-      REAL(8)    ,PARAMETER      :: TOL=1.D-12
-      REAL(8)                    :: PI,Y0
-      REAL(8)                    :: DER,DERO
-      REAL(8)                    :: R(NR)
-      REAL(8)                    :: PHIHOM(NR),PHIINHOM(NR),GHOM(NR)
-      REAL(8)                    :: PHI1(NR)
-      REAL(8)                    :: AUX(NR),AUX1(NR)
-      INTEGER(4) ,PARAMETER      :: NITER=100
-      INTEGER(4)                 :: I,IR
-      INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
-      INTEGER(4)                 :: IRMATCH 
-      REAL(8)                    :: SVAR
-      REAL(8)                    :: POT1(NR)
-      REAL(8)   ,PARAMETER       :: XMAX=1.D+20 ! MAXIMUM FACTOR IN THE WAVE FUNCTION
-      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
-      LOGICAL(4)                 :: THOM
-      REAL(8)                    :: ROUT
-      REAL(8)                    :: VAL,VAL1,VAL2,R1,R2
-      INTEGER(4)                 :: IROUT,IRCL,IRBOX,IREND
-!     *********************************************************************
-                                 CALL TRACE$PUSH('BOUNDSTATE')
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      CALL RADIAL$R(GID,NR,R)
-!     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST IOUTSIDE THE BOX
-      IRBOX=1
-      DO IR=1,NR
-        IRBOX=IR
-        IF(R(IR).GE.RBOX) EXIT
-      ENDDO
-!          
-      ISTART=1
-      X0=E
-      DX=1.D-2
-      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-      DO I=1,NITER
-        E=X0
-!        E=MIN(X0,EMAX)
-!
-!       =======================================================================
-!       ==  CUT OFF THE POTENTIAL                                            ==
-!       =======================================================================
-        CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
-!       == BOUNDARY CONDITION PHI(ROUT)=0 =====================================
-        IF(R(IROUT).LT.RBOX) THEN
-          ROUT=R(IROUT)-1.D-5    !ENSURE THAT ROUT<R(IROUT)
-        ELSE
-          ROUT=RBOX
-          IROUT=IRBOX
-        END IF
-!       ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT
-        POT1(:)=POT(:)
-        POT1(IROUT:)=POT(IROUT)
-!
-!       =======================================================================
-!       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
-!       =======================================================================
-        IDIR=1
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHI)
-!       == CHECK FOR OVERFLOW
-        IF(.NOT.(PHI(IROUT).GT.0.OR.PHI(IROUT).LE.0)) THEN
-          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
-          CALL ERROR$I4VAL('L',L)
-          CALL ERROR$I4VAL('NN',NN)
-          CALL ERROR$STOP('BOUNDSTATE')
-        END IF
-!
-!       =======================================================================
-!       == ESTIMATE PHASE SHIFT                                              ==
-!       =======================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,ROUT,Z0)
-        Z0=Z0-REAL(NN+1)
-        IF(ABS(2.D0*DX).LE.TOL) EXIT
-!       =====================================================================
-!       ==  BISECTION                                                      ==
-!       =====================================================================
-        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-      ENDDO
-      IF(ABS(DX).GT.TOL) THEN
-        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
-        CALL ERROR$MSG('BOUND STATE NOT FOUND')
-        CALL ERROR$STOP('BOUNDSTATE')
-      END IF
-!
-!     =======================================================================
-!     ==  DETERMINE MATCHING POINT                                         ==
-!     =======================================================================
-      IRMATCH=IRCL
-      IF(R(IRCL).GT.5.D0) THEN
-        CALL RADIAL$XOFR(GID,5.D0,SVAR)
-        IRMATCH=INT(SVAR)
-      END IF
-!
-!     =======================================================================
-!     ==  INTEGRATE INWARD                                                 ==
-!     =======================================================================
-      IF(IRMATCH.LT.IROUT) THEN
-        THOM=MAXVAL(ABS(G(:))).EQ.0.D0
-        IDIR=-1
-!       ==  HOMOGENEOUS SOLUTION THAT FULFILLS THE OUTER BOUNDARY CONDITION
-        IREND=MIN(IROUT,NR-3)
-        GHOM(:)=0.D0
-        GHOM(IREND+1)=1.D-8
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
-        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
-        GHOM(:)=0.D0
-        GHOM(IREND+2)=1.D-8
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHI1)
-        PHI1(:)=PHI1(:)/PHI1(IRMATCH)
-!       == EXTRAPOLATE =======================
-        IF(IREND.LT.IROUT) THEN
-          R1=R(IREND)
-          R2=R(IREND+1)
-          VAL1=PHIHOM(IREND)
-          VAL2=PHIHOM(IREND+1)
-          PHIHOM(IREND:)=VAL1+(VAL2-VAL1)/(R2-R1)*(R(IREND:)-R1)
-          VAL1=PHI1(IREND)
-          VAL2=PHI1(IREND+1)
-          PHI1(IREND:)=VAL1+(VAL2-VAL1)/(R2-R1)*(R(IREND:)-R1)
-        END IF
-!       == FULFILL OUTER BOUNDARY CONDITION =====================================
-        CALL RADIAL$VALUE(GID,NR,PHIHOM,ROUT,VAL1)
-        CALL RADIAL$VALUE(GID,NR,PHI1,ROUT,VAL2)
-        SVAR=VAL1+VAL2
-        VAL1=VAL1/SVAR
-        VAL2=VAL2/SVAR
-        PHIHOM(:)=VAL2*PHIHOM(:)-VAL1*PHI1(:)
-        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
-!       == INHOMOGENEOUS SOLUTION WITH CORRECT BOUNDARY CONDITIONS
-        IF(.NOT.THOM) THEN     
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
-          CALL RADIAL$VALUE(GID,NR,PHIINHOM,ROUT,VAL1)
-          CALL RADIAL$VALUE(GID,NR,PHI1,ROUT,VAL2)
-          PHIINHOM(:)=PHIINHOM(:)-VAL1/VAL2*PHI1(:)
-         ELSE
-          PHIINHOM(:)=0.D0
-        END IF
-!
-!       =======================================================================
-!       ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
-!       =======================================================================
-        SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
-        PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
-        SVAR=(DERO-DER)/PHI(IRMATCH)
-        PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
-      END IF
-!
-!     =======================================================================
-!     ==  NORMALIZE WAVE FUNCTION                                          ==
-!     =======================================================================
-      AUX(:)=R(:)**2*PHI(:)**2
-      CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
-      PHI(:)=PHI(:)/SQRT(SVAR)
-!
-!     =======================================================================
-!     ==  SET WAVE FUNCTION TO ZERO BEYOND RBOX                            ==
-!     =======================================================================
-DO IR=1,NR
-  IF(.NOT.(PHI(IR).GT.0.D0.OR.PHI(IR).LE.0.D0)) THEN
-    PRINT*,'ERROR'
-!    PRINT*,'PHIIN',PHI(:IRMATCH-1)
-!    PRINT*,'PHIOUT',PHI(IRMATCH:)
-    PRINT*,'SVAR ',SVAR
-    PRINT*,'IROUT,IRCL ',IROUT,IRCL,NR
-    PRINT*,'R,PHI ',R(IR),PHI(IR)
-!!$    OPEN(UNIT=8,FILE='XXX.DAT')
-!!$    DO I=1,NR
-!!$      WRITE(8,*)I,R(I),PHIHOM(I),POT1(I)*Y0
-!!$    ENDDO
-!!$    CLOSE(8)      
-    CALL ERROR$MSG('PHI CONTAINS NANS')
-    CALL ERROR$STOP('BOUNDSTATE')
-  END IF
-ENDDO
-                                 CALL TRACE$POP()
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BOUNDSTATE_OV(GID,NR,L,SO,RBOX,DREL,G,NN,POT,OV,E,PHI)
-!     **************************************************************************
-!     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND         **
-!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                     **
-!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G                **
-!     **                                                                      **
-!     **  FIRST, THE ENERGY IS DETERMINED BY BISECTION ON THE                 **
-!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.         **
-!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.         **
-!     **                                                                      **
-!     **  SECONDLY, THE SCHROEDINGER EQUATION IS SOLVED INWARD, AND           **
-!     **  MATCHED WITH VALUE, EITHER AT THE CLASSICAL TURNING POINT           **
-!     **  OR A SPECIFIED RADIUS, WHATEVER IS SMALLER.                         **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
-      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
-      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
-      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
-      REAL(8)    ,INTENT(IN)     :: RBOX    ! BOX RADIUS
-      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
-      REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
-      INTEGER(4) ,INTENT(IN)     :: NN      !#(NODES)
-      REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL
-      REAL(8)    ,INTENT(IN)     :: OV(NR)  !OVERLAP OPERATOR
-      REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
-      REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
-      INTEGER(4)                 :: ISTART,IBI
-      REAL(8)                    :: X0,DX,XM,ZM,Z0
-      REAL(8)    ,PARAMETER      :: TOL=1.D-12
-      REAL(8)                    :: PI,Y0
-      REAL(8)                    :: DER,DERO
-      REAL(8)                    :: R(NR)
-      REAL(8)                    :: PHIHOM(NR),PHIINHOM(NR),GHOM(NR)
-      REAL(8)                    :: PHI1(NR)
-      REAL(8)                    :: AUX(NR),AUX1(NR)
-      INTEGER(4) ,PARAMETER      :: NITER=100
-      INTEGER(4)                 :: I,IR
-      INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
-      INTEGER(4)                 :: IRMATCH 
-      REAL(8)                    :: SVAR
-      REAL(8)                    :: POT1(NR)
-      REAL(8)   ,PARAMETER       :: XMAX=1.D+20 ! MAXIMUM FACTOR IN THE WAVE FUNCTION
-      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
-      LOGICAL(4)                 :: THOM
-      REAL(8)                    :: ROUT
-      REAL(8)                    :: VAL,VAL1,VAL2,R1,R2
-      INTEGER(4)                 :: IROUT,IRCL,IRBOX,IREND
-!     *********************************************************************
-                                 CALL TRACE$PUSH('BOUNDSTATE')
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      CALL RADIAL$R(GID,NR,R)
-!     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST IOUTSIDE THE BOX
-      IRBOX=1
-      DO IR=1,NR
-        IRBOX=IR
-        IF(R(IR).GE.RBOX) EXIT
-      ENDDO
-!          
-      ISTART=1
-      X0=E
-      DX=1.D-2
-      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-      DO I=1,NITER
-        E=X0
-!        E=MIN(X0,EMAX)
-!
-!       =======================================================================
-!       ==  CUT OFF THE POTENTIAL                                            ==
-!       =======================================================================
-        POT1(:)=POT(:)-E*OV(:)
-        CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT1,E,IRCL,IROUT)
-!       == BOUNDARY CONDITION PHI(ROUT)=0 =====================================
-        IF(R(IROUT).LT.RBOX) THEN
-          ROUT=R(IROUT)-1.D-5    !ENSURE THAT ROUT<R(IROUT)
-        ELSE
-          ROUT=RBOX
-          IROUT=IRBOX
-        END IF
-!       ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT
-        POT1(:)=POT(:)
-        POT1(IROUT:)=POT(IROUT)
-!
-!       =======================================================================
-!       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
-!       =======================================================================
-        IDIR=1
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHI)
-!       == CHECK FOR OVERFLOW
-        IF(.NOT.(PHI(IROUT).GT.0.OR.PHI(IROUT).LE.0)) THEN
-          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
-          CALL ERROR$I4VAL('L',L)
-          CALL ERROR$I4VAL('NN',NN)
-          CALL ERROR$STOP('BOUNDSTATE')
-        END IF
-!
-!       =======================================================================
-!       == ESTIMATE PHASE SHIFT                                              ==
-!       =======================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,ROUT,Z0)
-        Z0=Z0-REAL(NN+1)
-        IF(ABS(2.D0*DX).LE.TOL) EXIT
-!       =====================================================================
-!       ==  BISECTION                                                      ==
-!       =====================================================================
-        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-      ENDDO
-      IF(ABS(DX).GT.TOL) THEN
-        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
-        CALL ERROR$MSG('BOUND STATE NOT FOUND')
-        CALL ERROR$STOP('BOUNDSTATE')
-      END IF
-!
-!     =======================================================================
-!     ==  DETERMINE MATCHING POINT                                         ==
-!     =======================================================================
-      IRMATCH=IRCL
-      IF(R(IRCL).GT.5.D0) THEN
-        CALL RADIAL$XOFR(GID,5.D0,SVAR)
-        IRMATCH=INT(SVAR)
-      END IF
-!
-!     =======================================================================
-!     ==  INTEGRATE INWARD                                                 ==
-!     =======================================================================
-      IF(IRMATCH.LT.IROUT) THEN
-        THOM=MAXVAL(ABS(G(:))).EQ.0.D0
-        IDIR=-1
-!       ==  HOMOGENEOUS SOLUTION THAT FULFILLS THE OUTER BOUNDARY CONDITION
-        IREND=MIN(IROUT,NR-3)
-        GHOM(:)=0.D0
-        GHOM(IREND+1)=1.D-8
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
-        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
-        GHOM(:)=0.D0
-        GHOM(IREND+2)=1.D-8
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHI1)
-        PHI1(:)=PHI1(:)/PHI1(IRMATCH)
-!       == EXTRAPOLATE =======================
-        IF(IREND.LT.IROUT) THEN
-          R1=R(IREND)
-          R2=R(IREND+1)
-          VAL1=PHIHOM(IREND)
-          VAL2=PHIHOM(IREND+1)
-          PHIHOM(IREND:)=VAL1+(VAL2-VAL1)/(R2-R1)*(R(IREND:)-R1)
-          VAL1=PHI1(IREND)
-          VAL2=PHI1(IREND+1)
-          PHI1(IREND:)=VAL1+(VAL2-VAL1)/(R2-R1)*(R(IREND:)-R1)
-        END IF
-!       == FULFILL OUTER BOUNDARY CONDITION =====================================
-        CALL RADIAL$VALUE(GID,NR,PHIHOM,ROUT,VAL1)
-        CALL RADIAL$VALUE(GID,NR,PHI1,ROUT,VAL2)
-        SVAR=VAL1+VAL2
-        VAL1=VAL1/SVAR
-        VAL2=VAL2/SVAR
-        PHIHOM(:)=VAL2*PHIHOM(:)-VAL1*PHI1(:)
-        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
-!       == INHOMOGENEOUS SOLUTION WITH CORRECT BOUNDARY CONDITIONS
-        IF(.NOT.THOM) THEN     
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
-          CALL RADIAL$VALUE(GID,NR,PHIINHOM,ROUT,VAL1)
-          CALL RADIAL$VALUE(GID,NR,PHI1,ROUT,VAL2)
-          PHIINHOM(:)=PHIINHOM(:)-VAL1/VAL2*PHI1(:)
-         ELSE
-          PHIINHOM(:)=0.D0
-        END IF
-!
-!       =======================================================================
-!       ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
-!       =======================================================================
-        SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
-        PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
-        SVAR=(DERO-DER)/PHI(IRMATCH)
-        PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
-      END IF
-!
-!     =======================================================================
-!     ==  NORMALIZE WAVE FUNCTION                                          ==
-!     =======================================================================
-      AUX(:)=R(:)**2*(1.D0+OV(:)*Y0)*PHI(:)**2
-      CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
-      PHI(:)=PHI(:)/SQRT(SVAR)
-!
-!     =======================================================================
-!     ==  SET WAVE FUNCTION TO ZERO BEYOND RBOX                            ==
-!     =======================================================================
-DO IR=1,NR
-  IF(.NOT.(PHI(IR).GT.0.D0.OR.PHI(IR).LE.0.D0)) THEN
-    PRINT*,'ERROR'
-!    PRINT*,'PHIIN',PHI(:IRMATCH-1)
-!    PRINT*,'PHIOUT',PHI(IRMATCH:)
-    PRINT*,'SVAR ',SVAR
-    PRINT*,'IROUT,IRCL ',IROUT,IRCL,NR
-    PRINT*,'R,PHI ',R(IR),PHI(IR)
-!!$    OPEN(UNIT=8,FILE='XXX.DAT')
-!!$    DO I=1,NR
-!!$      WRITE(8,*)I,R(I),PHIHOM(I),POT1(I)*Y0
-!!$    ENDDO
-!!$    CLOSE(8)      
-    CALL ERROR$MSG('PHI CONTAINS NANS')
-    CALL ERROR$STOP('BOUNDSTATE')
-  END IF
-ENDDO
-                                 CALL TRACE$POP()
-      RETURN
-      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITEPHI(FILE,GID,NR,NPHI,PHI)
@@ -4390,5 +2373,217 @@ END
 !     ==========================================================================
       IF(TPR)WRITE(NFILO,FMT='(50("."),T1,"TOTAL ENERGY",T50,F10.5)')ETOT
       DEDRAD=DEDRAD/(4.D0*PI*RAD**2)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BOUNDSTATE_OV(GID,NR,L,SO,RBOX,DREL,G,NN,POT,OV,E,PHI)
+!     **************************************************************************
+!     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND         **
+!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                     **
+!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G                **
+!     **                                                                      **
+!     **  FIRST, THE ENERGY IS DETERMINED BY BISECTION ON THE                 **
+!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.         **
+!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.         **
+!     **                                                                      **
+!     **  SECONDLY, THE SCHROEDINGER EQUATION IS SOLVED INWARD, AND           **
+!     **  MATCHED WITH VALUE, EITHER AT THE CLASSICAL TURNING POINT           **
+!     **  OR A SPECIFIED RADIUS, WHATEVER IS SMALLER.                         **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+      REAL(8)    ,INTENT(IN)     :: RBOX    ! BOX RADIUS
+      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
+      REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
+      INTEGER(4) ,INTENT(IN)     :: NN      !#(NODES)
+      REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL
+      REAL(8)    ,INTENT(IN)     :: OV(NR)  !OVERLAP OPERATOR
+      REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      INTEGER(4)                 :: ISTART,IBI
+      REAL(8)                    :: X0,DX,XM,ZM,Z0
+      REAL(8)    ,PARAMETER      :: TOL=1.D-12
+      REAL(8)                    :: PI,Y0
+      REAL(8)                    :: DER,DERO
+      REAL(8)                    :: R(NR)
+      REAL(8)                    :: PHIHOM(NR),PHIINHOM(NR),GHOM(NR)
+      REAL(8)                    :: PHI1(NR)
+      REAL(8)                    :: AUX(NR),AUX1(NR)
+      INTEGER(4) ,PARAMETER      :: NITER=100
+      INTEGER(4)                 :: I,IR
+      INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
+      INTEGER(4)                 :: IRMATCH 
+      REAL(8)                    :: SVAR
+      REAL(8)                    :: POT1(NR)
+      REAL(8)   ,PARAMETER       :: XMAX=1.D+20 ! MAXIMUM FACTOR IN THE WAVE FUNCTION
+      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
+      LOGICAL(4)                 :: THOM
+      REAL(8)                    :: ROUT
+      REAL(8)                    :: VAL,VAL1,VAL2,R1,R2
+      INTEGER(4)                 :: IROUT,IRCL,IRBOX,IREND
+!     *********************************************************************
+                                 CALL TRACE$PUSH('BOUNDSTATE')
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+!     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST IOUTSIDE THE BOX
+      IRBOX=1
+      DO IR=1,NR
+        IRBOX=IR
+        IF(R(IR).GE.RBOX) EXIT
+      ENDDO
+!          
+      ISTART=1
+      X0=E
+      DX=1.D-2
+      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      DO I=1,NITER
+        E=X0
+!        E=MIN(X0,EMAX)
+!
+!       =======================================================================
+!       ==  CUT OFF THE POTENTIAL                                            ==
+!       =======================================================================
+        POT1(:)=POT(:)-E*OV(:)
+        CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT1,E,IRCL,IROUT)
+!       == BOUNDARY CONDITION PHI(ROUT)=0 =====================================
+        IF(R(IROUT).LT.RBOX) THEN
+          ROUT=R(IROUT)-1.D-5    !ENSURE THAT ROUT<R(IROUT)
+        ELSE
+          ROUT=RBOX
+          IROUT=IRBOX
+        END IF
+!       ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT
+        POT1(:)=POT(:)
+        POT1(IROUT:)=POT(IROUT)
+!
+!       =======================================================================
+!       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
+!       =======================================================================
+        IDIR=1
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHI)
+!       == CHECK FOR OVERFLOW
+        IF(.NOT.(PHI(IROUT).GT.0.OR.PHI(IROUT).LE.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('NN',NN)
+          CALL ERROR$STOP('BOUNDSTATE')
+        END IF
+!
+!       =======================================================================
+!       == ESTIMATE PHASE SHIFT                                              ==
+!       =======================================================================
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,ROUT,Z0)
+        Z0=Z0-REAL(NN+1)
+        IF(ABS(2.D0*DX).LE.TOL) EXIT
+!       =====================================================================
+!       ==  BISECTION                                                      ==
+!       =====================================================================
+        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      ENDDO
+      IF(ABS(DX).GT.TOL) THEN
+        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
+        CALL ERROR$MSG('BOUND STATE NOT FOUND')
+        CALL ERROR$STOP('BOUNDSTATE')
+      END IF
+!
+!     =======================================================================
+!     ==  DETERMINE MATCHING POINT                                         ==
+!     =======================================================================
+      IRMATCH=IRCL
+      IF(R(IRCL).GT.5.D0) THEN
+        CALL RADIAL$XOFR(GID,5.D0,SVAR)
+        IRMATCH=INT(SVAR)
+      END IF
+!
+!     =======================================================================
+!     ==  INTEGRATE INWARD                                                 ==
+!     =======================================================================
+      IF(IRMATCH.LT.IROUT) THEN
+        THOM=MAXVAL(ABS(G(:))).EQ.0.D0
+        IDIR=-1
+!       ==  HOMOGENEOUS SOLUTION THAT FULFILLS THE OUTER BOUNDARY CONDITION
+        IREND=MIN(IROUT,NR-3)
+        GHOM(:)=0.D0
+        GHOM(IREND+1)=1.D-8
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
+        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
+        GHOM(:)=0.D0
+        GHOM(IREND+2)=1.D-8
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHI1)
+        PHI1(:)=PHI1(:)/PHI1(IRMATCH)
+!       == EXTRAPOLATE =======================
+        IF(IREND.LT.IROUT) THEN
+          R1=R(IREND)
+          R2=R(IREND+1)
+          VAL1=PHIHOM(IREND)
+          VAL2=PHIHOM(IREND+1)
+          PHIHOM(IREND:)=VAL1+(VAL2-VAL1)/(R2-R1)*(R(IREND:)-R1)
+          VAL1=PHI1(IREND)
+          VAL2=PHI1(IREND+1)
+          PHI1(IREND:)=VAL1+(VAL2-VAL1)/(R2-R1)*(R(IREND:)-R1)
+        END IF
+!       == FULFILL OUTER BOUNDARY CONDITION =====================================
+        CALL RADIAL$VALUE(GID,NR,PHIHOM,ROUT,VAL1)
+        CALL RADIAL$VALUE(GID,NR,PHI1,ROUT,VAL2)
+        SVAR=VAL1+VAL2
+        VAL1=VAL1/SVAR
+        VAL2=VAL2/SVAR
+        PHIHOM(:)=VAL2*PHIHOM(:)-VAL1*PHI1(:)
+        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
+!       == INHOMOGENEOUS SOLUTION WITH CORRECT BOUNDARY CONDITIONS
+        IF(.NOT.THOM) THEN     
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
+          CALL RADIAL$VALUE(GID,NR,PHIINHOM,ROUT,VAL1)
+          CALL RADIAL$VALUE(GID,NR,PHI1,ROUT,VAL2)
+          PHIINHOM(:)=PHIINHOM(:)-VAL1/VAL2*PHI1(:)
+         ELSE
+          PHIINHOM(:)=0.D0
+        END IF
+!
+!       =======================================================================
+!       ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
+!       =======================================================================
+        SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
+        PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
+        CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+        CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+        SVAR=(DERO-DER)/PHI(IRMATCH)
+        PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+      END IF
+!
+!     =======================================================================
+!     ==  NORMALIZE WAVE FUNCTION                                          ==
+!     =======================================================================
+      AUX(:)=R(:)**2*(1.D0+OV(:)*Y0)*PHI(:)**2
+      CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
+      PHI(:)=PHI(:)/SQRT(SVAR)
+!
+!     =======================================================================
+!     ==  SET WAVE FUNCTION TO ZERO BEYOND RBOX                            ==
+!     =======================================================================
+DO IR=1,NR
+  IF(.NOT.(PHI(IR).GT.0.D0.OR.PHI(IR).LE.0.D0)) THEN
+    PRINT*,'ERROR'
+!    PRINT*,'PHIIN',PHI(:IRMATCH-1)
+!    PRINT*,'PHIOUT',PHI(IRMATCH:)
+    PRINT*,'SVAR ',SVAR
+    PRINT*,'IROUT,IRCL ',IROUT,IRCL,NR
+    PRINT*,'R,PHI ',R(IR),PHI(IR)
+!!$    OPEN(UNIT=8,FILE='XXX.DAT')
+!!$    DO I=1,NR
+!!$      WRITE(8,*)I,R(I),PHIHOM(I),POT1(I)*Y0
+!!$    ENDDO
+!!$    CLOSE(8)      
+    CALL ERROR$MSG('PHI CONTAINS NANS')
+    CALL ERROR$STOP('BOUNDSTATE')
+  END IF
+ENDDO
+                                 CALL TRACE$POP()
       RETURN
       END
