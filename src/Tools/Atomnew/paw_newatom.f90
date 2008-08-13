@@ -96,7 +96,7 @@
       INTEGER(4)             ::ISVAR1ARR(1)  ! USED TO RESHAPE AN ARRAY OF LENGTH 1
       CHARACTER(16)          :: PSEUDOPARTIALWAVEMETHOD
       character(16)          :: id
-      logical(4) ,parameter  :: trel=.false.  !switch between relativistic and non-relativistic
+      logical(4) ,parameter  :: trel=.true.  !switch between relativistic and non-relativistic
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)

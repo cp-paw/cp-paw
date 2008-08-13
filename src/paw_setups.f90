@@ -2244,7 +2244,9 @@ PRINT*,'C'
       INTEGER(4)            :: LM1,LC,LRHO,LMC1A,IMC,LMC,LMRHOA,IMRHO,LMRHO
       INTEGER(4)            :: LN1,L1,IC,LN2,L2
       LOGICAL(4),PARAMETER  :: TPRINT=.FALSE.
+      real(8)               :: pi
 !     **************************************************************************
+      pi=4.d0*atan(1.d0)
       LX=MAXVAL(LOX)
       LMX=(LX+1)**2
       LCX=MAXVAL(LOFC)
@@ -2255,10 +2257,10 @@ PRINT*,'C'
 !     == INCLUDE ANGULAR INTEGRATIONS                                         ==
 !     ==========================================================================
       FACTOR=0.D0
-      DO L1=0,LX
+      DO L1=0,LX           ! angular momentum of local orbital
         LM1=L1**2+1
-        DO LC=0,LCX
-          DO LRHO=0,LRHOX
+        DO LC=0,LCX        ! angular Momentum of core state
+          DO LRHO=0,LRHOX  ! angular momentum of density
             LMCA=LC**2
             DO IMC=1,2*LC+1
               LMC=LMCA+IMC
@@ -2272,6 +2274,9 @@ PRINT*,'C'
           ENDDO
         ENDDO
       ENDDO
+      do lrho=0,lrhox
+        FACTOR(:,LRHO+1,:)=FACTOR(:,LRHO+1,:)*4.d0*pi/real(2*lrho+1,kind=8)
+      enddo
 !
 !     ==========================================================================
 !     == WORK OUT RADIAL INTEGRATIONS                                         ==
