@@ -923,9 +923,17 @@ END MODULE RADIAL_MODULE
       REAL(8)    ,INTENT(OUT):: G(NR2)
       INTEGER(4)             :: IR
       REAL(8)                :: R2(NR2)
+      REAL(8)                :: R1(NR1)
 !     ******************************************************************
+      CALL RADIAL$R(GID1,NR1,R1)
       CALL RADIAL$R(GID2,NR2,R2)
       DO IR=1,NR2
+!       == AVOID EXTRAPOLATION BEYOND END OF GRID
+        IF(R2(IR).GT.R1(NR1)) THEN
+          G(IR:)=0.D0
+          EXIT
+        END IF
+!       == INTERPOLATE
         CALL RADIAL$VALUE(GID1,NR1,F,R2(IR),G(IR))
       ENDDO       
       RETURN

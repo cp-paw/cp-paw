@@ -3863,6 +3863,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             CALL LDAPLUSU$SETI4A('MAINLN',2,MAINLN)
           END IF
 !
+!         == CORE-VALENCE EXCHANGE   ===========================================
+!         == not allowed for lda+U    ==========================================
+          CALL LDAPLUSU$SETl4('COREVALENCEEXCHANGE',.false.)
+!
 !         == GET OUT OF LDAPLUSU-BLOCK
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
         END IF
@@ -3896,6 +3900,15 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
           CALL LDAPLUSU$SETI4A('NCORROFL',LENG,NCORROFL)
           DEALLOCATE(NCORROFL)
+!
+!         == CORE-VALENCE EXCHANGE   ===========================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'CV',1,TCHK)
+          IF(TCHK) then
+            CALL LINKEDLIST$GET(LL_STRC,'CV',1,TCHK)
+          else
+            tchk=.true.  ! default is to include core-valence interaction
+          end if
+          CALL LDAPLUSU$SETl4('COREVALENCEEXCHANGE',TCHK)
 !
 !         == DEFINE MIXING FOR HYBRID FUNCTIONAL ===============================
           SVAR=0.25D0

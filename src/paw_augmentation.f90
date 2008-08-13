@@ -283,6 +283,8 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: PSTOTPOT(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: RHO(:,:,:)
       CHARACTER(32)           :: SOFTCORETYPE
+real(8),allocatable :: aux(:)
+real(8) :: val
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
       PI=4.D0*ATAN(1.D0)

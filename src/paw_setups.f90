@@ -91,6 +91,7 @@ INTEGER(4),POINTER     :: LOCORBLOX(:)    ! L FOR EACH LOCAL ORBITAL-SHELL
 REAL(8)   ,POINTER     :: LOCORBAMAT(:,:) ! |CHI>=|PHI>*AMAT
 REAL(8)   ,POINTER     :: LOCORBBMAT(:,:) ! |PSI>=|CHI>BMAT<PTILDE|PSITILDE>
 ! SANTOS040616 BEGIN
+LOGICAL(4)             :: TCORE=.FALSE. ! CORE INFORMATION PRESENT?
 REAL(8)   ,POINTER     :: AEPOT(:)     !(NRX)
 INTEGER(4),POINTER     :: LB(:)        !(NC)
 REAL(8)   ,POINTER     :: FB(:)        !(NC)
@@ -224,6 +225,7 @@ END MODULE SETUP_MODULE
       NULLIFY(THIS%PROOFG)  !(NGX,LNX)
 ! SANTOS040616 BEGIN
       THIS%NC    =0
+      THIS%TCORE=.FALSE.
       NULLIFY(THIS%AEPOT)   !(NRX)
       NULLIFY(THIS%LB)      !(NC)
       NULLIFY(THIS%FB)      !(NC)
@@ -484,7 +486,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
       INTEGER(4)               :: NR
-      INTEGER(4)               :: lrhox
+      INTEGER(4)               :: LRHOX
 !     **************************************************************************
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
 !
@@ -589,7 +591,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
         VAL=RESHAPE(THIS%DTKIN,(/LEN/))
 !
 !     ==========================================================================
-!     ==  overlap difference matrix elements <aepsi|aepsi>-<pspsi|pspsi>      ==
+!     ==  OVERLAP DIFFERENCE MATRIX ELEMENTS <AEPSI|AEPSI>-<PSPSI|PSPSI>      ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'DO') THEN
         IF(LEN.NE.THIS%LNX**2) THEN
@@ -600,7 +602,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
         VAL=RESHAPE(THIS%DOVER,(/LEN/))
 !
 !     ==========================================================================
-!     ==  core valence exchange matrix elements                               ==
+!     ==  CORE VALENCE EXCHANGE MATRIX ELEMENTS                               ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'CVX') THEN
         IF(LEN.NE.THIS%LNX**2) THEN
@@ -608,11 +610,16 @@ PRINT*,'FROM SETUP$GETCH ',VAL
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
+        IF(.NOT.THIS%TCORE) THEN
+          CALL ERROR$MSG('CORE STATES NOT AVAILABLE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
 !
-!       == calculate core-valence exchange matrix elements =====================
-        lrhox=int(sqrt(real(this%lmrx-1)+1.d-8))
-        CALL SETUP_CVXMAT(this%GID,NR,this%LNX,THIS%LOX,THIS%AEPHI &
-     &                   ,this%NC,THIS%LB,THIS%AEPSI,LRHOX,VAL)
+!       == CALCULATE CORE-VALENCE EXCHANGE MATRIX ELEMENTS =====================
+        LRHOX=INT(SQRT(REAL(THIS%LMRX-1)+1.D-8))
+        CALL SETUP_CVXMAT(THIS%GID,NR,THIS%LNX,THIS%LOX,THIS%AEPHI &
+     &                   ,THIS%NC,THIS%LB,THIS%AEPSI,LRHOX,VAL)
 !
 ! SANTOS040616 BEGIN
 !
@@ -976,16 +983,17 @@ PRINT*,'FROM SETUP$GETCH ',VAL
         CALL SETUPREAD$GETR8A('AECORE',NR,THIS%AECORE)
         CALL SETUPREAD$GETR8A('AEPOT',NR,THIS%AEPOT)
 !ADD HERE THE CORE WAVE FUNCTIONS FOR SANTOS
+        THIS%TCORE=.TRUE.
         CALL SETUPREAD$GETI4A('LOFC',NC,THIS%LB)
         CALL SETUPREAD$GETR8A('FOFC',NC,THIS%FB)
         CALL SETUPREAD$GETR8A('EOFC',NC,THIS%EB)
-        CALL SETUPREAD$GETR8A('AEPSICORE',nrx*NC,THIS%AEPSI)
+        CALL SETUPREAD$GETR8A('AEPSICORE',NR*NC,THIS%AEPSI)
       ELSE
         CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
      &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &
      &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
      &         ,THIS%AECORE,THIS%PSCORE,THIS%PRO &
-     &         ,THIS%AEPOT,THIS%NC,THIS%LB,THIS%FB,THIS%EB,THIS%AEPSI) !SANTOS040616
+     &         ,THIS%TCORE,THIS%AEPOT,THIS%NC,THIS%LB,THIS%FB,THIS%EB,THIS%AEPSI) !SANTOS040616
       END IF
       CALL FILEHANDLER$CLOSE(THIS%FILEID)
 PRINT*,'NEW FORMAT?',TNEWFORMAT
@@ -1759,7 +1767,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       SUBROUTINE INPOT$READALL(NFIL,NRX,R1,DEX,NR,LNX,LOX,AEZ,PSZ &
      &         ,PSPHI,AEPHI,VADD,RCSM &
      &         ,DTKIN,DOVER,RHOCOR,PSCORR,PRO & !SANTOS040616/BLO
-     &         ,AEPOT,NC,LB,FB,EB,AEPSI)           !SANTOS040616/BLO
+     &         ,TCORE,AEPOT,NC,LB,FB,EB,AEPSI)           !SANTOS040616/BLO
 !     &         ,DTKIN,DOVER,IRCCOR,RHOCOR,PSCORR,PRO)
 !     ******************************************************************
 !     **                                                              **
@@ -1786,6 +1794,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)    ,INTENT(OUT) :: RHOCOR(NRX)
       REAL(8)    ,INTENT(OUT) :: PSCORR(NRX)
 ! SANTOS040616 BEGIN
+      LOGICAL(4) ,INTENT(OUT) :: TCORE
       REAL(8)    ,INTENT(OUT) :: AEPOT(NRX) ! ATOMIC AE POTENTIAL
       INTEGER(4) ,INTENT(OUT) :: LB(NC) ! MAIN ANGULAR MOMENTUM
       REAL(8)    ,INTENT(OUT) :: FB(NC) ! OCCUPATIONS
@@ -1843,6 +1852,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 6100    FORMAT(SP,5E14.8)
       ENDDO
 ! SANTOS040616 BEGIN
+      TCORE=.FALSE.
       AEPOT(:)=0.D0
       LB(:)=0
       FB(:)=0.D0
@@ -1855,6 +1865,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       DO I=1,NC
         READ(NFIL,END=1000,FMT='(SP,5E14.8)')(AEPSI(IR,I),IR=1,NR)
       ENDDO
+      TCORE=.TRUE.
 1000  CONTINUE
 ! SANTOS040616 END
                               CALL TRACE$POP
@@ -2218,8 +2229,8 @@ PRINT*,'C'
       INTEGER(4),INTENT(IN) :: NC            ! #(CORE STATES)
       INTEGER(4),INTENT(IN) :: LOFC(NC)      ! ANGULAR MOMENTA OF CORE STATES
       REAL(8)   ,INTENT(IN) :: PSIC(NR,NC)   ! CORE STATES
-      INTEGER(4),INTENT(IN) :: LRHOX         ! max angular momentum of density
-      REAL(8)   ,INTENT(OUT):: MAT(LNX,LNX)  ! core valence x matrix elements
+      INTEGER(4),INTENT(IN) :: LRHOX         ! MAX ANGULAR MOMENTUM OF DENSITY
+      REAL(8)   ,INTENT(OUT):: MAT(LNX,LNX)  ! CORE VALENCE X MATRIX ELEMENTS
       INTEGER(4)            :: LX  ! MAX ANGULAR MOMENTUM PARTIAL WAVES
       INTEGER(4)            :: LMX ! MAX #(ANGULAR MOMENTA) OF PARTIAL WAVES
       INTEGER(4)            :: LCX ! HIGHEST ANGULAR MOMENTUM OF CORE STATES
@@ -2232,7 +2243,7 @@ PRINT*,'C'
       INTEGER(4)            :: LMCA
       INTEGER(4)            :: LM1,LC,LRHO,LMC1A,IMC,LMC,LMRHOA,IMRHO,LMRHO
       INTEGER(4)            :: LN1,L1,IC,LN2,L2
-      LOGICAL(4),PARAMETER  :: TPRINT=.false.
+      LOGICAL(4),PARAMETER  :: TPRINT=.FALSE.
 !     **************************************************************************
       LX=MAXVAL(LOX)
       LMX=(LX+1)**2

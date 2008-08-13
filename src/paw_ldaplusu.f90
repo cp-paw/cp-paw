@@ -33,6 +33,7 @@ INTEGER(4)             :: NCHI              !#(LOCAL ORBITALS)
 REAL(8)   ,POINTER     :: CHI(:,:)          !LOCAL (HEAD) ORBITALS
 REAL(8)   ,POINTER     :: ULITTLE(:,:,:,:,:)!SLATER INTEGRALS 
 REAL(8)   ,POINTER     :: DOWNFOLD(:,:)     !MAPS PARTIAL WAVES TO LOCAL ORBITALS
+logical(4)             :: tcv=.false.
 REAL(8)   ,POINTER     :: CVX(:,:)          !CORE VALENCE EXCHANGE 
 END TYPE THISTYPE
 TYPE(THISTYPE),ALLOCATABLE,TARGET :: THISARRAY(:)
@@ -216,13 +217,20 @@ END MODULE LDAPLUSU_MODULE
         TON=VAL
         RETURN
       END IF
+!
+!     ==========================================================================
+!     == set atom specific information                                        ==
+!     ==========================================================================
       IF(ISP.EQ.0) THEN
         CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$SETR8')
       END IF
+!
       IF(ID.EQ.'ACTIVE') THEN
         THIS%TON=VAL
+      ELSE IF(ID.EQ.'COREVALENCEEXCHANGE') THEN
+        this%tcv=val
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -573,12 +581,14 @@ PRINT*,'E(U) ',ETOT
 !     ==========================================================================
 !     ==  CORE VALENCE EXCHANGE INTERACTION                                   ==
 !     ==========================================================================
-      ALLOCATE(HAM1(NCHI,NCHI,2,2))
-      CALL LDAPLUSU_CVX(NCHI,LNX,LOX,RHO,THIS%CVX,ETOT1,HAM1)
+      if(this%tcv) then
+        ALLOCATE(HAM1(NCHI,NCHI,2,2))
+        CALL LDAPLUSU_CVX(NCHI,LNX,LOX,RHO,THIS%CVX,ETOT1,HAM1)
 PRINT*,'ETOT FROM CORE VALENCE EXCHANGE ',ETOT1
-      ETOT=ETOT+ETOT1
-      HAM=HAM+HAM1
-      DEALLOCATE(HAM1)
+        ETOT=ETOT+ETOT1
+        HAM=HAM+HAM1
+        DEALLOCATE(HAM1)
+      end if
 !
 !     ==========================================================================
 !     ==  DOUBLE COUNTING CORRECTION                                          ==
@@ -726,12 +736,16 @@ PRINT*,'E(DC) ',ETOT1
       ENDDO
 !
 !     == DETERMINE CORE-VALENCE EXCHANGE =========================================
-      IF(ASSOCIATED(THIS%CVX))DEALLOCATE(THIS%CVX)
-      ALLOCATE(THIS%CVX(LNXCHI,LNXCHI))
-      ALLOCATE(MAT(LNX,LNX))
-      CALL SETUP$GETR8A('CVX',LNX**2,MAT)
-      THIS%CVX(:,:)=MATMUL(TRANSPOSE(AMAT),MATMUL(MAT,AMAT))
-      DEALLOCATE(MAT)
+      IF(THIS%TCV) THEN
+        IF(ASSOCIATED(THIS%CVX))DEALLOCATE(THIS%CVX)
+        ALLOCATE(THIS%CVX(LNXCHI,LNXCHI))
+        ALLOCATE(MAT(LNX,LNX))
+        CALL SETUP$GETR8A('CVX',LNX**2,MAT)
+        THIS%CVX(:,:)=MATMUL(TRANSPOSE(AMAT),MATMUL(MAT,AMAT))
+        DEALLOCATE(MAT)
+      ELSE
+        NULLIFY(THIS%CVX)
+      END IF
 !
 !     == STORE DOWNFOLD MATRIX ===================================================
       IF(ASSOCIATED(THIS%DOWNFOLD))DEALLOCATE(THIS%DOWNFOLD)
