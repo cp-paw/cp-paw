@@ -46,8 +46,28 @@ TYPE CIHAMIL_TYPE
 END TYPE CIHAMIL_TYPE
 ! MINC IS USED BY CI_COMPACTPSI TO REMOVE SLATER-DETERMINANTS WITH TOO 
 ! SMALL WEIGHT. 
-REAL(8),SAVE              :: CI_MINC=1.D-50  ! MINIMUM ACCEPTABLE COEFFICIENT
+REAL(8),SAVE              :: CI_MINC=1.D-10  ! MINIMUM ACCEPTABLE COEFFICIENT
 END MODULE CI_MODULE
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI$setr8(id,val)
+!     **************************************************************************
+!     **  CI$setr8                                                            **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      character(*),intent(in) :: id
+      REAL(8)     ,INTENT(IN) :: VAL
+!     **************************************************************************
+      IF(ID.EQ.'MIN(PSI)') THEN
+        CI_MINC=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('CI$SETR8')
+      END IF
+      RETURN
+      END
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$DELETEPSI(PHI)
@@ -61,12 +81,28 @@ END MODULE CI_MODULE
 !     **************************************************************************
       PHI%NX=0
       PHI%N=0
-      IF(AssociateD(PHI%C)) THEN
+      IF(ASSOCIATED(PHI%C)) THEN
         DEALLOCATE(PHI%C)
         DEALLOCATE(PHI%ID)
       END IF
       RETURN
       END SUBROUTINE CI$DELETEPSI
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI$zeroPSI(PHI)
+!     **************************************************************************
+!     **  CI$SETPSI                                                           **
+!     **  ADD A SLATER DETERMINANT TO A STATE                                 **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(CISTATE_TYPE),INTENT(INOUT) :: PHI
+      INTEGER(4)                       :: N
+!     **************************************************************************
+      phi%nx=0
+      CALL CI_EXPANDPSI(PHI,20)
+      RETURN
+      END SUBROUTINE CI$ZEROPSI
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$SETPSI(PHI,ID,C)
@@ -705,10 +741,41 @@ END MODULE CI_MODULE
       IMPLICIT NONE
       TYPE(CIHAMIL_TYPE),INTENT(INOUT) :: HAM           
 !     **************************************************************************
+CALL TIMING$CLOCKON('CI$CLEANH')
       CALL CI_CLEANU(HAM%U)
       CALL CI_CLEANH(HAM%H)
+CALL TIMING$CLOCKOFF('CI$CLEANH')
       RETURN 
       END SUBROUTINE CI$CLEANHAMILTONIAN
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI$deleteHAMILTONIAN(HAM)
+!     **************************************************************************
+!     **  CI$deleteHAMILTONIAN                                                **
+!     **  deallocate all arrays                                               **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(CIHAMIL_TYPE),INTENT(INOUT) :: HAM           
+!     **************************************************************************
+      if(associated(ham%u%c)) then
+        deallocate(ham%u%c)
+        deallocate(ham%u%i)
+        deallocate(ham%u%j)
+        deallocate(ham%u%k)
+        deallocate(ham%u%l)
+      end if
+      ham%u%nx=0
+      ham%u%n=0
+      if(associated(ham%H%c)) then
+        deallocate(ham%H%c)
+        deallocate(ham%H%i)
+        deallocate(ham%H%j)
+      end if
+      ham%H%nx=0
+      ham%H%n=0
+      RETURN 
+      END SUBROUTINE CI$DELETEHAMILTONIAN
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI_SETUELEMENT(U,I,J,K,L,VAL)
@@ -1008,18 +1075,22 @@ END MODULE CI_MODULE
           CALL SORT__FLIP(FROM,TO)
           DO WHILE (FROM.NE.0.OR.TO.NE.0)
             IF(TO.EQ.0) THEN
+              from=from+istart-1
               I=U%I(FROM)
               J=U%J(FROM)
               K=U%K(FROM)
               L=U%L(FROM)
               C=U%C(FROM)
             ELSE IF (FROM.EQ.0) THEN
+              to=to+istart-1
               U%I(TO)=I
               U%J(TO)=J
               U%K(TO)=K
               U%L(TO)=L
               U%C(TO)=C
             ELSE
+              from=from+istart-1
+              to=to+istart-1
               U%I(TO)=U%I(FROM)
               U%J(TO)=U%J(FROM)
               U%K(TO)=U%K(FROM)
@@ -1047,18 +1118,22 @@ END MODULE CI_MODULE
           CALL SORT__FLIP(FROM,TO)
           DO WHILE (FROM.NE.0.OR.TO.NE.0)
             IF(TO.EQ.0) THEN
+              from=from+istart-1
               I=U%I(FROM)
               J=U%J(FROM)
               K=U%K(FROM)
               L=U%L(FROM)
               C=U%C(FROM)
             ELSE IF (FROM.EQ.0) THEN
+              to=to+istart-1
               U%I(TO)=I
               U%J(TO)=J
               U%K(TO)=K
               U%L(TO)=L
               U%C(TO)=C
             ELSE
+              from=from+istart-1
+              to=to+istart-1
               U%I(TO)=U%I(FROM)
               U%J(TO)=U%J(FROM)
               U%K(TO)=U%K(FROM)
@@ -1088,18 +1163,22 @@ END MODULE CI_MODULE
           CALL SORT__FLIP(FROM,TO)
           DO WHILE (FROM.NE.0.OR.TO.NE.0)
             IF(TO.EQ.0) THEN
+              from=from+istart-1
               I=U%I(FROM)
               J=U%J(FROM)
               K=U%K(FROM)
               L=U%L(FROM)
               C=U%C(FROM)
             ELSE IF (FROM.EQ.0) THEN
+              to=to+istart-1
               U%I(TO)=I
               U%J(TO)=J
               U%K(TO)=K
               U%L(TO)=L
               U%C(TO)=C
             ELSE
+              from=from+istart-1
+              to=to+istart-1
               U%I(TO)=U%I(FROM)
               U%J(TO)=U%J(FROM)
               U%K(TO)=U%K(FROM)
@@ -1229,14 +1308,18 @@ END MODULE CI_MODULE
           CALL SORT__FLIP(FROM,TO)
           DO WHILE (FROM.NE.0.OR.TO.NE.0)
             IF(TO.EQ.0) THEN
+              from=from+istart-1
               I=H%I(FROM)
               J=H%J(FROM)
               C=H%C(FROM)
             ELSE IF (FROM.EQ.0) THEN
+              to=to+istart-1
               H%I(TO)=I
               H%J(TO)=J
               H%C(TO)=C
             ELSE
+              from=from+istart-1
+              to=to+istart-1
               H%I(TO)=H%I(FROM)
               H%J(TO)=H%J(FROM)
               H%C(TO)=H%C(FROM)
@@ -1299,6 +1382,7 @@ END MODULE CI_MODULE
 !     == APPLY U-TENSOR                                                       ==
 !     == W=0.5d0*sum_{i,j,k,l} W_{i,j,k,l} cdagger_i cdagger_j c_l c_k        ==
 !     ==========================================================================
+      call ci$zeropsi(hpsi)
       N=HAM%U%N
       I=0
       J=0
@@ -1420,6 +1504,7 @@ END MODULE CI_MODULE
       ENDDO
       FN(NCHI+1)=0.D0
       FN(0)=1.D0
+print*,' fn ',fn(1:nchi)
 !
 !     ==========================================================================
 !     == CONSTRUCT WAVE FUNCTION                                              ==
@@ -1428,7 +1513,7 @@ END MODULE CI_MODULE
       CALL CI$SETPSI(PSIN,1,(1.D0,0.D0))  ! VACUUM STATE
 !
       CALL CI$DELETEPSI(PSI)
-      CSVAR=CMPLX(SQRT(FN(0)-FN(1)))
+      CSVAR=CMPLX(SQRT(FN(0)-FN(1)),kind=8)
       CALL CI$SETPSI(PSI,1,CSVAR)
       DO N=1,NCHI
 !       ========================================================================
@@ -1449,7 +1534,7 @@ END MODULE CI_MODULE
 !       ==  ADD CONMTRIBUTION OF N-PARTICLE STATE TO WAVE FUNCTION            ==
 !       ========================================================================
         CALL CI$COPYPSI(PSIN,PSICOPY)       
-        CSVAR=CMPLX(SQRT(FN(N)-FN(N+1)))
+        CSVAR=CMPLX(SQRT(FN(N)-FN(N+1)),kind=8)
         CALL CI$SCALEPSI(PSICOPY,CSVAR)
         CALL CI$ADDPSI(PSI,PSICOPY)
         CALL CI$CLEANPSI(PSI)
@@ -1504,9 +1589,9 @@ END MODULE CI_MODULE
       TYPE(CISTATE_TYPE)            :: PSI1
       COMPLEX(8)                    :: CSVAR1,CSVAR2,CSVAR3
 !     **************************************************************************
-      CSVAR1=CMPLX(2.D0/(1.D0+ANNE),0.D0)
-      CSVAR2=CMPLX(1.D0,0.D0)-CSVAR1
-      CSVAR3=CMPLX(-DT**2/MPSI/(1.D0+ANNE),0.D0)
+      CSVAR1=CMPLX(2.D0/(1.D0+ANNE),0.D0,kind=8)
+      CSVAR2=CMPLX(1.D0,0.D0,kind=8)-CSVAR1
+      CSVAR3=CMPLX(-DT**2/MPSI/(1.D0+ANNE),0.D0,kind=8)
       CALL CI$COPYPSI(PSI0,PSIP)
       CALL CI$SCALEPSI(PSIP,CSVAR1)
       CALL CI$COPYPSI(PSIM,PSI1)
@@ -1586,7 +1671,7 @@ END MODULE CI_MODULE
       REAL(8)                         :: VEC(NCHI**2+1)
       REAL(8)                         :: VECSUM(NCHI**2+1)
       INTEGER(4)        ,PARAMETER    :: NITER=100  
-      REAL(8)           ,PARAMETER    :: TOL=1.D-6
+      REAL(8)           ,PARAMETER    :: TOL=1.D-5
       integer(4)                      :: iter
       integer(4)                      :: ic,icbar,i,j
       real(8)                         :: svar,svar1
@@ -1601,37 +1686,38 @@ END MODULE CI_MODULE
 !     == MAT IS THE REAL (NC*NC) MATRIX WITH ELEMENTS                         ==
 !     ==    <PSI0| cONSTR(I)*CONSTR(J) |PSI0>                                 ==
 !     ==========================================================================
-      CALL CI_LAGRANGEMAT(NCHI,PSI0,NC,MAT)
-!
+      CALL CI_LAGRANGEMAT(NCHI,PSI0,NC,MAT)!
+
 !     ==========================================================================
 !     == invert matrix for loop                                               ==
 !     ==========================================================================
-!     == a little of a unity matrix to avoid singular values
-      do i=1,nc
-        mat(i,i)=mat(i,i)+1.d-8
-      enddo
+!     == A LITTLE OF A UNITY MATRIX TO AVOID SINGULAR VALUES
+      DO I=1,NC
+        MAT(I,I)=MAT(I,I)+1.D-8
+      ENDDO
       CALL LIB$INVERTR8(NC,MAT,MATINV)
 !
 !     ==========================================================================
 !     == loop to enforce constraints                                          ==
 !     ==========================================================================
       VECSUM=0.D0
-      do iter=1,niter
+      DO ITER=1,NITER
 !       == CALCULATE DEVIATION OF |PSI(+)> FROM CONSTRAINT =====================
 !       == <PSI(+)|CONSTR(I)|PSI(+)>-VALUE(I) ==================================
-        call ci_constraint(NCHI,psip,rho,nc,vec)
-        convg=maxval(abs(vec)).lt.tol
-        if(convg) exit
-!       == DETERMINE CORRECTION FOR lAGRANGE MULTIPLIERS =======================
-        vec(:)=-matmul(matinv,vec)
+        CALL CI_CONSTRAINT(NCHI,PSIP,RHO,NC,VEC)
+        CONVG=MAXVAL(ABS(VEC)).LT.TOL
+        IF(CONVG) EXIT
+!       == DETERMINE CORRECTION FOR LAGRANGE MULTIPLIERS =======================
+        VEC(:)=-MATMUL(MATINV,VEC)
         VECSUM=VECSUM+VEC    ! ADD CORRECTIONS UP TO OBTAIN TOTAL
-!       == ADD CORRECTION TO |psi(+)> == =======================================
-        call ci_addconstraint(nchi,psip,psi0,nc,vec)
-      enddo
-      if(.not.convg) then
-        call error$msg('loop not converged')
-        call error$stop('ci_lagrange')
-      end if
+!       == ADD CORRECTION TO |PSI(+)> == =======================================
+        CALL CI_ADDCONSTRAINT(NCHI,PSIP,PSI0,NC,VEC)
+      ENDDO
+      IF(.NOT.CONVG) THEN
+        CALL ERROR$MSG('LOOP NOT CONVERGED')
+        CALL ERROR$STOP('CI_LAGRANGE')
+      END IF
+!print*,'lagrange converged after ',iter,' iterations'
 !
 !     ==========================================================================
 !     ==  calculates Lagrange multiplicators                                  ==
@@ -1642,11 +1728,11 @@ END MODULE CI_MODULE
           IC=J+(I-1)*NCHI
           ICBAR=I+(J-1)*NCHI
           IF(J.GT.I) THEN
-            V(I,J)=0.5D0*CMPLX(VECSUM(IC),VECSUM(ICBAR))
+            V(I,J)=0.5D0*CMPLX(VECSUM(IC),VECSUM(ICBAR),kind=8)
           ELSE IF(J.EQ.I) THEN
-            V(I,J)=CMPLX(VECSUM(IC),0.D0)
+            V(I,J)=CMPLX(VECSUM(IC),0.D0,kind=8)
           ELSE IF(J.LT.I) THEN
-            V(I,J)=0.5D0*CMPLX(VECSUM(ICBAR),-VECSUM(IC))
+            V(I,J)=0.5D0*CMPLX(VECSUM(ICBAR),-VECSUM(IC),kind=8)
           END IF
         ENDDO
       ENDDO
@@ -1684,6 +1770,7 @@ END MODULE CI_MODULE
 !     ==========================================================================
       CALL CI$SCALARPRODUCT(PSI0,PSI0,CMAT0)
       CMAT4(:,:,:,:)=(0.D0,0.D0)
+!print*,'before matrix elements in lagrangemat'
       DO L=1,NCHI
         CALL CI$COPYPSI(PSI0,PSI1)
         CALL CI$ANNIHILATOR(PSI1,L)
@@ -1707,6 +1794,7 @@ END MODULE CI_MODULE
           ENDDO
         ENDDO
       ENDDO
+!print*,'after matrix elements in lagrangemat'
 !
 !     ==========================================================================
 !     ==  complete matrices                                                   ==
@@ -1904,85 +1992,89 @@ END MODULE CI_MODULE
           vec(ic1)=rmat2(i,j)
         enddo
       enddo
-      vec(nc)=rmat0
+      VEC(NC)=RMAT0
 !
 !     ==========================================================================
-!     ==  wrap up                                                             ==
+!     ==  WRAP UP                                                             ==
 !     ==========================================================================
-      call ci$deletepsi(psi1)
-      call ci$deletepsi(psi2)
-      return
-      end
+      CALL CI$DELETEPSI(PSI1)
+      CALL CI$DELETEPSI(PSI2)
+      RETURN
+      END
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ci_addconstraint(NCHI,psip,psi0,nc,vec)
+      SUBROUTINE CI_ADDCONSTRAINT(NCHI,PSIP,PSI0,NC,VEC)
 !     **************************************************************************
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
       INTEGER(4),        INTENT(IN)   :: NCHI
-      TYPE(CISTATE_TYPE),INTENT(INout):: PSIp
+      TYPE(CISTATE_TYPE),INTENT(INOUT):: PSIP
       TYPE(CISTATE_TYPE),INTENT(IN)   :: PSI0
-      INTEGER(4),        INTENT(IN)   :: nc
-      real(8),           INTENT(IN)   :: vec(nc)
+      INTEGER(4),        INTENT(IN)   :: NC
+      REAL(8),           INTENT(IN)   :: VEC(NC)
       TYPE(CISTATE_TYPE)              :: PSI1
       TYPE(CISTATE_TYPE)              :: PSI2
-      real(8)                         :: svar
-      integer(4)                      :: i,j,ic,icbar
-      complex(8)                      :: lambda(nchi,nchi)
-      complex(8)                      :: ce
+      REAL(8)                         :: SVAR
+      INTEGER(4)                      :: I,J,IC,ICBAR
+      COMPLEX(8)                      :: LAMBDA(NCHI,NCHI)
+      COMPLEX(8)                      :: CE
 !     **************************************************************************
-      if(nc.ne.nchi**2+1) then
-        call error$stop('...')
-      end if
+      IF(NC.NE.NCHI**2+1) THEN
+        CALL ERROR$STOP('...')
+      END IF
 !
 !     ==========================================================================
 !     ==  DESYMMETRIZE                                                       ==
 !     ==========================================================================
       DO J=1,NCHI
         DO I=1,NCHI
-          ic=i+(j-1)*nchi
-          icbar=j+(i-1)*nchi
-          IF(j.Gt.i) THEN
-            lambda(i,j)=0.5d0*cmplx(vec(ic),vec(icbar))
-          ELSE if(j.eq.i) then
-            lambda(i,j)=cmplx(vec(ic),0.d0)
-          ELSE if(j.lt.i) then
-            lambda(i,j)=0.5d0*cmplx(vec(icbar),-vec(ic))
+          IC=I+(J-1)*NCHI
+          ICBAR=J+(I-1)*NCHI
+          IF(J.GT.I) THEN
+            LAMBDA(I,J)=0.5D0*CMPLX(VEC(IC),VEC(ICBAR),kind=8)
+          ELSE IF(J.EQ.I) THEN
+            LAMBDA(I,J)=CMPLX(VEC(IC),0.D0,kind=8)
+          ELSE IF(J.LT.I) THEN
+!print*,'ic',icbar,ic
+!print*,'vec',vec(icbar),vec(ic)
+!print*,'cmplx',CMPLX(VEC(ICBAR),-VEC(IC),kind=8)
+            LAMBDA(I,J)=0.5D0*CMPLX(VEC(ICBAR),-VEC(IC),kind=8)
+!print*,'over'
           END IF
-        ENDdo
+        ENDDO
       ENDDO
-      CE=CMPLX(VEC(NC),0.D0)
+      CE=CMPLX(VEC(NC),0.D0,kind=8)
 !
 !     ==========================================================================
 !     == DETERMINE EXPECTATION VALUES OF OPERATORS==============================
 !     ==========================================================================
       CALL CI$COPYPSI(PSI0,PSI1)
-      call ci$scalepsi(psi1,ce)
-      CALL CI$addpsi(PSIp,PSI1)
+      CALL CI$SCALEPSI(PSI1,CE)
+      CALL CI$ADDPSI(PSIP,PSI1)
 !
-      DO j=1,NCHI
+      DO J=1,NCHI
         CALL CI$COPYPSI(PSI0,PSI1)
-        CALL CI$ANNIHILATOR(PSI1,j)
-        DO i=1,NCHI
+        CALL CI$ANNIHILATOR(PSI1,J)
+        DO I=1,NCHI
           CALL CI$COPYPSI(PSI1,PSI2)
-          CALL CI$CREATOR(PSI2,i)
-          call ci$scalepsi(psi2,lambda(i,j))
-          CALL CI$addpsi(PSIp,PSI2)
+          CALL CI$CREATOR(PSI2,I)
+          CALL CI$SCALEPSI(PSI2,LAMBDA(I,J))
+          CALL CI$ADDPSI(PSIP,PSI2)
         ENDDO
       ENDDO
 !
 !     ==========================================================================
-!     ==  wrap up                                                             ==
+!     ==  WRAP UP                                                             ==
 !     ==========================================================================
-      call ci$deletepsi(psi1)
-      call ci$deletepsi(psi2)
-      return
-      end SUBROUTINE ci_addconstraint
+      CALL CI$DELETEPSI(PSI1)
+      CALL CI$DELETEPSI(PSI2)
+      RETURN
+      END SUBROUTINE CI_ADDCONSTRAINT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine ci$dynwithfixeddenmat(nchi,rho2,hamilton,psi0,v,e)
+      SUBROUTINE CI$DYNWITHFIXEDDENMAT(NCHI,RHO2,HAMILTON,PSI0,V,E)
 !     **************************************************************************
 !     **  DETERMINE MANY PARTICLE WAVE FUNCTION CONSISTENT WITH THE           **
 !     **  ONE-PARTICLE DENSITY MATRIX RHO, WHICH MINIMIZES THE TOTAL ENERGY.  **
@@ -1996,12 +2088,17 @@ END MODULE CI_MODULE
       COMPLEX(8)        ,INTENT(IN) :: RHO2(NCHI,NCHI) ! 1P DENSITY MATRIX
       TYPE(CIHAMIL_TYPE),INTENT(IN) :: HAMILTON        ! MANY-P HAMILTONIAN
       TYPE(CISTATE_TYPE),INTENT(OUT):: PSI0            ! CURRENT WAVE FUNCTION
-      complex(8)        ,INTENT(OUT):: V(NCHI,NCHI)    ! De/DRHO2
+      COMPLEX(8)        ,INTENT(OUT):: V(NCHI,NCHI)    ! DE/DRHO2
       REAL(8)           ,INTENT(OUT):: E               ! ENERGY
-      INTEGER(4)        ,PARAMETER  :: NOITER=1000     ! X#(ITERATIONS)
-      REAL(8)           ,PARAMETER  :: DELTA=1.d-1     ! TIME STEP IN LOOP
-      REAL(8)           ,parameter  :: ALPHA=0.d0      ! FRICTION (1.d-1)
+      INTEGER(4)        ,PARAMETER  :: NOITER=10000     ! X#(ITERATIONS)
+      REAL(8)           ,PARAMETER  :: DELTA=1.D-1     ! TIME STEP IN LOOP
+      REAL(8)                       :: ALPHA=0.D0      ! FRICTION (1.D-1)
       REAL(8)           ,PARAMETER  :: MASS=1.D0       ! MASS
+      real(8)           ,parameter  :: maxekin=0.1d0   ! x(for hpsi contribution)
+      real(8)           ,parameter  :: maxhpsi=1.d-3   ! x(for hpsi contribution)
+      real(8)           ,parameter  :: maxpsi=1.d-4    ! x(for psi contribution)
+      real(8)           ,parameter  :: targetekindot=1.d-2    ! x(for psi contribution)
+      integer(4)        ,parameter  :: nexpandbasis=2  ! 
       TYPE(CISTATE_TYPE)            :: PSIM            ! PREVIOUS WAVE FUNCTION
       TYPE(CISTATE_TYPE)            :: PSIP            ! NEXT WAVE FUNCTION
       TYPE(CISTATE_TYPE)            :: PSIBAR          ! PROPAGATED W/O CONSTR.
@@ -2013,45 +2110,72 @@ END MODULE CI_MODULE
       TYPE(CISTATE_TYPE)            :: PSItest         ! CURRENT WAVE FUNCTION
       integer(4)                    :: i,j
       logical(4)                    :: convg
-      real(8)          ,parameter   :: tol=1.d-7
-      real(8)                       :: svar      
+      real(8)          ,parameter   :: tol=1.d-5
+      integer(4)       ,parameter   :: nwait=20
+      integer(4)                    :: iwait
+      real(8)                       :: ewait
+      REAL(8)                       :: SVAR      
 !     **************************************************************************
 !     OPEN(123, FILE="CIINFO", STATUS="OLD")
       OPEN(123, FILE="CIINFO")
-      rewind 123
+      REWIND 123
 !     ===========================================================================
-!     == check if the density matrix is hermitean                              ==
+!     == CHECK IF THE DENSITY MATRIX IS HERMITEAN                              ==
 !     ===========================================================================
-      do i=1,nchi
-        do j=i,nchi
-          if(abs(rho2(i,j)-conjg(rho2(j,i))).gt.1.d-8) then
-            call error$msg('density matrix not hermitean. Not allowed...')
-            call error$stop('ci$dynwithfixeddenmat')
-          end if
-        end do
-      enddo
-      
+      DO I=1,NCHI
+        DO J=I,NCHI
+          IF(ABS(RHO2(I,J)-CONJG(RHO2(J,I))).GT.1.D-8) THEN
+            CALL ERROR$MSG('DENSITY MATRIX NOT HERMITEAN. NOT ALLOWED...')
+            CALL ERROR$STOP('CI$DYNWITHFIXEDDENMAT')
+          END IF
+        END DO
+      ENDDO
 !     ===========================================================================
 !     == CONSTRUCT STARTING WAVE FUNCTION                                      ==
 !     ===========================================================================
-      call CI$STATEFROMDENSITYMATRIX(NCHI,RHO2,PSI0)
-      CALL CI$COPYPSI(PSI0,PSIM) ! zero initial velocity 
+      CALL CI$STATEFROMDENSITYMATRIX(NCHI,RHO2,PSI0)
+      CALL CI$LIMITSIZE(MAXPSI,PSI0) ! REDUCE THE NUMBER OF SLATER DETERMINANTS
+      CALL CI$COPYPSI(PSI0,PSIM) ! ZERO INITIAL VELOCITY 
+!
+!CALL CI$SETR8('MIN(PSI)',1.D-5)
+CALL CI$CLEANPSI(PSI0)
+CALL CI$WRITEPSI(PSI0,6)
+PRINT*,'PSI%N ',PSI0%N
 !
 !     ===========================================================================
 !     == ITERATE TO FIND GROUND STATE                                          ==
 !     ===========================================================================
       EPOT=HUGE(EPOT)
       EKIN=0.D0
+      iwait=0
+      ewait=epot
       DO ITER=1,NOITER
+        CALL CI$CLEANPSI(PSI0)
         CALL CI$COPYPSI(PSI0,HPSI)
         CALL CI$HPSI(HAMILTON,HPSI)  ! CONSTRUCT H|PSI(0)>
+        CALL CI$LIMITSIZE(maxhpsi,HPSI) ! REDUCE THE NUMBER OF SLATER DETERMINANTS
+!PRINT*,'hPSI%N ',hPSI%N
         EPOTLAST=EPOT
         CALL CI$EPOT(PSI0,HPSI,EPOT)
 !
 !       == SET FRICTION VALUE ==================================================
-        IF(EPOT.GT.EPOTLAST.AND.EKIN.GT.1.D-6) THEN
+!        IF(EPOT.GT.EPOTLAST.AND.EKIN.GT.1.D-6) THEN
+        IF(EPOT.GT.EPOTLAST) THEN
+          CALL CI$LIMITSIZE(MAXPSI,PSIM) ! REDUCE THE NUMBER OF SLATER DETERMINANTS
           CALL CI$COPYPSI(PSIM,PSI0)
-          CYCLE
+          PRINT*,'PSI0%N AFTER LIMITSIZE',PSI0%N,epot-epotlast
+          ekin=1.d-10
+          EPOT=EPOTLAST
+          cycle
+        END IF
+        IF(EKIN.GT.MAXEKIN) THEN
+!         == keep kinetic energy about constant if ekin>maxekin ===============
+          ALPHA=-(EPOT-EPOTLAST)/(4.D0*MAXEKIN)
+        ELSE
+!         == CHOOSE FRICTION SO THAT EKIN GROWS WITH RATE TARGETEKINDOT
+          ALPHA=-(TARGETEKINDOT+EPOT-EPOTLAST)/(4.D0*EKIN)
+          ALPHA=MAX(ALPHA,-0.1D0)   ! AVOID TOO LARGE ACCELERATIONS (INSTABLE)
+          ALPHA=MIN(ALPHA,0.D0)     ! DO NOT SLOW DOWN 
         END IF
 !
 !       == PROPAGATE WITHOUT CONSTRAINTS =======================================
@@ -2063,12 +2187,32 @@ END MODULE CI_MODULE
         CALL CI$DELETEPSI(PSIBAR)
 !
 !       ========================================================================
+!       == LIMIT THE GROWTH OF THE NUMBER OF SLATER DETERMINANTS              ==
+!       == THE MAXIMUM ALLOWED VALUE IS NEXPANDBASIS*NCHI                     ==
+!       ========================================================================
+!PRINT*,'PSI0%N BEFORE GROWTH CHECK',PSIP%N
+        CALL CI$GROWTHCHECK(nexpandbasis*NCHI,PSIP,PSI0)
+!PRINT*,'PSI0%N AFTER GROWTH CHECK',PSIP%N
+!
+!       ========================================================================
+!       == CHECK CONVERGENCE                                                  ==
+!       ========================================================================
+        IF(ABS(EPOT-EWAIT).LT.TOL) THEN
+          IWAIT=IWAIT+1
+        ELSE
+          EWAIT=EPOT
+          IWAIT=0
+        END IF
+        CONVG=(IWAIT.GT.NWAIT) 
+        IF(CONVG) EXIT
+!
+!       ========================================================================
 !       == KINETIC ENERGY AND ENERGY REPORT                                   ==
 !       ========================================================================
         CALL CI$EKIN(DELTA,MASS,PSIP,PSIM,EKIN)
 !
-        WRITE(*,'(I5.4,4F30.15)') ITER,EKIN,EPOT,EKIN+EPOT
-        WRITE(123,'(I5.4,3F40.20)') ITER,EPOT,EKIN,EKIN+EPOT
+        WRITE(*,'(I5,3F30.15,i10)') ITER,EKIN,EPOT,EKIN+EPOT,psi0%n
+        WRITE(123,'(I5,3F40.20)') ITER,EPOT,EKIN,EKIN+EPOT
 !
 !       ========================================================================
 !       == SWITCH TO NEXT TIME STEP                                           ==
@@ -2076,6 +2220,10 @@ END MODULE CI_MODULE
         CALL CI$COPYPSI(PSI0,PSIM)
         CALL CI$COPYPSI(PSIP,PSI0) 
       END DO
+      if(.not.convg) then
+        call error$msg('self-consistency loop not converged')
+        call error$stop('ci$dynwithfixeddenmat')
+      end if
       CALL CI$CLEANPSI(PSI0)
 !
 !     ===========================================================================
@@ -2087,224 +2235,100 @@ END MODULE CI_MODULE
       close(123)
       RETURN
       END
-
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE PAW_CI(ISP_,LMNX,NDIMD,DENMAT)
+      SUBROUTINE ci$growthcheck(nmax,psip,psi0)
 !     **************************************************************************
-!     **   ACTUAL MAIN DRIVER ROUTINE FOR CI 
+!     **                                                                      **
+!     **                                                                      **
 !     **************************************************************************
-      USE LAGRANGE_MODULE
       USE CI_MODULE
-      USE LDAPLUSU_MODULE
       IMPLICIT NONE
-      INTEGER(4), INTENT(IN) ::ISP_
-      INTEGER(4), INTENT(IN) ::LMNX
-      INTEGER(4), INTENT(IN) ::NDIMD
-      COMPLEX(8), INTENT(IN) ::DENMAT(LMNX,LMNX,NDIMD)
-      COMPLEX(8),ALLOCATABLE ::RHO(:,:,:,:)
-      COMPLEX(8),ALLOCATABLE ::RHO2(:,:)
-      COMPLEX(8),ALLOCATABLE ::MATSS(:,:,:,:)
-      COMPLEX(8),ALLOCATABLE ::HAM(:,:,:,:)
-      REAL(8)   ,ALLOCATABLE ::PHITOCHI(:,:)
-      REAL(8)   ,ALLOCATABLE ::UIJKL(:,:,:,:)
-      REAL(8)   ,ALLOCATABLE ::START(:)
-      REAL(8)   ,ALLOCATABLE ::R(:)
-      INTEGER(4),ALLOCATABLE ::LOXPHI(:)
-      INTEGER(4),ALLOCATABLE ::LOX(:)        !L  OF CHI
-      REAL(8), PARAMETER     :: MASS=1.D0
-      REAL(8), PARAMETER     :: DELTA=0.01d0 !0.01D0
-      REAL(8), PARAMETER     :: alpha=0.05d0 
-      REAL(8)  ,parameter    :: GAMMA=2.d0*alpha/delta
-      INTEGER(4)             ::LMRX
-      INTEGER(4)             ::LRX
-      INTEGER(4)             ::GID
-      INTEGER(4)             ::NR
-      INTEGER(4)             ::LNX           
-      INTEGER(4)             ::LNXPHI
-      INTEGER(4)             ::NPHI
-      INTEGER(4)             ::NCHI
-      INTEGER(4)             ::IS1,IS2        
-      !MANY PARTICLE THEORY
-      REAL(8),   ALLOCATABLE ::A(:)
-      REAL(8)                ::LAMBDA
-      REAL(8)                ::VAL           
-      REAL(8)                ::EPOT,EKIN     !,EPOT2
-      REAL(8)                ::REA,IMA
-      COMPLEX(8),ALLOCATABLE ::LAMBDA_IJ(:,:)
-      COMPLEX(8)             ::CVAL,CSVAR
-      INTEGER(4)             ::I,J,K,L
-      INTEGER(4)             ::N
-      INTEGER(4)             ::ISVAR
-      INTEGER(4)             ::COUNT
-      INTEGER(4)             ::ITER
-      INTEGER(4)             ::NOITER
-      INTEGER(4),ALLOCATABLE ::IOFN(:),SOFN(:) 
-      TYPE(CISTATE_TYPE)     ::PSIP
-      TYPE(CISTATE_TYPE)     ::PSI0
-      TYPE(CISTATE_TYPE)     ::PSIM   
-      TYPE(CISTATE_TYPE)     ::HPSI
-      TYPE(CISTATE_TYPE)     ::PSICOPY
-      TYPE(CISTATE_TYPE)     ::PSIbar
-      TYPE(CISTATE_TYPE)     ::PSIA
-      TYPE(CISTATE_TYPE)     ::PSIB
-      TYPE(CISTATE_TYPE)     ::PSIRHO
-      TYPE(CISTATE_TYPE)     ::PSISTART
-      TYPE(CISTATE_TYPE)     ::PSIOUT
-      TYPE(CIHAMIL_TYPE)     ::HAMILTON
-      complex(8),allocatable :: vij(:,:)
-      real(8)                :: e
+      integer(4)        ,intent(in)    :: nmax
+      TYPE(CISTATE_TYPE),INTENT(in)    :: PSI0         
+      TYPE(CISTATE_TYPE),INTENT(inout) :: PSIp         
+      integer(4)                       :: i0,ip
+      integer(4)                       :: id0,idp
+      integer(4)                       :: np
+      integer(4)                       :: count
+      real(8)           ,allocatable   :: test(:)      
+      real(8)                          :: svar
+      real(8)                          :: factor
+      real(8)                          :: xtest
 !     **************************************************************************
-      IF(.NOT.TON) RETURN
-      CALL LDAPLUSU$SELECT(ISP_)
-      IF(.NOT.THIS%TON) RETURN      
- 
-      CALL SETUP$LMRX(ISP_,LMRX)
-      THIS%LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
-      LRX=THIS%LRX
-      CALL LDAPLUSU_CHIFROMPHI()
-
-      GID=THIS%GID
-      NR=THIS%NR
-      LNX=THIS%LNXCHI
-      ALLOCATE(LOX(LNX))
-      LOX=THIS%LOXCHI
-      NCHI=THIS%NCHI
-
-      ALLOCATE(R(NR))
-      CALL RADIAL$R(GID,NR,R) 
-      ALLOCATE(THIS%ULITTLE(LRX+1,LNX,LNX,LNX,LNX))
-      CALL LDAPLUSU_ULITTLE(GID,NR,LRX,LNX,LOX,THIS%CHI,THIS%ULITTLE)
-
-      CALL SETUP$ISELECT(ISP)
-      CALL SETUP$LNX(ISP,LNXPHI)
-      ALLOCATE(LOXPHI(LNXPHI))
-      CALL SETUP$LOFLN(ISP,LNXPHI,LOXPHI)
-      NPHI=SUM(2*LOXPHI+1)
-!
-!     ==========================================================================
-!     ==  DOWNFOLD                                                            ==
-!     ==========================================================================
-      ALLOCATE(PHITOCHI(NCHI,NPHI))
-      ALLOCATE(RHO(NCHI,NCHI,2,2))
-      ALLOCATE(HAM(NCHI,NCHI,2,2))
-      ALLOCATE(MATSS(NPHI,NPHI,2,2))
-      ALLOCATE(UIJKL(NCHI,NCHI,NCHI,NCHI))
-      
-      CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
-
-      CALL LDAPLUSU_MAPTOCHI(LNX,LOX,NCHI,LNXPHI,LOXPHI,NPHI,PHITOCHI)
-      DO IS1=1,2
-       DO IS2=1,2
-         RHO(:,:,IS1,IS2)=MATMUL(PHITOCHI,MATMUL(MATSS(:,:,IS1,IS2),TRANSPOSE(PHITOCHI)))
-       ENDDO
+      NP=PSIP%N
+      ALLOCATE(TEST(NP))
+      TEST(:)=-1.d0
+      I0=1
+      ID0=PSI0%ID(I0)
+      DO IP=1,NP
+        IDP=PSIP%ID(IP)
+        IF(IDP.LT.ID0) THEN  ! NO CORRESPONDING
+!          PRINT*,'LONE SLATER DETERMINANT ',IP,PSIP%C(IP) 
+          TEST(IP)=ABS(PSIP%C(IP))
+        ELSE IF(IDP.GE.ID0) THEN
+          DO WHILE (ID0.LE.IDP)
+            I0=I0+1
+            IF(I0.LE.PSI0%N) THEN
+              ID0=PSI0%ID(I0)
+            ELSE
+              ID0=PSIP%ID(PSIP%N)+1
+            END IF
+          ENDDO      
+        END IF
       ENDDO
-
-      CALL LDAPLUSU_UTENSOR(LRX,NCHI,LNX,LOX,THIS%ULITTLE,UIJKL)
-
-      PRINT*, 'CALL CI SUBROUTINES'
-
-      NCHI=3
-      PRINT*, 'NCHI= ',NCHI
-
-!================================================================
-!       DEFINE HAMILTONIAN         
-!================================================================
-      ALLOCATE(IOFN(2*NCHI))
-      ALLOCATE(SOFN(2*NCHI))
-
-      N=0
-      DO IS1=1,2
-       DO I=1,NCHI
-        N=N+1
-        IOFN(N)=I
-        SOFN(N)=IS1
-       END DO
-      END DO
-
-      DO I=1,2*NCHI
-       DO J=1,2*NCHI
-         IF(I.EQ.J) THEN
-
-!           IF(I.EQ.1) THEN
-!            CALL CI$SETH(HAMILTON,I,J,(-1.D0,0.D0))
-!           ELSE
-!            CALL CI$SETH(HAMILTON,I,J,(-1.D0,0.D0))    
-!           END IF
-
-         END IF
-
-         DO K=1,2*NCHI
-          DO L=1,2*NCHI
-           IF(SOFN(I).NE.SOFN(K)) CYCLE
-            IF(SOFN(J).NE.SOFN(L)) CYCLE
-
-             CALL CI$SETU(HAMILTON,I,J,K,L,UIJKL(IOFN(I),IOFN(J),IOFN(K),IOFN(L))*(1.D0,0.D0))
-!           CALL CI$SETU(HAMILTON,V1,V2,V3,V4,(0.D0,0.D0))
-          END DO
-         END DO
-        END DO
-       END DO
-
-       CALL CI$CLEANHAMILTONIAN(HAMILTON)
-       CALL CI$WRITEHAMILTONIAN(HAMILTON,6)
-
-       ALLOCATE(RHO2(2*NCHI,2*NCHI))
-
-       RHO2(1:NCHI,1:NCHI)=RHO(:,:,1,1)
-       RHO2(1:NCHI,(NCHI+1):(2*NCHI))=RHO(:,:,1,2)
-       RHO2((NCHI+1):(2*NCHI),1:NCHI)=RHO(:,:,2,1)
-       RHO2((NCHI+1):(2*NCHI),(NCHI+1):2*NCHI)=RHO(:,:,2,2)
-
-       NCHI=2*NCHI
 !
 !     ==========================================================================
-!     == FIND MANY PARTICLE STATE                                             ==
-!     ==========================================================================
-      allocate(vij(nchi,nchi))
-      CALL ci$dynwithfixeddenmat(nchi,rho2,hamilton,psi0,vij,e)
+      if(psi0%n.ge.nmax) then
+        do ip=1,np
+          if(test(ip).gt.0.d0)test(ip)=0.d0
+        enddo
+      else
+        xtest=MAXVAL(TEST)
+        factor=0.5d0
+1000   continue
+        SVAR=xtest*(1.d0-factor)
+        count=0
+        DO IP=1,NP
+          IF(TEST(IP).LT.0.d0) cycle
+          IF(TEST(IP).LT.SVAR) test(ip)=0.d0
+          if(test(ip).gt.0.d0) count=count+1
+        enddo
+        if(psi0%n+count.gt.nmax) then
+          factor=0.5d0*factor
+          goto 1000
+        end if
+      end if
+      do ip=1,np
+        IF(TEST(IP).EQ.0.D0) PSIP%C(IP)=(0.D0,0.D0)
+      ENDDO
+      CALL CI_COMPACTPSI(PSIP)
+      RETURN
+      END
 !
-!     ==========================================================================
-!     == Report results                                                       ==
-!     ==========================================================================
-
-      PRINT*, 'PSIOUT'
-      CALL CI$WRITEPSI(PSI0,6) 
-
-!!$      PRINT*, '===RHOOUT===='
-!!$      DO I=1,NCHI
-!!$        DO J=1,NCHI
-!!$          CALL CI$COPYPSI(PSI0,PSICOPY)
-!!$          CALL CI$IJOCC(I,J,PSICOPY,CVAL)
-!!$          WRITE(*,'(2I5.4,2F30.15)') I,J,REAL(CVAL),AIMAG(CVAL)        
-!!$        END DO
-!!$      END DO
-
-      PRINT*, 'PSISTART'
-      CALL CI$WRITEPSI(PSISTART,6)      
-
-!!$      PRINT*, '===RHOSTART===='
-!!$      DO I=1,NCHI
-!!$        DO J=1,NCHI
-!!$          CALL CI$COPYPSI(PSISTART,PSICOPY)
-!!$          CALL CI$IJOCC(I,J,PSICOPY,CVAL)
-!!$          WRITE(*,'(2I5.4,2F30.15)') I,J,REAL(CVAL),AIMAG(CVAL) 
-!!$        END DO
-!!$      END DO
-
-      STOP
-      CLOSE(123)
-      CALL CI$DELETEPSI(PSIP) 
-      CALL CI$DELETEPSI(PSI0)
-      CALL CI$DELETEPSI(PSIM) 
-      CALL CI$DELETEPSI(PSISTART)
-      CALL CI$DELETEPSI(PSICOPY)
-
-      DEALLOCATE(UIJKL)
-      DEALLOCATE(LOXPHI)
-      DEALLOCATE(LOX)
-      DEALLOCATE(MATSS)
-      DEALLOCATE(RHO)
-      DEALLOCATE(HAM)
-      RETURN 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ci$limitsize(xlimit,pHi)
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      real(8)           ,intent(in)    :: xlimit
+      TYPE(CISTATE_TYPE),INTENT(inOUT) :: PHI         
+      integer(4)                       :: i,J
+      integer(4)                       :: N
+!     **************************************************************************
+      N=PHI%N
+      J=0
+      do i=1,n
+        IF(ABS(PHI%C(I)).LT.XLIMIT) CYCLE
+        J=J+1
+        PHI%C(J)=PHI%C(I)
+        PHI%ID(J)=PHI%ID(I)
+      ENDDO
+      PHI%C(J+1:)=(0.D0,0.D0)
+      PHI%ID(J+1:)=0
+      PHI%N=J
+      RETURN
       END

@@ -2708,6 +2708,19 @@ END IF
       ENDDO
 !
 !     ==========================================================================
+!     == SYMMETRIZE DENSITY MATRIX with respect to time inversion             ==
+!     == for collinear calculations psi(k)=conjg(psi(-k)). therefore the      ==                     
+!     == density matrix is real after summing over k-points. This is not true ==
+!     == for transport calculations. this symmetry fails fro spin-orbit       ==
+!     == and non-collinear calculations where an explicit magnetic field      ==
+!     == is present.
+!     ==========================================================================
+      IF(NDIM.EQ.1) THEN
+        DENMAT(:,:,1)=REAL(DENMAT(:,:,1),KIND=8)
+        EDENMAT(:,:,1)=REAL(EDENMAT(:,:,1),KIND=8)
+      END IF
+!
+!     ==========================================================================
 !     == PRINTOUT FOR TEST                                                    ==
 !     ==========================================================================
       IF(TPR) THEN

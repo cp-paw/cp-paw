@@ -1,5 +1,6 @@
 !TODO :
 ! DATH IS STILL REAL AND SHOULD PROBABLY BE COMPLEX LIKE DENMAT
+! Denmat and dath are both real, if the calculation is collinear
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE LDAPLUSU_MODULE
 TYPE THISTYPE
@@ -424,9 +425,11 @@ END MODULE LDAPLUSU_MODULE
       COMPLEX(8),ALLOCATABLE :: HAM(:,:,:,:)
       COMPLEX(8),ALLOCATABLE :: HAM1(:,:,:,:)
       COMPLEX(8),ALLOCATABLE :: MATSS(:,:,:,:)
+      real(8)   ,ALLOCATABLE :: aecore(:)
       INTEGER(4)             :: IS1,IS2,I,LN,M
       REAL(8)                :: SVAR,ETOT1
 INTEGER(4)             :: LN1,LN2,LN3,LN4
+      logical(4),parameter   :: tci=.true.
 !     **************************************************************************
       ETOT=0.D0
       DATH_=0.D0
@@ -543,7 +546,8 @@ DO IS1=1,2
     DO LN=1,LNX
       DO M=1,2*LOX(LN)+1
         I=I+1
-        WRITE(*,FMT='(I3,100F8.3)')LOX(LN),REAL(RHO(I,:,IS1,IS2))
+        WRITE(*,FMT='("RE",I3,100F8.3)')LOX(LN),REAL(RHO(I,:,IS1,IS2))
+        WRITE(*,FMT='("IM",I3,100F8.3)')LOX(LN),Aimag(RHO(I,:,IS1,IS2))
       ENDDO
     ENDDO
   ENDDO
@@ -575,7 +579,11 @@ ENDDO
 !     ==========================================================================
 !     ==  HARTREE FOCK INTERACTION ENERGY                                     ==
 !     ==========================================================================
-      CALL LDAPLUSU_INTERACTION(NCHI,U,RHO,ETOT,HAM)
+      IF(TCI) THEN
+        CALL LDAPLUSU_CI(NCHI,U,RHO,ETOT,HAM)
+      ELSE
+        CALL LDAPLUSU_INTERACTION(NCHI,U,RHO,ETOT,HAM)
+      END IF
 PRINT*,'E(U) ',ETOT
 !
 !     ==========================================================================
@@ -601,12 +609,20 @@ PRINT*,'ETOT FROM CORE VALENCE EXCHANGE ',ETOT1
         DEALLOCATE(HAM1)
 !
       ELSE IF(THIS%FUNCTIONALID.EQ.'HYBRID') THEN
+        CALL SETUP$ISELECT(ISP_)
+        ALLOCATE(AECORE(NR))
+        IF(THIS%TCV) THEN
+          CALL SETUP$GETR8A('AECORE',NR,AECORE)
+        ELSE
+          AECORE(:)=0.D0
+        END IF
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
-        CALL LDAPLUSU_EDFT(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,RHO,ETOT1,HAM1)
+        CALL LDAPLUSU_EDFT(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,AECORE,RHO,ETOT1,HAM1)
 PRINT*,'E(DC) ',ETOT1
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
         DEALLOCATE(HAM1)
+        deallocate(aecore)
 !       == SCALE CORRECTION WITH 0.25 ACCORDING TO PBE0
         ETOT=ETOT*THIS%HFWEIGHT
         HAM=HAM*THIS%HFWEIGHT
@@ -1441,7 +1457,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU_EDFT(GID,NR,LMNX,LNX,LOX,CHI,LRX,DENMAT,ETOT,HAM)
+      SUBROUTINE LDAPLUSU_EDFT(GID,NR,LMNX,LNX,LOX,CHI,LRX,aecore,DENMAT,ETOT,HAM)
 !     **                                                                      **
 !     ** DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                 **
 !     **                                                                      **
@@ -1453,6 +1469,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)  ,INTENT(IN) :: LNX        ! #(RADIAL FUNCTIONS)
       INTEGER(4)  ,INTENT(IN) :: LOX(LNX)   ! MAIN ANGULAR MOMENTUM OF LOCAL ORB.
       REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)
+      REAL(8)     ,INTENT(IN) :: aecore(NR)
       COMPLEX(8)  ,INTENT(IN) :: DENMAT(LMNX,LMNX,2,2) ! DENSITY MATRIX
       REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
       COMPLEX(8)  ,INTENT(OUT):: HAM(LMNX,LMNX,2,2)  ! DETOT/D(RHO^*)        
@@ -1460,6 +1477,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       COMPLEX(8)              :: HAM1(LMNX,LMNX,4)
       REAL(8)                 :: R(NR)
       REAL(8)     ,ALLOCATABLE:: RHO(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: RHOwc(:,:,:)
       REAL(8)     ,ALLOCATABLE:: POT(:,:,:)
       REAL(8)                 :: EDENSITY(NR)
       REAL(8)                 :: AUX(NR),SVAR
@@ -1467,6 +1485,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)              :: IDIM,LM
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)  ,PARAMETER  :: NDIMD=4
+      real(8)                 :: etotc,etotv
 INTEGER(4) :: LMRX1,IR
 INTEGER(4) :: IMETHOD
  REAL(8)     ,ALLOCATABLE:: RHOTEST(:,:,:)
@@ -1494,12 +1513,13 @@ INTEGER(4) :: IMETHOD
         CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
      &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHO(:,:,IDIM))
       ENDDO
+      ALLOCATE(RHOwc(NR,LMRX,NDIMD))  !with core
+      rhowc=rho
+      rhowc(:,1,1)=rho(:,1,1)+aecore(:)
 !
 !     ==========================================================================
 !     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
 !     ==========================================================================
-      ALLOCATE(POT(NR,LMRX,NDIMD))
-      POT(:,:,:)=0.D0
 !     == EXCHANGE ENERGY AND POTENTIAL =========================================
       CALL DFT$SETL4('XCONLY',.TRUE.)
 !
@@ -1514,7 +1534,15 @@ INTEGER(4) :: IMETHOD
 !==== 2) A COLLINEAR METHOD (WHICH IS COMPARED ON THE FLY WITH THE          ====
 !====    NONCOLLINEAR METHOD                                                ====
 !===============================================================================
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOT,POT)
+      ALLOCATE(POT(NR,LMRX,NDIMD))
+      CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,ETOTC,POT)
+      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTV,POT)
+      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOwc,ETOT,POT)
+print*,'core-valence exchange energy (local) ',etot-etotV-etotc
+print*,'valence      exchange energy (local) ',etotV
+print*,'core         exchange energy (local) ',etotC
+      ETOT=ETOT-ETOTC
+
 IMETHOD=0
 !IMETHOD=1
       IF(IMETHOD.EQ.1) THEN
@@ -1553,7 +1581,11 @@ IMETHOD=0
       CALL DFT$SETL4('XCONLY',.FALSE.)
 PRINT*,'EXC ',ETOT
 !
+!     ==========================================================================
 !     == HARTREE ENERGY AND POTENTIAL ==========================================
+!     == core contribution is not included because it is not represented in   ==
+!     == the u-tensor and only the exchange part of the core-valence is included
+!     ==========================================================================
       EDENSITY=0.D0
       DO LM=1,LMRX
         L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
@@ -1868,5 +1900,374 @@ PRINT*,'EH ',SVAR
       ENDDO
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ldaplusu_CI_old(ISP_,LMNX,NDIMD,DENMAT)
+!     **************************************************************************
+!     **   ACTUAL MAIN DRIVER ROUTINE FOR CI 
+!     **************************************************************************
+      USE CI_MODULE
+      USE LDAPLUSU_MODULE
+      IMPLICIT NONE
+      INTEGER(4), INTENT(IN) ::ISP_
+      INTEGER(4), INTENT(IN) ::LMNX
+      INTEGER(4), INTENT(IN) ::NDIMD
+      COMPLEX(8), INTENT(IN) ::DENMAT(LMNX,LMNX,NDIMD)
+      COMPLEX(8),ALLOCATABLE ::RHO(:,:,:,:)
+      COMPLEX(8),ALLOCATABLE ::RHO2(:,:)
+      COMPLEX(8),ALLOCATABLE ::MATSS(:,:,:,:)
+      COMPLEX(8),ALLOCATABLE ::HAM(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE ::PHITOCHI(:,:)
+      REAL(8)   ,ALLOCATABLE ::UIJKL(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE ::START(:)
+      REAL(8)   ,ALLOCATABLE ::R(:)
+      INTEGER(4),ALLOCATABLE ::LOXPHI(:)
+      INTEGER(4),ALLOCATABLE ::LOX(:)        !L  OF CHI
+      REAL(8), PARAMETER     :: MASS=1.D0
+      REAL(8), PARAMETER     :: DELTA=0.01d0 !0.01D0
+      REAL(8), PARAMETER     :: alpha=0.05d0 
+      REAL(8)  ,parameter    :: GAMMA=2.d0*alpha/delta
+      INTEGER(4)             ::LMRX
+      INTEGER(4)             ::LRX
+      INTEGER(4)             ::GID
+      INTEGER(4)             ::NR
+      INTEGER(4)             ::LNX           
+      INTEGER(4)             ::LNXPHI
+      INTEGER(4)             ::NPHI
+      INTEGER(4)             ::NCHI
+      INTEGER(4)             ::IS1,IS2        
+      !MANY PARTICLE THEORY
+      REAL(8),   ALLOCATABLE ::A(:)
+      REAL(8)                ::LAMBDA
+      REAL(8)                ::VAL           
+      REAL(8)                ::EPOT,EKIN     !,EPOT2
+      REAL(8)                ::REA,IMA
+      COMPLEX(8),ALLOCATABLE ::LAMBDA_IJ(:,:)
+      COMPLEX(8)             ::CVAL,CSVAR
+      INTEGER(4)             ::I,J,K,L
+      INTEGER(4)             ::N
+      INTEGER(4)             ::ISVAR
+      INTEGER(4)             ::COUNT
+      INTEGER(4)             ::ITER
+      INTEGER(4)             ::NOITER
+      INTEGER(4),ALLOCATABLE ::IOFN(:),SOFN(:) 
+      TYPE(CISTATE_TYPE)     ::PSIP
+      TYPE(CISTATE_TYPE)     ::PSI0
+      TYPE(CISTATE_TYPE)     ::PSIM   
+      TYPE(CISTATE_TYPE)     ::HPSI
+      TYPE(CISTATE_TYPE)     ::PSICOPY
+      TYPE(CISTATE_TYPE)     ::PSIbar
+      TYPE(CISTATE_TYPE)     ::PSIA
+      TYPE(CISTATE_TYPE)     ::PSIB
+      TYPE(CISTATE_TYPE)     ::PSIRHO
+      TYPE(CISTATE_TYPE)     ::PSISTART
+      TYPE(CISTATE_TYPE)     ::PSIOUT
+      TYPE(CIHAMIL_TYPE)     ::HAMILTON
+      complex(8),allocatable :: vij(:,:)
+      real(8)                :: e
+!     **************************************************************************
+      IF(.NOT.TON) RETURN
+      CALL LDAPLUSU$SELECT(ISP_)
+      IF(.NOT.THIS%TON) RETURN      
+ 
+      CALL SETUP$LMRX(ISP_,LMRX)
+      THIS%LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
+      LRX=THIS%LRX
+      CALL LDAPLUSU_CHIFROMPHI()
 
+      GID=THIS%GID
+      NR=THIS%NR
+      LNX=THIS%LNXCHI
+      ALLOCATE(LOX(LNX))
+      LOX=THIS%LOXCHI
+      NCHI=THIS%NCHI
 
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R) 
+      ALLOCATE(THIS%ULITTLE(LRX+1,LNX,LNX,LNX,LNX))
+      CALL LDAPLUSU_ULITTLE(GID,NR,LRX,LNX,LOX,THIS%CHI,THIS%ULITTLE)
+
+      CALL SETUP$ISELECT(ISP)
+      CALL SETUP$LNX(ISP,LNXPHI)
+      ALLOCATE(LOXPHI(LNXPHI))
+      CALL SETUP$LOFLN(ISP,LNXPHI,LOXPHI)
+      NPHI=SUM(2*LOXPHI+1)
+!
+!     ==========================================================================
+!     ==  DOWNFOLD                                                            ==
+!     ==========================================================================
+      ALLOCATE(PHITOCHI(NCHI,NPHI))
+      ALLOCATE(RHO(NCHI,NCHI,2,2))
+      ALLOCATE(HAM(NCHI,NCHI,2,2))
+      ALLOCATE(MATSS(NPHI,NPHI,2,2))
+      ALLOCATE(UIJKL(NCHI,NCHI,NCHI,NCHI))
+      
+      CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
+
+      CALL LDAPLUSU_MAPTOCHI(LNX,LOX,NCHI,LNXPHI,LOXPHI,NPHI,PHITOCHI)
+      DO IS1=1,2
+       DO IS2=1,2
+         RHO(:,:,IS1,IS2)=MATMUL(PHITOCHI,MATMUL(MATSS(:,:,IS1,IS2),TRANSPOSE(PHITOCHI)))
+       ENDDO
+      ENDDO
+
+      CALL LDAPLUSU_UTENSOR(LRX,NCHI,LNX,LOX,THIS%ULITTLE,UIJKL)
+
+      PRINT*, 'CALL CI SUBROUTINES'
+
+      NCHI=3
+      PRINT*, 'NCHI= ',NCHI
+
+!================================================================
+!       DEFINE HAMILTONIAN         
+!================================================================
+      ALLOCATE(IOFN(2*NCHI))
+      ALLOCATE(SOFN(2*NCHI))
+
+      N=0
+      DO IS1=1,2
+       DO I=1,NCHI
+        N=N+1
+        IOFN(N)=I
+        SOFN(N)=IS1
+       END DO
+      END DO
+
+      DO I=1,2*NCHI
+       DO J=1,2*NCHI
+         IF(I.EQ.J) THEN
+
+!           IF(I.EQ.1) THEN
+!            CALL CI$SETH(HAMILTON,I,J,(-1.D0,0.D0))
+!           ELSE
+!            CALL CI$SETH(HAMILTON,I,J,(-1.D0,0.D0))    
+!           END IF
+
+         END IF
+
+         DO K=1,2*NCHI
+          DO L=1,2*NCHI
+           IF(SOFN(I).NE.SOFN(K)) CYCLE
+            IF(SOFN(J).NE.SOFN(L)) CYCLE
+
+             CALL CI$SETU(HAMILTON,I,J,K,L,UIJKL(IOFN(I),IOFN(J),IOFN(K),IOFN(L))*(1.D0,0.D0))
+!           CALL CI$SETU(HAMILTON,V1,V2,V3,V4,(0.D0,0.D0))
+          END DO
+         END DO
+        END DO
+       END DO
+
+       CALL CI$CLEANHAMILTONIAN(HAMILTON)
+       CALL CI$WRITEHAMILTONIAN(HAMILTON,6)
+
+       ALLOCATE(RHO2(2*NCHI,2*NCHI))
+
+       RHO2(1:NCHI,1:NCHI)=RHO(:,:,1,1)
+       RHO2(1:NCHI,(NCHI+1):(2*NCHI))=RHO(:,:,1,2)
+       RHO2((NCHI+1):(2*NCHI),1:NCHI)=RHO(:,:,2,1)
+       RHO2((NCHI+1):(2*NCHI),(NCHI+1):2*NCHI)=RHO(:,:,2,2)
+
+       NCHI=2*NCHI
+!
+!     ==========================================================================
+!     == FIND MANY PARTICLE STATE                                             ==
+!     ==========================================================================
+      allocate(vij(nchi,nchi))
+      CALL ci$dynwithfixeddenmat(nchi,rho2,hamilton,psi0,vij,e)
+!
+!     ==========================================================================
+!     == Report results                                                       ==
+!     ==========================================================================
+
+      PRINT*, 'PSIOUT'
+      CALL CI$WRITEPSI(PSI0,6) 
+
+!!$      PRINT*, '===RHOOUT===='
+!!$      DO I=1,NCHI
+!!$        DO J=1,NCHI
+!!$          CALL CI$COPYPSI(PSI0,PSICOPY)
+!!$          CALL CI$IJOCC(I,J,PSICOPY,CVAL)
+!!$          WRITE(*,'(2I5.4,2F30.15)') I,J,REAL(CVAL),AIMAG(CVAL)        
+!!$        END DO
+!!$      END DO
+
+      PRINT*, 'PSISTART'
+      CALL CI$WRITEPSI(PSISTART,6)      
+
+!!$      PRINT*, '===RHOSTART===='
+!!$      DO I=1,NCHI
+!!$        DO J=1,NCHI
+!!$          CALL CI$COPYPSI(PSISTART,PSICOPY)
+!!$          CALL CI$IJOCC(I,J,PSICOPY,CVAL)
+!!$          WRITE(*,'(2I5.4,2F30.15)') I,J,REAL(CVAL),AIMAG(CVAL) 
+!!$        END DO
+!!$      END DO
+
+      STOP
+      CLOSE(123)
+      CALL CI$DELETEPSI(PSIP) 
+      CALL CI$DELETEPSI(PSI0)
+      CALL CI$DELETEPSI(PSIM) 
+      CALL CI$DELETEPSI(PSISTART)
+      CALL CI$DELETEPSI(PSICOPY)
+
+      DEALLOCATE(UIJKL)
+      DEALLOCATE(LOXPHI)
+      DEALLOCATE(LOX)
+      DEALLOCATE(MATSS)
+      DEALLOCATE(RHO)
+      DEALLOCATE(HAM)
+      RETURN 
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU_CI(NCHI,U,RHO,ETOT,pot)
+!     **************************************************************************
+!     **   ACTUAL MAIN DRIVER ROUTINE FOR CI 
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NCHI
+      REAL(8)   ,INTENT(IN) :: U(NCHI,NCHI,NCHI,NCHI)      
+      COMPLEX(8),INTENT(IN) :: RHO(NCHI,NCHI,2,2)
+      REAL(8)   ,INTENT(OUT):: ETOT
+      COMPLEX(8),INTENT(OUT):: pot(NCHI,NCHI,2,2)
+      COMPLEX(8)            :: RHO2(2*NCHI,2*NCHI)
+      COMPLEX(8)            :: POT2(2*NCHI,2*NCHI)
+      COMPLEX(8)            :: CSVAR
+      INTEGER(4)            :: I,J,K,L,n
+      TYPE(CIHAMIL_TYPE)    :: CIHAM
+      TYPE(CISTATE_TYPE)    :: CIPSI
+      real(8)               :: fn(2*nchi)
+      complex(8)            :: transf(2*nchi,2*nchi)
+      complex(8)            :: rho2a(2*nchi,2*nchi)
+      complex(8),allocatable:: u1(:,:,:,:)
+      complex(8),allocatable:: usvar(:,:,:,:)
+      complex(8),allocatable:: potsvar(:,:)
+!     **************************************************************************
+      ETOT=0.D0
+      pot(:,:,:,:)=(0.D0,0.D0)
+!
+!     ==========================================================================
+!     == MAP DENSITY MATRIX ONTO RANK 2                                       ==
+!     ==========================================================================
+      RHO2(1:NCHI,1:NCHI)=RHO(:,:,1,1)
+      RHO2(1:NCHI,NCHI+1:2*NCHI)=RHO(:,:,1,2)
+      RHO2(NCHI+1:2*NCHI,1:NCHI)=RHO(:,:,2,1)
+      RHO2(NCHI+1:2*NCHI,NCHI+1:2*NCHI)=RHO(:,:,2,2)
+!
+!     ==========================================================================
+!     == map utensor                                                          ==
+!     ==========================================================================
+      ALLOCATE(U1(2*NCHI,2*NCHI,2*NCHI,2*NCHI))
+      U1=(0.D0,0.D0)
+      U1(1:NCHI,1:NCHI,1:NCHI,1:NCHI)=U(:,:,:,:)
+      U1(1:NCHI,NCHI+1:2*NCHI,1:NCHI,NCHI+1:2*NCHI)=U(:,:,:,:)
+      U1(NCHI+1:2*NCHI,1:NCHI,NCHI+1:2*NCHI,1:NCHI)=U(:,:,:,:)
+      U1(NCHI+1:2*NCHI,NCHI+1:2*NCHI,NCHI+1:2*NCHI,NCHI+1:2*NCHI)=U(:,:,:,:)
+!
+!     ==========================================================================
+!     == diagonalize density matrix                                           ==
+!     ==the ci-expansion converges faster if formulated in natural orbitals   ==
+!     ==========================================================================
+      CALL LIB$DIAGC8(2*NCHI,RHO2,fn,transf)
+!
+!     == SET UP TRANSFORMED DENSITY MATRIX =====================================
+      RHO2(:,:)=(0.D0,0.d0)
+      DO I=1,2*NCHI
+        RHO2(I,I)=FN(I)
+      ENDDO
+!
+!     == TRANSFORM UTENSOR =====================================================
+      ALLOCATE(USVAR(2*NCHI,2*NCHI,2*NCHI,2*NCHI))
+      USVAR(:,:,:,:)=(0.D0,0.d0)
+      DO N=1,2*NCHI
+        DO I=1,2*NCHI
+          USVAR(:,:,:,N)=USVAR(:,:,:,N)+U1(:,:,:,I)*TRANSF(I,N)
+        ENDDO
+      ENDDO
+      U1(:,:,:,:)=(0.D0,0.d0)
+      DO N=1,2*NCHI
+        DO I=1,2*NCHI
+          U1(:,:,N,:)=U1(:,:,N,:)+USVAR(:,:,I,:)*TRANSF(I,N)
+        ENDDO
+      ENDDO
+      USVAR(:,:,:,:)=(0.D0,0.d0)
+      DO N=1,2*NCHI
+        DO I=1,2*NCHI
+          USVAR(:,N,:,:)=USVAR(:,N,:,:)+U1(:,I,:,:)*CONJG(TRANSF(I,N))
+        ENDDO
+      ENDDO
+      U1(:,:,:,:)=(0.D0,0.d0)
+      DO N=1,2*NCHI
+        DO I=1,2*NCHI
+          U1(N,:,:,:)=U1(N,:,:,:)+USVAR(I,:,:,:)*CONJG(TRANSF(I,N))
+        ENDDO
+      ENDDO
+      DEALLOCATE(USVAR)
+!
+!     ==========================================================================
+!     == SET UP HAMILTON OPERATOR                                             ==
+!     ==========================================================================
+      DO I=1,2*NCHI
+        DO J=1,2*NCHI
+          DO K=1,2*NCHI
+            DO L=1,2*NCHI
+              CSVAR=CMPLX(U1(I,J,K,L),KIND=8)
+              IF(ABS(CSVAR).LT.1.D-6) CYCLE
+              CALL CI$SETU(CIHAM,I,J,K,L,CSVAR)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      CALL CI$CLEANHAMILTONIAN(CIHAM)
+      CALL CI$WRITEHAMILTONIAN(CIHAM,6)
+!print*,'H%n',ciham%h%n,ciham%u%n
+!print*,'nchi',nchi
+!
+!     ==========================================================================
+!     == SET UP HAMILTON OPERATOR                                             ==
+!     ==========================================================================
+!!$print*,'nchi',nchi
+!!$do i=1,2*nchi
+!!$  write(6,fmt='("rho2",8("(",f7.4,";",f7.4,")"))')rho2(i,:)
+!!$enddo
+!!$print*,'before CI$DYNWITHFIXEDDENMAT'
+      CALL CI$DYNWITHFIXEDDENMAT(2*NCHI,RHO2,CIHAM,CIPSI,POT2,ETOT)
+!print*,'after CI$DYNWITHFIXEDDENMAT'
+      CALL CI$WRITEPSI(CIPSI,6) 
+!
+!     ==========================================================================
+!     == transform from natural orbitals back                                 ==
+!     ==========================================================================
+      ALLOCATE(potSVAR(2*NCHI,2*NCHI))
+      potSVAR(:,:)=(0.D0,0.d0)
+      DO N=1,2*NCHI
+        DO I=1,2*NCHI
+          potsvar(:,i)=potSVAR(:,i)+pot2(:,n)*conjg(TRANSF(n,i))
+        ENDDO
+      ENDDO
+      pot2(:,:)=(0.D0,0.d0)
+      DO N=1,2*NCHI
+        DO I=1,2*NCHI
+          pot2(i,:)=pot2(i,:)+potSVAR(n,:)*TRANSF(n,i)
+        ENDDO
+      ENDDO
+      DEALLOCATE(potsVAR)
+!
+!     ==========================================================================
+!     == MAP POTENTIAL BACK                                                   ==
+!     ==========================================================================
+      POT(:,:,1,1)=POT2(1:NCHI,1:NCHI)
+      POT(:,:,1,2)=POT2(1:NCHI,NCHI+1:2*NCHI)
+      POT(:,:,2,1)=POT2(NCHI+1:2*NCHI,1:NCHI)
+      POT(:,:,2,2)=POT2(NCHI+1:2*NCHI,NCHI+1:2*NCHI)
+!
+!     ==========================================================================
+!     == CLEAN UP                                                             ==
+!     ==========================================================================
+      CALL CI$DELETEPSI(CIPSI)
+      CALL CI$DELETEHAMILTONIAN(CIHAM)
+call error$stop('forced stop in ldaplusu_ci')
+      RETURN 
+      END

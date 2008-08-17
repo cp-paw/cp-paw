@@ -549,7 +549,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
 !     ==                                                                      ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'AECORE') THEN
-        IF(LEN.NE.THIS%LNX*NR) THEN
+        IF(LEN.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETR8A')
@@ -560,7 +560,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
 !     ==                                                                      ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'PSCORE') THEN
-        IF(LEN.NE.THIS%LNX*NR) THEN
+        IF(LEN.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETR8A')
@@ -571,7 +571,7 @@ PRINT*,'FROM SETUP$GETCH ',VAL
 !     ==                                                                      ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'VADD') THEN
-        IF(LEN.NE.THIS%LNX*NR) THEN
+        IF(LEN.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$MSG('ID NOT RECOGNIZED')
           CALL ERROR$CHVAL('ID',ID)
@@ -2274,6 +2274,8 @@ PRINT*,'C'
           ENDDO
         ENDDO
       ENDDO
+!
+!     = this factor is included to have a proper definition of slater integrals
       do lrho=0,lrhox
         FACTOR(:,LRHO+1,:)=FACTOR(:,LRHO+1,:)*4.d0*pi/real(2*lrho+1,kind=8)
       enddo
@@ -2294,6 +2296,7 @@ PRINT*,'C'
               IF(L2.NE.L1) CYCLE
               AUX(:)=R(:)**2*POT(:)*PSIC(:,IC)*AEPHI(:,LN2)
               CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
+              val=val*real(2*lrho+1,kind=8)/(4.d0*pi)  !Slater integral
               MAT(LN1,LN2)=MAT(LN1,LN2)-FACTOR(L1+1,LRHO+1,LC+1)*VAL
               MAT(LN2,LN1)=MAT(LN1,LN2)
             ENDDO
