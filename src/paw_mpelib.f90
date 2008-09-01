@@ -812,12 +812,12 @@ END INTERFACE
 CONTAINS
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #TEMPLATE MPE$RECEIVE
-(<TYPEID><TYPE><MPI_TYPE>)
-                =([C8],[COMPLEX(8)][MY_MPITYPE_COMPLEX_KIND8])
-                 ([R8],[REAL(8)][MY_MPITYPE_REAL_KIND8])
-                 ([R4],[REAL(4)][MY_MPITYPE_REAL_KIND4])
-                 ([I4],[INTEGER(4)][MY_MPITYPE_INTEGER_KIND4])
-                 ([L4],[LOGICAL(4)][MPI_LOGICAL])
+(<TYPEID><TYPE><MPI_TYPE><ZERO>)
+                =([C8],[COMPLEX(8)][MY_MPITYPE_COMPLEX_KIND8][(0.d0,0.d0)])
+                 ([R8],[REAL(8)][MY_MPITYPE_REAL_KIND8][0.d0])
+                 ([R4],[REAL(4)][MY_MPITYPE_REAL_KIND4][0.])
+                 ([I4],[INTEGER(4)][MY_MPITYPE_INTEGER_KIND4][0])
+                 ([L4],[LOGICAL(4)][MPI_LOGICAL][.false.])
 (<RANKID><SIZE><RANK>)
                  =([R0],[1],[])
                  =([R1],[SIZE(VAL)],[(:)])
@@ -862,6 +862,7 @@ CONTAINS
 #ELSE
       CALL ERROR$MSG('MPE$RECEIVE MUST NOT BE CALLED IN SCALAR MODE')
       CALL ERROR$STOP('MPE$RECEIVER8A')
+      val=<ZERO>    ! only to make the compiler happy
 #ENDIF
       RETURN
       END SUBROUTINE MPE$RECEIVE<TYPEID><RANKID>

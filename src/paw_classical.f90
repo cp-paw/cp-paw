@@ -4697,7 +4697,7 @@ END MODULE UFFTABLE_MODULE
 !
       RIJ=SQRT(XI*XJ)
       DIJ=SQRT(DI*DJ)
-      WRITE(ID,FMT='(A1,2A5, " X=",F5.2," D=",F5.4)') &
+      WRITE(ID,FMT='(A1,2A5, " X=",F5.2," D=",F6.4)') &
      &              'N ',ATOM1,ATOM2,RIJ,DIJ
 !
 !     ==================================================================

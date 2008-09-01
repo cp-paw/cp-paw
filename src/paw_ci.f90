@@ -47,6 +47,7 @@ END TYPE CIHAMIL_TYPE
 ! MINC IS USED BY CI_COMPACTPSI TO REMOVE SLATER-DETERMINANTS WITH TOO 
 ! SMALL WEIGHT. 
 REAL(8),SAVE              :: CI_MINC=1.D-10  ! MINIMUM ACCEPTABLE COEFFICIENT
+real(8),pointer           :: cimat(:,:)
 END MODULE CI_MODULE
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -1686,7 +1687,22 @@ print*,' fn ',fn(1:nchi)
 !     == MAT IS THE REAL (NC*NC) MATRIX WITH ELEMENTS                         ==
 !     ==    <PSI0| cONSTR(I)*CONSTR(J) |PSI0>                                 ==
 !     ==========================================================================
-      CALL CI_LAGRANGEMAT(NCHI,PSI0,NC,MAT)!
+      if(associated(cimat)) then
+print*,'1st request cimat (associated)'
+        if(size(cimat).ne.size(mat)) then
+          deallocate(cimat)
+print*,'deallocating cimat'
+        end if
+      end if
+      if(associated(cimat)) then
+print*,'2nd request cimat: associated'
+        mat=cimat
+      else
+print*,'2nd request cimat (not associated)'
+        CALL CI_LAGRANGEMAT(NCHI,PSI0,NC,MAT)
+        allocate(cimat(nc,nc))
+        cimat=mat
+      end if
 
 !     ==========================================================================
 !     == invert matrix for loop                                               ==
@@ -1708,6 +1724,7 @@ print*,' fn ',fn(1:nchi)
         CONVG=MAXVAL(ABS(VEC)).LT.TOL
         IF(CONVG) EXIT
 !       == DETERMINE CORRECTION FOR LAGRANGE MULTIPLIERS =======================
+print*,'marke 4',iter,maxval(abs(vec))
         VEC(:)=-MATMUL(MATINV,VEC)
         VECSUM=VECSUM+VEC    ! ADD CORRECTIONS UP TO OBTAIN TOTAL
 !       == ADD CORRECTION TO |PSI(+)> == =======================================
@@ -1717,7 +1734,6 @@ print*,' fn ',fn(1:nchi)
         CALL ERROR$MSG('LOOP NOT CONVERGED')
         CALL ERROR$STOP('CI_LAGRANGE')
       END IF
-!print*,'lagrange converged after ',iter,' iterations'
 !
 !     ==========================================================================
 !     ==  calculates Lagrange multiplicators                                  ==
@@ -2119,6 +2135,7 @@ print*,' fn ',fn(1:nchi)
 !     OPEN(123, FILE="CIINFO", STATUS="OLD")
       OPEN(123, FILE="CIINFO")
       REWIND 123
+      nullify(cimat)
 !     ===========================================================================
 !     == CHECK IF THE DENSITY MATRIX IS HERMITEAN                              ==
 !     ===========================================================================
@@ -2160,7 +2177,7 @@ PRINT*,'PSI%N ',PSI0%N
 !
 !       == SET FRICTION VALUE ==================================================
 !        IF(EPOT.GT.EPOTLAST.AND.EKIN.GT.1.D-6) THEN
-        IF(EPOT.GT.EPOTLAST) THEN
+        IF(EPOT.GT.EPOTLAST+1.d-6) THEN
           CALL CI$LIMITSIZE(MAXPSI,PSIM) ! REDUCE THE NUMBER OF SLATER DETERMINANTS
           CALL CI$COPYPSI(PSIM,PSI0)
           PRINT*,'PSI0%N AFTER LIMITSIZE',PSI0%N,epot-epotlast
@@ -2182,6 +2199,9 @@ PRINT*,'PSI%N ',PSI0%N
         CALL CI$PROPAGATE(DELTA,ALPHA,MASS,PSI0,PSIM,HPSI,PSIBAR)
 !
 !       == APPLY CONSTRAINTS
+        if(iter.lt.20.or.mod(iter,1).eq.0) then
+          if(associated(cimat)) deallocate(cimat)
+        end if
         CALL CI_LAGRANGE(NCHI,PSI0,PSIBAR,RHO2,V,E)
         CALL CI$COPYPSI(PSIBAR,PSIP)
         CALL CI$DELETEPSI(PSIBAR)
@@ -2224,6 +2244,7 @@ PRINT*,'PSI%N ',PSI0%N
         call error$msg('self-consistency loop not converged')
         call error$stop('ci$dynwithfixeddenmat')
       end if
+      if(associated(cimat)) deallocate(cimat)
       CALL CI$CLEANPSI(PSI0)
 !
 !     ===========================================================================

@@ -1514,7 +1514,7 @@ END MODULE BESSELTRANSFORM_MODULE
       REAL(8)               :: ARG
       REAL(8)               :: XSQ
       REAL(8)               :: FAC
-      INTEGER(4)            :: K,IL,II,ISVAR
+      INTEGER(4)            :: K,IL,II,ISVAR,i
 !     ******************************************************************
       IF(X.GT.DBLE(L)) THEN
         PI=4.D0*ATAN(1.D0)

@@ -703,6 +703,9 @@ endif
  ## file:src/paw_kpoints.f90
  ## file:src/paw_ldaplusu.f90
  LDAPLUSU_MODULE.mod : ${OBJDIR}/paw_ldaplusu.o
+ ${OBJDIR}/paw_ldaplusu.o :  CI_MODULE.mod
+ ## file:src/paw_ci.f90
+ CI_MODULE.mod : ${OBJDIR}/paw_ci.o
  ## file:src/paw_library.f90
  RANDOM_MODULE.mod : ${OBJDIR}/paw_library.o
  ## file:src/paw_linkedlist.f90
