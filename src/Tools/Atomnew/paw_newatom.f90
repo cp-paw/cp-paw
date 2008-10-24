@@ -126,9 +126,9 @@
 !     ==           default value for rcl (cutoff for partial wave constr.)    ==
 !     ==========================================================================
       IF(TREL) THEN
-        CALL REPORT$TITLE(NFILO,'NONRELATIVISTIC CALCULATION')
-      ELSE
         CALL REPORT$TITLE(NFILO,'SCALAR RELATIVISTIC CALCULATION')
+      ELSE
+        CALL REPORT$TITLE(NFILO,'NONRELATIVISTIC CALCULATION')
       END IF
       CALL READCNTL_DIMENSIONS(LL_CNTL,NB,LMAX,NAUGX)
       ALLOCATE(LOFI(NB))
@@ -3199,7 +3199,8 @@ ENDDO
 !       == CALCULATE OUTPUT POTENTIAL                                     ==
 !       ====================================================================
         IF(TBROYDEN) POTIN=POT
-        CALL MYVOFRHO(GID,NR,Z,RHO,POT,EH,EXC)
+        call atomlib$boxvofrho(gid,nr,rbox,z,rho,pot,eh,exc)
+!       CALL MYVOFRHO(GID,NR,Z,RHO,POT,EH,EXC) !do not use for boxed density
 !
 !       ================================================================
 !       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD     ==
@@ -3226,6 +3227,9 @@ PRINT*,'XMAX ',XMAX,XAV
 !     **                                                              **
 !     **  ELECTROSTATIC AND EXCHANGE-CORRELATION POTENTIAL            **
 !     **                                                              **
+!     **  warning! do not use for the atom in a box                   **
+!     **                                                              **
+!     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -3241,6 +3245,8 @@ PRINT*,'XMAX ',XMAX,XAV
       REAL(8)               :: AUX(NR)
       REAL(8)               :: EDEN(NR)
       REAL(8)               :: GRHO(NR)
+      REAL(8)               :: potxc(NR)
+      REAL(8)               :: poth(NR)
       REAL(8)               :: R(NR)
       REAL(8)               :: VGXC,VXC,EXC1,RH,GRHO2
       REAL(8)               :: DUMMY1,DUMMY2,DUMMY3
@@ -3255,10 +3261,10 @@ PRINT*,'XMAX ',XMAX,XAV
 !     ==  TOTAL POTENTIAL                                             ==
 !     ==================================================================
       EDEN=0.D0
-      CALL RADIAL$POISSON(GID,NR,0,RHO,POT)
-      EDEN(:)=EDEN(:)+0.5D0*RHO(:)*POT(:)
+      CALL RADIAL$POISSON(GID,NR,0,RHO,POTh)
+      EDEN(:)=EDEN(:)+0.5D0*RHO(:)*POTh(:)
       CALL RADIAL$NUCPOT(GID,NR,AEZ,AUX)
-      POT(:)=POT(:)+AUX(:)
+      POTh(:)=POTh(:)+AUX(:)
       EDEN(:)=EDEN(:)+RHO(:)*AUX(:)
       EDEN(:)=EDEN(:)*R(:)**2
       CALL RADIAL$INTEGRAL(GID,NR,EDEN,EH)
@@ -3272,20 +3278,21 @@ PRINT*,'XMAX ',XMAX,XAV
         GRHO2=(Y0*GRHO(IR))**2
         CALL DFT(RH,0.D0,GRHO2,0.D0,0.D0,EXC1,VXC,DUMMY1,VGXC,DUMMY2,DUMMY3)
         EDEN(IR)=4.D0*PI*EXC1   ! ANGULAR INTEGRATION ALREADY INCLUDED
-        POT(IR)=POT(IR)+VXC/Y0
+        POTxc(IR)=VXC/Y0
         GRHO(IR)=VGXC*2.D0*GRHO(IR)
       ENDDO
       CALL RADIAL$DERIVE(GID,NR,GRHO(:),AUX)
-      POT(:)=POT(:)-AUX
+      POTxc(:)=POTxc(:)-AUX
       IF(R(1).GT.1.D+10) THEN
-         POT(:)=POT(:)-2.D0/R(:)*GRHO(:)
+         POTxc(:)=POTxc(:)-2.D0/R(:)*GRHO(:)
       ELSE
-        POT(2:)=POT(2:)-2.D0/R(2:)*GRHO(2:)
-        POT(1)=POT(1)-2.D0/R(2)*GRHO(2)
-        POT(1)=POT(2)
+        POTxc(2:)=POTxc(2:)-2.D0/R(2:)*GRHO(2:)
+        POTxc(1)=POTxc(1)-2.D0/R(2)*GRHO(2)
+        POTxc(1)=POTxc(2)
       END IF
       EDEN(:)=EDEN(:)*R(:)**2
       CALL RADIAL$INTEGRAL(GID,NR,EDEN,EXC)
+      pot=poth+potxc
       RETURN
       END
 !

@@ -429,7 +429,7 @@ END MODULE LDAPLUSU_MODULE
       INTEGER(4)             :: IS1,IS2,I,LN,M
       REAL(8)                :: SVAR,ETOT1
 INTEGER(4)             :: LN1,LN2,LN3,LN4
-      logical(4),parameter   :: tci=.true.
+      logical(4),parameter   :: tci=.false.
 !     **************************************************************************
       ETOT=0.D0
       DATH_=0.D0
@@ -1410,6 +1410,126 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
                             CALL TRACE$POP()
       RETURN
       END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LDAPLUSU_INTERACTION_truehf(NORB,U,RHO,ETOT,HAM)
+!!$!     **                                                                      **
+! this was an attempt to determine the interactrion energy from a 
+! uncorrelated multideterminant wavefuntion. It is unfinished!!!!
+!!$!     ** CALCULATES THE HARTREE AND EXCHANGE ENERGY FROM THE U-TENSOR U       **
+!!$!     ** AND THE DENSITY MATRIX RHO.                                          **
+!!$!     **                                                                      **
+!!$      IMPLICIT NONE
+!!$      INTEGER(4)  ,INTENT(IN) :: NORB                   ! BASIS-SET SIZE              
+!!$      REAL(8)     ,INTENT(IN) :: U(NORB,NORB,NORB,NORB) ! U TENSOR
+!!$      COMPLEX(8)  ,INTENT(IN) :: RHO(NORB,NORB,2,2)     ! DENSITY MATRIX
+!!$      REAL(8)     ,INTENT(OUT):: ETOT                   ! ENERGY
+!!$      COMPLEX(8)  ,INTENT(OUT):: HAM(NORB,NORB,2,2)     ! DE/D(DENMAT)        
+!!$      REAL(8)                 :: UIJKL
+!!$      COMPLEX(8)              :: RHOT(NORB,NORB)
+!!$      COMPLEX(8)              :: HAMT(NORB,NORB)
+!!$      REAL(8)                 :: SVAR,EBLOCK
+!!$      INTEGER(4)              :: I,J,K,L,IS1,IS2
+!!$!     **************************************************************************
+!!$                            CALL TRACE$PUSH('LDAPLUSU_INTERACTION')
+!!$!
+!!$!     ==========================================================================
+!!$!     == DIAGONALIZE DENSITY MATRIX                                           ==
+!!$!     ==========================================================================
+!!$      denmat(1:norb,1:norb)=rho(:,:,1,1)
+!!$      denmat(1:norb,norb+1:2*norb)=rho(:,:,1,2)
+!!$      denmat(norb+1:2*norb,1:norb)=rho(:,:,2,1)
+!!$      denmat(norb+1:2*norb,norb+1:2*norb)=rho(:,:,2,2)
+!!$      CALL LIB$DIAGC8(2*norb,denmat,EIG,UT)
+!!$      DO I=1,NCHI
+!!$        FN(I)=EIG(NCHI+1-I)
+!!$      ENDDO
+!!$      FN(NCHI+1)=0.D0
+!!$      FN(0)=1.D0
+!!$!
+!!$!     ==========================================================================
+!!$!     == two particle density                                                 ==
+!!$!     ==========================================================================
+!!$      rho2(:,:,:,:)=0.d0
+!!$      do n=1,2*norb
+!!$        do m=1,2*norb
+!!$          weight=min(fn(n),fn(m))-fn(n)*fm(m)
+!!$          if(abs(weight).lt.1.d-7) cycle
+!!$          do i=1,2*norb
+!!$            isi=1+mod(i-1,norb)
+!!$            do k=1,2*norb
+!!$              isk=1+mod(k-1,norb)
+!!$              csvar1=weight*ut(k,n)*ut(i,n)
+!!$              do j=1,2*norb
+!!$                isj=1+mod(j-1,norb)
+!!$                do l=1,2*norb
+!!$                  isl=1+mod(l-1,norb)
+!!$                  rho2(i,j,k,l)=u(i,j,k,l)+csvar*ut(l,m)*ut(j,m)
+!!$                enddo
+!!$              enddo
+!!$            enddo
+!!$          enddo
+!!$        enddo
+!!$      enddo
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  correction to the interaction energy                                ==
+!!$!     ==========================================================================
+!!$      ETOT=0.D0
+!!$      HAMmat(:,:)=(0.D0,0.d0)
+!!$      DO i=1,NORB
+!!$        DO j=1,NORB
+!!$          EBLOCK=0.D0
+!!$          DO k=1,NORB
+!!$            DO l=1,NORB
+!!$              du=U(I,J,K,L)-u(i,j,l,k)
+!!$              do is1=0,1
+!!$                do is2=0,1
+!!$                  i1=i+norb*is1
+!!$                  i2=j+norb*is2
+!!$                  i3=k+norb*is2
+!!$                  i4=l+norb*is1
+!!$                  etot=etot+du*rho2(i1,i2,i3,i4)
+!!$                  ham2(i1,i2,i3,i4)=ham2(i1,i2,i3,i4)+du
+!!$                enddo
+!!$              enddo
+!!$            enddo
+!!$          enddo
+!!$        enddo
+!!$      enddo
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  transform to derivatives fo occupations ane eigenvectors            ==
+!!$!     ==========================================================================
+!!$      rho2(:,:,:,:)=0.d0
+!!$      do n=1,2*norb
+!!$        do m=1,2*norb
+!!$          weight=min(fn(n),fn(m))-fn(n)*fm(m)
+!!$          if(abs(weight).lt.1.d-7) cycle
+!!$          do i=1,2*norb
+!!$            isi=1+mod(i-1,norb)
+!!$            do k=1,2*norb
+!!$              isk=1+mod(k-1,norb)
+!!$              csvar1=weight*ut(k,n)*ut(i,n)
+!!$              do j=1,2*norb
+!!$                isj=1+mod(j-1,norb)
+!!$                do l=1,2*norb
+!!$                  isl=1+mod(l-1,norb)
+!!$                  rho2(i,j,k,l)=u(i,j,k,l)+csvar*ut(l,m)*ut(j,m)
+!!$!----                  dedf(n)
+!!$                enddo
+!!$              enddo
+!!$            enddo
+!!$          enddo
+!!$        enddo
+!!$      enddo
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  transform two-particle Hamiltonian into a one-particle Hamiltonian  ==
+!!$!     ==========================================================================
+!!$                            CALL TRACE$POP()
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_DOUBLECOUNTING(ID,L,U,J,F,E,V)
@@ -1887,8 +2007,8 @@ PRINT*,'EH ',SVAR
         L=LOX(LN1)
         DO LN2=1,LNX
           IF(LOX(LN2).NE.L) CYCLE
-          LMN1A=SUM(LOX(1:LN1-1))
-          LMN2A=SUM(LOX(1:LN2-1))
+          LMN1A=SUM(2*LOX(1:LN1-1)+1)
+          LMN2A=SUM(2*LOX(1:LN2-1)+1)
           DO IM=1,2*L+1
             LMN1=LMN1A+IM
             LMN2=LMN2A+IM

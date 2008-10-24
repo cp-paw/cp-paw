@@ -1212,6 +1212,7 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
 INTEGER(4) ::NTASKS_W,THISTASK_W
 CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
                               CALL TRACE$PUSH('WAVES$ETOT')
+      call LMTO$makestructureconstants()
 !
 !     ==================================================================
 !     == CHECK CONSISTENCY WITH OCCUPATIONS OBJECT                    ==

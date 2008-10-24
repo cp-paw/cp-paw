@@ -507,6 +507,10 @@
       AM(:)=A(:)-0.5D0*B(:)
       IF(IDIR.GE.0) THEN
         DO I=2,NX-1
+          if(abs(f(i)).gt.huge(f)*1.d-10) then   !guard against overflow
+            f(i:)=0.d0
+            exit
+          end if
           F(I+1)=( -(A0(I)+AM(I))*F(I) +AM(I)*(F(I)-F(I-1)) +D(I) )/AP(I)
         ENDDO
       ELSE IF(IDIR.LT.0) THEN

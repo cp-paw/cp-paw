@@ -1,0 +1,38 @@
+!SCNTL
+  !SETUP ID='H_FIRST' 
+     EL='H_'  ZV=1. RCL/RCOV=1.D0 1.D0 1.D0
+     !GRID R1=1.056D-4  DEX=0.05 NR=250 !END
+     !POT   POW=2. VAL0=-0.5 RC/RCOV=0.9 !END
+     !CORE  POW=2. VAL0= 0.1 RC/RCOV=0.9 !END
+  !END
+  !SETUP ID='DUMMY' RCL/RCOV=1.D0 1.D0 1.D0
+     Z=0.5  ZV=0.5   
+     !GRID R1=1.056D-4  DEX=0.05 NR=250 !END
+     !POT   POW=2. VAL0=-0.5 RC/RCOV=0.9 !END
+     !CORE  POW=2. VAL0= 0.1 RC/RCOV=0.9 !END
+  !END
+  !SETUP ID='O_' EL='O_'  ZV=6.   
+      RBOX/rcov=4.  rcsm/rcov=0.3     
+      RCL/RCOV=1. 1. 1. 
+     !GRID DMIN=5.E-6 DMAX=0.1 RMAX=7. !END
+     !POT   POW=3. VAL0=-1.2 RC/RCOV=0.8 !END
+     !CORE  POW=3. VAL0= 0.1 RC/RCOV=0.8 !END
+  !END
+  !SETUP ID='CU' EL='CU'  ZV=11.  
+     RBOX/RCOV=2. RCSM/RCOV=0.3
+     RCL/RCOV=1.0 1.0 0.8
+     !GRID DMIN=5.E-6 DMAX=0.1 RMAX=7. !END
+     !POT   POW=3. VAL0=-2.2 RC/RCOV=0.8 !END
+     !CORE  POW=3. VAL0= 0.1 RC/RCOV=0.8 !END
+  !END
+  !SETUP ID='CA' EL='CA'  ZV=10.  
+     RBOX/RCOV=2. RCSM/RCOV=0.3 
+     RCL/RCOV=0.8 0.8 0.8 0.8  
+     !GRID DMIN=5.E-6 DMAX=0.1 RMAX=7. !END
+     !POT   POW=3. VAL0=-2.2 RC/RCOV=0.8 !END
+     !CORE  POW=3. VAL0= 0.1 RC/RCOV=0.8 !END
+  !END
+!END
+!EOB
+
+http://www.intel.com/software/products/compilers/docs/flin/main_for/mergedProjects/bldaps_for/common/bldaps_rterrs.htm

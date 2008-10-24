@@ -794,7 +794,10 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
 !
       IF(ID.EQ.'NPRO') THEN
         IF(.NOT.ASSOCIATED(XXX(THISTYPE)%NPRO)) THEN
-          VAL(:)=10000
+!          VAL(:)=10000
+          CALL ERROR$MSG('Npro has not been set and is not available')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('ATOMTYPELIST$GETI4')
         ELSE
           LEN1=SIZE(XXX(THISTYPE)%NPRO) 
           IF(LEN.GE.LEN1) THEN
@@ -802,6 +805,11 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
             VAL(1:LEN1)=XXX(THISTYPE)%NPRO
           ELSE
             VAL(:)=XXX(THISTYPE)%NPRO(1:LEN)
+            CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$i4val('array size expected',len)
+            CALL ERROR$i4val('actual array size',len1)
+            CALL ERROR$STOP('ATOMTYPELIST$GETI4')
           END IF
         END IF
       ELSE

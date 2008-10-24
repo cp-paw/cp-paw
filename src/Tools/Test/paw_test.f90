@@ -36,6 +36,12 @@ END TYPE ION_TYPE
 END MODULE SESM_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       PROGRAM MAIN
+      CALL TRACE$SETL4('ON',.FALSE.)
+CALL TESTATOMLIB()
+stop
+call teststructureconstants
+! call test
+stop
       CALL DEBUG_PETERS_NONSPH()
       STOP
       END
@@ -2587,3 +2593,562 @@ ENDDO
                                  CALL TRACE$POP()
       RETURN
       END
+!==================================================================================
+!===================================================================================
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine test
+      IMPLICIT NONE
+      integer(4),parameter :: l1x=2
+      integer(4),parameter :: l2x=3
+      integer(4),parameter :: lm1x=(l1x+1)**2
+      integer(4),parameter :: lm2x=(l2x+1)**2
+      real(8)   ,parameter :: r0(3)=(/-1.d0,-1.d0,0.d0/)
+      real(8)   ,parameter :: dr1(3)=(/1.d-1,0.d0,0.d0/)
+      real(8)   ,parameter :: dr2(3)=(/0.d0,1.d-1,0.d0/)
+      integer(4),parameter :: n1=31
+      integer(4),parameter :: n2=21
+      real(8)   ,parameter :: rcenter(3)=(/0.d0,0.d0,0.d0/)
+      real(8)   ,parameter :: roffcenter(3)=(/1.4d0,0.3d0,0.2d0/)
+      real(8)   ,parameter :: k2=0.d0
+      real(8)   ,parameter :: valx=2.d0
+      integer(4),parameter :: nfil1=10
+      integer(4),parameter :: nfil2=11
+      integer(4),parameter :: nfil3=12
+      integer(4)           :: i1,i2
+      real(8)              :: h(lm1x)
+      real(8)              :: h2(lm1x)
+      real(8)              :: s(lm2x,lm1x)
+      real(8)              :: j(lm2x)
+      real(8)              :: r(3)
+      real(8)              :: val,svar
+      integer(4)           :: lmselect
+      real(8)              :: pi
+      integer(4)           :: lm1,lm2,l1,l2,m1,m2
+      complex(8)           :: kk
+!     **************************************************************************      
+      pi=4.d0*atan(1.d0)
+      if(k2.gt.0.d0) then
+        kk=cmplx(1.d0,0.d0)*sqrt(k2)
+      else if(k2.lt.0.d0) then
+        kk=cmplx(0.d0,1.d0)*sqrt(-k2)
+      else
+        kk=(0.d0,0.d0)
+      end if
+      open(unit=nfil1,file='h.dat')
+      open(unit=nfil2,file='js.dat')
+      open(unit=nfil3,file='h-js.dat')
+      lmselect=1
+      call LMTO$STRUCTURECONSTANTS(Rcenter,L1X,Roffcenter,L2X,K2,S)
+!
+!     == compare structure constants with daniel
+!!$      do lm1=1,lm1x
+!!$        l1=sqrt(real(lm1-1)+1.d-7)
+!!$        m1=1+l1**2+l1-lm1
+!!$        do lm2=1,lm2x
+!!$          l2=sqrt(real(lm2-1)+1.d-7)
+!!$          m2=1+l2**2+l2-lm2
+!!$          call structureconstants(Roffcenter,L2,M2,Rcenter,L1,M1,kk,val)
+!!$          if(k2.gt.0.d0) then
+!!$            val=-sqrt(k2)**(l1+l2+1)*val
+!!$          else if(k2.lt.0.d0) then
+!!$            val=2.d0/pi*sqrt(-k2)**(l1+l2+1)*val
+!!$          else
+!!$            val=-val
+!!$          end if
+!!$          write(*,fmt='(6i5,3f10.5)')lm1,l1,m1,lm2,l2,m2,val,s(lm2,lm1),s(lm2,lm1)-val
+!!$        enddo
+!!$      enddo
+!
+!     == put function and expansion oni grid
+      do i1=1,n1
+        do i2=1,n2
+          r(:)=r0(:)+dr1(:)*real(i1-1,kind=8)+dr2(:)*real(i2-1,kind=8)
+          call LMTO$SOLIDHANKEL(R-rcenter,1.d-3,K2,LM1X,H)
+          val=h(lmselect)
+          val=max(-valx,min(valx,val))
+          write(nfil1,fmt='(3f20.5)')r(1),r(2),val
+          svar=val
+          call LMTO$SOLIDbessel(R-roffcenter,K2,LM2X,J)
+          H2(:)=matmul(j,s)
+          val=h2(lmselect)
+          val=max(-valx,min(valx,val))
+          write(nfil2,fmt='(3f20.5)')r(1),r(2),val
+          write(nfil3,fmt='(3f20.5)')r(1),r(2),svar-val
+        enddo
+      enddo
+      close(nfil1)
+      close(nfil2)
+      close(nfil3)
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE teststructureconstants
+!     **                                                                      **
+!     **************************************************************************      
+      use periodictable_module
+      use oneatom_module
+      use strings_module
+      implicit none
+      integer(4),parameter :: nfil=6
+      integer(4),parameter :: nat=7
+      integer(4),parameter :: lxx=2
+      real(8)   ,parameter :: k2=0.d0
+      real(8)   ,parameter :: lunit=5.d0
+      character(4),parameter:: atomid='FE'
+      real(8)              :: rpos(3,nat)
+      integer(4)           :: lx(nat)
+      integer(4)           :: n
+      integer(4)           :: norb
+      real(8)   ,allocatable :: sbar(:,:)
+      real(8)              :: qbar(lxx+1,nat)
+      integer(4)           :: ii,i
+      integer(4)           :: l
+      integer(4)           :: iat
+      real(8)              :: aez
+      real(8)              :: rad(nat)
+      real(8)              :: detot,dedq,dedrad
+      real(8)              :: val,der
+      character(32)        :: rootname='xx'
+      real(8)      :: s1(4,1)
+      integer(4),parameter :: lmselect=2
+      real(8)   ,parameter :: r0(3)=(/-1.d0,-1.d0,0.d0/)*10.d0
+      real(8)   ,parameter :: dr1(3)=(/1.d-1,0.d0,0.d0/)*10.d0
+      real(8)   ,parameter :: dr2(3)=(/0.d0,1.d-1,0.d0/)*10.d0
+      integer(4),parameter :: n1=31
+      integer(4),parameter :: n2=21
+      real(8)   ,parameter :: valx=2.d-2
+      integer(4),parameter :: nfil1=10
+      INTEGER(4)           :: i1,i2
+      real(8)              :: r(3)
+      real(8)              :: h((lxx+1)**2)
+      real(8)   ,allocatable :: c(:,:)
+      real(8)   ,allocatable :: qbarvec(:)
+!     **************************************************************************      
+      lx(:)=lxx
+      rpos(:,1)=(/0.d0,0.d0,0.d0/)
+      rpos(:,2)=(/1.d0,0.d0,0.d0/)
+      rpos(:,3)=(/0.d0,1.d0,0.d0/)
+      rpos(:,4)=(/0.d0,0.d0,1.d0/)
+      rpos(:,5)=(/-1.d0,0.d0,0.d0/)
+      rpos(:,6)=(/0.d0,-1.d0,0.d0/)
+      rpos(:,7)=(/0.d0,0.d0,-1.d0/)
+      rpos(:,:)=rpos(:,:)*lunit
+!
+!     ==========================================================================        
+!     ==  CONNECT PROTOCOLL FILE                                              ==        
+!     ==========================================================================        
+      CALL FILEHANDLER$SETROOT(ROOTNAME)
+      CALL FILEHANDLER$SETFILE('PROT',.FALSE.,TRIM(ROOTNAME)//-'.PROT')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','FORM','FORMATTED')
+!
+!     ==========================================================================
+!     == determine screened structure constants                               ==
+!     ==========================================================================
+      CALL DFT$SETI4('TYPE',2)
+      CALL DFT$SETL4('SPIN',.FALSE.)
+      CALL PERIODICTABLE$GET(ATOMID,'Z',AEZ)
+      CALL ONEATOM$NEW(1,AEZ)
+      CALL ONEATOM(1,0.D0,20.D0,DETOT,DEDQ,DEDRAD)
+      CALL PERIODICTABLE$GET(ATOMID,'R(COV)',RAD(1))
+      rad(2:)=rad(1)
+      THIS=>THISARR(1)
+      QBAR(:,:)=0.D0
+      DO L=0,LX(1)
+        CALL RADIAL$VALUE(THIS%GID,THIS%NR,THIS%UDOT(:,L+1),RAD,VAL)
+        CALL RADIAL$VALUE(THIS%GID,THIS%NR,THIS%UDOT(:,L+1),RAD,DER)
+        CALL LMTO$Q(L,RAD(1),VAL,DER,K2,QBAR(L+1,1))
+PRINT*,'-- ',L,RAD(1),VAL,DER,QBAR(L+1,1)
+        QBAR(L+1,2:)=QBAR(L+1,1)
+      ENDDO
+!     
+!     ==========================================================================
+!     == determine screened structure constants                               ==
+!     ==========================================================================
+      n=sum((lx(:)+1)**2)
+      norb=(lx(1)+1)**2
+      allocate(sbar(n,norb))
+      allocate(qbarvec(n))
+      allocate(c(n,norb))
+      CALL LMTO$EXPANDQBAR(NAT,LXX,LX,QBAR,N,QBARVEC)
+      CALL LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QBARvec,N,NORB,SBAR)
+      CALL LMTO$KBARMULTICENTER(N,NORB,QBARVEC,SBAR,C)
+!
+!     ==========================================================================
+!     == print structure constants                                            ==
+!     ==========================================================================
+      ii=0
+      do iat=1,nat
+        write(nfil,fmt='(82("="),t20," structureconstants for atom ",i2)')iat
+        do i=1,(lx(iat)+1)**2
+          ii=ii+1
+          write(nfil,fmt='(20f10.5)')sbar(II,:)
+        enddo
+      enddo
+ !
+!     ==========================================================================
+!     == plot envelope function                                               ==
+!     ==========================================================================
+      open(unit=nfil1,file='kbar.dat')
+      do i1=1,n1
+        do i2=1,n2
+          r(:)=r0(:)+dr1(:)*real(i1-1,kind=8)+dr2(:)*real(i2-1,kind=8)
+          call LMTO$screenedsolidhankel(K2,NAT,RPOS,rad,LX,N,norb,C,R,h)
+          val=h(lmselect)
+          val=max(-valx,min(valx,val))
+          write(nfil1,fmt='(3f20.5)')r(1),r(2),val
+        enddo
+      enddo
+      close(nfil1)
+      deallocate(sbar)
+      return
+      end
+!
+!........1.........2.........3.........4.........5.........6.........7.........8
+module structureconstants_module
+type nmat_type
+  integer(4) :: iat1=0
+  integer(4) :: iat2=0
+  integer(4) :: it(3)=0
+  integer(4) :: lmn1=0
+  integer(4) :: lmn2=0
+  real(8)  ,pointer :: s(:,:)
+  type(nmat_type),pointer :: next
+end type nmat_type
+type(nmat_type),target,save  :: first
+type(nmat_type),pointer,save :: this
+type(nmat_type),pointer,save :: previous
+contains
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine nmat_select(iat1,iat2,it)
+!     ** points this onto the desired element or disassociates it          **
+      integer(4),intent(in) :: iat1
+      integer(4),intent(in) :: iat2
+      integer(4),intent(in) :: it(3)
+!     **************************************************************************
+      this=>first
+      nullify(previous)
+      do
+        if(this%iat1.eq.iat1) then
+          if(this%iat2.ne.iat2) then
+            if(this%it(1).eq.it(1))then
+              if(this%it(2).eq.it(2)) then
+                if(this%it(3).eq.it(3)) then
+                  exit     ! success: correct member found
+                else if(this%it(3).gt.it(3)) then
+                  nullify(this)
+                  exit
+                end if
+              else if(this%it(2).gt.it(2)) then
+                nullify(this)
+                exit
+              end if
+            else if(this%it(1).gt.it(1)) then
+              nullify(this)
+              exit
+            end if
+          else if(this%iat2.gt.iat2) then
+            nullify(this)
+            exit
+          end if
+        else if(this%iat1.gt.iat1) then
+          nullify(this)
+          exit
+        end if
+!       == search for the next member in the list
+        if(associated(this%next)) then
+          previous=>this
+          this=>this%next
+        else
+          nullify(this)
+          exit
+        end if
+      enddo
+      return
+      end subroutine nmat_select
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE NMAT_INSERT()
+!     ** INSERT A NEW NEIGHBOR PAIR AFTER PREVIOUS                            **
+      IMPLICIT NONE
+!     **************************************************************************
+      IF(ASSOCIATED(PREVIOUS)) THEN
+        ALLOCATE(THIS)
+        THIS%NEXT=>PREVIOUS%NEXT
+        PREVIOUS%NEXT=>THIS
+      ELSE
+        IF(FIRST%IAT1.NE.0) THEN 
+!         == FIRST ELEMENT HAS ALREADY BEEN DEFINED. CREATE NEW ONE ON THE    ==
+!         == FIRST POSITION AND SHIFT THE FIRST TO THE SECOND PLACE           ==
+          ALLOCATE(THIS)
+          THIS%NEXT=>FIRST%NEXT
+          FIRST%NEXT=>THIS
+          THIS%IAT1=FIRST%IAT1
+          THIS%IAT2=FIRST%IAT2
+          THIS%IT=FIRST%IT
+          THIS%LMN1=FIRST%LMN1
+          THIS%LMN2=FIRST%LMN2
+          THIS%S=>FIRST%S
+          THIS=>FIRST
+        END IF
+      END IF
+!     == BLANK OUT THE NEW ELEMENT
+      THIS%IAT1=0
+      THIS%IAT2=0
+      THIS%IT=0
+      THIS%LMN1=0
+      THIS%LMN2=0
+      NULLIFY(THIS%S)
+      RETURN
+      END SUBROUTINE NMAT_INSERT
+END MODULE STRUCTURECONSTANTS_MODULE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SMAT$GET(IAT1,IAT2,IT,LMN1,LMN2,S,TCHK)
+      USE STRUCTURECONSTANTS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: IAT1
+      INTEGER(4),INTENT(IN) :: IAT2
+      INTEGER(4),INTENT(IN) :: IT(3)
+      INTEGER(4),INTENT(IN) :: LMN1
+      INTEGER(4),INTENT(IN) :: LMN2
+      REAL(8)   ,INTENT(OUT):: S(LMN1,LMN2)
+      logical(4),intent(out):: tchk
+!     **************************************************************************      
+      CALL NMAT_SELECT(IAT1,IAT2,IT)
+      TCHK=ASSOCIATED(this)
+      IF(TCHK) THEN
+        IF(LMN1.NE.this%LMN1.OR.LMN2.NE.this%LMN2) THEN
+          CALL ERROR$STOP('SMAT$GET')
+        END IF
+        S=this%S
+      ELSE
+        S(:,:)=0.D0
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SMAT$SET(IAT1,IAT2,IT,LMN1,LMN2,S)
+      USE STRUCTURECONSTANTS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: IAT1
+      INTEGER(4),INTENT(IN) :: IAT2
+      INTEGER(4),INTENT(IN) :: IT(3)
+      INTEGER(4),INTENT(IN) :: LMN1
+      INTEGER(4),INTENT(IN) :: LMN2
+      REAL(8)   ,INTENT(IN) :: S(LMN1,LMN2)
+      logical(4)            :: tchk
+!     **************************************************************************      
+      CALL NMAT_SELECT(IAT1,IAT2,IT)
+      TCHK=ASSOCIATED(THIS)
+      IF(TCHK) THEN
+        IF(LMN1.NE.THIS%LMN1.OR.LMN2.NE.THIS%LMN2) THEN
+          DEALLOCATE(THIS%S)
+          THIS%LMN1=LMN1
+          THIS%LMN2=LMN2
+          ALLOCATE(THIS%S(LMN1,LMN2))
+        END IF
+        THIS%S=S
+      ELSE
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SMAT$report(nfil,title)
+      USE STRUCTURECONSTANTS_MODULE
+      implicit none
+      integer(4)     ,intent(in) :: nfil
+      character(*)   ,intent(in) :: title
+      type(nmat_type),pointer:: current
+!     **************************************************************************      
+      write(nfil,fmt='(82("="),t20,a)')title
+      if(first%iat1.eq.0) then
+        write(nfil,fmt='("list is empty")')
+      end if
+      current=>first
+      do 
+        write(nfil,fmt='("iat1=",i5," iat2=",i5," it=",3i2)')current%iat1,current%iat2,current%it(:)
+        if(.not.associated(current%next)) exit
+        current=>current%next
+      enddo
+      write(nfil,fmt='("end of list")')
+      return
+      end
+      
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TESTATOMLIB()
+      REAL(8)   ,PARAMETER :: R1=1.056D-4
+      REAL(8)   ,PARAMETER :: DEX=0.05
+      INTEGER(4),PARAMETER :: NR=250
+      INTEGER(4),PARAMETER :: Np=20
+!      real(8)   ,parameter :: xmin=-7.d0,xmax=+3.d0
+      real(8)   ,parameter :: xmin=0.d0,xmax=+20.d0
+      REAL(8)              :: potpar(np,108)
+      INTEGER(4)           :: GID
+      CHARACTER(128)       :: KEY='START,REL,NONSO,ROBUST'
+      REAL(8)              :: RBOX
+      INTEGER(4),PARAMETER :: NX=40
+      INTEGER(4)           :: nb
+      REAL(8)              :: AEZ
+      INTEGER(4)           :: LOFI(NX)
+      INTEGER(4)           :: SO(NX)
+      INTEGER(4)           :: nn(NX)
+      REAL(8)              :: F(NX)
+      REAL(8)              :: EOFI(NX)
+      REAL(8)              :: PHI(NR,NX)
+      REAL(8)              :: ETOT
+      REAL(8)              :: POT(NR),pot1(nr),pot2(nr)
+      REAL(8)              :: r(NR)
+      REAL(8)              :: y,ri,y1
+      INTEGER(4)           :: NFILDAT=10
+      INTEGER(4)           :: NFILpot=11
+      INTEGER(4)           :: I,ir,j
+      character(64)        :: string
+      REAL(8)              :: pi,y0
+      REAL(8)              :: aux(nr),nucpot(nr)
+!     **************************************************************************
+      pi=4.d0*atan(1.d0)
+      y0=1.d0/sqrt(4.d0*pi)
+      CALL RADIAL$NEW('SHLOG',GID)
+      CALL RADIAL$SETR8(GID,'R1',R1)
+      CALL RADIAL$SETR8(GID,'DEX',DEX)
+      CALL RADIAL$SETI4(GID,'NR',NR)
+      call radial$r(gid,nr,r)
+      RBOX=R(NR-2)
+      OPEN(UNIT=NFILDAT,FILE='ATOMLIB_E.DAT')
+      DO I=1,108,1
+        AEZ=REAL(I,KIND=8)
+        CALL ATOMLIB$AESCF(GID,NR,KEY,RBOX,AEZ,NX,NB,LOFI,SO,F,NN,ETOT,POT,EOFI,PHI)
+        PRINT*,'ETOT',AEZ,ETOT
+        WRITE(NFILDAT,FMT='(41F12.2)')aez,EOFI
+
+   string=trim('apot'//trim(adjustl(string)))//'.dat'
+   OPEN(UNIT=NFILpot,FILE=string)
+    do ir=1,nr
+      write(nfilpot,*)r(ir),-pot(ir)*r(ir)
+    enddo      
+   close(nfilpot)
+cycle
+
+!
+!       == determine data for interpolation ======================================
+        CALL RADIAL$NUCPOT(GID,NR,AEZ,nucPOT)
+        aux=pot*r
+        do j=1,np
+          ri=xmin+real(j-1,kind=8)*(xmax-xmin)/real(np-1,kind=8)
+!print*,'ri ',ri,r(nr)
+          call radial$value(gid,nr,aux,ri,potpar(j,i))
+        enddo
+        call ATOMLIB_unwrappot(GID,NR,aez,Np,xmin,xmax,potpar(:,i),pot1)
+!print*,'marke 1'       
+pot2=pot1
+!CALL ATOMLIB$AESCF(GID,NR,'REL,NONSO',RBOX,AEZ,NX,NB,LOFI,SO,F,NN,ETOT,POT2,EOFI,PHI)
+print*,'========================= marke 2=============================='       
+cycle
+!
+!       ====
+        write(string,*)i
+        string=trim('pot'//trim(adjustl(string)))//'.dat'
+        OPEN(UNIT=NFILpot,FILE=string)
+        do ir=1,nr
+!          y=log(pot(ir)-nucpot(ir))
+!          y1=log(pot1(ir)-nucpot(ir))
+if(ir.lt.exp(xmin)) cycle
+y=pot(ir)*r(ir)**3
+y1=pot1(ir)
+          write(nfilpot,*)r(ir),y,y1
+        enddo
+        close(nfilpot)
+      ENDDO
+      CLOSE(NFILDAT)
+      RETURN
+      END
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMLIB_unwrappot(GID,NR,aez,nx,xmin,xmax,potpar,pot)
+!     **************************************************************************
+      implicit none
+      INTEGER(4),intent(in) :: NX
+      real(8)   ,intent(in) :: xmin
+      real(8)   ,intent(in) :: xmax
+      integer(4),intent(in) :: gid
+      integer(4),intent(in) :: nr
+      real(8)   ,intent(in) :: aez
+      real(8)   ,intent(in) :: potpar(nx)
+      real(8)   ,intent(out):: pot(nr)
+      real(8)               :: xi(nx)
+      real(8)               :: r(nr)
+      real(8)               :: pi,y0
+      real(8)               :: a(nx-3),b(nx-3),c(nx-3),d(nx-3)
+      integer(4)            :: i,ir,j
+      real(8)               :: x(4),f(4)
+      real(8)               :: xc
+      real(8)               :: xr
+      real(8)               :: nucpot(nr)
+!     *************************************************************************
+      pi=4.d0*atan(1.d0)
+      y0=1.d0/sqrt(4.d0*pi)
+      call radial$r(gid,nr,r)
+      do i=1,nx
+        xi(i)=xmin+REAL(i-1,kind=8)*(xmax-xmin)/real(nx-1,kind=8)
+      enddo
+      do i=1,nx-3
+        f(:)=potpar(i:i+3)
+        x(:)=xi(i:i+3)
+        xc=sum(x)/4.d0
+        x(:)=x(:)-xc
+        c(i)=0.5d0*(f(1)-f(2)-f(3)+f(4))/(x(4)**2-x(3)**2)
+        f(:)=f(:)-c(i)*x(:)**2
+        a(i)=sum(f)/4.d0
+        f(:)=f(:)-a(i)
+        f(:)=f(:)/x(:)
+        D(i)=0.5d0*(f(1)-f(2)-f(3)+f(4))/(x(4)**2-x(3)**2)
+        f(:)=f(:)-d(i)*x(:)**2
+        b(i)=sum(f)/4.d0
+!       == shift origin
+        a(i)=a(i)-b(i)*xc+c(i)*xc**2-d(i)*xc**3
+        b(i)=b(i)-2.d0*c(i)*xc+3.d0*d(i)*xc**2
+        c(i)=c(i)-3.d0*d(i)*xc
+!       == TEST
+!        x(:)=xi(i:i+3)
+!        f(:)=potpar(i:i+3)-a(i)-b(i)*x(:)-c(i)*x(:)**2-d(i)*x(:)**3
+!        print*,'dev',maxval(abs(f))
+      enddo
+      do ir=1,nr
+        xr=log(r(ir))
+   xr=r(ir)
+        if(xr.lt.xi(1)) then
+          pot(ir)=potpar(1)
+        else if(xr.lt.xi(2)) then
+          pot(ir)=a(1)+b(1)*xr+c(1)*xr**2+d(1)*xr**3
+        else if(xr.lt.xi(nx-1)) then
+          do j=1,nx-3
+            if(xr.gt.xi(j+1).and.xr.le.xi(j+3)) then
+              pot(ir)=a(j)+b(j)*xr+c(j)*xr**2+d(j)*xr**3
+              exit
+            end if
+          enddo
+        else 
+           pot(ir)=a(nx-3)+b(nx-3)*xr+c(nx-3)*xr**2+d(nx-3)*xr**3
+        end if
+      enddo
+!      pot=exp(pot)
+!      CALL RADIAL$NUCPOT(GID,NR,AEZ,nucPOT)
+!      pot=pot+nucpot
+      return 
+      end

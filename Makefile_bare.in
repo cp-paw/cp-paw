@@ -170,6 +170,7 @@ LOBJS = \
         ${OBJDIR}/paw_periodictable.o \
         ${OBJDIR}/paw_radial.o \
         ${OBJDIR}/paw_schroedinger.o \
+        ${OBJDIR}/paw_atomlib.o \
         ${OBJDIR}/paw_specialfunctions.o \
         ${OBJDIR}/paw_usage.o \
         ${OBJDIR}/paw_selftest.o \
@@ -179,6 +180,7 @@ LOBJS = \
         ${OBJDIR}/paw_library.o \
         ${OBJDIR}/paw_polynom.o \
         ${OBJDIR}/paw_dimer.o  \
+        ${OBJDIR}/paw_lmtobasics.o \
         ${OBJDIR}/paw_debug.o
 #
 ##########################################################################
@@ -192,6 +194,7 @@ OBJECTS1 = \
            ${OBJDIR}/paw_ldaplusu.o \
            ${OBJDIR}/paw_lists.o \
            ${OBJDIR}/paw_constraints.o \
+           ${OBJDIR}/paw_lmto.o \
            ${OBJDIR}/paw_fft.o \
 #
 OBJECTS2 = \
@@ -244,9 +247,10 @@ OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 OBJLATTICE = \
           ${OBJDIR}/paw_lattice.o
 OBJTEST = \
-          ${OBJDIR}/paw_test.o \
           ${OBJDIR}/paw_oneatom.o \
+          ${OBJDIR}/paw_test.o \
           ${OBJDIR}/paw_testlib.o
+
 # Objects for atomic setup tool
 OBJNEWATOM = \
           ${OBJDIR}/paw_newatom.o
@@ -912,3 +916,6 @@ endif
  ${OBJDIR}/paw_wave.o : STRINGS_MODULE.mod
  ${OBJDIR}/paw_wave.o : LINKEDLIST_MODULE.mod
  ${OBJDIR}/paw_wave.o : PERIODICTABLE_MODULE.mod
+ ## file:src/Tools/Wave/paw_lmto.f90
+ ${OBJDIR}/paw_lmto.o : SETUP_MODULE.mod
+ ${OBJDIR}/paw_lmto.o : ATOMS_MODULE.mod

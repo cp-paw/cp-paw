@@ -803,8 +803,10 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)           :: NTASKS
       INTEGER(4)           :: THISTASK
       INTEGER(4)           :: NFILO
+      character(512)       :: pawdir=''
 !     ******************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
+      CALL LIB$GETENV('PAWDIR',PAWDIR)
 !  
 !     ==================================================================
 !     == SET STANDARD FILENAMES                                       ==
@@ -850,6 +852,14 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
+!
+!     ==  setup parameter file ==========================================
+      ID=+'PARMS_STP'
+      CALL FILEHANDLER$SETFILE(ID,F,trim(PAWDIR)//-'/PARAMETERS/STP.CNTL')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
 !     ==  MOVIE FILE FOR QMMM MULTIPLE TIMESTEPS =======================

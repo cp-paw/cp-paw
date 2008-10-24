@@ -106,6 +106,49 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$GETenv(name,val)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 ==
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(in)  :: name
+      CHARACTER(*),INTENT(OUT) :: val
+      integer                  :: leng
+      integer                  :: st
+!     **************************************************************************
+#IF DEFINED(CPPVAR_COMPILER_G95)
+      CALL LIB_G95_GETENV(NAME,VAL)
+#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+      CALL LIB_IFC_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!!$      CALL LIB_IFC7_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!!$      CALL LIB_ABSOFT_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!!$      CALL LIB_XLF_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!!$      CALL LIB_PGI_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
+!!$      CALL LIB_PATHSCALE_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!!$      CALL LIB_SUN_GETENV(NAME,VAL)
+#ELSE    
+      ! NO EXPLICIT INTERFACE; USE  FORTRAN 2003 INTRINSIC FUNCTION
+      CALL GET_ENVIRONMENT_VARIABLE(NAME,LENG,ST,VAL)
+      IF(ST.NE.0) THEN
+        CALL ERROR$MSG('FAILURE COLLECTING ENVIORONMENT VARIABLE')
+        IF(ST.EQ.11)
+          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
+        ELSE IF(ST.EQ.-1)
+          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
+        END IF
+        CALL ERROR$STOP('LIB$GETENV')
+      END IF 
+#ENDIF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$ETIME(USRTIME,SYSTIME)
 !     **************************************************************************
 !     **  RETURNS THE USER AND SYSTEM TIME OF THE CURRENT PROCESS             **
@@ -281,9 +324,28 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_IFC_ETIME(USRTIME,SYSTIME)
+      SUBROUTINE LIB_IFC_GETenv(name,val)
 !     **************************************************************************
-!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!     **  RETURNS THE value of an environment variable                        **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
+!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
+!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
+!     **************************************************************************
+      USE IFPORT          !INCLUDE FORTRAN PORTABILITY FUNCTIONS
+      IMPLICIT NONE
+      character(*),INTENT(IN)  :: name
+      CHARACTER(*),INTENT(OUT) :: val
+!     **************************************************************************
+      CALL GETenv(name,val)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_IFC_etime(usrtime,systime)
+!     **************************************************************************
+!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
 !     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
@@ -574,6 +636,42 @@
       IF(ST.NE.0) THEN
         CALL ERROR$MSG('ARGUMENT NOT PRESENT')
         CALL ERROR$STOP('LIB_G95_GETARG')
+      END IF 
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_G95_GETenv(name,val)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
+!     **************************************************************************
+      IMPLICIT NONE
+!!$    ! do not use the interface because this is a intrinsic function extension
+!!$    ! in g95
+!!$      INTERFACE 
+!!$        SUBROUTINE GETenv(name,value)
+!!$        character(len=*),INTENT(IN) :: name
+!!$        CHARACTER(LEN=*),INTENT(OUT):: VALUE
+!!$        END SUBROUTINE GETARG
+!!$      END INTERFACE
+      CHARACTER(LEN=*) ,INTENT(OUT) :: name
+      CHARACTER(LEN=*) ,INTENT(OUT) :: value
+      integer                       :: leng,st
+!     **************************************************************************
+      POS=IPOS
+!      CALL GETenv(name val)
+!     ==  USE  FORTRAN 2003 INTRINSIC FUNCTION
+      CALL GET_ENVIRONMENT_VARIABLE(NAME,LENG,ST,VAL)
+      IF(ST.NE.0) THEN
+        CALL ERROR$MSG('FAILURE COLLECTING ENVIORONMENT VARIABLE')
+        IF(ST.EQ.11)
+          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
+        ELSE IF(ST.EQ.-1)
+          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
+        END IF
+        CALL ERROR$STOP('LIB_G95_GETENV')
       END IF 
       RETURN
       END

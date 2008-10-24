@@ -1370,7 +1370,7 @@ CONTAINS
       LIST=>LL%PTR
       CALL LLIST_NLISTS(LIST,ID,NUM)
       IF(NTH.GT.0) THEN
-        TCHK=(NUM.EQ.NTH)
+        TCHK=(NUM.GE.NTH)
       ELSE IF(NTH.EQ.0) THEN
         TCHK=(NUM.GT.0)
       ELSE 
