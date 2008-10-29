@@ -433,15 +433,16 @@ MODULE ATOMTYPELIST_MODULE
 !**                                                                   **
 !***********************************************************************
 TYPE XXX_TYPE
-  CHARACTER(16):: NAME       ! ATOM TYPE NAME
-  CHARACTER(16):: FILE       ! SETUP FILE
-!  REAL(8)      :: Z          ! ATOMIC NUMBER
-  REAL(8)      :: VALENCE    ! #(VALENCE ELECTRONS)
-  REAL(8)      :: RMASS      ! ATOMIC MASS
-  REAL(8)      :: PSG2       ! PARAMETER REQUIRED FOR MASS RENORMALIZATION
-  REAL(8)      :: PSG4       ! PARAMETER REQUIRED FOR MASS RENORMALIZATION
-  INTEGER(4)   :: LRHOX      ! MAX ANGULAR MOMENTUM FOR ONECENTER DENSITY
-  CHARACTER(32):: SOFTCORETYPE ! TYPE OF SOFTCORE TREATMENT
+  CHARACTER(16) :: NAME       ! ATOM TYPE NAME
+  LOGICAL(4)    :: TID=.FALSE.! SWITCH FOR NEW SETTING
+  CHARACTER(32) :: ID         ! SETUP ID (USED ONLY WITH PARAMETER FILE)
+  CHARACTER(512):: FILE       ! SETUP FILE
+  REAL(8)       :: VALENCE    ! #(VALENCE ELECTRONS)
+  REAL(8)       :: RMASS      ! ATOMIC MASS
+  REAL(8)       :: PSG2       ! PARAMETER REQUIRED FOR MASS RENORMALIZATION
+  REAL(8)       :: PSG4       ! PARAMETER REQUIRED FOR MASS RENORMALIZATION
+  INTEGER(4)    :: LRHOX      ! MAX ANGULAR MOMENTUM FOR ONECENTER DENSITY
+  CHARACTER(32) :: SOFTCORETYPE ! TYPE OF SOFTCORE TREATMENT
   INTEGER(4),POINTER   :: NPRO(:)    ! MAX #(PROJECTORS PER ANGULAR MOMENTUM)
 END TYPE XXX_TYPE
 LOGICAL(4)            :: TINI=.FALSE.
@@ -472,12 +473,13 @@ END MODULE ATOMTYPELIST_MODULE
       THISTYPE=0
       DO ITYPE=1,NTYPEX
         XXX(ITYPE)%NAME=' '
-!        XXX(ITYPE)%Z=0.D0
+        XXX(ITYPE)%TID=.FALSE.
+        XXX(ITYPE)%ID=' '
         XXX(ITYPE)%PSG2=0.D0
         XXX(ITYPE)%PSG4=0.D0
         XXX(ITYPE)%VALENCE=0.D0
         XXX(ITYPE)%RMASS=0.D0
-        XXX(ITYPE)%softcoretype='none'
+        XXX(ITYPE)%SOFTCORETYPE='NONE'
 !LINUX PATCH    NULLIFY(XXX(ITYPE)%NPRO)   
 ALLOCATE(XXX(ITYPE)%NPRO(1))
       ENDDO
@@ -614,14 +616,27 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       END IF
 !  
       IF(ID.EQ.'ZV') THEN
+        IF(XXX(THISTYPE)%TID) THEN
+          CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('ATOMTYPELIST$SETR8')
+        END IF
         XXX(THISTYPE)%VALENCE=VAL
-!      else IF(ID.EQ.'Z') THEN
-!        XXX(THISTYPE)%Z=VAL
       ELSE IF(ID.EQ.'M') THEN
         XXX(THISTYPE)%RMASS=VAL
       ELSE IF(ID.EQ.'PS<G2>') THEN
+!!$        IF(XXX(THISTYPE)%TID) THEN
+!!$          CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+!!$          CALL ERROR$CHVAL('ID',ID)
+!!$          CALL ERROR$STOP('ATOMTYPELIST$SETR8')
+!!$        END IF
         XXX(THISTYPE)%PSG2=VAL
       ELSE IF(ID.EQ.'PS<G4>') THEN
+!!$        IF(XXX(THISTYPE)%TID) THEN
+!!$          CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+!!$          CALL ERROR$CHVAL('ID',ID)
+!!$          CALL ERROR$STOP('ATOMTYPELIST$SETR8')
+!!$        END IF
         XXX(THISTYPE)%PSG4=VAL
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
@@ -652,14 +667,29 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         CALL ERROR$STOP('ATOMTYPELIST$GETR8')
       END IF
       IF(ID.EQ.'ZV') THEN
+        IF(XXX(THISTYPE)%TID) THEN
+          CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('ATOMTYPELIST$GETR8')
+        END IF
         VAL=XXX(THISTYPE)%VALENCE
 !      IF(ID.EQ.'Z') THEN
 !        VAL=XXX(THISTYPE)%Z
        ELSE IF(ID.EQ.'M') THEN
         VAL=XXX(THISTYPE)%RMASS
       ELSE IF(ID.EQ.'PS<G2>') THEN
+!!$        IF(XXX(THISTYPE)%TID) THEN
+!!$          CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+!!$          CALL ERROR$CHVAL('ID',ID)
+!!$          CALL ERROR$STOP('ATOMTYPELIST$GETR8')
+!!$        END IF
         VAL=XXX(THISTYPE)%PSG2
       ELSE IF(ID.EQ.'PS<G4>') THEN
+!!$        IF(XXX(THISTYPE)%TID) THEN
+!!$          CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+!!$          CALL ERROR$CHVAL('ID',ID)
+!!$          CALL ERROR$STOP('ATOMTYPELIST$GETR8')
+!!$        END IF
         VAL=XXX(THISTYPE)%PSG4
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
@@ -723,12 +753,41 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
 !
       IF(ID.EQ.'LRHOX') THEN
         VAL=XXX(THISTYPE)%LRHOX
-!      ELSE IF(ID.EQ.'IZ') THEN
-!        VAL=NINT(XXX(THISTYPE)%Z)
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$GETI4')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE ATOMTYPELIST$GETL4(ID,VAL)
+!     ******************************************************************
+!     **  SET ATOMIC NUMBER                                           **
+!     ******************************************************************
+      USE ATOMTYPELIST_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID
+      LOGICAL(4)  ,INTENT(OUT) :: VAL
+!     ******************************************************************
+      IF(.NOT.TINI) THEN
+        CALL ERROR$MSG('ATOMTYPELIST NOT INITIALIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMTYPELIST$GETL4')
+      END IF
+      IF(THISTYPE.EQ.0) THEN
+        CALL ERROR$MSG('NO ATOM TYPE SELECTED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMTYPELIST$GETL4')
+      END IF
+!
+      IF(ID.EQ.'TID') THEN
+        VAL=XXX(THISTYPE)%TID
+      ELSE
+        CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMTYPELIST$GETL4')
       END IF
       RETURN
       END
@@ -743,6 +802,8 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       INTEGER(4)  ,INTENT(IN) :: VAL(LEN)
+      INTEGER(4)              :: LNG1
+      INTEGER(4)              :: I
 !     ******************************************************************
       IF(.NOT.TINI) THEN
         CALL ERROR$MSG('ATOMTYPELIST NOT INITIALIZED')
@@ -759,8 +820,11 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         IF(ASSOCIATED(XXX(THISTYPE)%NPRO)) THEN  !LINUX PATCH
           DEALLOCATE(XXX(THISTYPE)%NPRO)
         END IF    !LINUX PATCH (SEE NULLIFY IN ATOMTYPELIST$INITIALIZE)
-        ALLOCATE(XXX(THISTYPE)%NPRO(LEN))
-        XXX(THISTYPE)%NPRO(:)=VAL(:)
+        DO I=1,LEN
+          IF(VAL(I).GT.0)LNG1=I
+        ENDDO
+        ALLOCATE(XXX(THISTYPE)%NPRO(LNG1))
+        XXX(THISTYPE)%NPRO(:)=VAL(:LNG1)
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
         CALL ERROR$CHVAL('ID',ID)
@@ -795,7 +859,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       IF(ID.EQ.'NPRO') THEN
         IF(.NOT.ASSOCIATED(XXX(THISTYPE)%NPRO)) THEN
 !          VAL(:)=10000
-          CALL ERROR$MSG('Npro has not been set and is not available')
+          CALL ERROR$MSG('NPRO HAS NOT BEEN SET AND IS NOT AVAILABLE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('ATOMTYPELIST$GETI4')
         ELSE
@@ -807,8 +871,8 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
             VAL(:)=XXX(THISTYPE)%NPRO(1:LEN)
             CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
             CALL ERROR$CHVAL('ID',ID)
-            CALL ERROR$i4val('array size expected',len)
-            CALL ERROR$i4val('actual array size',len1)
+            CALL ERROR$I4VAL('ARRAY SIZE EXPECTED',LEN)
+            CALL ERROR$I4VAL('ACTUAL ARRAY SIZE',LEN1)
             CALL ERROR$STOP('ATOMTYPELIST$GETI4')
           END IF
         END IF
@@ -842,9 +906,17 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       END IF
 !  
       IF(ID.EQ.'FILE') THEN
+        IF(XXX(THISTYPE)%TID) THEN
+          CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('ATOMTYPELIST$GETR8')
+        END IF
         XXX(THISTYPE)%FILE=VAL
       ELSE IF(ID.EQ.'SOFTCORETYPE') THEN
         XXX(THISTYPE)%SOFTCORETYPE=VAL
+      ELSE IF(ID.EQ.'ID') THEN
+        XXX(THISTYPE)%TID=.TRUE.
+        XXX(THISTYPE)%ID=VAL
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
         CALL ERROR$CHVAL('ID',ID)
@@ -880,6 +952,8 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         VAL=XXX(THISTYPE)%NAME
       ELSE IF(ID.EQ.'SOFTCORETYPE') THEN
         VAL=XXX(THISTYPE)%SOFTCORETYPE
+      ELSE IF(ID.EQ.'ID') THEN
+        VAL=XXX(THISTYPE)%ID
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
         CALL ERROR$CHVAL('ID',ID)
@@ -887,38 +961,6 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       END IF
       RETURN
       END
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE ATOMTYPELIST$SETZ(ID_,Z)
-!!$!     ******************************************************************
-!!$!     **  SET ATOMIC NUMBER                                           **
-!!$!     ******************************************************************
-!!$      USE ATOMTYPELIST_MODULE
-!!$      IMPLICIT NONE
-!!$      CHARACTER(*),INTENT(IN) :: ID_
-!!$      REAL(8)     ,INTENT(IN) :: Z
-!!$!     ******************************************************************
-!!$      CALL ATOMTYPELIST$SELECT(ID_)
-!!$      CALL ATOMTYPELIST$SETR8('Z',Z)
-!!$      CALL ATOMTYPELIST$UNSELECT
-!!$      RETURN
-!!$      END
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE ATOMTYPELIST$Z(IDENT1_,Z1)
-!!$!     ******************************************************************
-!!$!     **  RETURN ATOMIC NUMBER                                        **
-!!$!     ******************************************************************
-!!$      USE ATOMTYPELIST_MODULE
-!!$      IMPLICIT NONE
-!!$      CHARACTER(*),INTENT(IN) :: IDENT1_
-!!$      REAL(8)     ,INTENT(OUT):: Z1
-!!$!     ******************************************************************
-!!$      CALL ATOMTYPELIST$SELECT(IDENT1_)
-!!$      CALL ATOMTYPELIST$GETR8('Z',Z1)
-!!$      CALL ATOMTYPELIST$UNSELECT
-!!$      RETURN
-!!$      END
 !
 !     ..................................................................
       SUBROUTINE ATOMTYPELIST$SETVALENCE(IDENT1_,Z1)
@@ -1065,12 +1107,17 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       WRITE(NFIL,FMT='("NAME",T15,"N_VAL",T25,"M[U]"' &
      &      //',T33,"PS<G2>",T43,"PS<G4>",T52,1X,"FILE_ID")')
       DO ITYPE=1,NTYPE
-        WRITE(NFIL,FMT='(A10,T15,F4.1,T20,F9.5' &
+        IF(XXX(ITYPE)%TID) THEN
+          WRITE(NFIL,FMT='(A10,T15,A20," M=",F9.5)') &
+     &       XXX(ITYPE)%NAME,TRIM(XXX(ITYPE)%ID),XXX(ITYPE)%RMASS/U
+        ELSE
+          WRITE(NFIL,FMT='(A10,T15,F4.1,T20,F9.5' &
      &      //',T30,F9.5,T40,F9.5,T52,1X,A)') &
      &       XXX(ITYPE)%NAME,XXX(ITYPE)%VALENCE &
 !     &       XXX(ITYPE)%NAME,XXX(ITYPE)%Z,XXX(ITYPE)%VALENCE &
      &      ,XXX(ITYPE)%RMASS/U,XXX(ITYPE)%PSG2,XXX(ITYPE)%PSG4 &
      &      ,TRIM(XXX(ITYPE)%FILE)
+        END IF
       ENDDO
       RETURN
       END

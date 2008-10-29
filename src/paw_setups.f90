@@ -55,6 +55,7 @@ MODULE SETUP_MODULE
 !**                                              P.E. BLOECHL, (1991-2008)    **
 !*******************************************************************************
 TYPE SETUPPARMS_TYPE
+character(128)  :: id
 REAL(8)         :: POW_POT=0.D0
 REAL(8)         :: VAL0_POT
 REAL(8)         :: RC_POT
@@ -258,21 +259,19 @@ END MODULE SETUP_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$GETCH(ID,VAL)
-!     ******************************************************************
-!     **  COLLECTS INTERNAL DATA                                      **
-!     **                                                              **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  COLLECTS INTERNAL DATA                                              **
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       CHARACTER(*),INTENT(OUT) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'ID') THEN
         VAL=THIS%ID
-PRINT*,'FROM SETUP$GETCH ',THIS%ID
-PRINT*,'FROM SETUP$GETCH ',VAL
       ELSE IF(ID.EQ.'SOFTCORETYPE') THEN
         VAL=THIS%SOFTCORETYPE
       ELSE
@@ -282,18 +281,18 @@ PRINT*,'FROM SETUP$GETCH ',VAL
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$GETI4(ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(OUT) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'GID') THEN
         VAL=THIS%GID
       ELSE IF(ID.EQ.'GIDG') THEN
@@ -1225,59 +1224,47 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_READ_NEW
-!     ******************************************************************
-!     **  READ SELECTED SETUP                                         **
-!     **  REQUIRES INFORMATION FROM ATOMTYPELIST                      **
-!     **    NAME; LRHOX                                               **
-!     **  REQUIRES THE FILEHANDLER TO KNOW THE SETUP FILE             **
-!     ******************************************************************
+!     **************************************************************************
+!     **  READ SELECTED SETUP                                                 **
+!     **  REQUIRES INFORMATION FROM ATOMTYPELIST                              **
+!     **    NAME; LRHOX                                                       **
+!     **  REQUIRES THE FILEHANDLER TO KNOW THE SETUP FILE                     **
+!     **************************************************************************
       USE PERIODICTABLE_MODULE
       USE SETUP_MODULE
       IMPLICIT NONE
-      REAL(8)   ,PARAMETER  :: TOL=1.D-6
-      INTEGER(4)            :: LMRXCUT
       INTEGER(4),PARAMETER  :: NBX=19
+      INTEGER(4)            :: LOFI(NBX)
+      INTEGER(4)            :: SOFI(NBX)
+      REAL(8)               :: FOFI(NBX)
+      INTEGER(4)            :: NNOFI(NBX)
+      REAL(8)               :: EOFI(NBX)
       INTEGER(4)            :: GID
       INTEGER(4)            :: GIDG
-      INTEGER(4)            :: NFIL
+      REAL(8)               :: dex
       REAL(8)               :: G1
       REAL(8)   ,PARAMETER  :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
       INTEGER(4),PARAMETER  :: NG=250
-      REAL(8)               :: R1,DEX
-      INTEGER(4)            :: NR,NRX
-      INTEGER(4)            :: IR
-      INTEGER(4)            :: LN
-      INTEGER(4)            :: LNX1
-      LOGICAL(4)            :: TCHK
-      INTEGER(4)            :: IRMAX
-      INTEGER(4)            :: L,LX,ISVAR,LNOLD,LNX
-      INTEGER(4)            :: NC !SANTOS040616
-      INTEGER(4)            :: LN1,LN2,LN1A,LN2A,IB
+      INTEGER(4)            :: NR
+      INTEGER(4)            :: LX,LNX
+      INTEGER(4)            :: NB
+      INTEGER(4)            :: NC 
       INTEGER(4),ALLOCATABLE:: NPRO(:)
-      INTEGER(4),ALLOCATABLE:: IWORK(:)
-      REAL(8)   ,ALLOCATABLE:: DWORK(:,:,:) 
-      REAL(8)               :: PI,FOURPI,Y0,C0LL
-      LOGICAL(4)            :: TNEWFORMAT
-      INTEGER(4)            :: ISOURCE
       REAL(8)   ,ALLOCATABLE:: R(:)
-      REAL(8)               :: SVAR
       INTEGER(4),ALLOCATABLE:: LOX(:)
       REAL(8)   ,ALLOCATABLE:: RC(:)
       REAL(8)               :: RBOX
       REAL(8)               :: AEZ
       REAL(8)               :: ZV
       REAL(8)               :: ETOT
-      INTEGER(4)            :: NB
       CHARACTER(32)         :: KEY
-      INTEGER(4)            :: LOFI(NBX)
-      INTEGER(4)            :: SOFI(NBX)
-      REAL(8)               :: FOFI(NBX)
-      INTEGER(4)            :: NNOFI(NBX)
-      REAL(8)               :: EOFI(NBX)
       REAL(8)   ,ALLOCATABLE:: PSI(:,:)
-      real(8)               :: psz   !legacy only
-!     ******************************************************************
-                            CALL TRACE$PUSH('SETUP_READ')
+      LOGICAL(4)            :: TCHK
+      REAL(8)               :: PI,FOURPI,Y0,C0LL
+      REAL(8)               :: SVAR
+      INTEGER(4)            :: IR,ib,ln,l
+!     **************************************************************************
+                            CALL TRACE$PUSH('SETUP_READ_NEW')
       PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       Y0=1.D0/SQRT(FOURPI)
@@ -1290,384 +1277,135 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       CALL ATOMTYPELIST$NAME(THIS%I,THIS%ID)
       CALL ATOMTYPELIST$SELECT(THIS%ID)
       CALL ATOMTYPELIST$GETR8('M',THIS%M)
-      CALL ATOMTYPELIST$GETR8('ZV',THIS%ZV)
       CALL ATOMTYPELIST$GETR8('PS<G2>',THIS%PSG2)
       CALL ATOMTYPELIST$GETR8('PS<G4>',THIS%PSG4)
       CALL ATOMTYPELIST$GETCH('SOFTCORETYPE',THIS%SOFTCORETYPE)
 !
-      CALL FILEHANDLER$UNIT(THIS%FILEID,NFIL)
-      CALL SETUPREAD$NEW(NFIL,TNEWFORMAT)
-      ISOURCE=0                ! OLD FORMAT FOR SETUP FILES
-      IF(TNEWFORMAT)ISOURCE=1  ! NEW FORMAT FOR SETUP FILES
-      ISOURCE=2                ! NO SETUP FILE
-!
-      IF(ISOURCE.EQ.1) THEN
-        CALL SETUPREAD$GETI4('LNX',LNX)
-        CALL SETUPREAD$GETI4('GID',THIS%GID)
-        GID=THIS%GID
-        CALL SETUPREAD$GETI4('NR',NR)
-        NRX=NR
-        THIS%LNX=LNX
-      ELSE IF(ISOURCE.EQ.0) THEN
-        CALL INPOT$GRID(NFIL,R1,DEX,NR)
-        CALL RADIAL$NEW('LOG',GID)
-        THIS%GID=GID
-        NRX=NR
-        CALL RADIAL$SETI4(GID,'NR',NR)
-        CALL RADIAL$SETR8(GID,'DEX',DEX)
-        CALL RADIAL$SETR8(GID,'R1',R1)
-        CALL INPOT$LNX(NFIL,LNX)
-        THIS%LNX=LNX
-      ELSE IF(ISOURCE.EQ.2) THEN
-!       == EXTRACT LNX,LOX,LX FROM NPRO AS DEFINED IN STRC INPUT FILE ==============
-        CALL ATOMTYPELIST$SELECT(THIS%ID)
-        CALL ATOMTYPELIST$GETI4('LRHOX',THIS%LMRX)
-        ALLOCATE(NPRO(10)) 
-        CALL ATOMTYPELIST$GETI4A('NPRO',10,NPRO)
-        LNX=SUM(NPRO)
-        ALLOCATE(LOX(LNX))
-        LN=0
-        DO L=0,9
-          DO WHILE (NPRO(L+1).GT.0)
-            LN=LN+1
-            NPRO(L+1)=NPRO(L+1)-1
-            LOX(LN)=L
-          ENDDO
+!     ==========================================================================
+!     == EXTRACT LNX,LOX,LX FROM NPRO AS DEFINED IN STRC INPUT FILE           ==
+!     ==========================================================================
+      ALLOCATE(NPRO(10)) 
+      CALL ATOMTYPELIST$GETI4A('NPRO',10,NPRO)
+      LNX=SUM(NPRO)
+      ALLOCATE(LOX(LNX))
+      LN=0
+      DO L=0,9
+        DO WHILE (NPRO(L+1).GT.0)
+          LN=LN+1
+          NPRO(L+1)=NPRO(L+1)-1
+          LOX(LN)=L
         ENDDO
-        LX=MAXVAL(LOX)
-        DEALLOCATE(NPRO)
-        ALLOCATE(THIS%PARMS%RCL(LX+1))
-        CALL ATOMLIB$SCNTLLOOKUP(THIS%ID,GID,AEZ,ZV,RBOX,LX,THIS%PARMS%RCL,THIS%RCSM &
-     &                     ,THIS%PARMS%POW_POT,THIS%PARMS%RC_POT,THIS%PARMS%VAL0_POT &
-     &                     ,THIS%PARMS%POW_CORE,THIS%PARMS%RC_CORE,THIS%PARMS%VAL0_CORE)
-        THIS%AEZ=AEZ
-        THIS%ZV=ZV
-        THIS%GID=GID
-        THIS%LNX=LNX
-        ALLOCATE(THIS%LOX(LNX))
-        THIS%LOX(:)=LOX(:LNX)
-        DEALLOCATE(LOX)      ! REDIMENSION LOX
-        ALLOCATE(LOX(LNX))
-        LOX(:)=THIS%LOX(:)
-        CALL RADIAL$GETI4(GID,'NR',NR)
-        NRX=NR
-        THIS%RCBG=1.D0/SQRT(0.218D0)
-      ELSE
-        CALL ERROR$MSG('ISOURCE NOT RECOGNIZED')
-        CALL ERROR$STOP('STEUP$READ_NEW')
-      END IF
-      IF(ISOURCE.NE.2) THEN
-        ALLOCATE(THIS%LOX(LNX))
-      END IF
-      ALLOCATE(THIS%VADD(NRX))
-      ALLOCATE(THIS%AECORE(NRX))
-      ALLOCATE(THIS%PSCORE(NRX))
-      ALLOCATE(THIS%PRO(NRX,LNX))
-      ALLOCATE(THIS%AEPHI(NRX,LNX))
-      ALLOCATE(THIS%PSPHI(NRX,LNX))
-      ALLOCATE(THIS%UPHI(NRX,LNX))
-      ALLOCATE(THIS%TUPHI(NRX,LNX))
-      ALLOCATE(THIS%DTKIN(LNX,LNX))
-      ALLOCATE(THIS%DOVER(LNX,LNX))
-      ALLOCATE(THIS%AEPOT(NRX))
-      THIS%VADD=0.D0
-      THIS%AECORE=0.D0
-      THIS%PSCORE=0.D0
-      THIS%PRO=0.D0
-      THIS%AEPHI=0.D0
-      THIS%PSPHI=0.D0
-      THIS%AEPOT=0.D0
-! SANTOS040616 BEGIN
-      IF(ISOURCE.EQ.0.OR.ISOURCE.EQ.1) THEN
-        IF(ISOURCE.EQ.1) THEN
-          CALL SETUPREAD$GETI4('NC',NC)
-        ELSE IF(ISOURCE.EQ.0) THEN
-          CALL INPOT$NC(NFIL,NC)
-        END IF
-        THIS%NC=NC
-        ALLOCATE(THIS%LB(NC))
-        ALLOCATE(THIS%FB(NC))
-        ALLOCATE(THIS%EB(NC))
-        ALLOCATE(THIS%AEPSI(NRX,NC))
-        THIS%LB=0.D0
-        THIS%FB=0.D0
-        THIS%EB=0.D0
-        THIS%AEPSI=0.D0
-      END IF
-! SANTOS040616 END
-!     
-!     ==================================================================
-!     ==  READ PSEUDOPOTENTIALS AND PSEUDO WAVE FUNCTIONS             ==
-!     ==================================================================
-                            CALL TRACE$PASS('READ SETUP FILES')
-      THIS%RCBG=1.D0/SQRT(0.218D0)
-      
-!      CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
-!     &         ,THIS%AEZ,PSZ,THIS%PSPHI,THIS%AEPHI &
-!     &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
-!     &         ,IRCCOR,THIS%AECORE,THIS%PSCORE,THIS%PRO)
-      IF(ISOURCE.EQ.2) THEN
-        ALLOCATE(PSI(NR,NBX))
-        KEY='START,REL,NONSO'
-!!$WRITE(6,FMT='(82("="))')
-!!$WRITE(6,FMT='(82("="),T20," NONRELATIVISTIC SETUPS!!!!  ")')
-!!$WRITE(6,FMT='(82("="))')
-
-        CALL ATOMLIB$AESCF(GID,NR,KEY,RBOX,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
-    &                     ,ETOT,THIS%AEPOT,EOFI,PSI)
-!       == DETERMINE NUMBER OF CORE SHELLS
-        SVAR=AEZ-ZV
-        NC=0
-        DO IB=1,NB
-          SVAR=SVAR-FOFI(IB)
-          NC=IB
-          IF(ABS(SVAR).LT.1.D-3) EXIT
-          IF(SVAR.LT.-1.D-3) THEN
-            CALL ERROR$MSG('ZV INCONSISTENT WITH COMPLETE ANGULAR MOMENTUM SHELLS')
-            CALL ERROR$R8VAL('AEZ',AEZ)
-            CALL ERROR$R8VAL('ZV',ZV)
-            CALL ERROR$STOP('SETUP_READ_NEW')
-          END IF
-        ENDDO
-        THIS%NC=NC
-!       == MAP CORE ORBITALS ON GRID
-        THIS%TCORE=.TRUE.
-        ALLOCATE(THIS%LB(NC))
-        ALLOCATE(THIS%FB(NC))
-        ALLOCATE(THIS%EB(NC))
-        ALLOCATE(THIS%AEPSI(NRX,NC))
-        THIS%LB=LOFI(1:NC)
-        THIS%FB=FOFI(1:NC)
-        THIS%EB=EOFI(1:NC)
-        THIS%AEPSI=PSI(:,1:NC)
-!
-!       ========================================================================
-!       == CALCULATE AND PSEUDIZE CORE DENSITY                                ==
-!       ========================================================================
-        THIS%AECORE(:)=0.D0
-        DO IB=1,NC
-          THIS%AECORE(:)=THIS%AECORE(:)+FOFI(IB)*PSI(:,IB)**2*C0LL
-        ENDDO
-        CALL ATOMIC_PSEUDIZE(GID,NR &
-       &         ,THIS%PARMS%POW_CORE,THIS%PARMS%VAL0_CORE,THIS%PARMS%RC_CORE &
-       &         ,THIS%AECORE,THIS%PSCORE)
-!
-!       ========================================================================
-!       == CONSTRUCT PARTIAL WAVES
-!       ========================================================================
-        ALLOCATE(RC(LNX))
-        DO LN=1,LNX
-          L=LOX(LN)
-          RC(LN)=THIS%PARMS%RCL(L+1)
-        ENDDO
-!
-        CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%AEPOT,NB,NC &
-     &             ,LOFI,SOFI,NNOFI,EOFI,FOFI &
-     &             ,RBOX,LNX,LOX,RC,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%PRO &
-     &             ,THIS%DTKIN,THIS%DOVER &
-     &             ,THIS%PARMS%POW_POT,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
-     &             ,THIS%RCSM,THIS%VADD)
-print*,'marke 1'
-        DEALLOCATE(LOX)
-        DEALLOCATE(PSI)
-      ELSE IF(ISOURCE.EQ.1) THEN
-        CALL SETUPREAD$GETI4A('LOX',LNX,THIS%LOX)
-        CALL SETUPREAD$GETR8('AEZ',THIS%AEZ)
-        CALL SETUPREAD$GETR8A('PSPHI',NR*LNX,THIS%PSPHI)
-        CALL SETUPREAD$GETR8A('AEPHI',NR*LNX,THIS%AEPHI)
-        CALL SETUPREAD$GETR8A('PRO',NR*LNX,THIS%PRO)
-        CALL SETUPREAD$GETR8A('NDLSPHI',NR*LNX,THIS%UPHI)
-        CALL SETUPREAD$GETR8A('NDLSTPHI',NR*LNX,THIS%TUPHI)
-        CALL SETUPREAD$GETR8A('VADD',NR,THIS%VADD)
-        CALL SETUPREAD$GETR8('RCSM',THIS%RCSM)
-        CALL SETUPREAD$GETR8A('DT',LNX*LNX,THIS%DTKIN)
-        CALL SETUPREAD$GETR8A('DO',LNX*LNX,THIS%DOVER)
-        CALL SETUPREAD$GETR8A('PSCORE',NR,THIS%PSCORE)
-        CALL SETUPREAD$GETR8A('AECORE',NR,THIS%AECORE)
-        CALL SETUPREAD$GETR8A('AEPOT',NR,THIS%AEPOT)
-!ADD HERE THE CORE WAVE FUNCTIONS FOR SANTOS
-        THIS%TCORE=.TRUE.
-        CALL SETUPREAD$GETI4A('LOFC',NC,THIS%LB)
-        CALL SETUPREAD$GETR8A('FOFC',NC,THIS%FB)
-        CALL SETUPREAD$GETR8A('EOFC',NC,THIS%EB)
-        CALL SETUPREAD$GETR8A('AEPSICORE',NR*NC,THIS%AEPSI)
-      ELSE IF(ISOURCE.EQ.0) THEN
-        CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
-     &         ,THIS%AEZ,PSZ,THIS%PSPHI,THIS%AEPHI &
-     &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
-     &         ,THIS%AECORE,THIS%PSCORE,THIS%PRO &
-     &         ,THIS%TCORE,THIS%AEPOT,THIS%NC,THIS%LB,THIS%FB,THIS%EB,THIS%AEPSI) !SANTOS040616
-      END IF
-      CALL FILEHANDLER$CLOSE(THIS%FILEID)
-PRINT*,'NEW FORMAT?',TNEWFORMAT
-ALLOCATE(R(NR))
-CALL RADIAL$R(GID,NR,R)
-CALL RADIAL$INTEGRAL(GID,NR,4.D0*PI*THIS%AECORE*Y0*R**2,SVAR)
-PRINT*,'INT AECORE ',SVAR
-CALL RADIAL$INTEGRAL(GID,NR,4.D0*PI*THIS%PSCORE*Y0*R**2,SVAR)
-PRINT*,'INT PSCORE ',SVAR
-PRINT*,'AEZ ',THIS%AEZ
-PRINT*,'RCSM ',THIS%RCSM
-!STOP
-!     
-!     ==================================================================
-!     == LIMIT NUMBER OF PROJECTORS FOR EACH L                        ==
-!     ==================================================================
-      LX=0
-      DO LN=1,THIS%LNX
-        LX=MAX(LX,THIS%LOX(LN))
       ENDDO
-      ALLOCATE(NPRO(LX+1)) 
-      CALL ATOMTYPELIST$SELECT(THIS%ID)
-      CALL ATOMTYPELIST$GETI4A('NPRO',LX+1,NPRO)
-      DO L=0,LX
-        ISVAR=0
-        DO LN=1,THIS%LNX
-          IF(THIS%LOX(LN).NE.L)CYCLE
-          ISVAR=ISVAR+1
-          IF(ISVAR.GT.NPRO(L+1)) THEN
-            THIS%LOX(LN)=-1     ! MARK PROJECTORS TO BE DELETED BY LOX=-1
-            ISVAR=ISVAR-1
-          END IF
-        ENDDO
-        NPRO(L+1)=ISVAR
-      ENDDO
-      CALL ATOMTYPELIST$SETI4A('NPRO',LX+1,NPRO)
+      LX=MAXVAL(LOX)
       DEALLOCATE(NPRO)
-!
-      LNOLD=THIS%LNX
-      LNX=0
-      DO LN=1,LNOLD
-        IF(THIS%LOX(LN).NE.-1) LNX=LNX+1
-      ENDDO
+      THIS%LMNX=sum(2*LOX(:)+1)
       THIS%LNX=LNX
+      ALLOCATE(THIS%LOX(LNX))
+      THIS%LOX(:)=LOX(:LNX)
 !
-!     == FOLD DOWN ARRAYS FOR PROJECTORS AND PARTIALWAVES, LOX =========
-      ALLOCATE(DWORK(NRX,LNOLD,5))
-      ALLOCATE(IWORK(LNOLD))
-      DWORK(:,:,1)=THIS%PRO(:,:)
-      DWORK(:,:,2)=THIS%AEPHI(:,:)
-      DWORK(:,:,3)=THIS%PSPHI(:,:)
-      DWORK(:,:,4)=THIS%UPHI(:,:)
-      DWORK(:,:,5)=THIS%TUPHI(:,:)
-      IWORK(:)=THIS%LOX(:)
-      DEALLOCATE(THIS%PRO)
-      DEALLOCATE(THIS%AEPHI)
-      DEALLOCATE(THIS%PSPHI)
-      DEALLOCATE(THIS%UPHI)
-      DEALLOCATE(THIS%TUPHI)
-      DEALLOCATE(THIS%LOX)
-      ALLOCATE(THIS%PRO(NRX,THIS%LNX))
-      ALLOCATE(THIS%AEPHI(NRX,THIS%LNX))
-      ALLOCATE(THIS%PSPHI(NRX,THIS%LNX))
-      ALLOCATE(THIS%UPHI(NRX,THIS%LNX))
-      ALLOCATE(THIS%TUPHI(NRX,THIS%LNX))
-      ALLOCATE(THIS%LOX(THIS%LNX))
-      ISVAR=0
-      DO LN=1,LNOLD
-        IF(IWORK(LN).EQ.-1) CYCLE
-        ISVAR=ISVAR+1
-        THIS%PRO(:,ISVAR)=DWORK(:,LN,1)
-        THIS%AEPHI(:,ISVAR)=DWORK(:,LN,2)
-        THIS%PSPHI(:,ISVAR)=DWORK(:,LN,3)
-        THIS%UPHI(:,ISVAR)=DWORK(:,LN,4)
-        THIS%TUPHI(:,ISVAR)=DWORK(:,LN,5)
-        THIS%LOX(ISVAR)=IWORK(LN)
-      ENDDO
-      DEALLOCATE(DWORK)
-!
-!     == FOLD DOWN ARRAYS FOR DTKIN AND DOVER ==========================
-      ALLOCATE(DWORK(LNOLD,LNOLD,2))
-      DWORK(:,:,1)=THIS%DTKIN(:,:)
-      DWORK(:,:,2)=THIS%DOVER(:,:)
-      DEALLOCATE(THIS%DTKIN)
-      DEALLOCATE(THIS%DOVER)
-      ALLOCATE(THIS%DTKIN(LNX,LNX))
-      ALLOCATE(THIS%DOVER(LNX,LNX))
-      LN1A=0
-      DO LN1=1,LNOLD
-        IF(IWORK(LN1).EQ.-1) CYCLE
-        LN1A=LN1A+1
-        LN2A=0
-        DO LN2=1,LNOLD
-          IF(IWORK(LN2).EQ.-1) CYCLE
-          LN2A=LN2A+1
-          THIS%DTKIN(LN1A,LN2A)=DWORK(LN1,LN2,1)
-          THIS%DOVER(LN1A,LN2A)=DWORK(LN1,LN2,2)
-        ENDDO
-      ENDDO
-      DEALLOCATE(DWORK)
-!
-      DEALLOCATE(IWORK)
-
-!!$PRINT*,'=============================================================='
-!!$PRINT*,'AEZ  ',THIS%AEZ
-!!$PRINT*,'RCSM ',THIS%RCSM
-!!$PRINT*,'LNX  ',THIS%LNX
-!!$PRINT*,'LOX  ',THIS%LOX
-!!$PRINT*,'PRO  ',THIS%PRO
-!!$PRINT*,'AEPHI',THIS%AEPHI
-!!$PRINT*,'PSPHI',THIS%PSPHI
-!!$PRINT*,'VADD ',THIS%VADD
-!!$PRINT*,'PSCORE',THIS%PSCORE
-!!$PRINT*,'AECORE',THIS%AECORE
-!!$PRINT*,'DOVER',THIS%DOVER
-!!$PRINT*,'DTKIN',THIS%DTKIN
-!!$CALL ERROR$STOP('FORCED STOP IN SETUP')
+!     == limit lrhox to the maximum consistent with wave function cutoff
+      CALL ATOMTYPELIST$GETI4('LRHOX',THIS%LMRX)
+      this%lmrx=(this%lmrx+1)**2
+      THIS%LMRX=MIN(THIS%LMRX,(2*LX+1)**2)
+      CALL ATOMTYPELIST$SETI4('LRHOX',THIS%LMRX)
 !     
-!     ==================================================================
-!     == SET VALUES BEYOND A CERTAIN RADIUS EXACTLY TO ZERO           ==
-!     ==================================================================
-                            CALL TRACE$PASS('CHECK MAX. RADIUS')
-      CALL RADIAL$R(GID,NR,R)
-      IRMAX=0
-      DO IR=1,NR
-        TCHK=(ABS(THIS%VADD(IR)).LT.TOL)
-        TCHK=TCHK.AND.(ABS(THIS%PSCORE(IR)-THIS%AECORE(IR)).LT.TOL)
-        DO LN=1,THIS%LNX
-          TCHK=TCHK.AND. &
-     &           (ABS(THIS%AEPHI(IR,LN)-THIS%PSPHI(IR,LN)).LT.TOL)
-        ENDDO
-!       == LDAPLUSU REQUIRES A SOMEWHAT LARGER RADIUS ==================
-        TCHK=TCHK.AND.(R(IR).GE.6.D0)  
-        IF(.NOT.TCHK) IRMAX=IR
-      ENDDO
-      DO IR=IRMAX+1,NR
-        THIS%VADD(IR)=0.D0
-        DO LN=1,THIS%LNX
-          THIS%AEPHI(IR,LN)=0.D0
-          THIS%PSPHI(IR,LN)=0.D0
-          THIS%UPHI(IR,LN)=0.D0
-          THIS%TUPHI(IR,LN)=0.D0
-        ENDDO
-      ENDDO
-!     
-!     ================================================================
-!     ==  DEFINE ARRAYS                                             ==
-!     ================================================================
-                            CALL TRACE$PASS('DEFINE ARRAYS')
-!
-!     == SELECT NATURAL VALUES =======================================
-      THIS%LMNX=0
-      THIS%LMRX=0
-      DO LN=1,THIS%LNX
-        THIS%LMNX=THIS%LMNX+2*THIS%LOX(LN)+1
-        THIS%LMRX=MAX(THIS%LMRX,(2*THIS%LOX(LN)+1)**2)
-      ENDDO
-!
-!     == LIMIT MAX ANGULAR MOMENTUM FOR THE DENSITY TO MAX VALUE =======
-      CALL ATOMTYPELIST$SELECT(THIS%ID)
-      CALL ATOMTYPELIST$GETI4('LRHOX',LMRXCUT)
-      LMRXCUT=(LMRXCUT+1)**2
-      THIS%LMRX=MIN(THIS%LMRX,LMRXCUT)
-      CALL ATOMTYPELIST$UNSELECT
-!     
-!     ==================================================================
-!     ==  UPDATE GLOBAL VARIABLES                                     ==
-!     ==================================================================
+!     ==  UPDATE GLOBAL VARIABLES ==============================================
       LMNXX=MAX(LMNXX,THIS%LMNX)
       LMRXX=MAX(LMRXX,THIS%LMRX)
       LNXX=MAX(LNXX,THIS%LNX)
+!
+!     ==========================================================================
+!     == read setup information from parameter file                           ==
+!     ==========================================================================
+      ALLOCATE(THIS%PARMS%RCL(LX+1))
+      CALL ATOMTYPELIST$GETch('ID',THIS%PARMS%ID)
+      CALL ATOMLIB$SCNTLLOOKUP(THIS%PARMS%ID,GID,AEZ,ZV,RBOX,LX,THIS%PARMS%RCL,THIS%RCSM &
+     &                     ,THIS%PARMS%POW_POT,THIS%PARMS%RC_POT,THIS%PARMS%VAL0_POT &
+     &                     ,THIS%PARMS%POW_CORE,THIS%PARMS%RC_CORE,THIS%PARMS%VAL0_CORE)
+      THIS%GID=GID
+      THIS%AEZ=AEZ
+      THIS%ZV=ZV
+      THIS%RCBG=1.D0/SQRT(0.218D0)
+      CALL RADIAL$GETI4(GID,'NR',NR)
+!     
+!     ==========================================================================
+!     ==  PERFORM ALL-ELECTRON CALCULATION FOR THE ATOM IN A BOX              ==
+!     ==========================================================================
+      ALLOCATE(THIS%AEPOT(NR))
+      ALLOCATE(PSI(NR,NBX))
+      KEY='START,REL,NONSO'
+      CALL ATOMLIB$AESCF(GID,NR,KEY,RBOX,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
+    &                   ,ETOT,THIS%AEPOT,EOFI,PSI)
+!
+!     == DETERMINE NUMBER OF CORE SHELLS =======================================
+      SVAR=AEZ-ZV
+      NC=0
+      DO IB=1,NB
+        SVAR=SVAR-FOFI(IB)
+        NC=IB
+        IF(ABS(SVAR).LT.1.D-3) EXIT
+        IF(SVAR.LT.-1.D-3) THEN
+          CALL ERROR$MSG('ZV INCONSISTENT WITH COMPLETE ANGULAR MOMENTUM SHELLS')
+          CALL ERROR$R8VAL('AEZ',AEZ)
+          CALL ERROR$R8VAL('ZV',ZV)
+          CALL ERROR$STOP('SETUP_READ_NEW')
+        END IF
+      ENDDO
+      THIS%NC=NC
+!
+!     == MAP CORE ORBITALS ON GRID =============================================
+      THIS%TCORE=.TRUE.
+      ALLOCATE(THIS%LB(NC))
+      ALLOCATE(THIS%FB(NC))
+      ALLOCATE(THIS%EB(NC))
+      ALLOCATE(THIS%AEPSI(NR,NC))
+      THIS%LB=LOFI(1:NC)
+      THIS%FB=FOFI(1:NC)
+      THIS%EB=EOFI(1:NC)
+      THIS%AEPSI=PSI(:,1:NC)
+!
+!     ==========================================================================
+!     == CALCULATE AND PSEUDIZE CORE DENSITY                                  ==
+!     ==========================================================================
+      ALLOCATE(THIS%AECORE(NR))
+      ALLOCATE(THIS%PSCORE(NR))
+      THIS%AECORE(:)=0.D0
+      DO IB=1,NC
+        THIS%AECORE(:)=THIS%AECORE(:)+FOFI(IB)*PSI(:,IB)**2*C0LL
+      ENDDO
+      CALL ATOMIC_PSEUDIZE(GID,NR &
+     &         ,THIS%PARMS%POW_CORE,THIS%PARMS%VAL0_CORE,THIS%PARMS%RC_CORE &
+     &         ,THIS%AECORE,THIS%PSCORE)
+      DEALLOCATE(PSI)
+!
+!     ==========================================================================
+!     == CONSTRUCT PARTIAL WAVES                                              ==
+!     ==========================================================================
+      ALLOCATE(THIS%VADD(NR))
+      ALLOCATE(THIS%PRO(NR,LNX))
+      ALLOCATE(THIS%AEPHI(NR,LNX))
+      ALLOCATE(THIS%PSPHI(NR,LNX))
+      ALLOCATE(THIS%UPHI(NR,LNX))
+      ALLOCATE(THIS%TUPHI(NR,LNX))
+      ALLOCATE(THIS%DTKIN(LNX,LNX))
+      ALLOCATE(THIS%DOVER(LNX,LNX))
+      THIS%VADD=0.D0
+      THIS%PRO=0.D0
+      THIS%AEPHI=0.D0
+      THIS%PSPHI=0.D0
+!
+      ALLOCATE(RC(LNX))
+      DO LN=1,LNX
+        L=LOX(LN)
+        RC(LN)=THIS%PARMS%RCL(L+1)
+      ENDDO
+!
+      CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%AEPOT,NB,NC &
+     &           ,LOFI(1:nb),SOFI(1:nb),NNOFI(1:nb),EOFI(1:nb),FOFI(1:nb) &
+     &           ,RBOX,LNX,LOX,RC,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%PRO &
+     &           ,THIS%DTKIN,THIS%DOVER &
+     &           ,THIS%PARMS%POW_POT,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
+     &           ,THIS%RCSM,THIS%VADD)
 !     
 !     ==================================================================
 !     ==  PERFORM BESSELTRANSFORMS                                    ==
@@ -1767,6 +1505,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !       == report settings for the setup construction ==========================
         IF(THIS1%PARMS%POW_POT.NE.0.D0) THEN
+          CALL REPORT$CHVAL(NFIL,'SETUP ID',THIS1%PARMS%ID)
           DO L=0,MAXVAL(THIS1%LOX)
             WRITE(STRING,*)L
             STRING='PARTIAL WAVE PSEUDIZATION PARAMETER RC FOR L='//ADJUSTL(STRING)
@@ -1798,8 +1537,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     **  READ SETUP                                                  **
 !     ******************************************************************
       IMPLICIT NONE
-      INTEGER(4)           :: ISP,NSP1
-      CHARACTER(32)        :: NAME
+      INTEGER(4)               :: ISP,NSP1
+      CHARACTER(32)            :: NAME
+      LOGICAL     ,ALLOCATABLE :: TNEW(:) ! SWITCH BETWEEN INTERNAL ATOM 
+                                          ! PROGRAM AND READING THE FILE
 !     ******************************************************************
                             CALL TRACE$PUSH('SETUP$READ')
 !
@@ -1807,9 +1548,11 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ==  CREATE SETUPS                                               ==
 !     ==================================================================
       CALL ATOMTYPELIST$LENGTH(NSP1)
+      ALLOCATE(TNEW(NSP1))
       DO ISP=1,NSP1
         CALL ATOMTYPELIST$NAME(ISP,NAME)
         CALL ATOMTYPELIST$SELECT(NAME)
+        CALL ATOMTYPELIST$GETL4('TID',TNEW(ISP))
         CALL ATOMTYPELIST$UNSELECT
         CALL SETUP$SELECT(NAME)
       ENDDO
@@ -1819,9 +1562,13 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ==================================================================
       DO ISP=1,NSP1
         CALL SETUP$ISELECT(ISP)
-!        CALL SETUP_READ
-        CALL SETUP_READ_NEW
+        IF(TNEW(ISP)) THEN
+          CALL SETUP_READ_NEW
+        ELSE
+          CALL SETUP_READ
+        END IF
       ENDDO
+      DEALLOCATE(TNEW)
                             CALL TRACE$POP
       RETURN
       END

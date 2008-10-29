@@ -3586,7 +3586,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$NDATA(LL_STRC,'K',NKPT)
       IF(NKPT.NE.0) THEN
         CALL ERROR$MSG('CHOICE OF INDIVIDUALLY SPECIFIED KPOINTS HAS BEEN DISABLED')
-        CALL ERROR$MSG('OPTION STRV!KPOINT:K IS NO MORE ALLOWED')
+        CALL ERROR$MSG('OPTION STRUCTURE!KPOINT:K IS NO MORE ALLOWED')
         CALL ERROR$STOP('STRCIN_KPOINT')
       END IF
 !
@@ -3596,7 +3596,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
       CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK1)
       IF(TCHK1.AND.TCHK) THEN
-        CALL ERROR$MSG('!SPECIES!KPOINTS:R AND DIV ARE MUTUALLY EXCLUSIVE')
+        CALL ERROR$MSG('!Structure!KPOINTS:R AND DIV ARE MUTUALLY EXCLUSIVE')
         CALL ERROR$STOP('STRCIN_KPOINT')
       ELSE IF(TCHK) THEN
 !       == K-POINT GRID DEFINED BY R ===========================================
@@ -3606,7 +3606,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       ELSE IF(TCHK1) THEN
         CALL LINKEDLIST$GET(LL_STRC,'DIV',1,NKDIV)
         IF(NKDIV(1).LE.0.OR.NKDIV(2).LE.0.OR.NKDIV(3).LE.0) THEN
-          CALL ERROR$MSG('!SPECIES!KPOINT:DIV MUST BE GREATER THAN ZERO')
+          CALL ERROR$MSG('!structure!KPOINT:DIV MUST BE GREATER THAN ZERO')
           CALL ERROR$STOP('STRCIN_KPOINT')
         END IF
       ELSE
@@ -3650,6 +3650,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CHARACTER(32)            :: SPNAME
       CHARACTER(256)           :: SETUPFILE
       CHARACTER(32)            :: SOFTCORETYPE
+      CHARACTER(32)            :: key
       INTEGER(4)               :: ISVAR
       REAL(8)                  :: Z
       REAL(8)                  :: SVAR
@@ -3681,34 +3682,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
              CALL ATOMTYPELIST$ADD(SPNAME)
 !
 !       ========================================================================
-!       ==  CONNECT SETUP FILE                                                ==
-!       ========================================================================
-        CALL LINKEDLIST$GET(LL_STRC,'FILE',1,SETUPFILE)
-             CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
-             CH8SVAR1=' '
-             WRITE(CH8SVAR1,FMT='(I8)')ISP
-             CH8SVAR1=ADJUSTL(CH8SVAR1)
-             CH8SVAR1='ATOM'//TRIM(CH8SVAR1(1:4))
-             CALL ATOMTYPELIST$SETFILE(SPNAME,CH8SVAR1(1:5))
-!
-             CALL FILEHANDLER$SETFILE(CH8SVAR1(1:5),.FALSE.,SETUPFILE)
-             CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'STATUS','OLD')
-             CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'POSITION','REWIND')
-             CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'ACTION','READ')
-             CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'FORM','FORMATTED')
-!
-!       ========================================================================
-!       ==  #(VALENCE ELECTRONS)                                              ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'ZV',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('!STRUCTURE!SPECIES:ZV IS MANDATORY')
-          CALL ERROR$STOP('STRCIN_SPECIES')
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'ZV',1,SVAR)
-             CALL ATOMTYPELIST$SETVALENCE(SPNAME,SVAR)
-!
-!       ========================================================================
 !       ==  ATOMIC NUMBER                                                     ==
 !       ========================================================================
         Z=-1.D0
@@ -3723,15 +3696,46 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL LINKEDLIST$GET(LL_STRC,'Z',1,Z)
 !
 !       ========================================================================
-!       ==  ATOMIC MASS                                                       ==
+!       ==  CONNECT SETUP FILE                                                ==
 !       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL PERIODICTABLE$GET(Z,'MASS',SVAR)
-          CALL LINKEDLIST$SET(LL_STRC,'M',0,SVAR/PROTONMASS)
+        CALL LINKEDLIST$existd(LL_STRC,'FILE',1,tchk)
+!The following is used only if setup files are used
+        if(tchk) then
+          CALL LINKEDLIST$GET(LL_STRC,'FILE',1,SETUPFILE)
+          CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
+          CH8SVAR1=' '
+          WRITE(CH8SVAR1,FMT='(I8)')ISP
+          CH8SVAR1=ADJUSTL(CH8SVAR1)
+          CH8SVAR1='ATOM'//TRIM(CH8SVAR1(1:4))
+          CALL ATOMTYPELIST$SETFILE(SPNAME,CH8SVAR1(1:5))
+!
+          CALL FILEHANDLER$SETFILE(CH8SVAR1(1:5),.FALSE.,SETUPFILE)
+          CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'STATUS','OLD')
+          CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'POSITION','REWIND')
+          CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'ACTION','READ')
+          CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'FORM','FORMATTED')
+!
+!         ========================================================================
+!         ==  #(VALENCE ELECTRONS)                                              ==
+!         ========================================================================
+          CALL LINKEDLIST$EXISTD(LL_STRC,'ZV',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('!STRUCTURE!SPECIES:ZV IS MANDATORY')
+            CALL ERROR$STOP('STRCIN_SPECIES')
+          END IF
+          CALL LINKEDLIST$GET(LL_STRC,'ZV',1,SVAR)
+               CALL ATOMTYPELIST$SETVALENCE(SPNAME,SVAR)
+        else
+          CALL LINKEDLIST$EXISTD(LL_STRC,'ID',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('ID MUST BE SPECIFIED, IF NO SETUP FILES ARE USED')          
+            CALL ERROR$STOP('STRCIN_SPECIES')
+          END IF
+          CALL LINKEDLIST$GET(LL_STRC,'ID',1,KEY)
+          CALL ATOMTYPELIST$SELECT(SPNAME)
+          CALL ATOMTYPELIST$SETCH('ID',key)
+          CALL ATOMTYPELIST$UNSELECT
         END IF
-        CALL LINKEDLIST$GET(LL_STRC,'M',1,SVAR)
-        CALL ATOMTYPELIST$SETMASS(SPNAME,SVAR*PROTONMASS)
 !
 !       ========================================================================
 !       ==  KINETIC ENERGY OF THE PSEUDO WAVE FUNCTIONS                       ==
@@ -3755,6 +3759,17 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL LINKEDLIST$GET(LL_STRC,'PS<G4>',1,SVAR)
         CALL ATOMTYPELIST$SETR8('PS<G4>',SVAR)
         CALL ATOMTYPELIST$UNSELECT
+!
+!       ========================================================================
+!       ==  ATOMIC MASS                                                       ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL PERIODICTABLE$GET(Z,'MASS',SVAR)
+          CALL LINKEDLIST$SET(LL_STRC,'M',0,SVAR/PROTONMASS)
+        END IF
+        CALL LINKEDLIST$GET(LL_STRC,'M',1,SVAR)
+        CALL ATOMTYPELIST$SETMASS(SPNAME,SVAR*PROTONMASS)
 !
 !       ========================================================================
 !       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY                    ==
