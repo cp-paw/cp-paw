@@ -1,26 +1,59 @@
 !PROGRAM MAIN;USE PERIODICTABLE_MODULE;CALL PERIODICTABLE$REPORT(6);STOP;END
 !
-!.......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
 MODULE PERIODICTABLE_MODULE
-!**********************************************************************
-!**                                                                  **
-!**  NAME: PERIODICTABLE                                             **
-!**                                                                  **
-!**  PURPOSE: MAINTAINS A PERIODIC TABLE OF CHEMICAL ELEMENTS        **
-!**                                                                  **
-!**  METHOD:                                                         **
-!**    PERIODICTABLE$GET(SY,ID,VALUE)                                **
-!**      SYMBOL IS THE ELEMENTSYMBOL OR THE ATOMIC NUMBER            **
-!**      ID IS THE IDENTIFIER OF THE DATE REQUESTED                  **
-!**          (Z,SYMBOL,MASS,R(COV),R(ASA),R(VDW)                     **
-!**          ,OCC(S),OCC(P),OCC(D),OCC(F))                           **
-!**      VALUE IS THE REQUESTED DATA                                 **
-!**                                                                  **
-!**  REMARKS:                                                        **
-!**    THE ADDITIONAL ATOMS FROM 106-108 ARE DUMMY ATOMS REFERRED    **
-!**    TO BY FORCE FIELDS                                            **
-!**                                                                  **
-!**********************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  NAME: PERIODICTABLE                                                      **
+!**                                                                           **
+!**  PURPOSE: MAINTAINS A PERIODIC TABLE OF CHEMICAL ELEMENTS                 **
+!**                                                                           **
+!**  METHOD:                                                                  **
+!**    PERIODICTABLE$GET(SYMBOL,ID,VALUE)                                     **
+!**    PERIODICTABLE$GET(IZ,ID,VALUE)                                         **
+!**    PERIODICTABLE$GET(Z,ID,VALUE)                                          **
+!**                                                                           **
+!**      SYMBOL IS THE TWO-LETTER ELEMENT SYMBOL                              **
+!**      IZ IS THE ATOMIC NUMBER (INTEGER(4))                                 **
+!**      Z IS THE ATOMIC NUMBER (REAL(8))                                     **
+!**      ID IS THE IDENTIFIER OF THE DATE REQUESTED. IT MAY HAVE THE VALUES   **
+!**         'Z'         ATOMIC NUMBER                                         **
+!**         'SY'        ELEMENT SYMBOL                                        **
+!**         'MASS'      MASS IN ATOMIC UNITS (ELECTRON MASSES)                **
+!**         'R(COV)'    COVALENT RADIUS IN A0                                 **
+!**         'R(ASA)'    1.10534 TIMES THE COVALENT RADIUS IN A0               **
+!**                     (FACTOR CORRESPONDS TO THE RATIO BETWEEN TOUCHING AND **
+!**                     VOLUME FILLING SPHERES IN AN FCC LATTICE)             **
+!**         'R(VDW)'    VAN DER WAALS RADIUS                                  **
+!**         'RNUC'      NUCLEAR RADIUS                                        **
+!**         'EN'        PAULI ELECTRONEGATIVITY                               **
+!**         'OCC(S)'    ATOMIC OCCUPATION OF THE VALENCE S-SHELL              **
+!**         'OCC(P)'    ATOMIC OCCUPATION OF THE VALENCE P-SHELL              **
+!**         'OCC(D)'    ATOMIC OCCUPATION OF THE VALENCE D-SHELL              **
+!**         'OCC(F)'    ATOMIC OCCUPATION OF THE VALENCE F-SHELL              **
+!**         '#NODES(S)' NUMBER OF NODES OF THE VALENCE F-SHELL                **
+!**         '#NODES(p)' NUMBER OF NODES OF THE VALENCE F-SHELL                **
+!**         '#NODES(D)' NUMBER OF NODES OF THE VALENCE F-SHELL                **
+!**         '#NODES(F)' NUMBER OF NODES OF THE VALENCE F-SHELL                **
+!**         'ZCORE'     ATOMIC NUMBER OF THE CORE SHELL                       **
+!**         'MAGNETIC MOMENT' NUCLEAR MAGNETIC MOMENT OF THE MOST ABUNDANT    **
+!**                     ISOTOPE WITH NON-ZERO NUCLEAR SPIN                    **
+!**         'GYROMAGNETICRATIO' GYROMAGNETICRATIO OF THE MOST ABUNDANT        **
+!**                     ISOTOPE WITH NON-ZERO NUCLEAR SPIN                    **
+!**         'SPIN'      NUCLEAR SPIN OF THE MOST ABUNDANT ISOTOPE WITH        **
+!**                     NON-ZERO NUCLEAR SPIN                                 **
+!**                                                                           **
+!**      VALUE IS THE REQUESTED DATA                                          **
+!**                                                                           **
+!**  REMARKS:                                                                 **
+!**    THE ADDITIONAL ATOMS FROM 106-108 ARE DUMMY ATOMS REFERRED             **
+!**      TO BY FORCE FIELDS                                                   **
+!**                                                                           **
+!**    THE CALLS BY ATOMIC NUMBER INTERPOLATE BETWEEN THE TWO NEIGHBORING     **
+!**      ATOMIC NUMBERS                                                       **
+!**                                                                           **
+!**                                                                           **
+!*******************************************************************************
 PRIVATE
 PUBLIC PERIODICTABLE$GET
 INTERFACE PERIODICTABLE$GET
@@ -53,6 +86,7 @@ TYPE ELEMENT_TYPE
   TYPE(ISOTOPE_TYPE),POINTER :: ISOTOPE(:)
 END TYPE
 INTEGER,PARAMETER     :: NEL=108
+INTEGER,PARAMETER     :: IFIRSTDUMMY=106
 TYPE(ELEMENT_TYPE)    :: ELEMENT(0:NEL)
 LOGICAL(4)            :: TINI=.FALSE.
 REAL(8)     ,PARAMETER:: U=1822.8885046287D0
@@ -61,17 +95,19 @@ REAL(8)     ,PARAMETER:: METER=1.889726D+10 ! DOEs NOT HAVE FULL ACCURACY
 ! THE NUCLRAR RADIUS IS RNUC=(MASS/U)**(1/3)*1.2E-15 METER, 
 ! WHERE U IS THE M[C12]/12. (e.g. Halliday-Resnick-Walker, Physik, Wiley)
 REAL(8)     ,PARAMETER:: RNUCFAC=1.85635065215D-6
-!**********************************************************************
+!*******************************************************************************
 CONTAINS
 !
-!     .............................................FUNCTION TFAPOT......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PERIODICTABLE_INITIALIZE
-!     **                                                              **
-!     ** ATOMIC WEIGHTS: RELATIVE ATOMIC MASS                         **
-!     **    (FOR UNSTABLE NUCLEI: ISOTOPIC MASS)                      **
-!     **    FROM QUANTITIES,UNITS AND SYMBOLS IN PHYSICAL CHEMISTRY   **
-!     **    BLACKWELL SCIENTIFIC PUBLICATIONS, OXFORD 1993            **
-!     **                                                              **
+!     **************************************************************************
+!     **                                                                      **
+!     ** ATOMIC WEIGHTS: RELATIVE ATOMIC MASS                                 **
+!     **    (FOR UNSTABLE NUCLEI: ISOTOPIC MASS)                              **
+!     **    FROM QUANTITIES,UNITS AND SYMBOLS IN PHYSICAL CHEMISTRY           **
+!     **    BLACKWELL SCIENTIFIC PUBLICATIONS, OXFORD 1993                    **
+!     **                                                                      **
+!     **************************************************************************
       TYPE SET_TYPE
         CHARACTER(2)      :: SYMBOL    ! ELEMENT SYMBOL
         REAL(8)           :: MASS      ! ATOMIC MASS
@@ -85,15 +121,15 @@ CONTAINS
       REAL(8)             :: PI
       REAL(8)             :: FACASA
       INTEGER(4)          :: I,J,IC
-!     **************************************************************
+!     **************************************************************************
       IF(TINI) RETURN
       TINI=.TRUE.
 !    
-!     ==  1S   =====================================================
+!     ==  1S   =================================================================
       SET(  0)=SET_TYPE('0 ',0.0000  ,0.53,0.530,0.00,(/0,0,0,0/),'0 ')
       SET(  1)=SET_TYPE('H ',1.00794 ,0.32,2.886,2.20,(/1,0,0,0/),'0 ')
       SET(  2)=SET_TYPE('HE',4.002602,0.93,2.362,0.00,(/2,0,0,0/),'0 ')
-!     ==  2SP  =====================================================
+!     ==  2SP  =================================================================
       SET(  3)=SET_TYPE('LI',6.941    ,1.23,2.451,0.98,(/1,0,0,0/),'HE')
       SET(  4)=SET_TYPE('BE',9.012182 ,0.90,2.745,1.57,(/2,0,0,0/),'HE')
       SET(  5)=SET_TYPE('B ',10.811   ,0.82,4.083,2.04,(/2,1,0,0/),'HE')
@@ -102,7 +138,7 @@ CONTAINS
       SET(  8)=SET_TYPE('O ',15.9994  ,0.73,3.500,3.44,(/2,4,0,0/),'HE')
       SET(  9)=SET_TYPE('F ',18.998403,0.72,3.364,3.98,(/2,5,0,0/),'HE')
       SET( 10)=SET_TYPE('NE',20.1797  ,0.71,3.243,0.00,(/2,6,0,0/),'HE')
-!     == 3SP  ======================================================
+!     == 3SP  ==================================================================
       SET( 11)=SET_TYPE('NA',22.989768,1.54,2.983,0.93,(/1,0,0,0/),'NE')
       SET( 12)=SET_TYPE('MG',24.3050  ,1.36,3.021,1.31,(/2,0,0,0/),'NE')
       SET( 13)=SET_TYPE('AL',26.981539,1.18,4.499,1.61,(/2,1,0,0/),'NE')
@@ -111,10 +147,10 @@ CONTAINS
       SET( 16)=SET_TYPE('S ',32.066   ,1.02,4.035,2.58,(/2,4,0,0/),'NE')
       SET( 17)=SET_TYPE('CL',35.4527  ,0.99,3.947,3.16,(/2,5,0,0/),'NE')
       SET( 18)=SET_TYPE('AR',39.948   ,0.98,3.868,0.00,(/2,6,0,0/),'NE')
-!     ==  4S   =====================================================
+!     ==  4S   =================================================================
       SET( 19)=SET_TYPE('K ',39.0983  ,2.03,3.812,0.82,(/1,0,0,0/),'AR')
       SET( 20)=SET_TYPE('CA',40.078   ,1.74,3.399,1.00,(/2,0,0,0/),'AR')
-!     ==  3D   =====================================================
+!     ==  3D   =================================================================
       SET( 21)=SET_TYPE('SC',44.955910,1.44,3.295,1.36,(/2,0,1,0/),'AR')
       SET( 22)=SET_TYPE('TI',47.88    ,1.32,3.175,1.54,(/2,0,2,0/),'AR')
       SET( 23)=SET_TYPE('V ',50.9415  ,1.22,3.144,1.63,(/2,0,3,0/),'AR')
@@ -125,17 +161,17 @@ CONTAINS
       SET( 28)=SET_TYPE('NI',58.34    ,1.15,2.834,1.91,(/2,0,8,0/),'AR')
       SET( 29)=SET_TYPE('CU',63.546   ,1.17,3.495,1.90,(/1,0,10,0/),'AR')
       SET( 30)=SET_TYPE('ZN',65.39    ,1.25,2.763,1.65,(/2,0,10,0/),'AR')
-!     ==  4P   ===================='================================
+!     ==  4P   ===================='============================================
       SET( 31)=SET_TYPE('GA',60.723   ,1.26,4.383,1.81,(/2,1,10,0/),'AR')
       SET( 32)=SET_TYPE('GE',72.61    ,1.22,4.280,2.01,(/2,2,10,0/),'AR')
       SET( 33)=SET_TYPE('AS',74.92159 ,1.20,4.230,2.18,(/2,3,10,0/),'AR')
       SET( 34)=SET_TYPE('SE',78.96    ,1.16,4.205,2.55,(/2,4,10,0/),'AR')
       SET( 35)=SET_TYPE('BR',79.904   ,1.14,4.189,2.96,(/2,5,10,0/),'AR')
       SET( 36)=SET_TYPE('KR',83.80    ,1.12,4.141,0.00,(/2,6,10,0/),'AR')
-!     ==  5S   =====================================================
+!     ==  5S   =================================================================
       SET( 37)=SET_TYPE('RB',85.4678  ,2.16,4.114,0.82,(/1,0,0,0/),'KR')
       SET( 38)=SET_TYPE('SR',87.62    ,1.91,3.641,0.95,(/2,0,0,0/),'KR')
-!     ==  4D   =====================================================
+!     ==  4D   =================================================================
       SET( 39)=SET_TYPE('Y ',88.90585 ,1.62,3.345,1.22,(/2,0,1,0/),'KR')
       SET( 40)=SET_TYPE('ZR',91.224   ,1.45,3.124,1.33,(/2,0,2,0/),'KR')
       SET( 41)=SET_TYPE('NB',92.90638 ,1.34,3.165,1.60,(/1,0,4,0/),'KR')
@@ -146,19 +182,19 @@ CONTAINS
       SET( 46)=SET_TYPE('PD',106.42   ,1.28,2.899,2.20,(/0,0,10,0/),'KR')
       SET( 47)=SET_TYPE('AG',107.868  ,1.34,3.148,1.93,(/1,0,10,0/),'KR')
       SET( 48)=SET_TYPE('CD',112.411  ,1.48,2.848,1.69,(/2,0,10,0/),'KR')
-!     ==  5P ========================================================
+!     ==  5P ===================================================================
       SET( 49)=SET_TYPE('IN',114.818  ,1.44,4.463,1.78,(/2,1,10,0/),'KR')
       SET( 50)=SET_TYPE('SN',118.710  ,1.41,4.392,1.96,(/2,2,10,0/),'KR')
       SET( 51)=SET_TYPE('SB',121.757  ,1.40,4.420,2.05,(/2,3,10,0/),'KR')
       SET( 52)=SET_TYPE('TE',127.60   ,1.36,4.470,2.10,(/2,4,10,0/),'KR')
       SET( 53)=SET_TYPE('I ',126.90447,1.33,4.500,2.66,(/2,5,10,0/),'KR')
       SET( 54)=SET_TYPE('XE',131.29   ,1.31,4.404,0.00,(/2,6,10,0/),'KR')
-!     == 6S  ========================================================
+!     == 6S  ===================================================================
       SET( 55)=SET_TYPE('CS',132.90543,2.35,4.517,0.79,(/1,0,0,0/),'XE')
       SET( 56)=SET_TYPE('BA',137.327  ,1.98,3.703,0.89,(/2,0,0,0/),'XE')
-!     == 5D TRANSITION METALS ======================================
+!     == 5D TRANSITION METALS ==================================================
       SET( 57)=SET_TYPE('LA',138.9055 ,1.69,3.522,1.10,(/2,0,1,0/),'XE')
-!     == LANTHANIDES - 4F RARE EARTHS ==============================
+!     == LANTHANIDES - 4F RARE EARTHS ==========================================
       SET( 58)=SET_TYPE('CE',140.115  ,1.65,3.556,1.12,(/2,0,1,1/),'XE')
       SET( 59)=SET_TYPE('PR',140.90765,1.65,3.606,1.13,(/2,0,0,3/),'XE')
       SET( 60)=SET_TYPE('ND',144.24   ,1.64,3.575,1.14,(/2,0,0,4/),'XE')
@@ -173,7 +209,7 @@ CONTAINS
       SET( 69)=SET_TYPE('TM',168.93421,1.56,3.374,1.25,(/2,0,0,13/),'XE')
       SET( 70)=SET_TYPE('YB',173.04   ,1.74,3.355,1.10,(/2,0,0,14/),'XE')
       SET( 71)=SET_TYPE('LU',174.967  ,1.56,3.640,1.27,(/2,0,1,14/),'XE')
-!     == 5D TRANSITION METALS (CONTINUATION)========================
+!     == 5D TRANSITION METALS (CONTINUATION)====================================
       SET( 72)=SET_TYPE('HF',178.49   ,1.44,3.141,1.30,(/2,0,2,14/),'XE')
       SET( 73)=SET_TYPE('TA',180.9479 ,1.34,3.170,1.50,(/2,0,3,14/),'XE')
       SET( 74)=SET_TYPE('W ',183.84   ,1.30,3.069,2.36,(/2,0,4,14/),'XE')
@@ -183,19 +219,19 @@ CONTAINS
       SET( 78)=SET_TYPE('PT',195.08   ,1.30,2.754,2.28,(/1,0,9,14/),'XE')
       SET( 79)=SET_TYPE('AU',196.96654,1.34,3.293,2.54,(/1,0,10,14/),'XE')
       SET( 80)=SET_TYPE('HG',200.59   ,1.49,2.705,2.00,(/2,0,10,14/),'XE')
-!     == 6P ======================= ================================
+!     == 6P ======================= ============================================
       SET( 81)=SET_TYPE('TL',204.3833 ,1.48,4.347,2.04,(/2,1,10,14/),'XE')
       SET( 82)=SET_TYPE('PB',207.2    ,1.47,4.297,2.33,(/2,2,10,14/),'XE')
       SET( 83)=SET_TYPE('BI',208.98037,1.46,4.370,2.02,(/2,3,10,14/),'XE')
       SET( 84)=SET_TYPE('PO',208.98240,1.46,4.709,2.00,(/2,4,10,14/),'XE')
       SET( 85)=SET_TYPE('AT',209.98713,1.45,4.750,2.20,(/2,5,10,14/),'XE')
       SET( 86)=SET_TYPE('RN',222.01757,1.44,4.765,0.00,(/2,6,10,14/),'XE')
-!     ==  7S ========================================================
+!     ==  7S ===================================================================
       SET( 87)=SET_TYPE('FR',223.01973,2.50,4.900,0.70,(/1,0,0,0/),'RN')
       SET( 88)=SET_TYPE('RA',226.02540,2.00,3.677,0.90,(/2,0,0,0/),'RN')
-!     ==  6D TRANSITION METALS =====================================
+!     ==  6D TRANSITION METALS =================================================
       SET( 89)=SET_TYPE('AC',227.02775,1.65,3.478,1.10,(/2,0,1,0/),'RN')
-!     ==  ACTINIDES - 5F RARE EARTHS ===============================
+!     ==  ACTINIDES - 5F RARE EARTHS ===========================================
       SET( 90)=SET_TYPE('TH',232.0381 ,1.65,3.396,1.30,(/2,0,2,0/),'RN')
       SET( 91)=SET_TYPE('PA',231.03588,1.65,3.424,1.50,(/2,0,1,2/),'RN')
       SET( 92)=SET_TYPE('U ',238.0289 ,1.42,3.395,1.38,(/2,0,1,3/),'RN')
@@ -210,17 +246,17 @@ CONTAINS
       SET(101)=SET_TYPE('MD',258.09857,1.56,3.274,1.30,(/2,0,0,13/),'RN')
       SET(102)=SET_TYPE('NO',259.10093,1.74,3.248,1.30,(/2,0,0,14/),'RN')
       SET(103)=SET_TYPE('LR',260.10532,1.56,3.236,1.30,(/2,0,1,14/),'RN')
-!     ==  6D TRANSITION METALS (CONTINUATION, =====================
+!     ==  6D TRANSITION METALS (CONTINUATION, ==================================
       SET(104)=SET_TYPE('RF',261.10869,1.44,3.500,0.00,(/2,0,2,14/),'RN')
       SET(105)=SET_TYPE('HA',262.11376,1.34,3.500,0.00,(/2,0,3,14/),'RN')
-!     ==  DUMMY ATOMS FOR FORCE FIELDS ============================
+!     ==  DUMMY ATOMS FOR FORCE FIELDS =========================================
       SET(106)=SET_TYPE('CP',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')
       SET(107)=SET_TYPE('PI',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')
       SET(108)=SET_TYPE('CI',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')
 !
-!     ==================================================================
-!     ==  MAP INTO ELEMENT AND CONVERT TO ATOMIC UNITS                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  MAP INTO ELEMENT AND CONVERT TO ATOMIC UNITS                        ==
+!     ==========================================================================
       PI=4.D0*ATAN(1.D0)
       FACASA=4.D0/SQRT(2.D0)*(3.D0/(16.D0*PI))**(1.D0/3.D0)
       DO I=0,NEL
@@ -246,28 +282,27 @@ CONTAINS
       CALL PERIODICTABLE_ISOTOPES
       RETURN
       END SUBROUTINE PERIODICTABLE_INITIALIZE
-!.......................................................................
-SUBROUTINE PERIODICTABLE_ISOTOPES
-!***********************************************************************
-!**                                                                   **
-!**  PROVIDES INFORMATION FOR INDIVIDUAL ISOTOPES FOR EACH ELEMENT    **
-!**  THIS INFORMATION IS NOT COMPLETE!!                               **
-!**                                                                   **
-!**                                                                   **
-!***********************************************************************
-IMPLICIT NONE
-REAL(8)              :: NUCLEARMAGNETON   
-REAL(8)              :: METER
-REAL(8)              :: FEMTO
-REAL(8)              :: FM2   ! (FEMTOMETER)**2
-INTEGER(4)           :: IZ,I
-INTEGER(4)           :: NISOTOPES
-!***********************************************************************
-!===================================================================
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PERIODICTABLE_ISOTOPES
+!     **************************************************************************
+!     **  PROVIDES INFORMATION FOR INDIVIDUAL ISOTOPES FOR EACH ELEMENT       **
+!     **  THIS INFORMATION IS NOT COMPLETE!!                                  **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8)         :: NUCLEARMAGNETON   
+      REAL(8)         :: METER
+      REAL(8)         :: FEMTO
+      REAL(8)         :: FM2   ! (FEMTOMETER)**2
+      INTEGER(4)      :: IZ,I
+      INTEGER(4)      :: NISOTOPES
+!     **************************************************************************
+!===============================================================================
 !==  ABUNDANCE IS GIVEN IN PERCENT
 !==  MAGNETIC MOMENT IN NUCLEAR MAGNETONS
 !==  SPIN IN HBAR
-!===============================================================
+!===============================================================================
 !== HYDROGEN ==========================================================
 IZ=1
 NISOTOPES=3
@@ -328,17 +363,19 @@ ENDDO
 RETURN
 END SUBROUTINE PERIODICTABLE_ISOTOPES
 !
-!     ...........................................PERIODICTABLE..........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PERIODICTABLE_ATOMICNUMBER(SYMBOL_,IZ)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     ** RETURN INTEGER ATOMIC NUMBER FOR A GIVEN SYMBOL, RESPECETIVELY       **
+!     ** THE ENTRY INDEX                                                      **
+!     **                                                                      **
+!     **************************************************************************
       USE STRINGS_MODULE
       CHARACTER(*),INTENT(IN) :: SYMBOL_
       INTEGER(4)  ,INTENT(OUT):: IZ
       CHARACTER(2)            :: SYMBOL
       INTEGER(4)              :: I
-!     ******************************************************************
+!     **************************************************************************
       SYMBOL=SYMBOL_(1:2)
       IF(SYMBOL(2:2).EQ.'_') SYMBOL(2:2)=' '
       DO I=0,NEL
@@ -353,18 +390,18 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       RETURN
       END SUBROUTINE PERIODICTABLE_ATOMICNUMBER
 !
-!     ...........................................PERIODICTABLE..........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PERIODICTABLE$GETCH(IZ,ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: IZ
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(*),INTENT(OUT):: VAL
-!     ******************************************************************
+!     **************************************************************************
       CALL PERIODICTABLE_INITIALIZE
-      IF(IZ.LT.0.OR.IZ.GT.NEL) THEN
+      IF(IZ.LT.0.OR.IZ.GE.NEL) THEN
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
         CALL ERROR$I4VAL('IZ',IZ)
         CALL ERROR$CHVAL('ID',ID)
@@ -380,23 +417,23 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       RETURN
       END SUBROUTINE PERIODICTABLE$GETCH
 !
-!     ...........................................PERIODICTABLE..........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PERIODICTABLE$GETR8(IZ,ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: IZ
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
       INTEGER(4)              :: I
-!     ******************************************************************
+!     **************************************************************************
       CALL PERIODICTABLE_INITIALIZE
       IF(IZ.LT.0.OR.IZ.GT.NEL) THEN
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
         CALL ERROR$I4VAL('IZ',IZ)
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('PERIODICTABLE$GETr8')
+        CALL ERROR$STOP('PERIODICTABLE$GETR8')
       END IF
       IF(ID.EQ.'R(COV)') THEN
         VAL=ELEMENT(IZ)%RCOV
@@ -445,11 +482,11 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       RETURN
       END SUBROUTINE PERIODICTABLE$GETR8
 !
-!     ...........................................PERIODICTABLE..........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PERIODICTABLE$GETBYZR8(Z,ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       real(8)     ,INTENT(IN) :: Z
       CHARACTER(*),INTENT(IN) :: ID
@@ -457,7 +494,7 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       INTEGER(4)              :: Iz1,iz2
       real(8)                 :: c1,c2
       logical(4)              :: tsubalkali
-!     ******************************************************************
+!     **************************************************************************
       CALL PERIODICTABLE_INITIALIZE
       IF(Z.LT.0.OR.Z.GT.REAL(NEL)) THEN
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
@@ -508,14 +545,16 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       RETURN
       END SUBROUTINE PERIODICTABLE$GETBYZR8
 !
-!     ...........................................PERIODICTABLE..........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PERIODICTABLE$GETI4(IZ,ID,VAL)
-!     **                                                              **
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: IZ
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(OUT):: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(IZ.LT.0.OR.IZ.GT.NEL) THEN
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
         CALL ERROR$I4VAL('IZ',IZ)
@@ -524,6 +563,8 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       END IF
       IF(ID.EQ.'Z') THEN
         VAL=IZ       
+      ELSE IF(ID.EQ.'ZCORE') THEN
+        VAL=ELEMENT(IZ)%CORE
       ELSE IF(ID.EQ.'OCC(S)') THEN
         VAL=ELEMENT(IZ)%CONFIGURATION(1)
       ELSE IF(ID.EQ.'OCC(P)') THEN
@@ -548,39 +589,49 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       RETURN
       END SUBROUTINE PERIODICTABLE$GETI4
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PERIODICTABLE$SYMBOLGETI4(SYMBOL,ID,VAL)
-!     **                                                              **
+!     **************************************************************************
+!     **  INTERFACE FOR CALLS BY ELEMENT SYMBOL                               **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: SYMBOL
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(OUT):: VAL
       INTEGER(4)              :: IZ
-!     ******************************************************************
+!     **************************************************************************
       CALL PERIODICTABLE_INITIALIZE
       CALL PERIODICTABLE_ATOMICNUMBER(SYMBOL,IZ)
       CALL PERIODICTABLE$GETI4(IZ,ID,VAL)
       RETURN
       END SUBROUTINE PERIODICTABLE$SYMBOLGETI4
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PERIODICTABLE$SYMBOLGETR8(SYMBOL,ID,VAL)
-!     **                                                              **
+!     **************************************************************************
+!     **  INTERFACE FOR CALLS BY ELEMENT SYMBOL                               **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: SYMBOL
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
       INTEGER(4)              :: IZ
-!     ******************************************************************
+!     **************************************************************************
       CALL PERIODICTABLE_INITIALIZE
       CALL PERIODICTABLE_ATOMICNUMBER(SYMBOL,IZ)
       CALL PERIODICTABLE$GETR8(IZ,ID,VAL)
       RETURN
       END SUBROUTINE PERIODICTABLE$SYMBOLGETR8
 !
-!     ..................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PERIODICTABLE$REPORT(NFIL)
-!     **                                                              **
+!     **************************************************************************
+!     **  REPORT SETTINGS OF PERIODIC TABLE                                   **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFIL
       INTEGER(4)              :: IZ

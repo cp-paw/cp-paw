@@ -41,8 +41,8 @@
       REAL(8)                    :: POTIN(NR)
       REAL(8)                    :: SVAR
       INTEGER(4)                 :: IRBOX
-      INTEGER(4)                 :: IR,I,IB,iso,l
-      INTEGER(4)                 :: Isvar
+      INTEGER(4)                 :: IR,I,IB,jb,iso,l
+      INTEGER(4)                 :: Isvar,iarr(1)
       CHARACTER(32)              :: ID
       LOGICAL(4)                 :: TSTART  ! CALCULATE ANGULAR MOMENTA ETC
       LOGICAL(4)                 :: TREL    ! RELATIOVISTIC CALCULATION
@@ -184,14 +184,7 @@
 !       ================================================================
 !       ==  EXIT IF CONVERGED                                         ==
 !       ================================================================
-        IF(CONVG) THEN
-          CALL BROYDEN$CLEAR
-!!$DO I=1,NB
-!!$ WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SO(I),F(I),NN(I),EOFI(I)
-!!$ENDDO
-!!$PRINT*,'#ITERATIONS ',ITER
-          RETURN
-        END IF
+        IF(CONVG) exit
 
 !       ====================================================================
 !       == CALCULATE OUTPUT POTENTIAL                                     ==
@@ -207,8 +200,42 @@
         POT=POTIN
         CONVG=(XMAX.LT.TOL)
       ENDDO
-      CALL ERROR$MSG('SELFCONSISTENCY LOOP NOT CONVERGED')
-      CALL ERROR$STOP('AESCF')
+      CALL BROYDEN$CLEAR
+      if(.not.convg) then
+        CALL ERROR$MSG('SELFCONSISTENCY LOOP NOT CONVERGED')
+        CALL ERROR$STOP('AESCF')
+      end if
+!!$DO I=1,NB
+!!$ WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SO(I),F(I),NN(I),EOFI(I)
+!!$ENDDO
+!!$PRINT*,'#ITERATIONS ',ITER
+!
+!     ====================================================================
+!     == REORDER STATES ACCORDING TO ENERGY                             ==
+!     ====================================================================
+      DO IB=1,NB
+        IARR=MINLOC(EOFI(IB:nb))
+        JB=IARR(1)+IB-1
+        IF(JB.EQ.IB) CYCLE
+        ISVAR=LOFI(JB)
+        LOFI(IB+1:JB)=LOFI(IB:JB-1)
+        LOFI(IB)=ISVAR
+        ISVAR=SO(JB)
+        SO(IB+1:JB)=SO(IB:JB-1)
+        SO(IB)=ISVAR
+        ISVAR=NN(JB)
+        NN(IB+1:JB)=NN(IB:JB-1)
+        NN(IB)=ISVAR
+        SVAR=EOFI(JB)
+        EOFI(IB+1:JB)=EOFI(IB:JB-1)
+        EOFI(IB)=SVAR
+        SVAR=F(JB)
+        F(IB+1:JB)=F(IB:JB-1)
+        F(IB)=SVAR
+        AUX=PHI(:,JB)
+        PHI(:,IB+1:JB)=PHI(:,IB:JB-1)
+        PHI(:,IB)=AUX
+      ENDDO
       RETURN
       END
 !
@@ -487,7 +514,7 @@
 !       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
 !       ========================================================================
 print*,'e ',i,e,z0,nn
-        call ATOMIC_PAWDER(GID,NR,L,e,pspot,npro,pro,dh,do,g,phi)
+        call ATOMLIB_PAWDER(GID,NR,L,e,pspot,npro,pro,dh,do,g,phi)
 !       == CHECK FOR OVERFLOW ==================================================
         IF(.NOT.(PHI(IRbox+2).GT.0.OR.PHI(IRbox+2).LE.0)) THEN
           CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
@@ -678,3 +705,154 @@ print*,'e ',i,e,z0,nn
       enddo
       return
       end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMLIB_PAWDER(GID,NR,L,e,pspot,npro,pro,dh,do,g,phi)
+!     **************************************************************************
+!     **                                                                      **
+!     **  SOLVES THE RADIAL PAW -SCHROEDINGER EQUATION.                       **
+!     **    (T+VTILDE-E+|P>(DH-E*DO<P|]|PHI>=|G>                              **
+!     **  WHERE T IS THE NONRELATIVISTIC KINETIC ENERGY.                      **
+!     **                                                                      **
+!     **    DH=<AEPHI|T+V|AEPHI>-<PSPHI|T+VTILDE|PSPHI>                       **
+!     **    DO=<AEPHI|AEPHI>-<PSPHI|PSPHI>                                    **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID     !GRID ID
+      INTEGER(4)  ,INTENT(IN) :: NR      ! #(RADIAL GRID POINTS
+      INTEGER(4)  ,INTENT(IN) :: L       ! ANGULAR MOMENTUM
+      REAL(8)     ,INTENT(IN) :: E       ! ENERGY
+      REAL(8)     ,INTENT(IN) :: PSPOT(NR)  !VTILDE=PSPOT*Y0
+      INTEGER(4)  ,INTENT(IN) :: NPRO       ! #(PROJECTOR FUNCTIONS)
+      REAL(8)     ,INTENT(IN) :: PRO(NR,NPRO) ! PROJECTOR FUNCTIONS
+      REAL(8)     ,INTENT(IN) :: DH(NPRO,NPRO)     
+      REAL(8)     ,INTENT(IN) :: DO(NPRO,NPRO)     
+      REAL(8)     ,INTENT(IN) :: G(NR)        !INHOMOGENEITY
+      REAL(8)     ,INTENT(OUT):: PHI(NR)      !PAW RADIAL FUNCTION
+      REAL(8)                 :: U(NR)
+      REAL(8)                 :: V(NR,NPRO)
+      REAL(8)                 :: AMAT(NPRO,NPRO)
+      REAL(8)                 :: BMAT(NPRO,NPRO)
+      REAL(8)                 :: BMATINV(NPRO,NPRO)
+      REAL(8)                 :: CMAT(NPRO,NPRO)
+      REAL(8)                 :: CVEC(NPRO)
+      REAL(8)                 :: DVEC(NPRO)
+      INTEGER(4)              :: IB,JB
+      INTEGER(4)              :: I1,I2,I3
+      REAL(8)                 :: SVAR
+      REAL(8)                 :: AUX(NR)
+      REAL(8)                 :: R(NR)
+      REAL(8)                 :: DREL(NR)
+      INTEGER(4)              :: SO
+INTEGER(4)              :: IR
+REAL(8)                 :: PI,Y0
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+!
+!     ==================================================================
+!     ==  -1/2NABLA^2+POT-E|U>=|G>                                    ==
+!     ==================================================================
+      SO=0
+      DREL(:)=0.D0
+      CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,SO,G,L,E,1,U)
+!
+!     ==================================================================
+!     ==  -1/2NABLA^2+POT-E|V>=|PRO>                                 ==
+!     ==================================================================
+      DO I1=1,NPRO
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,SO,PRO(:,I1),L,E,1,V(:,I1))
+      ENDDO
+!!$PRINT*,'E ',E,SO,L,NR,GID
+!!$OPEN(100,FILE='XXX.DAT')
+!!$ DO IR=1,NR
+!!$    WRITE(100,FMT='(22F30.10)')R(IR),U(IR),V(IR,:),PRO(IR,:)
+!!$ ENDDO
+!!$CLOSE(10)
+!!$STOP 'IN PAWDER'
+!
+!     ==================================================================
+!     ==  AMAT=<PRO|V>  CVEC=<PRO|U>                                  ==
+!     ==================================================================
+      DO I1=1,NPRO
+        DO I2=1,NPRO
+          AUX(:)=PRO(:,I1)*V(:,I2)*R(:)**2
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,AMAT(I1,I2))
+        ENDDO
+      ENDDO
+      DO I1=1,NPRO
+        AUX(:)=PRO(:,I1)*U(:)*R(:)**2
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,CVEC(I1))
+      ENDDO  
+!
+!     ==================================================================
+!     ==  BMAT=1+(DATH-EDO)<PRO|V>                                    ==
+!     ==================================================================
+!     BMAT(:,:)=MATMUL(DH(:,:)-E*DO(:,:),AMAT(:,:))
+!     DO I1=1,NPRO
+!       BMAT(I1,I1)=BMAT(I1,I1)+1.D0
+!     ENDDO
+!
+      DO I1=1,NPRO
+        DO I2=1,NPRO
+          BMAT(I1,I2)=0.D0
+          DO I3=1,NPRO
+            BMAT(I1,I2)=BMAT(I1,I2)+(DH(I1,I3)-E*DO(I1,I3))*AMAT(I3,I2)     
+          ENDDO
+        ENDDO
+        BMAT(I1,I1)=BMAT(I1,I1)+1.D0
+      ENDDO
+!
+!     ==================================================================
+!     ==  BMAT = BMAT^-1 = [1+(DATH-EDO)<PRO|V>]^-1                   ==
+!     ==================================================================
+      IF(NPRO.EQ.0) THEN
+        CALL ERROR$STOP('NPRO=0 NOT ALLOWED')
+      END IF
+      IF(NPRO.EQ.1) THEN 
+        BMAT(1,1)=1.D0/BMAT(1,1)
+      ELSE 
+        CALL LIB$INVERTR8(NPRO,BMAT,BMATINV)
+        BMAT=BMATINV
+      END IF
+!
+!     ==================================================================
+!     ==  CMAT = -BMAT*(DATH-EDO)                                     ==
+!     ==       = -[1+(DATH-EDO)*<PRO|V>]^-1 (DATH-EDO)                ==
+!     ==================================================================
+!     CMAT(:,:)=MATMUL(BMAT(:,:),DH(:,:)-E*DO(:,:))
+      DO I1=1,NPRO
+        DO I2=1,NPRO
+          CMAT(I1,I2)=0.D0
+          DO I3=1,NPRO
+            CMAT(I1,I2)=CMAT(I1,I2)-BMAT(I1,I3)*(DH(I3,I2)-E*DO(I3,I2))
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==================================================================
+!     ==  DVEC = CMAT*CVEC                                           ==
+!     ==       = -[1+(DATH-EDO)*<PRO|V>]^-1 (DATH-EDO) <PRO|U>        ==
+!     ==================================================================
+!     DVEC(:)=MATMUL(CMAT(:,:),CVEC(:))
+      DO I1=1,NPRO
+        DVEC(I1)=0.D0
+        DO I2=1,NPRO
+          DVEC(I1)=DVEC(I1)+CMAT(I1,I2)*CVEC(I2)
+        ENDDO
+      ENDDO
+!
+!     ==================================================================
+!     ==  |PHI> = |U>+|V>DVEC                                         ==
+!     ==  = [1-|V>[1+(DATH-EDO)*<PRO|V>]^-1(DATH-EDO)<PRO|] |U>       ==
+!     ==================================================================
+!     PHI(:)=U(:)+MATMUL(V(:,:),DVEC(:))
+      PHI(:)=U(:)
+      DO I1=1,NPRO
+        PHI(:)=PHI(:)+V(:,I1)*DVEC(I1)
+      ENDDO
+      RETURN
+      STOP
+      END

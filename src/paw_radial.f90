@@ -209,17 +209,41 @@
 !***********************************************************************
 !***********************************************************************
 !***********************************************************************
-
-!     ....................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL$GRIDPARAMETERS(DMIN,DMAX,RX,R1,DEX,NR)
+!     **************************************************************************
+!     **  DETERMINES THE GRID PARAMETERS FOR THE SHIFTED LOGARITHMIC          **
+!     **  GRID FROM A SPECIFIED MINIMUM SPACING DMIN, A MAXIMUM               **
+!     **  SPACING DMAX AND A MAXIMUM RADIUS RX                                **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
+      REAL(8),   INTENT(IN) :: DMIN
+      REAL(8),   INTENT(IN) :: DMAX
+      REAL(8),   INTENT(IN) :: RX
+      REAL(8),   INTENT(OUT):: R1
+      REAL(8),   INTENT(OUT):: DEX
+      INTEGER(4),INTENT(OUT):: NR
+      REAL(8)               :: RN
+      REAL(8)               :: Q   ! EXP(DEX)
+!     **************************************************************************
+      RN=2.D0+LOG(DMAX/DMIN)/LOG((RX-DMIN)/(RX-DMAX))
+      Q=(DMAX/DMIN)**(1.D0/(RN-2.D0))
+      DEX=LOG(Q)
+      R1=DMIN/(Q-1.D0)
+      NR=NINT(RN)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_POLYNOMIALCOEFFICIENTS(NP,RI_,FI_,R0,CN)
-!     **                                                              **
-!     **  OBTAINS THE COEFFICIENTS CN FOR A POWERSERIES EXPANSION OF  **
-!     **  ORDER NP THROUGH NP DATA POINTS. R0 IS THE EXPANSION POINT  **
-!     **  THE INTERPOLATED FUNCTION IS GIVEN BY                       **
-!     **     F(R)=\SUM_{J=0}^{N-1} C_J (R-R_0)^{J}                    **
-!     **                                                              **
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **  OBTAINS THE COEFFICIENTS CN FOR A POWERSERIES EXPANSION OF          **
+!     **  ORDER NP THROUGH NP DATA POINTS. R0 IS THE EXPANSION POINT          **
+!     **  THE INTERPOLATED FUNCTION IS GIVEN BY                               **
+!     **     F(R)=\SUM_{J=0}^{N-1} C_J (R-R_0)^{J}                            **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NP
       REAL(8)   ,INTENT(IN) :: RI_(NP)
@@ -233,7 +257,7 @@
       REAL(8)               :: SVAR,VAL,A,B
       INTEGER(4)            :: I,J,K
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
-!     ****************************************************************
+!     **************************************************************************
       FI(:)=FI_(:)
       RI(:)=RI_(:)-R0
       CN(:)=0.D0
@@ -264,9 +288,9 @@
         ENDDO
       ENDDO
 !
-!     ================================================================
-!     == TEST ACCURACY OF THE POLYNOMIAL                            ==
-!     ================================================================
+!     ==========================================================================
+!     == TEST ACCURACY OF THE POLYNOMIAL                                      ==
+!     ==========================================================================
       IF(TPR) THEN
         DO I=1,NP
           VAL=0.D0
@@ -279,14 +303,13 @@
       RETURN
       END SUBROUTINE RADIAL_POLYNOMIALCOEFFICIENTS
 !
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_POLYNOMIALVALUE(NP,RI,FI_,R0,F0)
-!     **                                                              **
-!     **  DETERMINES THE VALUE F0 AT R0 FROM A POLYNOM OF ORDER NP    **
-!     **  THAT PASSES THROUGH NP DATA POINTS (RI,FI_)                 **
-!     **                                                              **
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **  DETERMINES THE VALUE F0 AT R0 FROM A POLYNOM OF ORDER NP            **
+!     **  THAT PASSES THROUGH NP DATA POINTS (RI,FI_)                         **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NP
       REAL(8)   ,INTENT(IN) :: RI(NP)

@@ -2695,20 +2695,12 @@ shifting the grid.}
 \vrules{Mandatory}
 \vdefault{None}}
 
-\mbax{\key{ZV}
-\vdescr{Number of valence electrons}
-\vformat{real}
-\vrules{Mandatory}
-\vdefault{None}} 
+\mbax{\key{ID}
+\vdescr{identifier for the setup type on the parameter file parameters/stp.cntl.}
+\vformat{Character}
+\vrules{Optional. used only if FILE is not specified}
+\vdefault{first two letters of \verb{NAME}}}
 
-\mbax{\key{Z}
-\vdescr{Atomic number. This number is used only to set the default value for the
-  mass.}
-\vformat{real}
-\vrules{optional}
-\vdefault{atomic number as deduced from !STRUCTURE!SPECIES:NAME, if the latter starts
-  from an element symbol}} 
- 
 \mbax{\key{M}
 \vdescr{Atomic mass in mass units
   (u=1822.89~a.u.=$\frac{1}{12}m(^{12}$C$)\approx$m$_p$).}
@@ -2717,17 +2709,6 @@ shifting the grid.}
 or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vdefault{Atomic mass, as obtained from !STRUCTURE!SPECIES:Z  or, if not
   present, from !STRUCTURE!SPECIES:NAME}}
-
-\mbax{\key{PSEKIN} 
-\vdescr{[Do not use this option. It works but may be removed in later
-  versions. Please use ``PS$\langle$G2$\rangle$'' and ``PS$\langle$G4$\rangle$'' instead].
-   Kinetic energy of the pseudo wave functions
-    of the atom. This term is used to renormalize the atomic masses to
-    account for the effective mass of the wave function cloud. When
-    this term is set the estimate of the Born-Oppenheimer wave
-    function kinetic energy is subtracted from the kinetic energy of
-    the wave functions in the protocoll.} \vformat{real}
-  \vrules{Optional} \vdefault{None}}
 
 \mbax{\key{PS$<$G2$>$} 
   \vdescr{Parameter used for determining the effective mass of the
@@ -2773,8 +2754,34 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vdescr{name of the file containing the partial waves
     and projector functions etc. for this atom.}
 \vformat{Character} 
-\vrules{Mandatory} 
-\vdefault{First two letters of the atom name}}
+\vrules{Optional} 
+\vdefault{information will be created on the fly using the parameter file paramters/stp.cntl}}
+
+\mbax{\key{ZV}
+\vdescr{Number of valence electrons}
+\vformat{real}
+\vrules{Mandatory, if FILE has been specified. Otherwise not used}
+\vdefault{None}} 
+
+\mbax{\key{Z}
+\vdescr{Atomic number. This number is used only to set the default value for the
+  mass.}
+\vformat{real}
+\vrules{optional}
+\vdefault{atomic number as deduced from !STRUCTURE!SPECIES:NAME, if the latter starts
+  from an element symbol}} 
+
+\mbax{\key{PSEKIN} 
+\vdescr{[Do not use this option. It works but may be removed in later
+  versions. Please use ``PS$\langle$G2$\rangle$'' and ``PS$\langle$G4$\rangle$'' instead].
+   Kinetic energy of the pseudo wave functions
+    of the atom. This term is used to renormalize the atomic masses to
+    account for the effective mass of the wave function cloud. When
+    this term is set the estimate of the Born-Oppenheimer wave
+    function kinetic energy is subtracted from the kinetic energy of
+    the wave functions in the protocoll.} \vformat{real}
+  \vrules{Optional} \vdefault{None}}
+
 
 %----------------------------------------------------------------------
 {\block{!STRUCTURE!SPECIES!LDAPLUSU}

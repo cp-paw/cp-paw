@@ -1212,7 +1212,6 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
 INTEGER(4) ::NTASKS_W,THISTASK_W
 CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
                               CALL TRACE$PUSH('WAVES$ETOT')
-      call LMTO$makestructureconstants()
 !
 !     ==================================================================
 !     == CHECK CONSISTENCY WITH OCCUPATIONS OBJECT                    ==
@@ -1295,6 +1294,13 @@ CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
         CALL WAVES$PROJECTIONS('PSI0')
       END IF
       IF(TFIRST) TFIRST=.FALSE.
+!
+!     ==================================================================
+!     == CALCULATE LMTO xstructure constants                           ==
+!     ==================================================================
+      if(tfirst.or.tforce) then
+        CALL LMTO$MAKESTRUCTURECONSTANTS()
+      end if
                               CALL TIMING$CLOCKON('WAVES$ETOT')
 !
 !     ==================================================================
