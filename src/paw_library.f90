@@ -8,7 +8,7 @@
 !****  SPECIFIC LIBRARIES ARE SELECTED BY THE PREPROCESSOR STATEMENTS      *****
 !****                                                                      *****
 !****  CONTAINS:                                                           *****
-!****    1) FORTRAN utility LIBRARIES                                      *****
+!****    1) FORTRAN UTILITY LIBRARIES                                      *****
 !****    2) LAPACK/BLAS LIBRARIES                                          *****
 !****    3) FOURIER TRANSFORM LIBRARIES                                    *****
 !****    4) SOME OTHER                                                     *****
@@ -66,7 +66,7 @@
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_GETARG(IPOS,ARG)
 #ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_sun_GETARG(IPOS,ARG)
+      CALL LIB_SUN_GETARG(IPOS,ARG)
 #ELSE    
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       CALL GETARG(IPOSSTD,ARG)
@@ -106,15 +106,15 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$GETenv(name,val)
+      SUBROUTINE LIB$GETENV(NAME,VAL)
 !     **************************************************************************
 !     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 ==
 !     **************************************************************************
       IMPLICIT NONE
-      CHARACTER(*),INTENT(in)  :: name
-      CHARACTER(*),INTENT(OUT) :: val
-      integer                  :: leng
-      integer                  :: st
+      CHARACTER(*),INTENT(IN)  :: NAME
+      CHARACTER(*),INTENT(OUT) :: VAL
+      INTEGER                  :: LENG
+      INTEGER                  :: ST
 !     **************************************************************************
 #IF DEFINED(CPPVAR_COMPILER_G95)
       CALL LIB_G95_GETENV(NAME,VAL)
@@ -134,12 +134,12 @@
 !!$      CALL LIB_SUN_GETENV(NAME,VAL)
 #ELSE    
       ! NO EXPLICIT INTERFACE; USE  FORTRAN 2003 INTRINSIC FUNCTION
-      CALL GET_ENVIRONMENT_VARIABLE(NAME,LENG,ST,VAL)
+      CALL GET_ENVIRONMENT_VARIABLE(NAME,VAL,LENG,ST)
       IF(ST.NE.0) THEN
         CALL ERROR$MSG('FAILURE COLLECTING ENVIORONMENT VARIABLE')
-        IF(ST.EQ.11) then
+        IF(ST.EQ.11) THEN
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
-        ELSE IF(ST.EQ.-1) then
+        ELSE IF(ST.EQ.-1) THEN
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
         END IF
         CALL ERROR$STOP('LIB$GETENV')
@@ -179,7 +179,7 @@
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_ETIME(USRTIME,SYSTIME)
 #ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_sun_ETIME(USRTIME,SYSTIME)
+      CALL LIB_SUN_ETIME(USRTIME,SYSTIME)
 #ELSE  
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RESULT=ETIME(TARRAY)
@@ -212,7 +212,7 @@
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_GETHOSTNAME(HOSTNAME)
 #ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_sun_GETHOSTNAME(HOSTNAME)
+      CALL LIB_SUN_GETHOSTNAME(HOSTNAME)
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RC=HOSTNM(HOSTNAME)    
@@ -244,7 +244,7 @@
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
       CALL LIB_PATHSCALE_SYSTEM(COMMAND)
 #ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_sun_SYSTEM(COMMAND)
+      CALL LIB_SUN_SYSTEM(COMMAND)
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RC=SYSTEM(COMMAND)
@@ -324,9 +324,9 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_IFC_GETenv(name,val)
+      SUBROUTINE LIB_IFC_GETENV(NAME,VAL)
 !     **************************************************************************
-!     **  RETURNS THE value of an environment variable                        **
+!     **  RETURNS THE VALUE OF AN ENVIRONMENT VARIABLE                        **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
 !     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
@@ -335,15 +335,15 @@
 !     **************************************************************************
       USE IFPORT          !INCLUDE FORTRAN PORTABILITY FUNCTIONS
       IMPLICIT NONE
-      character(*),INTENT(IN)  :: name
-      CHARACTER(*),INTENT(OUT) :: val
+      CHARACTER(*),INTENT(IN)  :: NAME
+      CHARACTER(*),INTENT(OUT) :: VAL
 !     **************************************************************************
-      CALL GETenv(name,val)
+      CALL GETENV(NAME,VAL)
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_IFC_etime(usrtime,systime)
+      SUBROUTINE LIB_IFC_ETIME(USRTIME,SYSTIME)
 !     **************************************************************************
 !     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
 !     **                                                                      **
@@ -577,8 +577,8 @@
 !     ** EXTENSIONS. THESE MUST BE ADRESSED WITHOUT AN EXPLICIT INTERFACE     **
 !     ** TO AVOID THAT AN EXTERNAL LIBRARY IS CALLED INSTEAD.                 **
 !     **                                                                      **
-!     ** using the extensions is incompatible with the -std95 flag of the     **
-!     ** fortran compiler!                                                    **
+!     ** USING THE EXTENSIONS IS INCOMPATIBLE WITH THE -STD95 FLAG OF THE     **
+!     ** FORTRAN COMPILER!                                                    **
 !     **                                                                      **
 !     ** SOME OF THE ROUTINES ARE ALSO AVAILABLE AS INTRINSIC FUNCTIONS OF    **
 !     ** FORTRAN 2003.                                                        **
@@ -616,8 +616,8 @@
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
-!!$    ! do not use the interface because this is a intrinsic function extension
-!!$    ! in g95
+!!$    ! DO NOT USE THE INTERFACE BECAUSE THIS IS A INTRINSIC FUNCTION EXTENSION
+!!$    ! IN G95
 !!$      INTERFACE 
 !!$        SUBROUTINE GETARG(POS,VALUE)
 !!$        INTEGER         ,INTENT(IN) :: POS
@@ -627,7 +627,7 @@
       INTEGER(4),INTENT(IN)         :: IPOS
       CHARACTER(LEN=*) ,INTENT(OUT) :: ARG
       INTEGER                       :: POS
-      INTEGER                       :: len,st
+      INTEGER                       :: LEN,ST
 !     **************************************************************************
       POS=IPOS
 !      CALL GETARG(POS,ARG)
@@ -641,37 +641,37 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_G95_GETenv(name,val)
+      SUBROUTINE LIB_G95_GETENV(NAME,VAL)
 !     **************************************************************************
 !     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
-!!$    ! do not use the interface because this is a intrinsic function extension
-!!$    ! in g95
+!!$    ! DO NOT USE THE INTERFACE BECAUSE THIS IS A INTRINSIC FUNCTION EXTENSION
+!!$    ! IN G95
 !!$      INTERFACE 
-!!$        SUBROUTINE GETenv(name,value)
-!!$        character(len=*),INTENT(IN) :: name
+!!$        SUBROUTINE GETENV(NAME,VALUE)
+!!$        CHARACTER(LEN=*),INTENT(IN) :: NAME
 !!$        CHARACTER(LEN=*),INTENT(OUT):: VALUE
 !!$        END SUBROUTINE GETARG
 !!$      END INTERFACE
-      CHARACTER(LEN=*) ,INTENT(in) :: name
-      CHARACTER(LEN=*) ,INTENT(OUT) :: val
-      integer                       :: leng,st
+      CHARACTER(LEN=*) ,INTENT(IN) :: NAME
+      CHARACTER(LEN=*) ,INTENT(OUT) :: VAL
+      INTEGER                       :: LENG,ST
 !     **************************************************************************
-      CALL GETenv(name,val)
-      return
+!      CALL GETENV(NAME,VAL)
+!      RETURN
 !     ==  USE  FORTRAN 2003 INTRINSIC FUNCTION
-      CALL GET_ENVIRONMENT_VARIABLE(NAME,LENG,ST,VAL)
+      CALL GET_ENVIRONMENT_VARIABLE(NAME,VAL,LENG,ST)
       IF(ST.NE.0) THEN
         CALL ERROR$MSG('FAILURE COLLECTING ENVIORONMENT VARIABLE')
-        IF(ST.EQ.11) then
+        IF(ST.EQ.11) THEN
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
-        ELSE IF(ST.EQ.-1) then
+        ELSE IF(ST.EQ.-1) THEN
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
         END IF
-        CALL ERROR$chval('name',trim(name))
+        CALL ERROR$CHVAL('NAME',TRIM(NAME))
         CALL ERROR$STOP('LIB_G95_GETENV')
       END IF 
       RETURN
@@ -692,7 +692,7 @@
       INTEGER(4),INTENT(OUT) :: NARGS
 !     **************************************************************************
 !!$      NARGS=IARGC()
-      nargs=command_argument_count()
+      NARGS=COMMAND_ARGUMENT_COUNT()
       RETURN
       END
 !
@@ -1373,7 +1373,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **************************************************************************
 !     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **  SPECIFIC INTERFACE FOR THE SUN COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
@@ -1394,7 +1394,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **************************************************************************
 !     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
 !     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **  SPECIFIC INTERFACE FOR THE SUN COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
@@ -1413,7 +1413,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **  SPECIFIC INTERFACE FOR THE SUN COMPILER                             **
 !     **************************************************************************
 !      USE DFPORT
       IMPLICIT NONE
@@ -1439,7 +1439,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **************************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
 !     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **  SPECIFIC INTERFACE FOR THE SUN COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
@@ -1460,7 +1460,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **************************************************************************
 !     **  FLUSHES THE FILE CONNECTED TO UNIT NFIL                             **
 !     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE sun COMPILER                             **
+!     **  SPECIFIC INTERFACE FOR THE SUN COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
       INTERFACE 
@@ -1828,7 +1828,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ==========================================================================
       IF(N.EQ.1) THEN
         E(1)=H(1,1)/S(1,1)
-        U(1,1)=1.D0/sqrt(s(1,1))
+        U(1,1)=1.D0/SQRT(S(1,1))
         RETURN
       ELSE IF(N.EQ.0) THEN
         RETURN
@@ -3659,7 +3659,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 #ELIF DEFINED(CPPVAR_FFT_FFTW3)
       CALL LIB_FFTW3(DIR,LEN,NFFT,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_ACML)
-      CALL LIB_ACML_fft1DC8(DIR,LEN,NFFT,X,Y)
+      CALL LIB_ACML_FFT1DC8(DIR,LEN,NFFT,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_PACK)
       CALL LIB_FFTPACK(DIR,LEN,NFFT,X,Y)
 #ELSE
@@ -3691,9 +3691,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
 #ELIF DEFINED(CPPVAR_FFT_FFTW)
       CALL LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_FFTW3)
-      CALL LIB_FFT3dW3(DIR,N1,N2,N3,X,Y)
+      CALL LIB_FFT3DW3(DIR,N1,N2,N3,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_ACML)
-      call LIB_ACML_FFT3dC8(DIR,N1,N2,N3,X,Y)
+      CALL LIB_ACML_FFT3DC8(DIR,N1,N2,N3,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_PACK)
       CALL LIB_3DFFTPACK(DIR,N1,N2,N3,X,Y)
 #ELSE
@@ -3723,8 +3723,8 @@ PRINT*,'NARGS ',NARGS,IARGC()
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
       INTEGER                 :: NFFT_1
       INTEGER                 :: LEN_1
-      INTEGER                 :: mode
-      integer                 :: info
+      INTEGER                 :: MODE
+      INTEGER                 :: INFO
       COMPLEX(8)  ,ALLOCATABLE,SAVE :: COMM(:)
       INTEGER(4)              ,SAVE :: LENPREV=0
       REAL(8)                 ,SAVE :: SCALEFORWARD
@@ -3734,9 +3734,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
       NFFT_1=NFFT
       LEN_1=LEN
       IF(DIR.EQ.'RTOG') THEN
-        mode=-1
+        MODE=-1
       ELSE IF(DIR.EQ.'GTOR') THEN
-        mode=1
+        MODE=1
       ELSE
         CALL ERROR$MSG('INVALID VALUE OF VARIABLE "DIR"')
         CALL ERROR$MSG('CAN BE "GTOR" OR "RTOG"')
@@ -3761,13 +3761,13 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     == PERFORM FOURIER TRANSFORM                                            ==
 !     ==========================================================================
       Y=X
-      CALL ZFFT1M(mode,NFFT,LEN,Y,COMM,INFO)
+      CALL ZFFT1M(MODE,NFFT,LEN,Y,COMM,INFO)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('I-TH ARGUMENT OF ZFFT1M HAD AN ILLEGAL VALUE')
-        CALL ERROR$I4VAL('I',-Info)
+        CALL ERROR$I4VAL('I',-INFO)
         CALL ERROR$STOP('LIB_ACML_FFT1DC8')
       ELSE IF(INFO.GT.0) THEN
-        CALL ERROR$I4VAL('I',Info)
+        CALL ERROR$I4VAL('I',INFO)
         CALL ERROR$STOP('LIB_ACML_FFT1DC8')
       END IF
 ! 
@@ -3783,7 +3783,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ..........................................................................
-      SUBROUTINE LIB_ACML_FFT3dC8(DIR,N1,N2,N3,X,Y)
+      SUBROUTINE LIB_ACML_FFT3DC8(DIR,N1,N2,N3,X,Y)
 !     **************************************************************************
 !     **  3-D FFT                                                             **
 !     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)                    **
@@ -3801,9 +3801,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER                 :: MODE
       INTEGER                 :: INFO
       COMPLEX(8)  ,ALLOCATABLE,SAVE :: COMM(:)
-      INTEGER(4)              ,SAVE :: n1PREV=0
-      INTEGER(4)              ,SAVE :: n2pREV=0
-      INTEGER(4)              ,SAVE :: n3PREV=0
+      INTEGER(4)              ,SAVE :: N1PREV=0
+      INTEGER(4)              ,SAVE :: N2PREV=0
+      INTEGER(4)              ,SAVE :: N3PREV=0
       REAL(8)                 ,SAVE :: SCALEFORWARD
       REAL(8)                 ,SAVE :: SCALEBACKWARD
 !     **************************************************************************
@@ -3825,12 +3825,12 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ==========================================================================
 !     == INITIALIZE PLAN                                                      ==
 !     ==========================================================================
-      IF(n1.ne.n1prev.or.n2.ne.n2prev.or.n3.ne.n3prev) THEN
-        IF(n1prev.NE.0) DEALLOCATE(COMM)
+      IF(N1.NE.N1PREV.OR.N2.NE.N2PREV.OR.N3.NE.N3PREV) THEN
+        IF(N1PREV.NE.0) DEALLOCATE(COMM)
         ALLOCATE(COMM(N1*N2*N3+3*(N1+N2+N3)))
-        n1prev=n1
-        n2prev=n2
-        n3prev=n3
+        N1PREV=N1
+        N2PREV=N2
+        N3PREV=N3
         SCALEFORWARD=1.D0/SQRT(REAL(N1*N2*N3,KIND=8))
         SCALEBACKWARD=1.D0/SCALEFORWARD
       END IF
