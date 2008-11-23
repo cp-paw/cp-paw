@@ -1,9 +1,9 @@
-!TODO :
+ !TODO :
 ! DATH IS STILL REAL AND SHOULD PROBABLY BE COMPLEX LIKE DENMAT
-! Denmat and dath are both real, if the calculation is collinear
+! DENMAT AND DATH ARE BOTH REAL, IF THE CALCULATION IS COLLINEAR
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE LDAPLUSU_MODULE
-TYPE THISTYPE
+TYPE THISISP_TYPE
 LOGICAL(4)             :: TINI=.FALSE.
 LOGICAL(4)             :: TON=.FALSE.
 CHARACTER(8)           :: ATOMTYPE=''
@@ -29,152 +29,265 @@ REAL(8)                :: UPAR=0.D0         !U-PARAMETER
 REAL(8)                :: JPAR=0.D0         !J-PARAMETER
 REAL(8)                :: FRATIO42=0.D0     ! RATIO OF SLATER INTEGRALS F4 AND F2
 REAL(8)                :: FRATIO62=0.D0     ! RATIO OF SLATER INTEGRALS F6 AND F2
-!==  INTERMEDIATE STORAGE FROM INITUALIZATION ================================== 
-INTEGER(4)             :: NCHI              !#(LOCAL ORBITALS)
-REAL(8)   ,POINTER     :: CHI(:,:)          !LOCAL (HEAD) ORBITALS
-REAL(8)   ,POINTER     :: ULITTLE(:,:,:,:,:)!SLATER INTEGRALS 
-REAL(8)   ,POINTER     :: DOWNFOLD(:,:)     !MAPS PARTIAL WAVES TO LOCAL ORBITALS
-logical(4)             :: tcv=.false.
-REAL(8)   ,POINTER     :: CVX(:,:)          !CORE VALENCE EXCHANGE 
-END TYPE THISTYPE
-TYPE(THISTYPE),ALLOCATABLE,TARGET :: THISARRAY(:)
-TYPE(THISTYPE),POINTER :: THIS
+LOGICAL(4)             :: TCV=.FALSE.
+END TYPE THISISP_TYPE
+!
+TYPE THIS_TYPE
+TYPE(THISISP_TYPE),POINTER :: SP
+INTEGER(4)                 :: NCHI              !#(LOCAL ORBITALS)
+REAL(8)   ,POINTER         :: CHI(:,:)          !LOCAL (HEAD) ORBITALS
+REAL(8)   ,POINTER         :: ULITTLE(:,:,:,:,:)!SLATER INTEGRALS 
+REAL(8)   ,POINTER         :: DOWNFOLD(:,:)     !MAPS PARTIAL WAVES TO LOCAL ORBITALS
+REAL(8)   ,POINTER         :: CVX(:,:)          !CORE VALENCE EXCHANGE 
+END TYPE THIS_TYPE
+!
+TYPE(THIS_TYPE)   ,ALLOCATABLE,TARGET :: THISARRAY(:)
+TYPE(THISISP_TYPE),ALLOCATABLE,TARGET :: THISISPARRAY(:)
+TYPE(THIS_TYPE)              ,POINTER :: THIS
+TYPE(THISISP_TYPE)           ,POINTER :: THISISP
 LOGICAL(4)             :: TON=.FALSE.
-INTEGER(4)             :: NSP=0    ! #(ATOM TYPES)
-INTEGER(4)             :: ISP=0    ! SELECTED ATOM TYPE
+INTEGER(4)             :: NTHIS=0      ! #(ATOMS)
+INTEGER(4)             :: ITHIS=0      ! SELECTED ATOM 
+INTEGER(4)             :: NTHISISP=0   ! #(ATOM TYPES)
+INTEGER(4)             :: ITHISISP=0   ! SELECTED ATOM TYPE
 CHARACTER(8)           :: DCTYPE='FLL' ! SPECIFIES TYPE OF DOUBLE COUNTING CORRECTION
 END MODULE LDAPLUSU_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU$NEW(NSP_)
+      SUBROUTINE LDAPLUSU$NEW(NSP)
+!     **************************************************************************
 !     **                                                                      **
 !     **  SETS UP THE ARRAYS FOR OPERATION. THIS ROUTINE MUST BE CALLED ONCE  **
 !     **  BEFORE ANY OTHER CALL TO THE LDAPLUSU OBJECT                        **
 !     **                                                                      **
 !     **  ATTENTION: CHANGES THE SETTING OF SETUP OBJECT                      **
 !     **                                                                      **
-      USE LDAPLUSU_MODULE
+!     **************************************************************************
+      USE LDAPLUSU_MODULE, ONLY : NTHISISP,THISISPARRAY
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NSP_    ! #(DIFFERENT ATOM TYPES)
+      INTEGER(4),INTENT(IN) :: NSP    ! #(ATOMS)
+      INTEGER(4)            :: ISP
 !     **************************************************************************
 !
 !     ==========================================================================
 !     == DO NOTHING IF THISARRAY IS ALREADY ALLOCATED                         ==
 !     ==========================================================================
-      IF(NSP.NE.0) THEN
-        IF(NSP_.NE.NSP) THEN
-          CALL ERROR$MSG('LDAPLUSU$NEW CANNOT BE CALLED TWICE')
-          CALL ERROR$STOP('LDAPLUSU$NEW')
-        END IF
-        RETURN
+      IF(NTHISISP.NE.0) THEN
+        CALL ERROR$MSG('LDAPLUSU$NEW CANNOT BE CALLED TWICE')
+        CALL ERROR$STOP('LDAPLUSU$NEW')
       END IF
 !
 !     ==========================================================================
 !     == CREATE THISARRAY                                                     ==
 !     ==========================================================================
-      NSP=NSP_
-      ISP=0
-      ALLOCATE(THISARRAY(NSP))
+      NTHISISP=NSP
+      ALLOCATE(THISISPARRAY(NTHISISP))
       DO ISP=1,NSP
-        ALLOCATE(THISARRAY(ISP)%NORB(1))
-        THISARRAY(ISP)%NORB(:)=0  ! PER DEFAULT CORRELATE NOTHING
+        ALLOCATE(THISISPARRAY(ISP)%NORB(1))
+        THISISPARRAY(ISP)%NORB(:)=0  ! PER DEFAULT CORRELATE NOTHING
       ENDDO
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU$SELECT(ISP_)
+      SUBROUTINE LDAPLUSU$SELECTTYPE(ISP)
+!     **************************************************************************
 !     **                                                                      **
 !     **  SELECT AN ATOM TYPE OR UNSELECT WITH ISP=0                          **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_  ! UNIQUE INDEX OF THE ATOM TYPE
+      INTEGER(4),INTENT(IN) :: ISP  ! ATOM-TYPE INDEX
 !     **************************************************************************
-      ISP=ISP_
-      IF(ISP.GT.NSP) THEN
-        IF(NSP.EQ.0) THEN
-          CALL ERROR$STOP('LDAPLUSU NOT INITIALIZED')
-          CALL ERROR$STOP('LDAPLUSU$SELECT')
-        END IF
-        CALL ERROR$STOP('ISP OUT OF RANGE')
+!
+!     ==========================================================================
+!     == TEST FOR CONFLICTS                                                   ==
+!     ==========================================================================
+      IF(NTHISISP.EQ.0) THEN
+        CALL ERROR$MSG('LDAPLUSU NOT INITIALIZED')
+        CALL ERROR$STOP('LDAPLUSU$SELECTTYPE')
+      END IF
+!
+      IF(ISP.NE.0.AND.ITHISISP.NE.0) THEN
+        CALL ERROR$MSG('CANNOT SELECT ATOM TYPE WHILE ANOTHER ONE IS SELECTED')
+        CALL ERROR$MSG('USE "CALL LDAPLUSU$SELECTTYPE(0)"')
+        CALL ERROR$STOP('LDAPLUSU$SELECTTYPE')
+      END IF
+!
+      IF(ITHIS.NE.0) THEN
+        CALL ERROR$MSG('CANNOT SELECT ATOM TYPE WHILE AN ATOM IS SELECTED')
+        CALL ERROR$MSG('USE "CALL LDAPLUSU$SELECT(0)"')
+        CALL ERROR$STOP('LDAPLUSU$SELECTTYPE')
+      END IF
+!
+!     ==========================================================================
+!     == MAKE SELECTION                                                       ==
+!     ==========================================================================
+      ITHISISP=ISP
+      IF(ITHISISP.GT.NTHISISP) THEN
+        CALL ERROR$MSG('ISP OUT OF RANGE')
+        CALL ERROR$STOP('LDAPLUSU$SELECTTYPE')
+      END IF
+      IF(ITHISISP.EQ.0) THEN
+        NULLIFY(THISISP)
+      ELSE
+        THISISP=>THISISPARRAY(ITHISISP)
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU$SELECT(IAT)
+!     **************************************************************************
+!     **                                                                      **
+!     **  SELECT AN ATOM OR UNSELECT WITH IAT=0                               **
+!     **                                                                      **
+!     **************************************************************************
+      USE LDAPLUSU_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: IAT  ! UNIQUE INDEX OF THE ATOM TYPE
+      INTEGER(4)            :: NAT
+      INTEGER(4)            :: IAT1
+      INTEGER(4)            :: ISP
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == INITIALIZATION                                                       ==
+!     ==========================================================================
+      IF(NTHISISP.EQ.0) THEN
+        CALL ERROR$MSG('LDAPLUSU NOT INITIALIZED')
         CALL ERROR$STOP('LDAPLUSU$SELECT')
       END IF
-      IF(ISP.EQ.0) THEN
+!
+      IF(NTHIS.EQ.0) THEN
+        CALL ATOMLIST$NATOM(NAT)
+        NTHIS=NAT
+        ALLOCATE(THISARRAY(NTHIS))
+        DO IAT1=1,NAT
+          CALL ATOMLIST$GETI4('ISPECIES',IAT1,ISP)
+          THISARRAY(IAT1)%SP=>THISISPARRAY(ISP)
+          THIS=>THISARRAY(IAT1)
+          NULLIFY(THIS%CHI)
+          NULLIFY(THIS%ULITTLE)
+          NULLIFY(THIS%DOWNFOLD)
+          NULLIFY(THIS%CVX)
+        ENDDO
+        ITHIS=0
+      END IF
+!
+!     ==========================================================================
+!     == TEST FOR CONFLICTS                                                   ==
+!     ==========================================================================
+      IF(IAT.NE.0.AND.ITHIS.NE.0) THEN
+        CALL ERROR$MSG('CANNOT SELECT ATOM WHILE ANOTHER ONE IS SELECTED')
+        CALL ERROR$MSG('USE "CALL LDAPLUSU$SELECT(0)"')
+        CALL ERROR$I4VAL('ATOM TO BE SELECTED ',IAT)
+        CALL ERROR$I4VAL('ATOM ALREADY SELECTED ',ITHIS)
+        CALL ERROR$STOP('LDAPLUSU$SELECT')
+      END IF
+!
+      IF(ITHISISP.NE.0) THEN
+        CALL ERROR$MSG('CANNOT SELECT ATOM WHILE AN ATOM TYPE IS SELECTED')
+        CALL ERROR$MSG('USE "CALL LDAPLUSU$SELECTtype(0)"')
+        CALL ERROR$I4VAL('ATOM TO BE SELECTED ',IAT)
+        CALL ERROR$I4VAL('ATOM TYPE SELECTED ',ITHISISP)
+        CALL ERROR$STOP('LDAPLUSU$SELECT')
+      END IF
+!
+!     ==========================================================================
+!     == MAKE SELECTION                                                       ==
+!     ==========================================================================
+      ITHIS=IAT
+      IF(ITHIS.GT.NTHIS) THEN
+        CALL ERROR$MSG('IAT OUT OF RANGE')
+        CALL ERROR$I4VAL('NTHIS',NTHIS)
+        CALL ERROR$I4VAL('IAT',IAT)
+        CALL ERROR$STOP('LDAPLUSU$SELECT')
+      END IF
+      IF(ITHIS.EQ.0) THEN
         NULLIFY(THIS)
       ELSE
-        THIS=>THISARRAY(ISP)
+        THIS=>THISARRAY(ITHIS)
       END IF
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU$SETR8(ID,VAL)
+!     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
 !     **************************************************************************
-      IF(ISP.EQ.0) THEN
+      IF(ITHISISP.EQ.0) THEN
         CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$SETR8')
       END IF
 
       IF(ID.EQ.'UPAR') THEN
-        THIS%UPAR=VAL
-        THIS%USEUPAR=.TRUE.
-        IF(THIS%USEDIEL) THEN
+        THISISP%UPAR=VAL
+        THISISP%USEUPAR=.TRUE.
+        IF(THISISP%USEDIEL) THEN
           CALL ERROR$MSG('DIEL HAS ALREADY BEEN SET')
           CALL ERROR$MSG('UPAR AND DIEL CANNOT BE USED SIMULTANEOUSLY')
           CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$CHVAL('SELECTION (ATOM TYPE INDEX)',ITHISISP)
           CALL ERROR$STOP('LDAPLUSU$SETR8')
         END IF
       ELSE IF(ID.EQ.'JPAR') THEN
-        THIS%JPAR=VAL
-        THIS%USEJPAR=.TRUE.
-        IF(THIS%USEDIEL) THEN
+        THISISP%JPAR=VAL
+        THISISP%USEJPAR=.TRUE.
+        IF(THISISP%USEDIEL) THEN
           CALL ERROR$MSG('DIEL HAS ALREADY BEEN SET')
           CALL ERROR$MSG('JPAR AND DIEL CANNOT BE USED SIMULTANEOUSLY')
           CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$CHVAL('SELECTION (ATOM INDEX)',ITHISISP)
           CALL ERROR$STOP('LDAPLUSU$SETR8')
         END IF
       ELSE IF(ID.EQ.'F4/F2') THEN
-        THIS%FRATIO42=VAL
-        THIS%USEFRATIO42=.TRUE.
-        IF(THIS%USEDIEL) THEN
+        THISISP%FRATIO42=VAL
+        THISISP%USEFRATIO42=.TRUE.
+        IF(THISISP%USEDIEL) THEN
           CALL ERROR$MSG('DIEL HAS ALREADY BEEN SET')
           CALL ERROR$MSG('FRATIO42 AND DIEL CANNOT BE USED SIMULTANEOUSLY')
           CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$CHVAL('SELECTION (ATOM INDEX)',ITHISISP)
           CALL ERROR$STOP('LDAPLUSU$SETR8')
         END IF
       ELSE IF(ID.EQ.'F6/F2') THEN
-        THIS%FRATIO62=VAL
-        THIS%USEFRATIO62=.TRUE.
-        IF(THIS%USEDIEL) THEN
+        THISISP%FRATIO62=VAL
+        THISISP%USEFRATIO62=.TRUE.
+        IF(THISISP%USEDIEL) THEN
           CALL ERROR$MSG('DIEL HAS ALREADY BEEN SET')
           CALL ERROR$MSG('FRATIO62 AND DIEL CANNOT BE USED SIMULTANEOUSLY')
           CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$CHVAL('SELECTION (ATOM INDEX)',ITHISISP)
           CALL ERROR$STOP('LDAPLUSU$SETR8')
         END IF
       ELSE IF(ID.EQ.'DIEL') THEN
-        THIS%DIEL=VAL
-        THIS%USEDIEL=.TRUE.
-        IF(THIS%USEUPAR.OR.THIS%USEJPAR) THEN
+        THISISP%DIEL=VAL
+        THISISP%USEDIEL=.TRUE.
+        IF(THISISP%USEUPAR.OR.THISISP%USEJPAR) THEN
           CALL ERROR$MSG('UPAR OR JPAR HAVE ALREADY BEEN SET')
           CALL ERROR$MSG('DIEL AND UPAR OR JPAR CANNOT BE USED SIMULTANEOUSLY')
           CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$CHVAL('SELECTION (ATOM INDEX)',ITHISISP)
           CALL ERROR$STOP('LDAPLUSU$SETR8')
         END IF
       ELSE IF(ID.EQ.'RCUT') THEN
-        THIS%RCUT=VAL
+        THISISP%RCUT=VAL
       ELSE IF(ID.EQ.'HFWEIGHT') THEN
-        THIS%HFWEIGHT=VAL
+        THISISP%HFWEIGHT=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$CHVAL('SELECTION (ATOM INDEX)',ITHISISP)
         CALL ERROR$STOP('LDAPLUSU$SETR8')
       END IF
       RETURN
@@ -182,21 +295,23 @@ END MODULE LDAPLUSU_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU$GETR8(ID,VAL)
+!     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
 !     **************************************************************************
-      IF(ISP.EQ.0) THEN
+      IF(ITHIS.EQ.0) THEN
         CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$GETR8')
       END IF
 
       IF(ID.EQ.'RCUT') THEN
-        VAL=THIS%RCUT
+        VAL=THIS%SP%RCUT
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -207,8 +322,10 @@ END MODULE LDAPLUSU_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU$SETL4(ID,VAL)
+!     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -220,18 +337,18 @@ END MODULE LDAPLUSU_MODULE
       END IF
 !
 !     ==========================================================================
-!     == set atom specific information                                        ==
+!     == SET ATOM SPECIFIC INFORMATION                                        ==
 !     ==========================================================================
-      IF(ISP.EQ.0) THEN
+      IF(ITHISISP.EQ.0) THEN
         CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$SETR8')
       END IF
 !
       IF(ID.EQ.'ACTIVE') THEN
-        THIS%TON=VAL
+        THISISP%TON=VAL
       ELSE IF(ID.EQ.'COREVALENCEEXCHANGE') THEN
-        this%tcv=val
+        THISISP%TCV=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -242,26 +359,28 @@ END MODULE LDAPLUSU_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU$SETI4A(ID,LENG,VAL)
+!     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LENG
       INTEGER(4)  ,INTENT(IN) :: VAL(LENG)
 !     **************************************************************************
-      IF(ISP.EQ.0) THEN
+      IF(ITHISISP.EQ.0) THEN
         CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$SETI4A')
       END IF
       IF(ID.EQ.'NCORROFL') THEN
-        DEALLOCATE(THISARRAY(ISP)%NORB)
-        ALLOCATE(THISARRAY(ISP)%NORB(LENG))
-        THIS%NORB=VAL
+        DEALLOCATE(THISISP%NORB)
+        ALLOCATE(THISISP%NORB(LENG))
+        THISISP%NORB=VAL
 !
       ELSE IF(ID.EQ.'MAINLN') THEN
-        THIS%MAINLN=VAL
+        THISISP%MAINLN=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -272,8 +391,10 @@ END MODULE LDAPLUSU_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU$GETI4A(ID,LENG,VAL)
+!     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -281,13 +402,13 @@ END MODULE LDAPLUSU_MODULE
       INTEGER(4)  ,INTENT(OUT) :: VAL(LENG)
       INTEGER(4)               :: ISVAR
 !     **************************************************************************
-      IF(ISP.EQ.0) THEN
+      IF(ITHIS.EQ.0) THEN
         CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$SETI4A')
       END IF
       IF(ID.EQ.'NCORROFL') THEN
-        ISVAR=SIZE(THISARRAY(ISP)%NORB)
+        ISVAR=SIZE(THIS%SP%NORB)
         IF(ISVAR.LT.LENG) THEN
           CALL ERROR$MSG('INSUFFICIENT ARRAY LENGTH')
           CALL ERROR$CHVAL('ID',ID)
@@ -296,7 +417,7 @@ END MODULE LDAPLUSU_MODULE
           CALL ERROR$STOP('LDAPLUSU$GETI4A')
         END IF
         VAL(:)=0
-        VAL(1:ISVAR)=THISARRAY(ISP)%NORB
+        VAL(1:ISVAR)=THIS%SP%NORB
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -307,14 +428,16 @@ END MODULE LDAPLUSU_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU$SETCH(ID,VAL)
+!     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(*),INTENT(IN) :: VAL
 !     **************************************************************************
-      IF(ISP.EQ.0) THEN
+      IF(ITHISISP.EQ.0) THEN
         CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$SETCH')
@@ -326,7 +449,7 @@ END MODULE LDAPLUSU_MODULE
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('LDAPLUSU$SETCH')
         END IF
-        THIS%FUNCTIONALID=VAL
+        THISISP%FUNCTIONALID=VAL
       ELSE IF(ID.EQ.'DCTYPE') THEN
         DCTYPE=VAL
       ELSE
@@ -339,72 +462,81 @@ END MODULE LDAPLUSU_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU$REPORT(NFIL)
-!     **                                                                      **
+!     **************************************************************************
 !     **  REPORTS THE SETTINGS OF THE LDAPLUSU OBJECT                         **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       USE CONSTANTS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NFIL
-      TYPE(THISTYPE),POINTER :: THIS1
-      CHARACTER(64)          :: STRING
-      INTEGER(4)             :: L
+      TYPE(THISISP_TYPE),POINTER :: THISISP1
+      CHARACTER(64)          :: STRING,NAME
+      INTEGER(4)             :: L,ISP,IAT,ISP1
       REAL(8)                :: EV
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       CALL REPORT$TITLE(NFIL,'HYBRID FUNCTIONAL')
-      DO ISP=1,NSP
-        THIS1=>THISARRAY(ISP)
-        IF(.NOT.THIS1%TON) CYCLE
+      DO ISP=1,NTHISISP
+        THISISP1=>THISISPARRAY(ISP)
+        IF(.NOT.THISISP1%TON) CYCLE
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETCH('ID',STRING)
-        THISARRAY(ISP)%ATOMTYPE=STRING
+        THISISP1%ATOMTYPE=STRING
         CALL REPORT$CHVAL(NFIL,'ATOM TYPE',TRIM(STRING))
-        CALL REPORT$CHVAL(NFIL,'  FUNCTIONAL TYPE',THIS1%FUNCTIONALID)
-        CALL REPORT$R8VAL(NFIL,'  EXTENT OF LOCAL ORBITALS',THIS1%RCUT,'A_0')
-        CALL REPORT$I4VAL(NFIL,'  MAX. ANG.MOMENTUM OF THE DENSITY',THIS1%LRX,' ')
-        DO L=0,SIZE(THIS1%NORB)-1
-          IF(THIS1%NORB(L+1).EQ.0) CYCLE
+        CALL REPORT$CHVAL(NFIL,'  FUNCTIONAL TYPE',THISISP1%FUNCTIONALID)
+        CALL REPORT$R8VAL(NFIL,'  EXTENT OF LOCAL ORBITALS',THISISP1%RCUT,'A_0')
+        CALL REPORT$I4VAL(NFIL,'  MAX. ANG.MOMENTUM OF THE DENSITY',THISISP1%LRX,' ')
+        DO L=0,SIZE(THISISP1%NORB)-1
+          IF(THISISP1%NORB(L+1).EQ.0) CYCLE
           IF(L.EQ.0) THEN
-            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED S-SHELLS',THIS1%NORB(L+1),' ')
+            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED S-SHELLS',THISISP1%NORB(L+1),' ')
           ELSE IF(L.EQ.1) THEN
-            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED P-SHELLS',THIS1%NORB(L+1),' ')
+            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED P-SHELLS',THISISP1%NORB(L+1),' ')
           ELSE IF(L.EQ.2) THEN
-            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED D-SHELLS',THIS1%NORB(L+1),' ')
+            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED D-SHELLS',THISISP1%NORB(L+1),' ')
           ELSE IF(L.EQ.3) THEN
-            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED F-SHELLS',THIS1%NORB(L+1),' ')
+            CALL REPORT$I4VAL(NFIL,'  NUMBER OF CORRELATED F-SHELLS',THISISP1%NORB(L+1),' ')
           ELSE 
             WRITE(STRING,FMT='("  NUMBER OF CORRELATED SHELLS WITH L=",I2)')L+1
-            CALL REPORT$I4VAL(NFIL,STRING,THIS1%NORB(L+1),' ')
+            CALL REPORT$I4VAL(NFIL,STRING,THISISP1%NORB(L+1),' ')
           END IF
         ENDDO
-        IF(THIS1%FUNCTIONALID.EQ.'HYBRID') THEN
+        IF(THISISP1%FUNCTIONALID.EQ.'HYBRID') THEN
           CALL REPORT$R8VAL(NFIL,'  HARTREE-FOCK CONTRIBUTION' &
-     &                           ,THIS1%HFWEIGHT*100,'PERCENT')
-        ELSE IF(THIS1%FUNCTIONALID.EQ.'LDA+U' &
-     &      .OR.THIS1%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
+     &                           ,THISISP1%HFWEIGHT*100,'PERCENT')
+        ELSE IF(THISISP1%FUNCTIONALID.EQ.'LDA+U' &
+     &      .OR.THISISP1%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
           CALL CONSTANTS('EV',EV)
-          CALL REPORT$R8VAL(NFIL,'  U-PARAMETER',THIS1%UPAR/EV,'EV')
-          CALL REPORT$R8VAL(NFIL,'  J-PARAMETER',THIS1%JPAR/EV,'EV')
-          CALL REPORT$R8VAL(NFIL,'  F4/F2',THIS1%FRATIO42,'')
-          CALL REPORT$R8VAL(NFIL,'  F6/F2',THIS1%FRATIO62,'')
+          CALL REPORT$R8VAL(NFIL,'  U-PARAMETER',THISISP1%UPAR/EV,'EV')
+          CALL REPORT$R8VAL(NFIL,'  J-PARAMETER',THISISP1%JPAR/EV,'EV')
+          CALL REPORT$R8VAL(NFIL,'  F4/F2',THISISP1%FRATIO42,'')
+          CALL REPORT$R8VAL(NFIL,'  F6/F2',THISISP1%FRATIO62,'')
           CALL REPORT$CHVAL(NFIL,'  DOUBLE COUNTING TYPE',DCTYPE)
         END IF
+        DO IAT=1,NTHIS
+          CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP1)
+          IF(ISP1.NE.ISP) CYCLE
+          CALL ATOMLIST$GETCH('NAME',IAT,NAME)
+          CALL REPORT$CHVAL(NFIL,'ATOM',TRIM(NAME))
+        ENDDO
       ENDDO
+      NULLIFY(THISISP1)
       RETURN
       END SUBROUTINE LDAPLUSU$REPORT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU$ETOT(ISP_,LMNXX,NDIMD,DENMAT,ETOT,DATH_)
-!     **                                                                      **
+      SUBROUTINE LDAPLUSU$ETOT(IAT,LMNXX,NDIMD,DENMAT,ETOT,DATH_)
+!     **************************************************************************
 !     **  THIS IS THE MAIN DRIVER ROUTINE FOR THE LDA+U CORRECTION            **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: ISP_
+      INTEGER(4),INTENT(IN)  :: IAT     ! ATOM INDEX
       INTEGER(4),INTENT(IN)  :: LMNXX
       INTEGER(4),INTENT(IN)  :: NDIMD
-      COMPLEX(8),INTENT(IN)  :: DENMAT(LMNXX,LMNXX,NDIMD)
+      COMPLEX(8),INTENT(IN)  :: DENMAT(LMNXX,LMNXX,NDIMD)  ! DENSITY MATRIX
       REAL(8)   ,INTENT(OUT) :: ETOT
       REAL(8)   ,INTENT(OUT) :: DATH_(LMNXX,LMNXX,NDIMD)
       CHARACTER(8),PARAMETER :: CHITYPE='FROMPHI'
@@ -425,77 +557,90 @@ END MODULE LDAPLUSU_MODULE
       COMPLEX(8),ALLOCATABLE :: HAM(:,:,:,:)
       COMPLEX(8),ALLOCATABLE :: HAM1(:,:,:,:)
       COMPLEX(8),ALLOCATABLE :: MATSS(:,:,:,:)
-      real(8)   ,ALLOCATABLE :: aecore(:)
+      REAL(8)   ,ALLOCATABLE :: AECORE(:)
       INTEGER(4)             :: IS1,IS2,I,LN,M
+      INTEGER(4)             :: ISP        ! ATOM-TYPE INDEX
       REAL(8)                :: SVAR,ETOT1
 INTEGER(4)             :: LN1,LN2,LN3,LN4
-      logical(4),parameter   :: tci=.false.
+      LOGICAL(4),PARAMETER   :: TCI=.FALSE.
+      logical(4)             :: tchk
 !     **************************************************************************
       ETOT=0.D0
       DATH_=0.D0
       IF(.NOT.TON) RETURN
-      CALL LDAPLUSU$SELECT(ISP_)
-      IF(.NOT.THIS%TON) RETURN
+      CALL LDAPLUSU$SELECT(IAT)
+      tchk=this%sp%ton
+      IF(.NOT.Tchk) then
+        CALL LDAPLUSU$SELECT(0)  ! unselecting is required
+        RETURN
+      end if
+      CALL SETUP$GETL4('INTERNALSETUPS',TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('THE LDAPLUSU-OBJECT ONLY WORKS WITH INTERNAL SETUPS')
+        CALL ERROR$MSG('THIS AFFECTS LDA+U, HYBRID FUNCTIONALS AND LDA+CI')
+        CALL ERROR$STOP('LDAPLUSU.ETOT')
+      END IF
                             CALL TRACE$PUSH('LDAPLUSU$ETOT')
 !      
 !     ==========================================================================
 !     ==  CONSTRUCT LOCAL ORBITALS                                            ==
 !     ==========================================================================
-      IF(.NOT.THIS%TINI) THEN
-        CALL SETUP$LMRX(ISP_,LMRX)
-        THIS%LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
-        LRX=THIS%LRX
+      CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+      CALL SETUP$ISELECT(ISP)
+      IF(.NOT.THIS%SP%TINI) THEN
+        CALL SETUP$GETI4('LMRX',LMRX)
+        THIS%SP%LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
+        LRX=THIS%SP%LRX
 !
         CALL LDAPLUSU_CHIFROMPHI()
-PRINT*,'TINI ',THIS%TINI
-PRINT*,'TON ',THIS%TON
-PRINT*,'LNXCHI ',THIS%LNXCHI
-PRINT*,'NR     ',THIS%NR
-PRINT*,'LOXCHI ',THIS%LOXCHI
-PRINT*,'NORB   ',THIS%NORB
+PRINT*,'TINI ',THIS%SP%TINI
+PRINT*,'TON ',THIS%SP%TON
+PRINT*,'LNXCHI ',THIS%SP%LNXCHI
+PRINT*,'NR     ',THIS%SP%NR
+PRINT*,'LOXCHI ',THIS%SP%LOXCHI
+PRINT*,'NORB   ',THIS%SP%NORB
 PRINT*,'NCHI   ',THIS%NCHI
-PRINT*,'DIEL   ',THIS%DIEL
-PRINT*,'UPAR   ',THIS%UPAR
-PRINT*,'JPAR   ',THIS%JPAR
+PRINT*,'DIEL   ',THIS%SP%DIEL
+PRINT*,'UPAR   ',THIS%SP%UPAR
+PRINT*,'JPAR   ',THIS%SP%JPAR
 !       ========================================================================
 !       ==  CALCULATE SMALL U-TENSOR                                          ==
 !       ========================================================================
-        GID=THIS%GID
-        NR=THIS%NR
-        LNX=THIS%LNXCHI
+        GID=THIS%SP%GID
+        NR=THIS%SP%NR
+        LNX=THIS%SP%LNXCHI
         ALLOCATE(LOX(LNX))
-        LOX=THIS%LOXCHI
+        LOX=THIS%SP%LOXCHI
         NCHI=THIS%NCHI
         ALLOCATE(THIS%ULITTLE(LRX+1,LNX,LNX,LNX,LNX))
         CALL LDAPLUSU_ULITTLE(GID,NR,LRX,LNX,LOX,THIS%CHI,THIS%ULITTLE)
-        IF(THIS%USEDIEL.AND.(THIS%USEUPAR.OR.THIS%USEJPAR)) THEN
+        IF(THIS%SP%USEDIEL.AND.(THIS%SP%USEUPAR.OR.THIS%SP%USEJPAR)) THEN
           CALL ERROR$MSG('DIEL AND (UPAR.OR.JPAR) ARE INCOMPATIBLE')
-          CALL ERROR$L4VAL('USEDIEL',THIS%USEDIEL)
-          CALL ERROR$L4VAL('USEUPAR',THIS%USEUPAR)
-          CALL ERROR$L4VAL('USEJPAR',THIS%USEJPAR)
+          CALL ERROR$L4VAL('USEDIEL',THIS%SP%USEDIEL)
+          CALL ERROR$L4VAL('USEUPAR',THIS%SP%USEUPAR)
+          CALL ERROR$L4VAL('USEJPAR',THIS%SP%USEJPAR)
           CALL ERROR$STOP('LDAPLUSU$ETOT')
         END IF
-        IF(THIS%USEDIEL) THEN
-          THIS%ULITTLE=THIS%ULITTLE/THIS%DIEL
-        ELSE IF(THIS%USEUPAR.OR.THIS%USEJPAR) THEN
+        IF(THIS%SP%USEDIEL) THEN
+          THIS%ULITTLE=THIS%ULITTLE/THIS%SP%DIEL
+        ELSE IF(THIS%SP%USEUPAR.OR.THIS%SP%USEJPAR) THEN
           CALL LDAPLUSU_MODULITTLEWITHPARMS(LNX,LOX,LRX &
-     &         ,THIS%USEUPAR,THIS%UPAR,THIS%USEJPAR,THIS%JPAR &
-     &         ,THIS%USEFRATIO42,THIS%FRATIO42,THIS%USEFRATIO62,THIS%FRATIO62 &
-     &         ,THIS%MAINLN,THIS%ULITTLE)
+     &         ,THIS%SP%USEUPAR,THIS%SP%UPAR,THIS%SP%USEJPAR,THIS%SP%JPAR &
+     &         ,THIS%SP%USEFRATIO42,THIS%SP%FRATIO42,THIS%SP%USEFRATIO62,THIS%SP%FRATIO62 &
+     &         ,THIS%SP%MAINLN,THIS%ULITTLE)
         END IF
       ELSE
-        GID=THIS%GID
-        NR=THIS%NR
-        LRX=THIS%LRX
-        LNX=THIS%LNXCHI
+        GID=THIS%SP%GID
+        NR=THIS%SP%NR
+        LRX=THIS%SP%LRX
+        LNX=THIS%SP%LNXCHI
         ALLOCATE(LOX(LNX))
-        LOX=THIS%LOXCHI
+        LOX=THIS%SP%LOXCHI
         NCHI=THIS%NCHI
       END IF
-      CALL SETUP$ISELECT(ISP)
-      CALL SETUP$LNX(ISP,LNXPHI)
+      CALL SETUP$GETI4('LNX',LNXPHI)
       ALLOCATE(LOXPHI(LNXPHI))
-      CALL SETUP$LOFLN(ISP,LNXPHI,LOXPHI)
+      CALL SETUP$GETI4A('LOX',LNXPHI,LOXPHI)
       NPHI=SUM(2*LOXPHI+1)
 !
 !     ==========================================================================
@@ -511,7 +656,7 @@ PRINT*,'JPAR   ',THIS%JPAR
 !     == TRANSFORM FROM TOTAL/SPIN TO UP/DOWN REPRESENTATION ===================
       CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
 !
-      IF(THIS%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
+      IF(THIS%SP%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
         CALL LDAPLUSU_DENMATFLAPW('FORWARD',NPHI,MATSS,NCHI,RHO)
       ELSE
 !       == TRANSFORM FROM PARTIAL WAVES PHI TO LOCAL ORBITALS CHI ================
@@ -547,7 +692,7 @@ DO IS1=1,2
       DO M=1,2*LOX(LN)+1
         I=I+1
         WRITE(*,FMT='("RE",I3,100F8.3)')LOX(LN),REAL(RHO(I,:,IS1,IS2))
-        WRITE(*,FMT='("IM",I3,100F8.3)')LOX(LN),Aimag(RHO(I,:,IS1,IS2))
+        WRITE(*,FMT='("IM",I3,100F8.3)')LOX(LN),AIMAG(RHO(I,:,IS1,IS2))
       ENDDO
     ENDDO
   ENDDO
@@ -589,53 +734,54 @@ PRINT*,'E(U) ',ETOT
 !     ==========================================================================
 !     ==  CORE VALENCE EXCHANGE INTERACTION                                   ==
 !     ==========================================================================
-      if(this%tcv) then
+      IF(THIS%SP%TCV) THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
         CALL LDAPLUSU_CVX(NCHI,LNX,LOX,RHO,THIS%CVX,ETOT1,HAM1)
 PRINT*,'ETOT FROM CORE VALENCE EXCHANGE ',ETOT1
         ETOT=ETOT+ETOT1
         HAM=HAM+HAM1
         DEALLOCATE(HAM1)
-      end if
+      END IF
 !
 !     ==========================================================================
 !     ==  DOUBLE COUNTING CORRECTION                                          ==
 !     ==========================================================================
-      IF(THIS%FUNCTIONALID.EQ.'LDA+U'.OR.THIS%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
+      IF(THIS%SP%FUNCTIONALID.EQ.'LDA+U'.OR.THIS%SP%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
         CALL LDAPLUSU_DCLDAPLUSU(DCTYPE,LNX,LOX,NCHI,U,RHO,ETOT1,HAM1)
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
         DEALLOCATE(HAM1)
 !
-      ELSE IF(THIS%FUNCTIONALID.EQ.'HYBRID') THEN
-        CALL SETUP$ISELECT(ISP_)
+      ELSE IF(THIS%SP%FUNCTIONALID.EQ.'HYBRID') THEN
+        CALL SETUP$ISELECT(ISP)
         ALLOCATE(AECORE(NR))
-        IF(THIS%TCV) THEN
+        IF(THIS%SP%TCV) THEN
           CALL SETUP$GETR8A('AECORE',NR,AECORE)
         ELSE
           AECORE(:)=0.D0
         END IF
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
+PRINT*,'NCHI ',NCHI
         CALL LDAPLUSU_EDFT(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,AECORE,RHO,ETOT1,HAM1)
 PRINT*,'E(DC) ',ETOT1
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
         DEALLOCATE(HAM1)
-        deallocate(aecore)
+        DEALLOCATE(AECORE)
 !       == SCALE CORRECTION WITH 0.25 ACCORDING TO PBE0
-        ETOT=ETOT*THIS%HFWEIGHT
-        HAM=HAM*THIS%HFWEIGHT
+        ETOT=ETOT*THIS%SP%HFWEIGHT
+        HAM=HAM*THIS%SP%HFWEIGHT
       ELSE
         CALL ERROR$MSG('FUNCTIONALID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('FUNCTIONALID',THIS%FUNCTIONALID)
+        CALL ERROR$CHVAL('FUNCTIONALID',THIS%SP%FUNCTIONALID)
         CALL ERROR$STOP('LDAPLUSU$ETOT')
       END IF
 !
 !     ==========================================================================
 !     ==  UPFOLD                                                              ==
 !     ==========================================================================
-      IF(THIS%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
+      IF(THIS%SP%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
         CALL LDAPLUSU_DENMATFLAPW('BACK',NPHI,MATSS,NCHI,HAM)
       ELSE
 !       == TRANSFORM FROM CHI TO PHI =============================================
@@ -679,10 +825,12 @@ PRINT*,'E(DC) ',ETOT1
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_CHIFROMPHI()
+!     **************************************************************************
 !     **                                                                      **
 !     **  DEFINES TRANSFORMATION FROM PARTIAL WAVES TO LOCAL ORBITALS.        **
 !     **  THE RESULT IS STORED WITHOUT MAGNETIC QUANTUM NUMBERS.              **
 !     **                                                                      **
+!     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
       REAL(8)               :: RCUT
@@ -690,6 +838,7 @@ PRINT*,'E(DC) ',ETOT1
       INTEGER(4)            :: NR
       INTEGER(4)            :: LNX
       INTEGER(4),ALLOCATABLE:: LOX(:)
+      INTEGER(4),ALLOCATABLE:: ISCATT(:)
       REAL(8)   ,ALLOCATABLE:: PHI(:,:)
       INTEGER(4)            :: LNXCHI 
       INTEGER(4),ALLOCATABLE:: LOXCHI(:)
@@ -699,60 +848,80 @@ PRINT*,'E(DC) ',ETOT1
       REAL(8)   ,ALLOCATABLE:: R(:)        
       REAL(8)               :: SVAR1,SVAR2
       INTEGER(4)            :: IR
+      INTEGER(4)            :: IAT
       INTEGER(4)            :: NX,N,LX,L,LN,LNCHI,LN0,NOFL,ISVAR
       INTEGER(4)            :: N1,N2,LN1,LN2,L1,L2
       INTEGER(4)            :: NORB(4)
       REAL(8)   ,ALLOCATABLE:: AMAT(:,:),BMAT(:,:)
+      LOGICAL(4),ALLOCATABLE:: TORB(:)
 !     **************************************************************************
                             CALL TRACE$PUSH('LDAPLUSU_CHIFROMPHI')
-      CALL SETUP$ISELECT(ISP)
+!     == SETUP IS STILL SELECTED BY PARENT ROUTINE =============================
       CALL SETUP$GETI4('GID',GID)
-      THIS%GID=GID
+      THIS%SP%GID=GID
       CALL RADIAL$GETI4(GID,'NR',NR)
-      THIS%NR=NR
+      THIS%SP%NR=NR
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R)
-      CALL SETUP$LNX(ISP,LNX)
+      CALL SETUP$GETI4('LNX',LNX)
+      ALLOCATE(LOX(LNX))
+      CALL SETUP$GETI4A('LOX',LNX,LOX)
       ALLOCATE(PHI(NR,LNX))
-      CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,PHI)
+      CALL SETUP$GETR8A('AEPHI',NR*LNX,PHI)
 
-!     == COLLECT INFORMATION ON LOCAL ORBITALS =================================
-      CALL SETUP$SETR8('RADCHI',THIS%RCUT)      
-      ISVAR=MIN(4,SIZE(THIS%NORB))
-      NORB(:)=0
-      NORB(:ISVAR)=THIS%NORB(:ISVAR)
-      CALL SETUP$SETI4A('NOFLCHI',4,NORB)
-      CALL SETUP$GETI4('LNXCHI',LNXCHI)      
-      THIS%LNXCHI=LNXCHI
-!     == LOXCHI ============
-      ALLOCATE(LOXCHI(LNXCHI))
-      CALL SETUP$GETI4A('LOXCHI',LNXCHI,LOXCHI)      
-      ALLOCATE(THIS%LOXCHI(LNXCHI))
-      THIS%LOXCHI=LOXCHI
-      THIS%NCHI=SUM(2*LOXCHI(1:LNXCHI)+1)
-      DEALLOCATE(LOXCHI)
-!
-      ALLOCATE(AMAT(LNX,LNXCHI))
-      ALLOCATE(BMAT(LNXCHI,LNX))
-      CALL SETUP$GETR8A('AMATCHI',LNX*LNXCHI,AMAT)
-      CALL SETUP$GETR8A('BMATCHI',LNXCHI*LNX,BMAT)
-!
-!     == CONSTRUCT LOCAL ORBITALS ================================================
-      IF(ASSOCIATED(THIS%CHI))DEALLOCATE(THIS%CHI)
-      ALLOCATE(THIS%CHI(NR,LNXCHI))
-      THIS%CHI(:,:)=0.D0
-      DO LN1=1,LNXCHI
-        DO LN2=1,LNX
-          THIS%CHI(:,LN1)=THIS%CHI(:,LN1)+PHI(:,LN2)*AMAT(LN2,LN1)
+!     == COLLECT THE SELECTOR OF LOCAL ORBITALS =================================
+      ALLOCATE(TORB(LNX))
+      IF(SIZE(THIS%SP%NORB).LT.MAXVAL(LOX)+1) THEN
+        CALL ERROR$MSG('CONFLICT OF ARRAY DIMENSIONS')
+        CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
+      END IF
+      DO L=0,MAXVAL(LOX)
+        ISVAR=THIS%SP%NORB(L+1)
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          TORB(LN)=ISVAR.GT.0
+          ISVAR=ISVAR-1
         ENDDO
       ENDDO
-      DO IR=1,NR
-        IF(R(IR).LT.THIS%RCUT) CYCLE
-        THIS%CHI(IR:,:)=0.D0
+!
+!     == CHECK CONSISTENCY WITH ISCATT =========================================
+      ALLOCATE(ISCATT(LNX))
+      CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
+      DO LN=1,LNX
+        IF(TORB(LN).AND.ISCATT(LN).GT.0) THEN
+          CALL ERROR$MSG('SCATTERING STATES MUST NOT AMONG CORRELATED ORBITALS')
+          CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
+        END IF
       ENDDO
 !
-!     == DETERMINE CORE-VALENCE EXCHANGE =========================================
-      IF(THIS%TCV) THEN
+      LNXCHI=0
+      DO LN=1,LNX
+        IF(TORB(LN))LNXCHI=LNXCHI+1
+      ENDDO
+      THIS%SP%LNXCHI=LNXCHI
+      ALLOCATE(LOXCHI(LNXCHI))
+      LNCHI=0
+      DO LN=1,LNX
+        IF(.NOT.TORB(LN))CYCLE
+        LNCHI=LNCHI+1
+        LOXCHI(LNCHI)=LOX(LN)
+      ENDDO
+      ALLOCATE(THIS%SP%LOXCHI(LNXCHI))
+      THIS%SP%LOXCHI=LOXCHI
+      THIS%NCHI=SUM(2*LOXCHI(1:LNXCHI)+1)
+      DEALLOCATE(LOXCHI)
+      ALLOCATE(AMAT(LNX,LNXCHI))
+      ALLOCATE(BMAT(LNXCHI,LNX))
+      IAT=ITHIS
+      CALL LMTO$DOLOCORB(IAT,LNXCHI,LNX,TORB,AMAT,BMAT)
+!
+!     == CONSTRUCT LOCAL ORBITALS ===============================================
+      IF(ASSOCIATED(THIS%CHI))DEALLOCATE(THIS%CHI)
+      ALLOCATE(THIS%CHI(NR,LNXCHI))
+      THIS%CHI=MATMUL(PHI,AMAT) 
+!
+!     == DETERMINE CORE-VALENCE EXCHANGE ========================================
+      IF(THIS%SP%TCV) THEN
         IF(ASSOCIATED(THIS%CVX))DEALLOCATE(THIS%CVX)
         ALLOCATE(THIS%CVX(LNXCHI,LNXCHI))
         ALLOCATE(MAT(LNX,LNX))
@@ -763,7 +932,7 @@ PRINT*,'E(DC) ',ETOT1
         NULLIFY(THIS%CVX)
       END IF
 !
-!     == STORE DOWNFOLD MATRIX ===================================================
+!     == STORE DOWNFOLD MATRIX ==================================================
       IF(ASSOCIATED(THIS%DOWNFOLD))DEALLOCATE(THIS%DOWNFOLD)
       ALLOCATE(THIS%DOWNFOLD(LNXCHI,LNX))
       DO LN=1,LNXCHI
@@ -1412,10 +1581,10 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       END
 !!$!
 !!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE LDAPLUSU_INTERACTION_truehf(NORB,U,RHO,ETOT,HAM)
+!!$      SUBROUTINE LDAPLUSU_INTERACTION_TRUEHF(NORB,U,RHO,ETOT,HAM)
 !!$!     **                                                                      **
-! this was an attempt to determine the interactrion energy from a 
-! uncorrelated multideterminant wavefuntion. It is unfinished!!!!
+! THIS WAS AN ATTEMPT TO DETERMINE THE INTERACTRION ENERGY FROM A 
+! UNCORRELATED MULTIDETERMINANT WAVEFUNTION. IT IS UNFINISHED!!!!
 !!$!     ** CALCULATES THE HARTREE AND EXCHANGE ENERGY FROM THE U-TENSOR U       **
 !!$!     ** AND THE DENSITY MATRIX RHO.                                          **
 !!$!     **                                                                      **
@@ -1436,11 +1605,11 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !!$!     ==========================================================================
 !!$!     == DIAGONALIZE DENSITY MATRIX                                           ==
 !!$!     ==========================================================================
-!!$      denmat(1:norb,1:norb)=rho(:,:,1,1)
-!!$      denmat(1:norb,norb+1:2*norb)=rho(:,:,1,2)
-!!$      denmat(norb+1:2*norb,1:norb)=rho(:,:,2,1)
-!!$      denmat(norb+1:2*norb,norb+1:2*norb)=rho(:,:,2,2)
-!!$      CALL LIB$DIAGC8(2*norb,denmat,EIG,UT)
+!!$      DENMAT(1:NORB,1:NORB)=RHO(:,:,1,1)
+!!$      DENMAT(1:NORB,NORB+1:2*NORB)=RHO(:,:,1,2)
+!!$      DENMAT(NORB+1:2*NORB,1:NORB)=RHO(:,:,2,1)
+!!$      DENMAT(NORB+1:2*NORB,NORB+1:2*NORB)=RHO(:,:,2,2)
+!!$      CALL LIB$DIAGC8(2*NORB,DENMAT,EIG,UT)
 !!$      DO I=1,NCHI
 !!$        FN(I)=EIG(NCHI+1-I)
 !!$      ENDDO
@@ -1448,84 +1617,84 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !!$      FN(0)=1.D0
 !!$!
 !!$!     ==========================================================================
-!!$!     == two particle density                                                 ==
+!!$!     == TWO PARTICLE DENSITY                                                 ==
 !!$!     ==========================================================================
-!!$      rho2(:,:,:,:)=0.d0
-!!$      do n=1,2*norb
-!!$        do m=1,2*norb
-!!$          weight=min(fn(n),fn(m))-fn(n)*fm(m)
-!!$          if(abs(weight).lt.1.d-7) cycle
-!!$          do i=1,2*norb
-!!$            isi=1+mod(i-1,norb)
-!!$            do k=1,2*norb
-!!$              isk=1+mod(k-1,norb)
-!!$              csvar1=weight*ut(k,n)*ut(i,n)
-!!$              do j=1,2*norb
-!!$                isj=1+mod(j-1,norb)
-!!$                do l=1,2*norb
-!!$                  isl=1+mod(l-1,norb)
-!!$                  rho2(i,j,k,l)=u(i,j,k,l)+csvar*ut(l,m)*ut(j,m)
-!!$                enddo
-!!$              enddo
-!!$            enddo
-!!$          enddo
-!!$        enddo
-!!$      enddo
+!!$      RHO2(:,:,:,:)=0.D0
+!!$      DO N=1,2*NORB
+!!$        DO M=1,2*NORB
+!!$          WEIGHT=MIN(FN(N),FN(M))-FN(N)*FM(M)
+!!$          IF(ABS(WEIGHT).LT.1.D-7) CYCLE
+!!$          DO I=1,2*NORB
+!!$            ISI=1+MOD(I-1,NORB)
+!!$            DO K=1,2*NORB
+!!$              ISK=1+MOD(K-1,NORB)
+!!$              CSVAR1=WEIGHT*UT(K,N)*UT(I,N)
+!!$              DO J=1,2*NORB
+!!$                ISJ=1+MOD(J-1,NORB)
+!!$                DO L=1,2*NORB
+!!$                  ISL=1+MOD(L-1,NORB)
+!!$                  RHO2(I,J,K,L)=U(I,J,K,L)+CSVAR*UT(L,M)*UT(J,M)
+!!$                ENDDO
+!!$              ENDDO
+!!$            ENDDO
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
 !!$!
 !!$!     ==========================================================================
-!!$!     ==  correction to the interaction energy                                ==
+!!$!     ==  CORRECTION TO THE INTERACTION ENERGY                                ==
 !!$!     ==========================================================================
 !!$      ETOT=0.D0
-!!$      HAMmat(:,:)=(0.D0,0.d0)
-!!$      DO i=1,NORB
-!!$        DO j=1,NORB
+!!$      HAMMAT(:,:)=(0.D0,0.D0)
+!!$      DO I=1,NORB
+!!$        DO J=1,NORB
 !!$          EBLOCK=0.D0
-!!$          DO k=1,NORB
-!!$            DO l=1,NORB
-!!$              du=U(I,J,K,L)-u(i,j,l,k)
-!!$              do is1=0,1
-!!$                do is2=0,1
-!!$                  i1=i+norb*is1
-!!$                  i2=j+norb*is2
-!!$                  i3=k+norb*is2
-!!$                  i4=l+norb*is1
-!!$                  etot=etot+du*rho2(i1,i2,i3,i4)
-!!$                  ham2(i1,i2,i3,i4)=ham2(i1,i2,i3,i4)+du
-!!$                enddo
-!!$              enddo
-!!$            enddo
-!!$          enddo
-!!$        enddo
-!!$      enddo
+!!$          DO K=1,NORB
+!!$            DO L=1,NORB
+!!$              DU=U(I,J,K,L)-U(I,J,L,K)
+!!$              DO IS1=0,1
+!!$                DO IS2=0,1
+!!$                  I1=I+NORB*IS1
+!!$                  I2=J+NORB*IS2
+!!$                  I3=K+NORB*IS2
+!!$                  I4=L+NORB*IS1
+!!$                  ETOT=ETOT+DU*RHO2(I1,I2,I3,I4)
+!!$                  HAM2(I1,I2,I3,I4)=HAM2(I1,I2,I3,I4)+DU
+!!$                ENDDO
+!!$              ENDDO
+!!$            ENDDO
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
 !!$!
 !!$!     ==========================================================================
-!!$!     ==  transform to derivatives fo occupations ane eigenvectors            ==
+!!$!     ==  TRANSFORM TO DERIVATIVES FO OCCUPATIONS ANE EIGENVECTORS            ==
 !!$!     ==========================================================================
-!!$      rho2(:,:,:,:)=0.d0
-!!$      do n=1,2*norb
-!!$        do m=1,2*norb
-!!$          weight=min(fn(n),fn(m))-fn(n)*fm(m)
-!!$          if(abs(weight).lt.1.d-7) cycle
-!!$          do i=1,2*norb
-!!$            isi=1+mod(i-1,norb)
-!!$            do k=1,2*norb
-!!$              isk=1+mod(k-1,norb)
-!!$              csvar1=weight*ut(k,n)*ut(i,n)
-!!$              do j=1,2*norb
-!!$                isj=1+mod(j-1,norb)
-!!$                do l=1,2*norb
-!!$                  isl=1+mod(l-1,norb)
-!!$                  rho2(i,j,k,l)=u(i,j,k,l)+csvar*ut(l,m)*ut(j,m)
-!!$!----                  dedf(n)
-!!$                enddo
-!!$              enddo
-!!$            enddo
-!!$          enddo
-!!$        enddo
-!!$      enddo
+!!$      RHO2(:,:,:,:)=0.D0
+!!$      DO N=1,2*NORB
+!!$        DO M=1,2*NORB
+!!$          WEIGHT=MIN(FN(N),FN(M))-FN(N)*FM(M)
+!!$          IF(ABS(WEIGHT).LT.1.D-7) CYCLE
+!!$          DO I=1,2*NORB
+!!$            ISI=1+MOD(I-1,NORB)
+!!$            DO K=1,2*NORB
+!!$              ISK=1+MOD(K-1,NORB)
+!!$              CSVAR1=WEIGHT*UT(K,N)*UT(I,N)
+!!$              DO J=1,2*NORB
+!!$                ISJ=1+MOD(J-1,NORB)
+!!$                DO L=1,2*NORB
+!!$                  ISL=1+MOD(L-1,NORB)
+!!$                  RHO2(I,J,K,L)=U(I,J,K,L)+CSVAR*UT(L,M)*UT(J,M)
+!!$!----                  DEDF(N)
+!!$                ENDDO
+!!$              ENDDO
+!!$            ENDDO
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
 !!$!
 !!$!     ==========================================================================
-!!$!     ==  transform two-particle Hamiltonian into a one-particle Hamiltonian  ==
+!!$!     ==  TRANSFORM TWO-PARTICLE HAMILTONIAN INTO A ONE-PARTICLE HAMILTONIAN  ==
 !!$!     ==========================================================================
 !!$                            CALL TRACE$POP()
 !!$      RETURN
@@ -1577,7 +1746,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU_EDFT(GID,NR,LMNX,LNX,LOX,CHI,LRX,aecore,DENMAT,ETOT,HAM)
+      SUBROUTINE LDAPLUSU_EDFT(GID,NR,LMNX,LNX,LOX,CHI,LRX,AECORE,DENMAT,ETOT,HAM)
 !     **                                                                      **
 !     ** DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                 **
 !     **                                                                      **
@@ -1589,7 +1758,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)  ,INTENT(IN) :: LNX        ! #(RADIAL FUNCTIONS)
       INTEGER(4)  ,INTENT(IN) :: LOX(LNX)   ! MAIN ANGULAR MOMENTUM OF LOCAL ORB.
       REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)
-      REAL(8)     ,INTENT(IN) :: aecore(NR)
+      REAL(8)     ,INTENT(IN) :: AECORE(NR)
       COMPLEX(8)  ,INTENT(IN) :: DENMAT(LMNX,LMNX,2,2) ! DENSITY MATRIX
       REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
       COMPLEX(8)  ,INTENT(OUT):: HAM(LMNX,LMNX,2,2)  ! DETOT/D(RHO^*)        
@@ -1597,7 +1766,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       COMPLEX(8)              :: HAM1(LMNX,LMNX,4)
       REAL(8)                 :: R(NR)
       REAL(8)     ,ALLOCATABLE:: RHO(:,:,:)
-      REAL(8)     ,ALLOCATABLE:: RHOwc(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: RHOWC(:,:,:)
       REAL(8)     ,ALLOCATABLE:: POT(:,:,:)
       REAL(8)                 :: EDENSITY(NR)
       REAL(8)                 :: AUX(NR),SVAR
@@ -1605,7 +1774,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)              :: IDIM,LM
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)  ,PARAMETER  :: NDIMD=4
-      real(8)                 :: etotc,etotv
+      REAL(8)                 :: ETOTC,ETOTV
 INTEGER(4) :: LMRX1,IR
 INTEGER(4) :: IMETHOD
  REAL(8)     ,ALLOCATABLE:: RHOTEST(:,:,:)
@@ -1633,9 +1802,9 @@ INTEGER(4) :: IMETHOD
         CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
      &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHO(:,:,IDIM))
       ENDDO
-      ALLOCATE(RHOwc(NR,LMRX,NDIMD))  !with core
-      rhowc=rho
-      rhowc(:,1,1)=rho(:,1,1)+aecore(:)
+      ALLOCATE(RHOWC(NR,LMRX,NDIMD))  !WITH CORE
+      RHOWC=RHO
+      RHOWC(:,1,1)=RHO(:,1,1)+AECORE(:)
 !
 !     ==========================================================================
 !     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
@@ -1657,10 +1826,10 @@ INTEGER(4) :: IMETHOD
       ALLOCATE(POT(NR,LMRX,NDIMD))
       CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,ETOTC,POT)
       CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTV,POT)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOwc,ETOT,POT)
-print*,'core-valence exchange energy (local) ',etot-etotV-etotc
-print*,'valence      exchange energy (local) ',etotV
-print*,'core         exchange energy (local) ',etotC
+      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC,ETOT,POT)
+PRINT*,'CORE-VALENCE EXCHANGE ENERGY (LOCAL) ',ETOT-ETOTV-ETOTC
+PRINT*,'VALENCE      EXCHANGE ENERGY (LOCAL) ',ETOTV
+PRINT*,'CORE         EXCHANGE ENERGY (LOCAL) ',ETOTC
       ETOT=ETOT-ETOTC
 
 IMETHOD=0
@@ -1703,8 +1872,8 @@ PRINT*,'EXC ',ETOT
 !
 !     ==========================================================================
 !     == HARTREE ENERGY AND POTENTIAL ==========================================
-!     == core contribution is not included because it is not represented in   ==
-!     == the u-tensor and only the exchange part of the core-valence is included
+!     == CORE CONTRIBUTION IS NOT INCLUDED BECAUSE IT IS NOT REPRESENTED IN   ==
+!     == THE U-TENSOR AND ONLY THE EXCHANGE PART OF THE CORE-VALENCE IS INCLUDED
 !     ==========================================================================
       EDENSITY=0.D0
       DO LM=1,LMRX
@@ -1899,12 +2068,12 @@ PRINT*,'EH ',SVAR
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU_DENMATFLAPW')
       END IF
-      GID=THIS%GID
-      NR=THIS%NR
-      LNXCHI=THIS%LNXCHI
+      GID=THIS%SP%GID
+      NR=THIS%SP%NR
+      LNXCHI=THIS%SP%LNXCHI
       ALLOCATE(LOXCHI(LNXCHI))
-      LOXCHI=THIS%LOXCHI
-      RCUT=THIS%RCUT
+      LOXCHI=THIS%SP%LOXCHI
+      RCUT=THIS%SP%RCUT
 !
 !     ==========================================================================
 !     ==  CHECK IF ONLY ONE CORRELATED ORBITAL PER L                          ==
@@ -1918,12 +2087,11 @@ PRINT*,'EH ',SVAR
 !     ==========================================================================
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R) 
-      CALL SETUP$ISELECT(ISP)
-      CALL SETUP$LNX(ISP,LNXPHI)
+      CALL SETUP$GETI4('LNX',LNXPHI)
       ALLOCATE(LOXPHI(LNXPHI))
-      CALL SETUP$LOFLN(ISP,LNXPHI,LOXPHI)
+      CALL SETUP$GETI4A('LOX',LNXPHI,LOXPHI)
       ALLOCATE(PHI(NR,LNXPHI))
-      CALL SETUP$AEPARTIALWAVES(ISP,NR,LNXPHI,PHI)
+      CALL SETUP$GETR8A('AEPHI',NR*LNXPHI,PHI)
       ALLOCATE(OVER(LNXPHI,LNXPHI))
       ALLOCATE(AUX1(NR))
       ALLOCATE(AUX2(NR))
@@ -2022,7 +2190,7 @@ PRINT*,'EH ',SVAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU_CI(NCHI,U,RHO,ETOT,pot)
+      SUBROUTINE LDAPLUSU_CI(NCHI,U,RHO,ETOT,POT)
 !     **************************************************************************
 !     **   ACTUAL MAIN DRIVER ROUTINE FOR CI 
 !     **************************************************************************
@@ -2032,22 +2200,22 @@ PRINT*,'EH ',SVAR
       REAL(8)   ,INTENT(IN) :: U(NCHI,NCHI,NCHI,NCHI)      
       COMPLEX(8),INTENT(IN) :: RHO(NCHI,NCHI,2,2)
       REAL(8)   ,INTENT(OUT):: ETOT
-      COMPLEX(8),INTENT(OUT):: pot(NCHI,NCHI,2,2)
+      COMPLEX(8),INTENT(OUT):: POT(NCHI,NCHI,2,2)
       COMPLEX(8)            :: RHO2(2*NCHI,2*NCHI)
       COMPLEX(8)            :: POT2(2*NCHI,2*NCHI)
       COMPLEX(8)            :: CSVAR
-      INTEGER(4)            :: I,J,K,L,n
+      INTEGER(4)            :: I,J,K,L,N
       TYPE(CIHAMIL_TYPE)    :: CIHAM
       TYPE(CISTATE_TYPE)    :: CIPSI
-      real(8)               :: fn(2*nchi)
-      complex(8)            :: transf(2*nchi,2*nchi)
-      complex(8)            :: rho2a(2*nchi,2*nchi)
-      complex(8),allocatable:: u1(:,:,:,:)
-      complex(8),allocatable:: usvar(:,:,:,:)
-      complex(8),allocatable:: potsvar(:,:)
+      REAL(8)               :: FN(2*NCHI)
+      COMPLEX(8)            :: TRANSF(2*NCHI,2*NCHI)
+      COMPLEX(8)            :: RHO2A(2*NCHI,2*NCHI)
+      COMPLEX(8),ALLOCATABLE:: U1(:,:,:,:)
+      COMPLEX(8),ALLOCATABLE:: USVAR(:,:,:,:)
+      COMPLEX(8),ALLOCATABLE:: POTSVAR(:,:)
 !     **************************************************************************
       ETOT=0.D0
-      pot(:,:,:,:)=(0.D0,0.D0)
+      POT(:,:,:,:)=(0.D0,0.D0)
 !
 !     ==========================================================================
 !     == MAP DENSITY MATRIX ONTO RANK 2                                       ==
@@ -2058,7 +2226,7 @@ PRINT*,'EH ',SVAR
       RHO2(NCHI+1:2*NCHI,NCHI+1:2*NCHI)=RHO(:,:,2,2)
 !
 !     ==========================================================================
-!     == map utensor                                                          ==
+!     == MAP UTENSOR                                                          ==
 !     ==========================================================================
       ALLOCATE(U1(2*NCHI,2*NCHI,2*NCHI,2*NCHI))
       U1=(0.D0,0.D0)
@@ -2068,38 +2236,38 @@ PRINT*,'EH ',SVAR
       U1(NCHI+1:2*NCHI,NCHI+1:2*NCHI,NCHI+1:2*NCHI,NCHI+1:2*NCHI)=U(:,:,:,:)
 !
 !     ==========================================================================
-!     == diagonalize density matrix                                           ==
-!     ==the ci-expansion converges faster if formulated in natural orbitals   ==
+!     == DIAGONALIZE DENSITY MATRIX                                           ==
+!     ==THE CI-EXPANSION CONVERGES FASTER IF FORMULATED IN NATURAL ORBITALS   ==
 !     ==========================================================================
-      CALL LIB$DIAGC8(2*NCHI,RHO2,fn,transf)
+      CALL LIB$DIAGC8(2*NCHI,RHO2,FN,TRANSF)
 !
 !     == SET UP TRANSFORMED DENSITY MATRIX =====================================
-      RHO2(:,:)=(0.D0,0.d0)
+      RHO2(:,:)=(0.D0,0.D0)
       DO I=1,2*NCHI
         RHO2(I,I)=FN(I)
       ENDDO
 !
 !     == TRANSFORM UTENSOR =====================================================
       ALLOCATE(USVAR(2*NCHI,2*NCHI,2*NCHI,2*NCHI))
-      USVAR(:,:,:,:)=(0.D0,0.d0)
+      USVAR(:,:,:,:)=(0.D0,0.D0)
       DO N=1,2*NCHI
         DO I=1,2*NCHI
           USVAR(:,:,:,N)=USVAR(:,:,:,N)+U1(:,:,:,I)*TRANSF(I,N)
         ENDDO
       ENDDO
-      U1(:,:,:,:)=(0.D0,0.d0)
+      U1(:,:,:,:)=(0.D0,0.D0)
       DO N=1,2*NCHI
         DO I=1,2*NCHI
           U1(:,:,N,:)=U1(:,:,N,:)+USVAR(:,:,I,:)*TRANSF(I,N)
         ENDDO
       ENDDO
-      USVAR(:,:,:,:)=(0.D0,0.d0)
+      USVAR(:,:,:,:)=(0.D0,0.D0)
       DO N=1,2*NCHI
         DO I=1,2*NCHI
           USVAR(:,N,:,:)=USVAR(:,N,:,:)+U1(:,I,:,:)*CONJG(TRANSF(I,N))
         ENDDO
       ENDDO
-      U1(:,:,:,:)=(0.D0,0.d0)
+      U1(:,:,:,:)=(0.D0,0.D0)
       DO N=1,2*NCHI
         DO I=1,2*NCHI
           U1(N,:,:,:)=U1(N,:,:,:)+USVAR(I,:,:,:)*CONJG(TRANSF(I,N))
@@ -2123,38 +2291,38 @@ PRINT*,'EH ',SVAR
       ENDDO
       CALL CI$CLEANHAMILTONIAN(CIHAM)
       CALL CI$WRITEHAMILTONIAN(CIHAM,6)
-!print*,'H%n',ciham%h%n,ciham%u%n
-!print*,'nchi',nchi
+!PRINT*,'H%N',CIHAM%H%N,CIHAM%U%N
+!PRINT*,'NCHI',NCHI
 !
 !     ==========================================================================
 !     == SET UP HAMILTON OPERATOR                                             ==
 !     ==========================================================================
-!!$print*,'nchi',nchi
-!!$do i=1,2*nchi
-!!$  write(6,fmt='("rho2",8("(",f7.4,";",f7.4,")"))')rho2(i,:)
-!!$enddo
-!!$print*,'before CI$DYNWITHFIXEDDENMAT'
+!!$PRINT*,'NCHI',NCHI
+!!$DO I=1,2*NCHI
+!!$  WRITE(6,FMT='("RHO2",8("(",F7.4,";",F7.4,")"))')RHO2(I,:)
+!!$ENDDO
+!!$PRINT*,'BEFORE CI$DYNWITHFIXEDDENMAT'
       CALL CI$DYNWITHFIXEDDENMAT(2*NCHI,RHO2,CIHAM,CIPSI,POT2,ETOT)
-!print*,'after CI$DYNWITHFIXEDDENMAT'
+!PRINT*,'AFTER CI$DYNWITHFIXEDDENMAT'
       CALL CI$WRITEPSI(CIPSI,6) 
 !
 !     ==========================================================================
-!     == transform from natural orbitals back                                 ==
+!     == TRANSFORM FROM NATURAL ORBITALS BACK                                 ==
 !     ==========================================================================
-      ALLOCATE(potSVAR(2*NCHI,2*NCHI))
-      potSVAR(:,:)=(0.D0,0.d0)
+      ALLOCATE(POTSVAR(2*NCHI,2*NCHI))
+      POTSVAR(:,:)=(0.D0,0.D0)
       DO N=1,2*NCHI
         DO I=1,2*NCHI
-          potsvar(:,i)=potSVAR(:,i)+pot2(:,n)*conjg(TRANSF(n,i))
+          POTSVAR(:,I)=POTSVAR(:,I)+POT2(:,N)*CONJG(TRANSF(N,I))
         ENDDO
       ENDDO
-      pot2(:,:)=(0.D0,0.d0)
+      POT2(:,:)=(0.D0,0.D0)
       DO N=1,2*NCHI
         DO I=1,2*NCHI
-          pot2(i,:)=pot2(i,:)+potSVAR(n,:)*TRANSF(n,i)
+          POT2(I,:)=POT2(I,:)+POTSVAR(N,:)*TRANSF(N,I)
         ENDDO
       ENDDO
-      DEALLOCATE(potsVAR)
+      DEALLOCATE(POTSVAR)
 !
 !     ==========================================================================
 !     == MAP POTENTIAL BACK                                                   ==
@@ -2169,6 +2337,6 @@ PRINT*,'EH ',SVAR
 !     ==========================================================================
       CALL CI$DELETEPSI(CIPSI)
       CALL CI$DELETEHAMILTONIAN(CIHAM)
-call error$stop('forced stop in ldaplusu_ci')
+CALL ERROR$STOP('FORCED STOP IN LDAPLUSU_CI')
       RETURN 
       END

@@ -803,7 +803,7 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)           :: NTASKS
       INTEGER(4)           :: THISTASK
       INTEGER(4)           :: NFILO
-      character(512)       :: pawdir=''
+      CHARACTER(512)       :: PAWDIR=''
 !     ******************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
       CALL LIB$GETENV('PAWDIR',PAWDIR)
@@ -854,9 +854,9 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  setup parameter file ==========================================
+!     ==  SETUP PARAMETER FILE ==========================================
       ID=+'PARMS_STP'
-      CALL FILEHANDLER$SETFILE(ID,F,trim(PAWDIR)//-'/PARAMETERS/STP.CNTL')
+      CALL FILEHANDLER$SETFILE(ID,F,TRIM(PAWDIR)//-'/PARAMETERS/STP.CNTL')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
@@ -1345,7 +1345,7 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!RDYN!AUTO                               ==
 !     ==================================================================
-      CALL READIN_AUTO(LL_CNTL,'ATOMS',0.d0,1.D0,1.d-2,1.D0)
+      CALL READIN_AUTO(LL_CNTL,'ATOMS',0.D0,1.D0,1.D-2,1.D0)
 !
 !     ==================================================================
 !     ==  READ BLOCK !CONTROL!RDYN!THERMOSTAT                         ==
@@ -1846,7 +1846,7 @@ CALL TRACE$PASS('DONE')
       REAL(8)                  :: P           ! EXTERNAL PRESSURE
       REAL(8)                  :: MASS        ! MASS FOR CELL DFYNAMICS
       REAL(8)                  :: FRIC        ! MASS FOR CELL DFYNAMICS
-      character(32)            :: ch32val
+      CHARACTER(32)            :: CH32VAL
 !     ******************************************************************
       LL_CNTL=LL_CNTL_
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -3596,7 +3596,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$EXISTD(LL_STRC,'R',1,TCHK)
       CALL LINKEDLIST$EXISTD(LL_STRC,'DIV',1,TCHK1)
       IF(TCHK1.AND.TCHK) THEN
-        CALL ERROR$MSG('!Structure!KPOINTS:R AND DIV ARE MUTUALLY EXCLUSIVE')
+        CALL ERROR$MSG('!STRUCTURE!KPOINTS:R AND DIV ARE MUTUALLY EXCLUSIVE')
         CALL ERROR$STOP('STRCIN_KPOINT')
       ELSE IF(TCHK) THEN
 !       == K-POINT GRID DEFINED BY R ===========================================
@@ -3606,7 +3606,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       ELSE IF(TCHK1) THEN
         CALL LINKEDLIST$GET(LL_STRC,'DIV',1,NKDIV)
         IF(NKDIV(1).LE.0.OR.NKDIV(2).LE.0.OR.NKDIV(3).LE.0) THEN
-          CALL ERROR$MSG('!structure!KPOINT:DIV MUST BE GREATER THAN ZERO')
+          CALL ERROR$MSG('!STRUCTURE!KPOINT:DIV MUST BE GREATER THAN ZERO')
           CALL ERROR$STOP('STRCIN_KPOINT')
         END IF
       ELSE
@@ -3650,7 +3650,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CHARACTER(32)            :: SPNAME
       CHARACTER(256)           :: SETUPFILE
       CHARACTER(32)            :: SOFTCORETYPE
-      CHARACTER(32)            :: key
+      CHARACTER(32)            :: KEY
       INTEGER(4)               :: ISVAR
       REAL(8)                  :: Z
       REAL(8)                  :: SVAR
@@ -3672,6 +3672,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
       CALL ATOMTYPELIST$INITIALIZE(10)
+      CALL LDAPLUSU$NEW(NSP)
       DO ISP=1,NSP
         CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
 !
@@ -3698,9 +3699,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ========================================================================
 !       ==  CONNECT SETUP FILE                                                ==
 !       ========================================================================
-        CALL LINKEDLIST$existd(LL_STRC,'FILE',1,tchk)
-!The following is used only if setup files are used
-        if(tchk) then
+        CALL LINKEDLIST$EXISTD(LL_STRC,'FILE',1,TCHK)
+!THE FOLLOWING IS USED ONLY IF SETUP FILES ARE USED
+        IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'FILE',1,SETUPFILE)
           CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
           CH8SVAR1=' '
@@ -3725,7 +3726,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           END IF
           CALL LINKEDLIST$GET(LL_STRC,'ZV',1,SVAR)
                CALL ATOMTYPELIST$SETVALENCE(SPNAME,SVAR)
-        else
+        ELSE
           CALL LINKEDLIST$EXISTD(LL_STRC,'ID',1,TCHK)
           IF(.NOT.TCHK) THEN
             CALL ERROR$MSG('ID MUST BE SPECIFIED, IF NO SETUP FILES ARE USED')          
@@ -3733,7 +3734,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           END IF
           CALL LINKEDLIST$GET(LL_STRC,'ID',1,KEY)
           CALL ATOMTYPELIST$SELECT(SPNAME)
-          CALL ATOMTYPELIST$SETCH('ID',key)
+          CALL ATOMTYPELIST$SETCH('ID',KEY)
           CALL ATOMTYPELIST$UNSELECT
         END IF
 !
@@ -3824,8 +3825,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !
         IF(TLDAPLUSU) THEN
           CALL LINKEDLIST$SELECT(LL_STRC,'LDAPLUSU')
-          CALL LDAPLUSU$NEW(NSP)
-          CALL LDAPLUSU$SELECT(ISP)
+          CALL LDAPLUSU$SELECTTYPE(ISP)
           CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
           CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U')
 
@@ -3889,10 +3889,11 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           END IF
 !
 !         == CORE-VALENCE EXCHANGE   ===========================================
-!         == not allowed for lda+U    ==========================================
-          CALL LDAPLUSU$SETl4('COREVALENCEEXCHANGE',.false.)
+!         == NOT ALLOWED FOR LDA+U    ==========================================
+          CALL LDAPLUSU$SETL4('COREVALENCEEXCHANGE',.FALSE.)
 !
 !         == GET OUT OF LDAPLUSU-BLOCK
+          CALL LDAPLUSU$SELECTTYPE(0)
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
         END IF
 !
@@ -3903,8 +3904,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ========================================================================
         IF(THYBRID) THEN
           CALL LINKEDLIST$SELECT(LL_STRC,'HYBRID')
-          CALL LDAPLUSU$NEW(NSP)
-          CALL LDAPLUSU$SELECT(ISP)
+          CALL LDAPLUSU$SELECTTYPE(ISP)
           CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
           CALL LDAPLUSU$SETCH('FUNCTIONALID','HYBRID')
 !
@@ -3928,12 +3928,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !
 !         == CORE-VALENCE EXCHANGE   ===========================================
           CALL LINKEDLIST$EXISTD(LL_STRC,'CV',1,TCHK)
-          IF(TCHK) then
+          IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_STRC,'CV',1,TCHK)
-          else
-            tchk=.true.  ! default is to include core-valence interaction
-          end if
-          CALL LDAPLUSU$SETl4('COREVALENCEEXCHANGE',TCHK)
+          ELSE
+            TCHK=.TRUE.  ! DEFAULT IS TO INCLUDE CORE-VALENCE INTERACTION
+          END IF
+          CALL LDAPLUSU$SETL4('COREVALENCEEXCHANGE',TCHK)
 !
 !         == DEFINE MIXING FOR HYBRID FUNCTIONAL ===============================
           SVAR=0.25D0
@@ -3942,6 +3942,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL LDAPLUSU$SETR8('HFWEIGHT',SVAR)
 !
 !         == GET OUT OF HYBRID-BLOCK ===========================================
+          CALL LDAPLUSU$SELECTTYPE(0)
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
         END IF
 
@@ -5455,7 +5456,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)                  :: IATQ,IATM,IATS,IATM1,IATM2,IATS1,IATS2,IAT
       INTEGER(4)                  :: IBONDM,IBONDS,ILINK,I,IRES,J,IVAR,ICONECT
       INTEGER(4)                  :: IZ
-      LOGICAL(4)                  :: TCHK,tchk2
+      LOGICAL(4)                  :: TCHK,TCHK2
       LOGICAL(4)     ,ALLOCATABLE :: TFREEZE(:)
       INTEGER(4)     ,ALLOCATABLE :: LINKARRAY(:,:)
       INTEGER(4)     ,ALLOCATABLE :: MAPARRAY(:,:)

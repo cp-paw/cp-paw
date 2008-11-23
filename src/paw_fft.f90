@@ -226,7 +226,7 @@ END MODULE PLANEWAVE_MODULE
             CALL REPORT$I4VAL(NFIL,'NR3',NR3,' ')
             CALL REPORT$I4VAL(NFIL,'BELONGS TO TASK GROUP '//TRIM(THIS1%CID)//' WITH MAIN TASK',ITASK,' ')
             DO J=1,NTASKS1
-              WRITE(NFIL,FMT='("SUB-TASK ",I4," NR1L ",I5," NGL ",I5," NSTRIPEL ",I5)') &
+              WRITE(NFIL,FMT='("SUB-TASK ",I4," NR1L ",I5," NGL ",I10," NSTRIPEL ",I5)') &
               J,IWORK(J,1),IWORK(J,2),IWORK(J,3)
             ENDDO
           END IF

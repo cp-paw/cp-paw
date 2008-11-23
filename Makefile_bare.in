@@ -329,7 +329,7 @@ ${PAWX} : f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} \
 ##  build paw library                                                  ##
 #########################################################################
 ${PAWLIB}: ${LOBJS} ${MPE} ${OBJDIR}/version_writeparmfile.o
-	ar -ru $(PAWLIB) $(LOBJS) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+	ar -rus $(PAWLIB) $(LOBJS) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 #
 #########################################################################
 ##  build Tools                                                        ##
@@ -787,6 +787,7 @@ endif
  SETUPREAD_MODULE.mod : ${OBJDIR}/paw_setupread.o
  ## file:src/paw_setups.f90
  ${OBJDIR}/paw_setups.o : PERIODICTABLE_MODULE.mod
+ ${OBJDIR}/paw_setups.o : LMTO_MODULE.mod
  SETUP_MODULE.mod : ${OBJDIR}/paw_setups.o
  ## file:src/paw_softcore.f90
  CORE_MODULE.mod : ${OBJDIR}/paw_softcore.o
@@ -917,5 +918,5 @@ endif
  ${OBJDIR}/paw_wave.o : LINKEDLIST_MODULE.mod
  ${OBJDIR}/paw_wave.o : PERIODICTABLE_MODULE.mod
  ## file:src/Tools/Wave/paw_lmto.f90
- ${OBJDIR}/paw_lmto.o : SETUP_MODULE.mod
- ${OBJDIR}/paw_lmto.o : ATOMS_MODULE.mod
+##  ${OBJDIR}/paw_lmto.o : ATOMS_MODULE.mod
+LMTO_MODULE.mod : ${OBJDIR}/paw_lmto.o

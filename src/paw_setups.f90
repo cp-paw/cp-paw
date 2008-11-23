@@ -52,10 +52,16 @@ MODULE SETUP_MODULE
 !**    GETR8A('AMATCHI',LNXPHI*LNXCHI,AMAT)                                   **
 !**    GETR8A('BMATCHI',LNXCHI*LNXPHI,BMAT)                                   **
 !**                                                                           **
+!**                                                                           **
+!**  AN UNSELECT FUNCTION HAS BEEN INCLUDED BUT NOT FULLY IMPLEMENTED.        **
+!**  BY FORCING UNSELECT BEFORE SELECT, ONE CAN SAFEGUARD THAT A SUBROUTINE   **
+!**  CHANGES THE SETTING OF A PARENT ROUTINE.                                 **
+!**                                                                           **
+!**                                                                           **
 !**                                              P.E. BLOECHL, (1991-2008)    **
 !*******************************************************************************
 TYPE SETUPPARMS_TYPE
-  character(128)  :: id 
+  CHARACTER(128)  :: ID 
   REAL(8)         :: POW_POT=0.D0
   REAL(8)         :: VAL0_POT
   REAL(8)         :: RC_POT
@@ -64,15 +70,15 @@ TYPE SETUPPARMS_TYPE
   REAL(8)         :: RC_CORE
   REAL(8),POINTER :: RCL(:)
 END TYPE SETUPPARMS_TYPE
-type atomwaves_type
-  integer(4)         :: nb=-1
-  integer(4)         :: nc=-1
-  integer(4),pointer :: lofi(:)
-  integer(4),pointer :: eofi(:)
-  integer(4),pointer :: fofi(:)
-  integer(4),pointer :: aepsi(:,:)
-  integer(4),pointer :: aepot(:)
-end type atomwaves_type
+TYPE ATOMWAVES_TYPE
+  INTEGER(4)         :: NB=-1
+  INTEGER(4)         :: NC=-1
+  INTEGER(4),POINTER :: LOFI(:)
+  INTEGER(4),POINTER :: EOFI(:)
+  INTEGER(4),POINTER :: FOFI(:)
+  INTEGER(4),POINTER :: AEPSI(:,:)
+  INTEGER(4),POINTER :: AEPOT(:)
+END TYPE ATOMWAVES_TYPE
 TYPE THIS_TYPE
 INTEGER(4)             :: I            ! INTEGER IDENTIFIER (ISPECIES)
 CHARACTER(32)          :: ID           ! IDENTIFIER (SPECIES-NAME)
@@ -81,6 +87,7 @@ INTEGER(4)             :: GIDG         ! GRID ID FOR G-SPACE GRID
 REAL(8)                :: AEZ          ! ATOMIC NUMBER
 REAL(8)                :: RCBG
 REAL(8)                :: RCSM         ! GAUSSIAN DECAY FOR COMPENSATION CHARGE
+INTEGER(4)             :: LX           ! HIGHEST ANGULAR MOMENTUM
 INTEGER(4)             :: LNX          ! #(ORBITAL SHELLS)
 INTEGER(4)             :: LMNX
 INTEGER(4)             :: LMRX         ! #(ANGULAR MOMENTA FOR 1C-DENSITY)
@@ -103,8 +110,8 @@ REAL(8)   ,POINTER     :: PSCOREOFG(:) !(NGX)
 REAL(8)   ,POINTER     :: VHATOFG(:)   !(NGX)
 REAL(8)   ,POINTER     :: NHATPRIMEOFG(:)  !(NGX)
 REAL(8)   ,POINTER     :: PROOFG(:,:)  !(NR,LNX)  
-LOGICAL(4)             :: LOCORBINI       ! LOCAL ORBITALS ARE INITIALIZED IF TRUE
-REAL(8)                :: LOCORBRAD=5.D0  ! RADIUS OF LOCAL ORBITALS
+LOGICAL(4)             :: LOCORBINI=.FALSE.       ! LOCAL ORBITALS ARE INITIALIZED IF TRUE
+REAL(8)                :: LOCORBRAD(4)=5.D0  ! RADIUS OF LOCAL ORBITALS
 INTEGER(4)             :: LOCORBNOFL(4)=0 ! #(LOCAL ORBITALS PER L)
 INTEGER(4)             :: LOCORBLNX=0     ! #(LOCAL ORBITAL-SHELLS)
 INTEGER(4),POINTER     :: LOCORBLOX(:)    ! L FOR EACH LOCAL ORBITAL-SHELL
@@ -138,6 +145,7 @@ END TYPE THIS_TYPE
 !INTEGER(4),PARAMETER   :: NG=256
 !REAL(8)                :: G1          ! FIRST POINT ON THE RADIAL G-GRID
 INTEGER(4)              :: NSP=0
+LOGICAL,SAVE            :: SELECTED=.FALSE. ! CONTAINER FOR ACTUAL SETTING
 INTEGER(4)              :: LMRXX=0
 INTEGER(4)              :: LMNXX=0
 INTEGER(4)              :: LNXX=0
@@ -147,6 +155,7 @@ TYPE FASTACCESS_TYPE
   TYPE(THIS_TYPE),POINTER :: THIS
 END TYPE FASTACCESS_TYPE
 TYPE(FASTACCESS_TYPE),ALLOCATABLE :: FASTACCESS(:)
+LOGICAL(4)             :: TINTERNALSETUPS=.TRUE.
 END MODULE SETUP_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -159,6 +168,10 @@ END MODULE SETUP_MODULE
       INTEGER(4),INTENT(IN) :: I
       INTEGER(4)            :: J
 !     **************************************************************************
+!
+!     ==========================================================================
+!     ==  DEFINE FASTACCESS LOOKUP ARRAY                                      ==
+!     ==========================================================================
       IF(.NOT.ALLOCATED(FASTACCESS)) THEN
         IF(.NOT.ASSOCIATED(FIRST)) THEN
           CALL ERROR$MSG('NO SETUPS DEFINED')
@@ -177,17 +190,60 @@ END MODULE SETUP_MODULE
         ENDDO
       END IF
 !
-      IF(I.GT.NSP) THEN
+!     ==========================================================================
+!     ==  CHECK IF I LIES OUT OF RANGE                                        ==
+!     ==========================================================================
+      IF(I.GT.NSP.OR.I.LT.0) THEN
         CALL ERROR$MSG('INDEX I OUT OF RANGE')
         CALL ERROR$I4VAL('I',I)
         CALL ERROR$I4VAL('NSP',NSP)
         CALL ERROR$STOP('SETUP$ISELECT')
       END IF
 !
-      THIS=>FASTACCESS(I)%THIS
+!     ==========================================================================
+!     ==  SELECT OR UNSELECT                                                  ==
+!     ==========================================================================
+      IF(I.EQ.0) THEN
+!       ==  UNSELECT ===========================================================
+        IF(.NOT.SELECTED) THEN
+          CALL ERROR$MSG('SAFEGUARD FUNCTION:')
+          CALL ERROR$MSG('CANNOT UNSELECT A SETUP THAT IS NOT SELECTED')
+          CALL ERROR$STOP('SETUP$ISELECT')
+        END IF
+        SELECTED=.FALSE.
+        NULLIFY(THIS)
+      ELSE 
+!       ==  SELECT =============================================================
+!        IF(SELECTED) THEN
+!          CALL ERROR$MSG('SAFEGUARD FUNCTION:')
+!          CALL ERROR$MSG('ANOTHER SETUP IS ALREADY SELECTED:')
+!          CALL ERROR$MSG('UNSELECT BEFORE SELECT')
+!          CALL ERROR$STOP('SETUP$ISELECT')
+!        END IF
+        THIS=>FASTACCESS(I)%THIS
+        SELECTED=.TRUE.
+      END IF
       RETURN
       END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$UNSELECT()
+!     **************************************************************************
+!     **  UNSELECTS                                                           **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+!     **************************************************************************
+      IF(.NOT.SELECTED) THEN
+        CALL ERROR$MSG('SAFEGUARD FUNCTION:')
+        CALL ERROR$MSG('CANNOT UNSELECT A SETUP THAT IS NOT SELECTED')
+        CALL ERROR$STOP('SETUP$UNSELECT')
+      END IF
+      SELECTED=.FALSE.
+      NULLIFY(THIS)
+      RETURN
+      END
+!!
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$SELECT(ID)
 !     **************************************************************************
@@ -257,7 +313,7 @@ END MODULE SETUP_MODULE
       NULLIFY(THIS%AEPSI)   !(NRX,NC)
 ! SANTOS040616 END
       THIS%LOCORBINI=.FALSE. ! INITIALIZED?
-      THIS%LOCORBRAD=5.D0  ! RADIUS OF LOCAL ORBITALS
+      THIS%LOCORBRAD(:)=5.D0  ! RADIUS OF LOCAL ORBITALS
       THIS%LOCORBNOFL(:)=0 ! (4) #(LOCAL ORBITALS PER L)
       THIS%LOCORBLNX=0     ! #(LOCAL ORBITAL-SHELLS)
       NULLIFY(THIS%LOCORBLOX)  !(LOCORBLNX)  L FOR EACH LOCAL ORBITAL-SHELL
@@ -295,6 +351,28 @@ END MODULE SETUP_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$GETL4(ID,VAL)
+!     **************************************************************************
+!     **  COLLECTS INTERNAL DATA                                              **
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID
+      LOGICAL(4)  ,INTENT(OUT) :: VAL
+!     **************************************************************************
+      IF(ID.EQ.'INTERNALSETUPS') THEN
+        VAL=tinternalsetups
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$STOP('SETUP$GETL4')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$GETI4(ID,VAL)
 !     **************************************************************************
 !     **                                                                      **
@@ -314,14 +392,11 @@ END MODULE SETUP_MODULE
         VAL=LMNXX
       ELSE IF(ID.EQ.'LMRXX') THEN
         VAL=LMRXX
-      else IF(ID.EQ.'GID') THEN
+      ELSE IF(ID.EQ.'GID') THEN
         VAL=THIS%GID
       ELSE IF(ID.EQ.'GIDG') THEN
         VAL=THIS%GIDG
       ELSE IF(ID.EQ.'NR') THEN
-        CALL ERROR$MSG('ID="NR" IS MARKED FOR DELETION')
-        CALL ERROR$STOP('SETUP$GETI4')
-!       == THIS SHALL BE MARKED FOR DELETION'
         CALL RADIAL$GETI4(THIS%GID,'NR',VAL)
       ELSE IF(ID.EQ.'LNX') THEN
         VAL=THIS%LNX
@@ -330,6 +405,8 @@ END MODULE SETUP_MODULE
       ELSE IF(ID.EQ.'LMRX') THEN
         VAL=THIS%LMRX
       ELSE IF(ID.EQ.'LNXCHI') THEN
+        CALL ERROR$MSG('ID LNXCHI IS MARKED FOR DELETION')
+        CALL ERROR$STOP('SETUP$GETI4')
         CALL SETUP_RENEWLOCORB()
         VAL=THIS%LOCORBLNX    ! #(LOCAL ORBITALS)
 ! SANTOS040616 BEGIN
@@ -362,7 +439,7 @@ END MODULE SETUP_MODULE
         IF(LEN.NE.4) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETI4A')
+          CALL ERROR$STOP('SETUP$SETI4A')
         END IF
 !       == CHECK IF VALUE HAS CHANGED ==================================        
         DO I=1,4
@@ -401,7 +478,12 @@ END MODULE SETUP_MODULE
         IF((LEN.NE.THIS%LNX).OR.(THIS%LNX.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETRI4A')
+          CALL ERROR$STOP('SETUP$GETI4A')
+        END IF
+        IF(.NOT.ASSOCIATED(THIS%ISCATT)) THEN
+          CALL ERROR$MSG('DATA NOT AVAILABLE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETI4A')
         END IF
         VAL=THIS%ISCATT
 ! SANTOS040616 BEGIN
@@ -409,7 +491,7 @@ END MODULE SETUP_MODULE
         IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETRI4A')
+          CALL ERROR$STOP('SETUP$GETI4A')
         END IF
         VAL=THIS%LB
 ! SANTOS040616 END
@@ -417,18 +499,20 @@ END MODULE SETUP_MODULE
         IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETRI4A')
+          CALL ERROR$STOP('SETUP$GETI4A')
         END IF
         VAL=THIS%LB
       ELSE IF(ID.EQ.'LOXCHI') THEN
-!       == ANULAR MOMENTA OF LOCAL ORBITALS ==========================
-        CALL SETUP_RENEWLOCORB()
-        IF((LEN.NE.THIS%LOCORBLNX).OR.(THIS%LOCORBLNX.EQ.0)) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETRI4A')
-        END IF
-        VAL=THIS%LOCORBLOX
+        CALL ERROR$MSG('ID LoxCHI IS MARKED FOR DELETION')
+        CALL ERROR$STOP('SETUP$GETI4a')
+!!$!       == ANULAR MOMENTA OF LOCAL ORBITALS ==========================
+!!$        CALL SETUP_RENEWLOCORB()
+!!$        IF((LEN.NE.THIS%LOCORBLNX).OR.(THIS%LOCORBLNX.EQ.0)) THEN
+!!$          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+!!$          CALL ERROR$CHVAL('ID',ID)
+!!$          CALL ERROR$STOP('SETUP$GETRI4A')
+!!$        END IF
+!!$        VAL=THIS%LOCORBLOX
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -450,9 +534,46 @@ END MODULE SETUP_MODULE
       REAL(8)     ,INTENT(IN)  :: VAL
 !     ******************************************************************
       IF(ID.EQ.'RADCHI') THEN
-!       == EXTENT OF LOCAL ORBITALS
-        THIS%LOCORBINI=THIS%LOCORBINI.AND.(THIS%LOCORBRAD.EQ.VAL)
-        THIS%LOCORBRAD=VAL
+        CALL ERROR$MSG('ID radchi IS MARKED FOR DELETION')
+        CALL ERROR$STOP('SETUP$sETr8')
+!!$!       == EXTENT OF LOCAL ORBITALS
+!!$        THIS%LOCORBINI=.FALSE.
+!!$        THIS%LOCORBRAD(:)=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP$SETR8')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$SETR8A(ID,LENG,VAL)
+!     ******************************************************************
+!     **                                                              **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                **
+!     **                                                              **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID
+      INTEGER(4)  ,INTENT(IN)  :: LENG
+      REAL(8)     ,INTENT(IN)  :: VAL(LENG)
+!     ******************************************************************
+      IF(ID.EQ.'RADCHI') THEN
+        CALL ERROR$MSG('ID radchi IS MARKED FOR DELETION')
+        CALL ERROR$STOP('SETUP$sETr8a')
+!!$!       == EXTENT OF LOCAL ORBITALS
+!!$        THIS%LOCORBINI=.FALSE.
+!!$        IF(LENG.GT.4) THEN
+!!$          CALL ERROR$MSG('INCONSISTENT SIZE')
+!!$          CALL ERROR$MSG('DIMENSION OF ARRAY MUST NOT BE LARGER THAN 4')
+!!$          CALL ERROR$I4VAL('LENG',LENG)
+!!$          CALL ERROR$CHVAL('ID',ID)
+!!$          CALL ERROR$STOP('SETUP$SETR8')
+!!$        END IF
+!!$        THIS%LOCORBRAD(:)=0.D0
+!!$        THIS%LOCORBRAD(:)=VAL(1:LENG)
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -739,31 +860,35 @@ END MODULE SETUP_MODULE
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
-        CALL radial$NUCPOT(THIS%GID,NR,THIS%AEZ,VAL)
+        CALL RADIAL$NUCPOT(THIS%GID,NR,THIS%AEZ,VAL)
 !
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'AMATCHI') THEN
-        CALL SETUP_RENEWLOCORB()
-        IF(LEN.NE.THIS%LOCORBLNX*THIS%LNX) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETR8A')
-        END IF
-        VAL=RESHAPE(THIS%LOCORBAMAT,(/LEN/))
+        CALL ERROR$MSG('ID amatchi IS MARKED FOR DELETION')
+        CALL ERROR$STOP('SETUP$GETr8a')
+!!$        CALL SETUP_RENEWLOCORB()
+!!$        IF(LEN.NE.THIS%LOCORBLNX*THIS%LNX) THEN
+!!$          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+!!$          CALL ERROR$CHVAL('ID',ID)
+!!$          CALL ERROR$STOP('SETUP$GETR8A')
+!!$        END IF
+!!$        VAL=RESHAPE(THIS%LOCORBAMAT,(/LEN/))
 !
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'BMATCHI') THEN
-        CALL SETUP_RENEWLOCORB()
-        IF(LEN.NE.THIS%LOCORBLNX*THIS%LNX) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETR8A')
-        END IF
-        VAL=RESHAPE(THIS%LOCORBBMAT,(/LEN/))
+        CALL ERROR$MSG('ID Bmatchi IS MARKED FOR DELETION')
+        CALL ERROR$STOP('SETUP$GETr8a')
+!!$        CALL SETUP_RENEWLOCORB()
+!!$        IF(LEN.NE.THIS%LOCORBLNX*THIS%LNX) THEN
+!!$          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+!!$          CALL ERROR$CHVAL('ID',ID)
+!!$          CALL ERROR$STOP('SETUP$GETR8A')
+!!$        END IF
+!!$        VAL=RESHAPE(THIS%LOCORBBMAT,(/LEN/))
 !
 !     ==========================================================================
 !     ==  WRONG ID                                                            ==
@@ -919,9 +1044,14 @@ END MODULE SETUP_MODULE
       LOGICAL(4)            :: TNEWFORMAT
       REAL(8)   ,ALLOCATABLE:: R(:)
       REAL(8)               :: SVAR
-      REAL(8)               :: psz   ! legacy only
+      REAL(8)               :: PSZ   ! LEGACY ONLY
 !     ******************************************************************
                             CALL TRACE$PUSH('SETUP_READ')
+!     == certain options only work if all setups are calculated  =======
+!     == internally using setup_read_new. This switch allows to ========
+!     == lock options that do not work =================================
+      tinternalsetups=.false.
+!
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       IF(.NOT.ASSOCIATED(THIS)) THEN
@@ -1264,7 +1394,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: EOFI(NBX)
       INTEGER(4)            :: GID
       INTEGER(4)            :: GIDG
-      REAL(8)               :: dex
+      REAL(8)               :: DEX
       REAL(8)               :: G1
       REAL(8)   ,PARAMETER  :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
       INTEGER(4),PARAMETER  :: NG=250
@@ -1285,7 +1415,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       LOGICAL(4)            :: TCHK
       REAL(8)               :: PI,FOURPI,Y0,C0LL
       REAL(8)               :: SVAR
-      INTEGER(4)            :: IR,ib,ln,l
+      INTEGER(4)            :: IR,IB,LN,L
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
       PI=4.D0*ATAN(1.D0)
@@ -1321,14 +1451,14 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       ENDDO
       LX=MAXVAL(LOX)
       DEALLOCATE(NPRO)
-      THIS%LMNX=sum(2*LOX(:)+1)
+      THIS%LMNX=SUM(2*LOX(:)+1)
       THIS%LNX=LNX
       ALLOCATE(THIS%LOX(LNX))
       THIS%LOX(:)=LOX(:LNX)
 !
-!     == limit lrhox to the maximum consistent with wave function cutoff
+!     == LIMIT LRHOX TO THE MAXIMUM CONSISTENT WITH WAVE FUNCTION CUTOFF
       CALL ATOMTYPELIST$GETI4('LRHOX',THIS%LMRX)
-      this%lmrx=(this%lmrx+1)**2
+      THIS%LMRX=(THIS%LMRX+1)**2
       THIS%LMRX=MIN(THIS%LMRX,(2*LX+1)**2)
       CALL ATOMTYPELIST$SETI4('LRHOX',THIS%LMRX)
 !     
@@ -1338,10 +1468,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       LNXX=MAX(LNXX,THIS%LNX)
 !
 !     ==========================================================================
-!     == read setup information from parameter file                           ==
+!     == READ SETUP INFORMATION FROM PARAMETER FILE                           ==
 !     ==========================================================================
       ALLOCATE(THIS%PARMS%RCL(LX+1))
-      CALL ATOMTYPELIST$GETch('ID',THIS%PARMS%ID)
+      CALL ATOMTYPELIST$GETCH('ID',THIS%PARMS%ID)
       CALL ATOMLIB$SCNTLLOOKUP(THIS%PARMS%ID,GID,AEZ,ZV,RBOX,LX,THIS%PARMS%RCL,THIS%RCSM &
      &                     ,THIS%PARMS%POW_POT,THIS%PARMS%RC_POT,THIS%PARMS%VAL0_POT &
      &                     ,THIS%PARMS%POW_CORE,THIS%PARMS%RC_CORE,THIS%PARMS%VAL0_CORE)
@@ -1363,27 +1493,30 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     == DETERMINE NUMBER OF CORE SHELLS =======================================
       SVAR=AEZ-ZV
       NC=0
-      DO IB=1,NB
-        SVAR=SVAR-FOFI(IB)
-        NC=IB
-        IF(ABS(SVAR).LT.1.D-3) EXIT
-        IF(SVAR.LT.-1.D-3) THEN
-          CALL ERROR$MSG('ZV INCONSISTENT WITH COMPLETE ANGULAR MOMENTUM SHELLS')
-          CALL ERROR$R8VAL('AEZ',AEZ)
-          CALL ERROR$R8VAL('ZV',ZV)
-          CALL ERROR$STOP('SETUP_READ_NEW')
-        END IF
-      ENDDO
+      if(svar.gt.1.d-3) then
+        DO IB=1,NB
+          SVAR=SVAR-FOFI(IB)
+          NC=IB
+          IF(ABS(SVAR).LT.1.D-3) EXIT
+          IF(SVAR.LT.-1.D-3) THEN
+            CALL ERROR$MSG('ZV INCONSISTENT WITH COMPLETE ANGULAR MOMENTUM SHELLS')
+            CALL ERROR$R8VAL('AEZ',AEZ)
+            CALL ERROR$R8VAL('ZV',ZV)
+            CALL ERROR$R8VAL('svar',svar)
+            CALL ERROR$STOP('SETUP_READ_NEW')
+          END IF
+        ENDDO
+      end if
 !
 !     ==========================================================================
-      ALLOCATE(THIS%iscatt(LNX))
-      call setup_makeiscatt(aez,nb,nc,lofi(1:nb),nnofi(1:nb),lnx,lox,this%iscatt)
-print*,'aez',this%aez 
-print*,'lox',this%lox 
-print*,'iscatt',this%iscatt 
+      ALLOCATE(THIS%ISCATT(LNX))
+      CALL SETUP_MAKEISCATT(AEZ,NB,NC,LOFI(1:NB),NNOFI(1:NB),LNX,LOX,THIS%ISCATT)
+PRINT*,'AEZ',THIS%AEZ 
+PRINT*,'LOX',THIS%LOX 
+PRINT*,'ISCATT',THIS%ISCATT 
 !
 !     == MAP CORE ORBITALS ON GRID =============================================
-!     == this is redundant and shall be removed later (see this%atom below)      
+!     == THIS IS REDUNDANT AND SHALL BE REMOVED LATER (SEE THIS%ATOM BELOW)      
       THIS%NC=NC
       THIS%TCORE=.TRUE.
       ALLOCATE(THIS%LB(NC))
@@ -1446,7 +1579,7 @@ print*,'iscatt',this%iscatt
       ENDDO
 !
       CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%AEPOT,NB,NC &
-     &           ,LOFI(1:nb),SOFI(1:nb),NNOFI(1:nb),EOFI(1:nb),FOFI(1:nb) &
+     &           ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
      &           ,RBOX,LNX,LOX,RC,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%PRO &
      &           ,THIS%DTKIN,THIS%DOVER &
      &           ,THIS%PARMS%POW_POT,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
@@ -1505,7 +1638,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4)                 :: L,NPRO,LN,NPROSUM
       TYPE(THIS_TYPE),POINTER    :: THIS1
       CHARACTER(64)              :: STRING
-      REAL(8)                    :: U,pi,y0
+      REAL(8)                    :: U,PI,Y0
       INTEGER(4)                 :: THISTASK,NTASKS
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -1548,7 +1681,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         CALL REPORT$R8VAL(NFIL,'PARAMETER PS<G4> FOR MASS RENORMALIZATION' &
      &                        ,THIS1%PSG4,'H')
 !
-!       == report settings for the setup construction ==========================
+!       == REPORT SETTINGS FOR THE SETUP CONSTRUCTION ==========================
         IF(THIS1%PARMS%POW_POT.NE.0.D0) THEN
           CALL REPORT$CHVAL(NFIL,'SETUP ID',THIS1%PARMS%ID)
           DO L=0,MAXVAL(THIS1%LOX)
@@ -1557,13 +1690,13 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
             CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%RCL(L+1),'ABOHR')
           ENDDO
           CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: VAL(0)' &
-    &                            ,THIS1%PARMS%VAL0_POT*y0,'H')
+    &                            ,THIS1%PARMS%VAL0_POT*Y0,'H')
           CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: RC' &
     &                            ,THIS1%PARMS%RC_POT,'ABOHR')
           CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: POWER' &
     &                            ,THIS1%PARMS%POW_POT,'')
           CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: VAL(0)' &
-    &                            ,THIS1%PARMS%VAL0_CORE*y0,'H')
+    &                            ,THIS1%PARMS%VAL0_CORE*Y0,'H')
           CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: RC' &
     &                            ,THIS1%PARMS%RC_CORE,'ABOHR')
           CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: POWER' &
@@ -1620,7 +1753,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$AEPARTIALWAVES(ISP_,NRX_,LNX_,AEPHI_)
-!legacy code! -> setup$getr8a('aephi'
+!LEGACY CODE! -> SETUP$GETR8A('AEPHI'
 !     ******************************************************************
 !     **  RETURN AE PARTIAL WAVES ON THE RADIAL GRID                  **
 !     ******************************************************************
@@ -1648,7 +1781,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$PSPARTIALWAVES(ISP_,NRX_,LNX_,PSPHI_)
-!legacy code! -> setup$getr8a('psphi'
+!LEGACY CODE! -> SETUP$GETR8A('PSPHI'
 !     ******************************************************************
 !     **  RETURN PS PARTIAL WAVE ON A RADIAL GRID                     **
 !     ******************************************************************
@@ -1675,59 +1808,8 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       END
 !
 !     ..................................................................
-      SUBROUTINE SETUP$AECORE(ISP_,NRX_,AECORE_)
-!legacy code! -> setup$getr8a('aecore'
-!     ******************************************************************
-!     **  RETURN AE CORE DNSITY                                       **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: NRX_
-      REAL(8)   ,INTENT(OUT):: AECORE_(NRX_)
-!     ******************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      AECORE_(:)=THIS%AECORE(:)
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$PSCORE(ISP_,NRX_,PSCORE_)
-!legacy code! -> setup$getr8a('pscore'
-!     ******************************************************************
-!     **  RETURN PS CORE DNSITY                                       **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: NRX_
-      REAL(8)   ,INTENT(OUT):: PSCORE_(NRX_)
-!     ******************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      PSCORE_(:)=THIS%PSCORE(:)
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$VBAR(ISP_,NRX_,VBAR_)
-!legacy code! -> setup$getr8a('vadd'
-!     ******************************************************************
-!     **  RETURN PS CORE DNSITY                                       **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: NRX_
-      REAL(8)   ,INTENT(OUT):: VBAR_(NRX_)
-!     ******************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      VBAR_(:)=THIS%VADD(:)
-      RETURN  
-      END
-!
-!     ..................................................................
       SUBROUTINE SETUP$1COVERLAP(ISP_,LNXX_,DOVER_)
-!legacy code! -> setup$getr8a('do'
+!LEGACY CODE! -> SETUP$GETR8A('DO'
 !     ******************************************************************
 !     **  RETURN 1-C- OVERLAP OF THE PARTIAL WAVES                    **
 !     ******************************************************************
@@ -1749,7 +1831,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$1CKINETIC(ISP_,LNXX_,DTKIN_)
-!legacy code! -> setup$getr8a('dekin'
+!LEGACY CODE! -> SETUP$GETR8A('DEKIN'
 !     ******************************************************************
 !     **  RETURN 1-C- KINETIC ENERGY OVERLAP OF THE PARTIAL WAVES     **
 !     ******************************************************************
@@ -1771,7 +1853,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$RCSM(ISP_,RCSM_)
-!legacy code! -> setup$getr8('
+!LEGACY CODE! -> SETUP$GETR8('
 !     ******************************************************************
 !     **  RETURN NUMBER OF PARTIAL WAVES                              **
 !     ******************************************************************
@@ -1787,7 +1869,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$RCBG(ISP_,RCBG_)
-!legacy code! -> setup$getr8('
+!LEGACY CODE! -> SETUP$GETR8('
 !     ******************************************************************
 !     **  RETURN NUMBER OF PARTIAL WAVES                              **
 !     ******************************************************************
@@ -1803,7 +1885,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$LNX(ISP_,LNX_)
-!legacy code! -> setup$geti4('
+!LEGACY CODE! -> SETUP$GETI4('
 !     ******************************************************************
 !     **  RETURN NUMBER OF PARTIAL WAVES                              **
 !     ******************************************************************
@@ -1819,7 +1901,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$LMNX(ISP_,LMNX_)
-!legacy code! -> setup$geti4('
+!LEGACY CODE! -> SETUP$GETI4('
 !     ******************************************************************
 !     **  RETURN NUMBER OF PARTIAL WAVES                              **
 !     ******************************************************************
@@ -1835,7 +1917,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$LMNXX(LMNXX_)
-!legacy code! -> setup$geti4('
+!LEGACY CODE! -> SETUP$GETI4('
 !     ******************************************************************
 !     **  RETURN NUMBER OF PARTIAL WAVES                              **
 !     ******************************************************************
@@ -1849,7 +1931,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$LOFLN(ISP_,LNX_,LOX_)
-!legacy code! -> setup$geti4a('lox'
+!LEGACY CODE! -> SETUP$GETI4A('LOX'
 !     ******************************************************************
 !     **  RETURN NUMBER MAIN ANGULAR MOMENTUM OF PARTIAL WAVES        **
 !     ******************************************************************
@@ -1874,7 +1956,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$NSPECIES(NSP_)
-!legacy code! -> setup$geti4
+!LEGACY CODE! -> SETUP$GETI4
 !     ******************************************************************
 !     **  RETURN NUMBER OF PARTIAL WAVES                              **
 !     ******************************************************************
@@ -1888,7 +1970,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$LMRXX(LMRXX_)
-!legacy code! -> setup$geti4
+!LEGACY CODE! -> SETUP$GETI4
 !     ******************************************************************
 !     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY          **
 !     ****************************************************************** 
@@ -1902,7 +1984,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$LNXX(LNXX_)
-!legacy code! -> setup$geti4
+!LEGACY CODE! -> SETUP$GETI4
 !     ******************************************************************
 !     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY          **
 !     ******************************************************************
@@ -1916,7 +1998,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$LMRX(ISP_,LMRX_)
-!legacy code! -> setup$geti4
+!LEGACY CODE! -> SETUP$GETI4
 !     ******************************************************************
 !     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY          **
 !     ******************************************************************
@@ -1932,7 +2014,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     ..................................................................
       SUBROUTINE SETUP$AEZ(ISP_,AEZ_)
-!legacy code! ->setup$getr8
+!LEGACY CODE! ->SETUP$GETR8
 !     ******************************************************************
 !     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY          **
 !     ******************************************************************
@@ -2173,348 +2255,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_RENEWLOCORB()
-!     **                                                                      **
-!     **  DRIVER ROUTINE FOR SETUP_CHIFROMPHI                                 **
-!     **                                                                      **
-!     **  CHECKS WHETHER AN UPDATE IS NECESSARY; REALLOCATES ARRAYS AND       **
-!     **  COMPUTES NEW TRANSFORMATION MATRICES                                **
-!     **                                                                      **
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4)             :: LN,L,I,NR
-!     **************************************************************************
-      IF(THIS%LOCORBINI) RETURN
-PRINT*,'A1',THIS%LOCORBNOFL
-PRINT*,'A2',THIS%LOCORBLNX
-!
-!     == REALLOCATE DATA =======================================================
-      IF(SUM(THIS%LOCORBNOFL).NE.THIS%LOCORBLNX) THEN
-PRINT*,'B'
-        THIS%LOCORBLNX=SUM(THIS%LOCORBNOFL)
-        IF(ASSOCIATED(THIS%LOCORBLOX)) DEALLOCATE(THIS%LOCORBLOX)
-        IF(ASSOCIATED(THIS%LOCORBAMAT)) DEALLOCATE(THIS%LOCORBAMAT)
-        IF(ASSOCIATED(THIS%LOCORBBMAT)) DEALLOCATE(THIS%LOCORBBMAT)
-        ALLOCATE(THIS%LOCORBLOX(THIS%LOCORBLNX))
-        ALLOCATE(THIS%LOCORBAMAT(THIS%LNX,THIS%LOCORBLNX))
-        ALLOCATE(THIS%LOCORBBMAT(THIS%LOCORBLNX,THIS%LNX))
-      END IF
-PRINT*,'C'
-!
-!     == RECALCULATE LOCAL ORBITALS ============================================
-      CALL RADIAL$GETI4(THIS%GID,'NR',NR)
-      CALL SETUP_CHIFROMPHI(THIS%GID,NR,THIS%LNX,THIS%LOX,THIS%AEPHI &
-     &                 ,THIS%LOCORBNOFL,THIS%LOCORBRAD,THIS%LOCORBLNX &
-     &                 ,THIS%LNX,THIS%LOCORBLOX,THIS%LOCORBAMAT,THIS%LOCORBBMAT)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_CHIFROMPHI(GID,NR,LNX,LOX,PHI,NORB,RCUT &
-     &                           ,LNXCHI,LNXPHI,LOXCHI,AMAT,BMAT)
-!     **                                                                      **
-!     **  DEFINES PROJECTOR FUNCTIONS FOR LOCAL ORBITALS IN TERMS OF          **
-!     **  THE CONVENTIONAL PARTIAL WAVE PROJECTOR FUNCTIONS                   **
-!     **                                                                      **
-!     **     <P_CHI_I|= SUM_J BMAT(I,J) <P_PHI_J|                             **
-!     **     |CHI_I>  = SUM_J |PHI_J> AMAT(J,I)                               **
-!     **                                                                      **
-!     **  THE LOCAL ORBITALS ARE SELECTED BY NORB WHICH SPECIFIES THE NUMBER  **
-!     **  OF LOCAL ORBITALS PER ANGULAR MOMENTUM CHANNEL.                     **
-!     **                                                                      **
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID     ! GRID ID
-      INTEGER(4),INTENT(IN) :: NR      ! #(RADIAL GRID POINTS)
-      INTEGER(4),INTENT(IN) :: LNX     ! #(PARTIAL WAVES) 
-      INTEGER(4),INTENT(IN) :: LOX(LNX)! ANGULAR MOMENTUM PER PARTIAL WAVE
-      REAL(8)   ,INTENT(IN) :: PHI(NR,LNX)    ! PARTIAL WAVES
-      INTEGER(4),INTENT(IN) :: NORB(4) ! X#(HEAD ORBITALS PER L)
-      REAL(8)   ,INTENT(IN) :: RCUT    ! EXTENT OF HEAD FUNCTIONS
-      INTEGER(4),INTENT(IN) :: LNXCHI  ! #(LOCAL ORBITALS)
-      INTEGER(4),INTENT(IN) :: LNXPHI  ! #(PARTIAL WAVES)
-      INTEGER(4),INTENT(OUT):: LOXCHI(LNXCHI)  ! ANGULAR MOMENTUM PER LOCAL ORB.
-      REAL(8)   ,INTENT(OUT):: BMAT(LNXCHI,LNXPHI) ! MAPPING OF PROJECTORS
-      REAL(8)   ,INTENT(OUT):: AMAT(LNXPHI,LNXCHI)     ! MAPPING OF WAVE FUNCTIONS
-      REAL(8)   ,ALLOCATABLE:: CHI(:,:)
-      REAL(8)   ,ALLOCATABLE:: CHI1(:,:)
-      REAL(8)   ,ALLOCATABLE:: A(:,:)
-      REAL(8)   ,ALLOCATABLE:: B(:,:)
-      REAL(8)   ,ALLOCATABLE:: A1(:,:)
-      REAL(8)   ,ALLOCATABLE:: MAT(:,:)
-      REAL(8)   ,ALLOCATABLE:: MATINV(:,:)
-      REAL(8)   ,ALLOCATABLE:: R(:)        
-      REAL(8)   ,ALLOCATABLE:: G(:)        
-      REAL(8)   ,PARAMETER  :: RCG=1.D-2
-      REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:)
-      REAL(8)               :: SVAR1,SVAR2
-      INTEGER(4)            :: IR
-      INTEGER(4)            :: NX,N,LX,L,LN,LNCHI,NOFL,NOFL2,ISVAR
-      INTEGER(4)            :: N1,N2,LN1,LN2,L1,L2
-      CHARACTER(64)         :: FILE
-!     **************************************************************************
-                            CALL TRACE$PUSH('SETUP_CHIFROMPHI')
-!
-!     ==========================================================================
-!     ==  COLLECT DATA FROM SETUP OBJECT                                      ==
-!     ==========================================================================
-      ALLOCATE(R(NR))
-      CALL RADIAL$R(GID,NR,R)
-!
-!     ==========================================================================
-!     ==  CONSISTENCY CHECKS                                                  ==
-!     ==========================================================================
-!     == CHECK IF #(LOCAL ORBITALS) IS CONSISTENT WITH ARRAY DIMENSIONS ========
-      IF(SUM(NORB).NE.LNXCHI) THEN
-        CALL ERROR$MSG('NORB AND LNXCHI INCONSISTENT')
-        CALL ERROR$I4VAL('NORB',LNX)
-        CALL ERROR$I4VAL('LNXCHI',LNXCHI)
-        CALL ERROR$STOP('SETUP_CHIFROMPHI')
-      END IF
-!
-!     == CHECK IF #(PARTIAL WAVES) FROM SETUP OBJECT IS CONSISTENT WITH ========
-!     == ARRAY DIMENSIONS ======================================================
-      IF(LNX.NE.LNXPHI) THEN
-        CALL ERROR$MSG('LNX AND LNXPHI INCONSISTENT')
-        CALL ERROR$I4VAL('LNX',LNX)
-        CALL ERROR$I4VAL('LNXPHI',LNXPHI)
-        CALL ERROR$STOP('SETUP_CHIFROMPHI')
-      END IF
-!
-!     == CHECK IF NUMBER OF LOCAL ORBITALS DOES NOT EXCEED NUMBER OF PARTIAL WAVES
-      LX=MAXVAL(LOX)
-      DO L=0,LX
-        NOFL=0
-        DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
-          NOFL=NOFL+1
-        ENDDO
-        IF(NORB(L+1).GT.NOFL) THEN
-          CALL ERROR$MSG('#(CORRELATED ORBITALS) EXCEEDS #(PARTIAL WAVES)')
-          CALL ERROR$STOP('SETUP_CHIFROMPHI')
-        END IF
-      ENDDO
-!
-!     ==========================================================================
-!     ==  START WITH PARTIAL WAVES AS LOCAL ORBITALS                          ==
-!     == |CHI_I>=SUM_I |PHI_J>A(J,I)
-!     ==========================================================================
-      ALLOCATE(CHI(NR,LNX))        
-      CHI(:,:)=0.D0
-      ALLOCATE(A(LNX,LNX))        
-      A(:,:)=0.D0
-      DO LN=1,LNX
-        L=LOX(LN)
-        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-        A(LN,LN)=1.D0
-        CHI(:,LN)=PHI(:,LN)
-      ENDDO
-!
-!     ==========================================================================
-!     == MAKE HEAD FUNCTION ANTIBONDING WITH NODE AT RCUT ======================
-!     ==========================================================================
-      ALLOCATE(AUX(NR))
-      ALLOCATE(AUX1(NR))
-      DO L=0,LX
-        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-        NOFL=0
-        DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE
-          NOFL=NOFL+1
-          IF(NOFL.GT.NORB(L+1)) CYCLE  ! CONSIDER ONLY HEAD FUNCTIONS
-!         == SEARCH FOR NEXT PARTIAL WAVE WITH THIS L =========================
-          LN1=0
-          DO LN2=LN+1,LNX
-            IF(LOX(LN2).NE.L) CYCLE  
-            LN1=LN2
-            EXIT
-          ENDDO
-          IF(LN1.EQ.0) THEN
-            CALL ERROR$MSG('CAN NOT LOCALIZE')
-            CALL ERROR$MSG('NO TAIL FUNCTION AVAILABLE')
-            CALL ERROR$STOP('SETUP_CHIFROMPHI')
-          END IF
-!
-!         == NOW CONTINUE; LN1 POINTS TO THE NEXT PHI WITH THIS L ==============
-!         == IMPOSE NODE CONDITION==============================================
-          CALL RADIAL$VALUE(GID,NR,CHI(:,LN),RCUT,SVAR1)
-          CALL RADIAL$VALUE(GID,NR,CHI(:,LN1),RCUT,SVAR2)
-          IF(SVAR1.EQ.0.D0.AND.SVAR2.EQ.0.D0) THEN
-            CALL ERROR$MSG('PARTIAL WAVES ARE TRUNCATED INSIDE OF RCUT')
-            CALL ERROR$MSG('THIS IS A FLAW OF THE IMPLEMENTATION')
-            CALL ERROR$MSG('CHOOSE SMALLER RCUT')
-            CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
-          END IF
-          CHI(:,LN)=CHI(:,LN)*SVAR2-CHI(:,LN1)*SVAR1
-          A(:,LN)=A(:,LN)*SVAR2-A(:,LN1)*SVAR1
-!         == ORTHOGONALIZE TO THE LOWER HEAD FUNCTIONS =========================
-          DO LN1=1,LN-1
-            IF(LOX(LN1).NE.L) CYCLE  
-            AUX(:)=CHI(:,LN)*CHI(:,LN1)*R(:)**2
-            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RCUT,SVAR1)
-            CHI(:,LN)=CHI(:,LN)-CHI(:,LN1)*SVAR1
-            A(:,LN)=A(:,LN)-A(:,LN1)*SVAR1
-          ENDDO
-!         == NORMALIZE HEAD FUNCTION =============================================
-          AUX(:)=CHI(:,LN)**2*R(:)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RCUT,SVAR1)
-          SVAR1=1.D0/SQRT(SVAR1)
-          CHI(:,LN)=CHI(:,LN)*SVAR1
-          A(:,LN)=A(:,LN)*SVAR1
-        ENDDO
-      END DO          
-!
-!     ==========================================================================
-!     == DELOCALIZE TAIL FUNCTIONS                                            ==
-!     ==========================================================================
-!     == DEFINE WEIGHT FUNCTION       
-      ALLOCATE(G(NR))
-      G(:)=EXP(-(R(:)/RCG)**2)
-!     ==  MINIMIZE SUCCESSIVELY THE WEIGHT OF <CHI2+X*CHI1|W|CHI2+X*CHI1> ======
-!     ==  I.E. <CHI1|W|CHI2>+X<CHI1|W|CHI1> ====================================
-      ALLOCATE(CHI1(NR,LNX))
-      CHI1(:,:)=CHI(:,:)
-      ALLOCATE(A1(LNX,LNX))        
-      A1(:,:)=A(:,:)
-      DO L=0,LX
-        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-        NOFL=0
-        DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE
-          NOFL=NOFL+1
-!         == MINIMIZE CONTRIBUTION NEAR THE CENTER 
-          NOFL2=0
-          DO LN2=1,LN-1
-            IF(LOX(LN2).NE.L) CYCLE
-            NOFL2=NOFL2+1
-            AUX(:)=G(:)*CHI1(:,LN)*CHI1(:,LN2)*R(:)**2
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
-            AUX(:)=G(:)*CHI1(:,LN2)**2*R(:)**2
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
-            SVAR1=SVAR1/SVAR2
-            CHI1(:,LN)=CHI1(:,LN)-CHI1(:,LN2)*SVAR1
-            A1(:,LN)=A1(:,LN)-A1(:,LN2)*SVAR1
-          ENDDO
-        ENDDO
-      ENDDO
-!
-!     = NOW MAP ONLY TAIL FUNCTIONS BACK AND LEAVE HEAD FUNCTIONS UNTOUCHED        
-      DO L=0,LX
-        NOFL=0
-        DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE
-          NOFL=NOFL+1
-          IF(NOFL.LE.NORB(L+1)) CYCLE ! LEAVE HEAD FUNCTIONS ALONE
-          CHI(:,LN)=CHI1(:,LN)
-          A(:,LN)=A1(:,LN)
-        ENDDO
-      ENDDO
-      DEALLOCATE(G)
-      DEALLOCATE(CHI1)
-      DEALLOCATE(A1)
-      DEALLOCATE(AUX)
-      DEALLOCATE(AUX1)
-!
-!     ==========================================================================
-!     == NOW INVERT THE MATRIX A: B:=A^{-1}                                   ==
-!     == |CHI_I>=SUM_J |PHI_J>A(J,I)                                          ==
-!     == 1=|PHI><P|=|PHI>A B <P|=|CHI> ( B<P| )                               ==
-!     == <P_CHI_I|=SUM_J B(I,J)<P_PHI_J|                                      ==
-!     ==========================================================================
-      ALLOCATE(B(LNX,LNX))
-      B(:,:)=0.D0
-      LX=MAXVAL(LOX)
-      DO L=0,LX
-        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-!
-        NX=0
-        DO LN=1,LNX
-          IF(LOX(LN).EQ.L) NX=NX+1
-        ENDDO
-        IF(NX.EQ.0) CYCLE   
-
-        ALLOCATE(MAT(NX,NX))
-        ALLOCATE(MATINV(NX,NX))
-!        
-!       == MAP A INTO MATRIX MAT ===============================================
-        N1=0
-        DO LN1=1,LNX
-          L1=LOX(LN1)
-          IF(L1.NE.L) CYCLE
-          N1=N1+1
-          N2=0
-          DO LN2=1,LNX
-            L2=LOX(LN2)
-            IF(L2.NE.L) CYCLE
-            N2=N2+1
-            MAT(N2,N1)=A(LN2,LN1)
-          ENDDO
-        ENDDO
-!
-!       == INVERT MATRIX =======================================================
-        CALL LIB$INVERTR8(NX,MAT,MATINV)
-!
-!       == MAP MATINV INTO B ===================================================
-        N1=0
-        DO LN1=1,LNX
-          L1=LOX(LN1)
-          IF(L1.NE.L) CYCLE
-          N1=N1+1
-          N2=0
-          DO LN2=1,LNX
-            L2=LOX(LN2)
-            IF(L2.NE.L) CYCLE
-            N2=N2+1
-            B(LN1,LN2)=MATINV(N1,N2) 
-          ENDDO
-        ENDDO
-        DEALLOCATE(MAT)
-        DEALLOCATE(MATINV)
-      ENDDO
-!
-!     ==========================================================================
-!     === REMOVE TAIL FUNCTIONS                                               ==
-!     ==========================================================================
-      LNCHI=0
-      DO L=0,LX
-        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-        NOFL=0
-        DO LN=1,LNX
-          IF(L.NE.LOX(LN)) CYCLE
-          NOFL=NOFL+1
-          IF(NOFL.GT.NORB(L+1)) EXIT
-          LNCHI=LNCHI+1
-          IF(LNCHI.GT.LNXCHI) THEN
-            CALL ERROR$MSG('LNCHI OUT OF RANGE')
-            CALL ERROR$I4VAL('LNCHI',LNCHI)
-            CALL ERROR$I4VAL('LNXCHI',LNXCHI)
-            CALL ERROR$STOP('SETUP_CHIFROMPHI')
-          END IF
-          LOXCHI(LNCHI)=L
-          BMAT(LNCHI,:)=B(LN,:)
-          AMAT(:,LNCHI)=A(:,LN)
-        END DO
-      ENDDO
-      IF(LNCHI.NE.LNXCHI) THEN
-        CALL ERROR$MSG('LNCHI AND LNXCHI ARE INCONSISTENT')
-        CALL ERROR$I4VAL('LNCHI',LNCHI)
-        CALL ERROR$I4VAL('LNXCHI',LNXCHI)
-        CALL ERROR$STOP('SETUP_CHIFROMPHI')
-      END IF
-!
-!     ==========================================================================
-!     ==  CLEAN UP                                                            ==
-!     ==========================================================================
-      DEALLOCATE(CHI)
-      DEALLOCATE(A)
-      DEALLOCATE(B)
-      DEALLOCATE(R)
-                            CALL TRACE$POP()
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_CVXMAT(GID,NR,LNX,LOX,AEPHI,NC,LOFC,PSIC,LRHOX,MAT)
 !     **************************************************************************
 !     **  CORE-VALENCE EXCHANGE MATRIX ELEMENTS                               **
@@ -2680,7 +2420,7 @@ PRINT*,'C'
       INTEGER(4)              :: NFIL
       TYPE(LL_TYPE)           :: LL_SCNTL
       INTEGER(4)              :: ITH
-      LOGICAL(4)              :: TCHK,tchk1,tchk2,tchk3
+      LOGICAL(4)              :: TCHK,TCHK1,TCHK2,TCHK3
       CHARACTER(128)          :: ID
       CHARACTER(2)            :: EL
       REAL(8)                 :: R1
@@ -2693,11 +2433,11 @@ PRINT*,'C'
       REAL(8)     ,ALLOCATABLE:: R(:)
       REAL(8)     ,ALLOCATABLE:: RCL1(:)
       REAL(8)                 :: RCOV
-      REAL(8)                 :: dmin,dmax,rx
-      REAL(8)                 :: pi,y0
+      REAL(8)                 :: DMIN,DMAX,RX
+      REAL(8)                 :: PI,Y0
 !     **************************************************************************
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL ATOMLIB$READSCNTL(LL_SCNTL)
       CALL LINKEDLIST$SELECT(LL_SCNTL,'~')
       CALL LINKEDLIST$SELECT(LL_SCNTL,'SCNTL')
@@ -2752,7 +2492,7 @@ PRINT*,'C'
             END IF
             CALL LINKEDLIST$GET(LL_SCNTL,'RMAX',1,RX)
 !
-            CALL radial$GRIDPARAMETERS(DMIN,DMAX,RX,R1,DEX,NR)
+            CALL RADIAL$GRIDPARAMETERS(DMIN,DMAX,RX,R1,DEX,NR)
 !
 !           == CHECK FOR CONFLICT ==============================================
             CALL LINKEDLIST$EXISTD(LL_SCNTL,'R1',1,TCHK1)
@@ -2785,7 +2525,7 @@ PRINT*,'C'
               CALL ERROR$STOP('ATOMLIB$READCNTL')
             END IF
             CALL LINKEDLIST$GET(LL_SCNTL,'NR',1,NR)
-          end if
+          END IF
 !
 !         == CREATE GRID =======================================================
           CALL RADIAL$NEW('SHLOG',GID)
@@ -2867,6 +2607,7 @@ PRINT*,'C'
             CALL ERROR$STOP('ATOMLIB$READCNTL')
           END IF
           CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+          leng=min(size(rcl),leng)
           RCL=RCL1(1:LENG)*RCOV
 !      
           CALL LINKEDLIST$EXISTD(LL_SCNTL,'RCSM/RCOV',1,TCHK)
@@ -2895,7 +2636,7 @@ PRINT*,'C'
           VAL0_POT=0.D0
           CALL LINKEDLIST$EXISTD(LL_SCNTL,'VAL0',1,TCHK)
           IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'VAL0',1,VAL0_POT)
-          val0_pot=val0_pot/y0
+          VAL0_POT=VAL0_POT/Y0
 !
           RC_POT=1.D0
           CALL LINKEDLIST$EXISTD(LL_SCNTL,'RC/RCOV',1,TCHK)
@@ -2905,9 +2646,9 @@ PRINT*,'C'
 
           CALL LINKEDLIST$SELECT(LL_SCNTL,'..')
 !
-!         ======================================================================        
+!         ======================================================================
 !         == DEFINE CORE PSEUDIZATION                                         ==
-!         ======================================================================        
+!         ======================================================================
           CALL LINKEDLIST$EXISTL(LL_SCNTL,'CORE',1,TCHK)
           IF(.NOT.TCHK) THEN
             CALL ERROR$MSG('!SCNTL!SETUP!CORE NOT SPECIFIED')
@@ -2922,7 +2663,7 @@ PRINT*,'C'
           VAL0_CORE=0.D0
           CALL LINKEDLIST$EXISTD(LL_SCNTL,'VAL0',1,TCHK)
           IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'VAL0',1,VAL0_CORE)
-          val0_core=val0_core/y0
+          VAL0_CORE=VAL0_CORE/Y0
 !
           RC_CORE=1.D0
           CALL LINKEDLIST$EXISTD(LL_SCNTL,'RC/RCOV',1,TCHK)
@@ -2945,13 +2686,13 @@ PRINT*,'C'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,AEPOT &
      &                    ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
-     &                    ,RBOX,LNX,LOX,RC,AEPHI,PSPHI,nlphi,PRO,DT,DOver &
+     &                    ,RBOX,LNX,LOX,RC,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER &
      &                    ,POW_POT,VAL0_POT,RC_POT,RCSM,VADD)
 !     **************************************************************************
 !     **************************************************************************
 !     **************************************************************************
-      use periodictable_module
-      use strings_module
+      USE PERIODICTABLE_MODULE
+      USE STRINGS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
@@ -2976,10 +2717,10 @@ PRINT*,'C'
       REAL(8)   ,INTENT(OUT):: VADD(NR)
       REAL(8)   ,INTENT(OUT):: AEPHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: PSPHI(NR,LNX)
-      REAL(8)   ,intent(out):: NLPHI(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: NLPHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: PRO(NR,LNX)
       REAL(8)   ,INTENT(OUT):: DT(LNX,LNX)
-      REAL(8)   ,INTENT(OUT):: DOver(LNX,LNX)
+      REAL(8)   ,INTENT(OUT):: DOVER(LNX,LNX)
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -3012,24 +2753,25 @@ REAL(8)               :: PHITEST1(NR,LNX)
       REAL(8)               :: RC1
       REAL(8)               :: EHOMO
       INTEGER(4)            :: LX
-      INTEGER(4)            :: L,IB,LN,IR,IB1,ib2,LN1,LN2,iter
+      INTEGER(4)            :: L,IB,LN,IR,IB1,IB2,LN1,LN2,ITER
       INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
       REAL(8)               :: PI,Y0
       REAL(8)               :: R(NR)
       REAL(8)               :: AUX(NR),AUX1(NR)
+      REAL(8)   ,allocatable:: AUXarr(:,:)
       REAL(8)               :: VAL
       REAL(8)               :: SVAR,SVAR1,SVAR2
       LOGICAL(4)            :: TREL,TSO,TCHK
       REAL(8)   ,ALLOCATABLE:: A(:,:),AINV(:,:)
       REAL(8)   ,ALLOCATABLE:: PROJ(:)
-      LOGICAL   ,PARAMETER  :: TTEST=.true.
+      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
       REAL(8)               :: AEPSIF(NR,NB-NC)
       REAL(8)               :: PSPSIF(NR,NB-NC)
       REAL(8)               :: EH,EXC
-      integer(4)            :: nn,nn0
-      integer(4)            :: nfil
-      character(64)         :: string
-      logical   ,parameter  :: twrite=.true.
+      INTEGER(4)            :: NN,NN0
+      INTEGER(4)            :: NFIL
+      CHARACTER(64)         :: STRING
+      LOGICAL   ,PARAMETER  :: TWRITE=.TRUE.
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -3068,13 +2810,6 @@ REAL(8)               :: PHITEST1(NR,LNX)
 !     == CONSTRUCT PSEUDO POTENTIAL                                           ==
 !     ==========================================================================
       CALL ATOMIC_PSEUDIZE(GID,NR,POW_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
-      IF(TTEST) THEN
-        OPEN(UNIT=8,FILE='PSPOT.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),PSPOT(IR),AEPOT(IR)
-        ENDDO
-        CLOSE(8)
-      END IF
 !
 !     ==========================================================================
 !     == CONSTRUCT NODELESS WAVE FUNCTIONS                                    ==
@@ -3097,18 +2832,14 @@ REAL(8)               :: PHITEST1(NR,LNX)
 !     == REPORT SETTINGS ON WAVE FUNCTIONS                                    ==
 !     ==========================================================================
       IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20," Z=",f5.0," ")')aez
+        WRITE(6,FMT='(82("="),T20," Z=",F5.0," ")')AEZ
         WRITE(6,FMT='(82("="),T20," ENERGIES FOR ATOMIC WAVE FUNCTIONS")')
         DO IB=1,NB
           WRITE(6,FMT='("IB=",I3," L=",I2," F=",F10.5," E[NEW]=",F15.5 &
      &                                               ," E[OLD]=",F15.5)') &
      &                  IB,LOFI(IB),FOFI(IB),EOFI1(IB),EOFI(IB)
         ENDDO
-        OPEN(UNIT=8,FILE='UOFI.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),UOFI(IR,:),AEPSI(IR,:)
-        ENDDO
-        CLOSE(8)
+!       CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,nb,UOFI)
       END IF
 !
 !     ==========================================================================
@@ -3146,12 +2877,6 @@ REAL(8)               :: PHITEST1(NR,LNX)
           WRITE(6,FMT='("LN=",I2," L=",I2," E=",F10.5," RC=",F6.3)') &
      &                      LN,LOX(LN),EOFLN(LN),RC(LN)
         ENDDO
-
-        OPEN(UNIT=8,FILE='NLPHI.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),NLPHI(IR,:)
-        ENDDO
-        CLOSE(8)
       END IF
 !
 !     ==========================================================================
@@ -3165,11 +2890,11 @@ REAL(8)               :: PHITEST1(NR,LNX)
             IF(LOFI(IB).NE.L) CYCLE
             AUX(:)=R(:)**2*UOFI(:,IB)*PHI(:)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,svar1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR1)
             AUX(:)=R(:)**2*UOFI(:,IB)**2
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,svar2)
-            val=svar1/svar2
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR2)
+            VAL=SVAR1/SVAR2
             PHI(:)=PHI(:)-UOFI(:,IB)*VAL
           ENDDO
           AUX(:)=R(:)**2*PHI(:)**2
@@ -3186,7 +2911,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
             NLPHI(:,LN1) = NLPHI(:,LN1)*VAL
             TNLPHI(:,LN1)=TNLPHI(:,LN1)*VAL
           ENDDO
-          exit
+          EXIT
         ENDDO
       ENDDO
 !
@@ -3221,12 +2946,6 @@ REAL(8)               :: PHITEST1(NR,LNX)
         DO LN1=1,LNX
           WRITE(6,FMT='(20F15.10)')TRANSUINV(LN1,:)
         ENDDO
-        OPEN(UNIT=8,FILE='QN.DAT')
-        DO IR=1,NR
-          IF(R(IR).GT.10.D0) EXIT
-          WRITE(8,'(30F20.5)')R(IR),MAX(-10.D0,MIN(10.D0,QN(IR,:))),MAX(-10.D0,MIN(10.D0,NLPHI(IR,:)))
-        ENDDO
-        CLOSE(8)
       END IF
 !
 !     ==========================================================================
@@ -3257,96 +2976,96 @@ REAL(8)               :: PHITEST1(NR,LNX)
 !     ==   THE LADDER OF NODELESS WAVE FUNCTION LEADS TO A BETTER SOLUTION    ==
 !     ==   OF THE SCHROEDINGER EQUATION, BUT THE CORE-ORTHOGONALITY IS WORSE  ==
 !     ==========================================================================
-!!$      allocate(a(nc,nc))
-!!$      allocate(a(nc,nc))
-!!$      allocate(a(nc,nc))
-!!$!     == <uc|uc> ===============================================================
-!!$      a(:,:)=0.d0
-!!$      do ib1=1,nc
-!!$        do ib2=ib1,nc
-!!$          if(lofi(ib1).ne.lofi(ib2)) cycle
-!!$          AUX(:)=R(:)**2*UOFI(:,IB1)*uofi(:,ib2)
+!!$      ALLOCATE(A(NC,NC))
+!!$      ALLOCATE(A(NC,NC))
+!!$      ALLOCATE(A(NC,NC))
+!!$!     == <UC|UC> ===============================================================
+!!$      A(:,:)=0.D0
+!!$      DO IB1=1,NC
+!!$        DO IB2=IB1,NC
+!!$          IF(LOFI(IB1).NE.LOFI(IB2)) CYCLE
+!!$          AUX(:)=R(:)**2*UOFI(:,IB1)*UOFI(:,IB2)
 !!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,val)
-!!$          a(ib1,ib2)=val
-!!$          a(ib2,ib1)=val
-!!$        enddo
-!!$      enddo
-!!$!     == invert  <uc|uc> =======================================================
-!!$      allocate(ainv(nc,nc))
-!!$      CALL LIB$INVERTR8(nc,A,AINV)
-!!$      a=matmul(a,ainv)
-!!$      WRITE(6,FMT='(82("="),T20,"  inversion test  ")')
-!!$      DO LN1=1,LNX
-!!$        WRITE(6,FMT='(20F20.15)')a(ln1,:)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!!$          A(IB1,IB2)=VAL
+!!$          A(IB2,IB1)=VAL
+!!$        ENDDO
 !!$      ENDDO
-!!$      deallocate(a)
-!!$!     == <uc|qn> ===============================================================
-!!$      allocate(a(nc,lnx))
-!!$      a(:,:)=0.d0
-!!$      do ib=1,nc
-!!$        do ln=1,lnx
-!!$          if(lox(ln).ne.lofi(ib)) cycle
-!!$          AUX(:)=R(:)**2*UOFI(:,IB)*qn(:,ln)
+!!$!     == INVERT  <UC|UC> =======================================================
+!!$      ALLOCATE(AINV(NC,NC))
+!!$      CALL LIB$INVERTR8(NC,A,AINV)
+!!$      A=MATMUL(A,AINV)
+!!$      WRITE(6,FMT='(82("="),T20,"  INVERSION TEST  ")')
+!!$      DO LN1=1,LNX
+!!$        WRITE(6,FMT='(20F20.15)')A(LN1,:)
+!!$      ENDDO
+!!$      DEALLOCATE(A)
+!!$!     == <UC|QN> ===============================================================
+!!$      ALLOCATE(A(NC,LNX))
+!!$      A(:,:)=0.D0
+!!$      DO IB=1,NC
+!!$        DO LN=1,LNX
+!!$          IF(LOX(LN).NE.LOFI(IB)) CYCLE
+!!$          AUX(:)=R(:)**2*UOFI(:,IB)*QN(:,LN)
 !!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,val)
-!!$          a(ib,ln)=val
-!!$        enddo
-!!$      enddo
-!!$!     == |aephi>=|qn> - |uc>(<uc|uc>)^{-1}<uc|qn> ==============================
-!!$      aephi(:,:)=qn(:,:)-matmul(uofi,matmul(ainv,a))
-!!$      Taephi(:,:)=Tqn(:,:)-matmul(Tuofi,matmul(ainv,a))
-!!$!     == again to avoid numerical errors =======================================
-!!$!     == <uc|qn> ===============================================================
-!!$      do ib=1,nc
-!!$        do ln=1,lnx
-!!$          if(lox(ln).ne.lofi(ib)) cycle
-!!$          AUX(:)=R(:)**2*UOFI(:,IB)*aephi(:,ln)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!!$          A(IB,LN)=VAL
+!!$        ENDDO
+!!$      ENDDO
+!!$!     == |AEPHI>=|QN> - |UC>(<UC|UC>)^{-1}<UC|QN> ==============================
+!!$      AEPHI(:,:)=QN(:,:)-MATMUL(UOFI,MATMUL(AINV,A))
+!!$      TAEPHI(:,:)=TQN(:,:)-MATMUL(TUOFI,MATMUL(AINV,A))
+!!$!     == AGAIN TO AVOID NUMERICAL ERRORS =======================================
+!!$!     == <UC|QN> ===============================================================
+!!$      DO IB=1,NC
+!!$        DO LN=1,LNX
+!!$          IF(LOX(LN).NE.LOFI(IB)) CYCLE
+!!$          AUX(:)=R(:)**2*UOFI(:,IB)*AEPHI(:,LN)
 !!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,val)
-!!$          a(ib,ln)=val
-!!$        enddo
-!!$      enddo
-!!$!     == |aephi>=|qn> - |uc>(<uc|uc>)^{-1}<uc|qn> ==============================
-!!$      aephi(:,:)=aephi(:,:)-matmul(uofi,matmul(ainv,a))
-!!$      Taephi(:,:)=Taephi(:,:)-matmul(Tuofi,matmul(ainv,a))
-!!$      deallocate(ainv)
-!!$      deallocate(a)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!!$          A(IB,LN)=VAL
+!!$        ENDDO
+!!$      ENDDO
+!!$!     == |AEPHI>=|QN> - |UC>(<UC|UC>)^{-1}<UC|QN> ==============================
+!!$      AEPHI(:,:)=AEPHI(:,:)-MATMUL(UOFI,MATMUL(AINV,A))
+!!$      TAEPHI(:,:)=TAEPHI(:,:)-MATMUL(TUOFI,MATMUL(AINV,A))
+!!$      DEALLOCATE(AINV)
+!!$      DEALLOCATE(A)
 !
-!     == use ladder of nodeless wave functions =================================
+!     == USE LADDER OF NODELESS WAVE FUNCTIONS =================================
       AEPHI(:,:) =QN(:,:)   
       TAEPHI(:,:)=TQN(:,:)  
       DO LN=1,LNX
-        svar=1.d0
+        SVAR=1.D0
         DO IB=NC,1,-1
           IF(LOFI(IB).NE.LOX(LN)) CYCLE
-          svar=svar/(EOFLN(LN)-EOFI1(IB))
-          AEPHI(:,LN) = AEPHI(:,LN)+ UOFI(:,IB)*svar
-          TAEPHI(:,LN)=TAEPHI(:,LN)+TUOFI(:,IB)*svar
+          SVAR=SVAR/(EOFLN(LN)-EOFI1(IB))
+          AEPHI(:,LN) = AEPHI(:,LN)+ UOFI(:,IB)*SVAR
+          TAEPHI(:,LN)=TAEPHI(:,LN)+TUOFI(:,IB)*SVAR
         ENDDO
       ENDDO
 !
 !     ==========================================================================
-!     == test orthogonality of AEPHI to core states                           ==
+!     == TEST ORTHOGONALITY OF AEPHI TO CORE STATES                           ==
 !     ==========================================================================
-      if(ttest) then
-        allocate(a(lnx,nc))
-        a(:,:)=0.d0
-        do ln=1,lnx
-          do ib=1,nc
-            if(lox(ln).ne.lofi(ib)) cycle
-            AUX(:)=R(:)**2*UOFI(:,IB)*aephi(:,ln)
+      IF(TTEST) THEN
+        ALLOCATE(A(LNX,NC))
+        A(:,:)=0.D0
+        DO LN=1,LNX
+          DO IB=1,NC
+            IF(LOX(LN).NE.LOFI(IB)) CYCLE
+            AUX(:)=R(:)**2*UOFI(:,IB)*AEPHI(:,LN)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,val)
-            a(ln,ib)=val
-          enddo
-        enddo
-        WRITE(6,FMT='(82("="),T20," <uc|aephi>  ")')
-        DO LN1=1,LNX
-          WRITE(6,FMT='(20F20.10)')a(ln1,:)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+            A(LN,IB)=VAL
+          ENDDO
         ENDDO
-        deallocate(a)
-      end if
+        WRITE(6,FMT='(82("="),T20," <UC|AEPHI>  ")')
+        DO LN1=1,LNX
+          WRITE(6,FMT='(20F20.10)')A(LN1,:)
+        ENDDO
+        DEALLOCATE(A)
+      END IF
 !
 !     ==========================================================================
 !     == TEST EQUATION FOR ALL-ELECTRON PARTIAL WAVES AEPHI                   ==
@@ -3401,11 +3120,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
       ENDDO
 
       IF(TTEST) THEN
-        OPEN(UNIT=8,FILE='PRO-BARE.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),BAREPRO(IR,:)
-        ENDDO
-        CLOSE(8)
+!        CALL SETUP_WRITEPHI('PRO-BARE.DAT',GID,NR,LNX,BAREPRO)
       END IF
 !
 !     ==========================================================================
@@ -3503,7 +3218,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
 !     == DT,DO                                                                ==
 !     ==========================================================================
       DT=0.D0
-      DOver=0.D0
+      DOVER=0.D0
       DH=0.D0
       DO LN1=1,LNX
         DO LN2=1,LNX
@@ -3515,7 +3230,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-          DOver(LN1,LN2)=VAL
+          DOVER(LN1,LN2)=VAL
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPOT(:)*Y0*AEPHI(:,LN2) &
       &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
@@ -3526,7 +3241,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
 
 !     == SYMMETRIZE
       DT=0.5D0*(DT+TRANSPOSE(DT))
-      DOver=0.5D0*(DOver+TRANSPOSE(DOver))
+      DOVER=0.5D0*(DOVER+TRANSPOSE(DOVER))
       DH=0.5D0*(DH+TRANSPOSE(DH))
 !
 !     ==========================================================================
@@ -3557,7 +3272,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
             SVAR=0.D0
             DO LN2=1,LNX
               IF(LOX(LN2).NE.LOX(LN)) CYCLE
-              SVAR=SVAR+(DH(LN1,LN2)-EOFLN(LN2)*DOver(LN1,LN2))*PROJ(LN2)
+              SVAR=SVAR+(DH(LN1,LN2)-EOFLN(LN2)*DOVER(LN1,LN2))*PROJ(LN2)
             ENDDO
             TPHITEST(:,LN)=TPHITEST(:,LN)+PRO(:,LN1)*SVAR
             PHITEST1(:,LN)=PHITEST1(:,LN)+PRO(:,LN1)*SVAR
@@ -3569,11 +3284,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
      &                                 ," SCHR. EQ.",F20.5," DPRO ",F20.5)') &
      &          LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))),MAXVAL(ABS(PHITEST(:,LN))),MAXVAL(ABS(PHITEST1(:,LN)+BAREPRO(:,LN)))
         ENDDO
-        OPEN(UNIT=8,FILE='PRO-TEST.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),PHITEST1(IR,:),-BAREPRO(IR,:)
-        ENDDO
-        CLOSE(8)
+!        CALL SETUP_WRITEPHI('pro-test.DAT',GID,NR,LNX,-barepro)
         DEALLOCATE(PROJ)
         DEALLOCATE(PHITEST)
         DEALLOCATE(TPHITEST)
@@ -3590,7 +3301,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
       TAEPHI=MATMUL(TAEPHI,TRANSUINV)
       PRO=MATMUL(PRO,TRANSPOSE(TRANSU))
       DT=MATMUL(TRANSPOSE(TRANSUINV),MATMUL(DT,TRANSUINV))
-      DOver=MATMUL(TRANSPOSE(TRANSUINV),MATMUL(DOver,TRANSUINV))
+      DOVER=MATMUL(TRANSPOSE(TRANSUINV),MATMUL(DOVER,TRANSUINV))
       DH=MATMUL(TRANSPOSE(TRANSUINV),MATMUL(DH,TRANSUINV))
 !
 !     == TEST IF BACK TRANSFORM WAS SUCCESSFUL ================================
@@ -3611,7 +3322,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
         ENDDO
         WRITE(6,FMT='(82("="),T20,"  DOVERLAP  ")')
         DO LN1=1,LNX
-          WRITE(6,FMT='(20F12.3)')DOver(LN1,:)
+          WRITE(6,FMT='(20F12.3)')DOVER(LN1,:)
         ENDDO
         WRITE(6,FMT='(82("="),T20,"  DOHAMILTONIAN ")')
         DO LN1=1,LNX
@@ -3624,9 +3335,9 @@ REAL(8)               :: PHITEST1(NR,LNX)
       END IF
 !
 !     ==========================================================================
-!     == renormalize wave functions and projector functions                   ==
+!     == RENORMALIZE WAVE FUNCTIONS AND PROJECTOR FUNCTIONS                   ==
 !     ==========================================================================
-      DO l=0,LX
+      DO L=0,LX
         IPRO=0
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
@@ -3636,8 +3347,8 @@ REAL(8)               :: PHITEST1(NR,LNX)
             AUX(:)=R(:)**2*PSPHI(:,LN)**2
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
             CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-            VAL=VAL+DOver(LN,LN)
-            VAL=1.d0/SQRT(VAL)
+            VAL=VAL+DOVER(LN,LN)
+            VAL=1.D0/SQRT(VAL)
           END IF
           PSPHI(:,LN) = PSPHI(:,LN)*VAL
           TPSPHI(:,LN)=TPSPHI(:,LN)*VAL
@@ -3650,15 +3361,15 @@ REAL(8)               :: PHITEST1(NR,LNX)
           PRO(:,LN)   =   PRO(:,LN)/VAL
           DH(LN,:)=DH(LN,:)*VAL
           DT(LN,:)=DT(LN,:)*VAL
-          DOver(LN,:)=DOver(LN,:)*VAL
+          DOVER(LN,:)=DOVER(LN,:)*VAL
           DH(:,LN)=DH(:,LN)*VAL
           DT(:,LN)=DT(:,LN)*VAL
-          DOver(:,LN)=DOver(:,LN)*VAL
+          DOVER(:,LN)=DOVER(:,LN)*VAL
         ENDDO
       ENDDO
 !
 !     ==========================================================================
-!     == calculate density for unscreening                                    ==
+!     == CALCULATE DENSITY FOR UNSCREENING                                    ==
 !     ==========================================================================
       AERHO(:)=0.D0
       PSRHO(:)=0.D0
@@ -3679,55 +3390,55 @@ REAL(8)               :: PHITEST1(NR,LNX)
             IF(LOX(LN2).NE.L) CYCLE
             IPRO2=IPRO2+1
             DH1(IPRO1,IPRO2)=DH(LN1,LN2)
-            DO1(IPRO1,IPRO2)=DOver(LN1,LN2)
+            DO1(IPRO1,IPRO2)=DOVER(LN1,LN2)
           ENDDO
         ENDDO
-        nn0=-1
+        NN0=-1
         G(:)=0.D0
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
-          if(nn0.eq.-1)nn0=nnofi(ib)
+          IF(NN0.EQ.-1)NN0=NNOFI(IB)
           E=EOFI1(IB)
 !
           G(:)=0.D0
-          if(trel)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-          call atomlib$BOUNDSTATE(GID,NR,L,0,RBOX,DREL,G,nNofi(ib),aePOT &
-       &                             ,E,aepsif(:,ib-nc))
-          svar1=e
-          nn=nnofi(ib)-nn0
+          IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,RBOX,DREL,G,NNOFI(IB),AEPOT &
+       &                             ,E,AEPSIF(:,IB-NC))
+          SVAR1=E
+          NN=NNOFI(IB)-NN0
           G(:)=0.D0
-          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,nn,RBOX,PSPOT,NPRO,PRO1,DH1,DO1,G &
+          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,RBOX,PSPOT,NPRO,PRO1,DH1,DO1,G &
      &                                ,E,PSPSIF(:,IB-NC))
-          svar2=e
-          if(abs(svar2-eofi1(ib)).gt.1.d-2) then
-            call error$msg('inaccurate behavior during unscreening ps potential')
-            call error$r8val('( paw-ae)[ev]',(svar2-svar1)*27.211d0)
-            call error$r8val('(paw-ref)[ev]',(svar2-eofi1(ib))*27.211d0)
-            call error$r8val('( ae-ref)[ev]',(svar1-eofi1(ib))*27.211d0)
-            call error$stop('atomlib_makepartialwaves')
-          end if
-          if(ttest) then
-             write(6,fmt='("dev unscreening levels in ev ",i5,2f10.5)') &
-         &              l,(svar1-eofi1(ib))*27.211d0,(svar2-eofi1(ib))*27.211d0
-          end if
+          SVAR2=E
+          IF(ABS(SVAR2-EOFI1(IB)).GT.1.D-2) THEN
+            CALL ERROR$MSG('INACCURATE BEHAVIOR DURING UNSCREENING PS POTENTIAL')
+            CALL ERROR$R8VAL('( PAW-AE)[EV]',(SVAR2-SVAR1)*27.211D0)
+            CALL ERROR$R8VAL('(PAW-REF)[EV]',(SVAR2-EOFI1(IB))*27.211D0)
+            CALL ERROR$R8VAL('( AE-REF)[EV]',(SVAR1-EOFI1(IB))*27.211D0)
+            CALL ERROR$STOP('ATOMLIB_MAKEPARTIALWAVES')
+          END IF
+          IF(TTEST) THEN
+             WRITE(6,FMT='("DEV UNSCREENING LEVELS IN EV ",I5,2F10.5)') &
+         &              L,(SVAR1-EOFI1(IB))*27.211D0,(SVAR2-EOFI1(IB))*27.211D0
+          END IF
 !
           DO IR=1,NR-2
             IF(R(IR).LT.RBOX) CYCLE
             PSPSIF(IR+2:,IB-NC)=0.D0
             AEPSIF(IR+2:,IB-NC)=0.D0
-            if(pspsif(ir-2,ib-nc)*aepsif(ir-2,ib-nc).lt.0.d0) &
-     &                                          aepsif(:,ib-nc)=-aepsif(:,ib-nc)
-            exit
+            IF(PSPSIF(IR-2,IB-NC)*AEPSIF(IR-2,IB-NC).LT.0.D0) &
+     &                                          AEPSIF(:,IB-NC)=-AEPSIF(:,IB-NC)
+            EXIT
           ENDDO
 !
-!         == calculate projections proj=<p|ps-psi>  ============================
+!         == CALCULATE PROJECTIONS PROJ=<P|PS-PSI>  ============================
           DO IPRO=1,NPRO
             AUX(:)=R(:)**2*PSPSIF(:,IB-NC)*PRO1(:,IPRO)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,PROJ(iPRO))
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,PROJ(IPRO))
           ENDDO
 !
-!         == normalize ps wave function=========================================
+!         == NORMALIZE PS WAVE FUNCTION=========================================
           AUX(:)=R(:)**2*PSPSIF(:,IB-NC)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
@@ -3737,11 +3448,11 @@ REAL(8)               :: PHITEST1(NR,LNX)
             ENDDO
           ENDDO
           PSPSIF(:,IB-NC)=PSPSIF(:,IB-NC)/SQRT(VAL)
-          Proj=proj/SQRT(VAL)
+          PROJ=PROJ/SQRT(VAL)
 !
     PRINT*,'PROJ ',L,PROJ
 !
-!         == normalize ae wave function=========================================
+!         == NORMALIZE AE WAVE FUNCTION=========================================
           AUX(:)=R(:)**2*AEPSIF(:,IB-NC)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
@@ -3756,48 +3467,15 @@ REAL(8)               :: PHITEST1(NR,LNX)
         DEALLOCATE(PROJ)
       ENDDO      
 !
-      IF(TTEST) THEN
-        OPEN(UNIT=8,FILE='PSPSIF.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),PSPSIF(IR,:)
-        ENDDO
-        CLOSE(8)
-        OPEN(UNIT=8,FILE='AEPSIF.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),AEPSIF(IR,:)
-        ENDDO
-        CLOSE(8)
-        OPEN(UNIT=8,FILE='PSPHI.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),PSPHI(IR,:)
-        ENDDO
-        CLOSE(8)
-        OPEN(UNIT=8,FILE='AEPHI.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),AEPHI(IR,:)
-        ENDDO
-        CLOSE(8)
-        OPEN(UNIT=8,FILE='PRO.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),PRO(IR,:)
-        ENDDO
-        CLOSE(8)
-        OPEN(UNIT=8,FILE='NLPHI.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),NLPHI(IR,:)
-        ENDDO
-        CLOSE(8)
-        OPEN(UNIT=8,FILE='QN.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),QN(IR,:)
-        ENDDO
-        CLOSE(8)
-        OPEN(UNIT=8,FILE='RHO.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),AERHO(IR),PSRHO(IR)
-        ENDDO
-        CLOSE(8)
-      END IF
+!!$      IF(TTEST) THEN
+!!$        CALL SETUP_WRITEPHI('PSPSIF.DAT',GID,NR,NB-NC,PSPSIF)
+!!$        CALL SETUP_WRITEPHI('AEPSIF.DAT',GID,NR,NB-NC,AEPSIF)
+!!$        ALLOCATE(AUXARR(NR,2))
+!!$        AUXARR(:,1)=AERHO
+!!$        AUXARR(:,2)=PSRHO
+!!$        CALL SETUP_WRITEPHI('RHO.DAT',GID,NR,2,AUXARR)
+!!$        DEALLOCATE(AUXARR)
+!!$      END IF
 !
 !     ==========================================================================
 !     == UNSCREENING                                                          ==
@@ -3807,13 +3485,13 @@ REAL(8)               :: PHITEST1(NR,LNX)
         SVAR=SVAR-FOFI(IB)
       ENDDO
       CALL ATOMIC_UNSCREEN(GID,NR,RBOX,SVAR,AERHO,PSRHO,PSPOT,RCSM,VADD)
-      IF(TTEST) THEN
-        OPEN(UNIT=8,FILE='VADD.DAT')
-        DO IR=1,NR
-          WRITE(8,'(30F20.5)')R(IR),VADD(IR),PSPOT(IR)
-        ENDDO
-        CLOSE(8)
-      END IF
+!!$      IF(TTEST) THEN
+!!$        ALLOCATE(AUXARR(NR,2))
+!!$        AUXARR(:,1)=vadd
+!!$        AUXARR(:,2)=pspot
+!!$        CALL SETUP_WRITEPHI('vadd.DAT',GID,NR,2,AUXARR)
+!!$        DEALLOCATE(AUXARR)
+!!$      END IF
 !
 !     ==========================================================================
 !     == WRITE INFORMATION TO FILE                                            ==
@@ -3823,75 +3501,59 @@ REAL(8)               :: PHITEST1(NR,LNX)
         WRITE(STRING,FMT='(F3.0)')AEZ
         STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
 !       == AE PARTIAL WAVES
-        OPEN(NFIL,FILE=-'AEPHI'//TRIM(STRING))
-        DO IR=1,NR
-          WRITE(NFIL,fmt='(50e15.5)')R(IR),AEPHI(IR,:)
-        ENDDO
-        CLOSE(NFIL)
+        CALL SETUP_WRITEPHI(-'AEPHI'//TRIM(STRING),GID,NR,LNX,AEPHI)
 !
 !       == PS PARTIAL WAVES ====================================================
-        OPEN(NFIL,FILE=-'PSPHI'//TRIM(STRING))
-        DO IR=1,NR
-          WRITE(NFIL,fmt='(50e15.5)')R(IR),PSPHI(IR,:)
-        ENDDO
-        CLOSE(NFIL)
+        CALL SETUP_WRITEPHI(-'PSPHI'//TRIM(STRING),GID,NR,LNX,PSPHI)
 !
 !       == NODELESS PARTIAL WAVES ==============================================
-        OPEN(NFIL,FILE=-'NLPHI'//TRIM(STRING))
-        DO IR=1,NR
-          WRITE(NFIL,fmt='(50e15.5)')R(IR),NLPHI(IR,:)
-        ENDDO
-        CLOSE(NFIL)
+        CALL SETUP_WRITEPHI(-'NLPHI'//TRIM(STRING),GID,NR,LNX,NLPHI)
 !
 !       == PROJECTOR FUNCTIONS =================================================
-        OPEN(NFIL,FILE=-'PRO'//TRIM(STRING))
-        DO IR=1,NR
-          WRITE(NFIL,fmt='(50e15.5)')R(IR),PRO(IR,:)
-        ENDDO
-        CLOSE(NFIL)
+        CALL SETUP_WRITEPHI(-'PRO'//TRIM(STRING),GID,NR,LNX,PRO)
 !
 !       == PROJECTOR FUNCTIONS =================================================
-        OPEN(NFIL,FILE=-'POT'//TRIM(STRING))
-        DO IR=1,NR
-          WRITE(NFIL,fmt='(50e15.5)')R(IR),AEPOT(IR),PSPOT(IR),PSPOT(IR)-VADD(IR)
-        ENDDO
-        CLOSE(NFIL)
-
+        ALLOCATE(AUXARR(NR,3))
+        AUXARR(:,1)=AEPOT
+        AUXARR(:,2)=PSPOT
+        AUXARR(:,3)=PSPOT-VADD
+        CALL SETUP_WRITEPHI(-'POT'//TRIM(STRING),GID,NR,3,AUXARR)
+        DEALLOCATE(AUXARR)
       END IF
       RETURN
       END
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE setup_makeiscatt(aez,nb,nc,lofi,nnofi,lnx,lox,iscatt)
+      SUBROUTINE SETUP_MAKEISCATT(AEZ,NB,NC,LOFI,NNOFI,LNX,LOX,ISCATT)
 !     **************************************************************************
 !     **                                                                      **
-!     ** the parameter iscatt determines whether a partial wave is attributed **
-!     ** to a semi-core, valence, or scattering state                         **
-!     **   iscatt=-2    state below highest core state                        **
-!     **   iscatt=-1    semi core state                                       **
-!     **   iscatt= 0    valence state (phi)                                   **
-!     **   iscatt= 1    first scattering state (phidot)                       **
-!     **   iscatt= 2    second scattering state (phidotdot)                   **
+!     ** THE PARAMETER ISCATT DETERMINES WHETHER A PARTIAL WAVE IS ATTRIBUTED **
+!     ** TO A SEMI-CORE, VALENCE, OR SCATTERING STATE                         **
+!     **   ISCATT=-2    STATE BELOW HIGHEST CORE STATE                        **
+!     **   ISCATT=-1    SEMI CORE STATE                                       **
+!     **   ISCATT= 0    VALENCE STATE (PHI)                                   **
+!     **   ISCATT= 1    FIRST SCATTERING STATE (PHIDOT)                       **
+!     **   ISCATT= 2    SECOND SCATTERING STATE (PHIDOTDOT)                   **
 !     **                                                                      **
 !     **************************************************************************
-      use periodictable_module
-      use strings_module
+      USE PERIODICTABLE_MODULE
+      USE STRINGS_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)  :: AEZ
-      INTEGER(4),INTENT(IN)  :: nb
-      INTEGER(4),INTENT(IN)  :: nc
-      INTEGER(4),INTENT(IN)  :: lofi(nb)
-      INTEGER(4),INTENT(IN)  :: nnofi(nb)
-      INTEGER(4),INTENT(IN)  :: lnx
-      INTEGER(4),INTENT(IN)  :: lox(lnx)
-      INTEGER(4),INTENT(out) :: iscatt(lnx)
-      integer(4),allocatable :: ncl(:)
-      integer(4)             :: lx
-      integer(4)             :: ib,l,ln
-      integer(4)             :: isvar
+      INTEGER(4),INTENT(IN)  :: NB
+      INTEGER(4),INTENT(IN)  :: NC
+      INTEGER(4),INTENT(IN)  :: LOFI(NB)
+      INTEGER(4),INTENT(IN)  :: NNOFI(NB)
+      INTEGER(4),INTENT(IN)  :: LNX
+      INTEGER(4),INTENT(IN)  :: LOX(LNX)
+      INTEGER(4),INTENT(OUT) :: ISCATT(LNX)
+      INTEGER(4),ALLOCATABLE :: NCL(:)
+      INTEGER(4)             :: LX
+      INTEGER(4)             :: IB,L,LN
+      INTEGER(4)             :: ISVAR
 !     **************************************************************************
-      lx=maxval(lox)
+      LX=MAXVAL(LOX)
 !
 !     == DETERMINE HIGHEST CORE STATE FOR EACH ANGULAR MOMENTUM ================
       ALLOCATE(NCL(0:LX))
@@ -3912,7 +3574,7 @@ REAL(8)               :: PHITEST1(NR,LNX)
         ELSE IF(L.EQ.3) THEN
           CALL PERIODICTABLE$GET(NINT(AEZ),'#NODES(F)',ISVAR)
         ELSE
-          CALL ERROR$STOP('ATOMIC_MAKEiscatt')
+          CALL ERROR$STOP('ATOMIC_MAKEISCATT')
         END IF
         IF(NCL(L).GT.0) THEN
           ISVAR=ISVAR-NNOFI(NCL(L))
@@ -3925,10 +3587,32 @@ REAL(8)               :: PHITEST1(NR,LNX)
           ISCATT(LN)=-ISVAR+1
           ISVAR=ISVAR-1
         ENDDO
-      ENDdo
-      deallocate(ncl)
-      return
-      end
+      ENDDO
+      DEALLOCATE(NCL)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_WRITEPHI(FILE,GID,NR,NPHI,PHI)
+!     **                                                                      **
+!     **                                                                      **
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: FILE
+      INTEGER(4)  ,INTENT(IN) :: GID      ! GRID ID
+      INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
+      INTEGER(4)  ,INTENT(IN) :: NPHI        
+      REAL(8)     ,INTENT(IN) :: PHI(NR,NPHI)
+      INTEGER(4)              :: IR
+      REAL(8)                 :: R(NR)
+!     **************************************************************************
+      CALL RADIAL$R(GID,NR,R)
+      OPEN(100,FILE=FILE)
+      DO IR=1,NR
+        WRITE(100,FMT='(F15.10,2X,20(F25.15,2X))')R(IR),PHI(IR,:)
+      ENDDO
+      CLOSE(100)
+      RETURN
+      END
 !
 !     ......................................................................
       SUBROUTINE ATOMIC_UNSCREEN(GID,NR,RBOX,AEZ,AERHO,PSRHO,PSPOT,RCSM,VADD)
@@ -4827,7 +4511,7 @@ PRINT*,'QLM ',QLM*Y0*4.D0*PI
 !!$          IF(LOFI(IB).NE.L) CYCLE
 !!$          E=EOFI(IB)
 !!$          G(:)=0.D0
-!!$          CALL ATOMlib_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI)
+!!$          CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI)
 !!$
 !!$          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,AUX)
 !!$          DO IR=1,NR
@@ -5732,7 +5416,7 @@ PRINT*,'QLM ',QLM*Y0*4.D0*PI
 !!$          IF(LOFI(IB).NE.L) CYCLE
 !!$          E=EOFI(IB)
 !!$          G(:)=0.D0
-!!$          CALL ATOMlib_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI)
+!!$          CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI)
 !!$
 !!$          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,AUX)
 !!$          DO IR=1,NR
@@ -5934,7 +5618,7 @@ ENDDO
       INTEGER(4)                :: GIDX
       INTEGER(4)                :: IRMATCH
 !     **************************************************************************
-!CALL WRITEPHI('TESTCONSTRUCTPSPHI1',GID,NR,NB,PSPHI)
+!CALL setup_WRITEPHI('TESTCONSTRUCTPSPHI1',GID,NR,NB,PSPHI)
       PI=4.D0*ATAN(1.D0)
       CALL RADIAL$NEW('SHLOG',GIDX)
       XDEX=1.D-5
@@ -5993,6 +5677,10 @@ ENDDO
           CALL ERROR$MSG('TRY TO INCREASE MATCHING RADIUS')
           CALL ERROR$I4VAL('IB',IB)
           CALL ERROR$I4VAL('L',L)
+          CALL ERROR$r8val('shift',shift)
+          CALL ERROR$r8val('phase(1)',phase(1))
+          CALL ERROR$r8val('offsetnn',offsetnn)
+          CALL ERROR$r8val('rc',rc)
           CALL ERROR$STOP('CONSTRUCTPSPHI')
 PRINT*,'WARNING SHIFT WAS REQUIRED ',L,IB,PHASE(1),SHIFT
            SHIFT=SHIFT+REAL(INT(PHASE(1)-SHIFT+1.D0))
@@ -6191,5 +5879,435 @@ PRINT*,'KI ',KI
 !CALL WRITECOMPARE('TEST1.DAT',GID,NR,1,AEF,AUX)
 !STOP
       END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$AECORE(ISP_,NRX_,AECORE_)
+!LEGACY CODE! -> SETUP$GETR8A('AECORE'
+!     ******************************************************************
+!     **  RETURN AE CORE DNSITY                                       **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(IN) :: NRX_
+      REAL(8)   ,INTENT(OUT):: AECORE_(NRX_)
+!     ******************************************************************
+      CALL ERROR$MSG('CODE IS MARKED FOR DELETION')
+      CALL ERROR$MSG('USE SETUP$GETR8A INSTEAD')
+      CALL ERROR$STOP('SETUP$AECORE')
+      CALL SETUP$ISELECT(ISP_)
+      AECORE_(:)=THIS%AECORE(:)
+      RETURN  
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$PSCORE(ISP_,NRX_,PSCORE_)
+!LEGACY CODE! -> SETUP$GETR8A('PSCORE'
+!     ******************************************************************
+!     **  RETURN PS CORE DNSITY                                       **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(IN) :: NRX_
+      REAL(8)   ,INTENT(OUT):: PSCORE_(NRX_)
+!     ******************************************************************
+      CALL ERROR$MSG('CODE IS MARKED FOR DELETION')
+      CALL ERROR$MSG('USE SETUP$GETR8A INSTEAD')
+      CALL ERROR$STOP('SETUP$PSCORE')
+      CALL SETUP$ISELECT(ISP_)
+      PSCORE_(:)=THIS%PSCORE(:)
+      RETURN  
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$VBAR(ISP_,NRX_,VBAR_)
+!LEGACY CODE! -> SETUP$GETR8A('VADD'
+!     ******************************************************************
+!     **  RETURN PS CORE DNSITY                                       **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(IN) :: NRX_
+      REAL(8)   ,INTENT(OUT):: VBAR_(NRX_)
+!     ******************************************************************
+      CALL ERROR$MSG('CODE IS MARKED FOR DELETION')
+      CALL ERROR$MSG('USE SETUP$GETR8A INSTEAD')
+      CALL ERROR$STOP('SETUP$VBAR')
+      CALL SETUP$ISELECT(ISP_)
+      VBAR_(:)=THIS%VADD(:)
+      RETURN  
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_RENEWLOCORB()
+!     **************************************************************************
+!     **                                                                      **
+!     **  DRIVER ROUTINE FOR SETUP_CHIFROMPHI                                 **
+!     **                                                                      **
+!     **  CHECKS WHETHER AN UPDATE IS NECESSARY; REALLOCATES ARRAYS AND       **
+!     **  COMPUTES NEW TRANSFORMATION MATRICES                                **
+!     **                                                                      **
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : ORBRAD
+      USE PERIODICTABLE_MODULE
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4)             :: LN,L,I,NR,LXX
+      REAL(8)   ,ALLOCATABLE :: RAD(:)
+      CHARACTER(3)           :: ID ! CAN BE OLD OR NEW
+      REAL(8)                :: RASA
+!     **************************************************************************
+      call error$msg('routine is marked for deletion')
+      call error$stop('SETUP_renewlocorb')
+      IF(THIS%LOCORBINI) RETURN
+      THIS%LOCORBINI=.TRUE.
+                            CALL TRACE$PUSH('SETUP_RENEWLOCORB')
+!     == LOCORBINI IS RESET TO FALSE, WHEVEVER THE DATA ARE CHANGED VIA SETUP$SET
+PRINT*,'A1',THIS%LOCORBNOFL
+PRINT*,'A2',THIS%LOCORBLNX
+!
+!     == REALLOCATE DATA =======================================================
+      IF(SUM(THIS%LOCORBNOFL).NE.THIS%LOCORBLNX) THEN
+PRINT*,'B'
+        THIS%LOCORBLNX=SUM(THIS%LOCORBNOFL)
+        IF(ASSOCIATED(THIS%LOCORBLOX)) DEALLOCATE(THIS%LOCORBLOX)
+        IF(ASSOCIATED(THIS%LOCORBAMAT)) DEALLOCATE(THIS%LOCORBAMAT)
+        IF(ASSOCIATED(THIS%LOCORBBMAT)) DEALLOCATE(THIS%LOCORBBMAT)
+        ALLOCATE(THIS%LOCORBLOX(THIS%LOCORBLNX))
+        ALLOCATE(THIS%LOCORBAMAT(THIS%LNX,THIS%LOCORBLNX))
+        ALLOCATE(THIS%LOCORBBMAT(THIS%LOCORBLNX,THIS%LNX))
+        LN=0
+        DO L=0,3
+          DO I=1,THIS%LOCORBNOFL(L+1)
+            LN=LN+1
+            THIS%LOCORBLOX(LN)=L
+          ENDDO
+        ENDDO
+      END IF
+PRINT*,'C'
+!
+!     == RECALCULATE LOCAL ORBITALS ============================================
+      CALL RADIAL$GETI4(THIS%GID,'NR',NR)
+      ALLOCATE(RAD(THIS%LOCORBLNX))
+      DO LN=1,THIS%LOCORBLNX
+        L=THIS%LOCORBLOX(LN)
+        RAD(LN)=THIS%LOCORBRAD(L+1)
+      ENDDO
+      CALL SETUP_CHIFROMPHI(THIS%GID,NR,THIS%LNX,THIS%LOX,THIS%AEPHI &
+     &               ,THIS%LOCORBNOFL,RAD,THIS%LOCORBLNX &
+     &               ,THIS%LNX,THIS%LOCORBLOX,THIS%LOCORBAMAT,THIS%LOCORBBMAT)
+      DEALLOCATE(RAD)
+                            CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_CHIFROMPHI(GID,NR,LNX,LOX,PHI,NORB,RCUT &
+     &                           ,LNXCHI,LNXPHI,LOXCHI,AMAT,BMAT)
+!     **                                                                      **
+!     **  DEFINES PROJECTOR FUNCTIONS FOR LOCAL ORBITALS IN TERMS OF          **
+!     **  THE CONVENTIONAL PARTIAL WAVE PROJECTOR FUNCTIONS                   **
+!     **                                                                      **
+!     **     <P_CHI_I|= SUM_J BMAT(I,J) <P_PHI_J|                             **
+!     **     |CHI_I>  = SUM_J |PHI_J> AMAT(J,I)                               **
+!     **                                                                      **
+!     **  THE LOCAL ORBITALS ARE SELECTED BY NORB WHICH SPECIFIES THE NUMBER  **
+!     **  OF LOCAL ORBITALS PER ANGULAR MOMENTUM CHANNEL.                     **
+!     **                                                                      **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID     ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4),INTENT(IN) :: LNX     ! #(PARTIAL WAVES) 
+      INTEGER(4),INTENT(IN) :: LOX(LNX)! ANGULAR MOMENTUM PER PARTIAL WAVE
+      REAL(8)   ,INTENT(IN) :: PHI(NR,LNX)    ! PARTIAL WAVES
+      INTEGER(4),INTENT(IN) :: NORB(4) ! X#(HEAD ORBITALS PER L)
+      REAL(8)   ,INTENT(IN) :: RCUT(LNX)  ! EXTENT OF HEAD FUNCTIONS
+      INTEGER(4),INTENT(IN) :: LNXCHI  ! #(LOCAL ORBITALS)
+      INTEGER(4),INTENT(IN) :: LNXPHI  ! #(PARTIAL WAVES)
+      INTEGER(4),INTENT(OUT):: LOXCHI(LNXCHI)  ! ANGULAR MOMENTUM PER LOCAL ORB.
+      REAL(8)   ,INTENT(OUT):: BMAT(LNXCHI,LNXPHI) ! MAPPING OF PROJECTORS
+      REAL(8)   ,INTENT(OUT):: AMAT(LNXPHI,LNXCHI)     ! MAPPING OF WAVE FUNCTIONS
+      REAL(8)   ,ALLOCATABLE:: CHI(:,:)
+      REAL(8)   ,ALLOCATABLE:: CHI1(:,:)
+      REAL(8)   ,ALLOCATABLE:: A(:,:)
+      REAL(8)   ,ALLOCATABLE:: B(:,:)
+      REAL(8)   ,ALLOCATABLE:: A1(:,:)
+      REAL(8)   ,ALLOCATABLE:: MAT(:,:)
+      REAL(8)   ,ALLOCATABLE:: MATINV(:,:)
+      REAL(8)   ,ALLOCATABLE:: R(:)        
+      REAL(8)   ,ALLOCATABLE:: G(:)        
+      REAL(8)   ,PARAMETER  :: RCG=1.D-2
+      REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:)
+      REAL(8)               :: SVAR1,SVAR2
+      INTEGER(4)            :: IR
+      INTEGER(4)            :: NX,N,LX,L,LN,LNCHI,NOFL,NOFL2,ISVAR
+      INTEGER(4)            :: N1,N2,LN1,LN2,L1,L2
+      CHARACTER(64)         :: FILE
+!     **************************************************************************
+                            CALL TRACE$PUSH('SETUP_CHIFROMPHI')
+      call error$msg('routine is marked for deletion')
+      call error$stop('SETUP_CHIFROMPHI')
+!
+!     ==========================================================================
+!     ==  COLLECT DATA FROM SETUP OBJECT                                      ==
+!     ==========================================================================
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     ==  CONSISTENCY CHECKS                                                  ==
+!     ==========================================================================
+!     == CHECK IF #(LOCAL ORBITALS) IS CONSISTENT WITH ARRAY DIMENSIONS ========
+      IF(SUM(NORB).NE.LNXCHI) THEN
+        CALL ERROR$MSG('NORB AND LNXCHI INCONSISTENT')
+        CALL ERROR$I4VAL('NORB',LNX)
+        CALL ERROR$I4VAL('LNXCHI',LNXCHI)
+        CALL ERROR$STOP('SETUP_CHIFROMPHI')
+      END IF
+!
+!     == CHECK IF #(PARTIAL WAVES) FROM SETUP OBJECT IS CONSISTENT WITH ========
+!     == ARRAY DIMENSIONS ======================================================
+      IF(LNX.NE.LNXPHI) THEN
+        CALL ERROR$MSG('LNX AND LNXPHI INCONSISTENT')
+        CALL ERROR$I4VAL('LNX',LNX)
+        CALL ERROR$I4VAL('LNXPHI',LNXPHI)
+        CALL ERROR$STOP('SETUP_CHIFROMPHI')
+      END IF
+!
+!     == CHECK IF NUMBER OF LOCAL ORBITALS DOES NOT EXCEED NUMBER OF PARTIAL WAVES
+      LX=MAXVAL(LOX)
+      DO L=0,LX
+        NOFL=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE !CONSIDER ONLY PARTIAL WAVES WITH THE CORRECT L
+          NOFL=NOFL+1
+        ENDDO
+        IF(NORB(L+1).GT.NOFL) THEN
+          CALL ERROR$MSG('#(CORRELATED ORBITALS) EXCEEDS #(PARTIAL WAVES)')
+          CALL ERROR$STOP('SETUP_CHIFROMPHI')
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     ==  START WITH PARTIAL WAVES AS LOCAL ORBITALS                          ==
+!     == |CHI_I>=SUM_I |PHI_J>A(J,I)
+!     ==========================================================================
+      ALLOCATE(CHI(NR,LNX))        
+      CHI(:,:)=0.D0
+      ALLOCATE(A(LNX,LNX))        
+      A(:,:)=0.D0
+      DO LN=1,LNX
+        L=LOX(LN)
+        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
+        A(LN,LN)=1.D0
+        CHI(:,LN)=PHI(:,LN)
+      ENDDO
+!
+!     ==========================================================================
+!     == MAKE HEAD FUNCTION ANTIBONDING WITH NODE AT RCUT ======================
+!     ==========================================================================
+      ALLOCATE(AUX(NR))
+      ALLOCATE(AUX1(NR))
+      DO L=0,LX
+        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
+        NOFL=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          NOFL=NOFL+1
+          IF(NOFL.GT.NORB(L+1)) CYCLE  ! CONSIDER ONLY HEAD FUNCTIONS
+!         == SEARCH FOR NEXT PARTIAL WAVE WITH THIS L =========================
+          LN1=0
+          DO LN2=LN+1,LNX
+            IF(LOX(LN2).NE.L) CYCLE  
+            LN1=LN2
+            EXIT
+          ENDDO
+          IF(LN1.EQ.0) THEN
+            CALL ERROR$MSG('CAN NOT LOCALIZE')
+            CALL ERROR$MSG('NO TAIL FUNCTION AVAILABLE')
+            CALL ERROR$STOP('SETUP_CHIFROMPHI')
+          END IF
+!
+!         == NOW CONTINUE; LN1 POINTS TO THE NEXT PHI WITH THIS L ==============
+!         == IMPOSE NODE CONDITION==============================================
+          CALL RADIAL$VALUE(GID,NR,CHI(:,LN),RCUT(LN),SVAR1)
+          CALL RADIAL$VALUE(GID,NR,CHI(:,LN1),RCUT(LN),SVAR2)
+          IF(SVAR1.EQ.0.D0.AND.SVAR2.EQ.0.D0) THEN
+            CALL ERROR$MSG('PARTIAL WAVES ARE TRUNCATED INSIDE OF RCUT')
+            CALL ERROR$MSG('THIS IS A FLAW OF THE IMPLEMENTATION')
+            CALL ERROR$MSG('CHOOSE SMALLER RCUT')
+            CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
+          END IF
+          CHI(:,LN)=CHI(:,LN)*SVAR2-CHI(:,LN1)*SVAR1
+          A(:,LN)=A(:,LN)*SVAR2-A(:,LN1)*SVAR1
+!         == ORTHOGONALIZE TO THE LOWER HEAD FUNCTIONS =========================
+          DO LN1=1,LN-1
+            IF(LOX(LN1).NE.L) CYCLE  
+            AUX(:)=CHI(:,LN)*CHI(:,LN1)*R(:)**2
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,MIN(RCUT(LN),RCUT(LN1)),SVAR1)
+            CHI(:,LN)=CHI(:,LN)-CHI(:,LN1)*SVAR1
+            A(:,LN)=A(:,LN)-A(:,LN1)*SVAR1
+          ENDDO
+!         == NORMALIZE HEAD FUNCTION =============================================
+          AUX(:)=CHI(:,LN)**2*R(:)**2
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RCUT(LN),SVAR1)
+          SVAR1=1.D0/SQRT(SVAR1)
+          CHI(:,LN)=CHI(:,LN)*SVAR1
+          A(:,LN)=A(:,LN)*SVAR1
+        ENDDO
+      END DO          
+!
+!     ==========================================================================
+!     == DELOCALIZE TAIL FUNCTIONS                                            ==
+!     ==========================================================================
+!     == DEFINE WEIGHT FUNCTION       
+      ALLOCATE(G(NR))
+      G(:)=EXP(-(R(:)/RCG)**2)
+!     ==  MINIMIZE SUCCESSIVELY THE WEIGHT OF <CHI2+X*CHI1|W|CHI2+X*CHI1> ======
+!     ==  I.E. <CHI1|W|CHI2>+X<CHI1|W|CHI1> ====================================
+      ALLOCATE(CHI1(NR,LNX))
+      CHI1(:,:)=CHI(:,:)
+      ALLOCATE(A1(LNX,LNX))        
+      A1(:,:)=A(:,:)
+      DO L=0,LX
+        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
+        NOFL=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          NOFL=NOFL+1
+!         == MINIMIZE CONTRIBUTION NEAR THE CENTER 
+          NOFL2=0
+          DO LN2=1,LN-1
+            IF(LOX(LN2).NE.L) CYCLE
+            NOFL2=NOFL2+1
+            AUX(:)=G(:)*CHI1(:,LN)*CHI1(:,LN2)*R(:)**2
+            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+            AUX(:)=G(:)*CHI1(:,LN2)**2*R(:)**2
+            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
+            SVAR1=SVAR1/SVAR2
+            CHI1(:,LN)=CHI1(:,LN)-CHI1(:,LN2)*SVAR1
+            A1(:,LN)=A1(:,LN)-A1(:,LN2)*SVAR1
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     = NOW MAP ONLY TAIL FUNCTIONS BACK AND LEAVE HEAD FUNCTIONS UNTOUCHED        
+      DO L=0,LX
+        NOFL=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          NOFL=NOFL+1
+          IF(NOFL.LE.NORB(L+1)) CYCLE ! LEAVE HEAD FUNCTIONS ALONE
+          CHI(:,LN)=CHI1(:,LN)
+          A(:,LN)=A1(:,LN)
+        ENDDO
+      ENDDO
+      DEALLOCATE(G)
+      DEALLOCATE(CHI1)
+      DEALLOCATE(A1)
+      DEALLOCATE(AUX)
+      DEALLOCATE(AUX1)
+!
+!     ==========================================================================
+!     == NOW INVERT THE MATRIX A: B:=A^{-1}                                   ==
+!     == |CHI_I>=SUM_J |PHI_J>A(J,I)                                          ==
+!     == 1=|PHI><P|=|PHI>A B <P|=|CHI> ( B<P| )                               ==
+!     == <P_CHI_I|=SUM_J B(I,J)<P_PHI_J|                                      ==
+!     ==========================================================================
+      ALLOCATE(B(LNX,LNX))
+      B(:,:)=0.D0
+      LX=MAXVAL(LOX)
+      DO L=0,LX
+        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
+!
+        NX=0
+        DO LN=1,LNX
+          IF(LOX(LN).EQ.L) NX=NX+1
+        ENDDO
+        IF(NX.EQ.0) CYCLE   
+
+        ALLOCATE(MAT(NX,NX))
+        ALLOCATE(MATINV(NX,NX))
+!        
+!       == MAP A INTO MATRIX MAT ===============================================
+        N1=0
+        DO LN1=1,LNX
+          L1=LOX(LN1)
+          IF(L1.NE.L) CYCLE
+          N1=N1+1
+          N2=0
+          DO LN2=1,LNX
+            L2=LOX(LN2)
+            IF(L2.NE.L) CYCLE
+            N2=N2+1
+            MAT(N2,N1)=A(LN2,LN1)
+          ENDDO
+        ENDDO
+!
+!       == INVERT MATRIX =======================================================
+        CALL LIB$INVERTR8(NX,MAT,MATINV)
+!
+!       == MAP MATINV INTO B ===================================================
+        N1=0
+        DO LN1=1,LNX
+          L1=LOX(LN1)
+          IF(L1.NE.L) CYCLE
+          N1=N1+1
+          N2=0
+          DO LN2=1,LNX
+            L2=LOX(LN2)
+            IF(L2.NE.L) CYCLE
+            N2=N2+1
+            B(LN1,LN2)=MATINV(N1,N2) 
+          ENDDO
+        ENDDO
+        DEALLOCATE(MAT)
+        DEALLOCATE(MATINV)
+      ENDDO
+!
+!     ==========================================================================
+!     === REMOVE TAIL FUNCTIONS                                               ==
+!     ==========================================================================
+      LNCHI=0
+      DO L=0,LX
+        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
+        NOFL=0
+        DO LN=1,LNX
+          IF(L.NE.LOX(LN)) CYCLE
+          NOFL=NOFL+1
+          IF(NOFL.GT.NORB(L+1)) EXIT
+          LNCHI=LNCHI+1
+          IF(LNCHI.GT.LNXCHI) THEN
+            CALL ERROR$MSG('LNCHI OUT OF RANGE')
+            CALL ERROR$I4VAL('LNCHI',LNCHI)
+            CALL ERROR$I4VAL('LNXCHI',LNXCHI)
+            CALL ERROR$STOP('SETUP_CHIFROMPHI')
+          END IF
+          LOXCHI(LNCHI)=L
+          BMAT(LNCHI,:)=B(LN,:)
+          AMAT(:,LNCHI)=A(:,LN)
+        END DO
+      ENDDO
+      IF(LNCHI.NE.LNXCHI) THEN
+        CALL ERROR$MSG('LNCHI AND LNXCHI ARE INCONSISTENT')
+        CALL ERROR$I4VAL('LNCHI',LNCHI)
+        CALL ERROR$I4VAL('LNXCHI',LNXCHI)
+        CALL ERROR$STOP('SETUP_CHIFROMPHI')
+      END IF
+!
+!     ==========================================================================
+!     ==  CLEAN UP                                                            ==
+!     ==========================================================================
+      DEALLOCATE(CHI)
+      DEALLOCATE(A)
+      DEALLOCATE(B)
+      DEALLOCATE(R)
+                            CALL TRACE$POP()
       RETURN
       END

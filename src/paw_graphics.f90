@@ -586,7 +586,8 @@ USE MPE_MODULE
 !     ==  GET GENERIC FROM ATOM OBJECT                               ==
 !     =================================================================
       CALL ATOMLIST$NATOM(NAT)
-      CALL SETUP$LMNXX(LMNXX)
+      CALL SETUP$GETI4('LMNXX',LMNXX)
+!      CALL SETUP$LMNXX(LMNXX)
       ALLOCATE(POS(3,NAT))
       ALLOCATE(ATOMNAME(NAT))
       ALLOCATE(Z(NAT))
@@ -610,13 +611,17 @@ USE MPE_MODULE
           CALL SETUP$GETI4('GID',GID)
           CALL RADIAL$GETI4(GID,'NR',NR)
 !
-          CALL SETUP$LNX(ISP,LNX)
+          CALL SETUP$GETI4('LNX',LNX)
+!          CALL SETUP$LNX(ISP,LNX)
           ALLOCATE(LOX(LNX))
-          CALL SETUP$LOFLN(ISP,LNX,LOX)
+          CALL SETUP$GETI4A('LOX',LNX,LOX)
+!          CALL SETUP$LOFLN(ISP,LNX,LOX)
           ALLOCATE(AEPHI(NR,LNX))
           ALLOCATE(PSPHI(NR,LNX))
-          CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
-          CALL SETUP$PSPARTIALWAVES(ISP,NR,LNX,PSPHI)
+          CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
+          CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI)
+!          CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
+!          CALL SETUP$PSPARTIALWAVES(ISP,NR,LNX,PSPHI)
           ALLOCATE(PROJ(LMNXX))
           CALL WAVES$SETI4('IAT',IAT)
           CALL WAVES$GETR8A('<PSPSI|PRO>',LMNXX,PROJ)
@@ -829,7 +834,8 @@ USE MPE_MODULE
 !     =================================================================
 !     ==  GET GENERIC FROM ATOM OBJECT                               ==
 !     =================================================================
-      CALL SETUP$LMNXX(LMNXX)
+      CALL SETUP$GETI4('LMNXX',LMNXX)
+!      CALL SETUP$LMNXX(LMNXX)
       CALL ATOMLIST$NATOM(NAT)
       ALLOCATE(POS(3,NAT))
       ALLOCATE(ATOMNAME(NAT))
@@ -847,13 +853,17 @@ USE MPE_MODULE
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('GID',GID)
         CALL RADIAL$GETI4(GID,'NR',NR)
-        CALL SETUP$LNX(ISP,LNX)
+        CALL SETUP$GETI4('LNX',LNX)
+!        CALL SETUP$LNX(ISP,LNX)
         ALLOCATE(LOX(LNX))
-        CALL SETUP$LOFLN(ISP,LNX,LOX)
+        CALL SETUP$GETI4A('LOX',LNX,LOX)
+!        CALL SETUP$LOFLN(ISP,LNX,LOX)
         ALLOCATE(AEPHI(NR,LNX))
         ALLOCATE(PSPHI(NR,LNX))
-        CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
-        CALL SETUP$PSPARTIALWAVES(ISP,NR,LNX,PSPHI)
+        CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
+        CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI)
+!        CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
+!        CALL SETUP$PSPARTIALWAVES(ISP,NR,LNX,PSPHI)
 !     
 !       __ GET PROJECTIONS____________________________________________
         CALL WAVES$SETI4('IAT',IAT)
@@ -885,7 +895,8 @@ USE MPE_MODULE
 !       ================================================================
         IF(THISTASK.EQ.1.AND.TCORE.AND.(.NOT.(TYPE.EQ.'SPIN'))) THEN
           ALLOCATE(AECORE(NR))
-          CALL SETUP$AECORE(ISP,NR,AECORE)
+          CALL SETUP$GETR8A('AECORE',NR,AECORE)
+!          CALL SETUP$AECORE(ISP,NR,AECORE)
           IF(TYPE.EQ.'UP'.OR.TYPE.EQ.'DOWN') AECORE(:)=0.5D0*AECORE(:)
           CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
     &           ,1,NR1B,WAVEBIG,POS(:,IAT),GID,NR,1,AECORE)
@@ -1424,6 +1435,7 @@ USE MPE_MODULE
       REAL(8)   ,ALLOCATABLE     :: ONECPOT(:,:,:)
       INTEGER(4)                 :: NTASKS,THISTASK
       INTEGER(4)                 :: NR1B,NR2B,NR3B
+      INTEGER(4)                 :: nSP   !#(atom types)
       INTEGER(4)                 :: ISP
       INTEGER(4)                 :: GID
       INTEGER(4)                 :: I,J,K,IND
@@ -1482,8 +1494,14 @@ CALL GRAPHICS_TOM()
       ALLOCATE(Z(NAT))
       ALLOCATE(Q(NAT))
       ALLOCATE(POS(3,NAT))
+      CALL SETUP$GETI4('NSP',NSP)
+      NRX=0
+      DO ISP=1,NSP
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('NR',NR)
+        NRX=MAX(NRX,NR)
+      ENDDO        
       IF(.NOT.ALLOCATED(AE1CPOT)) THEN
-        CALL SETUP$GETI4('NRX',NRX)
         CALL SETUP$GETI4('LMRXX',LMRXX)
         CALL ATOMLIST$NATOM(NAT)
         ALLOCATE(AE1CPOT(NRX,LMRXX,NAT))
@@ -1546,7 +1564,7 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       USE MPE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      LOGICAL(4), PARAMETER :: TTOM=.true.
+      LOGICAL(4), PARAMETER :: TTOM=.TRUE.
       REAL(8)               :: GVEC(3,NGL)
       REAL(8)               :: RCENTER(3)
       INTEGER(4)            :: NAT

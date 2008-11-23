@@ -137,9 +137,9 @@
       CALL GET_ENVIRONMENT_VARIABLE(NAME,LENG,ST,VAL)
       IF(ST.NE.0) THEN
         CALL ERROR$MSG('FAILURE COLLECTING ENVIORONMENT VARIABLE')
-        IF(ST.EQ.11)
+        IF(ST.EQ.11) then
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
-        ELSE IF(ST.EQ.-1)
+        ELSE IF(ST.EQ.-1) then
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
         END IF
         CALL ERROR$STOP('LIB$GETENV')
@@ -656,21 +656,22 @@
 !!$        CHARACTER(LEN=*),INTENT(OUT):: VALUE
 !!$        END SUBROUTINE GETARG
 !!$      END INTERFACE
-      CHARACTER(LEN=*) ,INTENT(OUT) :: name
-      CHARACTER(LEN=*) ,INTENT(OUT) :: value
+      CHARACTER(LEN=*) ,INTENT(in) :: name
+      CHARACTER(LEN=*) ,INTENT(OUT) :: val
       integer                       :: leng,st
 !     **************************************************************************
-      POS=IPOS
-!      CALL GETenv(name val)
+      CALL GETenv(name,val)
+      return
 !     ==  USE  FORTRAN 2003 INTRINSIC FUNCTION
       CALL GET_ENVIRONMENT_VARIABLE(NAME,LENG,ST,VAL)
       IF(ST.NE.0) THEN
         CALL ERROR$MSG('FAILURE COLLECTING ENVIORONMENT VARIABLE')
-        IF(ST.EQ.11)
+        IF(ST.EQ.11) then
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
-        ELSE IF(ST.EQ.-1)
+        ELSE IF(ST.EQ.-1) then
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
         END IF
+        CALL ERROR$chval('name',trim(name))
         CALL ERROR$STOP('LIB_G95_GETENV')
       END IF 
       RETURN

@@ -367,9 +367,12 @@
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$Q(L,RAD,VAL,DER,K2,QPAR)
-!     **                                                                      **
+!     **************************************************************************      
 !     ** parameter needed to  screen the structure constants                  **
+!     **   |K>-|J>qbar has the same logarithmic derivative as |phidot>.       **
+!     ** val and der are value and derivative of phidot.                       **
 !     **                                                                      **
+!     **************************************************************************      
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L
       REAL(8)   ,INTENT(IN) :: RAD

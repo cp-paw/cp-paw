@@ -319,8 +319,10 @@ if test "$TUPPERCASEMOD" = "F"; then
 #                   (/string/) save string for later use as /1
 #                   \L make expression lowercase
 # sed command       s%stringa%stringb%g  replace stringa by stringb 
-  sed -e 's%\([[^\/]]*.mod\)%\L\1%'\
-      ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
+#
+#  sed -e 's%\([[^\/]]*.mod\)%\L\1%'\
+#      ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
+  ./lowercasemodnames.x  < ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
   cp  ${PAWDIR}/Makefile_bare_tmp  ${PAWDIR}/Makefile_bare
   rm  -f ${PAWDIR}/Makefile_bare_tmp
 fi

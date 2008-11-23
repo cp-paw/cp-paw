@@ -1,52 +1,53 @@
-!***********************************************************************
-!***********************************************************************
-!**                                                                   **
-!**  WAVES OBJECT                                                     **
-!**  THIS OBJECT IS CONTINUED IN PAW_WAVES2.F90                       **
-!**                                                                   **
-!**  PURPOSE: OPERATIONS ON THE PLANE WAVE PART OF THE WAVE FUNCTIONS **
-!**                                                                   **
-!**  FUNCTIONS:                                                       **
-!**    WAVES$SETR8A(ID,LEN,VAL)                                       **
-!**    WAVES$GETR8A(ID,LEN,VAL)                                       **
-!**    WAVES$INITIALIZE                                               **
-!**    WAVES$ETOT                                                     **
-!**    WAVES$PROPAGATE                                                **
-!**    WAVES$ORTHOGONALIZE                                            **
-!**    WAVES$SWITCH                                                   **
-!**    WAVES$REPORT(NFIL)                                             **
-!**                                                                   **
-!**  DEPENDECIES:                                                     **
-!**    ERROR                                                          **
-!**    MPELIB                                                         **
-!**    PLANEWAVE                                                      **
-!**    SETUP                                                          **
-!**    ...                                                            **
-!**                                                                   **
-!**  DEFINITION OF SPIN DIMENSIONS:                                   **
-!**                           | NSPIN | NDIM | NDIMD |                **
-!**        -------------------------------------------                **
-!**        NON-SPIN-POLARIZED |   1   |   1  |   1   |                **
-!**        SPIN POLARIZED     |   2   |   1  |   2   |                **
-!**        NON-COLLINEAR      |   1   |   2  |   4   |                **
-!**                                                                   **
-!**     NSPIN IS THE NUMBER OF SLATER DETERMINANTS                    **
-!**     NDIM IS THE NUMBER OF SPINOR DIMENSIONS OF THE WAVE FUNCTION  **
-!**     NDIMD IS THE NUMBER OF DENSITY COMPONENTS. NDIMD=NSPIN*NDIM**2**
-!**     TWO REPRESENTATIONS ARE USED:                                 **
-!**           NSPIN=2,NDIM=1:  UP/DOWN AND TOTAL/SPIN                 **
-!**           NSPIN=1,NDIM=2:  UPUP/UPDOWN/DOWNUP/DOWNDOWN AND        **
-!**                            TOTAL/MX/MY/MZ                         **
-!**                                                                   **
-!***********************************************************************
-!***********************************************************************
+!........1.........2.........3.........4.........5.........6.........7.........8
+!*******************************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  WAVES OBJECT                                                             **
+!**  THIS OBJECT IS CONTINUED IN PAW_WAVES2.F90                               **
+!**                                                                           **
+!**  PURPOSE: OPERATIONS ON THE PLANE WAVE PART OF THE WAVE FUNCTIONS         **
+!**                                                                           **
+!**  FUNCTIONS:                                                               **
+!**    WAVES$SETR8A(ID,LEN,VAL)                                               **
+!**    WAVES$GETR8A(ID,LEN,VAL)                                               **
+!**    WAVES$INITIALIZE                                                       **
+!**    WAVES$ETOT                                                             **
+!**    WAVES$PROPAGATE                                                        **
+!**    WAVES$ORTHOGONALIZE                                                    **
+!**    WAVES$SWITCH                                                           **
+!**    WAVES$REPORT(NFIL)                                                     **
+!**                                                                           **
+!**  DEPENDECIES:                                                             **
+!**    ERROR                                                                  **
+!**    MPELIB                                                                 **
+!**    PLANEWAVE                                                              **
+!**    SETUP                                                                  **
+!**    ...                                                                    **
+!**                                                                           **
+!**  DEFINITION OF SPIN DIMENSIONS:                                           **
+!**                           | NSPIN | NDIM | NDIMD |                        **
+!**        -------------------------------------------                        **
+!**        NON-SPIN-POLARIZED |   1   |   1  |   1   |                        **
+!**        SPIN POLARIZED     |   2   |   1  |   2   |                        **
+!**        NON-COLLINEAR      |   1   |   2  |   4   |                        **
+!**                                                                           **
+!**     NSPIN IS THE NUMBER OF SLATER DETERMINANTS                            **
+!**     NDIM IS THE NUMBER OF SPINOR DIMENSIONS OF THE WAVE FUNCTION          **
+!**     NDIMD IS THE NUMBER OF DENSITY COMPONENTS. NDIMD=NSPIN*NDIM**2        **
+!**     TWO REPRESENTATIONS ARE USED:                                         **
+!**           NSPIN=2,NDIM=1:  UP/DOWN AND TOTAL/SPIN                         **
+!**           NSPIN=1,NDIM=2:  UPUP/UPDOWN/DOWNUP/DOWNDOWN AND                **
+!**                            TOTAL/MX/MY/MZ                                 **
+!**                                                                           **
+!*******************************************************************************
+!*******************************************************************************
 !
-!......................................................WAVES............
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE WAVES_MODULE                                                
-!***********************************************************************
-!**                                                                   **
-!**                                                                   **
-!************************************************P.E. BLOECHL, (1995)***
+!*******************************************************************************
+!**                                                                           **
+!**                                                                           **
+!************************************************P.E. BLOECHL, (1995)***********
 USE LINKEDLIST_MODULE
 ! ----------------------------------------------------------------------
 ! THE TYPE MAP_TYPE DESCRIBES THE ARRANGEMENT OF PROJECTOR FUNCTIONS 
@@ -153,7 +154,7 @@ LOGICAL(4)                :: TWRITERHO=.FALSE.
 CHARACTER(8)              :: OPTIMIZERTYPE  ! SWITCH FOR CONJUGATE GRADIENT OR DYNAMICS
 
 CONTAINS
-!***********************************************************************
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_SELECTWV(IKPT,ISPIN)
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IKPT
@@ -181,7 +182,7 @@ CONTAINS
       END SUBROUTINE WAVES_SELECTWV
 END MODULE WAVES_MODULE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$STATESELECTED(IB,IKPT,ISPIN,TCHK)
 !     ******************************************************************
 !     **  WAVES$STATESELECTED                                         **
@@ -1160,14 +1161,14 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$ETOT()
-!     ******************************************************************
-!     **                                                              **
-!     **  EVALUATE PS KINETIC ENERGY IN G-SPACE                       **
-!     **  EVALUATE NUMBER OF ELECTRONS IN G-SPACE                     **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (2000)***
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATE PS KINETIC ENERGY IN G-SPACE                               **
+!     **  EVALUATE NUMBER OF ELECTRONS IN G-SPACE                             **
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (2000)***********
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -1208,14 +1209,14 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       INTEGER(4)             :: NFILO
       LOGICAL(4)             :: TCONV ! MIXER SAYS THAT WAVE FUNCTIONS ARE CONVERGED !KAESTNERCG
       REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
-!     ******************************************************************      
-INTEGER(4) ::NTASKS_W,THISTASK_W
-CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
+!     **************************************************************************
+      INTEGER(4) ::NTASKS_W,THISTASK_W
+      CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
                               CALL TRACE$PUSH('WAVES$ETOT')
 !
-!     ==================================================================
-!     == CHECK CONSISTENCY WITH OCCUPATIONS OBJECT                    ==
-!     ==================================================================
+!     ==========================================================================
+!     == CHECK CONSISTENCY WITH OCCUPATIONS OBJECT                            ==
+!     ==========================================================================
       CALL DYNOCC$GETL4('DYN',TCHK)
       IF(TCHK) THEN
         IF(TSAFEORTHO) THEN
@@ -1224,9 +1225,9 @@ CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
         END IF
       END IF
 !
-!     ==================================================================
-!     == SWITCHES FOR FORCE AND STRESS CALCULATION                    ==
-!     ==================================================================
+!     ==========================================================================
+!     == SWITCHES FOR FORCE AND STRESS CALCULATION                            ==
+!     ==========================================================================
       CALL CELL$GETL4('MOVE',TSTRESS)
       CALL ATOMS$GETL4('MOVE',TFORCE)
       TSTRESS=TSTRESS.OR.TSTRESSX
@@ -1271,18 +1272,18 @@ CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
         CALL WAVES$KAESTNERCG1(TFIRST)
       END IF
 !
-!     ==================================================================
-!     == RANDOMIZE INITIAL WAVE FUNCTIONS                             ==
-!     ==================================================================
+!     ==========================================================================
+!     == RANDOMIZE INITIAL WAVE FUNCTIONS                                     ==
+!     ==========================================================================
       IF(TFIRST.AND.TRANDOM) THEN
         CALL WAVES$RANDOMIZE()
       END IF
 !
-!     ==================================================================
-!     == GRAMM-SCHMIDT ORTHOGONALIZATION OF INITIAL WAVE FUNCTIONS    ==
-!     == ATTENTION THIS REORTHOGONALIZATION MAY GIVE THE              ==
-!     == AN UNCONTROLLED KICK AFTER RESTARTING                        ==
-!     ==================================================================
+!     ==========================================================================
+!     == GRAMM-SCHMIDT ORTHOGONALIZATION OF INITIAL WAVE FUNCTIONS            ==
+!     == ATTENTION THIS REORTHOGONALIZATION MAY GIVE THE                      ==
+!     == AN UNCONTROLLED KICK AFTER RESTARTING                                ==
+!     ==========================================================================
       IF(TFIRST) THEN
         CALL WAVES$GRAMMSCHMIDT()
       END IF
@@ -1301,6 +1302,7 @@ CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
       if(tfirst.or.tforce) then
         CALL LMTO$MAKESTRUCTURECONSTANTS()
       end if
+print*,'marke 1'
                               CALL TIMING$CLOCKON('WAVES$ETOT')
 !
 !     ==================================================================
@@ -1353,18 +1355,18 @@ END IF
 !     ==================================================================
 !     == MIX RHO AND CHECK IF CONVERGED                               ==
 !     ==================================================================
-      IF(OPTIMIZERTYPE.EQ.'CG') THEN                                             !KAESTNERCG
-         CALL TIMING$CLOCKON('MIXER')                                        !KAESTNERCG
-         TSTOP=.TRUE. ! DO NOT PROPAGATE THE WAVE FUNCTION                   !KAESTNERCG
-                      ! MUST BE SET IN EACH ITERATION, SEE WAVES$PROPAGATE   !KAESTNERCG
- PRINT*,'----------------- NEW CG SCF ITERATION------------------'           !KAESTNERCG
+      IF(OPTIMIZERTYPE.EQ.'CG') THEN                                 !KAESTNERCG
+         CALL TIMING$CLOCKON('MIXER')                                !KAESTNERCG
+         TSTOP=.TRUE. ! DO NOT PROPAGATE THE WAVE FUNCTION           !KAESTNERCG
+              ! MUST BE SET IN EACH ITERATION, SEE WAVES$PROPAGATE   !KAESTNERCG
+ PRINT*,'----------------- NEW CG SCF ITERATION------------------'   !KAESTNERCG
 CALL ERROR$MSG('MIXER SWITCHED OFF BECAUSE IT IS STILL INCOMPATIBLE')
 CALL ERROR$MSG('WITH A COMPLEX DENSITY MATRIX')
 CALL ERROR$STOP('WAVES$ETOT')
-!         CALL WAVES_MIXRHO_PUL(NRL*NDIM,LMNXX*LMNXX*NDIMD*NAT,&              !KAESTNERCG
-!              RHO,REAL(DENMAT,KIND=8),TCONV,CONVPSI)                         !KAESTNERCG
-         CALL TIMING$CLOCKOFF('MIXER')                                       !KAESTNERCG
-      END IF                                                                 !KAESTNERCG
+!         CALL WAVES_MIXRHO_PUL(NRL*NDIM,LMNXX*LMNXX*NDIMD*NAT,&     !KAESTNERCG
+!              RHO,REAL(DENMAT,KIND=8),TCONV,CONVPSI)                !KAESTNERCG
+         CALL TIMING$CLOCKOFF('MIXER')                               !KAESTNERCG
+      END IF                                                         !KAESTNERCG
 !
 !     ==================================================================
 !     == MULTIPOLE MOMENTS OF ONE-CENTER PART                         ==
@@ -1374,7 +1376,6 @@ CALL ERROR$STOP('WAVES$ETOT')
       ALLOCATE(QLM(LMRXX,NAT))
       NAT=MAP%NAT
       CALL WAVES$MOMENTS(NAT,LMRXX,NDIMD,LMNXX,DENMAT,QLM)
-
 !
 !     ==================================================================
 !     == PREPARE SNAPSHOT OF SPIN TRAJECTORY                          ==
@@ -3675,6 +3676,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     ==  FOURIER TRANSFORM WAVE FUNCTIONS TO REAL SPACE              ==
 !     ==================================================================
 !     -- REMARK: CONSIDER BLOCKING THIS INTO SMALLER BUNCHES OF BANDS
+print*,'nrl,ndim,nbh ',nrl,ndim,nbh
       ALLOCATE(PSIOFR(NRL,NDIM,NBH))
       CALL PLANEWAVE$FFT('GTOR',NBH*NDIM,NGL,PSI,NRL,PSIOFR)
 !

@@ -27,15 +27,16 @@
       REAL(8)    ,INTENT(OUT)    :: EOFI(NX)  ! ONE-PARTICLE ENERGIES
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NX)! ONE-PARTICLE WAVE FUNCTIONS
       REAL(8)                    :: R(NR)
+      REAL(8)                    :: wght(NR)
       REAL(8)                    :: DREL(NR)  ! RELATIVISTIC CORRECTION
       REAL(8)                    :: RHO(NR)
       REAL(8)                    :: G(NR)     ! INHOMOGENEITY
       REAL(8)                    :: AUX(NR),AUX1(NR)   !AUXILIARY ARRAY
       INTEGER(4)                 :: ITER
-      INTEGER(4)                 :: NITER=500
+      INTEGER(4),parameter       :: NITER=1000
       REAL(8)                    :: XAV,XMAX
       LOGICAL(4)                 :: CONVG
-      REAL(8)   ,PARAMETER       :: TOL=1.D-5
+      REAL(8)   ,PARAMETER       :: TOL=1.D-7
       REAL(8)                    :: EKIN,EH,EXC
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
       REAL(8)                    :: POTIN(NR)
@@ -81,6 +82,7 @@
         IRBOX=IR
         IF(R(IR).GT.RBOX) EXIT
       ENDDO
+!
       EOFI=0.D0
       IF(TSTART) THEN
         lofi(:)=0
@@ -194,17 +196,21 @@
 !       ================================================================
 !       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD     ==
 !       ================================================================
-        XAV=SQRT(DOT_PRODUCT(POT-POTIN,POT-POTIN)/REAL(NR,KIND=8))
-        XMAX=MAXVAL(ABS(POT-POTIN)) 
+        XAV=SQRT(sum(r**3*(POT-POTIN)**2)/sum(r**3))
+        XMAX=MAXVAL(ABS(r**2*(POT-POTIN))) 
         CALL BROYDEN$STEP(NR,POTIN,(POT-POTIN))
         POT=POTIN
         CONVG=(XMAX.LT.TOL)
       ENDDO
       CALL BROYDEN$CLEAR
-      if(.not.convg) then
+      IF(.NOT.CONVG) THEN
         CALL ERROR$MSG('SELFCONSISTENCY LOOP NOT CONVERGED')
-        CALL ERROR$STOP('AESCF')
-      end if
+        CALL ERROR$R8VAL('AEZ',AEZ)
+        CALL ERROR$R8VAL('XMAX',XMAX)
+        CALL ERROR$R8VAL('TOLX',TOL)
+        CALL ERROR$i4VAL('NITER',NITER)
+        CALL ERROR$STOP('ATOMLIB$AESCF')
+      END IF
 !!$DO I=1,NB
 !!$ WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SO(I),F(I),NN(I),EOFI(I)
 !!$ENDDO
