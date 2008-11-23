@@ -592,19 +592,12 @@
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
       IMPLICIT NONE
-!!$      INTERFACE 
-!!$        REAL FUNCTION ETIME(TARRAY)
-!!$        REAL,OPTIONAL,INTENT(OUT) :: TARRAY(2)
-!!$        END FUNCTION ETIME
-!!$      END INTERFACE
       REAL(8),INTENT(OUT) :: USRTIME
       REAL(8),INTENT(OUT) :: SYSTIME
       REAL                :: TARRAY(2)
       REAL                :: RESULT      
 !     **************************************************************************
-      RESULT=ETIME(TARRAY)
-      USRTIME=TARRAY(1)
-      SYSTIME=TARRAY(2)
+      call etime(tarray,result)
       RETURN
       END
 !
