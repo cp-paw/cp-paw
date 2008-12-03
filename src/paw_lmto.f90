@@ -308,6 +308,10 @@ END MODULE LMTO_MODULE
             END IF
           ELSE
             IF(TPHIDOT(L+1)) THEN
+              CALL ERROR$msg('tphidot=T')
+print*,'lox ',lox
+print*,'iscatt ',iscatt
+              CALL ERROR$i4val('l',l)
               CALL ERROR$STOP('LMTO$MAKEPOTENTIALPARAMETERS')
             END IF
             DO IR=1,NR

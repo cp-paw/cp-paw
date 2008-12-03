@@ -919,4 +919,6 @@ endif
  ${OBJDIR}/paw_wave.o : PERIODICTABLE_MODULE.mod
  ## file:src/Tools/Wave/paw_lmto.f90
 ##  ${OBJDIR}/paw_lmto.o : ATOMS_MODULE.mod
+${OBJDIR}/paw_lmto.o : PERIODICTABLE_MODULE.mod
 LMTO_MODULE.mod : ${OBJDIR}/paw_lmto.o
+

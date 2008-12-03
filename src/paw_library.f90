@@ -683,9 +683,11 @@
 !!$        END FUNCTION IARGC
 !!$      END INTERFACE
       INTEGER(4),INTENT(OUT) :: NARGS
+      INTEGER                :: count
 !     **************************************************************************
 !!$      NARGS=IARGC()
-      NARGS=COMMAND_ARGUMENT_COUNT()
+      count=COMMAND_ARGUMENT_COUNT()
+      nargs=count
       RETURN
       END
 !
@@ -1890,7 +1892,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       SUBROUTINE LIB$GENERALEIGENVALUEC8(N,H,S,E,U)
 !     **************************************************************************
 !     **                                                                      **
-!     ** SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM        **
+!     ** SOLVES THE GENERALIZED, complex NON-SYMMETRIC EIGENVALUE PROBLEM        **
 !     **      [H(:,:)-E(I)*S(:,:)]*U(:,I)=0                                   **
 !     **                                                                      **
 !     ** REMARK: H AND S MUST BE HERMITEANC                                   **

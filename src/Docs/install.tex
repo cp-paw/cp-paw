@@ -76,14 +76,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % headers and footers for your document
-\usepackage{fancyheadings}
+%\usepackage{fancyheadings}
+\usepackage{fancyhdr}
 
 % count the number of pages for display on footer
 \usepackage{lastpage}
 
 % width of the line for headers and footers
-\headrulewidth 0.5pt
-\footrulewidth 0.5pt
+%\headrulewidth 0.5pt
+%\footrulewidth 0.5pt
 %\addtolength{\headwidth}{\marginparsep}
 
 % uncomment the following lines for headers
@@ -163,9 +164,9 @@ web page\index{CP-PAW web page}
 \end{center}
 following the link ``Download''. Access to the PAW distribution is
 restricted to users with a valid license. You can apply for a license
-on the same web-page. With a valid password you can obtain the codes
-and the so-called ``SETUP-files''\index{setup file}, which are needed
-to perform PAW calculations.
+on the same web-page. With a valid password you can obtain the codes.
+You will also find so-called ``SETUP-files''\index{setup file}, which
+were required by older PAW versions.
 
 After you have given you Login name and Password you have reached the
 ``CP-PAW Download Page''. Following the link ``Sources'' on that page
@@ -227,6 +228,8 @@ be needed later to execute the CP-PAW code.
 %=====================================================
 One needs
 \begin{enumerate}
+\item gnu-make (gmake; often simply make)
+\item C-preprocessor (cpp)
 \item a Fortran90 compiler, 
 \item a numerical library for linear algebra, which corresponds to
 BLAS\index{BLAS}. Examples are BLAS, ACML, MKL, ESSL.
@@ -287,6 +290,8 @@ A successful configuration is indicated by a line
 A typical printout of a configuration can be found in
 appendix~\ref{sec:printoutconfigure}.
 
+
+After each change in the \myspec{parmfile} execute \verb+./configure+.
 
 %=====================================================
 \section{Make}
@@ -356,13 +361,16 @@ experience with.
 \label{sec:g95}
 %====================================================
 \begin{itemize}
-\item License: Open source (GNU Licence)
+\item License: GPL (Open source)
 \item Source: \textit{http://www.g95.org}
 \item Problems: 
 \begin{itemize}
 \item The -std95 -std2003 compiler flags must be avoided, so that the
 intrinsic function extensions can be used. In that case the g2c
-library is not required.
+library is not required. The g2c library is a fortran-to-C converter 
+used for the interface of the support library calls. It is no more 
+supported by GNU.
+\item use the -fno-pic compiler flag under OS X.
 \end{itemize}
 \end{itemize}
 
@@ -372,7 +380,7 @@ library is not required.
 \begin{itemize}
 \item Suppplier: The Portland Group
 \item Source: \textit{http://www.pgroup.com/}
-\item Lizence: commercial
+\item Lizense: commercial
 \item Problems: non known Problems
 \item Remarks:
 \begin{itemize}
@@ -386,8 +394,10 @@ precompiled librarues such as LAPACK, ACML, BLAS, MPICH.
 %====================================================
 \begin{itemize}
 \item Supplier: Intel
-\item Source: Register on the page \textit{https://welcome.intel.com/Login.aspx}.
+\item Source: Register on the 
+page \textit{https://welcome.intel.com/Login.aspx}.
 Then search for  ``Intel Fortran Compiler''.
+\item License: commercial
 \item Problems: 
 \begin{itemize}
 \item using the interprocedural optimization IPO the IFORT can produce
@@ -409,7 +419,7 @@ size can be controlled with \mytt{ulimit -a}.
 \begin{itemize}
 \item Supplier: IBM
 \item Source: \textit{http://www-306.ibm.com/software/awdtools/fortran/xlfortran/features/xlf-linux.html}
-\item Lizence: commercial
+\item License: commercial
 \item Remark: Only for the Power architecture of IBM
 \item Problems: no known problems
 \end{itemize}
@@ -420,7 +430,8 @@ size can be controlled with \mytt{ulimit -a}.
 \begin{itemize}
 \item Supplier: Free Software Foundation
 \item Source\textit{http://gcc.gnu.org/fortran/}
-\item Problems: We did not succed to compile PAW with gfortran.
+\item License: GPL (open source)
+%\item Problems: We did not succed to compile PAW with gfortran.
 \end{itemize}
 
 
@@ -430,7 +441,9 @@ size can be controlled with \mytt{ulimit -a}.
 \begin{itemize}
 \item Supplier: Absoft
 \item http://www.absoft.com/
-\item Problems: We did not succed to compile PAW with gfortran.
+\item License: commercial
+%\item Problems: We did not succed to compile PAW with an older version of 
+%the Absoft compiler.
 \end{itemize}
 
 
@@ -453,7 +466,7 @@ kind parameter of the arguments. In order to avoid the corresponding
 problems the CP-PAW code contains interfaces to the utility library
 for the individual compilers. The specific interfaces are selected via
 the C-preprocessor, if the corresponding parameters have been set in
-the paameter file.
+as variable CPPFLAGS the parameter file (see Section~\ref{sec:cppflags}).
 
 Consult the user guide of the corresponding compiler to find out if
 If a utility library needs to be linked.
@@ -471,7 +484,7 @@ purposes. Often they are combined in asingle library.
 mathematical library for elementary vector-matrix operations such as
 vector and matrix multiplications.
 \item Lineare Algebra PACKage (LAPACK)\index{LAPACK}: more complex
-matrix operations such as eigenvalue solvers.
+matrix operations such as eigenvalue solvers. (LAPACK relies on BLAS)
 \item Fast Fourier Transformation Library (FFT):
 As the name says: Fast Fourier transformations
 \end{itemize}
@@ -508,16 +521,19 @@ specific computer. The advantage is that it facilitates installation
 on parallel computer clusters, where the libraries are kept only on the
 frontend.
 
+
+The following table lists the combination of libraries that have been
+tested.
 \begin{center}
 \begin{tabular}{|l|l|l|}
 \hline
 LAPACK& BLAS & FFT\\
 \hline
-LAPACK & ATLAS & FFTW\\
-ACML & ACML & FFTW\\
+LAPACK & ATLAS & FFTW2\\
+ACML & ACML & FFTW2\\
 ACML & ACML & ACML\\
-MKL & MKL & FFTW(MKL)\\
-MKL & MKL & FFTW\\
+MKL & MKL & FFTW2(MKL)\\
+MKL & MKL & FFTW2\\
 ESSL & ESSL & ESSL\\
 \hline
 \end{tabular}
@@ -534,7 +550,7 @@ ESSL & ESSL & ESSL\\
 \item Name: ATLAS=Automatically Tuned Linear Algebra Software
 \item License: Open Source
 \item Source \textit{http://math-atlas.sourceforge.net/}
-\item Funktions: BLAS
+\item Functions: BLAS
 \item Installation:
 \begin{itemize}
 \item 
@@ -572,8 +588,11 @@ automatically.
 \begin{itemize}
 \item Name: LAPACK=Linear Algebra PACKage
 \item Source: http://www.netlib.org/lapack/
-\item Funktions: LAPACK
-\item Reamrk: This library is not recommended. It si better to use the libraries specifically tuned to your hardware.
+\item Functions: LAPACK (The lapack package also contains slow BLAS
+  routines. As the computational efficiency heavily depends on the
+  performance of the BLAS library, one should always link a
+  machine-optimized BLAS library.)
+\item License: Open source
 \item Installation:
 \begin{enumerate}
 \item Download \textit{lapack-lite-3.1.1.tgz} von
@@ -594,11 +613,13 @@ http://www.netlib.org/lapack/lawn81/node13.html)
 \item Supplier: Massachusetts Institute of Technology (MIT)
 \item Name: FFTW=Fastest Fourier Transform in the West
 \item Source: \mytt{http://www.fftw.org/download.html}
+\item License: open source
 \item Remark
 \begin{itemize}
-\item The versions FFTW2 und FFTW3 are not compatible. Currently we only support FFTW2.
+\item The versions FFTW2 und FFTW3 are not compatible. 
+Currently, the CP-PAW code only works with FFTW2.
 \end{itemize}
-\item Installation:
+\item Installation: 
 \begin{enumerate}
 \item download FFTW 2.1.5 from \mytt{http://www.fftw.org/download.html}.
 \item Archiv mit \mytt{tar -xvzf Dateiname} entpacken
@@ -606,7 +627,8 @@ http://www.netlib.org/lapack/lawn81/node13.html)
  The option \mytt{--enable-i386-hacks} takes advantage of the
  gcc/x86-specific performance hacks. (For the core2duo the option
  \mytt{--enable-i386-hacks} must be left out!)
-\item Change the following line in the file \textit{fftw/config.h} (At the end of the file):\\
+\item On 32-bit architectures, change the following 
+line in the file \textit{fftw/config.h} (At the end of the file):\\
 \begin{verbatim}
  \#define F77_FUNC_(name,NAME) name ## __
 \end{verbatim}
@@ -628,8 +650,20 @@ http://www.netlib.org/lapack/lawn81/node13.html)
 \item Supplier: AMD
 \item Source: \mytt{http://developer.amd.com/acml.jsp}
 \item Contains: FFT, LAPACK, BLAS
-\item Installation: Untar the archive after downaloading and follow
-the installation instructions.
+\item License: royalty-free license 
+\item Installation: Untar the archive after downloading and follow
+the installation instructions. 
+\item Remarks: Available for Windows and Linux operating systems, and
+  for the fortran compilers gfortran, ifort, pgi, pathscale, and nag.
+\item Special instructions to use the ACML-internal FFT library:
+\begin{itemize} 
+\item use \verb+-DCPPVAR_FFT_ACML+ in the variable CPPFLAGS of the 
+\myspec{parmfile} (see section~\ref{sec:cppflags}).
+\item set the variable \verb+FFT_HEADER+ in the parameter file to 
+the file gnu64/include/acml.h inside the acml directory.
+\item do not include other FFT, LAPACK or BLAS libraries together 
+with ACML.
+\end{itemize}
 \end{itemize}
 
 
@@ -641,6 +675,11 @@ the installation instructions.
 \item Supplier: Intel
 \item Name: MKL=Math Kernel Library\index{MKL}
 \item Source: \mytt{http://www.intel.com/cd/software/products/asmo-na/eng/307757.htm}
+\item License: commercial (For Linux: free license for non-commercial entities)
+\item Remarks: as of writing this the MKL 10.x does not yet work with CP-PAW.
+\item Link the following libraries for MKL: mkl\_lapack, guide,
+  pthread.  For i386 architecture also link mkl\_ia32 and for EM64T or
+  AMD64 architectures link mkl\_em64t.œ
 \item Installation:
 \begin{enumerate}
 \item Register at \mytt{https://welcome.intel.com/Login.aspx}
@@ -672,12 +711,14 @@ adjust the value of \mytt{FFTDIR}.  Then one has to replace the value
 \subsection{ESSL}
 %====================================================
 \begin{itemize}
+\item Name: Engineering and Scientific Subroutine Library (ESSL)
 \item Supplier: IBM
 \item Source: \mytt{http://www-03.ibm.com/systems/p/software/essl/index.html}
-\item Anmerkung: 
+\item License: commercial
+\item Remarks: 
 \begin{itemize}
-\item Nur f\"ur IBM Hardware. Nur f\"ur AIX operating
-system oder Linux f\"ur Power achitekture.
+\item Only for IBM Hardware. Only for the AIX operating
+system and for  Linux with Power architecture.
 \item ESSL does not use the same calling sequences as LAPACK and
 BLAS. However, PAW has a special interface for ESSL.
 \end{itemize}
@@ -706,12 +747,14 @@ MPICH is a free implementation of the MPI for  ethernet networks.
 \begin{itemize}
 \item Supplier: Argonne National Laboratory and Missisippi State University
 \item Source http://www-unix.mcs.anl.gov/mpi/mpich1/
+\item License: open source
 \item Remarks:
 \begin{itemize}
 \item There is a new implementation of MPICH called MPICH2. According
 to the supplier this is the currently recommendent implementation.
-MPICH2 can be downloaded from
-\textit{http://www-unix.mcs.anl.gov/mpi/mpich2/index.htm}.
+MPICH2 can be downloaded from\\
+\centerline{\textit{http://www-unix.mcs.anl.gov/mpi/mpich2/index.htm}.}
+It has not been tested with CP-PAW.
 \end{itemize}
 \item Installation:
 \begin{enumerate}
@@ -719,7 +762,10 @@ MPICH2 can be downloaded from
 \begin{center}
 \textit{http://www-unix.mcs.anl.gov/mpi/mpich1/}
 \end{center}
-\item After unpacking, one can compile the MPI for PAW using the following script.
+\item After unpacking, one can compile the MPI for PAW using the 
+following script.
+
+For G95
 \begin{verbatim}
 #!/bin/sh
 export F90=g95
@@ -756,6 +802,7 @@ MPICH is a free implementation of the MPI for  Infiniband networks.
 \begin{itemize}
 \item Supplier: Ohio State University
 \item Source: \textit{http://mvapich.cse.ohio-state.edu/}
+\item License: Open Source
 \end{itemize}
 
 
@@ -865,7 +912,7 @@ be built.  A requirement is a corresponding MPI library.  Specify
 Leave the setting \mytt{SPECIAL='none'}. It is a flag for special rules
 in the make files.
 
-\subsection{\mytt{BLASDIR},\mytt{LAPACKDIR},\mytt{FFTDIR},\mytt{MPIDIR}}
+\subsection{\mytt{BLASDIR}, \mytt{LAPACKDIR}, \mytt{FFTDIR}, \mytt{MPIDIR}}
 
 This set of variables specifies the path for the various
 libraries. These variables can be used within the parameter file. They
@@ -882,6 +929,8 @@ Path to the include file \mytt{fftw\_f77.i} for the FFTW library.
 This file contains constants , that need passed to the FFTW routines.
 
 If FFTW2 is used as described in section~\ref{sec:FFTWinstall}, no change is needed.
+
+Note that CP-PAW is not compatible with FFTW3!
 
 %================================================================================
 \subsection{\mytt{MPI\_HEADER}}
@@ -901,9 +950,8 @@ reason to use the more conventional method of an include file to set
 the MPI-specific parameters.
 
 %================================================================================
-\subsection{\mytt{COMPILER}}
+\subsection{\mytt{COMPILER\_SCALAR},  \mytt{COMPILER\_PARALLEL}}
 %================================================================================
-
 This variable specifies the command to call the compiler for the
 sequential and the parallel executables.
 
@@ -913,8 +961,8 @@ example requires the option \textit{-fno-second-underscore} in order
 to link the libraries properly.
 
 %================================================================================
-\subsection{\mytt{FCFLAGS\_NONE}, \mytt{FCFLAGS\_OPT}, 
-\mytt{FCFLAGS\_DBG}, \mytt{FCFLAGS\_PROF}}
+\subsection{\mytt{FCFLAGS\_NONE},  \mytt{FCFLAGS\_OPT}, 
+\mytt{FCFLAGS\_DBG},  \mytt{FCFLAGS\_PROF}}
 %================================================================================
 
 Here the compiler options are specified. Different sets of compiler
@@ -1031,7 +1079,7 @@ Fortran interface to the C-subroutines.
 
 
 %================================================================================
-\subsection{\mytt{CPPFLAGS}}
+\subsection{\mytt{CPPFLAGS}}\label{sec:cppflags}
 %================================================================================
 
 Flags for the C-preprozessor. Using these flags, the C-preprozessor
@@ -1082,7 +1130,9 @@ Allowed values for \verb+CPPVAR_BLAS_foo+ are:
 \subsection{\mytt{FEXT}}
 %================================================================================
 Extension expected by the compiler for the source code files. It is
-usually ``f90'' or ``f95''.
+usually ``f90'' or ``f95''. (The sources of teh CP-PAW code are stored with the 
+extension .f90. However they are transformed before compilation into a file with 
+the extension specified by FEXT. This is the only extension seen by the compiler.)
 
 
 %================================================================================
@@ -1110,21 +1160,80 @@ The makefile recognizes the following targets:
 
 
 
+% %================================================================================
+% \chapter{Problems}
+% %================================================================================
+% %================================================================================
+% \section{Typical errors during compilation}
+% %================================================================================
+% %================================================================================
+% \section{Typical errors during linking}
+% %================================================================================
+% %================================================================================
+% \section{Typical run-time errors}
+% %================================================================================
+
+
+
 %================================================================================
-\chapter{Problems und other Remarks}
+\chapter{Problems and miscellaneous remarks}
 %================================================================================
+
+
+%================================================================================
+\section{Missing symbols in paw\_library\_d.f90}
+%================================================================================
+The file paw\_library.f90 contains all calls to external libraries,
+including the support libraries. The interfaces to specific libraries
+or the support libraries to specific compilers are selected by the
+c-preprocessor, which is in turn instructed by the variable CPPFLAGS
+specified in \myspec{parmfile}.
+
+If symbols in this libraries are not recognized, it is likely that
+CPPFLAGS are not properly chosen. See section~\ref{sec:cppflags}.
+
+A typical error message may be
+\begin{verbatim}
+fortcom: Error: /home/tools/PAW/bin/ifc/Objects/fast/paw_library_d.f90, 
+line 94: This name does not have a type, and must have an explicit type.
+\end{verbatim}
+
+%================================================================================
+\section{Generic subroutine inconsistent with specific subroutine interface}
+%================================================================================
+
+If a library expects 4-byte integers and receives 8-byte integers,
+which usually is the size of the default integer on a 64-bit
+architecture, there is a mismatch of interfaces. This hopefully causes
+an error message by the compiler.
+
+It is important that CP-PAW and the libraries have been compiled with
+the same size for the default integer. The problem is usually related
+to paw\_mpelib.f90 or paw\_library.f90. The file paw\_mpelib.f90
+contains all calls to the MPI library (parallelization routines) and
+makes heavy use of integers.
+
+A typical error message may have the form.
+\begin{verbatim}
+CALL MPE__GATHER(CID,1,NAMES,NAMEARRAY)  ! NEED A GATHER ROUTINE FOR STRI 1
+
+Error: Generic subroutine 'mpe__gather' at (1) is not consistent with a specific 
+subroutine interface
+\end{verbatim}
+
 %================================================================================
 \section{Stack-size exceeded}
 %================================================================================
-Unpredictable behavior can occur if the
-stack-size is exceeded. In the bash shell the stack size can be
-increased using the command
+Unpredictable behavior can occur if the stack-size is exceeded. In the
+bash shell the stack size can be increased using the command
 \begin{verbatim}
 ulimit -s unlimited
 \end{verbatim}
  This is apparently a problem of the operating system. It can be
 caused by certain optimizations such as inlining. The latter increases
 the code size.
+
+
 
 %================================================================================
 \section{No core dump}
