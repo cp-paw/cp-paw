@@ -40,7 +40,7 @@ INTEGER(4)            :: LXX
 INTEGER(4),ALLOCATABLE:: LX(:)               !(NSP)
 REAL(8)   ,ALLOCATABLE:: RAD(:)              !(NSP)
 INTEGER(4),ALLOCATABLE:: ISPECIES(:)         !(NAT)
-TYPE(POTPAR_TYPE),ALLOCATABLE:: POTPAR(:,:)  !(LXX+1,NSP)
+!TYPE(POTPAR_TYPE),ALLOCATABLE:: POTPAR(:,:)  !(LXX+1,NSP)
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE:: SBAR(:) !(NNB)
 REAL(8)   ,ALLOCATABLE :: ORBRAD(:,:) !(LXX+1,NAT) NODE-POSITION OF THE ORBITAL
 END MODULE LMTO_MODULE
@@ -190,242 +190,242 @@ END MODULE LMTO_MODULE
 !!$      ENDDO
 !!$      RETURN
 !!$      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$MAKEPOTENTIALPARAMETERS
-!     **************************************************************************
-!     **                                                                      **
-!     **************************************************************************
-      USE LMTO_MODULE
-      USE PERIODICTABLE_MODULE
-      IMPLICIT NONE
-      INTEGER(4)             :: LNX
-      INTEGER(4),ALLOCATABLE :: LOX(:)
-      REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)
-      REAL(8)   ,ALLOCATABLE :: UPHI(:,:)
-      REAL(8)   ,ALLOCATABLE :: UN(:,:)
-      REAL(8)   ,ALLOCATABLE :: QNPLUS1(:,:)
-      REAL(8)   ,ALLOCATABLE :: PHINU(:,:)
-      REAL(8)   ,ALLOCATABLE :: PHINUDOT(:,:)
-      REAL(8)   ,ALLOCATABLE :: R(:)
-      INTEGER(4),ALLOCATABLE :: ISCATT(:)
-      LOGICAL(4),ALLOCATABLE :: TPHI(:)
-      LOGICAL(4),ALLOCATABLE :: TPHIDOT(:)
-      REAL(8)                :: AEZ
-      REAL(8)                :: ETOT
-      INTEGER(4)             :: GID
-      INTEGER(4)             :: NR
-      INTEGER(4)             :: ISP,IB,L,IR,LN
-      INTEGER(4)             :: IC,IV
-      INTEGER(4)             :: NC
-      INTEGER(4)             :: IROUT
-      REAL(8)                :: RBOX
-      REAL(8)                :: VALU,DERU,VALQ,DERQ
-      REAL(8)                :: VALK,DERK,VALJ,DERJ
-      REAL(8)                :: WKU,WJU,WKQ,WJQ,WKJ,WUQ
-      REAL(8)                :: CUK,CQK,CUJ,CQJ,CUJBAR,CQJBAR
-      REAL(8)                :: E
-      REAL(8)                :: QBAR
-      REAL(8)                :: VAL
-      REAL(8)   ,ALLOCATABLE :: AUX(:),AUX1(:)
-      logical(4)             :: tchk
-!     **************************************************************************
-      IF(TINIPOTPAR) RETURN
-      TINIPOTPAR=.TRUE.
-                                 call trace$push('LMTO$MAKEPOTENTIALPARAMETERS')
-!
-      CALL SETUP$NSPECIES(NSP)
-      ALLOCATE(RAD(NSP))
-      ALLOCATE(LX(NSP))
-      LXX=-1
-      DO ISP=1,NSP
-        CALL SETUP$LNX(ISP,LNX)
-        ALLOCATE(LOX(LNX))
-        CALL SETUP$LOFLN(ISP,LNX,LOX)
-        LX(ISP)=MAXVAL(LOX)
-        DEALLOCATE(LOX)
-        CALL SETUP$AEZ(ISP,AEZ)
-        CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RAD(ISP))
-      ENDDO
-      LXX=MAXVAL(LX)
-!
-!     ==========================================================================
-!     ==                                                                      ==
-!     ==========================================================================
-      ALLOCATE(POTPAR(LXX+1,NSP))
-      DO ISP=1,NSP
-        CALL SETUP$ISELECT(ISP)
-!       == POTENTIAL PARAMETERS CAN ONLY BE DETERMINED WITH INTERNAL SETUPS ====
-        CALL SETUP$GETI4('GID',GID)
-        CALL SETUP$GETI4('NR',NR)
-        ALLOCATE(AUX(NR))
-        ALLOCATE(AUX1(NR))
-        ALLOCATE(R(NR))
-        CALL RADIAL$R(GID,NR,R)
-!
-!       ========================================================================
-!       ==  UN,Q_(N+1)                                                        ==
-!       ========================================================================
-        ALLOCATE(UN(NR,LX(ISP)+1))
-        ALLOCATE(QNPLUS1(NR,LX(ISP)+1))
-        ALLOCATE(PHINU(NR,LX(ISP)+1))
-        ALLOCATE(PHINUDOT(NR,LX(ISP)+1))
-!
-        CALL SETUP$GETI4('LNX',LNX)
-        ALLOCATE(LOX(LNX))
-        ALLOCATE(ISCATT(LNX))
-        CALL SETUP$GETI4A('LOX',LNX,LOX)
-        CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
-        ALLOCATE(AEPHI(NR,LNX))
-        ALLOCATE(UPHI(NR,LNX))
-        CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
-        CALL SETUP$GETR8A('NDLSPHI',NR*LNX,UPHI)
-        ALLOCATE(TPHI(LX(ISP)+1))
-        ALLOCATE(TPHIDOT(LX(ISP)+1))
-        TPHI(:)=.FALSE.
-        TPHIDOT(:)=.FALSE.
-        DO LN=1,LNX
-          L=LOX(LN) 
-          IF(ISCATT(LN).EQ.0) THEN
-            TPHI(L+1)=.TRUE.
-            UN(:,L+1)=UPHI(:,LN)
-            PHINU(:,L+1)=AEPHI(:,LN)
-          ELSE IF(ISCATT(LN).EQ.1) THEN
-            TPHIDOT(L+1)=.TRUE.
-            QNPLUS1(:,L+1)=UPHI(:,LN)
-            PHINUDOT(:,L+1)=AEPHI(:,LN)
-          END IF
-        ENDDO
-!
-!       == NORMALIZE PHINU =====================================================
-        DO L=0,LX(ISP)
-          IF(TPHI(L+1)) THEN
-            IF(.NOT.TPHIDOT(L+1)) THEN
-              DO IR=1,NR
-                CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,QNPLUS1(IR,L+1),DERJ)
-              ENDDO
-              PHINUDOT(:,L+1)=QNPLUS1(:,L+1)
-            END IF
-          ELSE
-            IF(TPHIDOT(L+1)) THEN
-              CALL ERROR$msg('tphidot=T')
-print*,'lox ',lox
-print*,'iscatt ',iscatt
-              CALL ERROR$i4val('l',l)
-              CALL ERROR$STOP('LMTO$MAKEPOTENTIALPARAMETERS')
-            END IF
-            DO IR=1,NR
-              CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,UN(IR,L+1),DERK)
-              CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,QNPLUS1(IR,L+1),DERJ)
-            ENDDO
-            PHINU(:,L+1)=UN(:,L+1)
-            PHINUDOT(:,L+1)=QNPLUS1(:,L+1)
-          END IF
-        ENDDO
-!
-!       == NORMALIZE PHINU =====================================================
-        DO L=0,LX(ISP)
-          IF(.NOT.TPHI(L+1)) CYCLE
-          AUX(:)=R(:)**2*PHINU(:,L+1)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX,RAD(ISP),VAL)
-          VAL=1.D0/SQRT(VAL)
-          PHINU(:,L+1)=PHINU(:,L+1)*VAL
-          PHINUDOT(:,L+1)=PHINUDOT(:,L+1)*VAL
-          UN(:,L+1)=UN(:,L+1)*VAL
-          QNPLUS1(:,L+1)=QNPLUS1(:,L+1)*VAL
-        ENDDO
-!
-!       ========================================================================
-!       ==  DETERMINE WRONSKI MATRICES AND QBAR                               ==
-!       ========================================================================
-        DO L=0,LX(ISP)
-          CALL RADIAL$VALUE(GID,NR,UN(:,L+1),RAD(ISP),VALU)
-          CALL RADIAL$DERIVATIVE(GID,NR,UN(:,L+1),RAD(ISP),DERU)
-          CALL RADIAL$VALUE(GID,NR,QNPLUS1(:,L+1),RAD(ISP),VALQ)
-          CALL RADIAL$DERIVATIVE(GID,NR,QNPLUS1(:,L+1),RAD(ISP),DERQ)
-          CALL LMTO$SOLIDBESSELRAD(L,RAD(ISP),K2,VALJ,DERJ)
-          CALL LMTO$SOLIDHANKELRAD(L,RAD(ISP),K2,VALK,DERK)
-          WKU=VALK*DERU-DERK*VALU
-          WKQ=VALK*DERQ-DERK*VALQ
-          WJU=VALJ*DERU-DERJ*VALU
-          WJQ=VALJ*DERQ-DERJ*VALQ
-          WKJ=VALK*DERJ-DERK*VALJ
-!PRINT*,'WKJ ',WKJ,1.D0/RAD(ISP)**2,WKJ-1.D0/RAD(ISP)**2
-          WUQ=VALU*DERQ-DERU*VALQ
-!         == K -> U*CUK + Q*CQK ================================================
-!         == J -> U*CUJ + Q*CQJ ================================================
-!         == JBAR -> Q*CQJBAR ==================================================
-          CUK=WKQ/WUQ
-          CQK=WKU/WUQ
-          CUJ=WJQ/WUQ
-          CQJ=WJU/WUQ
-          CALL LMTO$Q(L,RAD(ISP),VALQ,DERQ,K2,QBAR)
-          CUJBAR=CUJ-QBAR*CUK
-          CQJBAR=CQJ-QBAR*CQK
-          
-          POTPAR(L+1,ISP)%RAD=RAD(ISP)
-          POTPAR(L+1,ISP)%QBAR=QBAR
-          POTPAR(L+1,ISP)%WKU=WKU
-          POTPAR(L+1,ISP)%WKQ=WKQ
-          POTPAR(L+1,ISP)%WJU=WJU
-          POTPAR(L+1,ISP)%WJQ=WJQ
-          POTPAR(L+1,ISP)%WKJ=WKJ
-          POTPAR(L+1,ISP)%WUQ=WUQ
-          POTPAR(L+1,ISP)%KJTOUQ(1,1)=CUK
-          POTPAR(L+1,ISP)%KJTOUQ(1,2)=CQK
-          POTPAR(L+1,ISP)%KJTOUQ(2,1)=CUJ
-          POTPAR(L+1,ISP)%KJTOUQ(2,2)=CQJ
-          POTPAR(L+1,ISP)%KJBARTOUQ(1,1)=CUK
-          POTPAR(L+1,ISP)%KJBARTOUQ(1,2)=CQK
-          POTPAR(L+1,ISP)%KJBARTOUQ(2,1)=0.D0
-          POTPAR(L+1,ISP)%KJBARTOUQ(2,2)=CQJBAR
-          POTPAR(L+1,ISP)%JBARTOQ=CQJBAR
-          POTPAR(L+1,ISP)%VALK=VALK
-          POTPAR(L+1,ISP)%DERK=DERK
-          POTPAR(L+1,ISP)%VALJ=VALJ
-          POTPAR(L+1,ISP)%DERJ=DERJ
-          POTPAR(L+1,ISP)%VALJBAR=VALJ-QBAR*VALK
-          POTPAR(L+1,ISP)%DERJBAR=DERJ-QBAR*DERK
-!
-          AUX=R(:)**2*PHINU(:,L+1)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RAD(ISP),POTPAR(L+1,ISP)%OVUU)
-          AUX=R(:)**2*PHINU(:,L+1)*PHINUDOT(:,L+1)
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RAD(ISP),POTPAR(L+1,ISP)%OVUQ)
-          AUX=R(:)**2*PHINUDOT(:,L+1)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RAD(ISP),POTPAR(L+1,ISP)%OVQQ)
-        ENDDO
-!
-!       ========================================================================
-!       ==  CLEAN UP                                                          ==
-!       ========================================================================
-        DEALLOCATE(TPHI)
-        DEALLOCATE(TPHIDOT)
-        DEALLOCATE(LOX)
-        DEALLOCATE(ISCATT)
-        DEALLOCATE(AEPHI)
-        DEALLOCATE(UPHI)
-        DEALLOCATE(PHINU)
-        DEALLOCATE(PHINUDOT)
-        DEALLOCATE(UN)
-        DEALLOCATE(QNPLUS1)
-        DEALLOCATE(R)
-        DEALLOCATE(AUX)
-        DEALLOCATE(AUX1)
-      ENDDO
-                                                                call trace$pop()
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LMTO$MAKEPOTENTIALPARAMETERS
+!!$!     **************************************************************************
+!!$!     **                                                                      **
+!!$!     **************************************************************************
+!!$      USE LMTO_MODULE
+!!$      USE PERIODICTABLE_MODULE
+!!$      IMPLICIT NONE
+!!$      INTEGER(4)             :: LNX
+!!$      INTEGER(4),ALLOCATABLE :: LOX(:)
+!!$      REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)
+!!$      REAL(8)   ,ALLOCATABLE :: UPHI(:,:)
+!!$      REAL(8)   ,ALLOCATABLE :: UN(:,:)
+!!$      REAL(8)   ,ALLOCATABLE :: QNPLUS1(:,:)
+!!$      REAL(8)   ,ALLOCATABLE :: PHINU(:,:)
+!!$      REAL(8)   ,ALLOCATABLE :: PHINUDOT(:,:)
+!!$      REAL(8)   ,ALLOCATABLE :: R(:)
+!!$      INTEGER(4),ALLOCATABLE :: ISCATT(:)
+!!$      LOGICAL(4),ALLOCATABLE :: TPHI(:)
+!!$      LOGICAL(4),ALLOCATABLE :: TPHIDOT(:)
+!!$      REAL(8)                :: AEZ
+!!$      REAL(8)                :: ETOT
+!!$      INTEGER(4)             :: GID
+!!$      INTEGER(4)             :: NR
+!!$      INTEGER(4)             :: ISP,IB,L,IR,LN
+!!$      INTEGER(4)             :: IC,IV
+!!$      INTEGER(4)             :: NC
+!!$      INTEGER(4)             :: IROUT
+!!$      REAL(8)                :: RBOX
+!!$      REAL(8)                :: VALU,DERU,VALQ,DERQ
+!!$      REAL(8)                :: VALK,DERK,VALJ,DERJ
+!!$      REAL(8)                :: WKU,WJU,WKQ,WJQ,WKJ,WUQ
+!!$      REAL(8)                :: CUK,CQK,CUJ,CQJ,CUJBAR,CQJBAR
+!!$      REAL(8)                :: E
+!!$      REAL(8)                :: QBAR
+!!$      REAL(8)                :: VAL
+!!$      REAL(8)   ,ALLOCATABLE :: AUX(:),AUX1(:)
+!!$      logical(4)             :: tchk
+!!$!     **************************************************************************
+!!$      IF(TINIPOTPAR) RETURN
+!!$      TINIPOTPAR=.TRUE.
+!!$                                 call trace$push('LMTO$MAKEPOTENTIALPARAMETERS')
+!!$!
+!!$      CALL SETUP$NSPECIES(NSP)
+!!$      ALLOCATE(RAD(NSP))
+!!$      ALLOCATE(LX(NSP))
+!!$      LXX=-1
+!!$      DO ISP=1,NSP
+!!$        CALL SETUP$LNX(ISP,LNX)
+!!$        ALLOCATE(LOX(LNX))
+!!$        CALL SETUP$LOFLN(ISP,LNX,LOX)
+!!$        LX(ISP)=MAXVAL(LOX)
+!!$        DEALLOCATE(LOX)
+!!$        CALL SETUP$AEZ(ISP,AEZ)
+!!$        CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RAD(ISP))
+!!$      ENDDO
+!!$      LXX=MAXVAL(LX)
+!!$!
+!!$!     ==========================================================================
+!!$!     ==                                                                      ==
+!!$!     ==========================================================================
+!!$      ALLOCATE(POTPAR(LXX+1,NSP))
+!!$      DO ISP=1,NSP
+!!$        CALL SETUP$ISELECT(ISP)
+!!$!       == POTENTIAL PARAMETERS CAN ONLY BE DETERMINED WITH INTERNAL SETUPS ====
+!!$        CALL SETUP$GETI4('GID',GID)
+!!$        CALL SETUP$GETI4('NR',NR)
+!!$        ALLOCATE(AUX(NR))
+!!$        ALLOCATE(AUX1(NR))
+!!$        ALLOCATE(R(NR))
+!!$        CALL RADIAL$R(GID,NR,R)
+!!$!
+!!$!       ========================================================================
+!!$!       ==  UN,Q_(N+1)                                                        ==
+!!$!       ========================================================================
+!!$        ALLOCATE(UN(NR,LX(ISP)+1))
+!!$        ALLOCATE(QNPLUS1(NR,LX(ISP)+1))
+!!$        ALLOCATE(PHINU(NR,LX(ISP)+1))
+!!$        ALLOCATE(PHINUDOT(NR,LX(ISP)+1))
+!!$!
+!!$        CALL SETUP$GETI4('LNX',LNX)
+!!$        ALLOCATE(LOX(LNX))
+!!$        ALLOCATE(ISCATT(LNX))
+!!$        CALL SETUP$GETI4A('LOX',LNX,LOX)
+!!$        CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
+!!$        ALLOCATE(AEPHI(NR,LNX))
+!!$        ALLOCATE(UPHI(NR,LNX))
+!!$        CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
+!!$        CALL SETUP$GETR8A('NDLSPHI',NR*LNX,UPHI)
+!!$        ALLOCATE(TPHI(LX(ISP)+1))
+!!$        ALLOCATE(TPHIDOT(LX(ISP)+1))
+!!$        TPHI(:)=.FALSE.
+!!$        TPHIDOT(:)=.FALSE.
+!!$        DO LN=1,LNX
+!!$          L=LOX(LN) 
+!!$          IF(ISCATT(LN).EQ.0) THEN
+!!$            TPHI(L+1)=.TRUE.
+!!$            UN(:,L+1)=UPHI(:,LN)
+!!$            PHINU(:,L+1)=AEPHI(:,LN)
+!!$          ELSE IF(ISCATT(LN).EQ.1) THEN
+!!$            TPHIDOT(L+1)=.TRUE.
+!!$            QNPLUS1(:,L+1)=UPHI(:,LN)
+!!$            PHINUDOT(:,L+1)=AEPHI(:,LN)
+!!$          END IF
+!!$        ENDDO
+!!$!
+!!$!       == NORMALIZE PHINU =====================================================
+!!$        DO L=0,LX(ISP)
+!!$          IF(TPHI(L+1)) THEN
+!!$            IF(.NOT.TPHIDOT(L+1)) THEN
+!!$              DO IR=1,NR
+!!$                CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,QNPLUS1(IR,L+1),DERJ)
+!!$              ENDDO
+!!$              PHINUDOT(:,L+1)=QNPLUS1(:,L+1)
+!!$            END IF
+!!$          ELSE
+!!$            IF(TPHIDOT(L+1)) THEN
+!!$              CALL ERROR$msg('tphidot=T')
+!!$print*,'lox ',lox
+!!$print*,'iscatt ',iscatt
+!!$              CALL ERROR$i4val('l',l)
+!!$              CALL ERROR$STOP('LMTO$MAKEPOTENTIALPARAMETERS')
+!!$            END IF
+!!$            DO IR=1,NR
+!!$              CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,UN(IR,L+1),DERK)
+!!$              CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,QNPLUS1(IR,L+1),DERJ)
+!!$            ENDDO
+!!$            PHINU(:,L+1)=UN(:,L+1)
+!!$            PHINUDOT(:,L+1)=QNPLUS1(:,L+1)
+!!$          END IF
+!!$        ENDDO
+!!$!
+!!$!       == NORMALIZE PHINU =====================================================
+!!$        DO L=0,LX(ISP)
+!!$          IF(.NOT.TPHI(L+1)) CYCLE
+!!$          AUX(:)=R(:)**2*PHINU(:,L+1)**2
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX,RAD(ISP),VAL)
+!!$          VAL=1.D0/SQRT(VAL)
+!!$          PHINU(:,L+1)=PHINU(:,L+1)*VAL
+!!$          PHINUDOT(:,L+1)=PHINUDOT(:,L+1)*VAL
+!!$          UN(:,L+1)=UN(:,L+1)*VAL
+!!$          QNPLUS1(:,L+1)=QNPLUS1(:,L+1)*VAL
+!!$        ENDDO
+!!$!
+!!$!       ========================================================================
+!!$!       ==  DETERMINE WRONSKI MATRICES AND QBAR                               ==
+!!$!       ========================================================================
+!!$        DO L=0,LX(ISP)
+!!$          CALL RADIAL$VALUE(GID,NR,UN(:,L+1),RAD(ISP),VALU)
+!!$          CALL RADIAL$DERIVATIVE(GID,NR,UN(:,L+1),RAD(ISP),DERU)
+!!$          CALL RADIAL$VALUE(GID,NR,QNPLUS1(:,L+1),RAD(ISP),VALQ)
+!!$          CALL RADIAL$DERIVATIVE(GID,NR,QNPLUS1(:,L+1),RAD(ISP),DERQ)
+!!$          CALL LMTO$SOLIDBESSELRAD(L,RAD(ISP),K2,VALJ,DERJ)
+!!$          CALL LMTO$SOLIDHANKELRAD(L,RAD(ISP),K2,VALK,DERK)
+!!$          WKU=VALK*DERU-DERK*VALU
+!!$          WKQ=VALK*DERQ-DERK*VALQ
+!!$          WJU=VALJ*DERU-DERJ*VALU
+!!$          WJQ=VALJ*DERQ-DERJ*VALQ
+!!$          WKJ=VALK*DERJ-DERK*VALJ
+!!$!PRINT*,'WKJ ',WKJ,1.D0/RAD(ISP)**2,WKJ-1.D0/RAD(ISP)**2
+!!$          WUQ=VALU*DERQ-DERU*VALQ
+!!$!         == K -> U*CUK + Q*CQK ================================================
+!!$!         == J -> U*CUJ + Q*CQJ ================================================
+!!$!         == JBAR -> Q*CQJBAR ==================================================
+!!$          CUK=WKQ/WUQ
+!!$          CQK=WKU/WUQ
+!!$          CUJ=WJQ/WUQ
+!!$          CQJ=WJU/WUQ
+!!$          CALL LMTO$Q(L,RAD(ISP),VALQ,DERQ,K2,QBAR)
+!!$          CUJBAR=CUJ-QBAR*CUK
+!!$          CQJBAR=CQJ-QBAR*CQK
+!!$          
+!!$          POTPAR(L+1,ISP)%RAD=RAD(ISP)
+!!$          POTPAR(L+1,ISP)%QBAR=QBAR
+!!$          POTPAR(L+1,ISP)%WKU=WKU
+!!$          POTPAR(L+1,ISP)%WKQ=WKQ
+!!$          POTPAR(L+1,ISP)%WJU=WJU
+!!$          POTPAR(L+1,ISP)%WJQ=WJQ
+!!$          POTPAR(L+1,ISP)%WKJ=WKJ
+!!$          POTPAR(L+1,ISP)%WUQ=WUQ
+!!$          POTPAR(L+1,ISP)%KJTOUQ(1,1)=CUK
+!!$          POTPAR(L+1,ISP)%KJTOUQ(1,2)=CQK
+!!$          POTPAR(L+1,ISP)%KJTOUQ(2,1)=CUJ
+!!$          POTPAR(L+1,ISP)%KJTOUQ(2,2)=CQJ
+!!$          POTPAR(L+1,ISP)%KJBARTOUQ(1,1)=CUK
+!!$          POTPAR(L+1,ISP)%KJBARTOUQ(1,2)=CQK
+!!$          POTPAR(L+1,ISP)%KJBARTOUQ(2,1)=0.D0
+!!$          POTPAR(L+1,ISP)%KJBARTOUQ(2,2)=CQJBAR
+!!$          POTPAR(L+1,ISP)%JBARTOQ=CQJBAR
+!!$          POTPAR(L+1,ISP)%VALK=VALK
+!!$          POTPAR(L+1,ISP)%DERK=DERK
+!!$          POTPAR(L+1,ISP)%VALJ=VALJ
+!!$          POTPAR(L+1,ISP)%DERJ=DERJ
+!!$          POTPAR(L+1,ISP)%VALJBAR=VALJ-QBAR*VALK
+!!$          POTPAR(L+1,ISP)%DERJBAR=DERJ-QBAR*DERK
+!!$!
+!!$          AUX=R(:)**2*PHINU(:,L+1)**2
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RAD(ISP),POTPAR(L+1,ISP)%OVUU)
+!!$          AUX=R(:)**2*PHINU(:,L+1)*PHINUDOT(:,L+1)
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RAD(ISP),POTPAR(L+1,ISP)%OVUQ)
+!!$          AUX=R(:)**2*PHINUDOT(:,L+1)**2
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RAD(ISP),POTPAR(L+1,ISP)%OVQQ)
+!!$        ENDDO
+!!$!
+!!$!       ========================================================================
+!!$!       ==  CLEAN UP                                                          ==
+!!$!       ========================================================================
+!!$        DEALLOCATE(TPHI)
+!!$        DEALLOCATE(TPHIDOT)
+!!$        DEALLOCATE(LOX)
+!!$        DEALLOCATE(ISCATT)
+!!$        DEALLOCATE(AEPHI)
+!!$        DEALLOCATE(UPHI)
+!!$        DEALLOCATE(PHINU)
+!!$        DEALLOCATE(PHINUDOT)
+!!$        DEALLOCATE(UN)
+!!$        DEALLOCATE(QNPLUS1)
+!!$        DEALLOCATE(R)
+!!$        DEALLOCATE(AUX)
+!!$        DEALLOCATE(AUX1)
+!!$      ENDDO
+!!$                                                                call trace$pop()
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$ORBRAD
 !     **************************************************************************      
 !     **                                                                      **
 !     **************************************************************************      
-      USE LMTO_MODULE, ONLY : K2,LX,SBAR,ORBRAD
+      USE LMTO_MODULE, ONLY : K2,SBAR,ORBRAD
       USE PERIODICTABLE_MODULE
       REAL(8)   ,ALLOCATABLE      :: SBARDIAG(:)
       REAL(8)                     :: RAD1
@@ -434,6 +434,9 @@ print*,'iscatt ',iscatt
       REAL(8)                     :: VALJ,DERJ
       REAL(8)                     :: AEZ
       INTEGER(4)                  :: LX1
+      INTEGER(4)                  :: Lnx
+      INTEGER(4),allocatable      :: LX(:)
+      INTEGER(4),allocatable      :: LoX(:)
       INTEGER(4)                  :: NNB
       INTEGER(4)                  :: NAT
       INTEGER(4)                  :: LMX
@@ -448,10 +451,20 @@ print*,'iscatt ',iscatt
 !     == DETERMINE SCREENING PARAMETERS QBAR                                  ==
 !     ==========================================================================
       CALL SETUP$GETI4('NSP',NSP)
+      ALLOCATE(LX(NSP))
+      DO ISP=1,NSP
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('LNX',LNX)
+        ALLOCATE(LOX(LNX))
+        CALL SETUP$GETI4A('LOX',lnx,LOX)
+        LX(ISP)=MAXVAL(LOX)
+        DEALLOCATE(LOX)
+        CALL SETUP$ISELECT(0)
+      ENDDO
       LXX=MAXVAL(LX)
       ALLOCATE(QBAR(LXX+1,NSP))
       CALL LMTO_MAKEQBAR(NSP,LXX,K2,QBAR)
-!
+
 !     ==========================================================================
 !     == COLLECT DATA AND ALLOCATE ORBRAD                                     ==
 !     ==========================================================================
@@ -597,7 +610,7 @@ print*,'iscatt ',iscatt
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : K2,RC,LX,SBAR,POTPAR,TINISTRUC
+      USE LMTO_MODULE, ONLY : K2,RC,SBAR,TINISTRUC
       IMPLICIT NONE
       INTEGER(4)             :: NAT       !#(ATOMS)
       REAL(8)                :: RBAS(3,3) !LATTICE VECTORS
@@ -619,6 +632,9 @@ print*,'iscatt ',iscatt
       INTEGER(4)             :: IAT,IAT1,IAT2,ISP,ISP1,ISP2,LMX1,LMX2 
       INTEGER(4)             :: L,NN,NN1,NN2,NN0,I,IM
       INTEGER(4)             :: LXX        !X(ANGULAR MOMENTUM FOR ALL ATOMS)
+      INTEGER(4)             :: Lnx
+      INTEGER(4),allocatable :: LX(:)      !X(ANGULAR MOMENTUM FOR each atom)
+      INTEGER(4),allocatable :: LoX(:)     !ANGULAR MOMENTa
       INTEGER(4)             :: NSP       !#(ATOM TYPES)
       INTEGER(4),ALLOCATABLE :: ISPECIES(:)
       logical(4)             :: tchk
@@ -628,7 +644,7 @@ print*,'iscatt ',iscatt
 !
       IF(TINISTRUC) RETURN
       TINISTRUC=.TRUE.
-      CALL LMTO$MAKEPOTENTIALPARAMETERS
+!      CALL LMTO$MAKEPOTENTIALPARAMETERS
 !
       CALL CELL$GETR8A('T0',9,RBAS)
       CALL ATOMLIST$NATOM(NAT)
@@ -641,6 +657,16 @@ print*,'iscatt ',iscatt
 !     == DETERMINE SCREENING PARAMETER QBAR                                   ==
 !     ==========================================================================
       CALL SETUP$NSPECIES(NSP)
+      ALLOCATE(LX(NSP))
+      DO ISP=1,NSP
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('LNX',LNX)
+        ALLOCATE(LOX(LNX))
+        CALL SETUP$GETI4A('LOX',lnx,LOX)
+        LX(ISP)=MAXVAL(LOX)
+        DEALLOCATE(LOX)
+        CALL SETUP$ISELECT(0)
+      ENDDO
       LXX=MAXVAL(LX)
       ALLOCATE(QBAR1(LXX+1,NSP))
       CALL LMTO_MAKEQBAR(NSP,LXX,K2,QBAR1)
@@ -711,7 +737,7 @@ print*,'iscatt ',iscatt
         ENDDO
 !
 !       ========================================================================
-!       == DETERMINE ASTRUCTURE CONSTANTS                                     ==
+!       == DETERMINE STRUCTURE CONSTANTS                                      ==
 !       ========================================================================
         ALLOCATE(SBAR1(N,NORB))
         ALLOCATE(C(N,NORB))

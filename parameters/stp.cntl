@@ -50,7 +50,7 @@
       RBOX/rcov=3.  rcsm/rcov=0.3     
       RCL/RCOV=1.5 1. 1. 
      !GRID DMIN=5.E-6 DMAX=0.1 RMAX=7. !END
-     !POT   POW=3. VAL0=-1.2 RC/RCOV=0.8 !END
+     !POT   POW=3. VAL0=-0.2 RC/RCOV=0.8 !END
      !CORE  POW=3. VAL0= 0.1 RC/RCOV=0.8 !END
   !END
     
@@ -72,9 +72,9 @@
     
   !SETUP ID='MN' EL='MN'  ZV=7.  
      RBOX/RCOV=2. RCSM/RCOV=0.3
-     RCL/RCOV=1.2 1.2 0.8
+     RCL/RCOV=1.0 1.0 0.8
      !GRID DMIN=5.E-6 DMAX=0.1 RMAX=7. !END
-     !POT   POW=3. VAL0=-2.2 RC/RCOV=0.8 !END
+     !POT   POW=3. VAL0=-1.2 RC/RCOV=0.8 !END
      !CORE  POW=3. VAL0= 0.1 RC/RCOV=0.8 !END
   !END
 
@@ -135,9 +135,9 @@
   !END
 
   !SETUP ID='PR_SC' EL='PR'  ZV=13.  
-     RBOX/RCOV=2. RCSM/RCOV=0.3 
+     RBOX/RCOV=4. RCSM/RCOV=0.3 
      RCL/RCOV=1.0 1.0 1.0 0.53
-     !GRID DMIN=5.E-6 DMAX=0.1 RMAX=13. !END
+     !GRID DMIN=5.E-6 DMAX=0.03 RMAX=13. !END
      !POT   POW=3. VAL0=-3.2 RC/RCOV=0.8 !END
      !CORE  POW=3. VAL0= 0.1 RC/RCOV=0.8 !END
   !END

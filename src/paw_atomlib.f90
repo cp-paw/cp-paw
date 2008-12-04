@@ -36,7 +36,7 @@
       INTEGER(4),parameter       :: NITER=1000
       REAL(8)                    :: XAV,XMAX
       LOGICAL(4)                 :: CONVG
-      REAL(8)   ,PARAMETER       :: TOL=1.D-7
+      REAL(8)   ,PARAMETER       :: TOL=1.D-6
       REAL(8)                    :: EKIN,EH,EXC
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
       REAL(8)                    :: POTIN(NR)
