@@ -117,6 +117,13 @@
           END IF
           if(ftot.le.1.d-10) exit
         ENDDO
+        IF(FTOT.GT.1.D-10) THEN
+          CALL ERROR$MSG('SPECIFIED NUMBER OF BANDS IS TOO SMALL')
+          CALL ERROR$MSG('#(ELECTRONS) REMAINING')
+          CALL ERROR$I4VAL('NX',NX)
+          CALL ERROR$R8VAL('AEZ',AEZ)
+          CALL ERROR$STOP('ATOMLIB$AESCF')
+        END IF
         CALL RADIAL$NUCPOT(GID,NR,AEZ,POT)
         do l=0,maxval(lofi)
           do iso=-1,1

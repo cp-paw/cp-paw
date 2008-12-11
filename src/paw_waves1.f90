@@ -3676,7 +3676,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     ==  FOURIER TRANSFORM WAVE FUNCTIONS TO REAL SPACE              ==
 !     ==================================================================
 !     -- REMARK: CONSIDER BLOCKING THIS INTO SMALLER BUNCHES OF BANDS
-print*,'nrl,ndim,nbh ',nrl,ndim,nbh
       ALLOCATE(PSIOFR(NRL,NDIM,NBH))
       CALL PLANEWAVE$FFT('GTOR',NBH*NDIM,NGL,PSI,NRL,PSIOFR)
 !

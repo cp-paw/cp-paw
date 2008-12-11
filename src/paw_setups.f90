@@ -422,27 +422,26 @@ END MODULE SETUP_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-!     ..................................................................
       SUBROUTINE SETUP$SETI4A(ID,LEN,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
       INTEGER(4)  ,INTENT(IN)  :: VAL(LEN)
       INTEGER(4)               :: I
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'NOFLCHI') THEN
         IF(LEN.NE.4) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$SETI4A')
         END IF
-!       == CHECK IF VALUE HAS CHANGED ==================================        
+!       == CHECK IF VALUE HAS CHANGED ==========================================        
         DO I=1,4
           THIS%LOCORBINI=THIS%LOCORBINI.AND.(THIS%LOCORBNOFL(I).EQ.VAL(I))
         ENDDO
@@ -456,19 +455,18 @@ END MODULE SETUP_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-!     ..................................................................
       SUBROUTINE SETUP$GETI4A(ID,LEN,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
       INTEGER(4)  ,INTENT(OUT) :: VAL(LEN)
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'LOX') THEN
         IF(LEN.NE.THIS%LNX) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -523,18 +521,18 @@ END MODULE SETUP_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$SETR8(ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       REAL(8)     ,INTENT(IN)  :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'RADCHI') THEN
         CALL ERROR$MSG('ID radchi IS MARKED FOR DELETION')
         CALL ERROR$STOP('SETUP$sETr8')
@@ -549,19 +547,19 @@ END MODULE SETUP_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$SETR8A(ID,LENG,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LENG
       REAL(8)     ,INTENT(IN)  :: VAL(LENG)
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'RADCHI') THEN
         CALL ERROR$MSG('ID radchi IS MARKED FOR DELETION')
         CALL ERROR$STOP('SETUP$sETr8a')
@@ -1416,6 +1414,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: PI,FOURPI,Y0,C0LL
       REAL(8)               :: SVAR
       INTEGER(4)            :: IR,IB,LN,L
+      INTEGER(4)            :: lrhox
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
       PI=4.D0*ATAN(1.D0)
@@ -1442,7 +1441,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       LNX=SUM(NPRO)
       ALLOCATE(LOX(LNX))
       LN=0
-      DO L=0,9
+      DO L=0,size(npro)-1
         DO WHILE (NPRO(L+1).GT.0)
           LN=LN+1
           NPRO(L+1)=NPRO(L+1)-1
@@ -1457,10 +1456,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       THIS%LOX(:)=LOX(:LNX)
 !
 !     == LIMIT LRHOX TO THE MAXIMUM CONSISTENT WITH WAVE FUNCTION CUTOFF
-      CALL ATOMTYPELIST$GETI4('LRHOX',THIS%LMRX)
-      THIS%LMRX=(THIS%LMRX+1)**2
-      THIS%LMRX=MIN(THIS%LMRX,(2*LX+1)**2)
-      CALL ATOMTYPELIST$SETI4('LRHOX',THIS%LMRX)
+      CALL ATOMTYPELIST$GETI4('LRHOX',LRHOX)
+      LRHOX=MIN(2*LX,LRHOX)
+      CALL ATOMTYPELIST$SETI4('LRHOX',LRHOX)
+      THIS%LMRX=(LRHOX+1)**2
 !     
 !     ==  UPDATE GLOBAL VARIABLES ==============================================
       LMNXX=MAX(LMNXX,THIS%LMNX)
@@ -2447,6 +2446,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         CALL LINKEDLIST$EXISTL(LL_SCNTL,'SETUP',ITH,TCHK)
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('SETUP DATA NOT FOUND')
+          CALL ERROR$CHVAL('SETUPID',SETUPID)
           CALL ERROR$STOP('ATOMLIB$READCNTL')
         END IF
         CALL LINKEDLIST$SELECT(LL_SCNTL,'SETUP',ITH)
@@ -3106,8 +3106,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
           IPRO=IPRO+1
-          PHITEST(:,IPRO)=QN(:,LN)
-          TPHITEST(:,IPRO)=TQN(:,LN)
+!          PHITEST(:,IPRO)=QN(:,LN)
+!          TPHITEST(:,IPRO)=TQN(:,LN)
+PHITEST(:,IPRO)=AEPHI(:,LN)
+TPHITEST(:,IPRO)=TAEPHI(:,LN)
         ENDDO
         CALL ATOMIC_MAKEPSPHI(GID,NR,RC1,L,NPRO,PHITEST,TPHITEST)
         IPRO=0
