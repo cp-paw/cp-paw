@@ -2877,14 +2877,11 @@ comparisons only. It is not fully supported or compatible with all other options
 \vrules{optional, mandatory with UPAR and JPAR} 
 \vdefault{none}}
 
-
-
-
 %----------------------------------------------------------------------
-{\block{!STRUCTURE!SPECIES!hybrid}
+{\block{!STRUCTURE!SPECIES!HYBRID}
 %----------------------------------------------------------------------
 \brules{optional} \bdescr{sets the parameters for lda+U
-calculation. Only used when !CONTROL!DFT:LDA+U=T. \textbf{Experimental option!}}
+calculation. \textbf{Experimental option!}}
 
 \mbax{\key{NCORROFL} 
 \vdescr{number of correlated orbital shells per angular momentum.  The
@@ -2897,20 +2894,20 @@ correlated orbital. This is however not recommended.}
 \vrules{Mandatory} 
 \vdefault{none}}
 
-\mbax{\key{RCUT} 
-\vdescr{Correlated orbitals are constructed so that 
-they have a note at the radius RCUT.}
-\vformat{real} 
-\vrules{optional} 
-\vdefault{covalent radius plus 15\%}}
+%\mbax{\key{RCUT} 
+%\vdescr{Correlated orbitals are constructed so that 
+%they have a node at the radius RCUT.}
+%\vformat{real} 
+%\vrules{optional} 
+%\vdefault{covalent radius plus 15\%}}
 
-\mbax{\key{C-V} 
+\mbax{\key{CV} 
 \vdescr{Switch to include core valence exchange contribution}
 \vformat{logical} 
 \vrules{optional} 
 \vdefault{.true.}}
 
-\mbax{\key{HFweight} 
+\mbax{\key{HFWEIGHT} 
 \vdescr{weight of HF fock exchange.}
 \vformat{real} 
 \vrules{optional} 

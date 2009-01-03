@@ -68,16 +68,18 @@ TYPE SETUPPARMS_TYPE
   REAL(8)         :: POW_CORE
   REAL(8)         :: VAL0_CORE
   REAL(8)         :: RC_CORE
+  CHARACTER(32)   :: TYPE
   REAL(8),POINTER :: RCL(:)
+  REAL(8),POINTER :: LAMBDA(:)
 END TYPE SETUPPARMS_TYPE
 TYPE ATOMWAVES_TYPE
   INTEGER(4)         :: NB=-1
   INTEGER(4)         :: NC=-1
   INTEGER(4),POINTER :: LOFI(:)
-  real(8)   ,POINTER :: EOFI(:)
-  real(8)   ,POINTER :: FOFI(:)
-  real(8)   ,POINTER :: AEPSI(:,:)
-  real(8)   ,POINTER :: AEPOT(:)
+  REAL(8)   ,POINTER :: EOFI(:)
+  REAL(8)   ,POINTER :: FOFI(:)
+  REAL(8)   ,POINTER :: AEPSI(:,:)
+  REAL(8)   ,POINTER :: AEPOT(:)
 END TYPE ATOMWAVES_TYPE
 TYPE THIS_TYPE
 INTEGER(4)             :: I            ! INTEGER IDENTIFIER (ISPECIES)
@@ -96,13 +98,20 @@ INTEGER(4),POINTER     :: ISCATT(:)    !(LNX) =-1 FOR SEMI-CORE STATE
                                        !      = 0 FOR VALENCE STATE   (PHI)
                                        !      = 1 FOR 1ST SCATTERING STATE (PHIDOT)
 REAL(8)   ,POINTER     :: VADD(:)      !(NR)
+REAL(8)   ,POINTER     :: PSPOT(:)     !(NR)
 REAL(8)   ,POINTER     :: AECORE(:)    !(NR)  CORE ELECTRON DENSITY
 REAL(8)   ,POINTER     :: PSCORE(:)    !(NR)  PSEUDIZED ELECTRON DENSITY
 REAL(8)   ,POINTER     :: PRO(:,:)     !(NR,LNX)  PROJECTOR FUNCTIONS
+REAL(8)                :: RBOX         ! PARTIAL WAVES HAVE OUTER NODE AT RBOX
+REAL(8)   ,POINTER     :: EOFLN(:)     !(LNX)  ENERGIES FOR PARTIAL WAVE CONSTRUCTION
+REAL(8)   ,POINTER     :: ESCATT(:)    !(LNX)  ENERGIES FOR SCATTERING WAVE FUNCTIONS
 REAL(8)   ,POINTER     :: AEPHI(:,:)   !(NR,LNX)  AE PARTIAL WAVES
 REAL(8)   ,POINTER     :: PSPHI(:,:)   !(NR,LNX)  PS PARTIAL WAVES
-REAL(8)   ,POINTER     :: UPHI(:,:)    !(NR,LNX)   NODELESS PARTIAL WAVES
+REAL(8)   ,POINTER     :: UPHI(:,:)    !(NR,LNX)  NODELESS PARTIAL WAVES
 REAL(8)   ,POINTER     :: TUPHI(:,:)   !(NR,LNX)  KINETIC ENERGY OF ABOVE
+REAL(8)   ,POINTER     :: NLPHIDOT(:,:)!(NR,LNX)  NL SCATTERING PARTIAL WAVES
+REAL(8)   ,POINTER     :: PSPHIDOT(:,:)!(NR,LNX)  PS SCATTERING PARTIAL WAVES
+REAL(8)   ,POINTER     :: AEPHIDOT(:,:)!(NR,LNX)  AE SCATTERING PARTIAL WAVES
 REAL(8)   ,POINTER     :: DTKIN(:,:)   !(LNX,LNX) 1C-KIN. EN. MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: DOVER(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: VADDOFG(:)   !(NGX)
@@ -110,23 +119,13 @@ REAL(8)   ,POINTER     :: PSCOREOFG(:) !(NGX)
 REAL(8)   ,POINTER     :: VHATOFG(:)   !(NGX)
 REAL(8)   ,POINTER     :: NHATPRIMEOFG(:)  !(NGX)
 REAL(8)   ,POINTER     :: PROOFG(:,:)  !(NR,LNX)  
-LOGICAL(4)             :: LOCORBINI=.FALSE. !LOCAL ORBs ARE INITIALIZED IF TRUE
+LOGICAL(4)             :: LOCORBINI=.FALSE. !LOCAL ORBS ARE INITIALIZED IF TRUE
 REAL(8)                :: LOCORBRAD(4)=5.D0  ! RADIUS OF LOCAL ORBITALS
 INTEGER(4)             :: LOCORBNOFL(4)=0 ! #(LOCAL ORBITALS PER L)
 INTEGER(4)             :: LOCORBLNX=0     ! #(LOCAL ORBITAL-SHELLS)
 INTEGER(4),POINTER     :: LOCORBLOX(:)    ! L FOR EACH LOCAL ORBITAL-SHELL
 REAL(8)   ,POINTER     :: LOCORBAMAT(:,:) ! |CHI>=|PHI>*AMAT
 REAL(8)   ,POINTER     :: LOCORBBMAT(:,:) ! |PSI>=|CHI>BMAT<PTILDE|PSITILDE>
-! SANTOS040616 BEGIN
-INTEGER(4)             :: NC     !SANTOS040616
-LOGICAL(4)             :: TCORE=.FALSE. ! CORE INFORMATION PRESENT?
-REAL(8)   ,POINTER     :: AEPOT(:)     !(NRX)
-INTEGER(4),POINTER     :: LB(:)        !(NC)
-REAL(8)   ,POINTER     :: FB(:)        !(NC)
-REAL(8)   ,POINTER     :: EB(:)        !(NC)
-REAL(8)   ,POINTER     :: AEPSI(:,:)   !(NRX,NC)
-! SANTOS040616 END
-!
 REAL(8)                :: M
 REAL(8)                :: ZV
 REAL(8)                :: PSG2
@@ -303,15 +302,6 @@ END MODULE SETUP_MODULE
       NULLIFY(THIS%VHATOFG) !(NGX)
       NULLIFY(THIS%NHATPRIMEOFG) !(NGX)
       NULLIFY(THIS%PROOFG)  !(NGX,LNX)
-! SANTOS040616 BEGIN
-      THIS%NC    =0
-      THIS%TCORE=.FALSE.
-      NULLIFY(THIS%AEPOT)   !(NRX)
-      NULLIFY(THIS%LB)      !(NC)
-      NULLIFY(THIS%FB)      !(NC)
-      NULLIFY(THIS%EB)      !(NC)
-      NULLIFY(THIS%AEPSI)   !(NRX,NC)
-! SANTOS040616 END
       THIS%LOCORBINI=.FALSE. ! INITIALIZED?
       THIS%LOCORBRAD(:)=5.D0  ! RADIUS OF LOCAL ORBITALS
       THIS%LOCORBNOFL(:)=0 ! (4) #(LOCAL ORBITALS PER L)
@@ -364,7 +354,7 @@ END MODULE SETUP_MODULE
       LOGICAL(4)  ,INTENT(OUT) :: VAL
 !     **************************************************************************
       IF(ID.EQ.'INTERNALSETUPS') THEN
-        VAL=tinternalsetups
+        VAL=TINTERNALSETUPS
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('SETUP$GETL4')
@@ -386,6 +376,8 @@ END MODULE SETUP_MODULE
 !     **************************************************************************
       IF(ID.EQ.'NSP') THEN
         VAL=NSP
+      ELSE IF(ID.EQ.'ISP') THEN
+        VAL=THIS%I
       ELSE IF(ID.EQ.'LNXX') THEN
         VAL=LNXX
       ELSE IF(ID.EQ.'LMNXX') THEN
@@ -409,10 +401,10 @@ END MODULE SETUP_MODULE
         CALL ERROR$STOP('SETUP$GETI4')
         CALL SETUP_RENEWLOCORB()
         VAL=THIS%LOCORBLNX    ! #(LOCAL ORBITALS)
-! SANTOS040616 BEGIN
       ELSE IF(ID.EQ.'NC') THEN
-        VAL=THIS%NC
-! SANTOS040616 END
+        VAL=THIS%ATOM%NC
+      ELSE IF(ID.EQ.'NB') THEN
+        VAL=THIS%ATOM%NB
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -467,6 +459,9 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: LEN
       INTEGER(4)  ,INTENT(OUT) :: VAL(LEN)
 !     **************************************************************************
+!     ==========================================================================
+!     == ANGULAR MOMENTA OF THE PARTIAL WAVES                                 ==
+!     ==========================================================================
       IF(ID.EQ.'LOX') THEN
         IF(LEN.NE.THIS%LNX) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -474,6 +469,10 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETI4A')
         END IF
         VAL=THIS%LOX
+!
+!     ==========================================================================
+!     == COUNTS PARTIAL WAVES RELATIVE TO THE HIGHEST VALENCE STATE           ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'ISCATT') THEN
         IF((LEN.NE.THIS%LNX).OR.(THIS%LNX.EQ.0)) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -486,33 +485,17 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETI4A')
         END IF
         VAL=THIS%ISCATT
-! SANTOS040616 BEGIN
+!
+!     ==========================================================================
+!     == MAIN ANGULAR MOMENTA OF ATOMIC STATES                                ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'LB') THEN
-        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
+        IF(LEN.NE.THIS%ATOM%NB) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETI4A')
         END IF
-        VAL=THIS%LB
-! SANTOS040616 END
-      ELSE IF(ID.EQ.'LOFC') THEN
-        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETI4A')
-        END IF
-        VAL=THIS%LB
-      ELSE IF(ID.EQ.'LOXCHI') THEN
-        CALL ERROR$MSG('ID LoxCHI IS MARKED FOR DELETION')
-        CALL ERROR$STOP('SETUP$GETI4a')
-!!$!       == ANULAR MOMENTA OF LOCAL ORBITALS ==========================
-!!$        CALL SETUP_RENEWLOCORB()
-!!$        IF((LEN.NE.THIS%LOCORBLNX).OR.(THIS%LOCORBLNX.EQ.0)) THEN
-!!$          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-!!$          CALL ERROR$CHVAL('ID',ID)
-!!$          CALL ERROR$STOP('SETUP$GETRI4A')
-!!$        END IF
-!!$        VAL=THIS%LOCORBLOX
+        VAL=THIS%ATOM%LOFI
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -534,8 +517,8 @@ END MODULE SETUP_MODULE
       REAL(8)     ,INTENT(IN)  :: VAL
 !     **************************************************************************
       IF(ID.EQ.'RADCHI') THEN
-        CALL ERROR$MSG('ID radchi IS MARKED FOR DELETION')
-        CALL ERROR$STOP('SETUP$sETr8')
+        CALL ERROR$MSG('ID RADCHI IS MARKED FOR DELETION')
+        CALL ERROR$STOP('SETUP$SETR8')
 !!$!       == EXTENT OF LOCAL ORBITALS
 !!$        THIS%LOCORBINI=.FALSE.
 !!$        THIS%LOCORBRAD(:)=VAL
@@ -561,8 +544,8 @@ END MODULE SETUP_MODULE
       REAL(8)     ,INTENT(IN)  :: VAL(LENG)
 !     **************************************************************************
       IF(ID.EQ.'RADCHI') THEN
-        CALL ERROR$MSG('ID radchi IS MARKED FOR DELETION')
-        CALL ERROR$STOP('SETUP$sETr8a')
+        CALL ERROR$MSG('ID RADCHI IS MARKED FOR DELETION')
+        CALL ERROR$STOP('SETUP$SETR8A')
 !!$!       == EXTENT OF LOCAL ORBITALS
 !!$        THIS%LOCORBINI=.FALSE.
 !!$        IF(LENG.GT.4) THEN
@@ -608,6 +591,8 @@ END MODULE SETUP_MODULE
         VAL=THIS%PSG2
       ELSE IF(ID.EQ.'<G4>') THEN
         VAL=THIS%PSG4
+      ELSE IF(ID.EQ.'RBOX') THEN
+        VAL=THIS%RBOX  ! OUTER NODE OF PARTIAL WAVES
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -629,7 +614,7 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
       INTEGER(4)               :: NR
-      INTEGER(4)               :: Nc
+      INTEGER(4)               :: NC
       INTEGER(4)               :: LRHOX
 !     **************************************************************************
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
@@ -644,6 +629,28 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%PRO,(/LEN/))
+! 
+!     ==========================================================================
+!     ==  ENERGIES FOR PARTIAL WAVE CONSTRUCTION                              ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'EOFLN') THEN
+        IF(LEN.NE.THIS%LNX) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=THIS%EOFLN
+! 
+!     ==========================================================================
+!     ==  ENERGIES FOR SCATTERING PARTIAL WAVE CONSTRUCTION                   ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'ESCATT') THEN
+        IF(LEN.NE.THIS%LNX) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=THIS%ESCATT
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -657,7 +664,7 @@ END MODULE SETUP_MODULE
         VAL=RESHAPE(THIS%AEPHI,(/LEN/))
 !
 !     ==========================================================================
-!     ==                                                                      ==
+!     ==  PSEUDO PARTIAL WAVES                                                ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'PSPHI') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
@@ -668,9 +675,9 @@ END MODULE SETUP_MODULE
         VAL=RESHAPE(THIS%PSPHI,(/LEN/))
 !
 !     ==========================================================================
-!     ==                                                                      ==
+!     ==  NODELESS PARTIAL WAVES                                              ==
 !     ==========================================================================
-      ELSE IF(ID.EQ.'NDLSPHI') THEN
+      ELSE IF(ID.EQ.'NLPHI') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
@@ -679,9 +686,9 @@ END MODULE SETUP_MODULE
         VAL=RESHAPE(THIS%UPHI,(/LEN/))
 !
 !     ==========================================================================
-!     ==                                                                      ==
+!     ==  KINETIC ENERGY OPERATOR APPLIED TO NODELESS PARTIAL WAVES           ==
 !     ==========================================================================
-      ELSE IF(ID.EQ.'NDLSTPHI') THEN
+      ELSE IF(ID.EQ.'NLTPHI') THEN
 !       == DO NOT FORGET TO CLEAN UP THIS%TUPHI!!!
         CALL ERROR$MSG('OPTION IS MARKED FOR DELETION')
         CALL ERROR$CHVAL('ID',ID)
@@ -693,6 +700,39 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%TUPHI,(/LEN/))
+!
+!     ==========================================================================
+!     ==  NODELESS SCATTERING PARTIAL WAVES                                   ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'NLPHIDOT') THEN
+        IF(LEN.NE.THIS%LNX*NR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%NLPHIDOT,(/LEN/))
+!
+!     ==========================================================================
+!     ==  SCATTERING PSEUDO PARTIAL WAVES                                     ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'PSPHIDOT') THEN
+        IF(LEN.NE.THIS%LNX*NR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%PSPHIDOT,(/LEN/))
+!
+!     ==========================================================================
+!     ==  SCATTERING ALL-ELECTRON PARTIAL WAVES                               ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'AEPHIDOT') THEN
+        IF(LEN.NE.THIS%LNX*NR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%AEPHIDOT,(/LEN/))
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -751,103 +791,70 @@ END MODULE SETUP_MODULE
         VAL=RESHAPE(THIS%DOVER,(/LEN/))
 !
 !     ==========================================================================
-!     ==  CORE-VALENCE EXCHANGE MATRIX ELEMENTS                               ==
+!     ==  ATOMIC WAVE FUNCTIONS                                               ==
 !     ==========================================================================
-      ELSE IF(ID.EQ.'CVX') THEN
-        IF(LEN.NE.THIS%LNX**2) THEN
+      ELSE IF(ID.EQ.'AEPSI') THEN
+        IF(LEN.NE.NR*THIS%ATOM%NB) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
-        IF(THIS%ATOM%NB.NE.0) THEN
-          LRHOX=INT(SQRT(REAL(THIS%LMRX-1)+1.D-8))
-          NC=THIS%ATOM%NC
-          CALL SETUP_CVXMAT(THIS%GID,NR,THIS%LNX,THIS%LOX,THIS%AEPHI &
-     &                ,NC,THIS%ATOM%Lofi(:NC),THIS%ATOM%AEPSI(:,:NC),LRHOX,VAL)
-          RETURN
-        ELSE  !LEGACY CODE
-          IF(.NOT.THIS%TCORE) THEN
-            CALL ERROR$MSG('CORE STATES NOT AVAILABLE')
-            CALL ERROR$CHVAL('ID',ID)
-            CALL ERROR$STOP('SETUP$GETR8A')
-          END IF
-!         == CALCULATE CORE-VALENCE EXCHANGE MATRIX ELEMENTS ===================
-          LRHOX=INT(SQRT(REAL(THIS%LMRX-1)+1.D-8))
-          CALL SETUP_CVXMAT(THIS%GID,NR,THIS%LNX,THIS%LOX,THIS%AEPHI &
-     &                   ,THIS%NC,THIS%LB,THIS%AEPSI,LRHOX,VAL)
-        end if
-!
-! SANTOS040616 BEGIN
+        VAL=RESHAPE(THIS%ATOM%AEPSI,(/LEN/))
 !
 !     ==========================================================================
-!     ==                                                                      ==
+!     ==  ATOMIC OCCUPATIONS                                                  ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'FOFI') THEN
+        IF(LEN.NE.THIS%ATOM%NB) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=THIS%ATOM%FOFI
+!
+!     ==========================================================================
+!     ==  ATOMIC ONE-PARTICLE ENERGIES                                        ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'EOFI') THEN
+        IF(LEN.NE.THIS%ATOM%NB) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=THIS%ATOM%EOFI
+!
+!     ==========================================================================
+!     ==  OCCUPATION OF ATOMIC ORBITALS                                       ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'FB') THEN
-        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
+        IF(LEN.NE.THIS%ATOM%NB) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
-        VAL=RESHAPE(THIS%FB,(/LEN/))
+        VAL=THIS%ATOM%FOFI
 !
 !     ==========================================================================
-!     ==                                                                      ==
+!     ==  ATOMIC ENERGY LEVELS                                                ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'EB') THEN
-        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
+        IF(LEN.NE.THIS%ATOM%NB) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
-        VAL=RESHAPE(THIS%EB,(/LEN/))
+        VAL=THIS%ATOM%EOFI
 !
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
-      ELSE IF(ID.EQ.'AECOREPSI') THEN
-        IF(LEN.NE.THIS%NC*NR) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETR8A')
-        END IF
-        VAL=RESHAPE(THIS%AEPSI,(/LEN/))
-!
-!     ==========================================================================
-!     ==                                                                      ==
-!     ==========================================================================
-      ELSE IF(ID.EQ.'ATOMICAEPOT') THEN
+      ELSE IF(ID.EQ.'AEPOT') THEN
         IF(LEN.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
-        VAL(:)=THIS%AEPOT(:)
-! SANTOS040616 END
-!
-!     ==========================================================================
-!     ==                                                                      ==
-!     ==========================================================================
-      ELSE IF(ID.EQ.'FOFC') THEN
-        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$I4VAL('LEN',LEN)
-          CALL ERROR$I4VAL('THIS%NC',THIS%NC)
-          CALL ERROR$STOP('SETUP$GETR8A')
-        END IF
-        VAL=RESHAPE(THIS%FB,(/LEN/))
-!     == ATOMIC ENERGIES OF THE CORE STATES ===========================
-!
-!     ==========================================================================
-!     ==                                                                      ==
-!     ==========================================================================
-      ELSE IF(ID.EQ.'EOFC') THEN
-        IF((LEN.NE.THIS%NC).OR.(THIS%NC.EQ.0)) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETR8A')
-        END IF
-        VAL=RESHAPE(THIS%EB,(/LEN/))
+        VAL(:)=THIS%ATOM%AEPOT(:)
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -859,34 +866,6 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         CALL RADIAL$NUCPOT(THIS%GID,NR,THIS%AEZ,VAL)
-!
-!     ==========================================================================
-!     ==                                                                      ==
-!     ==========================================================================
-      ELSE IF(ID.EQ.'AMATCHI') THEN
-        CALL ERROR$MSG('ID amatchi IS MARKED FOR DELETION')
-        CALL ERROR$STOP('SETUP$GETr8a')
-!!$        CALL SETUP_RENEWLOCORB()
-!!$        IF(LEN.NE.THIS%LOCORBLNX*THIS%LNX) THEN
-!!$          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-!!$          CALL ERROR$CHVAL('ID',ID)
-!!$          CALL ERROR$STOP('SETUP$GETR8A')
-!!$        END IF
-!!$        VAL=RESHAPE(THIS%LOCORBAMAT,(/LEN/))
-!
-!     ==========================================================================
-!     ==                                                                      ==
-!     ==========================================================================
-      ELSE IF(ID.EQ.'BMATCHI') THEN
-        CALL ERROR$MSG('ID Bmatchi IS MARKED FOR DELETION')
-        CALL ERROR$STOP('SETUP$GETr8a')
-!!$        CALL SETUP_RENEWLOCORB()
-!!$        IF(LEN.NE.THIS%LOCORBLNX*THIS%LNX) THEN
-!!$          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-!!$          CALL ERROR$CHVAL('ID',ID)
-!!$          CALL ERROR$STOP('SETUP$GETR8A')
-!!$        END IF
-!!$        VAL=RESHAPE(THIS%LOCORBBMAT,(/LEN/))
 !
 !     ==========================================================================
 !     ==  WRONG ID                                                            ==
@@ -1045,10 +1024,10 @@ END MODULE SETUP_MODULE
       REAL(8)               :: PSZ   ! LEGACY ONLY
 !     ******************************************************************
                             CALL TRACE$PUSH('SETUP_READ')
-!     == certain options only work if all setups are calculated  =======
-!     == internally using setup_read_new. This switch allows to ========
-!     == lock options that do not work =================================
-      tinternalsetups=.false.
+!     == CERTAIN OPTIONS ONLY WORK IF ALL SETUPS ARE CALCULATED  =======
+!     == INTERNALLY USING SETUP_READ_NEW. THIS SWITCH ALLOWS TO ========
+!     == LOCK OPTIONS THAT DO NOT WORK =================================
+      TINTERNALSETUPS=.FALSE.
 !
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -1103,24 +1082,6 @@ END MODULE SETUP_MODULE
       THIS%PRO=0.D0
       THIS%AEPHI=0.D0
       THIS%PSPHI=0.D0
-! SANTOS040616 BEGIN
-      IF(TNEWFORMAT) THEN
-        CALL SETUPREAD$GETI4('NC',NC)
-      ELSE
-        CALL INPOT$NC(NFIL,NC)
-      END IF
-      THIS%NC=NC
-      ALLOCATE(THIS%AEPOT(NRX))
-      ALLOCATE(THIS%LB(NC))
-      ALLOCATE(THIS%FB(NC))
-      ALLOCATE(THIS%EB(NC))
-      ALLOCATE(THIS%AEPSI(NRX,NC))
-      THIS%AEPOT=0.D0
-      THIS%LB=0.D0
-      THIS%FB=0.D0
-      THIS%EB=0.D0
-      THIS%AEPSI=0.D0
-! SANTOS040616 END
 !     
 !     ==================================================================
 !     ==  READ PSEUDOPOTENTIALS AND PSEUDO WAVE FUNCTIONS             ==
@@ -1146,19 +1107,12 @@ END MODULE SETUP_MODULE
         CALL SETUPREAD$GETR8A('DO',LNX*LNX,THIS%DOVER)
         CALL SETUPREAD$GETR8A('PSCORE',NR,THIS%PSCORE)
         CALL SETUPREAD$GETR8A('AECORE',NR,THIS%AECORE)
-        CALL SETUPREAD$GETR8A('AEPOT',NR,THIS%AEPOT)
-!ADD HERE THE CORE WAVE FUNCTIONS FOR SANTOS
-        THIS%TCORE=.TRUE.
-        CALL SETUPREAD$GETI4A('LOFC',NC,THIS%LB)
-        CALL SETUPREAD$GETR8A('FOFC',NC,THIS%FB)
-        CALL SETUPREAD$GETR8A('EOFC',NC,THIS%EB)
-        CALL SETUPREAD$GETR8A('AEPSICORE',NR*NC,THIS%AEPSI)
+        CALL SETUPREAD$GETR8A('AEPOT',NR,THIS%ATOM%AEPOT)
       ELSE
         CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
      &         ,THIS%AEZ,PSZ,THIS%PSPHI,THIS%AEPHI &
      &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
-     &         ,THIS%AECORE,THIS%PSCORE,THIS%PRO &
-     &         ,THIS%TCORE,THIS%AEPOT,THIS%NC,THIS%LB,THIS%FB,THIS%EB,THIS%AEPSI) !SANTOS040616
+     &         ,THIS%AECORE,THIS%PSCORE,THIS%PRO)
       END IF
       CALL FILEHANDLER$CLOSE(THIS%FILEID)
 PRINT*,'NEW FORMAT?',TNEWFORMAT
@@ -1382,6 +1336,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     **  REQUIRES THE FILEHANDLER TO KNOW THE SETUP FILE                     **
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
+      USE STRINGS_MODULE
       USE SETUP_MODULE
       IMPLICIT NONE
       INTEGER(4),PARAMETER  :: NBX=19
@@ -1404,7 +1359,9 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)   ,ALLOCATABLE:: R(:)
       INTEGER(4),ALLOCATABLE:: LOX(:)
       REAL(8)   ,ALLOCATABLE:: RC(:)
+      REAL(8)   ,ALLOCATABLE:: LAMBDA(:)  ! SECOND PARAMETER FOR PSEUDIZATION
       REAL(8)               :: RBOX
+      REAL(8)               :: ROUT
       REAL(8)               :: AEZ
       REAL(8)               :: ZV
       REAL(8)               :: ETOT
@@ -1414,7 +1371,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: PI,FOURPI,Y0,C0LL
       REAL(8)               :: SVAR
       INTEGER(4)            :: IR,IB,LN,L
-      INTEGER(4)            :: lrhox
+      INTEGER(4)            :: LRHOX
+      CHARACTER(64)         :: STRING
+      CHARACTER(64)         :: PSEUDIZATION
+      INTEGER(4)            :: NFIL
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
       PI=4.D0*ATAN(1.D0)
@@ -1441,7 +1401,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       LNX=SUM(NPRO)
       ALLOCATE(LOX(LNX))
       LN=0
-      DO L=0,size(npro)-1
+      DO L=0,SIZE(NPRO)-1
         DO WHILE (NPRO(L+1).GT.0)
           LN=LN+1
           NPRO(L+1)=NPRO(L+1)-1
@@ -1470,8 +1430,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     == READ SETUP INFORMATION FROM PARAMETER FILE                           ==
 !     ==========================================================================
       ALLOCATE(THIS%PARMS%RCL(LX+1))
+      ALLOCATE(THIS%PARMS%LAMBDA(LX+1))
       CALL ATOMTYPELIST$GETCH('ID',THIS%PARMS%ID)
-      CALL ATOMLIB$SCNTLLOOKUP(THIS%PARMS%ID,GID,AEZ,ZV,RBOX,LX,THIS%PARMS%RCL &
+      CALL ATOMLIB$SCNTLLOOKUP(THIS%PARMS%ID,GID,AEZ,ZV,RBOX,LX &
+     &             ,THIS%PARMS%TYPE,THIS%PARMS%RCL,THIS%PARMS%LAMBDA &
      &             ,THIS%RCSM &
      &             ,THIS%PARMS%POW_POT,THIS%PARMS%RC_POT,THIS%PARMS%VAL0_POT &
      &             ,THIS%PARMS%POW_CORE,THIS%PARMS%RC_CORE,THIS%PARMS%VAL0_CORE)
@@ -1480,20 +1442,35 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       THIS%ZV=ZV
       THIS%RCBG=1.D0/SQRT(0.218D0)
       CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+      ROUT=R(NR-3)
+      DEALLOCATE(R)
 !     
 !     ==========================================================================
 !     ==  PERFORM ALL-ELECTRON CALCULATION FOR THE ATOM IN A BOX              ==
 !     ==========================================================================
-      ALLOCATE(THIS%AEPOT(NR))
+      ALLOCATE(THIS%ATOM%AEPOT(NR))
       ALLOCATE(PSI(NR,NBX))
       KEY='START,REL,NONSO'
-      CALL ATOMLIB$AESCF(GID,NR,KEY,RBOX,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
-    &                   ,ETOT,THIS%AEPOT,EOFI,PSI)
+      CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
+    &                   ,ETOT,THIS%ATOM%AEPOT,EOFI,PSI)
+!
+!     == MAP ATOMIC DATA ON GRID ===============================================
+      THIS%ATOM%NB=NB
+      ALLOCATE(THIS%ATOM%LOFI(NB))
+      ALLOCATE(THIS%ATOM%FOFI(NB))
+      ALLOCATE(THIS%ATOM%EOFI(NB))
+      ALLOCATE(THIS%ATOM%AEPSI(NR,NB))
+      THIS%ATOM%LOFI=LOFI(1:NB)
+      THIS%ATOM%FOFI=FOFI(1:NB)
+      THIS%ATOM%EOFI=EOFI(1:NB)
+      THIS%ATOM%AEPSI=PSI(:,1:NB)
 !
 !     == DETERMINE NUMBER OF CORE SHELLS =======================================
       SVAR=AEZ-ZV
       NC=0
-      if(svar.gt.1.d-3) then
+      IF(SVAR.GT.1.D-3) THEN
         DO IB=1,NB
           SVAR=SVAR-FOFI(IB)
           NC=IB
@@ -1502,43 +1479,17 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
             CALL ERROR$MSG('ZV INCONSISTENT WITH COMPLETE ANGULAR MOMENTUM SHELLS')
             CALL ERROR$R8VAL('AEZ',AEZ)
             CALL ERROR$R8VAL('ZV',ZV)
-            CALL ERROR$R8VAL('svar',svar)
+            CALL ERROR$R8VAL('SVAR',SVAR)
             CALL ERROR$STOP('SETUP_READ_NEW')
           END IF
         ENDDO
-      end if
+      END IF
+      THIS%ATOM%NC=NC
 !
 !     ==========================================================================
       ALLOCATE(THIS%ISCATT(LNX))
       CALL SETUP_MAKEISCATT(AEZ,NB,NC,LOFI(1:NB),NNOFI(1:NB),LNX,LOX &
      &                     ,THIS%ISCATT)
-!
-!     == MAP CORE ORBITALS ON GRID =============================================
-!     == THIS IS REDUNDANT AND SHALL BE REMOVED LATER (SEE THIS%ATOM BELOW) ====
-      THIS%NC=NC
-      THIS%TCORE=.TRUE.
-      ALLOCATE(THIS%LB(NC))
-      ALLOCATE(THIS%FB(NC))
-      ALLOCATE(THIS%EB(NC))
-      ALLOCATE(THIS%AEPSI(NR,NC))
-      THIS%LB=LOFI(1:NC)
-      THIS%FB=FOFI(1:NC)
-      THIS%EB=EOFI(1:NC)
-      THIS%AEPSI=PSI(:,1:NC)
-!
-!     == MAP ATOMIC DATA ON GRID ===============================================
-      THIS%ATOM%NB=NB
-      THIS%ATOM%NC=NC
-      ALLOCATE(THIS%ATOM%LOFI(NB))
-      ALLOCATE(THIS%ATOM%FOFI(NB))
-      ALLOCATE(THIS%ATOM%EOFI(NB))
-      ALLOCATE(THIS%ATOM%AEPSI(NR,NB))
-      ALLOCATE(THIS%ATOM%AEPOT(NR))
-      THIS%ATOM%LOFI=LOFI(1:NB)
-      THIS%ATOM%LOFI=FOFI(1:NB)
-      THIS%ATOM%EOFI=EOFI(1:NB)
-      THIS%ATOM%AEPSI=PSI(:,1:NB)
-      THIS%ATOM%AEPOT=THIS%AEPOT
 !
 !     ==========================================================================
 !     == CALCULATE AND PSEUDIZE CORE DENSITY                                  ==
@@ -1558,6 +1509,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     == CONSTRUCT PARTIAL WAVES                                              ==
 !     ==========================================================================
       ALLOCATE(THIS%VADD(NR))
+      ALLOCATE(THIS%PSPOT(NR))
       ALLOCATE(THIS%PRO(NR,LNX))
       ALLOCATE(THIS%AEPHI(NR,LNX))
       ALLOCATE(THIS%PSPHI(NR,LNX))
@@ -1565,23 +1517,43 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       ALLOCATE(THIS%TUPHI(NR,LNX))
       ALLOCATE(THIS%DTKIN(LNX,LNX))
       ALLOCATE(THIS%DOVER(LNX,LNX))
+      ALLOCATE(THIS%EOFLN(LNX))
+      ALLOCATE(THIS%ESCATT(LNX))
+      ALLOCATE(THIS%NLPHIDOT(NR,LNX))
+      ALLOCATE(THIS%PSPHIDOT(NR,LNX))
+      ALLOCATE(THIS%AEPHIDOT(NR,LNX))
       THIS%VADD=0.D0
       THIS%PRO=0.D0
       THIS%AEPHI=0.D0
       THIS%PSPHI=0.D0
+      THIS%RBOX=RBOX  ! OUTER NODE OF PARTIAL WAVES
 !
       ALLOCATE(RC(LNX))
+      ALLOCATE(LAMBDA(LNX))
       DO LN=1,LNX
         L=LOX(LN)
         RC(LN)=THIS%PARMS%RCL(L+1)
+        LAMBDA(LN)=THIS%PARMS%LAMBDA(L+1)
       ENDDO
 !
-      CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%AEPOT,NB,NC &
+      CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%ATOM%AEPOT,NB,NC &
      &           ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
-     &           ,RBOX,LNX,LOX,RC,this%iscatt,THIS%AEPHI,THIS%PSPHI &
-     &           ,THIS%UPHI,THIS%PRO,THIS%DTKIN,THIS%DOVER &
+     &           ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
+     &           ,THIS%ISCATT,THIS%EOFLN,THIS%ESCATT &
+     &           ,THIS%AEPHI,THIS%PSPHI &
+     &           ,THIS%UPHI,THIS%PRO,THIS%DTKIN,THIS%DOVER,THIS%PSPOT &
      &           ,THIS%PARMS%POW_POT,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
-     &           ,THIS%RCSM,THIS%VADD)
+     &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT)
+!
+      WRITE(STRING,FMT='(F3.0)')AEZ
+      STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
+      CALL FILEHANDLER$SETFILE('TMP',.FALSE.,-'SCATT'//TRIM(STRING))
+      CALL FILEHANDLER$SETSPECIFICATION('TMP','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('TMP','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('TMP','FORM','FORMATTED')
+      CALL FILEHANDLER$UNIT('TMP',NFIL)
+      CALL SETUP_TESTSCATTERING(NFIL)
+      CALL FILEHANDLER$CLOSE('TMP')
 !     
 !     ==========================================================================
 !     ==  PERFORM BESSELTRANSFORMS                                            ==
@@ -1683,11 +1655,23 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !       == REPORT SETTINGS FOR THE SETUP CONSTRUCTION ==========================
         IF(THIS1%PARMS%POW_POT.NE.0.D0) THEN
           CALL REPORT$CHVAL(NFIL,'SETUP ID',THIS1%PARMS%ID)
+          IF(THIS1%PARMS%TYPE.EQ.'KERKER') THEN
+            CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD','KERKER TYPE')
+          ELSE IF(THIS1%PARMS%TYPE.EQ.'HBS') THEN
+            CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD','HAMANN-BACHELET-SCHLUETER TYPE')
+          ELSE
+            CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD','UNKNOWN')
+          END IF
           DO L=0,MAXVAL(THIS1%LOX)
             WRITE(STRING,*)L
             STRING='PARTIAL WAVE PSEUDIZATION PARAMETER RC FOR L='//ADJUSTL(STRING)
             CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%RCL(L+1),'ABOHR')
-          ENDDO
+            IF(THIS1%PARMS%TYPE.EQ.'HBS') THEN
+              WRITE(STRING,*)L
+              STRING='PARTIAL WAVE PSEUDIZATION PARAMETER LAMBDA FOR L='//ADJUSTL(STRING)
+              CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%LAMBDA(L+1),'ABOHR')
+            END IF 
+         ENDDO
           CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: VAL(0)' &
     &                            ,THIS1%PARMS%VAL0_POT*Y0,'H')
           CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: RC' &
@@ -2147,9 +2131,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ...........................................INPOT..........................
       SUBROUTINE INPOT$READALL(NFIL,NRX,R1,DEX,NR,LNX,LOX,AEZ,PSZ &
      &         ,PSPHI,AEPHI,VADD,RCSM &
-     &         ,DTKIN,DOVER,RHOCOR,PSCORR,PRO & !SANTOS040616/BLO
-     &         ,TCORE,AEPOT,NC,LB,FB,EB,AEPSI)           !SANTOS040616/BLO
-!     &         ,DTKIN,DOVER,IRCCOR,RHOCOR,PSCORR,PRO)
+     &         ,DTKIN,DOVER,RHOCOR,PSCORR,PRO)
 !     **************************************************************************
 !     **                                                                      **
 !     ******************************************* P.E. BLOECHL, 1991 ***********
@@ -2160,7 +2142,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)    ,INTENT(IN)  :: DEX
       INTEGER(4) ,INTENT(IN)  :: NR
       INTEGER(4) ,INTENT(IN)  :: LNX
-      INTEGER(4) ,INTENT(IN)  :: NC   !SANTOS
       REAL(8)    ,INTENT(OUT) :: AEZ
       REAL(8)    ,INTENT(OUT) :: PSZ
       REAL(8)    ,INTENT(OUT) :: RCSM
@@ -2174,14 +2155,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)    ,INTENT(OUT) :: PSPHI(NRX,LNX)
       REAL(8)    ,INTENT(OUT) :: RHOCOR(NRX)
       REAL(8)    ,INTENT(OUT) :: PSCORR(NRX)
-! SANTOS040616 BEGIN
-      LOGICAL(4) ,INTENT(OUT) :: TCORE
-      REAL(8)    ,INTENT(OUT) :: AEPOT(NRX) ! ATOMIC AE POTENTIAL
-      INTEGER(4) ,INTENT(OUT) :: LB(NC) ! MAIN ANGULAR MOMENTUM
-      REAL(8)    ,INTENT(OUT) :: FB(NC) ! OCCUPATIONS
-      REAL(8)    ,INTENT(OUT) :: EB(NC) ! ONE-PARTICLE ENERGIES
-      REAL(8)    ,INTENT(OUT) :: AEPSI(NRX,NC) ! CORE STATES
-! SANTOS040616 END
       REAL(8)                 :: R11,DEX1
       INTEGER(4)              :: NR1,LNX1,I,IR,LN1,LN2,LN
 !     **************************************************************************
@@ -2232,134 +2205,9 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         READ(NFIL,6100)(PSPHI(IR,LN),IR=1,NR)
 6100    FORMAT(SP,5E14.8)
       ENDDO
-! SANTOS040616 BEGIN
-      TCORE=.FALSE.
-      AEPOT(:)=0.D0
-      LB(:)=0
-      FB(:)=0.D0
-      EB(:)=0.D0
-      AEPSI(:,:)=0.D0
-      READ(NFIL,END=1000,FMT='(SP,5E14.8)')(AEPOT(IR),IR=1,NR)
-      READ(NFIL,END=1000,FMT='(14I5)')(LB(I),I=1,NC)
-      READ(NFIL,END=1000,FMT='(SP,5E14.8)')(FB(I),I=1,NC)
-      READ(NFIL,END=1000,FMT='(SP,5E14.8)')(EB(I),I=1,NC)
-      DO I=1,NC
-        READ(NFIL,END=1000,FMT='(SP,5E14.8)')(AEPSI(IR,I),IR=1,NR)
-      ENDDO
-      TCORE=.TRUE.
-1000  CONTINUE
-! SANTOS040616 END
                               CALL TRACE$POP
       RETURN
       END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_CVXMAT(GID,NR,LNX,LOX,AEPHI,NC,LOFC,PSIC,LRHOX,MAT)
-!     **************************************************************************
-!     **  CORE-VALENCE EXCHANGE MATRIX ELEMENTS                               **
-!     **                                                                      **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      INTEGER(4),INTENT(IN) :: LNX
-      INTEGER(4),INTENT(IN) :: LOX(LNX)      ! ANGULAR MOMENTA OF PARTIAL WAVES
-      REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX) ! AE PARTIAL WAVES
-      INTEGER(4),INTENT(IN) :: NC            ! #(CORE STATES)
-      INTEGER(4),INTENT(IN) :: LOFC(NC)      ! ANGULAR MOMENTA OF CORE STATES
-      REAL(8)   ,INTENT(IN) :: PSIC(NR,NC)   ! CORE STATES
-      INTEGER(4),INTENT(IN) :: LRHOX         ! MAX ANGULAR MOMENTUM OF DENSITY
-      REAL(8)   ,INTENT(OUT):: MAT(LNX,LNX)  ! CORE VALENCE X MATRIX ELEMENTS
-      INTEGER(4)            :: LX  ! MAX ANGULAR MOMENTUM PARTIAL WAVES
-      INTEGER(4)            :: LMX ! MAX #(ANGULAR MOMENTA) OF PARTIAL WAVES
-      INTEGER(4)            :: LCX ! HIGHEST ANGULAR MOMENTUM OF CORE STATES
-      REAL(8)               :: CG
-      REAL(8)               :: RHO1(NR)
-      REAL(8)               :: AUX(NR),POT(NR)
-      REAL(8)               :: R(NR)
-      REAL(8)               :: VAL
-      REAL(8)   ,ALLOCATABLE:: FACTOR(:,:,:)
-      INTEGER(4)            :: LMCA
-      INTEGER(4)            :: LM1,LC,LRHO,LMC1A,IMC,LMC,LMRHOA,IMRHO,LMRHO
-      INTEGER(4)            :: LN1,L1,IC,LN2,L2
-      LOGICAL(4),PARAMETER  :: TPRINT=.FALSE.
-      REAL(8)               :: PI
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      LX=MAXVAL(LOX)
-      LMX=(LX+1)**2
-      LCX=MAXVAL(LOFC)
-      ALLOCATE(FACTOR(LX+1,LRHOX+1,LCX+1))
-      CALL RADIAL$R(GID,NR,R)
-!
-!     ==========================================================================
-!     == INCLUDE ANGULAR INTEGRATIONS                                         ==
-!     ==========================================================================
-      FACTOR=0.D0
-      DO L1=0,LX           ! ANGULAR MOMENTUM OF LOCAL ORBITAL
-        LM1=L1**2+1
-        DO LC=0,LCX        ! ANGULAR MOMENTUM OF CORE STATE
-          DO LRHO=0,LRHOX  ! ANGULAR MOMENTUM OF DENSITY
-            LMCA=LC**2
-            DO IMC=1,2*LC+1
-              LMC=LMCA+IMC
-              LMRHOA=LRHO**2
-              DO IMRHO=1,2*LRHO+1
-                LMRHO=LMRHOA+IMRHO
-                CALL SPHERICAL$GAUNT(LM1,LMC,LMRHO,CG)
-                FACTOR(L1+1,LRHO+1,LC+1)=FACTOR(L1+1,LRHO+1,LC+1)+CG**2
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-!
-!     = THIS FACTOR IS INCLUDED TO HAVE A PROPER DEFINITION OF SLATER INTEGRALS
-      DO LRHO=0,LRHOX
-        FACTOR(:,LRHO+1,:)=FACTOR(:,LRHO+1,:)*4.D0*PI/REAL(2*LRHO+1,KIND=8)
-      ENDDO
-!
-!     ==========================================================================
-!     == WORK OUT RADIAL INTEGRATIONS                                         ==
-!     ==========================================================================
-      MAT(:,:)=0.D0
-      DO LN1=1,LNX
-        L1=LOX(LN1)
-        DO IC=1,NC
-          LC=LOFC(IC)
-          RHO1(:)=AEPHI(:,LN1)*PSIC(:,IC)
-          DO LRHO=0,LRHOX
-            CALL RADIAL$POISSON(GID,NR,LRHO,RHO1,POT)
-            DO LN2=1,LN1  ! MATRIX IS SYMMETRIC
-              L2=LOX(LN2)
-              IF(L2.NE.L1) CYCLE
-              AUX(:)=R(:)**2*POT(:)*PSIC(:,IC)*AEPHI(:,LN2)
-              CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
-              VAL=VAL*REAL(2*LRHO+1,KIND=8)/(4.D0*PI)  !SLATER INTEGRAL
-              MAT(LN1,LN2)=MAT(LN1,LN2)-FACTOR(L1+1,LRHO+1,LC+1)*VAL
-              MAT(LN2,LN1)=MAT(LN1,LN2)
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-      DEALLOCATE(FACTOR)
-!
-!     ==========================================================================
-!     ==  WRITE FOR TEST PURPOSES                                             ==
-!     ==========================================================================
-      IF(TPRINT) THEN
-        PRINT*,'NOW THE MATRIX FOR THE CORE VALENCE EXCHANGE INTERACTION'
-        DO LN1=1,LNX
-          L1=LOX(LN1)
-          DO LN2=1,LNX
-            L2=LOX(LN2)
-            WRITE(*,FMT='(4I3,10F18.10)')LN1,L1,LN2,L2,MAT(LN1,LN2)
-          ENDDO
-        ENDDO
-        STOP
-      END IF
-      RETURN
-      END      
 !
 !     ..........................................................................
       SUBROUTINE ATOMLIB$READSCNTL(LL_SCNTL)
@@ -2394,7 +2242,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$SCNTLLOOKUP(SETUPID,GID,AEZ,ZV,RBOX,LX,RCL &
+      SUBROUTINE ATOMLIB$SCNTLLOOKUP(SETUPID,GID,AEZ,ZV,RBOX,LX,TYPE,RCL,LAMBDA &
      &           ,RCSM,POW_POT,RC_POT,VAL0_POT,POW_CORE,RC_CORE,VAL0_CORE)
 !     **************************************************************************
 !     **************************************************************************
@@ -2408,7 +2256,9 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)     ,INTENT(OUT):: ZV
       REAL(8)     ,INTENT(OUT):: RBOX
       INTEGER(4)  ,INTENT(IN) :: LX
+      CHARACTER(*),INTENT(OUT):: TYPE
       REAL(8)     ,INTENT(OUT):: RCL(LX+1)
+      REAL(8)     ,INTENT(OUT):: LAMBDA(LX+1)
       REAL(8)     ,INTENT(OUT):: RCSM
       REAL(8)     ,INTENT(OUT):: POW_POT
       REAL(8)     ,INTENT(OUT):: RC_POT
@@ -2431,6 +2281,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4)              :: IZ
       REAL(8)     ,ALLOCATABLE:: R(:)
       REAL(8)     ,ALLOCATABLE:: RCL1(:)
+      REAL(8)     ,ALLOCATABLE:: lambda1(:)
       REAL(8)                 :: RCOV
       REAL(8)                 :: DMIN,DMAX,RX
       REAL(8)                 :: PI,Y0
@@ -2548,7 +2399,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
           IF(TCHK) THEN
             IF(EL.EQ.'XX') THEN 
               CALL ERROR$MSG('!SCNTL!SETUP:AEZ AND EL="XX"')
-              CALL ERROR$MSG('MUST NOT BE SPECIFIED SIMULANEOUSLY')
+              CALL ERROR$MSG('MUST NOT BE SPECIFIED SIMULTANEOUSLY')
               CALL ERROR$STOP('ATOMLIB$READCNTL')
             END IF
             CALL LINKEDLIST$GET(LL_SCNTL,'Z',1,AEZ)
@@ -2581,7 +2432,9 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
             CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
             RBOX=RBOX*RCOV 
             IF(RBOX.GT.R(NR-3)) THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:RBOX  EXCEEDS GRID DIMENSIONS')
+              CALL ERROR$MSG('!SCNTL!SETUP:RBOX EXCEEDS GRID DIMENSIONS')
+              CALL ERROR$R8VAL('AEZ ',AEZ)
+              CALL ERROR$CHVAL('SETUPID ',SETUPID)
               CALL ERROR$R8VAL('RBOX ',RBOX)
               CALL ERROR$R8VAL('R(NR-3)',R(NR-3))
               CALL ERROR$STOP('ATOMLIB$READCNTL')
@@ -2590,8 +2443,13 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
           DEALLOCATE(R)
 !
 !         ======================================================================
-!         == CUTOFF RADII FOR PARTIALWAVE CONSTRUCTION                        ==
+!         == PARAMETER FOR PARTIALWAVE CONSTRUCTION                           ==
 !         ======================================================================
+          TYPE='KERKER'
+          CALL LINKEDLIST$EXISTD(LL_SCNTL,'TYPE',1,TCHK)
+          IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'TYPE',1,TYPE)
+!
+!         == matching radius ===================================================
           CALL LINKEDLIST$EXISTD(LL_SCNTL,'RCL/RCOV',1,TCHK)
           IF(.NOT.TCHK) THEN
             CALL ERROR$MSG('!SCNTL!SETUP:RCL NOT SPECIFIED')
@@ -2607,9 +2465,32 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
             CALL ERROR$STOP('ATOMLIB$READCNTL')
           END IF
           CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-          leng=min(size(rcl),leng)
+          LENG=MIN(SIZE(RCL),LENG)
           RCL=RCL1(1:LENG)*RCOV
-!      
+          deallocate(rcl1)
+!
+!         == additional lambda parameter required for 'hbs' type construction ==
+          LAMBDA(:)=0.D0
+          IF(TYPE.EQ.'HBS') THEN
+            LAMBDA(:)=6.D0    !DEFAULT FOR HBS CONSTRUCTION
+            CALL LINKEDLIST$EXISTD(LL_SCNTL,'LAMBDA',1,TCHK)
+            IF(TCHK) THEN
+              CALL LINKEDLIST$SIZE(LL_SCNTL,'LAMBDA',1,LENG)
+              ALLOCATE(LAMBDA1(LENG))
+              CALL LINKEDLIST$GET(LL_SCNTL,'LAMBDA',1,LAMBDA1)
+              IF(LENG.LT.LX+1) THEN
+                CALL ERROR$MSG('!SCNTL!SETUP:LAMBDA ARRAY TOO SHORT')
+                CALL ERROR$I4VAL('MAX L ON FILE ',LENG-1)
+                CALL ERROR$I4VAL('MAX L REQUESTED',LX)
+                CALL ERROR$STOP('ATOMLIB$READCNTL')
+              END IF
+              LENG=MIN(SIZE(LAMBDA),LENG)
+              LAMBDA=LAMBDA1(1:LENG)
+              deallocate(lambda1)
+            END IF
+          END IF
+!
+!         == decay constant for short-ranged compensation charge density ======       
           CALL LINKEDLIST$EXISTD(LL_SCNTL,'RCSM/RCOV',1,TCHK)
           IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_SCNTL,'RCSM/RCOV',1,RCSM)
@@ -2686,10 +2567,12 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,AEPOT &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
-     &                  ,RBOX,LNX,LOX,RC,iscatt,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER &
-     &                  ,POW_POT,VAL0_POT,RC_POT,RCSM,VADD)
+     &           ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
+     &                  ,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER,PSPOT &
+     &                  ,POW_POT,VAL0_POT,RC_POT,RCSM,VADD &
+     &                  ,NLPHIDOT,AEPHIDOT,PSPHIDOT)
 !     **************************************************************************
-!     **  constructs  the setup                                               **
+!     **  CONSTRUCTS  THE SETUP                                               **
 !     **                                                                      **
 !     **                                                                      **
 !     **                                                                      **
@@ -2697,45 +2580,54 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       USE PERIODICTABLE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTEnT(IN) :: TYPE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       CHARACTER(*),INTENT(IN) :: KEY
       REAL(8)   ,INTENT(IN) :: AEZ
-      REAL(8)   ,INTENT(IN) :: AEPOT(NR)   ! all electron potential
+      REAL(8)   ,INTENT(IN) :: AEPOT(NR)   ! ALL ELECTRON POTENTIAL
       INTEGER(4),INTENT(IN) :: NB
       INTEGER(4),INTENT(IN) :: NC
       INTEGER(4),INTENT(IN) :: LOFI(NB)
       INTEGER(4),INTENT(IN) :: SOFI(NB)
       INTEGER(4),INTENT(IN) :: NNOFI(NB)
       REAL(8)   ,INTENT(IN) :: EOFI(NB)
-      REAL(8)   ,INTENT(IN) :: RBOX    ! hard sphere for atom has radius rbox
+      REAL(8)   ,INTENT(IN) :: ROUT    ! HARD SPHERE FOR ATOM HAS RADIUS RBOX
+      REAL(8)   ,INTENT(IN) :: RBOX    ! RADIUS FOR BOUNDARY CONDITION OF PHI
       REAL(8)   ,INTENT(IN) :: FOFI(NB)
       INTEGER(4),INTENT(IN) :: LNX
       INTEGER(4),INTENT(IN) :: LOX(LNX)
-      INTEGER(4),INTENT(IN) :: iscatt(LNX)
+      INTEGER(4),INTENT(IN) :: ISCATT(LNX)
       REAL(8)   ,INTENT(IN) :: RC(LNX)
+      REAL(8)   ,INTENT(IN) :: LAMBDA(LNX)
       REAL(8)   ,INTENT(IN) :: POW_POT
       REAL(8)   ,INTENT(IN) :: VAL0_POT
       REAL(8)   ,INTENT(IN) :: RC_POT
       REAL(8)   ,INTENT(IN) :: RCSM
       REAL(8)   ,INTENT(OUT):: VADD(NR)
+      REAL(8)   ,INTENT(OUT):: PSPOT(NR)
+      REAL(8)   ,INTENT(OUT):: EOFLN(LNX)   ! ENERGY OF PARTIAL WAVE
+      REAL(8)   ,INTENT(OUT):: ESCATT(LNX)  ! ENERGY OF SCATTERING PARTIAL WAVE
       REAL(8)   ,INTENT(OUT):: AEPHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: PSPHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: NLPHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: PRO(NR,LNX)
       REAL(8)   ,INTENT(OUT):: DT(LNX,LNX)
       REAL(8)   ,INTENT(OUT):: DOVER(LNX,LNX)
+      REAL(8)   ,INTENT(OUT):: NLPHIDOT(NR,LNX)  
+      REAL(8)   ,INTENT(OUT):: PSPHIDOT(NR,LNX)  
+      REAL(8)   ,INTENT(OUT):: AEPHIDOT(NR,LNX)  
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
       REAL(8)               :: PSPHIPROBARE(LNX,LNX)
       REAL(8)               :: TRANSPHI(LNX,LNX)
+      REAL(8)               :: TRANSPHIINV(LNX,LNX)
       REAL(8)               :: TRANSPRO(LNX,LNX)
       REAL(8)               :: TRANSU(LNX,LNX)
       REAL(8)               :: TRANSUINV(LNX,LNX)
-      REAL(8)               :: PSPOT(NR)
       REAL(8)               :: EOFI1(NB)
-      REAL(8)               :: EOFLN(LNX)
+      REAL(8)               :: EOFICOMP(2,NB-NC)
       REAL(8)               :: UOFI(NR,NB)
       REAL(8)               :: TUOFI(NR,NB)
       REAL(8)               :: AEPSI(NR,NB)
@@ -2744,43 +2636,60 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: TPSPHI(NR,LNX)
       REAL(8)               :: QN(NR,LNX)
       REAL(8)               :: TQN(NR,LNX)
+      REAL(8)               :: QNP(NR,LNX)
+      REAL(8)               :: PSPHIP(NR,LNX)
       REAL(8)               :: BAREPRO(NR,LNX)
-      ReAL(8)               :: PHITEST1(NR,LNX)
+      REAL(8)               :: PHITEST1(NR,LNX)
       REAL(8)   ,ALLOCATABLE:: PHITEST(:,:)
       REAL(8)   ,ALLOCATABLE:: TPHITEST(:,:)
       REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
       REAL(8)               :: AERHO(NR),PSRHO(NR)
-      REAL(8)               :: G(NR),DREL(NR),G1(NR),PHI(NR)
+      REAL(8)               :: G(NR),DREL(NR),G1(NR),PHI(NR),PHI1(NR)
       REAL(8)               :: E
       REAL(8)               :: RC1
       REAL(8)               :: EHOMO
       INTEGER(4)            :: LX
-      INTEGER(4)            :: L,IB,LN,IR,IB1,IB2,LN1,LN2,ITER
+      INTEGER(4)            :: L,IB,LN,IR,IB1,IB2,LN1,LN2,I,ISO
       INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
       REAL(8)               :: PI,Y0
+      REAL(8)               :: X0,Z0,DX,XM,ZM
+      INTEGER(4)            :: ISTART,IBI
+      INTEGER(4)            :: NITER=100
+      REAL(8)               :: PHIPHASE
       REAL(8)               :: R(NR)
+      REAL(8)   ,PARAMETER  :: TOL=1.D-7
       REAL(8)               :: AUX(NR),AUX1(NR)
-      REAL(8)   ,allocatable:: AUXarr(:,:)
-      REAL(8)               :: VAL
+      REAL(8)   ,ALLOCATABLE:: AUXARR(:,:)
+      REAL(8)               :: VAL,DER,JVAL,JDER,KVAL,KDER
       REAL(8)               :: SVAR,SVAR1,SVAR2
       LOGICAL(4)            :: TREL,TSO,TCHK
       REAL(8)   ,ALLOCATABLE:: A(:,:),AINV(:,:)
       REAL(8)   ,ALLOCATABLE:: PROJ(:)
-      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
       REAL(8)               :: AEPSIF(NR,NB-NC)
       REAL(8)               :: PSPSIF(NR,NB-NC)
       REAL(8)               :: EH,EXC
       INTEGER(4)            :: NN,NN0
       INTEGER(4)            :: NFIL
       CHARACTER(64)         :: STRING
+      REAL(8)               :: RCOV    !COVALENT RADIUS
+      REAL(8)               :: RASA    !COVALENT RADIUS*APPROX 1.15
+      REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
+      REAL(8)               :: RBND   !RADIUS FOR BOUNDARY CONDITIONS
+      REAL(8)               :: DFACP,DFACM    !DOUBLE FACTORIAL OF 2L+1; 2L-1
+      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
       LOGICAL   ,PARAMETER  :: TWRITE=.TRUE.
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
       CALL RADIAL$R(GID,NR,R)
+      CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
+      CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RASA)
+      RNORM=RBOX
+      RBND=RNORM
+      PHIPHASE=1.D0    !NODE AT R=RBND
 !
 !     ==========================================================================
 !     == RESOLVE KEY                                                          ==
@@ -2825,7 +2734,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
           E=EOFI(IB)
           DREL(:)=0.D0
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,RBOX,DREL,G,0,AEPOT,E,UOFI(:,IB))
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,0,AEPOT,E,UOFI(:,IB))
           EOFI1(IB)=E
           TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
           G(:)=UOFI(:,IB)
@@ -2837,36 +2746,58 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ==========================================================================
       IF(TTEST) THEN
         WRITE(6,FMT='(82("="),T20," Z=",F5.0," ")')AEZ
-        WRITE(6,FMT='(82("="),T20," ENERGIES FOR ATOMIC WAVE FUNCTIONS")')
+        WRITE(6,FMT='(82("="),T20," ENERGIES FOR ATOMIC WAVE FUNCTIONS ")')
+        WRITE(6,FMT='(82("="),T20," OLD: AE SCHRODINGER EQUATION           ")')
+        WRITE(6,FMT='(82("="),T20," NEW: NODELESS EQUATION                 ")')
+        WRITE(6,FMT='(82("="),T20," DIFFERENCE DUE TO RELATIVISTIC EFFECTS ")')
         DO IB=1,NB
           WRITE(6,FMT='("IB=",I3," L=",I2," F=",F10.5," E[NEW]=",F15.5 &
      &                                               ," E[OLD]=",F15.5)') &
      &                  IB,LOFI(IB),FOFI(IB),EOFI1(IB),EOFI(IB)
         ENDDO
-!       CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,nb,UOFI)
+!       CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
       END IF
-!
-!     ==========================================================================
-!     == DETERMINE ENERGY OF HIGHEST OCCUPIED STATE                           ==
-!     ==========================================================================
-      EHOMO=-0.5D0
-      DO IB=1,NB
-        IF(FOFI(IB).GT.0.D0) EHOMO=MAX(EHOMO,EOFI1(IB))
-      ENDDO
-      IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,EHOMO,DREL)
 !
 !     ==========================================================================
 !     == CONSTRUCT NODELESS PARTIAL WAVES                                     ==
 !     ==========================================================================
+      DFACP=1.D0
       DO L=0,LX
-        E=EHOMO
-        G=0.D0
+        ISO=0
+        DFACM=DFACP
+        DFACP=DFACP*REAL(2*L+1,KIND=8)
+        E=0.D0
+        DO IB=NC+1,NB
+          IF(LOFI(IB).NE.L) CYCLE
+          E=EOFI(IB)
+          EXIT
+        ENDDO
+        G(:)=0.D0
         IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,RBOX,DREL,G,0,AEPOT,E,NLPHI(:,LN))
+!         == SEARCH NODELESS STATE =============================================
+          ISTART=1
+          X0=E
+          DX=1.D-2
+          CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+          DO I=1,NITER
+            E=X0
+            IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+            CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,ISO,G,L,E,1,PHI)
+            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+            Z0=Z0-PHIPHASE
+            IF(ABS(2.D0*DX).LE.TOL) EXIT
+            CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+          ENDDO
+          IF(ABS(DX).GT.TOL) THEN
+            CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
+            CALL ERROR$MSG('BOUND STATE NOT FOUND')
+            CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
+          END IF
           EOFLN(LN)=E
-          TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*NLPHI(:,LN)
+          NLPHI(:,LN)=PHI(:)
+          TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*PHI(:)
           G(:)=NLPHI(:,LN)
         ENDDO
       ENDDO
@@ -2890,7 +2821,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
           PHI(:)=NLPHI(:,LN)
-!         == orthogonalize to core states
+!         == ORTHOGONALIZE TO CORE STATES  =====================================
           DO IB=NC,1,-1
             IF(LOFI(IB).NE.L) CYCLE
             AUX(:)=R(:)**2*UOFI(:,IB)*PHI(:)
@@ -2902,24 +2833,26 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
             VAL=SVAR1/SVAR2
             PHI(:)=PHI(:)-UOFI(:,IB)*VAL
           ENDDO
-!         == normalization factor  ==========================================
+!         == NORMALIZATION FACTOR  =============================================
           AUX(:)=R(:)**2*PHI(:)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RNORM,VAL)
           VAL=1.D0/SQRT(VAL)
-!         == scale all wave functions ==========================================
+          CALL RADIAL$VALUE(GID,NR,PHI,MAXVAL(RC),SVAR)
+          VAL=SIGN(VAL,SVAR)
+!         == SCALE ALL WAVE FUNCTIONS ==========================================
           DO IB=1,NB
             IF(LOFI(IB).NE.L) CYCLE
             UOFI(:,IB) = UOFI(:,IB)*VAL
             TUOFI(:,IB)=TUOFI(:,IB)*VAL
           ENDDO
-!         == scale all partial waves  =========================================
+!         == SCALE ALL PARTIAL WAVES  ==========================================
           DO LN1=1,LNX
             IF(LOX(LN1).NE.L) CYCLE
-            NLPHI(:,LN1) = NLPHI(:,LN1)*VAL
-            TNLPHI(:,LN1)=TNLPHI(:,LN1)*VAL
+            NLPHI(:,LN1)   =NLPHI(:,LN1)*VAL
+            TNLPHI(:,LN1)  =TNLPHI(:,LN1)*VAL
           ENDDO
-          EXIT
+          EXIT ! SCALE ONLY ONCE PER L
         ENDDO
       ENDDO
 !
@@ -2955,6 +2888,9 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
           WRITE(6,FMT='(20F15.10)')TRANSUINV(LN1,:)
         ENDDO
       END IF
+
+CALL SETUP_WRITEPHI('UN.DAT',GID,NR,LNX,NLPHI)
+CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
 !
 !     ==========================================================================
 !     == TEST EQUATION FOR QN                                                 ==
@@ -2968,80 +2904,19 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
             IPRO=IPRO+1
             PRO(:,LN)=TQN(:,LN)+(AEPOT*Y0-EOFLN(LN))*QN(:,LN)
             IF(NCL(L).NE.0) PRO(:,LN)=PRO(:,LN)-UOFI(:,NCL(L))
-            WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|Uc>=",F20.15)') &
+            WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|UC>=",F20.15)') &
      &                     LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
           ENDDO
         ENDDO
       END IF
 !
 !     ==========================================================================
-!     == CORE-ORTHOGONALIZE TO OBTAIN NODAL PARTIAL WAVES                     ==
-!     == NOTE THAT THESE ARE NOT EIGENSTATES AS THEY ARE ONLY ORTHOGONALIZED  ==
-!     == TO THE CORE STATES                                                   ==
-!     ==                                                                      ==
-!     == REMARK: DIRECT ORTHOGONALIZATION IMPROVES THE CORE ORTHOGONALIZATION ==
-!     ==   BUT THE RESULT DOES NOT FULFILL THE SCHROEDINGER EQUATION WELL.    ==
-!     ==   THE LADDER OF NODELESS WAVE FUNCTION LEADS TO A BETTER SOLUTION    ==
-!     ==   OF THE SCHROEDINGER EQUATION, BUT THE CORE-ORTHOGONALITY IS WORSE  ==
+!     == CORE-ORTHOGONALIZE QN TO OBTAIN NODAL AE PARTIAL WAVES               ==
+!     == USE LADDER OF NODELESS WAVE FUNCTIONS                                ==
+!     == DUE TO NEGLECT OF THE SMALL COMPONENT THE ORTHOGONALIZATION IS NOT   ==
+!     == EXACT. HOWEVER THIS CHOICE ENSURES THAT AEPHI FULFILLS THE           ==
+!     == SCHRODINGER EQUATION                                                 ==
 !     ==========================================================================
-!!$      ALLOCATE(A(NC,NC))
-!!$      ALLOCATE(A(NC,NC))
-!!$      ALLOCATE(A(NC,NC))
-!!$!     == <UC|UC> ============================================================
-!!$      A(:,:)=0.D0
-!!$      DO IB1=1,NC
-!!$        DO IB2=IB1,NC
-!!$          IF(LOFI(IB1).NE.LOFI(IB2)) CYCLE
-!!$          AUX(:)=R(:)**2*UOFI(:,IB1)*UOFI(:,IB2)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          A(IB1,IB2)=VAL
-!!$          A(IB2,IB1)=VAL
-!!$        ENDDO
-!!$      ENDDO
-!!$!     == INVERT  <UC|UC> ====================================================
-!!$      ALLOCATE(AINV(NC,NC))
-!!$      CALL LIB$INVERTR8(NC,A,AINV)
-!!$      A=MATMUL(A,AINV)
-!!$      WRITE(6,FMT='(82("="),T20,"  INVERSION TEST  ")')
-!!$      DO LN1=1,LNX
-!!$        WRITE(6,FMT='(20F20.15)')A(LN1,:)
-!!$      ENDDO
-!!$      DEALLOCATE(A)
-!!$!     == <UC|QN> ============================================================
-!!$      ALLOCATE(A(NC,LNX))
-!!$      A(:,:)=0.D0
-!!$      DO IB=1,NC
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.LOFI(IB)) CYCLE
-!!$          AUX(:)=R(:)**2*UOFI(:,IB)*QN(:,LN)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          A(IB,LN)=VAL
-!!$        ENDDO
-!!$      ENDDO
-!!$!     == |AEPHI>=|QN> - |UC>(<UC|UC>)^{-1}<UC|QN> ===========================
-!!$      AEPHI(:,:)=QN(:,:)-MATMUL(UOFI,MATMUL(AINV,A))
-!!$      TAEPHI(:,:)=TQN(:,:)-MATMUL(TUOFI,MATMUL(AINV,A))
-!!$!     == AGAIN TO AVOID NUMERICAL ERRORS ====================================
-!!$!     == <UC|QN> ============================================================
-!!$      DO IB=1,NC
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.LOFI(IB)) CYCLE
-!!$          AUX(:)=R(:)**2*UOFI(:,IB)*AEPHI(:,LN)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          A(IB,LN)=VAL
-!!$        ENDDO
-!!$      ENDDO
-!!$!     == |AEPHI>=|QN> - |UC>(<UC|UC>)^{-1}<UC|QN> ==============================
-!!$      AEPHI(:,:)=AEPHI(:,:)-MATMUL(UOFI,MATMUL(AINV,A))
-!!$      TAEPHI(:,:)=TAEPHI(:,:)-MATMUL(TUOFI,MATMUL(AINV,A))
-!!$      DEALLOCATE(AINV)
-!!$      DEALLOCATE(A)
-!
-!     == USE LADDER OF NODELESS WAVE FUNCTIONS =================================
-!     = to construct aE partial waves by core orthogonalization ================
       AEPHI(:,:) =QN(:,:)   
       TAEPHI(:,:)=TQN(:,:)  
       DO LN=1,LNX
@@ -3067,11 +2942,17 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
             CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
             A(LN,IB)=VAL
+            AUX(:)=R(:)**2*UOFI(:,IB)**2
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+            A(LN,IB)=A(LN,IB)/SQRT(VAL)
           ENDDO
         ENDDO
-        WRITE(6,FMT='(82("="),T20," <UC|AEPHI>  ")')
+        WRITE(6,FMT='(82("="),T20," <UC|AEPHI>/SQRT(<UC|UC>  ")')
+        WRITE(6,FMT='(82("="),T10," DEVIATION DUE NEGLECT OF SMALL COMPONENT")')
+        WRITE(6,FMT='(82("="),T10," ORTHOGONALIZATION DONE BASED ON ENERGIES")')
         DO LN1=1,LNX
-          WRITE(6,FMT='(20F20.10)')A(LN1,:)
+          WRITE(6,FMT='(20F10.5)')A(LN1,:)
         ENDDO
         DEALLOCATE(A)
       END IF
@@ -3093,41 +2974,55 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ==========================================================================
       PSPHI=QN
       TPSPHI=TQN
-      DO L=0,LX
-        DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE
-          RC1=RC(LN)
+      IF(TYPE.EQ.'KERKER') THEN
+        DO L=0,LX
+          DO LN=1,LNX
+            IF(LOX(LN).NE.L) CYCLE
+            RC1=RC(LN)
+          ENDDO
+          NPRO=NPROL(L)
+          IF(NPRO.EQ.0) CYCLE
+          ALLOCATE(PHITEST(NR,NPRO))
+          ALLOCATE(TPHITEST(NR,NPRO))
+          IPRO=0
+          DO LN=1,LNX
+            IF(LOX(LN).NE.L) CYCLE
+            IPRO=IPRO+1
+            PHITEST(:,IPRO)=QN(:,LN)
+            TPHITEST(:,IPRO)=TQN(:,LN)
+          ENDDO
+          CALL ATOMIC_MAKEPSPHI(GID,NR,RC1,L,NPRO,PHITEST,TPHITEST)
+          IPRO=0
+          DO LN=1,LNX
+            IF(LOX(LN).NE.L) CYCLE
+            IPRO=IPRO+1
+            PSPHI(:,LN)=PHITEST(:,IPRO)
+            TPSPHI(:,LN)=TPHITEST(:,IPRO)
+          ENDDO
+          DEALLOCATE(PHITEST)
+          DEALLOCATE(TPHITEST)
         ENDDO
-        NPRO=NPROL(L)
-        IF(NPRO.EQ.0) CYCLE
-        ALLOCATE(PHITEST(NR,NPRO))
-        ALLOCATE(TPHITEST(NR,NPRO))
-        IPRO=0
-        DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE
-          IPRO=IPRO+1
-!          PHITEST(:,IPRO)=QN(:,LN)
-!          TPHITEST(:,IPRO)=TQN(:,LN)
-PHITEST(:,IPRO)=AEPHI(:,LN)
-TPHITEST(:,IPRO)=TAEPHI(:,LN)
-        ENDDO
-        CALL ATOMIC_MAKEPSPHI(GID,NR,RC1,L,NPRO,PHITEST,TPHITEST)
-        IPRO=0
-        DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE
-          IPRO=IPRO+1
-          PSPHI(:,LN)=PHITEST(:,IPRO)
-          TPSPHI(:,LN)=TPHITEST(:,IPRO)
-        ENDDO
-        DEALLOCATE(PHITEST)
-        DEALLOCATE(TPHITEST)
-      ENDDO
+      ELSE IF(TYPE.EQ.'HBS') THEN
+        CALL ATOMIC_MAKEPSPHI_HBS(GID,NR,LNX,LOX,EOFLN,RC,LAMBDA,PSPOT &
+     &                               ,rbnd,PSPHI,TPSPHI)
+      ELSE
+        CALL ERROR$MSG('PSEUDIZATION TYPE IS UNKNOWN')
+        CALL ERROR$MSG('CAN BE "BESSEL" OR "HBS"')
+        CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
+      END IF
 !
 !     ==========================================================================
 !     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
 !     ==========================================================================
       DO LN=1,LNX
         BAREPRO(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
+      ENDDO
+!     ==  CLEANUP OF NUMERICAL ERRORS INDUCED BY A TOO COARSE GRID AT LARGE ====
+!     ==  RADII. 2.D0*RCOV IS CHOSEN ARBITRARILY ===============================
+      DO IR=1,NR
+        IF(R(IR).LT.RNORM) CYCLE
+        BAREPRO(IR:,:)=0.D0
+        EXIT
       ENDDO
 
       IF(TTEST) THEN
@@ -3159,58 +3054,15 @@ TPHITEST(:,IPRO)=TAEPHI(:,LN)
 !     ==========================================================================
 !     == ENFORCE BIORTHOGONALIZATION                                          ==
 !     ==========================================================================
-      PRO(:,:)=BAREPRO(:,:)
-!
-!     ==  DETERMINE <PSPHI|PROBARE> ============================================
-      PSPHIPROBARE(:,:)=0.D0
-      DO LN1=1,LNX
-        DO LN2=1,LNX
-          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-          AUX(:)=R(:)**2*PSPHI(:,LN1)*PRO(:,LN2)
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-          PSPHIPROBARE(LN1,LN2)=VAL
-        ENDDO
-      ENDDO
-do ln1=1,lnx
-  write(6,fmt='("<psphi|probare> ",10f20.5)')psphiprobare(:,ln1)
-enddo
-!call dggevinterface(lnx,psphiprobare)
-!stop
-!
-      DO L=0,LX
-        NPRO=NPROL(L)
-        IF(NPRO.EQ.0) CYCLE   ! skip if no partial waves for this l exist...
-        ALLOCATE(A(NPRO,NPRO))
-        ALLOCATE(AINV(NPRO,NPRO))
-        ALLOCATE(PRO1(NR,NPRO))
-        IPRO1=0
-        DO LN1=1,LNX
-          IF(LOX(LN1).NE.L) CYCLE
-          IPRO1=IPRO1+1
-          PRO1(:,IPRO1)=PRO(:,LN1)
-          IPRO2=0
-          DO LN2=1,LNX
-            IF(LOX(LN2).NE.L) CYCLE
-            IPRO2=IPRO2+1
-            A(IPRO1,IPRO2)=PSPHIPROBARE(LN1,LN2)
-          ENDDO
-        ENDDO
-        CALL LIB$INVERTR8(NPRO,A,AINV)
-do ln1=1,npro
-  write(6,fmt='("ainv",10f20.5)')ainv(:,ln1)
-enddo
-        PRO1=MATMUL(PRO1,AINV)
-        DEALLOCATE(A)
-        DEALLOCATE(AINV)
-        IPRO=0
-        DO LN=1,LNX
-          IF(LOX(LN).NE.L) CYCLE
-          IPRO=IPRO+1
-          PRO(:,LN)=PRO1(:,IPRO)
-        ENDDO
-        DEALLOCATE(PRO1)
-      ENDDO
+      ALLOCATE(A(LNX,LNX))
+      CALL BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,BAREPRO,TRANSPHI,TRANSPRO)
+      A=MATMUL(TRANSPRO,TRANSPOSE(TRANSPHI))
+      PRO=MATMUL(BAREPRO,A)
+      CALL LIB$INVERTR8(LNX,TRANSPHI,TRANSPHIINV)
+      DEALLOCATE(A)
+!CALL SETUP_WRITEPHI(-'PRO.DAT',GID,NR,LNX,MATMUL(BAREPRO,TRANSPRO))
+!CALL SETUP_WRITEPHI(-'PSPHI.DAT',GID,NR,LNX,MATMUL(PSPHI,TRANSPHI))
+!CALL SETUP_WRITEPHI(-'AEPHI.DAT',GID,NR,LNX,MATMUL(AEPHI,TRANSPHI))
 !
 !     ==========================================================================
 !     == CHECK BIORTHOGONALIZATION                                            ==
@@ -3235,7 +3087,7 @@ enddo
 !
 !     ==========================================================================
 !     == DT,DO                                                                ==
-!     == attention!! do not make dt and dh symmetric. They are not hermitean! ==
+!     == ATTENTION!! DO NOT MAKE DT AND DH SYMMETRIC. THEY ARE NOT HERMITEAN! ==
 !     ==========================================================================
       DT=0.D0
       DOVER=0.D0
@@ -3263,10 +3115,10 @@ enddo
           WRITE(6,FMT='("LN=",I2," DTKIN-TRANSPOSE(DTKIN)=",10F10.5)') &
      &                                    LN,(DT(LN,LN2)-DT(LN2,LN),LN2=1,LNX)
         ENDDO
-      end if
+      END IF
 !
 !     ==========================================================================
-!     == CHECK2 PAW EQUATION FOR PSEUDO PARTIALWAVES                          ==
+!     == CHECK PAW EQUATION FOR PSEUDO PARTIALWAVES                           ==
 !     ==========================================================================
       IF(TTEST) THEN
         ALLOCATE(TPHITEST(NR,LNX))    ! HOLDS TEST FOR PSEUDO
@@ -3304,19 +3156,121 @@ enddo
           WRITE(6,FMT='("LN=",I2," L=",I2," PAW EQ.",F20.5 &
      &                                 ," SCHR. EQ.",F20.5," DPRO ",F20.5)') &
      &          LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))) &  
-     &                    ,MAXVAL(ABS(PHITEST(:,LN))) &   ! all-electron eq
+     &                    ,MAXVAL(ABS(PHITEST(:,LN))) &   ! ALL-ELECTRON EQ
      &                    ,MAXVAL(ABS(PHITEST1(:,LN)+BAREPRO(:,LN)))
         ENDDO
-!        CALL SETUP_WRITEPHI('pro-test.DAT',GID,NR,LNX,-barepro)
+!        CALL SETUP_WRITEPHI('PRO-TEST.DAT',GID,NR,LNX,-BAREPRO)
         DEALLOCATE(PROJ)
         DEALLOCATE(PHITEST)
         DEALLOCATE(TPHITEST)
       END IF
 !
 !     ==========================================================================
+!     == CONSTRUCT PHIDOT FUNCTIONS                                           ==
+!     ==========================================================================
+!     == TRANSFORMATION TO NODELESS REPRESENTATION =============================
+      QNP(:,:)   =MATMUL(QN,TRANSUINV)
+      PSPHIP(:,:)=MATMUL(PSPHI,TRANSUINV)
+      DO L=0,LX
+        NPRO=NPROL(L)
+        IF(NPRO.EQ.0) CYCLE
+        ALLOCATE(DH1(NPRO,NPRO))
+        ALLOCATE(DO1(NPRO,NPRO))
+        ALLOCATE(PRO1(NR,NPRO))
+        ALLOCATE(PROJ(NPRO))
+        IPRO1=0
+        DO LN1=1,LNX
+          IF(LOX(LN1).NE.L) CYCLE
+          IPRO1=IPRO1+1
+          PRO1(:,IPRO1)=PRO(:,LN1)
+          IPRO2=0
+          DO LN2=1,LNX
+            IF(LOX(LN2).NE.L) CYCLE
+            IPRO2=IPRO2+1
+            DH1(IPRO1,IPRO2)=DH(LN1,LN2)
+            DO1(IPRO1,IPRO2)=DOVER(LN1,LN2)
+          ENDDO
+        ENDDO
+        G(:)=0.D0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          ESCATT(LN)=MIN(-0.0D0,EOFLN(LN))
+          E=ESCATT(LN)
+          IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+!
+!         == CALCULATE QN  FUNCTION ===========================================
+          G(:)=0.D0
+          IF(NCL(L).GT.0)G(:)=UOFI(:,NCL(L))
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,PHI)
+          IF(NCL(L).EQ.0) THEN
+            CALL RADIAL$VALUE(GID,NR,PHI,1.D-2,SVAR1)
+            CALL RADIAL$VALUE(GID,NR,QN(:,LN),1.D-2,SVAR2)
+            PHI(:)=PHI(:)*SVAR2/SVAR1
+          END IF
+          NLPHIDOT(:,LN)=PHI(:)
+!
+!         == CALCULATE PSEUDO WAVE FUNCTIONS ===================================
+          G(:)=0.D0
+          CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI)
+          CALL RADIAL$VALUE(GID,NR,PHI,MAXVAL(RC),SVAR)
+          CALL RADIAL$VALUE(GID,NR,NLPHIDOT(:,LN),MAXVAL(RC),VAL)
+          PSPHIDOT(:,LN)=PHI(:)*VAL/SVAR
+!
+          IF(ABS(E-EOFLN(LN)).GT.1.D-3) THEN
+            DO LN1=1,LNX
+              IF(LOX(LN1).NE.L) CYCLE
+              IF(ISCATT(LN1).GT.ISCATT(LN)) CYCLE
+              NLPHIDOT(:,LN)   =(   NLPHIDOT(:,LN)-   QNP(:,LN1))/(E-EOFLN(LN1))
+              PSPHIDOT(:,LN)=(PSPHIDOT(:,LN)-PSPHIP(:,LN1))/(E-EOFLN(LN1))     
+            ENDDO
+          ELSE
+!           == ENERGY DERIVATIVE OF QN ========================================
+            G(:)=NLPHIDOT(:,LN)
+            CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,PHI)
+            NLPHIDOT(:,LN)=PHI
+!           == ENERGY DERIVATIVE OF PSPHI ====================================
+            PHI=PSPHIDOT(:,LN)    
+            DO IPRO=1,NPRO
+              AUX(:)=R(:)**2*PRO1(:,IPRO)*PHI(:)
+              CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+              CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,PROJ(IPRO))
+            ENDDO
+            G(:)=PHI(:)+MATMUL(PRO1,MATMUL(DO1,PROJ))
+            CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI1)
+            CALL RADIAL$VALUE(GID,NR,NLPHIDOT(:,LN)-PHI1,MAXVAL(RC),VAL)
+            CALL RADIAL$VALUE(GID,NR,PHI,MAXVAL(RC),SVAR)
+            PSPHIDOT(:,LN)=PHI1(:)+PHI*VAL/SVAR
+            DO LN1=1,LNX
+              IF(LOX(LN1).NE.L) CYCLE
+              IF(ISCATT(LN1).GE.ISCATT(LN)) CYCLE
+              NLPHIDOT(:,LN)   =(   NLPHIDOT(:,LN)-   QNP(:,LN1))/(E-EOFLN(LN1))
+              PSPHIDOT(:,LN)=(PSPHIDOT(:,LN)-PSPHIP(:,LN1))/(E-EOFLN(LN1))          
+            ENDDO
+          END IF
+!
+!         == CONSTRUCT AEPHIDOT BY CORE-ORTHOGONALIZATION ======================
+          AEPHIDOT(:,LN)=NLPHIDOT(:,LN)
+          DO IB=NC,1,-1
+            IF(LOFI(IB).NE.L) CYCLE
+            AUX=R(:)**2*UOFI(:,IB)**2
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR1)
+            AUX=R(:)**2*UOFI(:,IB)*AEPHIDOT(:,LN)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR2)
+            AEPHIDOT(:,LN)=AEPHIDOT(:,LN)-UOFI(:,IB)*SVAR2/SVAR1
+          ENDDO
+        ENDDO
+        DEALLOCATE(DH1)
+        DEALLOCATE(DO1)
+        DEALLOCATE(PRO1)
+        DEALLOCATE(PROJ)
+      ENDDO
+!
+!     ==========================================================================
 !     == BACK TRANSFORM                                                       ==
 !     ==========================================================================
-goto 100
+GOTO 100
       QN=MATMUL(QN,TRANSUINV)
       TQN=MATMUL(TQN,TRANSUINV)
       PSPHI=MATMUL(PSPHI,TRANSUINV)
@@ -3338,11 +3292,12 @@ goto 100
      &                    ,MAXVAL(ABS(TQN(:,LN)-TNLPHI(:,LN)))
         ENDDO
       END IF
-100 continue
+100 CONTINUE
 !
 !     ==========================================================================
 !     == RENORMALIZE WAVE FUNCTIONS AND PROJECTOR FUNCTIONS                   ==
 !     ==========================================================================
+GOTO 10001
       DO L=0,LX
         IPRO=0
         DO LN=1,LNX
@@ -3350,39 +3305,44 @@ goto 100
           IPRO=IPRO+1
 !         == NORMALIZE PS PARTIAL WAVE =========================================
 !          IF(IPRO.EQ.1) THEN
-          IF(Iscatt(ln).le.0) THEN    ! normalize valence and semi-core states
+          IF(ISCATT(LN).LE.0) THEN    ! NORMALIZE VALENCE AND SEMI-CORE STATES
             AUX(:)=R(:)**2*PSPHI(:,LN)**2
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RNORM,VAL)
             VAL=VAL+DOVER(LN,LN)
             VAL=1.D0/SQRT(VAL)
           END IF
-          do ln2=ln,lnx
+          DO LN2=LN,LNX
             IF(LOX(LN2).NE.L) CYCLE
-            PSPHI(:,LN2) = PSPHI(:,LN2)*VAL
-            TPSPHI(:,LN2)=TPSPHI(:,LN2)*VAL
-            AEPHI(:,LN2) = AEPHI(:,LN2)*VAL
-            TAEPHI(:,LN2)=TAEPHI(:,LN2)*VAL
-            NLPHI(:,LN2) = NLPHI(:,LN2)*VAL
-            TNLPHI(:,LN2)=TNLPHI(:,LN2)*VAL
-            QN(:,LN2)    =    QN(:,LN2)*VAL
-            TQN(:,LN2)   =   TQN(:,LN2)*VAL
-            PRO(:,LN2)   =   PRO(:,LN2)/VAL
-            DH(LN2,:)=DH(LN2,:)*VAL
-            DT(LN2,:)=DT(LN2,:)*VAL
-            DOVER(LN2,:)=DOVER(LN2,:)*VAL
-            DH(:,LN2)=DH(:,LN2)*VAL
-            DT(:,LN2)=DT(:,LN2)*VAL
-            DOVER(:,LN2)=DOVER(:,LN2)*VAL
-          enddo
+            PSPHI(:,LN2)   =   PSPHI(:,LN2)*VAL
+            TPSPHI(:,LN2)  =  TPSPHI(:,LN2)*VAL
+            AEPHI(:,LN2)   =   AEPHI(:,LN2)*VAL
+            TAEPHI(:,LN2)  =  TAEPHI(:,LN2)*VAL
+            NLPHI(:,LN2)   =   NLPHI(:,LN2)*VAL
+            TNLPHI(:,LN2)  =  TNLPHI(:,LN2)*VAL
+            PSPHIDOT(:,LN2)=PSPHIDOT(:,LN2)*VAL
+            AEPHIDOT(:,LN2)=AEPHIDOT(:,LN2)*VAL
+            NLPHIDOT(:,LN2)=NLPHIDOT(:,LN2)*VAL
+            QN(:,LN2)      =      QN(:,LN2)*VAL
+            TQN(:,LN2)     =     TQN(:,LN2)*VAL
+            PRO(:,LN2)     =     PRO(:,LN2)/VAL
+            DH(LN2,:)      =      DH(LN2,:)*VAL
+            DT(LN2,:)      =      DT(LN2,:)*VAL
+            DOVER(LN2,:)   =   DOVER(LN2,:)*VAL
+            DH(:,LN2)      =      DH(:,LN2)*VAL
+            DT(:,LN2)      =      DT(:,LN2)*VAL
+            DOVER(:,LN2)   =   DOVER(:,LN2)*VAL
+          ENDDO
         ENDDO
       ENDDO
+10001 CONTINUE
 !
 !     ==========================================================================
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
 !     ==========================================================================
       AERHO(:)=0.D0
       PSRHO(:)=0.D0
+      EOFICOMP(:,:)=0.D0
       DO L=0,LX
         NPRO=NPROL(L)
         IF(NPRO.EQ.0) CYCLE
@@ -3408,32 +3368,45 @@ goto 100
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
           IF(NN0.EQ.-1)NN0=NNOFI(IB)
-          E=EOFI1(IB)
+           E=EOFI1(IB)
 !
           G(:)=0.D0
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,RBOX,DREL,G,NNOFI(IB),AEPOT &
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,NNOFI(IB),AEPOT &
        &                             ,E,AEPSIF(:,IB-NC))
           SVAR1=E
+          EOFICOMP(1,IB-NC)=E
+!
           NN=NNOFI(IB)-NN0
           G(:)=0.D0
-          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,RBOX,PSPOT,NPRO,PRO1,DH1,DO1 &
+          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
      &                              ,G,E,PSPSIF(:,IB-NC))
           SVAR2=E
+          EOFICOMP(2,IB-NC)=E
           IF(ABS(SVAR2-EOFI1(IB)).GT.1.D-2) THEN
-            CALL ERROR$MSG('INACCURATE BEHAVIOR DURING UNSCREENING PS POTENTIAL')
+            CALL ERROR$MSG('INACCURACY WHILE UNSCREENING PS POTENTIAL')
+            CALL ERROR$MSG('ONE-PARTICLE ENERGIES OBTAINED FROM PAW ')
+            CALL ERROR$MSG('DISAGREE WITH THOSE FROM THE AE CALCULATION')
+            CALL ERROR$I4VAL('L',L)
+            CALL ERROR$I4VAL('IB',IB)
+            CALL ERROR$R8VAL('TARGET: E[EV]',EOFI1(IB)*27.211D0)
+            CALL ERROR$R8VAL('TARGET: E[EV]',EOFI(IB)*27.211D0)
+            CALL ERROR$R8VAL('AE:     E[EV]',SVAR1*27.211D0)
+            CALL ERROR$R8VAL('PAW:    E[EV]',SVAR2*27.211D0)
             CALL ERROR$R8VAL('( PAW-AE)[EV]',(SVAR2-SVAR1)*27.211D0)
             CALL ERROR$R8VAL('(PAW-REF)[EV]',(SVAR2-EOFI1(IB))*27.211D0)
             CALL ERROR$R8VAL('( AE-REF)[EV]',(SVAR1-EOFI1(IB))*27.211D0)
             CALL ERROR$STOP('ATOMLIB_MAKEPARTIALWAVES')
           END IF
           IF(TTEST) THEN
-             WRITE(6,FMT='("DEV UNSCREENING LEVELS IN EV ",I5,2F10.5)') &
-         &              L,(SVAR1-EOFI1(IB))*27.211D0,(SVAR2-EOFI1(IB))*27.211D0
+             WRITE(6,FMT='("DEVIATION OF THE ATOMIC ENERGY LEVELS IN EV")')
+             WRITE(6,FMT='("OBTAINED ONCE WITH PAW AND THE AE CALCULATION")')
+             WRITE(6,FMT='("L",I2," PAW-REF ",F10.5,"EV; AE-REF ",F10.5," EV")') &
+         &          L,(SVAR2-EOFI1(IB))*27.211D0,(SVAR1-EOFI1(IB))*27.211D0
           END IF
 !
           DO IR=1,NR-2
-            IF(R(IR).LT.RBOX) CYCLE
+            IF(R(IR).LT.ROUT) CYCLE
             PSPSIF(IR+2:,IB-NC)=0.D0
             AEPSIF(IR+2:,IB-NC)=0.D0
             IF(PSPSIF(IR-2,IB-NC)*AEPSIF(IR-2,IB-NC).LT.0.D0) &
@@ -3451,7 +3424,7 @@ goto 100
 !         == NORMALIZE PS WAVE FUNCTION=========================================
           AUX(:)=R(:)**2*PSPSIF(:,IB-NC)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DO IPRO1=1,NPRO
             DO IPRO2=1,NPRO
               VAL=VAL+PROJ(IPRO1)*DO1(IPRO1,IPRO2)*PROJ(IPRO2)
@@ -3465,7 +3438,7 @@ goto 100
 !         == NORMALIZE AE WAVE FUNCTION=========================================
           AUX(:)=R(:)**2*AEPSIF(:,IB-NC)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           AEPSIF(:,IB-NC)=AEPSIF(:,IB-NC)/SQRT(VAL)
 !
           PSRHO(:)=PSRHO(:)+FOFI(IB)*PSPSIF(:,IB-NC)**2*Y0
@@ -3476,6 +3449,14 @@ goto 100
         DEALLOCATE(PRO1)
         DEALLOCATE(PROJ)
       ENDDO      
+
+!     == REPORT ===============================================================
+      WRITE(6,FMT='(82("="),T20,"  AE- AND PS-ENERGY LEVELS ")')
+      DO IB=NC+1,NB
+        WRITE(6,FMT='("IB=",I2," L=",I2," AE-ENERGY:",F10.5," EV;" &
+     &                                 ," PS-ENERGY:",F10.5," EV")') &
+     &          IB,LOFI(IB),EOFICOMP(:,IB-NC)*27.211D0
+      ENDDO
 !
 !!$      IF(TTEST) THEN
 !!$        CALL SETUP_WRITEPHI('PSPSIF.DAT',GID,NR,NB-NC,PSPSIF)
@@ -3497,11 +3478,40 @@ goto 100
       CALL ATOMIC_UNSCREEN(GID,NR,RBOX,SVAR,AERHO,PSRHO,PSPOT,RCSM,VADD)
 !!$      IF(TTEST) THEN
 !!$        ALLOCATE(AUXARR(NR,2))
-!!$        AUXARR(:,1)=vadd
-!!$        AUXARR(:,2)=pspot
-!!$        CALL SETUP_WRITEPHI('vadd.DAT',GID,NR,2,AUXARR)
+!!$        AUXARR(:,1)=VADD
+!!$        AUXARR(:,2)=PSPOT
+!!$        CALL SETUP_WRITEPHI('VADD.DAT',GID,NR,2,AUXARR)
 !!$        DEALLOCATE(AUXARR)
 !!$      END IF
+!
+!     ==========================================================================
+!     == CUT OFF THE EXPONENTIALLY GROWING TAIL OF THE PARTIALWAVES
+!     ==========================================================================
+      DO IR=1,NR
+        IF(R(IR).GT.MAX(2.D0*RCOV,RNORM)) THEN
+          I=IR+1
+          EXIT
+        END IF
+      ENDDO
+      IR=I
+      AEPHI(IR:,:)=0.D0
+      PSPHI(IR:,:)=0.D0
+      NLPHI(IR:,:)=0.D0
+      aePHIDOT(IR:,:)=0.D0
+      NLPHIDOT(IR:,:)=0.D0
+      PSPHIDOT(IR:,:)=0.D0
+      QN(IR:,:)=0.D0
+      PRO(IR:,:)=0.D0
+!
+!     ==========================================================================
+!     == TRANSFORM ONTO SEQUENTIAL RESPRESENTATION                            ==
+!     ==========================================================================
+!!$PSPHI=MATMUL(PSPHI,TRANSPHI)
+!!$AEPHI=MATMUL(AEPHI,TRANSPHI)
+!!$NLPHI=MATMUL(NLPHI,TRANSPHI)
+!!$PRO=MATMUL(PRO,TRANSPOSE(TRANSPHIINV))
+!!$DT=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DT,TRANSPHI))
+!!$DOVER=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DOVER,TRANSPHI))
 !
 !     ==========================================================================
 !     == WRITE INFORMATION TO FILE                                            ==
@@ -3520,35 +3530,35 @@ goto 100
           WRITE(6,FMT='(20F12.3)')DH(LN1,:)
         ENDDO
 !
-        WRITE(6,FMT='(82("="),T20,"  AE-Overlap ")')
-        allocate(a(lnx,lnx))
-        a(:,:)=0.d0
-        do ln1=1,lnx
-          do ln2=1,lnx
-            if(lox(ln2).ne.lox(ln1)) cycle
-            AUX(:)=R(:)**2*AEPhi(:,ln1)*AEPhi(:,ln2)
+        WRITE(6,FMT='(82("="),T20,"  AE-OVERLAP ")')
+        ALLOCATE(A(LNX,LNX))
+        A(:,:)=0.D0
+        DO LN1=1,LNX
+          DO LN2=1,LNX
+            IF(LOX(LN2).NE.LOX(LN1)) CYCLE
+            AUX(:)=R(:)**2*AEPHI(:,LN1)*AEPHI(:,LN2)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-            a(ln1,ln2)=val
-          enddo
-          WRITE(6,FMT='(20F12.3)')a(LN1,:)
-        enddo
-        deallocate(a)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RNORM,VAL)
+            A(LN1,LN2)=VAL
+          ENDDO
+          WRITE(6,FMT='(20F12.3)')A(LN1,:)
+        ENDDO
+        DEALLOCATE(A)
 !
-        WRITE(6,FMT='(82("="),T20," <pro|psphi> ")')
-        allocate(a(lnx,lnx))
-        a(:,:)=0.d0
-        do ln1=1,lnx
-          do ln2=1,lnx
-            if(lox(ln2).ne.lox(ln1)) cycle
-            AUX(:)=R(:)**2*pro(:,ln1)*psPhi(:,ln2)
+        WRITE(6,FMT='(82("="),T20," <PRO|PSPHI> ")')
+        ALLOCATE(A(LNX,LNX))
+        A(:,:)=0.D0
+        DO LN1=1,LNX
+          DO LN2=1,LNX
+            IF(LOX(LN2).NE.LOX(LN1)) CYCLE
+            AUX(:)=R(:)**2*PRO(:,LN1)*PSPHI(:,LN2)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
             CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-            a(ln1,ln2)=val
-          enddo
-          WRITE(6,FMT='(20F12.3)')a(LN1,:)
-        enddo
-        deallocate(a)
+            A(LN1,LN2)=VAL
+          ENDDO
+          WRITE(6,FMT='(20F12.3)')A(LN1,:)
+        ENDDO
+        DEALLOCATE(A)
       END IF
       IF(TWRITE) THEN
         WRITE(STRING,FMT='(F3.0)')AEZ
@@ -3560,45 +3570,168 @@ goto 100
         CALL SETUP_WRITEPHI(-'PSPHI'//TRIM(STRING),GID,NR,LNX,PSPHI)
 !
 !       == NODELESS PARTIAL WAVES ==============================================
-        CALL SETUP_WRITEPHI(-'NLPHI'//TRIM(STRING),GID,NR,LNX,qn)
+        CALL SETUP_WRITEPHI(-'NLPHI'//TRIM(STRING),GID,NR,LNX,NLPHI)
 !
 !       == PROJECTOR FUNCTIONS =================================================
         CALL SETUP_WRITEPHI(-'PRO'//TRIM(STRING),GID,NR,LNX,PRO)
 !
-!       == PROJECTOR FUNCTIONS =================================================
+!       == NODELESS SCATTERING PARTIAL WAVES ===================================
+        CALL SETUP_WRITEPHI(-'NLPHIDOT'//TRIM(STRING),GID,NR,LNX,NLPHIDOT)
+!
+!       == SCATTERING PSEUDO PARTIAL WAVES =====================================
+        CALL SETUP_WRITEPHI(-'PSPHIDOT'//TRIM(STRING),GID,NR,LNX,PSPHIDOT)
+!
+!       == SCATTERING ALL-ELECTRON PARTIAL WAVES ===============================
+        CALL SETUP_WRITEPHI(-'AEPHIDOT'//TRIM(STRING),GID,NR,LNX,AEPHIDOT)
+!
+!       == POTENTIALS  =========================================================
         ALLOCATE(AUXARR(NR,3))
         AUXARR(:,1)=AEPOT
         AUXARR(:,2)=PSPOT
         AUXARR(:,3)=PSPOT-VADD
         CALL SETUP_WRITEPHI(-'POT'//TRIM(STRING),GID,NR,3,AUXARR)
         DEALLOCATE(AUXARR)
+!
+!       == QBAR ================================================================
+        DO LN=1,LNX
+          WRITE(*,FMT='("LN= ",I3," L=",I1," ISCATT=",I3," QBAR ",F10.5)') &
+     &                 LN,LOX(LN),ISCATT(LN)
+        ENDDO
       END IF
+!
+!STOP 'FORCED: IN MAKEPARTIALWAVES'
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE dggevinterface(N,a)
+      SUBROUTINE SETUP_TESTSCATTERING(NFIL)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      implicit none
-      integer(4),intent(in)  :: N
-      real(8)   ,intent(in)  :: a(n,n)
-      real(8)                :: e(n)
-      real(8)                :: u(n,n)
-      real(8)                :: wi(n)
-      real(8)                :: vl(n,n)
-      real(8)                :: work(4*n)
-      integer                :: info
-      integer                :: i
+      USE SETUP_MODULE
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NFIL
+      INTEGER(4)             :: NC
+      INTEGER(4)             :: NB
+      REAL(8)                :: EMIN
+      REAL(8)                :: EMAX
+      INTEGER(4),PARAMETER   :: NE=200
+      REAL(8)                :: DE
+      REAL(8)                :: E
+      INTEGER(4)             :: LX
+      INTEGER(4)             :: GID ! GRID ID
+      INTEGER(4)             :: NR  ! #(GRID POINTS)
+      REAL(8)   ,ALLOCATABLE :: R(:)  !(NR) RADIAL GRID
+      INTEGER(4)             :: LNX ! #(PARTIAL WAVES)
+      INTEGER(4),ALLOCATABLE :: LOX(:) !(LNX) ANGULAR MOMENTA OF PARTIAL WAVES
+      REAL(8)   ,ALLOCATABLE :: DREL(:)
+      REAL(8)   ,ALLOCATABLE :: G(:)
+      REAL(8)   ,ALLOCATABLE :: PHI(:)
+      REAL(8)   ,ALLOCATABLE :: AUX(:)
+      REAL(8)   ,ALLOCATABLE :: AEPHASE(:,:)
+      REAL(8)   ,ALLOCATABLE :: PAWPHASE(:,:)
+      REAL(8)   ,ALLOCATABLE :: PRO(:,:)  !(NR,LNX) PROJECTOR FUNCTIONS
+      REAL(8)   ,ALLOCATABLE :: DH(:,:)  !(LNX,LNX) HAMILTON-DIFFERENCE
+      REAL(8)   ,ALLOCATABLE :: DO(:,:)  !(LNX,LNX) OVERLAP DIFFERENCE
+      REAL(8)                :: VAL
+      REAL(8)                :: PI,Y0
+      REAL(8)               :: EV
+      REAL(8)                :: RCOV
+      REAL(8)                :: DPHASE
+      INTEGER(4)             :: NPRO
+      INTEGER(4)             :: IE,LN1,LN2,IPRO1,IPRO2,L,LN,IB
 !     **************************************************************************
-      call dgeev('N','V',N,a,n,e,WI,VL,N,u,N,work,4*n,info)
-      do i=1,n
-        write(6,fmt='("E=",e20.5)')e(i)
-        write(6,fmt='("V=",20e15.5)')u(:,i)
-      enddo
-      return
-      end
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      NC=THIS%ATOM%NC
+      NB=THIS%ATOM%NB
+      EMIN=MINVAL(THIS%ATOM%EOFI(NC+1:NB))-0.2D0
+      EMAX=MAX(MAXVAL(THIS%ATOM%EOFI(NC+1:NB)),1.D0)
+      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)
+      GID=THIS%GID
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+      ALLOCATE(DREL(NR))
+      ALLOCATE(G(NR))
+      ALLOCATE(PHI(NR))
+      ALLOCATE(AUX(NR))
+      LNX=THIS%LNX
+      ALLOCATE(LOX(LNX))
+      LOX=THIS%LOX
+      LX=MAX(MAXVAL(THIS%LOX),MAXVAL(THIS%ATOM%LOFI(:NB)))
+      CALL PERIODICTABLE$GET(THIS%AEZ,'R(COV)',RCOV)
+!
+!     ==========================================================================
+!     ==  LOOP OVER ANGULAR MOMENTA                                           ==
+!     ==========================================================================
+      ALLOCATE(AEPHASE(LX+1,NE))
+      ALLOCATE(PAWPHASE(LX+1,NE))
+      DO L=0,LX
+        NPRO=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          NPRO=NPRO+1
+        ENDDO
+        DPHASE=0
+        DO IB=1,NC
+          IF(THIS%ATOM%LOFI(IB).NE.L) CYCLE
+          DPHASE=DPHASE+1.D0
+        ENDDO
+        ALLOCATE(DH(NPRO,NPRO))
+        ALLOCATE(DO(NPRO,NPRO))
+        ALLOCATE(PRO(NR,NPRO))
+        IPRO1=0
+        DO LN1=1,LNX
+          IF(LOX(LN1).NE.L) CYCLE
+          IPRO1=IPRO1+1
+          PRO(:,IPRO1)=THIS%PRO(:,LN1)
+          IPRO2=0
+          DO LN2=1,LNX
+            IF(LOX(LN2).NE.L) CYCLE
+            IPRO2=IPRO2+1
+            AUX(:)=THIS%AEPHI(:,LN1)*THIS%AEPHI(:,LN2)*THIS%ATOM%AEPOT*Y0 &
+     &            -THIS%PSPHI(:,LN1)*THIS%PSPHI(:,LN2)*THIS%PSPOT*Y0
+            AUX(:)=R(:)**2*AUX(:)
+            CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
+            DH(IPRO1,IPRO2)=THIS%DTKIN(LN1,LN2)+VAL
+            DO(IPRO1,IPRO2)=THIS%DOVER(LN1,LN2)
+          ENDDO
+        ENDDO
+!
+!       ========================================================================
+!       ==  LOOP OVER ENERGIES                                                ==
+!       ========================================================================
+        DO IE=1,NE
+          E=EMIN+DE*REAL(IE-1,KIND=8)
+          CALL SCHROEDINGER$DREL(GID,NR,THIS%ATOM%AEPOT,E,DREL)
+          G(:)=0.D0          
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%ATOM%AEPOT,DREL,0,G,L,E,1,PHI)
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RCOV,AEPHASE(L+1,IE))
+          IF(NPRO.GT.0) THEN
+            G(:)=0.D0          
+            CALL ATOMLIB_PAWDER(GID,NR,L,E,THIS%PSPOT,NPRO,PRO,DH,DO,G,PHI)
+          END IF
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RCOV,PAWPHASE(L+1,IE))
+          PAWPHASE(L+1,IE)=PAWPHASE(L+1,IE)+DPHASE
+        ENDDO
+        DEALLOCATE(DH)
+        DEALLOCATE(DO)
+        DEALLOCATE(PRO)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  WRITE RESULT TO FILE                                                ==
+!     ==========================================================================
+      rewind(nfil)
+      CALL CONSTANTS('EV',EV)
+      DO IE=1,NE
+        E=EMIN+DE*REAL(IE-1,KIND=8)
+        WRITE(NFIL,FMT='(20F10.5)')E/EV,AEPHASE(:,IE),PAWPHASE(:,IE)
+      ENDDO
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_MAKEISCATT(AEZ,NB,NC,LOFI,NNOFI,LNX,LOX,ISCATT)
@@ -3684,6 +3817,7 @@ goto 100
       CALL RADIAL$R(GID,NR,R)
       OPEN(100,FILE=FILE)
       DO IR=1,NR
+        IF(R(IR).GT.3.D0.AND.MAXVAL(ABS(PHI(IR,:))).GT.1.D+3) EXIT
         WRITE(100,FMT='(F15.10,2X,20(F25.15,2X))')R(IR),PHI(IR,:)
       ENDDO
       CLOSE(100)
@@ -3774,1772 +3908,6 @@ PRINT*,'QLM ',QLM*Y0*4.D0*PI
       VADD(:)=PSPOT(:)-POT(:)
       RETURN
       END
-!!$!
-!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE ATOMIC_MAKEPARTIALWAVES_SECOND(GID,NR,KEY,AEPOT,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI,PSI &
-!!$     &                    ,RBOX,LNX,LOX,RC,AEPHI,PSPHI,PRO,DT,DO &
-!!$     &                    ,POW_POT,VAL0_POT,RC_POT,PSPOT)
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: GID
-!!$      INTEGER(4),INTENT(IN) :: NR
-!!$      CHARACTER(*),INTENT(IN) :: KEY
-!!$      REAL(8)   ,INTENT(IN) :: AEPOT(NR)
-!!$      INTEGER(4),INTENT(IN) :: NB
-!!$      INTEGER(4),INTENT(IN) :: NC
-!!$      INTEGER(4),INTENT(IN) :: LOFI(NB)
-!!$      INTEGER(4),INTENT(IN) :: SOFI(NB)
-!!$      INTEGER(4),INTENT(IN) :: NNOFI(NB)
-!!$      REAL(8)   ,INTENT(IN) :: EOFI(NB)
-!!$      REAL(8)   ,INTENT(IN) :: RBOX
-!!$      REAL(8)   ,INTENT(IN) :: FOFI(NB)
-!!$      REAL(8)   ,INTENT(IN) :: PSI(NR,NB)
-!!$      INTEGER(4),INTENT(IN) :: LNX
-!!$      INTEGER(4),INTENT(IN) :: LOX(LNX)
-!!$      REAL(8)   ,INTENT(IN) :: RC(LNX)
-!!$      REAL(8)   ,INTENT(IN) :: POW_POT
-!!$      REAL(8)   ,INTENT(IN) :: VAL0_POT
-!!$      REAL(8)   ,INTENT(IN) :: RC_POT
-!!$      REAL(8)   ,INTENT(OUT):: PSPOT(NR)
-!!$      REAL(8)   ,INTENT(OUT):: AEPHI(NR,LNX)
-!!$      REAL(8)   ,INTENT(OUT):: PSPHI(NR,LNX)
-!!$      REAL(8)   ,INTENT(OUT):: PRO(NR,LNX)
-!!$      REAL(8)   ,INTENT(OUT):: DT(LNX,LNX)
-!!$      REAL(8)   ,INTENT(OUT):: DO(LNX,LNX)
-!!$      INTEGER(4),ALLOCATABLE:: NPROL(:)
-!!$      INTEGER(4),ALLOCATABLE:: NCL(:)
-!!$      REAL(8)               :: DH(LNX,LNX)
-!!$      REAL(8)               :: PSPHIPROBARE(LNX,LNX)
-!!$      REAL(8)               :: TRANSPHI(LNX,LNX)
-!!$      REAL(8)               :: TRANSPRO(LNX,LNX)
-!!$      REAL(8)               :: TRANSU(LNX,LNX)
-!!$      REAL(8)               :: TRANSUINV(LNX,LNX)
-!!$      REAL(8)               :: EOFLN(LNX)
-!!$      REAL(8)               :: UOFI(NR,NB)
-!!$      REAL(8)               :: TUOFI(NR,NB)
-!!$      REAL(8)               :: AEPSI(NR,NB)
-!!$      REAL(8)               :: NLPHI(NR,LNX)
-!!$      REAL(8)               :: TNLPHI(NR,LNX)
-!!$      REAL(8)               :: TAEPHI(NR,LNX)
-!!$      REAL(8)               :: TPSPHI(NR,LNX)
-!!$      REAL(8)               :: QN(NR,LNX)
-!!$      REAL(8)               :: TQN(NR,LNX)
-!!$      REAL(8)               :: BAREPRO(NR,LNX)
-!!$REAL(8)               :: PHITEST1(NR,LNX)
-!!$      REAL(8)   ,ALLOCATABLE:: PHITEST(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: TPHITEST(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: DH1(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: DO1(:,:)
-!!$      REAL(8)               :: AERHO(NR),PSRHO(NR)
-!!$      REAL(8)               :: G(NR),DREL(NR),G1(NR),PHI(NR)
-!!$      REAL(8)               :: E
-!!$      REAL(8)               :: RC1
-!!$      REAL(8)               :: EHOMO
-!!$      INTEGER(4)            :: LX
-!!$      INTEGER(4)            :: L,IB,LN,IR,IB1,LN1,LN2
-!!$      INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
-!!$      REAL(8)               :: PI,Y0
-!!$      REAL(8)               :: R(NR)
-!!$      REAL(8)               :: AUX(NR),AUX1(NR)
-!!$      REAL(8)               :: VAL
-!!$      REAL(8)               :: SVAR,SVAR1,SVAR2
-!!$      LOGICAL(4)            ::TREL,TSO,TDOT(LNX),TCHK
-!!$      REAL(8)   ,ALLOCATABLE:: A(:,:),AINV(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: PROJ(:)
-!!$      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.
-!!$      REAL(8)   ,PARAMETER  :: ESTEP=1.D-2
-!!$!     **************************************************************************
-!!$      PI=4.D0*ATAN(1.D0)
-!!$      Y0=1.D0/SQRT(4.D0*PI)
-!!$      LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
-!!$      CALL RADIAL$R(GID,NR,R)
-!!$!
-!!$!     ==========================================================================
-!!$!     == RESOLVE KEY                                                          ==
-!!$!     ==========================================================================
-!!$      TREL=INDEX(KEY,'NONREL').EQ.0
-!!$      IF(TREL.AND.INDEX(KEY,'REL').EQ.0) THEN
-!!$        CALL ERROR$STOP('SETUP_MAKEPARTIALWAVES')
-!!$      END IF
-!!$      TSO=INDEX(KEY,'NONSO').EQ.0
-!!$      IF(TSO.AND.INDEX(KEY,'SO').EQ.0) THEN
-!!$        CALL ERROR$STOP('SETUP_MAKEPARTIALWAVES')
-!!$      END IF
-!!$!
-!!$!     == DETERMINE HIGHEST CORE STATE FOR THIS ANGULAR MOMENTUM ================
-!!$      ALLOCATE(NCL(0:LX))
-!!$      NCL(:)=0
-!!$      DO IB=1,NC
-!!$        L=LOFI(IB)
-!!$        NCL(L)=MAX(NCL(L),IB)
-!!$      ENDDO
-!!$!
-!!$!     == DETERMINE NUMBER OF PROJECTORS FOR EACH ANGULAR MOMENTUM ==============
-!!$      ALLOCATE(NPROL(0:LX))
-!!$      NPROL(:)=0
-!!$      DO LN=1,LNX
-!!$        L=LOX(LN)
-!!$        NPROL(L)=NPROL(L)+1
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT PSEUDO POTENTIAL                                           ==
-!!$!     ==========================================================================
-!!$      CALL PSEUDIZE(GID,NR,POW_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
-!!$OPEN(UNIT=8,FILE='PSPOT.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PSPOT(IR),AEPOT(IR)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT NODELESS WAVE FUNCTIONS PSEUDO POTENTIAL                   ==
-!!$!     ==========================================================================
-!!$      DO L=0,LX
-!!$        G(:)=0.D0
-!!$        DO IB=1,NB
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          E=EOFI(IB)
-!!$          DREL(:)=0.D0
-!!$          IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-!!$          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,RBOX,DREL,G,0,AEPOT,E,UOFI(:,IB))
-!!$WRITE(6,FMT='("==",I3,4F10.5)')L,E,EOFI(IB),FOFI(IB)
-!!$          TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
-!!$          G(:)=UOFI(:,IB)
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == NORMALIZE NODELESS WAVE FUNCTIONS                                    ==
-!!$!     ==========================================================================
-!!$      AEPSI(:,:)=UOFI(:,:)
-!!$      DO IB=NB,1,-1
-!!$        L=LOFI(IB)
-!!$        DO IB1=IB-1,1,-1
-!!$          IF(LOFI(IB1).NE.L) CYCLE
-!!$          AUX(:)=R(:)**2*UOFI(:,IB1)*AEPSI(:,IB)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          AEPSI(:,IB)=AEPSI(:,IB)-UOFI(:,IB1)*VAL
-!!$        ENDDO
-!!$        AUX(:)=R(:)**2*AEPSI(:,IB)**2
-!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$        CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$        VAL=1.D0/SQRT(VAL)
-!!$        AEPSI(:,IB)=AEPSI(:,IB)*VAL
-!!$        UOFI(:,IB) =UOFI(:,IB)*VAL
-!!$        TUOFI(:,IB)=TUOFI(:,IB)*VAL
-!!$      ENDDO
-!!$OPEN(UNIT=8,FILE='UOFI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),UOFI(IR,:),AEPSI(IR,:),PSI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='PSI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PSI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == DETERMINE ENERGY OF HIGHEST OCCUPIED STATE                           ==
-!!$!     ==========================================================================
-!!$      EHOMO=-0.5D0
-!!$      DO IB=1,NB
-!!$        IF(FOFI(IB).GT.0.D0) EHOMO=MAX(EHOMO,EOFI(IB))
-!!$      ENDDO
-!!$      IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,EHOMO,DREL)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT PARTIAL WAVES                                              ==
-!!$!     ==========================================================================
-!!$      TDOT(:)=.FALSE.
-!!$      AEPHI=0.D0
-!!$      DO L=0,LX
-!!$!
-!!$!       == DETERMINE NUMBER OF VALENCE STATES AND INDEX OF LOWEST VALENCE STATE
-!!$!       == FOR SEMI-CORE STATES NV=2. OTHERWISE IT IS ZERO OR ONE
-!!$        IV=0
-!!$        NV=0
-!!$        DO IB=NC+1,NB
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          IF(FOFI(IB).NE.0.D0) NV=NV+1
-!!$          IF(IV.EQ.0) IV=IB
-!!$        ENDDO
-!!$!       == SELECT PHIDOT FUNCTIONS, I.E. TDOT
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$!         TDOT(LN)=IPRO.EQ.NV+1
-!!$        ENDDO
-!!$!
-!!$!       == DETERMINE NODELESS PARTIAL WAVES  ===================================
-!!$        E=EHOMO
-!!$        G=0.D0
-!!$        IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IF(TDOT(LN)) THEN   !PHIDOT FUNCTION Q_(N+1)
-!!$            CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,NLPHI(:,LN))
-!!$            EOFLN(LN)=E
-!!$            TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*NLPHI(:,LN)
-!!$          ELSE
-!!$            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,RBOX,DREL,G,0,AEPOT,E,NLPHI(:,LN))
-!!$            EOFLN(LN)=E
-!!$            TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*NLPHI(:,LN)
-!!$            G(:)=NLPHI(:,LN)
-!!$          END IF
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == REPORT SETTINGS ON PARTIAL WAVES                                     ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20," ENERGIES FOR PARTIAL-WAVE CONSTRUCTION")')
-!!$        WRITE(6,FMT='("RBOX=",F9.5)')RBOX
-!!$        DO LN=1,LNX
-!!$          WRITE(6,FMT='("LN=",I2," L=",I2," E=",F10.5," TDOT=",L1," RC=",F6.3)') &
-!!$     &                      LN,LOX(LN),EOFLN(LN),TDOT(LN),RC(LN)
-!!$        ENDDO
-!!$      END IF
-!!$OPEN(UNIT=8,FILE='NLPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),NLPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT QN FUNCTIONS        (H-E)|QN>=|UC>                         ==
-!!$!     ==========================================================================
-!!$      TRANSU(:,:)=0.D0
-!!$      DO L=0,LX
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          IF(TDOT(LN)) THEN
-!!$            SVAR1=1.D0
-!!$            SVAR2=0.D0
-!!$            LN2=0
-!!$            IPRO1=0
-!!$            DO LN1=1,LN-1
-!!$              IF(LOX(LN1).NE.L) CYCLE
-!!$              IPRO1=IPRO1+1
-!!$              IF(TDOT(LN1)) CYCLE
-!!$              IF(LN2.EQ.0) THEN
-!!$                LN2=LN1
-!!$                CYCLE
-!!$              END IF
-!!$              SVAR1=SVAR1*(EOFLN(LN)-EOFLN(LN2))
-!!$              SVAR2=SVAR2+1.D0/(EOFLN(LN)-EOFLN(LN2))
-!!$              SVAR=SVAR1*SVAR2
-!!$              TRANSU(LN1,LN)=TRANSU(LN1,LN)+SVAR
-!!$              LN2=LN1
-!!$            ENDDO
-!!$            TRANSU(LN,LN)=TRANSU(LN,LN)+SVAR
-!!$          ELSE
-!!$            SVAR=1.D0
-!!$            DO LN1=1,LN
-!!$              IF(LOX(LN1).NE.L) CYCLE
-!!$              IF(TDOT(LN1)) CYCLE
-!!$              TRANSU(LN1,LN)=TRANSU(LN1,LN)+SVAR
-!!$              SVAR=SVAR*(EOFLN(LN)-EOFLN(LN1))
-!!$            ENDDO
-!!$          END IF
-!!$        ENDDO
-!!$      ENDDO
-!!$      CALL LIB$INVERTR8(LNX,TRANSU,TRANSUINV)
-!!$      QN=MATMUL(NLPHI,TRANSU)
-!!$      TQN=MATMUL(TNLPHI,TRANSU)
-!!$
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20,"  TRANSU ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')TRANSU(LN1,:)
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  TRANSU^(-1) ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')TRANSUINV(LN1,:)
-!!$        ENDDO
-!!$      END IF
-!!$!
-!!$!     ==========================================================================
-!!$!     == TEST EQUATION FOR QN                                                 ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST QN EQ.  ")')
-!!$        DO L=0,LX
-!!$          IPRO=0
-!!$          DO LN=1,LNX
-!!$            IF(LOX(LN).NE.L) CYCLE
-!!$            IPRO=IPRO+1
-!!$            PRO(:,LN)=TQN(:,LN)+(AEPOT*Y0-EOFLN(LN))*QN(:,LN)
-!!$            IF(TDOT(LN)) THEN
-!!$              IF(IPRO.EQ.0) THEN
-!!$                IF(NCL(L).NE.0) PRO(:,LN)=PRO(:,LN)-UOFI(:,NCL(L))
-!!$                WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|UC>     =",F20.15)') &
-!!$     &                       LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$              ELSE
-!!$                PRO(:,LN)=PRO(:,LN)-QN(:,LN-1)
-!!$                WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|Q_{N-1}>=",F20.15)') &
-!!$     &                       LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$              END IF
-!!$            ELSE
-!!$              IF(NCL(L).NE.0) PRO(:,LN)=PRO(:,LN)-UOFI(:,NCL(L))
-!!$              WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|UC>     =",F20.15)') &
-!!$     &                     LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$            END IF
-!!$          ENDDO
-!!$        ENDDO
-!!$      END IF
-!!$!
-!!$OPEN(UNIT=8,FILE='QN.DAT')
-!!$DO IR=1,NR
-!!$  IF(R(IR).GT.10.D0) EXIT
-!!$  WRITE(8,'(30F20.5)')R(IR),MAX(-10.D0,MIN(10.D0,QN(IR,:))),MAX(-10.D0,MIN(10.D0,NLPHI(IR,:)))
-!!$ENDDO
-!!$CLOSE(8)
-!!$
-!!$OPEN(UNIT=8,FILE='BAREPRO-1.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PRO(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CORE-ORTHOGONALIZE TO OBTAIN NODAL PARTIAL WAVES                     ==
-!!$!     == NOTE THAT THESE ARE NOT EIGENSTATES AS THEY ARE ONLY ORTHOGONALIZED  ==
-!!$!     == TO THE CORE STATES                                                   ==
-!!$!     ==========================================================================
-!!$      AEPHI(:,:)=QN(:,:)    !NLPHI(:,:)
-!!$      TAEPHI(:,:)=TQN(:,:)  !TNLPHI(:,:)
-!!$      DO L=0,LX
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          DO IB=NC,1,-1
-!!$            IF(LOFI(IB).NE.L) CYCLE
-!!$            AUX(:)=R(:)**2*UOFI(:,IB)*AEPHI(:,LN)
-!!$            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR1)
-!!$            AUX(:)=R(:)**2*UOFI(:,IB)**2
-!!$            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR2)
-!!$            VAL=SVAR1/SVAR2
-!!$            AEPHI(:,LN)=AEPHI(:,LN)-UOFI(:,IB)*VAL
-!!$            TAEPHI(:,LN)=TAEPHI(:,LN)-TUOFI(:,IB)*VAL
-!!$          ENDDO
-!!$        ENDDO
-!!$      ENDDO
-!!$OPEN(UNIT=8,FILE='AEPHI-1.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),AEPHI(IR,:),QN(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == TEST EQUATION FOR ALL-ELECTRON PARTIAL WAVES AEPHI                   ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST AEPHI EQ.  ")')
-!!$        DO LN=1,LNX
-!!$          PRO(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
-!!$          IF(TDOT(LN)) THEN
-!!$            DO LN1=LN-1,1,-1
-!!$              IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$              PRO(:,LN)=PRO(:,LN)-AEPHI(:,LN1) 
-!!$              EXIT
-!!$            ENDDO
-!!$            WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|AEPHI_N>-|AEPHI_N-1>=",F20.15)') &
-!!$      &          LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$          ELSE
-!!$            WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|AEPHI_N>            =",F20.15)') &
-!!$      &          LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$          END IF
-!!$        ENDDO
-!!$      END IF
-!!$
-!!$OPEN(UNIT=8,FILE='BAREPRO-2.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PRO(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT PSEUDO PARTIAL WAVES                                       ==
-!!$!     ==========================================================================
-!!$      PSPHI=QN
-!!$      TPSPHI=TQN
-!!$      DO L=0,LX
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          RC1=RC(LN)
-!!$        ENDDO
-!!$        NPRO=NPROL(L)
-!!$        IF(NPRO.EQ.0) CYCLE
-!!$        ALLOCATE(PHITEST(NR,NPRO))
-!!$        ALLOCATE(TPHITEST(NR,NPRO))
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          PHITEST(:,IPRO)=QN(:,LN)
-!!$          TPHITEST(:,IPRO)=TQN(:,LN)
-!!$          IF(TDOT(LN).AND.IPRO.GT.1) THEN
-!!$            PHITEST(:,IPRO) =PHITEST(:,IPRO-1) +ESTEP*PHITEST(:,IPRO)
-!!$            TPHITEST(:,IPRO)=TPHITEST(:,IPRO-1)+ESTEP*TPHITEST(:,IPRO)
-!!$          END IF                 
-!!$        ENDDO
-!!$        CALL ATOMIC_MAKEPSPHI(GID,NR,RC1,L,NPRO,PHITEST,TPHITEST)
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          IF(TDOT(LN).AND.IPRO.GT.1) THEN
-!!$            PHITEST(:,IPRO) =(PHITEST(:,IPRO)-PHITEST(:,IPRO-1))/ESTEP
-!!$            TPHITEST(:,IPRO)=(TPHITEST(:,IPRO)-TPHITEST(:,IPRO-1))/ESTEP
-!!$          END IF
-!!$          PSPHI(:,LN)=PHITEST(:,IPRO)
-!!$          TPSPHI(:,LN)=TPHITEST(:,IPRO)
-!!$        ENDDO
-!!$        DEALLOCATE(PHITEST)
-!!$        DEALLOCATE(TPHITEST)
-!!$      ENDDO
-!!$
-!!$OPEN(UNIT=8,FILE='PSPHI-BARE.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),QN(IR,:),PSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='TPSPHI-BARE.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),TQN(IR,:),TPSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == BACK TRANSFORM                                                       ==
-!!$!     ==========================================================================
-!!$      QN=MATMUL(QN,TRANSUINV)
-!!$      TQN=MATMUL(TQN,TRANSUINV)
-!!$      PSPHI=MATMUL(PSPHI,TRANSUINV)
-!!$      TPSPHI=MATMUL(TPSPHI,TRANSUINV)
-!!$      AEPHI=MATMUL(AEPHI,TRANSUINV)
-!!$      TAEPHI=MATMUL(TAEPHI,TRANSUINV)
-!!$!
-!!$!     == TEST IF BACK TRANSFORM WAS SUCCESSFUL ================================
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST BACK TRANSFORM  ")')
-!!$        DO LN=1,LNX
-!!$          WRITE(6,FMT='("LN=",I2," L=",I2," DIFF. NDLSS PHI",F10.5 &
-!!$     &                                 ," DIFF. KIN.OP NDLSS. PHI ",F10.5)') &
-!!$     &          LN,LOX(LN),MAXVAL(ABS(QN(:,LN)-NLPHI(:,LN))) &
-!!$     &                    ,MAXVAL(ABS(TQN(:,LN)-TNLPHI(:,LN)))
-!!$        ENDDO
-!!$      END IF
-!!$ 
-!!$OPEN(UNIT=8,FILE='PSPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='AEPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),AEPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='TPSPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),TNLPHI(IR,:),TPSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
-!!$!     ==========================================================================
-!!$      DO LN=1,LNX
-!!$!       == PRO(:,LN)=TNLPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*NLPHI(:,LN) ==========
-!!$        BAREPRO(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
-!!$        TCHK=.FALSE.
-!!$        DO LN1=LN-1,1,-1
-!!$          IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$          IF(TDOT(LN1)) CYCLE
-!!$!         ==  PRO(:,LN)=PRO(:,LN)-NLPHI(:,LN1) =================================
-!!$          BAREPRO(:,LN)=BAREPRO(:,LN)-PSPHI(:,LN1) 
-!!$          TCHK=.TRUE.
-!!$          EXIT
-!!$        ENDDO
-!!$        IF(.NOT.TCHK) THEN
-!!$          DO IB=NC,1,-1
-!!$            IF(LOFI(IB).NE.LOX(LN)) CYCLE
-!!$!           == PRO(:,LN)=PRO(:,LN)-UOFI(:,IB) ==================================
-!!$            EXIT
-!!$          ENDDO
-!!$        END IF
-!!$      ENDDO
-!!$
-!!$
-!!$OPEN(UNIT=8,FILE='BAREPRO.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),BAREPRO(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CHECK PAW EQUATION FOR PSEUDO PARTIALWAVES                           ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        ALLOCATE(PHITEST(NR,LNX))
-!!$        ALLOCATE(TPHITEST(NR,LNX))
-!!$        DO LN=1,LNX
-!!$          TPHITEST(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN) &
-!!$     &                  -BAREPRO(:,LN)
-!!$          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
-!!$          DO LN1=LN-1,1,-1
-!!$            IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$            IF(TDOT(LN1)) CYCLE
-!!$            PHITEST(:,LN)=PHITEST(:,LN)-AEPHI(:,LN1) 
-!!$            TPHITEST(:,LN)=TPHITEST(:,LN)-PSPHI(:,LN1) 
-!!$            EXIT
-!!$          ENDDO
-!!$        ENDDO
-!!$!
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST RAW PAW EQUATION  ")')
-!!$        DO LN=1,LNX
-!!$          WRITE(6,FMT='("LN=",I2," L=",I2," RAW PAW EQ.",F10.5 &
-!!$     &                                 ," SCHR. EQ.",F10.5)') &
-!!$     &          LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))),MAXVAL(ABS(PHITEST(:,LN)))
-!!$        ENDDO
-!!$OPEN(UNIT=8,FILE='AUX.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),TPHITEST(IR,:),PHITEST(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$STOP
-!!$        DEALLOCATE(PHITEST)
-!!$        DEALLOCATE(TPHITEST)
-!!$      ENDIF
-!!$
-!!$!
-!!$!     ==========================================================================
-!!$!     == CUT OFF THE TAILS OF THE PROJECTOR FUNCTIONS                         ==
-!!$!     ==========================================================================
-!!$      PRO(:,:)=BAREPRO(:,:)
-!!$      DO LN=1,LNX
-!!$        DO IR=1,NR
-!!$          IF(R(IR).LT.RC(LN)) CYCLE
-!!$          PRO(IR:,LN)=0.D0
-!!$          EXIT
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == ENFORCE BIORTHOGONALIZATION                                          ==
-!!$!     ==========================================================================
-!!$      CALL BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,PRO,TRANSPHI,TRANSPRO)
-!!$        WRITE(6,FMT='(82("="),T20,"  TRANSPRO ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F20.5)')TRANSPRO(LN1,:)
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  TRANSPHI ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F20.5)')TRANSPHI(LN1,:)
-!!$        ENDDO
-!!$
-!!$!     ==  DETERMINE <PSPHI|PROBARE> ============================================
-!!$      PSPHIPROBARE(:,:)=0.D0
-!!$      DO LN1=1,LNX
-!!$        DO LN2=1,LNX
-!!$          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-!!$          AUX(:)=R(:)**2*PSPHI(:,LN1)*PRO(:,LN2)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          PSPHIPROBARE(LN1,LN2)=VAL
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$      DO L=0,LX
-!!$        NPRO=NPROL(L)
-!!$        IF(NPRO.EQ.0) CYCLE
-!!$        ALLOCATE(A(NPRO,NPRO))
-!!$        ALLOCATE(AINV(NPRO,NPRO))
-!!$        ALLOCATE(PRO1(NR,NPRO))
-!!$        IPRO1=0
-!!$        DO LN1=1,LNX
-!!$          IF(LOX(LN1).NE.L) CYCLE
-!!$          IPRO1=IPRO1+1
-!!$          PRO1(:,IPRO1)=PRO(:,LN1)
-!!$          IPRO2=0
-!!$          DO LN2=1,LNX
-!!$            IF(LOX(LN2).NE.L) CYCLE
-!!$            IPRO2=IPRO2+1
-!!$            A(IPRO1,IPRO2)=PSPHIPROBARE(LN1,LN2)
-!!$          ENDDO
-!!$        ENDDO
-!!$        CALL LIB$INVERTR8(NPRO,A,AINV)
-!!$DO IPRO1=1,NPRO
-!!$  WRITE(*,FMT='("A",20F15.10)')A(IPRO1,:)
-!!$ENDDO
-!!$DO IPRO1=1,NPRO
-!!$  WRITE(*,FMT='("AINV",20E15.3)')AINV(IPRO1,:)
-!!$ENDDO
-!!$A=MATMUL(AINV,A)
-!!$DO IPRO1=1,NPRO
-!!$  WRITE(*,FMT='("AINV*A",20F15.10)')A(IPRO1,:)
-!!$ENDDO
-!!$
-!!$        A=MATMUL(A,AINV)
-!!$        PRO1=MATMUL(PRO1,AINV)
-!!$        DEALLOCATE(A)
-!!$        DEALLOCATE(AINV)
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          PRO(:,LN)=PRO1(:,IPRO)
-!!$        ENDDO
-!!$        DEALLOCATE(PRO1)
-!!$      ENDDO
-!!$OPEN(UNIT=8,FILE='PRO.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PRO(IR,:) !*R(IR)**2
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='AEPSPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),AEPHI(IR,:),PSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='AEPSDIFF.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),(AEPHI(IR,:)-PSPHI(IR,:))*R(IR)**2
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CHECK BIORTHOGONALIZATION                                            ==
-!!$!     ==========================================================================
-!!$      DO LN1=1,LNX
-!!$        DO LN2=1,LNX
-!!$          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-!!$          AUX(:)=R(:)**2*PSPHI(:,LN1)*PRO(:,LN2)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          IF(LN1.EQ.LN2)VAL=VAL-1.D0
-!!$          IF(ABS(VAL).GT.1.D-5) THEN
-!!$            CALL ERROR$MSG('BIORTHOGONALIZATION FAILED')
-!!$            CALL ERROR$I4VAL('L',L)
-!!$            CALL ERROR$I4VAL('LN1',LN1)
-!!$            CALL ERROR$I4VAL('LN2',LN2)
-!!$            CALL ERROR$R8VAL('DEVIATION',VAL)
-!!$            CALL ERROR$STOP('XXXX')
-!!$          END IF
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == DT,DO                                                                ==
-!!$!     ==========================================================================
-!!$      DT=0.D0
-!!$      DO=0.D0
-!!$      DH=0.D0
-!!$      DO LN1=1,LNX
-!!$        DO LN2=1,LNX
-!!$          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-!!$          AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          DT(LN1,LN2)=VAL
-!!$          AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          DO(LN1,LN2)=VAL
-!!$          AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPOT(:)*Y0*AEPHI(:,LN2) &
-!!$      &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          DH(LN1,LN2)=DT(LN1,LN2)+VAL
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20,"  DTKIN  ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')DT(LN1,:)
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  DOVERLAP  ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')DO(LN1,:)
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  DOHAMILTONIAN ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')DH(LN1,:)
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  <PSPHI|PRO-BARE> ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')PSPHIPROBARE(LN1,:)
-!!$        ENDDO
-!!$!
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST <PSPHI|PRO-BARE>+DH-DO-DO_N-1=0 ")')
-!!$        ALLOCATE(A(LNX,LNX))        
-!!$        A=PSPHIPROBARE+DH
-!!$        DO LN=1,LNX
-!!$          A(:,LN)=A(:,LN)-DO(:,LN)*EOFLN(LN)
-!!$        ENDDO
-!!$        DO L=0,LX
-!!$          LN1=0
-!!$          DO LN=1,LNX
-!!$            IF(LOX(LN).NE.L) CYCLE
-!!$            IF(LN1.NE.0)A(:,LN)=A(:,LN)-DO(:,LN1)
-!!$            LN1=LN
-!!$          ENDDO
-!!$        ENDDO
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')A(LN1,:)
-!!$        ENDDO
-!!$OPEN(UNIT=8,FILE='AUX1.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),(SUM(PRO(IR,:)*A(:,LN)),LN=1,LNX)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!        DEALLOCATE(A)
-!!$      END IF
-!!$
-!!$!     == SYMMETRIZE
-!!$      DT=0.5D0*(DT+TRANSPOSE(DT))
-!!$      DO=0.5D0*(DO+TRANSPOSE(DO))
-!!$      DH=0.5D0*(DH+TRANSPOSE(DH))
-!!$!
-!!$!     ==========================================================================
-!!$!     == CHECK2 PAW EQUATION FOR PSEUDO PARTIALWAVES                          ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        ALLOCATE(TPHITEST(NR,LNX))    ! HOLDS TEST FOR PSEUDO
-!!$        ALLOCATE(PHITEST(NR,LNX))     ! HOLDS TEST FOR ALL-ELECTRON 
-!!$        DO LN=1,LNX
-!!$          TPHITEST(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
-!!$! TPHITEST(:,LN)=TPHITEST(:,LN)-BAREPRO(:,LN)
-!!$          PHITEST1(:,LN)=0.D0          
-!!$          DO LN1=1,LNX
-!!$            IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$             TPHITEST(:,LN)=TPHITEST(:,LN)+PRO(:,LN1)*(DH(LN1,LN)-EOFLN(LN)*DO(LN1,LN))
-!!$             PHITEST1(:,LN)=PHITEST1(:,LN)+PRO(:,LN1)*(DH(LN1,LN)-EOFLN(LN)*DO(LN1,LN))
-!!$          ENDDO
-!!$!
-!!$          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
-!!$          DO LN1=LN-1,1,-1
-!!$            IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$            IF(TDOT(LN1)) CYCLE
-!!$!           ==  PRO(:,LN)=PRO(:,LN)-NLPHI(:,LN1) =================================
-!!$            PHITEST(:,LN)=PHITEST(:,LN)-AEPHI(:,LN1) 
-!!$            TPHITEST(:,LN)=TPHITEST(:,LN)-PSPHI(:,LN1) 
-!!$            DO LN2=1,LNX
-!!$              IF(LOX(LN2).NE.LOX(LN)) CYCLE
-!!$              TPHITEST(:,LN)=TPHITEST(:,LN)-PRO(:,LN2)*DO(LN2,LN1)
-!!$              PHITEST1(:,LN)=PHITEST1(:,LN)-PRO(:,LN2)*DO(LN2,LN1)
-!!$            ENDDO
-!!$            EXIT
-!!$          ENDDO
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST PAW EQUATION  ")')
-!!$        DO LN=1,LNX
-!!$          WRITE(6,FMT='("LN=",I2," L=",I2," PAW EQ.",F10.5 &
-!!$     &                                 ," SCHR. EQ.",F10.5)') &
-!!$     &          LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))),MAXVAL(ABS(PHITEST(:,LN)))
-!!$        ENDDO
-!!$OPEN(UNIT=8,FILE='AUX.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PHITEST1(IR,:),-BAREPRO(IR,:),(SUM(PRO(IR,:)*A(:,LN)),LN=1,LNX)
-!!$ENDDO
-!!$CLOSE(8)
-!!$STOP
-!!$        DEALLOCATE(PHITEST)
-!!$        DEALLOCATE(TPHITEST)
-!!$      END IF
-!!$!
-!!$!     ==========================================================================
-!!$!     == UNSCREENING                                                          ==
-!!$!     ==========================================================================
-!!$      AERHO(:)=0.D0
-!!$      PSRHO(:)=0.D0
-!!$      DO L=0,LX
-!!$        NPRO=NPROL(L)
-!!$        ALLOCATE(DH1(NPRO,NPRO))
-!!$        ALLOCATE(DO1(NPRO,NPRO))
-!!$        ALLOCATE(PRO1(NR,NPRO))
-!!$        ALLOCATE(PROJ(NPRO))
-!!$        IPRO1=0
-!!$        DO LN1=1,LNX
-!!$          IF(LOX(LN1).NE.L) CYCLE
-!!$          IPRO1=IPRO1+1
-!!$          PRO1(:,IPRO1)=PRO(:,LN1)
-!!$          IPRO2=0
-!!$          DO LN2=1,LNX
-!!$            IF(LOX(LN2).NE.L) CYCLE
-!!$            IPRO2=IPRO2+1
-!!$            DH1(IPRO1,IPRO2)=DH(LN1,LN2)
-!!$            DO1(IPRO1,IPRO2)=DO(LN1,LN2)
-!!$          ENDDO
-!!$        ENDDO
-!!$        G(:)=0.D0
-!!$        DO IB=NC+1,NB
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          E=EOFI(IB)
-!!$          G(:)=0.D0
-!!$          CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI)
-!!$
-!!$          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,AUX)
-!!$          DO IR=1,NR
-!!$            IF(R(IR).LT.RBOX) CYCLE
-!!$            PHI(IR:)=0.D0
-!!$          ENDDO
-!!$PRINT*,'RBOX ',RBOX
-!!$OPEN(UNIT=8,FILE='TEST.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PHI(IR),AUX(IR)
-!!$ENDDO
-!!$CLOSE(8)
-!!$STOP
-!!$          DO IPRO=1,NPRO
-!!$            AUX(:)=R(:)**2*PHI(:)*PRO1(:,IPRO)
-!!$            CALL RADIAL$INTEGRAL(GID,NR,AUX,PROJ(NPRO))
-!!$          ENDDO
-!!$PRINT*,'PROJ ',L,PROJ
-!!$          AUX(:)=R(:)**2*PHI(:)**2
-!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
-!!$PRINT*,'VAL1 ',L,VAL
-!!$          DO IPRO1=1,NPRO
-!!$            DO IPRO2=1,NPRO
-!!$              VAL=VAL+PROJ(IPRO1)*DO1(IPRO1,IPRO2)*PROJ(IPRO2)
-!!$            ENDDO
-!!$          ENDDO
-!!$PRINT*,'VAL2 ',L,VAL
-!!$          PHI(:)=PHI(:)/SQRT(VAL)
-!!$          PSRHO(:)=PSRHO(:)+FOFI(IB)*PHI(:)**2
-!!$          AERHO(:)=AERHO(:)+FOFI(IB)*AEPSI(:,IB)**2
-!!$        ENDDO
-!!$        DEALLOCATE(DH1)
-!!$        DEALLOCATE(DO1)
-!!$        DEALLOCATE(PRO1)
-!!$        DEALLOCATE(PROJ)
-!!$      ENDDO      
-!!$OPEN(UNIT=8,FILE='RHO.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),AERHO(IR),PSRHO(IR)
-!!$ENDDO
-!!$CLOSE(8)
-!!$STOP
-!!$
-!!$!      CALL ATOMLIB$BOXVOFRHO(GID,NR,RAD,AEZ,RHO,POT,EH,EXC)
-!!$
-!!$      RETURN
-!!$      END
-!!$!
-!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE ATOMIC_MAKEPARTIALWAVES_FIRST(GID,NR,KEY,AEPOT,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI,PSI &
-!!$     &                    ,RBOX,LNX,LOX,RC,AEPHI,PSPHI,PRO,DT,DO &
-!!$     &                    ,POW_POT,VAL0_POT,RC_POT,PSPOT)
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: GID
-!!$      INTEGER(4),INTENT(IN) :: NR
-!!$      CHARACTER(*),INTENT(IN) :: KEY
-!!$      REAL(8)   ,INTENT(IN) :: AEPOT(NR)
-!!$      INTEGER(4),INTENT(IN) :: NB
-!!$      INTEGER(4),INTENT(IN) :: NC
-!!$      INTEGER(4),INTENT(IN) :: LOFI(NB)
-!!$      INTEGER(4),INTENT(IN) :: SOFI(NB)
-!!$      INTEGER(4),INTENT(IN) :: NNOFI(NB)
-!!$      REAL(8)   ,INTENT(IN) :: EOFI(NB)
-!!$      REAL(8)   ,INTENT(IN) :: RBOX
-!!$      REAL(8)   ,INTENT(IN) :: FOFI(NB)
-!!$      REAL(8)   ,INTENT(IN) :: PSI(NR,NB)
-!!$      INTEGER(4),INTENT(IN) :: LNX
-!!$      INTEGER(4),INTENT(IN) :: LOX(LNX)
-!!$      REAL(8)   ,INTENT(IN) :: RC(LNX)
-!!$      REAL(8)   ,INTENT(IN) :: POW_POT
-!!$      REAL(8)   ,INTENT(IN) :: VAL0_POT
-!!$      REAL(8)   ,INTENT(IN) :: RC_POT
-!!$      REAL(8)   ,INTENT(OUT):: PSPOT(NR)
-!!$      REAL(8)   ,INTENT(OUT):: AEPHI(NR,LNX)
-!!$      REAL(8)   ,INTENT(OUT):: PSPHI(NR,LNX)
-!!$      REAL(8)   ,INTENT(OUT):: PRO(NR,LNX)
-!!$      REAL(8)   ,INTENT(OUT):: DT(LNX,LNX)
-!!$      REAL(8)   ,INTENT(OUT):: DO(LNX,LNX)
-!!$      REAL(8)               :: DH(LNX,LNX)
-!!$      REAL(8)               :: PSPHIPROBARE(LNX,LNX)
-!!$      REAL(8)               :: TRANSPHI(LNX,LNX)
-!!$      REAL(8)               :: TRANSPRO(LNX,LNX)
-!!$      REAL(8)               :: EOFLN(LNX)
-!!$      REAL(8)               :: UOFI(NR,NB)
-!!$      REAL(8)               :: TUOFI(NR,NB)
-!!$      REAL(8)               :: AEPSI(NR,NB)
-!!$      REAL(8)               :: NLPHI(NR,LNX)
-!!$      REAL(8)               :: TNLPHI(NR,LNX)
-!!$      REAL(8)               :: TAEPHI(NR,LNX)
-!!$      REAL(8)               :: TPSPHI(NR,LNX)
-!!$      REAL(8)               :: QN(NR,LNX)
-!!$      REAL(8)               :: TQN(NR,LNX)
-!!$      REAL(8)               :: BAREPRO(NR,LNX)
-!!$REAL(8)               :: PHITEST1(NR,LNX)
-!!$      REAL(8)   ,ALLOCATABLE:: PHITEST(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: TPHITEST(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: DH1(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: DO1(:,:)
-!!$      REAL(8)               :: AERHO(NR),PSRHO(NR)
-!!$      REAL(8)               :: G(NR),DREL(NR),G1(NR),PHI(NR)
-!!$      REAL(8)               :: E
-!!$      REAL(8)               :: RC1
-!!$      REAL(8)               :: EHOMO
-!!$      INTEGER(4)            :: LX
-!!$      INTEGER(4)            :: L,IB,LN,IR,IB1,LN1,LN2
-!!$      INTEGER(4)            :: NC1,NV,NPRO,IV,IPRO,IPRO1,IPRO2
-!!$      REAL(8)               :: PI,Y0
-!!$      REAL(8)               :: R(NR)
-!!$      REAL(8)               :: AUX(NR),AUX1(NR)
-!!$      REAL(8)               :: VAL
-!!$      REAL(8)               :: SVAR,SVAR1,SVAR2
-!!$      LOGICAL(4)            ::TREL,TSO,TDOT(LNX),TCHK
-!!$      REAL(8)   ,ALLOCATABLE:: A(:,:),AINV(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: PROJ(:)
-!!$      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.
-!!$!     **************************************************************************
-!!$      PI=4.D0*ATAN(1.D0)
-!!$      Y0=1.D0/SQRT(4.D0*PI)
-!!$      LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
-!!$      CALL RADIAL$R(GID,NR,R)
-!!$!
-!!$!     ==========================================================================
-!!$!     == RESOLVE KEY                                                          ==
-!!$!     ==========================================================================
-!!$      TREL=INDEX(KEY,'NONREL').EQ.0
-!!$      IF(TREL.AND.INDEX(KEY,'REL').EQ.0) THEN
-!!$        CALL ERROR$STOP('SETUP_MAKEPARTIALWAVES')
-!!$      END IF
-!!$      TSO=INDEX(KEY,'NONSO').EQ.0
-!!$      IF(TSO.AND.INDEX(KEY,'SO').EQ.0) THEN
-!!$        CALL ERROR$STOP('SETUP_MAKEPARTIALWAVES')
-!!$      END IF
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT PSEUDO POTENTIAL                                           ==
-!!$!     ==========================================================================
-!!$      CALL PSEUDIZE(GID,NR,POW_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
-!!$OPEN(UNIT=8,FILE='PSPOT.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PSPOT(IR),AEPOT(IR)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT NODELESS WAVE FUNCTIONS PSEUDO POTENTIAL                   ==
-!!$!     ==========================================================================
-!!$      DO L=0,LX
-!!$        G(:)=0.D0
-!!$        DO IB=1,NB
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          E=EOFI(IB)
-!!$          DREL(:)=0.D0
-!!$          IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-!!$          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,RBOX,DREL,G,0,AEPOT,E,UOFI(:,IB))
-!!$WRITE(6,FMT='("==",I3,4F10.5)')L,E,EOFI(IB),FOFI(IB)
-!!$          TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
-!!$          G(:)=UOFI(:,IB)
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == NORMALIZE NODELESS WAVE FUNCTIONS                                    ==
-!!$!     ==========================================================================
-!!$      AEPSI(:,:)=UOFI(:,:)
-!!$      DO IB=NB,1,-1
-!!$        L=LOFI(IB)
-!!$        DO IB1=IB-1,1,-1
-!!$          IF(LOFI(IB1).NE.L) CYCLE
-!!$          AUX(:)=R(:)**2*UOFI(:,IB1)*AEPSI(:,IB)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          AEPSI(:,IB)=AEPSI(:,IB)-UOFI(:,IB1)*VAL
-!!$        ENDDO
-!!$        AUX(:)=R(:)**2*AEPSI(:,IB)**2
-!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$        CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$        VAL=1.D0/SQRT(VAL)
-!!$        AEPSI(:,IB)=AEPSI(:,IB)*VAL
-!!$        UOFI(:,IB) =UOFI(:,IB)*VAL
-!!$        TUOFI(:,IB)=TUOFI(:,IB)*VAL
-!!$      ENDDO
-!!$OPEN(UNIT=8,FILE='UOFI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),UOFI(IR,:),AEPSI(IR,:),PSI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='PSI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PSI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == DETERMINE ENERGY OF HIGHEST OCCUPIED STATE                           ==
-!!$!     ==========================================================================
-!!$      EHOMO=-0.5D0
-!!$      DO IB=1,NB
-!!$        IF(FOFI(IB).GT.0.D0) EHOMO=MAX(EHOMO,EOFI(IB))
-!!$      ENDDO
-!!$     IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,EHOMO,DREL)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT PARTIAL WAVES                                              ==
-!!$!     ==========================================================================
-!!$      TDOT(:)=.FALSE.
-!!$      AEPHI=0.D0
-!!$      DO L=0,LX
-!!$!
-!!$!       == DETERMINE HIGHEST CORE STATE FOR THIS ANGULAR MOMENTUM ==============
-!!$        NC1=0
-!!$        DO IB=NC,1,-1
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          NC1=IB
-!!$          EXIT
-!!$        ENDDO
-!!$!       == DETERMINE NUMBER OF VALENCE STATES AND INDEX OF LOWEST VALENCE STATE
-!!$!       == FOR SEMI-CORE STATES NV=2. OTHERWISE IT IS ZERO OR ONE
-!!$        IV=0
-!!$        NV=0
-!!$        DO IB=NC+1,NB
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          IF(FOFI(IB).NE.0.D0) NV=NV+1
-!!$          IF(IV.EQ.0) IV=IB
-!!$        ENDDO
-!!$!       == SELECT PHIDOT FUNCTIONS, I.E. TDOT
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          TDOT(LN)=IPRO.EQ.NV+1
-!!$        ENDDO
-!!$TDOT(2)=.FALSE.
-!!$TDOT(3)=.TRUE.
-!!$TDOT=.FALSE.
-!!$!
-!!$!       == DETERMINE NODELESS PARTIAL WAVES  ===================================
-!!$        E=EHOMO
-!!$        G=0.D0
-!!$        IF(NC1.NE.0)G(:)=UOFI(:,NC1)
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IF(TDOT(LN)) THEN   !PHIDOT FUNCTION Q_(N+1)
-!!$            CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,NLPHI(:,LN))
-!!$            EOFLN(LN)=E
-!!$            TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*NLPHI(:,LN)
-!!$          ELSE
-!!$            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,RBOX,DREL,G,0,AEPOT,E,NLPHI(:,LN))
-!!$            EOFLN(LN)=E
-!!$            TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*NLPHI(:,LN)
-!!$            G(:)=NLPHI(:,LN)
-!!$          END IF
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == REPORT SETTINGS ON PARTIAL WAVES                                     ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20," ENERGIES FOR PARTIAL-WAVE CONSTRUCTION")')
-!!$        WRITE(6,FMT='("RBOX=",F9.5)')RBOX
-!!$        DO LN=1,LNX
-!!$          WRITE(6,FMT='("LN=",I2," L=",I2," E=",F10.5," TDOT=",L1," RC=",F6.3)') &
-!!$     &                      LN,LOX(LN),EOFLN(LN),TDOT(LN),RC(LN)
-!!$        ENDDO
-!!$      END IF
-!!$OPEN(UNIT=8,FILE='NLPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),NLPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT QN FUNCTIONS        (H-E)|QN>=|UC>                         ==
-!!$!     ==========================================================================
-!!$      DO L=0,LX
-!!$!
-!!$!       == DETERMINE HIGHEST CORE STATE FOR THIS ANGULAR MOMENTUM ==============
-!!$        NC1=0
-!!$        DO IB=NC,1,-1
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          NC1=IB
-!!$          EXIT
-!!$        ENDDO
-!!$!
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          IF(TDOT(LN)) THEN
-!!$            QN(:,LN)=0.D0
-!!$            TQN(:,LN)=0.D0
-!!$            SVAR1=1.D0
-!!$            SVAR2=0.D0
-!!$            LN2=0
-!!$!
-!!$            IPRO1=0
-!!$            DO LN1=1,LN-1
-!!$              IF(LOX(LN1).NE.L) CYCLE
-!!$              IPRO1=IPRO1+1
-!!$              IF(TDOT(LN1)) CYCLE
-!!$              IF(LN2.EQ.0) THEN
-!!$                LN2=LN1
-!!$                CYCLE
-!!$              END IF
-!!$              SVAR1=SVAR1*(EOFLN(LN)-EOFLN(LN2))
-!!$              SVAR2=SVAR2+1.D0/(EOFLN(LN)-EOFLN(LN2))
-!!$              SVAR=SVAR1*SVAR2
-!!$              QN(:,LN) =QN(:,LN) +NLPHI(:,LN1)*SVAR
-!!$              TQN(:,LN)=TQN(:,LN)+TNLPHI(:,LN1)*SVAR
-!!$              LN2=LN1
-!!$            ENDDO
-!!$            QN(:,LN) = QN(:,LN)+ NLPHI(:,LN)*SVAR1
-!!$            TQN(:,LN)=TQN(:,LN)+TNLPHI(:,LN)*SVAR1
-!!$          ELSE
-!!$            QN(:,LN)=0.D0
-!!$            TQN(:,LN)=0.D0
-!!$            SVAR=1.D0
-!!$            DO LN1=1,LN
-!!$              IF(LOX(LN1).NE.L) CYCLE
-!!$              IF(TDOT(LN1)) CYCLE
-!!$              QN(:,LN) =QN(:,LN) + NLPHI(:,LN1)*SVAR
-!!$              TQN(:,LN)=TQN(:,LN)+TNLPHI(:,LN1)*SVAR
-!!$              SVAR=SVAR*(EOFLN(LN)-EOFLN(LN1))
-!!$            ENDDO
-!!$          END IF
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == TEST EQUATION FOR QN                                                 ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST QN EQ.  ")')
-!!$        DO L=0,LX
-!!$          NC1=0
-!!$          DO IB=NC,1,-1
-!!$            IF(LOFI(IB).NE.L) CYCLE
-!!$            NC1=IB
-!!$            EXIT
-!!$          ENDDO
-!!$          IPRO=0
-!!$          DO LN=1,LNX
-!!$            IF(LOX(LN).NE.L) CYCLE
-!!$            IPRO=IPRO+1
-!!$            PRO(:,LN)=TQN(:,LN)+(AEPOT*Y0-EOFLN(LN))*QN(:,LN)
-!!$            IF(TDOT(LN)) THEN
-!!$              IF(IPRO.EQ.0) THEN
-!!$                IF(NC1.NE.0) PRO(:,LN)=PRO(:,LN)-UOFI(:,NC1)
-!!$                WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|UC>     =",F20.15)') &
-!!$     &                       LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$              ELSE
-!!$                PRO(:,LN)=PRO(:,LN)-QN(:,LN-1)
-!!$                WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|Q_{N-1}>=",F20.15)') &
-!!$     &                       LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$              END IF
-!!$            ELSE
-!!$              IF(NC1.NE.0) PRO(:,LN)=PRO(:,LN)-UOFI(:,NC1)
-!!$              WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|UC>     =",F20.15)') &
-!!$     &                     LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$            END IF
-!!$          ENDDO
-!!$        ENDDO
-!!$      END IF
-!!$!
-!!$OPEN(UNIT=8,FILE='QN.DAT')
-!!$DO IR=1,NR
-!!$  IF(R(IR).GT.10.D0) EXIT
-!!$  WRITE(8,'(30F20.5)')R(IR),MAX(-10.D0,MIN(10.D0,QN(IR,:))),MAX(-10.D0,MIN(10.D0,NLPHI(IR,:)))
-!!$ENDDO
-!!$CLOSE(8)
-!!$
-!!$OPEN(UNIT=8,FILE='BAREPRO-1.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PRO(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CORE-ORTHOGONALIZE TO OBTAIN NODAL PARTIAL WAVES                     ==
-!!$!     == NOTE THAT THESE ARE NOT EIGENSTATES AS THEY ARE ONLY ORTHOGONALIZED  ==
-!!$!     == TO THE CORE STATES                                                   ==
-!!$!     ==========================================================================
-!!$      AEPHI(:,:)=QN(:,:)    !NLPHI(:,:)
-!!$      TAEPHI(:,:)=TQN(:,:)  !TNLPHI(:,:)
-!!$      DO L=0,LX
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          DO IB=NC,1,-1
-!!$            IF(LOFI(IB).NE.L) CYCLE
-!!$            AUX(:)=R(:)**2*UOFI(:,IB)*AEPHI(:,LN)
-!!$            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR1)
-!!$            AUX(:)=R(:)**2*UOFI(:,IB)**2
-!!$            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR2)
-!!$            VAL=SVAR1/SVAR2
-!!$            AEPHI(:,LN)=AEPHI(:,LN)-UOFI(:,IB)*VAL
-!!$            TAEPHI(:,LN)=TAEPHI(:,LN)-TUOFI(:,IB)*VAL
-!!$          ENDDO
-!!$        ENDDO
-!!$      ENDDO
-!!$OPEN(UNIT=8,FILE='AEPHI-1.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),AEPHI(IR,:),QN(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == TEST EQUATION FOR ALL-ELECTRON PARTIAL WAVES AEPHI                   ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST AEPHI EQ.  ")')
-!!$        DO LN=1,LNX
-!!$          PRO(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
-!!$          IF(TDOT(LN)) THEN
-!!$            DO LN1=LN-1,1,-1
-!!$              IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$              PRO(:,LN)=PRO(:,LN)-AEPHI(:,LN1) 
-!!$              EXIT
-!!$            ENDDO
-!!$            WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|AEPHI_N>-|AEPHI_N-1>=",F20.15)') &
-!!$      &          LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$          ELSE
-!!$            WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|AEPHI_N>            =",F20.15)') &
-!!$      &          LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
-!!$          END IF
-!!$        ENDDO
-!!$      END IF
-!!$
-!!$OPEN(UNIT=8,FILE='BAREPRO-2.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PRO(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT PSEUDO PARTIAL WAVES                                       ==
-!!$!     ==========================================================================
-!!$      PSPHI=QN
-!!$      TPSPHI=TQN
-!!$      DO L=0,LX
-!!$        NPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          NPRO=NPRO+1
-!!$          RC1=RC(LN)
-!!$        ENDDO
-!!$        IF(NPRO.EQ.0) CYCLE
-!!$        ALLOCATE(PHITEST(NR,NPRO))
-!!$        ALLOCATE(TPHITEST(NR,NPRO))
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          PHITEST(:,IPRO)=QN(:,LN)
-!!$          TPHITEST(:,IPRO)=TQN(:,LN)
-!!$          IF(TDOT(LN).AND.IPRO.GT.1) THEN
-!!$            PHITEST(:,IPRO) =PHITEST(:,IPRO-1) +0.1D0*PHITEST(:,IPRO)
-!!$            TPHITEST(:,IPRO)=TPHITEST(:,IPRO-1)+0.1D0*TPHITEST(:,IPRO)
-!!$          END IF                 
-!!$        ENDDO
-!!$        CALL ATOMIC_MAKEPSPHI(GID,NR,RC1,L,NPRO,PHITEST,TPHITEST)
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          IF(TDOT(LN).AND.IPRO.GT.1) THEN
-!!$            PHITEST(:,IPRO) =10.D0*(PHITEST(:,IPRO)-PHITEST(:,IPRO-1))
-!!$            TPHITEST(:,IPRO)=10.D0*(TPHITEST(:,IPRO)-TPHITEST(:,IPRO-1))
-!!$          END IF
-!!$          PSPHI(:,LN)=PHITEST(:,IPRO)
-!!$          TPSPHI(:,LN)=TPHITEST(:,IPRO)
-!!$        ENDDO
-!!$        DEALLOCATE(PHITEST)
-!!$        DEALLOCATE(TPHITEST)
-!!$      ENDDO
-!!$
-!!$OPEN(UNIT=8,FILE='PSPHI-BARE.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),QN(IR,:),PSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='TPSPHI-BARE.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),TQN(IR,:),TPSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == BACK TRANSFORM                                                       ==
-!!$!     ==========================================================================
-!!$      DO L=0,LX
-!!$!       == DETERMINE NPRO ======================================================
-!!$        NPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).EQ.L) NPRO=NPRO+1
-!!$        ENDDO
-!!$!
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          IF(TDOT(LN)) CYCLE
-!!$PRINT*,'MAKE ',LN,' TO BASE'
-!!$          IPRO1=IPRO
-!!$          DO LN1=LN+1,LNX
-!!$            IF(LOX(LN1).NE.L) CYCLE
-!!$            IPRO1=IPRO1+1
-!!$            IF(IPRO1.LE.IPRO) CYCLE
-!!$            IF(TDOT(LN1)) THEN
-!!$              IF(IPRO1.EQ.IPRO+1) CYCLE
-!!$!             == LN1 -> PHIDOT
-!!$!             == LN2 -> PHI
-!!$              DO LN2=LN1-1,1,-1
-!!$                IF(LOX(LN2).NE.L) CYCLE
-!!$                SVAR=1.D0/(EOFLN(LN1)-EOFLN(LN))
-!!$                QN(:,LN1) =( QN(:,LN1) -QN(:,LN2))*SVAR
-!!$                TQN(:,LN1)=(TQN(:,LN1)-TQN(:,LN2))*SVAR
-!!$                PSPHI(:,LN1) =( PSPHI(:,LN1) -PSPHI(:,LN2))*SVAR
-!!$                TPSPHI(:,LN1)=(TPSPHI(:,LN1)-TPSPHI(:,LN2))*SVAR
-!!$                AEPHI(:,LN1) =( AEPHI(:,LN1) -AEPHI(:,LN2))*SVAR
-!!$                TAEPHI(:,LN1)=(TAEPHI(:,LN1)-TAEPHI(:,LN2))*SVAR
-!!$                EXIT
-!!$              ENDDO
-!!$            ELSE
-!!$              SVAR=1.D0/(EOFLN(LN1)-EOFLN(LN))
-!!$              QN(:,LN1)    =(    QN(:,LN1)-    QN(:,LN))*SVAR
-!!$              TQN(:,LN1)   =(   TQN(:,LN1)-   TQN(:,LN))*SVAR
-!!$              PSPHI(:,LN1) =( PSPHI(:,LN1)- PSPHI(:,LN))*SVAR
-!!$              TPSPHI(:,LN1)=(TPSPHI(:,LN1)-TPSPHI(:,LN))*SVAR
-!!$              AEPHI(:,LN1) =( AEPHI(:,LN1)- AEPHI(:,LN))*SVAR
-!!$              TAEPHI(:,LN1)=(TAEPHI(:,LN1)-TAEPHI(:,LN))*SVAR
-!!$            END IF
-!!$          ENDDO
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     == TEST IF BACK TRANSFORM WAS SUCCESSFUL ================================
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST BACK TRANSFORM  ")')
-!!$        DO LN=1,LNX
-!!$          WRITE(6,FMT='("LN=",I2," L=",I2," DIFF. NDLSS PHI",F10.5 &
-!!$     &                                 ," DIFF. KIN.OP NDLSS. PHI ",F10.5)') &
-!!$     &          LN,LOX(LN),MAXVAL(ABS(QN(:,LN)-NLPHI(:,LN))) &
-!!$     &                    ,MAXVAL(ABS(TQN(:,LN)-TNLPHI(:,LN)))
-!!$        ENDDO
-!!$      END IF
-!!$ 
-!!$OPEN(UNIT=8,FILE='PSPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='AEPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),AEPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='TPSPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),TNLPHI(IR,:),TPSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
-!!$!     ==========================================================================
-!!$      DO LN=1,LNX
-!!$!       == PRO(:,LN)=TNLPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*NLPHI(:,LN) ==========
-!!$        BAREPRO(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
-!!$        TCHK=.FALSE.
-!!$        DO LN1=LN-1,1,-1
-!!$          IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$          IF(TDOT(LN1)) CYCLE
-!!$!         ==  PRO(:,LN)=PRO(:,LN)-NLPHI(:,LN1) =================================
-!!$          BAREPRO(:,LN)=BAREPRO(:,LN)-PSPHI(:,LN1) 
-!!$          TCHK=.TRUE.
-!!$          EXIT
-!!$        ENDDO
-!!$        IF(.NOT.TCHK) THEN
-!!$          DO IB=NC,1,-1
-!!$            IF(LOFI(IB).NE.LOX(LN)) CYCLE
-!!$!           == PRO(:,LN)=PRO(:,LN)-UOFI(:,IB) ==================================
-!!$            EXIT
-!!$          ENDDO
-!!$        END IF
-!!$      ENDDO
-!!$
-!!$
-!!$OPEN(UNIT=8,FILE='BAREPRO.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),BAREPRO(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CHECK PAW EQUATION FOR PSEUDO PARTIALWAVES                           ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        ALLOCATE(PHITEST(NR,LNX))
-!!$        ALLOCATE(TPHITEST(NR,LNX))
-!!$        DO LN=1,LNX
-!!$          TPHITEST(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN) &
-!!$     &                  -BAREPRO(:,LN)
-!!$          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
-!!$          DO LN1=LN-1,1,-1
-!!$            IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$            IF(TDOT(LN1)) CYCLE
-!!$            PHITEST(:,LN)=PHITEST(:,LN)-AEPHI(:,LN1) 
-!!$            TPHITEST(:,LN)=TPHITEST(:,LN)-PSPHI(:,LN1) 
-!!$            EXIT
-!!$          ENDDO
-!!$        ENDDO
-!!$!
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST RAW PAW EQUATION  ")')
-!!$        DO LN=1,LNX
-!!$          WRITE(6,FMT='("LN=",I2," L=",I2," RAW PAW EQ.",F10.5 &
-!!$     &                                 ," SCHR. EQ.",F10.5)') &
-!!$     &          LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))),MAXVAL(ABS(PHITEST(:,LN)))
-!!$        ENDDO
-!!$OPEN(UNIT=8,FILE='AUX.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),TPHITEST(IR,:),PHITEST(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$STOP
-!!$        DEALLOCATE(PHITEST)
-!!$        DEALLOCATE(TPHITEST)
-!!$      ENDIF
-!!$
-!!$!
-!!$!     ==========================================================================
-!!$!     == CUT OFF THE TAILS OF THE PROJECTOR FUNCTIONS                         ==
-!!$!     ==========================================================================
-!!$      PRO(:,:)=BAREPRO(:,:)
-!!$      DO LN=1,LNX
-!!$        DO IR=1,NR
-!!$          IF(R(IR).LT.RC(LN)) CYCLE
-!!$          PRO(IR:,LN)=0.D0
-!!$          EXIT
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == ENFORCE BIORTHOGONALIZATION                                          ==
-!!$!     ==========================================================================
-!!$      CALL BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,PRO,TRANSPHI,TRANSPRO)
-!!$        WRITE(6,FMT='(82("="),T20,"  TRANSPRO ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F20.5)')TRANSPRO(LN1,:)
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  TRANSPHI ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F20.5)')TRANSPHI(LN1,:)
-!!$        ENDDO
-!!$
-!!$!     ==  DETERMINE <PSPHI|PROBARE> ============================================
-!!$      PSPHIPROBARE(:,:)=0.D0
-!!$      DO LN1=1,LNX
-!!$        DO LN2=1,LNX
-!!$          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-!!$          AUX(:)=R(:)**2*PSPHI(:,LN1)*PRO(:,LN2)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          PSPHIPROBARE(LN1,LN2)=VAL
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$      DO L=0,LX
-!!$        NPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          NPRO=NPRO+1
-!!$        ENDDO
-!!$        IF(NPRO.EQ.0) CYCLE
-!!$        ALLOCATE(A(NPRO,NPRO))
-!!$        ALLOCATE(AINV(NPRO,NPRO))
-!!$        ALLOCATE(PRO1(NR,NPRO))
-!!$        IPRO1=0
-!!$        DO LN1=1,LNX
-!!$          IF(LOX(LN1).NE.L) CYCLE
-!!$          IPRO1=IPRO1+1
-!!$          PRO1(:,IPRO1)=PRO(:,LN1)
-!!$          IPRO2=0
-!!$          DO LN2=1,LNX
-!!$            IF(LOX(LN2).NE.L) CYCLE
-!!$            IPRO2=IPRO2+1
-!!$            A(IPRO1,IPRO2)=PSPHIPROBARE(LN1,LN2)
-!!$          ENDDO
-!!$        ENDDO
-!!$        CALL LIB$INVERTR8(NPRO,A,AINV)
-!!$DO IPRO1=1,NPRO
-!!$  WRITE(*,FMT='("A",20F15.10)')A(IPRO1,:)
-!!$ENDDO
-!!$DO IPRO1=1,NPRO
-!!$  WRITE(*,FMT='("AINV",20E15.3)')AINV(IPRO1,:)
-!!$ENDDO
-!!$A=MATMUL(AINV,A)
-!!$DO IPRO1=1,NPRO
-!!$  WRITE(*,FMT='("AINV*A",20F15.10)')A(IPRO1,:)
-!!$ENDDO
-!!$
-!!$        A=MATMUL(A,AINV)
-!!$        PRO1=MATMUL(PRO1,AINV)
-!!$        DEALLOCATE(A)
-!!$        DEALLOCATE(AINV)
-!!$        IPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).NE.L) CYCLE
-!!$          IPRO=IPRO+1
-!!$          PRO(:,LN)=PRO1(:,IPRO)
-!!$        ENDDO
-!!$        DEALLOCATE(PRO1)
-!!$      ENDDO
-!!$OPEN(UNIT=8,FILE='PRO.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PRO(IR,:) !*R(IR)**2
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='AEPSPHI.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),AEPHI(IR,:),PSPHI(IR,:)
-!!$ENDDO
-!!$CLOSE(8)
-!!$OPEN(UNIT=8,FILE='AEPSDIFF.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),(AEPHI(IR,:)-PSPHI(IR,:))*R(IR)**2
-!!$ENDDO
-!!$CLOSE(8)
-!!$!
-!!$!     ==========================================================================
-!!$!     == CHECK BIORTHOGONALIZATION                                            ==
-!!$!     ==========================================================================
-!!$      DO LN1=1,LNX
-!!$        DO LN2=1,LNX
-!!$          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-!!$          AUX(:)=R(:)**2*PSPHI(:,LN1)*PRO(:,LN2)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          IF(LN1.EQ.LN2)VAL=VAL-1.D0
-!!$          IF(ABS(VAL).GT.1.D-5) THEN
-!!$            CALL ERROR$MSG('BIORTHOGONALIZATION FAILED')
-!!$            CALL ERROR$I4VAL('L',L)
-!!$            CALL ERROR$I4VAL('LN1',LN1)
-!!$            CALL ERROR$I4VAL('LN2',LN2)
-!!$            CALL ERROR$R8VAL('DEVIATION',VAL)
-!!$            CALL ERROR$STOP('XXXX')
-!!$          END IF
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     == DT,DO                                                                ==
-!!$!     ==========================================================================
-!!$      DT=0.D0
-!!$      DO=0.D0
-!!$      DH=0.D0
-!!$      DO LN1=1,LNX
-!!$        DO LN2=1,LNX
-!!$          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-!!$          AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          DT(LN1,LN2)=VAL
-!!$          AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          DO(LN1,LN2)=VAL
-!!$          AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPOT(:)*Y0*AEPHI(:,LN2) &
-!!$      &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-!!$          DH(LN1,LN2)=DT(LN1,LN2)+VAL
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$      IF(TTEST) THEN
-!!$        WRITE(6,FMT='(82("="),T20,"  DTKIN  ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')DT(LN1,:)
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  DOVERLAP  ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')DO(LN1,:)
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  DOHAMILTONIAN ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')DH(LN1,:)
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  <PSPHI|PRO-BARE> ")')
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')PSPHIPROBARE(LN1,:)
-!!$        ENDDO
-!!$!
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST <PSPHI|PRO-BARE>+DH-DO-DO_N-1=0 ")')
-!!$        ALLOCATE(A(LNX,LNX))        
-!!$        A=PSPHIPROBARE+DH
-!!$        DO LN=1,LNX
-!!$          A(:,LN)=A(:,LN)-DO(:,LN)*EOFLN(LN)
-!!$        ENDDO
-!!$        DO L=0,LX
-!!$          LN1=0
-!!$          DO LN=1,LNX
-!!$            IF(LOX(LN).NE.L) CYCLE
-!!$            IF(LN1.NE.0)A(:,LN)=A(:,LN)-DO(:,LN1)
-!!$            LN1=LN
-!!$          ENDDO
-!!$        ENDDO
-!!$        DO LN1=1,LNX
-!!$          WRITE(6,FMT='(20F10.5)')A(LN1,:)
-!!$        ENDDO
-!!$OPEN(UNIT=8,FILE='AUX1.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),(SUM(PRO(IR,:)*A(:,LN)),LN=1,LNX)
-!!$ENDDO
-!!$CLOSE(8)
-!!$!        DEALLOCATE(A)
-!!$      END IF
-!!$
-!!$!     == SYMMETRIZE
-!!$      DT=0.5D0*(DT+TRANSPOSE(DT))
-!!$      DO=0.5D0*(DO+TRANSPOSE(DO))
-!!$      DH=0.5D0*(DH+TRANSPOSE(DH))
-!!$!
-!!$!     ==========================================================================
-!!$!     == CHECK2 PAW EQUATION FOR PSEUDO PARTIALWAVES                          ==
-!!$!     ==========================================================================
-!!$      IF(TTEST) THEN
-!!$        ALLOCATE(TPHITEST(NR,LNX))    ! HOLDS TEST FOR PSEUDO
-!!$        ALLOCATE(PHITEST(NR,LNX))     ! HOLDS TEST FOR ALL-ELECTRON 
-!!$        DO LN=1,LNX
-!!$          TPHITEST(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
-!!$! TPHITEST(:,LN)=TPHITEST(:,LN)-BAREPRO(:,LN)
-!!$          PHITEST1(:,LN)=0.D0          
-!!$          DO LN1=1,LNX
-!!$            IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$             TPHITEST(:,LN)=TPHITEST(:,LN)+PRO(:,LN1)*(DH(LN1,LN)-EOFLN(LN)*DO(LN1,LN))
-!!$             PHITEST1(:,LN)=PHITEST1(:,LN)+PRO(:,LN1)*(DH(LN1,LN)-EOFLN(LN)*DO(LN1,LN))
-!!$          ENDDO
-!!$!
-!!$          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
-!!$          DO LN1=LN-1,1,-1
-!!$            IF(LOX(LN1).NE.LOX(LN)) CYCLE
-!!$            IF(TDOT(LN1)) CYCLE
-!!$!           ==  PRO(:,LN)=PRO(:,LN)-NLPHI(:,LN1) =================================
-!!$            PHITEST(:,LN)=PHITEST(:,LN)-AEPHI(:,LN1) 
-!!$            TPHITEST(:,LN)=TPHITEST(:,LN)-PSPHI(:,LN1) 
-!!$            DO LN2=1,LNX
-!!$              IF(LOX(LN2).NE.LOX(LN)) CYCLE
-!!$              TPHITEST(:,LN)=TPHITEST(:,LN)-PRO(:,LN2)*DO(LN2,LN1)
-!!$              PHITEST1(:,LN)=PHITEST1(:,LN)-PRO(:,LN2)*DO(LN2,LN1)
-!!$            ENDDO
-!!$            EXIT
-!!$          ENDDO
-!!$        ENDDO
-!!$        WRITE(6,FMT='(82("="),T20,"  TEST PAW EQUATION  ")')
-!!$        DO LN=1,LNX
-!!$          WRITE(6,FMT='("LN=",I2," L=",I2," PAW EQ.",F10.5 &
-!!$     &                                 ," SCHR. EQ.",F10.5)') &
-!!$     &          LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))),MAXVAL(ABS(PHITEST(:,LN)))
-!!$        ENDDO
-!!$OPEN(UNIT=8,FILE='AUX.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PHITEST1(IR,:),-BAREPRO(IR,:),(SUM(PRO(IR,:)*A(:,LN)),LN=1,LNX)
-!!$ENDDO
-!!$CLOSE(8)
-!!$STOP
-!!$        DEALLOCATE(PHITEST)
-!!$        DEALLOCATE(TPHITEST)
-!!$      END IF
-!!$!
-!!$!     ==========================================================================
-!!$!     == UNSCREENING                                                          ==
-!!$!     ==========================================================================
-!!$      AERHO(:)=0.D0
-!!$      PSRHO(:)=0.D0
-!!$      DO L=0,LX
-!!$        NPRO=0
-!!$        DO LN=1,LNX
-!!$          IF(LOX(LN).EQ.L) NPRO=NPRO+1
-!!$        ENDDO
-!!$        ALLOCATE(DH1(NPRO,NPRO))
-!!$        ALLOCATE(DO1(NPRO,NPRO))
-!!$        ALLOCATE(PRO1(NR,NPRO))
-!!$        ALLOCATE(PROJ(NPRO))
-!!$        IPRO1=0
-!!$        DO LN1=1,LNX
-!!$          IF(LOX(LN1).NE.L) CYCLE
-!!$          IPRO1=IPRO1+1
-!!$          PRO1(:,IPRO1)=PRO(:,LN1)
-!!$          IPRO2=0
-!!$          DO LN2=1,LNX
-!!$            IF(LOX(LN2).NE.L) CYCLE
-!!$            IPRO2=IPRO2+1
-!!$            DH1(IPRO1,IPRO2)=DH(LN1,LN2)
-!!$            DO1(IPRO1,IPRO2)=DO(LN1,LN2)
-!!$          ENDDO
-!!$        ENDDO
-!!$        G(:)=0.D0
-!!$        DO IB=NC+1,NB
-!!$          IF(LOFI(IB).NE.L) CYCLE
-!!$          E=EOFI(IB)
-!!$          G(:)=0.D0
-!!$          CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI)
-!!$
-!!$          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,AUX)
-!!$          DO IR=1,NR
-!!$            IF(R(IR).LT.RBOX) CYCLE
-!!$            PHI(IR:)=0.D0
-!!$          ENDDO
-!!$PRINT*,'RBOX ',RBOX
-!!$OPEN(UNIT=8,FILE='TEST.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),PHI(IR),AUX(IR)
-!!$ENDDO
-!!$CLOSE(8)
-!!$STOP
-!!$          DO IPRO=1,NPRO
-!!$            AUX(:)=R(:)**2*PHI(:)*PRO1(:,IPRO)
-!!$            CALL RADIAL$INTEGRAL(GID,NR,AUX,PROJ(NPRO))
-!!$          ENDDO
-!!$PRINT*,'PROJ ',L,PROJ
-!!$          AUX(:)=R(:)**2*PHI(:)**2
-!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
-!!$PRINT*,'VAL1 ',L,VAL
-!!$          DO IPRO1=1,NPRO
-!!$            DO IPRO2=1,NPRO
-!!$              VAL=VAL+PROJ(IPRO1)*DO1(IPRO1,IPRO2)*PROJ(IPRO2)
-!!$            ENDDO
-!!$          ENDDO
-!!$PRINT*,'VAL2 ',L,VAL
-!!$          PHI(:)=PHI(:)/SQRT(VAL)
-!!$          PSRHO(:)=PSRHO(:)+FOFI(IB)*PHI(:)**2
-!!$          AERHO(:)=AERHO(:)+FOFI(IB)*AEPSI(:,IB)**2
-!!$        ENDDO
-!!$        DEALLOCATE(DH1)
-!!$        DEALLOCATE(DO1)
-!!$        DEALLOCATE(PRO1)
-!!$        DEALLOCATE(PROJ)
-!!$      ENDDO      
-!!$OPEN(UNIT=8,FILE='RHO.DAT')
-!!$DO IR=1,NR
-!!$  WRITE(8,'(30F20.5)')R(IR),AERHO(IR),PSRHO(IR)
-!!$ENDDO
-!!$CLOSE(8)
-!!$STOP
-!!$
-!!$!      CALL ATOMLIB$BOXVOFRHO(GID,NR,RAD,AEZ,RHO,POT,EH,EXC)
-!!$
-!!$      RETURN
-!!$      END
 !
 !     ......................................................................
       SUBROUTINE BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,PRO,TRANSPHI,TRANSPRO)
@@ -5631,6 +3999,87 @@ ENDDO
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMIC_MAKEPSPHI_HBS(GID,NR,LNX,LOX,EOFLN,RC,LAMBDA,PSPOT &
+     &                               ,rbnd,PSPHI,TPSPHI)
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      ** 
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)     :: GID
+      INTEGER(4),INTENT(IN)     :: NR
+      INTEGER(4),INTENT(IN)     :: LNX
+      INTEGER(4),INTENT(IN)     :: LOX(LNX)
+      REAL(8)   ,INTENT(IN)     :: EOFLN(LNX)
+      REAL(8)   ,INTENT(IN)     :: LAMBDA(LNX)
+      REAL(8)   ,INTENT(IN)     :: RC(LNX)
+      REAL(8)   ,INTENT(IN)     :: PSPOT(NR)
+      REAL(8)   ,INTENT(IN)     :: rbnd
+      REAL(8)   ,INTENT(INOUT)  :: PSPHI(NR,LNX)
+      REAL(8)   ,INTENT(INOUT)  :: TPSPHI(NR,LNX)
+      INTEGER(4),PARAMETER      :: NITER=100
+      INTEGER(4),PARAMETER      :: ISO=0
+      REAL(8)   ,PARAMETER      :: TOL=1.D-6
+      REAL(8)                   :: E
+      REAL(8)                   :: PI,Y0
+      REAL(8)                   :: AUX(NR),DREL(NR),G(NR),POT(NR),PHI(NR)
+      REAL(8)                   :: C(NR)
+      REAL(8)                   :: R(NR)
+      REAL(8)                   :: X0,XM,Z0,ZM,DX
+      REAL(8)                   :: PHIPHASE
+      INTEGER(4)                :: IRBND
+      INTEGER(4)                :: ISTART,IBI
+      INTEGER(4)                :: L
+      INTEGER(4)                :: LN,ITER,IR
+      logical(4)                :: convg
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+      IRBND=0
+      DO IR=1,NR-2
+        IRBND=IR
+        IF(r(ir).GT.RBND) EXIT
+      ENDDO
+!
+!     ==========================================================================
+!     ==  CONSTRUCT                                                           ==
+!     ==========================================================================
+      DO LN=1,LNX
+        L=LOX(LN)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),RBND,PHIPHASE)
+        E=EOFLN(LN)
+        C(:)=EXP(-(R(:)/RC(LN))**lambda(ln))
+        C(:)=(C(:)-C(IRBND))/(1.D0-C(IRBND))
+        C(IRBND:)=0.D0
+        ISTART=1
+        X0=0.d0
+        DX=1.D-2
+        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+        DO ITER=1,NITER
+          POT(:)=PSPOT(:)+X0*C(:)
+          DREL(:)=0.D0
+          G(:)=0.D0
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,ISO,G,L,E,1,PHI)
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+          Z0=PHIPHASE-z0
+          convg=(ABS(2.D0*DX).LE.TOL)
+          IF(convg) EXIT
+          CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+        ENDDO
+        IF(.NOT.CONVG) THEN
+          CALL ERROR$MSG('LOOP NOT CONVERGED')
+          CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
+        END IF
+        phi(:)=phi(:)/phi(irbnd)*psphi(irbnd,ln)
+        psphi(:,ln)=phi(:)
+        TPSPHI(:,LN)=(E-POT(:)*Y0)*phi(:)
+      ENDDO
+
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMIC_MAKEPSPHI(GID,NR,RC,L,NB,PSPHI,TPSPHI)
 !     **                                                                      **
 !     **  PSEUDIZES A WAVE FUNCTION BY MATCHING SPHERICAL BESSEL FUNCTIONS    **
@@ -5694,7 +4143,7 @@ ENDDO
       INTEGER(4)                :: GIDX
       INTEGER(4)                :: IRMATCH
 !     **************************************************************************
-!CALL setup_WRITEPHI('TESTCONSTRUCTPSPHI1',GID,NR,NB,PSPHI)
+!CALL SETUP_WRITEPHI('TESTCONSTRUCTPSPHI1',GID,NR,NB,PSPHI)
       PI=4.D0*ATAN(1.D0)
       CALL RADIAL$NEW('SHLOG',GIDX)
       XDEX=1.D-5
@@ -5753,10 +4202,10 @@ ENDDO
           CALL ERROR$MSG('TRY TO INCREASE MATCHING RADIUS')
           CALL ERROR$I4VAL('IB',IB)
           CALL ERROR$I4VAL('L',L)
-          CALL ERROR$r8val('shift',shift)
-          CALL ERROR$r8val('phase(1)',phase(1))
-          CALL ERROR$r8val('offsetnn',offsetnn)
-          CALL ERROR$r8val('rc',rc)
+          CALL ERROR$R8VAL('SHIFT',SHIFT)
+          CALL ERROR$R8VAL('PHASE(1)',PHASE(1))
+          CALL ERROR$R8VAL('OFFSETNN',OFFSETNN)
+          CALL ERROR$R8VAL('RC',RC)
           CALL ERROR$STOP('CONSTRUCTPSPHI')
 PRINT*,'WARNING SHIFT WAS REQUIRED ',L,IB,PHASE(1),SHIFT
            SHIFT=SHIFT+REAL(INT(PHASE(1)-SHIFT+1.D0))
@@ -6037,8 +4486,8 @@ PRINT*,'KI ',KI
       CHARACTER(3)           :: ID ! CAN BE OLD OR NEW
       REAL(8)                :: RASA
 !     **************************************************************************
-      call error$msg('routine is marked for deletion')
-      call error$stop('SETUP_renewlocorb')
+      CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION')
+      CALL ERROR$STOP('SETUP_RENEWLOCORB')
       IF(THIS%LOCORBINI) RETURN
       THIS%LOCORBINI=.TRUE.
                             CALL TRACE$PUSH('SETUP_RENEWLOCORB')
@@ -6125,8 +4574,8 @@ PRINT*,'C'
       CHARACTER(64)         :: FILE
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_CHIFROMPHI')
-      call error$msg('routine is marked for deletion')
-      call error$stop('SETUP_CHIFROMPHI')
+      CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION')
+      CALL ERROR$STOP('SETUP_CHIFROMPHI')
 !
 !     ==========================================================================
 !     ==  COLLECT DATA FROM SETUP OBJECT                                      ==
@@ -6385,5 +4834,972 @@ PRINT*,'C'
       DEALLOCATE(B)
       DEALLOCATE(R)
                             CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMIC_MAKEPARTIALWAVESOLD(GID,NR,KEY,AEZ,AEPOT &
+     &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
+     &             ,RBOX,ROUT,LNX,LOX,RC,ISCATT,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER &
+     &                  ,POW_POT,VAL0_POT,RC_POT,RCSM,VADD,QBAR)
+!     **************************************************************************
+!     **  CONSTRUCTS  THE SETUP                                               **
+!     **                                                                      **
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      USE PERIODICTABLE_MODULE
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      CHARACTER(*),INTENT(IN) :: KEY
+      REAL(8)   ,INTENT(IN) :: AEZ
+      REAL(8)   ,INTENT(IN) :: AEPOT(NR)   ! ALL ELECTRON POTENTIAL
+      INTEGER(4),INTENT(IN) :: NB
+      INTEGER(4),INTENT(IN) :: NC
+      INTEGER(4),INTENT(IN) :: LOFI(NB)
+      INTEGER(4),INTENT(IN) :: SOFI(NB)
+      INTEGER(4),INTENT(IN) :: NNOFI(NB)
+      REAL(8)   ,INTENT(IN) :: EOFI(NB)
+      REAL(8)   ,INTENT(IN) :: ROUT    ! HARD SPHERE FOR ATOM HAS RADIUS RBOX
+      REAL(8)   ,INTENT(IN) :: RBOX    ! RADIUS FOR BOUNDARY CONDITION OF PHI
+      REAL(8)   ,INTENT(IN) :: FOFI(NB)
+      INTEGER(4),INTENT(IN) :: LNX
+      INTEGER(4),INTENT(IN) :: LOX(LNX)
+      INTEGER(4),INTENT(IN) :: ISCATT(LNX)
+      REAL(8)   ,INTENT(IN) :: RC(LNX)
+      REAL(8)   ,INTENT(IN) :: POW_POT
+      REAL(8)   ,INTENT(IN) :: VAL0_POT
+      REAL(8)   ,INTENT(IN) :: RC_POT
+      REAL(8)   ,INTENT(IN) :: RCSM
+      REAL(8)   ,INTENT(OUT):: VADD(NR)
+      REAL(8)   ,INTENT(OUT):: AEPHI(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: PSPHI(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: NLPHI(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: PRO(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: DT(LNX,LNX)
+      REAL(8)   ,INTENT(OUT):: DOVER(LNX,LNX)
+      REAL(8)   ,INTENT(OUT):: QBAR(LNX)  
+      INTEGER(4),ALLOCATABLE:: NPROL(:)
+      INTEGER(4),ALLOCATABLE:: NCL(:)
+      REAL(8)               :: DH(LNX,LNX)
+      REAL(8)               :: PSPHIPROBARE(LNX,LNX)
+      REAL(8)               :: TRANSPHI(LNX,LNX)
+      REAL(8)               :: TRANSPRO(LNX,LNX)
+      REAL(8)               :: TRANSU(LNX,LNX)
+      REAL(8)               :: TRANSUINV(LNX,LNX)
+      REAL(8)               :: PSPOT(NR)
+      REAL(8)               :: EOFI1(NB)
+      REAL(8)               :: EOFICOMP(2,NB-NC)
+      REAL(8)               :: EOFLN(LNX)
+      REAL(8)               :: UOFI(NR,NB)
+      REAL(8)               :: TUOFI(NR,NB)
+      REAL(8)               :: AEPSI(NR,NB)
+      REAL(8)               :: TNLPHI(NR,LNX)
+      REAL(8)               :: TAEPHI(NR,LNX)
+      REAL(8)               :: TPSPHI(NR,LNX)
+      REAL(8)               :: QN(NR,LNX)
+      REAL(8)               :: TQN(NR,LNX)
+      REAL(8)               :: BAREPRO(NR,LNX)
+      REAL(8)               :: PHITEST1(NR,LNX)
+      REAL(8)   ,ALLOCATABLE:: PHITEST(:,:)
+      REAL(8)   ,ALLOCATABLE:: TPHITEST(:,:)
+      REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
+      REAL(8)   ,ALLOCATABLE:: DH1(:,:)
+      REAL(8)   ,ALLOCATABLE:: DO1(:,:)
+      REAL(8)               :: AERHO(NR),PSRHO(NR)
+      REAL(8)               :: G(NR),DREL(NR),G1(NR),PHI(NR)
+      REAL(8)               :: E
+      REAL(8)               :: RC1
+      REAL(8)               :: EHOMO
+      INTEGER(4)            :: LX
+      INTEGER(4)            :: L,IB,LN,IR,IB1,IB2,LN1,LN2,I,ISO
+      INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
+      REAL(8)               :: PI,Y0
+      REAL(8)               :: X0,Z0,DX,XM,ZM
+      INTEGER(4)            :: ISTART,IBI
+      INTEGER(4)            :: NITER=100
+      REAL(8)               :: PHIPHASE
+      REAL(8)               :: R(NR)
+      REAL(8)   ,PARAMETER  :: TOL=1.D-7
+      REAL(8)               :: AUX(NR),AUX1(NR)
+      REAL(8)   ,ALLOCATABLE:: AUXARR(:,:)
+      REAL(8)               :: VAL,DER,JVAL,JDER,KVAL,KDER
+      REAL(8)               :: SVAR,SVAR1,SVAR2
+      LOGICAL(4)            :: TREL,TSO,TCHK
+      REAL(8)   ,ALLOCATABLE:: A(:,:),AINV(:,:)
+      REAL(8)   ,ALLOCATABLE:: PROJ(:)
+      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
+      REAL(8)               :: AEPSIF(NR,NB-NC)
+      REAL(8)               :: PSPSIF(NR,NB-NC)
+      REAL(8)               :: EH,EXC
+      INTEGER(4)            :: NN,NN0
+      INTEGER(4)            :: NFIL
+      CHARACTER(64)         :: STRING
+      REAL(8)               :: RCOV    !COVALENT RADIUS
+      REAL(8)               :: RASA    !COVALENT RADIUS*APPROX 1.15
+      REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
+      REAL(8)               :: RBND   !RADIUS FOR BOUNDARY CONDITIONS
+      REAL(8)               :: DFACP,DFACM    !DOUBLE FACTORIAL OF 2L+1; 2L-1
+      LOGICAL   ,PARAMETER  :: TWRITE=.TRUE.
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
+      CALL RADIAL$R(GID,NR,R)
+      CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
+      CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RASA)
+      RNORM=RBOX
+      RBND=RNORM
+      PHIPHASE=1.D0    !NODE AT R=RBND
+!
+!     ==========================================================================
+!     == RESOLVE KEY                                                          ==
+!     ==========================================================================
+      TREL=INDEX(KEY,'NONREL').EQ.0
+      IF(TREL.AND.INDEX(KEY,'REL').EQ.0) THEN
+        CALL ERROR$STOP('SETUP_MAKEPARTIALWAVES')
+      END IF
+      TSO=INDEX(KEY,'NONSO').EQ.0
+      IF(TSO.AND.INDEX(KEY,'SO').EQ.0) THEN
+        CALL ERROR$STOP('SETUP_MAKEPARTIALWAVES')
+      END IF
+!
+!     == DETERMINE HIGHEST CORE STATE FOR EACH ANGULAR MOMENTUM ================
+      ALLOCATE(NCL(0:LX))
+      NCL(:)=0
+      DO IB=1,NC
+        L=LOFI(IB)
+        NCL(L)=MAX(NCL(L),IB)
+      ENDDO
+!
+!     == DETERMINE NUMBER OF PROJECTORS FOR EACH ANGULAR MOMENTUM ==============
+      ALLOCATE(NPROL(0:LX))
+      NPROL(:)=0
+      DO LN=1,LNX
+        L=LOX(LN)
+        NPROL(L)=NPROL(L)+1
+      ENDDO
+!
+!     ==========================================================================
+!     == CONSTRUCT PSEUDO POTENTIAL                                           ==
+!     ==========================================================================
+      CALL ATOMIC_PSEUDIZE(GID,NR,POW_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
+!
+!     ==========================================================================
+!     == CONSTRUCT NODELESS WAVE FUNCTIONS                                    ==
+!     ==========================================================================
+      DO L=0,LX
+        G(:)=0.D0
+        DO IB=1,NB
+          IF(LOFI(IB).NE.L) CYCLE
+          E=EOFI(IB)
+          DREL(:)=0.D0
+          IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,0,AEPOT,E,UOFI(:,IB))
+          EOFI1(IB)=E
+          TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
+          G(:)=UOFI(:,IB)
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == REPORT SETTINGS ON WAVE FUNCTIONS                                    ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        WRITE(6,FMT='(82("="),T20," Z=",F5.0," ")')AEZ
+        WRITE(6,FMT='(82("="),T20," ENERGIES FOR ATOMIC WAVE FUNCTIONS ")')
+        WRITE(6,FMT='(82("="),T20," OLD: AE SCHRODINGER EQUATION           ")')
+        WRITE(6,FMT='(82("="),T20," NEW: NODELESS EQUATION                 ")')
+        WRITE(6,FMT='(82("="),T20," DIFFERENCE DUE TO RELATIVISTIC EFFECTS ")')
+        DO IB=1,NB
+          WRITE(6,FMT='("IB=",I3," L=",I2," F=",F10.5," E[NEW]=",F15.5 &
+     &                                               ," E[OLD]=",F15.5)') &
+     &                  IB,LOFI(IB),FOFI(IB),EOFI1(IB),EOFI(IB)
+        ENDDO
+!       CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
+      END IF
+!
+!     ==========================================================================
+!     == RELATIVISTIC EFFECTS ARE DETERMINED FOR AN ENERGY -0.5<E<0.0         ==
+!     == AND IDEALLY FOR THE HIGHEST OCCUPIED VALENCE STATE                   ==
+!     ==========================================================================
+      EHOMO=-0.5D0
+      DO IB=1,NB
+        IF(FOFI(IB).GT.0.D0) EHOMO=MAX(EHOMO,EOFI1(IB))
+      ENDDO
+      EHOMO=MIN(EHOMO,0.D0)
+      IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,EHOMO,DREL)
+!
+!     ==========================================================================
+!     == CONSTRUCT NODELESS PARTIAL WAVES                                     ==
+!     ==========================================================================
+ALLOCATE(PHITEST(NR,LNX))
+ALLOCATE(TPHITEST(NR,LNX))
+      DFACP=1.D0
+      DO L=0,LX
+        ISO=0
+        DFACM=DFACP
+        DFACP=DFACP*REAL(2*L+1,KIND=8)
+        E=0.D0
+        DO IB=NC+1,NB
+          IF(LOFI(IB).NE.L) CYCLE
+          E=EOFI(IB)
+          EXIT
+        ENDDO
+        G=0.D0
+        IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+!         == SEARCH NODELESS STATE =============================================
+          ISTART=1
+          X0=E
+          DX=1.D-2
+          CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+          DO I=1,NITER
+            E=X0
+            IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+            CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,ISO,G,L,E,1,PHI)
+            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+            Z0=Z0-PHIPHASE
+            IF(ABS(2.D0*DX).LE.TOL) EXIT
+            CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+          ENDDO
+          IF(ABS(DX).GT.TOL) THEN
+            CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
+            CALL ERROR$MSG('BOUND STATE NOT FOUND')
+            CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
+          END IF
+          EOFLN(LN)=E
+          NLPHI(:,LN)=PHI(:)
+          TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*PHI(:)
+          G(:)=NLPHI(:,LN)
+!         == NOW ALSO DETERMINE THE CORRESPONDING QBAR USING THE QDOT FUNCTION
+!         = THE ENERGY MUST NOT BE TOO HIGH BECAUSE THE SCATTERING PARTIAL WAVE
+!         == DOES EXHIBIT OSCILLATORY INSTEAD OF BEING EXPONENTIALLY INCREASING 
+          E=MIN(-0.5D0,EOFLN(LN))
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,PHI)
+          CALL RADIAL$VALUE(GID,NR,PHI,RCOV,VAL)
+!PHITEST(:,LN)=PHI/VAL
+!TPHITEST(:,LN)=G/VAL
+          CALL RADIAL$DERIVATIVE(GID,NR,PHI,RCOV,DER)
+!         == SOLID BESSEL AND HANKEL FUNCTIONS MUST BE CONSISTENT WITH =========
+!         == PAW_LMTOBASICS.F90. HERE WE USE KAPPA=0 ===========================
+!         == J=R^L/(2L+1)!!*YLM      K=R^(-L-1)*(2L-1)!!*YLM ===================
+          JVAL=RCOV**L/DFACP
+          JDER=REAL(L,KIND=8)*JVAL/RCOV
+          KVAL=RCOV**(-L-1)*DFACM
+          KDER=REAL(-L-1,KIND=8)*KVAL/RCOV
+          QBAR(LN)=(JVAL*DER-VAL*JDER)/(KVAL*DER-VAL*KDER)
+        ENDDO
+      ENDDO
+!CALL SETUP_WRITEPHI('PHIDOTS.DAT',GID,NR,LNX,PHITEST)
+!CALL SETUP_WRITEPHI('PHIS.DAT',GID,NR,LNX,TPHITEST)
+!DEALLOCATE(PHITEST)
+!DEALLOCATE(TPHITEST)
+!STOP
+!
+!     ==========================================================================
+!     == REPORT SETTINGS ON PARTIAL WAVES                                     ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        WRITE(6,FMT='(82("="),T20," ENERGIES FOR PARTIAL-WAVE CONSTRUCTION")')
+        WRITE(6,FMT='("RBOX=",F9.5)')RBOX
+        DO LN=1,LNX
+          WRITE(6,FMT='("LN=",I2," L=",I2," E=",F10.5," RC=",F6.3)') &
+     &                      LN,LOX(LN),EOFLN(LN),RC(LN)
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     == NORMALIZE EACH ANGULAR MOMENTUM SO THAT FIRST PARTIAL WAVE IS NORMAL ==
+!     ==========================================================================
+      DO L=0,LX
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          PHI(:)=NLPHI(:,LN)
+!         == ORTHOGONALIZE TO CORE STATES  =====================================
+          DO IB=NC,1,-1
+            IF(LOFI(IB).NE.L) CYCLE
+            AUX(:)=R(:)**2*UOFI(:,IB)*PHI(:)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR1)
+            AUX(:)=R(:)**2*UOFI(:,IB)**2
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR2)
+            VAL=SVAR1/SVAR2
+            PHI(:)=PHI(:)-UOFI(:,IB)*VAL
+          ENDDO
+!         == NORMALIZATION FACTOR  =============================================
+          AUX(:)=R(:)**2*PHI(:)**2
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RNORM,VAL)
+          VAL=1.D0/SQRT(VAL)
+!         == SCALE ALL WAVE FUNCTIONS ==========================================
+          DO IB=1,NB
+            IF(LOFI(IB).NE.L) CYCLE
+            UOFI(:,IB) = UOFI(:,IB)*VAL
+            TUOFI(:,IB)=TUOFI(:,IB)*VAL
+          ENDDO
+!         == SCALE ALL PARTIAL WAVES  ==========================================
+          DO LN1=1,LNX
+            IF(LOX(LN1).NE.L) CYCLE
+            NLPHI(:,LN1) = NLPHI(:,LN1)*VAL
+            TNLPHI(:,LN1)=TNLPHI(:,LN1)*VAL
+          ENDDO
+!         == SCALE ONLY ONCE PER L =============================================
+          EXIT
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == CONSTRUCT QN FUNCTIONS        (H-E)|QN>=|UC>                         ==
+!     ==========================================================================
+      TRANSU(:,:)=0.D0
+      DO L=0,LX
+        IPRO=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          IPRO=IPRO+1
+          SVAR=1.D0
+          DO LN1=1,LN
+            IF(LOX(LN1).NE.L) CYCLE
+            TRANSU(LN1,LN)=TRANSU(LN1,LN)+SVAR
+            SVAR=SVAR*(EOFLN(LN)-EOFLN(LN1))
+          ENDDO
+        ENDDO
+      ENDDO
+      CALL LIB$INVERTR8(LNX,TRANSU,TRANSUINV)
+!
+      QN=MATMUL(NLPHI,TRANSU)
+      TQN=MATMUL(TNLPHI,TRANSU)
+
+      IF(TTEST) THEN
+        WRITE(6,FMT='(82("="),T20,"  TRANSU ")')
+        DO LN1=1,LNX
+          WRITE(6,FMT='(20F15.10)')TRANSU(LN1,:)
+        ENDDO
+        WRITE(6,FMT='(82("="),T20,"  TRANSU^(-1) ")')
+        DO LN1=1,LNX
+          WRITE(6,FMT='(20F15.10)')TRANSUINV(LN1,:)
+        ENDDO
+      END IF
+
+CALL SETUP_WRITEPHI('UN.DAT',GID,NR,LNX,NLPHI)
+CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
+!
+!     ==========================================================================
+!     == TEST EQUATION FOR QN                                                 ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        WRITE(6,FMT='(82("="),T20,"  TEST QN EQ.  ")')
+        DO L=0,LX
+          IPRO=0
+          DO LN=1,LNX
+            IF(LOX(LN).NE.L) CYCLE
+            IPRO=IPRO+1
+            PRO(:,LN)=TQN(:,LN)+(AEPOT*Y0-EOFLN(LN))*QN(:,LN)
+            IF(NCL(L).NE.0) PRO(:,LN)=PRO(:,LN)-UOFI(:,NCL(L))
+            WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|UC>=",F20.15)') &
+     &                     LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
+          ENDDO
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     == CORE-ORTHOGONALIZE QN TO OBTAIN NODAL AE PARTIAL WAVES               ==
+!     == USE LADDER OF NODELESS WAVE FUNCTIONS                                ==
+!     == DUE TO NEGLECT OF THE SMALL COMPONENT THE ORTHOGONALIZATION IS NOT   ==
+!     == EXACT. HOWEVER THIS CHOICE ENSURES THAT AEPHI FULFILLS THE           ==
+!     == SCHRODINGER EQUATION                                                 ==
+!     ==========================================================================
+      AEPHI(:,:) =QN(:,:)   
+      TAEPHI(:,:)=TQN(:,:)  
+      DO LN=1,LNX
+        SVAR=1.D0
+        DO IB=NC,1,-1
+          IF(LOFI(IB).NE.LOX(LN)) CYCLE
+          SVAR=SVAR/(EOFLN(LN)-EOFI1(IB))
+          AEPHI(:,LN) = AEPHI(:,LN)+ UOFI(:,IB)*SVAR
+          TAEPHI(:,LN)=TAEPHI(:,LN)+TUOFI(:,IB)*SVAR
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == TEST ORTHOGONALITY OF AEPHI TO CORE STATES                           ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        ALLOCATE(A(LNX,NC))
+        A(:,:)=0.D0
+        DO LN=1,LNX
+          DO IB=1,NC
+            IF(LOX(LN).NE.LOFI(IB)) CYCLE
+            AUX(:)=R(:)**2*UOFI(:,IB)*AEPHI(:,LN)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+            A(LN,IB)=VAL
+            AUX(:)=R(:)**2*UOFI(:,IB)**2
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+            A(LN,IB)=A(LN,IB)/SQRT(VAL)
+          ENDDO
+        ENDDO
+        WRITE(6,FMT='(82("="),T20," <UC|AEPHI>/SQRT(<UC|UC>  ")')
+        WRITE(6,FMT='(82("="),T10," DEVIATION DUE NEGLECT OF SMALL COMPONENT")')
+        WRITE(6,FMT='(82("="),T10," ORTHOGONALIZATION DONE BASED ON ENERGIES")')
+        DO LN1=1,LNX
+          WRITE(6,FMT='(20F10.5)')A(LN1,:)
+        ENDDO
+        DEALLOCATE(A)
+      END IF
+!
+!     ==========================================================================
+!     == TEST EQUATION FOR ALL-ELECTRON PARTIAL WAVES AEPHI                   ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        WRITE(6,FMT='(82("="),T20,"  TEST AEPHI EQ.  ")')
+        DO LN=1,LNX
+          PRO(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
+          WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|AEPHI_N> =",F20.15)') &
+      &                 LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     == CONSTRUCT PSEUDO PARTIAL WAVES                                       ==
+!     ==========================================================================
+      PSPHI=QN
+      TPSPHI=TQN
+      DO L=0,LX
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          RC1=RC(LN)
+        ENDDO
+        NPRO=NPROL(L)
+        IF(NPRO.EQ.0) CYCLE
+        ALLOCATE(PHITEST(NR,NPRO))
+        ALLOCATE(TPHITEST(NR,NPRO))
+        IPRO=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          IPRO=IPRO+1
+          PHITEST(:,IPRO)=QN(:,LN)
+          TPHITEST(:,IPRO)=TQN(:,LN)
+!PHITEST(:,IPRO)=AEPHI(:,LN)
+!TPHITEST(:,IPRO)=TAEPHI(:,LN)
+        ENDDO
+        CALL ATOMIC_MAKEPSPHI(GID,NR,RC1,L,NPRO,PHITEST,TPHITEST)
+        IPRO=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          IPRO=IPRO+1
+          PSPHI(:,LN)=PHITEST(:,IPRO)
+          TPSPHI(:,LN)=TPHITEST(:,IPRO)
+        ENDDO
+        DEALLOCATE(PHITEST)
+        DEALLOCATE(TPHITEST)
+      ENDDO
+!
+!     ==========================================================================
+!     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
+!     ==========================================================================
+      DO LN=1,LNX
+        BAREPRO(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
+      ENDDO
+!     ==  CLEANUP OF NUMERICAL ERRORS INDUCED BY A TOO COARSE GRID AT LARGE ====
+!     ==  RADII. 2.D0*RCOV IS CHOSEN ARBITRARILY ===============================
+      DO IR=1,NR
+        IF(R(IR).LT.RNORM) CYCLE
+        BAREPRO(IR:,:)=0.D0
+        EXIT
+      ENDDO
+
+      IF(TTEST) THEN
+        CALL SETUP_WRITEPHI('PRO-BARE.DAT',GID,NR,LNX,BAREPRO)
+      END IF
+!
+!     ==========================================================================
+!     == CHECK PAW EQUATION FOR PSEUDO PARTIALWAVES                           ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        ALLOCATE(PHITEST(NR,LNX))
+        ALLOCATE(TPHITEST(NR,LNX))
+        DO LN=1,LNX
+          TPHITEST(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN) &
+     &                  -BAREPRO(:,LN)
+          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
+        ENDDO
+!
+        WRITE(6,FMT='(82("="),T20,"  TEST RAW PAW EQUATION  ")')
+        DO LN=1,LNX
+          WRITE(6,FMT='("LN=",I2," L=",I2," RAW PAW EQ.",F10.5 &
+     &                                 ," SCHR. EQ.",F10.5)') &
+     &         LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))),MAXVAL(ABS(PHITEST(:,LN)))
+        ENDDO
+        DEALLOCATE(PHITEST)
+        DEALLOCATE(TPHITEST)
+      ENDIF
+!
+!     ==========================================================================
+!     == ENFORCE BIORTHOGONALIZATION                                          ==
+!     ==========================================================================
+      PRO(:,:)=BAREPRO(:,:)
+!
+!     ==  DETERMINE <PSPHI|PROBARE> ============================================
+      PSPHIPROBARE(:,:)=0.D0
+      DO LN1=1,LNX
+        DO LN2=1,LNX
+          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
+          AUX(:)=R(:)**2*PSPHI(:,LN1)*PRO(:,LN2)
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          PSPHIPROBARE(LN1,LN2)=VAL
+        ENDDO
+      ENDDO
+DO LN1=1,LNX
+  WRITE(6,FMT='("<PSPHI|PROBARE> ",10F20.5)')PSPHIPROBARE(:,LN1)
+ENDDO
+!
+      DO L=0,LX
+        NPRO=NPROL(L)
+        IF(NPRO.EQ.0) CYCLE   ! SKIP IF NO PARTIAL WAVES FOR THIS L EXIST...
+        ALLOCATE(A(NPRO,NPRO))
+        ALLOCATE(AINV(NPRO,NPRO))
+        ALLOCATE(PRO1(NR,NPRO))
+        IPRO1=0
+        DO LN1=1,LNX
+          IF(LOX(LN1).NE.L) CYCLE
+          IPRO1=IPRO1+1
+          PRO1(:,IPRO1)=PRO(:,LN1)
+          IPRO2=0
+          DO LN2=1,LNX
+            IF(LOX(LN2).NE.L) CYCLE
+            IPRO2=IPRO2+1
+            A(IPRO1,IPRO2)=PSPHIPROBARE(LN1,LN2)
+          ENDDO
+        ENDDO
+        CALL LIB$INVERTR8(NPRO,A,AINV)
+!DO LN1=1,NPRO
+!  WRITE(6,FMT='("AINV",10F20.5)')AINV(:,LN1)
+!ENDDO
+        PRO1=MATMUL(PRO1,AINV)
+        DEALLOCATE(A)
+        DEALLOCATE(AINV)
+        IPRO=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          IPRO=IPRO+1
+          PRO(:,LN)=PRO1(:,IPRO)
+        ENDDO
+        DEALLOCATE(PRO1)
+      ENDDO
+!
+!     ==========================================================================
+!     == CHECK BIORTHOGONALIZATION                                            ==
+!     ==========================================================================
+      DO LN1=1,LNX
+        DO LN2=1,LNX
+          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
+          AUX(:)=R(:)**2*PSPHI(:,LN1)*PRO(:,LN2)
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          IF(LN1.EQ.LN2)VAL=VAL-1.D0
+          IF(ABS(VAL).GT.1.D-5) THEN
+            CALL ERROR$MSG('BIORTHOGONALIZATION FAILED')
+            CALL ERROR$I4VAL('L',L)
+            CALL ERROR$I4VAL('LN1',LN1)
+            CALL ERROR$I4VAL('LN2',LN2)
+            CALL ERROR$R8VAL('DEVIATION',VAL)
+            CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
+          END IF
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == DT,DO                                                                ==
+!     == ATTENTION!! DO NOT MAKE DT AND DH SYMMETRIC. THEY ARE NOT HERMITEAN! ==
+!     ==========================================================================
+      DT=0.D0
+      DOVER=0.D0
+      DH=0.D0
+      DO LN1=1,LNX
+        DO LN2=1,LNX
+          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
+          AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          DT(LN1,LN2)=VAL
+          AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          DOVER(LN1,LN2)=VAL
+          AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPOT(:)*Y0*AEPHI(:,LN2) &
+      &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          DH(LN1,LN2)=DT(LN1,LN2)+VAL
+        ENDDO
+      ENDDO
+      IF(TTEST) THEN
+        DO LN=1,LNX
+          WRITE(6,FMT='("LN=",I2," DTKIN-TRANSPOSE(DTKIN)=",10F10.5)') &
+     &                                    LN,(DT(LN,LN2)-DT(LN2,LN),LN2=1,LNX)
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     == CHECK PAW EQUATION FOR PSEUDO PARTIALWAVES                           ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        ALLOCATE(TPHITEST(NR,LNX))    ! HOLDS TEST FOR PSEUDO
+        ALLOCATE(PHITEST(NR,LNX))     ! HOLDS TEST FOR ALL-ELECTRON 
+        ALLOCATE(PROJ(LNX))
+        DO LN=1,LNX
+!         == DETERMINE PROJECTIONS
+          PROJ(:)=0.D0
+          DO LN1=1,LNX
+            IF(LOX(LN1).NE.LOX(LN)) CYCLE
+            AUX(:)=R(:)**2*PRO(:,LN1)*PSPHI(:,LN)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+            PROJ(LN1)=VAL
+          ENDDO
+          WRITE(6,FMT='("LN=",I2," <P|PSPHI>=",10F10.5)')LN,PROJ
+!
+          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
+          TPHITEST(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
+!TPHITEST(:,LN)=TPHITEST(:,LN)-BAREPRO(:,LN)
+          PHITEST1(:,LN)=0.D0          
+          DO LN1=1,LNX
+            IF(LOX(LN1).NE.LOX(LN)) CYCLE
+            SVAR=0.D0
+            DO LN2=1,LNX
+              IF(LOX(LN2).NE.LOX(LN)) CYCLE
+              SVAR=SVAR+(DH(LN1,LN2)-EOFLN(LN2)*DOVER(LN1,LN2))*PROJ(LN2)
+            ENDDO
+            TPHITEST(:,LN)=TPHITEST(:,LN)+PRO(:,LN1)*SVAR
+            PHITEST1(:,LN)=PHITEST1(:,LN)+PRO(:,LN1)*SVAR
+          ENDDO
+        ENDDO
+        WRITE(6,FMT='(82("="),T20,"  TEST PAW EQUATION  ")')
+        DO LN=1,LNX
+          WRITE(6,FMT='("LN=",I2," L=",I2," PAW EQ.",F20.5 &
+     &                                 ," SCHR. EQ.",F20.5," DPRO ",F20.5)') &
+     &          LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))) &  
+     &                    ,MAXVAL(ABS(PHITEST(:,LN))) &   ! ALL-ELECTRON EQ
+     &                    ,MAXVAL(ABS(PHITEST1(:,LN)+BAREPRO(:,LN)))
+        ENDDO
+!        CALL SETUP_WRITEPHI('PRO-TEST.DAT',GID,NR,LNX,-BAREPRO)
+        DEALLOCATE(PROJ)
+        DEALLOCATE(PHITEST)
+        DEALLOCATE(TPHITEST)
+      END IF
+!
+!     ==========================================================================
+!     == BACK TRANSFORM                                                       ==
+!     ==========================================================================
+GOTO 100
+      QN=MATMUL(QN,TRANSUINV)
+      TQN=MATMUL(TQN,TRANSUINV)
+      PSPHI=MATMUL(PSPHI,TRANSUINV)
+      TPSPHI=MATMUL(TPSPHI,TRANSUINV)
+      AEPHI=MATMUL(AEPHI,TRANSUINV)
+      TAEPHI=MATMUL(TAEPHI,TRANSUINV)
+      PRO=MATMUL(PRO,TRANSPOSE(TRANSU))
+      DT=MATMUL(TRANSPOSE(TRANSUINV),MATMUL(DT,TRANSUINV))
+      DOVER=MATMUL(TRANSPOSE(TRANSUINV),MATMUL(DOVER,TRANSUINV))
+      DH=MATMUL(TRANSPOSE(TRANSUINV),MATMUL(DH,TRANSUINV))
+!
+!     == TEST IF BACK TRANSFORM WAS SUCCESSFUL ================================
+      IF(TTEST) THEN
+        WRITE(6,FMT='(82("="),T20,"  TEST BACK TRANSFORM  ")')
+        DO LN=1,LNX
+          WRITE(6,FMT='("LN=",I2," L=",I2," DIFF. NDLSS PHI",F10.5 &
+     &                                 ," DIFF. KIN.OP NDLSS. PHI ",F10.5)') &
+     &          LN,LOX(LN),MAXVAL(ABS(QN(:,LN)-NLPHI(:,LN))) &
+     &                    ,MAXVAL(ABS(TQN(:,LN)-TNLPHI(:,LN)))
+        ENDDO
+      END IF
+100 CONTINUE
+!
+!     ==========================================================================
+!     == RENORMALIZE WAVE FUNCTIONS AND PROJECTOR FUNCTIONS                   ==
+!     ==========================================================================
+      DO L=0,LX
+        IPRO=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L) CYCLE
+          IPRO=IPRO+1
+!         == NORMALIZE PS PARTIAL WAVE =========================================
+!          IF(IPRO.EQ.1) THEN
+          IF(ISCATT(LN).LE.0) THEN    ! NORMALIZE VALENCE AND SEMI-CORE STATES
+            AUX(:)=R(:)**2*PSPHI(:,LN)**2
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RNORM,VAL)
+            VAL=VAL+DOVER(LN,LN)
+            VAL=1.D0/SQRT(VAL)
+          END IF
+          DO LN2=LN,LNX
+            IF(LOX(LN2).NE.L) CYCLE
+            PSPHI(:,LN2) = PSPHI(:,LN2)*VAL
+            TPSPHI(:,LN2)=TPSPHI(:,LN2)*VAL
+            AEPHI(:,LN2) = AEPHI(:,LN2)*VAL
+            TAEPHI(:,LN2)=TAEPHI(:,LN2)*VAL
+            NLPHI(:,LN2) = NLPHI(:,LN2)*VAL
+            TNLPHI(:,LN2)=TNLPHI(:,LN2)*VAL
+            QN(:,LN2)    =    QN(:,LN2)*VAL
+            TQN(:,LN2)   =   TQN(:,LN2)*VAL
+            PRO(:,LN2)   =   PRO(:,LN2)/VAL
+            DH(LN2,:)=DH(LN2,:)*VAL
+            DT(LN2,:)=DT(LN2,:)*VAL
+            DOVER(LN2,:)=DOVER(LN2,:)*VAL
+            DH(:,LN2)=DH(:,LN2)*VAL
+            DT(:,LN2)=DT(:,LN2)*VAL
+            DOVER(:,LN2)=DOVER(:,LN2)*VAL
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == CALCULATE DENSITY FOR UNSCREENING                                    ==
+!     ==========================================================================
+      AERHO(:)=0.D0
+      PSRHO(:)=0.D0
+      EOFICOMP(:,:)=0.D0
+      DO L=0,LX
+        NPRO=NPROL(L)
+        IF(NPRO.EQ.0) CYCLE
+        ALLOCATE(DH1(NPRO,NPRO))
+        ALLOCATE(DO1(NPRO,NPRO))
+        ALLOCATE(PRO1(NR,NPRO))
+        ALLOCATE(PROJ(NPRO))
+        IPRO1=0
+        DO LN1=1,LNX
+          IF(LOX(LN1).NE.L) CYCLE
+          IPRO1=IPRO1+1
+          PRO1(:,IPRO1)=PRO(:,LN1)
+          IPRO2=0
+          DO LN2=1,LNX
+            IF(LOX(LN2).NE.L) CYCLE
+            IPRO2=IPRO2+1
+            DH1(IPRO1,IPRO2)=DH(LN1,LN2)
+            DO1(IPRO1,IPRO2)=DOVER(LN1,LN2)
+          ENDDO
+        ENDDO
+        NN0=-1
+        G(:)=0.D0
+        DO IB=NC+1,NB
+          IF(LOFI(IB).NE.L) CYCLE
+          IF(NN0.EQ.-1)NN0=NNOFI(IB)
+           E=EOFI1(IB)
+!
+          G(:)=0.D0
+          IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,NNOFI(IB),AEPOT &
+       &                             ,E,AEPSIF(:,IB-NC))
+          SVAR1=E
+          EOFICOMP(1,IB-NC)=E
+!
+          NN=NNOFI(IB)-NN0
+          G(:)=0.D0
+          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
+     &                              ,G,E,PSPSIF(:,IB-NC))
+          SVAR2=E
+          EOFICOMP(2,IB-NC)=E
+          IF(ABS(SVAR2-EOFI1(IB)).GT.1.D-2) THEN
+            CALL ERROR$MSG('INACCURACY WHILE UNSCREENING PS POTENTIAL')
+            CALL ERROR$MSG('ONE-PARTICLE ENERGIES OBTAINED FROM PAW ')
+            CALL ERROR$MSG('DISAGREE WITH THOSE FROM THE AE CALCULATION')
+            CALL ERROR$I4VAL('L',L)
+            CALL ERROR$I4VAL('IB',IB)
+            CALL ERROR$R8VAL('TARGET: E[EV]',EOFI1(IB)*27.211D0)
+            CALL ERROR$R8VAL('TARGET: E[EV]',EOFI(IB)*27.211D0)
+            CALL ERROR$R8VAL('AE:     E[EV]',SVAR1*27.211D0)
+            CALL ERROR$R8VAL('PAW:    E[EV]',SVAR2*27.211D0)
+            CALL ERROR$R8VAL('( PAW-AE)[EV]',(SVAR2-SVAR1)*27.211D0)
+            CALL ERROR$R8VAL('(PAW-REF)[EV]',(SVAR2-EOFI1(IB))*27.211D0)
+            CALL ERROR$R8VAL('( AE-REF)[EV]',(SVAR1-EOFI1(IB))*27.211D0)
+            CALL ERROR$STOP('ATOMLIB_MAKEPARTIALWAVES')
+          END IF
+          IF(TTEST) THEN
+             WRITE(6,FMT='("DEVIATION OF THE ATOMIC ENERGY LEVELS IN EV")')
+             WRITE(6,FMT='("OBTAINED ONCE WITH PAW AND THE AE CALCULATION")')
+             WRITE(6,FMT='("L",I2," PAW-REF ",F10.5,"EV; AE-REF ",F10.5," EV")') &
+         &          L,(SVAR2-EOFI1(IB))*27.211D0,(SVAR1-EOFI1(IB))*27.211D0
+          END IF
+!
+          DO IR=1,NR-2
+            IF(R(IR).LT.ROUT) CYCLE
+            PSPSIF(IR+2:,IB-NC)=0.D0
+            AEPSIF(IR+2:,IB-NC)=0.D0
+            IF(PSPSIF(IR-2,IB-NC)*AEPSIF(IR-2,IB-NC).LT.0.D0) &
+     &                                          AEPSIF(:,IB-NC)=-AEPSIF(:,IB-NC)
+            EXIT
+          ENDDO
+!
+!         == CALCULATE PROJECTIONS PROJ=<P|PS-PSI>  ============================
+          DO IPRO=1,NPRO
+            AUX(:)=R(:)**2*PSPSIF(:,IB-NC)*PRO1(:,IPRO)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,PROJ(IPRO))
+          ENDDO
+!
+!         == NORMALIZE PS WAVE FUNCTION=========================================
+          AUX(:)=R(:)**2*PSPSIF(:,IB-NC)**2
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+          DO IPRO1=1,NPRO
+            DO IPRO2=1,NPRO
+              VAL=VAL+PROJ(IPRO1)*DO1(IPRO1,IPRO2)*PROJ(IPRO2)
+            ENDDO
+          ENDDO
+          PSPSIF(:,IB-NC)=PSPSIF(:,IB-NC)/SQRT(VAL)
+          PROJ=PROJ/SQRT(VAL)
+!
+    PRINT*,'PROJ ',L,PROJ
+!
+!         == NORMALIZE AE WAVE FUNCTION=========================================
+          AUX(:)=R(:)**2*AEPSIF(:,IB-NC)**2
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+          AEPSIF(:,IB-NC)=AEPSIF(:,IB-NC)/SQRT(VAL)
+!
+          PSRHO(:)=PSRHO(:)+FOFI(IB)*PSPSIF(:,IB-NC)**2*Y0
+          AERHO(:)=AERHO(:)+FOFI(IB)*AEPSIF(:,IB-NC)**2*Y0
+        ENDDO
+        DEALLOCATE(DH1)
+        DEALLOCATE(DO1)
+        DEALLOCATE(PRO1)
+        DEALLOCATE(PROJ)
+      ENDDO      
+
+      WRITE(6,FMT='(82("="),T20,"  AE- AND PS-ENERGY LEVELS ")')
+      DO IB=NC+1,NB
+        WRITE(6,FMT='("IB=",I2," L=",I2," AE-ENERGY:",F10.5," EV;" &
+     &                                 ," PS-ENERGY:",F10.5," EV")') &
+     &          IB,LOFI(IB),EOFICOMP(:,IB-NC)*27.211D0
+      ENDDO
+
+
+!
+!!$      IF(TTEST) THEN
+!!$        CALL SETUP_WRITEPHI('PSPSIF.DAT',GID,NR,NB-NC,PSPSIF)
+!!$        CALL SETUP_WRITEPHI('AEPSIF.DAT',GID,NR,NB-NC,AEPSIF)
+!!$        ALLOCATE(AUXARR(NR,2))
+!!$        AUXARR(:,1)=AERHO
+!!$        AUXARR(:,2)=PSRHO
+!!$        CALL SETUP_WRITEPHI('RHO.DAT',GID,NR,2,AUXARR)
+!!$        DEALLOCATE(AUXARR)
+!!$      END IF
+!
+!     ==========================================================================
+!     == UNSCREENING                                                          ==
+!     ==========================================================================
+      SVAR=AEZ
+      DO IB=1,NC
+        SVAR=SVAR-FOFI(IB)
+      ENDDO
+      CALL ATOMIC_UNSCREEN(GID,NR,RBOX,SVAR,AERHO,PSRHO,PSPOT,RCSM,VADD)
+!!$      IF(TTEST) THEN
+!!$        ALLOCATE(AUXARR(NR,2))
+!!$        AUXARR(:,1)=VADD
+!!$        AUXARR(:,2)=PSPOT
+!!$        CALL SETUP_WRITEPHI('VADD.DAT',GID,NR,2,AUXARR)
+!!$        DEALLOCATE(AUXARR)
+!!$      END IF
+!
+!     ==========================================================================
+!     == CUT OFF THE EXPONENTIALLY GROWING TAIL OF THE PARTIALWAVES
+!     ==========================================================================
+      DO IR=1,NR
+        IF(R(IR).GT.RNORM) THEN
+          I=IR+1
+          EXIT
+        END IF
+      ENDDO
+      IR=I
+      AEPHI(IR:,:)=0.D0
+      PSPHI(IR:,:)=0.D0
+      NLPHI(IR:,:)=0.D0
+      QN(IR:,:)=0.D0
+      PRO(IR:,:)=0.D0
+!
+!     ==========================================================================
+!     == WRITE INFORMATION TO FILE                                            ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        WRITE(6,FMT='(82("="),T20,"  DTKIN  ")')
+        DO LN1=1,LNX
+          WRITE(6,FMT='(20F12.3)')DT(LN1,:)
+        ENDDO
+        WRITE(6,FMT='(82("="),T20,"  DOVERLAP  ")')
+        DO LN1=1,LNX
+          WRITE(6,FMT='(20F12.3)')DOVER(LN1,:)
+        ENDDO
+        WRITE(6,FMT='(82("="),T20,"  DHAMILTONIAN ")')
+        DO LN1=1,LNX
+          WRITE(6,FMT='(20F12.3)')DH(LN1,:)
+        ENDDO
+!
+        WRITE(6,FMT='(82("="),T20,"  AE-OVERLAP ")')
+        ALLOCATE(A(LNX,LNX))
+        A(:,:)=0.D0
+        DO LN1=1,LNX
+          DO LN2=1,LNX
+            IF(LOX(LN2).NE.LOX(LN1)) CYCLE
+            AUX(:)=R(:)**2*AEPHI(:,LN1)*AEPHI(:,LN2)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RNORM,VAL)
+            A(LN1,LN2)=VAL
+          ENDDO
+          WRITE(6,FMT='(20F12.3)')A(LN1,:)
+        ENDDO
+        DEALLOCATE(A)
+!
+        WRITE(6,FMT='(82("="),T20," <PRO|PSPHI> ")')
+        ALLOCATE(A(LNX,LNX))
+        A(:,:)=0.D0
+        DO LN1=1,LNX
+          DO LN2=1,LNX
+            IF(LOX(LN2).NE.LOX(LN1)) CYCLE
+            AUX(:)=R(:)**2*PRO(:,LN1)*PSPHI(:,LN2)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+            A(LN1,LN2)=VAL
+          ENDDO
+          WRITE(6,FMT='(20F12.3)')A(LN1,:)
+        ENDDO
+        DEALLOCATE(A)
+      END IF
+      IF(TWRITE) THEN
+        WRITE(STRING,FMT='(F3.0)')AEZ
+        STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
+!       == AE PARTIAL WAVES
+        CALL SETUP_WRITEPHI(-'AEPHI'//TRIM(STRING),GID,NR,LNX,AEPHI)
+!
+!       == PS PARTIAL WAVES ====================================================
+        CALL SETUP_WRITEPHI(-'PSPHI'//TRIM(STRING),GID,NR,LNX,PSPHI)
+!
+!       == NODELESS PARTIAL WAVES ==============================================
+        CALL SETUP_WRITEPHI(-'NLPHI'//TRIM(STRING),GID,NR,LNX,QN)
+!
+!       == PROJECTOR FUNCTIONS =================================================
+        CALL SETUP_WRITEPHI(-'PRO'//TRIM(STRING),GID,NR,LNX,PRO)
+!
+!       == PROJECTOR FUNCTIONS =================================================
+        ALLOCATE(AUXARR(NR,3))
+        AUXARR(:,1)=AEPOT
+        AUXARR(:,2)=PSPOT
+        AUXARR(:,3)=PSPOT-VADD
+        CALL SETUP_WRITEPHI(-'POT'//TRIM(STRING),GID,NR,3,AUXARR)
+        DEALLOCATE(AUXARR)
+!
+!       == QBAR ================================================================
+        DO LN=1,LNX
+          WRITE(*,FMT='("LN= ",I3," L=",I1," ISCATT=",I3," QBAR ",F10.5)') &
+     &                 LN,LOX(LN),ISCATT(LN),QBAR(LN)
+        ENDDO
+      END IF
       RETURN
       END

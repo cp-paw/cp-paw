@@ -19,7 +19,7 @@
       INTEGER(4)            :: LM,m
       INTEGER(4)            :: L
       REAL(8)               :: PI
-!     **************************************************************************      
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       CALL SPHERICAL$YLM(LMX,R,J)
       LX=int(SQRT(REAL(LMX+1.D-5)))-1
@@ -51,7 +51,7 @@
 !     **                   (nabla^2 + k2)*psi(r)=0                            **
 !     **                                                                      **
 !     ** The solution behaves at the origin like                              **
-!     **    H_{l,m}(r)=1/(2*l-1)!! * |r|^{-l-1}  Y_{l,m}(r)                   **
+!     **    H_{l,m}(r)= (2*l-1)!! * |r|^{-l-1}  Y_{l,m}(r)                   **
 !     **                                                                      **
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: R(3) ! position relative to the origin
@@ -67,7 +67,7 @@
       REAL(8)               :: PI
       logical(4)            :: tcap
       real(8)               :: a,b
-!     **************************************************************************      
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       CALL SPHERICAL$YLM(LMX,R,H)
       LX=int(SQRT(REAL(LMX+1.D-5)))-1
@@ -92,7 +92,7 @@
           dydx=-dydx 
         END IF 
 !
-!       == inside rad, match a parabola times r**l ==============================
+!       == inside rad, match a parabola times r**l =============================
         if(tcap) then
           b=0.5d0*(dydx*x-real(l,kind=8)*y)/x**(l+2)
           a=y/x**l-b*x**2
@@ -218,7 +218,7 @@
       REAL(8)               :: K 
       REAL(8)               :: X,Y,dydx
       REAL(8)               :: PI
-!     **************************************************************************      
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       K=SQRT(ABS(K2))     
       X=r
@@ -257,7 +257,7 @@
       REAL(8)               :: X,Y,dydx
       REAL(8)               :: PI
       REAL(8)               :: svar
-!     **************************************************************************      
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       K=SQRT(ABS(K2))     
       X=r
@@ -309,7 +309,7 @@
       REAL(8)               :: HANKEL ! HANKEL FUNCTION OF THE DISTANCE
       REAL(8)               :: CG ! GAUNT COEFFICIENT
       complex(8)            :: kappa
-!     **************************************************************************      
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       L3X=L1X+L2X
       LM1X=(L1X+1)**2
@@ -357,7 +357,7 @@
         ENDDO
       ENDDO
 !
-!     == MULTIPLY WITH -4*PI (-1)**l2 ============================================
+!     == MULTIPLY WITH -4*PI (-1)**l2 ==========================================
       S=-4.D0*PI*S
       do lm2=1,lm2x
         s(lm2,:)=s(lm2,:)*(-1.d0)**loflm(lm2)
@@ -367,12 +367,12 @@
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$Q(L,RAD,VAL,DER,K2,QPAR)
-!     **************************************************************************      
+!     **************************************************************************
 !     ** parameter needed to  screen the structure constants                  **
 !     **   |K>-|J>qbar has the same logarithmic derivative as |phidot>.       **
-!     ** val and der are value and derivative of phidot.                       **
+!     ** val and der are value and derivative of phidot.                      **
 !     **                                                                      **
-!     **************************************************************************      
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L
       REAL(8)   ,INTENT(IN) :: RAD
@@ -382,7 +382,7 @@
       REAL(8)   ,INTENT(OUT):: QPAR
       REAL(8)               :: Jval,JDER
       REAL(8)               :: Kval,KDER
-!     **************************************************************************      
+!     **************************************************************************
       CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,Jval,JDER)
       CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,Kval,KDER)
       QPAR=(JVAL*DER-VAL*JDER)/(KVAL*DER-VAL*KDER)
@@ -391,7 +391,7 @@
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$SCREEN(TSTART,N,NORB,QBAR,S,SBAR)
-!     **************************************************************************      
+!     **************************************************************************
 !     **  determines screened structure constants for a cluster               **
 !     **      |Kbar_i>=sum_j |K_j> (delta_ji+Qbar_j*sbar_ji)                  **
 !     **  start with sbar=0 or give better estimate                           **
@@ -399,7 +399,7 @@
 !     **                                                                      **
 !     **      sbar=                                                           **
 !     **                                                                      **
-!     **************************************************************************      
+!     **************************************************************************
       IMPLICIT NONE
       logical(4),intent(in) :: tstart
       INTEGER(4),INTENT(IN) :: N            ! #(orbitals on the cluster)
@@ -417,7 +417,8 @@
       real(8)               :: delta
       integer(4)            :: iter
       logical(4)            :: convg
-!     **************************************************************************      
+!     **************************************************************************
+                            call trace$push('LMTO$SCREEN')
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -442,7 +443,6 @@
           enddo
           dsbar=matmul(s,dsbar)-sbar
           delta=maxval(abs(dsbar))
-print*,'lmto$screen: delta ',iter,delta
           convg=delta.lt.tol
           if(convg) exit
           sbar=sbar+dsbar*alpha
@@ -452,12 +452,13 @@ print*,'lmto$screen: delta ',iter,delta
           call error$stop('lmto$screen')
         end if
       end if
+                            call trace$pop()
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QbAR,N,NORB,SBAR)
-!     **************************************************************************      
+!     **************************************************************************
 !     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
 !     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
 !     **                                                                      **
@@ -468,7 +469,7 @@ print*,'lmto$screen: delta ',iter,delta
 !     **                                                                      **
 !     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
 !     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
-!     **************************************************************************      
+!     **************************************************************************
       implicit none
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: RPOS(3,NAT)
@@ -487,7 +488,8 @@ print*,'lmto$screen: delta ',iter,delta
       REAL(8)               :: S0(n,n)
       REAL(8)  ,allocatable :: S1(:,:)
       REAL(8)               :: qbarvec(n)
-!     **************************************************************************      
+!     **************************************************************************
+                               call trace$push('LMTO$CLUSTERSTRUCTURECONSTANTS')
 !
 !     ==========================================================================
 !     == CHECK CONSISTENCY OF ARRAY DIMENSIONS                                ==
@@ -534,7 +536,11 @@ write(*,fmt='("r1=",3f10.4," dr=",3f10.4)')r1,r2-r1
 !     == SCREEN STRUCTURE CONSTANTS                                           ==
 !     ==========================================================================
       sbar=0.d0
-      CALL LMTO$SCREEN(.false.,N,NORB,QBAR,S0,SBAR)
+!     == THE FIRST PARAMETER SWITCHES BETWEEN AN ITERATIVE AND A DIRECT SOLUTION
+!     == OF THE EQUATION. THE ITERATIVE APPROACH MAY BE MORE EFFICIENT IN AN
+!     == CAR-PARRINELLO LIKE APPROACH.
+      CALL LMTO$SCREEN(.true.,N,NORB,QBAR,S0,SBAR)
+                               call trace$pop()
       RETURN
       END
 
@@ -601,7 +607,7 @@ write(*,fmt='("r1=",3f10.4," dr=",3f10.4)')r1,r2-r1
           Y0=Rfold(2,IAT1)-rfold(2,iat2)
           Z0=Rfold(3,IAT1)-rfold(3,iat2)
           CALL BOXSPH(rbas,X0,Y0,Z0,RC,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
-!         == LOOP OVER BOXES IN THE NEIGHBORHOOD ================================
+!         == LOOP OVER BOXES IN THE NEIGHBORHOOD ===============================
           DO It1=MIN1,MAX1
             DO It2=MIN2,MAX2
               DO It3=MIN3,MAX3
@@ -610,7 +616,7 @@ write(*,fmt='("r1=",3f10.4," dr=",3f10.4)')r1,r2-r1
                 itvec(2)=it2
                 itvec(3)=it3
                 tvec(:)=matmul(rbas,real(itvec,kind=8))
-!               == distance criterion =========================================
+!               == distance criterion ==========================================
                 D(:)=Rfold(:,IAT2)+tvec(:)-Rfold(:,IAT1)
                 D2=SUM(D(:)**2)
                 IF(D2.GT.RMAX2) CYCLE

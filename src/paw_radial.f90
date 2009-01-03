@@ -2540,7 +2540,7 @@ REAL(8)                :: G1SAVE=0.D0
 REAL(8)                :: DEXSAVE=0.D0
 INTEGER(4)             :: NSAVE=0
 ! BESSELTRANSFORM REQUIRES MAPPING FROM SHLOG TO LOG GRID TYPE
-INTEGER(4),PARAMETER   :: NMAPX=20
+INTEGER(4),PARAMETER   :: NMAPX=105
 INTEGER(4)             :: NMAP=0
 INTEGER(4)             :: MAP(4,NMAPX)
 CONTAINS
@@ -3094,7 +3094,7 @@ END MODULE BESSELTRANSFORM_MODULE
 !     ==================================================================
       IF(GID1A.LT.0) THEN
         IF(NMAP.GE.NMAPX) THEN
-          CALL ERROR$MSG('OUT OF RANGE')
+          CALL ERROR$MSG('OUT OF RANGE: nmap.ge.nmapx')
           CALL ERROR$STOP('RADIAL$BESSELTRANSFORM')
         END IF
         CALL RADIAL$NEW('LOG',GID1A)

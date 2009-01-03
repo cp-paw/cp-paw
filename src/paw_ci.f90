@@ -1741,8 +1741,10 @@ print*,'marke 4',iter,maxval(abs(vec))
 !     ==========================================================================
       DO J=1,NCHI
         DO I=1,NCHI
-          IC=J+(I-1)*NCHI
-          ICBAR=I+(J-1)*NCHI
+! indices i,j has been exchanged due to christians remark
+! must be consistent with similar expression in ci_addconstraint
+          IC=i+(j-1)*NCHI
+          ICBAR=j+(i-1)*NCHI
           IF(J.GT.I) THEN
             V(I,J)=0.5D0*CMPLX(VECSUM(IC),VECSUM(ICBAR),kind=8)
           ELSE IF(J.EQ.I) THEN
@@ -2251,7 +2253,8 @@ PRINT*,'PSI%N ',PSI0%N
 !     == CONSTRUCT CONSTRAINING FORCES                                         ==
 !     ===========================================================================
       SVAR=delta**2/mass/(1.d0+alpha)
-      e=e/svar
+!      e=e/svar  energy is not the lagrange parameter
+      e=epot    ! E=<psi|H|psi>
       v(:,:)=v(:,:)/svar
       close(123)
       RETURN

@@ -4,7 +4,7 @@ MODULE CORE_MODULE
 !**  BECAUSE EVERY NODE WILL CALCULATE THE CORE LEVELS ONLY FOR ITS   **
 !**  OWN SET OF ATOMS AND ONLY THE FIRST NODE CAN WRITE               **
 !**                                                                   **
-!**  COMMUNIATION IN CROE$REPORT NOT DONE YET.                        **
+!**  COMMUNIATION IN CORE$REPORT NOT DONE YET.                        **
 !**                                                                   **
 TYPE CORESHIFT_TYPE
 INTEGER(4)           :: IAT
@@ -78,7 +78,7 @@ END MODULE CORE_MODULE
       INTEGER(4)              :: THISTASK,NTASKS
 !     ******************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-      IF(thistask.NE.1) RETURN
+      IF(THISTASK.NE.1) RETURN
       CALL CONSTANTS('EV',EV)
       THIS=>FIRST
       DO 
@@ -102,7 +102,7 @@ END MODULE CORE_MODULE
 !
 ! SANTOS040617 BEGIN
 !     ..................................................................
-      SUBROUTINE CORE_CORESHIFTS(IAT,ISP,gid,NR,LMRXX,AEPOT)
+      SUBROUTINE CORE_CORESHIFTS(IAT,ISP,GID,NR,LMRXX,AEPOT)
 !     ******************************************************************
 !     **                                                              **
 !     **  CALCULATES THE EIGENVALUES OF CORE HAMILTONIAN              **
@@ -113,19 +113,20 @@ END MODULE CORE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IAT
       INTEGER(4),INTENT(IN) :: ISP
-      INTEGER(4),INTENT(IN) :: gid
+      INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: LMRXX
       REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRXX)
 
       REAL(8)               :: ATPOT(NR)
       REAL(8)               :: AEPOT1(NR,LMRXX)
+      INTEGER(4)            :: NB
       INTEGER(4)            :: NC
       INTEGER(4),ALLOCATABLE:: LB(:)
 !     REAL(8)   ,ALLOCATABLE:: FB(:)
       REAL(8)   ,ALLOCATABLE:: EB(:)
       REAL(8)   ,ALLOCATABLE:: AEPSI(:,:)
-      REAL(8)               :: r(nr)
+      REAL(8)               :: R(NR)
       CHARACTER(32)         :: NAME
       INTEGER(4)            :: LMNX
       INTEGER(4)            :: LMRX
@@ -153,7 +154,7 @@ END MODULE CORE_MODULE
       LOGICAL(4)            :: TCHK
 !     ******************************************************************
       IF(.NOT.TCORESHIFTS) RETURN
-      call radial$r(gid,nr,r)
+      CALL RADIAL$R(GID,NR,R)
       CALL ATOMLIST$GETCH('NAME',IAT,NAME)
       TCHK=DEFAULT
       DO I=1,NATOMS
@@ -197,21 +198,20 @@ END MODULE CORE_MODULE
 !     ==  COLLECT CORE PARTIAL WAVES FROM SETUP OBJECT                ==
 !     ==================================================================
       CALL SETUP$ISELECT(ISP)
+      CALL SETUP$GETI4('NB',NB)
       CALL SETUP$GETI4('NC',NC)
       IF (NC.EQ.0) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         CALL REPORT$TITLE(NFILO,'NO CORE STATES FOR ATOM '//TRIM(NAME))
         RETURN
       END IF
-      CALL SETUP$GETR8A('ATOMICAEPOT',NR,ATPOT)
-      ALLOCATE(LB(NC))
-      CALL SETUP$GETI4A('LB',NC,LB)
-!     ALLOCATE(FB(NC))
-!     CALL SETUP$FB(ISP,NC,FB)
-      ALLOCATE(EB(NC))
-      CALL SETUP$GETR8A('EB',NC,EB)
-      ALLOCATE(AEPSI(NR,NC))
-      CALL SETUP$GETR8A('AECOREPSI',NR*NC,AEPSI)
+      CALL SETUP$GETR8A('AEPOT',NR,ATPOT)
+      ALLOCATE(LB(NB))
+      CALL SETUP$GETI4A('LB',NB,LB)
+      ALLOCATE(EB(NB))
+      CALL SETUP$GETR8A('EB',NB,EB)
+      ALLOCATE(AEPSI(NR,NB))
+      CALL SETUP$GETR8A('AEPSI',NR*NB,AEPSI)
 !
 !     ==================================================================
 !     ==  CONSTANTS                                                   ==
@@ -269,7 +269,7 @@ END MODULE CORE_MODULE
               ENDDO
 !
               DWORK1(:)=(AEDMU(:)*AEPSI(:,LN1)*AEPSI(:,LN2))*R(:)**2
-              CALL RADIAL$INTEGRAL(gid,NR,DWORK1,SVAR)
+              CALL RADIAL$INTEGRAL(GID,NR,DWORK1,SVAR)
               HAMIL(LMN1,LMN2)=HAMIL(LMN1,LMN2)+SVAR
 !
             ENDDO
