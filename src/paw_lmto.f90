@@ -903,6 +903,7 @@ PRINT*,'SBARONSITE ',L,SBARONSITE(L**2+1,L**2+1)
           LM=L**2+1
           SVAR=POTPAR(ISP)%CBAR(LN)-POTPAR(ISP)%ENU(LN) &
      &        +SBARONSITE(LM,LM)*POTPAR(ISP)%SQDELTABAR(LN)**2
+          if(svar.le.0.d0) cycle
           AECHI(:,LNCHI)=AECHI(:,LNCHI)+AEPHIDOT(:,LN)*SVAR
           PSCHI(:,LNCHI)=PSCHI(:,LNCHI)+PSPHIDOT(:,LN)*SVAR
 print*,'ln svar ',ln,svar
