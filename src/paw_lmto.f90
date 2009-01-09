@@ -899,16 +899,14 @@ PRINT*,'SBARONSITE ',L,SBARONSITE(L**2+1,L**2+1)
         LOXCHI(LNCHI)=L
         AECHI(:,LNCHI)=AEPHI(:,LN)          
         PSCHI(:,LNCHI)=PSPHI(:,LN)          
-        IF(ISCATT(LN).EQ.0) THEN
-          LM=L**2+1
-          SVAR=POTPAR(ISP)%CBAR(LN)-POTPAR(ISP)%ENU(LN) &
+        LM=L**2+1
+        SVAR=POTPAR(ISP)%CBAR(LN)-POTPAR(ISP)%ENU(LN) &
      &        +SBARONSITE(LM,LM)*POTPAR(ISP)%SQDELTABAR(LN)**2
-          if(svar.le.0.d0) cycle
-          AECHI(:,LNCHI)=AECHI(:,LNCHI)+AEPHIDOT(:,LN)*SVAR
-          PSCHI(:,LNCHI)=PSCHI(:,LNCHI)+PSPHIDOT(:,LN)*SVAR
 print*,'ln svar ',ln,svar
 print*,'c,enu   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
-        END IF
+        if(svar.le.0.d0) cycle
+        AECHI(:,LNCHI)=AECHI(:,LNCHI)+AEPHIDOT(:,LN)*SVAR
+        PSCHI(:,LNCHI)=PSCHI(:,LNCHI)+PSPHIDOT(:,LN)*SVAR
       ENDDO
 !
 !     == CUT OFF THE TAIL OF THE LOCAL ORBITALS ================================

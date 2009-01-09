@@ -3572,6 +3572,9 @@ GOTO 10001
 !       == NODELESS PARTIAL WAVES ==============================================
         CALL SETUP_WRITEPHI(-'NLPHI'//TRIM(STRING),GID,NR,LNX,NLPHI)
 !
+!       == NODELESS PARTIAL WAVES ==============================================
+        CALL SETUP_WRITEPHI(-'QPHI'//TRIM(STRING),GID,NR,LNX,QN)
+!
 !       == PROJECTOR FUNCTIONS =================================================
         CALL SETUP_WRITEPHI(-'PRO'//TRIM(STRING),GID,NR,LNX,PRO)
 !
@@ -3636,7 +3639,6 @@ GOTO 10001
       REAL(8)   ,ALLOCATABLE :: DO(:,:)  !(LNX,LNX) OVERLAP DIFFERENCE
       REAL(8)                :: VAL
       REAL(8)                :: PI,Y0
-      REAL(8)               :: EV
       REAL(8)                :: RCOV
       REAL(8)                :: DPHASE
       INTEGER(4)             :: NPRO
@@ -3725,10 +3727,9 @@ GOTO 10001
 !     ==  WRITE RESULT TO FILE                                                ==
 !     ==========================================================================
       rewind(nfil)
-      CALL CONSTANTS('EV',EV)
       DO IE=1,NE
         E=EMIN+DE*REAL(IE-1,KIND=8)
-        WRITE(NFIL,FMT='(20F10.5)')E/EV,AEPHASE(:,IE),PAWPHASE(:,IE)
+        WRITE(NFIL,FMT='(20F10.5)')E,AEPHASE(:,IE),PAWPHASE(:,IE)
       ENDDO
       RETURN
       END
