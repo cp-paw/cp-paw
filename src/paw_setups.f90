@@ -4004,8 +4004,9 @@ ENDDO
      &                               ,rbnd,PSPHI,TPSPHI)
 !     **************************************************************************
 !     **                                                                      **
-!     **                                                                      ** 
+!     **                                                                      **
 !     **************************************************************************
+use strings_module
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)     :: GID
       INTEGER(4),INTENT(IN)     :: NR
@@ -4021,6 +4022,7 @@ ENDDO
       INTEGER(4),PARAMETER      :: NITER=100
       INTEGER(4),PARAMETER      :: ISO=0
       REAL(8)   ,PARAMETER      :: TOL=1.D-6
+      REAL(8)   ,PARAMETER      :: cmin=1.D-8
       REAL(8)                   :: E
       REAL(8)                   :: PI,Y0
       REAL(8)                   :: AUX(NR),DREL(NR),G(NR),POT(NR),PHI(NR)
@@ -4033,6 +4035,7 @@ ENDDO
       INTEGER(4)                :: L
       INTEGER(4)                :: LN,ITER,IR
       logical(4)                :: convg
+      real(8)                   :: svar
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -4051,8 +4054,28 @@ ENDDO
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),RBND,PHIPHASE)
         E=EOFLN(LN)
         C(:)=EXP(-(R(:)/RC(LN))**lambda(ln))
+!       == cut off c, if it falls below minimum ================================
+        svar=rc(ln)*(-log(cmin))**(1.d0/lambda(ln))
+        irbnd=0
+        do ir=1,nr
+          irbnd=ir
+          if(r(ir).gt.svar) exit
+        enddo
         C(:)=(C(:)-C(IRBND))/(1.D0-C(IRBND))
         C(IRBND:)=0.D0
+!
+!       == find outermost point considering the potential ======================
+        do ir=nr-2,1,-1
+          if(ir.lt.irbnd) exit
+          svar=tpsphi(ir,ln)+(pspot(ir)*y0-e)*psphi(ir,ln)
+          svar=abs(svar/psphi(ir,ln))
+          if(svar.gt.1.d-5) then
+            irbnd=ir
+            exit
+          end if
+        enddo
+!
+!       == loop to find pseudo partial wave ====================================
         ISTART=1
         X0=0.d0
         DX=1.D-2
@@ -4076,7 +4099,6 @@ ENDDO
         psphi(:,ln)=phi(:)
         TPSPHI(:,LN)=(E-POT(:)*Y0)*phi(:)
       ENDDO
-
       RETURN
       END
 !

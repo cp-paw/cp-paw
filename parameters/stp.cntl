@@ -1,5 +1,4 @@
 !SCNTL
-
   !SETUP ID='H_FIRST' 
      EL='H_'  ZV=1. RCL/RCOV=1.D0 1.D0 1.D0
      !GRID R1=1.056D-4  DEX=0.05 NR=250 !END
