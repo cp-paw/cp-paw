@@ -1006,16 +1006,13 @@ print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
         ENDDO
       ENDDO
       BMAT(:,:)=0.D0
-      DO LNCHI=1,LNXCHI
+      DO LNCHI=1,LNXCHI1
         BMAT(LNCHI,LNCHI)=1.D0
       ENDDO
       CALL LIB$MATRIXSOLVER8(LNXCHI1,LNXPHI,LNXCHI1,AMAT,XMAT,BMAT)
       AMAT=TRANSPOSE(XMAT)
       DEALLOCATE(XMAT)
       DEALLOCATE(BMAT)
-!
-CALL LMTO_WRITEPHI('TESTAECHI.DAT',GID,NR,LNXCHI1,AECHI)
-CALL LMTO_WRITEPHI('TESTPSCHI.DAT',GID,NR,LNXCHI1,PSCHI)
 !
 !     ==========================================================================
 !     == DELETE ORBITALS NOT IN THE SET                                       ==
@@ -1029,6 +1026,7 @@ CALL LMTO_WRITEPHI('TESTPSCHI.DAT',GID,NR,LNXCHI1,PSCHI)
         LNCHI=LNCHI+1
         CHI(:,LNCHI)=AECHI(:,LNCHI1)
         CHIPHI(LNCHI,:)=AMAT(LNCHI1,:)
+print*,'chiphi ',chiphi(lnchi,:)
       ENDDO
 !
 !     ==========================================================================
