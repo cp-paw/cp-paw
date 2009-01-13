@@ -776,6 +776,7 @@ END MODULE LMTO_MODULE
 !     **                                                                      **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : SBAR,POTPAR
+      USE strings_module
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: IAT     ! ATOM INDEX
@@ -809,11 +810,13 @@ END MODULE LMTO_MODULE
       REAL(8)                :: AEZ               ! ATOMIC NUMBER
       REAL(8)                :: AUX(NR)
       REAL(8)                :: R(NR)
-      REAL(8)                :: SVAR,VAL
+      REAL(8)                :: SVAR,svar1,VAL
       logical(4)             :: tchk
       INTEGER(4)             :: Lmx,lnxchi1
       INTEGER(4)             :: LN,L,I,j,LXX,ISVAR,iib,n1,lm,lnchi1,lnchi,ir
       INTEGER(4)             :: LNphi
+      INTEGER(4)             :: ircov  ! grid index just beyond rcov
+      character(64)          :: string
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO$DOLOCORB')
       CALL RADIAL$R(GID,NR,R)
@@ -824,6 +827,10 @@ END MODULE LMTO_MODULE
       CALL SETUP$ISELECT(ISP)
       CALL SETUP$GETR8('AEZ',AEZ)
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
+      do ir=1,nr
+        ircov=ir
+        if(r(ir).gt.rcov) exit
+      enddo
       CALL SETUP$GETI4('LNX',LNX)
       IF(LNXPHI.NE.LNX) THEN
         CALL ERROR$STOP('INCONSISTENT #(PARTIAL WAVES)')
@@ -902,38 +909,69 @@ PRINT*,'SBARONSITE ',L,SBARONSITE(L**2+1,L**2+1)
         LM=L**2+1
         SVAR=POTPAR(ISP)%CBAR(LN)-POTPAR(ISP)%ENU(LN) &
      &        +SBARONSITE(LM,LM)*POTPAR(ISP)%SQDELTABAR(LN)**2
-print*,'ln svar ',ln,svar
+print*,'ln svar ',ln,lnchi,svar,aephidot(ircov,ln),aechi(ircov,lnchi)
 print*,'c,enu   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
-        if(svar.le.0.d0) cycle
+!if(aephidot(ircov,ln)*svar/aechi(ircov,lnchi).gt.0.d0) cycle
+        if(svar.lt.0.d0) cycle
         AECHI(:,LNCHI)=AECHI(:,LNCHI)+AEPHIDOT(:,LN)*SVAR
         PSCHI(:,LNCHI)=PSCHI(:,LNCHI)+PSPHIDOT(:,LN)*SVAR
       ENDDO
 !
 !     == CUT OFF THE TAIL OF THE LOCAL ORBITALS ================================
       DO LNCHI=1,LNXCHI1     
-        DO IR=3,NR
-          IF(R(IR).LT.RCOV) CYCLE
-          IF(AECHI(IR,LNCHI)*AECHI(IR-1,LNCHI).le.0.D0) then
-print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov
-            AECHI(IR:,lnchi)=0.D0
-            PSCHI(IR:,lnchi)=0.D0
-            exit
-          end if
-!         == check if a chi has a node at all... ===============================
-          IF(R(IR).GT.2.D0*RCOV.AND.AECHI(IR,LNCHI)/AECHI(IR-1,LNCHI).GT.1.D0) THEN
-            CALL LMTO_WRITEPHI('FAILEDLOCALORBITAL.DAT',GID,NR,LNXCHI1,AECHI)
-            CALL LMTO_WRITEPHI('FAILEDPHI.DAT',GID,NR,LNXCHI1,AEPHI)
-            CALL LMTO_WRITEPHI('FAILEDPHIDOT.DAT',GID,NR,LNXCHI1,AEPHIDOT)
-            CALL ERROR$MSG('LOCAL ORBITAL CONSTRUCTION FAILED')
-            CALL ERROR$MSG('LOCAL ORBITALS ARE PRINTED INTO FILE')
-            CALL ERROR$CHVAL('FILE','FAILEDLOCALORBITAL.DAT')
-            CALL ERROR$I4VAL('IAT',IAT)
-            CALL ERROR$I4VAL('ISP',ISP)
-            CALL ERROR$I4VAL('LNCHI ',LNCHI)
-            CALL ERROR$R8VAL('R',R(IR))
-            CALL ERROR$STOP('LMTO$DOLOCORB')
-          END IF
-        ENDDO
+        svar=aechi(ircov,lnchi)/aechi(ircov-1,lnchi)
+!       svar>1 : increasing in absolute value
+!       0<svar<1 : decreasing in absolute value
+!       svar<0 : zero between r(ir-1) and r(ir)
+        if(svar.gt.1.d0) then
+          do ir=ircov-1,1,-1
+            svar1=aechi(ir,lnchi)/aechi(ir-1,lnchi)
+            if(svar1.le.0.d0) then
+print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
+               AECHI(IR:,lnchi)=0.D0
+               PSCHI(IR:,lnchi)=0.D0
+               exit
+            end if
+            if(svar1.lt.1.d0) then
+              CALL LMTO_WRITEPHI('FAILEDLOCALORBITAL.DAT',GID,NR,LNXCHI1,AECHI)
+              CALL LMTO_WRITEPHI('FAILEDPHI.DAT',GID,NR,LNXCHI1,AEPHI)
+              CALL LMTO_WRITEPHI('FAILEDPHIDOT.DAT',GID,NR,LNXCHI1,AEPHIDOT)
+              CALL ERROR$MSG('LOCAL ORBITAL CONSTRUCTION FAILED')
+              CALL ERROR$MSG('absolute value of LOCAL ORBITAL has a minimum inside rcov')
+              CALL ERROR$MSG('LOCAL ORBITALS ARE PRINTED INTO FILE')
+              CALL ERROR$CHVAL('FILE','FAILEDLOCALORBITAL.DAT')
+              CALL ERROR$I4VAL('IAT',IAT)
+              CALL ERROR$I4VAL('ISP',ISP)
+              CALL ERROR$I4VAL('LNCHI ',LNCHI)
+              CALL ERROR$R8VAL('R',R(IR))
+              CALL ERROR$STOP('LMTO$DOLOCORB')
+            end if
+          enddo
+        else  
+          DO IR=ircov,NR
+            svar1=aechi(ir,lnchi)/aechi(ir-1,lnchi)
+            IF(svar1.le.0.D0) then
+print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
+              AECHI(IR:,lnchi)=0.D0
+              PSCHI(IR:,lnchi)=0.D0
+              exit
+            end if
+!           == check if a chi has a node at all... ===============================
+            IF(svar1.gt.1.d0) then
+              CALL LMTO_WRITEPHI('FAILEDLOCALORBITAL.DAT',GID,NR,LNXCHI1,AECHI)
+              CALL LMTO_WRITEPHI('FAILEDPHI.DAT',GID,NR,LNXCHI1,AEPHI)
+              CALL LMTO_WRITEPHI('FAILEDPHIDOT.DAT',GID,NR,LNXCHI1,AEPHIDOT)
+              CALL ERROR$MSG('LOCAL ORBITAL CONSTRUCTION FAILED')
+              CALL ERROR$MSG('LOCAL ORBITALS ARE PRINTED INTO FILE')
+              CALL ERROR$CHVAL('FILE','FAILEDLOCALORBITAL.DAT')
+              CALL ERROR$I4VAL('IAT',IAT)
+              CALL ERROR$I4VAL('ISP',ISP)
+              CALL ERROR$I4VAL('LNCHI ',LNCHI)
+              CALL ERROR$R8VAL('R',R(IR))
+              CALL ERROR$STOP('LMTO$DOLOCORB')
+            END IF
+          ENDDO
+         end if
       ENDDO
 !
 !     ==ORTHONORMALIZE LOCAL ORBITALS ==========================================
@@ -992,6 +1030,13 @@ CALL LMTO_WRITEPHI('TESTPSCHI.DAT',GID,NR,LNXCHI1,PSCHI)
         CHI(:,LNCHI)=AECHI(:,LNCHI1)
         CHIPHI(LNCHI,:)=AMAT(LNCHI1,:)
       ENDDO
+!
+!     ==========================================================================
+!     == plot local orbitals                                                  ==
+!     ==========================================================================
+      WRITE(STRING,FMT='(F3.0)')AEZ
+      STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
+      CALL SETUP_WRITEPHI(-'CHI'//TRIM(STRING),GID,NR,LNCHI,CHI)
 !
                             CALL TRACE$POP()
       RETURN
