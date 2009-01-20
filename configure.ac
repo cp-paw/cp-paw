@@ -322,7 +322,7 @@ if test "$TUPPERCASEMOD" = "F"; then
 #
 #  sed -e 's%\([[^\/]]*.mod\)%\L\1%'\
 #      ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
-  ./lowercasemodnames.x  < ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
+  ./lowercasemodnames.sh  < ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
   cp  ${PAWDIR}/Makefile_bare_tmp  ${PAWDIR}/Makefile_bare
   rm  -f ${PAWDIR}/Makefile_bare_tmp
 fi

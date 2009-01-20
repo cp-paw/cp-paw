@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 869 $'
+character(256):: VERrev='$LastChangedRevision: 918 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2008-01-16 17:22:10 +0100 (Mi, 16. Jan 2008) $'
+character(256):: VERdat='$LastChangedDate: 2009-01-20 10:18:06 +0100 (Di, 20. Jan 2009) $'
 end Module version_module
 !
 !     ..................................................................
@@ -60,6 +60,7 @@ end Module version_module
 !     ==================================================================
       CALL TRACE$PUSH('MAIN')
                               CALL TIMING$START
+call setup$buildparms
       CALL PAW
 !
 !     ==================================================================

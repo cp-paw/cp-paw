@@ -37,14 +37,82 @@ END MODULE SESM_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       PROGRAM MAIN
       CALL TRACE$SETL4('ON',.FALSE.)
+CALL BUILD()
+STOP
 CALL TESTATOMLIB()
-stop
-call teststructureconstants
-! call test
-stop
+STOP
+CALL TESTSTRUCTURECONSTANTS
+! CALL TEST
+STOP
       CALL DEBUG_PETERS_NONSPH()
       STOP
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BUILD()
+!     **************************************************************************
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: NFIL=1001
+      CHARACTER(2)     :: EL
+      CHARACTER(12)    :: ID
+      CHARACTER(14)    :: SY
+      CHARACTER(5)    :: TYPE="'HBS'"
+      INTEGER(4)       :: I
+      REAL(8)          :: AEZ,ZCORE,ZV
+!     **************************************************************************
+      OPEN(NFIL,FILE='STPS')
+      WRITE(NFIL,FMT='("!SCNTL")')
+      DO I=1,105
+        CALL PERIODICTABLE$GET(I,'SYMBOL',EL)
+        CALL PERIODICTABLE$GET(I,'Z',AEZ)
+        CALL PERIODICTABLE$GET(I,'ZCORE',ZCORE)
+        ZV=AEZ-ZCORE
+        ID="'"//TRIM(EL)//'_HBS'//"'"
+        SY="'"//EL//"'"
+        IF(SY(3:3).EQ.' ')SY(3:3)='_'
+        WRITE(NFIL,FMT='(T2,"!SETUP  ID=",A," EL=",A," ZV=",F3.0)') &
+     &     TRIM(ID),TRIM(SY),ZV
+        WRITE(NFIL,FMT='(T10,"TYPE=",A," RBOX/RCOV=2.0 RCSM/RCOV=0.25")') &
+           TYPE
+        WRITE(NFIL,FMT='(T10,"RCL/RCOV= 0.75 0.75 0.75 0.75")') 
+        WRITE(NFIL,FMT='(T10,"LAMBDA= 6. 6. 6. 6.")') 
+        WRITE(NFIL,FMT='(T4,"!GRID DMIN=5.E-6 DMAX=0.1 RMAX=7.0 !END")') 
+        WRITE(NFIL,FMT='(T4,"!POT  POW=3. VAL=-1.2 RC/RCOV=0.67 !END")') 
+        WRITE(NFIL,FMT='(T4,"!CORE POW=3. VAL=0.1  RC/RCOV=0.67 !END")') 
+        WRITE(NFIL,FMT='(T2,"!END")') 
+        WRITE(NFIL,*) 
+!       == NOW THE SEMICORE SETUP
+        IF(    (AEZ.GE.11.AND.AEZ.LE.12) &
+    &      .OR.(AEZ.GE.19.AND.AEZ.LE.28) &
+    &      .OR.(AEZ.GE.37.AND.AEZ.LE.46) &
+    &      .OR.(AEZ.GE.55.AND.AEZ.LE.78) &
+    &      .OR.(AEZ.GE.87.AND.AEZ.LE.110)) THEN
+          ID="'"//TRIM(EL)//'_HBS_SC'//"'"
+          SY="'"//EL//"'"
+          IF(SY(3:3).EQ.' ')SY(3:3)='_'
+          WRITE(NFIL,FMT='(T2,"!SETUP  ID=",A," EL=",A," ZV=",F3.0)') &
+       &     TRIM(ID),TRIM(SY),ZV+8.d0
+          WRITE(NFIL,FMT='(T10,"TYPE=",A," RBOX/RCOV=1.2 RCSM/RCOV=0.25")') &
+           TYPE
+          WRITE(NFIL,FMT='(T10,"RCL/RCOV= 0.5 0.5 0.5 0.5")') 
+          WRITE(NFIL,FMT='(T10,"LAMBDA= 6. 6. 6. 6.")') 
+          WRITE(NFIL,FMT='(T4,"!GRID DMIN=5.E-6 DMAX=0.1 RMAX=7.0 !END")') 
+          WRITE(NFIL,FMT='(T4,"!POT  POW=3. VAL=-2.2 RC/RCOV=0.5  !END")') 
+          WRITE(NFIL,FMT='(T4,"!CORE POW=3. VAL= 0.1 RC/RCOV=0.5  !END")') 
+          WRITE(NFIL,FMT='(T2,"!END")') 
+          WRITE(NFIL,*) 
+        END IF
+      ENDDO
+      WRITE(NFIL,FMT='("!END")') 
+      WRITE(NFIL,FMT='("!EOB")') 
+      WRITE(NFIL,*)
+      CLOSE(NFIL)
+
+      RETURN
+      END
+
+      
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DEBUG_PETERS_NONSPH()
@@ -81,7 +149,7 @@ stop
       CHARACTER(10)             :: ROOTNAME='SESM'
       REAL(8)    ,ALLOCATABLE   :: POTREP(:,:)
       REAL(8)                   :: AEZ
-      REAL(8)                   :: rad
+      REAL(8)                   :: RAD
       REAL(8)                   :: DR(3),VAL,DR2(3)
       REAL(8)                   :: CG,PI,Y0
       REAL(8)    ,ALLOCATABLE   :: FIN(:,:),FOUT(:,:)
@@ -110,18 +178,18 @@ stop
 !STOP
 CALL DFT$SETI4('TYPE',2)
 CALL DFT$SETL4('SPIN',.FALSE.)
-rad=2.d0
-print*,'=========================== fader ==================================='
-CALL X_ONEATOM$NEW(1,8.d0)
+RAD=2.D0
+PRINT*,'=========================== FADER ==================================='
+CALL X_ONEATOM$NEW(1,8.D0)
 CALL X_ONEATOM(1,0.D0,RAD,DETOT,DEDQ,DEDRAD)
-print*,'rad ',rad
-print*,'detot ',detot
-print*,'=========================== peter ==================================='
-CALL ONEATOM$NEW(1,8.d0)
+PRINT*,'RAD ',RAD
+PRINT*,'DETOT ',DETOT
+PRINT*,'=========================== PETER ==================================='
+CALL ONEATOM$NEW(1,8.D0)
 CALL ONEATOM(1,0.D0,RAD,DETOT,DEDQ,DEDRAD)
-print*,'rad ',rad
-print*,'detot ',detot
-stop
+PRINT*,'RAD ',RAD
+PRINT*,'DETOT ',DETOT
+STOP
 
 !
 !     ==========================================================================        
@@ -130,7 +198,7 @@ stop
       CALL BIGONE()
 !
 !     ==========================================================================
-!     ==  THIS IS FOR SIMPLE SESM (Rolf's project)                            ==
+!     ==  THIS IS FOR SIMPLE SESM (ROLF'S PROJECT)                            ==
 !     ==========================================================================
 !      CALL LATTICE()
       RETURN
@@ -290,8 +358,8 @@ PRINT*,'RAD(IAT1)',RAD(IAT1)
 PRINT*,'IAT,ETOT ',IAT1,DETOT
 !       == SELECT NUMBER OF CORE STATES
         NC=THISARR(IAT1)%NC
-print*,'nc ',nc
-print*,'lofi ',thisarr(iat1)%lofi
+PRINT*,'NC ',NC
+PRINT*,'LOFI ',THISARR(IAT1)%LOFI
         ION(IAT1)%NCG=SUM(2*THISARR(IAT1)%LOFI(1:NC)+1)
       ENDDO
 !!$      CALL WRITEPHI('ETAPAULI.DAT',GID,NR,2,THISARR(1)%ETAPAULI(:,:))
@@ -1188,8 +1256,8 @@ PRINT*,'CALCULATING HAMILTON AND OVERLAPMATRIX ...'
 !       ========================================================================        
 !       == PRINT WAVE FUNCTIONS                                               ==
 !       ========================================================================        
-        WRITE(*,FMT='("ITER",I5," EBG: ",20F10.5)')ITER,EBG(nc+1:)
-        WRITE(*,FMT='("ITER",I5," fBG: ",20F10.5)')ITER,fBG(nc+1:)
+        WRITE(*,FMT='("ITER",I5," EBG: ",20F10.5)')ITER,EBG(NC+1:)
+        WRITE(*,FMT='("ITER",I5," FBG: ",20F10.5)')ITER,FBG(NC+1:)
 !  
 !       ========================================================================        
 !       == MIX POTENTIALS                                                     ==
@@ -2182,14 +2250,14 @@ END
       REAL(8)              :: RAD0(NAT)
       REAL(8)              :: RAD(NAT)
       REAL(8)              :: ETOT
-      INTEGER(4)           :: IAT,ip,if
-      integer(4),parameter :: np=30
-      integer(4),parameter :: nf=1
-      real(8)              :: x(np)
-      real(8)              :: y(np,nf)
+      INTEGER(4)           :: IAT,IP,IF
+      INTEGER(4),PARAMETER :: NP=30
+      INTEGER(4),PARAMETER :: NF=1
+      REAL(8)              :: X(NP)
+      REAL(8)              :: Y(NP,NF)
 !     **************************************************************************
       AEZARR(:)=(/12.D0,8.D0/)
-      ALAT=4.214D0/0.529177d0
+      ALAT=4.214D0/0.529177D0
       RBASFCC(:,1)=(/0.0D0,0.5D0,0.5D0/)
       RBASFCC(:,2)=(/0.5D0,0.0D0,0.5D0/)
       RBASFCC(:,3)=(/0.5D0,0.5D0,0.0D0/)
@@ -2197,7 +2265,7 @@ END
       POS(1,2)=0.5D0
       RBAS=RBASFCC*ALAT
       POS=POS*ALAT
-      Q(:)=(/-2.d0,2.d0/)
+      Q(:)=(/-2.D0,2.D0/)
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -2208,28 +2276,28 @@ END
         CALL ONEATOM$NEW(IAT,AEZARR(IAT))
         CALL PERIODICTABLE$GET(NINT(AEZARR(IAT)),'R(COV)',RCOV(IAT))
       ENDDO
-      rad0(:)=rcov(:)
+      RAD0(:)=RCOV(:)
 !
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
-      open(unit=8,file='lattice_gnu.dat')
-      do ip=1,np
-        x(ip)=7.8d0+0.2d0*real(ip-1)
-        do if=1,nf
-          rad(2)=x(ip)
-          rad(1)=2.0d0+0.2d0*real(if-1)
+      OPEN(UNIT=8,FILE='LATTICE_GNU.DAT')
+      DO IP=1,NP
+        X(IP)=7.8D0+0.2D0*REAL(IP-1)
+        DO IF=1,NF
+          RAD(2)=X(IP)
+          RAD(1)=2.0D0+0.2D0*REAL(IF-1)
           CALL LATTICE$ENERGY(NAT,RBAS,POS,Q,RAD,ETOT)
-          y(ip,if)=etot          
-          write(8,FMT='(30f10.5)')rad(1),rad(2),etot
-        enddo
-      enddo
-      close(8)
-      open(unit=8,file='lattice.dat')
-      do ip=1,np
-        write(8,FMT='(30f10.5)')x(ip),y(ip,:)
-      enddo
-      close(8)
+          Y(IP,IF)=ETOT          
+          WRITE(8,FMT='(30F10.5)')RAD(1),RAD(2),ETOT
+        ENDDO
+      ENDDO
+      CLOSE(8)
+      OPEN(UNIT=8,FILE='LATTICE.DAT')
+      DO IP=1,NP
+        WRITE(8,FMT='(30F10.5)')X(IP),Y(IP,:)
+      ENDDO
+      CLOSE(8)
       RETURN
       END
 !
@@ -2244,8 +2312,8 @@ END
       REAL(8)   ,INTENT(IN) :: RAD(NAT)
       REAL(8)   ,INTENT(OUT):: ETOT
       REAL(8)               :: DEDQ(NAT),DEDQ1(NAT),DEDRAD(NAT),FORCE(3,NAT)
-      INTEGER(4),parameter  :: ndiv=2
-      INTEGER(4)            :: IAT,IAT1,IAT2,it1,it2,it3
+      INTEGER(4),PARAMETER  :: NDIV=2
+      INTEGER(4)            :: IAT,IAT1,IAT2,IT1,IT2,IT3
       INTEGER(4)            :: NR
       INTEGER(4)            :: GID
       REAL(8)               :: DETOT
@@ -2253,13 +2321,13 @@ END
       REAL(8)   ,ALLOCATABLE:: R(:)
       REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:),RHO(:),POT(:)
       REAL(8)               :: VAL,VAL1,VAL2
-      REAL(8)               :: PI,y0
-      LOGICAL(4),PARAMETER  :: TPR=.true.
-      INTEGER(4)            :: nfilo
+      REAL(8)               :: PI,Y0
+      LOGICAL(4),PARAMETER  :: TPR=.TRUE.
+      INTEGER(4)            :: NFILO
 !     **************************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       PI=4.D0*ATAN(1.D0)
-      y0=1.d0/sqrt(4.d0*pi)
+      Y0=1.D0/SQRT(4.D0*PI)
       GID=GIDONEATOM
       CALL RADIAL$GETI4(GID,'NR',NR)
       ALLOCATE(R(NR))
@@ -2368,7 +2436,7 @@ END
         ENDDO
       ENDDO
       IF(TPR)WRITE(NFILO,FMT='(50("."),T1,"ELECTROSTATIC OVERLAP",T50,F10.5)')DETOT
-      etot=etot+detot
+      ETOT=ETOT+DETOT
       DEALLOCATE(AUX)
       DEALLOCATE(AUX1)
       DEALLOCATE(RHO)
@@ -2603,144 +2671,144 @@ ENDDO
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine test
+      SUBROUTINE TEST
       IMPLICIT NONE
-      integer(4),parameter :: l1x=2
-      integer(4),parameter :: l2x=3
-      integer(4),parameter :: lm1x=(l1x+1)**2
-      integer(4),parameter :: lm2x=(l2x+1)**2
-      real(8)   ,parameter :: r0(3)=(/-1.d0,-1.d0,0.d0/)
-      real(8)   ,parameter :: dr1(3)=(/1.d-1,0.d0,0.d0/)
-      real(8)   ,parameter :: dr2(3)=(/0.d0,1.d-1,0.d0/)
-      integer(4),parameter :: n1=31
-      integer(4),parameter :: n2=21
-      real(8)   ,parameter :: rcenter(3)=(/0.d0,0.d0,0.d0/)
-      real(8)   ,parameter :: roffcenter(3)=(/1.4d0,0.3d0,0.2d0/)
-      real(8)   ,parameter :: k2=0.d0
-      real(8)   ,parameter :: valx=2.d0
-      integer(4),parameter :: nfil1=10
-      integer(4),parameter :: nfil2=11
-      integer(4),parameter :: nfil3=12
-      integer(4)           :: i1,i2
-      real(8)              :: h(lm1x)
-      real(8)              :: h2(lm1x)
-      real(8)              :: s(lm2x,lm1x)
-      real(8)              :: j(lm2x)
-      real(8)              :: r(3)
-      real(8)              :: val,svar
-      integer(4)           :: lmselect
-      real(8)              :: pi
-      integer(4)           :: lm1,lm2,l1,l2,m1,m2
-      complex(8)           :: kk
+      INTEGER(4),PARAMETER :: L1X=2
+      INTEGER(4),PARAMETER :: L2X=3
+      INTEGER(4),PARAMETER :: LM1X=(L1X+1)**2
+      INTEGER(4),PARAMETER :: LM2X=(L2X+1)**2
+      REAL(8)   ,PARAMETER :: R0(3)=(/-1.D0,-1.D0,0.D0/)
+      REAL(8)   ,PARAMETER :: DR1(3)=(/1.D-1,0.D0,0.D0/)
+      REAL(8)   ,PARAMETER :: DR2(3)=(/0.D0,1.D-1,0.D0/)
+      INTEGER(4),PARAMETER :: N1=31
+      INTEGER(4),PARAMETER :: N2=21
+      REAL(8)   ,PARAMETER :: RCENTER(3)=(/0.D0,0.D0,0.D0/)
+      REAL(8)   ,PARAMETER :: ROFFCENTER(3)=(/1.4D0,0.3D0,0.2D0/)
+      REAL(8)   ,PARAMETER :: K2=0.D0
+      REAL(8)   ,PARAMETER :: VALX=2.D0
+      INTEGER(4),PARAMETER :: NFIL1=10
+      INTEGER(4),PARAMETER :: NFIL2=11
+      INTEGER(4),PARAMETER :: NFIL3=12
+      INTEGER(4)           :: I1,I2
+      REAL(8)              :: H(LM1X)
+      REAL(8)              :: H2(LM1X)
+      REAL(8)              :: S(LM2X,LM1X)
+      REAL(8)              :: J(LM2X)
+      REAL(8)              :: R(3)
+      REAL(8)              :: VAL,SVAR
+      INTEGER(4)           :: LMSELECT
+      REAL(8)              :: PI
+      INTEGER(4)           :: LM1,LM2,L1,L2,M1,M2
+      COMPLEX(8)           :: KK
 !     **************************************************************************      
-      pi=4.d0*atan(1.d0)
-      if(k2.gt.0.d0) then
-        kk=cmplx(1.d0,0.d0)*sqrt(k2)
-      else if(k2.lt.0.d0) then
-        kk=cmplx(0.d0,1.d0)*sqrt(-k2)
-      else
-        kk=(0.d0,0.d0)
-      end if
-      open(unit=nfil1,file='h.dat')
-      open(unit=nfil2,file='js.dat')
-      open(unit=nfil3,file='h-js.dat')
-      lmselect=1
-      call LMTO$STRUCTURECONSTANTS(Rcenter,L1X,Roffcenter,L2X,K2,S)
+      PI=4.D0*ATAN(1.D0)
+      IF(K2.GT.0.D0) THEN
+        KK=CMPLX(1.D0,0.D0)*SQRT(K2)
+      ELSE IF(K2.LT.0.D0) THEN
+        KK=CMPLX(0.D0,1.D0)*SQRT(-K2)
+      ELSE
+        KK=(0.D0,0.D0)
+      END IF
+      OPEN(UNIT=NFIL1,FILE='H.DAT')
+      OPEN(UNIT=NFIL2,FILE='JS.DAT')
+      OPEN(UNIT=NFIL3,FILE='H-JS.DAT')
+      LMSELECT=1
+      CALL LMTO$STRUCTURECONSTANTS(RCENTER,L1X,ROFFCENTER,L2X,K2,S)
 !
-!     == compare structure constants with daniel
-!!$      do lm1=1,lm1x
-!!$        l1=sqrt(real(lm1-1)+1.d-7)
-!!$        m1=1+l1**2+l1-lm1
-!!$        do lm2=1,lm2x
-!!$          l2=sqrt(real(lm2-1)+1.d-7)
-!!$          m2=1+l2**2+l2-lm2
-!!$          call structureconstants(Roffcenter,L2,M2,Rcenter,L1,M1,kk,val)
-!!$          if(k2.gt.0.d0) then
-!!$            val=-sqrt(k2)**(l1+l2+1)*val
-!!$          else if(k2.lt.0.d0) then
-!!$            val=2.d0/pi*sqrt(-k2)**(l1+l2+1)*val
-!!$          else
-!!$            val=-val
-!!$          end if
-!!$          write(*,fmt='(6i5,3f10.5)')lm1,l1,m1,lm2,l2,m2,val,s(lm2,lm1),s(lm2,lm1)-val
-!!$        enddo
-!!$      enddo
+!     == COMPARE STRUCTURE CONSTANTS WITH DANIEL
+!!$      DO LM1=1,LM1X
+!!$        L1=SQRT(REAL(LM1-1)+1.D-7)
+!!$        M1=1+L1**2+L1-LM1
+!!$        DO LM2=1,LM2X
+!!$          L2=SQRT(REAL(LM2-1)+1.D-7)
+!!$          M2=1+L2**2+L2-LM2
+!!$          CALL STRUCTURECONSTANTS(ROFFCENTER,L2,M2,RCENTER,L1,M1,KK,VAL)
+!!$          IF(K2.GT.0.D0) THEN
+!!$            VAL=-SQRT(K2)**(L1+L2+1)*VAL
+!!$          ELSE IF(K2.LT.0.D0) THEN
+!!$            VAL=2.D0/PI*SQRT(-K2)**(L1+L2+1)*VAL
+!!$          ELSE
+!!$            VAL=-VAL
+!!$          END IF
+!!$          WRITE(*,FMT='(6I5,3F10.5)')LM1,L1,M1,LM2,L2,M2,VAL,S(LM2,LM1),S(LM2,LM1)-VAL
+!!$        ENDDO
+!!$      ENDDO
 !
-!     == put function and expansion oni grid
-      do i1=1,n1
-        do i2=1,n2
-          r(:)=r0(:)+dr1(:)*real(i1-1,kind=8)+dr2(:)*real(i2-1,kind=8)
-          call LMTO$SOLIDHANKEL(R-rcenter,1.d-3,K2,LM1X,H)
-          val=h(lmselect)
-          val=max(-valx,min(valx,val))
-          write(nfil1,fmt='(3f20.5)')r(1),r(2),val
-          svar=val
-          call LMTO$SOLIDbessel(R-roffcenter,K2,LM2X,J)
-          H2(:)=matmul(j,s)
-          val=h2(lmselect)
-          val=max(-valx,min(valx,val))
-          write(nfil2,fmt='(3f20.5)')r(1),r(2),val
-          write(nfil3,fmt='(3f20.5)')r(1),r(2),svar-val
-        enddo
-      enddo
-      close(nfil1)
-      close(nfil2)
-      close(nfil3)
-      return
-      end
+!     == PUT FUNCTION AND EXPANSION ONI GRID
+      DO I1=1,N1
+        DO I2=1,N2
+          R(:)=R0(:)+DR1(:)*REAL(I1-1,KIND=8)+DR2(:)*REAL(I2-1,KIND=8)
+          CALL LMTO$SOLIDHANKEL(R-RCENTER,1.D-3,K2,LM1X,H)
+          VAL=H(LMSELECT)
+          VAL=MAX(-VALX,MIN(VALX,VAL))
+          WRITE(NFIL1,FMT='(3F20.5)')R(1),R(2),VAL
+          SVAR=VAL
+          CALL LMTO$SOLIDBESSEL(R-ROFFCENTER,K2,LM2X,J)
+          H2(:)=MATMUL(J,S)
+          VAL=H2(LMSELECT)
+          VAL=MAX(-VALX,MIN(VALX,VAL))
+          WRITE(NFIL2,FMT='(3F20.5)')R(1),R(2),VAL
+          WRITE(NFIL3,FMT='(3F20.5)')R(1),R(2),SVAR-VAL
+        ENDDO
+      ENDDO
+      CLOSE(NFIL1)
+      CLOSE(NFIL2)
+      CLOSE(NFIL3)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE teststructureconstants
+      SUBROUTINE TESTSTRUCTURECONSTANTS
 !     **                                                                      **
 !     **************************************************************************      
-      use periodictable_module
-      use oneatom_module
-      use strings_module
-      implicit none
-      integer(4),parameter :: nfil=6
-      integer(4),parameter :: nat=7
-      integer(4),parameter :: lxx=2
-      real(8)   ,parameter :: k2=0.d0
-      real(8)   ,parameter :: lunit=5.d0
-      character(4),parameter:: atomid='FE'
-      real(8)              :: rpos(3,nat)
-      integer(4)           :: lx(nat)
-      integer(4)           :: n
-      integer(4)           :: norb
-      real(8)   ,allocatable :: sbar(:,:)
-      real(8)              :: qbar(lxx+1,nat)
-      integer(4)           :: ii,i
-      integer(4)           :: l
-      integer(4)           :: iat
-      real(8)              :: aez
-      real(8)              :: rad(nat)
-      real(8)              :: detot,dedq,dedrad
-      real(8)              :: val,der
-      character(32)        :: rootname='xx'
-      real(8)      :: s1(4,1)
-      integer(4),parameter :: lmselect=2
-      real(8)   ,parameter :: r0(3)=(/-1.d0,-1.d0,0.d0/)*10.d0
-      real(8)   ,parameter :: dr1(3)=(/1.d-1,0.d0,0.d0/)*10.d0
-      real(8)   ,parameter :: dr2(3)=(/0.d0,1.d-1,0.d0/)*10.d0
-      integer(4),parameter :: n1=31
-      integer(4),parameter :: n2=21
-      real(8)   ,parameter :: valx=2.d-2
-      integer(4),parameter :: nfil1=10
-      INTEGER(4)           :: i1,i2
-      real(8)              :: r(3)
-      real(8)              :: h((lxx+1)**2)
-      real(8)   ,allocatable :: c(:,:)
-      real(8)   ,allocatable :: qbarvec(:)
+      USE PERIODICTABLE_MODULE
+      USE ONEATOM_MODULE
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: NFIL=6
+      INTEGER(4),PARAMETER :: NAT=7
+      INTEGER(4),PARAMETER :: LXX=2
+      REAL(8)   ,PARAMETER :: K2=0.D0
+      REAL(8)   ,PARAMETER :: LUNIT=5.D0
+      CHARACTER(4),PARAMETER:: ATOMID='FE'
+      REAL(8)              :: RPOS(3,NAT)
+      INTEGER(4)           :: LX(NAT)
+      INTEGER(4)           :: N
+      INTEGER(4)           :: NORB
+      REAL(8)   ,ALLOCATABLE :: SBAR(:,:)
+      REAL(8)              :: QBAR(LXX+1,NAT)
+      INTEGER(4)           :: II,I
+      INTEGER(4)           :: L
+      INTEGER(4)           :: IAT
+      REAL(8)              :: AEZ
+      REAL(8)              :: RAD(NAT)
+      REAL(8)              :: DETOT,DEDQ,DEDRAD
+      REAL(8)              :: VAL,DER
+      CHARACTER(32)        :: ROOTNAME='XX'
+      REAL(8)      :: S1(4,1)
+      INTEGER(4),PARAMETER :: LMSELECT=2
+      REAL(8)   ,PARAMETER :: R0(3)=(/-1.D0,-1.D0,0.D0/)*10.D0
+      REAL(8)   ,PARAMETER :: DR1(3)=(/1.D-1,0.D0,0.D0/)*10.D0
+      REAL(8)   ,PARAMETER :: DR2(3)=(/0.D0,1.D-1,0.D0/)*10.D0
+      INTEGER(4),PARAMETER :: N1=31
+      INTEGER(4),PARAMETER :: N2=21
+      REAL(8)   ,PARAMETER :: VALX=2.D-2
+      INTEGER(4),PARAMETER :: NFIL1=10
+      INTEGER(4)           :: I1,I2
+      REAL(8)              :: R(3)
+      REAL(8)              :: H((LXX+1)**2)
+      REAL(8)   ,ALLOCATABLE :: C(:,:)
+      REAL(8)   ,ALLOCATABLE :: QBARVEC(:)
 !     **************************************************************************      
-      lx(:)=lxx
-      rpos(:,1)=(/0.d0,0.d0,0.d0/)
-      rpos(:,2)=(/1.d0,0.d0,0.d0/)
-      rpos(:,3)=(/0.d0,1.d0,0.d0/)
-      rpos(:,4)=(/0.d0,0.d0,1.d0/)
-      rpos(:,5)=(/-1.d0,0.d0,0.d0/)
-      rpos(:,6)=(/0.d0,-1.d0,0.d0/)
-      rpos(:,7)=(/0.d0,0.d0,-1.d0/)
-      rpos(:,:)=rpos(:,:)*lunit
+      LX(:)=LXX
+      RPOS(:,1)=(/0.D0,0.D0,0.D0/)
+      RPOS(:,2)=(/1.D0,0.D0,0.D0/)
+      RPOS(:,3)=(/0.D0,1.D0,0.D0/)
+      RPOS(:,4)=(/0.D0,0.D0,1.D0/)
+      RPOS(:,5)=(/-1.D0,0.D0,0.D0/)
+      RPOS(:,6)=(/0.D0,-1.D0,0.D0/)
+      RPOS(:,7)=(/0.D0,0.D0,-1.D0/)
+      RPOS(:,:)=RPOS(:,:)*LUNIT
 !
 !     ==========================================================================        
 !     ==  CONNECT PROTOCOLL FILE                                              ==        
@@ -2753,7 +2821,7 @@ ENDDO
       CALL FILEHANDLER$SETSPECIFICATION('PROT','FORM','FORMATTED')
 !
 !     ==========================================================================
-!     == determine screened structure constants                               ==
+!     == DETERMINE SCREENED STRUCTURE CONSTANTS                               ==
 !     ==========================================================================
       CALL DFT$SETI4('TYPE',2)
       CALL DFT$SETL4('SPIN',.FALSE.)
@@ -2761,7 +2829,7 @@ ENDDO
       CALL ONEATOM$NEW(1,AEZ)
       CALL ONEATOM(1,0.D0,20.D0,DETOT,DEDQ,DEDRAD)
       CALL PERIODICTABLE$GET(ATOMID,'R(COV)',RAD(1))
-      rad(2:)=rad(1)
+      RAD(2:)=RAD(1)
       THIS=>THISARR(1)
       QBAR(:,:)=0.D0
       DO L=0,LX(1)
@@ -2773,109 +2841,109 @@ PRINT*,'-- ',L,RAD(1),VAL,DER,QBAR(L+1,1)
       ENDDO
 !     
 !     ==========================================================================
-!     == determine screened structure constants                               ==
+!     == DETERMINE SCREENED STRUCTURE CONSTANTS                               ==
 !     ==========================================================================
-      n=sum((lx(:)+1)**2)
-      norb=(lx(1)+1)**2
-      allocate(sbar(n,norb))
-      allocate(qbarvec(n))
-      allocate(c(n,norb))
+      N=SUM((LX(:)+1)**2)
+      NORB=(LX(1)+1)**2
+      ALLOCATE(SBAR(N,NORB))
+      ALLOCATE(QBARVEC(N))
+      ALLOCATE(C(N,NORB))
       CALL LMTO$EXPANDQBAR(NAT,LXX,LX,QBAR,N,QBARVEC)
-      CALL LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QBARvec,N,NORB,SBAR)
+      CALL LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QBARVEC,N,NORB,SBAR)
       CALL LMTO$KBARMULTICENTER(N,NORB,QBARVEC,SBAR,C)
 !
 !     ==========================================================================
-!     == print structure constants                                            ==
+!     == PRINT STRUCTURE CONSTANTS                                            ==
 !     ==========================================================================
-      ii=0
-      do iat=1,nat
-        write(nfil,fmt='(82("="),t20," structureconstants for atom ",i2)')iat
-        do i=1,(lx(iat)+1)**2
-          ii=ii+1
-          write(nfil,fmt='(20f10.5)')sbar(II,:)
-        enddo
-      enddo
+      II=0
+      DO IAT=1,NAT
+        WRITE(NFIL,FMT='(82("="),T20," STRUCTURECONSTANTS FOR ATOM ",I2)')IAT
+        DO I=1,(LX(IAT)+1)**2
+          II=II+1
+          WRITE(NFIL,FMT='(20F10.5)')SBAR(II,:)
+        ENDDO
+      ENDDO
  !
 !     ==========================================================================
-!     == plot envelope function                                               ==
+!     == PLOT ENVELOPE FUNCTION                                               ==
 !     ==========================================================================
-      open(unit=nfil1,file='kbar.dat')
-      do i1=1,n1
-        do i2=1,n2
-          r(:)=r0(:)+dr1(:)*real(i1-1,kind=8)+dr2(:)*real(i2-1,kind=8)
-          call LMTO$screenedsolidhankel(K2,NAT,RPOS,rad,LX,N,norb,C,R,h)
-          val=h(lmselect)
-          val=max(-valx,min(valx,val))
-          write(nfil1,fmt='(3f20.5)')r(1),r(2),val
-        enddo
-      enddo
-      close(nfil1)
-      deallocate(sbar)
-      return
-      end
+      OPEN(UNIT=NFIL1,FILE='KBAR.DAT')
+      DO I1=1,N1
+        DO I2=1,N2
+          R(:)=R0(:)+DR1(:)*REAL(I1-1,KIND=8)+DR2(:)*REAL(I2-1,KIND=8)
+          CALL LMTO$SCREENEDSOLIDHANKEL(K2,NAT,RPOS,RAD,LX,N,NORB,C,R,H)
+          VAL=H(LMSELECT)
+          VAL=MAX(-VALX,MIN(VALX,VAL))
+          WRITE(NFIL1,FMT='(3F20.5)')R(1),R(2),VAL
+        ENDDO
+      ENDDO
+      CLOSE(NFIL1)
+      DEALLOCATE(SBAR)
+      RETURN
+      END
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
-module structureconstants_module
-type nmat_type
-  integer(4) :: iat1=0
-  integer(4) :: iat2=0
-  integer(4) :: it(3)=0
-  integer(4) :: lmn1=0
-  integer(4) :: lmn2=0
-  real(8)  ,pointer :: s(:,:)
-  type(nmat_type),pointer :: next
-end type nmat_type
-type(nmat_type),target,save  :: first
-type(nmat_type),pointer,save :: this
-type(nmat_type),pointer,save :: previous
-contains
+MODULE STRUCTURECONSTANTS_MODULE
+TYPE NMAT_TYPE
+  INTEGER(4) :: IAT1=0
+  INTEGER(4) :: IAT2=0
+  INTEGER(4) :: IT(3)=0
+  INTEGER(4) :: LMN1=0
+  INTEGER(4) :: LMN2=0
+  REAL(8)  ,POINTER :: S(:,:)
+  TYPE(NMAT_TYPE),POINTER :: NEXT
+END TYPE NMAT_TYPE
+TYPE(NMAT_TYPE),TARGET,SAVE  :: FIRST
+TYPE(NMAT_TYPE),POINTER,SAVE :: THIS
+TYPE(NMAT_TYPE),POINTER,SAVE :: PREVIOUS
+CONTAINS
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine nmat_select(iat1,iat2,it)
-!     ** points this onto the desired element or disassociates it          **
-      integer(4),intent(in) :: iat1
-      integer(4),intent(in) :: iat2
-      integer(4),intent(in) :: it(3)
+      SUBROUTINE NMAT_SELECT(IAT1,IAT2,IT)
+!     ** POINTS THIS ONTO THE DESIRED ELEMENT OR DISASSOCIATES IT          **
+      INTEGER(4),INTENT(IN) :: IAT1
+      INTEGER(4),INTENT(IN) :: IAT2
+      INTEGER(4),INTENT(IN) :: IT(3)
 !     **************************************************************************
-      this=>first
-      nullify(previous)
-      do
-        if(this%iat1.eq.iat1) then
-          if(this%iat2.ne.iat2) then
-            if(this%it(1).eq.it(1))then
-              if(this%it(2).eq.it(2)) then
-                if(this%it(3).eq.it(3)) then
-                  exit     ! success: correct member found
-                else if(this%it(3).gt.it(3)) then
-                  nullify(this)
-                  exit
-                end if
-              else if(this%it(2).gt.it(2)) then
-                nullify(this)
-                exit
-              end if
-            else if(this%it(1).gt.it(1)) then
-              nullify(this)
-              exit
-            end if
-          else if(this%iat2.gt.iat2) then
-            nullify(this)
-            exit
-          end if
-        else if(this%iat1.gt.iat1) then
-          nullify(this)
-          exit
-        end if
-!       == search for the next member in the list
-        if(associated(this%next)) then
-          previous=>this
-          this=>this%next
-        else
-          nullify(this)
-          exit
-        end if
-      enddo
-      return
-      end subroutine nmat_select
+      THIS=>FIRST
+      NULLIFY(PREVIOUS)
+      DO
+        IF(THIS%IAT1.EQ.IAT1) THEN
+          IF(THIS%IAT2.NE.IAT2) THEN
+            IF(THIS%IT(1).EQ.IT(1))THEN
+              IF(THIS%IT(2).EQ.IT(2)) THEN
+                IF(THIS%IT(3).EQ.IT(3)) THEN
+                  EXIT     ! SUCCESS: CORRECT MEMBER FOUND
+                ELSE IF(THIS%IT(3).GT.IT(3)) THEN
+                  NULLIFY(THIS)
+                  EXIT
+                END IF
+              ELSE IF(THIS%IT(2).GT.IT(2)) THEN
+                NULLIFY(THIS)
+                EXIT
+              END IF
+            ELSE IF(THIS%IT(1).GT.IT(1)) THEN
+              NULLIFY(THIS)
+              EXIT
+            END IF
+          ELSE IF(THIS%IAT2.GT.IAT2) THEN
+            NULLIFY(THIS)
+            EXIT
+          END IF
+        ELSE IF(THIS%IAT1.GT.IAT1) THEN
+          NULLIFY(THIS)
+          EXIT
+        END IF
+!       == SEARCH FOR THE NEXT MEMBER IN THE LIST
+        IF(ASSOCIATED(THIS%NEXT)) THEN
+          PREVIOUS=>THIS
+          THIS=>THIS%NEXT
+        ELSE
+          NULLIFY(THIS)
+          EXIT
+        END IF
+      ENDDO
+      RETURN
+      END SUBROUTINE NMAT_SELECT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE NMAT_INSERT()
@@ -2923,15 +2991,15 @@ END MODULE STRUCTURECONSTANTS_MODULE
       INTEGER(4),INTENT(IN) :: LMN1
       INTEGER(4),INTENT(IN) :: LMN2
       REAL(8)   ,INTENT(OUT):: S(LMN1,LMN2)
-      logical(4),intent(out):: tchk
+      LOGICAL(4),INTENT(OUT):: TCHK
 !     **************************************************************************      
       CALL NMAT_SELECT(IAT1,IAT2,IT)
-      TCHK=ASSOCIATED(this)
+      TCHK=ASSOCIATED(THIS)
       IF(TCHK) THEN
-        IF(LMN1.NE.this%LMN1.OR.LMN2.NE.this%LMN2) THEN
+        IF(LMN1.NE.THIS%LMN1.OR.LMN2.NE.THIS%LMN2) THEN
           CALL ERROR$STOP('SMAT$GET')
         END IF
-        S=this%S
+        S=THIS%S
       ELSE
         S(:,:)=0.D0
       END IF
@@ -2948,7 +3016,7 @@ END MODULE STRUCTURECONSTANTS_MODULE
       INTEGER(4),INTENT(IN) :: LMN1
       INTEGER(4),INTENT(IN) :: LMN2
       REAL(8)   ,INTENT(IN) :: S(LMN1,LMN2)
-      logical(4)            :: tchk
+      LOGICAL(4)            :: TCHK
 !     **************************************************************************      
       CALL NMAT_SELECT(IAT1,IAT2,IT)
       TCHK=ASSOCIATED(THIS)
@@ -2966,26 +3034,26 @@ END MODULE STRUCTURECONSTANTS_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SMAT$report(nfil,title)
+      SUBROUTINE SMAT$REPORT(NFIL,TITLE)
       USE STRUCTURECONSTANTS_MODULE
-      implicit none
-      integer(4)     ,intent(in) :: nfil
-      character(*)   ,intent(in) :: title
-      type(nmat_type),pointer:: current
+      IMPLICIT NONE
+      INTEGER(4)     ,INTENT(IN) :: NFIL
+      CHARACTER(*)   ,INTENT(IN) :: TITLE
+      TYPE(NMAT_TYPE),POINTER:: CURRENT
 !     **************************************************************************      
-      write(nfil,fmt='(82("="),t20,a)')title
-      if(first%iat1.eq.0) then
-        write(nfil,fmt='("list is empty")')
-      end if
-      current=>first
-      do 
-        write(nfil,fmt='("iat1=",i5," iat2=",i5," it=",3i2)')current%iat1,current%iat2,current%it(:)
-        if(.not.associated(current%next)) exit
-        current=>current%next
-      enddo
-      write(nfil,fmt='("end of list")')
-      return
-      end
+      WRITE(NFIL,FMT='(82("="),T20,A)')TITLE
+      IF(FIRST%IAT1.EQ.0) THEN
+        WRITE(NFIL,FMT='("LIST IS EMPTY")')
+      END IF
+      CURRENT=>FIRST
+      DO 
+        WRITE(NFIL,FMT='("IAT1=",I5," IAT2=",I5," IT=",3I2)')CURRENT%IAT1,CURRENT%IAT2,CURRENT%IT(:)
+        IF(.NOT.ASSOCIATED(CURRENT%NEXT)) EXIT
+        CURRENT=>CURRENT%NEXT
+      ENDDO
+      WRITE(NFIL,FMT='("END OF LIST")')
+      RETURN
+      END
       
 
 !
@@ -2994,85 +3062,85 @@ END MODULE STRUCTURECONSTANTS_MODULE
       REAL(8)   ,PARAMETER :: R1=1.056D-4
       REAL(8)   ,PARAMETER :: DEX=0.05
       INTEGER(4),PARAMETER :: NR=250
-      INTEGER(4),PARAMETER :: Np=20
-!      real(8)   ,parameter :: xmin=-7.d0,xmax=+3.d0
-      real(8)   ,parameter :: xmin=0.d0,xmax=+20.d0
-      REAL(8)              :: potpar(np,108)
+      INTEGER(4),PARAMETER :: NP=20
+!      REAL(8)   ,PARAMETER :: XMIN=-7.D0,XMAX=+3.D0
+      REAL(8)   ,PARAMETER :: XMIN=0.D0,XMAX=+20.D0
+      REAL(8)              :: POTPAR(NP,108)
       INTEGER(4)           :: GID
       CHARACTER(128)       :: KEY='START,REL,NONSO,ROBUST'
       REAL(8)              :: RBOX
       INTEGER(4),PARAMETER :: NX=40
-      INTEGER(4)           :: nb
+      INTEGER(4)           :: NB
       REAL(8)              :: AEZ
       INTEGER(4)           :: LOFI(NX)
       INTEGER(4)           :: SO(NX)
-      INTEGER(4)           :: nn(NX)
+      INTEGER(4)           :: NN(NX)
       REAL(8)              :: F(NX)
       REAL(8)              :: EOFI(NX)
       REAL(8)              :: PHI(NR,NX)
       REAL(8)              :: ETOT
-      REAL(8)              :: POT(NR),pot1(nr),pot2(nr)
-      REAL(8)              :: r(NR)
-      REAL(8)              :: y,ri,y1
+      REAL(8)              :: POT(NR),POT1(NR),POT2(NR)
+      REAL(8)              :: R(NR)
+      REAL(8)              :: Y,RI,Y1
       INTEGER(4)           :: NFILDAT=10
-      INTEGER(4)           :: NFILpot=11
-      INTEGER(4)           :: I,ir,j
-      character(64)        :: string
-      REAL(8)              :: pi,y0
-      REAL(8)              :: aux(nr),nucpot(nr)
+      INTEGER(4)           :: NFILPOT=11
+      INTEGER(4)           :: I,IR,J
+      CHARACTER(64)        :: STRING
+      REAL(8)              :: PI,Y0
+      REAL(8)              :: AUX(NR),NUCPOT(NR)
 !     **************************************************************************
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$NEW('SHLOG',GID)
       CALL RADIAL$SETR8(GID,'R1',R1)
       CALL RADIAL$SETR8(GID,'DEX',DEX)
       CALL RADIAL$SETI4(GID,'NR',NR)
-      call radial$r(gid,nr,r)
+      CALL RADIAL$R(GID,NR,R)
       RBOX=R(NR-2)
       OPEN(UNIT=NFILDAT,FILE='ATOMLIB_E.DAT')
       DO I=1,108,1
         AEZ=REAL(I,KIND=8)
         CALL ATOMLIB$AESCF(GID,NR,KEY,RBOX,AEZ,NX,NB,LOFI,SO,F,NN,ETOT,POT,EOFI,PHI)
         PRINT*,'ETOT',AEZ,ETOT
-        WRITE(NFILDAT,FMT='(41F12.2)')aez,EOFI
+        WRITE(NFILDAT,FMT='(41F12.2)')AEZ,EOFI
 
-   string=trim('apot'//trim(adjustl(string)))//'.dat'
-   OPEN(UNIT=NFILpot,FILE=string)
-    do ir=1,nr
-      write(nfilpot,*)r(ir),-pot(ir)*r(ir)
-    enddo      
-   close(nfilpot)
-cycle
+   STRING=TRIM('APOT'//TRIM(ADJUSTL(STRING)))//'.DAT'
+   OPEN(UNIT=NFILPOT,FILE=STRING)
+    DO IR=1,NR
+      WRITE(NFILPOT,*)R(IR),-POT(IR)*R(IR)
+    ENDDO      
+   CLOSE(NFILPOT)
+CYCLE
 
 !
-!       == determine data for interpolation ======================================
-        CALL RADIAL$NUCPOT(GID,NR,AEZ,nucPOT)
-        aux=pot*r
-        do j=1,np
-          ri=xmin+real(j-1,kind=8)*(xmax-xmin)/real(np-1,kind=8)
-!print*,'ri ',ri,r(nr)
-          call radial$value(gid,nr,aux,ri,potpar(j,i))
-        enddo
-        call ATOMLIB_unwrappot(GID,NR,aez,Np,xmin,xmax,potpar(:,i),pot1)
-!print*,'marke 1'       
-pot2=pot1
+!       == DETERMINE DATA FOR INTERPOLATION ======================================
+        CALL RADIAL$NUCPOT(GID,NR,AEZ,NUCPOT)
+        AUX=POT*R
+        DO J=1,NP
+          RI=XMIN+REAL(J-1,KIND=8)*(XMAX-XMIN)/REAL(NP-1,KIND=8)
+!PRINT*,'RI ',RI,R(NR)
+          CALL RADIAL$VALUE(GID,NR,AUX,RI,POTPAR(J,I))
+        ENDDO
+        CALL ATOMLIB_UNWRAPPOT(GID,NR,AEZ,NP,XMIN,XMAX,POTPAR(:,I),POT1)
+!PRINT*,'MARKE 1'       
+POT2=POT1
 !CALL ATOMLIB$AESCF(GID,NR,'REL,NONSO',RBOX,AEZ,NX,NB,LOFI,SO,F,NN,ETOT,POT2,EOFI,PHI)
-print*,'========================= marke 2=============================='       
-cycle
+PRINT*,'========================= MARKE 2=============================='       
+CYCLE
 !
 !       ====
-        write(string,*)i
-        string=trim('pot'//trim(adjustl(string)))//'.dat'
-        OPEN(UNIT=NFILpot,FILE=string)
-        do ir=1,nr
-!          y=log(pot(ir)-nucpot(ir))
-!          y1=log(pot1(ir)-nucpot(ir))
-if(ir.lt.exp(xmin)) cycle
-y=pot(ir)*r(ir)**3
-y1=pot1(ir)
-          write(nfilpot,*)r(ir),y,y1
-        enddo
-        close(nfilpot)
+        WRITE(STRING,*)I
+        STRING=TRIM('POT'//TRIM(ADJUSTL(STRING)))//'.DAT'
+        OPEN(UNIT=NFILPOT,FILE=STRING)
+        DO IR=1,NR
+!          Y=LOG(POT(IR)-NUCPOT(IR))
+!          Y1=LOG(POT1(IR)-NUCPOT(IR))
+IF(IR.LT.EXP(XMIN)) CYCLE
+Y=POT(IR)*R(IR)**3
+Y1=POT1(IR)
+          WRITE(NFILPOT,*)R(IR),Y,Y1
+        ENDDO
+        CLOSE(NFILPOT)
       ENDDO
       CLOSE(NFILDAT)
       RETURN
@@ -3080,75 +3148,75 @@ y1=pot1(ir)
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB_unwrappot(GID,NR,aez,nx,xmin,xmax,potpar,pot)
+      SUBROUTINE ATOMLIB_UNWRAPPOT(GID,NR,AEZ,NX,XMIN,XMAX,POTPAR,POT)
 !     **************************************************************************
-      implicit none
-      INTEGER(4),intent(in) :: NX
-      real(8)   ,intent(in) :: xmin
-      real(8)   ,intent(in) :: xmax
-      integer(4),intent(in) :: gid
-      integer(4),intent(in) :: nr
-      real(8)   ,intent(in) :: aez
-      real(8)   ,intent(in) :: potpar(nx)
-      real(8)   ,intent(out):: pot(nr)
-      real(8)               :: xi(nx)
-      real(8)               :: r(nr)
-      real(8)               :: pi,y0
-      real(8)               :: a(nx-3),b(nx-3),c(nx-3),d(nx-3)
-      integer(4)            :: i,ir,j
-      real(8)               :: x(4),f(4)
-      real(8)               :: xc
-      real(8)               :: xr
-      real(8)               :: nucpot(nr)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NX
+      REAL(8)   ,INTENT(IN) :: XMIN
+      REAL(8)   ,INTENT(IN) :: XMAX
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: AEZ
+      REAL(8)   ,INTENT(IN) :: POTPAR(NX)
+      REAL(8)   ,INTENT(OUT):: POT(NR)
+      REAL(8)               :: XI(NX)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: PI,Y0
+      REAL(8)               :: A(NX-3),B(NX-3),C(NX-3),D(NX-3)
+      INTEGER(4)            :: I,IR,J
+      REAL(8)               :: X(4),F(4)
+      REAL(8)               :: XC
+      REAL(8)               :: XR
+      REAL(8)               :: NUCPOT(NR)
 !     *************************************************************************
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
-      call radial$r(gid,nr,r)
-      do i=1,nx
-        xi(i)=xmin+REAL(i-1,kind=8)*(xmax-xmin)/real(nx-1,kind=8)
-      enddo
-      do i=1,nx-3
-        f(:)=potpar(i:i+3)
-        x(:)=xi(i:i+3)
-        xc=sum(x)/4.d0
-        x(:)=x(:)-xc
-        c(i)=0.5d0*(f(1)-f(2)-f(3)+f(4))/(x(4)**2-x(3)**2)
-        f(:)=f(:)-c(i)*x(:)**2
-        a(i)=sum(f)/4.d0
-        f(:)=f(:)-a(i)
-        f(:)=f(:)/x(:)
-        D(i)=0.5d0*(f(1)-f(2)-f(3)+f(4))/(x(4)**2-x(3)**2)
-        f(:)=f(:)-d(i)*x(:)**2
-        b(i)=sum(f)/4.d0
-!       == shift origin
-        a(i)=a(i)-b(i)*xc+c(i)*xc**2-d(i)*xc**3
-        b(i)=b(i)-2.d0*c(i)*xc+3.d0*d(i)*xc**2
-        c(i)=c(i)-3.d0*d(i)*xc
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+      DO I=1,NX
+        XI(I)=XMIN+REAL(I-1,KIND=8)*(XMAX-XMIN)/REAL(NX-1,KIND=8)
+      ENDDO
+      DO I=1,NX-3
+        F(:)=POTPAR(I:I+3)
+        X(:)=XI(I:I+3)
+        XC=SUM(X)/4.D0
+        X(:)=X(:)-XC
+        C(I)=0.5D0*(F(1)-F(2)-F(3)+F(4))/(X(4)**2-X(3)**2)
+        F(:)=F(:)-C(I)*X(:)**2
+        A(I)=SUM(F)/4.D0
+        F(:)=F(:)-A(I)
+        F(:)=F(:)/X(:)
+        D(I)=0.5D0*(F(1)-F(2)-F(3)+F(4))/(X(4)**2-X(3)**2)
+        F(:)=F(:)-D(I)*X(:)**2
+        B(I)=SUM(F)/4.D0
+!       == SHIFT ORIGIN
+        A(I)=A(I)-B(I)*XC+C(I)*XC**2-D(I)*XC**3
+        B(I)=B(I)-2.D0*C(I)*XC+3.D0*D(I)*XC**2
+        C(I)=C(I)-3.D0*D(I)*XC
 !       == TEST
-!        x(:)=xi(i:i+3)
-!        f(:)=potpar(i:i+3)-a(i)-b(i)*x(:)-c(i)*x(:)**2-d(i)*x(:)**3
-!        print*,'dev',maxval(abs(f))
-      enddo
-      do ir=1,nr
-        xr=log(r(ir))
-   xr=r(ir)
-        if(xr.lt.xi(1)) then
-          pot(ir)=potpar(1)
-        else if(xr.lt.xi(2)) then
-          pot(ir)=a(1)+b(1)*xr+c(1)*xr**2+d(1)*xr**3
-        else if(xr.lt.xi(nx-1)) then
-          do j=1,nx-3
-            if(xr.gt.xi(j+1).and.xr.le.xi(j+3)) then
-              pot(ir)=a(j)+b(j)*xr+c(j)*xr**2+d(j)*xr**3
-              exit
-            end if
-          enddo
-        else 
-           pot(ir)=a(nx-3)+b(nx-3)*xr+c(nx-3)*xr**2+d(nx-3)*xr**3
-        end if
-      enddo
-!      pot=exp(pot)
-!      CALL RADIAL$NUCPOT(GID,NR,AEZ,nucPOT)
-!      pot=pot+nucpot
-      return 
-      end
+!        X(:)=XI(I:I+3)
+!        F(:)=POTPAR(I:I+3)-A(I)-B(I)*X(:)-C(I)*X(:)**2-D(I)*X(:)**3
+!        PRINT*,'DEV',MAXVAL(ABS(F))
+      ENDDO
+      DO IR=1,NR
+        XR=LOG(R(IR))
+   XR=R(IR)
+        IF(XR.LT.XI(1)) THEN
+          POT(IR)=POTPAR(1)
+        ELSE IF(XR.LT.XI(2)) THEN
+          POT(IR)=A(1)+B(1)*XR+C(1)*XR**2+D(1)*XR**3
+        ELSE IF(XR.LT.XI(NX-1)) THEN
+          DO J=1,NX-3
+            IF(XR.GT.XI(J+1).AND.XR.LE.XI(J+3)) THEN
+              POT(IR)=A(J)+B(J)*XR+C(J)*XR**2+D(J)*XR**3
+              EXIT
+            END IF
+          ENDDO
+        ELSE 
+           POT(IR)=A(NX-3)+B(NX-3)*XR+C(NX-3)*XR**2+D(NX-3)*XR**3
+        END IF
+      ENDDO
+!      POT=EXP(POT)
+!      CALL RADIAL$NUCPOT(GID,NR,AEZ,NUCPOT)
+!      POT=POT+NUCPOT
+      RETURN 
+      END

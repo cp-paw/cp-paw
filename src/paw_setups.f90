@@ -1377,6 +1377,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4)            :: NFIL
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
+!
       PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       Y0=1.D0/SQRT(FOURPI)
@@ -2436,7 +2437,9 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
               CALL ERROR$R8VAL('AEZ ',AEZ)
               CALL ERROR$CHVAL('SETUPID ',SETUPID)
               CALL ERROR$R8VAL('RBOX ',RBOX)
+              CALL ERROR$R8VAL('Rcov ',Rcov)
               CALL ERROR$R8VAL('R(NR-3)',R(NR-3))
+              CALL ERROR$R8VAL('R(NR)',R(NR))
               CALL ERROR$STOP('ATOMLIB$READCNTL')
             END IF
           END IF
@@ -2689,7 +2692,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RASA)
       RNORM=RBOX
       RBND=RNORM
-      PHIPHASE=1.D0    !NODE AT R=RBND
+      PHIPHASE=1.D0    !NODE AT R=RBND!
 !
 !     ==========================================================================
 !     == RESOLVE KEY                                                          ==
@@ -5824,5 +5827,163 @@ GOTO 100
      &                 LN,LOX(LN),ISCATT(LN),QBAR(LN)
         ENDDO
       END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$BUILDPARMS()
+!     **************************************************************************
+!     ** GENERATES AUTOMATICALLY A PAERAMETER FILE FOR THE SETUP CONSTRUCTION **
+!     **************************************************************************
+      USE PERIODICTABLE_MODULE
+      USE CONSTANTS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: NFIL=1001
+      INTEGER(4),PARAMETER :: NFIL2=1002
+      CHARACTER(2)     :: EL
+      CHARACTER(12)    :: ID
+      CHARACTER(14)    :: SY
+      CHARACTER(5)     :: TYPE="'HBS'"
+      REAL(8)          :: RMAX=7.D0
+      INTEGER(4)       :: I
+      REAL(8)          :: AEZ,ZCORE,ZV,RCOV,ANGSTROM
+      CHARACTER(1)     :: ATOMTYPE
+!     **************************************************************************
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
+      OPEN(NFIL,FILE='STP.CNTL_HBSAUTOMATIC')
+      OPEN(NFIL2,FILE='TEST.STRC_HBSAUTOMATIC')
+      rewind nfil
+      rewind nfil2
+      WRITE(NFIL,FMT='("!SCNTL")')
+      DO I=1,105
+        CALL PERIODICTABLE$GET(I,'SYMBOL',EL)
+        CALL PERIODICTABLE$GET(I,'Z',AEZ)
+        CALL PERIODICTABLE$GET(I,'ZCORE',ZCORE)
+        CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+        ZV=AEZ-ZCORE
+        ID="'"//TRIM(EL)//'_HBS'//"'"
+        SY="'"//EL//"'"
+        IF(SY(3:3).EQ.' ')SY(3:3)='_'
+        IF(I.GE.1.AND.I.LE.2)   ATOMTYPE='A'   ! ALKALI AND EARTH ALKALI
+        IF(I.GE.3.AND.I.LE.4)   ATOMTYPE='A'   ! ALKALI AND EARTH ALKALI
+        IF(I.GE.5.AND.I.LE.10)  ATOMTYPE='M'   ! MAIN GROUP
+        IF(I.GE.11.AND.I.LE.12) ATOMTYPE='A'   
+        IF(I.GE.13.AND.I.LE.18) ATOMTYPE='M'   
+        IF(I.GE.19.AND.I.LE.20) ATOMTYPE='A'   
+        IF(I.GE.21.AND.I.LE.30) ATOMTYPE='T'   !TRANSITION METAL AND POOR METALS  
+        IF(I.GE.31.AND.I.LE.36) ATOMTYPE='M'   
+        IF(I.GE.37.AND.I.LE.38) ATOMTYPE='A'   
+        IF(I.GE.39.AND.I.LE.48) ATOMTYPE='T'   
+        IF(I.GE.49.AND.I.LE.54) ATOMTYPE='M'   
+        IF(I.GE.55.AND.I.LE.56) ATOMTYPE='A'   
+        IF(I.GE.57.AND.I.LE.71) ATOMTYPE='F'   
+        IF(I.GE.72.AND.I.LE.80) ATOMTYPE='T'   
+        IF(I.GE.81.AND.I.LE.86) ATOMTYPE='M'   
+        IF(I.GE.87.AND.I.LE.88) ATOMTYPE='A'   
+        IF(I.GE.89.AND.I.LE.103) ATOMTYPE='F'   
+        IF(I.GE.104.AND.I.LE.112) ATOMTYPE='T'   
+        IF(I.GE.113.AND.I.LE.118) ATOMTYPE='M'   
+!
+!       == RMAX MUST BE LARGER THAN THE BOX RADIUS AND SHOULD AT LEAST BE AS ===
+!       == LARGE AS THE BOND DISTANCE TO OXYGEN ================================
+        RMAX=MAX(2.D0*RCOV+0.5d0,RCOV+0.73d0*ANGSTROM)
+!
+!       ========================================================================
+!       == VALENCE-ONLY SETUPS                                                ==
+!       ========================================================================
+!       == EXCLUDE D AND F-SHELLS FOR MAINGROUP ELEMENTS (S-P)
+        ZV=AEZ-ZCORE
+        IF(I.GE.31.AND.I.LE.36) ZV=ZV-10.D0
+        IF(I.GE.49.AND.I.LE.54) ZV=ZV-10.D0
+        IF(I.GE.72.AND.I.LE.80) ZV=ZV-14.D0
+        IF(I.GE.81.AND.I.LE.86) ZV=ZV-24.D0
+        IF(I.GE.104) ZV=ZV-14.D0
+        WRITE(NFIL,FMT='(T2,"!SETUP  ID=",A," EL=",A," ZV=",f3.0)') &
+     &     TRIM(ID),TRIM(SY),ZV
+        WRITE(NFIL,FMT='(T10,"TYPE=",A," RBOX/RCOV=2.0 RCSM/RCOV=0.25")') &
+           TYPE
+        WRITE(NFIL,FMT='(T10,"RCL/RCOV= 0.75 0.75 0.75 0.75")') 
+        WRITE(NFIL,FMT='(T10,"LAMBDA= 6. 6. 6. 6.")') 
+        WRITE(NFIL,FMT='(T4,"!GRID DMIN=5.E-6 DMAX=0.1 RMAX=",F4.1," !END")')RMAX 
+        WRITE(NFIL,FMT='(T4,"!POT  POW=3. VAL=-1.2 RC/RCOV=0.67 !END")') 
+        WRITE(NFIL,FMT='(T4,"!CORE POW=3. VAL=0.1  RC/RCOV=0.67 !END")') 
+        WRITE(NFIL,FMT='(T2,"!END")') 
+        WRITE(NFIL,*) 
+!
+!       == NOW PREPARE INPUT FOR TEST STRUCTURE FILE
+        WRITE(NFIL2,FMT='(T2,"!SPECIES NAME=",A," ID=",A)')TRIM(SY),TRIM(ID)
+        IF(I.LE.2) THEN
+          WRITE(NFIL2,FMT='(T4,"NPRO=1  LRHOX=2")')
+        ELSE IF(I.LE.18) THEN
+          WRITE(NFIL2,FMT='(T4,"NPRO=1 1 0  LRHOX=2")')
+        ELSE IF(I.LT.56) THEN
+          WRITE(NFIL2,FMT='(T4,"NPRO=1 1 1  LRHOX=2")')
+        ELSE      
+          WRITE(NFIL2,FMT='(T4,"NPRO=1 1 1 1 LRHOX=2")')
+        END IF
+        IF(ATOMTYPE.EQ.'A') THEN
+          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 0 0 0 CV=T HFWEIGHT=0.25 !END")')
+        ELSE IF(ATOMTYPE.EQ.'M') THEN
+          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 1 0 0 CV=T HFWEIGHT=0.25 !END")')
+        ELSE IF(ATOMTYPE.EQ.'T') THEN
+          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 0 1 0 CV=T HFWEIGHT=0.25 !END")')
+        ELSE IF(ATOMTYPE.EQ.'F') THEN
+          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 0 1 1 CV=T HFWEIGHT=0.25 !END")')
+        END IF
+        WRITE(NFIL2,FMT='(T2,"!END")')
+!
+!       ========================================================================
+!       == SEMI-CORE SETUPS                                                   ==
+!       ========================================================================
+!       == INCLUDE CORE-S-P SHELL INTO THE VALENCE SO THAT ALL STATES 
+!       == WITH A MINIMUM MAIN QUANTUM NUMBER ARE INCLUDED
+        IF(AEZ.GE.11) THEN
+          ZV=AEZ-ZCORE+8.d0
+!       == F-STATES ARE INCLUDED ONLY FOR F-ELEMENTS
+!          IF(I.GE.72.AND.I.LE.86) ZV=ZV-14.d0
+!          IF(I.GE.104.AND.I.LE.118) ZV=ZV-14.d0
+          ID="'"//TRIM(EL)//'_HBS_SC'//"'"
+          SY="'"//EL//"'"
+          IF(SY(3:3).EQ.' ')SY(3:3)='_'
+          WRITE(NFIL,FMT='(T2,"!SETUP  ID=",A," EL=",A," ZV=",f3.0)') &
+       &     TRIM(ID),TRIM(SY),ZV
+          WRITE(NFIL,FMT='(T10,"TYPE=",A," RBOX/RCOV=1.2 RCSM/RCOV=0.25")') &
+               TYPE
+          WRITE(NFIL,FMT='(T10,"RCL/RCOV= 0.5 0.5 0.5 0.5")') 
+          WRITE(NFIL,FMT='(T10,"LAMBDA= 6. 6. 6. 6.")') 
+          WRITE(NFIL,FMT='(T4,"!GRID DMIN=5.E-6 DMAX=0.1 RMAX=",F4.1," !END")')RMAX 
+          WRITE(NFIL,FMT='(T4,"!POT  POW=3. VAL=-2.2 RC/RCOV=0.5  !END")') 
+          WRITE(NFIL,FMT='(T4,"!CORE POW=3. VAL= 0.1 RC/RCOV=0.5  !END")') 
+          WRITE(NFIL,FMT='(T2,"!END")') 
+          WRITE(NFIL,*) 
+!
+!         == NOW PREPARE INPUT FOR TEST STRUCTURE FILE
+          SY="'"//EL//"_SC'"
+          WRITE(NFIL2,FMT='(T2,"!SPECIES NAME=",A," ID=",A)')TRIM(SY),TRIM(ID)
+          IF(I.LE.2) THEN
+            WRITE(NFIL2,FMT='(T4,"NPRO=1  LRHOX=2")')
+          ELSE IF(I.LE.18) THEN
+            WRITE(NFIL2,FMT='(T4,"NPRO=2 2 0  LRHOX=2")')
+          ELSE IF(I.LT.56) THEN
+            WRITE(NFIL2,FMT='(T4,"NPRO=2 2 1  LRHOX=2")')
+          ELSE      
+            WRITE(NFIL2,FMT='(T4,"NPRO=2 2 1 1 LRHOX=2")')
+          END IF
+          IF(ATOMTYPE.EQ.'A') THEN
+            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 1 0 0 CV=T HFWEIGHT=0.25 !END")')
+          ELSE IF(ATOMTYPE.EQ.'M') THEN
+            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 2 0 0 CV=T HFWEIGHT=0.25 !END")')
+          ELSE IF(ATOMTYPE.EQ.'T') THEN
+            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 1 1 0 CV=T HFWEIGHT=0.25 !END")')
+          ELSE IF(ATOMTYPE.EQ.'F') THEN
+            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 1 1 1 CV=T HFWEIGHT=0.25 !END")')
+          END IF
+          WRITE(NFIL2,FMT='(T2,"!END")')
+        END IF
+      ENDDO
+      WRITE(NFIL,FMT='("!END")') 
+      WRITE(NFIL,FMT='("!EOB")') 
+      WRITE(NFIL,*)
+      CLOSE(NFIL)
       RETURN
       END
