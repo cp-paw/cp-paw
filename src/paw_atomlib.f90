@@ -27,6 +27,7 @@
       REAL(8)    ,INTENT(INOUT)  :: POT(NR)   ! POTENTIAL
       REAL(8)    ,INTENT(OUT)    :: EOFI(NX)  ! ONE-PARTICLE ENERGIES
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NX)! ONE-PARTICLE WAVE FUNCTIONS
+      REAL(8)                    :: sphi(NR,nx) ! small component
       REAL(8)                    :: R(NR)
       REAL(8)                    :: wght(NR)
       REAL(8)                    :: DREL(NR)  ! RELATIVISTIC CORRECTION
@@ -161,7 +162,13 @@
           END IF
           CALL atomlib$BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),RBOX,DREL,G,NN(IB) &
      &                           ,POT,EOFI(IB),PHI(:,IB))
-          AUX(:)=(R(:)*PHI(:,IB))**2
+          if(trel) then
+            call SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,Lofi(ib),SO(ib) &
+     &                                         ,DREL,PHI(:,ib),SPHI(:,ib))
+          else
+            sphi(:,ib)=0.d0
+          end if
+          AUX(:)=R(:)**2*(PHI(:,IB)**2+sphi(:,ib)**2)
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
           PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
@@ -172,7 +179,7 @@
 !       ========================================================================
         RHO(:)=0.D0
         DO IB=1,NB
-          RHO(:)=RHO(:)+F(IB)*C0LL*PHI(:,IB)**2
+          RHO(:)=RHO(:)+F(IB)*C0LL*(PHI(:,IB)**2+sphi(:,ib)**2)
         ENDDO
 !
 !       ========================================================================
@@ -182,7 +189,7 @@
         IF(CONVG) THEN
           AUX(:)=0.D0
           DO IB=1,NB
-            AUX(:)=AUX(:)+PHI(:,IB)*(EOFI(IB)-POT(:)*Y0)*F(IB)
+            AUX(:)=AUX(:)+(PHI(:,IB)**2+sphi(:,ib)**2)*(EOFI(IB)-POT(:)*Y0)*F(IB)
           ENDDO
           AUX(:)=AUX(:)*R(:)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
@@ -250,7 +257,12 @@
         AUX=PHI(:,JB)
         PHI(:,IB+1:JB)=PHI(:,IB:JB-1)
         PHI(:,IB)=AUX
+        AUX=sPHI(:,JB)
+        sPHI(:,IB+1:JB)=sPHI(:,IB:JB-1)
+        sPHI(:,IB)=AUX
       ENDDO
+!call setup_writephi('testphi.dat',gid,nr,nb,phi)
+!call setup_writephi('testsphi.dat',gid,nr,nb,sphi)
       RETURN
       END
 !
@@ -498,17 +510,18 @@
       REAL(8)                    :: X0,DX,XM,ZM,Z0
       REAL(8)    ,PARAMETER      :: TOL=1.D-8
       REAL(8)                    :: R(NR)
+      REAL(8)                    :: phi1(NR),phi2(nr)
       INTEGER(4) ,PARAMETER      :: NITER=100
       INTEGER(4)                 :: I,IR
       REAL(8)                    :: ROUT
-      REAL(8)                    :: VAL,VAL1,VAL2,R1,R2
+      REAL(8)                    :: VAL,VAL1,VAL2,R1,R2,svar
       INTEGER(4)                 :: IROUT,IRCL,IRBOX,IREND
 !     **************************************************************************
                                  CALL TRACE$PUSH('atomlib$PAWBOUNDSTATE')
       CALL RADIAL$R(GID,NR,R)
 !     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST IOUTSIDE THE BOX
       IRBOX=1
-      DO IR=1,NR
+      DO IR=1,NR-2
         IRBOX=IR
         IF(R(IR).GE.RBOX) EXIT
       ENDDO
@@ -528,7 +541,6 @@
 !       ========================================================================
 !       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
 !       ========================================================================
-!print*,'e ',i,e,z0,nn
         call ATOMLIB_PAWDER(GID,NR,L,e,pspot,npro,pro,dh,do,g,phi)
 !       == CHECK FOR OVERFLOW ==================================================
         IF(.NOT.(PHI(IRbox+2).GT.0.OR.PHI(IRbox+2).LE.0)) THEN
@@ -541,8 +553,13 @@
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,Rbox,Z0)
-        Z0=Z0-REAL(NN+1)
+        Z0=Z0-REAL(NN+1,kind=8)
         IF(ABS(2.D0*DX).LE.TOL) EXIT
+        if(z0.gt.0.d0) then
+          phi1(:)=phi(:)
+        else
+          phi2(:)=phi(:)
+        end if
 !       ========================================================================
 !       ==  BISECTION                                                         ==
 !       ========================================================================
@@ -553,6 +570,15 @@
         CALL ERROR$MSG('BOUND STATE NOT FOUND')
         CALL ERROR$STOP('atomlib$PAWBOUNDSTATE')
       END IF
+!     ==========================================================================
+!     ==  chop of tails which may be exponentially increasing                 ==
+!     ==========================================================================
+      CALL RADIAL$VALUE(GID,NR,PHI1,RBOX,VAL1)
+      CALL RADIAL$VALUE(GID,NR,PHI2,RBOX,VAL2)
+      SVAR=VAL2-VAL1
+      VAL1=VAL1/SVAR
+      VAL2=VAL2/SVAR
+      PHI=PHI1*VAL2-PHI2*VAL1
                                  CALL TRACE$POP()
       RETURN
       END

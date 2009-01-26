@@ -2524,10 +2524,53 @@ CHARACTER(32):: FILE
       RETURN
       END SUBROUTINE SCHROEDINGER_SP
 !
-!     ........................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO,DREL,PHI,SPHI)
+!     **************************************************************************
+!     **  DETERMINES THE RADIAL PART OF THE SMALL COMPONENT OF THE SPHERICAL  **
+!     **  DIRAC EQUATION. IT HAS AN ANGULAR MOMENTUM L-ISO. AN ADDITIONAL     **
+!     **  FACTOR $I^{2J-2L+1}$  IS STILL LACKING.                             **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: l
+      INTEGER(4),INTENT(IN) :: iso
+      REAL(8)   ,INTENT(IN) :: DREL(NR)
+      real(8)   ,INTENT(IN) :: PHI(NR)
+      real(8)   ,INTENT(OUT):: SPHI(NR)
+      real(8)               :: lambda
+      real(8)               :: speedoflight
+      real(8)               :: r(nr)
+      logical(4),parameter  :: ton=.false.  !switches small component on and off          
+!     **************************************************************************
+      if(.not.ton) then
+        sphi=0.d0
+        return
+      end if
+!
+      if(iso.eq.1) then
+        lambda=real(l,kind=8)
+      else if(iso.eq.-1) then
+        lambda=real(-l-1,kind=8)
+      else if(iso.eq.0) then
+        lambda=0.d0
+      else
+         call error$msg('illegal value of iso (must be 1,0, or -1)')
+         call error$stop('schroedinger_sphsmallcomponent')
+      end if
+      CALL CONSTANTS$GET('C',speedoflight)
+      call radial$r(gid,nr,r)
+      call radial$derive(gid,nr,phi,sphi)
+      sphi=sphi-lambda*phi/r
+      sphi=0.5d0*(1.d0+drel(:))*sphi/speedoflight
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SCHROEDINGER_SMALLCOMPONENT(GID,NR,LMX,NPHI,DREL,PHI,SPHI)
-!     **                                                                    **
-!     **                                                                    **
+!     **                                                                      **
+!     **                                                                      **
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
@@ -2634,12 +2677,13 @@ CHARACTER(32):: FILE
       INTEGER(4)            :: IR
       REAL(8)               :: C           ! SPEED OF LIGHT
       REAL(8)               :: PI,Y0      
-      REAL(8)               :: DRELDOT(NR)
+      REAL(8)               :: ekin(NR)
 !     ***************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',C)
-      DREL(:)=-1.D0/(1.D0+2.D0*C**2/MAX(E-POT(:)*Y0,0.D0))
+      ekin(:)=max(e-pot(:)*y0,0.d0)
+      DREL(:)=-ekin(:)/(ekin(:)+2.D0*C**2)
       RETURN
       END
 !
