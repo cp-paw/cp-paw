@@ -1,7 +1,7 @@
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$AESCF(GID,NR,KEY,RBOX,AEZ,NX,NB,LOFI,SO,F,NN &
-     &                        ,ETOT,POT,EOFI,PHI)
+     &                        ,ETOT,POT,EOFI,PHI,sphi)
 !     **************************************************************************
 !     ** MAKES A SELF-CONSISTENT CALCULATION OF AN ATOM IN A BOX WITH         **
 !     ** RADIUS RBOX (RADIUS IS LIMITED BY THE GRID RBOX<R(NR-3) )            **
@@ -27,7 +27,7 @@
       REAL(8)    ,INTENT(INOUT)  :: POT(NR)   ! POTENTIAL
       REAL(8)    ,INTENT(OUT)    :: EOFI(NX)  ! ONE-PARTICLE ENERGIES
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NX)! ONE-PARTICLE WAVE FUNCTIONS
-      REAL(8)                    :: sphi(NR,nx) ! small component
+      REAL(8)    ,INTENT(OUT)    :: SPHI(NR,NX) ! SMALL COMPONENT
       REAL(8)                    :: R(NR)
       REAL(8)                    :: wght(NR)
       REAL(8)                    :: DREL(NR)  ! RELATIVISTIC CORRECTION

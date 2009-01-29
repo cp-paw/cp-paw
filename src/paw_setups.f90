@@ -81,6 +81,7 @@ TYPE ATOMWAVES_TYPE
   REAL(8)   ,POINTER :: EOFI(:)
   REAL(8)   ,POINTER :: FOFI(:)
   REAL(8)   ,POINTER :: AEPSI(:,:)
+  REAL(8)   ,POINTER :: AEPSIsm(:,:) ! small component
   REAL(8)   ,POINTER :: AEPOT(:)
 END TYPE ATOMWAVES_TYPE
 TYPE THIS_TYPE
@@ -1369,6 +1370,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: ETOT
       CHARACTER(32)         :: KEY
       REAL(8)   ,ALLOCATABLE:: PSI(:,:)
+      REAL(8)   ,ALLOCATABLE:: PSIsm(:,:)  !small component
       LOGICAL(4)            :: TCHK
       REAL(8)               :: PI,FOURPI,Y0,C0LL
       REAL(8)               :: SVAR
@@ -1457,9 +1459,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ==========================================================================
       ALLOCATE(THIS%ATOM%AEPOT(NR))
       ALLOCATE(PSI(NR,NBX))
+      ALLOCATE(PSIsm(NR,NBX))
       KEY='START,REL,NONSO'
       CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
-    &                   ,ETOT,THIS%ATOM%AEPOT,EOFI,PSI)
+    &                   ,ETOT,THIS%ATOM%AEPOT,EOFI,PSI,psism)
 !
 !     == MAP ATOMIC DATA ON GRID ===============================================
       THIS%ATOM%NB=NB
@@ -1467,10 +1470,12 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       ALLOCATE(THIS%ATOM%FOFI(NB))
       ALLOCATE(THIS%ATOM%EOFI(NB))
       ALLOCATE(THIS%ATOM%AEPSI(NR,NB))
+      ALLOCATE(THIS%ATOM%AEPSIsm(NR,NB))
       THIS%ATOM%LOFI=LOFI(1:NB)
       THIS%ATOM%FOFI=FOFI(1:NB)
       THIS%ATOM%EOFI=EOFI(1:NB)
       THIS%ATOM%AEPSI=PSI(:,1:NB)
+      THIS%ATOM%AEPSI=PSIsm(:,1:NB)
 !
 !     == DETERMINE NUMBER OF CORE SHELLS =======================================
       SVAR=AEZ-ZV
@@ -1503,7 +1508,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       ALLOCATE(THIS%PSCORE(NR))
       THIS%AECORE(:)=0.D0
       DO IB=1,NC
-        THIS%AECORE(:)=THIS%AECORE(:)+FOFI(IB)*PSI(:,IB)**2*C0LL
+        THIS%AECORE(:)=THIS%AECORE(:)+FOFI(IB)*(PSI(:,IB)**2+psism(:,ib)**2)*C0LL
       ENDDO
       CALL ATOMIC_PSEUDIZE(GID,NR,THIS%PARMS%POW_CORE,this%parms%tval0_core &
      &         ,THIS%PARMS%VAL0_CORE,THIS%PARMS%RC_CORE,THIS%AECORE,THIS%PSCORE)
@@ -1545,7 +1550,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
      &           ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
      &           ,THIS%ISCATT,THIS%EOFLN,THIS%ESCATT &
      &           ,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%PRO,THIS%DTKIN,THIS%DOVER &
-     &           ,THIS%PSPOT,THIS%PARMS%POW_POT,this%parms%tval0_pot &
+     &           ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
      &           ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT)
 !     
@@ -2592,7 +2597,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,AEPOT &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
-     &           ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
+     &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
      &                  ,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER,PSPOT &
      &                  ,POW_POT,tval0_pot,VAL0_POT,RC_POT,RCSM,VADD &
      &                  ,NLPHIDOT,AEPHIDOT,PSPHIDOT)
@@ -2654,7 +2659,8 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: TRANSUINV(LNX,LNX)
       REAL(8)               :: EOFI1(NB)
       REAL(8)               :: EOFICOMP(2,NB-NC)
-      REAL(8)               :: UOFI(NR,NB)
+      REAL(8)               :: UOFI(NR,NB)   ! nodeless wave function
+      REAL(8)               :: UOFIsm(NR,NB) ! small component
       REAL(8)               :: TUOFI(NR,NB)
       REAL(8)               :: AEPSI(NR,NB)
       REAL(8)               :: TNLPHI(NR,LNX)
@@ -2761,6 +2767,12 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
           DREL(:)=0.D0
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
           CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,0,AEPOT,E,UOFI(:,IB))
+          if(trel) then
+            call SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,Lofi(ib),SOfi(ib) &
+     &                                         ,DREL,uofi(:,ib),uofism(:,ib))
+          else
+            uofism(:,ib)=0.d0
+          end if
           EOFI1(IB)=E
           TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
           G(:)=UOFI(:,IB)
@@ -3427,6 +3439,7 @@ GOTO 10001
           IF(TTEST) THEN
              WRITE(6,FMT='("DEVIATION OF THE ATOMIC ENERGY LEVELS IN EV")')
              WRITE(6,FMT='("OBTAINED ONCE WITH PAW AND THE AE CALCULATION")')
+             WRITE(6,FMT='("DEVIATION PROBABLY DUE TO INCONSISTENCEY OF RELATIVISTIC EFFECTS")')
              WRITE(6,FMT='("L",I2," PAW-REF ",F10.5,"EV; AE-REF ",F10.5," EV")') &
          &          L,(SVAR2-EOFI1(IB))*27.211D0,(SVAR1-EOFI1(IB))*27.211D0
           END IF
@@ -3882,7 +3895,8 @@ real(8):: auxarr(nr,5)
       CALL RADIAL$R(GID,NR,R)
 auxarr(:,1)=aerho
 auxarr(:,2)=psrho
-CALL setup_WRITEPHI('TEST',GID,NR,2,auxarr(:,:2))
+auxarr(:,3)=aerho-psrho
+CALL setup_WRITEPHI('TEST',GID,NR,3,auxarr(:,:3))
 !
 AUX(:)=PSRHO(:)*R(:)**2
 CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
@@ -3903,12 +3917,11 @@ PRINT*,'AERHO CHARGE ',QLM*Y0*4.D0*PI,rbox,r(nr)
 !     == small deviations lead to long-range tail in vadd ====================
       CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
       CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,QLM)
-! CALL RADIAL$INTEGRAl(GID,NR,AUX,qlm) 
       QLM=QLM-AEZ*Y0    ! CHARGE =QM/Y0
 PRINT*,'CHARGE ',QLM/Y0,AEZ
 !
 !     ========================================================================
-!     == ADD COMPENSATION DENSITY AND DETERMINE ELECTROSTATIC POTENTIA      ==
+!     == ADD COMPENSATION DENSITY AND DETERMINE ELECTROSTATIC POTENTIAL     ==
 !     ========================================================================
       ALPHA=1.D0/RCSM**2
       CALL GAUSSN(0,ALPHA,CL)
@@ -3918,6 +3931,8 @@ PRINT*,'CHARGE ',QLM/Y0,AEZ
  CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,QLM)
 PRINT*,'QLM ',QLM*Y0*4.D0*PI
       CALL RADIAL$POISSON(GID,NR,0,AUX,POTh)
+      CALL RADIAL$VALUE(GID,NR,poth,RBOX,svar)
+      poth=poth-svar
 !
 !     ========================================================================
 !     == EXCHANGE AND CORRELATION                                           ==
@@ -3927,7 +3942,7 @@ PRINT*,'QLM ',QLM*Y0*4.D0*PI
         RH=PSRHO(IR)*Y0
         GRHO2=(Y0*GRHO(IR))**2
         CALL DFT(RH,0.D0,GRHO2,0.D0,0.D0,EXC,VXC,DUMMY1,VGXC,DUMMY2,DUMMY3)
-        POTxc(IR)=VXC/Y0
+        POTXC(IR)=VXC/Y0
         GRHO(IR)=VGXC*2.D0*GRHO(IR)
       ENDDO
       CALL RADIAL$DERIVE(GID,NR,GRHO(:),AUX)
@@ -3948,15 +3963,30 @@ PRINT*,'QLM ',QLM*Y0*4.D0*PI
         IF(AERHO(IR)*Y0.LT.1.D-6) POTXC(IR)=0.D0
       ENDDO
 !
+!     ==========================================================================
+!     == set potxc to zero beyond rbox  the radius where the wave functions   ==
+!     == have their zero
+!     ==========================================================================
+      do ir=1,nr
+        if(r(ir).ge.rbox) then
+          potxc(ir:)=0.d0
+          poth(ir:)=0.d0
+          exit
+        end if
+      enddo
+!
 !     ========================================================================
 !     == VADD                                                               ==
 !     ========================================================================
       pot=poth+potxc
       VADD(:)=PSPOT(:)-POT(:)
+
 auxarr(:,1)=pspot
 auxarr(:,2)=pot
 auxarr(:,3)=vadd
-CALL SETUP_WRITEPHI('TESTPOT',GID,NR,3,AUXARR(:,:3))
+auxarr(:,4)=POTH
+auxarr(:,5)=POTxc
+CALL SETUP_WRITEPHI('TESTPOT',GID,NR,5,AUXARR(:,:))
       RETURN
       END
 !

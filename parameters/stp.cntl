@@ -1808,6 +1808,18 @@
    !CORE POW=2.  RC/RCOV=0.67 !END
  !END
 
+
+
+ !SETUP  ID='BA_TEST' EL='BA' ZV=10.
+         TYPE='HBS' RBOX/RCOV=2.0 RCSM/RCOV=0.25
+         RCL/RCOV= 0.5 0.5 0.5 0.5
+         LAMBDA= 6. 6. 6. 6.
+   !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 8.0 !END
+   !POT  POW=3. VAL=-2.2 RC/RCOV=0.5  !END
+   !CORE POW=3. VAL= 0.1 RC/RCOV=0.5  !END
+ !END
+
+
 !END
 !EOB
 
