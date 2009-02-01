@@ -78,6 +78,8 @@ TYPE ATOMWAVES_TYPE
   INTEGER(4)         :: NB=-1
   INTEGER(4)         :: NC=-1
   INTEGER(4),POINTER :: LOFI(:)
+  INTEGER(4),POINTER :: sOFI(:)
+  INTEGER(4),POINTER :: nnOFI(:)
   REAL(8)   ,POINTER :: EOFI(:)
   REAL(8)   ,POINTER :: FOFI(:)
   REAL(8)   ,POINTER :: AEPSI(:,:)
@@ -1342,7 +1344,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       USE STRINGS_MODULE
       USE SETUP_MODULE
       IMPLICIT NONE
-      INTEGER(4),PARAMETER  :: NBX=19
+      INTEGER(4),PARAMETER  :: NBX=40
       INTEGER(4)            :: LOFI(NBX)
       INTEGER(4)            :: SOFI(NBX)
       REAL(8)               :: FOFI(NBX)
@@ -1362,6 +1364,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)   ,ALLOCATABLE:: R(:)
       INTEGER(4),ALLOCATABLE:: LOX(:)
       REAL(8)   ,ALLOCATABLE:: RC(:)
+      logical(4),ALLOCATABLE:: tC(:)
       REAL(8)   ,ALLOCATABLE:: LAMBDA(:)  ! SECOND PARAMETER FOR PSEUDIZATION
       REAL(8)               :: RBOX
       REAL(8)               :: ROUT
@@ -1374,7 +1377,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       LOGICAL(4)            :: TCHK
       REAL(8)               :: PI,FOURPI,Y0,C0LL
       REAL(8)               :: SVAR
-      INTEGER(4)            :: IR,IB,LN,L
+      INTEGER(4)            :: IR,IB,LN,L,ib1
       INTEGER(4)            :: LRHOX
       CHARACTER(64)         :: STRING
       CHARACTER(64)         :: PSEUDIZATION
@@ -1461,45 +1464,73 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       ALLOCATE(PSI(NR,NBX))
       ALLOCATE(PSIsm(NR,NBX))
       KEY='START,REL,NONSO'
+KEY='START,NONREL,NONSO'
+!KEY='START,REL,SO'
       CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
     &                   ,ETOT,THIS%ATOM%AEPOT,EOFI,PSI,psism)
-!
+!     
+!     ==========================================================================
+!     ==  select core, and reorder states                                     ==
+!     ==========================================================================
+      allocate(tc(nb))
+      call setup_coreselect(aez,zv,nb,lofi,sofi,tc)
+      nc=0
+      do ib=1,nb
+        if(tc(ib))nc=nc+1
+      enddo
+      THIS%ATOM%NC=NC
+
 !     == MAP ATOMIC DATA ON GRID ===============================================
       THIS%ATOM%NB=NB
       ALLOCATE(THIS%ATOM%LOFI(NB))
       ALLOCATE(THIS%ATOM%FOFI(NB))
+      ALLOCATE(THIS%ATOM%sOFI(NB))
+      ALLOCATE(THIS%ATOM%nnOFI(NB))
       ALLOCATE(THIS%ATOM%EOFI(NB))
       ALLOCATE(THIS%ATOM%AEPSI(NR,NB))
       ALLOCATE(THIS%ATOM%AEPSIsm(NR,NB))
-      THIS%ATOM%LOFI=LOFI(1:NB)
-      THIS%ATOM%FOFI=FOFI(1:NB)
-      THIS%ATOM%EOFI=EOFI(1:NB)
-      THIS%ATOM%AEPSI=PSI(:,1:NB)
-      THIS%ATOM%AEPSI=PSIsm(:,1:NB)
-!
-!     == DETERMINE NUMBER OF CORE SHELLS =======================================
-      SVAR=AEZ-ZV
-      NC=0
-      IF(SVAR.GT.1.D-3) THEN
-        DO IB=1,NB
-          SVAR=SVAR-FOFI(IB)
-          NC=IB
-          IF(ABS(SVAR).LT.1.D-3) EXIT
-          IF(SVAR.LT.-1.D-3) THEN
-            CALL ERROR$MSG('ZV INCONSISTENT WITH COMPLETE ANGULAR MOMENTUM SHELLS')
-            CALL ERROR$R8VAL('AEZ',AEZ)
-            CALL ERROR$R8VAL('ZV',ZV)
-            CALL ERROR$R8VAL('SVAR',SVAR)
-            CALL ERROR$STOP('SETUP_READ_NEW')
-          END IF
-        ENDDO
-      END IF
-      THIS%ATOM%NC=NC
-!
-!     ==========================================================================
-      ALLOCATE(THIS%ISCATT(LNX))
-      CALL SETUP_MAKEISCATT(AEZ,NB,NC,LOFI(1:NB),NNOFI(1:NB),LNX,LOX &
-     &                     ,THIS%ISCATT)
+      ib1=0
+      do ib=1,nb 
+        if(tc(ib)) then
+          ib1=ib1+1  
+          THIS%ATOM%LOFI(ib1)=LOFI(ib)
+          THIS%ATOM%sOFI(ib1)=sOFI(ib)
+          THIS%ATOM%FOFI(ib1)=FOFI(ib)
+          THIS%ATOM%nnOFI(ib1)=nnOFI(ib)
+          THIS%ATOM%EOFI(ib1)=EOFI(ib)
+          THIS%ATOM%AEPSI(:,ib1)=PSI(:,ib)
+          THIS%ATOM%AEPSIsm(:,ib1)=PSIsm(:,ib)
+        end if
+      enddo
+      do ib=1,nb 
+        if(.not.tc(ib)) then
+          ib1=ib1+1  
+          THIS%ATOM%LOFI(ib1)=LOFI(ib)
+          THIS%ATOM%sOFI(ib1)=sOFI(ib)
+          THIS%ATOM%FOFI(ib1)=FOFI(ib)
+          THIS%ATOM%nnOFI(ib1)=nnOFI(ib)
+          THIS%ATOM%EOFI(ib1)=EOFI(ib)
+          THIS%ATOM%AEPSI(:,ib1)=PSI(:,ib)
+          THIS%ATOM%AEPSIsm(:,ib1)=PSIsm(:,ib)
+        end if
+      enddo
+      LOFI(:NB) =THIS%ATOM%LOFI
+      sOFI(:NB) =THIS%ATOM%SOFI
+      FOFI(:NB) =THIS%ATOM%FOFI
+      NNOFI(:NB)=THIS%ATOM%NNOFI
+      EOFI(:NB) =THIS%ATOM%EOFI
+      PSI(:,:NB)=THIS%ATOM%AEPSI
+      PSISM(:,:NB)=THIS%ATOM%AEPSISM
+      deallocate(tc)
+svar=0.d0
+do ib=1,nb
+  svar=svar+fofi(ib)
+  write(6,fmt='("ib=",4i4,f20.4,2f10.5)')ib,nnofi(ib)+lofi(ib)+1,lofi(ib) &
+ &                                      ,sofi(ib),eofi(ib),fofi(ib),aez-svar
+enddo
+!CALL SETUP_WRITEPHI('aepsi.DAT',GID,NR,nb,psi(:,:nb))
+!CALL SETUP_WRITEPHI('aepsism.DAT',GID,NR,nb,psism(:,:nb))
+
 !
 !     ==========================================================================
 !     == CALCULATE AND PSEUDIZE CORE DENSITY                                  ==
@@ -1513,6 +1544,14 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       CALL ATOMIC_PSEUDIZE(GID,NR,THIS%PARMS%POW_CORE,this%parms%tval0_core &
      &         ,THIS%PARMS%VAL0_CORE,THIS%PARMS%RC_CORE,THIS%AECORE,THIS%PSCORE)
       DEALLOCATE(PSI)
+!
+!     ==========================================================================
+!     == identify scattering character of the partial waves                   ==
+!     == (band index relative to HOMO for each L)                             ==
+!     ==========================================================================
+      ALLOCATE(THIS%ISCATT(LNX))
+      CALL SETUP_MAKEISCATT(AEZ,NB,NC,LOFI(1:NB),NNOFI(1:NB),LNX,LOX &
+     &                                                   ,THIS%ISCATT)
 !
 !     ==========================================================================
 !     == CONSTRUCT PARTIAL WAVES                                              ==
@@ -1545,6 +1584,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         LAMBDA(LN)=THIS%PARMS%LAMBDA(L+1)
       ENDDO
 !
+print*,'marke before makepartialwaves'
       CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%ATOM%AEPOT,NB,NC &
      &           ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
      &           ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
@@ -1553,6 +1593,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
      &           ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
      &           ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT)
+!stop 'forced in paw_setup'
 !     
 !     ==========================================================================
 !     ==  calculate and print scattering properties                           ==
@@ -1609,6 +1650,97 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
                             CALL TRACE$POP
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine setup_coreselect(aez,zv,nb,lofi,sofi,tc)
+!     **************************************************************************
+!     **************************************************************************
+!     **************************************************************************
+      implicit none
+      real(8)   ,intent(in)  :: aez
+      real(8)   ,intent(in)  :: zv
+      integer(4),intent(in)  :: nb
+      integer(4),intent(in)  :: lofi(nb)
+      integer(4),intent(in)  :: sofi(nb)
+      logical(4),intent(out) :: tc(nb)
+      real(8)                :: znoble(0:7)=(/0.d0,2.d0,10.d0,18.d0,36.d0 &
+     &                                       ,54.d0,86.d0,118.d0/)
+      integer(4)             :: is(15)=(/1,0,0,1,0,1,0,0,1,0,1,0,1,0,1/)
+      integer(4)             :: ip(15)=(/0,0,1,1,0,0,0,1,1,1,1,0,0,1,1/)
+      integer(4)             :: id(15)=(/0,0,0,0,1,1,0,1,1,0,0,1,1,1,1/)
+      integer(4)             :: if(15)=(/0,0,0,0,0,0,1,0,0,1,1,1,1,1,1/)
+      INTEGER(4)             :: LMAP(19)=(/0,0,1,0,1,0,2,1,0,2,1,0,3,2,1,0,3,2,1/)
+      integer(4)             :: i,ib,l,iso,ib0,isvar,nel
+      real(8)                :: z1,z2,svar
+      integer(4)             :: ion(0:3)
+      integer(4)             :: isumel,iz1
+      logical(4)             :: tmap(19)
+      real(8)                :: sumel
+!     **************************************************************************
+      znoble(1:7)=znoble(1:7)+1.d-6
+!     == determine atomic number of last nobel gas atom before valence states ==
+      do i=1,7
+        z1=znoble(i-1)
+        z2=znoble(i)
+        if(aez-zv.lt.znoble(i)) exit
+      enddo
+!
+!     == determine occupied core shells 
+      isvar=nint(0.5d0*(aez-zv-z1))
+      if(isvar.lt.1.or.isvar.gt.15) then
+        call error$stop('setup_coreselect')
+      end if
+      ion(0)=is(isvar)
+      ion(1)=ip(isvar)
+      ion(2)=id(isvar)
+      ion(3)=if(isvar)
+!      
+!     ==  fill complete core shells ===================================
+      tmap=.false.
+      iz1=nint(z1)
+      isumel=iz1
+      do ib=1,19
+        nel=2*(2*lmap(ib)+1)
+        svar=real(nel,kind=8)
+        tmap(ib)=isumel.ge.nel
+        if(tmap(ib)) isumel=isumel-nel
+        if(tmap(ib)) ib0=ib+1
+      enddo
+      if(isumel.ne.0) then
+        call error$msg('internal error 1')
+        call error$stop('setup_coreselect')
+      end if
+!
+!     == fill remaining sub-shells
+      do ib=ib0,19
+        if(ion(lmap(ib)).eq.1) then
+          tmap(ib)=.true.
+          ion(lmap(ib))=0
+        end if
+      enddo
+!
+!     == identify core shells =====================================
+      tc=.false.
+      do l=0,3
+        do iso=-1,1
+!         == count number of core shells with this L
+          isvar=0
+          do i=1,19
+            if(lmap(i).ne.l) cycle
+            if(tmap(i))isvar=isvar+1
+          enddo
+!         == switch core states on
+          do ib=1,nb
+            if(lofi(ib).ne.l) cycle
+            if(sofi(ib).ne.iso) cycle
+            if(isvar.eq.0) exit
+            tc(ib)=.true.
+            isvar=isvar-1
+          enddo
+        enddo
+      enddo      
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$REPORT(NFIL)
@@ -2678,7 +2810,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
       REAL(8)               :: AERHO(NR),PSRHO(NR)
-      REAL(8)               :: G(NR),DREL(NR),G1(NR),PHI(NR),PHI1(NR)
+      REAL(8)               :: G(NR),gs(nr),DREL(NR),G1(NR),PHI(NR),PHI1(NR)
       REAL(8)               :: E
       REAL(8)               :: RC1
       REAL(8)               :: EHOMO
@@ -2712,9 +2844,11 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: DFACP,DFACM    !DOUBLE FACTORIAL OF 2L+1; 2L-1
       LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
       LOGICAL   ,PARAMETER  :: TWRITE=.TRUE.
+      real(8)               :: speedoflight
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
+      CALL CONSTANTS$GET('C',speedoflight)
       LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
       CALL RADIAL$R(GID,NR,R)
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
@@ -2760,23 +2894,41 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     == CONSTRUCT NODELESS WAVE FUNCTIONS                                    ==
 !     ==========================================================================
       DO L=0,LX
-        G(:)=0.D0
-        DO IB=1,NB
-          IF(LOFI(IB).NE.L) CYCLE
-          E=EOFI(IB)
-          DREL(:)=0.D0
-          IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,0,AEPOT,E,UOFI(:,IB))
-          if(trel) then
-            call SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,Lofi(ib),SOfi(ib) &
-     &                                         ,DREL,uofi(:,ib),uofism(:,ib))
-          else
-            uofism(:,ib)=0.d0
-          end if
-          EOFI1(IB)=E
-          TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
-          G(:)=UOFI(:,IB)
-        ENDDO
+        do iso=-1,1
+          G(:)=0.D0
+          Gs(:)=0.D0
+          DO IB=1,NB
+            IF(LOFI(IB).NE.L) CYCLE
+            IF(sOFI(IB).NE.iso) CYCLE
+            E=EOFI(IB)
+            DREL(:)=0.D0
+            IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,0,AEPOT,E,UOFI(:,IB))
+            if(trel) then
+              call SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,Lofi(ib),SOfi(ib) &
+     &                                         ,DREL,gs,uofi(:,ib),uofism(:,ib))
+            else
+              uofism(:,ib)=0.d0
+            end if
+            EOFI1(IB)=E
+            TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
+            aux=(1.d0+Drel)*uofism(:,ib)
+            call radial$derive(gid,nr,aux,aux1)
+            if(iso.eq.1) then
+              aux(2:)=aux1(2:)+real(l+2,kind=8)/r(2:)*aux(2:)
+              aux(1)=aux(2)
+              aux(:)=-0.5/speedoflight*aux(:)
+            else if(iso.eq.-1) then
+              aux(2:)=aux1(2:)-real(l-1,kind=8)/r(2:)*aux(2:)
+              aux(1)=aux(2)
+              aux=+0.5/speedoflight*aux(:)
+            else
+              aux=+0.5/speedoflight*aux1
+            end if
+            G(:)=UOFI(:,IB)   !+aux(:)
+            gs(:)=uofism(:,ib)
+          ENDDO
+        enddo
       ENDDO
 !
 !     ==========================================================================
@@ -2795,6 +2947,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         ENDDO
 !       CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
       END IF
+!stop 'forced in makepartialwaves'
 !
 !     ==========================================================================
 !     == CONSTRUCT NODELESS PARTIAL WAVES                                     ==

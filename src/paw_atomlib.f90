@@ -94,11 +94,15 @@
         FTOT=AEZ
         DO I=1,19
           NB=NB+1
-          IF(NB.GT.NX) EXIT
+          IF(NB.GT.NX) THEN
+            CALL ERROR$MSG('ACTUAL NUMBER OF BAND EXCEEDS DIMENSION')
+            CALL ERROR$I4VAL('NX',NX)
+            CALL ERROR$STOP('ATOMLIB$AESCF')
+          END IF
           LOFI(NB)=LMAP(I)
           IF(TSO)THEN
             IF(LMAP(I).eq.0)THEN
-              SO(NB)=-1
+              SO(NB)=1
               F(NB)=MIN(FTOT,2.d0)
               FTOT=FTOT-F(NB)
             else
@@ -106,7 +110,11 @@
               F(NB)=MIN(FTOT,REAL(2*LMAP(I),KIND=8))
               FTOT=FTOT-F(NB)
               NB=NB+1
-              IF(NB.GT.NX) EXIT
+              IF(NB.GT.NX) THEN
+                CALL ERROR$MSG('ACTUAL NUMBER OF BAND EXCEEDS DIMENSION')
+                CALL ERROR$I4VAL('NX',NX)
+                CALL ERROR$STOP('ATOMLIB$AESCF')
+              END IF
               LOFI(NB)=LMAP(I)
               SO(NB)=1
               F(NB)=MIN(FTOT,REAL(2*LMAP(I)+2,KIND=8))
@@ -154,17 +162,18 @@
 !       == DETERMINE BOUND STATES FOR A GIVEN POTENTIAL AND ADD TO DENSITY    ==
 !       ========================================================================
         DO IB=1,NB
-          G(:)=0.D0
           IF(TREL) THEN
             CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
           ELSE 
             DREL(:)=0.D0 
           END IF
+          G(:)=0.D0
           CALL atomlib$BOUNDSTATE(GID,NR,LOFI(IB),SO(IB),RBOX,DREL,G,NN(IB) &
      &                           ,POT,EOFI(IB),PHI(:,IB))
           if(trel) then
+            G(:)=0.D0
             call SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,Lofi(ib),SO(ib) &
-     &                                         ,DREL,PHI(:,ib),SPHI(:,ib))
+     &                                         ,DREL,G,PHI(:,ib),SPHI(:,ib))
           else
             sphi(:,ib)=0.d0
           end if
@@ -172,6 +181,7 @@
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
           PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
+          sPHI(:,IB)=sPHI(:,IB)/SQRT(SVAR)
         ENDDO
 !
 !       ========================================================================

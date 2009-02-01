@@ -2525,24 +2525,34 @@ CHARACTER(32):: FILE
       END SUBROUTINE SCHROEDINGER_SP
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO,DREL,PHI,SPHI)
+      SUBROUTINE SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO,DREL,g,PHI,SPHI)
 !     **************************************************************************
 !     **  DETERMINES THE RADIAL PART OF THE SMALL COMPONENT OF THE SPHERICAL  **
-!     **  DIRAC EQUATION. IT HAS AN ANGULAR MOMENTUM L-ISO. AN ADDITIONAL     **
-!     **  FACTOR $I^{2J-2L+1}$  IS STILL LACKING.                             **
+!     **  DIRAC EQUATION.                                                     **
+!     **                                                                      **
+!     **  iso=+1 for     parallel spin and orbital angular momentum           **
+!     **  iso=-1 for antiparallel spin and orbital angular momentum           **
+!     **  iso= 0 in the absence of spin-orbit coupling                        **
+!     **                                                                      **
+!     **  g is the inhomogeneity in the small components of the               **
+!     **    four-component dirac equation. For the nodeless equations it is   **
+!     **    equal to the small component of the nodeless wave function of the **
+!     **    next lower band.                                                  **  
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: l
-      INTEGER(4),INTENT(IN) :: iso
+      INTEGER(4),INTENT(IN) :: iso         ! =1 for LS>0; =-1 for LS<0
       REAL(8)   ,INTENT(IN) :: DREL(NR)
-      real(8)   ,INTENT(IN) :: PHI(NR)
-      real(8)   ,INTENT(OUT):: SPHI(NR)
-      real(8)               :: lambda
-      real(8)               :: speedoflight
-      real(8)               :: r(nr)
-      logical(4),parameter  :: ton=.false.  !switches small component on and off          
+      REAL(8)   ,INTENT(IN) :: g(NR)
+      real(8)   ,INTENT(IN) :: PHI(NR)     ! large component
+      real(8)   ,INTENT(OUT):: SPHI(NR)    ! small component
+      real(8)               :: lambda      ! =l for LS>0; -l-1 for LS<0
+      real(8)               :: sgnlambda   !sgn(lambda)
+      real(8)               :: speedoflight! speed of light
+      real(8)               :: r(nr)       ! radial grid
+      logical(4),parameter  :: ton=.false. !switches small component on and off
 !     **************************************************************************
       if(.not.ton) then
         sphi=0.d0
@@ -2551,19 +2561,24 @@ CHARACTER(32):: FILE
 !
       if(iso.eq.1) then
         lambda=real(l,kind=8)
+        sgnlambda=1.d0
       else if(iso.eq.-1) then
         lambda=real(-l-1,kind=8)
+        sgnlambda=-1.d0
       else if(iso.eq.0) then
         lambda=0.d0
+        sgnlambda=1.d0
       else
          call error$msg('illegal value of iso (must be 1,0, or -1)')
-         call error$stop('schroedinger_sphsmallcomponent')
+         call error$stop('schroedinger$sphsmallcomponent')
       end if
       CALL CONSTANTS$GET('C',speedoflight)
       call radial$r(gid,nr,r)
       call radial$derive(gid,nr,phi,sphi)
-      sphi=sphi-lambda*phi/r
-      sphi=0.5d0*(1.d0+drel(:))*sphi/speedoflight
+      sphi(2:)=sphi(2:)-lambda*phi/r(2:)
+      sphi(1)=sphi(2)
+      sphi=sgnlambda*sphi-G/speedoflight
+      sphi=0.5d0*(1.d0+drel)/speedoflight*sphi
       return
       end
 !
