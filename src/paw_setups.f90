@@ -3529,6 +3529,25 @@ GOTO 10001
 10001 CONTINUE
 !
 !     ==========================================================================
+!     == CUT OFF THE EXPONENTIALLY GROWING TAIL OF THE PARTIALWAVES
+!     ==========================================================================
+      DO IR=1,NR
+        IF(R(IR).GT.MAX(2.D0*RCOV,RNORM)) THEN
+          I=IR+1
+          EXIT
+        END IF
+      ENDDO
+      IR=I
+      AEPHI(IR:,:)=0.D0
+      PSPHI(IR:,:)=0.D0
+      NLPHI(IR:,:)=0.D0
+      aePHIDOT(IR:,:)=0.D0
+      NLPHIDOT(IR:,:)=0.D0
+      PSPHIDOT(IR:,:)=0.D0
+      QN(IR:,:)=0.D0
+      PRO(IR:,:)=0.D0
+!
+!     ==========================================================================
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
 !     ==========================================================================
       AERHO(:)=0.D0
@@ -3668,6 +3687,14 @@ GOTO 10001
         SVAR=SVAR-FOFI(IB)
       ENDDO
       CALL ATOMIC_UNSCREEN(GID,NR,Rout,SVAR,AERHO,PSRHO,PSPOT,RCSM,VADD)
+      DO IR=1,NR
+        IF(R(IR).GT.MAX(1.2D0*RCOV,RNORM)) THEN
+          I=IR+1
+          EXIT
+        END IF
+      ENDDO
+      IR=I
+      vadd(IR:)=0.D0
 !!$      IF(TTEST) THEN
 !!$        ALLOCATE(AUXARR(NR,2))
 !!$        AUXARR(:,1)=VADD
@@ -3675,25 +3702,6 @@ GOTO 10001
 !!$        CALL SETUP_WRITEPHI('VADD.DAT',GID,NR,2,AUXARR)
 !!$        DEALLOCATE(AUXARR)
 !!$      END IF
-!
-!     ==========================================================================
-!     == CUT OFF THE EXPONENTIALLY GROWING TAIL OF THE PARTIALWAVES
-!     ==========================================================================
-      DO IR=1,NR
-        IF(R(IR).GT.MAX(2.D0*RCOV,RNORM)) THEN
-          I=IR+1
-          EXIT
-        END IF
-      ENDDO
-      IR=I
-      AEPHI(IR:,:)=0.D0
-      PSPHI(IR:,:)=0.D0
-      NLPHI(IR:,:)=0.D0
-      aePHIDOT(IR:,:)=0.D0
-      NLPHIDOT(IR:,:)=0.D0
-      PSPHIDOT(IR:,:)=0.D0
-      QN(IR:,:)=0.D0
-      PRO(IR:,:)=0.D0
 !
 !     ==========================================================================
 !     == TRANSFORM ONTO SEQUENTIAL RESPRESENTATION                            ==
@@ -3869,11 +3877,13 @@ GOTO 10001
           IF(LOX(LN).NE.L) CYCLE
           NPRO=NPRO+1
         ENDDO
+!       __ count offset in the number of nodes between ae and ps partial waves
         DPHASE=0
         DO IB=1,NC
           IF(THIS%ATOM%LOFI(IB).NE.L) CYCLE
           DPHASE=DPHASE+1.D0
         ENDDO
+!       __
         ALLOCATE(DH(NPRO,NPRO))
         ALLOCATE(DO(NPRO,NPRO))
         ALLOCATE(PRO(NR,NPRO))

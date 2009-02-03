@@ -598,6 +598,8 @@
       REAL                :: RESULT      
 !     **************************************************************************
       call etime(tarray,result)
+      usrtime=tarray(1)
+      systime=tarray(2)
       RETURN
       END
 !
