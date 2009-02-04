@@ -2639,17 +2639,17 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END SUBROUTINE LIB_LAPACK_DGESV
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_LAPACK_DGELSD(N,M,NEQ,A,X,B)
-!     ******************************************************************
-!     **  DRIVER ROUTINE FOR LAPACK ROUTINE DGELSD                    **
-!     **                                                              **
-!     **  COMPUTES THE MINIMUM-NORM SOLUTION TO A COMPLEX LINEAR LEAST**
-!     **  SQUARES PROBLEM:                                            **
-!     **              MINIMIZE 2-NORM(| B - A*X |)                    **
-!     **  USING THE SINGULAR VALUE DECOMPOSITION (SVD) OF A.          **
-!     **  A IS AN M-BY-N MATRIX WHICH MAY BE RANK-DEFICIENT.          **
-!     ******************************************************************
+!     **************************************************************************
+!     **  DRIVER ROUTINE FOR LAPACK ROUTINE DGELSD                            **
+!     **                                                                      **
+!     **  COMPUTES THE MINIMUM-NORM SOLUTION TO A COMPLEX LINEAR LEAST        **
+!     **  SQUARES PROBLEM:                                                    **
+!     **              MINIMIZE 2-NORM(| B - A*X |)                            **
+!     **  USING THE SINGULAR VALUE DECOMPOSITION (SVD) OF A.                  **
+!     **  A IS AN M-BY-N MATRIX WHICH MAY BE RANK-DEFICIENT.                  **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: M
@@ -2668,50 +2668,103 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER                     :: LIWORK
       INTEGER                     :: INFO
       INTEGER                     :: nrhs
-      INTEGER                     :: LDB
-      INTEGER                     :: N1,M1,SMLSIZ,MINMN,NLVL
+      INTEGER                     :: LDA,LDB
+      INTEGER                     :: N1,M1,SMLSIZ,MINMN,MAXMN,NLVL
       INTEGER                     :: ILAENV
       EXTERNAL                    :: ILAENV
       LOGICAL         ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)         ,PARAMETER  :: TOL=1.D-5
       REAL(8)                     :: SVAR1,SVAR2
-!     ******************************************************************
+      character(6)    ,parameter  :: type='dgels'
+!     **************************************************************************
+      IF(N.LT.1.OR.M.LT.1) THEN
+        CALL ERROR$MSG('DIMENSIONS MUST BE NONZERO AND POSITIVE')
+        CALL ERROR$I4VAL('N',N)
+        CALL ERROR$I4VAL('M',M)
+        CALL ERROR$STOP('LIB_LAPACK_DGELSD')
+      END IF
       M1=N    ! LAPACK USES M AND N OPPOSITE 
       N1=M
       nrhs=neq
-      SMLSIZ=ILAENV(9,'DGELSD',' ',0,0,0,0 )
       MINMN=MIN(M1,N1)
-      NLVL = MAX(0,INT(LOG(REAL(MINMN,kind=8)/real(SMLSIZ+1,KIND=8))/LOG(2.D0))+1)
-      LIWORK=MAX(1,3*MINMN*NLVL+11*MINMN)
-      LWORK=12*MINMN+2*MINMN*SMLSIZ+8*MINMN*NLVL+MINMN*NEQ+(SMLSIZ+1)**2
-      ALLOCATE(WORK(LWORK))
-      ALLOCATE(IWORK(LIWORK))
-      LDB=MAX(1,MAX(M1,N1))
-      ALLOCATE(B1(LDB,NEQ))
-      B1=0.D0
-      B1(1:M1,:)=B(:,:)
-      A1=A
-      CALL DGELSD(M1,N1,Nrhs,A1,M1,B1,LDB,S,RCOND,RANK,WORK,LWORK,IWORK,INFO )
-!call gelsd(a1,b1,rank,s,rcond,info)
-      X=B1(1:N1,:)
-      DEALLOCATE(WORK)
-      DEALLOCATE(IWORK)
-      IF(INFO.NE.0) THEN
-        IF(INFO.LT.0) THEN
-          CALL ERROR$MSG('I-TH ARGUMENT HAD AN ILLEGAL VALUE')
-          CALL ERROR$I4VAL('I',-INFO)
-          CALL ERROR$STOP('LIB_LAPACK_DGELSD')
-        ELSE
-          CALL ERROR$MSG('ALGORITHM FOR COMPUTING SVD FAILED TO CONVERGE')
-          CALL ERROR$MSG('I OFF-DIAGONAL ELEMENTS OF AN INTERMEDIATE')
-          CALL ERROR$MSG('BIDIAGONAL FORM DID NOT CONVERGE TO ZERO.')
-          CALL ERROR$I4VAL('I',INFO)
-          CALL ERROR$STOP('LIB_LAPACK_DGELSD')
+      MAXMN=MAX(M1,N1)
+!
+!     ==========================================================================
+!     == interface to dgelsD                                                  ==
+!     ==========================================================================
+      if(type.eq.'dgelsd') then
+        SMLSIZ=ILAENV(9,'DGELSD',' ',0,0,0,0 )
+        NLVL = MAX(0,INT(LOG(REAL(MINMN,kind=8)/real(SMLSIZ+1,KIND=8))/LOG(2.D0))+1)
+        LIWORK=MAX(1,3*MINMN*NLVL+11*MINMN)
+        LWORK=12*MINMN+2*MINMN*SMLSIZ+8*MINMN*NLVL+MINMN*NEQ+(SMLSIZ+1)**2
+        ALLOCATE(WORK(LWORK))
+        ALLOCATE(IWORK(LIWORK))
+        LDB=MAX(1,MAXMN)
+        ALLOCATE(B1(LDB,NEQ))
+        B1=0.D0
+        B1(1:M1,:)=B(:,:)
+        A1=A
+! the call to dgelsd failed using mkl
+        CALL DGELSD(M1,N1,Nrhs,A1,M1,B1,LDB,S,RCOND,RANK,WORK,LWORK,IWORK,INFO )
+        deallocate(iwork)
+        deallocate(work)
+        X=B1(1:N1,:)
+        deallocate(B1)
+        IF(INFO.NE.0) THEN
+          IF(INFO.LT.0) THEN
+            CALL ERROR$MSG('I-TH ARGUMENT HAD AN ILLEGAL VALUE')
+            CALL ERROR$I4VAL('I',-INFO)
+            CALL ERROR$STOP('LIB_LAPACK_DGELSD')
+          ELSE
+            CALL ERROR$MSG('ALGORITHM FOR COMPUTING SVD FAILED TO CONVERGE')
+            CALL ERROR$MSG('I OFF-DIAGONAL ELEMENTS OF AN INTERMEDIATE')
+            CALL ERROR$MSG('BIDIAGONAL FORM DID NOT CONVERGE TO ZERO.')
+            CALL ERROR$I4VAL('I',INFO)
+            CALL ERROR$STOP('LIB_LAPACK_DGELSD')
+          END IF
         END IF
-      END IF
-!     ==================================================================
-!     ==                                                              ==
-!     ==================================================================
+!
+!     ==========================================================================
+!     == interface to dgels                                                   ==
+!     ==========================================================================
+      else if(type.eq.'dgels') then
+        LDA=MAX(1,M1)
+        LDB=MAX(1,MAXMN)
+        ALLOCATE(B1(LDB,NEQ))
+        B1=0.D0
+        B1(1:M1,:)=B(:,:)
+        A1=A
+        LWORK=MINMN+max(1,max(NRHS,maxMN))
+        ALLOCATE(WORK(LWORK))
+        CALL DGELS('N',M1,N1,NRHS,A1,LDA,B1,LDB,WORK,LWORK,INFO)
+        DEALLOCATE(WORK)
+        X=B1(1:N1,:)
+        DEALLOCATE(B1)
+!
+!     ==========================================================================
+!     == interface to dgelsS                                                  ==
+!     ==========================================================================
+      else if(type.eq.'dgelss') then
+        LDA=MAX(1,M1)
+        LDB=MAX(1,MAX(M1,N1))
+        ALLOCATE(B1(LDB,NEQ))
+        B1=0.D0
+        B1(1:M1,:)=B(:,:)
+        A1=A
+        LWORK=3*MINMN+max(2*MINMN,max(NRHS,maxMN))
+        ALLOCATE(WORK(LWORK))
+        CALL DGELSS(M1,N1,NRHS,A1,LDA,B1,LDB,S,RCOND,RANK,WORK,LWORK,INFO)
+        DEALLOCATE(WORK)
+        X=B1(1:N1,:)
+        DEALLOCATE(B1)
+      else
+        call error$msg('type not recognized') 
+        call error$stop('lib_lapack_dgelsd')
+      end if
+!
+!     ==========================================================================
+!     == TEST                                                                 ==
+!     ==========================================================================
       IF(TTEST) THEN
         SVAR1=MAXVAL(ABS(MATMUL(A,X)-B))
         SVAR2=TOL*MAXVAL(ABS(B))/MAXVAL(ABS(B))
