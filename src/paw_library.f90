@@ -2657,29 +2657,31 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)   ,INTENT(IN) :: A(N,M)
       REAL(8)   ,INTENT(OUT):: X(M,NEQ)
       REAL(8)   ,INTENT(IN) :: B(N,NEQ)
-      REAL(8)               :: A1(N,M)
-      REAL(8)   ,ALLOCATABLE:: B1(:,:)
-      REAL(8)               :: S(N)        ! SINGULAR VALUES
-      REAL(8)   ,PARAMETER  :: RCOND=-1.D0 ! USE MACHINE PRECISION
-      INTEGER(4)            :: RANK
-      INTEGER(4)            :: LWORK
-      REAL(8)   ,ALLOCATABLE:: WORK(:)
-      INTEGER(4),ALLOCATABLE:: IWORK(:)
-      INTEGER(4)            :: LIWORK
-      INTEGER(4)            :: INFO
-      INTEGER               :: LDB
-      INTEGER               :: N1,M1,SMLSIZ,MINMN,NLVL
-      INTEGER               :: ILAENV
-      EXTERNAL              :: ILAENV
-      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-      REAL(8)   ,PARAMETER  :: TOL=1.D-5
-      REAL(8)               :: SVAR1,SVAR2
+      double precision            :: A1(N,M)
+      double precision,ALLOCATABLE:: B1(:,:)
+      double precision            :: S(N)        ! SINGULAR VALUES
+      double precision,PARAMETER  :: RCOND=-1.D0 ! USE MACHINE PRECISION
+      INTEGER                     :: RANK
+      INTEGER                     :: LWORK
+      double precision,ALLOCATABLE:: WORK(:)
+      INTEGER         ,ALLOCATABLE:: IWORK(:)
+      INTEGER                     :: LIWORK
+      INTEGER                     :: INFO
+      INTEGER                     :: nrhs
+      INTEGER                     :: LDB
+      INTEGER                     :: N1,M1,SMLSIZ,MINMN,NLVL
+      INTEGER                     :: ILAENV
+      EXTERNAL                    :: ILAENV
+      LOGICAL         ,PARAMETER  :: TTEST=.FALSE.
+      REAL(8)         ,PARAMETER  :: TOL=1.D-5
+      REAL(8)                     :: SVAR1,SVAR2
 !     ******************************************************************
       M1=N    ! LAPACK USES M AND N OPPOSITE 
       N1=M
+      nrhs=neq
       SMLSIZ=ILAENV(9,'DGELSD',' ',0,0,0,0 )
       MINMN=MIN(M1,N1)
-      NLVL = MAX(0,INT(LOG(REAL(MINMN/(SMLSIZ+1),KIND=8))/LOG(2.D0))+1)
+      NLVL = MAX(0,INT(LOG(REAL(MINMN,kind=8)/real(SMLSIZ+1,KIND=8))/LOG(2.D0))+1)
       LIWORK=MAX(1,3*MINMN*NLVL+11*MINMN)
       LWORK=12*MINMN+2*MINMN*SMLSIZ+8*MINMN*NLVL+MINMN*NEQ+(SMLSIZ+1)**2
       ALLOCATE(WORK(LWORK))
@@ -2689,7 +2691,8 @@ PRINT*,'NARGS ',NARGS,IARGC()
       B1=0.D0
       B1(1:M1,:)=B(:,:)
       A1=A
-      CALL DGELSD(M1,N1,NEQ,A1,M1,B1,LDB,S,RCOND,RANK,WORK,LWORK,IWORK,INFO )
+      CALL DGELSD(M1,N1,Nrhs,A1,M1,B1,LDB,S,RCOND,RANK,WORK,LWORK,IWORK,INFO )
+!call gelsd(a1,b1,rank,s,rcond,info)
       X=B1(1:N1,:)
       DEALLOCATE(WORK)
       DEALLOCATE(IWORK)
