@@ -1665,10 +1665,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       logical(4),intent(out) :: tc(nb)
       real(8)                :: znoble(0:7)=(/0.d0,2.d0,10.d0,18.d0,36.d0 &
      &                                       ,54.d0,86.d0,118.d0/)
-      integer(4)             :: is(15)=(/1,0,0,1,0,1,0,0,1,0,1,0,1,0,1/)
-      integer(4)             :: ip(15)=(/0,0,1,1,0,0,0,1,1,1,1,0,0,1,1/)
-      integer(4)             :: id(15)=(/0,0,0,0,1,1,0,1,1,0,0,1,1,1,1/)
-      integer(4)             :: if(15)=(/0,0,0,0,0,0,1,0,0,1,1,1,1,1,1/)
+      integer(4)             :: is(0:15)=(/0,1,0,0,1,0,1,0,0,1,0,1,0,1,0,1/)
+      integer(4)             :: ip(0:15)=(/0,0,0,1,1,0,0,0,1,1,1,1,0,0,1,1/)
+      integer(4)             :: id(0:15)=(/0,0,0,0,0,1,1,0,1,1,0,0,1,1,1,1/)
+      integer(4)             :: if(0:15)=(/0,0,0,0,0,0,0,1,0,0,1,1,1,1,1,1/)
       INTEGER(4)             :: LMAP(19)=(/0,0,1,0,1,0,2,1,0,2,1,0,3,2,1,0,3,2,1/)
       integer(4)             :: i,ib,l,iso,ib0,isvar,nel
       real(8)                :: z1,z2,svar
@@ -1685,9 +1685,11 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         if(aez-zv.lt.znoble(i)) exit
       enddo
 !
-!     == determine occupied core shells 
+!     == determine occupied core shells ======================================== 
       isvar=nint(0.5d0*(aez-zv-z1))
-      if(isvar.lt.1.or.isvar.gt.15) then
+      if(isvar.lt.0.or.isvar.gt.15) then
+        call error$msg('less than zwero or more than 30 core electrons requested')
+        call error$i4val('isvar ',isvar)
         call error$stop('setup_coreselect')
       end if
       ion(0)=is(isvar)
@@ -1695,7 +1697,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       ion(2)=id(isvar)
       ion(3)=if(isvar)
 !      
-!     ==  fill complete core shells ===================================
+!     ==  fill complete core shells ============================================
       tmap=.false.
       iz1=nint(z1)
       isumel=iz1
