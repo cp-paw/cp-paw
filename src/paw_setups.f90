@@ -86,6 +86,10 @@ TYPE ATOMWAVES_TYPE
   REAL(8)   ,POINTER :: AEPSIsm(:,:) ! small component
   REAL(8)   ,POINTER :: AEPOT(:)
 END TYPE ATOMWAVES_TYPE
+type setting_type
+  logical  :: trel
+  logical  :: so
+end type setting_type
 TYPE THIS_TYPE
 INTEGER(4)             :: I            ! INTEGER IDENTIFIER (ISPECIES)
 CHARACTER(32)          :: ID           ! IDENTIFIER (SPECIES-NAME)
@@ -137,6 +141,7 @@ REAL(8)                :: PSG2
 REAL(8)                :: PSG4
 CHARACTER(32)          :: SOFTCORETYPE
 CHARACTER(16)          :: FILEID
+TYPE(SETting_type)     :: setting
 TYPE(SETUPPARMS_TYPE)  :: PARMS
 TYPE(ATOMWAVES_TYPE)   :: ATOM
 TYPE(THIS_TYPE),POINTER:: NEXT
@@ -1463,9 +1468,21 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       ALLOCATE(THIS%ATOM%AEPOT(NR))
       ALLOCATE(PSI(NR,NBX))
       ALLOCATE(PSIsm(NR,NBX))
-      KEY='START,REL,NONSO'
-KEY='START,NONREL,NONSO'
-!KEY='START,REL,SO'
+!
+!     == set switches for relativistic/non-relativistic here ===================
+      THIS%SETTING%TREL=.true.
+      THIS%SETTING%SO=.FALSE.
+!
+      IF(THIS%SETTING%TREL) THEN
+        IF(THIS%SETTING%SO) THEN
+         KEY='START,REL,SO'
+        ELSE 
+          KEY='START,REL,NONSO'
+        end if
+      ELSE 
+         KEY='START,NONREL,NONSO'
+      END IF
+
       CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
     &                   ,ETOT,THIS%ATOM%AEPOT,EOFI,PSI,psism)
 !     
@@ -1663,33 +1680,36 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       integer(4),intent(in)  :: lofi(nb)
       integer(4),intent(in)  :: sofi(nb)
       logical(4),intent(out) :: tc(nb)
-      real(8)                :: znoble(0:7)=(/0.d0,2.d0,10.d0,18.d0,36.d0 &
-     &                                       ,54.d0,86.d0,118.d0/)
+      integer(4)             :: znoble(0:7)=(/0,2,10,18,36,54,86,118/)
       integer(4)             :: is(0:15)=(/0,1,0,0,1,0,1,0,0,1,0,1,0,1,0,1/)
       integer(4)             :: ip(0:15)=(/0,0,0,1,1,0,0,0,1,1,1,1,0,0,1,1/)
       integer(4)             :: id(0:15)=(/0,0,0,0,0,1,1,0,1,1,0,0,1,1,1,1/)
       integer(4)             :: if(0:15)=(/0,0,0,0,0,0,0,1,0,0,1,1,1,1,1,1/)
       INTEGER(4)             :: LMAP(19)=(/0,0,1,0,1,0,2,1,0,2,1,0,3,2,1,0,3,2,1/)
       integer(4)             :: i,ib,l,iso,ib0,isvar,nel
-      real(8)                :: z1,z2,svar
+      integer(4)             :: iz1,iz2
       integer(4)             :: ion(0:3)
-      integer(4)             :: isumel,iz1
+      integer(4)             :: isumel
       logical(4)             :: tmap(19)
       real(8)                :: sumel
 !     **************************************************************************
-      znoble(1:7)=znoble(1:7)+1.d-6
 !     == determine atomic number of last nobel gas atom before valence states ==
       do i=1,7
-        z1=znoble(i-1)
-        z2=znoble(i)
-        if(aez-zv.lt.znoble(i)) exit
+        iz1=znoble(i-1)
+        iz2=znoble(i)
+        if(int(aez-zv).lt.iz2) exit
       enddo
 !
 !     == determine occupied core shells ======================================== 
-      isvar=nint(0.5d0*(aez-zv-z1))
+      isvar=nint(aez-zv)-iz1
+      isvar=isvar/2
       if(isvar.lt.0.or.isvar.gt.15) then
-        call error$msg('less than zwero or more than 30 core electrons requested')
-        call error$i4val('isvar ',isvar)
+        call error$msg('less than zero or more than 30 core electrons requested')
+        call error$r8val('aez',aez)
+        call error$r8val('zv',zv)
+        call error$i4val('iz1',iz1)
+        call error$i4val('iz2',iz2)
+        call error$i4val('isvar',isvar)
         call error$stop('setup_coreselect')
       end if
       ion(0)=is(isvar)
@@ -1699,14 +1719,13 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !      
 !     ==  fill complete core shells ============================================
       tmap=.false.
-      iz1=nint(z1)
       isumel=iz1
+      ib0=1
       do ib=1,19
         nel=2*(2*lmap(ib)+1)
-        svar=real(nel,kind=8)
         tmap(ib)=isumel.ge.nel
         if(tmap(ib)) isumel=isumel-nel
-        if(tmap(ib)) ib0=ib+1
+        if(tmap(ib)) ib0=ib+1  !ib0 points to first valence shell
       enddo
       if(isumel.ne.0) then
         call error$msg('internal error 1')
@@ -1740,7 +1759,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
             isvar=isvar-1
           enddo
         enddo
-      enddo      
+      enddo     
       return
       end
 !
@@ -3867,6 +3886,9 @@ GOTO 10001
       LOX=THIS%LOX
       LX=MAX(MAXVAL(THIS%LOX),MAXVAL(THIS%ATOM%LOFI(:NB)))
       CALL PERIODICTABLE$GET(THIS%AEZ,'R(COV)',RCOV)
+!CALL SETUP_WRITEPHI('aepot.dat',GID,NR,1,this%atom%aepot)
+!CALL SETUP_WRITEPHI('pspot.dat',GID,NR,1,this%pspot)
+!stop
 !
 !     ==========================================================================
 !     ==  LOOP OVER ANGULAR MOMENTA                                           ==
@@ -3912,13 +3934,20 @@ GOTO 10001
 !       ========================================================================
         DO IE=1,NE
           E=EMIN+DE*REAL(IE-1,KIND=8)
-          CALL SCHROEDINGER$DREL(GID,NR,THIS%ATOM%AEPOT,E,DREL)
+          DREL=0.D0
+          IF(THIS%SETTING%TREL) THEN
+            CALL SCHROEDINGER$DREL(GID,NR,THIS%ATOM%AEPOT,E,DREL)
+          END IF
           G(:)=0.D0          
           CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%ATOM%AEPOT,DREL,0,G,L,E,1,PHI)
           CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RCOV,AEPHASE(L+1,IE))
           IF(NPRO.GT.0) THEN
             G(:)=0.D0          
             CALL ATOMLIB_PAWDER(GID,NR,L,E,THIS%PSPOT,NPRO,PRO,DH,DO,G,PHI)
+          ELSE      
+            G(:)=0.D0          
+            DREL(:)=0.D0
+            CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%PSPOT,DREL,0,G,L,E,1,PHI)
           END IF
           CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RCOV,PAWPHASE(L+1,IE))
           PAWPHASE(L+1,IE)=PAWPHASE(L+1,IE)+DPHASE
