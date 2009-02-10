@@ -1,0 +1,11 @@
+#!/bin/sh
+# This tool removes number of states from the output files of the 
+# dos tool. It searches the current directory for files ending with
+# .dos and creates for each a copy with ending .ddos.
+for FILE  in *.dos ; do
+ ROOT=${FILE%.dos}
+ FILEIN=$ROOT.dos
+ FILEOUT=$ROOT.ddos
+# echo $FILEIN $FILEOUT
+ gawk '{print $1 "  "  $2 "  " $4 " " $6 " " $8}' $FILEIN > $FILEOUT
+done

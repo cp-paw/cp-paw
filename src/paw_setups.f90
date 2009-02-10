@@ -3997,7 +3997,7 @@ GOTO 10001
       INTEGER(4)             :: IB,L,LN
       INTEGER(4)             :: ISVAR
 !     **************************************************************************
-      LX=MAXVAL(LOX)
+      LX=max(MAXVAL(LOFI),maxval(lox))
 !
 !     == DETERMINE HIGHEST CORE STATE FOR EACH ANGULAR MOMENTUM ================
       ALLOCATE(NCL(0:LX))
