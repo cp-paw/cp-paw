@@ -2729,6 +2729,58 @@ CHARACTER(32):: FILE
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
+!
+!     == this is a more robust expression with linear interpolation between
+!     == two points. it may be better for strong deviations from polynomial
+!     == character of the function.
+      IF(RC.GT.R(NR)) THEN
+        CALL ERROR$MSG('RC > R(NR)')
+        CALL ERROR$STOP('SCHROEDINGER$PHASESHIFT')
+      END IF
+      PHASE=0.D0
+      DO IR=3,NR-1  ! do not consider a zero at the origin
+        IF(R(IR).GE.RC) THEN
+          DER=(PHI(IR)-PHI(IR-1))/(R(IR)-R(IR-1))
+          VAL=PHI(IR-1)+DER*(RC-R(IR-1))
+          IF(VAL*PHI(IR-1).LT.0.D0) PHASE=PHASE+1.D0
+          EXIT
+        END IF
+        IF(PHI(IR)*PHI(IR-1).LT.0.D0) PHASE=PHASE+1.D0
+        IF(PHI(IR).EQ.0.D0) then
+          if(phi(ir+1)*phi(ir-1).lt.0.d0)PHASE=PHASE+1.d0
+        end if
+      ENDDO
+      PHASE=0.5D0-ATAN(DER/VAL)/PI+PHASE
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SCHROEDINGER$PHASESHIFT_OLD(GID,NR,PHI,RC,PHASE)
+!     **************************************************************************
+!     **  CALCULATES THE PHASE SHIFT FOR A RADIAL FUNCTION AT RADIUS RC       **
+!     **                                                                      **
+!     **  THE PHASE SHIFT IS DEFINED AS                                       **
+!     **     0.5-1/PI * ATAN (DPHIDR/PHI)+NN                                  **
+!     **  WHERE PHI AND DPHIDR ARE VALUE AND DERIVATIVE OF PHI AT RADIUS RC   **
+!     **  AND NN IS THE NUMBER OF NODES INSIDE RC.                            **
+!     **                                                                      **
+!     **  THIS DEFINITION OF THE PHASE SHIFT DIFFERS FROM THE TERM USED       **
+!     **  IN SCATTERING THEORY                                                **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: PHI(NR)
+      REAL(8)   ,INTENT(IN) :: RC
+      REAL(8)   ,INTENT(OUT):: PHASE
+      REAL(8)               :: PI
+      REAL(8)               :: R(NR)
+      REAL(8)               :: VAL,DER
+      INTEGER(4)            :: IR
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$VALUE(GID,NR,PHI,RC,VAL)
       CALL RADIAL$DERIVATIVE(GID,NR,PHI,RC,DER)
       PHASE=0.5D0-ATAN(DER/VAL)/PI

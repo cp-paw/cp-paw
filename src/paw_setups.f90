@@ -87,8 +87,9 @@ TYPE ATOMWAVES_TYPE
   REAL(8)   ,POINTER :: AEPOT(:)
 END TYPE ATOMWAVES_TYPE
 type setting_type
-  logical  :: trel
-  logical  :: so
+  logical  :: trel ! relativistic or non-relativistic
+  logical  :: so   ! spin orbit splitting or scalar relativistic
+  real(8)  :: fock ! admixture of exact exchange - mu_x
 end type setting_type
 TYPE THIS_TYPE
 INTEGER(4)             :: I            ! INTEGER IDENTIFIER (ISPECIES)
@@ -1469,20 +1470,25 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       ALLOCATE(PSI(NR,NBX))
       ALLOCATE(PSIsm(NR,NBX))
 !
-!     == set switches for relativistic/non-relativistic here ===================
+!     == SET SWITCHES FOR RELATIVISTIC/NON-RELATIVISTIC HERE ===================
       THIS%SETTING%TREL=.true.
       THIS%SETTING%SO=.FALSE.
+      THIS%SETTING%FOCK=0.d0
 !
       IF(THIS%SETTING%TREL) THEN
         IF(THIS%SETTING%SO) THEN
          KEY='START,REL,SO'
         ELSE 
           KEY='START,REL,NONSO'
-        end if
+        END IF
       ELSE 
          KEY='START,NONREL,NONSO'
       END IF
-
+      IF(THIS%SETTING%FOCK.NE.0.D0) THEN
+        WRITE(STRING,*)THIS%SETTING%FOCK
+        KEY=TRIM(KEY)//'FOCK='//TRIM(STRING)
+      END IF
+!
       CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
     &                   ,ETOT,THIS%ATOM%AEPOT,EOFI,PSI,psism)
 !     
@@ -1607,6 +1613,7 @@ print*,'marke before makepartialwaves'
      &           ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
      &           ,THIS%ISCATT,THIS%EOFLN,THIS%ESCATT &
      &           ,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%PRO,THIS%DTKIN,THIS%DOVER &
+     &           ,this%aecore,this%pscore &
      &           ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
      &           ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT)
@@ -1837,7 +1844,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
               CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%LAMBDA(L+1),'ABOHR')
             END IF 
          ENDDO
-          if(this%parms%tval0_pot) then
+          if(this1%parms%tval0_pot) then
             CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: VAL(0)' &
     &                            ,THIS1%PARMS%VAL0_POT*Y0,'H')
           else
@@ -1848,7 +1855,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
     &                            ,THIS1%PARMS%RC_POT,'ABOHR')
           CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: POWER' &
     &                            ,THIS1%PARMS%POW_POT,'')
-          if(this%parms%tval0_core) then
+          if(this1%parms%tval0_core) then
             CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: VAL(0)' &
     &                            ,THIS1%PARMS%VAL0_CORE*Y0,'H')
           else
@@ -2751,7 +2758,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       SUBROUTINE ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,AEPOT &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
      &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
-     &                  ,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER,PSPOT &
+     &                  ,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER,aecore,pscore,PSPOT &
      &                  ,POW_POT,tval0_pot,VAL0_POT,RC_POT,RCSM,VADD &
      &                  ,NLPHIDOT,AEPHIDOT,PSPHIDOT)
 !     **************************************************************************
@@ -2788,6 +2795,8 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)   ,INTENT(IN) :: VAL0_POT
       REAL(8)   ,INTENT(IN) :: RC_POT
       REAL(8)   ,INTENT(IN) :: RCSM
+      REAL(8)   ,INTENT(in) :: aecore(NR)
+      REAL(8)   ,INTENT(in) :: PScore(NR)
       REAL(8)   ,INTENT(OUT):: VADD(NR)
       REAL(8)   ,INTENT(OUT):: PSPOT(NR)
       REAL(8)   ,INTENT(OUT):: EOFLN(LNX)   ! ENERGY OF PARTIAL WAVE
@@ -3186,6 +3195,7 @@ CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
 !     ==========================================================================
       PSPHI=QN
       TPSPHI=TQN
+CALL SETUP_WRITEPHI('xx1.DAT',GID,NR,LNX,psphi)
       IF(TYPE.EQ.'KERKER') THEN
         DO L=0,LX
           DO LN=1,LNX
@@ -3200,8 +3210,8 @@ CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
             IPRO=IPRO+1
-            PHITEST(:,IPRO)=QN(:,LN)
-            TPHITEST(:,IPRO)=TQN(:,LN)
+            PHITEST(:,IPRO)=psphi(:,LN)
+            TPHITEST(:,IPRO)=Tpsphi(:,LN)
           ENDDO
           CALL ATOMIC_MAKEPSPHI(GID,NR,RC1,L,NPRO,PHITEST,TPHITEST)
           IPRO=0
@@ -3222,6 +3232,7 @@ CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
         CALL ERROR$MSG('CAN BE "BESSEL" OR "HBS"')
         CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
       END IF
+CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
 !
 !     ==========================================================================
 !     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
@@ -3571,8 +3582,8 @@ GOTO 10001
 !     ==========================================================================
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
 !     ==========================================================================
-      AERHO(:)=0.D0
-      PSRHO(:)=0.D0
+      AERHO(:)=aecore(:)
+      PSRHO(:)=pscore(:)
       EOFICOMP(:,:)=0.D0
       DO L=0,LX
         NPRO=NPROL(L)
@@ -3703,19 +3714,13 @@ GOTO 10001
 !     ==========================================================================
 !     == UNSCREENING                                                          ==
 !     ==========================================================================
-      SVAR=AEZ
-      DO IB=1,NC
-        SVAR=SVAR-FOFI(IB)
-      ENDDO
-      CALL ATOMIC_UNSCREEN(GID,NR,Rout,SVAR,AERHO,PSRHO,PSPOT,RCSM,VADD)
+      CALL ATOMIC_UNSCREEN(GID,NR,ROUT,AEZ,AERHO,PSRHO,PSPOT,RCSM,VADD)
       DO IR=1,NR
         IF(R(IR).GT.MAX(1.2D0*RCOV,RNORM)) THEN
-          I=IR+1
+          vadd(IR+1:)=0.D0
           EXIT
         END IF
       ENDDO
-      IR=I
-      vadd(IR:)=0.D0
 !!$      IF(TTEST) THEN
 !!$        ALLOCATE(AUXARR(NR,2))
 !!$        AUXARR(:,1)=VADD
@@ -4082,7 +4087,7 @@ GOTO 10001
       REAL(8)                 :: GRHO(NR)
       INTEGER(4)              :: IR
       REAL(8)                 :: RH,GRHO2,VXC,VGXC,EXC,DUMMY1,DUMMY2,DUMMY3
-real(8):: auxarr(nr,5)
+real(8):: auxarr(nr,7)
 !     ************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -4369,7 +4374,8 @@ use strings_module
           CALL ERROR$MSG('LOOP NOT CONVERGED')
           CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
         END IF
-        phi(:)=phi(:)/phi(irbnd)*psphi(irbnd,ln)
+!       == do not rescale at the nodal plane, but 5 points inward....        
+        phi(:)=phi(:)/phi(irbnd-5)*psphi(irbnd-5,ln)
         psphi(:,ln)=phi(:)
         TPSPHI(:,LN)=(E-POT(:)*Y0)*phi(:)
       ENDDO

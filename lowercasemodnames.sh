@@ -1,4 +1,9 @@
 #!/bin/bash
+# this script changes the filenames of module file "FILE.mod" into all lowercase.
+#
+# Usage:  
+#      lowercasemodnames.sh <filein >fileout
+#
 IFS=""
 ## Die Datei aus $1 zeilenweise auslesen und in "line" hinterlegen
 while read -r linein ;  do 

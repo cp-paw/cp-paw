@@ -846,6 +846,109 @@ END MODULE spherical_MODULE
       RETURN
       END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE spherical$testgauntrel()
+!     **************************************************************************
+!     ** this routine has no special use other than to test a mathematical    **
+!     ** identity                                                             **
+!     ** routine to test the identity                                         **
+!     **   4*pi*(2*l3+1) sum_{m1,m2} C_{Lm1,lm2,lm3a)C_(lm1,lm2,lm3b)         **
+!     **                                   =Q(l1,l2,l3)*delta(lm3a,lm3b)      **
+!     **  with                                                                **
+!     **    Q(l1,l2,l3)=q(l2,l1,l3)                                           **
+!     **    Q(l1,l2,l3)=q(l2,l3,l1)=q(l3,l1,l2)                               **
+!     **    q(l1,l2,l3)=0 if l1+l2+l3 is odd                                  **
+!     **************************************************************************
+      implicit none
+      integer(4),parameter :: lx1=10
+      integer(4),parameter :: lx2=10
+      integer(4),parameter :: lx3=10
+      real(8)              :: coeff(lx1+1,lx2+1,lx3+1)
+      integer(4)           :: l1,l2,l3
+      integer(4)           :: im1,im2,im3a,im3b
+      integer(4)           :: lm1,lm2,lm3a,lm3b
+      real(8)              :: cg1,cg2,svar,svar1
+      real(8)              :: pi
+!     **************************************************************************
+      pi=4.d0*atan(1.d0)
+!
+!     ==========================================================================
+!     == take care of angular part                                            ==
+!     ==========================================================================
+print*,'========================================================='
+      coeff(:,:,:)=0.d0
+      do l1=0,lx1
+        do l2=0,lx2
+          do l3=0,lx3
+            do im3a=1,2*l3+1
+              lm3a=l3**2+im3a
+              do im3b=1,2*l3+1
+                lm3b=l3**2+im3b
+                svar=0.d0
+                do im1=1,2*l1+1
+                  lm1=l1**2+im1
+                  do im2=1,2*l2+1
+                    lm2=l2**2+im2
+                    call spherical$gaunt(lm1,lm2,lm3a,cg1)
+                    call spherical$gaunt(lm1,lm2,lm3b,cg2)
+                    svar=svar+4.d0*pi*cg1*cg2/real((2*l1+1)*(2*l2+1))
+                  enddo
+                enddo
+                if(lm3a.ne.lm3b) then
+                  if(abs(svar).gt.1.d-10) then
+                    call error$msg('test 1 failed ')
+                    call error$msg('nonzero result for lm3a.ne.lm3b')
+                    call error$stop('atomlib$testgauntrel')
+                  end if
+                  cycle
+                end if
+                if(im3a.ne.1) then
+                  if(abs(svar1-svar).gt.1.d-10) then
+                    call error$msg('test 2 failed ')
+                    call error$msg('result depends on m3')
+                    call error$stop('atomlib$testgauntrel')
+                  end if
+                  cycle
+                else
+                  svar1=svar
+                end if
+                if(mod(l1+l2+l3,2).ne.0) then
+                  if(abs(svar).gt.1.d-10) then
+                    call error$msg('test 3 failed ')
+                    call error$msg('result nonzero for odd l1+l2+l3')
+                    call error$stop('atomlib$testgauntrel')
+                  end if
+                  cycle
+                end if
+                write(6,fmt='(3i5,f20.10)')l1,l2,l3,svar
+                coeff(l1+1,l2+1,l3+1)=svar
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+      do l1=0,lx1
+        do l2=0,lx2
+          do l3=0,lx3
+            if(abs(coeff(l1+1,l2+1,l3+1)-coeff(l1+1,l2+1,l3+1)).gt.1.d-10) then
+              call error$msg('test 4 failed ')
+              call error$msg('result nonzero for odd l1+l2+l3')
+              call error$stop('atomlib$testgauntrel')
+            end if
+            if(abs(coeff(l1+1,l2+1,l3+1)-coeff(l2+1,l3+1,l1+1)).gt.1.d-10 &
+     &        .or.abs(coeff(l1+1,l2+1,l3+1)-coeff(l3+1,l1+1,l2+1)).gt.1.d-10) then
+              call error$msg('test 5 failed ')
+              call error$msg('result not symmetric in the three indices')
+              call error$stop('atomlib$testgauntrel')
+            end if
+!            write(6,fmt='(3f20.5)')coeff(l1+1,l2+1,l3+1),coeff(l2+1,l3+1,l1+1) &
+!      &                        ,coeff(l3+1,l1+1,l2+1)
+          enddo
+        enddo
+      enddo
+      stop 'testgauntrel completed sucessfully'
+      end
+!
 !.......................................................................
 MODULE SPHERICALCCMAT_MODULE
 !***********************************************************************
