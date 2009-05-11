@@ -457,15 +457,16 @@
       RETURN
       END
 !
-!     .......................................................SPHLSD.....
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_DERIVEEQUISPACED(NX,F,G)
-!     **                                                              **
-!     **  TAKES THE RADIAL DERIVATIVE OF A FUNCTION F GIVEN ON A      **
-!     **  LOGARITHMIC GRID                                            **
-!     **                                                              **
-!     **  BASED ON A INTERPOLATION BY A FOURTH ORDER POLYNOM          **
-!     **                                                              **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **                                                                      **
+!     **  TAKES THE RADIAL DERIVATIVE OF A FUNCTION F GIVEN ON A              **
+!     **  LOGARITHMIC GRID                                                    **
+!     **                                                                      **
+!     **  BASED ON A INTERPOLATION BY A FOURTH ORDER POLYNOM                  **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN) :: NX
       REAL(8)    ,INTENT(IN) :: F(NX)
@@ -482,10 +483,10 @@
       REAL(8)    ,PARAMETER  :: CI1=1.D0/12.D0
       REAL(8)    ,PARAMETER  :: CI2=-2.D0/3.D0
       INTEGER(4)             :: I
-!     ******************************************************************
-!     ==================================================================
-!     == FORM DERIVATIVE ON THE EQUI SPACED X-GRID                    ==
-!     ==================================================================
+!     **************************************************************************
+!     ==========================================================================
+!     == FORM DERIVATIVE ON THE EQUI SPACED X-GRID                            ==
+!     ==========================================================================
 !CHECK FOUR END POINTS!!
       G(1)=(C11*F(1)+C12*F(2)+C13*F(3)+C14*F(4))/6.D0
       G(2)=(C21*F(1)+C22*F(2)+C23*F(3)+C24*F(4)+C25*F(5))/12.D0
@@ -498,21 +499,19 @@
       RETURN
       END
 !
-!     .......................................................SPHLSD.....
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_DGLEQUISPACED(IDIR,NX,A,B,C,D,F)
-!     **                                                              **
-!     **  SOLVES THE DGL SECOND ORDER ON AN EQUISPACED GRID           **
-!     **                                                              **
-!     **  [A(X)\PARTIAL^2_X+B(X)\PARTIAL_X+C(X)]F(X)=D(X)             **
-!     **                                                              **
-!     **  FOR IDIR=1, F(1) AND F(2) MUST BE SUPPLIED ON INPUT         **
-!     **  FOR IDIR=-1, F(NX) AND F(NX-1) MUST BE SUPPLIED ON INPUT    **
-!     **                                                              **
-!     **  CAUTION! THERE IS NO CATCH AGAINST OVERFLOW                 **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **  SOLVES THE DGL SECOND ORDER ON AN EQUISPACED GRID                   **
+!     **                                                                      **
+!     **  [A(X)\PARTIAL^2_X+B(X)\PARTIAL_X+C(X)]F(X)=D(X)                     **
+!     **                                                                      **
+!     **  FOR IDIR=1, F(1) AND F(2) MUST BE SUPPLIED ON INPUT                 **
+!     **  FOR IDIR=-1, F(NX) AND F(NX-1) MUST BE SUPPLIED ON INPUT            **
+!     **                                                                      **
+!     **  CAUTION! THERE IS NO CATCH AGAINST OVERFLOW                         **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN) :: IDIR  ! DIRECTION
       INTEGER(4) ,INTENT(IN) :: NX
@@ -547,7 +546,7 @@
       RETURN
       END
 !
-!     .......................................................SPHLSD.....
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_DGLEQUISPACEDGEN(NX,NF,I1,I2,A,B,C,D,F)
 !     **                                                              **
 !     **  SOLVES THE DGL SECOND ORDER ON AN EQUISPACED GRID           **
@@ -561,7 +560,7 @@
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN) :: NX
       INTEGER(4) ,INTENT(IN) :: NF
@@ -575,7 +574,7 @@
       REAL(8)                :: AP(NX),A0(NX),AM(NX)
       INTEGER(4)             :: I
       INTEGER(4)             :: IDIR
-!     ******************************************************************
+!     **************************************************************************
       IF(MIN(I1,I2).LT.1.OR.MAX(I1,I2).GT.NX) THEN
         CALL ERROR$MSG('INTEGRATION BOUNDS OUT OF RANGE')
         CALL ERROR$I4VAL('I1',I1)
@@ -611,21 +610,20 @@
       RETURN
       END
 !
-!     .......................................................SPHLSD.....
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_DGLEQUISPACEDGENC(NX,NF,I1,I2,A,B,C,D,F)
-!     **                                                              **
-!     **  SOLVES THE DGL SECOND ORDER ON AN EQUISPACED GRID           **
-!     **                                                              **
-!     **  [A(X)\PARTIAL^2_X+B(X)\PARTIAL_X+C(X)]F(X)=D(X)             **
-!     **                                                              **
-!     **  FOR I2>I1, F(I1) AND F(I1+1) MUST BE SUPPLIED ON INPUT      **
-!     **  FOR I2<I1, F(I2-1) AND F(I2) MUST BE SUPPLIED ON INPUT      **
-!     **                                                              **
-!     **  CAUTION! THERE IS NO CATCH AGAINST OVERFLOW                 **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **                                                                      **
+!     **  SOLVES THE DGL SECOND ORDER ON AN EQUISPACED GRID                   **
+!     **                                                                      **
+!     **  [A(X)\PARTIAL^2_X+B(X)\PARTIAL_X+C(X)]F(X)=D(X)                     **
+!     **                                                                      **
+!     **  FOR I2>I1, F(I1) AND F(I1+1) MUST BE SUPPLIED ON INPUT              **
+!     **  FOR I2<I1, F(I2-1) AND F(I2) MUST BE SUPPLIED ON INPUT              **
+!     **                                                                      **
+!     **  CAUTION! THERE IS NO CATCH AGAINST OVERFLOW                         **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN) :: I1
       INTEGER(4) ,INTENT(IN) :: I2
@@ -691,37 +689,36 @@
       RETURN
       END
 !
-!     .......................................................SPHLSD.....
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_VERLETD1EQUISPACED(NX,F,DFDX)
-!     **                                                              **
-!     **                                                              **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN) :: NX
       REAL(8)    ,INTENT(IN) :: F(NX)
       REAL(8)    ,INTENT(OUT):: DFDX(NX)
       INTEGER(4)             :: I
-!     ******************************************************************
+!     **************************************************************************
       DFDX(1)=-1.5D0*F(1)+2.D0*F(2)-0.5D0*F(3)
       DO I=2,NX-1
         DFDX(I)=0.5D0*(F(I+1)-F(I-1))
       ENDDO
-      DFDX(NX)=-1.5D0*F(NX)+2.D0*F(NX-1)-0.5D0*F(NX-2)
+      DFDX(NX)=1.5D0*F(NX)-2.D0*F(NX-1)+0.5D0*F(NX-2)
       RETURN
       END
 !
-!     .......................................................SPHLSD.....
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_VERLETD2EQUISPACED(NX,F,D2FDX2)
-!     **                                                              **
-!     **                                                              **
-!     *****************************************************************
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN) :: NX
       REAL(8)    ,INTENT(IN) :: F(NX)
       REAL(8)    ,INTENT(OUT):: D2FDX2(NX)
       INTEGER(4)             :: I
-!     ******************************************************************
+!     **************************************************************************
       D2FDX2(1)=F(1)-2.D0*F(2)+F(3)
       DO I=2,NX-1
         D2FDX2(I)=F(I+1)-2.D0*F(I)+F(I-1)
@@ -731,6 +728,7 @@
       D2FDX2(NX)=2.D0*D2FDX2(NX-1)-D2FDX2(NX-2)
       RETURN
       END
+!
 !***********************************************************************
 !***********************************************************************
 !**                                                                   **
@@ -952,8 +950,11 @@ END MODULE RADIAL_MODULE
       REAL(8)                :: R2(NR2)
       REAL(8)                :: R1(NR1)
 !     ******************************************************************
+print*,'radial$r1 ',gid1,nr1
       CALL RADIAL$R(GID1,NR1,R1)
+print*,'radial$r2 ',gid2,nr2
       CALL RADIAL$R(GID2,NR2,R2)
+print*,'radial$r over '
       DO IR=1,NR2
 !       == AVOID EXTRAPOLATION BEYOND END OF GRID
         IF(R2(IR).GT.R1(NR1)) THEN
@@ -966,10 +967,12 @@ END MODULE RADIAL_MODULE
       RETURN
       END
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$R(GID,NR,R)
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **  returns radial grid                                                 **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
@@ -978,7 +981,7 @@ END MODULE RADIAL_MODULE
       INTEGER(4)            :: TYPE
 INTEGER(4) :: IR
 REAL(8)    :: XEXP,RI
-!     ******************************************************************
+!     **************************************************************************
 IF(GID.EQ.0) THEN
   IF(NR.NE.250) STOP 'ERROR IN RADIAL$R/ GID=0'
   XEXP=EXP(0.05D0)
@@ -997,6 +1000,31 @@ END IF
       ELSE
         CALL ERROR$MSG('GRID TYPE NOT RECOGNIZED')
         CALL ERROR$STOP('RADIAL$R')
+      END IF  
+      RETURN
+      END      
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL$drdx(GID,NR,drdx)
+!     **************************************************************************
+!     **  returns derivative of mapping from equispaced to radial grid        **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(OUT):: drdx(NR)
+      INTEGER(4)            :: GIDS
+      INTEGER(4)            :: TYPE
+!     **************************************************************************
+      CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
+      IF(TYPE.EQ.1) THEN
+        CALL LOGRADIAL$drdx(GIDS,NR,drdx)
+      ELSE IF(TYPE.EQ.2) THEN
+        CALL SHLOGRADIAL$drdx(GIDS,NR,drdx) 
+      ELSE
+        CALL ERROR$MSG('GRID TYPE NOT RECOGNIZED')
+        CALL ERROR$STOP('RADIAL$drdx')
       END IF  
       RETURN
       END      
@@ -1149,10 +1177,12 @@ PRINT*,'GIDS ',GIDS
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$DGL(GID,IDIR,NR,A,B,C,D,F)
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **  solves the differential equation                                    **
+!     **  [ a(r)\partial^2_r+b(r)\partial_r+c(r) ] f(r)=d(r)                  **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: IDIR
@@ -1164,7 +1194,7 @@ PRINT*,'GIDS ',GIDS
       REAL(8)   ,INTENT(INOUT):: F(NR)
       INTEGER(4)            :: GIDS
       INTEGER(4)            :: TYPE
-!     ******************************************************************
+!     **************************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
       IF(TYPE.EQ.1) THEN
         CALL LOGRADIAL$DGL(GIDS,IDIR,NR,A,B,C,D,F)
@@ -1413,38 +1443,49 @@ REAL(8)   ,PARAMETER              :: RMIN=1.D-8  ! OFFSET OF INNERMOST POINT
                                                  !TO AVOID DIVIDE BY ZERO
 END MODULE SHLOGRADIAL_MODULE
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SHLOGRADIAL_NEW(GID)
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(OUT) :: GID
       INTEGER(4),PARAMETER ::NGIDBLOCKSIZE=10
       TYPE(SHLOGGRID_TYPE), ALLOCATABLE :: NEWARRAY(:)
       INTEGER(4)           :: NEWNGIDX
-!     ********************************************************************
+      INTEGER(4)           :: igid
+!     **************************************************************************
 !       
-!     ==================================================================
-!     == REALLOCATE GRIDARRAY, IF IT IS TO SMALL                      ==
-!     ==================================================================
+!     ==========================================================================
+!     == REALLOCATE GRIDARRAY, IF IT IS TO SMALL                              ==
+!     ==========================================================================
       IF(NGID.GE.NGIDX) THEN
+!       == DROP ALL STORED GRIDS AS THEY ARE RECREATED BY FUNCTION "RESOLVE"====
+        DO IGID=1,NGIDX
+          DEALLOCATE(GRIDARRAY(IGID)%R)
+        ENDDO
 !       == SAVE CONTENTS OF GRIDARRAY AND DEALLOCATE IT
         IF(ALLOCATED(GRIDARRAY)) THEN
           ALLOCATE(NEWARRAY(NGIDX))
           NEWARRAY(:)=GRIDARRAY(:)
           DEALLOCATE(GRIDARRAY)
         END IF
-!       == ALLOCATE GRIDARRAY WITH LARGER SIZE ========================
+!       == ALLOCATE GRIDARRAY WITH LARGER SIZE =================================
         NEWNGIDX=NGIDX+NGIDBLOCKSIZE
         ALLOCATE(GRIDARRAY(NEWNGIDX))
         GRIDARRAY(:)%R1=0.D0
         GRIDARRAY(:)%DEX=0.D0
         GRIDARRAY(:)%NR=0
-!       == COPY CONTENTS SAVED FROM GRIDARRAY BACK ====================
+!       == COPY CONTENTS SAVED FROM GRIDARRAY BACK =============================
         IF(ALLOCATED(NEWARRAY)) THEN
           GRIDARRAY(:NGIDX)=NEWARRAY(:)
           DEALLOCATE(NEWARRAY)
         END IF
+!       == ENSURE THAT POINTERS ARE IN A DEFINED STATE =========================
+        DO IGID=1,NGIDX
+          NULLIFY(GRIDARRAY(IGID)%R)
+        ENDDO
         NGIDX=NEWNGIDX
       END IF
 !
@@ -1457,10 +1498,11 @@ END MODULE SHLOGRADIAL_MODULE
       RETURN
       END
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SHLOGRADIAL_RESOLVE(GID)
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -1595,16 +1637,18 @@ END MODULE SHLOGRADIAL_MODULE
        RETURN
        END SUBROUTINE SHLOGRADIAL$GETI4
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SHLOGRADIAL$R(GID,NR_,R)
+!     **************************************************************************
+!     **  returns radial grid                                                 **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR_
       REAL(8)   ,INTENT(OUT):: R(NR_)
-      REAL(8)               :: RI     
-      INTEGER(4)            :: IR
-!     ******************************************************************
+!     **************************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
          CALL ERROR$MSG('INCONSISTENT NUMBER OF GRID POINTS')
@@ -1613,16 +1657,31 @@ END MODULE SHLOGRADIAL_MODULE
          CALL ERROR$I4VAL('NR_',NR_)
          CALL ERROR$STOP('SHLOGRADIAL$R')
       END IF
-      IF(ASSOCIATED(GRIDARRAY(GID)%R)) THEN
-        R(:)=GRIDARRAY(GID)%R(:)
-        RETURN
+      R(:)=GRIDARRAY(GID)%R(:)
+      return
+      END      
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SHLOGRADIAL$drdx(GID,NR_,drdx)
+!     **************************************************************************
+!     **  returns derivative of mapping from equispaced to radial grid        **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
+      USE SHLOGRADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR_
+      REAL(8)   ,INTENT(OUT):: drdx(NR_)
+!     **************************************************************************
+      CALL SHLOGRADIAL_RESOLVE(GID)
+      IF(NR_.NE.NR) THEN
+         CALL ERROR$MSG('INCONSISTENT NUMBER OF GRID POINTS')
+         CALL ERROR$I4VAL('GID',GID)
+         CALL ERROR$I4VAL('NR',NR)
+         CALL ERROR$I4VAL('NR_',NR_)
+         CALL ERROR$STOP('SHLOGRADIAL$DRDX')
       END IF
-      RI=R1/XEXP
-      DO IR=1,NR 
-        RI=RI*XEXP
-        R(IR)=RI-R1
-      ENDDO
-      R(1)=RMIN
+      DRDX(:)=DEX*(GRIDARRAY(GID)%R(:)+r1)
       RETURN
       END      
 !
@@ -1765,8 +1824,12 @@ END MODULE SHLOGRADIAL_MODULE
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SHLOGRADIAL$DGL(GID,IDIR,NR_,A,B,C,D,F)
+!     **************************************************************************
+!     **  solves the differential equation                                    **
+!     **  [ a(r)\partial^2_r+b(r)\partial_r+c(r) ] f(r)=d(r)                  **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -1779,10 +1842,12 @@ END MODULE SHLOGRADIAL_MODULE
       REAL(8)   ,INTENT(INOUT):: F(NR_)
       REAL(8)               :: R(NR_)
       REAL(8)               :: DRDX(NR_)
+      REAL(8)               :: A1(NR_)
       REAL(8)               :: B1(NR_)
       REAL(8)               :: C1(NR_)
       REAL(8)               :: D1(NR_)
-!     ******************************************************************
+      logical(4),parameter  :: tnew=.false.
+!     **************************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
          CALL ERROR$MSG('INCONSISTENT NUMBER OF GRID POINTS')
@@ -1793,10 +1858,19 @@ END MODULE SHLOGRADIAL_MODULE
       END IF
       CALL SHLOGRADIAL$R(GID,NR,R)
       DRDX(:)=DEX*(R(:)+R1)   
-      B1(:)=B(:)*DRDX(:)-DEX*A(:)
-      C1(:)=C(:)*DRDX(:)**2
-      D1(:)=D(:)*DRDX(:)**2
-      CALL RADIAL_DGLEQUISPACED(IDIR,NR,A,B1,C1,D1,F)
+      if(tnew) then
+        a1(:)=a(:)/drdx(:)**2
+        B1(:)=B(:)/DRDX(:)-DEX*A1(:)
+        C1(:)=C(:)
+        D1(:)=D(:)
+      else
+        a1(:)=a(:)
+        B1(:)=B(:)*DRDX(:)-DEX*A(:)
+        C1(:)=C(:)*DRDX(:)**2
+        D1(:)=D(:)*DRDX(:)**2
+      end if
+
+      CALL RADIAL_DGLEQUISPACED(IDIR,NR,A1,B1,C1,D1,F)
       RETURN
       END      
 !
@@ -1923,6 +1997,14 @@ END MODULE SHLOGRADIAL_MODULE
       CALL RADIAL_VERLETD1EQUISPACED(NR,F,DFDR)
       CALL SHLOGRADIAL$R(GID,NR,R)
       DFDR(:)=DFDR(:)/(DEX*(R(:)+R1))
+!
+!     == treatment of first grid point in verletd1equispaced inaccurate ========
+!     == for purely quadratic functions. =======================================
+!     == obtain derivative from quadratic interpolation through the first ======
+!     == three grid points 
+      dfdr(1)=((f(2)*r(3)**2-f(3)*r(2)**2)/(r(3)**2-r(2)**2) &
+     &        -(f(1)*r(3)**2-f(3)*r(1)**2)/(r(3)**2-r(1)**2)) &
+     &       /(r(2)*r(3)/(r(3)+r(2))-r(1)*r(3)/(r(3)+r(1)))
       RETURN
       END      
 !
@@ -1955,54 +2037,64 @@ END MODULE SHLOGRADIAL_MODULE
       END      
 
 !
-!..........................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE LOGRADIAL_MODULE
 TYPE LOGGRID_TYPE
-  REAL(8)    :: R1
-  REAL(8)    :: DEX
-  INTEGER(4) :: NR
+  REAL(8)         :: R1
+  REAL(8)         :: DEX
+  INTEGER(4)      :: NR
+  real(8),pointer :: r(:)
 END TYPE LOGGRID_TYPE
-TYPE(LOGGRID_TYPE), ALLOCATABLE :: GRIDARRAY(:)
-INTEGER(4)                        :: NGIDX=0
-INTEGER(4)                        :: NGID=0
-REAL(8)   :: R1
-REAL(8)   :: DEX
-INTEGER(4):: NR
-REAL(8)   :: XEXP
+TYPE(LOGGRID_TYPE),ALLOCATABLE :: GRIDARRAY(:)
+INTEGER(4)                     :: NGIDX=0
+INTEGER(4)                     :: NGID=0
+REAL(8)                        :: R1
+REAL(8)                        :: DEX
+INTEGER(4)                     :: NR
+REAL(8)                        :: XEXP
 END MODULE LOGRADIAL_MODULE
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LOGRADIAL_NEW(GID)
       USE LOGRADIAL_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(OUT):: GID
-      INTEGER(4),PARAMETER  ::NGIDBLOCKSIZE=10
-      TYPE(LOGGRID_TYPE), ALLOCATABLE :: NEWARRAY(:)
-      INTEGER(4)           :: NEWNGIDX
-!     ********************************************************************
+      INTEGER(4),INTENT(OUT)         :: GID
+      INTEGER(4),PARAMETER           :: NGIDBLOCKSIZE=10
+      TYPE(LOGGRID_TYPE),ALLOCATABLE :: NEWARRAY(:)
+      INTEGER(4)                     :: NEWNGIDX
+      INTEGER(4)                     :: igid
+!     **************************************************************************
 !       
-!     ==================================================================
-!     == REALLOCATE GRIDARRAY, IF IT IS TO SMALL                      ==
-!     ==================================================================
+!     ==========================================================================
+!     == REALLOCATE GRIDARRAY, IF IT IS TO SMALL                              ==
+!     ==========================================================================
       IF(NGID.GE.NGIDX) THEN
-!       == SAVE CONTENTS OF GRIDARRAY AND DEALLOCATE IT
+!       == deallocate all stored radial grids. =================================
+!       == they will be reconstructed by call to logradial_resolve =============
+        DO IGID=1,NGIDX
+          DEALLOCATE(GRIDARRAY(IGID)%R)
+        ENDDO
+!       == SAVE CONTENTS OF GRIDARRAY AND DEALLOCATE IT ========================
         IF(ALLOCATED(GRIDARRAY)) THEN
           ALLOCATE(NEWARRAY(NGIDX))
           NEWARRAY(:)=GRIDARRAY(:)
           DEALLOCATE(GRIDARRAY)
         END IF
-!       == ALLOCATE GRIDARRAY WITH LARGER SIZE ========================
+!       == ALLOCATE GRIDARRAY WITH LARGER SIZE =================================
         NEWNGIDX=NGIDX+NGIDBLOCKSIZE
         ALLOCATE(GRIDARRAY(NEWNGIDX))
         GRIDARRAY(:)%R1=0.D0
         GRIDARRAY(:)%DEX=0.D0
         GRIDARRAY(:)%NR=0
-!       == COPY CONTENTS SAVED FROM GRIDARRAY BACK ====================
+!       == COPY CONTENTS SAVED FROM GRIDARRAY BACK =============================
         IF(ALLOCATED(NEWARRAY)) THEN
           GRIDARRAY(:NGIDX)=NEWARRAY(:)
           DEALLOCATE(NEWARRAY)
         END IF
         NGIDX=NEWNGIDX
+        DO IGID=1,NGIDX
+          nullify(gridarray(IGID)%R)
+        ENDDO
       END IF
 !
       NGID=NGID+1
@@ -2010,12 +2102,14 @@ END MODULE LOGRADIAL_MODULE
       RETURN
       END
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LOGRADIAL_RESOLVE(GID)
       USE LOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
-!     *******************************************************************
+      real(8)               :: ri
+      integer(4)            :: ir
+!     **************************************************************************
       IF(GID.GT.NGID) THEN
         CALL ERROR$MSG('GRID ID OUT OF RANGE')
         CALL ERROR$I4VAL('GID',GID)
@@ -2026,92 +2120,101 @@ END MODULE LOGRADIAL_MODULE
       DEX=GRIDARRAY(GID)%DEX
       NR=GRIDARRAY(GID)%NR
       XEXP=EXP(DEX)
+
+      IF(.NOT.ASSOCIATED(GRIDARRAY(gid)%R)) THEN
+        ALLOCATE(GRIDARRAY(gid)%R(NR))
+        RI=R1/XEXP
+        DO IR=1,NR
+          RI=RI*XEXP
+          GRIDARRAY(GID)%R(Ir)=RI
+        ENDDO       
+      END IF
       RETURN
       END
 !
-!      .................................................................
-       SUBROUTINE LOGRADIAL$GETR8(GID,ID,VAL)
-!      *****************************************************************
-!      *****************************************************************
-       USE LOGRADIAL_MODULE
-       IMPLICIT NONE
-       INTEGER(4)  ,INTENT(IN) :: GID
-       CHARACTER(*),INTENT(IN) :: ID
-       REAL(8)     ,INTENT(OUT):: VAL
-!      ***************************************************************
-       IF(GID.GT.NGID) THEN
-         CALL ERROR$MSG('GRID ID OUT OF RANGE')
-         CALL ERROR$I4VAL('GID',GID)
-         CALL ERROR$I4VAL('NGID',NGID)
-         CALL ERROR$STOP('LOGRADIAL$GETR8')
-       END IF
-       IF(ID.EQ.'R1') THEN
-         VAL=GRIDARRAY(GID)%R1
-       ELSE IF(ID.EQ.'DEX') THEN
-         VAL=GRIDARRAY(GID)%DEX
-       ELSE
-         CALL ERROR$MSG('ID NOT RECOGNIZED')
-         CALL ERROR$CHVAL('ID',ID)
-         CALL ERROR$STOP('LOGRADIAL$GETR8')
-       END IF
-       RETURN
-       END SUBROUTINE LOGRADIAL$GETR8
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LOGRADIAL$GETR8(GID,ID,VAL)
+!     *************************************************************************
+!     *************************************************************************
+      USE LOGRADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID
+      CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,INTENT(OUT):: VAL
+!     *************************************************************************
+      IF(GID.GT.NGID) THEN
+        CALL ERROR$MSG('GRID ID OUT OF RANGE')
+        CALL ERROR$I4VAL('GID',GID)
+        CALL ERROR$I4VAL('NGID',NGID)
+        CALL ERROR$STOP('LOGRADIAL$GETR8')
+      END IF
+      IF(ID.EQ.'R1') THEN
+        VAL=GRIDARRAY(GID)%R1
+      ELSE IF(ID.EQ.'DEX') THEN
+        VAL=GRIDARRAY(GID)%DEX
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LOGRADIAL$GETR8')
+      END IF
+      RETURN
+      END SUBROUTINE LOGRADIAL$GETR8
 !
-!      .................................................................
-       SUBROUTINE LOGRADIAL$SETR8(GID,ID,VAL)
-!      *****************************************************************
-!      *****************************************************************
-       USE LOGRADIAL_MODULE
-       IMPLICIT NONE
-       INTEGER(4)  ,INTENT(IN) :: GID
-       CHARACTER(*),INTENT(IN) :: ID
-       REAL(8)     ,INTENT(IN) :: VAL
-!      ***************************************************************
-       IF(GID.GT.NGID) THEN
-         CALL ERROR$MSG('GRID ID OUT OF RANGE')
-         CALL ERROR$I4VAL('GID',GID)
-         CALL ERROR$I4VAL('NGID',NGID)
-         CALL ERROR$STOP('LOGRADIAL$SETR8')
-       END IF
-       IF(ID.EQ.'R1') THEN
-         GRIDARRAY(GID)%R1=VAL
-       ELSE IF(ID.EQ.'DEX') THEN
-         GRIDARRAY(GID)%DEX=VAL
-       ELSE
-         CALL ERROR$MSG('ID NOT RECOGNIZED')
-         CALL ERROR$CHVAL('ID',ID)
-         CALL ERROR$STOP('LOGRADIAL$SETR8')
-       END IF
-       RETURN
-     END SUBROUTINE LOGRADIAL$SETR8
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LOGRADIAL$SETR8(GID,ID,VAL)
+!     *****************************************************************
+!     *****************************************************************
+      USE LOGRADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID
+      CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,INTENT(IN) :: VAL
+!     ***************************************************************
+      IF(GID.GT.NGID) THEN
+        CALL ERROR$MSG('GRID ID OUT OF RANGE')
+        CALL ERROR$I4VAL('GID',GID)
+        CALL ERROR$I4VAL('NGID',NGID)
+        CALL ERROR$STOP('LOGRADIAL$SETR8')
+      END IF
+      IF(ID.EQ.'R1') THEN
+        GRIDARRAY(GID)%R1=VAL
+      ELSE IF(ID.EQ.'DEX') THEN
+        GRIDARRAY(GID)%DEX=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LOGRADIAL$SETR8')
+      END IF
+      RETURN
+      END SUBROUTINE LOGRADIAL$SETR8
 !
-!      .................................................................
-       SUBROUTINE LOGRADIAL$SETI4(GID,ID,VAL)
-!      *****************************************************************
-!      *****************************************************************
-       USE LOGRADIAL_MODULE
-       IMPLICIT NONE
-       INTEGER(4)  ,INTENT(IN) :: GID
-       CHARACTER(*),INTENT(IN) :: ID
-       INTEGER(4)  ,INTENT(IN) :: VAL
-!      ***************************************************************
-       IF(GID.GT.NGID) THEN
-         CALL ERROR$MSG('GRID ID OUT OF RANGE')
-         CALL ERROR$I4VAL('GID',GID)
-         CALL ERROR$I4VAL('NGID',NGID)
-         CALL ERROR$STOP('LOGRADIAL$SETI4')
-       END IF
-       IF(ID.EQ.'NR') THEN
-         GRIDARRAY(GID)%NR=VAL
-       ELSE
-         CALL ERROR$MSG('ID NOT RECOGNIZED')
-         CALL ERROR$CHVAL('ID',ID)
-         CALL ERROR$STOP('LOGRADIAL$SETI4')
-       END IF
-       RETURN
-       END SUBROUTINE LOGRADIAL$SETI4
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LOGRADIAL$SETI4(GID,ID,VAL)
+!     *****************************************************************
+!     *****************************************************************
+      USE LOGRADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: VAL
+!     ***************************************************************
+      IF(GID.GT.NGID) THEN
+        CALL ERROR$MSG('GRID ID OUT OF RANGE')
+        CALL ERROR$I4VAL('GID',GID)
+        CALL ERROR$I4VAL('NGID',NGID)
+        CALL ERROR$STOP('LOGRADIAL$SETI4')
+      END IF
+      IF(ID.EQ.'NR') THEN
+        GRIDARRAY(GID)%NR=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LOGRADIAL$SETI4')
+      END IF
+      RETURN
+      END SUBROUTINE LOGRADIAL$SETI4
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE LOGRADIAL$GETI4(GID,ID,VAL)
 !      *****************************************************************
 !      *****************************************************************
@@ -2137,16 +2240,18 @@ END MODULE LOGRADIAL_MODULE
        RETURN
        END SUBROUTINE LOGRADIAL$GETI4
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LOGRADIAL$R(GID,NR_,R)
+!     **************************************************************************
+!     **  returns radial grid                                                 **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE LOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR_
       REAL(8)   ,INTENT(OUT):: R(NR_)
-      REAL(8)               :: RI     
-      INTEGER(4)            :: IR
-!     ******************************************************************
+!     **************************************************************************
       CALL LOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
         CALL ERROR$MSG('GRID SIZE INCONSISTENT')
@@ -2154,11 +2259,35 @@ END MODULE LOGRADIAL_MODULE
         CALL ERROR$I4VAL('NR_',NR_)
         CALL ERROR$STOP('LOGRADIAL$R')
       END IF
-      RI=R1/XEXP
-      DO IR=1,NR 
-        RI=RI*XEXP
-        R(IR)=RI
-      ENDDO
+print*,'gid ',gid,nr
+print*,'size',size(r)
+print*,'size2',gridarray(gid)%nr
+print*,'??',associated(gridarray(gid)%r)
+print*,'size3',size(gridarray(gid)%r)
+      R(:)=gridarray(gid)%r
+      RETURN
+      END SUBROUTINE LOGRADIAL$R
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LOGRADIAL$dRdx(GID,NR_,drdx)
+!     **************************************************************************
+!     **  returns radial grid                                                 **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
+      USE LOGRADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR_
+      REAL(8)   ,INTENT(OUT):: drdx(NR_)
+!     **************************************************************************
+      CALL LOGRADIAL_RESOLVE(GID)
+      IF(NR_.NE.NR) THEN
+        CALL ERROR$MSG('GRID SIZE INCONSISTENT')
+        CALL ERROR$I4VAL('NR',NR)
+        CALL ERROR$I4VAL('NR_',NR_)
+        CALL ERROR$STOP('LOGRADIAL$R')
+      END IF
+      drdx(:)=dex*gridarray(gid)%r(:)
       RETURN
       END      
 !
@@ -3120,9 +3249,10 @@ END MODULE BESSELTRANSFORM_MODULE
         CALL RADIAL$SETR8(GID1A,'R1',R1A)
       END IF
 !
-!     ==================================================================
-!     == TRANSFORM TO SUPPORT GRID, BESSELTRANSFORM AND TRANSFORM FROM SUPPORT GRID==
-!     ==================================================================
+!     ==========================================================================
+!     == TRANSFORM TO SUPPORT GRID, BESSELTRANSFORM                           ==
+!     ==  AND TRANSFORM FROM SUPPORT GRID                                     ==
+!     ==========================================================================
       CALL RADIAL$GETI4(GID1A,'NR',NX)
       ALLOCATE(FA(NX))
       ALLOCATE(GA(NX))
@@ -3131,7 +3261,9 @@ END MODULE BESSELTRANSFORM_MODULE
       CALL RADIAL$GETR8(GID2A,'R1',G1A)
       CALL RADIAL$CHANGEGRID(GID1,NR_,F,GID1A,NX,FA)
       CALL BESSELTRANSFORM(L,NX,R1A,G1A,DEX,FA,GA,DISC)
+print*,'before changegrid',gid2a,gid2,nx,ng_
       CALL RADIAL$CHANGEGRID(GID2A,NX,GA,GID2,NG_,G)
+print*,'after changegrid'
       DEALLOCATE(FA)
       DEALLOCATE(GA)
 !CALL ERROR$STOP('FORCED STOP IN RADIAL$BESSELTRANSFORM')
@@ -3139,31 +3271,31 @@ END MODULE BESSELTRANSFORM_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ..........................................................................
       SUBROUTINE BESSELTRANSFORM(L,NP,R1,G1,DEX,F,G,DISC)
-!     **                                                              **
-!     **  CALCULATES THE SPHERICAL BESSEL TRANSFORM OF ORDER L        **
-!     **    F_L(G)=INT_0^INFTY : X**2*F_L(R)*J_L(|G|*|R|)             **
-!     **  FOR A FUNCTION F GIVEN ON THE LOGARITHMIC GRID              **
-!     **            R(I)=R1*EXP((I-1)*DEX)  ; I=1,.,NP                **
-!     ** IN THE PRESENT IMPLEMENTATION NP MUST BE A POWER OF 2        **
-!     ** THE RESULT IS RETURNED AS FOFG ON THE LOGARITHMIC GRID       **
-!     **            G(I)=G1*EXP((I-1)*H)    ;I=1,NP                   **
-!     **                                                              **
-!     ** METHOD:  J.D. TALMAN. COMP. PHYS. COMMUN. 30 (1983) 93       **
-!     **                                                              **
-!     **   TWO TRANSFORMS ARE CALCULATED, ONE OF WHICH IS ACCURATE    **
-!     **   SMALL G AND THE OTHER FOR LARGE G. THE TWO SOLUTIONS       **
-!     **   ARE JOINT AT THE POINT OF MINIMUM DISCREPANCY.             **
-!     **   THE DISCREPANCY AT THE MATCHING POINT IS RETURNED AS       **
-!     **   VARIABLE DISC SERVING AS ERROR ESTIMATE.                   **
-!     **                                                              **
-!     **   FOR L=0,1 THE SMALL-G TRANSFORM USES SIEGMAN'S METHOD      **
-!     **                                                              **
-!     **   THE FOURIERTRANSFORM ACCORDING TO THE CONVENTION USED      **
-!     **   IN PAW IS OBTAINED BY MULTIPLICATION WITH 4*PI*I**L/VOL    **
-!     **                                                              **
-!     ******************************************************************
+!     **                                                                      **
+!     **  CALCULATES THE SPHERICAL BESSEL TRANSFORM OF ORDER L                **
+!     **    F_L(G)=INT_0^INFTY : X**2*F_L(R)*J_L(|G|*|R|)                     **
+!     **  FOR A FUNCTION F GIVEN ON THE LOGARITHMIC GRID                      **
+!     **            R(I)=R1*EXP((I-1)*DEX)  ; I=1,.,NP                        **
+!     ** IN THE PRESENT IMPLEMENTATION NP MUST BE A POWER OF 2                **
+!     ** THE RESULT IS RETURNED AS FOFG ON THE LOGARITHMIC GRID               **
+!     **            G(I)=G1*EXP((I-1)*H)    ;I=1,NP                           **
+!     **                                                                      **
+!     ** METHOD:  J.D. TALMAN. COMP. PHYS. COMMUN. 30 (1983) 93               **
+!     **                                                                      **
+!     **   TWO TRANSFORMS ARE CALCULATED, ONE OF WHICH IS ACCURATE            **
+!     **   SMALL G AND THE OTHER FOR LARGE G. THE TWO SOLUTIONS               **
+!     **   ARE JOINT AT THE POINT OF MINIMUM DISCREPANCY.                     **
+!     **   THE DISCREPANCY AT THE MATCHING POINT IS RETURNED AS               **
+!     **   VARIABLE DISC SERVING AS ERROR ESTIMATE.                           **
+!     **                                                                      **
+!     **   FOR L=0,1 THE SMALL-G TRANSFORM USES SIEGMAN'S METHOD              **
+!     **                                                                      **
+!     **   THE FOURIERTRANSFORM ACCORDING TO THE CONVENTION USED              **
+!     **   IN PAW IS OBTAINED BY MULTIPLICATION WITH 4*PI*I**L/VOL            **
+!     **                                                                      **
+!     **************************************************************************
       USE BESSELTRANSFORM_MODULE
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN) :: L       ! ANGULAR MOMENTUM

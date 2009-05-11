@@ -548,7 +548,6 @@
       REAL(8)   ,INTENT(IN) :: BOXR0(3)
       REAL(8)   ,INTENT(IN) :: BOXVEC(3,3)
       REAL(8)               :: SBAS(3,3)
-      LOGICAL(4)            :: TCHK
       REAL(8)               :: XMIN1,XMAX1,XMIN2,XMAX2,XMIN3,XMAX3
       INTEGER(4)            :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
       INTEGER(4)            :: N1,N2,N3

@@ -1349,6 +1349,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       USE PERIODICTABLE_MODULE
       USE STRINGS_MODULE
       USE SETUP_MODULE
+      use radialfock_module, only: vfock_type
       IMPLICIT NONE
       INTEGER(4),PARAMETER  :: NBX=40
       INTEGER(4)            :: LOFI(NBX)
@@ -1387,6 +1388,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4)            :: LRHOX
       CHARACTER(64)         :: STRING
       CHARACTER(64)         :: PSEUDIZATION
+      type(vfock_type)      :: vfock
       INTEGER(4)            :: NFIL
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
@@ -1474,6 +1476,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       THIS%SETTING%TREL=.true.
       THIS%SETTING%SO=.FALSE.
       THIS%SETTING%FOCK=0.d0
+!THIS%SETTING%FOCK=0.25d0
 !
       IF(THIS%SETTING%TREL) THEN
         IF(THIS%SETTING%SO) THEN
@@ -1486,11 +1489,11 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       END IF
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         WRITE(STRING,*)THIS%SETTING%FOCK
-        KEY=TRIM(KEY)//'FOCK='//TRIM(STRING)
+        KEY=TRIM(KEY)//',FOCK='//TRIM(STRING)
       END IF
 !
       CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
-    &                   ,ETOT,THIS%ATOM%AEPOT,EOFI,PSI,psism)
+    &                   ,ETOT,THIS%ATOM%AEPOT,vfock,EOFI,PSI,psism)
 !     
 !     ==========================================================================
 !     ==  select core, and reorder states                                     ==
@@ -1562,7 +1565,8 @@ enddo
       ALLOCATE(THIS%PSCORE(NR))
       THIS%AECORE(:)=0.D0
       DO IB=1,NC
-        THIS%AECORE(:)=THIS%AECORE(:)+FOFI(IB)*(PSI(:,IB)**2+psism(:,ib)**2)*C0LL
+        THIS%AECORE(:)=THIS%AECORE(:)+FOFI(IB)*(PSI(:,IB)**2 &
+     &                                         +psism(:,ib)**2)*C0LL
       ENDDO
       CALL ATOMIC_PSEUDIZE(GID,NR,THIS%PARMS%POW_CORE,this%parms%tval0_core &
      &         ,THIS%PARMS%VAL0_CORE,THIS%PARMS%RC_CORE,THIS%AECORE,THIS%PSCORE)
@@ -1608,16 +1612,28 @@ enddo
       ENDDO
 !
 print*,'marke before makepartialwaves'
-      CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%ATOM%AEPOT,NB,NC &
+      CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%ATOM%AEPOT,vfock &
+     &           ,NB,NC &
      &           ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
      &           ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
      &           ,THIS%ISCATT,THIS%EOFLN,THIS%ESCATT &
-     &           ,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%PRO,THIS%DTKIN,THIS%DOVER &
+     &         ,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%PRO,THIS%DTKIN,THIS%DOVER &
      &           ,this%aecore,this%pscore &
      &           ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
      &           ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT)
-!stop 'forced in paw_setup'
+      if(THIS%SETTING%FOCK.ne.0.d0) then
+        call radialfock$cleanvfock(vfock)
+      end if
+!!$
+!!$IF(THIS%SETTING%FOCK.NE.0.D0) THEN
+!!$  CALL ERROR$MSG('FOCK OPERATION UNDER CONSTRUCTION')
+!!$  CALL ERROR$MSG('USE ONLY FOR TESTING PURPOSES!')
+!!$  CALL ERROR$MSG('replace "THIS%SETTING%FOCK=0.25d0"')
+!!$  CALL ERROR$MSG('with "THIS%SETTING%FOCK=0.d0"')
+!!$  CALL ERROR$MSG('in paw_setups.f90')
+!!$  CALL ERROR$STOP('SETUP_READ_NEW')
+!!$END IF
 !     
 !     ==========================================================================
 !     ==  calculate and print scattering properties                           ==
@@ -1631,6 +1647,8 @@ print*,'marke before makepartialwaves'
       CALL FILEHANDLER$UNIT('TMP',NFIL)
       CALL SETUP_TESTSCATTERING(NFIL)
       CALL FILEHANDLER$CLOSE('TMP')
+!
+      call SETUP_TESTghost1()
 !     
 !     ==========================================================================
 !     ==  PERFORM BESSELTRANSFORMS                                            ==
@@ -1646,11 +1664,9 @@ DEX=0.05D0
       CALL RADIAL$SETI4(GIDG,'NR',NG)
       CALL RADIAL$SETR8(GIDG,'R1',G1)
       CALL RADIAL$SETR8(GIDG,'DEX',DEX)
-PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !       
 !     == VADD (VBAR) ===========================================================
       ALLOCATE(THIS%VADDOFG(NG))
-
       CALL RADIAL$BESSELTRANSFORM(0,GID,NR,THIS%VADD,GIDG,NG,THIS%VADDOFG)
       THIS%VADDOFG(:)=FOURPI*THIS%VADDOFG(:)
 !     == PSCORE (VBAR) =========================================================
@@ -1707,11 +1723,11 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         if(int(aez-zv).lt.iz2) exit
       enddo
 !
-!     == determine occupied core shells ======================================== 
+!     == determine occupied core shells ======================================= 
       isvar=nint(aez-zv)-iz1
       isvar=isvar/2
       if(isvar.lt.0.or.isvar.gt.15) then
-        call error$msg('less than zero or more than 30 core electrons requested')
+        call error$msg('less than 0 or more than 30 core electrons requested')
         call error$r8val('aez',aez)
         call error$r8val('zv',zv)
         call error$i4val('iz1',iz1)
@@ -2289,17 +2305,17 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       RETURN
       END
 !
-!     ...........................................INPOT..................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE INPOT$NC(NFIL,NC)
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
       INTEGER(4),INTENT(IN)  :: NFIL
       INTEGER(4),INTENT(OUT) :: NC
       REAL(8)                :: R1,DEX,PSZ,AEZ,RCSM
       INTEGER(4)             :: NR,LNX
-!     ******************************************************************
+!     **************************************************************************
                               CALL TRACE$PUSH('INPOT$LNX')
       REWIND NFIL
       NC=0
@@ -2310,7 +2326,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       RETURN
       END
 !
-!     ...........................................INPOT..........................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE INPOT$READALL(NFIL,NRX,R1,DEX,NR,LNX,LOX,AEZ,PSZ &
      &         ,PSPHI,AEPHI,VADD,RCSM &
      &         ,DTKIN,DOVER,RHOCOR,PSCORR,PRO)
@@ -2399,7 +2415,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       USE STRINGS_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE) ,INTENT(OUT) :: LL_SCNTL
-      CHARACTER(128)             :: SCNTLNAME='STP.CNTL'
       TYPE(LL_TYPE) ,SAVE        :: LL_SCNTL_SAVE
       INTEGER(4)                 :: NFIL
       LOGICAL(4)    ,SAVE        :: TINI=.FALSE.
@@ -2409,13 +2424,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         RETURN
       END IF
       TINI=.TRUE.
-!!$      CALL FILEHANDLER$SETFILE(+'SCNTL',.FALSE.,-SCNTLNAME)
-!!$      CALL FILEHANDLER$SETSPECIFICATION(+'SCNTL','STATUS','OLD')
-!!$      CALL FILEHANDLER$SETSPECIFICATION(+'SCNTL','POSITION','REWIND')
-!!$      CALL FILEHANDLER$SETSPECIFICATION(+'SCNTL','ACTION','READ')
-!!$      CALL FILEHANDLER$SETSPECIFICATION(+'SCNTL','FORM','FORMATTED')
-!!$      CALL FILEHANDLER$UNIT('SCNTL',NFIL)
-!     ==========================================================================
       CALL LINKEDLIST$NEW(LL_SCNTL)
       CALL FILEHANDLER$UNIT('PARMS_STP',NFIL)
       CALL LINKEDLIST$READ(LL_SCNTL,NFIL,'~')
@@ -2424,9 +2432,10 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$SCNTLLOOKUP(SETUPID,GID,AEZ,ZV,RBOX,LX,TYPE,RCL,LAMBDA &
-     &                                ,RCSM,POW_POT,RC_POT,tval0_pot,VAL0_POT &
-     &                                 ,POW_CORE,RC_CORE,tval0_core,VAL0_CORE)
+      SUBROUTINE ATOMLIB$SCNTLLOOKUP(SETUPID,GID,AEZ,ZV,RBOX,LX,TYPE,RCL &
+     &                              ,LAMBDA &
+     &                              ,RCSM,POW_POT,RC_POT,tval0_pot,VAL0_POT &
+     &                              ,POW_CORE,RC_CORE,tval0_core,VAL0_CORE)
 !     **************************************************************************
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
@@ -2755,7 +2764,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,AEPOT &
+      SUBROUTINE ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,AEPOT,vfock &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
      &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
      &                  ,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER,aecore,pscore,PSPOT &
@@ -2769,13 +2778,16 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
       USE STRINGS_MODULE
+      USE radialfock_module,only: vfock_type
+      USE radialpaw_module,only: vpaw_type
       IMPLICIT NONE
       CHARACTER(*),INTEnT(IN) :: TYPE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4)  ,INTENT(IN) :: GID
+      INTEGER(4)  ,INTENT(IN) :: NR
       CHARACTER(*),INTENT(IN) :: KEY
       REAL(8)   ,INTENT(IN) :: AEZ
       REAL(8)   ,INTENT(IN) :: AEPOT(NR)   ! ALL ELECTRON POTENTIAL
+      type(vfock_type),intent(inout) :: vfock
       INTEGER(4),INTENT(IN) :: NB
       INTEGER(4),INTENT(IN) :: NC
       INTEGER(4),INTENT(IN) :: LOFI(NB)
@@ -2813,7 +2825,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
-      REAL(8)               :: PSPHIPROBARE(LNX,LNX)
       REAL(8)               :: TRANSPHI(LNX,LNX)
       REAL(8)               :: TRANSPHIINV(LNX,LNX)
       REAL(8)               :: TRANSPRO(LNX,LNX)
@@ -2854,11 +2865,11 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: PHIPHASE
       REAL(8)               :: R(NR)
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
-      REAL(8)               :: AUX(NR),AUX1(NR)
+      REAL(8)               :: AUX(NR),AUX1(NR),AUX2(NR)
       REAL(8)   ,ALLOCATABLE:: AUXARR(:,:)
-      REAL(8)               :: VAL,DER,JVAL,JDER,KVAL,KDER
+      REAL(8)               :: VAL,DER,JVAL,JDER,KVAL,KDER,val1,val2
       REAL(8)               :: SVAR,SVAR1,SVAR2
-      LOGICAL(4)            :: TREL,TSO,TCHK
+      LOGICAL(4)            :: TREL,TSO
       REAL(8)   ,ALLOCATABLE:: A(:,:),AINV(:,:)
       REAL(8)   ,ALLOCATABLE:: PROJ(:)
       REAL(8)               :: AEPSIF(NR,NB-NC)
@@ -2871,11 +2882,14 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       REAL(8)               :: RASA    !COVALENT RADIUS*APPROX 1.15
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
       REAL(8)               :: RBND   !RADIUS FOR BOUNDARY CONDITIONS
-      REAL(8)               :: DFACP,DFACM    !DOUBLE FACTORIAL OF 2L+1; 2L-1
       LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
       LOGICAL   ,PARAMETER  :: TWRITE=.TRUE.
       real(8)               :: speedoflight
+      real(8)               :: e1
+      type(vpaw_type)       :: vpaw
+real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
 !     **************************************************************************
+!vfock%scale=0.d0
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',speedoflight)
@@ -2923,6 +2937,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !     ==========================================================================
 !     == CONSTRUCT NODELESS WAVE FUNCTIONS                                    ==
 !     ==========================================================================
+      Eofi1(:)=EOFI(:)
       DO L=0,LX
         do iso=-1,1
           G(:)=0.D0
@@ -2930,18 +2945,27 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
           DO IB=1,NB
             IF(LOFI(IB).NE.L) CYCLE
             IF(sOFI(IB).NE.iso) CYCLE
-            E=EOFI(IB)
+            E=EOFI1(IB)
             DREL(:)=0.D0
             IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,0,AEPOT,E,UOFI(:,IB))
+            if(vfock%ton) then
+!             == remark: if this crashes proceed like for nodeless partial waves
+!             == work with local potential first and then update with fock pot
+              call atomlib$boundstatewithHF(gid,nr,trel,rout,aepot &
+     &                                     ,vfock,l,iso,0,g,e,uofi(:,ib),aux)
+            else
+              CALL ATOMLIB$BOUNDSTATE(GID,NR,L,iso,ROUT,DREL,G,0,AEPOT &
+     &                               ,E,UOFI(:,IB))
+            end if
             if(trel) then
-              call SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,Lofi(ib),SOfi(ib) &
+              call SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,iso &
      &                                         ,DREL,gs,uofi(:,ib),uofism(:,ib))
             else
               uofism(:,ib)=0.d0
             end if
             EOFI1(IB)=E
-            TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
+            CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,uofi(:,ib),AUX)
+            TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)-aux(:)
             aux=(1.d0+Drel)*uofism(:,ib)
             call radial$derive(gid,nr,aux,aux1)
             if(iso.eq.1) then
@@ -2977,51 +3001,52 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         ENDDO
 !       CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
       END IF
-!stop 'forced in makepartialwaves'
 !
 !     ==========================================================================
 !     == CONSTRUCT NODELESS PARTIAL WAVES                                     ==
 !     ==========================================================================
-      DFACP=1.D0
+!     == first use only the local potential... =================================
       DO L=0,LX
         ISO=0
-        DFACM=DFACP
-        DFACP=DFACP*REAL(2*L+1,KIND=8)
         E=0.D0
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
-          E=EOFI(IB)
+          E=EOFI1(IB)
           EXIT
         ENDDO
         G(:)=0.D0
         IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
-!         == SEARCH NODELESS STATE =============================================
-          ISTART=1
-          X0=E
-          DX=1.D-2
-          CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-          DO I=1,NITER
-            E=X0
-            IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-            CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,ISO,G,L,E,1,PHI)
-            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
-            Z0=Z0-PHIPHASE
-            IF(ABS(2.D0*DX).LE.TOL) EXIT
-            CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-          ENDDO
-          IF(ABS(DX).GT.TOL) THEN
-            CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
-            CALL ERROR$MSG('BOUND STATE NOT FOUND')
-            CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
-          END IF
+          IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+          call ATOMLIB$phaseshiftstate(GID,NR,L,iSO,DREL,G,aepot &
+     &                                                     ,rbnd,phiphase,E,PHI)
           EOFLN(LN)=E
           NLPHI(:,LN)=PHI(:)
           TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*PHI(:)
           G(:)=NLPHI(:,LN)
         ENDDO
       ENDDO
+!CALL SETUP_WRITEPHI('test1.dat',GID,NR,lnx,nlphi)
+!
+!     == ... Now correct for fock contribution =================================
+      if(vfock%ton) then
+        DO L=0,LX
+          ISO=0
+          G(:)=0.D0
+          IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
+          DO LN=1,LNX
+            IF(LOX(LN).NE.L) CYCLE
+            IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,EOFLN(LN),DREL)
+            CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
+    &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
+            CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,NLPHI(:,LN),AUX)
+            TNLPHI(:,LN)=G(:)+(EOFLN(LN)-AEPOT(:)*Y0)*NLPHI(:,LN)-AUX(:)
+            G(:)=NLPHI(:,LN)
+          ENDDO
+        ENDDO
+      END IF
+!CALL SETUP_WRITEPHI('test2.dat',GID,NR,lnx,nlphi)
 !
 !     ==========================================================================
 !     == REPORT SETTINGS ON PARTIAL WAVES                                     ==
@@ -3123,7 +3148,8 @@ CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
             IPRO=IPRO+1
-            PRO(:,LN)=TQN(:,LN)+(AEPOT*Y0-EOFLN(LN))*QN(:,LN)
+            call radialfock$vpsi(gid,nr,vfock,lox(ln),qn(:,ln),aux)
+            PRO(:,LN)=TQN(:,LN)+(AEPOT*Y0-EOFLN(LN))*QN(:,LN)+aux(:)
             IF(NCL(L).NE.0) PRO(:,LN)=PRO(:,LN)-UOFI(:,NCL(L))
             WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|QN>-|UC>=",F20.15)') &
      &                     LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
@@ -3184,7 +3210,8 @@ CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
       IF(TTEST) THEN
         WRITE(6,FMT='(82("="),T20,"  TEST AEPHI EQ.  ")')
         DO LN=1,LNX
-          PRO(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
+          call radialfock$vpsi(gid,nr,vfock,lox(ln),aephi(:,ln),aux)
+          PRO(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)+aux(:)
           WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|AEPHI_N> =",F20.15)') &
       &                 LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
         ENDDO
@@ -3261,7 +3288,9 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
         DO LN=1,LNX
           TPHITEST(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN) &
      &                  -BAREPRO(:,LN)
-          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
+          call radialfock$vpsi(gid,nr,vfock,lox(ln),aephi(:,ln),aux)
+          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)+aux(:)
+
         ENDDO
 !
         WRITE(6,FMT='(82("="),T20,"  TEST RAW PAW EQUATION  ")')
@@ -3326,7 +3355,8 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
           DOVER(LN1,LN2)=VAL
-          AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPOT(:)*Y0*AEPHI(:,LN2) &
+          call radialfock$vpsi(gid,nr,vfock,lox(ln2),aephi(:,ln2),aux1)
+          AUX(:)=R(:)**2*(AEPHI(:,LN1)*(AEPOT(:)*Y0*AEPHI(:,LN2)+aux1(:)) &
       &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
@@ -3359,7 +3389,8 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
           ENDDO
           WRITE(6,FMT='("LN=",I2," <P|PSPHI>=",10F10.5)')LN,PROJ
 !
-          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)
+          call radialfock$vpsi(gid,nr,vfock,lox(ln),aephi(:,ln),aux)
+          PHITEST(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)+aux(:)
           TPHITEST(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
 !TPHITEST(:,LN)=TPHITEST(:,LN)-BAREPRO(:,LN)
           PHITEST1(:,LN)=0.D0          
@@ -3368,7 +3399,7 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
             SVAR=0.D0
             DO LN2=1,LNX
               IF(LOX(LN2).NE.LOX(LN)) CYCLE
-              SVAR=SVAR+(DH(LN1,LN2)-EOFLN(LN2)*DOVER(LN1,LN2))*PROJ(LN2)
+              SVAR=SVAR+(DH(LN1,LN2)-EOFLN(LN)*DOVER(LN1,LN2))*PROJ(LN2)
             ENDDO
             TPHITEST(:,LN)=TPHITEST(:,LN)+PRO(:,LN1)*SVAR
             PHITEST1(:,LN)=PHITEST1(:,LN)+PRO(:,LN1)*SVAR
@@ -3425,6 +3456,8 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
           G(:)=0.D0
           IF(NCL(L).GT.0)G(:)=UOFI(:,NCL(L))
           CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,PHI)
+          call atomlib$updatestatewithHF(gid,nr,l,0,drel,g,aepot,vfock &
+    &                                    ,-1.d0,e,phi)
           IF(NCL(L).EQ.0) THEN
             CALL RADIAL$VALUE(GID,NR,PHI,1.D-2,SVAR1)
             CALL RADIAL$VALUE(GID,NR,QN(:,LN),1.D-2,SVAR2)
@@ -3450,6 +3483,8 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
 !           == ENERGY DERIVATIVE OF QN ========================================
             G(:)=NLPHIDOT(:,LN)
             CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,PHI)
+            call atomlib$updatestatewithHF(gid,nr,l,0,drel,g,aepot,vfock &
+    &                                    ,-1.d0,e,phi)
             NLPHIDOT(:,LN)=PHI
 !           == ENERGY DERIVATIVE OF PSPHI ====================================
             PHI=PSPHIDOT(:,LN)    
@@ -3467,7 +3502,7 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
               IF(LOX(LN1).NE.L) CYCLE
               IF(ISCATT(LN1).GE.ISCATT(LN)) CYCLE
               NLPHIDOT(:,LN)   =(   NLPHIDOT(:,LN)-   QNP(:,LN1))/(E-EOFLN(LN1))
-              PSPHIDOT(:,LN)=(PSPHIDOT(:,LN)-PSPHIP(:,LN1))/(E-EOFLN(LN1))          
+              PSPHIDOT(:,LN)=(PSPHIDOT(:,LN)-PSPHIP(:,LN1))/(E-EOFLN(LN1))   
             ENDDO
           END IF
 !
@@ -3616,13 +3651,32 @@ GOTO 10001
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
           CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,NNOFI(IB),AEPOT &
        &                             ,E,AEPSIF(:,IB-NC))
+          call atomlib$updatestatewithHF(gid,nr,l,0,drel,g,aepot,vfock &
+       &                                ,rout,e,aepsif(:,ib-nc))
           SVAR1=E
           EOFICOMP(1,IB-NC)=E
 !
-          NN=NNOFI(IB)-NN0
-          G(:)=0.D0
-          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
-     &                              ,G,E,PSPSIF(:,IB-NC))
+!         == this does not work with the fock potential because the number of 
+!         == bnodes does not increase with energy. Hence the node tracing fails
+!          NN=NNOFI(IB)-NN0
+!          G(:)=0.D0
+!          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
+!     &                              ,G,E,PSPSIF(:,IB-NC))
+!
+          e=eofi1(ib)
+          do i=1,100
+            g=0.d0
+            CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX)
+            CALL ATOMLIB_PAWDER(GID,NR,L,E+1.d-2,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX1)
+            aux1(:)=1.d+2*(aux1(:)-aux(:))
+            CALL RADIAL$VALUE(GID,NR,AUX,ROUT,VAL1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL2)
+!           == the factor 0.5 is a fudge and should not be there. 
+!           == However it is needed for convergence
+            e=e-val1/val2
+            if(abs(val1/val2).lt.1.d-8) exit
+          enddo
+          PSPsIF(:,IB-NC)=AUX(:)-AUX1(:)*VAL1/val2
           SVAR2=E
           EOFICOMP(2,IB-NC)=E
           IF(ABS(SVAR2-EOFI1(IB)).GT.1.D-2) THEN
@@ -3832,6 +3886,73 @@ GOTO 10001
 !STOP 'FORCED: IN MAKEPARTIALWAVES'
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_TESTghost1
+!     **************************************************************************
+!     **  test for states with negative norm.                                 **
+!     **                                                                      **
+!     **                                                                      **
+!     **                                                                      **
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      integer(4)             :: lnx
+      integer(4),allocatable :: lox(:)
+      real(8)   ,allocatable :: amat(:,:)
+      real(8)   ,allocatable :: aux(:)
+      real(8)   ,allocatable :: r(:)
+      real(8)   ,allocatable :: e(:)
+      real(8)   ,allocatable :: u(:,:)
+      integer(4)             :: nr
+      integer(4)             :: gid
+      integer(4)             :: ln,ln1,ln2
+!     **************************************************************************
+      gid=this%gid
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+      LNX=THIS%LNX
+      ALLOCATE(LOX(LNX))
+      ALLOCATE(AMAT(LNX,LNX))
+      ALLOCATE(AUX(NR))
+      AMAT(:,:)=0.D0
+      DO LN1=1,LNX
+        DO LN2=LN1,LNX
+          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
+          AUX(:)=R(:)**2*THIS%PRO(:,LN1)*THIS%PRO(:,LN2)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,AMAT(LN1,LN2))
+          AMAT(LN2,LN1)=AMAT(LN1,LN2)
+        ENDDO
+      ENDDO
+      AMAT=MATMUL(THIS%DOVER,AMAT)
+      DO LN=1,LNX
+        AMAT(LN,LN)=1.D0+AMAT(LN,LN)
+      ENDDO
+      ALLOCATE(E(LNX))
+      ALLOCATE(U(LNX,LNX))
+      CALL LIB$DIAGR8(LNX,AMAT,E,U)
+      IF(MINVAL(E).LE.0.D0) THEN
+        CALL ERROR$MSG('1+DO<P|P> IS NOT POSITIVE DEFINITE')
+        CALL ERROR$MSG('SETUP WILL PRODUCE GHOST STATES')
+        CALL ERROR$CHVAL('SPECIES NAME',THIS%ID)
+        DO LN=1,LNX
+          IF(E(LN).LE.0.D0) THEN
+            DO LN2=1,LNX
+              IF(ABS(U(LN2,LN)).GT.1.D-6) THEN
+                 CALL ERROR$I4VAL('ANGULAR MOMENTUM ',LOX(LN2))
+                EXIT
+              END IF
+            ENDDO
+            write(*,fmt='("e=",f10.3," u=",20f10.5)')e(ln),u(:,ln)
+          end if
+        ENDDO
+        call error$stop('setup_testghost1')
+      end if
+      RETURN
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_TESTSCATTERING(NFIL)
@@ -4786,14 +4907,11 @@ if(.not.tval)print*,'--c2-- ',c2,val0
 !     **  COMPUTES NEW TRANSFORMATION MATRICES                                **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : ORBRAD
       USE PERIODICTABLE_MODULE
       USE SETUP_MODULE
       IMPLICIT NONE
-      INTEGER(4)             :: LN,L,I,NR,LXX
+      INTEGER(4)             :: LN,L,I,NR
       REAL(8)   ,ALLOCATABLE :: RAD(:)
-      CHARACTER(3)           :: ID ! CAN BE OLD OR NEW
-      REAL(8)                :: RASA
 !     **************************************************************************
       CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION')
       CALL ERROR$STOP('SETUP_RENEWLOCORB')
@@ -4877,10 +4995,8 @@ PRINT*,'C'
       REAL(8)   ,PARAMETER  :: RCG=1.D-2
       REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:)
       REAL(8)               :: SVAR1,SVAR2
-      INTEGER(4)            :: IR
-      INTEGER(4)            :: NX,N,LX,L,LN,LNCHI,NOFL,NOFL2,ISVAR
+      INTEGER(4)            :: NX,LX,L,LN,LNCHI,NOFL,NOFL2
       INTEGER(4)            :: N1,N2,LN1,LN2,L1,L2
-      CHARACTER(64)         :: FILE
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_CHIFROMPHI')
       CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION')

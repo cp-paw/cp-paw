@@ -205,11 +205,6 @@
 !**      SCHROEDINGER$LBND_SCALREL  SCALAR RELATIVISTIC (REAL PHI)            **
 !**      SCHROEDINGER$LBND_FULLYREL INCLUDES SPIN-ORBIT COUPLING (COMPLEX PHI)**
 !**                                                                           **
-!**                                                                           **
-!**                                                                           **
-!**                                                                           **
-!**                                                                           **
-!**                                                                           **
 !*******************************************************************************
 !*******************************************************************************
 !*******************************************************************************
@@ -342,6 +337,80 @@ DO IR=1,NR
 ENDDO
       RETURN
       END SUBROUTINE SCHROEDINGER$SPHERICAL
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SCHROEDINGER$ekinpsi(GID,NR,POT,DREL,SO,L,PHI,tphi)
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARKS:                                                            **
+!     **  - POT IS ONLY THE RADIAL PART OF THE POTENTIAL.                     **
+!     **    THE POTENTIAL IS POT*Y0 WHERE Y0 IS A SPHERICAL HARMONIC          **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID FOR RADIAL GRID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: L       ! MAINANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+                 ! SO=0: NO SO; SO=1: L/S PARALLEL; SO=-1: L,S ANTIPARALLEL
+      REAL(8)    ,INTENT(IN)     :: DREL(NR)!RELATIVISTIC CORRECTION
+!                                           ! DREL= M0/MREL(R)-1
+      REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL (RADIAL PART ONLY)
+      REAL(8)    ,INTENT(in)     :: PHI(NR) !WAVE-FUNCTION
+      REAL(8)    ,INTENT(OUT)    :: tPHI(NR) !kinetic energy * WAVE-FUNCTION
+      REAL(8)                    :: A(NR) 
+      REAL(8)                    :: B(NR) 
+      REAL(8)                    :: C(NR) 
+      REAL(8)                    :: Dphi(NR) 
+      REAL(8)                    :: D2phi(NR) 
+      REAL(8)                    :: R(NR) 
+      REAL(8)                    :: PI
+      REAL(8)                    :: Y0
+      REAL(8)                    :: SOFACTOR
+      REAL(8)                    :: RDPRIME(NR)
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+!
+!     ==========================================================================
+!     == SPIN ORBIT COUPLING                                                  ==
+!     ==========================================================================
+      IF (SO.EQ.0) THEN
+        SOFACTOR=0.D0
+      ELSE IF(SO.EQ.1) THEN
+        SOFACTOR=REAL(L,KIND=8)       ! PARALLEL SPIN AND ORBIT
+      ELSE IF(SO.EQ.-1) THEN
+        SOFACTOR=REAL(-L-1,KIND=8)    ! ANTIPARALLELSPIN AND ORBIT
+      ELSE
+         CALL ERROR$MSG('SO CAN ONLY HAVE VALUES -1,0,1')
+         CALL ERROR$STOP('RADIAL$SCHRODINGER')
+      END IF
+!
+!     ==========================================================================
+!     == SET UP DIFFERENTIAL EQUATION                                         ==
+!     ==========================================================================
+      CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
+      CALL RADIAL$R(GID,NR,R)
+      A(:)=1.D0+DREL(:)
+!     == AVOID DIVIDE BY ZERO IF THE FIRST GRID POINT IS THE ORIGIN.
+!     == THE FORCES ON THE FIRST GRID POINT ARE NOT USED,
+!     == BECAUSE RADIAL$DGL IS BASED ON THE VERLET ALGORITHM
+!     == THAT CANNOT USE THE FORCES ON THE FIRST AND LAST GRID POINT
+      B(2:)=2.D0*(1.D0+DREL(2:))/R(2:)+RDPRIME(2:)
+      C(2:)=-(1.D0+DREL(2:))*REAL(L*(L+1),KIND=8)/R(2:)**2 &
+     &    -RDPRIME(2:)*SOFACTOR/R(2:)
+      B(1)=B(2)
+      C(1)=C(2)
+!
+!     ==========================================================================
+!     == BOUNDARY CONDITIONS                                                  ==
+!     ==========================================================================
+      call radial$verletd1(gid,nr,phi,dphi)
+      call radial$verletd2(gid,nr,phi,d2phi)
+      tphi(:)=a(:)*d2phi+b(:)*dphi+c(:)*phi
+      tphi(:)=-0.5d0*tphi(:)
+      RETURN
+      END SUBROUTINE SCHROEDINGER$ekinpsi
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SCHROEDINGER$LBND_SCALREL(GID,NR,LX,LMX,LMRX,TMAINSH,POT,DREL &
@@ -1708,15 +1777,15 @@ CHARACTER(32):: FILE
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     ==  DETERMINE CLASSICAL TURNING POINT R(IRCL)                   ==
-!     ==  AND OUTMOST POINT FOR INWARD INTEGRATION R(IROUT)           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DETERMINE CLASSICAL TURNING POINT R(IRCL)                           ==
+!     ==  AND OUTMOST POINT FOR INWARD INTEGRATION R(IROUT)                   ==
+!     ==========================================================================
       CALL SCHROEDINGER_SPECIALRADS(GID,NR,0,XMAX,POT(:,1),ENU,IRCL,IROUT)
 !
-!     ==================================================================
-!     ==  PREPARE POTENTIAL-INDEPENDENT ARRAYS                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PREPARE POTENTIAL-INDEPENDENT ARRAYS                                ==
+!     ==========================================================================
 !     == A*D2F/DR2+B*DF/DR+C*F=D
       A(:)=1.D0
 !     == AVOID DIVIDE BY ZERO IF THE FIRST GRID POINT IS THE ORIGIN.
@@ -1727,9 +1796,9 @@ CHARACTER(32):: FILE
       B(1)=B(2)
       D(:,:)=-2.D0*G(:,:)
 !
-!     ==================================================================
-!     ==  COUPLING BETWEEN WAVE FUNCTION COMPONENTS VIA POTENTIAL     ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  COUPLING BETWEEN WAVE FUNCTION COMPONENTS VIA POTENTIAL             ==
+!     ==========================================================================
       DCDE=0.D0
       C(:,:,:)=0.D0
       DO LM1=1,LMX
@@ -1739,15 +1808,15 @@ CHARACTER(32):: FILE
             CALL CLEBSCH(LM1,LM2,LM3,CG)
             IF(CG.EQ.0.D0) CYCLE
             AUX=CG*POT(:,LM3)
-            IF(LM3.EQ.1) AUX(IROUT+1:)=AUX(IROUT)  ! CONSTANT POTENTIAL BEYOND IROUT
+            IF(LM3.EQ.1) AUX(IROUT+1:)=AUX(IROUT) !CONSTANT POTENTIAL BEYOND IROUT
             C(:,LM1,LM2)=C(:,LM1,LM2)+AUX
           ENDDO
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     ==  ADD SEMI-LOCAL POTENTIAL                                    ==
-!     ================================================================== 
+!     ==========================================================================
+!     ==  ADD SEMI-LOCAL POTENTIAL                                            ==
+!     ==========================================================================
       CPOT=C   ! KEEP POTENTIAL TO DETERMINE THE KINETIC ENERGY
 !     == attention! lxsl is the number of angular momenta, 
 !     == and not the highest angular momentum
@@ -1762,9 +1831,9 @@ CHARACTER(32):: FILE
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     ==  ADD KINETIC ENERGY TERM TO C AND SHIFT ENERGY ZERO TO ENU   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ADD KINETIC ENERGY TERM TO C AND SHIFT ENERGY ZERO TO ENU           ==
+!     ==========================================================================
       LM=0
       DO L=0,LX
         AUX(1)=0.D0
@@ -1779,9 +1848,9 @@ CHARACTER(32):: FILE
       C(1,:,:)=C(2,:,:)
       DCDE(1,:)=DCDE(2,:)
 !
-!     ==================================================================
-!     ==  SCALE C                                                     ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  SCALE C                                                             ==
+!     ==========================================================================
       C=-2.D0*C
       DCDE=-2.D0*DCDE
 !
@@ -1820,16 +1889,16 @@ CHARACTER(32):: FILE
       RETURN
       END 
 !
-!     ..................................................................
+!     ..........................................................................
       SUBROUTINE SCHROEDINGER_XXXR_OV(GID,NR,lx,NF,IRMATCH,IROUT,tmainsh,A,B,C,DCDE,D,NPHI,DE,PHI,TOK)
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID             ! GRID-ID FOR RADIAL GRID
-      INTEGER(4),INTENT(IN) :: NR              ! #(RADIAL GRID POINTS)
-      INTEGER(4),INTENT(IN) :: LX              ! MAX ANGULAR MOMENTUM OF LM EXPANSION
-      INTEGER(4),INTENT(IN) :: NF              ! #(ANGULAR MOMENTA)
-      INTEGER(4),INTENT(IN) :: IRMATCH         ! MATCHING POINT FOR INSIDE-OUTSIDE INTEGRATION
-      INTEGER(4),INTENT(IN) :: IROUT           ! OUTERMOST POINT TO BE CONSIDERED
-      LOGICAL(4),INTENT(IN) :: TMAINSH(LX+1)   ! 
+      INTEGER(4),INTENT(IN) :: GID      ! GRID-ID FOR RADIAL GRID
+      INTEGER(4),INTENT(IN) :: NR       ! #(RADIAL GRID POINTS)
+      INTEGER(4),INTENT(IN) :: LX       ! MAX ANGULAR MOMENTUM OF LM EXPANSION
+      INTEGER(4),INTENT(IN) :: NF             ! #(ANGULAR MOMENTA)
+      INTEGER(4),INTENT(IN) :: IRMATCH        ! MATCHING POINT FOR INSIDE-OUTSIDE INTEGRATION
+      INTEGER(4),INTENT(IN) :: IROUT          ! OUTERMOST POINT TO BE CONSIDERED
+      LOGICAL(4),INTENT(IN) :: TMAINSH(LX+1)  ! 
       REAL(8)   ,INTENT(IN) :: A(NR)
       REAL(8)   ,INTENT(IN) :: B(NR)
       REAL(8)   ,INTENT(IN) :: C(NR,NF,NF)
@@ -2105,23 +2174,23 @@ CHARACTER(32):: FILE
       CALL LIB$MATRIXSOLVER8(NPHI,NPHI,NPHI,-KINK_DOT,HAM,KINK_HOM)
 !!$      SVAR=MAXVAL(ABS(KINK_HOM+MATMUL(KINK_DOT,HAM)))
 !!$PRINT*,'REMAINING KINKS ',SVAR
-!     == MAKE PHI DIFFERENTIABLE =========================================
+!     == MAKE PHI DIFFERENTIABLE ===============================================
       DO I=1,NPHI
         DO J=1,NPHI
           PHIL(:IRC,:,I)         =PHIL(:IRC,:,I)         +PHIL_DOT(:IRC,:,J)  *HAM(J,I)
           PHIR(IRC+1:IROUT+1,:,I)=PHIR(IRC+1:IROUT+1,:,I)+PHIR_DOT(IRC+1:IROUT+1,:,J)*HAM(J,I)
         ENDDO
       ENDDO
-!     == MAKE PHI DIFFERENTIABLE =========================================
+!     == MAKE PHI DIFFERENTIABLE ===============================================
 !!$DO I=1,NPHI
 !!$  WRITE(*,FMT='("HAM ",50("(",2F10.5")   "))')HAM(I,:)
 !!$ENDDO
 !SVAR=0.5D0*MAXVAL(ABS(HAM-TRANSPOSE(CONJG(HAM))))
 !PRINT*,'DEVIATION FROM HERMITICITY',SVAR
 !
-!     ==================================================================
-!     ==  DETERMINE OVERLAP MATRIX                                    ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DETERMINE OVERLAP MATRIX                                            ==
+!     ==========================================================================
       DO I=1,NPHI
         DO J=I,NPHI
           AUX(:)=0.D0
@@ -2139,9 +2208,9 @@ CHARACTER(32):: FILE
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     ==  DETERMINE EIGENSTATES                                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DETERMINE EIGENSTATES                                               ==
+!     ==========================================================================
 !PRINT*,'SCHROEDINGER_XXXR_OV: DETERMINE EIGENSTATES'
       HAM=0.5D0*(HAM+TRANSPOSE(HAM))
       OV=0.5D0*(OV+TRANSPOSE(OV))
@@ -2165,7 +2234,7 @@ CHARACTER(32):: FILE
 !     **  2) ESTIMATE THE OUTERMOST GRID POINT R(IROUT) FOR INWARD INTEGRATION**
 !     **     FROM A WKB SOLUTION OF THE SCHROEDINGER EQUATION. THE CRITERION  **
 !     **     IROUT IS THAT THE SOLUTION GROWS FROM R(IROUT) TO R(IRCL)        **
-!     **     BY A FACTOR OF LESS THAN XMAX,                                    **
+!     **     BY A FACTOR OF LESS THAN XMAX,                                   **
 !     **                                                                      **
 !     **  REMARK: IT IS NOT POSSIBLE TO CHOOSE THE INNERMOST CLASSICAL        **
 !     **    TURNING POINT, BECAUSE OTHERWISE WE MUST EXPLICITELY DESCRIBE     **
@@ -2204,12 +2273,12 @@ CHARACTER(32):: FILE
 !
 !     ==========================================================================
 !     ==  IDENTIFY CLASSICAL TURNING POINT AS THE OUTERMOST POINT, WHERE      ==
-!     ==  THE KINETIC ENERGY SWITCHES FROM POSITIVE TO NEGATIVE VALUES        == 
+!     ==  THE KINETIC ENERGY SWITCHES FROM POSITIVE TO NEGATIVE VALUES        ==
 !     ==========================================================================
       IF(TINNER) THEN
         IRCL=NR
         DO IR=2,NR
-          IF(TKIN(IR-1).LT.0.D0.AND.TKIN(IR).GE.0.D0) THEN
+          IF(TKIN(IR-1).GT.0.D0.AND.TKIN(IR).LE.0.D0) THEN
             IRCL=IR+1
             EXIT
           END IF
@@ -2238,8 +2307,8 @@ CHARACTER(32):: FILE
             IRCL=IR+1        ! RCL WILL BE THE FIRST POINT WITH POSITIVE EKIN
             CYCLE
           END IF
-!         == SUMVAL IS THE APPROXIMATE INTEGRAL OF THE MOMENTUM FROM THE =========
-!         == CLASSICAL TURNING POINT OUTWARD =====================================
+!         == SUMVAL IS THE APPROXIMATE INTEGRAL OF THE MOMENTUM FROM THE =======
+!         == CLASSICAL TURNING POINT OUTWARD ===================================
           SUMVAL=SUMVAL+SQRT(2.D0*SVAR)*0.5D0*(R(IR+1)-R(IR-1))
           IROUT=IR-1
           IF(SUMVAL.GT.XMAXLOG) THEN
@@ -2753,6 +2822,41 @@ CHARACTER(32):: FILE
       PHASE=0.5D0-ATAN(DER/VAL)/PI+PHASE
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SCHROEDINGER$resolvePHASESHIFT(PHASE,val,der,nn)
+!     **************************************************************************
+!     **                                                                      **
+!     **  THE PHASE SHIFT IS DEFINED AS                                       **
+!     **     0.5-1/PI * ATAN (DPHIDR/PHI)+NN                                  **
+!     **  WHERE PHI AND DPHIDR ARE VALUE AND DERIVATIVE OF PHI AT RADIUS RC   **
+!     **  AND NN IS THE NUMBER OF NODES INSIDE RC.                            **
+!     **                                                                      **
+!     **  THIS DEFINITION OF THE PHASE SHIFT DIFFERS FROM THE TERM USED       **
+!     **  IN SCATTERING THEORY                                                **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(out) :: Nn
+      REAL(8)   ,INTENT(IN)  :: PHase
+      REAL(8)   ,INTENT(out) :: val
+      REAL(8)   ,INTENT(out) :: der
+      real(8)                :: svar
+      real(8)                :: pi
+!     **************************************************************************
+      pi=4.d0*atan(1.d0)
+      svar=modulo(phase,1.d0)
+      nn=nint(phase-svar)
+      if(abs(svar-0.5d0).lt.0.25d0) then
+        val=1.d0
+        der=-tan(pi*(svar+0.5d0))
+      else
+!       == cot(x)=-tan(x+pi/2)=-tan(x-pi/2)=====================================
+        val=tan(pi*svar)
+        der=1.d0
+      end if
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SCHROEDINGER$PHASESHIFT_OLD(GID,NR,PHI,RC,PHASE)

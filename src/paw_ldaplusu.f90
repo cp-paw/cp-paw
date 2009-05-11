@@ -1,4 +1,4 @@
- !TODO :
+!TODO :
 ! DATH IS STILL REAL AND SHOULD PROBABLY BE COMPLEX LIKE DENMAT
 ! DENMAT AND DATH ARE BOTH REAL, IF THE CALCULATION IS COLLINEAR
 !........1.........2.........3.........4.........5.........6.........7.........8
@@ -656,6 +656,7 @@ PRINT*,'JPAR   ',THIS%SP%JPAR
 !     == TRANSFORM FROM TOTAL/SPIN TO UP/DOWN REPRESENTATION ===================
       CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
 !
+print*,'THIS%SP%FUNCTIONALID',THIS%SP%FUNCTIONALID
       IF(THIS%SP%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
         CALL LDAPLUSU_DENMATFLAPW('FORWARD',NPHI,MATSS,NCHI,RHO)
       ELSE
@@ -1007,9 +1008,9 @@ PRINT*,'TORB ',TORB
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      INTEGER(4),INTENT(IN) :: LNX
+      INTEGER(4),INTENT(IN) :: GID           ! grid id
+      INTEGER(4),INTENT(IN) :: NR            ! #(radial grid points)
+      INTEGER(4),INTENT(IN) :: LNX           ! #(partial waves w/o m,sigma)
       INTEGER(4),INTENT(IN) :: LOX(LNX)      ! ANGULAR MOMENTA OF PARTIAL WAVES
       REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX) ! AE PARTIAL WAVES
       INTEGER(4),INTENT(IN) :: NC            ! #(CORE STATES)
@@ -1028,8 +1029,8 @@ PRINT*,'TORB ',TORB
       REAL(8)   ,ALLOCATABLE:: FACTOR(:,:,:)
       INTEGER(4)            :: LMCA
       INTEGER(4)            :: LM1,LC,LRHO,LMC1A,IMC,LMC,LMRHOA,IMRHO,LMRHO
-      INTEGER(4)            :: LN1,L1,IC,LN2,L2
-      LOGICAL(4),PARAMETER  :: TPRINT=.FALSE.
+      INTEGER(4)            :: LN1,L1,IC,LN2,L2,lm2
+      LOGICAL(4),PARAMETER  :: TPRINT=.true.
       REAL(8)               :: PI
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -1042,6 +1043,7 @@ PRINT*,'TORB ',TORB
 !     ==========================================================================
 !     == INCLUDE ANGULAR INTEGRATIONS                                         ==
 !     ==========================================================================
+!     == spherical symmetry exploited: 
       FACTOR=0.D0
       DO L1=0,LX           ! ANGULAR MOMENTUM OF LOCAL ORBITAL
         LM1=L1**2+1
@@ -1064,6 +1066,11 @@ PRINT*,'TORB ',TORB
 !     = THIS FACTOR IS INCLUDED TO HAVE A PROPER DEFINITION OF SLATER INTEGRALS
       DO LRHO=0,LRHOX
         FACTOR(:,LRHO+1,:)=FACTOR(:,LRHO+1,:)*4.D0*PI/REAL(2*LRHO+1,KIND=8)
+do l1=0,lx
+  do lc=0,lcx
+    write(*,*)lrho,l1,lc,factor(l1+1,lrho+1,lc+1)
+  enddo
+enddo
       ENDDO
 !
 !     ==========================================================================
@@ -1095,7 +1102,9 @@ PRINT*,'TORB ',TORB
 !     ==  WRITE FOR TEST PURPOSES                                             ==
 !     ==========================================================================
       IF(TPRINT) THEN
+        print*,'lofc ',lofc
         PRINT*,'NOW THE MATRIX FOR THE CORE VALENCE EXCHANGE INTERACTION'
+        WRITE(*,FMT='(4a3,10a18)')'LN1','L1','LN2','L2','MAT(LN1,LN2)'
         DO LN1=1,LNX
           L1=LOX(LN1)
           DO LN2=1,LNX
@@ -1103,8 +1112,42 @@ PRINT*,'TORB ',TORB
             WRITE(*,FMT='(4I3,10F18.10)')LN1,L1,LN2,L2,MAT(LN1,LN2)
           ENDDO
         ENDDO
-        STOP
+!        STOP
       END IF
+!!$
+!!$      do ln1=1,lnx
+!!$        l1=lox(ln1)
+!!$        lm1=l1**2+1
+!!$        do ln2=1,lnx
+!!$          l2=lox(ln2)
+!!$          lm2=l2**2+1   
+!!$          mat(ln1,ln2)=0.d0 
+!!$          do ic=1,nc
+!!$            lc=lofc(ic)
+!!$            do imc=1,2*lc+1
+!!$              lmc=lc**2+imc
+!!$              call ldaplusu_singleu(gid,nr,lrhox,lm1,aephi(:,ln1),lmc,psic(:,ic) &
+!!$    &                   ,lmc,psic(:,ic),lm2,aephi(:,ln2),val)
+!!$              mat(ln1,ln2)=mat(ln1,ln2)+val
+!!$            enddo
+!!$          enddo
+!!$        enddo
+!!$      enddo
+!!$
+!!$      IF(TPRINT) THEN
+!!$        print*,'lofc ',lofc
+!!$        PRINT*,'NOW THE MATRIX FOR THE CORE VALENCE EXCHANGE INTERACTION'
+!!$        WRITE(*,FMT='(4a3,10a18)')'LN1','L1','LN2','L2','MAT(LN1,LN2)'
+!!$        DO LN1=1,LNX
+!!$          L1=LOX(LN1)
+!!$          DO LN2=1,LNX
+!!$            L2=LOX(LN2)
+!!$            WRITE(*,FMT='(4I3,10F18.10)')LN1,L1,LN2,L2,MAT(LN1,LN2)
+!!$          ENDDO
+!!$        ENDDO
+!!$        STOP
+!!$      END IF
+
       RETURN
       END      
 !
@@ -1910,7 +1953,12 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_EDFT(GID,NR,LMNX,LNX,LOX,CHI,LRX,AECORE,DENMAT,ETOT,HAM)
 !     **                                                                      **
-!     ** DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                 **
+!     **  DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                **
+!     **                                                                      **
+!     **  determines the Hartree and exchange-only energy from the            **
+!     **  DFT functional                                                      **
+!     **  for the density built from the local orbitals and the core density  **
+!     **  This energy needs to be subtracted from the total energy            **
 !     **                                                                      **
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: GID
@@ -2503,3 +2551,51 @@ PRINT*,'EH ',SVAR
 CALL ERROR$STOP('FORCED STOP IN LDAPLUSU_CI')
       RETURN 
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine ldaplusu_singleu(gid,nr,lrhox,lm1,phi1,lm2,phi2,lm3,phi3,lm4,phi4,u)
+!     **************************************************************************
+!     **  calculates a single matrix element of the U-tensor                  **
+!     **  no optimization. To be used only for testing purposes               **
+!     **************************************************************************
+      implicit none
+      integer(4),intent(in) :: gid
+      integer(4),intent(in) :: nr
+      integer(4),intent(in) :: lrhox
+      integer(4),intent(in) :: lm1
+      real(8)   ,intent(in) :: phi1(nr)
+      integer(4),intent(in) :: lm2
+      real(8)   ,intent(in) :: phi2(nr)
+      integer(4),intent(in) :: lm3
+      real(8)   ,intent(in) :: phi3(nr)
+      integer(4),intent(in) :: lm4
+      real(8)   ,intent(in) :: phi4(nr)
+      real(8)   ,intent(ouT):: U
+      real(8)               :: pi
+      real(8)               :: r(nr)
+      real(8)               :: rho13(nr),rho24(nr),pot(nr)
+      real(8)               :: aux(nr)
+      integer(4)            :: lmrho,lrho,im
+      real(8)               :: cg1,cg2,val
+!     *************************************************************************
+      pi=4.d0*atan(1.d0)
+      call radial$r(gid,nr,r)
+      rho24=phi2(:)*phi4(:)
+      rho13=phi1(:)*phi3(:)
+      u=0.d0
+      lmrho=0
+      do lrho=0,lrhox
+        call radial$poisson(gid,nr,lrho,rho24,pot)
+        aux=r(:)**2*pot(:)*rho13(:)
+        call radial$integral(gid,nr,aux,val)
+!       == slater integral is (2*lrho+1)/(4pi)*val
+        do im=1,2*lrho+1
+          lmrho=lmrho+1
+          call spherical$gaunt(lm1,lm3,lmrho,cg1)
+          call spherical$gaunt(lm2,lm4,lmrho,cg2)
+          u=u+cg1*cg2*val
+        enddo
+      enddo
+      return
+      end
+

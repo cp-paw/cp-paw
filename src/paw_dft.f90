@@ -660,7 +660,8 @@ MODULE DFT_MODULE
 !RETURN !#
         VAL(1)=RHOTMIN
       END IF
-
+!
+!     == spin density must not be larger than the total density ========
       IF(ABS(VAL(2)).GE.VAL(1)-RHOTMIN) THEN
         VAL(2)=MAX(VAL(2),-VAL(1)+RHOTMIN)
         VAL(2)=MIN(VAL(2),VAL(1)-RHOTMIN)
