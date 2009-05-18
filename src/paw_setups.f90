@@ -1476,7 +1476,8 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       THIS%SETTING%TREL=.true.
       THIS%SETTING%SO=.FALSE.
       THIS%SETTING%FOCK=0.d0
-!THIS%SETTING%FOCK=0.25d0
+THIS%SETTING%trel=.false.
+THIS%SETTING%FOCK=0.25d0
 !
       IF(THIS%SETTING%TREL) THEN
         IF(THIS%SETTING%SO) THEN
@@ -1492,8 +1493,11 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
         KEY=TRIM(KEY)//',FOCK='//TRIM(STRING)
       END IF
 !
+      call trace$pass('all-electron scf atomic calculation')
       CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
     &                   ,ETOT,THIS%ATOM%AEPOT,vfock,EOFI,PSI,psism)
+      CALL SETUP_WRITEPHI(-'AEPSIFROMAESCF.DAT',GID,NR,NB,PSI)
+      call trace$pass('all-electron scf atomic calculation finished')
 !     
 !     ==========================================================================
 !     ==  select core, and reorder states                                     ==
@@ -1612,6 +1616,7 @@ enddo
       ENDDO
 !
 print*,'marke before makepartialwaves'
+      call trace$pass('construct partial waves')
       CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%ATOM%AEPOT,vfock &
      &           ,NB,NC &
      &           ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
@@ -1622,6 +1627,7 @@ print*,'marke before makepartialwaves'
      &           ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
      &           ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT)
+      call trace$pass('construct partial waves finished')
       if(THIS%SETTING%FOCK.ne.0.d0) then
         call radialfock$cleanvfock(vfock)
       end if
@@ -2889,6 +2895,7 @@ DEX=0.05D0
       type(vpaw_type)       :: vpaw
 real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
 !     **************************************************************************
+                                call trace$push('ATOMIC_MAKEPARTIALWAVEs')
 !vfock%scale=0.d0
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -2935,8 +2942,9 @@ real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
       CALL ATOMIC_PSEUDIZE(GID,NR,POW_POT,tval0_pot,VAL0_POT,RC_POT,AEPOT,PSPOT)
 !
 !     ==========================================================================
-!     == CONSTRUCT NODELESS WAVE FUNCTIONS                                    ==
+!     == CONSTRUCT NODELESS WAVE FUNCTIONS (local potential only)             ==
 !     ==========================================================================
+                           call trace$pass('construct nodeless wave functions')
       Eofi1(:)=EOFI(:)
       DO L=0,LX
         do iso=-1,1
@@ -2948,15 +2956,8 @@ real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
             E=EOFI1(IB)
             DREL(:)=0.D0
             IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-            if(vfock%ton) then
-!             == remark: if this crashes proceed like for nodeless partial waves
-!             == work with local potential first and then update with fock pot
-              call atomlib$boundstatewithHF(gid,nr,trel,rout,aepot &
-     &                                     ,vfock,l,iso,0,g,e,uofi(:,ib),aux)
-            else
-              CALL ATOMLIB$BOUNDSTATE(GID,NR,L,iso,ROUT,DREL,G,0,AEPOT &
+            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,iso,ROUT,DREL,G,0,AEPOT &
      &                               ,E,UOFI(:,IB))
-            end if
             if(trel) then
               call SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,iso &
      &                                         ,DREL,gs,uofi(:,ib),uofism(:,ib))
@@ -2964,8 +2965,7 @@ real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
               uofism(:,ib)=0.d0
             end if
             EOFI1(IB)=E
-            CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,uofi(:,ib),AUX)
-            TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)-aux(:)
+            TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
             aux=(1.d0+Drel)*uofism(:,ib)
             call radial$derive(gid,nr,aux,aux1)
             if(iso.eq.1) then
@@ -2986,25 +2986,9 @@ real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
       ENDDO
 !
 !     ==========================================================================
-!     == REPORT SETTINGS ON WAVE FUNCTIONS                                    ==
+!     == CONSTRUCT NODELESS PARTIAL WAVES  (local potential only)             ==
 !     ==========================================================================
-      IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20," Z=",F5.0," ")')AEZ
-        WRITE(6,FMT='(82("="),T20," ENERGIES FOR ATOMIC WAVE FUNCTIONS ")')
-        WRITE(6,FMT='(82("="),T20," OLD: AE SCHRODINGER EQUATION           ")')
-        WRITE(6,FMT='(82("="),T20," NEW: NODELESS EQUATION                 ")')
-        WRITE(6,FMT='(82("="),T20," DIFFERENCE DUE TO RELATIVISTIC EFFECTS ")')
-        DO IB=1,NB
-          WRITE(6,FMT='("IB=",I3," L=",I2," F=",F10.5," E[NEW]=",F15.5 &
-     &                                               ," E[OLD]=",F15.5)') &
-     &                  IB,LOFI(IB),FOFI(IB),EOFI1(IB),EOFI(IB)
-        ENDDO
-!       CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
-      END IF
-!
-!     ==========================================================================
-!     == CONSTRUCT NODELESS PARTIAL WAVES                                     ==
-!     ==========================================================================
+                           call trace$pass('construct nodeless partial waves')
 !     == first use only the local potential... =================================
       DO L=0,LX
         ISO=0
@@ -3020,17 +3004,70 @@ real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
           IF(LOX(LN).NE.L) CYCLE
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
           call ATOMLIB$phaseshiftstate(GID,NR,L,iSO,DREL,G,aepot &
-     &                                                     ,rbnd,phiphase,E,PHI)
+     &                                ,rbnd,phiphase,E,PHI)
           EOFLN(LN)=E
           NLPHI(:,LN)=PHI(:)
           TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*PHI(:)
           G(:)=NLPHI(:,LN)
         ENDDO
       ENDDO
+print*,'eofln',eofln
 !CALL SETUP_WRITEPHI('test1.dat',GID,NR,lnx,nlphi)
 !
-!     == ... Now correct for fock contribution =================================
+!
+!     ==========================================================================
+!     == update wave functions with fock potential                            ==
+!     ==========================================================================
       if(vfock%ton) then
+                      call trace$pass('apply fock correction to wave functions')
+        DO L=0,LX
+          do iso=-1,1
+            G(:)=0.D0
+            Gs(:)=0.D0
+            DO IB=1,NB
+              IF(LOFI(IB).NE.L) CYCLE
+              IF(sOFI(IB).NE.iso) CYCLE
+              E=EOFI1(IB)
+              DREL(:)=0.D0
+              IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+!             == remark: if this crashes proceed like for nodeless partial waves
+!             == work with local potential first and then update with fock pot
+              call atomlib$updatestatewithHF(gid,nr,l,iso,drel,g,aepot,vfock &
+     &                                    ,rout,e,uofi(:,ib))
+              if(trel) then
+                call SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,iso &
+     &                                         ,DREL,gs,uofi(:,ib),uofism(:,ib))
+              else
+                uofism(:,ib)=0.d0
+              end if
+              EOFI1(IB)=E
+              CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,uofi(:,ib),AUX)
+              TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)-aux(:)
+              aux=(1.d0+Drel)*uofism(:,ib)
+              call radial$derive(gid,nr,aux,aux1)
+              if(iso.eq.1) then
+                aux(2:)=aux1(2:)+real(l+2,kind=8)/r(2:)*aux(2:)
+                aux(1)=aux(2)
+                aux(:)=-0.5/speedoflight*aux(:)
+              else if(iso.eq.-1) then
+                aux(2:)=aux1(2:)-real(l-1,kind=8)/r(2:)*aux(2:)
+                aux(1)=aux(2)
+                aux=+0.5/speedoflight*aux(:)
+              else
+                aux=+0.5/speedoflight*aux1
+              end if
+              G(:)=UOFI(:,IB)   !+aux(:)
+              gs(:)=uofism(:,ib)
+           ENDDO
+          enddo
+        ENDDO
+      end if
+!
+!     ==========================================================================
+!     == update NODELESS PARTIAL WAVES  with fock potential                   ==
+!     ==========================================================================
+      if(vfock%ton) then
+                      call trace$pass('apply fock correction to partial waves')
         DO L=0,LX
           ISO=0
           G(:)=0.D0
@@ -3046,6 +3083,23 @@ real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
           ENDDO
         ENDDO
       END IF
+!
+!     ==========================================================================
+!     == REPORT SETTINGS ON WAVE FUNCTIONS                                    ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        WRITE(6,FMT='(82("="),T20," Z=",F5.0," ")')AEZ
+        WRITE(6,FMT='(82("="),T20," ENERGIES FOR ATOMIC WAVE FUNCTIONS ")')
+        WRITE(6,FMT='(82("="),T20," OLD: AE SCHRODINGER EQUATION           ")')
+        WRITE(6,FMT='(82("="),T20," NEW: NODELESS EQUATION                 ")')
+        WRITE(6,FMT='(82("="),T20," DIFFERENCE DUE TO RELATIVISTIC EFFECTS ")')
+        DO IB=1,NB
+          WRITE(6,FMT='("IB=",I3," L=",I2," F=",F10.5," E[NEW]=",F15.5 &
+     &                                               ," E[OLD]=",F15.5)') &
+     &                  IB,LOFI(IB),FOFI(IB),EOFI1(IB),EOFI(IB)
+        ENDDO
+        CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
+      END IF
 !CALL SETUP_WRITEPHI('test2.dat',GID,NR,lnx,nlphi)
 !
 !     ==========================================================================
@@ -3058,6 +3112,7 @@ real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
           WRITE(6,FMT='("LN=",I2," L=",I2," E=",F10.5," RC=",F6.3)') &
      &                      LN,LOX(LN),EOFLN(LN),RC(LN)
         ENDDO
+        CALL SETUP_WRITEPHI(-'nlphi.DAT',GID,NR,lnx,nlphi)
       END IF
 !
 !     ==========================================================================
@@ -3105,6 +3160,7 @@ real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
 !     ==========================================================================
 !     == CONSTRUCT QN FUNCTIONS        (H-E)|QN>=|UC>                         ==
 !     ==========================================================================
+                           call trace$pass('construct qn functions')
       TRANSU(:,:)=0.D0
       DO L=0,LX
         IPRO=0
@@ -3135,8 +3191,8 @@ real(8) :: phitest2(nr,lnx),phitest3(nr,lnx),phitest4(nr,lnx)
         ENDDO
       END IF
 
-CALL SETUP_WRITEPHI('UN.DAT',GID,NR,LNX,NLPHI)
-CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
+CALL SETUP_WRITEPHI(+'UN.DAT',GID,NR,LNX,NLPHI)
+CALL SETUP_WRITEPHI(+'QN.DAT',GID,NR,LNX,QN)
 !
 !     ==========================================================================
 !     == TEST EQUATION FOR QN                                                 ==
@@ -3215,11 +3271,13 @@ CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
           WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|AEPHI_N> =",F20.15)') &
       &                 LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
         ENDDO
+        CALL SETUP_WRITEPHI(+'aephi.DAT',GID,NR,LNX,aephi)
       END IF
 !
 !     ==========================================================================
 !     == CONSTRUCT PSEUDO PARTIAL WAVES                                       ==
 !     ==========================================================================
+                           call trace$pass('construct pseudo partial waves')
       PSPHI=QN
       TPSPHI=TQN
 CALL SETUP_WRITEPHI('xx1.DAT',GID,NR,LNX,psphi)
@@ -3264,6 +3322,7 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
 !     ==========================================================================
 !     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
 !     ==========================================================================
+                      call trace$pass('construct projector functions')
       DO LN=1,LNX
         BAREPRO(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
       ENDDO
@@ -3312,9 +3371,9 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
       PRO=MATMUL(BAREPRO,A)
       CALL LIB$INVERTR8(LNX,TRANSPHI,TRANSPHIINV)
       DEALLOCATE(A)
-!CALL SETUP_WRITEPHI(-'PRO.DAT',GID,NR,LNX,MATMUL(BAREPRO,TRANSPRO))
-!CALL SETUP_WRITEPHI(-'PSPHI.DAT',GID,NR,LNX,MATMUL(PSPHI,TRANSPHI))
-!CALL SETUP_WRITEPHI(-'AEPHI.DAT',GID,NR,LNX,MATMUL(AEPHI,TRANSPHI))
+CALL SETUP_WRITEPHI(-'PRO.DAT',GID,NR,LNX,MATMUL(BAREPRO,TRANSPRO))
+CALL SETUP_WRITEPHI(-'PSPHI.DAT',GID,NR,LNX,MATMUL(PSPHI,TRANSPHI))
+CALL SETUP_WRITEPHI(-'AEPHI.DAT',GID,NR,LNX,MATMUL(AEPHI,TRANSPHI))
 !
 !     ==========================================================================
 !     == CHECK BIORTHOGONALIZATION                                            ==
@@ -3456,8 +3515,8 @@ CALL SETUP_WRITEPHI('xx2.DAT',GID,NR,LNX,psphi)
           G(:)=0.D0
           IF(NCL(L).GT.0)G(:)=UOFI(:,NCL(L))
           CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,PHI)
-          call atomlib$updatestatewithHF(gid,nr,l,0,drel,g,aepot,vfock &
-    &                                    ,-1.d0,e,phi)
+!          call atomlib$updatestatewithHF(gid,nr,l,0,drel,g,aepot,vfock &
+!    &                                    ,-1.d0,e,phi)
           IF(NCL(L).EQ.0) THEN
             CALL RADIAL$VALUE(GID,NR,PHI,1.D-2,SVAR1)
             CALL RADIAL$VALUE(GID,NR,QN(:,LN),1.D-2,SVAR2)
@@ -3617,6 +3676,7 @@ GOTO 10001
 !     ==========================================================================
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
 !     ==========================================================================
+                      call trace$pass('construct density or unscreening')
       AERHO(:)=aecore(:)
       PSRHO(:)=pscore(:)
       EOFICOMP(:,:)=0.D0
@@ -3645,8 +3705,11 @@ GOTO 10001
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
           IF(NN0.EQ.-1)NN0=NNOFI(IB)
-           E=EOFI1(IB)
+          E=EOFI1(IB)
 !
+!         ======================================================================
+!         ==  construct all-electron wave function                            ==
+!         ======================================================================
           G(:)=0.D0
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
           CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,NNOFI(IB),AEPOT &
@@ -3656,30 +3719,41 @@ GOTO 10001
           SVAR1=E
           EOFICOMP(1,IB-NC)=E
 !
+!         ======================================================================
+!         ==  construct paw pseudo wave function                              ==
+!         ======================================================================
 !         == this does not work with the fock potential because the number of 
 !         == bnodes does not increase with energy. Hence the node tracing fails
-!          NN=NNOFI(IB)-NN0
-!          G(:)=0.D0
-!          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
-!     &                              ,G,E,PSPSIF(:,IB-NC))
+          NN=NNOFI(IB)-NN0
+          G(:)=0.D0
+          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
+     &                              ,G,E,PSPSIF(:,IB-NC))
+          CALL SETUP_WRITEPHI(-'error_pspsif1',GID,NR,1,psPsif(:,ib-nc))
 !
-          e=eofi1(ib)
-          do i=1,100
-            g=0.d0
-            CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX)
-            CALL ATOMLIB_PAWDER(GID,NR,L,E+1.d-2,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX1)
-            aux1(:)=1.d+2*(aux1(:)-aux(:))
-            CALL RADIAL$VALUE(GID,NR,AUX,ROUT,VAL1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL2)
-!           == the factor 0.5 is a fudge and should not be there. 
-!           == However it is needed for convergence
-            e=e-val1/val2
-            if(abs(val1/val2).lt.1.d-8) exit
-          enddo
-          PSPsIF(:,IB-NC)=AUX(:)-AUX1(:)*VAL1/val2
+!!$          e=eofi1(ib)
+!!$          do i=1,100
+!!$            g=0.d0
+!!$            CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX)
+!!$            CALL ATOMLIB_PAWDER(GID,NR,L,E+1.d-2,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX1)
+!!$            aux1(:)=1.d+2*(aux1(:)-aux(:))
+!!$            CALL RADIAL$VALUE(GID,NR,AUX,ROUT,VAL1)
+!!$            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL2)
+!!$!           == the factor 0.5 is a fudge and should not be there. 
+!!$!           == However it is needed for convergence
+!!$            e=e-val1/val2
+!!$            if(abs(val1/val2).lt.1.d-8) exit
+!!$            if(i.eq.100) then
+!!$              call error$msg('loop not converged')
+!!$              CALL ERROR$STOP('ATOMLIB_MAKEPARTIALWAVES')
+!!$            end if
+!!$          enddo
+!!$          PSPsIF(:,IB-NC)=AUX(:)-AUX1(:)*VAL1/val2
           SVAR2=E
           EOFICOMP(2,IB-NC)=E
-          IF(ABS(SVAR2-EOFI1(IB)).GT.1.D-2) THEN
+          IF(ABS(SVAR2-EOFI1(IB)).GT.1.D-1) THEN
+            CALL SETUP_WRITEPHI(-'error_uofi',GID,NR,1,uofi(:,ib-nc))
+            CALL SETUP_WRITEPHI(-'error_aepsif',GID,NR,1,AEPsif(:,ib-nc))
+            CALL SETUP_WRITEPHI(-'error_pspsif',GID,NR,1,psPsif(:,ib-nc))
             CALL ERROR$MSG('INACCURACY WHILE UNSCREENING PS POTENTIAL')
             CALL ERROR$MSG('ONE-PARTICLE ENERGIES OBTAINED FROM PAW ')
             CALL ERROR$MSG('DISAGREE WITH THOSE FROM THE AE CALCULATION')
@@ -3702,12 +3776,13 @@ GOTO 10001
          &          L,(SVAR2-EOFI1(IB))*27.211D0,(SVAR1-EOFI1(IB))*27.211D0
           END IF
 !
+!         ==  ensure that the tails of ae and ps wave function have same sign ==
           DO IR=1,NR-2
             IF(R(IR).LT.ROUT) CYCLE
             PSPSIF(IR+2:,IB-NC)=0.D0
             AEPSIF(IR+2:,IB-NC)=0.D0
             IF(PSPSIF(IR-2,IB-NC)*AEPSIF(IR-2,IB-NC).LT.0.D0) &
-     &                                          AEPSIF(:,IB-NC)=-AEPSIF(:,IB-NC)
+     &                                       AEPSIF(:,IB-NC)=-AEPSIF(:,IB-NC)
             EXIT
           ENDDO
 !
@@ -3768,6 +3843,7 @@ GOTO 10001
 !     ==========================================================================
 !     == UNSCREENING                                                          ==
 !     ==========================================================================
+                      call trace$pass('construct vadd (unscreen)')
       CALL ATOMIC_UNSCREEN(GID,NR,ROUT,AEZ,AERHO,PSRHO,PSPOT,RCSM,VADD)
       DO IR=1,NR
         IF(R(IR).GT.MAX(1.2D0*RCOV,RNORM)) THEN
@@ -3843,7 +3919,7 @@ GOTO 10001
       IF(TWRITE) THEN
         WRITE(STRING,FMT='(F3.0)')AEZ
         STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
-!       == AE PARTIAL WAVES
+!       == AE PARTIAL WAVES ====================================================
         CALL SETUP_WRITEPHI(-'AEPHI'//TRIM(STRING),GID,NR,LNX,AEPHI)
 !
 !       == PS PARTIAL WAVES ====================================================
@@ -3867,6 +3943,12 @@ GOTO 10001
 !       == SCATTERING ALL-ELECTRON PARTIAL WAVES ===============================
         CALL SETUP_WRITEPHI(-'AEPHIDOT'//TRIM(STRING),GID,NR,LNX,AEPHIDOT)
 !
+!       == all-ELECTRON wave functions =========================================
+        CALL SETUP_WRITEPHI(-'AEPsif'//TRIM(STRING),GID,NR,nb-nc,AEPsif)
+!
+!       == pseudo wave functions =========================================
+        CALL SETUP_WRITEPHI(-'psPsif'//TRIM(STRING),GID,NR,nb-nc,psPsif)
+!
 !       == POTENTIALS  =========================================================
         ALLOCATE(AUXARR(NR,4))
         AUXARR(:,1)=AEPOT
@@ -3884,6 +3966,7 @@ GOTO 10001
       END IF
 !
 !STOP 'FORCED: IN MAKEPARTIALWAVES'
+                                call trace$pop()
       RETURN
       END
 !
@@ -3891,10 +3974,6 @@ GOTO 10001
       SUBROUTINE SETUP_TESTghost1
 !     **************************************************************************
 !     **  test for states with negative norm.                                 **
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
       USE SETUP_MODULE
@@ -3916,6 +3995,7 @@ GOTO 10001
       CALL RADIAL$R(GID,NR,R)
       LNX=THIS%LNX
       ALLOCATE(LOX(LNX))
+      lox=this%lox
       ALLOCATE(AMAT(LNX,LNX))
       ALLOCATE(AUX(NR))
       AMAT(:,:)=0.D0
@@ -3931,9 +4011,11 @@ GOTO 10001
       DO LN=1,LNX
         AMAT(LN,LN)=1.D0+AMAT(LN,LN)
       ENDDO
+!
       ALLOCATE(E(LNX))
       ALLOCATE(U(LNX,LNX))
       CALL LIB$DIAGR8(LNX,AMAT,E,U)
+!
       IF(MINVAL(E).LE.0.D0) THEN
         CALL ERROR$MSG('1+DO<P|P> IS NOT POSITIVE DEFINITE')
         CALL ERROR$MSG('SETUP WILL PRODUCE GHOST STATES')
@@ -4440,11 +4522,6 @@ use strings_module
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
-      IRBND=0
-      DO IR=1,NR-2
-        IRBND=IR
-        IF(r(ir).GT.RBND) EXIT
-      ENDDO
 !
 !     ==========================================================================
 !     ==  CONSTRUCT                                                           ==
@@ -4452,6 +4529,14 @@ use strings_module
       DO LN=1,LNX
         L=LOX(LN)
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),RBND,PHIPHASE)
+        do ir=1,nr
+          if(psphi(ir,ln)*psphi(ir+1,ln).lt.0.d0) then
+            phiphase=phiphase-1.d0
+            write(*,fmt='("Nr. of nodes reduced by one relative to qn")')
+          end if           
+          if(r(ir).gt.0.1*rbnd) exit
+        enddo
+        
         E=EOFLN(LN)
         C(:)=EXP(-(R(:)/RC(LN))**lambda(ln))
 !       == cut off c, if it falls below minimum ================================
@@ -4496,6 +4581,11 @@ use strings_module
           CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
         END IF
 !       == do not rescale at the nodal plane, but 5 points inward....        
+        IRBND=0
+        DO IR=1,NR-2
+          IRBND=IR
+          IF(r(ir).GT.RBND) EXIT
+        ENDDO
         phi(:)=phi(:)/phi(irbnd-5)*psphi(irbnd-5,ln)
         psphi(:,ln)=phi(:)
         TPSPHI(:,LN)=(E-POT(:)*Y0)*phi(:)

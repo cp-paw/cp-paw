@@ -305,8 +305,8 @@ end module radialfock_module
           DO LRHO=0,2*Lx
 !          if(mod(lf+lb+lrho,2).eq.1) cycle !empirical
 !PRINT*,'========================================================='
-            LMF=LF**2+1  ! RESULT INDEPEMDENT OF IMF: PIC ANY LMF
             SVAR=0.D0
+            LMF=LF**2+1  ! RESULT INDEPEMDENT OF IMF: PIC ANY LMF
             LMB=LB**2
             DO IMB=1,2*LB+1
               LMB=LMB+1
@@ -415,6 +415,9 @@ end module radialfock_module
       REAL(8)    ,INTENT(OUT)    :: EOFI(NX)  ! ONE-PARTICLE ENERGIES
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NX)! ONE-PARTICLE WAVE FUNCTIONS
       REAL(8)    ,INTENT(OUT)    :: SPHI(NR,NX) ! SMALL COMPONENT
+      REAL(8)   ,PARAMETER       :: TOL=1.D-6
+      INTEGER(4),PARAMETER       :: NITER=1000
+      LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
       REAL(8)                    :: R(NR)
       REAL(8)                    :: DREL(NR)  ! RELATIVISTIC CORRECTION
       REAL(8)                    :: RHO(NR)
@@ -422,12 +425,9 @@ end module radialfock_module
       REAL(8)                    :: AUX(NR),AUX1(NR)   !AUXILIARY ARRAY
       REAL(8)                    :: MUX(NR)   !EXCHANGE ONLY POTENTIAL
       INTEGER(4)                 :: ITER
-      INTEGER(4),PARAMETER       :: NITER=1000
       REAL(8)                    :: XAV,XMAX
       LOGICAL(4)                 :: CONVG
-      REAL(8)   ,PARAMETER       :: TOL=1.D-6
       REAL(8)                    :: EKIN,EH,EXC
-      LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
       REAL(8)                    :: POTIN(NR)
       REAL(8)                    :: SVAR
       INTEGER(4)                 :: I,IB,JB,ISO,L
@@ -757,7 +757,7 @@ print*,'xav ',xav,xmax
       REAL(8)                    :: VAL1,VAL2,R1,R2
       INTEGER(4)                 :: IROUT,IRCL,IRBOX,IREND
 !     **************************************************************************
-                                 CALL TRACE$PUSH('ATOMLIB$BOUNDSTATE')
+!                                 CALL TRACE$PUSH('ATOMLIB$BOUNDSTATE')
       CALL RADIAL$R(GID,NR,R)
 !     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST IOUTSIDE THE BOX
       IRBOX=1
@@ -901,7 +901,7 @@ print*,'xav ',xav,xmax
       END IF
 !!$!
 ! DO NOT NORMALIZE!!!! IT DOES NOT MAKE SENSE FOR THE INHOMOGENEOUS SOLUTION
-                                 CALL TRACE$POP()
+!                                 CALL TRACE$POP()
       RETURN
       END SUBROUTINE ATOMLIB$BOUNDSTATE
 !
@@ -941,7 +941,7 @@ print*,'xav ',xav,xmax
       REAL(8)   ,PARAMETER       :: XMAX=1.D+20 !MAX. FACTOR IN THE WAVEFUNCTION
       REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
 !     **************************************************************************
-                                 CALL TRACE$PUSH('ATOMLIB$BOUNDSTATE')
+!                                 CALL TRACE$PUSH('ATOMLIB$phaseshiftstate')
       CALL RADIAL$R(GID,NR,R)
       do ir=1,nr
         irbnd=ir
@@ -988,7 +988,7 @@ print*,'xav ',xav,xmax
         CALL ERROR$MSG('BOUND STATE NOT FOUND')
         CALL ERROR$STOP('ATOMLIB$BOUNDSTATE')
       END IF
-                                 CALL TRACE$POP()
+!                                 CALL TRACE$POP()
       RETURN
       END SUBROUTINE ATOMLIB$phaseshiftstate
 !
@@ -1656,7 +1656,11 @@ pot=vpaw%pspot
       real(8)   ,intent(inout) :: pot(nr)
       real(8)   ,intent(inout) :: psi(nr,nb)
       type(vfock_type),intent(inout) :: vfock
+      real(8)   ,parameter     :: tol=1.d-6
+      integer(4),parameter     :: niter=50
+      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
       real(8)                  :: dpsi(nr,nb)
+      real(8)                  :: spsi(nr,nb)
       real(8)                  :: drrpsi(nr,nb)
       real(8)                  :: pi,y0
       real(8)                  :: sofactor
@@ -1666,19 +1670,19 @@ pot=vpaw%pspot
       real(8)                  :: rdprime(nr)
       real(8)                  :: val,der,val1,val2
       real(8)                  :: etot
+      real(8)                  :: svar
       integer(4)               :: l,ib,ib1,ib2,i,ir,iso
       integer(4)               :: irbox
       integer(4)               :: nn
-      integer(4),parameter     :: niter=20
       integer(4)               :: iter
-      real(8)   ,parameter     :: tol=1.d-3
       logical(4)               :: convg
       real(8)                  :: e
       real(8)                  :: pot1(nr)
-      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
       integer(4)               :: ircl,irout
       real(8)                  :: rout
-      logical(4)               :: tpr=.false.
+      logical(4)               :: tpr=.true.
+      real(8)                  :: overlap(nb,nb)
+real(8)  :: psitest(nr,nb)
 !     **************************************************************************
       pi=4.d0*atan(1.d0)
       y0=1.d0/sqrt(4.d0*pi)
@@ -1712,7 +1716,7 @@ POT(IRBOX+2:)=0.D0
         END IF
         G(:)=0.D0
         CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,G,NN &
-     &                           ,POT,EOFI(IB),PSI(:,IB))
+     &                         ,POT,EOFI(IB),PSI(:,IB))
         AUX(:)=R(:)**2*PSI(:,IB)**2
         CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
         CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
@@ -1728,24 +1732,25 @@ POT(IRBOX+2:)=0.D0
 !     ==  estimate first-order change of the energy                         ==
 !     ========================================================================
       if(tpr) then
+        psitest=psi
         vfock%scale=0.d0
         call ATOMLIB$etotwithfoCK(GID,NR,rbox,lrhox,trel,pot,vfock &
-    &                      ,NB,LOFI,sofi,FOFI,PSI,val1)
+    &                      ,NB,LOFI,sofi,FOFI,PSItest,val1)
         vfock%scale=scale
         print*,'energy without HF                      :',val1
         call ATOMLIB$etotwithfoCK(GID,NR,rbox,lrhox,trel,pot,vfock &
-    &                      ,NB,LOFI,sofi,FOFI,PSI,val2)
+    &                      ,NB,LOFI,sofi,FOFI,PSItest,val2)
         print*,'energy with scaled (HF-mu_X) correction:' ,val2
         print*,'scaled (HF-mu_X) correction            :' ,val2-val1
         vfock%scale=1.d0
         call ATOMLIB$etotwithfoCK(GID,NR,rbox,lrhox,trel,pot,vfock &
-    &                      ,NB,LOFI,sofi,FOFI,PSI,val2)
+    &                      ,NB,LOFI,sofi,FOFI,PSItest,val2)
         vfock%scale=scale
         print*,'100% (HF-Mu_X) correction              :',val2-val1
         aux(:)=vfock%mux
         vfock%mux=0.d0
         call ATOMLIB$etotwithfoCK(GID,NR,rbox,lrhox,trel,pot,vfock &
-    &                      ,NB,LOFI,sofi,FOFI,PSI,val2)
+    &                      ,NB,LOFI,sofi,FOFI,PSItest,val2)
         vfock%mux=aux
         print*,'100% HF correction                     :' ,val2-val1
       end if
@@ -1763,10 +1768,12 @@ POT(IRBOX+2:)=0.D0
 !       ========================================================================
 !       ==  vfock|psi> and partial_r*r|\psi>                                  ==
 !       ========================================================================
+        aux(:)=vfock%mux
+        scale=vfock%scale
         call radialfock$makevfock(gid,nr,nb,lofi,sofi,fofi,psi &
      &                               ,rbox,lrhox,vfock)
         vfock%scale=scale
-        vfock%mux=mux
+        vfock%mux=aux
 !
 !       ========================================================================
 !       ==  calculate total energy (this a fake quantity)                     ==
@@ -1841,6 +1848,7 @@ POT(IRBOX+2:)=0.D0
             call error$stop('atomlib$aescfwithHF')
           end if
 !         == kinetic energy of the wave function (nonrelativistic)
+psitest(:,ib)=r*psi(:,ib)
           call radial$verletd2(gid,nr,r*psi(:,ib),aux2)
           aux(:)=r(:)*aux2(:)-real(l*(l+1),kind=8)*psi(:,ib)
           aux(:)=-(1.d0+drel)*aux(:)
@@ -1850,6 +1858,7 @@ POT(IRBOX+2:)=0.D0
           aux(:)=aux(:)+2.d0*r(:)**2*pot(:)*y0*psi(:,ib)
 !         == Hartree-Fock correction ===========================================
           call radialfock$vpsi(GID,NR,vfock,lofi(ib),psi(:,ib),aux2)
+!psitest(:,ib)=aux2(:)
           aux(:)=aux(:)+2.d0*r(:)**2*aux2(:)
 !         == correct glitches ==================================================
           aux(1:2)=0.d0
@@ -1857,11 +1866,20 @@ POT(IRBOX+2:)=0.D0
           aux1(:)=0.5d0*aux(:)*psi(:,ib)
           call radial$integrate(gid,nr,aux1,aux2)
           call radial$value(gid,nr,aux2,rbox,eofi(ib))
+          aux1(:)=r(:)**2*psi(:,ib)**2
+          call radial$integrate(gid,nr,aux1,aux2)
+          call radial$value(gid,nr,aux2,rbox,svar)
+          eofi(ib)=eofi(ib)/svar
 !         == remove energy term ================================================
           aux(:)=aux(:)-2.d0*r(:)**2*eofi(ib)*psi(:,ib)
-!         == weight with occupation ============================================
-          dpsi(:,ib)=aux(:)/(2.d0*r(:)**2)
+!         == copy into dpsi ====================================================
+          dpsi(2:,ib)=aux(2:)/(2.d0*r(2:)**2)
+          dpsi(1:2,ib)=0.d0
         enddo
+CALL ATOMLIB_WRITEPHI('testfock.dat',GID,NR,vfock%nb,vfock%psi)
+CALL ATOMLIB_WRITEPHI('testmux.dat',GID,NR,1,vfock%mux)
+cALL ATOMLIB_WRITEPHI('test1a.dat',GID,NR,NB,psitest)
+CALL ATOMLIB_WRITEPHI('test1.dat',GID,NR,1,dPSI)
 !
 !       ========================================================================
 !       ==  Determine phiprime-phidot*eprime                                  ==
@@ -1897,8 +1915,21 @@ POT(IRBOX+2:)=0.D0
           dpsi(:,ib)=aux1(:)-aux2(:)*val1/val2
           dpsi(irout+3:,ib)=0.d0
           if(rout.lt.rbox) dpsi(irout:,ib)=0.d0
+!
+!         == small component ===================================================
           call radial$value(gid,nr,dpsi(:,ib),rbox,val)
+          IF(TREL) THEN
+            G(:)=0.D0
+            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
+     &                                       ,DREL,G,PsI(:,IB),SPsI(:,IB))
+          ELSE
+            SPsI(:,IB)=0.D0
+          END IF
+
         enddo
+CALL ATOMLIB_WRITEPHI('test2.dat',GID,NR,NB,dPSI)
+CALL ATOMLIB_WRITEPHI('test0.dat',GID,NR,NB,PSI)
+CALL ATOMLIB_WRITEPHI('pot.dat',GID,NR,1,pot)
 !   
 !       ========================================================================
 !       ==  check convergence                                                 ==
@@ -1917,23 +1948,52 @@ POT(IRBOX+2:)=0.D0
 !       ==  orthogonalize                                                     ==
 !       ========================================================================
         do ib1=1,nb
-          do ib2=1,ib1-1
-            if(lofi(ib1).ne.lofi(ib2)) cycle
-            if(sofi(ib1).ne.sofi(ib2)) cycle
-            aux(:)=r(:)**2*psi(:,ib1)*psi(:,ib2)
-            call radial$integrate(gid,nr,aux,aux1)
-            call radial$value(gid,nr,aux1,rbox,val)
-            psi(:,ib1)=psi(:,ib1)-psi(:,ib2)*val
-          enddo
-          aux(:)=r(:)**2*psi(:,ib1)**2
+          aux(:)=r(:)**2*(psi(:,ib1)**2+spsi(:,ib1)**2)
           call radial$integrate(gid,nr,aux,aux1)
           call radial$value(gid,nr,aux1,rbox,val)
           psi(:,ib1)=psi(:,ib1)/sqrt(val)
+          spsi(:,ib1)=spsi(:,ib1)/sqrt(val)
         enddo
+
+!== orthogonalization killed convergence
+        if(tpr) then
+          overlap(:,:)=0.d0
+          do ib1=1,nb
+            do ib2=1,ib1-1
+              if(lofi(ib1).ne.lofi(ib2)) cycle
+              if(sofi(ib1).ne.sofi(ib2)) cycle
+              aux(:)=r(:)**2*(psi(:,ib1)*psi(:,ib2)+spsi(:,ib1)*spsi(:,ib2))
+              call radial$integrate(gid,nr,aux,aux1)
+              call radial$value(gid,nr,aux1,rbox,val)
+              overlap(ib1,ib2)=val
+!              psi(:,ib1)=psi(:,ib1)-psi(:,ib2)*val
+!              spsi(:,ib1)=spsi(:,ib1)-spsi(:,ib2)*val
+!if(abs(overlap(ib1,ib2)).gt.1.d-7) then
+!write(*,fmt='("overlap",2i5,f20.10)')ib1,ib2,overlap(ib1,ib2)
+!end if
+            enddo
+            aux(:)=r(:)**2*(psi(:,ib1)**2+spsi(:,ib1)**2)
+            call radial$integrate(gid,nr,aux,aux1)
+            call radial$value(gid,nr,aux1,rbox,val)
+            overlap(ib1,ib1)=val
+! orthogonalization
+!            psi(:,ib1)=psi(:,ib1)/sqrt(val)
+!            spsi(:,ib1)=spsi(:,ib1)/sqrt(val)
+if(abs(overlap(ib1,ib1)-1.d0).gt.1.d-7) then
+!write(*,fmt='("overlap",2i5,f20.10)')ib1,ib1,overlap(ib1,ib1)
+end if
+          enddo
+        end if
+!
       ENDDO    ! end of iteration
+
 !
       IF(.NOT.CONVG) THEN
         call error$msg('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
+        call error$i4val('number of iterations',iter)
+        val=maxval(abs(dpsi(:irbox-3,:)))
+        call error$r8val('max deviation',val)
+        call error$r8val('up to radius',r(irbox-3))
         call error$stop('atomlib$aescfwithHF')
       end if
       if(tpr) PRINT*,ITER,'ITERATIONSIN LOOP FOR RADIAL HARTREE FOCK'
@@ -1965,6 +2025,10 @@ POT(IRBOX+2:)=0.D0
       real(8)   ,intent(out)   :: psi(nr)
       real(8)   ,intent(out)   :: e
       real(8)   ,intent(out)   :: tpsi(nr)
+      real(8)   ,parameter     :: tol=1.d-6
+      integer(4),parameter     :: niter=20
+      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
+      logical(4),parameter     :: tpr=.true.
       real(8)                  :: drel(nr)
       real(8)                  :: dpsi(nr)
       real(8)                  :: vfockpsi(nr)
@@ -1977,16 +2041,12 @@ POT(IRBOX+2:)=0.D0
       real(8)                  :: val,val1,val2
       integer(4)               :: ir,iso
       integer(4)               :: irbox
-      integer(4),parameter     :: niter=20
       integer(4)               :: iter
-      real(8)   ,parameter     :: tol=1.d-8
       logical(4)               :: convg
       real(8)                  :: pot1(nr)
-      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
       integer(4)               :: ircl,irout
       real(8)                  :: rout
       real(8)                  :: norm
-      logical(4)               :: tpr=.false.
       logical(4)               :: thom
 !     **************************************************************************
       pi=4.d0*atan(1.d0)
@@ -2207,9 +2267,13 @@ POT(IRBOX+2:)=0.D0
       y0=1.d0/sqrt(4.d0*pi)
       call radial$r(gid,nr,r)
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
+      if(rbnd.le.0) then
+        call error$msg('constant energy solution not implemented')
+        call error$msg('rbnd must be positive')
+        call error$stop('atomlib$phaseshiftstatewithHF')
+      end if
 !      
       thom=maxval(abs(g)).lt.1.d-8
-thom=.false.
       do ir=1,nr
         irbnd=ir
         if(r(ir).gt.rbnd) exit
@@ -2378,14 +2442,18 @@ print*,'ee',e,norm
       real(8)         ,intent(in) :: drel(nr)
       real(8)         ,intent(in) :: pot(nr)
       type(vfock_type),intent(in) :: vfock
-      real(8)   ,intent(in)    :: g(nr)
-      real(8)   ,intent(in)    :: rbnd
-      real(8)   ,intent(inout) :: e
-      real(8)   ,intent(inout) :: psi(nr)
+      real(8)         ,intent(in) :: g(nr)
+      real(8)         ,intent(in) :: rbnd
+      real(8)         ,intent(inout) :: e
+      real(8)         ,intent(inout) :: psi(nr)
+      real(8)         ,parameter  :: tol=1.d-8
+      integer(4)      ,parameter  :: niter=50
+      REAL(8)         ,PARAMETER  :: XMAX=1.D+15 !MAX. FACTOR for WAVEFUNCTION
       real(8)                  :: phase(nr)
       real(8)                  :: dpsi(nr)
       real(8)                  :: phidot(nr)
       real(8)                  :: phiprime(nr)
+      real(8)                  :: pot1(nr)
       real(8)                  :: valdot,derdot,valprime,derprime,val0,der0
       real(8)                  :: pi,y0
       real(8)                  :: sofactor
@@ -2395,12 +2463,12 @@ print*,'ee',e,norm
       real(8)                  :: rdprime(nr)
       real(8)                  :: val,der,svar
       integer(4)               :: ir
-      integer(4),parameter     :: niter=50
       integer(4)               :: iter
-      real(8)   ,parameter     :: tol=1.d-8
       logical(4)               :: convg
-      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
       integer(4)               :: irbnd
+      integer(4)               :: irout
+      integer(4)               :: ircl
+      real(8)                  :: rout
       real(8)                  :: norm
       logical(4)               :: tpr=.false.
       logical(4)               :: tfixe
@@ -2470,6 +2538,8 @@ print*,'ee',e,norm
 !         == remove energy term ================================================
           aux(:)=aux(:)-e*psi(:)
         else
+!         == remove energy term ================================================
+          aux(:)=aux(:)-e*psi(:)
 !         = a reasonable norm is needed later for judging the convergence ======
           aux1(:)=r(:)**2*psi(:)**2
           call radial$integrate(gid,nr,aux1,aux2)
@@ -2479,31 +2549,41 @@ print*,'ee',e,norm
         aux(:)=aux(:)-g(:)
 !       == map into dpsi
         dpsi(:)=-aux(:)
+        dpsi(1:2)=0.d0
 !
 !       ========================================================================
 !       ==  Determine phiprime-phidot*eprime                                  ==
 !       ========================================================================
+        CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
+!       == BOUNDARY CONDITION PHI(ROUT)=0 ====================================
+        rout=r(irout)
+!       ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT TO AVOID AN OVERFLOW ======
+!       == ATTENTION: THERE IS A STEP IN THE POTENTIAL =======================
+        POT1(:)=POT(:)
+        POT1(IROUT:)=E
+!
         g1=dpsi(:)
         g1(1:2)=0.d0
         CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,so,G1,L,E,1,phiprime)
         if(.not.tfixe) then
           g1=psi(:)
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,so,G1,L,E,1,phidot)
-          call radial$value(gid,nr,psi,rbnd,val0)
-          call radial$derivative(gid,nr,PSI,rbnd,der0)
-          call radial$value(gid,nr,phiprime,rbnd,valprime)
-          call radial$derivative(gid,nr,phiprime,rbnd,derprime)
-          call radial$value(gid,nr,phidot,rbnd,valdot)
-          call radial$derivative(gid,nr,phidot,rbnd,derdot)
-          call SCHROEDINGER$resolvePHASESHIFT(PHASE,val,der,nn)
-          val0=val*der0-der*val0
-          valprime=val*derprime-der*valprime
-          valdot=val*derdot-der*valdot
-          svar=(val0+valprime)/valdot  !delta epsilon
-          DPSI(:)=phiprime(:)-phidot(:)*svar
-        else
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G1,L,E,1,PHIDOT)
+          CALL RADIAL$VALUE(GID,NR,PSI,RBND,VAL0)
+          CALL RADIAL$DERIVATIVE(GID,NR,PSI,RBND,DER0)
+          CALL RADIAL$VALUE(GID,NR,PHIPRIME,RBND,VALPRIME)
+          CALL RADIAL$DERIVATIVE(GID,NR,PHIPRIME,RBND,DERPRIME)
+          CALL RADIAL$VALUE(GID,NR,PHIDOT,RBND,VALDOT)
+          CALL RADIAL$DERIVATIVE(GID,NR,PHIDOT,RBND,DERDOT)
+          CALL SCHROEDINGER$RESOLVEPHASESHIFT(PHASE,VAL,DER,NN)
+          VAL0=VAL*DER0-DER*VAL0
+          VALPRIME=VAL*DERPRIME-DER*VALPRIME
+          VALDOT=VAL*DERDOT-DER*VALDOT
+          SVAR=(VAL0+VALPRIME)/VALDOT  !DELTA EPSILON
+          DPSI(:)=PHIPRIME(:)-PHIDOT(:)*SVAR
+        ELSE
           CALL ATOMLIB_WRITEPHI('g.dat',GID,NR,1,g1)
           CALL ATOMLIB_WRITEPHI('phiprime.dat',GID,NR,1,phiprime)
+          CALL ATOMLIB_WRITEPHI('phi.dat',GID,NR,1,psi)
           DPSI(:)=phiprime(:)
         end if
 !   

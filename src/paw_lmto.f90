@@ -909,7 +909,7 @@ PRINT*,'SBARONSITE ',L,SBARONSITE(L**2+1,L**2+1)
         LM=L**2+1
         SVAR=POTPAR(ISP)%CBAR(LN)-POTPAR(ISP)%ENU(LN) &
      &        +SBARONSITE(LM,LM)*POTPAR(ISP)%SQDELTABAR(LN)**2
-print*,'ln svar ',ln,lnchi,svar,aephidot(ircov,ln),aechi(ircov,lnchi)
+print*,'ln,lnchi,l, svar ',ln,lnchi,l,svar,aephidot(ircov,ln),aechi(ircov,lnchi)
 print*,'c,enu   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
 !if(aephidot(ircov,ln)*svar/aechi(ircov,lnchi).gt.0.d0) cycle
         if(svar.lt.0.d0) cycle
@@ -920,9 +920,9 @@ print*,'c,enu   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
 !     == CUT OFF THE TAIL OF THE LOCAL ORBITALS ================================
       DO LNCHI=1,LNXCHI1     
         svar=aechi(ircov,lnchi)/aechi(ircov-1,lnchi)
-!       svar>1 : increasing in absolute value
-!       0<svar<1 : decreasing in absolute value
-!       svar<0 : zero between r(ir-1) and r(ir)
+!       svar>1 : chi increases in absolute value at the covalent radius
+!       0<svar<1: chi decreass in absolute value
+!       svar<0 : zero between r(ircov-1) and r(ircov)
         if(svar.gt.1.d0) then
           do ir=ircov-1,1,-1
             svar1=aechi(ir,lnchi)/aechi(ir-1,lnchi)
@@ -943,6 +943,8 @@ print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
               CALL ERROR$I4VAL('IAT',IAT)
               CALL ERROR$I4VAL('ISP',ISP)
               CALL ERROR$I4VAL('LNCHI ',LNCHI)
+              CALL ERROR$I4VAL('L ',loxchi(LNCHI))
+              CALL ERROR$R8VAL('R(ircov)',R(IRcov))
               CALL ERROR$R8VAL('R',R(IR))
               CALL ERROR$STOP('LMTO$DOLOCORB')
             end if
@@ -962,12 +964,14 @@ print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
               CALL LMTO_WRITEPHI('FAILEDPHI.DAT',GID,NR,LNXCHI1,AEPHI)
               CALL LMTO_WRITEPHI('FAILEDPHIDOT.DAT',GID,NR,LNXCHI1,AEPHIDOT)
               CALL ERROR$MSG('LOCAL ORBITAL CONSTRUCTION FAILED')
-              CALL ERROR$MSG('LOCAL ORBITALS ARE PRINTED INTO FILE')
-              CALL ERROR$CHVAL('FILE','FAILEDLOCALORBITAL.DAT')
+              CALL ERROR$MSG('ORBITAL DOES NOT HAVE A NODE BEFORE INCREASING AGAIN')
+              CALL ERROR$CHVAL('LOCAL ORBITALS ARE PRINTED TO FILE','FAILEDLOCALORBITAL.DAT')
               CALL ERROR$I4VAL('IAT',IAT)
               CALL ERROR$I4VAL('ISP',ISP)
               CALL ERROR$I4VAL('LNCHI ',LNCHI)
-              CALL ERROR$R8VAL('R',R(IR))
+              CALL ERROR$I4VAL('L ',LOXCHI(LNCHI))
+              CALL ERROR$R8VAL('R(IR)',R(IR))
+              CALL ERROR$R8VAL('R(IRCOV)',R(IRCOV))
               CALL ERROR$STOP('LMTO$DOLOCORB')
             END IF
           ENDDO
