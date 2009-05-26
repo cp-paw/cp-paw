@@ -304,14 +304,16 @@ END MODULE LDAPLUSU_MODULE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
 !     **************************************************************************
-      IF(ITHIS.EQ.0) THEN
-        CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
+      IF(ITHISISP.EQ.0) THEN
+        CALL ERROR$MSG(' atom type in LDAPLUSU NOT SELECTED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$GETR8')
       END IF
 
       IF(ID.EQ.'RCUT') THEN
         VAL=THIS%SP%RCUT
+      ELSE IF(ID.EQ.'HFWEIGHT') THEN
+        val=THISISP%HFWEIGHT
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -353,6 +355,37 @@ END MODULE LDAPLUSU_MODULE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$SETL4')
+      END IF
+      RETURN
+      END 
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU$GETL4(ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      USE LDAPLUSU_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID
+      LOGICAL(4)  ,INTENT(out) :: VAL
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == SET ATOM SPECIFIC INFORMATION                                        ==
+!     ==========================================================================
+      IF(ITHISISP.EQ.0) THEN
+        CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LDAPLUSU$GETR8')
+      END IF
+!
+      IF(ID.EQ.'ACTIVE') THEN
+        val=ton.and.THISISP%TON
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LDAPLUSU$GETL4')
       END IF
       RETURN
       END 
@@ -456,6 +489,32 @@ END MODULE LDAPLUSU_MODULE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LDAPLUSU$SETCH')
+      END IF
+      RETURN
+      END 
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU$gETCH(ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      USE LDAPLUSU_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID
+      CHARACTER(*),INTENT(out) :: VAL
+!     **************************************************************************
+      IF(ITHISISP.EQ.0) THEN
+        CALL ERROR$MSG('LDAPLUSU NOT SELECTED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LDAPLUSU$GETCH')
+      END IF
+      IF(ID.EQ.'FUNCTIONALID') THEN
+        VAL=THISISP%FUNCTIONALID
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LDAPLUSU$GETCH')
       END IF
       RETURN
       END 
