@@ -3831,7 +3831,7 @@ GOTO 10001
       ENDDO      
 
 !     == REPORT ===============================================================
-      WRITE(6,FMT='(82("="),T20,"  AE- AND PS-ENERGY LEVELS ")')
+      WRITE(6,FMT='(82("="),T20,"  Straight AE- AND PAW-ENERGY LEVELS ")')
       DO IB=NC+1,NB
         WRITE(6,FMT='("IB=",I2," L=",I2," AE-ENERGY:",F10.5," EV;" &
      &                                 ," PS-ENERGY:",F10.5," EV")') &
