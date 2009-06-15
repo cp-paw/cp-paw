@@ -4046,7 +4046,7 @@ GOTO 10001
           WRITE(*,FMT='(82("="))')
           WRITE(*,FMT='(82("="),T10,A)') &
      &                          ' THIS SETUP IS LIKELY TO PRODUCE GHOST STATES '
-          WRITE(*,FMT='(82("="),T10," SPECIES=",A5," Z=",6.1," ")') &
+          WRITE(*,FMT='(82("="),T10," SPECIES=",A5," Z=",f6.1," ")') &
      &                               TRIM(THIS%ID),THIS%AEZ
           WRITE(*,FMT='(82("="))')
         END IF
