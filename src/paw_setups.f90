@@ -2861,10 +2861,12 @@ DEX=0.05D0
       REAL(8)               :: PHITEST1(NR,LNX)
       REAL(8)   ,ALLOCATABLE:: PHITEST(:,:)
       REAL(8)   ,ALLOCATABLE:: TPHITEST(:,:)
+      REAL(8)   ,ALLOCATABLE:: aephi1(:,:)
+      REAL(8)   ,ALLOCATABLE:: psphi1(:,:)
       REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
-      REAL(8)               :: AERHO(NR),PSRHO(NR)
+      REAL(8)               :: AERHO(NR),PSRHO(NR),augrho(nr)
       REAL(8)               :: G(NR),GS(NR),DREL(NR),G1(NR),PHI(NR),PHI1(NR)
       REAL(8)               :: E
       REAL(8)               :: RC1
@@ -2888,6 +2890,7 @@ DEX=0.05D0
       REAL(8)   ,ALLOCATABLE:: PROJ(:)
       REAL(8)               :: AEPSIF(NR,NB-NC)
       REAL(8)               :: PSPSIF(NR,NB-NC)
+      REAL(8)               :: augPSIF(NR,NB-NC)
       REAL(8)               :: EH,EXC
       INTEGER(4)            :: NN,NN0
       INTEGER(4)            :: NFIL
@@ -3288,7 +3291,7 @@ CALL SETUP_WRITEPHI(+'QN.DAT',GID,NR,LNX,QN)
                            CALL TRACE$PASS('CONSTRUCT PSEUDO PARTIAL WAVES')
       PSPHI=QN
       TPSPHI=TQN
-CALL SETUP_WRITEPHI('XX1.DAT',GID,NR,LNX,PSPHI)
+!CALL SETUP_WRITEPHI('XX1.DAT',GID,NR,LNX,PSPHI)
       IF(TYPE.EQ.'KERKER') THEN
         DO L=0,LX
           DO LN=1,LNX
@@ -3325,7 +3328,7 @@ CALL SETUP_WRITEPHI('XX1.DAT',GID,NR,LNX,PSPHI)
         CALL ERROR$MSG('CAN BE "BESSEL" OR "HBS"')
         CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
       END IF
-CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
+!CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
 !
 !     ==========================================================================
 !     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
@@ -3686,6 +3689,7 @@ GOTO 10001
 !     ==========================================================================
                       CALL TRACE$PASS('CONSTRUCT DENSITY OR UNSCREENING')
       AERHO(:)=AECORE(:)
+      augRHO(:)=AECORE(:)
       PSRHO(:)=PSCORE(:)
       EOFICOMP(:,:)=0.D0
       DO L=0,LX
@@ -3694,12 +3698,16 @@ GOTO 10001
         ALLOCATE(DH1(NPRO,NPRO))
         ALLOCATE(DO1(NPRO,NPRO))
         ALLOCATE(PRO1(NR,NPRO))
+        ALLOCATE(aephi1(NR,NPRO))
+        ALLOCATE(psphi1(NR,NPRO))
         ALLOCATE(PROJ(NPRO))
         IPRO1=0
         DO LN1=1,LNX
           IF(LOX(LN1).NE.L) CYCLE
           IPRO1=IPRO1+1
           PRO1(:,IPRO1)=PRO(:,LN1)
+          aephi1(:,IPRO1)=aephi(:,LN1)
+          psphi1(:,IPRO1)=psphi(:,LN1)
           IPRO2=0
           DO LN2=1,LNX
             IF(LOX(LN2).NE.L) CYCLE
@@ -3786,7 +3794,7 @@ GOTO 10001
 !
 !         ==  ENSURE THAT THE TAILS OF AE AND PS WAVE FUNCTION HAVE SAME SIGN ==
           DO IR=1,NR-2
-            IF(R(IR).LT.ROUT) CYCLE
+            IF(R(IR).LT.Rout) CYCLE
             PSPSIF(IR+2:,IB-NC)=0.D0
             AEPSIF(IR+2:,IB-NC)=0.D0
             IF(PSPSIF(IR-2,IB-NC)*AEPSIF(IR-2,IB-NC).LT.0.D0) &
@@ -3798,7 +3806,7 @@ GOTO 10001
           DO IPRO=1,NPRO
             AUX(:)=R(:)**2*PSPSIF(:,IB-NC)*PRO1(:,IPRO)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,PROJ(IPRO))
+            CALL RADIAL$VALUE(GID,NR,AUX1,Rout,PROJ(IPRO))
           ENDDO
 !
 !         == NORMALIZE PS WAVE FUNCTION=========================================
@@ -3812,8 +3820,14 @@ GOTO 10001
           ENDDO
           PSPSIF(:,IB-NC)=PSPSIF(:,IB-NC)/SQRT(VAL)
           PROJ=PROJ/SQRT(VAL)
-!
     PRINT*,'PROJ ',L,PROJ
+!
+!         == augment ps wave functions =========================================
+          augpsif(:,ib-nc)=pspsif(:,ib-nc)
+          DO IPRO=1,NPRO
+             augpsif(:,ib-nc)=augpsif(:,ib-nc) &
+       &                     +(aephi1(:,ipro)-psphi1(:,ipro))*proj(IPRO)
+          ENDDO
 !
 !         == NORMALIZE AE WAVE FUNCTION=========================================
           AUX(:)=R(:)**2*AEPSIF(:,IB-NC)**2
@@ -3822,11 +3836,14 @@ GOTO 10001
           AEPSIF(:,IB-NC)=AEPSIF(:,IB-NC)/SQRT(VAL)
 !
           PSRHO(:)=PSRHO(:)+FOFI(IB)*PSPSIF(:,IB-NC)**2*Y0
+          augRHO(:)=augRHO(:)+FOFI(IB)*augPSIF(:,IB-NC)**2*Y0
           AERHO(:)=AERHO(:)+FOFI(IB)*AEPSIF(:,IB-NC)**2*Y0
         ENDDO
         DEALLOCATE(DH1)
         DEALLOCATE(DO1)
         DEALLOCATE(PRO1)
+        DEALLOCATE(aephi1)
+        DEALLOCATE(psphi1)
         DEALLOCATE(PROJ)
       ENDDO      
 
@@ -3852,7 +3869,7 @@ GOTO 10001
 !     == UNSCREENING                                                          ==
 !     ==========================================================================
                       CALL TRACE$PASS('CONSTRUCT VADD (UNSCREEN)')
-      CALL ATOMIC_UNSCREEN(GID,NR,ROUT,AEZ,AERHO,PSRHO,PSPOT,RCSM,VADD)
+      CALL ATOMIC_UNSCREEN(GID,NR,ROUT,AEZ,augRHO,PSRHO,PSPOT,RCSM,VADD)
       DO IR=1,NR
         IF(R(IR).GT.MAX(1.2D0*RCOV,RNORM)) THEN
           VADD(IR+1:)=0.D0
@@ -4318,11 +4335,13 @@ AUXARR(:,2)=PSRHO
 AUXARR(:,3)=AERHO-PSRHO
 CALL SETUP_WRITEPHI('TEST',GID,NR,3,AUXARR(:,:3))
 !
+print*,'======= info from atomic_unscreen:z=',aez,' =================='
+print*,'rbox=',rbox,' rcsm=',rcsm
 AUX(:)=PSRHO(:)*R(:)**2
 CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
 CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,QLM)
 PRINT*,'PSRHO CHARGE ',QLM*Y0*4.D0*PI
- AUX(:)=AERHO(:)*R(:)**2
+AUX(:)=AERHO(:)*R(:)**2
 CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
 CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,QLM)
 PRINT*,'AERHO CHARGE ',QLM*Y0*4.D0*PI
@@ -4338,7 +4357,7 @@ PRINT*,'AERHO CHARGE ',QLM*Y0*4.D0*PI,RBOX,R(NR)
       CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
       CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,QLM)
       QLM=QLM-AEZ*Y0    ! CHARGE =QM/Y0
-PRINT*,'CHARGE ',QLM/Y0,AEZ
+PRINT*,'AUGMENTATION CHARGE=',QLM/Y0,' ATOMIC NUMBER=',AEZ
 !
 !     ========================================================================
 !     == ADD COMPENSATION DENSITY AND DETERMINE ELECTROSTATIC POTENTIAL     ==
@@ -4347,17 +4366,20 @@ PRINT*,'CHARGE ',QLM/Y0,AEZ
       CALL GAUSSN(0,ALPHA,CL)
       SVAR=QLM*CL
       AUX(:)=PSRHO(:)+SVAR*EXP(-ALPHA*R(:)**2)
- CALL RADIAL$INTEGRATE(GID,NR,AUX*R(:)**2,AUX1)
- CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,QLM)
-PRINT*,'QLM ',QLM*Y0*4.D0*PI
+!== check charge neutrality psrho+augmentation ===============================
+CALL RADIAL$INTEGRATE(GID,NR,AUX*R(:)**2,AUX1)
+CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,svar)
+PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       CALL RADIAL$POISSON(GID,NR,0,AUX,POTH)
+!     == set potential at the box radius to zero ============================
       CALL RADIAL$VALUE(GID,NR,POTH,RBOX,SVAR)
       POTH=POTH-SVAR
 !
 !     ========================================================================
-!     == EXCHANGE AND CORRELATION                                           ==
+!     == Exchange AND CORRELATION                                           ==
 !     ========================================================================
       CALL RADIAL$DERIVE(GID,NR,PSRHO(:),GRHO)
+      grho(1)=0.d0 ! r(1)=0 density gradient vanishes at the origin
       DO IR=1,NR
         RH=PSRHO(IR)*Y0
         GRHO2=(Y0*GRHO(IR))**2
@@ -4365,14 +4387,22 @@ PRINT*,'QLM ',QLM*Y0*4.D0*PI
         POTXC(IR)=VXC/Y0
         GRHO(IR)=VGXC*2.D0*GRHO(IR)
       ENDDO
-      CALL RADIAL$DERIVE(GID,NR,GRHO(:),AUX)
-      POTXC(:)=POTXC(:)-AUX(:)
-      IF(R(1).GT.1.D+10) THEN
-         POTXC(:)=POTXC(:)-2.D0/R(:)*GRHO(:)
-      ELSE
-        POTXC(2:)=POTXC(2:)-2.D0/R(2:)*GRHO(2:)
-        POTXC(1)=POTXC(1)-2.D0/R(2)*GRHO(2)
-      END IF
+! neu
+      aux(:)=r(:)**2*grho(:)
+      CALL RADIAL$DERIVE(GID,NR,aux,AUX1)
+      grho(2:)=aux1(2:)/r(2:)**2
+      grho(1:5)=grho(5) ! avoid errors due to termination of the grid
+                        ! 5 points offset for 5-point formula applied twice...
+      potxc(:)=potxc(:)-grho(:)
+!alt
+!!$      CALL RADIAL$DERIVE(GID,NR,GRHO(:),AUX)
+!!$      POTXC(:)=POTXC(:)-AUX(:)
+!!$      IF(R(1).GT.1.D+10) THEN
+!!$         POTXC(:)=POTXC(:)-2.D0/R(:)*GRHO(:)
+!!$      ELSE
+!!$        POTXC(2:)=POTXC(2:)-2.D0/R(2:)*GRHO(2:)
+!!$        POTXC(1)=POTXC(1)-2.D0/R(2)*GRHO(2)
+!!$      END IF
 !
 !     ==========================================================================
 !     ==  CUT OF POTENTIAL FOR LOW DENSITIES                                  ==
@@ -4407,6 +4437,7 @@ AUXARR(:,3)=VADD
 AUXARR(:,4)=POTH
 AUXARR(:,5)=POTXC
 CALL SETUP_WRITEPHI('TESTPOT',GID,NR,5,AUXARR(:,:))
+!stop 'forced in atomic_unscreen'
       RETURN
       END
 !
@@ -4521,7 +4552,7 @@ USE STRINGS_MODULE
       REAL(8)   ,INTENT(INOUT)  :: TPSPHI(NR,LNX)
       INTEGER(4),PARAMETER      :: NITER=100
       INTEGER(4),PARAMETER      :: ISO=0
-      REAL(8)   ,PARAMETER      :: TOL=1.D-6
+      REAL(8)   ,PARAMETER      :: TOL=1.D-11
       REAL(8)   ,PARAMETER      :: CMIN=1.D-8
       REAL(8)                   :: E
       REAL(8)                   :: PI,Y0
@@ -4540,12 +4571,14 @@ USE STRINGS_MODULE
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
-!
-!     ==========================================================================
-!     ==  CONSTRUCT                                                           ==
-!     ==========================================================================
       DO LN=1,LNX
         L=LOX(LN)
+        E=EOFLN(LN)
+!
+!       ========================================================================
+!       ==  correct for nodes lying within 0.1*rbnd. They can occur           ==
+!       ==  with a (nonlocal) fock potential and upset the formalism          ==
+!       ========================================================================
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),RBND,PHIPHASE)
         DO IR=1,NR
           IF(PSPHI(IR,LN)*PSPHI(IR+1,LN).LT.0.D0) THEN
@@ -4554,8 +4587,11 @@ USE STRINGS_MODULE
           END IF           
           IF(R(IR).GT.0.1*RBND) EXIT
         ENDDO
-        
-        E=EOFLN(LN)
+!
+!       ========================================================================
+!       ==  set up the additional potential used to adjust the wave function  ==
+!       ==  to become equal with the all-electron wave function               ==
+!       ========================================================================
         C(:)=EXP(-(R(:)/RC(LN))**LAMBDA(LN))
 !       == CUT OFF C, IF IT FALLS BELOW MINIMUM ================================
         SVAR=RC(LN)*(-LOG(CMIN))**(1.D0/LAMBDA(LN))
@@ -4578,7 +4614,9 @@ USE STRINGS_MODULE
           END IF
         ENDDO
 !
-!       == LOOP TO FIND PSEUDO PARTIAL WAVE ====================================
+!       ========================================================================
+!       ==  LOOP TO FIND PSEUDO PARTIAL WAVE                                  ==
+!       ========================================================================
         ISTART=1
         X0=0.D0
         DX=1.D-2
@@ -4598,15 +4636,13 @@ USE STRINGS_MODULE
           CALL ERROR$MSG('LOOP NOT CONVERGED')
           CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
         END IF
+!
 !       == DO NOT RESCALE AT THE NODAL PLANE, BUT 5 POINTS INWARD....        
-        IRBND=0
-        DO IR=1,NR-2
-          IRBND=IR
-          IF(R(IR).GT.RBND) EXIT
-        ENDDO
-        PHI(:)=PHI(:)/PHI(IRBND-5)*PSPHI(IRBND-5,LN)
-        PSPHI(:,LN)=PHI(:)
-        TPSPHI(:,LN)=(E-POT(:)*Y0)*PHI(:)
+        svar=psphi(irbnd,ln)/phi(irbnd)
+        PHI(:)=PHI(:)*svar
+!
+        PSPHI(:irbnd,LN)=PHI(:irbnd)
+        TPSPHI(:irbnd,LN)=(E-POT(:irbnd)*Y0)*PHI(:irbnd)
       ENDDO
       RETURN
       END
@@ -4872,10 +4908,116 @@ PRINT*,'KI ',KI
       TPSPHI(:IRMATCH,:)=SUPTPHI(:IRMATCH,:)
       RETURN
       END
-
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMIC_PSEUDIZE(GID,NR,POW,TVAL,VAL0_,RC,AEF,PSF)
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID
+      INTEGER(4) ,INTENT(IN)     :: NR
+      REAL(8)    ,INTENT(IN)     :: POW   !POWER
+      LOGICAL(4) ,INTENT(IN)     :: TVAL
+      REAL(8)    ,INTENT(IN)     :: VAL0_
+      REAL(8)    ,INTENT(IN)     :: RC
+      REAL(8)    ,INTENT(IN)     :: AEF(NR)
+      REAL(8)    ,INTENT(OUT)    :: PSF(NR)
+      REAL(8)                    :: a,b,c
+      REAL(8)                    :: VAL,DER
+      REAL(8)                    :: psVAL,psDER
+      INTEGER(4)                 :: IR,IR0
+      REAL(8)                    :: R(NR)
+      LOGICAL(4),PARAMETER       :: TTEST=.false.
+      logical                    :: tok
+      real(8)                    :: tol=1.d-10
+      real(8)                    :: svar1,svar2,svar3
+!!$      real(8)                    :: a11,a12,a21,a22,b1,b2,x1,x2,det
+!!$      real(8)                    :: f1(nr),f2(nr)
+!     **************************************************************************
+      CALL RADIAL$VALUE(GID,NR,AEF,RC,VAL)
+      CALL RADIAL$DERIVATIVE(GID,NR,AEF,RC,DER)
+      IF(TVAL) THEN
+        B=RC*DER/POW
+        A=val-B
+        B=B/RC**POW
+        C=0.D0
+      ELSE
+        A=VAL0_
+        C=0.5D0*(RC*DER-POW*(VAL-A))
+        B=VAL-A-C
+        B=B/RC**POW
+        C=C/RC**(POW+2.D0)
+      END IF
+!     == CALCULATE PS FUNCTION
+      CALL RADIAL$R(GID,NR,R)
+      DO IR=1,NR
+        IF(R(IR).GT.RC) THEN
+          IR0=IR
+          EXIT
+        END IF
+      ENDDO
+      PSF(:IR0-1)=a+R(:IR0-1)**POW*(b+C*R(:IR0-1)**2)
+      PSF(IR0:)=AEF(IR0:)
+!
+!     ==========================================================================
+!     ==  attempt to match with numerically equivalent value and derivatives  ==
+!     ==  attempt failed                                                      ==
+!     ==========================================================================
+!!$      CALL RADIAL$VALUE(GID,NR,psF,RC,psVAL)
+!!$      CALL RADIAL$DERIVATIVE(GID,NR,psF,RC,psDER)
+!!$print*,'pseudize 1',psval-val,psder-der,val,der
+!!$      if(tval) then
+!!$         f1(:)=r(:)**pow
+!!$         f2(:)=r(:)**(pow+2.d0)
+!!$      else
+!!$         f1(:)=1.d0
+!!$         f2(:)=r(:)**pow
+!!$      end if
+!!$      f1(ir0:)=0.d0
+!!$      f2(ir0:)=0.d0
+!!$      CALL RADIAL$VALUE(GID,NR,f1,RC,a11)
+!!$      CALL RADIAL$DERIVATIVE(GID,NR,f1,RC,a21)
+!!$      CALL RADIAL$VALUE(GID,NR,f2,RC,a12)
+!!$      CALL RADIAL$DERIVATIVE(GID,NR,f2,RC,a22)
+!!$      b1=val-psval
+!!$      b2=der-psder
+!!$      det=a11*a22-a12*a21
+!!$      x1=(a22*b1-a12*b2)/det
+!!$      x2=(-a21*b1+a11*b2)/det
+!!$      psf(:)=psf(:)+f1(:)*x1+f2(:)*x2
+!!$      CALL RADIAL$VALUE(GID,NR,psF,RC,psVAL)
+!!$      CALL RADIAL$DERIVATIVE(GID,NR,psF,RC,psDER)
+!!$print*,'pseudize 2',psval-val,psder-der,val,der
+!
+!     ==========================================================================
+!     ==  optional test                                                       ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        svar1=a+b*rc**pow+c*rc**(pow+2.d0)
+        svar2=pow*b*rc**(pow-1)+(pow+2.d0)*c*rc**(pow+1.d0)
+        svar3=a
+        if(tval) then
+          tok=.true.
+          tok=tok.and.abs(svar1-val).le.tol
+          tok=tok.and.abs(svar2-der).le.tol
+          if(tval)tok=tok.and.abs(svar3-val0_).le.tol
+          if(.not.tok) then
+            call error$msg('internal error')
+            call error$r8val('f(rc) target    ',val)
+            call error$r8val('f(rc) actual   ',svar1)
+            call error$r8val('df/dr|_rc target',der)
+            call error$r8val('df/dr|_rc actual',svar2)
+            if(tval) then
+              call error$r8val('f(0) target',val0_)
+              call error$r8val('f(0) actual',svar3)
+            end if
+            call error$stop('atomic$pseudize')
+          end if
+        end if
+      END IF
+      RETURN
+      END
 !
 !     ......................................................................
-      SUBROUTINE ATOMIC_PSEUDIZE(GID,NR,POW,TVAL,VAL0_,RC,AEF,PSF)
+      SUBROUTINE ATOMIC_PSEUDIZE_old(GID,NR,POW,TVAL,VAL0_,RC,AEF,PSF)
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID
       INTEGER(4) ,INTENT(IN)     :: NR

@@ -430,7 +430,7 @@ end module radialfock_module
       REAL(8)                    :: EKIN,EH,EXC
       REAL(8)                    :: POTIN(NR)
       REAL(8)                    :: SVAR
-      INTEGER(4)                 :: I,IB,JB,ISO,L
+      INTEGER(4)                 :: I,IB,JB,ISO,L,ir
       INTEGER(4)                 :: ISVAR,IARR(1)
       LOGICAL(4)                 :: TSTART  ! CALCULATE ANGULAR MOMENTA ETC
       LOGICAL(4)                 :: TREL    ! RELATIOVISTIC CALCULATION
@@ -535,6 +535,15 @@ print*,'scale=',scale,' tfock=',tfock
           CALL ERROR$STOP('ATOMLIB$AESCF')
         END IF
         CALL RADIAL$NUCPOT(GID,NR,AEZ,POT)
+!       == use hard sphere boundaruy condition in a metal ======================
+        CALL RADIAL$VALUE(GID,NR,pot,RBOX,svar)
+        pot(:)=pot(:)-svar
+        do ir=1,nr
+          if(r(ir).lt.rbox) cycle
+          pot(ir:)=0.d0
+          exit
+        enddo
+!
         DO L=0,MAXVAL(LOFI)
           DO ISO=-1,1
             IF(TSO.AND.ISO.EQ.0) CYCLE
@@ -557,8 +566,10 @@ print*,'scale=',scale,' tfock=',tfock
       XAV=0.D0
       XMAX=0.D0
       CONVG=.FALSE.
+      potin=pot
       CALL BROYDEN$NEW(NR,NBROYDENMEM,BROYDENSTEP)
       DO ITER=1,NITER
+
 !
 !       ========================================================================
 !       == DETERMINE BOUND STATES FOR A GIVEN POTENTIAL AND ADD TO DENSITY    ==
@@ -612,7 +623,7 @@ print*,'nofockboundstate ',iter
 !       ========================================================================
         IF(TBROYDEN) POTIN=POT
         IF(CONVG) THEN
-          potin=pot
+          potin=pot  ! save input potential to avoid overwriting
           AUX(:)=0.D0
           DO IB=1,NB
             AUX(:)=AUX(:) &
@@ -623,8 +634,7 @@ print*,'nofockboundstate ',iter
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EKIN)
           CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EXC)
           ETOT=EKIN+EH+EXC
-          pot=potin
-!!$PRINT*,'ETOT ',ITER,ETOT
+          pot=potin  ! recover pot as input potential
         END IF
 !
 !       ========================================================================
@@ -641,10 +651,10 @@ print*,'nofockboundstate ',iter
 !       ========================================================================
 !       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD             ==
 !       ========================================================================
-print*,'xav ',xav,xmax
         XAV=SQRT(SUM(R**3*(POT-POTIN)**2)/SUM(R**3))
         XMAX=MAXVAL(ABS(R**2*(POT-POTIN))) 
-        CALL BROYDEN$STEP(NR,POTIN,(POT-POTIN))
+print*,iter,' av(pot-potin)=',xav,' max:r**2*(pot-potin)=',xmax
+        CALL BROYDEN$STEP(NR,POTIN,POT-POTIN)
         POT=POTIN
         CONVG=(XMAX.LT.TOL)
       ENDDO
@@ -696,15 +706,6 @@ print*,'xav ',xav,xmax
         SPHI(:,IB+1:JB)=SPHI(:,IB:JB-1)
         SPHI(:,IB)=AUX
       ENDDO
-!CALL ATOMLIB$FOCKSCHROEDINGER(GID,NR,POT,DREL &
-!     &        ,1.D0,NB,LOFI,F,PHI,MUX,LRHOX,LOFI(IB),SOFI(IB),EOFI(IB),AUX)
-!CALL ATOMLIB$FOCKBOUNDSTATE(GID,NR,LOFI(IB),SOFI,RBOX,DREL &
-!     &                                 ,0.5d0,NB,LOFI,F,PHI,MUX,LRHOX &
-!     &                                 ,G,NNOFI(IB),POT,EOFI(IB),AUX)
-!CALL ATOMLIB_WRITEPHI('FOCKPHI.DAT',GID,NR,1,AUX)
-!CALL ATOMLIB_WRITEPHI('NOFOCKPHI.DAT',GID,NR,nb,PHI(:,:))
-!CALL ATOMLIB_WRITEPHI('wFOCKPHI.DAT',GID,NR,nb,PHI(:,:))
-!STOP 'done'
       RETURN
       END
 !
@@ -1297,7 +1298,7 @@ pot=vpaw%pspot
       Y0=1.D0/SQRT(FOURPI)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
-        IRBOX=IR
+        IRBOX=IR    ! smallest grid-point index with r(irbox).ge.rad
         IF(R(IR).GE.RAD) EXIT
       ENDDO
 !
@@ -1314,15 +1315,18 @@ pot=vpaw%pspot
 !     ==========================================================================
       RHO1=RHO
       IR=MIN(IRBOX+3,NR)
-      RHO1(IR:)=0.D0
+      RHO1(IR:)=0.D0        ! avoid extreme numerical rounding errors
       CALL RADIAL$NUCPOT(GID,NR,AEZ,POTH)
       EDEN(:)=0.5D0*RHO1(:)*POTH(:)
       CALL RADIAL$POISSON(GID,NR,0,RHO1,AUX)
       POTH(:)=POTH(:)+AUX(:)
       CALL RADIAL$VALUE(GID,NR,POTH,RAD,SVAR)
-      SVAR=Q/RAD/Y0-SVAR
-      POTH(1:IRBOX-1)=POTH(1:IRBOX-1)+SVAR
-      POTH(IRBOX:NR)=Q/R(IRBOX:NR)/Y0
+!      SVAR=Q/RAD/Y0-SVAR
+!      POTH(1:IRBOX-1)=POTH(1:IRBOX-1)+SVAR
+!      POTH(IRBOX:NR)=Q/R(IRBOX:NR)/Y0
+!change 090618 boundary conditions: hard sphere in a metal.
+      poth(:)=poth(:)-svar
+      poth(irbox:)=0.d0
       EDEN(:)=EDEN(:)+0.5D0*RHO1(:)*POTH(:)
 !
       EDEN(:)=EDEN(:)*R(:)**2
