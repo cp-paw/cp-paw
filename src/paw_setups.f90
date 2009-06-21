@@ -4576,7 +4576,7 @@ USE STRINGS_MODULE
         E=EOFLN(LN)
 !
 !       ========================================================================
-!       ==  correct for nodes lying within 0.1*rbnd. They can occur           ==
+!       ==  correct for nodes lying within 0.3. They can occur                ==
 !       ==  with a (nonlocal) fock potential and upset the formalism          ==
 !       ========================================================================
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),RBND,PHIPHASE)
@@ -4584,8 +4584,9 @@ USE STRINGS_MODULE
           IF(PSPHI(IR,LN)*PSPHI(IR+1,LN).LT.0.D0) THEN
             PHIPHASE=PHIPHASE-1.D0
             WRITE(*,FMT='("NR. OF NODES REDUCED BY ONE RELATIVE TO QN")')
+print*,'ir ',ir,psphi(ir,ln),psphi(ir+1,ln),r(ir)
           END IF           
-          IF(R(IR).GT.0.1*RBND) EXIT
+          IF(R(IR).GT.0.3d0) EXIT
         ENDDO
 !
 !       ========================================================================
@@ -4628,6 +4629,7 @@ USE STRINGS_MODULE
           CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,ISO,G,L,E,1,PHI)
           CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
           Z0=PHIPHASE-Z0
+print*,'makepsphi ',dx,x0,z0
           CONVG=(ABS(2.D0*DX).LE.TOL)
           IF(CONVG) EXIT
           CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)

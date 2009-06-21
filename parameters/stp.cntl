@@ -22,7 +22,7 @@
 
 
 
- !SETUP  ID='O.75_6.0' EL='O_' ZV= 6.
+ !SETUP  ID='O_.75_6.0' EL='O_' ZV= 6.
          TYPE='HBS' RBOX/RCOV=14.0 RCSM/RCOV=0.25
          RCL/RCOV= 0.75 0.75 0.75 0.75
          LAMBDA= 6. 6. 6. 6.
