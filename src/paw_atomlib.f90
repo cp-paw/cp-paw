@@ -187,6 +187,44 @@ real(8)     ,allocatable :: coeff(:,:,:)
 end module radialfock_module
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE radialfock$printvfock(file,vfock)
+!     **************************************************************************
+!     ** sets up a the input for calculating the fock potential               **
+!     **                                                                      **
+!     ** it is possible to subtract also a local potential vfock%mux(nr)      **
+!     **   and to scale the result vfock%scale.                               **
+!     **   this call initializes scale=1. and mux(:)=0.                       **
+!     **************************************************************************
+      use radialfock_module
+      implicit none
+      character(*)                :: file
+      type(vfock_type),intent(in) :: vfock
+      integer(4)                  :: nr
+      integer(4)                  :: gid
+      real(8)         ,allocatable:: r(:)
+      integer(4)                  :: ir,ib
+!     **************************************************************************
+      if(.not.vfock%ton) return
+      gid=vfock%gid
+      nr=vfock%nr
+      allocate(r(nr))
+      call radial$r(gid,nr,r)
+print*,'printvfock on ',trim(file)
+print*,'nr=',nr,' nb=',vfock%nb
+do ib=1,vfock%nb
+  print *,'ib=',ib,' l=',vfock%l(ib),' f=',vfock%f(ib)
+enddo
+      open(100,file=file)
+      rewind(100)
+      do ir=1,nr
+        write(100,*)r(ir),vfock%mux(ir),vfock%psi(ir,:)
+      enddo
+      close(100)
+      deallocate(r)
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE radialfock$makevfock(gid,nr,nb,lofi,sofi,fofi,psi &
      &                               ,rbox,lrhox,vfock)
 !     **************************************************************************
@@ -235,7 +273,7 @@ end module radialfock_module
 !     == cut of tails                                                         ==
 !     ==========================================================================
       do ir=1,nr
-        if(r(ir).gt.rbox) then
+        if(r(ir).ge.rbox) then
           vfock%psi(ir:,:)=0.d0
           exit
         end if
@@ -247,7 +285,7 @@ end module radialfock_module
       do ib=1,nb
         aux(:)=(r(:)*vfock%psi(:,ib))**2
         call radial$integral(gid,nr,aux,svar)
-        vfock%psi(:,ib)=psi(:,ib)/sqrt(svar)
+        vfock%psi(:,ib)=vfock%psi(:,ib)/sqrt(svar)
       enddo
       return
       end SUBROUTINE radialfock$makevfock
@@ -397,6 +435,7 @@ end module radialfock_module
 !     **                                                                      **
 !     **************************************************************************
       use radialfock_module
+use periodictable_module
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID       ! GRID ID
       INTEGER(4) ,INTENT(IN)     :: NR        ! #(GRID POINTS)
@@ -445,6 +484,8 @@ end module radialfock_module
       character(128)             :: string
       real(8)                    :: scale
       logical                    :: tsecond
+      real(8)                    :: rfock !extent of orbitals defining fock term
+      real(8)       ,allocatable:: eofi_fock(:)
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -535,7 +576,8 @@ print*,'scale=',scale,' tfock=',tfock
           CALL ERROR$STOP('ATOMLIB$AESCF')
         END IF
         CALL RADIAL$NUCPOT(GID,NR,AEZ,POT)
-!       == use hard sphere boundaruy condition in a metal ======================
+!       == use "hard sphere boundary condition" for the poisson equation =======
+!       == that is choose the pot(r)=0 for r>rbox ==============================
         CALL RADIAL$VALUE(GID,NR,pot,RBOX,svar)
         pot(:)=pot(:)-svar
         do ir=1,nr
@@ -576,10 +618,10 @@ print*,'scale=',scale,' tfock=',tfock
 !       ========================================================================
         IF(TFOCK.AND.tsecond) THEN
 print*,'fockboundstate ',iter
-          call radialfock$makevfock(gid,nr,nb,lofi,sofi,fofi,phi,rbox &
-     &                            ,lrhox,vfock)
-          vfock%scale=scale
-          vfock%mux(:)=mux(:)          
+!!$          call radialfock$makevfock(gid,nr,nb,lofi,sofi,fofi,phi,rbox &
+!!$     &                            ,lrhox,vfock)
+!!$          vfock%scale=scale
+!!$          vfock%mux(:)=mux(:)          
           call atomlib$aescfwithHF(gid,nr,trel,nb,sofi,lofi,fofi,eofi,phi &
      &                            ,lrhox,rbox,drel,pot,mux,scale,vfock)
         else
@@ -638,15 +680,39 @@ print*,'nofockboundstate ',iter
         END IF
 !
 !       ========================================================================
-!       ==  EXIT IF CONVERGED                                                 ==
-!       ========================================================================
-        IF(CONVG) EXIT
-
-!       ========================================================================
 !       == CALCULATE OUTPUT POTENTIAL                                         ==
 !       ========================================================================
         CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EXC)
-        IF(TFOCK) CALL ATOMLIB$BOXMUX(GID,NR,RBOX,RHO,MUX)
+!
+!       == determine wave functions for fock potential =========================
+        IF(TFOCK.AND.(tsecond.or.convg)) THEN
+CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RFOCK)
+RFOCK=1.1D0*RFOCK
+          if(.not.tsecond) then
+            allocate(eofi_fock(nb))
+            eofi_fock(:)=eofi(:)
+            call ATOMLIB$BOUNDSTATEs(GID,NR,nb,Lofi,SOfi,nnofi,eofi_fock,pot &
+     &                            ,TREL,rfock,PHI,sphi)
+          else
+            call atomlib$aescfwithHF(gid,nr,trel,nb,sofi,lofi,fofi,eofi_fock,phi &
+     &                            ,lrhox,rfock,drel,pot,mux,scale,vfock)
+          end if
+          call radialfock$makevfock(gid,nr,nb,lofi,sofi,fofi,phi,rfock &
+     &                            ,lrhox,vfock)
+          RHO(:)=0.D0
+          DO IB=1,NB
+            RHO(:)=RHO(:)+Fofi(IB)*C0LL*(PHI(:,IB)**2+SPHI(:,IB)**2)
+          ENDDO
+          CALL ATOMLIB$BOXMUX(GID,NR,Rfock,RHO,MUX)
+          vfock%mux(:)=mux(:)          
+          vfock%scale=scale
+          call radialfock$printvfock('vfock.dat',vfock)
+        end if
+!
+!       ========================================================================
+!       ==  EXIT IF CONVERGED                                                 ==
+!       ========================================================================
+        IF(CONVG) EXIT
 !
 !       ========================================================================
 !       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD             ==
@@ -672,6 +738,7 @@ print*,iter,' av(pot-potin)=',xav,' max:r**2*(pot-potin)=',xmax
         tsecond=.true.
         goto 1000
       end if
+call radialfock$printvfock('vfock.dat',vfock)
 !!$DO I=1,NB
 !!$ WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),F(I),NNOFI(I),EOFI(I)
 !!$ENDDO
@@ -708,6 +775,68 @@ print*,iter,' av(pot-potin)=',xav,' max:r**2*(pot-potin)=',xmax
       ENDDO
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMLIB$BOUNDSTATEs(GID,NR,nb,Lofi,SOfi,nnofi,eofi,pot &
+     &                              ,TREL,rbox,PHI,sphi)
+!     **************************************************************************
+!     **  finds a set of boundstates for a given potential                    **
+!     ** the wave functions are normalized
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: Nb      ! #(wave function shells)
+      INTEGER(4) ,INTENT(IN)     :: Lofi(nb)! ANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: SOfi(nb)! SWITCH FOR SPIN-ORBIT COUP.
+      INTEGER(4) ,INTENT(IN)     :: NNofi(nb)  !#(NODES)
+      REAL(8)    ,INTENT(INOUT)  :: Eofi(NB)   !ENERGY
+      REAL(8)    ,INTENT(IN)     :: POT(NR)    !POTENTIAL
+      logical(4) ,intent(in)     :: trel       !switch for relativistic corr/
+      REAL(8)    ,INTENT(IN)     :: RBOX       !BOX RADIUS
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR,nb) !WAVE-FUNCTION (large comp.)
+      REAL(8)    ,INTENT(OUT)    :: sPHI(NR,nb)!WAVE-FUNCTION (small comp.)
+      real(8)                    :: drel(nr)
+      real(8)                    :: g(nr)
+      real(8)                    :: r(nr)
+      real(8)                    :: svar
+      real(8)                    :: aux(nr),aux1(nr)
+      integer(4)                 :: ib
+!     **************************************************************************
+      call radial$r(gid,nr,r)
+      DREL(:)=0.D0 
+      DO IB=1,NB
+!
+!       ========================================================================
+!       == DETERMINE ENERGY AND LARGE COMPONENT                               ==
+!       ========================================================================
+        IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
+        G(:)=0.D0
+        CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,G &
+     &                         ,NNOFI(IB),POT,EOFI(IB),PHI(:,IB))
+!
+!       ========================================================================
+!       == DETERMINE SMALL COMPONENTS                                         ==
+!       ========================================================================
+        IF(TREL) THEN
+          G(:)=0.D0
+          CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
+     &                                       ,DREL,G,PHI(:,IB),SPHI(:,IB))
+        ELSE
+          SPHI(:,IB)=0.D0
+        END IF
+!
+!       ========================================================================
+!       == normalize                                                          ==
+!       ========================================================================
+        AUX(:)=R(:)**2*(PHI(:,IB)**2+SPHI(:,IB)**2)
+        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+        CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
+        PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
+        SPHI(:,IB)=SPHI(:,IB)/SQRT(SVAR)
+      ENDDO
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,DREL,G,NN,POT,E,PHI)
@@ -933,7 +1062,7 @@ print*,iter,' av(pot-potin)=',xav,' max:r**2*(pot-potin)=',xmax
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) ! WAVE-FUNCTION
       INTEGER(4)                 :: ISTART,IBI
       REAL(8)                    :: X0,DX,XM,ZM,Z0
-      REAL(8)    ,PARAMETER      :: TOL=1.D-8
+      REAL(8)    ,PARAMETER      :: TOL=1.D-15
       REAL(8)                    :: R(NR)
       INTEGER(4) ,PARAMETER      :: NITER=100
       INTEGER(4)                 :: I,IR
@@ -941,6 +1070,11 @@ print*,iter,' av(pot-potin)=',xav,' max:r**2*(pot-potin)=',xmax
       INTEGER(4)                 :: IRbnd
       REAL(8)   ,PARAMETER       :: XMAX=1.D+20 !MAX. FACTOR IN THE WAVEFUNCTION
       REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
+      real(8)                    :: phiup(nr)
+      real(8)                    :: phidown(nr)
+      logical(4)                 :: tup,tdown
+      real(8)                    :: zup,zdown
+      real(8)                    :: xup,xdown
 !     **************************************************************************
 !                                 CALL TRACE$PUSH('ATOMLIB$phaseshiftstate')
       CALL RADIAL$R(GID,NR,R)
@@ -958,6 +1092,10 @@ print*,iter,' av(pot-potin)=',xav,' max:r**2*(pot-potin)=',xmax
       X0=E
       DX=1.D-2
       CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      phiup(nr)=0.d0
+      phidown(nr)=0.d0
+      tup=.false.
+      tdown=.false.
       DO I=1,NITER
         E=X0
 !
@@ -978,6 +1116,17 @@ print*,iter,' av(pot-potin)=',xav,' max:r**2*(pot-potin)=',xmax
 !       ========================================================================
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,Rbnd,Z0)
         Z0=Z0-Phase
+        if(z0.ge.0.d0) then
+          phiup(:)=phi(:)
+          tup=.true.
+          zup=z0
+          xup=x0
+        else
+          phidown(:)=phi(:)
+          tdown=.true.
+          zdown=z0
+          xdown=x0
+        end if
         IF(ABS(2.D0*DX).LE.TOL) EXIT
 !       ========================================================================
 !       ==  BISECTION                                                         ==
@@ -989,6 +1138,23 @@ print*,iter,' av(pot-potin)=',xav,' max:r**2*(pot-potin)=',xmax
         CALL ERROR$MSG('BOUND STATE NOT FOUND')
         CALL ERROR$STOP('ATOMLIB$BOUNDSTATE')
       END IF
+!
+!     ==========================================================================
+!     == Mix result linearly                                                  ==
+!     ==========================================================================
+      if(.not.tup.and.tdown) then
+        CALL ERROR$MSG('rare event captured')
+        CALL ERROR$MSG('bisection does not bracket from both sides')
+        CALL ERROR$STOP('ATOMLIB$BOUNDSTATE')
+      end if
+      phi(:)=(zup*phidown-zdown*phiup)/(zup-zdown)
+print*,'factors ',zup/(zup-zdown),-zdown/(zup-zdown)
+print*,'xup  =',xup  ,' zup   ',zup  ,' diffz ',zup-zdown
+print*,'xdown=',xdown,' zdown ',zdown,' diffx ',xup-xdown
+      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,Rbnd,Z0)
+      z0=z0-phase
+print*,'l=',l,' e=',e,' zup-zdown',zup-zdown,' z0=',z0
+
 !                                 CALL TRACE$POP()
       RETURN
       END SUBROUTINE ATOMLIB$phaseshiftstate
@@ -1333,6 +1499,9 @@ pot=vpaw%pspot
       CALL RADIAL$INTEGRATE(GID,NR,EDEN,AUX1)
       CALL RADIAL$VALUE(GID,NR,AUX1,RAD,EH)
 !
+!     ==========================================================================
+!     == exchange correlation                                                 ==
+!     ==========================================================================
       CALL RADIAL$DERIVE(GID,NR,RHO,GRHO)
       DO IR=1,NR
         RH=RHO(IR)*Y0
@@ -2510,6 +2679,7 @@ print*,'ee',e,norm
 !     ==  now start loop                                                      ==
 !     ==========================================================================
       do iter=1,niter
+print*,'iter ',iter,e
 !
 !       ========================================================================
 !       ==  construct |dpsi>=de/dpsi                                          ==
@@ -2533,12 +2703,18 @@ print*,'ee',e,norm
 !       == estimate energy =====================================================
         if(.not.tfixe) then
           aux1(:)=r(:)**2*psi(:)*(aux(:)-g(:))
+CALL ATOMLIB_WRITEPHI('psi.dat',GID,NR,1,psi)
+CALL ATOMLIB_WRITEPHI('g.dat',GID,NR,1,g)
+CALL ATOMLIB_WRITEPHI('aux1.dat',GID,NR,1,aux1)
           call radial$integrate(gid,nr,aux1,aux2)
           call radial$value(gid,nr,aux2,rbnd,e)
           aux1(:)=r(:)**2*psi(:)**2
+CALL ATOMLIB_WRITEPHI('aux2.dat',GID,NR,1,aux1)
           call radial$integrate(gid,nr,aux1,aux2)
           call radial$value(gid,nr,aux2,rbnd,norm)
           e=e/norm
+print*,'e ',e,'rbnd=',rbnd
+if(e.lt.-1000.d0) call error$stop('forced') 
 !         == remove energy term ================================================
           aux(:)=aux(:)-e*psi(:)
         else

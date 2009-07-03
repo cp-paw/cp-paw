@@ -1623,7 +1623,7 @@ ENDDO
         LAMBDA(LN)=THIS%PARMS%LAMBDA(L+1)
       ENDDO
 !
-PRINT*,'MARKE BEFORE MAKEPARTIALWAVES'
+PRINT*,'MARKE BEFORE atomic_MAKEPARTIALWAVES'
       CALL TRACE$PASS('CONSTRUCT PARTIAL WAVES')
       CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%ATOM%AEPOT,VFOCK &
      &           ,NB,NC &
@@ -2918,6 +2918,15 @@ REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
       RNORM=RBOX
       RBND=RNORM
       PHIPHASE=1.D0    !NODE AT R=RBND!
+print*,'r(nr)   ',r(nr),' outermost gridpoint'
+print*,'r(nr-1) ',r(nr-1),' second to outermost gridpoint'
+print*,'r(nr-2) ',r(nr-2),' third tooutermost gridpoint'
+print*,'rout    ',rout,' hard sphere radius for atomic calculation'
+print*,'rbox    ',rbox,' radius for boundary conditions for partial waves'
+print*,'rbnd    ',rbnd,' radius for boundary condition for partial wavers'
+print*,'rnorm   ',rnorm,' normalization will be done up to rnorm'
+print*,'rcov    ',rcov,' covalent radius'
+print*,'rASA    ',rasa,' asa radius'
 !
 !     ==========================================================================
 !     == RESOLVE KEY                                                          ==
@@ -3003,19 +3012,23 @@ REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !     == FIRST USE ONLY THE LOCAL POTENTIAL... =================================
       DO L=0,LX
         ISO=0
+!       == get energy of the lowest valence state with this l ==================
         E=0.D0
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
           E=EOFI1(IB)
           EXIT
         ENDDO
+!       == use highest core state with this l as inhomogeneity =================
         G(:)=0.D0
         IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+print*,'phiphase  before: ',ln,l,e,phiphase,rbnd
           CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,RBND,PHIPHASE,E,PHI)
+print*,'phiphase  after: ',ln,l,e,phiphase
           EOFLN(LN)=E
           NLPHI(:,LN)=PHI(:)
           TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*PHI(:)
@@ -3023,7 +3036,7 @@ REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
         ENDDO
       ENDDO
 PRINT*,'EOFLN',EOFLN
-!CALL SETUP_WRITEPHI('TEST1.DAT',GID,NR,LNX,NLPHI)
+CALL SETUP_WRITEPHI('TEST1.DAT',GID,NR,LNX,NLPHI)
 !
 !
 !     ==========================================================================
@@ -3043,6 +3056,7 @@ PRINT*,'EOFLN',EOFLN
               IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
 !             == REMARK: IF THIS CRASHES PROCEED LIKE FOR NODELESS PARTIAL WAVES
 !             == WORK WITH LOCAL POTENTIAL FIRST AND THEN UPDATE WITH FOCK POT
+print*,'rout ',rout
               CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
      &                                    ,ROUT,E,UOFI(:,IB))
               IF(TREL) THEN
@@ -3086,6 +3100,7 @@ PRINT*,'EOFLN',EOFLN
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
             IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,EOFLN(LN),DREL)
+print*,' ln= ',ln,' l=',l,' e=',eofln(ln)
             CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
     &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
             CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,NLPHI(:,LN),AUX)
@@ -3291,7 +3306,7 @@ CALL SETUP_WRITEPHI(+'QN.DAT',GID,NR,LNX,QN)
                            CALL TRACE$PASS('CONSTRUCT PSEUDO PARTIAL WAVES')
       PSPHI=QN
       TPSPHI=TQN
-!CALL SETUP_WRITEPHI('XX1.DAT',GID,NR,LNX,PSPHI)
+CALL SETUP_WRITEPHI('XX1.DAT',GID,NR,LNX,PSPHI)
       IF(TYPE.EQ.'KERKER') THEN
         DO L=0,LX
           DO LN=1,LNX
@@ -3328,7 +3343,7 @@ CALL SETUP_WRITEPHI(+'QN.DAT',GID,NR,LNX,QN)
         CALL ERROR$MSG('CAN BE "BESSEL" OR "HBS"')
         CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
       END IF
-!CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
+CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
 !
 !     ==========================================================================
 !     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
@@ -4296,7 +4311,7 @@ GOTO 10001
       OPEN(100,FILE=FILE)
       DO IR=1,NR
         IF(R(IR).GT.3.D0.AND.MAXVAL(ABS(PHI(IR,:))).GT.1.D+3) EXIT
-        WRITE(100,FMT='(F15.10,2X,20(F25.15,2X))')R(IR),PHI(IR,:)
+        WRITE(100,FMT='(F15.10,2X,20(E25.10,2X))')R(IR),PHI(IR,:)
       ENDDO
       CLOSE(100)
       RETURN
@@ -4567,13 +4582,17 @@ USE STRINGS_MODULE
       INTEGER(4)                :: LN,ITER,IR
       LOGICAL(4)                :: CONVG
       REAL(8)                   :: SVAR
+      character(64)  :: string
 !     **************************************************************************
+                                call trace$push('atomic_makepsphi_hbs')
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
+!print*,'eofln ',eofln
       DO LN=1,LNX
         L=LOX(LN)
         E=EOFLN(LN)
+!print*,'ln ',ln,' l=',l,' e=',e
 !
 !       ========================================================================
 !       ==  correct for nodes lying within 0.3. They can occur                ==
@@ -4584,7 +4603,7 @@ USE STRINGS_MODULE
           IF(PSPHI(IR,LN)*PSPHI(IR+1,LN).LT.0.D0) THEN
             PHIPHASE=PHIPHASE-1.D0
             WRITE(*,FMT='("NR. OF NODES REDUCED BY ONE RELATIVE TO QN")')
-print*,'ir ',ir,psphi(ir,ln),psphi(ir+1,ln),r(ir)
+!print*,'ir ',ir,psphi(ir,ln),psphi(ir+1,ln),r(ir)
           END IF           
           IF(R(IR).GT.0.3d0) EXIT
         ENDDO
@@ -4627,11 +4646,28 @@ print*,'ir ',ir,psphi(ir,ln),psphi(ir+1,ln),r(ir)
           DREL(:)=0.D0
           G(:)=0.D0
           CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,ISO,G,L,E,1,PHI)
+          if(.not.(phi(irbnd+2).gt.0.d0.or.phi(irbnd+2).le.0.d0)) then
+            CALL ERROR$MSG('wave function is not a number')
+            CALL ERROR$MSG('overflow of wave function encountered')
+            CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
+          end if
           CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
           Z0=PHIPHASE-Z0
-print*,'makepsphi ',dx,x0,z0
+print*,'makepsphi ',dx,x0,z0,rbnd
           CONVG=(ABS(2.D0*DX).LE.TOL)
           IF(CONVG) EXIT
+          IF(ABS(X0).GT.1.D+5) THEN
+            CALL ERROR$MSG('NO SUITABLE PSEUDO-PARTIAL WAVE FOUND')
+            CALL ERROR$MSG('EITHER INCREASE CUTOFF-RADIUS OR ..')
+            CALL ERROR$MSG('.. DISCARD THIS PARTIAL WAVE IF IT HAS HIGH ENERGY')
+            CALL ERROR$I4VAL('L',L)
+            CALL ERROR$r8VAL('E',E)
+            CALL ERROR$r8VAL('x0',x0)
+            phi(irbnd+2:)=0.d0  ! mask overflows
+            CALL SETUP_WRITEPHI('ERRORDATA1.DAT',GID,NR,1,PHI)
+            CALL SETUP_WRITEPHI('ERRORDATA2.DAT',GID,NR,1,PSPHI(:,LN))
+            CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
+          END IF
           CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
         ENDDO
         IF(.NOT.CONVG) THEN
@@ -4639,13 +4675,18 @@ print*,'makepsphi ',dx,x0,z0
           CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
         END IF
 !
+!       ========================================================================
+!       ==  rescale pseudo partial waves so that they match to AE partial waves=
+!       ========================================================================
 !       == DO NOT RESCALE AT THE NODAL PLANE, BUT 5 POINTS INWARD....        
         svar=psphi(irbnd,ln)/phi(irbnd)
         PHI(:)=PHI(:)*svar
 !
+!       == overwrite nodeless input partial wave by pseudo partial wave
         PSPHI(:irbnd,LN)=PHI(:irbnd)
         TPSPHI(:irbnd,LN)=(E-POT(:irbnd)*Y0)*PHI(:irbnd)
       ENDDO
+                                call trace$pop()
       RETURN
       END
 !

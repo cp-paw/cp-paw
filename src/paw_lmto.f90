@@ -924,7 +924,7 @@ print*,'c,enu   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
 !       0<svar<1: chi decreass in absolute value
 !       svar<0 : zero between r(ircov-1) and r(ircov)
         if(svar.gt.1.d0) then
-          do ir=ircov-1,1,-1
+          do ir=ircov-1,2,-1
             svar1=aechi(ir,lnchi)/aechi(ir-1,lnchi)
             if(svar1.le.0.d0) then
 print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
