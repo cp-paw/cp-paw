@@ -24,7 +24,7 @@
       INTEGER(4) ,INTENT(IN)     :: IDIR    ! IDIR=1 INTEGRATE OUTWARD
                                             ! IDIR=-1 INTEGRATE INWARD
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2007 ********
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2007 ************
       CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHI)
       RETURN
       END SUBROUTINE RADIAL$SCHRODINGER
@@ -2271,7 +2271,8 @@ CHARACTER(32):: FILE
 !     ==========================================================================
 !     ==  DETERMINE THE RADIAL KINETIC ENERGY                                 ==
 !     ==========================================================================
-      FAC=0.5D0*REAL(L*(L+1),KIND=8)
+!     FAC=0.5D0*REAL(L*(L+1),KIND=8)
+      fac=0.d0   ! zentrifugal potential can lead to very small rout
       TKIN(2:)=E-V00(2:)*Y0-FAC/R(2:)**2  ! TKIN=E-VEFF
       TKIN(1)=TKIN(2)  ! AVOID DIVIDE-BY-ZERO FOR R(1)=0    
 !
@@ -2321,6 +2322,7 @@ CHARACTER(32):: FILE
           END IF
         ENDDO
       END IF
+!call atomlib_writephi('test1.dat',gid,nr,1,-tkin)
 !
 !     ==========================================================================
 !     == FIX UP END OF THE GRID                                               ==
@@ -2823,7 +2825,11 @@ CHARACTER(32):: FILE
           if(phi(ir+1)*phi(ir-1).lt.0.d0)PHASE=PHASE+1.d0
         end if
       ENDDO
-      PHASE=0.5D0-ATAN(DER/VAL)/PI+PHASE
+      if(val.ne.0.d0) then
+         PHASE=0.5D0-ATAN(DER/VAL)/PI+PHASE
+      else
+         PHASE=1.D0+PHASE
+      end if
       RETURN
       END
 !

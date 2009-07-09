@@ -1474,6 +1474,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
 !
 !     == SET SWITCHES FOR RELATIVISTIC/NON-RELATIVISTIC HERE ===================
       THIS%SETTING%TREL=.TRUE.
+THIS%SETTING%TREL=.false.
       THIS%SETTING%SO=.FALSE.
 !     == SELECT HARTREE FOCK ADMIXTURE =========================================
       THIS%SETTING%FOCK=0.D0
@@ -2986,6 +2987,10 @@ print*,'rASA    ',rasa,' asa radius'
             END IF
             EOFI1(IB)=E
             TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
+            if(vfock%ton) then
+              CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,UOFI(:,IB),AUX)
+              TUOFI(:,IB)=tuofi(:,ib)-AUX(:)
+            end if
             AUX=(1.D0+DREL)*UOFISM(:,IB)
             CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
             IF(ISO.EQ.1) THEN
@@ -3004,6 +3009,9 @@ print*,'rASA    ',rasa,' asa radius'
           ENDDO
         ENDDO
       ENDDO
+print*,'eofi ',eofi
+print*,'eofi1 ',eofi1
+!CALL SETUP_WRITEPHI('uofi1.DAT',GID,NR,nb,uofi)
 !
 !     ==========================================================================
 !     == CONSTRUCT NODELESS PARTIAL WAVES  (LOCAL POTENTIAL ONLY)             ==
@@ -3025,22 +3033,22 @@ print*,'rASA    ',rasa,' asa radius'
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-print*,'phiphase  before: ',ln,l,e,phiphase,rbnd
+!print*,'phiphase  before: ',ln,l,e,phiphase,rbnd
           CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,RBND,PHIPHASE,E,PHI)
-print*,'phiphase  after: ',ln,l,e,phiphase
+!print*,'phiphase  after: ',ln,l,e,phiphase
           EOFLN(LN)=E
           NLPHI(:,LN)=PHI(:)
           TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*PHI(:)
           G(:)=NLPHI(:,LN)
         ENDDO
       ENDDO
-PRINT*,'EOFLN',EOFLN
-CALL SETUP_WRITEPHI('TEST1.DAT',GID,NR,LNX,NLPHI)
-!
+!PRINT*,'EOFLN',EOFLN
+!CALL SETUP_WRITEPHI('TEST1.DAT',GID,NR,LNX,NLPHI)
 !
 !     ==========================================================================
 !     == UPDATE WAVE FUNCTIONS WITH FOCK POTENTIAL                            ==
+!     == the fock correction must
 !     ==========================================================================
       IF(VFOCK%TON) THEN
                       CALL TRACE$PASS('APPLY FOCK CORRECTION TO WAVE FUNCTIONS')
@@ -3056,7 +3064,6 @@ CALL SETUP_WRITEPHI('TEST1.DAT',GID,NR,LNX,NLPHI)
               IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
 !             == REMARK: IF THIS CRASHES PROCEED LIKE FOR NODELESS PARTIAL WAVES
 !             == WORK WITH LOCAL POTENTIAL FIRST AND THEN UPDATE WITH FOCK POT
-print*,'rout ',rout
               CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
      &                                    ,ROUT,E,UOFI(:,IB))
               IF(TREL) THEN
@@ -3087,6 +3094,8 @@ print*,'rout ',rout
           ENDDO
         ENDDO
       END IF
+!print*,'eofi1 ',eofi1
+!CALL SETUP_WRITEPHI('uofi2.DAT',GID,NR,nb,uofi)
 !
 !     ==========================================================================
 !     == UPDATE NODELESS PARTIAL WAVES  WITH FOCK POTENTIAL                   ==
@@ -4653,7 +4662,7 @@ USE STRINGS_MODULE
           end if
           CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
           Z0=PHIPHASE-Z0
-print*,'makepsphi ',dx,x0,z0,rbnd
+!print*,'makepsphi ',dx,x0,z0,rbnd
           CONVG=(ABS(2.D0*DX).LE.TOL)
           IF(CONVG) EXIT
           IF(ABS(X0).GT.1.D+5) THEN
