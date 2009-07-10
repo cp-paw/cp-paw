@@ -1682,7 +1682,12 @@ DEX=0.05D0
 !       
 !     == VADD (VBAR) ===========================================================
       ALLOCATE(THIS%VADDOFG(NG))
+print*,'marke 1'
+print*,'this%vadd ',this%vadd 
+print*,'this%vaddofg ',this%vaddofg 
+print*,'marke 1a'
       CALL RADIAL$BESSELTRANSFORM(0,GID,NR,THIS%VADD,GIDG,NG,THIS%VADDOFG)
+print*,'marke 2'
       THIS%VADDOFG(:)=FOURPI*THIS%VADDOFG(:)
 !     == PSCORE (VBAR) =========================================================
       ALLOCATE(THIS%PSCOREOFG(NG))
