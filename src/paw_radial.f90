@@ -2072,9 +2072,9 @@ END MODULE LOGRADIAL_MODULE
 !       == deallocate all stored radial grids. =================================
 !       == they will be reconstructed by call to logradial_resolve =============
         DO IGID=1,NGIDX
-          IF(ASSOCIATED(GRIDARRAY(IGID)%R))DEALLOCATE(GRIDARRAY(IGID)%R)
+          If(ASSOCIATED(GRIDARRAY(IGID)%R))DEALLOCATE(GRIDARRAY(IGID)%R)
         ENDDO
-!       == SAVE CONTENTS OF GRIDARRAY AND DEALLOCATE IT ========================
+!       == Save CONTENTS OF GRIDARRAY AND DEALLOCATE IT ========================
         IF(ALLOCATED(GRIDARRAY)) THEN
           ALLOCATE(NEWARRAY(NGIDX))
           NEWARRAY(:)=GRIDARRAY(:)
@@ -3226,9 +3226,7 @@ END MODULE BESSELTRANSFORM_MODULE
           CALL ERROR$MSG('OUT OF RANGE: nmap.ge.nmapx')
           CALL ERROR$STOP('RADIAL$BESSELTRANSFORM')
         END IF
-print*,'bess marke 1'
         CALL RADIAL$NEW('LOG',GID1A)
-print*,'bess marke 2'
         CALL RADIAL$NEW('LOG',GID2A)
         NMAP=NMAP+1
         MAP(1,NMAP)=GID1
