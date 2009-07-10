@@ -1294,12 +1294,13 @@ PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:R**2*(POT-POTIN)=',XMAX
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
       INTEGER(4)                 :: ISTART,IBI
       REAL(8)                    :: X0,DX,XM,ZM,Z0
-      REAL(8)    ,PARAMETER      :: TOL=1.D-8
+      REAL(8)    ,PARAMETER      :: TOL=1.D-12
       REAL(8)                    :: R(NR)
       REAL(8)                    :: PHI1(NR),PHI2(NR)
       INTEGER(4) ,PARAMETER      :: NITER=100
       INTEGER(4)                 :: I,IR
       REAL(8)                    :: VAL1,VAL2,SVAR
+      REAL(8)                    :: y2,y1,x2,x1,val,der
       INTEGER(4)                 :: IRBOX
 !     **************************************************************************
                                  CALL TRACE$PUSH('ATOMLIB$PAWBOUNDSTATE')
@@ -1358,8 +1359,19 @@ PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:R**2*(POT-POTIN)=',XMAX
 !     ==========================================================================
 !     ==  CHOP OF TAILS WHICH MAY BE EXPONENTIALLY INCREASING                 ==
 !     ==========================================================================
-      CALL RADIAL$VALUE(GID,NR,PHI1,RBOX,VAL1)
-      CALL RADIAL$VALUE(GID,NR,PHI2,RBOX,VAL2)
+!      CALL RADIAL$VALUE(GID,NR,PHI1,RBOX,VAL1)
+!      CALL RADIAL$VALUE(GID,NR,PHI2,RBOX,VAL2)
+      x1=r(irbox-1)
+      x2=r(irbox)
+      y1=phi1(irbox-1)
+      y2=phi1(irbox)
+      der=(y2-y1)/(x2-x1)
+      val1=y1+der*(rbox-x1)
+      y1=phi2(irbox-1)
+      y2=phi2(irbox)
+      der=(y2-y1)/(x2-x1)
+      val2=y1+der*(rbox-x1)
+!
       SVAR=VAL2-VAL1
       VAL1=VAL1/SVAR
       VAL2=VAL2/SVAR

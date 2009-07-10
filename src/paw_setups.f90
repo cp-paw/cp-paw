@@ -2867,7 +2867,8 @@ DEX=0.05D0
       REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
-      REAL(8)               :: AERHO(NR),PSRHO(NR),augrho(nr)
+      REAL(8)               :: AERHO(NR),PSRHO(NR),augrho(nr),pawrho(nr)
+      real(8)   ,allocatable:: denmat(:,:)
       REAL(8)               :: G(NR),GS(NR),DREL(NR),G1(NR),PHI(NR),PHI1(NR)
       REAL(8)               :: E
       REAL(8)               :: RC1
@@ -2875,7 +2876,7 @@ DEX=0.05D0
       INTEGER(4)            :: LX
       INTEGER(4)            :: L,IB,LN,IR,IB1,IB2,LN1,LN2,I,ISO
       INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
-      REAL(8)               :: PI,Y0
+      REAL(8)               :: PI,Y0,c0ll
       REAL(8)               :: X0,Z0,DX,XM,ZM
       INTEGER(4)            :: ISTART,IBI
       INTEGER(4)            :: NITER=100
@@ -2911,6 +2912,7 @@ REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !VFOCK%SCALE=0.D0
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
+      c0ll=y0
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
       LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
       CALL RADIAL$R(GID,NR,R)
@@ -3109,7 +3111,6 @@ print*,'eofi1 ',eofi1
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
             IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,EOFLN(LN),DREL)
-print*,' ln= ',ln,' l=',l,' e=',eofln(ln)
             CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
     &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
             CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,NLPHI(:,LN),AUX)
@@ -3135,7 +3136,6 @@ print*,' ln= ',ln,' l=',l,' e=',eofln(ln)
         ENDDO
         CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
       END IF
-!CALL SETUP_WRITEPHI('TEST2.DAT',GID,NR,LNX,NLPHI)
 !
 !     ==========================================================================
 !     == REPORT SETTINGS ON PARTIAL WAVES                                     ==
@@ -3441,19 +3441,22 @@ CALL SETUP_WRITEPHI(-'AEPHI.DAT',GID,NR,LNX,MATMUL(AEPHI,TRANSPHI))
       DO LN1=1,LNX
         DO LN2=1,LNX
           IF(LOX(LN1).NE.LOX(LN2)) CYCLE
+! if everything is correct, the integration should be done towards the
+! end of the grid. However the exponentially growing tail of the partial 
+! waves may introduce numerical errors
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,Rbox,VAL)
           DT(LN1,LN2)=VAL
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,Rbox,VAL)
           DOVER(LN1,LN2)=VAL
           CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOX(LN2),AEPHI(:,LN2),AUX1)
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*(AEPOT(:)*Y0*AEPHI(:,LN2)+AUX1(:)) &
       &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,Rbox,VAL)
           DH(LN1,LN2)=DT(LN1,LN2)+VAL
         ENDDO
       ENDDO
@@ -3715,6 +3718,7 @@ GOTO 10001
       AERHO(:)=AECORE(:)
       augRHO(:)=AECORE(:)
       PSRHO(:)=PSCORE(:)
+      pawrho(:)=aecore(:)-pscore(:)
       EOFICOMP(:,:)=0.D0
       DO L=0,LX
         NPRO=NPROL(L)
@@ -3763,12 +3767,11 @@ GOTO 10001
 !         ==  CONSTRUCT PAW PSEUDO WAVE FUNCTION                              ==
 !         ======================================================================
 !         == THIS DOES NOT WORK WITH THE FOCK POTENTIAL BECAUSE THE NUMBER OF 
-!         == BNODES DOES NOT INCREASE WITH ENERGY. HENCE THE NODE TRACING FAILS
+!         == NODES DOES NOT INCREASE WITH ENERGY. HENCE THE NODE TRACING FAILS
           NN=NNOFI(IB)-NN0
           G(:)=0.D0
           CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
      &                              ,G,E,PSPSIF(:,IB-NC))
-          CALL SETUP_WRITEPHI(-'ERROR_PSPSIF1',GID,NR,1,PSPSIF(:,IB-NC))
 !
 !!$          E=EOFI1(IB)
 !!$          DO I=1,100
@@ -3846,6 +3849,19 @@ GOTO 10001
           PROJ=PROJ/SQRT(VAL)
     PRINT*,'PROJ ',L,PROJ
 !
+!         == add to augmentation density =======================================
+          do ipro1=1,npro
+            do ipro2=1,npro
+              svar=fofi(ib)*proj(ipro1)*proj(ipro2)*c0ll
+              pawrho(:)=pawrho(:)+svar*aephi1(:,ipro1)*aephi1(:,ipro2) &
+                                 -svar*psphi1(:,ipro1)*psphi1(:,ipro2)
+!!$AUX(:)=4.d0*pi*R(:)**2*y0*c0ll*(aephi1(:,ipro1)*aephi1(:,ipro2)-psphi1(:,ipro1)*psphi1(:,ipro2))
+!!$CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
+!!$print*,'dover ',l,ipro1,ipro2,val,do1(ipro1,ipro2),val-do1(ipro1,ipro2)
+            enddo
+          enddo
+!
 !         == augment ps wave functions =========================================
           augpsif(:,ib-nc)=pspsif(:,ib-nc)
           DO IPRO=1,NPRO
@@ -3859,9 +3875,9 @@ GOTO 10001
           CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           AEPSIF(:,IB-NC)=AEPSIF(:,IB-NC)/SQRT(VAL)
 !
-          PSRHO(:)=PSRHO(:)+FOFI(IB)*PSPSIF(:,IB-NC)**2*Y0
+          PSRHO(:) =PSRHO(:) +FOFI(IB)*PSPSIF(:,IB-NC)**2*Y0
           augRHO(:)=augRHO(:)+FOFI(IB)*augPSIF(:,IB-NC)**2*Y0
-          AERHO(:)=AERHO(:)+FOFI(IB)*AEPSIF(:,IB-NC)**2*Y0
+          AERHO(:) =AERHO(:) +FOFI(IB)*AEPSIF(:,IB-NC)**2*Y0
         ENDDO
         DEALLOCATE(DH1)
         DEALLOCATE(DO1)
@@ -3870,6 +3886,21 @@ GOTO 10001
         DEALLOCATE(psphi1)
         DEALLOCATE(PROJ)
       ENDDO      
+      pawrho(:)=pawrho(:)+psrho(:)
+
+AUX(:)=4.d0*pi*R(:)**2*aerho(:)*y0
+CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+print*,'integrl of aerho ',val
+AUX(:)=4.d0*pi*R(:)**2*augrho(:)*y0
+CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+print*,'integrl of augrho ',val
+AUX(:)=4.d0*pi*R(:)**2*pawrho(:)*y0
+CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+print*,'integrl of pawrho ',val
+
 
 !     == REPORT ===============================================================
       WRITE(6,FMT='(82("="),T20,"  STRAIGHT AE- AND PAW-ENERGY LEVELS ")')
@@ -3893,7 +3924,7 @@ GOTO 10001
 !     == UNSCREENING                                                          ==
 !     ==========================================================================
                       CALL TRACE$PASS('CONSTRUCT VADD (UNSCREEN)')
-      CALL ATOMIC_UNSCREEN(GID,NR,ROUT,AEZ,augRHO,PSRHO,PSPOT,RCSM,VADD)
+      CALL ATOMIC_UNSCREEN(GID,NR,ROUT,AEZ,pawRHO,PSRHO,PSPOT,RCSM,VADD)
       DO IR=1,NR
         IF(R(IR).GT.MAX(1.2D0*RCOV,RNORM)) THEN
           VADD(IR+1:)=0.D0
@@ -3997,6 +4028,9 @@ GOTO 10001
 !
 !       == PSEUDO WAVE FUNCTIONS =========================================
         CALL SETUP_WRITEPHI(-'PSPSIF'//TRIM(STRING),GID,NR,NB-NC,PSPSIF)
+!
+!       == PSEUDO WAVE FUNCTIONS =========================================
+        CALL SETUP_WRITEPHI(-'augPSIF'//TRIM(STRING),GID,NR,NB-NC,augPSIF)
 !
 !       == POTENTIALS  =========================================================
         ALLOCATE(AUXARR(NR,4))
@@ -4369,8 +4403,6 @@ AUX(:)=AERHO(:)*R(:)**2
 CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
 CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,QLM)
 PRINT*,'AERHO CHARGE ',QLM*Y0*4.D0*PI
-CALL RADIAL$INTEGRAL(GID,NR,AUX,QLM)
-PRINT*,'AERHO CHARGE ',QLM*Y0*4.D0*PI,RBOX,R(NR)
 !
 !     ========================================================================
 !     == MOMENT OF DIFFERENCE CHARGE DENSITY                                ==
@@ -5220,7 +5252,7 @@ IF(.NOT.TVAL)PRINT*,'--C2-- ',C2,VAL0
       IF(THIS%LOCORBINI) RETURN
       THIS%LOCORBINI=.TRUE.
                             CALL TRACE$PUSH('SETUP_RENEWLOCORB')
-!     == LOCORBINI IS RESET TO FALSE, WHEVEVER THE DATA ARE CHANGED VIA SETUP$SET
+!     == LOCORBINI IS RESET TO FALSE, WHEVEVER DATA ARE CHANGED VIA SETUP$SET
 PRINT*,'A1',THIS%LOCORBNOFL
 PRINT*,'A2',THIS%LOCORBLNX
 !
@@ -5284,7 +5316,7 @@ PRINT*,'C'
       INTEGER(4),INTENT(IN) :: LNXPHI  ! #(PARTIAL WAVES)
       INTEGER(4),INTENT(OUT):: LOXCHI(LNXCHI)  ! ANGULAR MOMENTUM PER LOCAL ORB.
       REAL(8)   ,INTENT(OUT):: BMAT(LNXCHI,LNXPHI) ! MAPPING OF PROJECTORS
-      REAL(8)   ,INTENT(OUT):: AMAT(LNXPHI,LNXCHI)     ! MAPPING OF WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: AMAT(LNXPHI,LNXCHI) ! MAPPING OF WAVE FUNCTIONS
       REAL(8)   ,ALLOCATABLE:: CHI(:,:)
       REAL(8)   ,ALLOCATABLE:: CHI1(:,:)
       REAL(8)   ,ALLOCATABLE:: A(:,:)
@@ -5405,7 +5437,7 @@ PRINT*,'C'
             CHI(:,LN)=CHI(:,LN)-CHI(:,LN1)*SVAR1
             A(:,LN)=A(:,LN)-A(:,LN1)*SVAR1
           ENDDO
-!         == NORMALIZE HEAD FUNCTION =============================================
+!         == NORMALIZE HEAD FUNCTION ===========================================
           AUX(:)=CHI(:,LN)**2*R(:)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RCUT(LN),SVAR1)

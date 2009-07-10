@@ -379,7 +379,6 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','FORM','FORMATTED')
-
 !
 !     ==================================================================
 !     ==  CHECK EXPIRATION DATE                                       ==
