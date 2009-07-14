@@ -557,6 +557,8 @@ ifeq ($(ALLDEP),T)
 
  ${OBJDIR}/paw_ldaplusu.o:      ${OBJDIR}/paw_periodictable.o
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_periodictable.o
+ ${OBJDIR}/paw_atomlib.o:       ${OBJDIR}/paw_periodictable.o
+ ${OBJDIR}/paw_schroedinger.o:  ${OBJDIR}/paw_periodictable.o
 
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_constraints.o:   ${OBJDIR}/paw_linkedlist.o

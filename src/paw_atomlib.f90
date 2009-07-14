@@ -2576,14 +2576,14 @@ end if
 !       ==  CHECK CONVERGENCE                                                 ==
 !       ========================================================================
         VAL=MAXVAL(ABS(DPSI(:IRBND-3)))/SQRT(NORM)
-        IF(TPR) PRINT*,'iter=',iter,' l=',l,' E=',e,' DEV=',VAL
+        IF(TPR) PRINT*,'ITER=',ITER,' L=',L,' E=',E,' DEV=',VAL
         CONVG=(VAL.LT.TOL)
-        if(convg.and.val.lt.0.d0) then
-          call error$msg('not a number')
-          CALL ATOMLIB_WRITEPHI('dpsi',GID,NR,1,dPSI)
-          print*,'norm',norm
-          call error$stop('atomlib$updatestatewithhf')
-        end if
+        IF(CONVG.AND.VAL.LT.0.D0) THEN
+          CALL ERROR$MSG('NOT A NUMBER')
+          CALL ATOMLIB_WRITEPHI('DPSI',GID,NR,1,DPSI)
+          PRINT*,'NORM',NORM
+          CALL ERROR$STOP('ATOMLIB$UPDATESTATEWITHHF')
+        END IF
         IF(CONVG) EXIT
 !!$CALL ATOMLIB_WRITEPHI('psi+dpsi.DAT',GID,NR,1,PSI+dpsi)
 !!$CALL ATOMLIB_WRITEPHI('dpsi.DAT',GID,NR,1,dPSI)
@@ -2599,10 +2599,16 @@ end if
       ENDDO    ! END OF ITERATION
 !
       IF(.NOT.CONVG) THEN
-print*,'rend ',rend
-        CALL ATOMLIB_WRITEPHI('psi.DAT',GID,NR,1,PSI)
-        CALL ATOMLIB_WRITEPHI('dpsi.DAT',GID,NR,1,dPSI)
+        CALL ATOMLIB_WRITEPHI('PSI.DAT',GID,NR,1,PSI)
+        CALL ATOMLIB_WRITEPHI('DPSI.DAT',GID,NR,1,DPSI)
         CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
+        CALL ERROR$I4VAL('L',L)
+        CALL ERROR$R8VAL('E',E)
+        CALL ERROR$R8VAL('REND',REND)
+        CALL ERROR$R8VAL('RBND',RBND)
+        CALL ERROR$I4VAL('#(ITERATIONS)',ITER)
+        CALL ERROR$R8VAL('MAX DEVIATION',VAL)
+        CALL ERROR$R8VAL('TOLERANCE',TOL)
         CALL ERROR$STOP('ATOMLIB$UPDATESTATEWITHHF')
       END IF
       RETURN
