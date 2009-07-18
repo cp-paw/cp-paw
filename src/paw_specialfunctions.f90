@@ -1,26 +1,142 @@
 !
-!      .............................................................
-       subroutine specialfunction__erf(x,val)
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       subroutine specialfunction$test()
+!      *************************************************************************
+!      **                                                                     **
+!      **                                                                     **
+!      **                                                                     **
+!      *************************************************************************
+       implicit none
+       integer(4),parameter :: lx=3
+       integer(4),parameter :: nx=200
+       integer(4),parameter :: nfil=101
+       real(8)   ,parameter :: xmax=10.d0
+       real(8)   ,parameter :: dx=xmax/real(nx-1,kind=8)
+       real(8)              :: x
+       real(8)              :: y(lx+1)
+       real(8)              :: dydx(lx+1)
+       integer(4)           :: ix,l
+!      *************************************************************************
+!
+!      =========================================================================
+!      ==  bessel functions                                                   ==
+!      =========================================================================
+       open(nfil,file='test_bessel.dat')
+       do ix=1,nx
+         x=dx*real(ix-1,kind=8)
+         do l=0,lx
+           call Spfunction$BESSEL(L,X,Y(l+1),dydx(l+1))       
+         enddo
+         write(nfil,*)x,y,dydx
+       enddo
+       close(nfil)
+!
+!      =========================================================================
+!      ==  modified bessel functions                                          ==
+!      =========================================================================
+       open(nfil,file='test_modbessel.dat')
+       do ix=1,nx
+         x=dx*real(ix-1,kind=8)
+         do l=0,lx
+           call Spfunction$modBESSEL(L,X,Y(l+1),dydx(l+1))       
+         enddo
+         write(nfil,*)x,y,dydx
+       enddo
+       close(nfil)
+!
+!      =========================================================================
+!      ==  bessel functions for kappa=0                                       ==
+!      =========================================================================
+       open(nfil,file='test_bessel0.dat')
+       do ix=1,nx
+         x=dx*real(ix-1,kind=8)
+         do l=0,lx
+           call Spfunction$BESSEL0(L,X,Y(l+1),dydx(l+1))       
+         enddo
+         write(nfil,*)x,y,dydx
+       enddo
+       close(nfil)
+!
+!      =========================================================================
+!      ==  modified hankel functions                                          ==
+!      =========================================================================
+       open(nfil,file='test_modhankel.dat')
+       do ix=2,nx
+         x=dx*real(ix-1,kind=8)
+         do l=0,lx
+           call Spfunction$modhankel(L,X,Y(l+1),dydx(l+1))       
+         enddo
+         write(nfil,*)x,y,dydx
+       enddo
+       close(nfil)
+!
+!      =========================================================================
+!      ==  neumann functions                                                  ==
+!      =========================================================================
+       open(nfil,file='test_neumann.dat')
+       do ix=2,nx
+         x=dx*real(ix-1,kind=8)
+         do l=0,lx
+           call Spfunction$neumann(L,X,Y(l+1),dydx(l+1))       
+         enddo
+         write(nfil,*)x,y,dydx
+       enddo
+       close(nfil)
+!
+!      =========================================================================
+!      ==  modified neumann functions                                         ==
+!      =========================================================================
+       open(nfil,file='test_modneumann.dat')
+       do ix=2,nx
+         x=dx*real(ix-1,kind=8)
+         do l=0,lx
+           call Spfunction$modneumann(L,X,Y(l+1),dydx(l+1))       
+         enddo
+         write(nfil,*)x,y,dydx
+       enddo
+       close(nfil)
+!
+!      =========================================================================
+!      ==  neumann functions for kappa=0                                      ==
+!      =========================================================================
+       open(nfil,file='test_neumann0.dat')
+       do ix=2,nx
+         x=dx*real(ix-1,kind=8)
+         do l=0,lx
+           call Spfunction$NEUMANN0(L,X,Y(l+1),dydx(l+1))
+         enddo
+         write(nfil,*)x,y,dydx
+       enddo
+       close(nfil)
+       return
+       end
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       subroutine specialfunction$erf(x,val)
+!      *************************************************************************
 !      **  returns the error function erf(x)
 !      ** see numerical recipes
+!      *************************************************************************
        implicit none
        real(8),intent(in) :: x
        real(8),intent(out):: val
-!      *************************************************************
-       call specialfunction__gammp(x**2,0.5d0,val)
+!      *************************************************************************
+       call specialfunction$gammp(x**2,0.5d0,val)
        If(x.lt.0.d0) val=-val
        return
        end
 !
-!      .............................................................
-       subroutine specialfunction__gammp(x,a,val)
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       subroutine specialfunction$gammp(x,a,val)
+!      *************************************************************************
 !      **  returns the incomplete gamma function P(a,x)
 !      ** see numerical recipes
+!      *************************************************************************
        implicit none
        real(8),intent(in) :: x
        real(8),intent(in) :: a
        real(8),intent(out):: val
-!      *************************************************************
+!      *************************************************************************
        if(x.lt.0.d0.or.a.le.0.d0) then
          stop 'error stop in specialfunction$gammp'
        end if
@@ -35,7 +151,7 @@
        return
        end
 !
-!      .............................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE SPECIALFUNCTION_GAMMLN(X,VAL)
 !      ** ln(gamma(xx))
 !      ** SEE NUMERICAL RECIPES
@@ -61,7 +177,7 @@
        RETURN
        END
 !
-!      .............................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE SPECIALFUNCTION_Gser(X,A,val)
 !      ** 
 !      ** incomplete gamma function P(a,x) evaluated by its series expansion
@@ -99,10 +215,11 @@
        stop 'a too large, itmax too small; stop in gser'
        END
 !
-!      .............................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE SPECIALFUNCTION_Gcf(X,A,val)
 !      ** 
-!      ** incomplete gamma function q(a,x) evaluated by its continued fraction representation
+!      ** incomplete gamma function q(a,x) evaluated by its continued 
+!      **  fraction representation
 !      ** 
 !      ** SEE NUMERICAL RECIPES
        IMPLICIT NONE
@@ -144,16 +261,17 @@
         stop 'a too large, itmax soo small, stop in gcf'
         end
 !
-!     ..............................................BESSL...............
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPECIALFUNCTION$BESSEL(L,X,Y)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATES THE SPHERICAL BESSEL FUNCTION                    **
-!     **  ACCORDING TO ABRAMOWITZ AND STEGUN                          **
-!     **    FORMULA 10.1.2              FOR   X < 8                   **
-!     **    FORMULA 10.1.8 AND  10.1.9  FOR   X > 8                   **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATES THE SPHERICAL BESSEL FUNCTION                            **
+!     **  ACCORDING TO ABRAMOWITZ AND STEGUN                                  **
+!     **    FORMULA 10.1.2              FOR   X < L                           **
+!     **    FORMULA 10.1.8 AND  10.1.9  FOR   X > L                           **
+!     **                                                                      **
+!     ** todo: this routine is duplicated by spfunction$bessel                **
+!     ****************************************** P.E. BLOECHL, 1991 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN AGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
@@ -222,15 +340,14 @@
 9999  CONTINUE
       RETURN
       END
-
 !
-!===============================================================================     
-!===============================================================================     
-!===============================================================================     
-!=====     The following routines need to be tested.
-!===============================================================================     
-!===============================================================================     
-!===============================================================================     
+!===============================================================================
+!===============================================================================
+!===============================================================================
+!=====     The following routines need to be tested.                          ==
+!===============================================================================
+!===============================================================================
+!===============================================================================
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE Spfunction$BESSEL(L,X,Y,dydx)
@@ -238,10 +355,10 @@
 !     **                                                                      **
 !     **  CALCULATES THE SPHERICAL BESSEL FUNCTION                            **
 !     **  ACCORDING TO ABRAMOWITZ AND STEGUN                                  **
-!     **    FORMULA 10.1.2              FOR   X < 8                           **
-!     **    FORMULA 10.1.8 AND  10.1.9  FOR   X > 8                           **
+!     **    FORMULA 10.1.2              FOR   X < L                           **
+!     **    FORMULA 10.1.8 AND  10.1.9  FOR   X > L                           **
 !     **                                                                      **
-!     ****************************************** P.E. BLOECHL, 1991 ************
+!     ****************************************** P.E. BLOECHL, 2009 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN AGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
@@ -285,8 +402,9 @@
         ISVAR=2*L+1
         DO I=1,1000
           ISVAR=ISVAR+2
-          FAC=FAC*XSQ/real(I*ISVAR,kind=8)
+!         = do derivative before value because value is modified ===============
           dFAC=(dFAC*XSQ-FAC*X)/real(I*ISVAR,kind=8)
+          FAC=FAC*XSQ/real(I*ISVAR,kind=8)
           Y=Y+FAC
           dYdx=dYdx+dFAC
           convg=abs(FAC).LT.TOL
@@ -394,8 +512,8 @@
         ISVAR=-(2*L+1)
         DO I=1,1000
           ISVAR=ISVAR+2
-          FAC=FAC*XSQ/REAL(I*ISVAR,KIND=8)
           DFAC=(DFAC*XSQ-X*FAC)/REAL(I*ISVAR,KIND=8)
+          FAC=FAC*XSQ/REAL(I*ISVAR,KIND=8)
           Y=Y+FAC
           DYDX=DYDX+DFAC
           IF(ABS(FAC).LT.TOL) RETURN
@@ -440,16 +558,16 @@
       RETURN
       END SUBROUTINE SPFUNCTION$NEUMANN
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPFUNCTION$MODBESSEL(L,X,Y,dydx)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATES THE MODIFIED SPHERICAL BESSEL FUNCTION           **
-!     **  ACCORDING TO ABRAMOWITZ AND STEGUN                          **
-!     **    FORMULA 10.2.5   FOR   X < L+1                            **
-!     **    FORMULA 10.2.9   FOR   X > L+1                            **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATES THE MODIFIED SPHERICAL BESSEL FUNCTION                   **
+!     **  ACCORDING TO ABRAMOWITZ AND STEGUN                                  **
+!     **    FORMULA 10.2.5   FOR   X < L+1                                    **
+!     **    FORMULA 10.2.9   FOR   X > L+1                                    **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
@@ -457,31 +575,32 @@
       REAL(8)   ,INTENT(OUT):: dydx ! derivative
       REAL(8)               :: TRIG(2),dtrig(2)
       REAL(8)   ,PARAMETER  :: TOL=1.D-10
-      REAL(8)               :: XSQ
+      REAL(8)               :: XSQ  !x-square
       REAL(8)               :: FAC,dfac
       INTEGER(4)            :: I,K,IL,ISVAR
-!     ******************************************************************
+!     **************************************************************************
       IF(X.GT.real(L+1,kind=8)) THEN
         TRIG(:)=1.D0
         dTRIG(:)=0.D0
         XSQ=0.5D0/X
-        Y=XSQ*(EXP(X)+EXP(-X))
-        dYdx=-y/x+xsq*(EXP(X)-EXP(-X))
+        Y=XSQ*(EXP(X)-(-1.d0)**l*EXP(-X))
+        dYdx=-y/x+xsq*(EXP(X)+(-1.d0)**l*EXP(-X))
         DO K=1,L
-           FAC=REAL((L+K)*(L-K+1),KIND=8)/REAL(K, KIND=8)*XSQ
+           FAC=REAL((L+K)*(L-K+1),KIND=8)/REAL(K,KIND=8)*XSQ
            dfac=-fac/x
-           TRIG(1)=-TRIG(1)*FAC
            dtrig(1)=-dtrig(1)*fac-trig(1)*dfac
-           TRIG(2)=+TRIG(2)*FAC
+           TRIG(1)=-TRIG(1)*FAC
            dtrig(2)=dtrig(2)*fac+trig(2)*dfac
-           Y=Y+XSQ*(TRIG(1)*EXP(X)-(-1.d0)**K*TRIG(2)*EXP(-X))
-           dydx=dydx-XSQ/x*(TRIG(1)*EXP(X)-(-1)**K*TRIG(2)*EXP(-X)) &
+           TRIG(2)=+TRIG(2)*FAC
+           dydx=dydx-XSQ/x*(TRIG(1)*EXP(X)-(-1)**l*TRIG(2)*EXP(-X)) &
     &                +XSQ*((dtrig(1)+TRIG(1))*EXP(X) &
-    &                      -(-1.d0)**K*(dtrig(2)-TRIG(2))*EXP(-X))
+               -(-1.d0)**l*(dtrig(2)-TRIG(2))*EXP(-X))
+           Y=Y+XSQ*(TRIG(1)*EXP(X)-(-1.d0)**l*TRIG(2)*EXP(-X))
         ENDDO
-!     ==================================================================
-!     ==  TAYLOR EXPANSION FOR SMALL ARGUMENTS                        ==
-!     ==================================================================
+!
+!     ==========================================================================
+!     ==  TAYLOR EXPANSION FOR SMALL ARGUMENTS                                ==
+!     ==========================================================================
       ELSE
         ISVAR=1
         DO IL=1,L
@@ -503,8 +622,8 @@
         ISVAR=2*L+1
         DO I=1,1000
           ISVAR=ISVAR+2
-          FAC=FAC*XSQ/real(I*ISVAR,kind=8)
           dFAC=(dFAC*XSQ+FAC*X)/real(I*ISVAR,kind=8)
+          FAC=FAC*XSQ/real(I*ISVAR,kind=8)
           Y=Y+FAC
           dydx=dydx+dFAC
           IF(DABS(FAC).LT.TOL) RETURN
@@ -526,7 +645,7 @@
 !     **    FORMULA 10.2.6   FOR   X < L                                      **
 !     **    FORMULA 10.2.10  FOR   X > L                                      **
 !     **                                                                      **
-!     **************************************************************************         
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
@@ -539,7 +658,7 @@
       INTEGER(4)            :: I,K,IL,ISVAR
       logical(4)            :: convg
       real(8)               :: svar,dsvar
-!     **************************************************************************         
+!     **************************************************************************
       if(x.le.0.d0) then
         CALL ERROR$MSG('not defined for zero or negative arguments')
         CALL ERROR$I4VAL('L',L)
@@ -562,8 +681,8 @@
         convg=.false.
         DO I=1,1000
           ISVAR=ISVAR+2
-          FAC=FAC*XSQ/real(I*ISVAR,kind=8)
           dFAC=(dFAC*XSQ+FAC*X)/real(I*ISVAR,kind=8)
+          FAC=FAC*XSQ/real(I*ISVAR,kind=8)
           Y=Y+FAC
           dydx=dydx+dFAC
           convg=ABS(FAC).LT.TOL
@@ -582,18 +701,18 @@
         TRIG(:)=1.D0
         DTRIG(:)=0.D0
         XSQ=0.5D0/X
-        Y=XSQ*(EXP(X)+EXP(-X))
-        DYDX=-Y/X+XSQ*(EXP(X)-EXP(-X))
+        Y=XSQ*(EXP(X)+(-1.d0)**l*EXP(-X))
+        DYDX=-Y/X+XSQ*(EXP(X)-(-1.d0)**l*EXP(-X))
         DO K=1,L
            FAC=REAL((L+K)*(L-K+1),KIND=8)/REAL(K, KIND=8)*XSQ
            DFAC=-FAC/X
-           TRIG(1)=-TRIG(1)*FAC
            DTRIG(1)=-DTRIG(1)*FAC-TRIG(1)*DFAC
-           TRIG(2)= TRIG(2)*FAC
+           TRIG(1)=-TRIG(1)*FAC
            DTRIG(2)= DTRIG(2)*FAC+TRIG(2)*DFAC
-           SVAR=XSQ*(TRIG(1)*DEXP(X)+(-1.D0)**K*TRIG(2)*DEXP(-X))
+           TRIG(2)= TRIG(2)*FAC
+           SVAR=XSQ*(TRIG(1)*DEXP(X)+(-1.D0)**l*TRIG(2)*DEXP(-X))
            DSVAR=-SVAR/X+XSQ*(           (DTRIG(1)+TRIG(1))*EXP(X) &
-       &                     +(-1.D0)**K*(DTRIG(2)-TRIG(2))*EXP(-X))
+       &                     +(-1.D0)**l*(DTRIG(2)-TRIG(2))*EXP(-X))
            Y=Y+SVAR
            DYDX=DYDX+DSVAR
         ENDDO
@@ -601,40 +720,40 @@
       RETURN
       END SUBROUTINE SPFUNCTION$MODNEUMANN
 !!$!
-!!$!     ..................................................................
+!!$!     .......................................................................
 !!$      SUBROUTINE Spfunction$HANKEL(L,X,Y,dydx)
-!!$!     ******************************************************************
-!!$!     **                                                              **
-!!$!     **  CALCULATES THE SPHERICAL HANKEL FUNCTION.                   **
-!!$!     **  CONVENTION: ABRAMOWITZ, EQUATION 10.1.1                     **
-!!$!     **                                                              **
-!!$!     ******************************************************************
+!!$!     ***********************************************************************
+!!$!     **                                                                   **
+!!$!     **  CALCULATES THE SPHERICAL HANKEL FUNCTION.                        **
+!!$!     **  CONVENTION: ABRAMOWITZ, EQUATION 10.1.1                          **
+!!$!     **                                                                   **
+!!$!     ***********************************************************************
 !!$      IMPLICIT NONE
 !!$      INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
 !!$      REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
 !!$      COMPLEX(8),INTENT(OUT):: Y ! HANKEL FUNCTION AT X
 !!$      COMPLEX(8),INTENT(OUT):: dydx ! HANKEL FUNCTION AT X
 !!$      REAL(8)               :: YREAL, YIMAG,dYREAL, dYIMAG
-!!$!     ******************************************************************
+!!$!     ***********************************************************************
 !!$      CALL Spfunction$BESSEL (L,X,YREAL,dyreal)
 !!$      CALL Spfunction$NEUMANN(L,X,YIMAG,dyimag)
 !!$      Y    = CMPLX(YREAL,YIMAG)
 !!$      dydx = CMPLX(dYREAL,dYIMAG)
 !!$      END SUBROUTINE SPFUNCTION$HANKEL
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE Spfunction$MODHANKEL(L,X,Y,dydx)
-!     ******************************************************************
-!     **  MODIFIED SPHERICAL BESSEL FUNCTION OF THE THIRD KIND K_L(X) **
-!     **  AS DEFINED IN ABRAMOWITZ/STEGUN EQ. 10.2.4                  **
-!     **                                                              **
-!     **    Y = 0.5*PI*X^L*(-1/X D/DX)^L [EXP(-X)/X]                  **
-!     **                                                              **
-!     **  CALCULATES THE MODIFIED SPHERICAL HANKEL FUNCTION           **
-!     **  AS DEFINED BY ABRAMOWITZ AND STEGUN (EQUATION 10.2.4)       **
-!     **  USING EQUATION 10.2.15 FOR X>L                              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  MODIFIED SPHERICAL BESSEL FUNCTION OF THE THIRD KIND K_L(X)         **
+!     **  AS DEFINED IN ABRAMOWITZ/STEGUN EQ. 10.2.4                          **
+!     **                                                                      **
+!     **    Y = 0.5*PI*X^L*(-1/X D/DX)^L [EXP(-X)/X]                          **
+!     **                                                                      **
+!     **  CALCULATES THE MODIFIED SPHERICAL HANKEL FUNCTION                   **
+!     **  AS DEFINED BY ABRAMOWITZ AND STEGUN (EQUATION 10.2.4)               **
+!     **  USING EQUATION 10.2.15 FOR X>L                                      **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
@@ -650,7 +769,7 @@
       REAL(8)               :: nval,nder
       REAL(8)               :: svar,dsvar
       INTEGER(4)            :: K
-!     ******************************************************************
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       if(x.le.0.d0) then
         call error$msg('undefined for negative or zero arguments')
@@ -667,12 +786,12 @@
         Y=XSQ*PI*EXP(-X)
         dYdx=-y/x-y
         DO K=1,L
-           FAC=REAL((L+K)*(L-K+1),KIND=8)/REAL(K, KIND=8)*XSQ
+           FAC=REAL((L+K)*(L-K+1),KIND=8)/REAL(K,KIND=8)*XSQ
            dFAC=-fac/x
-           TRIG=TRIG*FAC
            dTRIG=dTRIG*FAC+TRIG*dFAC
+           TRIG=TRIG*FAC
            svar=XSQ*PI*TRIG*EXP(-X)
-           dsvar=-svar/x-svar
+           dsvar=-svar/x-svar+svar*dtrig/trig
            Y=Y+svar
            dYdx=dYdx+dsvar
         ENDDO
@@ -680,20 +799,20 @@
       return
       END SUBROUTINE SPFUNCTION$MODHANKEL
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE Spfunction$BESSEL0(L,X,Y,dydx)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATES THE SPHERICAL BESSEL FUNCTION FOR K=0.           **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATES THE SPHERICAL BESSEL FUNCTION FOR K=0.                   **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! BESSEL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: dydx ! derivative
       INTEGER(4)            :: FAC, I
-!     ******************************************************************
+!     **************************************************************************
       IF(L.EQ.0) THEN
         Y = 1.D0
         DYDX=0.D0
@@ -707,20 +826,20 @@
       END IF
       END SUBROUTINE SPFUNCTION$BESSEL0
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE Spfunction$NEUMANN0(L,X,Y,dydx)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATES THE SPHERICAL NEUMANN FUNCTION FOR K=0.          **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATES THE SPHERICAL NEUMANN FUNCTION FOR K=0.                  **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! NEUMANN FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: dYdx ! derivative
       INTEGER(4)            :: FAC, I
-!     ******************************************************************
+!     **************************************************************************
       if(x.le.0.d0) then
         call error$msg('not defined for zero or negative arguments')
         call error$stop('Spfunction$NEUMANN0')

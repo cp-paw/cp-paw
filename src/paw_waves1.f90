@@ -1302,7 +1302,6 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       if(tfirst.or.tforce) then
         CALL LMTO$MAKESTRUCTURECONSTANTS()
       end if
-print*,'marke 1'
                               CALL TIMING$CLOCKON('WAVES$ETOT')
 !
 !     ==================================================================

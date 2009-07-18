@@ -950,11 +950,8 @@ END MODULE RADIAL_MODULE
       REAL(8)                :: R2(NR2)
       REAL(8)                :: R1(NR1)
 !     ******************************************************************
-print*,'radial$r1 ',gid1,nr1
       CALL RADIAL$R(GID1,NR1,R1)
-print*,'radial$r2 ',gid2,nr2
       CALL RADIAL$R(GID2,NR2,R2)
-print*,'radial$r over '
       DO IR=1,NR2
 !       == AVOID EXTRAPOLATION BEYOND END OF GRID
         IF(R2(IR).GT.R1(NR1)) THEN
@@ -2259,11 +2256,6 @@ END MODULE LOGRADIAL_MODULE
         CALL ERROR$I4VAL('NR_',NR_)
         CALL ERROR$STOP('LOGRADIAL$R')
       END IF
-print*,'gid ',gid,nr
-print*,'size',size(r)
-print*,'size2',gridarray(gid)%nr
-print*,'??',associated(gridarray(gid)%r)
-print*,'size3',size(gridarray(gid)%r)
       R(:)=gridarray(gid)%r
       RETURN
       END SUBROUTINE LOGRADIAL$R
@@ -3261,12 +3253,9 @@ END MODULE BESSELTRANSFORM_MODULE
       CALL RADIAL$GETR8(GID2A,'R1',G1A)
       CALL RADIAL$CHANGEGRID(GID1,NR_,F,GID1A,NX,FA)
       CALL BESSELTRANSFORM(L,NX,R1A,G1A,DEX,FA,GA,DISC)
-print*,'before changegrid',gid2a,gid2,nx,ng_
       CALL RADIAL$CHANGEGRID(GID2A,NX,GA,GID2,NG_,G)
-print*,'after changegrid'
       DEALLOCATE(FA)
       DEALLOCATE(GA)
-!CALL ERROR$STOP('FORCED STOP IN RADIAL$BESSELTRANSFORM')
                                     CALL TRACE$POP
       RETURN
       END

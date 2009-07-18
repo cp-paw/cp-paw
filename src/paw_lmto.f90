@@ -49,13 +49,13 @@ END MODULE LMTO_MODULE
         WRITE(NFIL,FMT='(82("="),T10," IAT1=",I5," IAT2=",I5," IT=",3I3," ")') &
      &                 SBAR(NN)%IAT1,SBAR(NN)%IAT2,SBAR(NN)%IT
         DO LM1=1,SBAR(NN)%N1
-          WRITE(NFIL,FMT='(20F10.5)')SBAR(NN)%MAT(LM1,:)
+          WRITE(NFIL,FMT='(20F10.5)')SBAR(NN)%MAT(:,lm1)
         ENDDO
         WRITE(NFIL,FMT='(82("="))')
       ENDDO
                              call trace$pop()
       RETURN
-      END
+      END SUBROUTINE LMTO$REPORTSBAR
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$REPORTPOTBAR(NFIL)
@@ -196,13 +196,10 @@ END MODULE LMTO_MODULE
         ALLOCATE(POTPAR(ISP)%PHIPHI(LNX))
         ALLOCATE(POTPAR(ISP)%ENU(LNX))
         ALLOCATE(POTPAR(ISP)%ESCATT(LNX))
+!
         ALLOCATE(AUX(NR))
         ALLOCATE(AUX1(NR))
         DO L=0,MAXVAL(LOX)
-!!$          DO LN=1,LNX
-!!$            IF(LOX(LN).NE.L) CYCLE
-!!$            IF(ISCATT(LN).EQ.0) LNHOMO=LN
-!!$          ENDDO
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
             CALL RADIAL$VALUE(GID,NR,NLPHIDOT(:,LN),RAD,PHIDOTVAL)
@@ -406,7 +403,6 @@ END MODULE LMTO_MODULE
             DO IM=1,2*L+1
               I=I+1
               QBAR(I)=QBAR1(L+1,ISP)
-!             QBAR(I)=POTPAR(L+1,ISP)%QBAR
             ENDDO
           ENDDO
         ENDDO
@@ -435,8 +431,8 @@ END MODULE LMTO_MODULE
           LMX2=(LX(ISP2)+1)**2      
           SBAR(NN)%N1=LMX1
           SBAR(NN)%N2=LMX2
-          ALLOCATE(SBAR(NN)%MAT(LMX1,LMX2))
-          SBAR(NN)%MAT(:,:)=TRANSPOSE(SBAR1(I+1:I+LMX2,:))
+          ALLOCATE(SBAR(NN)%MAT(LMX2,LMX1))
+          SBAR(NN)%MAT(:,:)=SBAR1(I+1:I+LMX2,:)
           I=I+LMX2
         ENDDO
         DEALLOCATE(LX1)
@@ -450,7 +446,6 @@ END MODULE LMTO_MODULE
       CALL LMTO$REPORTPOTBAR(6)
       CALL LMTO$REPORTSBAR(6)
 !
-!      CALL LMTO$ORBRAD
                               call trace$pop()
       RETURN
       END      
@@ -937,7 +932,8 @@ print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
               CALL LMTO_WRITEPHI('FAILEDPHI.DAT',GID,NR,LNXCHI1,AEPHI)
               CALL LMTO_WRITEPHI('FAILEDPHIDOT.DAT',GID,NR,LNXCHI1,AEPHIDOT)
               CALL ERROR$MSG('LOCAL ORBITAL CONSTRUCTION FAILED')
-              CALL ERROR$MSG('absolute value of LOCAL ORBITAL has a minimum inside rcov')
+              CALL ERROR$MSG('absolute value of LOCAL ORBITAL ...')
+              CALL ERROR$MSG('... has a minimum inside rcov')
               CALL ERROR$MSG('LOCAL ORBITALS ARE PRINTED INTO FILE')
               CALL ERROR$CHVAL('FILE','FAILEDLOCALORBITAL.DAT')
               CALL ERROR$I4VAL('IAT',IAT)
@@ -1438,19 +1434,195 @@ PRINT*,'LOXPHI ',LOXPHI
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_PLOTLOCORB()
+      SUBROUTINE LMTO_PLOTLOCORB(iat0)
 !     **************************************************************************
+!     **  writes the envelope functions centered at atom iat0 to file         **
+!     **                                                                      **
+!     **  set n1,n2,n3 equal to the number of gridpoints in each direction    **
+!     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
+      USE PERIODICTABLE_MODULE
+      use strings_module
       USE LMTO_MODULE
       IMPLICIT NONE
-      INTEGER(4),PARAMETER  :: N1=20,N2=20,N3=20
-      REAL(8)   ,PARAMETER  :: DR=1.D-1
+      INTEGER(4),intent(in) :: IAT0
+      INTEGER(4),PARAMETER  :: N1=100,N2=1,N3=1
+      REAL(8)               :: ORIGIN(3)
+      REAL(8)               :: TVEC(3,3)
+      REAL(8)               :: TLITTLE(3,3)
+      REAL(8)               :: RBAS(3,3)
+      INTEGER(4)            :: NAT
+      INTEGER(4)            :: lm1
+      INTEGER(4)            :: lm1x
+      REAL(8)   ,ALLOCATABLE:: R0(:,:)      !(3,NAT)
+      INTEGER(4),ALLOCATABLE:: ISPECIES1(:)  !(NAT)
+      REAL(8)   ,ALLOCATABLE:: RCOV(:)      !(NAT)
+      REAL(8)               :: XI(3)
+      REAL(8)               :: DR(3)
+      INTEGER(4)            :: NNB
+      INTEGER(4)            :: NN,IAT,IAT2,ISP,I1,I2,I3,LN
+      INTEGER(4)            :: L
+      INTEGER(4)            :: LNX
+      REAL(8)               :: AEZ
+      INTEGER(4)            :: LM2X
+      INTEGER(4),PARAMETER  :: LMXX=36
+      REAL(8)               :: K0(LMXX)
+      REAL(8)               :: j0(LMXX)
+      REAL(8)               :: jbar(LMXX)
+      REAL(8)   ,allocatable:: CVEC(:,:)
+      REAL(8)               :: CVECsum(LMXX)
+      REAL(8)               :: R2(3)
+      REAL(8)   ,allocatable:: ORB(:,:,:,:)
+      REAL(8)   ,allocatable:: ORBi(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE:: QBARVEC(:,:)
+      INTEGER(4),ALLOCATABLE:: LOX(:)
+      INTEGER(4),ALLOCATABLE:: iscatt(:)
+      logical               :: tonsite
+      logical               :: tsphere
+      integer(4)            :: nfil
+      character(64)         :: file
+      character(8)         :: string
 !     **************************************************************************
-!      CALL ATOMLIST$NATOM(NAT)
-!      NNB=SIZE(SBAR)
-!      DO IAT=1,NAT
-!        DO 
-!      ENDDO
+      TVEC(:,:)=0.D0
+      TVEC(1,1)=15.D0
+      TVEC(2,2)=15.D0
+      TVEC(3,3)=15.D0
+!
+!     ==========================================================================
+!     == define centered grid                                                 ==
+!     ==========================================================================
+      IF(N1.EQ.1)TVEC(:,1)=0.D0
+      IF(N2.EQ.1)TVEC(:,2)=0.D0
+      IF(N3.EQ.1)TVEC(:,3)=0.D0
+      TLITTLE=TVEC
+      IF(N1.GT.1)TLITTLE(:,1)=TLITTLE(:,1)/REAL(N1-1,KIND=8)
+      IF(N2.GT.1)TLITTLE(:,2)=TLITTLE(:,2)/REAL(N2-1,KIND=8)
+      IF(N3.GT.1)TLITTLE(:,3)=TLITTLE(:,3)/REAL(N3-1,KIND=8)
+      ORIGIN(:)=-0.5D0*(TVEC(:,1)+TVEC(:,2)+TVEC(:,3))
+!
+      CALL CELL$GETR8A('T0',9,RBAS)
+      CALL ATOMLIST$NATOM(NAT)
+      ALLOCATE(R0(3,NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+      ALLOCATE(ISPECIES1(NAT))
+      CALL ATOMLIST$GETI4A('ISPECIES',0,NAT,ISPECIES1)
+      ALLOCATE(RCOV(NAT))
+      ALLOCATE(QBARVEC(LMXX,NAT))
+      QBARVEC(:,:)=0.D0
+      lm1x=0
+      DO IAT=1,NAT
+        ISP=ISPECIES1(IAT)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('AEZ',AEZ)
+        CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV(IAT))
+!
+        CALL SETUP$GETI4('LNX',LNX)
+        ALLOCATE(LOX(LNX))
+        ALLOCATE(ISCATT(LNX))
+        CALL SETUP$GETI4A('LOX',LNX,LOX)
+        CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
+        DO LN=1,LNX
+          IF(ISCATT(LN).NE.0) CYCLE
+          L=LOX(LN)
+          QBARVEC(L**2+1:(L+1)**2,IAT)=POTPAR(ISP)%QBAR(LN)
+          if(iat.eq.iat0)lm1x=max(lm1x,(l+1)**2)
+        ENDDO
+        DEALLOCATE(LOX)
+        DEALLOCATE(ISCATT)
+        CALL SETUP$ISELECT(0)
+      ENDDO
+      ORIGIN(:)=ORIGIN(:)+R0(:,IAT0)
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      ALLOCATE(CVEC(LMXX,LM1X))
+      ALLOCATE(ORB(N1,N2,N3,LM1X))
+      ALLOCATE(ORBI(N1,N2,N3,LM1X))
+      ORB(:,:,:,:)=0.D0
+      ORBI(:,:,:,:)=0.D0
+      NNB=SIZE(SBAR)
+      DO NN=1,NNB
+         IF(SBAR(NN)%IAT1.NE.IAT0) CYCLE
+         if(sbar(nn)%n1.ne.lm1x) then
+           call error$msg('internal error')
+           call error$stop('lmto$plotlocorb')
+         end if
+         IAT2=SBAR(NN)%IAT2
+         LM2X=SBAR(NN)%N2
+         IF(LM2X.GT.LMXX) THEN
+           CALL ERROR$MSG('LM2X GREATER THAN LMXX')
+           CALL ERROR$MSG('INCREASE PARAMETER LMXX')
+           CALL ERROR$STOP('LMTO_PLOTLOCORB')
+         END IF
+         R2(:)=R0(:,IAT2)+RBAS(:,1)*REAL(SBAR(NN)%IT(1),KIND=8) &
+     &                   +RBAS(:,2)*REAL(SBAR(NN)%IT(2),KIND=8) &
+     &                   +RBAS(:,3)*REAL(SBAR(NN)%IT(3),KIND=8) 
+         tonsite=(IAT2.EQ.IAT0).AND.(MAXVAL(ABS(SBAR(NN)%IT(:))).eq.0)
+         do lm1=1,lm1x
+           CVEC(:LM2X,lm1)=QBARVEC(:LM2X,IAT2)*SBAR(NN)%MAT(:,LM1)
+           if(tonsite)CVEC(LM1,lm1)=CVEC(LM1,lm1)+1.D0
+         enddo
+         DO I1=1,N1
+           XI(1)=REAL(I1-1,KIND=8)
+           DO I2=1,N2
+             XI(2)=REAL(I2-1,KIND=8)
+             DO I3=1,N3
+               XI(3)=REAL(I3-1,KIND=8)
+!              == dr is the distance from second atom ==========================
+               DR(:)=ORIGIN(:)+MATMUL(TLITTLE,XI)-R2(:)
+               tsphere=(dot_product(dr,dr).lt.rcov(iat2))
+!
+               CALL  LMTO$SOLIDHANKEL(DR,RCOV(IAT2),K2,LM2X,K0(1:LM2X))
+               if(tsphere) then
+                 CALL  LMTO$SOLIDbessel(DR,K2,LM2X,J0(1:LM2X))
+                 jbar(:lm2x)=j0(:lm2x)-k0(:lm2x)*qbarvec(:lm2x,iat2)
+               end if
+               do lm1=1,lm1x
+!                == |kbar>=|K0>*(1+qbar*sbar) ==================================
+                 ORB(I1,I2,I3,lm1)=ORB(I1,I2,I3,lm1) &
+      &                        +DOT_PRODUCT(K0(1:LM2X),CVEC(1:LM2X,lm1))
+!                == -|jbar>sbar=-(|j0>-|k0>qbar)*sbar ==========================
+                 if(tsphere) then
+                   ORBi(I1,I2,I3,lm1)=ORBi(I1,I2,I3,lm1) &
+      &                        -DOT_PRODUCT(jbar(1:LM2X),SBAR(NN)%MAT(:,LM1))
+                   if(tonsite) ORBi(I1,I2,I3,lm1)=ORBi(I1,I2,I3,lm1)+k0(lm1)
+                 end if
+               enddo
+             ENDDO
+           ENDDO
+         ENDDO
+      ENDDO
+      deallocate(cvec)
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      FILE='TEST_LOCORB'
+      WRITE(STRING,*)IAT0 
+      FILE=TRIM(ADJUSTL(FILE))//'_IAT'//TRIM(ADJUSTL(STRING))//'.dat'
+      CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,-FILE)
+      CALL FILEHANDLER$UNIT('HOOK',NFIL)
+      WRITE(NFIL,*)ORIGIN(:)
+      WRITE(NFIL,*)TVEC(:,:)
+      WRITE(NFIL,*)N1,N2,N3,lm1x
+      NN=0
+      DO I1=1,N1
+        DO I2=1,N2
+          DO I3=1,N3
+            NN=NN+1
+!            WRITE(nfil,*)NN,ORB(I1,I2,I3),bareORB(I1,I2,I3),orbi(i1,i2,i3)
+            WRITE(nfil,fmt='(3i5,100f10.5)')i1,i2,i3,ORB(I1,I2,I3,:) &
+     &                                             ,orbi(i1,i2,i3,:)
+          ENDDO
+        ENDDO
+      ENDDO
+      CALL FILEHANDLER$CLOSE('HOOK')
+      CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOKERROR')
+
+!call specialfunction$test()
+!call test_lmto$structureconstants()
+      STOP 'FORCED IN LMTO_PLOTLOCORB'
       RETURN
       END

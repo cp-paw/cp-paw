@@ -213,8 +213,8 @@ END MODULE FILEHANDLER_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID_
       CHARACTER(*),INTENT(IN) :: NAME_
-      LOGICAL(4)      ,INTENT(IN) :: EXT_
-      INTEGER(4)                  :: IFIL
+      LOGICAL(4)  ,INTENT(IN) :: EXT_
+      INTEGER(4)              :: IFIL
 !     ******************************************************************
       IF(.NOT.ALLOCATED(FILE))CALL FILEHANDLER_CREATE
 !

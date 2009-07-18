@@ -209,11 +209,6 @@ END MODULE RADIALFOCK_MODULE
       NR=VFOCK%NR
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R)
-PRINT*,'PRINTVFOCK ON ',TRIM(FILE)
-PRINT*,'NR=',NR,' NB=',VFOCK%NB
-DO IB=1,VFOCK%NB
-  PRINT *,'IB=',IB,' L=',VFOCK%L(IB),' F=',VFOCK%F(IB)
-ENDDO
       OPEN(100,FILE=FILE)
       REWIND(100)
       DO IR=1,NR
@@ -342,7 +337,6 @@ ENDDO
         DO LB=0,LX
           DO LRHO=0,2*LX
 !          IF(MOD(LF+LB+LRHO,2).EQ.1) CYCLE !EMPIRICAL
-!PRINT*,'========================================================='
             SVAR=0.D0
             LMF=LF**2+1  ! RESULT INDEPEMDENT OF IMF: PIC ANY LMF
             LMB=LB**2
@@ -356,7 +350,6 @@ ENDDO
               ENDDO
             ENDDO
             SVAR=4.D0*PI*SVAR/REAL((2*LB+1)*(2*LRHO+1),KIND=8) !AVERAGE OVER M_J
-!WRITE(6,FMT='(5I5,F20.5)')LF,LB,LRHO,IMB,IMRHO,SVAR
             COEFF(LB+1,LRHO+1,LF+1)=SVAR
           ENDDO
         ENDDO
@@ -457,6 +450,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)   ,PARAMETER       :: TOL=1.D-6
       INTEGER(4),PARAMETER       :: NITER=1000
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
+      LOGICAL(4),PARAMETER       :: tpr=.false.
       REAL(8)                    :: R(NR)
       REAL(8)                    :: DREL(NR)  ! RELATIVISTIC CORRECTION
       REAL(8)                    :: RHO(NR)
@@ -485,7 +479,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)                    :: SCALE
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
-      REAL(8)       ,ALLOCATABLE:: EOFI_FOCK(:)
+      REAL(8)       ,ALLOCATABLE :: EOFI_FOCK(:)
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -512,15 +506,22 @@ USE PERIODICTABLE_MODULE
       ELSE
         SCALE=0.D0
       END IF
-PRINT*,'KEY=',TRIM(KEY)
-PRINT*,'SCALE=',SCALE,' TFOCK=',TFOCK
       TSTART=INDEX(KEY,'START').NE.0
-      NBROYDENMEM=2
-      BROYDENSTEP=5.D-1
+      IF(TPR) THEN
+        WRITE(*,FMT='("RELATIVISTIC EFFECTS SWITCHED ON? ",L5)')TREL
+        WRITE(*,FMT='("SPIN-ORBIT COUPLING SWITCHED ON?  ",L5)')TSO
+        WRITE(*,FMT='("FOCK CONTRIBTION ON?              ",L5)')TFOCK
+        IF(TFOCK) THEN
+          WRITE(*,FMT='("PERCENT FOCK CONTRIBUTION: ",L5)')NINT(SCALE*100.D0)
+        END IF
+        WRITE(*,FMT='("START FROM SCRATCH?                ",L5)')TSTART
+      END IF
 !
 !     ==========================================================================
 !     == INITIALIZATIONS                                                      ==
 !     ==========================================================================
+      NBROYDENMEM=2
+      BROYDENSTEP=5.D-1
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       C0LL=Y0
@@ -617,40 +618,12 @@ PRINT*,'SCALE=',SCALE,' TFOCK=',TFOCK
 !       == DETERMINE BOUND STATES FOR A GIVEN POTENTIAL AND ADD TO DENSITY    ==
 !       ========================================================================
         IF(TFOCK.AND.TSECOND) THEN
-PRINT*,'FOCKBOUNDSTATE ',ITER,CONVG
           CALL ATOMLIB$BOUNDSTATESWITHHF(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI,POT &
      &                              ,VFOCK,TREL,RBOX,PHI,SPHI)
-!          CALL ATOmLIB$AESCFWITHHF(GID,NR,TREL,NB,SOFI,LOFI,FOFI,EOFI,PHI &
-!     &                            ,LRHOX,RBOX,DREL,POT,MUX,SCALE,VFOCK)
         ELSE
-PRINT*,'NOFOCKBOUNDSTATE ',ITER
           CALL ATOMLIB$BOUNDSTATES(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI,POT &
      &                            ,TREL,RBOX,PHI,SPHI)
-!!$          DO IB=1,NB
-!!$            IF(TREL) THEN
-!!$              CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
-!!$            ELSE 
-!!$              DREL(:)=0.D0 
-!!$            END IF
-!!$            G(:)=0.D0
-!!$            CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,G &
-!!$     &                             ,NNOFI(IB),POT,EOFI(IB),PHI(:,IB))
-!!$          ENDDO
         END IF
-!!$        DO IB=1,NB
-!!$          IF(TREL) THEN
-!!$            G(:)=0.D0
-!!$            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
-!!$     &                                       ,DREL,G,PHI(:,IB),SPHI(:,IB))
-!!$          ELSE
-!!$            SPHI(:,IB)=0.D0
-!!$          END IF
-!!$          AUX(:)=R(:)**2*(PHI(:,IB)**2+SPHI(:,IB)**2)
-!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
-!!$          PHI(:,IB)=PHI(:,IB)/SQRT(SVAR)
-!!$          SPHI(:,IB)=SPHI(:,IB)/SQRT(SVAR)
-!!$        ENDDO
 !
 !       ========================================================================
 !       == ADD UP CHARGE DENSITY                                              ==
@@ -711,8 +684,6 @@ RFOCK=1.1D0*RFOCK
           ELSE
             CALL ATOMLIB$BOUNDSTATESWITHHF(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI,POT &
      &                              ,VFOCK,TREL,RFOCK,PHI,SPHI)
-!            CALL ATOMLIB$AESCFWITHHF(GID,NR,TREL,NB,SOFI,LOFI,FOFI,EOFI_FOCK,PHI &
-!     &                            ,LRHOX,RFOCK,DREL,POT,MUX,SCALE,VFOCK)
           END IF
           CALL RADIALFOCK$MAKEVFOCK(GID,NR,NB,LOFI,SOFI,FOFI,PHI,RFOCK &
      &                            ,LRHOX,VFOCK)
@@ -735,7 +706,7 @@ RFOCK=1.1D0*RFOCK
 !       ========================================================================
         XAV=SQRT(SUM(R**3*(POT-POTIN)**2)/SUM(R**3))
         XMAX=MAXVAL(ABS(R**2*(POT-POTIN))) 
-PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:R**2*(POT-POTIN)=',XMAX
+        if(tpr)PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:R**2*(POT-POTIN)=',XMAX
         CALL BROYDEN$STEP(NR,POTIN,POT-POTIN)
         POT=POTIN
         CONVG=(XMAX.LT.TOL)
@@ -799,7 +770,7 @@ PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:R**2*(POT-POTIN)=',XMAX
      &                              ,TREL,RBOX,PHI,SPHI)
 !     **************************************************************************
 !     **  FINDS A SET OF BOUNDSTATES FOR A GIVEN POTENTIAL                    **
-!     ** THE WAVE FUNCTIONS ARE NORMALIZED
+!     **  THE WAVE FUNCTIONS ARE NORMALIZED                                   **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
@@ -895,10 +866,6 @@ PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:R**2*(POT-POTIN)=',XMAX
 !       ========================================================================
         IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
         G(:)=0.D0
-!        CALL ATOMLIB$BOUNDSTATEWITHHF(GID,NR,TREL,RBOX,POT &
-!     &                ,VFOCK,LOFI(IB),SOFI(IB),NNOFI(IB),G,EOFI(IB) &
-!     &               ,PHI(:,IB),TPHI(:,IB))
-!
         CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,G &
      &                         ,NNOFI(IB),POT,EOFI(IB),PHI(:,IB))
         call ATOMLIB$UPDATESTATEWITHHF(GID,NR,Lofi(ib),SOfi(ib),DREL,G,POT &
@@ -1137,130 +1104,6 @@ PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:R**2*(POT-POTIN)=',XMAX
       END SUBROUTINE ATOMLIB$BOUNDSTATE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$PHASESHIFTSTATE(GID,NR,L,SO,DREL,G,POT,RBND,PHASE &
-     &                                                              ,E,PHI)
-!     **************************************************************************
-!     **  FINDS A STATE WITH DETERMINED PHASESHIFT PHASE AT RADIUS RC         **
-!     **  OF THE RADIAL SCHROEDINGER EQUATION AND                             **
-!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G                **
-!     **                                                                      **
-!     **  THE ENERGY IS DETERMINED BY BISECTION ON THE                        **
-!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.         **
-!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.         **
-!     **                                                                      **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
-      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
-      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
-      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
-      REAL(8)    ,INTENT(IN)     :: DREL(NR)! RELATIVISTIC CORRECTION
-      REAL(8)    ,INTENT(IN)     :: G(NR)   ! INHOMOGENITY
-      REAL(8)    ,INTENT(IN)     :: POT(NR) ! POTENTIAL
-      REAL(8)    ,INTENT(IN)     :: RBND    ! RADIUS OF PHASE SHIFT
-      REAL(8)    ,INTENT(IN)     :: PHASE   ! TARGET PHASE SHIFT
-      REAL(8)    ,INTENT(INOUT)  :: E       ! ENERGY
-      REAL(8)    ,INTENT(OUT)    :: PHI(NR) ! WAVE-FUNCTION
-      INTEGER(4)                 :: ISTART,IBI
-      REAL(8)                    :: X0,DX,XM,ZM,Z0
-      REAL(8)    ,PARAMETER      :: TOL=1.D-15
-      REAL(8)                    :: R(NR)
-      INTEGER(4) ,PARAMETER      :: NITER=100
-      INTEGER(4)                 :: I,IR
-      INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
-      INTEGER(4)                 :: IRBND
-      REAL(8)   ,PARAMETER       :: XMAX=1.D+20 !MAX. FACTOR IN THE WAVEFUNCTION
-      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
-      REAL(8)                    :: PHIUP(NR)
-      REAL(8)                    :: PHIDOWN(NR)
-      LOGICAL(4)                 :: TUP,TDOWN
-      REAL(8)                    :: ZUP,ZDOWN
-      REAL(8)                    :: XUP,XDOWN
-!     **************************************************************************
-!                                 CALL TRACE$PUSH('ATOMLIB$PHASESHIFTSTATE')
-      CALL RADIAL$R(GID,NR,R)
-      DO IR=1,NR
-        IRBND=IR
-        IF(R(IR).GT.RBND) EXIT
-      ENDDO
-!          
-!     ==========================================================================
-!     ==========================================================================
-!     ==  ITERATE TO BISECT ENERGY WITH A NODE AT RBOX                        ==
-!     ==========================================================================
-!     ==========================================================================
-      ISTART=1
-      X0=E
-      DX=1.D-2
-      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-      PHIUP(NR)=0.D0
-      PHIDOWN(NR)=0.D0
-      TUP=.FALSE.
-      TDOWN=.FALSE.
-      DO I=1,NITER
-        E=X0
-!
-!       ========================================================================
-!       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
-!       ========================================================================
-        IDIR=1
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHI)
-!       == CHECK FOR OVERFLOW
-        IF(.NOT.(PHI(IRBND).GT.0.OR.PHI(IRBND).LE.0)) THEN
-          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
-          CALL ERROR$I4VAL('L',L)
-          CALL ERROR$STOP('ATOMLIB$BOUNDSTATE')
-        END IF
-!
-!       ========================================================================
-!       == ESTIMATE PHASE SHIFT                                               ==
-!       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
-        Z0=Z0-PHASE
-        IF(Z0.GE.0.D0) THEN
-          PHIUP(:)=PHI(:)
-          TUP=.TRUE.
-          ZUP=Z0
-          XUP=X0
-        ELSE
-          PHIDOWN(:)=PHI(:)
-          TDOWN=.TRUE.
-          ZDOWN=Z0
-          XDOWN=X0
-        END IF
-        IF(ABS(2.D0*DX).LE.TOL) EXIT
-!       ========================================================================
-!       ==  BISECTION                                                         ==
-!       ========================================================================
-        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-      ENDDO
-      IF(ABS(DX).GT.TOL) THEN
-        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
-        CALL ERROR$MSG('BOUND STATE NOT FOUND')
-        CALL ERROR$STOP('ATOMLIB$BOUNDSTATE')
-      END IF
-!
-!     ==========================================================================
-!     == MIX RESULT LINEARLY                                                  ==
-!     ==========================================================================
-      IF(.NOT.TUP.AND.TDOWN) THEN
-        CALL ERROR$MSG('RARE EVENT CAPTURED')
-        CALL ERROR$MSG('BISECTION DOES NOT BRACKET FROM BOTH SIDES')
-        CALL ERROR$STOP('ATOMLIB$BOUNDSTATE')
-      END IF
-      PHI(:)=(ZUP*PHIDOWN-ZDOWN*PHIUP)/(ZUP-ZDOWN)
-!PRINT*,'FACTORS ',ZUP/(ZUP-ZDOWN),-ZDOWN/(ZUP-ZDOWN)
-!PRINT*,'XUP  =',XUP  ,' ZUP   ',ZUP  ,' DIFFZ ',ZUP-ZDOWN
-!PRINT*,'XDOWN=',XDOWN,' ZDOWN ',ZDOWN,' DIFFX ',XUP-XDOWN
-      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
-      Z0=Z0-PHASE
-!PRINT*,'L=',L,' E=',E,' ZUP-ZDOWN',ZUP-ZDOWN,' Z0=',Z0
-
-!                                 CALL TRACE$POP()
-      RETURN
-      END SUBROUTINE ATOMLIB$PHASESHIFTSTATE
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,RBOX,PSPOT,NPRO,PRO,DH,DO,G &
      &                                ,E,PHI)
 !     **************************************************************************
@@ -1381,164 +1224,6 @@ PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:R**2*(POT-POTIN)=',XMAX
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$UPDATEPAWSTATE(GID,NR,L,VPAW,G,RBND,E,PSI)
-!     **************************************************************************
-!     ** USES AN APPROXIMATE SOLUTION TO CONSTRUCT A SOLUTION FOR             **
-!     ** A PAW-TYPE HAMILTONIAN                                               **
-!     **                                                                      **
-!     ** THE BOUNDARY CONDITIONS (LOGARITHMIC DERIVATIVE AT RBND IS PRESERVED **
-!     ** IF RBND.LE.0 A FIXED ENERGY SOLUTION IS SEARCHED AND THE OUTER       **
-!     ** BOUNDARY CONDITION IS RELAXED.                                       **
-!     **                                                                      **
-!     **************************************************************************
-      USE RADIALPAW_MODULE, ONLY: VPAW_TYPE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)    :: GID
-      INTEGER(4),INTENT(IN)    :: NR
-      INTEGER(4),INTENT(IN)    :: L
-      TYPE(VPAW_TYPE),INTENT(IN) :: VPAW
-      REAL(8)   ,INTENT(IN)    :: G(NR)
-      REAL(8)   ,INTENT(IN)    :: RBND
-      REAL(8)   ,INTENT(INOUT) :: E
-      REAL(8)   ,INTENT(INOUT) :: PSI(NR)
-      REAL(8)                  :: PHASE
-      REAL(8)                  :: DREL(NR)
-      REAL(8)                  :: DPSI(NR)
-      REAL(8)                  :: OPSI(NR)
-      REAL(8)                  :: POT(NR)
-      REAL(8)                  :: PHIDOT(NR)
-      REAL(8)                  :: PHIPRIME(NR)
-      REAL(8)                  :: VALDOT,DERDOT,VALPRIME,DERPRIME,VAL0,DER0
-      REAL(8)                  :: PI,Y0
-      REAL(8)                  :: R(NR)
-      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
-      REAL(8)                  :: G1(NR)
-      REAL(8)                  :: VAL,DER,SVAR
-      INTEGER(4)               :: IR
-      INTEGER(4),PARAMETER     :: NITER=20
-      INTEGER(4)               :: ITER
-      REAL(8)   ,PARAMETER     :: TOL=1.D-8
-      LOGICAL(4)               :: CONVG
-      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
-      INTEGER(4)               :: IRBND
-      REAL(8)                  :: NORM,E1
-      LOGICAL(4)               :: TPR=.TRUE.
-      LOGICAL(4)               :: TFIXE
-      INTEGER(4)               :: NN
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      CALL RADIAL$R(GID,NR,R)
-      TFIXE=RBND.LE.0.D0
-      DREL(:)=0.D0
-!
-!     :: REMARK: SCHROEDINGER$PHASESHIFT TAKES VALUE AND DERIVATIVE FROM A    ::
-!     :: TWO-POINT FORMULA, AND THEREFORE IS NOT FULLY CONSISTENT WITH        ::
-!     :: RADIAL$VALUE AND RADIAL$DERIVATIVE                                   ::
-      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,PHASE)
-PRINT*,'PHASE',PHASE
-!
-      DO IR=1,NR
-        IRBND=IR
-        IF(TFIXE.AND.R(IR).GT.3.D0) EXIT
-        IF(.NOT.TFIXE.AND.R(IR).GT.RBND) EXIT
-      ENDDO
-!
-!     ==========================================================================
-!     ==  CONSTRUCT AN LOCAL, APPROXIMATE POTENTIAL
-!     ==========================================================================
-      AUX(:)=1.D0
-      CALL RADIALPAW$VPSI(GID,NR,VPAW,L,AUX,AUX1,OPSI)
-      POT(:)=AUX1-E*OPSI(:)+E*AUX(:)
-POT=VPAW%PSPOT
-!
-!     ==========================================================================
-!     ==  NOW START LOOP                                                      ==
-!     ==========================================================================
-      DO ITER=1,NITER
-!
-!       ========================================================================
-!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
-!       ========================================================================
-!       == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
-        CALL RADIAL$VERLETD2(GID,NR,R*PSI,AUX1)
-        AUX(:)=-R(:)*AUX(:)+REAL(L*(L+1),KIND=8)*PSI(:)
-!       == REMOVE FACTOR 2*R**2 ================================================
-        AUX(:)=AUX(:)/(2.D0*R(:)**2)
-!       == CORRECT GLITCHES ====================================================
-        AUX(1:2)=0.D0
-!       == POTENTIAL ENERGY ====================================================
-        CALL RADIALPAW$VPSI(GID,NR,VPAW,L,PSI,AUX1,OPSI)
-        AUX(:)=AUX(:)+AUX1(:)
-!       == ESTIMATE ENERGY =====================================================
-        IF(.NOT.TFIXE) THEN
-          AUX1(:)=R(:)**2*PSI(:)*(AUX(:)-G(:))
-          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-          CALL RADIAL$VALUE(GID,NR,AUX2,RBND,E)
-          AUX1(:)=R(:)**2*PSI(:)*OPSI(:)
-          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-          CALL RADIAL$VALUE(GID,NR,AUX2,RBND,NORM)
-          E=E/NORM
-!         == REMOVE ENERGY TERM ================================================
-          AUX(:)=AUX(:)-E*OPSI(:)
-        ELSE
-          AUX1(:)=R(:)**2*PSI(:)*OPSI(:)
-          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-          CALL RADIAL$VALUE(GID,NR,AUX2,3.D0,NORM)
-        END IF
-!       == SUBTRACT INHOMOGENEITY ==============================================
-        AUX(:)=AUX(:)-G(:)
-!       == MAP INTO DPSI
-        DPSI(:)=-AUX(:)
-!
-!       ========================================================================
-!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
-!       ========================================================================
-        G1=DPSI(:)
-        G1(1:2)=0.D0
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,0,G1,L,E,1,PHIPRIME)
-        IF(.NOT.TFIXE) THEN
-          G1=PSI(:)
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,0,G1,L,E,1,PHIDOT)
-          CALL RADIAL$VALUE(GID,NR,PSI,RBND,VAL0)
-          CALL RADIAL$DERIVATIVE(GID,NR,PSI,RBND,DER0)
-          CALL RADIAL$VALUE(GID,NR,PHIPRIME,RBND,VALPRIME)
-          CALL RADIAL$DERIVATIVE(GID,NR,PHIPRIME,RBND,DERPRIME)
-          CALL RADIAL$VALUE(GID,NR,PHIDOT,RBND,VALDOT)
-          CALL RADIAL$DERIVATIVE(GID,NR,PHIDOT,RBND,DERDOT)
-          CALL SCHROEDINGER$RESOLVEPHASESHIFT(PHASE,VAL,DER,NN)
-          VAL0=VAL*DER0-DER*VAL0
-          VALPRIME=VAL*DERPRIME-DER*VALPRIME
-          VALDOT=VAL*DERDOT-DER*VALDOT
-          SVAR=(VAL0+VALPRIME)/VALDOT  !DELTA EPSILON
-          DPSI(:)=PHIPRIME(:)-PHIDOT(:)*SVAR
-        ELSE
-          DPSI(:)=PHIPRIME(:)
-        END IF
-!   
-!       ========================================================================
-!       ==  CHECK CONVERGENCE                                                 ==
-!       ========================================================================
-        VAL=MAXVAL(ABS(DPSI(:IRBND-3)))/SQRT(NORM)
-        IF(TPR) PRINT*,' DEV=',VAL
-        CONVG=(VAL.LT.TOL)
-        IF(CONVG) EXIT
-!   
-!       ========================================================================
-!       ==  PROPAGATE                                                         ==
-!       ========================================================================
-        PSI(:)=PSI(:)+DPSI(:)
-!
-      ENDDO    ! END OF ITERATION
-!
-      IF(.NOT.CONVG) THEN
-        CALL ERROR$MSG('LOOP FOR RADIAL PAW NOT CONVERGED')
-        CALL ERROR$STOP('ATOMLIB$UPDATEPAWSTATE')
-      END IF
-      RETURN
-      END SUBROUTINE ATOMLIB$UPDATEPAWSTATE
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$BOXVOFRHO(GID,NR,RAD,AEZ,RHO,POT,EH,EXC)
 !     ******************************************************************
 !     **                                                              **
@@ -1620,7 +1305,6 @@ POT=VPAW%PSPOT
         RH=RHO(IR)*Y0
         GRHO2=(Y0*GRHO(IR))**2
         CALL DFT(RH,0.D0,GRHO2,0.D0,0.D0,EXC1,VXC,DUMMY1,VGXC,DUMMY2,DUMMY3)
-!WRITE(6,FMT='("XCTEST",I5,10F30.10)')IR,R(IR),RH,GRHO2,EXC1,VXC,VGXC
         EDEN(IR)=4.D0*PI*EXC1   ! ANGULAR INTEGRATION ALREADY INCLUDED
         POTXC(IR)=VXC/Y0
         GRHO(IR)=VGXC*2.D0*GRHO(IR)
@@ -1653,10 +1337,6 @@ POT=VPAW%PSPOT
 !     ==  CUT OF POTENTIAL FOTR LOW DENSITIES                                 ==
 !     ==========================================================================
       POT=POTH+POTXC
-!DO IR=1,NR
-!WRITE(6,FMT='("POTTEST",I5,10F30.10)')IR,RHO(IR),POT(IR),POTH(IR),POTXC(IR)
-!ENDDO
-!STOP
       RETURN
       END
 !
@@ -1920,423 +1600,6 @@ POT=VPAW%PSPOT
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$BOUNDSTATEWITHHF(GID,NR,TREL,RBOX,POT &
-     &                             ,VFOCK,L,SO,NN,G,E,PSI,TPSI)
-!     **************************************************************************
-!     **                                                                      **
-!     **************************************************************************
-      USE RADIALFOCK_MODULE, ONLY : VFOCK_TYPE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)    :: GID
-      INTEGER(4),INTENT(IN)    :: NR
-      LOGICAL(4),INTENT(IN)    :: TREL
-      REAL(8)   ,INTENT(IN)    :: RBOX
-      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
-      REAL(8)   ,INTENT(IN)    :: POT(NR)
-      INTEGER(4),INTENT(IN)    :: NN
-      INTEGER(4),INTENT(IN)    :: L
-      INTEGER(4),INTENT(IN)    :: SO
-      REAL(8)   ,INTENT(IN)    :: G(NR)
-      REAL(8)   ,INTENT(OUT)   :: PSI(NR)
-      REAL(8)   ,INTENT(OUT)   :: E
-      REAL(8)   ,INTENT(OUT)   :: TPSI(NR)
-      REAL(8)   ,PARAMETER     :: TOL=1.D-6
-      INTEGER(4),PARAMETER     :: NITER=20
-      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
-      LOGICAL(4),PARAMETER     :: TPR=.TRUE.
-      REAL(8)                  :: DREL(NR)
-      REAL(8)                  :: DPSI(NR)
-      REAL(8)                  :: VFOCKPSI(NR)
-      REAL(8)                  :: PI,Y0
-      REAL(8)                  :: SOFACTOR
-      REAL(8)                  :: R(NR)
-      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
-      REAL(8)                  :: G1(NR)
-      REAL(8)                  :: RDPRIME(NR)
-      REAL(8)                  :: VAL,VAL1,VAL2
-      INTEGER(4)               :: IR,ISO
-      INTEGER(4)               :: IRBOX
-      INTEGER(4)               :: ITER
-      LOGICAL(4)               :: CONVG
-      REAL(8)                  :: POT1(NR)
-      INTEGER(4)               :: IRCL,IROUT
-      REAL(8)                  :: ROUT
-      REAL(8)                  :: NORM
-      LOGICAL(4)               :: THOM
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      CALL RADIAL$R(GID,NR,R)
-      THOM=MAXVAL(ABS(G)).LT.1.D-8
-!
-!     == INDEX OF THE FIRST GRIDPOINT OUTSIDE RBOX =============================
-      DO IR=1,NR
-        IRBOX=IR
-        IF(R(IR).GE.RBOX) EXIT
-      ENDDO
-!
-      IF(TPR) THEN
-        PRINT*,'==============================================================='
-        PRINT*,'L=',L,' SO=',SO,' NN=',NN,' THOM ',THOM
-        PRINT*,'SCALE ',VFOCK%SCALE,'TREL ',TREL,' RBOX ',RBOX,R(IRBOX)
-        PRINT*,'EOFI ',-1,E
-      END IF
-!
-!     ==========================================================================
-!     ==  RECREATE WAVE FUNCTION                                              ==
-!     ==========================================================================
-      E=0.D0 
-      IF(TREL) THEN
-        CALL SCHROEDINGER$DREL(GID,NR,POT,E,DREL)
-      ELSE 
-        DREL(:)=0.D0 
-      END IF
-      CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,DREL,G,NN,POT,E,PSI)
-!
-      IF(TPR.AND.THOM) THEN
-        AUX(:)=R(:)**2*PSI(:)**2
-        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-        CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-        PSI(:)=PSI(:)/SQRT(VAL)
-      END IF
-        
-      IF(TPR) THEN
-        CALL ATOMLIB_WRITEPHI('PSI_I.DAT',GID,NR,1,PSI)
-        PRINT*,'EOFI ',0,E
-      END IF
-!
-!     ==========================================================================
-!     ==  NOW START LOOP                                                      ==
-!     ==========================================================================
-      DO ITER=1,NITER
-!
-!       ========================================================================
-!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
-!       ========================================================================
-        IF(TREL) THEN
-          CALL SCHROEDINGER$DREL(GID,NR,POT,E,DREL)
-          CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
-        ELSE
-          DREL=0.D0
-          RDPRIME=0.D0
-        END IF
-        IF(SO.EQ.0) THEN
-          SOFACTOR=0.D0
-        ELSE IF(SO.EQ.1) THEN
-          SOFACTOR=REAL(L,KIND=8)
-        ELSE IF(SO.EQ.-1) THEN
-          SOFACTOR=REAL(-L-1,KIND=8)
-        ELSE
-          CALL ERROR$STOP('ILLEGAL VALUE FOR SO')
-          CALL ERROR$STOP('ATOMLIB$BOUNDSTATEWITHHF')
-        END IF
-!       == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
-        CALL RADIAL$VERLETD2(GID,NR,R*PSI,AUX2)
-        AUX(:)=R(:)*AUX2(:)-REAL(L*(L+1),KIND=8)*PSI(:)
-        AUX(:)=-(1.D0+DREL)*AUX(:)
-        CALL RADIAL$VERLETD1(GID,NR,PSI,AUX2)
-        AUX(:)=AUX(:)-RDPRIME*(R(:)**2*AUX2(:)-SOFACTOR*R(:)*PSI(:))
-!       == POTENTIAL ENERGY ==================================================
-        AUX(:)=AUX(:)+2.D0*R(:)**2*POT(:)*Y0*PSI(:)
-!       == HARTREE-FOCK CORRECTION ===========================================
-        CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,PSI,VFOCKPSI)
-        AUX(:)=AUX(:)+2.D0*R(:)**2*VFOCKPSI(:)
-!       == CORRECT GLITCHES ==================================================
-        AUX(1:2)=0.D0
-!       == ESTIMATE ENERGY ===================================================
-        AUX1(:)=0.5D0*AUX(:)*PSI(:)-R(:)**2*PSI(:)*G(:)
-        CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-        CALL RADIAL$VALUE(GID,NR,AUX2,RBOX,E)
-        AUX1(:)=R(:)**2*PSI(:)**2
-        CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-        CALL RADIAL$VALUE(GID,NR,AUX2,RBOX,NORM)
-        E=E/NORM
-!       == REMOVE ENERGY TERM ================================================
-        AUX(:)=AUX(:)-2.D0*R(:)**2*E*PSI(:)
-!       == WEIGHT WITH OCCUPATION ============================================
-        DPSI(:)=AUX(:)/(2.D0*R(:)**2)-G(:)
-!
-!       ========================================================================
-!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
-!       ========================================================================
-        ISO=SO
-        CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
-!       == BOUNDARY CONDITION PHI(ROUT)=0 ====================================
-        IF(R(IROUT).LT.RBOX) THEN
-          ROUT=R(IROUT)
-        ELSE
-          ROUT=RBOX
-          IROUT=IRBOX
-        END IF
-!       ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT TO AVOID AN OVERFLOW ======
-!       == ATTENTION: THERE IS A STEP IN THE POTENTIAL =======================
-        POT1(:)=POT(:)
-        POT1(IROUT:)=E
-        IF(TREL) THEN
-          CALL SCHROEDINGER$DREL(GID,NR,POT1,E,DREL)
-        ELSE 
-          DREL(:)=0.D0 
-        END IF
-        G1=DPSI(:)
-        G1(1:2)=0.D0
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,ISO,G1,L,E,1,AUX1)
-        G1=PSI(:)
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,ISO,G1,L,E,1,AUX2)
-        CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL1)
-        CALL RADIAL$VALUE(GID,NR,AUX2,ROUT,VAL2)
-        DPSI(:)=AUX1(:)-AUX2(:)*VAL1/VAL2
-        DPSI(IROUT+3:)=0.D0
-        IF(ROUT.LT.RBOX) DPSI(IROUT:)=0.D0
-        CALL RADIAL$VALUE(GID,NR,DPSI(:),RBOX,VAL)
-!   
-!       ========================================================================
-!       ==  CHECK CONVERGENCE                                                 ==
-!       ========================================================================
-        VAL=MAXVAL(ABS(DPSI(:IRBOX-3)))/SQRT(NORM)
-        IF(TPR) PRINT*,' DEV=',VAL,' ITER=',ITER
-        CONVG=(VAL.LT.TOL)
-        IF(CONVG) EXIT
-!   
-!       ========================================================================
-!       ==  PROPAGATE                                                         ==
-!       ========================================================================
-        PSI(:)=PSI(:)-DPSI(:)
-!   
-!       ========================================================================
-!       ==  NORMALIZE                                                         ==
-!       ========================================================================
-        IF(TPR.AND.THOM) THEN
-          AUX(:)=R(:)**2*PSI(:)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-          PSI(:)=PSI(:)/SQRT(VAL)
-        END IF
-        IF(TPR) THEN
-          PRINT*,'EOFI ',ITER,E
-        END IF
-!
-      ENDDO    ! END OF ITERATION
-!
-      IF(.NOT.CONVG) THEN
-        CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
-        CALL ERROR$STOP('ATOMLIB$BOUNDSTATEWITHHF')
-      END IF
-      IF(TPR) PRINT*,ITER,'ITERATIONSIN LOOP FOR RADIAL HARTREE FOCK'
-      IF(TPR) THEN
-        PRINT*,'EOFI ',ITER,E
-        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,1,PSI)
-      END IF
-!   
-!     ==========================================================================
-!     ==  DETERMINE KINETIC ENERGY                                            ==
-!     ==========================================================================
-      TPSI(:)=(E-POT(:)*Y0+VFOCK%SCALE*VFOCK%MUX*Y0)*PSI(:) &
-     &                    -VFOCK%SCALE*VFOCKPSI(:)+G(:)
-      RETURN
-      END SUBROUTINE ATOMLIB$BOUNDSTATEWITHHF
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$PHASESHIFTSTATEWITHHF(GID,NR,L,SO,DREL,G,POT &
-     &                             ,VFOCK,RBND,PHASE,E,PSI)
-!     **************************************************************************
-!     **                                                                      **
-!     **************************************************************************
-      USE RADIALFOCK_MODULE, ONLY : VFOCK_TYPE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)    :: GID
-      INTEGER(4),INTENT(IN)    :: NR
-      INTEGER(4),INTENT(IN)    :: L
-      INTEGER(4),INTENT(IN)    :: SO
-      REAL(8)   ,INTENT(IN)    :: DREL(NR)
-      REAL(8)   ,INTENT(IN)    :: POT(NR)
-      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
-      REAL(8)   ,INTENT(IN)    :: G(NR)
-      REAL(8)   ,INTENT(IN)    :: RBND
-      REAL(8)   ,INTENT(IN)    :: PHASE
-      REAL(8)   ,INTENT(OUT)   :: E
-      REAL(8)   ,INTENT(OUT)   :: PSI(NR)
-      REAL(8)                  :: DPSI(NR)
-      REAL(8)                  :: PHIDOT(NR)
-      REAL(8)                  :: PHIPRIME(NR)
-      REAL(8)                  :: VALDOT,DERDOT,VALPRIME,DERPRIME,VAL0,DER0
-      REAL(8)                  :: PI,Y0
-      REAL(8)                  :: SOFACTOR
-      REAL(8)                  :: R(NR)
-      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
-      REAL(8)                  :: G1(NR)
-      REAL(8)                  :: RDPRIME(NR)
-      REAL(8)                  :: VAL,DER,SVAR
-      INTEGER(4)               :: IR
-      INTEGER(4),PARAMETER     :: NITER=20
-      INTEGER(4)               :: ITER
-      REAL(8)   ,PARAMETER     :: TOL=1.D-8
-      LOGICAL(4)               :: CONVG
-      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
-      INTEGER(4)               :: IRBND
-      REAL(8)                  :: NORM
-      LOGICAL(4)               :: TPR=.TRUE.
-      LOGICAL(4)               :: THOM
-      INTEGER(4)               :: NN
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      CALL RADIAL$R(GID,NR,R)
-      CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
-      IF(RBND.LE.0) THEN
-        CALL ERROR$MSG('CONSTANT ENERGY SOLUTION NOT IMPLEMENTED')
-        CALL ERROR$MSG('RBND MUST BE POSITIVE')
-        CALL ERROR$STOP('ATOMLIB$PHASESHIFTSTATEWITHHF')
-      END IF
-!      
-      THOM=MAXVAL(ABS(G)).LT.1.D-8
-      DO IR=1,NR
-        IRBND=IR
-        IF(R(IR).GT.RBND) EXIT
-      ENDDO
-      IF(SO.EQ.0) THEN
-        SOFACTOR=0.D0
-      ELSE IF(SO.EQ.1) THEN
-        SOFACTOR=REAL(L,KIND=8)
-      ELSE IF(SO.EQ.-1) THEN
-        SOFACTOR=REAL(-L-1,KIND=8)
-      ELSE
-        CALL ERROR$STOP('ILLEGAL VALUE FOR SO')
-        CALL ERROR$STOP('ATOMLIB$BOUNDSTATEWITHHF')
-      END IF
-!
-!     ==========================================================================
-!     ==  RECREATE WAVE FUNCTION                                              ==
-!     ==========================================================================
-      CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,SO,DREL,G,POT,RBND,PHASE,E,PSI)
-!
-      IF(THOM) THEN
-        AUX(:)=R(:)**2*PSI(:)**2
-        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-        CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
-        PSI(:)=PSI(:)/SQRT(VAL)
-PRINT*,'WAVE FUNCTION NORMALIZED; THOM=',THOM
-      END IF
-        
-      IF(TPR) THEN
-        CALL ATOMLIB_WRITEPHI('PSI_I.DAT',GID,NR,1,PSI)
-        PRINT*,'EOFI ',0,E
-      END IF
-!
-!     ==========================================================================
-!     ==  NOW START LOOP                                                      ==
-!     ==========================================================================
-      DO ITER=1,NITER
-!
-!       ========================================================================
-!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
-!       ========================================================================
-!       == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
-        CALL RADIAL$VERLETD2(GID,NR,R*PSI,AUX1)
-        AUX(:)=R(:)*AUX1(:)
-        AUX(:)=AUX(:)-REAL(L*(L+1),KIND=8)*PSI(:)
-        AUX(:)=-(1.D0+DREL)*AUX(:)
-        CALL RADIAL$VERLETD1(GID,NR,PSI,AUX1)
-        AUX(:)=AUX(:)-RDPRIME(:)*(R(:)**2*AUX1(:)-SOFACTOR*R(:)*PSI(:))
-!       == POTENTIAL ENERGY ====================================================
-        AUX(:)=AUX(:)+2.D0*R(:)**2*POT(:)*Y0*PSI(:)
-!       == REMOVE FACTOR 2*R**2 ================================================
-        AUX(:)=AUX(:)/(2.D0*R(:)**2)
-!       == HARTREE-FOCK CORRECTION =============================================
-        CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,PSI,AUX1)
-        AUX(:)=AUX(:)+AUX1(:)
-!       == CORRECT GLITCHES ====================================================
-        AUX(1:2)=0.D0
-!       == ESTIMATE ENERGY =====================================================
-        AUX1(:)=R(:)**2*PSI(:)*(AUX(:)-G(:))
-        CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-        CALL RADIAL$VALUE(GID,NR,AUX2,RBND,E)
-        AUX1(:)=R(:)**2*PSI(:)**2
-        CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-        CALL RADIAL$VALUE(GID,NR,AUX2,RBND,NORM)
-        E=E/NORM
-PRINT*,'EE',E,NORM
-!       == REMOVE ENERGY TERM ================================================
-        AUX(:)=AUX(:)-E*PSI(:)
-!       == SUBTRACT INHOMOGENEITY ==============================================
-        AUX(:)=AUX(:)-G(:)
-!       == MAP INTO DPSI
-        DPSI(:)=-AUX(:)
-!
-!       ========================================================================
-!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
-!       ========================================================================
-        G1=DPSI(:)
-        G1(1:2)=0.D0
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G1,L,E,1,PHIPRIME)
-        G1=PSI(:)
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G1,L,E,1,PHIDOT)
-!
-!       :: REMARK: SCHROEDINGER$PHASESHIFT TAKES VALUE AND DERIVATIVE FROM A  ::
-!       :: TWO-POINT FORMULA, AND THEREFORE IS NOT FULLY CONSISTENT WITH      ::
-!       :: RADIAL$VALUE AND RADIAL$DERIVATIVE                                 ::
-        CALL RADIAL$VALUE(GID,NR,PSI,RBND,VAL0)
-        CALL RADIAL$DERIVATIVE(GID,NR,PSI,RBND,DER0)
-        CALL RADIAL$VALUE(GID,NR,PHIPRIME,RBND,VALPRIME)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHIPRIME,RBND,DERPRIME)
-        CALL RADIAL$VALUE(GID,NR,PHIDOT,RBND,VALDOT)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHIDOT,RBND,DERDOT)
-        CALL SCHROEDINGER$RESOLVEPHASESHIFT(PHASE,VAL,DER,NN)
-        VAL0=VAL*DER0-DER*VAL0
-        VALPRIME=VAL*DERPRIME-DER*VALPRIME
-        VALDOT=VAL*DERDOT-DER*VALDOT
-        SVAR=(VAL0+VALPRIME)/VALDOT  !DELTA EPSILON
-        DPSI(:)=PHIPRIME(:)-PHIDOT(:)*SVAR
-!   
-!       ========================================================================
-!       ==  CHECK CONVERGENCE                                                 ==
-!       ========================================================================
-        VAL=MAXVAL(ABS(DPSI(:IRBND-3)))/SQRT(NORM)
-        IF(TPR) PRINT*,' DEV=',VAL
-        CONVG=(VAL.LT.TOL)
-        IF(CONVG) EXIT
-!   
-!       ========================================================================
-!       ==  PROPAGATE                                                         ==
-!       ========================================================================
-        PSI(:)=PSI(:)+DPSI(:)
-! CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,SVAR)
-!PRINT*,'TARGET PHASE+ ',PHASE,' ACTUAL PHASE=',SVAR,' R=',RBND
-!   
-!       ========================================================================
-!       ==  NORMALIZE                                                         ==
-!       ========================================================================
-        IF(THOM) THEN
-          AUX(:)=R(:)**2*PSI(:)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
-          PSI(:)=PSI(:)/SQRT(VAL)
-        END IF
-        IF(TPR) THEN
-          PRINT*,'EOFI ',ITER,E
-        END IF
-!
-      ENDDO    ! END OF ITERATION
-!
-      IF(.NOT.CONVG) THEN
-        CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
-        CALL ERROR$STOP('ATOMLIB$PHASESHIFTSTATEWITHHF')
-      END IF
-      IF(TPR) PRINT*,ITER,'ITERATIONSIN LOOP FOR RADIAL HARTREE FOCK'
-      IF(THOM) THEN
-        AUX(:)=R(:)**2*PSI(:)**2
-        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-        CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
-        PSI(:)=PSI(:)/SQRT(VAL)
-      END IF
-      IF(TPR) THEN
-        PRINT*,'EOFI ',ITER,E
-        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,1,PSI)
-      END IF
-!
-      RETURN
-      END SUBROUTINE ATOMLIB$PHASESHIFTSTATEWITHHF
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,SO,DREL,G,POT,VFOCK &
      &                                    ,RBND,E,PSI)
 !     **************************************************************************
@@ -2368,7 +1631,7 @@ PRINT*,'EE',E,NORM
       REAL(8)         ,INTENT(INOUT) :: PSI(NR)
       REAL(8)         ,PARAMETER  :: TOL=1.D-10  !(1d-12 is too small)
       REAL(8)         ,PARAMETER  :: TOLmax=1.D-8  !emergency tolerance
-      INTEGER(4)      ,PARAMETER  :: NITER=50
+      INTEGER(4)      ,PARAMETER  :: NITER=200
       REAL(8)         ,PARAMETER  :: XMAX=1.D+15 !MAX. FACTOR FOR WAVEFUNCTION
       REAL(8)                  :: PHASE
       REAL(8)                  :: DPSI(NR)
@@ -2431,7 +1694,7 @@ PRINT*,'EE',E,NORM
         SOFACTOR=REAL(-L-1,KIND=8)
       ELSE
         CALL ERROR$STOP('ILLEGAL VALUE FOR SO')
-        CALL ERROR$STOP('ATOMLIB$BOUNDSTATEWITHHF')
+        CALL ERROR$STOP('ATOMLIB$UPDATESTATEWITHHF')
       END IF
 !
 !     ==========================================================================
@@ -2467,11 +1730,13 @@ PRINT*,'EE',E,NORM
           CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
           CALL RADIAL$VALUE(GID,NR,AUX2,RBND,NORM)
           E=E/NORM
-if(e.lt.-5.d+3) then
-  PRINT*,'E ',E,'RBND=',RBND
-  CALL ERROR$msg('energy below -5000 H encountered. Seems unreasonable') 
-  CALL ERROR$STOP('atomlib$updatestatewithhf') 
-end if
+          IF(E.LT.-5.D+3) THEN
+            CALL ERROR$MSG('ENERGY BELOW -5000 H ENCOUNTERED.')
+            CALL ERROR$MSG('INDICATION OF CATASTROPHIC FAILURE.') 
+            CALL ERROR$R8VAL('E',E)
+            CALL ERROR$R8VAL('RBND',RBND)
+            CALL ERROR$STOP('ATOMLIB$UPDATESTATEWITHHF') 
+          END IF
 !         == REMOVE ENERGY TERM ================================================
           AUX(:)=AUX(:)-E*PSI(:)
         ELSE
@@ -2492,7 +1757,6 @@ end if
 !       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
 !       ========================================================================
         CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
-!print*,'e ',e,' l=',l,' rout=',r(irout),' rbnd=',rbnd
 
 !       == BOUNDARY CONDITION PHI(ROUT)=0 ====================================
         ROUT=R(IROUT)
@@ -2504,8 +1768,6 @@ end if
         G1=DPSI(:)
         G1(1:2)=0.D0
         CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G1,L,E,1,PHIPRIME)
-!!$        g1=0.d0
-!!$        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G1,L,E,1,PHIhom)
         IF(.NOT.TFIXE) THEN
           G1=PSI(:)
           CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G1,L,E,1,PHIDOT)
@@ -2543,34 +1805,9 @@ end if
           enddo
           if(rend.lt.rbnd) dpsi(irend+1:)=0.d0
 !
-if(maxval(abs(dpsi)).lt.0.d0) then
-  call error$stop('marke 1')
-end if
-!
-!         == fix boundary condition of phihom ==================================
-!!$          do i=1,2 ! loop to fix up numerical errors 
-!!$            y1=phihom(irbnd-1)
-!!$            y2=phihom(irbnd)
-!!$            derhom=(y2-y1)/(x2-x1)
-!!$            valhom=y1+derhom*(rbnd-x1)
-!!$            whom=val*derhom-der*valhom
-!!$            SVAR=-whom/wDOT  !DELTA EPSILON
-!!$            phihom(:)=phihom(:)+PHIDOT(:)*SVAR
-!!$          enddo
         ELSE
-          CALL ATOMLIB_WRITEPHI('G.DAT',GID,NR,1,G1)
-          CALL ATOMLIB_WRITEPHI('PHIPRIME.DAT',GID,NR,1,PHIPRIME)
-          CALL ATOMLIB_WRITEPHI('PHI.DAT',GID,NR,1,PSI)
           DPSI(:)=PHIPRIME(:)
         END IF
-!   
-!       ========================================================================
-!       ==  Mix in homogeneous solution to enforce slow growth                ==
-!       ========================================================================
-!        if(tinhom) then
-!          aux(:)=(psi(:)+dpsi(:))/phihom(:)
-!          dpsi=dpsi(:)-phihom(:)*aux(2)
-!        end if
 !   
 !       ========================================================================
 !       ==  CHECK CONVERGENCE                                                 ==
@@ -2579,17 +1816,13 @@ end if
         IF(TPR) PRINT*,'ITER=',ITER,' L=',L,' E=',E,' DEV=',VAL
         CONVG=(VAL.LT.TOL)
         IF(CONVG.AND.VAL.LT.0.D0) THEN
-          CALL ERROR$MSG('NOT A NUMBER')
           CALL ATOMLIB_WRITEPHI('DPSI',GID,NR,1,DPSI)
-          PRINT*,'NORM',NORM
+          CALL ERROR$MSG('NOT-A-NUMBER ENCOUNTERED')
+          CALL ERROR$R8VAL('NORM',NORM)
+          CALL ERROR$R8VAL('max deviation',val)
           CALL ERROR$STOP('ATOMLIB$UPDATESTATEWITHHF')
         END IF
         IF(CONVG) EXIT
-!!$CALL ATOMLIB_WRITEPHI('psi+dpsi.DAT',GID,NR,1,PSI+dpsi)
-!!$CALL ATOMLIB_WRITEPHI('dpsi.DAT',GID,NR,1,dPSI)
-!!$CALL ATOMLIB_WRITEPHI('phidot.DAT',GID,NR,1,Phidot)
-!!$CALL ATOMLIB_WRITEPHI('phiprime.DAT',GID,NR,1,Phiprime)
-!!$if(iter.eq.2)stop 'forced'
 !
 !       ========================================================================
 !       ==  PROPAGATE                                                         ==
@@ -2718,6 +1951,130 @@ end if
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMLIB$PHASESHIFTSTATE(GID,NR,L,SO,DREL,G,POT,RBND,PHASE &
+     &                                                              ,E,PHI)
+!     **************************************************************************
+!     **  FINDS A STATE WITH DETERMINED PHASESHIFT PHASE AT RADIUS RC         **
+!     **  OF THE RADIAL SCHROEDINGER EQUATION AND                             **
+!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G                **
+!     **                                                                      **
+!     **  THE ENERGY IS DETERMINED BY BISECTION ON THE                        **
+!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.         **
+!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.         **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+      REAL(8)    ,INTENT(IN)     :: DREL(NR)! RELATIVISTIC CORRECTION
+      REAL(8)    ,INTENT(IN)     :: G(NR)   ! INHOMOGENITY
+      REAL(8)    ,INTENT(IN)     :: POT(NR) ! POTENTIAL
+      REAL(8)    ,INTENT(IN)     :: RBND    ! RADIUS OF PHASE SHIFT
+      REAL(8)    ,INTENT(IN)     :: PHASE   ! TARGET PHASE SHIFT
+      REAL(8)    ,INTENT(INOUT)  :: E       ! ENERGY
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR) ! WAVE-FUNCTION
+      INTEGER(4)                 :: ISTART,IBI
+      REAL(8)                    :: X0,DX,XM,ZM,Z0
+      REAL(8)    ,PARAMETER      :: TOL=1.D-15
+      REAL(8)                    :: R(NR)
+      INTEGER(4) ,PARAMETER      :: NITER=100
+      INTEGER(4)                 :: I,IR
+      INTEGER(4)                 :: IDIR ! SWITCH FOR OUT/INWARD INTEGRATION 
+      INTEGER(4)                 :: IRBND
+      REAL(8)   ,PARAMETER       :: XMAX=1.D+20 !MAX. FACTOR IN THE WAVEFUNCTION
+      REAL(8)   ,PARAMETER       :: EMAX=100.D0 ! MAXIMUM ENERGY
+      REAL(8)                    :: PHIUP(NR)
+      REAL(8)                    :: PHIDOWN(NR)
+      LOGICAL(4)                 :: TUP,TDOWN
+      REAL(8)                    :: ZUP,ZDOWN
+      REAL(8)                    :: XUP,XDOWN
+!     **************************************************************************
+                                 CALL TRACE$PUSH('ATOMLIB$PHASESHIFTSTATE')
+      CALL RADIAL$R(GID,NR,R)
+      DO IR=1,NR
+        IRBND=IR
+        IF(R(IR).GT.RBND) EXIT
+      ENDDO
+!          
+!     ==========================================================================
+!     ==========================================================================
+!     ==  ITERATE TO BISECT ENERGY WITH A NODE AT RBOX                        ==
+!     ==========================================================================
+!     ==========================================================================
+      ISTART=1
+      X0=E
+      DX=1.D-2
+      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      PHIUP(NR)=0.D0
+      PHIDOWN(NR)=0.D0
+      TUP=.FALSE.
+      TDOWN=.FALSE.
+      DO I=1,NITER
+        E=X0
+!
+!       ========================================================================
+!       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
+!       ========================================================================
+        IDIR=1
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,E,IDIR,PHI)
+!       == CHECK FOR OVERFLOW
+        IF(.NOT.(PHI(IRBND).GT.0.OR.PHI(IRBND).LE.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$STOP('ATOMLIB$BOUNDSTATE')
+        END IF
+!
+!       ========================================================================
+!       == ESTIMATE PHASE SHIFT                                               ==
+!       ========================================================================
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+        Z0=Z0-PHASE
+        IF(Z0.GE.0.D0) THEN
+          PHIUP(:)=PHI(:)
+          TUP=.TRUE.
+          ZUP=Z0
+          XUP=X0
+        ELSE
+          PHIDOWN(:)=PHI(:)
+          TDOWN=.TRUE.
+          ZDOWN=Z0
+          XDOWN=X0
+        END IF
+        IF(ABS(2.D0*DX).LE.TOL) EXIT
+!       ========================================================================
+!       ==  BISECTION                                                         ==
+!       ========================================================================
+        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      ENDDO
+      IF(ABS(DX).GT.TOL) THEN
+        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
+        CALL ERROR$MSG('BOUND STATE NOT FOUND')
+        CALL ERROR$STOP('ATOMLIB$BOUNDSTATE')
+      END IF
+!
+!     ==========================================================================
+!     == MIX RESULT LINEARLY                                                  ==
+!     ==========================================================================
+      IF(.NOT.TUP.AND.TDOWN) THEN
+        CALL ERROR$MSG('RARE EVENT CAPTURED')
+        CALL ERROR$MSG('BISECTION DOES NOT BRACKET FROM BOTH SIDES')
+        CALL ERROR$STOP('ATOMLIB$BOUNDSTATE')
+      END IF
+      PHI(:)=(ZUP*PHIDOWN-ZDOWN*PHIUP)/(ZUP-ZDOWN)
+!PRINT*,'FACTORS ',ZUP/(ZUP-ZDOWN),-ZDOWN/(ZUP-ZDOWN)
+!PRINT*,'XUP  =',XUP  ,' ZUP   ',ZUP  ,' DIFFZ ',ZUP-ZDOWN
+!PRINT*,'XDOWN=',XDOWN,' ZDOWN ',ZDOWN,' DIFFX ',XUP-XDOWN
+      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+      Z0=Z0-PHASE
+!PRINT*,'L=',L,' E=',E,' ZUP-ZDOWN',ZUP-ZDOWN,' Z0=',Z0
+
+                                 CALL TRACE$POP()
+      RETURN
+      END SUBROUTINE ATOMLIB$PHASESHIFTSTATE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB_WRITEPHI(FILE,GID,NR,NPHI,PHI)
 !     **                                                                      **
 !     **                                                                      **
@@ -2751,516 +2108,1096 @@ end if
 !*******************************************************************************
 !*******************************************************************************
 !*******************************************************************************
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$AESCFWITHHF(GID,NR,TREL,NB,SOFI,LOFI,FOFI,EOFI,PSI &
-     &                              ,LRHOX,RBOX,DREL,POT,MUX,SCALE,VFOCK)
-!     **************************************************************************
-!     **************************************************************************
-      USE RADIALFOCK_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)    :: GID
-      INTEGER(4),INTENT(IN)    :: NR
-      INTEGER(4),INTENT(IN)    :: NB
-      LOGICAL(4),INTENT(IN)    :: TREL
-      INTEGER(4),INTENT(IN)    :: SOFI(NB)
-      INTEGER(4),INTENT(IN)    :: LOFI(NB)
-      REAL(8)   ,INTENT(IN)    :: FOFI(NB)
-      INTEGER(4),INTENT(IN)    :: LRHOX
-      REAL(8)   ,INTENT(IN)    :: RBOX
-      REAL(8)   ,INTENT(IN)    :: MUX(NR)
-      REAL(8)   ,INTENT(INOUT) :: SCALE
-      REAL(8)   ,INTENT(INOUT) :: EOFI(NB)
-      REAL(8)   ,INTENT(INOUT) :: DREL(NR)
-      REAL(8)   ,INTENT(INOUT) :: POT(NR)
-      REAL(8)   ,INTENT(INOUT) :: PSI(NR,NB)
-      TYPE(VFOCK_TYPE),INTENT(INOUT) :: VFOCK
-      REAL(8)   ,PARAMETER     :: TOL=1.D-6
-      INTEGER(4),PARAMETER     :: NITER=50
-      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
-      REAL(8)                  :: DPSI(NR,NB)
-      REAL(8)                  :: SPSI(NR,NB)
-      REAL(8)                  :: DRRPSI(NR,NB)
-      REAL(8)                  :: PI,Y0
-      REAL(8)                  :: SOFACTOR
-      REAL(8)                  :: R(NR)
-      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
-      REAL(8)                  :: G(NR)
-      REAL(8)                  :: RDPRIME(NR)
-      REAL(8)                  :: VAL,DER,VAL1,VAL2
-      REAL(8)                  :: ETOT
-      REAL(8)                  :: SVAR
-      INTEGER(4)               :: L,IB,IB1,IB2,I,IR,ISO
-      INTEGER(4)               :: IRBOX
-      INTEGER(4)               :: NN
-      INTEGER(4)               :: ITER
-      LOGICAL(4)               :: CONVG
-      REAL(8)                  :: E
-      REAL(8)                  :: POT1(NR)
-      INTEGER(4)               :: IRCL,IROUT
-      REAL(8)                  :: ROUT
-      LOGICAL(4)               :: TPR=.TRUE.
-      REAL(8)                  :: OVERLAP(NB,NB)
-REAL(8)  :: PSITEST(NR,NB)
-!     **************************************************************************
-      call error$msg('Routine is marked for deletion')
-      call error$stop('ATOMLIB$aescfWITHHF')
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      CALL RADIAL$R(GID,NR,R)
-!
-!     == INDEX OF THE FIRST GRIDPOINT OUTSIDE RBOX =============================
-      DO IR=1,NR
-        IRBOX=IR
-        IF(R(IR).GE.RBOX) EXIT
-      ENDDO
-
-POT(IRBOX+2:)=0.D0
-!
-      IF(TPR) THEN
-        PRINT*,'SCALE ',SCALE,'TREL ',TREL,' RBOX ',RBOX,R(IRBOX)
-        PRINT*,'EOFI ',0,EOFI
-      END IF
-!
-!     ==========================================================================
-!     ==  RECREATE WAVE FUNCTIONS FOR TESTING                                 ==
-!     ==========================================================================
-      DO IB=1,NB
-        NN=0
-        DO I=1,IB-1
-          IF(LOFI(I).EQ.LOFI(IB)) NN=NN+1
-        ENDDO
-        IF(TREL) THEN
-          CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
-        ELSE 
-          DREL(:)=0.D0 
-        END IF
-        G(:)=0.D0
-        CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,G,NN &
-     &                         ,POT,EOFI(IB),PSI(:,IB))
-        AUX(:)=R(:)**2*PSI(:,IB)**2
-        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-        CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-        PSI(:,IB)=PSI(:,IB)/SQRT(VAL)
-      ENDDO
-        
-      IF(TPR) THEN
-        CALL ATOMLIB_WRITEPHI('PSI_I.DAT',GID,NR,NB,PSI)
-        PRINT*,'EOFI ',-1,EOFI
-      END IF
-!
-!     ========================================================================
-!     ==  ESTIMATE FIRST-ORDER CHANGE OF THE ENERGY                         ==
-!     ========================================================================
-      IF(TPR) THEN
-        PSITEST=PSI
-        VFOCK%SCALE=0.D0
-        CALL ATOMLIB$ETOTWITHFOCK(GID,NR,RBOX,LRHOX,TREL,POT,VFOCK &
-    &                      ,NB,LOFI,SOFI,FOFI,PSITEST,VAL1)
-        VFOCK%SCALE=SCALE
-        PRINT*,'ENERGY WITHOUT HF                      :',VAL1
-        CALL ATOMLIB$ETOTWITHFOCK(GID,NR,RBOX,LRHOX,TREL,POT,VFOCK &
-    &                      ,NB,LOFI,SOFI,FOFI,PSITEST,VAL2)
-        PRINT*,'ENERGY WITH SCALED (HF-MU_X) CORRECTION:' ,VAL2
-        PRINT*,'SCALED (HF-MU_X) CORRECTION            :' ,VAL2-VAL1
-        VFOCK%SCALE=1.D0
-        CALL ATOMLIB$ETOTWITHFOCK(GID,NR,RBOX,LRHOX,TREL,POT,VFOCK &
-    &                      ,NB,LOFI,SOFI,FOFI,PSITEST,VAL2)
-        VFOCK%SCALE=SCALE
-        PRINT*,'100% (HF-MU_X) CORRECTION              :',VAL2-VAL1
-        AUX(:)=VFOCK%MUX
-        VFOCK%MUX=0.D0
-        CALL ATOMLIB$ETOTWITHFOCK(GID,NR,RBOX,LRHOX,TREL,POT,VFOCK &
-    &                      ,NB,LOFI,SOFI,FOFI,PSITEST,VAL2)
-        VFOCK%MUX=AUX
-        PRINT*,'100% HF CORRECTION                     :' ,VAL2-VAL1
-      END IF
-!
-!     ==========================================================================
-!     ==  NOW START LOOP                                                      ==
-!     ==========================================================================
-      DO ITER=1,NITER
-!   
-!       ========================================================================
-!       ==  ENFORCE BOUNDARY CONDITIONS AT RBOX                               ==
-!       ========================================================================
-        PSI(IRBOX+2:,:)=0.D0
-!
-!       ========================================================================
-!       ==  VFOCK|PSI> AND PARTIAL_R*R|\PSI>                                  ==
-!       ========================================================================
-        AUX(:)=VFOCK%MUX
-        SCALE=VFOCK%SCALE
-        CALL RADIALFOCK$MAKEVFOCK(GID,NR,NB,LOFI,SOFI,FOFI,PSI &
-     &                               ,RBOX,LRHOX,VFOCK)
-        VFOCK%SCALE=SCALE
-        VFOCK%MUX=AUX
-!
-!       ========================================================================
-!       ==  CALCULATE TOTAL ENERGY (THIS A FAKE QUANTITY)                     ==
-!       ========================================================================
-        IF(TPR) THEN
-          DO IB=1,NB
-            AUX(:)=R(:)*PSI(:,IB)
-            VAL=AUX(IRBOX)
-            DER=(AUX(IRBOX+1)-AUX(IRBOX-1))/(R(IRBOX+1)-R(IRBOX-1))
-            AUX(IRBOX:)=VAL+(R(IRBOX:)-R(IRBOX))*DER
-            CALL RADIAL$VERLETD1(GID,NR,AUX,AUX1)
-            AUX1(1:2)=AUX1(3)  
-            DRRPSI(:,IB)=AUX1(:)
-          ENDDO
-          AUX(:)=0.D0
-          DO IB=1,NB
-            L=LOFI(IB)
-            IF(TREL) THEN
-              CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
-              CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
-            ELSE
-              DREL=0.D0
-              RDPRIME=0.D0
-            END IF
-            IF(SOFI(IB).EQ.0) THEN
-              SOFACTOR=0.D0
-            ELSE IF(SOFI(IB).EQ.1) THEN
-              SOFACTOR=REAL(L,KIND=8)
-            ELSE IF(SOFI(IB).EQ.-1) THEN
-              SOFACTOR=REAL(-L-1,KIND=8)
-            ELSE
-              CALL ERROR$MSG('ILLEGAL VALUE FOR SOFI ')
-              CALL ERROR$STOP('ATOMLIB$AESCFWITHHF')
-            END IF
-!           == KINETIC ENERGY ==================================================
-            AUX1(:)=0.5D0*(1.D0+DREL) &
-         &               *(DRRPSI(:,IB)**2+REAL(L*(L+1),KIND=8)*PSI(:,IB)**2)
-            AUX1(:)=AUX1(:)+0.5D0*(SOFACTOR+1.D0)*RDPRIME*R(:)*PSI(:,IB)**2
-!           == POTENTIAL ENERGY ================================================
-            AUX1(:)=AUX1(:)+R(:)**2*POT(:)*Y0*PSI(:,IB)**2
-!           == HARTREE-FOCK CORRECTION =========================================
-            CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOFI(IB),PSI(:,IB),AUX2)
-            AUX2(:)=PSI(:,IB)*(0.5D0*AUX2-0.5D0*VFOCK%MUX(:)*Y0*PSI(:,IB))
-            AUX1(:)=AUX1(:)+R(:)**2*AUX2(:)
-!           == ADD TO SUM OVER STATES ==========================================
-            AUX(:)=AUX(:)+FOFI(IB)*AUX1(:)
-          ENDDO
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,ETOT)
-        END IF
-!
-!       ========================================================================
-!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
-!       ========================================================================
-        DO IB=1,NB
-          L=LOFI(IB)
-          IF(TREL) THEN
-            CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
-            CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
-          ELSE
-            DREL=0.D0
-            RDPRIME=0.D0
-          END IF
-          IF(SOFI(IB).EQ.0) THEN
-            SOFACTOR=0.D0
-          ELSE IF(SOFI(IB).EQ.1) THEN
-            SOFACTOR=REAL(L,KIND=8)
-          ELSE IF(SOFI(IB).EQ.-1) THEN
-            SOFACTOR=REAL(-L-1,KIND=8)
-          ELSE
-            CALL ERROR$MSG('ILLEGAL VALUE FOR SOFI ')
-            CALL ERROR$STOP('ATOMLIB$AESCFWITHHF')
-          END IF
-!         == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
-PSITEST(:,IB)=R*PSI(:,IB)
-          CALL RADIAL$VERLETD2(GID,NR,R*PSI(:,IB),AUX2)
-          AUX(:)=R(:)*AUX2(:)-REAL(L*(L+1),KIND=8)*PSI(:,IB)
-          AUX(:)=-(1.D0+DREL)*AUX(:)
-          CALL RADIAL$VERLETD1(GID,NR,PSI(:,IB),AUX2)
-          AUX(:)=AUX(:)-RDPRIME*(R(:)**2*AUX2(:)-SOFACTOR*R(:)*PSI(:,IB))
-!         == POTENTIAL ENERGY ==================================================
-          AUX(:)=AUX(:)+2.D0*R(:)**2*POT(:)*Y0*PSI(:,IB)
-!         == HARTREE-FOCK CORRECTION ===========================================
-          CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOFI(IB),PSI(:,IB),AUX2)
-!PSITEST(:,IB)=AUX2(:)
-          AUX(:)=AUX(:)+2.D0*R(:)**2*AUX2(:)
-!         == CORRECT GLITCHES ==================================================
-          AUX(1:2)=0.D0
-!         == ESTIMATE ENERGY ===================================================
-          AUX1(:)=0.5D0*AUX(:)*PSI(:,IB)
-          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-          CALL RADIAL$VALUE(GID,NR,AUX2,RBOX,EOFI(IB))
-          AUX1(:)=R(:)**2*PSI(:,IB)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
-          CALL RADIAL$VALUE(GID,NR,AUX2,RBOX,SVAR)
-          EOFI(IB)=EOFI(IB)/SVAR
-!         == REMOVE ENERGY TERM ================================================
-          AUX(:)=AUX(:)-2.D0*R(:)**2*EOFI(IB)*PSI(:,IB)
-!         == COPY INTO DPSI ====================================================
-          DPSI(2:,IB)=AUX(2:)/(2.D0*R(2:)**2)
-          DPSI(1:2,IB)=0.D0
-        ENDDO
-CALL ATOMLIB_WRITEPHI('TESTFOCK.DAT',GID,NR,VFOCK%NB,VFOCK%PSI)
-CALL ATOMLIB_WRITEPHI('TESTMUX.DAT',GID,NR,1,VFOCK%MUX)
-CALL ATOMLIB_WRITEPHI('TEST1A.DAT',GID,NR,NB,PSITEST)
-CALL ATOMLIB_WRITEPHI('TEST1.DAT',GID,NR,1,DPSI)
-!
-!       ========================================================================
-!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
-!       ========================================================================
-        DO IB=1,NB
-          L=LOFI(IB)
-          ISO=SOFI(IB)
-          E=EOFI(IB)
-          CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
-!         == BOUNDARY CONDITION PHI(ROUT)=0 ====================================
-          IF(R(IROUT).LT.RBOX) THEN
-            ROUT=R(IROUT)
-          ELSE
-            ROUT=RBOX
-            IROUT=IRBOX
-          END IF
-!         ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT TO AVOID AN OVERFLOW ======
-!         == ATTENTION: THERE IS A STEP IN THE POTENTIAL =======================
-          POT1(:)=POT(:)
-          POT1(IROUT:)=E
-          IF(TREL) THEN
-            CALL SCHROEDINGER$DREL(GID,NR,POT1,E,DREL)
-          ELSE 
-            DREL(:)=0.D0 
-          END IF
-          G=DPSI(:,IB)
-          G(1:2)=0.D0
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,ISO,G,L,E,1,AUX1)
-          G=PSI(:,IB)
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,ISO,G,L,E,1,AUX2)
-          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL1)
-          CALL RADIAL$VALUE(GID,NR,AUX2,ROUT,VAL2)
-          DPSI(:,IB)=AUX1(:)-AUX2(:)*VAL1/VAL2
-          DPSI(IROUT+3:,IB)=0.D0
-          IF(ROUT.LT.RBOX) DPSI(IROUT:,IB)=0.D0
-!
-!         == SMALL COMPONENT ===================================================
-          CALL RADIAL$VALUE(GID,NR,DPSI(:,IB),RBOX,VAL)
-          IF(TREL) THEN
-            G(:)=0.D0
-            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
-     &                                       ,DREL,G,PSI(:,IB),SPSI(:,IB))
-          ELSE
-            SPSI(:,IB)=0.D0
-          END IF
-
-        ENDDO
-CALL ATOMLIB_WRITEPHI('TEST2.DAT',GID,NR,NB,DPSI)
-CALL ATOMLIB_WRITEPHI('TEST0.DAT',GID,NR,NB,PSI)
-CALL ATOMLIB_WRITEPHI('POT.DAT',GID,NR,1,POT)
-!   
-!       ========================================================================
-!       ==  CHECK CONVERGENCE                                                 ==
-!       ========================================================================
-        VAL=MAXVAL(ABS(DPSI(:IRBOX-3,:)))
-        IF(TPR) PRINT*,'ETOT=',ETOT,' DEV=',VAL
-        CONVG=(VAL.LT.TOL)
-        IF(CONVG) EXIT
-!   
-!       ========================================================================
-!       ==  PROPAGATE                                                         ==
-!       ========================================================================
-        PSI(:,:)=PSI(:,:)-DPSI(:,:)
-!   
-!       ========================================================================
-!       ==  ORTHOGONALIZE                                                     ==
-!       ========================================================================
-        DO IB1=1,NB
-          AUX(:)=R(:)**2*(PSI(:,IB1)**2+SPSI(:,IB1)**2)
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-          PSI(:,IB1)=PSI(:,IB1)/SQRT(VAL)
-          SPSI(:,IB1)=SPSI(:,IB1)/SQRT(VAL)
-        ENDDO
-
-!== ORTHOGONALIZATION KILLED CONVERGENCE
-        IF(TPR) THEN
-          OVERLAP(:,:)=0.D0
-          DO IB1=1,NB
-            DO IB2=1,IB1-1
-              IF(LOFI(IB1).NE.LOFI(IB2)) CYCLE
-              IF(SOFI(IB1).NE.SOFI(IB2)) CYCLE
-              AUX(:)=R(:)**2*(PSI(:,IB1)*PSI(:,IB2)+SPSI(:,IB1)*SPSI(:,IB2))
-              CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-              CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-              OVERLAP(IB1,IB2)=VAL
-!              PSI(:,IB1)=PSI(:,IB1)-PSI(:,IB2)*VAL
-!              SPSI(:,IB1)=SPSI(:,IB1)-SPSI(:,IB2)*VAL
-!IF(ABS(OVERLAP(IB1,IB2)).GT.1.D-7) THEN
-!WRITE(*,FMT='("OVERLAP",2I5,F20.10)')IB1,IB2,OVERLAP(IB1,IB2)
-!END IF
-            ENDDO
-            AUX(:)=R(:)**2*(PSI(:,IB1)**2+SPSI(:,IB1)**2)
-            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-            OVERLAP(IB1,IB1)=VAL
-! ORTHOGONALIZATION
-!            PSI(:,IB1)=PSI(:,IB1)/SQRT(VAL)
-!            SPSI(:,IB1)=SPSI(:,IB1)/SQRT(VAL)
-IF(ABS(OVERLAP(IB1,IB1)-1.D0).GT.1.D-7) THEN
-!WRITE(*,FMT='("OVERLAP",2I5,F20.10)')IB1,IB1,OVERLAP(IB1,IB1)
-END IF
-          ENDDO
-        END IF
-!
-      ENDDO    ! END OF ITERATION
-
-!
-      IF(.NOT.CONVG) THEN
-        CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
-        CALL ERROR$I4VAL('NUMBER OF ITERATIONS',ITER)
-        VAL=MAXVAL(ABS(DPSI(:IRBOX-3,:)))
-        CALL ERROR$R8VAL('MAX DEVIATION',VAL)
-        CALL ERROR$R8VAL('UP TO RADIUS',R(IRBOX-3))
-        CALL ERROR$STOP('ATOMLIB$AESCFWITHHF')
-      END IF
-      IF(TPR) PRINT*,ITER,'ITERATIONSIN LOOP FOR RADIAL HARTREE FOCK'
-      IF(TPR) THEN
-        PRINT*,'EOFI ',ITER,EOFI
-        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,NB,PSI)
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$SPHERICALWITHHF(GID,NR,POT,DREL,VFOCK,SO,G,L,E,PSI)
-!     **************************************************************************
-!     **                                                                      **
-!     **************************************************************************
-      USE RADIALFOCK_MODULE, ONLY : VFOCK_TYPE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)    :: GID
-      INTEGER(4),INTENT(IN)    :: NR
-      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
-      REAL(8)   ,INTENT(IN)    :: DREL(NR)
-      REAL(8)   ,INTENT(IN)    :: POT(NR)
-      INTEGER(4),INTENT(IN)    :: L
-      INTEGER(4),INTENT(IN)    :: SO
-      REAL(8)   ,INTENT(IN)    :: G(NR)
-      REAL(8)   ,INTENT(IN)    :: E
-      REAL(8)   ,INTENT(OUT)   :: PSI(NR)
-      REAL(8)                  :: DPSI(NR)
-      REAL(8)                  :: VFOCKPSI(NR)
-      REAL(8)                  :: PI,Y0
-      REAL(8)                  :: SOFACTOR
-      REAL(8)                  :: R(NR)
-      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
-      REAL(8)                  :: G1(NR)
-      REAL(8)                  :: RDPRIME(NR)
-      REAL(8)                  :: VAL,NORM
-      INTEGER(4),PARAMETER     :: NITER=20
-      INTEGER(4)               :: ITER
-      REAL(8)   ,PARAMETER     :: TOL=1.D-5
-      LOGICAL(4)               :: CONVG
-      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
-      LOGICAL(4)               :: TPR=.TRUE.
-      LOGICAL(4)               :: THOM
-!     **************************************************************************
-      call error$msg('Routine is marked for deletion')
-      call error$stop('ATOMLIB$SPHERICALWITHHF')
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      CALL RADIAL$R(GID,NR,R)
-      THOM=MAXVAL(ABS(G)).LT.1.D-8
-!
-      IF(TPR) THEN
-        PRINT*,'==============================================================='
-        PRINT*,'L=',L,' SO=',SO,' THOM ',THOM
-        PRINT*,'SCALE ',VFOCK%SCALE
-        PRINT*,'EOFI ',-1,E
-      END IF
-!
-!     ==========================================================================
-!     ==  CHECK AND PROCESS SPIN ORBIT PARAMETER                              ==
-!     ==========================================================================
-      IF(SO.EQ.0) THEN
-        SOFACTOR=0.D0
-      ELSE IF(SO.EQ.1) THEN
-        SOFACTOR=REAL(L,KIND=8)
-      ELSE IF(SO.EQ.-1) THEN
-        SOFACTOR=REAL(-L-1,KIND=8)
-      ELSE
-        CALL ERROR$STOP('ILLEGAL VALUE FOR SO')
-        CALL ERROR$STOP('ATOMLIB$BOUNDSTATEWITHHF')
-      END IF
-!
-!     ==========================================================================
-!     ==  SET RELATIVISTIC CORRECTION                                         ==
-!     ==========================================================================
-      CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
-!
-!     ==========================================================================
-!     ==  RECREATE WAVE FUNCTION                                              ==
-!     ==========================================================================
-      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,E,1,PSI)
-      IF(TPR) THEN
-        CALL ATOMLIB_WRITEPHI('PSI_I.DAT',GID,NR,1,PSI)
-      END IF
-!
-!     ==========================================================================
-!     ==  NOW START LOOP                                                      ==
-!     ==========================================================================
-      DO ITER=1,NITER
-!
-!       ========================================================================
-!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
-!       ========================================================================
-!       == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
-        CALL RADIAL$VERLETD2(GID,NR,R*PSI,AUX2)
-        AUX(:)=R(:)*AUX2(:)-REAL(L*(L+1),KIND=8)*PSI(:)
-        AUX(:)=-(1.D0+DREL)*AUX(:)
-        CALL RADIAL$VERLETD1(GID,NR,PSI,AUX2)
-        AUX(:)=AUX(:)-RDPRIME*(R(:)**2*AUX2(:)-SOFACTOR*R(:)*PSI(:))
-!       == POTENTIAL ENERGY ==================================================
-        AUX(:)=AUX(:)+2.D0*R(:)**2*POT(:)*Y0*PSI(:)
-!       == HARTREE-FOCK CORRECTION ===========================================
-        CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,PSI,VFOCKPSI)
-        AUX(:)=AUX(:)+2.D0*R(:)**2*VFOCKPSI(:)
-!       == CORRECT GLITCHES ==================================================
-        AUX(1:2)=0.D0
-!       == REMOVE ENERGY TERM ================================================
-        AUX(:)=AUX(:)-2.D0*R(:)**2*E*PSI(:)
-!       == WEIGHT WITH OCCUPATION ============================================
-        DPSI(:)=AUX(:)/(2.D0*R(:)**2)-G(:)
-!
-!       ========================================================================
-!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
-!       ========================================================================
-        CALL ATOMLIB_WRITEPHI('DPSI1.DAT',GID,NR,1,DPSI)
-        G1=DPSI(:)
-        G1(1:2)=0.D0
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G1,L,E,1,DPSI)
-        CALL ATOMLIB_WRITEPHI('DPSI2.DAT',GID,NR,1,DPSI)
-!   
-!       ========================================================================
-!       ==  CHECK CONVERGENCE                                                 ==
-!       ========================================================================
-        AUX(:)=(R*PSI)**2
-        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-        CALL RADIAL$VALUE(GID,NR,AUX1,3.D0,NORM)
-        VAL=MAXVAL(ABS(DPSI(:)))/SQRT(NORM)
-        IF(TPR) PRINT*,' DEV=',VAL,NORM
-        CONVG=(VAL.LT.TOL)
-        IF(CONVG) EXIT
-!   
-!       ========================================================================
-!       ==  PROPAGATE                                                         ==
-!       ========================================================================
-        PSI(:)=PSI(:)-DPSI(:)
-!
-      ENDDO    ! END OF ITERATION
-!
-      IF(.NOT.CONVG) THEN
-        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,1,PSI)
-        CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
-        CALL ERROR$STOP('ATOMLIB$SPHERICALWITHHF')
-      END IF
-      IF(TPR) THEN
-        PRINT*,ITER,'ITERATIONSIN LOOP FOR RADIAL HARTREE FOCK'
-        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,1,PSI)
-      END IF
-      RETURN
-      END SUBROUTINE ATOMLIB$SPHERICALWITHHF
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE ATOMLIB$AESCFWITHHF(GID,NR,TREL,NB,SOFI,LOFI,FOFI,EOFI,PSI &
+!!$     &                              ,LRHOX,RBOX,DREL,POT,MUX,SCALE,VFOCK)
+!!$!     **************************************************************************
+!!$!     **************************************************************************
+!!$      USE RADIALFOCK_MODULE
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN)    :: GID
+!!$      INTEGER(4),INTENT(IN)    :: NR
+!!$      INTEGER(4),INTENT(IN)    :: NB
+!!$      LOGICAL(4),INTENT(IN)    :: TREL
+!!$      INTEGER(4),INTENT(IN)    :: SOFI(NB)
+!!$      INTEGER(4),INTENT(IN)    :: LOFI(NB)
+!!$      REAL(8)   ,INTENT(IN)    :: FOFI(NB)
+!!$      INTEGER(4),INTENT(IN)    :: LRHOX
+!!$      REAL(8)   ,INTENT(IN)    :: RBOX
+!!$      REAL(8)   ,INTENT(IN)    :: MUX(NR)
+!!$      REAL(8)   ,INTENT(INOUT) :: SCALE
+!!$      REAL(8)   ,INTENT(INOUT) :: EOFI(NB)
+!!$      REAL(8)   ,INTENT(INOUT) :: DREL(NR)
+!!$      REAL(8)   ,INTENT(INOUT) :: POT(NR)
+!!$      REAL(8)   ,INTENT(INOUT) :: PSI(NR,NB)
+!!$      TYPE(VFOCK_TYPE),INTENT(INOUT) :: VFOCK
+!!$      REAL(8)   ,PARAMETER     :: TOL=1.D-6
+!!$      INTEGER(4),PARAMETER     :: NITER=50
+!!$      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
+!!$      REAL(8)                  :: DPSI(NR,NB)
+!!$      REAL(8)                  :: SPSI(NR,NB)
+!!$      REAL(8)                  :: DRRPSI(NR,NB)
+!!$      REAL(8)                  :: PI,Y0
+!!$      REAL(8)                  :: SOFACTOR
+!!$      REAL(8)                  :: R(NR)
+!!$      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
+!!$      REAL(8)                  :: G(NR)
+!!$      REAL(8)                  :: RDPRIME(NR)
+!!$      REAL(8)                  :: VAL,DER,VAL1,VAL2
+!!$      REAL(8)                  :: ETOT
+!!$      REAL(8)                  :: SVAR
+!!$      INTEGER(4)               :: L,IB,IB1,IB2,I,IR,ISO
+!!$      INTEGER(4)               :: IRBOX
+!!$      INTEGER(4)               :: NN
+!!$      INTEGER(4)               :: ITER
+!!$      LOGICAL(4)               :: CONVG
+!!$      REAL(8)                  :: E
+!!$      REAL(8)                  :: POT1(NR)
+!!$      INTEGER(4)               :: IRCL,IROUT
+!!$      REAL(8)                  :: ROUT
+!!$      LOGICAL(4)               :: TPR=.TRUE.
+!!$      REAL(8)                  :: OVERLAP(NB,NB)
+!!$REAL(8)  :: PSITEST(NR,NB)
+!!$!     **************************************************************************
+!!$      call error$msg('Routine is marked for deletion')
+!!$      call error$stop('ATOMLIB$aescfWITHHF')
+!!$      PI=4.D0*ATAN(1.D0)
+!!$      Y0=1.D0/SQRT(4.D0*PI)
+!!$      CALL RADIAL$R(GID,NR,R)
+!!$!
+!!$!     == INDEX OF THE FIRST GRIDPOINT OUTSIDE RBOX =============================
+!!$      DO IR=1,NR
+!!$        IRBOX=IR
+!!$        IF(R(IR).GE.RBOX) EXIT
+!!$      ENDDO
+!!$
+!!$POT(IRBOX+2:)=0.D0
+!!$!
+!!$      IF(TPR) THEN
+!!$        PRINT*,'SCALE ',SCALE,'TREL ',TREL,' RBOX ',RBOX,R(IRBOX)
+!!$        PRINT*,'EOFI ',0,EOFI
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  RECREATE WAVE FUNCTIONS FOR TESTING                                 ==
+!!$!     ==========================================================================
+!!$      DO IB=1,NB
+!!$        NN=0
+!!$        DO I=1,IB-1
+!!$          IF(LOFI(I).EQ.LOFI(IB)) NN=NN+1
+!!$        ENDDO
+!!$        IF(TREL) THEN
+!!$          CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
+!!$        ELSE 
+!!$          DREL(:)=0.D0 
+!!$        END IF
+!!$        G(:)=0.D0
+!!$        CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,G,NN &
+!!$     &                         ,POT,EOFI(IB),PSI(:,IB))
+!!$        AUX(:)=R(:)**2*PSI(:,IB)**2
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!!$        PSI(:,IB)=PSI(:,IB)/SQRT(VAL)
+!!$      ENDDO
+!!$        
+!!$      IF(TPR) THEN
+!!$        CALL ATOMLIB_WRITEPHI('PSI_I.DAT',GID,NR,NB,PSI)
+!!$        PRINT*,'EOFI ',-1,EOFI
+!!$      END IF
+!!$!
+!!$!     ========================================================================
+!!$!     ==  ESTIMATE FIRST-ORDER CHANGE OF THE ENERGY                         ==
+!!$!     ========================================================================
+!!$      IF(TPR) THEN
+!!$        PSITEST=PSI
+!!$        VFOCK%SCALE=0.D0
+!!$        CALL ATOMLIB$ETOTWITHFOCK(GID,NR,RBOX,LRHOX,TREL,POT,VFOCK &
+!!$    &                      ,NB,LOFI,SOFI,FOFI,PSITEST,VAL1)
+!!$        VFOCK%SCALE=SCALE
+!!$        PRINT*,'ENERGY WITHOUT HF                      :',VAL1
+!!$        CALL ATOMLIB$ETOTWITHFOCK(GID,NR,RBOX,LRHOX,TREL,POT,VFOCK &
+!!$    &                      ,NB,LOFI,SOFI,FOFI,PSITEST,VAL2)
+!!$        PRINT*,'ENERGY WITH SCALED (HF-MU_X) CORRECTION:' ,VAL2
+!!$        PRINT*,'SCALED (HF-MU_X) CORRECTION            :' ,VAL2-VAL1
+!!$        VFOCK%SCALE=1.D0
+!!$        CALL ATOMLIB$ETOTWITHFOCK(GID,NR,RBOX,LRHOX,TREL,POT,VFOCK &
+!!$    &                      ,NB,LOFI,SOFI,FOFI,PSITEST,VAL2)
+!!$        VFOCK%SCALE=SCALE
+!!$        PRINT*,'100% (HF-MU_X) CORRECTION              :',VAL2-VAL1
+!!$        AUX(:)=VFOCK%MUX
+!!$        VFOCK%MUX=0.D0
+!!$        CALL ATOMLIB$ETOTWITHFOCK(GID,NR,RBOX,LRHOX,TREL,POT,VFOCK &
+!!$    &                      ,NB,LOFI,SOFI,FOFI,PSITEST,VAL2)
+!!$        VFOCK%MUX=AUX
+!!$        PRINT*,'100% HF CORRECTION                     :' ,VAL2-VAL1
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  NOW START LOOP                                                      ==
+!!$!     ==========================================================================
+!!$      DO ITER=1,NITER
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  ENFORCE BOUNDARY CONDITIONS AT RBOX                               ==
+!!$!       ========================================================================
+!!$        PSI(IRBOX+2:,:)=0.D0
+!!$!
+!!$!       ========================================================================
+!!$!       ==  VFOCK|PSI> AND PARTIAL_R*R|\PSI>                                  ==
+!!$!       ========================================================================
+!!$        AUX(:)=VFOCK%MUX
+!!$        SCALE=VFOCK%SCALE
+!!$        CALL RADIALFOCK$MAKEVFOCK(GID,NR,NB,LOFI,SOFI,FOFI,PSI &
+!!$     &                               ,RBOX,LRHOX,VFOCK)
+!!$        VFOCK%SCALE=SCALE
+!!$        VFOCK%MUX=AUX
+!!$!
+!!$!       ========================================================================
+!!$!       ==  CALCULATE TOTAL ENERGY (THIS A FAKE QUANTITY)                     ==
+!!$!       ========================================================================
+!!$        IF(TPR) THEN
+!!$          DO IB=1,NB
+!!$            AUX(:)=R(:)*PSI(:,IB)
+!!$            VAL=AUX(IRBOX)
+!!$            DER=(AUX(IRBOX+1)-AUX(IRBOX-1))/(R(IRBOX+1)-R(IRBOX-1))
+!!$            AUX(IRBOX:)=VAL+(R(IRBOX:)-R(IRBOX))*DER
+!!$            CALL RADIAL$VERLETD1(GID,NR,AUX,AUX1)
+!!$            AUX1(1:2)=AUX1(3)  
+!!$            DRRPSI(:,IB)=AUX1(:)
+!!$          ENDDO
+!!$          AUX(:)=0.D0
+!!$          DO IB=1,NB
+!!$            L=LOFI(IB)
+!!$            IF(TREL) THEN
+!!$              CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
+!!$              CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
+!!$            ELSE
+!!$              DREL=0.D0
+!!$              RDPRIME=0.D0
+!!$            END IF
+!!$            IF(SOFI(IB).EQ.0) THEN
+!!$              SOFACTOR=0.D0
+!!$            ELSE IF(SOFI(IB).EQ.1) THEN
+!!$              SOFACTOR=REAL(L,KIND=8)
+!!$            ELSE IF(SOFI(IB).EQ.-1) THEN
+!!$              SOFACTOR=REAL(-L-1,KIND=8)
+!!$            ELSE
+!!$              CALL ERROR$MSG('ILLEGAL VALUE FOR SOFI ')
+!!$              CALL ERROR$STOP('ATOMLIB$AESCFWITHHF')
+!!$            END IF
+!!$!           == KINETIC ENERGY ==================================================
+!!$            AUX1(:)=0.5D0*(1.D0+DREL) &
+!!$         &               *(DRRPSI(:,IB)**2+REAL(L*(L+1),KIND=8)*PSI(:,IB)**2)
+!!$            AUX1(:)=AUX1(:)+0.5D0*(SOFACTOR+1.D0)*RDPRIME*R(:)*PSI(:,IB)**2
+!!$!           == POTENTIAL ENERGY ================================================
+!!$            AUX1(:)=AUX1(:)+R(:)**2*POT(:)*Y0*PSI(:,IB)**2
+!!$!           == HARTREE-FOCK CORRECTION =========================================
+!!$            CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOFI(IB),PSI(:,IB),AUX2)
+!!$            AUX2(:)=PSI(:,IB)*(0.5D0*AUX2-0.5D0*VFOCK%MUX(:)*Y0*PSI(:,IB))
+!!$            AUX1(:)=AUX1(:)+R(:)**2*AUX2(:)
+!!$!           == ADD TO SUM OVER STATES ==========================================
+!!$            AUX(:)=AUX(:)+FOFI(IB)*AUX1(:)
+!!$          ENDDO
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,ETOT)
+!!$        END IF
+!!$!
+!!$!       ========================================================================
+!!$!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
+!!$!       ========================================================================
+!!$        DO IB=1,NB
+!!$          L=LOFI(IB)
+!!$          IF(TREL) THEN
+!!$            CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
+!!$            CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
+!!$          ELSE
+!!$            DREL=0.D0
+!!$            RDPRIME=0.D0
+!!$          END IF
+!!$          IF(SOFI(IB).EQ.0) THEN
+!!$            SOFACTOR=0.D0
+!!$          ELSE IF(SOFI(IB).EQ.1) THEN
+!!$            SOFACTOR=REAL(L,KIND=8)
+!!$          ELSE IF(SOFI(IB).EQ.-1) THEN
+!!$            SOFACTOR=REAL(-L-1,KIND=8)
+!!$          ELSE
+!!$            CALL ERROR$MSG('ILLEGAL VALUE FOR SOFI ')
+!!$            CALL ERROR$STOP('ATOMLIB$AESCFWITHHF')
+!!$          END IF
+!!$!         == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
+!!$PSITEST(:,IB)=R*PSI(:,IB)
+!!$          CALL RADIAL$VERLETD2(GID,NR,R*PSI(:,IB),AUX2)
+!!$          AUX(:)=R(:)*AUX2(:)-REAL(L*(L+1),KIND=8)*PSI(:,IB)
+!!$          AUX(:)=-(1.D0+DREL)*AUX(:)
+!!$          CALL RADIAL$VERLETD1(GID,NR,PSI(:,IB),AUX2)
+!!$          AUX(:)=AUX(:)-RDPRIME*(R(:)**2*AUX2(:)-SOFACTOR*R(:)*PSI(:,IB))
+!!$!         == POTENTIAL ENERGY ==================================================
+!!$          AUX(:)=AUX(:)+2.D0*R(:)**2*POT(:)*Y0*PSI(:,IB)
+!!$!         == HARTREE-FOCK CORRECTION ===========================================
+!!$          CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOFI(IB),PSI(:,IB),AUX2)
+!!$!PSITEST(:,IB)=AUX2(:)
+!!$          AUX(:)=AUX(:)+2.D0*R(:)**2*AUX2(:)
+!!$!         == CORRECT GLITCHES ==================================================
+!!$          AUX(1:2)=0.D0
+!!$!         == ESTIMATE ENERGY ===================================================
+!!$          AUX1(:)=0.5D0*AUX(:)*PSI(:,IB)
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX2,RBOX,EOFI(IB))
+!!$          AUX1(:)=R(:)**2*PSI(:,IB)**2
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX2,RBOX,SVAR)
+!!$          EOFI(IB)=EOFI(IB)/SVAR
+!!$!         == REMOVE ENERGY TERM ================================================
+!!$          AUX(:)=AUX(:)-2.D0*R(:)**2*EOFI(IB)*PSI(:,IB)
+!!$!         == COPY INTO DPSI ====================================================
+!!$          DPSI(2:,IB)=AUX(2:)/(2.D0*R(2:)**2)
+!!$          DPSI(1:2,IB)=0.D0
+!!$        ENDDO
+!!$CALL ATOMLIB_WRITEPHI('TESTFOCK.DAT',GID,NR,VFOCK%NB,VFOCK%PSI)
+!!$CALL ATOMLIB_WRITEPHI('TESTMUX.DAT',GID,NR,1,VFOCK%MUX)
+!!$CALL ATOMLIB_WRITEPHI('TEST1A.DAT',GID,NR,NB,PSITEST)
+!!$CALL ATOMLIB_WRITEPHI('TEST1.DAT',GID,NR,1,DPSI)
+!!$!
+!!$!       ========================================================================
+!!$!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
+!!$!       ========================================================================
+!!$        DO IB=1,NB
+!!$          L=LOFI(IB)
+!!$          ISO=SOFI(IB)
+!!$          E=EOFI(IB)
+!!$          CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
+!!$!         == BOUNDARY CONDITION PHI(ROUT)=0 ====================================
+!!$          IF(R(IROUT).LT.RBOX) THEN
+!!$            ROUT=R(IROUT)
+!!$          ELSE
+!!$            ROUT=RBOX
+!!$            IROUT=IRBOX
+!!$          END IF
+!!$!         ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT TO AVOID AN OVERFLOW ======
+!!$!         == ATTENTION: THERE IS A STEP IN THE POTENTIAL =======================
+!!$          POT1(:)=POT(:)
+!!$          POT1(IROUT:)=E
+!!$          IF(TREL) THEN
+!!$            CALL SCHROEDINGER$DREL(GID,NR,POT1,E,DREL)
+!!$          ELSE 
+!!$            DREL(:)=0.D0 
+!!$          END IF
+!!$          G=DPSI(:,IB)
+!!$          G(1:2)=0.D0
+!!$          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,ISO,G,L,E,1,AUX1)
+!!$          G=PSI(:,IB)
+!!$          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,ISO,G,L,E,1,AUX2)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX2,ROUT,VAL2)
+!!$          DPSI(:,IB)=AUX1(:)-AUX2(:)*VAL1/VAL2
+!!$          DPSI(IROUT+3:,IB)=0.D0
+!!$          IF(ROUT.LT.RBOX) DPSI(IROUT:,IB)=0.D0
+!!$!
+!!$!         == SMALL COMPONENT ===================================================
+!!$          CALL RADIAL$VALUE(GID,NR,DPSI(:,IB),RBOX,VAL)
+!!$          IF(TREL) THEN
+!!$            G(:)=0.D0
+!!$            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
+!!$     &                                       ,DREL,G,PSI(:,IB),SPSI(:,IB))
+!!$          ELSE
+!!$            SPSI(:,IB)=0.D0
+!!$          END IF
+!!$
+!!$        ENDDO
+!!$CALL ATOMLIB_WRITEPHI('TEST2.DAT',GID,NR,NB,DPSI)
+!!$CALL ATOMLIB_WRITEPHI('TEST0.DAT',GID,NR,NB,PSI)
+!!$CALL ATOMLIB_WRITEPHI('POT.DAT',GID,NR,1,POT)
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  CHECK CONVERGENCE                                                 ==
+!!$!       ========================================================================
+!!$        VAL=MAXVAL(ABS(DPSI(:IRBOX-3,:)))
+!!$        IF(TPR) PRINT*,'ETOT=',ETOT,' DEV=',VAL
+!!$        CONVG=(VAL.LT.TOL)
+!!$        IF(CONVG) EXIT
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  PROPAGATE                                                         ==
+!!$!       ========================================================================
+!!$        PSI(:,:)=PSI(:,:)-DPSI(:,:)
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  ORTHOGONALIZE                                                     ==
+!!$!       ========================================================================
+!!$        DO IB1=1,NB
+!!$          AUX(:)=R(:)**2*(PSI(:,IB1)**2+SPSI(:,IB1)**2)
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!!$          PSI(:,IB1)=PSI(:,IB1)/SQRT(VAL)
+!!$          SPSI(:,IB1)=SPSI(:,IB1)/SQRT(VAL)
+!!$        ENDDO
+!!$
+!!$!== ORTHOGONALIZATION KILLED CONVERGENCE
+!!$        IF(TPR) THEN
+!!$          OVERLAP(:,:)=0.D0
+!!$          DO IB1=1,NB
+!!$            DO IB2=1,IB1-1
+!!$              IF(LOFI(IB1).NE.LOFI(IB2)) CYCLE
+!!$              IF(SOFI(IB1).NE.SOFI(IB2)) CYCLE
+!!$              AUX(:)=R(:)**2*(PSI(:,IB1)*PSI(:,IB2)+SPSI(:,IB1)*SPSI(:,IB2))
+!!$              CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$              CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!!$              OVERLAP(IB1,IB2)=VAL
+!!$!              PSI(:,IB1)=PSI(:,IB1)-PSI(:,IB2)*VAL
+!!$!              SPSI(:,IB1)=SPSI(:,IB1)-SPSI(:,IB2)*VAL
+!!$!IF(ABS(OVERLAP(IB1,IB2)).GT.1.D-7) THEN
+!!$!WRITE(*,FMT='("OVERLAP",2I5,F20.10)')IB1,IB2,OVERLAP(IB1,IB2)
+!!$!END IF
+!!$            ENDDO
+!!$            AUX(:)=R(:)**2*(PSI(:,IB1)**2+SPSI(:,IB1)**2)
+!!$            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!!$            OVERLAP(IB1,IB1)=VAL
+!!$! ORTHOGONALIZATION
+!!$!            PSI(:,IB1)=PSI(:,IB1)/SQRT(VAL)
+!!$!            SPSI(:,IB1)=SPSI(:,IB1)/SQRT(VAL)
+!!$IF(ABS(OVERLAP(IB1,IB1)-1.D0).GT.1.D-7) THEN
+!!$!WRITE(*,FMT='("OVERLAP",2I5,F20.10)')IB1,IB1,OVERLAP(IB1,IB1)
+!!$END IF
+!!$          ENDDO
+!!$        END IF
+!!$!
+!!$      ENDDO    ! END OF ITERATION
+!!$
+!!$!
+!!$      IF(.NOT.CONVG) THEN
+!!$        CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
+!!$        CALL ERROR$I4VAL('NUMBER OF ITERATIONS',ITER)
+!!$        VAL=MAXVAL(ABS(DPSI(:IRBOX-3,:)))
+!!$        CALL ERROR$R8VAL('MAX DEVIATION',VAL)
+!!$        CALL ERROR$R8VAL('UP TO RADIUS',R(IRBOX-3))
+!!$        CALL ERROR$STOP('ATOMLIB$AESCFWITHHF')
+!!$      END IF
+!!$      IF(TPR) PRINT*,ITER,'ITERATIONSIN LOOP FOR RADIAL HARTREE FOCK'
+!!$      IF(TPR) THEN
+!!$        PRINT*,'EOFI ',ITER,EOFI
+!!$        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,NB,PSI)
+!!$      END IF
+!!$      RETURN
+!!$      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE ATOMLIB$SPHERICALWITHHF(GID,NR,POT,DREL,VFOCK,SO,G,L,E,PSI)
+!!$!     **************************************************************************
+!!$!     **                                                                      **
+!!$!     **************************************************************************
+!!$      USE RADIALFOCK_MODULE, ONLY : VFOCK_TYPE
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN)    :: GID
+!!$      INTEGER(4),INTENT(IN)    :: NR
+!!$      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
+!!$      REAL(8)   ,INTENT(IN)    :: DREL(NR)
+!!$      REAL(8)   ,INTENT(IN)    :: POT(NR)
+!!$      INTEGER(4),INTENT(IN)    :: L
+!!$      INTEGER(4),INTENT(IN)    :: SO
+!!$      REAL(8)   ,INTENT(IN)    :: G(NR)
+!!$      REAL(8)   ,INTENT(IN)    :: E
+!!$      REAL(8)   ,INTENT(OUT)   :: PSI(NR)
+!!$      REAL(8)                  :: DPSI(NR)
+!!$      REAL(8)                  :: VFOCKPSI(NR)
+!!$      REAL(8)                  :: PI,Y0
+!!$      REAL(8)                  :: SOFACTOR
+!!$      REAL(8)                  :: R(NR)
+!!$      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
+!!$      REAL(8)                  :: G1(NR)
+!!$      REAL(8)                  :: RDPRIME(NR)
+!!$      REAL(8)                  :: VAL,NORM
+!!$      INTEGER(4),PARAMETER     :: NITER=20
+!!$      INTEGER(4)               :: ITER
+!!$      REAL(8)   ,PARAMETER     :: TOL=1.D-5
+!!$      LOGICAL(4)               :: CONVG
+!!$      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
+!!$      LOGICAL(4)               :: TPR=.TRUE.
+!!$      LOGICAL(4)               :: THOM
+!!$!     **************************************************************************
+!!$      call error$msg('Routine is marked for deletion')
+!!$      call error$stop('ATOMLIB$SPHERICALWITHHF')
+!!$      PI=4.D0*ATAN(1.D0)
+!!$      Y0=1.D0/SQRT(4.D0*PI)
+!!$      CALL RADIAL$R(GID,NR,R)
+!!$      THOM=MAXVAL(ABS(G)).LT.1.D-8
+!!$!
+!!$      IF(TPR) THEN
+!!$        PRINT*,'==============================================================='
+!!$        PRINT*,'L=',L,' SO=',SO,' THOM ',THOM
+!!$        PRINT*,'SCALE ',VFOCK%SCALE
+!!$        PRINT*,'EOFI ',-1,E
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  CHECK AND PROCESS SPIN ORBIT PARAMETER                              ==
+!!$!     ==========================================================================
+!!$      IF(SO.EQ.0) THEN
+!!$        SOFACTOR=0.D0
+!!$      ELSE IF(SO.EQ.1) THEN
+!!$        SOFACTOR=REAL(L,KIND=8)
+!!$      ELSE IF(SO.EQ.-1) THEN
+!!$        SOFACTOR=REAL(-L-1,KIND=8)
+!!$      ELSE
+!!$        CALL ERROR$STOP('ILLEGAL VALUE FOR SO')
+!!$        CALL ERROR$STOP('ATOMLIB$BOUNDSTATEWITHHF')
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  SET RELATIVISTIC CORRECTION                                         ==
+!!$!     ==========================================================================
+!!$      CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  RECREATE WAVE FUNCTION                                              ==
+!!$!     ==========================================================================
+!!$      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,E,1,PSI)
+!!$      IF(TPR) THEN
+!!$        CALL ATOMLIB_WRITEPHI('PSI_I.DAT',GID,NR,1,PSI)
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  NOW START LOOP                                                      ==
+!!$!     ==========================================================================
+!!$      DO ITER=1,NITER
+!!$!
+!!$!       ========================================================================
+!!$!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
+!!$!       ========================================================================
+!!$!       == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
+!!$        CALL RADIAL$VERLETD2(GID,NR,R*PSI,AUX2)
+!!$        AUX(:)=R(:)*AUX2(:)-REAL(L*(L+1),KIND=8)*PSI(:)
+!!$        AUX(:)=-(1.D0+DREL)*AUX(:)
+!!$        CALL RADIAL$VERLETD1(GID,NR,PSI,AUX2)
+!!$        AUX(:)=AUX(:)-RDPRIME*(R(:)**2*AUX2(:)-SOFACTOR*R(:)*PSI(:))
+!!$!       == POTENTIAL ENERGY ==================================================
+!!$        AUX(:)=AUX(:)+2.D0*R(:)**2*POT(:)*Y0*PSI(:)
+!!$!       == HARTREE-FOCK CORRECTION ===========================================
+!!$        CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,PSI,VFOCKPSI)
+!!$        AUX(:)=AUX(:)+2.D0*R(:)**2*VFOCKPSI(:)
+!!$!       == CORRECT GLITCHES ==================================================
+!!$        AUX(1:2)=0.D0
+!!$!       == REMOVE ENERGY TERM ================================================
+!!$        AUX(:)=AUX(:)-2.D0*R(:)**2*E*PSI(:)
+!!$!       == WEIGHT WITH OCCUPATION ============================================
+!!$        DPSI(:)=AUX(:)/(2.D0*R(:)**2)-G(:)
+!!$!
+!!$!       ========================================================================
+!!$!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
+!!$!       ========================================================================
+!!$        CALL ATOMLIB_WRITEPHI('DPSI1.DAT',GID,NR,1,DPSI)
+!!$        G1=DPSI(:)
+!!$        G1(1:2)=0.D0
+!!$        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G1,L,E,1,DPSI)
+!!$        CALL ATOMLIB_WRITEPHI('DPSI2.DAT',GID,NR,1,DPSI)
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  CHECK CONVERGENCE                                                 ==
+!!$!       ========================================================================
+!!$        AUX(:)=(R*PSI)**2
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX1,3.D0,NORM)
+!!$        VAL=MAXVAL(ABS(DPSI(:)))/SQRT(NORM)
+!!$        IF(TPR) PRINT*,' DEV=',VAL,NORM
+!!$        CONVG=(VAL.LT.TOL)
+!!$        IF(CONVG) EXIT
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  PROPAGATE                                                         ==
+!!$!       ========================================================================
+!!$        PSI(:)=PSI(:)-DPSI(:)
+!!$!
+!!$      ENDDO    ! END OF ITERATION
+!!$!
+!!$      IF(.NOT.CONVG) THEN
+!!$        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,1,PSI)
+!!$        CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
+!!$        CALL ERROR$STOP('ATOMLIB$SPHERICALWITHHF')
+!!$      END IF
+!!$      IF(TPR) THEN
+!!$        PRINT*,ITER,'ITERATIONSIN LOOP FOR RADIAL HARTREE FOCK'
+!!$        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,1,PSI)
+!!$      END IF
+!!$      RETURN
+!!$      END SUBROUTINE ATOMLIB$SPHERICALWITHHF
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE ATOMLIB$UPDATEPAWSTATE(GID,NR,L,VPAW,G,RBND,E,PSI)
+!!$!     **************************************************************************
+!!$!     ** USES AN APPROXIMATE SOLUTION TO CONSTRUCT A SOLUTION FOR             **
+!!$!     ** A PAW-TYPE HAMILTONIAN                                               **
+!!$!     **                                                                      **
+!!$!     ** THE BOUNDARY CONDITIONS (LOGARITHMIC DERIVATIVE AT RBND IS PRESERVED **
+!!$!     ** IF RBND.LE.0 A FIXED ENERGY SOLUTION IS SEARCHED AND THE OUTER       **
+!!$!     ** BOUNDARY CONDITION IS RELAXED.                                       **
+!!$!     **                                                                      **
+!!$!     **************************************************************************
+!!$      USE RADIALPAW_MODULE, ONLY: VPAW_TYPE
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN)    :: GID
+!!$      INTEGER(4),INTENT(IN)    :: NR
+!!$      INTEGER(4),INTENT(IN)    :: L
+!!$      TYPE(VPAW_TYPE),INTENT(IN) :: VPAW
+!!$      REAL(8)   ,INTENT(IN)    :: G(NR)
+!!$      REAL(8)   ,INTENT(IN)    :: RBND
+!!$      REAL(8)   ,INTENT(INOUT) :: E
+!!$      REAL(8)   ,INTENT(INOUT) :: PSI(NR)
+!!$      REAL(8)                  :: PHASE
+!!$      REAL(8)                  :: DREL(NR)
+!!$      REAL(8)                  :: DPSI(NR)
+!!$      REAL(8)                  :: OPSI(NR)
+!!$      REAL(8)                  :: POT(NR)
+!!$      REAL(8)                  :: PHIDOT(NR)
+!!$      REAL(8)                  :: PHIPRIME(NR)
+!!$      REAL(8)                  :: VALDOT,DERDOT,VALPRIME,DERPRIME,VAL0,DER0
+!!$      REAL(8)                  :: PI,Y0
+!!$      REAL(8)                  :: R(NR)
+!!$      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
+!!$      REAL(8)                  :: G1(NR)
+!!$      REAL(8)                  :: VAL,DER,SVAR
+!!$      INTEGER(4)               :: IR
+!!$      INTEGER(4),PARAMETER     :: NITER=20
+!!$      INTEGER(4)               :: ITER
+!!$      REAL(8)   ,PARAMETER     :: TOL=1.D-8
+!!$      LOGICAL(4)               :: CONVG
+!!$      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
+!!$      INTEGER(4)               :: IRBND
+!!$      REAL(8)                  :: NORM,E1
+!!$      LOGICAL(4)               :: TPR=.TRUE.
+!!$      LOGICAL(4)               :: TFIXE
+!!$      INTEGER(4)               :: NN
+!!$!     **************************************************************************
+!!$      call error$msg('Routine is marked for deletion')
+!!$      call error$stop('ATOMLIB$SPHERICALWITHHF')
+!!$      PI=4.D0*ATAN(1.D0)
+!!$      Y0=1.D0/SQRT(4.D0*PI)
+!!$      CALL RADIAL$R(GID,NR,R)
+!!$      TFIXE=RBND.LE.0.D0
+!!$      DREL(:)=0.D0
+!!$!
+!!$!     :: REMARK: SCHROEDINGER$PHASESHIFT TAKES VALUE AND DERIVATIVE FROM A    ::
+!!$!     :: TWO-POINT FORMULA, AND THEREFORE IS NOT FULLY CONSISTENT WITH        ::
+!!$!     :: RADIAL$VALUE AND RADIAL$DERIVATIVE                                   ::
+!!$      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,PHASE)
+!!$!
+!!$      DO IR=1,NR
+!!$        IRBND=IR
+!!$        IF(TFIXE.AND.R(IR).GT.3.D0) EXIT
+!!$        IF(.NOT.TFIXE.AND.R(IR).GT.RBND) EXIT
+!!$      ENDDO
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  CONSTRUCT AN LOCAL, APPROXIMATE POTENTIAL
+!!$!     ==========================================================================
+!!$      AUX(:)=1.D0
+!!$      CALL RADIALPAW$VPSI(GID,NR,VPAW,L,AUX,AUX1,OPSI)
+!!$      POT(:)=AUX1-E*OPSI(:)+E*AUX(:)
+!!$POT=VPAW%PSPOT
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  NOW START LOOP                                                      ==
+!!$!     ==========================================================================
+!!$      DO ITER=1,NITER
+!!$!
+!!$!       ========================================================================
+!!$!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
+!!$!       ========================================================================
+!!$!       == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
+!!$        CALL RADIAL$VERLETD2(GID,NR,R*PSI,AUX1)
+!!$        AUX(:)=-R(:)*AUX(:)+REAL(L*(L+1),KIND=8)*PSI(:)
+!!$!       == REMOVE FACTOR 2*R**2 ================================================
+!!$        AUX(:)=AUX(:)/(2.D0*R(:)**2)
+!!$!       == CORRECT GLITCHES ====================================================
+!!$        AUX(1:2)=0.D0
+!!$!       == POTENTIAL ENERGY ====================================================
+!!$        CALL RADIALPAW$VPSI(GID,NR,VPAW,L,PSI,AUX1,OPSI)
+!!$        AUX(:)=AUX(:)+AUX1(:)
+!!$!       == ESTIMATE ENERGY =====================================================
+!!$        IF(.NOT.TFIXE) THEN
+!!$          AUX1(:)=R(:)**2*PSI(:)*(AUX(:)-G(:))
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX2,RBND,E)
+!!$          AUX1(:)=R(:)**2*PSI(:)*OPSI(:)
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX2,RBND,NORM)
+!!$          E=E/NORM
+!!$!         == REMOVE ENERGY TERM ================================================
+!!$          AUX(:)=AUX(:)-E*OPSI(:)
+!!$        ELSE
+!!$          AUX1(:)=R(:)**2*PSI(:)*OPSI(:)
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX2,3.D0,NORM)
+!!$        END IF
+!!$!       == SUBTRACT INHOMOGENEITY ==============================================
+!!$        AUX(:)=AUX(:)-G(:)
+!!$!       == MAP INTO DPSI
+!!$        DPSI(:)=-AUX(:)
+!!$!
+!!$!       ========================================================================
+!!$!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
+!!$!       ========================================================================
+!!$        G1=DPSI(:)
+!!$        G1(1:2)=0.D0
+!!$        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,0,G1,L,E,1,PHIPRIME)
+!!$        IF(.NOT.TFIXE) THEN
+!!$          G1=PSI(:)
+!!$          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,0,G1,L,E,1,PHIDOT)
+!!$          CALL RADIAL$VALUE(GID,NR,PSI,RBND,VAL0)
+!!$          CALL RADIAL$DERIVATIVE(GID,NR,PSI,RBND,DER0)
+!!$          CALL RADIAL$VALUE(GID,NR,PHIPRIME,RBND,VALPRIME)
+!!$          CALL RADIAL$DERIVATIVE(GID,NR,PHIPRIME,RBND,DERPRIME)
+!!$          CALL RADIAL$VALUE(GID,NR,PHIDOT,RBND,VALDOT)
+!!$          CALL RADIAL$DERIVATIVE(GID,NR,PHIDOT,RBND,DERDOT)
+!!$          CALL SCHROEDINGER$RESOLVEPHASESHIFT(PHASE,VAL,DER,NN)
+!!$          VAL0=VAL*DER0-DER*VAL0
+!!$          VALPRIME=VAL*DERPRIME-DER*VALPRIME
+!!$          VALDOT=VAL*DERDOT-DER*VALDOT
+!!$          SVAR=(VAL0+VALPRIME)/VALDOT  !DELTA EPSILON
+!!$          DPSI(:)=PHIPRIME(:)-PHIDOT(:)*SVAR
+!!$        ELSE
+!!$          DPSI(:)=PHIPRIME(:)
+!!$        END IF
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  CHECK CONVERGENCE                                                 ==
+!!$!       ========================================================================
+!!$        VAL=MAXVAL(ABS(DPSI(:IRBND-3)))/SQRT(NORM)
+!!$        IF(TPR) PRINT*,' DEV=',VAL
+!!$        CONVG=(VAL.LT.TOL)
+!!$        IF(CONVG) EXIT
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  PROPAGATE                                                         ==
+!!$!       ========================================================================
+!!$        PSI(:)=PSI(:)+DPSI(:)
+!!$!
+!!$      ENDDO    ! END OF ITERATION
+!!$!
+!!$      IF(.NOT.CONVG) THEN
+!!$        CALL ERROR$MSG('LOOP FOR RADIAL PAW NOT CONVERGED')
+!!$        CALL ERROR$STOP('ATOMLIB$UPDATEPAWSTATE')
+!!$      END IF
+!!$      RETURN
+!!$      END SUBROUTINE ATOMLIB$UPDATEPAWSTATE
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE ATOMLIB$PHASESHIFTSTATEWITHHF(GID,NR,L,SO,DREL,G,POT &
+!!$     &                             ,VFOCK,RBND,PHASE,E,PSI)
+!!$!     **************************************************************************
+!!$!     **                                                                      **
+!!$!     **************************************************************************
+!!$      USE RADIALFOCK_MODULE, ONLY : VFOCK_TYPE
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN)    :: GID
+!!$      INTEGER(4),INTENT(IN)    :: NR
+!!$      INTEGER(4),INTENT(IN)    :: L
+!!$      INTEGER(4),INTENT(IN)    :: SO
+!!$      REAL(8)   ,INTENT(IN)    :: DREL(NR)
+!!$      REAL(8)   ,INTENT(IN)    :: POT(NR)
+!!$      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
+!!$      REAL(8)   ,INTENT(IN)    :: G(NR)
+!!$      REAL(8)   ,INTENT(IN)    :: RBND
+!!$      REAL(8)   ,INTENT(IN)    :: PHASE
+!!$      REAL(8)   ,INTENT(OUT)   :: E
+!!$      REAL(8)   ,INTENT(OUT)   :: PSI(NR)
+!!$      REAL(8)                  :: DPSI(NR)
+!!$      REAL(8)                  :: PHIDOT(NR)
+!!$      REAL(8)                  :: PHIPRIME(NR)
+!!$      REAL(8)                  :: VALDOT,DERDOT,VALPRIME,DERPRIME,VAL0,DER0
+!!$      REAL(8)                  :: PI,Y0
+!!$      REAL(8)                  :: SOFACTOR
+!!$      REAL(8)                  :: R(NR)
+!!$      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
+!!$      REAL(8)                  :: G1(NR)
+!!$      REAL(8)                  :: RDPRIME(NR)
+!!$      REAL(8)                  :: VAL,DER,SVAR
+!!$      INTEGER(4)               :: IR
+!!$      INTEGER(4),PARAMETER     :: NITER=20
+!!$      INTEGER(4)               :: ITER
+!!$      REAL(8)   ,PARAMETER     :: TOL=1.D-8
+!!$      LOGICAL(4)               :: CONVG
+!!$      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
+!!$      INTEGER(4)               :: IRBND
+!!$      REAL(8)                  :: NORM
+!!$      LOGICAL(4)               :: TPR=.TRUE.
+!!$      LOGICAL(4)               :: THOM
+!!$      INTEGER(4)               :: NN
+!!$!     **************************************************************************
+!!$      call error$msg('Routine is marked for deletion')
+!!$      call error$stop('ATOMLIB$PHASESHIFTSTATEWITHHF')
+!!$      PI=4.D0*ATAN(1.D0)
+!!$      Y0=1.D0/SQRT(4.D0*PI)
+!!$      CALL RADIAL$R(GID,NR,R)
+!!$      CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
+!!$      IF(RBND.LE.0) THEN
+!!$        CALL ERROR$MSG('CONSTANT ENERGY SOLUTION NOT IMPLEMENTED')
+!!$        CALL ERROR$MSG('RBND MUST BE POSITIVE')
+!!$        CALL ERROR$STOP('ATOMLIB$PHASESHIFTSTATEWITHHF')
+!!$      END IF
+!!$!      
+!!$      THOM=MAXVAL(ABS(G)).LT.1.D-8
+!!$      DO IR=1,NR
+!!$        IRBND=IR
+!!$        IF(R(IR).GT.RBND) EXIT
+!!$      ENDDO
+!!$      IF(SO.EQ.0) THEN
+!!$        SOFACTOR=0.D0
+!!$      ELSE IF(SO.EQ.1) THEN
+!!$        SOFACTOR=REAL(L,KIND=8)
+!!$      ELSE IF(SO.EQ.-1) THEN
+!!$        SOFACTOR=REAL(-L-1,KIND=8)
+!!$      ELSE
+!!$        CALL ERROR$STOP('ILLEGAL VALUE FOR SO')
+!!$        CALL ERROR$STOP('ATOMLIB$BOUNDSTATEWITHHF')
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  RECREATE WAVE FUNCTION                                              ==
+!!$!     ==========================================================================
+!!$      CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,SO,DREL,G,POT,RBND,PHASE,E,PSI)
+!!$!
+!!$      IF(THOM) THEN
+!!$        AUX(:)=R(:)**2*PSI(:)**2
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
+!!$        PSI(:)=PSI(:)/SQRT(VAL)
+!!$PRINT*,'WAVE FUNCTION NORMALIZED; THOM=',THOM
+!!$      END IF
+!!$        
+!!$      IF(TPR) THEN
+!!$        CALL ATOMLIB_WRITEPHI('PSI_I.DAT',GID,NR,1,PSI)
+!!$        PRINT*,'EOFI ',0,E
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  NOW START LOOP                                                      ==
+!!$!     ==========================================================================
+!!$      DO ITER=1,NITER
+!!$!
+!!$!       ========================================================================
+!!$!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
+!!$!       ========================================================================
+!!$!       == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
+!!$        CALL RADIAL$VERLETD2(GID,NR,R*PSI,AUX1)
+!!$        AUX(:)=R(:)*AUX1(:)
+!!$        AUX(:)=AUX(:)-REAL(L*(L+1),KIND=8)*PSI(:)
+!!$        AUX(:)=-(1.D0+DREL)*AUX(:)
+!!$        CALL RADIAL$VERLETD1(GID,NR,PSI,AUX1)
+!!$        AUX(:)=AUX(:)-RDPRIME(:)*(R(:)**2*AUX1(:)-SOFACTOR*R(:)*PSI(:))
+!!$!       == POTENTIAL ENERGY ====================================================
+!!$        AUX(:)=AUX(:)+2.D0*R(:)**2*POT(:)*Y0*PSI(:)
+!!$!       == REMOVE FACTOR 2*R**2 ================================================
+!!$        AUX(:)=AUX(:)/(2.D0*R(:)**2)
+!!$!       == HARTREE-FOCK CORRECTION =============================================
+!!$        CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,PSI,AUX1)
+!!$        AUX(:)=AUX(:)+AUX1(:)
+!!$!       == CORRECT GLITCHES ====================================================
+!!$        AUX(1:2)=0.D0
+!!$!       == ESTIMATE ENERGY =====================================================
+!!$        AUX1(:)=R(:)**2*PSI(:)*(AUX(:)-G(:))
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX2,RBND,E)
+!!$        AUX1(:)=R(:)**2*PSI(:)**2
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX2,RBND,NORM)
+!!$        E=E/NORM
+!!$PRINT*,'EE',E,NORM
+!!$!       == REMOVE ENERGY TERM ================================================
+!!$        AUX(:)=AUX(:)-E*PSI(:)
+!!$!       == SUBTRACT INHOMOGENEITY ==============================================
+!!$        AUX(:)=AUX(:)-G(:)
+!!$!       == MAP INTO DPSI
+!!$        DPSI(:)=-AUX(:)
+!!$!
+!!$!       ========================================================================
+!!$!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
+!!$!       ========================================================================
+!!$        G1=DPSI(:)
+!!$        G1(1:2)=0.D0
+!!$        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G1,L,E,1,PHIPRIME)
+!!$        G1=PSI(:)
+!!$        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G1,L,E,1,PHIDOT)
+!!$!
+!!$!       :: REMARK: SCHROEDINGER$PHASESHIFT TAKES VALUE AND DERIVATIVE FROM A  ::
+!!$!       :: TWO-POINT FORMULA, AND THEREFORE IS NOT FULLY CONSISTENT WITH      ::
+!!$!       :: RADIAL$VALUE AND RADIAL$DERIVATIVE                                 ::
+!!$        CALL RADIAL$VALUE(GID,NR,PSI,RBND,VAL0)
+!!$        CALL RADIAL$DERIVATIVE(GID,NR,PSI,RBND,DER0)
+!!$        CALL RADIAL$VALUE(GID,NR,PHIPRIME,RBND,VALPRIME)
+!!$        CALL RADIAL$DERIVATIVE(GID,NR,PHIPRIME,RBND,DERPRIME)
+!!$        CALL RADIAL$VALUE(GID,NR,PHIDOT,RBND,VALDOT)
+!!$        CALL RADIAL$DERIVATIVE(GID,NR,PHIDOT,RBND,DERDOT)
+!!$        CALL SCHROEDINGER$RESOLVEPHASESHIFT(PHASE,VAL,DER,NN)
+!!$        VAL0=VAL*DER0-DER*VAL0
+!!$        VALPRIME=VAL*DERPRIME-DER*VALPRIME
+!!$        VALDOT=VAL*DERDOT-DER*VALDOT
+!!$        SVAR=(VAL0+VALPRIME)/VALDOT  !DELTA EPSILON
+!!$        DPSI(:)=PHIPRIME(:)-PHIDOT(:)*SVAR
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  CHECK CONVERGENCE                                                 ==
+!!$!       ========================================================================
+!!$        VAL=MAXVAL(ABS(DPSI(:IRBND-3)))/SQRT(NORM)
+!!$        IF(TPR) PRINT*,' DEV=',VAL
+!!$        CONVG=(VAL.LT.TOL)
+!!$        IF(CONVG) EXIT
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  PROPAGATE                                                         ==
+!!$!       ========================================================================
+!!$        PSI(:)=PSI(:)+DPSI(:)
+!!$! CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,SVAR)
+!!$!PRINT*,'TARGET PHASE+ ',PHASE,' ACTUAL PHASE=',SVAR,' R=',RBND
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  NORMALIZE                                                         ==
+!!$!       ========================================================================
+!!$        IF(THOM) THEN
+!!$          AUX(:)=R(:)**2*PSI(:)**2
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
+!!$          PSI(:)=PSI(:)/SQRT(VAL)
+!!$        END IF
+!!$        IF(TPR) THEN
+!!$          PRINT*,'EOFI ',ITER,E
+!!$        END IF
+!!$!
+!!$      ENDDO    ! END OF ITERATION
+!!$!
+!!$      IF(.NOT.CONVG) THEN
+!!$        CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
+!!$        CALL ERROR$STOP('ATOMLIB$PHASESHIFTSTATEWITHHF')
+!!$      END IF
+!!$      IF(TPR) PRINT*,ITER,'ITERATIONSIN LOOP FOR RADIAL HARTREE FOCK'
+!!$      IF(THOM) THEN
+!!$        AUX(:)=R(:)**2*PSI(:)**2
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
+!!$        PSI(:)=PSI(:)/SQRT(VAL)
+!!$      END IF
+!!$      IF(TPR) THEN
+!!$        PRINT*,'EOFI ',ITER,E
+!!$        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,1,PSI)
+!!$      END IF
+!!$!
+!!$      RETURN
+!!$      END SUBROUTINE ATOMLIB$PHASESHIFTSTATEWITHHF
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE ATOMLIB$BOUNDSTATEWITHHF(GID,NR,TREL,RBOX,POT &
+!!$     &                             ,VFOCK,L,SO,NN,G,E,PSI,TPSI)
+!!$!     **************************************************************************
+!!$!     **                                                                      **
+!!$!     **************************************************************************
+!!$      USE RADIALFOCK_MODULE, ONLY : VFOCK_TYPE
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN)    :: GID
+!!$      INTEGER(4),INTENT(IN)    :: NR
+!!$      LOGICAL(4),INTENT(IN)    :: TREL
+!!$      REAL(8)   ,INTENT(IN)    :: RBOX
+!!$      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
+!!$      REAL(8)   ,INTENT(IN)    :: POT(NR)
+!!$      INTEGER(4),INTENT(IN)    :: NN
+!!$      INTEGER(4),INTENT(IN)    :: L
+!!$      INTEGER(4),INTENT(IN)    :: SO
+!!$      REAL(8)   ,INTENT(IN)    :: G(NR)
+!!$      REAL(8)   ,INTENT(OUT)   :: PSI(NR)
+!!$      REAL(8)   ,INTENT(OUT)   :: E
+!!$      REAL(8)   ,INTENT(OUT)   :: TPSI(NR)
+!!$      REAL(8)   ,PARAMETER     :: TOL=1.D-6
+!!$      INTEGER(4),PARAMETER     :: NITER=20
+!!$      REAL(8)   ,PARAMETER     :: XMAX=1.D+15 !MAX. FACTOR IN THE WAVEFUNCTION
+!!$      LOGICAL(4),PARAMETER     :: TPR=.TRUE.
+!!$      REAL(8)                  :: DREL(NR)
+!!$      REAL(8)                  :: DPSI(NR)
+!!$      REAL(8)                  :: VFOCKPSI(NR)
+!!$      REAL(8)                  :: PI,Y0
+!!$      REAL(8)                  :: SOFACTOR
+!!$      REAL(8)                  :: R(NR)
+!!$      REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
+!!$      REAL(8)                  :: G1(NR)
+!!$      REAL(8)                  :: RDPRIME(NR)
+!!$      REAL(8)                  :: VAL,VAL1,VAL2
+!!$      INTEGER(4)               :: IR,ISO
+!!$      INTEGER(4)               :: IRBOX
+!!$      INTEGER(4)               :: ITER
+!!$      LOGICAL(4)               :: CONVG
+!!$      REAL(8)                  :: POT1(NR)
+!!$      INTEGER(4)               :: IRCL,IROUT
+!!$      REAL(8)                  :: ROUT
+!!$      REAL(8)                  :: NORM
+!!$      LOGICAL(4)               :: THOM
+!!$!     **************************************************************************
+!!$      call error$msg('Routine is marked for deletion')
+!!$      call error$stop('ATOMLIB$BOUNDSTATEWITHHF')
+!!$      PI=4.D0*ATAN(1.D0)
+!!$      Y0=1.D0/SQRT(4.D0*PI)
+!!$      CALL RADIAL$R(GID,NR,R)
+!!$      THOM=MAXVAL(ABS(G)).LT.1.D-8
+!!$!
+!!$!     == INDEX OF THE FIRST GRIDPOINT OUTSIDE RBOX =============================
+!!$      DO IR=1,NR
+!!$        IRBOX=IR
+!!$        IF(R(IR).GE.RBOX) EXIT
+!!$      ENDDO
+!!$!
+!!$      IF(TPR) THEN
+!!$        PRINT*,'==============================================================='
+!!$        PRINT*,'L=',L,' SO=',SO,' NN=',NN,' THOM ',THOM
+!!$        PRINT*,'SCALE ',VFOCK%SCALE,'TREL ',TREL,' RBOX ',RBOX,R(IRBOX)
+!!$        PRINT*,'EOFI ',-1,E
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  RECREATE WAVE FUNCTION                                              ==
+!!$!     ==========================================================================
+!!$      E=0.D0 
+!!$      IF(TREL) THEN
+!!$        CALL SCHROEDINGER$DREL(GID,NR,POT,E,DREL)
+!!$      ELSE 
+!!$        DREL(:)=0.D0 
+!!$      END IF
+!!$      CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,DREL,G,NN,POT,E,PSI)
+!!$!
+!!$      IF(TPR.AND.THOM) THEN
+!!$        AUX(:)=R(:)**2*PSI(:)**2
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!!$        PSI(:)=PSI(:)/SQRT(VAL)
+!!$      END IF
+!!$        
+!!$      IF(TPR) THEN
+!!$        CALL ATOMLIB_WRITEPHI('PSI_I.DAT',GID,NR,1,PSI)
+!!$        PRINT*,'EOFI ',0,E
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  NOW START LOOP                                                      ==
+!!$!     ==========================================================================
+!!$      DO ITER=1,NITER
+!!$!
+!!$!       ========================================================================
+!!$!       ==  CONSTRUCT |DPSI>=DE/DPSI                                          ==
+!!$!       ========================================================================
+!!$        IF(TREL) THEN
+!!$          CALL SCHROEDINGER$DREL(GID,NR,POT,E,DREL)
+!!$          CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
+!!$        ELSE
+!!$          DREL=0.D0
+!!$          RDPRIME=0.D0
+!!$        END IF
+!!$        IF(SO.EQ.0) THEN
+!!$          SOFACTOR=0.D0
+!!$        ELSE IF(SO.EQ.1) THEN
+!!$          SOFACTOR=REAL(L,KIND=8)
+!!$        ELSE IF(SO.EQ.-1) THEN
+!!$          SOFACTOR=REAL(-L-1,KIND=8)
+!!$        ELSE
+!!$          CALL ERROR$STOP('ILLEGAL VALUE FOR SO')
+!!$          CALL ERROR$STOP('ATOMLIB$BOUNDSTATEWITHHF')
+!!$        END IF
+!!$!       == KINETIC ENERGY OF THE WAVE FUNCTION (NONRELATIVISTIC)
+!!$        CALL RADIAL$VERLETD2(GID,NR,R*PSI,AUX2)
+!!$        AUX(:)=R(:)*AUX2(:)-REAL(L*(L+1),KIND=8)*PSI(:)
+!!$        AUX(:)=-(1.D0+DREL)*AUX(:)
+!!$        CALL RADIAL$VERLETD1(GID,NR,PSI,AUX2)
+!!$        AUX(:)=AUX(:)-RDPRIME*(R(:)**2*AUX2(:)-SOFACTOR*R(:)*PSI(:))
+!!$!       == POTENTIAL ENERGY ==================================================
+!!$        AUX(:)=AUX(:)+2.D0*R(:)**2*POT(:)*Y0*PSI(:)
+!!$!       == HARTREE-FOCK CORRECTION ===========================================
+!!$        CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,PSI,VFOCKPSI)
+!!$        AUX(:)=AUX(:)+2.D0*R(:)**2*VFOCKPSI(:)
+!!$!       == CORRECT GLITCHES ==================================================
+!!$        AUX(1:2)=0.D0
+!!$!       == ESTIMATE ENERGY ===================================================
+!!$        AUX1(:)=0.5D0*AUX(:)*PSI(:)-R(:)**2*PSI(:)*G(:)
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX2,RBOX,E)
+!!$        AUX1(:)=R(:)**2*PSI(:)**2
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX2,RBOX,NORM)
+!!$        E=E/NORM
+!!$!       == REMOVE ENERGY TERM ================================================
+!!$        AUX(:)=AUX(:)-2.D0*R(:)**2*E*PSI(:)
+!!$!       == WEIGHT WITH OCCUPATION ============================================
+!!$        DPSI(:)=AUX(:)/(2.D0*R(:)**2)-G(:)
+!!$!
+!!$!       ========================================================================
+!!$!       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
+!!$!       ========================================================================
+!!$        ISO=SO
+!!$        CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
+!!$!       == BOUNDARY CONDITION PHI(ROUT)=0 ====================================
+!!$        IF(R(IROUT).LT.RBOX) THEN
+!!$          ROUT=R(IROUT)
+!!$        ELSE
+!!$          ROUT=RBOX
+!!$          IROUT=IRBOX
+!!$        END IF
+!!$!       ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT TO AVOID AN OVERFLOW ======
+!!$!       == ATTENTION: THERE IS A STEP IN THE POTENTIAL =======================
+!!$        POT1(:)=POT(:)
+!!$        POT1(IROUT:)=E
+!!$        IF(TREL) THEN
+!!$          CALL SCHROEDINGER$DREL(GID,NR,POT1,E,DREL)
+!!$        ELSE 
+!!$          DREL(:)=0.D0 
+!!$        END IF
+!!$        G1=DPSI(:)
+!!$        G1(1:2)=0.D0
+!!$        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,ISO,G1,L,E,1,AUX1)
+!!$        G1=PSI(:)
+!!$        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,ISO,G1,L,E,1,AUX2)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL1)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX2,ROUT,VAL2)
+!!$        DPSI(:)=AUX1(:)-AUX2(:)*VAL1/VAL2
+!!$        DPSI(IROUT+3:)=0.D0
+!!$        IF(ROUT.LT.RBOX) DPSI(IROUT:)=0.D0
+!!$        CALL RADIAL$VALUE(GID,NR,DPSI(:),RBOX,VAL)
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  CHECK CONVERGENCE                                                 ==
+!!$!       ========================================================================
+!!$        VAL=MAXVAL(ABS(DPSI(:IRBOX-3)))/SQRT(NORM)
+!!$        IF(TPR) PRINT*,' DEV=',VAL,' ITER=',ITER
+!!$        CONVG=(VAL.LT.TOL)
+!!$        IF(CONVG) EXIT
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  PROPAGATE                                                         ==
+!!$!       ========================================================================
+!!$        PSI(:)=PSI(:)-DPSI(:)
+!!$!   
+!!$!       ========================================================================
+!!$!       ==  NORMALIZE                                                         ==
+!!$!       ========================================================================
+!!$        IF(TPR.AND.THOM) THEN
+!!$          AUX(:)=R(:)**2*PSI(:)**2
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!!$          PSI(:)=PSI(:)/SQRT(VAL)
+!!$        END IF
+!!$        IF(TPR) THEN
+!!$          PRINT*,'EOFI ',ITER,E
+!!$        END IF
+!!$!
+!!$      ENDDO    ! END OF ITERATION
+!!$!
+!!$      IF(.NOT.CONVG) THEN
+!!$        CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
+!!$        CALL ERROR$STOP('ATOMLIB$BOUNDSTATEWITHHF')
+!!$      END IF
+!!$      IF(TPR) PRINT*,ITER,'ITERATIONSIN LOOP FOR RADIAL HARTREE FOCK'
+!!$      IF(TPR) THEN
+!!$        PRINT*,'EOFI ',ITER,E
+!!$        CALL ATOMLIB_WRITEPHI('PSI_F.DAT',GID,NR,1,PSI)
+!!$      END IF
+!!$!   
+!!$!     ==========================================================================
+!!$!     ==  DETERMINE KINETIC ENERGY                                            ==
+!!$!     ==========================================================================
+!!$      TPSI(:)=(E-POT(:)*Y0+VFOCK%SCALE*VFOCK%MUX*Y0)*PSI(:) &
+!!$     &                    -VFOCK%SCALE*VFOCKPSI(:)+G(:)
+!!$      RETURN
+!!$      END SUBROUTINE ATOMLIB$BOUNDSTATEWITHHF

@@ -1,40 +1,114 @@
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TEST_LMTO$STRUCTURECONSTANTS()
+!     **************************************************************************
+!     ** TESTS STRUCTURE CONSTANTS BY COMPARING THE SOLID HANKEL FUNCTION     **
+!     ** AGAINST THE EXPANSION INTO SOLID BESSEL FUNCTIONS                    **
+!     **                                                                      **
+!     ** IF TEST FAILS, IT INTERRUPTS WITH AN ERROR MSG                       **
+!     **************************************************************************
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: L1X=2
+      INTEGER(4),PARAMETER :: L2X=6
+      INTEGER(4),PARAMETER :: NP=11
+      REAL(8)              :: CENTER(3)  ! POSITION OF EXPANSION CENTER
+      REAL(8)              :: K2         ! KAPPA**2
+      REAL(8)              :: S((L2X+1)**2,(L1X+1)**2)
+      REAL(8)              :: H((L1X+1)**2)
+      REAL(8)              :: J((L2X+1)**2)
+      REAL(8)              :: MINUSJS((L1X+1)**2)
+      INTEGER(4)           :: IP,IK
+      INTEGER(4)           :: NFIL
+      REAL(8)              :: R(3)
+      REAL(8)              :: DR(3)
+      REAL(8)              :: DIS
+      CHARACTER(64)        :: FILE
+      REAL(8)              :: MAXDEV
+      LOGICAL    ,PARAMETER:: TPR=.FALSE.
+!     **************************************************************************
+      CENTER(:)=(/0.D0,1.D0,5.D0/)
+      DR(:)=(/0.D0,1.D0,1.D0/)
+      MAXDEV=0.D0
+      DO IK=-1,1
+        K2=REAL(IK,KIND=8)
+        IF(TPR) THEN
+          WRITE(FILE,*)IK
+          FILE='TEST_STRUCTURECONSTANTS_K2EQUALS'//TRIM(ADJUSTL(FILE))//'.DAT'
+          CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,-FILE)
+          CALL FILEHANDLER$UNIT('HOOK',NFIL)
+        END IF
+        DO IP=1,NP
+          R=CENTER+DR*(-0.5D0+REAL(IP-1,KIND=8)/REAL(NP-1,KIND=8))
+          CALL LMTO$SOLIDHANKEL(R,1.D-3,K2,(L1X+1)**2,H)
+          CALL LMTO$STRUCTURECONSTANTS(CENTER,K2,L1X,L2X,S)
+          CALL LMTO$SOLIDBESSEL(R-CENTER,K2,(L2X+1)**2,J)
+          MINUSJS=-MATMUL(J,S) 
+          MAXDEV=MAX(MAXDEV,MAXVAL(ABS(H-MINUSJS)))
+!
+!         ==PRINT ==============================================================
+          IF(TPR) THEN
+            DIS=SQRT(SUM((R-CENTER)**2)/SUM(CENTER**2))
+            IF(2*(IP-1).LT.NP-1)DIS=-DIS
+            WRITE(NFIL,*)DIS,MINUSJS,H
+          END IF
+        ENDDO
+        IF(TPR) THEN
+          CALL FILEHANDLER$CLOSE('HOOK')
+        END IF
+      ENDDO
+!
+!     == INTERRUPT WHEN TEST FAILS =============================================
+      IF(MAXDEV.GT.1.D-6) THEN
+        CALL ERROR$MSG('TEST FAILED')
+        CALL ERROR$R8VAL('MAXDEV',MAXDEV)
+        CALL ERROR$STOP('TEST_LMTO$STRUCTURECONSTANTS')
+      END IF
+!
+!     == POINT 'HOOK' TO DEFAULT, WHICH INDICATES AN ERROR =====================
+      IF(TPR) THEN
+       CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOKERROR')
+      END IF 
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$SOLIDBESSEL(R,K2,LMX,J)
+!     **************************************************************************
+!     ** CONSTRUCTS THE REGULAR SOLUTIONS OF THE HELMHOLTZ EQUATION           **
+!     **                   (NABLA^2 + K2)*PSI(R)=0                            **
 !     **                                                                      **
-!     ** constructs the regular solutions of the Helmholtz equation           **
-!     **                   (nabla^2 + k2)*psi(r)=0                            **
+!     ** THE SOLUTION BEHAVES AT THE ORIGIN LIKE                              **
+!     **    J_{L,M}(R)=1/(2*L+1)!! * |R|^L  Y_{L,M}(R)  +O(R^L+1)             **
 !     **                                                                      **
-!     ** The solution behaves at the origin like                              **
-!     **    J_{l,m}(r)=1/(2*l+1)!! * |r|^l  Y_{l,m}(r)  +O(r^l+1)             **
-!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: R(3)
       REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
       INTEGER(4),INTENT(IN) :: LMX
-      REAL(8)   ,INTENT(out):: J(LMX)
+      REAL(8)   ,INTENT(OUT):: J(LMX)
       INTEGER(4)            :: LX
       REAL(8)               :: K 
-      REAL(8)               :: X,Y,dydx
-      INTEGER(4)            :: LM,m
+      REAL(8)               :: X,Y,DYDX
+      INTEGER(4)            :: LM,M
       INTEGER(4)            :: L
       REAL(8)               :: PI
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       CALL SPHERICAL$YLM(LMX,R,J)
-      LX=int(SQRT(REAL(LMX+1.D-5)))-1
+      LX=INT(SQRT(REAL(LMX+1.D-5)))-1
       K=SQRT(ABS(K2))     
       X=SQRT(SUM(R**2))
       LM=0
       DO L=0,LX
         IF(K2.GT.0.D0) THEN
-          CALL SPFUNCTION$BESSEL(L,k*X,Y,dydx)  ! ABRAMOWITZ 10.1.25
+          CALL SPFUNCTION$BESSEL(L,K*X,Y,DYDX)  ! ABRAMOWITZ 10.1.25
           Y=Y/K**L
         ELSE IF(K2.LT.0.D0) THEN
-          CALL SPFUNCTION$MODBESSEL(L,k*X,Y,dydx) !ABRAMOWITZ 10.2.4
+          CALL SPFUNCTION$MODBESSEL(L,K*X,Y,DYDX) !ABRAMOWITZ 10.2.4
           Y=Y/K**L
         ELSE
-          CALL SPFUNCTION$BESSEL0(L,X,Y,dydx)  ! ABRAMOWITZ 10.1.2
+          CALL SPFUNCTION$BESSEL0(L,X,Y,DYDX)  ! ABRAMOWITZ 10.1.2
         END IF
         DO M=1,2*L+1
           LM=LM+1
@@ -45,65 +119,66 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$SOLIDHANKEL(R,rad,K2,LMX,H)
+      SUBROUTINE LMTO$SOLIDHANKEL(R,RAD,K2,LMX,H)
+!     **************************************************************************
+!     ** CONSTRUCTS THE IRREGULAR SOLUTIONS OF THE HELMHOLTZ EQUATION         **
+!     **                   (NABLA^2 + K2)*PSI(R)=0                            **
 !     **                                                                      **
-!     ** constructs the irregular solutions of the Helmholtz equation         **
-!     **                   (nabla^2 + k2)*psi(r)=0                            **
+!     ** THE SOLUTION BEHAVES AT THE ORIGIN LIKE                              **
+!     **    H_{L,M}(R)= (2*L-1)!! * |R|^{-L-1}  Y_{L,M}(R)                    **
 !     **                                                                      **
-!     ** The solution behaves at the origin like                              **
-!     **    H_{l,m}(r)= (2*l-1)!! * |r|^{-l-1}  Y_{l,m}(r)                   **
-!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
-      REAL(8)   ,INTENT(IN) :: R(3) ! position relative to the origin
-      real(8)   ,intent(in) :: rad  ! inside rad the function is regularized
+      REAL(8)   ,INTENT(IN) :: R(3) ! POSITION RELATIVE TO THE ORIGIN
+      REAL(8)   ,INTENT(IN) :: RAD  ! INSIDE RAD THE FUNCTION IS REGULARIZED
       REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
       INTEGER(4),INTENT(IN) :: LMX
-      REAL(8)   ,INTENT(out):: H(LMX)  ! solid hankel function
+      REAL(8)   ,INTENT(OUT):: H(LMX)  ! SOLID HANKEL FUNCTION
       INTEGER(4)            :: LX
       REAL(8)               :: K 
-      REAL(8)               :: X,xr,Y,dydx
-      INTEGER(4)            :: LM,m
+      REAL(8)               :: X,XR,Y,DYDX
+      INTEGER(4)            :: LM,M
       INTEGER(4)            :: L
       REAL(8)               :: PI
-      logical(4)            :: tcap
-      real(8)               :: a,b
+      LOGICAL(4)            :: TCAP
+      REAL(8)               :: A,B
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       CALL SPHERICAL$YLM(LMX,R,H)
-      LX=int(SQRT(REAL(LMX+1.D-5)))-1
+      LX=INT(SQRT(REAL(LMX+1.D-5)))-1
       K=SQRT(ABS(K2))     
-      Xr=SQRT(SUM(R**2))
-      tcap=xr.lt.rad
-      x=max(xr,rad)
+      XR=SQRT(SUM(R**2))
+      TCAP=XR.LT.RAD
+      X=MAX(XR,RAD)
       LM=0
       DO L=0,LX
         IF(K2.GT.0.D0) THEN
-          CALL SPFUNCTION$NEUMANN(L,k*X,Y,dydx)  ! ABRAMOWITZ 10.1.26
+          CALL SPFUNCTION$NEUMANN(L,K*X,Y,DYDX)  ! ABRAMOWITZ 10.1.26
           Y=-Y*K**(L+1)
-          dYdx=-dYdx*K**(L+2)
+          DYDX=-DYDX*K**(L+2)
         ELSE IF(K2.LT.0.D0) THEN
-          CALL SPFUNCTION$MODHANKEL(L,k*X,Y,dydx) !ABRAMOWITZ 10.2.4
+          CALL SPFUNCTION$MODHANKEL(L,K*X,Y,DYDX) !ABRAMOWITZ 10.2.4
           Y=Y*2.D0/PI*K**(L+1)
-          dYdx=dYdx*2.D0/PI*K**(L+2)
+          DYDX=DYDX*2.D0/PI*K**(L+2)
         ELSE
-!         ==  y(x)= 1/(2l-1)!! * x**(-l-1) 
-          CALL SPFUNCTION$NEUMANN0(L,X,Y,dydx)  ! ABRAMOWITZ 10.2.5
+!         ==  Y(X)= 1/(2L-1)!! * X**(-L-1) 
+          CALL SPFUNCTION$NEUMANN0(L,X,Y,DYDX)  ! ABRAMOWITZ 10.2.5
           Y=-Y     !
-          dydx=-dydx 
+          DYDX=-DYDX 
         END IF 
 !
-!       == inside rad, match a parabola times r**l =============================
-        if(tcap) then
-          b=0.5d0*(dydx*x-real(l,kind=8)*y)/x**(l+2)
-          a=y/x**l-b*x**2
-          if(l.eq.0) then
-            y=a+b*xr**2
-            dydx=2.d0*b*xr
-          else
-            y=a*xr**l+b*xr**(l+2)
-            dydx=real(l,kind=8)*a*xr**(l-1)+real(l+2)*b*xr**(l+1)
-          end if
-        end if  
+!       == INSIDE RAD, MATCH A PARABOLA TIMES R**L =============================
+        IF(TCAP) THEN
+          B=0.5D0*(DYDX*X-REAL(L,KIND=8)*Y)/X**(L+2)
+          A=Y/X**L-B*X**2
+          IF(L.EQ.0) THEN
+            Y=A+B*XR**2
+            DYDX=2.D0*B*XR
+          ELSE
+            Y=A*XR**L+B*XR**(L+2)
+            DYDX=REAL(L,KIND=8)*A*XR**(L-1)+REAL(L+2)*B*XR**(L+1)
+          END IF
+        END IF  
         DO M=1,2*L+1
           LM=LM+1
           H(LM)=H(LM)*Y
@@ -113,58 +188,58 @@
       END
 !
 !     ..1.........2.........3.........4.........5.........6.........7.........8
-      subroutine lmto$kbarmulticenter(n,norb,qbar,sbar,c)
+      SUBROUTINE LMTO$KBARMULTICENTER(N,NORB,QBAR,SBAR,C)
 !     **************************************************************************
-!     ** determines the coefficients for the multicenter expansion of the     **
-!     ** screened Hankelfunctions in termes of unscreened ones.               **
+!     ** DETERMINES THE COEFFICIENTS FOR THE MULTICENTER EXPANSION OF THE     **
+!     ** SCREENED HANKELFUNCTIONS IN TERMES OF UNSCREENED ONES.               **
 !     **************************************************************************
-      implicit none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: NORB
-      REAL(8)   ,INTENT(IN) :: QBAR(n)
-      REAL(8)   ,INTENT(in) :: SBAR(N,NORB)
-      REAL(8)   ,INTENT(out):: c(N,NORB)
-      integer(4)            :: i
+      REAL(8)   ,INTENT(IN) :: QBAR(N)
+      REAL(8)   ,INTENT(IN) :: SBAR(N,NORB)
+      REAL(8)   ,INTENT(OUT):: C(N,NORB)
+      INTEGER(4)            :: I
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == SET UP coefficients for the multicenter expansion of kbar            ==
+!     == SET UP COEFFICIENTS FOR THE MULTICENTER EXPANSION OF KBAR            ==
 !     ==========================================================================
-      do i=1,norb
-        c(:,i)=qbar(:)*sbar(:,i)
-        c(i,i)=c(i,i)+1.d0
-      enddo
-      return
-      end subroutine lmto$kbarmulticenter
+      DO I=1,NORB
+        C(:,I)=QBAR(:)*SBAR(:,I)
+        C(I,I)=C(I,I)+1.D0
+      ENDDO
+      RETURN
+      END SUBROUTINE LMTO$KBARMULTICENTER
 
 !
 !     ..1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$expandqbar(NAT,lxx,lx,qbar,n,qbarvec)
+      SUBROUTINE LMTO$EXPANDQBAR(NAT,LXX,LX,QBAR,N,QBARVEC)
 !     **************************************************************************
 !     **************************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: Nat
-      INTEGER(4),INTENT(IN) :: LXx
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: LXX
       INTEGER(4),INTENT(IN) :: LX(NAT)
-      REAL(8)   ,INTENT(IN) :: qbar(lxx+1,Nat)
-      INTEGER(4),INTENT(IN) :: n
-      REAL(8)   ,INTENT(out):: qbarvec(n)
-      integer(4)            :: i,iat,l,im
+      REAL(8)   ,INTENT(IN) :: QBAR(LXX+1,NAT)
+      INTEGER(4),INTENT(IN) :: N
+      REAL(8)   ,INTENT(OUT):: QBARVEC(N)
+      INTEGER(4)            :: I,IAT,L,IM
 !     **************************************************************************
-      if(n.ne.sum((lx+1)**2)) then
-        call error$stop('lmto$expandqbar')
-      end if
-      i=0
-      do iat=1,nat
-        do l=0,lx(iat)
-          do im=1,2*l+1
-            i=i+1
-            qbarvec(i)=qbar(l+1,iat)
-          enddo
-        enddo
-      enddo
-      return
-      end
+      IF(N.NE.SUM((LX+1)**2)) THEN
+        CALL ERROR$STOP('LMTO$EXPANDQBAR')
+      END IF
+      I=0
+      DO IAT=1,NAT
+        DO L=0,LX(IAT)
+          DO IM=1,2*L+1
+            I=I+1
+            QBARVEC(I)=QBAR(L+1,IAT)
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
 
 !
 !     ..1.........2.........3.........4.........5.........6.........7.........8
@@ -175,13 +250,13 @@
       REAL(8)   ,INTENT(IN) :: K2
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: RPOS(3,NAT)
-      REAL(8)   ,INTENT(IN) :: Rad(NAT)
+      REAL(8)   ,INTENT(IN) :: RAD(NAT)
       INTEGER(4),INTENT(IN) :: LX(NAT)
       INTEGER(4),INTENT(IN) :: N
-      INTEGER(4),INTENT(IN) :: Norb
-      REAL(8)   ,INTENT(IN) :: C(N,norb)
+      INTEGER(4),INTENT(IN) :: NORB
+      REAL(8)   ,INTENT(IN) :: C(N,NORB)
       REAL(8)   ,INTENT(IN) :: R(3)
-      REAL(8)   ,INTENT(out):: F(norb)
+      REAL(8)   ,INTENT(OUT):: F(NORB)
       INTEGER(4)            :: LMXX,LMX
       REAL(8)   ,ALLOCATABLE:: H(:)
       INTEGER(4)            :: I,IAT
@@ -192,8 +267,8 @@
       I=0
       DO IAT=1,NAT
         LMX=(LX(IAT)+1)**2
-        CALL LMTO$SOLIDHANKEL(R(:)-RPOS(:,IAT),rad(iat),K2,LMX,H)
-        F(:)=F(:)+matmul(H(:LMX),C(I+1:I+LMX,:))
+        CALL LMTO$SOLIDHANKEL(R(:)-RPOS(:,IAT),RAD(IAT),K2,LMX,H)
+        F(:)=F(:)+MATMUL(H(:LMX),C(I+1:I+LMX,:))
         I=I+LMX
       ENDDO
       DEALLOCATE(H)
@@ -201,137 +276,137 @@
       END SUBROUTINE LMTO$SCREENEDSOLIDHANKEL
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$SOLIDBESSELrad(l,R,K2,J,jder)
+      SUBROUTINE LMTO$SOLIDBESSELRAD(L,R,K2,J,JDER)
 !     **                                                                      **
-!     ** constructs the radial part of the regular solutions                  **
-!     **  of the Helmholtz equation  (nabla^2 + k2)*psi(r)=0                  **
+!     ** CONSTRUCTS THE RADIAL PART OF THE REGULAR SOLUTIONS                  **
+!     **  OF THE HELMHOLTZ EQUATION  (NABLA^2 + K2)*PSI(R)=0                  **
 !     **                                                                      **
-!     ** The solution behaves at the origin like                              **
-!     **    J_{l,m}(r)=1/(2*l+1)!! * |r|^l  Y_{l,m}(r)  +O(r^l+1)             **
+!     ** THE SOLUTION BEHAVES AT THE ORIGIN LIKE                              **
+!     **    J_{L,M}(R)=1/(2*L+1)!! * |R|^L  Y_{L,M}(R)  +O(R^L+1)             **
 !     **                                                                      **
       IMPLICIT NONE
-      integer(4),intent(in) :: l
+      INTEGER(4),INTENT(IN) :: L
       REAL(8)   ,INTENT(IN) :: R
       REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
-      REAL(8)   ,INTENT(out):: J
-      REAL(8)   ,INTENT(out):: Jder
+      REAL(8)   ,INTENT(OUT):: J
+      REAL(8)   ,INTENT(OUT):: JDER
       REAL(8)               :: K 
-      REAL(8)               :: X,Y,dydx
+      REAL(8)               :: X,Y,DYDX
       REAL(8)               :: PI
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       K=SQRT(ABS(K2))     
-      X=r
+      X=R
       IF(K2.GT.0.D0) THEN
-        CALL SPFUNCTION$BESSEL(L,k*X,Y,dydx)  ! ABRAMOWITZ 10.1.25
+        CALL SPFUNCTION$BESSEL(L,K*X,Y,DYDX)  ! ABRAMOWITZ 10.1.25
         Y=Y/K**L
-        dydx=dydx/K**(L-1)
+        DYDX=DYDX/K**(L-1)
       ELSE IF(K2.LT.0.D0) THEN
-        CALL SPFUNCTION$MODBESSEL(L,k*X,Y,dydx) !ABRAMOWITZ 10.2.4
+        CALL SPFUNCTION$MODBESSEL(L,K*X,Y,DYDX) !ABRAMOWITZ 10.2.4
         Y=Y/K**L
-        dYdx=dYdx/K**(L-1)
+        DYDX=DYDX/K**(L-1)
       ELSE
-        CALL SPFUNCTION$BESSEL0(L,X,Y,dydx)  ! ABRAMOWITZ 10.1.2
+        CALL SPFUNCTION$BESSEL0(L,X,Y,DYDX)  ! ABRAMOWITZ 10.1.2
       END IF
-      j=y
-      jder=dydx
+      J=Y
+      JDER=DYDX
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$SOLIDHANKELrad(l,R,K2,H,hder)
+      SUBROUTINE LMTO$SOLIDHANKELRAD(L,R,K2,H,HDER)
 !     **                                                                      **
-!     ** constructs radial part of the the irregular solutions                **
-!     ** of the Helmholtz equation (nabla^2 + k2)*psi(r)=0                    **
+!     ** CONSTRUCTS RADIAL PART OF THE THE IRREGULAR SOLUTIONS                **
+!     ** OF THE HELMHOLTZ EQUATION (NABLA^2 + K2)*PSI(R)=0                    **
 !     **                                                                      **
-!     ** The solution behaves at the origin like                              **
-!     **    H_{l,m}(r)=1/(2*l-1)!! * |r|^{-l-1}  Y_{l,m}(r)                   **
+!     ** THE SOLUTION BEHAVES AT THE ORIGIN LIKE                              **
+!     **    H_{L,M}(R)=1/(2*L-1)!! * |R|^{-L-1}  Y_{L,M}(R)                   **
 !     **                                                                      **
       IMPLICIT NONE
-      integer(4),INTENT(IN) :: l    ! main angular momentum
-      REAL(8)   ,INTENT(IN) :: R    ! radius
+      INTEGER(4),INTENT(IN) :: L    ! MAIN ANGULAR MOMENTUM
+      REAL(8)   ,INTENT(IN) :: R    ! RADIUS
       REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
-      REAL(8)   ,INTENT(out):: H    ! radial part of the hankel function
-      REAL(8)   ,INTENT(out):: Hder ! radial derivative of the hankel function
+      REAL(8)   ,INTENT(OUT):: H    ! RADIAL PART OF THE HANKEL FUNCTION
+      REAL(8)   ,INTENT(OUT):: HDER ! RADIAL DERIVATIVE OF THE HANKEL FUNCTION
       REAL(8)               :: K 
-      REAL(8)               :: X,Y,dydx
+      REAL(8)               :: X,Y,DYDX
       REAL(8)               :: PI
-      REAL(8)               :: svar
+      REAL(8)               :: SVAR
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       K=SQRT(ABS(K2))     
-      X=r
+      X=R
       IF(K2.GT.0.D0) THEN
-        CALL SPFUNCTION$NEUMANN(L,k*X,Y,dydx)  ! ABRAMOWITZ 10.1.26
-        svar=-K**(L+1)
-        Y=svar*Y
-        dydx=svar*dydx*k
+        CALL SPFUNCTION$NEUMANN(L,K*X,Y,DYDX)  ! ABRAMOWITZ 10.1.26
+        SVAR=-K**(L+1)
+        Y=SVAR*Y
+        DYDX=SVAR*DYDX*K
       ELSE IF(K2.LT.0.D0) THEN
-        CALL SPFUNCTION$MODHANKEL(L,k*X,Y,dydx) !ABRAMOWITZ 10.2.4
-        svar=2.D0/PI*K**(L+1)
-        Y=svar*y
-        dydx=svar*dydx*k
+        CALL SPFUNCTION$MODHANKEL(L,K*X,Y,DYDX) !ABRAMOWITZ 10.2.4
+        SVAR=2.D0/PI*K**(L+1)
+        Y=SVAR*Y
+        DYDX=SVAR*DYDX*K
       ELSE
-!       ==  y(x)= 1/(2l-1)!! * x**(-l-1) 
-        CALL SPFUNCTION$NEUMANN0(L,X,Y,dydx)  ! ABRAMOWITZ 10.2.5
+!       ==  Y(X)= 1/(2L-1)!! * X**(-L-1) 
+        CALL SPFUNCTION$NEUMANN0(L,X,Y,DYDX)  ! ABRAMOWITZ 10.2.5
         Y=-Y     ! 
-        dydx=-dydx
+        DYDX=-DYDX
       END IF   
-      h=y
-      hder=dydx
+      H=Y
+      HDER=DYDX
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$STRUCTURECONSTANTS(R1,L1X,R2,L2X,K2,S)
+      SUBROUTINE LMTO$STRUCTURECONSTANTS(R21,K2,L1X,L2X,S)
+!     **************************************************************************
+!     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
+!     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
+!     **  INTO SOLID BESSEL FUNCTIONS  J_{L,M}(R-R2) CENTERED AT R2           **
 !     **                                                                      **
-!     **  constructs the structure constants that mediate an expansion        **
-!     **  of a solid hankel function H_{l,m}(r-R1) centered at R1             **
-!     **  into solid bessel functions  J_{l,m}(r-r2) centered at r2           **
+!     **    H_{L,M}(R-R1) = SUM_{L',M'} J_{L',M'}(R-R2) * S_{L',M',L,M}       **
 !     **                                                                      **
-!     **    H_{l,m}(r-r1) = sum_{l',m'} J_{l',m'}(r-r2) * S_{l',m',l,m}       **
-!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
-      REAL(8)   ,INTENT(IN) :: R1(3)
-      REAL(8)   ,INTENT(IN) :: R2(3)
+      REAL(8)   ,INTENT(IN) :: R21(3) ! EXPANSION CENTER
       INTEGER(4),INTENT(IN) :: L1X
       INTEGER(4),INTENT(IN) :: L2X
       REAL(8)   ,INTENT(IN) :: K2 ! 2ME/HBAR**2
       REAL(8)   ,INTENT(OUT):: S((L2X+1)**2,(L1X+1)**2)
-      real(8)   ,parameter  :: rad=1.d-6
-      REAL(8)               :: k
+      REAL(8)   ,PARAMETER  :: RAD=1.D-6
+      REAL(8)               :: K
       REAL(8)               :: PI
       REAL(8)               :: SVAR
       INTEGER(4)            :: L3X,LM1X,LM2X,LM3X
-      INTEGER(4)            :: LM1,LM2,LM3,l,l1,l2,l3,IM,LM3A,LM3B
+      INTEGER(4)            :: LM1,LM2,LM3,L,L1,L2,L3,IM,LM3A,LM3B
       INTEGER(4)            :: LOFLM((L1X+L2X+1)**2)
       REAL(8)               :: H((L1X+L2X+1)**2)
       REAL(8)               :: HANKEL ! HANKEL FUNCTION OF THE DISTANCE
-      REAL(8)               :: CG ! GAUNT COEFFICIENT
-      complex(8)            :: kappa
+      REAL(8)               :: CG     ! GAUNT COEFFICIENT
+      COMPLEX(8)            :: KAPPA
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       L3X=L1X+L2X
       LM1X=(L1X+1)**2
       LM2X=(L2X+1)**2
       LM3X=(L3X+1)**2
-      lm3=0
-      do l=0,l3x
-        do Im=1,2*l+1
-          lm3=lm3+1
-          loflm(lm3)=L
+      LM3=0
+      DO L=0,L3X
+        DO IM=1,2*L+1
+          LM3=LM3+1
+          LOFLM(LM3)=L
         ENDDO
       ENDDO
-      if(k2.gt.0.d0) then
-        kappa=cmplx(0.d0,-sqrt(k2))
-      else if(k2.lt.0.d0) then
-        kappa=cmplx(sqrt(-k2),0.d0)
-      else
-        kappa=(0.d0,0.d0)
-      end if
+      IF(K2.GT.0.D0) THEN
+        KAPPA=CMPLX(0.D0,-SQRT(K2))
+      ELSE IF(K2.LT.0.D0) THEN
+        KAPPA=CMPLX(SQRT(-K2),0.D0)
+      ELSE
+        KAPPA=(0.D0,0.D0)
+      END IF
 
 !     == CALCULATE HANKEL FUNCTION OF THE DISTANCE =============================
-      call LMTO$SOLIDHANKEL(R2-r1,rad,K2,LM3X,H)
+      CALL LMTO$SOLIDHANKEL(R21,RAD,K2,LM3X,H)
 !
 !     ==========================================================================
       S(:,:)=0.D0
@@ -342,7 +417,7 @@
           LM3A=(ABS(L2-L1))**2+1
           LM3B=(L1+L2+1)**2
 !          DO LM3=LM3A,LM3B
-          DO LM3=1,lm3x
+          DO LM3=1,LM3X
             L3=LOFLM(LM3)
             CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
             IF(CG.EQ.0.D0) CYCLE
@@ -357,20 +432,20 @@
         ENDDO
       ENDDO
 !
-!     == MULTIPLY WITH -4*PI (-1)**l2 ==========================================
+!     == MULTIPLY WITH -4*PI (-1)**L2 ==========================================
       S=-4.D0*PI*S
-      do lm2=1,lm2x
-        s(lm2,:)=s(lm2,:)*(-1.d0)**loflm(lm2)
-      enddo
+      DO LM2=1,LM2X
+        S(LM2,:)=S(LM2,:)*(-1.D0)**LOFLM(LM2)
+      ENDDO
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$Q(L,RAD,VAL,DER,K2,QPAR)
 !     **************************************************************************
-!     ** parameter needed to  screen the structure constants                  **
-!     **   |K>-|J>qbar has the same logarithmic derivative as |phidot>.       **
-!     ** val and der are value and derivative of phidot.                      **
+!     ** PARAMETER NEEDED TO  SCREEN THE STRUCTURE CONSTANTS                  **
+!     **   |K>-|J>QBAR HAS THE SAME LOGARITHMIC DERIVATIVE AS |PHIDOT>.       **
+!     ** VAL AND DER ARE VALUE AND DERIVATIVE OF PHIDOT.                      **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -380,11 +455,11 @@
       REAL(8)   ,INTENT(IN) :: DER
       REAL(8)   ,INTENT(IN) :: K2
       REAL(8)   ,INTENT(OUT):: QPAR
-      REAL(8)               :: Jval,JDER
-      REAL(8)               :: Kval,KDER
+      REAL(8)               :: JVAL,JDER
+      REAL(8)               :: KVAL,KDER
 !     **************************************************************************
-      CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,Jval,JDER)
-      CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,Kval,KDER)
+      CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
+      CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
       QPAR=(JVAL*DER-VAL*JDER)/(KVAL*DER-VAL*KDER)
       RETURN
       END
@@ -392,104 +467,106 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$SCREEN(TSTART,N,NORB,QBAR,S,SBAR)
 !     **************************************************************************
-!     **  determines screened structure constants for a cluster               **
-!     **      |Kbar_i>=sum_j |K_j> (delta_ji+Qbar_j*sbar_ji)                  **
-!     **  start with sbar=0 or give better estimate                           **
+!     **  DETERMINES SCREENED STRUCTURE CONSTANTS FOR A CLUSTER               **
+!     **      |KBAR_I>=SUM_J |K_J> (DELTA_JI+QBAR_J*SBAR_JI)                  **
+!     **  START WITH SBAR=0 OR GIVE BETTER ESTIMATE                           **
 !     **                                                                      **
 !     **                                                                      **
-!     **      sbar=                                                           **
+!     **      SBAR=                                                           **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
-      logical(4),intent(in) :: tstart
-      INTEGER(4),INTENT(IN) :: N            ! #(orbitals on the cluster)
-      INTEGER(4),INTENT(IN) :: NORB         ! #(orbitals on central site
+      LOGICAL(4),INTENT(IN) :: TSTART
+      INTEGER(4),INTENT(IN) :: N            ! #(ORBITALS ON THE CLUSTER)
+      INTEGER(4),INTENT(IN) :: NORB         ! #(ORBITALS ON CENTRAL SITE
       REAL(8)   ,INTENT(IN) :: QBAR(N)      !
-      REAL(8)   ,INTENT(IN) :: S(N,N)       ! unscreened-structure constants
-      REAL(8)   ,INTENT(inOUT):: SBAR(N,NORB) !screened structure constants
-      real(8)   ,parameter  :: tol=1.d-5    ! tolerance for converence
-      integer(4),parameter  :: niter=1000   ! x#(iterations)
-      real(8)               :: alpha=0.5d0  ! mixing factor
-      real(8)               :: dsbar(n,norb)
-      real(8)               :: s0(n,norb)
-      real(8)               :: a(n,n)
-      integer(4)            :: i
-      real(8)               :: delta
-      integer(4)            :: iter
-      logical(4)            :: convg
+      REAL(8)   ,INTENT(IN) :: S(N,N)       ! UNSCREENED-STRUCTURE CONSTANTS
+      REAL(8)   ,INTENT(INOUT):: SBAR(N,NORB) !SCREENED STRUCTURE CONSTANTS
+      REAL(8)   ,PARAMETER  :: TOL=1.D-5    ! TOLERANCE FOR CONVERENCE
+      INTEGER(4),PARAMETER  :: NITER=1000   ! X#(ITERATIONS)
+      REAL(8)               :: ALPHA=0.5D0  ! MIXING FACTOR
+      REAL(8)               :: DSBAR(N,NORB)
+      REAL(8)               :: S0(N,NORB)
+      REAL(8)               :: A(N,N)
+      REAL(8)               :: SBARBIG(N,N)
+      INTEGER(4)            :: I
+      REAL(8)               :: DELTA
+      INTEGER(4)            :: ITER
+      LOGICAL(4)            :: CONVG
 !     **************************************************************************
-                            call trace$push('LMTO$SCREEN')
+                            CALL TRACE$PUSH('LMTO$SCREEN')
 !
 !     ==========================================================================
 !     ==========================================================================
 !     ==========================================================================
-      if(tstart) then
-        do i=1,n
-          a(:,i)=-qbar(:)*s(:,i)
-          a(i,i)=a(i,i)+1.d0
-        enddo
-        s0(:,:)=s(:,:norb)
-        call LIB$MATRIXSOLVER8(N,n,norb,A,sbar,s0)
+      IF(TSTART) THEN
+        DO I=1,N
+          A(:,I)=-QBAR(:)*S(:,I)
+          A(I,I)=A(I,I)+1.D0
+        ENDDO
+        CALL LIB$MATRIXSOLVER8(N,N,N,TRANSPOSE(A),SBARBIG,TRANSPOSE(S))
+        SBARBIG=TRANSPOSE(SBARBIG)
+        SBAR(:,:)=SBARBIG(:,:NORB)
 !
 !     ==========================================================================
 !     ==========================================================================
 !     ==========================================================================
-      else
-        s0(:,:)=s(:,:norb)
-        do iter=1,niter
-          do i=1,norb
-            dsbar(:,i)=qbar(:)*sbar(:,i)
-            dsbar(i,i)=1.d0+dsbar(i,i)
-          enddo
-          dsbar=matmul(s,dsbar)-sbar
-          delta=maxval(abs(dsbar))
-          convg=delta.lt.tol
-          if(convg) exit
-          sbar=sbar+dsbar*alpha
-        enddo
-        if(.not.convg) then
-          call error$msg('loop not converged')
-          call error$stop('lmto$screen')
-        end if
-      end if
-                            call trace$pop()
+      ELSE
+        S0(:,:)=S(:,:NORB)
+        DO ITER=1,NITER
+          DO I=1,NORB
+            DSBAR(:,I)=QBAR(:)*SBAR(:,I)
+            DSBAR(I,I)=1.D0+DSBAR(I,I)
+          ENDDO
+          DSBAR=MATMUL(S,DSBAR)-SBAR
+          DELTA=MAXVAL(ABS(DSBAR))
+          CONVG=DELTA.LT.TOL
+          IF(CONVG) EXIT
+          SBAR=SBAR+DSBAR*ALPHA
+        ENDDO
+        IF(.NOT.CONVG) THEN
+          CALL ERROR$MSG('LOOP NOT CONVERGED')
+          CALL ERROR$STOP('LMTO$SCREEN')
+        END IF
+      END IF
+                            CALL TRACE$POP()
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QbAR,N,NORB,SBAR)
+      SUBROUTINE LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QBAR,N,NORB,SBAR)
 !     **************************************************************************
 !     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
 !     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
 !     **                                                                      **
-!     ** remark: ThE CENTRAL ATOM IS THE FIRST ATOM IN THE LIST               **
+!     ** REMARK: THE CENTRAL ATOM IS THE FIRST ATOM IN THE LIST               **
 !     **                                                                      **
-!     ** remark: Initialize sbar with zero or a better estimate               **
+!     ** REMARK: INITIALIZE SBAR WITH ZERO OR A BETTER ESTIMATE               **
 !     **                                                                      **
 !     **                                                                      **
 !     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
 !     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
 !     **************************************************************************
-      implicit none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: RPOS(3,NAT)
       INTEGER(4),INTENT(IN) :: LX(NAT)
-      REAL(8)   ,INTENT(IN) :: QBAR(n)
+      REAL(8)   ,INTENT(IN) :: QBAR(N)
       REAL(8)   ,INTENT(IN) :: K2
       INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: NORB
-      REAL(8)   ,INTENT(inOUT):: SBAR(N,NORB)
+      REAL(8)   ,INTENT(INOUT):: SBAR(N,NORB)
       INTEGER(4)            :: II,IAT,LN,L,IM
       INTEGER(4)            :: I1,I2
-      INTEGER(4)            :: iat1,iat2
+      INTEGER(4)            :: IAT1,IAT2
       REAL(8)               :: R1(3),R2(3)
       INTEGER(4)            :: LMN1,LMN2
       INTEGER(4)            :: L1X,L2X
-      REAL(8)               :: S0(n,n)
-      REAL(8)  ,allocatable :: S1(:,:)
-      REAL(8)               :: qbarvec(n)
+      REAL(8)               :: S0(N,N)
+      REAL(8)  ,ALLOCATABLE :: S1(:,:)
+      REAL(8)               :: QBARVEC(N)
 !     **************************************************************************
-                               call trace$push('LMTO$CLUSTERSTRUCTURECONSTANTS')
+                               CALL TRACE$PUSH('LMTO$CLUSTERSTRUCTURECONSTANTS')
 !
 !     ==========================================================================
 !     == CHECK CONSISTENCY OF ARRAY DIMENSIONS                                ==
@@ -516,16 +593,16 @@
         ALLOCATE(S1(LMN2,LMN1))
         I2=0
         DO IAT2=1,NAT
-          if(iat2.eq.iat1) then
-            I2=I2+lmn1
-            cycle
-          end if
+          IF(IAT2.EQ.IAT1) THEN
+            I2=I2+LMN1
+            CYCLE
+          END IF
           R2(:)=RPOS(:,IAT2)
-write(*,fmt='("r1=",3f10.4," dr=",3f10.4)')r1,r2-r1
+!WRITE(*,FMT='("R1=",3F10.4," DR=",3F10.4)')R1,R2-R1
           L2X=LX(IAT2)
           LMN2=(L2X+1)**2
-          CALL LMTO$STRUCTURECONSTANTS(R1,L1X,R2,L2X,K2,S1(:lmn2,:))
-          S0(I2+1:I2+LMN2,i1+1:I1+LMN1)=S1(:lmn2,:)
+          CALL LMTO$STRUCTURECONSTANTS(R2-R1,K2,L1X,L2X,S1(:LMN2,:))
+          S0(I2+1:I2+LMN2,I1+1:I1+LMN1)=S1(:LMN2,:)
           I2=I2+(L2X+1)**2
         ENDDO
         DEALLOCATE(S1)
@@ -535,120 +612,120 @@ write(*,fmt='("r1=",3f10.4," dr=",3f10.4)')r1,r2-r1
 !     ==========================================================================
 !     == SCREEN STRUCTURE CONSTANTS                                           ==
 !     ==========================================================================
-      sbar=0.d0
+      SBAR=0.D0
 !     == THE FIRST PARAMETER SWITCHES BETWEEN AN ITERATIVE AND A DIRECT SOLUTION
 !     == OF THE EQUATION. THE ITERATIVE APPROACH MAY BE MORE EFFICIENT IN AN
 !     == CAR-PARRINELLO LIKE APPROACH.
-      CALL LMTO$SCREEN(.true.,N,NORB,QBAR,S0,SBAR)
-                               call trace$pop()
+      CALL LMTO$SCREEN(.TRUE.,N,NORB,QBAR,S0,SBAR)
+                               CALL TRACE$POP()
       RETURN
       END
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$neighborlist(rbas,nat,r,rc,nnx,NNB,nnlist)
+      SUBROUTINE LMTO$NEIGHBORLIST(RBAS,NAT,R,RC,NNX,NNB,NNLIST)
 !     **************************************************************************
-!     **  this is a simple neighborlist routine                               **
+!     **  THIS IS A SIMPLE NEIGHBORLIST ROUTINE                               **
 !     **************************************************************************
-      implicit none
-      integer(4)   ,intent(in) :: nat       ! #(atoms)
-      real(8)      ,intent(in) :: rbas(3,3) ! lattice vectors
-      real(8)      ,intent(in) :: r(3,nat)  ! atom positions
-      real(8)      ,intent(in) :: rc        ! cutoff radius for the neighorlist
-      integer(4)   ,intent(in) :: nnx       ! x#(neighbors per atom)
-      INTEGER(4)   ,intent(out):: nnB       ! #(NEIGHBORS)
-      INTEGER(4)   ,intent(out):: nnlist(5,nnx) ! neighborlist (IAT1,IAT2,IT(3))
-      real(8)                  :: rbasinv(3,3)
-      real(8)                  :: rfold(3,nat)
-      real(8)                  :: x(3)      ! relative coordinates
-      real(8)                  :: xfold(3)      ! relative coordinates
-      integer(4)               :: itfold(3,nat)   ! shift
-      integer(4)               :: iat,i,iat1,iat2,it1,it2,it3
-      real(8)                  :: rmax2     ! squared cutoff radius
-      real(8)                  :: tvec(3)
-      integer(4)               :: itvec(3)
-      integer(4)               :: min1,max1,min2,max2,min3,max3
-      real(8)                  :: d(3),d2
-      real(8)                  :: x0,y0,z0
+      IMPLICIT NONE
+      INTEGER(4)   ,INTENT(IN) :: NAT       ! #(ATOMS)
+      REAL(8)      ,INTENT(IN) :: RBAS(3,3) ! LATTICE VECTORS
+      REAL(8)      ,INTENT(IN) :: R(3,NAT)  ! ATOM POSITIONS
+      REAL(8)      ,INTENT(IN) :: RC        ! CUTOFF RADIUS FOR THE NEIGHORLIST
+      INTEGER(4)   ,INTENT(IN) :: NNX       ! X#(NEIGHBORS PER ATOM)
+      INTEGER(4)   ,INTENT(OUT):: NNB       ! #(NEIGHBORS)
+      INTEGER(4)   ,INTENT(OUT):: NNLIST(5,NNX) ! NEIGHBORLIST (IAT1,IAT2,IT(3))
+      REAL(8)                  :: RBASINV(3,3)
+      REAL(8)                  :: RFOLD(3,NAT)
+      REAL(8)                  :: X(3)      ! RELATIVE COORDINATES
+      REAL(8)                  :: XFOLD(3)      ! RELATIVE COORDINATES
+      INTEGER(4)               :: ITFOLD(3,NAT)   ! SHIFT
+      INTEGER(4)               :: IAT,I,IAT1,IAT2,IT1,IT2,IT3
+      REAL(8)                  :: RMAX2     ! SQUARED CUTOFF RADIUS
+      REAL(8)                  :: TVEC(3)
+      INTEGER(4)               :: ITVEC(3)
+      INTEGER(4)               :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
+      REAL(8)                  :: D(3),D2
+      REAL(8)                  :: X0,Y0,Z0
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == fold atom positions into the first unit cell                         ==
+!     == FOLD ATOM POSITIONS INTO THE FIRST UNIT CELL                         ==
 !     ==========================================================================
       CALL LIB$INVERTR8(3,RBAS,RBASINV)
       DO IAT=1,NAT
         X(:)=MATMUL(RBASINV,R(:,IAT))
         DO I=1,3
-          Xfold(I)=MODULO(X(I),1.D0)
+          XFOLD(I)=MODULO(X(I),1.D0)
         ENDDO
-        itfold(:,iat)=nint(xfold-x)
-        RFOLD(:,IAT)=MATMUL(RBAS,Xfold)
+        ITFOLD(:,IAT)=NINT(XFOLD-X)
+        RFOLD(:,IAT)=MATMUL(RBAS,XFOLD)
       ENDDO
 !
 !     ==========================================================================
-!     == fold atom positions into the first unit cell                         ==
+!     == FOLD ATOM POSITIONS INTO THE FIRST UNIT CELL                         ==
 !     ==========================================================================
-      rmax2=rc**2
-      nnb=0
+      RMAX2=RC**2
+      NNB=0
       DO IAT1=1,NAT
-!       == place onsite element for each atom first in the neighborlist
-        nnb=nnb+1
-        IF(NNB.gt.NNX) THEN
-          call error$msg('maximum number of neighbors exceeded')
-          call error$i4val('nnb',nnb)
-          call error$i4val('nnx',nnx)
-          call error$stop('lmto$neighborlist')
-        end if
-        nnlist(1,nnb)=iat1
-        nnlist(2,nnb)=iat1
-        nnlist(3:5,nnb)=0
-        do iat2=1,nat
-          X0=Rfold(1,IAT1)-rfold(1,iat2)
-          Y0=Rfold(2,IAT1)-rfold(2,iat2)
-          Z0=Rfold(3,IAT1)-rfold(3,iat2)
-          CALL BOXSPH(rbas,X0,Y0,Z0,RC,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
+!       == PLACE ONSITE ELEMENT FOR EACH ATOM FIRST IN THE NEIGHBORLIST
+        NNB=NNB+1
+        IF(NNB.GT.NNX) THEN
+          CALL ERROR$MSG('MAXIMUM NUMBER OF NEIGHBORS EXCEEDED')
+          CALL ERROR$I4VAL('NNB',NNB)
+          CALL ERROR$I4VAL('NNX',NNX)
+          CALL ERROR$STOP('LMTO$NEIGHBORLIST')
+        END IF
+        NNLIST(1,NNB)=IAT1
+        NNLIST(2,NNB)=IAT1
+        NNLIST(3:5,NNB)=0
+        DO IAT2=1,NAT
+          X0=RFOLD(1,IAT1)-RFOLD(1,IAT2)
+          Y0=RFOLD(2,IAT1)-RFOLD(2,IAT2)
+          Z0=RFOLD(3,IAT1)-RFOLD(3,IAT2)
+          CALL BOXSPH(RBAS,X0,Y0,Z0,RC,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
 !         == LOOP OVER BOXES IN THE NEIGHBORHOOD ===============================
-          DO It1=MIN1,MAX1
-            DO It2=MIN2,MAX2
-              DO It3=MIN3,MAX3
-                if(iat1.eq.iat2.and.it1.eq.0.and.it2.eq.0.and.it3.eq.0) cycle
-                itvec(1)=it1
-                itvec(2)=it2
-                itvec(3)=it3
-                tvec(:)=matmul(rbas,real(itvec,kind=8))
-!               == distance criterion ==========================================
-                D(:)=Rfold(:,IAT2)+tvec(:)-Rfold(:,IAT1)
+          DO IT1=MIN1,MAX1
+            DO IT2=MIN2,MAX2
+              DO IT3=MIN3,MAX3
+                IF(IAT1.EQ.IAT2.AND.IT1.EQ.0.AND.IT2.EQ.0.AND.IT3.EQ.0) CYCLE
+                ITVEC(1)=IT1
+                ITVEC(2)=IT2
+                ITVEC(3)=IT3
+                TVEC(:)=MATMUL(RBAS,REAL(ITVEC,KIND=8))
+!               == DISTANCE CRITERION ==========================================
+                D(:)=RFOLD(:,IAT2)+TVEC(:)-RFOLD(:,IAT1)
                 D2=SUM(D(:)**2)
                 IF(D2.GT.RMAX2) CYCLE
                 NNB=NNB+1
-                IF(NNB.gt.NNX) THEN
-                  call error$msg('maximum number of neighbors exceeded')
-                  call error$i4val('nnb',nnb)
-                  call error$i4val('nnx',nnx)
-                  call error$stop('lmto$neighborlist')
-                end if
-                NnLIST(1,NNB)=IAT1
-                NnLIST(2,NNB)=IAT2
-                itvec(:)=itvec(:)+itfold(:,iat2)-itfold(:,iat1)
-                NnLIST(3:5,NNB)=Itvec(:)
+                IF(NNB.GT.NNX) THEN
+                  CALL ERROR$MSG('MAXIMUM NUMBER OF NEIGHBORS EXCEEDED')
+                  CALL ERROR$I4VAL('NNB',NNB)
+                  CALL ERROR$I4VAL('NNX',NNX)
+                  CALL ERROR$STOP('LMTO$NEIGHBORLIST')
+                END IF
+                NNLIST(1,NNB)=IAT1
+                NNLIST(2,NNB)=IAT2
+                ITVEC(:)=ITVEC(:)+ITFOLD(:,IAT2)-ITFOLD(:,IAT1)
+                NNLIST(3:5,NNB)=ITVEC(:)
               ENDDO
             ENDDO
           ENDDO
         ENDDO
       ENDDO
 
-!!$do iat1=1,nat
-!!$ d(:)=r(:,iat1)-rfold(:,iat1)
-!!$ write(*,fmt='("d ",3f10.5,3i5)')d(:),itfold(:,iat1)
-!!$enddo
-!!$do i=1,nnb
-!!$  iat1=nnlist(1,i)
-!!$  iat2=nnlist(2,i)
-!!$  itvec(:)=nnlist(3:5,i)
-!!$  d(:)=r(:,iat2)-r(:,iat1)+matmul(rbas,real(itvec,kind=8))
-!!$  write(*,fmt='(i5," dis ",f10.5," d ",3f10.5)')i,sqrt(sum(d**2)),d(:)
-!!$enddo
-!!$print*,'rc ',rc
-!!$stop
-      return
-      end
+!!$DO IAT1=1,NAT
+!!$ D(:)=R(:,IAT1)-RFOLD(:,IAT1)
+!!$ WRITE(*,FMT='("D ",3F10.5,3I5)')D(:),ITFOLD(:,IAT1)
+!!$ENDDO
+!!$DO I=1,NNB
+!!$  IAT1=NNLIST(1,I)
+!!$  IAT2=NNLIST(2,I)
+!!$  ITVEC(:)=NNLIST(3:5,I)
+!!$  D(:)=R(:,IAT2)-R(:,IAT1)+MATMUL(RBAS,REAL(ITVEC,KIND=8))
+!!$  WRITE(*,FMT='(I5," DIS ",F10.5," D ",3F10.5)')I,SQRT(SUM(D**2)),D(:)
+!!$ENDDO
+!!$PRINT*,'RC ',RC
+!!$STOP
+      RETURN
+      END
