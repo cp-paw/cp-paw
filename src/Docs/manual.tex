@@ -2567,7 +2567,7 @@ because it incorporates (almost) all options at the same time.
     !STATE K=1 S=1 B=5 F=1.000 !END 
     !STATE K=1 S=1 B=6 F=1.000 !END 
   !END
-  !ISOLATE NF=2 RC=1.0 RCFAC=1.5 GMAX2=3. 
+  !ISOLATE NF=3 RC=0.5 RCFAC=1.5 GMAX2=3. 
            DECOUPLE=T !END 
   !GROUP NAME='BOND1'  ATOMS='C_1' 'H_1' !END 
   !GROUP NAME='BOND2'  ATOMS='C_1' 'H_2' !END 
@@ -3054,13 +3054,13 @@ polarized calculations (see !STRUCTURE!GENERIC)}
 contain at least two.}
 \vformat{integer}
 \vrules{optional}
-\vdefault{2}}
+\vdefault{3}}
 
 \mbax{\key{RC}
 \vdescr{Smallest decay constant for the Gaussians.}
 \vformat{real}
 \vrules{optional}
-\vdefault{1.}}
+\vdefault{0.5}}
 
 \mbax{\key{RCFAC}
   \vdescr{Scaling factors for the decay constants. $r_c(i)=r_c(1)*{\rm
