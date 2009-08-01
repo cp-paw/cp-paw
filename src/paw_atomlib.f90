@@ -1309,15 +1309,12 @@ RFOCK=1.1D0*RFOCK
         POTXC(IR)=VXC/Y0
         GRHO(IR)=VGXC*2.D0*GRHO(IR)
       ENDDO
-      CALL RADIAL$DERIVE(GID,NR,GRHO(:),AUX)
-      POTXC(:)=POTXC(:)-AUX
-      IF(R(1).GT.1.D-8) THEN
-         POTXC(:)=POTXC(:)-2.D0/R(:)*GRHO(:)
-      ELSE
-        POTXC(2:)=POTXC(2:)-2.D0/R(2:)*GRHO(2:)
-!        POTXC(1)=POTXC(1)-2.D0/R(2)*GRHO(2)
-        POTXC(1)=POTXC(2)
-      END IF
+      aux(:)=r(:)**2*grho(:)
+      CALL RADIAL$DERIVE(GID,NR,aux,AUX1)
+      grho(2:)=aux1(2:)/r(2:)**2
+      grho(1:5)=grho(5) ! avoid errors due to termination of the grid
+                        ! 5 points offset for 5-point formula applied twice...
+      POTXC(:)=POTXC(:)-grho(:)
 !
 !     == EXCHANGE CORRELATION POTENTIAL IS SET TO ZERO OUTSIDE THE BOX. 
 !     == OTHERWISE IT WILL HAVE A CONSTANT VALUE IN THE ZERO-DENSITY REGION
@@ -1357,7 +1354,7 @@ RFOCK=1.1D0*RFOCK
       REAL(8)               :: PI
       REAL(8)               :: FOURPI
       REAL(8)               :: Y0
-      REAL(8)               :: AUX(NR)
+      REAL(8)               :: AUX(NR),aux1(nr)
       REAL(8)               :: GRHO(NR)
       REAL(8)               :: R(NR)
       REAL(8)               :: VGXC,VXC,EXC1,RH,GRHO2
@@ -1385,14 +1382,12 @@ RFOCK=1.1D0*RFOCK
         MUX(IR)=VXC/Y0
         GRHO(IR)=VGXC*2.D0*GRHO(IR)
       ENDDO
-      CALL RADIAL$DERIVE(GID,NR,GRHO(:),AUX)
-      MUX(:)=MUX(:)-AUX
-      IF(R(1).GT.1.D-8) THEN
-         MUX(:)=MUX(:)-2.D0/R(:)*GRHO(:)
-      ELSE
-        MUX(2:)=MUX(2:)-2.D0/R(2:)*GRHO(2:)
-        MUX(1)=MUX(2)
-      END IF
+      AUX(:)=R(:)**2*GRHO(:)
+      CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
+      GRHO(2:)=AUX1(2:)/R(2:)**2
+      GRHO(1:5)=GRHO(5) ! AVOID ERRORS DUE TO TERMINATION OF THE GRID
+                        ! 5 POINTS OFFSET FOR 5-POINT FORMULA APPLIED TWICE...
+      MUX(:)=MUX(:)-GRHO
 !
 !     == EXCHANGE CORRELATION POTENTIAL IS SET TO ZERO OUTSIDE THE BOX. 
 !     == OTHERWISE IT WILL HAVE A CONSTANT VALUE IN THE ZERO-DENSITY REGION

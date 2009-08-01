@@ -7545,6 +7545,54 @@ coefficients at the plane wave cutoff vanish strictly.
 \subsection{Electrostatic decoupling and coupling of point charges}
 %==========================================================================
 
+%==========================================================================
+\subsection{Non-collinear densities}
+\label{sec:noncollinear}
+%==========================================================================
+In the current implementation the non-collinear spin density is first
+transformed into a locally collinear spin density, from which the
+exchange functional is evaluated. 
+\begin{eqnarray*}
+n_s(\vec{r})= |\vec{\sigma}(\vec{r})|
+\end{eqnarray*}
+
+The choice is non-unique regarding gradient corrections because the
+gradient of the spin density is a tensor.
+\begin{eqnarray*}
+\partial_u\sigma_j(\vec{r})
+\end{eqnarray*}
+Our choice
+\begin{eqnarray*}
+\vec{\nabla}n_s(\vec{r})=\vec{\nabla}|\vec{\sigma}(\vec{r})|
+\end{eqnarray*}
+is only one of the possible choices. 
+
+
+For the one-center densities, we evaluate
+\begin{eqnarray*}
+n_s&=&\sqrt{Q^2+\left(\vec{\sigma}^2}-Q^2)}
+=Q\sqrt{1+\left(\frac{\vec{\sigma}^2}{Q^2}-1)}
+\\
+&=&Q\Bigl[1+\frac{1}{2}\left(\frac{\vec{\sigma}^2}{Q^2}-1)
+-\frac{1}{8}\left(\frac{\vec{\sigma}^2}{Q^2}-1)^2+\ldots
+\end{eqnarray*}
+where $Q$ is defined as
+\begin{eqnarray*}
+Q&=&\sqrt{C+(\hat{P}_s\vec{\sigma})^2}
+\end{eqnarray*}
+and $\hat{P}_s$ is an operator the projects out nonspherical terms
+from the spin density. The constant is a small value that avoids a 
+divide-by-zero.
+
+Note, that these approximations are not necessary for collinear
+densities. Therefore the results of collinear and non-collinear
+densities differ even though the density may be collinear!
+
+There is a second implementation, which is even more approximate, but
+it provides the exact result for strictly collinear densities. This
+option must be enabled in the code.
+
+
 
 %}{} % end of \ifthenelse
 

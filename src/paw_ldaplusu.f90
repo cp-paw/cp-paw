@@ -585,7 +585,7 @@ END MODULE LDAPLUSU_MODULE
       END SUBROUTINE LDAPLUSU$REPORT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU$ETOT(IAT,LMNXX,NDIMD,DENMAT,ETOT,DATH_)
+      SUBROUTINE LDAPLUSU$ETOT(IAT,LMNXX,NDIMD,DENMAT_,ETOT,DATH_)
 !     **************************************************************************
 !     **  THIS IS THE MAIN DRIVER ROUTINE FOR THE LDA+U CORRECTION            **
 !     **                                                                      **
@@ -595,7 +595,8 @@ END MODULE LDAPLUSU_MODULE
       INTEGER(4),INTENT(IN)  :: IAT     ! ATOM INDEX
       INTEGER(4),INTENT(IN)  :: LMNXX
       INTEGER(4),INTENT(IN)  :: NDIMD
-      COMPLEX(8),INTENT(IN)  :: DENMAT(LMNXX,LMNXX,NDIMD)  ! DENSITY MATRIX
+      COMPLEX(8),INTENT(IN)  :: DENMAT_(LMNXX,LMNXX,NDIMD)  ! DENSITY MATRIX
+      COMPLEX(8)  :: DENMAT(LMNXX,LMNXX,NDIMD)  ! DENSITY MATRIX
       REAL(8)   ,INTENT(OUT) :: ETOT
       REAL(8)   ,INTENT(OUT) :: DATH_(LMNXX,LMNXX,NDIMD)
       CHARACTER(8),PARAMETER :: CHITYPE='FROMPHI'
@@ -623,6 +624,7 @@ END MODULE LDAPLUSU_MODULE
 INTEGER(4)             :: LN1,LN2,LN3,LN4
       LOGICAL(4),PARAMETER   :: TCI=.FALSE.
       logical(4)             :: tchk
+character(1) :: switch
 !     **************************************************************************
       ETOT=0.D0
       DATH_=0.D0
@@ -711,8 +713,19 @@ PRINT*,'JPAR   ',THIS%SP%JPAR
       ALLOCATE(MATSS(NPHI,NPHI,2,2))
       ALLOCATE(DATH(NPHI,NPHI,NDIMD))
       ALLOCATE(U(NCHI,NCHI,NCHI,NCHI))
+switch='0'
+1221 continue
+denmat=denmat_
+if(switch.eq.'+') then
+  denmat(1,2,2)=denmat(1,2,2)+1.d-3
+  denmat(2,1,2)=denmat(2,1,2)+1.d-3
+else if(switch.eq.'-') then
+  denmat(1,2,2)=denmat(1,2,2)-1.d-3
+  denmat(2,1,2)=denmat(2,1,2)-1.d-3
+end if
 !
 !     == TRANSFORM FROM TOTAL/SPIN TO UP/DOWN REPRESENTATION ===================
+
       CALL LDAPLUSU_SPINDENMAT('FORWARD',NDIMD,NPHI,DENMAT(1:NPHI,1:NPHI,:),MATSS)
 !
 print*,'THIS%SP%FUNCTIONALID',THIS%SP%FUNCTIONALID
@@ -791,6 +804,30 @@ ENDDO
         CALL LDAPLUSU_INTERACTION(NCHI,U,RHO,ETOT,HAM)
       END IF
 PRINT*,'E(U) ',ETOT
+!!$print*,'============ interaction ====iat=',iat,'============================'
+!!$print*,'iat=',iat,' interaction etot ',etot,' switch=',switch
+!!$DO IS1=1,2
+!!$PRINT*,'===================== DENMAT FOR SPIN',IS1,IS1,' ======================'
+!!$I=0
+!!$DO LN=1,LNXPHI
+!!$DO M=1,2*LOXPHI(LN)+1
+!!$I=I+1
+!!$WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(rho(I,:,IS1,is1))
+!!$ENDDO
+!!$ENDDO
+!!$ENDDO
+!!$if(switch.eq.'0') then
+!!$DO IS1=1,2
+!!$PRINT*,'===================== DATH FOR SPIN',IS1,IS1,' ========================'
+!!$I=0
+!!$DO LN=1,LNXPHI
+!!$DO M=1,2*LOXPHI(LN)+1
+!!$I=I+1
+!!$WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(ham(I,:,IS1,is1))
+!!$ENDDO
+!!$ENDDO
+!!$ENDDO
+!!$end if
 !
 !     ==========================================================================
 !     ==  CORE VALENCE EXCHANGE INTERACTION                                   ==
@@ -828,6 +865,30 @@ PRINT*,'NCHI ',NCHI
         CALL LDAPLUSU_EDFT(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,AECORE,RHO &
     &                     ,ETOT1,HAM1)
 PRINT*,'E(DC) ',ETOT1
+print*,'============ dc ================iat=',iat,'============================'
+print*,'iat=',iat,' dc etot ',etot1,' switch=',switch
+DO IS1=1,2
+PRINT*,'===================== DENMAT FOR SPIN',IS1,IS1,' ======================'
+I=0
+DO LN=1,LNXPHI
+DO M=1,2*LOXPHI(LN)+1
+I=I+1
+WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(rho(I,:,IS1,is1))
+ENDDO
+ENDDO
+ENDDO
+if(switch.eq.'0') then
+DO IS1=1,2
+PRINT*,'===================== DATH FOR SPIN',IS1,IS1,' ========================'
+I=0
+DO LN=1,LNXPHI
+DO M=1,2*LOXPHI(LN)+1
+I=I+1
+WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(ham1(I,:,IS1,is1))
+ENDDO
+ENDDO
+ENDDO
+end if
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
         DEALLOCATE(HAM1)
@@ -861,16 +922,40 @@ PRINT*,'E(DC) ',ETOT1
 !     == MAKE REAL (THIS IS A FUDGE TO BE FIXED IN AUGMENTATION!)
       DATH_(:,:,:)=(0.D0,0.D0)
       DATH_(:NPHI,:NPHI,:)=REAL(DATH)
-!!$DO IS1=1,NDIMD
-!!$PRINT*,'===================== DATH FOR SPIN',IS1,IS2,' ====================='
-!!$I=0
-!!$DO LN=1,LNXPHI
-!!$DO M=1,2*LOXPHI(LN)+1
-!!$I=I+1
-!!$WRITE(*,FMT='(I3,100F8.3)')LOXPHI(LN),REAL(DATH(I,:,IS1))
-!!$ENDDO
-!!$ENDDO
-!!$ENDDO
+
+print*,'============ total ldaplusu ====iat=',iat,'============================'
+print*,'iat=',iat,' LDA+U etot ',etot,' switch=',switch
+DO IS1=1,NDIMD
+PRINT*,'===================== DENMAT FOR SPIN',IS1,IS2,' ======================'
+I=0
+DO LN=1,LNXPHI
+DO M=1,2*LOXPHI(LN)+1
+I=I+1
+WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(Denmat(I,:,IS1))
+ENDDO
+ENDDO
+ENDDO
+if(switch.eq.'0') then
+DO IS1=1,NDIMD
+PRINT*,'===================== DATH FOR SPIN',IS1,IS2,' ========================'
+I=0
+DO LN=1,LNXPHI
+DO M=1,2*LOXPHI(LN)+1
+I=I+1
+WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(DATH_(I,:,IS1))
+ENDDO
+ENDDO
+ENDDO
+end if
+
+if(switch.eq.'0') then
+ switch='+'
+else if(switch.eq.'+') then
+ switch='-'
+else
+ stop 'forced'
+end if
+!goto 1221
 !
 !     ==========================================================================
 !     ==  UNSELECT LDAPLUSU                                                   ==
@@ -882,6 +967,8 @@ PRINT*,'E(DC) ',ETOT1
       DEALLOCATE(RHO)
       DEALLOCATE(HAM)
       CALL LDAPLUSU$SELECT(0)
+!call error$msg('denmat is changed internally for testing purposes!!!!')
+!call error$stop('forced in ldaplus')
                             CALL TRACE$POP()
       RETURN
       END
@@ -2031,18 +2118,20 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       COMPLEX(8)  ,INTENT(IN) :: DENMAT(LMNX,LMNX,2,2) ! DENSITY MATRIX
       REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
       COMPLEX(8)  ,INTENT(OUT):: HAM(LMNX,LMNX,2,2)  ! DETOT/D(RHO^*)        
-      COMPLEX(8)              :: DENMAT1(LMNX,LMNX,4)
-      COMPLEX(8)              :: HAM1(LMNX,LMNX,4)
+      COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
+      INTEGER(4)  ,PARAMETER  :: NDIMD=4
+      complex(8)              :: DENMAT1(LMNX,LMNX,ndimd)
+      complex(8)              :: HAM1(LMNX,LMNX,ndimd)
       REAL(8)                 :: R(NR)
       REAL(8)     ,ALLOCATABLE:: RHO(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: RHO2(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: pot2(:,:,:)
       REAL(8)     ,ALLOCATABLE:: RHOWC(:,:,:)
       REAL(8)     ,ALLOCATABLE:: POT(:,:,:)
       REAL(8)                 :: EDENSITY(NR)
       REAL(8)                 :: AUX(NR),SVAR
       INTEGER(4)              :: LMRX,L
-      INTEGER(4)              :: IDIM,LM
-      COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
-      INTEGER(4)  ,PARAMETER  :: NDIMD=4
+      INTEGER(4)              :: IDIM,LM,lmn
       REAL(8)                 :: ETOTC,ETOTV
 INTEGER(4) :: LMRX1,IR
 INTEGER(4) :: IMETHOD
@@ -2062,6 +2151,11 @@ INTEGER(4) :: IMETHOD
       DENMAT1(:,:,2)=DENMAT(:,:,1,2)+DENMAT(:,:,2,1)
       DENMAT1(:,:,3)=-CI*(DENMAT(:,:,1,2)-DENMAT(:,:,2,1))
       DENMAT1(:,:,4)=DENMAT(:,:,1,1)-DENMAT(:,:,2,2)
+do idim=1,ndimd
+do lmn=1,lmnx
+  write(*,fmt='("XC-Denmat",2i5,20f20.10)')idim,lmn,denmat1(lmn,:,idim)
+enddo
+enddo
 !
 !     ==========================================================================
 !     ==  CALCULATE DENSITY                                                   ==
@@ -2081,61 +2175,83 @@ INTEGER(4) :: IMETHOD
 !     == EXCHANGE ENERGY AND POTENTIAL =========================================
       CALL DFT$SETL4('XCONLY',.TRUE.)
 !
-!===============================================================================
-!==== DANGEROUS CODE!!!!                                                    ====
-!==== THIS FORMULATION IS BASED ON A NONCOLLINEAR FORMULATION, WHICH        ====
-!==== YIELDS DIFFERENT RESULTS FROM A COLLINEAR FORMULATION EVEN FOR        ====
-!==== A COLLINEAR DENSITY                                                   ====
-!====                                                                       ====
-!==== DIFFERENT VERSIONS ARE IMPLEMENTED                                    ====
-!==== 1) DEFAULT NONCOLLINEAR METHOD                                        ====
-!==== 2) A COLLINEAR METHOD (WHICH IS COMPARED ON THE FLY WITH THE          ====
-!====    NONCOLLINEAR METHOD                                                ====
-!===============================================================================
+!     ==========================================================================
+!     == THIS FORMULATION IS BASED ON A NONCOLLINEAR FORMULATION, WHICH       ==
+!     == YIELDS DIFFERENT RESULTS FROM A COLLINEAR FORMULATION EVEN FOR       ==
+!     == A COLLINEAR DENSITY                                                  ==
+!     ==                                                                      ==
+!     == the reason for this difference is the transformation of a            ==
+!     == non-collinear density within augmentation_ncolltrans which is called ==
+!     == by augmentation_xc                                                   ==
+!     ==                                                                      ==
+!     ==========================================================================
       ALLOCATE(POT(NR,LMRX,NDIMD))
       CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,ETOTC,POT)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTV,POT)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC,ETOT,POT)
-PRINT*,'CORE-VALENCE EXCHANGE ENERGY (LOCAL) ',ETOT-ETOTV-ETOTC
+allocate(rho2(nr,lmrx,2))
+allocate(pot2(nr,lmrx,2))
+rho2(:,:,1)=rho(:,:,1)
+rho2(:,:,2)=rho(:,:,4)
+      CALL AUGMENTATION_XC(GID,NR,LMRX,ndimd,RHO,ETOTV,POT)
+!      CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHO2,ETOTV,POT2)
+print*,'gid,nr,lmrx,ndimd ',gid,nr,lmrx,ndimd
+rho2(:,:,1)=rhowc(:,:,1)
+rho2(:,:,2)=rhowc(:,:,4)
+      CALL AUGMENTATION_XC(GID,NR,LMRX,ndimd,RHOwc,ETOT,POT)
+!      CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHO2,ETOT,POT2)
+!pot(:,:,:)=0.d0
+!pot(:,:,1)=pot2(:,:,1)
+!pot(:,:,4)=pot2(:,:,2)
+deallocate(rho2)
+deallocate(pot2)
+PRINT*,'total        EXCHANGE ENERGY (LOCAL) ',ETOT
 PRINT*,'VALENCE      EXCHANGE ENERGY (LOCAL) ',ETOTV
 PRINT*,'CORE         EXCHANGE ENERGY (LOCAL) ',ETOTC
+PRINT*,'CORE-VALENCE EXCHANGE ENERGY (LOCAL) ',ETOT-ETOTV-ETOTC
       ETOT=ETOT-ETOTC
+if(etot.lt.-3.145d0) then
+PRINT*,'FILE RHOWC.DAT WRITTEN'
+CALL ATOMLIB_WRITEPHI('RHOWC1.DAT',GID,NR,LMRX,RHOWC(:,:,1))
+CALL ATOMLIB_WRITEPHI('RHOWC2.DAT',GID,NR,LMRX,RHOWC(:,:,2))
+CALL ATOMLIB_WRITEPHI('RHOWC3.DAT',GID,NR,LMRX,RHOWC(:,:,3))
+CALL ATOMLIB_WRITEPHI('RHOWC4.DAT',GID,NR,LMRX,RHOWC(:,:,4))
+end if
 
-IMETHOD=0
-!IMETHOD=1
-      IF(IMETHOD.EQ.1) THEN
-!       == COLLINEAR METHOD WITH COLLINEAR DENSITY
-        ALLOCATE(RHOTEST(NR,LMRX,2))
-        ALLOCATE(POTTEST(NR,LMRX,2))
-        POTTEST(:,:,1)=0.D0
-        RHOTEST(:,:,1)=RHO(:,:,1)
-        RHOTEST(:,:,2)=RHO(:,:,4)
-        CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHOTEST,ETOT,POTTEST)
-        POT(:,:,:)=0.D0
-        POT(:,:,1)=POTTEST(:,:,1)
-        POT(:,:,4)=POTTEST(:,:,2)
-        DEALLOCATE(RHOTEST)
-        DEALLOCATE(POTTEST)
-!
-!      ELSE IF(IMETHOD.EQ.2) THEN
-!       == NONCOLLINEAR METHOD WITH COLLINEAR DENSITY ==========================
-        ALLOCATE(RHOTEST2(NR,LMRX,NDIMD))
-        ALLOCATE(POTTEST2(NR,LMRX,NDIMD))
-        RHOTEST2(:,:,:)=0.D0
-        POTTEST2(:,:,:)=0.D0
-        RHOTEST2(:,:,1)=RHO(:,:,1)
-        RHOTEST2(:,:,4)=RHO(:,:,4)
-        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOTEST2,ETOT2,POTTEST2)
-!PRINT*,'LDAPLUSUTEST',ETOT2-ETOT,MAXVAL(ABS(POTTEST2-POT)),MAXLOC(ABS(POTTEST2-POT))
-!        ETOT=ETOT2
-!        POT(:,:,:)=POTTEST2(:,:,:)
-        DEALLOCATE(RHOTEST2)
-        DEALLOCATE(POTTEST2)
-!
-      ELSE IF(IMETHOD.EQ.3) THEN
-!       == COMPARISON ==========================================================
-
-      END IF
+!!$IMETHOD=0
+!!$!IMETHOD=1
+!!$      IF(IMETHOD.EQ.1) THEN
+!!$!       == COLLINEAR METHOD WITH COLLINEAR DENSITY
+!!$        ALLOCATE(RHOTEST(NR,LMRX,2))
+!!$        ALLOCATE(POTTEST(NR,LMRX,2))
+!!$        POTTEST(:,:,1)=0.D0
+!!$        RHOTEST(:,:,1)=RHO(:,:,1)
+!!$        RHOTEST(:,:,2)=RHO(:,:,4)
+!!$        CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHOTEST,ETOT,POTTEST)
+!!$        POT(:,:,:)=0.D0
+!!$        POT(:,:,1)=POTTEST(:,:,1)
+!!$        POT(:,:,4)=POTTEST(:,:,2)
+!!$        DEALLOCATE(RHOTEST)
+!!$        DEALLOCATE(POTTEST)
+!!$!
+!!$!      ELSE IF(IMETHOD.EQ.2) THEN
+!!$!       == NONCOLLINEAR METHOD WITH COLLINEAR DENSITY ==========================
+!!$        ALLOCATE(RHOTEST2(NR,LMRX,NDIMD))
+!!$        ALLOCATE(POTTEST2(NR,LMRX,NDIMD))
+!!$        RHOTEST2(:,:,:)=0.D0
+!!$        POTTEST2(:,:,:)=0.D0
+!!$        RHOTEST2(:,:,1)=RHO(:,:,1)
+!!$        RHOTEST2(:,:,4)=RHO(:,:,4)
+!!$        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOTEST2,ETOT2,POTTEST2)
+!!$PRINT*,'ETOT2',ETOT2,ETOT
+!!$PRINT*,'LDAPLUSUTEST',ETOT2-ETOT,MAXVAL(ABS(POTTEST2-POT)),MAXLOC(ABS(POTTEST2-POT))
+!!$!        ETOT=ETOT2
+!!$!        POT(:,:,:)=POTTEST2(:,:,:)
+!!$        DEALLOCATE(RHOTEST2)
+!!$        DEALLOCATE(POTTEST2)
+!!$!
+!!$      ELSE IF(IMETHOD.EQ.3) THEN
+!!$!       == COMPARISON ==========================================================
+!!$
+!!$      END IF
       CALL DFT$SETL4('XCONLY',.FALSE.)
 PRINT*,'EXC ',ETOT
 !

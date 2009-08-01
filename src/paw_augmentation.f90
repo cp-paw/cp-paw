@@ -934,6 +934,8 @@ STOP
               IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
               L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
               FAC=DBLE(L*(L+1))
+!             == the following lines divide by zero if r=0. ====================
+!             == the values are overwritten at the end of the routine... =======
               VRHO(:,LM,ISPIN1)  =VRHO(:,LM,ISPIN1) &
       &                 +CG0LL*FAC/R(:)**2*XDER(:,II,1)*RHO(:,LM,ISPIN2)
               VRHO(:,LM,ISPIN2)  =VRHO(:,LM,ISPIN2) &
@@ -1399,8 +1401,179 @@ STOP
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE AUGMENTATION_NCOLLTRANS(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
 !     **************************************************************************
+!     **  constructs a collinear spin density from a noncollinear one         **
+!     **  and for  id='pot' instead of id='rho' it also                       **
+!     **  constructs a noncollinear potential from a collinear one and the    **
+!     **  noncollinear density                                                **
 !     **                                                                      **
+!     **  The transformation is approximate because it involves a taylor      **
+!     **  expansion of the square root to second order. thus the results      **
+!     **  for collinear densities do not agree with those of collinear        **
+!     **  treated as noncollinear ones                                        **
 !     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: ID
+      INTEGER(4)  ,INTENT(IN)    :: NR
+      INTEGER(4)  ,INTENT(IN)    :: LMRX
+      REAL(8)     ,INTENT(IN)    :: RHO4(NR,LMRX,4)
+      REAL(8)     ,INTENT(OUT)   :: RHO2(NR,LMRX,2)
+      REAL(8)     ,INTENT(IN)    :: POT2(NR,LMRX,2)
+      REAL(8)     ,INTENT(OUT)   :: POT4(NR,LMRX,4)
+      REAL(8)                    :: Q(NR)
+      REAL(8)                    :: VQ(NR)
+      REAL(8)                    :: A(NR,LMRX,3)
+      REAL(8)                    :: VA(NR,LMRX,3)
+      real(8)                    :: p(nr,lmrx)
+      real(8)                    :: vp(nr,lmrx)
+      real(8)                    :: s(nr,lmrx)
+      real(8)                    :: vs(nr,lmrx)
+      REAL(8)                    :: aux(nr)
+      REAL(8)                    :: PI,Y0
+      REAL(8)                    :: cg   ! gaunt coefficient
+      REAL(8)     ,PARAMETER     :: SMALL=1.D-4
+      INTEGER(4)                 :: ISIG,LM,lm1,lm2,lm3
+      logical(4)  ,parameter     :: Tother=.false.
+!     **************************************************************************
+      if(tother) then
+        call AUGMENTATION_NCOLLTRANS_Other(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
+        return
+      end if
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      RHO2(:,:,:)=0.D0
+      POT4(:,:,:)=0.D0
+!
+!     ==========================================================================
+!     == WORK OUT AUXILIARY VARIABLES                                         ==
+!     ==========================================================================
+      Q(:)=SQRT(SMALL+(RHO4(:,1,2)**2+RHO4(:,1,3)**2+RHO4(:,1,4)**2)*Y0**2)
+!
+!     == CONSTRUCT A=SIGMA/Q ===================================================
+      DO ISIG=1,3
+        DO LM=1,LMRX
+          A(:,LM,ISIG)=RHO4(:,LM,ISIG+1)/Q(:)
+        ENDDO
+      ENDDO
+!
+!     ==  CONSTRUCT P=A^2 ======================================================
+      P(:,:)=0.D0
+      DO LM1=1,LMRX
+        DO LM2=LM1,LMRX
+          AUX(:)=A(:,LM1,1)*A(:,LM2,1) &
+     &          +A(:,LM1,2)*A(:,LM2,2) &
+     &          +A(:,LM1,3)*A(:,LM2,3)
+          IF(LM1.ne.LM2)AUX(:)=2.D0*AUX(:)
+          DO LM3=1,LMRX
+            CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
+            P(:,LM3)=P(:,LM3)+CG*AUX(:)
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     == CONSTRUCT S ===========================================================
+      S(:,:)=0.D0
+      DO LM1=1,LMRX
+        S(:,LM1)=S(:,LM1)+0.75D0*P(:,LM1)
+        DO LM2=LM1,LMRX
+          AUX(:)=P(:,LM1)*P(:,LM2)
+          IF(LM1.ne.LM2)AUX(:)=2.D0*AUX(:)
+          DO LM3=1,LMRX
+            CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
+            S(:,LM3)=S(:,LM3)-0.125D0*CG*AUX(:)
+          ENDDO
+        ENDDO
+      ENDDO
+      S(:,1)=S(:,1)+0.375D0/Y0
+!
+!     ==========================================================================
+!     == WORK OUT COLLINEAR DENSITY                                           ==
+!     ==========================================================================
+      RHO2(:,:,1)=RHO4(:,:,1)
+      RHO2(:,1,2)=0.375D0*Q(:)/Y0
+      DO LM=1,LMRX
+        RHO2(:,LM,2)=RHO2(:,LM,2)+Q(:)*S(:,LM)
+      ENDDO
+!
+!     ==========================================================================
+!     == RETURN IF ONLY DENSITY IS REQUIRED                                   ==
+!     ==========================================================================
+      IF(ID.EQ.'RHO') RETURN
+!
+!     ==========================================================================
+!     == WORK OUT POTENTIAL                                                   ==
+!     ==========================================================================
+      IF(ID.NE.'POT') THEN
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('AUGMENTATION_NCTRANS1')
+      END IF
+!
+!     == CONSTRUCT VQ ==========================================================
+      VQ(:)=0.D0
+      DO LM=1,LMRX
+        VQ(:)=VQ(:)+POT2(:,LM,2)*S(:,LM)
+        VS(:,LM)=POT2(:,LM,2)*Q(:)
+      ENDDO
+!
+!     == CONSTRUCT VP ==========================================================
+      DO LM1=1,LMRX
+        VP(:,LM1)=0.75D0*VS(:,LM1)
+        DO LM2=1,LMRX
+          DO LM3=1,LMRX
+            CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
+            VP(:,LM1)=VP(:,LM1)-0.25D0*CG*VS(:,LM2)*P(:,LM3)
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     == CONSTRUCT VA ==========================================================
+      VA(:,:,:)=0.D0
+      DO ISIG=1,3
+        DO LM1=1,LMRX
+          DO LM2=1,LMRX
+            DO LM3=1,LMRX
+              CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
+              VA(:,LM1,ISIG)=VA(:,LM1,ISIG)+2.D0*CG*VP(:,LM2)*A(:,LM3,ISIG)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     == CONSTRUCT POTENTIAL FOR NON-COLLINEAR SPIN DENSITY ====================
+      AUX(:)=0.D0
+      do isig=1,3
+        DO LM=1,LMRX
+          AUX(:)=AUX(:)+VA(:,LM,ISIG)*A(:,LM,ISIG)
+        ENDDO
+      enddo
+      AUX(:)=(VQ(:)-AUX(:)/Q(:))*Y0**2
+!
+      POT4(:,:,:)=0.D0
+      DO ISIG=1,3
+        POT4(:,1,ISIG+1)=POT4(:,1,ISIG)+AUX(:)*A(:,1,ISIG)
+        DO LM1=1,LMRX
+          POT4(:,LM1,ISIG+1)=POT4(:,LM1,ISIG+1)+VA(:,LM1,ISIG)/Q(:)
+        ENDDO
+      ENDDO
+!
+!     == ADD TOTAL POTENTIAL ===================================================
+      POT4(:,:,1)=POT2(:,:,1)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE AUGMENTATION_NCOLLTRANS_Other(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
+!     **************************************************************************
+!     **  CONSTRUCTS A COLLINEAR SPIN DENSITY FROM A NONCOLLINEAR ONE         **
+!     **  AND FOR  ID='POT' INSTEAD OF ID='RHO' IT ALSO                       **
+!     **  CONSTRUCTS A NONCOLLINEAR POTENTIAL FROM A COLLINEAR ONE AND THE    **
+!     **  NONCOLLINEAR DENSITY                                                **
+!     **                                                                      **
+!     **  THE TRANSFORMATION IS APPROXIMATE BECAUSE IT INVOLVES A TAYLOR      **
+!     **  EXPANSION OF THE SQUARE ROOT TO FIRST ORDER ONLY. IT IS CONSTRUCTED **
+!     **  SUCH THAT THE RESULTS FOR COLLINEAR DENSITIES DO AGREE WITH         **
+!     **  THOSE OF COLLINEAR DENSITIES TREATED AS NONCOLLINEAR ONES           **
 !     **************************************************************************
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)    :: ID
@@ -1415,7 +1588,7 @@ STOP
       REAL(8)                    :: Q(NR)
       REAL(8)                    :: VQ(NR)
       REAL(8)                    :: PI,Y0
-      REAL(8)     ,PARAMETER     :: R8SMALL=1.D-20
+      REAL(8)     ,PARAMETER     :: R8SMALL=1.D-8 ! do not choose too small!
       INTEGER(4)                 :: ISIG,LM
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -1427,7 +1600,6 @@ STOP
 !     == WORK OUT AUXILIARY VARIABLES                                         ==
 !     ==========================================================================
       Q(:)=SQRT(RHO4(:,1,2)**2+RHO4(:,1,3)**2+RHO4(:,1,4)**2)
-!
       DO ISIG=1,3
         DO LM=1,LMRX
           A(:,LM,ISIG)=RHO4(:,LM,ISIG+1)/(Q(:)+R8SMALL)
