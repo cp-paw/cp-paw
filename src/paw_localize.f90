@@ -459,7 +459,7 @@ END MODULE LOCALIZE_MODULE
       complex(8),intent(in) :: proj(ndim,nbh,npro)      
       complex(8)            :: propsi(npro,ndim,nbh)      
       complex(8)            :: cchi(nchi,ndim,nbh)
-      real(8)               :: dofk(npro,nchi)
+      complex(8)            :: dofk(npro,nchi)
       integer(4)            :: i,j,k
 !     **************************************************************************
 !
