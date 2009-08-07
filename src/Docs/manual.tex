@@ -2711,24 +2711,6 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vdefault{Atomic mass, as obtained from !STRUCTURE!SPECIES:Z  or, if not
   present, from !STRUCTURE!SPECIES:NAME}}
 
-\mbax{\key{PS$<$G2$>$} 
-  \vdescr{Parameter used for determining the effective mass of the
-    electron cloud at an atom.
-    $$\sum_n f_n\int d^3G G^2 |\tilde{\Psi}_n^{at}(G)|^2$$
-    The value is twice the pseudo-kinetic-energy of the atom.}
-  \vformat{real}
-  \vrules{Optional} 
-\vdefault{0}}
-
-\mbax{\key{PS$<$G4$>$} 
-  \vdescr{Parameter used for determining the effective mass of the
-    electron cloud at an atom.
-    $$\sum_n f_n\int d^3G G^4 |\tilde{\Psi}_n^{at}(G)|^2$$
-    This value is needed only in combination with a G-dependend
-    electron mass.}
-  \vformat{real} 
-\vrules{Optional} 
-\vdefault{0}}
 
 \mbax{\key{LRHOX}
 \vdescr{One center expansion for the density is limited to a maximum
@@ -2751,12 +2733,21 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vrules{Mandatory}
 \vdefault{None}}
 
+\mbax{\key{Z}
+\vdescr{Atomic number. This number is used only to set the default value for the
+  mass.}
+\vformat{real}
+\vrules{optional}
+\vdefault{atomic number as deduced from !STRUCTURE!SPECIES:NAME, if the latter starts
+  with an element symbol}} 
+
 \mbax{\key{FILE} 
 \vdescr{name of the file containing the partial waves
     and projector functions etc. for this atom.}
 \vformat{Character} 
-\vrules{Optional} 
+\vrules{Optional, deprecated option.} 
 \vdefault{information will be created on the fly using the parameter file paramters/stp.cntl}}
+
 
 \mbax{\key{ZV}
 \vdescr{Number of valence electrons}
@@ -2764,13 +2755,14 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vrules{Mandatory, if FILE has been specified. Otherwise not used}
 \vdefault{None}} 
 
-\mbax{\key{Z}
-\vdescr{Atomic number. This number is used only to set the default value for the
-  mass.}
-\vformat{real}
-\vrules{optional}
-\vdefault{atomic number as deduced from !STRUCTURE!SPECIES:NAME, if the latter starts
-  from an element symbol}} 
+\mbax{\key{PS$<$G2$>$} 
+  \vdescr{Parameter used for determining the effective mass of the
+    electron cloud at an atom.
+    $$\sum_n f_n\int d^3G G^2 |\tilde{\Psi}_n^{at}(G)|^2$$
+    The value is twice the pseudo-kinetic-energy of the atom.}
+  \vformat{real}
+  \vrules{Optional, if FILE has been specified. Otherwise not used}
+\vdefault{0}}
 
 \mbax{\key{PSEKIN} 
 \vdescr{[Do not use this option. It works but may be removed in later
@@ -2781,7 +2773,18 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
     this term is set the estimate of the Born-Oppenheimer wave
     function kinetic energy is subtracted from the kinetic energy of
     the wave functions in the protocoll.} \vformat{real}
-  \vrules{Optional} \vdefault{None}}
+  \vrules{Optional, if FILE has been specified. Otherwise not used} 
+\vdefault{None}}
+
+\mbax{\key{PS$<$G4$>$} 
+  \vdescr{Parameter used for determining the effective mass of the
+    electron cloud at an atom.
+    $$\sum_n f_n\int d^3G G^4 |\tilde{\Psi}_n^{at}(G)|^2$$
+    This value is needed only in combination with a G-dependend
+    electron mass.}
+  \vformat{real} 
+\vrules{Optional, if FILE has been specified. Otherwise not used}
+\vdefault{0}}
 
 
 %----------------------------------------------------------------------
@@ -7570,11 +7573,11 @@ is only one of the possible choices.
 
 For the one-center densities, we evaluate
 \begin{eqnarray*}
-n_s&=&\sqrt{Q^2+\left(\vec{\sigma}^2}-Q^2)}
-=Q\sqrt{1+\left(\frac{\vec{\sigma}^2}{Q^2}-1)}
+n_s&=&\sqrt{Q^2+\left(\vec{\sigma}^2-Q^2\right)}
+=Q\sqrt{1+\left(\frac{\vec{\sigma}^2}{Q^2}-1\right)}
 \\
-&=&Q\Bigl[1+\frac{1}{2}\left(\frac{\vec{\sigma}^2}{Q^2}-1)
--\frac{1}{8}\left(\frac{\vec{\sigma}^2}{Q^2}-1)^2+\ldots
+&=&Q\Bigl[1+\frac{1}{2}\left(\frac{\vec{\sigma}^2}{Q^2}-1\right)
+-\frac{1}{8}\left(\frac{\vec{\sigma}^2}{Q^2}-1\right)^2+\ldots
 \end{eqnarray*}
 where $Q$ is defined as
 \begin{eqnarray*}
