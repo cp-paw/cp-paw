@@ -1405,8 +1405,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       CALL ATOMTYPELIST$NAME(THIS%I,THIS%ID)
       CALL ATOMTYPELIST$SELECT(THIS%ID)
       CALL ATOMTYPELIST$GETR8('M',THIS%M)
-      CALL ATOMTYPELIST$GETR8('PS<G2>',THIS%PSG2)
-      CALL ATOMTYPELIST$GETR8('PS<G4>',THIS%PSG4)
       CALL ATOMTYPELIST$GETCH('SOFTCORETYPE',THIS%SOFTCORETYPE)
 !
 !     ==========================================================================
@@ -1635,11 +1633,14 @@ PRINT*,'MARKE BEFORE atomic_MAKEPARTIALWAVES'
      &           ,THIS%AECORE,THIS%PSCORE &
      &           ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
      &           ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
-     &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT)
-      CALL TRACE$PASS('CONSTRUCT PARTIAL WAVES FINISHED')
+     &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT &
+     &           ,this%psg2,this%psg4)
+      CALL TRACE$PASS('CONSTRUCTion of PARTIAL WAVES FINISHED')
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         CALL RADIALFOCK$CLEANVFOCK(VFOCK)
       END IF
+      CALL ATOMTYPELIST$SETR8('PS<G2>',THIS%PSG2)
+      CALL ATOMTYPELIST$SETR8('PS<G4>',THIS%PSG4)
 !!$
 !!$IF(THIS%SETTING%FOCK.NE.0.D0) THEN
 !!$  CALL ERROR$MSG('FOCK OPERATION UNDER CONSTRUCTION')
@@ -2784,7 +2785,7 @@ DEX=0.05D0
      &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
      &                  ,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER,AECORE,PSCORE,PSPOT &
      &                  ,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,RCSM,VADD &
-     &                  ,NLPHIDOT,AEPHIDOT,PSPHIDOT)
+     &                  ,NLPHIDOT,AEPHIDOT,PSPHIDOT,psg2,psg4)
 !     **************************************************************************
 !     **  CONSTRUCTS  THE SETUP                                               **
 !     **                                                                      **
@@ -2837,6 +2838,8 @@ DEX=0.05D0
       REAL(8)   ,INTENT(OUT):: NLPHIDOT(NR,LNX)  
       REAL(8)   ,INTENT(OUT):: PSPHIDOT(NR,LNX)  
       REAL(8)   ,INTENT(OUT):: AEPHIDOT(NR,LNX)  
+      REAL(8)   ,INTENT(OUT):: psg2
+      REAL(8)   ,INTENT(OUT):: psg4
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -3953,6 +3956,16 @@ GOTO 10001
         ENDDO
         DEALLOCATE(A)
       END IF
+!
+!     ==========================================================================
+!     == construct parameters for mass renormalization                        ==
+!     ==========================================================================
+      call setup_parmsformassrenormalization(gid,nr,rout,nb-nc,lofi(nc+1:) &
+     &                           ,fofi(nc+1:),pspsif,psg2,psg4)
+!
+!     ==========================================================================
+!     == write data to file                                                   ==
+!     ==========================================================================
       IF(TWRITE) THEN
         WRITE(STRING,FMT='(F3.0)')AEZ
         STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
@@ -4007,6 +4020,110 @@ GOTO 10001
 !
 !STOP 'FORCED: IN MAKEPARTIALWAVES'
                                 CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine setup_parmsformassrenormalization(gid,nr,rbox,nb &
+     &                                 ,lofi,fofi,pspsi,psg2,psg4)
+!     **************************************************************************
+!     **************************************************************************
+      implicit none
+      integer(4),intent(in) :: gid
+      integer(4),intent(in) :: nr
+      integer(4),intent(in) :: nb
+      integer(4),intent(in) :: lofi(nb)
+      real(8)   ,intent(in) :: fofi(nb)
+      real(8)   ,intent(in) :: rbox
+      real(8)   ,intent(in) :: pspsi(nr,nb)
+      real(8)   ,intent(out):: psg2
+      real(8)   ,intent(out):: psg4
+      REAL(8)   ,PARAMETER  :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
+      INTEGER(4),PARAMETER  :: NG=250
+      real(8)               :: charge  ! pseudo valence charge
+      real(8)               :: ekin    ! pseudo kinetic energy
+      real(8)               :: eking2  ! sum f<pspsi|G**4|pspsi>
+      real(8)               :: g(ng)
+      real(8)               :: auxg(ng)
+      real(8)               :: aux(nr),aux1(nr)
+      real(8)               :: pspsig(ng)
+      integer(4)            :: gidg
+      real(8)               :: dex
+      real(8)               :: g1 
+      real(8)               :: val
+      real(8)               :: r(nr)
+      integer(4)            :: irbox ! first grid point beyond box radius
+      real(8)               :: pi
+      logical               :: ttest=.true.
+      real(8)               :: charge1,ekin1
+      integer(4)            :: l,ib,ir
+!     **************************************************************************
+      pi=4.d0*atan(1.d0)
+      call radial$r(gid,nr,r)
+      do ir=1,nr
+        if(r(ir).lt.rbox) cycle
+        irbox=ir
+        exit
+      enddo
+!       
+!     ==========================================================================
+!     == define the radial grid for the fourier transform                     == 
+!     ==========================================================================
+      CALL RADIAL$GETR8(GID,'DEX',DEX)
+      G1=GMAX*EXP(-DEX*real(NG-1))
+      CALL RADIAL$NEW('LOG',GIDG)
+      CALL RADIAL$SETI4(GIDG,'NR',NG)
+      CALL RADIAL$SETR8(GIDG,'R1',G1)
+      CALL RADIAL$SETR8(GIDG,'DEX',DEX)
+!
+!     ==========================================================================
+!     == determine factors from bessel transform                              ==
+!     ==========================================================================
+      CALL RADIAL$R(GIDG,NG,G)
+      CHARGE=0.D0
+      EKIN=0.D0
+      EKING2=0.D0
+      DO IB=1,NB
+        L=LOFI(IB)
+        aux(:)=pspsi(:,ib)
+        aux(irbox:)=0.d0
+        CALL RADIAL$BESSELTRANSFORM(L,GID,NR,aux,GIDG,NG,PSPSIG)
+        pspsig(:)=pspsig(:)*sqrt(2.d0/pi)
+        AUXG(:)=psPSIG(:)**2*G(:)**2
+        CALL RADIAL$INTEGRAL(GIDG,NG,AUXg,VAL)
+        CHARGE=CHARGE+FOFI(IB)*VAL
+        AUXG(:)=psPSIG(:)**2*G(:)**4
+        CALL RADIAL$INTEGRAL(GIDG,NG,AUXg,VAL)
+        EKIN=EKIN+FOFI(IB)*0.5d0*VAL
+        AUXG(:)=psPSIG(:)**2*G(:)**6
+        CALL RADIAL$INTEGRAL(GIDG,NG,AUXg,VAL)
+        EKING2=EKING2+FOFI(IB)*0.5d0*VAL
+      ENDDO
+      psg2=2.d0*ekin
+      psg4=2.d0*eking2
+!
+!     ==========================================================================
+!     == test                                                                 ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        EKIN1=0.D0
+        CHARGE1=0.D0
+        DO IB=1,NB
+          L=LOFI(IB)
+          AUX(:)=(R(:)*PSPSI(:,IB))**2
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          CHARGE1=CHARGE1+FOFI(IB)*VAL
+!
+          CALL RADIAL$DERIVE(GID,NR,R(:)*PSPSI(:,IB),AUX)
+          AUX(:)=AUX(:)**2+REAL(L*(L+1),KIND=8)*PSPSI(:,IB)**2
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          EKIN1=EKIN1+FOFI(IB)*0.5D0*VAL
+        ENDDO
+        WRITE(*,*)'PS CHARGE IN G-SPACE ',CHARGE,' IN R-SPACE ',CHARGE1
+        WRITE(*,*)'PS EKIN   IN G-SPACE ',EKIN,' IN R-SPACE ',EKIN1
+      END IF
       RETURN
       END
 !

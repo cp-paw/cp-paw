@@ -1,29 +1,29 @@
-!.................................................................... 
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE atoms_module
-!***********************************************************************
-!**                                                                   **
-!**  NAME: ATOMS                                                      **
-!**                                                                   **
-!**  PURPOSE: MAINTAINS THE ATOMIC POSITIONS                          **
-!**                                                                   **
-!**  FUNCTIONS:                                                       **
-!**    ATOMS$SETR8(ID,VAL)                                            **
-!**    ATOMS$REPORT                                                   **
-!**    ATOMS$PROPAGATE                                                **
-!**    ATOMS$INITIALIZE                                               **
-!**                                                                   **
-!**  REMARKS:                                                         **
-!**    FOR HISTORICAL REASONS, PART OF THIS OBJECT IS NAMED ATOMLIST  **
-!**                                                                   **
-!**  STATEOFTHIS RUNS THROUGH THE FOLLOWING LIFE CYCLE:               **
-!**    'NOT INITIALIZED'                                              **
-!**    'INITIALIZED'                                                  **
-!**    'PROPAGATED WITHOUT CONSTRAINTS'                               **
-!**    'PROPAGATED WITH CONSTRAINTS'                                  **
-!**    'SWITCHED'                                                     **
-!**    NEXT: 'PROPAGATED WITHOUT CONSTRAINTS'                         **
-!**                                                                   **
-!******************PETER E. BLOECHL, IBM RESEARCH LABORATORY (1996)*****
+!******************************************************************************* 
+!**                                                                           **
+!**  NAME: ATOMS                                                              **
+!**                                                                           **
+!**  PURPOSE: MAINTAINS THE ATOMIC POSITIONS                                  **
+!**                                                                           **
+!**  FUNCTIONS:                                                               **
+!**    ATOMS$SETR8(ID,VAL)                                                    **
+!**    ATOMS$REPORT                                                           **
+!**    ATOMS$PROPAGATE                                                        **
+!**    ATOMS$INITIALIZE                                                       **
+!**                                                                           **
+!**  REMARKS:                                                                 **
+!**    FOR HISTORICAL REASONS, PART OF THIS OBJECT IS NAMED ATOMLIST          **
+!**                                                                           **
+!**  STATEOFTHIS RUNS THROUGH THE FOLLOWING LIFE CYCLE:                       **
+!**    'NOT INITIALIZED'                                                      **
+!**    'INITIALIZED'                                                          **
+!**    'PROPAGATED WITHOUT CONSTRAINTS'                                       **
+!**    'PROPAGATED WITH CONSTRAINTS'                                          **
+!**    'SWITCHED'                                                             **
+!**    NEXT: 'PROPAGATED WITHOUT CONSTRAINTS'                                 **
+!**                                                                           **
+!******************PETER E. BLOECHL, IBM RESEARCH LABORATORY (1996)*************
 real(8)          :: DELT=0.D0      ! TIME STEP
 REAL(8)          :: AMPRE=0.D0     ! TARGET TEMPERATURE FOR RANDOMIZATION
 REAL(8)          :: ANNER=0.D0     ! FRIcTION
@@ -62,15 +62,15 @@ REAL(8)      ,ALLOCATABLE :: ANNERVECM(:)
 REAL(8)      ,ALLOCATABLE :: R2M(:,:)
 END MODULE ATOMS_MODULE
 !
-!     .................................................................. 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMS$SETR8(ID_,VAL_)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
       USE ATOMS_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID_
       REAL(8)     ,INTENT(IN) :: VAL_
-!     ******************************************************************
+!     **************************************************************************
       IF(ID_.EQ.'TIMESTEP') THEN
         DELT=VAL_
       ELSE IF(ID_.EQ.'AMPRE') THEN
@@ -250,11 +250,11 @@ END MODULE ATOMS_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMS$INITIALIZE
-!     ******************************************************************
-!     **  READ ATOMIC POSITIONS FROM ATOMLIST                         **
-!     ******************************************************************
+!     **************************************************************************
+!     **  READ ATOMIC POSITIONS FROM ATOMLIST                                 **
+!     **************************************************************************
       USE ATOMS_MODULE
       IMPLICIT NONE
       INTEGER(4)           :: IAT,I
@@ -264,7 +264,7 @@ END MODULE ATOMS_MODULE
       REAL(8)              :: SVAR
       LOGICAL(4)           :: TERR,TCHK
       INTEGER(4)           :: NFREE
-!     ******************************************************************
+!     **************************************************************************
                               CALL TRACE$PUSH('ATOMS$INITIALIZE')
 !     CALL SHADOW$INITIALIZE
 !     CALL SHADOW$OPTIMIZE(100,TOL,TCHK)
@@ -274,35 +274,38 @@ END MODULE ATOMS_MODULE
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     ==  FIX ATOM THERMOSTAT                                         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  FIX ATOM THERMOSTAT                                                 ==
+!     ==========================================================================
       CALL ATOMLIST$NATOM(NAT)
       CALL CONSTRAINTS$NFREE(NAT,NFREE)
       CALL THERMOSTAT$SELECT('ATOMS')
       CALL THERMOSTAT$GETL4('ON',TCHK)
       IF(TCHK)CALL THERMOSTAT$SCALEGFREE(REAL(NFREE,KIND=8))
 !
-!     ==================================================================
-!     ==   INITIALIZE THERMOSTATS FOR THE WAVE FUNCTIONS              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   INITIALIZE THERMOSTATS FOR THE WAVE FUNCTIONS                      ==
+!     ==========================================================================
       CALL WAVES$GETR8('EMASS',EMASS)
       CALL WAVES$GETR8('EMASSCG2',EMASSCG2)
       CALL ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
 !
-!     ==================================================================
-!     ==   CHECK IF REDUCED MASS IS NEGATIVE                          ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   CHECK IF REDUCED MASS IS NEGATIVE                                  ==
+!     ==========================================================================
       TERR=.FALSE.
       DO IAT=1,NAT
-        IF(EFFEMASS(IAT).GT.RMASS(IAT)) THEN
+        IF(EFFEMASS(IAT).GT.0.7d0*RMASS(IAT)) THEN
           IF(.NOT.TERR) THEN
-            CALL ERROR$MSG('REDUCED MASS MUST NOT BE NEGATIVE')
+            CALL ERROR$MSG('EFFECTIVE MASS OF WAVE FUNCTIONS ...')
+            CALL ERROR$MSG('... MUST ACCOUNT LESS THAN 70% OF TOTAL MASS.')
+            CALL ERROR$MSG('REDUCE WAVE FUNCTION MASS or increase nuclear mass')
             TERR=.TRUE.
           END IF
-          CALL ERROR$CHVAL('ATOM ',NAME(IAT))
-          CALL ERROR$R8VAL('MASS ',RMASS(IAT))
-          CALL ERROR$R8VAL('REDUCED MASS ',RMASS(IAT)-EFFEMASS(IAT))
+          CALL ERROR$CHVAL('ATOM',NAME(IAT))
+          CALL ERROR$R8VAL('MASS',RMASS(IAT))
+          CALL ERROR$R8VAL('REDUCED MASS',RMASS(IAT)-EFFEMASS(IAT))
+          CALL ERROR$R8VAL('EFFECTIVE MASS',EFFEMASS(IAT))
         END IF
       ENDDO
       IF(TERR) THEN
@@ -311,9 +314,9 @@ END MODULE ATOMS_MODULE
         CALL ERROR$STOP('ATOMS$INITIALIZE')
       END IF
 !
-!     ==================================================================
-!     ==   ADJUST KINETIC ENERGY OF THE WAVE FUNCTION THERMOSTAT      ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   ADJUST KINETIC ENERGY OF THE WAVE FUNCTION THERMOSTAT              ==
+!     ==========================================================================
       CALL THERMOSTAT$SELECT('WAVES')
       CALL THERMOSTAT$GETL4('ON',TCHK)
       IF(TCHK) THEN
@@ -346,11 +349,11 @@ END MODULE ATOMS_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMS$PROPAGATE()
-!     ******************************************************************
-!     **  PROPAGATE: PROPAGATES ATOMIC POSITIONS                      **
-!     ******************************************************************
+!     **************************************************************************
+!     **  PROPAGATE: PROPAGATES ATOMIC POSITIONS                              **
+!     **************************************************************************
       USE ATOMS_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
@@ -363,16 +366,17 @@ END MODULE ATOMS_MODULE
       REAL(8)        :: CELLFRIC(3,3)
       REAL(8)        :: RBAS(3,3)
       REAL(8)        :: SVAR
-!     ******************************************************************
+!     **************************************************************************
                               CALL TRACE$PUSH('ATOMS$PROPAGATE')
 !!$PRINT*,'FORCES FROM ATOMS$PROPAGATE',MAXVAL(ABS(FORCE))
 !!$DO IAT=1,NAT
 !!$  WRITE(*,FMT='("FORCE ",I3,3F15.10)')IAT,FORCE(:,IAT)
 !!$ENDDO
 ! 
-!     ==================================================================
-!     == CONTROL AND CHANGE STATE OF THIS                             ==
-!     ==================================================================
+!     **************************************************************************
+!     ==========================================================================
+!     == CONTROL AND CHANGE STATE OF THIS                                     ==
+!     ==========================================================================
       IF(STATEOFTHIS.NE.'INITIALIZED'.AND.STATEOFTHIS.NE.'SWITCHED') THEN
         CALL ERROR$MSG('ATOMS OBJECT IS IN THE INCORRECT STATE')
         CALL ERROR$MSG('FOR APLICATION OF CONSTRAINTS')
@@ -380,18 +384,18 @@ END MODULE ATOMS_MODULE
       END IF
       STATEOFTHIS='PROPAGATED WITHOUT CONSTRAINTS'
 ! 
-!     ==================================================================
-!     == FREEZE ATOMIC POSITIONS                                      ==
-!     ==================================================================
+!     ==========================================================================
+!     == FREEZE ATOMIC POSITIONS                                              ==
+!     ==========================================================================
       IF(.NOT.TDYN) THEN
         RP(:,:)=R0(:,:)
         RM(:,:)=R0(:,:)
         CALL TRACE$POP ;RETURN
       END IF
 ! 
-!     ==================================================================
-!     == CALCULATE EFFECTIVE WAVE FUNCTION MASS AND REDUCED MASS      ==
-!     ==================================================================
+!     ==========================================================================
+!     == CALCULATE EFFECTIVE WAVE FUNCTION MASS AND REDUCED MASS              ==
+!     ==========================================================================
       CALL WAVES$GETR8('EMASS',EMASS)
       CALL WAVES$GETR8('EMASSCG2',EMASSCG2)
       CALL ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
@@ -399,9 +403,9 @@ END MODULE ATOMS_MODULE
         REDRMASS(IAT)=RMASS(IAT)-EFFEMASS(IAT)
       ENDDO
 ! 
-!     ================================================================
-!     ==  DETERMINE FRICTION VECTOR                                 ==
-!     ================================================================
+!     ==========================================================================
+!     ==  DETERMINE FRICTION VECTOR                                           ==
+!     ==========================================================================
       IF(.NOT.ALLOCATED(ANNERVEC0))ALLOCATE(ANNERVEC0(NAT))
       IF(TOPTFRIC) THEN
         IF(AOPT2AV.GT.0.D0) THEN
@@ -411,10 +415,10 @@ END MODULE ATOMS_MODULE
         END IF
         ANNER=SVAR
 PRINT*,'ATOMS: OPT.FRICTION ',SVAR,AOPT1AV,AOPT2AV,MIXAOPT
-!       == CORRECT FRICTION FOR ELECTRON FRICTION  =====================
+!       == CORRECT FRICTION FOR ELECTRON FRICTION  =============================
         ANNERVEC0(:)=(RMASS(:)*SVAR-EFFEMASS(:)*ANNEE)/REDRMASS(:)
       ELSE
-!        == CORRECT FRICTION FOR ELECTRON FRICTION  =====================
+!        == CORRECT FRICTION FOR ELECTRON FRICTION  ============================
         ANNERVEC0(:)=(RMASS(:)*ANNER-EFFEMASS(:)*ANNEE)/REDRMASS(:)
       END IF
 !
@@ -425,62 +429,60 @@ PRINT*,'ATOMS: OPT.FRICTION ',SVAR,AOPT1AV,AOPT2AV,MIXAOPT
         ANNERVEC0(:)=MAX(ANNERVEC0,0.D0)
       END IF
 ! 
-!     ==================================================================
-!     == STOP ATOMIC MOTION
-!     ==================================================================
+!     ==========================================================================
+!     == STOP ATOMIC MOTION                                                   ==
+!     ==========================================================================
       IF(TSTOP) THEN
         RM(:,:)=R0(:,:)
         TSTOP=.FALSE.
       END IF
 !
-!     ==================================================================
-!     == RANDOMIZE VELOCITIES
-!     ==================================================================
+!     ==========================================================================
+!     == RANDOMIZE VELOCITIES                                                 ==
+!     ==========================================================================
       IF(TRANDOMIZE) THEN
         CALL ATOMS_RANDOMIZEVELOCITY(NAT,RMASS,RM,AMPRE,DELT)
         CALL MPE$BROADCAST('MONOMER',1,RM)
         TRANDOMIZE=.FALSE.
       END IF 
 ! 
-!     ==================================================================
-!     ==  SET REFERENCE STRUCTURE  FOR CONSTRAINTS                    ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  SET REFERENCE STRUCTURE  FOR CONSTRAINTS                            ==
+!     ==========================================================================
       IF(.NOT.TCONSTRAINTREFERENCE) THEN
         CALL CELL$GETR8A('T(0)',9,RBAS)
         CALL CONSTRAINTS$SETREFERENCE(RBAS,NAT,R0,RM,REDRMASS,DELT)
         TCONSTRAINTREFERENCE=.TRUE.
       END IF
 ! 
-!     == PRECONDITIONING =============================================
+!     == PRECONDITIONING =======================================================
 !     CALL SHADOW$PRECONDITION(NAT,RMASS,R0,FORCE)
 ! 
-!     == SYMMETRIZE FORCE ============================================
+!     == SYMMETRIZE FORCE ======================================================
       CALL SYMMETRIZE$FORCE(NAT,FORCE)
 ! 
-!     =================================================================
-!     ==  PROPAGATE ATOMS                                           ==
-!     ================================================================
+!     ==========================================================================
+!     ==  PROPAGATE ATOMS                                                     ==
+!     ==========================================================================
       CALL CELL$GETL4('MOVE',TSTRESS)
       IF(TSTRESS) CALL CELL$GETR8A('FRICMAT',9,CELLFRIC)
       CALL ATOMS_PROPAGATE(NAT,DELT,REDRMASS,ANNERVEC0 &
    &                      ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC)
 !
-!     ==================================================================
-!     == TAKE CARE OF LINK BONDS AS CONSTRAINTS                       ==
-!     ==================================================================
+!     ==========================================================================
+!     == TAKE CARE OF LINK BONDS AS CONSTRAINTS                               ==
+!     ==========================================================================
       CALL ATOMS_FRICTIONARRAY(NAT,ANNER,ANNEE,RMASS,EFFEMASS,ANNER1)
       CALL QMMM$PROPAGATE(NAT,DELT,ANNER,REDRMASS,ANNER1,RM,R0,RP)
 !
-!     ==================================================================
-!     == WARMUP SYSTEM                                                ==
-!     ==================================================================
+!     ==========================================================================
+!     == WARMUP SYSTEM                                                        ==
+!     ==========================================================================
       CALL PAW_WARMUP_APPLY
                             CALL TRACE$POP
       RETURN
-
       END
-
-
+!
 !     ..................................................................
       SUBROUTINE ATOMS$PROPAGATE_DIMER()
 !     ******************************************************************
@@ -1201,14 +1203,12 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
-!     ******************************************************************
-!     **                                                              **
-!     **  ESTIMATES THE EFFECTIVE MASS OF THE ELECTRONS BOUND TO      **
-!     **  THE ATOMS FROM A MODEL OF ISOLATED ATOMS.                   **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  ESTIMATES THE EFFECTIVE MASS OF THE ELECTRONS BOUND TO              **
+!     **  THE ATOMS FROM A MODEL OF ISOLATED ATOMS.                           **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT           ! #(ATOMS)
       REAL(8)   ,INTENT(IN) :: EMASS         ! FICTITIOUS ELECTRON MASS 
@@ -1217,7 +1217,7 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
       REAL(8)   ,INTENT(IN) :: PSG4(NAT)     ! 
       REAL(8)   ,INTENT(OUT):: EFFEMASS(NAT) ! MASS RENORMALIZATION
       INTEGER(4)            :: IAT
-!     ******************************************************************
+!     **************************************************************************
       DO IAT=1,NAT
         EFFEMASS(IAT)=2.D0/3.D0*EMASS*(PSG2(IAT)+EMASSCG2*PSG4(IAT))
       ENDDO

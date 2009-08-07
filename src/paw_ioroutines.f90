@@ -3669,6 +3669,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)               :: MAINLN(2)
       LOGICAL(4)               :: TLDAPLUSU
       LOGICAL(4)               :: THYBRID
+      LOGICAL(4)               :: Tinternalsetup
       REAL(8)                  :: EV
 !     ************************************************************************** 
                            CALL TRACE$PUSH('STRCIN_SPECIES')
@@ -3705,11 +3706,15 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL LINKEDLIST$GET(LL_STRC,'Z',1,Z)
 !
 !       ========================================================================
-!       ==  CONNECT SETUP FILE                                                ==
+!       ==  Checjk if setupfile or internal setup construction is used        ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'FILE',1,TCHK)
-!THE FOLLOWING IS USED ONLY IF SETUP FILES ARE USED
-        IF(TCHK) THEN
+        tinternalsetup=.not.tchk
+!
+!       ========================================================================
+!       ==  CONNECT SETUP FILE                                                ==
+!       ========================================================================
+        IF(.not.tinternalsetup) THEN
           CALL LINKEDLIST$GET(LL_STRC,'FILE',1,SETUPFILE)
           CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
           CH8SVAR1=' '
@@ -3749,25 +3754,50 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ========================================================================
 !       ==  KINETIC ENERGY OF THE PSEUDO WAVE FUNCTIONS                       ==
 !       ========================================================================
-        CALL ATOMTYPELIST$SELECT(SPNAME)
-        CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G2>',1,TCHK)
-        IF(.NOT.TCHK) THEN
+        if(.not.tinternalsetup) then
+          CALL ATOMTYPELIST$SELECT(SPNAME)
+          CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G2>',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL LINKEDLIST$EXISTD(LL_STRC,'PSEKIN',1,TCHK)
+            IF(TCHK) THEN
+              CALL LINKEDLIST$GET(LL_STRC,'PSEKIN',1,SVAR)
+              CALL LINKEDLIST$SET(LL_STRC,'PS<G2>',0,2.D0*SVAR)
+            ELSE
+              CALL LINKEDLIST$SET(LL_STRC,'PS<G2>',0,0.D0)
+            END IF
+          END IF
+          CALL LINKEDLIST$GET(LL_STRC,'PS<G2>',1,SVAR)
+          CALL ATOMTYPELIST$SETR8('PS<G2>',SVAR)
+          CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G4>',1,TCHK)
+          IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_STRC,'PS<G4>',0,0.D0)
+          CALL LINKEDLIST$GET(LL_STRC,'PS<G4>',1,SVAR)
+          CALL ATOMTYPELIST$SETR8('PS<G4>',SVAR)
+          CALL ATOMTYPELIST$UNSELECT
+        END IF
+!
+        IF(TINTERNALSETUP) THEN
+          CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G2>',1,TCHK)
+          IF(TCHK) THEN
+            CALL ERROR$MSG('VARIABLE PS<G2> MUST NOT BE SPECIFIED, ...')
+            CALL ERROR$MSG('..., IF SETUPS ARE CONSTRUCTED INTERNALLY')
+            CALL ERROR$MSG('VALUE IS CALCULATED INTERNALLY')
+            CALL ERROR$STOP('STRCIN_SPECIES')
+          END IF
+          CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G4>',1,TCHK)
+          IF(TCHK) THEN
+            CALL ERROR$MSG('VARIABLE PS<G4> MUST NOT BE SPECIFIED, ...')
+            CALL ERROR$MSG('..., IF SETUPS ARE CONSTRUCTED INTERNALLY')
+            CALL ERROR$MSG('VALUE IS CALCULATED INTERNALLY')
+            CALL ERROR$STOP('STRCIN_SPECIES')
+          END IF
           CALL LINKEDLIST$EXISTD(LL_STRC,'PSEKIN',1,TCHK)
           IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'PSEKIN',1,SVAR)
-            CALL LINKEDLIST$SET(LL_STRC,'PS<G2>',0,2.D0*SVAR)
-          ELSE
-            CALL LINKEDLIST$SET(LL_STRC,'PS<G2>',0,0.D0)
+            CALL ERROR$MSG('VARIABLE PSEKIN MUST NOT BE SPECIFIED, ...')
+            CALL ERROR$MSG('..., IF SETUPS ARE CONSTRUCTED INTERNALLY')
+            CALL ERROR$MSG('VALUE IS CALCULATED INTERNALLY')
+            CALL ERROR$STOP('STRCIN_SPECIES')
           END IF
         END IF
-        CALL LINKEDLIST$GET(LL_STRC,'PS<G2>',1,SVAR)
-        CALL ATOMTYPELIST$SETR8('PS<G2>',SVAR)
-!
-        CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G4>',1,TCHK)
-        IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_STRC,'PS<G4>',0,0.D0)
-        CALL LINKEDLIST$GET(LL_STRC,'PS<G4>',1,SVAR)
-        CALL ATOMTYPELIST$SETR8('PS<G4>',SVAR)
-        CALL ATOMTYPELIST$UNSELECT
 !
 !       ========================================================================
 !       ==  ATOMIC MASS                                                       ==

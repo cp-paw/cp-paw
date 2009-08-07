@@ -183,7 +183,7 @@
 !**    RADIAL$DERIVE(R1,DEX,NR,F,DFDR)                                **
 !**    RADIAL$DERIVATIVE(R1,DEX,NR,F,R0,DFDR0)                        **
 !**    RADIAL$INTEGRATE(R1,DEX,NR,F,FINT)                             **
-!**    RADIAL$INTEGRAL(R1,DEX,NR,F,R0,FINT0)                          **
+!**    RADIAL$INTEGRAL(gid,nr,F,FINT0)                                **
 !**    RADIAL$FFT(ID,R1,DEX,NR,F1,G1,F2)                              **
 !**    RADIAL$POISSON(R1,DEX,NR,RHO,V)                                **
 !**    RADIAL$MOMENT(R1,DEX,NR,L,RHO,QLM)                             **
