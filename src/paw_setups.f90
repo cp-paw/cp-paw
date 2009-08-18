@@ -147,13 +147,7 @@ TYPE(SETUPPARMS_TYPE)  :: PARMS
 TYPE(ATOMWAVES_TYPE)   :: ATOM
 TYPE(THIS_TYPE),POINTER:: NEXT
 END TYPE THIS_TYPE
-
-!
-!INTEGER(4)             :: NR    !=250
-!INTEGER(4)             :: NRX=250
-!REAL(8)   ,PARAMETER   :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
-!INTEGER(4),PARAMETER   :: NG=256
-!REAL(8)                :: G1          ! FIRST POINT ON THE RADIAL G-GRID
+INTEGER(4)              :: GIDG_PROTO=0 !prototype g-grid
 INTEGER(4)              :: NSP=0
 LOGICAL,SAVE            :: SELECTED=.FALSE. ! CONTAINER FOR ACTUAL SETTING
 INTEGER(4)              :: LMRXX=0
@@ -263,14 +257,22 @@ END MODULE SETUP_MODULE
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,PARAMETER  :: GMAX=15.D0 ! <-> EPW OF ABOUT 200 RY
+      REAL(8)     ,PARAMETER  :: G1=1.D-3
+      INTEGER(4)  ,PARAMETER  :: ng=512
+      REAL(8)                 :: DEX
 !     **************************************************************************
 !
-!     == CHECK IF ALREADY SELECTED
+!     ==========================================================================
+!     == CHECK IF ALREADY SELECTED                                            ==
+!     ==========================================================================
       IF(ASSOCIATED(THIS)) THEN
         IF(THIS%ID.EQ.ID) RETURN
       END IF
 !
+!     ==========================================================================
 !     == CHECK IF PRESENT ===
+!     ==========================================================================
       IF(ASSOCIATED(FIRST)) THEN
         THIS=>FIRST
         DO 
@@ -287,7 +289,20 @@ END MODULE SETUP_MODULE
         THIS%I=1
       END IF
 !
+!     ==========================================================================
 !     == CREATE NEW
+!     ==========================================================================
+      IF(GIDG_PROTO.EQ.0) THEN
+        CALL RADIAL$NEW('LOG',GIDG_PROTO)
+        DEX=LOG(GMAX/G1)/REAL(NG-1,KIND=8)
+        CALL RADIAL$SETI4(GIDG_PROTO,'NR',NG)
+        CALL RADIAL$SETR8(GIDG_PROTO,'R1',G1)
+        CALL RADIAL$SETR8(GIDG_PROTO,'DEX',DEX)
+      END IF
+!
+!     ==========================================================================
+!     == CREATE NEW
+!     ==========================================================================
       IF(ALLOCATED(FASTACCESS)) DEALLOCATE(FASTACCESS)
       THIS%ID    =ID
       THIS%AEZ   =0.D0
@@ -625,8 +640,6 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
       INTEGER(4)               :: NR
-      INTEGER(4)               :: NC
-      INTEGER(4)               :: LRHOX
 !     **************************************************************************
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
 !
@@ -1013,11 +1026,9 @@ END MODULE SETUP_MODULE
       INTEGER(4)            :: GID
       INTEGER(4)            :: GIDG
       INTEGER(4)            :: NFIL
-      REAL(8)               :: G1
-      REAL(8)   ,PARAMETER  :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
-      INTEGER(4),PARAMETER  :: NG=250
       REAL(8)               :: R1,DEX
       INTEGER(4)            :: NR,NRX
+      INTEGER(4)            :: Ng   ! #(reciprocal gridpoints )
       INTEGER(4)            :: IR
       INTEGER(4)            :: LN
       LOGICAL(4)            :: TCHK
@@ -1304,14 +1315,8 @@ PRINT*,'RCSM ',THIS%RCSM
       Y0=1.D0/SQRT(FOURPI)
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
-      CALL RADIAL$GETR8(GID,'DEX',DEX)
-      G1=GMAX*EXP(-DEX*DBLE(NG-1))
-      CALL RADIAL$NEW('LOG',GIDG)
-      THIS%GIDG=GIDG
-      CALL RADIAL$SETI4(GIDG,'NR',NG)
-      CALL RADIAL$SETR8(GIDG,'R1',G1)
-      CALL RADIAL$SETR8(GIDG,'DEX',DEX)
-PRINT*,'GIDG ',GIDG,G1,DEX,NG
+      gidg=gidg_proto  ! use prototype g-grid
+      CALL RADIAL$GETI4(GIDG,'NR',NG)
 !       
 !     == VADD (VBAR) ===================================================
       ALLOCATE(THIS%VADDOFG(NG))
@@ -1360,9 +1365,7 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4)            :: GID
       INTEGER(4)            :: GIDG
       REAL(8)               :: DEX
-      REAL(8)               :: G1
-      REAL(8)   ,PARAMETER  :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
-      INTEGER(4),PARAMETER  :: NG=250
+      INTEGER(4)            :: NG
       INTEGER(4)            :: NR
       INTEGER(4)            :: LX,LNX
       INTEGER(4)            :: NB
@@ -1670,15 +1673,9 @@ PRINT*,'MARKE BEFORE atomic_MAKEPARTIALWAVES'
 !     ==========================================================================
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
-      CALL RADIAL$GETR8(GID,'DEX',DEX)
-      G1=GMAX*EXP(-DEX*DBLE(NG-1))
-G1=1.175D-4     
-DEX=0.05D0
-      CALL RADIAL$NEW('LOG',GIDG)
+      GIDG=GIDG_PROTO
       THIS%GIDG=GIDG
-      CALL RADIAL$SETI4(GIDG,'NR',NG)
-      CALL RADIAL$SETR8(GIDG,'R1',G1)
-      CALL RADIAL$SETR8(GIDG,'DEX',DEX)
+      CALL RADIAL$GETI4(GIDG,'NR',NG)
 !       
 !     == VADD (VBAR) ===========================================================
       ALLOCATE(THIS%VADDOFG(NG))
@@ -4037,7 +4034,8 @@ GOTO 10001
       real(8)   ,intent(in) :: pspsi(nr,nb)
       real(8)   ,intent(out):: psg2
       real(8)   ,intent(out):: psg4
-      REAL(8)   ,PARAMETER  :: GMAX=30     ! EPW[RY]<GMAX**2 FOR PSI AND RHO
+      REAL(8)   ,PARAMETER  :: GMAX=15.d0   ! EPW[RY]<GMAX**2 FOR PSI AND RHO
+      REAL(8)   ,PARAMETER  :: G1=1.d-3     
       INTEGER(4),PARAMETER  :: NG=250
       real(8)               :: charge  ! pseudo valence charge
       real(8)               :: ekin    ! pseudo kinetic energy
@@ -4048,7 +4046,6 @@ GOTO 10001
       real(8)               :: pspsig(ng)
       integer(4)            :: gidg
       real(8)               :: dex
-      real(8)               :: g1 
       real(8)               :: val
       real(8)               :: r(nr)
       integer(4)            :: irbox ! first grid point beyond box radius
@@ -4068,8 +4065,7 @@ GOTO 10001
 !     ==========================================================================
 !     == define the radial grid for the fourier transform                     == 
 !     ==========================================================================
-      CALL RADIAL$GETR8(GID,'DEX',DEX)
-      G1=GMAX*EXP(-DEX*real(NG-1))
+      DEX=LOG(GMAX/G1)/REAL(NG-1,KIND=8)
       CALL RADIAL$NEW('LOG',GIDG)
       CALL RADIAL$SETI4(GIDG,'NR',NG)
       CALL RADIAL$SETR8(GIDG,'R1',G1)
@@ -4088,7 +4084,6 @@ GOTO 10001
         aux(irbox:)=0.d0
         CALL RADIAL$BESSELTRANSFORM(L,GID,NR,aux,GIDG,NG,PSPSIG)
         pspsig(:)=pspsig(:)*sqrt(2.d0/pi)
-call SETUP_WRITEPHI('x2.dat',GIDg,Ng,1,pspsig)
         AUXG(:)=psPSIG(:)**2*G(:)**2
         CALL RADIAL$INTEGRAL(GIDG,NG,AUXg,VAL)
         CHARGE=CHARGE+FOFI(IB)*VAL
