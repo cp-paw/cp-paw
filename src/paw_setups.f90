@@ -1392,7 +1392,6 @@ PRINT*,'GIDG ',GIDG,G1,DEX,NG
       INTEGER(4)            :: NFIL
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
-!
       PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       Y0=1.D0/SQRT(FOURPI)
@@ -3960,7 +3959,7 @@ GOTO 10001
 !     ==========================================================================
 !     == construct parameters for mass renormalization                        ==
 !     ==========================================================================
-      call setup_parmsformassrenormalization(gid,nr,rout,nb-nc,lofi(nc+1:) &
+      call setup_parmsmassrenormalization(gid,nr,rout,nb-nc,lofi(nc+1:) &
      &                           ,fofi(nc+1:),pspsif,psg2,psg4)
 !
 !     ==========================================================================
@@ -4024,7 +4023,7 @@ GOTO 10001
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine setup_parmsformassrenormalization(gid,nr,rbox,nb &
+      subroutine setup_parmsmassrenormalization(gid,nr,rbox,nb &
      &                                 ,lofi,fofi,pspsi,psg2,psg4)
 !     **************************************************************************
 !     **************************************************************************
@@ -4089,6 +4088,7 @@ GOTO 10001
         aux(irbox:)=0.d0
         CALL RADIAL$BESSELTRANSFORM(L,GID,NR,aux,GIDG,NG,PSPSIG)
         pspsig(:)=pspsig(:)*sqrt(2.d0/pi)
+call SETUP_WRITEPHI('x2.dat',GIDg,Ng,1,pspsig)
         AUXG(:)=psPSIG(:)**2*G(:)**2
         CALL RADIAL$INTEGRAL(GIDG,NG,AUXg,VAL)
         CHARGE=CHARGE+FOFI(IB)*VAL
@@ -5753,4 +5753,103 @@ PRINT*,'C'
       WRITE(NFIL,*)
       CLOSE(NFIL)
       RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_BUILDPARMS()
+!     **************************************************************************
+!     **************************************************************************
+!     **************************************************************************
+      USE STRINGS_MODULE
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4)           :: IZ
+      CHARACTER(2)         :: SY
+      CHARACTER(32)        :: id
+      CHARACTER(32)        :: STRING
+      REAL(8)   ,PARAMETER :: FACTOR=0.75D0  !RC=FACTOR*RCOV
+      REAL(8)   ,PARAMETER :: LAMBDA=6.D0  !RC=FACTOR*RCOV
+      INTEGER(4)           :: NS,NP,ND,NF
+      INTEGER(4)           :: NFIL
+      REAL(8)              :: RCOV 
+      REAL(8)              :: zv
+      CHARACTER(1),PARAMETER:: APOSTROPHE="'"
+      CHARACTER(120)       :: LINE      
+!     **************************************************************************
+!     ==========================================================================
+!     == SPECIFY FILE                                                         ==
+!     ==========================================================================
+      CALL FILEHANDLER$SETFILE('TMP',.FALSE.,'STP.PARMS_AUTO')
+      CALL FILEHANDLER$SETSPECIFICATION('TMP','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('TMP','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('TMP','FORM','FORMATTED')
+      CALL FILEHANDLER$UNIT('TMP',NFIL)
+
+      DO IZ=1,105
+        CALL PERIODICTABLE$GET(IZ,'SYMBOL',SY)
+        CALL PERIODICTABLE$GET(IZ,'R(COV)',RCOV)
+        CALL PERIODICTABLE$GET(IZ,'OCC(S)',NS)
+        CALL PERIODICTABLE$GET(IZ,'OCC(P)',NP)
+        CALL PERIODICTABLE$GET(IZ,'OCC(D)',ND)
+        CALL PERIODICTABLE$GET(IZ,'OCC(F)',NF)
+        ZV=REAL(NS+NP+ND+NF)
+!
+!       ========================================================================
+!       == CONSTRUCT ID  SI_.75_6.0                                           ==
+!       ========================================================================
+        WRITE(STRING,FMT='(F3.2)')FACTOR
+        ID=TRIM(SY)//'_'//ADJUSTL(STRING)
+        WRITE(STRING,FMT='(F3.1)')LAMBDA
+        ID=TRIM(id)//'_'//ADJUSTL(STRING)
+!
+!       ========================================================================
+!       == WRITE INPUT FILE                                                  ==
+!       ========================================================================
+        LINE='  !SETUP'
+        LINE(11:)='ID='//apostrophe//TRIM(ID)//apostrophe
+        LINE=TRIM(LINE)//' EL='//APOSTROPHE//TRIM(SY)//APOSTROPHE
+        WRITE(STRING,FMT='(F5.0)')ZV
+        LINE=TRIM(LINE)//' ZV='//TRIM(STRING)
+        WRITE(NFIL,FMT='(A)')+trim(LINE)
+!
+!       =================================================================
+        LINE=''
+        LINE(11:)='TYPE='//APOSTROPHE//'HBS'//APOSTROPHE
+        LINE=TRIM(LINE)//'  RBOX/RCOV=2.0'
+        LINE=TRIM(LINE)//'  RCSM/RCOV=0.25'
+        WRITE(NFIL,FMT='(A)')+trim(LINE)
+!
+!       =================================================================
+        LINE=''
+        LINE(11:)='RCL/RCOV= 0.75 0.75 0.75 0.75'
+        WRITE(NFIL,FMT='(A)')+trim(LINE)
+!
+!       =================================================================
+        LINE=''
+        LINE(11:)='LAMBDA= 6. 6. 6. 6.'
+        WRITE(NFIL,FMT='(A)')+trim(LINE)
+!
+!       =================================================================
+        LINE=''
+        LINE(5:)='!GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END'
+        WRITE(NFIL,FMT='(A)')+trim(LINE)
+!
+!       =================================================================
+        LINE=''
+        WRITE(STRING,FMT='(F8.3)')FACTOR-0.1D0/RCOV
+        LINE(5:)='!POT  POW=3. RC/RCOV='//TRIM(STRING)//' !END'
+        WRITE(NFIL,FMT='(A)')+trim(LINE)
+!
+!       =================================================================
+        LINE=''
+        WRITE(STRING,FMT='(F8.3)')FACTOR-0.1D0/RCOV
+        LINE(5:)='!CORE POW=3. RC/RCOV='//TRIM(STRING)//' !END'
+        WRITE(NFIL,FMT='(A)')+trim(LINE)
+!
+!       =================================================================
+        WRITE(NFIL,FMT='("  !END")')
+        WRITE(NFIL,*)
+      ENDDO
+      CALL FILEHANDLER$CLOSE('TMP')
+      STOP
       END

@@ -1,15 +1,951 @@
 !SCNTL
+  !SETUP  ID='H_.75_6.0' EL='H' ZV=   1.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.585 !END
+    !CORE   POW=3. RC/RCOV=   0.585 !END
+  !END
+
+  !SETUP  ID='HE_.75_6.0' EL='HE' ZV=   2.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.693 !END
+    !CORE   POW=3. RC/RCOV=   0.693 !END
+  !END
+
+  !SETUP  ID='LI_.75_6.0' EL='LI' ZV=   1.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.707 !END
+    !CORE   POW=3. RC/RCOV=   0.707 !END
+  !END
+
+  !SETUP  ID='BE_.75_6.0' EL='BE' ZV=   2.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.691 !END
+    !CORE   POW=3. RC/RCOV=   0.691 !END
+  !END
+
+  !SETUP  ID='B_.75_6.0' EL='B' ZV=   3.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.685 !END
+    !CORE   POW=3. RC/RCOV=   0.685 !END
+  !END
+
+  !SETUP  ID='C_.75_6.0' EL='C' ZV=   4.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.681 !END
+    !CORE   POW=3. RC/RCOV=   0.681 !END
+  !END
+
+  !SETUP  ID='N_.75_6.0' EL='N' ZV=   5.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.679 !END
+    !CORE   POW=3. RC/RCOV=   0.679 !END
+  !END
+
+  !SETUP  ID='O_.75_6.0' EL='O' ZV=   6.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.678 !END
+    !CORE   POW=3. RC/RCOV=   0.678 !END
+  !END
+
+  !SETUP  ID='F_.75_6.0' EL='F' ZV=   7.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.677 !END
+    !CORE   POW=3. RC/RCOV=   0.677 !END
+  !END
+
+  !SETUP  ID='NE_.75_6.0' EL='NE' ZV=   8.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.675 !END
+    !CORE   POW=3. RC/RCOV=   0.675 !END
+  !END
+
+  !SETUP  ID='NA_.75_6.0' EL='NA' ZV=   1.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.716 !END
+    !CORE   POW=3. RC/RCOV=   0.716 !END
+  !END
+
+  !SETUP  ID='MG_.75_6.0' EL='MG' ZV=   2.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.711 !END
+    !CORE   POW=3. RC/RCOV=   0.711 !END
+  !END
+
+  !SETUP  ID='AL_.75_6.0' EL='AL' ZV=   3.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.705 !END
+    !CORE   POW=3. RC/RCOV=   0.705 !END
+  !END
+
+  !SETUP  ID='SI_.75_6.0' EL='SI' ZV=   4.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.702 !END
+    !CORE   POW=3. RC/RCOV=   0.702 !END
+  !END
+
+  !SETUP  ID='P_.75_6.0' EL='P' ZV=   5.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.700 !END
+    !CORE   POW=3. RC/RCOV=   0.700 !END
+  !END
+
+  !SETUP  ID='S_.75_6.0' EL='S' ZV=   6.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.698 !END
+    !CORE   POW=3. RC/RCOV=   0.698 !END
+  !END
+
+  !SETUP  ID='CL_.75_6.0' EL='CL' ZV=   7.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.697 !END
+    !CORE   POW=3. RC/RCOV=   0.697 !END
+  !END
+
+  !SETUP  ID='AR_.75_6.0' EL='AR' ZV=   8.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.696 !END
+    !CORE   POW=3. RC/RCOV=   0.696 !END
+  !END
+
+  !SETUP  ID='K_.75_6.0' EL='K' ZV=   1.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.724 !END
+    !CORE   POW=3. RC/RCOV=   0.724 !END
+  !END
+
+  !SETUP  ID='CA_.75_6.0' EL='CA' ZV=   2.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.720 !END
+    !CORE   POW=3. RC/RCOV=   0.720 !END
+  !END
+
+  !SETUP  ID='SC_.75_6.0' EL='SC' ZV=   3.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.713 !END
+    !CORE   POW=3. RC/RCOV=   0.713 !END
+  !END
+
+  !SETUP  ID='TI_.75_6.0' EL='TI' ZV=   4.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.710 !END
+    !CORE   POW=3. RC/RCOV=   0.710 !END
+  !END
+
+  !SETUP  ID='V_.75_6.0' EL='V' ZV=   5.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.707 !END
+    !CORE   POW=3. RC/RCOV=   0.707 !END
+  !END
+
+  !SETUP  ID='CR_.75_6.0' EL='CR' ZV=   6.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.705 !END
+    !CORE   POW=3. RC/RCOV=   0.705 !END
+  !END
+
+  !SETUP  ID='MN_.75_6.0' EL='MN' ZV=   7.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.705 !END
+    !CORE   POW=3. RC/RCOV=   0.705 !END
+  !END
+
+  !SETUP  ID='FE_.75_6.0' EL='FE' ZV=   8.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 10. !END
+    !POT  POW=3. RC/RCOV=   0.705 !END
+    !CORE   POW=3. RC/RCOV=   0.705 !END
+  !END
+
+  !SETUP  ID='CO_.75_6.0' EL='CO' ZV=   9.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.704 !END
+    !CORE   POW=3. RC/RCOV=   0.704 !END
+  !END
+
+  !SETUP  ID='NI_.75_6.0' EL='NI' ZV=  10.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.704 !END
+    !CORE   POW=3. RC/RCOV=   0.704 !END
+  !END
+
+  !SETUP  ID='CU_.75_6.0' EL='CU' ZV=  11.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.705 !END
+    !CORE   POW=3. RC/RCOV=   0.705 !END
+  !END
+
+  !SETUP  ID='ZN_.75_6.0' EL='ZN' ZV=  12.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.708 !END
+    !CORE   POW=3. RC/RCOV=   0.708 !END
+  !END
+
+  !SETUP  ID='GA_.75_6.0' EL='GA' ZV=  13.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.708 !END
+    !CORE   POW=3. RC/RCOV=   0.708 !END
+  !END
+
+  !SETUP  ID='GE_.75_6.0' EL='GE' ZV=  14.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.707 !END
+    !CORE   POW=3. RC/RCOV=   0.707 !END
+  !END
+
+  !SETUP  ID='AS_.75_6.0' EL='AS' ZV=  15.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.706 !END
+    !CORE   POW=3. RC/RCOV=   0.706 !END
+  !END
+
+  !SETUP  ID='SE_.75_6.0' EL='SE' ZV=  16.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.704 !END
+    !CORE   POW=3. RC/RCOV=   0.704 !END
+  !END
+
+  !SETUP  ID='BR_.75_6.0' EL='BR' ZV=  17.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.704 !END
+    !CORE   POW=3. RC/RCOV=   0.704 !END
+  !END
+
+  !SETUP  ID='KR_.75_6.0' EL='KR' ZV=  18.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.703 !END
+    !CORE   POW=3. RC/RCOV=   0.703 !END
+  !END
+
+  !SETUP  ID='RB_.75_6.0' EL='RB' ZV=   1.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.726 !END
+    !CORE   POW=3. RC/RCOV=   0.726 !END
+  !END
+
+  !SETUP  ID='SR_.75_6.0' EL='SR' ZV=   2.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.722 !END
+    !CORE   POW=3. RC/RCOV=   0.722 !END
+  !END
+
+  !SETUP  ID='Y_.75_6.0' EL='Y' ZV=   3.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='ZR_.75_6.0' EL='ZR' ZV=   4.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.714 !END
+    !CORE   POW=3. RC/RCOV=   0.714 !END
+  !END
+
+  !SETUP  ID='NB_.75_6.0' EL='NB' ZV=   5.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.711 !END
+    !CORE   POW=3. RC/RCOV=   0.711 !END
+  !END
+
+  !SETUP  ID='MO_.75_6.0' EL='MO' ZV=   6.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.709 !END
+    !CORE   POW=3. RC/RCOV=   0.709 !END
+  !END
+
+  !SETUP  ID='TC_.75_6.0' EL='TC' ZV=   7.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.708 !END
+    !CORE   POW=3. RC/RCOV=   0.708 !END
+  !END
+
+  !SETUP  ID='RU_.75_6.0' EL='RU' ZV=   8.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.708 !END
+    !CORE   POW=3. RC/RCOV=   0.708 !END
+  !END
+
+  !SETUP  ID='RH_.75_6.0' EL='RH' ZV=   9.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.708 !END
+    !CORE   POW=3. RC/RCOV=   0.708 !END
+  !END
+
+  !SETUP  ID='PD_.75_6.0' EL='PD' ZV=  10.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.709 !END
+    !CORE   POW=3. RC/RCOV=   0.709 !END
+  !END
+
+  !SETUP  ID='AG_.75_6.0' EL='AG' ZV=  11.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.711 !END
+    !CORE   POW=3. RC/RCOV=   0.711 !END
+  !END
+
+  !SETUP  ID='CD_.75_6.0' EL='CD' ZV=  12.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.714 !END
+    !CORE   POW=3. RC/RCOV=   0.714 !END
+  !END
+
+  !SETUP  ID='IN_.75_6.0' EL='IN' ZV=  13.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.713 !END
+    !CORE   POW=3. RC/RCOV=   0.713 !END
+  !END
+
+  !SETUP  ID='SN_.75_6.0' EL='SN' ZV=  14.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.712 !END
+    !CORE   POW=3. RC/RCOV=   0.712 !END
+  !END
+
+  !SETUP  ID='SB_.75_6.0' EL='SB' ZV=  15.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.712 !END
+    !CORE   POW=3. RC/RCOV=   0.712 !END
+  !END
+
+  !SETUP  ID='TE_.75_6.0' EL='TE' ZV=  16.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.711 !END
+    !CORE   POW=3. RC/RCOV=   0.711 !END
+  !END
+
+  !SETUP  ID='I_.75_6.0' EL='I' ZV=  17.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.710 !END
+    !CORE   POW=3. RC/RCOV=   0.710 !END
+  !END
+
+  !SETUP  ID='XE_.75_6.0' EL='XE' ZV=  18.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.710 !END
+    !CORE   POW=3. RC/RCOV=   0.710 !END
+  !END
+
+  !SETUP  ID='CS_.75_6.0' EL='CS' ZV=   1.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.727 !END
+    !CORE   POW=3. RC/RCOV=   0.727 !END
+  !END
+
+  !SETUP  ID='BA_.75_6.0' EL='BA' ZV=   2.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.723 !END
+    !CORE   POW=3. RC/RCOV=   0.723 !END
+  !END
+
+  !SETUP  ID='LA_.75_6.0' EL='LA' ZV=   3.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.719 !END
+    !CORE   POW=3. RC/RCOV=   0.719 !END
+  !END
+
+  !SETUP  ID='CE_.75_6.0' EL='CE' ZV=   4.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.718 !END
+    !CORE   POW=3. RC/RCOV=   0.718 !END
+  !END
+
+  !SETUP  ID='PR_.75_6.0' EL='PR' ZV=   5.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.718 !END
+    !CORE   POW=3. RC/RCOV=   0.718 !END
+  !END
+
+  !SETUP  ID='ND_.75_6.0' EL='ND' ZV=   6.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.718 !END
+    !CORE   POW=3. RC/RCOV=   0.718 !END
+  !END
+
+  !SETUP  ID='PM_.75_6.0' EL='PM' ZV=   7.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.718 !END
+    !CORE   POW=3. RC/RCOV=   0.718 !END
+  !END
+
+  !SETUP  ID='SM_.75_6.0' EL='SM' ZV=   8.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='EU_.75_6.0' EL='EU' ZV=   9.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.721 !END
+    !CORE   POW=3. RC/RCOV=   0.721 !END
+  !END
+
+  !SETUP  ID='GD_.75_6.0' EL='GD' ZV=  10.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='TB_.75_6.0' EL='TB' ZV=  11.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='DY_.75_6.0' EL='DY' ZV=  12.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='HO_.75_6.0' EL='HO' ZV=  13.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='ER_.75_6.0' EL='ER' ZV=  14.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.716 !END
+    !CORE   POW=3. RC/RCOV=   0.716 !END
+  !END
+
+  !SETUP  ID='TM_.75_6.0' EL='TM' ZV=  15.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.716 !END
+    !CORE   POW=3. RC/RCOV=   0.716 !END
+  !END
+
+  !SETUP  ID='YB_.75_6.0' EL='YB' ZV=  16.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.720 !END
+    !CORE   POW=3. RC/RCOV=   0.720 !END
+  !END
+
+  !SETUP  ID='LU_.75_6.0' EL='LU' ZV=  17.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.716 !END
+    !CORE   POW=3. RC/RCOV=   0.716 !END
+  !END
+
+  !SETUP  ID='HF_.75_6.0' EL='HF' ZV=  18.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.713 !END
+    !CORE   POW=3. RC/RCOV=   0.713 !END
+  !END
+
+  !SETUP  ID='TA_.75_6.0' EL='TA' ZV=  19.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.711 !END
+    !CORE   POW=3. RC/RCOV=   0.711 !END
+  !END
+
+  !SETUP  ID='W_.75_6.0' EL='W' ZV=  20.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.709 !END
+    !CORE   POW=3. RC/RCOV=   0.709 !END
+  !END
+
+  !SETUP  ID='RE_.75_6.0' EL='RE' ZV=  21.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.709 !END
+    !CORE   POW=3. RC/RCOV=   0.709 !END
+  !END
+
+  !SETUP  ID='OS_.75_6.0' EL='OS' ZV=  22.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.708 !END
+    !CORE   POW=3. RC/RCOV=   0.708 !END
+  !END
+
+  !SETUP  ID='IR_.75_6.0' EL='IR' ZV=  23.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.708 !END
+    !CORE   POW=3. RC/RCOV=   0.708 !END
+  !END
+
+  !SETUP  ID='PT_.75_6.0' EL='PT' ZV=  24.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.709 !END
+    !CORE   POW=3. RC/RCOV=   0.709 !END
+  !END
+
+  !SETUP  ID='AU_.75_6.0' EL='AU' ZV=  25.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.711 !END
+    !CORE   POW=3. RC/RCOV=   0.711 !END
+  !END
+
+  !SETUP  ID='HG_.75_6.0' EL='HG' ZV=  26.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.714 !END
+    !CORE   POW=3. RC/RCOV=   0.714 !END
+  !END
+
+  !SETUP  ID='TL_.75_6.0' EL='TL' ZV=  27.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.714 !END
+    !CORE   POW=3. RC/RCOV=   0.714 !END
+  !END
+
+  !SETUP  ID='PB_.75_6.0' EL='PB' ZV=  28.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.714 !END
+    !CORE   POW=3. RC/RCOV=   0.714 !END
+  !END
+
+  !SETUP  ID='BI_.75_6.0' EL='BI' ZV=  29.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.714 !END
+    !CORE   POW=3. RC/RCOV=   0.714 !END
+  !END
+
+  !SETUP  ID='PO_.75_6.0' EL='PO' ZV=  30.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.714 !END
+    !CORE   POW=3. RC/RCOV=   0.714 !END
+  !END
+
+  !SETUP  ID='AT_.75_6.0' EL='AT' ZV=  31.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.714 !END
+    !CORE   POW=3. RC/RCOV=   0.714 !END
+  !END
+
+  !SETUP  ID='RN_.75_6.0' EL='RN' ZV=  32.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.713 !END
+    !CORE   POW=3. RC/RCOV=   0.713 !END
+  !END
+
+  !SETUP  ID='FR_.75_6.0' EL='FR' ZV=   1.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.729 !END
+    !CORE   POW=3. RC/RCOV=   0.729 !END
+  !END
+
+  !SETUP  ID='RA_.75_6.0' EL='RA' ZV=   2.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.724 !END
+    !CORE   POW=3. RC/RCOV=   0.724 !END
+  !END
+
+  !SETUP  ID='AC_.75_6.0' EL='AC' ZV=   3.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.718 !END
+    !CORE   POW=3. RC/RCOV=   0.718 !END
+  !END
+
+  !SETUP  ID='TH_.75_6.0' EL='TH' ZV=   4.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.718 !END
+    !CORE   POW=3. RC/RCOV=   0.718 !END
+  !END
+
+  !SETUP  ID='PA_.75_6.0' EL='PA' ZV=   5.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.718 !END
+    !CORE   POW=3. RC/RCOV=   0.718 !END
+  !END
+
+  !SETUP  ID='U_.75_6.0' EL='U' ZV=   6.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.713 !END
+    !CORE   POW=3. RC/RCOV=   0.713 !END
+  !END
+
+  !SETUP  ID='NP_.75_6.0' EL='NP' ZV=   7.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.718 !END
+    !CORE   POW=3. RC/RCOV=   0.718 !END
+  !END
+
+  !SETUP  ID='PU_.75_6.0' EL='PU' ZV=   8.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='AM_.75_6.0' EL='AM' ZV=   9.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.721 !END
+    !CORE   POW=3. RC/RCOV=   0.721 !END
+  !END
+
+  !SETUP  ID='CM_.75_6.0' EL='CM' ZV=  10.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='BK_.75_6.0' EL='BK' ZV=  11.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='CF_.75_6.0' EL='CF' ZV=  12.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='ES_.75_6.0' EL='ES' ZV=  13.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.717 !END
+    !CORE   POW=3. RC/RCOV=   0.717 !END
+  !END
+
+  !SETUP  ID='FM_.75_6.0' EL='FM' ZV=  14.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.716 !END
+    !CORE   POW=3. RC/RCOV=   0.716 !END
+  !END
+
+  !SETUP  ID='MD_.75_6.0' EL='MD' ZV=  15.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.716 !END
+    !CORE   POW=3. RC/RCOV=   0.716 !END
+  !END
+
+  !SETUP  ID='NO_.75_6.0' EL='NO' ZV=  16.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.720 !END
+    !CORE   POW=3. RC/RCOV=   0.720 !END
+  !END
+
+  !SETUP  ID='LR_.75_6.0' EL='LR' ZV=  17.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.716 !END
+    !CORE   POW=3. RC/RCOV=   0.716 !END
+  !END
+
+  !SETUP  ID='RF_.75_6.0' EL='RF' ZV=  18.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.713 !END
+    !CORE   POW=3. RC/RCOV=   0.713 !END
+  !END
+
+  !SETUP  ID='HA_.75_6.0' EL='HA' ZV=  19.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.711 !END
+    !CORE   POW=3. RC/RCOV=   0.711 !END
+  !END
+
 
  !SETUP  ID='E_' EL='0_' ZV= 0.
-         TYPE='HBS' RBOX/RCOV=20.0 RCSM/RCOV=0.25
-         RCL/RCOV= 0.75 0.75 0.75 0.75
-         LAMBDA= 6. 6. 6. 6.
-   !GRID DMIN=5.E-6 DMAX=1.3145 RMAX= 26.954 !END
-   !POT  POW=3.  RC/RCOV=0.585 !END
-   !CORE POW=2.  RC/RCOV=0.585 !END
- !END
-
- !SETUP  ID='H_.75_6.0' EL='H_' ZV= 1.
          TYPE='HBS' RBOX/RCOV=20.0 RCSM/RCOV=0.25
          RCL/RCOV= 0.75 0.75 0.75 0.75
          LAMBDA= 6. 6. 6. 6.
@@ -25,15 +961,6 @@
    !GRID DMIN=5.E-6 DMAX=1.0 RMAX= 26.954 !END
    !POT  POW=3.  RC/RCOV=0.585 !END
    !CORE POW=2.  RC/RCOV=0.585 !END
- !END
-
- !SETUP  ID='O_.75_6.0' EL='O_' ZV= 6.
-         TYPE='HBS' RBOX/RCOV=14.0 RCSM/RCOV=0.25
-         RCL/RCOV= 0.75 0.75 0.75 0.75
-         LAMBDA= 6. 6. 2. 6.
-   !GRID DMIN=5.E-6 DMAX=1.3145 RMAX= 26.954 !END
-   !POT  POW=3.  RC/RCOV=0.678 !END
-   !CORE POW=2.  RC/RCOV=0.678 !END
  !END
 
  !SETUP  ID='H_HBS' EL='H_' ZV= 1.

@@ -130,7 +130,7 @@
        subroutine specialfunction$gammp(x,a,val)
 !      *************************************************************************
 !      **  returns the incomplete gamma function P(a,x)
-!      ** see numerical recipes
+!      **  see numerical recipes
 !      *************************************************************************
        implicit none
        real(8),intent(in) :: x
