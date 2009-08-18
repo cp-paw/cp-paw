@@ -2627,6 +2627,732 @@ END MODULE LOGRADIAL_MODULE
       END      
 
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TEST_BESSEL()
+      IMPLICIT NONE
+      INTEGER(4)           :: L=0
+      INTEGER(4)           :: GID
+      INTEGER(4),PARAMETER :: NR=250
+      REAL(8)              :: R1=1.056D-4
+      REAL(8)              :: DEX=0.05D0       
+      REAL(8)              :: R(NR)
+      INTEGER(4)           :: GIDG
+      INTEGER(4),PARAMETER :: NG=512
+      REAL(8)              :: GMAX=20.D0
+      REAL(8)              :: DEXG
+      REAL(8)              :: G1=1.D-3 !small G1 -> small oscillations
+      REAL(8)              :: FOFR(NR)
+      REAL(8)              :: FOFG(NG)
+      REAL(8)              :: FOFG_OLD(NG)
+      REAL(8)              :: G(NG)
+      REAL(8)              :: SVAR
+      REAL(8)              :: PI
+      INTEGER(4)           :: I
+      INTEGER(4)           :: NFIL=20
+!      CHARACTER(16),PARAMETER :: TYPE='EXPONENTIAL'
+      CHARACTER(16),PARAMETER :: TYPE='GAUSSIAN'
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+!      CALL RADIAL_BESSELTRANSF_PLOTM()
+!
+!     ==========================================================================
+!     == DEFINE R-GRID AND TEST FUNCTION                                      ==
+!     ==========================================================================
+      CALL RADIAL$NEW('SHLOG',GID)
+      CALL RADIAL$SETR8(GID,'R1',R1)
+      CALL RADIAL$SETR8(GID,'DEX',DEX)
+      CALL RADIAL$SETI4(GID,'NR',NR)
+      CALL RADIAL$R(GID,NR,R)
+      DO I=1,NR
+        IF(TYPE.EQ.'EXPONENTIAL') THEN 
+          FOFR(I)=EXP(-R(I))
+        ELSE IF(TYPE.EQ.'GAUSSIAN') THEN 
+          FOFR(I)=EXP(-R(I)**2)
+        ELSE
+          CALL ERROR$MSG('TYPE NOT RECOGNIZED')
+          CALL ERROR$STOP('TEST_BESSEL')
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     == DEFINE G-GRID                                                        ==
+!     ==========================================================================
+      DEXG=LOG(GMAX/G1)/REAL(NG-1,KIND=8)
+      CALL RADIAL$NEW('LOG',GIDG)
+      CALL RADIAL$SETR8(GIDG,'R1',G1)
+      CALL RADIAL$SETR8(GIDG,'DEX',DEXG)
+      CALL RADIAL$SETI4(GIDG,'NR',NG)
+PRINT*,'G1 ',G1,' XEXPG ',EXP(DEXG),' GX=',G1*EXP(DEXG*(NG-1))
+!
+!     ==========================================================================
+!     == CALL BESSELTRANSFORM                                                 ==
+!     ==========================================================================
+stop 'errorerrorerrorerrorerrorerror!'
+
+!      CALL RADIAL$BESSELTRANSFORM(L,GID,NR,FOFR,GIDG,NG,FOFG)
+!
+!      CALL RADIAL$BESSELTRANSFORM_OLD(L,GID,NR,FOFR,GIDG,NG,FOFG_OLD)
+!
+!     ==========================================================================
+!     == PRINT                                                               ==
+!     ==========================================================================
+      OPEN(NFIL,FILE='XXX.DAT')
+      CALL RADIAL$R(GIDG,NG,G)
+      DO I=1,NG
+        IF(TYPE.EQ.'EXPONENTIAL') THEN 
+          SVAR=2.D0/(1.D0+G(I)**2)**2
+        ELSE IF(TYPE.EQ.'GAUSSIAN') THEN 
+          SVAR=SQRT(PI)/4*EXP(-0.25D0*G(I)**2)
+        ELSE
+          CALL ERROR$MSG('TYPE NOT RECOGNIZED')
+          CALL ERROR$STOP('TEST_BESSEL')
+        END IF
+        SVAR=4.D0*PI/(2.D0*PI)**3*SVAR
+        WRITE(NFIL,*)G(I),FOFG(I),SVAR,SVAR-FOFG(I),FOFG_OLD(i)
+      ENDDO
+      CLOSE(NFIL)
+PRINT*,'DONE'
+STOP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL$BESSELTRANSFORM(L,GID,NR,FOFR,GIDG,NG,FOFG)
+!     **************************************************************************
+!     **  PERFORMS A BESSEL TRANSFORM                                         **
+!     **    F(R) = FOFR(|R|) * Y_LM(R)                                        **
+!     **    F(G) = 1/(2*PI)**3 * INT D^3R * F(R) * EXP(-I*G*R)                **
+!     **        = (-I)**L * FOFG(|G|) * Y_LM(G)                               **
+!     **    FOFG(|G|)=4*PI/(2*PI)**3 * INT DR R^2 * J_L(|G||R|) FOFR(|R|)     **
+!     **                                                                      **
+!     **  USES THE METHOD OF JAMES D. TALMAN                                  **
+!     **                     COMPUTER PHYSICS COMMUNICATION 30, P93-99 (1983) **
+!     **                   JOURNAL OF COMPUTATIONAL PHYSICS 29, P35-48 (1978) **
+!     **                                                                      **
+!     **  MULTIPLY WITH A FACTOR (2*PI)**2/V TO OBTAIN THE COEFFICIENTS       **
+!     **  OF THE PERIODICALLY REPEATED FUNCTION                               **
+!     **    F(G) = 1/V * INT_V D^3R EXP(-I*G*R) \SUM_T F(R-T)                 **
+!     **                                                                      **
+!     **  CURRENTLY SIEGMAN'S METHOD IS USED:                                 **
+!     **  IT TURNS OUT THAT SIEGMAN'S METHOD IS SUPERIOR.  TALMAN'S METHOD    **
+!     **  GIVES IDENTICAL RESULTS, WHEN THE GRID IS DOUBLED AS WELL, BUT      **
+!     **  ITS RESULTS ARE NOISY NEAR G=0.                                     **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: L
+      REAL(8)   ,INTENT(IN) :: FOFR(NR)
+      INTEGER(4),INTENT(IN) :: GIDG
+      INTEGER(4),INTENT(IN) :: NG
+      REAL(8)   ,INTENT(OUT):: FOFG(NG)
+      REAL(8)               :: G1
+      REAL(8)               :: R1
+      REAL(8)               :: DEX
+      REAL(8)               :: R(NR)
+      REAL(8)               :: FI(NG)
+      REAL(8)               :: FOFGS(NG)
+      REAL(8)               :: FOFGL(NG)
+      REAL(8)               :: FOFG_OLD(NG)
+      REAL(8)               :: XEXP,RI
+      INTEGER(4)            :: ISVAR,I
+      REAL(8)               :: PI
+      REAL(8)               :: DIFF
+      CHARACTER(16),parameter :: TYPE='SIEGMAN'
+!      CHARACTER(16),parameter :: TYPE='TALMAN'
+!      CHARACTER(16),parameter :: TYPE='TALMAN0'
+!      CHARACTER(16),parameter :: TYPE='TALMANL'
+!     **************************************************************************
+!      call RADIAL$BESSELTRANSFORM_OLD(L,GID,NR,Fofr,GIDg,NG,fofG_OLD)
+
+      PI=4.D0*ATAN(1.D0)
+! 
+!     ==========================================================================
+!     == ANALYZE G-GRID                                                       ==
+!     ==========================================================================
+      CALL RADIAL$GETR8(GIDG,'R1',G1)
+      CALL RADIAL$GETR8(GIDG,'DEX',DEX)
+      CALL RADIAL$GETI4(GIDG,'NR',ISVAR)
+      IF(ISVAR.NE.NG) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+        CALL ERROR$STOP('RADIAL_NEWBESSELTRANSFORM')
+      END IF
+! 
+!     ==================================================================
+!     == DEFINE R-GRID AND INTERPOLATE FOFR ONTO THIS SUPPORT GRID    ==
+!     ==================================================================
+      CALL RADIAL$R(GID,NR,R)
+      R1=R(NR)*EXP(-DEX*REAL(NG-1))
+      XEXP=EXP(DEX)
+      RI=R1/XEXP
+      DO I=1,NG
+        RI=RI*XEXP
+        CALL RADIAL$VALUE(GID,NR,FOFR,RI,FI(I))
+      ENDDO
+!
+!     ==================================================================
+!     == CALCULATE RESULTS ACCURATE AT SMALL K VALUES                 ==
+!     ==================================================================
+      fofgl=0.d0
+      fofgs=0.d0
+      IF(TYPE.EQ.'TALMAN') THEN
+        IF (L.GE.2) THEN
+          CALL RADIAL_BESSELTRANSF_CONVOLUTION(L,L,R1,G1,DEX,NG,FI,FOFGS)
+        ELSE
+          CALL RADIAL_BESSELTRANSF_SIEGMANN(L,R1,G1,DEX,NG,FI,FOFGS)
+        END IF
+        CALL RADIAL_BESSELTRANSF_CONVOLUTION(L,0,R1,G1,DEX,NG,FI,FOFGL)
+        CALL RADIAL_BESSELTRANSF_MATCH(NG,FOFGS,FOFGL,FOFG,DIFF)
+      ELSE IF(TYPE.EQ.'SIEGMAN') THEN
+        CALL RADIAL_BESSELTRANSF_SIEGMANN(L,R1,G1,DEX,NG,FI,FOFG)
+      ELSE IF(TYPE.EQ.'TALMAN0') THEN
+        CALL RADIAL_BESSELTRANSF_CONVOLUTION(L,0,R1,G1,DEX,NG,FI,FOFG)
+      ELSE IF(TYPE.EQ.'TALMANL') THEN
+        CALL RADIAL_BESSELTRANSF_CONVOLUTION(L,L,R1,G1,DEX,NG,FI,FOFG)
+      ELSE
+        CALL ERROR$MSG('TYPE NOT RECOGNIZED')
+        CALL ERROR$CHVAL('TYPE',TYPE)
+        CALL ERROR$STOP('RADIAL$NEWBESSELTRANSFORM')
+      END IF
+!!$CALL RADIAL_WRITEPHI('FOFGL.DAT',G1,DEX,NG,FOFGL)
+!!$CALL RADIAL_WRITEPHI('FOFGS.DAT',G1,DEX,NG,FOFGS)
+!!$CALL RADIAL_WRITEPHI('FOFG.DAT',G1,DEX,NG,FOFG)
+!
+!     =================================================================
+!     == APPLY FACTOR THAT DIFFERS TO TALMAN'S NOTATION              ==
+!     =================================================================
+!      FOFG(:)=4.D0*PI/(2.D0*PI)**3*FOFG(:)
+!!$if(maxval(abs(fofg-fofg_old)).gt.1.d-6*maxval(abs(fofg_old))) then
+!!$print*,'l ',l,r1,g1,dex,ng
+!!$print*,'ratio ', fofg_old(50)/fofg(50)
+!!$CALL RADIAL_WRITEPHI('FOFG.DAT',G1,DEX,NG,FOFG)
+!!$CALL RADIAL_WRITEPHI('FOFG_OLD.DAT',G1,DEX,NG,FOFG_OLD)
+!!$call error$stop('radial$besseltransform')
+!!$end if
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL_BESSELTRANSF_FILLHOLE(L,R1,G1,DEX,NP,FOFR,FOFG)
+!     **************************************************************************
+!     **  CORRECTION FOR THE INTEGRAL FROM ZERO TO THE FIRST GRID POINT.      **
+!     **  ASSUMES THE FORM FOFR(R) APPROX C*R^L                               **
+!     **  ASSUMES A FORM J_L(X)= 1/(2*L+1)!! * X^L                            **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: L
+      REAL(8)   ,INTENT(IN) :: R1
+      REAL(8)   ,INTENT(IN) :: G1
+      REAL(8)   ,INTENT(IN) :: DEX
+      INTEGER(4),INTENT(IN) :: NP
+      REAL(8)   ,INTENT(IN) :: FOFR(NP)
+      REAL(8)   ,INTENT(OUT):: FOFG(NP)
+      INTEGER(4)            :: I
+      REAL(8)               :: SVAR,XEXPL,GIL
+!     **************************************************************************
+      SVAR=FOFR(1)*R1**(L+3)
+      DO I=1,2*L+3,2
+        SVAR=SVAR/REAL(I,KIND=8)
+      ENDDO
+      XEXPL=EXP(DEX)**L
+      GIL=G1**L/XEXPL*SVAR
+      DO I=1,NP
+        GIL=GIL*XEXPL
+        FOFG(I)=GIL
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL_BESSELTRANSF_SIEGMANN(L,R1,G1,DEX,NP,FOFR,FOFG)
+!     **************************************************************************
+!     **  CONVOLUTION USING SIEGMAN'S METHOD USING TWO SUCCESSIVE FAST        **
+!     **  FOURIER TRANSFORMS                                                  **
+!     **                                                                      **
+!     **   F(G)= INT DR J_L(GR) * R^2 * F(R)                                  **
+!     **      USE G=EXP(K) AND R=EXP(X) AND OBTAIN                            **
+!     **   F(EXP(K))= INT DX J_L(EXP(K+X) * [EXP(3*X) * F(EXP(X))]            **
+!     **                                                                      **
+!     **   IS USED AS SMALL-G APPROXIMATION FOR L=0,1 IN THE BESSEL TRANSFORM **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: L
+      REAL(8)   ,INTENT(IN) :: R1
+      REAL(8)   ,INTENT(IN) :: G1
+      REAL(8)   ,INTENT(IN) :: DEX
+      INTEGER(4),INTENT(IN) :: NP
+      REAL(8)   ,INTENT(IN) :: FOFR(NP)
+      REAL(8)   ,INTENT(OUT):: FOFG(NP)
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      logical(4)            :: tcorr=.true.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      REAL(8)               :: B(NP)
+      REAL(8)               :: A(2*NP)
+      COMPLEX(8)            :: POFR(2*NP,2)
+      COMPLEX(8)            :: POFG(2*NP,2)
+      real(8)               :: fofg1(np)
+      REAL(8)               :: XEXP,RI
+      INTEGER(4)            :: I,J
+      REAL(8)               :: DEVX
+      REAL(8)               :: SVAR
+!     **************************************************************************
+      XEXP=EXP(DEX)
+      RI=R1/XEXP
+      DO I=1,NP
+        RI=RI*XEXP
+        B(I)=DEX*RI**3*FOFR(I)
+      ENDDO
+!     == THIS WOULD BE CONSISTENT WITH TRAPEZOIDAL RULE
+      B(1)=0.5D0*B(1)
+      B(NP)=0.5D0*B(NP)
+!
+      RI=G1*R1/XEXP
+      DO I=1,2*NP
+        RI=RI*XEXP
+        CALL SPECIALFUNCTION$BESSEL(L,RI,A(I))
+      ENDDO
+!
+!     ==========================================================================
+!     == CONVOLUTION BY TWO FAST FOURIER TRANSFORMS                           ==
+!     ==========================================================================
+      POFR(:NP,1)=CMPLX(B(:),0.D0)
+      POFR(NP+1:,1)=CMPLX(0.D0,0.D0)
+      POFR(:,2)=CMPLX(A(:),0.D0)
+      CALL LIB$FFTC8('GTOR',2*NP,2,POFR,POFG)                  
+      POFG(:,1)=POFG(:,2)*CONJG(POFG(:,1))
+      CALL LIB$FFTC8('RTOG',2*NP,1,POFG(:,1),POFR(:,1))                  
+      FOFG(:)=REAL(POFR(:NP,1))
+!
+!     ==========================================================================
+!     ==  add correction for the hole of the log. grid at the origin          ==
+!     ==========================================================================
+      if(tcorr) then
+        CALL RADIAL_BESSELTRANSF_FILLHOLE(L,R1,G1,DEX,NP,FOFR,FOFG1)
+        fofg(:)=fofg(:)+fofg1(:)
+      end if
+!
+!     ==========================================================================
+!     == TEST RESULT BY DIRECT CONVOLUTION ON THE GRID                        ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        DEVX=0.D0
+        DO I=1,NP
+          SVAR=0.D0
+          DO J=1,NP
+            SVAR=SVAR+A(I+J-1)*B(J)
+          ENDDO
+          DEVX=MAX(DEVX,ABS(SVAR-FOFG(I)))
+        ENDDO
+        IF(DEVX.GT.1.D-6) THEN
+          CALL ERROR$MSG('ACCURACY TEST FAILED')
+          CALL ERROR$R8VAL('MAX. ABSOLUTE DEVIATION',DEVX)
+          CALL ERROR$R8VAL('MAX. ABSOLUTE VALUE',MAXVAL(FOFG))
+          CALL ERROR$STOP('RADIAL_BESSELTRANSF_SIEGMANN')
+         END IF
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL_BESSELTRANSF_CONVOLUTION(L,M,R1,G1,DEX,NP,FOFR,FOFG)
+!     **************************************************************************
+!     **  TALMAN'S METHOD FOR THE LARGE-G APPROXIMATION (M=0) AND             **
+!     **  THE SMALL-G APPROXIMATION (M=L) FOR L>1                             **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
+      USE BESSELTRANSFORM_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: L
+      INTEGER(4),INTENT(IN) :: M
+      REAL(8)   ,INTENT(IN) :: R1
+      REAL(8)   ,INTENT(IN) :: G1
+      REAL(8)   ,INTENT(IN) :: DEX
+      INTEGER(4),INTENT(IN) :: NP
+      REAL(8)   ,INTENT(IN) :: FOFR(NP)
+      REAL(8)   ,INTENT(OUT):: FOFG(NP)
+      integer(4),parameter  :: nexpand=2
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      LOGICAL(4),PARAMETER  :: TCORR=.TRUE.
+      REAL(8)               :: PHI(NP)
+      COMPLEX(8)            :: POFR(NP*nexpand)
+      COMPLEX(8)            :: POFG(NP*nexpand)
+      REAL(8)               :: XEXP,RI
+      REAL(8)               :: T
+      REAL(8)               :: PI,TWOPI
+      INTEGER(4)            :: I
+      INTEGER(4)            :: NPH
+      INTEGER(4)            :: NP2
+      REAL(8)               :: SVAR
+      REAL(8)               :: DT
+      REAL(8)               :: RM ! REAL(M)
+      REAL(8)               :: logr1 ! log(r1)
+      COMPLEX(8)            :: CVAL,CSVAR1,CSVAR2
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      TWOPI=2.D0*PI
+      np2=nexpand*np
+      DT=TWOPI/(DEX*REAL(NP2,KIND=8))
+      NPH=NINT(0.5D0*REAL(NP2+2))
+      RM=REAL(M,KIND=8)
+      logr1=log(r1)
+!
+!     ==========================================================================
+!     ==  PHI(X)=DEX*R1^3 * EXP((3*DEX-GAMMA)X) * F(R1*EXP(DEX*X))            ==
+!     ==========================================================================
+      SVAR=1.5D0+RM
+      XEXP=EXP(SVAR*DEX)
+      RI=(R1**SVAR)/XEXP
+      DO I=1,NP
+        RI=RI*XEXP
+        PHI(I)=RI*FOFR(I)
+      ENDDO
+!
+!     == terminator for trapezoidal integration ================================
+      PHI(1)=0.5D0*PHI(1)
+      PHI(NP)=0.5D0*PHI(NP)
+!
+!     ==========================================================================
+!     == FOURIER TRANSFORM                                                    ==
+!     ==========================================================================
+      POFR(:np)=CMPLX(PHI(:),0.D0)
+      pofr(np+1:)=(0.d0,0.d0)
+!     == USE GTOR INSTEAD OF RTOG TO OBTAIN COMPLEX CONJUGATE OF PHI(T) ========
+      CALL LIB$FFTC8('GTOR',NP2,1,POFR,POFG)                  
+      SVAR=LOGR1*DT
+      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))
+      CSVAR1=CMPLX(DEX/TWOPI,0.D0)
+      DO I=1,NPH
+        IF(I.EQ.NPH) CSVAR1=REAL(CSVAR1)
+        POFG(I)=CSVAR1*POFG(I)
+        IF(I.NE.1.AND.I.NE.NPH) THEN
+          POFG(NP2+2-I)=POFG(NP2+2-I)*CONJG(CSVAR1) 
+        END IF
+        CSVAR1=CSVAR1*CSVAR2
+      ENDDO
+!
+!     ==========================================================================
+!     == CORRECTION FOR HOLE AT THE ORIGIN                                    ==
+!     ==========================================================================
+      IF(TCORR) THEN
+        SVAR=LOGR1*DT
+        CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))   !EXP(I*T*LOG[R1])
+        SVAR=FOFR(1)/TWOPI*R1**(1.5D0+RM)
+        CSVAR1=CMPLX(SVAR,0.D0)
+        SVAR=1.5D0+REAL(M+L,KIND=8)
+        DO I=1,NPH
+          T=DT*REAL(I-1,KIND=8)
+          CVAL=CSVAR1/CMPLX(SVAR,T)
+          IF(I.EQ.NPH) CVAL=REAL(CVAL)
+          POFG(I)=POFG(I)+CVAL
+          IF(I.NE.1.AND.I.NE.NPH) THEN
+            POFG(NP2+2-I)=POFG(NP2+2-I)+CONJG(CVAL) 
+          END IF
+          CSVAR1=CSVAR1*CSVAR2
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     == MULTIPLICATION WITH M_{L,M}(T)                                       ==
+!     ==========================================================================
+print*,'nph*dt ',nph*dt,nph,dt
+      DO I=1,NPH
+        T=DT*REAL(I-1,KIND=8)
+        CALL RADIAL_BESSELTRANSF_M(L,M,T,CVAL)
+        IF(I.EQ.NPH) CVAL=0.d0
+        POFG(I)=CVAL*POFG(I)  
+        IF(I.NE.1.AND.I.NE.NPH) THEN
+          POFG(NP2+2-I)=POFG(NP2+2-I)*CONJG(CVAL)
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     == FOURIER BACK-TRANSFORM                                               ==
+!     ==========================================================================
+      SVAR=LOG(G1)*DT
+      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))
+      CSVAR1=(1.D0,0.D0)*DT
+      DO I=1,NPH
+        IF(I.EQ.NPH) CSVAR1=REAL(CSVAR1)
+        POFG(I)=CSVAR1*POFG(I)
+        IF(I.NE.1.AND.I.NE.NPH) THEN
+          POFG(NP2+2-I)=POFG(NP2+2-I)*CONJG(CSVAR1) 
+        END IF
+        CSVAR1=CSVAR1*CSVAR2
+      ENDDO
+      CALL LIB$FFTC8('GTOR',NP2,1,POFG,POFR) 
+!
+!     ==========================================================================
+!     == MULTIPLICATION WITH G**(-3/2-M)                                      ==
+!     ==========================================================================
+      SVAR=-(1.5D0-REAL(M,KIND=8))
+      XEXP=EXP(SVAR*DEX)
+      RI=TWOPI*(G1**SVAR)/XEXP
+      DO I=1,NP
+        RI=RI*XEXP
+        FOFG(I)=RI*REAL(POFR(I))
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL_BESSELTRANSF_M(L,M,T,RES)
+!     **************************************************************************
+!     **  EQ. 17 OF J.D. TALMAN,  J. COMP. PHYS. 29, P35-48 (1978)            **
+!     **  (EQUIVALENT TO EQ.8 OF J.D.TALMAN, COMP.PHYS.COMM.30, P93 (1983))   **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: L
+      INTEGER(4),INTENT(IN) :: M
+      REAL(8)   ,INTENT(IN) :: T
+      COMPLEX(8),INTENT(OUT):: RES
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      INTEGER   ,PARAMETER  :: NX=10
+      REAL(8)               :: PI
+      INTEGER(4)            :: P 
+      REAL(8)               :: COSPPIHALF,SINPPIHALF
+      COMPLEX(8)            :: Z
+      REAL(8)               :: PHI1,PHI2
+      COMPLEX(8)            :: EIPHIDIFF,EIPHISUM
+      REAL(8)               :: R,PHI
+      LOGICAL               :: TTEST=.FALSE.
+      REAL(8)               :: SVAR
+      COMPLEX(8)            :: CSVAR
+      INTEGER(4)            :: I,J
+      INTEGER(4),PARAMETER  :: NP=1000
+      REAL(8)   ,PARAMETER  :: XMIN=-1.D+1
+      REAL(8)   ,PARAMETER  :: XMAX=4.D+1
+      REAL(8)   ,PARAMETER  :: DX=(XMAX-XMIN)/REAL(NP-1,8)
+      REAL(8)               :: X
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      P=L-M
+      IF(P.LT.0) THEN
+        CALL ERROR$MSG('ILLEGAL VALUE')
+        CALL ERROR$STOP('RADIAL_BESSELTRANSF_M')
+      END IF
+!
+!     == CALCULATE PHI1: EQ.9 IN TALMAN78_JCOMPPHYS29_35 ===================
+      R=SQRT(0.25D0*REAL(2*NX+1,KIND=8)**2+T**2) 
+      PHI=ATAN(2.D0*T/REAL(2*NX+1,KIND=8))
+      PHI1=0.D0
+      DO J=1,NX 
+        PHI1=PHI1+ATAN(2.D0*T/REAL(2*J-1,KIND=8))
+      ENDDO
+      PHI1=PHI1-T*LOG(R)+T-PHI*REAL(NX,KIND=8) &
+     &     +SIN(PHI)/(12.D0*R) &
+     &     -SIN(3.D0*PHI)/(360.D0*R**3) &
+     &     +SIN(5.D0*PHI)/(1260.D0*R**5) &
+     &     -SIN(7.D0*PHI)/(1680.D0*R**7) &  
+     &     +SIN(9.D0*PHI)/(1188.D0*R**9)  & 
+     &     -691.D0*SIN(11.D0*PHI)/(360360.D0*R**11)  & 
+     &     +13.D0*SIN(13.D0*PHI)/(156.D0*R**13)  & 
+     &     -3617.D0*SIN(15.D0*PHI)/(122400.D0*R**15)   
+!
+!     == CALCULATE PHI2 =====================================================
+      SVAR=EXP(-PI*T)
+      SVAR=(1.D0-SVAR)/(1.D0+SVAR)
+      PHI2=ATAN(SVAR)
+!
+!     ==
+      EIPHIDIFF=EXP(CI*(PHI1-PHI2))
+      EIPHISUM =EXP(CI*(PHI1+PHI2))
+      SVAR=0.5D0*PI*REAL(P,KIND=8)
+      COSPPIHALF=COS(SVAR)
+      SINPPIHALF=SIN(SVAR)
+      Z=COSPPIHALF*EIPHIDIFF+SINPPIHALF*EIPHISUM
+      DO J=1,P
+        SVAR=0.5D0*REAL(2*J-1,KIND=8)
+        Z=Z*CMPLX(SVAR,-T)
+      ENDDO
+      DO J=1,L
+        SVAR=0.5D0*REAL(4*J-2*L+2*M-1,KIND=8)
+        Z=Z/CMPLX(SVAR,T)
+      ENDDO
+      RES=Z/SQRT(8.D0*PI)
+!
+!     ==========================================================================
+!     ==  PERFORM NUMERIC INTEGRATION TO COMPARE THE RESULT                   ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        OPEN(100,FILE='MTEST.DAT')
+        CSVAR=(0.D0,0.D0)
+        DO I=1,NP
+          X=XMIN+DX*REAL(I-1)
+          IF((1.5D0-REAL(M,KIND=8))*X.GT.50) EXIT
+          CALL SPECIALFUNCTION$BESSEL(L,EXP(X),SVAR)
+          SVAR=SVAR*EXP((1.5D0-REAL(M,KIND=8))*X)
+          CSVAR=CSVAR+DX*SVAR*EXP(-CI*T*X)
+          WRITE(100,*)X,REAL(SVAR*EXP(-CI*T*X),8),AIMAG(SVAR*EXP(-CI*T*X))
+        ENDDO
+        CSVAR=CSVAR/(2.D0*PI)
+        CLOSE(100)
+        PRINT*,L,M,T,'NUMERIC M:',CSVAR,' ANALYTIC  M:',RES
+        STOP
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL_BESSELTRANSF_MATCH(NP,FOFGS,FOFGL,FOFG,DIFF)
+!     **************************************************************************
+!     **  CONSTRUCTS THE SOLUTION FOFG FROM AN APPROXIMATION FOFGS FOR SMALL  **
+!     **  VALUES AND AN APPROXIMATION FOFGL FOR LARGE VALUES.                 **
+!     **  MATCHING TAKES PLACE WHERE THE DEVIATION OF TWO SUCCESSIVE POINTS   **
+!     **  HAS THE SMALLES VALUE.                                              **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NP
+      REAL(8)   ,INTENT(IN)    :: FOFGS(NP)
+      REAL(8)   ,INTENT(IN)    :: FOFGL(NP)
+      REAL(8)   ,INTENT(OUT)   :: FOFG(NP)
+      REAL(8)   ,INTENT(OUT)   :: DIFF
+      INTEGER(4)               :: I,IMATCH
+      REAL(8)                  :: D,DLAST
+!     **************************************************************************
+      DIFF=1.D+10
+      DLAST=ABS(FOFGS(1)-FOFGL(1))
+      DO I=2,NP
+        D=ABS(FOFGS(I)-FOFGL(I))
+        IF(D+DLAST.LT.DIFF) THEN
+          DIFF=D+DLAST
+          IMATCH=I
+        END IF
+        DLAST=D
+      ENDDO
+      FOFG(:IMATCH)=FOFGS(:IMATCH)
+      FOFG(IMATCH:)=FOFGL(IMATCH:)
+      RETURN
+      END
+!
+!*******************************************************************************
+!*******************************************************************************
+!*******************************************************************************
+!*******************************************************************************
+!********************************garbadge  *************************************
+!*******************************************************************************
+!*******************************************************************************
+!*******************************************************************************
+!*******************************************************************************
+!*******************************************************************************
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL_WRITEPHI(FILE,R1,DEX,NR,PHI)
+!     **                                                                      **
+!     **                                                                      **
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: FILE
+      REAL(8)     ,INTENT(IN) :: R1
+      REAL(8)     ,INTENT(IN) :: DEX
+      INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
+      REAL(8)     ,INTENT(IN) :: PHI(NR)
+      INTEGER(4)              :: IR
+      REAL(8)                 :: RI,XEXP
+!     **************************************************************************
+      OPEN(100,FILE=FILE)
+      XEXP=EXP(DEX)
+      RI=R1/XEXP
+      DO IR=1,NR
+        RI=RI*XEXP
+        WRITE(100,FMT='(F30.10,2X,20(E25.10,2X))')RI,PHI(IR)
+      ENDDO
+      CLOSE(100)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL_WRITEARR(FILE,NR,PHI)
+!     **                                                                      **
+!     **                                                                      **
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: FILE
+      INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
+      REAL(8)     ,INTENT(IN) :: PHI(NR)
+      INTEGER(4)              :: IR
+!     **************************************************************************
+      OPEN(100,FILE=FILE)
+      DO IR=1,NR
+        WRITE(100,FMT='(I10,2X,20(E25.10,2X))')IR,PHI(IR)
+      ENDDO
+      CLOSE(100)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL_BESSELTRANSF_PLOTM()
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8)   ,PARAMETER :: TMAX=100.D0
+      INTEGER(4),PARAMETER :: N=1000
+      INTEGER(4),PARAMETER :: LX=3
+      INTEGER(4),PARAMETER :: NFIL1=11
+      INTEGER(4),PARAMETER :: NFIL2=10
+      INTEGER(4),PARAMETER :: NFIL3=12
+      INTEGER(4),PARAMETER :: NFIL4=14
+      COMPLEX(8)           :: M(2,LX+1)
+      REAL(8)              :: T
+      INTEGER(4)           :: I,L
+      REAL(8)              :: PI
+      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      OPEN(NFIL1,FILE='MLM_0R.DAT')
+      OPEN(NFIL2,FILE='MLM_0I.DAT')
+      OPEN(NFIL3,FILE='MLM_LR.DAT')
+      OPEN(NFIL4,FILE='MLM_LI.DAT')
+      DO I=1,N
+        T=TMAX/REAL(N-1,KIND=8)*REAL(I-1)
+        DO L=0,LX
+          CALL RADIAL_BESSELTRANSF_M(L,0,T,M(1,L+1))
+          CALL RADIAL_BESSELTRANSF_M(L,L,T,M(2,L+1))
+        ENDDO
+        WRITE(NFIL1,*)T,REAL(M(1,:))
+        WRITE(NFIL2,*)T,AIMAG(M(1,:))
+        WRITE(NFIL3,*)T,REAL(M(2,:))
+        WRITE(NFIL4,*)T,AIMAG(M(2,:))
+      ENDDO
+      CLOSE(NFIL1)
+      CLOSE(NFIL2)
+      CLOSE(NFIL3)
+      CLOSE(NFIL4)
+       RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL_MYNLOGN(N,F,G)
+!     **                                                                      **
+!     **                                                                      **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      COMPLEX(8),INTENT(IN) :: F(N)
+      COMPLEX(8),INTENT(OUT):: G(N)
+      COMPLEX(8)            :: EI(N)
+      COMPLEX(8)            :: FEI(N)
+      REAL(8)               :: PI
+      REAL(8)               :: DG
+      COMPLEX(8)            :: CSVAR1,CSVAR2
+      INTEGER(4)            :: I
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      DG=2.D0*PI/REAL(N,KIND=8)
+      CSVAR1=1.D0
+      CSVAR2=CMPLX(COS(DG),SIN(DG))
+      DO I=1,N
+        EI(I)=CSVAR1
+        CSVAR1=CSVAR1*CSVAR2
+      ENDDO
+      FEI(:)=F(:)
+      DO I=1,N
+        G(I)=SUM(FEI)
+        FEI(:)=FEI(:)*EI(:)
+      ENDDO
+      RETURN
+      END
+!
 !.......................................................................
 MODULE BESSELTRANSFORM_MODULE
 !***********************************************************************
@@ -3382,845 +4108,5 @@ CALL RADIAL_WRITEPHI('GSMALL.DAT',G1,DEX,NP,G)
 CALL RADIAL_WRITEPHI('GLARGE.DAT',G1,DEX,NP,GLARGE)
       CALL MATCH(NP,G,GLARGE,DISC)
 CALL RADIAL_WRITEPHI('GMATCHED.DAT',G1,DEX,NP,G)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE TEST_BESSEL()
-      IMPLICIT NONE
-      INTEGER(4)           :: L=0
-      INTEGER(4)           :: GID
-      INTEGER(4),PARAMETER :: NR=250
-      REAL(8)              :: R1=1.056D-4
-      REAL(8)              :: DEX=0.05D0       
-      REAL(8)              :: R(NR)
-      INTEGER(4)           :: GIDG
-      INTEGER(4),PARAMETER :: NG=512
-      REAL(8)              :: GMAX=20.D0
-      REAL(8)              :: DEXG
-      REAL(8)              :: G1=1.D-3 !small G1 -> small oscillations
-      REAL(8)              :: FOFR(NR)
-      REAL(8)              :: FOFG(NG)
-      REAL(8)              :: FOFG_OLD(NG)
-      REAL(8)              :: G(NG)
-      REAL(8)              :: SVAR
-      REAL(8)              :: PI
-      INTEGER(4)           :: I
-      INTEGER(4)           :: NFIL=20
-!      CHARACTER(16),PARAMETER :: TYPE='EXPONENTIAL'
-      CHARACTER(16),PARAMETER :: TYPE='GAUSSIAN'
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-!      CALL RADIAL_BESSELTRANSF_PLOTM()
-!
-!     ==========================================================================
-!     == DEFINE R-GRID AND TEST FUNCTION                                      ==
-!     ==========================================================================
-      CALL RADIAL$NEW('SHLOG',GID)
-      CALL RADIAL$SETR8(GID,'R1',R1)
-      CALL RADIAL$SETR8(GID,'DEX',DEX)
-      CALL RADIAL$SETI4(GID,'NR',NR)
-      CALL RADIAL$R(GID,NR,R)
-      DO I=1,NR
-        IF(TYPE.EQ.'EXPONENTIAL') THEN 
-          FOFR(I)=EXP(-R(I))
-        ELSE IF(TYPE.EQ.'GAUSSIAN') THEN 
-          FOFR(I)=EXP(-R(I)**2)
-        ELSE
-          CALL ERROR$MSG('TYPE NOT RECOGNIZED')
-          CALL ERROR$STOP('TEST_BESSEL')
-        END IF
-      ENDDO
-!
-!     ==========================================================================
-!     == DEFINE G-GRID                                                        ==
-!     ==========================================================================
-      DEXG=LOG(GMAX/G1)/REAL(NG-1,KIND=8)
-      CALL RADIAL$NEW('LOG',GIDG)
-      CALL RADIAL$SETR8(GIDG,'R1',G1)
-      CALL RADIAL$SETR8(GIDG,'DEX',DEXG)
-      CALL RADIAL$SETI4(GIDG,'NR',NG)
-PRINT*,'G1 ',G1,' XEXPG ',EXP(DEXG),' GX=',G1*EXP(DEXG*(NG-1))
-!
-!     ==========================================================================
-!     == CALL BESSELTRANSFORM                                                 ==
-!     ==========================================================================
-      CALL RADIAL$BESSELTRANSFORM(L,GID,NR,FOFR,GIDG,NG,FOFG)
-!
-      CALL RADIAL$BESSELTRANSFORM_OLD(L,GID,NR,FOFR,GIDG,NG,FOFG_OLD)
-!
-!     ==========================================================================
-!     == PRINT                                                               ==
-!     ==========================================================================
-      OPEN(NFIL,FILE='XXX.DAT')
-      CALL RADIAL$R(GIDG,NG,G)
-      DO I=1,NG
-        IF(TYPE.EQ.'EXPONENTIAL') THEN 
-          SVAR=2.D0/(1.D0+G(I)**2)**2
-        ELSE IF(TYPE.EQ.'GAUSSIAN') THEN 
-          SVAR=SQRT(PI)/4*EXP(-0.25D0*G(I)**2)
-        ELSE
-          CALL ERROR$MSG('TYPE NOT RECOGNIZED')
-          CALL ERROR$STOP('TEST_BESSEL')
-        END IF
-        SVAR=4.D0*PI/(2.D0*PI)**3*SVAR
-        WRITE(NFIL,*)G(I),FOFG(I),SVAR,SVAR-FOFG(I),FOFG_OLD(i)
-      ENDDO
-      CLOSE(NFIL)
-PRINT*,'DONE'
-STOP
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL$BESSELTRANSFORM(L,GID,NR,FOFR,GIDG,NG,FOFG)
-!     **************************************************************************
-!     **  PERFORMS A BESSEL TRANSFORM                                         **
-!     **    F(R) = FOFR(|R|) * Y_LM(R)                                        **
-!     **    F(G) = 1/(2*PI)**3 * INT D^3R * F(R) * EXP(-I*G*R)                **
-!     **        = (-I)**L * FOFG(|G|) * Y_LM(G)                               **
-!     **    FOFG(|G|)=4*PI/(2*PI)**3 * INT DR R^2 * J_L(|G||R|) FOFR(|R|)     **
-!     **                                                                      **
-!     **  USES THE METHOD OF JAMES D. TALMAN                                  **
-!     **                     COMPUTER PHYSICS COMMUNICATION 30, P93-99 (1983) **
-!     **                   JOURNAL OF COMPUTATIONAL PHYSICS 29, P35-48 (1978) **
-!     **                                                                      **
-!     **  MULTIPLY WITH A FACTOR (2*PI)**2/V TO OBTAIN THE COEFFICIENTS       **
-!     **  OF THE PERIODICALLY REPEATED FUNCTION                               **
-!     **    F(G) = 1/V * INT_V D^3R EXP(-I*G*R) \SUM_T F(R-T)                 **
-!     **                                                                      **
-!     **  CURRENTLY SIEGMAN'S METHOD IS USED:                                 **
-!     **  IT TURNS OUT THAT SIEGMAN'S METHOD IS SUPERIOR.  TALMAN'S METHOD    **
-!     **  GIVES IDENTICAL RESULTS, WHEN THE GRID IS DOUBLED AS WELL, BUT      **
-!     **  ITS RESULTS ARE NOISY NEAR G=0.                                     **
-!     **                                                                      **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      INTEGER(4),INTENT(IN) :: L
-      REAL(8)   ,INTENT(IN) :: FOFR(NR)
-      INTEGER(4),INTENT(IN) :: GIDG
-      INTEGER(4),INTENT(IN) :: NG
-      REAL(8)   ,INTENT(OUT):: FOFG(NG)
-      REAL(8)               :: G1
-      REAL(8)               :: R1
-      REAL(8)               :: DEX
-      REAL(8)               :: R(NR)
-      REAL(8)               :: FI(NG)
-      REAL(8)               :: GI(NG),DISC
-      REAL(8)               :: FOFGS(NG)
-      REAL(8)               :: FOFGL(NG)
-      REAL(8)               :: XEXP,RI
-      INTEGER(4)            :: ISVAR,I
-      REAL(8)               :: PI
-      REAL(8)               :: DIFF
-      CHARACTER(16),parameter :: TYPE='SIEGMAN'
-!      CHARACTER(16),parameter :: TYPE='TALMAN'
-!      CHARACTER(16),parameter :: TYPE='TALMAN0'
-!      CHARACTER(16),parameter :: TYPE='TALMANL'
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-! 
-!     ==========================================================================
-!     == ANALYZE G-GRID                                                       ==
-!     ==========================================================================
-      CALL RADIAL$GETR8(GIDG,'R1',G1)
-      CALL RADIAL$GETR8(GIDG,'DEX',DEX)
-      CALL RADIAL$GETI4(GIDG,'NR',ISVAR)
-      IF(ISVAR.NE.NG) THEN
-        CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-        CALL ERROR$STOP('RADIAL_NEWBESSELTRANSFORM')
-      END IF
-! 
-!     ==================================================================
-!     == DEFINE R-GRID AND INTERPOLATE FOFR ONTO THIS SUPPORT GRID    ==
-!     ==================================================================
-      CALL RADIAL$R(GID,NR,R)
-      R1=R(NR)*EXP(-DEX*REAL(NG-1))
-      XEXP=EXP(DEX)
-      RI=R1/XEXP
-      DO I=1,NG
-        RI=RI*XEXP
-        CALL RADIAL$VALUE(GID,NR,FOFR,RI,FI(I))
-      ENDDO
-!
-!     ==================================================================
-!     == CALCULATE RESULTS ACCURATE AT SMALL K VALUES                 ==
-!     ==================================================================
-      fofgl=0.d0
-      fofgs=0.d0
-      IF(TYPE.EQ.'TALMAN') THEN
-        IF (L.GE.2) THEN
-          CALL RADIAL_BESSELTRANSF_CONVOLUTION(L,L,R1,G1,DEX,NG,FI,FOFGS)
-        ELSE
-          CALL RADIAL_BESSELTRANSF_SIEGMANN(L,R1,G1,DEX,NG,FI,FOFGS)
-        END IF
-        CALL RADIAL_BESSELTRANSF_CONVOLUTION(L,0,R1,G1,DEX,NG,FI,FOFGL)
-        CALL RADIAL_BESSELTRANSF_MATCH(NG,FOFGS,FOFGL,FOFG,DIFF)
-      ELSE IF(TYPE.EQ.'SIEGMAN') THEN
-        CALL RADIAL_BESSELTRANSF_SIEGMANN(L,R1,G1,DEX,NG,FI,FOFG)
-      ELSE IF(TYPE.EQ.'TALMAN0') THEN
-        CALL RADIAL_BESSELTRANSF_CONVOLUTION(L,0,R1,G1,DEX,NG,FI,FOFG)
-      ELSE IF(TYPE.EQ.'TALMANL') THEN
-        CALL RADIAL_BESSELTRANSF_CONVOLUTION(L,L,R1,G1,DEX,NG,FI,FOFG)
-      ELSE
-        CALL ERROR$MSG('TYPE NOT RECOGNIZED')
-        CALL ERROR$CHVAL('TYPE',TYPE)
-        CALL ERROR$STOP('RADIAL$NEWBESSELTRANSFORM')
-      END IF
-CALL RADIAL_WRITEPHI('FOFGL.DAT',G1,DEX,NG,FOFGL)
-CALL RADIAL_WRITEPHI('FOFGS.DAT',G1,DEX,NG,FOFGS)
-CALL RADIAL_WRITEPHI('FOFG.DAT',G1,DEX,NG,FOFG)
-!
-!     =================================================================
-!     == APPLY FACTOR THAT DIFFERS TO TALMAN'S NOTATION              ==
-!     =================================================================
-      FOFG(:)=4.D0*PI/(2.D0*PI)**3*FOFG(:)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_BESSELTRANSF_FILLHOLE(L,R1,G1,DEX,NP,FOFR,FOFG)
-!     **************************************************************************
-!     **  CORRECTION FOR THE INTEGRAL FROM ZERO TO THE FIRST GRID POINT.      **
-!     **  ASSUMES THE FORM FOFR(R) APPROX C*R^L                               **
-!     **  ASSUMES A FORM J_L(X)= 1/(2*L+1)!! * X^L                            **
-!     **                                                                      **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: L
-      REAL(8)   ,INTENT(IN) :: R1
-      REAL(8)   ,INTENT(IN) :: G1
-      REAL(8)   ,INTENT(IN) :: DEX
-      INTEGER(4),INTENT(IN) :: NP
-      REAL(8)   ,INTENT(IN) :: FOFR(NP)
-      REAL(8)   ,INTENT(OUT):: FOFG(NP)
-      INTEGER(4)            :: I
-      REAL(8)               :: SVAR,XEXPL,GIL
-!     **************************************************************************
-      SVAR=FOFR(1)*R1**(L+3)
-      DO I=1,2*L+3,2
-        SVAR=SVAR/REAL(I,KIND=8)
-      ENDDO
-      XEXPL=EXP(DEX)**L
-      GIL=G1**L/XEXPL*SVAR
-      DO I=1,NP
-        GIL=GIL*XEXPL
-        FOFG(I)=GIL
-      ENDDO
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_BESSELTRANSF_SIEGMANN(L,R1,G1,DEX,NP,FOFR,FOFG)
-!     **************************************************************************
-!     **  CONVOLUTION USING SIEGMAN'S METHOD USING TWO SUCCESSIVE FAST        **
-!     **  FOURIER TRANSFORMS                                                  **
-!     **                                                                      **
-!     **   F(G)= INT DR J_L(GR) * R^2 * F(R)                                  **
-!     **      USE G=EXP(K) AND R=EXP(X) AND OBTAIN                            **
-!     **   F(EXP(K))= INT DX J_L(EXP(K+X) * [EXP(3*X) * F(EXP(X))]            **
-!     **                                                                      **
-!     **   IS USED AS SMALL-G APPROXIMATION FOR L=0,1 IN THE BESSEL TRANSFORM **
-!     **                                                                      **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: L
-      REAL(8)   ,INTENT(IN) :: R1
-      REAL(8)   ,INTENT(IN) :: G1
-      REAL(8)   ,INTENT(IN) :: DEX
-      INTEGER(4),INTENT(IN) :: NP
-      REAL(8)   ,INTENT(IN) :: FOFR(NP)
-      REAL(8)   ,INTENT(OUT):: FOFG(NP)
-      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      logical(4)            :: tcorr=.true.
-      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-      REAL(8)               :: B(NP)
-      REAL(8)               :: A(2*NP)
-      COMPLEX(8)            :: POFR(2*NP,2)
-      COMPLEX(8)            :: POFG(2*NP,2)
-      real(8)               :: fofg1(np)
-      REAL(8)               :: XEXP,RI
-      INTEGER(4)            :: I,J
-      REAL(8)               :: DEVX
-      REAL(8)               :: SVAR
-!     **************************************************************************
-      XEXP=EXP(DEX)
-      RI=R1/XEXP
-      DO I=1,NP
-        RI=RI*XEXP
-        B(I)=DEX*RI**3*FOFR(I)
-      ENDDO
-!     == THIS WOULD BE CONSISTENT WITH TRAPEZOIDAL RULE
-      B(1)=0.5D0*B(1)
-      B(NP)=0.5D0*B(NP)
-!
-      RI=G1*R1/XEXP
-      DO I=1,2*NP
-        RI=RI*XEXP
-        CALL SPECIALFUNCTION$BESSEL(L,RI,A(I))
-      ENDDO
-!
-!     ==========================================================================
-!     == CONVOLUTION BY TWO FAST FOURIER TRANSFORMS                           ==
-!     ==========================================================================
-      POFR(:NP,1)=CMPLX(B(:),0.D0)
-      POFR(NP+1:,1)=CMPLX(0.D0,0.D0)
-      POFR(:,2)=CMPLX(A(:),0.D0)
-      CALL LIB$FFTC8('GTOR',2*NP,2,POFR,POFG)                  
-      POFG(:,1)=POFG(:,2)*CONJG(POFG(:,1))
-      CALL LIB$FFTC8('RTOG',2*NP,1,POFG(:,1),POFR(:,1))                  
-      FOFG(:)=REAL(POFR(:NP,1))
-!
-!     ==========================================================================
-!     ==  add correction for the hole of the log. grid at the origin          ==
-!     ==========================================================================
-      if(tcorr) then
-        CALL RADIAL_BESSELTRANSF_FILLHOLE(L,R1,G1,DEX,NP,FOFR,FOFG1)
-        fofg(:)=fofg(:)+fofg1(:)
-      end if
-!
-!     ==========================================================================
-!     == TEST RESULT BY DIRECT CONVOLUTION ON THE GRID                        ==
-!     ==========================================================================
-      IF(TTEST) THEN
-        DEVX=0.D0
-        DO I=1,NP
-          SVAR=0.D0
-          DO J=1,NP
-            SVAR=SVAR+A(I+J-1)*B(J)
-          ENDDO
-          DEVX=MAX(DEVX,ABS(SVAR-FOFG(I)))
-        ENDDO
-        IF(DEVX.GT.1.D-6) THEN
-          CALL ERROR$MSG('ACCURACY TEST FAILED')
-          CALL ERROR$R8VAL('MAX. ABSOLUTE DEVIATION',DEVX)
-          CALL ERROR$R8VAL('MAX. ABSOLUTE VALUE',MAXVAL(FOFG))
-          CALL ERROR$STOP('RADIAL_BESSELTRANSF_SIEGMANN')
-         END IF
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_BESSELTRANSF_CONVOLUTION(L,M,R1,G1,DEX,NP,FOFR,FOFG)
-!     **************************************************************************
-!     **  TALMAN'S METHOD FOR THE LARGE-G APPROXIMATION (M=0) AND             **
-!     **  THE SMALL-G APPROXIMATION (M=L) FOR L>1                             **
-!     **                                                                      **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
-      USE BESSELTRANSFORM_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: L
-      INTEGER(4),INTENT(IN) :: M
-      REAL(8)   ,INTENT(IN) :: R1
-      REAL(8)   ,INTENT(IN) :: G1
-      REAL(8)   ,INTENT(IN) :: DEX
-      INTEGER(4),INTENT(IN) :: NP
-      REAL(8)   ,INTENT(IN) :: FOFR(NP)
-      REAL(8)   ,INTENT(OUT):: FOFG(NP)
-      integer(4),parameter  :: nexpand=2
-      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      LOGICAL(4),PARAMETER  :: TCORR=.TRUE.
-      REAL(8)               :: PHI(NP)
-      COMPLEX(8)            :: POFR(NP*nexpand)
-      COMPLEX(8)            :: POFG(NP*nexpand)
-      REAL(8)               :: XEXP,RI
-      REAL(8)               :: T
-      REAL(8)               :: PI,TWOPI
-      INTEGER(4)            :: I
-      INTEGER(4)            :: NPH
-      INTEGER(4)            :: NP2
-      REAL(8)               :: SVAR
-      REAL(8)               :: DT
-      REAL(8)               :: RM ! REAL(M)
-      REAL(8)               :: logr1 ! log(r1)
-      COMPLEX(8)            :: CVAL,CSVAR1,CSVAR2
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      TWOPI=2.D0*PI
-      np2=nexpand*np
-      DT=TWOPI/(DEX*REAL(NP2,KIND=8))
-      NPH=NINT(0.5D0*REAL(NP2+2))
-      RM=REAL(M,KIND=8)
-      logr1=log(r1)
-!
-!     ==========================================================================
-!     ==  PHI(X)=DEX*R1^3 * EXP((3*DEX-GAMMA)X) * F(R1*EXP(DEX*X))            ==
-!     ==========================================================================
-      SVAR=1.5D0+RM
-      XEXP=EXP(SVAR*DEX)
-      RI=(R1**SVAR)/XEXP
-      DO I=1,NP
-        RI=RI*XEXP
-        PHI(I)=RI*FOFR(I)
-      ENDDO
-!
-!     == terminator for trapezoidal integration ================================
-      PHI(1)=0.5D0*PHI(1)
-      PHI(NP)=0.5D0*PHI(NP)
-!
-!     ==========================================================================
-!     == FOURIER TRANSFORM                                                    ==
-!     ==========================================================================
-      POFR(:np)=CMPLX(PHI(:),0.D0)
-      pofr(np+1:)=(0.d0,0.d0)
-!     == USE GTOR INSTEAD OF RTOG TO OBTAIN COMPLEX CONJUGATE OF PHI(T) ========
-      CALL LIB$FFTC8('GTOR',NP2,1,POFR,POFG)                  
-      SVAR=LOGR1*DT
-      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))
-      CSVAR1=CMPLX(DEX/TWOPI,0.D0)
-      DO I=1,NPH
-        IF(I.EQ.NPH) CSVAR1=REAL(CSVAR1)
-        POFG(I)=CSVAR1*POFG(I)
-        IF(I.NE.1.AND.I.NE.NPH) THEN
-          POFG(NP2+2-I)=POFG(NP2+2-I)*CONJG(CSVAR1) 
-        END IF
-        CSVAR1=CSVAR1*CSVAR2
-      ENDDO
-!
-!     ==========================================================================
-!     == CORRECTION FOR HOLE AT THE ORIGIN                                    ==
-!     ==========================================================================
-      IF(TCORR) THEN
-        SVAR=LOGR1*DT
-        CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))   !EXP(I*T*LOG[R1])
-        SVAR=FOFR(1)/TWOPI*R1**(1.5D0+RM)
-        CSVAR1=CMPLX(SVAR,0.D0)
-        SVAR=1.5D0+REAL(M+L,KIND=8)
-        DO I=1,NPH
-          T=DT*REAL(I-1,KIND=8)
-          CVAL=CSVAR1/CMPLX(SVAR,T)
-          IF(I.EQ.NPH) CVAL=REAL(CVAL)
-          POFG(I)=POFG(I)+CVAL
-          IF(I.NE.1.AND.I.NE.NPH) THEN
-            POFG(NP2+2-I)=POFG(NP2+2-I)+CONJG(CVAL) 
-          END IF
-          CSVAR1=CSVAR1*CSVAR2
-        ENDDO
-      END IF
-!
-!     ==========================================================================
-!     == MULTIPLICATION WITH M_{L,M}(T)                                       ==
-!     ==========================================================================
-print*,'nph*dt ',nph*dt,nph,dt
-      DO I=1,NPH
-        T=DT*REAL(I-1,KIND=8)
-        CALL RADIAL_BESSELTRANSF_M(L,M,T,CVAL)
-        IF(I.EQ.NPH) CVAL=0.d0
-        POFG(I)=CVAL*POFG(I)  
-        IF(I.NE.1.AND.I.NE.NPH) THEN
-          POFG(NP2+2-I)=POFG(NP2+2-I)*CONJG(CVAL)
-        END IF
-      ENDDO
-!
-!     ==========================================================================
-!     == FOURIER BACK-TRANSFORM                                               ==
-!     ==========================================================================
-      SVAR=LOG(G1)*DT
-      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))
-      CSVAR1=(1.D0,0.D0)*DT
-      DO I=1,NPH
-        IF(I.EQ.NPH) CSVAR1=REAL(CSVAR1)
-        POFG(I)=CSVAR1*POFG(I)
-        IF(I.NE.1.AND.I.NE.NPH) THEN
-          POFG(NP2+2-I)=POFG(NP2+2-I)*CONJG(CSVAR1) 
-        END IF
-        CSVAR1=CSVAR1*CSVAR2
-      ENDDO
-      CALL LIB$FFTC8('GTOR',NP2,1,POFG,POFR) 
-!
-!     ==========================================================================
-!     == MULTIPLICATION WITH G**(-3/2-M)                                      ==
-!     ==========================================================================
-      SVAR=-(1.5D0-REAL(M,KIND=8))
-      XEXP=EXP(SVAR*DEX)
-      RI=TWOPI*(G1**SVAR)/XEXP
-      DO I=1,NP
-        RI=RI*XEXP
-        FOFG(I)=RI*REAL(POFR(I))
-      ENDDO
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_BESSELTRANSF_CONVOLUTION_OLD(L,M,R1,G1,DEX,NP,FOFR,FOFG)
-!     **************************************************************************
-!     **  TALMAN'S METHOD FOR THE LARGE-G APPROXIMATION (M=0) AND             **
-!     **  THE SMALL-G APPROXIMATION (M=L) FOR L>1                             **
-!     **                                                                      **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
-      USE BESSELTRANSFORM_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: L
-      INTEGER(4),INTENT(IN) :: M
-      REAL(8)   ,INTENT(IN) :: R1
-      REAL(8)   ,INTENT(IN) :: G1
-      REAL(8)   ,INTENT(IN) :: DEX
-      INTEGER(4),INTENT(IN) :: NP
-      REAL(8)   ,INTENT(IN) :: FOFR(NP)
-      REAL(8)   ,INTENT(OUT):: FOFG(NP)
-      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      LOGICAL(4),PARAMETER  :: TCORR=.TRUE.
-      REAL(8)               :: PHI(NP)
-      COMPLEX(8)            :: POFR(NP)
-      COMPLEX(8)            :: POFG(NP)
-      REAL(8)               :: XEXP,RI
-      REAL(8)               :: T
-      REAL(8)               :: PI,TWOPI
-      INTEGER(4)            :: I
-      INTEGER(4)            :: NPH
-      REAL(8)               :: SVAR
-      REAL(8)               :: DT
-      REAL(8)               :: RM ! REAL(M)
-      COMPLEX(8)            :: CVAL,CSVAR1,CSVAR2
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      TWOPI=2.D0*PI
-      DT=TWOPI/(DEX*REAL(NP,KIND=8))
-      NPH=NINT(0.5D0*REAL(NP+2))
-      RM=REAL(M,KIND=8)
-!
-!     ==========================================================================
-!     ==  PHI(X)=DEX*R1^3 * EXP((3*DEX-GAMMA)X) * F(R1*EXP(DEX*X))            ==
-!     ==========================================================================
-      SVAR=1.5D0+RM
-      XEXP=EXP(SVAR*DEX)
-      RI=(R1**SVAR)/XEXP
-      DO I=1,NP
-        RI=RI*XEXP
-        PHI(I)=RI*FOFR(I)
-      ENDDO
-      IF(TCORR) PHI(1)=0.5D0*PHI(1)
-      PHI(NP)=0.5D0*PHI(NP)
-!
-!     ==========================================================================
-!     == FOURIER TRANSFORM                                                    ==
-!     ==========================================================================
-      POFR(:)=CMPLX(PHI(:),0.D0)
-!     == USE GTOR INSTEAD OF RTOG TO OBTAIN COMPLEX CONJUGATE OF PHI(T) ========
-      CALL LIB$FFTC8('GTOR',NP,1,POFR,POFG)                  
-      SVAR=LOG(R1)*DT
-      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))
-      CSVAR1=CMPLX(DEX/TWOPI,0.D0)
-      DO I=1,NPH
-        IF(I.EQ.NPH) CSVAR1=REAL(CSVAR1)
-        POFG(I)=CSVAR1*POFG(I)
-        IF(I.NE.1.AND.I.NE.NPH) THEN
-          POFG(NP+2-I)=POFG(NP+2-I)*CONJG(CSVAR1) 
-        END IF
-        CSVAR1=CSVAR1*CSVAR2
-      ENDDO
-!
-!     ==========================================================================
-!     == CORRECTION FOR HOLE AT THE ORIGIN                                    ==
-!     ==========================================================================
-      IF(TCORR) THEN
-        SVAR=LOG(R1)*DT
-        CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))   !EXP(I*T*LOG[R1])
-        SVAR=FOFR(1)/TWOPI*R1**(1.5D0+RM)
-        CSVAR1=CMPLX(SVAR,0.D0)
-        SVAR=1.5D0+REAL(M+L,KIND=8)
-        DO I=1,NPH
-          T=DT*REAL(I-1,KIND=8)
-          CVAL=CSVAR1/CMPLX(SVAR,T)
-          IF(I.EQ.NPH) CVAL=REAL(CVAL)
-          POFG(I)=POFG(I)+CVAL
-          IF(I.NE.1.AND.I.NE.NPH) THEN
-            POFG(NP+2-I)=POFG(NP+2-I)+CONJG(CVAL) 
-          END IF
-          CSVAR1=CSVAR1*CSVAR2
-        ENDDO
-      END IF
-!
-!     ==========================================================================
-!     == MULTIPLICATION WITH M_{L,M}(T)                                       ==
-!     ==========================================================================
-print*,'nph*dt ',nph*dt,nph,dt
-      DO I=1,NPH
-        T=DT*REAL(I-1,KIND=8)
-        CALL RADIAL_BESSELTRANSF_M(L,M,T,CVAL)
-        IF(I.EQ.NPH) CVAL=0.d0
-        POFG(I)=CVAL*POFG(I)  
-        IF(I.NE.1.AND.I.NE.NPH) THEN
-          POFG(NP+2-I)=POFG(NP+2-I)*CONJG(CVAL)
-        END IF
-      ENDDO
-!
-!     ==========================================================================
-!     == FOURIER BACK-TRANSFORM                                               ==
-!     ==========================================================================
-      SVAR=LOG(G1)*DT
-      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))
-      CSVAR1=(1.D0,0.D0)*DT
-      DO I=1,NPH
-        IF(I.EQ.NPH) CSVAR1=REAL(CSVAR1)
-        POFG(I)=CSVAR1*POFG(I)
-        IF(I.NE.1.AND.I.NE.NPH) THEN
-          POFG(NP+2-I)=POFG(NP+2-I)*CONJG(CSVAR1) 
-        END IF
-        CSVAR1=CSVAR1*CSVAR2
-      ENDDO
-      CALL LIB$FFTC8('GTOR',NP,1,POFG,POFR) 
-!
-!     ==========================================================================
-!     == MULTIPLICATION WITH G**(-3/2-M)                                      ==
-!     ==========================================================================
-      SVAR=-(1.5D0-REAL(M,KIND=8))
-      XEXP=EXP(SVAR*DEX)
-      RI=TWOPI*(G1**SVAR)/XEXP
-      DO I=1,NP
-        RI=RI*XEXP
-        FOFG(I)=RI*REAL(POFR(I))
-      ENDDO
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_BESSELTRANSF_PLOTM()
-!     **************************************************************************
-!     **************************************************************************
-      IMPLICIT NONE
-      REAL(8)   ,PARAMETER :: TMAX=100.D0
-      INTEGER(4),PARAMETER :: N=1000
-      INTEGER(4),PARAMETER :: LX=3
-      INTEGER(4),PARAMETER :: NFIL1=11
-      INTEGER(4),PARAMETER :: NFIL2=10
-      INTEGER(4),PARAMETER :: NFIL3=12
-      INTEGER(4),PARAMETER :: NFIL4=14
-      COMPLEX(8)           :: M(2,LX+1)
-      REAL(8)              :: T
-      INTEGER(4)           :: I,L
-      REAL(8)              :: PI
-      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
-!     **************************************************************************
-PRINT*,'PLOTM START '
-      PI=4.D0*ATAN(1.D0)
-      OPEN(NFIL1,FILE='MLM_0R.DAT')
-      OPEN(NFIL2,FILE='MLM_0I.DAT')
-      OPEN(NFIL3,FILE='MLM_LR.DAT')
-      OPEN(NFIL4,FILE='MLM_LI.DAT')
-      DO I=1,N
-        T=TMAX/REAL(N-1,KIND=8)*REAL(I-1)
-        DO L=0,LX
-          CALL RADIAL_BESSELTRANSF_M(L,0,T,M(1,L+1))
-          CALL RADIAL_BESSELTRANSF_M(L,L,T,M(2,L+1))
-        ENDDO
-        WRITE(NFIL1,*)T,REAL(M(1,:))
-        WRITE(NFIL2,*)T,AIMAG(M(1,:))
-        WRITE(NFIL3,*)T,REAL(M(2,:))
-        WRITE(NFIL4,*)T,AIMAG(M(2,:))
-      ENDDO
-      CLOSE(NFIL1)
-      CLOSE(NFIL2)
-      CLOSE(NFIL3)
-      CLOSE(NFIL4)
-PRINT*,'PLOTM DONE '
-       RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_BESSELTRANSF_M(L,M,T,RES)
-!     **************************************************************************
-!     **************************************************************************
-!     **  EQ. 17 OF J.D. TALMAN,  J. COMP. PHYS. 29, P35-48 (1978)            **
-!     **  (EQUIVALENT TO EQ.8 OF J.D.TALMAN, COMP.PHYS.COMM.30, P93 (1983))   **
-!     **                                                                      **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: L
-      INTEGER(4),INTENT(IN) :: M
-      REAL(8)   ,INTENT(IN) :: T
-      COMPLEX(8),INTENT(OUT):: RES
-      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      INTEGER   ,PARAMETER  :: NX=10
-      REAL(8)               :: PI
-      INTEGER(4)            :: P 
-      REAL(8)               :: COSPPIHALF,SINPPIHALF
-      COMPLEX(8)            :: Z
-      REAL(8)               :: PHI1,PHI2
-      COMPLEX(8)            :: EIPHIDIFF,EIPHISUM
-      REAL(8)               :: R,PHI
-      LOGICAL               :: TTEST=.FALSE.
-      REAL(8)               :: SVAR
-      COMPLEX(8)            :: CSVAR
-      INTEGER(4)            :: I,J
-      INTEGER(4),PARAMETER  :: NP=1000
-      REAL(8)   ,PARAMETER  :: XMIN=-1.D+1
-      REAL(8)   ,PARAMETER  :: XMAX=4.D+1
-      REAL(8)   ,PARAMETER  :: DX=(XMAX-XMIN)/REAL(NP-1,8)
-      REAL(8)               :: X
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      P=L-M
-      IF(P.LT.0) THEN
-        CALL ERROR$MSG('ILLEGAL VALUE')
-        CALL ERROR$STOP('RADIAL_BESSELTRANSF_M')
-      END IF
-!
-!     == CALCULATE PHI1: EQ.9 IN TALMAN78_JCOMPPHYS29_35 ===================
-      R=SQRT(0.25D0*REAL(2*NX+1,KIND=8)**2+T**2) 
-      PHI=ATAN(2.D0*T/REAL(2*NX+1,KIND=8))
-      PHI1=0.D0
-      DO J=1,NX 
-        PHI1=PHI1+ATAN(2.D0*T/REAL(2*J-1,KIND=8))
-      ENDDO
-      PHI1=PHI1-T*LOG(R)+T-PHI*REAL(NX,KIND=8) &
-     &     +SIN(PHI)/(12.D0*R) &
-     &     -SIN(3.D0*PHI)/(360.D0*R**3) &
-     &     +SIN(5.D0*PHI)/(1260.D0*R**5) &
-     &     -SIN(7.D0*PHI)/(1680.D0*R**7) &  
-     &     +SIN(9.D0*PHI)/(1188.D0*R**9)  & 
-     &     -691.D0*SIN(11.D0*PHI)/(360360.D0*R**11)  & 
-     &     +13.D0*SIN(13.D0*PHI)/(156.D0*R**13)  & 
-     &     -3617.D0*SIN(15.D0*PHI)/(122400.D0*R**15)   
-!
-!     == CALCULATE PHI2 =====================================================
-      SVAR=EXP(-PI*T)
-      SVAR=(1.D0-SVAR)/(1.D0+SVAR)
-      PHI2=ATAN(SVAR)
-!
-!     ==
-      EIPHIDIFF=EXP(CI*(PHI1-PHI2))
-      EIPHISUM =EXP(CI*(PHI1+PHI2))
-      SVAR=0.5D0*PI*REAL(P,KIND=8)
-      COSPPIHALF=COS(SVAR)
-      SINPPIHALF=SIN(SVAR)
-      Z=COSPPIHALF*EIPHIDIFF+SINPPIHALF*EIPHISUM
-      DO J=1,P
-        SVAR=0.5D0*REAL(2*J-1,KIND=8)
-        Z=Z*CMPLX(SVAR,-T)
-      ENDDO
-      DO J=1,L
-        SVAR=0.5D0*REAL(4*J-2*L+2*M-1,KIND=8)
-        Z=Z/CMPLX(SVAR,T)
-      ENDDO
-      RES=Z/SQRT(8.D0*PI)
-!
-!     ==========================================================================
-!     ==  PERFORM NUMERIC INTEGRATION TO COMPARE THE RESULT                   ==
-!     ==========================================================================
-      IF(TTEST) THEN
-        OPEN(100,FILE='MTEST.DAT')
-        CSVAR=(0.D0,0.D0)
-        DO I=1,NP
-          X=XMIN+DX*REAL(I-1)
-          IF((1.5D0-REAL(M,KIND=8))*X.GT.50) EXIT
-          CALL SPECIALFUNCTION$BESSEL(L,EXP(X),SVAR)
-          SVAR=SVAR*EXP((1.5D0-REAL(M,KIND=8))*X)
-          CSVAR=CSVAR+DX*SVAR*EXP(-CI*T*X)
-          WRITE(100,*)X,REAL(SVAR*EXP(-CI*T*X),8),AIMAG(SVAR*EXP(-CI*T*X))
-        ENDDO
-        CSVAR=CSVAR/(2.D0*PI)
-        CLOSE(100)
-        PRINT*,L,M,T,'NUMERIC M:',CSVAR,' ANALYTIC  M:',RES
-        STOP
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_BESSELTRANSF_MATCH(NP,FOFGS,FOFGL,FOFG,DIFF)
-!     **************************************************************************
-!     **  CONSTRUCTS THE SOLUTION FOFG FROM AN APPROXIMATION FOFGS FOR SMALL  **
-!     **  VALUES AND AN APPROXIMATION FOFGL FOR LARGE VALUES.                 **
-!     **  MATCHING TAKES PLACE WHERE THE DEVIATION OF TWO SUCCESSIVE POINTS   **
-!     **  HAS THE SMALLES VALUE.                                              **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)    :: NP
-      REAL(8)   ,INTENT(IN)    :: FOFGS(NP)
-      REAL(8)   ,INTENT(IN)    :: FOFGL(NP)
-      REAL(8)   ,INTENT(OUT)   :: FOFG(NP)
-      REAL(8)   ,INTENT(OUT)   :: DIFF
-      INTEGER(4)               :: I,IMATCH
-      REAL(8)                  :: D,DLAST
-!     **************************************************************************
-      DIFF=1.D+10
-      DLAST=ABS(FOFGS(1)-FOFGL(1))
-      DO I=2,NP
-        D=ABS(FOFGS(I)-FOFGL(I))
-        IF(D+DLAST.LT.DIFF) THEN
-          DIFF=D+DLAST
-          IMATCH=I
-        END IF
-        DLAST=D
-      ENDDO
-      FOFG(:IMATCH)=FOFGS(:IMATCH)
-      FOFG(IMATCH:)=FOFGL(IMATCH:)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_MYNLOGN(N,F,G)
-!     **                                                                      **
-!     **                                                                      **
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: N
-      COMPLEX(8),INTENT(IN) :: F(N)
-      COMPLEX(8),INTENT(OUT):: G(N)
-      COMPLEX(8)            :: EI(N)
-      COMPLEX(8)            :: FEI(N)
-      REAL(8)               :: PI
-      REAL(8)               :: DG
-      COMPLEX(8)            :: CSVAR1,CSVAR2
-      INTEGER(4)            :: I
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      DG=2.D0*PI/REAL(N,KIND=8)
-      CSVAR1=1.D0
-      CSVAR2=CMPLX(COS(DG),SIN(DG))
-      DO I=1,N
-        EI(I)=CSVAR1
-        CSVAR1=CSVAR1*CSVAR2
-      ENDDO
-      FEI(:)=F(:)
-      DO I=1,N
-        G(I)=SUM(FEI)
-        FEI(:)=FEI(:)*EI(:)
-      ENDDO
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_WRITEPHI(FILE,R1,DEX,NR,PHI)
-!     **                                                                      **
-!     **                                                                      **
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: FILE
-      REAL(8)     ,INTENT(IN) :: R1
-      REAL(8)     ,INTENT(IN) :: DEX
-      INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
-      REAL(8)     ,INTENT(IN) :: PHI(NR)
-      INTEGER(4)              :: IR
-      REAL(8)                 :: RI,XEXP
-!     **************************************************************************
-      OPEN(100,FILE=FILE)
-      XEXP=EXP(DEX)
-      RI=R1/XEXP
-      DO IR=1,NR
-        RI=RI*XEXP
-        WRITE(100,FMT='(F30.10,2X,20(E25.10,2X))')RI,PHI(IR)
-      ENDDO
-      CLOSE(100)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL_WRITEARR(FILE,NR,PHI)
-!     **                                                                      **
-!     **                                                                      **
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: FILE
-      INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
-      REAL(8)     ,INTENT(IN) :: PHI(NR)
-      INTEGER(4)              :: IR
-!     **************************************************************************
-      OPEN(100,FILE=FILE)
-      DO IR=1,NR
-        WRITE(100,FMT='(I10,2X,20(E25.10,2X))')IR,PHI(IR)
-      ENDDO
-      CLOSE(100)
       RETURN
       END
