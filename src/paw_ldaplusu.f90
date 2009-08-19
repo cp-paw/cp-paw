@@ -861,7 +861,6 @@ PRINT*,'ETOT FROM CORE VALENCE EXCHANGE ',ETOT1
           AECORE(:)=0.D0
         END IF
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
-PRINT*,'NCHI ',NCHI
         CALL LDAPLUSU_EDFT(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,AECORE,RHO &
     &                     ,ETOT1,HAM1)
 PRINT*,'E(DC) ',ETOT1
@@ -2153,7 +2152,7 @@ INTEGER(4) :: IMETHOD
       DENMAT1(:,:,4)=DENMAT(:,:,1,1)-DENMAT(:,:,2,2)
 do idim=1,ndimd
 do lmn=1,lmnx
-  write(*,fmt='("XC-Denmat",2i5,20f20.10)')idim,lmn,denmat1(lmn,:,idim)
+  write(*,fmt='("XC-Denmat",2i5,100f15.3)')idim,lmn,denmat1(lmn,:,idim)
 enddo
 enddo
 !
