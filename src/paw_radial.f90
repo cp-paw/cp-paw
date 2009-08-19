@@ -2963,7 +2963,6 @@ STOP
 !     **  THE SMALL-G APPROXIMATION (M=L) FOR L>1                             **
 !     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
-      USE BESSELTRANSFORM_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L
       INTEGER(4),INTENT(IN) :: M

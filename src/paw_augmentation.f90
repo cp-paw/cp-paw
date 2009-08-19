@@ -825,7 +825,7 @@ STOP
 !       == USING A TAYLOR EXPANSION ABOUT THE SPHERICAL PART OF THE SQUARE =====
 !       == OF THE SPIN DENSITY. ================================================
         VRHO(:,:,:)=0.D0
-        CALL AUGMENTATION_NCOLLTRANS('RHO',NR,LMRX,RHOIN,RHO,VRHO,VXC)
+        CALL AUGMENTATION_NCOLLTRANS(gid,'RHO',NR,LMRX,RHOIN,RHO,VRHO,VXC)
       END IF
 !
 !     == IMAX ALLOWS TO RESTRICT SOME LOOPS (1:5) TO (1:IMAX)
@@ -991,7 +991,7 @@ STOP
       IF(NDIMD.EQ.2) THEN
         VXC(:,:,2)=VRHO(:,:,2)
       ELSE IF(NDIMD.EQ.4) THEN
-        CALL AUGMENTATION_NCOLLTRANS('POT',NR,LMRX,RHOIN,RHO,VRHO,VXC)
+        CALL AUGMENTATION_NCOLLTRANS(gid,'POT',NR,LMRX,RHOIN,RHO,VRHO,VXC)
       END IF     
       DEALLOCATE(RHO)
       DEALLOCATE(GRHO)
@@ -1399,7 +1399,7 @@ STOP
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE AUGMENTATION_NCOLLTRANS(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
+      SUBROUTINE AUGMENTATION_NCOLLTRANS(gid,ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
 !     **************************************************************************
 !     **  constructs a collinear spin density from a noncollinear one         **
 !     **  and for  id='pot' instead of id='rho' it also                       **
@@ -1413,6 +1413,7 @@ STOP
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)    :: gid
       CHARACTER(*),INTENT(IN)    :: ID
       INTEGER(4)  ,INTENT(IN)    :: NR
       INTEGER(4)  ,INTENT(IN)    :: LMRX
@@ -1431,9 +1432,9 @@ STOP
       REAL(8)                    :: aux(nr)
       REAL(8)                    :: PI,Y0
       REAL(8)                    :: cg   ! gaunt coefficient
-      REAL(8)     ,PARAMETER     :: SMALL=1.D-4
+      REAL(8)     ,PARAMETER     :: SMALL=(1.D-4)**2
       INTEGER(4)                 :: ISIG,LM,lm1,lm2,lm3
-      logical(4)  ,parameter     :: Tother=.true.
+      logical(4)  ,parameter     :: Tother=.false.
 !     **************************************************************************
       if(tother) then
         call AUGMENTATION_NCOLLTRANS_Other(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
@@ -1490,7 +1491,7 @@ STOP
 !     == WORK OUT COLLINEAR DENSITY                                           ==
 !     ==========================================================================
       RHO2(:,:,1)=RHO4(:,:,1)
-      RHO2(:,1,2)=0.375D0*Q(:)/Y0
+      RHO2(:,1,2)=0.d0
       DO LM=1,LMRX
         RHO2(:,LM,2)=RHO2(:,LM,2)+Q(:)*S(:,LM)
       ENDDO
@@ -2902,6 +2903,29 @@ END IF
         ENDDO
         LMN1=LMN1+2*L1+1
       ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE augmentation_WRITEPHI(FILE,GID,NR,NPHI,PHI)
+!     **                                                                      **
+!     **                                                                      **
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: FILE
+      INTEGER(4)  ,INTENT(IN) :: GID      ! GRID ID
+      INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
+      INTEGER(4)  ,INTENT(IN) :: NPHI        
+      REAL(8)     ,INTENT(IN) :: PHI(NR,NPHI)
+      INTEGER(4)              :: IR
+      REAL(8)                 :: R(NR)
+!     **************************************************************************
+      CALL RADIAL$R(GID,NR,R)
+      OPEN(100,FILE=FILE)
+      DO IR=1,NR
+        IF(R(IR).GT.3.D0.AND.MAXVAL(ABS(PHI(IR,:))).GT.1.D+3) EXIT
+        WRITE(100,FMT='(F15.10,2X,20(E25.10,2X))')R(IR),PHI(IR,:)
+      ENDDO
+      CLOSE(100)
       RETURN
       END
 
