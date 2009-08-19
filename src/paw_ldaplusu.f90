@@ -868,26 +868,26 @@ PRINT*,'E(DC) ',ETOT1
 print*,'============ dc ================iat=',iat,'============================'
 print*,'iat=',iat,' dc etot ',etot1,' switch=',switch
 DO IS1=1,2
-PRINT*,'===================== DENMAT FOR SPIN',IS1,IS1,' ======================'
-I=0
-DO LN=1,LNXPHI
-DO M=1,2*LOXPHI(LN)+1
-I=I+1
-WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(rho(I,:,IS1,is1))
-ENDDO
-ENDDO
+  PRINT*,'===================== DENMAT FOR SPIN',IS1,IS1,' ======================'
+  I=0
+  DO LN=1,LNX
+    DO M=1,2*LOX(LN)+1
+      I=I+1
+      WRITE(*,FMT='(I3,100F12.5)')LOX(LN),REAL(rho(I,:,IS1,is1))
+    ENDDO
+  ENDDO
 ENDDO
 if(switch.eq.'0') then
-DO IS1=1,2
-PRINT*,'===================== DATH FOR SPIN',IS1,IS1,' ========================'
-I=0
-DO LN=1,LNXPHI
-DO M=1,2*LOXPHI(LN)+1
-I=I+1
-WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(ham1(I,:,IS1,is1))
-ENDDO
-ENDDO
-ENDDO
+  DO IS1=1,2
+    PRINT*,'===================== DATH FOR SPIN',IS1,IS1,' ========================'
+    I=0
+    DO LN=1,LNX
+      DO M=1,2*LOX(LN)+1
+        I=I+1
+        WRITE(*,FMT='(I3,100F12.5)')LOX(LN),REAL(ham1(I,:,IS1,is1))
+      ENDDO
+    ENDDO
+  ENDDO
 end if
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
