@@ -976,13 +976,23 @@ STOP
 !           ==  SECOND ALTERNATIVE APPEARS TO BE MORE ACCURATE
             WORK2(:)=VGRHO(:,LM,ISPIN)*R(:)**2
             CALL RADIAL$DERIVE(GID,NR,WORK2,WORK1)
-            WORK1(:)=WORK1(:)/R(:)**2
+            WORK1(2:)=WORK1(2:)/R(2:)**2
+            work(1)=work(2)  ! avoid divide by zero
 !           == ALTERNATIVES FINISHED
             VRHO(:,LM,ISPIN)=VRHO(:,LM,ISPIN)-WORK1(:)
           ENDDO
         ENDDO
       ENDIF
       DEALLOCATE(VGRHO)
+!
+!     ==========================================================================
+!     ==   CORRECT FOR DIVERGENCE AT THE ORIGIN:                              ==
+!     ==   IF A SHIFTED LOGARITHMIC GRID IS USED THE FIRST GRID POINT         ==
+!     ==   IS MESSED UP BECAUSE OF FACTORS 1/R                                ==
+!     ==========================================================================
+      IF(R(1).LT.1.D-5) THEN
+        Vrho(1,:,:)=Vrho(2,:,:)
+      END IF
 !
 !     ==========================================================================
 !     ==  TRANSFORM GRADIENT POTENTIAL BACK TO POTENTIALS                     ==
@@ -996,15 +1006,6 @@ STOP
       DEALLOCATE(RHO)
       DEALLOCATE(GRHO)
       DEALLOCATE(VRHO)
-!
-!     ==========================================================================
-!     ==   CORRECT FOR DIVERGENCE AT THE ORIGIN:                              ==
-!     ==   IF A SHIFTED LOGARITHMIC GRID IS USED THE FIRST GRID POINT         ==
-!     ==   IS MESSED UP BECAUSE OF FACTORS 1/R                                ==
-!     ==========================================================================
-      IF(R(1).LT.1.D-5) THEN
-        VXC(1,:,:)=VXC(2,:,:)
-      END IF
                       CALL TRACE$POP
       RETURN
       END
@@ -1434,10 +1435,14 @@ STOP
       REAL(8)                    :: cg   ! gaunt coefficient
       REAL(8)     ,PARAMETER     :: SMALL=(1.D-4)**2
       INTEGER(4)                 :: ISIG,LM,lm1,lm2,lm3
-      logical(4)  ,parameter     :: Tother=.true.
+      logical(4)  ,parameter     :: Tother=.false.
 !     **************************************************************************
       if(tother) then
         call AUGMENTATION_NCOLLTRANS_Other(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
+!!$call augmentation_WRITEPHI('rho4_z_other.dat',GID,NR,lmrx,rho4(:,:,4))
+!!$call augmentation_WRITEPHI('rho2_z_other.dat',GID,NR,lmrx,rho2(:,:,2))
+!!$call augmentation_WRITEPHI('pot2_z_other.dat',GID,NR,lmrx,pot2(:,:,2))
+!!$call augmentation_WRITEPHI('pot4_z_other.dat',GID,NR,lmrx,pot4(:,:,4))
         return
       end if
       PI=4.D0*ATAN(1.D0)
@@ -1560,6 +1565,11 @@ STOP
 !
 !     == ADD TOTAL POTENTIAL ===================================================
       POT4(:,:,1)=POT2(:,:,1)
+!!$call augmentation_WRITEPHI('rho4_z.dat',GID,NR,lmrx,rho4(:,:,4))
+!!$call augmentation_WRITEPHI('rho2_z.dat',GID,NR,lmrx,rho2(:,:,2))
+!!$call augmentation_WRITEPHI('pot2_z.dat',GID,NR,lmrx,pot2(:,:,2))
+!!$call augmentation_WRITEPHI('pot4_z.dat',GID,NR,lmrx,pot4(:,:,4))
+!!$stop
       RETURN
       END
 !
