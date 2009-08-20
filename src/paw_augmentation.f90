@@ -1434,7 +1434,7 @@ STOP
       REAL(8)                    :: cg   ! gaunt coefficient
       REAL(8)     ,PARAMETER     :: SMALL=(1.D-4)**2
       INTEGER(4)                 :: ISIG,LM,lm1,lm2,lm3
-      logical(4)  ,parameter     :: Tother=.false.
+      logical(4)  ,parameter     :: Tother=.true.
 !     **************************************************************************
       if(tother) then
         call AUGMENTATION_NCOLLTRANS_Other(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
