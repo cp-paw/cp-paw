@@ -2186,22 +2186,35 @@ enddo
 !     ==========================================================================
       ALLOCATE(POT(NR,LMRX,NDIMD))
       CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,ETOTC,POT)
-allocate(rho2(nr,lmrx,2))
-allocate(pot2(nr,lmrx,2))
-rho2(:,:,1)=rho(:,:,1)
-rho2(:,:,2)=rho(:,:,4)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,ndimd,RHO,ETOTV,POT)
-!      CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHO2,ETOTV,POT2)
-print*,'gid,nr,lmrx,ndimd ',gid,nr,lmrx,ndimd
-rho2(:,:,1)=rhowc(:,:,1)
-rho2(:,:,2)=rhowc(:,:,4)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,ndimd,RHOwc,ETOT,POT)
-!      CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHO2,ETOT,POT2)
+!!$allocate(rho2(nr,lmrx,2))
+!!$allocate(pot2(nr,lmrx,2))
+!!$rho2(:,:,1)=rho(:,:,1)
+!!$rho2(:,:,2)=rho(:,:,4)
+!!$CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHO2,ETOTV,POT2)
+!!$print*,'etotv collinear',etotv
+!!$call augmentation_WRITEPHI('rho4_z.dat',GID,NR,lmrx,rho4(:,:,4))
+      Call AUGMENTATION_XC(GID,NR,LMRX,ndimd,RHO,ETOTV,POT)
+!!$print*,'etotv noncollinear',etotv
+!!$print*,'gid,nr,lmrx,ndimd ',gid,nr,lmrx,ndimd
+!!$rho2(:,:,1)=rhowc(:,:,1)
+!!$rho2(:,:,2)=rhowc(:,:,4)
+!!$CALL ATOMLIB_WRITEPHI('RHO2WC_t.DAT',GID,NR,LMRX,RHO2(:,:,1))
+!!$CALL ATOMLIB_WRITEPHI('RHO2WC_s.DAT',GID,NR,LMRX,RHO2(:,:,2))
+!!$CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHO2,ETOT,POT2)
+!!$CALL ATOMLIB_WRITEPHI('pot2WC_t.DAT',GID,NR,LMRX,pot2(:,:,1))
+!!$CALL ATOMLIB_WRITEPHI('pot2WC_s.DAT',GID,NR,LMRX,pot2(:,:,2))
+!!$print*,'etot collinear',etotv
+      Call AUGMENTATION_XC(GID,NR,LMRX,ndimd,RHOwc,ETOT,POT)
+!!$CALL ATOMLIB_WRITEPHI('pot4WC_t.DAT',GID,NR,LMRX,pot(:,:,1))
+!!$CALL ATOMLIB_WRITEPHI('pot4WC_x.DAT',GID,NR,LMRX,pot(:,:,2))
+!!$CALL ATOMLIB_WRITEPHI('pot4WC_y.DAT',GID,NR,LMRX,pot(:,:,3))
+!!$CALL ATOMLIB_WRITEPHI('pot4WC_z.DAT',GID,NR,LMRX,pot(:,:,4))
+!!$print*,'etotv noncollinear',etotv
 !pot(:,:,:)=0.d0
 !pot(:,:,1)=pot2(:,:,1)
 !pot(:,:,4)=pot2(:,:,2)
-deallocate(rho2)
-deallocate(pot2)
+!!$deallocate(rho2)
+!!$deallocate(pot2)
 PRINT*,'total        EXCHANGE ENERGY (LOCAL) ',ETOT
 PRINT*,'VALENCE      EXCHANGE ENERGY (LOCAL) ',ETOTV
 PRINT*,'CORE         EXCHANGE ENERGY (LOCAL) ',ETOTC

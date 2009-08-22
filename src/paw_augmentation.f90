@@ -1433,12 +1433,12 @@ STOP
       REAL(8)                    :: aux(nr)
       REAL(8)                    :: PI,Y0
       REAL(8)                    :: cg   ! gaunt coefficient
-      REAL(8)     ,PARAMETER     :: SMALL=(1.D-4)**2
+      REAL(8)     ,PARAMETER     :: SMALL=(1.D-2)**2
       INTEGER(4)                 :: ISIG,LM,lm1,lm2,lm3
-      logical(4)  ,parameter     :: Tother=.false.
+      logical(4)  ,parameter     :: Tother=.true.
 !     **************************************************************************
       if(tother) then
-        call AUGMENTATION_NCOLLTRANS_Other(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
+        call AUGMENTATION_NCOLLTRANS_Other2(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
 !!$call augmentation_WRITEPHI('rho4_z_other.dat',GID,NR,lmrx,rho4(:,:,4))
 !!$call augmentation_WRITEPHI('rho2_z_other.dat',GID,NR,lmrx,rho2(:,:,2))
 !!$call augmentation_WRITEPHI('pot2_z_other.dat',GID,NR,lmrx,pot2(:,:,2))
@@ -1565,6 +1565,7 @@ STOP
 !
 !     == ADD TOTAL POTENTIAL ===================================================
       POT4(:,:,1)=POT2(:,:,1)
+!!$call augmentation_WRITEPHI('q.dat',GID,NR,1,q)
 !!$call augmentation_WRITEPHI('rho4_z.dat',GID,NR,lmrx,rho4(:,:,4))
 !!$call augmentation_WRITEPHI('rho2_z.dat',GID,NR,lmrx,rho2(:,:,2))
 !!$call augmentation_WRITEPHI('pot2_z.dat',GID,NR,lmrx,pot2(:,:,2))
@@ -1574,7 +1575,7 @@ STOP
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE AUGMENTATION_NCOLLTRANS_Other(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
+      SUBROUTINE AUGMENTATION_NCOLLTRANS_Other1(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
 !     **************************************************************************
 !     **  CONSTRUCTS A COLLINEAR SPIN DENSITY FROM A NONCOLLINEAR ONE         **
 !     **  AND FOR  ID='POT' INSTEAD OF ID='RHO' IT ALSO                       **
@@ -1599,7 +1600,7 @@ STOP
       REAL(8)                    :: Q(NR)
       REAL(8)                    :: VQ(NR)
       REAL(8)                    :: PI,Y0
-      REAL(8)     ,PARAMETER     :: R8SMALL=1.D-8 ! do not choose too small!
+      REAL(8)     ,PARAMETER     :: SMALL=1.D-4 ! do not choose too small!
       INTEGER(4)                 :: ISIG,LM
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -1610,10 +1611,10 @@ STOP
 !     ==========================================================================
 !     == WORK OUT AUXILIARY VARIABLES                                         ==
 !     ==========================================================================
-      Q(:)=SQRT(RHO4(:,1,2)**2+RHO4(:,1,3)**2+RHO4(:,1,4)**2)
+      Q(:)=SQRT(SMall+RHO4(:,1,2)**2+RHO4(:,1,3)**2+RHO4(:,1,4)**2)
       DO ISIG=1,3
         DO LM=1,LMRX
-          A(:,LM,ISIG)=RHO4(:,LM,ISIG+1)/(Q(:)+R8SMALL)
+          A(:,LM,ISIG)=RHO4(:,LM,ISIG+1)/Q(:)
         ENDDO
       ENDDO
 !
@@ -1646,7 +1647,7 @@ STOP
 !     -- CALCULATE VQ ----------------------------------------------------------
       VQ(:)=0.D0
       DO LM=1,LMRX
-        VQ(:)=VQ(:)+POT2(:,LM,2)*RHO2(:,LM,2)/(Q(:)+R8SMALL)
+        VQ(:)=VQ(:)+POT2(:,LM,2)*RHO2(:,LM,2)/Q(:)
       ENDDO
 !     -- CALCULATE VA ----------------------------------------------------------
       DO ISIG=1,3
@@ -1669,6 +1670,73 @@ STOP
           POT4(:,LM,ISIG+1)=VA(:,LM,ISIG)
         ENDDO
         POT4(:,1,ISIG+1)=POT4(:,1,ISIG+1)+VQ(:)*A(:,1,ISIG)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE AUGMENTATION_NCOLLTRANS_Other2(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
+!     **************************************************************************
+!     **  CONSTRUCTS A COLLINEAR SPIN DENSITY FROM A NONCOLLINEAR ONE         **
+!     **  AND FOR  ID='POT' INSTEAD OF ID='RHO' IT ALSO                       **
+!     **  CONSTRUCTS A NONCOLLINEAR POTENTIAL FROM A COLLINEAR ONE AND THE    **
+!     **  NONCOLLINEAR DENSITY                                                **
+!     **                                                                      **
+!     **  THE TRANSFORMATION IS APPROXIMATE BECAUSE IT INVOLVES A TAYLOR      **
+!     **  EXPANSION OF THE SQUARE ROOT TO FIRST ORDER ONLY. IT IS CONSTRUCTED **
+!     **  SUCH THAT THE RESULTS FOR COLLINEAR DENSITIES DO AGREE WITH         **
+!     **  THOSE OF COLLINEAR DENSITIES TREATED AS NONCOLLINEAR ONES           **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: ID
+      INTEGER(4)  ,INTENT(IN)    :: NR
+      INTEGER(4)  ,INTENT(IN)    :: LMRX
+      REAL(8)     ,INTENT(IN)    :: RHO4(NR,LMRX,4)
+      REAL(8)     ,INTENT(OUT)   :: RHO2(NR,LMRX,2)
+      REAL(8)     ,INTENT(IN)    :: POT2(NR,LMRX,2)
+      REAL(8)     ,INTENT(OUT)   :: POT4(NR,LMRX,4)
+      REAL(8)                    :: PI,Y0
+      REAL(8)     ,PARAMETER     :: SMALL=1.D-4 ! do not choose too small!
+      INTEGER(4)                 :: ISIG,LM
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      RHO2(:,:,:)=0.D0
+      POT4(:,:,:)=0.D0
+!
+!     ==========================================================================
+!     == WORK OUT COLLINEAR DENSITY                                           ==
+!     ==========================================================================
+      RHO2(:,:,1)=RHO4(:,:,1)
+      RHO2(:,1,2)=SQRT(RHO4(:,1,2)**2+RHO4(:,1,3)**2+RHO4(:,1,4)**2)
+      DO LM=2,LMRX
+        RHO2(:,LM,2)=Y0*(RHO4(:,1,2)*RHO4(:,LM,2) &
+     &                  +RHO4(:,1,3)*RHO4(:,LM,3) &
+     &                  +RHO4(:,1,4)*RHO4(:,LM,4)) 
+      ENDDO
+!
+!     ==========================================================================
+!     == RETURN IF ONLY DENSITY IS REQUIRED                                   ==
+!     ==========================================================================
+      IF(ID.EQ.'RHO') RETURN
+!
+!     ==========================================================================
+!     == WORK OUT POTENTIAL                                                   ==
+!     ==========================================================================
+      IF(ID.NE.'POT') THEN
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('AUGMENTATION_NCTRANS1')
+      END IF
+      POT4(:,:,1)=POT2(:,:,1)
+      DO ISIG=2,4
+        POT4(:,1,ISIG)=POT2(:,1,2)*RHO4(:,1,ISIG)/(small+RHO2(:,1,2))
+      ENDDo
+      DO LM=2,LMRX
+        DO ISIG=2,4
+           POT4(:,LM,ISIG)=POT2(:,LM,2)*RHO4(:,1,ISIG)*Y0
+           POT4(:,1,ISIG)=POT4(:,1,ISIG)+POT2(:,LM,2)*RHO4(:,LM,ISIG)*Y0
+        ENDDO
       ENDDO
       RETURN
       END
