@@ -2859,6 +2859,15 @@
    !CORE POW=3.  RC/RCOV=0.5  !END
  !END
 
+  !SETUP  ID='O_.75_6.0_a' EL='O' ZV=   6.
+          TYPE='HBS'  RBOX/RCOV=4.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.678 !END
+    !CORE POW=3. RC/RCOV=   0.678 !END
+  !END
+
 
 !End
 !EOB

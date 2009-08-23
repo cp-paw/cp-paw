@@ -24,7 +24,8 @@
       REAL(8)   ,INTENT(OUT) :: VQLM(LMRXX,NAT)   ! DE/DQLM
       REAL(8)   ,INTENT(OUT) :: EPAIR
       REAL(8)   ,INTENT(OUT) :: STRESS(3,3)
-      REAL(8)   ,PARAMETER   :: RMAX=13.D0 ! CUTOFF RADIUS FOR PAIR POTENTIAL
+      REAL(8)   ,parameter   :: rmaxbyrcbg=6.d0 
+      REAL(8)                :: RMAX ! CUTOFF RADIUS FOR PAIR POTENTIAL 
       INTEGER(4)             :: NFILO
       INTEGER(4)             :: NTASKS,THISTASK
       INTEGER(4)             :: LRXX     
@@ -49,6 +50,7 @@
                              CALL TRACE$PUSH('PAIRP')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
+      RMAX=MAXVAL(RCBG(:))*rmaxbyrcbg
       EPAIR=0.D0
       VQLM(:,:)=0.D0
       FORCE(:,:)=0.D0

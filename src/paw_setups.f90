@@ -339,6 +339,12 @@ END MODULE SETUP_MODULE
       NULLIFY(THIS%NEXT)
       WRITE(THIS%FILEID,*)THIS%I
       THIS%FILEID='ATOM'//ADJUSTL(THIS%FILEID)
+!
+!     == initialize default values
+!      THIS%RCBG  =1.d0/sqrt(0.218d0)
+      THIS%RCBG  =10.d0
+
+
       RETURN
       END 
 !
@@ -1109,8 +1115,6 @@ END MODULE SETUP_MODULE
 !     ==  READ PSEUDOPOTENTIALS AND PSEUDO WAVE FUNCTIONS             ==
 !     ==================================================================
                             CALL TRACE$PASS('READ SETUP FILES')
-      THIS%RCBG=1.D0/SQRT(0.218D0)
-      
 !      CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
 !     &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &
 !     &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
@@ -1316,6 +1320,7 @@ PRINT*,'RCSM ',THIS%RCSM
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
       gidg=gidg_proto  ! use prototype g-grid
+      this%gidg=gidg
       CALL RADIAL$GETI4(GIDG,'NR',NG)
 !       
 !     == VADD (VBAR) ===================================================
@@ -1395,6 +1400,7 @@ PRINT*,'RCSM ',THIS%RCSM
       INTEGER(4)            :: NFIL
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
+      CALL TIMING$CLOCKON('SETUP CONSTRUCTION')
       PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       Y0=1.D0/SQRT(FOURPI)
@@ -1458,7 +1464,6 @@ PRINT*,'RCSM ',THIS%RCSM
       THIS%GID=GID
       THIS%AEZ=AEZ
       THIS%ZV=ZV
-      THIS%RCBG=1.D0/SQRT(0.218D0)
       CALL RADIAL$GETI4(GID,'NR',NR)
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R)
@@ -1502,11 +1507,10 @@ PRINT*,'RCSM ',THIS%RCSM
         KEY=TRIM(KEY)//',FOCK='//TRIM(STRING)
       END IF
 !
-      CALL TRACE$PASS('ALL-ELECTRON SCF ATOMIC CALCULATION')
+      CALL TIMING$CLOCKON('SCF-ATOM')
       CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
     &                   ,ETOT,THIS%ATOM%AEPOT,VFOCK,EOFI,PSI,PSISM)
-!      CALL SETUP_WRITEPHI(-'AEPSIFROMAESCF.DAT',GID,NR,NB,PSI)
-      CALL TRACE$PASS('ALL-ELECTRON SCF ATOMIC CALCULATION FINISHED')
+      CALL TIMING$CLOCKOFF('SCF-ATOM')
 !     
 !     ==========================================================================
 !     ==  SELECT CORE, AND REORDER STATES                                     ==
@@ -1624,8 +1628,7 @@ ENDDO
         LAMBDA(LN)=THIS%PARMS%LAMBDA(L+1)
       ENDDO
 !
-PRINT*,'MARKE BEFORE atomic_MAKEPARTIALWAVES'
-      CALL TRACE$PASS('CONSTRUCT PARTIAL WAVES')
+      CALL TIMING$CLOCKON('MAKEPARTIALWAVES')
       CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%ATOM%AEPOT,VFOCK &
      &           ,NB,NC &
      &           ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
@@ -1637,25 +1640,17 @@ PRINT*,'MARKE BEFORE atomic_MAKEPARTIALWAVES'
      &           ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT &
      &           ,this%psg2,this%psg4)
-      CALL TRACE$PASS('CONSTRUCTion of PARTIAL WAVES FINISHED')
+      CALL TIMING$CLOCKOFF('MAKEPARTIALWAVES')
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         CALL RADIALFOCK$CLEANVFOCK(VFOCK)
       END IF
       CALL ATOMTYPELIST$SETR8('PS<G2>',THIS%PSG2)
       CALL ATOMTYPELIST$SETR8('PS<G4>',THIS%PSG4)
-!!$
-!!$IF(THIS%SETTING%FOCK.NE.0.D0) THEN
-!!$  CALL ERROR$MSG('FOCK OPERATION UNDER CONSTRUCTION')
-!!$  CALL ERROR$MSG('USE ONLY FOR TESTING PURPOSES!')
-!!$  CALL ERROR$MSG('REPLACE "THIS%SETTING%FOCK=0.25D0"')
-!!$  CALL ERROR$MSG('WITH "THIS%SETTING%FOCK=0.D0"')
-!!$  CALL ERROR$MSG('IN PAW_SETUPS.F90')
-!!$  CALL ERROR$STOP('SETUP_READ_NEW')
-!!$END IF
 !     
 !     ==========================================================================
 !     ==  CALCULATE AND PRINT SCATTERING PROPERTIES                           ==
 !     ==========================================================================
+      CALL TIMING$CLOCKON('TEST SCATTERING')
       WRITE(STRING,FMT='(F3.0)')AEZ
       STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
       CALL FILEHANDLER$SETFILE('TMP',.FALSE.,-'SCATT'//TRIM(STRING))
@@ -1665,12 +1660,16 @@ PRINT*,'MARKE BEFORE atomic_MAKEPARTIALWAVES'
       CALL FILEHANDLER$UNIT('TMP',NFIL)
       CALL SETUP_TESTSCATTERING(NFIL)
       CALL FILEHANDLER$CLOSE('TMP')
+      CALL TIMING$CLOCKOFF('TEST SCATTERING')
 !
+      CALL TIMING$CLOCKON('TEST GHOSTS')
       CALL SETUP_TESTGHOST1()
+      CALL TIMING$CLOCKOFF('TEST GHOSTS')
 !     
 !     ==========================================================================
 !     ==  PERFORM BESSELTRANSFORMS                                            ==
 !     ==========================================================================
+      CALL TIMING$CLOCKON('BESSELTRANSFORMS')
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
       GIDG=GIDG_PROTO
@@ -1698,7 +1697,9 @@ PRINT*,'MARKE BEFORE atomic_MAKEPARTIALWAVES'
       ALLOCATE(THIS%VHATOFG(NG))
       CALL SETUP_COMPOFG(THIS%RCBG,THIS%RCSM,GIDG,NG &
      &                  ,THIS%NHATPRIMEOFG,THIS%VHATOFG)
+      CALL TIMING$CLOCKOFF('BESSELTRANSFORMS')
 !      
+      CALL TIMING$CLOCKOFF('SETUP CONSTRUCTION')
                             CALL TRACE$POP
       RETURN
       END
