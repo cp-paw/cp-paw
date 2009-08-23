@@ -2045,38 +2045,6 @@ ENDDO
       RETURN  
       END
 !
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP$RCSM(ISP_,RCSM_)
-!LEGACY CODE! -> SETUP$GETR8('
-!     ******************************************************************
-!     **  RETURN NUMBER OF PARTIAL WAVES                              **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      REAL(8)   ,INTENT(OUT):: RCSM_
-!     ******************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      RCSM_=THIS%RCSM
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$RCBG(ISP_,RCBG_)
-!LEGACY CODE! -> SETUP$GETR8('
-!     ******************************************************************
-!     **  RETURN NUMBER OF PARTIAL WAVES                              **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      REAL(8)   ,INTENT(OUT):: RCBG_
-!     ******************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      RCBG_=THIS%RCBG
-      RETURN  
-      END
-!
 !     ..................................................................
       SUBROUTINE SETUP$LNX(ISP_,LNX_)
 !LEGACY CODE! -> SETUP$GETI4('

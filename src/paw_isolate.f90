@@ -175,7 +175,9 @@
 !     == GET DECAY CONSTANT FOR THE GAUSSION OF THE COMPENSATION DENSITY
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
-        CALL SETUP$RCSM(ISP,RCSM(IAT))
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('RCSM',RCSM(IAT))
+        CALL SETUP$ISELECT(0)
       ENDDO
 !
 !     ==================================================================

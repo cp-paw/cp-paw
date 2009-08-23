@@ -686,8 +686,10 @@
 !     ==================================================================
                                 CALL TIMING$CLOCKON('VOFRHO: PAIRP')
       DO ISP=1,NSP
-        CALL SETUP$RCSM(ISP,RCSM(ISP))
-        CALL SETUP$RCBG(ISP,RCBG(ISP))
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('RCSM',RCSM(ISP))
+        CALL SETUP$GETR8('RCBG',RCBG(ISP))
+        CALL SETUP$ISELECT(0)
       ENDDO
       EPAIR=0.D0
       FORCE1(:,:)=0.D0
