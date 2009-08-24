@@ -68,7 +68,7 @@
           LAMBDA= 6. 6. 6. 6.
     !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
     !POT  POW=3. RC/RCOV=   0.678 !END
-    !CORE   POW=3. RC/RCOV=   0.678 !END
+    !CORE POW=2. RC/RCOV=   0.678 !END
   !END
 
   !SETUP  ID='F_.75_6.0' EL='F' ZV=   7.
@@ -95,7 +95,7 @@
           LAMBDA= 6. 6. 6. 6.
     !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
     !POT  POW=3. RC/RCOV=   0.716 !END
-    !CORE   POW=3. RC/RCOV=   0.716 !END
+    !CORE POW=3. RC/RCOV=   0.716 !END
   !END
 
   !SETUP  ID='MG_.75_6.0' EL='MG' ZV=   2.

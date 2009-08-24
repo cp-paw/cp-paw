@@ -1565,15 +1565,13 @@ PRINT*,'RCSM ',THIS%RCSM
       PSI(:,:NB)=THIS%ATOM%AEPSI
       PSISM(:,:NB)=THIS%ATOM%AEPSISM
       DEALLOCATE(TC)
+WRITE(6,FMT='("Total energy=",f25.7)')etot
 SVAR=0.D0
 DO IB=1,NB
   SVAR=SVAR+FOFI(IB)
   WRITE(6,FMT='("IB=",4I4,F20.4,2F10.5)')IB,NNOFI(IB)+LOFI(IB)+1,LOFI(IB) &
  &                                      ,SOFI(IB),EOFI(IB),FOFI(IB),AEZ-SVAR
 ENDDO
-!CALL SETUP_WRITEPHI('AEPSI.DAT',GID,NR,NB,PSI(:,:NB))
-!CALL SETUP_WRITEPHI('AEPSISM.DAT',GID,NR,NB,PSISM(:,:NB))
-
 !
 !     ==========================================================================
 !     == CALCULATE AND PSEUDIZE CORE DENSITY                                  ==
@@ -5014,16 +5012,16 @@ PRINT*,'KI ',KI
       CALL RADIAL$VALUE(GID,NR,AEF,RC,VAL)
       CALL RADIAL$DERIVATIVE(GID,NR,AEF,RC,DER)
       IF(TVAL) THEN
-        B=RC*DER/POW
-        A=val-B
-        B=B/RC**POW
-        C=0.D0
-      ELSE
         A=VAL0_
         C=0.5D0*(RC*DER-POW*(VAL-A))
         B=VAL-A-C
         B=B/RC**POW
         C=C/RC**(POW+2.D0)
+      else
+        B=RC*DER/POW
+        A=val-B
+        B=B/RC**POW
+        C=0.D0
       END IF
 !     == CALCULATE PS FUNCTION
       CALL RADIAL$R(GID,NR,R)
