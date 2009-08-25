@@ -1426,7 +1426,7 @@ STOP
       logical(4)  ,parameter     :: Tother=.true.
 !     **************************************************************************
       if(tother) then
-        call AUGMENTATION_NCOLLTRANS_Other2(ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
+        call AUGMENTATION_NCOLLTRANS_Other3(gid,ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
 !!$call augmentation_WRITEPHI('rho4_z_other.dat',GID,NR,lmrx,rho4(:,:,4))
 !!$call augmentation_WRITEPHI('rho2_z_other.dat',GID,NR,lmrx,rho2(:,:,2))
 !!$call augmentation_WRITEPHI('pot2_z_other.dat',GID,NR,lmrx,pot2(:,:,2))
@@ -1726,6 +1726,128 @@ STOP
            POT4(:,1,ISIG)=POT4(:,1,ISIG)+POT2(:,LM,2)*RHO4(:,LM,ISIG)*Y0
         ENDDO
       ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE AUGMENTATION_NCOLLTRANS_Other3(gid,ID,NR,LMRX,RHO4,RHO2,POT2,POT4)
+!     **************************************************************************
+!     **  CONSTRUCTS A COLLINEAR SPIN DENSITY FROM A NONCOLLINEAR ONE         **
+!     **  AND FOR  ID='POT' INSTEAD OF ID='RHO' IT ALSO                       **
+!     **  CONSTRUCTS A NONCOLLINEAR POTENTIAL FROM A COLLINEAR ONE AND THE    **
+!     **  NONCOLLINEAR DENSITY                                                **
+!     **                                                                      **
+!     **  THE TRANSFORMATION IS APPROXIMATE BECAUSE IT INVOLVES A TAYLOR      **
+!     **  EXPANSION OF THE SQUARE ROOT TO FIRST ORDER ONLY. IT IS CONSTRUCTED **
+!     **  SUCH THAT THE RESULTS FOR COLLINEAR DENSITIES DO AGREE WITH         **
+!     **  THOSE OF COLLINEAR DENSITIES TREATED AS NONCOLLINEAR ONES           **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: ID
+      INTEGER(4)  ,INTENT(IN)    :: gid
+      INTEGER(4)  ,INTENT(IN)    :: NR
+      INTEGER(4)  ,INTENT(IN)    :: LMRX
+      REAL(8)     ,INTENT(IN)    :: RHO4(NR,LMRX,4)
+      REAL(8)     ,INTENT(OUT)   :: RHO2(NR,LMRX,2)
+      REAL(8)     ,INTENT(IN)    :: POT2(NR,LMRX,2)
+      REAL(8)     ,INTENT(OUT)   :: POT4(NR,LMRX,4)
+      real(8)                    :: array(nr)
+      real(8)                    :: a(nr,lmrx,3)
+      real(8)                    :: b(nr,lmrx,3)
+      real(8)                    :: aux(nr)
+      REAL(8)                    :: PI,Y0,c0ll,cg
+      REAL(8)     ,PARAMETER     :: SMALL=1.D-6 ! do not choose too small!
+      INTEGER(4)                 :: ISIG,LM,lm1,lm2,lm3
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      c0ll=Y0
+      RHO2(:,:,:)=0.D0
+      POT4(:,:,:)=0.D0
+!
+!     ==========================================================================
+!     == WORK OUT COLLINEAR DENSITY                                           ==
+!     ==========================================================================
+!     == total density =========================================================
+      RHO2(:,:,1)=RHO4(:,:,1)
+!
+!     == square of the spin density=============================================
+      DO LM1=1,LMRX
+        AUX(:)=0.D0
+        DO LM2=1,LMRX
+          DO LM3=LM2,LMRX
+            CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
+            IF(LM2.NE.LM3)CG=2.D0*CG
+            AUX(:)=AUX(:)+cg*(RHO4(:,LM2,2)*RHO4(:,LM3,2) &
+     &                       +RHO4(:,LM2,3)*RHO4(:,LM3,3) &
+     &                       +RHO4(:,LM2,4)*RHO4(:,LM3,4)) 
+          ENDDO
+        ENDDO
+        RHO2(:,LM1,2)=AUX(:)
+      ENDDO
+!
+!     == absolute value of the spin density=====================================
+      array(:)=1.d0/sqrt(small+rho2(:,1,2)/y0)
+      aux(:)=array(:)/(2.d0*Y0)
+      do lm=1,lmrx
+        rho2(:,lm,2)=rho2(:,lm,2)*aux(:)
+      enddo
+      rho2(:,1,2)=2.d0*rho2(:,1,2)
+!!$call augmentation_WRITEPHI('rho4_x',GID,NR,lmrx,rho4(:,:,2))
+!!$call augmentation_WRITEPHI('rho4_y',GID,NR,lmrx,rho4(:,:,3))
+!!$call augmentation_WRITEPHI('rho4_z',GID,NR,lmrx,rho4(:,:,4))
+!!$call augmentation_WRITEPHI('rho2',GID,NR,lmrx,rho2(:,:,2))
+!!$aux(:)=sqrt(rho4(:,1,2)**2+rho4(:,1,3)**2+rho4(:,1,4)**2)
+!!$call augmentation_WRITEPHI('aux',GID,NR,1,aux)
+!
+!     ==========================================================================
+!     == RETURN IF ONLY DENSITY IS REQUIRED                                   ==
+!     ==========================================================================
+      IF(ID.EQ.'RHO') RETURN
+!
+!     ==========================================================================
+!     == WORK OUT POTENTIAL                                                   ==
+!     ==========================================================================
+      IF(ID.NE.'POT') THEN
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('AUGMENTATION_NCTRANS1')
+      END IF
+!     == total potential =======================================================
+      POT4(:,:,1)=POT2(:,:,1)
+!
+      do isig=2,4
+        do lm=1,lmrx
+          a(:,lm,isig-1)=rho4(:,lm,isig)*array(:)
+        enddo
+      enddo
+!
+      b(:,:,:)=0.d0
+      do lm1=1,lmrx
+        do lm2=1,lmrx
+          do lm3=1,lmrx
+            CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
+            if(lm2.eq.1)cg=2.d0*cg
+            do isig=2,4
+              b(:,lm1,isig-1)=b(:,lm1,isig-1)+cg*pot2(:,lm2,2)*a(:,lm3,isig-1)        
+            enddo
+          enddo
+        enddo
+      enddo
+!
+      aux(:)=0.d0
+      do isig=2,4
+        do lm=1,lmrx
+          aux(:)=aux(:)+b(:,lm,isig-1)*a(:,lm,isig-1)
+        enddo
+      enddo
+!
+      do isig=2,4
+        do lm=1,lmrx
+          pot4(:,lm,isig)=-0.5d0*aux(:)*a(:,lm,isig-1)+b(:,lm,isig-1)
+        enddo
+      enddo
+      pot4(:,:,2:)=pot4(:,:,2:)/y0
       RETURN
       END
 !

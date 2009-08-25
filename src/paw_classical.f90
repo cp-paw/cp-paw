@@ -4004,9 +4004,10 @@ END MODULE UFFTABLE_MODULE
 !     ==================================================================
 !     == ELECTRONEGATIVITY CORRECTION EQ.4                            ==
 !     == ATTENTION! WRONG SIGN IN THE UFF PAPER (CORRECTED HERE)      ==
+!     == ( see also comments for UFF from MCCCS Towhee)
 !     ==================================================================
       REN=-RI*RJ*(SQRT(ENCI)-SQRT(ENCJ))**2/(ENCI*RI+ENCJ*RJ)
-!
+!     
       R=RI+RJ+RBO+REN               ! BOND DISTANCE
       RETURN
       END
@@ -4394,7 +4395,7 @@ END MODULE UFFTABLE_MODULE
       SVAR2=0.D0
       IF(IPER2-1.GE.1) SVAR1=USP2(IPER2-1)
       IF(IPER3-1.GE.1) SVAR2=USP2(IPER3-1)
-      VSP2=5.D0*SQRT(SVAR1*SVAR2)*(1.D0+4.18D0*LOG(BO23))
+      VSP2=5.D0*SQRT(SVAR1*SVAR2)*(1.D0+4.18D0*LOG(BO23)) !Rappe EQ. 17
 !
 !     ==================================================================
 !     == DETERMINE HYBRIDIZATION                                      ==
