@@ -341,10 +341,7 @@ END MODULE SETUP_MODULE
       THIS%FILEID='ATOM'//ADJUSTL(THIS%FILEID)
 !
 !     == initialize default values
-!      THIS%RCBG  =1.d0/sqrt(0.218d0)
-      THIS%RCBG  =10.d0
-
-
+      THIS%RCBG  =1.d0/sqrt(0.218d0)
       RETURN
       END 
 !

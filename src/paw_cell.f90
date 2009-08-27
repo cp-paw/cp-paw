@@ -62,6 +62,7 @@ CONTAINS
       IMPLICIT NONE
       INTEGER(4) :: I
       REAL(8)    :: SVAR
+      REAL(8)    :: mbar
 !     **************************************************************************
       IF(TINIT) RETURN
       TINIT=.TRUE.
@@ -122,9 +123,11 @@ CONTAINS
         CALL ERROR$MSG('TIME STEP HAS NOT BEEN SET')
         CALL ERROR$STOP('CELL_INITIALIZE')
       END IF
-      IF(TMASS.EQ.0.D0) THEN
-        CALL ERROR$MSG('CELL-MASS HAS NOT BEEN SET')
-        CALL ERROR$STOP('CELL_INITIALIZE')
+      IF(TMASS.LE.0.D0) THEN
+        CALL CONSTANTS('BAR',MBAR)
+        MBAR=MBAR*1.D+6
+!       == bulk modulus of diamond is 5.45 mbar ================================
+        CALL CELL$CONVERT(DELTAT,5.45D0*MBAR,TREF,50.D0*DELTAT,TMASS,SVAR)
       END IF
 !
       RETURN
@@ -171,12 +174,12 @@ END MODULE CELL_MODULE
       REAL(8)            :: VOL
       REAL(8)            :: AMAT(3,3)
 !     *****************************************************************
-      CALL ERROR$MSG('NOT FULLY IMPLEMENTED: DO NOT USE')
-      CALL ERROR$STOP('CELL$CONVERT')
+!      CALL ERROR$MSG('NOT FULLY IMPLEMENTED: DO NOT USE')
+!      CALL ERROR$STOP('CELL$CONVERT')
       PI=4.D0*ATAN(1.D0)
       CALL GBASS(TREF,AMAT,VOL)
       OMEGA=2.D0*PI/PERIOD
-      MASS=9.D0*B/(OMEGA*VOL)**2
+      MASS=3.D0*B*vol**(1.d0/3.d0)/omega**2
       FRICTION=OMEGA*DT
       RETURN
       END
@@ -750,16 +753,16 @@ end if
         SVAR3=DELTAT**2/TMASS/(1.D0+FRIC)
         CALL LIB__INVERTR8(3,T0,T0INV)
         TP=SVAR1*T0+SVAR2*TM+SVAR3*MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
-print*,'==cell$propagate nconstraint ',nconstraint
-print*,'==cell$propagate constrainttype ',constrainttype
-print*,'==cell$propagate stress_I ',stress_I
-print*,'==cell$propagate kinstress ',kinstress
-print*,'==cell$propagate stress_ext ',stress_ext
-print*,'==cell$propagate facts ',tmass,fric,deltat,svar1,svar2,svar3
-print*,'==cell$propagate tm ',tm
-print*,'==cell$propagate t0 ',t0
-print*,'==cell$propagate tp ',tp
-print*,'==cell$propagate ft ',MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
+!!$print*,'==cell$propagate nconstraint ',nconstraint
+!!$print*,'==cell$propagate constrainttype ',constrainttype
+!!$print*,'==cell$propagate stress_I ',stress_I
+!!$print*,'==cell$propagate kinstress ',kinstress
+!!$print*,'==cell$propagate stress_ext ',stress_ext
+!!$print*,'==cell$propagate facts ',tmass,fric,deltat,svar1,svar2,svar3
+!!$print*,'==cell$propagate tm ',tm
+!!$print*,'==cell$propagate t0 ',t0
+!!$print*,'==cell$propagate tp ',tp
+!!$print*,'==cell$propagate ft ',MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
 !       == CONSTRAINTS ========================================================
         IF(NCONSTRAINT.GT.0) THEN        
           ALLOCATE(B(NCONSTRAINT))
@@ -940,3 +943,120 @@ print*,'==cell$propagate ft ',MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0I
       END IF
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine cell$testme()
+      implicit none
+      character(16),parameter :: type='orthorhombic'
+      real(8)   ,parameter :: dt=10.d0
+      real(8)   ,parameter :: megabar=3.4d-3
+      real(8)   ,parameter :: bulkmodulus=10.d0*megabar
+      real(8)   ,parameter :: alat=10.d0
+      real(8)   ,parameter :: pressure=0.d0
+!                             bulkmodulus=1 Mbar; Poisson ratio=0.25
+      real(8)   ,parameter :: lambda=0.6d0*bulkmodulus ! lame constant
+      real(8)   ,parameter :: mu=lambda                ! lame constant
+      real(8)   ,parameter :: period=500.d0
+      integer(4),parameter :: niter=1000.
+      real(8)              :: straintensor(3,3,3,3)
+      real(8)              :: tref(3,3)
+      real(8)              :: vref
+      real(8)              :: trefin(3,3)
+      real(8)              :: t0(3,3)
+      real(8)              :: one(3,3)
+      real(8)              :: estrain,epot,ekin
+      real(8)              :: strain(3,3)
+      real(8)              :: stress(3,3)
+      real(8)              :: tmass
+      real(8)              :: friction
+      integer(4)           :: i,j,k,l,iter
+!     **************************************************************************      
+      one(:,:)=0.d0
+      one(1,1)=1.d0
+      one(2,2)=1.d0
+      one(3,3)=1.d0
+!
+      TREF(:,:)=0.D0
+      TREF(1,1)=ALAT
+      TREF(2,2)=ALAT
+      TREF(3,3)=ALAT
+      vref=tref(1,1)*(tref(2,2)*tref(3,3)-tref(3,2)*tref(2,3)) &
+     &    +tref(2,1)*(tref(3,2)*tref(1,3)-tref(1,2)*tref(3,3)) &
+     &    +tref(3,1)*(tref(1,2)*tref(2,3)-tref(2,2)*tref(1,3)) 
+      call lib$invertr8(3,tref,trefin)
+!
+      straintensor(:,:,:,:)=0.d0
+      do i=1,3
+        do j=1,3
+          straintensor(i,i,j,j)=straintensor(i,i,j,j)+lambda
+          straintensor(i,j,i,j)=straintensor(i,j,i,j)+mu
+          straintensor(i,j,j,i)=straintensor(i,j,j,i)+mu
+        enddo
+      enddo
+      straintensor=straintensor*vref
+      CALL CELL$CONVERT(DT,BULKMODULUS,TREF,PERIOD,TMASS,FRICTION)
+tmass=-1.d0
+print*,'tmass ',tmass,friction
+      FRICTION=0.D0
+      CALL CELL$SETL4('MOVE',.TRUE.)
+      CALL CELL$SETL4('STOP',.TRUE.)
+      CALL CELL$SETR8('DT',DT)
+      CALL CELL$SETR8A('TREF',9,TREF)
+      CALL CELL$SETR8('MASS',TMASS)
+      CALL CELL$SETR8('FRICTION',FRICTION)
+      CALL CELL$SETR8('P',PRESSURE)
+      CALL CELL$SETCH('CONSTRAINTTYPE','NOSHEAR')
+!      CALL CELL$SETCH('CONSTRAINTTYPE','FREE')
+!      CALL CELL$SETCH('CONSTRAINTTYPE','ISOTROPIC')
+!
+      t0=tref
+      if(type.eq.'isotropic') then
+        t0=t0*1.2d0
+      else if(type.eq.'shear') then
+        t0(1,2)=0.1d0
+        t0(2,1)=0.1d0
+      else if(type.eq.'orthorhombic') then
+        t0(3,:)=t0(3,:)*1.2d0
+      else 
+        call error$msg('type not rcognized')
+        call error$chval('type',type)
+        call error$stop('cell$testme')
+      end if
+      CALL CELL$SETR8A('T(0)',9,t0)
+      CALL CELL$SETR8A('T(-)',9,t0)
+      DO ITER=1,NITER
+        CALL CELL$gETR8A('T(0)',9,T0)
+!print*,'t0 ',t0
+        strain=matmul(t0,trefin)-one
+!print*,'strain',strain
+        estrain=0.d0
+        stress(:,:)=0.d0
+        do i=1,3
+          do j=1,3
+            do k=1,3
+              do l=1,3
+                estrain=estrain+0.5d0*straintensor(i,j,k,l)*strain(i,j)*strain(k,l)
+                stress(i,j)=stress(i,j)-0.5d0*straintensor(i,j,k,l)*strain(k,l)
+                stress(k,l)=stress(k,l)-0.5d0*straintensor(i,j,k,l)*strain(i,j)
+              enddo
+            enddo
+          enddo
+        enddo
+!print*,'stress',stress
+!       == stress = de/dt *transpose(t(0))
+        stress=matmul(matmul(stress,transpose(trefin)),transpose(t0))
+!print*,'stress',stress
+        CALL CELL$SETR8A('STRESS_I',9,STRESS)
+        CALL CELL$PROPAGATE()
+        CALL CELL$GETR8('EKIN',EKIN)
+        CALL CELL$GETR8('EPOT',EPOT)
+!print*,'estress',estrain,ekin,epot
+        WRITE(*,FMT='(">>>",I5,5F10.5)')ITER,EKIN,ESTRAIN,EPOT,EKIN+ESTRAIN+EPOT
+        CALL CELL$SWITCH()
+      ENDDO
+!
+      do i=1,3
+        write(*,fmt='("T=",3f20.5)')t0(i,:)
+      enddo
+      stop
+      end
