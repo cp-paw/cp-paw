@@ -73,7 +73,7 @@ END MODULE CORE_MODULE
       INTEGER(4)  ,INTENT(IN) :: NFIL
       REAL(8)                 :: EV
       CHARACTER(32)           :: NAME
-      INTEGER(4)              :: I,IAT
+      INTEGER(4)              :: I
       REAL(8)                 :: SVAR
       INTEGER(4)              :: THISTASK,NTASKS
 !     ******************************************************************
@@ -133,9 +133,7 @@ END MODULE CORE_MODULE
 
       REAL(8)               :: PI
       INTEGER(4)            :: I
-      REAL(8)               :: AUX1(NR)
       REAL(8)               :: AUX2
-      CHARACTER(LEN=82)     :: STRING
 
       INTEGER(4)            :: LMN1,LMN2
       INTEGER(4)            :: LN1,LN2

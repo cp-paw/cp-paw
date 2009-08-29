@@ -772,7 +772,6 @@ END MODULE WAVES_MODULE
       REAL(8)                :: GBAS(3,3) ! RECIPROCAL LATTICE VECTORS
       REAL(8)                :: CELLVOL   ! UNIT CELL  VOLUME
       REAL(8)   ,ALLOCATABLE :: XK(:,:)   ! K-POINTS IN RELATIVE COORDINATES
-      REAL(8)   ,ALLOCATABLE :: G2(:)     ! G**2
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)     ! G VECTOR
       INTEGER(4)             :: LN,ISP,IKPT,ISPIN,IAT,IKPTG,IKPTL
       INTEGER(4)             :: NB
@@ -1288,37 +1287,39 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
         CALL WAVES$GRAMMSCHMIDT()
       END IF
 !
-!     ==================================================================
-!     == CALCULATE PROJECTIONS                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     == CALCULATE PROJECTIONS                                                ==
+!     ==========================================================================
       IF(TFIRST) THEN
         CALL WAVES$PROJECTIONS('PSI0')
       END IF
       IF(TFIRST) TFIRST=.FALSE.
 !
-!     ==================================================================
-!     == CALCULATE LMTO xstructure constants                           ==
-!     ==================================================================
-      if(tfirst.or.tforce) then
+!     ==========================================================================
+!     == CALCULATE LMTO structure constants                                   ==
+!     ==========================================================================
+      IF(TFIRST.OR.TFORCE) THEN
+                               CALL TIMING$CLOCKON('STRUCTURECONSTANTS')
         CALL LMTO$MAKESTRUCTURECONSTANTS()
-      end if
+                              CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
+      END IF
                               CALL TIMING$CLOCKON('WAVES$ETOT')
 !
-!     ==================================================================
-!     == KINETIC ENERGY                                               ==
-!     ==================================================================
-      CALL WAVES$EKIN(EKIN,STRESSKIN)   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+!     ==========================================================================
+!     == KINETIC ENERGY                                                       ==
+!     ==========================================================================
+      CALL WAVES$EKIN(EKIN,STRESSKIN)   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       STRESS(:,:)=STRESS(:,:)+STRESSKIN(:,:)
       CALL ENERGYLIST$SET('PS  KINETIC',EKIN)
       CALL ENERGYLIST$ADD('AE  KINETIC',EKIN)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EKIN)
 !
-!     ==================================================================
-!     == ONE-CENTER DENSITY MATRICES                                  ==
-!     == SPIN RESTRICTED NSPIN=1;NDIM=1: (TOTAL)                      ==
-!     == SPIN POLARIZED  NSPIN=2;NDIM=1: (TOTAL,SPIN_Z)               ==
-!     == NONCOLLINEAR    NSPIN=1;NDIM=2: (TOTAL,SPIN_X,SPIN_Y,SPIN_Z) ==
-!     ==================================================================
+!     ==========================================================================
+!     == ONE-CENTER DENSITY MATRICES                                          ==
+!     == SPIN RESTRICTED NSPIN=1;NDIM=1: (TOTAL)                              ==
+!     == SPIN POLARIZED  NSPIN=2;NDIM=1: (TOTAL,SPIN_Z)                       ==
+!     == NONCOLLINEAR    NSPIN=1;NDIM=2: (TOTAL,SPIN_X,SPIN_Y,SPIN_Z)         ==
+!     ==========================================================================
       NAT=MAP%NAT
       LMNXX=0
       DO ISP=1,MAP%NSP

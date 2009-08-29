@@ -291,10 +291,7 @@ END MODULE GRAPHICS_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
-      REAL(8)                 :: PI,Y0
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       IF(ID.EQ.'DR') THEN 
         IF(IWAVEPTR.NE.0) THEN
           WAVEPLOT(IWAVEPTR)%DR=VAL
@@ -513,7 +510,7 @@ USE MPE_MODULE
       INTEGER(4)                :: NR1B,NR2B,NR3B
       INTEGER(4)                :: GID    ! GRID ID
       LOGICAL(4)                :: TKGROUP
-      LOGICAL(4)                :: TSEND,TRECEIVE
+      LOGICAL(4)                :: TSEND
       INTEGER(4)                :: SENDTASK
 !     ******************************************************************
                               CALL TRACE$PUSH('GRAPHICS_WAVEPLOT')
@@ -1438,10 +1435,7 @@ USE MPE_MODULE
       INTEGER(4)                 :: nSP   !#(atom types)
       INTEGER(4)                 :: ISP
       INTEGER(4)                 :: GID
-      INTEGER(4)                 :: I,J,K,IND
 !     ******************************************************************
-
-
 !COLLECTING OF INFORMATION
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
@@ -1581,12 +1575,10 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       INTEGER(4)            :: NP
       REAL(8)   ,ALLOCATABLE:: POT2D(:)   !(NP)
       REAL(8)   ,ALLOCATABLE:: RVEC(:,:)  !(3,NP)
-      REAL(8)   ,ALLOCATABLE:: RAB(:,:)   !(2,NP)
       INTEGER(4),ALLOCATABLE:: IJ(:,:)    !(2,NP)
       REAL(8)   ,ALLOCATABLE:: ONECPOT(:,:)
       REAL(8)               :: RA,RB
       INTEGER(4)            :: I,J,IAT,IG,ISP,LM,IP
-      INTEGER(4)            :: NRB1
       INTEGER(4)            :: LMRX                  
       REAL(8)   ,ALLOCATABLE:: YLM(:)
       REAL(8)               :: SVAR,SVAR1,GR
@@ -1634,7 +1626,6 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       ALLOCATE(POT2D(NP))
       ALLOCATE(RVEC(3,NP))
       ALLOCATE(IJ(2,NP))
-      ALLOCATE(RAB(2,NP))
 !
 !     ==  CREAT GRID POINTS ==================================================
       IP=0
@@ -1646,8 +1637,6 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
             IF(ABS(RA-ATOMDISTANCE).GT.RB) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
             IF(ABS(RB-ATOMDISTANCE).GT.RA) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
             IP=IP+1
-            RAB(1,IP)=RA
-            RAB(2,IP)=RB
             IJ(1,IP)=I
             IJ(2,IP)=J
             RVEC(3,IP)=(ATOMDISTANCE**2+RA**2-RB**2)/(2.D0*ATOMDISTANCE)
@@ -1658,8 +1647,6 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
           IP=IP+1
           IJ(1,IP)=I
           IJ(2,IP)=0
-          RAB(1,IP)=RA
-          RAB(2,IP)=0.D0
           RVEC(1,IP)=0.D0
           RVEC(2,IP)=0.D0
           RVEC(3,IP)=RA

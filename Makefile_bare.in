@@ -599,6 +599,8 @@ endif
  ## file:src/paw_assist.f90
  DIALS_MODULE.mod : ${OBJDIR}/paw_assist.o
  AUTOPILOT_MODULE.mod : ${OBJDIR}/paw_assist.o
+ ## file:src/paw_atomlib.f90
+ ${OBJDIR}/paw_atomlib.o : PERIODICTABLE_MODULE.mod
  ## file:src/paw_atoms.f90
  ${OBJDIR}/paw_atoms.o : MPE_MODULE.mod
  ${OBJDIR}/paw_atoms.o : RESTART_INTERFACE.mod

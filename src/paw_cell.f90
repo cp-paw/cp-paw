@@ -144,6 +144,7 @@ END MODULE CELL_MODULE
       INTEGER(4),INTENT(IN) :: NFIL
 !     **************************************************************************
       IF(.NOT.TON) RETURN
+      CALL CELL_INITIALIZE()
       CALL REPORT$TITLE(NFIL,'UNIT CELL')
       CALL REPORT$L4VAL(NFIL,'DYNAMICAL UNIT CELL',TMOVE) 
       CALL REPORT$R8VAL(NFIL,'MASS',TMASS,'A.U.') 
@@ -298,23 +299,23 @@ END MODULE CELL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
-!     ******************************************************************
+!     **************************************************************************
 !
-!     ==================================================================
-!     ==  PRESSURE                                                    ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PRESSURE                                                            ==
+!     ==========================================================================
       IF(ID.EQ.'P') THEN
         PRESSURE=VAL
 !
-!     ==================================================================
-!     ==  TIME STEP                                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  TIME STEP                                                           ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'DT') THEN
         DELTAT=VAL
 !
-!     ==================================================================
-!     ==  FRICTION                                                    ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  FRICTION                                                            ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'FRICTION') THEN
         FRIC=VAL
 !
@@ -346,9 +347,9 @@ END MODULE CELL_MODULE
       REAL(8)     ,INTENT(OUT):: VAL
 !     **************************************************************************
 !
-!     =================================================================
-!     ==  POTENTIAL ENERGY                                           ==
-!     =================================================================
+!     ==========================================================================
+!     ==  POTENTIAL ENERGY                                                    ==
+!     ==========================================================================
       IF(ID.EQ.'EPOT') THEN
         IF(TMOVE.AND.(.NOT.TPROPAGATED)) THEN
           CALL ERROR$MSG('DATA AVALAIBLE ONLY AFTER PROPAGATION')
@@ -357,9 +358,9 @@ END MODULE CELL_MODULE
         END IF
         VAL=EPOT
 !
-!     =================================================================
-!     ==  KINETIC ENERGY                                             ==
-!     =================================================================
+!     ==========================================================================
+!     ==  KINETIC ENERGY                                                      ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'EKIN') THEN
         IF(TMOVE.AND.(.NOT.TPROPAGATED)) THEN
           CALL ERROR$MSG('DATA AVALAIBLE ONLY AFTER PROPAGATION')
@@ -368,15 +369,15 @@ END MODULE CELL_MODULE
         END IF
         VAL=EKIN
 !
-!     =================================================================
-!     ==  MASS FOR CELL DYNAMICS                                     ==
-!     =================================================================
+!     ==========================================================================
+!     ==  MASS FOR CELL DYNAMICS                                              ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'MASS') THEN
         VAL=TMASS
 !
-!     =================================================================
-!     ==  DONE                                                       ==
-!     =================================================================
+!     ==========================================================================
+!     ==  DONE                                                                ==
+!     ==========================================================================
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -395,11 +396,11 @@ END MODULE CELL_MODULE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       REAL(8)     ,INTENT(IN) :: VAL(LEN)
-!     ******************************************************************
+!     **************************************************************************
 !
-!     ==================================================================
-!     ==  REFERENCE CELL VECTORS                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  REFERENCE CELL VECTORS                                              ==
+!     ==========================================================================
       IF(ID.EQ.'TREF') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
@@ -637,8 +638,7 @@ END MODULE CELL_MODULE
       REAL(8)    :: XPMAT(3,3),XMMAT(3,3)
       REAL(8)    :: ONE(3,3)
       REAL(8)    :: stress_ext(3,3)
-REAL(8)    :: mat33(3,3)
-      REAL(8)    :: SVAR,SVAR1,SVAR2,SVAR3
+      REAL(8)    :: SVAR1,SVAR2,SVAR3
       INTEGER(4) :: I,j,ITER,IC1,IC2
       logical(4),parameter :: donothing=.false.
       integer(4) :: nconstraint !#(constraints)
@@ -747,12 +747,13 @@ end if
 !       == ENERGY AND STRESS OF THE VOLUME RESERVOIR. THE ENTHALPY IS  H=E+PV
         EPOT=PRESSURE*V0
         STRESS_EXT(:,:)=-PRESSURE*V0*ONE
-!       == PROPAGATE LATTICE VECTORS ================================================
+!       == PROPAGATE LATTICE VECTORS ===========================================
         SVAR1=2.D0/(1.D0+FRIC)
         SVAR2=1.D0-SVAR1
         SVAR3=DELTAT**2/TMASS/(1.D0+FRIC)
         CALL LIB__INVERTR8(3,T0,T0INV)
-        TP=SVAR1*T0+SVAR2*TM+SVAR3*MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
+        TP=SVAR1*T0+SVAR2*TM &
+     &             +SVAR3*MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
 !!$print*,'==cell$propagate nconstraint ',nconstraint
 !!$print*,'==cell$propagate constrainttype ',constrainttype
 !!$print*,'==cell$propagate stress_I ',stress_I
@@ -789,7 +790,8 @@ end if
           ENDDO
           CALL LIB$MATRIXSOLVER8(NCONSTRAINT,NCONSTRAINT,1,A,X,B)
           DO IC1=1,NCONSTRAINT
-            TP(:,:)=TP(:,:)-MATMUL(CONSTRAINTPROJECT(:,:,IC1),TRANSPOSE(T0INV))*X(IC1)
+            TP(:,:)=TP(:,:) &
+     &             -MATMUL(CONSTRAINTPROJECT(:,:,IC1),TRANSPOSE(T0INV))*X(IC1)
           ENDDO
           DEALLOCATE(B)
           DEALLOCATE(A)
@@ -802,7 +804,7 @@ end if
 !       == CALCULATE KINETIC ENERGY 
         EKIN=0.5D0*TMASS*SUM((TP-TM)**2)/(2.D0*DELTAT)**2
       ELSE 
-!       == EXTERNAL STRESS ===============================================
+!       == EXTERNAL STRESS =====================================================
 !        AMAT=MATMUL(SIGMA,TRANSPOSE(TREFINV))
 !        AMAT=MATMUL(TREFINV,AMAT)
 !   
@@ -811,15 +813,15 @@ end if
         AMAT=AMAT*VREF       
         EPOT=0.5D0*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
         AMAT=-AMAT
-!       == EXTERNAL PRESSURE =============================================
+!       == EXTERNAL PRESSURE ===================================================
         AMAT=AMAT-ONE*PRESSURE*V0  ! -PV - V_0 T0*SIGMA*T0^T
         EPOT=EPOT+PRESSURE*V0
-!       == STRESS_I ======================================================
+!       == STRESS_I ============================================================
         AMAT=AMAT+STRESS_I+KINSTRESS  ! -DE/DALPHA -PV +V T0*SIGMA*T0^T
-!       == STRESS PER VOLUME**2 ==========================================
+!       == STRESS PER VOLUME**2 ================================================
         AMAT=AMAT/V0**2
 !    
-!       ==PROPAGATE ======================================================
+!       ==PROPAGATE ============================================================
         AMAT=AMAT/TMASS  ! ACCELERATION
         CALL LIB$INVERTR8(3,T0,T0INV)
         ALPHAM=MATMUL(TM,T0INV)-ONE
@@ -840,7 +842,7 @@ end if
         END DO
         TP=MATMUL(ONE+ALPHAP,T0)
 !   
-!       ==  KINETIC ENERGY  ==============================================
+!       ==  KINETIC ENERGY  ====================================================
         ALPHADOT=(ALPHAP-ALPHAM)/(2.D0*DELTAT)
         AMAT=MATMUL(ALPHADOT,TRANSPOSE(ALPHADOT))
         EKIN=0.5D0*TMASS*V0**2*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
@@ -856,7 +858,7 @@ end if
 !     **************************************************************************
       USE CELL_MODULE
       IMPLICIT NONE
-!     ******************************************************************
+!     **************************************************************************
       STRESS_I=0.D0
       EKIN=0.D0
       EPOT=0.D0
@@ -867,7 +869,7 @@ end if
       TP=2.D0*T0-TM
       TP=3.D0*T0-3.D0*TM+TMM
 !
-!     == UPDATE VOUME OF THE UNIT CELL =================================
+!     == UPDATE VOUME OF THE UNIT CELL =========================================
       V0=T0(1,1) * (T0(2,2)*T0(3,3)-T0(3,2)*T0(2,3)) &
      &  +T0(2,1) * (T0(3,2)*T0(1,3)-T0(1,2)*T0(3,3)) &
      &  +T0(3,1) * (T0(1,2)*T0(2,3)-T0(2,2)*T0(1,3))
@@ -891,7 +893,7 @@ end if
                  =SEPARATOR_TYPE(1,'CELL','NONE','MAY2000','NONE')
       TYPE (SEPARATOR_TYPE)            :: SEPARATOR
       INTEGER(4)                       :: NTASKS,THISTASK
-!     ******************************************************************
+!     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK=.TRUE.
       SEPARATOR=MYSEPARATOR
@@ -899,9 +901,9 @@ end if
       CALL MPE$BROADCAST('MONOMER',1,TCHK)
       IF(.NOT.TCHK) RETURN
 !
-!     ==================================================================
-!     ==  READ DATA                                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ DATA                                                           ==
+!     ==========================================================================
       IF(THISTASK.EQ.1) THEN
         IF(SEPARATOR%VERSION.NE.MYSEPARATOR%VERSION) THEN
           CALL ERROR$MSG('VERSION INCONSISTENCY')
@@ -929,11 +931,11 @@ end if
       TYPE (SEPARATOR_TYPE),PARAMETER  :: MYSEPARATOR &
                =SEPARATOR_TYPE(1,'CELL','NONE','MAY2000','NONE')
       INTEGER(4)                        :: NTASKS,THISTASK
-!     ******************************************************************
+!     **************************************************************************
 !
-!     ==================================================================
-!     ==  WRITE DATA                                                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  WRITE DATA                                                          ==
+!     ==========================================================================
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
         CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
@@ -995,7 +997,6 @@ end if
       enddo
       straintensor=straintensor*vref
       CALL CELL$CONVERT(DT,BULKMODULUS,TREF,PERIOD,TMASS,FRICTION)
-tmass=-1.d0
 print*,'tmass ',tmass,friction
       FRICTION=0.D0
       CALL CELL$SETL4('MOVE',.TRUE.)

@@ -369,12 +369,10 @@ ENDDO
       REAL(8)                    :: D2phi(NR) 
       REAL(8)                    :: R(NR) 
       REAL(8)                    :: PI
-      REAL(8)                    :: Y0
       REAL(8)                    :: SOFACTOR
       REAL(8)                    :: RDPRIME(NR)
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
 !
 !     ==========================================================================
 !     == SPIN ORBIT COUPLING                                                  ==
@@ -455,7 +453,7 @@ ENDDO
       REAL(8)    ,INTENT(OUT)    :: TPHI(NR,LMX,NPHI) ! P**2/(2M)*WAVE-FUNCTION
       REAL(8)    ,INTENT(OUT)    :: EB(NPHI)          ! ONE-PARTICKE ENERGIES
       LOGICAL(4) ,INTENT(OUT)    :: TOK               ! ERROR FLAG
-      INTEGER(4)                 :: LM,LM1,LM2,LM3,L,M,IM,IB
+      INTEGER(4)                 :: LM,LM1,LM2,LM3,L,IM,IB
       REAL(8)                    :: A(NR)
       REAL(8)                    :: B(NR)
       REAL(8)                    :: C(NR,LMX,LMX)
@@ -613,10 +611,8 @@ ENDDO
       REAL(8)               :: AUX(NR)
       REAL(8)               :: SVAR
       INTEGER(4)            :: I,J,l,m,lm
-      INTEGER(4)            :: L0
       integer(4)            :: lox(nf)
       LOGICAL(4)            :: TMAIN(NF)  !SELECTS THE MAIN CONTRIBUTIONS
-CHARACTER(32):: FILE
 !     **************************************************************************
       TOK=.FALSE.
 !PRINT*,'NEW SCHROEDINGER_XXXR STARTED',NPHI,NF

@@ -202,7 +202,7 @@ END MODULE RADIALFOCK_MODULE
       INTEGER(4)                  :: NR
       INTEGER(4)                  :: GID
       REAL(8)         ,ALLOCATABLE:: R(:)
-      INTEGER(4)                  :: IR,IB
+      INTEGER(4)                  :: IR
 !     **************************************************************************
       IF(.NOT.VFOCK%TON) RETURN
       GID=VFOCK%GID
