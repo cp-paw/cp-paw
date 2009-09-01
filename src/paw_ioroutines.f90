@@ -1854,8 +1854,23 @@ CALL TRACE$PASS('DONE')
       REAL(8)                  :: MASS        ! MASS FOR CELL DFYNAMICS
       REAL(8)                  :: FRIC        ! MASS FOR CELL DFYNAMICS
       CHARACTER(32)            :: CH32VAL
+      real(8)                  :: dt          ! time step
 !     ******************************************************************
       LL_CNTL=LL_CNTL_
+!
+!     ==================================================================
+!     ==  READ BLOCK GENERIC                                          ==
+!     ==================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
+      CALL LINKEDLIST$GET(LL_CNTL,'DT',1,DT)
+      CALL WAVES$SETR8('TIMESTEP',DT)
+      CALL CELL$SETR8('DT',DT)
+!
+!     ==================================================================
+!     ==  NOW ENTER CELL BLOCK                                        ==
+!     ==================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'CELL',1,TCHK)

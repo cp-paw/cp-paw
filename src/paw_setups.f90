@@ -594,18 +594,18 @@ END MODULE SETUP_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ..........................................................................
       SUBROUTINE SETUP$GETR8(ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       REAL(8)     ,INTENT(OUT) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'AEZ') THEN
         VAL=THIS%AEZ
       ELSE IF(ID.EQ.'RCSM') THEN
@@ -1356,8 +1356,10 @@ PRINT*,'RCSM ',THIS%RCSM
       USE PERIODICTABLE_MODULE
       USE STRINGS_MODULE
       USE SETUP_MODULE
+      use linkedlist_module
       USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
       IMPLICIT NONE
+      type(ll_type)          :: ll_stp
       INTEGER(4),PARAMETER  :: NBX=40
       INTEGER(4)            :: LOFI(NBX)
       INTEGER(4)            :: SOFI(NBX)
@@ -1395,6 +1397,7 @@ PRINT*,'RCSM ',THIS%RCSM
       CHARACTER(64)         :: PSEUDIZATION
       TYPE(VFOCK_TYPE)      :: VFOCK
       INTEGER(4)            :: NFIL
+      integer(4)            :: ntasks,thistask
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
       CALL TIMING$CLOCKON('SETUP CONSTRUCTION')
@@ -1406,6 +1409,8 @@ PRINT*,'RCSM ',THIS%RCSM
         CALL ERROR$MSG('NO SETUP SELECTED')
         CALL ERROR$STOP('SETUP_READ')
       END IF
+      call linkedlist$new(ll_stp)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',0)
 !
       CALL ATOMTYPELIST$NAME(THIS%I,THIS%ID)
       CALL ATOMTYPELIST$SELECT(THIS%ID)
@@ -1465,7 +1470,7 @@ PRINT*,'RCSM ',THIS%RCSM
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R)
       ROUT=R(NR-3)
-      DEALLOCATE(R)
+
 !     
 !     ==========================================================================
 !     ==  PERFORM ALL-ELECTRON CALCULATION FOR THE ATOM IN A BOX              ==
@@ -1569,6 +1574,8 @@ DO IB=1,NB
   WRITE(6,FMT='("IB=",4I4,F20.4,2F10.5)')IB,NNOFI(IB)+LOFI(IB)+1,LOFI(IB) &
  &                                      ,SOFI(IB),EOFI(IB),FOFI(IB),AEZ-SVAR
 ENDDO
+
+
 !
 !     ==========================================================================
 !     == CALCULATE AND PSEUDIZE CORE DENSITY                                  ==
@@ -1624,17 +1631,17 @@ ENDDO
       ENDDO
 !
       CALL TIMING$CLOCKON('MAKEPARTIALWAVES')
-      CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,THIS%ATOM%AEPOT,VFOCK &
-     &           ,NB,NC &
-     &           ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
-     &           ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
-     &           ,THIS%ISCATT,THIS%EOFLN,THIS%ESCATT &
+      CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,ll_stp,AEZ,THIS%ATOM%AEPOT &
+     &          ,VFOCK,NB,NC &
+     &          ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
+     &          ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
+     &          ,THIS%ISCATT,THIS%EOFLN,THIS%ESCATT &
      &         ,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%PRO,THIS%DTKIN,THIS%DOVER &
-     &           ,THIS%AECORE,THIS%PSCORE &
-     &           ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
-     &           ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
-     &           ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT &
-     &           ,this%psg2,this%psg4)
+     &          ,THIS%AECORE,THIS%PSCORE &
+     &          ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
+     &          ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
+     &          ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%AEPHIDOT,THIS%PSPHIDOT &
+     &          ,this%psg2,this%psg4)
       CALL TIMING$CLOCKOFF('MAKEPARTIALWAVES')
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         CALL RADIALFOCK$CLEANVFOCK(VFOCK)
@@ -1646,15 +1653,7 @@ ENDDO
 !     ==  CALCULATE AND PRINT SCATTERING PROPERTIES                           ==
 !     ==========================================================================
       CALL TIMING$CLOCKON('TEST SCATTERING')
-      WRITE(STRING,FMT='(F3.0)')AEZ
-      STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
-      CALL FILEHANDLER$SETFILE('TMP',.FALSE.,-'SCATT'//TRIM(STRING))
-      CALL FILEHANDLER$SETSPECIFICATION('TMP','STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION('TMP','ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION('TMP','FORM','FORMATTED')
-      CALL FILEHANDLER$UNIT('TMP',NFIL)
-      CALL SETUP_TESTSCATTERING(NFIL)
-      CALL FILEHANDLER$CLOSE('TMP')
+      CALL SETUP_TESTSCATTERING(ll_stp)
       CALL TIMING$CLOCKOFF('TEST SCATTERING')
 !
       CALL TIMING$CLOCKON('TEST GHOSTS')
@@ -1693,8 +1692,110 @@ ENDDO
       CALL SETUP_COMPOFG(THIS%RCBG,THIS%RCSM,GIDG,NG &
      &                  ,THIS%NHATPRIMEOFG,THIS%VHATOFG)
       CALL TIMING$CLOCKOFF('BESSELTRANSFORMS')
-!      
       CALL TIMING$CLOCKOFF('SETUP CONSTRUCTION')
+!
+!     ==========================================================================
+!     == write report
+!     ==========================================================================
+      call setup_reportfile(ll_STP)
+                            CALL TRACE$POP
+      RETURN
+      END
+!
+!  
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine setup_reportfile(ll_STP)
+!     **************************************************************************
+!     **************************************************************************
+      use linkedlist_module
+      use setup_module
+      use strings_module
+      implicit none
+      type(ll_type),intent(inout) :: ll_stp
+      CHARACTER(64)               :: STRING
+      integer(4)                  :: gid
+      integer(4)                  :: nr
+      integer(4)                  :: ng
+      integer(4)                  :: gidg
+      real(8)       ,allocatable  :: r(:)
+      integer(4)                  :: ntasks,thistask
+      integer(4)                  :: nfil
+!     **************************************************************************
+!     == WRITE REPORT ==========================================================
+      CALL LINKEDLIST$SELECT(LL_STP,'~',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'GENERIC',0)
+      CALL LINKEDLIST$SET(LL_STP,'ID',0,TRIM(THIS%PARMS%ID))
+      CALL LINKEDLIST$SET(LL_STP,'Z',0,THIS%AEZ)
+      CALL LINKEDLIST$SET(LL_STP,'ZV',0,THIS%ZV)
+!
+      CALL LINKEDLIST$SELECT(LL_STP,'~',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'RGRID',0)
+      GID=THIS%GID
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+      CALL LINKEDLIST$SET(LL_STP,'NR',0,NR)
+      CALL LINKEDLIST$SET(LL_STP,'R',0,R)
+      DEALLOCATE(R)
+!
+      CALL LINKEDLIST$SELECT(LL_STP,'~',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'ATOM',0)
+      CALL LINKEDLIST$SET(LL_STP,'NB',0,THIS%ATOM%NB)
+      CALL LINKEDLIST$SET(LL_STP,'NC',0,THIS%ATOM%NC)
+      CALL LINKEDLIST$SET(LL_STP,'L',0,THIS%ATOM%LOFI)
+      CALL LINKEDLIST$SET(LL_STP,'SO',0,THIS%ATOM%SOFI)
+      CALL LINKEDLIST$SET(LL_STP,'E',0,THIS%ATOM%EOFI)
+      CALL LINKEDLIST$SET(LL_STP,'F',0,THIS%ATOM%FOFI)
+      CALL LINKEDLIST$SET(LL_STP,'AEPSI',0,THIS%ATOM%AEPSI)
+!
+      CALL LINKEDLIST$SELECT(LL_STP,'~',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'AUGMENTATION',0)
+      CALL LINKEDLIST$SET(LL_STP,'AECORE',0,THIS%NLPHIDOT)
+      CALL LINKEDLIST$SET(LL_STP,'PSCORE',0,THIS%NLPHIDOT)
+!
+      CALL LINKEDLIST$SELECT(LL_STP,'~',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'BESSELTRANSFORMED',0)
+      GIDG=THIS%GIDG
+      CALL RADIAL$GETI4(GIDg,'NR',NG)
+      ALLOCATE(R(NG))
+      CALL RADIAL$R(GIDg,NG,R)
+      CALL LINKEDLIST$SET(LL_STP,'NG',0,NG)
+      CALL LINKEDLIST$SET(LL_STP,'G',0,R)
+      DEALLOCATE(R)
+!
+!      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+!      CALL LINKEDLIST$REPORT(LL_STP,6)
+!
+!     ==========================================================================
+!     == write setup report to file                                           ==
+!     ==========================================================================
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      IF(THISTASK.EQ.1) THEN
+        WRITE(STRING,*)NINT(THIS%AEZ)
+        STRING='_STPFORZ'//TRIM(ADJUSTL(STRING))//'.MYXML' 
+        CALL FILEHANDLER$SETFILE('STP_REPORT',.TRUE.,-STRING)
+        CALL FILEHANDLER$SETSPECIFICATION('STP_REPORT','STATUS','UNKNOWN')
+        CALL FILEHANDLER$SETSPECIFICATION('STP_REPORT','ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION('STP_REPORT','FORM','FORMATTED')
+        CALL FILEHANDLER$UNIT('STP_REPORT',NFIL)
+        CALL LINKEDLIST$SELECT(LL_STP,'~')
+        CALL LINKEDLIST$WRITE(LL_STP,NFIL,'MONOMER')
+        CALL FILEHANDLER$CLOSE('STP_REPORT')
+      END IF
+PRINT*,'SETUP REPORT FILE WRITTEN'
+!
+!     ==========================================================================
+!     == remove linked list ====================================================
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STP,'~')
+      CALL LINKEDLIST$RMLIST(LL_STP,'SETUPREPORT')
+      CALL LINKEDLIST$SELECT(LL_STP,'~')
+!      CALL LINKEDLIST$REPORT(LL_STP,6)
                             CALL TRACE$POP
       RETURN
       END
@@ -2740,7 +2841,7 @@ ENDDO
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,AEZ,AEPOT,VFOCK &
+      SUBROUTINE ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,ll_stp,AEZ,AEPOT,VFOCK &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
      &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
      &                  ,AEPHI,PSPHI,NLPHI,PRO,DT,DOVER,AECORE,PSCORE,PSPOT &
@@ -2753,6 +2854,7 @@ ENDDO
 !     **                                                                      **
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
+      USE linkedlist_MODULE
       USE STRINGS_MODULE
       USE RADIALFOCK_MODULE,ONLY: VFOCK_TYPE
       USE RADIALPAW_MODULE,ONLY: VPAW_TYPE
@@ -2761,6 +2863,7 @@ ENDDO
       INTEGER(4)  ,INTENT(IN) :: GID
       INTEGER(4)  ,INTENT(IN) :: NR
       CHARACTER(*),INTENT(IN) :: KEY
+      type(ll_type),intent(inout) :: ll_stp
       REAL(8)   ,INTENT(IN) :: AEZ
       REAL(8)   ,INTENT(IN) :: AEPOT(NR)   ! ALL ELECTRON POTENTIAL
       TYPE(VFOCK_TYPE),INTENT(INOUT) :: VFOCK
@@ -2864,11 +2967,12 @@ ENDDO
       REAL(8)               :: RASA    !COVALENT RADIUS*APPROX 1.15
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
       REAL(8)               :: RBND   !RADIUS FOR BOUNDARY CONDITIONS
-      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
-      LOGICAL   ,PARAMETER  :: TWRITE=.TRUE.
+      LOGICAL   ,PARAMETER  :: TTEST=.true.
+      LOGICAL   ,PARAMETER  :: TWRITE=.false.
       REAL(8)               :: SPEEDOFLIGHT
       REAL(8)               :: E1
       TYPE(VPAW_TYPE)       :: VPAW
+      logical(4)            :: tfirst
 REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !     **************************************************************************
                                 CALL TRACE$PUSH('ATOMIC_MAKEPARTIALWAVES')
@@ -2976,7 +3080,7 @@ print*,'rASA    ',rasa,' asa radius'
       ENDDO
 print*,'eofi ',eofi
 print*,'eofi1 ',eofi1
-!CALL SETUP_WRITEPHI('uofi1.DAT',GID,NR,nb,uofi)
+      if(ttest.and.twrite)CALL SETUP_WRITEPHI('uofi1.DAT',GID,NR,nb,uofi)
 !
 !     ==========================================================================
 !     == CONSTRUCT NODELESS PARTIAL WAVES  (LOCAL POTENTIAL ONLY)             ==
@@ -2995,11 +3099,20 @@ print*,'eofi1 ',eofi1
 !       == use highest core state with this l as inhomogeneity =================
         G(:)=0.D0
         IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
+        tfirst=.true.   ! switch back to box with tfirst=.false.
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-          CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
+          if(tfirst) then
+            PHIPHASE=1.D0   ! NODE AT ROUT
+            CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
+     &                                ,ROUT,PHIPHASE,E,PHI)
+            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,PHIPHASE)
+            tfirst=.false.
+          ELSE
+            CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,RBND,PHIPHASE,E,PHI)
+          END IF
           EOFLN(LN)=E
           NLPHI(:,LN)=PHI(:)
           TNLPHI(:,LN)=G(:)+(E-AEPOT(:)*Y0)*PHI(:)
@@ -3091,7 +3204,7 @@ print*,'eofi1 ',eofi1
      &                                               ," E[OLD]=",F15.5)') &
      &                  IB,LOFI(IB),FOFI(IB),EOFI1(IB),EOFI(IB)
         ENDDO
-        CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
+        if(twrite)CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
       END IF
 !
 !     ==========================================================================
@@ -3104,7 +3217,7 @@ print*,'eofi1 ',eofi1
           WRITE(6,FMT='("LN=",I2," L=",I2," E=",F10.5," RC=",F6.3)') &
      &                      LN,LOX(LN),EOFLN(LN),RC(LN)
         ENDDO
-        CALL SETUP_WRITEPHI(-'NLPHI.DAT',GID,NR,LNX,NLPHI)
+        if(twrite)CALL SETUP_WRITEPHI(-'NLPHI.DAT',GID,NR,LNX,NLPHI)
       END IF
 !
 !     ==========================================================================
@@ -3261,7 +3374,7 @@ print*,'eofi1 ',eofi1
           WRITE(6,FMT='("LN=",I2," L=",I2,"  [T+V-E_N]|AEPHI_N> =",F20.15)') &
       &                 LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
         ENDDO
-        CALL SETUP_WRITEPHI(+'AEPHI.DAT',GID,NR,LNX,AEPHI)
+!       CALL SETUP_WRITEPHI(+'AEPHI.DAT',GID,NR,LNX,AEPHI)
       END IF
 !
 !     ==========================================================================
@@ -3270,7 +3383,7 @@ print*,'eofi1 ',eofi1
                            CALL TRACE$PASS('CONSTRUCT PSEUDO PARTIAL WAVES')
       PSPHI=QN
       TPSPHI=TQN
-      if(ttest)CALL SETUP_WRITEPHI('XX1.DAT',GID,NR,LNX,PSPHI)
+      if(ttest.and.twrite)CALL SETUP_WRITEPHI('XX1.DAT',GID,NR,LNX,PSPHI)
       IF(TYPE.EQ.'KERKER') THEN
         DO L=0,LX
           DO LN=1,LNX
@@ -3307,7 +3420,7 @@ print*,'eofi1 ',eofi1
         CALL ERROR$MSG('CAN BE "BESSEL" OR "HBS"')
         CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
       END IF
-      if(ttest)CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
+      if(ttest.and.twrite)CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
 !
 !     ==========================================================================
 !     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
@@ -3319,12 +3432,13 @@ print*,'eofi1 ',eofi1
 !     ==  CLEANUP OF NUMERICAL ERRORS INDUCED BY A TOO COARSE GRID AT LARGE ====
 !     ==  RADII. 2.D0*RCOV IS CHOSEN ARBITRARILY ===============================
       DO IR=1,NR
-        IF(R(IR).LT.RNORM) CYCLE
+!        IF(R(IR).LT.RNORM) CYCLE !RNORM IS CHOSEN =RBND WHICH MAY BE TOO SMALL
+        IF(R(IR).LT.1.5D0*RCOV) CYCLE
         BAREPRO(IR:,:)=0.D0
         EXIT
       ENDDO
 
-      IF(TTEST) THEN
+      IF(TTEST.and.twrite) THEN
         CALL SETUP_WRITEPHI('PRO-BARE.DAT',GID,NR,LNX,BAREPRO)
       END IF
 !
@@ -3374,7 +3488,7 @@ print*,'eofi1 ',eofi1
           IF(LN1.EQ.LN2)VAL=VAL-1.D0
           IF(ABS(VAL).GT.1.D-5) THEN
             CALL ERROR$MSG('BIORTHOGONALIZATION FAILED')
-            CALL ERROR$I4VAL('L',L)
+            CALL ERROR$I4VAL('L',Lox(ln1))
             CALL ERROR$I4VAL('LN1',LN1)
             CALL ERROR$I4VAL('LN2',LN2)
             CALL ERROR$R8VAL('DEVIATION',VAL)
@@ -3398,17 +3512,17 @@ print*,'eofi1 ',eofi1
 ! waves may introduce numerical errors
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,Rbox,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,Rbnd,VAL)
           DT(LN1,LN2)=VAL
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,Rbox,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,Rbnd,VAL)
           DOVER(LN1,LN2)=VAL
           CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOX(LN2),AEPHI(:,LN2),AUX1)
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*(AEPOT(:)*Y0*AEPHI(:,LN2)+AUX1(:)) &
       &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,Rbox,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,Rbnd,VAL)
           DH(LN1,LN2)=DT(LN1,LN2)+VAL
         ENDDO
       ENDDO
@@ -3978,6 +4092,36 @@ GOTO 10001
         ENDDO
       END IF
 !
+!     ==========================================================================
+!     == write setup report                                                   ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'ATOM',0)
+      CALL LINKEDLIST$SET(LL_STP,'UPSI',0,UOFI)
+      CALL LINKEDLIST$SET(LL_STP,'UPSI_SMALL',0,UOFISM)
+!
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'AUGMENTATION',0)
+      CALL LINKEDLIST$SET(LL_STP,'LNX',0,LNX)
+      CALL LINKEDLIST$SET(LL_STP,'LOX',0,LOX)
+      CALL LINKEDLIST$SET(LL_STP,'AEPHI',0,AEPHI)
+      CALL LINKEDLIST$SET(LL_STP,'PSPHI',0,PSPHI)
+      CALL LINKEDLIST$SET(LL_STP,'NLPHI',0,NLPHI)
+      CALL LINKEDLIST$SET(LL_STP,'QPHI',0,QN)
+      CALL LINKEDLIST$SET(LL_STP,'PRO',0,PRO)
+      CALL LINKEDLIST$SET(LL_STP,'AEPHIDOT',0,AEPHIDOT)
+      CALL LINKEDLIST$SET(LL_STP,'PSPHIDOT',0,PSPHIDOT)
+      CALL LINKEDLIST$SET(LL_STP,'AEPHIDOT',0,AEPHIDOT)
+      CALL LINKEDLIST$SET(LL_STP,'NV',0,NB-NC)
+      CALL LINKEDLIST$SET(LL_STP,'AEPSI',0,AEPSIF)
+      CALL LINKEDLIST$SET(LL_STP,'PSPSI',0,PSPSIF)
+      CALL LINKEDLIST$SET(LL_STP,'AUGPSI',0,AUGPSIF)
+      CALL LINKEDLIST$SET(LL_STP,'AEPOT',0,AEPOT)
+      CALL LINKEDLIST$SET(LL_STP,'PSPOT',0,PSPOT)
+      CALL LINKEDLIST$SET(LL_STP,'POTOFPSRHO',0,PSPOT-VADD)
+!
 !STOP 'FORCED: IN MAKEPARTIALWAVES'
                                 CALL TRACE$POP()
       RETURN
@@ -4027,7 +4171,7 @@ GOTO 10001
       enddo
 !       
 !     ==========================================================================
-!     == define the radial grid for the fourier transform                     == 
+!     == define the radial grid for the fourier transform                     ==
 !     ==========================================================================
       DEX=LOG(GMAX/G1)/REAL(NG-1,KIND=8)
       CALL RADIAL$NEW('LOG',GIDG)
@@ -4163,14 +4307,17 @@ GOTO 10001
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_TESTSCATTERING(NFIL)
+      SUBROUTINE SETUP_TESTSCATTERING(ll_stp)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
+      USE STRINGS_MODULE
+      USE LINKEDLIST_MODULE
       USE SETUP_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: NFIL
+      type(ll_type),intent(Inout) :: ll_stp
+      INTEGER(4)             :: NFIL
       INTEGER(4)             :: NC
       INTEGER(4)             :: NB
       REAL(8)                :: EMIN
@@ -4199,6 +4346,8 @@ GOTO 10001
       REAL(8)                :: DPHASE
       INTEGER(4)             :: NPRO
       INTEGER(4)             :: IE,LN1,LN2,IPRO1,IPRO2,L,LN,IB
+      character(64)          :: string
+      logical(4),parameter   :: twrite=.false.
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -4289,13 +4438,37 @@ GOTO 10001
       ENDDO
 !
 !     ==========================================================================
+!     ==  add result to linkedlist                                            ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'SCATTERING',0)
+      CALL LINKEDLIST$SET(LL_STP,'EMIN',0,EMIN)
+      CALL LINKEDLIST$SET(LL_STP,'EMAX',0,EMAX)
+      CALL LINKEDLIST$SET(LL_STP,'NE',0,NE)
+      CALL LINKEDLIST$SET(LL_STP,'LX',0,LX)
+      CALL LINKEDLIST$SET(LL_STP,'AEPHASE',0,AEPHASE)
+      CALL LINKEDLIST$SET(LL_STP,'PAWPHASE',0,PAWPHASE)
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+!
+!     ==========================================================================
 !     ==  WRITE RESULT TO FILE                                                ==
 !     ==========================================================================
-      REWIND(NFIL)
-      DO IE=1,NE
-        E=EMIN+DE*REAL(IE-1,KIND=8)
-        WRITE(NFIL,FMT='(20F10.5)')E,AEPHASE(:,IE),PAWPHASE(:,IE)
-      ENDDO
+      if(twrite) then
+        WRITE(STRING,FMT='(F3.0)')this%AEZ
+        STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
+        CALL FILEHANDLER$SETFILE('TMP',.FALSE.,-'SCATT'//TRIM(STRING))
+        CALL FILEHANDLER$SETSPECIFICATION('TMP','STATUS','UNKNOWN')
+        CALL FILEHANDLER$SETSPECIFICATION('TMP','ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION('TMP','FORM','FORMATTED')
+        CALL FILEHANDLER$UNIT('TMP',NFIL)
+        REWIND(NFIL)
+        DO IE=1,NE
+          E=EMIN+DE*REAL(IE-1,KIND=8)
+          WRITE(NFIL,FMT='(20F10.5)')E,AEPHASE(:,IE),PAWPHASE(:,IE)
+        ENDDO
+        CALL FILEHANDLER$CLOSE('TMP')
+      end if
       RETURN
       END
 !
@@ -4390,10 +4563,12 @@ GOTO 10001
       RETURN
       END
 !
-!     ......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMIC_UNSCREEN(GID,NR,RBOX,AEZ,AERHO,PSRHO,PSPOT,RCSM,VADD)
-!     **                                                                  **
-!     **                                                                  **
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: GID      ! GRID ID
       INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
@@ -4413,40 +4588,40 @@ GOTO 10001
       REAL(8)                 :: GRHO(NR)
       INTEGER(4)              :: IR
       REAL(8)                 :: RH,GRHO2,VXC,VGXC,EXC,DUMMY1,DUMMY2,DUMMY3
-!     ************************************************************************
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
-!     ========================================================================
-!     == MOMENT OF DIFFERENCE CHARGE DENSITY                                ==
-!     ========================================================================
+!     ==========================================================================
+!     == MOMENT OF DIFFERENCE CHARGE DENSITY                                  ==
+!     ==========================================================================
       AUX(:)=(AERHO(:)-PSRHO(:))*R(:)**2
-!     == THE INTEGRATION MUST BE PERFORMED OUTWARD TO THE END, BECAUSE =======
-!     == SMALL DEVIATIONS LEAD TO LONG-RANGE TAIL IN VADD ====================
+!     == THE INTEGRATION MUST BE PERFORMED OUTWARD TO THE END, BECAUSE =========
+!     == SMALL DEVIATIONS LEAD TO LONG-RANGE TAIL IN VADD ======================
       CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
       CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,QLM)
       QLM=QLM-AEZ*Y0    ! CHARGE =QM/Y0
 !
-!     ========================================================================
-!     == ADD COMPENSATION DENSITY AND DETERMINE ELECTROSTATIC POTENTIAL     ==
-!     ========================================================================
+!     ==========================================================================
+!     == ADD COMPENSATION DENSITY AND DETERMINE ELECTROSTATIC POTENTIAL       ==
+!     ==========================================================================
       ALPHA=1.D0/RCSM**2
       CALL GAUSSN(0,ALPHA,CL)
       SVAR=QLM*CL
       AUX(:)=PSRHO(:)+SVAR*EXP(-ALPHA*R(:)**2)
-!== check charge neutrality psrho+augmentation ===============================
+!== check charge neutrality psrho+augmentation =================================
 CALL RADIAL$INTEGRATE(GID,NR,AUX*R(:)**2,AUX1)
 CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,svar)
 PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       CALL RADIAL$POISSON(GID,NR,0,AUX,POTH)
-!     == set potential at the box radius to zero ============================
+!     == set potential at the box radius to zero ==============================
       CALL RADIAL$VALUE(GID,NR,POTH,RBOX,SVAR)
       POTH=POTH-SVAR
 !
-!     ========================================================================
-!     == Exchange AND CORRELATION                                           ==
-!     ========================================================================
+!     ==========================================================================
+!     == Exchange AND CORRELATION                                             ==
+!     ==========================================================================
       CALL RADIAL$DERIVE(GID,NR,PSRHO(:),GRHO)
       grho(1)=0.d0 ! r(1)=0 density gradient vanishes at the origin
       DO IR=1,NR
@@ -4485,22 +4660,24 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
         END IF
       ENDDO
 !
-!     ========================================================================
-!     == VADD                                                               ==
-!     ========================================================================
+!     ==========================================================================
+!     == VADD                                                                 ==
+!     ==========================================================================
       POT=POTH+POTXC
       VADD(:)=PSPOT(:)-POT(:)
       RETURN
       END
 !
-!     ......................................................................
-      SUBROUTINE BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,PRO,TRANSPHI,TRANSPRO)
-!     **                                                                  **
-!     ** DETERMINES THE MATRICES TRANSPHI AND TRANSPRO SUCH THAT          **
-!     **     |PHI-BAR>:=|PHI>TRANSSPHI                                    **
-!     **     |PRO-BAR>:=|PRO>TRANSSPRO                                    **
-!     **  OBEY  <PHIBAR(I)|PROBAR(J)>=DELTA(I,J)    (KRONECKER DELTA)     **
-!     **                                                                  **
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,PRO &
+     &                          ,TRANSPHI,TRANSPRO)
+!     **************************************************************************
+!     ** DETERMINES THE MATRICES TRANSPHI AND TRANSPRO SUCH THAT              **
+!     **     |PHI-BAR>:=|PHI>TRANSSPHI                                        **
+!     **     |PRO-BAR>:=|PRO>TRANSSPRO                                        **
+!     **  OBEY  <PHIBAR(I)|PROBAR(J)>=DELTA(I,J)    (KRONECKER DELTA)         **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID
       INTEGER(4) ,INTENT(IN)     :: NR
@@ -4518,12 +4695,12 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       LOGICAL(4),PARAMETER       :: TTEST=.TRUE.
       REAL(8)                    :: PROPSI(LNX,LNX)
       REAL(8)                    :: TRANSPROPSI(LNX,LNX)
-!     *********************************************************************
+!     **************************************************************************
       CALL RADIAL$R(GID,NR,R)
 !
-!     =====================================================================
-!     == CALCULATE INITIAL VIOLATION OF BIORTHOGONALITY                  ==
-!     =====================================================================
+!     ==========================================================================
+!     == CALCULATE INITIAL VIOLATION OF BIORTHOGONALITY                       ==
+!     ==========================================================================
       PROPSI(:,:)=0.D0
       DO LN1=1,LNX
         DO LN2=1,LNX
@@ -4535,9 +4712,9 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
         ENDDO
       ENDDO
 !
-!     =====================================================================
-!     == COLLECT TRANSFORMATION MATRIX BETWEEN NEW AND OLD               ==
-!     =====================================================================
+!     ==========================================================================
+!     == COLLECT TRANSFORMATION MATRIX BETWEEN NEW AND OLD                    ==
+!     ==========================================================================
       TRANSPRO(:,:)=0.D0
       TRANSPHI(:,:)=0.D0
       DO LN=1,LNX
@@ -4549,36 +4726,38 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       DO LN1=1,LNX
         DO LN2=1,LN1-1
           IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-!         == ORTHOGONALIZE PARTIAL WAVES ===================================
+!         == ORTHOGONALIZE PARTIAL WAVES =======================================
           SVAR=TRANSPROPSI(LN2,LN1)
           TRANSPHI(:,LN1)   =TRANSPHI(:,LN1)-TRANSPHI(:,LN2)*SVAR
-          TRANSPROPSI(:,LN1)=TRANSPROPSI(:,LN1)-TRANSPROPSI(:,LN2)*SVAR          
-!         == ORTHOGONALIZE PROJECTOR=====================================
+          TRANSPROPSI(:,LN1)=TRANSPROPSI(:,LN1)-TRANSPROPSI(:,LN2)*SVAR     
+!         == ORTHOGONALIZE PROJECTOR===========================================
           SVAR=TRANSPROPSI(LN1,LN2)
           TRANSPRO(:,LN1)   =TRANSPRO(:,LN1)-TRANSPRO(:,LN2)*SVAR
-          TRANSPROPSI(LN1,:)=TRANSPROPSI(LN1,:)-TRANSPROPSI(LN2,:)*SVAR          
+          TRANSPROPSI(LN1,:)=TRANSPROPSI(LN1,:)-TRANSPROPSI(LN2,:)*SVAR 
         ENDDO
         SVAR=TRANSPROPSI(LN1,LN1)
         TRANSPRO(:,LN1)=TRANSPRO(:,LN1)/SVAR
         TRANSPROPSI(LN1,:)=TRANSPROPSI(LN1,:)/SVAR
       ENDDO
 !
-!     =====================================================================
-!     == CHECK RESULT                                                    ==
-!     =====================================================================
-      TRANSPROPSI(:,:)=MATMUL(TRANSPOSE(TRANSPRO),MATMUL(PROPSI,TRANSPHI))
-      DO LN=1,LNX
-        TRANSPROPSI(LN,LN)=TRANSPROPSI(LN,LN)-1.D0
-      ENDDO
-      SVAR=MAXVAL(TRANSPROPSI)
-      IF(SVAR.GT.1.D-5) THEN
+!     ==========================================================================
+!     == CHECK RESULT                                                         ==
+!     ==========================================================================
+      if(ttest) then
+        TRANSPROPSI(:,:)=MATMUL(TRANSPOSE(TRANSPRO),MATMUL(PROPSI,TRANSPHI))
         DO LN=1,LNX
-          WRITE(*,FMT='(20E10.2)')TRANSPROPSI(:,LN)
+          TRANSPROPSI(LN,LN)=TRANSPROPSI(LN,LN)-1.D0
         ENDDO
-        CALL ERROR$MSG('BIORTHOGONALIZATION INACCURATE')
-        CALL ERROR$R8VAL('MAX. DEV.',SVAR)
-        CALL ERROR$STOP('BIORTHOMATRICES')
-      END IF
+        SVAR=MAXVAL(TRANSPROPSI)
+        IF(SVAR.GT.1.D-5) THEN
+          DO LN=1,LNX
+            WRITE(*,FMT='(20E10.2)')TRANSPROPSI(:,LN)
+          ENDDO
+          CALL ERROR$MSG('BIORTHOGONALIZATION INACCURATE')
+          CALL ERROR$R8VAL('MAX. DEV.',SVAR)
+          CALL ERROR$STOP('BIORTHOMATRICES')
+        END IF
+      end if
       RETURN
       END
 !
@@ -4616,9 +4795,11 @@ USE STRINGS_MODULE
       INTEGER(4)                :: IRBND
       INTEGER(4)                :: ISTART,IBI
       INTEGER(4)                :: L
-      INTEGER(4)                :: LN,ITER,IR
+      INTEGER(4)                :: LN,ITER,IR,ii(1)
       LOGICAL(4)                :: CONVG
       REAL(8)                   :: SVAR
+      REAL(8)                   :: arr1(5),arr2(5)
+      REAL(8)                   :: rbnd2
       character(64)  :: string
 !     **************************************************************************
                                 call trace$push('atomic_makepsphi_hbs')
@@ -4628,19 +4809,6 @@ USE STRINGS_MODULE
       DO LN=1,LNX
         L=LOX(LN)
         E=EOFLN(LN)
-!
-!       ========================================================================
-!       ==  correct for nodes lying within 0.3. They can occur                ==
-!       ==  with a (nonlocal) fock potential and upset the formalism          ==
-!       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),RBND,PHIPHASE)
-        DO IR=1,NR
-          IF(PSPHI(IR,LN)*PSPHI(IR+1,LN).LT.0.D0) THEN
-            PHIPHASE=PHIPHASE-1.D0
-            WRITE(*,FMT='("NR. OF NODES REDUCED BY ONE RELATIVE TO QN")')
-          END IF           
-          IF(R(IR).GT.0.3d0) EXIT
-        ENDDO
 !
 !       ========================================================================
 !       ==  set up the additional potential used to adjust the wave function  ==
@@ -4661,11 +4829,25 @@ USE STRINGS_MODULE
         DO IR=NR-2,1,-1
           IF(IR.LT.IRBND) EXIT
           SVAR=TPSPHI(IR,LN)+(PSPOT(IR)*Y0-E)*PSPHI(IR,LN)
-          SVAR=ABS(SVAR/PSPHI(IR,LN))
-          IF(SVAR.GT.1.D-5) THEN
+          IF(abs(SVAR).GT.1.d-4*abs(psphi(ir,ln))) THEN
             IRBND=IR
             EXIT
           END IF
+        ENDDO
+!        rbnd2=rbnd !old choice
+        rbnd2=r(irbnd)
+!
+!       ========================================================================
+!       ==  correct for nodes lying within 0.3. They can occur                ==
+!       ==  with a (nonlocal) fock potential and upset the formalism          ==
+!       ========================================================================
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),RBND2,PHIPHASE)
+        DO IR=1,NR
+          IF(PSPHI(IR,LN)*PSPHI(IR+1,LN).LT.0.D0) THEN
+            PHIPHASE=PHIPHASE-1.D0
+            WRITE(*,FMT='("NR. OF NODES REDUCED BY ONE RELATIVE TO QN")')
+          END IF           
+          IF(R(IR).GT.0.3d0) EXIT
         ENDDO
 !
 !       ========================================================================
@@ -4680,12 +4862,12 @@ USE STRINGS_MODULE
           DREL(:)=0.D0
           G(:)=0.D0
           CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,ISO,G,L,E,1,PHI)
-          if(.not.(phi(irbnd+2).gt.0.d0.or.phi(irbnd+2).le.0.d0)) then
-            CALL ERROR$MSG('wave function is not a number')
-            CALL ERROR$MSG('overflow of wave function encountered')
+          IF(.NOT.(PHI(IRBND+2).GT.0.D0.OR.PHI(IRBND+2).LE.0.D0)) THEN
+            CALL ERROR$MSG('WAVE FUNCTION IS NOT A NUMBER')
+            CALL ERROR$MSG('OVERFLOW OF WAVE FUNCTION ENCOUNTERED')
             CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
-          end if
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+          END IF
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND2,Z0)
           Z0=PHIPHASE-Z0
           CONVG=(ABS(2.D0*DX).LE.TOL)
           IF(CONVG) EXIT
@@ -4709,15 +4891,18 @@ USE STRINGS_MODULE
         END IF
 !
 !       ========================================================================
-!       ==  rescale pseudo partial waves so that they match to AE partial waves=
+!       ==  RESCALE PSEUDO PARTIAL WAVES SO THAT THEY MATCH TO AE PARTIAL WAVES=
 !       ========================================================================
 !       == DO NOT RESCALE AT THE NODAL PLANE, BUT 5 POINTS INWARD....        
-        svar=psphi(irbnd,ln)/phi(irbnd)
-        PHI(:)=PHI(:)*svar
+        ARR1(:)=PSPHI(IRBND-5:IRBND,LN)
+        ARR2(:)=PHI(IRBND-5:IRBND)
+        II=MAXLOC(ABS(ARR1*ARR2))
+        SVAR=ARR1(II(1))/ARR2(II(1))
+        PHI(:)=PHI(:)*SVAR
 !
-!       == overwrite nodeless input partial wave by pseudo partial wave
-        PSPHI(:irbnd,LN)=PHI(:irbnd)
-        TPSPHI(:irbnd,LN)=(E-POT(:irbnd)*Y0)*PHI(:irbnd)
+!       == OVERWRITE NODELESS INPUT PARTIAL WAVE BY PSEUDO PARTIAL WAVE
+        PSPHI(:IRBND,LN)=PHI(:IRBND)
+        TPSPHI(:IRBND,LN)=(E-POT(:IRBND)*Y0)*PHI(:IRBND)
       ENDDO
                                 call trace$pop()
       RETURN

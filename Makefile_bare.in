@@ -566,6 +566,7 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_waves1.o:        ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_linkedlist.o
  ${OBJDIR}/paw_efg.o:           ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_setups.o:        ${OBJDIR}/paw_linkedlist.o
 
  ${OBJDIR}/paw_atoms.o:         ${OBJDIR}/paw_report.o
  ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_report.o
@@ -792,6 +793,7 @@ endif
  ## file:src/paw_setups.f90
  ${OBJDIR}/paw_setups.o : PERIODICTABLE_MODULE.mod
  ${OBJDIR}/paw_setups.o : LMTO_MODULE.mod
+ ${OBJDIR}/paw_setups.o : LINKEDLIST_MODULE.mod
  SETUP_MODULE.mod : ${OBJDIR}/paw_setups.o
  ## file:src/paw_softcore.f90
  CORE_MODULE.mod : ${OBJDIR}/paw_softcore.o

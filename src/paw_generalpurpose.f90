@@ -696,7 +696,7 @@
       RETURN
       END
 !
-!..................................................................................
+!...............................................................................
 MODULE BROYDEN_MODULE
 LOGICAL(4)         :: TON=.FALSE.
 INTEGER(4)         :: NSTEPX=0
@@ -707,14 +707,14 @@ REAL(8),ALLOCATABLE :: XPREV(:,:)
 REAL(8),ALLOCATABLE :: YPREV(:,:)
 REAL(8),ALLOCATABLE :: WEIGHT(:)
 END MODULE BROYDEN_MODULE
-!      .............................................................................
+!      .........................................................................
        SUBROUTINE BROYDEN$NEW(NX_,NSTEPX_,ALPHA_)
        USE BROYDEN_MODULE
        IMPLICIT NONE
        INTEGER(4),INTENT(IN)    :: NX_
        INTEGER(4),INTENT(IN)    :: NSTEPX_
        REAL(8)   ,INTENT(IN)    :: ALPHA_
-!      *****************************************************************************
+!      *************************************************************************
        IF(TON) THEN
          CALL ERROR$MSG('BROYDEN OBJECT ALREADY IN USE')
          CALL ERROR$STOP('BROYDEN$NEW')
@@ -732,11 +732,11 @@ END MODULE BROYDEN_MODULE
        YPREV(:,:)=0.D0
        RETURN
        END
-!      .............................................................................
+!      .........................................................................
        SUBROUTINE BROYDEN$CLEAR
        USE BROYDEN_MODULE
        IMPLICIT NONE
-!      *****************************************************************************
+!      *************************************************************************
        IF(.NOT.TON) THEN
          CALL ERROR$MSG('BROYDEN OBJECT NOT ACTIVE')
          CALL ERROR$MSG('CALL BROYDEN$NEW FIRST')
@@ -753,13 +753,13 @@ END MODULE BROYDEN_MODULE
        RETURN
        END
 !
-!      .............................................................................
+!      .........................................................................
        SUBROUTINE BROYDEN$SETWEIGHT(NX_,WEIGHT_)
        USE BROYDEN_MODULE
        IMPLICIT NONE
        INTEGER(4),INTENT(IN) :: NX_
        REAL(8)   ,INTENT(IN)  :: WEIGHT_(NX_)
-!      *****************************************************************************
+!      *************************************************************************
        IF(.NOT.TON) THEN
          CALL ERROR$MSG('BROYDEN OBJECT NOT ACTIVE')
          CALL ERROR$MSG('CALL BROYDEN$NEW FIRST')
@@ -773,7 +773,7 @@ END MODULE BROYDEN_MODULE
        RETURN
        END
 !
-!      .............................................................................
+!      .........................................................................
        SUBROUTINE BROYDEN$STEP(NX_,X,Y)
        USE BROYDEN_MODULE
        IMPLICIT NONE
@@ -786,7 +786,7 @@ END MODULE BROYDEN_MODULE
        REAL(8)   ,ALLOCATABLE   :: BINV(:,:)
        REAL(8)                  :: WY(NX_)
        INTEGER(4)               :: I
-!      *****************************************************************************
+!      *************************************************************************
        IF(.NOT.TON) THEN
          CALL ERROR$MSG('BROYDEN OBJECT NOT ACTIVE')
          CALL ERROR$MSG('CALL BROYDEN$NEW FIRST')

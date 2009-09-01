@@ -447,7 +447,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)    ,INTENT(OUT)    :: EOFI(NX)  ! ONE-PARTICLE ENERGIES
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NX)! ONE-PARTICLE WAVE FUNCTIONS
       REAL(8)    ,INTENT(OUT)    :: SPHI(NR,NX) ! SMALL COMPONENT
-      REAL(8)   ,PARAMETER       :: TOL=1.D-6
+      REAL(8)   ,PARAMETER       :: TOL=1.D-3
       INTEGER(4),PARAMETER       :: NITER=1000
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
       LOGICAL(4),PARAMETER       :: tpr=.false.
@@ -458,7 +458,9 @@ USE PERIODICTABLE_MODULE
       REAL(8)                    :: AUX(NR),AUX1(NR)   !AUXILIARY ARRAY
       REAL(8)                    :: MUX(NR)   !EXCHANGE ONLY POTENTIAL
       INTEGER(4)                 :: ITER
-      REAL(8)                    :: XAV,XMAX
+      REAL(8)                    :: XAV,XMAX,xde
+      REAL(8)                    :: XAVmin,XMAXmin,xdemin
+      integer(4)                 :: nconv
       LOGICAL(4)                 :: CONVG
       REAL(8)                    :: EKIN,EH,EXC
       REAL(8)                    :: POTIN(NR)
@@ -480,6 +482,8 @@ USE PERIODICTABLE_MODULE
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
       REAL(8)       ,ALLOCATABLE :: EOFI_FOCK(:)
+      real(8)                    :: potsave(nr,10),potinsave(nr,10)
+      real(8)                    :: potoutsave(nr,10)
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -606,13 +610,14 @@ USE PERIODICTABLE_MODULE
 !     ==========================================================================
       TSECOND=.FALSE.
 1000  CONTINUE
-      XAV=0.D0
-      XMAX=0.D0
+      XAVmin=1.d+12
+      XMAXmin=1.d+12
+      xdemin=1.d+12
+      nconv=0
       CONVG=.FALSE.
       POTIN=POT
       CALL BROYDEN$NEW(NR,NBROYDENMEM,BROYDENSTEP)
       DO ITER=1,NITER
-
 !
 !       ========================================================================
 !       == DETERMINE BOUND STATES FOR A GIVEN POTENTIAL AND ADD TO DENSITY    ==
@@ -705,12 +710,51 @@ RFOCK=1.1D0*RFOCK
 !       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD             ==
 !       ========================================================================
         XAV=SQRT(SUM(R**3*(POT-POTIN)**2)/SUM(R**3))
-        XMAX=MAXVAL(ABS(R**2*(POT-POTIN))) 
-        if(tpr)PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:R**2*(POT-POTIN)=',XMAX
+        XMAX=MAXVAL(ABS(POT-POTIN))
+        AUX(:)=R**2*RHO*(POT-POTIN) 
+        AUX(:)=ABS(AUX)
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,XDE)
+        nconv=nconv+1
+        IF(XAV.LT.XAVMIN) THEN
+          XAVMIN=XAV
+          NCONV=0
+        END IF
+        IF(XMAX.LT.XMAXMIN) THEN
+          XMAXMIN=XMAX
+          NCONV=0
+        END IF
+        IF(XDE.LT.XDEMIN) THEN
+          XDEMIN=XDE
+          NCONV=0
+        END IF
+        if(tpr)PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:(POT-POTIN)=',XMAX &
+      &                   ,' de ',xde 
+if(tpr) then
+  do i=10,2,-1
+    potsave(:,i)=potsave(:,i-1)
+    potinsave(:,i)=potinsave(:,i-1)
+    potoutsave(:,i)=potoutsave(:,i-1)
+  enddo  
+  potsave(:,1)=pot-potin
+  potinsave(:,1)=potin
+  potoutsave(:,1)=pot
+  do i=2,10
+     potoutsave(:,i)=potoutsave(:,i)-potoutsave(:,1)
+     potinsave(:,i)=potinsave(:,i)-potinsave(:,1)
+  enddo
+  do i=1,10
+     potinsave(:,i)=r(:)*potinsave(:,i)
+     potsave(:,i)=r(:)*potsave(:,i)
+  enddo
+  CALL ATOMLIB_WRITEPHI('pot-potin',GID,NR,10,potsave)
+  CALL ATOMLIB_WRITEPHI('potin',GID,NR,9,potinsave(:,2:10))
+  CALL ATOMLIB_WRITEPHI('potout',GID,NR,9,potoutsave(:,2:10))
+end if
         CALL BROYDEN$STEP(NR,POTIN,POT-POTIN)
         POT=POTIN
-        CONVG=(XMAX.LT.TOL)
+        CONVG=(XMAX.LT.TOL).and.nconv.gt.5
       ENDDO
+
       CALL BROYDEN$CLEAR
       IF(.NOT.CONVG) THEN
         CALL ERROR$MSG('SELFCONSISTENCY LOOP NOT CONVERGED')
@@ -1334,6 +1378,9 @@ RFOCK=1.1D0*RFOCK
 !     ==  CUT OF POTENTIAL FOTR LOW DENSITIES                                 ==
 !     ==========================================================================
       POT=POTH+POTXC
+!CALL ATOMLIB_WRITEPHI('poth',GID,NR,1,poth)
+!CALL ATOMLIB_WRITEPHI('potxc',GID,NR,1,potxc)
+!CALL ATOMLIB_WRITEPHI('rho',GID,NR,1,rho)
       RETURN
       END
 !
