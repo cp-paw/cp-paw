@@ -2351,6 +2351,8 @@ CONTAINS
             IF(LENG.EQ.0) THEN
               CALL ERROR$MSG('DATA DOES NOT FIT BUFFER')
               CALL ERROR$MSG('OR BUFFER STRUCTURE CORRUPTED')
+              CALL ERROR$MSG('LENG=0 AFTER CALLING TYPESIZE')
+              CALL ERROR$chval('type',type)
               CALL ERROR$STOP('BUFFER$READ')
             ENDIF
           END IF
@@ -2439,7 +2441,7 @@ CONTAINS
 !     ==================================================================
 !     ==                                                              ==
 !     ==================================================================
-      I=MAX(1,BUFFER%LAST-LENGX)
+      I=MAX(1,BUFFER%LAST-LENGX+1)
       LINE=' '
       CALL BUFFER_TOSTRING(BUFFER,I,BUFFER%LAST,LINE)
       TEOB=(INDEX(+LINE,'!EOB').NE.0)
@@ -2850,11 +2852,11 @@ CONTAINS
           STRING(II:II)=BUFFER%CH(I)
         ENDDO
         CALL ERROR$MSG('WORD DOES NOT FIT INTO STRING')
-        CALL ERROR$CHVAL('WORD(TRUNCATED)',STRING)
         CALL ERROR$I4VAL('LENG',LENG)
+        CALL ERROR$CHVAL('WORD(TRUNCATED)',STRING)
         CALL ERROR$STOP('BUFFER_TOSTRING')
       END IF
-!     == COPY INTO STRING
+!     == COPY INTO STRING =====================================================
       II=0
       DO I=I1,I2
         II=II+1
@@ -2863,22 +2865,22 @@ CONTAINS
       RETURN
       END SUBROUTINE BUFFER_TOSTRING
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BUFFER_NEXTWORD(BUFFER,I1,I2)
-!     ******************************************************************
-!     **                                                              **
-!     **  NAME: BUFFER_NEXTWORD(BUFFER,I1,I2)                         **
-!     **                                                              **
-!     **  PURPOSE: SEARCHES FOR THE NEXT SYNTAXTIC WORD FOLLOWING     **
-!     **    POSITION I1 ON BUFFER ARRAY "BUFFER%CH". A SYNTACTIC      **
-!     **    WORD IS EITHER A BLOCK OR DATA KEY WORD OR A SCALAR DATA. **
-!     **                                                              **
-!     **    ON OUTPUT, I1 IS SET TO THE FIRST NON-BLANK CHARACTER     **
-!     **    FOLLOWING THE PROVIDED I1 AND I2 POINTS TO THE LAST       **
-!     **    NON-BLANK CHARACTER OR THE FIRST '=' SIGN FOLLOWING       **
-!     **    THE NEW I1.                                               **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  NAME: BUFFER_NEXTWORD(BUFFER,I1,I2)                                 **
+!     **                                                                      **
+!     **  PURPOSE: SEARCHES FOR THE NEXT SYNTAXTIC WORD FOLLOWING             **
+!     **    POSITION I1 ON BUFFER ARRAY "BUFFER%CH". A SYNTACTIC              **
+!     **    WORD IS EITHER A BLOCK OR DATA KEY WORD OR A SCALAR DATA.         **
+!     **                                                                      **
+!     **    ON OUTPUT, I1 IS SET TO THE FIRST NON-BLANK CHARACTER             **
+!     **    FOLLOWING THE PROVIDED I1 AND I2 POINTS TO THE LAST               **
+!     **    NON-BLANK CHARACTER OR THE FIRST '=' SIGN FOLLOWING               **
+!     **    THE NEW I1.                                                       **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       TYPE(BUFF_TYPE),INTENT(INOUT):: BUFFER
       INTEGER(4)     ,INTENT(INOUT):: I1
@@ -2886,28 +2888,31 @@ CONTAINS
       INTEGER(4)                   :: I,I1NEW
       INTEGER(4)                   :: IBLANK,ICHAR
       CHARACTER(1)                 :: CHAR
-!     ******************************************************************
+!     **************************************************************************
 !
-!     ==================================================================
-!     ==                                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       ICHAR=0
       IBLANK=2
       I1NEW=0
       I2=0
       DO I=I1,BUFFER%LAST      
         CHAR=BUFFER%CH(I)
-!       ================================================================
-!       ==  COUNT SIGNIFICANT BLANKS  
-!       ================================================================
+!       ========================================================================
+!       ==  COUNT SIGNIFICANT BLANKS                                          ==
+!       ========================================================================
         IF(CHAR.EQ.' '.AND.ICHAR.EQ.0)THEN
           IBLANK=IBLANK+1
         ELSE
           IBLANK=0
         END IF
-!       ================================================================
-!       ==  SWITCH FOR CHARACTER CONTEXT                              ==
-!       ================================================================
+!       ========================================================================
+!       ==  SWITCH FOR CHARACTER CONTEXT                                      ==
+!       == ichar=0: outside text string                                       ==
+!       == ichar=1: inside text string enclosed by single apostrophes         ==
+!       == ichar=2: inside text string enclosed by double apostrophes         ==
+!       ========================================================================
         IF(ICHAR.EQ.0) THEN
           IF(CHAR.EQ."'") THEN
             ICHAR=1
@@ -2921,11 +2926,11 @@ CONTAINS
             ICHAR=0
           END IF
         END IF
-!       ================================================================
-!       ==                                                            ==
-!       ================================================================
+!       ========================================================================
+!       ==                                                                    ==
+!       ========================================================================
         IF(I1NEW.EQ.0) THEN
-          IF(IBLANK.EQ.0) I1NEW=I
+          IF(IBLANK.EQ.0) I1NEW=I  !position of first non-blank character
         ELSE
           IF(ICHAR.EQ.0) THEN
             IF(IBLANK.GE.1) THEN
