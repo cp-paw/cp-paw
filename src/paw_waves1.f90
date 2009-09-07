@@ -1298,7 +1298,7 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
 !     ==========================================================================
 !     == CALCULATE LMTO structure constants                                   ==
 !     ==========================================================================
-      IF(TFIRST.OR.TFORCE) THEN
+      IF(TFIRST.OR.TFORCE.OR.TSTRESS) THEN
                                CALL TIMING$CLOCKON('STRUCTURECONSTANTS')
         CALL LMTO$MAKESTRUCTURECONSTANTS()
                               CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')

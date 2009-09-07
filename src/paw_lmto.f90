@@ -43,17 +43,17 @@ END MODULE LMTO_MODULE
       INTEGER(4)            :: NNB
       INTEGER(4)            :: NN,LM1
 !     **************************************************************************
-                             call trace$push('lmto$reportsbar')
+                             CALL TRACE$PUSH('LMTO$REPORTSBAR')
       NNB=SIZE(SBAR)
       DO NN=1,NNB
         WRITE(NFIL,FMT='(82("="),T10," IAT1=",I5," IAT2=",I5," IT=",3I3," ")') &
      &                 SBAR(NN)%IAT1,SBAR(NN)%IAT2,SBAR(NN)%IT
         DO LM1=1,SBAR(NN)%N1
-          WRITE(NFIL,FMT='(20F10.5)')SBAR(NN)%MAT(:,lm1)
+          WRITE(NFIL,FMT='(20F10.5)')SBAR(NN)%MAT(:,LM1)
         ENDDO
         WRITE(NFIL,FMT='(82("="))')
       ENDDO
-                             call trace$pop()
+                             CALL TRACE$POP()
       RETURN
       END SUBROUTINE LMTO$REPORTSBAR
 !
@@ -71,13 +71,13 @@ END MODULE LMTO_MODULE
       INTEGER(4)            :: ISP,LN
       INTEGER(4),ALLOCATABLE:: LOX(:)
 !     **************************************************************************
-                             call trace$push('lmto$reportpotpar')
+                             CALL TRACE$PUSH('LMTO$REPORTPOTPAR')
       NSP=SIZE(POTPAR)
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
         LNX=SIZE(POTPAR(ISP)%QBAR)
-        ALLOCATE(LOX(lnx))
-        CALL SETUP$GETi4A('LOX',LNX,LOX)
+        ALLOCATE(LOX(LNX))
+        CALL SETUP$GETI4A('LOX',LNX,LOX)
         CALL SETUP$ISELECT(0)
         DO LN=1,LNX
           WRITE(TITLE,FMT='(I3," LN=",I3," L=",I2)')ISP,LN,LOX(LN)
@@ -97,7 +97,7 @@ END MODULE LMTO_MODULE
         WRITE(NFIL,FMT='(82("="))')
         DEALLOCATE(LOX)
       ENDDO
-                                                 call trace$pop()
+                                                 CALL TRACE$POP()
       RETURN
       END
 !
@@ -253,9 +253,9 @@ END MODULE LMTO_MODULE
         DEALLOCATE(AEPHIDOT)
         DEALLOCATE(LOX)
         DEALLOCATE(ISCATT)
-        DEALLOCATE(r)
-        DEALLOCATE(aux)
-        DEALLOCATE(aux1)
+        DEALLOCATE(R)
+        DEALLOCATE(AUX)
+        DEALLOCATE(AUX1)
       ENDDO
       RETURN
       END
@@ -265,7 +265,7 @@ END MODULE LMTO_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : K2,RC,SBAR,TINISTRUC,potpar
+      USE LMTO_MODULE, ONLY : K2,RC,SBAR,TINISTRUC,POTPAR
       IMPLICIT NONE
       INTEGER(4)             :: NAT       !#(ATOMS)
       REAL(8)                :: RBAS(3,3) !LATTICE VECTORS
@@ -298,7 +298,7 @@ END MODULE LMTO_MODULE
 !     **************************************************************************
       CALL SETUP$GETL4('INTERNALSETUPS',TCHK)
       IF(.NOT.TCHK) RETURN
-                              call trace$push('LMTO$MAKESTRUCTURECONSTANTS')
+                              CALL TRACE$PUSH('LMTO$MAKESTRUCTURECONSTANTS')
 !
       IF(TINISTRUC) RETURN
       TINISTRUC=.TRUE.
@@ -446,7 +446,7 @@ END MODULE LMTO_MODULE
       CALL LMTO$REPORTPOTBAR(6)
       CALL LMTO$REPORTSBAR(6)
 !
-                              call trace$pop()
+                              CALL TRACE$POP()
       RETURN
       END      
 !
@@ -759,7 +759,7 @@ END MODULE LMTO_MODULE
 !!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$DOLOCORB(IAT,ISP,GID,NR,LNXCHI,LNXPHI,TORB,cHIpHI,CHI)
+      SUBROUTINE LMTO$DOLOCORB(IAT,ISP,GID,NR,LNXCHI,LNXPHI,TORB,CHIPHI,CHI)
 !     **************************************************************************
 !     **  CONSTRUCTS ONSITE-MAPPING FROM PARTIAL WAVES TO LOCAL ORBITALS      **
 !     **                                                                      **
@@ -771,7 +771,7 @@ END MODULE LMTO_MODULE
 !     **                                                                      **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : SBAR,POTPAR
-      USE strings_module
+      USE STRINGS_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: IAT     ! ATOM INDEX
@@ -780,15 +780,15 @@ END MODULE LMTO_MODULE
       INTEGER(4),INTENT(IN)  :: LNXPHI  ! #(PARTIAL WAVES W/O M-MULTIPLICITY)
       INTEGER(4),INTENT(IN)  :: LNXCHI  ! #(PARTIAL WAVES W/O M-MULTIPLICITY)
       LOGICAL(4),INTENT(IN)  :: TORB(LNXPHI)          ! SELECTS LOCAL ORBITALS
-      REAL(8)   ,INTENT(OUT) :: CHIphi(LNXcHI,LNXpHI) !<pi_i|=\sum_j chiphi(i,j)<p_j|
+      REAL(8)   ,INTENT(OUT) :: CHIPHI(LNXCHI,LNXPHI) !<PI_I|=\SUM_J CHIPHI(I,J)<P_J|
       REAL(8)   ,INTENT(OUT) :: CHI(NR,LNXCHI)
       INTEGER(4)             :: NAT         ! #(ATOMS)
       INTEGER(4),ALLOCATABLE :: ISPECIES(:) !(NAT) ATOM TYPE FOR EACH ATOM
       INTEGER(4)             :: ISP         ! ATOM TYPE INDEX
       INTEGER(4)             :: LNX         ! #(PARTIAL WAVES)
-      INTEGER(4)             :: nnb         ! 
+      INTEGER(4)             :: NNB         ! 
       INTEGER(4)             :: LOX(LNXPHI) ! ANGULAR MOMENTA
-      INTEGER(4),allocatable :: LOXchi(:)    ! ANGULAR MOMENTA
+      INTEGER(4),ALLOCATABLE :: LOXCHI(:)    ! ANGULAR MOMENTA
       INTEGER(4)             :: ISCATT(LNXPHI)    ! COUNTER RELATIVE TO HOMO
       REAL(8)                :: AEPHI(NR,LNXPHI)  ! AE PARTIAL WAVES
       REAL(8)                :: PSPHI(NR,LNXPHI)  ! PSEUDO PARTIAL WAVES
@@ -805,13 +805,13 @@ END MODULE LMTO_MODULE
       REAL(8)                :: AEZ               ! ATOMIC NUMBER
       REAL(8)                :: AUX(NR)
       REAL(8)                :: R(NR)
-      REAL(8)                :: SVAR,svar1,VAL
-      logical(4)             :: tchk
-      INTEGER(4)             :: Lmx,lnxchi1
-      INTEGER(4)             :: LN,L,I,j,LXX,ISVAR,iib,n1,lm,lnchi1,lnchi,ir
-      INTEGER(4)             :: LNphi
-      INTEGER(4)             :: ircov  ! grid index just beyond rcov
-      character(64)          :: string
+      REAL(8)                :: SVAR,SVAR1,VAL,der
+      LOGICAL(4)             :: TCHK
+      INTEGER(4)             :: LMX,LNXCHI1
+      INTEGER(4)             :: LN,L,I,J,LXX,ISVAR,IIB,N1,LM,LNCHI1,LNCHI,IR
+      INTEGER(4)             :: LNPHI
+      INTEGER(4)             :: IRCOV  ! GRID INDEX JUST BEYOND RCOV
+      CHARACTER(64)          :: STRING
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO$DOLOCORB')
       CALL RADIAL$R(GID,NR,R)
@@ -822,10 +822,10 @@ END MODULE LMTO_MODULE
       CALL SETUP$ISELECT(ISP)
       CALL SETUP$GETR8('AEZ',AEZ)
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
-      do ir=1,nr
-        ircov=ir
-        if(r(ir).gt.rcov) exit
-      enddo
+      DO IR=1,NR
+        IRCOV=IR
+        IF(R(IR).GT.RCOV) EXIT
+      ENDDO
       CALL SETUP$GETI4('LNX',LNX)
       IF(LNXPHI.NE.LNX) THEN
         CALL ERROR$STOP('INCONSISTENT #(PARTIAL WAVES)')
@@ -844,7 +844,7 @@ END MODULE LMTO_MODULE
 !     ==========================================================================
       NNB=SIZE(SBAR)
       TCHK=.FALSE.
-      DO Iib=1,NNB
+      DO IIB=1,NNB
         IF(SBAR(IIB)%IAT1.NE.IAT) CYCLE
         IF(SBAR(IIB)%IAT2.NE.IAT) CYCLE
         N1=SBAR(IIB)%N1
@@ -860,7 +860,7 @@ END MODULE LMTO_MODULE
       END IF
 !
 !     == SPHERICAL AVERAGE =====================================================
-      lmx=(maxval(lox)+1)**2
+      LMX=(MAXVAL(LOX)+1)**2
       DO I=1,LMX
         DO J=1,LMX
           IF(I.EQ.J) CYCLE
@@ -904,58 +904,293 @@ PRINT*,'SBARONSITE ',L,SBARONSITE(L**2+1,L**2+1)
         LM=L**2+1
         SVAR=POTPAR(ISP)%CBAR(LN)-POTPAR(ISP)%ENU(LN) &
      &        +SBARONSITE(LM,LM)*POTPAR(ISP)%SQDELTABAR(LN)**2
-print*,'ln,lnchi,l, svar ',ln,lnchi,l,svar,aephidot(ircov,ln),aechi(ircov,lnchi)
-print*,'c,enu   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
-!if(aephidot(ircov,ln)*svar/aechi(ircov,lnchi).gt.0.d0) cycle
-        if(svar.lt.0.d0) cycle
+PRINT*,'LN,LNCHI,L, SVAR ',LN,LNCHI,L,SVAR,AEPHIDOT(IRCOV,LN),AECHI(IRCOV,LNCHI)
+PRINT*,'C,ENU   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
+!IF(AEPHIDOT(IRCOV,LN)*SVAR/AECHI(IRCOV,LNCHI).GT.0.D0) CYCLE
+        IF(SVAR.LT.0.D0) CYCLE
+        AECHI(:,LNCHI)=AECHI(:,LNCHI)+AEPHIDOT(:,LN)*SVAR
+        PSCHI(:,LNCHI)=PSCHI(:,LNCHI)+PSPHIDOT(:,LN)*SVAR
+      ENDDO
+!
+!     == attach exponential tail at the covalent radius ========================
+      DO LNCHI=1,LNXCHI1     
+        call radial$value(gid,nr,aechi(:,lnchi),rcov,val)
+        call radial$derivative(gid,nr,aechi(:,lnchi),rcov,der)
+        SVAR=der/val
+        if(svar.gt.0.d0) then
+          CALL ERROR$msg('Orbital does not decay')
+          CALL ERROR$r8val('logaritmic cderivative ',svar)
+          CALL ERROR$STOP('LMTO$DOLOCORB')
+        end if
+        do ir=ircov,nr
+          aechi(ir,lnchi)=val*exp(svar*(r(ir)-rcov))
+        enddo
+      enddo
+!
+!     ==ORTHONORMALIZE LOCAL ORBITALS ==========================================
+      DO LNCHI=1,LNXCHI1
+        L=LOXCHI(LNCHI)
+        DO LN=1,LNCHI-1
+          IF(LOXCHI(LN).NE.L) CYCLE
+          AUX(:)=R(:)**2*AECHI(:,LNCHI)*AECHI(:,LN)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
+          AECHI(:,LNCHI)=AECHI(:,LNCHI)-AECHI(:,LN)*VAL
+          PSCHI(:,LNCHI)=PSCHI(:,LNCHI)-PSCHI(:,LN)*VAL
+        ENDDO
+        AUX(:)=R(:)**2*AECHI(:,LNCHI)**2
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
+        VAL=1.D0/SQRT(VAL)
+        AECHI(:,LNCHI)=AECHI(:,LNCHI)*VAL
+        PSCHI(:,LNCHI)=PSCHI(:,LNCHI)*VAL
+      ENDDO
+!
+!     ==========================================================================
+!     == TRANSFORMATION OF PROJECTORS                                         ==
+!     ==========================================================================
+      ALLOCATE(AMAT(LNXCHI1,LNXPHI))
+      ALLOCATE(BMAT(LNXCHI1,LNXCHI1))
+      ALLOCATE(XMAT(LNXPHI,LNXCHI1))
+      AMAT(:,:)=0.D0
+      DO LNCHI=1,LNXCHI1
+        DO LNPHI=1,LNXPHI
+          IF(LOX(LNPHI).NE.LOXCHI(LNCHI)) CYCLE
+          AUX(:)=R(:)**2*PRO(:,LNPHI)*PSCHI(:,LNCHI)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,AMAT(LNCHI,LNPHI))
+        ENDDO
+      ENDDO
+      BMAT(:,:)=0.D0
+      DO LNCHI=1,LNXCHI1
+        BMAT(LNCHI,LNCHI)=1.D0
+      ENDDO
+      CALL LIB$MATRIXSOLVER8(LNXCHI1,LNXPHI,LNXCHI1,AMAT,XMAT,BMAT)
+      AMAT=TRANSPOSE(XMAT)
+      DEALLOCATE(XMAT)
+      DEALLOCATE(BMAT)
+!
+!     ==========================================================================
+!     == DELETE ORBITALS NOT IN THE SET                                       ==
+!     ==========================================================================
+      LNCHI=0
+      LNCHI1=0
+      DO LN=1,LNX
+        IF(ISCATT(LN).GT.0) CYCLE
+        LNCHI1=LNCHI1+1
+        IF(.NOT.TORB(LN)) CYCLE
+        LNCHI=LNCHI+1
+        CHI(:,LNCHI)=AECHI(:,LNCHI1)
+        CHIPHI(LNCHI,:)=AMAT(LNCHI1,:)
+PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
+      ENDDO
+!
+!     ==========================================================================
+!     == PLOT LOCAL ORBITALS                                                  ==
+!     ==========================================================================
+      WRITE(STRING,FMT='(F3.0)')AEZ
+      STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
+      CALL SETUP_WRITEPHI(-'CHI'//TRIM(STRING),GID,NR,LNCHI,CHI)
+!
+                            CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$DOLOCORB_OLD2(IAT,ISP,GID,NR,LNXCHI,LNXPHI,TORB,CHIPHI,CHI)
+!     **************************************************************************
+!     **  CONSTRUCTS ONSITE-MAPPING FROM PARTIAL WAVES TO LOCAL ORBITALS      **
+!     **                                                                      **
+!     **  1) SEMI-CORE-LIKE PARTIAL WAVES ARE TREATED AS LOCAL ORBITALS       **
+!     **     EVEN THOUGH THEY MAY NOT BE INCLUDED IN THE SET                  **
+!     **  2) VALENCE-LIKE LOCAL ORBITALS ARE CONSTRUCTED FROM THE VALENCE-LIKE**
+!     **     PARTIAL WAVE AND ITS |Q_{N+1}> PARTNER. THAT ARE SUPER-IMPOSED   **
+!     **     AS IN A SCREENED LMTO.                                           **
+!     **                                                                      **
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : SBAR,POTPAR
+      USE STRINGS_MODULE
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: IAT     ! ATOM INDEX
+      INTEGER(4),INTENT(IN)  :: GID     ! GRID ID
+      INTEGER(4),INTENT(IN)  :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4),INTENT(IN)  :: LNXPHI  ! #(PARTIAL WAVES W/O M-MULTIPLICITY)
+      INTEGER(4),INTENT(IN)  :: LNXCHI  ! #(PARTIAL WAVES W/O M-MULTIPLICITY)
+      LOGICAL(4),INTENT(IN)  :: TORB(LNXPHI)          ! SELECTS LOCAL ORBITALS
+      REAL(8)   ,INTENT(OUT) :: CHIPHI(LNXCHI,LNXPHI) !<PI_I|=\SUM_J CHIPHI(I,J)<P_J|
+      REAL(8)   ,INTENT(OUT) :: CHI(NR,LNXCHI)
+      INTEGER(4)             :: NAT         ! #(ATOMS)
+      INTEGER(4),ALLOCATABLE :: ISPECIES(:) !(NAT) ATOM TYPE FOR EACH ATOM
+      INTEGER(4)             :: ISP         ! ATOM TYPE INDEX
+      INTEGER(4)             :: LNX         ! #(PARTIAL WAVES)
+      INTEGER(4)             :: NNB         ! 
+      INTEGER(4)             :: LOX(LNXPHI) ! ANGULAR MOMENTA
+      INTEGER(4),ALLOCATABLE :: LOXCHI(:)    ! ANGULAR MOMENTA
+      INTEGER(4)             :: ISCATT(LNXPHI)    ! COUNTER RELATIVE TO HOMO
+      REAL(8)                :: AEPHI(NR,LNXPHI)  ! AE PARTIAL WAVES
+      REAL(8)                :: PSPHI(NR,LNXPHI)  ! PSEUDO PARTIAL WAVES
+      REAL(8)                :: AEPHIDOT(NR,LNXPHI) ! AE PARTIAL WAVES
+      REAL(8)                :: PSPHIDOT(NR,LNXPHI) ! PARTIAL WAVES
+      REAL(8)                :: PRO(NR,LNXPHI)    ! PROJECTOR FUNCTIONS
+      REAL(8)   ,ALLOCATABLE :: AECHI(:,:)  ! ALL-ELECTRON LOCAL ORBITALS
+      REAL(8)   ,ALLOCATABLE :: PSCHI(:,:)  ! PSEUDO LOCAL ORBITALS
+      REAL(8)   ,ALLOCATABLE :: SBARONSITE(:,:)   !(LMX,LMX) 
+      REAL(8)   ,ALLOCATABLE :: AMAT(:,:)   !(LNXCHI1,LNXPHI) 
+      REAL(8)   ,ALLOCATABLE :: BMAT(:,:)   !(LNXCHI1,LNXCHI1) 
+      REAL(8)   ,ALLOCATABLE :: XMAT(:,:)   !(LNXPHI,LNXCHI) 
+      REAL(8)                :: RCOV              ! COVALENT RADIUS
+      REAL(8)                :: AEZ               ! ATOMIC NUMBER
+      REAL(8)                :: AUX(NR)
+      REAL(8)                :: R(NR)
+      REAL(8)                :: SVAR,SVAR1,VAL
+      LOGICAL(4)             :: TCHK
+      INTEGER(4)             :: LMX,LNXCHI1
+      INTEGER(4)             :: LN,L,I,J,LXX,ISVAR,IIB,N1,LM,LNCHI1,LNCHI,IR
+      INTEGER(4)             :: LNPHI
+      INTEGER(4)             :: IRCOV  ! GRID INDEX JUST BEYOND RCOV
+      CHARACTER(64)          :: STRING
+!     **************************************************************************
+                            CALL TRACE$PUSH('LMTO$DOLOCORB')
+      CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     == COLLECT DATA                                                         ==
+!     ==========================================================================
+      CALL SETUP$ISELECT(ISP)
+      CALL SETUP$GETR8('AEZ',AEZ)
+      CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
+      DO IR=1,NR
+        IRCOV=IR
+        IF(R(IR).GT.RCOV) EXIT
+      ENDDO
+      CALL SETUP$GETI4('LNX',LNX)
+      IF(LNXPHI.NE.LNX) THEN
+        CALL ERROR$STOP('INCONSISTENT #(PARTIAL WAVES)')
+        CALL ERROR$STOP('LMTO$DOLOCORB')
+      END IF
+      CALL SETUP$GETI4A('LOX',LNX,LOX)
+      CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
+      CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
+      CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI)
+      CALL SETUP$GETR8A('AEPHIDOT',NR*LNX,AEPHIDOT)
+      CALL SETUP$GETR8A('PSPHIDOT',NR*LNX,PSPHIDOT)
+      CALL SETUP$GETR8A('PRO',NR*LNX,PRO)
+!
+!     ==========================================================================
+!     == FIND ONSITE STRUCTURE CONSTANTS                                      ==
+!     ==========================================================================
+      NNB=SIZE(SBAR)
+      TCHK=.FALSE.
+      DO IIB=1,NNB
+        IF(SBAR(IIB)%IAT1.NE.IAT) CYCLE
+        IF(SBAR(IIB)%IAT2.NE.IAT) CYCLE
+        N1=SBAR(IIB)%N1
+        ALLOCATE(SBARONSITE(N1,N1)) 
+        SBARONSITE(:,:)=SBAR(IIB)%MAT
+        TCHK=.TRUE.
+        EXIT
+      ENDDO
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('ONSITE TERM OF STRUCTURE CONSTANTS NOT FOUND')
+        CALL ERROR$I4VAL('IAT',IAT)
+        CALL ERROR$STOP('LMTO$DOLOCORB')
+      END IF
+!
+!     == SPHERICAL AVERAGE =====================================================
+      LMX=(MAXVAL(LOX)+1)**2
+      DO I=1,LMX
+        DO J=1,LMX
+          IF(I.EQ.J) CYCLE
+          SBARONSITE(I,J)=0.D0
+        ENDDO
+      ENDDO
+      DO L=0,MAXVAL(LOX)
+        SVAR=0.D0
+        DO LM=L**2+1,(L+1)**2
+          SVAR=SVAR+SBARONSITE(LM,LM)
+        ENDDO
+        SVAR=SVAR/REAL(2*L+1,KIND=8)
+        DO LM=L**2+1,(L+1)**2
+          SBARONSITE(LM,LM)=SVAR
+        ENDDO
+PRINT*,'SBARONSITE ',L,SBARONSITE(L**2+1,L**2+1)
+      ENDDO
+!
+!     ==========================================================================
+!     == COUNT ONSITE ORBITALS BEFORE EXCLUSION                               ==
+!     ==========================================================================
+      LNXCHI1=0
+      DO LN=1,LNX
+        IF(ISCATT(LN).LE.0) LNXCHI1=LNXCHI1+1
+      ENDDO
+      ALLOCATE(LOXCHI(LNXCHI1))
+      ALLOCATE(AECHI(NR,LNXCHI1))
+      ALLOCATE(PSCHI(NR,LNXCHI1))
+!
+!     ==========================================================================
+!     == CONSTRUCT LOCAL ORBITALS                                             ==
+!     ==========================================================================
+      LNCHI=0
+      DO LN=1,LNX
+        IF(ISCATT(LN).GT.0) CYCLE
+        LNCHI=LNCHI+1
+        L=LOX(LN)
+        LOXCHI(LNCHI)=L
+        AECHI(:,LNCHI)=AEPHI(:,LN)          
+        PSCHI(:,LNCHI)=PSPHI(:,LN)          
+        LM=L**2+1
+        SVAR=POTPAR(ISP)%CBAR(LN)-POTPAR(ISP)%ENU(LN) &
+     &        +SBARONSITE(LM,LM)*POTPAR(ISP)%SQDELTABAR(LN)**2
+PRINT*,'LN,LNCHI,L, SVAR ',LN,LNCHI,L,SVAR,AEPHIDOT(IRCOV,LN),AECHI(IRCOV,LNCHI)
+PRINT*,'C,ENU   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
+!IF(AEPHIDOT(IRCOV,LN)*SVAR/AECHI(IRCOV,LNCHI).GT.0.D0) CYCLE
+        IF(SVAR.LT.0.D0) CYCLE
         AECHI(:,LNCHI)=AECHI(:,LNCHI)+AEPHIDOT(:,LN)*SVAR
         PSCHI(:,LNCHI)=PSCHI(:,LNCHI)+PSPHIDOT(:,LN)*SVAR
       ENDDO
 !
 !     == CUT OFF THE TAIL OF THE LOCAL ORBITALS ================================
       DO LNCHI=1,LNXCHI1     
-        svar=aechi(ircov,lnchi)/aechi(ircov-1,lnchi)
-!       svar>1 : chi increases in absolute value at the covalent radius
-!       0<svar<1: chi decreass in absolute value
-!       svar<0 : zero between r(ircov-1) and r(ircov)
-        if(svar.gt.1.d0) then
-          do ir=ircov-1,2,-1
-            svar1=aechi(ir,lnchi)/aechi(ir-1,lnchi)
-            if(svar1.le.0.d0) then
-print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
-               AECHI(IR:,lnchi)=0.D0
-               PSCHI(IR:,lnchi)=0.D0
-               exit
-            end if
-            if(svar1.lt.1.d0) then
+        SVAR=AECHI(IRCOV,LNCHI)/AECHI(IRCOV-1,LNCHI)
+!       SVAR>1 : CHI INCREASES IN ABSOLUTE VALUE AT THE COVALENT RADIUS
+!       0<SVAR<1: CHI DECREASS IN ABSOLUTE VALUE
+!       SVAR<0 : ZERO BETWEEN R(IRCOV-1) AND R(IRCOV)
+        IF(SVAR.GT.1.D0) THEN
+          DO IR=IRCOV-1,2,-1
+            SVAR1=AECHI(IR,LNCHI)/AECHI(IR-1,LNCHI)
+            IF(SVAR1.LE.0.D0) THEN
+PRINT*,'ORBITAL CUTOFF/RCOV',LNCHI,R(IR)/RCOV,' R=',R(IR)
+               AECHI(IR:,LNCHI)=0.D0
+               PSCHI(IR:,LNCHI)=0.D0
+               EXIT
+            END IF
+            IF(SVAR1.LT.1.D0) THEN
               CALL LMTO_WRITEPHI('FAILEDLOCALORBITAL.DAT',GID,NR,LNXCHI1,AECHI)
               CALL LMTO_WRITEPHI('FAILEDPHI.DAT',GID,NR,LNXCHI1,AEPHI)
               CALL LMTO_WRITEPHI('FAILEDPHIDOT.DAT',GID,NR,LNXCHI1,AEPHIDOT)
               CALL ERROR$MSG('LOCAL ORBITAL CONSTRUCTION FAILED')
-              CALL ERROR$MSG('absolute value of LOCAL ORBITAL ...')
-              CALL ERROR$MSG('... has a minimum inside rcov')
+              CALL ERROR$MSG('ABSOLUTE VALUE OF LOCAL ORBITAL ...')
+              CALL ERROR$MSG('... HAS A MINIMUM INSIDE RCOV')
               CALL ERROR$MSG('LOCAL ORBITALS ARE PRINTED INTO FILE')
               CALL ERROR$CHVAL('FILE','FAILEDLOCALORBITAL.DAT')
               CALL ERROR$I4VAL('IAT',IAT)
               CALL ERROR$I4VAL('ISP',ISP)
               CALL ERROR$I4VAL('LNCHI ',LNCHI)
-              CALL ERROR$I4VAL('L ',loxchi(LNCHI))
-              CALL ERROR$R8VAL('R(ircov)',R(IRcov))
+              CALL ERROR$I4VAL('L ',LOXCHI(LNCHI))
+              CALL ERROR$R8VAL('R(IRCOV)',R(IRCOV))
               CALL ERROR$R8VAL('R',R(IR))
               CALL ERROR$STOP('LMTO$DOLOCORB')
-            end if
-          enddo
-        else  
-          DO IR=ircov,NR
-            svar1=aechi(ir,lnchi)/aechi(ir-1,lnchi)
-            IF(svar1.le.0.D0) then
-print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
-              AECHI(IR:,lnchi)=0.D0
-              PSCHI(IR:,lnchi)=0.D0
-              exit
-            end if
-!           == check if a chi has a node at all... ===============================
-            IF(svar1.gt.1.d0) then
+            END IF
+          ENDDO
+        ELSE  
+          DO IR=IRCOV,NR
+            SVAR1=AECHI(IR,LNCHI)/AECHI(IR-1,LNCHI)
+            IF(SVAR1.LE.0.D0) THEN
+PRINT*,'ORBITAL CUTOFF/RCOV',LNCHI,R(IR)/RCOV,' R=',R(IR)
+              AECHI(IR:,LNCHI)=0.D0
+              PSCHI(IR:,LNCHI)=0.D0
+              EXIT
+            END IF
+!           == CHECK IF A CHI HAS A NODE AT ALL... ===============================
+            IF(SVAR1.GT.1.D0) THEN
               CALL LMTO_WRITEPHI('FAILEDLOCALORBITAL.DAT',GID,NR,LNXCHI1,AECHI)
               CALL LMTO_WRITEPHI('FAILEDPHI.DAT',GID,NR,LNXCHI1,AEPHI)
               CALL LMTO_WRITEPHI('FAILEDPHIDOT.DAT',GID,NR,LNXCHI1,AEPHIDOT)
@@ -971,7 +1206,7 @@ print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
               CALL ERROR$STOP('LMTO$DOLOCORB')
             END IF
           ENDDO
-         end if
+         END IF
       ENDDO
 !
 !     ==ORTHONORMALIZE LOCAL ORBITALS ==========================================
@@ -1002,7 +1237,7 @@ print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
         DO LNPHI=1,LNXPHI
           IF(LOX(LNPHI).NE.LOXCHI(LNCHI)) CYCLE
           AUX(:)=R(:)**2*PRO(:,LNPHI)*PSCHI(:,LNCHI)
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,AMAT(LNcHI,LNpHI))
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,AMAT(LNCHI,LNPHI))
         ENDDO
       ENDDO
       BMAT(:,:)=0.D0
@@ -1020,17 +1255,17 @@ print*,'orbital cutoff/rcov',lnchi,r(ir)/rcov,' r=',r(ir)
       LNCHI=0
       LNCHI1=0
       DO LN=1,LNX
-        IF(ISCATT(ln).GT.0) CYCLE
+        IF(ISCATT(LN).GT.0) CYCLE
         LNCHI1=LNCHI1+1
         IF(.NOT.TORB(LN)) CYCLE
         LNCHI=LNCHI+1
         CHI(:,LNCHI)=AECHI(:,LNCHI1)
         CHIPHI(LNCHI,:)=AMAT(LNCHI1,:)
-print*,'chiphi ',chiphi(lnchi,:)
+PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
       ENDDO
 !
 !     ==========================================================================
-!     == plot local orbitals                                                  ==
+!     == PLOT LOCAL ORBITALS                                                  ==
 !     ==========================================================================
       WRITE(STRING,FMT='(F3.0)')AEZ
       STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
@@ -1434,27 +1669,27 @@ PRINT*,'LOXPHI ',LOXPHI
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_PLOTLOCORB(iat0)
+      SUBROUTINE LMTO_PLOTLOCORB(IAT0)
 !     **************************************************************************
-!     **  writes the envelope functions centered at atom iat0 to file         **
+!     **  WRITES THE ENVELOPE FUNCTIONS CENTERED AT ATOM IAT0 TO FILE         **
 !     **                                                                      **
-!     **  set n1,n2,n3 equal to the number of gridpoints in each direction    **
+!     **  SET N1,N2,N3 EQUAL TO THE NUMBER OF GRIDPOINTS IN EACH DIRECTION    **
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
-      use strings_module
+      USE STRINGS_MODULE
       USE LMTO_MODULE
       IMPLICIT NONE
-      INTEGER(4),intent(in) :: IAT0
+      INTEGER(4),INTENT(IN) :: IAT0
       INTEGER(4),PARAMETER  :: N1=100,N2=1,N3=1
       REAL(8)               :: ORIGIN(3)
       REAL(8)               :: TVEC(3,3)
       REAL(8)               :: TLITTLE(3,3)
       REAL(8)               :: RBAS(3,3)
       INTEGER(4)            :: NAT
-      INTEGER(4)            :: lm1
-      INTEGER(4)            :: lm1x
+      INTEGER(4)            :: LM1
+      INTEGER(4)            :: LM1X
       REAL(8)   ,ALLOCATABLE:: R0(:,:)      !(3,NAT)
       INTEGER(4),ALLOCATABLE:: ISPECIES1(:)  !(NAT)
       REAL(8)   ,ALLOCATABLE:: RCOV(:)      !(NAT)
@@ -1468,21 +1703,21 @@ PRINT*,'LOXPHI ',LOXPHI
       INTEGER(4)            :: LM2X
       INTEGER(4),PARAMETER  :: LMXX=36
       REAL(8)               :: K0(LMXX)
-      REAL(8)               :: j0(LMXX)
-      REAL(8)               :: jbar(LMXX)
-      REAL(8)   ,allocatable:: CVEC(:,:)
-      REAL(8)               :: CVECsum(LMXX)
+      REAL(8)               :: J0(LMXX)
+      REAL(8)               :: JBAR(LMXX)
+      REAL(8)   ,ALLOCATABLE:: CVEC(:,:)
+      REAL(8)               :: CVECSUM(LMXX)
       REAL(8)               :: R2(3)
-      REAL(8)   ,allocatable:: ORB(:,:,:,:)
-      REAL(8)   ,allocatable:: ORBi(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE:: ORB(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE:: ORBI(:,:,:,:)
       REAL(8)   ,ALLOCATABLE:: QBARVEC(:,:)
       INTEGER(4),ALLOCATABLE:: LOX(:)
-      INTEGER(4),ALLOCATABLE:: iscatt(:)
-      logical               :: tonsite
-      logical               :: tsphere
-      integer(4)            :: nfil
-      character(64)         :: file
-      character(8)         :: string
+      INTEGER(4),ALLOCATABLE:: ISCATT(:)
+      LOGICAL               :: TONSITE
+      LOGICAL               :: TSPHERE
+      INTEGER(4)            :: NFIL
+      CHARACTER(64)         :: FILE
+      CHARACTER(8)         :: STRING
 !     **************************************************************************
       TVEC(:,:)=0.D0
       TVEC(1,1)=15.D0
@@ -1490,7 +1725,7 @@ PRINT*,'LOXPHI ',LOXPHI
       TVEC(3,3)=15.D0
 !
 !     ==========================================================================
-!     == define centered grid                                                 ==
+!     == DEFINE CENTERED GRID                                                 ==
 !     ==========================================================================
       IF(N1.EQ.1)TVEC(:,1)=0.D0
       IF(N2.EQ.1)TVEC(:,2)=0.D0
@@ -1510,7 +1745,7 @@ PRINT*,'LOXPHI ',LOXPHI
       ALLOCATE(RCOV(NAT))
       ALLOCATE(QBARVEC(LMXX,NAT))
       QBARVEC(:,:)=0.D0
-      lm1x=0
+      LM1X=0
       DO IAT=1,NAT
         ISP=ISPECIES1(IAT)
         CALL SETUP$ISELECT(ISP)
@@ -1526,7 +1761,7 @@ PRINT*,'LOXPHI ',LOXPHI
           IF(ISCATT(LN).NE.0) CYCLE
           L=LOX(LN)
           QBARVEC(L**2+1:(L+1)**2,IAT)=POTPAR(ISP)%QBAR(LN)
-          if(iat.eq.iat0)lm1x=max(lm1x,(l+1)**2)
+          IF(IAT.EQ.IAT0)LM1X=MAX(LM1X,(L+1)**2)
         ENDDO
         DEALLOCATE(LOX)
         DEALLOCATE(ISCATT)
@@ -1545,10 +1780,10 @@ PRINT*,'LOXPHI ',LOXPHI
       NNB=SIZE(SBAR)
       DO NN=1,NNB
          IF(SBAR(NN)%IAT1.NE.IAT0) CYCLE
-         if(sbar(nn)%n1.ne.lm1x) then
-           call error$msg('internal error')
-           call error$stop('lmto$plotlocorb')
-         end if
+         IF(SBAR(NN)%N1.NE.LM1X) THEN
+           CALL ERROR$MSG('INTERNAL ERROR')
+           CALL ERROR$STOP('LMTO$PLOTLOCORB')
+         END IF
          IAT2=SBAR(NN)%IAT2
          LM2X=SBAR(NN)%N2
          IF(LM2X.GT.LMXX) THEN
@@ -1559,70 +1794,70 @@ PRINT*,'LOXPHI ',LOXPHI
          R2(:)=R0(:,IAT2)+RBAS(:,1)*REAL(SBAR(NN)%IT(1),KIND=8) &
      &                   +RBAS(:,2)*REAL(SBAR(NN)%IT(2),KIND=8) &
      &                   +RBAS(:,3)*REAL(SBAR(NN)%IT(3),KIND=8) 
-         tonsite=(IAT2.EQ.IAT0).AND.(MAXVAL(ABS(SBAR(NN)%IT(:))).eq.0)
-         do lm1=1,lm1x
-           CVEC(:LM2X,lm1)=QBARVEC(:LM2X,IAT2)*SBAR(NN)%MAT(:,LM1)
-           if(tonsite)CVEC(LM1,lm1)=CVEC(LM1,lm1)+1.D0
-         enddo
+         TONSITE=(IAT2.EQ.IAT0).AND.(MAXVAL(ABS(SBAR(NN)%IT(:))).EQ.0)
+         DO LM1=1,LM1X
+           CVEC(:LM2X,LM1)=QBARVEC(:LM2X,IAT2)*SBAR(NN)%MAT(:,LM1)
+           IF(TONSITE)CVEC(LM1,LM1)=CVEC(LM1,LM1)+1.D0
+         ENDDO
          DO I1=1,N1
            XI(1)=REAL(I1-1,KIND=8)
            DO I2=1,N2
              XI(2)=REAL(I2-1,KIND=8)
              DO I3=1,N3
                XI(3)=REAL(I3-1,KIND=8)
-!              == dr is the distance from second atom ==========================
+!              == DR IS THE DISTANCE FROM SECOND ATOM ==========================
                DR(:)=ORIGIN(:)+MATMUL(TLITTLE,XI)-R2(:)
-               tsphere=(dot_product(dr,dr).lt.rcov(iat2))
+               TSPHERE=(DOT_PRODUCT(DR,DR).LT.RCOV(IAT2))
 !
                CALL  LMTO$SOLIDHANKEL(DR,RCOV(IAT2),K2,LM2X,K0(1:LM2X))
-               if(tsphere) then
-                 CALL  LMTO$SOLIDbessel(DR,K2,LM2X,J0(1:LM2X))
-                 jbar(:lm2x)=j0(:lm2x)-k0(:lm2x)*qbarvec(:lm2x,iat2)
-               end if
-               do lm1=1,lm1x
-!                == |kbar>=|K0>*(1+qbar*sbar) ==================================
-                 ORB(I1,I2,I3,lm1)=ORB(I1,I2,I3,lm1) &
-      &                        +DOT_PRODUCT(K0(1:LM2X),CVEC(1:LM2X,lm1))
-!                == -|jbar>sbar=-(|j0>-|k0>qbar)*sbar ==========================
-                 if(tsphere) then
-                   ORBi(I1,I2,I3,lm1)=ORBi(I1,I2,I3,lm1) &
-      &                        -DOT_PRODUCT(jbar(1:LM2X),SBAR(NN)%MAT(:,LM1))
-                   if(tonsite) ORBi(I1,I2,I3,lm1)=ORBi(I1,I2,I3,lm1)+k0(lm1)
-                 end if
-               enddo
+               IF(TSPHERE) THEN
+                 CALL  LMTO$SOLIDBESSEL(DR,K2,LM2X,J0(1:LM2X))
+                 JBAR(:LM2X)=J0(:LM2X)-K0(:LM2X)*QBARVEC(:LM2X,IAT2)
+               END IF
+               DO LM1=1,LM1X
+!                == |KBAR>=|K0>*(1+QBAR*SBAR) ==================================
+                 ORB(I1,I2,I3,LM1)=ORB(I1,I2,I3,LM1) &
+      &                        +DOT_PRODUCT(K0(1:LM2X),CVEC(1:LM2X,LM1))
+!                == -|JBAR>SBAR=-(|J0>-|K0>QBAR)*SBAR ==========================
+                 IF(TSPHERE) THEN
+                   ORBI(I1,I2,I3,LM1)=ORBI(I1,I2,I3,LM1) &
+      &                        -DOT_PRODUCT(JBAR(1:LM2X),SBAR(NN)%MAT(:,LM1))
+                   IF(TONSITE) ORBI(I1,I2,I3,LM1)=ORBI(I1,I2,I3,LM1)+K0(LM1)
+                 END IF
+               ENDDO
              ENDDO
            ENDDO
          ENDDO
       ENDDO
-      deallocate(cvec)
+      DEALLOCATE(CVEC)
 !
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
       FILE='TEST_LOCORB'
       WRITE(STRING,*)IAT0 
-      FILE=TRIM(ADJUSTL(FILE))//'_IAT'//TRIM(ADJUSTL(STRING))//'.dat'
+      FILE=TRIM(ADJUSTL(FILE))//'_IAT'//TRIM(ADJUSTL(STRING))//'.DAT'
       CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,-FILE)
       CALL FILEHANDLER$UNIT('HOOK',NFIL)
       WRITE(NFIL,*)ORIGIN(:)
       WRITE(NFIL,*)TVEC(:,:)
-      WRITE(NFIL,*)N1,N2,N3,lm1x
+      WRITE(NFIL,*)N1,N2,N3,LM1X
       NN=0
       DO I1=1,N1
         DO I2=1,N2
           DO I3=1,N3
             NN=NN+1
-!            WRITE(nfil,*)NN,ORB(I1,I2,I3),bareORB(I1,I2,I3),orbi(i1,i2,i3)
-            WRITE(nfil,fmt='(3i5,100f10.5)')i1,i2,i3,ORB(I1,I2,I3,:) &
-     &                                             ,orbi(i1,i2,i3,:)
+!            WRITE(NFIL,*)NN,ORB(I1,I2,I3),BAREORB(I1,I2,I3),ORBI(I1,I2,I3)
+            WRITE(NFIL,FMT='(3I5,100F10.5)')I1,I2,I3,ORB(I1,I2,I3,:) &
+     &                                             ,ORBI(I1,I2,I3,:)
           ENDDO
         ENDDO
       ENDDO
       CALL FILEHANDLER$CLOSE('HOOK')
       CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOKERROR')
 
-!call specialfunction$test()
-!call test_lmto$structureconstants()
+!CALL SPECIALFUNCTION$TEST()
+!CALL TEST_LMTO$STRUCTURECONSTANTS()
       STOP 'FORCED IN LMTO_PLOTLOCORB'
       RETURN
       END
