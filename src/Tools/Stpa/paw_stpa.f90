@@ -9,8 +9,8 @@
       IMPLICIT NONE
       TYPE(LL_TYPE)               :: LL_STP
       CHARACTER(256)              :: SETUPREPORT      
+      CHARACTER(16)               :: Selection
       INTEGER(4)                  :: NARGS
-      CHARACTER(32)               :: ARG      
       INTEGER(4)                  :: NFIL
 !     **************************************************************************
       CALL LIB$NARGS(NARGS)
@@ -20,6 +20,8 @@
         CALL ERROR$MSG('PAW_STPA.X ARG SETUPREPORTFILENAME')
         CALL ERROR$STOP('MAIN')
       END IF
+      CALL LIB$GETARG(1,selection)
+      selection=+selection
       CALL LIB$GETARG(2,SETUPREPORT)
 !
 !     ==========================================================================
@@ -47,27 +49,43 @@
 !     == TAKE CARE OF SCATTERING PROPERTIES                                   ==
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('DAT',NFIL)
-!      CALL SCATTERING(LL_STP,NFIL)
+      IF(SELECTION.EQ.'SCATTERING') THEN
+        CALL SCATTERING(LL_STP,NFIL)
 !
 !     ==========================================================================
-!     == construct file for atomic wave functions                             ==
+!     == CONSTRUCT FILE FOR ATOMIC WAVE FUNCTIONS                             ==
 !     ==========================================================================
-!      CALL WAVEFUNCTIONS(LL_STP,NFIL,'AEPSI')
-!      CALL WAVEFUNCTIONS(LL_STP,NFIL,'UPSI')
-!      CALL WAVEFUNCTIONS(LL_STP,NFIL,'UPSISM')
+      ELSE IF(SELECTION.EQ.'AEPSI') THEN
+        CALL WAVEFUNCTIONS(LL_STP,NFIL,'AEPSI')
+      ELSE IF(SELECTION.EQ.'UPSI') THEN
+        CALL WAVEFUNCTIONS(LL_STP,NFIL,'UPSI')!
+      ELSE IF(SELECTION.EQ.'UPSISM') THEN
+        CALL WAVEFUNCTIONS(LL_STP,NFIL,'UPSISM')
 !
 !     ==========================================================================
 !     == CONSTRUCT FILE FOR AUGMENTATION                                      ==
 !     ==========================================================================
-!      CALL AUGMENTATION(LL_STP,NFIL,'AEPHI')
-!      CALL AUGMENTATION(LL_STP,NFIL,'PSPHI')
-!      CALL AUGMENTATION(LL_STP,NFIL,'NLPHI')
-      CALL AUGMENTATION(LL_STP,NFIL,'QPHI')
-!      CALL AUGMENTATION(LL_STP,NFIL,'PRO')
-!      CALL AUGMENTATION(LL_STP,NFIL,'AEPHIDOT')
-!      CALL AUGMENTATION(LL_STP,NFIL,'PSPHIDOT')
-!      CALL AUGMENTATION(LL_STP,NFIL,'QPHIDOT')
-
+      ELSE IF(SELECTION.EQ.'AEPHI') THEN
+        CALL AUGMENTATION(LL_STP,NFIL,'AEPHI')
+      ELSE IF(SELECTION.EQ.'PSPHI') THEN
+        CALL AUGMENTATION(LL_STP,NFIL,'PSPHI')
+      ELSE IF(SELECTION.EQ.'NLPHI') THEN
+        CALL AUGMENTATION(LL_STP,NFIL,'NLPHI')
+      ELSE IF(SELECTION.EQ.'QPHI') THEN
+        CALL AUGMENTATION(LL_STP,NFIL,'QPHI')
+      ELSE IF(SELECTION.EQ.'PRO') THEN
+        CALL AUGMENTATION(LL_STP,NFIL,'PRO')
+      ELSE IF(SELECTION.EQ.'AEPHIDOT') THEN
+        CALL AUGMENTATION(LL_STP,NFIL,'AEPHIDOT')
+      ELSE IF(SELECTION.EQ.'PSPHIDOT') THEN
+        CALL AUGMENTATION(LL_STP,NFIL,'PSPHIDOT')
+      ELSE IF(SELECTION.EQ.'QPHIDOT') THEN
+        CALL AUGMENTATION(LL_STP,NFIL,'QPHIDOT')
+      ELSE 
+        CALL ERROR$MSG('SELECTION NOT RECOGNIZED')
+        CALL ERROR$CHVAL('SELECTION',SELECTION)
+        CALL ERROR$STOP('MAIN')
+      END IF
       CALL FILEHANDLER$CLOSE('DAT')
       STOP
       END

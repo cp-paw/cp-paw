@@ -2887,6 +2887,15 @@
    !CORE POW=3.   RC/RCOV=0.67 !END
  !END
 
+  !SETUP  ID='LA_SC_PB091002_TEST' EL='LA' ZV=  11.
+          TYPE='HBS'  RBOX/RCOV=2.0  RCSM/RCOV=0.25
+          RCL/RCOV= 0.75 0.75 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=5.E-6 DMAX=0.2 RMAX= 20. !END
+    !POT  POW=3. RC/RCOV=   0.719 !END
+    !CORE POW=3. RC/RCOV=   0.719 !END
+  !END
+
 !End
 !EOB
 

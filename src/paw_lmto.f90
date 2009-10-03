@@ -445,6 +445,7 @@ END MODULE LMTO_MODULE
 !
       CALL LMTO$REPORTPOTBAR(6)
       CALL LMTO$REPORTSBAR(6)
+!     CALL LMTO_plotlocorb(1)
 !
                               CALL TRACE$POP()
       RETURN
@@ -794,9 +795,12 @@ END MODULE LMTO_MODULE
       REAL(8)                :: PSPHI(NR,LNXPHI)  ! PSEUDO PARTIAL WAVES
       REAL(8)                :: AEPHIDOT(NR,LNXPHI) ! AE PARTIAL WAVES
       REAL(8)                :: PSPHIDOT(NR,LNXPHI) ! PARTIAL WAVES
+      REAL(8)                :: nlphi(NR,LNXPHI) ! PARTIAL WAVES
+      REAL(8)                :: nlPHIDOT(NR,LNXPHI) ! PARTIAL WAVES
       REAL(8)                :: PRO(NR,LNXPHI)    ! PROJECTOR FUNCTIONS
       REAL(8)   ,ALLOCATABLE :: AECHI(:,:)  ! ALL-ELECTRON LOCAL ORBITALS
       REAL(8)   ,ALLOCATABLE :: PSCHI(:,:)  ! PSEUDO LOCAL ORBITALS
+      REAL(8)   ,ALLOCATABLE :: nlCHI(:,:)  ! nodeless LOCAL ORBITALS
       REAL(8)   ,ALLOCATABLE :: SBARONSITE(:,:)   !(LMX,LMX) 
       REAL(8)   ,ALLOCATABLE :: AMAT(:,:)   !(LNXCHI1,LNXPHI) 
       REAL(8)   ,ALLOCATABLE :: BMAT(:,:)   !(LNXCHI1,LNXCHI1) 
@@ -805,7 +809,7 @@ END MODULE LMTO_MODULE
       REAL(8)                :: AEZ               ! ATOMIC NUMBER
       REAL(8)                :: AUX(NR)
       REAL(8)                :: R(NR)
-      REAL(8)                :: SVAR,SVAR1,VAL,der
+      REAL(8)                :: SVAR,SVAR1,VAL,der,vald,derd
       LOGICAL(4)             :: TCHK
       INTEGER(4)             :: LMX,LNXCHI1
       INTEGER(4)             :: LN,L,I,J,LXX,ISVAR,IIB,N1,LM,LNCHI1,LNCHI,IR
@@ -835,8 +839,10 @@ END MODULE LMTO_MODULE
       CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
       CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
       CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI)
+      CALL SETUP$GETR8A('NLPHI',NR*LNX,NLPHI)
       CALL SETUP$GETR8A('AEPHIDOT',NR*LNX,AEPHIDOT)
       CALL SETUP$GETR8A('PSPHIDOT',NR*LNX,PSPHIDOT)
+      CALL SETUP$GETR8A('NLPHIDOT',NR*LNX,NLPHIDOT)
       CALL SETUP$GETR8A('PRO',NR*LNX,PRO)
 !
 !     ==========================================================================
@@ -889,6 +895,7 @@ PRINT*,'SBARONSITE ',L,SBARONSITE(L**2+1,L**2+1)
       ALLOCATE(LOXCHI(LNXCHI1))
       ALLOCATE(AECHI(NR,LNXCHI1))
       ALLOCATE(PSCHI(NR,LNXCHI1))
+      ALLOCATE(nlCHI(NR,LNXCHI1))
 !
 !     ==========================================================================
 !     == CONSTRUCT LOCAL ORBITALS                                             ==
@@ -901,30 +908,59 @@ PRINT*,'SBARONSITE ',L,SBARONSITE(L**2+1,L**2+1)
         LOXCHI(LNCHI)=L
         AECHI(:,LNCHI)=AEPHI(:,LN)          
         PSCHI(:,LNCHI)=PSPHI(:,LN)          
+        nlCHI(:,LNCHI)=nlPHI(:,LN)          
         LM=L**2+1
         SVAR=POTPAR(ISP)%CBAR(LN)-POTPAR(ISP)%ENU(LN) &
      &        +SBARONSITE(LM,LM)*POTPAR(ISP)%SQDELTABAR(LN)**2
 PRINT*,'LN,LNCHI,L, SVAR ',LN,LNCHI,L,SVAR,AEPHIDOT(IRCOV,LN),AECHI(IRCOV,LNCHI)
 PRINT*,'C,ENU   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
 !IF(AEPHIDOT(IRCOV,LN)*SVAR/AECHI(IRCOV,LNCHI).GT.0.D0) CYCLE
-        IF(SVAR.LT.0.D0) CYCLE
+!        IF(SVAR.LT.0.D0) CYCLE
         AECHI(:,LNCHI)=AECHI(:,LNCHI)+AEPHIDOT(:,LN)*SVAR
         PSCHI(:,LNCHI)=PSCHI(:,LNCHI)+PSPHIDOT(:,LN)*SVAR
+        nlCHI(:,LNCHI)=nlCHI(:,LNCHI)+nlPHIDOT(:,LN)*SVAR
       ENDDO
 !
 !     == attach exponential tail at the covalent radius ========================
       DO LNCHI=1,LNXCHI1     
-        call radial$value(gid,nr,aechi(:,lnchi),rcov,val)
-        call radial$derivative(gid,nr,aechi(:,lnchi),rcov,der)
-        SVAR=der/val
-        if(svar.gt.0.d0) then
-          CALL ERROR$msg('Orbital does not decay')
-          CALL ERROR$r8val('logaritmic cderivative ',svar)
+        l=loxchi(lnchi)
+        CALL RADIAL$VALUE(GID,NR,NLCHI(:,LNCHI),RCOV,VAL)
+        CALL RADIAL$DERIVATIVE(GID,NR,NLCHI(:,LNCHI),RCOV,DER)
+        CALL RADIAL$VALUE(GID,NR,AECHI(:,LNCHI),RCOV,VALD)
+        CALL RADIAL$DERIVATIVE(GID,NR,AECHI(:,LNCHI),RCOV,DERD)
+        VALD=VALD-VAL
+        DERD=DERD-DER
+!
+        SVAR=DER/VAL
+        if(abs(vald/val).gt.1.d-9) then ! avoid divide-by-zero
+          SVAR1=DERD/VALD
+        else
+          svar1=-1.d0
+        end if        
+! 
+        IF(SVAR.GT.0.D0.or.svar1.gt.0.d0) THEN
+          CALL SETUP_WRITEPHI(-'FAILEDAEORBITAL.DAT',GID,NR,LNXCHI1,AECHI)
+          CALL SETUP_WRITEPHI(-'FAILEDPSORBITAL.DAT',GID,NR,LNXCHI1,PSCHI)
+          CALL SETUP_WRITEPHI(-'FAILEDNLORBITAL.DAT',GID,NR,LNXCHI1,NLCHI)
+          CALL SETUP_WRITEPHI(-'FAILEDdiffORBITAL.DAT',GID,NR,LNXCHI1,aechi-NLCHI)
+          CALL ERROR$MSG('ORBITAL DOES NOT DECAY')
+          CALL ERROR$I4VAL('IAT',IAT)
+          CALL ERROR$I4VAL('ISP',ISP)
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('LNCHI',LNCHI)
+          CALL ERROR$I4VAL('LOXCHI',LOXCHI)
+          CALL ERROR$R8VAL('COVALENT RADIUS',RCOV)
+          CALL ERROR$R8VAL('LOGARITMIC DERIVATIVE ',SVAR)
+          CALL ERROR$R8VAL('LOGARITMIC DERIVATIVE OF DIFFERENCE',SVAR1)
           CALL ERROR$STOP('LMTO$DOLOCORB')
-        end if
-        do ir=ircov,nr
-          aechi(ir,lnchi)=val*exp(svar*(r(ir)-rcov))
-        enddo
+        END IF
+        DO IR=IRCOV,NR
+          nlCHI(IR,LNCHI)=VAL*EXP(SVAR*(R(IR)-RCOV))
+          AECHI(IR,LNCHI)=VAL*EXP(SVAR*(R(IR)-RCOV)) &
+                         +vald*EXP(SVAR1*(R(IR)-RCOV))
+          psCHI(IR,LNCHI)=VAL*EXP(SVAR*(R(IR)-RCOV)) &
+                         +vald*EXP(SVAR1*(R(IR)-RCOV))
+        ENDDO
       enddo
 !
 !     ==ORTHONORMALIZE LOCAL ORBITALS ==========================================

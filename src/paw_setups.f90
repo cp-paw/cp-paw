@@ -2976,6 +2976,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)               :: E1
       TYPE(VPAW_TYPE)       :: VPAW
       LOGICAL(4)            :: TFIRST
+      LOGICAL(4),parameter  :: Tsmallbox=.false.
 REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !     **************************************************************************
                                 CALL TRACE$PUSH('ATOMIC_MAKEPARTIALWAVES')
@@ -3103,10 +3104,11 @@ PRINT*,'EOFI1 ',EOFI1
         G(:)=0.D0
         IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
         TFIRST=.TRUE.   ! SWITCH BACK TO BOX WITH TFIRST=.FALSE.
+        PHIPHASE=1.D0   ! NODE 
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-          IF(TFIRST) THEN
+          IF(TFIRST.and.(.not.Tsmallbox)) THEN
             PHIPHASE=1.D0   ! NODE AT ROUT
             CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,ROUT,PHIPHASE,E,PHI)
@@ -3141,8 +3143,13 @@ PRINT*,'EOFI1 ',EOFI1
               IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
 !             == REMARK: IF THIS CRASHES PROCEED LIKE FOR NODELESS PARTIAL WAVES
 !             == WORK WITH LOCAL POTENTIAL FIRST AND THEN UPDATE WITH FOCK POT
-              CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
+              if(tsmallbox) then
+                CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
+     &                                    ,RBND,E,UOFI(:,IB))
+              else
+                CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
      &                                    ,ROUT,E,UOFI(:,IB))
+              end if
               IF(TREL) THEN
                 CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
      &                                         ,DREL,GS,UOFI(:,IB),UOFISM(:,IB))
@@ -3281,6 +3288,8 @@ PRINT*,'EOFI1 ',EOFI1
             TRANSU(LN1,LN)=TRANSU(LN1,LN)+SVAR
             SVAR=SVAR*(EOFLN(LN)-EOFLN(LN1))
           ENDDO
+          SVAR=TRANSU(LN,LN)
+          TRANSU(:,LN)=TRANSU(:,LN)/SVAR
         ENDDO
       ENDDO
       CALL LIB$INVERTR8(LNX,TRANSU,TRANSUINV)
@@ -4362,7 +4371,7 @@ GOTO 10001
       Y0=1.D0/SQRT(4.D0*PI)
       NC=THIS%ATOM%NC
       NB=THIS%ATOM%NB
-      EMIN=min(MINVAL(THIS%ATOM%EOFI(NC+1:NB))-0.2D0,-1.d0)
+      EMIN=MIN(MINVAL(THIS%ATOM%EOFI(NC+1:NB))-0.2D0,-1.D0)
       EMAX=MAX(MAXVAL(THIS%ATOM%EOFI(NC+1:NB)),1.D0)
       DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)
       GID=THIS%GID
@@ -4456,7 +4465,7 @@ GOTO 10001
       CALL LINKEDLIST$SET(LL_STP,'EMAX',0,EMAX)
       CALL LINKEDLIST$SET(LL_STP,'NE',0,NE)
       CALL LINKEDLIST$SET(LL_STP,'LX',0,LX)
-!     == nth=-1 in linkedlist set adds a new item to the list =================
+!     == NTH=-1 IN LINKEDLIST SET ADDS A NEW ITEM TO THE LIST =================
       DO L=0,LX
         CALL LINKEDLIST$SET(LL_STP,'AEPHASE',-1,AEPHASE(L+1,:))
         CALL LINKEDLIST$SET(LL_STP,'PAWPHASE',-1,PAWPHASE(L+1,:))

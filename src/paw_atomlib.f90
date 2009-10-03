@@ -1657,6 +1657,9 @@ end if
 !     **   'phase'    logarithmic derivative at rbnd is fixed                 **
 !     **   'energy'   energy is fixed to input value, rbnd is not used        **
 !     **                                                                      **
+!     ** remark: has convergence problems if rbnd is chosen very large,       **
+!     **    Probably related to low-lying states                              **
+!     **                                                                      **
 !     **************************************************************************
       USE RADIALFOCK_MODULE, ONLY : VFOCK_TYPE
       IMPLICIT NONE
