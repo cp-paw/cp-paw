@@ -48,7 +48,8 @@
 !     ==========================================================================
 !     == TAKE CARE OF SCATTERING PROPERTIES                                   ==
 !     ==========================================================================
-      CALL FILEHANDLER$UNIT('DAT',NFIL)
+!      CALL FILEHANDLER$UNIT('DAT',NFIL)
+      NFIL=6   ! standard output
       IF(SELECTION.EQ.'SCATTERING') THEN
         CALL SCATTERING(LL_STP,NFIL)
 !
@@ -79,14 +80,14 @@
         CALL AUGMENTATION(LL_STP,NFIL,'AEPHIDOT')
       ELSE IF(SELECTION.EQ.'PSPHIDOT') THEN
         CALL AUGMENTATION(LL_STP,NFIL,'PSPHIDOT')
-      ELSE IF(SELECTION.EQ.'QPHIDOT') THEN
-        CALL AUGMENTATION(LL_STP,NFIL,'QPHIDOT')
+      ELSE IF(SELECTION.EQ.'NLPHIDOT') THEN
+        CALL AUGMENTATION(LL_STP,NFIL,'NLPHIDOT')
       ELSE 
         CALL ERROR$MSG('SELECTION NOT RECOGNIZED')
         CALL ERROR$CHVAL('SELECTION',SELECTION)
         CALL ERROR$STOP('MAIN')
       END IF
-      CALL FILEHANDLER$CLOSE('DAT')
+!      CALL FILEHANDLER$CLOSE('DAT')
       STOP
       END
 !

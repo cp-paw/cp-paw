@@ -5937,316 +5937,55 @@ ID in block !DCNTL!WEIGHT or !DCNTL!COOP}
 \vrules{optional}
 \vdefault{all k-points}}
 
-
 %==========================================================================
 \newpage
-%\ifthenelse{\boolean{private}}{
-\section{The Atomic-Setup program: ``paw\_atom''}
+\section{The Setup-Analysis program: ``paw\_stpa.x''}
 %==========================================================================
-The atomic-setup program performs a calculation for an isolated atom
-and determines the augmentation-transformation for this atom.
+Before the simulation starts atomic information is calculated and the
+augmentation is constructed. Earlier this was done in an external
+program and the information was passed in a file to the simulation code.
+
+During this initialization step a lot of information is created that
+is meant to control and to monitor the setup-construction step. This
+information is written into a single file in an xml-like format. The
+tool ``paw\_stpa.x'', which stands for ``SeTuP-Analysis'', allows to
+visualize this information.
 
 %==========================================================================
 \subsection{Command}
 %==========================================================================
+
 The calling sequence is
+\begin{center}
+\verb|paw_stpa.x| \textit{parameter file} \verb|>| \textit{out}
+\end{center}
+where ``\textit{parameter}'' is a keyword selecting the information to
+be visualized.  \textit{file} is the file written by the paw code. It
+has the ending ``\verb|stpforz|\textit{Z}\verb|.myxml|'', where
+\textit{Z} is the atomic number. \textit{out} is the name of the file
+keeping the output.  The format is ``x y1 y2 \ldots'' and is written
+line-by-line in free format.  It can be viewed for example with the
+xy-plotting tool xmgrace.
+\begin{center}
+\verb|xmgrace -nxy| \textit{out}
+\end{center}
 
-\bigskip\fbox{{\tt paw\_atom} {\it name}}\bigskip
-
-\noindent
-where {\it name} is a specifier for the setup. 
-
-%==========================================================================
-\subsection{Example for the control input file}
-%==========================================================================
-
-\begin{verbatim}
-!ACNTL
- !GENERIC ELEMENT='N ' RAUG=2.D0 RBOX=20.D0 !END
- !DFT     TYPE=1 !END
- !GRID    R1=1.056D-4 DEX=0.05 NR=250 !END
- !AECORE
-   !STATE L=0 N=1 F=2 !END
- !END
- !VALENCE
-   !STATE L=0 N=2 F=2. !END
-   !STATE L=1 N=2 F=3. !END
-   !STATE L=0 N=3 F=0. !END
- !END
- !VTILDE  TYPE='POLYNOMIAL' RC=1.0 POWER=3 POT(0)=-2.58 !END
- !COMPENSATE RC=0.3 !END
- !PSCORE  TYPE='POLYNOMIAL' RC=1.0 POWER=3 RHO(0)=0.05 !END
- !WAVE L=0 N=2       PSTYPE='HBS' RC=1.0 LAMBDA=6 !END
- !WAVE L=1 N=2       PSTYPE='HBS' RC=1.0 LAMBDA=6 !END
- !WAVE L=0 N=3       PSTYPE='HBS' RC=1.0 LAMBDA=6 !END
-!END
-!EOB
-\end{verbatim}
-
-
-
-%==========================================================================
-\subsection{Argument description for the control input file ACNTL}
-%==========================================================================
-
-%----------------------------------------------------------------------
-\block{!ACNTL}
-%----------------------------------------------------------------------
-\brules{mandatory}
-\bdescr{}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!GENERIC}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{}
-
-\mbax{\key{ELEMENT}
-\vdescr{element symbol.}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RAUG}
-\vdescr{maximum radius where augmentation operates.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RBOX}
-\vdescr{the atom sits in a spherical box with hard walls at r=RBOX.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!DFT}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{}
-
-\mbax{\key{TYPE}
-\vdescr{functional type index. see ``!CNTL!DFT''}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!GRID}
-%----------------------------------------------------------------------
-\brules{optional} \bdescr{Specifies the logarithmic radial grid. It is
-  recommended that the default parameters be left as they are, because
-  the simulation program can only work with one grid for all setups.}
-
-\mbax{\key{R1}
-\vdescr{innermost grid point}
-\vformat{real} 
-\vrules{optional}
-\vdefault{$1.056\times10^{-4}$}}
-
-\mbax{\key{DEX}
-\vdescr{logarithmic spacing $\ln(r(i+1)/r(i))$.}
-\vformat{real} 
-\vrules{optional}
-\vdefault{0.05}}
-
-\mbax{\key{NR}
-\vdescr{number of grid points}
-\vformat{integer} 
-\vrules{optional}
-\vdefault{250}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!AECORE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines core states}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!AECORE!STATE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines one state.}
-
-\mbax{\key{L}
-\vdescr{main angular momentum quantum number.}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{N}
-\vdescr{main radial quantum number.}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{F}
-\vdescr{Occupation. number of electrons in this state}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!VALENCE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines valence states}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!VALENCE!STATE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines one state.}
-
-\mbax{\key{L}
-\vdescr{main angular momentum quantum number.}
-\vformat{intger} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{N}
-\vdescr{main radial quantum number.}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{F}
-\vdescr{Occupation. number of electrons in this state}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!VTILDE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines pseudo-protential. (Do not confuse with the
-  pseudopotential of the pseudopotential method.)}
-
-\mbax{\key{TYPE}
-\vdescr{pseudization type. Can be ``Polynomial'' or 'HBS'.
-\begin{itemize}
-\item Polynomial uses a polynomial
-$\tilde{v}_{at}(r<r_c)=Ar^n+Br^{n+1}$ and
-$\tilde{v}_{at}(r>r_c)=v_{at}(r)$ so that it is differentiable 
-and the value at the origin has the value specified by POT(0).
-\item HBS uses a cutoff function $k(r)=e^{-(\frac{r}{r_c})^\lambda}$
-to obtain the pseudopotential as
-$\tilde{v}_{at}(r)=\tilde{v}_0k(r)+[1-k(r)]v_{at}(r)$.
-\end{itemize}
-}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RC}
-\vdescr{for POLYNOMIAL: matching radius. For HBS: parameter $r_c$.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{POWER} 
-\vdescr{for POLYNOMIAL: Order of the polynom used for
-  pseudization. For HBS: Parameter $\lambda$. }
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{POT(0)}
-  \vdescr{Value of the pseudo potential at the origin}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!COMPENSATE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines compensation density.}
-
-\mbax{\key{RC}
-\vdescr{Gaussian decay parameter $g=\exp(-(\frac{r}{r_c})^2)$.}
-\vformat{real} 
-\vrules{optional}
-\vdefault{0.3}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!PSCORE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines pseudo core.}
-
-\mbax{\key{TYPE}
-\vdescr{pseudization type. Can be ``Polynomial''.}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RC}
-\vdescr{matching radius.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{POWER}
-  \vdescr{Order of the polynom used for pseudization}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{POT(0)}
-  \vdescr{Value of the pseudo potential at the origin}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!WAVE}
-%----------------------------------------------------------------------
-\brules{optional} \bdescr{Defines pseudo wave function. The order of
-the states is relevant. (Increasing $n$ and within each n increasing
-$\ell$)}
-
-\mbax{\key{L}
-\vdescr{main angular momentum quantum number.}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{N} 
-\vdescr{main radial quantum number. Use only for bound states.}
-\vformat{integer} 
-\vrules{mandatory if E is not specified. Must not be
-specified if E is specified. } 
-\vdefault{none}}
-
-\mbax{\key{E}
-\vdescr{Energy at which the partial waves are obtained.}
-\vformat{integer} 
-\vrules{mandatory if N is not specified. Must not be specified if N
-  is specified. }
-\vdefault{none}}
-
-\mbax{\key{PSTYPE}
-\vdescr{pseudization type. Can be ``HBS''. The potential is varied by
-  a potential $\exp(-(r/r_c)^\lambda$ with a variable scaling factor.}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RC}
-\vdescr{matching radius.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{LAMBDA}
-  \vdescr{}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%}{} % end of \ifthenelse
+Here a list of the parameters recognized.
+\begin{center}
+\begin{tabular}{ll}
+SCATTERING & \\
+AEPSI      & all-electron wave functions\\
+UPSI       & node-less wave functions\\
+UPSISM     & \\
+AEPHI      & all-electron partial waves\\
+PSPHI      & auxiliary partial waves\\
+NLPHI      & node-less partial waves\\
+QPHI       & \\
+AEPHIDOT   & all-electron scattering partial waves\\ 
+PSPHIDOT   & auxiliary scattering partial waves\\ 
+NLPHIDOT   & nodeless scattering partial waves\\ 
+\end{tabular}
+\end{center}
 
 %==========================================================================
 \newpage
@@ -6350,7 +6089,7 @@ largely independent of the system}
 \vdefault{F}}
 
 \mbax{\key{TOL}
-\vdescr{tolerance of the maximal component of the force on atoms in 
+ \vdescr{tolerance of the maximal component of the force on atoms in 
   the convergence cycles}
 \vformat{real} 
 \vrules{optional}
@@ -7733,6 +7472,7 @@ keep this list as short as possible.
   to set use {\tt paw\_compile ?} to obtain the command line syntax.
 \end{itemize}
 
+\appendix
 %==========================================================================
 \section{Installation}
 %==========================================================================
@@ -7766,6 +7506,321 @@ The directory structure will have the following form
 \item check if paw\_dos tool treats spin-polarized calculations properly
 \end{itemize}
 }{} % end of \ifthenelse
+%==========================================================================
+\newpage
+%\ifthenelse{\boolean{private}}{
+\section{The Atomic-Setup program: ``paw\_atom''}
+%==========================================================================
+The external atomic program is marked for deletion. 
+
+
+The atomic-setup program performs a calculation for an isolated atom
+and determines the augmentation-transformation for this atom.
+
+
+
+
+%==========================================================================
+\subsection{Command}
+%==========================================================================
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_atom} {\it name}}\bigskip
+
+\noindent
+where {\it name} is a specifier for the setup. 
+
+%==========================================================================
+\subsection{Example for the control input file}
+%==========================================================================
+
+\begin{verbatim}
+!ACNTL
+ !GENERIC ELEMENT='N ' RAUG=2.D0 RBOX=20.D0 !END
+ !DFT     TYPE=1 !END
+ !GRID    R1=1.056D-4 DEX=0.05 NR=250 !END
+ !AECORE
+   !STATE L=0 N=1 F=2 !END
+ !END
+ !VALENCE
+   !STATE L=0 N=2 F=2. !END
+   !STATE L=1 N=2 F=3. !END
+   !STATE L=0 N=3 F=0. !END
+ !END
+ !VTILDE  TYPE='POLYNOMIAL' RC=1.0 POWER=3 POT(0)=-2.58 !END
+ !COMPENSATE RC=0.3 !END
+ !PSCORE  TYPE='POLYNOMIAL' RC=1.0 POWER=3 RHO(0)=0.05 !END
+ !WAVE L=0 N=2       PSTYPE='HBS' RC=1.0 LAMBDA=6 !END
+ !WAVE L=1 N=2       PSTYPE='HBS' RC=1.0 LAMBDA=6 !END
+ !WAVE L=0 N=3       PSTYPE='HBS' RC=1.0 LAMBDA=6 !END
+!END
+!EOB
+\end{verbatim}
+
+
+
+%==========================================================================
+\subsection{Argument description for the control input file ACNTL}
+%==========================================================================
+
+%----------------------------------------------------------------------
+\block{!ACNTL}
+%----------------------------------------------------------------------
+\brules{mandatory}
+\bdescr{}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!GENERIC}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{}
+
+\mbax{\key{ELEMENT}
+\vdescr{element symbol.}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{RAUG}
+\vdescr{maximum radius where augmentation operates.}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{RBOX}
+\vdescr{the atom sits in a spherical box with hard walls at r=RBOX.}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!DFT}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{}
+
+\mbax{\key{TYPE}
+\vdescr{functional type index. see ``!CNTL!DFT''}
+\vformat{integer} 
+\vrules{mandatory}
+\vdefault{none}}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!GRID}
+%----------------------------------------------------------------------
+\brules{optional} \bdescr{Specifies the logarithmic radial grid. It is
+  recommended that the default parameters be left as they are, because
+  the simulation program can only work with one grid for all setups.}
+
+\mbax{\key{R1}
+\vdescr{innermost grid point}
+\vformat{real} 
+\vrules{optional}
+\vdefault{$1.056\times10^{-4}$}}
+
+\mbax{\key{DEX}
+\vdescr{logarithmic spacing $\ln(r(i+1)/r(i))$.}
+\vformat{real} 
+\vrules{optional}
+\vdefault{0.05}}
+
+\mbax{\key{NR}
+\vdescr{number of grid points}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{250}}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!AECORE}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{Defines core states}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!AECORE!STATE}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{Defines one state.}
+
+\mbax{\key{L}
+\vdescr{main angular momentum quantum number.}
+\vformat{integer} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{N}
+\vdescr{main radial quantum number.}
+\vformat{integer} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{F}
+\vdescr{Occupation. number of electrons in this state}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!VALENCE}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{Defines valence states}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!VALENCE!STATE}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{Defines one state.}
+
+\mbax{\key{L}
+\vdescr{main angular momentum quantum number.}
+\vformat{intger} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{N}
+\vdescr{main radial quantum number.}
+\vformat{integer} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{F}
+\vdescr{Occupation. number of electrons in this state}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!VTILDE}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{Defines pseudo-protential. (Do not confuse with the
+  pseudopotential of the pseudopotential method.)}
+
+\mbax{\key{TYPE}
+\vdescr{pseudization type. Can be ``Polynomial'' or 'HBS'.
+\begin{itemize}
+\item Polynomial uses a polynomial
+$\tilde{v}_{at}(r<r_c)=Ar^n+Br^{n+1}$ and
+$\tilde{v}_{at}(r>r_c)=v_{at}(r)$ so that it is differentiable 
+and the value at the origin has the value specified by POT(0).
+\item HBS uses a cutoff function $k(r)=e^{-(\frac{r}{r_c})^\lambda}$
+to obtain the pseudopotential as
+$\tilde{v}_{at}(r)=\tilde{v}_0k(r)+[1-k(r)]v_{at}(r)$.
+\end{itemize}
+}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{RC}
+\vdescr{for POLYNOMIAL: matching radius. For HBS: parameter $r_c$.}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{POWER} 
+\vdescr{for POLYNOMIAL: Order of the polynom used for
+  pseudization. For HBS: Parameter $\lambda$. }
+\vformat{integer} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{POT(0)}
+  \vdescr{Value of the pseudo potential at the origin}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!COMPENSATE}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{Defines compensation density.}
+
+\mbax{\key{RC}
+\vdescr{Gaussian decay parameter $g=\exp(-(\frac{r}{r_c})^2)$.}
+\vformat{real} 
+\vrules{optional}
+\vdefault{0.3}}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!PSCORE}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{Defines pseudo core.}
+
+\mbax{\key{TYPE}
+\vdescr{pseudization type. Can be ``Polynomial''.}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{RC}
+\vdescr{matching radius.}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{POWER}
+  \vdescr{Order of the polynom used for pseudization}
+\vformat{integer} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{POT(0)}
+  \vdescr{Value of the pseudo potential at the origin}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+%----------------------------------------------------------------------
+\block{!ACNTL!WAVE}
+%----------------------------------------------------------------------
+\brules{optional} \bdescr{Defines pseudo wave function. The order of
+the states is relevant. (Increasing $n$ and within each n increasing
+$\ell$)}
+
+\mbax{\key{L}
+\vdescr{main angular momentum quantum number.}
+\vformat{integer} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{N} 
+\vdescr{main radial quantum number. Use only for bound states.}
+\vformat{integer} 
+\vrules{mandatory if E is not specified. Must not be
+specified if E is specified. } 
+\vdefault{none}}
+
+\mbax{\key{E}
+\vdescr{Energy at which the partial waves are obtained.}
+\vformat{integer} 
+\vrules{mandatory if N is not specified. Must not be specified if N
+  is specified. }
+\vdefault{none}}
+
+\mbax{\key{PSTYPE}
+\vdescr{pseudization type. Can be ``HBS''. The potential is varied by
+  a potential $\exp(-(r/r_c)^\lambda$ with a variable scaling factor.}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{RC}
+\vdescr{matching radius.}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{LAMBDA}
+  \vdescr{}
+\vformat{integer} 
+\vrules{mandatory}
+\vdefault{none}}
+
+%}{} % end of \ifthenelse
 
 \newpage
 %%==========================================================================
