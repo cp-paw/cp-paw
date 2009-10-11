@@ -2906,6 +2906,10 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)   ,INTENT(OUT):: AEPHIDOT(NR,LNX)  
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
+      REAL(8)   ,PARAMETER  :: TOL=1.D-7
+      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
+      LOGICAL   ,PARAMETER  :: TWRITE=.true.
+      LOGICAL(4),parameter  :: Tsmallbox=.false.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -2936,6 +2940,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
+      REAL(8)               :: ubyq(lnx)
       REAL(8)               :: AERHO(NR),PSRHO(NR),AUGRHO(NR),PAWRHO(NR)
       REAL(8)   ,ALLOCATABLE:: DENMAT(:,:)
       REAL(8)               :: G(NR),GS(NR),DREL(NR),G1(NR),PHI(NR),PHI1(NR)
@@ -2951,7 +2956,6 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       INTEGER(4)            :: NITER=100
       REAL(8)               :: PHIPHASE
       REAL(8)               :: R(NR)
-      REAL(8)   ,PARAMETER  :: TOL=1.D-7
       REAL(8)               :: AUX(NR),AUX1(NR),AUX2(NR)
       REAL(8)   ,ALLOCATABLE:: AUXARR(:,:)
       REAL(8)               :: VAL,DER,JVAL,JDER,KVAL,KDER,VAL1,VAL2
@@ -2970,13 +2974,10 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)               :: RASA    !COVALENT RADIUS*APPROX 1.15
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
       REAL(8)               :: RBND   !RADIUS FOR BOUNDARY CONDITIONS
-      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
-      LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
       REAL(8)               :: SPEEDOFLIGHT
       REAL(8)               :: E1
       TYPE(VPAW_TYPE)       :: VPAW
       LOGICAL(4)            :: TFIRST
-      LOGICAL(4),parameter  :: Tsmallbox=.false.
 REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !     **************************************************************************
                                 CALL TRACE$PUSH('ATOMIC_MAKEPARTIALWAVES')
@@ -3288,15 +3289,14 @@ PRINT*,'EOFI1 ',EOFI1
             TRANSU(LN1,LN)=TRANSU(LN1,LN)+SVAR
             SVAR=SVAR*(EOFLN(LN)-EOFLN(LN1))
           ENDDO
-          SVAR=TRANSU(LN,LN)
-          TRANSU(:,LN)=TRANSU(:,LN)/SVAR
+          ubyq(ln)=1.d0/transu(ln,ln) ! matchfactor |un> <-> qn*ubyq
         ENDDO
       ENDDO
-      CALL LIB$INVERTR8(LNX,TRANSU,TRANSUINV)
-!
       QN=MATMUL(NLPHI,TRANSU)
       TQN=MATMUL(TNLPHI,TRANSU)
-
+!
+      CALL LIB$INVERTR8(LNX,TRANSU,TRANSUINV)
+!
       IF(TTEST) THEN
         WRITE(6,FMT='(82("="),T20,"  TRANSU ")')
         DO LN1=1,LNX
@@ -3306,8 +3306,16 @@ PRINT*,'EOFI1 ',EOFI1
         DO LN1=1,LNX
           WRITE(6,FMT='(20F15.10)')TRANSUINV(LN1,:)
         ENDDO
+        IF(TWRITE)CALL SETUP_WRITEPHI(-'QN.DAT',GID,NR,LNX,QN)
       END IF
-
+!
+!     ==========================================================================
+!     == adjust scaling of nodeless partial waves to the qn                   ==
+!     ==========================================================================
+      do ln=1,lnx
+        nlphi(:,ln)=nlphi(:,ln)/ubyq(ln)
+        Tnlphi(:,ln)=Tnlphi(:,ln)/ubyq(ln)
+      enddo
 !
 !     ==========================================================================
 !     == TEST EQUATION FOR QN                                                 ==
@@ -3326,6 +3334,7 @@ PRINT*,'EOFI1 ',EOFI1
      &                     LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
           ENDDO
         ENDDO
+IF(TWRITE)CALL SETUP_WRITEPHI(-'TEST.DAT',GID,NR,LNX,PRO)
       END IF
 !
 !     ==========================================================================
@@ -3435,7 +3444,7 @@ PRINT*,'EOFI1 ',EOFI1
       IF(TTEST.AND.TWRITE)CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
 !
 !     ==========================================================================
-!     == CONSTRUCT PROJECTOR FUNCTIONS                                        ==
+!     == CONSTRUCT bare PROJECTOR FUNCTIONS                                   ==
 !     ==========================================================================
                       CALL TRACE$PASS('CONSTRUCT PROJECTOR FUNCTIONS')
       DO LN=1,LNX
