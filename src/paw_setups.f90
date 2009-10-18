@@ -3003,6 +3003,7 @@ PRINT*,'RBND    ',RBND,' RADIUS FOR BOUNDARY CONDITION FOR PARTIAL WAVERS'
 PRINT*,'RNORM   ',RNORM,' NORMALIZATION WILL BE DONE UP TO RNORM'
 PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
 PRINT*,'RASA    ',RASA,' ASA RADIUS'
+if(tsmallbox)print*,'partial waves determined with small-box boundary conditions'
 !
 !     ==========================================================================
 !     == RESOLVE KEY                                                          ==
@@ -3145,13 +3146,13 @@ PRINT*,'EOFI1 ',EOFI1
               IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
 !             == REMARK: IF THIS CRASHES PROCEED LIKE FOR NODELESS PARTIAL WAVES
 !             == WORK WITH LOCAL POTENTIAL FIRST AND THEN UPDATE WITH FOCK POT
-              if(tsmallbox) then
+              IF(.NOT.TSMALLBOX) THEN
                 CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
      &                                    ,RBND,E,UOFI(:,IB))
-              else
+              ELSE
                 CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
      &                                    ,ROUT,E,UOFI(:,IB))
-              end if
+              END IF
               IF(TREL) THEN
                 CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
      &                                         ,DREL,GS,UOFI(:,IB),UOFISM(:,IB))
@@ -3648,8 +3649,8 @@ IF(TWRITE)CALL SETUP_WRITEPHI(-'TEST.DAT',GID,NR,LNX,PRO)
           G(:)=PSPHI(:,LN)
           do ipro=1,npro
             aux(:)=r(:)**2*pro(:,ipro)*psphi(:,ln)
-            call radial$integrate(gid,nr,aux,aux1)
-            call radial$value(gid,nr,aux1,maxval(rc),proj(ipro))
+!           == INTEGRAL IS OK BECAUSE PRO IS EXACTLY ZERO BEYOND A RADIUS ======
+            call radial$integral(gid,nr,aux,proj(ipro))
           enddo
           proj(:)=matmul(do1,proj)
           do ipro=1,npro
