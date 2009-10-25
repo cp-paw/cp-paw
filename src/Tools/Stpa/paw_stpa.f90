@@ -14,6 +14,35 @@
       INTEGER(4)                  :: NFIL
 !     **************************************************************************
       CALL LIB$NARGS(NARGS)
+      IF(NARGS.GE.1) THEN
+        CALL LIB$GETARG(1,SELECTION)
+        IF(SELECTION.EQ.'?'.OR.SELECTION.EQ.-'-H') THEN
+          WRITE(*,FMT='(a)')'calling sequence:'
+          WRITE(*,FMT='(t10,a)')-"PAW_STPA.X SELECTION FILE"
+          WRITE(*,FMT='("THE NAME OF FILE HAS THE FORM:")') 
+          WRITE(*,FMT='(t10,a)')+"ROOT"//-"_STPFORZ"//+"NN"//-".MYXML"
+          WRITE(*,FMT='("SELECTION CAN BE ONE OF:")')
+!
+          WRITE(*,FMT='(t2,A,T20,A)')+'scattering',-'phase shifts'
+!
+          WRITE(*,FMT='(t2,A,T20,A)')+'AEPHI',-'ALL-ELECTRON PARTIAL WAVES'
+          WRITE(*,FMT='(t2,A,T20,A)')+'PSPHI',-'AUXILIARY PARTIAL WAVES'
+          WRITE(*,FMT='(t2,A,T20,A)')+'NLPHI',-'NODE-LESS PARTIAL WAVES'
+          WRITE(*,FMT='(t2,A,T20,A)')+'QPHI',-'CORE-LESS PARTIAL WAVES'
+          WRITE(*,FMT='(t2,A,T20,A)')+'PRO',-'PROJECTOR FUNCTIONS'
+          WRITE(*,FMT='(t2,A,T20,A)')+'AEPHIDOT',-'SCATTERING ALL-ELECTRON PARTIAL WAVES'
+          WRITE(*,FMT='(t2,A,T20,A)')+'PSPHIDOT',-'AUXILIARY SCATTERING PARTIAL WAVES'
+          WRITE(*,FMT='(t2,A,T20,A)')+'NLPHIDOT',-'NODE-LESS SCATTERING PARTIAL WAVES'
+          WRITE(*,FMT='(T2,A,T20,A)')+'PAWVALENCEPSI',-'VALENCE WAVE FUNCTIONS CALCULATED FROM PAW'
+          WRITE(*,FMT='(T2,A,T20,A)')+'AEVALENCEPSI',-'ALL-ELECTRON VALENCE WAVE FUNCTIONS'
+!
+          WRITE(*,FMT='(t2,A,T20,A)')+'upsi',-'node-less wave functions'
+          WRITE(*,FMT='(t2,A,T20,A)')+'upsism',-'small component of node-less wave functions'
+          WRITE(*,FMT='(t2,A,T20,A)')+'aepsi',-'all-electron wave functions'
+          WRITE(*,FMT='(t2,A,T20,A)')+'aepsism',-'small component of all-electron wave functions'
+          STOP
+        END IF
+      END IF
       IF(NARGS.NE.2) THEN
         CALL ERROR$MSG('INCORRECT NUMBER OF COMMAND LINE ARGUMENTS')
         CALL ERROR$MSG('CALLING SEQUENCE:')
@@ -82,7 +111,24 @@
         CALL AUGMENTATION(LL_STP,NFIL,'PSPHIDOT')
       ELSE IF(SELECTION.EQ.'NLPHIDOT') THEN
         CALL AUGMENTATION(LL_STP,NFIL,'NLPHIDOT')
+!
+      ELSE IF(SELECTION.EQ.'PAWVALENCEPSI') THEN
+        CALL VALENCEWAVEFUNCTION(LL_STP,NFIL,'AUGPSI')
+      ELSE IF(SELECTION.EQ.'AEVALENCEPSI') THEN
+        CALL VALENCEWAVEFUNCTION(LL_STP,NFIL,'AEPSI')
+      ELSE IF(SELECTION.EQ.'PSVALENCEPSI') THEN
+        CALL VALENCEWAVEFUNCTION(LL_STP,NFIL,'PSPSI')
+!
+      ELSE IF(SELECTION.EQ.'AEPSISM') THEN
+        CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION))
+      ELSE IF(SELECTION.EQ.'AEPSI') THEN
+        CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION))
+      ELSE IF(SELECTION.EQ.'UPSI') THEN
+        CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION))
+      ELSE IF(SELECTION.EQ.'UPSISM') THEN
+        CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION))
       ELSE 
+!aepot,pspot,potofpsrho,aecore,pscore
         CALL ERROR$MSG('SELECTION NOT RECOGNIZED')
         CALL ERROR$CHVAL('SELECTION',SELECTION)
         CALL ERROR$STOP('MAIN')
@@ -152,6 +198,56 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE valenceWAVEFUNCTION(LL_STP,NFIL,ID)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
+      INTEGER(4)   ,INTENT(IN)    :: NFIL
+      CHARACTER(*),INTENT(IN)     :: ID
+      INTEGER(4)                  :: NR
+      REAL(8)      ,ALLOCATABLE   :: R(:)
+      REAL(8)      ,ALLOCATABLE   :: PSI(:,:)
+      INTEGER(4)                  :: Nv
+      INTEGER(4)                  :: IB,IR
+!     **************************************************************************
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'RGRID',1)
+      CALL LINKEDLIST$GET(LL_STP,'NR',1,NR)
+      ALLOCATE(R(NR))
+      CALL LINKEDLIST$GET(LL_STP,'R',1,R)
+!
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'AUGMENTATION',1)
+      CALL LINKEDLIST$GET(LL_STP,'NV',1,NV)
+      ALLOCATE(PSI(NR,NV))
+      DO IB=1,NV
+        IF(ID.EQ.'AEPSI') THEN
+          CALL LINKEDLIST$GET(LL_STP,'AEPSI',IB,PSI(:,IB))
+        ELSE IF(ID.EQ.'PSPSI') THEN
+          CALL LINKEDLIST$GET(LL_STP,'PSPSI',IB,PSI(:,IB))
+        ELSE IF(ID.EQ.'AUGPSI') THEN
+          CALL LINKEDLIST$GET(LL_STP,'AUGPSI',IB,PSI(:,IB))
+        ELSE
+          CALL ERROR$MSG('ID NOT RECOGNIZED')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('VALENCEWAVEFUNCTIONS')
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      DO IR=1,NR
+        WRITE(NFIL,*)R(IR),PSI(IR,:)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVEFUNCTIONS(LL_STP,NFIL,ID)
 !     **************************************************************************
 !     **************************************************************************
@@ -181,6 +277,8 @@
       DO IB=1,NB
         IF(ID.EQ.'AEPSI') THEN
           CALL LINKEDLIST$GET(LL_STP,'AEPSI',IB,PSI(:,IB))
+        ELSE IF(ID.EQ.'AEPSISM') THEN
+          CALL LINKEDLIST$GET(LL_STP,'AEPSISM',IB,PSI(:,IB))
         ELSE IF(ID.EQ.'UPSI') THEN
           CALL LINKEDLIST$GET(LL_STP,'UPSI',IB,PSI(:,IB))
 !          psi(:,ib)=psi(:,ib)/maxval(abs(psi(:,ib)))

@@ -1117,23 +1117,35 @@ to estimate the frequency from
 \vrules{optional, not used if ``!CONTROL!PSIDYN!AUTO'' is selected.}
 \vdefault{0.0}}
 
-\ifthenelse{\boolean{private}}{
-\mbax{\key{SAFEORTHO}
-\vdescr{chooses the way the orthogonality constraints for the wave
-  functions is enforced. If SAFEORTHO=T is selected the traditional
-  way is used, which results in a strictly energy-conserving
-  dynamics. If SAFEORTHO=F a new method is used which converges at
-  eigenstates of the Hamiltonian, but is energy conserving only if the
-  states are sufficiently close to eigenstates. This option allows to
-  calculate excited states or to use the 
-   Mermin functional\cite{mermin65_pr137_A1441} in order to
-  introduce Fermi occupation numbers. It must be used in connection
-  with dynamical occupations such as the Mermin functional and the
-  tetrahedron method for Brillouin-zone integration.}
-\vformat{logical}
-\vrules{optional}
-\vdefault{T}}
-}  % end of ifthenelse
+\ifthenelse{\boolean{private}}{ 
+\mbax{\key{SAFEORTHO} 
+  \vdescr{chooses the way the orthogonality constraints for the wave
+    functions is enforced. If SAFEORTHO=T is selected the traditional
+    way is used, which results in a strictly energy-conserving
+    dynamics. If SAFEORTHO=F a new method is used which converges at
+    eigenstates of the Hamiltonian, but is energy conserving only if
+    the states are sufficiently close to eigenstates. This option
+    allows to calculate excited states or to treat metals.
+
+    The option \verb|SAFEORTHO=F| can artificially stabilize the
+    calculation with states is in the ``wrong'' order, i.e. with
+    occupations that are not monotonically decreasing. Since the wrong
+    order corresponds to a saddle point of the total energy, the wave
+    functions accelerate to reach the correct order. This behavior can
+    also occur, if the two states that are mis-ordered are both
+    occupied or both unoccupied. In that case the energy increases
+    temporarily as the wavefunctions acquire kinetic energy, while the
+    DFT total energy remains approximately constant. The
+    ``zentrifugal'' forces of the wave function dynamics also perturb
+    the DFT total energy, so that also the latter increases
+    temporarily. Rarely, this behavior can also lead to a instability,
+    namely when the energy-levels shift in such a way that the final
+    state is again in the incorrect order.
+}
+  \vformat{logical} 
+  \vrules{optional} 
+  \vdefault{T}}
+} % end of ifthenelse
 
 \ifthenelse{\boolean{private}}{
 \mbax{\key{SWAPSTATES}
@@ -1550,9 +1562,15 @@ wavefunctions from the BO surface. This is an approximate procedure.}
   $f_i=(1+e^{-(\epsilon_i-\mu)/kT)})^{-1}$.  The eigenvalues are the
   $\epsilon_n=\langle\Psi_n|H|\Psi_n\rangle$. 
 
-  In the adiabatic mode of operation also the improved tetrahedron method
-  \cite{bloechl94_prb49_16223}can be used, which is the recommended option for
-  static ground state calculations of metallic systems.
+  In the adiabatic mode of operation also the improved tetrahedron
+  method\footnote{The original papers on the tetrahedron method ar by
+    Jepsen/Andersen\cite{jepsen71_ssc9_1763} and
+    Lehman/Taut\cite{lehmann72_pssb54_463}. The improved tetrahedron
+    method by Bl\"ochl/Jepsen/Andersen\cite{bloechl94_prb49_16223}
+    goes beyond the linear interpolation and leads to dramatically
+    improved convergence.}  \cite{bloechl94_prb49_16223} can be used,
+  which is the recommended option for static ground state calculations
+  of metallic systems.
 
   Use this option (variable occupations) only with
   eigenstates of the Hamitlonian, i.e. with
@@ -1730,7 +1748,7 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
   the unit cell, if requested. }
 %
 \mbax{\key{MOVE}
-\vdescr{Dynamical evulution of the unit cell.}
+\vdescr{Dynamical evolution of the unit cell.}
 \vformat{logical}
 \vrules{optional}
 \vdefault{T}}

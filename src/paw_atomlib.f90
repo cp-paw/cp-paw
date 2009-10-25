@@ -470,21 +470,34 @@ USE PERIODICTABLE_MODULE
       LOGICAL(4)                 :: TSTART  ! CALCULATE ANGULAR MOMENTA ETC
       LOGICAL(4)                 :: TREL    ! RELATIOVISTIC CALCULATION
       LOGICAL(4)                 :: TSO     ! CALCULATE WITH SPIN ORBIT COUPLING
+      LOGICAL(4)                 :: Tzora   ! CALCULATE zeroth order relativistic corrections
       LOGICAL(4)                 :: TFOCK   ! CALCULATE WITH FOCK EXCHANGE
       INTEGER(4)          :: LMAP(19)=(/0,0,1,0,1,0,2,1,0,2,1,0,3,2,1,0,3,2,1/)
+      INTEGER(4),PARAMETER       :: ZCORES(6)=(/2,10,18,36,54,86/)
       REAL(8)                    :: FTOT
       REAL(8)                    :: PI,Y0,C0LL
       INTEGER(4)                 :: NBROYDENMEM
       REAL(8)                    :: BROYDENSTEP
       INTEGER(4)                 :: LRHOX=4
+      INTEGER(4)                 :: IPERIOD,ISVAR1
       CHARACTER(128)             :: STRING
       REAL(8)                    :: SCALE
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
       REAL(8)       ,ALLOCATABLE :: EOFI_FOCK(:)
-      real(8)                    :: potsave(nr,10),potinsave(nr,10)
-      real(8)                    :: potoutsave(nr,10)
+      REAL(8)                    :: POTSAVE(NR,10),POTINSAVE(NR,10)
+      REAL(8)                    :: POTOUTSAVE(NR,10)
 !     **************************************************************************
+!     ==========================================================================
+!     == LMAP
+!     == H  0          Z=1-2 
+!     == LI 0,1,       Z=3-10
+!     == NA 0,1,       Z=11-18
+!     == K  0,2,1,     Z=19-36   3-D SERIES
+!     == RB 0,2,1,     Z=37-54   4-D SERIES
+!     == CS 0,3,2,1,   Z=55-86   4-F SERIES LANTHANIDES
+!     == FR 0,3,2,1    Z=87-     5-F SERIES ACTINIDES
+!     ==========================================================================
 !
 !     ==========================================================================
 !     == RESOLVE KEY                                                          ==
@@ -498,6 +511,12 @@ USE PERIODICTABLE_MODULE
       TSO=INDEX(KEY,'NONSO').EQ.0
       IF(TSO.AND.INDEX(KEY,'SO').EQ.0) THEN
         CALL ERROR$MSG('TSO=T BUT "SO" NOT SPECIFIED IN KEY')
+        CALL ERROR$CHVAL('KEY',KEY)
+        CALL ERROR$STOP('ATOMLIB$AESCF')
+      END IF
+      TZORA=INDEX(KEY,'NONZORA').EQ.0
+      IF(TZORA.AND.INDEX(KEY,'ZORA').EQ.0) THEN
+        CALL ERROR$MSG('TZORA=T BUT "ZORA" NOT SPECIFIED IN KEY')
         CALL ERROR$CHVAL('KEY',KEY)
         CALL ERROR$STOP('ATOMLIB$AESCF')
       END IF
@@ -537,49 +556,119 @@ USE PERIODICTABLE_MODULE
         FOFI(:)=0.D0
         SOFI(:)=0
         NB=0
-        FTOT=AEZ
-        DO I=1,19
-          NB=NB+1
-          IF(NB.GT.NX) THEN
-            CALL ERROR$MSG('ACTUAL NUMBER OF BAND EXCEEDS DIMENSION')
-            CALL ERROR$I4VAL('NX',NX)
-            CALL ERROR$STOP('ATOMLIB$AESCF')
-          END IF
-          LOFI(NB)=LMAP(I)
-          IF(TSO)THEN
-            IF(LMAP(I).EQ.0)THEN
-              SOFI(NB)=1
-              FOFI(NB)=MIN(FTOT,2.D0)
-              FTOT=FTOT-FOFI(NB)
-            ELSE
-              SOFI(NB)=-1
-              FOFI(NB)=MIN(FTOT,REAL(2*LMAP(I),KIND=8))
-              FTOT=FTOT-FOFI(NB)
-              NB=NB+1
-              IF(NB.GT.NX) THEN
-                CALL ERROR$MSG('ACTUAL NUMBER OF BAND EXCEEDS DIMENSION')
-                CALL ERROR$I4VAL('NX',NX)
-                CALL ERROR$STOP('ATOMLIB$AESCF')
-              END IF
-              LOFI(NB)=LMAP(I)
-              SOFI(NB)=1
-              FOFI(NB)=MIN(FTOT,REAL(2*LMAP(I)+2,KIND=8))
-              FTOT=FTOT-FOFI(NB)
-            END IF
-          ELSE
-            FOFI(NB)=MIN(FTOT,REAL(2*(2*LMAP(I)+1),KIND=8))
-            FTOT=FTOT-FOFI(NB)
-            SOFI(NB)=0
-          END IF
-          IF(FTOT.LE.1.D-10) EXIT
-        ENDDO
-        IF(FTOT.GT.1.D-10) THEN
-          CALL ERROR$MSG('SPECIFIED NUMBER OF BANDS IS TOO SMALL')
-          CALL ERROR$MSG('#(ELECTRONS) REMAINING')
-          CALL ERROR$I4VAL('NX',NX)
-          CALL ERROR$R8VAL('AEZ',AEZ)
-          CALL ERROR$STOP('ATOMLIB$AESCF')
-        END IF
+IPERIOD=0
+DO I=1,6
+  IF(AEZ.LE.ZCORES(I)) EXIT
+  IPERIOD=I
+ENDDO
+ib=0
+DO I=1,IPERIOD
+  ISVAR=ZCORES(I)
+  DO L=0,3
+    IF(L.EQ.0)CALL PERIODICTABLE$GET(ISVAR,'OCC(S)',ISVAR1)
+    IF(L.EQ.1)CALL PERIODICTABLE$GET(ISVAR,'OCC(P)',ISVAR1)
+    IF(L.EQ.2)CALL PERIODICTABLE$GET(ISVAR,'OCC(D)',ISVAR1)
+    IF(L.EQ.3)CALL PERIODICTABLE$GET(ISVAR,'OCC(F)',ISVAR1)
+    IF(ISVAR1.EQ.0) CYCLE
+    IB=IB+1
+    LOFI(IB)=L
+    FOFI(IB)=2.D0*REAL(2*L+1,KIND=8)
+    SOFI(IB)=0
+    IF(TSO) then
+      if(L.NE.0) THEN
+        FOFI(IB)=REAL(2*L+2,KIND=8)
+        SOFI(IB)=1
+        IB=IB+1
+        LOFI(IB)=L
+        FOFI(IB)=REAL(2*L,KIND=8)
+        SOFI(IB)=-1
+      else 
+        sofi(ib)=1
+      end if
+    END IF
+  ENDDO
+ENDDO
+DO L=0,3    
+  IF(L.EQ.0)CALL PERIODICTABLE$GET(nint(AEZ),'OCC(S)',ISVAR1)
+  IF(L.EQ.1)CALL PERIODICTABLE$GET(nint(AEZ),'OCC(P)',ISVAR1)
+  IF(L.EQ.2)CALL PERIODICTABLE$GET(nint(AEZ),'OCC(D)',ISVAR1)
+  IF(L.EQ.3)CALL PERIODICTABLE$GET(nint(AEZ),'OCC(F)',ISVAR1)
+  IF(ISVAR1.EQ.0) CYCLE
+  IB=IB+1
+  LOFI(IB)=L
+  FOFI(IB)=REAL(MIN(2*(2*L+1),ISVAR1),KIND=8)
+  SOFI(IB)=0
+  IF(TSO) THEN
+    IF(L.NE.0) THEN
+      FOFI(IB)=REAL(MIN(2*L+2,ISVAR1),KIND=8)
+      SOFI(IB)=1
+      IB=IB+1
+      LOFI(IB)=L
+      FOFI(IB)=REAL(max(0,MIN(2*L,ISVAR1-2*L-2)),KIND=8)
+      SOFI(IB)=-1
+    else
+      sofi(ib)=1
+    end if
+  END IF
+ENDDO
+NB=IB
+FTOT=SUM(FOFI(:NB))
+IF(ABS(FTOT-AEZ).GT.1.D-8) THEN
+  DO IB=1,NB
+    WRITE(*,'("IB=",I2," L=",I1," SOFI=",I2," F=",F8.2," SUM(F)=",F8.2)') &
+&           IB,LOFI(IB),SOFI(IB),FOFI(IB),SUM(FOFI(:IB))
+  ENDDO
+  CALL ERROR$MSG('INCONSISTENT NUMBER OF ELECTRONS')
+  CALL ERROR$R8VAL('AEZ ',AEZ)
+  CALL ERROR$R8VAL('#(ELECTRONS) ',FTOT)
+  CALL ERROR$STOP('ATOMLIB$AESCF')
+END IF
+
+!!$        FTOT=AEZ
+!!$        DO I=1,19
+!!$          NB=NB+1
+!!$          IF(NB.GT.NX) THEN
+!!$            CALL ERROR$MSG('ACTUAL NUMBER OF BAND EXCEEDS DIMENSION')
+!!$            CALL ERROR$I4VAL('NX',NX)
+!!$            CALL ERROR$STOP('ATOMLIB$AESCF')
+!!$          END IF
+!!$          LOFI(NB)=LMAP(I)
+!!$          IF(TSO)THEN
+!!$            IF(LMAP(I).EQ.0)THEN
+!!$              SOFI(NB)=1
+!!$              FOFI(NB)=MIN(FTOT,2.D0)
+!!$              FTOT=FTOT-FOFI(NB)
+!!$            ELSE
+!!$              SOFI(NB)=-1
+!!$              FOFI(NB)=MIN(FTOT,REAL(2*LMAP(I),KIND=8))
+!!$              FTOT=FTOT-FOFI(NB)
+!!$              NB=NB+1
+!!$              IF(NB.GT.NX) THEN
+!!$                CALL ERROR$MSG('ACTUAL NUMBER OF BAND EXCEEDS DIMENSION')
+!!$                CALL ERROR$I4VAL('NX',NX)
+!!$                CALL ERROR$STOP('ATOMLIB$AESCF')
+!!$              END IF
+!!$              LOFI(NB)=LMAP(I)
+!!$              SOFI(NB)=1
+!!$              FOFI(NB)=MIN(FTOT,REAL(2*LMAP(I)+2,KIND=8))
+!!$              FTOT=FTOT-FOFI(NB)
+!!$            END IF
+!!$          ELSE
+!!$            FOFI(NB)=MIN(FTOT,REAL(2*(2*LMAP(I)+1),KIND=8))
+!!$            FTOT=FTOT-FOFI(NB)
+!!$            SOFI(NB)=0
+!!$          END IF
+!!$          IF(FTOT.LE.1.D-10) EXIT
+!!$        ENDDO
+!!$        IF(FTOT.GT.1.D-10) THEN
+!!$          CALL ERROR$MSG('SPECIFIED NUMBER OF BANDS IS TOO SMALL')
+!!$          CALL ERROR$MSG('#(ELECTRONS) REMAINING')
+!!$          CALL ERROR$I4VAL('NX',NX)
+!!$          CALL ERROR$R8VAL('AEZ',AEZ)
+!!$          CALL ERROR$STOP('ATOMLIB$AESCF')
+!!$        END IF
+
+!
         CALL RADIAL$NUCPOT(GID,NR,AEZ,POT)
 !       == USE "HARD SPHERE BOUNDARY CONDITION" FOR THE POISSON EQUATION =======
 !       == THAT IS CHOOSE THE POT(R)=0 FOR R>RBOX ==============================
@@ -591,6 +680,9 @@ USE PERIODICTABLE_MODULE
           EXIT
         ENDDO
 !
+!       ========================================================================
+!       == determine number of nodes for each shell                           ==
+!       ========================================================================
         DO L=0,MAXVAL(LOFI)
           DO ISO=-1,1
             IF(TSO.AND.ISO.EQ.0) CYCLE
@@ -624,10 +716,10 @@ USE PERIODICTABLE_MODULE
 !       ========================================================================
         IF(TFOCK.AND.TSECOND) THEN
           CALL ATOMLIB$BOUNDSTATESWITHHF(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI,POT &
-     &                              ,VFOCK,TREL,RBOX,PHI,SPHI)
+     &                              ,VFOCK,TREL,tzora,RBOX,PHI,SPHI)
         ELSE
           CALL ATOMLIB$BOUNDSTATES(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI,POT &
-     &                            ,TREL,RBOX,PHI,SPHI)
+     &                            ,TREL,tzora,RBOX,PHI,SPHI)
         END IF
 !
 !       ========================================================================
@@ -685,10 +777,10 @@ RFOCK=1.1D0*RFOCK
             ALLOCATE(EOFI_FOCK(NB))
             EOFI_FOCK(:)=EOFI(:)
             CALL ATOMLIB$BOUNDSTATES(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI_FOCK,POT &
-     &                            ,TREL,RFOCK,PHI,SPHI)
+     &                            ,TREL,tzora,RFOCK,PHI,SPHI)
           ELSE
             CALL ATOMLIB$BOUNDSTATESWITHHF(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI,POT &
-     &                              ,VFOCK,TREL,RFOCK,PHI,SPHI)
+     &                              ,VFOCK,TREL,tzora,RFOCK,PHI,SPHI)
           END IF
           CALL RADIALFOCK$MAKEVFOCK(GID,NR,NB,LOFI,SOFI,FOFI,PHI,RFOCK &
      &                            ,LRHOX,VFOCK)
@@ -776,6 +868,7 @@ end if
 !  WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),FOFI(I),NNOFI(I),EOFI(I)
 !ENDDO
 !PRINT*,'#ITERATIONS ',ITER
+!stop
 !
 !     ==========================================================================
 !     == REORDER STATES ACCORDING TO ENERGY                                   ==
@@ -811,7 +904,7 @@ end if
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$BOUNDSTATES(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI,POT &
-     &                              ,TREL,RBOX,PHI,SPHI)
+     &                              ,TREL,tzora,RBOX,PHI,SPHI)
 !     **************************************************************************
 !     **  FINDS A SET OF BOUNDSTATES FOR A GIVEN POTENTIAL                    **
 !     **  THE WAVE FUNCTIONS ARE NORMALIZED                                   **
@@ -826,6 +919,7 @@ end if
       REAL(8)    ,INTENT(INOUT)  :: EOFI(NB)   !ENERGY
       REAL(8)    ,INTENT(IN)     :: POT(NR)    !POTENTIAL
       LOGICAL(4) ,INTENT(IN)     :: TREL       !SWITCH FOR RELATIVISTIC CORR/
+      LOGICAL(4) ,INTENT(IN)     :: tzora      !SWITCH FOR zora
       REAL(8)    ,INTENT(IN)     :: RBOX       !BOX RADIUS
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NB) !WAVE-FUNCTION (LARGE COMP.)
       REAL(8)    ,INTENT(OUT)    :: SPHI(NR,NB)!WAVE-FUNCTION (SMALL COMP.)
@@ -843,7 +937,13 @@ end if
 !       ========================================================================
 !       == DETERMINE ENERGY AND LARGE COMPONENT                               ==
 !       ========================================================================
-        IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
+        IF(TREL) then
+          if(tzora) then
+            CALL SCHROEDINGER$DREL(GID,NR,POT,0.d0,DREL)
+          else
+            CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
+          end if
+        end if
         G(:)=0.D0
         CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,G &
      &                         ,NNOFI(IB),POT,EOFI(IB),PHI(:,IB))
@@ -851,7 +951,7 @@ end if
 !       ========================================================================
 !       == DETERMINE SMALL COMPONENTS                                         ==
 !       ========================================================================
-        IF(TREL) THEN
+        IF(TREL.and.(.not.tzora)) THEN
           G(:)=0.D0
           CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
      &                                       ,DREL,G,PHI(:,IB),SPHI(:,IB))
@@ -873,7 +973,7 @@ end if
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$BOUNDSTATESWITHHF(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI,POT &
-     &                              ,VFOCK,TREL,RBOX,PHI,SPHI)
+     &                              ,VFOCK,TREL,tzora,RBOX,PHI,SPHI)
 !     **************************************************************************
 !     **  FINDS A SET OF BOUNDSTATES FOR A GIVEN POTENTIAL                    **
 !     ** THE WAVE FUNCTIONS ARE NORMALIZED                                    **
@@ -889,6 +989,7 @@ end if
       REAL(8)    ,INTENT(INOUT)  :: EOFI(NB)   !ENERGY
       REAL(8)    ,INTENT(IN)     :: POT(NR)    !POTENTIAL
       LOGICAL(4) ,INTENT(IN)     :: TREL       !SWITCH FOR RELATIVISTIC CORR/
+      LOGICAL(4) ,INTENT(IN)     :: Tzora       !SWITCH FOR zora
       REAL(8)    ,INTENT(IN)     :: RBOX       !BOX RADIUS
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NB) !WAVE-FUNCTION (LARGE COMP.)
       REAL(8)    ,INTENT(OUT)    :: SPHI(NR,NB)!WAVE-FUNCTION (SMALL COMP.)
@@ -903,12 +1004,13 @@ end if
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R)
       DREL(:)=0.D0 
+      IF(TREL.and.tzora)CALL SCHROEDINGER$DREL(GID,NR,POT,0.d0,DREL)
       DO IB=1,NB
 !
 !       ========================================================================
 !       == DETERMINE ENERGY AND LARGE COMPONENT                               ==
 !       ========================================================================
-        IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
+        IF(TREL.and.(.not.tzora))CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
         G(:)=0.D0
         CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,G &
      &                         ,NNOFI(IB),POT,EOFI(IB),PHI(:,IB))
@@ -918,7 +1020,7 @@ end if
 !       ========================================================================
 !       == DETERMINE SMALL COMPONENTS                                         ==
 !       ========================================================================
-        IF(TREL) THEN
+        IF(TREL.and.(.not.tzora)) THEN
           G(:)=0.D0
           CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
      &                                       ,DREL,G,PHI(:,IB),SPHI(:,IB))
@@ -1114,7 +1216,9 @@ end if
 !       
 !       == INHOMOGENEOUS SOLUTION WITH CORRECT BOUNDARY CONDITIONS =============
         IF(.NOT.THOM) THEN     
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G,L,E,IDIR,PHIINHOM)
+          GHOM=G   !AVOID OVERFLOW BY REMOVIN INHOMOGENEITY OUTSIDE OF THE BOX
+          GHOM(IREND+2:)=0.D0
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,GHOM,L,E,IDIR,PHIINHOM)
           CALL RADIAL$VALUE(GID,NR,PHIINHOM,ROUT,VAL1)
           CALL RADIAL$VALUE(GID,NR,PHI1,ROUT,VAL2)
           PHIINHOM(:)=PHIINHOM(:)-VAL1/VAL2*PHI1(:)
@@ -1184,15 +1288,18 @@ end if
       REAL(8)    ,PARAMETER      :: TOL=1.D-12
       REAL(8)                    :: R(NR)
       REAL(8)                    :: PHI1(NR),PHI2(NR)
+      REAL(8)                    :: drel(NR),ghom(nr),phihom(nr)
+      REAL(8)                    :: phiinhom(nr)
       INTEGER(4) ,PARAMETER      :: NITER=100
-      INTEGER(4)                 :: I,IR
       REAL(8)                    :: VAL1,VAL2,SVAR
-      REAL(8)                    :: y2,y1,x2,x1,val,der
+      INTEGER(4)                 :: I,IR,irmatch,so,idir
+      logical                    :: thom
+      REAL(8)                    :: y2,y1,x2,x1,val,der,dero,r1,r2
       INTEGER(4)                 :: IRBOX
 !     **************************************************************************
                                  CALL TRACE$PUSH('ATOMLIB$PAWBOUNDSTATE')
       CALL RADIAL$R(GID,NR,R)
-!     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST IOUTSIDE THE BOX
+!     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST OUTSIDE THE BOX =================
       IRBOX=1
       DO IR=1,NR-2
         IRBOX=IR
@@ -1244,10 +1351,8 @@ end if
         CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
       END IF
 !     ==========================================================================
-!     ==  CHOP OF TAILS WHICH MAY BE EXPONENTIALLY INCREASING                 ==
+!     ==  average both bounds of bisection                                    ==
 !     ==========================================================================
-!      CALL RADIAL$VALUE(GID,NR,PHI1,RBOX,VAL1)
-!      CALL RADIAL$VALUE(GID,NR,PHI2,RBOX,VAL2)
       x1=r(irbox-1)
       x2=r(irbox)
       y1=phi1(irbox-1)
@@ -1263,6 +1368,68 @@ end if
       VAL1=VAL1/SVAR
       VAL2=VAL2/SVAR
       PHI=PHI1*VAL2-PHI2*VAL1
+!
+!     ==========================================================================
+!     ==  determine matching point                                            ==
+!     ==========================================================================
+      do ir=1,nr
+        irmatch=ir
+        if(sum(abs(pro(ir,:))).lt.1.d-8) then
+          if(abs(phi2(ir)-phi1(ir)).gt.1.d-3*abs(phi1(ir))) exit
+        end if
+      enddo
+!
+!     ==========================================================================
+!     ==  INTEGRATE INWARD                                                    ==
+!     ==========================================================================
+      DREL(:)=0.D0
+      SO=0
+      IF(IRMATCH.LT.IRBOX) THEN
+        THOM=MAXVAL(ABS(G(:))).EQ.0.D0
+        IDIR=-1
+!       ==  HOMOGENEOUS SOLUTION THAT FULFILLS THE OUTER BOUNDARY CONDITION   ==
+!       ==  INTEGRATE INWARD AT THE GIVEN ENERGY WITH SLIGHTLY DIFFERENT      ==
+!       ==  BOUNDARY CONDITIONS AND SUPERIMPOSE THEM SO THAT OUTER BOUNDARY   ==
+!       ==  CONDITION IS EXACTLY FULFILLED                                    ==
+        GHOM(:)=0.D0
+        GHOM(IRbox+1)=1.D-8
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,psPOT,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
+        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
+        GHOM(:)=0.D0
+        GHOM(IRbox+2)=1.D-8
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,psPOT,DREL,SO,GHOM,L,E,IDIR,PHI1)
+        PHI1(:)=PHI1(:)/PHI1(IRMATCH)
+!       == FULFILL OUTER BOUNDARY CONDITION ====================================
+        CALL RADIAL$VALUE(GID,NR,PHIHOM,Rbox,VAL1)
+        CALL RADIAL$VALUE(GID,NR,PHI1,Rbox,VAL2)
+        SVAR=VAL1+VAL2
+        VAL1=VAL1/SVAR
+        VAL2=VAL2/SVAR
+        PHIHOM(:)=VAL2*PHIHOM(:)-VAL1*PHI1(:)
+        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
+!       
+!       == INHOMOGENEOUS SOLUTION WITH CORRECT BOUNDARY CONDITIONS =============
+        IF(.NOT.THOM) THEN     
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,psPOT,DREL,SO,G,L,E,IDIR,PHIINHOM)
+          CALL RADIAL$VALUE(GID,NR,PHIINHOM,Rbox,VAL1)
+          CALL RADIAL$VALUE(GID,NR,PHI1,Rbox,VAL2)
+          PHIINHOM(:)=PHIINHOM(:)-VAL1/VAL2*PHI1(:)
+        ELSE
+          PHIINHOM(:)=0.D0
+        END IF
+!
+!       =======================================================================
+!       ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
+!       =======================================================================
+        SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
+        PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
+        CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+        CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+        SVAR=(DERO-DER)/PHI(IRMATCH)
+        PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+      END IF
+ 
+
                                  CALL TRACE$POP()
       RETURN
       END
