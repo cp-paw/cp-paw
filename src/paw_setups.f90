@@ -2919,7 +2919,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
       LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
-      LOGICAL   ,PARAMETER  :: TWRITE=.false.
+      LOGICAL   ,PARAMETER  :: TWRITE=.true.
       LOGICAL(4),parameter  :: Tsmallbox=.false.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
@@ -3182,13 +3182,13 @@ PRINT*,'EOFI1 ',EOFI1
               end if
 !             == REMARK: IF THIS CRASHES PROCEED LIKE FOR NODELESS PARTIAL WAVES
 !             == WORK WITH LOCAL POTENTIAL FIRST AND THEN UPDATE WITH FOCK POT
-              IF(.NOT.TSMALLBOX) THEN
-                CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
-     &                                    ,RBND,E,UOFI(:,IB))
-              ELSE
+!!$              IF(.NOT.TSMALLBOX) THEN
+!!$                CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
+!!$     &                                    ,RBND,E,UOFI(:,IB))
+!!$              ELSE
                 CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
      &                                    ,ROUT,E,UOFI(:,IB))
-              END IF
+!!$              END IF
               IF(TREL) THEN
                 CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
      &                                         ,DREL,GS,UOFI(:,IB),UOFISM(:,IB))
@@ -3214,7 +3214,7 @@ PRINT*,'EOFI1 ',EOFI1
               ELSE
                 AUX=+0.5/SPEEDOFLIGHT*AUX1
               END IF
-              G(:) =UOFI(:,IB)+AUX(:)
+              G(:) =UOFI(:,IB) !+AUX(:)
               GS(:)=uofism(:,ib) ! rest is done in schr...$sphsmallcomponent
            ENDDO
           ENDDO
@@ -3228,6 +3228,7 @@ print*,'eofi1 a ',eofi1
       IF(VFOCK%TON) THEN
                       CALL TRACE$PASS('APPLY FOCK CORRECTION TO PARTIAL WAVES')
         DO L=0,LX
+          tfirst=.true.
           ISO=0
           G(:)=0.D0
           IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
@@ -3242,8 +3243,14 @@ print*,'eofi1 a ',eofi1
             else
               DREL(:)=0.D0
             end if
-            CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
+            IF(TFIRST.and.(.not.Tsmallbox)) THEN
+              CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
+    &                                    ,Rout,EOFLN(LN),NLPHI(:,LN))
+              tfirst=.false. 
+            ELSE
+              CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
     &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
+            end if
             CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,NLPHI(:,LN),AUX)
             TNLPHI(:,LN)=G(:)+(EOFLN(LN)-AEPOT(:)*Y0)*NLPHI(:,LN)-AUX(:)
             G(:)=NLPHI(:,LN)
