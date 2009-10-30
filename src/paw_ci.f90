@@ -1467,6 +1467,27 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       CALL CI$CREATOR(PSI,IORB)
       RETURN
       END
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI$1Pdenmat(iorb1,iorb2,PSI,cval)
+!     **************************************************************************
+!     **  CIHAMI_ADDTOU                                                       **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(CISTATE_TYPE),INTENT(IN) :: PSI
+      INTEGER(4)        ,INTENT(IN) :: IORB1
+      INTEGER(4)        ,INTENT(IN) :: IORB2
+      complex(8)        ,intent(out):: cval
+      TYPE(CISTATE_TYPE)            :: PSI1
+!     **************************************************************************
+      CALL CI$COPYPSI(PSI,PSI1)
+      CALL CI$ANNIHILATOR(PSI1,IORB2)
+      CALL CI$CREATOR(PSI1,IORB1)
+      call ci$scalarproduct(psi,psi1,cval)
+      CALL CI$DELETEPSI(PSI1)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$STATEFROMDENSITYMATRIX(NCHI,RHO,PSI)
@@ -1548,8 +1569,7 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       IF(TTEST) THEN
         DO I=1,NCHI
           DO J=1,NCHI
-            CALL CI$COPYPSI(PSI,PSICOPY)
-            CALL CI$IJOCC(I,J,PSICOPY,CSVAR)
+            CALL CI$1PDENMAT(I,J,PSI,CSVAR)
             DIFF=ABS(CSVAR-RHO(I,J))
             IF(DIFF.GT.1.D-7) THEN
               WRITE(*,'(2I3,"DEV.:",E10.2," FROM WV.",2F10.7,"FROM INPUT",2F10.7)') &

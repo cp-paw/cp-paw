@@ -3176,11 +3176,8 @@ ENDDO
           ID='NONREL'
         END IF
         CALL AERHO(ID,GID,NR,NB,LOFI,SO,F,NN,RBOX,DREL,POT,RHO,EOFI)
-print*,'marke 1'
         RHO(:)=RHO(:)+RHOADD(:)
-print*,'marke 2',nb
         EREF=EOFI(NB)
-print*,'marke 3'
 !
 !       ================================================================
 !       ==  EXIT IF CONVERGED                                         ==
