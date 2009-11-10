@@ -212,7 +212,7 @@ END MODULE ATOMS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: ISP,IAT,ISP1
-      CHARACTER(LEN=82)     :: STRING
+      CHARACTER(LEN=100)    :: STRING
       REAL(8)               :: U      ! MASS UNIT C12/12
       INTEGER(4)            :: NTASKS,THISTASK
       REAL(8)               :: EFFEMASS(NAT)
@@ -229,8 +229,8 @@ END MODULE ATOMS_MODULE
 !
       CALL REPORT$TITLE(NFIL,'ATOMLIST REPORT')
       WRITE(NFIL,FMT='("T1=",3F10.6/"T2=",3F10.6/"T3=",3F10.6)')RBAS
-      WRITE(STRING,FMT='(T1,A,T10,A,T43,A,T53,A,T65,A)') &
-     &                  'NAME','R(0)','M[U]','MPSI_EFF[U]','Q[E]'
+      WRITE(STRING,FMT='(T1,A,T15,A,T45,A,T53,A,T65,A,T80,A)') &
+     &                  'NAME','POSITION[ABOHR]','M[U]','MPSI_EFF[U]','Q[E]','FORCE'
       WRITE(NFIL,FMT='(A)')TRIM(STRING)
       ISP=0
       DO IAT=1,NAT
@@ -245,6 +245,9 @@ END MODULE ATOMS_MODULE
         WRITE(STRING(43:52),FMT='(F8.4)')RMASS(IAT)/U
         WRITE(STRING(53:64),FMT='(F8.4)')EFFEMASS(IAT)/U
         WRITE(STRING(63:72),FMT='(F8.5)')-CHARGE(IAT)
+        IF(ALLOCATED(FORCE).AND.TDYN.AND..NOT.TSTOP) THEN
+          WRITE(STRING(73:100),FMT='("(",F7.3,",",F7.3,",",F7.3,")")')FORCE(:,IAT)
+        END IF
         WRITE(NFIL,FMT='(A)')TRIM(STRING)
       ENDDO
       RETURN

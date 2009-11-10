@@ -1718,14 +1718,14 @@ PRINT*,'LOXPHI ',LOXPHI
       USE LMTO_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IAT0
-      INTEGER(4),PARAMETER  :: N1=100,N2=1,N3=1
+      INTEGER(4),PARAMETER  :: N1=50,N2=50,N3=50 !GRID (1D?)
       REAL(8)               :: ORIGIN(3)
-      REAL(8)               :: TVEC(3,3)
+      REAL(8)               :: TVEC(3,3)    !BOX
       REAL(8)               :: TLITTLE(3,3)
       REAL(8)               :: RBAS(3,3)
       INTEGER(4)            :: NAT
       INTEGER(4)            :: LM1
-      INTEGER(4)            :: LM1X
+      INTEGER(4)            :: LM1X         !#Ylm
       REAL(8)   ,ALLOCATABLE:: R0(:,:)      !(3,NAT)
       INTEGER(4),ALLOCATABLE:: ISPECIES1(:)  !(NAT)
       REAL(8)   ,ALLOCATABLE:: RCOV(:)      !(NAT)
@@ -1741,24 +1741,24 @@ PRINT*,'LOXPHI ',LOXPHI
       REAL(8)               :: K0(LMXX)
       REAL(8)               :: J0(LMXX)
       REAL(8)               :: JBAR(LMXX)
-      REAL(8)   ,ALLOCATABLE:: CVEC(:,:)
+      REAL(8)   ,ALLOCATABLE:: CVEC(:,:)  !screenParm
       REAL(8)               :: CVECSUM(LMXX)
       REAL(8)               :: R2(3)
-      REAL(8)   ,ALLOCATABLE:: ORB(:,:,:,:)
-      REAL(8)   ,ALLOCATABLE:: ORBI(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE:: ORB(:,:,:,:),resO(:,:) !locOrb.
+      REAL(8)   ,ALLOCATABLE:: ORBI(:,:,:,:) 
       REAL(8)   ,ALLOCATABLE:: QBARVEC(:,:)
       INTEGER(4),ALLOCATABLE:: LOX(:)
       INTEGER(4),ALLOCATABLE:: ISCATT(:)
-      LOGICAL               :: TONSITE
+      LOGICAL               :: TONSITE      !add head function onsite
       LOGICAL               :: TSPHERE
       INTEGER(4)            :: NFIL
       CHARACTER(64)         :: FILE
-      CHARACTER(8)         :: STRING
+      CHARACTER(15)         :: STRING         !contains IATO
 !     **************************************************************************
       TVEC(:,:)=0.D0
-      TVEC(1,1)=15.D0
-      TVEC(2,2)=15.D0
-      TVEC(3,3)=15.D0
+      TVEC(1,1)=2*7.17D0 !2*CaMnO3
+      TVEC(2,2)=2*7.17D0
+      TVEC(3,3)=2*7.17D0
 !
 !     ==========================================================================
 !     == DEFINE CENTERED GRID                                                 ==
@@ -1770,7 +1770,7 @@ PRINT*,'LOXPHI ',LOXPHI
       IF(N1.GT.1)TLITTLE(:,1)=TLITTLE(:,1)/REAL(N1-1,KIND=8)
       IF(N2.GT.1)TLITTLE(:,2)=TLITTLE(:,2)/REAL(N2-1,KIND=8)
       IF(N3.GT.1)TLITTLE(:,3)=TLITTLE(:,3)/REAL(N3-1,KIND=8)
-      ORIGIN(:)=-0.5D0*(TVEC(:,1)+TVEC(:,2)+TVEC(:,3))
+      ORIGIN(:)=-0.5D0*(TVEC(:,1)+TVEC(:,2)+TVEC(:,3)) !also 2D
 !
       CALL CELL$GETR8A('T0',9,RBAS)
       CALL ATOMLIST$NATOM(NAT)
@@ -1810,10 +1810,11 @@ PRINT*,'LOXPHI ',LOXPHI
 !     ==========================================================================
       ALLOCATE(CVEC(LMXX,LM1X))
       ALLOCATE(ORB(N1,N2,N3,LM1X))
+      ALLOCATE(resO(N1*N2*N3,LM1X))
       ALLOCATE(ORBI(N1,N2,N3,LM1X))
       ORB(:,:,:,:)=0.D0
       ORBI(:,:,:,:)=0.D0
-      NNB=SIZE(SBAR)
+      NNB=SIZE(SBAR)  !SBAR strucCons. (global)
       DO NN=1,NNB
          IF(SBAR(NN)%IAT1.NE.IAT0) CYCLE
          IF(SBAR(NN)%N1.NE.LM1X) THEN
@@ -1875,20 +1876,42 @@ PRINT*,'LOXPHI ',LOXPHI
       FILE=TRIM(ADJUSTL(FILE))//'_IAT'//TRIM(ADJUSTL(STRING))//'.DAT'
       CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,-FILE)
       CALL FILEHANDLER$UNIT('HOOK',NFIL)
-      WRITE(NFIL,*)ORIGIN(:)
-      WRITE(NFIL,*)TVEC(:,:)
-      WRITE(NFIL,*)N1,N2,N3,LM1X
-      NN=0
-      DO I1=1,N1
-        DO I2=1,N2
-          DO I3=1,N3
-            NN=NN+1
-!            WRITE(NFIL,*)NN,ORB(I1,I2,I3),BAREORB(I1,I2,I3),ORBI(I1,I2,I3)
-            WRITE(NFIL,FMT='(3I5,100F10.5)')I1,I2,I3,ORB(I1,I2,I3,:) &
+      If(1.eq.1) then
+!       == writes file for the data explorer ===================================
+        WRITE(NFIL,FMT='("class gridpositions counts ",3(1X,I3))')N1,N2,N3
+        WRITE(NFIL,FMT='("origin ",3F10.7)')ORIGIN
+        WRITE(NFIL,FMT='("#LM1X= ",I2)')LM1X                !dx/2Dcntr 
+        WRITE(NFIL,FMT='("#delta(A) ",3F10.7)')TVEC(1,:)/N1 !dx/2Dcntr
+        WRITE(NFIL,FMT='("#delta(A) ",3F10.7)')TVEC(2,:)/N2 !dx/2Dcntr
+        WRITE(NFIL,FMT='("#delta(A) ",3F10.7)')TVEC(3,:)/N3 !dx/2Dcntr
+        resO=RESHAPE(ORB,(/I1*I2*I3,LM1X/))
+        PRINT*,"start write data"
+        DO LM1=1,LM1X  !dx/2Dcntr
+          WRITE(NFIL,FMT='("#LM1= ",I2)')LM1 !dx/2Dcntr
+          DO I1=1,N1*N2*N3,10 
+             WRITE(NFIL,FMT='(10F10.5)')resO(I1,LM1),resO(I1+1,LM1) &
+     &            ,resO(I1+2,LM1),resO(I1+3,LM1), resO(I1+4,LM1) &
+     &            ,resO(I1+5,LM1),resO(I1+6,LM1),resO(I1+7,LM1) &
+     &            ,resO(I1+8,LM1),resO(I1+9,LM1)
+          ENDDO 
+        ENDDO
+        PRINT*,"done write data"
+      else
+        WRITE(NFIL,*)ORIGIN(:)
+        WRITE(NFIL,*)TVEC(:,:)
+        WRITE(NFIL,*)N1,N2,N3,LM1X
+        NN=0
+        DO I1=1,N1
+          DO I2=1,N2
+            DO I3=1,N3
+              NN=NN+1
+!              WRITE(NFIL,*)NN,ORB(I1,I2,I3),BAREORB(I1,I2,I3),ORBI(I1,I2,I3)
+              WRITE(NFIL,FMT='(3I5,100F10.5)')I1,I2,I3,ORB(I1,I2,I3,:) &
      &                                             ,ORBI(I1,I2,I3,:)
+            ENDDO
           ENDDO
         ENDDO
-      ENDDO
+      end if
       CALL FILEHANDLER$CLOSE('HOOK')
       CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOKERROR')
 
