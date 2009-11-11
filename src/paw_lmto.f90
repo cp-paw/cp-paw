@@ -1,5 +1,5 @@
 MODULE LMTO_MODULE
-REAL(8)   ,PARAMETER  :: K2=0.D0
+REAL(8)   ,PARAMETER  :: K2=1.D0
 REAL(8)   ,PARAMETER  :: RC=5.D0  ! CUTOF RADIUS FOR NEIGHBORLIST
 TYPE POTPAR_TYPE
   REAL(8)          :: RAD
@@ -920,6 +920,8 @@ PRINT*,'C,ENU   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
         PSCHI(:,LNCHI)=PSCHI(:,LNCHI)+PSPHIDOT(:,LN)*SVAR
         nlCHI(:,LNCHI)=nlCHI(:,LNCHI)+nlPHIDOT(:,LN)*SVAR
       ENDDO
+print*,'lnx,lox ',lnx,lox
+print*,'lnxchi1,loxchi ',lnxchi1,loxchi
 !
 !     == attach exponential tail at the covalent radius ========================
       DO LNCHI=1,LNXCHI1     
@@ -948,7 +950,7 @@ PRINT*,'C,ENU   ',POTPAR(ISP)%CBAR(LN),POTPAR(ISP)%ENU(LN)
           CALL ERROR$I4VAL('ISP',ISP)
           CALL ERROR$I4VAL('L',L)
           CALL ERROR$I4VAL('LNCHI',LNCHI)
-          CALL ERROR$I4VAL('LOXCHI',LOXCHI)
+          CALL ERROR$I4VAL('LOXCHI',LOXCHI(lnchi))
           CALL ERROR$R8VAL('COVALENT RADIUS',RCOV)
           CALL ERROR$R8VAL('LOGARITMIC DERIVATIVE ',SVAR)
           CALL ERROR$R8VAL('LOGARITMIC DERIVATIVE OF DIFFERENCE',SVAR1)

@@ -737,7 +737,7 @@ print*,'THIS%SP%FUNCTIONALID',THIS%SP%FUNCTIONALID
         DO IS1=1,2
           DO IS2=1,2
             RHO(:,:,IS1,IS2)=MATMUL(PHITOCHI &
-     &                         ,MATMUL(MATSS(:,:,IS1,IS2),TRANSPOSE(PHITOCHI)))
+     &                      ,MATMUL(MATSS(:,:,IS1,IS2),TRANSPOSE(PHITOCHI)))
           ENDDO
         ENDDO
       END IF
