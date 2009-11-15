@@ -1,5 +1,5 @@
 MODULE LMTO_MODULE
-REAL(8)   ,PARAMETER  :: K2=1.D0
+REAL(8)   ,PARAMETER  :: K2=-1.D0 ! 0.5*k2 is the kinetic energy
 REAL(8)   ,PARAMETER  :: RC=5.D0  ! CUTOF RADIUS FOR NEIGHBORLIST
 TYPE POTPAR_TYPE
   REAL(8)          :: RAD
@@ -141,7 +141,8 @@ END MODULE LMTO_MODULE
       REAL(8)                :: PHIINT
       REAL(8)                :: ENU
       REAL(8)                :: EGAMMA
-      INTEGER(4)             :: ISP,LN,L
+      INTEGER(4)             :: ISP,LN,L,ln1,ir
+real(8):: x1,x2,x3
 !     **************************************************************************
       CALL SETUP$NSPECIES(NSP)
       ALLOCATE(LX(NSP))
@@ -200,40 +201,67 @@ END MODULE LMTO_MODULE
         ALLOCATE(AUX(NR))
         ALLOCATE(AUX1(NR))
         DO L=0,MAXVAL(LOX)
+!         == select phibardot from valence channel =============================
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
-            CALL RADIAL$VALUE(GID,NR,NLPHIDOT(:,LN),RAD,PHIDOTVAL)
-            CALL RADIAL$DERIVATIVE(GID,NR,NLPHIDOT(:,LN),RAD,PHIDOTDER)
+            if(iscatt(ln).gt.0) cycle
+            ln1=ln
+          enddo
+          DO LN=1,LNX
+            IF(LOX(LN).NE.L) CYCLE
+!ln1=ln ! old version re-established
+!           ====================================================================
+!           == value and derivative of partial waves and envelope functions   ==
+!           ====================================================================
+            CALL RADIAL$VALUE(GID,NR,NLPHIDOT(:,LN1),RAD,PHIDOTVAL)
+            CALL RADIAL$DERIVATIVE(GID,NR,NLPHIDOT(:,LN1),RAD,PHIDOTDER)
             CALL RADIAL$VALUE(GID,NR,NLPHI(:,LN),RAD,PHIVAL)
             CALL RADIAL$DERIVATIVE(GID,NR,NLPHI(:,LN),RAD,PHIDER)
             CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
             CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
+PRINT*,'ISP,L,LN',ISP,L,LN,'=========================================='
+PRINT*,'PHIDOT ', PHIDOTVAL,PHIDOTDER,rad-phidotval/phidotder
+PRINT*,'PHI    ', PHIVAL,PHIDER
+PRINT*,'K      ', KVAL,KDER
+PRINT*,'J      ', JVAL,JDER
 !
-!           == CALCULATE POTENTIAL PARAMETERS ===================
+!           ====================================================================
+!           == CALCULATE POTENTIAL PARAMETERS                                 ==
+!           ====================================================================
             WJPHI=JVAL*PHIDER-JDER*PHIVAL
             WJPHIDOT=JVAL*PHIDOTDER-JDER*PHIDOTVAL
             WKPHI=KVAL*PHIDER-KDER*PHIVAL
             WKPHIDOT=KVAL*PHIDOTDER-KDER*PHIDOTVAL
+!           ==  screening charge ===============================================
             QBAR=WJPHIDOT/WKPHIDOT
+print*,'qbar ',qbar
             WJBARPHI=WJPHI-WKPHI*QBAR
             ENU=EOFLN(LN)
-            EGAMMA=ESCATT(LN)
+            EGAMMA=ESCATT(LN1)
+!           == band center =====================================================
             CBAR=ENU-WKPHI/WKPHIDOT
+!           ==  phiint=<phi|phi> ===============================================
             AUX(:)=R(:)**2*AEPHI(:,LN)**2
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
             CALL RADIAL$VALUE(GID,NR,AUX1,RAD,PHIINT)
-            AUX(:)=R(:)**2*AEPHI(:,LN)*AEPHIDOT(:,LN)
+!           ==  obar=<phi|phibardot>/<phi|phi>  ================================
+            AUX(:)=R(:)**2*AEPHI(:,LN)*AEPHIDOT(:,LN1)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
             CALL RADIAL$VALUE(GID,NR,AUX1,RAD,OBAR)
             OBAR=OBAR/PHIINT 
-            AUX(:)=R(:)**2*AEPHIDOT(:,LN)**2
+!           ==  pbar=<phibardot|phibardot>/<phi|phi> ===========================
+            AUX(:)=R(:)**2*AEPHIDOT(:,LN1)**2
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
             CALL RADIAL$VALUE(GID,NR,AUX1,RAD,PBAR)
             PBAR=PBAR/PHIINT 
+!           == approximate normalization factor for phi ========================
             A=1.D0/SQRT((1.D0-(ENU-EGAMMA)*OBAR)*PHIINT)
+!           == band width ======================================================
             SQDELTABAR=-RAD**2*A*WJBARPHI/SQRT(2.D0)
 !
-!           == NOW MAP ONTO POTPAR ================================
+!           ====================================================================
+!           == NOW MAP ONTO POTPAR                                            ==
+!           ====================================================================
             POTPAR(ISP)%QBAR(LN)=QBAR
             POTPAR(ISP)%CBAR(LN)=CBAR
             POTPAR(ISP)%SQDELTABAR(LN)=SQDELTABAR

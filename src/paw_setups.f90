@@ -2918,8 +2918,8 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
-      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
-      LOGICAL   ,PARAMETER  :: TWRITE=.true.
+      LOGICAL   ,PARAMETER  :: TTEST=.false.
+      LOGICAL   ,PARAMETER  :: TWRITE=.false.
       LOGICAL(4),parameter  :: Tsmallbox=.false.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
