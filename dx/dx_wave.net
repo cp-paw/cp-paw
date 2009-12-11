@@ -1,5 +1,5 @@
 //
-// time: Tue Jan 13 11:16:01 2009
+// time: Mon Nov 30 15:09:57 2009
 //
 // version: 3.2.0 (format), 4.4.4 (DX)
 //
@@ -23,8 +23,8 @@ main_AmbientLight_1_out_1 =
     ) [instance: 1, cache: 1];
     // 
     // node FileSelector[1]: x = 419, y = 134, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = "/Users/peterbloechl/Tree/Projects/Joss/Cu_atom/cu3+_s5.dx"
-    // output[2]: visible = 1, type = 32, value = "cu3+_s5.dx"
+    // output[1]: visible = 1, type = 32, value = "/Users/ptpb/Desktop/dx/porph/2H/L+++.dx"
+    // output[2]: visible = 1, type = 32, value = "L+++.dx"
     // page group: dx_wave
     //
     // 
@@ -551,7 +551,7 @@ CacheScene(main_Image_1_in_1, main_Image_1_out_1, main_Image_1_out_2);
 }
 main_AmbientLight_1_in_1 = NULL;
 main_AmbientLight_1_out_1 = NULL;
-main_FileSelector_1_out_1 = "/Users/peterbloechl/Tree/Projects/Joss/Cu_atom/cu3+_s5.dx";
+main_FileSelector_1_out_1 = "/Users/ptpb/Desktop/dx/porph/2H/L+++.dx";
 main_Import_2_in_2 = "density";
 main_Import_2_in_3 = NULL;
 main_Import_2_in_4 = NULL;

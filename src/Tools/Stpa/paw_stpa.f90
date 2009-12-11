@@ -36,10 +36,10 @@
           WRITE(*,FMT='(T2,A,T20,A)')+'PAWVALENCEPSI',-'VALENCE WAVE FUNCTIONS CALCULATED FROM PAW'
           WRITE(*,FMT='(T2,A,T20,A)')+'AEVALENCEPSI',-'ALL-ELECTRON VALENCE WAVE FUNCTIONS'
 !
-          WRITE(*,FMT='(t2,A,T20,A)')+'upsi',-'node-less wave functions'
-          WRITE(*,FMT='(t2,A,T20,A)')+'upsism',-'small component of node-less wave functions'
-          WRITE(*,FMT='(t2,A,T20,A)')+'aepsi',-'all-electron wave functions'
-          WRITE(*,FMT='(t2,A,T20,A)')+'aepsism',-'small component of all-electron wave functions'
+          WRITE(*,FMT='(T2,A,T20,A)')+'UPSI',-'NODE-LESS WAVE FUNCTIONS'
+          WRITE(*,FMT='(T2,A,T20,A)')+'UPSISM',-'SMALL COMPONENT OF NODE-LESS WAVE FUNCTIONS'
+          WRITE(*,FMT='(T2,A,T20,A)')+'AEPSI',-'ALL-ELECTRON WAVE FUNCTIONS'
+          WRITE(*,FMT='(T2,A,T20,A)')+'AEPSISM',-'SMALL COMPONENT OF ALL-ELECTRON WAVE FUNCTIONS'
           STOP
         END IF
       END IF
@@ -75,12 +75,42 @@
       CALL LINKEDLIST$READ(LL_STP,NFIL,'~')
 !
 !     ==========================================================================
-!     == TAKE CARE OF SCATTERING PROPERTIES                                   ==
+!     == define output file and prepare output                                ==
 !     ==========================================================================
 !      CALL FILEHANDLER$UNIT('DAT',NFIL)
       NFIL=6   ! standard output
+!      call linkedlist$report(ll_stp,nfil)
+!     ==========================================================================
+!     == TAKE CARE OF SCATTERING PROPERTIES                                   ==
+!     ==========================================================================
       IF(SELECTION.EQ.'SCATTERING') THEN
         CALL SCATTERING(LL_STP,NFIL)
+!
+!     ==========================================================================
+!     == constants                                                            ==
+!     ==========================================================================
+      ELSE IF(SELECTION.EQ.'NB') THEN
+        CALL ATOMCONSTANTS(LL_STP,NFIL,'NB')
+      ELSE IF(SELECTION.EQ.'NC') THEN
+        CALL ATOMCONSTANTS(LL_STP,NFIL,'NC')
+      ELSE IF(SELECTION.EQ.'ATOM.L') THEN
+        CALL ATOMCONSTANTS(LL_STP,NFIL,'ATOM.L')
+      ELSE IF(SELECTION.EQ.'ATOM.E') THEN
+        CALL ATOMCONSTANTS(LL_STP,NFIL,'ATOM.E')
+      ELSE IF(SELECTION.EQ.'ATOM.F') THEN
+        CALL ATOMCONSTANTS(LL_STP,NFIL,'ATOM.F')
+!
+      ELSE IF(SELECTION.EQ.'NPRO') THEN
+        CALL AUGMENTATIONCONSTANTS(LL_STP,NFIL,'NPRO')
+      ELSE IF(SELECTION.EQ.'LPRO') THEN
+        CALL AUGMENTATIONCONSTANTS(LL_STP,NFIL,'LPRO')
+!
+      ELSE IF(SELECTION.EQ.'ID') THEN
+        CALL GENERICCONSTANTS(LL_STP,NFIL,'ID')
+      ELSE IF(SELECTION.EQ.'Z') THEN
+        CALL GENERICCONSTANTS(LL_STP,NFIL,'Z')
+      ELSE IF(SELECTION.EQ.'ZV') THEN
+        CALL GENERICCONSTANTS(LL_STP,NFIL,'ZV')
 !
 !     ==========================================================================
 !     == CONSTRUCT FILE FOR ATOMIC WAVE FUNCTIONS                             ==
@@ -136,6 +166,124 @@
 !      CALL FILEHANDLER$CLOSE('DAT')
       STOP
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GENERICCONSTANTS(LL_STP,NFIL,ID)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
+      INTEGER(4)   ,INTENT(IN)    :: NFIL
+      CHARACTER(*),INTENT(IN)     :: ID
+      REAL(8)                     :: svar
+      CHARACTER(64)               :: CHVAR
+!     **************************************************************************
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'GENERIC',1)
+      IF(ID.EQ.'ID') THEN
+        CALL LINKEDLIST$GET(LL_STP,'ID',1,CHVAR)
+        WRITE(NFIL,*)CHVAR
+      ELSE IF(ID.EQ.'Z') THEN
+        CALL LINKEDLIST$GET(LL_STP,'Z',1,SVAR)
+        WRITE(NFIL,*)SVAR
+      ELSE IF(ID.EQ.'ZV') THEN
+        CALL LINKEDLIST$GET(LL_STP,'ZV',1,SVAR)
+        WRITE(NFIL,*)SVAR
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('GENERICCONSTANTS')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE augmentationconstants(LL_STP,NFIL,ID)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
+      INTEGER(4)   ,INTENT(IN)    :: NFIL
+      CHARACTER(*),INTENT(IN)     :: ID
+      INTEGER(4)                  :: ISVAR
+      INTEGER(4)  ,ALLOCATABLE    :: IARR(:)
+!     **************************************************************************
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'AUGMENTATION',1)
+      IF(ID.EQ.'NPRO') THEN
+        CALL LINKEDLIST$GET(LL_STP,'LNX',1,ISVAR)
+        WRITE(NFIL,*)ISVAR
+      ELSE IF(ID.EQ.'LPRO') THEN
+        CALL LINKEDLIST$GET(LL_STP,'LNX',1,ISVAR)
+        ALLOCATE(IARR(ISVAR))
+        CALL LINKEDLIST$GET(LL_STP,'LOX',1,IARR)
+        WRITE(NFIL,*)IARR
+        DEALLOCATE(IARR)
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('AUGMENTATIONCONSTANTS')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE atomconstants(LL_STP,NFIL,ID)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
+      INTEGER(4)   ,INTENT(IN)    :: NFIL
+      CHARACTER(*),INTENT(IN)     :: ID
+      INTEGER(4)                  :: ISVAR
+      INTEGER(4)  ,ALLOCATABLE    :: IARR(:)
+      reaL(8)     ,ALLOCATABLE    :: ARR(:)
+!     **************************************************************************
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'ATOM',1)
+      IF(ID.EQ.'NB') THEN
+        CALL LINKEDLIST$GET(LL_STP,'NB',1,ISVAR)
+        WRITE(NFIL,*)ISVAR
+      ELSE IF(ID.EQ.'NC') THEN
+        CALL LINKEDLIST$GET(LL_STP,'NC',1,ISVAR)
+        WRITE(NFIL,*)ISVAR
+      ELSE IF(ID.EQ.'ATOM.L') THEN
+        CALL LINKEDLIST$GET(LL_STP,'NB',1,ISVAR)
+        ALLOCATE(IARR(ISVAR))
+        CALL LINKEDLIST$GET(LL_STP,'L',1,IARR)
+        WRITE(NFIL,*)IARR
+        DEALLOCATE(IARR)
+      ELSE IF(ID.EQ.'ATOM.E') THEN
+        CALL LINKEDLIST$GET(LL_STP,'NB',1,ISVAR)
+        ALLOCATE(ARR(ISVAR))
+        CALL LINKEDLIST$GET(LL_STP,'E',1,ARR)
+        WRITE(NFIL,*)ARR
+        DEALLOCATE(ARR)
+      ELSE IF(ID.EQ.'ATOM.F') THEN
+        CALL LINKEDLIST$GET(LL_STP,'NB',1,ISVAR)
+        ALLOCATE(ARR(ISVAR))
+        CALL LINKEDLIST$GET(LL_STP,'F',1,ARR)
+        WRITE(NFIL,*)ARR
+        DEALLOCATE(ARR)
+      ELSE IF(ID.EQ.'ATOM.so') THEN
+        CALL LINKEDLIST$GET(LL_STP,'NB',1,ISVAR)
+        ALLOCATE(ARR(ISVAR))
+        CALL LINKEDLIST$GET(LL_STP,'so',1,ARR)
+        WRITE(NFIL,*)ARR
+        DEALLOCATE(ARR)
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMCONSTANTS')
+      END IF
+      RETURN
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE augmentation(LL_STP,NFIL,ID)

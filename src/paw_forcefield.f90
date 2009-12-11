@@ -2120,22 +2120,18 @@ END SUBROUTINE FORCEFIELD$TIP3PNEW
     END SUBROUTINE FORCEFIELD$SWITCH_O   
 
 
-
-    SUBROUTINE FORCEFIELD$SWITCH_F(ATOM)
-
-      USE CLASSICAL_MODULE
-      USE FORCEFIELD_MODULE
-
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)      ::ATOM
-      INTEGER(4)                  :: I
-      
-      DO I=ATOM,ATOM+2
+!      .........................................................................
+       SUBROUTINE FORCEFIELD$SWITCH_F(ATOM)
+       USE CLASSICAL_MODULE
+       USE FORCEFIELD_MODULE
+       IMPLICIT NONE
+       INTEGER(4) ,INTENT(IN)      :: ATOM
+       INTEGER(4)                  :: I
+!      *************************************************************************
+       DO I=ATOM,ATOM+2
          !MD%R0(:,I)=MD%RM(:,I)
          !MD%RP(:,I)=0.D0
          MD%FORCE(:,I)=0.D0
-      END DO
-
-      RETURN
-
-    END SUBROUTINE FORCEFIELD$SWITCH_F
+       END DO
+       RETURN
+       END SUBROUTINE FORCEFIELD$SWITCH_F
