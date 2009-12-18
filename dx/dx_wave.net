@@ -1,5 +1,5 @@
 //
-// time: Mon Nov 30 15:09:57 2009
+// time: Fri Dec 18 19:00:53 2009
 //
 // version: 3.2.0 (format), 4.4.4 (DX)
 //
@@ -23,8 +23,8 @@ main_AmbientLight_1_out_1 =
     ) [instance: 1, cache: 1];
     // 
     // node FileSelector[1]: x = 419, y = 134, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = "/Users/ptpb/Desktop/dx/porph/2H/L+++.dx"
-    // output[2]: visible = 1, type = 32, value = "L+++.dx"
+    // output[1]: visible = 1, type = 32, value = "/Users/ptpb/Desktop/COT/c8h8.dx"
+    // output[2]: visible = 1, type = 32, value = "c8h8.dx"
     // page group: dx_wave
     //
     // 
@@ -428,7 +428,7 @@ main_Compute_3_out_1 =
     // input[41]: defaulting = 0, visible = 0, type = 32, value = "panzoom"
     // page group: dx_wave
     // depth: value = 24
-    // window: position = (0.4201,0.0387), size = 0.5222x0.5421, screen = 0
+    // window: position = (0.1208,0.0979), size = 0.5222x0.5421, screen = 0
     // internal caching: 1
     //
 main_Image_1_out_1,
@@ -551,7 +551,7 @@ CacheScene(main_Image_1_in_1, main_Image_1_out_1, main_Image_1_out_2);
 }
 main_AmbientLight_1_in_1 = NULL;
 main_AmbientLight_1_out_1 = NULL;
-main_FileSelector_1_out_1 = "/Users/ptpb/Desktop/dx/porph/2H/L+++.dx";
+main_FileSelector_1_out_1 = "/Users/ptpb/Desktop/COT/c8h8.dx";
 main_Import_2_in_2 = "density";
 main_Import_2_in_3 = NULL;
 main_Import_2_in_4 = NULL;

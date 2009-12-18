@@ -2404,9 +2404,13 @@ print*,'a     ',(a(i,i),i=1,nb)
 !       CALL REPORT$R8VAL(NFIL &
 !    &      ,'INITIAL VELOCITIES ARE RANDOMIZED WITH ENERGY',AMPRE,'H')
 !     END IF
+      CALL REPORT$L4VAL(NFIL,'SAFEORTHO',TSAFEORTHO)
       IF(.NOT.TSAFEORTHO) THEN
-        WRITE(NFIL,FMT='("EIGENSTATES ARE CALCULATED."' &
+        WRITE(NFIL,FMT='("I.E. ORTHOGONALIZATION CONVERGES TO EIGENSTATES."' &
      &                 //'," (NO STRICT ENERGY CONSERVATION)")')
+      ELSE
+        WRITE(NFIL,FMT='("I.E. ORTHOGONALIZATION CONSERVES ENERGY"' &
+     &                 //'," (DO NOT USE WITH VARIABLE OCCUPATIONS)")')
       END IF
 !     
 !     ================================================================
