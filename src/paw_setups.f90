@@ -429,8 +429,8 @@ END MODULE SETUP_MODULE
       ELSE IF(ID.EQ.'LNXCHI') THEN
         CALL ERROR$MSG('ID LNXCHI IS MARKED FOR DELETION')
         CALL ERROR$STOP('SETUP$GETI4')
-        CALL SETUP_RENEWLOCORB()
-        VAL=THIS%LOCORBLNX    ! #(LOCAL ORBITALS)
+!        CALL SETUP_RENEWLOCORB()
+!       VAL=THIS%LOCORBLNX    ! #(LOCAL ORBITALS)
       ELSE IF(ID.EQ.'NC') THEN
         VAL=THIS%ATOM%NC
       ELSE IF(ID.EQ.'NB') THEN
@@ -2128,28 +2128,6 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       DO LN1=1,THIS%LNX
         DO LN2=1,THIS%LNX
           DOVER_(LN1,LN2)=THIS%DOVER(LN1,LN2)
-        ENDDO
-      ENDDO
-      RETURN  
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP$1CKINETIC(ISP_,LNXX_,DTKIN_)
-!LEGACY CODE! -> SETUP$GETR8A('DEKIN'
-!     ******************************************************************
-!     **  RETURN 1-C- KINETIC ENERGY OVERLAP OF THE PARTIAL WAVES     **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: LNXX_
-      REAL(8)   ,INTENT(OUT):: DTKIN_(LNXX_,LNXX_)
-      INTEGER(4)            :: LN1,LN2
-!     ******************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      DO LN1=1,THIS%LNX
-        DO LN2=1,THIS%LNX
-          DTKIN_(LN1,LN2)=THIS%DTKIN(LN1,LN2)
         ENDDO
       ENDDO
       RETURN  

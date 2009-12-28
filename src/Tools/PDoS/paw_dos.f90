@@ -1021,9 +1021,12 @@ END MODULE READCNTL_MODULE
       RETURN
       END SUBROUTINE READCNTL$SETNUMBER
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$SETS(NB,NKPT,NSPIN,NSET &
      &                        ,NAT,LMX,RPOS,LENG,SET,LEGEND)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE READCNTL_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -1048,7 +1051,7 @@ END MODULE READCNTL_MODULE
       COMPLEX(8)                :: ORBITAL1(LENG)
       COMPLEX(8)                :: ORBITAL2(LENG)
       COMPLEX(8)                :: ORBITALI(LENG)
-!     ******************************************************************
+!     **************************************************************************
                           CALL TRACE$PUSH('READCNTL$SETS')
       SET(:,:,:,:)=0.D0
       ISET=0
@@ -1090,7 +1093,6 @@ END MODULE READCNTL_MODULE
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO
                           CALL TRACE$PASS('COOPS FINISHED')
-
 !
 !     ==================================================================
 !     ==================================================================
@@ -1207,39 +1209,39 @@ END MODULE READCNTL_MODULE
       RETURN
       END SUBROUTINE READCNTL$SETS
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SET$WEIGHT(ATOMID_,ORBITALID,NB_,NKPT_,NSPIN_,SPIN,SET)
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     ** ADDS A CONTRIBUTION TO THE SET, WHICH CONTAINS THE CONTRIBUTION      **
+!     ** TO THE WEIGHT FROM ALL THE STATES                                    **
+!     **   SPIN: MAY BE 'TOTAL, 'MAIN', 'X', 'Y', 'Z'                         **
+!     **         TOTAL IS THE TOTAL DENSITY OF STATES                         **
+!     **         MAIN IS THE PROJECTION ON SPINDIR(I,IAT)                     **
+!     **   ORBITALID MAY BE:  'ALL','S','P','D','F'                           **
+!     **                                                                      **
+!     **************************************************************************
       USE PDOS_MODULE
       USE SPINDIR_MODULE
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ATOMID_
-      CHARACTER(*),INTENT(IN) :: ORBITALID
-      INTEGER(4)  ,INTENT(IN) :: NB_
-      INTEGER(4)  ,INTENT(IN) :: NKPT_
-      INTEGER(4)  ,INTENT(IN) :: NSPIN_
-      CHARACTER(*),INTENT(INOUT) :: SPIN
+      CHARACTER(*),INTENT(IN)   :: ATOMID_
+      CHARACTER(*),INTENT(IN)   :: ORBITALID !MAY BE 'ALL','S','P','D','F'
+      INTEGER(4)  ,INTENT(IN)   :: NB_
+      INTEGER(4)  ,INTENT(IN)   :: NKPT_
+      INTEGER(4)  ,INTENT(IN)   :: NSPIN_
+      CHARACTER(*),INTENT(INOUT):: SPIN   
       REAL(8)     ,INTENT(INOUT):: SET(NB_,NKPT_,NSPIN_)
-      INTEGER(4)              :: ISPIN,IKPT,IB,IDIM
-      INTEGER(4)              :: IPRO0,IPRO1,IPRO2
-      INTEGER(4)              :: IAT,IAT0,ISP
-      INTEGER(4)              :: L,L1,L2,M,LN,LN1,LN2
-      REAL(8)                 :: SUM,SUM_(3)
-!     ******************************************************************
+      INTEGER(4)                :: ISPIN,IKPT,IB,IDIM
+      INTEGER(4)                :: IPRO0,IPRO1,IPRO2
+      INTEGER(4)                :: IAT,IAT0,ISP
+      INTEGER(4)                :: L,L1,L2,M,LN,LN1,LN2
+      REAL(8)                   :: SUM,SUM_(3)
+!     **************************************************************************
                                  CALL TRACE$PUSH('SET$WEIGHT')
-!      SET(:,:,:)=0.D0
-      IF(NDIM.EQ.1) SPIN='TOTAL'
+      IF(NDIM.EQ.1) SPIN='TOTAL'   ! overwrite if only one choice possible
 !
-!     ==================================================================
-!     ==  SELECT ATOM                                                 ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  SELECT ATOM                                                         ==
+!     ==========================================================================
       IF(ATOMID_.EQ.'ALL'.OR.ATOMID_.EQ.'') THEN
         IAT0=-1
       ELSE
@@ -1263,9 +1265,9 @@ END MODULE READCNTL_MODULE
         CALL ERROR$STOP('SET$WEIGHT')
       END IF
 !
-!     ==================================================================
-!     ==  SELECT ORBITAL                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  SELECT ORBITAL                                                      ==
+!     ==========================================================================
       IF(ORBITALID.EQ.'S') THEN
         L=0
       ELSE IF(ORBITALID.EQ.'P') THEN
@@ -1282,9 +1284,9 @@ END MODULE READCNTL_MODULE
         CALL ERROR$STOP('SET$WEIGHT')
       END IF
 !
-!     ==================================================================
-!     ==  NOW EVALUATE WEIGHTS                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  NOW EVALUATE WEIGHTS                                                ==
+!     ==========================================================================
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
@@ -1311,29 +1313,34 @@ END MODULE READCNTL_MODULE
      &                                    *STATE%VEC(IDIM,IPRO2+M,IB))
                       ENDDO
                       IF(NDIM.EQ.2.AND.TRIM(SPIN).NE.'TOTAL') THEN
-                        SUM_(1)=SUM_(1)+REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                  *STATE%VEC(2,IPRO2+M,IB)) 
-                        SUM_(2)=SUM_(2)+AIMAG(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                  *STATE%VEC(2,IPRO2+M,IB))
-                        SUM_(3)=SUM_(3)+0.5D0*REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                  *STATE%VEC(1,IPRO2+M,IB)- &
-     &                    CONJG(STATE%VEC(2,IPRO1+M,IB))*STATE%VEC(2,IPRO2+M,IB))
+                        SUM_(1)=SUM_(1) +2.d0*REAL( &
+     &                                          CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                                *STATE%VEC(2,IPRO2+M,IB)) 
+                        SUM_(2)=SUM_(2)+2.d0*AIMAG( &
+     &                                          CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                               *STATE%VEC(2,IPRO2+M,IB))
+                        SUM_(3)=SUM_(3)+REAL( &
+     &                                          CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                               *STATE%VEC(1,IPRO2+M,IB)  &
+     &                                         -CONJG(STATE%VEC(2,IPRO1+M,IB)) &
+     &                                               *STATE%VEC(2,IPRO2+M,IB))
                       END IF
                     ENDDO
+                    sum    =sum    *ov(ln1,ln2,isp)
+                    sum_(:)=sum_(:)*ov(ln1,ln2,isp)
                     IF(TRIM(SPIN).EQ.'TOTAL') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM*OV(LN1,LN2,ISP)
+                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM
                     ELSE IF(TRIM(SPIN).EQ.'X') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+2.D0*SUM_(1)*OV(LN1,LN2,ISP)
+                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM_(1)
                     ELSE IF(TRIM(SPIN).EQ.'Y') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+2.D0*SUM_(2)*OV(LN1,LN2,ISP)
+                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM_(2)
                     ELSE IF(TRIM(SPIN).EQ.'Z') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+2.D0*SUM_(3)*OV(LN1,LN2,ISP)
+                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM_(3)
                     ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
-!                      SET(IB,IKPT,ISPIN,1)=SET(IB,IKPT,ISPIN,1)+(SUM_(1)*SPINDIR(1,IAT)+ &
-!     &                     SUM_(2)*SPINDIR(2,IAT)+SUM_(3)*SPINDIR(3,IAT))*OV(LN1,LN2,ISP)&
-!     &                      /REAL(NDIM)*SCALEOCC(IB,IKPT,ISPIN)
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+2.D0*(SUM_(1)*SPINDIR(1,IAT)+ &
-     &                     SUM_(2)*SPINDIR(2,IAT)+SUM_(3)*SPINDIR(3,IAT))*OV(LN1,LN2,ISP)
+                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN) &
+     &                                                 +SUM_(1)*SPINDIR(1,IAT) &
+     &                                                 +SUM_(2)*SPINDIR(2,IAT) &
+     &                                                 +SUM_(3)*SPINDIR(3,IAT)
                     ELSE
                       CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
                       CALL ERROR$MSG('SPIN SHOULD BE TOTAL,X,Y,Z OR MAIN')
@@ -1356,16 +1363,11 @@ END MODULE READCNTL_MODULE
       RETURN
       END SUBROUTINE SET$WEIGHT
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SET$PROJECT(NPRO_,NB_,NKPT_,NSPIN_,ORBITAL1,ORBITAL2,SET)
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE PDOS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NPRO_
@@ -1377,9 +1379,8 @@ END MODULE READCNTL_MODULE
       REAL(8)   ,INTENT(INOUT):: SET(NB_,NKPT_,NSPIN_)
       INTEGER(4)            :: ISPIN,IKPT,IB,IPRO,IDIM
       COMPLEX(8)            :: CSVAR1,CSVAR2
-!     ******************************************************************
+!     **************************************************************************
                                  CALL TRACE$PUSH('SET$PROJECT')
-  !    SET(:,:,:,:)=0.D0
       DO ISPIN=1,NSPIN
         DO IKPT=1,NKPT
           STATE=>STATEARR(IKPT,ISPIN)
@@ -1401,11 +1402,11 @@ END MODULE READCNTL_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
      &                    ,NB,NKPT,NSPIN,EIG,NSET,SET,LEGEND)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
       USE READCNTL_MODULE
       USE ORBITALS_MODULE
       IMPLICIT NONE
@@ -1433,7 +1434,7 @@ END MODULE READCNTL_MODULE
       REAL(8)              :: EV
       REAL(8)              :: ENERGY
       REAL(8)              :: SUM,SUMS,SVAR 
-!     ******************************************************************
+!     **************************************************************************
                          CALL TRACE$PUSH('READCNTL$OUTPUT')
       CALL CONSTANTS('EV',EV)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -1472,13 +1473,14 @@ END MODULE READCNTL_MODULE
           WRITE(NFILO,FMT='("OUTPUT WRITTEN FOR SET ",A &
        &           ," IS WRITTEN TO FILE:"/A)') &
        &           TRIM(LEGEND(ISET)),TRIM(FILE)
-!          IF(ISET.EQ.-1) WRITE(NFILO,FMT='("OUTPUT WRITTEN FOR SET SPINANALYSIS &
-!       & IS WRITTEN TO FILE:"/A)') TRIM(FILE)
         ELSE
           CALL FILEHANDLER$UNIT('PDOSOUT',NFIL)
         ENDIF
 !
 !       ==  OUTPUT TYPE ===============================================
+!       ==  (b,k,s) specifies a specific state reported in the protocoll
+!       ==  e[ev]    specifies an energy
+!       ==  otherwise the information on the grid is written to file
         CALL LINKEDLIST$EXISTD(LL_CNTL,'B',1,TIB)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'E[EV]',1,TE)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'K',1,TIK)
@@ -1499,7 +1501,7 @@ END MODULE READCNTL_MODULE
 !       ================================================================
 !       ==  WRITE PROJECTION OF A GIVEN STATE ON FILE                 ==
 !       ================================================================
-         IF(TIB) THEN
+        IF(TIB) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'B',1,IB0)
           DO ISPIN=1,NSPIN
             IF(TIS.AND.(ISPIN.NE.IS0)) CYCLE
@@ -1581,29 +1583,34 @@ END MODULE READCNTL_MODULE
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                      ==
 !       ================================================================
         IF(.NOT.(TIB.OR.TE)) THEN
-!          IF (TIS) THEN
-!            CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,NB,NKPT,1,EIG &
-!     &                      ,SET(:,:,IS0,ISET),LEGEND(ISET))
-!          ELSE
             CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
       &                   ,NB,NKPT,NSPIN,EIG,SET(:,:,:,ISET),LEGEND(ISET))
-!          END IF
         END IF
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-!       END IF
       ENDDO
                           CALL TRACE$POP
       RETURN
       END SUBROUTINE READCNTL$OUTPUT
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
      &                    ,NB,NKPT,NSPIN,EIG,SET,LEGEND)
+!     **************************************************************************
+!     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
+!     **  CONSTRUCTS DOS AND NOS AND WRITES THE RESULT ON FILE                **
+!     **                                                                      **
+!     **  SET IS THE CONTRIBUTION FROM EACH STATE (WITHOUT K-POINT WEIGHT     **
+!     **       AND OCCUPATIONS MULTIPLIED TO THEM)                            **
+!     **  STATE(IK,IS)%OCC(IB) IS THE OCCUPATION MULTIPLIED WITH THE          **
+!     **     WITH THE K-POINT WEIGHT                                          **
+!     **  SCALEY MAY BE 'DOS' OR 'NOS' OR 'NONE'                              **
+!     **     SCALEY='DOS' RESCALES THE DENSITY OF STATES TO FIT WINDOW        **
+!     **     SCALEY='NOS' RESCALES THE NUMBER OF STATES TO FIT WINDOW         **
+!     **  NOS(IE,ISPIN,1) IS MULTIPLIED WITH MAX OCCUPATION OF ALL BANDS      **
+!     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
+!     **                                                                      **
+!     **************************************************************************
       USE PDOS_MODULE, ONLY: STATE,STATEARR
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NE
       REAL(8)      ,INTENT(IN) :: EMIN
@@ -1630,17 +1637,17 @@ END MODULE READCNTL_MODULE
       INTEGER(4)           :: IKPT,ISPIN,IE,IB
       REAL(8)              :: SVAR
       REAL(8)              :: E
-!     ******************************************************************
+!     **************************************************************************
                                  CALL TRACE$PUSH('PUTONGRID')
       CALL CONSTANTS('EV',EV)
-      DE=(EMAX-EMIN)/DBLE(NE-1)
-      ND=NINT(EBROAD/DE*SQRT(-LOG(1.D-3)))
+      DE=(EMAX-EMIN)/real(NE-1,kind=8)   !step of the energy grid
+      ND=NINT(EBROAD/DE*SQRT(-LOG(1.D-3)))  !broadening extends over 2N steps
       DO IKPT=1,NKPT
         WKPT(IKPT)=0.D0
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
 !         == CAUTION: HERE I ESTIMATE THE WEIGHT AND SPIN-DEGENERACY FACTOR 
-!         == FROM THE MAX OCCUPATION, WHIHC MAY BE INCORRECT
+!         == FROM THE MAX OCCUPATION, WHICH MAY BE INCORRECT
           WKPT(IKPT)=MAX(WKPT(IKPT),MAXVAL(STATE%OCC(:)))
         ENDDO
         IF(WKPT(IKPT).EQ.0.D0) THEN
@@ -1649,9 +1656,10 @@ END MODULE READCNTL_MODULE
         END IF
       ENDDO       
 !
-!     ==================================================================
-!     ==                                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  map contribution from each state) onto the energy grid.             ==
+!     ==  (it is divided proportionally to the two enclosing grid points)     ==
+!     ==========================================================================
       NOS(:,:,:)=0.D0
       NOSSMALL(:,:)=0.D0
       DO ISPIN=1,NSPIN
@@ -1667,7 +1675,6 @@ END MODULE READCNTL_MODULE
             W2=(X-DBLE(IE1))
             W1=1.D0-W2
             IF (IE1.LT.1) THEN
-!              NOSSMALL(ISPIN,IOCC)=NOSSMALL(ISPIN,IOCC)+SET(IB,IKPT,ISPIN)
               NOSSMALL(ISPIN,1)=NOSSMALL(ISPIN,1)+SET(IB,IKPT,ISPIN)*WGHTX
               NOSSMALL(ISPIN,2)=NOSSMALL(ISPIN,2)+SET(IB,IKPT,ISPIN)*STATE%OCC(IB)
             ELSE
@@ -1683,25 +1690,17 @@ END MODULE READCNTL_MODULE
           ENDDO
         ENDDO
       ENDDO
-
 !
-!     ==================================================================
-!     ==  RENORMALIZE WITH K-POINT WEIGHT AND SPIN MULTIPLICITY       ==
-!     ==================================================================
-!      NOS(:,:,1)=NOS(:,:,1)/DBLE(NKPT)
-!      NOSSMALL(:,1)=NOSSMALL(:,1)/DBLE(NKPT)
-!      NOS(:,:,2)=NOS(:,:,2)/DBLE(NKPT)
-!      NOSSMALL(:,2)=NOSSMALL(:,2)/DBLE(NKPT)
-!
-!     ==================================================================
-!     ==  CALCULATE DOS                                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE DOS                                                       ==
+!     ==========================================================================
+!     == norm of the gaussian used to broaden the result
       FAC=0.D0
       DO IDE=-ND,ND
         FAC=FAC+EXP(-(DE*DBLE(IDE)/EBROAD)**2)
       ENDDO
-
       FAC=1.D0/FAC
+!     ==  determine dos =======================================================
       DOS(:,:,:)=0.D0
       DO ISPIN=1,NSPIN
         DO IOCC=1,2
@@ -1715,11 +1714,10 @@ END MODULE READCNTL_MODULE
           ENDDO
         ENDDO
       ENDDO
-
 !
-!     ==================================================================
-!     ==  INTEGRATE NOS                                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  determine nos by integration                                        ==
+!     ==========================================================================
       DO ISPIN=1,NSPIN
         DO IOCC=1,2
           NOS(1,ISPIN,IOCC)=NOS(1,ISPIN,IOCC)+NOSSMALL(ISPIN,IOCC)
@@ -1729,9 +1727,9 @@ END MODULE READCNTL_MODULE
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     ==  ROUND NOS AND DOS TO OBTAIN PROPER EDITING                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ROUND INSIGNIFICANT VALUES TO ZERO                                  ==
+!     ==========================================================================
       DO ISPIN=1,NSPIN
         DO IOCC=1,2
           DO IE=1,NE
@@ -1740,13 +1738,12 @@ END MODULE READCNTL_MODULE
           ENDDO
         ENDDO
       ENDDO
-
 !
-!     ==================================================================
-!     ==  ROUND NOS AND DOS TO OBTAIN PROPER EDITING                  ==
-!     ==================================================================
-!CHECK THE FOLLOWING
+!     ==========================================================================
+!     ==  ROUND NOS AND DOS TO OBTAIN PROPER EDITING                          ==
+!     ==========================================================================
       IF(SCALEY.EQ.'NONE') THEN
+!
       ELSE IF(SCALEY.EQ.'DOS') THEN
         SVAR=MAXVAL(DOS)
         IF(SVAR.LT.1.D-99) THEN
@@ -1754,6 +1751,7 @@ END MODULE READCNTL_MODULE
           CALL ERROR$STOP('PUTONGRID')
         END IF
         DOS=DOS*MAXVAL(NOS)/SVAR
+!
       ELSE IF(SCALEY.EQ.'NOS') THEN
         SVAR=MAXVAL(NOS)
         IF(SVAR.LT.1.D-99) THEN
@@ -1761,24 +1759,16 @@ END MODULE READCNTL_MODULE
           CALL ERROR$STOP('PUTONGRID')
         END IF
         NOS=NOS*MAXVAL(DOS)/SVAR
+!
       ELSE
         CALL ERROR$MSG('ILLEGAL VALUE OF SCALEY')
         CALL ERROR$CHVAL('SCALEY',SCALEY)
         CALL ERROR$STOP('PUTONGRID')
       END IF     
-!       DO IOCC=1,2
-!         DO ISPIN=1,NSPIN
-!           DO IE=1,NE
-!             IF(ABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
-!             IF(ABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
-!           ENDDO
-!         ENDDO
-!       ENDDO
-
 !
-!     ==================================================================
-!     ==  WRITE RESULT ON PSODOUT                                     ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  WRITE RESULT ON PSODOUT                                             ==
+!     ==========================================================================
       DO IE=1,NE
         E=EMIN+(EMAX-EMIN)*DBLE(IE-1)/DBLE(NE-1)
         IF(NSPIN.EQ.1) THEN
@@ -1795,10 +1785,3 @@ END MODULE READCNTL_MODULE
                                  CALL TRACE$POP
       RETURN
       END SUBROUTINE PUTONGRID
-
-
-
-
-
-
-

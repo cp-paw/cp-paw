@@ -265,6 +265,7 @@ END MODULE ATOMS_MODULE
       REAL(8)              :: EFFEMASS(NAT)
       REAL(8)              :: EMASS,EMASSCG2
       REAL(8)              :: SVAR
+      REAL(8)              :: protonm
       LOGICAL(4)           :: TERR,TCHK
       INTEGER(4)           :: NFREE
 !     **************************************************************************
@@ -305,10 +306,11 @@ END MODULE ATOMS_MODULE
             CALL ERROR$MSG('REDUCE WAVE FUNCTION MASS or increase nuclear mass')
             TERR=.TRUE.
           END IF
+          CALL CONSTANTS('U',PROTONM)
           CALL ERROR$CHVAL('ATOM',NAME(IAT))
           CALL ERROR$R8VAL('MASS',RMASS(IAT))
-          CALL ERROR$R8VAL('REDUCED MASS',RMASS(IAT)-EFFEMASS(IAT))
-          CALL ERROR$R8VAL('EFFECTIVE MASS',EFFEMASS(IAT))
+          CALL ERROR$R8VAL('REDUCED MASS[u]',(RMASS(IAT)-EFFEMASS(IAT))/protonm)
+          CALL ERROR$R8VAL('EFFECTIVE MASS[u]',EFFEMASS(IAT)/protonm)
         END IF
       ENDDO
       IF(TERR) THEN
