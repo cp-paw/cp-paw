@@ -1019,15 +1019,17 @@ result; cdual=2 is often a good choice.}
 See section~\ref{sec:sawtooth} for an explanation of the sawtooth 
 behavior. Parameter $E_B$ in Ry specified as
 follows: If specified an additial potential energy term
-$\sum_{G,n}f_n\langle\tilde\Psi_n|G\langle B(G)\langle
+$\sum_{G,n}f_n\langle\tilde\Psi_n|G\rangle B(G)\langle
 G|\tilde\Psi_n\rangle$, is added top the total energy where
 $B(G)=c_B\theta(\frac{1}{2}G^2-E_B)(G-\sqrt{2E_B})^2$.  When this term
 is set to a fixed value, the plane wave convergence is artificially
 accelerated, which is important to evaluate stresses.  The energy
 converged this way corresponds however not to equal to the energy
 converged without this term, but corresponds to the total energy
-obtained with a plane wave cutoff slightly higher than EPWBUCKET.}
-\vformat{real} \vrules{optional;mandatory of BUCKETPAR is specified}
+obtained with a plane wave cutoff slightly higher than EPWBUCKET.
+Example: $E_{PW}=50$~Ry, $E_B=30$~Ry, $c_B=1$}
+\vformat{real} 
+\vrules{optional;mandatory of BUCKETPAR is specified}
 \vdefault{none}}
 
 \mbax{\key{BUCKETPAR}
@@ -1035,6 +1037,8 @@ obtained with a plane wave cutoff slightly higher than EPWBUCKET.}
 \vformat{real}
 \vrules{optional; mandatory, if EPWBUCKET is specified}
 \vdefault{0.}}
+
+
 
 %----------------------------------------------------------------------
 \block{!CONTROL!PSIDYN}
@@ -1117,7 +1121,7 @@ to estimate the frequency from
 \vrules{optional, not used if ``!CONTROL!PSIDYN!AUTO'' is selected.}
 \vdefault{0.0}}
 
-\ifthenelse{\boolean{private}}{ 
+
 \mbax{\key{SAFEORTHO} 
   \vdescr{chooses the way the orthogonality constraints for the wave
     functions is enforced. If SAFEORTHO=T is selected the traditional
@@ -1127,7 +1131,7 @@ to estimate the frequency from
     the states are sufficiently close to eigenstates. This option
     allows to calculate excited states or to treat metals.
 
-    The option \verb|SAFEORTHO=F| can artificially stabilize the
+    The option ``SAFEORTHO=F''  can artificially stabilize the
     calculation with states is in the ``wrong'' order, i.e. with
     occupations that are not monotonically decreasing. Since the wrong
     order corresponds to a saddle point of the total energy, the wave
@@ -1140,16 +1144,15 @@ to estimate the frequency from
     the DFT total energy, so that also the latter increases
     temporarily. Rarely, this behavior can also lead to a instability,
     namely when the energy-levels shift in such a way that the final
-    state is again in the incorrect order.
-}
+    state is again in the incorrect order.}
   \vformat{logical} 
   \vrules{optional} 
-  \vdefault{T}}
-} % end of ifthenelse
+  \vdefault{T}
+}
 
-\ifthenelse{\boolean{private}}{
 \mbax{\key{SWAPSTATES}
-\vdescr{Only used with SAFEORTHO=F. For SWAPSTATES=F, the approximate
+\vdescr{\textbf{Experimental option! You are on your own!}
+Only used with SAFEORTHO=F. For SWAPSTATES=F, the approximate
 eigenstates are ordered in increasing energy expectation values. This
 is used for optimizing electronic and atomic structures. Thus the
 given occupations refer to increasing one-particle energies in the
@@ -1178,7 +1181,7 @@ one-particle energies takes place.
 \end{itemize}}
   \vformat{logical} 
   \vrules{optional, not tested}
-  \vdefault{F}}  }  % end of ifthenelse
+  \vdefault{F}}  
 
 %\mbax{\key{DIAG}
 %\vdescr{apply unitary transformation to the trajectory so 
@@ -4347,24 +4350,35 @@ the paw\_grab tool. I recommend the extension ``.gcntl''.
 %==========================================================================
 \subsection{Command}
 %==========================================================================
-The tool paw\_strc prepares a cssr structure file which can be read,
-by some molecular modeling software packages. This tool uses the {\it
-  rootname}.strc\_out file of the simulation code, and writes a file
-{\it rootname}.cssr.
+The tool paw\_strc.x allows a first analysis of the atomic structure
+and prepares some structure files in common formats for use with
+molecular or crystal viewers.  This tool uses the {\it
+  rootname}.strc\_out file of the simulation code, and writes the file
+{\it rootname}.cssr, {\it rootname}.xyz and {\it rootname}.cml.  The
+protocoll file {\it rootname}.sprot contains, among others, bond
+lengths and bond angles and a segment to be used in the input
+structure file.
 
 The calling sequence is
 
-\bigskip\fbox{{\tt paw\_strc} {\it rootname}}\bigskip
+\bigskip\fbox{{\tt paw\_strc} \textit{options} {\it rootname}}\bigskip
 
 \noindent
 where rootname is the name of the protocol file without the ``.prot''
 ending and option is one of the following:
 \begin{description}
-\item[-c] creates output with a unit cell for crystals. Relative
-  coordinates and lattice constants and angles are used. The default
-  produces molecular output with absolute Cartesian coordinates in
-  ~\AA.
+\item[-c] considers the system as a crystal. (Default is use as a molecule)
+\item[-c\textit{ijk}] like -c but multiplies the lattice in the xyz
+  file by factors i,j,k in the three lattice directions. \textit{ijk}
+  is a three digit integer composed out of three single digit numbers
+  i,j,k by sinple concatenation. (No spaces!)
+\item[-i] real from input structue file .strc instead from the output
+  structure file .strc\_out.
 \end{description}
+
+The xyz file contains the molecule or a cluster made of the atoms in
+one or several unit cells.
+
 
 %==========================================================================
 \newpage
@@ -7293,6 +7307,41 @@ This sawtooth behavior can be suppressed by including an additional
 G-dependent bucket potential that ensures that the wave function
 coefficients at the plane wave cutoff vanish strictly.
 
+%==========================================================================
+\subsection{Overcompleteness problem when using too many projector functions}
+%==========================================================================
+When testing the convergence with respect to the number of projector
+functions one usually runs into instabilities. I believe this problem
+is a sort of overcompleteness problem. There is no rigorous
+investigation so far.
+
+The problem is the following: One cannot map a number of N projector
+functions onto less than N real space grid points. On the grid they
+are no more distingishable. Thus there are combinations of partial
+waves with coefficients that are completely decoupled from the plane
+wave part. 
+
+To illustrate the problem let us estimate the number of degrees of
+freedom on a grid with a given plane wave cutoff in spheres of
+different radius $r$.
+
+\begin{center}
+\begin{tabular}{|r|r|r|r|}
+\hline
+r      & 20 Ry & 40 Ry & 60 Ry \\
+\hline
+1.5 a$_0$ &  5 &  14 &  26 \\
+2   a$_0$& 12 &  34 &  62 \\
+2.5 a$_0$& 23 &  66 &  122\\
+3   a$_0$& 40 & 115 & 211 \\
+\hline
+\end{tabular}
+\end{center}
+
+A semi-core setup with two shells of s- and p-character and, in
+addition one shell for d and f electrons yields 20 projector
+functions.
+
 
 
 
@@ -7425,12 +7474,13 @@ keep this list as short as possible.
     consistent with the setup files.
   \item Some setups produce this behavior in the first few time steps.
     In this case reduce the plane wave cutoff to a small value such as
-    5, 10 or 20 Ry. If this alone does not help, also reduce the
-    time step, but leave the masses constant. It is suffient to do
-    this for the first few (about five or ten) time steps. If you
-    started a new job with gradient corrected DFT functionals, you
-    should try ``!CONTROL!FOURIER:CDUAL=4'' or reach convergence furst
-    for a truly local functional before switching gradient corrections
+    5, 10 or 20 Ry. If this alone does not help, also reduce the time
+    step, but leave the wave function masses MPSI and MPSICG2
+    constant. It is suffient to do this for the first few (about five
+    or ten) time steps. If you started a new job with gradient
+    corrected DFT functionals, you should try
+    ``!CONTROL!FOURIER:CDUAL=4'' or reach convergence furst for a
+    truly local functional before switching gradient corrections
     on. If the kinetic energy for the wave functions decreases to a
     reasonable value of a few Hartree, one can restart with the
     original values.

@@ -1,64 +1,157 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      PROGRAM PAW_STRC
+      PROGRAM MAIN
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-      IMPLICIT none
+      IMPLICIT NONE
       TYPE(LL_TYPE)               :: LL_STRC
       INTEGER(4)                  :: NFIL
       LOGICAL                     :: TCRYSTAL=.FALSE.
       REAL(8)                     :: ANGSTROM
-      CHARACTER(128)              :: ROOTNAME     ! COMMON ROOT OF THE FILENAMES
+      CHARACTER(128)              :: ROOTNAME  ! COMMON ROOT OF THE FILENAMES
       CHARACTER(128)              :: OBJECTNAME
       LOGICAL                     :: TCHK
-      REAL(8)                     :: RUNIT        ! LENGTH UNIT ON STRUCTURE FILE
-      REAL(8)                     :: RBAS(3,3)    ! LATTICE VECTORS
-      CHARACTER(32),ALLOCATABLE   :: NAME(:)      ! ATOM NAMES
-      integer(4)                  :: nat          ! #(atoms in the qm part)
-      REAL(8),      ALLOCATABLE   :: R(:,:)       ! ATOMIC POSITIONS
-      REAL(8),      ALLOCATABLE   :: Q(:)         ! CHARGES
-      integer(4)                  :: natmm        ! #(atoms of the MM part)
-      CHARACTER(32),ALLOCATABLE   :: MMNAME(:)    ! ATOM NAMES
-      REAL(8),      ALLOCATABLE   :: MMR(:,:)     ! ATOMIC POSITIONS FOR MM PART OF QM-MM
-      REAL(8),      ALLOCATABLE   :: MMQ(:)       ! ATOMIC CHARGES MM PART OF QM-MM
-      REAL(8),      ALLOCATABLE   :: RSH(:,:)     ! ATOMIC POSITIONS FOR SHADOW PART OF QM-MM
-      INTEGER(4),   ALLOCATABLE   :: NEIGH(:,:)   ! NEIGHBOR LIST
+      REAL(8)                     :: RUNIT     ! LENGTH UNIT ON STRUCTURE FILE
+      REAL(8)                     :: RBAS(3,3) ! LATTICE VECTORS
+      CHARACTER(32),ALLOCATABLE   :: NAME(:)   ! ATOM NAMES
+      INTEGER(4)                  :: NAT       ! #(ATOMS IN THE QM PART)
+      REAL(8),      ALLOCATABLE   :: R(:,:)    ! ATOMIC POSITIONS
+      REAL(8),      ALLOCATABLE   :: Q(:)      ! CHARGES
+      INTEGER(4)                  :: NATMM     ! #(ATOMS OF THE MM PART)
+      CHARACTER(32),ALLOCATABLE   :: MMNAME(:) ! ATOM NAMES
+      REAL(8),      ALLOCATABLE   :: MMR(:,:)  ! POSITIONS FOR MM PART OF QM-MM
+      REAL(8),      ALLOCATABLE   :: MMQ(:)    ! ATOMIC CHARGES MM PART OF QM-MM
       LOGICAL(4)                  :: TQMMM
       INTEGER(4)                  :: IAT,IAT1
       CHARACTER(32)               :: STRING
-      integer(4)                  :: i    
-!     ******************************************************************
+      INTEGER(4)                  :: I,isvar
+      INTEGER(4)                  :: NARGS
+      INTEGER(4)                  :: nfilo
+      INTEGER(4)                  :: ndup(3)
+      logical                     :: tinput
+!     **************************************************************************
+      ndup(:)=1
+      tinput=.false.
       CALL LINKEDLIST$NEW(LL_STRC)
 !
-!     ==================================================================
-!     == GET FILE NAME ROOT FROM THE ARGUMENT LIST AND CONSTRUCT      ==
-!     == FILE NAMES                                                   ==
-!     ==================================================================
-      CALL GETARG(1,ROOTNAME)
-      IF(ROOTNAME(1:1).EQ.'-') THEN
-        TCRYSTAL=(+ROOTNAME(2:2).EQ.+'C')
-        CALL GETARG(2,ROOTNAME)
-      END IF
+!     ==========================================================================
+!     == GET FILE NAME ROOT FROM THE ARGUMENT LIST AND CONSTRUCT              ==
+!     == FILE NAMES                                                           ==
+!     ==========================================================================
+      CALL LIB$NARGS(NARGS)
+!     ==  DETECT HELP REQUESTS =================================================
+      DO I=1,NARGS
+        CALL LIB$GETARG(I,STRING)
+        string=+string
+        IF(STRING(1:2).EQ.'-H'.OR.STRING.EQ.'?') THEN
+          WRITE(*,'("CALLING SEQUENCE: PAW_STRC.X ARGS ROOTNAME")')
+          WRITE(*,'("ROOTNAME IS THE ROOT NAME OF THE STRC_OUT FILE")')
+          WRITE(*,'("ARGUMENTS CAN BE:")')
+          WRITE(*,'(T2,A,T10,A)')'?','PRINT HELP MESSAGE'
+          WRITE(*,'(T2,A,T10,A)')'-H','PRINT HELP MESSAGE'
+          WRITE(*,'(T2,A,T10,A)')'-I','use input structure file instead of strc_out'
+          WRITE(*,'(T2,A,T10,A)')'-C','CONSIDER AS CRYSTAL (DEFAULT: MOLECULE)'
+          WRITE(*,'(T2,A,T10,A)')'-CIJK','CONSIDER AS CRYSTAL (DEFAULT: MOLECULE)'
+          WRITE(*,'(T10,A)')'AND MULTIPLY UNIT CELL BY FACTORS I,J,K ALONG THE THREE LATTICE VECTORS'
+          WRITE(*,'(T10,A)')'I,J,K ARE POSITIVE SINGLE-DIGIT INTEGERS'
+          WRITE(*,'("output:")')
+          WRITE(*,'(T4,"ROOTNAME",A,t20,"PROTOCOLL FILE ")')-'.SPROT'
+          WRITE(*,'(T4,"ROOTNAME",A,t20,"CRYSTAL STRUCTURE FILE IN THE CML FORMAT")')-'.CML'
+          WRITE(*,'(T4,"ROOTNAME",A,t20,"MOLECULAR OUTPUT FOR VIEWING PURPOSES")')-'.XYZ'
+          WRITE(*,'(T4,"ROOTNAME",A,t20,"MOLECULAR OUTPUT FOR VIEWING PURPOSES")')-'.cssr'
+          WRITE(*,'("REMARKs:")')
+          WRITE(*,'(T4,"REQUIRES ATOMNAMES TO START WITH THE ELEMENT SYMBOL")')
+          STOP
+        END IF
+      ENDDO
+!     == RESOLVE ARGUMENTS =====================================================
+      TCRYSTAL=.FALSE.
+      DO I=1,NARGS-1
+        CALL LIB$GETARG(I,STRING)
+        WRITE(*,FMT='("ARGUMENT(",I2,"):",A)')I,TRIM(STRING)
+        IF(STRING(1:1).NE.'-') THEN
+          CALL ERROR$MSG('ARGUMENT DOES NOT HAVE PRECEDING "-"')
+          CALL ERROR$I4VAL('ARGUMENT NR:',I)
+          CALL ERROR$CHVAL('ARGUMENT',TRIM(STRING))
+          CALL ERROR$STOP('MAIN')
+        END IF
+        STRING(1:)=+STRING(2:) ! REMOVE PRECEEDING DASH AND MAKE UPPERCASE
+        IF(STRING(1:1).EQ.'C') THEN
+          TCRYSTAL=.TRUE.
+          IF(STRING(2:2).NE.' ') THEN
+            STRING(1:)=STRING(2:)
+            READ(STRING,FMT=*)ISVAR
+            IF(ISVAR.GT.999.OR.ISVAR.LT.111) THEN
+              CALL ERROR$MSG('UNIT CELL MULTIPLICATION ARGUMENT OUT OF RANGE')
+              CALL ERROR$MSG('ARGUMENT MUST BE IJK WHERE I,J,K ARE SINGLE-DIGIT INTEGERS')
+              CALL ERROR$CHVAL('ARGUMENT',TRIM(STRING))
+              CALL ERROR$STOP('MAIN')
+            END IF
+            NDUP(1)=INT(ISVAR/100)
+            ISVAR=ISVAR-100*NDUP(1)
+            NDUP(2)=INT(ISVAR/10)
+            ISVAR=ISVAR-10*NDUP(2)
+            NDUP(3)=ISVAR
+            IF(NDUP(1)*NDUP(2)*NDUP(3).EQ.0) THEN
+              CALL ERROR$MSG('LATTICE DISPLACEMENT MUST BE GREATER THAN ZERO')
+              CALL ERROR$I4VAL('NDUP(1)',NDUP(1))
+              CALL ERROR$I4VAL('NDUP(2)',NDUP(2))
+              CALL ERROR$I4VAL('NDUP(3)',NDUP(3))
+              CALL ERROR$CHVAL('ARGUMENT',TRIM(STRING))
+              CALL ERROR$STOP('MAIN')
+            END IF
+          END IF
+        else if(string(1:1).eq.'I') then
+          tinput=.true.
+        ELSE
+          CALL ERROR$MSG('ARGUMENT NOT RECOGNIZED')
+          CALL ERROR$MSG('OBTAIN ARGUMENT LIST USING -H ARGUMENT')
+          CALL ERROR$CHVAL('ARGUMENT',TRIM(STRING))
+          CALL ERROR$I4VAL('ARGUMENT NUMBER',I)
+          CALL ERROR$STOP('MAIN')
+        END IF
+      ENDDO
+!
+!     == ROOTNAME ==============================================================
+      CALL LIB$GETARG(NARGS,ROOTNAME) !LAST ARGUMENT IS THE ROOT NAME
+      WRITE(*,FMT='("ROOTNAME: ",A)')TRIM(ROOTNAME)
       IF(LEN(TRIM(ROOTNAME)).EQ.0) THEN
         STOP 'NO ROOTNAME SUPPLIED'
       END IF
+!
       I=INDEX(ROOTNAME,'/',BACK=.TRUE.)
       OBJECTNAME=ROOTNAME(I+1:)
       CALL FILEHANDLER$SETROOT(ROOTNAME)
-      CALL FILEHANDLER$SETFILE('STRC',.TRUE.,-'.STRC_OUT')
+      CALL FILEHANDLER$SETFILE('PROT',.TRUE.,-'.SPROT')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','FORM','FORMATTED')
+!
+      IF(TINPUT) THEN
+        CALL FILEHANDLER$SETFILE('STRC',.TRUE.,-'.STRC')
+      ELSE
+        CALL FILEHANDLER$SETFILE('STRC',.TRUE.,-'.STRC_OUT')
+      END IF
       CALL FILEHANDLER$SETSPECIFICATION('STRC','STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','FORM','FORMATTED')
+!
       CALL FILEHANDLER$SETFILE('CSSR',.TRUE.,-'.CSSR')
       CALL FILEHANDLER$SETSPECIFICATION('CSSR','STATUS','UNKNOWN')
       CALL FILEHANDLER$SETSPECIFICATION('CSSR','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('CSSR','ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION('CSSR','FORM','FORMATTED')
+!
       CALL FILEHANDLER$SETFILE('MMCSSR',.TRUE.,-'_MM.CSSR')
       CALL FILEHANDLER$SETSPECIFICATION('MMCSSR','STATUS','UNKNOWN')
       CALL FILEHANDLER$SETSPECIFICATION('MMCSSR','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('MMCSSR','ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION('MMCSSR','FORM','FORMATTED')
+!
       CALL FILEHANDLER$SETFILE('SHCSSR',.TRUE.,-'_SH.CSSR')
       CALL FILEHANDLER$SETSPECIFICATION('SHCSSR','STATUS','UNKNOWN')
       CALL FILEHANDLER$SETSPECIFICATION('SHCSSR','POSITION','REWIND')
@@ -71,41 +164,45 @@
       CALL FILEHANDLER$SETSPECIFICATION('CML','ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION('CML','FORM','FORMATTED')
 !
-!     ==================================================================
-!     == READ STRUCTURE FILE                                          ==
-!     ==================================================================
+      CALL FILEHANDLER$SETFILE('XYZ',.TRUE.,-'.XYZ')
+      CALL FILEHANDLER$SETSPECIFICATION('XYZ','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('XYZ','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('XYZ','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('XYZ','FORM','FORMATTED')
+!
+!     ==========================================================================
+!     == READ STRUCTURE FILE                                                  ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('STRC',NFIL)
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
 !
-!     ==================================================================
-!     == GET LATTICE VECTORS                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     == GET LATTICE VECTORS                                                  ==
+!     ==========================================================================
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$SELECT(LL_STRC,'GENERIC')
       CALL LINKEDLIST$GET(LL_STRC,'LUNIT',1,RUNIT)
 !
-!     ==================================================================
-!     ==                                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$SELECT(LL_STRC,'LATTICE')
       CALL LINKEDLIST$GET(LL_STRC,'T',1,RBAS)
       RBAS=RBAS*RUNIT
 !
-!     ==================================================================
-!     ==  READ ATOM DATA FROM STRC FILE                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ ATOM DATA FROM STRC FILE                                       ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$NLISTS(LL_STRC,'ATOM',NAT)
       ALLOCATE(NAME(NAT))
       ALLOCATE(R(3,NAT))
       ALLOCATE(Q(NAT)) ; Q(:)=0.D0
-      ALLOCATE(NEIGH(8,NAT))
-      NEIGH=0
       DO IAT=1,NAT
         CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',IAT)
         CALL LINKEDLIST$GET(LL_STRC,'R',1,R(:,IAT))
@@ -120,9 +217,9 @@
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
 !
-!     ==================================================================
-!     ==  READ MM ATOM DATA FROM STRC FILE                            ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ MM ATOM DATA FROM STRC FILE                                    ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$EXISTL(LL_STRC,'QM-MM',1,TQMMM)
@@ -152,15 +249,62 @@
         ENDDO  
       END IF
 !
-!     ==================================================================
-!     ==  READ SH ATOM DATA FROM STRC FILE                            ==
-!     ==================================================================
-      CALL FILEHANDLER$UNIT('CML',NFIL)
-      call WRITEavogadro(NFIL,OBJECTNAME,RBAS,NAT,NAME,R,Q,TCRYSTAL)
+!     ==========================================================================
+!     == WRITE header to protocoll file .sprot                                ==
+!     ==========================================================================
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+      WRITE(NFILO,FMT='()')
+      WRITE(NFILO,FMT='(80("*"))')
+      WRITE(NFILO,FMT='(80("*"),T15 &
+     &           ,"          STRUCTURE ANALYSIS                ")')
+      WRITE(NFILO,FMT='(80("*"),T15 &
+     &           ,"   FOR THE PROJECTOR-AUGMENTED WAVE METHOD   ")')
+      WRITE(NFILO,FMT='(80("*"))')
+      WRITE(NFILO,FMT='(T10 &
+     &         ,"P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
+      WRITE(NFILO,FMT='(T10 &
+     &    ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY ")')
+      WRITE(NFILO,FMT='(T10 &
+     &    ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
+      WRITE(NFILO,*)
+      IF(TINPUT) then
+        WRITE(NFILO,FMT='("INPUT STRUCTURE FILE READ")')
+      END IF
+      IF(TINPUT) THEN
+        WRITE(NFILO,FMT='("STRUCTURE FILE READ:",A)')TRIM(ROOTNAME)//-'.STRC'
+      ELSE
+        WRITE(NFILO,FMT='("STRUCTURE FILE READ:",A)')TRIM(ROOTNAME)//-'.STRC_OUT'
+      END IF
+      IF(TCRYSTAL) THEN
+        WRITE(NFILO,FMT='("STRUCTURE INPRETED AS CRYSTAL")')
+      ELSE
+        WRITE(NFILO,FMT='("STRUCTURE INPRETED AS MOLECULE")')
+      END IF
 !
-!     ==================================================================
-!     == CONVERT DATA TO ANGSTROM AND ELECTRON CHARGES                ==
-!     ==================================================================
+!     ==========================================================================
+!     == WRITE BOND LENGTH TO PROTOCOLL                                       ==
+!     ==========================================================================
+      CALL REPORTLOCALSTRUCTURE(RBAS,NAT,NAME,R,TCRYSTAL)
+!
+!     ==========================================================================
+!     == WRITE SECTION FOR STRC FILE                                          ==
+!     ==========================================================================
+      CALL WRITESTRCFILE(RBAS,NAT,NAME,R,TCRYSTAL,RUNIT)
+!
+!     ==========================================================================
+!     ==  write cml file as input for avogadro viewer                         ==
+!     ==========================================================================
+      CALL FILEHANDLER$UNIT('CML',NFIL)
+      CALL WRITEAVOGADRO(NFIL,OBJECTNAME,RBAS,NAT,NAME,R,Q,TCRYSTAL)
+!
+!     ==========================================================================
+!     ==  write xyz file                                                      ==
+!     ==========================================================================
+      call WRITEXYZ(RBAS,NAT,NAME,R,TCRYSTAL,nDUP,rootname)
+!
+!     ==========================================================================
+!     == CONVERT DATA TO ANGSTROM AND ELECTRON CHARGES                        ==
+!     ==========================================================================
       RBAS=RBAS/ANGSTROM
       R=R/ANGSTROM
       Q=-Q
@@ -168,14 +312,15 @@
         MMR=MMR/ANGSTROM
       END IF
 !
-!     ==================================================================
-!     == WRITE CSSR FILE                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     == WRITE CSSR FILE                                                      ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('CSSR',NFIL)
       CALL WRITECSSR(NFIL,OBJECTNAME,RBAS,NAT,NAME,R,Q,TCRYSTAL)
       IF(TQMMM) THEN
         CALL FILEHANDLER$UNIT('MMCSSR',NFIL)
-        CALL WRITECSSR(NFIL,TRIM(OBJECTNAME)//-'MM',RBAS,NATMM,MMNAME,MMR,MMQ,TCRYSTAL)
+        CALL WRITECSSR(NFIL,TRIM(OBJECTNAME)//-'MM',RBAS,NATMM,MMNAME,MMR &
+     &                                                            ,MMQ,TCRYSTAL)
       END IF
 
       IF(TCRYSTAL) THEN
@@ -183,12 +328,319 @@
       ELSE
         WRITE(*,FMT='("MOLECULAR OUTPUT PRODUCED")')
       END IF
-      call filehandler$closeall
+      CALL FILEHANDLER$CLOSEALL
       WRITE(*,FMT='("======= TASK FINISHED ========")')
       STOP
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WRITESTRCFILE(RBAS,NAT,NAME,R,TCRYSTAL,RUNIT)
+!     **************************************************************************
+!     ** REPORT BOND ANGLES AND BOND LENGTHS                                  **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NAT
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      CHARACTER(*),INTENT(IN):: NAME(NAT)
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)
+      REAL(8)   ,INTENT(IN) :: RUNIT
+      LOGICAL(4),INTENT(IN) :: TCRYSTAL
+      INTEGER(4)            :: NFILO
+      INTEGER(4)            :: IAT
+!     **************************************************************************
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+      WRITE(NFILO,FMT='(80("="))')
+      WRITE(NFILO,FMT='(80("="),T20," SEGMENT FOR STRUCTURE INPUT FILE  ")')
+      WRITE(NFILO,FMT='(80("="),T20,"          IN UNITS OF LUNIT        ")')
+      WRITE(NFILO,FMT='(80("="))')
+      WRITE(NFILO,FMT=*)
+      WRITE(NFILO,FMT='(T3,"LUNIT=",F10.5)')RUNIT
+      WRITE(NFILO,FMT=*)
+      WRITE(NFILO,FMT='(T3,"!LATTICE",T25," T= ",3F12.5)')RBAS(:,1)/RUNIT
+      WRITE(NFILO,FMT='(T29,3F12.5)')RBAS(:,2)/RUNIT
+      WRITE(NFILO,FMT='(T29,3F12.5," !END")')RBAS(:,2)/RUNIT
+      WRITE(NFILO,FMT=*)
+      DO IAT=1,NAT
+        WRITE(NFILO,FMT='(T3,"!ATOM NAME= ",T15,A,T25," R= ",3F12.5," !END")') &
+     &                   TRIM(NAME(IAT)),R(:,IAT)/RUNIT
+      ENDDO
+      WRITE(NFILO,FMT=*)
+      RETURN
+      END      
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WRITEXYZ(RBAS,NAT,NAME,R,TCRYSTAL,NDUP,TITLE)
+!     **************************************************************************
+!     **  WRITES AN XYZ FILE FOR THE STRUCTURE                                **
+!     **                                                                      **
+!     **  CAUTION: ASSUMES THAT THE ATOM NAME STARTS WITH THE ELEMENT SYMBOL!!**
+!     **************************************************************************
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NAT
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      CHARACTER(*),INTENT(IN):: NAME(NAT)
+      CHARACTER(*),INTENT(IN):: TITLE
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)
+      INTEGER(4),INTENT(IN) :: NDUP(3)
+      LOGICAL(4),INTENT(IN) :: TCRYSTAL
+      INTEGER(4)            :: NFIL
+      INTEGER(4)            :: IAT
+      INTEGER(4)            :: IT1,IT2,IT3
+      REAL(8)               :: T(3)
+      REAL(8)               :: ANGSTROM
+      CHARACTER(2)          :: EL
+      CHARACTER(80)         :: STRING
+!     **************************************************************************
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
+      CALL FILEHANDLER$UNIT('XYZ',NFIL)
+      REWIND(NFIL)
+      IF(TCRYSTAL) THEN
+        WRITE(NFIL,FMT='(I10)')NAT*NDUP(1)*NDUP(2)*NDUP(3)
+        WRITE(STRING,FMT='(I1,A,I1,A,I1)')NDUP(1),-'X',NDUP(2),-'X',NDUP(3)
+        STRING=TRIM(STRING)//' AS CLUSTER'        
+      ELSE
+        STRING=' '
+      END IF
+      WRITE(NFIL,FMT='(A)')TRIM(TITLE)//' '//TRIM(STRING)
+      DO IT1=1,NDUP(1)
+        DO IT2=1,NDUP(2)
+           DO IT3=1,NDUP(3)
+             T(:)=RBAS(:,1)*REAL(IT1-1) &
+     &           +RBAS(:,2)*REAL(IT2-1) &
+     &           +RBAS(:,3)*REAL(IT3-1)
+             DO IAT=1,NAT
+               el=name(iat)(1:2)
+               if(el(2:2).eq.'_')el(2:2)=' '
+               WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X),2X,A)')el, &
+     &              (R(:,IAT)+T(:))/ANGSTROM
+             ENDDO
+           ENDDO
+         ENDDO
+      ENDDO
+      CALL FILEHANDLER$CLOSE('XYZ')
+      RETURN
+      END      
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE REPORTLOCALSTRUCTURE(RBAS,NAT,NAME,R,TCRYSTAL)
+!     **************************************************************************
+!     ** REPORT BOND ANGLES AND BOND LENGTHS                                  **
+!     **************************************************************************
+      IMPLICIT NONE
+      TYPE BOND_TYPE
+        INTEGER(4) :: IAT1
+        INTEGER(4) :: IAT2
+        INTEGER(4) :: IT(3)
+        REAL(8)    :: DR(3)
+      END TYPE BOND_TYPE
+      INTEGER(4),INTENT(IN) :: NAT
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      CHARACTER(*),INTENT(IN):: NAME(NAT)
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)
+      LOGICAL(4),INTENT(IN) :: TCRYSTAL
+      INTEGER(4)            :: NT
+      REAL(8)               :: DISX
+      INTEGER(4)            :: IAT,IAT1,IAT2,IT1,IT2,IT3
+      REAL(8)               :: T1(3),T2(3),T3(3)
+      REAL(8)               :: DR(3),DIS
+      INTEGER(4),PARAMETER  :: NBONDX=100
+      TYPE(BOND_TYPE)       :: BOND(NBONDX)
+      TYPE(BOND_TYPE)       :: SVARBOND
+      REAL(8)               :: DISARR(NBONDX)
+      REAL(8)               :: ANGLE(NBONDX,NBONDX)
+      REAL(8)               :: ANGLEN
+      REAL(8)               :: SVAR
+      REAL(8)               :: PI
+      INTEGER(4)            :: NBOND,I,J,K
+      INTEGER(4)            :: NFILO
+      REAL(8)               :: ANGSTROM
+      REAL(8)               :: RBASIN(3,3)
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      ANGLEN=PI/180.d0*80.d0    ! MIN ANGLE=60 DEG
+      DISX=6.D0                 ! MAX DISTANCE
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
+!
+!     ==========================================================================
+!     ==  ANALYZE LATTICE
+!     ==========================================================================
+      IF(TCRYSTAL) THEN
+        WRITE(NFILO,FMT='(80("="))')
+        WRITE(NFILO,FMT='(80("="),T20,"      LATTICE CONSTANTS AND        ")')
+        WRITE(NFILO,FMT='(80("="),T20," POSITIONS IN RELATIVE COORDINATES ")')
+        WRITE(NFILO,FMT='(80("="))')
+        WRITE(NFILO,FMT=*)
+        DO I=1,3
+          DISARR(I)=SQRT(SUM(RBAS(:,I)**2))
+        ENDDO
+        DO I=1,3
+          J=1+MODULO(I+1-1,3)
+          K=1+MODULO(I+2-1,3)
+          SVAR=DOT_PRODUCT(RBAS(:,I),RBAS(:,J))/(DISARR(I)*DISARR(J))
+          SVAR=ACOS(SVAR)
+          DISARR(3+K)=SVAR
+        ENDDO
+        WRITE(NFILO,FMT='("LATTICE CONSTANTS:")')
+        WRITE(NFILO,FMT='("A,B,C = 1ST, 2ND AND 3RD LATTICE VECTOR")')
+        WRITE(NFILO,FMT='("ALPHA = ANGLE BETWEEN B AND C")')
+        WRITE(NFILO,FMT='("BETA  = ANGLE BETWEEN C AND A")')
+        WRITE(NFILO,FMT='("GAMMA = ANGLE BETWEEN A AND B")')
+        WRITE(NFILO,FMT='("LATTICE CONSTANTS A,B,C: ",T40,3F10.5," ANGSTROM")') &
+     &                                                      DISARR(1:3)/ANGSTROM
+        WRITE(NFILO,FMT='("LATTICE ANGLES ALPHA,BETA,GAMMA: ",T40,3F10.5," DEGREE")') &
+     &                                             DISARR(4:6)/PI*180.D0
+        WRITE(NFILO,FMT=*)
+!
+        CALL GBASS(RBAS,RBASIN,SVAR)
+        WRITE(NFILO,FMT='("ATOMIC POSITIONS IN RELATIVE COORDINATES:")')
+        DO IAT=1,NAT
+          DR(:)=MATMUL(RBASIN,R(:,IAT))
+          DO I=1,3
+            DR(I)=MODULO(DR(I),1.D0)
+          ENDDO
+          WRITE(NFILO,FMT='(A,T30,3F10.5)')NAME(IAT),DR
+        ENDDO
+        WRITE(NFILO,FMT=*)
+      END IF
+!
+!     ==========================================================================
+!     == 
+!     ==========================================================================
+      WRITE(NFILO,FMT='(80("="))')
+      WRITE(NFILO,FMT='(80("="),T20,"  BOND LENGTHS AND ANGLES    ")')
+      WRITE(NFILO,FMT='(80("="))')
+      WRITE(NFILO,FMT='("NEIGHBORS WITH BOND LENGTHS BEYOND ",F5.1," ANGSTROM ARE DROPPED")') &
+     &                DISX/ANGSTROM
+      WRITE(NFILO,FMT='("NEIGHBORS WITH ANGLES BELOW ",F5.0," DGREE ARE DROPPED")') &
+     &                ANGLEN/PI*180.D0
+      WRITE(NFILO,FMT='("CAUTION: ANGLE REQUIREMENT MAY RESULT IN INCOMPLETE SHELLS")')
+      WRITE(NFILO,FMT=*)
+      NT=0
+      IF(TCRYSTAL) NT=1
+      DO IAT1=1,NAT
+!       ========================================================================
+!       ==  COLLECT BONDS TO ATOM IAT1                                        ==
+!       ========================================================================
+        NBOND=0
+        DO IAT2=1,NAT
+          DO IT1=-NT,NT 
+            T1(:)=RBAS(:,1)*REAL(IT1,KIND=8)
+            DO IT2=-NT,NT 
+              T2(:)=RBAS(:,2)*REAL(IT2,KIND=8)
+              DO IT3=-NT,NT 
+                T3(:)=RBAS(:,3)*REAL(IT3,KIND=8)
+                DR(:)=R(:,IAT2)-R(:,IAT1)+T1+T2+T3
+                DIS=SQRT(SUM(DR**2))
+                IF(IAT1.EQ.IAT2.AND.IT1.EQ.0.AND.IT2.EQ.0.AND.IT3.EQ.0) CYCLE
+                IF(DIS.GT.DISX) CYCLE
+                NBOND=NBOND+1
+                IF(NBOND.GT.NBONDX) THEN
+                  CALL ERROR$MSG('ARRAY SIZE EXCEEDED')
+                  CALL ERROR$I4VAL('NBOND',NBOND)
+                  CALL ERROR$I4VAL('NBONDX',NBONDX)
+                  CALL ERROR$STOP('REPORTLOCALSTRUCTURE')
+                END IF
+                BOND(NBOND)%IAT1=IAT1
+                BOND(NBOND)%IAT2=IAT2
+                BOND(NBOND)%IT(1)=IT1
+                BOND(NBOND)%IT(2)=IT2
+                BOND(NBOND)%IT(3)=IT3
+                BOND(NBOND)%DR(:)=DR(:)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+!
+!       ========================================================================
+!       ==  DETERMINE BOND LENGTH ARRAY DISARR                                ==
+!       ========================================================================
+        DO I=1,NBOND
+          DISARR(I)=SQRT(SUM(BOND(I)%DR**2))
+        ENDDO
+!
+!       ========================================================================
+!       ==  ORDER BONDS ACCORDING TO  INCREASING LENGTH                       ==
+!       ========================================================================
+        DO I=1,NBOND
+          J=I
+          DO K=I+1,NBOND
+            IF(DISARR(K).LT.DISARR(J)) J=K
+          ENDDO
+          IF(J.EQ.I) CYCLE
+          SVAR=DISARR(J)
+          DISARR(J)=DISARR(I)
+          DISARR(I)=SVAR
+          SVARBOND=BOND(J)
+          BOND(J)=BOND(I)
+          BOND(I)=SVARBOND
+        ENDDO
+        IF(DISARR(1).LT.3.D-3) THEN
+          CALL ERROR$MSG('UNPHYSICAL BOND DISTANCE')
+          CALL ERROR$R8VAL('MIN(DIS)',DISARR(1))
+          CALL ERROR$I4VAL('IAT1',BOND(1)%IAT1)
+          CALL ERROR$I4VAL('IAT2',BOND(1)%IAT2)
+          CALL ERROR$I4VAL('IT1',BOND(1)%IT(1))
+          CALL ERROR$I4VAL('IT2',BOND(1)%IT(2))
+          CALL ERROR$I4VAL('IT3',BOND(1)%IT(3))
+          CALL ERROR$STOP('REPORTLOCALSTRUCTURE')
+        END IF
+!
+!       ========================================================================
+!       == DETERMINE BOND ANGLES                                              ==
+!       ========================================================================
+        DO I=1,NBOND
+          ANGLE(I,I)=0.D0
+          DO J=I+1,NBOND
+            SVAR=DOT_PRODUCT(BOND(I)%DR,BOND(J)%DR)/DISARR(I)/DISARR(J)
+            SVAR=ACOS(SVAR)
+            ANGLE(I,J)=SVAR
+            ANGLE(J,I)=SVAR
+          ENDDO
+        ENDDO
+!
+!       ========================================================================
+!       == DROP NEIGHBORS WITH TOO SMALL BOND ANGLES                          ==
+!       ========================================================================
+        DO I=1,NBOND
+          IF(DISARR(I).LT.0.D0) CYCLE
+          DO J=I+1,NBOND
+            IF(DISARR(J).LT.0.D0) CYCLE
+            IF(ANGLE(I,J).LT.ANGLEN) DISARR(J)=-1.D0
+          ENDDO
+        ENDDO
+        J=0
+        DO I=1,NBOND
+          IF(DISARR(I).LT.0.D0) CYCLE
+          J=J+1
+          IF(J.EQ.I) CYCLE
+          ANGLE(:,J)=ANGLE(:,I) 
+          ANGLE(J,:)=ANGLE(I,:) 
+          DISARR(J)=DISARR(I)
+        ENDDO
+        NBOND=J
+!
+!       ========================================================================
+!       == REPORT TO FILE                                                     ==
+!       ========================================================================
+        WRITE(NFILO,FMT='(80("-"),T30,"  ",A,"   ")')TRIM(NAME(IAT1))
+        DO I=1,NBOND
+          WRITE(NFILO,FMT='(A,T10,A,T40,"BOND LENGTH: ",F5.3," ANGSTROM")') &
+     &                          NAME(BOND(I)%IAT1),NAME(BOND(I)%IAT2),DISARR(I)/ANGSTROM
+        ENDDO
+        DO I=1,NBOND
+          DO J=I+1,NBOND
+            WRITE(NFILO,FMT='(A,T10,A,T20,A,T40,"ANGLE: ",F5.1," DEGREE")') &
+     &              NAME(BOND(I)%IAT2),NAME(BOND(I)%IAT1),NAME(BOND(J)%IAT2),ANGLE(I,J)/PI*180.
+          ENDDO
+        ENDDO
+      ENDDO
+
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITECSSR(NFIL,OBJECTNAME,RBAS,NAT,NAME,R,Q,TCRYSTAL)
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -215,9 +667,9 @@
       REAL(8)                 :: A,B,C            ! LENGTH OF LATTICE VECTORS
       REAL(8)                 :: ALPHA,BETA,GAMMA ! ANGLES BETWEEN LATTICE VECTORS
       REAL(8)                 :: DET
-      INTEGER(4)              :: IAT,I,J
-      REAL(8)                 :: VEC(3),SVAR,RBASNEU(3,3)
-!     ******************************************************************
+      INTEGER(4)              :: IAT
+      REAL(8)                 :: VEC(3),RBASNEU(3,3)
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       NEIGH(:,:)=0
 !
@@ -281,9 +733,9 @@
 !
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WRITEavogadro(NFIL,OBJECTNAME,RBAS,NAT,NAME,R,Q,TCRYSTAL)
+      SUBROUTINE WRITEAVOGADRO(NFIL,OBJECTNAME,RBAS,NAT,NAME,R,Q,TCRYSTAL)
       USE STRINGS_MODULE
-      USE periodictable_MODULE
+      USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTERFACE OPERATOR (.DYAD.)
         FUNCTION DYADISCHES_PRODUCT(R1,R2) RESULT(R3)
@@ -300,26 +752,26 @@
       CHARACTER(*),INTENT(IN) :: NAME(NAT)
       REAL(8)     ,INTENT(IN) :: R(3,NAT)
       REAL(8)     ,INTENT(IN) :: Q(NAT)
-      real(8)     ,parameter  :: tolbond=5.d-2
-      real(8)     ,parameter  :: tolbox=1.d-1
-      REAL(8)                 :: x(3,NAT)
-      character(2)            :: el(nat)
+      REAL(8)     ,PARAMETER  :: TOLBOND=5.D-2
+      REAL(8)     ,PARAMETER  :: TOLBOX=1.D-1
+      REAL(8)                 :: X(3,NAT)
+      CHARACTER(2)            :: EL(NAT)
       REAL(8)                 :: PI
       REAL(8)                 :: RBASINV(3,3) ! RBAS**(-1)
       REAL(8)                 :: A,B,C            ! LENGTH OF LATTICE VECTORS
       REAL(8)                 :: ALPHA,BETA,GAMMA ! ANGLES BETWEEN LATTICE VECTORS
       REAL(8)                 :: DET
-      INTEGER(4)              :: IAT,I,J,k,l
-      REAL(8)                 :: VEC(3),SVAR,RBASNEU(3,3)
-      real(8)                 :: angstrom,degree
+      INTEGER(4)              :: IAT,I,J,K,L
+      REAL(8)                 :: SVAR,RBASNEU(3,3)
+      REAL(8)                 :: ANGSTROM,DEGREE
       INTEGER(4) ,ALLOCATABLE :: MAP(:,:)
-      INTEGER(4)              :: NMAP,imap,j1,j2,j3,DUP,NDUP1,NDUP2,IDUP,nbond
-      INTEGER(4)              :: nbondx
-      character(8)           :: distid(-1:1,-1:1,-1:1)
-      integer(4) ,allocatable:: bond(:,:)
-      real(8)                 :: rcov(nat)
-      real(8)                 :: rcov1,rcov2
-      real(8)                 :: r1(3),r2(3)
+      INTEGER(4)              :: NMAP,IMAP,J1,J2,J3,NDUP1,NBOND
+      INTEGER(4)              :: NBONDX
+      CHARACTER(8)           :: DISTID(-1:1,-1:1,-1:1)
+      INTEGER(4) ,ALLOCATABLE:: BOND(:,:)
+      REAL(8)                 :: RCOV(NAT)
+      REAL(8)                 :: RCOV1,RCOV2
+      REAL(8)                 :: R1(3),R2(3)
 !     ******************************************************************
       CALL CONSTANTS('PI',PI)
       CALL CONSTANTS('DEGREE',DEGREE)
@@ -358,134 +810,134 @@
       RBASNEU(1,1)=SQRT(A**2-RBASNEU(2,1)**2-RBASNEU(3,1)**2)
 !
 !     ==========================================================================
-!     == WRITE avogadro file                                                  ==
+!     == WRITE AVOGADRO FILE                                                  ==
 !     ==========================================================================
 !
 !     ==========================================================================
-!     == WRITE unit cell                                                      ==
+!     == WRITE UNIT CELL                                                      ==
 !     ==========================================================================
-      write(nfil,fmt='(a)')-'<molecule>'
-      write(nfil,fmt='(a)')-'<crystal>'
-      write(nfil,fmt='(a,f10.5,a)')-'<scalar title="a" units="units:angstrom">',a/angstrom,-'</scalar>'
-      write(nfil,fmt='(a,f10.5,a)')-'<scalar title="b" units="units:angstrom">',b/angstrom,-'</scalar>'
-      write(nfil,fmt='(a,f10.5,a)')-'<scalar title="c" units="units:angstrom">',c/angstrom,-'</scalar>'
-      write(nfil,fmt='(a,f10.5,a)')-'<scalar title="alpha" units="units:degree">',alpha/degree,-'</scalar>'
-      write(nfil,fmt='(a,f10.5,a)')-'<scalar title="beta" units="units:degree">',beta/degree,-'</scalar>'
-      write(nfil,fmt='(a,f10.5,a)')-'<scalar title="gamma" units="units:degree">',gamma/degree,-'</scalar>'
-      write(nfil,fmt='(a)')-'</crystal>'
+      WRITE(NFIL,FMT='(A)')-'<MOLECULE>'
+      WRITE(NFIL,FMT='(A)')-'<CRYSTAL>'
+      WRITE(NFIL,FMT='(A,F10.5,A)')-'<SCALAR TITLE="A" UNITS="UNITS:ANGSTROM">',A/ANGSTROM,-'</SCALAR>'
+      WRITE(NFIL,FMT='(A,F10.5,A)')-'<SCALAR TITLE="B" UNITS="UNITS:ANGSTROM">',B/ANGSTROM,-'</SCALAR>'
+      WRITE(NFIL,FMT='(A,F10.5,A)')-'<SCALAR TITLE="C" UNITS="UNITS:ANGSTROM">',C/ANGSTROM,-'</SCALAR>'
+      WRITE(NFIL,FMT='(A,F10.5,A)')-'<SCALAR TITLE="ALPHA" UNITS="UNITS:DEGREE">',ALPHA/DEGREE,-'</SCALAR>'
+      WRITE(NFIL,FMT='(A,F10.5,A)')-'<SCALAR TITLE="BETA" UNITS="UNITS:DEGREE">',BETA/DEGREE,-'</SCALAR>'
+      WRITE(NFIL,FMT='(A,F10.5,A)')-'<SCALAR TITLE="GAMMA" UNITS="UNITS:DEGREE">',GAMMA/DEGREE,-'</SCALAR>'
+      WRITE(NFIL,FMT='(A)')-'</CRYSTAL>'
 !
 !     ==========================================================================
-!     == construct relative coordinates and map into first unit cell          ==
+!     == CONSTRUCT RELATIVE COORDINATES AND MAP INTO FIRST UNIT CELL          ==
 !     ==========================================================================
-      nMAP=0
-      do iat=1,nat
-         x(:,iat)=MATMUL(RBASINV,r(:,iat))
-         if(tcrystal) then
-           x(:,iat)=MOD(x(:,IAT)+100.d0,1.D0)
-           ndup1=0
-           do i=1,3
-             if(x(i,iat).lt.1.d-1.or.x(i,iat).gt.1.d0-1.d-1) ndup1=ndup1+1
-           enddo
-           nMAP=nMAP+2**ndup1
-         else
-           nmap=nmap+1
-         end if
-         el(iat)=name(iat)(1:2)
-         if(el(iat)(2:2).eq.'_')el(iat)(2:2)=' '
-         CALL PERIODICTABLE$GET(EL(IAT),'R(COV)',RCOV(iat))
-      enddo
+      NMAP=0
+      DO IAT=1,NAT
+         X(:,IAT)=MATMUL(RBASINV,R(:,IAT))
+         IF(TCRYSTAL) THEN
+           X(:,IAT)=MOD(X(:,IAT)+100.D0,1.D0)
+           NDUP1=0
+           DO I=1,3
+             IF(X(I,IAT).LT.1.D-1.OR.X(I,IAT).GT.1.D0-1.D-1) NDUP1=NDUP1+1
+           ENDDO
+           NMAP=NMAP+2**NDUP1
+         ELSE
+           NMAP=NMAP+1
+         END IF
+         EL(IAT)=NAME(IAT)(1:2)
+         IF(EL(IAT)(2:2).EQ.'_')EL(IAT)(2:2)=' '
+         CALL PERIODICTABLE$GET(EL(IAT),'R(COV)',RCOV(IAT))
+      ENDDO
 !
 !     ==========================================================================
-!     == construct periodic images                                            ==
+!     == CONSTRUCT PERIODIC IMAGES                                            ==
 !     ==========================================================================
-      allocate(MAP(4,nMAP))
-      map(:,:)=0
-      if(tcrystal) then
-        Imap=1
+      ALLOCATE(MAP(4,NMAP))
+      MAP(:,:)=0
+      IF(TCRYSTAL) THEN
+        IMAP=1
         DO IAT=1,NAT
-          map(1,imap)=iat
+          MAP(1,IMAP)=IAT
           NDUP1=1
-          do i=1,3
-            if(x(i,iat).lt.tolbox.or.x(i,iat).gt.1.d0-tolbox) then
-              j1=imap
-              j2=imap+ndup1
-              j3=imap+2*ndup1
-              map(:,j2:j3-1)=map(:,j1:j2-1)
-              if(x(i,iat).lt.0.5d0) then
-                map(1+I,j2:j3-1)=1
-              else
-                map(1+I,j2:j3-1)=-1
-              end if
-              ndup1=2*ndup1
+          DO I=1,3
+            IF(X(I,IAT).LT.TOLBOX.OR.X(I,IAT).GT.1.D0-TOLBOX) THEN
+              J1=IMAP
+              J2=IMAP+NDUP1
+              J3=IMAP+2*NDUP1
+              MAP(:,J2:J3-1)=MAP(:,J1:J2-1)
+              IF(X(I,IAT).LT.0.5D0) THEN
+                MAP(1+I,J2:J3-1)=1
+              ELSE
+                MAP(1+I,J2:J3-1)=-1
+              END IF
+              NDUP1=2*NDUP1
             END IF
-          enddo
-          Imap=Imap+NDUP1
+          ENDDO
+          IMAP=IMAP+NDUP1
         ENDDO
-      else
-        do iat=1,nat
-          map(1,iat)=iat
-        enddo
-      end if
+      ELSE
+        DO IAT=1,NAT
+          MAP(1,IAT)=IAT
+        ENDDO
+      END IF
 !
 !     ==========================================================================
-!     == write atomic positions                                               ==
+!     == WRITE ATOMIC POSITIONS                                               ==
 !     ==========================================================================
-      write(nfil,fmt='("<",a)')-'atom'//+'a'//-'rray'
-      write(nfil,fmt='(a)')-'atom'//+'id'//'="'
-      write(nfil,*)(trim(name(map(1,imap)))//distid(map(2,imap),map(3,imap),map(4,imap))//' ',imap=1,nmap)
-      write(nfil,fmt='(a)')'"'
-      write(nfil,fmt='(a)')-'element'//+'T'//-'ype="'
-      write(nfil,*)el(map(1,:))//' '
-      write(nfil,fmt='(a)')'"'
-      write(nfil,fmt='(a)')-'x'//+'f'//-'ract="'
-      write(nfil,fmt='(10f10.5)')x(1,map(1,:))+real(map(2,:))
-      write(nfil,fmt='(a)')'"'
-      write(nfil,fmt='(a)')-'y'//+'f'//-'ract="'
-      write(nfil,fmt='(10f10.5)')x(2,map(1,:))+real(map(3,:))
-      write(nfil,fmt='(a)')'"'
-      write(nfil,fmt='(a)')-'z'//+'f'//-'ract="'
-      write(nfil,fmt='(10f10.5)')x(3,map(1,:))+real(map(4,:))
-      write(nfil,fmt='(a)')'"/>'
+      WRITE(NFIL,FMT='("<",A)')-'ATOM'//+'A'//-'RRAY'
+      WRITE(NFIL,FMT='(A)')-'ATOM'//+'ID'//'="'
+      WRITE(NFIL,*)(TRIM(NAME(MAP(1,IMAP)))//DISTID(MAP(2,IMAP),MAP(3,IMAP),MAP(4,IMAP))//' ',IMAP=1,NMAP)
+      WRITE(NFIL,FMT='(A)')'"'
+      WRITE(NFIL,FMT='(A)')-'ELEMENT'//+'T'//-'YPE="'
+      WRITE(NFIL,*)EL(MAP(1,:))//' '
+      WRITE(NFIL,FMT='(A)')'"'
+      WRITE(NFIL,FMT='(A)')-'X'//+'F'//-'RACT="'
+      WRITE(NFIL,FMT='(10F10.5)')X(1,MAP(1,:))+REAL(MAP(2,:))
+      WRITE(NFIL,FMT='(A)')'"'
+      WRITE(NFIL,FMT='(A)')-'Y'//+'F'//-'RACT="'
+      WRITE(NFIL,FMT='(10F10.5)')X(2,MAP(1,:))+REAL(MAP(3,:))
+      WRITE(NFIL,FMT='(A)')'"'
+      WRITE(NFIL,FMT='(A)')-'Z'//+'F'//-'RACT="'
+      WRITE(NFIL,FMT='(10F10.5)')X(3,MAP(1,:))+REAL(MAP(4,:))
+      WRITE(NFIL,FMT='(A)')'"/>'
 !
 !     ==========================================================================
-!     == calculate bonds                                                      ==
+!     == CALCULATE BONDS                                                      ==
 !     ==========================================================================
-      nbondx=16*nmap
-      allocate(bond(2,nbondx))
-      nbond=0
-      do i=1,nmap
-        r1(:)=matmul(rbasneu,x(:,map(1,i))+real(map(2:4,i)))
-        rcov1=rcov(map(1,i))
-        do j=i+1,nmap
-          r2(:)=matmul(rbasneu,x(:,map(1,j))+real(map(2:4,j)))
-          rcov2=rcov(map(1,j))
-          svar=sqrt(sum((r2-r1)**2))/(rcov1+rcov2)-1.d0
-          if(svar.lt.tolbond) then
-            nbond=nbond+1
-            if(nbond.gt.nbondx) then
-              call error$msg('array bounds exceeded')
-              call error$stop('WRITEavogadro')
-            end if
-            bond(1,nbond)=i
-            bond(2,nbond)=j
-          end if
-        enddo
-      enddo
+      NBONDX=16*NMAP
+      ALLOCATE(BOND(2,NBONDX))
+      NBOND=0
+      DO I=1,NMAP
+        R1(:)=MATMUL(RBASNEU,X(:,MAP(1,I))+REAL(MAP(2:4,I)))
+        RCOV1=RCOV(MAP(1,I))
+        DO J=I+1,NMAP
+          R2(:)=MATMUL(RBASNEU,X(:,MAP(1,J))+REAL(MAP(2:4,J)))
+          RCOV2=RCOV(MAP(1,J))
+          SVAR=SQRT(SUM((R2-R1)**2))/(RCOV1+RCOV2)-1.D0
+          IF(SVAR.LT.TOLBOND) THEN
+            NBOND=NBOND+1
+            IF(NBOND.GT.NBONDX) THEN
+              CALL ERROR$MSG('ARRAY BOUNDS EXCEEDED')
+              CALL ERROR$STOP('WRITEAVOGADRO')
+            END IF
+            BOND(1,NBOND)=I
+            BOND(2,NBOND)=J
+          END IF
+        ENDDO
+      ENDDO
 !
 !     ==========================================================================
-!     == write bonds                                                          ==
+!     == WRITE BONDS                                                          ==
 !     ==========================================================================
-      write(nfil,fmt='(a)')-'<bond'//+'A'//-'rray'
-      write(nfil,fmt='(a)')-'atom'//+'R'//-'ef1="'
-      write(nfil,*)(trim(name(map(1,bond(1,i))))//distid(map(2,bond(1,i)),map(3,bond(1,i)),map(4,bond(1,i)))//' ',i=1,nbond)
-      write(nfil,fmt='(a)')'"'
-      write(nfil,fmt='(a)')-'atom'//+'R'//-'ef2="'
-      write(nfil,*)(trim(name(map(1,bond(2,i))))//distid(map(2,bond(2,i)),map(3,bond(2,i)),map(4,bond(2,i)))//' ',i=1,nbond)
-      write(nfil,fmt='(a)')'"'
-      write(nfil,fmt='(a)')-'order="'
-      write(nfil,*)(1,i=1,nbond)
-      write(nfil,fmt='(a)')'"/>'
-      write(nfil,fmt='(a)')-'</molecule>'
+      WRITE(NFIL,FMT='(A)')-'<BOND'//+'A'//-'RRAY'
+      WRITE(NFIL,FMT='(A)')-'ATOM'//+'R'//-'EF1="'
+      WRITE(NFIL,*)(TRIM(NAME(MAP(1,BOND(1,I))))//DISTID(MAP(2,BOND(1,I)),MAP(3,BOND(1,I)),MAP(4,BOND(1,I)))//' ',I=1,NBOND)
+      WRITE(NFIL,FMT='(A)')'"'
+      WRITE(NFIL,FMT='(A)')-'ATOM'//+'R'//-'EF2="'
+      WRITE(NFIL,*)(TRIM(NAME(MAP(1,BOND(2,I))))//DISTID(MAP(2,BOND(2,I)),MAP(3,BOND(2,I)),MAP(4,BOND(2,I)))//' ',I=1,NBOND)
+      WRITE(NFIL,FMT='(A)')'"'
+      WRITE(NFIL,FMT='(A)')-'ORDER="'
+      WRITE(NFIL,*)(1,I=1,NBOND)
+      WRITE(NFIL,FMT='(A)')'"/>'
+      WRITE(NFIL,FMT='(A)')-'</MOLECULE>'
       RETURN
       END
 !
