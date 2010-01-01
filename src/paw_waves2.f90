@@ -2738,12 +2738,12 @@ print*,'a     ',(a(i,i),i=1,nb)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$REPORTEIG(NFIL)
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
       USE WAVES_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
@@ -2755,11 +2755,38 @@ print*,'a     ',(a(i,i),i=1,nb)
       REAL(8)               :: EV
       CHARACTER(64)         :: STRING
       INTEGER(4)            :: NB
-      REAL(8)      ,ALLOCATABLE :: EIG(:)
+      REAL(8)  ,ALLOCATABLE :: EIG(:)
       INTEGER(4)            :: NTASKS,THISTASK
-!     ******************************************************************
+      real(8)  ,allocatable :: occ(:,:,:)
+      real(8)               :: ehomo,elumo,egdirect
+      integer(4)            :: ibhomo(nspin)
+      integer(4)            :: ikhomo,iklumo,ikdirect
+      integer(4)            :: ishomo,islumo,isdirect
+      character(80)         :: format
+!     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL CONSTANTS('EV',EV)
+
+!
+!     ==========================================================================
+!     == determine total number of electrons to estimate band gap             ==
+!     ==========================================================================
+      CALL DYNOCC$GETI4('NB',NB)
+      ALLOCATE(occ(NB,NKPT,NSPIN))
+      CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,occ)
+      egdirect=1.d+10
+      ehomo=-1.d+10
+      elumo=1.d+10
+      ikdirect=0
+      ikhomo=0
+      iklumo=0
+      isdirect=0
+      ishomo=0
+      islumo=0
+!
+!     ==========================================================================
+!     == write energy bands                                                   ==
+!     ==========================================================================
       IKPTL=0
       DO IKPT=1,NKPT
         IF(KMAP(IKPT).EQ.THISTASK) IKPTL=IKPTL+1
@@ -2794,10 +2821,55 @@ print*,'a     ',(a(i,i),i=1,nb)
      &             ITEN,(EIG(IB)/EV,IB=ITEN+1,MIN(ITEN+10,NB))
               ITEN=ITEN+10
             ENDDO
+!
+!           == scan eigenvalues for band gaps ===============================
+            do ib=1,nb
+              if(occ(ib,ikpt,ispin).gt.1.d-6.and.ib.gt.ibhomo(ispin)) then
+                ibhomo(ispin)=ib
+              end if
+              if(occ(ib,ikpt,ispin).gt.1.d-6.and.eig(ib).gt.ehomo) then
+                ehomo=eig(ib)
+                ikhomo=ikpt
+                ishomo=ispin
+                ibhomo=ib
+              end if
+              if(occ(ib,ikpt,ispin).lt.1.d-6.and.eig(ib).lt.elumo) then
+                elumo=eig(ib)
+                iklumo=ikpt
+                islumo=ispin
+              end if
+              if(ib.gt.1.and.occ(ib,ikpt,ispin).lt.1.d-6 &
+       &                .and.occ(ib-1,ikpt,ispin).gt.1.d-6) then
+                if(eig(ib)-eig(ib-1).lt.egdirect) then
+                  egdirect=eig(ib)-eig(ib-1)
+                  ikdirect=ikpt
+                  isdirect=ispin
+                end if
+              end if
+            enddo
           END IF
           DEALLOCATE(EIG)
         ENDDO
       ENDDO
+!
+!     ==========================================================================
+!     == REPORT ENERGY GAPS                                                   ==
+!     ==========================================================================
+      IF(NSPIN.EQ.1) THEN
+        CALL REPORT$I4VAL(NFIL,'BAND INDEX OF HOMO',IBHOMO(1),' ')
+      ELSE     
+        CALL REPORT$I4VAL(NFIL,'BAND INDEX OF HOMO FOR SPIN 1',IBHOMO(1),' ')
+        CALL REPORT$I4VAL(NFIL,'BAND INDEX OF HOMO FOR SPIN 2',IBHOMO(2),' ')
+      END IF
+      FORMAT='(55("."),": ",T1,A,T58,F10.4," EV AT IK=",I5," AND ISPIN=",I1)'
+      WRITE(NFIL,FMT=FORMAT)'SMALLEST DIRECT GAP',EGDIRECT/EV,IKDIRECT,ISDIRECT 
+      FORMAT='(55("."),": ",T1,A,T58,F10.4," EV ")'
+      WRITE(NFIL,FMT=FORMAT)'ABSOLUTE GAP',(ELUMO-EHOMO)/EV
+      FORMAT='(T10," FROM IK=",I4," AND ISPIN=",I1," TO IK=",I5," AND ISPIN=",I2)'
+      WRITE(NFIL,FMT=FORMAT)IKHOMO,ISHOMO,IKLUMO,ISLUMO
+      IF(ELUMO-EHOMO.LT.0.D0) THEN
+        CALL REPORT$STRING(NFIL,'MATERIAL IS A METAL: USE VARIABLE OCCUPATIONS')
+      END IF
       RETURN
       END
 !

@@ -1155,12 +1155,19 @@ END MODULE DYNOCC_MODULE
              CALL DYNOCC_PREIG('OCC',NFIL,NB,OCC(:,IKPT,ISPIN),WKPT(IKPT))
            ENDDO
          ENDDO
+!
+!        == CHECK IF THE NUMBER OF BAND IS SUFFICIENT ==========================
+         IF(SUM(OCC(NB,:,:)).GT.1.D-6) THEN
+           CALL REPORT$STRING(NFIL,'WARNING: HIGHEST BAND IS NOT EMPTY')
+           CALL REPORT$STRING(NFIL,'         RESULTS ARE POBABLY INCORRECT')
+           CALL REPORT$STRING(NFIL,'         INCREASE NUMBER OF BANDS')
+         END IF
        END IF
                           CALL TRACE$POP()
        RETURN
        END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC_REPORTSETTING(NFIL)
 !      *****************************************************************
 !      **                                                             **
