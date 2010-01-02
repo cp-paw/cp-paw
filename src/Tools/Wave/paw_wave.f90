@@ -1,4 +1,4 @@
-!************************************************************************
+ !************************************************************************
 !**                                                                    **
 !**  NAME: WAVEPLOT                                                    **
 !**                                                                    **
@@ -59,6 +59,11 @@
       CALL FILEHANDLER$SETSPECIFICATION('WAVEDX','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('WAVEDX','ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION('WAVEDX','FORM','FORMATTED')
+      CALL FILEHANDLER$SETFILE('CUBE',.TRUE.,-'.CUB')
+      CALL FILEHANDLER$SETSPECIFICATION('CUBE','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('CUBE','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('CUBE','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('CUBE','FORM','FORMATTED')
 !
 !     ==================================================================
 !     ==  READ CNTL FILE TO LINKEDLIST                                ==
@@ -120,7 +125,7 @@
        USE STRINGS_MODULE
        USE LINKEDLIST_MODULE
        USE PERIODICTABLE_MODULE
-       implicit none
+       IMPLICIT NONE
        TYPE(LL_TYPE), INTENT(IN) :: LL_CNTL_
        TYPE(LL_TYPE), INTENT(IN) :: LL_STRC_
        TYPE(LL_TYPE)             :: LL_CNTL
@@ -145,9 +150,9 @@
        INTEGER(4)   ,ALLOCATABLE :: BOND(:,:)
        LOGICAL(4)                :: TCHK
        INTEGER(4)                :: NATM
-       INTEGER(4)                :: Iat
+       INTEGER(4)                :: IAT
        INTEGER(4)                :: IVEC(3)
-       real(8)      ,ALLOCATABLE :: scaledrad(:)
+       REAL(8)      ,ALLOCATABLE :: SCALEDRAD(:)
 !      ******************************************************************
        CALL TRACE$PUSH('MWAVE')
        LL_CNTL=LL_CNTL_
@@ -193,9 +198,17 @@
        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'T',1,BOXVEC)
 !
 !      ==================================================================
+!      ==  WRITE DENSITY TO CUBE FILE                                  ==
+!      ==================================================================
+       CALL TRACE$PASS('WRITE WAVE TO CUBE-FILE')
+       CALL FILEHANDLER$UNIT('CUBE',NFIL)
+       REWIND NFIL
+       CALL MAKECUBE(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE,BOXR0,BOXVEC)
+       CALL FILEHANDLER$CLOSE('CUBE')
+!
+!      ==================================================================
 !      ==  WRITE DENSITY TO DATAEXPLORER FILE                          ==
 !      ==================================================================
-       CALL TRACE$PASS('WRITE WAVE TO DX-FILE')
        CALL FILEHANDLER$UNIT('WAVEDX',NFIL)
        REWIND NFIL
        CALL DX_DENSITY(NFIL,NR1,NR2,NR3,RBAS,WAVE,BOXR0,BOXVEC)
@@ -217,17 +230,17 @@
          CALL ATOMCOLOR(NINT(Z(MAP(IAT))),IVEC)
          COLOR(:,IAT)=REAL(IVEC,KIND=8)/200.D0
        ENDDO
-       scaledrad(:)=1.2d0*rad(:)
-       CALL MODEL$NBONDM(NATM,POSM,scaledrad,NBOND)
+       SCALEDRAD(:)=1.2D0*RAD(:)
+       CALL MODEL$NBONDM(NATM,POSM,SCALEDRAD,NBOND)
        ALLOCATE(BOND(2,NBOND))
-       CALL MODEL$BONDS(NATM,POSM,scaledrad,NBOND,BOND)
+       CALL MODEL$BONDS(NATM,POSM,SCALEDRAD,NBOND,BOND)
 !
 !      ==================================================================
 !      ==  WRITE BALLSTICK MODEL TO DATAEXPLORER FILE                  ==
 !      ==================================================================
        CALL TRACE$PASS('BEFORE BALLSTICK')
-       scaledrad(:)=0.5d0*rad(:)
-       CALL DXBALLSTICK(NFIL,NATM,COLOR,scaledrad,POSM,NBOND,BOND,BOXR0,BOXVEC)
+       SCALEDRAD(:)=0.5D0*RAD(:)
+       CALL DXBALLSTICK(NFIL,NATM,COLOR,SCALEDRAD,POSM,NBOND,BOND,BOXR0,BOXVEC)
        CALL TRACE$PASS('AFTER BALLSTICK')
 !
 !      ==================================================================
@@ -532,7 +545,7 @@
       END
 !                                                                       
 !     .....................................................BONDS .......
-      SUBROUTINE DX_DENSITY(NFIL,NR1,NR2,NR3,RBAS,DENSITYin,BOXR0,BOXVEC)
+      SUBROUTINE DX_DENSITY(NFIL,NR1,NR2,NR3,RBAS,DENSITYIN,BOXR0,BOXVEC)
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
@@ -544,7 +557,7 @@
       INTEGER(4),INTENT(IN) :: NR2
       INTEGER(4),INTENT(IN) :: NR3
       REAL(8)   ,INTENT(IN) :: RBAS(3,3)
-      REAL(8)   ,INTENT(IN) :: DENSITYin(NR1,NR2,NR3)
+      REAL(8)   ,INTENT(IN) :: DENSITYIN(NR1,NR2,NR3)
       REAL(8)   ,INTENT(IN) :: BOXR0(3)
       REAL(8)   ,INTENT(IN) :: BOXVEC(3,3)
       REAL(8)               :: SBAS(3,3)
@@ -556,19 +569,19 @@
       REAL(8)               :: X,Y,Z
       REAL(8)               :: SH1,SH2,SH3
       INTEGER(4)            :: I,J,K
-      real(8)  ,parameter   :: maxvalue=9999.D0
+      REAL(8)  ,PARAMETER   :: MAXVALUE=9999.D0
       REAL(8)               :: DENSITY(NR1,NR2,NR3)
-      REAL(8)               :: svar
+      REAL(8)               :: SVAR
 !     *******************************************************************
-      density(:,:,:)=densityin(:,:,:)
-      do k=1,nr3
-        do j=1,nr2
-          do i=1,nr1
-            svar=min(maxvalue,density(i,j,k))
-            density(i,j,k)=max(-maxvalue,svar)
-          end do
-        end do
-      end do
+      DENSITY(:,:,:)=DENSITYIN(:,:,:)
+      DO K=1,NR3
+        DO J=1,NR2
+          DO I=1,NR1
+            SVAR=MIN(MAXVALUE,DENSITY(I,J,K))
+            DENSITY(I,J,K)=MAX(-MAXVALUE,SVAR)
+          END DO
+        END DO
+      END DO
       SBAS(:,1)=RBAS(:,1)/REAL(NR1,KIND=8)
       SBAS(:,2)=RBAS(:,2)/REAL(NR2,KIND=8)
       SBAS(:,3)=RBAS(:,3)/REAL(NR3,KIND=8)
@@ -607,7 +620,7 @@
       WRITE(NFIL,FMT='("#")')
 !
 !     ==================================================================
-!     ==   POSITIONS ARRAY: grid positions                            ==
+!     ==   POSITIONS ARRAY: GRID POSITIONS                            ==
 !     ==================================================================
       WRITE(NFIL,FMT='(A/A,3I10)') &
      &               -"OBJECT 2" &
@@ -680,8 +693,8 @@
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
-      use strings_module
-      implicit none
+      USE STRINGS_MODULE
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: COLOR(3,NAT)
@@ -692,9 +705,9 @@
       REAL(8)   ,INTENT(IN) :: BOXR0(3)
       REAL(8)   ,INTENT(IN) :: BOXVEC(3,3)
       INTEGER(4)            :: IOBJECT0=4
-      real(8)               :: x,y,z
-      real(8)               :: t1,t2,t3
-      integer(4)            :: i1,i2,i3
+      REAL(8)               :: X,Y,Z
+      REAL(8)               :: T1,T2,T3
+      INTEGER(4)            :: I1,I2,I3
 !     ******************************************************************
 !     
 !     ==================================================================
@@ -737,16 +750,16 @@
 !     ==   CONNECTIONS ARRAY: BONDS                                 ==
 !     ================================================================
       WRITE(NFIL,FMT='("#"/"#",T10,"BONDS"/"#")') !COMMENT
-      if(nbond.eq.0) then
+      IF(NBOND.EQ.0) THEN
         WRITE(NFIL,FMT='(A,I10/A,I10)') &
      &             -"OBJECT ",IOBJECT0+4 &
      &            ,-"CLASS ARRAY TYPE INT RANK 1 SHAPE 2 ITEMS ",NBOND 
-      else
+      ELSE
         WRITE(NFIL,FMT='(A,I10/A,I10/A)') &
      &             -"OBJECT ",IOBJECT0+4 &
      &            ,-"CLASS ARRAY TYPE INT RANK 1 SHAPE 2 ITEMS ",NBOND &
      &            ,-"DATA FOLLOWS"
-      end if
+      END IF
       WRITE(NFIL,FMT='(10I5)')IBOND(:,:)-1
       WRITE(NFIL,FMT='(A)')-"ATTRIBUTE ""REF"" STRING ""POSITIONS"""
       WRITE(NFIL,FMT='(A)')-"ATTRIBUTE ""ELEMENT TYPE"" STRING ""LINES"""
@@ -796,9 +809,9 @@
 !     **                                                              **
 !     **                                                              **
 !     **                                                              **
-      implicit none
-      integer(4),intent(in)  :: iz
-      integer(4),intent(out) :: icolor(3)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: IZ
+      INTEGER(4),INTENT(OUT) :: ICOLOR(3)
       INTEGER(4)             :: ICOLORSTANDARD(3,106)
       INTEGER(4)             :: I
 !     ******************************************************************
@@ -915,26 +928,149 @@
       END
 !    
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine writecmcv(nfil,title,rbas,n1,n2,n3,field)
-      implicit none
-      integer(4)  ,intent(in) :: nfil
-      character(*),intent(in) :: title
-      real(8)     ,intent(in) :: rbas(3,3)
-      integer(4)  ,intent(in) :: n1,n2,n3
-      real(8)     ,intent(in) :: field(n1,n2,n3)
-      integer(4)              :: i,j,k
+      SUBROUTINE WRITECMCV(NFIL,TITLE,RBAS,N1,N2,N3,FIELD)
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      CHARACTER(*),INTENT(IN) :: TITLE
+      REAL(8)     ,INTENT(IN) :: RBAS(3,3)
+      INTEGER(4)  ,INTENT(IN) :: N1,N2,N3
+      REAL(8)     ,INTENT(IN) :: FIELD(N1,N2,N3)
+      INTEGER(4)              :: I,J,K
 !     **************************************************************************
-      rewind(nfil)
-      write(nfil,*)title
-      write(nfil,*)n1,n2,n3
-      write(nfil,*)rbas
-      do k=1,n3
-        do j=1,n2
-          do i=1,n1
-            write(nfil,*)field(i,j,k)
-          enddo
-        enddo
-      enddo
+      REWIND(NFIL)
+      WRITE(NFIL,*)TITLE
+      WRITE(NFIL,*)N1,N2,N3
+      WRITE(NFIL,*)RBAS
+      DO K=1,N3
+        DO J=1,N2
+          DO I=1,N1
+            WRITE(NFIL,*)FIELD(I,J,K)
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE MAKECUBE(NFIL,NAT,Z,R,RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX)
+!     **************************************************************************
+!     ** INTERPOLATES PERIODIC DENSITY DATA ON AN ARBITRARY GRID ONTO         **
+!     ** AN INDEPENDENT GRID SPECIFIED BY ORIGIN AND BOX.                     **
+!     ** IT THEN PLACES THE DATA INTO A FILE WITH THE GAUSSIAN CUBE FORMAT.   **
+!     ** A VERY CLEAR DESCRIPTION OF THE GAUSSIAN CUBE FORMAT HAS BEEN GIVEN  **
+!     **  ON HTTP://LOCAL.WASP.UWA.EDU.AU/~PBOURKE/DATAFORMATS/CUBE/          **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NFIL
+      INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
+      REAL(8)   ,INTENT(IN) :: Z(NAT)    !ATOMIC NUMBER
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! atomic positions
+      REAL(8)   ,INTENT(IN) :: Rbas(3,3) !lattice vectors of the periodic data
+      INTEGER(4),INTENT(IN) :: Nr1,Nr2,Nr3 ! # grid points on the periodic grid
+      REAL(8)   ,INTENT(IN) :: wave(Nr1,Nr2,Nr3) ! periodic density data
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! corner of the new grid
+      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! vectors spanning the new grid
+      integer(4),parameter  :: n1=60      ! displacement
+      integer(4),parameter  :: n2=60
+      integer(4),parameter  :: n3=60
+      real(8)               :: data(n1,n2,n3)
+      real(8)               :: pos(3)
+      real(8)               :: dt1(3),dt2(3),dt3(3)
+      real(8)               :: xtor(3,3)
+      real(8)               :: rtox(3,3)
+      real(8)               :: svar1,svar2
+      real(8)               :: f00,f01,f10,f11,g0,g1
+      real(8)               :: xdis(3)
+      INTEGER(4)            :: i1m,i1p,i2m,i2p,i3m,i3p
+      INTEGER(4)            :: I,J,K
+!     **************************************************************************
+      xtor(:,1)=rbas(:,1)/real(nr1,kind=8)
+      xtor(:,2)=rbas(:,2)/real(nr2,kind=8)
+      xtor(:,3)=rbas(:,3)/real(nr3,kind=8)
+      call lib$invertr8(3,xtor,rtox)
+!
+!     ==========================================================================
+!     ==  INTERPOLATE WAVE ONTO NEW GRID                                      ==
+!     ==========================================================================
+      DT1(:)=BOX(:,1)/REAL(N1-1,KIND=8)
+      DT2(:)=BOX(:,2)/REAL(N2-1,KIND=8)
+      DT3(:)=BOX(:,3)/REAL(N3-1,KIND=8)
+      DO I=1,N1
+        DO J=1,N2
+          POS(:)=ORIGIN(:)+DT1*REAL(I-1,KIND=8)+DT2*REAL(J-1,KIND=8)-DT3(:)
+          DO K=1,N3
+            POS(:)=POS(:)+DT3(:)  ! POSITION ON THE NEW GRID
+            XDIS=MATMUL(RTOX,POS)
+            I1M=1+MODULO(INT(XDIS(1)+1.d+6)-1000000,NR1-1)
+            I1P=1+MODULO(I1M,NR1-1)
+            I2M=1+MODULO(INT(XDIS(2)+1.d+6)-1000000,NR2-1)
+            I2P=1+MODULO(I2M,NR2-1)
+            I3M=1+MODULO(INT(XDIS(3)+1.d+6)-1000000,NR3-1)
+            I3P=1+MODULO(I3M,NR3-1)
+            XDIS(1)=modulo(XDIS(1),1.d0)
+            XDIS(2)=modulo(XDIS(2),1.d0)
+            XDIS(3)=modulo(XDIS(3),1.d0)
+!           == INTERPOLATE ALONG THIRD DIRECTION ===========================
+            SVAR2=XDIS(3)
+            SVAR1=1.D0-SVAR2
+            F00=WAVE(I1M,I2M,I3M)*SVAR1+WAVE(I1M,I2M,I3P)*SVAR2
+            F10=WAVE(I1P,I2M,I3M)*SVAR1+WAVE(I1P,I2M,I3P)*SVAR2
+            F01=WAVE(I1M,I2P,I3M)*SVAR1+WAVE(I1M,I2P,I3P)*SVAR2
+            F11=WAVE(I1P,I2P,I3M)*SVAR1+WAVE(I1P,I2P,I3P)*SVAR2
+!           == INTERPOLATE ALONG SECOND DIRECTION ===========================
+            SVAR2=XDIS(2)
+            SVAR1=1.D0-SVAR2
+            G0=F00*SVAR1+F01*SVAR2
+            G1=F10*SVAR1+F11*SVAR2
+!           == INTERPOLATE ALONG SECOND DIRECTION ===========================
+            SVAR2=XDIS(1)
+            SVAR1=1.D0-SVAR2
+            DATA(I,j,k)=G0*SVAR1+G1*SVAR2
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  blank out contribution of periodic images                           ==
+!     ==========================================================================
+!      if(.not.tcrystal) then
+        
+!      end if
+!
+!     ==========================================================================
+!     ==  write cube file                                                     ==
+!     ==========================================================================
+      call WRITECUBEFILE(NFIL,NAT,Z,R,ORIGIN,BOX,N1,N2,N3,DATA)
       return
       end
-
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WRITECUBEFILE(NFIL,NAT,Z,R,ORIGIN,BOX,N1,N2,N3,DATA)
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NFIL
+      INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
+      REAL(8)   ,INTENT(IN) :: Z(NAT)    !ATOMIC NUMBER
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3)
+      REAL(8)   ,INTENT(IN) :: BOX(3,3)
+      INTEGER(4),INTENT(IN) :: N1,N2,N3
+      REAL(8)   ,INTENT(IN) :: DATA(N1,N2,N3)
+      REAL(8)               :: ANGSTROM
+      INTEGER(4)            :: IAT,I,J,K
+!     **************************************************************************
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
+      ANGSTROM=1.D0/0.528177D0
+      WRITE(NFIL,FMT='("CP-PAW CUBE FILE")')
+      WRITE(NFIL,FMT='("NOCHN KOMMENTAR")')
+      WRITE(NFIL,FMT='(I5,3F12.6)')NAT,ORIGIN/ANGSTROM
+      WRITE(NFIL,FMT='(I5,3F12.6)')N1,BOX(:,1)/REAL(N1,KIND=8)/ANGSTROM
+      WRITE(NFIL,FMT='(I5,3F12.6)')N2,BOX(:,2)/REAL(N2,KIND=8)/ANGSTROM
+      WRITE(NFIL,FMT='(I5,3F12.6)')N3,BOX(:,3)/REAL(N3,KIND=8)/ANGSTROM
+      DO IAT=1,NAT
+        WRITE(NFIL,FMT='(I5,4F12.6)')NINT(Z(IAT)),0.D0,R(:,IAT)/ANGSTROM
+      ENDDO  
+      WRITE(NFIL,FMT='(6(E12.6," "))')(((DATA(I,J,K),K=1,N3),J=1,N2),I=1,N1)
+      RETURN
+      END
