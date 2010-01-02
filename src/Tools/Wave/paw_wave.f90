@@ -971,9 +971,9 @@
       REAL(8)   ,INTENT(IN) :: wave(Nr1,Nr2,Nr3) ! periodic density data
       REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! corner of the new grid
       REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! vectors spanning the new grid
-      integer(4),parameter  :: n1=60      ! displacement
-      integer(4),parameter  :: n2=60
-      integer(4),parameter  :: n3=60
+      integer(4),parameter  :: n1=80      ! displacement
+      integer(4),parameter  :: n2=80
+      integer(4),parameter  :: n3=80
       real(8)               :: data(n1,n2,n3)
       real(8)               :: pos(3)
       real(8)               :: dt1(3),dt2(3),dt3(3)
@@ -1002,12 +1002,12 @@
           DO K=1,N3
             POS(:)=POS(:)+DT3(:)  ! POSITION ON THE NEW GRID
             XDIS=MATMUL(RTOX,POS)
-            I1M=1+MODULO(INT(XDIS(1)+1.d+6)-1000000,NR1-1)
-            I1P=1+MODULO(I1M,NR1-1)
-            I2M=1+MODULO(INT(XDIS(2)+1.d+6)-1000000,NR2-1)
-            I2P=1+MODULO(I2M,NR2-1)
-            I3M=1+MODULO(INT(XDIS(3)+1.d+6)-1000000,NR3-1)
-            I3P=1+MODULO(I3M,NR3-1)
+            I1M=1+int(MODULO(XDIS(1),real(NR1,kind=8)))
+            I1P=1+MODULO(I1M,NR1)
+            I2M=1+int(MODULO(XDIS(2),real(NR2,kind=8)))
+            I2P=1+MODULO(I2M,NR2)
+            I3M=1+int(MODULO(XDIS(3),real(NR3,kind=8)))
+            I3P=1+MODULO(I3M,NR3)
             XDIS(1)=modulo(XDIS(1),1.d0)
             XDIS(2)=modulo(XDIS(2),1.d0)
             XDIS(3)=modulo(XDIS(3),1.d0)
@@ -1048,6 +1048,13 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITECUBEFILE(NFIL,NAT,Z,R,ORIGIN,BOX,N1,N2,N3,DATA)
 !     **************************************************************************
+!     **  write a Gaussian Cube file (extension .cub) with voluminetric data  **
+!     **                                                                      **
+!     ** remark:                                                              **
+!     ** units written are abohr, consistent with avogadro's implementation.  **
+!     ** the specs require N1,N2,N3 to be multiplied by -1 if abohr are used  **
+!     ** and angstrom is the unit if they are positive.                       **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
@@ -1058,18 +1065,20 @@
       INTEGER(4),INTENT(IN) :: N1,N2,N3
       REAL(8)   ,INTENT(IN) :: DATA(N1,N2,N3)
       REAL(8)               :: ANGSTROM
+      REAL(8)               :: scale
       INTEGER(4)            :: IAT,I,J,K
 !     **************************************************************************
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
-      ANGSTROM=1.D0/0.528177D0
+      scale=1.d0
+!      SCALE=1.D0/ANGSTROM
       WRITE(NFIL,FMT='("CP-PAW CUBE FILE")')
       WRITE(NFIL,FMT='("NOCHN KOMMENTAR")')
-      WRITE(NFIL,FMT='(I5,3F12.6)')NAT,ORIGIN/ANGSTROM
-      WRITE(NFIL,FMT='(I5,3F12.6)')N1,BOX(:,1)/REAL(N1,KIND=8)/ANGSTROM
-      WRITE(NFIL,FMT='(I5,3F12.6)')N2,BOX(:,2)/REAL(N2,KIND=8)/ANGSTROM
-      WRITE(NFIL,FMT='(I5,3F12.6)')N3,BOX(:,3)/REAL(N3,KIND=8)/ANGSTROM
+      WRITE(NFIL,FMT='(I5,3F12.6)')NAT,ORIGIN*scale
+      WRITE(NFIL,FMT='(I5,3F12.6)')-N1,BOX(:,1)/REAL(N1,KIND=8)*scale
+      WRITE(NFIL,FMT='(I5,3F12.6)')-N2,BOX(:,2)/REAL(N2,KIND=8)*scale
+      WRITE(NFIL,FMT='(I5,3F12.6)')-N3,BOX(:,3)/REAL(N3,KIND=8)*scale
       DO IAT=1,NAT
-        WRITE(NFIL,FMT='(I5,4F12.6)')NINT(Z(IAT)),0.D0,R(:,IAT)/ANGSTROM
+        WRITE(NFIL,FMT='(I5,4F12.6)')NINT(Z(IAT)),0.D0,R(:,IAT)*scale
       ENDDO  
       WRITE(NFIL,FMT='(6(E12.6," "))')(((DATA(I,J,K),K=1,N3),J=1,N2),I=1,N1)
       RETURN
