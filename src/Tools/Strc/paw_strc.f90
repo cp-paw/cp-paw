@@ -31,6 +31,8 @@
       INTEGER(4)                  :: nfilo
       INTEGER(4)                  :: ndup(3)
       logical                     :: tinput
+      logical                     :: thelp
+      logical                     :: tcm
 !     **************************************************************************
       ndup(:)=1
       tinput=.false.
@@ -41,31 +43,60 @@
 !     == FILE NAMES                                                           ==
 !     ==========================================================================
       CALL LIB$NARGS(NARGS)
+      
 !     ==  DETECT HELP REQUESTS =================================================
+      THELP=.FALSE.
+      TCM=.FALSE.     ! CRYSTAL OR MOLECULE SPECIFIED
       DO I=1,NARGS
         CALL LIB$GETARG(I,STRING)
-        string=+string
+        STRING=+STRING
         IF(STRING(1:2).EQ.'-H'.OR.STRING.EQ.'?') THEN
-          WRITE(*,'("CALLING SEQUENCE: PAW_STRC.X ARGS ROOTNAME")')
-          WRITE(*,'("ROOTNAME IS THE ROOT NAME OF THE STRC_OUT FILE")')
-          WRITE(*,'("ARGUMENTS CAN BE:")')
-          WRITE(*,'(T2,A,T10,A)')'?','PRINT HELP MESSAGE'
-          WRITE(*,'(T2,A,T10,A)')'-H','PRINT HELP MESSAGE'
-          WRITE(*,'(T2,A,T10,A)')'-I','use input structure file instead of strc_out'
-          WRITE(*,'(T2,A,T10,A)')'-C','CONSIDER AS CRYSTAL (DEFAULT: MOLECULE)'
-          WRITE(*,'(T2,A,T10,A)')'-CIJK','CONSIDER AS CRYSTAL (DEFAULT: MOLECULE)'
-          WRITE(*,'(T10,A)')'AND MULTIPLY UNIT CELL BY FACTORS I,J,K ALONG THE THREE LATTICE VECTORS'
-          WRITE(*,'(T10,A)')'I,J,K ARE POSITIVE SINGLE-DIGIT INTEGERS'
-          WRITE(*,'("output:")')
-          WRITE(*,'(T4,"ROOTNAME",A,t20,"PROTOCOLL FILE ")')-'.SPROT'
-          WRITE(*,'(T4,"ROOTNAME",A,t20,"CRYSTAL STRUCTURE FILE IN THE CML FORMAT")')-'.CML'
-          WRITE(*,'(T4,"ROOTNAME",A,t20,"MOLECULAR OUTPUT FOR VIEWING PURPOSES")')-'.XYZ'
-          WRITE(*,'(T4,"ROOTNAME",A,t20,"MOLECULAR OUTPUT FOR VIEWING PURPOSES")')-'.cssr'
-          WRITE(*,'("REMARKs:")')
-          WRITE(*,'(T4,"REQUIRES ATOMNAMES TO START WITH THE ELEMENT SYMBOL")')
-          STOP
+          THELP=.TRUE.
+        END IF
+        IF(STRING(1:2).EQ.'-C'.OR.STRING(1:2).EQ.'-M') THEN
+          IF(TCM) THEN
+            CALL ERROR$MSG('ONE ON OF THE OPTIONS -C AND -M IS ALLOWED')
+            CALL ERROR$STOP('MAIN')
+          END IF
+          TCM=.TRUE.
+        END IF
+        TCHK=STRING(1:2).EQ.'?'.OR.STRING(1:2).EQ.'-H'.OR.STRING(1:2).EQ.'-I' &
+     &                         .OR.STRING(1:2).EQ.'-C'.OR.STRING(1:2).EQ.'-M'
+        IF(.NOT.TCHK.AND.I.LT.NARGS) THEN
+          WRITE(*,'("ILLEGAL ARGUMENT ",A)')TRIM(STRING)
+          WRITE(*,*)
+          THELP=.TRUE.
         END IF
       ENDDO
+      THELP=THELP.OR.(.NOT.TCM)
+      IF(.NOT.TCM) THEN
+        WRITE(*,'("ONE OF THE OPTIONS -M, -C OR -CIJK MUST BE SPECIFIED")')
+        WRITE(*,*)
+      END IF
+!
+!     == WRITE INFO  ===========================================================
+      IF(THELP) THEN
+        WRITE(*,'("CALLING SEQUENCE: PAW_STRC.X ARGS ROOTNAME")')
+        WRITE(*,'("ROOTNAME IS THE ROOT NAME OF THE STRC_OUT FILE")')
+        WRITE(*,'("ARGUMENTS CAN BE:")')
+        WRITE(*,'(T2,A,T10,A)')'?','PRINT HELP MESSAGE'
+        WRITE(*,'(T2,A,T10,A)')'-H','PRINT HELP MESSAGE'
+        WRITE(*,'(T2,A,T10,A)')'-I','USE INPUT STRUCTURE FILE INSTEAD OF STRC_OUT'
+        WRITE(*,'(T2,A,T10,A)')'-M','CONSIDER AS MOLECULE'
+        WRITE(*,'(T2,A,T10,A)')'-C','CONSIDER AS CRYSTAL'
+        WRITE(*,'(T2,A,T10,A)')'-CIJK','CONSIDER AS CRYSTAL'
+        WRITE(*,'(T10,A)')'AND MULTIPLY UNIT CELL BY FACTORS I,J,K ALONG THE THREE LATTICE VECTORS'
+        WRITE(*,'(T10,A)')'I,J,K ARE POSITIVE SINGLE-DIGIT INTEGERS'
+        WRITE(*,'("OUTPUT:")')
+        WRITE(*,'(T4,"ROOTNAME",A,T20,"PROTOCOLL FILE ")')-'.SPROT'
+        WRITE(*,'(T4,"ROOTNAME",A,T20,"CRYSTAL STRUCTURE FILE IN THE CML FORMAT")')-'.CML'
+        WRITE(*,'(T4,"ROOTNAME",A,T20,"MOLECULAR OUTPUT FOR VIEWING PURPOSES")')-'.XYZ'
+        WRITE(*,'(T4,"ROOTNAME",A,T20,"MOLECULAR OUTPUT FOR VIEWING PURPOSES")')-'.CSSR'
+        WRITE(*,'("REMARKS:")')
+        WRITE(*,'(T4,"REQUIRES ATOMNAMES TO START WITH THE ELEMENT SYMBOL")')
+        STOP
+      END IF
+!
 !     == RESOLVE ARGUMENTS =====================================================
       TCRYSTAL=.FALSE.
       DO I=1,NARGS-1
@@ -105,6 +136,8 @@
           END IF
         else if(string(1:1).eq.'I') then
           tinput=.true.
+        else if(string(1:1).eq.'M') then
+          tcrystal=.false.
         ELSE
           CALL ERROR$MSG('ARGUMENT NOT RECOGNIZED')
           CALL ERROR$MSG('OBTAIN ARGUMENT LIST USING -H ARGUMENT')
@@ -400,6 +433,7 @@
         WRITE(STRING,FMT='(I1,A,I1,A,I1)')NDUP(1),-'X',NDUP(2),-'X',NDUP(3)
         STRING=TRIM(STRING)//' AS CLUSTER'        
       ELSE
+        WRITE(NFIL,FMT='(I10)')NAT
         STRING=' '
       END IF
       WRITE(NFIL,FMT='(A)')TRIM(TITLE)//' '//TRIM(STRING)
