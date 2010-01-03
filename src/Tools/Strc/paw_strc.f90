@@ -458,7 +458,7 @@
       REAL(8)               :: RBASIN(3,3)
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
-      ANGLEN=PI/180.d0*80.d0    ! MIN ANGLE=60 DEG
+      ANGLEN=PI/180.d0*70.d0    ! MIN ANGLE=60 DEG
       DISX=6.D0                 ! MAX DISTANCE
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
@@ -518,7 +518,7 @@
       WRITE(NFILO,FMT='("CAUTION: ANGLE REQUIREMENT MAY RESULT IN INCOMPLETE SHELLS")')
       WRITE(NFILO,FMT=*)
       NT=0
-      IF(TCRYSTAL) NT=1
+      IF(TCRYSTAL) NT=2
       DO IAT1=1,NAT
 !       ========================================================================
 !       ==  COLLECT BONDS TO ATOM IAT1                                        ==

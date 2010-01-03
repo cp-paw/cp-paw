@@ -1,4 +1,4 @@
- !************************************************************************
+!************************************************************************
 !**                                                                    **
 !**  NAME: WAVEPLOT                                                    **
 !**                                                                    **
@@ -141,7 +141,6 @@
        REAL(8)      ,ALLOCATABLE :: WAVE(:,:,:)
        REAL(8)                   :: BOXR0(3)
        REAL(8)                   :: BOXVEC(3,3)
-       INTEGER(4)   ,ALLOCATABLE :: IZ(:)      !(NAT) ATOMIC NUMBER
        REAL(8)      ,ALLOCATABLE :: POSM(:,:)  ! POSITIONS
        INTEGER(4)   ,ALLOCATABLE :: MAP(:)     !MAPPING FROM MODEL 
        REAL(8)      ,ALLOCATABLE :: RAD(:)   
@@ -315,7 +314,6 @@
        REAL(8)               :: BOXVECIN(3,3)
        REAL(8)               :: DET
        REAL(8)               :: R(3)
-       REAL(8)               :: RBOXIN(3:3)
        REAL(8)               :: XMIN1,XMAX1,XMIN2,XMAX2,XMIN3,XMAX3
        INTEGER(4)            :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
        REAL(8)               :: T1,T2,T3
@@ -388,7 +386,6 @@
        REAL(8)               :: BOXVECIN(3,3)
        REAL(8)               :: DET
        REAL(8)               :: R(3),XR(3)
-       REAL(8)               :: RBOXIN(3:3)
        REAL(8)               :: XMIN1,XMAX1,XMIN2,XMAX2,XMIN3,XMAX3
        INTEGER(4)            :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
        REAL(8)               :: T1,T2,T3
@@ -982,9 +979,17 @@
       real(8)               :: svar1,svar2
       real(8)               :: f00,f01,f10,f11,g0,g1
       real(8)               :: xdis(3)
+      real(8)               :: vol
+      real(8)               :: t1(3),t2(3),t3(3)
+      integer(4)            :: nrview,nrviewx
+      real(8)   ,allocatable:: rview(:,:)
+      real(8)   ,allocatable:: zview(:)
       INTEGER(4)            :: i1m,i1p,i2m,i2p,i3m,i3p
-      INTEGER(4)            :: I,J,K
+      INTEGER(4)            :: I,J,K,it1,it2,it3,iat
+      INTEGER(4)            :: min1,max1,min2,max2,min3,max3
+      real(8)               :: pi
 !     **************************************************************************
+      pi=4.d0*atan(1.d0)
       xtor(:,1)=rbas(:,1)/real(nr1,kind=8)
       xtor(:,2)=rbas(:,2)/real(nr2,kind=8)
       xtor(:,3)=rbas(:,3)/real(nr3,kind=8)
@@ -1002,11 +1007,19 @@
           DO K=1,N3
             POS(:)=POS(:)+DT3(:)  ! POSITION ON THE NEW GRID
             XDIS=MATMUL(RTOX,POS)
-            I1M=1+int(MODULO(XDIS(1),real(NR1,kind=8)))
+            xdis(1)=MODULO(XDIS(1),real(NR1,kind=8))
+            xdis(2)=MODULO(XDIS(2),real(NR2,kind=8))
+            xdis(3)=MODULO(XDIS(3),real(NR3,kind=8))
+!           == avoid compiler bug. for very small negative values a result  ==
+!           == equal to the right boundary can occur
+            if(xdis(1).eq.real(nr1,kind=8))xdis(1)=xdis(1)-real(NR1,kind=8)
+            if(xdis(2).eq.real(nr2,kind=8))xdis(2)=xdis(2)-real(NR2,kind=8)
+            if(xdis(3).eq.real(nr3,kind=8))xdis(3)=xdis(3)-real(NR3,kind=8)
+            I1M=1+int(XDIS(1))
             I1P=1+MODULO(I1M,NR1)
-            I2M=1+int(MODULO(XDIS(2),real(NR2,kind=8)))
+            I2M=1+int(XDIS(2))
             I2P=1+MODULO(I2M,NR2)
-            I3M=1+int(MODULO(XDIS(3),real(NR3,kind=8)))
+            I3M=1+int(XDIS(3))
             I3P=1+MODULO(I3M,NR3)
             XDIS(1)=modulo(XDIS(1),1.d0)
             XDIS(2)=modulo(XDIS(2),1.d0)
@@ -1039,9 +1052,54 @@
 !      end if
 !
 !     ==========================================================================
+!     ==  map atoms into the viewbox                                          ==
+!     ==========================================================================
+      call gbass(box,rtox,vol)      
+      nrviewx=nint(vol/(4.d0*pi/3.d0*1.4d0**3)) ! estimate max number of atoms
+                                             ! inside the viewbox
+      allocate(rview(3,nrviewx))
+      allocate(zview(nrviewx))
+      call lib$invertr8(3,box,rtox)
+      min1=-5
+      max1=5
+      min2=-5
+      max2=5
+      min3=-5
+      max3=5
+      nrview=0
+      do it1=min1,max1
+        t1(:)=rbas(:,1)*real(it1,kind=8)
+        do it2=min2,max2
+          t2(:)=rbas(:,2)*real(it2,kind=8)
+          do it3=min3,max3
+            t3(:)=rbas(:,3)*real(it3,kind=8)
+            do iat=1,nat
+              pos(:)=r(:,iat)+t1+t2+t3
+              xdis(:)=matmul(rtox,pos-origin(:))
+              if(xdis(1).lt.-0.05d0.or.xdis(1).gt.1.05d0) cycle
+              if(xdis(2).lt.-0.05d0.or.xdis(2).gt.1.05d0) cycle
+              if(xdis(3).lt.-0.05d0.or.xdis(3).gt.1.05d0) cycle
+              nrview=nrview+1
+              IF(NRVIEW.GT.NRVIEWX) THEN
+                CALL ERROR$MSG('NUMBER OF ATOMS IN THE BOX OUT OF RANGE')
+                CALL ERROR$I4VAL('NRVIEWX',NRVIEWX)
+                CALL ERROR$I4VAL('NRVIEW',NRVIEW)
+                CALL ERROR$STOP('MAKECUBE')
+              END IF
+              rview(:,nrview)=pos(:)
+              zview(nrview)=z(iat)
+            enddo
+          enddo
+        enddo
+      enddo
+!
+!     ==========================================================================
 !     ==  write cube file                                                     ==
 !     ==========================================================================
-      call WRITECUBEFILE(NFIL,NAT,Z,R,ORIGIN,BOX,N1,N2,N3,DATA)
+      call WRITECUBEFILE(NFIL,Nrview,Zview,Rview,ORIGIN,BOX,N1,N2,N3,DATA)
+!
+      deallocate(rview)
+      deallocate(zview)
       return
       end
 !
