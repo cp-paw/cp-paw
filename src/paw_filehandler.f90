@@ -471,12 +471,11 @@ END MODULE FILEHANDLER_MODULE
       RETURN
       END 
 !
-!     ..................................................................     
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE FILEHANDLER_OPEN(FILE_)
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  OPEN files unless already open                                      **
+!     **************************************************************************
       USE STRINGS_MODULE
       USE FILEHANDLER_MODULE
       IMPLICIT NONE
@@ -493,7 +492,7 @@ END MODULE FILEHANDLER_MODULE
       INTEGER(4)                     :: I
       LOGICAL(4)                     :: TOPENIBM  ! IBM CHOICE BETWEEN LITTLE AND BIG ENDIAN
       CHARACTER(1)                   :: CONVERT        !USED TO TEST FOR LITTLE AND BIG ENDIAN
-!     ******************************************************************
+!     **************************************************************************
       STDOUT =-'STDOUT'
       STDIN  =-'STDIN'
       STDERR =-'STDERR'
@@ -574,31 +573,46 @@ END MODULE FILEHANDLER_MODULE
         ACTION=' '
       END IF
 !  
-!     ==================================================================
-!     == OPEN FILE                                                    ==
-!     ==================================================================
+!     =========================================================================
+!     == OPEN FILE                                                           ==
+!     =========================================================================
       IF(TRIM(FILE_%PERMISSION).EQ.'N') THEN
+!       == permission 'N' chooses default permission of (R,W,RW) ==============
+!       == special because parameter ACTION is omitted  =======================
         IERR=4
-        OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
-     &    ,FILE=FILE_%NAME &
-     &    ,STATUS=FILE_%STATUS &
-     &    ,FORM=FORM &
-     &    ,POSITION=FILE_%POSITION)
+        IF(FILE_%FORMATTED) THEN
+!         == recl is explicitely specified to avoid arbitrary breakinf of =====
+!         == lines. recl is the max number if characters per line. ============
+          OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+     &        ,FILE=FILE_%NAME &
+     &        ,STATUS=FILE_%STATUS &
+     &        ,FORM='formatted' &
+     &        ,POSITION=FILE_%POSITION &
+     &        ,recl=1000)
+         else
+!          == recl not specified for unformatted files. uses default.         ==
+!          == The default or recl is 2^31 bytes for direct access files       ==
+           OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+     &        ,FILE=FILE_%NAME &
+     &        ,STATUS=FILE_%STATUS &
+     &        ,FORM='UNFORMATTED' &
+     &        ,POSITION=FILE_%POSITION)
+         end if
          CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
       ELSE
+!       == here files with specified action are opened ========================
         IERR=5
+        IF(FILE_%FORMATTED) THEN
+          OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+     &        ,FILE=FILE_%NAME &
+     &        ,STATUS=FILE_%STATUS &
+     &        ,FORM='FORMATTED' &
+     &        ,POSITION=FILE_%POSITION &
+     &        ,ACTION=ACTION &
+     &        ,RECL=1000)
+          CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+        else
 #IF DEFINED(CPPVAR_ENDIANCHECK)
-        IF(FORM.EQ.'FORMATTED') THEN
-#ENDIF
-        OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
-     &      ,FILE=FILE_%NAME &
-     &      ,STATUS=FILE_%STATUS &
-     &      ,FORM=FORM &
-     &      ,POSITION=FILE_%POSITION &
-     &      ,ACTION=ACTION)
-         CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
-#IF DEFINED(CPPVAR_ENDIANCHECK)
-        ELSE
           CALL FILEHANDLER_READCONVERT(FILE_,FORM,CONVERT)
           IF(CONVERT.EQ.'U') TOPENIBM=(.NOT.TLITTLEENDIAN) !UNKNOWN
           IF(CONVERT.EQ.'B') TOPENIBM=.TRUE.
@@ -615,7 +629,6 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED IBM-COMPATIB
                   &    ,POSITION=FILE_%POSITION &
                   &    ,ACTION=ACTION &
                   &    ,CONVERT='BIG_ENDIAN')            
-            CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
           ELSE
             ! FILE IS INTEL COMPATIBLE
 PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPATIBLE'
@@ -626,10 +639,17 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
                   &    ,POSITION=FILE_%POSITION &
                   &    ,ACTION=ACTION &
                   &    ,CONVERT='LITTLE_ENDIAN')
-            CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
-         END IF
-        END IF
+          END IF
+#ELSE
+          OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+     &        ,FILE=FILE_%NAME &
+     &        ,STATUS=FILE_%STATUS &
+     &        ,FORM='UNFORMATTED' &
+     &        ,POSITION=FILE_%POSITION &
+     &        ,ACTION=ACTION)
 #ENDIF
+          CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+        END IF
       END IF
       FILE_%OPEN=.TRUE.
       FILE_%USED=.TRUE.
