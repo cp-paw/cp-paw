@@ -26,6 +26,7 @@ REAL(8)   ,ALLOCATABLE :: PHIOFR(:,:)
 REAL(8)   ,ALLOCATABLE :: DPHIDR(:,:)
 REAL(8)   ,ALLOCATABLE :: OV(:,:,:)
 REAL(8)   ,ALLOCATABLE :: XK(:,:)
+REAL(8)   ,ALLOCATABLE :: WKPT(:)
 TYPE(STATE_TYPE),ALLOCATABLE,TARGET :: STATEARR(:,:)
 TYPE(STATE_TYPE),POINTER :: STATE
 END MODULE PDOS_MODULE
@@ -326,6 +327,7 @@ END MODULE PDOS_MODULE
           CALL ERROR$STOP('PDOS$GETR8A')
         END IF
         VAL=RESHAPE(OV,(/LNXX*LNXX*NSP/))
+!
       ELSE IF(ID.EQ.'XK') THEN
         IF(LEN.NE.3*NKPT) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -338,6 +340,19 @@ END MODULE PDOS_MODULE
           CALL ERROR$STOP('PDOS$GETR8A')
         END IF
         VAL=RESHAPE(XK,(/3*NKPT/))
+!
+      ELSE IF(ID.EQ.'WKPT') THEN
+        IF(LEN.NE.NKPT) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('PDOS$GETR8A')
+        END IF
+        IF(.NOT.ALLOCATED(WKPT)) THEN
+          CALL ERROR$MSG('REQUESTED QUANTITY HAS NOT BEEN SET')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('PDOS$GETR8A')
+        END IF
+        VAL=WKPT(:)
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -374,6 +389,7 @@ END MODULE PDOS_MODULE
         END IF
         IF(.NOT.ALLOCATED(R)) ALLOCATE(R(3,NAT))
         R=RESHAPE(VAL,(/3,NAT/))
+!
       ELSE IF(ID.EQ.'RAD') THEN
         IF(NSP.EQ.0) NSP=LEN
         IF(LEN.NE.NSP) THEN
@@ -383,6 +399,7 @@ END MODULE PDOS_MODULE
         END IF
         IF(.NOT.ALLOCATED(RAD)) ALLOCATE(RAD(NSP))
         RAD=VAL
+!
       ELSE IF(ID.EQ.'PHI') THEN
         IF(NSP*LNXX.EQ.0) THEN
           IF(NSP.EQ.0)  NSP=LEN/LNXX
@@ -395,6 +412,7 @@ END MODULE PDOS_MODULE
         END IF
         IF(.NOT.ALLOCATED(PHIOFR)) ALLOCATE(PHIOFR(LNXX,NSP))
         PHIOFR=RESHAPE(VAL,(/LNXX,NSP/))
+!
       ELSE IF(ID.EQ.'DPHIDR') THEN
         IF(NSP*LNXX.EQ.0) THEN
           IF(NSP.EQ.0)  NSP=LEN/LNXX
@@ -407,6 +425,7 @@ END MODULE PDOS_MODULE
         END IF
         IF(.NOT.ALLOCATED(DPHIDR))ALLOCATE(DPHIDR(LNXX,NSP))
         DPHIDR=RESHAPE(VAL,(/LNXX,NSP/))
+!
       ELSE IF(ID.EQ.'OVERLAP') THEN
         IF(NSP*LNXX.EQ.0) THEN
           IF(NSP.EQ.0)  NSP=LEN/LNXX**2
@@ -419,6 +438,7 @@ END MODULE PDOS_MODULE
         END IF
         IF(.NOT.ALLOCATED(OV))ALLOCATE(OV(LNXX,LNXX,NSP))
         OV=RESHAPE(VAL,(/LNXX,LNXX,NSP/))
+!
       ELSE IF(ID.EQ.'XK') THEN
         IF(NKPT.EQ.0) NKPT=LEN/3
         IF(LEN.NE.3*NKPT) THEN
@@ -428,6 +448,18 @@ END MODULE PDOS_MODULE
         END IF
         IF(.NOT.ALLOCATED(XK)) ALLOCATE(XK(3,NKPT))
         XK=RESHAPE(VAL,(/3,NKPT/))
+!
+!     == K-POINT WEIGHT ==================================================
+      ELSE IF(ID.EQ.'WKPT') THEN
+        IF(NKPT.EQ.0) NKPT=LEN
+        IF(LEN.NE.NKPT) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('PDOS$SETR8A')
+        END IF
+        IF(.NOT.ALLOCATED(WKPT)) ALLOCATE(WKPT(NKPT))
+        WKPT=VAL(:)
+!
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -449,7 +481,7 @@ END MODULE PDOS_MODULE
       INTEGER(4)             :: LNX1,NB
       INTEGER(4)             :: IOS
       CHARACTER(82)          :: IOSTATMSG
-      CHARACTER(32)          :: FLAG
+      CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION
       LOGICAL(4)             :: TCHK
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS%READ')
@@ -498,17 +530,18 @@ END MODULE PDOS_MODULE
 !     ==  NOW READ PROJECTIONS                                       ==
 !     ==================================================================
       ALLOCATE(XK(3,NKPT))
+      ALLOCATE(WKPT(NKPT))
       ALLOCATE(STATEARR(NKPT,NSPIN))
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
-          READ(NFIL)XK(:,IKPT),NB
           STATE=>STATEARR(IKPT,ISPIN)
+          READ(NFIL,ERR=9998,END=9998)XK(:,IKPT),NB,WKPT(IKPT)
           STATE%NB=NB
           ALLOCATE(STATE%EIG(NB))
           ALLOCATE(STATE%VEC(NDIM,NPRO,NB))
           ALLOCATE(STATE%OCC(NB))
           DO IB=1,NB
-            IF(FLAG.EQ.'011004') THEN
+            IF(FLAG.eq.'011004') THEN
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB) &
     &                          ,STATE%OCC(IB),STATE%VEC(:,:,IB)
             ELSE
@@ -530,6 +563,13 @@ END MODULE PDOS_MODULE
       CALL ERROR$I4VAL('ISPIN',ISPIN)
       CALL ERROR$I4VAL('NPRO',NPRO)
       CALL ERROR$STOP('PDOS$READ')
+      stop
+ 9998 continue
+      CALL ERROR$MSG('ERROR READING PDOS FILE')
+      CALL ERROR$MSG('OLD VERSION: VARIABLE WKPT IS NOT PRESENT')
+      CALL ERROR$MSG('PRODUCE NEW PDOS FILE')
+      CALL ERROR$STOP('PDOS$READ')
+      stop
       END SUBROUTINE PDOS$READ
 !
 !     ..................................................................

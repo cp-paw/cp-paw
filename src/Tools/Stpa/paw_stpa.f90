@@ -9,60 +9,148 @@
       IMPLICIT NONE
       TYPE(LL_TYPE)               :: LL_STP
       CHARACTER(256)              :: SETUPREPORT      
-      CHARACTER(16)               :: Selection
+      CHARACTER(256)              :: STRING
+      CHARACTER(256)              :: OUTFILE
+      CHARACTER(16)               :: SELECTION
       INTEGER(4)                  :: NARGS
+      INTEGER(4)                  :: IARG
       INTEGER(4)                  :: NFIL
+      INTEGER(4)   ,PARAMETER     :: NCHOICEX=100
+      CHARACTER(30)               :: CHOICE(2,NCHOICEX)
+      INTEGER(4)                  :: I,NCHOICE
+      LOGICAL(4)                  :: TCHK
 !     **************************************************************************
+!
+!     ==========================================================================
+!     ==  DEFINE LIST OF SELECTIONS                                           ==
+!     ==========================================================================
+      I=1
+      CHOICE(1,I)='SCATTERING'; CHOICE(2,I)=-'PHASE SHIFTS'; I=I+1
+      CHOICE(1,I)='NB'; CHOICE(2,I)=-'NR. OF WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='NC'; CHOICE(2,I)=-'NR. OF CORE WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='ATOM.L'; CHOICE(2,I)=-'MAIN ANGULAR MOMENTA OF WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='ATOM.E'; CHOICE(2,I)=-'ENERGY EIGENVALUES IN H OF WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='ATOM.F'; CHOICE(2,I)=-'OCCUPATIONS OF WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='NPRO'; CHOICE(2,I)=-'NR. OF PROJECTOR FUNCTIONS'; I=I+1
+      CHOICE(1,I)='LPRO'; CHOICE(2,I)=-'MAIN ANGULAR MOMENTA OF PROJECTOR FUNCTIONS'; I=I+1
+      CHOICE(1,I)='ID'; CHOICE(2,I)=-'ID OF THIS SETUP CONSTRUCTION'; I=I+1
+      CHOICE(1,I)='Z'; CHOICE(2,I)=-'ATOMIC NUMBER'; I=I+1
+      CHOICE(1,I)='ZV'; CHOICE(2,I)=-'NR. OF VALENCE ELECTRONS'; I=I+1
+      CHOICE(1,I)='AEPHI'; CHOICE(2,I)=-'ALL-ELECTRON PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='PSPHI'; CHOICE(2,I)=-'AUXILIARY PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='NLPHI'; CHOICE(2,I)=-'NODE-LESS PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='QPHI'; CHOICE(2,I)=-'CORE-LESS PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='PRO'; CHOICE(2,I)=-'PROJECTOR FUNCTIONS'; I=I+1
+      CHOICE(1,I)='AEPHIDOT'; CHOICE(2,I)=-'SCATTERING ALL-ELECTRON PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='PSPHIDOT'; CHOICE(2,I)=-'AUXILIARY SCATTERING PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='NLPHIDOT'; CHOICE(2,I)=-'NODE-LESS SCATTERING PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='PAWVALENCEPSI'; CHOICE(2,I)=-'VALENCE WAVE FUNCTIONS CALCULATED FROM PAW'; I=I+1
+      CHOICE(1,I)='AEVALENCEPSI'; CHOICE(2,I)=-'ALL-ELECTRON VALENCE WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='UPSI'; CHOICE(2,I)=-'NODE-LESS WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='UPSISM'; CHOICE(2,I)=-'SMALL COMPONENT OF NODE-LESS WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='AEPSI'; CHOICE(2,I)=-'ALL-ELECTRON WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='AEPSISM'; CHOICE(2,I)=-'SMALL COMPONENT OF ALL-ELECTRON WAVE FUNCTIONS'; I=I+1
+      CHOICE(1,I)='PARMS.PSI.RC'; CHOICE(2,I)=-'METHOD FOR CONSTRUCTING AUXILIARY PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='PARMS.PSI.TYPE'; CHOICE(2,I)=-'METHOD FOR CONSTRUCTING AUXILIARY PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='PARMS.PSI.LAMBDA'; CHOICE(2,I)=-'DECAY PARAMETER FOR CONSTRUCTING AUXILIARY PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='PARMS.CORE.RC'; CHOICE(2,I)=-'CUTOFF RADIUS FOR PSEUDIZED CORE'; I=I+1
+      CHOICE(1,I)='PARMS.CORE.POW'; CHOICE(2,I)=-'LEADING POWER AT THE ORIGIN OF THE PSEUDIZED CORE'; I=I+1
+      CHOICE(1,I)='PARMS.CORE.VAL0'; CHOICE(2,I)=-'VALUE AT THE ORIGIN OF THE PSEUDIZED CORE'; I=I+1
+      CHOICE(1,I)='PARMS.POT.RC'; CHOICE(2,I)=-'CUTOFF RADIUS FOR PSEUDIZED POTENTIAL'; I=I+1
+      CHOICE(1,I)='PARMS.POT.POW'; CHOICE(2,I)=-'LEADING POWER AT THE ORIGIN OF THE PSEUDIZED POTENTIAL'; I=I+1
+      CHOICE(1,I)='PARMS.POT.VAL0'; CHOICE(2,I)=-'VALUE AT THE ORIGIN OF THE PSEUDIZED POTENTIAL'; I=I+1
+      CHOICE(1,I)='PARMS.RCSM'; CHOICE(2,I)=-'NARROW COMPENSATION GAUSSIAN'; I=I+1
+      CHOICE(1,I)='POT'; CHOICE(2,I)=-'POTENTIALS [AE,PS,V(PSRHO)]'; I=I+1
+      CHOICE(1,I)='PROG'; CHOICE(2,I)=-'PROJECTOR FUNCTIONS IN G-SPACE'; I=I+1
+      CHOICE(1,I)='VADDG'; CHOICE(2,I)=-'VADD IN G-SPACE'; I=I+1
+      NCHOICE=I-1
+      CHOICE(1,I)='AECORE'; CHOICE(2,I)=-'ATOMIC CORE DENSITY'; I=I+1
+      CHOICE(1,I)='PSCORE'; CHOICE(2,I)=-'PSEUDIZED CORE DENSITY'; I=I+1
+!
+!     ==========================================================================
+!     ==  DETERMINE THE NUMBER OF ELEMENTS IN THE ARGUMENT LIST               ==
+!     ==========================================================================
       CALL LIB$NARGS(NARGS)
-      IF(NARGS.GE.1) THEN
-        CALL LIB$GETARG(1,SELECTION)
-        IF(SELECTION.EQ.'?'.OR.SELECTION.EQ.-'-H') THEN
-          WRITE(*,FMT='(a)')'calling sequence:'
-          WRITE(*,FMT='(t10,a)')-"PAW_STPA.X SELECTION FILE"
-          WRITE(*,FMT='("THE NAME OF FILE HAS THE FORM:")') 
-          WRITE(*,FMT='(t10,a)')+"ROOT"//-"_STPFORZ"//+"NN"//-".MYXML"
-          WRITE(*,FMT='("SELECTION CAN BE ONE OF:")')
 !
-          WRITE(*,FMT='(t2,A,T20,A)')+'scattering',-'phase shifts'
-!
-          WRITE(*,FMT='(T2,A,T20,A)')+'NB',-'NR. OF WAVE FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'NC',-'NR. OF CORE WAVE FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'ATOM.L',-'MAIN ANGULAR MOMENTA OF WAVE FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'ATOM.E',-'ENERGY EIGENVALUES IN H OF WAVE FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'ATOM.F',-'OCCUPATIONS OF WAVE FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'NPRO',-'NR. OF PROJECTOR FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'LPRO',-'MAIN ANGULAR MOMENTA OF PROJECTOR FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'ID',-'ID OF THIS SETUP CONSTRUCTION'
-          WRITE(*,FMT='(T2,A,T20,A)')+'Z',-'ATOMIC NUMBER'
-          WRITE(*,FMT='(T2,A,T20,A)')+'ZV',-'NR. OF VALENCE ELECTRONS'
-!
-          WRITE(*,FMT='(t2,A,T20,A)')+'AEPHI',-'ALL-ELECTRON PARTIAL WAVES'
-          WRITE(*,FMT='(t2,A,T20,A)')+'PSPHI',-'AUXILIARY PARTIAL WAVES'
-          WRITE(*,FMT='(t2,A,T20,A)')+'NLPHI',-'NODE-LESS PARTIAL WAVES'
-          WRITE(*,FMT='(t2,A,T20,A)')+'QPHI',-'CORE-LESS PARTIAL WAVES'
-          WRITE(*,FMT='(t2,A,T20,A)')+'PRO',-'PROJECTOR FUNCTIONS'
-          WRITE(*,FMT='(t2,A,T20,A)')+'AEPHIDOT',-'SCATTERING ALL-ELECTRON PARTIAL WAVES'
-          WRITE(*,FMT='(t2,A,T20,A)')+'PSPHIDOT',-'AUXILIARY SCATTERING PARTIAL WAVES'
-          WRITE(*,FMT='(t2,A,T20,A)')+'NLPHIDOT',-'NODE-LESS SCATTERING PARTIAL WAVES'
-          WRITE(*,FMT='(T2,A,T20,A)')+'PAWVALENCEPSI',-'VALENCE WAVE FUNCTIONS CALCULATED FROM PAW'
-          WRITE(*,FMT='(T2,A,T20,A)')+'AEVALENCEPSI',-'ALL-ELECTRON VALENCE WAVE FUNCTIONS'
-!
-          WRITE(*,FMT='(T2,A,T20,A)')+'UPSI',-'NODE-LESS WAVE FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'UPSISM',-'SMALL COMPONENT OF NODE-LESS WAVE FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'AEPSI',-'ALL-ELECTRON WAVE FUNCTIONS'
-          WRITE(*,FMT='(T2,A,T20,A)')+'AEPSISM',-'SMALL COMPONENT OF ALL-ELECTRON WAVE FUNCTIONS'
+!     ==========================================================================
+!     ==  SEARCH FOR HELP ARGUMENT                                            ==
+!     ==========================================================================
+      DO IARG=1,NARGS
+        CALL LIB$GETARG(IARG,STRING)
+        IF(STRING.EQ.'?'.OR.STRING.EQ.-'-H') THEN
+          CALL ERRORMESSAGE(NCHOICE,CHOICE)
           STOP
         END IF
+      ENDDO
+!
+!     ==========================================================================
+!     ==  RESOLVE ARGUMENT LIST                                               ==
+!     ==========================================================================
+!     == LAST ARGUMENT IS THE INPUT  FILE FOR THE SETUP REPORT =================
+      CALL LIB$GETARG(NARGS,SETUPREPORT)
+!
+      SELECTION=''
+      OUTFILE=''
+      IARG=1
+      DO WHILE(IARG.LT.NARGS)
+        CALL LIB$GETARG(IARG,STRING)
+!       == OPTION MUST START WITH A DASH =========================================
+        IF(STRING(1:1).NE.'-') THEN
+          WRITE(*,*)'INPUT ERROR: ARGUMENT MUST BEGIN WITH A DASH'
+          WRITE(*,*)
+          CALL ERRORMESSAGE(NCHOICE,CHOICE)
+          STOP
+        END IF       
+!      
+        IF(+STRING.EQ.+'-O') THEN
+          IARG=IARG+1
+          CALL LIB$GETARG(IARG,OUTFILE)
+          IF(OUTFILE(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
+            WRITE(*,*)'INPUT ERROR: OPTION -O MUST BE FOLLOWED BY OUTPUT FILE'
+            WRITE(*,*)
+            CALL ERRORMESSAGE(NCHOICE,CHOICE)
+            STOP
+          END IF
+          IARG=IARG+1
+!
+!       == OPTION SPECIFY SELECTION ===========================================
+        ELSE IF(+STRING.EQ.+'-S') THEN
+          IARG=IARG+1
+          CALL LIB$GETARG(IARG,SELECTION)
+          IF(SELECTION(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
+            WRITE(*,*)'INPUT ERROR: OPTION -S MUST BE FOLLOWED BY SELECTION'
+            WRITE(*,*)
+            CALL ERRORMESSAGE(NCHOICE,CHOICE)
+            STOP
+          END IF
+          SELECTION=+SELECTION
+          TCHK=.FALSE.
+          DO I=1,NCHOICE
+            TCHK=TCHK.OR.(TRIM(SELECTION).EQ.+TRIM(CHOICE(1,I)))
+            IF(TCHK) EXIT
+          ENDDO
+          IF(.NOT.TCHK) THEN
+            WRITE(*,*)'INPUT ERROR: ILLEGAL VALUE FOR SELECTION'
+            WRITE(*,*)'SELECTION=',TRIM(SELECTION)
+            WRITE(*,*)
+            CALL ERRORMESSAGE(NCHOICE,CHOICE)
+            STOP
+          END IF
+          IARG=IARG+1
+        ELSE 
+          WRITE(*,*)'INPUT ERROR: UNKNOWN ARGUMENT'
+          WRITE(*,*)'SELECTION=',TRIM(STRING)
+          WRITE(*,*)
+          CALL ERRORMESSAGE(NCHOICE,CHOICE)
+          STOP
+        END IF
+      ENDDO
+      IF(SELECTION.EQ.'') THEN
+        WRITE(*,*)'INPUT ERROR: OPTION -S IS MANDATORY'
+        WRITE(*,*)
+        CALL ERRORMESSAGE(NCHOICE,CHOICE)
+        STOP
       END IF
-      IF(NARGS.NE.2) THEN
-        CALL ERROR$MSG('INCORRECT NUMBER OF COMMAND LINE ARGUMENTS')
-        CALL ERROR$MSG('CALLING SEQUENCE:')
-        CALL ERROR$MSG('PAW_STPA.X ARG SETUPREPORTFILENAME')
-        CALL ERROR$STOP('MAIN')
-      END IF
-      CALL LIB$GETARG(1,selection)
-      selection=+selection
-      CALL LIB$GETARG(2,SETUPREPORT)
 !
 !     ==========================================================================
 !     == READ INPUT FILE                                                      ==
@@ -72,11 +160,6 @@
       CALL FILEHANDLER$SETSPECIFICATION('STP_REPORT','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('STP_REPORT','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION('STP_REPORT','FORM','FORMATTED')
-      CALL FILEHANDLER$SETFILE('DAT',.FALSE.,-'TMP.DAT')
-      CALL FILEHANDLER$SETSPECIFICATION('DAT','STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION('DAT','POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION('DAT','ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION('DAT','FORM','FORMATTED')
 !
 !     ==========================================================================
 !     == READ INPUT FILE                                                      ==
@@ -86,11 +169,38 @@
       CALL LINKEDLIST$READ(LL_STP,NFIL,'~')
 !
 !     ==========================================================================
-!     == define output file and prepare output                                ==
+!     == DEFINE OUTPUT FILE AND PREPARE OUTPUT                                ==
 !     ==========================================================================
-!      CALL FILEHANDLER$UNIT('DAT',NFIL)
-      NFIL=6   ! standard output
-!      call linkedlist$report(ll_stp,nfil)
+      IF(OUTFILE.NE.'') THEN
+        CALL FILEHANDLER$SETFILE('DAT',.FALSE.,OUTFILE)
+        CALL FILEHANDLER$SETSPECIFICATION('DAT','STATUS','UNKNOWN')
+        CALL FILEHANDLER$SETSPECIFICATION('DAT','POSITION','REWIND')
+        CALL FILEHANDLER$SETSPECIFICATION('DAT','ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION('DAT','FORM','FORMATTED')
+        CALL FILEHANDLER$UNIT('DAT',NFIL)
+      ELSE 
+       NFIL=6
+      END IF
+!      CALL LINKEDLIST$REPORT(LL_STP,NFIL)
+!
+!     ==========================================================================
+!     == SCAN FOR PARAMETERS                                                  ==
+!     ==========================================================================
+      CALL PARMSCONSTANTS(LL_STP,NFIL,SELECTION,TCHK)
+      IF(TCHK) STOP
+!
+!     ==========================================================================
+!     == SCAN FOR POTENTIALS                                                  ==
+!     ==========================================================================
+      CALL POTENTIALS(LL_STP,NFIL,SELECTION,TCHK)
+      IF(TCHK) STOP
+!
+!     ==========================================================================
+!     == SCAN FOR PROJECTOR FUNCTIONS AND VADD IN G-SPACE                     ==
+!     ==========================================================================
+      CALL FOURIER(LL_STP,NFIL,SELECTION,TCHK)
+      IF(TCHK) STOP
+!
 !     ==========================================================================
 !     == TAKE CARE OF SCATTERING PROPERTIES                                   ==
 !     ==========================================================================
@@ -98,7 +208,7 @@
         CALL SCATTERING(LL_STP,NFIL)
 !
 !     ==========================================================================
-!     == constants                                                            ==
+!     == CONSTANTS                                                            ==
 !     ==========================================================================
       ELSE IF(SELECTION.EQ.'NB') THEN
         CALL ATOMCONSTANTS(LL_STP,NFIL,'NB')
@@ -169,13 +279,113 @@
       ELSE IF(SELECTION.EQ.'UPSISM') THEN
         CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION))
       ELSE 
-!aepot,pspot,potofpsrho,aecore,pscore
+!AEPOT,PSPOT,POTOFPSRHO,AECORE,PSCORE
         CALL ERROR$MSG('SELECTION NOT RECOGNIZED')
         CALL ERROR$CHVAL('SELECTION',SELECTION)
         CALL ERROR$STOP('MAIN')
       END IF
 !      CALL FILEHANDLER$CLOSE('DAT')
       STOP
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ERRORMESSAGE(NCHOICE,CHOICE)
+!     **************************************************************************
+!     **  WRITES AN ERROR MESSAGE TO STANDARD OUT                             **
+!     **************************************************************************
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NCHOICE
+      CHARACTER(*),INTENT(IN) :: CHOICE(2,NCHOICE)
+      INTEGER(4)              :: I
+!     **************************************************************************
+      WRITE(*,FMT='(A)')'CALLING SEQUENCE:'
+      WRITE(*,FMT='(T10,A)')-"PAW_STPA.X -S SELECTION -O OUTFILE INFILE"
+      WRITE(*,FMT=*)
+      WRITE(*,FMT='("INFILE IS THE NAME OF THE INPUT FILE")') 
+      WRITE(*,FMT='("THE NAME OF INFILE HAS THE FORM:")') 
+      WRITE(*,FMT='(T10,A)')+"ROOT"//-"_STPFORZ"//+"NN"//-".MYXML"
+      WRITE(*,FMT='("     WHERE NN IS THE ATOMIC NUMBER")') 
+      WRITE(*,FMT='("     AND ROOT IS THE ROOT NAME OF THE PAW PROJECT")') 
+      WRITE(*,FMT=*)
+      WRITE(*,FMT='("OUTFILE IS THE NAME OF THE OUTPUT FILE")') 
+      WRITE(*,FMT=*)
+      WRITE(*,FMT='("SELECTION CAN BE ONE OF:")')
+!
+      DO I=1,NCHOICE
+        WRITE(*,FMT='(T2,A,T20,A)')-CHOICE(1,I),CHOICE(2,I)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PARMSCONSTANTS(LL_STP,NFIL,ID,TCHK)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
+      INTEGER(4)   ,INTENT(IN)    :: NFIL
+      CHARACTER(*) ,INTENT(IN)    :: ID
+      LOGICAL(4)   ,INTENT(OUT)   :: TCHK
+      REAL(8)                     :: SVAR
+      CHARACTER(64)               :: CHVAR
+      INTEGER(4)                  :: ISVAR
+      REAL(8)     ,ALLOCATABLE    :: ARR(:)
+!     **************************************************************************
+      TCHK=.TRUE.
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'PARAMETERS',1)
+      IF(ID.EQ.'PARMS.RCSM') THEN
+        CALL LINKEDLIST$GET(LL_STP,'RCSM',1,CHVAR)
+        WRITE(NFIL,*)CHVAR
+      ELSE IF(ID.EQ.'PARMS.PSI.TYPE') THEN
+        CALL LINKEDLIST$SELECT(LL_STP,'PSI',1)
+        CALL LINKEDLIST$GET(LL_STP,'TYPE',1,CHVAR)
+        WRITE(NFIL,*)CHVAR
+      ELSE IF(ID.EQ.'PARMS.PSI.RC') THEN
+        CALL LINKEDLIST$SELECT(LL_STP,'PSI',1)
+        CALL LINKEDLIST$SIZE(LL_STP,'RC',1,ISVAR)
+        ALLOCATE(ARR(ISVAR))
+        CALL LINKEDLIST$GET(LL_STP,'RC',1,ARR)
+        WRITE(NFIL,*)ARR
+        DEALLOCATE(ARR)
+      ELSE IF(ID.EQ.'PARMS.PSI.LAMBDA') THEN
+        CALL LINKEDLIST$SELECT(LL_STP,'PSI',1)
+        CALL LINKEDLIST$SIZE(LL_STP,'LAMBDA',1,ISVAR)
+        ALLOCATE(ARR(ISVAR))
+        CALL LINKEDLIST$GET(LL_STP,'LAMBDA',1,ARR)
+        WRITE(NFIL,*)ARR
+        DEALLOCATE(ARR)
+      ELSE IF(ID.EQ.'PARMS.CORE.RC') THEN
+        CALL LINKEDLIST$SELECT(LL_STP,'CORE',1)
+        CALL LINKEDLIST$GET(LL_STP,'RC',1,SVAR)
+        WRITE(NFIL,*)SVAR
+      ELSE IF(ID.EQ.'PARMS.CORE.POW') THEN
+        CALL LINKEDLIST$SELECT(LL_STP,'CORE',1)
+        CALL LINKEDLIST$GET(LL_STP,'POW',1,SVAR)
+        WRITE(NFIL,*)SVAR
+      ELSE IF(ID.EQ.'PARMS.CORE.VAL0') THEN
+        CALL LINKEDLIST$SELECT(LL_STP,'CORE',1)
+        CALL LINKEDLIST$GET(LL_STP,'VAL0',1,SVAR)
+        WRITE(NFIL,*)SVAR
+      ELSE IF(ID.EQ.'PARMS.POT.RC') THEN
+        CALL LINKEDLIST$SELECT(LL_STP,'POT',1)
+        CALL LINKEDLIST$GET(LL_STP,'RC',1,SVAR)
+        WRITE(NFIL,*)SVAR
+      ELSE IF(ID.EQ.'PARMS.POT.POW') THEN
+        CALL LINKEDLIST$SELECT(LL_STP,'POT',1)
+        CALL LINKEDLIST$GET(LL_STP,'POW',1,SVAR)
+        WRITE(NFIL,*)SVAR
+      ELSE IF(ID.EQ.'PARMS.POT.VAL0') THEN
+        CALL LINKEDLIST$SELECT(LL_STP,'POT',1)
+        CALL LINKEDLIST$GET(LL_STP,'VAL0',1,SVAR)
+        WRITE(NFIL,*)SVAR
+      ELSE
+        TCHK=.FALSE.
+      END IF
+      RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -187,7 +397,7 @@
       TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
       INTEGER(4)   ,INTENT(IN)    :: NFIL
       CHARACTER(*),INTENT(IN)     :: ID
-      REAL(8)                     :: svar
+      REAL(8)                     :: SVAR
       CHARACTER(64)               :: CHVAR
 !     **************************************************************************
       CALL LINKEDLIST$SELECT(LL_STP,'~',0)
@@ -211,7 +421,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE augmentationconstants(LL_STP,NFIL,ID)
+      SUBROUTINE AUGMENTATIONCONSTANTS(LL_STP,NFIL,ID)
 !     **************************************************************************
 !     **************************************************************************
       USE LINKEDLIST_MODULE
@@ -243,7 +453,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE atomconstants(LL_STP,NFIL,ID)
+      SUBROUTINE ATOMCONSTANTS(LL_STP,NFIL,ID)
 !     **************************************************************************
 !     **************************************************************************
       USE LINKEDLIST_MODULE
@@ -253,7 +463,7 @@
       CHARACTER(*),INTENT(IN)     :: ID
       INTEGER(4)                  :: ISVAR
       INTEGER(4)  ,ALLOCATABLE    :: IARR(:)
-      reaL(8)     ,ALLOCATABLE    :: ARR(:)
+      REAL(8)     ,ALLOCATABLE    :: ARR(:)
 !     **************************************************************************
       CALL LINKEDLIST$SELECT(LL_STP,'~',0)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
@@ -282,10 +492,10 @@
         CALL LINKEDLIST$GET(LL_STP,'F',1,ARR)
         WRITE(NFIL,*)ARR
         DEALLOCATE(ARR)
-      ELSE IF(ID.EQ.'ATOM.so') THEN
+      ELSE IF(ID.EQ.'ATOM.SO') THEN
         CALL LINKEDLIST$GET(LL_STP,'NB',1,ISVAR)
         ALLOCATE(ARR(ISVAR))
-        CALL LINKEDLIST$GET(LL_STP,'so',1,ARR)
+        CALL LINKEDLIST$GET(LL_STP,'SO',1,ARR)
         WRITE(NFIL,*)ARR
         DEALLOCATE(ARR)
       ELSE
@@ -294,10 +504,10 @@
         CALL ERROR$STOP('ATOMCONSTANTS')
       END IF
       RETURN
-      end
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE augmentation(LL_STP,NFIL,ID)
+      SUBROUTINE AUGMENTATION(LL_STP,NFIL,ID)
 !     **************************************************************************
 !     **************************************************************************
       USE LINKEDLIST_MODULE
@@ -308,8 +518,8 @@
       INTEGER(4)                  :: NR
       REAL(8)      ,ALLOCATABLE   :: R(:)
       REAL(8)      ,ALLOCATABLE   :: PHI(:,:)
-      INTEGER(4)                  :: lnx
-      INTEGER(4)                  :: ln,IR
+      INTEGER(4)                  :: LNX
+      INTEGER(4)                  :: LN,IR
 !     **************************************************************************
       CALL LINKEDLIST$SELECT(LL_STP,'~',0)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
@@ -343,7 +553,7 @@
         ELSE
           CALL ERROR$MSG('ID NOT RECOGNIZED')
           CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('augmentation')
+          CALL ERROR$STOP('AUGMENTATION')
         END IF
       ENDDO
 !
@@ -351,13 +561,13 @@
 !     ==                                                                      ==
 !     ==========================================================================
       DO IR=1,NR
-        WRITE(NFIL,*)R(IR),PhI(IR,:)
+        WRITE(NFIL,*)R(IR),PHI(IR,:)
       ENDDO
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE valenceWAVEFUNCTION(LL_STP,NFIL,ID)
+      SUBROUTINE VALENCEWAVEFUNCTION(LL_STP,NFIL,ID)
 !     **************************************************************************
 !     **************************************************************************
       USE LINKEDLIST_MODULE
@@ -368,7 +578,7 @@
       INTEGER(4)                  :: NR
       REAL(8)      ,ALLOCATABLE   :: R(:)
       REAL(8)      ,ALLOCATABLE   :: PSI(:,:)
-      INTEGER(4)                  :: Nv
+      INTEGER(4)                  :: NV
       INTEGER(4)                  :: IB,IR
 !     **************************************************************************
       CALL LINKEDLIST$SELECT(LL_STP,'~',0)
@@ -440,7 +650,7 @@
           CALL LINKEDLIST$GET(LL_STP,'AEPSISM',IB,PSI(:,IB))
         ELSE IF(ID.EQ.'UPSI') THEN
           CALL LINKEDLIST$GET(LL_STP,'UPSI',IB,PSI(:,IB))
-!          psi(:,ib)=psi(:,ib)/maxval(abs(psi(:,ib)))
+!          PSI(:,IB)=PSI(:,IB)/MAXVAL(ABS(PSI(:,IB)))
         ELSE IF(ID.EQ.'UPSISM') THEN
           CALL LINKEDLIST$GET(LL_STP,'UPSI_SMALL',IB,PSI(:,IB))
         ELSE
@@ -455,6 +665,100 @@
 !     ==========================================================================
       DO IR=1,NR
         WRITE(NFIL,*)R(IR),PSI(IR,:)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE POTENTIALS(LL_STP,NFIL,ID,TCHK)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
+      INTEGER(4)   ,INTENT(IN)    :: NFIL
+      CHARACTER(*),INTENT(IN)     :: ID
+      LOGICAL(4)   ,INTENT(OUT)   :: TCHK
+      INTEGER(4)                  :: NR
+      REAL(8)      ,ALLOCATABLE   :: R(:)
+      REAL(8)      ,ALLOCATABLE   :: POTS(:,:)
+      INTEGER(4)                  :: IR
+!     **************************************************************************
+      TCHK=ID.EQ.'POT'
+      IF(.NOT.TCHK) RETURN
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'RGRID',1)
+      CALL LINKEDLIST$GET(LL_STP,'NR',1,NR)
+      ALLOCATE(R(NR))
+      CALL LINKEDLIST$GET(LL_STP,'R',1,R)
+!
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'ATOM',1)
+      ALLOCATE(POTS(NR,3))
+      CALL LINKEDLIST$GET(LL_STP,'AEPOT',1,POTS(:,1))
+      CALL LINKEDLIST$GET(LL_STP,'PSPOT',1,POTS(:,2))
+      CALL LINKEDLIST$GET(LL_STP,'VADD',1,POTS(:,3))
+      POTS(:,3)=POTS(:,2)-POTS(:,3)
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      DO IR=1,NR
+        WRITE(NFIL,*)R(IR),POTS(IR,:)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE FOURIER(LL_STP,NFIL,ID,TCHK)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
+      INTEGER(4)   ,INTENT(IN)    :: NFIL
+      CHARACTER(*),INTENT(IN)     :: ID
+      LOGICAL(4)   ,INTENT(OUT)   :: TCHK
+      INTEGER(4)                  :: NG
+      INTEGER(4)                  :: NPRO
+      INTEGER(4)                  :: ISVAR
+      REAL(8)      ,ALLOCATABLE   :: G(:)
+      REAL(8)      ,ALLOCATABLE   :: F(:,:)
+      INTEGER(4)                  :: IG
+!     **************************************************************************
+      TCHK=(ID.EQ.'PROG').OR.(ID.EQ.'VADDG')
+      IF(.NOT.TCHK) RETURN
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'BESSELTRANSFORMED',1)
+      CALL LINKEDLIST$GET(LL_STP,'NG',1,NG)
+      ALLOCATE(G(NG))
+      CALL LINKEDLIST$GET(LL_STP,'G',1,G)
+      IF(ID.EQ.'PROG') THEN
+        CALL LINKEDLIST$SIZE(LL_STP,'PRO',1,ISVAR)
+        NPRO=NINT(REAL(ISVAR)/REAL(NG))
+        IF(NPRO*NG.NE.ISVAR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
+          CALL ERROR$I4VAL('NG',NG)
+          CALL ERROR$I4VAL('ESTIMATED NPRO',NPRO)
+          CALL ERROR$I4VAL('SIZE-NPRO*NG',ISVAR-NPRO*NG)
+          CALL ERROR$STOP('FOURIER')
+        ENDIF
+        ALLOCATE(F(NG,NPRO))
+        CALL LINKEDLIST$GET(LL_STP,'PRO',1,F)
+!      
+      ELSE IF(ID.EQ.'VADDG') THEN
+        ALLOCATE(F(NG,1))
+        CALL LINKEDLIST$GET(LL_STP,'VADD',1,F)
+      END IF
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      DO IG=1,NG
+        WRITE(NFIL,*)G(IG),F(IG,:)
       ENDDO
       RETURN
       END

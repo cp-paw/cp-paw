@@ -21,7 +21,7 @@ END MODULE SPINDIR_MODULE
       INTEGER(4)                :: NB
       INTEGER(4)                :: NKPT
       INTEGER(4)                :: NSPIN
-      INTEGER(4)                :: NDIM
+      INTEGER(4)                :: NDIM !=2 for spinor wf; otherwise =1
       INTEGER(4)                :: LENG
       INTEGER(4)                 :: NSET
       INTEGER(4)   ,ALLOCATABLE :: LMX(:)
@@ -120,6 +120,7 @@ END MODULE SPINDIR_MODULE
      &                  ,NAT,LMX,RPOS,LENG &
      &                  ,SET,LEGEND)
       DEALLOCATE(LMX)
+
                             CALL TRACE$PASS('AFTER READCNTL$SETS')
 !
 !     ==================================================================
@@ -128,7 +129,7 @@ END MODULE SPINDIR_MODULE
       CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD,SCALEY)
                             CALL TRACE$PASS('AFTER READCNTL$GRID')
       CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
-     &                    ,NB,NKPT,NSPIN,EIG,NSET,SET,LEGEND)
+     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND)
                             CALL TRACE$PASS('AFTER READCNTL$OUTPUT')
 !
 !     ==================================================================
@@ -1115,16 +1116,19 @@ END MODULE READCNTL_MODULE
           ELSE
             SPIN='TOTAL'
           END IF
+!
 !         ==============================================================
 !         ==  'TOTAL' = TOTAL DENSITY OF STATES                       ==
 !         ==============================================================
           IF(TRIM(TYPE).EQ.'TOTAL') THEN
             SET(:,:,:,ISET)=1.D0
+!
 !         ==============================================================
 !         ==  'ALL' = ALL PROJECTED DENSITY OF STATES                 ==
 !         ==============================================================
           ELSE IF(TRIM(TYPE).EQ.'ALL') THEN
             CALL SET$WEIGHT('ALL','',NB,NKPT,NSPIN,SPIN,SET(1,1,1,ISET))
+!
 !         ==============================================================
 !         ==  'EMPTY' = VACCUM DENSITY OF STATES                      ==
 !         ==============================================================
@@ -1404,7 +1408,7 @@ END MODULE READCNTL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
-     &                    ,NB,NKPT,NSPIN,EIG,NSET,SET,LEGEND)
+     &                    ,NB,NKPT,NSPIN,ndim,EIG,NSET,SET,LEGEND)
 !     **************************************************************************
 !     **************************************************************************
       USE READCNTL_MODULE
@@ -1418,6 +1422,7 @@ END MODULE READCNTL_MODULE
       INTEGER(4)   ,INTENT(IN) :: NB
       INTEGER(4)   ,INTENT(IN) :: NKPT
       INTEGER(4)   ,INTENT(IN) :: NSPIN
+      INTEGER(4)   ,INTENT(IN) :: Ndim  !#(spinor components)
       REAL(8)      ,INTENT(IN) :: EIG(NB,NKPT,NSPIN)
       INTEGER(4)   ,INTENT(IN) :: NSET
       REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN,NSET)
@@ -1478,9 +1483,9 @@ END MODULE READCNTL_MODULE
         ENDIF
 !
 !       ==  OUTPUT TYPE ===============================================
-!       ==  (b,k,s) specifies a specific state reported in the protocoll
-!       ==  e[ev]    specifies an energy
-!       ==  otherwise the information on the grid is written to file
+!       ==  (B,K,S) SPECIFIES A SPECIFIC STATE REPORTED IN THE PROTOCOLL
+!       ==  E[EV]    SPECIFIES AN ENERGY
+!       ==  OTHERWISE THE INFORMATION ON THE GRID IS WRITTEN TO FILE
         CALL LINKEDLIST$EXISTD(LL_CNTL,'B',1,TIB)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'E[EV]',1,TE)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'K',1,TIK)
@@ -1583,8 +1588,8 @@ END MODULE READCNTL_MODULE
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                      ==
 !       ================================================================
         IF(.NOT.(TIB.OR.TE)) THEN
-            CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
-      &                   ,NB,NKPT,NSPIN,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+          CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
+      &                 ,NB,NKPT,NSPIN,ndim,EIG,SET(:,:,:,ISET),LEGEND(ISET))
         END IF
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO
@@ -1594,7 +1599,7 @@ END MODULE READCNTL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
-     &                    ,NB,NKPT,NSPIN,EIG,SET,LEGEND)
+     &                    ,NB,NKPT,NSPIN,ndim,EIG,SET,LEGEND)
 !     **************************************************************************
 !     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
 !     **  CONSTRUCTS DOS AND NOS AND WRITES THE RESULT ON FILE                **
@@ -1610,7 +1615,7 @@ END MODULE READCNTL_MODULE
 !     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
 !     **                                                                      **
 !     **************************************************************************
-      USE PDOS_MODULE, ONLY: STATE,STATEARR
+      USE PDOS_MODULE, ONLY: STATE,STATEARR,wkpt
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NE
       REAL(8)      ,INTENT(IN) :: EMIN
@@ -1620,6 +1625,7 @@ END MODULE READCNTL_MODULE
       INTEGER(4)   ,INTENT(IN) :: NB
       INTEGER(4)   ,INTENT(IN) :: NKPT
       INTEGER(4)   ,INTENT(IN) :: NSPIN
+      INTEGER(4)   ,INTENT(IN) :: Ndim
       REAL(8)      ,INTENT(IN) :: EIG(NB,NKPT,NSPIN)
       REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN)
       INTEGER(4)   ,INTENT(IN) :: NFIL
@@ -1633,28 +1639,36 @@ END MODULE READCNTL_MODULE
       REAL(8)              :: W1,W2,X,FAC
       REAL(8)              :: NOSSMALL(NSPIN,2)
       REAL(8)              :: WGHTX
-      REAL(8)              :: WKPT(NKPT)
+!      REAL(8)              :: WKPT(NKPT)
       INTEGER(4)           :: IKPT,ISPIN,IE,IB
       REAL(8)              :: SVAR
       REAL(8)              :: E
+      REAL(8)              :: spindeg
 !     **************************************************************************
                                  CALL TRACE$PUSH('PUTONGRID')
       CALL CONSTANTS('EV',EV)
       DE=(EMAX-EMIN)/real(NE-1,kind=8)   !step of the energy grid
       ND=NINT(EBROAD/DE*SQRT(-LOG(1.D-3)))  !broadening extends over 2N steps
-      DO IKPT=1,NKPT
-        WKPT(IKPT)=0.D0
-        DO ISPIN=1,NSPIN
-          STATE=>STATEARR(IKPT,ISPIN)
-!         == CAUTION: HERE I ESTIMATE THE WEIGHT AND SPIN-DEGENERACY FACTOR 
-!         == FROM THE MAX OCCUPATION, WHICH MAY BE INCORRECT
-          WKPT(IKPT)=MAX(WKPT(IKPT),MAXVAL(STATE%OCC(:)))
-        ENDDO
-        IF(WKPT(IKPT).EQ.0.D0) THEN
-          CALL ERROR$MSG('NO ELECTRONS FOR THIS K-POINT. GOT CONFUSED')
-          CALL ERROR$STOP('PUTONGRID')
-        END IF
-      ENDDO       
+      spindeg=1.d0
+      if(nspin.eq.1.and.ndim.eq.1) spindeg=2.d0
+!
+!     == this is a dirty fix that was necessary before the k-point weight was
+!     == available on the pdos file 
+      if(sum(wkpt).eq.0.d0) then
+        DO IKPT=1,NKPT
+          WKPT(IKPT)=0.D0
+          DO ISPIN=1,NSPIN
+            STATE=>STATEARR(IKPT,ISPIN)
+!           == CAUTION: HERE I ESTIMATE THE WEIGHT AND SPIN-DEGENERACY FACTOR 
+!           == FROM THE MAX OCCUPATION, WHICH MAY BE INCORRECT
+            WKPT(IKPT)=MAX(WKPT(IKPT),MAXVAL(STATE%OCC(:)))
+          ENDDO
+          IF(WKPT(IKPT).EQ.0.D0) THEN
+            CALL ERROR$MSG('NO ELECTRONS FOR THIS K-POINT. GOT CONFUSED')
+            CALL ERROR$STOP('PUTONGRID')
+          END IF
+        ENDDO       
+      end if
 !
 !     ==========================================================================
 !     ==  map contribution from each state) onto the energy grid.             ==
@@ -1666,8 +1680,8 @@ END MODULE READCNTL_MODULE
         DO IKPT=1,NKPT
           STATE=>STATEARR(IKPT,ISPIN)
 !         == CAUTION: HERE I ESTIMATE THE WEIGHT AND SPIN-DEGENERACY FACTOR 
-!         == FROM THE MAX OCCUPATION, WHIHC MAY BE INCORRECT
-          WGHTX=WKPT(IKPT)
+!         == FROM THE MAX OCCUPATION, WHIch MAY BE INCORRECT
+          WGHTX=WKPT(IKPT)*spindeg
           DO IB=1,NB
             X=(EIG(IB,IKPT,ISPIN)-EMIN)/DE+1.D0
             IE1=INT(X)

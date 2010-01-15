@@ -149,6 +149,43 @@ END MODULE spherical_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPHERICAL$YLMNAME(LM,NAME)
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: LM
+      CHARACTER(*),INTENT(OUT) :: NAME
+      CHARACTER(8)             :: STRING
+!     **************************************************************************
+      IF(LM.EQ.1) THEN
+        NAME='S'
+      ELSE IF(LM.EQ.2) THEN
+        NAME='PX'
+      ELSE IF(LM.EQ.3) THEN
+        NAME='PZ'
+      ELSE IF(LM.EQ.4) THEN
+        NAME='PY'
+      ELSE IF(LM.EQ.5) THEN
+        NAME='DX2-Y2'
+      ELSE IF(LM.EQ.6) THEN
+        NAME='DXZ'
+      ELSE IF(LM.EQ.7) THEN
+        NAME='D3Z2-R2'
+      ELSE IF(LM.EQ.8) THEN
+        NAME='DYZ'
+      ELSE IF(LM.EQ.9) THEN
+        NAME='DXY'
+      ELSE IF(LM.LE.0) THEN
+        CALL ERROR$MSG('INDEX FOR CUBIC HARMONIC MUST BE POSITIVE')
+        CALL ERROR$STOP('SPHERICAL$YLMNAME')
+      ELSE
+        WRITE(STRING,*)LM
+        NAME='LM='//TRIM(STRING)
+      END IF       
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PLGNDR(LMX,LX,X,PLM)
 !     **************************************************************************
 !     **                                                                      **

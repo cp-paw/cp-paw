@@ -89,7 +89,7 @@ END TYPE ATOMWAVES_TYPE
 TYPE SETTING_TYPE
   LOGICAL  :: TREL ! RELATIVISTIC OR NON-RELATIVISTIC
   LOGICAL  :: SO   ! SPIN ORBIT SPLITTING OR SCALAR RELATIVISTIC
-  LOGICAL  :: zora ! zero'th order relativistic correction
+  LOGICAL  :: ZORA ! ZERO'TH ORDER RELATIVISTIC CORRECTION
   REAL(8)  :: FOCK ! ADMIXTURE OF EXACT EXCHANGE - MU_X
 END TYPE SETTING_TYPE
 TYPE THIS_TYPE
@@ -1484,9 +1484,9 @@ PRINT*,'RCSM ',THIS%RCSM
       THIS%SETTING%TREL=.TRUE.
 !THIS%SETTING%TREL=.FALSE.
       THIS%SETTING%SO=.FALSE.
-!THIS%SETTING%SO=.true.
-      THIS%SETTING%zora=.false.
-THIS%SETTING%zora=.true.
+!THIS%SETTING%SO=.TRUE.
+      THIS%SETTING%ZORA=.FALSE.
+THIS%SETTING%ZORA=.TRUE.
 !     == SELECT HARTREE FOCK ADMIXTURE =========================================
       THIS%SETTING%FOCK=0.D0
       CALL LDAPLUSU$SELECTTYPE(THIS%I)
@@ -1518,12 +1518,12 @@ THIS%SETTING%zora=.true.
         KEY=TRIM(KEY)//',FOCK='//TRIM(STRING)
       END IF
 !
-      CALL trace$pass('before SCF-ATOM')
+      CALL TRACE$PASS('BEFORE SCF-ATOM')
       CALL TIMING$CLOCKON('SCF-ATOM')
       CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
     &                   ,ETOT,THIS%ATOM%AEPOT,VFOCK,EOFI,PSI,PSISM)
       CALL TIMING$CLOCKOFF('SCF-ATOM')
-      CALL trace$pass('after SCF-ATOM')
+      CALL TRACE$PASS('AFTER SCF-ATOM')
 !     
 !     ==========================================================================
 !     ==  SELECT CORE, AND REORDER STATES                                     ==
@@ -1739,6 +1739,9 @@ ENDDO
       CALL LINKEDLIST$SET(LL_STP,'Z',0,THIS%AEZ)
       CALL LINKEDLIST$SET(LL_STP,'ZV',0,THIS%ZV)
 !
+!     ==========================================================================
+!     == RADIAL GRID
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
       CALL LINKEDLIST$SELECT(LL_STP,'RGRID',0)
@@ -1750,6 +1753,9 @@ ENDDO
       CALL LINKEDLIST$SET(LL_STP,'R',0,R)
       DEALLOCATE(R)
 !
+!     ==========================================================================
+!     == ATOM
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
       CALL LINKEDLIST$SELECT(LL_STP,'ATOM',0)
@@ -1763,13 +1769,49 @@ ENDDO
         CALL LINKEDLIST$SET(LL_STP,'AEPSI',-1,THIS%ATOM%AEPSI(:,I))
         CALL LINKEDLIST$SET(LL_STP,'AEPSISM',-1,THIS%ATOM%AEPSISM(:,I))
       ENDDO
+      CALL LINKEDLIST$SET(LL_STP,'AEPOT',-1,THIS%ATOM%AEPOT)
+      CALL LINKEDLIST$SET(LL_STP,'PSPOT',0,THIS%PSPOT)
+      CALL LINKEDLIST$SET(LL_STP,'VADD',0,THIS%VADD)
 !
+!     ==========================================================================
+!     == SETUP PARAMETERS 
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STP,'~',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'PARAMETERS',0)
+      CALL LINKEDLIST$SET(LL_STP,'RBOX',0,THIS%RCSM)
+      CALL LINKEDLIST$SET(LL_STP,'RCSM',0,THIS%RCSM)
+      CALL LINKEDLIST$SELECT(LL_STP,'PSI',0)
+      CALL LINKEDLIST$SET(LL_STP,'TYPE',0,THIS%PARMS%TYPE)
+      CALL LINKEDLIST$SET(LL_STP,'RCL',0,THIS%PARMS%RCL)
+      CALL LINKEDLIST$SET(LL_STP,'LAMBDA',0,THIS%PARMS%LAMBDA)
+      CALL LINKEDLIST$SELECT(LL_STP,'..',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'CORE',0)
+      CALL LINKEDLIST$SET(LL_STP,'RC',0,THIS%PARMS%RC_CORE)
+      CALL LINKEDLIST$SET(LL_STP,'POW',0,THIS%PARMS%POW_CORE)
+      IF(THIS%PARMS%TVAL0_CORE) THEN
+        CALL LINKEDLIST$SET(LL_STP,'VAL0',0,THIS%PARMS%VAL0_CORE)
+      END IF
+      CALL LINKEDLIST$SELECT(LL_STP,'..',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'POT',0)
+      CALL LINKEDLIST$SET(LL_STP,'RC',0,THIS%PARMS%RC_POT)
+      CALL LINKEDLIST$SET(LL_STP,'POW',0,THIS%PARMS%POW_POT)
+      IF(THIS%PARMS%TVAL0_POT) THEN
+        CALL LINKEDLIST$SET(LL_STP,'VAL0',0,THIS%PARMS%VAL0_POT)
+      END IF
+!
+!     ==========================================================================
+!     == AUGMENTATION
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
       CALL LINKEDLIST$SELECT(LL_STP,'AUGMENTATION',0)
       CALL LINKEDLIST$SET(LL_STP,'AECORE',0,THIS%AECORE)
       CALL LINKEDLIST$SET(LL_STP,'PSCORE',0,THIS%PSCORE)
 !
+!     ==========================================================================
+!     == BESSELTRANSFORMS
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
       CALL LINKEDLIST$SELECT(LL_STP,'BESSELTRANSFORMED',0)
@@ -1780,6 +1822,8 @@ ENDDO
       CALL LINKEDLIST$SET(LL_STP,'NG',0,NG)
       CALL LINKEDLIST$SET(LL_STP,'G',0,R)
       DEALLOCATE(R)
+      CALL LINKEDLIST$SET(LL_STP,'PRO',0,THIS%PROOFG)
+      CALL LINKEDLIST$SET(LL_STP,'VADD',0,THIS%VADDOFG)
 !
 !      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
 !      CALL LINKEDLIST$REPORT(LL_STP,6)
@@ -1796,7 +1840,7 @@ ENDDO
         CALL FILEHANDLER$SETSPECIFICATION('STP_REPORT','ACTION','WRITE')
         CALL FILEHANDLER$SETSPECIFICATION('STP_REPORT','FORM','FORMATTED')
         CALL FILEHANDLER$UNIT('STP_REPORT',NFIL)
-        rewind(nfil)
+        REWIND(NFIL)
         CALL LINKEDLIST$SELECT(LL_STP,'~')
         CALL LINKEDLIST$WRITE(LL_STP,NFIL,'MONOMER')
         CALL FILEHANDLER$CLOSE('STP_REPORT')
@@ -2896,9 +2940,9 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
-      LOGICAL   ,PARAMETER  :: TTEST=.false.
-      LOGICAL   ,PARAMETER  :: TWRITE=.false.
-      LOGICAL(4),parameter  :: Tsmallbox=.false.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
+      LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -2929,7 +2973,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
-      REAL(8)               :: ubyq(lnx)
+      REAL(8)               :: UBYQ(LNX)
       REAL(8)               :: AERHO(NR),PSRHO(NR),AUGRHO(NR),PAWRHO(NR)
       REAL(8)   ,ALLOCATABLE:: DENMAT(:,:)
       REAL(8)               :: G(NR),GS(NR),DREL(NR),G1(NR),PHI(NR),PHI1(NR)
@@ -2943,14 +2987,14 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)               :: X0,Z0,DX,XM,ZM
       INTEGER(4)            :: ISTART,IBI
       INTEGER(4)            :: NITER=100
-      INTEGER(4)            :: lnlast
+      INTEGER(4)            :: LNLAST
       REAL(8)               :: PHIPHASE
       REAL(8)               :: R(NR)
       REAL(8)               :: AUX(NR),AUX1(NR),AUX2(NR)
       REAL(8)   ,ALLOCATABLE:: AUXARR(:,:)
       REAL(8)               :: VAL,DER,JVAL,JDER,KVAL,KDER,VAL1,VAL2
       REAL(8)               :: SVAR,SVAR1,SVAR2
-      LOGICAL(4)            :: TREL,TSO,tzora
+      LOGICAL(4)            :: TREL,TSO,TZORA
       REAL(8)   ,ALLOCATABLE:: A(:,:),AINV(:,:)
       REAL(8)   ,ALLOCATABLE:: PROJ(:)
       REAL(8)               :: AEPSIF(NR,NB-NC)
@@ -2992,7 +3036,7 @@ PRINT*,'RBND    ',RBND,' RADIUS FOR BOUNDARY CONDITION FOR PARTIAL WAVERS'
 PRINT*,'RNORM   ',RNORM,' NORMALIZATION WILL BE DONE UP TO RNORM'
 PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
 PRINT*,'RASA    ',RASA,' ASA RADIUS'
-if(tsmallbox)print*,'partial waves determined with small-box boundary conditions'
+IF(TSMALLBOX)PRINT*,'PARTIAL WAVES DETERMINED WITH SMALL-BOX BOUNDARY CONDITIONS'
 !
 !     ==========================================================================
 !     == RESOLVE KEY                                                          ==
@@ -3045,16 +3089,16 @@ if(tsmallbox)print*,'partial waves determined with small-box boundary conditions
             IF(SOFI(IB).NE.ISO) CYCLE
             E=EOFI1(IB)
             DREL(:)=0.D0
-            IF(TREL) then
-              if(tzora) then 
-                CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.d0,DREL)
-              else
+            IF(TREL) THEN
+              IF(TZORA) THEN 
+                CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
+              ELSE
                 CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-              end if
-            end if
+              END IF
+            END IF
             CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,ROUT,DREL,G,0,AEPOT &
      &                               ,E,UOFI(:,IB))
-            IF(TREL.and.(.not.tzora)) THEN
+            IF(TREL.AND.(.NOT.TZORA)) THEN
               CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
      &                                         ,DREL,GS,UOFI(:,IB),UOFISM(:,IB))
             ELSE
@@ -3063,7 +3107,7 @@ if(tsmallbox)print*,'partial waves determined with small-box boundary conditions
             EOFI1(IB)=E
             TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)
             G(:)=UOFI(:,IB) 
-            GS(:)=0.d0      
+            GS(:)=0.D0      
 !
 !           == DETERMINE THE INHOMOGENEITY CONSIDERING THE SMALL COMPONENT
 !           == INCLUDING THE SMALL COMPONENT CAN FAIL BECAUSE OF NON-REGULAR
@@ -3111,14 +3155,14 @@ PRINT*,'EOFI1 ',EOFI1
         PHIPHASE=1.D0   ! NODE 
         DO LN=1,LNX
           IF(LOX(LN).NE.L) CYCLE
-          IF(TREL)then
-            if(tzora) then
-              CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.d0,DREL)
-            else
+          IF(TREL)THEN
+            IF(TZORA) THEN
+              CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
+            ELSE
               CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-            end if
-          end if
-          IF(TFIRST.and.(.not.Tsmallbox)) THEN
+            END IF
+          END IF
+          IF(TFIRST.AND.(.NOT.TSMALLBOX)) THEN
             PHIPHASE=1.D0   ! NODE AT ROUT
             CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,ROUT,PHIPHASE,E,PHI)
@@ -3149,15 +3193,15 @@ PRINT*,'EOFI1 ',EOFI1
               IF(LOFI(IB).NE.L) CYCLE
               IF(SOFI(IB).NE.ISO) CYCLE
               E=EOFI1(IB)
-              IF(TREL)then
-                if(tzora) then
-                  CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.d0,DREL)
-                else
+              IF(TREL)THEN
+                IF(TZORA) THEN
+                  CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
+                ELSE
                   CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-                end if
-              else
+                END IF
+              ELSE
                 DREL(:)=0.D0
-              end if
+              END IF
 !             == REMARK: IF THIS CRASHES PROCEED LIKE FOR NODELESS PARTIAL WAVES
 !             == WORK WITH LOCAL POTENTIAL FIRST AND THEN UPDATE WITH FOCK POT
 !!$              IF(.NOT.TSMALLBOX) THEN
@@ -3174,11 +3218,11 @@ PRINT*,'EOFI1 ',EOFI1
                 UOFISM(:,IB)=0.D0
               END IF
               EOFI1(IB)=E
-!             == determine kinetic energy of uofi: (e-pot)|uofi> ===============
+!             == DETERMINE KINETIC ENERGY OF UOFI: (E-POT)|UOFI> ===============
               CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,UOFI(:,IB),AUX)
               TUOFI(:,IB)=G+(E-AEPOT(:)*Y0)*UOFI(:,IB)-AUX(:)
 !
-!             ==  determine inhomogeneity for the next band ====================
+!             ==  DETERMINE INHOMOGENEITY FOR THE NEXT BAND ====================
               AUX=(1.D0+DREL)*UOFISM(:,IB)
               CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
               IF(ISO.EQ.1) THEN
@@ -3193,11 +3237,11 @@ PRINT*,'EOFI1 ',EOFI1
                 AUX=+0.5/SPEEDOFLIGHT*AUX1
               END IF
               G(:) =UOFI(:,IB) !+AUX(:)
-              GS(:)=uofism(:,ib) ! rest is done in schr...$sphsmallcomponent
+              GS(:)=UOFISM(:,IB) ! REST IS DONE IN SCHR...$SPHSMALLCOMPONENT
            ENDDO
           ENDDO
         ENDDO
-print*,'eofi1 a ',eofi1
+PRINT*,'EOFI1 A ',EOFI1
       END IF
 !
 !     ==========================================================================
@@ -3206,29 +3250,29 @@ print*,'eofi1 a ',eofi1
       IF(VFOCK%TON) THEN
                       CALL TRACE$PASS('APPLY FOCK CORRECTION TO PARTIAL WAVES')
         DO L=0,LX
-          tfirst=.true.
+          TFIRST=.TRUE.
           ISO=0
           G(:)=0.D0
           IF(NCL(L).NE.0)G(:)=UOFI(:,NCL(L))
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
-            IF(TREL)then
-              if(tzora) then
-                CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.d0,DREL)
-              else
-                CALL SCHROEDINGER$DREL(GID,NR,AEPOT,eofln(ln),DREL)
-              end if
-            else
+            IF(TREL)THEN
+              IF(TZORA) THEN
+                CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
+              ELSE
+                CALL SCHROEDINGER$DREL(GID,NR,AEPOT,EOFLN(LN),DREL)
+              END IF
+            ELSE
               DREL(:)=0.D0
-            end if
-            IF(TFIRST.and.(.not.Tsmallbox)) THEN
+            END IF
+            IF(TFIRST.AND.(.NOT.TSMALLBOX)) THEN
               CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
-    &                                    ,Rout,EOFLN(LN),NLPHI(:,LN))
-              tfirst=.false. 
+    &                                    ,ROUT,EOFLN(LN),NLPHI(:,LN))
+              TFIRST=.FALSE. 
             ELSE
               CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
     &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
-            end if
+            END IF
             CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,NLPHI(:,LN),AUX)
             TNLPHI(:,LN)=G(:)+(EOFLN(LN)-AEPOT(:)*Y0)*NLPHI(:,LN)-AUX(:)
             G(:)=NLPHI(:,LN)
@@ -3324,7 +3368,7 @@ print*,'eofi1 a ',eofi1
             TRANSU(LN1,LN)=TRANSU(LN1,LN)+SVAR
             SVAR=SVAR*(EOFLN(LN)-EOFLN(LN1))
           ENDDO
-          ubyq(ln)=1.d0/transu(ln,ln) ! matchfactor |un> <-> qn*ubyq
+          UBYQ(LN)=1.D0/TRANSU(LN,LN) ! MATCHFACTOR |UN> <-> QN*UBYQ
         ENDDO
       ENDDO
       QN=MATMUL(NLPHI,TRANSU)
@@ -3345,12 +3389,12 @@ print*,'eofi1 a ',eofi1
       END IF
 !
 !     ==========================================================================
-!     == adjust scaling of nodeless partial waves to the qn                   ==
+!     == ADJUST SCALING OF NODELESS PARTIAL WAVES TO THE QN                   ==
 !     ==========================================================================
-      do ln=1,lnx
-        nlphi(:,ln)=nlphi(:,ln)/ubyq(ln)
-        Tnlphi(:,ln)=Tnlphi(:,ln)/ubyq(ln)
-      enddo
+      DO LN=1,LNX
+        NLPHI(:,LN)=NLPHI(:,LN)/UBYQ(LN)
+        TNLPHI(:,LN)=TNLPHI(:,LN)/UBYQ(LN)
+      ENDDO
 !
 !     ==========================================================================
 !     == TEST EQUATION FOR QN                                                 ==
@@ -3479,7 +3523,7 @@ IF(TWRITE)CALL SETUP_WRITEPHI(-'TEST.DAT',GID,NR,LNX,PRO)
       IF(TTEST.AND.TWRITE)CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
 !
 !     ==========================================================================
-!     == CONSTRUCT bare PROJECTOR FUNCTIONS                                   ==
+!     == CONSTRUCT BARE PROJECTOR FUNCTIONS                                   ==
 !     ==========================================================================
                       CALL TRACE$PASS('CONSTRUCT PROJECTOR FUNCTIONS')
       DO LN=1,LNX
@@ -3671,7 +3715,7 @@ IF(TWRITE)CALL SETUP_WRITEPHI(-'TEST.DAT',GID,NR,LNX,PRO)
           E=ESCATT(LN)
           IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
 !
-!         == CALCULATE nlphidot    ===========================================
+!         == CALCULATE NLPHIDOT    ===========================================
           G(:)=NLPHI(:,LN)
           CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1 &
     &                                ,NLPHIDOT(:,LN))
@@ -3680,15 +3724,15 @@ IF(TWRITE)CALL SETUP_WRITEPHI(-'TEST.DAT',GID,NR,LNX,PRO)
 !
 !         == CALCULATE PSEUDO WAVE FUNCTIONS ===================================
           G(:)=PSPHI(:,LN)
-          do ipro=1,npro
-            aux(:)=r(:)**2*pro(:,ipro)*psphi(:,ln)
+          DO IPRO=1,NPRO
+            AUX(:)=R(:)**2*PRO(:,IPRO)*PSPHI(:,LN)
 !           == INTEGRAL IS OK BECAUSE PRO IS EXACTLY ZERO BEYOND A RADIUS ======
-            call radial$integral(gid,nr,aux,proj(ipro))
-          enddo
-          proj(:)=matmul(do1,proj)
-          do ipro=1,npro
-            g(:)=g(:)+pro(:,ipro)*proj(ipro)
-          enddo
+            CALL RADIAL$INTEGRAL(GID,NR,AUX,PROJ(IPRO))
+          ENDDO
+          PROJ(:)=MATMUL(DO1,PROJ)
+          DO IPRO=1,NPRO
+            G(:)=G(:)+PRO(:,IPRO)*PROJ(IPRO)
+          ENDDO
           CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G &
     &                        ,PSPHIDOT(:,LN))
 !
@@ -3699,13 +3743,13 @@ IF(TWRITE)CALL SETUP_WRITEPHI(-'TEST.DAT',GID,NR,LNX,PRO)
           PHI=PHI/VAL
           CALL RADIAL$VALUE(GID,NR,NLPHIDOT(:,LN)-PSPHIDOT(:,LN),MAXVAL(RC),VAL)
           PSPHIDOT(:,LN)=PSPHIDOT(:,LN)+PHI(:)*VAL
-!         == replace tails to avoid numerical errors ============================
-          svar=maxval(rc)
-          do ir=1,nr
-            if(r(ir).le.svar) cycle
-            psphidot(ir:,ln)=nlphidot(ir:,ln)
-            exit
-          enddo
+!         == REPLACE TAILS TO AVOID NUMERICAL ERRORS ============================
+          SVAR=MAXVAL(RC)
+          DO IR=1,NR
+            IF(R(IR).LE.SVAR) CYCLE
+            PSPHIDOT(IR:,LN)=NLPHIDOT(IR:,LN)
+            EXIT
+          ENDDO
 !
 !         == CONSTRUCT AEPHIDOT BY CORE-ORTHOGONALIZATION ======================
           AEPHIDOT(:,LN)=NLPHIDOT(:,LN)

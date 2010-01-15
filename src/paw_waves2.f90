@@ -2461,7 +2461,8 @@ print*,'a     ',(a(i,i),i=1,nb)
       INTEGER(4)             :: NAT,NSP
       INTEGER(4)             :: NR
       INTEGER(4)             :: NB,NBH
-      REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      REAL(8)   ,ALLOCATABLE :: XK(:,:)   ! k-point in relative coordinates
+      REAL(8)   ,ALLOCATABLE :: wkpt(:)   ! k-point weights
       COMPLEX(8),ALLOCATABLE :: VEC(:,:,:)      
       COMPLEX(8),ALLOCATABLE :: VECTOR1(:,:,:)
       REAL(8)   ,ALLOCATABLE :: EIG(:)
@@ -2498,16 +2499,16 @@ print*,'a     ',(a(i,i),i=1,nb)
       NPRO=MAP%NPRO
       LNXX=MAP%LNXX
 ! THE SETTING OF PDOS DOES SEEM REDUNDANT. IT IS WRITTEN HERE....
-      CALL PDOS$SETI4('NAT',NAT)
-      CALL PDOS$SETI4('NSP',NSP)
-      CALL PDOS$SETI4('NKPT',NKPT)
-      CALL PDOS$SETI4('NSPIN',NSPIN)
-      CALL PDOS$SETI4('NDIM',NDIM)
-      CALL PDOS$SETI4('NPRO',NPRO)
-      CALL PDOS$SETI4('LNXX',LNXX)
-      CALL PDOS$SETI4A('LNX',NSP,MAP%LNX)
-      CALL PDOS$SETI4A('LOX',LNXX*NSP,MAP%LOX)
-      CALL PDOS$SETI4A('ISPECIES',NAT,MAP%ISP)
+!!$      CALL PDOS$SETI4('NAT',NAT)
+!!$      CALL PDOS$SETI4('NSP',NSP)
+!!$      CALL PDOS$SETI4('NKPT',NKPT)
+!!$      CALL PDOS$SETI4('NSPIN',NSPIN)
+!!$      CALL PDOS$SETI4('NDIM',NDIM)
+!!$      CALL PDOS$SETI4('NPRO',NPRO)
+!!$      CALL PDOS$SETI4('LNXX',LNXX)
+!!$      CALL PDOS$SETI4A('LNX',NSP,MAP%LNX)
+!!$      CALL PDOS$SETI4A('LOX',LNXX*NSP,MAP%LOX)
+!!$      CALL PDOS$SETI4A('ISPECIES',NAT,MAP%ISP)
       IF(THISTASK.EQ.1) THEN
         CALL FILEHANDLER$UNIT('PDOS',NFIL)
         REWIND NFIL
@@ -2523,9 +2524,8 @@ print*,'a     ',(a(i,i),i=1,nb)
       CALL CELL$GETR8A('T(0)',9,RBAS)
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)
       CALL ATOMLIST$GETCHA('NAME',0,NAT,ATOMID)
-      CALL PDOS$SETR8A('RBAS',9,RBAS)
-      CALL PDOS$SETR8A('R',3*NAT,R)
-!     CALL PDOS$SETCHA('ATOMID',NAT,ATOMID)
+!!$      CALL PDOS$SETR8A('RBAS',9,RBAS)
+!!$      CALL PDOS$SETR8A('R',3*NAT,R)
       IF(THISTASK.EQ.1) THEN
         WRITE(NFIL)RBAS,R,ATOMID
       END IF
@@ -2576,11 +2576,11 @@ print*,'a     ',(a(i,i),i=1,nb)
         DEALLOCATE(WORK1)
         DEALLOCATE(AEPHI)
       ENDDO
-      CALL PDOS$SETI4A('IZ',NSP,IZ)
-      CALL PDOS$SETR8A('RAD',NSP,RAD)
-      CALL PDOS$SETR8A('PHI',LNXX*NSP,VAL)
-      CALL PDOS$SETR8A('DPHIDR',LNXX*NSP,DER)
-      CALL PDOS$SETR8A('OVERLAP',LNXX*LNXX*NSP,OV)
+!!$      CALL PDOS$SETI4A('IZ',NSP,IZ)
+!!$      CALL PDOS$SETR8A('RAD',NSP,RAD)
+!!$      CALL PDOS$SETR8A('PHI',LNXX*NSP,VAL)
+!!$      CALL PDOS$SETR8A('DPHIDR',LNXX*NSP,DER)
+!!$      CALL PDOS$SETR8A('OVERLAP',LNXX*LNXX*NSP,OV)
       DEALLOCATE(VAL)
       DEALLOCATE(IZ)
       DEALLOCATE(RAD)
@@ -2596,7 +2596,9 @@ print*,'a     ',(a(i,i),i=1,nb)
       CALL DYNOCC$GETR8A('OCC',NBX*NKPT*NSPIN,OCC)
       ALLOCATE(XK(3,NKPT))
       CALL DYNOCC$GETR8A('XK',3*NKPT,XK)
-      CALL PDOS$SETR8A('XK',3*NKPT,XK)
+      ALLOCATE(wkpt(NKPT))
+      CALL DYNOCC$GETR8A('WKPT',NKPT,WKPT)
+!!$      CALL PDOS$SETR8A('XK',3*NKPT,XK)
       IKPT=0    ! IKPT IS THE K-POINT INDEX LOCAL TO MPE-GROUP K
       DO IKPTG=1,NKPT
         TKGROUP=THISTASK.EQ.KMAP(IKPTG)
@@ -2701,18 +2703,7 @@ print*,'a     ',(a(i,i),i=1,nb)
 !         == ARE ALREADY IN TASK 1.                                     ==
 !         ================================================================
           IF(THISTASK.EQ.1) THEN
-!!$            == this is the uncorrected version with ikpt instead of ikptg
-!!$            WRITE(NFIL)XK(:,IKPT),NB
-!!$            DO IB1=1,NB
-!!$              IF(FLAG.EQ.'011004') THEN
-!!$!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
-!!$                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPT,ISPIN),VECTOR1(:,:,ib1)
-!!$              ELSE
-!!$!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
-!!$                WRITE(NFIL)EIG(IB1),VECTOR1(:,:,ib1)
-!!$              END IF
-!!$            ENDDO
-            WRITE(NFIL)XK(:,IKPTg),NB
+            WRITE(NFIL)XK(:,IKPTG),NB,wkpt(ikptg)
             DO IB1=1,NB
               IF(FLAG.EQ.'011004') THEN
 !               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
@@ -2728,6 +2719,7 @@ print*,'a     ',(a(i,i),i=1,nb)
         ENDDO  ! END LOOP OVER ISPIN
       ENDDO  ! END LOOP OVER IKPTG
       DEALLOCATE(XK)
+      DEALLOCATE(wkpt)
       DEALLOCATE(R)
       DEALLOCATE(OCC)
       IF(THISTASK.EQ.1) THEN

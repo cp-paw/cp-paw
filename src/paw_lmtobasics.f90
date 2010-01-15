@@ -598,7 +598,6 @@
             CYCLE
           END IF
           R2(:)=RPOS(:,IAT2)
-!WRITE(*,FMT='("R1=",3F10.4," DR=",3F10.4)')R1,R2-R1
           L2X=LX(IAT2)
           LMN2=(L2X+1)**2
           CALL LMTO$STRUCTURECONSTANTS(R2-R1,K2,L1X,L2X,S1(:LMN2,:))

@@ -2649,9 +2649,12 @@ types, electronic occupations, atomic masses. etc...}
 \brules{optional} 
 \bdescr{specifies the k-point grid. Default is $\Gamma$-point sampling.}
 
-\mbax{\key{R}
-\vdescr{defines the density of k-points for the automatic generation
-  of k-points. $\Delta k= 2\pi/R$.}
+\mbax{\key{R} \vdescr{defines the density of k-points for the
+    automatic generation of k-points. $\Delta k= 2\pi/R$. The number
+    $n_i$ of k-points along the reciprocal lattice vector $\vec{g}_i$
+    is obtained from $R$ as the minimum number obeying
+    $n_i\ge\frac{1}{2\pi}|vec{g}_i|R$.
+}
 \vformat{real}
 \vrules{optional}
 \vdefault{12.}}
@@ -6781,6 +6784,9 @@ the nucleus.  The nuclear magnetic moment is typically given units of
 nuclear magnetons $\mu_N=(m_e/m_p)\mu_B$, where $m_e$ is the electron
 mass, $m_p$ is the proton mass, and $\mu_B=\frac{e\hbar}{2m_e}$ is the
 Bohr magneton.
+
+Values for the magnetic moment and the nuclear spin of the isotopes
+can be obtained from the ``Green Book''\cite{greenbook}.
 
 In the literature the hyperfine splitting is often converted into a
 frequency $\nu$ using the relation $\Delta E=h\nu$. The frequency is

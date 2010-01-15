@@ -751,8 +751,6 @@ END MODULE DYNOCC_MODULE
 !      ==  K-POINT GEOMETRIC INTEGRATION WEIGHTS                      ==
 !      =================================================================
        ELSE IF(ID.EQ.'WKPT') THEN
-          CALL ERROR$MSG('WKPT IS MADE PRIVATE. DO NOT ACCESS')
-          CALL ERROR$STOP('DYNOCC$GETR8A')
          IF(LEN.NE.NKPT) THEN
            CALL ERROR$MSG('SIZE INCONSISTENT')
            CALL ERROR$CHVAL('ID',ID)
