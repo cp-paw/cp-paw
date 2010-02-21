@@ -3083,6 +3083,16 @@
     !CORE POW=2. RC/RCOV=   0.678 !END
   !END
 
+ !SETUP  ID='BA_MU' EL='BA' ZV=10.
+         TYPE='HBS' RBOX/RCOV=1.2 RCSM/RCOV=0.25
+         RCL/RCOV= 0.6 0.6 0.6 0.6
+         LAMBDA= 4. 4. 4. 5.
+   !GRID DMIN=5.E-6 DMAX=0.15 RMAX= 27.0 !END
+   !POT  POW=3.  RC/RCOV=0.5  !END
+   !CORE POW=2.  RC/RCOV=0.5  !END
+ !END
+
+
 !End
 !EOB
 

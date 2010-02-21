@@ -283,9 +283,9 @@ INTEGER(4) :: IR
       IF (SO.EQ.0) THEN
         SOFACTOR=0.D0
       ELSE IF(SO.EQ.1) THEN
-        SOFACTOR=REAL(L,KIND=8)       ! PARALLEL SPIN AND ORBIT
+        SOFACTOR=REAL(-L,KIND=8)       ! PARALLEL SPIN AND ORBIT
       ELSE IF(SO.EQ.-1) THEN
-        SOFACTOR=REAL(-L-1,KIND=8)    ! ANTIPARALLELSPIN AND ORBIT
+        SOFACTOR=REAL(L+1,KIND=8)        ! ANTIPARALLELSPIN AND ORBIT
       ELSE
          CALL ERROR$MSG('SO CAN ONLY HAVE VALUES -1,0,1')
          CALL ERROR$STOP('RADIAL$SCHRODINGER')
@@ -303,7 +303,7 @@ INTEGER(4) :: IR
 !     == THAT CANNOT USE THE FORCES ON THE FIRST AND LAST GRID POINT
       B(2:)=2.D0*(1.D0+DREL(2:))/R(2:)+RDPRIME(2:)
       C(2:)=-(1.D0+DREL(2:))*REAL(L*(L+1),KIND=8)/R(2:)**2 &
-     &    -RDPRIME(2:)*SOFACTOR/R(2:) &
+     &    +RDPRIME(2:)*SOFACTOR/R(2:) &
      &    -2.D0*(POT(2:)*Y0-E)
       B(1)=B(2)
       C(1)=C(2)
@@ -3183,3 +3183,104 @@ PRINT*,'SVAR',SVAR,IROUT,IRCL,PHIR(IRCL-1:IRCL+1)
       CLOSE(NFIL)
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SCHROEDINGER$HYDROGENICDIRAC(GID,NR,AEZ,NB,LOFI,NNOFI,SOFI &
+     &                                       ,EOFI,PHI,SPHI)
+!     **************************************************************************
+!     **  DETERMINE ANALYTIC WAVE FUNCTIONS OF THE DIRAC EQUATION             **
+!     **  FOR A HYDROGENIC ATOM, I.E. V=-Z/R                                  **
+!     **  FROM W. GORDON, Z. PHYS. 48, P11 (1928)                             **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID        ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR         ! #(RADIAL GRID POINTS)
+      REAL(8)   ,INTENT(IN) :: AEZ        ! ATOMIC NUMBER
+      INTEGER(4),INTENT(IN) :: NB         ! #(STATES)
+      INTEGER(4),INTENT(IN) :: LOFI(NB)   ! ANGULAR MOMENTA
+      INTEGER(4),INTENT(IN) :: NNOFI(NB)  ! #(NODES)
+      INTEGER(4),INTENT(IN) :: SOFI(NB)   ! SIGN OF L*S
+      REAL(8)   ,INTENT(OUT):: EOFI(NB)   ! ENERGY EIGENVALUES W/O REST ENERGY
+      REAL(8)   ,INTENT(OUT):: PHI(NR,NB) ! LARGE COMPONENT
+      REAL(8)   ,INTENT(OUT):: SPHI(NR,NB) ! SMALL COMPONENT
+      REAL(8)               :: C          ! SPEED OF LIGHT
+      REAL(8)               :: ALPHA      ! FINE STRUCTURE CONSTANT
+      INTEGER(4)            :: N,L,ISO,IB,IR
+      REAL(8)               :: JPRIME
+      REAL(8)               :: JPHALF
+      REAL(8)               :: NPRIME
+      REAL(8)               :: SVAR
+      REAL(8)               :: E          ! ENERGY INCLUDING REST ENERGY
+      REAL(8)               :: K0
+      REAL(8)               :: RHO
+      REAL(8)               :: C01BYC02
+      REAL(8)               :: R(NR)      ! RADIAL GRID
+      REAL(8)               :: SIGMA1(NR)
+      REAL(8)               :: SIGMA2(NR)
+!     **************************************************************************
+      CALL CONSTANTS('C',C)
+      ALPHA=1.D0/C
+      CALL RADIAL$R(GID,NR,R)
+!
+      DO IB=1,NB
+        L=LOFI(IB)
+        ISO=SOFI(IB)
+        N=NNOFI(IB)+LOFI(IB)+1
+        IF(ISO.EQ.1) THEN
+          JPRIME=REAL(-L-1)
+          JPHALF=REAL(L+1,KIND=8)
+        ELSE
+          JPRIME=REAL(L)
+          JPHALF=REAL(L,KIND=8)
+        END IF
+        NPRIME=REAL(N)-ABS(JPRIME)  ! BEFORE EQ.2 OF GORDON
+!       == EQ 6 IN GORDON ======================================================
+        RHO=SQRT(JPRIME**2-(AEZ*ALPHA)**2)
+!       == ENERGY INCLUDING REST ENERGY (LAST EQUATION IN GORDON) ==============
+        E=C**2/SQRT(1.D0+(AEZ*ALPHA/(NPRIME+RHO))**2)
+!       == EQ.4 IN GORDON ======================================================
+        K0=C*SQRT(1.D0-(E/C**2)**2)            
+!       == EQ. 8 IN GORDON =====================================================
+        C01BYC02=-NPRIME/(ALPHA/SQRT(1-(E/C**2)**2)-JPRIME)
+!       == EQ.10 IN GORDON =====================================================
+        DO IR=1,NR
+          CALL FHYPER(1.D0-NPRIME,2.D0*RHO+1.D0,2.D0*K0*R(IR),SIGMA1(IR))
+          CALL FHYPER(-NPRIME,2.D0*RHO+1.D0,2.D0*K0*R(IR),SIGMA2(IR))
+        ENDDO
+        SIGMA1(:)=C01BYC02*EXP(-K0*R(:))*R(:)**(RHO-1.D0)*SIGMA1(:)
+        SIGMA2(:)=EXP(-K0*R(:))*R(:)**(RHO-1.D0)*SIGMA2(:)
+!       ==
+        SPHI(:,IB)=SQRT(1.D0-E/C**2)*(SIGMA1(:)-SIGMA2(:))
+        PHI(:,IB)=SQRT(1.D0+E/C**2)*(SIGMA1(:)+SIGMA2(:))
+!       == NORMALIZE ===========================================================
+        CALL RADIAL$INTEGRAL(GID,NR,R**2*(PHI(:,IB)**2+PHI(:,IB)**2),SVAR)
+        SVAR=1.D0/SQRT(SVAR)
+        PHI(:,IB)=PHI(:,IB)*SVAR
+        SPHI(:,IB)=SPHI(:,IB)*SVAR
+!       == SUBTRACT REST ENERGY ================================================
+        EOFI(IB)=E-C**2
+      ENDDO
+      RETURN
+      CONTAINS
+!       .1.........2.........3.........4.........5.........6.........7.........8
+        SUBROUTINE FHYPER(ALPHA,BETA,X,F)
+!       ************************************************************************
+!       ************************************************************************
+        IMPLICIT NONE
+        REAL(8)   ,INTENT(IN) :: ALPHA 
+        REAL(8)   ,INTENT(IN) :: BETA 
+        REAL(8)   ,INTENT(IN) :: X
+        REAL(8)   ,INTENT(OUT):: F
+        REAL(8)               :: FAC,RI
+        INTEGER(4)            :: I
+!       ************************************************************************
+        F=1.D0
+        FAC=1.D0
+        DO I=1,10
+          RI=REAL(I,KIND=8)
+          FAC=FAC*(ALPHA+RI-1.D0)/(BETA+RI-1.D0)/RI*X
+          F=F+FAC
+        ENDDO
+        RETURN
+        END SUBROUTINE FHYPER
+      END SUBROUTINE SCHROEDINGER$HYDROGENICDIRAC

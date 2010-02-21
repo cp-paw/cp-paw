@@ -1,6 +1,6 @@
 MODULE LMTO_MODULE
-REAL(8)   ,PARAMETER  :: K2=-1.D0 ! 0.5*k2 is the kinetic energy
-REAL(8)   ,PARAMETER  :: RC=5.D0  ! CUTOF RADIUS FOR NEIGHBORLIST
+REAL(8)   ,PARAMETER  :: K2=-0.5D0 ! 0.5*k2 is the kinetic energy
+REAL(8)   ,PARAMETER  :: RCscale=1.1d0  ! radius scale factor FOR NEIGHBORLIST
 TYPE POTPAR_TYPE
   REAL(8)          :: RAD
   REAL(8),POINTER  :: QBAR(:)
@@ -287,7 +287,8 @@ real(8):: x1,x2,x3
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : K2,RC,SBAR,TINISTRUC,POTPAR
+      USE LMTO_MODULE, ONLY : K2,RCscale,SBAR,TINISTRUC,POTPAR
+      use periodictable_module
       IMPLICIT NONE
       INTEGER(4)             :: NAT       !#(ATOMS)
       REAL(8)                :: RBAS(3,3) !LATTICE VECTORS
@@ -306,8 +307,8 @@ real(8):: x1,x2,x3
       REAL(8)   ,ALLOCATABLE :: SBAR1(:,:) !
       REAL(8)   ,ALLOCATABLE :: QBAR1SP(:) !
       INTEGER(4),ALLOCATABLE :: ISCATT(:)
-      REAL(8)   ,ALLOCATABLE :: C(:,:) !
       REAL(8)                :: VAL,DER
+      REAL(8)                :: svar
       INTEGER(4)             :: IAT,IAT1,IAT2,ISP,ISP1,ISP2,LMX1,LMX2 
       INTEGER(4)             :: L,NN,NN1,NN2,NN0,I,IM,LN
       INTEGER(4)             :: LXX        !X(ANGULAR MOMENTUM FOR ALL ATOMS)
@@ -317,7 +318,8 @@ real(8):: x1,x2,x3
       INTEGER(4)             :: NSP       !#(ATOM TYPES)
       INTEGER(4),ALLOCATABLE :: ISPECIES(:)
       LOGICAL(4)             :: TCHK
-      LOGICAL(4),SAVE        :: TPLOTLOCORB=.false.
+      REAL(8)   ,ALLOCATABLE :: RC(:)
+      Logical(4),SAVE        :: TPLOTLOCORB=.false.
 !     **************************************************************************
       CALL SETUP$GETL4('INTERNALSETUPS',TCHK)
       IF(.NOT.TCHK) RETURN
@@ -358,7 +360,7 @@ real(8):: x1,x2,x3
         CALL SETUP$GETI4A('LOX',LNX,LOX)
         CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
         DO LN=1,LNX
-          IF(ISCATT(LN).NE.0) CYCLE
+          IF(ISCATT(LN).gt.0) CYCLE
           QBAR1(LOX(LN)+1,ISP)=POTPAR(ISP)%QBAR(LN)
         ENDDO
         DEALLOCATE(ISCATT)
@@ -367,11 +369,21 @@ real(8):: x1,x2,x3
       ENDDO
 !
 !     ==========================================================================
-!     == NEIGHBORLIST                                                         ==
+!     == NEIGHBORLIST   nnlist(:,nn)=(iat1,iat2,it1,it2,it3)                  ==
 !     ==========================================================================
+      allocate(rc(nat))
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('AEZ',SVAR)
+        CALL PERIODICTABLE$GET(SVAR,'R(COV)',RC(IAT))
+      ENDDO
+      RC(:)=RC(:)*RCSCALE
       NNX=NNXPERATOM*NAT
       ALLOCATE(NNLIST(5,NNX))
       CALL LMTO$NEIGHBORLIST(RBAS,NAT,R0,RC,NNX,NNB,NNLIST)
+      DEALLOCATE(RC)
+
 !!$DO I=1,NNB
 !!$WRITE(*,FMT='("NNLIST",5I10)')NNLIST(:,I)
 !!$ENDDO
@@ -412,6 +424,11 @@ real(8):: x1,x2,x3
         ENDDO
         NORB=(LX1(NN0-NN1+1)+1)**2
         N=SUM((LX1(:)+1)**2)
+        if(nn0.ne.nn1) then
+          CALL ERROR$MSG('ONSITE ELEMENT NOT FIRST IN NEIGHBORLIST')
+          CALL ERROR$MSG('INTERNAL CONSISTENCY CHECK FAILED')
+          CALL ERROR$STOP('LMTO$MAKESTRUCTURECONSTANTS')
+        END IF
 !
 !       ========================================================================
 !       == EXPAND SCREENING PARAMETER QBAR                                    ==
@@ -433,9 +450,7 @@ real(8):: x1,x2,x3
 !       == DETERMINE STRUCTURE CONSTANTS                                      ==
 !       ========================================================================
         ALLOCATE(SBAR1(N,NORB))
-        ALLOCATE(C(N,NORB))
         CALL LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT1,RPOS,LX1,QBAR,N,NORB,SBAR1)
-        CALL LMTO$KBARMULTICENTER(N,NORB,QBAR,SBAR1,C)
 !
 !       ========================================================================
 !       == MAP ONTO SBAR                                                      ==
@@ -460,18 +475,17 @@ real(8):: x1,x2,x3
         DEALLOCATE(RPOS)
         DEALLOCATE(QBAR)
         DEALLOCATE(SBAR1)
-        DEALLOCATE(C)
       ENDDO
       DEALLOCATE(QBAR1)
 !
-      if(tplotlocorb) then
+      IF(TPLOTLOCORB) THEN
         CALL LMTO$REPORTPOTBAR(6)
         CALL LMTO$REPORTSBAR(6)
-        do iat=1,nat
-          CALL LMTO_plotlocorb(iat)
-        enddo
-        tplotlocorb=.false.
-      end if
+        DO IAT=1,NAT
+          CALL LMTO_PLOTLOCORB(IAT)
+        ENDDO
+        TPLOTLOCORB=.FALSE.
+      END IF
 !
                               CALL TRACE$POP()
       RETURN
@@ -647,7 +661,7 @@ real(8):: x1,x2,x3
         DO L=0,LXX
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
-            IF(ISCATT(LN).NE.0) CYCLE
+            IF(ISCATT(LN).gt.0) CYCLE
             CALL RADIAL$VALUE(GID,NR,NLPHIDOT(:,LN),RAD,VAL)
             CALL RADIAL$DERIVATIVE(GID,NR,NLPHIDOT(:,LN),RAD,DER)
             CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
@@ -1747,7 +1761,7 @@ PRINT*,'LOXPHI ',LOXPHI
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IAT0
       INTEGER(4),PARAMETER  :: N1=40,N2=40,N3=40 !GRID (1D?)
-      INTEGER(4),PARAMETER  :: N1d=100
+      INTEGER(4),PARAMETER  :: N1d=1000
       REAL(8)               :: ORIGIN(3)
       REAL(8)               :: TVEC(3,3)    !BOX
       REAL(8)               :: TLITTLE(3,3)
@@ -1761,7 +1775,7 @@ PRINT*,'LOXPHI ',LOXPHI
       REAL(8)               :: XI(3)
       REAL(8)               :: DR(3)
       INTEGER(4)            :: NNB
-      INTEGER(4)            :: NN,IAT,IAT2,ISP,I1,I2,I3,LN,i
+      INTEGER(4)            :: NN,IAT,IAT2,ISP,I1,I2,I3,LN,i,j
       INTEGER(4)            :: L
       INTEGER(4)            :: LNX
       REAL(8)               :: AEZ
@@ -1790,8 +1804,9 @@ PRINT*,'LOXPHI ',LOXPHI
       CHARACTER(15)         :: STRING         !contains IATO
       character(16)         :: formattype
       real(8)               :: x1d(n1d)
-      integer(4)          :: np,ip
-      real(8),allocatable :: p(:,:)
+      integer(4)            :: np,ip
+      real(8)  ,allocatable :: p(:,:)
+      logical(4) ,parameter :: t2d=.true.
 !     **************************************************************************
                                               call trace$push('LMTO_PLOTLOCORB')
       NNB=SIZE(SBAR)  !SBAR STRUCCONS. (GLOBAL)
@@ -1931,7 +1946,7 @@ PRINT*,'LOXPHI ',LOXPHI
       NP=N1D*(NATCLUSTER-1)
       ALLOCATE(P(3,NP))
       DO I=1,N1D
-        X1D(I)=(-1.D0+2.D0*REAL(I-1)/REAL(N1D-1))*7.D0
+        X1D(I)=(-1.D0+2.D0*REAL(I-1)/REAL(N1D-1))*10.D0
       ENDDO
       IP=0
       DO IAT=1,NATCLUSTER
@@ -1951,9 +1966,9 @@ PRINT*,'LOXPHI ',LOXPHI
       ALLOCATE(ORB1(NP,LM1X))
       ALLOCATE(ORB(NP,LM1X))
       ALLOCATE(env1(NP,LM1X))
-      CALL LMTO_GRIDENVELOPE(RBAS,NAT,R0,IAT0,LM1X,NP,P,env,env1)
-      call LMTO_GRIDaugment(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORB1,env1)
-      orb=env+orb1-env1
+      CALL LMTO_GRIDENVELOPE(RBAS,NAT,R0,IAT0,LM1X,NP,P,ENV,ENV1)
+      CALL LMTO_GRIDAUGMENT(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORB1,ENV1)
+      ORB=ENV+ORB1-ENV1
 !
 !     ==========================================================================
 !     == WRITE ORBITALS TO FILE                                               ==
@@ -1968,8 +1983,11 @@ PRINT*,'LOXPHI ',LOXPHI
         CALL FILEHANDLER$UNIT('HOOK',NFIL)
 !
         DO I=1,N1D
-          WRITE(NFIL,*)X1D(I),(ORB(N1D*(IAT-1)+I,LM1) &
-     &                       ,orb1(N1D*(IAT-1)+I,LM1),IAT=1,NATCLUSTER-1)
+!          WRITE(NFIL,*)X1D(I),(ORB(N1D*(IAT-1)+I,LM1),IAT=1,NATCLUSTER-1)
+          WRITE(NFIL,*)X1D(I),(orb(N1D*(IAT-1)+I,LM1) &
+      &                       ,orb1(N1D*(IAT-1)+I,LM1) &
+      &                       ,env(N1D*(IAT-1)+I,LM1) &
+      &                       ,env1(N1D*(IAT-1)+I,LM1),IAT=1,NATCLUSTER-1)
         ENDDO
         CALL FILEHANDLER$CLOSE('HOOK')
         CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOK')
@@ -1979,6 +1997,69 @@ PRINT*,'LOXPHI ',LOXPHI
       DEALLOCATE(ORB1)
       DEALLOCATE(env)
       DEALLOCATE(env1)
+
+!attentionattention start fudging
+if(t2d) then
+!
+!     ==========================================================================
+!     == DEFINE 2-DIMENSIONAL GRID                                           ==
+!     ==========================================================================
+      NP=n1*n2
+      ALLOCATE(P(3,NP))
+      tvec(:,1)=(/10.d0,0.d0,0.d0/)
+      tvec(:,2)=(/0.d0,10.d0,0.d0/)
+      origin(:)=(/1.d0,0.d0,0.d0/)-0.5d0*(tvec(:,1)+tvec(:,2))
+      tlittle(:,1)=tvec(:,1)/real(n1-1,kind=8)
+      tlittle(:,2)=tvec(:,2)/real(n2-1,kind=8)
+      ip=0
+      DO I=1,n1
+        DO j=1,n2
+          ip=ip+1
+          p(:,ip)=origin+tlittle(:,1)*real(i-1,kind=8) &
+     &                  +tlittle(:,2)*real(j-1,kind=8) 
+        ENDDO
+      enddo
+!
+!     ==========================================================================
+!     == DETERMINE ENVELOPE FUNCTION AT THE GRID POINTS                       ==
+!     ==========================================================================
+      ALLOCATE(env(NP,LM1X))
+      ALLOCATE(ORB1(NP,LM1X))
+      ALLOCATE(ORB(NP,LM1X))
+      ALLOCATE(env1(NP,LM1X))
+      CALL LMTO_GRIDENVELOPE(RBAS,NAT,R0,IAT0,LM1X,NP,P,env,env1)
+      call LMTO_GRIDaugment(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORB1,env1)
+      orb=env+orb1-env1
+!
+!     ==========================================================================
+!     == WRITE ORBITALS TO FILE                                               ==
+!     ==========================================================================
+      DO LM1=1,LM1X
+        FILE='NTB2D'
+        WRITE(STRING,*)IAT0 
+        FILE=TRIM(ADJUSTL(FILE))//'_IAT'//TRIM(ADJUSTL(STRING))
+        CALL SPHERICAL$YLMNAME(LM1,STRING)
+        FILE=TRIM(ADJUSTL(FILE))//TRIM(ADJUSTL(STRING))//'.DAT'
+        CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,-FILE)
+        CALL FILEHANDLER$UNIT('HOOK',NFIL)
+!
+        DO I=1,Np
+          WRITE(NFIL,*)p(1:2,i),ORB(i,lm1)
+        ENDDO
+        CALL FILEHANDLER$CLOSE('HOOK')
+        CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOK')
+      ENDDO
+      DEALLOCATE(P)
+      DEALLOCATE(ORB)
+      DEALLOCATE(ORB1)
+      DEALLOCATE(env)
+      DEALLOCATE(env1)
+      CALL ERROR$MSG('PROGRAM STOPS AFTER WRITING DATA FOR 2-D PLOT')
+      CALL ERROR$MSG('OF LOCAL ORBITALS')
+      CALL ERROR$MSG('AVOID THIS OPTION BY SETTING T2D=.FALSE.')
+      CALL ERROR$STOP('LMTO_PLOTLOCORB')
+end if
+
 !CALL SPECIALFUNCTION$TEST()
 !CALL TEST_LMTO$STRUCTURECONSTANTS()
                                               call trace$pop()
@@ -2059,6 +2140,10 @@ real(8) :: x(10)
         ALLOCATE(NLPHIDOT(NR,LNX))
         CALL SETUP$GETR8A('NLPHIDOT',NR*LNX,NLPHIDOT)
         CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
+!
+!       ========================================================================
+!       ==  match partial waves to k and jbar                                 ==
+!       ========================================================================
         lx=maxval(lox)
         ALLOCATE(k0augarr(NR,lx+1))
         ALLOCATE(jbaraugarr(NR,lx+1))
@@ -2067,7 +2152,7 @@ real(8) :: x(10)
         ALLOCATE(qbarvec((lx+1)**2))
         qbarvec=0.d0
         DO LN=1,LNX
-          if(iscatt(ln).ne.0) cycle
+          if(iscatt(ln).gt.0) cycle 
           L=LOX(LN)
           qbar=potpar(isp)%qbar(ln)
           CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,J0VAL,J0DER)
@@ -2086,31 +2171,39 @@ real(8) :: x(10)
           k0augarr(:,l+1)=(AEPHI(:,LN)*WK0PHIDOT-NLPHIDOT(:,LN)*WK0PHI) &
       &                  /WPHIPHIDOT
           qbarvec(l**2+1:(l+1)**2)=qbar
+!print*,'wkj',wk0phidot,wk0phi,wphiphidot
         ENDDO
-print*,'qbarvec ',qbarvec
-nfil=12
-open(unit=nfil,file='xx.dat')
-do ir=10,nr
-  CALL LMTO$SOLIDBESSELRAD(0,r(ir),K2,x(1),J0DER)
-  CALL LMTO$SOLIDHANKELRAD(0,r(ir),K2,x(2),K0DER)
-  CALL LMTO$SOLIDBESSELRAD(1,r(ir),K2,x(3),J0DER)
-  CALL LMTO$SOLIDHANKELRAD(1,r(ir),K2,x(4),K0DER)
-  x(1)=x(1)-x(2)*qbarvec(1)
-  x(3)=x(3)-x(4)*qbarvec(2)
-  write(nfil,*)r(ir),k0augarr(ir,:),jbaraugarr(ir,:),x(1:4)
-enddo
-close(nfil)
-!stop
+!print*,'iscatt ',iscatt(1:lnx)
+!print*,'lox    ',lox(1:lnx)
+!!$#print*,'qbarvec ',qbarvec
+!!$nfil=12
+!!$open(unit=nfil,file='xx.dat')
+!!$do ir=10,nr
+!!$  CALL LMTO$SOLIDBESSELRAD(0,r(ir),K2,x(1),J0DER)
+!!$  CALL LMTO$SOLIDHANKELRAD(0,r(ir),K2,x(2),K0DER)
+!!$  CALL LMTO$SOLIDBESSELRAD(1,r(ir),K2,x(3),J0DER)
+!!$  CALL LMTO$SOLIDHANKELRAD(1,r(ir),K2,x(4),K0DER)
+!!$  x(1)=x(1)-x(2)*qbarvec(1)
+!!$  x(3)=x(3)-x(4)*qbarvec(2)
+!!$  write(nfil,*)r(ir),k0augarr(ir,:),jbaraugarr(ir,:),x(1:4)
+!!$enddo
+!!$close(nfil)
+!!$stop
 !
-        ALLOCATE(k0aug((lx+1)**2))
-        ALLOCATE(jbaraug((lx+1)**2))
-        ALLOCATE(k0((lx+1)**2))
-        ALLOCATE(j0((lx+1)**2))
-        ALLOCATE(jbar((lx+1)**2))
-        ALLOCATE(ylm((lx+1)**2))
-
+!
+!       ========================================================================
+!       ==                                                                    ==
+!       ========================================================================
+        ALLOCATE(K0AUG((LX+1)**2))
+        ALLOCATE(JBARAUG((LX+1)**2))
+        ALLOCATE(K0((LX+1)**2))
+        ALLOCATE(J0((LX+1)**2))
+        ALLOCATE(JBAR((LX+1)**2))
+        ALLOCATE(YLM((LX+1)**2))
+!
         DO NN=1,NNB
           IF(SBAR(NN)%IAT1.NE.IAT1) CYCLE
+!IF(SBAR(NN)%IAT2.eq.IAT1) CYCLE
           IAT2=SBAR(NN)%IAT2
           IF(ISPECIES1(IAT2).NE.ISP) CYCLE
           LM2X=SBAR(NN)%N2
@@ -2118,54 +2211,54 @@ close(nfil)
      &                    +RBAS(:,2)*REAL(SBAR(NN)%IT(2),KIND=8) &
      &                    +RBAS(:,3)*REAL(SBAR(NN)%IT(3),KIND=8) 
           TONSITE=(IAT2.EQ.IAT1).AND.(MAXVAL(ABS(SBAR(NN)%IT(:))).EQ.0)
-          do ip=1,np
-            dr(:)=p(:,ip)-r2(:)
-            dis=sqrt(sum(dr**2))
-            if(dis.gt.rad) cycle
+          DO IP=1,NP
+            DR(:)=P(:,IP)-R2(:)
+            DIS=SQRT(SUM(DR**2))
+            IF(DIS.GT.RAD) CYCLE
 !
 !           == DETERMINE HANKEL AND SCREENED BESSEL FUNCTION AT IAT2 ===========
             CALL  LMTO$SOLIDHANKEL(DR,RAD,K2,LM2X,K0(1:LM2X))
             CALL  LMTO$SOLIDBESSEL(DR,K2,LM2X,J0(1:LM2X))
             JBAR(:LM2X)=J0(:LM2X)-K0(:LM2X)*QBARVEC(:LM2X)
-            call spherical$ylm(lm2x,dr,ylm)
+            CALL SPHERICAL$YLM(LM2X,DR,YLM)
             DO L=0,LX
-              lm1=l**2+1
-              lm2=(l+1)**2
-              CALL RADIAL$VALUE(GID,NR,K0AUGARR(:,L+1),dis,SVAR)
-              K0AUG(LM1:lm2)=SVAR*ylm(lm1:lm2)
-              CALL RADIAL$VALUE(GID,NR,JBARAUGARR(:,L+1),dis,SVAR)
-              JBARAUG(LM1:LM2)=SVAR*ylm(lm1:lm2)
+              LM1=L**2+1
+              LM2=(L+1)**2
+              CALL RADIAL$VALUE(GID,NR,K0AUGARR(:,L+1),DIS,SVAR)
+              K0AUG(LM1:LM2)=SVAR*YLM(LM1:LM2)
+              CALL RADIAL$VALUE(GID,NR,JBARAUGARR(:,L+1),DIS,SVAR)
+              JBARAUG(LM1:LM2)=SVAR*YLM(LM1:LM2)
             ENDDO
 !
-            do lm1=1,lm1x
+            DO LM1=1,LM1X
               ORBI(IP,LM1)=ORBI(IP,LM1) &
       &                           -DOT_PRODUCT(JBAR(1:LM2X),SBAR(NN)%MAT(:,LM1))
               ORB(IP,LM1)=ORB(IP,LM1) &
-      &                        -DOT_PRODUCT(JBARaug(1:LM2X),SBAR(NN)%MAT(:,LM1))
-              IF(TONSITE) then
+      &                        -DOT_PRODUCT(JBARAUG(1:LM2X),SBAR(NN)%MAT(:,LM1))
+              IF(TONSITE) THEN
                 ORBI(IP,LM1)=ORBI(IP,LM1)+K0(LM1)
-                ORB(IP,LM1) =ORB(IP,LM1) +K0aug(LM1)
-              end if
-            enddo
-          enddo
-        enddo
-        deALLOCATE(k0aug)
-        deALLOCATE(jbaraug)
-        deALLOCATE(k0)
-        deALLOCATE(j0)
-        deALLOCATE(jbar)
-        deallocate(lox)
-        deallocate(iscatt)
-        deallocate(nlphidot)
-        deallocate(aephi)
-        deallocate(r)
-        deALLOCATE(k0augarr)
-        deALLOCATE(jbaraugarr)
-        deALLOCATE(qbarvec)
-        deALLOCATE(ylm)
-      enddo    
-      return
-      end
+                ORB(IP,LM1) =ORB(IP,LM1) +K0AUG(LM1)
+              END IF
+            ENDDO
+          ENDDO
+        ENDDO
+        DEALLOCATE(K0AUG)
+        DEALLOCATE(JBARAUG)
+        DEALLOCATE(K0)
+        DEALLOCATE(J0)
+        DEALLOCATE(JBAR)
+        DEALLOCATE(LOX)
+        DEALLOCATE(ISCATT)
+        DEALLOCATE(NLPHIDOT)
+        DEALLOCATE(AEPHI)
+        DEALLOCATE(R)
+        DEALLOCATE(K0AUGARR)
+        DEALLOCATE(JBARAUGARR)
+        DEALLOCATE(QBARVEC)
+        DEALLOCATE(YLM)
+      ENDDO    
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_GRIDENVELOPE(RBAS,NAT,R0,IAT1,LM1X,NP,P,ORB,ORBI)
@@ -2204,7 +2297,6 @@ close(nfil)
       INTEGER(4),ALLOCATABLE::LOX(:),ISCATT(:)
       INTEGER(4)            :: ispecies1(nat)
 !     **************************************************************************
-print*,'marke 0'
       NNB=SIZE(SBAR)  !SBAR STRUCCONS. (GLOBAL)
       CALL ATOMLIST$GETI4A('ISPECIES',0,NAT,ISPECIES1)
 !     == DETERMINE LMXX #(ANGULAR MOMENTA ON NEIGHBORING SITE) =================
@@ -2213,16 +2305,13 @@ print*,'marke 0'
          IF(SBAR(NN)%IAT1.NE.IAT1) CYCLE
         LMXX=MAX(LMXX,SBAR(NN)%N2)
       ENDDO
-print*,'marke 1'
       ALLOCATE(CVEC(LMXX,LM1X))
       ALLOCATE(K0(LMXX))
       ALLOCATE(JBAR(LMXX))
       ALLOCATE(J0(LMXX))
-print*,'marke 2'
 !
 !     == DETERMINE QBAR ========================================================
       ALLOCATE(QBARVEC(LMXX,NAT))
-print*,'marke 3'
       QBARVEC(:,:)=0.D0
       DO IAT=1,NAT
         ISP=ISPECIES1(IAT)
@@ -2242,7 +2331,6 @@ print*,'marke 3'
         DEALLOCATE(ISCATT)
         CALL SETUP$ISELECT(0)
       ENDDO
-print*,'marke 4'
 !
 !     == LOOP OVER ALL NEIGHBORS AND GRID POINTS ===============================
       ORB(:,:)=0.D0

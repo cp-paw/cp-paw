@@ -2255,7 +2255,7 @@ CONTAINS
       character(*)  ,intent(in) :: cid
       TYPE(LL_TYPE)             :: LIST
       TYPE(BUFF_TYPE)           :: BUFFER
-      INTEGER(4)    ,PARAMETER  :: BUFFERSIZE=100000
+      INTEGER(4)    ,PARAMETER  :: BUFFERSIZE=1000000
       LOGICAL(4)                :: TDATA
       CHARACTER(32)             :: KEY
       INTEGER(4)                :: KEYL
@@ -2394,7 +2394,8 @@ CONTAINS
               CALL ERROR$STOP('BUFFER$READ')
             END IF
 !           CALL LINKEDLIST$SET(LIST,TRIM(KEY),-1,CHARRAY(:)(1:ISVAR))
-            CALL LINKEDLIST_SETchr1withlength(LIST,TRIM(KEY),-1,leng,CHARRAY(:)(1:ISVAR))
+            CALL LINKEDLIST_SETchr1withlength(LIST,TRIM(KEY),-1,leng &
+      &                                                    ,CHARRAY(:)(1:ISVAR))
             DEALLOCATE(CHARRAY)
           ELSE
             CALL ERROR$MSG('TYPE NOT RECOGNIZED')

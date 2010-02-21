@@ -2908,13 +2908,13 @@ END IF
       REAL(8)   ,ALLOCATABLE:: AEPHI(:,:)
       REAL(8)               :: RAD  !APPROXIMATE ASA RADIUS OF THE ATOM
       INTEGER(4)            :: NFILO
-!     ***************************************************************************
+!     **************************************************************************
                             CALL TRACE$PUSH('WAVES$SPINS')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
-!     ===========================================================================
-!     ==  DETERMINE SPINS ON THE INDIVIDUAL ATOMS                              ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==  DETERMINE SPINS ON THE INDIVIDUAL ATOMS                             ==
+!     ==========================================================================
       CM(:,:)=0.D0
       DO IAT=1,NAT
         IF(MOD(IAT-1,NTASKS)+1.NE.THISTASK)  CYCLE
@@ -2995,9 +2995,9 @@ END IF
 RETURN
 
 !
-!     ===========================================================================
-!     ==  DETERMINE TOTAL MAGNETIZATION AS INTEGRATED MOMENT DENSITY           ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==  DETERMINE TOTAL MAGNETIZATION AS INTEGRATED MOMENT DENSITY          ==
+!     ==========================================================================
       PSSPIN(:)=0.D0
       IF(NDIMD.EQ.2) THEN
         PSSPIN(3)=SUM(RHO(:,2))
@@ -3013,9 +3013,9 @@ RETURN
       CALL GBASS(RBAS,GBAS,CELLVOL)
       PSSPIN(:)=PSSPIN(:)*CELLVOL/REAL(NR,KIND=8)
 !
-!     ===========================================================================
-!     ==  DETERMINE AUGMENTATION PART OF THE SPIN DENSITY                      ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==  DETERMINE AUGMENTATION PART OF THE SPIN DENSITY                     ==
+!     ==========================================================================
       AUGSPIN(:)=0.D0
       DO IAT=1,NAT
         IF(MOD(IAT-1,NTASKS)+1.NE.THISTASK)  CYCLE
@@ -3052,14 +3052,14 @@ RETURN
       ENDDO
       CALL MPE$COMBINE('MONOMER','+',AUGSPIN)
 !
-!     ===========================================================================
-!     ==  REPORT TOTAL SPIN                                                    ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==  REPORT TOTAL SPIN                                                   ==
+!     ==========================================================================
       TOTSPIN=PSSPIN+AUGSPIN
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='("ABS.VALUE OF INTEGRATED SPIN MOMENT DENSITY",F10.5)') &
      &                 SQRT(SUM(TOTSPIN(:)**2))
-      WRITE(NFILO,FMT='("DIRECTION OF INTEGRATED SPIN MOMENT DENSITY",3F10.5)') &
+      WRITE(NFILO,FMT='("DIRECTION OF INTEGRATED SPIN MOMENT DENSITY",3F10.5)')&
      &                 TOTSPIN/SQRT(SUM(TOTSPIN(:)**2))
                                    CALL TRACE$POP()
       RETURN

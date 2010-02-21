@@ -1,0 +1,27 @@
+#!/bin/sh
+cat $1 \
+|perl -p -e 's/\s+$/ /g' \
+|perl -p -e 's/([0-9a-zA-Z.\-=_\[\]'+"'"+']*)\s*([0-9a-zA-Z.\-=]*?)/$1 $2/g' \
+|perl -p -e 's/= /=/g' \
+|perl -p -e 's/(!(?!(END|STRUCTURE)))/\n$1/gi' \
+|perl -p -e 's/E\+000//gi' \
+|perl -p -e 's/  / /g' \
+|perl -p -e 's/!EOB/!EOB\n/gi' \
+|perl -p -e 's/\.([0-9]*?)0*(\s)/.$1$2/g' \
+|perl -p -e 's/([0-9])\. /$1\.0 /g' \
+|perl -p -e 's/Q=\S*?\s//g' \
+|perl -p -e 's/INDEX=\S*?\s//gi' \
+|perl -p -e 's/SP=\S*?\s//gi' \
+|perl -p -e 's/SOFTCORE=\x27NONE\x27\s//gi' \
+|perl -p -e 's/Z=\S*?\s//g' \
+|perl -p -e 's/LRHOX=2\s//gi' \
+|perl -p -e 's/([= ]\-?[0-9]*?\.[0-9]{8})[0-9]*/$1E+000/g' \
+|perl -p -e 's/([= ]\-?[0-9]*?\.[0-9]{8})[0-9]*(E[\+\-][0-9]{3})/$1$2/g' \
+|perl -p -e 's/E\+000E/E/g' \
+|perl -p -e 's/([= ])([0-9]\.[0-9]{8})/$1 $2/g' \
+|perl -p -e 's/(NAME=\x27[a-zA-Z0-9_]{3}\x27)/$1   /g' \
+|perl -p -e 's/(NAME=\x27[a-zA-Z0-9_]{4}\x27)/$1  /g' \
+|perl -p -e 's/(NAME=\x27[a-zA-Z0-9_]{5}\x27)/$1 /g' \
+|perl -p -e 's/ !STRUCTURE/!STRUCTURE/gi' \
+|perl -p -e 's/ DECOUPLE=T//gi' \
+|perl -p -e 's/!END\s*!END/!END\n!END/gi' \

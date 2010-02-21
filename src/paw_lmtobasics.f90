@@ -25,12 +25,15 @@
       REAL(8)              :: DIS
       CHARACTER(64)        :: FILE
       REAL(8)              :: MAXDEV
-      LOGICAL    ,PARAMETER:: TPR=.FALSE.
+      LOGICAL    ,PARAMETER:: TPR=.false.
 !     **************************************************************************
+!     == THE BARE HANKEL FUNCTION IS CENTERED AT THE ORIGIN AND CALCULATED 
+!     == ALONG A LINE FROM CENTER-DR TO CENTER+DR.
+!     == THE HANKEL FUNCTION IS EXPANDED ABOUT CENTER IN BESSEL FUNCTIONS
       CENTER(:)=(/0.D0,1.D0,5.D0/)
       DR(:)=(/0.D0,1.D0,1.D0/)
       MAXDEV=0.D0
-      DO IK=-1,1
+      DO IK=-1,1   ! try negative, positive and zero kappa
         K2=REAL(IK,KIND=8)
         IF(TPR) THEN
           WRITE(FILE,*)IK
@@ -469,8 +472,11 @@
 !     **************************************************************************
 !     **  DETERMINES SCREENED STRUCTURE CONSTANTS FOR A CLUSTER               **
 !     **      |KBAR_I>=SUM_J |K_J> (DELTA_JI+QBAR_J*SBAR_JI)                  **
-!     **  START WITH SBAR=0 OR GIVE BETTER ESTIMATE                           **
 !     **                                                                      **
+!     **  remark:                                                             **
+!     **    s(:,:norb) connects the same orbitals as sbar(:,:)                **
+!     **                                                                      **
+!     **  START WITH SBAR=0 OR GIVE BETTER ESTIMATE                           **
 !     **                                                                      **
 !     **      SBAR=                                                           **
 !     **                                                                      **
@@ -489,24 +495,41 @@
       REAL(8)               :: S0(N,NORB)
       REAL(8)               :: A(N,N)
       REAL(8)               :: SBARBIG(N,N)
-      INTEGER(4)            :: I
+      INTEGER(4)            :: I,j
       REAL(8)               :: DELTA
       INTEGER(4)            :: ITER
       LOGICAL(4)            :: CONVG
+      LOGICAL(4)            :: test=.false.
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO$SCREEN')
 !
 !     ==========================================================================
-!     ==========================================================================
+!     == DETERMINE SBAR FROM MATRIX EQUATION                                  ==
 !     ==========================================================================
       IF(TSTART) THEN
         DO I=1,N
-          A(:,I)=-QBAR(:)*S(:,I)
+          A(i,:)=-S(I,:)*QBAR(:)
           A(I,I)=A(I,I)+1.D0
         ENDDO
-        CALL LIB$MATRIXSOLVER8(N,N,N,TRANSPOSE(A),SBARBIG,TRANSPOSE(S))
-        SBARBIG=TRANSPOSE(SBARBIG)
-        SBAR(:,:)=SBARBIG(:,:NORB)
+        CALL LIB$MATRIXSOLVER8(N,N,Norb,A,SBAR,s(:,:norb))
+
+!       == test ================================================================
+        if(test) then
+!         ==  test (1-s0*qbar)*sbar=s0 =========================================
+          DO I=1,N
+            A(i,:)=-S(i,:)*QBAR(:)
+            A(I,I)=A(I,I)+1.D0
+          ENDDO
+          dsbar=matmul(a,sbar)-s(:,:norb)
+          do i=1,n
+            do j=1,norb
+              if(abs(dsbar(i,j)).gt.1.d-8) then
+                print*,'sbartest ',i,j,dsbar(i,j)
+              end if
+            enddo
+          enddo
+          stop 'forced stop in lmto$screen'
+        end if
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -622,7 +645,7 @@
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$NEIGHBORLIST(RBAS,NAT,R,RC,NNX,NNB,NNLIST)
+      SUBROUTINE LMTO$NEIGHBORLIST(RBAS,NAT,R,Rad,NNX,NNB,NNLIST)
 !     **************************************************************************
 !     **  THIS IS A SIMPLE NEIGHBORLIST ROUTINE                               **
 !     **************************************************************************
@@ -630,10 +653,11 @@
       INTEGER(4)   ,INTENT(IN) :: NAT       ! #(ATOMS)
       REAL(8)      ,INTENT(IN) :: RBAS(3,3) ! LATTICE VECTORS
       REAL(8)      ,INTENT(IN) :: R(3,NAT)  ! ATOM POSITIONS
-      REAL(8)      ,INTENT(IN) :: RC        ! CUTOFF RADIUS FOR THE NEIGHORLIST
+      REAL(8)      ,INTENT(IN) :: Rad(nat)   ! CUTOFF RADIUS FOR THE NEIGHORLIST
       INTEGER(4)   ,INTENT(IN) :: NNX       ! X#(NEIGHBORS PER ATOM)
       INTEGER(4)   ,INTENT(OUT):: NNB       ! #(NEIGHBORS)
       INTEGER(4)   ,INTENT(OUT):: NNLIST(5,NNX) ! NEIGHBORLIST (IAT1,IAT2,IT(3))
+      REAL(8)                  :: Rc
       REAL(8)                  :: RBASINV(3,3)
       REAL(8)                  :: RFOLD(3,NAT)
       REAL(8)                  :: X(3)      ! RELATIVE COORDINATES
@@ -664,7 +688,6 @@
 !     ==========================================================================
 !     == FOLD ATOM POSITIONS INTO THE FIRST UNIT CELL                         ==
 !     ==========================================================================
-      RMAX2=RC**2
       NNB=0
       DO IAT1=1,NAT
 !       == PLACE ONSITE ELEMENT FOR EACH ATOM FIRST IN THE NEIGHBORLIST
@@ -682,6 +705,8 @@
           X0=RFOLD(1,IAT1)-RFOLD(1,IAT2)
           Y0=RFOLD(2,IAT1)-RFOLD(2,IAT2)
           Z0=RFOLD(3,IAT1)-RFOLD(3,IAT2)
+          RC=RAD(IAT1)+RAD(IAT2)
+          RMAX2=RC**2
           CALL BOXSPH(RBAS,X0,Y0,Z0,RC,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
 !         == LOOP OVER BOXES IN THE NEIGHBORHOOD ===============================
           DO IT1=MIN1,MAX1
@@ -714,17 +739,18 @@
       ENDDO
 
 !!$DO IAT1=1,NAT
-!!$ D(:)=R(:,IAT1)-RFOLD(:,IAT1)
-!!$ WRITE(*,FMT='("D ",3F10.5,3I5)')D(:),ITFOLD(:,IAT1)
+!!$  D(:)=R(:,IAT1)-RFOLD(:,IAT1)
+!!$  WRITE(*,FMT='("D ",3F10.5,3I5)')D(:),ITFOLD(:,IAT1)
 !!$ENDDO
 !!$DO I=1,NNB
 !!$  IAT1=NNLIST(1,I)
 !!$  IAT2=NNLIST(2,I)
 !!$  ITVEC(:)=NNLIST(3:5,I)
 !!$  D(:)=R(:,IAT2)-R(:,IAT1)+MATMUL(RBAS,REAL(ITVEC,KIND=8))
-!!$  WRITE(*,FMT='(I5," DIS ",F10.5," D ",3F10.5)')I,SQRT(SUM(D**2)),D(:)
+!!$  WRITE(*,FMT='(I5,",iat1",i3," iat2 ",i3" DIS ",F10.5," D ",3F10.5," r1+r2",f10.5)') &
+!!$ &             I,iat1,iat2,SQRT(SUM(D**2)),D(:),rad(iat1)+rad(iat2)
 !!$ENDDO
-!!$PRINT*,'RC ',RC
+!!$PRINT*,'Rad ',Rad
 !!$STOP
       RETURN
       END

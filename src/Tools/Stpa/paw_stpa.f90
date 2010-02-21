@@ -10,13 +10,14 @@
       TYPE(LL_TYPE)               :: LL_STP
       CHARACTER(256)              :: SETUPREPORT      
       CHARACTER(256)              :: STRING
-      CHARACTER(256)              :: OUTFILE
-      CHARACTER(16)               :: SELECTION
+      INTEGER(4)                  :: NSELECTION
+      CHARACTER(256),ALLOCATABLE  :: OUTFILE(:)
+      CHARACTER(16) ,ALLOCATABLE  :: SELECTION(:)
       INTEGER(4)                  :: NARGS
       INTEGER(4)                  :: IARG
       INTEGER(4)                  :: NFIL
       INTEGER(4)   ,PARAMETER     :: NCHOICEX=100
-      CHARACTER(30)               :: CHOICE(2,NCHOICEX)
+      CHARACTER(60)               :: CHOICE(2,NCHOICEX)
       INTEGER(4)                  :: I,NCHOICE
       LOGICAL(4)                  :: TCHK
 !     **************************************************************************
@@ -50,7 +51,7 @@
       CHOICE(1,I)='UPSISM'; CHOICE(2,I)=-'SMALL COMPONENT OF NODE-LESS WAVE FUNCTIONS'; I=I+1
       CHOICE(1,I)='AEPSI'; CHOICE(2,I)=-'ALL-ELECTRON WAVE FUNCTIONS'; I=I+1
       CHOICE(1,I)='AEPSISM'; CHOICE(2,I)=-'SMALL COMPONENT OF ALL-ELECTRON WAVE FUNCTIONS'; I=I+1
-      CHOICE(1,I)='PARMS.PSI.RC'; CHOICE(2,I)=-'METHOD FOR CONSTRUCTING AUXILIARY PARTIAL WAVES'; I=I+1
+      CHOICE(1,I)='PARMS.PSI.RCL'; CHOICE(2,I)=-'METHOD FOR CONSTRUCTING AUXILIARY PARTIAL WAVES'; I=I+1
       CHOICE(1,I)='PARMS.PSI.TYPE'; CHOICE(2,I)=-'METHOD FOR CONSTRUCTING AUXILIARY PARTIAL WAVES'; I=I+1
       CHOICE(1,I)='PARMS.PSI.LAMBDA'; CHOICE(2,I)=-'DECAY PARAMETER FOR CONSTRUCTING AUXILIARY PARTIAL WAVES'; I=I+1
       CHOICE(1,I)='PARMS.CORE.RC'; CHOICE(2,I)=-'CUTOFF RADIUS FOR PSEUDIZED CORE'; I=I+1
@@ -60,6 +61,7 @@
       CHOICE(1,I)='PARMS.POT.POW'; CHOICE(2,I)=-'LEADING POWER AT THE ORIGIN OF THE PSEUDIZED POTENTIAL'; I=I+1
       CHOICE(1,I)='PARMS.POT.VAL0'; CHOICE(2,I)=-'VALUE AT THE ORIGIN OF THE PSEUDIZED POTENTIAL'; I=I+1
       CHOICE(1,I)='PARMS.RCSM'; CHOICE(2,I)=-'NARROW COMPENSATION GAUSSIAN'; I=I+1
+      CHOICE(1,I)='PARMS.RBOX'; CHOICE(2,I)=-'RBOX'; I=I+1
       CHOICE(1,I)='POT'; CHOICE(2,I)=-'POTENTIALS [AE,PS,V(PSRHO)]'; I=I+1
       CHOICE(1,I)='PROG'; CHOICE(2,I)=-'PROJECTOR FUNCTIONS IN G-SPACE'; I=I+1
       CHOICE(1,I)='VADDG'; CHOICE(2,I)=-'VADD IN G-SPACE'; I=I+1
@@ -84,17 +86,37 @@
       ENDDO
 !
 !     ==========================================================================
-!     ==  RESOLVE ARGUMENT LIST                                               ==
+!     ==========================================================================
+!     ==  DETERMINE INPUT FILE READ IT INTO THE BUFFER                        ==
+!     ==========================================================================
 !     ==========================================================================
 !     == LAST ARGUMENT IS THE INPUT  FILE FOR THE SETUP REPORT =================
       CALL LIB$GETARG(NARGS,SETUPREPORT)
 !
-      SELECTION=''
-      OUTFILE=''
+!     ==========================================================================
+!     ==========================================================================
+!     ==  RESOLVE ARGUMENT LIST                                               ==
+!     ==========================================================================
+!     ==========================================================================
+      NSELECTION=0
+      DO IARG=1,NARGS-1
+        IF(+STRING(1:2).EQ.'-S') NSELECTION=NSELECTION+1
+      ENDDO
+      IF(NSELECTION.EQ.0) THEN
+        WRITE(*,*)'INPUT ERROR: OPTION -S IS MANDATORY'
+        WRITE(*,*)
+        CALL ERRORMESSAGE(NCHOICE,CHOICE)
+        STOP
+      END IF
+      ALLOCATE(SELECTION(NSELECTION))
+      ALLOCATE(OUTFILE(NSELECTION))
+      SELECTION(:)=''
+      OUTFILE(:)=''
+      ISELECTION=0
       IARG=1
       DO WHILE(IARG.LT.NARGS)
         CALL LIB$GETARG(IARG,STRING)
-!       == OPTION MUST START WITH A DASH =========================================
+!       == OPTION MUST START WITH A DASH =======================================
         IF(STRING(1:1).NE.'-') THEN
           WRITE(*,*)'INPUT ERROR: ARGUMENT MUST BEGIN WITH A DASH'
           WRITE(*,*)
@@ -104,7 +126,11 @@
 !      
         IF(+STRING.EQ.+'-O') THEN
           IARG=IARG+1
-          CALL LIB$GETARG(IARG,OUTFILE)
+          IF(ISELECTION.EQ.0) THEN
+            CALL ERROR$MSG('SELECTION MUST BE SPECIFIED BEFORE THE OUTPUT FILE')
+            CALL ERROR$STOP('MAIN')
+          END IF
+          CALL LIB$GETARG(IARG,OUTFILE(ISELECTION))
           IF(OUTFILE(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
             WRITE(*,*)'INPUT ERROR: OPTION -O MUST BE FOLLOWED BY OUTPUT FILE'
             WRITE(*,*)
@@ -113,25 +139,26 @@
           END IF
           IARG=IARG+1
 !
-!       == OPTION SPECIFY SELECTION ===========================================
+!       == OPTION SPECIFY SELECTION ============================================
         ELSE IF(+STRING.EQ.+'-S') THEN
           IARG=IARG+1
-          CALL LIB$GETARG(IARG,SELECTION)
+          ISELECTION=ISELECTION+1
+          CALL LIB$GETARG(IARG,SELECTION(ISELECTION))
           IF(SELECTION(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
             WRITE(*,*)'INPUT ERROR: OPTION -S MUST BE FOLLOWED BY SELECTION'
             WRITE(*,*)
             CALL ERRORMESSAGE(NCHOICE,CHOICE)
             STOP
           END IF
-          SELECTION=+SELECTION
+          SELECTION(ISELECTION)=+SELECTION(ISELECTION)
           TCHK=.FALSE.
           DO I=1,NCHOICE
-            TCHK=TCHK.OR.(TRIM(SELECTION).EQ.+TRIM(CHOICE(1,I)))
+            TCHK=TCHK.OR.(TRIM(SELECTION(ISELECTION)).EQ.+TRIM(CHOICE(1,I)))
             IF(TCHK) EXIT
           ENDDO
           IF(.NOT.TCHK) THEN
             WRITE(*,*)'INPUT ERROR: ILLEGAL VALUE FOR SELECTION'
-            WRITE(*,*)'SELECTION=',TRIM(SELECTION)
+            WRITE(*,*)'SELECTION=',TRIM(SELECTION(ISELECTION))
             WRITE(*,*)
             CALL ERRORMESSAGE(NCHOICE,CHOICE)
             STOP
@@ -145,12 +172,6 @@
           STOP
         END IF
       ENDDO
-      IF(SELECTION.EQ.'') THEN
-        WRITE(*,*)'INPUT ERROR: OPTION -S IS MANDATORY'
-        WRITE(*,*)
-        CALL ERRORMESSAGE(NCHOICE,CHOICE)
-        STOP
-      END IF
 !
 !     ==========================================================================
 !     == READ INPUT FILE                                                      ==
@@ -171,120 +192,121 @@
 !     ==========================================================================
 !     == DEFINE OUTPUT FILE AND PREPARE OUTPUT                                ==
 !     ==========================================================================
-      IF(OUTFILE.NE.'') THEN
-        CALL FILEHANDLER$SETFILE('DAT',.FALSE.,OUTFILE)
-        CALL FILEHANDLER$SETSPECIFICATION('DAT','STATUS','UNKNOWN')
-        CALL FILEHANDLER$SETSPECIFICATION('DAT','POSITION','REWIND')
-        CALL FILEHANDLER$SETSPECIFICATION('DAT','ACTION','WRITE')
-        CALL FILEHANDLER$SETSPECIFICATION('DAT','FORM','FORMATTED')
-        CALL FILEHANDLER$UNIT('DAT',NFIL)
-      ELSE 
-       NFIL=6
-      END IF
-!      CALL LINKEDLIST$REPORT(LL_STP,NFIL)
+      DO ISELECTION=1,NSELECTION
+        IF(OUTFILE(ISELECTION).NE.'') THEN
+          CALL FILEHANDLER$SETFILE('DAT',.FALSE.,OUTFILE(ISELECTION))
+          CALL FILEHANDLER$SETSPECIFICATION('DAT','STATUS','UNKNOWN')
+          CALL FILEHANDLER$SETSPECIFICATION('DAT','POSITION','REWIND')
+          CALL FILEHANDLER$SETSPECIFICATION('DAT','ACTION','WRITE')
+          CALL FILEHANDLER$SETSPECIFICATION('DAT','FORM','FORMATTED')
+          CALL FILEHANDLER$UNIT('DAT',NFIL)
+        ELSE 
+          NFIL=6
+        END IF
+!       CALL LINKEDLIST$REPORT(LL_STP,NFIL)
 !
-!     ==========================================================================
-!     == SCAN FOR PARAMETERS                                                  ==
-!     ==========================================================================
-      CALL PARMSCONSTANTS(LL_STP,NFIL,SELECTION,TCHK)
-      IF(TCHK) STOP
+!       ======================================================================
+!       == SCAN FOR PARAMETERS                                              ==
+!       ======================================================================
+        CALL PARMSCONSTANTS(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
+        IF(TCHK) STOP
 !
-!     ==========================================================================
-!     == SCAN FOR POTENTIALS                                                  ==
-!     ==========================================================================
-      CALL POTENTIALS(LL_STP,NFIL,SELECTION,TCHK)
-      IF(TCHK) STOP
+!       ========================================================================
+!       == SCAN FOR POTENTIALS                                                ==
+!       ========================================================================
+        CALL POTENTIALS(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
+        IF(TCHK) STOP
 !
-!     ==========================================================================
-!     == SCAN FOR PROJECTOR FUNCTIONS AND VADD IN G-SPACE                     ==
-!     ==========================================================================
-      CALL FOURIER(LL_STP,NFIL,SELECTION,TCHK)
-      IF(TCHK) STOP
+!       ========================================================================
+!       == SCAN FOR PROJECTOR FUNCTIONS AND VADD IN G-SPACE                   ==
+!       ========================================================================
+        CALL FOURIER(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
+        IF(TCHK) STOP
 !
-!     ==========================================================================
-!     == TAKE CARE OF SCATTERING PROPERTIES                                   ==
-!     ==========================================================================
-      IF(SELECTION.EQ.'SCATTERING') THEN
-        CALL SCATTERING(LL_STP,NFIL)
+!       ========================================================================
+!       == TAKE CARE OF SCATTERING PROPERTIES                                 ==
+!       ========================================================================
+        IF(SELECTION(ISELECTION).EQ.'SCATTERING') THEN
+          CALL SCATTERING(LL_STP,NFIL)
 !
-!     ==========================================================================
-!     == CONSTANTS                                                            ==
-!     ==========================================================================
-      ELSE IF(SELECTION.EQ.'NB') THEN
-        CALL ATOMCONSTANTS(LL_STP,NFIL,'NB')
-      ELSE IF(SELECTION.EQ.'NC') THEN
-        CALL ATOMCONSTANTS(LL_STP,NFIL,'NC')
-      ELSE IF(SELECTION.EQ.'ATOM.L') THEN
-        CALL ATOMCONSTANTS(LL_STP,NFIL,'ATOM.L')
-      ELSE IF(SELECTION.EQ.'ATOM.E') THEN
-        CALL ATOMCONSTANTS(LL_STP,NFIL,'ATOM.E')
-      ELSE IF(SELECTION.EQ.'ATOM.F') THEN
-        CALL ATOMCONSTANTS(LL_STP,NFIL,'ATOM.F')
-!
-      ELSE IF(SELECTION.EQ.'NPRO') THEN
-        CALL AUGMENTATIONCONSTANTS(LL_STP,NFIL,'NPRO')
-      ELSE IF(SELECTION.EQ.'LPRO') THEN
-        CALL AUGMENTATIONCONSTANTS(LL_STP,NFIL,'LPRO')
-!
-      ELSE IF(SELECTION.EQ.'ID') THEN
-        CALL GENERICCONSTANTS(LL_STP,NFIL,'ID')
-      ELSE IF(SELECTION.EQ.'Z') THEN
-        CALL GENERICCONSTANTS(LL_STP,NFIL,'Z')
-      ELSE IF(SELECTION.EQ.'ZV') THEN
-        CALL GENERICCONSTANTS(LL_STP,NFIL,'ZV')
-!
-!     ==========================================================================
-!     == CONSTRUCT FILE FOR ATOMIC WAVE FUNCTIONS                             ==
-!     ==========================================================================
-      ELSE IF(SELECTION.EQ.'AEPSI') THEN
-        CALL WAVEFUNCTIONS(LL_STP,NFIL,'AEPSI')
-      ELSE IF(SELECTION.EQ.'UPSI') THEN
-        CALL WAVEFUNCTIONS(LL_STP,NFIL,'UPSI')!
-      ELSE IF(SELECTION.EQ.'UPSISM') THEN
-        CALL WAVEFUNCTIONS(LL_STP,NFIL,'UPSISM')
-!
-!     ==========================================================================
-!     == CONSTRUCT FILE FOR AUGMENTATION                                      ==
-!     ==========================================================================
-      ELSE IF(SELECTION.EQ.'AEPHI') THEN
-        CALL AUGMENTATION(LL_STP,NFIL,'AEPHI')
-      ELSE IF(SELECTION.EQ.'PSPHI') THEN
-        CALL AUGMENTATION(LL_STP,NFIL,'PSPHI')
-      ELSE IF(SELECTION.EQ.'NLPHI') THEN
-        CALL AUGMENTATION(LL_STP,NFIL,'NLPHI')
-      ELSE IF(SELECTION.EQ.'QPHI') THEN
-        CALL AUGMENTATION(LL_STP,NFIL,'QPHI')
-      ELSE IF(SELECTION.EQ.'PRO') THEN
-        CALL AUGMENTATION(LL_STP,NFIL,'PRO')
-      ELSE IF(SELECTION.EQ.'AEPHIDOT') THEN
-        CALL AUGMENTATION(LL_STP,NFIL,'AEPHIDOT')
-      ELSE IF(SELECTION.EQ.'PSPHIDOT') THEN
-        CALL AUGMENTATION(LL_STP,NFIL,'PSPHIDOT')
-      ELSE IF(SELECTION.EQ.'NLPHIDOT') THEN
-        CALL AUGMENTATION(LL_STP,NFIL,'NLPHIDOT')
-!
-      ELSE IF(SELECTION.EQ.'PAWVALENCEPSI') THEN
-        CALL VALENCEWAVEFUNCTION(LL_STP,NFIL,'AUGPSI')
-      ELSE IF(SELECTION.EQ.'AEVALENCEPSI') THEN
-        CALL VALENCEWAVEFUNCTION(LL_STP,NFIL,'AEPSI')
-      ELSE IF(SELECTION.EQ.'PSVALENCEPSI') THEN
-        CALL VALENCEWAVEFUNCTION(LL_STP,NFIL,'PSPSI')
-!
-      ELSE IF(SELECTION.EQ.'AEPSISM') THEN
-        CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION))
-      ELSE IF(SELECTION.EQ.'AEPSI') THEN
-        CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION))
-      ELSE IF(SELECTION.EQ.'UPSI') THEN
-        CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION))
-      ELSE IF(SELECTION.EQ.'UPSISM') THEN
-        CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION))
-      ELSE 
-!AEPOT,PSPOT,POTOFPSRHO,AECORE,PSCORE
-        CALL ERROR$MSG('SELECTION NOT RECOGNIZED')
-        CALL ERROR$CHVAL('SELECTION',SELECTION)
-        CALL ERROR$STOP('MAIN')
-      END IF
-!      CALL FILEHANDLER$CLOSE('DAT')
+!       ========================================================================
+!       == CONSTANTS                                                          ==
+!       ========================================================================
+        ELSE IF(SELECTION(ISELECTION).EQ.'NB') THEN
+          CALL ATOMCONSTANTS(LL_STP,NFIL,'NB')
+        ELSE IF(SELECTION(ISELECTION).EQ.'NC') THEN
+          CALL ATOMCONSTANTS(LL_STP,NFIL,'NC')
+        ELSE IF(SELECTION(ISELECTION).EQ.'ATOM.L') THEN
+          CALL ATOMCONSTANTS(LL_STP,NFIL,'ATOM.L')
+        ELSE IF(SELECTION(ISELECTION).EQ.'ATOM.E') THEN
+          CALL ATOMCONSTANTS(LL_STP,NFIL,'ATOM.E')
+        ELSE IF(SELECTION(ISELECTION).EQ.'ATOM.F') THEN
+          CALL ATOMCONSTANTS(LL_STP,NFIL,'ATOM.F')
+!   
+        ELSE IF(SELECTION(ISELECTION).EQ.'NPRO') THEN
+          CALL AUGMENTATIONCONSTANTS(LL_STP,NFIL,'NPRO')
+        ELSE IF(SELECTION(ISELECTION).EQ.'LPRO') THEN
+          CALL AUGMENTATIONCONSTANTS(LL_STP,NFIL,'LPRO')
+!   
+        ELSE IF(SELECTION(ISELECTION).EQ.'ID') THEN
+          CALL GENERICCONSTANTS(LL_STP,NFIL,'ID')
+        ELSE IF(SELECTION(ISELECTION).EQ.'Z') THEN
+          CALL GENERICCONSTANTS(LL_STP,NFIL,'Z')
+        ELSE IF(SELECTION(ISELECTION).EQ.'ZV') THEN
+          CALL GENERICCONSTANTS(LL_STP,NFIL,'ZV')
+!   
+!       ========================================================================
+!       == CONSTRUCT FILE FOR ATOMIC WAVE FUNCTIONS                           ==
+!       ========================================================================
+        ELSE IF(SELECTION(ISELECTION).EQ.'AEPSI') THEN
+          CALL WAVEFUNCTIONS(LL_STP,NFIL,'AEPSI')
+        ELSE IF(SELECTION(ISELECTION).EQ.'UPSI') THEN
+          CALL WAVEFUNCTIONS(LL_STP,NFIL,'UPSI')!
+        ELSE IF(SELECTION(ISELECTION).EQ.'UPSISM') THEN
+          CALL WAVEFUNCTIONS(LL_STP,NFIL,'UPSISM')
+!   
+!       ========================================================================
+!       == CONSTRUCT FILE FOR AUGMENTATION                                    ==
+!       ========================================================================
+        ELSE IF(SELECTION(ISELECTION).EQ.'AEPHI') THEN
+          CALL AUGMENTATION(LL_STP,NFIL,'AEPHI')
+        ELSE IF(SELECTION(ISELECTION).EQ.'PSPHI') THEN
+          CALL AUGMENTATION(LL_STP,NFIL,'PSPHI')
+        ELSE IF(SELECTION(ISELECTION).EQ.'NLPHI') THEN
+          CALL AUGMENTATION(LL_STP,NFIL,'NLPHI')
+        ELSE IF(SELECTION(ISELECTION).EQ.'QPHI') THEN
+          CALL AUGMENTATION(LL_STP,NFIL,'QPHI')
+        ELSE IF(SELECTION(ISELECTION).EQ.'PRO') THEN
+          CALL AUGMENTATION(LL_STP,NFIL,'PRO')
+        ELSE IF(SELECTION(ISELECTION).EQ.'AEPHIDOT') THEN
+          CALL AUGMENTATION(LL_STP,NFIL,'AEPHIDOT')
+        ELSE IF(SELECTION(ISELECTION).EQ.'PSPHIDOT') THEN
+          CALL AUGMENTATION(LL_STP,NFIL,'PSPHIDOT')
+        ELSE IF(SELECTION(ISELECTION).EQ.'NLPHIDOT') THEN
+          CALL AUGMENTATION(LL_STP,NFIL,'NLPHIDOT')
+!   
+        ELSE IF(SELECTION(ISELECTION).EQ.'PAWVALENCEPSI') THEN
+          CALL VALENCEWAVEFUNCTION(LL_STP,NFIL,'AUGPSI')
+        ELSE IF(SELECTION(ISELECTION).EQ.'AEVALENCEPSI') THEN
+          CALL VALENCEWAVEFUNCTION(LL_STP,NFIL,'AEPSI')
+        ELSE IF(SELECTION(ISELECTION).EQ.'PSVALENCEPSI') THEN
+          CALL VALENCEWAVEFUNCTION(LL_STP,NFIL,'PSPSI')
+!   
+        ELSE IF(SELECTION(ISELECTION).EQ.'AEPSISM') THEN
+          CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION(ISELECTION)))
+        ELSE IF(SELECTION(ISELECTION).EQ.'AEPSI') THEN
+          CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION(ISELECTION)))
+        ELSE IF(SELECTION(ISELECTION).EQ.'UPSI') THEN
+          CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION(ISELECTION)))
+        ELSE IF(SELECTION(ISELECTION).EQ.'UPSISM') THEN
+          CALL WAVEFUNCTIONS(LL_STP,NFIL,TRIM(SELECTION(ISELECTION)))
+        ELSE 
+          CALL ERROR$MSG('SELECTION NOT RECOGNIZED')
+          CALL ERROR$CHVAL('SELECTION',SELECTION(ISELECTION))
+          CALL ERROR$STOP('MAIN')
+        END IF
+        CALL FILEHANDLER$CLOSE('DAT')
+      ENDDO
       STOP
       END
 !
@@ -313,7 +335,7 @@
       WRITE(*,FMT='("SELECTION CAN BE ONE OF:")')
 !
       DO I=1,NCHOICE
-        WRITE(*,FMT='(T2,A,T20,A)')-CHOICE(1,I),CHOICE(2,I)
+        WRITE(*,FMT='(T2,A,T20,A)')-TRIM(CHOICE(1,I)),TRIM(CHOICE(2,I))
       ENDDO
       RETURN
       END
@@ -338,17 +360,20 @@
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
       CALL LINKEDLIST$SELECT(LL_STP,'PARAMETERS',1)
       IF(ID.EQ.'PARMS.RCSM') THEN
-        CALL LINKEDLIST$GET(LL_STP,'RCSM',1,CHVAR)
-        WRITE(NFIL,*)CHVAR
+        CALL LINKEDLIST$GET(LL_STP,'RCSM',1,SVAR)
+        WRITE(NFIL,*)SVAR
+      ELSE IF(ID.EQ.'PARMS.RBOX') THEN
+        CALL LINKEDLIST$GET(LL_STP,'RBOX',1,SVAR)
+        WRITE(NFIL,*)SVAR
       ELSE IF(ID.EQ.'PARMS.PSI.TYPE') THEN
         CALL LINKEDLIST$SELECT(LL_STP,'PSI',1)
         CALL LINKEDLIST$GET(LL_STP,'TYPE',1,CHVAR)
         WRITE(NFIL,*)CHVAR
-      ELSE IF(ID.EQ.'PARMS.PSI.RC') THEN
+      ELSE IF(ID.EQ.'PARMS.PSI.RCL') THEN
         CALL LINKEDLIST$SELECT(LL_STP,'PSI',1)
-        CALL LINKEDLIST$SIZE(LL_STP,'RC',1,ISVAR)
+        CALL LINKEDLIST$SIZE(LL_STP,'RCL',1,ISVAR)
         ALLOCATE(ARR(ISVAR))
-        CALL LINKEDLIST$GET(LL_STP,'RC',1,ARR)
+        CALL LINKEDLIST$GET(LL_STP,'RCL',1,ARR)
         WRITE(NFIL,*)ARR
         DEALLOCATE(ARR)
       ELSE IF(ID.EQ.'PARMS.PSI.LAMBDA') THEN

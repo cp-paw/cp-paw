@@ -6755,22 +6755,45 @@ corresponds to $\bar{\nu}=450-500$~cm$^{-1}$.
 %===================================================================
 \subsection{Magnetic hyperfine parameters}
 %===================================================================
+An electronic magnetization produces a magnetic field $\vec{B}^N$, the
+hyperfine field\index{hyperfine field}, at the nucleus, which results in splittings of the
+nuclear energy levels.  In electron spin resonance (ESR), it is the
+electron spin that is flipped by a microwave radiation, while the
+nuclear spin remains unaffected.
 
-The hyperfine parameters measure the splitting of several transitions,
-each of which switches the spin of an electron, and preserves the spin
-of the nucleus. The energy of a nucleus in the magnetic field of the
-electronic spin density is
+The energy of a nucleus in the magnetic field is
 \begin{displaymath}
-E=m^N B^N
+E=\vec{m}^N \vec{B}^N
 \end{displaymath}
-where $m^N$ is the magnetic moment of the nucleus, and $B^N$ is the
-hyperfine field created by the electronic spin density. (The hyperfine
-field is a kind of effective magnetic field). When the electron spin
-is flipped by an electronic transition, the transition energy is
-$\hbar\omega=\hbar\omega_0+2m^NB^N$. For different spin quantum
-numbers $S^N_z$, we obtain transitions
+where $m^N$ is the nuclear magnetic moment. The nuclear magnetic
+moment is proportional to the nuclear spin $\vec{S}^N$, where the
+proportionality constant is the gyromagnetic ratio\index{gyromagnetic
+  ratio}, defined as the ratio of magnetic moment and spin,
+i.e. $\vec{m}_N=\gamma_N \vec{S}_N$.
+
+The nuclear magnetic moment is typically given units of nuclear
+magnetons $\mu_N=(m_e/m_p)\mu_B$, where $m_e$ is the electron mass,
+$m_p$ is the proton mass, and $\mu_B=\frac{e\hbar}{2m_e}$ is the Bohr
+magneton.  Values for the magnetic moment and the nuclear spin of the
+isotopes can be obtained from the ``Green Book''\cite{greenbook}.
+
+The Hamiltonian of the electron-nucleus interaction can be cast in the form
+\begin{eqnarray*}
+\hat{H}=\hat{\vec{S}}_N\mathbf{A}\hat{\vec{S}}_e
+\end{eqnarray*}
+where $\mathbf{A}$ is the hyperfine tensor and $\hat{\vec{S}}_N$ is
+the nuclear spin operator and $\hat{\vec{S}}_e$ is the electron-spin
+operator. The isotropic interaction, also called Fermi-contact
+interaction, is defined as $a=\frac{1}{3}\textrm{Tr}[\mathbf{A}]$. The
+anisotropic hyperfine interaction is governed by
+$\mathbf{A}-a\mathbf{1}$.
+
+When the electron spin is flipped by an electronic transition, the
+transition energy is $\hbar\omega=\hbar\omega_0+2m^NB^N$, where
+$\hbar\omega_0$ is, for example, the Zeeman splitting. For different
+spin quantum numbers $S^N_z$, we obtain transitions
 \begin{equation}
-\hbar\omega(S^N_z)=\hbar\omega_0+2\frac{m^N}{S^N}B^N S^N_z
+\hbar\omega(S^N_z)=\hbar\omega_0+2\frac{m^N}{|S^N|}B^N S^N_z
 \end{equation}
 from which follows the splitting of neighboring levels
 \begin{equation}
@@ -6779,14 +6802,6 @@ from which follows the splitting of neighboring levels
 with $S^N$ being the nuclear spin with values $0,1/2\hbar,\hbar,..$,
 depending on the nucleus.
 
-The quantity $\gamma_N=m^N/S^N$ is called the gyromagnetic ratio of
-the nucleus.  The nuclear magnetic moment is typically given units of
-nuclear magnetons $\mu_N=(m_e/m_p)\mu_B$, where $m_e$ is the electron
-mass, $m_p$ is the proton mass, and $\mu_B=\frac{e\hbar}{2m_e}$ is the
-Bohr magneton.
-
-Values for the magnetic moment and the nuclear spin of the isotopes
-can be obtained from the ``Green Book''\cite{greenbook}.
 
 In the literature the hyperfine splitting is often converted into a
 frequency $\nu$ using the relation $\Delta E=h\nu$. The frequency is
@@ -6825,12 +6840,12 @@ electron. While the g-factor of the electron is slightly larger than
 2, its value is set exactly to 2. The term $g_e\mu_B$ is twice the
 magnetic moment of the electron. 
 \begin{eqnarray*}
-B^e&=&\frac{\Delta E}{g_e\mu_B}=\frac{2\hbar m_N B_N}{s_N g_e\mu_B}
+B^e&=&\frac{\Delta E}{g_e\mu_B}=\frac{2\hbar m_N B_N}{S_N g_e\mu_B}
 \\
-&=&\frac{m_N[\mu_N]B_N[{\rm T}]}{s_N[\hbar]}\times 
+&=&\frac{m_N[\mu_N]B_N[{\rm T}]}{S_N[\hbar]}\times 
 \frac{2\hbar\mu_N T}{\hbar 2\mu_B {\rm T}}\ {\rm T} 
 \\
-&=& \frac{m_N[\mu_N]B_N[{\rm T}]}{s_N[\hbar]}\times 0.544617\ {\rm mT}
+&=& \frac{m_N[\mu_N]B_N[{\rm T}]}{S_N[\hbar]}\times 0.544617\ {\rm mT}
 \end{eqnarray*}
 The magnetic field is either given in
 milliTesla, in Oersted or in Gauss (1~Oe=1~gauss=10$^{-4}$~T).

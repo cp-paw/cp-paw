@@ -1056,9 +1056,9 @@
 !     ==========================================================================
       call gbass(box,rtox,vol)      
       nrviewx=nint(vol/(4.d0*pi/3.d0*1.4d0**3)) ! estimate max number of atoms
-                                             ! inside the viewbox
-      allocate(rview(3,nrviewx))
-      allocate(zview(nrviewx))
+                                                ! inside the viewbox
+      allocate(rview(3,nrviewx)) ! positions
+      allocate(zview(nrviewx))   ! atomic numbers
       call lib$invertr8(3,box,rtox)
       min1=-5
       max1=5
@@ -1132,12 +1132,61 @@
       WRITE(NFIL,FMT='("CP-PAW CUBE FILE")')
       WRITE(NFIL,FMT='("NOCHN KOMMENTAR")')
       WRITE(NFIL,FMT='(I5,3F12.6)')NAT,ORIGIN*scale
-      WRITE(NFIL,FMT='(I5,3F12.6)')-N1,BOX(:,1)/REAL(N1,KIND=8)*scale
-      WRITE(NFIL,FMT='(I5,3F12.6)')-N2,BOX(:,2)/REAL(N2,KIND=8)*scale
-      WRITE(NFIL,FMT='(I5,3F12.6)')-N3,BOX(:,3)/REAL(N3,KIND=8)*scale
+      WRITE(NFIL,FMT='(I5,3F12.6)')-N1,BOX(:,1)/REAL(N1-1,KIND=8)*scale
+      WRITE(NFIL,FMT='(I5,3F12.6)')-N2,BOX(:,2)/REAL(N2-1,KIND=8)*scale
+      WRITE(NFIL,FMT='(I5,3F12.6)')-N3,BOX(:,3)/REAL(N3-1,KIND=8)*scale
       DO IAT=1,NAT
         WRITE(NFIL,FMT='(I5,4F12.6)')NINT(Z(IAT)),0.D0,R(:,IAT)*scale
       ENDDO  
       WRITE(NFIL,FMT='(6(E12.6," "))')(((DATA(I,J,K),K=1,N3),J=1,N2),I=1,N1)
+!!$do k=1,n3
+!!$  scale=0.d0
+!!$  do i=1,n1
+!!$    do j=1,n2
+!!$      scale=scale+data(i,j,k)**2
+!!$    enddo
+!!$  enddo
+!!$print*,'scale ',origin(:)+box(:,3)/real(n3,kind=8)*real(k-1,kind=8),scale
+!!$enddo
       RETURN
       END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE WRITEgnuFILE(NFIL,l1,l2,n1,n2,data)
+!!$!     **************************************************************************
+!!$!     **  write a gnuplot file                                                **
+!!$!     **                                                                      **
+!!$!     ** remark:                                                              **
+!!$!     ** units written are abohr, consistent with avogadro's implementation.  **
+!!$!     ** the specs require N1,N2,N3 to be multiplied by -1 if abohr are used  **
+!!$!     ** and angstrom is the unit if they are positive.                       **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN) :: NFIL
+!!$      INTEGER(4),INTENT(IN) :: N1,N2
+!!$      REAL(8)   ,INTENT(IN) :: l1,l2
+!!$      REAL(8)   ,INTENT(IN) :: DATA(N1,N2)
+!!$      REAL(8)               :: ANGSTROM
+!!$      INTEGER(4)            :: I,J,K
+!!$!     **************************************************************************
+!!$      write(nfil,fmt='("set style line 1 lt 1 lc rgb "black" lw 1")')
+!!$      write(nfil,fmt='("set palette rgbformula 22,13,-31")')
+!!$      write(nfil,fmt='("set xrange [",f10.5,":",f10.5]")')0.d0,l1
+!!$      write(nfil,fmt='("set yrange [",f10.5,":",f10.5"]")')0.d0,l2
+!!$      write(nfil,fmt='("set zrange [-0.015:0.3]")')
+!!$      write(nfil,fmt='("set dgrid3d  60,60,1")')
+!!$      write(nfil,fmt='("set cntrparam levels incremental -0.2,0.01,0.2")')
+!!$      write(nfil,fmt='("set surface")')
+!!$      write(nfil,fmt='("set hidden3d")')
+!!$      write(nfil,fmt='("set data style lines")')
+!!$      write(nfil,fmt='("set view 30, 20, 1.0, 2.5")')
+!!$      write(nfil,fmt='("set xyplane at 0.")')
+!!$      write(nfil,fmt='("unset border")')
+!!$      write(nfil,fmt='("unset xtics")')
+!!$      write(nfil,fmt='("unset ytics"0')
+!!$      write(nfil,fmt='("unset ztics")')
+!!$      write(nfil,fmt='("set key off"0')
+!!$      write(nfil,fmt='("set pm3d explicit hidden3d 1")')
+!!$      write(nfil,fmt='("splot "ntb2d_iat1s.dat" with pm3d")')
+!!$      RETURN
+!!$      END

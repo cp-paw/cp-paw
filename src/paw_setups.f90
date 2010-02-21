@@ -1481,12 +1481,12 @@ PRINT*,'RCSM ',THIS%RCSM
       ALLOCATE(PSISM(NR,NBX))
 !
 !     == SET SWITCHES FOR RELATIVISTIC/NON-RELATIVISTIC HERE ===================
-      THIS%SETTING%TREL=.TRUE.
-!THIS%SETTING%TREL=.FALSE.
+      THIS%SETTING%TREL=.true.
+THIS%SETTING%TREL=.FALSE.
       THIS%SETTING%SO=.FALSE.
 !THIS%SETTING%SO=.TRUE.
       THIS%SETTING%ZORA=.FALSE.
-THIS%SETTING%ZORA=.TRUE.
+!THIS%SETTING%ZORA=.TRUE.
 !     == SELECT HARTREE FOCK ADMIXTURE =========================================
       THIS%SETTING%FOCK=0.D0
       CALL LDAPLUSU$SELECTTYPE(THIS%I)
@@ -3012,6 +3012,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)               :: E1
       TYPE(VPAW_TYPE)       :: VPAW
       LOGICAL(4)            :: TFIRST
+      LOGICAL(4)            :: Tvardrel
 REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !     **************************************************************************
                                 CALL TRACE$PUSH('ATOMIC_MAKEPARTIALWAVES')
@@ -3079,6 +3080,10 @@ IF(TSMALLBOX)PRINT*,'PARTIAL WAVES DETERMINED WITH SMALL-BOX BOUNDARY CONDITIONS
 !     == CONSTRUCT NODELESS WAVE FUNCTIONS (LOCAL POTENTIAL ONLY)             ==
 !     ==========================================================================
                            CALL TRACE$PASS('CONSTRUCT NODELESS WAVE FUNCTIONS')
+      drel(:)=0.d0
+      tvardrel=trel.and.(.not.tzora)
+      if(trel.and.tzora) CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
+!
       EOFI1(:)=EOFI(:)
       DO L=0,LX
         DO ISO=-1,1
@@ -3088,15 +3093,7 @@ IF(TSMALLBOX)PRINT*,'PARTIAL WAVES DETERMINED WITH SMALL-BOX BOUNDARY CONDITIONS
             IF(LOFI(IB).NE.L) CYCLE
             IF(SOFI(IB).NE.ISO) CYCLE
             E=EOFI1(IB)
-            DREL(:)=0.D0
-            IF(TREL) THEN
-              IF(TZORA) THEN 
-                CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
-              ELSE
-                CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-              END IF
-            END IF
-            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,ROUT,DREL,G,0,AEPOT &
+            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,ROUT,tvardrel,DREL,G,0,AEPOT &
      &                               ,E,UOFI(:,IB))
             IF(TREL.AND.(.NOT.TZORA)) THEN
               CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
@@ -3893,6 +3890,11 @@ GOTO 10001
             DO1(IPRO1,IPRO2)=DOVER(LN1,LN2)
           ENDDO
         ENDDO
+!
+        drel=0.d0
+        tvardrel=trel.and.(.not.tzora) 
+        if(trel.and.tzora)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.d0,DREL)
+!
         NN0=-1
         G(:)=0.D0
         DO IB=NC+1,NB
@@ -3903,9 +3905,8 @@ GOTO 10001
 !         ======================================================================
 !         ==  CONSTRUCT ALL-ELECTRON WAVE FUNCTION                            ==
 !         ======================================================================
-          IF(TREL)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
           G(:)=0.D0
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,DREL,G,NNOFI(IB),AEPOT &
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,tvardrel,DREL,G,NNOFI(IB),AEPOT &
        &                             ,E,AEPSIF(:,IB-NC))
           CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
        &                              ,ROUT,E,AEPSIF(:,IB-NC))
