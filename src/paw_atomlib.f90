@@ -27,6 +27,7 @@
       REAL(8)   ,ALLOCATABLE :: SPHI(:,:)
       REAL(8)   ,ALLOCATABLE :: R(:)
       REAL(8)   ,ALLOCATABLE :: AUX(:),AUX1(:)
+      REAL(8)   ,ALLOCATABLE :: drel(:)
       LOGICAL(4)             :: TREL,TZORA
       INTEGER(4)             :: IB,N,L,ISO,IR
       REAL(8)                :: JPHALF ! J+1/2
@@ -46,7 +47,7 @@
 !     ==========================================================================
       AEZ=92.D0   ! URANIUM
       TFINITENUCLEUS=.true.
-      NB=38  !50
+      NB=38 !50
       DMIN=1.D-6
       DMAX=1.D-1      
       RX=25.D0
@@ -256,6 +257,21 @@
       ENDDO
       CALL ATOMLIB_WRITEPHI('DIRACBIG.DAT',GID,NR,NB,PHI)
       CALL ATOMLIB_WRITEPHI('DIRACSMALL.DAT',GID,NR,NB,SPHI)
+!
+!     ==========================================================================
+!     == determine small component from analytical large component to test =====
+!     == the accuracy of the small component calculation                   =====
+!     ==========================================================================
+      allocate(drel(nr))
+      do ib=1,nb
+         aux(:)=0.d0
+        CALL SCHROEDINGER$DREL(GID,NR,POT,eofi(ib),DREL)
+        CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
+     &                                     ,DREL,aux,PHI(:,IB),SPHI(:,IB))
+      enddo
+!     == compare diracsmallnum.dat with diracsmall.dat =========================
+      CALL ATOMLIB_WRITEPHI('DIRACSMALLNUM.DAT',GID,NR,NB,SPHI)
+
 !
       CALL ERROR$MSG('FORCED STOP AFTER TESTING ROUTINE')
       CALL ERROR$STOP('ATOMLIB$TEST_ATOMLIB$BOUNDSTATE')
@@ -1228,6 +1244,7 @@ END IF
 !       ========================================================================
         IF(TREL.AND.(.NOT.TZORA)) THEN
           G(:)=0.D0
+          CALL SCHROEDINGER$DREL(GID,NR,POT,eofi(ib),DREL)
           CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
      &                                       ,DREL,G,PHI(:,IB),SPHI(:,IB))
         ELSE

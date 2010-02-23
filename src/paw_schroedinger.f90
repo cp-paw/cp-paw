@@ -2627,6 +2627,7 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(IN) :: PHI(NR)     ! LARGE COMPONENT
       REAL(8)   ,INTENT(OUT):: SPHI(NR)    ! SMALL COMPONENT
       REAL(8)               :: LAMBDA      ! =L FOR LS>0; -L-1 FOR LS<0
+      REAL(8)               :: kappa       ! =-l-1 FOR LS>0; l FOR LS<0
       REAL(8)               :: SGNLAMBDA   !SGN(LAMBDA)
       REAL(8)               :: SPEEDOFLIGHT! SPEED OF LIGHT
       REAL(8)               :: R(NR)       ! RADIAL GRID
@@ -2637,13 +2638,16 @@ CHARACTER(32):: FILE
         RETURN
       END IF
 !
-      IF(ISO.EQ.1) THEN
-        LAMBDA=REAL(L,KIND=8)
-        SGNLAMBDA=1.D0
-      ELSE IF(ISO.EQ.-1) THEN
+      IF(ISO.EQ.1) THEN   !parallel spin and orbit
+        LAMBDA=REAL(L,KIND=8)   ! lambda=-(kappa+1)
+        kappa=real(-l-1,kind=8)
+        SGNLAMBDA=1.D0          ! sgnlambda=-sgnkappa
+      ELSE IF(ISO.EQ.-1) THEN !anti parallel spin and orbit
         LAMBDA=REAL(-L-1,KIND=8)
+        kappa=real(l,kind=8)
         SGNLAMBDA=-1.D0
-      ELSE IF(ISO.EQ.0) THEN
+      ELSE IF(ISO.EQ.0) THEN ! scalar relativistic
+        kappa=real(-1,kind=8)
         LAMBDA=0.D0
         SGNLAMBDA=1.D0
       ELSE
@@ -2775,7 +2779,8 @@ CHARACTER(32):: FILE
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',C)
-      EKIN(:)=MAX(E-POT(:)*Y0,0.D0)
+      EKIN(:)=E-POT(:)*Y0
+      EKIN(:)=MAX(ekin,-c**2)   ! fix to avoid a divide by zero.
       DREL(:)=-EKIN(:)/(EKIN(:)+2.D0*C**2)
       RETURN
       END
