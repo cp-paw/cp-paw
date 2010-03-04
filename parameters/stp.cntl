@@ -3092,6 +3092,15 @@
    !CORE POW=2.  RC/RCOV=0.5  !END
  !END
 
+ !SETUP  ID='U_HBS_SC_TEST' EL='U_' ZV=14.
+         TYPE='HBS' RBOX/RCOV=1.2 RCSM/RCOV=0.25
+         RCL/RCOV= 0.6 0.6 0.6 0.6
+         LAMBDA= 4. 4. 4. 5.
+   !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 17. !END
+   !POT  POW=3.  RC/RCOV=0.5  !END
+   !CORE POW=2.  RC/RCOV=0.5  !END
+ !END
+
 
 !End
 !EOB

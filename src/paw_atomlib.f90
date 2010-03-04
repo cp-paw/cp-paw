@@ -704,7 +704,7 @@ END MODULE RADIALFOCK_MODULE
 !     ** MAKES A SELF-CONSISTENT CALCULATION OF AN ATOM IN A BOX WITH         **
 !     ** RADIUS RBOX (RADIUS IS LIMITED BY THE GRID RBOX<R(NR-3) )            **
 !     **                                                                      **
-!     ** KEY='START,REL,SO,FOCK='                                             **
+!     ** KEY='START,REL,SO,zora,FOCK='                                        **
 !     **                                                                      **
 !     **************************************************************************
       USE RADIALFOCK_MODULE
@@ -730,7 +730,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)   ,PARAMETER       :: TOL=1.D-3
       INTEGER(4),PARAMETER       :: NITER=1000
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
-      LOGICAL(4),PARAMETER       :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER       :: TPR=.true.
       REAL(8)                    :: R(NR)
       REAL(8)                    :: DREL(NR)  ! RELATIVISTIC CORRECTION
       REAL(8)                    :: RHO(NR)
@@ -759,8 +759,8 @@ USE PERIODICTABLE_MODULE
       INTEGER(4)                 :: NBROYDENMEM
       REAL(8)                    :: BROYDENSTEP
       INTEGER(4)                 :: LRHOX=4
-      INTEGER(4)                 :: IPERIOD,ISVAR1
-      CHARACTER(128)             :: STRING
+      INTEGER(4)                 :: IPERIOD,ISVAR1,ipos
+      CHARACTER(128)             :: STRING,string1
       REAL(8)                    :: SCALE
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
@@ -782,44 +782,60 @@ USE PERIODICTABLE_MODULE
 !     ==========================================================================
 !
 !     ==========================================================================
-!     == RESOLVE KEY                                                          ==
+!     == resolve key                                                          ==
 !     ==========================================================================
-      TREL=INDEX(KEY,'NONREL').EQ.0
-      IF(TREL.AND.INDEX(KEY,'REL').EQ.0) THEN
-        CALL ERROR$MSG('TREL=T BUT "REL" NOT SPECIFIED IN KEY')
-        CALL ERROR$CHVAL('KEY',KEY)
-        CALL ERROR$STOP('ATOMLIB$AESCF')
-      END IF
-      TSO=INDEX(KEY,'NONSO').EQ.0
-      IF(TSO.AND.INDEX(KEY,'SO').EQ.0) THEN
-        CALL ERROR$MSG('TSO=T BUT "SO" NOT SPECIFIED IN KEY')
-        CALL ERROR$CHVAL('KEY',KEY)
-        CALL ERROR$STOP('ATOMLIB$AESCF')
-      END IF
-      TZORA=INDEX(KEY,'NONZORA').EQ.0
-      IF(TZORA.AND.INDEX(KEY,'ZORA').EQ.0) THEN
-        CALL ERROR$MSG('TZORA=T BUT "ZORA" NOT SPECIFIED IN KEY')
-        CALL ERROR$CHVAL('KEY',KEY)
-        CALL ERROR$STOP('ATOMLIB$AESCF')
-      END IF
-      TFOCK=INDEX(KEY,'FOCK').NE.0
-      IF(TFOCK) THEN
-        ISVAR=INDEX(KEY,'FOCK')+5
-        STRING=KEY(ISVAR:)
-        ISVAR=INDEX(KEY,'FOCK')
-        READ(STRING,*)SCALE
-      ELSE
-        SCALE=0.D0
-      END IF
-      TSTART=INDEX(KEY,'START').NE.0
+      TREL=.FALSE.
+      TSO=.FALSE.
+      TZORA=.FALSE.
+      TFOCK=.FALSE.
+      TSTART=.FALSE.
+      SCALE=0.D0
+!
+      STRING=KEY
+      IPOS=1
+      DO i=1,7
+        IPOS=INDEX(string,',')
+        IF(IPOS.ne.0) THEN
+          STRING1=STRING(1:IPOS-1)
+        ELSE
+          STRING1=STRING
+        END IF
+        STRING=STRING(IPOS+1:)
+        TREL=trel.or.trim(STRING1).EQ.'REL' 
+        TSO=tso.or.STRING1.EQ.'SO' 
+        TZORA=tzora.or.STRING1.EQ.'ZORA' 
+        TSTART=tstart.or.STRING1.EQ.'START' 
+        IF(STRING1(1:4).EQ.'FOCK') THEN
+          TFOCK=.TRUE.
+          if(string(5:5).eq.'=')READ(STRING1(6:),*)SCALE
+        END IF
+        if(ipos.eq.0) exit
+      ENDDO
       IF(TPR) THEN
+        WRITE(*,FMT='("KEY: ",A)')TRIM(KEY)
         WRITE(*,FMT='("RELATIVISTIC EFFECTS SWITCHED ON? ",L5)')TREL
         WRITE(*,FMT='("SPIN-ORBIT COUPLING SWITCHED ON?  ",L5)')TSO
+        WRITE(*,FMT='("ZORA SWITCHED ON?                 ",L5)')TZORA
         WRITE(*,FMT='("FOCK CONTRIBTION ON?              ",L5)')TFOCK
         IF(TFOCK) THEN
-          WRITE(*,FMT='("PERCENT FOCK CONTRIBUTION: ",L5)')NINT(SCALE*100.D0)
+          WRITE(*,FMT='("PERCENT FOCK CONTRIBUTION: ",i5)')NINT(SCALE*100.D0)
         END IF
         WRITE(*,FMT='("START FROM SCRATCH?                ",L5)')TSTART
+      END IF
+      IF(.NOT.TREL.AND.INDEX(KEY,'NONREL').EQ.0) THEN
+        CALL ERROR$MSG('TREL=F BUT "NONREL" NOT SPECIFIED IN KEY')
+        CALL ERROR$CHVAL('KEY',KEY)
+        CALL ERROR$STOP('ATOMLIB$AESCF')
+      END IF
+      IF(.NOT.TSO.AND.INDEX(KEY,'NONSO').EQ.0) THEN
+        CALL ERROR$MSG('TSO=F BUT "NONSO" NOT SPECIFIED IN KEY')
+        CALL ERROR$CHVAL('KEY',KEY)
+        CALL ERROR$STOP('ATOMLIB$AESCF')
+      END IF
+      IF(.NOT.TZORA.AND.INDEX(KEY,'NONZORA').EQ.0) THEN
+        CALL ERROR$MSG('TZORA=F BUT "NONZORA" NOT SPECIFIED IN KEY')
+        CALL ERROR$CHVAL('KEY',KEY)
+        CALL ERROR$STOP('ATOMLIB$AESCF')
       END IF
 !
 !     ==========================================================================
@@ -838,118 +854,73 @@ USE PERIODICTABLE_MODULE
         FOFI(:)=0.D0
         SOFI(:)=0
         NB=0
-IPERIOD=0
-DO I=1,6
-  IF(AEZ.LE.ZCORES(I)) EXIT
-  IPERIOD=I
-ENDDO
-IB=0
-DO I=1,IPERIOD
-  ISVAR=ZCORES(I)
-  DO L=0,3
-    IF(L.EQ.0)CALL PERIODICTABLE$GET(ISVAR,'OCC(S)',ISVAR1)
-    IF(L.EQ.1)CALL PERIODICTABLE$GET(ISVAR,'OCC(P)',ISVAR1)
-    IF(L.EQ.2)CALL PERIODICTABLE$GET(ISVAR,'OCC(D)',ISVAR1)
-    IF(L.EQ.3)CALL PERIODICTABLE$GET(ISVAR,'OCC(F)',ISVAR1)
-    IF(ISVAR1.EQ.0) CYCLE
-    IB=IB+1
-    LOFI(IB)=L
-    FOFI(IB)=2.D0*REAL(2*L+1,KIND=8)
-    SOFI(IB)=0
-    IF(TSO) THEN
-      IF(L.NE.0) THEN
-        FOFI(IB)=REAL(2*L+2,KIND=8)
-        SOFI(IB)=1
-        IB=IB+1
-        LOFI(IB)=L
-        FOFI(IB)=REAL(2*L,KIND=8)
-        SOFI(IB)=-1
-      ELSE 
-        SOFI(IB)=1
-      END IF
-    END IF
-  ENDDO
-ENDDO
-DO L=0,3    
-  IF(L.EQ.0)CALL PERIODICTABLE$GET(NINT(AEZ),'OCC(S)',ISVAR1)
-  IF(L.EQ.1)CALL PERIODICTABLE$GET(NINT(AEZ),'OCC(P)',ISVAR1)
-  IF(L.EQ.2)CALL PERIODICTABLE$GET(NINT(AEZ),'OCC(D)',ISVAR1)
-  IF(L.EQ.3)CALL PERIODICTABLE$GET(NINT(AEZ),'OCC(F)',ISVAR1)
-  IF(ISVAR1.EQ.0) CYCLE
-  IB=IB+1
-  LOFI(IB)=L
-  FOFI(IB)=REAL(MIN(2*(2*L+1),ISVAR1),KIND=8)
-  SOFI(IB)=0
-  IF(TSO) THEN
-    IF(L.NE.0) THEN
-      FOFI(IB)=REAL(MIN(2*L+2,ISVAR1),KIND=8)
-      SOFI(IB)=1
-      IB=IB+1
-      LOFI(IB)=L
-      FOFI(IB)=REAL(MAX(0,MIN(2*L,ISVAR1-2*L-2)),KIND=8)
-      SOFI(IB)=-1
-    ELSE
-      SOFI(IB)=1
-    END IF
-  END IF
-ENDDO
-NB=IB
-FTOT=SUM(FOFI(:NB))
-IF(ABS(FTOT-AEZ).GT.1.D-8) THEN
-  DO IB=1,NB
-    WRITE(*,'("IB=",I2," L=",I1," SOFI=",I2," F=",F8.2," SUM(F)=",F8.2)') &
-&           IB,LOFI(IB),SOFI(IB),FOFI(IB),SUM(FOFI(:IB))
-  ENDDO
-  CALL ERROR$MSG('INCONSISTENT NUMBER OF ELECTRONS')
-  CALL ERROR$R8VAL('AEZ ',AEZ)
-  CALL ERROR$R8VAL('#(ELECTRONS) ',FTOT)
-  CALL ERROR$STOP('ATOMLIB$AESCF')
-END IF
-
-!!$        FTOT=AEZ
-!!$        DO I=1,19
-!!$          NB=NB+1
-!!$          IF(NB.GT.NX) THEN
-!!$            CALL ERROR$MSG('ACTUAL NUMBER OF BAND EXCEEDS DIMENSION')
-!!$            CALL ERROR$I4VAL('NX',NX)
-!!$            CALL ERROR$STOP('ATOMLIB$AESCF')
-!!$          END IF
-!!$          LOFI(NB)=LMAP(I)
-!!$          IF(TSO)THEN
-!!$            IF(LMAP(I).EQ.0)THEN
-!!$              SOFI(NB)=1
-!!$              FOFI(NB)=MIN(FTOT,2.D0)
-!!$              FTOT=FTOT-FOFI(NB)
-!!$            ELSE
-!!$              SOFI(NB)=-1
-!!$              FOFI(NB)=MIN(FTOT,REAL(2*LMAP(I),KIND=8))
-!!$              FTOT=FTOT-FOFI(NB)
-!!$              NB=NB+1
-!!$              IF(NB.GT.NX) THEN
-!!$                CALL ERROR$MSG('ACTUAL NUMBER OF BAND EXCEEDS DIMENSION')
-!!$                CALL ERROR$I4VAL('NX',NX)
-!!$                CALL ERROR$STOP('ATOMLIB$AESCF')
-!!$              END IF
-!!$              LOFI(NB)=LMAP(I)
-!!$              SOFI(NB)=1
-!!$              FOFI(NB)=MIN(FTOT,REAL(2*LMAP(I)+2,KIND=8))
-!!$              FTOT=FTOT-FOFI(NB)
-!!$            END IF
-!!$          ELSE
-!!$            FOFI(NB)=MIN(FTOT,REAL(2*(2*LMAP(I)+1),KIND=8))
-!!$            FTOT=FTOT-FOFI(NB)
-!!$            SOFI(NB)=0
-!!$          END IF
-!!$          IF(FTOT.LE.1.D-10) EXIT
-!!$        ENDDO
-!!$        IF(FTOT.GT.1.D-10) THEN
-!!$          CALL ERROR$MSG('SPECIFIED NUMBER OF BANDS IS TOO SMALL')
-!!$          CALL ERROR$MSG('#(ELECTRONS) REMAINING')
-!!$          CALL ERROR$I4VAL('NX',NX)
-!!$          CALL ERROR$R8VAL('AEZ',AEZ)
-!!$          CALL ERROR$STOP('ATOMLIB$AESCF')
-!!$        END IF
-
+        IPERIOD=0
+        DO I=1,6
+          IF(AEZ.LE.ZCORES(I)) EXIT
+          IPERIOD=I
+        ENDDO
+        IB=0
+        DO I=1,IPERIOD
+          ISVAR=ZCORES(I)
+          DO L=0,3
+            IF(L.EQ.0)CALL PERIODICTABLE$GET(ISVAR,'OCC(S)',ISVAR1)
+            IF(L.EQ.1)CALL PERIODICTABLE$GET(ISVAR,'OCC(P)',ISVAR1)
+            IF(L.EQ.2)CALL PERIODICTABLE$GET(ISVAR,'OCC(D)',ISVAR1)
+            IF(L.EQ.3)CALL PERIODICTABLE$GET(ISVAR,'OCC(F)',ISVAR1)
+            IF(ISVAR1.EQ.0) CYCLE
+            IB=IB+1
+            LOFI(IB)=L
+            FOFI(IB)=2.D0*REAL(2*L+1,KIND=8)
+            SOFI(IB)=0
+            IF(TSO) THEN
+              IF(L.NE.0) THEN
+                FOFI(IB)=REAL(2*L+2,KIND=8)
+                SOFI(IB)=1
+                IB=IB+1
+                LOFI(IB)=L
+                FOFI(IB)=REAL(2*L,KIND=8)
+                SOFI(IB)=-1
+              ELSE 
+                SOFI(IB)=1
+              END IF
+            END IF
+          ENDDO
+        ENDDO
+        DO L=0,3    
+          IF(L.EQ.0)CALL PERIODICTABLE$GET(NINT(AEZ),'OCC(S)',ISVAR1)
+          IF(L.EQ.1)CALL PERIODICTABLE$GET(NINT(AEZ),'OCC(P)',ISVAR1)
+          IF(L.EQ.2)CALL PERIODICTABLE$GET(NINT(AEZ),'OCC(D)',ISVAR1)
+          IF(L.EQ.3)CALL PERIODICTABLE$GET(NINT(AEZ),'OCC(F)',ISVAR1)
+          IF(ISVAR1.EQ.0) CYCLE
+          IB=IB+1
+          LOFI(IB)=L
+          FOFI(IB)=REAL(MIN(2*(2*L+1),ISVAR1),KIND=8)
+          SOFI(IB)=0
+          IF(TSO) THEN
+            IF(L.NE.0) THEN
+              FOFI(IB)=REAL(MIN(2*L+2,ISVAR1),KIND=8)
+              SOFI(IB)=1
+              IB=IB+1
+              LOFI(IB)=L
+              FOFI(IB)=REAL(MAX(0,MIN(2*L,ISVAR1-2*L-2)),KIND=8)
+              SOFI(IB)=-1
+            ELSE
+              SOFI(IB)=1
+            END IF
+          END IF
+        ENDDO
+        NB=IB
+        FTOT=SUM(FOFI(:NB))
+        IF(ABS(FTOT-AEZ).GT.1.D-8) THEN
+          DO IB=1,NB
+            WRITE(*,'("IB=",I2," L=",I1," SOFI=",I2," F=",F8.2," SUM(F)=",F8.2)') &
+        &           IB,LOFI(IB),SOFI(IB),FOFI(IB),SUM(FOFI(:IB))
+          ENDDO
+          CALL ERROR$MSG('INCONSISTENT NUMBER OF ELECTRONS')
+          CALL ERROR$R8VAL('AEZ ',AEZ)
+          CALL ERROR$R8VAL('#(ELECTRONS) ',FTOT)
+          CALL ERROR$STOP('ATOMLIB$AESCF')
+        END IF
 !
         CALL RADIAL$NUCPOT(GID,NR,AEZ,POT)
 !       == USE "HARD SPHERE BOUNDARY CONDITION" FOR THE POISSON EQUATION =======
@@ -1103,6 +1074,10 @@ RFOCK=1.1D0*RFOCK
         END IF
         IF(TPR)PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:(POT-POTIN)=',XMAX &
       &                   ,' DE ',XDE 
+PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:(POT-POTIN)=',XMAX &
+&                   ,' DE ',XDE 
+!CALL ATOMLIB_WRITEPHI('AUX',GID,NR,1,AUX)
+!CALL ATOMLIB_WRITEPHI('RHO',GID,NR,1,RHO)
 IF(TPR) THEN
   DO I=10,2,-1
     POTSAVE(:,I)=POTSAVE(:,I-1)
@@ -2140,8 +2115,8 @@ END IF
       REAL(8)         ,INTENT(IN) :: RBND
       REAL(8)         ,INTENT(INOUT) :: E
       REAL(8)         ,INTENT(INOUT) :: PSI(NR)
-      REAL(8)         ,PARAMETER  :: TOL=1.D-10  !(1D-12 IS TOO SMALL)
-      REAL(8)         ,PARAMETER  :: TOLMAX=1.D-8  !EMERGENCY TOLERANCE
+      REAL(8)         ,PARAMETER  :: TOL=1.D-7  !(1D-12 IS TOO SMALL)
+!      REAL(8)         ,PARAMETER  :: TOLMAX=1.D-8  !EMERGENCY TOLERANCE
       INTEGER(4)      ,PARAMETER  :: NITER=200
       REAL(8)         ,PARAMETER  :: XMAX=1.D+15 !MAX. FACTOR FOR WAVEFUNCTION
       REAL(8)                  :: PHASE
@@ -2172,7 +2147,7 @@ END IF
       REAL(8)                  :: REND
       REAL(8)                  :: NORM
       REAL(8)                  :: DEV,DEVPREV
-      LOGICAL(4)               :: TPR=.FALSE.
+      LOGICAL(4)               :: TPR=.false.
       LOGICAL(4)               :: TFIXE ! CONSTANT ENERGY CALCULATION IF TRUE
       LOGICAL(4)               :: TINHOM ! INHOMOGENEOUS EQUATION
       INTEGER(4)               :: NN

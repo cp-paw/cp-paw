@@ -1482,7 +1482,7 @@ PRINT*,'RCSM ',THIS%RCSM
 !
 !     == SET SWITCHES FOR RELATIVISTIC/NON-RELATIVISTIC HERE ===================
       THIS%SETTING%TREL=.true.
-THIS%SETTING%TREL=.FALSE.
+!THIS%SETTING%TREL=.FALSE.
       THIS%SETTING%SO=.FALSE.
 !THIS%SETTING%SO=.TRUE.
       THIS%SETTING%ZORA=.FALSE.
@@ -3206,7 +3206,7 @@ PRINT*,'EOFI1 ',EOFI1
 !!$     &                                    ,RBND,E,UOFI(:,IB))
 !!$              ELSE
                 CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
-     &                                    ,ROUT,E,UOFI(:,IB))
+     &                                        ,ROUT,E,UOFI(:,IB))
 !!$              END IF
               IF(TREL) THEN
                 CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
