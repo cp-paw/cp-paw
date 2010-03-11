@@ -19,6 +19,7 @@
       INTEGER(4)   ,PARAMETER     :: NCHOICEX=100
       CHARACTER(60)               :: CHOICE(2,NCHOICEX)
       INTEGER(4)                  :: I,NCHOICE
+      INTEGER(4)                  :: Iselection
       LOGICAL(4)                  :: TCHK
 !     **************************************************************************
 !
@@ -100,6 +101,7 @@
 !     ==========================================================================
       NSELECTION=0
       DO IARG=1,NARGS-1
+        CALL LIB$GETARG(IARG,STRING)
         IF(+STRING(1:2).EQ.'-S') NSELECTION=NSELECTION+1
       ENDDO
       IF(NSELECTION.EQ.0) THEN
@@ -131,7 +133,7 @@
             CALL ERROR$STOP('MAIN')
           END IF
           CALL LIB$GETARG(IARG,OUTFILE(ISELECTION))
-          IF(OUTFILE(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
+          IF(OUTFILE(iselection)(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
             WRITE(*,*)'INPUT ERROR: OPTION -O MUST BE FOLLOWED BY OUTPUT FILE'
             WRITE(*,*)
             CALL ERRORMESSAGE(NCHOICE,CHOICE)
@@ -144,7 +146,7 @@
           IARG=IARG+1
           ISELECTION=ISELECTION+1
           CALL LIB$GETARG(IARG,SELECTION(ISELECTION))
-          IF(SELECTION(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
+          IF(SELECTION(iselection)(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
             WRITE(*,*)'INPUT ERROR: OPTION -S MUST BE FOLLOWED BY SELECTION'
             WRITE(*,*)
             CALL ERRORMESSAGE(NCHOICE,CHOICE)

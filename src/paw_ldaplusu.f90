@@ -755,7 +755,7 @@ DO IS1=1,NDIMD
 ENDDO
 PRINT*,'===================== PHITOCHI ======================'
 DO I=1,NCHI
-  WRITE(*,FMT='(I3,100F8.3)')NCHI,PHITOCHI(I,:)
+  WRITE(*,FMT='(I3,100F8.3)')i,PHITOCHI(I,:)
 ENDDO
 DO IS1=1,2
   DO IS2=1,2
@@ -925,7 +925,7 @@ end if
 print*,'============ total ldaplusu ====iat=',iat,'============================'
 print*,'iat=',iat,' LDA+U etot ',etot,' switch=',switch
 DO IS1=1,NDIMD
-PRINT*,'===================== DENMAT FOR SPIN',IS1,IS2,' ======================'
+PRINT*,'===================== DENMAT FOR SPIN',IS1,' ======================'
 I=0
 DO LN=1,LNXPHI
 DO M=1,2*LOXPHI(LN)+1
@@ -936,7 +936,7 @@ ENDDO
 ENDDO
 if(switch.eq.'0') then
 DO IS1=1,NDIMD
-PRINT*,'===================== DATH FOR SPIN',IS1,IS2,' ========================'
+PRINT*,'===================== DATH FOR SPIN',IS1,' ========================'
 I=0
 DO LN=1,LNXPHI
 DO M=1,2*LOXPHI(LN)+1
@@ -1214,11 +1214,6 @@ PRINT*,'TORB ',TORB
 !     = THIS FACTOR IS INCLUDED TO HAVE A PROPER DEFINITION OF SLATER INTEGRALS
       DO LRHO=0,LRHOX
         FACTOR(:,LRHO+1,:)=FACTOR(:,LRHO+1,:)*4.D0*PI/REAL(2*LRHO+1,KIND=8)
-do l1=0,lx
-  do lc=0,lcx
-    write(*,*)lrho,l1,lc,factor(l1+1,lrho+1,lc+1)
-  enddo
-enddo
       ENDDO
 !
 !     ==========================================================================
@@ -1236,7 +1231,9 @@ enddo
               L2=LOX(LN2)
               IF(L2.NE.L1) CYCLE
               AUX(:)=R(:)**2*POT(:)*PSIC(:,IC)*AEPHI(:,LN2)
-              CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
+              CALL RADIAL$INTEGRAl(GID,NR,AUX,val)
+!!$print*,ln1,ic,lc,lrho,ln2,'val ',val
+!!$CALL ATOMLIB_WRITEPHI('x0.DAT',GID,NR,1,aux)
               VAL=VAL*REAL(2*LRHO+1,KIND=8)/(4.D0*PI)  !SLATER INTEGRAL
               MAT(LN1,LN2)=MAT(LN1,LN2)-FACTOR(L1+1,LRHO+1,LC+1)*VAL
               MAT(LN2,LN1)=MAT(LN1,LN2)

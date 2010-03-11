@@ -2235,6 +2235,45 @@ CHARACTER(32):: FILE
       END SUBROUTINE SCHROEDINGER_XXXR_OV
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SCHROEDINGER$MODPOT(GID,NR,XMAX,E,POT)
+!     **************************************************************************
+!     ** MODIFIES THE POTENTIAL SUCH THAT AN EXPONENTIAL INCREASE DOES DOES   **
+!     ** NOT LEAD TO AN OVERFLOW, I.E. THE MAX. RATIO OF WAVE FUNCTIONS       **
+!     ** SHOULD NOT EXCEED XMAX. THE OUTER POTENTIAL IS LIMITED TO A MAX.     **
+!     ** VALUE                                                                **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)   :: GID      ! GRID ID
+      INTEGER(4),INTENT(IN)   :: NR       ! #(RADIAL GRID POINTS)
+      REAL(8)   ,INTENT(IN)   :: XMAX     ! MAXIMUM TOLERABLE RATIO OF PHI 
+      REAL(8)   ,INTENT(INout):: pot(NR)  ! RADIAL SPHERICAL POTENTIAL
+      REAL(8)   ,INTENT(IN)   :: E        ! ENERGY
+      real(8)                 :: pi
+      real(8)                 :: y0
+      real(8)                 :: svar
+      real(8)                 :: r(nr)
+      real(8)                 :: f(nr)
+      real(8)                 :: g(nr)
+      integer(4)              :: ir
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+      f(:)=sqrt(max(pot(:)*y0-e,0.d0))
+      call radial$integrate(gid,nr,f,g)
+      g=g+f*(r(nr)-r(:))-log(xmax)
+      do ir=2,nr-1
+        if(g(ir).gt.0.d0) then
+          svar=g(ir)/(g(ir+1)-g(ir))
+          svar=(1.d0-svar)*pot(ir)+svar*pot(ir-1)
+          pot(ir:)=svar
+          exit
+        end if
+      enddo
+      return 
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,V00,E,IRCL,IROUT)
 !     **************************************************************************
 !     **  1) ESTIMATE THE CLASSICAL TURNING POINT R(IRCL).                    **

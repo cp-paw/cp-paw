@@ -1397,6 +1397,7 @@ PRINT*,'RCSM ',THIS%RCSM
       CHARACTER(64)         :: STRING
       CHARACTER(64)         :: PSEUDIZATION
       TYPE(VFOCK_TYPE)      :: VFOCK
+      real(8)   ,allocatable:: aux(:)
       INTEGER(4)            :: NFIL
       INTEGER(4)            :: NTASKS,THISTASK
 !     **************************************************************************
@@ -1513,10 +1514,10 @@ THIS%SETTING%ZORA=.TRUE.
       ELSE 
          KEY='START,NONREL,NONSO,NONZORA'
       END IF
-      IF(THIS%SETTING%FOCK.NE.0.D0) THEN
+!      IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         WRITE(STRING,*)THIS%SETTING%FOCK
         KEY=TRIM(KEY)//',FOCK='//TRIM(STRING)
-      END IF
+!      END IF
 !
       CALL TRACE$PASS('BEFORE SCF-ATOM')
       CALL TIMING$CLOCKON('SCF-ATOM')
@@ -1578,13 +1579,39 @@ THIS%SETTING%ZORA=.TRUE.
       PSI(:,:NB)=THIS%ATOM%AEPSI
       PSISM(:,:NB)=THIS%ATOM%AEPSISM
       DEALLOCATE(TC)
-WRITE(6,FMT='("TOTAL ENERGY=",F25.7)')ETOT
-SVAR=0.D0
-DO IB=1,NB
-  SVAR=SVAR+FOFI(IB)
-  WRITE(6,FMT='("IB=",4I4,F20.4,2F10.5)')IB,NNOFI(IB)+LOFI(IB)+1,LOFI(IB) &
- &                                      ,SOFI(IB),EOFI(IB),FOFI(IB),AEZ-SVAR
-ENDDO
+!     
+!     ==========================================================================
+!     == cut off tail of the core states. bound states have a node at rout,   ==
+!     == but may still have an exponentially increasing tail                  ==
+!     ==========================================================================
+      do ir=1,nr
+        if(r(ir).lt.rout) cycle
+        psi(ir:,:nc)=0.d0
+        psism(ir:,:nc)=0.d0
+        exit
+      enddo
+      allocate(aux(nr))
+      do ib=1,nc
+        aux(:)=r(:)**2*(psi(:,ib)**2+psism(:,ib)**2)
+        call radial$integral(gid,nr,aux,svar)
+        svar=1.d0/sqrt(svar)
+        psi(:,ib)=psi(:,ib)*svar
+        psism(:,ib)=psism(:,ib)*svar
+        THIS%ATOM%AEPSI(:,ib)=psi(:,ib)
+        THIS%ATOM%AEPSIsm(:,ib)=psism(:,ib)
+      enddo
+      deallocate(aux)
+!     
+!     ==========================================================================
+!     == report energies                                                      ==
+!     ==========================================================================
+      WRITE(6,FMT='("TOTAL ENERGY=",F25.7)')ETOT
+      SVAR=0.D0
+      DO IB=1,NB
+        SVAR=SVAR+FOFI(IB)  
+        WRITE(6,FMT='("IB=",4I4,F20.4,2F10.5)')IB,NNOFI(IB)+LOFI(IB)+1,LOFI(IB)&
+     &                                      ,SOFI(IB),EOFI(IB),FOFI(IB),AEZ-SVAR
+      ENDDO
 !
 !     ==========================================================================
 !     == CALCULATE AND PSEUDIZE CORE DENSITY                                  ==
@@ -2940,8 +2967,8 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
-      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-      LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.true.
+      LOGICAL   ,PARAMETER  :: TWRITE=.true.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
@@ -2966,6 +2993,8 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)               :: PSPHIP(NR,LNX)
       REAL(8)               :: BAREPRO(NR,LNX)
       REAL(8)               :: PHITEST1(NR,LNX)
+      REAL(8)               :: PHIscale(LNX)
+      REAL(8)               :: Psiscale(nb)
       REAL(8)   ,ALLOCATABLE:: PHITEST(:,:)
       REAL(8)   ,ALLOCATABLE:: TPHITEST(:,:)
       REAL(8)   ,ALLOCATABLE:: AEPHI1(:,:)
@@ -3268,7 +3297,8 @@ PRINT*,'EOFI1 A ',EOFI1
               TFIRST=.FALSE. 
             ELSE
               CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
-    &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
+    &                                    ,ROUT,EOFLN(LN),NLPHI(:,LN))
+!    &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
             END IF
             CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,NLPHI(:,LN),AUX)
             TNLPHI(:,LN)=G(:)+(EOFLN(LN)-AEPOT(:)*Y0)*NLPHI(:,LN)-AUX(:)
@@ -3292,19 +3322,6 @@ PRINT*,'EOFI1 A ',EOFI1
      &                  IB,LOFI(IB),FOFI(IB),EOFI1(IB),EOFI(IB)
         ENDDO
         IF(TWRITE)CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
-      END IF
-!
-!     ==========================================================================
-!     == REPORT SETTINGS ON PARTIAL WAVES                                     ==
-!     ==========================================================================
-      IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20," ENERGIES FOR PARTIAL-WAVE CONSTRUCTION")')
-        WRITE(6,FMT='("RBOX=",F9.5)')RBOX
-        DO LN=1,LNX
-          WRITE(6,FMT='("LN=",I2," L=",I2," E=",F10.5," RC=",F6.3)') &
-     &                      LN,LOX(LN),EOFLN(LN),RC(LN)
-        ENDDO
-        IF(TWRITE)CALL SETUP_WRITEPHI(-'NLPHI.DAT',GID,NR,LNX,NLPHI)
       END IF
 !
 !     ==========================================================================
@@ -3348,6 +3365,56 @@ PRINT*,'EOFI1 A ',EOFI1
           EXIT ! SCALE ONLY ONCE PER L
         ENDDO
       ENDDO
+!
+!     ==========================================================================
+!     == DEFINE PHISCALE AND PSISCALE                                         ==
+!     == NEEDED TO COMPENSATE FOR THE HUGE SIZE DIFFERENCE BETWEEN STATES     ==
+!     == FROM DIFFERENT SHELLS IN THE NODELESS CONSTRUCTION                   ==
+!     ==========================================================================
+      PHISCALE(:)=1.D0
+      DO LN=1,LNX
+        DO LN1=LN+1,LNX
+          IF(LOX(LN1).NE.LOX(LN)) CYCLE
+          PHISCALE(LN1)=PHISCALE(LN1)*(EOFLN(LN)-EOFLN(LN1))
+        ENDDO
+      ENDDO
+!
+      PSISCALE(:)=1.D0
+      DO IB=1,NB
+        DO IB1=IB+1,NB
+          IF(LOFI(IB1).NE.LOFI(IB)) CYCLE
+          PSISCALE(IB1)=PSISCALE(IB1)*(EOFI(IB)-EOFI(IB1))
+        ENDDO
+      ENDDO
+!
+      DO L=0,LX
+        SVAR=1.D0
+        DO IB=NC+1,NB
+          IF(LOFI(IB).EQ.L) THEN
+            SVAR=1.D0/PSISCALE(IB)
+            EXIT
+          END IF
+        ENDDO
+        DO IB=1,NB
+          IF(LOFI(IB).EQ.L)PSISCALE(IB)=PSISCALE(IB)*SVAR
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == REPORT SETTINGS ON PARTIAL WAVES                                     ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        WRITE(6,FMT='(82("="),T20," ENERGIES FOR PARTIAL-WAVE CONSTRUCTION")')
+        WRITE(6,FMT='("RBOX=",F9.5)')RBOX
+        DO LN=1,LNX
+          WRITE(6,FMT='("LN=",I2," L=",I2," E=",F10.5," RC=",F6.3)') &
+     &                      LN,LOX(LN),EOFLN(LN),RC(LN)
+        ENDDO
+        IF(TWRITE) CALL SETUP_WRITEscaledPHI(-'NLPHISCALED.DAT',GID,NR,LNX &
+     &                                      ,phiscale,nlphi)
+        IF(TWRITE) CALL SETUP_WRITEscaledPHI(-'uofiSCALED.DAT',GID,NR,nb &
+     &                                      ,psiscale,uofi)
+      END IF
 !
 !     ==========================================================================
 !     == CONSTRUCT QN FUNCTIONS        (H-E)|QN>=|UC>                         ==
@@ -3410,7 +3477,7 @@ PRINT*,'EOFI1 A ',EOFI1
      &                     LN,LOX(LN),MAXVAL(ABS(PRO(:,LN)))
           ENDDO
         ENDDO
-IF(TWRITE)CALL SETUP_WRITEPHI(-'TEST.DAT',GID,NR,LNX,PRO)
+        IF(TWRITE)CALL SETUP_WRITEPHI(-'TEST.DAT',GID,NR,LNX,PRO)
       END IF
 !
 !     ==========================================================================
@@ -3953,6 +4020,10 @@ GOTO 10001
             CALL ERROR$MSG('DISAGREE WITH THOSE FROM THE AE CALCULATION')
             CALL ERROR$I4VAL('L',L)
             CALL ERROR$I4VAL('IB',IB)
+            CALL ERROR$I4VAL('nn',nn)
+            CALL ERROR$I4VAL('nnofi(ib)',nnofi(ib))
+            CALL ERROR$I4VAL('nn0',nn0)
+            CALL ERROR$R8VAL('rout',rout)
             CALL ERROR$R8VAL('TARGET: E[EV]',EOFI1(IB)*27.211D0)
             CALL ERROR$R8VAL('TARGET: E[EV]',EOFI(IB)*27.211D0)
             CALL ERROR$R8VAL('AE:     E[EV]',SVAR1*27.211D0)
@@ -4646,14 +4717,48 @@ GOTO 10001
       INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
       INTEGER(4)  ,INTENT(IN) :: NPHI        
       REAL(8)     ,INTENT(IN) :: PHI(NR,NPHI)
-      INTEGER(4)              :: IR
+      REAL(8)                 :: PHI1(nphi)
+      INTEGER(4)              :: IR,i
       REAL(8)                 :: R(NR)
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R)
       OPEN(100,FILE=FILE)
       DO IR=1,NR
         IF(R(IR).GT.3.D0.AND.MAXVAL(ABS(PHI(IR,:))).GT.1.D+3) EXIT
-        WRITE(100,FMT='(F15.10,2X,20(E25.10,2X))')R(IR),PHI(IR,:)
+        phi1(:)=phi(ir,:)
+        DO I=1,NPHI  ! AVOID CONFLICT WITH XMGRACE
+          IF(ABS(PHI1(I)).LT.1.D-60) PHI1(I)=0.D0
+        ENDDO
+        WRITE(100,FMT='(F15.10,2X,20(E25.10,2X))')R(IR),PHI1
+      ENDDO
+      CLOSE(100)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_WRITEscaledPHI(FILE,GID,NR,NPHI,scale,PHI)
+!     **                                                                      **
+!     **                                                                      **
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: FILE
+      INTEGER(4)  ,INTENT(IN) :: GID      ! GRID ID
+      INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
+      INTEGER(4)  ,INTENT(IN) :: NPHI        
+      REAL(8)     ,INTENT(IN) :: scale(NPHI)
+      REAL(8)     ,INTENT(IN) :: PHI(NR,NPHI)
+      REAL(8)                 :: PHI1(nphi)
+      INTEGER(4)              :: IR,i
+      REAL(8)                 :: R(NR)
+!     **************************************************************************
+      CALL RADIAL$R(GID,NR,R)
+      OPEN(100,FILE=FILE)
+      DO IR=1,NR
+        IF(R(IR).GT.3.D0.AND.MAXVAL(ABS(PHI(IR,:))).GT.1.D+3) EXIT
+        phi1(:)=phi(ir,:)*scale(:)
+        DO I=1,NPHI  ! AVOID CONFLICT WITH XMGRACE
+          IF(ABS(PHI1(I)).LT.1.D-60) PHI1(I)=0.D0
+        ENDDO
+        WRITE(100,FMT='(F15.10,2X,20(E25.10,2X))')R(IR),PHI1
       ENDDO
       CLOSE(100)
       RETURN
@@ -4864,7 +4969,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-USE STRINGS_MODULE
+      USE STRINGS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)     :: GID
       INTEGER(4),INTENT(IN)     :: NR
@@ -4881,6 +4986,7 @@ USE STRINGS_MODULE
       INTEGER(4),PARAMETER      :: ISO=0
       REAL(8)   ,PARAMETER      :: TOL=1.D-11
       REAL(8)   ,PARAMETER      :: CMIN=1.D-8
+      REAL(8)   ,PARAMETER      :: rbndx=4.d0
       REAL(8)                   :: E
       REAL(8)                   :: PI,Y0
       REAL(8)                   :: AUX(NR),DREL(NR),G(NR),POT(NR),PHI(NR)
@@ -4893,7 +4999,7 @@ USE STRINGS_MODULE
       INTEGER(4)                :: L
       INTEGER(4)                :: LN,ITER,IR,II(1)
       LOGICAL(4)                :: CONVG
-      REAL(8)                   :: SVAR
+      REAL(8)                   :: SVAR,svar1
       REAL(8)                   :: ARR1(5),ARR2(5)
       REAL(8)                   :: RBND2
       CHARACTER(64)  :: STRING
@@ -4921,15 +5027,36 @@ USE STRINGS_MODULE
         C(:)=(C(:)-C(IRBND))/(1.D0-C(IRBND))
         C(IRBND:)=0.D0
 !
+!       ========================================================================
+!       == determine rbnd to match the pseudo partial wave. requiring tha     ==
+!       == the potentials beyond rbnd are equal                               ==
+!       ==   1. start with point where iz zero                                ==
+!       ==   2. expand if AE and PS potentials deviate ate RBND               ==
+!       ==   3. overwrite by rbndx if matching radius is too large            ==
+!       ========================================================================
+!
 !       == FIND OUTERMOST POINT CONSIDERING THE POTENTIAL ======================
+        svar1=maxval(abs(psphi(irbnd:,ln)))
         DO IR=NR-2,1,-1
           IF(IR.LT.IRBND) EXIT
           SVAR=TPSPHI(IR,LN)+(PSPOT(IR)*Y0-E)*PSPHI(IR,LN)
-          IF(ABS(SVAR).GT.1.D-4*ABS(PSPHI(IR,LN))) THEN
+          IF(ABS(SVAR).GT.1.D-4*svar1) THEN
             IRBND=IR
             EXIT
           END IF
         ENDDO
+!
+!       == limit rbnd to a reasonable maximum ==================================
+        if(r(irbnd).gt.rbndx) then
+          WRITE(*,FMT='("overwriting matching radius estimated as ",f10.5)') &
+     &                                                               r(irbnd)
+          do ir=1,irbnd
+            if(r(ir).lt.rbndx) cycle
+            irbnd=ir
+            exit
+          enddo
+          WRITE(*,FMT='("new radius ",f10.5)')r(irbnd)
+        end if
 !        RBND2=RBND !OLD CHOICE
         RBND2=R(IRBND)
 !
@@ -4938,13 +5065,17 @@ USE STRINGS_MODULE
 !       ==  WITH A (NONLOCAL) FOCK POTENTIAL AND UPSET THE FORMALISM          ==
 !       ========================================================================
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),RBND2,PHIPHASE)
-        DO IR=1,NR
+print*,'l ',l,' e=',e,'phiphase before adjustment= ',phiphase
+        DO IR=1,irbnd
           IF(PSPHI(IR,LN)*PSPHI(IR+1,LN).LT.0.D0) THEN
             PHIPHASE=PHIPHASE-1.D0
-            WRITE(*,FMT='("NR. OF NODES REDUCED BY ONE RELATIVE TO QN")')
+            WRITE(*,FMT= &
+     &       '("l=",i2,"ln",i3,"NR. OF NODES REDUCED BY ONE RELATIVE TO QN. r=",f10.5)') &
+     &       l,ln,r(ir)
           END IF           
-          IF(R(IR).GT.0.3D0) EXIT
+          IF(R(IR).GT.0.3D0) EXIT  !0.3d0 is required for uranium
         ENDDO
+print*,'l ',l,' e=',e,'phiphase after adjustment= ',phiphase
 !
 !       ========================================================================
 !       ==  LOOP TO FIND PSEUDO PARTIAL WAVE                                  ==
@@ -4985,6 +5116,7 @@ USE STRINGS_MODULE
           CALL ERROR$MSG('LOOP NOT CONVERGED')
           CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
         END IF
+
 !
 !       ========================================================================
 !       ==  RESCALE PSEUDO PARTIAL WAVES SO THAT THEY MATCH TO AE PARTIAL WAVES=
@@ -4997,7 +5129,7 @@ USE STRINGS_MODULE
         PHI(:)=PHI(:)*SVAR
 !
 !       == OVERWRITE NODELESS INPUT PARTIAL WAVE BY PSEUDO PARTIAL WAVE
-        PSPHI(:IRBND,LN)=PHI(:IRBND)
+        PSPHI(:IRBND,LN) =PHI(:IRBND)
         TPSPHI(:IRBND,LN)=(E-POT(:IRBND)*Y0)*PHI(:IRBND)
       ENDDO
                                 CALL TRACE$POP()

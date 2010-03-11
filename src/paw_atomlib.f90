@@ -27,7 +27,7 @@
       REAL(8)   ,ALLOCATABLE :: SPHI(:,:)
       REAL(8)   ,ALLOCATABLE :: R(:)
       REAL(8)   ,ALLOCATABLE :: AUX(:),AUX1(:)
-      REAL(8)   ,ALLOCATABLE :: drel(:)
+      REAL(8)   ,ALLOCATABLE :: DREL(:)
       LOGICAL(4)             :: TREL,TZORA
       INTEGER(4)             :: IB,N,L,ISO,IR
       REAL(8)                :: JPHALF ! J+1/2
@@ -46,7 +46,7 @@
 !     == THE FOLLOWING PARAMETERS MUST BE SET BY HAND                         ==
 !     ==========================================================================
       AEZ=92.D0   ! URANIUM
-      TFINITENUCLEUS=.true.
+      TFINITENUCLEUS=.TRUE.
       NB=38 !50
       DMIN=1.D-6
       DMAX=1.D-1      
@@ -106,7 +106,7 @@
 !     == DETERMINE WAVE FUNCTIONS                                             ==
 !     ==========================================================================
       ALLOCATE(EOFI(NB))
-      eofi(:)=0.d0
+      EOFI(:)=0.D0
       ALLOCATE(PHI(NR,NB))
       ALLOCATE(SPHI(NR,NB))
       RBOX=R(NR-3)
@@ -154,7 +154,8 @@
       WRITE(*,*)'TEST SCALAR RELATIVISTIC BOUND STATE CALCULATION'
       DO IB=1,NB
         SVAR=-0.5D0*(AEZ/REAL(NNOFI(IB)+LOFI(IB)+1))**2
-        WRITE(*,FMT='(4I5,4F20.5)')IB,LOFI(IB),SOFI(IB),NNOFI(IB),EOFI(IB),SVAR,EOFI(IB)-SVAR
+        WRITE(*,FMT='(4I5,4F20.5)')IB,LOFI(IB),SOFI(IB) &
+     &                            ,NNOFI(IB),EOFI(IB),SVAR,EOFI(IB)-SVAR
       ENDDO
 !
 !     ==========================================================================
@@ -163,7 +164,7 @@
       IB=0
       DO N=1,10
         DO L=0,N-1
-          DO ISO=-1,1,2  !sign of LS
+          DO ISO=-1,1,2  !SIGN OF LS
             IF(L.EQ.0.AND.ISO.EQ.-1) CYCLE
             IB=IB+1
             IF(IB.GT.NB) EXIT
@@ -259,17 +260,17 @@
       CALL ATOMLIB_WRITEPHI('DIRACSMALL.DAT',GID,NR,NB,SPHI)
 !
 !     ==========================================================================
-!     == determine small component from analytical large component to test =====
-!     == the accuracy of the small component calculation                   =====
+!     == DETERMINE SMALL COMPONENT FROM ANALYTICAL LARGE COMPONENT TO TEST =====
+!     == THE ACCURACY OF THE SMALL COMPONENT CALCULATION                   =====
 !     ==========================================================================
-      allocate(drel(nr))
-      do ib=1,nb
-         aux(:)=0.d0
-        CALL SCHROEDINGER$DREL(GID,NR,POT,eofi(ib),DREL)
+      ALLOCATE(DREL(NR))
+      DO IB=1,NB
+         AUX(:)=0.D0
+        CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
         CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
-     &                                     ,DREL,aux,PHI(:,IB),SPHI(:,IB))
-      enddo
-!     == compare diracsmallnum.dat with diracsmall.dat =========================
+     &                                     ,DREL,AUX,PHI(:,IB),SPHI(:,IB))
+      ENDDO
+!     == COMPARE DIRACSMALLNUM.DAT WITH DIRACSMALL.DAT =========================
       CALL ATOMLIB_WRITEPHI('DIRACSMALLNUM.DAT',GID,NR,NB,SPHI)
 
 !
@@ -704,7 +705,7 @@ END MODULE RADIALFOCK_MODULE
 !     ** MAKES A SELF-CONSISTENT CALCULATION OF AN ATOM IN A BOX WITH         **
 !     ** RADIUS RBOX (RADIUS IS LIMITED BY THE GRID RBOX<R(NR-3) )            **
 !     **                                                                      **
-!     ** KEY='START,REL,SO,zora,FOCK='                                        **
+!     ** KEY='START,REL,SO,ZORA,FOCK='                                        **
 !     **                                                                      **
 !     **************************************************************************
       USE RADIALFOCK_MODULE
@@ -728,9 +729,12 @@ USE PERIODICTABLE_MODULE
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NX)! ONE-PARTICLE WAVE FUNCTIONS
       REAL(8)    ,INTENT(OUT)    :: SPHI(NR,NX) ! SMALL COMPONENT
       REAL(8)   ,PARAMETER       :: TOL=1.D-3
+      REAL(8)   ,PARAMETER       :: preTOL=1.D-4
+      REAL(8)   ,PARAMETER       :: XMAXTOL=1.D-8
+      REAL(8)   ,PARAMETER       :: XAVTOL=1.D-8
       INTEGER(4),PARAMETER       :: NITER=1000
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
-      LOGICAL(4),PARAMETER       :: TPR=.true.
+      LOGICAL(4),PARAMETER       :: TPR=.TRUE.
       REAL(8)                    :: R(NR)
       REAL(8)                    :: DREL(NR)  ! RELATIVISTIC CORRECTION
       REAL(8)                    :: RHO(NR)
@@ -759,8 +763,8 @@ USE PERIODICTABLE_MODULE
       INTEGER(4)                 :: NBROYDENMEM
       REAL(8)                    :: BROYDENSTEP
       INTEGER(4)                 :: LRHOX=4
-      INTEGER(4)                 :: IPERIOD,ISVAR1,ipos
-      CHARACTER(128)             :: STRING,string1
+      INTEGER(4)                 :: IPERIOD,ISVAR1,IPOS
+      CHARACTER(128)             :: STRING,STRING1
       REAL(8)                    :: SCALE
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
@@ -782,7 +786,7 @@ USE PERIODICTABLE_MODULE
 !     ==========================================================================
 !
 !     ==========================================================================
-!     == resolve key                                                          ==
+!     == RESOLVE KEY                                                          ==
 !     ==========================================================================
       TREL=.FALSE.
       TSO=.FALSE.
@@ -793,23 +797,23 @@ USE PERIODICTABLE_MODULE
 !
       STRING=KEY
       IPOS=1
-      DO i=1,7
-        IPOS=INDEX(string,',')
-        IF(IPOS.ne.0) THEN
+      DO I=1,7
+        IPOS=INDEX(STRING,',')
+        IF(IPOS.NE.0) THEN
           STRING1=STRING(1:IPOS-1)
         ELSE
           STRING1=STRING
         END IF
         STRING=STRING(IPOS+1:)
-        TREL=trel.or.trim(STRING1).EQ.'REL' 
-        TSO=tso.or.STRING1.EQ.'SO' 
-        TZORA=tzora.or.STRING1.EQ.'ZORA' 
-        TSTART=tstart.or.STRING1.EQ.'START' 
+        TREL=TREL.OR.TRIM(STRING1).EQ.'REL' 
+        TSO=TSO.OR.STRING1.EQ.'SO' 
+        TZORA=TZORA.OR.STRING1.EQ.'ZORA' 
+        TSTART=TSTART.OR.STRING1.EQ.'START' 
         IF(STRING1(1:4).EQ.'FOCK') THEN
           TFOCK=.TRUE.
-          if(string(5:5).eq.'=')READ(STRING1(6:),*)SCALE
+          IF(STRING(5:5).EQ.'=')READ(STRING1(6:),*)SCALE
         END IF
-        if(ipos.eq.0) exit
+        IF(IPOS.EQ.0) EXIT
       ENDDO
       IF(TPR) THEN
         WRITE(*,FMT='("KEY: ",A)')TRIM(KEY)
@@ -818,7 +822,7 @@ USE PERIODICTABLE_MODULE
         WRITE(*,FMT='("ZORA SWITCHED ON?                 ",L5)')TZORA
         WRITE(*,FMT='("FOCK CONTRIBTION ON?              ",L5)')TFOCK
         IF(TFOCK) THEN
-          WRITE(*,FMT='("PERCENT FOCK CONTRIBUTION: ",i5)')NINT(SCALE*100.D0)
+          WRITE(*,FMT='("PERCENT FOCK CONTRIBUTION: ",I5)')NINT(SCALE*100.D0)
         END IF
         WRITE(*,FMT='("START FROM SCRATCH?                ",L5)')TSTART
       END IF
@@ -1056,9 +1060,7 @@ RFOCK=1.1D0*RFOCK
 !       ========================================================================
         XAV=SQRT(SUM(R**3*(POT-POTIN)**2)/SUM(R**3))
         XMAX=MAXVAL(ABS(POT-POTIN))
-        AUX(:)=R**2*RHO*(POT-POTIN) 
-        AUX(:)=ABS(AUX)
-        CALL RADIAL$INTEGRAL(GID,NR,AUX,XDE)
+        IF(TPR)PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:(POT-POTIN)=',XMAX,NCONV,TFOCK.AND.TSECOND
         NCONV=NCONV+1
         IF(XAV.LT.XAVMIN) THEN
           XAVMIN=XAV
@@ -1068,40 +1070,21 @@ RFOCK=1.1D0*RFOCK
           XMAXMIN=XMAX
           NCONV=0
         END IF
-        IF(XDE.LT.XDEMIN) THEN
-          XDEMIN=XDE
-          NCONV=0
+!
+!       == QUIT LOOP IF BOTH TOLERANCES ARE FULFILLED ==========================
+        CONVG=(XMAX.LT.XMAXTOL).AND.(XAV.LT.XAVTOL)
+        IF(TFOCK.AND.(.NOT.TSECOND)) THEN
+          CONVG=(XMAX.LT.PRETOL).AND.(XAV.LT.PRETOL)
         END IF
-        IF(TPR)PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:(POT-POTIN)=',XMAX &
-      &                   ,' DE ',XDE 
-PRINT*,ITER,' AV(POT-POTIN)=',XAV,' MAX:(POT-POTIN)=',XMAX &
-&                   ,' DE ',XDE 
-!CALL ATOMLIB_WRITEPHI('AUX',GID,NR,1,AUX)
-!CALL ATOMLIB_WRITEPHI('RHO',GID,NR,1,RHO)
-IF(TPR) THEN
-  DO I=10,2,-1
-    POTSAVE(:,I)=POTSAVE(:,I-1)
-    POTINSAVE(:,I)=POTINSAVE(:,I-1)
-    POTOUTSAVE(:,I)=POTOUTSAVE(:,I-1)
-  ENDDO  
-  POTSAVE(:,1)=POT-POTIN
-  POTINSAVE(:,1)=POTIN
-  POTOUTSAVE(:,1)=POT
-  DO I=2,10
-     POTOUTSAVE(:,I)=POTOUTSAVE(:,I)-POTOUTSAVE(:,1)
-     POTINSAVE(:,I)=POTINSAVE(:,I)-POTINSAVE(:,1)
-  ENDDO
-  DO I=1,10
-     POTINSAVE(:,I)=R(:)*POTINSAVE(:,I)
-     POTSAVE(:,I)=R(:)*POTSAVE(:,I)
-  ENDDO
-  CALL ATOMLIB_WRITEPHI('POT-POTIN',GID,NR,10,POTSAVE)
-  CALL ATOMLIB_WRITEPHI('POTIN',GID,NR,9,POTINSAVE(:,2:10))
-  CALL ATOMLIB_WRITEPHI('POTOUT',GID,NR,9,POTOUTSAVE(:,2:10))
-END IF
+!       == IF PREVIOUS CONDITIONS CANNOT BE MET DO THE BEST YOU CAN AND
+!       == CECK IF MINIMUM REQUIREMENT IS FULFILLED
+        CONVG=CONVG.OR.(XMAX.LT.TOL).AND.NCONV.GT.5
+!
+!       ========================================================================
+!       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD             ==
+!       ========================================================================
         CALL BROYDEN$STEP(NR,POTIN,POT-POTIN)
         POT=POTIN
-        CONVG=(XMAX.LT.TOL).AND.NCONV.GT.5
       ENDDO
 
       CALL BROYDEN$CLEAR
@@ -1117,14 +1100,18 @@ END IF
       IF(TFOCK.AND.(.NOT.TSECOND)) THEN
         TSECOND=.TRUE.
         CONVG=.FALSE.
+print*,'first convergence'
+DO I=1,NB
+  WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),FOFI(I),NNOFI(I),EOFI(I)
+ENDDO
         GOTO 1000
       END IF
-!
-!CALL RADIALFOCK$PRINTVFOCK('VFOCK.DAT',VFOCK)
-!DO I=1,NB
-!  WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),FOFI(I),NNOFI(I),EOFI(I)
-!ENDDO
-!PRINT*,'#ITERATIONS ',ITER
+
+CALL RADIALFOCK$PRINTVFOCK('VFOCK.DAT',VFOCK)
+DO I=1,NB
+  WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),FOFI(I),NNOFI(I),EOFI(I)
+ENDDO
+PRINT*,'#ITERATIONS ',ITER
 !STOP
 !
 !     ==========================================================================
@@ -1219,7 +1206,7 @@ END IF
 !       ========================================================================
         IF(TREL.AND.(.NOT.TZORA)) THEN
           G(:)=0.D0
-          CALL SCHROEDINGER$DREL(GID,NR,POT,eofi(ib),DREL)
+          CALL SCHROEDINGER$DREL(GID,NR,POT,EOFI(IB),DREL)
           CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,LOFI(IB),SOFI(IB) &
      &                                       ,DREL,G,PHI(:,IB),SPHI(:,IB))
         ELSE
@@ -1333,12 +1320,12 @@ END IF
       INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
       REAL(8)    ,INTENT(IN)     :: RBOX    ! BOX RADIUS
       LOGICAL(4) ,INTENT(IN)     :: TVARDREL! UPDATE RELATIVISTIC PARAMETER
-      REAL(8)    ,INTENT(INOUT)  :: DREL(NR)!RELATIVISTIC CORRECTION
-      REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
-      INTEGER(4) ,INTENT(IN)     :: NN      !#(NODES)
-      REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL
-      REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
-      REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      REAL(8)    ,INTENT(INOUT)  :: DREL(NR)! RELATIVISTIC CORRECTION
+      REAL(8)    ,INTENT(IN)     :: G(NR)   ! INHOMOGENITY
+      INTEGER(4) ,INTENT(IN)     :: NN      ! #(NODES)
+      REAL(8)    ,INTENT(IN)     :: POT(NR) ! POTENTIAL
+      REAL(8)    ,INTENT(INOUT)  :: E       ! ENERGY
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR) ! WAVE-FUNCTION
       INTEGER(4)                 :: ISTART,IBI
       REAL(8)                    :: X0,DX,XM,ZM,Z0
       REAL(8)    ,PARAMETER      :: TOL=1.D-8
@@ -1555,16 +1542,18 @@ END IF
       REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
       REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      INTEGER(4) ,PARAMETER      :: NITER=100
+      REAL(8)    ,PARAMETER      :: TOL=1.D-12
+      REAL(8)    ,PARAMETER      :: RMATCHN=3.D0 ! MIN MATCHING RADIUS
       INTEGER(4)                 :: ISTART,IBI
       REAL(8)                    :: X0,DX,XM,ZM,Z0
-      REAL(8)    ,PARAMETER      :: TOL=1.D-12
       REAL(8)                    :: R(NR)
       REAL(8)                    :: PHI1(NR),PHI2(NR)
       REAL(8)                    :: DREL(NR),GHOM(NR),PHIHOM(NR)
       REAL(8)                    :: PHIINHOM(NR)
-      INTEGER(4) ,PARAMETER      :: NITER=100
       REAL(8)                    :: VAL1,VAL2,SVAR
-      INTEGER(4)                 :: I,IR,IRMATCH,SO,IDIR
+      INTEGER(4)                 :: IR,IRMATCH,SO,IDIR
+      INTEGER(4)                 :: ITER
       LOGICAL                    :: THOM
       REAL(8)                    :: Y2,Y1,X2,X1,VAL,DER,DERO,R1,R2
       INTEGER(4)                 :: IRBOX
@@ -1580,14 +1569,56 @@ END IF
 !          
 !     ==========================================================================
 !     ==========================================================================
+!     ==  PRESELECT A WINDOW FOR BISECTION                                    ==
+!     ==  DO SMALL STEPS TO AVOID COMING CLOSE TO A GHOST STATE               ==
+!     ==========================================================================
+!     ==========================================================================
+      X0=E
+      z0=333.333d0 ! first value is meaningless
+      DX=1.D-2
+      DO ITER=1,NITER
+        E=X0
+        
+!       ========================================================================
+!       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
+!       ========================================================================
+        CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO,DH,DO,G,PHI)
+!       == CHECK FOR OVERFLOW ==================================================
+        IF(.NOT.(PHI(IRBOX+2).GT.0.OR.PHI(IRBOX+2).LE.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
+        END IF
+!
+!       ========================================================================
+!       == ESTIMATE PHASE SHIFT                                               ==
+!       ========================================================================
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBOX,Z0)
+        Z0=Z0-REAL(NN+1,KIND=8)
+        IF(Z0.GT.0.D0) THEN
+          PHI1(:)=PHI(:)
+        ELSE
+          PHI2(:)=PHI(:)
+        END IF
+!
+        IF(ITER.GT.1.AND.Z0*ZM.LT.0.D0) EXIT
+        IF(ITER.EQ.1) DX=SIGN(DX,-Z0)
+        XM=X0
+        ZM=Z0
+        X0=X0+DX
+      ENDDO
+!          
+!     ==========================================================================
+!     ==========================================================================
 !     ==  ITERATE TO BISECT ENERGY WITH A NODE AT RBOX                        ==
 !     ==========================================================================
 !     ==========================================================================
       ISTART=1
       X0=E
-      DX=1.D-2
+      z0=333.333d0   ! first value is meaningless
+!     == DX IS DEFINED BY THE PREVIOUS LOOP
       CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
-      DO I=1,NITER
+      DO ITER=1,NITER
         E=X0
 !
 !       ========================================================================
@@ -1622,6 +1653,7 @@ END IF
         CALL ERROR$MSG('BOUND STATE NOT FOUND')
         CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
       END IF
+!
 !     ==========================================================================
 !     ==  AVERAGE BOTH BOUNDS OF BISECTION                                    ==
 !     ==========================================================================
@@ -1646,8 +1678,10 @@ END IF
 !     ==========================================================================
       DO IR=1,NR
         IRMATCH=IR
+        IF(R(IR).LT.RMATCHN)CYCLE
         IF(SUM(ABS(PRO(IR,:))).LT.1.D-8) THEN
-          IF(ABS(PHI2(IR)-PHI1(IR)).GT.1.D-3*ABS(PHI1(IR))) EXIT
+          EXIT
+!          IF(ABS(PHI2(IR)-PHI1(IR)).GT.1.D-3*ABS(PHI1(IR))) EXIT
         END IF
       ENDDO
 !
@@ -1700,8 +1734,6 @@ END IF
         SVAR=(DERO-DER)/PHI(IRMATCH)
         PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
       END IF
- 
-
                                  CALL TRACE$POP()
       RETURN
       END
@@ -2115,12 +2147,13 @@ END IF
       REAL(8)         ,INTENT(IN) :: RBND
       REAL(8)         ,INTENT(INOUT) :: E
       REAL(8)         ,INTENT(INOUT) :: PSI(NR)
-      REAL(8)         ,PARAMETER  :: TOL=1.D-7  !(1D-12 IS TOO SMALL)
-!      REAL(8)         ,PARAMETER  :: TOLMAX=1.D-8  !EMERGENCY TOLERANCE
+      REAL(8)         ,PARAMETER  :: TOL=1.D-7 !(1D-12 IS TOO SMALL)
       INTEGER(4)      ,PARAMETER  :: NITER=200
       REAL(8)         ,PARAMETER  :: XMAX=1.D+15 !MAX. FACTOR FOR WAVEFUNCTION
+      LOGICAL(4)      ,PARAMETER  :: TPR=.FALSE.
       REAL(8)                  :: PHASE
       REAL(8)                  :: DPSI(NR)
+      REAL(8)                  :: DEVARR(NR)
       REAL(8)                  :: PHIDOT(NR)
       REAL(8)                  :: PHIPRIME(NR)
       REAL(8)                  :: PHIHOM(NR)
@@ -2147,10 +2180,11 @@ END IF
       REAL(8)                  :: REND
       REAL(8)                  :: NORM
       REAL(8)                  :: DEV,DEVPREV
-      LOGICAL(4)               :: TPR=.false.
       LOGICAL(4)               :: TFIXE ! CONSTANT ENERGY CALCULATION IF TRUE
       LOGICAL(4)               :: TINHOM ! INHOMOGENEOUS EQUATION
       INTEGER(4)               :: NN
+!CHARACTER(64)            :: STRING
+!REAL(8)                  :: TESTARR(NR,NITER,6)
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -2182,6 +2216,7 @@ END IF
         CALL ERROR$STOP('ILLEGAL VALUE FOR SO')
         CALL ERROR$STOP('ATOMLIB$UPDATESTATEWITHHF')
       END IF
+!CALL ATOMLIB_WRITEPHI('PSIBEFORE',GID,NR,1,PSI)
 !
 !     ==========================================================================
 !     ==  NOW START LOOP                                                      ==
@@ -2202,22 +2237,24 @@ END IF
         AUX(:)=AUX(:)+2.D0*R(:)**2*POT(:)*Y0*PSI(:)
 !       == REMOVE FACTOR 2*R**2 ================================================
         AUX(:)=AUX(:)/(2.D0*R(:)**2)
-!       == HARTREE-FOCK CORRECTION =============================================
+!       == ADD FOCK TERM  ======================================================
         CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,PSI,AUX1)
         AUX(:)=AUX(:)+AUX1(:)
+!       == SUBTRACT INHOMOGENEITY ==============================================
+        AUX(:)=AUX(:)-G(:)
 !       == CORRECT GLITCHES ====================================================
         AUX(1:2)=0.D0
 !       == ESTIMATE ENERGY =====================================================
         IF(.NOT.TFIXE) THEN
-          AUX1(:)=R(:)**2*PSI(:)*(AUX(:)-G(:))
+          AUX1(:)=R(:)**2*PSI(:)*AUX(:)
           CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
           CALL RADIAL$VALUE(GID,NR,AUX2,RBND,E)
           AUX1(:)=R(:)**2*PSI(:)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
           CALL RADIAL$VALUE(GID,NR,AUX2,RBND,NORM)
           E=E/NORM
-          IF(E.LT.-5.D+3) THEN
-            CALL ERROR$MSG('ENERGY BELOW -5000 H ENCOUNTERED.')
+          IF(E.LT.-6.D+3) THEN
+            CALL ERROR$MSG('ENERGY BELOW -6000 H ENCOUNTERED.')
             CALL ERROR$MSG('INDICATION OF CATASTROPHIC FAILURE.') 
             CALL ERROR$R8VAL('E',E)
             CALL ERROR$R8VAL('RBND',RBND)
@@ -2233,44 +2270,53 @@ END IF
           CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
           CALL RADIAL$VALUE(GID,NR,AUX2,3.D0,NORM)
         END IF
-!       == SUBTRACT INHOMOGENEITY ==============================================
-        AUX(:)=AUX(:)-G(:)
-!       == MAP INTO DPSI
+!!$if(tinhom.and.(.not.tfixe)) then
+!!$  print*,'l ',l,' e ',e
+!!$  call atomlib_writephi('x1.dat',gid,nr,1,aux)
+!!$  call atomlib_writephi('x2.dat',gid,nr,1,psi)
+!!$end if
+!
+!       == MAP INTO DPSI =======================================================
         DPSI(:)=-AUX(:)
         DPSI(1:2)=0.D0
+        DEVARR=DPSI
 !
 !       ========================================================================
 !       ==  DETERMINE PHIPRIME-PHIDOT*EPRIME                                  ==
 !       ========================================================================
         CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
-
-!       == BOUNDARY CONDITION PHI(ROUT)=0 ====================================
         ROUT=R(IROUT)
-!       ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT TO AVOID AN OVERFLOW ======
-!       == ATTENTION: THERE IS A STEP IN THE POTENTIAL =======================
-        POT1(:)=POT(:)
-        POT1(IROUT:)=E
+!       ==  SET KINETIC ENERGY TO ZERO BEYOND ROUT TO AVOID AN OVERFLOW ========
+!       == ATTENTION: THERE IS A STEP IN THE POTENTIAL =========================
+        POT1=POT
+        POT1(IROUT:)=E/Y0
 !
-        G1=DPSI(:)
-        G1(1:2)=0.D0
-        CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G1,L,E,1,PHIPRIME)
-        IF(.NOT.TFIXE) THEN
+        IF(TFIXE) THEN
+          G1=DPSI(:)
+          G1(1:2)=0.D0
+          G1(IROUT:)=0.D0
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G1,L,E,1,PHIPRIME)
+          DPSI(:)=PHIPRIME(:)
+        ELSE
           G1=PSI(:)
+          G1(IROUT:)=0.D0
           CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G1,L,E,1,PHIDOT)
+!         == ADJUST ENERGY UNTIL PHIPRIME HAS A NODE AT RBND. AVOIDS ===========
+!         == PROBLEMS WITH EXPONENTIALLY INCREASING TAIL FOR CORE STATES =======
+          SVAR=0.D0
+          DO I=1,2
+            G1=DPSI(:)+SVAR*PSI(:)
+            G1(1:2)=0.D0
+            G1(IROUT:)=0.D0
+            CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL,SO,G1,L,E,1,PHIPRIME)
+            SVAR=SVAR-PHIPRIME(IRBND)/PHIDOT(IRBND)
+          ENDDO
 !
 !         == DETERMINE VALUES AND DERIVATIVES CONSISTENT WITH ==================
 !         == SCHROEDINGER$PHASESHIFT ===========================================
-          CALL SCHROEDINGER$RESOLVEPHASESHIFT(PHASE,VAL,DER,NN)!
-!
-          IF(IROUT.LT.IRBND) THEN
-            IREND=IROUT
-            VAL=0.D0
-            DER=1.D0
-            REND=R(IREND)
-          ELSE
-            IREND=IRBND
-            REND=RBND
-          END IF
+          CALL SCHROEDINGER$RESOLVEPHASESHIFT(PHASE,VAL,DER,NN)
+          IREND=IRBND
+          REND=RBND
           X1=R(IREND-1)
           X2=R(IREND)
           Y1=PHIDOT(IREND-1)
@@ -2290,16 +2336,13 @@ END IF
             DPSI(:)=DPSI(:)+PHIDOT(:)*SVAR
           ENDDO
           IF(REND.LT.RBND) DPSI(IREND+1:)=0.D0
-!
-        ELSE
-          DPSI(:)=PHIPRIME(:)
         END IF
+!TESTARR(:,ITER,6)=DPSI
 !   
 !       ========================================================================
 !       ==  CHECK CONVERGENCE                                                 ==
 !       ========================================================================
         VAL=MAXVAL(ABS(DPSI(:IRBND-3)))/SQRT(NORM)
-        IF(TPR) PRINT*,'ITER=',ITER,' L=',L,' E=',E,' DEV=',VAL
         CONVG=(VAL.LT.TOL)
         IF(CONVG.AND.VAL.LT.0.D0) THEN
           CALL ATOMLIB_WRITEPHI('DPSI',GID,NR,1,DPSI)
@@ -2316,15 +2359,36 @@ END IF
         PSI(:)=PSI(:)+DPSI(:)
 !
       ENDDO    ! END OF ITERATION
+!CALL ATOMLIB_WRITEPHI('PSIAFTER',GID,NR,1,PSI)
+!if(tinhom)stop 'forced ATOMLIB$UPDATESTATEWITHHF'
+
+      IF(TPR) PRINT*,'ITER=',ITER,' L=',L,' E=',E,' DEV=',VAL
 !
       IF(.NOT.CONVG) THEN
-        CALL ATOMLIB_WRITEPHI('PSI.DAT',GID,NR,1,PSI)
-        CALL ATOMLIB_WRITEPHI('DPSI.DAT',GID,NR,1,DPSI)
+        CALL ATOMLIB_WRITEPHI('PSI.DAT',GID,NR,1,PSI/SQRT(NORM))
+        CALL ATOMLIB_WRITEPHI('DPSI.DAT',GID,NR,1,DPSI/SQRT(NORM))
+        CALL ATOMLIB_WRITEPHI('DEVARR.DAT',GID,NR,1,DEVARR/SQRT(NORM))
+!!$        DO ITER=1,NITER,10
+!!$          WRITE(STRING,*)ITER
+!!$          STRING='TESTARR1_'//TRIM(ADJUSTL(STRING))//'.DAT'
+!!$          CALL ATOMLIB_WRITEPHI(STRING,GID,NR,10,TESTARR(:,ITER:ITER+9,1))
+!!$          STRING(8:8)='2'
+!!$          CALL ATOMLIB_WRITEPHI(STRING,GID,NR,10,TESTARR(:,ITER:ITER+9,2))
+!!$          STRING(8:8)='3'
+!!$          CALL ATOMLIB_WRITEPHI(STRING,GID,NR,10,TESTARR(:,ITER:ITER+9,3))
+!!$          STRING(8:8)='4'
+!!$          CALL ATOMLIB_WRITEPHI(STRING,GID,NR,10,TESTARR(:,ITER:ITER+9,4))
+!!$          STRING(8:8)='5'
+!!$          CALL ATOMLIB_WRITEPHI(STRING,GID,NR,10,TESTARR(:,ITER:ITER+9,5))
+!!$          STRING(8:8)='6'
+!!$          CALL ATOMLIB_WRITEPHI(STRING,GID,NR,10,TESTARR(:,ITER:ITER+9,6))
+!!$        ENDDO
         CALL ERROR$MSG('LOOP FOR RADIAL HARTREE FOCK NOT CONVERGED')
         CALL ERROR$I4VAL('L',L)
         CALL ERROR$R8VAL('E',E)
         CALL ERROR$R8VAL('REND',REND)
         CALL ERROR$R8VAL('RBND',RBND)
+        CALL ERROR$R8VAL('NORM',NORM)
         CALL ERROR$I4VAL('#(ITERATIONS)',ITER)
         CALL ERROR$R8VAL('MAX DEVIATION',VAL)
         CALL ERROR$R8VAL('TOLERANCE',TOL)
@@ -2572,17 +2636,18 @@ END IF
       REAL(8)     ,INTENT(IN) :: PHI(NR,NPHI)
       INTEGER(4)              :: IR,I
       REAL(8)                 :: R(NR)
-      REAL(8)                 :: PHI1(NR,NPHI)
+      REAL(8)                 :: PHI1(NPHI)
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R)
       OPEN(100,FILE=FILE)
-      PHI1=PHI
       DO IR=1,NR
-        IF(R(IR).GT.3.D0.AND.MAXVAL(ABS(PHI1(IR,:))).GT.1.D+3) EXIT
+!        IF(R(IR).GT.3.D0.AND.MAXVAL(ABS(PHI(IR,:))).GT.1.D+3) CYCLE
+        PHI1(:)=PHI(IR,:)
         DO I=1,NPHI  ! AVOID CONFLICT WITH XMGRACE
-          IF(ABS(PHI1(IR,I)).LT.1.D-60) PHI1(IR,I)=0.D0
+          IF(ABS(PHI1(I)).LT.1.D-60) PHI1(I)=0.D0
+          phi1(i)=max(-1.d+6,min(1.d+6,phi1(i)))
         ENDDO
-        WRITE(100,FMT='(F15.10,2X,20(E25.10,2X))')R(IR),PHI1(IR,:)
+        WRITE(100,FMT='(F15.10,2X,20(E25.10,2X))')R(IR),PHI1
       ENDDO
       CLOSE(100)
       RETURN
