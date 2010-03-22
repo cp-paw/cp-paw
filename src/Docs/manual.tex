@@ -5992,35 +5992,110 @@ visualize this information.
 
 The calling sequence is
 \begin{center}
-\verb|paw_stpa.x| \textit{parameter file} \verb|>| \textit{out}
+\verb|paw_stpa.x| 
+ \quad-s\quad\textit{selection}\quad\textrm{-o}\quad\textit{outfile} \quad\textit{file}
 \end{center}
-where ``\textit{parameter}'' is a keyword selecting the information to
-be visualized.  \textit{file} is the file written by the paw code. It
-has the ending ``\verb|stpforz|\textit{Z}\verb|.myxml|'', where
-\textit{Z} is the atomic number. \textit{out} is the name of the file
-keeping the output.  The format is ``x y1 y2 \ldots'' and is written
-line-by-line in free format.  It can be viewed for example with the
-xy-plotting tool xmgrace.
+where ``\textit{selection}'' is a keyword selecting the information to
+be visualized.  The parameter ``\textit{outfile}'' specifies the file
+to which the information for the preceeding selection shall be
+written. The result is written to standard out, if it is omitted.  The
+sequence
+``-s\quad\textit{selection}\quad\textrm{-o}\quad\textit{outfile}'' can
+be repeated several times.  ``\textit{file}'' is the input file, which
+has been written by the paw code. It has the ending
+``\verb|stpforz|\textit{Z}\verb|.myxml|'', where \textit{Z} is the
+atomic number. The \verb|paw_stpa.x| tool writes the data either in
+free format onto single line, or, for array data, the format is
+line-by-line free format ``x y1 y2 \ldots''.  It can be visualized for
+example with the xy-plotting tool xmgrace.
 \begin{center}
 \verb|xmgrace -nxy| \textit{out}
 \end{center}
 
-Here a list of the parameters recognized.
+Here a list of the parameter ``\textit{selection}'': 
 \begin{center}
 \begin{tabular}{ll}
-SCATTERING & \\
-AEPSI      & all-electron wave functions\\
-UPSI       & node-less wave functions\\
-UPSISM     & \\
-AEPHI      & all-electron partial waves\\
-PSPHI      & auxiliary partial waves\\
-NLPHI      & node-less partial waves\\
-QPHI       & \\
-AEPHIDOT   & all-electron scattering partial waves\\ 
-PSPHIDOT   & auxiliary scattering partial waves\\ 
-NLPHIDOT   & nodeless scattering partial waves\\ 
+ scattering       & phase shifts                                             \\
+ nb               & nr. of wave functions                                    \\
+ nc               & nr. of core wave functions                               \\
+ atom.l           & main angular momenta of wave functions                   \\
+ atom.e           & energy eigenvalues in h of wave functions                \\
+ atom.f           & occupations of wave functions                            \\
+ npro             & nr. of projector functions                               \\
+ lpro             & main angular momenta of projector functions              \\
+ id               & id of this setup construction                            \\
+ z                & atomic number                                            \\
+ zv               & nr. of valence electrons                                 \\
+ aephi            & all-electron partial waves                               \\
+ psphi            & auxiliary partial waves                                  \\
+ nlphi            & node-less partial waves                                  \\
+ qphi             & core-less partial waves                                  \\
+ pro              & projector functions                                      \\
+ aephidot         & all-electron scattering partial waves                    \\
+ psphidot         & auxiliary scattering partial waves                       \\
+ nlphidot         & node-less scattering partial waves                       \\
+ pawvalencepsi    & valence wave functions calculated from paw               \\
+ aevalencepsi     & all-electron valence wave functions                      \\
+ upsi             & node-less wave functions                                 \\
+ upsism           & small component of node-less wave functions              \\
+ aepsi            & all-electron wave functions                              \\
+ aepsism          & small component of all-electron wave functions           \\
+ parms.psi.rcl    & method for constructing auxiliary partial waves          \\
+ parms.psi.type   & method for constructing auxiliary partial waves          \\
+ parms.psi.lambda & decay parameter for constructing auxiliary partial waves \\
+ parms.core.rc    & cutoff radius for pseudized core                         \\
+ parms.core.pow   & leading power at the origin of the pseudized core        \\
+ parms.core.val0  & value at the origin of the pseudized core                \\
+ parms.pot.rc     & cutoff radius for pseudized potential                    \\
+ parms.pot.pow    & leading power at the origin of the pseudized potential   \\
+ parms.pot.val0   & value at the origin of the pseudized potential           \\
+ parms.rcsm       & narrow compensation gaussian                             \\
+ parms.rbox       & rbox                                                     \\
+ pot              & potentials [ae,ps,v(psrho)]                              \\
+ prog             & projector functions in g-space                           \\
+ vaddg            & vadd in g-space                                          \\
 \end{tabular}
 \end{center}
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
 
 %==========================================================================
 \newpage

@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 963 $'
+character(256):: VERrev='$LastChangedRevision: 1035 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2009-08-27 19:35:16 +0200 (Do, 27. Aug 2009) $'
+character(256):: VERdat='$LastChangedDate: 2010-03-22 10:53:57 +0100 (Mo, 22. Mär 2010) $'
 end Module version_module
 !
 !     ..................................................................
@@ -1109,6 +1109,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !         == (previously it was added)                             =====
           CALL ENERGYLIST$PRINTONE(NFILO,'AE  ELECTROSTATIC')     
           CALL ENERGYLIST$PRINTONE(NFILO,'AE  EXCHANGE-CORRELATION')     
+          CALL ENERGYLIST$PRINTONE(NFILO,'    LOCAL CORRELATIONS')     
           CALL ENERGYLIST$PRINTONE(NFILO,'BACKGROUND')     
           CALL ENERGYLIST$PRINTONE(NFILO,'ISOLATE ENERGY')     
           CALL ENERGYLIST$PRINTONE(NFILO,'PS  KINETIC')     

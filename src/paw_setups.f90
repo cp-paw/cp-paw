@@ -58,7 +58,7 @@ MODULE SETUP_MODULE
 !**  CHANGES THE SETTING OF A PARENT ROUTINE.                                 **
 !**                                                                           **
 !**                                                                           **
-!**                                              P.E. BLOECHL, (1991-2008)    **
+!**                                              P.E. BLOECHL, (1991-2010)    **
 !*******************************************************************************
 TYPE SETUPPARMS_TYPE
   CHARACTER(128)  :: ID 
@@ -1486,8 +1486,8 @@ PRINT*,'RCSM ',THIS%RCSM
 !THIS%SETTING%TREL=.FALSE.
       THIS%SETTING%SO=.FALSE.
 !THIS%SETTING%SO=.TRUE.
-      THIS%SETTING%ZORA=.FALSE.
-THIS%SETTING%ZORA=.TRUE.
+      THIS%SETTING%ZORA=.TRUE.
+!THIS%SETTING%ZORA=.FALSE.
 !     == SELECT HARTREE FOCK ADMIXTURE =========================================
       THIS%SETTING%FOCK=0.D0
       CALL LDAPLUSU$SELECTTYPE(THIS%I)
@@ -1514,10 +1514,12 @@ THIS%SETTING%ZORA=.TRUE.
       ELSE 
          KEY='START,NONREL,NONSO,NONZORA'
       END IF
-!      IF(THIS%SETTING%FOCK.NE.0.D0) THEN
+!
+      IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         WRITE(STRING,*)THIS%SETTING%FOCK
+!print*,'fock switched off'
         KEY=TRIM(KEY)//',FOCK='//TRIM(STRING)
-!      END IF
+      END IF
 !
       CALL TRACE$PASS('BEFORE SCF-ATOM')
       CALL TIMING$CLOCKON('SCF-ATOM')
@@ -1684,9 +1686,22 @@ THIS%SETTING%ZORA=.TRUE.
       END IF
       CALL ATOMTYPELIST$SETR8('PS<G2>',THIS%PSG2)
       CALL ATOMTYPELIST$SETR8('PS<G4>',THIS%PSG4)
+!!$!     
+!!$!     =======================================================================
+!!$!     ==  this for reading and writing the core density                    ==
+!!$!     =======================================================================
+!!$      open(unit=11,file='core.data',form='unformatted')
+!!$      rewind 11
+!!$!     ==  use this for writeing ...
+!!$      write(11)this%aecore      
+!!$      write(11)this%pscore      
+!!$!     == ..and this for reading
+!!$      read(11)this%aecore      
+!!$      read(11)this%pscore      
+!!$      close(11)
 !     
 !     ==========================================================================
-!     ==  CALCULATE AND PRINT SCATTERING PROPERTIES                           ==
+!     ==  Calculate AND PRINT SCATTERING PROPERTIES                           ==
 !     ==========================================================================
       CALL TIMING$CLOCKON('TEST SCATTERING')
       CALL SETUP_TESTSCATTERING(LL_STP)
@@ -2967,8 +2982,8 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
-      LOGICAL   ,PARAMETER  :: TTEST=.true.
-      LOGICAL   ,PARAMETER  :: TWRITE=.true.
+      LOGICAL   ,PARAMETER  :: TTEST=.false.
+      LOGICAL   ,PARAMETER  :: TWRITE=.false.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)

@@ -456,7 +456,7 @@ TYPE VFOCK_TYPE
   INTEGER(4)         :: NR
   REAL(8)            :: SCALE
   INTEGER(4)         :: LRHOX
-  INTEGER(4)         :: NB
+  INTEGER(4)         :: NB=-1
   INTEGER(4),POINTER :: L(:)
   INTEGER(4),POINTER :: SO(:)
   REAL(8)   ,POINTER :: F(:)
@@ -582,11 +582,11 @@ END MODULE RADIALFOCK_MODULE
       VFOCK%GID=-1
       VFOCK%NR=-1
       VFOCK%LRHOX=-1
-      DEALLOCATE(VFOCK%L)
-      DEALLOCATE(VFOCK%SO)
-      DEALLOCATE(VFOCK%F)
-      DEALLOCATE(VFOCK%PSI)
-      DEALLOCATE(VFOCK%MUX)
+      if(associated(vfock%l))DEALLOCATE(VFOCK%L)
+      if(associated(vfock%so))DEALLOCATE(VFOCK%SO)
+      if(associated(vfock%f))DEALLOCATE(VFOCK%F)
+      if(associated(vfock%psi))DEALLOCATE(VFOCK%PSI)
+      if(associated(vfock%mux))DEALLOCATE(VFOCK%MUX)
       RETURN
       END SUBROUTINE RADIALFOCK$CLEANVFOCK
 !

@@ -1904,7 +1904,7 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$GET(LL_CNTL,'CONSTRAINTTYPE',1,CH32VAL)
       CALL CELL$SETCH('CONSTRAINTTYPE',CH32VAL)
 !
-!     == MASS IF DYNAMICAL =============================================
+!     == FRICTION ======================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'FRIC',1,0.D0)
@@ -1912,7 +1912,7 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,FRIC)
       CALL CELL$SETR8('FRICTION',FRIC)
 !
-!     == FRICTION ======================================================
+!     == MASS IF DYNAMICAL =============================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'M',1,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'M',1,MASS)

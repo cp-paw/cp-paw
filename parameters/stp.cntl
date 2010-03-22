@@ -413,7 +413,8 @@
     !CORE   POW=3. RC/RCOV=   0.709 !END
   !END
 
-  !SETUP  ID='AG_.75_6.0' EL='AG' ZV=  11.
+  !SETUP_x  x='produces ghost states for silver metal'  
+          ID='AG_.75_6.0' EL='AG' ZV=  11.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -3100,6 +3101,25 @@
    !POT  POW=3.  RC/RCOV=0.5  !END
    !CORE POW=2.  RC/RCOV=0.5  !END
  !END
+
+!SETUP ID='O_MU' EL='O' ZV= 6.
+       TYPE='HBS' RBOX/RCOV=1.2 RCSM/RCOV=.25
+       RCL/RCOV=.75 .75 .75 .75
+       LAMBDA= 6. 6. 6. 6.
+ !GRID DMIN=5.E-6 DMAX=.15 RMAX=9. !END
+ !POT  POW=3. RC/RCOV=.65 !END
+ !CORE POW=2. RC/RCOV=.65 !END
+ !COMM RCOV='1.36B' !END
+!END
+
+!SETUP  ID='PR_MU' EL='PR' ZV=13.
+         TYPE='HBS' RBOX/RCOV=1.2 RCSM/RCOV=.25
+         RCL/RCOV=.65 .65 .65 .65
+         LAMBDA=4. 4. 4. 4.
+   !GRID DMIN=5.E-6 DMAX=.15 RMAX=9. !END
+   !POT  POW=3. RC/RCOV=.6 !END
+   !CORE POW=2. RC/RCOV=.6 !END
+!END
 
 
 !End
