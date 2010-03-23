@@ -211,19 +211,19 @@
 !       == SCAN FOR PARAMETERS                                              ==
 !       ======================================================================
         CALL PARMSCONSTANTS(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
-        IF(TCHK) STOP
+        IF(TCHK) cycle
 !
 !       ========================================================================
 !       == SCAN FOR POTENTIALS                                                ==
 !       ========================================================================
         CALL POTENTIALS(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
-        IF(TCHK) STOP
+        IF(TCHK)cycle
 !
 !       ========================================================================
 !       == SCAN FOR PROJECTOR FUNCTIONS AND VADD IN G-SPACE                   ==
 !       ========================================================================
         CALL FOURIER(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
-        IF(TCHK) STOP
+        IF(TCHK)cycle
 !
 !       ========================================================================
 !       == TAKE CARE OF SCATTERING PROPERTIES                                 ==
