@@ -19,10 +19,11 @@
 !*******************************************************************************
 MODULE CI_MODULE
 TYPE CISTATE_TYPE
-  INTEGER(4)             :: NX   !X (# SLATER DETERMINANTS)
-  INTEGER(4)             :: N    !ACTUAL # SLATER-DETERMINANTS
-  COMPLEX(8),POINTER     :: C(:) !COEFFICIENTS
-  INTEGER   ,POINTER     :: ID(:)!NUMBER REPRESENTATION IN BIT FORMAT
+  INTEGER(4)             :: NX     ! X (# SLATER DETERMINANTS)
+  INTEGER(4)             :: N      ! ACTUAL # SLATER-DETERMINANTS
+  logical                :: tclean ! is array ordered?
+  COMPLEX(8),POINTER     :: C(:)   ! COEFFICIENTS
+  INTEGER   ,POINTER     :: ID(:)  ! NUMBER REPRESENTATION IN BIT FORMAT
 END TYPE CISTATE_TYPE
 TYPE U_TYPE
   INTEGER(4)             :: NX=0   !
@@ -82,6 +83,7 @@ END MODULE CI_MODULE
 !     **************************************************************************
       PHI%NX=0
       PHI%N=0
+      PHI%TCLEAN=.TRUE.
       IF(ASSOCIATED(PHI%C)) THEN
         DEALLOCATE(PHI%C)
         DEALLOCATE(PHI%ID)
@@ -93,7 +95,7 @@ END MODULE CI_MODULE
       SUBROUTINE CI$ZEROPSI(PHI)
 !     **************************************************************************
 !     **  CI$SETPSI                                                           **
-!     **  ADD A SLATER DETERMINANT TO A STATE                                 **
+!     **  EXPAND ARRAY OF SLATER DETERMINANTS WITH ZERO ENTRIES               **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
@@ -125,6 +127,7 @@ END MODULE CI_MODULE
       N=PHI%N
       PHI%C(N)=C
       PHI%ID(N)=ID
+      phi%tclean=.false.
       RETURN
       END SUBROUTINE CI$SETPSI
 ! 
@@ -145,6 +148,7 @@ END MODULE CI_MODULE
       IF(PHI%NX.EQ.0) THEN
         PHI%NX=NFURTHER
         PHI%N=0
+        phi%tclean=.true.
         ALLOCATE(PHI%ID(NFURTHER))
         ALLOCATE(PHI%C(NFURTHER))
         RETURN
@@ -161,6 +165,8 @@ END MODULE CI_MODULE
       ALLOCATE(PHI%ID(PHI%NX))
       PHI%C(:N)=C
       PHI%ID(:N)=ID
+      PHI%C(N+1:)=(0.d0,0.d0)
+      PHI%ID(n+1:)=0
       DEALLOCATE(C)
       DEALLOCATE(ID)
       RETURN
@@ -181,6 +187,8 @@ END MODULE CI_MODULE
       INTEGER(4)                        :: I,FROM,TO
       REAL(8)           ,ALLOCATABLE    :: CRIT(:)
 !     **************************************************************************
+      if(phi%tclean) return
+!
       C=(0.D0,0.D0)   ! JUST TO MAKE THE COMPILER HAPPY
       ID=0
 !
