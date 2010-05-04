@@ -30,6 +30,7 @@ INTEGER(4),ALLOCATABLE  :: ISPECIES(:)         !(NAT)
 REAL(8)   ,ALLOCATABLE  :: ORBRAD(:,:) !(LXX+1,NAT) NODE-POSITION OF THE ORBITAL
 TYPE(POTPAR_TYPE)     ,ALLOCATABLE :: POTPAR(:)
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: SBAR(:) !(NNB)
+TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: prochi(:) !(NNB)
 END MODULE LMTO_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -325,8 +326,10 @@ real(8):: x1,x2,x3
       IF(.NOT.TCHK) RETURN
                               CALL TRACE$PUSH('LMTO$MAKESTRUCTURECONSTANTS')
 !
+!     == structure constants are determined only once this needs to be changed!
       IF(TINISTRUC) RETURN
       TINISTRUC=.TRUE.
+!
       CALL CELL$GETR8A('T0',9,RBAS)
       CALL ATOMLIST$NATOM(NAT)
       ALLOCATE(R0(3,NAT))
@@ -490,6 +493,153 @@ real(8):: x1,x2,x3
                               CALL TRACE$POP()
       RETURN
       END      
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$EXPANDSBAR()
+!     **************************************************************************
+!     **  THE SCREENED STRUCTURE CONSTANTS CONSIDER ONLY ON PARTOAL WAVE      **
+!     ** PER ANGULAR MOMENTUM. NOW THEY SHALL BE EXPANDED INTO                **
+!     ** #(PARTIAL WAVES) TIMES #(LOCAL ORBITALS)                             **
+!     **************************************************************************
+      USE LMTO_MODULE
+      INTEGER(4)            :: NNB
+!     **************************************************************************
+      CALL ATOMLIST$NATOM(NAT)
+      ALLOCATE(ISPECIES(NAT))
+      CALL ATOMLIST$GETI4A('ISPECIES',0,NAT,ISPECIES)
+      CALL SETUP$NSPECIES(NSP)
+      ALLOCATE(LX(NSP))
+      DO ISP=1,NSP
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('LNX',LNX)
+        ALLOCATE(LOX(LNX))
+        CALL SETUP$GETI4A('LOX',LNX,LOX)
+        LX(ISP)=MAXVAL(LOX)
+        DEALLOCATE(LOX)
+        CALL SETUP$ISELECT(0)
+      ENDDO
+!
+!     ==========================================================================
+!     == DETERMINE NUMBER OF LOCAL ORBITALS FOR EACH ELEMENT                  ==
+!     == AND THEIR MAPPING TO ANGULAR MOMENTA AND PARTIAL WAVES               ==
+!     ==========================================================================
+!     == DETERMINE MAX ARRAY LENGTH ============================================
+      LMNXXCHI=0
+      LMNXXPHI=0
+      DO ISP=1,NSP
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('LNX',LNX)
+        ALLOCATE(LOX(LNX))
+        ALLOCATE(ISCATT(LNX))
+        CALL SETUP$GETI4A('LOX',LNX,LOX)
+        CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
+        LMNPHI=0
+        LMNCHI=0
+        DO LN=1,LNX
+          LMNPHI=LMNPHI+2*LOX(LN)+1
+          IF(ISCATT(LN).GT.0) CYCLE
+          LMNCHI=LMNCHI+2*LOX(LN)+1
+        ENDDO
+        LMNXXCHI=MAX(LMNXXCHI,LMNCHI)
+        LMNXXPHI=MAX(LMNXXPHI,LMNPHI)
+        DEALLOCATE(ISCATT)
+        DEALLOCATE(LOX)
+        CALL SETUP$ISELECT(0)
+      ENDDO
+!
+!     == NOW DETERMINE LMNXCHI/PHI, LNCHI/PHI, LMCHI/PHI =======================
+      ALLOCATE(LMNXPHI(NSP))
+      ALLOCATE(LNPHI(LMNXXPHI,NSP))
+      ALLOCATE(LMPHI(LMNXXPHI,NSP))
+      ALLOCATE(LMNXCHI(NSP))
+      ALLOCATE(LNCHI(LMNXXCHI,NSP))
+      ALLOCATE(LMCHI(LMNXXCHI,NSP))
+      DO ISP=1,NSP
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('LNX',LNX)
+        ALLOCATE(LOX(LNX))
+        ALLOCATE(ISCATT(LNX))
+        CALL SETUP$GETI4A('LOX',LNX,LOX)
+        CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
+        LMN=0
+        DO LN=1,LNX
+          L=LOX(LN)
+          IF(ISCATT(LN).GT.0) CYCLE
+          DO IM=1,2*L+1
+            LMN=LMN+1
+            LMCHI(LMN,ISP)=L**2+IM
+            LNCHI(LMN,ISP)=LN
+          ENDDO
+        ENDDO
+        LMNXCHI(ISP)=LMN
+        LMN=0
+        DO LN=1,LNX
+          L=LOX(LN)
+          DO IM=1,2*L+1
+            LMN=LMN+1
+            LMPHI(LMN,ISP)=L**2+IM
+            LNPHI(LMN,ISP)=LN
+          ENDDO
+        ENDDO
+        LMNXPHI(ISP)=LMN
+        DEALLOCATE(ISCATT)
+        DEALLOCATE(LOX)
+        CALL SETUP$ISELECT(0)
+      ENDDO
+!
+!     ==========================================================================
+!     == DETERMINE NUMBER OF LOCAL ORBITALS FOR EACH ELEMENT                  ==
+!     == AND THEIR MAPPING TO ANGULAR MOMENTA AND PARTIAL WAVES               ==
+!     ==========================================================================
+      NNB=SIZE(SBAR)
+      ALLOCATE(PROCHI(NNB))
+      DO NN=1,NNB
+        IAT1=SBAR(NN)%IAT1
+        IAT2=SBAR(NN)%IAT2
+        ISP1=ISPECIES(IAT1)
+        ISP2=ISPECIES(IAT2)
+        PROCHI(NN)%IAT1=IAT1
+        PROCHI(NN)%IAT2=IAT2
+        PROCHI(NN)%IT(:)=SBAR(NN)%IT(:)
+        PROCHI(NN)%N1=LMNXCHI(ISP1)
+        PROCHI(NN)%N2=LMNXPHI(ISP2)
+        ALLOCATE(PROCHI(NN)%MAT(LMX2,LMX1))
+        PROCHI(NN)%MAT(:,:)=0.D0
+        DO LMN1=1,LMNXCHI(ISP1)
+          LM1=LMCHI(ISP1)
+          DO LMN2=1,LMNXPHI(ISP2) 
+            LM2=LMPHI(ISP2)
+            PROCHI(NN)%MAT(LMN2,LMN2)=SBAR(NN)%MAT(LM2,LM1) 
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$PROCHI()
+!     **************************************************************************
+!     **   <P|CHI>                                                            **
+!     **************************************************************************
+      USE LMTO_MODULE
+      INTEGER(4)            :: NNB
+!     **************************************************************************
+      NNB=SIZE(SBAR)
+      ALLOCATE(PROCHI(NNB))
+      DO NN=1,NNB
+        IAT1=SBAR(NN)%IAT1
+        IAT2=SBAR(NN)%IAT2
+        ISP2=ISPECIES(IAT2)
+        PROCHI(NN)%IAT1=IAT1
+        PROCHI(NN)%IAT2=IAT2
+        PROCHI(NN)%IT(:)=SBAR(NN)%IT(:)
+        PROCHI(NN)%N1=SBAR(NN)%N1
+        PROCHI(NN)%N2=
+        ALLOCATE(PROCHI(NN)%MAT(LMX2,LMX1))
+        PROCHI(NN)%MAT(:,:)=
+      ENDDO
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$ORBRAD

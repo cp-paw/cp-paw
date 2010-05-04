@@ -60,6 +60,7 @@ MODULE SETUP_MODULE
 !**                                                                           **
 !**                                              P.E. BLOECHL, (1991-2010)    **
 !*******************************************************************************
+!== parameters defining the setup construction =================================
 TYPE SETUPPARMS_TYPE
   CHARACTER(128)  :: ID 
   REAL(8)         :: POW_POT=0.D0
@@ -125,6 +126,7 @@ REAL(8)   ,POINTER     :: PSPHIDOT(:,:)!(NR,LNX)  PS SCATTERING PARTIAL WAVES
 REAL(8)   ,POINTER     :: AEPHIDOT(:,:)!(NR,LNX)  AE SCATTERING PARTIAL WAVES
 REAL(8)   ,POINTER     :: DTKIN(:,:)   !(LNX,LNX) 1C-KIN. EN. MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: DOVER(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
+real(8)   ,pointer     :: prophidot(:,:)  !(LNX,LNX) <pro|psphidot>
 REAL(8)   ,POINTER     :: VADDOFG(:)   !(NGX)
 REAL(8)   ,POINTER     :: PSCOREOFG(:) !(NGX)
 REAL(8)   ,POINTER     :: VHATOFG(:)   !(NGX)
@@ -817,6 +819,17 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%DOVER,(/LEN/))
+!
+!     ==========================================================================
+!     ==  <PRO|PSPHIDOT>                                                      ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'PROPHIDOT') THEN
+        IF(LEN.NE.THIS%LNX**2) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%PROPHIDOT,(/LEN/))
 !
 !     ==========================================================================
 !     ==  ATOMIC WAVE FUNCTIONS                                               ==
@@ -1686,6 +1699,14 @@ PRINT*,'RCSM ',THIS%RCSM
       END IF
       CALL ATOMTYPELIST$SETR8('PS<G2>',THIS%PSG2)
       CALL ATOMTYPELIST$SETR8('PS<G4>',THIS%PSG4)
+!     
+!     ==========================================================================
+!     ==  determine matrix elements between projector functions               ==
+!     ==  and energy derivative pseudo partial waves
+!     ==========================================================================
+      allocate(this%prophidot(lnx,lnx))
+      call setups$prophidot(gid,nr,lnx,this%lox,this%pro,this%psphidot &
+     &                     ,this%prophidot)
 !!$!     
 !!$!     =======================================================================
 !!$!     ==  this for reading and writing the core density                    ==
@@ -1897,6 +1918,47 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       CALL LINKEDLIST$SELECT(LL_STP,'~')
 !      CALL LINKEDLIST$REPORT(LL_STP,6)
                             CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine setups$prophidot(gid,nr,lnx,lox,pro,psphidot,prophidot)
+!     **************************************************************************
+!     ** determines <pro|psphidot>                                            **
+!     **************************************************************************
+      implicit none
+      integer(4),intent(in) :: gid
+      integer(4),intent(in) :: nr
+      integer(4),intent(in) :: lnx
+      integer(4),intent(in) :: lox(lnx)
+      real(8)   ,intent(in) :: pro(nr,lnx)
+      real(8)   ,intent(in) :: psphidot(nr,lnx)
+      real(8)   ,intent(out):: prophidot(lnx,lnx)
+      real(8)               :: r(nr)
+      real(8)               :: aux(nr)
+      integer(4)            :: ln1,ln2
+      logical   ,parameter  :: tprint=.false.
+!     **************************************************************************
+      call radial$r(gid,nr,r)
+      prophidot(:,:)=0.d0
+      do ln1=1,lnx
+        do ln2=1,lnx
+          if(lox(ln2).ne.lox(ln1)) cycle
+          aux(:)=r(:)**2*pro(:,ln1)*psphidot(:,ln2)
+          call radial$integral(gid,nr,aux,prophidot(ln1,ln2))
+        enddo
+      enddo
+!
+!     ==========================================================================
+!     ==  print for testing                                                   ==
+!     ==========================================================================
+      if(tprint) then
+        print*,'prophidot'
+        do ln1=1,lnx
+          write(*,fmt='(i5,20f20.5)')lox(ln1),prophidot(ln1,:)
+        enddo
+        stop
+      end if
       RETURN
       END
 !
