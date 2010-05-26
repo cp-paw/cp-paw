@@ -1541,6 +1541,48 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$INVERTC8(N,A,AINV)
+!     **************************************************************************
+!     **  INVERTS THE complex, SQUARE MATRIX A                                **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
+      complex(8),INTENT(IN) :: A(N,N)    ! MATRIX TO BE INVERTED
+      complex(8),INTENT(OUT):: AINV(N,N) ! INVERTED MATRIX
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      complex(8),ALLOCATABLE:: RES(:,:)
+      REAL(8)               :: DEV
+      INTEGER(4)            :: I
+!     **************************************************************************
+!      == GENERAL MATRIX INVERSE ===============================================
+#IF DEFINED(CPPVAR_LAPACK_ESSL)
+      CALL LIB_LAPACK_ZGETRI(N,A,AINV)
+!      CALL LIB_ESSL_ZGETRI(N,A,AINV)
+#ELSE 
+      CALL LIB_LAPACK_ZGETRI(N,A,AINV)
+#ENDIF
+!
+!     ==========================================================================
+!     == TEST                                                                 ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        ALLOCATE(RES(N,N))
+        RES=MATMUL(A,AINV)
+        DO I=1,N
+          RES(I,I)=RES(I,I)-(1.D0,0.d0)
+        ENDDO
+        DEV=MAXVAL(ABS(RES))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('TEST FAILED')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$INVERTR8')
+        END IF
+        DEALLOCATE(RES)
+      END IF
+      RETURN
+      END
+!
 !     ..................................................................
       SUBROUTINE LIB$MATRIXSOLVER8(N,M,NEQ,A,X,B)
 !     ******************************************************************
@@ -2565,6 +2607,56 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END IF
       RETURN
       END SUBROUTINE LIB_LAPACK_DGETRI
+!
+!     ..................................................................
+      SUBROUTINE LIB_LAPACK_zGETRI(N,A,AINV)
+!     ******************************************************************
+!     **                                                              **
+!     **  INVERTS THE REAL, SQUARE MATRIX A                           **
+!     **                                                              **
+!     **  DEPENDENCIES:                                               **
+!     **    ESSL: DGEICD                                              **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      complex(8),INTENT(IN) :: A(N,N)
+      complex(8),INTENT(OUT):: AINV(N,N)
+      INTEGER(4)            :: NAUX
+      complex(8)            :: AUX(100*N)
+      INTEGER               :: IPIV(N)
+      INTEGER               :: INFO
+!     ******************************************************************
+      NAUX=100*N
+      AINV(1:N,1:N)=A(1:N,1:N)
+!
+!     ==================================================================
+!     == PERFORM LU FACTORIZATION OF A                                ==
+!     ==================================================================
+      CALL zGETRF(N,N,AINV,N,IPIV,INFO) !LAPACK
+!
+!     ==================================================================
+!     == INVERT A USING THE LU FACTORIZATION                          ==
+!     ==================================================================
+      CALL zGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !LAPACK
+!
+!     ==================================================================
+!     == CHECK ERROR CODE                                             ==
+!     ==================================================================
+      IF(INFO.NE.0) THEN
+        IF(INFO.LT.0) THEN
+          CALL ERROR$MSG('I-TH ARGUMENT HAD AN ILLEGAL VALUE')
+          CALL ERROR$I4VAL('I',-INFO)
+          CALL ERROR$STOP('LIB_LAPACK_DGETRI')
+        ELSE
+          CALL ERROR$MSG('U(I,I) IS EXACTLY ZERO')
+          CALL ERROR$MSG('MATRIX IS SINGULAR AND ITS INVERSE COULD NOT BE COMPUTED.')
+          CALL ERROR$I4VAL('I',INFO)
+          CALL ERROR$STOP('LIB_LAPACK_DGETRI')
+        END IF
+      END IF
+      RETURN
+      END SUBROUTINE LIB_LAPACK_ZGETRI
 !
 !     ..................................................................
       SUBROUTINE LIB_LAPACK_DGESV(N,M,NEQ,A,X,B)

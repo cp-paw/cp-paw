@@ -89,6 +89,7 @@ TYPE WVSET_TYPE  !======================================================
   COMPLEX(8),POINTER :: PSI0(:,:,:)     !(NGL,NDIM,NBH)  PSPSI(0)
   COMPLEX(8),POINTER :: PSIM(:,:,:)     !(NGL,NDIM,NBH)  PSPSI(-,+)(G)
   COMPLEX(8),POINTER :: PROJ(:,:,:)     !(NDIM,NBH,NPRO) <PSPSI|P>
+  COMPLEX(8),POINTER :: tbc(:,:,:)      !(NDIM,NBH,NPRO) |psi>=|chi>*tbc
   COMPLEX(8),POINTER :: HPSI(:,:,:)     !(NGWLX,NB,IDIM)
                                         ! +(WAVES$HPSI)-(WAVES$PROPAGATE)
   COMPLEX(8),POINTER :: OPSI(:,:,:)     !(NGWLX,NB,IDIM)
@@ -853,6 +854,21 @@ END MODULE WAVES_MODULE
         ALLOCATE(THISARRAY(IKPT,1)%GSET)
         DO ISPIN=2,NSPIN
           THISARRAY(IKPT,ISPIN)%GSET=>THISARRAY(IKPT,1)%GSET
+        enddo
+        DO ISPIN=1,NSPIN
+          nullify(thisarray(ikpt,ispin)%psi0)
+          nullify(thisarray(ikpt,ispin)%psim)
+          nullify(thisarray(ikpt,ispin)%proj)
+          nullify(thisarray(ikpt,ispin)%tbc)
+          nullify(thisarray(ikpt,ispin)%hpsi)
+          nullify(thisarray(ikpt,ispin)%opsi)
+          nullify(thisarray(ikpt,ispin)%rlam0)
+          nullify(thisarray(ikpt,ispin)%rlamm)
+          nullify(thisarray(ikpt,ispin)%rlam2m)
+          nullify(thisarray(ikpt,ispin)%rlam3m)
+          nullify(thisarray(ikpt,ispin)%eigvec)
+          nullify(thisarray(ikpt,ispin)%eigval)
+          nullify(thisarray(ikpt,ispin)%expectval)
         ENDDO
       ENDDO
 !     
@@ -1307,6 +1323,7 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
                               CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
       END IF
                               CALL TIMING$CLOCKON('WAVES$ETOT')
+      call WAVES$toNTBO()
 !
 !     ==========================================================================
 !     == KINETIC ENERGY                                                       ==
@@ -2504,6 +2521,82 @@ END IF
                               CALL TRACE$POP
       RETURN
       END SUBROUTINE WAVES$DENMAT
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$TONTBO()
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATES ONE-CENTER DENSITY MATRIX FROM THE ACTUAL                 **
+!     **  PROJECTIONS <PRO|PSI> IN THE WAVES OBJECT                           **
+!     **                                                                      **
+!     **  ONE-CENTER DENSITY MATRICES                                         **
+!     **  SPIN RESTRICTED NSPIN=1;NDIM=1: (TOTAL)                             **
+!     **  SPIN POLARIZED  NSPIN=2;NDIM=1: (TOTAL,SPIN_Z)                      **
+!     **  NONCOLLINEAR    NSPIN=1;NDIM=2: (TOTAL,SPIN_X,SPIN_Y,SPIN_Z)        **
+!     **                                                                      **
+!     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
+      USE MPE_MODULE
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
+      INTEGER(4)             :: ISP   ! SPECIES INDEX
+      INTEGER(4)             :: IAT,ISPIN,IKPT,idim,ib,npro
+      COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:) !(NDIM,NBH,npro) <PRO|PSPSI>
+      LOGICAL(4),PARAMETER   :: TPRINT=.true.
+      real(8)   ,allocatable :: xk(:,:)
+!     **************************************************************************
+                              CALL TRACE$PUSH('WAVES$TONTBO')
+                              CALL TIMING$CLOCKON('W:TONTBO')
+!
+!     ==========================================================================
+!     ==  GET k-points in relative coordinates                                ==
+!     ==========================================================================
+      ALLOCATE(XK(3,NKPTL))
+      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
+      npro=map%npro
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+!!!! parallelize loop with respect to states.
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          NBH=THIS%NBH
+          if(.not.associated(this%tbc))allocate(this%tbc(ndim,nbh,npro))
+          this%tbc=this%proj
+          call LMTO$PROJTONTBO(XK(:,ikpt),NDIM,NBH,NPRO,this%tbc)
+        ENDDO
+      ENDDO
+!     == THE PROJECTIONS ARE IDENTICAL AND COMPLETE FOR EACH K-GROUP
+!     == EACH K-GROUP HOLDS ONLY THE WAVE FUNCTIONS BELONGING TO IT.
+!     == EACH PROCESSOR OF EACH K-GROUP ONLY ADDS UP A FRACTION OF THE 
+!     == PROJECTIONS
+!     == THEREFORE THERE IS NO DOUBLE COUNTING BY SUMMING OVER THE MONOMER
+!
+!     ==========================================================================
+!     ==  print for testing                                                   ==
+!     ==========================================================================
+      if(tprint) then
+        DO IKPT=1,NKPTL
+          DO ISPIN=1,NSPIN
+            CALL WAVES_SELECTWV(IKPT,ISPIN)
+            NBH=THIS%NBH
+            write(*,fmt='(82("="),t20,"  ikpt ",i5,"ispin=",i2,"  ")')ikpt,ispin
+            do ib=1,nbh
+              write(*,fmt='("-",i5,100f10.5)')2*ib-1,real(this%proj(1,ib,:))
+              write(*,fmt='("+",i5,100f10.5)')2*ib-1,real(this%tbc(1,ib,:))
+              write(*,fmt='("-",i5,100f10.5)')2*ib,aimag(this%proj(1,ib,:))
+              write(*,fmt='("+",i5,100f10.5)')2*ib,aimag(this%tbc(1,ib,:))
+            enddo
+          ENDDO
+        ENDDO
+!        stop 'forced'
+      end if
+                              CALL TIMING$CLOCKOFF('W:TONTBO')
+                              CALL TRACE$POP
+      RETURN
+      END SUBROUTINE WAVES$TONTBO
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,LAMBDA,PROPSI &
