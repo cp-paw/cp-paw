@@ -16,6 +16,19 @@
 !**    $ORBOCC(PHI,IORB,OCC)                                                  **
 !**    $COPY(PHI1,PHI2)                                                       **
 !**    $NUMBER(PHI,IORB,OCC)                                                  **
+!**                                                                           **
+!**   remarks:                                                                **
+!**     the following points need to be implemented!!!                        **
+!**                                                                           **
+!**     ci$creator and ci$annihilator do not destroy the order of the array   **
+!**     because it is either an addition with a fixed number or a deletion of **
+!**     the corresponding element. Is there any operation that destroys the   **
+!**     order                                                                 **
+!**                                                                           **
+!**     avoid deallocate and allocate for ci$copypsi, if not necessary        **
+!**                                                                           **
+!**     do not overwrite elements wit n>nx with zeros                         **
+!**                                                                           **
 !*******************************************************************************
 MODULE CI_MODULE
 TYPE CISTATE_TYPE

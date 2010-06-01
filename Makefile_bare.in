@@ -196,6 +196,7 @@ OBJECTS1 = \
            ${OBJDIR}/paw_constraints.o \
            ${OBJDIR}/paw_lmto.o \
            ${OBJDIR}/paw_fft.o \
+           ${OBJDIR}/paw_gaussian.o \
 #
 OBJECTS2 = \
            ${OBJDIR}/paw_augmentation.o \
