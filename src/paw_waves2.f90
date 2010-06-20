@@ -5209,3 +5209,94 @@ print*,'tsuper ',tsuper,'tsuper_ ',tsuper_,'TSUPER.EQV.TSUPER_',TSUPER.EQV.TSUPE
 
 
 
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$TESTORTHO(ID)
+!     **************************************************************************
+!     **  determines the overlap matrix of the wave functions                 **
+!     **************************************************************************
+      USE MPE_MODULE
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      CHARACTER(1),INTENT(IN) :: ID
+      REAL(8)   ,ALLOCATABLE :: R0(:,:)      !CURRENT ATOMIC POSITIONS
+      COMPLEX(8),ALLOCATABLE :: MAT(:,:)
+      COMPLEX(8),ALLOCATABLE :: AUXMAT(:,:)
+      INTEGER(4)             :: NPRO
+      INTEGER(4)             :: IKPT,ISPIN,IPRO,IAT,ISP
+      INTEGER(4)             :: IB,IDIM,IG,I,J
+      INTEGER(4)             :: NGL,NBH,NB,LMNX,LNX,LMX,LN
+      INTEGER(4)             :: NAT
+      INTEGER(4)             :: I1,J1,K
+      COMPLEX(8),ALLOCATABLE :: THISPROJ(:,:,:)
+!     **************************************************************************
+                             CALL TRACE$PUSH('WAVES$testortho')
+      NPRO=MAP%NPRO
+      NAT=MAP%NAT
+!
+!     ==========================================================================
+!     == COLLECT OCCUPATIONS                                                  ==
+!     ==========================================================================
+      ALLOCATE(R0(3,NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+!
+!     ==========================================================================
+!     ==  NOW ORTHOGONALIZE                                                   ==
+!     ==========================================================================
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          NGL=GSET%NGL
+          NBH=THIS%NBH
+          NB=THIS%NB
+!
+!         ======================================================================
+!         ==  CALCULATE PROJECTIONS FOR THE NEW POSITIONS                     ==
+!         ======================================================================
+          ALLOCATE(THISPROJ(NDIM,NBH,NPRO))
+          IF(ID.EQ.'0') THEN
+            CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NPRO &
+     &                                                     ,THIS%PSI0,THISPROJ)
+          ELSE IF(ID.EQ.'-') THEN
+            CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NPRO &
+     &                                                     ,THIS%PSIM,THISPROJ)
+          ELSE
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('WAVES$TESTORTHO')
+          END IF
+          CALL MPE$COMBINE('K','+',THISPROJ)
+!
+!         ======================================================================
+!         ==  1C-OVERLAP OF <PSI0|PSI0>, <OPSI|PSI0> AND <OPSI|OPSI>          ==
+!         ======================================================================
+          ALLOCATE(MAT(NB,NB))
+          CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,THISPROJ,THISPROJ,MAT)
+!
+!         ======================================================================
+!         ==  NOW ADD OVERLAP OF PSEUDO WAVE FUNCTIONS                        ==
+!         ======================================================================
+          ALLOCATE(AUXMAT(NB,NB))
+          IF(ID.EQ.'0') THEN
+            CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSI0,THIS%PSI0,AUXMAT)
+          ELSE IF(ID.EQ.'-') THEN
+            CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM,THIS%PSIM,AUXMAT)
+          ELSE
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('WAVES$TESTORTHO')
+          END IF
+          DO I=1,NB
+            DO J=1,NB
+              MAT(I,J)=MAT(I,J)+AUXMAT(I,J)
+            ENDDO
+          ENDDO
+WRITE(*,FMT='("%%%",80("="))')
+DO J=1,NB
+  WRITE(*,FMT='("%%%",20F10.5)')MAT(:,J)
+ENDDO
+WRITE(*,FMT='(80("-"))')
+        ENDDO
+      ENDDO
+                                    CALL TRACE$POP
+      RETURN
+      END

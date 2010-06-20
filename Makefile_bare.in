@@ -280,6 +280,9 @@ OBJGRAB=  \
 # Objects for paw_dos.x
 OBJDOS=  \
           ${OBJDIR}/paw_dos.o
+# Objects for paw_bands.x
+OBJBANDS=  \
+          ${OBJDIR}/paw_bands.o
 # Objects for paw_preopt.x
 OBJPRE=  \
           ${OBJDIR}/paw_preopt.o
@@ -404,6 +407,12 @@ ${BINDIR}/paw_dos.x: ${OBJDOS} ${PAWLIB}
 clean_dos:
 	rm -f ${OBJDOS}; rm -f ${BINDIR}/paw_dos.x
 #
+${BINDIR}/paw_bands.x: ${OBJBANDS} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_bands.x ${OBJBANDS} -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_bands:
+	rm -f ${OBJBANDS}; rm -f ${BINDIR}/paw_bands.x
+#
 ${BINDIR}/paw_preopt.x: ${OBJPRE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_preopt.x ${OBJPRE}  ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -L${OBJDIR}  -lpaw ${LIBS}
 #
@@ -507,6 +516,10 @@ ${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJBANDS}: ${OBJDIR}/%.o : ${TOOLDIR}/Bands/%.f90
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
@@ -902,6 +915,13 @@ endif
  SPINDIR_MODULE.mod : ${OBJDIR}/paw_dos.o
  ORBITALS_MODULE.mod : ${OBJDIR}/paw_dos.o
  READCNTL_MODULE.mod : ${OBJDIR}/paw_dos.o
+ ## file:src/Tools/Bands/paw_bands.f90
+ ${OBJDIR}/paw_bands.o : PDOS_MODULE.mod
+ ${OBJDIR}/paw_bands.o : STRINGS_MODULE.mod
+ ${OBJDIR}/paw_bands.o : LINKEDLIST_MODULE.mod
+ SPINDIR_MODULE.mod : ${OBJDIR}/paw_bands.o
+ ORBITALS_MODULE.mod : ${OBJDIR}/paw_bands.o
+ READCNTL_MODULE.mod : ${OBJDIR}/paw_bands.o
  ## file:src/Tools/Preopt/paw_preopt.f90
  ${OBJDIR}/paw_preopt.o : LINKEDLIST_MODULE.mod
  ${OBJDIR}/paw_preopt.o : STRINGS_MODULE.mod

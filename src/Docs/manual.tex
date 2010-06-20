@@ -5974,6 +5974,114 @@ ID in block !DCNTL!WEIGHT or !DCNTL!COOP}
 
 %==========================================================================
 \newpage
+\section{The Band Structure Analysis Tool: paw\_bands}
+%==========================================================================
+The paw\_bands tool allows one prepare the files for plotting bands
+structures including 2-d projected band structures.
+
+%==========================================================================
+\subsection{Command}
+%==========================================================================
+
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_bands} {\it controlfile}}\bigskip
+
+\noindent
+where {\it controlfile} is the file name of the control input file for
+the paw\_dos tool. I recommend the extension ``.bcntl''.
+
+%==========================================================================
+\subsection{Example for the control input file}
+%==========================================================================
+An example for the input control file is given here
+\begin{verbatim}
+!BCNTL
+  !LINE FILE='XBANDS.DAT'
+    XK1= 0. 0. 0. XK2= .5 .5 .5 NK=101 NPROJECT=11 XKPROJECT= 0. .5 .5 SPIN=1
+  !END
+  !LINE XK1= .5 .5 .5 XK2= .5 .5 0. NPROJECT=11 XKPROJECT= 0. .5 .5 !END
+  !LINE XK1= .5 .5 0. xk2= 0. 0. 0. NPROJECT=11 XKPROJECT= 0. .5 .5 !END
+!END
+!EOB
+\end{verbatim}
+
+%==========================================================================
+\subsection{Argument description for the control input file}
+%==========================================================================
+
+%----------------------------------------------------------------------
+\block{!BCNTL}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{defines the operations done on the system; 
+largely independent of the system}
+
+%----------------------------------------------------------------------
+\block{!BCNTL!LINE}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{defines one line seqment in k-space}
+
+\mbax{\key{xk1}
+\vdescr{First point of the line segment in relative coordinates 
+of the reciprocal lattice vectors.}
+\vformat{real(3)} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{xk2}
+\vdescr{Last point of the line segment in relative coordinates 
+of the reciprocal lattice vectors.}
+\vformat{real(3)} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{spin}
+\vdescr{spin direction. In a spin-polarized collinear 
+calculation the parameter can have the values 1 or 2.}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{1}}
+
+\mbax{\key{NK}
+\vdescr{number of grid points along the line segment}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{101}}
+
+\mbax{\key{XKPROJECT}
+\vdescr{direction for the projection for 2-d band structures 
+in relative coordinates of the reciprocal lattice vectors.}
+\vformat{real(3)} 
+\vrules{optional}
+\vdefault{(0.,0.,0.)}}
+
+\mbax{\key{NKPROJECT}
+\vdescr{number of displaced band line segments for the projection 
+for 2-d band structures}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{1}}
+
+
+\mbax{\key{FILE}
+\vdescr{Output file.}
+\vformat{character} 
+\vrules{optional}
+\vdefault{data are appended to previously specified file. 
+If none is specified, the file is the one with extension '.bands'}}
+
+%==========================================================================
+\subsection{Theoretical background}
+%==========================================================================
+The bands are interpolated between the grid points using a linear
+interpolation in each tetrahedron.
+
+
+
+%==========================================================================
+\newpage
 \section{The Setup-Analysis program: ``paw\_stpa.x''}
 %==========================================================================
 Before the simulation starts atomic information is calculated and the
