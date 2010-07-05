@@ -596,10 +596,18 @@
 !     ==========================================================================
       IF(SUM((LX+1)**2).NE.N) THEN
         CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
+        CALL ERROR$MSG('...  (lx+1)**2.ne.n')
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$I4VAL('N',N)
+        CALL ERROR$I4VAL('(LX+1)**2',(LX+1)**2)
         CALL ERROR$STOP('LMTO$CLUSTERSTRUCTURECONSTANTS')
       END IF
       IF((LX(1)+1)**2.NE.NORB) THEN
         CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
+        CALL ERROR$MSG('.....  (LX(1)+1)**2.NE.NORB')
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$I4VAL('NORB',NORB)
+        CALL ERROR$I4VAL('(LX(1)+1)**2',(LX(1)+1)**2)
         CALL ERROR$STOP('LMTO$CLUSTERSTRUCTURECONSTANTS')
       END IF
 !

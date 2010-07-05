@@ -1249,13 +1249,13 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
       CALL READIN_THERMOSTAT(LL_CNTL,'WAVES',DT,1.D0,100.D0)
 !
-!     ==================================================================
-!     ==  CHECK FOR SIMULTANEOUS USE OF AUTO AND THERMOSTAT           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CHECK FOR SIMULTANEOUS USE OF AUTO AND THERMOSTAT                   ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'THERMOSTAT',1,TCHK1)
       CALL LINKEDLIST$EXISTD(LL_CNTL,'AUTO',1,TCHK2)
       IF(TCHK1.AND.TCHK2) THEN
-        CALL ERROR$MSG('AUTO AND THERMOSTAT MUST NOT BE SPECIFIED SIMULTANEOUSLY')
+        CALL ERROR$MSG('!AUTO AND !THERMOSTAT are mutually exclusive')
         CALL ERROR$STOP('READIN_PSIDYN')
       END IF
                            CALL TRACE$POP
@@ -1436,17 +1436,17 @@ CALL TRACE$PASS('DONE')
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_THERMOSTAT(LL_CNTL_,ID,DT,TARGET_,FREQ_)
-!     ******************************************************************
-!     ** REQUIRES SETTING OF                                          **
-!     ******************************************************************
+!     **************************************************************************
+!     ** CREATES A THERMOSTAT-INSTANCE NAMED BY ID AND READS SETTING          **
+!     **************************************************************************
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
-      CHARACTER(*) ,INTENT(IN) :: ID
-      REAL(8)      ,INTENT(IN) :: DT
-      REAL(8)      ,INTENT(IN) :: TARGET_
-      REAL(8)      ,INTENT(IN) :: FREQ_
-      TYPE(LL_TYPE)            :: LL_CNTL
+      CHARACTER(*) ,INTENT(IN) :: ID        ! id for the thermostat object
+      REAL(8)      ,INTENT(IN) :: DT        ! time step
+      REAL(8)      ,INTENT(IN) :: TARGET_   ! target kinetic energy
+      REAL(8)      ,INTENT(IN) :: FREQ_     ! target frequency 
+      TYPE(LL_TYPE)            :: LL_CNTL   ! linked list holding input data
       LOGICAL(4)               :: TCHK,TCHK1,TCHK2
       REAL(8)                  :: TERA
       REAL(8)                  :: SECOND
@@ -1459,20 +1459,20 @@ CALL TRACE$PASS('DONE')
       REAL(8)                  :: MASS
       REAL(8)                  :: PERIOD
       REAL(8)                  :: FRICTION
-!     ******************************************************************
+!     **************************************************************************
                             CALL TRACE$PUSH('READIN_THERMOSTAT')
 !
-!     ==================================================================
-!     ==  INITIALIZE CONSTANTS                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  INITIALIZE CONSTANTS                                                ==
+!     ==========================================================================
       LL_CNTL=LL_CNTL_
       CALL CONSTANTS('TERA',TERA)
       CALL CONSTANTS('SECOND',SECOND)
       CALL CONSTANTS('KB',CELVIN)
 !
-!     ==================================================================
-!     == SELECT RNOSE LIST OR EXIT IF IT DOES NOT EXIST               ==
-!     ==================================================================
+!     ==========================================================================
+!     == SELECT thermostat LIST OR EXIT IF IT DOES NOT EXIST                  ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'THERMOSTAT',1,TON)
       CALL THERMOSTAT$NEW(ID)
       CALL THERMOSTAT$SETL4('ON',TON)
@@ -1482,17 +1482,17 @@ CALL TRACE$PASS('DONE')
         RETURN
       END IF
 !
-!     ==================================================================
-!     == STOP INITIAL VELOCITIES                                      ==
-!     ==================================================================
+!     ==========================================================================
+!     == STOP INITIAL VELOCITIES                                              ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'STOP',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'STOP',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'STOP',1,TSTOP)
       CALL THERMOSTAT$SETL4('STOP',TSTOP)
 !
-!     ==================================================================
-!     == TEMPERATURE                                                  ==
-!     ==================================================================
+!     ==========================================================================
+!     == TEMPERATURE                                                          ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'<EKIN>',1,TCHK1)
       CALL LINKEDLIST$EXISTD(LL_CNTL,'T[K]',1,TCHK2)
       IF(TCHK1.AND.TCHK2) THEN
@@ -1522,38 +1522,28 @@ CALL TRACE$PASS('DONE')
       END IF
 !
 !     ==================================================================
-!     == FRICTION ON THE THERMOSTAT                                   ==
-!     ==================================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'FRIC',0,0.D0)
-      CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,FRICTION)
-!
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'DAMP',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'DAMP',1,TDAMP)
-      ELSE
-        TDAMP=.FALSE.
-      END IF
-!
-!     ==================================================================
 !     == INITIALIZE #(DEGREES OF FREEDOM) TO ONE                      ==
 !     ==================================================================
       CALL THERMOSTAT$CONVERT(DT,TARGET,PERIOD,MASS,FRICTION)
       CALL THERMOSTAT$SETR8('TIMESTEP',DT)
       CALL THERMOSTAT$SETR8('TARGET',TARGET)
       CALL THERMOSTAT$SETR8('MASS',MASS)
-      IF(TDAMP)CALL THERMOSTAT$SETR8('FRICTION',FRICTION) 
+!
+!     ==================================================================
+!     == FRICTION ON THE THERMOSTAT                                   ==
+!     ==================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'FRIC',0,0.D0)
+      CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,FRICTION)
+      CALL THERMOSTAT$SETR8('FRICTION',FRICTION) 
 !
 !     ==================================================================
 !     == SWITCH WAVEFUNCTION THERMOSTAT BETWEEN OLD AND NEW VERSION   ==
 !     ==================================================================
       IF(ID.EQ.'WAVES') THEN
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'OLD',1,TCHK)
-        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'OLD',0,TCHK)
-        CALL LINKEDLIST$GET(LL_CNTL,'OLD',1,TCHK)
-        CALL TIMESTEP$SETL4('NEWTHERMOSTAT',.NOT.TCHK)
+        CALL TIMESTEP$SETL4('NEWTHERMOSTAT',.TRUE.)
 !       == THIS  IS IMPORTANT FOR THE NEW WAVE FUNCTION THERMOSTAT =====
-        CALL THERMOSTAT$SETL4('COOLONLY',.NOT.TCHK)
+        CALL THERMOSTAT$SETL4('COOLONLY',.TRUE.)
       END IF
 !
                             CALL TRACE$POP

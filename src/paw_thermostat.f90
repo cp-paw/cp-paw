@@ -1,57 +1,57 @@
-!======================================================================
-!======================================================================
-!====                                                              ====
-!====   THERMOSTAT OBJECT APPLIES THE NOSE THERMOSTAT              ====
-!====                                                              ====
-!======================================================================
-!======================================================================
+!*******************************************************************************
+!*******************************************************************************
+!*****                                                                      ****
+!*****          THERMOSTAT OBJECT APPLIES THE NOSE THERMOSTAT               ****
+!*****                                                                      ****
+!*******************************************************************************
+!*******************************************************************************
 !
-!.......................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE THERMOSTAT_MODULE
-!***********************************************************************
-!**                                                                   **
-!**  THERMOSTAT IMPLEMENTS THE NOSE THERMOSTAT                        **
-!**                                                                   **
-!**  FUNCTIONS :                                                      **
-!**    NEW(ID)        ADD NEW THERMOSTAT                              **
-!**    SELECT(ID)     SELECT EXISTING THERMOSTAT                      **
-!**    DELETE         DELETE SELECTED THERMOSTAT                      **
-!**    COMPOSE                                                        **
-!**    REPORT(NFIL)                                                   **
-!**    PROPAGATE                                                      **
-!**    SWITCH                                                         **
-!**    READ(NFIL,NFILO,TCHK)                                          **
-!**    WRITE(NFIL,NFILO,TCHK)                                         **
-!**                                                                   **
-!**                                                                   **
-!**    THERMOSTAT$NEW(ID)                                             **
-!**    THERMOSTAT$SETR8('TIMESTEP',DT)                                **
-!**    THERMOSTAT$SETR8('MASS',Q)                                     **
-!**    THERMOSTAT$SETR8('FRICTION',ANNE)                              **
-!**    THERMOSTAT$SETR8('GFREE',GFREE)    (OPTIONAL,ONLY FOR REPORT)  **
-!**                                                                   **
-!**    THERMOSTAT$SELECT(ID)                                          **
-!**    THERMOSTAT$SETR8('EKIN(SYSTEM)')                               **
-!**    THERMOSTAT$PROPAGATE                                           **
-!**    THERMOSTAT$SWITCH                                              **
-!**                                                                   **
-!**  REMARKS:                                                         **
-!**    1) PERIOD BECOMES EFFECTIVE ONLY THROUGH 'INITIALIZE'          **
-!**    2) GFREE AND TEMP ARE ACTUALIZED IN EACH ITERATION             **
-!**                                                                   **
-!**                                                                   **
-!**    3) IF THE 'COOLING' IS OBTAINED BEFORE CALLING THE FUNCTION    **
-!**    THERMOSTAT$PROPAGATE THE VALUE IS OBTAINED FROM A POLYNOMIAL   **
-!**    EXTRAPOLATION OF THE THERMOSTAT VARIABLE.                      **
-!**    IF THE 'COOLING' IS OBTAIND AFTER CALLING THERMOSTAT$PROPAGATE **
-!**    IT IS OBTAINED FROM THE ACTUAL VALUES OF THE THERMOSTA VARIABLE**
-!**    4) THE THERMOSTAT CAN OPERATE IN TWO MODES. ONE IS A POURELY   **
-!**    COOLING THERMOSTAT FOR THE WAVE FUNCTIONS. THIS OPTION IS SET  **
-!**    BY SETL4('COOLONLY',.TRUE.)                                    **
-!**    5) DURING READING  AND WRITING, THE THERMOSTAT ASSUMES THAT    **
-!**    IT LIVES ON THE PROCESSOR GROUP MONOMER (SEE MPE OBJECT)       **
-!**                                                                   **
-!***********************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  THERMOSTAT IMPLEMENTS THE NOSE THERMOSTAT                                **
+!**                                                                           **
+!**  FUNCTIONS :                                                              **
+!**    NEW(ID)        ADD NEW THERMOSTAT                                      **
+!**    SELECT(ID)     SELECT EXISTING THERMOSTAT                              **
+!**    DELETE         DELETE SELECTED THERMOSTAT                              **
+!**    COMPOSE                                                                **
+!**    REPORT(NFIL)                                                           **
+!**    PROPAGATE                                                              **
+!**    SWITCH                                                                 **
+!**    READ(NFIL,NFILO,TCHK)                                                  **
+!**    WRITE(NFIL,NFILO,TCHK)                                                 **
+!**                                                                           **
+!**                                                                           **
+!**    THERMOSTAT$NEW(ID)                                                     **
+!**    THERMOSTAT$SETR8('TIMESTEP',DT)                                        **
+!**    THERMOSTAT$SETR8('MASS',Q)                                             **
+!**    THERMOSTAT$SETR8('FRICTION',ANNE)                                      **
+!**    THERMOSTAT$SETR8('GFREE',GFREE)    (OPTIONAL,ONLY FOR REPORT)          **
+!**                                                                           **
+!**    THERMOSTAT$SELECT(ID)                                                  **
+!**    THERMOSTAT$SETR8('EKIN(SYSTEM)')                                       **
+!**    THERMOSTAT$PROPAGATE                                                   **
+!**    THERMOSTAT$SWITCH                                                      **
+!**                                                                           **
+!**  REMARKS:                                                                 **
+!**    1) PERIOD BECOMES EFFECTIVE ONLY THROUGH 'INITIALIZE'                  **
+!**    2) GFREE AND TEMP ARE ACTUALIZED IN EACH ITERATION                     **
+!**                                                                           **
+!**                                                                           **
+!**    3) IF THE 'COOLING' IS OBTAINED BEFORE CALLING THE FUNCTION            **
+!**    THERMOSTAT$PROPAGATE THE VALUE IS OBTAINED FROM A POLYNOMIAL           **
+!**    EXTRAPOLATION OF THE THERMOSTAT VARIABLE.                              **
+!**    IF THE 'COOLING' IS OBTAIND AFTER CALLING THERMOSTAT$PROPAGATE         **
+!**    IT IS OBTAINED FROM THE ACTUAL VALUES OF THE THERMOSTA VARIABLE        **
+!**    4) THE THERMOSTAT CAN OPERATE IN TWO MODES. ONE IS A POURELY           **
+!**    COOLING THERMOSTAT FOR THE WAVE FUNCTIONS. THIS OPTION IS SET          **
+!**    BY SETL4('COOLONLY',.TRUE.)                                            **
+!**    5) DURING READING  AND WRITING, THE THERMOSTAT ASSUMES THAT            **
+!**    IT LIVES ON THE PROCESSOR GROUP MONOMER (SEE MPE OBJECT)               **
+!**                                                                           **
+!*******************************************************************************
 TYPE THERMOSTAT_TYPE
 ! == INDIRECT SETTING: APPLIED ONLY THROUGH THERMOSTAT%INITIALIZE ======
   REAL(8)      :: GFREE       ! CONTROLLED SYSTEM IS 0.5*GFREE*TEMP
@@ -84,15 +84,15 @@ TYPE(THERMOSTAT_TYPE),POINTER :: FIRST_THIS
 TYPE(THERMOSTAT_TYPE),POINTER :: THIS
 END MODULE THERMOSTAT_MODULE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$NEW(ID)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.TINI) THEN
         TINI=.TRUE.
         ALLOCATE(FIRST_THIS)
@@ -141,15 +141,15 @@ END MODULE THERMOSTAT_MODULE
       RETURN
       END 
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$DELETE
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       TYPE(THERMOSTAT_TYPE),POINTER :: PREVIOUS
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$DELETE')
@@ -168,26 +168,26 @@ END MODULE THERMOSTAT_MODULE
       RETURN
       END 
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$SELECT(ID)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.TINI) THEN
         CALL ERROR$MSG('CREATE THERMOSTATS BEFORE SELECTING')
         CALL ERROR$STOP('THERMOSTAT$SELECT')
       END IF
 !
-!     == UNSELECT ======================================================
+!     == UNSELECT ==============================================================
       IF(ID.EQ.'NONE') THEN
         NULLIFY(THIS)
       END IF
 !
-!     == FIND THERMOSTAT AND SELECT
+!     == FIND THERMOSTAT AND SELECT  ===========================================
       THIS=>FIRST_THIS
       DO WHILE (THIS%ID.NE.ID)
         IF(.NOT.ASSOCIATED(THIS%NEXT)) THEN
@@ -200,11 +200,11 @@ END MODULE THERMOSTAT_MODULE
       RETURN
       END 
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$REPORT(NFIL)
-!     ==================================================================
-!     ==  INITIALIZE NOSE THERMOSTAT                                  ==
-!     ==================================================================
+!     **************************************************************************
+!     **  write report                                                        **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       INTEGER(4)            ,INTENT(IN) :: NFIL
@@ -244,11 +244,11 @@ END MODULE THERMOSTAT_MODULE
       RETURN
       END 
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$CONVERT(DT,TARGET,PERIOD,Q,FRICTION)
-!     ******************************************************************
-!     **  CREATED THE INPUT FOR THERMOSTAT FROM PHYSICAL INPUT        **
-!     ******************************************************************
+!     **************************************************************************
+!     **  CREATED THE INPUT FOR THERMOSTAT FROM PHYSICAL INPUT                **
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: DT       ! TIME STEP
       REAL(8)   ,INTENT(IN) :: TARGET   ! TARGET KINETIC ENERGY
@@ -259,7 +259,7 @@ END MODULE THERMOSTAT_MODULE
       REAL(8)               :: PI
       REAL(8)               :: OMEGA0
       REAL(8)               :: ALPHA
-!     ******************************************************************
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       OMEGA0=2.D0*PI/PERIOD
       Q=4.D0*TARGET/OMEGA0**2   ! OMEGA0=SQRT(4*<T>/Q)
@@ -268,19 +268,19 @@ END MODULE THERMOSTAT_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$SCALEGFREE(GFREE)
-!     ******************************************************************
-!     **  INTRODUCES THE NUMBER OF DEGREES OF FREEDOM                 **
-!     **  SO THAT THE KINETIC ENERGY IS SCALED UP,                    **
-!     **  WHILE TEMPERATURE, OSCILLATION PERIOD, AND DECAY TIME       **
-!     **  REMAIN UNCHANGED                                            **
-!     ******************************************************************
+!     **************************************************************************
+!     **  INTRODUCES THE NUMBER OF DEGREES OF FREEDOM                         **
+!     **  SO THAT THE KINETIC ENERGY IS SCALED UP,                            **
+!     **  WHILE TEMPERATURE, OSCILLATION PERIOD, AND DECAY TIME               **
+!     **  REMAIN UNCHANGED                                                    **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: GFREE    ! #(DEGREES OF FREEDOM)
       REAL(8)               :: SCALE
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$SCALEGFREE')
@@ -295,9 +295,9 @@ END MODULE THERMOSTAT_MODULE
         CALL ERROR$CHVAL('ID',THIS%ID)
         CALL ERROR$STOP('THERMOSTAT$SCALEGFREE')
       END IF
-!     ==================================================================
-!     ==  NOW DO THE RESCALING                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  NOW DO THE RESCALING                                                ==
+!     ==========================================================================
       IF(THIS%GFREE.EQ.0.D0) THIS%GFREE=1.D0
       SCALE=GFREE/THIS%GFREE        
       THIS%GFREE      =THIS%GFREE      *SCALE
@@ -308,11 +308,11 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       RETURN 
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$PROPAGATE()
-!     ******************************************************************
-!     **  CALCULATE XNOSP AND THE VELOCITY OF THE NOSE' VARIABLE
-!     ******************************************************************
+!     **************************************************************************
+!     **  CALCULATE XNOSP AND THE VELOCITY OF THE NOSE' VARIABLE              **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
@@ -327,7 +327,7 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       REAL(8)               :: VNOS
       REAL(8)               :: ANNER  
       REAL(8)               :: PERIOD
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$PROPAGATE')
@@ -351,9 +351,9 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
         CALL ERROR$STOP('THERMOSTAT$PROPAGATE')
       END IF
 !
-!     ==================================================================
-!     == STOP NOSE COORDINATE (SET FRICTION TO ZERO)                  ==
-!     ==================================================================
+!     ==========================================================================
+!     == STOP NOSE COORDINATE (SET FRICTION TO ZERO)                          ==
+!     ==========================================================================
       IF(THIS%STOP) THEN
         THIS%XM  =THIS%X0
         THIS%XMM =THIS%X0
@@ -361,18 +361,18 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
         THIS%STOP=.FALSE.
       END IF
 !
-!     ==================================================================
-!     ==  ADJUST DIRECT THERMOSTAT PARAMETERS                         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ADJUST DIRECT THERMOSTAT PARAMETERS                                 ==
+!     ==========================================================================
       PI=4.D0*ATAN(1.D0)
       PERIOD=PI*SQRT(THIS%Q/THIS%EKIN_TARGET)
       IF(PERIOD.LT.3.D0*THIS%DT) THEN
         PRINT*,'WARNING! THERMOSTAT HAS TOO LARGE TIME STEP'
       END IF
 !
-!     ==================================================================
-!     ==  CALCULATE XNOSP AND THE VELOCITY OF THE NOSE' VARIABLE
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE XNOSP AND THE VELOCITY OF THE NOSE' VARIABLE              ==
+!     ==========================================================================
       DT=THIS%DT
       X0=THIS%X0
       XM=THIS%XM
@@ -381,13 +381,13 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       QMASS=THIS%Q  
       TARGET=THIS%EKIN_TARGET
 !
-!     ==  PROPAGATE THERMOSTAT VARIABLE ================================
+!     ==  PROPAGATE THERMOSTAT VARIABLE ========================================
       SVAR1=2.D0/(1.D0+ANNEX)
       SVAR2=1.D0-SVAR1
       SVAR3=DT**2/QMASS/(1.D0+ANNEX)
       XP=SVAR1*X0+SVAR2*XM+SVAR3*2.D0*(EKIN-TARGET)
 !
-!     == UPDATE FRICTION ===============================================
+!     == UPDATE FRICTION =======================================================
       VNOS =(XP-XM)/(2.D0*DT)
       IF(THIS%TWAVE) THEN  
         IF(VNOS.LT.0) THEN !SWITCH OFF WHEN HEATING
@@ -402,9 +402,9 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       ANNER=MAX(ANNER,-0.99999D0)
       ANNER=MIN(ANNER,1.D0)
 !
-!     ==================================================================
-!     ==  COLLECT RESULTS                                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  COLLECT RESULTS                                                     ==
+!     ==========================================================================
       THIS%XP     = XP
       THIS%COOLING= ANNER
       THIS%EKIN   = 0.5D0*THIS%Q*VNOS**2 
@@ -413,9 +413,9 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       THIS%EDISS  = THIS%EDISS+ANNEX*0.5D0*QMASS*VNOS**2
 THIS%EDISS=0.D0
 !
-!     ==================================================================
-!     ==  PRINTOUT FOR TEST                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PRINTOUT FOR TEST                                                   ==
+!     ==========================================================================
       IF(TPR) THEN
         WRITE(*,'("THERMOSTAT: XNOS :",F5.2," VNOS ",F5.2," ENOSEP ",F10.5)') &
      &          X0,VNOS,THIS%EKIN+THIS%EPOT
@@ -425,11 +425,11 @@ PRINT*,'THERM XP     ',XP,X0,XM
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$SWITCH
-!     ==================================================================
-!     ==  SWITCH NOSE COORDINATES                                     ==
-!     ==================================================================
+!     **************************************************************************
+!     **  SWITCH NOSE COORDINATES                                             **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       REAL(8)            :: X0
@@ -438,25 +438,25 @@ PRINT*,'THERM XP     ',XP,X0,XM
       REAL(8)            :: XP
       REAL(8)            :: XDOT,XDOTLAST
       REAL(8)            :: DT
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$SWITCH')
       END IF
       IF(.NOT.THIS%ON) RETURN
 !
-!     =================================================================
-!     ==  SWITCH VARIABLES                                           ==
-!     =================================================================
+!     ==========================================================================
+!     ==  SWITCH VARIABLES                                                    ==
+!     ==========================================================================
       THIS%XMMM=THIS%XMM
       THIS%XMM =THIS%XM
       THIS%XM  =THIS%X0
       THIS%X0  =THIS%XP
 !
-!     =================================================================
-!     ==  PREDICT FRICTION FOR THE NEXT TIME STEP                    ==
-!     ==  (REQUIRED IF THE PROPAGATION CANNOT BE REPEATED)           ==
-!     =================================================================
+!     ==========================================================================
+!     ==  PREDICT FRICTION FOR THE NEXT TIME STEP                             ==
+!     ==  (REQUIRED IF THE PROPAGATION CANNOT BE REPEATED)                    ==
+!     ==========================================================================
       DT =THIS%DT
       X0 =THIS%X0
       XM =THIS%XM
@@ -469,12 +469,12 @@ PRINT*,'THERM XP     ',XP,X0,XM
       XDOT=(XP-XM)/(2.D0*DT)
       IF(THIS%TWAVE.AND.XDOT.LT.0) THEN
         XDOTLAST=(X0-XMM)/(2.D0*DT)
-!       ================================================================
-!       == USE THE AVERAGE FRICTION AMONG THE TIME STEPS              ==
-!       == ASSUMING A LINEAR INTERPOLATION OF XDOT,                   ==
-!       == WHICH IS TRUNCATED AT ITS ZERO.                            ==
-!       == THE HISTOGRAMM SHAPED FRICTION OF HALF STEP IS SUBTRACTED. ==
-!       ================================================================
+!       ========================================================================
+!       == USE THE AVERAGE FRICTION AMONG THE TIME STEPS                      ==
+!       == ASSUMING A LINEAR INTERPOLATION OF XDOT,                           ==
+!       == WHICH IS TRUNCATED AT ITS ZERO.                                    ==
+!       == THE HISTOGRAMM SHAPED FRICTION OF HALF STEP IS SUBTRACTED.         ==
+!       ========================================================================
         IF(XDOT.NE.-XDOTLAST) THEN
 !         XDOT=0.5D0*XDOTLAST*XDOT/(XDOTLAST-XDOT)
 !RINT*,'XDOT....',XDOT
@@ -487,11 +487,11 @@ PRINT*,'THERM XP     ',XP,X0,XM
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$WRITE(NFIL,NFILO,TCHK)
-!     ******************************************************************
-!     **  WRITES DYNAMICAL VARIABLES ON THE RESTART FILE              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  WRITES DYNAMICAL VARIABLES ON THE RESTART FILE                      **
+!     **************************************************************************
       USE RESTART_INTERFACE
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
@@ -503,7 +503,7 @@ PRINT*,'THERM XP     ',XP,X0,XM
       TYPE (SEPARATOR_TYPE)             :: SEPARATOR
       REAL(8)                           :: X0,XM,XMM
       INTEGER(4)                        :: NTASKS,THISTASK
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$WRITE')
@@ -513,12 +513,12 @@ PRINT*,'THERM XP     ',XP,X0,XM
 !
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
-!     == COLLECT DATA ==================================================
+!     == COLLECT DATA ==========================================================
       X0 =THIS%X0
       XM =THIS%XM
       XMM=THIS%XMM
 !
-!     == WRITE DATA TO FILE  ===========================================
+!     == WRITE DATA TO FILE  ===================================================
       IF(THISTASK.EQ.1) THEN
         SEPARATOR=MYSEPARATOR
         SEPARATOR%NAME=THIS%ID
@@ -528,11 +528,11 @@ PRINT*,'THERM XP     ',XP,X0,XM
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$READ(NFIL,NFILO,TCHK)
-!     ******************************************************************
-!     **  READS DYNAMICAL VARIABLES FROM THE RESTART FILE             **
-!     ******************************************************************
+!     **************************************************************************
+!     **  READS DYNAMICAL VARIABLES FROM THE RESTART FILE                     **
+!     **************************************************************************
       USE RESTART_INTERFACE
       USE THERMOSTAT_MODULE
       USE MPE_MODULE
@@ -545,24 +545,24 @@ PRINT*,'THERM XP     ',XP,X0,XM
       TYPE (SEPARATOR_TYPE)             :: SEPARATOR
       REAL(8)                           :: X0,XM,XMM
       INTEGER(4)                        :: NTASKS,THISTASK
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$READ')
       END IF
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
-!     == READ DATA FROM FILE ===========================================
+!     == READ DATA FROM FILE ===================================================
       TCHK=THIS%ON
       SEPARATOR=MYSEPARATOR
       SEPARATOR%NAME=THIS%ID
       IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
 !
-!     == RETURN AND LEAVE THERMOSTAT VARIABLES UNCHANGED ==============
+!     == RETURN AND LEAVE THERMOSTAT VARIABLES UNCHANGED =======================
       CALL MPE$BROADCAST('MONOMER',1,TCHK)
       IF(.NOT.TCHK)RETURN
 !
-!     == READ DATA FROM FILE ===========================================
+!     == READ DATA FROM FILE ===================================================
       IF(SEPARATOR%VERSION.NE.MYSEPARATOR%VERSION) THEN
         CALL ERROR$STOP('THERMOSTAT$READ')
       END IF
@@ -570,12 +570,12 @@ PRINT*,'THERM XP     ',XP,X0,XM
         READ(NFIL)X0,XM,XMM
       END IF
 !
-!     == DISTRIBUTE ARRAY TO ALL PARALLEL TASKS =======================
+!     == DISTRIBUTE ARRAY TO ALL PARALLEL TASKS ================================
       CALL MPE$BROADCAST('MONOMER',1,X0)
       CALL MPE$BROADCAST('MONOMER',1,XM)
       CALL MPE$BROADCAST('MONOMER',1,XMM)
 !
-!     == SET  DATA E ARRAY TO ALL PARALLEL TASKS =======================
+!     == SET  DATA E ARRAY TO ALL PARALLEL TASKS ===============================
       THIS%X0=X0
       THIS%XM=XM
       THIS%XMM=XMM
@@ -583,16 +583,16 @@ PRINT*,'THERM XP     ',XP,X0,XM
       RETURN
       END 
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$SETR8(ID,VAL)
-!     ==================================================================
-!     ==  SET DATA                                                    ==
-!     ==================================================================
+!     **************************************************************************
+!     **  SET DATA                                                            **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$SETR8')
@@ -603,7 +603,6 @@ PRINT*,'THERM XP     ',XP,X0,XM
         THIS%FRICTION=VAL
       ELSE IF(ID.EQ.'MASS') THEN
         THIS%Q=VAL
-IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SETR8',THIS%Q
       ELSE IF(ID.EQ.'TARGET') THEN
         THIS%EKIN_TARGET=VAL
       ELSE IF(ID.EQ.'EKIN(SYSTEM)') THEN
@@ -624,16 +623,16 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SETR8',THIS%Q
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$SETL4(ID,VAL)
-!     ==================================================================
-!     ==  SET DATA                                                    ==
-!     ==================================================================
+!     **************************************************************************
+!     **  SET DATA                                                            **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(IN) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$SETL4')
@@ -652,16 +651,16 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SETR8',THIS%Q
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$GETR8(ID,VAL)
-!     ==================================================================
-!     ==  SET DATA                                                    ==
-!     ==================================================================
+!     **************************************************************************
+!     **  SET DATA                                                            **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$GETR8')
@@ -694,16 +693,16 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SETR8',THIS%Q
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$GETL4(ID,VAL)
-!     ==================================================================
-!     ==  SET DATA                                                    ==
-!     ==================================================================
+!     **************************************************************************
+!     **  SET DATA                                                            **
+!     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(OUT):: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
         CALL ERROR$STOP('THERMOSTAT$GETL4')

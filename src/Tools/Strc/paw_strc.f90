@@ -918,7 +918,10 @@
 !     ==========================================================================
       WRITE(NFIL,FMT='("<",A)')-'ATOM'//+'A'//-'RRAY'
       WRITE(NFIL,FMT='(A)')-'ATOM'//+'ID'//'="'
-      WRITE(NFIL,*)(TRIM(NAME(MAP(1,IMAP)))//DISTID(MAP(2,IMAP),MAP(3,IMAP),MAP(4,IMAP))//' ',IMAP=1,NMAP)
+!      WRITE(NFIL,*)(TRIM(NAME(MAP(1,IMAP)))//DISTID(MAP(2,IMAP),MAP(3,IMAP),MAP(4,IMAP))//' ',IMAP=1,NMAP)
+      do imap=1,nmap
+        WRITE(NFIL,*)TRIM(NAME(MAP(1,IMAP)))//DISTID(MAP(2,IMAP),MAP(3,IMAP),MAP(4,IMAP))//' '
+      enddo
       WRITE(NFIL,FMT='(A)')'"'
       WRITE(NFIL,FMT='(A)')-'ELEMENT'//+'T'//-'YPE="'
       WRITE(NFIL,*)EL(MAP(1,:))//' '
@@ -963,10 +966,16 @@
 !     ==========================================================================
       WRITE(NFIL,FMT='(A)')-'<BOND'//+'A'//-'RRAY'
       WRITE(NFIL,FMT='(A)')-'ATOM'//+'R'//-'EF1="'
-      WRITE(NFIL,*)(TRIM(NAME(MAP(1,BOND(1,I))))//DISTID(MAP(2,BOND(1,I)),MAP(3,BOND(1,I)),MAP(4,BOND(1,I)))//' ',I=1,NBOND)
+!      WRITE(NFIL,*)(TRIM(NAME(MAP(1,BOND(1,I))))//DISTID(MAP(2,BOND(1,I)),MAP(3,BOND(1,I)),MAP(4,BOND(1,I)))//' ',I=1,NBOND)
+      do i=1,nbond
+        WRITE(NFIL,*)TRIM(NAME(MAP(1,BOND(1,I))))//DISTID(MAP(2,BOND(1,I)),MAP(3,BOND(1,I)),MAP(4,BOND(1,I)))//' '
+      enddo
       WRITE(NFIL,FMT='(A)')'"'
       WRITE(NFIL,FMT='(A)')-'ATOM'//+'R'//-'EF2="'
-      WRITE(NFIL,*)(TRIM(NAME(MAP(1,BOND(2,I))))//DISTID(MAP(2,BOND(2,I)),MAP(3,BOND(2,I)),MAP(4,BOND(2,I)))//' ',I=1,NBOND)
+!      WRITE(NFIL,*)(TRIM(NAME(MAP(1,BOND(2,I))))//DISTID(MAP(2,BOND(2,I)),MAP(3,BOND(2,I)),MAP(4,BOND(2,I)))//' ',I=1,NBOND)
+      do i=1,nbond
+        WRITE(NFIL,*)TRIM(NAME(MAP(1,BOND(2,I))))//DISTID(MAP(2,BOND(2,I)),MAP(3,BOND(2,I)),MAP(4,BOND(2,I)))//' '
+      enddo
       WRITE(NFIL,FMT='(A)')'"'
       WRITE(NFIL,FMT='(A)')-'ORDER="'
       WRITE(NFIL,*)(1,I=1,NBOND)

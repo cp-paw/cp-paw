@@ -2,9 +2,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 1035 $'
+character(256):: VERrev='$LastChangedRevision: 1050 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2010-03-22 10:53:57 +0100 (Mo, 22. Mär 2010) $'
+character(256):: VERdat='$LastChangedDate: 2010-07-05 12:56:13 +0200 (Mo, 05. Jul 2010) $'
 end Module version_module
 !
 !     ..................................................................
@@ -468,28 +468,31 @@ end Module version_module
         CALL THERMOSTAT$SELECT('WAVES')
         CALL THERMOSTAT$GETR8('COOLING',ANNEE)
         CALL WAVES$SETR8('FRICTION',ANNEE)
-      END IF
-!
-!     == DETERMINE IF CORRECTION FOR WAVE FUNCTION DRAG IS ON ==========
-      IF(TCHK1) THEN          ! ATOM THERMOSTAT OR BOTH THERMOSTATS
-        CALL WAVES$GETR8('FRICTION',ANNEE)
         CALL ATOMS$SETR8('ANNEE',ANNEE)
-        IF(.NOT.TNEWTHERMOSTAT) THEN
-          CALL ATOMS$SETR8('ANNEE',0.D0)
-        END IF
-      ELSE ! FRICTION DYNAMICS (NO THERMOSTAT)
-        IF(TCHK2) THEN ! WAVE FUNCTION THERMOSTAT ALONE NOT ALLOWED
-          CALL ERROR$MSG('WAVE FUNCTION THERMOSTAT ALONE IS NOT ALLOWED')
-          CALL ERROR$STOP('TIMESTEP')
-        ELSE 
-          CALL ATOMS$GETR8('FRICTION',ANNER)
-          CALL ATOMS$SETR8('ANNEE',ANNER)
-        END IF
+      else
+        CALL ATOMS$SETR8('ANNEE',0.D0)
       END IF
+!!$!
+!!$!     == DETERMINE IF CORRECTION FOR WAVE FUNCTION DRAG IS ON ==========
+!!$      IF(TCHK1) THEN          ! ATOM THERMOSTAT OR BOTH THERMOSTATS
+!!$        CALL WAVES$GETR8('FRICTION',ANNEE)
+!!$        CALL ATOMS$SETR8('ANNEE',ANNEE)
+!!$        IF(.NOT.TNEWTHERMOSTAT) THEN
+!!$          CALL ATOMS$SETR8('ANNEE',0.D0)
+!!$        END IF
+!!$      ELSE ! FRICTION DYNAMICS (NO THERMOSTAT)
+!!$        IF(TCHK2) THEN ! WAVE FUNCTION THERMOSTAT ALONE NOT ALLOWED
+!!$          CALL ERROR$MSG('WAVE FUNCTION THERMOSTAT ALONE IS NOT ALLOWED')
+!!$          CALL ERROR$STOP('TIMESTEP')
+!!$        ELSE 
+!!$          CALL ATOMS$GETR8('FRICTION',ANNER)
+!!$          CALL ATOMS$SETR8('ANNEE',ANNER)
+!!$        END IF
+!!$      END IF
 !
 !     ==================================================================
 !     ==================================================================
-!     ==  PROPAGATE:                                                  ==
+!     ==  Propagate:                                                  ==
 !     ==================================================================
 !     ==================================================================
 ! 

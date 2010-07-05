@@ -2,12 +2,12 @@
 !*******************************************************************************
 !*******************************************************************************
 !**                                                                           **
-!**  NAME: bands                                                              **
+!**  NAME: BANDS                                                              **
 !**                                                                           **
-!**  PURPOSE: ANALYSIS TOOL FOR band structure                                **
+!**  PURPOSE: ANALYSIS TOOL FOR BAND STRUCTURE                                **
 !**                                                                           **
 !*******************************************************************************
-!*******************************************P.E.Bloechl, Goslar June 20,2010****
+!*******************************************P.E.BLOECHL, GOSLAR JUNE 20,2010****
       PROGRAM MAIN
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
@@ -18,7 +18,7 @@
       INTEGER(4)                :: NAT
       INTEGER(4)                :: NB
       INTEGER(4)                :: NKPT
-      INTEGER(4)                :: NKPTbig
+      INTEGER(4)                :: NKPTBIG
       INTEGER(4)                :: NSPIN
       INTEGER(4)                :: NDIM !=2 FOR SPINOR WF; OTHERWISE =1
       REAL(8)                   :: RBAS(3,3) ! REAL-SPACE LATTICE VECTORS
@@ -26,17 +26,17 @@
       REAL(8)      ,ALLOCATABLE :: RPOS(:,:)
       REAL(8)      ,ALLOCATABLE :: XK(:,:) ! K IN RELATIVE COORDINATES
       REAL(8)      ,ALLOCATABLE :: EB(:,:,:)
-      REAL(8)      ,ALLOCATABLE :: EBbig(:,:,:)
+      REAL(8)      ,ALLOCATABLE :: EBBIG(:,:,:)
       INTEGER(4)   ,ALLOCATABLE :: MAP(:,:,:)
-      INTEGER(4)   ,ALLOCATABLE :: MAPbig(:,:,:)
-      real(8)      ,allocatable :: work1(:,:,:)
-      real(8)      ,allocatable :: work2(:,:,:)
+      INTEGER(4)   ,ALLOCATABLE :: MAPBIG(:,:,:)
+      REAL(8)      ,ALLOCATABLE :: WORK1(:,:,:)
+      REAL(8)      ,ALLOCATABLE :: WORK2(:,:,:)
       INTEGER(4)                :: NFILIN
       INTEGER(4)                :: NPRO
-      INTEGER(4)                :: IKPT,ISPIN,IB,I,J,k
+      INTEGER(4)                :: IKPT,ISPIN,IB,I,J,K
       INTEGER(4)                :: N1,N2,N3
-      INTEGER(4)                :: N1b,N2b,N3b
-      INTEGER(4)                :: ind
+      INTEGER(4)                :: N1B,N2B,N3B
+      INTEGER(4)                :: IND
       INTEGER(4)   ,ALLOCATABLE :: NBARR(:,:)
       REAL(8)                   :: XK1(3),XK2(3),XQ(3)
       CHARACTER(512)            :: FILE
@@ -46,8 +46,8 @@
       INTEGER(4)                :: NFIL
       REAL(8)                   :: X1,X2
       REAL(8)                   :: SVAR
-      logical(4)                :: tchk,tchk1
-      logical(4),parameter      :: trefine=.false.
+      LOGICAL(4)                :: TCHK,TCHK1
+      LOGICAL(4),PARAMETER      :: TREFINE=.FALSE.
 !     **************************************************************************
       CALL TRACE$PUSH('MAIN')
 !
@@ -144,52 +144,52 @@ PRINT*,'N1 ',N1,N2,N3
        CALL BANDS_GETMAP(GBAS,N1,N2,N3,NKPT,XK,MAP)
 !
 !      =========================================================================
-!      ==  interpolate to a finer mesh                                        ==
+!      ==  INTERPOLATE TO A FINER MESH                                        ==
 !      =========================================================================
-       if(trefine) then
-         n1b=32
-         n2b=32
-         n3b=32
+       IF(TREFINE) THEN
+         N1B=32
+         N2B=32
+         N3B=32
          CALL LIB$FFTADJUSTGRD(N1B)
          CALL LIB$FFTADJUSTGRD(N2B)
          CALL LIB$FFTADJUSTGRD(N3B)
-PRINT*,'N1b ',N1b,N2b,N3b
-         allocate(mapbig(n1b,n2b,n3b))
-         ind=0
-         do k=1,n3b
-           do j=1,n2b
-             do i=1,n1b
-               ind=ind+1
-               mapbig(i,j,k)=ind
-             enddo
-           enddo
-         enddo    
-         nkptbig=ind
-         allocate(ebbig(nb,nkptbig,nspin))
-         allocate(work1(n1,n2,n3))
-         allocate(work2(n1b,n2b,n3b))
-         do ispin=1,nspin
-           do ib=1,nb
-             do i=1,n1
-               do j=1,n2
-                 do k=1,n3
-                   work1(i,j,k)=eb(ib,map(i,j,k),ispin)
-                 enddo
-               enddo
-             enddo    
-             CALL REFINEGRID(N1,N2,N3,N1B,N2B,N3B,WORK1,work2)
-             do i=1,n1b
-               do j=1,n2b
-                 do k=1,n3b
-                   ebbig(ib,mapbig(i,j,k),ispin)=work2(i,j,k)
-                 enddo
-               enddo
-             enddo    
-           enddo
-         enddo  
-         deallocate(work1)
-         deallocate(work2)
-       end if
+PRINT*,'N1B ',N1B,N2B,N3B
+         ALLOCATE(MAPBIG(N1B,N2B,N3B))
+         IND=0
+         DO K=1,N3B
+           DO J=1,N2B
+             DO I=1,N1B
+               IND=IND+1
+               MAPBIG(I,J,K)=IND
+             ENDDO
+           ENDDO
+         ENDDO    
+         NKPTBIG=IND
+         ALLOCATE(EBBIG(NB,NKPTBIG,NSPIN))
+         ALLOCATE(WORK1(N1,N2,N3))
+         ALLOCATE(WORK2(N1B,N2B,N3B))
+         DO ISPIN=1,NSPIN
+           DO IB=1,NB
+             DO I=1,N1
+               DO J=1,N2
+                 DO K=1,N3
+                   WORK1(I,J,K)=EB(IB,MAP(I,J,K),ISPIN)
+                 ENDDO
+               ENDDO
+             ENDDO    
+             CALL REFINEGRID(N1,N2,N3,N1B,N2B,N3B,WORK1,WORK2)
+             DO I=1,N1B
+               DO J=1,N2B
+                 DO K=1,N3B
+                   EBBIG(IB,MAPBIG(I,J,K),ISPIN)=WORK2(I,J,K)
+                 ENDDO
+               ENDDO
+             ENDDO    
+           ENDDO
+         ENDDO  
+         DEALLOCATE(WORK1)
+         DEALLOCATE(WORK2)
+       END IF
 !
 !      =========================================================================
 !      ==  CONSTRUCT BAND STRUCTURE                                           ==
@@ -204,7 +204,7 @@ PRINT*,'N1b ',N1b,N2b,N3b
        CALL LINKEDLIST$SELECT(LL_CNTL,'~')
        CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
        CALL LINKEDLIST$NLISTS(LL_CNTL,'LINE',NLINE)
-       x2=0.d0
+       X2=0.D0
        DO ILINE=1,NLINE
          CALL LINKEDLIST$SELECT(LL_CNTL,'LINE',ILINE)
 !
@@ -239,7 +239,7 @@ PRINT*,'N1b ',N1b,N2b,N3b
            XQ(:)=0.D0
            NQ=1
          END IF
-!        == specify spin direction =============================================
+!        == SPECIFY SPIN DIRECTION =============================================
          ISPIN=1
          CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',0,TCHK)
          IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'SPIN',1,ISPIN)
@@ -248,15 +248,15 @@ PRINT*,'N1b ',N1b,N2b,N3b
            CALL ERROR$STOP('MAIN')
          END IF
 !
-!        == plot bands =========================================================
-         if(trefine) then         
-           CALL BANDS_PLOTBANDS(GBAS,N1b,N2b,N3b,MAPbig &
-      &                        ,NKPTbig,NB,EBbig(:,:,ISPIN) &
+!        == PLOT BANDS =========================================================
+         IF(TREFINE) THEN         
+           CALL BANDS_PLOTBANDS(GBAS,N1B,N2B,N3B,MAPBIG &
+      &                        ,NKPTBIG,NB,EBBIG(:,:,ISPIN) &
       &                        ,NP,X1,XK1,X2,XK2,NQ,XQ)
-         else
+         ELSE
            CALL BANDS_PLOTBANDS(GBAS,N1,N2,N3,MAP,NKPT,NB,EB(:,:,ISPIN) &
       &                      ,NP,X1,XK1,X2,XK2,NQ,XQ)
-         end if
+         END IF
 !
          CALL LINKEDLIST$SELECT(LL_CNTL,'..')
        ENDDO
@@ -393,14 +393,14 @@ PRINT*,'N1b ',N1b,N2b,N3b
 !      *************************************************************************
        CALL FILEHANDLER$UNIT('BANDS',NFIL)
        DO IQ=1,NQ
-         if(nq.eq.1) then
-           d3=0.d0
-         else
+         IF(NQ.EQ.1) THEN
+           D3=0.D0
+         ELSE
            D3=REAL(IQ-1)/REAL(NQ-1)
-         end if
+         END IF
          DO IP=1,NP
            D2=REAL(IP-1)/REAL(NP-1)
-           IF((-1)**IQ.gT.0)D2=1.D0-d2
+           IF((-1)**IQ.GT.0)D2=1.D0-D2
            D1=1.D0-D2
            KI=MATMUL(GBAS,XK1*D1+XK2*D2+XQ*D3)
            CALL BANDS_GETBAND(GBAS,N1,N2,N3,MAP,NK,NB,EB,KI,EBI)

@@ -658,7 +658,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
      &                               +RBAS(:,2)*REAL(NNLIST(4,NN),KIND=8) &
      &                               +RBAS(:,3)*REAL(NNLIST(5,NN),KIND=8)
         ENDDO
-        NORB=(LX1(ISP)+1)**2  ! #(ORBITALS ON THE CENTRAL ATOM)
+        NORB=(LX1(1)+1)**2  ! #(ORBITALS ON THE CENTRAL ATOM)
         IF(NN0.NE.NN1) THEN
           CALL ERROR$MSG('ONSITE ELEMENT NOT FIRST IN NEIGHBORLIST')
           CALL ERROR$MSG('INTERNAL CONSISTENCY CHECK FAILED')
@@ -686,6 +686,8 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !       == UP TO A MAXIMUM ANGULAR MOMENTUM. NOT ALL WILL BE USED LATER ON    ==
 !       ========================================================================
         ALLOCATE(SBAR1(N,NORB))
+!norb=(lx1(1)+1)**2
+!n=(lx(1)+2)**2?
         CALL LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT1,RPOS,LX1,QBAR,N,NORB,SBAR1)
 !
 !       ========================================================================

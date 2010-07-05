@@ -1252,33 +1252,20 @@ each step that reduces the energy}
 %----------------------------------------------------------------------
 \block{!CONTROL!PSIDYN!THERMOSTAT}
 %----------------------------------------------------------------------
-\brules{optional} 
-\bdescr{(presently in test phase:\\ 
-Thermostat for the wave functions. The thermostat acts like a Nose-Hoover
-thermostat\cite{nose84_molphys52_255,nose84_jcp81_511,hoover85_pra31_1695}
-, but it does not aim at constructing a canonical ensemble. Instead
-it starts acting only when the wave function kinetic exceeds the target
-temperature estimated for Born-Oppenheimer kinetic
-energy.\cite{bloechl02_prb65_104303} The latter obtained from the
-instantaneous atomic velocities, the wave function masses and the values of
-!STRUCTURE!SPECIES:PS$<$G2$>$ and !STRUCTURE!SPECIES:PS$<$G4$>$ provided the
-structure input file.  Do not use this thermostat without providing PS$<$G2$>$
-and PS$<$G4$>$.  If the thermostat kicks in, it reshuffles kinetic energy from
-the wave functions into the atomic motion.  The target kinetic energy is
-subtracted from the wave function kinetic energy in the protocol. A friction
-on the thermostat shall be used to avoid instabilities. The thermostat shall
-be used only if the atoms are moving.  \\
-Old version: Nos\'e thermostat for constant temperature ensemble for the
-electrons \cite{bloechl92_prb45_9413}.  The target kinetic energy should be a
-little (about 50\%) larger than
-  \begin{equation}
-     \langle E_{kin}^\Psi\rangle_T=\sum _R
-      2{{m_\Psi}\over{M_R}}\tilde{T}_R k_B T ,
-  \end{equation}
-  where
-  $\tilde{T}_R=\sum_{n}\langle\tilde\Psi_n|-\nabla^2/2|\tilde\Psi_n\rangle$ is
-  the kinetic energy of the pseudo wave functions of the corresponding
-  isolated atom and $T$ is the physical temperature of the nuclei.}
+\brules{optional}
+\bdescr{(presently in test phase:\\
+  Thermostat for the wave functions. The thermostat acts like a
+  Nose-Hoover
+  thermostat\cite{nose84_molphys52_255,nose84_jcp81_511,hoover85_pra31_1695}
+  , but it does not aim at constructing a canonical ensemble. Instead
+  it starts acting only when the wave function kinetic exceeds the
+  target temperature estimated for Born-Oppenheimer kinetic
+  energy.\cite{bloechl02_prb65_104303} If the thermostat kicks in, it
+  reshuffles kinetic energy from the wave functions into the atomic
+  motion.  The target kinetic energy is subtracted from the wave
+  function kinetic energy in the protocol. A friction on the
+  thermostat shall be used to avoid instabilities. The thermostat
+  shall be used only if the atoms are moving. 
 
 \mbax{\key{$<$EKIN$>$}
 \vdescr{average kinetic energy of the wave functions. Do not use in
@@ -1319,12 +1306,6 @@ Old version: average kinetic energy of the wave functions divided by
 
 \mbax{\key{STOP}
 \vdescr{set velocity for Nos\'e variable to zero in the first iteration}
-\vformat{logical}
-\vrules{optional}
-\vdefault{F}}
-
-\mbax{\key{OLD}
-\vdescr{selects the ``old'' implementation of the Nose thermostat}
 \vformat{logical}
 \vrules{optional}
 \vdefault{F}}
