@@ -2591,7 +2591,7 @@ END IF
             enddo
           ENDDO
         ENDDO
-!        stop 'forced'
+        stop 'forced'
       end if
                               CALL TIMING$CLOCKOFF('W:TONTBO')
                               CALL TRACE$POP

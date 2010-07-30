@@ -349,7 +349,7 @@ END MODULE ATOMS_MODULE
 !!$          CALL ERROR$STOP('ATOMS$INITIALIZE')
         END IF
       END IF
-      STATEOFTHIS='INITIALIZED'
+      Stateofthis='INITIALIZED'
                                CALL TRACE$POP
       RETURN
       END

@@ -735,10 +735,13 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !     ==========================================================================
 !     ==  
 !     ==========================================================================
-!      CALL LMTO$ORBINGAUSS()
-!      CALL LMTO$OVERLAPGAUSS()
-!      CALL LMTO$REPORTOVERLAP(6)
-
+!!$print*,'marke 1'
+!!$      CALL LMTO$ORBINGAUSS()
+!!$print*,'marke 2'
+!!$      CALL LMTO$OVERLAPGAUSS()
+!!$print*,'marke 3'
+!!$      CALL LMTO$REPORTOVERLAP(6)
+!!$stop 'forced in paw_lmto.f90'
 !
 !     ==========================================================================
 !     ==  

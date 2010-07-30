@@ -380,9 +380,9 @@ PRINT*,'N1B ',N1B,N2B,N3B
        INTEGER(4),INTENT(IN) :: MAP(N1,N2,N3)
        INTEGER(4),INTENT(IN) :: NP
        INTEGER(4),INTENT(IN) :: NQ
-       REAL(8)   ,INTENT(IN) :: XK1(3)
-       REAL(8)   ,INTENT(IN) :: XK2(3)
-       REAL(8)   ,INTENT(IN) :: XQ(3)
+       REAL(8)   ,INTENT(IN) :: XK1(3)  !initial k-point in relative coordinates
+       REAL(8)   ,INTENT(IN) :: XK2(3)  !final k-point in relative coordinates
+       REAL(8)   ,INTENT(IN) :: XQ(3)   !projection direction in relative coord.
        REAL(8)   ,INTENT(IN) :: X1
        REAL(8)   ,INTENT(IN) :: X2
        REAL(8)               :: D1,D2,D3
@@ -402,6 +402,7 @@ PRINT*,'N1B ',N1B,N2B,N3B
            D2=REAL(IP-1)/REAL(NP-1)
            IF((-1)**IQ.GT.0)D2=1.D0-D2
            D1=1.D0-D2
+!          == ki is the k-point in cartesian coordinates =======================
            KI=MATMUL(GBAS,XK1*D1+XK2*D2+XQ*D3)
            CALL BANDS_GETBAND(GBAS,N1,N2,N3,MAP,NK,NB,EB,KI,EBI)
            WRITE(NFIL,FMT='(100F10.5)')X1+D2*(X2-X1),EBI(:)
@@ -492,7 +493,7 @@ PRINT*,'N1B ',N1B,N2B,N3B
        GBASIN=TRANSPOSE(GBASIN)
 !
        XK=MATMUL(GBASIN,K1) ! RELATIVE COORDINATE IN K-SPACE
-!      == MAP INTO FIRST UNIT CELL
+!      == MAP INTO FIRST UNIT CELL =============================================
        XK(1)=MODULO(XK(1),1.D0)*REAL(N1,KIND=8) 
        XK(2)=MODULO(XK(2),1.D0)*REAL(N2,KIND=8) 
        XK(3)=MODULO(XK(3),1.D0)*REAL(N3,KIND=8) 

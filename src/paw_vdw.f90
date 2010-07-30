@@ -203,7 +203,7 @@ END MODULE VDW_MODULE
               do it2=it2min,it2max
                 do it3=it3min,it3max
                   if(iat1.eq.iat2) then
-                    if(it1.eq.0.and.it1.eq.0.and.it1.eq.0) cycle
+                    if(it1.eq.0.and.it2.eq.0.and.it3.eq.0) cycle
                   end if
                   dr(:)=dr0(:)+rbas(:,1)*real(it1,kind=8) &
       &                       +rbas(:,2)*real(it2,kind=8) &

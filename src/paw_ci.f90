@@ -17,24 +17,37 @@
 !**    $COPY(PHI1,PHI2)                                                       **
 !**    $NUMBER(PHI,IORB,OCC)                                                  **
 !**                                                                           **
-!**   remarks:                                                                **
-!**     the following points need to be implemented!!!                        **
+!**   REMARKS:                                                                **
+!**     1) BEFORE USING A CI-STATE IT MUST BE INITIALIZED BY CI$NEWPSI        **
+!**     2) PSI%NX=0 IMPLIES DEALLOCATED ARRAYS. ONLY CI$DELETEPSI AND         **
+!**        CI$NEWPSI CAN PRODUCE A STATE WITH DEALLOCATED ARRAYS. ONLY        **
+!**        CI$NEWPSI AND CI_EXPANDPSI CAN LEAD FROM A STATE WITH              **
+!**        DEALLOCATED ARRAYS TO ONE WITH ALLOCATED ARRAYS.                   **
+!**     3) A STATE WITH DEALLOCATED ARRAYS DOES NOT EVEN CONTAIN THE          **
+!**        VACUUM STATE                                                       **
+!**     4) STATES INTERNAL TO A SUBROUTINE MUST BE DELETED WITH CI$DELETEPSI  **
+!**        TO AVOID MEMORY LEAKS                                              **
 !**                                                                           **
-!**     ci$creator and ci$annihilator do not destroy the order of the array   **
-!**     because it is either an addition with a fixed number or a deletion of **
-!**     the corresponding element. Is there any operation that destroys the   **
-!**     order                                                                 **
 !**                                                                           **
-!**     avoid deallocate and allocate for ci$copypsi, if not necessary        **
 !**                                                                           **
-!**     do not overwrite elements wit n>nx with zeros                         **
+!**     THE FOLLOWING POINTS NEED TO BE IMPLEMENTED!!!                        **
+!**     DO NOT OVERWRITE ELEMENTS WIT N>NX WITH ZEROS                         **
+!**                                                                           **
+!**     MAKE INITIAL TRANSFORM ONTO ORTHONORMAL NATURAL ORBITALS              **
+!**     AND FINAL BACK TRANSFORM                                              **
+!**                                                                           **
+!**     CONSTRAINT ROUTINE CAN ONLY WORK IF THE WAVE FUNCTION CAN HAVE MORE   **
+!**     COEFFICIENTS THAN CONSTRAINTS                                         **
+!**                                                                           **
+!**     ARE ALL OPERATIONS COMPATIBLE WITH A STATE WITH DEALLOCATED ARRAYS?   **
+!**                                                                           **
 !**                                                                           **
 !*******************************************************************************
 MODULE CI_MODULE
 TYPE CISTATE_TYPE
   INTEGER(4)             :: NX     ! X (# SLATER DETERMINANTS)
   INTEGER(4)             :: N      ! ACTUAL # SLATER-DETERMINANTS
-  logical                :: tclean ! is array ordered?
+  LOGICAL                :: TCLEAN ! IS ARRAY ORDERED?
   COMPLEX(8),POINTER     :: C(:)   ! COEFFICIENTS
   INTEGER   ,POINTER     :: ID(:)  ! NUMBER REPRESENTATION IN BIT FORMAT
 END TYPE CISTATE_TYPE
@@ -63,6 +76,36 @@ END TYPE CIHAMIL_TYPE
 REAL(8),SAVE              :: CI_MINC=1.D-10  ! MINIMUM ACCEPTABLE COEFFICIENT
 REAL(8),POINTER           :: CIMAT(:,:)
 END MODULE CI_MODULE
+!
+!     ..........................................................................
+      SUBROUTINE CI_ODDPARITY(IVAL,POS,TMINUS)
+!     **************************************************************************
+!     ** COUNTS THE NUMBER OF BITS FROM POSITION ONE TO POSITION POS          **
+!     ** AND RETURNS TRUE OF THAT NUMBER IS ODD.                              **
+!     ** THIS IS THE NUMBER OF PERMUTATIONS OF AN ANNIHILATOR, UNTIL IT IS    **
+!     ** PLACED IN FRONT OF THE CREATOR AT POSITION POS+1.
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER   ,INTENT(IN) :: IVAL
+      INTEGER(4),INTENT(IN) :: POS     !BITS ARE COUNTED FROM 1 TO POS
+      LOGICAL(4),INTENT(OUT):: TMINUS
+      INTEGER   ,PARAMETER  :: ONE=1
+      INTEGER               :: JVAL
+      INTEGER               :: MASK
+      INTEGER(4),PARAMETER  :: NSHIFTS=8
+      INTEGER(4),PARAMETER  :: ISHIFTS(NSHIFTS)=(/128,64,32,16,8,4,2,1/)
+      INTEGER(4)            :: I
+!     **************************************************************************
+      JVAL=IVAL
+      MASK=IBSET(0,POS)-1   ! =2**POS-1
+      JVAL=IAND(JVAL,MASK)  ! SET ALL BITS BEYOND POS TO ZERO
+      DO I=1,NSHIFTS
+        IF(POS.LT.ISHIFTS(I)) CYCLE
+        JVAL=IEOR(JVAL,ISHFT(JVAL,-ISHIFTS(I)))
+      ENDDO
+      TMINUS=IAND(JVAL,ONE).EQ.1
+      RETURN
+      END
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$SETR8(ID,VAL)
@@ -98,6 +141,7 @@ END MODULE CI_MODULE
       PHI%N=0
       PHI%TCLEAN=.TRUE.
       IF(ASSOCIATED(PHI%C)) THEN
+!       == ONLY CI_EXPANDPSI CAN LEAD OUT OF THE NULLIFIED STATE ===============
         DEALLOCATE(PHI%C)
         DEALLOCATE(PHI%ID)
       END IF
@@ -107,17 +151,42 @@ END MODULE CI_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$ZEROPSI(PHI)
 !     **************************************************************************
-!     **  CI$SETPSI                                                           **
-!     **  EXPAND ARRAY OF SLATER DETERMINANTS WITH ZERO ENTRIES               **
+!     **  CI$ZEROPSI                                                          **
+!     **  ZET WAVE FUNCTION TO ZERO                                           **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
       TYPE(CISTATE_TYPE),INTENT(INOUT) :: PHI
 !     **************************************************************************
-      PHI%NX=0
-      CALL CI_EXPANDPSI(PHI,20)
+      PHI%N=0
+      PHI%TCLEAN=.TRUE.
       RETURN
       END SUBROUTINE CI$ZEROPSI
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI$NEWPSI(PHI,NX)
+!     **************************************************************************
+!     **  CI$NEWPSI                                                           **
+!     **  INITIALIZES A WAVE FUNCTION THAT HAS NOT BEEN USED BEFORE           **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(CISTATE_TYPE),INTENT(INOUT) :: PHI
+      INTEGER(4)        ,INTENT(IN)    :: NX
+!     **************************************************************************
+      PHI%N=0
+      PHI%NX=NX
+      PHI%TCLEAN=.TRUE.
+      IF(NX.GT.0) THEN
+        ALLOCATE(PHI%ID(NX))
+        ALLOCATE(PHI%C(NX))
+      ELSE
+!       == ONLY CI_EXPANDPSI CAN LEAD OUT OF THE NULLIFIED STATE ===============
+        NULLIFY(PHI%ID)
+        NULLIFY(PHI%C)
+      END IF
+      RETURN
+      END SUBROUTINE CI$NEWPSI
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$SETPSI(PHI,ID,C)
@@ -140,7 +209,7 @@ END MODULE CI_MODULE
       N=PHI%N
       PHI%C(N)=C
       PHI%ID(N)=ID
-      phi%tclean=.false.
+      PHI%TCLEAN=.FALSE.
       RETURN
       END SUBROUTINE CI$SETPSI
 ! 
@@ -154,53 +223,52 @@ END MODULE CI_MODULE
       IMPLICIT NONE
       INTEGER(4)        ,INTENT(IN)    :: NFURTHER
       TYPE(CISTATE_TYPE),INTENT(INOUT) :: PHI
-      COMPLEX(8)        ,ALLOCATABLE   :: C(:)
-      INTEGER(4)        ,ALLOCATABLE   :: ID(:)
+      COMPLEX(8)         ,POINTER      :: C(:)
+      INTEGER            ,POINTER      :: ID(:)
       INTEGER(4)                       :: N
+      INTEGER(4)                       :: NPLUS
+      LOGICAL(4),PARAMETER :: TNEW=.TRUE.
 !     **************************************************************************
       IF(PHI%NX.EQ.0) THEN
         PHI%NX=NFURTHER
         PHI%N=0
-        phi%tclean=.true.
+        PHI%TCLEAN=.TRUE.
         ALLOCATE(PHI%ID(NFURTHER))
         ALLOCATE(PHI%C(NFURTHER))
         RETURN
       END IF
+      NPLUS=PHI%NX+NFURTHER
       N=PHI%N
-      ALLOCATE(C(N))
-      ALLOCATE(ID(N))
-      C(:)=PHI%C(:N)
-      ID(:)=PHI%ID(:N)
+      ALLOCATE(C(NPLUS))
+      ALLOCATE(ID(NPLUS))
+      C(:N)=PHI%C(:N)
+      ID(:N)=PHI%ID(:N)
       DEALLOCATE(PHI%C)
       DEALLOCATE(PHI%ID)
-      PHI%NX=PHI%NX+NFURTHER
-      ALLOCATE(PHI%C(PHI%NX))
-      ALLOCATE(PHI%ID(PHI%NX))
-      PHI%C(:N)=C
-      PHI%ID(:N)=ID
-      PHI%C(N+1:)=(0.d0,0.d0)
-      PHI%ID(n+1:)=0
-      DEALLOCATE(C)
-      DEALLOCATE(ID)
+      PHI%NX=NPLUS
+      PHI%ID=>ID 
+      PHI%C=>C 
+      NULLIFY(ID)
+      NULLIFY(C)
       RETURN
       END SUBROUTINE CI_EXPANDPSI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$CLEANPSI(PHI)
 !     **************************************************************************
-!     **  CI$CLEANPSI                                                      **
+!     **  CI$CLEANPSI                                                         **
 !     **  SORT THE SLATER DETERMINANTS ACCORDING TO ID                        **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
       TYPE(CISTATE_TYPE) ,INTENT(INOUT) :: PHI
       INTEGER(4)                        :: N
-      INTEGER(4)                        :: ID
+      INTEGER                           :: ID
       COMPLEX(8)                        :: C
       INTEGER(4)                        :: I,FROM,TO
       REAL(8)           ,ALLOCATABLE    :: CRIT(:)
 !     **************************************************************************
-      if(phi%tclean) return
+      IF(PHI%TCLEAN) RETURN
 !
       C=(0.D0,0.D0)   ! JUST TO MAKE THE COMPILER HAPPY
       ID=0
@@ -307,6 +375,11 @@ END MODULE CI_MODULE
 !     **************************************************************************
       CALL CI$CLEANPSI(PHI)
       N=PHI%N
+      IF(N.LE.0) THEN
+        CALL ERROR$MSG('STATE IS THE ZERO STATE')
+        CALL ERROR$MSG('THE ZERO STATE CANNOT BE NORMALIZED')
+        CALL ERROR$STOP('CI$NORMALIZE')
+      END IF
       SVAR=SUM(ABS(PHI%C(1:N))**2)
       SVAR=1.D0/SQRT(SVAR)
       PHI%C(1:N)=PHI%C(1:N)*SVAR
@@ -321,23 +394,23 @@ END MODULE CI_MODULE
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
-      TYPE(CISTATE_TYPE) ,INTENT(INOUT):: PHI1
-      TYPE(CISTATE_TYPE) ,INTENT(INOUT):: PHI2
-      COMPLEX(8)  ,INTENT(OUT)  :: VAL
-      INTEGER(4)                :: N1,N2
-      INTEGER(4)                :: I1,I2
+      TYPE(CISTATE_TYPE),INTENT(INOUT):: PHI1
+      TYPE(CISTATE_TYPE),INTENT(INOUT):: PHI2
+      COMPLEX(8)        ,INTENT(OUT)  :: VAL
+      INTEGER(4)                      :: N1,N2
+      INTEGER(4)                      :: I1,I2
 !     **************************************************************************
       CALL CI$CLEANPSI(PHI1)
       CALL CI$CLEANPSI(PHI2)
       N1=PHI1%N
       N2=PHI2%N
       VAL=(0.D0,0.D0)
-      I1=1
-      I2=1
-      IF(N1.LT.1.OR.N2.LT.1) THEN
+      IF(N1.LE.0.OR.N2.LE.0) THEN
         VAL=(0.D0,0.D0)
         RETURN
       END IF
+      I1=1
+      I2=1
       DO 
         IF(PHI1%ID(I1).EQ.PHI2%ID(I2)) THEN
           VAL=VAL+CONJG(PHI1%C(I1))*PHI2%C(I2)
@@ -369,8 +442,6 @@ END MODULE CI_MODULE
       INTEGER(4)                :: I1,I2
       INTEGER(4)                :: N1,N2
       INTEGER(4)                :: NX,N
-      INTEGER(4)  ,ALLOCATABLE  :: ID(:)              
-      COMPLEX(8)  ,ALLOCATABLE  :: C(:)              
 !     **************************************************************************
       CALL CI$CLEANPSI(PHI1)
       CALL CI$CLEANPSI(PHI2)
@@ -414,55 +485,47 @@ END MODULE CI_MODULE
           EXIT
         END IF
       ENDDO
+!     == EXPAND ARRAY IF NECESSARY =============================================
+      IF(NX.GT.PHI1%NX) THEN
+        CALL CI_EXPANDPSI(PHI1,NX-PHI1%NX)
+      END IF
+!     == COPY ARRAY TO THE END SO THAT THE ADDITION CAN BE DONE IN PLACE =======
+      PHI1%ID(NX-N1+1:NX)=PHI1%ID(1:N1)
+      PHI1%C(NX-N1+1:NX)=PHI1%C(1:N1)
+      PHI1%N=NX
 !
 !     ==========================================================================
-!     == DETERMINE RESULT
+!     == DETERMINE RESULT                                                     ==
 !     ==========================================================================
-      ALLOCATE(C(NX))
-      ALLOCATE(ID(NX))
-      I1=1
+      I1=NX-N1+1
       I2=1
       N=0
       DO 
         N=N+1
         IF(PHI2%ID(I2).EQ.PHI1%ID(I1)) THEN
-          ID(N)=PHI1%ID(I1)
-          C(N)=PHI1%C(I1)+PHI2%C(I2)
+          PHI1%ID(N)=PHI1%ID(I1)
+          PHI1%C(N)=PHI1%C(I1)+PHI2%C(I2)
           I1=I1+1
           I2=I2+1
         ELSE
           IF(PHI1%ID(I1).LT.PHI2%ID(2)) THEN
-            ID(N)=PHI1%ID(I1)
-            C(N)=PHI1%C(I1)
+            PHI1%ID(N)=PHI1%ID(I1)
+            PHI1%C(N)=PHI1%C(I1)
             I1=I1+1
           ELSE
-            ID(N)=PHI2%ID(I2)
-            C(N)=PHI2%C(I2)
+            PHI1%ID(N)=PHI2%ID(I2)
+            PHI1%C(N)=PHI2%C(I2)
             I2=I2+1
           END IF
         END IF
-        IF(I1.GT.N1) THEN
-          ID(N+1:NX)=PHI2%ID(I2:N2)
-          C(N+1:NX)=PHI2%C(I2:N2)
+        IF(I1.GT.NX) THEN
+          PHI1%ID(N+1:NX)=PHI2%ID(I2:N2)
+          PHI1%C(N+1:NX)=PHI2%C(I2:N2)
           EXIT
         ELSE IF(I2.GT.N2) THEN
-          ID(N+1:NX)=PHI1%ID(I1:N1)
-          C(N+1:NX)=PHI1%C(I1:N1)
           EXIT
         END IF
       ENDDO
-!
-!     ==========================================================================
-!     == MAP RESULT INTO PHI1                                                 ==
-!     ==========================================================================
-      IF(NX.GT.PHI1%NX) THEN
-        CALL CI_EXPANDPSI(PHI1,NX-PHI1%NX)
-      END IF
-      PHI1%N=NX
-      PHI1%C(1:NX)=C
-      PHI1%ID(1:NX)=ID
-      DEALLOCATE(ID)
-      DEALLOCATE(C)
       RETURN
       END SUBROUTINE CI$ADDPSI
 !
@@ -479,6 +542,7 @@ END MODULE CI_MODULE
       INTEGER(4)                :: N
 !     **************************************************************************
       N=PHI%N
+      IF(N.EQ.0) RETURN   !TAKE CARE OF STATE WITH DEALLOCATED ARRAYS
       PHI%C(1:N)=PHI%C(1:N)*C
       RETURN
       END SUBROUTINE CI$SCALEPSI
@@ -493,29 +557,41 @@ END MODULE CI_MODULE
       IMPLICIT NONE
       TYPE(CISTATE_TYPE) ,INTENT(INOUT):: PHI
       INTEGER(4)  ,INTENT(IN)   :: IORB
-      INTEGER(4)                :: N,I,J
+      INTEGER(4)                :: N,I,J,K
       LOGICAL(4)                :: TOCC
       LOGICAL(4)                :: TMINUS
+      LOGICAL(4)  ,PARAMETER    :: TNEWPARITY=.TRUE.
 !     **************************************************************************
       IF(IORB.GE.BIT_SIZE(PHI%ID(1))) THEN
         STOP 'IORB OUT OF RANGE'
       END IF
+      CALL CI$CLEANPSI(PHI)
       N=PHI%N
+      J=0
       DO I=1,N
         TOCC=BTEST(PHI%ID(I)-1,IORB-1) 
-        IF(TOCC) THEN
-          PHI%C(I)=(0.D0,0.D0)
-        ELSE
-          PHI%ID(I)=1+IBSET(PHI%ID(I)-1,IORB-1)
+        IF(.NOT.TOCC) THEN
+          J=J+1
+!         == CREATE A PARTICLE AT POSITION IORB ================================
+          PHI%ID(J)=1+IBSET(PHI%ID(I)-1,IORB-1)
+!
 !         == DETERMINE SIGN CHANGE BY THE NUMBER OF PERMUTATIONS ===============
-          TMINUS=.FALSE.
-          DO J=1,IORB-1
-            IF(BTEST(PHI%ID(I)-1,J-1))TMINUS=.NOT.TMINUS
-          ENDDO
-          IF(TMINUS)PHI%C(I)=-PHI%C(I)
+          IF(TNEWPARITY) THEN
+            CALL CI_ODDPARITY(PHI%ID(J)-1,IORB-1,TMINUS)
+          ELSE
+            TMINUS=.FALSE.
+            DO K=1,IORB-1
+              IF(BTEST(PHI%ID(J)-1,K-1))TMINUS=.NOT.TMINUS
+            ENDDO
+          END IF
+          IF(TMINUS) THEN
+            PHI%C(J)=-PHI%C(I)
+          ELSE
+            PHI%C(J)=+PHI%C(I)
+          END IF
         END IF
       ENDDO
-      CALL CI_COMPACTPSI(PHI)
+      PHI%N=J
       RETURN
       END SUBROUTINE CI$CREATOR
 !
@@ -529,29 +605,41 @@ END MODULE CI_MODULE
       IMPLICIT NONE
       TYPE(CISTATE_TYPE) ,INTENT(INOUT):: PHI
       INTEGER(4)  ,INTENT(IN)   :: IORB
-      INTEGER(4)                :: N,I,J
+      INTEGER(4)                :: N,I,J,K
       LOGICAL(4)                :: TOCC
       LOGICAL(4)                :: TMINUS
+      LOGICAL(4)  ,PARAMETER    :: TNEWPARITY=.TRUE.
 !     **************************************************************************
       IF(IORB.GE.BIT_SIZE(PHI%ID(1))) THEN
         STOP 'IORB OUT OF RANGE'
       END IF
+      CALL CI$CLEANPSI(PHI)
       N=PHI%N
+      J=0
       DO I=1,N
         TOCC= BTEST(PHI%ID(I)-1,IORB-1) 
         IF(TOCC) THEN
-          PHI%ID(I)=1+IBCLR(PHI%ID(I)-1,IORB-1)
+          J=J+1
+          PHI%ID(J)=1+IBCLR(PHI%ID(I)-1,IORB-1)
+!
 !         == DETERMINE SIGN CHANGE BY THE NUMBER OF PERMUTATIONS ===============
-          TMINUS=.FALSE.
-          DO J=1,IORB-1
-            IF(BTEST(PHI%ID(I)-1,J-1)) TMINUS=.NOT.TMINUS
-          ENDDO
-          IF(TMINUS)PHI%C(I)=-PHI%C(I)
-        ELSE
-          PHI%C(I)=(0.D0,0.D0)
+          IF(TNEWPARITY) THEN
+             CALL CI_ODDPARITY(PHI%ID(J)-1,IORB-1,TMINUS)
+          ELSE
+            TMINUS=.FALSE.
+            DO K=1,IORB-1
+              IF(BTEST(PHI%ID(J)-1,K-1)) TMINUS=.NOT.TMINUS
+            ENDDO
+          END IF
+!
+          IF(TMINUS)THEN
+            PHI%C(J)=-PHI%C(I)
+          ELSE
+            PHI%C(J)=+PHI%C(I)
+          END IF
         END IF
       ENDDO
-      CALL CI_COMPACTPSI(PHI)
+      PHI%N=J
       RETURN
       END SUBROUTINE CI$ANNIHILATOR
 !
@@ -565,14 +653,20 @@ END MODULE CI_MODULE
       IMPLICIT NONE
       TYPE(CISTATE_TYPE) ,INTENT(INOUT):: PHI1
       TYPE(CISTATE_TYPE) ,INTENT(INOUT):: PHI2
+      INTEGER(4)                       :: N
 !     **************************************************************************
-      CALL CI$DELETEPSI(PHI2)
-      PHI2%NX=PHI1%NX
-      PHI2%N=PHI1%N
-      ALLOCATE(PHI2%ID(PHI1%NX))
-      ALLOCATE(PHI2%C(PHI1%NX))
-      PHI2%ID=PHI1%ID
-      PHI2%C=PHI1%C
+      N=PHI1%N
+      IF(N.EQ.0) THEN ! TAKE CARE OF STATE WITH DEALLOCATED ARRAYS ==========
+        CALL CI$ZEROPSI(PHI2)
+        RETURN  
+      END IF
+      IF(N.GT.PHI2%NX) THEN
+        CALL CI_EXPANDPSI(PHI2,N-PHI2%NX)
+      END IF
+      PHI2%N=N
+      PHI2%ID(1:N)=PHI1%ID(1:N)
+      PHI2%C(1:N) =PHI1%C(1:N)
+      PHI2%TCLEAN =PHI1%TCLEAN
       RETURN
       END SUBROUTINE CI$COPYPSI
 !
@@ -649,6 +743,7 @@ END MODULE CI_MODULE
       INTEGER(4)                       :: N,NORB,I,J,ICOUNT
 !     **************************************************************************
       N=PHI%N
+      IF(N.EQ.0) RETURN ! TAKE CARE OF ZERO STATES
       NORB=BIT_SIZE(PHI%ID(1))
       DO I=1,N
         ICOUNT=0
@@ -1398,12 +1493,16 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       INTEGER(4)                       :: N
       INTEGER(4)                       :: I,J,K,L,I1
 !     **************************************************************************
+      CALL CI$NEWPSI(PSI1,PSI%N)
+      CALL CI$NEWPSI(PSI2,PSI%N)
+      CALL CI$NEWPSI(PSI3,PSI%N/2)
+      CALL CI$NEWPSI(PSI4,PSI%N/4)
 !
 !     ==========================================================================
 !     == APPLY U-TENSOR                                                       ==
 !     == W=0.5D0*SUM_{I,J,K,L} W_{I,J,K,L} CDAGGER_I CDAGGER_J C_L C_K        ==
 !     ==========================================================================
-      CALL CI$ZEROPSI(HPSI)
+      CALL CI$NEWPSI(HPSI,PSI%N)
       N=HAM%U%N
       I=0
       J=0
@@ -1490,7 +1589,7 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       END
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE CI$1Pdenmat(iorb1,iorb2,PSI,cval)
+      SUBROUTINE CI$1PDENMAT(IORB1,IORB2,PSI,CVAL)
 !     **************************************************************************
 !     **  CIHAMI_ADDTOU                                                       **
 !     **************************************************************************
@@ -1499,13 +1598,14 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       TYPE(CISTATE_TYPE),INTENT(IN) :: PSI
       INTEGER(4)        ,INTENT(IN) :: IORB1
       INTEGER(4)        ,INTENT(IN) :: IORB2
-      complex(8)        ,intent(out):: cval
+      COMPLEX(8)        ,INTENT(OUT):: CVAL
       TYPE(CISTATE_TYPE)            :: PSI1
 !     **************************************************************************
+      CALL CI$NEWPSI(PSI1,PSI%N)
       CALL CI$COPYPSI(PSI,PSI1)
       CALL CI$ANNIHILATOR(PSI1,IORB2)
       CALL CI$CREATOR(PSI1,IORB1)
-      call ci$scalarproduct(psi,psi1,cval)
+      CALL CI$SCALARPRODUCT(PSI,PSI1,CVAL)
       CALL CI$DELETEPSI(PSI1)
       RETURN
       END
@@ -1519,6 +1619,7 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
 !     ** THE WAVE FUNCTIONS CONSISTS OF A STATISTICAL AVERAGE OF N-PARTICLE   **
 !     ** SLATER DETERMINANTS FOR DIFFERENT N                                  **
 !     **                                                                      **
+!     ** PSI MUST BE CREATED BY NEWPSI BEFORE CALLING THIS ROUTINE            **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
@@ -1533,9 +1634,12 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       TYPE(CISTATE_TYPE)              :: PSICOPY
       COMPLEX(8)                      :: CSVAR
       REAL(8)                         :: DIFF
-      INTEGER(4)                      :: I,j,N,K
+      INTEGER(4)                      :: I,J,N,K
       LOGICAL(4)       ,PARAMETER     :: TTEST=.FALSE.
 !     **************************************************************************
+      CALL CI$NEWPSI(PSIN,NCHI*NCHI)
+      CALL CI$NEWPSI(PSIADD2,NCHI*NCHI)
+      CALL CI$NEWPSI(PSICOPY,NCHI*NCHI)
 !
 !     ==========================================================================
 !     == DIAGONALIZE DENSITY MATRIX                                           ==
@@ -1550,18 +1654,17 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
 !     ==========================================================================
 !     == CONSTRUCT WAVE FUNCTION                                              ==
 !     ==========================================================================
-      CALL CI$DELETEPSI(PSIN)
       CALL CI$SETPSI(PSIN,1,(1.D0,0.D0))  ! VACUUM STATE
 !
-      CALL CI$DELETEPSI(PSI)
+      CALL CI$ZEROPSI(PSI)
       CSVAR=CMPLX(SQRT(FN(0)-FN(1)),KIND=8)
       CALL CI$SETPSI(PSI,1,CSVAR)
+!
       DO N=1,NCHI
 !       ========================================================================
 !       == APPLY NEXT CREATOR IN THE BASIS OF EIGENSTATES
 !       ========================================================================
-        CALL CI$DELETEPSI(PSIADD2)
-        CALL CI$DELETEPSI(PSICOPY)
+        CALL CI$ZEROPSI(PSIADD2)
         DO K=1,NCHI
           CALL CI$COPYPSI(PSIN,PSICOPY)  
           CALL CI$CREATOR(PSICOPY,K)
@@ -1569,17 +1672,15 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
           CALL CI$ADDPSI(PSIADD2,PSICOPY)
         ENDDO
         CALL CI$COPYPSI(PSIADD2,PSIN)       
-        CALL CI$DELETEPSI(PSIADD2)
-        CALL CI$CLEANPSI(PSIN)
 !       ========================================================================
-!       ==  ADD CONMTRIBUTION OF N-PARTICLE STATE TO WAVE FUNCTION            ==
+!       ==  ADD CONTRIBUTION OF N-PARTICLE STATE TO WAVE FUNCTION             ==
 !       ========================================================================
         CALL CI$COPYPSI(PSIN,PSICOPY)       
         CSVAR=CMPLX(SQRT(FN(N)-FN(N+1)),KIND=8)
         CALL CI$SCALEPSI(PSICOPY,CSVAR)
         CALL CI$ADDPSI(PSI,PSICOPY)
-        CALL CI$CLEANPSI(PSI)
       ENDDO       
+      CALL CI$CLEANPSI(PSI)
       CALL CI$DELETEPSI(PSIN)
       CALL CI$DELETEPSI(PSIADD2)
       CALL CI$DELETEPSI(PSICOPY)
@@ -1629,6 +1730,7 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       TYPE(CISTATE_TYPE)            :: PSI1
       COMPLEX(8)                    :: CSVAR1,CSVAR2,CSVAR3
 !     **************************************************************************
+      CALL CI$NEWPSI(PSI1,PSI0%N)
       CSVAR1=CMPLX(2.D0/(1.D0+ANNE),0.D0,KIND=8)
       CSVAR2=CMPLX(1.D0,0.D0,KIND=8)-CSVAR1
       CSVAR3=CMPLX(-DT**2/MPSI/(1.D0+ANNE),0.D0,KIND=8)
@@ -1683,6 +1785,7 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       COMPLEX(8)        ,PARAMETER  :: CMINUS=(-1.D0,0.D0)
       COMPLEX(8)                    :: CSVAR
 !     **************************************************************************
+      CALL CI$NEWPSI(PSICOPY,PSIM%N)
       CALL CI$COPYPSI(PSIM,PSICOPY)
       CALL CI$SCALEPSI(PSICOPY,CMINUS)
       CALL CI$ADDPSI(PSICOPY,PSIP)
@@ -1785,7 +1888,9 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
           END IF
         ENDDO
       ENDDO
-      E=VEC(NC)
+! VECSUM IS USED DUE TO CHRISTIAN'S REMARK. PETER DID NOT CHECK IT.
+!     E=VEC(NC)
+      E=VECSUM(NC)
       RETURN
       END
 !
@@ -1813,6 +1918,10 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       IF(NC.NE.NCHI**2+1) THEN
         CALL ERROR$STOP('CI_LAGRANGEMAT')
       END IF
+      CALL CI$NEWPSI(PSI1,PSI0%N)
+      CALL CI$NEWPSI(PSI2,PSI0%N)
+      CALL CI$NEWPSI(PSI3,PSI0%N/2)
+      CALL CI$NEWPSI(PSI4,PSI0%N/4)
 !
 !     ==========================================================================
 !     == DETERMINE EXPECTATION VALUES OF OPERATORS                            ==
@@ -1988,14 +2097,15 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       TYPE(CISTATE_TYPE)             :: PSI1,PSI2
       COMPLEX(8)                     :: CMAT2(NCHI,NCHI)
       COMPLEX(8)                     :: CMAT0
-      REAL(8)                        :: RMAT4(NCHI,NCHI,NCHI,NCHI)
       REAL(8)                        :: RMAT2(NCHI,NCHI)
       REAL(8)                        :: RMAT0
-      INTEGER(4)                     :: I,J,K,L,IC1,IC2
+      INTEGER(4)                     :: I,J,IC1
 !     **************************************************************************
       IF(NC.NE.NCHI**2+1) THEN
         CALL ERROR$STOP('...')
       END IF
+      CALL CI$NEWPSI(PSI1,PSIP%N)
+      CALL CI$NEWPSI(PSI2,PSIP%N)
 !
 !     ==========================================================================
 !     == DETERMINE EXPECTATION VALUES OF OPERATORS==============================
@@ -2063,7 +2173,6 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       REAL(8),           INTENT(IN)   :: VEC(NC)
       TYPE(CISTATE_TYPE)              :: PSI1
       TYPE(CISTATE_TYPE)              :: PSI2
-      REAL(8)                         :: SVAR
       INTEGER(4)                      :: I,J,IC,ICBAR
       COMPLEX(8)                      :: LAMBDA(NCHI,NCHI)
       COMPLEX(8)                      :: CE
@@ -2071,6 +2180,8 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       IF(NC.NE.NCHI**2+1) THEN
         CALL ERROR$STOP('...')
       END IF
+      CALL CI$NEWPSI(PSI1,PSI0%N)
+      CALL CI$NEWPSI(PSI2,PSI0%N)
 !
 !     ==========================================================================
 !     ==  DESYMMETRIZE                                                       ==
@@ -2161,6 +2272,11 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       REAL(8)                       :: EWAIT
       REAL(8)                       :: SVAR      
 !     **************************************************************************
+      CALL CI$NEWPSI(PSIM,200)
+      CALL CI$NEWPSI(PSIP,200)
+      CALL CI$NEWPSI(PSIBAR,200)
+      CALL CI$NEWPSI(HPSI,200)
+
 !     OPEN(123, FILE="CIINFO", STATUS="OLD")
       OPEN(123, FILE="CIINFO")
       REWIND 123
@@ -2233,7 +2349,6 @@ PRINT*,'PSI%N ',PSI0%N
         END IF
         CALL CI_LAGRANGE(NCHI,PSI0,PSIBAR,RHO2,V,E)
         CALL CI$COPYPSI(PSIBAR,PSIP)
-        CALL CI$DELETEPSI(PSIBAR)
 !
 !       ========================================================================
 !       == LIMIT THE GROWTH OF THE NUMBER OF SLATER DETERMINANTS              ==
@@ -2284,6 +2399,10 @@ PRINT*,'PSI%N ',PSI0%N
       E=EPOT    ! E=<PSI|H|PSI>
       V(:,:)=V(:,:)/SVAR
       CLOSE(123)
+      CALL CI$DELETEPSI(PSIM)
+      CALL CI$DELETEPSI(PSIP)
+      CALL CI$DELETEPSI(PSIBAR)
+      CALL CI$DELETEPSI(HPSI)
       RETURN
       END
 !
@@ -2299,7 +2418,7 @@ PRINT*,'PSI%N ',PSI0%N
       TYPE(CISTATE_TYPE),INTENT(IN)    :: PSI0         
       TYPE(CISTATE_TYPE),INTENT(INOUT) :: PSIP         
       INTEGER(4)                       :: I0,IP
-      INTEGER(4)                       :: ID0,IDP
+      INTEGER                          :: ID0,IDP
       INTEGER(4)                       :: NP
       INTEGER(4)                       :: COUNT
       REAL(8)           ,ALLOCATABLE   :: TEST(:)      
