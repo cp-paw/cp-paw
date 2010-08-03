@@ -3,6 +3,8 @@
 !**                                                                       **
 !**  Stefan Grimme, J. Comput.Chem. 25, 1463 (2004)                       **
 !**                                                                       **
+!**  (see S. Grimme, JCP132, 154104 (2010) for a more recent version)     **
+!**                                                                       **
 !***************************************************************************
 MODULE VDW_MODULE
 LOGICAL              :: TON=.FALSE.

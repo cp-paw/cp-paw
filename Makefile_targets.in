@@ -16,7 +16,7 @@ SHELL=/bin/sh
 ##                      (avoids none,dbg,prof)                         ##
 ##    all               everything exept parallel                      ##
 ##    all_new         everything except parallel with full dependencies##
-##    tools          all tools                                     ##
+##    tools          all tools                                         ##
 ##                                                                     ##
 #########################################################################
 ##                                                                     ##
@@ -108,8 +108,10 @@ else
   OBJTYPES=${OBJTYPES_SCALAR} 
   OBJTYPES_PRIMARY=${OBJTYPES_PRIMARY_SCALAR} 
 endif
-#TOOLS=newatom atom tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave lattice test
-TOOLS=tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave lattice stpa bands
+#TOOLS=newatom atom tra wave grab dos preopt converttra cleantra strc tostrc \
+#       toxyz 1davpot cmcwave lattice test
+TOOLS=tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave \
+       lattice stpa stpreport bands
 SCRIPTS=scripts
 #
 #########################################################################

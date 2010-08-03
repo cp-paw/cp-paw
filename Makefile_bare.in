@@ -247,6 +247,8 @@ OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 # Objects for test code
 OBJSTPA = \
           ${OBJDIR}/paw_stpa.o
+OBJSTPREPORT = \
+          ${OBJDIR}/paw_stpreport.o
 OBJLATTICE = \
           ${OBJDIR}/paw_lattice.o
 OBJTEST = \
@@ -340,6 +342,12 @@ ${PAWLIB}: ${LOBJS} ${MPE} ${OBJDIR}/version_writeparmfile.o
 #########################################################################
 ##  build Tools                                                        ##
 #########################################################################
+#
+${BINDIR}/paw_stpreport.x: ${OBJSTPREPORT} ${PAWLIB} ${BINDIR}/paw_stpa.x
+	${LINK} -o ${BINDIR}/paw_stpreport.x ${OBJSTPREPORT} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_stpreport:
+	rm -f ${OBJSTPREPORT} ${BINDIR}/paw_stpreport.x
 #
 ${BINDIR}/paw_stpa.x: ${OBJSTPA} ${PAWLIB} 
 	${LINK} -o ${BINDIR}/paw_stpa.x ${OBJSTPA} -L${OBJDIR} -lpaw ${LIBS}
@@ -474,6 +482,11 @@ $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 #__compile the tools____________________________________________________
+#
+${OBJSTPREPORT}: ${OBJDIR}/%.o : ${TOOLDIR}/Stpa/%.f90
+#	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	cp $< ${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJSTPA}: ${OBJDIR}/%.o : ${TOOLDIR}/Stpa/%.f90
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
