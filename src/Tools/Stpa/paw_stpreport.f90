@@ -831,3 +831,304 @@ end module stpreport_module
        enddo
       return
        end
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       subroutine writegpaw(file)
+!      *************************************************************************
+!      ** reads a single line from a specified file                           **
+!      *************************************************************************
+       use strings_module
+       implicit none
+       character(2)   :: sy !element symbol
+       real(8)        :: aez  ! atomic number
+       integer(4)     :: nc   ! #(core states)
+       integer(4)     :: nv   ! #(valence states)
+       character(8)   :: xctype !lda or gga
+       character(64)  :: xcname ! identifier for the xc functional
+       character(64)  :: reltype !type of relativistic treatment
+       real(8)        :: aeekin     ! all electron kinetic energy
+       real(8)        :: aexc       ! all electron xc energy
+       real(8)        :: aeehartree ! all electron coulomb energy
+       real(8)        :: aeekin_core ! core kinetic energy
+       integer(4)     :: npro ! #(projector functions)
+!      *************************************************************************
+       write(nfil,fmt=*)-'<?xml version="1.0"?>'
+       write(nfil,fmt=*)-'<paw_setup version="0.6">'
+       write(nfil,fmt='("<!--- ",a60," --->")')-'test setup writing'
+       write(nfil,fmt='("<!--- ",a60," --->")')-'Units: Hartree atomic units'
+!
+!      =========================================================================
+!      ==  atom element                                                       ==
+!      =========================================================================
+       sy=
+       aez=
+       nc=
+       nv=aez-nc
+!      == write string =========================================================
+       string=-'<atom'
+       call xml$addvarch(string,-'symbol',sy)
+       call xml$addvari4(string,-'Z',nint(aez))
+       call xml$addvari4(string,-'core',nc)
+       call xml$addvari4(string,-'valence',nv)
+       string=trim(string)//'/>'
+       write(nfil,a)string
+!
+!      =========================================================================
+!      ==  exchange correlation                                               ==
+!      == LDA VWN: Vosko, Wilk, Nusair                                        ==
+!      == LDA PZ: Perdew-Zunger                                               ==
+!      == LDA PW: Perdew-Wang                                                 ==
+!      == GGA PBE: Perdew-Burke-Ernzerhof                                     ==
+!      == GGA RPBE: Hammer, Hansen, Norskov                                   ==
+!      == GGA PW91: Perdew Wang 91                                            ==
+!      =========================================================================
+       xctype='GGA'
+       xcname='PBE'
+!      == write string =========================================================
+       string=-'<xc_functional'
+       call xml$addvarch(string,-'type',xctype)
+       call xml$addvarch(string,-'name',xcname)
+       string=trim(string)//'/>'
+       write(nfil,a)string
+!
+!      =========================================================================
+!      ==  Generator                                                          ==
+!      ==  non-relativistic, scalar-relativistic, relativistic                ==
+!      =========================================================================
+       reltype=-'scalar-relativistic'
+!      == write string =========================================================
+       string=-'<generator'
+       call xml$addvarch(string,-'type',reltype)
+       call xml$addvarch(string,-'name',-'CP-PAW 2010')
+       string=trim(string)//'/>'
+       write(nfil,a)string
+       if(nc.eq.2) then
+         write(nfil,a)-'frozen core: [He]'
+       else if(nc.eq.10) then
+         write(nfil,a)-'frozen core: [He]'
+       else if(nc.eq.18) then
+         write(nfil,a)-'frozen core: [Ar]'
+       else if(nc.eq.36) then
+         write(nfil,a)-'frozen core: [Kr]'
+       else if(nc.eq.54) then
+         write(nfil,a)-'frozen core: [Xe]'
+       else if(nc.eq.86) then
+         write(nfil,a)-'frozen core: [Rn]'
+! here the other cases
+       else
+         call error$msg('core not identified')
+         call error$stop('writegpaw')
+       end if
+       write(nfil,a)-'</generator>'
+!
+!      =========================================================================
+!      ==  Energies                                                           ==
+!      =========================================================================
+       aeekin=
+       aeexc=
+       aeehartree=
+       aeekin_core=
+!      == write string =========================================================
+       string=-'<aeenergy'
+       call xml$addvarr8(string,-'kinetic',aeekin)
+       call xml$addvarr8(string,-'xc',aeexc)
+       call xml$addvarr8(string,-'electrostatic',aeehartree)
+       call xml$addvarr8(string,-'total',aeekin+aeexc+aeehartree)
+       string=trim(string)//'/>'
+       write(nfil,a)string
+       string=-'<core_energy'
+       call xml$addvarr8(string,-'kinetic',aeekin_core)
+       string=trim(string)//'/>'
+       write(nfil,a)string
+!
+!      =========================================================================
+!      ==  valence states                                                     ==
+!      =========================================================================
+!unclear
+       npro=
+       idpro=
+       lpro=
+       epro=
+       fpro=
+!
+!      == write string =========================================================
+       string=-'<valence_states>' 
+       write(nfil,a)string
+       do ipro=1,npro
+         string=-'<state' 
+         call xml$addvari4(string,-'n',nnofi(ipro)+llofi(ipro)+1)
+         if(fofi(ib).ne.0.d0) then
+           call xml$addvari4(string,-'f',nint(fofi(ib)))
+         end if
+         call xml$addvari4(string,-'e',nint(eofi(ib)))
+         write(idpro(ipro),*)ipro
+         call xml$addvarch(string,-'id',idpro)
+         string=trim(string)//'/>'
+         write(nfil,a)string
+       enddo
+       string=-'</valence_states>' 
+       write(nfil,a)string
+!
+!      =========================================================================
+!      ==  radial gridses                                                     ==
+!      =========================================================================
+       dex=
+       r1=
+       nr=
+!
+!      == write string =========================================================
+       string=-'<radial_grid'
+       call xml$addvarch(string,-'eq',-'r=a*(exp(d*i)-1)')
+       call xml$addvarr8(string,-'a',r1)
+       call xml$addvarr8(string,-'d',dex)
+       call xml$addvari4(string,-'n',nr)
+       call xml$addvari4(string,-'istart',0)
+       call xml$addvari4(string,-'iend',nr-1)
+       call xml$addvarch(string,-'id','shlog')
+       string=trim(string)//'/>'
+       write(nfil,a)string
+!
+!      =========================================================================
+!      ==  shape function for compensation charge                             ==
+!      =========================================================================
+       rcsm=
+!
+!      == write string =========================================================
+       string=-'<shape_function'
+       call xml$addvarch(string,-'type',-'gauss')
+       call xml$addvarr8(string,-'rc',rcsm)
+       string=trim(string)//'/>'
+       write(nfil,a)string
+!
+!      =========================================================================
+!      ==  radial functions                                                   ==
+!      =========================================================================
+       aecore=
+       pscore=
+       aevalencerho=
+       psvalencerho=
+       vzero=
+!
+!      == write string =========================================================
+       string=-'<ae_core_density'
+       call xml$addvarch(string,-'grid',-'shlog')
+       string=trim(string)//'/>'
+       write(nfil,a)string
+       write(nfil,fmt='(5e20.10)')aecore(:)                  
+       string=-'</ae_core_density>'
+       write(nfil,a)string
+!
+       string=-'<ps_core_density'
+       call xml$addvarch(string,-'grid',-'shlog')
+       string=trim(string)//'/>'
+       write(nfil,a)string
+       write(nfil,fmt='(5e20.10)')pscore(:)                  
+       string=-'</ps_core_density>'
+       write(nfil,a)string
+!
+       string=-'<ae_valence_density'
+       call xml$addvarch(string,-'grid',-'shlog')
+       string=trim(string)//'/>'
+       write(nfil,a)string
+       write(nfil,fmt='(5e20.10)')aevalencerho(:)                  
+       string=-'</ae_valence_density>'
+       write(nfil,a)string
+!
+       string=-'<ps_valence_density'
+       call xml$addvarch(string,-'grid',-'shlog')
+       string=trim(string)//'/>'
+       write(nfil,a)string
+       write(nfil,fmt='(5e20.10)')psvalencerho(:)                  
+       string=-'</ps_valence_density>'
+       write(nfil,a)string
+!
+       string=-'<zero_potential'
+       call xml$addvarch(string,-'grid',-'shlog')
+       string=trim(string)//'/>'
+       write(nfil,a)string
+       write(nfil,fmt='(5e20.10)')vzero(:)                  
+       string=-'</zero_potential>'
+       write(nfil,a)string
+!
+!      =========================================================================
+!      ==  partial waves and projector functions                              ==
+!      =========================================================================
+       vstateid
+       aephi 
+       psphi
+       pro
+!
+       do ipro=1,npro
+         string=-'<ae_partial_wave'
+         call xml$addvarch(string,-'state',idpro(ipro))
+         call xml$addvarch(string,-'grid',-'shlog')
+         string=trim(string)//'/>'
+         write(nfil,a)string
+         write(nfil,fmt='(5e20.10)')aephi(:,ipro)                  
+         string=-'</ae_partial_wave>'
+         write(nfil,a)string
+!
+         string=-'<pseudo_partial_wave'
+         call xml$addvarch(string,-'state',idpro(ipro))
+         call xml$addvarch(string,-'grid',-'shlog')
+         string=trim(string)//'/>'
+         write(nfil,a)string
+         write(nfil,fmt='(5e20.10)')psphi(:,ipro)                  
+         string=-'</pseudo_partial_wave>'
+         write(nfil,a)string
+!
+         string=-'<projector function'
+         call xml$addvarch(string,-'state',idpro(ipro))
+         call xml$addvarch(string,-'grid',-'shlog')
+         string=trim(string)//'/>'
+         write(nfil,a)string
+         write(nfil,fmt='(5e20.10)')psphi(:,ipro)                  
+         string=-'</projector function'
+         write(nfil,a)string
+       enddo
+!
+!      =========================================================================
+!      ==  kinetic energy differences                                         ==
+!      =========================================================================
+       npro=
+       dtkin(:,:)=
+!
+!      == write string =========================================================
+       string=-'<kinetic_energy_differences>'
+       write(nfil,a)string
+       write(nfil,fmt='(5e20.10)')dtkin(:,:)                  
+       string=-'</kinetic_energy_differences>'
+       write(nfil,a)string
+!
+!      =========================================================================
+!      ==  close down                                                         ==
+!      =========================================================================
+       string=-'</paw_setup>'
+       write(nfil,a)string
+       return
+       end
+
+
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       subroutine xml$addvari4(string,id,val)
+!      *************************************************************************
+!      ** reads a single line from a specified file                           **
+!      *************************************************************************
+       implicit none
+       character(*),intent(in) :: id
+       integer(4)  ,intent(in) :: val
+       character(*),intent(inout):: string
+       character(64)           :: numstring
+       integer                 :: length
+!      *************************************************************************
+       pos=len_trim(string)
+       write(numstring,*)val
+       if(pos+len_trim(id)+4+len_trim(numstring).gt.len(string)) then
+         call error$stop('string is too small')
+         call error$stop('xml$advari4')
+       end if
+       string=trim(string)//' '//trim(adjustl(id))//'="'
+       string=trim(string)//trim(adjustl(numstring))//'"'
+       return
+       end

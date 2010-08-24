@@ -237,11 +237,11 @@ END MODULE VDW_MODULE
         REAL(8)               :: DFDMPBYFDMP
         REAL(8)               :: FAC !-1/D*(DE/DD)
 !       ********************************************************************
-        D=SUM(R(:)**2)
+        D=sqrt(SUM(R(:)**2))
 !       == EQ.3 IN GRIMME
-        FDMP=1.D0/(1.D0+EXP(-ALPHA*(D/R0)-1))
-        DFDMPBYFDMP=-FDMP*(-ALPHA/R0*EXP(-ALPHA*(D/R0)-1))
-!       == EQ.2 IN GRIMME
+        FDMP=1.D0/(1.D0+EXP(-ALPHA*(D/R0-1.d0)))
+        DFDMPBYFDMP=-FDMP*(-ALPHA/R0*EXP(-ALPHA*(D/R0-1.d0)))
+!       == Eq.2 IN GRIMME
         E=-S6*C6/D**6*FDMP
         FAC=-(-6.D0*E/D+E*DFDMPBYFDMP)/D
         F(:)=FAC*R(:)

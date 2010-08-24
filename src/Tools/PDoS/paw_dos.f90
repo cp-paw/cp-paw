@@ -26,6 +26,7 @@ END MODULE SPINDIR_MODULE
       INTEGER(4)                 :: NSET
       INTEGER(4)   ,ALLOCATABLE :: LMX(:)
       REAL(8)      ,ALLOCATABLE :: RPOS(:,:)
+      real(8)                   :: rbas(3,3) ! lattice vectors
       REAL(8)      ,ALLOCATABLE :: EIG(:,:,:)
       REAL(8)      ,ALLOCATABLE :: SET(:,:,:,:)
       CHARACTER(32),ALLOCATABLE :: LEGEND(:)
@@ -86,6 +87,7 @@ END MODULE SPINDIR_MODULE
       DEALLOCATE(NBARR)
       LENG=NPRO
       ALLOCATE(LMX(NAT))
+      CALL PDOS$GETR8A('RBAS',3*3,RBAS)
       ALLOCATE(RPOS(3,NAT))
       CALL PDOS$GETR8A('R',3*NAT,RPOS)
       ALLOCATE(EIG(NB,NKPT,NSPIN))
@@ -107,7 +109,7 @@ END MODULE SPINDIR_MODULE
 !     ==================================================================
 !     ==  READ PREDEFINED ORBITALS                                    ==
 !     ==================================================================
-      CALL READCNTL$ORBITAL(LENG,NAT,LMX,RPOS)
+      CALL READCNTL$ORBITAL(LENG,NAT,LMX,rbas,RPOS)
                             CALL TRACE$PASS('AFTER READCNTL$ORBITAL')
 !
 !     ==================================================================
@@ -116,8 +118,7 @@ END MODULE SPINDIR_MODULE
       CALL READCNTL$SETNUMBER(NSET)
       ALLOCATE(SET(NB,NKPT,NSPIN,NSET))
       ALLOCATE(LEGEND(NSET))
-      CALL READCNTL$SETS(NB,NKPT,NSPIN,NSET &
-     &                  ,NAT,LMX,RPOS,LENG &
+      CALL READCNTL$SETS(NB,NKPT,NSPIN,NSET,NAT,LMX,rbas,RPOS,LENG &
      &                  ,SET,LEGEND)
       DEALLOCATE(LMX)
 
@@ -548,7 +549,7 @@ END MODULE SPINDIR_MODULE
       END MODULE ORBITALS_MODULE
 !
 !     ..................................................................
-      SUBROUTINE READONEORB(LL_CNTL,NAT,LMX,RPOS,NPRO,ORBITAL)
+      SUBROUTINE READONEORB(LL_CNTL,NAT,LMX,rbas,RPOS,NPRO,ORBITAL)
 !     ******************************************************************
 !     **                                                              **
 !     ** READ  AN ORBITAL BLOCK FROM LIST LL_CNTL AND RETURN          **
@@ -561,6 +562,7 @@ END MODULE SPINDIR_MODULE
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NAT
       INTEGER(4)   ,INTENT(IN) :: LMX(NAT)
+      REAL(8)      ,INTENT(IN) :: Rbas(3,3)
       REAL(8)      ,INTENT(IN) :: RPOS(3,NAT)
       INTEGER(4)   ,INTENT(IN) :: NPRO
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL
@@ -571,6 +573,7 @@ END MODULE SPINDIR_MODULE
       CHARACTER(32)            :: ATOM1,ATOMZ,ATOMX
       CHARACTER(32)            :: ORBITALNAME1 
       CHARACTER(8)             :: TYPE
+      integer(4)               :: it3(3),it3z(3),it3x(3)
       REAL(8)                  :: FAC
       LOGICAL(4)               :: TCHK
       REAL(8)                  :: DRZ(3)
@@ -605,7 +608,7 @@ END MODULE SPINDIR_MODULE
       CALL LINKEDLIST$EXISTD(LL_CNTL,'ATOM',1,TCHK)
       IF(TCHK) THEN   
         CALL LINKEDLIST$GET(LL_CNTL,'ATOM',1,ATOM1)
-        CALL RESOLVEATOM(ATOM1,IAT)
+        CALL RESOLVEATOM(ATOM1,IAT,it3)
         CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,TYPE)
         TYPE=+TYPE
         CALL RESOLVETYPE(LMXX,TYPE,FAC,ORB)
@@ -616,7 +619,8 @@ END MODULE SPINDIR_MODULE
         DRZ(:)=0.D0
         DRZ(3)=1.D0
         DRX(:)=0.D0
-        DRX(3)=1.D0
+        DRX(1)=1.D0
+        CALL PDOS$GETR8A('RBAS',9,RBAS) !added
         CALL LINKEDLIST$EXISTD(LL_CNTL,'Z',1,TCHK)
         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'Z',1,DRZ(:))
         CALL LINKEDLIST$EXISTD(LL_CNTL,'X',1,TCHK)
@@ -624,15 +628,21 @@ END MODULE SPINDIR_MODULE
         CALL LINKEDLIST$EXISTD(LL_CNTL,'NNZ',1,TCHK)
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'NNZ',1,ATOMZ)
-          CALL RESOLVEATOM(ATOMZ,IAT2)
-          DRZ(:)=RPOS(:,IAT2)-RPOS(:,IAT)
+          CALL RESOLVEATOM(ATOMZ,IAT2,IT3Z)
+          DRZ(:)=RPOS(:,IAT2)-RPOS(:,IAT) &
+       &        +RBAS(:,1)*REAL(IT3Z(1)-IT3(1),KIND=8) &
+       &        +RBAS(:,2)*REAL(IT3Z(2)-IT3(2),KIND=8) &
+       &        +RBAS(:,3)*REAL(IT3Z(3)-IT3(3),KIND=8)
           CALL LINKEDLIST$SET(LL_CNTL,'Z',0,DRZ(:))
         END IF
         CALL LINKEDLIST$EXISTD(LL_CNTL,'NNX',1,TCHK)
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'NNX',1,ATOMX)
-          CALL RESOLVEATOM(ATOMX,IAT2)
-          DRX(:)=RPOS(:,IAT2)-RPOS(:,IAT)
+          CALL RESOLVEATOM(ATOMX,IAT2,IT3X)
+          DRX(:)=RPOS(:,IAT2)-RPOS(:,IAT) &
+       &        +RBAS(:,1)*REAL(IT3X(1)-IT3(1),KIND=8) &
+       &        +RBAS(:,2)*REAL(IT3X(2)-IT3(2),KIND=8) &
+       &        +RBAS(:,3)*REAL(IT3X(3)-IT3(3),KIND=8)
           CALL LINKEDLIST$SET(LL_CNTL,'X',0,DRX(:))
         END IF
 !       
@@ -835,13 +845,32 @@ END MODULE SPINDIR_MODULE
       END SUBROUTINE NORMALIZEORBITAL
 !
 !     ..................................................................
-      SUBROUTINE RESOLVEATOM(ATOM,IAT)
+      SUBROUTINE RESOLVEATOM(ATOMEX,IAT,IT)
+!     **************************************************************************
+!     **  RESOLVES THE EXTENDED ATOM NAME NOTATION, WHICH INCLUDES            **
+!     **  A LATTICE TRANSLATION                                               **
+!     **                                                                      **
+!     **  THE EXTENDED NOTATION INCLUDES AN INTEGER LATTICE TRANSLATIONS      **
+!     **  IN THE ATOM NAME FOLLOWING A COLON                                  **
+!     **                                                                      **
+!     **   'O_23:+1-1+1'  ATOM 'O_23' SHIFTED BY RBAS(:,1)-RBAS(:,2)+RBAS(:,3)**
+!     **                                                                      **
+!     **   THE '+'SIGNS ARE NOT REQUIRED.                                     **
+!     **   ONLY SINGLE-DIGIT TRANSLATIONS ARE PERMITTED                       **
+!     **                                                                      **
+!     ** analogous to STRCIN_RESOLVEEXTENDEDNAME(XNAME,NAME,IT)
+!     **                                                                      **
+!     **************************************************************************
       USE PDOS_MODULE
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ATOM
+      CHARACTER(*),INTENT(IN)  :: ATOMex
       INTEGER(4)  ,INTENT(OUT) :: IAT
+      INTEGER(4)  ,intent(out) :: It(3) !integer translation
       INTEGER(4)               :: I
+      character(32)            :: atom
 !     ******************************************************************
+      call RESOLVEEXTENDEDNAME(atomex,atom,IT)
+!
       DO I=1,NAT
         IF(ATOM.EQ.ATOMID(I)) THEN
           IAT=I
@@ -853,6 +882,71 @@ END MODULE SPINDIR_MODULE
       CALL ERROR$STOP('RESOLVEATOM')
       RETURN
       END SUBROUTINE RESOLVEATOM
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RESOLVEEXTENDEDNAME(XNAME,NAME,IT)
+!     **************************************************************************
+!     **  RESOLVES THE EXTENDED ATOM NAME NOTATION, WHICH INCLUDES            **
+!     **  A LATTICE TRANSLATION                                               **
+!     **                                                                      **
+!     **  THE EXTENDED NOTATION INCLUDES AN INTEGER LATTICE TRANSLATIONS      **
+!     **  IN THE ATOM NAME FOLLOWING A COLON                                  **
+!     **                                                                      **
+!     **   'O_23:+1-1+1'  ATOM 'O_23' SHIFTED BY RBAS(:,1)-RBAS(:,2)+RBAS(:,3)**
+!     **                                                                      **
+!     **   THE '+'SIGNS ARE NOT REQUIRED.                                     **
+!     **   ONLY SINGLE-DIGIT TRANSLATIONS ARE PERMITTED                       **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: XNAME  ! EXTENDED ATOM NAME
+      CHARACTER(*),INTENT(OUT):: NAME   ! NON-EXTENDED ATOM NAME
+      INTEGER(4)  ,INTENT(OUT):: IT(3)  ! INTEGER LATTICE TRANSLATIONS
+      INTEGER(4)              :: ICOLON ! POSITION OF THE COLON IN XNAME
+      INTEGER(4)              :: IPOS,IND,SGN
+      INTEGER(4)              :: ICH    ! ASCII NUMBER OF THE SELECTED LETTER
+!     **************************************************************************
+      ICOLON=INDEX(XNAME,':')
+!     == RETURN IF NO TRANSLATION VECTOR GIVEN =================================
+      IF(ICOLON.EQ.0) THEN
+        NAME=XNAME
+        IT(:)=0
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == RESOLVE EXTENDED ATOM NAME                                           ==
+!     ==========================================================================
+      NAME=XNAME(:ICOLON-1)
+      IPOS=ICOLON+1
+      IND=0
+      DO WHILE(IND.LT.3) 
+        ICH=IACHAR(XNAME(IPOS:IPOS))
+!       ==  IACHAR('+')=43; IACHAR('-')=45; IACHAR('0')=48; IACHAR('1')=49;...
+        IF(ICH.GE.48.AND.ICH.LE.57) THEN
+          IND=IND+1
+          IT(IND)=SGN*(ICH-48)
+          SGN=+1
+        ELSE IF(ICH.EQ.43) THEN
+          SGN=+1
+        ELSE IF(ICH.EQ.45) THEN
+          SGN=-1
+        ELSE
+          CALL ERROR$MSG('ILLEGAL CHARACTER IN EXTENDED ATOM NOTATION')  
+          CALL ERROR$CHVAL('EXT. NAME ',XNAME)
+          CALL ERROR$CHVAL('ILLEGAL CHARACTER ',XNAME(IPOS:IPOS))
+          CALL ERROR$STOP('STRCIN_RESOLVEEXTENDEDNAME')
+        END IF
+        IPOS=IPOS+1
+      ENDDO
+      IF(XNAME(IPOS:).NE.' ') THEN
+        CALL ERROR$MSG('LETTERS FOUND BEYOND END OF EXTENDED ATOM NOTATION')  
+        CALL ERROR$CHVAL('EXT. NAME ',XNAME)
+        CALL ERROR$CHVAL('ADDITIONAL LETTERS ',XNAME(IPOS:))
+        CALL ERROR$STOP('STRCIN_RESOLVEEXTENDEDNAME')
+      END IF
+      RETURN
+      END
 !
 !     ..................................................................
 MODULE READCNTL_MODULE
@@ -960,7 +1054,7 @@ END MODULE READCNTL_MODULE
       END SUBROUTINE READCNTL$GRID
 !
 !     ..................................................................
-      SUBROUTINE READCNTL$ORBITAL(NPRO,NAT,LMX,RPOS)
+      SUBROUTINE READCNTL$ORBITAL(NPRO,NAT,LMX,rbas,RPOS)
 !     ******************************************************************
 !     ******************************************************************
       USE READCNTL_MODULE
@@ -969,7 +1063,8 @@ END MODULE READCNTL_MODULE
       INTEGER(4)   ,INTENT(IN) :: NPRO
       INTEGER(4)   ,INTENT(IN) :: NAT
       INTEGER(4)   ,INTENT(IN) :: LMX(NAT)
-      REAL(8)      ,INTENT(IN) :: RPOS(3,NAT)
+      REAL(8)      ,INTENT(IN) :: Rbas(3,3) ! lattice vectors
+      REAL(8)      ,INTENT(IN) :: RPOS(3,NAT)  !atomic positions
       CHARACTER(32)            :: ORBITALNAME
       COMPLEX(8)               :: ORBITAL(NPRO)
       COMPLEX(8)               :: ORBITAL1(NPRO)
@@ -989,7 +1084,7 @@ END MODULE READCNTL_MODULE
         ORBITAL(:)=0.D0
         DO ITH=1,NUM
           CALL LINKEDLIST$SELECT(LL_CNTL,'ORB',ITH)
-          CALL READONEORB(LL_CNTL,NAT,LMX,RPOS,NPRO,ORBITAL1)
+          CALL READONEORB(LL_CNTL,NAT,LMX,rbas,RPOS,NPRO,ORBITAL1)
           ORBITAL(:)=ORBITAL(:)+ORBITAL1(:)
           CALL LINKEDLIST$SELECT(LL_CNTL,'..')
         ENDDO
@@ -1024,7 +1119,7 @@ END MODULE READCNTL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$SETS(NB,NKPT,NSPIN,NSET &
-     &                        ,NAT,LMX,RPOS,LENG,SET,LEGEND)
+     &                        ,NAT,LMX,rbas,RPOS,LENG,SET,LEGEND)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -1038,6 +1133,7 @@ END MODULE READCNTL_MODULE
       INTEGER(4)   ,INTENT(IN)  :: NAT
       INTEGER(4)   ,INTENT(IN)  :: LMX(NAT)
       INTEGER(4)   ,INTENT(IN)  :: LENG
+      REAL(8)      ,INTENT(IN)  :: Rbas(3,3)
       REAL(8)      ,INTENT(IN)  :: RPOS(3,NAT)
       REAL(8)      ,INTENT(OUT) :: SET(NB,NKPT,NSPIN,NSET)
       CHARACTER(32),INTENT(OUT) :: LEGEND(NSET)
@@ -1074,7 +1170,7 @@ END MODULE READCNTL_MODULE
         ORBITAL1=0.D0 
         DO IORB1=1,NORB1
           CALL LINKEDLIST$SELECT(LL_CNTL,'ORB1',IORB1) 
-          CALL READONEORB(LL_CNTL,NAT,LMX,RPOS,LENG,ORBITALI)
+          CALL READONEORB(LL_CNTL,NAT,LMX,rbas,RPOS,LENG,ORBITALI)
           ORBITAL1(:)=ORBITAL1(:)+ORBITALI(:)
           CALL LINKEDLIST$SELECT(LL_CNTL,'..')
         ENDDO
@@ -1082,7 +1178,7 @@ END MODULE READCNTL_MODULE
         ORBITAL2=0.D0 
         DO IORB2=1,NORB2
           CALL LINKEDLIST$SELECT(LL_CNTL,'ORB2',IORB2)
-          CALL READONEORB(LL_CNTL,NAT,LMX,RPOS,LENG,ORBITALI)
+          CALL READONEORB(LL_CNTL,NAT,LMX,rbas,RPOS,LENG,ORBITALI)
           ORBITAL2(:)=ORBITAL2(:)+ORBITALI(:)
           CALL LINKEDLIST$SELECT(LL_CNTL,'..')
         ENDDO
@@ -1199,7 +1295,7 @@ END MODULE READCNTL_MODULE
         CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB',NORB)
         DO IORB=1,NORB
           CALL LINKEDLIST$SELECT(LL_CNTL,'ORB',IORB)
-          CALL READONEORB(LL_CNTL,NAT,LMX,RPOS,LENG,ORBITALI)
+          CALL READONEORB(LL_CNTL,NAT,LMX,rbas,RPOS,LENG,ORBITALI)
           CALL SET$PROJECT(LENG,NB,NKPT,NSPIN,ORBITALI,ORBITALI,SET(1,1,1,ISET))
           CALL LINKEDLIST$SELECT(LL_CNTL,'..')
         ENDDO

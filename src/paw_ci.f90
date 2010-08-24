@@ -100,9 +100,21 @@ END MODULE CI_MODULE
       MASK=IBSET(0,POS)-1   ! =2**POS-1
       JVAL=IAND(JVAL,MASK)  ! SET ALL BITS BEYOND POS TO ZERO
       DO I=1,NSHIFTS
-        IF(POS.LT.ISHIFTS(I)) CYCLE
-        JVAL=IEOR(JVAL,ISHFT(JVAL,-ISHIFTS(I)))
+        IF(POS.LT.ISHIFTS(I)) CYCLE   !this statement is not necessary and very! costly
+       JVAL=IEOR(JVAL,ISHFT(JVAL,-ishifts(i)))
       ENDDO
+!!$!     this is an alternative that is faster but requires 8-bit integer
+!!$      if(reallyfast) then
+!!$        JVAL=IAND(JVAL,MASK)  ! SET ALL BITS BEYOND POS TO ZERO
+!!$        JVAL=IEOR(JVAL,ISHFT(JVAL,-128))
+!!$        JVAL=IEOR(JVAL,ISHFT(JVAL,-64))
+!!$        JVAL=IEOR(JVAL,ISHFT(JVAL,-32))
+!!$        JVAL=IEOR(JVAL,ISHFT(JVAL,-16))
+!!$        JVAL=IEOR(JVAL,ISHFT(JVAL,-8))
+!!$        JVAL=IEOR(JVAL,ISHFT(JVAL,-4))
+!!$        JVAL=IEOR(JVAL,ISHFT(JVAL,-2))
+!!$        JVAL=IEOR(JVAL,ISHFT(JVAL,-1))
+!!$      end if
       TMINUS=IAND(JVAL,ONE).EQ.1
       RETURN
       END
@@ -471,7 +483,7 @@ END MODULE CI_MODULE
           I1=I1+1
           I2=I2+1
         ELSE
-          IF(PHI1%ID(I1).LT.PHI2%ID(2)) THEN
+          IF(PHI1%ID(I1).LT.PHI2%ID(I2)) THEN
             I1=I1+1
           ELSE
             I2=I2+1
@@ -508,7 +520,7 @@ END MODULE CI_MODULE
           I1=I1+1
           I2=I2+1
         ELSE
-          IF(PHI1%ID(I1).LT.PHI2%ID(2)) THEN
+          IF(PHI1%ID(I1).LT.PHI2%ID(I2)) THEN
             PHI1%ID(N)=PHI1%ID(I1)
             PHI1%C(N)=PHI1%C(I1)
             I1=I1+1
