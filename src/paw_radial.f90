@@ -3124,7 +3124,7 @@ print*,'nph*dt ',nph*dt,nph,dt
       INTEGER(4),PARAMETER  :: NP=1000
       REAL(8)   ,PARAMETER  :: XMIN=-1.D+1
       REAL(8)   ,PARAMETER  :: XMAX=4.D+1
-      REAL(8)   ,PARAMETER  :: DX=(XMAX-XMIN)/REAL(NP-1,8)
+      REAL(8)   ,PARAMETER  :: DX=(XMAX-XMIN)/(NP-1) !rounding errors acceptable
       REAL(8)               :: X
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)

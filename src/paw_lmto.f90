@@ -1942,270 +1942,272 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
       CLOSE(100)
       RETURN
       END
- !
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_CHIFROMPHI(GID,NR,LXX,RASA,RAD &
-     &                           ,LNXPHI,LOXPHI,ISCATT,PHI &
-     &                           ,LNXCHI,LOXCHI,AMAT,BMAT)
-!     **************************************************************************
-!     **  DEFINES PROJECTOR FUNCTIONS FOR LOCAL ORBITALS IN TERMS OF          **
-!     **  THE CONVENTIONAL PARTIAL WAVE PROJECTOR FUNCTIONS                   **
-!     **                                                                      **
-!     **     <P_CHI_I|= SUM_J BMAT(I,J) <P_PHI_J|                             **
-!     **     |CHI_I>  = SUM_J |PHI_J> AMAT(J,I)                               **
-!     **                                                                      **
-!     **  THE LOCAL ORBITALS ARE SELECTED BY NORB WHICH SPECIFIES THE NUMBER  **
-!     **  OF LOCAL ORBITALS PER ANGULAR MOMENTUM CHANNEL.                     **
-!     **                                                                      **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID     ! GRID ID
-      INTEGER(4),INTENT(IN) :: NR      ! #(RADIAL GRID POINTS)
-      INTEGER(4),INTENT(IN) :: LXX     ! X(ANGULAR MOMENTUM)
-      REAL(8)   ,INTENT(IN) :: RASA    ! ATOMIC RADIUS             
-      REAL(8)   ,INTENT(IN) :: RAD(LXX+1)   ! EXTENT OF HEAD FUNCTIONS
-      INTEGER(4),INTENT(IN) :: LNXPHI  ! #(PARTIAL WAVES)
-      INTEGER(4),INTENT(IN) :: LOXPHI(LNXPHI)! ANGULAR MOMENTUM PER PARTIAL WAVE
-      INTEGER(4),INTENT(IN) :: ISCATT(LNXPHI)! RELATIVE TO HIGHEST VALENCE STATE
-      REAL(8)   ,INTENT(IN) :: PHI(NR,LNXPHI)! PARTIAL WAVES
-      INTEGER(4),INTENT(IN) :: LNXCHI        ! #(LOCAL ORBITALS)
-      INTEGER(4),INTENT(OUT):: LOXCHI(LNXCHI)  ! ANGULAR MOMENTUM PER LOCAL ORB.
-      REAL(8)   ,INTENT(OUT):: BMAT(LNXCHI,LNXPHI) ! MAPPING OF PROJECTORS
-      REAL(8)   ,INTENT(OUT):: AMAT(LNXPHI,LNXCHI)     ! MAPPING OF WAVE FUNCTIONS
-      REAL(8)   ,ALLOCATABLE:: CHI(:,:)
-      REAL(8)   ,ALLOCATABLE:: CHI1(:,:)
-      REAL(8)   ,ALLOCATABLE:: A(:,:)
-      REAL(8)   ,ALLOCATABLE:: B(:,:)
-      REAL(8)   ,ALLOCATABLE:: A1(:,:)
-      REAL(8)   ,ALLOCATABLE:: MAT(:,:)
-      REAL(8)   ,ALLOCATABLE:: MATINV(:,:)
-      REAL(8)               :: R(NR)       
-      REAL(8)   ,ALLOCATABLE:: G(:)        
-      REAL(8)   ,PARAMETER  :: RCG=1.D-2
-      REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:)
-      REAL(8)               :: SVAR1,SVAR2
-      INTEGER(4)            :: IR
-      INTEGER(4)            :: NX,N,LX,L,LN,LNCHI,NOFL,NOFL2,ISVAR
-      INTEGER(4)            :: N1,N2,LN1,LN2,L1,L2
-      CHARACTER(64)         :: FILE
-      INTEGER(4)            :: NORB(LXX+1)
-      REAL(8)               :: VAL1,DER1,VAL2,DER2
-      REAL(8)               :: DR
-      REAL(8)               :: RCUT(LNXPHI)
-!     **************************************************************************
-                            CALL TRACE$PUSH('LMTO_CHIFROMPHI')
-      CALL RADIAL$R(GID,NR,R)
-      LX=MAXVAL(LOXPHI)
-      NORB(:)=0
-      DO LN=1,LNXCHI
-        L=LOXCHI(LN)
-        NORB(L+1)=NORB(L+1)+1
-      ENDDO
-!
-      IF(LX.GT.LXX) THEN
-        CALL ERROR$MSG('LX>LXX')
-        CALL ERROR$STOP('LMTO_CHIFROMPHI')
-      END IF
-!
-!     ==========================================================================
-!     ==  START WITH PARTIAL WAVES AS LOCAL ORBITALS                          ==
-!     == |CHI_I>=SUM_I |PHI_J>A(J,I)                                          ==
-!     ==========================================================================
-      ALLOCATE(CHI(NR,LNXPHI))     
-      CHI(:,:)=0.D0
-      ALLOCATE(A(LNXPHI,LNXPHI))        
-      A(:,:)=0.D0
-      DO LN=1,LNXPHI
-        L=LOXPHI(LN)
-        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-        A(LN,LN)=1.D0
-        CHI(:,LN)=PHI(:,LN)
-      ENDDO
-!
-!     ==========================================================================
-!     == MAKE HEAD FUNCTION ANTIBONDING WITH NODE AT RCUT ======================
-!     ==========================================================================
-      ALLOCATE(AUX(NR))
-      ALLOCATE(AUX1(NR))
-      DO L=0,LX
-        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-        NOFL=0
-        DO LN=1,LNXPHI
-          IF(LOXPHI(LN).NE.L) CYCLE
-          NOFL=NOFL+1
-          IF(ISCATT(LN).GT.0) CYCLE ! CONSIDER ONLY HEAD FUNCTIONS
-!         == SEARCH FOR NEXT PARTIAL WAVE WITH THIS L =========================
-          LN1=0
-          DO LN2=1,LNXPHI
-            IF(LOXPHI(LN2).NE.L) CYCLE  
-!ALTERNATIVE 1
-            LN1=LN2
-            IF(ISCATT(LN2).EQ.1) EXIT
-!ALTERNATIVE 2
-!            IF(ISCATT(LN2).EQ.1) THEN
-!              LN1=LN2
-!              EXIT
-!            END IF
-!END ALTERNATIVES
-          ENDDO
-          IF(LN1.EQ.0) THEN
-PRINT*,'ISCATT ',ISCATT
-PRINT*,'LOXPHI ',LOXPHI
-            CALL ERROR$MSG('CAN NOT LOCALIZE')
-            CALL ERROR$MSG('NO TAIL FUNCTION AVAILABLE')
-            CALL ERROR$I4VAL('L',L)
-            CALL ERROR$I4VAL('LN',LN)
-            CALL ERROR$STOP('LMTO_CHIFROMPHI')
-          END IF
-!
-!         == NOW CONTINUE; LN1 POINTS TO THE NEXT PHI WITH THIS L ==============
-!         == IMPOSE NODE CONDITION==============================================
-          CALL RADIAL$VALUE(GID,NR,CHI(:,LN),RASA,VAL1)
-          CALL RADIAL$DERIVATIVE(GID,NR,CHI(:,LN),RASA,DER1)
-          CALL RADIAL$VALUE(GID,NR,CHI(:,LN1),RASA,VAL2)
-          CALL RADIAL$DERIVATIVE(GID,NR,CHI(:,LN1),RASA,DER2)
-          DR=RAD(L+1)-RASA
-          SVAR1=1.D0
-          SVAR2=-(VAL1+DR*DER1)/(VAL2+DR*DER2)
-          IF(VAL1.EQ.0.D0.AND.VAL2.EQ.0.D0) THEN
-            CALL ERROR$MSG('PARTIAL WAVES ARE TRUNCATED INSIDE OF RCUT')
-            CALL ERROR$MSG('THIS IS A FLAW OF THE IMPLEMENTATION')
-            CALL ERROR$MSG('CHOOSE SMALLER RCUT')
-            CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
-          END IF
-!
-          CHI(:,LN)=CHI(:,LN)*SVAR1+CHI(:,LN1)*SVAR2
-          A(:,LN)=A(:,LN)*SVAR1+A(:,LN1)*SVAR2
-!
-!         == DETERMINE ACTUAL NODE OF THE ORBITAL ==============================
-          DO IR=1,NR
-            IF(R(IR).LT.RASA) CYCLE
-            IF(CHI(IR,LN)*CHI(IR-1,LN).GT.0.D0) CYCLE
-            RCUT(LN)=R(IR-1)-CHI(IR-1,LN)/(CHI(IR,LN)-CHI(IR-1,LN))*(R(IR)-R(IR-1))
-            EXIT
-          ENDDO          
-          CALL RADIAL$VALUE(GID,NR,CHI(:,LN),RCUT(LN),VAL1)
-          CALL RADIAL$DERIVATIVE(GID,NR,CHI(:,LN),RCUT(LN),DER1)
-          RCUT(LN)=RCUT(LN)-VAL1/DER1
-!
-!         == ORTHOGONALIZE TO THE LOWER HEAD FUNCTIONS =========================
-          DO LN1=1,LN-1
-            IF(LOXPHI(LN1).NE.L) CYCLE  
-            AUX(:)=CHI(:,LN)*CHI(:,LN1)*R(:)**2
-            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,MIN(RCUT(LN),RCUT(LN1)),SVAR1)
-            CHI(:,LN)=CHI(:,LN)-CHI(:,LN1)*SVAR1
-            A(:,LN)=A(:,LN)-A(:,LN1)*SVAR1
-          ENDDO
-!
-!         == NORMALIZE HEAD FUNCTION ===========================================
-          AUX(:)=CHI(:,LN)**2*R(:)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RCUT(LN),SVAR1)
-          SVAR1=1.D0/SQRT(SVAR1)
-          CHI(:,LN)=CHI(:,LN)*SVAR1
-          A(:,LN)=A(:,LN)*SVAR1
-        ENDDO
-      END DO          
-      DEALLOCATE(AUX)
-      DEALLOCATE(AUX1)
-!
-!     ==========================================================================
-!     == NOW INVERT THE MATRIX A: B:=A^{-1}                                   ==
-!     == |CHI_I>=SUM_J |PHI_J>A(J,I)                                          ==
-!     == 1=|PHI><P|=|PHI>A B <P|=|CHI> ( B<P| )                               ==
-!     == <P_CHI_I|=SUM_J B(I,J)<P_PHI_J|                                      ==
-!     ==========================================================================
-      ALLOCATE(B(LNXPHI,LNXPHI))
-      B(:,:)=0.D0
-      LX=MAXVAL(LOXPHI)
-      DO L=0,LX
-        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-!
-        NX=0
-        DO LN=1,LNXPHI
-          IF(LOXPHI(LN).EQ.L) NX=NX+1
-        ENDDO
-        IF(NX.EQ.0) CYCLE   
-
-        ALLOCATE(MAT(NX,NX))
-        ALLOCATE(MATINV(NX,NX))
-!        
-!       == MAP A INTO MATRIX MAT ===============================================
-        N1=0
-        DO LN1=1,LNXPHI
-          L1=LOXPHI(LN1)
-          IF(L1.NE.L) CYCLE
-          N1=N1+1
-          N2=0
-          DO LN2=1,LNXPHI
-            L2=LOXPHI(LN2)
-            IF(L2.NE.L) CYCLE
-            N2=N2+1
-            MAT(N2,N1)=A(LN2,LN1)
-          ENDDO
-        ENDDO
-!
-!       == INVERT MATRIX =======================================================
-        CALL LIB$INVERTR8(NX,MAT,MATINV)
-!
-!       == MAP MATINV INTO B ===================================================
-        N1=0
-        DO LN1=1,LNXPHI
-          L1=LOXPHI(LN1)
-          IF(L1.NE.L) CYCLE
-          N1=N1+1
-          N2=0
-          DO LN2=1,LNXPHI
-            L2=LOXPHI(LN2)
-            IF(L2.NE.L) CYCLE
-            N2=N2+1
-            B(LN1,LN2)=MATINV(N1,N2) 
-          ENDDO
-        ENDDO
-        DEALLOCATE(MAT)
-        DEALLOCATE(MATINV)
-      ENDDO
-!
-!     ==========================================================================
-!     === REMOVE TAIL FUNCTIONS                                               ==
-!     ==========================================================================
-      LNCHI=0
-      DO L=0,LX
-        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
-        NOFL=0
-        DO LN=1,LNXPHI
-          IF(L.NE.LOXPHI(LN)) CYCLE
-          NOFL=NOFL+1
-          IF(NOFL.GT.NORB(L+1)) EXIT
-          LNCHI=LNCHI+1
-          IF(LNCHI.GT.LNXCHI) THEN
-            CALL ERROR$MSG('LNCHI OUT OF RANGE')
-            CALL ERROR$I4VAL('LNCHI',LNCHI)
-            CALL ERROR$I4VAL('LNXCHI',LNXCHI)
-            CALL ERROR$STOP('SETUP_CHIFROMPHI')
-          END IF
-          LOXCHI(LNCHI)=L
-          BMAT(LNCHI,:)=B(LN,:)
-          AMAT(:,LNCHI)=A(:,LN)
-        END DO
-      ENDDO
-      IF(LNCHI.NE.LNXCHI) THEN
-        CALL ERROR$MSG('LNCHI AND LNXCHI ARE INCONSISTENT')
-        CALL ERROR$I4VAL('LNCHI',LNCHI)
-        CALL ERROR$I4VAL('LNXCHI',LNXCHI)
-        CALL ERROR$STOP('SETUP_CHIFROMPHI')
-      END IF
-!
-!     ==========================================================================
-!     ==  CLEAN UP                                                            ==
-!     ==========================================================================
-      DEALLOCATE(CHI)
-      DEALLOCATE(A)
-      DEALLOCATE(B)
-                            CALL TRACE$POP()
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LMTO_CHIFROMPHI(GID,NR,LXX,RASA,RAD &
+!!$     &                           ,LNXPHI,LOXPHI,ISCATT,PHI &
+!!$     &                           ,LNXCHI,LOXCHI,AMAT,BMAT)
+!!$!     **************************************************************************
+!!$!     **  DEFINES PROJECTOR FUNCTIONS FOR LOCAL ORBITALS IN TERMS OF          **
+!!$!     **  THE CONVENTIONAL PARTIAL WAVE PROJECTOR FUNCTIONS                   **
+!!$!     **                                                                      **
+!!$!     **     <P_CHI_I|= SUM_J BMAT(I,J) <P_PHI_J|                             **
+!!$!     **     |CHI_I>  = SUM_J |PHI_J> AMAT(J,I)                               **
+!!$!     **                                                                      **
+!!$!     **  THE LOCAL ORBITALS ARE SELECTED BY NORB WHICH SPECIFIES THE NUMBER  **
+!!$!     **  OF LOCAL ORBITALS PER ANGULAR MOMENTUM CHANNEL.                     **
+!!$!     **                                                                      **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN) :: GID     ! GRID ID
+!!$      INTEGER(4),INTENT(IN) :: NR      ! #(RADIAL GRID POINTS)
+!!$      INTEGER(4),INTENT(IN) :: LXX     ! X(ANGULAR MOMENTUM)
+!!$      REAL(8)   ,INTENT(IN) :: RASA    ! ATOMIC RADIUS             
+!!$      REAL(8)   ,INTENT(IN) :: RAD(LXX+1)   ! EXTENT OF HEAD FUNCTIONS
+!!$      INTEGER(4),INTENT(IN) :: LNXPHI  ! #(PARTIAL WAVES)
+!!$      INTEGER(4),INTENT(IN) :: LOXPHI(LNXPHI)! ANGULAR MOMENTUM PER PARTIAL WAVE
+!!$      INTEGER(4),INTENT(IN) :: ISCATT(LNXPHI)! RELATIVE TO HIGHEST VALENCE STATE
+!!$      REAL(8)   ,INTENT(IN) :: PHI(NR,LNXPHI)! PARTIAL WAVES
+!!$      INTEGER(4),INTENT(IN) :: LNXCHI        ! #(LOCAL ORBITALS)
+!!$      INTEGER(4),INTENT(OUT):: LOXCHI(LNXCHI)  ! ANGULAR MOMENTUM PER LOCAL ORB.
+!!$      REAL(8)   ,INTENT(OUT):: BMAT(LNXCHI,LNXPHI) ! MAPPING OF PROJECTORS
+!!$      REAL(8)   ,INTENT(OUT):: AMAT(LNXPHI,LNXCHI)     ! MAPPING OF WAVE FUNCTIONS
+!!$      REAL(8)   ,ALLOCATABLE:: CHI(:,:)
+!!$      REAL(8)   ,ALLOCATABLE:: CHI1(:,:)
+!!$      REAL(8)   ,ALLOCATABLE:: A(:,:)
+!!$      REAL(8)   ,ALLOCATABLE:: B(:,:)
+!!$      REAL(8)   ,ALLOCATABLE:: A1(:,:)
+!!$      REAL(8)   ,ALLOCATABLE:: MAT(:,:)
+!!$      REAL(8)   ,ALLOCATABLE:: MATINV(:,:)
+!!$      REAL(8)               :: R(NR)       
+!!$      REAL(8)   ,ALLOCATABLE:: G(:)        
+!!$      REAL(8)   ,PARAMETER  :: RCG=1.D-2
+!!$      REAL(8)   ,ALLOCATABLE:: AUX(:),AUX1(:)
+!!$      REAL(8)               :: SVAR1,SVAR2
+!!$      INTEGER(4)            :: IR
+!!$      INTEGER(4)            :: NX,N,LX,L,LN,LNCHI,NOFL,NOFL2,ISVAR
+!!$      INTEGER(4)            :: N1,N2,LN1,LN2,L1,L2
+!!$      CHARACTER(64)         :: FILE
+!!$      INTEGER(4)            :: NORB(LXX+1)
+!!$      REAL(8)               :: VAL1,DER1,VAL2,DER2
+!!$      REAL(8)               :: DR
+!!$      REAL(8)               :: RCUT(LNXPHI)
+!!$!     **************************************************************************
+!!$                            CALL TRACE$PUSH('LMTO_CHIFROMPHI')
+!!$      CALL RADIAL$R(GID,NR,R)
+!!$      LX=MAXVAL(LOXPHI)
+!!$      NORB(:)=0
+!!$      DO LN=1,LNXCHI
+!!$call error$msg('loxchi used but not defined')
+!!$call error$stop('lmto_chifromphi')
+!!$        L=LOXCHI(LN)
+!!$        NORB(L+1)=NORB(L+1)+1
+!!$      ENDDO
+!!$!
+!!$      IF(LX.GT.LXX) THEN
+!!$        CALL ERROR$MSG('LX>LXX')
+!!$        CALL ERROR$STOP('LMTO_CHIFROMPHI')
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  START WITH PARTIAL WAVES AS LOCAL ORBITALS                          ==
+!!$!     == |CHI_I>=SUM_I |PHI_J>A(J,I)                                          ==
+!!$!     ==========================================================================
+!!$      ALLOCATE(CHI(NR,LNXPHI))     
+!!$      CHI(:,:)=0.D0
+!!$      ALLOCATE(A(LNXPHI,LNXPHI))        
+!!$      A(:,:)=0.D0
+!!$      DO LN=1,LNXPHI
+!!$        L=LOXPHI(LN)
+!!$        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
+!!$        A(LN,LN)=1.D0
+!!$        CHI(:,LN)=PHI(:,LN)
+!!$      ENDDO
+!!$!
+!!$!     ==========================================================================
+!!$!     == MAKE HEAD FUNCTION ANTIBONDING WITH NODE AT RCUT ======================
+!!$!     ==========================================================================
+!!$      ALLOCATE(AUX(NR))
+!!$      ALLOCATE(AUX1(NR))
+!!$      DO L=0,LX
+!!$        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
+!!$        NOFL=0
+!!$        DO LN=1,LNXPHI
+!!$          IF(LOXPHI(LN).NE.L) CYCLE
+!!$          NOFL=NOFL+1
+!!$          IF(ISCATT(LN).GT.0) CYCLE ! CONSIDER ONLY HEAD FUNCTIONS
+!!$!         == SEARCH FOR NEXT PARTIAL WAVE WITH THIS L =========================
+!!$          LN1=0
+!!$          DO LN2=1,LNXPHI
+!!$            IF(LOXPHI(LN2).NE.L) CYCLE  
+!!$!ALTERNATIVE 1
+!!$            LN1=LN2
+!!$            IF(ISCATT(LN2).EQ.1) EXIT
+!!$!ALTERNATIVE 2
+!!$!            IF(ISCATT(LN2).EQ.1) THEN
+!!$!              LN1=LN2
+!!$!              EXIT
+!!$!            END IF
+!!$!END ALTERNATIVES
+!!$          ENDDO
+!!$          IF(LN1.EQ.0) THEN
+!!$PRINT*,'ISCATT ',ISCATT
+!!$PRINT*,'LOXPHI ',LOXPHI
+!!$            CALL ERROR$MSG('CAN NOT LOCALIZE')
+!!$            CALL ERROR$MSG('NO TAIL FUNCTION AVAILABLE')
+!!$            CALL ERROR$I4VAL('L',L)
+!!$            CALL ERROR$I4VAL('LN',LN)
+!!$            CALL ERROR$STOP('LMTO_CHIFROMPHI')
+!!$          END IF
+!!$!
+!!$!         == NOW CONTINUE; LN1 POINTS TO THE NEXT PHI WITH THIS L ==============
+!!$!         == IMPOSE NODE CONDITION==============================================
+!!$          CALL RADIAL$VALUE(GID,NR,CHI(:,LN),RASA,VAL1)
+!!$          CALL RADIAL$DERIVATIVE(GID,NR,CHI(:,LN),RASA,DER1)
+!!$          CALL RADIAL$VALUE(GID,NR,CHI(:,LN1),RASA,VAL2)
+!!$          CALL RADIAL$DERIVATIVE(GID,NR,CHI(:,LN1),RASA,DER2)
+!!$          DR=RAD(L+1)-RASA
+!!$          SVAR1=1.D0
+!!$          SVAR2=-(VAL1+DR*DER1)/(VAL2+DR*DER2)
+!!$          IF(VAL1.EQ.0.D0.AND.VAL2.EQ.0.D0) THEN
+!!$            CALL ERROR$MSG('PARTIAL WAVES ARE TRUNCATED INSIDE OF RCUT')
+!!$            CALL ERROR$MSG('THIS IS A FLAW OF THE IMPLEMENTATION')
+!!$            CALL ERROR$MSG('CHOOSE SMALLER RCUT')
+!!$            CALL ERROR$STOP('LDAPLUSU_CHIFROMPHI')
+!!$          END IF
+!!$!
+!!$          CHI(:,LN)=CHI(:,LN)*SVAR1+CHI(:,LN1)*SVAR2
+!!$          A(:,LN)=A(:,LN)*SVAR1+A(:,LN1)*SVAR2
+!!$!
+!!$!         == DETERMINE ACTUAL NODE OF THE ORBITAL ==============================
+!!$          DO IR=1,NR
+!!$            IF(R(IR).LT.RASA) CYCLE
+!!$            IF(CHI(IR,LN)*CHI(IR-1,LN).GT.0.D0) CYCLE
+!!$            RCUT(LN)=R(IR-1)-CHI(IR-1,LN)/(CHI(IR,LN)-CHI(IR-1,LN))*(R(IR)-R(IR-1))
+!!$            EXIT
+!!$          ENDDO          
+!!$          CALL RADIAL$VALUE(GID,NR,CHI(:,LN),RCUT(LN),VAL1)
+!!$          CALL RADIAL$DERIVATIVE(GID,NR,CHI(:,LN),RCUT(LN),DER1)
+!!$          RCUT(LN)=RCUT(LN)-VAL1/DER1
+!!$!
+!!$!         == ORTHOGONALIZE TO THE LOWER HEAD FUNCTIONS =========================
+!!$          DO LN1=1,LN-1
+!!$            IF(LOXPHI(LN1).NE.L) CYCLE  
+!!$            AUX(:)=CHI(:,LN)*CHI(:,LN1)*R(:)**2
+!!$            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$            CALL RADIAL$VALUE(GID,NR,AUX1,MIN(RCUT(LN),RCUT(LN1)),SVAR1)
+!!$            CHI(:,LN)=CHI(:,LN)-CHI(:,LN1)*SVAR1
+!!$            A(:,LN)=A(:,LN)-A(:,LN1)*SVAR1
+!!$          ENDDO
+!!$!
+!!$!         == NORMALIZE HEAD FUNCTION ===========================================
+!!$          AUX(:)=CHI(:,LN)**2*R(:)**2
+!!$          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$          CALL RADIAL$VALUE(GID,NR,AUX1,RCUT(LN),SVAR1)
+!!$          SVAR1=1.D0/SQRT(SVAR1)
+!!$          CHI(:,LN)=CHI(:,LN)*SVAR1
+!!$          A(:,LN)=A(:,LN)*SVAR1
+!!$        ENDDO
+!!$      END DO          
+!!$      DEALLOCATE(AUX)
+!!$      DEALLOCATE(AUX1)
+!!$!
+!!$!     ==========================================================================
+!!$!     == NOW INVERT THE MATRIX A: B:=A^{-1}                                   ==
+!!$!     == |CHI_I>=SUM_J |PHI_J>A(J,I)                                          ==
+!!$!     == 1=|PHI><P|=|PHI>A B <P|=|CHI> ( B<P| )                               ==
+!!$!     == <P_CHI_I|=SUM_J B(I,J)<P_PHI_J|                                      ==
+!!$!     ==========================================================================
+!!$      ALLOCATE(B(LNXPHI,LNXPHI))
+!!$      B(:,:)=0.D0
+!!$      LX=MAXVAL(LOXPHI)
+!!$      DO L=0,LX
+!!$        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
+!!$!
+!!$        NX=0
+!!$        DO LN=1,LNXPHI
+!!$          IF(LOXPHI(LN).EQ.L) NX=NX+1
+!!$        ENDDO
+!!$        IF(NX.EQ.0) CYCLE   
+!!$
+!!$        ALLOCATE(MAT(NX,NX))
+!!$        ALLOCATE(MATINV(NX,NX))
+!!$!        
+!!$!       == MAP A INTO MATRIX MAT ===============================================
+!!$        N1=0
+!!$        DO LN1=1,LNXPHI
+!!$          L1=LOXPHI(LN1)
+!!$          IF(L1.NE.L) CYCLE
+!!$          N1=N1+1
+!!$          N2=0
+!!$          DO LN2=1,LNXPHI
+!!$            L2=LOXPHI(LN2)
+!!$            IF(L2.NE.L) CYCLE
+!!$            N2=N2+1
+!!$            MAT(N2,N1)=A(LN2,LN1)
+!!$          ENDDO
+!!$        ENDDO
+!!$!
+!!$!       == INVERT MATRIX =======================================================
+!!$        CALL LIB$INVERTR8(NX,MAT,MATINV)
+!!$!
+!!$!       == MAP MATINV INTO B ===================================================
+!!$        N1=0
+!!$        DO LN1=1,LNXPHI
+!!$          L1=LOXPHI(LN1)
+!!$          IF(L1.NE.L) CYCLE
+!!$          N1=N1+1
+!!$          N2=0
+!!$          DO LN2=1,LNXPHI
+!!$            L2=LOXPHI(LN2)
+!!$            IF(L2.NE.L) CYCLE
+!!$            N2=N2+1
+!!$            B(LN1,LN2)=MATINV(N1,N2) 
+!!$          ENDDO
+!!$        ENDDO
+!!$        DEALLOCATE(MAT)
+!!$        DEALLOCATE(MATINV)
+!!$      ENDDO
+!!$!
+!!$!     ==========================================================================
+!!$!     === REMOVE TAIL FUNCTIONS                                               ==
+!!$!     ==========================================================================
+!!$      LNCHI=0
+!!$      DO L=0,LX
+!!$        IF(NORB(L+1).EQ.0) CYCLE !IGNORE CHANNELS WITHOUT CORRELATED ORBITALS
+!!$        NOFL=0
+!!$        DO LN=1,LNXPHI
+!!$          IF(L.NE.LOXPHI(LN)) CYCLE
+!!$          NOFL=NOFL+1
+!!$          IF(NOFL.GT.NORB(L+1)) EXIT
+!!$          LNCHI=LNCHI+1
+!!$          IF(LNCHI.GT.LNXCHI) THEN
+!!$            CALL ERROR$MSG('LNCHI OUT OF RANGE')
+!!$            CALL ERROR$I4VAL('LNCHI',LNCHI)
+!!$            CALL ERROR$I4VAL('LNXCHI',LNXCHI)
+!!$            CALL ERROR$STOP('SETUP_CHIFROMPHI')
+!!$          END IF
+!!$          LOXCHI(LNCHI)=L
+!!$          BMAT(LNCHI,:)=B(LN,:)
+!!$          AMAT(:,LNCHI)=A(:,LN)
+!!$        END DO
+!!$      ENDDO
+!!$      IF(LNCHI.NE.LNXCHI) THEN
+!!$        CALL ERROR$MSG('LNCHI AND LNXCHI ARE INCONSISTENT')
+!!$        CALL ERROR$I4VAL('LNCHI',LNCHI)
+!!$        CALL ERROR$I4VAL('LNXCHI',LNXCHI)
+!!$        CALL ERROR$STOP('SETUP_CHIFROMPHI')
+!!$      END IF
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  CLEAN UP                                                            ==
+!!$!     ==========================================================================
+!!$      DEALLOCATE(CHI)
+!!$      DEALLOCATE(A)
+!!$      DEALLOCATE(B)
+!!$                            CALL TRACE$POP()
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_PLOTLOCORB(IAT0)
