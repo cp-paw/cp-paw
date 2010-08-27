@@ -920,16 +920,17 @@ END MODULE SPINDIR_MODULE
       NAME=XNAME(:ICOLON-1)
       IPOS=ICOLON+1
       IND=0
+      sgn=+1
       DO WHILE(IND.LT.3) 
         ICH=IACHAR(XNAME(IPOS:IPOS))
 !       ==  IACHAR('+')=43; IACHAR('-')=45; IACHAR('0')=48; IACHAR('1')=49;...
-        IF(ICH.GE.48.AND.ICH.LE.57) THEN
+        IF(ICH.GE.48.AND.ICH.LE.57) THEN ! if "0,1,...,9"
           IND=IND+1
           IT(IND)=SGN*(ICH-48)
           SGN=+1
-        ELSE IF(ICH.EQ.43) THEN
+        ELSE IF(ICH.EQ.43) THEN   ! if "+"
           SGN=+1
-        ELSE IF(ICH.EQ.45) THEN
+        ELSE IF(ICH.EQ.45) THEN   ! if "-"
           SGN=-1
         ELSE
           CALL ERROR$MSG('ILLEGAL CHARACTER IN EXTENDED ATOM NOTATION')  

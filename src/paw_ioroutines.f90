@@ -6517,6 +6517,7 @@ NBONDM=NBONDM+NCONECT
       NAME=XNAME(:ICOLON-1)
       IPOS=ICOLON+1
       IND=0
+      sgn=+1
       DO WHILE(IND.LT.3) 
         ICH=IACHAR(XNAME(IPOS:IPOS))
 !       ==  IACHAR('+')=43; IACHAR('-')=45; IACHAR('0')=48; IACHAR('1')=49;...
