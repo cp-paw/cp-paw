@@ -122,8 +122,8 @@
       CALL LIB_IFC_GETENV(NAME,VAL)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
 !!$      CALL LIB_IFC7_GETENV(NAME,VAL)
-!!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-!!$      CALL LIB_ABSOFT_GETENV(NAME,VAL)
+#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+      CALL LIB_ABSOFT_GETENV(NAME,VAL)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
 !!$      CALL LIB_XLF_GETENV(NAME,VAL)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
@@ -826,6 +826,24 @@
 !     **************************************************************************
       NARGS=IARGC()
 PRINT*,'NARGS ',NARGS,IARGC()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_absoft_GETENV(NAME,VAL)
+!     **************************************************************************
+!     **  RETURNS THE VALUE OF AN ENVIRONMENT VARIABLE                        **
+!     **                                                                      **
+!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
+!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
+!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
+!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: NAME
+      CHARACTER(*),INTENT(OUT) :: VAL
+!     **************************************************************************
+      CALL GETENV(NAME,VAL)
       RETURN
       END
 !

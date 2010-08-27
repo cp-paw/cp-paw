@@ -1948,6 +1948,8 @@ PRINT*,'#ITERATIONS ',ITER
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
+      uofi(:,:)=0.d0
+      tuofi(:,:)=0.d0
       DO IB=1,NB
         L=LOFI(IB)
         E=EOFI(IB)
@@ -1962,7 +1964,8 @@ PRINT*,'#ITERATIONS ',ITER
         DREL(:)=0.D0
         TVARDREL=.FALSE.
         NN=0
-        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,TVARDREL,DREL,G,NN,POT,E,UOFI(:,IB))
+        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,TVARDREL,DREL,G,NN,POT &
+     &                         ,E,UOFI(:,IB))
         TUOFI(:,IB)=G(:)+(E-POT(:)*Y0)*UOFI(:,IB)
         EOFI(IB)=E
       ENDDO
