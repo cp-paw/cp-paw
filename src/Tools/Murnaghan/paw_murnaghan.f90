@@ -5,14 +5,18 @@
 !    ** STANDARD INPUT                                                        **
 !    ***************************MATTHE UITTEVAAL AND PETER E. BLOECHL***********
      IMPLICIT NONE
-     REAL(8)    :: V(100), E(100)     ! INPUT VOLUMES, ENERGIES
-     INTEGER(4) :: HIGH,LOW,I, NP=0   ! INDICES, NO. DATA POINTS (INIT 0)
+     integer(4),parameter :: npx=100
+     REAL(8)    :: V(npx), E(npx)     ! INPUT VOLUMES, ENERGIES
+     INTEGER(4) :: np                 ! #(datasets)
+     INTEGER(4) :: HIGH,LOW,I         ! INDICES, 
      INTEGER(4) :: IARRAY(1)          ! 1D ARRAY FOR MIN INDEX
-     REAL(8)    :: PARMS(4),GRAD(4),X ! PARMS, GRAD AND MEAN SQR DEV OF MURN FIT
-     REAL(8)    :: VI, EFIT           ! VOLUME IN, ENERGY OUT
+     REAL(8)    :: x                  ! penalty
+     REAL(8)    :: PARMS(4)           ! fit paramers (E0,V0,B0,Bprime)
+     REAL(8)    :: GRAD(4)            ! gradients of penalty function
+     REAL(8)    :: VI,EFIT            ! VOLUME IN, ENERGY OUT
 !    ***************************************************************************
 !    ==========================================================================
-!    == START WITH PRINTING HEADER
+!    == START WITH PRINTING HEADER                                           ==
 !    ==========================================================================
      WRITE(*,FMT='(80("="))')
      WRITE(*,FMT='(80("="),T15," FIT MURNAGHAN EQUATION OF STATE ")')
@@ -23,8 +27,9 @@
     &    ,'SOURCE: F.D. MURNAGHAN, PNAS 30, 244 (1934)'
 !
 !    ==========================================================================
-!    == READ DATA UNTIL ERROR THEN RESET NP
+!    == READ DATA UNTIL ERROR THEN RESET NP                                  ==
 !    ==========================================================================
+     np=0
      DO 
        NP=NP+1
        IF (NP.EQ.101) THEN
@@ -39,35 +44,32 @@
        WRITE(*,*)"TOO FEW INPUT DATA, AT LEAST 4 REQUIRED!"
        STOP
      END IF
+!
 !    == REPORT INPUT DATA =====================================================
      DO I=1,NP
        WRITE(*,FMT='(I5," V=",F10.5," E=",F10.5)')I,V(I),E(I)
      ENDDO
 !
 !    ==========================================================================
-!    == PRINT DATA 
+!    == ESTIMATE FIT PARAMETERS AS STARTING VALUES FOR OPTIMIZATION          ==
 !    ==========================================================================
      IARRAY=MINLOC(V(1:NP))
      LOW=IARRAY(1) 
      IARRAY=MAXLOC(V(1:NP))
      HIGH=IARRAY(1) 
-!     WRITE(*,FMT='(" VMIN=",F10.5," VMAX=",F10.5)')V(LOW),V(HIGH)
      IARRAY=MINLOC(E(1:NP)) 
-!    I=MINLOC(V(1:NP))(1) ??
      PARMS(1)=E(IARRAY(1)) ! MINE
      PARMS(2)=V(IARRAY(1)) ! VOL MINE
-!     WRITE(*,FMT='(" V(EMIN)=",F10.5," EMIN=",F10.5)')PARMS(2),PARMS(1)
      PARMS(3)=2*(E(HIGH)+E(LOW)-2*PARMS(1))/(V(HIGH)-V(LOW))  !INITIAL B0
      PARMS(4)=3.5D0  ! APPROX CONST
-!     WRITE(*,FMT='(" BINI=",F10.5," BPRIMEINI=",F10.5)')PARMS(3),PARMS(4)
 !
 !    ==========================================================================
-!    == DO FIT
+!    == DO FIT USING QUENCHED DYNAMICS                                       ==
 !    ==========================================================================
-     CALL CG(NP,V,E,PARMS,X)
+     CALL MD(NP,V,E,PARMS,X)
 !
 !    ==========================================================================
-!    == PRINT PARAMETERS
+!    == PRINT PARAMETERS                                                     ==
 !    ==========================================================================
      WRITE(*,*)
      WRITE(*,FMT='(80("="),T10,"FIT PARAMETERS OF MURNGAHAN EQUATION OF STATE")')
@@ -102,59 +104,66 @@
      END
 !
 !    ...........................................................................
-     SUBROUTINE CG(NP,V,E,PARMS,X)
+     SUBROUTINE MD(NP,V,E,PARMS,X)
 !    ***************************************************************************
 !    ** CONJUGATE GRADIENT FIT OF THE MURNAGHAN CURVE (ITS PARAMETERS)        **
 !    ** RETURNS THE MURNAGHAN PARAMETERS AND THE QUALITY OF THE FIT           **
-!    **************************MATTHE UITTEVAAL*********************************
+!    **************************PETER BLOECHL, GOSLAR 2010***********************
      IMPLICIT NONE
      INTEGER(4),INTENT(IN)   :: NP
      REAL(8)   ,INTENT(IN)   :: V(NP)        ! VOLUMES OF INPUT DATA SET
      REAL(8)   ,INTENT(IN)   :: E(NP)        ! ENERGIES OF THE INPUT DATA SET
      REAL(8)   ,INTENT(INOUT):: PARMS(4)     ! MURNAGHAN PARAMETERS
      REAL(8)   ,INTENT(OUT)  :: X            ! QUALITY OF THE FIT
-     REAL(8)   ,PARAMETER    :: STEP=1.D-4
-     REAL(8)   ,PARAMETER    :: FACT=.13
-     REAL(8)   ,PARAMETER    :: TOL=7.D-5
-     REAL(8)                 :: PARMS1(4),PARMS2(4)
-     REAL(8)                 :: GRAD1(4),GRAD2(4)
-     REAL(8)                 :: LAPL(4)
-     LOGICAL(4)              :: TCONV
-     INTEGER                 :: LOOP=0
-     INTEGER   ,PARAMETER    :: LOOPMAX=1000
-     INTEGER(4),PARAMETER    :: NFIL=6
+     INTEGER(4),PARAMETER    :: NITER=1000000
+     REAL(8)   ,PARAMETER    :: ANNE=1.D-2
+     REAL(8)   ,PARAMETER    :: DT=1.D-2
+     REAL(8)   ,PARAMETER    :: TOL=1.D-8
+     REAL(8)   ,PARAMETER    :: STEP=1.D-2
+     REAL(8)                 :: M(4)
+     REAL(8)                 :: Y0(4),YM(4),YP(4),GRAD(4),D2(4,4)
+     REAL(8)                 :: XLAST
+     INTEGER(4)              :: ITER,I
+     REAL(8)                 :: SVAR1,SVAR2,SVAR3
+     REAL(8)                 :: EKIN
+     INTEGER(4)              :: NWRITE
 !    ***************************************************************************
-!     OPEN(NFIL,FILE='ITER.DAT')
-     WRITE(NFIL,*)
-     WRITE(NFIL,FMT='(80("="),T10," OPTIMIZING PARAMETERS ...")')
-     CALL ONESTEP(NP,V,E,PARMS,X,GRAD1)
-     WRITE(NFIL,FMT='(I4," E=",F10.5," V=",F10.5," B=",F10.5," DB/DV=",F10.5," PENALTY=",E15.7)') &
-    &     LOOP,PARMS,X
-     PARMS1(:)=PARMS(:)*(1.D0+STEP) !PERCENTAGE (DIMENSIONS,ENERGY 0??)
-     CALL ONESTEP(NP,V,E,PARMS1,X,GRAD2)
-     LAPL(:)=(GRAD2(:)-GRAD1(:))/PARMS(:)/STEP
-!     WRITE(NFIL,FMT='("          GRADIENT AND LAPLACIAN OF PENALTY FUNCTION ")')
-!     WRITE(NFIL,FMT='(4E10.2,"::",4E10.2)')GRAD1, LAPL
-!
-     PARMS1=PARMS
-     DO LOOP=1,LOOPMAX
-       PARMS2=PARMS1-GRAD1/LAPL*FACT  !FACT TOWARDS MINIMUM
-       TCONV=(SQRT(SUM((GRAD1/LAPL/PARMS1)**2)).LT.TOL) 
-       IF(TCONV) EXIT
-       CALL ONESTEP(NP,V,E,PARMS2,X,GRAD2)
-       WRITE(NFIL,FMT='(I4," E=",F10.5," V=",F10.5," B=",F10.5," DB/DV=",F10.5," PENALTY=",E15.7)') &
-    &                 LOOP,PARMS2,X
-       LAPL(:)=(GRAD2(:)-GRAD1(:))/(PARMS2-PARMS1)
-!       WRITE(NFIL,FMT='("        GRADIENT AND LAPLACIAN OF PENALTY FUNCTION ___")')
-!       WRITE(NFIL,FMT='(4E10.2,"::"4E10.2)')GRAD2, LAPL
-       GRAD1=GRAD2
-       PARMS1=PARMS2
+     Y0(:)=PARMS(:)
+     CALL ONESTEP(NP,V,E,Y0,X,GRAD)
+     DO I=1,4
+       Y0(:)=PARMS(:)
+       Y0(I)=Y0(I)+STEP
+       CALL ONESTEP(NP,V,E,Y0,X,D2(:,I))
+       D2(:,I)=(D2(:,I)-GRAD(:))/STEP
+       M(I)=ABS(D2(I,I))
      ENDDO
-     IF (.NOT.TCONV) THEN
-       WRITE(NFIL,FMT='("-----CONJUGATE GRADIENT NOT CONVERGED---------")')
-     END IF
-     CLOSE(NFIL)
-     PARMS=PARMS2
+!
+     WRITE(*,FMT='(80("="),T10,"OPTIMIZE FIT PARAMETERS WITH MD")')
+     Y0(:)=PARMS(:)
+     YM=Y0
+     XLAST=HUGE(X)
+     NWRITE=10
+     DO ITER=1,NITER
+       CALL ONESTEP(NP,V,E,Y0,X,GRAD)
+       IF(SUM(GRAD**2).LT.TOL) EXIT
+       IF(X.GT.XLAST) YM=Y0
+       XLAST=X
+       SVAR1=2.D0/(1.D0+ANNE)
+       SVAR2=1.D0-SVAR1
+       SVAR3=DT**2/(1+ANNE)
+       YP(:)=Y0(:)*SVAR1+YM(:)*SVAR2-GRAD(:)/M*SVAR3
+       EKIN=0.5D0*SUM(M*(YP-YM)**2)/(2.D0*DT)**2
+       IF(ITER.GT.10*NWRITE)NWRITE=10*NWRITE
+       IF(MODULO(ITER,NWRITE).EQ.0) THEN
+         WRITE(*,FMT='(I8," EKIN=",F12.5," PENALTY=",F12.7," CONSERVED=",F12.7)') &
+      &      ITER,EKIN,X,EKIN+X
+       END IF
+       YM=Y0
+       Y0=YP
+     ENDDO
+     WRITE(*,FMT='(I8," EKIN=",F12.5," PENALTY=",F12.7," CONSERVED=",F12.7)') &
+    &      ITER,EKIN,XLAST,EKIN+XLAST
+     PARMS=Y0
      RETURN
      END
 !
@@ -197,7 +206,7 @@
 !    **   $B'=\FRAC{\PARTIAL B}{\PARTIAL P}\EQUIV B_0'\APPROX 3.5$            **
 !    **   SUBROUTINE RETURNS ENERGY AND GRADIENT AT REQUESTED VOLUME          **
 !    **                                                                       **
-!    **   SEE BLOECHL LECTURE NOTES FOR THE PAW PRACTIKUM FOR A DERIVATION    **
+!    **   SEE BLOECHL LECTURE NOTES FOR THE PAW hands-on FOR DERIVATION       **
 !    *************************PETER BLOECHL, GOSLAR 2010************************
      IMPLICIT NONE
      REAL(8),INTENT(IN) :: PARMS(4) ! PARAMETERS OF MURN CURVE: E0, V0, B0, B'
