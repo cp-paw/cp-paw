@@ -245,6 +245,8 @@ OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 # Definition of objects for the compilation of the PAW-tools
 #
 # Objects for test code
+OBJMURNAGHAN = \
+          ${OBJDIR}/paw_murnaghan.o
 OBJSTPA = \
           ${OBJDIR}/paw_stpa.o
 OBJSTPREPORT = \
@@ -342,6 +344,12 @@ ${PAWLIB}: ${LOBJS} ${MPE} ${OBJDIR}/version_writeparmfile.o
 #########################################################################
 ##  build Tools                                                        ##
 #########################################################################
+#
+${BINDIR}/paw_murnaghan.x: ${OBJMURNAGHAN} 
+	${LINK} -o ${BINDIR}/paw_murnaghan.x ${OBJMURNAGHAN} 
+#
+clean_murnaghan:
+	rm -f ${OBJMURNAGHAN} ${BINDIR}/paw_murnaghan.x
 #
 ${BINDIR}/paw_stpreport.x: ${OBJSTPREPORT} ${PAWLIB} ${BINDIR}/paw_stpa.x
 	${LINK} -o ${BINDIR}/paw_stpreport.x ${OBJSTPREPORT} -L${OBJDIR} -lpaw ${LIBS}
@@ -482,6 +490,12 @@ $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 #__compile the tools____________________________________________________
+#
+${OBJMURNAGHAN}: ${OBJDIR}/%.o : ${TOOLDIR}/Murnaghan/%.f90
+#	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	echo doing murnaghan
+	cp $< ${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJSTPREPORT}: ${OBJDIR}/%.o : ${TOOLDIR}/Stpa/%.f90
 #	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}

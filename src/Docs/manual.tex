@@ -1265,7 +1265,7 @@ each step that reduces the energy}
   motion.  The target kinetic energy is subtracted from the wave
   function kinetic energy in the protocol. A friction on the
   thermostat shall be used to avoid instabilities. The thermostat
-  shall be used only if the atoms are moving. 
+  shall be used only if the atoms are moving.} 
 
 \mbax{\key{$<$EKIN$>$}
 \vdescr{average kinetic energy of the wave functions. Do not use in
@@ -6517,7 +6517,7 @@ current directory and copies the files with the same name but {\it
 root1} replaced by {\it root2}.
 
 %==========================================================================
-\subsection{collect energies ``paw\_collect''}
+\subsection{Collect energies ``paw\_collect''}
 %==========================================================================
 paw\_collect collects the last total energies from all protocoll files
 in the current directory.
@@ -6529,6 +6529,25 @@ The calling sequence is
 
 \bigskip\fbox{{\tt paw\_collect\ }}
 
+
+%==========================================================================
+\subsection{Murnaghan fit ``paw\_murnagan.x''}
+%==========================================================================
+{\tt paw\_murnaghan.x} extracts the minimum energy, equilibrium
+volume, bulk modulus and its pressure derivative from a
+energy-vs-volume data sequence. The equation of state proposed by
+Murnaghan\cite{murnaghan44_pnas30_244} is based on the assumption that
+the bulk modulus depends linearly on pressure.
+
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_murnaghan.x\ <in.dat}}\bigskip
+
+where {\tt in.dat} is an input file holding the energy-versus-volume
+data.  The first column of {\tt in.dat} holds the volumes and the
+second the corresponding energies, both given in Hartree atomic
+units. In addition a file ``{\tt murn.dat}'' is produced holding the
+interpolated data covering the range of the input volumes +10\%.
 
 %==========================================================================
 \newpage

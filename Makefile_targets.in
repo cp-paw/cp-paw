@@ -111,7 +111,7 @@ endif
 #TOOLS=newatom atom tra wave grab dos preopt converttra cleantra strc tostrc \
 #       toxyz 1davpot cmcwave lattice test
 TOOLS=tra wave grab dos preopt converttra cleantra strc tostrc toxyz 1davpot cmcwave \
-       lattice stpa stpreport bands
+       lattice stpa stpreport bands murnaghan
 SCRIPTS=scripts
 #
 #########################################################################

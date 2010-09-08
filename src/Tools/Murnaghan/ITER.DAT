@@ -1,0 +1,428 @@
+========= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   0:   2.21481   1.20000  19.64773   3.50000::  0.12E+01
+          gradient and laplacian of penalty function 
+ -0.85E+00 -0.52E+01 -0.33E-01 -0.60E+00::  0.32E+01  0.20E+01 -0.39E-02  0.11E+01
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   1:   2.24902   1.54345  18.55967   3.56949::.43105E+01
+        gradient and laplacian of penalty function ___
+  0.19E+01  0.30E+02  0.41E+00  0.40E+01::  0.81E+02  0.10E+03 -0.40E+00  0.65E+02
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   2:   2.24594   1.50542  18.69051   3.56164::.24577E+01
+        gradient and laplacian of penalty function ___
+  0.15E+01  0.21E+02  0.26E+00  0.26E+01::  0.15E+03  0.24E+03 -0.11E+01  0.17E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   3:   2.24469   1.49445  18.72135   3.55970::.20395E+01
+        gradient and laplacian of penalty function ___
+  0.13E+01  0.18E+02  0.23E+00  0.23E+01::  0.10E+03  0.21E+03 -0.11E+01  0.17E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   4:   2.24299   1.48337  18.74781   3.55795::.16638E+01
+        gradient and laplacian of penalty function ___
+  0.12E+01  0.16E+02  0.20E+00  0.20E+01::  0.75E+02  0.20E+03 -0.12E+01  0.17E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   5:   2.24090   1.47305  18.76888   3.55649::.13544E+01
+        gradient and laplacian of penalty function ___
+  0.11E+01  0.14E+02  0.17E+00  0.17E+01::  0.55E+02  0.19E+03 -0.13E+01  0.18E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   6:   2.23832   1.46344  18.78579   3.55524::.10994E+01
+        gradient and laplacian of penalty function ___
+  0.99E+00  0.12E+02  0.15E+00  0.15E+01::  0.41E+02  0.18E+03 -0.14E+01  0.18E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   7:   2.23520   1.45452  18.79943   3.55417::.88963E+00
+        gradient and laplacian of penalty function ___
+  0.89E+00  0.11E+02  0.13E+00  0.13E+01::  0.31E+02  0.17E+03 -0.15E+01  0.18E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   8:   2.23147   1.44626  18.81046   3.55324::.71760E+00
+        gradient and laplacian of penalty function ___
+  0.80E+00  0.95E+01  0.11E+00  0.11E+01::  0.24E+02  0.16E+03 -0.16E+01  0.18E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER   9:   2.22705   1.43866  18.81940   3.55244::.57693E+00
+        gradient and laplacian of penalty function ___
+  0.72E+00  0.83E+01  0.93E-01  0.97E+00::  0.18E+02  0.15E+03 -0.17E+01  0.18E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  10:   2.22192   1.43169  18.82666   3.55174::.46226E+00
+        gradient and laplacian of penalty function ___
+  0.65E+00  0.73E+01  0.80E-01  0.85E+00::  0.14E+02  0.15E+03 -0.18E+01  0.18E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  11:   2.21604   1.42533  18.83257   3.55112::.36913E+00
+        gradient and laplacian of penalty function ___
+  0.58E+00  0.64E+01  0.69E-01  0.74E+00::  0.11E+02  0.14E+03 -0.19E+01  0.18E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  12:   2.20941   1.41958  18.83739   3.55058::.29377E+00
+        gradient and laplacian of penalty function ___
+  0.52E+00  0.56E+01  0.60E-01  0.64E+00::  0.92E+01  0.14E+03 -0.20E+01  0.17E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  13:   2.20207   1.41441  18.84130   3.55010::.23304E+00
+        gradient and laplacian of penalty function ___
+  0.46E+00  0.48E+01  0.51E-01  0.56E+00::  0.75E+01  0.14E+03 -0.21E+01  0.17E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  14:   2.19407   1.40979  18.84449   3.54967::.18432E+00
+        gradient and laplacian of penalty function ___
+  0.41E+00  0.42E+01  0.44E-01  0.49E+00::  0.63E+01  0.13E+03 -0.22E+01  0.17E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  15:   2.18550   1.40570  18.84709   3.54930::.14539E+00
+        gradient and laplacian of penalty function ___
+  0.37E+00  0.37E+01  0.38E-01  0.43E+00::  0.53E+01  0.13E+03 -0.24E+01  0.17E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  16:   2.17648   1.40211  18.84919   3.54896::.11445E+00
+        gradient and laplacian of penalty function ___
+  0.33E+00  0.32E+01  0.33E-01  0.37E+00::  0.46E+01  0.13E+03 -0.25E+01  0.16E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  17:   2.16714   1.39897  18.85090   3.54867::.89953E-01
+        gradient and laplacian of penalty function ___
+  0.29E+00  0.28E+01  0.28E-01  0.32E+00::  0.40E+01  0.13E+03 -0.27E+01  0.16E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  18:   2.15761   1.39626  18.85228   3.54840::.70658E-01
+        gradient and laplacian of penalty function ___
+  0.26E+00  0.24E+01  0.24E-01  0.28E+00::  0.35E+01  0.14E+03 -0.28E+01  0.16E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  19:   2.14802   1.39393  18.85340   3.54817::.55522E-01
+        gradient and laplacian of penalty function ___
+  0.23E+00  0.21E+01  0.21E-01  0.25E+00::  0.31E+01  0.14E+03 -0.30E+01  0.16E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  20:   2.13851   1.39195  18.85430   3.54797::.43696E-01
+        gradient and laplacian of penalty function ___
+  0.20E+00  0.18E+01  0.18E-01  0.21E+00::  0.28E+01  0.14E+03 -0.33E+01  0.15E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  21:   2.12916   1.39027  18.85502   3.54779::.34489E-01
+        gradient and laplacian of penalty function ___
+  0.18E+00  0.16E+01  0.16E-01  0.19E+00::  0.25E+01  0.15E+03 -0.35E+01  0.15E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  22:   2.12008   1.38887  18.85560   3.54763::.27343E-01
+        gradient and laplacian of penalty function ___
+  0.16E+00  0.14E+01  0.13E-01  0.16E+00::  0.23E+01  0.15E+03 -0.38E+01  0.15E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  23:   2.11134   1.38770  18.85606   3.54749::.21811E-01
+        gradient and laplacian of penalty function ___
+  0.14E+00  0.12E+01  0.11E-01  0.14E+00::  0.21E+01  0.16E+03 -0.41E+01  0.15E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  24:   2.10297   1.38673  18.85643   3.54736::.17537E-01
+        gradient and laplacian of penalty function ___
+  0.12E+00  0.10E+01  0.99E-02  0.12E+00::  0.20E+01  0.17E+03 -0.44E+01  0.15E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  25:   2.09502   1.38594  18.85672   3.54725::.14241E-01
+        gradient and laplacian of penalty function ___
+  0.11E+00  0.88E+00  0.85E-02  0.11E+00::  0.18E+01  0.18E+03 -0.49E+01  0.15E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  26:   2.08751   1.38530  18.85694   3.54716::.11701E-01
+        gradient and laplacian of penalty function ___
+  0.93E-01  0.75E+00  0.73E-02  0.94E-01::  0.17E+01  0.19E+03 -0.54E+01  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  27:   2.08045   1.38479  18.85712   3.54707::.97450E-02
+        gradient and laplacian of penalty function ___
+  0.82E-01  0.65E+00  0.62E-02  0.82E-01::  0.16E+01  0.21E+03 -0.60E+01  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  28:   2.07383   1.38439  18.85725   3.54700::.82397E-02
+        gradient and laplacian of penalty function ___
+  0.72E-01  0.55E+00  0.53E-02  0.71E-01::  0.15E+01  0.23E+03 -0.67E+01  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  29:   2.06766   1.38407  18.85735   3.54693::.70810E-02
+        gradient and laplacian of penalty function ___
+  0.63E-01  0.47E+00  0.45E-02  0.62E-01::  0.14E+01  0.25E+03 -0.77E+01  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  30:   2.06194   1.38383  18.85743   3.54687::.61889E-02
+        gradient and laplacian of penalty function ___
+  0.55E-01  0.40E+00  0.38E-02  0.54E-01::  0.14E+01  0.29E+03 -0.89E+01  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  31:   2.05664   1.38364  18.85749   3.54682::.55017E-02
+        gradient and laplacian of penalty function ___
+  0.48E-01  0.34E+00  0.32E-02  0.47E-01::  0.13E+01  0.33E+03 -0.10E+02  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  32:   2.05176   1.38351  18.85753   3.54678::.49722E-02
+        gradient and laplacian of penalty function ___
+  0.42E-01  0.29E+00  0.27E-02  0.41E-01::  0.12E+01  0.39E+03 -0.13E+02  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  33:   2.04728   1.38341  18.85756   3.54674::.45639E-02
+        gradient and laplacian of penalty function ___
+  0.37E-01  0.24E+00  0.23E-02  0.36E-01::  0.12E+01  0.48E+03 -0.16E+02  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  34:   2.04319   1.38335  18.85758   3.54670::.42490E-02
+        gradient and laplacian of penalty function ___
+  0.32E-01  0.20E+00  0.19E-02  0.31E-01::  0.11E+01  0.60E+03 -0.20E+02  0.13E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  35:   2.03948   1.38330  18.85759   3.54667::.40061E-02
+        gradient and laplacian of penalty function ___
+  0.28E-01  0.17E+00  0.16E-02  0.27E-01::  0.11E+01  0.79E+03 -0.27E+02  0.13E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  36:   2.03612   1.38327  18.85760   3.54665::.38188E-02
+        gradient and laplacian of penalty function ___
+  0.25E-01  0.14E+00  0.13E-02  0.24E-01::  0.11E+01  0.11E+04 -0.37E+02  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  37:   2.03311   1.38326  18.85760   3.54662::.36746E-02
+        gradient and laplacian of penalty function ___
+  0.22E-01  0.11E+00  0.10E-02  0.20E-01::  0.10E+01  0.16E+04 -0.56E+02  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  38:   2.03043   1.38325  18.85760   3.54660::.35637E-02
+        gradient and laplacian of penalty function ___
+  0.19E-01  0.89E-01  0.82E-03  0.18E-01::  0.10E+01  0.25E+04 -0.91E+02  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  39:   2.02804   1.38324  18.85760   3.54659::.34786E-02
+        gradient and laplacian of penalty function ___
+  0.16E-01  0.69E-01  0.63E-03  0.15E-01::  0.10E+01  0.44E+04 -0.16E+03  0.14E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  40:   2.02594   1.38324  18.85760   3.54657::.34135E-02
+        gradient and laplacian of penalty function ___
+  0.14E-01  0.51E-01  0.46E-03  0.13E-01::  0.10E+01  0.88E+04 -0.33E+03  0.15E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  41:   2.02409   1.38324  18.85760   3.54656::.33639E-02
+        gradient and laplacian of penalty function ___
+  0.12E-01  0.36E-01  0.32E-03  0.11E-01::  0.10E+01  0.20E+05 -0.80E+03  0.16E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  42:   2.02248   1.38324  18.85760   3.54655::.33262E-02
+        gradient and laplacian of penalty function ___
+  0.11E-01  0.22E-01  0.19E-03  0.99E-02::  0.10E+01  0.59E+05 -0.24E+04  0.17E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  43:   2.02107   1.38324  18.85760   3.54655::.32976E-02
+        gradient and laplacian of penalty function ___
+  0.95E-02  0.11E-01  0.81E-04  0.85E-02::  0.10E+01  0.24E+06 -0.11E+05  0.18E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  44:   2.01984   1.38324  18.85760   3.54654::.32759E-02
+        gradient and laplacian of penalty function ___
+  0.82E-02  0.38E-03 -0.16E-04  0.73E-02::  0.10E+01  0.18E+07 -0.10E+06  0.19E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  45:   2.01877   1.38324  18.85760   3.54653::.32594E-02
+        gradient and laplacian of penalty function ___
+  0.72E-02 -0.85E-02 -0.99E-04  0.63E-02::  0.10E+01  0.32E+09  0.41E+07  0.21E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  46:   2.01785   1.38324  18.85760   3.54653::.32470E-02
+        gradient and laplacian of penalty function ___
+  0.62E-02 -0.16E-01 -0.17E-03  0.54E-02::  0.10E+01 -0.22E+10 -0.23E+08  0.23E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  47:   2.01704   1.38324  18.85760   3.54653::.32376E-02
+        gradient and laplacian of penalty function ___
+  0.54E-02 -0.23E-01 -0.24E-03  0.46E-02::  0.10E+01  0.71E+10  0.66E+08  0.26E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  48:   2.01633   1.38324  18.85760   3.54652::.32305E-02
+        gradient and laplacian of penalty function ___
+  0.47E-02 -0.29E-01 -0.29E-03  0.39E-02::  0.10E+01 -0.14E+11 -0.12E+09  0.30E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  49:   2.01572   1.38324  18.85760   3.54652::.32251E-02
+        gradient and laplacian of penalty function ___
+  0.41E-02 -0.34E-01 -0.34E-03  0.33E-02::  0.10E+01  0.19E+11  0.15E+09  0.35E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  50:   2.01519   1.38324  18.85760   3.54652::.32210E-02
+        gradient and laplacian of penalty function ___
+  0.36E-02 -0.38E-01 -0.38E-03  0.28E-02::  0.10E+01 -0.19E+11 -0.14E+09  0.42E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  51:   2.01473   1.38324  18.85760   3.54652::.32179E-02
+        gradient and laplacian of penalty function ___
+  0.31E-02 -0.42E-01 -0.42E-03  0.24E-02::  0.10E+01  0.15E+11  0.11E+09  0.52E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  52:   2.01432   1.38324  18.85760   3.54652::.32156E-02
+        gradient and laplacian of penalty function ___
+  0.27E-02 -0.46E-01 -0.45E-03  0.20E-02::  0.10E+01 -0.89E+10 -0.61E+08  0.67E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  53:   2.01397   1.38324  18.85760   3.54652::.32138E-02
+        gradient and laplacian of penalty function ___
+  0.23E-02 -0.49E-01 -0.48E-03  0.16E-02::  0.10E+01  0.44E+10  0.29E+08  0.90E+03
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  54:   2.01367   1.38324  18.85760   3.54652::.32125E-02
+        gradient and laplacian of penalty function ___
+  0.20E-02 -0.51E-01 -0.50E-03  0.13E-02::  0.10E+01 -0.18E+10 -0.11E+08  0.13E+04
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  55:   2.01340   1.38324  18.85760   3.54652::.32115E-02
+        gradient and laplacian of penalty function ___
+  0.18E-02 -0.53E-01 -0.52E-03  0.11E-02::  0.10E+01  0.59E+09  0.36E+07  0.19E+04
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  56:   2.01317   1.38324  18.85760   3.54652::.32107E-02
+        gradient and laplacian of penalty function ___
+  0.15E-02 -0.55E-01 -0.54E-03  0.83E-03::  0.10E+01 -0.16E+09 -0.96E+06  0.31E+04
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  57:   2.01297   1.38324  18.85760   3.54652::.32101E-02
+        gradient and laplacian of penalty function ___
+  0.13E-02 -0.57E-01 -0.55E-03  0.64E-03::  0.10E+01  0.38E+08  0.22E+06  0.57E+04
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  58:   2.01279   1.38324  18.85760   3.54652::.32097E-02
+        gradient and laplacian of penalty function ___
+  0.12E-02 -0.58E-01 -0.57E-03  0.47E-03::  0.10E+01 -0.75E+07 -0.41E+05  0.12E+05
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  59:   2.01264   1.38324  18.85760   3.54652::.32093E-02
+        gradient and laplacian of penalty function ___
+  0.10E-02 -0.60E-01 -0.58E-03  0.32E-03::  0.10E+01  0.13E+07  0.66E+04  0.28E+05
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  60:   2.01251   1.38324  18.85760   3.54652::.32091E-02
+        gradient and laplacian of penalty function ___
+  0.89E-03 -0.61E-01 -0.59E-03  0.19E-03::  0.10E+01 -0.18E+06 -0.91E+03  0.89E+05
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  61:   2.01239   1.38324  18.85760   3.54652::.32089E-02
+        gradient and laplacian of penalty function ___
+  0.77E-03 -0.62E-01 -0.60E-03  0.77E-04::  0.10E+01  0.22E+05  0.11E+03  0.40E+06
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  62:   2.01229   1.38324  18.85761   3.54652::.32087E-02
+        gradient and laplacian of penalty function ___
+  0.67E-03 -0.63E-01 -0.61E-03 -0.16E-04::  0.97E+00 -0.22E+04 -0.10E+02  0.38E+07
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  63:   2.01220   1.38324  18.85760   3.54652::.32091E-02
+        gradient and laplacian of penalty function ___
+  0.55E-03 -0.64E-01 -0.62E-03 -0.14E-03::  0.14E+01  0.29E+03  0.14E+01 -0.22E+09
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  64:   2.01215   1.38326  18.85766   3.54652::.32054E-02
+        gradient and laplacian of penalty function ___
+  0.74E-03 -0.62E-01 -0.60E-03  0.87E-04:: -0.36E+01  0.74E+02  0.37E+00 -0.27E+10
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  65:   2.01218   1.38337  18.85786   3.54652::.31930E-02
+        gradient and laplacian of penalty function ___
+  0.17E-02 -0.52E-01 -0.49E-03  0.12E-02::  0.35E+02  0.92E+02  0.49E+00  0.27E+12
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  66:   2.01217   1.38345  18.85799   3.54652::.31858E-02
+        gradient and laplacian of penalty function ___
+  0.23E-02 -0.45E-01 -0.43E-03  0.19E-02:: -0.98E+02  0.89E+02  0.51E+00 -0.16E+13
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  67:   2.01218   1.38351  18.85810   3.54652::.31802E-02
+        gradient and laplacian of penalty function ___
+  0.29E-02 -0.39E-01 -0.37E-03  0.25E-02::  0.18E+03  0.90E+02  0.55E+00       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  68:   2.01217   1.38357  18.85819   3.54652::.31760E-02
+        gradient and laplacian of penalty function ___
+  0.33E-02 -0.34E-01 -0.32E-03  0.31E-02:: -0.24E+03  0.89E+02  0.60E+00       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  69:   2.01217   1.38362  18.85826   3.54652::.31728E-02
+        gradient and laplacian of penalty function ___
+  0.38E-02 -0.30E-01 -0.27E-03  0.36E-02::  0.23E+03  0.90E+02  0.67E+00       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  70:   2.01217   1.38366  18.85831   3.54652::.31703E-02
+        gradient and laplacian of penalty function ___
+  0.41E-02 -0.26E-01 -0.23E-03  0.40E-02:: -0.17E+03  0.89E+02  0.75E+00       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  71:   2.01218   1.38370  18.85835   3.54652::.31685E-02
+        gradient and laplacian of penalty function ___
+  0.44E-02 -0.22E-01 -0.20E-03  0.44E-02::  0.10E+03  0.90E+02  0.87E+00       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  72:   2.01217   1.38373  18.85838   3.54652::.31671E-02
+        gradient and laplacian of penalty function ___
+  0.47E-02 -0.20E-01 -0.17E-03  0.47E-02:: -0.47E+02  0.88E+02  0.10E+01       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  73:   2.01218   1.38376  18.85840   3.54652::.31661E-02
+        gradient and laplacian of penalty function ___
+  0.50E-02 -0.17E-01 -0.14E-03  0.50E-02::  0.20E+02  0.93E+02  0.13E+01       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  74:   2.01215   1.38378  18.85842   3.54652::.31651E-02
+        gradient and laplacian of penalty function ___
+  0.51E-02 -0.15E-01 -0.12E-03  0.52E-02:: -0.51E+01  0.77E+02  0.13E+01       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  75:   2.01228   1.38381  18.85843   3.54652::.31657E-02
+        gradient and laplacian of penalty function ___
+  0.55E-02 -0.12E-01 -0.87E-04  0.56E-02::  0.26E+01  0.13E+03  0.29E+01       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  76:   2.01201   1.38382  18.85843   3.54652::.31626E-02
+        gradient and laplacian of penalty function ___
+  0.53E-02 -0.13E-01 -0.97E-04  0.54E-02::  0.64E+00 -0.11E+03 -0.27E+01      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  77:   2.01093   1.38380  18.85843   3.54652::.31530E-02
+        gradient and laplacian of penalty function ___
+  0.41E-02 -0.23E-01 -0.20E-03  0.42E-02::  0.11E+01  0.65E+03  0.21E+02      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  78:   2.01046   1.38381  18.85843   3.54652::.31491E-02
+        gradient and laplacian of penalty function ___
+  0.37E-02 -0.27E-01 -0.23E-03  0.38E-02::  0.92E+00 -0.76E+03 -0.27E+02      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  79:   2.00994   1.38380  18.85843   3.54652::.31459E-02
+        gradient and laplacian of penalty function ___
+  0.31E-02 -0.32E-01 -0.27E-03  0.32E-02::  0.11E+01  0.10E+04  0.41E+02      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  80:   2.00957   1.38381  18.85843   3.54652::.31435E-02
+        gradient and laplacian of penalty function ___
+  0.28E-02 -0.34E-01 -0.30E-03  0.29E-02::  0.91E+00 -0.69E+03 -0.30E+02      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  81:   2.00918   1.38380  18.85843   3.54652::.31419E-02
+        gradient and laplacian of penalty function ___
+  0.23E-02 -0.38E-01 -0.34E-03  0.25E-02::  0.11E+01  0.60E+03  0.28E+02      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  82:   2.00891   1.38381  18.85843   3.54652::.31401E-02
+        gradient and laplacian of penalty function ___
+  0.21E-02 -0.40E-01 -0.35E-03  0.23E-02::  0.74E+00 -0.18E+03 -0.85E+01      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  83:   2.00854   1.38378  18.85842   3.54652::.31413E-02
+        gradient and laplacian of penalty function ___
+  0.15E-02 -0.45E-01 -0.41E-03  0.16E-02::  0.17E+01  0.19E+03  0.10E+02      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  84:   2.00842   1.38381  18.85843   3.54652::.31382E-02
+        gradient and laplacian of penalty function ___
+  0.16E-02 -0.44E-01 -0.39E-03  0.18E-02:: -0.12E+01  0.56E+02  0.36E+01       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  85:   2.00860   1.38391  18.85844   3.54652::.31312E-02
+        gradient and laplacian of penalty function ___
+  0.27E-02 -0.33E-01 -0.28E-03  0.30E-02::  0.57E+01  0.10E+03  0.77E+01       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  86:   2.00854   1.38395  18.85845   3.54652::.31282E-02
+        gradient and laplacian of penalty function ___
+  0.29E-02 -0.30E-01 -0.25E-03  0.33E-02:: -0.47E+01  0.76E+02  0.69E+01       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  87:   2.00862   1.38401  18.85845   3.54652::.31259E-02
+        gradient and laplacian of penalty function ___
+  0.35E-02 -0.25E-01 -0.20E-03  0.39E-02::  0.63E+01  0.10E+03  0.11E+02       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  88:   2.00855   1.38404  18.85845   3.54652::.31238E-02
+        gradient and laplacian of penalty function ___
+  0.37E-02 -0.23E-01 -0.17E-03  0.41E-02:: -0.27E+01  0.70E+02  0.10E+02       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  89:   2.00873   1.38408  18.85845   3.54652::.31235E-02
+        gradient and laplacian of penalty function ___
+  0.42E-02 -0.17E-01 -0.12E-03  0.47E-02::  0.30E+01  0.12E+03  0.24E+02       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  90:   2.00855   1.38410  18.85846   3.54652::.31214E-02
+        gradient and laplacian of penalty function ___
+  0.42E-02 -0.17E-01 -0.12E-03  0.47E-02::  0.14E+00  0.70E+01  0.40E+01       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  91:   2.00476   1.38442  18.85846   3.54652::.30820E-02
+        gradient and laplacian of penalty function ___
+  0.30E-02 -0.21E-01 -0.12E-03  0.41E-02::  0.29E+00 -0.10E+02 -0.18E+01      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  92:   2.00341   1.38416  18.85845   3.54652::.30984E-02
+        gradient and laplacian of penalty function ___
+ -0.50E-03 -0.55E-01 -0.47E-03  0.26E-03::  0.26E+01  0.13E+03  0.39E+02      -INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  93:   2.00343   1.38421  18.85845   3.54652::.30926E-02
+        gradient and laplacian of penalty function ___
+ -0.20E-04 -0.50E-01 -0.42E-03  0.82E-03::  0.19E+02  0.92E+02  0.33E+02       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  94:   2.00343   1.38428  18.85845   3.54652::.30860E-02
+        gradient and laplacian of penalty function ___
+  0.57E-03 -0.44E-01 -0.35E-03  0.15E-02::  0.43E+04  0.89E+02  0.39E+02       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  95:   2.00343   1.38435  18.85845   3.54652::.30807E-02
+        gradient and laplacian of penalty function ___
+  0.11E-02 -0.38E-01 -0.30E-03  0.21E-02:: -0.32E+05  0.89E+02  0.49E+02       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  96:   2.00343   1.38440  18.85846   3.54652::.30767E-02
+        gradient and laplacian of penalty function ___
+  0.16E-02 -0.33E-01 -0.24E-03  0.27E-02::  0.10E+06  0.89E+02  0.65E+02       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  97:   2.00343   1.38445  18.85846   3.54652::.30737E-02
+        gradient and laplacian of penalty function ___
+  0.20E-02 -0.29E-01 -0.20E-03  0.32E-02:: -0.20E+06  0.89E+02  0.91E+02       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  98:   2.00343   1.38449  18.85846   3.54652::.30714E-02
+        gradient and laplacian of penalty function ___
+  0.23E-02 -0.25E-01 -0.16E-03  0.36E-02::  0.28E+06  0.89E+02  0.13E+03       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER  99:   2.00343   1.38453  18.85846   3.54652::.30697E-02
+        gradient and laplacian of penalty function ___
+  0.26E-02 -0.22E-01 -0.13E-03  0.39E-02:: -0.28E+06  0.89E+02  0.21E+03       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER 100:   2.00343   1.38456  18.85846   3.54652::.30684E-02
+        gradient and laplacian of penalty function ___
+  0.29E-02 -0.19E-01 -0.99E-04  0.42E-02::  0.22E+06  0.89E+02  0.37E+03       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER 101:   2.00343   1.38459  18.85846   3.54652::.30674E-02
+        gradient and laplacian of penalty function ___
+  0.32E-02 -0.17E-01 -0.74E-04  0.45E-02:: -0.14E+06  0.89E+02  0.74E+03       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER 102:   2.00343   1.38461  18.85846   3.54652::.30666E-02
+        gradient and laplacian of penalty function ___
+  0.34E-02 -0.14E-01 -0.52E-04  0.47E-02::  0.67E+05  0.89E+02  0.17E+04       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER 103:   2.00343   1.38464  18.85846   3.54652::.30661E-02
+        gradient and laplacian of penalty function ___
+  0.35E-02 -0.13E-01 -0.32E-04  0.50E-02:: -0.27E+05  0.89E+02  0.49E+04       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER 104:   2.00343   1.38465  18.85846   3.54652::.30656E-02
+        gradient and laplacian of penalty function ___
+  0.37E-02 -0.11E-01 -0.16E-04  0.51E-02::  0.91E+04  0.89E+02  0.20E+05       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER 105:   2.00343   1.38467  18.85846   3.54652::.30653E-02
+        gradient and laplacian of penalty function ___
+  0.38E-02 -0.95E-02 -0.10E-05  0.53E-02:: -0.25E+04  0.89E+02  0.14E+06       INF
+======= PARAMETERS AND PENALTY FUNCTION OF FIT =======
+ITER 106:   2.00343   1.38468  18.85846   3.54652::.30651E-02
+        gradient and laplacian of penalty function ___
+  0.39E-02 -0.82E-02  0.12E-04  0.54E-02::  0.60E+03  0.89E+02  0.13E+08       INF

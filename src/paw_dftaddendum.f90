@@ -2,7 +2,7 @@
 MODULE NEWDFT_MODULE
 LOGICAL(4) :: TINI=.FALSE.
 CONTAINS
-      SUBROUTINE NEWDFT_INITIALIZE
+      SUBROUTINE NEWDFT_INITIALIZE()
       IF(TINI) RETURN
       TINI=.TRUE.
       END SUBROUTINE NEWDFT_INITIALIZE
@@ -23,7 +23,7 @@ END MODULE NEWDFT_MODULE
 !VAL(3)= (GRAD*RHOT)**2
 !VAL(4)= (GRAD*RHOS)**2
 !VAL(3)= (GRAD*RHOT)*(GRAD*RHOS)
-      CALL NEWDFT_INITIALIZE
+      CALL NEWDFT_INITIALIZE()
       EXC=0.D0
       DEXC(:)=0.D0
       RETURN
@@ -40,7 +40,7 @@ END MODULE NEWDFT_MODULE
       REAL(8),INTENT(OUT) :: DEXC(5)
       REAL(8),INTENT(OUT) :: D2EXC(5,5)
 !     ******************************************************************
-      CALL NEWDFT_INITIALIZE
+      CALL NEWDFT_INITIALIZE()
       EXC=0.D0
       DEXC(:)=0.D0
       D2EXC(:,:)=0.D0
@@ -59,7 +59,7 @@ END MODULE NEWDFT_MODULE
       REAL(8),INTENT(OUT) :: D2EXC(5,5)
       REAL(8),INTENT(OUT) :: D3EXC(5,5,5)
 !     ******************************************************************
-      CALL NEWDFT_INITIALIZE
+      CALL NEWDFT_INITIALIZE()
       EXC=0.D0
       DEXC(:)=0.D0
       D2EXC(:,:)=0.D0
