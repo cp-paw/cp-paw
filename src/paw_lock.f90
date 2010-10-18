@@ -11,7 +11,8 @@
 !     ** (1) YEAR,(2) MONTH,(3) DAY,                                  **
 !     ** (4) HOUR,(5) MINUTES, (6) SECONDS                            **
 !     ******************************************************************
-      USE CLOCK_MODULE
+      USE CLOCK_MODULE, ONLY : DATE_TIME
+      IMPLICIT NONE
       TYPE(DATE_TIME),PARAMETER :: EXPIRATION=DATE_TIME(1997,6,31,0,0,0.0)
       LOGICAL(4)     ,PARAMETER :: TON=.FALSE.
       END MODULE LOCK_MODULE

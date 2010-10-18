@@ -1370,7 +1370,8 @@ PRINT*,'RCSM ',THIS%RCSM
       ALLOCATE(THIS%PROOFG(NG,LNX))
       DO LN=1,LNX
         L=THIS%LOX(LN)
-        CALL RADIAL$BESSELTRANSFORM(L,GID,NR,THIS%PRO(:,LN),GIDG,NG,THIS%PROOFG(:,LN))
+        CALL RADIAL$BESSELTRANSFORM(L,GID,NR,THIS%PRO(:,LN),GIDG &
+    &                              ,NG,THIS%PROOFG(:,LN))
         THIS%PROOFG(:,LN)=FOURPI*THIS%PROOFG(:,LN)
       ENDDO
 !     == COMPENSATION GAUSSIAN =========================================
@@ -1708,7 +1709,7 @@ PRINT*,'RCSM ',THIS%RCSM
       ENDDO
 !
       CALL TIMING$CLOCKON('MAKEPARTIALWAVES')
-      CALL ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,THIS%ATOM%AEPOT &
+      CALL setup_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,THIS%ATOM%AEPOT &
      &          ,VFOCK,NB,NC &
      &          ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
      &          ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
@@ -1829,7 +1830,7 @@ PRINT*,'RCSM ',THIS%RCSM
       CALL LINKEDLIST$SET(LL_STP,'ZV',0,THIS%ZV)
 !
 !     ==========================================================================
-!     == RADIAL GRID
+!     == RADIAL GRID                                                          ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
@@ -1843,7 +1844,7 @@ PRINT*,'RCSM ',THIS%RCSM
       DEALLOCATE(R)
 !
 !     ==========================================================================
-!     == ATOM
+!     == ATOM                                                                 ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
@@ -1863,7 +1864,7 @@ PRINT*,'RCSM ',THIS%RCSM
       CALL LINKEDLIST$SET(LL_STP,'VADD',0,THIS%VADD)
 !
 !     ==========================================================================
-!     == SETUP PARAMETERS 
+!     == SETUP PARAMETERS                                                     ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
@@ -1890,7 +1891,7 @@ PRINT*,'RCSM ',THIS%RCSM
       END IF
 !
 !     ==========================================================================
-!     == AUGMENTATION
+!     == AUGMENTATION                                                         ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
@@ -1899,7 +1900,7 @@ PRINT*,'RCSM ',THIS%RCSM
       CALL LINKEDLIST$SET(LL_STP,'PSCORE',0,THIS%PSCORE)
 !
 !     ==========================================================================
-!     == BESSELTRANSFORMS
+!     == BESSELTRANSFORMS                                                     ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
@@ -1937,7 +1938,7 @@ PRINT*,'RCSM ',THIS%RCSM
 PRINT*,'SETUP REPORT FILE WRITTEN'
 !
 !     ==========================================================================
-!     == REMOVE LINKED LIST ====================================================
+!     == REMOVE LINKED LIST                                                   ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~')
       CALL LINKEDLIST$RMLIST(LL_STP,'SETUPREPORT')
@@ -1991,7 +1992,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_CORESELECT(AEZ,ZV,NB,LOFI,SOFI,TC)
 !     **************************************************************************
-!     **************************************************************************
+!     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)  :: AEZ
@@ -2020,7 +2021,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
         IF(INT(AEZ-ZV).LT.IZ2) EXIT
       ENDDO
 !
-!     == DETERMINE OCCUPIED CORE SHELLS ======================================= 
+!     == DETERMINE OCCUPIED CORE SHELLS ========================================
       ISVAR=NINT(AEZ-ZV)-IZ1
       ISVAR=ISVAR/2
       IF(ISVAR.LT.0.OR.ISVAR.GT.15) THEN
@@ -2060,7 +2061,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
         END IF
       ENDDO
 !
-!     == IDENTIFY CORE SHELLS =====================================
+!     == IDENTIFY CORE SHELLS ==================================================
       TC=.FALSE.
       DO L=0,3
         DO ISO=-1,1
@@ -2189,20 +2190,20 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$READ()
-!     ******************************************************************
-!     **  READ SETUP                                                  **
-!     ******************************************************************
+!     **************************************************************************
+!     **  READ SETUP                                                          **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)               :: ISP,NSP1
       CHARACTER(32)            :: NAME
       LOGICAL     ,ALLOCATABLE :: TNEW(:) ! SWITCH BETWEEN INTERNAL ATOM 
                                           ! PROGRAM AND READING THE FILE
-!     ******************************************************************
+!     **************************************************************************
                             CALL TRACE$PUSH('SETUP$READ')
 !
-!     ==================================================================
-!     ==  CREATE SETUPS                                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CREATE SETUPS                                                       ==
+!     ==========================================================================
       CALL ATOMTYPELIST$LENGTH(NSP1)
       ALLOCATE(TNEW(NSP1))
       DO ISP=1,NSP1
@@ -2213,9 +2214,9 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
         CALL SETUP$SELECT(NAME)
       ENDDO
 !
-!     ==================================================================
-!     ==  READ SETUP FILES                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ SETUP FILES                                                    ==
+!     ==========================================================================
       DO ISP=1,NSP1
         CALL SETUP$ISELECT(ISP)
         IF(TNEW(ISP)) THEN
@@ -2232,9 +2233,9 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$AEPARTIALWAVES(ISP_,NRX_,LNX_,AEPHI_)
 !LEGACY CODE! -> SETUP$GETR8A('AEPHI'
-!     ******************************************************************
-!     **  RETURN AE PARTIAL WAVES ON THE RADIAL GRID                  **
-!     ******************************************************************
+!     **************************************************************************
+!     **  RETURN AE PARTIAL WAVES ON THE RADIAL GRID                          **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP_
@@ -2242,7 +2243,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       INTEGER(4),INTENT(IN) :: LNX_
       REAL(8)   ,INTENT(OUT):: AEPHI_(NRX_,LNX_)
       INTEGER(4)            :: NR
-!     ******************************************************************
+!     **************************************************************************
       CALL SETUP$ISELECT(ISP_)
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
       IF(NRX_.NE.NR) THEN
@@ -2260,9 +2261,9 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$PSPARTIALWAVES(ISP_,NRX_,LNX_,PSPHI_)
 !LEGACY CODE! -> SETUP$GETR8A('PSPHI'
-!     ******************************************************************
-!     **  RETURN PS PARTIAL WAVE ON A RADIAL GRID                     **
-!     ******************************************************************
+!     **************************************************************************
+!     **  RETURN PS PARTIAL WAVE ON A RADIAL GRID                             **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP_
@@ -2270,7 +2271,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       INTEGER(4),INTENT(IN) :: LNX_
       REAL(8)   ,INTENT(OUT):: PSPHI_(NRX_,LNX_)
       INTEGER(4)            :: NR
-!     ******************************************************************
+!     **************************************************************************
       CALL SETUP$ISELECT(ISP_)
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
       IF(NRX_.NE.NR) THEN
@@ -2288,16 +2289,16 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$1COVERLAP(ISP_,LNXX_,DOVER_)
 !LEGACY CODE! -> SETUP$GETR8A('DO'
-!     ******************************************************************
-!     **  RETURN 1-C- OVERLAP OF THE PARTIAL WAVES                    **
-!     ******************************************************************
+!     **************************************************************************
+!     **  RETURN 1-C- OVERLAP OF THE PARTIAL WAVES                            **
+!     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP_
       INTEGER(4),INTENT(IN) :: LNXX_
       REAL(8)   ,INTENT(OUT):: DOVER_(LNXX_,LNXX_)
       INTEGER(4)            :: LN1,LN2
-!     ******************************************************************
+!     **************************************************************************
       CALL SETUP$ISELECT(ISP_)
       DO LN1=1,THIS%LNX
         DO LN2=1,THIS%LNX
@@ -3007,7 +3008,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMIC_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,AEPOT,VFOCK &
+      SUBROUTINE setup_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,AEPOT,VFOCK &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
      &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
      &                  ,AEPHI,PSPHI,NLPHI,QN,PRO,DT,DOVER,AECORE,PSCORE,PSPOT &
@@ -3148,7 +3149,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       LOGICAL(4)            :: TVARDREL
 REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !     **************************************************************************
-                                CALL TRACE$PUSH('ATOMIC_MAKEPARTIALWAVES')
+                                CALL TRACE$PUSH('setup_MAKEPARTIALWAVES')
 !VFOCK%SCALE=0.D0
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -3740,7 +3741,8 @@ PRINT*,'EOFI1 A ',EOFI1
 !     == ENFORCE BIORTHOGONALIZATION                                          ==
 !     ==========================================================================
       ALLOCATE(A(LNX,LNX))
-      CALL BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,BAREPRO,TRANSPHI,TRANSPRO)
+      CALL setup_BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,BAREPRO &
+     &                          ,TRANSPHI,TRANSPRO)
       A=MATMUL(TRANSPRO,TRANSPOSE(TRANSPHI))
       PRO=MATMUL(BAREPRO,A)
       CALL LIB$INVERTR8(LNX,TRANSPHI,TRANSPHIINV)
@@ -3752,9 +3754,12 @@ PRINT*,'EOFI1 A ',EOFI1
       DO LN1=1,LNX
         DO LN2=1,LNX
           IF(LOX(LN1).NE.LOX(LN2)) CYCLE
+!         == PROJECTOR FUNCTIONS HAVE A STRICT CUTOFF. INTEGRATION IS DONE =====
+!         == TO THE END  =======================================================
           AUX(:)=R(:)**2*PSPHI(:,LN1)*PRO(:,LN2)
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+!          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+          CALL RADIAL$INTEGRAl(GID,NR,AUX,val)
           IF(LN1.EQ.LN2)VAL=VAL-1.D0
           IF(ABS(VAL).GT.1.D-5) THEN
             CALL ERROR$MSG('BIORTHOGONALIZATION FAILED')
@@ -4986,7 +4991,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,PRO &
+      SUBROUTINE setup_BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,PRO &
      &                          ,TRANSPHI,TRANSPRO)
 !     **************************************************************************
 !     ** DETERMINES THE MATRICES TRANSPHI AND TRANSPRO SUCH THAT              **
@@ -5023,8 +5028,11 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
         DO LN2=1,LNX
           IF(LOX(LN1).NE.LOX(LN2)) CYCLE
           AUX(:)=PRO(:,LN1)*PSPHI(:,LN2)*R(:)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)       
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)       
+!         == PROJECTOR FUNCTIONS HAVE A STRICT CUTOFF. INTEGRATION IS DONE =====
+!         == TO THE END  =======================================================
+!          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)       
+!          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)       
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
           PROPSI(LN1,LN2)=SVAR
         ENDDO
       ENDDO
@@ -5072,7 +5080,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
           ENDDO
           CALL ERROR$MSG('BIORTHOGONALIZATION INACCURATE')
           CALL ERROR$R8VAL('MAX. DEV.',SVAR)
-          CALL ERROR$STOP('BIORTHOMATRICES')
+          CALL ERROR$STOP('setup_BIORTHOMATRICES')
         END IF
       END IF
       RETURN
@@ -5238,8 +5246,8 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
 !       ==  RESCALE PSEUDO PARTIAL WAVES SO THAT THEY MATCH TO AE PARTIAL WAVES=
 !       ========================================================================
 !       == DO NOT RESCALE AT THE NODAL PLANE, BUT 5 POINTS INWARD....        
-        ARR1(:)=PSPHI(IRBND-5:IRBND,LN)
-        ARR2(:)=PHI(IRBND-5:IRBND)
+        ARR1(:)=PSPHI(IRBND-4:IRBND,LN)
+        ARR2(:)=PHI(IRBND-4:IRBND)
         II=MAXLOC(ABS(ARR1*ARR2))
         SVAR=ARR1(II(1))/ARR2(II(1))
         PHI(:)=PHI(:)*SVAR

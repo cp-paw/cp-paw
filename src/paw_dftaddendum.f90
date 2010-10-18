@@ -1,12 +1,13 @@
 !.......................................................................
 MODULE NEWDFT_MODULE
 LOGICAL(4) :: TINI=.FALSE.
-CONTAINS
+END MODULE NEWDFT_MODULE
+!     ..................................................................
       SUBROUTINE NEWDFT_INITIALIZE()
+      USE NEWDFT_MODULE
       IF(TINI) RETURN
       TINI=.TRUE.
       END SUBROUTINE NEWDFT_INITIALIZE
-END MODULE NEWDFT_MODULE
 !     ..................................................................
       SUBROUTINE NEWDFT$EVAL1(VAL,EXC,DEXC)
 !     ******************************************************************

@@ -661,7 +661,7 @@
       INTEGER(4)   ,INTENT(IN) :: NAT       ! #(ATOMS)
       REAL(8)      ,INTENT(IN) :: RBAS(3,3) ! LATTICE VECTORS
       REAL(8)      ,INTENT(IN) :: R(3,NAT)  ! ATOM POSITIONS
-      REAL(8)      ,INTENT(IN) :: Rad(nat)   ! CUTOFF RADIUS FOR THE NEIGHORLIST
+      REAL(8)      ,INTENT(IN) :: Rad(nat)  ! CUTOFF RADIUS FOR THE NEIGHORLIST
       INTEGER(4)   ,INTENT(IN) :: NNX       ! X#(NEIGHBORS PER ATOM)
       INTEGER(4)   ,INTENT(OUT):: NNB       ! #(NEIGHBORS)
       INTEGER(4)   ,INTENT(OUT):: NNLIST(5,NNX) ! NEIGHBORLIST (IAT1,IAT2,IT(3))
@@ -669,7 +669,7 @@
       REAL(8)                  :: RBASINV(3,3)
       REAL(8)                  :: RFOLD(3,NAT)
       REAL(8)                  :: X(3)      ! RELATIVE COORDINATES
-      REAL(8)                  :: XFOLD(3)      ! RELATIVE COORDINATES
+      REAL(8)                  :: XFOLD(3)  ! RELATIVE COORDINATES
       INTEGER(4)               :: ITFOLD(3,NAT)   ! SHIFT
       INTEGER(4)               :: IAT,I,IAT1,IAT2,IT1,IT2,IT3
       REAL(8)                  :: RMAX2     ! SQUARED CUTOFF RADIUS

@@ -2033,49 +2033,54 @@ end if
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine binomialcoefficient(i,j,res)
+      SUBROUTINE BINOMIALCOEFFICIENT(I,J,RES)
 !     **************************************************************************
-!     **  calculated the binomial coefficient n!/k!/(n-k)!                    **
+!     **  CALCULATES THE BINOMIAL COEFFICIENT (I OVER J)=I!/J!/(I-J)!         **
+!     **                                                                      **
+!     **  USES A LOOKUP TABLE                                                 **
+!     **  USES RECURSIVE FORMULA (N OVER K)=(N-1 OVER K-1) (N-1 OVER K)       **
+!     **  WITH INITIAL VALUES   (N OVER 0)=1                                  **
+!     **                                                                      **
 !     **************************************************************************
-      implicit none
-      integer(4),intent(in) :: i
-      integer(4),intent(in) :: j
-      real(8)   ,intent(out):: res
-      integer(4),save              :: nx=-1
-      integer(4),allocatable,save  :: b(:,:)
-      integer(4)                   :: n,k     
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)       :: I
+      INTEGER(4),INTENT(IN)       :: J
+      REAL(8)   ,INTENT(OUT)      :: RES
+      INTEGER(4),SAVE             :: NX=-1
+      INTEGER(4),ALLOCATABLE,SAVE :: B(:,:)
+      INTEGER(4)                  :: N,K     
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == return result, if already available                                  ==
+!     == RETURN RESULT, IF ALREADY AVAILABLE                                  ==
 !     ==========================================================================
-      if(i.lt.nx) then
-        res=real(b(i,j),kind=8)
-        return
-      end if
+      IF(I.LT.NX) THEN
+        RES=REAL(B(I,J),KIND=8)
+        RETURN
+      END IF
 !
 !     ==========================================================================
-!     == reallocate permanent array                                           ==
+!     == REALLOCATE PERMANENT ARRAY                                           ==
 !     ==========================================================================
-      if(allocated(b)) deallocate(b)
-      nx=max(i,nx+20)
-      allocate(b(0:nx,0:nx))
+      IF(ALLOCATED(B)) DEALLOCATE(B)
+      NX=MAX(I,NX+20)
+      ALLOCATE(B(0:NX,0:NX))
 !
 !     ==========================================================================
-!     == CALCULATE BINOMIAL COEFFICIENTS                                      ==
+!     == CALCULATE TABLE OF BINOMIAL COEFFICIENTS                             ==
 !     ==========================================================================
       B(:,:)=0.D0
       DO N=0,NX
-        B(N,0)=1.D0
+        B(N,0)=1.D0   !INITIAL VALUE (N OVER 0)=1
         DO K=1,N-1
-          B(N,K)=B(N-1,K-1)+B(N-1,K)
+          B(N,K)=B(N-1,K-1)+B(N-1,K)   ! RECURSIVE FORMULA
         ENDDO
-        B(N,N)=1.D0
+        B(N,N)=1.D0   ! INITIAL VALUE (N OVER N)=1
       ENDDO
 !
 !     ==========================================================================
-!     == now return result                                                    ==
+!     == RETURN RESULT                                                        ==
 !     ==========================================================================
-      res=real(b(i,j),kind=8)
-      return
-      end
+      RES=REAL(B(I,J),KIND=8)
+      RETURN
+      END

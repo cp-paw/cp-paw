@@ -2750,8 +2750,11 @@ print*,'a     ',(a(i,i),i=1,nb)
       REAL(8)  ,ALLOCATABLE :: EIG(:)
       INTEGER(4)            :: NTASKS,THISTASK
       real(8)  ,allocatable :: occ(:,:,:)
+      real(8)               :: espinhomo(nspin)
+      real(8)               :: espinlumo(nspin)
+      integer(4)            :: ibspinhomo(nspin)
       real(8)               :: ehomo,elumo,egdirect
-      integer(4)            :: ibhomo(nspin)
+      integer(4)            :: ibhomo
       integer(4)            :: ikhomo,iklumo,ikdirect
       integer(4)            :: ishomo,islumo,isdirect
       character(80)         :: format
@@ -2766,9 +2769,13 @@ print*,'a     ',(a(i,i),i=1,nb)
       CALL DYNOCC$GETI4('NB',NB)
       ALLOCATE(occ(NB,NKPT,NSPIN))
       CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,occ)
-      egdirect=1.d+10
-      ehomo=-1.d+10
-      elumo=1.d+10
+      egdirect    =+1.d+10
+      ehomo       =-1.d+10
+      elumo       =+1.d+10
+      espinhomo(:)=-1.d+10
+      espinlumo(:)=+1.d+10
+      ibhomo       =-1
+      ibspinhomo(:)=-1
       ikdirect=0
       ikhomo=0
       iklumo=0
@@ -2810,48 +2817,63 @@ print*,'a     ',(a(i,i),i=1,nb)
             ITEN=0
             DO WHILE (NB.GT.ITEN)
               WRITE(NFIL,FMT='(I3,":",10F8.3)') &
-     &             ITEN,(EIG(IB)/EV,IB=ITEN+1,MIN(ITEN+10,NB))
+     &                               ITEN,(EIG(IB)/EV,IB=ITEN+1,MIN(ITEN+10,NB))
               ITEN=ITEN+10
             ENDDO
 !
-!           == scan eigenvalues for band gaps ===============================
-            do ib=1,nb
-              if(occ(ib,ikpt,ispin).gt.1.d-6.and.ib.gt.ibhomo(ispin)) then
-                ibhomo(ispin)=ib
-              end if
-              if(occ(ib,ikpt,ispin).gt.1.d-6.and.eig(ib).gt.ehomo) then
-                ehomo=eig(ib)
-                ikhomo=ikpt
-                ishomo=ispin
-                ibhomo=ib
-              end if
-              if(occ(ib,ikpt,ispin).lt.1.d-6.and.eig(ib).lt.elumo) then
-                elumo=eig(ib)
-                iklumo=ikpt
-                islumo=ispin
-              end if
-              if(ib.gt.1.and.occ(ib,ikpt,ispin).lt.1.d-6 &
-       &                .and.occ(ib-1,ikpt,ispin).gt.1.d-6) then
-                if(eig(ib)-eig(ib-1).lt.egdirect) then
-                  egdirect=eig(ib)-eig(ib-1)
-                  ikdirect=ikpt
-                  isdirect=ispin
-                end if
-              end if
-            enddo
+!           == scan eigenvalues for band gaps ==================================
+            DO IB=1,NB
+!!$              IF(OCC(IB,IKPT,ISPIN).GT.1.D-6.AND.IB.GT.IBHOMO(ISPIN)) THEN
+!!$                IBHOMO(ISPIN)=IB
+!!$              END IF
+!             __LOOK FOR HOMO___________________________________________________
+              IF(OCC(IB,IKPT,ISPIN).GT.1.D-6.AND.EIG(IB).GT.EHOMO) THEN
+                EHOMO=EIG(IB)
+                IKHOMO=IKPT
+                ISHOMO=ISPIN
+                IBHOMO=IB
+              END IF
+!             __LOOK FOR HOMO___________________________________________________
+              IF(OCC(IB,IKPT,ISPIN).GT.1.D-6 &
+         &                                .AND.EIG(IB).GT.ESPINHOMO(ISPIN)) THEN
+                ESPINHOMO(ISPIN)=EIG(IB)
+                IBSPINHOMO(ISPIN)=IB
+              END IF
+!             __LOOK FOR LUMO___________________________________________________
+              IF(OCC(IB,IKPT,ISPIN).LT.1.D-6.AND.EIG(IB).LT.ELUMO) THEN
+                ELUMO=EIG(IB)
+              END IF
+!             __LOOK FOR LUMO___________________________________________________
+              IF(OCC(IB,IKPT,ISPIN).LT.1.D-6 &
+        &                                 .AND.EIG(IB).LT.ESPINLUMO(ISPIN)) THEN
+                ESPINLUMO(ISPIN)=EIG(IB)
+              END IF
+!             __LOOK FOR DIRECT GAP_____________________________________________
+              IF(IB.GT.1.AND.OCC(IB,IKPT,ISPIN).LT.1.D-6) THEN
+                IF(OCC(IB-1,IKPT,ISPIN).GT.1.D-6) THEN
+                  IF(EIG(IB)-EIG(IB-1).LT.EGDIRECT) THEN
+                    EGDIRECT=EIG(IB)-EIG(IB-1)
+                    IKDIRECT=IKPT
+                    ISDIRECT=ISPIN
+                  END IF
+                END IF
+              END IF
+            ENDDO   !end of loop over bands
           END IF
           DEALLOCATE(EIG)
-        ENDDO
-      ENDDO
+        ENDDO ! end of loop over spins
+      ENDDO   ! end of loop over k-points
 !
 !     ==========================================================================
 !     == REPORT ENERGY GAPS                                                   ==
 !     ==========================================================================
       IF(NSPIN.EQ.1) THEN
-        CALL REPORT$I4VAL(NFIL,'BAND INDEX OF HOMO',IBHOMO(1),' ')
+        CALL REPORT$I4VAL(NFIL,'BAND INDEX OF HOMO',IBSPINHOMO(1),' ')
       ELSE     
-        CALL REPORT$I4VAL(NFIL,'BAND INDEX OF HOMO FOR SPIN 1',IBHOMO(1),' ')
-        CALL REPORT$I4VAL(NFIL,'BAND INDEX OF HOMO FOR SPIN 2',IBHOMO(2),' ')
+        CALL REPORT$I4VAL(NFIL,'BAND INDEX OF HOMO FOR SPIN 1' &
+     &                                                       ,IBSPINHOMO(1),' ')
+        CALL REPORT$I4VAL(NFIL,'BAND INDEX OF HOMO FOR SPIN 2' &
+     &                                                       ,IBSPINHOMO(2),' ')
       END IF
       FORMAT='(55("."),": ",T1,A,T58,F10.4," EV AT IK=",I5," AND ISPIN=",I1)'
       WRITE(NFIL,FMT=FORMAT)'SMALLEST DIRECT GAP',EGDIRECT/EV,IKDIRECT,ISDIRECT 

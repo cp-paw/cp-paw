@@ -1320,10 +1320,12 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       IF(TFIRST.OR.TFORCE.OR.TSTRESS) THEN
                                CALL TIMING$CLOCKON('STRUCTURECONSTANTS')
         CALL LMTO$MAKESTRUCTURECONSTANTS()
-                              CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
+                               CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
       END IF
-                              CALL TIMING$CLOCKON('WAVES$ETOT')
-      call WAVES$toNTBO()
+                               CALL TIMING$CLOCKON('WAVES$ETOT')
+                               CALL TIMING$CLOCKON('WAVES$TONTBO')
+!      CALL WAVES$TONTBO()
+                               CALL TIMING$CLOCKOFF('WAVES$TONTBO')
 !
 !     ==========================================================================
 !     == KINETIC ENERGY                                                       ==
@@ -2542,7 +2544,7 @@ END IF
       INTEGER(4)             :: ISP   ! SPECIES INDEX
       INTEGER(4)             :: IAT,ISPIN,IKPT,idim,ib,npro
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:) !(NDIM,NBH,npro) <PRO|PSPSI>
-      LOGICAL(4),PARAMETER   :: TPRINT=.false.
+      LOGICAL(4),PARAMETER   :: TPRINT=.true.
       real(8)   ,allocatable :: xk(:,:)
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$TONTBO')
@@ -2578,21 +2580,25 @@ END IF
 !     ==  print for testing                                                   ==
 !     ==========================================================================
       if(tprint) then
+        WRITE(*,FMT='(82("="),T20," TIGHT-BINDING ORBITAL COEFFICIENTS ")')
         DO IKPT=1,NKPTL
           DO ISPIN=1,NSPIN
             CALL WAVES_SELECTWV(IKPT,ISPIN)
             NBH=THIS%NBH
-            write(*,fmt='(82("="),t20,"  ikpt ",i5,"ispin=",i2,"  ")')ikpt,ispin
-            do ib=1,nbh
-              write(*,fmt='("-",i5,100f10.5)')2*ib-1,real(this%proj(1,ib,:))
-              write(*,fmt='("+",i5,100f10.5)')2*ib-1,real(this%tbc(1,ib,:))
-              write(*,fmt='("-",i5,100f10.5)')2*ib,aimag(this%proj(1,ib,:))
-              write(*,fmt='("+",i5,100f10.5)')2*ib,aimag(this%tbc(1,ib,:))
-            enddo
+            WRITE(*,FMT='(82("="),T20,"  IKPT ",I5,"ISPIN=",I2,"  ")')IKPT,ISPIN
+            DO IB=1,NBH
+              WRITE(*,FMT='("PROJ",I5,100F10.5)')2*IB-1,REAL(THIS%PROJ(1,IB,:))
+              WRITE(*,FMT='("PROJ",I5,100F10.5)')2*IB,AIMAG(THIS%PROJ(1,IB,:))
+            ENDDO
+            DO IB=1,NBH
+              WRITE(*,FMT='("TBC ",I5,100F10.5)')2*IB-1,REAL(THIS%TBC(1,IB,:))
+              WRITE(*,FMT='("TBC ",I5,100F10.5)')2*IB,AIMAG(THIS%TBC(1,IB,:))
+            ENDDO
           ENDDO
         ENDDO
-        stop 'forced'
-      end if
+        WRITE(*,*)'FORCED STOP IN WAVES$TONTBO'
+        STOP 'FORCED STOP IN WAVES$TONTBO'
+      END IF
                               CALL TIMING$CLOCKOFF('W:TONTBO')
                               CALL TRACE$POP
       RETURN
@@ -2845,9 +2851,10 @@ END IF
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$RHO(NRL,NDIMD_,RHO)
 !     **************************************************************************
-!     **                                                                      **
 !     **  EVALUATES PSEUDO-DENSITY FROM THE ACTUAL PSEUDO WAVE                **
 !     **  FUNCTIONS                                                           **
+!     **                                                                      **
+!     **  rho1 is made allocatable, because it is too large for the stack     **
 !     **                                                                      **
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
       USE MPE_MODULE
@@ -2856,7 +2863,7 @@ END IF
       INTEGER(4),INTENT(IN)  :: NRL
       INTEGER(4),INTENT(IN)  :: NDIMD_
       REAL(8)   ,INTENT(OUT) :: RHO(NRL,NDIMD_)
-      REAL(8)                :: RHO1(NRL,NDIMD_)
+      REAL(8)   ,allocatable :: RHO1(:,:)    ! (NRL,NdIM**2)
       INTEGER(4)             :: IKPT,ISPIN,IR
       INTEGER(4)             :: NBX        
       REAL(8)  ,ALLOCATABLE  :: OCC(:,:,:) 
@@ -2879,6 +2886,7 @@ END IF
 !     ==================================================================
 !     ==  CALCULATE DENSITY                                           ==
 !     ==================================================================
+      allocate(rho1(nrl,ndim**2))
       RHO(:,:)=0.D0
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
@@ -2893,6 +2901,7 @@ END IF
           END IF
         ENDDO
       ENDDO
+      deallocate(rho1)
 !
 !     ===================================================================
 !     == CONVERT INTO TOTAL AND SPIN DENSITY                           ==
@@ -4040,8 +4049,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8),INTENT(IN)  :: PSIOFG(NGL,NDIM,NBH)
       REAL(8)   ,INTENT(OUT) :: RHO(NRL,NDIM**2) ! DENSITY IN R-SPACE
       COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:,:)
-      COMPLEX(8)             :: EI2KR(NRL)   !(NRL) SQUARED BLOCH PHASE FACTOR 
-      COMPLEX(8)             :: PSI1(NRL)
+      COMPLEX(8),allocatable :: EI2KR(:)  !(NRL) SQUARED BLOCH PHASE FACTOR 
+      COMPLEX(8),allocatable :: PSI1(:)   !(NRL)
       COMPLEX(8)             :: CSVAR
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: IBH,IR
@@ -4050,6 +4059,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)                :: SVAR1,SVAR2
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
 !     ******************************************************************
+                               call trace$push('waves_density')
 !RELEASED 8.OCT.99 
 !
 !     ==================================================================
@@ -4087,10 +4097,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           CALL ERROR$MSG('WITH SUPER WAVE FUNCTIONS')
           CALL ERROR$STOP('WAVES_DENSITY')
         END IF
+        allocate(ei2kr(nrl))
         CALL PLANEWAVE$GETC8A('EIKR',NRL,EI2KR)
         DO IR=1,NRL
           EI2KR(IR)=EI2KR(IR)**2
         ENDDO
+        allocate(psi1(nrl))
         RHO(:,:)=0.D0
         DO IBH=1,NBH
           F1=F(2*IBH-1)
@@ -4114,6 +4126,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             RHO(IR,1)=RHO(IR,1)+REAL(PSIOFR(IR,1,IBH)*PSI1(IR),KIND=8)
           ENDDO
         ENDDO
+        deallocate(psi1)
+        deallocate(ei2kr)
 !
 !     ==================================================================
 !     ==  CALCULATE DENSITY FOR GENERAL WAVE FUNCTIONS                ==
@@ -4160,6 +4174,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         ENDIF
       END IF
       DEALLOCATE(PSIOFR)
+                               call trace$pop()
       RETURN
       END
 !
