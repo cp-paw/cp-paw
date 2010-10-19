@@ -11,8 +11,7 @@ end module stpreport_module
        character(512) :: rootname
        integer        :: nfil=1321
        character(512) :: command
-       character(256)  :: texfile,pdffile
-       integer        :: rc
+       character(256)  :: texfile
        integer        :: nargs,i
        real(8)        :: svar
 !      *************************************************************************
@@ -20,12 +19,12 @@ end module stpreport_module
 !      =========================================================================
 !      == obtain filename and rootname                                        ==
 !      =========================================================================
-       nargs=command_argument_count()
+       call lib__nargs(nargs) !nargs=command_argument_count()
        if(nargs.ne.1) then
          print*,'filename is not given'
          stop 'command line error'
        end if
-       call get_command_argument(1,filename)
+       call lib__getarg(1,filename) ! call get_command_argument(1,filename)
        i=index(filename,'.')
        rootname=filename(1:i-1)
 !
@@ -38,9 +37,9 @@ end module stpreport_module
        write(tmpdir,fmt='(i12)')abs(nint(svar*1.d+6))
        tmpdir='tmpdir'//trim(adjustl(tmpdir))//'/'
        command='mkdir '//trim(adjustl(tmpdir))
-       rc=system(command)
+       call lib__system(command) !       rc=system(command)
        command='cp '//trim(filename)//' '//trim(tmpdir)
-       rc=system(command)
+       call lib__system(command) ! rc=system(command)
        precommand='cd '//trim(tmpdir)//'; '
 !
 !      =========================================================================
@@ -71,9 +70,9 @@ end module stpreport_module
        command='pdflatex '//adjustl(texfile)
        command=trim(precommand)//command
 !      ==== call lib$system(command)
-       rc=system(trim(command))
+       call lib__system(trim(command)) ! rc=system(trim(command))
        command='cp '//trim(tmpdir)//'tmp.pdf '//trim(rootname)//'.pdf'
-       rc=system(trim(command))
+       call lib__system(trim(command)) ! rc=system(trim(command))
        stop
        end
 !
@@ -85,7 +84,6 @@ end module stpreport_module
        integer      ,parameter :: stpa_nargs=(29) 
        character(50)           :: stpa_args(stpa_nargs)
        character(2048)         :: command
-       integer                 :: rc
        integer                 :: i
 !      *************************************************************************
        stpa_args( 1)='-s nb               -o nb.dat'
@@ -123,7 +121,7 @@ end module stpreport_module
        enddo
        command=trim(adjustl(command))//' '//trim(adjustl(filename))
        command=trim(precommand)//command
-       call system(command)
+       call lib__system(command) ! call system(command)
        return
        end
 !
@@ -139,7 +137,6 @@ end module stpreport_module
        character(1024)         :: filename
        integer                 :: nfilgp=1001
        character(1024)         :: command
-       integer                 :: rc
        integer                 :: i
 !      *************************************************************************
 !
@@ -176,7 +173,7 @@ end module stpreport_module
        command='gnuplot '//trim(adjustl(filename))
        command=trim(precommand)//command
 !      ==== call lib$system(command)
-       rc=system(command)
+       call lib__system(command) ! rc=system(command)
        return 
        end
 !
@@ -192,7 +189,6 @@ end module stpreport_module
        character(1024)         :: filename
        integer                 :: nfilgp=1001
        character(1024)         :: command
-       integer                 :: rc
        integer(4),parameter    :: nvalx=10
        integer(4)              :: nval
        integer(4)              :: ival(nvalx)
@@ -247,7 +243,7 @@ end module stpreport_module
        command='gnuplot '//adjustl(filename)
        command=trim(precommand)//command
 !      ==== call lib$system(command)
-       rc=system(command)
+       call lib__system(command) ! rc=system(command)
        return 
        end
 !
@@ -263,7 +259,6 @@ end module stpreport_module
        character(1024)         :: filename='phi.gp'
        integer                 :: nfilgp=1001
        character(1024)         :: command
-       integer                 :: rc
        integer(4),parameter    :: nvalx=10
        integer(4)              :: nval
        integer(4)              :: ival(nvalx)
@@ -327,7 +322,7 @@ end module stpreport_module
          command='gnuplot '//adjustl(filename)
          command=trim(precommand)//command
 !        ==== call lib$system(command)
-         rc=system(command)
+         call lib__system(command) ! rc=system(command)
        enddo
 
        return 
@@ -345,7 +340,6 @@ end module stpreport_module
        character(1024)         :: filename='phi.gp'
        integer                 :: nfilgp=1001
        character(1024)         :: command
-       integer                 :: rc
        integer                 :: i
        integer(4),parameter    :: nvalx=10
        integer(4)              :: nval
@@ -401,7 +395,7 @@ end module stpreport_module
          command='gnuplot '//adjustl(filename)
          command=trim(precommand)//command
 !        ==== call lib$system(command)
-         rc=system(command)
+         call lib__system(command) ! rc=system(command)
        enddo
 
        return 
@@ -421,14 +415,10 @@ end module stpreport_module
        integer                 :: nfil1=11
        integer                 :: nfil2=12
        character(1024)         :: command
-       integer                 :: rc
        integer(4),parameter    :: nvalx=30
        integer(4)              :: nval
        integer(4)              :: ival(nvalx)
-       integer(4)              :: lx
-       integer(4)              :: l,i,ib
-       integer(4)              :: iline
-       logical                 :: tfirst
+       integer(4)              :: i,ib
        integer(4)              :: nb
        integer(4)              :: nr
        real(8)   ,allocatable  :: r(:)
@@ -447,7 +437,7 @@ end module stpreport_module
 !      =========================================================================
        command='wc -l UPSI.dat > nr.dat'
        command=trim(precommand)//command
-       rc=system(command)
+       call lib__system(command) ! rc=system(command)
        call readline('nr.dat',line(1))
        read(line(1),*)nr
        allocate(r(nr))
@@ -508,7 +498,7 @@ end module stpreport_module
          command='gnuplot '//adjustl(filename)
          command=trim(precommand)//command
 !        ==== call lib$system(command)
-         rc=system(command)
+         call lib__system(command) ! rc=system(command)
        enddo
 
        return 
@@ -524,8 +514,6 @@ end module stpreport_module
        integer      ,parameter :: nline=50
        character(512)          :: line(nline)
        character(64)           :: inline(5)
-       character(1024)         :: command
-       integer                 :: rc
        character(4),parameter  :: dbs='\\\\'  !double backslash
        integer(4)               :: nb
        integer(4)               :: lx

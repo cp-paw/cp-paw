@@ -160,7 +160,7 @@ Peter Bl\"ochl
 The distribution of the CP-PAW code can be obtained from the CP-PAW
 web page\index{CP-PAW web page}
 \begin{center}
-\mytt{https://orion.pt.tu-clausthal.de/paw}
+\mytt{https://www2.pt.tu-clausthal.de/paw}
 \end{center}
 following the link ``Download''. Access to the PAW distribution is
 restricted to users with a valid license. You can apply for a license
@@ -1221,18 +1221,30 @@ Error: Generic subroutine 'mpe__gather' at (1) is not consistent with a specific
 subroutine interface
 \end{verbatim}
 
-%================================================================================
+%===============================================================================
 \section{Stack-size exceeded}
-%================================================================================
+%===============================================================================
 Unpredictable behavior can occur if the stack-size is exceeded. In the
 bash shell the stack size can be increased using the command
 \begin{verbatim}
 ulimit -s unlimited
 \end{verbatim}
- This is apparently a problem of the operating system. It can be
-caused by certain optimizations such as inlining. The latter increases
-the code size.
 
+On OSX \verb|unlimited| is not allowed. Use \verb|65532| instead,
+which is the hard limit. The hard limits for the computer can be
+printed using \verb|ulimit -H -s|.  It is best to include this command
+in the startup shell, namely .profile or .bashrc. The current value is
+printed with the command
+\begin{verbatim}
+ulimit -s 
+\end{verbatim}
+without a value. The result is the stack size in kB.
+
+
+The problem with the stack size is apparently related to the operating
+system. It can be caused by certain optimizations such as
+inlining. The latter increases the code size. Large automatic arrays
+cause a segmentation fault if the stack is too small.
 
 
 %================================================================================
@@ -1880,10 +1892,10 @@ CPPFLAGS="-DCPPVAR_COMPILER_PGI -DCPPVAR_FFT_FFTW \
 FEXT="f90"
 \end{verbatim}
 
-%================================================================================
+%===============================================================================
 \newpage
 \section{Parameter File for PATHSCALE}
-%================================================================================
+%===============================================================================
 \begin{verbatim}
 ARCH="pathscale_guam"
 TUPPERCASEMOD="T"
@@ -1914,15 +1926,50 @@ CPPFLAGS="-DCPPVAR_COMPILER_PATHSCALE -DCPPVAR_FFT_ACML  \
 FEXT="f90"
 \end{verbatim}
 
+%===============================================================================
+\newpage
+\section{Parameter File for ABSOFT (OSX)}
+%===============================================================================
+\begin{verbatim}
+ARCH="absoft_osx"
+TUPPERCASEMOD="F"
+TPARALLEL="F"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/Applications/Absoft11.0/lib64/"
+FFTDIR="/Users/..../Numerics/fftw-2.1.5/"
+MPIDIR="/Users/..../Numerics/openmpi/"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="f95 -m32 -osxtarget=10.6"
+COMPILER_PARALLEL="${MPIDIR}/bin/mpif90 -choicemod  -fno-pic -fno-second-underscore "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O3 -safefp -march=host"
+FCFLAGS_PROF="-c -P -pg -O3 -fshort-circuit -funroll-loops  -msse2"
+FCFLAGS_DBG="-c -g -en -Rb -Rc -Rs "
+# absoft Option -en warn of non-standard (FORTRAN95) usage
+# absoft Option -Ra check argument interface (does not compile)
+# absoft Option -Rb generate code to check array boundaries
+# absoft Option -Rc generate code to validate substring indices
+# absoft Option -Rs generate code to check array conformance
+# absoft Option -Rp generate code to check for Null pointers (does not compile)
+# absoft Option -Rn Check argument count (does not compile)
+# absoft Option -p module_path sets path to module files
+LDFLAGS_SCALAR=" -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/"
+LDFLAGS_PARALLEL="--I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/lib"
+LIBS_SCALAR="-lAbsoftLapack -lAbsoftAtlas -lf77blas -lfftw -lU77"
+LIBS_PARALLEL="-lfftw -llapack -latlas -lfmpich -lmpich -lmpich"
+CPPFLAGS="-DCPPVAR_COMPILER_ABSOFT -DCPPVAR_FFT_FFTW  -DCPPVAR_LAPACK_LAPACK "-DCPPVAR_BLAS_BLAS "
+FEXT="f90"
+\end{verbatim}
 
-
-%================================================================================
+%===============================================================================
 \newpage
 \chapter{Input Data Files}
-%================================================================================
-%================================================================================
+%===============================================================================
+%===============================================================================
 \section{Control Input File}
-%================================================================================
+%===============================================================================
 \begin{verbatim}
 !CONTROL
  !GENERIC  TRACE=f DT=10.0 NSTEP=180 NWRITE=100 START=t !END
@@ -1936,9 +1983,9 @@ FEXT="f90"
 !EOB
 \end{verbatim}
 
-%================================================================================
+%===============================================================================
 \section{Structure Input File}
-%================================================================================
+%===============================================================================
 \begin{verbatim}
 !STRUCTURE
   !GENERIC LUNIT=10.26 !END
