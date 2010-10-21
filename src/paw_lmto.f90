@@ -1605,8 +1605,9 @@ STOP
         ALLOCATE(R(NR))
         CALL RADIAL$R(GID,NR,R)
         LNX1=LNX(ISP)
-        LMNX=SUM(2*LOX(:,ISP)+1)
-        LX=MAXVAL(LOX(:,ISP))
+        LMNX=SUM(2*LOX(:lnx1,ISP)+1)
+        LX=MAXVAL(LOX(:lnx1,ISP))
+print*,'++',lnx(isp),lox(:,isp),lmnx,lx
 !       == CONSTRUCT FUNCTIONS MATCHING ONTO BESSEL AND HANKEL FUNCTIONS =======
         ALLOCATE(KIN(NR,LNX1))
         ALLOCATE(JIN(NR,LNX1))
@@ -1650,6 +1651,7 @@ STOP
 !             == KKOVERLAP =====================================================
               AUX(:)=(KIN(:,LN1)*KIN(:,LN2)-KOUT(:,LN1)*KOUT(:,LN2))*R(:)**2
               CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+print*,'-- ',isp,ln1,l1,lmn1,ln2,l2,ln2,lmnx
               DO IM=1,2*L1+1
                 POTPAR(ISP)%DOVERLAPKK(LMN1+IM,LMN2+IM)=SVAR
               ENDDO  
