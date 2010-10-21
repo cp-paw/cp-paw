@@ -1,43 +1,43 @@
-      MODULE STRINGS
-!     ******************************************************************
-!     ** MODULE FOR STRING MANIPULATION                               **
-!     ******************************************************************
-      PUBLIC
-      INTERFACE OPERATOR (-)
-        MODULE PROCEDURE LOWER_CASE
-      END INTERFACE
-      INTERFACE OPERATOR (+) 
-        MODULE PROCEDURE UPPER_CASE
-      END INTERFACE
-      CONTAINS
-!       ..................................................................
-        FUNCTION LOWER_CASE(OLD) RESULT(NEW)
-          CHARACTER(*), INTENT(IN):: OLD
-          CHARACTER(LEN(OLD))     :: NEW
-          INTEGER(4)              :: I,ISVAR
-          NEW=OLD 
-          DO I=1,LEN(TRIM(new))
-            ISVAR=IACHAR(new(I:I))
-            IF(ISVAR.GE.65.AND.ISVAR.LE.90) NEW(I:I)=ACHAR(ISVAR+32)
-          ENDDO
-        END FUNCTION LOWER_CASE
-!       ..................................................................
-        FUNCTION UPPER_CASE(OLD) RESULT(NEW)
-          CHARACTER(*), INTENT(IN):: OLD
-          CHARACTER(LEN(OLD))     :: NEW
-          INTEGER(4)              :: I,ISVAR
-          NEW=OLD 
-          DO I=1,LEN(TRIM(new))
-            ISVAR=IACHAR(new(I:I))
-            IF(ISVAR.GE.97.AND.ISVAR.LE.122) NEW(I:I)=ACHAR(ISVAR-32)
-          ENDDO
- STOP
-        END FUNCTION UPPER_CASE
-      END MODULE STRINGS
+!!$      MODULE STRINGS
+!!$!     ******************************************************************
+!!$!     ** MODULE FOR STRING MANIPULATION                               **
+!!$!     ******************************************************************
+!!$      PUBLIC
+!!$      INTERFACE OPERATOR (-)
+!!$        MODULE PROCEDURE LOWER_CASE
+!!$      END INTERFACE
+!!$      INTERFACE OPERATOR (+) 
+!!$        MODULE PROCEDURE UPPER_CASE
+!!$      END INTERFACE
+!!$      CONTAINS
+!!$!       ..................................................................
+!!$        FUNCTION LOWER_CASE(OLD) RESULT(NEW)
+!!$          CHARACTER(*), INTENT(IN):: OLD
+!!$          CHARACTER(LEN(OLD))     :: NEW
+!!$          INTEGER(4)              :: I,ISVAR
+!!$          NEW=OLD 
+!!$          DO I=1,LEN(TRIM(new))
+!!$            ISVAR=IACHAR(new(I:I))
+!!$            IF(ISVAR.GE.65.AND.ISVAR.LE.90) NEW(I:I)=ACHAR(ISVAR+32)
+!!$          ENDDO
+!!$        END FUNCTION LOWER_CASE
+!!$!       ..................................................................
+!!$        FUNCTION UPPER_CASE(OLD) RESULT(NEW)
+!!$          CHARACTER(*), INTENT(IN):: OLD
+!!$          CHARACTER(LEN(OLD))     :: NEW
+!!$          INTEGER(4)              :: I,ISVAR
+!!$          NEW=OLD 
+!!$          DO I=1,LEN(TRIM(new))
+!!$            ISVAR=IACHAR(new(I:I))
+!!$            IF(ISVAR.GE.97.AND.ISVAR.LE.122) NEW(I:I)=ACHAR(ISVAR-32)
+!!$          ENDDO
+!!$ STOP
+!!$        END FUNCTION UPPER_CASE
+!!$      END MODULE STRINGS
 !
 !     ..................................................................
       SUBROUTINE UPPERCASE1(old,new)
-      USE STRINGS
+!      USE STRINGS
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: old
       CHARACTER(*),INTENT(OUT):: new
@@ -320,7 +320,7 @@ END TYPE
 END MODULE TEMPLATE_MODULE
 !     ..................................................................
       PROGRAM MAIN
-      USE STRINGS
+!      USE STRINGS
       IMPLICIT NONE
       INTEGER(4),PARAMETER :: LINELENG=256
       INTEGER(4),PARAMETER :: NLINEX=100000
@@ -395,7 +395,7 @@ END MODULE TEMPLATE_MODULE
 !     **                                                            **
 !     ****************************************************************
       USE TEMPLATE_MODULE
-      USE STRINGS
+!      USE STRINGS
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN)   :: NLINEX
       INTEGER(4)   ,INTENT(INOUT):: IBEGIN
@@ -763,7 +763,7 @@ END MODULE TEMPLATE_MODULE
 !     **  READS THE REPLACEMENT RULES FROM A LINE                   **
 !     ****************************************************************
       USE TEMPLATE_MODULE
-      USE STRINGS
+!      USE STRINGS
       IMPLICIT NONE
       INTEGER(4)    ,INTENT(IN)    :: NREPX
       INTEGER(4)    ,INTENT(INOUT) :: NREP
@@ -814,7 +814,7 @@ END MODULE TEMPLATE_MODULE
 !     **  APPLY A REPLACEMENT RULE TO A LINE                        **
 !     ****************************************************************
       USE TEMPLATE_MODULE
-      USE STRINGS
+!      USE STRINGS
       IMPLICIT NONE
       TYPE(REP_TYPE),INTENT(IN)   :: REP
       CHARACTER(*)  ,INTENT(INOUT):: LINE

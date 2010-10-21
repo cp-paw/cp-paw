@@ -34,7 +34,7 @@ END MODULE TRACE_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRACE_FIRST
-      USE STRINGS_MODULE
+!      USE STRINGS_MODULE
       USE TRACE_MODULE
       IMPLICIT NONE
 !     **************************************************************************
