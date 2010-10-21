@@ -982,7 +982,6 @@ END IF
 !     **************************************************************************
       USE LDAPLUSU_MODULE
       IMPLICIT NONE
-      REAL(8)               :: RCUT
       INTEGER(4)            :: GID
       INTEGER(4)            :: NR
       INTEGER(4)            :: LNX
@@ -992,16 +991,13 @@ END IF
       REAL(8)   ,ALLOCATABLE:: PHI(:,:)
       INTEGER(4)            :: LNXCHI 
       INTEGER(4),ALLOCATABLE:: LOXCHI(:)
-      REAL(8)   ,ALLOCATABLE:: CHI(:,:)
-      REAL(8)   ,ALLOCATABLE:: A(:,:)
       REAL(8)   ,ALLOCATABLE:: MAT(:,:)
       REAL(8)   ,ALLOCATABLE:: R(:)        
       REAL(8)               :: SVAR1,SVAR2
       INTEGER(4)            :: IR
       INTEGER(4)            :: IAT
-      INTEGER(4)            :: NX,N,LX,L,LN,LNCHI,LN0,NOFL,ISVAR
+      INTEGER(4)            :: N,LX,L,LN,LNCHI,LN0,NOFL,ISVAR
       INTEGER(4)            :: N1,N2,LN1,LN2,L1,L2
-      INTEGER(4)            :: NORB(4)
       REAL(8)   ,ALLOCATABLE:: AMAT(:,:),BMAT(:,:)
       LOGICAL(4),ALLOCATABLE:: TORB(:)
 !     **************************************************************************
@@ -1176,7 +1172,7 @@ PRINT*,'TORB ',TORB
       REAL(8)               :: VAL
       REAL(8)   ,ALLOCATABLE:: FACTOR(:,:,:)
       INTEGER(4)            :: LMCA
-      INTEGER(4)            :: LM1,LC,LRHO,LMC1A,IMC,LMC,LMRHOA,IMRHO,LMRHO
+      INTEGER(4)            :: LM1,LC,LRHO,IMC,LMC,LMRHOA,IMRHO,LMRHO
       INTEGER(4)            :: LN1,L1,IC,LN2,L2,LM2
       LOGICAL(4),PARAMETER  :: TPRINT=.TRUE.
       REAL(8)               :: PI
@@ -2132,7 +2128,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN
       REAL(8)                 :: ETOTC,ETOTV
-INTEGER(4) :: LMRX1,IR
+INTEGER(4) :: LMRX1
 INTEGER(4) :: IMETHOD
  REAL(8)     ,ALLOCATABLE:: RHOTEST(:,:,:)
  REAL(8)     ,ALLOCATABLE:: POTTEST(:,:,:)

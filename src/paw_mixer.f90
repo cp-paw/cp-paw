@@ -35,7 +35,6 @@ END MODULE MIXPULAY_MODULE
       REAL(8)                   :: CONV=1.D-8
       REAL(8)                   :: G=0.5D0 !MIXING FACTOR
       REAL(8)                   :: SVAR,c(1,1)
-      REAL(8)                   :: R22,R12,R11
       INTEGER(4)                :: IH1,IH2,NBACK
       INTEGER(4)                :: RHOX
 !     ******************************************************************
@@ -194,7 +193,6 @@ WRITE(*,"('CG-MIXER: RHOOUT:',3F10.7)") RHOOUT(1:3)
       REAL(8)                   :: CONV=1.D-6
       REAL(8)                   :: G=0.5D0 !MIXING FACTOR
       REAL(8)                   :: SVAR
-      REAL(8)                   :: R22,R12,R11
       INTEGER(4)                :: IH1,IH2,NBACK
       INTEGER(4)                :: RHOX
 !     ******************************************************************

@@ -208,7 +208,7 @@ end subroutine dimer_init_files
       REAL(8)               :: R1(nat*3),R2(nat*3) !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
       REAL(8)               :: R1P(nat*3),R2P(nat*3) !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
       REAL(8)               :: F1(nat*3),F2(nat*3) !FORCE FROM POTENTIAL
-      integer(4)            :: NVAL,WORLD_ID,NWORLDTASKS
+      integer(4)            :: NVAL,WORLD_ID
       INTEGER(4)            :: IAT
 
       CELLKIN=0.D0
@@ -371,7 +371,7 @@ end subroutine dimer_init_files
       integer(4)               :: i,j,IAT
       logical(4)               :: perpfirst,parafirst,rotfirst
       real(8)                  :: fp1,fp2
-      real(8)                  :: s1,s2,a,b,c,d_
+      real(8)                  :: a,b,c,d_
       !******************************************************************
 
       CELLKIN1=0.0d0
@@ -870,7 +870,7 @@ SUBROUTINE DIMER$STRETCH(NAT,R1,R0)
   real(8),   intent(inout) :: R1(NAT*3) !inout because we set the position!
   real(8),   intent(in) :: R0(NAT*3) ! only for initialisation of rkeep
   real(8)              :: SQDIMERDIST
-  integer(4)           :: NVAL,WORLD_ID,NWORLDTASKS,IAT
+  integer(4)           :: NVAL,WORLD_ID,IAT
   LOGICAL(4)           :: LOOP
   if(placedimer) then
      call MPE$BROADCAST('~',1,R1)!both images use the position from 1st dimers strc
@@ -1011,43 +1011,26 @@ end SUBROUTINE PLACE_DIMER
        real(8)   ,intent(in) :: mrot
        real(8)   ,intent(inout) :: g1_(n)
        real(8)   ,intent(inout) :: g2_(n)
-
-
-
        integer(4),parameter  :: niterx=1000 ! #(iterations)
        real(8)   ,parameter  :: tol=1.d-8
        real(8)   ,parameter  :: du=1.d-5
        real(8)               :: f1used(n),f2used(n)
        real(8)               :: fsum(n) ! f1+f2
        real(8)               :: fdiff(n) ! f1-f2
-       real(8)               :: fsumpara
-       real(8)               :: fdiffpara
        real(8)               :: svar1,svar2,svar3,mfrac
        real(8)               :: vec1(n),vec2(n)
-       real(8)               :: uold
-       real(8)               :: ap(2,2),a0(2,2),am(2,2),af(2,2),ac(2),ainv(2,2)
-       real(8)               :: y1p(n),y10(n),y1m(n),y1bar(n),y1c(n)
-       real(8)               :: y2p(n),y20(n),y2m(n),y2bar(n),y2c(n)
+       real(8)               :: y1p(n),y10(n),y1m(n)
+       real(8)               :: y2p(n),y20(n),y2m(n),y2bar(n)
        real(8)               :: y1dot(n),y2dot(n)
        real(8)               :: lambda
-       real(8)               :: det
-       integer(4)            :: i,j,k
-       real(8)               :: du1,du2,uold_,u0
-       real(8)               :: udotold,ucenter,udotcenter
+       integer(4)            :: i,j
        real(8)               :: e(3,3) !the points needed for the hessian
        real(8)               :: a(2,2)
        real(8)               :: b(2)
-       real(8)               :: x0(2),x0old(2),y1p_old(n),y2p_old(n)
-
-       real(8)               :: di(2),ri(2),rip(2),xi(2),xip(2)
-       real(8)               :: alphai,betai
        logical(4)            :: tconv
        real(8)               :: eold
-
        real(8)               :: g1old(n)
        real(8)               :: g2old(n)
-
-
        real(8)               :: xcenter(n)
        real(8)               :: xpara(n)
        real(8)               :: xperp(n)
@@ -1640,7 +1623,7 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
        real(8)               :: f1ortho(n),f2ortho(n) ! the orthogonal part of the forces
        real(8)               :: e0(n),em(n) !the unity vectors in dimer direction
        real(8)               :: y10(n),y20(n),y1m(n),y2m(n)            
-       real(8)               :: svar,svar1 
+       real(8)               :: svar
        real(8)               :: xpara(n),xperp(n),xcenter(n),xrot(n)   ! the covered distance
        real(8)               :: spara,sperp,srot   ! the scalar covered distance
 
@@ -3045,12 +3028,8 @@ SUBROUTINE PLACEATOM(TO_ZERO,NAT,R,RCENTER,RCC)
   real(8),intent(in)     :: R(3*NAT)
   REAL(8),intent(in)     :: RCENTER(3)
   real(8),intent(out)    :: RCC(3*NAT)
-
   real(8)                :: VAL(3,NAT)
-  real(8)                :: RCOM(3)
-  real(8)                :: SUMM
   integer                :: i
-
 
   VAL(:,:)=RESHAPE(R,(/3,NAT/))
 
@@ -3078,9 +3057,6 @@ SUBROUTINE PLACEROT(NAT,R1,R2,rotdif,R2C)
   real(8),intent(in)     :: R2(3*NAT)
   real(8),intent(in)     :: rotdif
   real(8),intent(out)    :: R2C(3*NAT) !only dimer2 will be rotated
-
-
-
   real(8)     :: VAL1(3,NAT),VAL2(3,NAT),VAL2ROT(3)
   real(8)     :: a0
   real(8)     :: aact

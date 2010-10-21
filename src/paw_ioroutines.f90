@@ -254,7 +254,10 @@ CALL TRACE$PASS('DONE')
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN(NBEG,NOMORE,IPRINT,DELT,TMERMIN,TNWSTR)
-!     **                                                              **
+!     **************************************************************************
+!     **  read control input file                                             **
+!     **                                                                      **
+!     **************************************************************************
       USE IO_MODULE
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
@@ -269,8 +272,8 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)                   :: TCHK
       INTEGER(4)                   :: NFIL
       INTEGER(4)                   :: NFILO
-      LOGICAL(4)                   :: TOLATE
-      INTEGER(4)                   :: MAXTIM(3)
+!      LOGICAL(4)                   :: TOLATE
+!      INTEGER(4)                   :: MAXTIM(3)
       CHARACTER(256)               :: VERSIONTEXT
       CHARACTER(512)               :: CNTLNAME
       CHARACTER(512)               :: ROOTNAME
@@ -283,12 +286,12 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)                   :: RUNTIME(3)
       INTEGER(4)   ,ALLOCATABLE    :: SPLITKEY(:)
       COMMON/VERSION/VERSIONTEXT
-!     ******************************************************************
+!     **************************************************************************
                           CALL TRACE$PUSH('READIN')
 !
-!     ==================================================================
-!     ==  SET CONTROLFILENAME AND STANDARD ROOT                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  SET CONTROLFILENAME AND STANDARD ROOT                               ==
+!     ==========================================================================
       CALL MPE$QUERY('~',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
         CALL LIB$NARGS(ISVAR)
@@ -323,9 +326,9 @@ CALL TRACE$PASS('DONE')
       END IF
 
 !
-!     ==================================================================
-!     ==  DEFINE POLYMER IF NECESSARY                                 ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DEFINE POLYMER IF NECESSARY                                         ==
+!     ==========================================================================
       ALLOCATE(SPLITKEY(NTASKS))
       IF(INDEX(CNTLNAME,-'.POLYMER_CNTL',BACK=.TRUE.).NE.0) THEN
 !       POLYMER_CNTL DEFINES SEVERAL MONOMERS AND THE ROOTNAMES FOR THE 
@@ -361,10 +364,10 @@ CALL TRACE$PASS('DONE')
       CALL MPE$NEW('~','MONOMER',NTASKS,SPLITKEY)
       DEALLOCATE(SPLITKEY)
 !
-!     ==================================================================
-!     ==  SET CONTROLFILENAME AND STANDARD ROOT                       ==
-!     ==================================================================
-!     == IF ROOTNAME='-' USE THE ROOT OF THE CONTROLFILE ================
+!     ==========================================================================
+!     ==  SET CONTROLFILENAME AND STANDARD ROOT                               ==
+!     ==========================================================================
+!     == IF ROOTNAME='-' USE THE ROOT OF THE CONTROLFILE =======================
       ISVAR=INDEX(CNTLNAME,-'.CNTL',BACK=.TRUE.)
       IF(ISVAR.GT.0) THEN      
         ROOTNAME=CNTLNAME(1:ISVAR-1)
@@ -372,7 +375,7 @@ CALL TRACE$PASS('DONE')
         ROOTNAME=' '
       END IF
 
-!     == CONNECT CONTROL FILE ==========================================
+!     == CONNECT CONTROL FILE ==================================================
       CALL FILEHANDLER$SETROOT(ROOTNAME)
       CALL FILEHANDLER$SETFILE(+'CNTL',.FALSE.,CNTLNAME)
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','STATUS','OLD')
@@ -380,45 +383,46 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','FORM','FORMATTED')
 !
-!     ==================================================================
-!     ==  CHECK EXPIRATION DATE                                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CHECK EXPIRATION DATE                                               ==
+!     ==========================================================================
       CALL LOCK$BREAKPOINT
 !    
-!     ==================================================================
-!     ==  READ BUFFER CNTL                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BUFFER CNTL                                                    ==
+!     ==========================================================================
       CALL LINKEDLIST$NEW(LL_CNTL)
       CALL FILEHANDLER$UNIT('CNTL',NFIL)
       CALL LINKEDLIST$READ(LL_CNTL,NFIL,'MONOMER')
 !
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!FILES!FILE                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !CONTROL!FILES!FILE                                      ==
+!     ==========================================================================
       CALL READIN_FILES(LL_CNTL)
 !
-!     ==================================================================
-!     ==  WRITE HEADER                                                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  WRITE HEADER                                                        ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL PUTHEADER(NFILO,VERSIONTEXT)
 !
-!     ======================================================================
-!     ==  READ BLOCK !DIMER  AND !CONTROL!GENERIC START= (FOR PLACEDIMER) ==
-!     ======================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !DIMER  AND !CONTROL!GENERIC START= (FOR PLACEDIMER)     ==
+!     ==========================================================================
       CALL DIMER$GETL4('DIMER',TCHK)
       IF(TCHK) THEN
          CALL READIN_DIMER(LL_CNTL)
       END IF
 !    
-!     ==================================================================
-!     ==  READ BLOCK !GENERIC                                         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !GENERIC                                                 ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
 !
-!     == TAKE CARE OF TRACE FIRST ======================================
+!     ==========================================================================
+!     == TAKE CARE OF TRACE FIRST ==============================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'TRACE',0,TCHK)
       IF(TCHK) THEN
          CALL LINKEDLIST$GET(LL_CNTL,'TRACE',1,TCHK)
@@ -801,7 +805,6 @@ CALL TRACE$PASS('DONE')
       CHARACTER(32)        :: ID
       INTEGER(4)           :: NTASKS
       INTEGER(4)           :: THISTASK
-      INTEGER(4)           :: NFILO
       CHARACTER(512)       :: PAWDIR=''
 !     ******************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
@@ -1452,7 +1455,6 @@ CALL TRACE$PASS('DONE')
       REAL(8)                  :: SECOND
       REAL(8)                  :: CELVIN
       LOGICAL(4)               :: TON
-      LOGICAL(4)               :: TDAMP
       REAL(8)                  :: TARGET
       LOGICAL(4)               :: TSTOP
       REAL(8)                  :: FREQ
@@ -1839,7 +1841,6 @@ CALL TRACE$PASS('DONE')
       TYPE(LL_TYPE)            :: LL_CNTL
       LOGICAL(4)               :: TCHK
       LOGICAL(4)               :: TMOVE       ! SWITCH TO DYNAMIC LATTICE
-      REAL(8)                  :: STRESS(3,3) ! EXTERNAL STRESS
       REAL(8)                  :: P           ! EXTERNAL PRESSURE
       REAL(8)                  :: MASS        ! MASS FOR CELL DFYNAMICS
       REAL(8)                  :: FRIC        ! MASS FOR CELL DFYNAMICS
@@ -5517,9 +5518,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CHARACTER(32)               :: FF
       CHARACTER(255)              :: PARMFILE, TOPFILE, MMFILE
       CHARACTER(4)                :: RESNAME
-      REAL(8)                     :: MMO(3)            !ORIGIN OF THE MM BOX
-      REAL(8)                     :: MMVEC_TMP(3,3)    !TRANSLATION VECTOR OF THE MM BOX
-      REAL(8)                     :: MMVEC(9)
       REAL(8)                     :: MMS(3)            !ORIGIN OF THE MM SPHERE
       REAL(8)                     :: MSR(1)            !BOUNDARY RADIUS OF MM SPHERE
       REAL(8)                     :: T(9)

@@ -1793,47 +1793,11 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)   ,INTENT(IN) :: DELTA
       REAL(8)   ,INTENT(IN) :: RMASS(NAT)
       REAL(8)   ,INTENT(OUT):: VALUE_
-      INTEGER(4)            :: IAT
-      REAL(8)               :: XLEN,X,Y,Z
-      REAL(8)               :: TOTM
-      REAL(8)               :: COG(3)
-      REAL(8)               :: DX0,DY0,DZ0
-      REAL(8)               :: DXM,DYM,DZM
 !     **************************************************************************
 !     == CHANGED BY P. BLOECHL July 13, 2007. THIS ROUTINE SHALL ENFORCE THE 
 !     == ANGULAR MOMENTUM TO BE ZERO and not to a constant value. THEREFORE 
 !     == THE VALUE SHALL BE EQUAL TO ZERO AND NOT EQUAL TO THE ANGULAR MOMENTUM.
       value_=0.d0
-!!$      XLEN=SQRT(X_**2+Y_**2+Z_**2)
-!!$      X=X_/XLEN
-!!$      Y=Y_/XLEN
-!!$      Z=Z_/XLEN
-!!$!     == CALCULATE CENTER OF GRAVITY FROM REFERENCE POSITIONS ==========
-!!$      TOTM=0.D0
-!!$      COG(:)=0.D0
-!!$      DO IAT=1,NAT
-!!$        IF(TMEMBER(IAT)) THEN
-!!$          TOTM=TOTM+RMASS(IAT)
-!!$          COG(:)=COG(:)+RMASS(IAT)*R0(:,IAT)
-!!$        END IF
-!!$      ENDDO
-!!$      COG(:)=COG(:)/TOTM
-!!$!
-!!$      VALUE_=0.D0
-!!$      DO IAT=1,NAT
-!!$        IF(TMEMBER(IAT)) THEN
-!!$          DX0=R0(1,IAT)-COG(1)
-!!$          DY0=R0(2,IAT)-COG(2)
-!!$          DZ0=R0(3,IAT)-COG(3)
-!!$          DXM=RM(1,IAT)-COG(1)
-!!$          DYM=RM(2,IAT)-COG(2)
-!!$          DZM=RM(3,IAT)-COG(3)
-!!$          VALUE_=VALUE_+RMASS(IAT)*((Y*DZ0-Z*DY0)*DXM &
-!!$     &                             *(Z*DX0-X*DZ0)*DYM &
-!!$     &                             *(X*DY0-Y*DX0)*DZM)
-!!$        END IF
-!!$      ENDDO
-!!$      VALUE_=VALUE_/DELTA
       RETURN
       END
 !

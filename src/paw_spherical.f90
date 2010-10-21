@@ -904,7 +904,7 @@ END MODULE spherical_MODULE
       integer(4)           :: l1,l2,l3,l3a,l3b
       integer(4)           :: im1,im2,im3,im3a,im3b
       integer(4)           :: lm1,lm2,lm3,lm3a,lm3b
-      real(8)              :: cg1,cg2,svar,svar1
+      real(8)              :: cg1,cg2,svar
       real(8)              :: pi
 !     **************************************************************************
       pi=4.d0*atan(1.d0)

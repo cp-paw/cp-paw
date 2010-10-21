@@ -254,7 +254,6 @@ END MODULE LOCALIZE_MODULE
       integer(4)             :: iat,iat1,iat2,it1,it2,it3
       integer(4)             :: min1,max1,min2,max2,min3,max3
       integer(4)             :: i
-      integer(4)             :: lmnx1,lmnx2
 !     **************************************************************************
       CALL LOCALIZE_INITIALIZE()
 !

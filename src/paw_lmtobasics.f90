@@ -377,14 +377,12 @@
       REAL(8)   ,INTENT(IN) :: K2 ! 2ME/HBAR**2
       REAL(8)   ,INTENT(OUT):: S((L2X+1)**2,(L1X+1)**2)
       REAL(8)   ,PARAMETER  :: RAD=1.D-6
-      REAL(8)               :: K
       REAL(8)               :: PI
       REAL(8)               :: SVAR
       INTEGER(4)            :: L3X,LM1X,LM2X,LM3X
       INTEGER(4)            :: LM1,LM2,LM3,L,L1,L2,L3,IM,LM3A,LM3B
       INTEGER(4)            :: LOFLM((L1X+L2X+1)**2)
       REAL(8)               :: H((L1X+L2X+1)**2)
-      REAL(8)               :: HANKEL ! HANKEL FUNCTION OF THE DISTANCE
       REAL(8)               :: CG     ! GAUNT COEFFICIENT
       COMPLEX(8)            :: KAPPA
 !     **************************************************************************
@@ -494,7 +492,6 @@
       REAL(8)               :: DSBAR(N,NORB)
       REAL(8)               :: S0(N,NORB)
       REAL(8)               :: A(N,N)
-      REAL(8)               :: SBARBIG(N,N)
       INTEGER(4)            :: I,j
       REAL(8)               :: DELTA
       INTEGER(4)            :: ITER
@@ -579,7 +576,6 @@
       INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: NORB
       REAL(8)   ,INTENT(INOUT):: SBAR(N,NORB)
-      INTEGER(4)            :: II,IAT,LN,L,IM
       INTEGER(4)            :: I1,I2
       INTEGER(4)            :: IAT1,IAT2
       REAL(8)               :: R1(3),R2(3)
@@ -587,7 +583,6 @@
       INTEGER(4)            :: L1X,L2X
       REAL(8)               :: S0(N,N)
       REAL(8)  ,ALLOCATABLE :: S1(:,:)
-      REAL(8)               :: QBARVEC(N)
 !     **************************************************************************
                                CALL TRACE$PUSH('LMTO$CLUSTERSTRUCTURECONSTANTS')
 !

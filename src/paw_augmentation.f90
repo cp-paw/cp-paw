@@ -270,13 +270,13 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: PSRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: DATP(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: DWORK1(:)
-      INTEGER(4)              :: IDIM,LMR,IR
-      INTEGER(4)              :: LM,LMN1,LMN2,LMN11,LMN21,LN1,LN2,L1,L2,IM
+      INTEGER(4)              :: IDIM,IR
+      INTEGER(4)              :: LM,LMN1
       INTEGER(4)              :: NFILO
       LOGICAL(4),PARAMETER    :: TPR=.FALSE.
       LOGICAL(4),PARAMETER    :: TTEST=.FALSE.
       INTEGER(4),PARAMETER    :: ITEST=1
-      LOGICAL(4)              :: TBACK,TSPIN
+      LOGICAL(4)              :: TBACK
       REAL(8)                 :: DETOT,PSEHARTREE,AEEHARTREE,COREEXC
       REAL(8)                 :: EKINNL,ENL,AEEXC,PSEXC
       CHARACTER(32)           :: ATOM
@@ -291,8 +291,6 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: PSTOTPOT(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: RHO(:,:,:)
       CHARACTER(32)           :: SOFTCORETYPE
-REAL(8),ALLOCATABLE :: AUX(:)
-REAL(8) :: VAL
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
       PI=4.D0*ATAN(1.D0)
@@ -626,7 +624,6 @@ STOP
       COMPLEX(8),INTENT(IN) :: DENMAT(LMNXX,LMNXX)
       REAL(8)   ,INTENT(IN) :: PHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: RHOL(NR,LMRX)
-      INTEGER(4)             :: LMR
       INTEGER(4)             :: LMN1,LN1,L1,IM1,LMN2,LN2,L2,IM2
       INTEGER(4)             :: LM1,LM2,LM3
       REAL(8)                :: CG     !CLEBSCH GORDAN COEFFICIENT
@@ -690,7 +687,7 @@ STOP
       REAL(8)               :: DWORK(NR)
       REAL(8)               :: PI,Y0
       REAL(8)               :: RES
-      INTEGER(4)            :: LM,L,IR
+      INTEGER(4)            :: LM,L
       REAL(8)               :: R(NR)
 !     ******************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -761,27 +758,20 @@ STOP
       REAL(8)   ,ALLOCATABLE:: VRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE:: VGRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE:: B(:,:)    
-      REAL(8)               :: B0INV(NR) 
-      REAL(8)               :: ROOTB0(NR) 
       REAL(8)   ,ALLOCATABLE:: C(:,:)    
-      REAL(8)   ,ALLOCATABLE:: VB(:,:)    
-      REAL(8)   ,ALLOCATABLE:: VC(:,:)    
       REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
       REAL(8)               :: XVAL(NR,5,LMRX)
       REAL(8)               :: XDER(NR,5,LMRX)
       REAL(8)               :: PI,FOURPI
       REAL(8)               :: Y0
       INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
-      INTEGER(4)            :: LM,LM1,LM2,LM3
+      INTEGER(4)            :: LM
       INTEGER(4)            :: IMAX
-      REAL(8)               :: RI,FAC
+      REAL(8)               :: FAC
       REAL(8)               :: CG0LL
-      REAL(8)               :: CG
-      REAL(8)               :: SVAR
       REAL(8)               :: WORK(NR)
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
-      REAL(8)               :: WORK3(NR)
 !     **************************************************************************
       CALL TRACE$PUSH('AUGMENTATION_XC')
       EXC=0.D0
@@ -1052,7 +1042,6 @@ STOP
       REAL(8)   ,ALLOCATABLE:: VGRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE:: B(:,:)    
       REAL(8)               :: B0INV(NR) 
-      REAL(8)               :: ROOTB0(NR) 
       REAL(8)   ,ALLOCATABLE:: C(:,:)    
       REAL(8)   ,ALLOCATABLE:: VB(:,:)    
       REAL(8)   ,ALLOCATABLE:: VC(:,:)    
@@ -1064,10 +1053,9 @@ STOP
       INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
       INTEGER(4)            :: LM,LM1,LM2,LM3
       INTEGER(4)            :: IMAX
-      REAL(8)               :: RI,FAC
+      REAL(8)               :: FAC
       REAL(8)               :: CG0LL
       REAL(8)               :: CG
-      REAL(8)               :: SVAR
       REAL(8)               :: WORK(NR)
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
@@ -1882,7 +1870,6 @@ STOP
       REAL(8)    ,INTENT(OUT):: PSPOT(NR,LMRX)
       REAL(8)    ,INTENT(OUT):: PSEH
       REAL(8)                :: R(NR)
-      REAL(8)                :: AUX1(NR)
       REAL(8)                :: RHO1(NR)
       REAL(8)                :: POT(NR)
       REAL(8)                :: PSE(NR)

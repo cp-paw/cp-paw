@@ -759,7 +759,6 @@
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! MODIFIED HANKEL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: dYdx ! MODIFIED HANKEL FUNCTION AT X
-      REAL(8)               :: BESSEL_ABRA, NEUMANN_ABRA ! ABRAMOWITZ
       REAL(8)               :: PI
       REAL(8)               :: TRIG,dtrig
       REAL(8)   ,PARAMETER  :: TOL=1.D-10

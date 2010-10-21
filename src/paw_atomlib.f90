@@ -736,13 +736,11 @@ USE PERIODICTABLE_MODULE
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
       LOGICAL(4),PARAMETER       :: TPR=.TRUE.
       REAL(8)                    :: R(NR)
-      REAL(8)                    :: DREL(NR)  ! RELATIVISTIC CORRECTION
       REAL(8)                    :: RHO(NR)
-      REAL(8)                    :: G(NR)     ! INHOMOGENEITY
       REAL(8)                    :: AUX(NR),AUX1(NR)   !AUXILIARY ARRAY
       REAL(8)                    :: MUX(NR)   !EXCHANGE ONLY POTENTIAL
       INTEGER(4)                 :: ITER
-      REAL(8)                    :: XAV,XMAX,XDE
+      REAL(8)                    :: XAV,XMAX
       REAL(8)                    :: XAVMIN,XMAXMIN,XDEMIN
       INTEGER(4)                 :: NCONV
       LOGICAL(4)                 :: CONVG
@@ -769,8 +767,6 @@ USE PERIODICTABLE_MODULE
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
       REAL(8)       ,ALLOCATABLE :: EOFI_FOCK(:)
-      REAL(8)                    :: POTSAVE(NR,10),POTINSAVE(NR,10)
-      REAL(8)                    :: POTOUTSAVE(NR,10)
 !     **************************************************************************
 !     CALL ATOMLIB$TEST_ATOMLIB$BOUNDSTATE()
 !
@@ -1255,7 +1251,6 @@ PRINT*,'#ITERATIONS ',ITER
       REAL(8)                    :: AUX(NR),AUX1(NR)
       INTEGER(4)                 :: IB
       LOGICAL(4)                 :: TVARDREL
-      REAL(8)       :: TPHI(NR,NB)
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R)
       DREL(:)=0.D0 
@@ -1346,8 +1341,6 @@ PRINT*,'#ITERATIONS ',ITER
       REAL(8)                    :: ROUT
       REAL(8)                    :: VAL1,VAL2,R1,R2
       INTEGER(4)                 :: IROUT,IRCL,IRBOX,IREND
-      REAL(8)                    :: X1,X2,Y1,Y2
-      REAL(8)                    :: VAL
 !     **************************************************************************
 !                                 CALL TRACE$PUSH('ATOMLIB$BOUNDSTATE')
       CALL RADIAL$R(GID,NR,R)
@@ -1555,7 +1548,7 @@ PRINT*,'#ITERATIONS ',ITER
       INTEGER(4)                 :: IR,IRMATCH,SO,IDIR
       INTEGER(4)                 :: ITER
       LOGICAL                    :: THOM
-      REAL(8)                    :: Y2,Y1,X2,X1,VAL,DER,DERO,R1,R2
+      REAL(8)                    :: Y2,Y1,X2,X1,DER,DERO
       INTEGER(4)                 :: IRBOX
 !     **************************************************************************
                                  CALL TRACE$PUSH('ATOMLIB$PAWBOUNDSTATE')
@@ -2159,11 +2152,9 @@ PRINT*,'#ITERATIONS ',ITER
       REAL(8)                  :: DEVARR(NR)
       REAL(8)                  :: PHIDOT(NR)
       REAL(8)                  :: PHIPRIME(NR)
-      REAL(8)                  :: PHIHOM(NR)
       REAL(8)                  :: POT1(NR)
-      REAL(8)                  :: VALDOT,DERDOT,VALPRIME,DERPRIME,VAL0,DER0
-      REAL(8)                  :: VALHOM,DERHOM,WHOM
-      REAL(8)                  :: W0,WPRIME,WDOT
+      REAL(8)                  :: VALDOT,DERDOT,VAL0,DER0
+      REAL(8)                  :: W0,WDOT
       REAL(8)                  :: Y1,Y2,X1,X2
       REAL(8)                  :: PI,Y0
       REAL(8)                  :: SOFACTOR
@@ -2182,7 +2173,6 @@ PRINT*,'#ITERATIONS ',ITER
       REAL(8)                  :: ROUT
       REAL(8)                  :: REND
       REAL(8)                  :: NORM
-      REAL(8)                  :: DEV,DEVPREV
       LOGICAL(4)               :: TFIXE ! CONSTANT ENERGY CALCULATION IF TRUE
       LOGICAL(4)               :: TINHOM ! INHOMOGENEOUS EQUATION
       INTEGER(4)               :: NN

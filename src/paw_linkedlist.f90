@@ -1893,7 +1893,7 @@ CONTAINS
       TYPE(LDATA_TYPE),POINTER    :: DATA
       TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
       CHARACTER(1)    ,POINTER    :: CHARVAL(:)
-      CHARACTER(8)                :: STRING,string2
+      CHARACTER(8)                :: STRING
 !     CHARACTER(500)              :: MOLD
       INTEGER(4)                  :: LENG
       INTEGER(4)                  :: I1,I2,KIND

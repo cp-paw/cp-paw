@@ -1100,7 +1100,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       IMPLICIT NONE
       INTEGER(4) :: NIJKA,NIJKB,NIJKC,NIJKD,NIJKP,NIJKQ
       REAL(8)    :: EA,EB,EC,ED
-      REAL(8)    :: RA(3),RB(3),RC(3),RD(3),RP(3),RQ(3)
+      REAL(8)    :: RA(3),RB(3),RC(3),RD(3)
       REAL(8),ALLOCATABLE:: CA(:),CB(:),CC(:),CD(:)
       REAL(8)    :: UABCD
       INTEGER(4) :: NA,NB,NC,ND,NP,NQ
@@ -1161,7 +1161,6 @@ PRINT*,'UABCD',UABCD
       INTEGER(4) :: NB
       INTEGER(4) :: NP
       INTEGER(4)           :: I,IPROBE
-      REAL(8)              :: RAN
       REAL(8)              :: EA,EB,EP
       REAL(8)              :: RA(3),RB(3),RP(3)
       INTEGER(4)           :: NIJKA,NIJKB,NIJKP
@@ -1249,7 +1248,6 @@ PRINT*,'UABCD',UABCD
       REAL(8)              :: XA,EA
       REAL(8)              :: XB,EB
       REAL(8)              :: XP,EP
-      INTEGER(4)           :: N
       INTEGER(4)           :: NP
       REAL(8)              :: X,Y1,Y2,SVAR
       INTEGER(4)           :: I,M

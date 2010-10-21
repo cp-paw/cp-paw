@@ -259,7 +259,6 @@ END MODULE OPTFRIC_MODULE
       REAL(8)                 :: ASUM,BSUM
       REAL(8)                 :: A0 ! EFFECTIVE FRICTION/CURRENT TIME STEP
       REAL(8)                 :: AM ! EFFECTIVE FRICTION/PREVIOUS TIME STEP
-      REAL(8)                 :: AP ! EFFECTIVE FRICTION/NEXT TIME STEP
       real(8)                 :: aopt1 !numerator
       real(8)                 :: aopt2 !denominator
       real(8)                 :: aopt
