@@ -51,6 +51,7 @@ TYPE CISTATE_TYPE
   COMPLEX(8),POINTER     :: C(:)   ! COEFFICIENTS
   INTEGER   ,POINTER     :: ID(:)  ! NUMBER REPRESENTATION IN BIT FORMAT
 END TYPE CISTATE_TYPE
+!== interaction part of the Hamiltonian a^+_i a^+_j a_k a_l 
 TYPE U_TYPE
   INTEGER(4)             :: NX=0   !
   INTEGER(4)             :: N=0    !
@@ -60,6 +61,7 @@ TYPE U_TYPE
   INTEGER   ,POINTER     :: K(:)!
   INTEGER   ,POINTER     :: L(:)!
 END TYPE U_TYPE
+!== one-particle part of the Hamiltonian
 TYPE H_TYPE
   INTEGER(4)             :: NX   !
   INTEGER(4)             :: N    !
@@ -67,9 +69,17 @@ TYPE H_TYPE
   INTEGER   ,POINTER     :: I(:)!
   INTEGER   ,POINTER     :: J(:)!
 END TYPE H_TYPE
+!== source and sink term of the Hamiltonian ==============================
+TYPE A_TYPE
+  INTEGER(4)             :: NX   !
+  INTEGER(4)             :: N    !
+  COMPLEX(8),POINTER     :: C(:) !
+  INTEGER   ,POINTER     :: I(:) !
+END TYPE A_TYPE
 TYPE CIHAMIL_TYPE
-  TYPE(U_TYPE)            :: U
-  TYPE(H_TYPE)            :: H
+  TYPE(U_TYPE)            :: U  ! interaction 
+  TYPE(H_TYPE)            :: H  ! one-particle term
+  TYPE(A_TYPE)            :: A  ! source and sink terms
 END TYPE CIHAMIL_TYPE
 ! MINC IS USED BY CI_COMPACTPSI TO REMOVE SLATER-DETERMINANTS WITH TOO 
 ! SMALL WEIGHT. 
@@ -203,8 +213,9 @@ END MODULE CI_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$SETPSI(PHI,ID,C)
 !     **************************************************************************
-!     **  CI$SETPSI                                                           **
-!     **  ADD A SLATER DETERMINANT TO A STATE                                 **
+!     **  ADD A SLATER DETERMINANT TO A STATE.                                **
+!     **  IF THIS SLATER DETERMINANT IS ALREADY PRESENT, THE VALUE IS ADDED   **
+!     **  TO THE EXISTING COEFFICIENT                                         **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
@@ -221,7 +232,8 @@ END MODULE CI_MODULE
       N=PHI%N
       PHI%C(N)=C
       PHI%ID(N)=ID
-      PHI%TCLEAN=.FALSE.
+      phi%tclean=.false.
+      return
       RETURN
       END SUBROUTINE CI$SETPSI
 ! 
@@ -315,6 +327,7 @@ END MODULE CI_MODULE
         CALL SORT__FLIP(FROM,TO)
       ENDDO
       CALL SORT__UNSET
+      phi%tclean=.true.
 !
 !     ==========================================================================
 !     ==  REMOVE IDENTICAL SLATER DETERMINANTS                                ==
@@ -843,6 +856,21 @@ END MODULE CI_MODULE
       END SUBROUTINE CI$SETH
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI$SETA(Ham,I,VAL)
+!     **************************************************************************
+!     **  CIHAMI$ADDTOU                                                       **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(CIHAMIL_TYPE),INTENT(INOUT) :: Ham
+      INTEGER(4)  ,INTENT(IN)   :: I
+      COMPLEX(8)  ,INTENT(IN)   :: VAL
+!     **************************************************************************
+      CALL CI_SETAELEMENT(HAM%A,I,VAL)
+      RETURN 
+      END SUBROUTINE CI$SETA
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$WRITEHAMILTONIAN(HAM,NFIL)
 !     **************************************************************************
 !     **  CIHAMI$ADDTOU                                                       **
@@ -854,6 +882,7 @@ END MODULE CI_MODULE
 !     **************************************************************************
       CALL CI_WRITEH(HAM%H,NFIL)
       CALL CI_WRITEU(HAM%U,NFIL)
+      CALL CI_WRITEA(HAM%A,NFIL)
       RETURN 
       END SUBROUTINE CI$WRITEHAMILTONIAN
 ! 
@@ -872,6 +901,7 @@ END MODULE CI_MODULE
 CALL TIMING$CLOCKON('CI$CLEANH')
       CALL CI_CLEANU(HAM%U)
       CALL CI_CLEANH(HAM%H)
+      CALL CI_CLEANA(HAM%A)
 CALL TIMING$CLOCKOFF('CI$CLEANH')
       RETURN 
       END SUBROUTINE CI$CLEANHAMILTONIAN
@@ -895,6 +925,7 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       END IF
       HAM%U%NX=0
       HAM%U%N=0
+!
       IF(ASSOCIATED(HAM%H%C)) THEN
         DEALLOCATE(HAM%H%C)
         DEALLOCATE(HAM%H%I)
@@ -902,6 +933,13 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       END IF
       HAM%H%NX=0
       HAM%H%N=0
+!
+      IF(ASSOCIATED(HAM%A%C)) THEN
+        DEALLOCATE(HAM%A%C)
+        DEALLOCATE(HAM%A%I)
+      END IF
+      HAM%A%NX=0
+      HAM%A%N=0
       RETURN 
       END SUBROUTINE CI$DELETEHAMILTONIAN
 ! 
@@ -973,6 +1011,25 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       END SUBROUTINE CI_WRITEH
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI_WRITEA(A,NFIL)
+!     **************************************************************************
+!     **  WRITE  TO FILE                              **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(A_TYPE),INTENT(INOUT):: A
+      INTEGER(4)  ,INTENT(IN)   :: NFIL
+      INTEGER(4)                :: N,I
+!     **************************************************************************
+      N=A%N
+      WRITE(NFIL,FMT='("============== A  =======================")')
+      DO I=1,N
+        WRITE(NFIL,FMT='(I5,2F17.10)')A%I(I),A%C(I)
+      ENDDO
+      RETURN
+      END SUBROUTINE CI_WRITEA
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI_SETHELEMENT(H,I,J,VAL)
 !     **************************************************************************
 !     **  SET ONE MATRIX ELEMENT OF ONE-PARTICLE HAMILTONIAN                  **
@@ -994,6 +1051,27 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       H%C(N)=VAL
       RETURN
       END SUBROUTINE CI_SETHELEMENT
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI_SETAELEMENT(A,I,VAL)
+!     **************************************************************************
+!     **  SET ONE MATRIX ELEMENT OF ONE-PARTICLE HAMILTONIAN                  **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(A_TYPE),INTENT(INOUT):: A
+      INTEGER(4)  ,INTENT(IN)   :: I
+      COMPLEX(8)  ,INTENT(IN)   :: VAL
+      INTEGER(4)                :: N
+!     **************************************************************************
+      IF(A%N.GE.A%NX) CALL CI_CLEANA(A)
+      IF(A%N.GE.A%NX) CALL CI_EXPANDA(A,20)
+      A%N=A%N+1
+      N=A%N
+      A%I(N)=I
+      A%C(N)=VAL
+      RETURN
+      END SUBROUTINE CI_SETAELEMENT
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI_EXPANDU(U,NFURTHER)
@@ -1092,6 +1170,45 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       DEALLOCATE(C)
       RETURN
       END SUBROUTINE CI_EXPANDH
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI_EXPANDA(A,NFURTHER)
+!     **************************************************************************
+!     **  ADD NFURTHER ELEMENTS FOR THE ONE-PARTICLE HAMILTONIAN              **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(A_TYPE) ,INTENT(INOUT):: A
+      INTEGER(4)   ,INTENT(IN)   :: NFURTHER
+      COMPLEX(8)   ,ALLOCATABLE  :: C(:)
+      INTEGER(4)   ,ALLOCATABLE  :: IND(:)
+      INTEGER(4)                 :: N,NX
+!     **************************************************************************
+      IF(A%NX.EQ.0) THEN
+        A%NX=NFURTHER
+        A%N=0
+        NX=NFURTHER
+        ALLOCATE(A%I(NX))
+        ALLOCATE(A%C(NX))
+        RETURN
+      END IF
+      N=A%N
+      ALLOCATE(IND(N))
+      ALLOCATE(C(N))
+      IND(:)=A%I(:N)
+      C(:)=A%C(:N)
+      DEALLOCATE(A%I)
+      DEALLOCATE(A%C)
+      A%NX=A%NX+NFURTHER
+      NX=A%NX
+      ALLOCATE(A%I(NX))
+      ALLOCATE(A%C(NX))
+      A%I(:N)=IND(:)
+      A%C(:N)=C(:)
+      DEALLOCATE(IND)
+      DEALLOCATE(C)
+      RETURN
+      END SUBROUTINE CI_EXPANDA
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI_CLEANU(U)
@@ -1489,6 +1606,91 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       END SUBROUTINE CI_CLEANH
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI_CLEANA(A)
+!     **************************************************************************
+!     **  CI_CLEANA                                                           **
+!     **  REMOVES ZERO ELEMENTS OF THE creation annihilation part             **
+!     **  ORDER THE ELEMENTS AND ADD IDENTICAL ELEMENTS                       **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(A_TYPE) ,INTENT(INOUT):: A
+      INTEGER(4)                 :: N
+      INTEGER(4)                 :: I,J
+      COMPLEX(8)                 :: C
+      REAL(8)  ,ALLOCATABLE      :: CRIT(:)
+      INTEGER(4)                 :: FROM,TO
+      LOGICAL(4)                 :: TDIFF
+!     **************************************************************************
+      IF(A%N.EQ.0) RETURN
+      N=A%N
+      C=(0.D0,0.D0)
+!
+!     ==========================================================================
+!     ==  REMOVE ZERO ELEMENTS                                                ==
+!     ==========================================================================
+      J=0
+      DO I=1,N
+        IF(ABS(A%C(I)).EQ.0.D0) CYCLE
+        J=J+1
+        A%C(J)=A%C(I)
+        A%I(J)=A%I(I)
+      END DO
+      A%N=J
+      N=A%N
+!
+!     ==========================================================================
+!     ==  ORDER ENTRIES                                                       ==
+!     ==========================================================================
+!     ==  ORDER WITH RESPECT TO LAST INDEX
+      ALLOCATE(CRIT(N))
+      DO I=1,N
+        CRIT(I)=REAL(A%I(I))
+      ENDDO
+      CALL SORT__SET(N,CRIT)
+      CALL SORT__RESTART
+      CALL SORT__FLIP(FROM,TO)
+      DO WHILE (FROM.NE.0.OR.TO.NE.0)
+        IF(TO.EQ.0) THEN
+          I=A%I(FROM)
+          C=A%C(FROM)
+        ELSE IF (FROM.EQ.0) THEN
+          A%I(TO)=I
+          A%C(TO)=C
+        ELSE
+          A%I(TO)=A%I(FROM)
+          A%C(TO)=A%C(FROM)
+        END IF
+        CALL SORT__FLIP(FROM,TO)
+      ENDDO
+      CALL SORT__UNSET
+!
+!     ==========================================================================
+!     ==  COMBINE IDENTICAL ENTRIES                                           ==
+!     ==========================================================================
+      J=1
+      DO I=2,N
+        TDIFF=(J.EQ.0)
+        IF(.NOT.TDIFF) THEN
+          TDIFF=(A%I(I).NE.A%I(J))
+        END IF
+        IF(TDIFF) THEN
+          J=J+1
+          A%I(J)=A%I(I)
+          A%C(J)=A%C(I)
+        ELSE
+          A%C(J)=A%C(J)+A%C(I)
+          A%C(I)=(0.D0,0.D0)
+          IF(ABS(A%C(J)).EQ.0.D0) THEN
+            J=J-1
+          END IF
+        END IF
+      ENDDO
+      A%N=J
+      RETURN
+      END SUBROUTINE CI_CLEANA
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$HPSI(HAM,PSI)
 !     **************************************************************************
 !     **  CI$HPSI                                                             **
@@ -1570,7 +1772,24 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
       ENDDO
 !
 !     ==========================================================================
-!     == APPLY ONE-PARTICLE HAMILTONIAN                                       ==
+!     == APPLY creators and annihilators                                      ==
+!     ==========================================================================
+      N=HAM%A%N
+      DO I1=1,N
+        I=HAM%A%I(I1)
+        CALL CI$COPYPSI(PSI,PSI1)
+        CALL CI$CREATOR(PSI1,I)
+        CALL CI$SCALEPSI(PSI1,HAM%A%C(I1))
+        CALL CI$ADDPSI(HPSI,PSI1)
+!
+        CALL CI$COPYPSI(PSI,PSI1)
+        CALL CI$ANNIHILATOR(PSI1,I)
+        CALL CI$SCALEPSI(PSI1,CONJG(HAM%A%C(I1)))
+        CALL CI$ADDPSI(HPSI,PSI1)
+      ENDDO
+!
+!     ==========================================================================
+!     == copy result into final array                                         ==
 !     ==========================================================================
       CALL CI$COPYPSI(HPSI,PSI)
 !

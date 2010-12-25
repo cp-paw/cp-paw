@@ -1957,6 +1957,7 @@ print*,'a     ',(a(i,i),i=1,nb)
       TINV=GSET%TINV
       NPRO=MAP%NPRO
       ALLOCATE(PROJ(NDIM,NBH,NPRO))
+print*,'before wave_projections in waves_gramschmidt',nat,ngl,ndim,nbh,npro
       CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,PSI,PROJ)
       CALL MPE$COMBINE('K','+',PROJ)
 !     

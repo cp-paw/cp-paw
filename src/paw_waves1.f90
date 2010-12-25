@@ -1324,8 +1324,9 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
       END IF
                                CALL TIMING$CLOCKON('WAVES$ETOT')
                                CALL TIMING$CLOCKON('WAVES$TONTBO')
-!      CALL WAVES$TONTBO()
+      CALL WAVES$TONTBO()
                                CALL TIMING$CLOCKOFF('WAVES$TONTBO')
+      CALL LMTO$TESTENERGY()
 !
 !     ==========================================================================
 !     == KINETIC ENERGY                                                       ==
@@ -2544,7 +2545,7 @@ END IF
       INTEGER(4)             :: ISP   ! SPECIES INDEX
       INTEGER(4)             :: IAT,ISPIN,IKPT,idim,ib,npro
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:) !(NDIM,NBH,npro) <PRO|PSPSI>
-      LOGICAL(4),PARAMETER   :: TPRINT=.true.
+      LOGICAL(4),PARAMETER   :: TPRINT=.false.
       real(8)   ,allocatable :: xk(:,:)
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$TONTBO')

@@ -265,6 +265,12 @@ END MODULE SETUP_MODULE
       REAL(8)     ,PARAMETER  :: GMAX=15.D0 ! <-> EPW OF ABOUT 200 RY
       REAL(8)     ,PARAMETER  :: G1=1.D-3
       INTEGER(4)  ,PARAMETER  :: NG=512
+!!$!     ==  The radial grid has been changed between revision 857 and 1079 
+!!$!     ==  in the devel branch. This caused small differences in the results
+!!$!     ==  Here the previous parameters:
+!!$      Real(8)     ,PARAMETER  :: GMAX=30.D0 ! <-> EPW OF ABOUT 200 RY
+!!$      REAL(8)     ,PARAMETER  :: G1=1.175316829807299d-4
+!!$      INTEGER(4)  ,PARAMETER  :: NG=250
       REAL(8)                 :: DEX
 !     **************************************************************************
 !
@@ -1075,7 +1081,6 @@ END MODULE SETUP_MODULE
       LOGICAL(4)            :: TCHK
       INTEGER(4)            :: IRMAX
       INTEGER(4)            :: L,LX,ISVAR,LNOLD,LNX
-      INTEGER(4)            :: NC !SANTOS040616
       INTEGER(4)            :: LN1,LN2,LN1A,LN2A
       INTEGER(4),ALLOCATABLE:: NPRO(:)
       INTEGER(4),ALLOCATABLE:: IWORK(:)
@@ -1374,6 +1379,7 @@ PRINT*,'RCSM ',THIS%RCSM
     &                              ,NG,THIS%PROOFG(:,LN))
         THIS%PROOFG(:,LN)=FOURPI*THIS%PROOFG(:,LN)
       ENDDO
+CALL SETUP_WRITEPHI('proofg.dat',GIDg,Ng,lnx,THIS%PROOFG)
 !     == COMPENSATION GAUSSIAN =========================================
       ALLOCATE(THIS%NHATPRIMEOFG(NG))
       ALLOCATE(THIS%VHATOFG(NG))
@@ -1433,7 +1439,6 @@ PRINT*,'RCSM ',THIS%RCSM
       INTEGER(4)            :: IR,IB,LN,L,IB1
       INTEGER(4)            :: LRHOX
       CHARACTER(64)         :: STRING
-      CHARACTER(64)         :: PSEUDIZATION
       TYPE(VFOCK_TYPE)      :: VFOCK
       REAL(8)   ,ALLOCATABLE:: AUX(:)
       INTEGER(4)            :: NFIL
@@ -2012,7 +2017,6 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       INTEGER(4)             :: ION(0:3)
       INTEGER(4)             :: ISUMEL
       LOGICAL(4)             :: TMAP(19)
-      REAL(8)                :: SUMEL
 !     **************************************************************************
 !     == DETERMINE ATOMIC NUMBER OF LAST NOBEL GAS ATOM BEFORE VALENCE STATES ==
       DO I=1,7
@@ -2712,7 +2716,6 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       CHARACTER(2)            :: EL
       REAL(8)                 :: R1
       REAL(8)                 :: DEX
-      REAL(8)                 :: SVAR,SVAR1,SVAR2
       INTEGER(4)              :: NR
       INTEGER(4)              :: LENG
       INTEGER(4)              :: L,LN
@@ -3376,7 +3379,7 @@ PRINT*,'EOFI1 A ',EOFI1
       END IF
 !
 !     ==========================================================================
-!     == UPDATE NODELESS PARTIAL WAVES  WITH FOCK POTENTIAL                   ==
+!     == UPDATE NODELESS PARTIAL WAVES WITH FOCK POTENTIAL                    ==
 !     ==========================================================================
       IF(VFOCK%TON) THEN
                       CALL TRACE$PASS('APPLY FOCK CORRECTION TO PARTIAL WAVES')
@@ -3523,7 +3526,7 @@ PRINT*,'EOFI1 A ',EOFI1
 !
 !     ==========================================================================
 !     == CONSTRUCT QN FUNCTIONS        (H-E)|QN>=|UC>                         ==
-!     == THE QN FUNCTIONS MY HAVE NODES, BUT THE NUMBER OF NODES IS REDUCED   ==
+!     == THE QN FUNCTIONS MaY HAVE NODES, BUT THE NUMBER OF NODES IS REDUCED  ==
 !     == BY THE NUMBER OF CORE STATES                                         ==
 !     ==========================================================================
                            CALL TRACE$PASS('CONSTRUCT QN FUNCTIONS')
@@ -3536,7 +3539,17 @@ PRINT*,'EOFI1 A ',EOFI1
           SVAR=1.D0
           DO LN1=1,LN
             IF(LOX(LN1).NE.L) CYCLE
-            TRANSU(LN1,LN)=TRANSU(LN1,LN)+SVAR
+            IF(TRANSU(LN1,LN).NE.0.D0) THEN
+!              === this check shall be removed after some testing period
+               CALL ERROR$MSG('CHECKING ASSUMPTIONS UNDERLYING THE CODE')
+               CALL ERROR$MSG('VARIABLE TRANSU IS NOT ZERO AS ASSUMED')
+               CALL ERROR$I4VAL('LN',LN)
+               CALL ERROR$I4VAL('LN1',LN1)
+               CALL ERROR$R8VAL('TRANSU',TRANSU(LN1,LN))
+               CALL ERROR$STOP('SETUP_MAKEPARTIALWAVES')
+               TRANSU(LN1,LN)=TRANSU(LN1,LN)+SVAR  !OLD STATEMENT
+            END IF
+            TRANSU(LN1,LN)=SVAR
             SVAR=SVAR*(EOFLN(LN)-EOFLN(LN1))
           ENDDO
           UBYQ(LN)=1.D0/TRANSU(LN,LN) ! MATCHFACTOR |UN> <-> QN*UBYQ
@@ -3561,6 +3574,7 @@ PRINT*,'EOFI1 A ',EOFI1
 !
 !     ==========================================================================
 !     == ADJUST SCALING OF NODELESS PARTIAL WAVES TO THE QN                   ==
+!     == so that long-range tale of nlphi and qphi are identical              ==
 !     ==========================================================================
       DO LN=1,LNX
         NLPHI(:,LN)=NLPHI(:,LN)/UBYQ(LN)
@@ -3692,6 +3706,8 @@ PRINT*,'EOFI1 A ',EOFI1
         CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
       END IF
       IF(TTEST.AND.TWRITE)CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
+
+
 !
 !     ==========================================================================
 !     == CONSTRUCT BARE PROJECTOR FUNCTIONS                                   ==
@@ -3744,7 +3760,7 @@ PRINT*,'EOFI1 A ',EOFI1
       CALL setup_BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,BAREPRO &
      &                          ,TRANSPHI,TRANSPRO)
       A=MATMUL(TRANSPRO,TRANSPOSE(TRANSPHI))
-      PRO=MATMUL(BAREPRO,A)
+      PRO=MATMUL(BAREPRO,A)  ! enforce biorthogonality on the projectors only
       CALL LIB$INVERTR8(LNX,TRANSPHI,TRANSPHIINV)
       DEALLOCATE(A)
 !
@@ -3896,43 +3912,54 @@ PRINT*,'EOFI1 A ',EOFI1
     &                                                           ,NLPHIDOT(:,LN))
           CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
     &                                    ,-1.D0,E,NLPHIDOT(:,LN))
+!this construction has been replaced, because the dot functions did not have 
+! the same tail behavior.
+!!$!
+!!$!         == CALCULATE QNDOT  ==================================================
+!!$          G(:)=QN(:,LN)
+!!$          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,QNDOT(:,LN))
+!!$          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
+!!$    &                                    ,-1.D0,E,QNDOT(:,LN))
+!!$!
+!!$!         == CALCULATE PSEUDO WAVE FUNCTIONS ===================================
+!!$          G(:)=PSPHI(:,LN)
+!!$          DO IPRO=1,NPRO
+!!$            AUX(:)=R(:)**2*PRO(:,IPRO)*PSPHI(:,LN)
+!!$!           == INTEGRAL IS OK BECAUSE PRO IS EXACTLY ZERO BEYOND A RADIUS ======
+!!$            CALL RADIAL$INTEGRAL(GID,NR,AUX,PROJ(IPRO))
+!!$          ENDDO
+!!$          PROJ(:)=MATMUL(DO1,PROJ)
+!!$          DO IPRO=1,NPRO
+!!$            G(:)=G(:)+PRO(:,IPRO)*PROJ(IPRO)
+!!$          ENDDO
+!!$          CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G &
+!!$    &                        ,PSPHIDOT(:,LN))
+!!$!
+!!$!         == ADD HOMOGENEOUS SOLUTION TO MATCH OUTER BOUNDARY CONDITIONS =======
+!!$          G(:)=0.D0
+!!$          CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI)
+!!$          CALL RADIAL$VALUE(GID,NR,PHI,MAXVAL(RC),VAL)
+!!$          PHI=PHI/VAL
+!!$          CALL RADIAL$VALUE(GID,NR,NLPHIDOT(:,LN)-PSPHIDOT(:,LN),MAXVAL(RC),VAL)
+!!$          PSPHIDOT(:,LN)=PSPHIDOT(:,LN)+PHI(:)*VAL
+!!$!         == REPLACE TAILS TO AVOID NUMERICAL ERRORS ===========================
+!!$          SVAR=MAXVAL(RC)
+!!$          DO IR=1,NR
+!!$            IF(R(IR).LE.SVAR) CYCLE
+!!$            PSPHIDOT(IR:,LN)=NLPHIDOT(IR:,LN)
+!!$            EXIT
+!!$          ENDDO
 !
-!         == CALCULATE QNDOT  ==================================================
-          G(:)=QN(:,LN)
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,0,G,L,E,1,QNDOT(:,LN))
-          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
-    &                                    ,-1.D0,E,QNDOT(:,LN))
+!         ======================================================================
+!         == CONSTRUCT 
+!         ======================================================================
+          qndot(:,ln)=nlphidot(:,ln)
+          psphidot(:,ln)=nlphidot(:,ln)
 !
-!         == CALCULATE PSEUDO WAVE FUNCTIONS ===================================
-          G(:)=PSPHI(:,LN)
-          DO IPRO=1,NPRO
-            AUX(:)=R(:)**2*PRO(:,IPRO)*PSPHI(:,LN)
-!           == INTEGRAL IS OK BECAUSE PRO IS EXACTLY ZERO BEYOND A RADIUS ======
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,PROJ(IPRO))
-          ENDDO
-          PROJ(:)=MATMUL(DO1,PROJ)
-          DO IPRO=1,NPRO
-            G(:)=G(:)+PRO(:,IPRO)*PROJ(IPRO)
-          ENDDO
-          CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G &
-    &                        ,PSPHIDOT(:,LN))
-!
-!         == ADD HOMOGENEOUS SOLUTION TO MATCH OUTER BOUNDARY CONDITIONS =======
-          G(:)=0.D0
-          CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,PHI)
-          CALL RADIAL$VALUE(GID,NR,PHI,MAXVAL(RC),VAL)
-          PHI=PHI/VAL
-          CALL RADIAL$VALUE(GID,NR,NLPHIDOT(:,LN)-PSPHIDOT(:,LN),MAXVAL(RC),VAL)
-          PSPHIDOT(:,LN)=PSPHIDOT(:,LN)+PHI(:)*VAL
-!         == REPLACE TAILS TO AVOID NUMERICAL ERRORS ============================
-          SVAR=MAXVAL(RC)
-          DO IR=1,NR
-            IF(R(IR).LE.SVAR) CYCLE
-            PSPHIDOT(IR:,LN)=NLPHIDOT(IR:,LN)
-            EXIT
-          ENDDO
-!
-!         == CONSTRUCT AEPHIDOT BY CORE-ORTHOGONALIZATION ======================
+!         ======================================================================
+!         == CONSTRUCT AEPHIDOT BY CORE-ORTHOGONALIZATION                     ==
+!         == AEphidot does not obey (h-e)|aephidot>=|aephi> !!                ==
+!         ======================================================================
           AEPHIDOT(:,LN)=NLPHIDOT(:,LN)
           DO IB=NC,1,-1
             IF(LOFI(IB).NE.L) CYCLE
@@ -3951,6 +3978,17 @@ PRINT*,'EOFI1 A ',EOFI1
         DEALLOCATE(PRO1)
         DEALLOCATE(PROJ)
       ENDDO
+!     == qndot does not have the same radial long-range behavior as the other
+!     == dot-functions!
+!!$CALL SETUP_WRITEPHI('nl.DAT',GID,NR,LNX,nlphi)
+!!$CALL SETUP_WRITEPHI('qn.DAT',GID,NR,LNX,qn)
+!!$CALL SETUP_WRITEPHI('ps.DAT',GID,NR,LNX,PSPHI)
+!!$CALL SETUP_WRITEPHI('ae.DAT',GID,NR,LNX,AEPHI)
+!!$CALL SETUP_WRITEPHI(+'AEPHIDOT.DAT',GID,NR,LNX,AEPHIDOT)
+!!$CALL SETUP_WRITEPHI(+'PSPHIDOT.DAT',GID,NR,LNX,PSPHIDOT)
+!!$CALL SETUP_WRITEPHI(+'NLPHIDOT.DAT',GID,NR,LNX,NLPHIDOT)
+!!$CALL SETUP_WRITEPHI(+'QNDOT.DAT',GID,NR,LNX,QNDOT)
+!!$stop 'ok here'
 !
 !     ==========================================================================
 !     == BACK TRANSFORM                                                       ==

@@ -2287,6 +2287,10 @@ if test "$PARMFILE" != notset; then
   FCFLAGS_OPT=`grep '^FCFLAGS_OPT' $PARMFILE | cut -d'"' -f2`
   FCFLAGS_DBG=`grep '^FCFLAGS_DBG' $PARMFILE | cut -d'"' -f2`
   FCFLAGS_PROF=`grep '^FCFLAGS_PROF' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_NONE=`grep '^LDFLAGS_NONE' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_OPT=`grep '^LDFLAGS_OPT' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_DBG=`grep '^LDFLAGS_DBG' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_PROF=`grep '^LDFLAGS_PROF' $PARMFILE | cut -d'"' -f2`
   LDFLAGS_SCALAR=`grep '^LDFLAGS_SCALAR' $PARMFILE | cut -d'"' -f2`
   LDFLAGS_PARALLEL=`grep '^LDFLAGS_PARALLEL' $PARMFILE | cut -d'"' -f2`
   LIBS_SCALAR=`grep '^LIBS_SCALAR=' $PARMFILE | cut -d'"' -f2`
@@ -3679,6 +3683,7 @@ fi
 { $as_echo "$as_me:$LINENO: result: creating Makefile in none" >&5
 $as_echo "creating Makefile in none" >&6; }
 sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %"\
     -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
     -e 's%varPARALLEL%F%'\
     -e 's%varOBJTYPE%none%'\
@@ -3690,6 +3695,7 @@ if test "$TPARALLEL" = "T"; then
   { $as_echo "$as_me:$LINENO: result: creating Makefile in none_parallel" >&5
 $as_echo "creating Makefile in none_parallel" >&6; }
   sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
       -e 's%varPARALLEL%T%'\
       -e 's%varOBJTYPE%none_parallel%'\
@@ -3701,6 +3707,7 @@ fi
 { $as_echo "$as_me:$LINENO: result: creating Makefile in fast" >&5
 $as_echo "creating Makefile in fast" >&6; }
 sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%"\
     -e 's%varOBJTYPE%fast%'\
     -e 's%varPARALLEL%F%'\
@@ -3712,6 +3719,7 @@ if test "$TPARALLEL" = "T"; then
   { $as_echo "$as_me:$LINENO: result: creating Makefile_parallel in fast" >&5
 $as_echo "creating Makefile_parallel in fast" >&6; }
   sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%"\
       -e 's%varOBJTYPE%fast_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -3723,6 +3731,7 @@ fi
 { $as_echo "$as_me:$LINENO: result: creating Makefile in dbg" >&5
 $as_echo "creating Makefile in dbg" >&6; }
 sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%"\
     -e 's%varOBJTYPE%dbg%'\
     -e 's%varPARALLEL%F%'\
@@ -3734,6 +3743,7 @@ if test "$TPARALLEL" = "T"; then
   { $as_echo "$as_me:$LINENO: result: creating Makefile_parallel in dbg" >&5
 $as_echo "creating Makefile_parallel in dbg" >&6; }
   sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%"\
       -e 's%varOBJTYPE%dbg_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -3745,7 +3755,7 @@ fi
 { $as_echo "$as_me:$LINENO: result: creating Makefile in prof" >&5
 $as_echo "creating Makefile in prof" >&6; }
 sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
-    -e "s%\(LINK=.*\)%\1 -pg %"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%"\
     -e 's%varOBJTYPE%prof%'\
     -e 's%varPARALLEL%F%'\
@@ -3757,7 +3767,7 @@ if test "$TPARALLEL" = "T"; then
   { $as_echo "$as_me:$LINENO: result: creating Makefile_parallel in prof" >&5
 $as_echo "creating Makefile_parallel in prof" >&6; }
   sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
-      -e "s%\(LINK=.*\)%\1 -pg %"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%"\
       -e 's%varOBJTYPE%prof_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -3803,6 +3813,14 @@ $as_echo "compile flags (fast)           : $FCFLAGS_OPT" >&6; }
 $as_echo "compile flags (dbg)            : $FCFLAGS_DBG" >&6; }
 { $as_echo "$as_me:$LINENO: result: compile flags (prof)           : $FCFLAGS_PROF" >&5
 $as_echo "compile flags (prof)           : $FCFLAGS_PROF" >&6; }
+{ $as_echo "$as_me:$LINENO: result: special link flags (none)      : $LDFLAGS_NONE" >&5
+$as_echo "special link flags (none)      : $LDFLAGS_NONE" >&6; }
+{ $as_echo "$as_me:$LINENO: result: special link flags (opt)       : $LDFLAGS_OPT" >&5
+$as_echo "special link flags (opt)       : $LDFLAGS_OPT" >&6; }
+{ $as_echo "$as_me:$LINENO: result: special link flags (dbg)       : $LDFLAGS_DBG" >&5
+$as_echo "special link flags (dbg)       : $LDFLAGS_DBG" >&6; }
+{ $as_echo "$as_me:$LINENO: result: special link flags (prof)      : $LDFLAGS_PROF" >&5
+$as_echo "special link flags (prof)      : $LDFLAGS_PROF" >&6; }
 { $as_echo "$as_me:$LINENO: result: link command w.flags (scalar)  : $LINK_SCALAR" >&5
 $as_echo "link command w.flags (scalar)  : $LINK_SCALAR" >&6; }
 { $as_echo "$as_me:$LINENO: result: external libraries (scalar)    : $LIBS_SCALAR" >&5

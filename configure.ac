@@ -142,6 +142,10 @@ if test "$PARMFILE" != notset; then
   FCFLAGS_OPT=`grep '^FCFLAGS_OPT' $PARMFILE | cut -d'"' -f2`
   FCFLAGS_DBG=`grep '^FCFLAGS_DBG' $PARMFILE | cut -d'"' -f2`
   FCFLAGS_PROF=`grep '^FCFLAGS_PROF' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_NONE=`grep '^LDFLAGS_NONE' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_OPT=`grep '^LDFLAGS_OPT' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_DBG=`grep '^LDFLAGS_DBG' $PARMFILE | cut -d'"' -f2`
+  LDFLAGS_PROF=`grep '^LDFLAGS_PROF' $PARMFILE | cut -d'"' -f2`
   LDFLAGS_SCALAR=`grep '^LDFLAGS_SCALAR' $PARMFILE | cut -d'"' -f2`
   LDFLAGS_PARALLEL=`grep '^LDFLAGS_PARALLEL' $PARMFILE | cut -d'"' -f2`
   LIBS_SCALAR=`grep '^LIBS_SCALAR=' $PARMFILE | cut -d'"' -f2`
@@ -331,6 +335,7 @@ fi
 #
 AC_MSG_RESULT(creating Makefile in none)
 sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %"\
     -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
     -e 's%varPARALLEL%F%'\
     -e 's%varOBJTYPE%none%'\
@@ -341,6 +346,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile in none_parallel)
   sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
       -e 's%varPARALLEL%T%'\
       -e 's%varOBJTYPE%none_parallel%'\
@@ -351,6 +357,7 @@ fi
 #
 AC_MSG_RESULT(creating Makefile in fast)
 sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%"\
     -e 's%varOBJTYPE%fast%'\
     -e 's%varPARALLEL%F%'\
@@ -361,6 +368,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile_parallel in fast)
   sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%"\
       -e 's%varOBJTYPE%fast_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -371,6 +379,7 @@ fi
 #
 AC_MSG_RESULT(creating Makefile in dbg)
 sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%"\
     -e 's%varOBJTYPE%dbg%'\
     -e 's%varPARALLEL%F%'\
@@ -381,6 +390,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile_parallel in dbg)
   sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%"\
       -e 's%varOBJTYPE%dbg_parallel%'\
       -e 's%varPARALLEL%T%'\ 
@@ -391,7 +401,7 @@ fi
 #
 AC_MSG_RESULT(creating Makefile in prof)
 sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
-    -e "s%\(LINK=.*\)%\1 -pg %"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %"\
     -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%"\
     -e 's%varOBJTYPE%prof%'\
     -e 's%varPARALLEL%F%'\
@@ -402,7 +412,7 @@ sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile_parallel in prof)
   sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
-      -e "s%\(LINK=.*\)%\1 -pg %"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %"\
       -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%"\
       -e 's%varOBJTYPE%prof_parallel%'\
       -e 's%varPARALLEL%T%'\
@@ -433,6 +443,10 @@ AC_MSG_RESULT(compile flags (none)           : $FCFLAGS_NONE)
 AC_MSG_RESULT(compile flags (fast)           : $FCFLAGS_OPT)
 AC_MSG_RESULT(compile flags (dbg)            : $FCFLAGS_DBG)
 AC_MSG_RESULT(compile flags (prof)           : $FCFLAGS_PROF)
+AC_MSG_RESULT(special link flags (none)      : $LDFLAGS_NONE)
+AC_MSG_RESULT(special link flags (opt)       : $LDFLAGS_OPT)
+AC_MSG_RESULT(special link flags (dbg)       : $LDFLAGS_DBG)
+AC_MSG_RESULT(special link flags (prof)      : $LDFLAGS_PROF)
 AC_MSG_RESULT(link command w.flags (scalar)  : $LINK_SCALAR)
 AC_MSG_RESULT(external libraries (scalar)    : $LIBS_SCALAR)
 AC_MSG_RESULT(uppercase module names?        : $TUPPERCASEMOD)

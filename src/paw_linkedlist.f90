@@ -2204,7 +2204,8 @@ CONTAINS
           ENDDO
           DEALLOCATE(L4ARRAY)
         ELSE IF(TYPE(1:3).EQ.'CH(') THEN
-          READ(TYPE(4:INDEX(TYPE,')')-1),*)ISVAR
+          j=INDEX(TYPE,')')
+          READ(TYPE(4:j-1),*)ISVAR
           ALLOCATE(CHARRAY(LENG))
           CHARRAY(:)=' '
 !         CALL LINKEDLIST$GET(LIST,'*',I,CHARRAY(:)(1:ISVAR))

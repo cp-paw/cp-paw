@@ -623,6 +623,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)            :: NABX
       INTEGER(4)            :: I,J,K
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: primov(:,:)
       INTEGER(4)            :: INDA,MA,IA,JA,KA
       INTEGER(4)            :: INDB,MB,IB,JB,KB
       REAL(8)               :: PI
@@ -658,6 +659,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     ==========================================================================
 !     ==  WORK OUT OVERLAP MATRIX                                             ==
 !     ==========================================================================
+      ALLOCATE(primov(nijka,nijkb))
+      primov(:,:)=0.d0
       SAB(:,:)=0.D0
       INDA=0
       DO MA=0,NA
@@ -674,21 +677,22 @@ PRINT*,'SQUARE DEVIATION ',SVAR
                   INDB=INDB+1
 !
                   SVAR=HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
-                  DO J=1,NCB
-                    DO I=1,NCA
-                      SAB(I,J)=SAB(I,J)+SVAR*CA(INDA,I)*CB(INDB,J)
-                    ENDDO
-                  ENDDO
-!!$IF(ABS(SVAR*CA(INDA,1)*CB(INDB,1)/SAB(1,1)).GT.1.D-1) THEN
-!!$WRITE(*,FMT='("SAB(1,1) ",2I6,10E10.2)')INDA,INDB,SAB(1,1),CA(INDA,1),CB(INDB,1)
-!!$END IF
+                  primov(inda,indb)=svar
+!!$                  DO J=1,NCB
+!!$                    DO I=1,NCA
+!!$                      SAB(I,J)=SAB(I,J)+SVAR*CA(INDA,I)*CB(INDB,J)
+!!$                    ENDDO
+!!$                  ENDDO
+!
                 ENDDO
               ENDDO
             ENDDO
           ENDDO
         ENDDO
       ENDDO
-      SAB(:,:)=SAB(:,:)*(PI/(EA+EB))**1.5D0
+      primov(:,:)=primov(:,:)*(PI/(EA+EB))**1.5D0
+!      SAB(:,:)=SAB(:,:)*(PI/(EA+EB))**1.5D0
+      sab=matmul(transpose(ca(:,:)),matmul(primov,cb))
 !
 !!$DO I=1,NIJKA
 !!$  WRITE(*,FMT='("CA",I8,20E10.2)')I,CA(I,:),CB(I,:)
@@ -696,7 +700,103 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !!$DO J=1,NCB
 !!$  WRITE(*,FMT='("S",20E10.2)')SAB(:,J)
 !!$ENDDO
-!!$STOP
+!!$STOP 'forced in gaussian$overlap'
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GAUSSIAN$newOVERLAP(NIJKA,NCA,nea,EA,RA,CA &
+     &                           ,NIJKB,NCB,neb,EB,RB,CB,SAB)
+!     **************************************************************************
+!     ** EVALUATES THE OVERLAP OF TWO SETS OF FUNCTIONS REPRESENTED BY        **
+!     ** CARTESIAN GAUSSIANS.                                                 **
+!     ** SET "A" WITH NCA FUNCTIONS HAS THE EXPONENT EA AND IS CENTERED AT RA **
+!     ** SET "B" WITH NCB FUNCTIONS HAS THE EXPONENT EB AND IS CENTERED AT RB **
+!     ** THE RESULTING OVERLAP MATRIX IS S_IJ=<A_I|B_J>                       **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NIJKA
+      INTEGER(4),INTENT(IN) :: Nca
+      INTEGER(4),INTENT(IN) :: Nea
+      REAL(8)   ,INTENT(IN) :: EA(nea)
+      REAL(8)   ,INTENT(IN) :: RA(3)
+      REAL(8)   ,INTENT(IN) :: CA(NIJKA,nea,NCA)
+      INTEGER(4),INTENT(IN) :: NIJKB
+      INTEGER(4),INTENT(IN) :: Neb
+      INTEGER(4),INTENT(IN) :: Ncb
+      REAL(8)   ,INTENT(IN) :: EB(neb)
+      REAL(8)   ,INTENT(IN) :: RB(3)
+      REAL(8)   ,INTENT(IN) :: Cb(NIJKb,neb,NCb)
+      REAL(8)   ,INTENT(OUT) :: SAB(nca,ncb)
+      INTEGER(4)            :: NA,NB
+      INTEGER(4)            :: NABX
+      INTEGER(4)            :: I,J,K
+      REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: primov(:,:)
+      INTEGER(4)            :: INDA,MA,IA,JA,KA,iea,ieb
+      INTEGER(4)            :: INDB,MB,IB,JB,KB
+      REAL(8)               :: PI
+      REAL(8)               :: SVAR
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+!
+!     ==========================================================================
+!     ==  TESTS                                                               ==
+!     ==========================================================================
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
+      IF(J.NE.0.OR.K.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$STOP('GAUSSIAN_OVERLAP')
+      END IF
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,J,K)
+      IF(J.NE.0.OR.K.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$STOP('GAUSSIAN_OVERLAP')
+      END IF
+!
+!     ==========================================================================
+!     ==  DETERMINE HERMITE COEFFICIENTS                                      ==
+!     ==========================================================================
+      NABX=MAX(NA,NB)
+      ALLOCATE(HX(0:NABX,0:NABX,0:2*NABX))
+      ALLOCATE(HY(0:NABX,0:NABX,0:2*NABX))
+      ALLOCATE(HZ(0:NABX,0:NABX,0:2*NABX))
+      allocate(primov(nijka,nijkb))
+      SAB(:,:)=0.D0
+      do iea=1,nea
+        do ieb=1,neb
+          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),Ea(iea),Eb(ieB),HX)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(iea),EB(ieB),HY)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(iea),EB(ieB),HZ)
+!
+!         ======================================================================
+!         ==  WORK OUT OVERLAP MATRIX                                         ==
+!         ======================================================================
+          INDA=0
+          DO MA=0,NA
+            DO IA=0,MA
+              DO JA=0,MA-IA
+                KA=MA-IA-JA
+                INDA=INDA+1
+!
+                INDB=0
+                DO MB=0,NB
+                  DO IB=0,MB
+                    DO JB=0,MB-IB
+                      KB=MB-IB-JB
+                      INDB=INDB+1
+                      primov(inda,indb)=HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
+                    ENDDO
+                  ENDDO
+                ENDDO
+
+              ENDDO
+            ENDDO
+          ENDDO
+          primov(:,:)=primov(:,:)*(PI/(EA(iea)+EB(ieb)))**1.5D0
+          sab=sab+matmul(transpose(ca(:,iea,:)),matmul(primov,cb(:,ieb,:)))
+        enddo
+      enddo  
       RETURN
       END
 !
