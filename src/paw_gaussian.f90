@@ -373,13 +373,13 @@
       REAL(8)               :: Q(2*NPOW,NEP,NEP)
       REAL(8)               :: SCALE(NPOW,NEP)
       REAL(8)               :: WR2(NR)
-      INTEGER(4)            :: I,J,I1,J1,I2,J2
-      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.
+      INTEGER(4)            :: I,J,I1,J1,I2,J2,ir
+      LOGICAL(4),PARAMETER  :: TTEST=.false.
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R2)
       RL(:)=R2(:)**L
       R2(:)=R2(:)**2
-      WR2(:)=W(:)*R2(:)
+      WR2(:)=W(:) !*R2(:)
 !
 !     ==========================================================================
 !     ==  CONSTRUCT B=<F|W|G_I>                                               ==
@@ -470,18 +470,30 @@
               ENDDO
             ENDDO
             SVAR=SVAR-B(I1,J1)
-PRINT*,'SVAR ',L,I1,J1,SVAR
+!!$PRINT*,'SVAR ',L,I1,J1,SVAR
             IF(ABS(SVAR).GT.1.D-6) THEN
               PRINT*,'FITTING ERROR ',SVAR,I1,J1
             END IF
           ENDDO
         ENDDO
 
-PRINT*,'B/SCALE ',B/SCALE
-PRINT*,'SCALE ',SCALE
-PRINT*,'C/SCALE ',C/SCALE
-PRINT*,'C ',C
+!!$PRINT*,'B/SCALE ',B/SCALE
+!!$PRINT*,'SCALE ',SCALE
+!!$PRINT*,'C/SCALE ',C/SCALE
+!!$PRINT*,'C ',C
 !
+!!$        aux=0.d0
+!!$        do j=1,nep
+!!$          do i=1,npow
+!!$             aux(:)=aux(:)+rl(:)*r2(:)**(i-1)*exp(-ep(j)*r2(:))*c(i,j)
+!!$          enddo
+!!$        enddo
+!!$OPEN(UNIT=10001,FILE='fitgaussa.dat')
+!!$DO IR=1,NR
+!!$  WRITE(10001,FMT='(10F20.5)')sqrt(R2(IR)),f(ir),aux(ir)
+!!$ENDDO
+!!$CLOSE(10001)
+
         AUX(:)=WR2(:)*F(:)**2
         CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
         DO I1=1,NPOW
@@ -621,7 +633,6 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,INTENT(OUT) :: SAB(NCA,NCB)
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
-      INTEGER(4)            :: I,J,K
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
       REAL(8)   ,ALLOCATABLE:: primov(:,:)
       INTEGER(4)            :: INDA,MA,IA,JA,KA
@@ -634,13 +645,13 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
-      IF(J.NE.0.OR.K.NE.0) THEN
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,Ja,Ka)
+      IF(Ja.NE.0.OR.Ka.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,J,K)
-      IF(J.NE.0.OR.K.NE.0) THEN
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,Jb,Kb)
+      IF(Jb.NE.0.OR.Kb.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
@@ -730,11 +741,10 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,INTENT(OUT) :: SAB(nca,ncb)
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
-      INTEGER(4)            :: I,J,K
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
       REAL(8)   ,ALLOCATABLE:: primov(:,:)
-      INTEGER(4)            :: INDA,MA,IA,JA,KA,iea,ieb
-      INTEGER(4)            :: INDB,MB,IB,JB,KB
+      INTEGER(4)            :: INDA,MA,IA,JA,KA,iea
+      INTEGER(4)            :: INDB,MB,IB,JB,KB,ieb
       REAL(8)               :: PI
       REAL(8)               :: SVAR
 !     **************************************************************************
@@ -743,13 +753,13 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
-      IF(J.NE.0.OR.K.NE.0) THEN
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,Ja,Ka)
+      IF(Ja.NE.0.OR.Ka.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,J,K)
-      IF(J.NE.0.OR.K.NE.0) THEN
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,Jb,Kb)
+      IF(Jb.NE.0.OR.Kb.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
@@ -795,6 +805,97 @@ PRINT*,'SQUARE DEVIATION ',SVAR
           ENDDO
           primov(:,:)=primov(:,:)*(PI/(EA(iea)+EB(ieb)))**1.5D0
           sab=sab+matmul(transpose(ca(:,iea,:)),matmul(primov,cb(:,ieb,:)))
+        enddo
+      enddo  
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GAUSSIAN$gausspsi(NIJKA,nea,EA,RA,NIJKB,neb,EB,RB,ncb,CB,gcb)
+!     **************************************************************************
+!     ** EVALUATES THE matrix elements <g(i,ie)|psi_n> of a function |psi_n>  **
+!     ** at rb with Gaussians centered at ra                                  **
+!     ** SET "A" WITH NCA FUNCTIONS HAS THE EXPONENT EA AND IS CENTERED AT RA **
+!     ** SET "B" WITH NCB FUNCTIONS HAS THE EXPONENT EB AND IS CENTERED AT RB **
+!     ** THE RESULTING OVERLAP MATRIX IS S_IJ=<A_I|B_J>                       **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NIJKA
+      INTEGER(4),INTENT(IN) :: Nea
+      REAL(8)   ,INTENT(IN) :: EA(nea)
+      REAL(8)   ,INTENT(IN) :: RA(3)
+      INTEGER(4),INTENT(IN) :: NIJKB
+      INTEGER(4),INTENT(IN) :: Neb
+      REAL(8)   ,INTENT(IN) :: EB(neb)
+      REAL(8)   ,INTENT(IN) :: RB(3)
+      INTEGER(4),INTENT(IN) :: Ncb
+      REAL(8)   ,INTENT(IN) :: Cb(NIJKb,neb,NCb)   ! |psi_n>=sum_j:|gb_j>cb(j,n)
+      REAL(8)   ,INTENT(OUT):: gcb(nijka,nea,ncb)  ! <ga_i|psi_n>
+      INTEGER(4)            :: NA,NB
+      INTEGER(4)            :: NABX
+      INTEGER(4)            :: I,J,K
+      REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
+      INTEGER(4)            :: INDA,MA,IA,JA,KA,iea
+      INTEGER(4)            :: INDB,MB,IB,JB,KB,ieb
+      REAL(8)               :: PI
+      REAL(8)               :: SVAR,fac
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      gcb(:,:,:)=0.D0
+!
+!     ==========================================================================
+!     ==  TESTS                                                               ==
+!     ==========================================================================
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
+      IF(J.NE.0.OR.K.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$STOP('GAUSSIAN_OVERLAP')
+      END IF
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,J,K)
+      IF(J.NE.0.OR.K.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$STOP('GAUSSIAN_OVERLAP')
+      END IF
+!
+!     ==========================================================================
+!     ==  DETERMINE HERMITE COEFFICIENTS                                      ==
+!     ==========================================================================
+      NABX=MAX(NA,NB)
+      ALLOCATE(HX(0:NABX,0:NABX,0:2*NABX))
+      ALLOCATE(HY(0:NABX,0:NABX,0:2*NABX))
+      ALLOCATE(HZ(0:NABX,0:NABX,0:2*NABX))
+      do iea=1,nea
+        do ieb=1,neb
+          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),Ea(iea),Eb(ieB),HX)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(iea),EB(ieB),HY)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(iea),EB(ieB),HZ)
+!
+!         ======================================================================
+!         ==  WORK OUT OVERLAP <g|psi_n>                                      ==
+!         ======================================================================
+          fac=(PI/(EA(iea)+EB(ieb)))**1.5D0
+          INDA=0
+          DO MA=0,NA
+            DO IA=0,MA
+              DO JA=0,MA-IA
+                KA=MA-IA-JA
+                INDA=INDA+1
+!
+                INDB=0
+                DO MB=0,NB
+                  DO IB=0,MB
+                    DO JB=0,MB-IB
+                      KB=MB-IB-JB
+                      INDB=INDB+1
+                      svar=fac*HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
+                      gcb(inda,iea,:)=gcb(inda,iea,:)+svar*cb(indb,ieb,:)
+                    ENDDO
+                  ENDDO
+                ENDDO
+
+              ENDDO
+            ENDDO
+          ENDDO
         enddo
       enddo  
       RETURN
