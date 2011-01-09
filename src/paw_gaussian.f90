@@ -966,8 +966,10 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE GAUSSIAN_FOURCENTER(NIJKA,EA,RA,CA,NIJKB,EB,RB,CB &
-     &                              ,NIJKC,EC,RC,CC,NIJKD,ED,RD,CD,UABCD)
+      SUBROUTINE GAUSSIAN$FOURCENTER(NIJKA,nea,norba,EA,RA,CA &
+     &                              ,NIJKB,neb,norbb,EB,RB,CB &
+     &                              ,NIJKC,nec,norbc,EC,RC,CC &
+     &                              ,NIJKD,ned,norbd,ED,RD,CD,UABCD)
 !     **************************************************************************
 !     ** 
 !     **************************************************************************
@@ -976,19 +978,27 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4),INTENT(IN) :: NIJKB
       INTEGER(4),INTENT(IN) :: NIJKC
       INTEGER(4),INTENT(IN) :: NIJKD
-      REAL(8)   ,INTENT(IN) :: EA
-      REAL(8)   ,INTENT(IN) :: EB
-      REAL(8)   ,INTENT(IN) :: EC
-      REAL(8)   ,INTENT(IN) :: ED
+      INTEGER(4),INTENT(IN) :: Nea
+      INTEGER(4),INTENT(IN) :: Neb
+      INTEGER(4),INTENT(IN) :: NeC
+      INTEGER(4),INTENT(IN) :: NeD
+      INTEGER(4),INTENT(IN) :: Norba
+      INTEGER(4),INTENT(IN) :: Norbb
+      INTEGER(4),INTENT(IN) :: NorbC
+      INTEGER(4),INTENT(IN) :: NorbD
+      REAL(8)   ,INTENT(IN) :: EA(nea)
+      REAL(8)   ,INTENT(IN) :: EB(neb)
+      REAL(8)   ,INTENT(IN) :: EC(nec)
+      REAL(8)   ,INTENT(IN) :: ED(ned)
       REAL(8)   ,INTENT(IN) :: RA(3)
       REAL(8)   ,INTENT(IN) :: RB(3)
       REAL(8)   ,INTENT(IN) :: RC(3)
       REAL(8)   ,INTENT(IN) :: RD(3)
-      REAL(8)   ,INTENT(IN) :: CA(nijka)
-      REAL(8)   ,INTENT(IN) :: CB(nijkb)
-      REAL(8)   ,INTENT(IN) :: CC(nijkc)
-      REAL(8)   ,INTENT(IN) :: CD(nijkd)
-      REAL(8)   ,INTENT(OUT) :: UABCD
+      REAL(8)   ,INTENT(IN) :: CA(nijka,nea,norba)
+      REAL(8)   ,INTENT(IN) :: CB(nijkb,neb,norbb)
+      REAL(8)   ,INTENT(IN) :: CC(nijkc,nec,norbc)
+      REAL(8)   ,INTENT(IN) :: CD(nijkd,ned,norbd)
+      REAL(8)   ,INTENT(OUT) :: UABCD(norba,norbb,norbc,norbd)
       INTEGER(4)             :: NIJKP,NIJKQ
       REAL(8)                :: EP,EQ
       REAL(8)                :: RP(3),RQ(3)
@@ -997,29 +1007,32 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)             :: J,K
       REAL(8)   ,ALLOCATABLE :: HI(:,:,:)
       REAL(8)                :: SIGN
+      REAL(8)                :: uabcd1
       INTEGER(4)             :: INDP,INDQ,MP,MQ,IP,IQ,JP,JQ,KP,KQ
+      INTEGER(4)             :: iorba,iorbb,iorbc,iorbd
+      INTEGER(4)             :: iea,ieb,iec,ied
       REAL(8)                :: PI
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
-        CALL ERROR$STOP('GAUSSIAN_GAUSSIAN_FOURCENTER')
+        CALL ERROR$STOP('GAUSSIAN$FOURCENTER')
       END IF
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
-        CALL ERROR$STOP('GAUSSIAN_GAUSSIAN_FOURCENTER')
+        CALL ERROR$STOP('GAUSSIAN$FOURCENTER')
       END IF
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKC,NC,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
-        CALL ERROR$STOP('GAUSSIAN_GAUSSIAN_FOURCENTER')
+        CALL ERROR$STOP('GAUSSIAN$FOURCENTER')
       END IF
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKD,ND,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
-        CALL ERROR$STOP('GAUSSIAN_GAUSSIAN_FOURCENTER')
+        CALL ERROR$STOP('GAUSSIAN$FOURCENTER')
       END IF
 !
       NP=NA+NB 
@@ -1028,14 +1041,25 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',NIJKQ,NQ,0,0)
       ALLOCATE(CP(NIJKP))
       ALLOCATE(CQ(NIJKQ))
-      CALL GAUSSIAN_CONTRACT2GAUSS(NIJKA,EA,RA,CA,NIJKB,EB,RB,CB &
-     &                            ,NIJKP,EP,RP,CP)
-      CALL GAUSSIAN_CONTRACT2GAUSS(NIJKC,EC,RC,CC,NIJKD,ED,RD,CD &
-     &                            ,NIJKQ,EQ,RQ,CQ)
       N=np+nq
       ALLOCATE(HI(0:N,0:N,0:N))
+      UABCD(:,:,:,:)=0.D0
+      do iorba=1,norba
+        do iorbb=1,norbb
+          do iea=1,nea
+            do ieb=1,neb
+      CALL GAUSSIAN_CONTRACT2GAUSS(NIJKA,EA(iea),RA,CA(:,iea,iorba) &
+     &                            ,NIJKB,EB(ieb),RB,CB(:,ieb,iorbb) &
+     &                            ,NIJKP,EP,RP,CP)
+              do iorbc=1,norbc
+                do iorbd=1,norbd
+                  do iec=1,nec
+                    do ied=1,ned
+      CALL GAUSSIAN_CONTRACT2GAUSS(NIJKC,EC(iec),RC,CC(:,iec,iorbc) &
+     &                            ,NIJKD,ED(ied),RD,CD(:,ied,iorbd) &
+     &                            ,NIJKQ,EQ,RQ,CQ)
       CALL GAUSSIAN_HERMITEINTEGRAL(N,EP*EQ/(EP+EQ),RP-RQ,HI)
-      UABCD=0.D0
+      uabcd1=0.d0
       INDP=0
       DO MP=0,NP      
         DO IP=0,MP
@@ -1050,7 +1074,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
                   KQ=MQ-IQ-JQ
                   INDQ=INDQ+1
                   SIGN=IQ+JQ+KQ
-                  UABCD=UABCD+SIGN*HI(IP+IQ,JP+JQ,KP+KQ) &
+                  UABCD1=UABCD1+SIGN*HI(IP+IQ,JP+JQ,KP+KQ) &
      &                            *CP(INDP)*CQ(INDQ)
                 ENDDO
               ENDDO
@@ -1058,7 +1082,16 @@ PRINT*,'SQUARE DEVIATION ',SVAR
           ENDDO
         ENDDO
       ENDDO
-      UABCD=(2.D0*PI)**2.5D0/(EP*EQ*SQRT(EP+EQ))*UABCD
+      UABCD1=(2.D0*PI)**2.5D0/(EP*EQ*SQRT(EP+EQ))*UABCD1
+      uabcd(iorba,iorbb,iorbc,iorbd)=uabcd(iorba,iorbb,iorbc,iorbd)+uabcd1
+                    enddo
+                  enddo
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
       RETURN
       END
 !
@@ -1346,8 +1379,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
         CALL RANDOM_NUMBER(CD(I))
       ENDDO
  
-      CALL GAUSSIAN_FOURCENTER(NIJKA,EA,RA,CA,NIJKB,EB,RB,CB &
-     &                        ,NIJKC,EC,RC,CC,NIJKD,ED,RD,CD,UABCD)
+      CALL GAUSSIAN$FOURCENTER(NIJKA,1,1,EA,RA,CA,NIJKB,1,1,EB,RB,CB &
+     &                        ,NIJKC,1,1,EC,RC,CC,NIJKD,1,1,ED,RD,CD,UABCD)
 PRINT*,'UABCD',UABCD
       RETURN
       END

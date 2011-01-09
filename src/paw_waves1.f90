@@ -90,6 +90,7 @@ TYPE WVSET_TYPE  !======================================================
   COMPLEX(8),POINTER :: PSIM(:,:,:)     !(NGL,NDIM,NBH)  PSPSI(-,+)(G)
   COMPLEX(8),POINTER :: PROJ(:,:,:)     !(NDIM,NBH,NPRO) <PSPSI|P>
   COMPLEX(8),POINTER :: tbc(:,:,:)      !(NDIM,NBH,NPRO) |psi>=|chi>*tbc
+  COMPLEX(8),POINTER :: htbc(:,:,:)      !(NDIM,NBH,NPRO) de/dtbc
   COMPLEX(8),POINTER :: HPSI(:,:,:)     !(NGWLX,NB,IDIM)
                                         ! +(WAVES$HPSI)-(WAVES$PROPAGATE)
   COMPLEX(8),POINTER :: OPSI(:,:,:)     !(NGWLX,NB,IDIM)
@@ -830,6 +831,7 @@ END MODULE WAVES_MODULE
       CALL DYNOCC$GETR8A('XK',3*NKPT,XK)
       DO IKPT=1,NKPT
         CALL PLANEWAVE$CHECKINVERSION(XK(1,IKPT),TINVARR(IKPT))
+        IF(NDIM.NE.1)TINVARR(IKPT)=.FALSE.
       ENDDO
       DEALLOCATE(XK)
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -860,6 +862,7 @@ END MODULE WAVES_MODULE
           nullify(thisarray(ikpt,ispin)%psim)
           nullify(thisarray(ikpt,ispin)%proj)
           nullify(thisarray(ikpt,ispin)%tbc)
+          nullify(thisarray(ikpt,ispin)%htbc)
           nullify(thisarray(ikpt,ispin)%hpsi)
           nullify(thisarray(ikpt,ispin)%opsi)
           nullify(thisarray(ikpt,ispin)%rlam0)
@@ -907,10 +910,10 @@ END MODULE WAVES_MODULE
         ELSE
           TINV=.FALSE.
         END IF
-CALL FILEHANDLER$UNIT('PROT',NFILO)
-!WRITE(NFILO,*)'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
-!PRINT*,'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
-!TINV=.FALSE.
+!!$CALL FILEHANDLER$UNIT('PROT',NFILO)
+!!$WRITE(NFILO,*)'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
+!!$PRINT*,'TINV FORCED TO BE FALSE IN WAVES$INITIALIZE!!!'
+!!$TINV=.FALSE.
 !       ==  NOT THAT XK REFERS TO THE LOCAL K-POINT INDEX =================
 !PRINT*,THISTASK,'BEFORE ',XK(:,IKPTL),TINV
         CALL PLANEWAVE$INITIALIZE(GSET%ID,'K',RBAS,XK(1,IKPTL),TINV,EPWPSI &
@@ -1319,14 +1322,14 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
 !     ==========================================================================
       IF(TFIRST.OR.TFORCE.OR.TSTRESS) THEN
                                CALL TIMING$CLOCKON('STRUCTURECONSTANTS')
-        CALL LMTO$MAKESTRUCTURECONSTANTS()
+!        CALL LMTO$MAKESTRUCTURECONSTANTS()
                                CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
       END IF
                                CALL TIMING$CLOCKON('WAVES$ETOT')
                                CALL TIMING$CLOCKON('WAVES$TONTBO')
-      CALL WAVES$TONTBO()
+!      CALL WAVES$TONTBO()
                                CALL TIMING$CLOCKOFF('WAVES$TONTBO')
-      CALL LMTO$TESTENERGY()
+!      CALL LMTO$TESTENERGY()
 !
 !     ==========================================================================
 !     == KINETIC ENERGY                                                       ==
@@ -1580,13 +1583,20 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==================================================================
 !     ==  CALL GONJUGATE GRADIENT                                     ==
 !     ================================================================== 
-      IF(OPTIMIZERTYPE.EQ.'CG') THEN                                             !KAESTNERCG
-         CALL TIMING$CLOCKON('CG')                                           !KAESTNERCG
-         CALL CG$STATE_BY_STATE(MAP%NRL,NDIMD,RHO(:,:),CONVPSI,NAT,LMNXX,DH) !KAESTNERCG
-         CALL TIMING$CLOCKOFF('CG')                                          !KAESTNERCG
-         TCONV=.FALSE. ! TCONV HAS NOT BEEN SET!!!
-         IF(TCONV) CALL STOPIT$SETL4('STOP',.TRUE.)                          !KAESTNERCG
-      END IF                                                                 !KAESTNERCG
+!!$      IF(OPTIMIZERTYPE.EQ.'CG') THEN                                             !KAESTNERCG
+!!$         CALL TIMING$CLOCKON('CG')                                           !KAESTNERCG
+!!$         CALL CG$STATE_BY_STATE(MAP%NRL,NDIMD,RHO(:,:),CONVPSI,NAT,LMNXX,DH) !KAESTNERCG
+!!$         CALL TIMING$CLOCKOFF('CG')                                          !KAESTNERCG
+!!$         TCONV=.FALSE. ! TCONV HAS NOT BEEN SET!!!
+!!$         IF(TCONV) CALL STOPIT$SETL4('STOP',.TRUE.)                          !KAESTNERCG
+!!$      END IF                                                                 !KAESTNERCG
+!
+!     ==================================================================
+!     ==  RECEIVE POTENTIALS FROM NTBO INTERFACE                      ==
+!     ================================================================== 
+                               CALL TIMING$CLOCKON('WAVES$FROMNTBO')
+      CALL WAVES$FROMNTBO()
+                               CALL TIMING$CLOCKOFF('WAVES$FROMNTBO')
 !
 !     ==================================================================
 !     ==  EVALUATE H*PSI                                              ==
@@ -2541,12 +2551,11 @@ END IF
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
-      INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
-      INTEGER(4)             :: ISP   ! SPECIES INDEX
-      INTEGER(4)             :: IAT,ISPIN,IKPT,idim,ib,npro
-      COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:) !(NDIM,NBH,npro) <PRO|PSPSI>
       LOGICAL(4),PARAMETER   :: TPRINT=.false.
+      INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
+      INTEGER(4)             :: npro   !#(projector functions)
       real(8)   ,allocatable :: xk(:,:)
+      INTEGER(4)             :: ISPIN,IKPT,ib
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$TONTBO')
                               CALL TIMING$CLOCKON('W:TONTBO')
@@ -2604,6 +2613,80 @@ END IF
                               CALL TRACE$POP
       RETURN
       END SUBROUTINE WAVES$TONTBO
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$fromNTBO()
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATES ONE-CENTER DENSITY MATRIX FROM THE ACTUAL                 **
+!     **  PROJECTIONS <PRO|PSI> IN THE WAVES OBJECT                           **
+!     **                                                                      **
+!     **  ONE-CENTER DENSITY MATRICES                                         **
+!     **  SPIN RESTRICTED NSPIN=1;NDIM=1: (TOTAL)                             **
+!     **  SPIN POLARIZED  NSPIN=2;NDIM=1: (TOTAL,SPIN_Z)                      **
+!     **  NONCOLLINEAR    NSPIN=1;NDIM=2: (TOTAL,SPIN_X,SPIN_Y,SPIN_Z)        **
+!     **                                                                      **
+!     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
+      USE MPE_MODULE
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      logical(4),parameter   :: tprint=.false.
+      INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
+      INTEGER(4)             :: npro   !#(projector functions)
+      real(8)   ,allocatable :: xk(:,:)
+      INTEGER(4)             :: ISPIN,IKPT,ib
+!     **************************************************************************
+                              CALL TRACE$PUSH('WAVES$fromNTBO')
+                              CALL TIMING$CLOCKON('W:fromNTBO')
+!
+!     ==========================================================================
+!     ==  GET k-points in relative coordinates                                ==
+!     ==========================================================================
+      ALLOCATE(XK(3,NKPTL))
+      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
+      npro=map%npro
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+!!!! parallelize loop with respect to states.
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          NBH=THIS%NBH
+          if(.not.associated(this%htbc)) cycle
+          call LMTO$ntbotoproj(XK(:,ikpt),NDIM,NBH,NPRO,this%htbc)
+        ENDDO
+      ENDDO
+!     == THE PROJECTIONS ARE IDENTICAL AND COMPLETE FOR EACH K-GROUP
+!     == EACH K-GROUP HOLDS ONLY THE WAVE FUNCTIONS BELONGING TO IT.
+!     == EACH PROCESSOR OF EACH K-GROUP ONLY ADDS UP A FRACTION OF THE 
+!     == PROJECTIONS
+!     == THEREFORE THERE IS NO DOUBLE COUNTING BY SUMMING OVER THE MONOMER
+!
+!     ==========================================================================
+!     ==  print for testing                                                   ==
+!     ==========================================================================
+      if(tprint) then
+        WRITE(*,FMT='(82("="),T20," TIGHT-BINDING ORBITAL potentials ")')
+        DO IKPT=1,NKPTL
+          DO ISPIN=1,NSPIN
+            CALL WAVES_SELECTWV(IKPT,ISPIN)
+            NBH=THIS%NBH
+            WRITE(*,FMT='(82("="),T20,"  IKPT ",I5,"ISPIN=",I2,"  ")')IKPT,ISPIN
+            DO IB=1,NBH
+              WRITE(*,FMT='("hTBC ",I5,100F10.5)')2*IB-1,REAL(THIS%hTBC(1,IB,:))
+              WRITE(*,FMT='("hTBC ",I5,100F10.5)')2*IB,AIMAG(THIS%hTBC(1,IB,:))
+            ENDDO
+          ENDDO
+        ENDDO
+        WRITE(*,*)'FORCED STOP IN WAVES$fromNTBO'
+        STOP 'FORCED STOP IN WAVES$fromNTBO'
+      END IF
+                              CALL TIMING$CLOCKOFF('W:fromNTBO')
+                              CALL TRACE$POP
+      RETURN
+      END SUBROUTINE WAVES$fromNTBO
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,LAMBDA,PROPSI &
@@ -3004,7 +3087,7 @@ END IF
       INTEGER(4)            :: LNX
       INTEGER(4),ALLOCATABLE:: LOX(:)
       REAL(8)   ,ALLOCATABLE:: DOVER(:,:)
-      INTEGER(4)            :: L1,L2,LN1,LN2,LMN1,LMN2,M,IR,IDIMD
+      INTEGER(4)            :: L1,L2,LN1,LN2,LMN1,LMN2,M,IDIMD
       REAL(8)               :: CM(NDIMD,NAT)
       REAL(8)               :: CM1(NDIMD)   ! CHARGE AND MOMENT
       REAL(8)   ,ALLOCATABLE:: WORK(:), WORK1(:)
@@ -3560,6 +3643,13 @@ CALL TIMING$CLOCKON('W:HPSI.HPROJ')
 CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
 !
 !         ==============================================================
+!         ==  ADD POTENTIAL FROM LMTO INTERFACE                      ==
+!         ==============================================================
+          IF(ASSOCIATED(THIS%HTBC)) THEN
+            HPROJ(:,:,:)=HPROJ(:,:,:)+THIS%HTBC(:,:,:)
+          END IF
+!
+!         ==============================================================
 !         ==  ADD  |P>DH<P|PSI>                                       ==
 !         ==============================================================
 CALL TIMING$CLOCKON('W:HPSI.ADDPROJ')
@@ -3572,6 +3662,7 @@ ELSE
 !======================================================================== 
          CALL WAVES_HPSI(MAP,GSET,ISPIN,NGL,NDIM,NDIMD,NBH,MAP%NPRO,LMNXX,NAT,NRL&
      &                  ,THIS%PSI0,RHO(1,ISPIN),R,THIS%PROJ,DH,THIS%HPSI)
+!!lmto interface missing!!!
 !======================================================================== 
 END IF
 !======================================================================== 

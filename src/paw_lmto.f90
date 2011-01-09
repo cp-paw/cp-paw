@@ -1,61 +1,51 @@
 MODULE LMTO_MODULE
-REAL(8)   ,PARAMETER  :: K2=-0.5D0 ! 0.5*K2 IS THE KINETIC ENERGY
-REAL(8)   ,PARAMETER  :: RCSCALE=1.2D0  ! RADIUS SCALE FACTOR FOR NEIGHBORLIST
-!REAL(8)   ,PARAMETER  :: GAUSSEP0=1.D0/2.D0**2 ! GAUSSIAN DECAY
-REAL(8)   ,PARAMETER  :: GAUSSEP0=2.D0 ! GAUSSIAN DECAY
-INTEGER(4),PARAMETER  :: NPOWGAUSS=7
+REAL(8)   ,PARAMETER  :: K2=-0.5D0      ! 0.5*K2 IS THE KINETIC ENERGY
+REAL(8)   ,PARAMETER  :: RCSCALE=1.2D0  !2.D0  ! RADIUS SCALE FACTOR FOR NEIGHBORLIST
+!== PARAMETER SET TO DEFINE THE GAUSSIANS FOR THE UNSCREENED HANKEL FUNCTIONS ==
+!== IS USED IN LMTO_GAUSSFITKPRIME  ============================================
+INTEGER(4),PARAMETER  :: GAUSSFITKPRIME_NPOW=2   ! -1 INDICATES LX
+INTEGER(4),PARAMETER  :: GAUSSFITKPRIME_NE=12
+REAL(8)   ,PARAMETER  :: GAUSSFITKPRIME_R1=0.6667D0
+REAL(8)   ,PARAMETER  :: GAUSSFITKPRIME_SCALER=1.25D0
+!== PARAMETER SET TO DEFINE THE GAUSSIANS FOR THE SCREENED HANKEL FUNCTIONS   ==
+INTEGER(4),PARAMETER  :: GAUSSFITKBARPRIME_NPOW=4
+INTEGER(4),PARAMETER  :: GAUSSFITKBARPRIME_NE=4
+REAL(8)   ,PARAMETER  :: GAUSSFITKBARPRIME_R1=1.D0
+REAL(8)   ,PARAMETER  :: GAUSSFITKBARPRIME_SCALER=1.5D0
+!
+TYPE ORBITALGAUSSCOEFF_TYPE
+  INTEGER(4)         :: NIJK     
+  INTEGER(4)         :: NE
+  INTEGER(4)         :: NORB
+  REAL(8)   ,POINTER :: E(:)     !(NE)
+  REAL(8)   ,POINTER :: C(:,:,:) !(NIJK,NE,NORB)
+END TYPE ORBITALGAUSSCOEFF_TYPE
 !== POTPARRED CONSIDERS ONLY ONE ANGULAR MOMENTUM CHANNEL PER LM ===============
 !== CONSISTENT WITH THE SCREENED STRUCTURE CONSTANTS ===========================
-TYPE POTPARgauss_TYPE
-  integer(4)           :: npow
-  integer(4)           :: ne
-  integer(4)           :: nijk
-  integer(4)           :: lmx
-  real(8)   ,pointer   :: e(:)          !(ne) exponential decay constants
-  real(8)   ,pointer   :: ck(:,:,:)     !(nijk,ne,lmx)           
-  real(8)   ,pointer   :: cjbar(:,:,:)  !(nijk,ne,lmx)           
-  real(8)   ,pointer   :: ckl(:,:,:)    !(nijk,ne,lmx) Caution: do not use!
-end TYPE POTPARgauss_TYPE
-!
-TYPE POTPARgausskprime_TYPE
-  integer(4)           :: npow
-  integer(4)           :: ne
-  integer(4)           :: nijk
-  integer(4)           :: norb
-  real(8)   ,pointer   :: e(:)         !(ne) exponential decay constants
-  real(8)   ,pointer   :: c(:,:,:)    !(nijk,ne,norb) 
-end TYPE POTPARgausskprime_TYPE
-!
 TYPE POTPARRED_TYPE
   REAL(8)   ,POINTER :: DOVERLAPKK(:,:)
   REAL(8)   ,POINTER :: DOVERLAPKJ(:,:)
   REAL(8)   ,POINTER :: DOVERLAPJJ(:,:)
 END TYPE POTPARRED_TYPE
+!
 !== HOLDS THE POTENTIAL PARAMETER FOR ONE ATOM TYPE ============================
 TYPE POTPAR_TYPE
   REAL(8)            :: RAD
   REAL(8),POINTER    :: QBAR(:)
-! == K    -> |PHI>KTOPHI+|PHIBARDOT> KTOPHIDOT =================================
-! == JBAR ->             |PHIBARDOT> JBARTOPHIDOT ==============================
-  REAL(8)   ,POINTER :: PHIDOTPROJ(:)
-  REAL(8)   ,POINTER :: KTOPHI(:)
-  REAL(8)   ,POINTER :: KTOPHIDOT(:)
-  REAL(8)   ,POINTER :: JBARTOPHIDOT(:)
-  INTEGER(4),POINTER :: LNSCATT(:)   ! LN VALUE FOR THE CORRESPONDING SCATTERING CHANNEL
-  REAL(8)            :: GAUSSEP
-  INTEGER(4),POINTER :: GAUSSNPOW(:)
-  REAL(8)   ,POINTER :: GAUSSCOEFF(:,:)
-  INTEGER(4)         :: NIJK
-  REAL(8)   ,POINTER :: COEFFBARE(:,:)   !(nijk,ln)
-  real(8)   ,pointer :: doverlapkk(:,:)  !(lnx,lnx)
-  real(8)   ,pointer :: doverlapkj(:,:)  !(lnx,lnx)
-  REAL(8)   ,POINTER :: DOVERLAPJJ(:,:)  !(lnx,lnx)
-  TYPE(POTPARRED_TYPE) :: SMALL
-  TYPE(POTPARgauss_TYPE):: gauss
-  TYPE(POTPARgausskprime_TYPE) :: gausskprime
-  real(8)   ,pointer :: kprime(:,:)
-  real(8)   ,pointer :: Jbarprime(:,:)
+  REAL(8)   ,POINTER :: PHIDOTPROJ(:)   ! <P|PHIDOT>
+  REAL(8)   ,POINTER :: KTOPHI(:)       ! K -> |PHI>KTOPHI+|PHIBARDOT> KTOPHIDOT 
+  REAL(8)   ,POINTER :: KTOPHIDOT(:)    ! K -> |PHI>KTOPHI+|PHIBARDOT> KTOPHIDOT 
+  REAL(8)   ,POINTER :: JBARTOPHIDOT(:) ! JBAR ->  |PHIBARDOT> JBARTOPHIDOT ====
+  INTEGER(4),POINTER :: LNSCATT(:)      ! LN OF CORRESPONDING SCATTERING CHANNEL
+  REAL(8)   ,POINTER :: DOVERLAPKK(:,:) !(LNX,LNX)
+  REAL(8)   ,POINTER :: DOVERLAPKJ(:,:) !(LNX,LNX)
+  REAL(8)   ,POINTER :: DOVERLAPJJ(:,:) !(LNX,LNX)
+  TYPE(POTPARRED_TYPE)         :: SMALL
+  TYPE(ORBITALGAUSSCOEFF_TYPE) :: GAUSSKPRIME
+  TYPE(ORBITALGAUSSCOEFF_TYPE) :: GAUSSTAILEDK
+  TYPE(ORBITALGAUSSCOEFF_TYPE) :: GAUSSTAILEDJBAR
 END TYPE POTPAR_TYPE
+!
 TYPE PERIODICMAT_TYPE
   INTEGER(4)      :: IAT1 ! FIRST ATOM (LINKED TO THE RIGHT INDEX OF MAT)
   INTEGER(4)      :: IAT2 ! SECOND ATOM (LINKED TO THE LEFT INDEX OF MAT)
@@ -64,6 +54,7 @@ TYPE PERIODICMAT_TYPE
   INTEGER(4)      :: N2    ! LEFT DIMENSION OF MAT
   REAL(8),POINTER :: MAT(:,:)  !(N2,N1)
 END TYPE PERIODICMAT_TYPE
+!
 TYPE UMAT_TYPE
   INTEGER(4)      :: NN1   ! FIRST ATOM PAIR REFERRING TO SBAR
   INTEGER(4)      :: NN2   ! SECOND ATOM PAIR REFERRING TO SBAR
@@ -72,15 +63,24 @@ TYPE UMAT_TYPE
   INTEGER(4)      :: NB    ! ->IAT1(NN2)
   INTEGER(4)      :: NC    ! ->IAT2(NN2)
   INTEGER(4)      :: ND    ! ->IAT2(NN1)
-  REAL(8),POINTER :: UABCd(:,:,:,:)  !(NA,NB,NC,ND)
+  REAL(8),POINTER :: UABCD(:,:,:,:)  !(NA,NB,NC,ND)
 END TYPE UMAT_TYPE
-type orbitalgausscoeff_type
-  integer(4)         :: nijk     
-  integer(4)         :: ne
-  integer(4)         :: norb
-  real(8)   ,pointer :: e(:)     !(ne)
-  real(8)   ,pointer :: c(:,:,:) !(nijk,ne,norb)
-end type orbitalgausscoeff_type
+!
+TYPE UTENSOR_TYPE
+  INTEGER(4)      :: IAT1  ! FIRST ATOM 
+  INTEGER(4)      :: IAT2  ! FIRST ATOM 
+  INTEGER(4)      :: IAT3  ! FIRST ATOM 
+  INTEGER(4)      :: IAT4  ! FIRST ATOM 
+  INTEGER(4)      :: IT2(3) ! LATTICE TRANSLATIONS OF 2. ATOM
+  INTEGER(4)      :: IT3(3) ! LATTICE TRANSLATIONS OF 2. ATOM
+  INTEGER(4)      :: IT4(3) ! LATTICE TRANSLATIONS OF 2. ATOM
+  INTEGER(4)      :: N1    ! ->IAT1
+  INTEGER(4)      :: N2    ! ->IAT2
+  INTEGER(4)      :: N3    ! ->IAT3
+  INTEGER(4)      :: N4    ! ->IAT4
+  REAL(8),POINTER :: U(:,:,:,:)  !(N1,N2,N3,N4)
+END TYPE UTENSOR_TYPE
+!
 LOGICAL(4)              :: TINI=.FALSE.
 LOGICAL(4)              :: TINISTRUC=.FALSE.
 INTEGER(4)              :: NSP
@@ -91,16 +91,18 @@ INTEGER(4),ALLOCATABLE  :: ISPECIES(:)         !(NAT)
 REAL(8)   ,ALLOCATABLE  :: ORBRAD(:,:) !(LXX+1,NAT) NODE-POSITION OF THE ORBITAL
 TYPE(POTPAR_TYPE)     ,ALLOCATABLE :: POTPAR(:)!POTENTIAL PARAMETERS
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: SBAR(:)  !(NNS) SCREENED STRUCTURE CONST.
-TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: OVERLAP(:) !(NNS) OVERLAP MATRIX only main channel
+TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: OVERLAP(:) !(NNS) OVERLAP MATRIX ONLY MAIN CHANNEL
 INTEGER(4)                         :: NNUX    !DIMENSION OF UMAT
 INTEGER(4)                         :: NNU     !#(ELEMENTS OF UMAT)
-TYPE(UMAT_TYPE),ALLOCATABLE :: UMAT(:) !(NNUX/NNU) U-MATRIX ELEMENTS
+TYPE(UMAT_TYPE)       ,ALLOCATABLE :: UMAT(:) !(NNUX/NNU) U-MATRIX ELEMENTS
 INTEGER(4)            ,ALLOCATABLE :: SBARATOMI1(:)
 INTEGER(4)            ,ALLOCATABLE :: SBARATOMI2(:)
 INTEGER(4)            ,ALLOCATABLE :: SBARLI1(:,:)
-INTEGER(4)                         :: NIJKX
-REAL(8)               ,ALLOCATABLE :: COEFF(:,:) !(NIJKX,NRL)
-type(orbitalgausscoeff_type),allocatable :: gaussorb(:) !(nat)
+!== GAUSSIAN PART OF NTBOS FROM SUPERPOSITION OF HANKEL FUNCTIONS ==============
+TYPE(ORBITALGAUSSCOEFF_TYPE),ALLOCATABLE :: GAUSSORB(:) !(NAT)
+!== GAUSSIAN PART OF NTBOS FROM TAILED HANKEL AND BESSEL FUNCTIONS =============
+TYPE(ORBITALGAUSSCOEFF_TYPE),ALLOCATABLE :: GAUSSORB_T(:) !(NAT)
+TYPE(UTENSOR_TYPE)    ,ALLOCATABLE :: UTENSOR(:)
 END MODULE LMTO_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -125,7 +127,19 @@ END MODULE LMTO_MODULE
 !     == DETERMINE POTENTIAL PARAMETERS                                       ==
 !     ==========================================================================
       CALL LMTO_MAKEPOTPAR()
-      call LMTO_ONSITEOVERLAP()
+!
+!     ==========================================================================
+!     == DETERMINE GAUSS EXPANDION OF UNSCREENED HANKEL FUNCTIONS KPRIME      ==
+!     ==========================================================================
+      CALL LMTO_GAUSSFITKPRIME()
+!
+!     ==========================================================================
+!     == DETERMINE KPRIME AND JBAR WITH EXPONENTIAL TAILS                     ==
+!     == USED TO BUILD UP APPROXIMATE NTBO'S IN A ONE-CENTER EXPANSION        ==
+!     ==========================================================================
+      CALL LMTO_GAUSSFITKJTAILS()
+
+      CALL LMTO_ONSITEOVERLAP()
 !
 !     ==========================================================================
 !     == SET UP INDEX ARRAY FOR STRUCTURE CONSTANTS                           ==
@@ -259,7 +273,7 @@ END MODULE LMTO_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : K2,POTPAR,NSP,LNX,LOX,GAUSSEP0,NPOWGAUSS
+      USE LMTO_MODULE, ONLY : K2,POTPAR,NSP,LNX,LOX
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTEGER(4),ALLOCATABLE :: ISCATT(:)
@@ -278,7 +292,7 @@ END MODULE LMTO_MODULE
       REAL(8)   ,ALLOCATABLE :: PRO(:,:)
       REAL(8)   ,ALLOCATABLE :: KPRIME(:)
       REAL(8)   ,ALLOCATABLE :: W(:)
-      logical(4),parameter   :: ttest=.true.
+      LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
       REAL(8)                :: AEZ
       REAL(8)                :: RAD
       REAL(8)                :: PHIVAL,PHIDER
@@ -289,10 +303,10 @@ END MODULE LMTO_MODULE
       REAL(8)                :: WPHIPHIDOT
       REAL(8)                :: QBAR
       REAL(8)                :: SVAR
-      REAL(8)                :: lambda
-      INTEGER(4)             :: ISP,LN,L,LN1,LN2,lx
+      REAL(8)                :: LAMBDA
+      INTEGER(4)             :: ISP,LN,L,LN1,LN2,LX
 REAL(8) ::Y(20)
-INTEGER(4) :: I,j,IR,L0
+INTEGER(4) :: I,J,IR,L0
       CHARACTER(128)         :: STRING
 !     **************************************************************************
                              CALL TRACE$PUSH('LMTO_MAKEPOTPAR')
@@ -304,7 +318,7 @@ INTEGER(4) :: I,j,IR,L0
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
         LNX1=LNX(ISP)
-        lx=maxval(lox(:lnx1,isp))
+        LX=MAXVAL(LOX(:LNX1,ISP))
         ALLOCATE(ISCATT(LNX1))
         ALLOCATE(EOFLN(LNX1))
         ALLOCATE(ESCATT(LNX1))
@@ -322,9 +336,9 @@ INTEGER(4) :: I,j,IR,L0
         ALLOCATE(PSPHI(NR,LNX1))
         ALLOCATE(PSPHIDOT(NR,LNX1))
         ALLOCATE(PRO(NR,LNX1))
-        CALL SETUP$GETR8A('QPHI',NR*LNX1,nlPHI)
+        CALL SETUP$GETR8A('QPHI',NR*LNX1,NLPHI)
         CALL SETUP$GETR8A('AEPHI',NR*LNX1,AEPHI)
-        CALL SETUP$GETR8A('QPHIDOT',NR*LNX1,nlPHIDOT)
+        CALL SETUP$GETR8A('QPHIDOT',NR*LNX1,NLPHIDOT)
         CALL SETUP$GETR8A('AEPHIDOT',NR*LNX1,AEPHIDOT)
         CALL SETUP$GETR8A('PSPHI',NR*LNX1,PSPHI)
         CALL SETUP$GETR8A('PSPHIDOT',NR*LNX1,PSPHIDOT)
@@ -339,12 +353,26 @@ INTEGER(4) :: I,j,IR,L0
         ALLOCATE(POTPAR(ISP)%KTOPHI(LNX1))
         ALLOCATE(POTPAR(ISP)%KTOPHIDOT(LNX1))
         ALLOCATE(POTPAR(ISP)%JBARTOPHIDOT(LNX1))
-        ALLOCATE(POTPAR(ISP)%GAUSSNPOW(LNX1))
-        ALLOCATE(POTPAR(ISP)%GAUSSCOEFF(NPOWGAUSS,LNX1))
-        ALLOCATE(POTPAR(ISP)%kprime(nr,lx+1))
-        ALLOCATE(POTPAR(ISP)%jbarprime(nr,lx+1))
-        POTPAR(ISP)%GAUSSNPOW(:)=NPOWGAUSS
         ALLOCATE(KPRIME(NR))
+        CALL SETUP$GETI4('GID',GID)
+        CALL SETUP$GETI4('NR',NR)
+        ALLOCATE(R(NR))
+        CALL RADIAL$R(GID,NR,R)
+        ALLOCATE(NLPHI(NR,LNX1))
+        ALLOCATE(AEPHI(NR,LNX1))
+        ALLOCATE(NLPHIDOT(NR,LNX1))
+        ALLOCATE(AEPHIDOT(NR,LNX1))
+        ALLOCATE(PSPHI(NR,LNX1))
+        ALLOCATE(PSPHIDOT(NR,LNX1))
+        ALLOCATE(PRO(NR,LNX1))
+        CALL SETUP$GETR8A('QPHI',NR*LNX1,NLPHI)
+        CALL SETUP$GETR8A('AEPHI',NR*LNX1,AEPHI)
+        CALL SETUP$GETR8A('QPHIDOT',NR*LNX1,NLPHIDOT)
+        CALL SETUP$GETR8A('AEPHIDOT',NR*LNX1,AEPHIDOT)
+        CALL SETUP$GETR8A('PSPHI',NR*LNX1,PSPHI)
+        CALL SETUP$GETR8A('PSPHIDOT',NR*LNX1,PSPHIDOT)
+        CALL SETUP$GETR8A('PRO',NR*LNX1,PRO)
+
         ALLOCATE(W(NR))
 !
         DO L=0,MAXVAL(LOX(:,ISP))
@@ -394,15 +422,7 @@ INTEGER(4) :: I,j,IR,L0
             POTPAR(ISP)%KTOPHI(LN)=WKPHIDOT/WPHIPHIDOT
             POTPAR(ISP)%KTOPHIDOT(LN)=-WKPHI/WPHIPHIDOT
             POTPAR(ISP)%JBARTOPHIDOT(LN)=-WJBARPHI/WPHIPHIDOT
-
-!           __test______________________________________________________________
-!!$            if(ttest) then
-!!$              svar=phival*POTPAR(ISP)%KTOPHI(LN)+phidotval*POTPAR(ISP)%KTOPHIDOT(LN)
-!!$              write(*,fmt='("kval fit :",i3,3e10.2)')ln,kval,svar,kval-svar
-!!$              svar=phider*POTPAR(ISP)%KTOPHI(LN)+phidotder*POTPAR(ISP)%KTOPHIDOT(LN)
-!!$              write(*,fmt='("kder fit :",i3,3e10.2)')ln,kder,svar,kder-svar
-!!$            end if
-
+!
 !           ==  <PRO|PSPHIDOT> =================================================
             CALL RADIAL$INTEGRAL(GID,NR,R**2*PRO(:,LN)*PSPHIDOT(:,LN1),SVAR)
             POTPAR(ISP)%PHIDOTPROJ(LN)=SVAR
@@ -420,149 +440,8 @@ INTEGER(4) :: I,j,IR,L0
                 CALL ERROR$STOP('LMTO_MAKEPOTPAR')
               END IF
             ENDDO             
-!
-!           ====================================================================
-!           == KPRIME AND JPRIME WITH TAILS                                   ==
-!           ====================================================================
-            IF(LN.EQ.LN1) THEN
-              LAMBDA=1.D0
-              CALL lmto_KJBARTAILS(GID,NR,L,RAD,K2,QBAR,LAMBDA &
-        &               ,POTPAR(ISP)%KPRIME(:,L+1),POTPAR(ISP)%JBARPRIME(:,L+1))
-              DO IR=1,NR
-                IF(R(IR).GT.RAD) EXIT
-                POTPAR(ISP)%JBARPRIME(IR,L+1)=-NLPHIDOT(IR,LN1) &
-        &                                                   *WJBARPHI/WPHIPHIDOT
-                CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JVAL,JDER)
-                POTPAR(ISP)%KPRIME(IR,L+1)= &
-        &                              (JVAL-POTPAR(ISP)%JBARPRIME(IR,L+1))/QBAR
-                POTPAR(ISP)%kPRIME(IR,L+1)= &
-        &                    aePHI(IR,LN1)*potpar(isp)%ktophi(ln1) &
-        &                   +NLPHIDOT(IR,LN1)*potpar(isp)%ktophidot(ln1)
-              enddo
-            END IF
-!
-!           ====================================================================
-!           == put kprime on radial grid                                      ==
-!           ====================================================================
-            DO IR=1,NR
-              IF(R(IR).LT.RAD) THEN
-                CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JVAL,JDER)
-                KPRIME(IR)=JVAL+NLPHIDOT(IR,LN1)*WJBARPHI/WPHIPHIDOT
-                KPRIME(IR)=KPRIME(IR)/QBAR
-              ELSE
-                CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,KPRIME(IR),KDER)
-              END IF
-            ENDDO
-!
-!           ====================================================================
-!           == KPRIME(R)=SUM_I R^(L+2I-2)*EXP(-EP*R^2)*COEFF(I) ================
-!           ====================================================================
-print*,'k2,l ',ln,k2,POTPAR(ISP)%GAUSSNPOW(LN),POTPAR(ISP)%GAUSSEP
-            POTPAR(ISP)%GAUSSEP=GAUSSEP0
-            W(:)=EXP(-POTPAR(ISP)%GAUSSEP*R(:)**2)
-            SVAR=1.D0
-            DO I=1,POTPAR(ISP)%GAUSSNPOW(LN)+1
-              SVAR=SVAR*REAL(I)
-              W(:)=W(:)+(POTPAR(ISP)%GAUSSEP*R(:)**2)**I/SVAR &
-           &            *EXP(-POTPAR(ISP)%GAUSSEP*R(:)**2)
-!              IF(I.EQ.POTPAR(ISP)%GAUSSNPOW(LN)) KPRIME=KPRIME*W(:)
-            ENDDO
-            CALL GAUSSIAN_FITGAUSS(GID,NR,W,L,KPRIME,1 &
-      &                           ,POTPAR(ISP)%GAUSSNPOW(LN) &
-      &                           ,POTPAR(ISP)%GAUSSEP &
-      &                           ,POTPAR(ISP)%GAUSSCOEFF(:,LN))
-WRITE(STRING,*)LN
-STRING='KPRIME_'//TRIM(ADJUSTL(STRING))//'.DAT'
-OPEN(UNIT=10001,FILE=STRING)
-DO IR=1,NR
-  SVAR=0.D0
-  DO I=1,POTPAR(ISP)%GAUSSNPOW(LN)
-     SVAR=SVAR+R(IR)**(L+2*I-2)*POTPAR(ISP)%GAUSSCOEFF(I,LN)
-  ENDDO
-  SVAR=SVAR*EXP(-POTPAR(ISP)%GAUSSEP*R(IR)**2)
-  WRITE(10001,FMT='(10F20.5)')R(IR),KPRIME(IR),SVAR,SVAR-KPRIME(IR),w(ir)
-ENDDO
-CLOSE(10001)
-
           ENDDO
         ENDDO        
-!
-!!$!== THIS PLOTS THE RADIAL FUNCTIONS TO CONTROL THE MATCHING
-!!$L0=0
-!!$OPEN(UNIT=10001,FILE='XX.DAT')
-!!$DO IR=5,NR
-!!$IF(R(IR).GT.5.D0) EXIT
-!!$   J=0
-!!$   DO LN=1,LNX(ISP)
-!!$     IF(LOX(LN,ISP).NE.L0) CYCLE
-!!$     J=J+1
-!!$      LN1=POTPAR(ISP)%LNSCATT(LN)
-!!$     Y(J)= NLPHI(IR,LN)*POTPAR(ISP)%KTOPHI(LN) &
-!!$  &       +NLPHIDOT(IR,LN1)*POTPAR(ISP)%KTOPHIDOT(LN)
-!!$     J=J+1
-!!$     Y(J)= AEPHI(IR,LN)*POTPAR(ISP)%KTOPHI(LN) &
-!!$  &       +AEPHIDOT(IR,LN1)*POTPAR(ISP)%KTOPHIDOT(LN)
-!!$   ENDDO
-!!$   LN1=-1
-!!$   DO LN=1,LNX(ISP)
-!!$     LN1=POTPAR(ISP)%LNSCATT(LN)
-!!$     IF(L0.EQ.LOX(LN,ISP)) EXIT
-!!$   ENDDO
-!!$   IF(LN1.EQ.-1) CYCLE
-!!$   J=J+1
-!!$   Y(J)=NLPHIDOT(IR,LN1)*POTPAR(ISP)%JBARTOPHIDOT(LN)
-!!$   J=J+1
-!!$   CALL LMTO$SOLIDHANKELRAD(L0,R(IR),K2,KVAL,KDER)
-!!$   KVAL=MAX(-3.D0,MIN(3.D0,KVAL))
-!!$   Y(J)=KVAL
-!!$   J=J+1
-!!$   CALL LMTO$SOLIDBESSELRAD(L0,R(IR),K2,JVAL,JDER)
-!!$   Y(J)=JVAL-POTPAR(ISP)%QBAR(LN)*KVAL
-!!$   WRITE(10001,*)R(IR),Y(:J)
-!!$ENDDO
-!!$CLOSE(10001)
-!!$!
-!!$OPEN(UNIT=10001,FILE='YY.DAT')
-!!$DO IR=5,NR
-!!$!  IF(R(IR).GT.5.D0) EXIT
-!!$  IF(R(IR).LT.RAD) THEN
-!!$    J=0
-!!$    DO LN=1,LNX(ISP)
-!!$      J=J+1
-!!$      LN1=POTPAR(ISP)%LNSCATT(LN)
-!!$      Y(J)= NLPHI(IR,LN)*POTPAR(ISP)%KTOPHI(LN) &
-!!$  &         +NLPHIDOT(IR,LN1)*POTPAR(ISP)%KTOPHIDOT(LN)
-!!$      J=J+1
-!!$      Y(J)= AEPHI(IR,LN)*POTPAR(ISP)%KTOPHI(LN) &
-!!$  &        +AEPHIDOT(IR,LN1)*POTPAR(ISP)%KTOPHIDOT(LN)
-!!$    ENDDO
-!!$  ELSE
-!!$    J=0
-!!$    DO LN=1,LNX(ISP)
-!!$      L0=LOX(LN,ISP)
-!!$      J=J+1
-!!$      CALL LMTO$SOLIDHANKELRAD(L0,R(IR),K2,Y(J),KDER)
-!!$      J=J+1
-!!$      CALL LMTO$SOLIDHANKELRAD(L0,R(IR),K2,Y(J),KDER)
-!!$    ENDDO    
-!!$  END IF
-!!$   WRITE(10001,*)R(IR),Y(:J)
-!!$ENDDO
-!!$CLOSE(10001)
-!!$
-!!$OPEN(UNIT=10001,FILE='DAEPHI.DAT')
-!!$DO IR=5,NR
-!!$!  IF(R(IR).GT.5.D0) EXIT
-!!$   WRITE(10001,*)R(IR),AEPHI(IR,:2),NLPHI(IR,:2)
-!!$ENDDO
-!!$CLOSE(10001)
-!!$OPEN(UNIT=10001,FILE='DAEPHIDOT.DAT')
-!!$DO IR=5,NR
-!!$  IF(R(IR).GT.5.D0) EXIT
-!!$   WRITE(10001,*)R(IR),AEPHIDOT(IR,:)-NLPHIDOT(IR,:)
-!!$ENDDO
-!!$CLOSE(10001)
-!!$STOP
 !
         DEALLOCATE(EOFLN)
         DEALLOCATE(ESCATT)
@@ -577,157 +456,140 @@ CLOSE(10001)
         DEALLOCATE(R)
         DEALLOCATE(W)
         DEALLOCATE(KPRIME)
-!!$!==== print tails ======
-!!$WRITE(STRING,*)isp
-!!$STRING='TAILS_'//TRIM(ADJUSTL(STRING))//'.DAT'
-!!$OPEN(UNIT=10001,FILE=STRING)
-!!$DO IR=1,NR
-!!$  WRITE(10001,FMT='(10F20.5)')R(IR),POTPAR(ISP)%kPRIME(IR,:),POTPAR(ISP)%JBARPRIME(IR,:)
-!!$ENDDO
-!!$CLOSE(10001)
       ENDDO
-!
-!     ==========================================================================
-!     == EXPAND GAUSSIAN COEFFICIENTS FOR BARE ENVELOPE FUNCTIONS             ==
-!     ==========================================================================
-      CALL LMTO_EXPANDGAUSS()
-!
-! THIS PLOTS THE BARE
-!CALL LMTO_PLOTBAREK()
-!STOP 'FORCED IN LMTO$MAKEPOTPAR'
                              CALL TRACE$POP()
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine lmto_kjbartails(gid,nr,l,rad,k2,qbar,lambda,kf,jbarf)
+      SUBROUTINE LMTO_KJBARTAILS(GID,NR,L,RAD,K2,QBAR,LAMBDA,KF,JBARF)
 !     **************************************************************************
-!     **  constructs exponential tails for hankel function and                **
-!     **  screened besselfunctions                                            **
-!     **  fit (a+br^2)*r^l*exp(-lambda*r) at the radius rad                   **
+!     **  CONSTRUCTS EXPONENTIAL TAILS FOR HANKEL FUNCTION AND                **
+!     **  SCREENED BESSELFUNCTIONS                                            **
+!     **  FIT (A+BR^2)*R^L*EXP(-LAMBDA*R) AT THE RADIUS RAD                   **
 !     **************************************************************************
-      implicit none
-      integer(4),intent(in) :: gid
-      integer(4),intent(in) :: nr
-      integer(4),intent(in) :: l
-      real(8)   ,intent(in) :: rad
-      real(8)   ,intent(in) :: k2
-      real(8)   ,intent(in) :: qbar
-      real(8)   ,intent(in) :: lambda
-      real(8)   ,intent(out):: kf(nr)
-      real(8)   ,intent(out):: jbarf(nr)
-      real(8)               :: kval,kder,jval,jder
-      real(8)               :: svar,svar1,svar2
-      real(8)               :: aj,bj,ak,bk
-      real(8)               :: r(nr)
-      real(8)               :: x
-      integer(4)            :: ir
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: L
+      REAL(8)   ,INTENT(IN) :: RAD
+      REAL(8)   ,INTENT(IN) :: K2
+      REAL(8)   ,INTENT(IN) :: QBAR
+      REAL(8)   ,INTENT(IN) :: LAMBDA
+      REAL(8)   ,INTENT(OUT):: KF(NR)
+      REAL(8)   ,INTENT(OUT):: JBARF(NR)
+      REAL(8)               :: KVAL,KDER,JVAL,JDER
+      REAL(8)               :: SVAR,SVAR1,SVAR2
+      REAL(8)               :: AJ,BJ,AK,BK
+      REAL(8)               :: R(NR)
+      REAL(8)               :: X
+      INTEGER(4)            :: IR
 !     **************************************************************************
-      CALL LMTO$SOLIDhankelRAD(L,Rad,K2,kVAL,kDER)
-      CALL LMTO$SOLIDBESSELRAD(L,Rad,K2,JVAL,JDER)
-      jval=jval-qbar*kval
-      jder=jder-qbar*kder
-      svar=0.5d0*((real(l)-lambda*rad)*jval-rad*jder)
-      aj=svar+jval
-      bj=-svar
-      svar=0.5d0*((real(l)-lambda*rad)*kval-rad*kder)
-      ak=svar+kval
-      bk=-svar
+      CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
+      CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
+      JVAL=JVAL-QBAR*KVAL
+      JDER=JDER-QBAR*KDER
+      SVAR=0.5D0*((REAL(L)-LAMBDA*RAD)*JVAL-RAD*JDER)
+      AJ=SVAR+JVAL
+      BJ=-SVAR
+      SVAR=0.5D0*((REAL(L)-LAMBDA*RAD)*KVAL-RAD*KDER)
+      AK=SVAR+KVAL
+      BK=-SVAR
 !
-      call radial$r(gid,nr,r)
+      CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
-        x=r(ir)/rad
-        svar1=x**l*exp(-lambda*(r(ir)-rad))
-        svar2=svar1*x**2
-        kf(ir)=ak*svar1+bk*svar2
-        jbarf(ir)=aj*svar1+bj*svar2
+        X=R(IR)/RAD
+        SVAR1=X**L*EXP(-LAMBDA*(R(IR)-RAD))
+        SVAR2=SVAR1*X**2
+        KF(IR)=AK*SVAR1+BK*SVAR2
+        JBARF(IR)=AJ*SVAR1+BJ*SVAR2
       ENDDO
-      return
-      end
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_fitgauss1()
+      SUBROUTINE LMTO_GAUSSFITKJTAILS()
 !     **************************************************************************
-!     ** Constructs the unscreened Hankel functions, with the simgularity     **
-!     ** replaced by a nodeless scattering function and determines its        **
-!     ** coefficients in a Gaussian expansion.                                **
+!     ** CONSTRUCTS THE UNSCREENED HANKEL FUNCTIONS, WITH THE SIMGULARITY     **
+!     ** REPLACED BY A NODELESS SCATTERING FUNCTION AND DETERMINES ITS        **
+!     ** COEFFICIENTS IN A GAUSSIAN EXPANSION.                                **
 !     **                                                                      **
-!     ** similarly the uncreened Hankel and Bessel functions with             **
-!     ** an exponential tail r^l*(a+br^2)*exp(-lambda*r) are expanded         **
-!     ** into Gaussians.                                                      **
+!     ** SIMILARLY THE UNCREENED HANKEL AND BESSEL FUNCTIONS WITH             **
+!     ** AN EXPONENTIAL TAIL R^L*(A+BR^2)*EXP(-LAMBDA*R) ARE EXPANDED         **
+!     ** INTO GAUSSIANS.                                                      **
 !     **                                                                      **
-!     ** Caution!!! the unscreened Hankel function with long-range tail       **
-!     **   does not work because it requires Gaussians with a longer range    **
+!     ** CAUTION!!! THE UNSCREENED HANKEL FUNCTION WITH LONG-RANGE TAIL       **
+!     **   DOES NOT WORK BECAUSE IT REQUIRES GAUSSIANS WITH A LONGER RANGE    **
 !     **                                                                      **
-!     ******************************peter bloechl, Goslar 2010******************
-      USE LMTO_MODULE, ONLY : k2,POTPAR,NSP,lnx,LOX,sbarli1
-      logical   ,save        :: tfirst=.true.
-      integer(4),parameter   :: nex=10
-      real(8)   ,parameter   :: lambda=1.d0
-      real(8)                :: e(10)
-      integer(4)             :: npow
-      integer(4)             :: npow2
-      integer(4)             :: ne
-      integer(4)             :: lmx
-      integer(4)             :: nijk
-      integer(4)             :: gid,gid1
-      integer(4)             :: nr,nr1
-      integer(4)             :: l
-      integer(4)             :: lx
-      integer(4)             :: lm
-      integer(4)             :: norbx
-      real(8)                :: r1,dex
-      real(8)   ,allocatable :: r(:)
-      real(8)   ,allocatable :: w(:)
-      real(8)   ,allocatable :: kprime(:)
-      real(8)   ,allocatable :: jbarprime(:)
-      real(8)   ,allocatable :: kprimel(:)
-      real(8)   ,allocatable :: nlphidot(:,:)
-      real(8)   ,allocatable :: cpowk(:,:)    !(npow2,ne)
-      real(8)   ,allocatable :: cpowjbar(:,:) !(npow2,ne)
-      real(8)   ,allocatable :: cpowkl(:,:)   !(npow2,ne)
-      real(8)   ,allocatable :: ck(:,:)       !(nijk,ne)
-      real(8)   ,allocatable :: cjbar(:,:)    !(nijk,ne)
-      real(8)   ,allocatable :: ckl(:,:)      !(nijk,ne)
-      real(8)   ,allocatable :: workk(:,:)    !(nijk,ne)
-      real(8)   ,allocatable :: workj(:,:)    !(nijk,ne)
-      real(8)   ,allocatable :: workkl(:,:)   !(nijk,ne)
-      real(8)   ,allocatable :: ylmpol(:,:)
-      real(8)                :: rad
-      real(8)                :: qbar
-      real(8)                :: svar,svar1,svar2,jval,kval,jder,kder
-      integer(4)             :: isp,ie,i,j,k,i1,j1,k1,ln,im,ir,n,ind,ind1,ind2
-      integer(4)             :: ind1x,iorb
-      integer(4)             :: nijkxpow2
-character(128) :: string
-real(8)        :: r0(3)
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
+      USE LMTO_MODULE, ONLY : K2,POTPAR,NSP,LNX,LOX,SBARLI1 &
+     &                       ,GAUSSFITKBARPRIME_NPOW,GAUSSFITKBARPRIME_NE &
+     &                       ,GAUSSFITKBARPRIME_R1,GAUSSFITKBARPRIME_SCALER
+      INTEGER(4),SAVE        :: GID=-1
+      LOGICAL(4)             :: TTEST=.TRUE.
+      INTEGER(4),PARAMETER   :: NEX=30
+      REAL(8)   ,PARAMETER   :: LAMBDA=1.D0
+      REAL(8)                :: E(10)
+      INTEGER(4)             :: NPOW
+      INTEGER(4)             :: NPOW2
+      INTEGER(4)             :: NE
+      INTEGER(4)             :: LMX
+      INTEGER(4)             :: NIJK
+      INTEGER(4)             :: GID1
+      INTEGER(4)             :: NR,NR1
+      INTEGER(4)             :: L
+      INTEGER(4)             :: LX
+      INTEGER(4)             :: LM
+      INTEGER(4)             :: NORBX
+      REAL(8)                :: R1,DEX
+      REAL(8)   ,ALLOCATABLE :: R(:)
+      REAL(8)   ,ALLOCATABLE :: W(:)
+      REAL(8)   ,ALLOCATABLE :: KPRIME(:)
+      REAL(8)   ,ALLOCATABLE :: JBARPRIME(:)
+      REAL(8)   ,ALLOCATABLE :: KPRIMEL(:)
+      REAL(8)   ,ALLOCATABLE :: NLPHIDOT(:,:)
+      REAL(8)   ,ALLOCATABLE :: CPOWK(:,:)    !(NPOW2,NE)
+      REAL(8)   ,ALLOCATABLE :: CPOWJBAR(:,:) !(NPOW2,NE)
+      REAL(8)   ,ALLOCATABLE :: CPOWKL(:,:)   !(NPOW2,NE)
+      REAL(8)   ,ALLOCATABLE :: CK(:,:)       !(NIJK,NE)
+      REAL(8)   ,ALLOCATABLE :: CJBAR(:,:)    !(NIJK,NE)
+      REAL(8)   ,ALLOCATABLE :: CKL(:,:)      !(NIJK,NE)
+      REAL(8)   ,ALLOCATABLE :: WORKK(:,:)    !(NIJK,NE)
+      REAL(8)   ,ALLOCATABLE :: WORKJ(:,:)    !(NIJK,NE)
+      REAL(8)   ,ALLOCATABLE :: WORKKL(:,:)   !(NIJK,NE)
+      REAL(8)   ,ALLOCATABLE :: YLMPOL(:,:)
+      REAL(8)                :: RAD
+      REAL(8)                :: QBAR
+      REAL(8)                :: SVAR,SVAR1,SVAR2,JVAL,KVAL,JDER,KDER
+      INTEGER(4)             :: ISP,IE,I,J,K,I1,J1,K1,LN,IM,IR,N,IND,IND1,IND2
+      INTEGER(4)             :: IND1X,IORB
+      INTEGER(4)             :: NIJKXPOW2
+      CHARACTER(128)         :: FILE
+      CHARACTER(8)           :: STRING1,STRING2
+      REAL(8)                :: R0(3)
+      INTEGER(4)             :: NFIL
 !     **************************************************************************
-                                         call trace$push('lmto_fitgauss1')
-      IF(TFIRST) THEN
-        TFIRST=.FALSE.
-      ELSE
-        CALL ERROR$MSG('THIS ROUTINE MUST NOT BE CALLED TWICE')
-        CALL ERROR$MSG('TO AVOID A MEMORY LEAK.')
-        CALL ERROR$MSG('IT CREATES A NEW RADIAL GRID IN EACH CALL')
-        CALL ERROR$STOP('LMTO_FITGAUSS1')
-      END IF
+                                  CALL TRACE$PUSH('LMTO_GAUSSFITKJTAILS')
 !
 !     ==========================================================================
-!     == polynomial coefficients of spherical harmonics times r**l            ==
+!     == POLYNOMIAL COEFFICIENTS OF SPHERICAL HARMONICS TIMES R**L            ==
 !     ==========================================================================
-      lx=maxval(lox)
+      LX=MAXVAL(LOX)
       ALLOCATE(YLMPOL((LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2))
       CALL GAUSSIAN_YLMPOL(LX,YLMPOL)
 !
 !     ==========================================================================
-!     == define a radial grid on which the fit is performed                   ==
+!     == DEFINE A RADIAL GRID ON WHICH THE FIT IS PERFORMED                   ==
 !     ==========================================================================
-      CALL RADIAL$NEW('SHLOG',GID)
-      CALL RADIAL$GRIDPARAMETERS(0.01D0,0.5D0,25.D0,R1,DEX,NR)
-      CALL RADIAL$SETR8(GID,'R1',R1)
-      CALL RADIAL$SETR8(GID,'DEX',DEX)
-      CALL RADIAL$SETI4(GID,'NR',NR)
-      TFIRST=.FALSE.
+      IF(GID.EQ.-1) THEN
+        CALL RADIAL$NEW('SHLOG',GID)
+        CALL RADIAL$GRIDPARAMETERS(0.01D0,0.5D0,25.D0,R1,DEX,NR)
+        CALL RADIAL$SETR8(GID,'R1',R1)
+        CALL RADIAL$SETR8(GID,'DEX',DEX)
+        CALL RADIAL$SETI4(GID,'NR',NR)
+      ELSE
+        CALL RADIAL$GETI4(GID,'NR',NR)
+      END IF
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R)
       ALLOCATE(W(NR))
@@ -735,115 +597,110 @@ real(8)        :: r0(3)
 !     ==========================================================================
 !     ==========================================================================
 !     ==========================================================================
-      do isp=1,nsp
-        npow=4 !polynomial has x^npow as highest power
-        ne=4
-        do ie=1,ne
-          e(ie)=1.5d0**(-2*(ie-1))
-        enddo
-        nijk=((npow+1)*(npow+2)*(npow+3))/6
-        lx=maxval(lox(:lnx(isp),isp))
-        norbx=0
-        do l=0,lx
-          norbx=max(norbx,sbarli1(l+1,isp)+2*l)
-        enddo
-        potpar(isp)%gauss%ne=ne
-        potpar(isp)%gauss%npow=npow
-        potpar(isp)%gauss%nijk=nijk
-        allocate(potpar(isp)%gauss%e(ne))
-        potpar(isp)%gauss%e(:)=e(:ne)
-        allocate(potpar(isp)%gauss%ck(nijk,ne,norbx))
-        allocate(potpar(isp)%gauss%cjbar(nijk,ne,norbx))
-        allocate(potpar(isp)%gauss%ckl(nijk,ne,norbx))
+      DO ISP=1,NSP
+        NPOW=GAUSSFITKBARPRIME_NPOW !POLYNOMIAL HAS X^NPOW AS HIGHEST POWER
+        NE=GAUSSFITKBARPRIME_NE
+        DO IE=1,NE
+          SVAR=GAUSSFITKBARPRIME_R1*GAUSSFITKBARPRIME_SCALER**(IE-1)
+          E(IE)=1.D0/SVAR**2
+        ENDDO
+        NIJK=((NPOW+1)*(NPOW+2)*(NPOW+3))/6
+        LX=MAXVAL(LOX(:LNX(ISP),ISP))
+        NORBX=0
+        DO L=0,LX
+          NORBX=MAX(NORBX,SBARLI1(L+1,ISP)+2*L)
+        ENDDO
+        POTPAR(ISP)%GAUSSTAILEDK%NE     =NE
+        POTPAR(ISP)%GAUSSTAILEDJBAR%NE  =NE
+        POTPAR(ISP)%GAUSSTAILEDK%NIJK   =NIJK
+        POTPAR(ISP)%GAUSSTAILEDJBAR%NIJK=NIJK
+        POTPAR(ISP)%GAUSSTAILEDK%NORB   =NORBX
+        POTPAR(ISP)%GAUSSTAILEDJBAR%NORB=NORBX
+        ALLOCATE(POTPAR(ISP)%GAUSSTAILEDK%E(NE))
+        ALLOCATE(POTPAR(ISP)%GAUSSTAILEDJBAR%E(NE))
+        POTPAR(ISP)%GAUSSTAILEDK%E(:)=E(:NE)
+        POTPAR(ISP)%GAUSSTAILEDJBAR%E(:)=E(:NE)
+        ALLOCATE(POTPAR(ISP)%GAUSSTAILEDK%C(NIJK,NE,NORBX))
+        ALLOCATE(POTPAR(ISP)%GAUSSTAILEDJBAR%C(NIJK,NE,NORBX))
+
 !
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('GID',GID1)
         CALL SETUP$GETI4('NR',NR1)
-        ALLOCATE(nlphidot(nr1,lnx(isp)))
-        CALL SETUP$GETR8A('QPHIDOT',NR1*LNX(isp),nlPHIDOT)
+        ALLOCATE(NLPHIDOT(NR1,LNX(ISP)))
+        CALL SETUP$GETR8A('QPHIDOT',NR1*LNX(ISP),NLPHIDOT)
 !
-!       == determine weight for fit ============================================
-!!$        W(:)=EXP(-POTPAR(ISP)%GAUSSEP*R(:)**2)
-!!$        SVAR=1.D0
-!!$        DO I=1,NPOW+1
-!!$          SVAR=SVAR*REAL(I)
-!!$          W(:)=W(:)+(E(NE)*R(:)**2)**I/SVAR*EXP(-E(NE)*R(:)**2)
-!!$        ENDDO
-w(:)=1.d0
+!       == DETERMINE WEIGHT FOR FIT ============================================
+        W(:)=1.D0
 !
-        rad=potpar(isp)%rad
-        ALLOCATE(kprime(NR))
-        ALLOCATE(jbarprime(NR))
-        ALLOCATE(kprimel(NR))
-        ALLOCATE(cpowk(npow,ne))
-        ALLOCATE(cpowjbar(npow,ne))
-        ALLOCATE(cpowkl(npow,ne))
-        ALLOCATE(WORKj(NIJK,ne))
-        ALLOCATE(WORKk(NIJK,ne))
-        ALLOCATE(WORKkl(NIJK,ne))
-        ALLOCATE(ck(NIJK,ne))
-        ALLOCATE(cjbar(NIJK,ne))
-        ALLOCATE(ckl(NIJK,ne))
-        do ln=1,lnx(isp)
-          if(ln.ne.potpar(isp)%lnscatt(ln)) cycle
-          l=lox(ln,isp)
-          qbar=potpar(isp)%qbar(ln)
+        RAD=POTPAR(ISP)%RAD
+        ALLOCATE(KPRIME(NR))
+        ALLOCATE(JBARPRIME(NR))
+        ALLOCATE(CPOWK(NPOW,NE))
+        ALLOCATE(CPOWJBAR(NPOW,NE))
+        ALLOCATE(WORKJ(NIJK,NE))
+        ALLOCATE(WORKK(NIJK,NE))
+        ALLOCATE(CK(NIJK,NE))
+        ALLOCATE(CJBAR(NIJK,NE))
+        DO LN=1,LNX(ISP)
+          IF(LN.NE.POTPAR(ISP)%LNSCATT(LN)) CYCLE
+          L=LOX(LN,ISP)
+          QBAR=POTPAR(ISP)%QBAR(LN)
 !
 !         ======================================================================
 !         == KPRIME AND JPRIME WITH TAILS                                     ==
 !         ======================================================================
-          CALL lmto_KJBARTAILS(GID,NR,L,RAD,K2,QBAR,LAMBDA,KPRIME,JBARPRIME)
+          CALL LMTO_KJBARTAILS(GID,NR,L,RAD,K2,QBAR,LAMBDA,KPRIME,JBARPRIME)
           DO IR=1,NR
-            IF(R(IR).le.RAD) then
-              CALL RADIAL$VALUE(GID1,NR1,NLPHIDOT(:,LN),r(ir),svar)
-              JBARPRIME(IR)=svar*potpar(isp)%jbartophidot(ln)
+            IF(R(IR).LE.RAD) THEN
+              CALL RADIAL$VALUE(GID1,NR1,NLPHIDOT(:,LN),R(IR),SVAR)
+              JBARPRIME(IR)=SVAR*POTPAR(ISP)%JBARTOPHIDOT(LN)
               CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JVAL,JDER)
               KPRIME(IR)=(JVAL-JBARPRIME(IR))/QBAR
-              kprimel(ir)=kprime(ir)
-            else
-              CALL LMTO$SOLIDhankelRAD(L,R(IR),K2,kprimel(ir),svar)
-            end if
-          enddo
+            END IF
+          ENDDO
 !
-          npow2=int(0.5d0*real(npow-l))
-          cpowk(:,:)=0.d0
-          cpowjbar(:,:)=0.d0
-          cpowkl(:,:)=0.d0
-          CALL GAUSSIAN_FITGAUSS(GID,NR,W,L,KPRIME,ne,npow2+1,e(:ne) &
-       &                                                    ,cpowk(:npow2+1,:))
-          CALL GAUSSIAN_FITGAUSS(GID,NR,W,L,jbarprime,ne,npow2+1,e(:ne) &
-       &                                                 ,cpowjbar(:npow2+1,:))
-          CALL GAUSSIAN_FITGAUSS(GID,NR,W,L,KPRIMEl,ne,npow2+1,e(:ne) &
-       &                                                   ,cpowkl(:npow2+1,:))
+          NPOW2=INT(0.5D0*REAL(NPOW-L))
+          CPOWK(:,:)=0.D0
+          CPOWJBAR(:,:)=0.D0
+          CALL GAUSSIAN_FITGAUSS(GID,NR,W,L,KPRIME,NE,NPOW2+1,E(:NE) &
+       &                                                    ,CPOWK(:NPOW2+1,:))
+          CALL GAUSSIAN_FITGAUSS(GID,NR,W,L,JBARPRIME,NE,NPOW2+1,E(:NE) &
+       &                                                 ,CPOWJBAR(:NPOW2+1,:))
 !
-print*,'== ',npow,npow2,ne,e(:ne)
-print*,'ck ',ck(:,:)
-WRITE(STRING,*)L
-STRING='FITGAUSS_'//TRIM(ADJUSTL(STRING))//'.DAT'
-OPEN(UNIT=10001,FILE=STRING)
-DO IR=1,NR
-  kval=0.D0
-  jval=0.D0
-  svar=0.d0
-  do ie=1,ne
-    DO I=0,npow2
-      kval=kval+r(ir)**(l+2*i)*exp(-e(ie)*r(ir)**2)*cpowk(i+1,ie)
-      jval=jval+r(ir)**(l+2*i)*exp(-e(ie)*r(ir)**2)*cpowjbar(i+1,ie)
-      svar=svar+r(ir)**(l+2*i)*exp(-e(ie)*r(ir)**2)*cpowkl(i+1,ie)
-    ENDDO  
-  enddo
-  WRITE(10001,FMT='(10F20.5)')R(IR),KPRIME(IR),jbarprime(ir),kprimel(ir) &
- &                                 ,kval,jval,svar
-ENDDO
-CLOSE(10001)
 !         ======================================================================
-!         ==  expand                                                          ==
+!         ==  PLOT FIT TO INSPECT QUALITY                                     ==
 !         ======================================================================
-          WORKk(:,:)=0.D0
-          WORKj(:,:)=0.D0
-          WORKkl(:,:)=0.D0
-          nijkxpow2=0
-          DO N=0,npow2
+          IF(TTEST) THEN
+            WRITE(STRING1,*)ISP
+            WRITE(STRING2,*)L
+            FILE='GAUSSFITKJTAILS_A_'//TRIM(ADJUSTL(STRING1))
+            FILE=TRIM(FILE)//'_'//TRIM(ADJUSTL(STRING2))//'.DAT'
+            CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,FILE)
+            CALL FILEHANDLER$UNIT('HOOK',NFIL)
+            DO IR=1,NR
+              KVAL=0.D0
+              JVAL=0.D0
+              DO IE=1,NE
+                DO I=0,NPOW2
+                  KVAL=KVAL+R(IR)**(L+2*I)*EXP(-E(IE)*R(IR)**2)*CPOWK(I+1,IE)
+                  JVAL=JVAL+R(IR)**(L+2*I)*EXP(-E(IE)*R(IR)**2)*CPOWJBAR(I+1,IE)
+                ENDDO  
+              ENDDO
+              WRITE(NFIL,FMT='(10F20.5)')R(IR),KPRIME(IR),JBARPRIME(IR) &
+        &                                 ,KVAL,JVAL
+            ENDDO
+            CALL FILEHANDLER$CLOSE('HOOK')
+            CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,'.FORGOTTOASSIGNFILETOHOOK')
+          END IF
+!
+!         ======================================================================
+!         ==  EXPAND                                                          ==
+!         ======================================================================
+          WORKK(:,:)=0.D0
+          WORKJ(:,:)=0.D0
+          NIJKXPOW2=0
+          DO N=0,NPOW2
 !           == MULTIPLY WITH (X^2+Y^2+Z^2)^N ===================================
             DO I=0,N
               CALL BINOMIALCOEFFICIENT(N,I,SVAR1)
@@ -854,7 +711,6 @@ CLOSE(10001)
                 IF(IND1.GT.NIJK) CYCLE
                 WORKK(IND1,:)=WORKK(IND1,:)  +CPOWK(N+1,:)   *SVAR1*SVAR2
                 WORKJ(IND1,:)=WORKJ(IND1,:)  +CPOWJBAR(N+1,:)*SVAR1*SVAR2
-                WORKKl(IND1,:)=WORKKl(IND1,:)+CPOWKl(N+1,:)  *SVAR1*SVAR2
                 NIJKXPOW2=MAX(IND1,NIJKXPOW2)
               ENDDO
             ENDDO
@@ -864,12 +720,11 @@ CLOSE(10001)
 !         == MULTIPLY WITH SPHERICAL HARMONICS                                ==
 !         ======================================================================
           DO IM=1,2*L+1
-            ck(:,:)=0.d0
-            cjbar(:,:)=0.d0
-            ckl(:,:)=0.d0
+            CK(:,:)=0.D0
+            CJBAR(:,:)=0.D0
             LM=L**2+IM
-            Ind1x=SIZE(YLMPOL(:,LM))
-            DO IND1=1,Ind1x
+            IND1X=SIZE(YLMPOL(:,LM))
+            DO IND1=1,IND1X
               IF(YLMPOL(IND1,LM).EQ.0.D0) CYCLE
               CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I,J,K)
               DO IND=1,NIJKXPOW2
@@ -881,138 +736,136 @@ CLOSE(10001)
                 IF(IND2.GT.NIJK) CYCLE
                 CK(IND2,:)   =CK(IND2,:)   +WORKK(IND,:)*YLMPOL(IND1,LM)
                 CJBAR(IND2,:)=CJBAR(IND2,:)+WORKJ(IND,:)*YLMPOL(IND1,LM)
-                CKl(IND2,:)  =CKl(IND2,:)  +WORKKl(IND,:)*YLMPOL(IND1,LM)
               ENDDO
             ENDDO
-            iorb=sbarli1(L+1,isp)-1+im
-            potpar(isp)%gauss%ck(:,:,iorb)=ck(:,:)
-            potpar(isp)%gauss%cjbar(:,:,iorb)=cjbar(:,:)
-            potpar(isp)%gauss%ckl(:,:,iorb)=ckl(:,:)
+            IORB=SBARLI1(L+1,ISP)-1+IM
+            POTPAR(ISP)%GAUSSTAILEDK%C(:,:,IORB)=CK(:,:)
+            POTPAR(ISP)%GAUSSTAILEDJBAR%C(:,:,IORB)=CJBAR(:,:)
           ENDDO ! END OF LOOP OVER ORBITALS (IM)
         ENDDO  ! END OF LOOP OVER L
 !
-!!$do lm=1,norbx
-!!$WRITE(STRING,*)Lm
-!!$STRING='FITGAUSSb_'//TRIM(ADJUSTL(STRING))//'.DAT'
-!!$OPEN(UNIT=10001,FILE=STRING)
-!!$ck=potpar(isp)%gauss%ck(:,:,lm)
-!!$cjbar=potpar(isp)%gauss%cjbar(:,:,lm)
-!!$DO IR=1,NR
-!!$  kval=0.D0
-!!$  JVAL=0.D0
-!!$  DO IE=1,NE
-!!$    R0=(/5.D0,0.D0,0.D0/)*R(IR)
-!!$    CALL GAUSSIAN_3DORB('CARTESIAN',NIJK,E(IE),CK(:,IE),R0,SVAR)
-!!$    KVAL=KVAL+SVAR
-!!$    CALL GAUSSIAN_3DORB('CARTESIAN',NIJK,E(IE),CJBAR(:,IE),R0,SVAR)
-!!$    JVAL=JVAL+SVAR
-!!$  ENDDO
-!!$  WRITE(10001,FMT='(10F20.5)')5.d0*R(IR),KVAL,JVAL
-!!$ENDDO
-!!$CLOSE(10001)
-!!$enddo
-!!$!
-!!$do i=1,nijk
-!!$write(*,fmt='(i4,20e10.2)')i &
-!!$& ,potpar(isp)%gauss%ck(i,1,:)**2 &
-!!$& +potpar(isp)%gauss%ck(i,2,:)**2 &
-!!$& +potpar(isp)%gauss%ck(i,3,:)**2 &
-!!$& +potpar(isp)%gauss%ck(i,4,:)**2 
-!!$enddo
+!       ========================================================================
+!       ==  PLOT FIT TO INSPECT QUALITY                                       ==
+!       ========================================================================
+        IF(TTEST) THEN
+          DO IORB=1,NORBX
+            WRITE(STRING1,*)ISP
+            WRITE(STRING2,*)IORB
+            FILE='GAUSSFITKJTAILS_B_'//TRIM(ADJUSTL(STRING1))
+            FILE=TRIM(FILE)//'_'//TRIM(ADJUSTL(STRING2))//'.DAT'
+            CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,FILE)
+            CALL FILEHANDLER$UNIT('HOOK',NFIL)
+            CK(:,:)=POTPAR(ISP)%GAUSSTAILEDK%C(:,:,IORB)
+            CJBAR(:,:)=POTPAR(ISP)%GAUSSTAILEDJBAR%C(:,:,IORB)
+            DO IR=1,NR
+              KVAL=0.D0
+              JVAL=0.D0
+              DO IE=1,NE
+                R0=(/5.D0,0.D0,0.D0/)*R(IR)
+                CALL GAUSSIAN_3DORB('CARTESIAN',NIJK,E(IE),CK(:,IE),R0,SVAR)
+                KVAL=KVAL+SVAR
+                CALL GAUSSIAN_3DORB('CARTESIAN',NIJK,E(IE),CJBAR(:,IE),R0,SVAR)
+                JVAL=JVAL+SVAR
+              ENDDO
+              WRITE(NFIL,FMT='(10F20.5)')5.D0*R(IR),KVAL,JVAL
+            ENDDO
+            CLOSE(10001)
+            CALL FILEHANDLER$CLOSE('HOOK')
+            CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,'.FORGOTTOASSIGNFILETOHOOK')
+          ENDDO
+        END IF
 !
-        deALLOCATE(cpowkl)
-        deALLOCATE(WORKkl)
-        deALLOCATE(ckl)
-        DEALLOCATE(KPRIMEl)
-        deALLOCATE(cpowk)
-        deALLOCATE(cpowjbar)
-        deALLOCATE(WORKj)
-        deALLOCATE(WORKk)
-        deALLOCATE(ck)
-        deALLOCATE(cjbar)
+!       ========================================================================
+!       ==  FINISH OFF                                                        ==
+!       ========================================================================
+        DEALLOCATE(CPOWK)
+        DEALLOCATE(CPOWJBAR)
+        DEALLOCATE(WORKJ)
+        DEALLOCATE(WORKK)
+        DEALLOCATE(CK)
+        DEALLOCATE(CJBAR)
         DEALLOCATE(KPRIME)
         DEALLOCATE(JBARPRIME)
         DEALLOCATE(NLPHIDOT)
-      enddo   ! end loop over species
-      deallocate(r)
-      deallocate(w)
-                                         call trace$pop()
-      return
-      end
+      ENDDO   ! END LOOP OVER SPECIES
+      DEALLOCATE(R)
+      DEALLOCATE(W)
+                                         CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_fitgausskprime()
+      SUBROUTINE LMTO_GAUSSFITKPRIME()
 !     **************************************************************************
-!     ** Constructs the unscreened Hankel functions, with the simgularity     **
-!     ** replaced by a nodeless scattering function and determines its        **
-!     ** coefficients in a Gaussian expansion.                                **
+!     ** CONSTRUCTS THE UNSCREENED HANKEL FUNCTIONS, WITH THE SIMGULARITY     **
+!     ** REPLACED BY A NODELESS SCATTERING FUNCTION AND DETERMINES ITS        **
+!     ** COEFFICIENTS IN A GAUSSIAN EXPANSION.                                **
 !     **                                                                      **
-!     ** Caution!!! the unscreened Hankel function with long-range tail       **
-!     **   does not work because it requires Gaussians with a longer range    **
+!     ** CAUTION!!! THE UNSCREENED HANKEL FUNCTION WITH LONG-RANGE TAIL       **
+!     **   DOES NOT WORK BECAUSE IT REQUIRES GAUSSIANS WITH A LONGER RANGE    **
 !     **                                                                      **
-!     ******************************peter bloechl, Goslar 2010******************
-      USE LMTO_MODULE, ONLY : k2,POTPAR,NSP,lnx,LOX,sbarli1
-      logical   ,save        :: tfirst=.true.
-      integer(4),parameter   :: nex=10
-      real(8)   ,parameter   :: lambda=1.d0
-      real(8)                :: e(10)
-      integer(4)             :: npow
-      integer(4)             :: npow2
-      integer(4)             :: ne
-      integer(4)             :: lmx
-      integer(4)             :: nijk
-      integer(4)             :: gid,gid1
-      integer(4)             :: nr,nr1
-      integer(4)             :: l
-      integer(4)             :: lx
-      integer(4)             :: lm
-      integer(4)             :: norbx
-      real(8)                :: r1,dex
-      real(8)   ,allocatable :: r(:)
-      real(8)   ,allocatable :: w(:)
-      real(8)   ,allocatable :: kprimel(:)
-      real(8)   ,allocatable :: nlphidot(:,:)
-      real(8)   ,allocatable :: cpowkl(:,:)   !(npow2,ne)
-      real(8)   ,allocatable :: ckl(:,:)      !(nijk,ne)
-      real(8)   ,allocatable :: workkl(:,:)   !(nijk,ne)
-      real(8)   ,allocatable :: ylmpol(:,:)
-      real(8)                :: rad
-      real(8)                :: qbar
-      real(8)                :: svar,svar1,svar2,jval,kval,jder,kder
-      integer(4)             :: isp,ie,i,j,k,i1,j1,k1,ln,im,ir,n,ind,ind1,ind2
-      integer(4)             :: ind1x,iorb
-      integer(4)             :: nijkxpow2
-character(128) :: string
-real(8)        :: r0(3),ri
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
+      USE LMTO_MODULE, ONLY : K2,POTPAR,NSP,LNX,LOX,SBARLI1 &
+     &                       ,GAUSSFITKPRIME_NE,GAUSSFITKPRIME_R1 &
+     &                       ,GAUSSFITKPRIME_SCALER,GAUSSFITKPRIME_NPOW
+      INTEGER(4),SAVE        :: GID=-1
+      INTEGER(4),PARAMETER   :: NEX=30
+      REAL(8)   ,PARAMETER   :: LAMBDA=1.D0
+      LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
+      REAL(8)                :: E(NEX)
+      INTEGER(4)             :: NPOW
+      INTEGER(4)             :: NPOW2
+      INTEGER(4)             :: NE
+      INTEGER(4)             :: LMX
+      INTEGER(4)             :: NIJK
+      INTEGER(4)             :: GID1
+      INTEGER(4)             :: NR,NR1
+      INTEGER(4)             :: L
+      INTEGER(4)             :: LX
+      INTEGER(4)             :: LM
+      INTEGER(4)             :: NORBX
+      REAL(8)                :: R1,DEX
+      REAL(8)   ,ALLOCATABLE :: R(:)
+      REAL(8)   ,ALLOCATABLE :: W(:)
+      REAL(8)   ,ALLOCATABLE :: KPRIMEL(:)
+      REAL(8)   ,ALLOCATABLE :: NLPHIDOT(:,:)
+      REAL(8)   ,ALLOCATABLE :: CPOWKL(:,:)   !(NPOW2,NE)
+      REAL(8)   ,ALLOCATABLE :: CKL(:,:)      !(NIJK,NE)
+      REAL(8)   ,ALLOCATABLE :: WORKKL(:,:)   !(NIJK,NE)
+      REAL(8)   ,ALLOCATABLE :: YLMPOL(:,:)
+      REAL(8)                :: RAD
+      REAL(8)                :: QBAR
+      REAL(8)                :: SVAR,SVAR1,SVAR2,JVAL,KVAL,JDER,KDER
+      INTEGER(4)             :: ISP,IE,I,J,K,I1,J1,K1,LN,IM,IR,N,IND,IND1,IND2
+      INTEGER(4)             :: IND1X,IORB
+      INTEGER(4)             :: NIJKXPOW2
+      CHARACTER(128)         :: FILE
+      CHARACTER(8)           :: STRING1,STRING2
+      REAL(8)                :: R0(3),RI
+      INTEGER(4)             :: NFIL
 !     **************************************************************************
-                                         call trace$push('lmto_fitgauss1')
-      IF(TFIRST) THEN
-        TFIRST=.FALSE.
-      ELSE
-        CALL ERROR$MSG('THIS ROUTINE MUST NOT BE CALLED TWICE')
-        CALL ERROR$MSG('TO AVOID A MEMORY LEAK.')
-        CALL ERROR$MSG('IT CREATES A NEW RADIAL GRID IN EACH CALL')
-        CALL ERROR$STOP('LMTO_FITGAUSS1')
-      END IF
+                                         CALL TRACE$PUSH('LMTO_GAUSSFITKPRIME')
 !
 !     ==========================================================================
-!     == polynomial coefficients of spherical harmonics times r**l            ==
+!     == POLYNOMIAL COEFFICIENTS OF SPHERICAL HARMONICS TIMES R**L            ==
 !     ==========================================================================
-      lx=maxval(lox)
+      LX=MAXVAL(LOX)
       ALLOCATE(YLMPOL((LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2))
       CALL GAUSSIAN_YLMPOL(LX,YLMPOL)
 !
 !     ==========================================================================
-!     == define a radial grid on which the fit is performed                   ==
+!     == DEFINE A RADIAL GRID ON WHICH THE FIT IS PERFORMED                   ==
 !     ==========================================================================
-      CALL RADIAL$NEW('SHLOG',GID)
-!     == the grid must reach far out to avoid sharp increase ===================
-!     == outside the region considered for the fit =============================
-      CALL RADIAL$GRIDPARAMETERS(0.01D0,5.D0,100.D0,R1,DEX,NR)
-      CALL RADIAL$SETR8(GID,'R1',R1)
-      CALL RADIAL$SETR8(GID,'DEX',DEX)
-      CALL RADIAL$SETI4(GID,'NR',NR)
-      TFIRST=.FALSE.
+      IF(GID.EQ.-1) THEN
+        CALL RADIAL$NEW('SHLOG',GID)
+!       == THE GRID MUST REACH FAR OUT TO AVOID SHARP INCREASE =================
+!       == OUTSIDE THE REGION CONSIDERED FOR THE FIT ===========================
+        CALL RADIAL$GRIDPARAMETERS(0.01D0,5.D0,100.D0,R1,DEX,NR)
+        CALL RADIAL$SETR8(GID,'R1',R1)
+        CALL RADIAL$SETR8(GID,'DEX',DEX)
+        CALL RADIAL$SETI4(GID,'NR',NR)
+      END IF
+      CALL RADIAL$GETI4(GID,'NR',NR)
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R)
       ALLOCATE(W(NR))
@@ -1020,95 +873,98 @@ real(8)        :: r0(3),ri
 !     ==========================================================================
 !     ==========================================================================
 !     ==========================================================================
-      do isp=1,nsp
-        lx=maxval(lox(:lnx(isp),isp))
-        npow=lx
-!       == the parameters ne=7 and e=1/r^2 with r0.25*2^(ie-1) is good =========
-!       == up to a radius of about 10 a.u. =====================================
-        ne=7
-        do ie=1,ne
-          svar=0.25d0*2.d0**(ie-1)
-          e(ie)=1.d0/svar**2   
-        enddo
-!!$print*,'ri ',1.d0/sqrt(e(:ne))
-!!$print*,'rx ',e(ne),e(ne-1),log(e(ne-1)/e(ne)),sqrt(log(e(ne-1)/e(ne))/(e(ne)+e(ne-1)))
-        nijk=((npow+1)*(npow+2)*(npow+3))/6
-        norbx=0
-        do l=0,lx
-          norbx=max(norbx,sbarli1(l+1,isp)+2*l)
-        enddo
-        potpar(isp)%gausskprime%ne=ne
-        potpar(isp)%gausskprime%npow=npow
-        potpar(isp)%gausskprime%nijk=nijk
-        allocate(potpar(isp)%gausskprime%e(ne))
-        potpar(isp)%gausskprime%e(:)=e(:ne)
-        allocate(potpar(isp)%gausskprime%c(nijk,ne,norbx))
+      DO ISP=1,NSP
+        LX=MAXVAL(LOX(:LNX(ISP),ISP))
+        NPOW=MAX(LX,GAUSSFITKPRIME_NPOW)
+!       == THE PARAMETERS NE=7 AND E=1/R^2 WITH R0.25*2^(IE-1) IS GOOD =========
+!       == UP TO A RADIUS OF ABOUT 10 A.U. =====================================
+        NE=GAUSSFITKPRIME_NE
+        DO IE=1,NE
+          SVAR=GAUSSFITKPRIME_R1*GAUSSFITKPRIME_SCALER**(IE-1)
+          E(IE)=1.D0/SVAR**2   
+        ENDDO
+        NIJK=((NPOW+1)*(NPOW+2)*(NPOW+3))/6
+        NORBX=0
+        DO L=0,LX
+          NORBX=MAX(NORBX,SBARLI1(L+1,ISP)+2*L)
+        ENDDO
+        POTPAR(ISP)%GAUSSKPRIME%NE=NE
+        POTPAR(ISP)%GAUSSKPRIME%NIJK=NIJK
+        ALLOCATE(POTPAR(ISP)%GAUSSKPRIME%E(NE))
+        POTPAR(ISP)%GAUSSKPRIME%E(:)=E(:NE)
+        ALLOCATE(POTPAR(ISP)%GAUSSKPRIME%C(NIJK,NE,NORBX))
 !
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('GID',GID1)
         CALL SETUP$GETI4('NR',NR1)
-        ALLOCATE(nlphidot(nr1,lnx(isp)))
-        CALL SETUP$GETR8A('QPHIDOT',NR1*LNX(isp),nlPHIDOT)
-        w(:)=1.d0
+        ALLOCATE(NLPHIDOT(NR1,LNX(ISP)))
+        CALL SETUP$GETR8A('QPHIDOT',NR1*LNX(ISP),NLPHIDOT)
+        W(:)=1.D0
 !
-        rad=potpar(isp)%rad
-        ALLOCATE(kprimel(NR))
-        ALLOCATE(cpowkl(npow+1,ne))
-        ALLOCATE(WORKkl(NIJK,ne))
-        ALLOCATE(ckl(NIJK,ne))
-        do ln=1,lnx(isp)
-          if(ln.ne.potpar(isp)%lnscatt(ln)) cycle
-          l=lox(ln,isp)
-          qbar=potpar(isp)%qbar(ln)
+        RAD=POTPAR(ISP)%RAD
+        ALLOCATE(KPRIMEL(NR))
+        ALLOCATE(CPOWKL(NPOW+1,NE))
+        ALLOCATE(WORKKL(NIJK,NE))
+        ALLOCATE(CKL(NIJK,NE))
+        DO LN=1,LNX(ISP)
+          IF(LN.NE.POTPAR(ISP)%LNSCATT(LN)) CYCLE
+          L=LOX(LN,ISP)
+          QBAR=POTPAR(ISP)%QBAR(LN)
 !
 !         ======================================================================
-!         == KPRIME AND JPRIME WITH TAILS                                     ==
+!         == PUT KPRIME ON RADIAL GRID AND FIT TO GAUSSIANS                   ==
 !         ======================================================================
           DO IR=1,NR
-            IF(R(IR).le.RAD) then
-              CALL RADIAL$VALUE(GID1,NR1,NLPHIDOT(:,LN),r(ir),svar)
-              svar=svar*potpar(isp)%jbartophidot(ln)
+            IF(R(IR).LE.RAD) THEN
+              CALL RADIAL$VALUE(GID1,NR1,NLPHIDOT(:,LN),R(IR),SVAR)
+              SVAR=SVAR*POTPAR(ISP)%JBARTOPHIDOT(LN)
               CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JVAL,JDER)
-              kprimel(ir)=(JVAL-svar)/QBAR
-            else
-              CALL LMTO$SOLIDhankelRAD(L,R(IR),K2,kprimel(ir),svar)
-            end if
-          enddo
+              KPRIMEL(IR)=(JVAL-SVAR)/QBAR
+            ELSE
+              CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,KPRIMEL(IR),SVAR)
+            END IF
+          ENDDO
 !
-print*,'marke 1',gid,nr,l,ne,npow
-          npow2=int(0.5d0*real(npow-l))
-print*,'marke 2',npow2
-          cpowkl(:,:)=0.d0
-print*,'marke 3',size(e),size(cpowkl)
-          CALL GAUSSIAN_FITGAUSS(GID,NR,W,L,KPRIMEl,ne,npow2+1,e(:ne) &
-       &                                                   ,cpowkl(:npow2+1,:))
-print*,'marke 4'
+          NPOW2=INT(0.5D0*REAL(NPOW-L))
+          CPOWKL(:,:)=0.D0
+          CALL GAUSSIAN_FITGAUSS(GID,NR,W,L,KPRIMEL,NE,NPOW2+1,E(:NE) &
+       &                                                   ,CPOWKL(:NPOW2+1,:))
 !
-!!$WRITE(STRING,*)L
-!!$STRING='FITGAUSSKPRIME_'//TRIM(ADJUSTL(STRING))//'.DAT'
-!!$OPEN(UNIT=10001,FILE=STRING)
-!!$DO IR=1,NR
-!!$  ri=r(ir)*2.d0
-!!$  svar=0.d0
-!!$  do ie=1,ne
-!!$    DO I=0,npow2
-!!$      svar=svar+ri**(l+2*i)*exp(-e(ie)*ri**2)*cpowkl(i+1,ie)
-!!$    ENDDO  
-!!$  enddo
-!!$  if(ri.lt.rad) then
-!!$    call radial$value(gid,nr,kprimel,ri,svar1)
-!!$  else
-!!$    CALL LMTO$SOLIDhankelRAD(L,RI,K2,svar1,svar2)
-!!$  end if
-!!$  WRITE(10001,FMT='(10F20.5)')RI,svar1,svar
-!!$ENDDO
-!!$CLOSE(10001)
 !         ======================================================================
-!         ==  expand                                                          ==
+!         ==  PLOT FIT TO INSPECT QUALITY                                     ==
 !         ======================================================================
-          WORKkl(:,:)=0.D0
-          nijkxpow2=0
-          DO N=0,npow2
+          IF(TTEST) THEN
+            WRITE(STRING1,*)ISP
+            WRITE(STRING2,*)L
+            FILE='GAUSSFITKPRIME_A_'//TRIM(ADJUSTL(STRING1))
+            FILE=TRIM(FILE)//'_'//TRIM(ADJUSTL(STRING2))//'.DAT'
+            CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,FILE)
+            CALL FILEHANDLER$UNIT('HOOK',NFIL)
+            DO IR=1,NR
+              RI=R(IR)*2.D0  ! GRID IS EXTENDED ON PURPOSE
+              SVAR=0.D0
+              DO IE=1,NE
+                DO I=0,NPOW2
+                  SVAR=SVAR+RI**(L+2*I)*EXP(-E(IE)*RI**2)*CPOWKL(I+1,IE)
+                ENDDO  
+              ENDDO
+              IF(RI.LT.RAD) THEN
+                CALL RADIAL$VALUE(GID,NR,KPRIMEL,RI,SVAR1)
+              ELSE
+                CALL LMTO$SOLIDHANKELRAD(L,RI,K2,SVAR1,SVAR2)
+              END IF
+              WRITE(NFIL,FMT='(10F20.5)')RI,SVAR1,SVAR
+            ENDDO
+            CALL FILEHANDLER$CLOSE('HOOK')
+            CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,'.FORGOTTOASSIGNFILETOHOOK')
+          END IF
+!
+!         ======================================================================
+!         ==  EXPAND                                                          ==
+!         ======================================================================
+          WORKKL(:,:)=0.D0
+          NIJKXPOW2=0
+          DO N=0,NPOW2
 !           == MULTIPLY WITH (X^2+Y^2+Z^2)^N ===================================
             DO I=0,N
               CALL BINOMIALCOEFFICIENT(N,I,SVAR1)
@@ -1117,7 +973,7 @@ print*,'marke 4'
                 K=N-I-J
                 CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,2*I,2*J,2*K)
                 IF(IND1.GT.NIJK) CYCLE
-                WORKKl(IND1,:)=WORKKl(IND1,:)+CPOWKl(N+1,:) *SVAR1*SVAR2
+                WORKKL(IND1,:)=WORKKL(IND1,:)+CPOWKL(N+1,:) *SVAR1*SVAR2
                 NIJKXPOW2=MAX(IND1,NIJKXPOW2)
               ENDDO
             ENDDO
@@ -1127,10 +983,10 @@ print*,'marke 4'
 !         == MULTIPLY WITH SPHERICAL HARMONICS                                ==
 !         ======================================================================
           DO IM=1,2*L+1
-            ckl(:,:)=0.d0
+            CKL(:,:)=0.D0
             LM=L**2+IM
-            Ind1x=SIZE(YLMPOL(:,LM))
-            DO IND1=1,Ind1x
+            IND1X=SIZE(YLMPOL(:,LM))
+            DO IND1=1,IND1X
               IF(YLMPOL(IND1,LM).EQ.0.D0) CYCLE
               CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I,J,K)
               DO IND=1,NIJKXPOW2
@@ -1140,469 +996,415 @@ print*,'marke 4'
                 K1=K1+K
                 CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND2,I1,J1,K1)
                 IF(IND2.GT.NIJK) CYCLE
-                CKl(IND2,:)  =CKl(IND2,:)  +WORKKl(IND,:)*YLMPOL(IND1,LM)
+                CKL(IND2,:)  =CKL(IND2,:)  +WORKKL(IND,:)*YLMPOL(IND1,LM)
               ENDDO
             ENDDO
-            iorb=sbarli1(L+1,isp)-1+im
-            potpar(isp)%gausskprime%c(:,:,iorb)=ckl(:,:)
+            IORB=SBARLI1(L+1,ISP)-1+IM
+            POTPAR(ISP)%GAUSSKPRIME%C(:,:,IORB)=CKL(:,:)
           ENDDO ! END OF LOOP OVER ORBITALS (IM)
         ENDDO  ! END OF LOOP OVER L
 !
-!!$do lm=1,norbx
-!!$WRITE(STRING,*)Lm
-!!$STRING='FITGAUSSba_'//TRIM(ADJUSTL(STRING))//'.DAT'
-!!$OPEN(UNIT=10001,FILE=STRING)
-!!$ckl=potpar(isp)%gausskprime%c(:,:,lm)
-!!$DO IR=1,NR
-!!$  ri=2.d0*r(ir)
-!!$  kval=0.D0
-!!$  DO IE=1,NE
-!!$    R0=(/1.D0,0.D0,0.D0/)*Ri
-!!$    CALL GAUSSIAN_3DORB('CARTESIAN',NIJK,E(IE),CKl(:,IE),R0,SVAR)
-!!$    KVAL=KVAL+SVAR
-!!$  ENDDO
-!!$  WRITE(10001,FMT='(10F20.5)')ri,KVAL
-!!$ENDDO
-!!$CLOSE(10001)
-!!$enddo
-!!$!
+!       ========================================================================
+!       ==  PLOT FIT TO INSPECT QUALITY                                       ==
+!       ========================================================================
+        IF(TTEST) THEN
+          DO LM=1,NORBX
+            WRITE(STRING1,*)ISP
+            WRITE(STRING2,*)LM
+            FILE='GAUSSFITKPRIME_B_'//TRIM(ADJUSTL(STRING1))
+            FILE=TRIM(FILE)//'_'//TRIM(ADJUSTL(STRING2))//'.DAT'
+            CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,FILE)
+            CALL FILEHANDLER$UNIT('HOOK',NFIL)
+            CKL=POTPAR(ISP)%GAUSSKPRIME%C(:,:,LM)
+            DO IR=1,NR
+              RI=2.D0*R(IR)
+              KVAL=0.D0
+              DO IE=1,NE
+                R0=(/1.D0,0.D0,0.D0/)*RI
+                CALL GAUSSIAN_3DORB('CARTESIAN',NIJK,E(IE),CKL(:,IE),R0,SVAR)
+                KVAL=KVAL+SVAR
+              ENDDO
+              WRITE(NFIL,FMT='(10F20.5)')RI,KVAL
+            ENDDO
+            CALL FILEHANDLER$CLOSE('HOOK')
+            CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,'.FORGOTTOASSIGNFILETOHOOK')
+          ENDDO
+        END IF
 !
-        deALLOCATE(cpowkl)
-        deALLOCATE(WORKkl)
-        deALLOCATE(ckl)
-        DEALLOCATE(KPRIMEl)
+!       ========================================================================
+!       ==  FINISH OFF                                                        ==
+!       ========================================================================
+        DEALLOCATE(CPOWKL)
+        DEALLOCATE(WORKKL)
+        DEALLOCATE(CKL)
+        DEALLOCATE(KPRIMEL)
         DEALLOCATE(NLPHIDOT)
-      enddo   ! end loop over species
-      deallocate(r)
-      deallocate(w)
-                                         call trace$pop()
-      return
-      end
+      ENDDO   ! END LOOP OVER SPECIES
+      DEALLOCATE(R)
+      DEALLOCATE(W)
+                                         CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_ntbtogauss()
+      SUBROUTINE LMTO_NTBOFROMTAILEDKJ()
 !     **************************************************************************
+!     **  ONSITE EXPANSION OF TIGHT-BINDING ORBITALS FROM                     **
+!     **  TAILED HANKEL AND BESSEL FUNCTIONS                                  **
 !     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     ******************************peter bloechl, Goslar 2010******************
-      USE LMTO_MODULE, ONLY : POTPAR,ispecies,sbar,gaussorb
-      logical           :: tnew
-      integer(4)        :: nat
-      integer(4)        :: nns
-      integer(4)        :: iat
-      integer(4)        :: isp
-      integer(4)        :: norb
-      integer(4)        :: ne
-      integer(4)        :: nijk
-      integer(4)        :: nn,iorb1,iorb2
+!     **  RESULT IS PLACED IN GAUSSORB_T                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
+      USE LMTO_MODULE, ONLY : POTPAR,ISPECIES,SBAR,GAUSSORB_T
+      LOGICAL           :: TNEW
+      INTEGER(4)        :: NAT
+      INTEGER(4)        :: NNS
+      INTEGER(4)        :: IAT
+      INTEGER(4)        :: ISP
+      INTEGER(4)        :: NORB
+      INTEGER(4)        :: NE
+      INTEGER(4)        :: NIJK
+      INTEGER(4)        :: NN,IORB1,IORB2
 !     **************************************************************************
-      tnew=.not.allocated(gaussorb)
-      if(tnew) then
-        nat=size(ispecies)
-        allocate(gaussorb(nat))
-      end if
-      nns=size(sbar)
-      do nn=1,nns
-        if(sbar(nn)%iat1.ne.sbar(nn)%iat2) cycle
-        if(sbar(nn)%it(1).ne.0) cycle
-        if(sbar(nn)%it(2).ne.0) cycle
-        if(sbar(nn)%it(3).ne.0) cycle
-        iat=sbar(nn)%iat1
-        isp=ispecies(iat)
-        norb=sbar(nn)%n1
-        if(tnew) then
-          ne=potpar(isp)%gauss%ne
-          nijk=potpar(isp)%gauss%nijk
-          gaussorb(iat)%nijk=nijk
-          gaussorb(iat)%ne=ne
-          gaussorb(iat)%norb=norb
-          allocate(gaussorb(iat)%e(ne))
-          gaussorb(iat)%e(:)=potpar(isp)%gauss%e(:)
-          allocate(gaussorb(iat)%c(nijk,ne,norb))
-        end if
-        gaussorb(iat)%c(:,:,:)=potpar(isp)%gauss%ck(:,:,:)
-        do iorb1=1,norb
-          do iorb2=1,norb
-            gaussorb(iat)%c(:,:,iorb1)=gaussorb(iat)%c(:,:,iorb1) &
-       &           -potpar(isp)%gauss%cjbar(:,:,iorb2)*sbar(nn)%mat(iorb2,iorb1)
-          enddo
-        enddo
-      enddo        
-      return
-      end
+      TNEW=.NOT.ALLOCATED(GAUSSORB_T)
+      IF(TNEW) THEN
+        NAT=SIZE(ISPECIES)
+        ALLOCATE(GAUSSORB_T(NAT))
+      END IF
+      NNS=SIZE(SBAR)
+      DO NN=1,NNS
+        IF(SBAR(NN)%IAT1.NE.SBAR(NN)%IAT2) CYCLE
+        IF(SBAR(NN)%IT(1).NE.0) CYCLE
+        IF(SBAR(NN)%IT(2).NE.0) CYCLE
+        IF(SBAR(NN)%IT(3).NE.0) CYCLE
+        IAT=SBAR(NN)%IAT1
+        ISP=ISPECIES(IAT)
+        NORB=SBAR(NN)%N1
+        IF(TNEW) THEN
+          NE  =POTPAR(ISP)%GAUSSTAILEDK%NE
+          NIJK=POTPAR(ISP)%GAUSSTAILEDK%NIJK
+          GAUSSORB_T(IAT)%NIJK=NIJK
+          GAUSSORB_T(IAT)%NE=NE
+          GAUSSORB_T(IAT)%NORB=NORB
+          ALLOCATE(GAUSSORB_T(IAT)%E(NE))
+          GAUSSORB_T(IAT)%E(:)=POTPAR(ISP)%GAUSSTAILEDK%E(:)
+          ALLOCATE(GAUSSORB_T(IAT)%C(NIJK,NE,NORB))
+        END IF
+        GAUSSORB_T(IAT)%C(:,:,:)=POTPAR(ISP)%GAUSSTAILEDK%C(:,:,:)
+        DO IORB1=1,NORB
+          DO IORB2=1,NORB
+            GAUSSORB_T(IAT)%C(:,:,IORB1)=GAUSSORB_T(IAT)%C(:,:,IORB1) &
+     &                               -POTPAR(ISP)%GAUSSTAILEDJBAR%C(:,:,IORB2) &
+     &                               *SBAR(NN)%MAT(IORB2,IORB1)
+          ENDDO
+        ENDDO
+      ENDDO        
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_testgaussproject()
+      SUBROUTINE LMTO_NTBOFROMKPRIME()
 !     **************************************************************************
+!     ** CONSTRUCT TIGHT BINDING ORBITALS AS SUPERPOSITION OF HANKEL FUNCTIONS**
 !     **************************************************************************
-      use lmto_module, only : gaussorb
-      implicit none
-      integer(4)            :: nijk,ne
-      real(8)   ,allocatable :: e(:)
-      real(8)   ,allocatable :: u(:,:,:)
+      USE LMTO_MODULE, ONLY : ISPECIES,GAUSSORB,NSP,LNX,LOX,POTPAR,SBAR
+      IMPLICIT NONE
+      LOGICAL                :: TNEW
+      INTEGER(4)             :: NAT
+      INTEGER(4)             :: NE,NEA,NEB
+      INTEGER(4)             :: NIJK,NIJKA,NIJKB
+      INTEGER(4)             :: NORBX,NORB,NORB1,NORB2
+      INTEGER(4)             :: ISP,ISP2
+      INTEGER(4)             :: IAT,IAT2
+      INTEGER(4)             :: IT(3)
+      INTEGER(4)             :: LN,IORB,NN,I,J,IM
+      INTEGER(4)             :: NNS
+      INTEGER(4)             :: NPOW
+      LOGICAL(4)             :: TONSITE
+      REAL(8)   ,ALLOCATABLE :: QBAR(:,:)
+      REAL(8)   ,ALLOCATABLE :: EA(:),EB(:)
+      REAL(8)   ,ALLOCATABLE :: GCB(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: MAT(:,:)
+      REAL(8)   ,ALLOCATABLE :: R0(:,:)
+      REAL(8)                :: RBAS(3,3)
+      REAL(8)                :: RA(3),RB(3)
+      REAL(8)   ,ALLOCATABLE :: SCALE1(:)
+INTEGER(4) :: IE,IND,K,IX
+REAL(8)    :: SVAR,ARR(20),X
+REAL(8)    :: EULER
+REAL(8),ALLOCATABLE ::COO(:,:,:)
+INTEGER(4),PARAMETER  :: NX=100
+REAL(8)   ,PARAMETER  :: XMAX=10.D0
+REAL(8)               :: RGRID(3,NX)
+REAL(8)               :: FGRID(NX,20,2)
 !     **************************************************************************
-      nijk=gaussorb(1)%nijk
-      ne=gaussorb(1)%ne
-      allocate(e(ne))
-      allocate(u(nijk,ne,nijk*ne))
-      call LMTO_gaussproject(nijk,ne,e,u)
-      return
-      end
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_xx()
-!     **************************************************************************
-!     **************************************************************************
-      use lmto_module, only : ispecies,gaussorb,nsp,lnx,lox,potpar,sbar
-      implicit none
-      logical                :: tnew
-      integer(4)             :: nat
-      integer(4)             :: ne,nea,neb
-      integer(4)             :: nijk,nijka,nijkb
-      integer(4)             :: norbx,norb,norb1,norb2
-      integer(4)             :: isp,isp2
-      integer(4)             :: iat,iat2
-      integer(4)             :: it(3)
-      integer(4)             :: ln,iorb,nn,i,j,im
-      integer(4)             :: nns
-      integer(4)             :: npow
-      logical(4)             :: tonsite
-      real(8)   ,allocatable :: qbar(:,:)
-      real(8)   ,allocatable :: ea(:),eb(:)
-      real(8)   ,allocatable :: gcb(:,:,:)
-      real(8)   ,allocatable :: mat(:,:)
-      real(8)   ,allocatable :: r0(:,:)
-      real(8)                :: rbas(3,3)
-      real(8)                :: ra(3),rb(3)
-      real(8)   ,allocatable :: scale1(:)
-integer(4) :: ie,ind,k,ix
-real(8)    :: svar,arr(20),x
-real(8)    :: euler
-real(8),allocatable ::coo(:,:,:)
-integer(4),parameter  :: nx=100
-real(8)   ,parameter  :: xmax=10.d0
-real(8)               :: rgrid(3,nx)
-real(8)               :: fgrid(nx,20,2)
-!     **************************************************************************
-do i=1,nx
-  rgrid(:,i)=(/1.d0,1d0,1.d0/)/sqrt(3.d0)*xmax*2.d0*(real(i-1)/real(nx-1)-0.5d0)
-enddo
-      euler=exp(1.d0)
+DO I=1,NX
+  RGRID(:,I)=(/1.D0,1D0,1.D0/)/SQRT(3.D0)*XMAX*2.D0*(REAL(I-1)/REAL(NX-1)-0.5D0)
+ENDDO
+      EULER=EXP(1.D0)
       CALL ATOMLIST$NATOM(NAT)
       ALLOCATE(R0(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
       CALL CELL$GETR8A('T0',9,RBAS)
 !
 !     ==========================================================================
-!     == allocate gaussorb, which hold the local orbitals in gauss representat.
+!     == ALLOCATE GAUSSORB, WHICH HOLD THE LOCAL ORBITALS IN GAUSS REPRESENTAT.
 !     ==========================================================================
-      tnew=.not.allocated(gaussorb)
-      if(tnew) then
-        allocate(gaussorb(nat))
-        nat=size(ispecies)
-        do iat=1,nat
-          isp=ispecies(iat)
-          ne=4
-          npow=4 !polynomial has x^npow as highest power
-!!$ne=1
-!!$npow=2
-          nijk=((npow+1)*(npow+2)*(npow+3))/6
-          gaussorb(iat)%nijk=nijk
-          gaussorb(iat)%ne=ne
-          allocate(gaussorb(iat)%e(ne))
-          do i=1,ne
-            gaussorb(iat)%e(i)=1.5d0**(-2*(i-1))
-          enddo
-          norb=0
-          do ln=1,lnx(isp)
-            if(potpar(isp)%lnscatt(ln).ne.ln) cycle
-            norb=norb+2*lox(ln,isp)+1
-          enddo  
-          gaussorb(iat)%norb=norb
-          allocate(gaussorb(iat)%c(nijk,ne,norb))
-        enddo
-      end if
+      TNEW=.NOT.ALLOCATED(GAUSSORB)
+      IF(TNEW) THEN
+        ALLOCATE(GAUSSORB(NAT))
+        NAT=SIZE(ISPECIES)
+        DO IAT=1,NAT
+          ISP=ISPECIES(IAT)
+          NE=4
+          NPOW=4 !POLYNOMIAL HAS X^NPOW AS HIGHEST POWER
+!!$NE=1
+!!$NPOW=2
+          NIJK=((NPOW+1)*(NPOW+2)*(NPOW+3))/6
+          GAUSSORB(IAT)%NIJK=NIJK
+          GAUSSORB(IAT)%NE=NE
+          ALLOCATE(GAUSSORB(IAT)%E(NE))
+          DO I=1,NE
+            GAUSSORB(IAT)%E(I)=1.5D0**(-2*(I-1))
+          ENDDO
+          NORB=0
+          DO LN=1,LNX(ISP)
+            IF(POTPAR(ISP)%LNSCATT(LN).NE.LN) CYCLE
+            NORB=NORB+2*LOX(LN,ISP)+1
+          ENDDO  
+          GAUSSORB(IAT)%NORB=NORB
+          ALLOCATE(GAUSSORB(IAT)%C(NIJK,NE,NORB))
+        ENDDO
+      END IF
 !
-      norbx=maxval(gaussorb(:)%norb)
-      allocate(qbar(norbx,nsp))
-      qbar(:,:)=0.d0
-      do isp=1,nsp
-        iorb=0
-        do ln=1,lnx(isp)
-          if(potpar(isp)%lnscatt(ln).ne.ln) cycle
-          do im=1,2*lox(ln,isp)+1
-            iorb=iorb+1
-            qbar(iorb,isp)=potpar(isp)%qbar(ln)
-          enddo
-        enddo  
-      enddo
-!
-      neb=maxval(potpar(:)%gausskprime%ne)
-      allocate(eb(neb))
-!
-!     ==========================================================================
-!     == allocate gaussorb, which hold the local orbitals in gauss representat.
-!     ==========================================================================
-      nns=size(sbar)
-      do iat=1,nat
-fgrid(:,:,:)=0.d0
-        isp=ispecies(iat)
-        nijka=gaussorb(iat)%nijk
-        nea=gaussorb(iat)%ne
-        allocate(ea(nea))
-        ea(:nea)=gaussorb(iat)%e
-        norb1=gaussorb(iat)%norb
-        allocate(gcb(nijka,nea,norbx))
-        allocate(mat(nijka*nea,nijka*nea))
-        ra(:)=r0(:,iat)
-!
-!       == determine gaussorb= <g|kprime>(1+qbar*sbar) =========================
-        gaussorb(iat)%c(:,:,:)=0.d0
-        do nn=1,nns
-          if(sbar(nn)%iat1.ne.iat) cycle
-          iat2=sbar(nn)%iat2  
-          it(:)=sbar(nn)%it(:)
-          tonsite=iat2.eq.iat.and.it(1).eq.0.and.it(2).eq.0.and.it(3).eq.0
-          isp2=ispecies(iat2)
-          norb2=gaussorb(iat2)%norb
-          nijkb=potpar(isp2)%gausskprime%nijk
-          neb=potpar(isp2)%gausskprime%ne
-          eb(:neb)=potpar(isp2)%gausskprime%e
-          rb(:)=r0(:,iat2)+matmul(rbas,real(it))
-!!$do ix=1,nx
-!!$  arr(:)=0.d0
-!!$  do iorb=1,norb2
-!!$    do ie=1,neb
-!!$      call GAUSSIAN_3DORB('CARTESIAN',NIJKb,Eb(ie),potpar(isp2)%gausskprime%c(:,ie,iorb),Rgrid(:,ix)+ra(:)-rb(:),svar)
-!!$      arr(iorb)=arr(iorb)+svar
-!!$    enddo
-!!$  enddo
-!!$  do i=1,norb1
-!!$    if(tonsite)fgrid(ix,i,1)=fgrid(ix,i,1)+arr(i)
-!!$    do j=1,norb2
-!!$     fgrid(ix,i,1)=fgrid(ix,i,1)+arr(j)*qbar(j,isp2)*sbar(nn)%mat(j,i)
-!!$    enddo
-!!$  enddo
-!!$enddo
-          call GAUSSIAN$gausspsi(NIJKA,nea,EA,RA,NIJKB,neb,EB(:neb),RB &
-    &                           ,norb2,potpar(isp2)%gausskprime%c &
-    &                           ,gcb(:,:,:norb2))
-          do i=1,norb1
-            if(tonsite) gaussorb(iat)%c(:,:,i)=gaussorb(iat)%c(:,:,i)+gcb(:,:,i)
-            do j=1,norb2
-              gaussorb(iat)%c(:,:,i)=gaussorb(iat)%c(:,:,i) &
-    &                               +gcb(:,:,j)*qbar(j,isp2)*sbar(nn)%mat(j,i)
-            enddo
-          enddo
-        enddo
-!
-        call LMTO_gaussproject(nijka,nea,ea,mat)
-        gcb(:,:,:norb1)=gaussorb(iat)%c(:,:,:)
-        call lib$matrixsolver8(nijka*nea,nijka*nea,norb1 &
-    &                                      ,mat,gaussorb(iat)%c,gcb(:,:,:norb1))
-!
-!!$open(unit=10001,file='xy.dat')
-!!$do ix=1,nx
-!!$  arr(:)=0.d0
-!!$  do iorb=1,norb1
-!!$    do ie=1,nea
-!!$      call GAUSSIAN_3DORB('CARTESIAN',NIJKa,Ea(ie),gaussorb(iat)%c(:,ie,iorb),Rgrid(:,ix),svar)
-!!$      arr(iorb)=arr(iorb)+svar
-!!$    enddo
-!!$  enddo
-!!$  write(10001,*)rgrid(1,ix),arr(:norb1),fgrid(ix,:norb1,1)
-!!$enddo
-!!$close(10001)
-!!$!stop 'xc'
-        deallocate(ea)
-        deallocate(gcb)
-        deallocate(mat)
-      enddo
-      return
-      end
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_gaussproject(nijk,ne,e,u)
-!     **************************************************************************
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     **  1) replace the eigenvalue problem by a singular value decomposition **
-!     **  2) exploit that the matrix mat is block diagonal with 8 blocks      **
-!     **     (i1,i2=even,j1,j2=even,k1,k2=even)                               **
-!     **     (i1,i2=even,j1,j2=even,k1,k2=odd)                                **
-!     **     (i1,i2=even,j1,j2=odd ,k1,k2=even)                               **
-!     **     (i1,i2=even,j1,j2=odd ,k1,k2=odd)                                **
-!     **     (i1,i2=odd ,j1,j2=even,k1,k2=even)                               **
-!     **     (i1,i2=odd ,j1,j2=even,k1,k2=odd)                                **
-!     **     (i1,i2=odd ,j1,j2=odd ,k1,k2=even)                               **
-!     **     (i1,i2=odd ,j1,j2=odd ,k1,k2=odd)                                **
-!     **                                                                      **
-!     ******************************peter bloechl, Goslar 2010******************
-      integer(4),intent(in) :: nijk
-      integer(4),intent(in) :: ne
-      real(8)   ,intent(in) :: e(ne)
-      real(8)   ,intent(out):: u(nijk,ne,nijk*ne)
-      integer(4),parameter  :: imaxx=20
-      logical(4)            :: ttest=.true.
-      real(8)               :: factor(0:imaxx)
-      real(8)               :: efac(ne,ne,0:3*imaxx)
-      real(8)               :: pi
-      real(8)               :: svar,fac
-      integer(4)            :: imax
-      integer(4)            :: ipow
-      real(8)   ,allocatable:: mat(:,:)
-      real(8)   ,allocatable:: eig(:)
-      integer(4)            :: i,j,ie,je,ipos1,ipos2
-      integer(4)            :: ind1,i1,j1,k1,ind2,i2,j2,k2
-!     **************************************************************************
-      pi=4.d0*atan(1.d0)
-!
-!     == int dx x^n exp(-a*x^2) = factor(n)/sqrt(a)^(n+1) ======================
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',nijk,I1,J1,K1)
-      imax=i1
-      if(imax.gt.imaxx) then
-        call error$stop('LMTO_gaussproject')
-      end if
-      factor(:)=0.d0
-      svar=sqrt(2.d0*pi)
-      factor(0)=svar
-      do i=1,imax
-        svar=svar*real(2*i-1,kind=8)
-        factor(2*i)=svar
-      enddo
-      do ie=1,ne
-        do je=ie,ne
-          fac=1.d0/sqrt(2.d0*(e(ie)+e(je)))
-          svar=fac**3
-          do i=0,3*imax
-            efac(ie,je,i)=svar
-            svar=svar*fac
-          enddo
-          efac(je,ie,:)=efac(ie,je,:)
-        enddo
-      enddo
-!
-!     ==========================================================================
-!     == determine overlap matrix of Gaussians                                ==
-!     ==========================================================================
-      allocate(mat(nijk*ne,nijk*ne))
-      mat(:,:)=0.d0
-      do ind1=1,nijk
-        CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I1,J1,K1)
-        do ind2=1,nijk
-          CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND2,I2,J2,K2)
-          svar=factor(i1+i2)*factor(j1+j2)*factor(k1+k2)
-          if(svar.eq.0.d0) cycle
-          ipow=(i1+i2+j1+j2+k1+k2)
-          do ie=1,ne
-            ipos1=nijk*(ie-1)+ind1
-            do je=1,ne
-              ipos2=nijk*(je-1)+ind2
-              mat(ipos1,ipos2)=svar*efac(ie,je,ipow)
-            enddo
-          enddo
-        enddo
-      enddo
-!
-!this copies the overlap matrix back without inversion 
-! intended for testing only!!
-      do ie=1,ne
-        do ind1=1,nijk
-          ipos1=nijk*(ie-1)+ind1
-          u(ind1,ie,:)=mat(ipos1,:)
-        enddo
-      enddo
-
-!!$!
-!!$!     ==========================================================================
-!!$!     == determine inverse overlap as sum_i |i><i|                            ==
-!!$!     ==========================================================================
-!!$      allocate(eig(nijk*ne))
-!!$      call LIB$DIAGR8(Nijk*ne,mat,Eig,U)
-!!$      do i=1,nijk*ne
-!!$        u(:,:,i)=u(:,:,i)/sqrt(abs(eig(i)))
-!!$      enddo
-!!$      deallocate(eig)
-!!$      deallocate(mat)
-!!$!
-!!$!     ==========================================================================
-!!$!     == test inversion                                                       ==
-!!$!     ==========================================================================
-!!$      if(ttest) then
-!!$        do ipos1=1,nijk*ne
-!!$          do ipos2=1,nijk*ne
-!!$            svar=0.d0
-!!$            ind1=0
-!!$            do i=1,nijk
-!!$              do ie=1,ne
-!!$                ind1=ind1+1      
-!!$                ind2=0
-!!$                do j=1,nijk
-!!$                  do je=1,ne
-!!$                    ind2=ind2+1
-!!$                    svar=svar+u(i1,ie,ipos1)*mat(ind1,ind2)*u(j,je,ipos2)
-!!$                  enddo
-!!$                enddo
-!!$              enddo
-!!$            enddo
-!!$            print*,'inversion test ',ipos1,ipos2,svar
-!!$          enddo
-!!$        enddo
-!!$      end if
-      return 
-      end
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_PLOTBAREK()
-!     **************************************************************************
-!     **                                                                      **
-!     **************************************************************************
-      USE LMTO_MODULE, ONLY : NSP,LOX,POTPAR,SBARLI1
-
-      IMPLICIT NONE
-      INTEGER(4)   :: IND
-      INTEGER(4)   :: ISP
-      INTEGER(4)   :: L
-      INTEGER(4)   :: IM,IORB
-      CHARACTER(64):: STRING
-      INTEGER(4)   :: NFIL=10001
-      INTEGER(4),PARAMETER   :: NAT=1
-      REAL(8)                :: Z(NAT)=(/1.D0/)
-      REAL(8)                :: R(3,NAT)
-      REAL(8)   ,PARAMETER   :: RAD=5.D0
-      REAL(8)                :: ORIGIN(3)
-      REAL(8)                :: BOX(3,3)
-      INTEGER(4),PARAMETER   :: N=50.D0
-      REAL(8)                :: DATA(N,N,N)
-!     **************************************************************************
-      R(:,:)=0.D0
-      ORIGIN(:)=-RAD
-      BOX(:,:)=0.D0
-      DO IND=1,3
-        BOX(IND,IND)=2.D0*RAD
-      ENDDO
-      IND=0
+      NORBX=MAXVAL(GAUSSORB(:)%NORB)
+      ALLOCATE(QBAR(NORBX,NSP))
+      QBAR(:,:)=0.D0
       DO ISP=1,NSP
-        DO L=0,MAXVAL(LOX(:,ISP))
-          IORB=SBARLI1(L+1,ISP)
-          IF(IORB.LE.0) CYCLE
-          DO IM=1,2*L+1
-            IND=IND+1
-            WRITE(STRING,*)IND
-            STRING='YY'//TRIM(ADJUSTL(STRING))//'.CUB'
-            OPEN(UNIT=NFIL,FILE=STRING)
-            CALL GAUSSIAN$PLOTGAUSSEXPANSION(POTPAR(ISP)%NIJK &
-     &                                ,POTPAR(ISP)%GAUSSEP &
-     &                                ,POTPAR(ISP)%COEFFBARE(:,IND),RAD,N,DATA)
-            CALL LMTO_WRITECUBEFILE(NFIL,NAT,Z,R,ORIGIN,BOX,N,N,N,DATA)
-            close(nfil)
+        IORB=0
+        DO LN=1,LNX(ISP)
+          IF(POTPAR(ISP)%LNSCATT(LN).NE.LN) CYCLE
+          DO IM=1,2*LOX(LN,ISP)+1
+            IORB=IORB+1
+            QBAR(IORB,ISP)=POTPAR(ISP)%QBAR(LN)
+          ENDDO
+        ENDDO  
+      ENDDO
+!
+      NEB=MAXVAL(POTPAR(:)%GAUSSKPRIME%NE)
+      ALLOCATE(EB(NEB))
+!
+!     ==========================================================================
+!     == ALLOCATE GAUSSORB, WHICH HOLD THE LOCAL ORBITALS IN GAUSS REPRESENTAT.
+!     ==========================================================================
+      NNS=SIZE(SBAR)
+      DO IAT=1,NAT
+FGRID(:,:,:)=0.D0
+        ISP=ISPECIES(IAT)
+        NIJKA=GAUSSORB(IAT)%NIJK
+        NEA=GAUSSORB(IAT)%NE
+        ALLOCATE(EA(NEA))
+        EA(:NEA)=GAUSSORB(IAT)%E
+        NORB1=GAUSSORB(IAT)%NORB
+        ALLOCATE(GCB(NIJKA,NEA,NORBX))
+        ALLOCATE(MAT(NIJKA*NEA,NIJKA*NEA))
+        RA(:)=R0(:,IAT)
+!
+!       == DETERMINE GAUSSORB= <G|KPRIME>(1+QBAR*SBAR) =========================
+        GAUSSORB(IAT)%C(:,:,:)=0.D0
+        DO NN=1,NNS
+          IF(SBAR(NN)%IAT1.NE.IAT) CYCLE
+          IAT2=SBAR(NN)%IAT2  
+          IT(:)=SBAR(NN)%IT(:)
+          TONSITE=IAT2.EQ.IAT.AND.IT(1).EQ.0.AND.IT(2).EQ.0.AND.IT(3).EQ.0
+          ISP2=ISPECIES(IAT2)
+          NORB2=GAUSSORB(IAT2)%NORB
+          NIJKB=POTPAR(ISP2)%GAUSSKPRIME%NIJK
+          NEB=POTPAR(ISP2)%GAUSSKPRIME%NE
+          EB(:NEB)=POTPAR(ISP2)%GAUSSKPRIME%E
+          RB(:)=R0(:,IAT2)+MATMUL(RBAS,REAL(IT))
+!!$DO IX=1,NX
+!!$  ARR(:)=0.D0
+!!$  DO IORB=1,NORB2
+!!$    DO IE=1,NEB
+!!$      CALL GAUSSIAN_3DORB('CARTESIAN',NIJKB,EB(IE),POTPAR(ISP2)%GAUSSKPRIME%C(:,IE,IORB),RGRID(:,IX)+RA(:)-RB(:),SVAR)
+!!$      ARR(IORB)=ARR(IORB)+SVAR
+!!$    ENDDO
+!!$  ENDDO
+!!$  DO I=1,NORB1
+!!$    IF(TONSITE)FGRID(IX,I,1)=FGRID(IX,I,1)+ARR(I)
+!!$    DO J=1,NORB2
+!!$     FGRID(IX,I,1)=FGRID(IX,I,1)+ARR(J)*QBAR(J,ISP2)*SBAR(NN)%MAT(J,I)
+!!$    ENDDO
+!!$  ENDDO
+!!$ENDDO
+          CALL GAUSSIAN$GAUSSPSI(NIJKA,NEA,EA,RA,NIJKB,NEB,EB(:NEB),RB &
+    &                           ,NORB2,POTPAR(ISP2)%GAUSSKPRIME%C &
+    &                           ,GCB(:,:,:NORB2))
+          DO I=1,NORB1
+            IF(TONSITE) GAUSSORB(IAT)%C(:,:,I)=GAUSSORB(IAT)%C(:,:,I)+GCB(:,:,I)
+            DO J=1,NORB2
+              GAUSSORB(IAT)%C(:,:,I)=GAUSSORB(IAT)%C(:,:,I) &
+    &                               +GCB(:,:,J)*QBAR(J,ISP2)*SBAR(NN)%MAT(J,I)
+            ENDDO
+          ENDDO
+        ENDDO
+!
+        CALL LMTO_GAUSSPROJECT(NIJKA,NEA,EA,MAT)
+        GCB(:,:,:NORB1)=GAUSSORB(IAT)%C(:,:,:)
+        CALL LIB$MATRIXSOLVER8(NIJKA*NEA,NIJKA*NEA,NORB1 &
+    &                                      ,MAT,GAUSSORB(IAT)%C,GCB(:,:,:NORB1))
+!
+!!$OPEN(UNIT=10001,FILE='XY.DAT')
+!!$DO IX=1,NX
+!!$  ARR(:)=0.D0
+!!$  DO IORB=1,NORB1
+!!$    DO IE=1,NEA
+!!$      CALL GAUSSIAN_3DORB('CARTESIAN',NIJKA,EA(IE),GAUSSORB(IAT)%C(:,IE,IORB),RGRID(:,IX),SVAR)
+!!$      ARR(IORB)=ARR(IORB)+SVAR
+!!$    ENDDO
+!!$  ENDDO
+!!$  WRITE(10001,*)RGRID(1,IX),ARR(:NORB1),FGRID(IX,:NORB1,1)
+!!$ENDDO
+!!$CLOSE(10001)
+!!$!STOP 'XC'
+        DEALLOCATE(EA)
+        DEALLOCATE(GCB)
+        DEALLOCATE(MAT)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_GAUSSPROJECT(NIJK,NE,E,U)
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **                                                                      **
+!     **                                                                      **
+!     **  1) REPLACE THE EIGENVALUE PROBLEM BY A SINGULAR VALUE DECOMPOSITION **
+!     **  2) EXPLOIT THAT THE MATRIX MAT IS BLOCK DIAGONAL WITH 8 BLOCKS      **
+!     **     (I1,I2=EVEN,J1,J2=EVEN,K1,K2=EVEN)                               **
+!     **     (I1,I2=EVEN,J1,J2=EVEN,K1,K2=ODD)                                **
+!     **     (I1,I2=EVEN,J1,J2=ODD ,K1,K2=EVEN)                               **
+!     **     (I1,I2=EVEN,J1,J2=ODD ,K1,K2=ODD)                                **
+!     **     (I1,I2=ODD ,J1,J2=EVEN,K1,K2=EVEN)                               **
+!     **     (I1,I2=ODD ,J1,J2=EVEN,K1,K2=ODD)                                **
+!     **     (I1,I2=ODD ,J1,J2=ODD ,K1,K2=EVEN)                               **
+!     **     (I1,I2=ODD ,J1,J2=ODD ,K1,K2=ODD)                                **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
+      INTEGER(4),INTENT(IN) :: NIJK
+      INTEGER(4),INTENT(IN) :: NE
+      REAL(8)   ,INTENT(IN) :: E(NE)
+      REAL(8)   ,INTENT(OUT):: U(NIJK,NE,NIJK*NE)
+      INTEGER(4),PARAMETER  :: IMAXX=20
+      LOGICAL(4)            :: TTEST=.TRUE.
+      REAL(8)               :: FACTOR(0:IMAXX)
+      REAL(8)               :: EFAC(NE,NE,0:3*IMAXX)
+      REAL(8)               :: PI
+      REAL(8)               :: SVAR,FAC
+      INTEGER(4)            :: IMAX
+      INTEGER(4)            :: IPOW
+      REAL(8)   ,ALLOCATABLE:: MAT(:,:)
+      REAL(8)   ,ALLOCATABLE:: EIG(:)
+      INTEGER(4)            :: I,J,IE,JE,IPOS1,IPOS2
+      INTEGER(4)            :: IND1,I1,J1,K1,IND2,I2,J2,K2
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+!
+!     == INT DX X^N EXP(-A*X^2) = FACTOR(N)/SQRT(A)^(N+1) ======================
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJK,I1,J1,K1)
+      IMAX=I1
+      IF(IMAX.GT.IMAXX) THEN
+        CALL ERROR$STOP('LMTO_GAUSSPROJECT')
+      END IF
+      FACTOR(:)=0.D0
+      SVAR=SQRT(2.D0*PI)
+      FACTOR(0)=SVAR
+      DO I=1,IMAX
+        SVAR=SVAR*REAL(2*I-1,KIND=8)
+        FACTOR(2*I)=SVAR
+      ENDDO
+      DO IE=1,NE
+        DO JE=IE,NE
+          FAC=1.D0/SQRT(2.D0*(E(IE)+E(JE)))
+          SVAR=FAC**3
+          DO I=0,3*IMAX
+            EFAC(IE,JE,I)=SVAR
+            SVAR=SVAR*FAC
+          ENDDO
+          EFAC(JE,IE,:)=EFAC(IE,JE,:)
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == DETERMINE OVERLAP MATRIX OF GAUSSIANS                                ==
+!     ==========================================================================
+      ALLOCATE(MAT(NIJK*NE,NIJK*NE))
+      MAT(:,:)=0.D0
+      DO IND1=1,NIJK
+        CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I1,J1,K1)
+        DO IND2=1,NIJK
+          CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND2,I2,J2,K2)
+          SVAR=FACTOR(I1+I2)*FACTOR(J1+J2)*FACTOR(K1+K2)
+          IF(SVAR.EQ.0.D0) CYCLE
+          IPOW=(I1+I2+J1+J2+K1+K2)
+          DO IE=1,NE
+            IPOS1=NIJK*(IE-1)+IND1
+            DO JE=1,NE
+              IPOS2=NIJK*(JE-1)+IND2
+              MAT(IPOS1,IPOS2)=SVAR*EFAC(IE,JE,IPOW)
+            ENDDO
           ENDDO
         ENDDO
       ENDDO
-      RETURN
+!
+!THIS COPIES THE OVERLAP MATRIX BACK WITHOUT INVERSION 
+! INTENDED FOR TESTING ONLY!!
+      DO IE=1,NE
+        DO IND1=1,NIJK
+          IPOS1=NIJK*(IE-1)+IND1
+          U(IND1,IE,:)=MAT(IPOS1,:)
+        ENDDO
+      ENDDO
+
+!!$!
+!!$!     ==========================================================================
+!!$!     == DETERMINE INVERSE OVERLAP AS SUM_I |I><I|                            ==
+!!$!     ==========================================================================
+!!$      ALLOCATE(EIG(NIJK*NE))
+!!$      CALL LIB$DIAGR8(NIJK*NE,MAT,EIG,U)
+!!$      DO I=1,NIJK*NE
+!!$        U(:,:,I)=U(:,:,I)/SQRT(ABS(EIG(I)))
+!!$      ENDDO
+!!$      DEALLOCATE(EIG)
+!!$      DEALLOCATE(MAT)
+!!$!
+!!$!     ==========================================================================
+!!$!     == TEST INVERSION                                                       ==
+!!$!     ==========================================================================
+!!$      IF(TTEST) THEN
+!!$        DO IPOS1=1,NIJK*NE
+!!$          DO IPOS2=1,NIJK*NE
+!!$            SVAR=0.D0
+!!$            IND1=0
+!!$            DO I=1,NIJK
+!!$              DO IE=1,NE
+!!$                IND1=IND1+1      
+!!$                IND2=0
+!!$                DO J=1,NIJK
+!!$                  DO JE=1,NE
+!!$                    IND2=IND2+1
+!!$                    SVAR=SVAR+U(I1,IE,IPOS1)*MAT(IND1,IND2)*U(J,JE,IPOS2)
+!!$                  ENDDO
+!!$                ENDDO
+!!$              ENDDO
+!!$            ENDDO
+!!$            PRINT*,'INVERSION TEST ',IPOS1,IPOS2,SVAR
+!!$          ENDDO
+!!$        ENDDO
+!!$      END IF
+      RETURN 
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -1662,106 +1464,6 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_EXPANDGAUSS()
-!     **************************************************************************
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     **************************************************************************
-      USE LMTO_MODULE, ONLY: LOX,NSP,LNX,POTPAR,SBARLI1
-      IMPLICIT NONE
-      INTEGER(4)          :: LX
-      INTEGER(4)          :: NPOWX
-      INTEGER(4)          :: NX
-      INTEGER(4)          :: ISP,IND,IND1,IND2,N
-      INTEGER(4)          :: LN,LN1
-      INTEGER(4)          :: LM
-      INTEGER(4)          :: L,IM
-      INTEGER(4)          :: I,J,K,I1,J1,K1,IORB
-      INTEGER(4)             :: NIJK
-      REAL(8)   ,ALLOCATABLE :: YLMPOL(:,:)
-      REAL(8)   ,ALLOCATABLE :: WORK(:) 
-      REAL(8)   ,ALLOCATABLE :: COEFFBARE(:) 
-      REAL(8)                :: SVAR,SVAR1,SVAR2
-!     **************************************************************************
-!
-!     ==========================================================================
-!     == POLYNOMIAL REPRESENTATION OF REAL SPHERICAL HARMONICS                ==
-!     ==========================================================================
-      LX=MAXVAL(LOX)
-      ALLOCATE(YLMPOL((LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2))
-      CALL GAUSSIAN_YLMPOL(LX,YLMPOL)
-!
-!     ==========================================================================
-!     == POLYNOMIAL REPRESENTATION OF REAL SPHERICAL HARMONICS                ==
-!     ==========================================================================
-      DO ISP=1,NSP
-        LX=MAXVAL(LOX(:,ISP))
-        NPOWX=MAXVAL(POTPAR(ISP)%GAUSSNPOW(:))
-        NX=LX+2*(NPOWX-1) ! HIGHEST POWER OF GAUSSIAN EXPONENTIAL
-        NIJK=(NX+1)*(NX+2)*(NX+3)/6  !X#(COEFFICENTS PER ORBITAL)
-        POTPAR(ISP)%NIJK=NIJK
-        ALLOCATE(POTPAR(ISP)%COEFFBARE(NIJK,(LX+1)**2))
-!
-!       ========================================================================
-!       ==  THE GAUSSIAN IS DEFINED BY R^(2*N)*GAUSSCOEFF(N+1)*R^L*Y_LM(R)    ==
-!       ========================================================================
-        ALLOCATE(COEFFBARE(NIJK))
-        ALLOCATE(WORK(NIJK))
-        WORK(:)=0.D0
-        DO L=0,LX
-          IORB=SBARLI1(L+1,ISP)
-          IF(IORB.LE.0) CYCLE
-          DO LN=1,LNX(ISP)
-            IF(LOX(LN,ISP).EQ.L)LN1=LN
-          ENDDO
-          DO N=0,POTPAR(ISP)%GAUSSNPOW(LN1)-1
-!           == MULTIPLY WITH (X^2+Y^2+Z^2)^N ===================================
-            SVAR=POTPAR(ISP)%GAUSSCOEFF(N+1,LN1)
-            DO I=0,N
-              CALL BINOMIALCOEFFICIENT(N,I,SVAR1)
-              DO J=0,N-I
-                CALL BINOMIALCOEFFICIENT(N-I,J,SVAR2)
-                K=N-I-J
-                CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,2*I,2*J,2*K)
-                IF(IND1.GT.NIJK) CYCLE
-                WORK(IND1)=WORK(IND1)+SVAR*SVAR1*SVAR2
-              ENDDO
-            ENDDO
-          ENDDO
-!
-!         ======================================================================
-!         == MULTIPLY WITH SPHERICAL HARMONICS                                ==
-!         ======================================================================
-          DO IM=1,2*L+1
-            COEFFBARE(:)=0.D0
-            LM=L**2+IM
-            DO IND1=1,(LX+1)*(LX+2)*(LX+3)/6
-              IF(YLMPOL(IND1,LM).EQ.0.D0) CYCLE
-              CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I,J,K)
-              DO IND=1,NIJK
-                CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I1,J1,K1)
-                I1=I1+I
-                J1=J1+J
-                K1=K1+K
-                CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND2,I1,J1,K1)
-                IF(IND2.GT.NIJK) CYCLE
-                COEFFBARE(IND2)=COEFFBARE(IND2) &
-      &                               +WORK(IND)*YLMPOL(IND1,LM)
-              ENDDO
-            ENDDO
-            POTPAR(ISP)%COEFFBARE(:,IORB-1+IM)=COEFFBARE(:)
-          ENDDO ! END OF LOOP OVER ORBITALS (IM)
-        ENDDO  ! END OF LOOP OVER L
-        DEALLOCATE(WORK)
-        DEALLOCATE(COEFFBARE)
-      ENDDO   ! END OF LOOP OVER ISP
-      DEALLOCATE(YLMPOL)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$MAKESTRUCTURECONSTANTS()
 !     **************************************************************************
 !     **                                                                      **
@@ -1774,7 +1476,6 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       INTEGER(4),PARAMETER   :: NNXPERATOM=100
-      LOGICAL(4),SAVE        :: TPLOTLOCORB=.true.
       INTEGER(4)             :: NAT       !#(ATOMS)
       REAL(8)                :: RBAS(3,3) !LATTICE VECTORS
       REAL(8)   ,ALLOCATABLE :: R0(:,:)   !(3,NAT) ATOMIC POSITIONS
@@ -1932,9 +1633,9 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
         ALLOCATE(SBAR1(N,NORB))
 !NORB=(LX1(1)+1)**2
 !N=(LX(1)+2)**2?
-print*,'doing LMTO$CLUSTERSTRUCTURECONSTANTS.....'
+PRINT*,'DOING LMTO$CLUSTERSTRUCTURECONSTANTS.....'
         CALL LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT1,RPOS,LX1,QBAR,N,NORB,SBAR1)
-print*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  done'
+PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !
 !       ========================================================================
 !       == MAP ONTO SBAR                                                      ==
@@ -1980,332 +1681,6 @@ print*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  done'
                               CALL TRACE$POP()
       RETURN
       END      
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$ORBINGAUSS()
-!     **************************************************************************
-!     ** DETERMINE NATURAL TIGHT-BINDING ORBITALS IN A ONE-CENTER GAUSSIAN    **
-!     ** EXPANSION.                                                           **
-!     **                                                                      **
-!     ** THE RESULT IS PLACED INTO COEFF(NIJKX,NRL), WHERE NIJKX IS THE       **
-!     ** NUMBER OF CARTESIAN GAUSSIANS USED IN THE EXPANSION. NRL IS THE      **
-!     ** IS THE NUMBER OF LOCAL ORBITALS (COUNTING ONLY ONE PER R,L,M!).      **
-!     ** THIS COUNTING IS CONSISTENT WITH THE SCREENED STRUCTURE CONSTANTS    **
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     **************************************************************************
-      USE LMTO_MODULE, ONLY: LOX,NSP,ISPECIES,LNX,LOX,POTPAR,SBAR,SBARATOMI1 &
-     &                       ,SBARATOMI2,SBARLI1,COEFF,NIJKX,NRL
-      IMPLICIT NONE
-      INTEGER(4)          :: LX
-      INTEGER(4)          :: NAT
-      INTEGER(4)          :: NPOWX
-      INTEGER(4)          :: NX
-      INTEGER(4)          :: NNS
-      INTEGER(4)          :: ISP,IND,IND1,IND2,IRL1,IRL2,N,NN,N1,N2
-      INTEGER(4)          :: LN,LN1
-      INTEGER(4)          :: LM,LM1,LM2
-      INTEGER(4)          :: L,IM
-      INTEGER(4)          :: I,J,K,I1,J1,K1,I2,IORB
-      INTEGER(4)          :: IAT1,IAT2,ISP1,ISP2,IT(3)
-      REAL(8)   ,ALLOCATABLE :: R(:,:)
-      REAL(8)                :: RBAS(3,3)
-      REAL(8)   ,ALLOCATABLE :: YLMPOL(:,:)
-      REAL(8)   ,ALLOCATABLE :: COEFFBARE(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: COEFFTRANS(:,:)
-      REAL(8)   ,ALLOCATABLE :: MAT(:,:)
-      REAL(8)   ,ALLOCATABLE :: T(:,:) ! TRANSFORMATION MATRIX
-      REAL(8)   ,ALLOCATABLE :: QBAR(:,:) 
-      REAL(8)   ,ALLOCATABLE :: WORK(:) 
-      REAL(8)                :: SVAR,SVAR1,SVAR2
-      REAL(8)                :: R21(3)
-      REAL(8)                :: E
-      REAL(8)                :: Ep
-      LOGICAL(4)             :: TONSITE
-INTEGER(4) :: GID,NR,IR
-REAL(8),ALLOCATABLE :: RG(:),ARR(:)
-REAL(8) :: DIR(3)
-!     **************************************************************************
-      LX=MAXVAL(LOX)
-      NAT=SIZE(ISPECIES)
-      NPOWX=0
-      DO ISP=1,NSP
-        NPOWX=MAX(NPOWX,MAXVAL(POTPAR(ISP)%GAUSSNPOW(:)))
-      ENDDO
-      NRL=SBARATOMI2(NAT)        !#(TB ORBITALS PER UNIT CELL); ONLY ONE PER LM
-      NX=LX+2*(NPOWX-1)             ! HIGHEST POWER OF GAUSSIAN EXPONENTIAL
-      NIJKX=(NX+1)*(NX+2)*(NX+3)/6  ! X#(COEFFICENTS PER ORBITAL)
-!
-      ALLOCATE(R(3,NAT))
-      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)
-      CALL CELL$GETR8A('T0',9,RBAS)
-!
-!     ==  MAP QBAR INTO A CONVENIENT ARRAY =====================================
-      ALLOCATE(QBAR((LX+1)**2,NSP))
-      QBAR(:,:)=0.D0
-      DO ISP=1,NSP
-        DO L=0,LX
-          DO LN=1,LNX(ISP)
-            IF(LOX(LN,ISP).EQ.L) THEN
-              LM1=SBARLI1(L+1,ISP)
-              LM2=LM1+2*L
-              QBAR(LM1:LM2,ISP)=POTPAR(ISP)%QBAR(LN)
-            END IF
-          ENDDO
-        ENDDO
-      ENDDO
-!print*,'qbar ',qbar
-!
-!     ==========================================================================
-!     == UNSCREENED ORBITALS IN GAUSSIAN REPRESENTATION                       ==
-!     ==  K_{LM,ISP}(R)=\SUM_IND G_IND(R)*COEFFBARE(IND,LM,ISP)               ==
-!     == WHERE G_IND IS A CARTESIAN GAUSSIAN                                  ==
-!     ==                                                                      ==
-!     ==  THE GAUSSIAN IS DEFINED BY R^(2*N)*GAUSSCOEFF(N+1)*R^L*Y_LM(R)      ==
-!     ==========================================================================
-      ALLOCATE(COEFFBARE(NIJKX,(LX+1)**2,NSP))
-      COEFFBARE(:,:,:)=0.D0
-      DO ISP=1,NSP
-        DO L=0,LX
-          IORB=SBARLI1(L+1,ISP)
-          IF(IORB.LE.0) CYCLE
-          DO LN=1,LNX(ISP)
-            IF(LOX(LN,ISP).EQ.L)LN1=LN
-          ENDDO
-          DO N=0,POTPAR(ISP)%GAUSSNPOW(LN1)-1
-!           == MULTIPLY WITH (X^2+Y^2+Z^2)^N ===================================
-            SVAR=POTPAR(ISP)%GAUSSCOEFF(N+1,LN1)
-            DO I=0,N
-              CALL BINOMIALCOEFFICIENT(N,I,SVAR1)
-              DO J=0,N-I
-                CALL BINOMIALCOEFFICIENT(N-I,J,SVAR2)
-                K=N-I-J
-                CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,2*I,2*J,2*K)
-                IF(IND1.GT.NIJKX) CYCLE
-              COEFFBARE(IND1,IORB,ISP)=COEFFBARE(IND1,IORB,ISP)+SVAR*SVAR1*SVAR2
-              ENDDO
-            ENDDO
-          ENDDO
-!write(*,fmt='("bare",20f10.5)')coeffbare(:,iorb,isp)
-        ENDDO
-      ENDDO
-!
-!!$isp=1
-!!$CALL SETUP$ISELECT(ISP)
-!!$CALL SETUP$GETI4('GID',GID)
-!!$CALL SETUP$GETI4('NR',NR)
-!!$ALLOCATE(RG(NR))
-!!$ALLOCATE(ARR((LX+1)**2))
-!!$CALL RADIAL$R(GID,NR,RG)
-!!$OPEN(1001,FILE='ZZ.DAT')
-!!$DIR(:)=(/1.D0,0.D0,0.D0/)
-!!$DIR=DIR/SQRT(SUM(DIR**2))
-!!$ep=potpar(isp)%gaussep
-!!$DO IR=1,NR
-!!$  ARR=0.D0
-!!$  DO IND1=1,NIJKX
-!!$    CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I,J,K)
-!!$    ARR(:)=ARR(:)+DIR(1)**I*DIR(2)**J*DIR(3)**K*RG(IR)**(I+J+K)*EXP(-ep*RG(IR)**2)*COEFFBARE(IND1,:,ISP)
-!!$  ENDDO
-!!$  WRITE(1001,*)RG(IR),ARR
-!!$ENDDO
-!!$DEALLOCATE(R)
-!!$CLOSE(1001)
-!!$stop 'in orbingauss(bare)'
-!
-!     ==========================================================================
-!     == POLYNOMIAL REPRESENTATION OF REAL SPHERICAL HARMONICS                ==
-!     ==========================================================================
-      ALLOCATE(YLMPOL((LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2))
-      CALL GAUSSIAN_YLMPOL(LX,YLMPOL)
-!
-!!$print*,'===ylmpol===='
-!!$do lm=1,(lx+1)**2
-!!$  write(*,fmt='(i3,20f10.5)')lm,ylmpol(:,lm)
-!!$enddo
-!
-!     ==========================================================================
-!     == MULTIPLY WITH SPHERICAL HARMONICS                                    ==
-!     ==========================================================================
-      ALLOCATE(WORK(NIJKX))
-      DO ISP=1,NSP
-        DO L=0,LX
-          IORB=SBARLI1(L+1,ISP)
-          IF(IORB.LE.0) CYCLE
-          WORK(:)=COEFFBARE(:,IORB,ISP)
-          COEFFBARE(:,IORB:IORB+2*L,ISP)=0.D0
-          DO IM=1,2*L+1
-            LM=L**2+IM
-            DO IND1=1,(LX+1)*(LX+2)*(LX+3)/6
-              IF(YLMPOL(IND1,LM).EQ.0.D0) CYCLE
-              CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I,J,K)
-              DO IND=1,NIJKX
-                CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I1,J1,K1)
-                I1=I1+I
-                J1=J1+J
-                K1=K1+K
-                CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND2,I1,J1,K1)
-                IF(IND2.GT.NIJKX) CYCLE
-                COEFFBARE(IND2,IORB-1+IM,ISP)=COEFFBARE(IND2,IORB-1+IM,ISP) &
-      &                                      +WORK(IND)*YLMPOL(IND1,LM)
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO   
-      DEALLOCATE(WORK)
-!
-!!$do isp=1,nsp
-!!$  do iorb=1,(lx+1)**2
-!!$    write(*,fmt='("bare*Y",20f10.5)')coeffbare(:,iorb,isp)
-!!$  enddo
-!!$enddo
-!
-!!$isp=1
-!!$CALL SETUP$ISELECT(ISP)
-!!$CALL SETUP$GETI4('GID',GID)
-!!$CALL SETUP$GETI4('NR',NR)
-!!$ALLOCATE(RG(NR))
-!!$ALLOCATE(ARR((LX+1)**2))
-!!$CALL RADIAL$R(GID,NR,RG)
-!!$ep=potpar(isp)%gaussep
-!!$OPEN(1001,FILE='ZZ.DAT')
-!!$DIR(:)=(/1.D0,0.D0,0.D0/)
-!!$DIR=DIR/SQRT(SUM(DIR**2))
-!!$DO IR=1,NR
-!!$  ARR=0.D0
-!!$  DO IND1=1,NIJKX
-!!$    CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I,J,K)
-!!$    ARR(:)=ARR(:)+DIR(1)**I*DIR(2)**J*DIR(3)**K*RG(IR)**(I+J+K)*EXP(-ep*RG(IR)**2)*COEFFBARE(IND1,:,ISP)
-!!$  ENDDO
-!!$  WRITE(1001,*)RG(IR),ARR
-!!$ENDDO
-!!$DEALLOCATE(R)
-!!$CLOSE(1001)
-!!$stop 'yy'
-!
-!     ==========================================================================
-!     ==  SUPERIMPOSE UNSCREENED ORBITALS TO OBTAINED SCREENED ORBITALS       ==
-!     ==  IN A ONE-CENTER EXPANSION                                           ==
-!     ==========================================================================
-      IF(.NOT.ALLOCATED(COEFF))ALLOCATE(COEFF(NIJKX,NRL))
-      COEFF(:,:)=0.D0
-      ALLOCATE(T(NIJKX,NIJKX))
-      ALLOCATE(MAT((LX+1)**2,(LX+1)**2))
-      ALLOCATE(COEFFTRANS(NIJKX,(LX+1)**2))
-      NNS=SIZE(SBAR)
-      DO NN=1,NNS
-        IAT1=SBAR(NN)%IAT1
-        IAT2=SBAR(NN)%IAT2
-        ISP1=ISPECIES(IAT1)
-        ISP2=ISPECIES(IAT2)
-        IT(:)=SBAR(NN)%IT(:)
-        TONSITE=IAT1.EQ.IAT2.AND.IT(1).EQ.0.AND.IT(2).EQ.0.AND.IT(3).EQ.0
-!IF(TONSITE) CYCLE
-!       == SHIFT GAUSSIANS FROM IAT2 TO IAT1
-        R21(:)=R(:,IAT2)+RBAS(:,1)*REAL(IT(1),KIND=8) &
-     &                  +RBAS(:,2)*REAL(IT(2),KIND=8) &
-     &                  +RBAS(:,3)*REAL(IT(3),KIND=8)-R(:,IAT1)
-        E=POTPAR(ISP2)%GAUSSEP   !CAREFUL
-        CALL GAUSSIAN_SHIFTCENTER(LX+2*(NPOWX-1),NIJKX,E,R21,T)
-        COEFFTRANS(:,:)=MATMUL(T,COEFFBARE(:,:,ISP2))
-!
-!       == CONSTRUCT 1+QBAR*SBAR ===============================================
-        N1=SBAR(NN)%N1
-        N2=SBAR(NN)%N2
-        MAT(:,:)=0.D0
-        DO I=1,N1
-          MAT(:N2,I)=QBAR(:N2,ISP2)*SBAR(NN)%MAT(:,I)
-          IF(TONSITE) MAT(I,I)=MAT(I,I)+1.D0
-!print*,'mat ',tonsite,mat(:,i)
-        ENDDO
-!
-!       == MULTIPLY ORBITALS WITH MAT=1+QBAR*SBAR
-        COEFFTRANS(:,:)=MATMUL(COEFFTRANS(:,:),MAT)
-!
-!       == ADD TO ONE-CENTER EXPANSION =========================================
-        DO L=0,LX
-          IF(SBARLI1(L+1,ISP1).LE.0) CYCLE ! NO CONTRIBUTION FOR THIS L
-          IRL1=SBARATOMI1(IAT1)-1+SBARLI1(L+1,ISP1)
-          IRL2=IRL1+2*L
-          I1=SBARLI1(L+1,ISP1)
-          I2=I1+2*L
-          COEFF(:,IRL1:IRL2)=COEFF(:,IRL1:IRL2)+COEFFTRANS(:,I1:I2)
-        ENDDO
-      ENDDO
-!
-!!$isp=1
-!!$CALL SETUP$ISELECT(ISP)
-!!$CALL SETUP$GETI4('GID',GID)
-!!$CALL SETUP$GETI4('NR',NR)
-!!$ALLOCATE(RG(NR))
-!!$ALLOCATE(ARR(NRL))
-!!$CALL RADIAL$R(GID,NR,RG)
-!!$ep=potpar(isp)%gaussep
-!!$OPEN(1001,FILE='ZZ.DAT')
-!!$DIR(:)=(/1.D0,0.D0,0.D0/)
-!!$DIR=DIR/SQRT(SUM(DIR**2))
-!!$DO IR=1,NR
-!!$  ARR=0.D0
-!!$  DO IND1=1,NIJKX
-!!$    CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I,J,K)
-!!$    ARR(:)=ARR(:)+DIR(1)**I*DIR(2)**J*DIR(3)**K*RG(IR)**(I+J+K)*EXP(-ep*RG(IR)**2)*COEFF(IND1,:)
-!!$  ENDDO
-!!$  WRITE(1001,*)RG(IR),ARR
-!!$ENDDO
-!!$DEALLOCATE(R)
-!!$CLOSE(1001)
-!!$STOP 'in lmto_orbingauss'
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$OVERLAPGAUSS()
-!     **************************************************************************
-!     **************************************************************************
-      USE LMTO_MODULE, ONLY : SBAR,OVERLAP,SBARATOMI1,NIJKX,COEFF,GAUSSEP0
-      IMPLICIT NONE
-      INTEGER(4)          :: NNS
-      INTEGER(4)          :: NN
-      INTEGER(4)          :: N1,N2
-      INTEGER(4)          :: IAT1,IAT2
-      REAL(8)             :: RA(3),RB(3)
-      REAL(8)             :: EA,EB
-      REAL(8),ALLOCATABLE :: R0(:,:)
-      INTEGER(4)          :: NAT
-      INTEGER(4)          :: IRL1,IRL2
-!     **************************************************************************
-      CALL ATOMLIST$NATOM(NAT)
-      ALLOCATE(R0(3,NAT))
-      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-!
-      NNS=SIZE(SBAR)
-      if(.not.allocated(overlap))ALLOCATE(OVERLAP(NNS))
-      DO NN=1,NNS
-        OVERLAP(NN)%IAT1=SBAR(NN)%IAT1  
-        OVERLAP(NN)%IAT2=SBAR(NN)%IAT2  
-        OVERLAP(NN)%IT(:)=SBAR(NN)%IT(:)
-        OVERLAP(NN)%N1=SBAR(NN)%N1
-        OVERLAP(NN)%N2=SBAR(NN)%N2
-        N1=OVERLAP(NN)%N1
-        N2=OVERLAP(NN)%N2
-        IAT1=OVERLAP(NN)%IAT1
-        IAT2=OVERLAP(NN)%IAT2
-        RA(:)=R0(:,IAT1)
-        RB(:)=R0(:,IAT2)
-        EA=GAUSSEP0
-        EB=GAUSSEP0
-        IRL1=SBARATOMI1(IAT1)-1
-        IRL2=SBARATOMI1(IAT2)-1
-        ALLOCATE(OVERLAP(NN)%MAT(N2,N1))
-        CALL GAUSSIAN$OVERLAP(NIJKX,N2,EB,RB,COEFF(:,IRL2+1:IRL2+N2) &
-     &                       ,NIJKX,N1,EA,RA,COEFF(:,IRL1+1:IRL1+N1) &
-     &                       ,OVERLAP(NN)%MAT)
-      ENDDO
-      RETURN
-      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_PERIODICMAT_CP(NNS,MAT1,MAT2)
@@ -2429,15 +1804,15 @@ REAL(8) :: DIR(3)
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_KTOKBAR(NNS,SBAR,MAP)
 !     **************************************************************************
-!     ** determines the matrix map that provides the screened envelope        **
-!     ** function kbar as superposition of uncreened superpositions k         **
-!     **    |kbar_i>=\sum_j |K_j>map_ji=\sum_j |K_j>(1_ji+qbar_j*sbar_ji)     **
+!     ** DETERMINES THE MATRIX MAP THAT PROVIDES THE SCREENED ENVELOPE        **
+!     ** FUNCTION KBAR AS SUPERPOSITION OF UNCREENED SUPERPOSITIONS K         **
+!     **    |KBAR_I>=\SUM_J |K_J>MAP_JI=\SUM_J |K_J>(1_JI+QBAR_J*SBAR_JI)     **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : PERIODICMAT_TYPE,LOX,NSP,ISPECIES
       IMPLICIT NONE
       INTEGER(4)            ,INTENT(IN) :: NNS
       TYPE(PERIODICMAT_TYPE),INTENT(IN) :: SBAR(NNS) !(NNS)
-      TYPE(PERIODICMAT_TYPE),INTENT(inout) :: MAP(NNS) !(NNS)
+      TYPE(PERIODICMAT_TYPE),INTENT(INOUT) :: MAP(NNS) !(NNS)
       REAL(8)              ,ALLOCATABLE :: QBAR(:,:) ! (LMXX,NSP)
       INTEGER(4)                        :: NN,I,IAT2,ISP,N1,N2
       INTEGER(4)                        :: LX
@@ -2492,22 +1867,22 @@ REAL(8) :: DIR(3)
 !     ** PROGRAMMED VERY INEFFICIENTLY! OPTIMIZE BEFORE PRODUCTION            **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : PERIODICMAT_TYPE,SBAR,Overlap,ISPECIES,POTPAR &
-     &                       ,gaussorb
+      USE LMTO_MODULE, ONLY : PERIODICMAT_TYPE,SBAR,OVERLAP,ISPECIES,POTPAR &
+     &                       ,GAUSSORB
       IMPLICIT NONE
       TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: MAP(:) !(NNS)
       INTEGER(4)          :: NNS
       INTEGER(4)          :: NN,NN1,NN2
-      INTEGER(4)          :: N1,N2,n2a,n2b
-      INTEGER(4)          :: IAT1,IAT2,IAT2A,IAT2B,nea
-      INTEGER(4)          :: Isp1,isp2,ISP2A,ISP2B,neb
+      INTEGER(4)          :: N1,N2,N2A,N2B
+      INTEGER(4)          :: IAT1,IAT2,IAT2A,IAT2B,NEA
+      INTEGER(4)          :: ISP1,ISP2,ISP2A,ISP2B,NEB
       INTEGER(4)          :: NIJKA,NIJKB
       REAL(8)             :: RA(3),RB(3)
-      REAL(8),allocatable :: EA(:),EB(:)
+      REAL(8),ALLOCATABLE :: EA(:),EB(:)
       REAL(8)             :: RBAS(3,3)
       REAL(8),ALLOCATABLE :: R0(:,:)
       REAL(8)             :: DR(3)
-      REAL(8)             :: it(3)
+      REAL(8)             :: IT(3)
       INTEGER(4)          :: NAT
       INTEGER(4)          :: N1X
       REAL(8)   ,ALLOCATABLE :: BAREOV(:,:)
@@ -2518,9 +1893,9 @@ REAL(8) :: DIR(3)
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
       CALL CELL$GETR8A('T0',9,RBAS)
 
-      nea=maxval(potpar(:)%gausskprime%ne)
-      allocate(ea(nea))
-      allocate(eb(nea))
+      NEA=MAXVAL(POTPAR(:)%GAUSSKPRIME%NE)
+      ALLOCATE(EA(NEA))
+      ALLOCATE(EB(NEA))
 !
 !     ==========================================================================
 !     == KBAR=K*MAP;     MAP=(1+QBAR*SBAR)                                    ==
@@ -2535,28 +1910,23 @@ REAL(8) :: DIR(3)
 !     == OBTAINED BY ADDING ONSITE TERMS ONLY.                                ==
 !     == RESULT LIES IN POTPAR(ISP)%SMALL%DOVERLAPKK, ETC.                    ==
 !     ==========================================================================
-      call LMTO_EXPANDSPHEREDO('LM')
+      CALL LMTO_EXPANDSPHEREDO('LM')
 !
 !     ==========================================================================
 !     ==  CREATE EMPTY ARRAY OVERLAP (INDICES FROM SBAR, MAT IS ZEROED)       ==
 !     ==  OF TWO VECTORS
 !     ==========================================================================
       NNS=SIZE(SBAR)
-      if(.not.allocated(overlap))ALLOCATE(OVERLAP(NNS))
-      CALL LMTO_PERIODICMAT_CP(NNS,SBAR,OVERLAP)  !copy frame
+      IF(.NOT.ALLOCATED(OVERLAP))ALLOCATE(OVERLAP(NNS))
+      CALL LMTO_PERIODICMAT_CP(NNS,SBAR,OVERLAP)  !COPY FRAME
       N1X=0
       DO NN=1,NNS
         OVERLAP(NN)%MAT(:,:)=0.D0
         N1X=MAX(N1X,OVERLAP(NN)%N1,OVERLAP(NN)%N2)
       ENDDO
-!!$DO ISP1=1,size(potpar)
-!!$  POTPAR(ISP1)%small%DOVERLAPKK(:,:)=0.D0
-!!$  POTPAR(ISP1)%small%DOVERLAPKJ(:,:)=0.D0
-!!$  POTPAR(ISP1)%small%DOVERLAPJJ(:,:)=0.D0
-!!$ENDDO
 !
 !     ==========================================================================
-!     ==  ACCUMULATE NTBO OVERLAP MATRIX:gaussian contribution                ==
+!     ==  ACCUMULATE NTBO OVERLAP MATRIX:GAUSSIAN CONTRIBUTION                ==
 !     ==========================================================================
       ALLOCATE(BAREOV(N1X,N1X))
       DO NN=1,NNS
@@ -2578,100 +1948,74 @@ REAL(8) :: DIR(3)
       ENDDO
 !
 !     ==========================================================================
-!     ==  ACCUMULATE OVERLAP MATRIX: sphere correction                        ==
+!     ==  ACCUMULATE OVERLAP MATRIX: SPHERE CORRECTION                        ==
 !     ==========================================================================
       DO NN=1,NNS
-!       ==  <kbar(iat1)|kbar(iat2)> ============================================
+!       ==  <KBAR(IAT1)|KBAR(IAT2)> ============================================
         N1=OVERLAP(NN)%N1
         N2=OVERLAP(NN)%N2
         IAT1=OVERLAP(NN)%IAT1
         IAT2=OVERLAP(NN)%IAT2
-        isp1=ispecies(iat1)
-        isp2=ispecies(iat2)
-        DO NN1=1,NNS
-          IF(MAP(NN1)%IAT1.NE.IAT1) CYCLE
-!         ==  <kbar(iat1)|=sum(at2a):map(at1,at2a)<kbarprime(at2a)| ============
-!         ==  <kbar(iat1)|=<kbaromega(at1)|                          ===========
-!         ==              +sum(at2a):sbar(at1,at2a)<jbaromega(at2a)| ===========
-          IAT2A=MAP(NN1)%IAT2
-          ISP2A=ISPECIES(IAT2A)
-          N2a=map(NN1)%N2
-          NIJKa=POTPAR(ISP2a)%gausskprime%NIJK
-          nea=POTPAR(ISP2a)%gausskprime%Ne
-          Ea(:nea)=POTPAR(ISP2a)%gausskprime%e
-          DO NN2=1,NNS
-            IF(MAP(NN2)%IAT1.NE.IAT2) CYCLE
-!           ==  <kbar(iat2)|=sum(at2b):map(at2,at2b)<kbarprime(at2b)| ==========
-!           ==  <kbar(iat2)|=<kbaromega(at2)|                          =========
-!           ==              +sum(at2b):sbar(at2,at2b)<jbaromega(at2b)| =========
-            IAT2B=MAP(NN2)%IAT2
-            ISP2B=ISPECIES(IAT2B)
-            N2b=map(NN2)%N2
-            NIJKB=POTPAR(ISP2B)%gausskprime%NIJK
-            neb=POTPAR(ISP2B)%gausskprime%Ne
-            EB(:neb)=POTPAR(ISP2B)%gausskprime%e
+        ISP1=ISPECIES(IAT1)
+        ISP2=ISPECIES(IAT2)
 !
-            it=-MAP(NN1)%IT+OVERLAP(NN)%IT+MAP(NN2)%IT
-            DR=MATMUL(RBAS,REAL(it))
-            RA(:)=R0(:,IAT2A)
-            RB(:)=R0(:,IAT2B)+DR(:)
-!           ====================================================================
-!           ==  calculate overlap of envelope function with  the singularity  ==
-!           ==  replaced by phidot and unscreened bessel function J           ==
-!           ====================================================================
-!!$            CALL GAUSSIAN$NEWOVERLAP( &
-!!$     &                      NIJKA,N2a,NEA,ea(:nea),RA,POTPAR(ISP2A)%gausskprime%c &
-!!$     &                     ,NIJKB,N2b,NEB,eb(:neb),Rb,POTPAR(ISP2b)%gausskprime%c &
-!!$     &                     ,bareov(:n2a,:n2b))
-!!$            OVERLAP(NN)%MAT=OVERLAP(NN)%MAT &
-!!$     &                     +MATMUL(TRANSPOSE(MAP(NN1)%MAT) &
-!!$     &                            ,MATMUL(BAREOV(:N2a,:N2b),MAP(NN2)%MAT))
-!           == ADD ONSITE <J|J> TERMS ==========================================
-!           == sbar(at1,at2a)<jbaromega(at2a)|jbaromega(at2b)>sbar(at2b,at2) ===
-            IF(IAT2A.EQ.IAT2B) THEN
-              IT=-MAP(NN1)%IT+OVERLAP(NN)%IT+MAP(NN2)%IT
-              IF(IT(1).EQ.0.AND.IT(2).EQ.0.AND.IT(3).EQ.0) THEN
-                OVERLAP(NN)%MAT=OVERLAP(NN)%MAT &
-    &                   +MATMUL(TRANSPOSE(SBAR(NN1)%MAT) &
-                       ,MATMUL(POTPAR(ISP2A)%small%DOVERLAPJJ,SBAR(NN2)%MAT))
-              END IF
-            END IF
-          ENDDO ! end of loop over nn2
-!
-!         == ONSITE TERM WITH HEAD LEFT AND TAIL ON THE RIGHT ==================
-!         == sbar(at1,at2a)<jbaromega(at2a)|komega(at2)>  ======================
-          IF(IAT2a.eq.iat2) THEN
-            IT=-MAP(NN1)%IT+OVERLAP(NN)%IT
-            IF(IT(1).EQ.0.AND.IT(2).EQ.0.AND.IT(3).EQ.0) THEN
-              OVERLAP(NN)%MAT=OVERLAP(NN)%MAT &
-     &           +transpose(MATMUL(POTPAR(ISP2)%small%DOVERLAPKJ,SBAR(NN1)%MAT))
-            END IF
-          END IF
-        ENDDO  ! end of loop over nn1
-        DO NN2=1,NNS
-          IF(MAP(NN2)%IAT1.NE.IAT2) CYCLE
-          IAT2B=MAP(NN2)%IAT2
-!
-!         == ONSITE TERM WITH TAIL LEFT AND HEAD ON THE RIGHT ==================
-!         == <KOMEGA(AT1)|JBAROMEGA(AT2B)>SBAR(AT2B,AT2)   =====================
-          IF(IAT1.EQ.IAT2B) THEN
-            IT=OVERLAP(NN)%IT+MAP(NN2)%IT
-            IF(IT(1).EQ.0.AND.IT(2).EQ.0.AND.IT(3).EQ.0) THEN
-              OVERLAP(NN)%MAT=OVERLAP(NN)%MAT &
-    &                 +MATMUL(POTPAR(ISP1)%small%DOVERLAPKJ,SBAR(NN2)%MAT)
-            END IF
-          END IF
-        ENDDO  ! END OF LOOP OVER NN2
-!
-!       == ONSITE TERM OF HEADS ================================================
-!       == <KOMEGA(AT1)|KOMEGA(AT2)> ===========================================
+!       == ONSITE TERM OF HEADS: <KOMEGA(AT1)|KOMEGA(AT2)> =====================
         IF(IAT1.EQ.IAT2) THEN
           IT=OVERLAP(NN)%IT
           IF(IT(1).EQ.0.AND.IT(2).EQ.0.AND.IT(3).EQ.0) THEN
-            OVERLAP(NN)%MAT=OVERLAP(NN)%MAT+POTPAR(ISP1)%small%DOVERLAPKK
+            OVERLAP(NN)%MAT=OVERLAP(NN)%MAT+POTPAR(ISP1)%SMALL%DOVERLAPKK
           END IF
         END IF
-      ENDDO  ! end of loop over nn
+!
+        DO NN1=1,NNS
+          IF(SBAR(NN1)%IAT1.NE.IAT1) CYCLE
+!         ==  <KBAR(IAT1)|=SUM(AT2A):MAP(AT1,AT2A)<KBARPRIME(AT2A)| ============
+!         ==  <KBAR(IAT1)|=<KBAROMEGA(AT1)|                          ===========
+!         ==              +SUM(AT2A):SBAR(AT1,AT2A)<JBAROMEGA(AT2A)| ===========
+          IAT2A=SBAR(NN1)%IAT2
+          ISP2A=ISPECIES(IAT2A)
+          DO NN2=1,NNS
+            IF(SBAR(NN2)%IAT1.NE.IAT2) CYCLE
+!           ==  <KBAR(IAT2)|=SUM(AT2B):MAP(AT2,AT2B)<KBARPRIME(AT2B)| ==========
+!           ==  <KBAR(IAT2)|=<KBAROMEGA(AT2)|                          =========
+!           ==              +SUM(AT2B):SBAR(AT2,AT2B)<JBAROMEGA(AT2B)| =========
+            IAT2B=SBAR(NN2)%IAT2
+            ISP2B=ISPECIES(IAT2B)
+!
+!           == TAIL-TAIL OVERLAP: SBAR<JBAR|JBAR>SBAR ==========================
+            IF(IAT2A.EQ.IAT2B) THEN
+              IT=-SBAR(NN1)%IT+OVERLAP(NN)%IT+SBAR(NN2)%IT
+              IF(IT(1).EQ.0.AND.IT(2).EQ.0.AND.IT(3).EQ.0) THEN
+                OVERLAP(NN)%MAT=OVERLAP(NN)%MAT &
+    &                   +MATMUL(TRANSPOSE(SBAR(NN1)%MAT) &
+                          ,MATMUL(POTPAR(ISP2A)%SMALL%DOVERLAPJJ,SBAR(NN2)%MAT))
+              END IF
+            END IF
+          ENDDO ! END OF LOOP OVER NN2
+!
+!         == TAIL-HEAD OVERLAP:  SBAR<JBAR|K> ==================================
+          IF(IAT2A.EQ.IAT2) THEN
+            IT=-SBAR(NN1)%IT+OVERLAP(NN)%IT
+            IF(IT(1).EQ.0.AND.IT(2).EQ.0.AND.IT(3).EQ.0) THEN
+              OVERLAP(NN)%MAT=OVERLAP(NN)%MAT &
+     &           +TRANSPOSE(MATMUL(POTPAR(ISP2)%SMALL%DOVERLAPKJ,SBAR(NN1)%MAT))
+            END IF
+          END IF
+        ENDDO  ! END OF LOOP OVER NN1
+        DO NN2=1,NNS
+          IF(SBAR(NN2)%IAT1.NE.IAT2) CYCLE
+          IAT2B=SBAR(NN2)%IAT2
+!
+!         == HEAD-TAIL, OVERLAP:   <K|JBAR>SBAR ================================
+          IF(IAT1.EQ.IAT2B) THEN
+            IT=OVERLAP(NN)%IT+SBAR(NN2)%IT
+            IF(IT(1).EQ.0.AND.IT(2).EQ.0.AND.IT(3).EQ.0) THEN
+              OVERLAP(NN)%MAT=OVERLAP(NN)%MAT &
+    &                 +MATMUL(POTPAR(ISP1)%SMALL%DOVERLAPKJ,SBAR(NN2)%MAT)
+            END IF
+          END IF
+        ENDDO  ! END OF LOOP OVER NN2
+      ENDDO  ! END OF LOOP OVER NN
       DEALLOCATE(BAREOV)
      
                           CALL TRACE$POP()
@@ -2680,107 +2024,96 @@ REAL(8) :: DIR(3)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$TESTENERGY()
+      USE LMTO_MODULE, ONLY : GAUSSORB,GAUSSORB_T
 !     **************************************************************************
-      implicit none
-      integer(4) :: nat
-      integer(4) :: iat
+      IMPLICIT NONE
+      INTEGER(4) :: NAT
+      INTEGER(4) :: IAT
 !     **************************************************************************
-!return
-      write(*,fmt='(82("="),t30," testenergy start ")')
+!RETURN
+      WRITE(*,FMT='(82("="),T30," TESTENERGY START ")')
       CALL LMTO$REPORTPOTBAR(6)
       CALL LMTO$REPORTSBAR(6)
-
-
-!!$print*,'doing lmto_fitgauss.....'
-!!$      call LMTO_fitgauss1()
-!!$print*,'..... lmto_fitgauss done'
-!!$!
-!!$print*,'doing lmto_ntbtogauss.....'
-!!$      call LMTO_ntbtogauss()
-!!$print*,'..... lmto_ntbtogauss done'
-!
-
-print*,'doing lmto_fitgausskprime.....'
-      call LMTO_fitgausskprime()
-print*,'..... lmto_fitgausskprime done'
-
-print*,'doing lmto_xx.....'
-      call LMTO_xx() !construct tight inding orbitals in gaussian representation
-print*,'..... lmto_xx done'
-
-!     ==========================================================================
-!     ==  test coefficients of tight-binding orbitals                         ==
-!     ==========================================================================
-print*,' before testntbo.....'
-      call LMTO_testntbo()
-print*,'....... testntbo done'
 !
 !     ==========================================================================
-!     ==  calculate overlap matrix                                            ==
+!     == CONSTRUCT TIGHT-BINDING ORBITALS IN GAUSSIAN REPRESENTATION          ==
 !     ==========================================================================
-print*,'doing lmto$overlapfull.....'
+PRINT*,'DOING LMTO_NTBFROMTAILEDKJ.....'
+      CALL LMTO_NTBOFROMTAILEDKJ()
+PRINT*,'.....LMTO_NTBFROMTAILEDKJ DONE'
+!
+PRINT*,'DOING LMTO_NTBFROMKPRIME.....'
+      CALL LMTO_NTBOFROMKPRIME() 
+PRINT*,'..... LMTO_NTBFROMKPRIME DONE'
+!GAUSSORB=GAUSSORB_T
+!
+!     ==========================================================================
+!     ==  TEST COEFFICIENTS OF TIGHT-BINDING ORBITALS                         ==
+!     ==========================================================================
+PRINT*,' BEFORE TESTNTBO.....'
+      CALL LMTO_TESTNTBO()
+PRINT*,'....... TESTNTBO DONE'
+!
+!     ==========================================================================
+!     ==  CALCULATE OVERLAP MATRIX                                            ==
+!     ==========================================================================
+PRINT*,'DOING LMTO$OVERLAPFULL.....'
       CALL LMTO$OVERLAPFULL()
-print*,'..... lmto$overlapfull done'
+PRINT*,'..... LMTO$OVERLAPFULL DONE'
       CALL LMTO$REPORTOVERLAP(6)
 !
 !     ==========================================================================
-!     == tests the overlap matrix of natural tight-binding orbitals           ==
-!     == by estimating the overlap between kohn Sham wave functions using the ==
-!     == coefficients in ntbs and their overlap matrix                        ==
+!     == TESTS THE OVERLAP MATRIX OF NATURAL TIGHT-BINDING ORBITALS           ==
+!     == BY ESTIMATING THE OVERLAP BETWEEN KOHN SHAM WAVE FUNCTIONS USING THE ==
+!     == COEFFICIENTS IN NTBS AND THEIR OVERLAP MATRIX                        ==
 !     ==========================================================================
-print*,' before testoverlap.....'
-      call LMTO_testoverlap()
-print*,'....... testoverlap done'
+PRINT*,' BEFORE TESTOVERLAP.....'
+      CALL LMTO_TESTOVERLAP()
+PRINT*,'....... TESTOVERLAP DONE'
 !
 !     ==========================================================================
 !     ==  
 !     ==========================================================================
-!PRINT*,'MARKE 3'
-!      CALL LMTO$ORBINGAUSS()
-!PRINT*,'MARKE 4'
-!      CALL LMTO$OVERLAPGAUSS()
-!PRINT*,'MARKE 5'
-!      CALL LMTO$REPORTOVERLAP(6)
-!PRINT*,'MARKE 6'
-!      call LMTO$FOURCENTERGAUSS()
-!!$STOP 'FORCED IN PAW_LMTO.F90'
+PRINT*,' BEFORE LMTO_FOURCENTER.....'
+      call lmto_fourcenter()
+PRINT*,'....... LMTO_FOURCENTER DONE'
 !
 !     ==========================================================================
 !     ==  
 !     ==========================================================================
-print*,'doing lmto_plotlocorb.....'
+PRINT*,'DOING LMTO_PLOTLOCORB.....'
       CALL ATOMLIST$NATOM(NAT)
       DO IAT=1,NAT
-        CALL LMTO_PLOTLOCORB(IAT)
+!        CALL LMTO_PLOTLOCORB(IAT)
       ENDDO
-print*,'..... lmto_plotlocorb done'
+PRINT*,'..... LMTO_PLOTLOCORB DONE'
 CALL ERROR$MSG('FORCED STOP')
 CALL ERROR$STOP('LMTO$TESTENERGY')
-      STOP 'forced stop after lmto$testenergy'
+      RETURN
       END
 !!$!
 !!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE LMTO$ntbos(npro,npsi,c,np,p,psi)
+!!$      SUBROUTINE LMTO$NTBOS(NPRO,NPSI,C,NP,P,PSI)
 !!$!     **************************************************************************
-!!$      use lmto_module
-!!$      implicit none
-!!$      integer(4),intent(in) :: npsi
-!!$      integer(4),intent(in) :: npro
-!!$      real(8)   ,intent(in) :: c(npro,npsi)
-!!$      integer(4),intent(in) :: np
-!!$      real(8)   ,intent(in) :: p(3,np)   ! grid points
-!!$      real(8)   ,intent(out):: psi(np,npsi)
-!!$      real(8)   ,allocatable:: r0(:,:)
-!!$      real(8)               :: rbas(3,3)
-!!$      integer(4)            :: nat
-!!$      integer(4)            :: nijk,ne,norb
-!!$      real(8)               :: ei
-!!$      real(8)               :: ri(3)
-!!$      real(8)               :: svar
+!!$      USE LMTO_MODULE
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN) :: NPSI
+!!$      INTEGER(4),INTENT(IN) :: NPRO
+!!$      REAL(8)   ,INTENT(IN) :: C(NPRO,NPSI)
+!!$      INTEGER(4),INTENT(IN) :: NP
+!!$      REAL(8)   ,INTENT(IN) :: P(3,NP)   ! GRID POINTS
+!!$      REAL(8)   ,INTENT(OUT):: PSI(NP,NPSI)
+!!$      REAL(8)   ,ALLOCATABLE:: R0(:,:)
+!!$      REAL(8)               :: RBAS(3,3)
+!!$      INTEGER(4)            :: NAT
+!!$      INTEGER(4)            :: NIJK,NE,NORB
+!!$      REAL(8)               :: EI
+!!$      REAL(8)               :: RI(3)
+!!$      REAL(8)               :: SVAR
 !!$!     **************************************************************************
 !!$!
 !!$!     ==========================================================================
-!!$!     ==  collect data                                                        ==
+!!$!     ==  COLLECT DATA                                                        ==
 !!$!     ==========================================================================
 !!$      CALL ATOMLIST$NATOM(NAT)
 !!$      ALLOCATE(R0(3,NAT))
@@ -2788,31 +2121,31 @@ CALL ERROR$STOP('LMTO$TESTENERGY')
 !!$      CALL CELL$GETR8A('T0',9,RBAS)
 !!$!
 !!$!     ==========================================================================
-!!$!     ==  accumulate envelope functions of ntbos                              ==
+!!$!     ==  ACCUMULATE ENVELOPE FUNCTIONS OF NTBOS                              ==
 !!$!     ==========================================================================
-!!$      do iat=1,nat
-!!$        nijk=gaussorb(iat)%nijk
-!!$        ne=gaussorb(iat)%ne
-!!$        norb=gaussorb(iat)%norb
-!!$        ri(:)=r0(:,iat)
-!!$        do iorb=1,norb
-!!$          do ie=1,ne
-!!$            ei=gaussorb(iat)%e(ie)
-!!$            call gaussian_3dorb('CARTESIAN',NIJK,ei,gaussorb(iat)%c(:,ie,iorb),Ri,SVAR)
-!!$            psi(ip,:)=psi(ip,:)+svar*smallvec(iorb,:,iat)
-!!$          enddo
-!!$        enddo
-!!$      enddo
+!!$      DO IAT=1,NAT
+!!$        NIJK=GAUSSORB(IAT)%NIJK
+!!$        NE=GAUSSORB(IAT)%NE
+!!$        NORB=GAUSSORB(IAT)%NORB
+!!$        RI(:)=R0(:,IAT)
+!!$        DO IORB=1,NORB
+!!$          DO IE=1,NE
+!!$            EI=GAUSSORB(IAT)%E(IE)
+!!$            CALL GAUSSIAN_3DORB('CARTESIAN',NIJK,EI,GAUSSORB(IAT)%C(:,IE,IORB),RI,SVAR)
+!!$            PSI(IP,:)=PSI(IP,:)+SVAR*SMALLVEC(IORB,:,IAT)
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
 !!$
-!!$      return
-!!$      end
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_TESToverlap()
+      SUBROUTINE LMTO_TESTOVERLAP()
 !     **************************************************************************
-!     ** tests the overlap matrix of natural tight-binding orbitals           **
-!     ** by estimating the overlap between kohn Sham wave functions using the **
-!     ** coefficients in ntbs and their overlap matrix                        **
+!     ** TESTS THE OVERLAP MATRIX OF NATURAL TIGHT-BINDING ORBITALS           **
+!     ** BY ESTIMATING THE OVERLAP BETWEEN KOHN SHAM WAVE FUNCTIONS USING THE **
+!     ** COEFFICIENTS IN NTBS AND THEIR OVERLAP MATRIX                        **
 !     **************************************************************************
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV
       USE LMTO_MODULE, ONLY : PERIODICMAT_TYPE,SBAR,ISPECIES,POTPAR &
@@ -2820,12 +2153,12 @@ CALL ERROR$STOP('LMTO$TESTENERGY')
       IMPLICIT NONE
       REAL(8)       :: XK(3,NKPTL)
       INTEGER(4)    :: NPRO
-      INTEGER(4)    :: NBH,nb
-      INTEGER(4)    :: IKPT,ISPIN,IBH,JBH,IPRO,JPRO,IDIM,ib
+      INTEGER(4)    :: NBH,NB
+      INTEGER(4)    :: IKPT,ISPIN,IBH,JBH,IPRO,JPRO,IDIM,IB
       COMPLEX(8)    :: CSVAR1,CSVAR2
       COMPLEX(8),ALLOCATABLE :: OVER(:,:)
       REAL(8)   ,ALLOCATABLE :: OVERMAT(:,:)
-      logical(4)             :: tinv
+      LOGICAL(4)             :: TINV
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -2835,7 +2168,7 @@ CALL ERROR$STOP('LMTO$TESTENERGY')
       NPRO=MAP%NPRO
 !
 !     ==========================================================================
-!     ==  DETERMINE OVERLAP MATRIX  in k-space                                ==
+!     ==  DETERMINE OVERLAP MATRIX  IN K-SPACE                                ==
 !     ==========================================================================
 !!!! PARALLELIZE LOOP WITH RESPECT TO STATES.
       ALLOCATE(OVER(NPRO,NPRO))
@@ -2844,40 +2177,31 @@ CALL ERROR$STOP('LMTO$TESTENERGY')
         NBH=THIS%NBH
         NB=THIS%NB
         CALL PLANEWAVE$GETL4('TINV',TINV)
-print*,'tinv ',tinv
+PRINT*,'TINV ',TINV
 PRINT*,'MARKE 3A',IKPT,NBH,XK(:,IKPT),NPRO
         CALL LMTO_OVERLAPOFK(XK(:,IKPT),NPRO,OVER)
-PRINT*,'===================== OVERLAP (real part) ===================='
+PRINT*,'===================== OVERLAP (REAL PART) ===================='
 DO JPRO=1,NPRO
-  WRITE(*,FMT='("R(O)",20F10.5)')REAL(OVER(:,JPRO))
+  WRITE(*,FMT='("R(O)",80F10.5)')REAL(OVER(:,JPRO))
 ENDDO
-PRINT*,'===================== OVERLAP (imaginary part) ==============='
+PRINT*,'===================== OVERLAP (IMAGINARY PART) ==============='
 DO JPRO=1,NPRO
-  WRITE(*,FMT='("I(O)",20F10.5)')aimag(OVER(:,JPRO))
+  WRITE(*,FMT='("I(O)",80F10.5)')AIMAG(OVER(:,JPRO))
 ENDDO
         DO ISPIN=1,NSPIN
 PRINT*,'===================== ISPIN ',ISPIN,'========================='
-!!$do ipro=1,npro
-!!$    over(ipro,ipro)=(1.d0,0.d0)
-!!$  do jpro=ipro+1,npro
-!!$    over(ipro,jpro)=(0.d0,0.d0)
-!!$    over(jpro,ipro)=(0.d0,0.d0)
-!!$  enddo
-!!$enddo
-
-
           CALL WAVES_SELECTWV(IKPT,ISPIN)
 
-PRINT*,'=============wave function coefficients for NTBOs  ================='
+PRINT*,'=============WAVE FUNCTION COEFFICIENTS FOR NTBOS  ================='
 DO IBH=1,NBH
-  WRITE(*,FMT='("C",I5,20F10.5)')2*IBH-1,REAL(THIS%TBC(1,IBH,:))
-  WRITE(*,FMT='("C",I5,20F10.5)')2*IBH,AIMAG(THIS%TBC(1,IBH,:))
+  WRITE(*,FMT='("C",I5,80F10.5)')2*IBH-1,REAL(THIS%TBC(1,IBH,:))
+  WRITE(*,FMT='("C",I5,80F10.5)')2*IBH,AIMAG(THIS%TBC(1,IBH,:))
 ENDDO
           ALLOCATE(OVERMAT(NB,NB))
           OVERMAT(:,:)=0.D0
           DO IBH=1,NBH
             DO JBH=1,NBH
-              if(tinv) then
+              IF(TINV) THEN
                 CSVAR1=(0.D0,0.D0)
                 CSVAR2=(0.D0,0.D0)
                 DO IPRO=1,NPRO
@@ -2894,7 +2218,7 @@ ENDDO
                 OVERMAT(2*IBH-1,2*JBH)  =0.5D0*AIMAG(CSVAR1+CSVAR2)
                 OVERMAT(2*IBH,2*JBH-1) =-0.5D0*AIMAG(CSVAR1-CSVAR2)
                 OVERMAT(2*IBH,2*JBH)    =0.5D0*REAL(CSVAR1-CSVAR2)
-              else
+              ELSE
                 CSVAR1=(0.D0,0.D0)
                 DO IPRO=1,NPRO
                   DO JPRO=1,NPRO
@@ -2905,11 +2229,11 @@ ENDDO
                   ENDDO
                 ENDDO
                 OVERMAT(IBH,JBH)=REAL(CSVAR1)
-              end if
+              END IF
             ENDDO
           ENDDO
 DO IB=1,NB
-  WRITE(*,FMT='("UNITY ",I5,20F10.5)')ib,OVERMAT(:,IB)
+  WRITE(*,FMT='("UNITY ",I5,20F10.5)')IB,OVERMAT(:,IB)
 ENDDO
           DEALLOCATE(OVERMAT)
         ENDDO
@@ -2918,11 +2242,11 @@ ENDDO
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_testntbo()
+      SUBROUTINE LMTO_TESTNTBO()
 !     **************************************************************************
 !     **  DETERMINES THE PROJECTION FROM THE OCCUPATION OF THE NATURAL        **
-!     **  TIGHT-BINDING ORBITALS. ifg they are identical to the original      **
-!     ** paw projections <ptilde|psitilde>, the ntb coefficients are correct  **
+!     **  TIGHT-BINDING ORBITALS. IFG THEY ARE IDENTICAL TO THE ORIGINAL      **
+!     ** PAW PROJECTIONS <PTILDE|PSITILDE>, THE NTB COEFFICIENTS ARE CORRECT  **
 !     **************************************************************************
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV
       USE LMTO_MODULE, ONLY : PERIODICMAT_TYPE,SBAR,ISPECIES,POTPAR &
@@ -2937,12 +2261,12 @@ ENDDO
       COMPLEX(8),ALLOCATABLE :: VEC2(:,:)
       COMPLEX(8),ALLOCATABLE :: SBAROFK(:,:)
       INTEGER(4)             :: NSMALL,NNS,NAT
-      INTEGER(4)             :: IAT,ISP,LN,L,IRL,IM,ln1
-      INTEGER(4)             :: nl   !#(projectors in the same lm-channel)
+      INTEGER(4)             :: IAT,ISP,LN,L,IRL,IM,LN1
+      INTEGER(4)             :: NL   !#(PROJECTORS IN THE SAME LM-CHANNEL)
       REAL(8)                :: SVAR
-      REAL(8)                :: devmax
+      REAL(8)                :: DEVMAX
 !     **************************************************************************
-      devmax=0.d0
+      DEVMAX=0.D0
 !
 !     ==========================================================================
 !     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
@@ -2994,118 +2318,118 @@ ENDDO
               ISP=ISPECIES(IAT)
               DO LN=1,LNX(ISP)
                 L=LOX(LN,ISP)
-                nl=0 
-                do ln1=1,lnx(isp)
-                  if(lox(ln1,isp).eq.l)nl=nl+1
-                enddo
+                NL=0 
+                DO LN1=1,LNX(ISP)
+                  IF(LOX(LN1,ISP).EQ.L)NL=NL+1
+                ENDDO
                 IRL=SBARATOMI1(IAT)-1+SBARLI1(L+1,ISP)-1
                 DO IM=1,2*L+1
                   IPRO=IPRO+1
                   IRL=IRL+1
 !                 == CONTRIBUTION FROM KBAR
                   TBC1(:,IPRO)=TBC1(:,IPRO)*POTPAR(ISP)%KTOPHI(LN)
-                  TBC1(:,IPRO)=TBC1(:,IPRO)+vec2(:,irl)*POTPAR(ISP)%PHIDOTPROJ(LN)
+                  TBC1(:,IPRO)=TBC1(:,IPRO)+VEC2(:,IRL)*POTPAR(ISP)%PHIDOTPROJ(LN)
                   SVAR=POTPAR(ISP)%PHIDOTPROJ(LN)*POTPAR(ISP)%JBARTOPHIDOT(LN)
-                  svar=svar*real(nl)
+                  SVAR=SVAR*REAL(NL)
                   TBC1(:,IPRO)=TBC1(:,IPRO)-SVAR*VEC1(:,IRL)
                 ENDDO
               ENDDO
             ENDDO
-WRITE(*,FMT='("PI",I5,20F10.5)')2*IBH-1,REAL(THIS%PROJ(1,IBH,:))
-WRITE(*,FMT='("PF",I5,20F10.5)')2*IBH-1,REAL(TBC1(1,:))
+WRITE(*,FMT='("PI",I5,80F10.5)')2*IBH-1,REAL(THIS%PROJ(1,IBH,:))
+WRITE(*,FMT='("PF",I5,80F10.5)')2*IBH-1,REAL(TBC1(1,:))
 WRITE(*,*)
-WRITE(*,FMT='("PI",I5,20F10.5)')2*IBH,AIMAG(THIS%PROJ(1,IBH,:))
-WRITE(*,FMT='("PF",I5,20F10.5)')2*IBH,AIMAG(TBC1(1,:))
+WRITE(*,FMT='("PI",I5,80F10.5)')2*IBH,AIMAG(THIS%PROJ(1,IBH,:))
+WRITE(*,FMT='("PF",I5,80F10.5)')2*IBH,AIMAG(TBC1(1,:))
 WRITE(*,*)
-!           == calculate deviation (should be zero) =============================
-            tbc1(:,:)=tbc1(:,:)-THIS%PROJ(:,IBH,:)
-            devmax=max(devmax,maxval(real(tbc1(:,:))),maxval(aimag(tbc1(:,:))))
+!           == CALCULATE DEVIATION (SHOULD BE ZERO) =============================
+            TBC1(:,:)=TBC1(:,:)-THIS%PROJ(:,IBH,:)
+            DEVMAX=MAX(DEVMAX,MAXVAL(REAL(TBC1(:,:))),MAXVAL(AIMAG(TBC1(:,:))))
           ENDDO
         ENDDO
       ENDDO
-      write(*,fmt='("test of ntbo coefficients. max. dev.=",e20.5)')devmax
+      WRITE(*,FMT='("TEST OF NTBO COEFFICIENTS. MAX. DEV.=",E20.5)')DEVMAX
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_EXPANDoverlapofk(nsmall,nbig,ovs,sbar,ovb)
+      SUBROUTINE LMTO_EXPANDOVERLAPOFK(NSMALL,NBIG,OVS,SBAR,OVB)
 !     **************************************************************************
 !     ** THE (SMALL) OBERLAP MATRIX OVS IS THE ONE BETWEEN THE MAIN ANGULAR   **
 !     ** MOMENTA, THAT IS THERE IS ONE ENTRY PER SITE AND ANGULAR MOMENTUM.   **
 !     ** THIS ROUTINE BLOWS THE OVERLAP MATRIX UP TO THE FULL SPACE OF        **
 !     ** NATURAL TIGHT-BINDING ORBITALS                                       **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : LNX,LOX,POTPAR,SBARLI1,sbaratomi1,ispecies &
-     &                      ,potpar_type
-      implicit none
-      integer(4),intent(in) :: nsmall
-      integer(4),intent(in) :: nbig
-      complex(8),intent(in) :: ovs(nsmall,nsmall)
-      complex(8),intent(in) :: sbar(nsmall,nsmall)
-      complex(8),intent(out):: ovb(nbig,nbig)
-      integer(4)            :: ipro1,iat1,ln1,l1,lm1,isp1,ln1scatt,lm1a,lm1b
-      integer(4)            :: ipro2,iat2,ln2,l2,lm2,isp2,ln2scatt,lm2a,lm2b
-      integer(4)            :: nat
-      real(8)               :: svar
+      USE LMTO_MODULE, ONLY : LNX,LOX,POTPAR,SBARLI1,SBARATOMI1,ISPECIES &
+     &                      ,POTPAR_TYPE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NSMALL
+      INTEGER(4),INTENT(IN) :: NBIG
+      COMPLEX(8),INTENT(IN) :: OVS(NSMALL,NSMALL)
+      COMPLEX(8),INTENT(IN) :: SBAR(NSMALL,NSMALL)
+      COMPLEX(8),INTENT(OUT):: OVB(NBIG,NBIG)
+      INTEGER(4)            :: IPRO1,IAT1,LN1,L1,LM1,ISP1,LN1SCATT,LM1A,LM1B
+      INTEGER(4)            :: IPRO2,IAT2,LN2,L2,LM2,ISP2,LN2SCATT,LM2A,LM2B
+      INTEGER(4)            :: NAT
+      REAL(8)               :: SVAR
 !     **************************************************************************
-      nat=size(ispecies)
-      ovb(:,:)=(0.d0,0.d0)
-      ipro1=0
-      do iat1=1,nat
-        isp1=ispecies(iat1)          
-        do ln1=1,lnx(isp1)
-          ln1scatt=potpar(isp1)%lnscatt(ln1)
-          l1=lox(ln1,isp1)
-          lm1a=SBARATOMI1(IAT1)-1+SBARLI1(L1+1,ISP1)
-          lm1b=lm1a+2*l1
-          do lm1=lm1a,lm1b
-            ipro1=ipro1+1           
+      NAT=SIZE(ISPECIES)
+      OVB(:,:)=(0.D0,0.D0)
+      IPRO1=0
+      DO IAT1=1,NAT
+        ISP1=ISPECIES(IAT1)          
+        DO LN1=1,LNX(ISP1)
+          LN1SCATT=POTPAR(ISP1)%LNSCATT(LN1)
+          L1=LOX(LN1,ISP1)
+          LM1A=SBARATOMI1(IAT1)-1+SBARLI1(L1+1,ISP1)
+          LM1B=LM1A+2*L1
+          DO LM1=LM1A,LM1B
+            IPRO1=IPRO1+1           
 !
-!           == loop over second index ==========================================
-            ipro2=0
-            do iat2=1,nat
-              isp2=ispecies(iat2)          
-              do ln2=1,lnx(isp2)
-                ln2scatt=potpar(isp2)%lnscatt(ln2)
-                l2=lox(ln2,isp2)
-                lm2a=SBARATOMI1(IAT2)-1+SBARLI1(L2+1,ISP2)
-                lm2b=lm2a+2*l2
-                do lm2=lm2a,lm2b
-                  ipro2=ipro2+1           
-!                 == copy from overlap =========================================
-                  ovb(ipro1,ipro2)=ovb(ipro1,ipro2)+ovs(lm1,lm2)
-!                 == fix <k|jbar>sbar ==========================================
-                 svar=potpar(isp1)%doverlapkj(ln1,ln2scatt)  &
-      &              -potpar(isp1)%doverlapkj(ln1scatt,ln2scatt)
-                  ovb(ipro1,ipro2)=ovb(ipro1,ipro2)+svar*sbar(lm1,lm2)
-!                 == fix sbar<jbar|k> ==========================================
-                 svar=potpar(isp1)%doverlapkj(ln2scatt,ln1) &
-      &               -potpar(isp1)%doverlapkj(ln2scatt,ln1scatt)
-                  ovb(ipro1,ipro2)=ovb(ipro1,ipro2)+conjg(sbar(lm2,lm1))*svar
-!                 == fix <k|k> =================================================
-                  if(iat1.eq.iat2) then
-                    if(l1.eq.l2) then
-                      if(lm2-lm2a.eq.lm1-lm1a) then
-                        svar=potpar(isp1)%doverlapkk(ln1,ln2) &
-      &                      -potpar(isp1)%doverlapkk(ln1scatt,ln2scatt)
-                         ovb(ipro1,ipro2)=ovb(ipro1,ipro2)+svar
-                      end if
-                    end if
-                  end if
-                enddo
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
-      return
-      end
+!           == LOOP OVER SECOND INDEX ==========================================
+            IPRO2=0
+            DO IAT2=1,NAT
+              ISP2=ISPECIES(IAT2)          
+              DO LN2=1,LNX(ISP2)
+                LN2SCATT=POTPAR(ISP2)%LNSCATT(LN2)
+                L2=LOX(LN2,ISP2)
+                LM2A=SBARATOMI1(IAT2)-1+SBARLI1(L2+1,ISP2)
+                LM2B=LM2A+2*L2
+                DO LM2=LM2A,LM2B
+                  IPRO2=IPRO2+1           
+!                 == COPY FROM OVERLAP =========================================
+                  OVB(IPRO1,IPRO2)=OVB(IPRO1,IPRO2)+OVS(LM1,LM2)
+!                 == FIX <K|JBAR>SBAR ==========================================
+                 SVAR=POTPAR(ISP1)%DOVERLAPKJ(LN1,LN2SCATT)  &
+      &              -POTPAR(ISP1)%DOVERLAPKJ(LN1SCATT,LN2SCATT)
+                  OVB(IPRO1,IPRO2)=OVB(IPRO1,IPRO2)+SVAR*SBAR(LM1,LM2)
+!                 == FIX SBAR<JBAR|K> ==========================================
+                 SVAR=POTPAR(ISP1)%DOVERLAPKJ(LN2SCATT,LN1) &
+      &               -POTPAR(ISP1)%DOVERLAPKJ(LN2SCATT,LN1SCATT)
+                  OVB(IPRO1,IPRO2)=OVB(IPRO1,IPRO2)+CONJG(SBAR(LM2,LM1))*SVAR
+!                 == FIX <K|K> =================================================
+                  IF(IAT1.EQ.IAT2) THEN
+                    IF(L1.EQ.L2) THEN
+                      IF(LM2-LM2A.EQ.LM1-LM1A) THEN
+                        SVAR=POTPAR(ISP1)%DOVERLAPKK(LN1,LN2) &
+      &                      -POTPAR(ISP1)%DOVERLAPKK(LN1SCATT,LN2SCATT)
+                         OVB(IPRO1,IPRO2)=OVB(IPRO1,IPRO2)+SVAR
+                      END IF
+                    END IF
+                  END IF
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_EXPANDSPHEREDO(ID)
 !     **************************************************************************
-!     **  calculates  the correction of the overlap realative to the smooth   **
-!     **  part expanded into gaussians. Done only for the leading channel     **
+!     **  CALCULATES  THE CORRECTION OF THE OVERLAP RELATIVE TO THE SMOOTH    **
+!     **  PART EXPANDED INTO GAUSSIANS. DONE ONLY FOR THE LEADING CHANNEL     **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : NSP,LNX,LOX,POTPAR,SBARLI1
       IMPLICIT NONE
@@ -3139,8 +2463,8 @@ WRITE(*,*)
         POTPAR(ISP)%SMALL%DOVERLAPKJ(:,:)=0.D0
         POTPAR(ISP)%SMALL%DOVERLAPJJ(:,:)=0.D0
         DO LN=1,LNX(ISP)
-!         == lnscatt point to the valence channel from which the corresponding
-!         == scattering wave function is taken
+!         == LNSCATT POINT TO THE VALENCE CHANNEL FROM WHICH THE CORRESPONDING
+!         == SCATTERING WAVE FUNCTION IS TAKEN
           IF(POTPAR(ISP)%LNSCATT(LN).NE.LN) CYCLE
           L=LOX(LN,ISP)
           I1=SBARLI1(L+1,ISP)
@@ -3159,31 +2483,31 @@ WRITE(*,*)
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_ONSITEOVERLAP()
 !     **************************************************************************
-!     **  construct the difference of the overlap of partial waves matching  **
+!     **  CONSTRUCT THE DIFFERENCE OF THE OVERLAP OF PARTIAL WAVES MATCHING  **
 !     **  THE HANKEL AND SCREENED BESSEL FUNCTIONS.                            **
 !     **                                                                      **
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR,NSP,LOX,lnx,k2
+      USE LMTO_MODULE, ONLY : POTPAR,NSP,LOX,LNX,K2
       IMPLICIT NONE
-      INTEGER(4)             :: lnx1
+      INTEGER(4)             :: LNX1
       INTEGER(4)             :: LMNX,LX
-      INTEGER(4)             :: nr        ! #(radial grid points)
-      INTEGER(4)             :: gid       ! grid-identifier
-      REAL(8)                :: SVAR      ! auxiliart variable
-      REAL(8)   ,ALLOCATABLE :: AUX(:)    ! auxiliary array
+      INTEGER(4)             :: NR        ! #(RADIAL GRID POINTS)
+      INTEGER(4)             :: GID       ! GRID-IDENTIFIER
+      REAL(8)                :: SVAR      ! AUXILIART VARIABLE
+      REAL(8)   ,ALLOCATABLE :: AUX(:)    ! AUXILIARY ARRAY
       REAL(8)   ,ALLOCATABLE :: R(:)      ! RADIAL GRID
       REAL(8)   ,ALLOCATABLE :: KIN(:,:)
       REAL(8)   ,ALLOCATABLE :: JIN(:,:)
       REAL(8)   ,ALLOCATABLE :: KOUT(:,:)
       REAL(8)   ,ALLOCATABLE :: JOUT(:,:)
-      REAL(8)   ,ALLOCATABLE :: Jbessel(:,:)
-      REAL(8)   ,ALLOCATABLE :: Jbar(:,:)
-      REAL(8)   ,ALLOCATABLE :: Khankel(:,:)
-      real(8)                :: rad
-      real(8)                :: kval,kder,val,der
-      INTEGER(4)             :: ISP,ln,LN1,LN2,LMN2,l,L1,L2,ir
+      REAL(8)   ,ALLOCATABLE :: JBESSEL(:,:)
+      REAL(8)   ,ALLOCATABLE :: JBAR(:,:)
+      REAL(8)   ,ALLOCATABLE :: KHANKEL(:,:)
+      REAL(8)                :: RAD
+      REAL(8)                :: KVAL,KDER,VAL,DER
+      INTEGER(4)             :: ISP,LN,LN1,LN2,LMN2,L,L1,L2,IR
 !     **************************************************************************
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
@@ -3192,10 +2516,15 @@ WRITE(*,*)
         ALLOCATE(R(NR))
         CALL RADIAL$R(GID,NR,R)
         LNX1=LNX(ISP)
-        LMNX=SUM(2*LOX(:lnx1,ISP)+1)
-        LX=MAXVAL(LOX(:lnx1,ISP))
-        rad=potpar(isp)%rad
-!       == CONSTRUCT FUNCTIONS MATCHING ONTO BESSEL AND HANKEL FUNCTIONS =======
+        LMNX=SUM(2*LOX(:LNX1,ISP)+1)
+        LX=MAXVAL(LOX(:LNX1,ISP))
+        RAD=POTPAR(ISP)%RAD
+!       ========================================================================
+!       == CONSTRUCT FUNCTIONS MATCHING ONTO BESSEL AND HANKEL FUNCTIONS.     ==
+!       == KIN AND JIN ARE SUPERPOSITIONS OF BESSEL FUNCTIONS AND NODELESS    ==
+!       == SCATTERING FUNCTIONS MATCHING TO HANKEL AND BESSEL FUNCTIONS.      ==
+!       == KOUT AND JOUT ARE MATCHING ALL-ELECTRON PARTIAL WAVES.             ==
+!       ========================================================================
         ALLOCATE(KIN(NR,LNX1))
         ALLOCATE(JIN(NR,LNX1))
         ALLOCATE(KOUT(NR,LNX1))
@@ -3205,67 +2534,71 @@ WRITE(*,*)
         CALL SETUP$GETR8A('QPHIDOT',NR*LNX1,JOUT) ! NODELESS SCATTERING
         CALL SETUP$GETR8A('AEPHIDOT',NR*LNX1,JIN) ! NODAL SCATTERING
 !
-!       == ONLY THE SCATTERING FUNCTION OF THE LAST CHANNEL IS RELEVANT =========
+!       ========================================================================
+!       == ONE SCATTERING FUNCTION PER L IS USED FOR ALL PARTIAL WAVES        ==
+!       ========================================================================
         DO LN=1,LNX(ISP)
           JOUT(:,LN)=JOUT(:,POTPAR(ISP)%LNSCATT(LN))
           JIN(:,LN)=JIN(:,POTPAR(ISP)%LNSCATT(LN))
         ENDDO
 !
-!       == construct bessel functions ==========================================
-        allocate(jbessel(nr,lx+1))
-        allocate(khankel(nr,lx+1))
-        khankel=0.d0
-        do l=0,lx
-          do ir=1,nr
-            CALL LMTO$SOLIDBESSELRAD(L,r(ir),K2,jbessel(ir,l+1),svar)
-             if(r(ir).gt.1.d0) CALL LMTO$SOLIDhankelRAD(L,r(ir),K2,khankel(ir,l+1),svar)
-          enddo 
-        enddo
+!       ========================================================================
+!       == CONSTRUCT BESSEL FUNCTIONS ==========================================
+!       ========================================================================
+        ALLOCATE(JBESSEL(NR,LX+1))
+        ALLOCATE(KHANKEL(NR,LX+1))
+        KHANKEL=0.D0
+        DO L=0,LX
+          DO IR=1,NR
+            CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JBESSEL(IR,L+1),SVAR)
+             IF(R(IR).GT.1.D0) CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,KHANKEL(IR,L+1),SVAR)
+          ENDDO 
+        ENDDO
 
-        ALLOCATE(Jbar(NR,LNX1))
+        ALLOCATE(JBAR(NR,LNX1))
         DO LN=1,LNX1
-          l=lox(ln,isp)
+          L=LOX(LN,ISP)
           KIN(:,LN)=KIN(:,LN)*POTPAR(ISP)%KTOPHI(LN) &
        &           +JIN(:,LN)*POTPAR(ISP)%KTOPHIDOT(LN)
-!!$CALL LMTO$SOLIDhankelRAD(L,rad,K2,kval,kder)
-!!$CALL RADIAL$VALUE(GID,NR,kin(:,LN),RAD,VAL)
-!!$CALL RADIAL$DERIVATIVE(GID,NR,kin(:,LN),RAD,DER)
-!!$print*,'test in  ',ln,kval,val,kder,der
-          KOUT(:,LN)=Jbessel(:,L+1)-JOUT(:,LN)*POTPAR(ISP)%jbarTOPHIDOT(LN)
+!!$CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
+!!$CALL RADIAL$VALUE(GID,NR,KIN(:,LN),RAD,VAL)
+!!$CALL RADIAL$DERIVATIVE(GID,NR,KIN(:,LN),RAD,DER)
+!!$PRINT*,'TEST IN  ',LN,KVAL,VAL,KDER,DER
+          KOUT(:,LN)=JBESSEL(:,L+1)-JOUT(:,LN)*POTPAR(ISP)%JBARTOPHIDOT(LN)
           KOUT(:,LN)=KOUT(:,LN)/POTPAR(ISP)%QBAR(LN)
-!!$CALL RADIAL$VALUE(GID,NR,kout(:,LN),RAD,VAL)
-!!$CALL RADIAL$DERIVATIVE(GID,NR,kout(:,LN),RAD,DER)
-!!$print*,'test out ',ln,kval,val,kder,der
-          JIN(:,LN) =JIN(:,LN)*POTPAR(ISP)%JBARtOPHIDOT(LN)
-          JOUT(:,LN)=JOUT(:,LN)*POTPAR(ISP)%JBARtOPHIDOT(LN)
-          jbar(:,ln)=jbessel(:,l+1)-khankel(:,l+1)*POTPAR(ISP)%QBAR(LN)
+!!$CALL RADIAL$VALUE(GID,NR,KOUT(:,LN),RAD,VAL)
+!!$CALL RADIAL$DERIVATIVE(GID,NR,KOUT(:,LN),RAD,DER)
+!!$PRINT*,'TEST OUT ',LN,KVAL,VAL,KDER,DER
+          JIN(:,LN) =JIN(:,LN)*POTPAR(ISP)%JBARTOPHIDOT(LN)
+          JOUT(:,LN)=JOUT(:,LN)*POTPAR(ISP)%JBARTOPHIDOT(LN)
+          JBAR(:,LN)=JBESSEL(:,L+1)-KHANKEL(:,L+1)*POTPAR(ISP)%QBAR(LN)
         ENDDO
-!!$CALL SETUP_WRITEPHI('jbessel.dat',GID,NR,lx+1,jbessel)
-!!$CALL SETUP_WRITEPHI('khankel.dat',GID,NR,lx+1,khankel)
-!!$CALL SETUP_WRITEPHI('jbar.dat',GID,NR,lnx1,jbar)
-        deallocate(jbar)
+!!$CALL SETUP_WRITEPHI('JBESSEL.DAT',GID,NR,LX+1,JBESSEL)
+!!$CALL SETUP_WRITEPHI('KHANKEL.DAT',GID,NR,LX+1,KHANKEL)
+!!$CALL SETUP_WRITEPHI('JBAR.DAT',GID,NR,LNX1,JBAR)
+        DEALLOCATE(JBAR)
 !
-!       == fix tails to avoid errors in the integration =====================
-        do ir=1,nr
-          if(r(ir).gt.rad) then
-            do ln=1,lnx1
-             l=lox(ln,isp)
-              kin(ir:,ln) =khankel(ir:,l+1)
-              kout(ir:,ln)=khankel(ir:,l+1)
-              Jin(ir:,ln) =Jbessel(ir:,l+1)
-              Jout(ir:,ln)=Jbessel(ir:,l+1)
-            enddo
-            exit
-          end if
-        enddo
-        deallocate(jbessel)
-        deallocate(khankel)
-!!$CALL SETUP_WRITEPHI('kin.dat',GID,NR,LNX1,kin)
-!!$CALL SETUP_WRITEPHI('kout.dat',GID,NR,LNX1,kout)
-!!$CALL SETUP_WRITEPHI('jin.dat',GID,NR,LNX1,jin)
-!!$CALL SETUP_WRITEPHI('jout.dat',GID,NR,LNX1,jout)
-!!$print*,'rad ',rad
-!!$stop 'forced '
+!       == FIX TAILS TO AVOID ERRORS IN THE INTEGRATION =====================
+        DO IR=1,NR
+          IF(R(IR).GT.RAD) THEN
+            DO LN=1,LNX1
+             L=LOX(LN,ISP)
+              KIN(IR:,LN) =KHANKEL(IR:,L+1)
+              KOUT(IR:,LN)=KHANKEL(IR:,L+1)
+              JIN(IR:,LN) =JBESSEL(IR:,L+1)
+              JOUT(IR:,LN)=JBESSEL(IR:,L+1)
+            ENDDO
+            EXIT
+          END IF
+        ENDDO
+        DEALLOCATE(JBESSEL)
+        DEALLOCATE(KHANKEL)
+!!$CALL SETUP_WRITEPHI('KIN.DAT',GID,NR,LNX1,KIN)
+!!$CALL SETUP_WRITEPHI('KOUT.DAT',GID,NR,LNX1,KOUT)
+!!$CALL SETUP_WRITEPHI('JIN.DAT',GID,NR,LNX1,JIN)
+!!$CALL SETUP_WRITEPHI('JOUT.DAT',GID,NR,LNX1,JOUT)
+!!$PRINT*,'RAD ',RAD
+!!$STOP 'FORCED '
         ALLOCATE(POTPAR(ISP)%DOVERLAPKK(LNX1,LNX1))
         ALLOCATE(POTPAR(ISP)%DOVERLAPKJ(LNX1,LNX1))
         ALLOCATE(POTPAR(ISP)%DOVERLAPJJ(LNX1,LNX1))
@@ -3281,11 +2614,11 @@ WRITE(*,*)
 !             == KKOVERLAP =====================================================
               AUX(:)=(KIN(:,LN1)*KIN(:,LN2)-KOUT(:,LN1)*KOUT(:,LN2))*R(:)**2
               CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-              POTPAR(ISP)%DOVERLAPKK(ln1,ln2)=SVAR
+              POTPAR(ISP)%DOVERLAPKK(LN1,LN2)=SVAR
 !             == KJOVERLAP =====================================================
               AUX(:)=(KIN(:,LN1)*JIN(:,LN2)-KOUT(:,LN1)*JOUT(:,LN2))*R(:)**2
               CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-              POTPAR(ISP)%DOVERLAPKJ(ln1,Ln2)=SVAR
+              POTPAR(ISP)%DOVERLAPKJ(LN1,LN2)=SVAR
 !             == JJOVERLAP =====================================================
               AUX(:)=(JIN(:,LN1)*JIN(:,LN2)-JOUT(:,LN1)*JOUT(:,LN2))*R(:)**2
               CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
@@ -3293,18 +2626,18 @@ WRITE(*,*)
             END IF
           ENDDO
         ENDDO
-print*,'============================================='
-do ln1=1,lnx1
-  print*,'<KK>', POTPAR(ISP)%DOVERLAPKK(ln1,:)
-enddo
-print*,'============================================='
-do ln1=1,lnx1
-  print*,'<KJ>', POTPAR(ISP)%DOVERLAPKJ(ln1,:)
-enddo
-print*,'============================================='
-do ln1=1,lnx1
-  print*,'<JJ>', POTPAR(ISP)%DOVERLAPJJ(ln1,:)
-enddo
+PRINT*,'============================================='
+DO LN1=1,LNX1
+  PRINT*,'<KK>', POTPAR(ISP)%DOVERLAPKK(LN1,:)
+ENDDO
+PRINT*,'============================================='
+DO LN1=1,LNX1
+  PRINT*,'<KJ>', POTPAR(ISP)%DOVERLAPKJ(LN1,:)
+ENDDO
+PRINT*,'============================================='
+DO LN1=1,LNX1
+  PRINT*,'<JJ>', POTPAR(ISP)%DOVERLAPJJ(LN1,:)
+ENDDO
         DEALLOCATE(KIN)
         DEALLOCATE(JIN)
         DEALLOCATE(KOUT)
@@ -3318,13 +2651,13 @@ enddo
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_OVERLAPOFK(XK,NPRO,OVER)
 !     **************************************************************************
-!     **  construct overlap matrix in k-space
+!     **  CONSTRUCT OVERLAP MATRIX IN K-SPACE
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY: POTPAR_TYPE,OVERLAP,SBAR,sbaratomi2
+      USE LMTO_MODULE, ONLY: POTPAR_TYPE,OVERLAP,SBAR,SBARATOMI2
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: XK(3)
       INTEGER(4),INTENT(IN) :: NPRO
-      complex(8),INTENT(OUT):: OVER(NPRO,NPRO)
+      COMPLEX(8),INTENT(OUT):: OVER(NPRO,NPRO)
       INTEGER(4)            :: NNO
       INTEGER(4)            :: NNS
       INTEGER(4)            :: NSMALL
@@ -3338,7 +2671,7 @@ enddo
 !     ==========================================================================
       NNO=SIZE(OVERLAP)
       ALLOCATE(OVERLAPOFK(NSMALL,NSMALL))
-      CALL LMTO_AOFK(NNo,OVERLAP,XK,NSMALL,OVERLAPOFK)
+      CALL LMTO_AOFK(NNO,OVERLAP,XK,NSMALL,OVERLAPOFK)
 !
 !     ==========================================================================
 !     ==  TRANSFORM SCREENED STRUCTURE CONSTANTS TO K-SPACE                   ==
@@ -3350,193 +2683,295 @@ enddo
 !     ==========================================================================
 !     ==  SET UP COMPLETE OVERLAP MATRIX                                      ==
 !     ==========================================================================
-      CALL LMTO_EXPANDOVERLAPOFK(NSMALL,NPRO,OVerlapofk,SBARofk,OVER)
+      CALL LMTO_EXPANDOVERLAPOFK(NSMALL,NPRO,OVERLAPOFK,SBAROFK,OVER)
       DEALLOCATE(OVERLAPOFK)
-      DEALLOCATE(SBARofk)
+      DEALLOCATE(SBAROFK)
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$FOURCENTERGAUSS()
+      subroutine lmto_fourcenter()
 !     **************************************************************************
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : UTENSOR,nsp,ISPECIES,LNX,LOX,GAUSSORB,SBARLI1
+      IMPLICIT NONE
+      integer(4)             :: gid
+      integer(4)             :: nr
+      integer(4)             :: lmrx
+      real(8)   ,allocatable :: r(:)
+      real(8)   ,allocatable :: nlphi(:,:)
+      real(8)   ,allocatable :: nlphidot(:,:)
+      real(8)   ,allocatable :: aephi(:,:)
+      real(8)   ,allocatable :: aephidot(:,:)
+      real(8)   ,allocatable :: ulittle(:,:,:,:,:)
+      integer(4)             :: isp,lrx,lnx1
+!     **************************************************************************
+      CALL LMTO_FOURCENTERGAUSS()
+!
+      do isp=1,nsp
+        CALL SETUP$GETI4('GID',GID)
+        CALL SETUP$GETI4('NR',NR)
+        ALLOCATE(R(NR))
+        CALL RADIAL$R(GID,NR,R)
+!
+        CALL SETUP$GETI4('LMRX',LMRX)
+        lrx=INT(SQRT(REAL(LMRX)+1.D-8))-1
+!
+        lnx1=lnx(isp)
+        ALLOCATE(NLPHI(NR,LNX1))
+        ALLOCATE(AEPHI(NR,LNX1))
+        ALLOCATE(NLPHIDOT(NR,LNX1))
+        ALLOCATE(AEPHIDOT(NR,LNX1))
+        CALL SETUP$GETR8A('QPHI',NR*LNX1,NLPHI)
+        CALL SETUP$GETR8A('AEPHI',NR*LNX1,AEPHI)
+        CALL SETUP$GETR8A('QPHIDOT',NR*LNX1,NLPHIDOT)
+        CALL SETUP$GETR8A('AEPHIDOT',NR*LNX1,AEPHIDOT)
+        ALLOCATE(ULITTLE(LRX+1,LNX1,LNX1,LNX1,LNX1))
+!        CALL LDAPLUSU_ULITTLE(GID,NR,LRX,LNX,LOX(:lnx(isp),isp),CHI,ULITTLE)
+
+!        CALL LDAPLUSU_UTENSOR(LRX,NCHI,LNX,LOX,ULITTLE,U)
+        deALLOCATE(ULITTLE)
+        deALLOCATE(nlphi)
+        deALLOCATE(nlphidot)
+        deALLOCATE(aephi)
+        deALLOCATE(aephidot)
+        deALLOCATE(r)
+      enddo
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE Lmto_ULITTLE(GID,NR,LRX,LNX,LOX,CHI,ULITTLE)
+!     **                                                                      **
+!     ** SLATER INTEGRALS.                                                    **
+!     **                                                                      **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: LRX
+      INTEGER(4),INTENT(IN) :: LNX
+      INTEGER(4),INTENT(IN) :: LOX(LNX)
+      REAL(8)   ,INTENT(IN) :: CHI(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: ULITTLE(LRX+1,LNX,LNX,LNX,LNX)
+      INTEGER(4)            :: LN1,LN2,LN3,LN4
+      INTEGER(4)            :: L
+      INTEGER(4)            :: LMIN,LMAX,ISVAR1,ISVAR2
+      REAL(8)               :: RHO(NR)
+      REAL(8)               :: POT(NR)
+      REAL(8)               :: AUX(NR)
+      REAL(8)               :: SVAR
+      REAL(8)               :: R(NR)
+      REAL(8)               :: PI,FOURPI
+!     **************************************************************************
+                            CALL TRACE$PUSH('LDAPLUSU_ULITTLE')
+      CALL RADIAL$R(GID,NR,R)
+      ULITTLE=0.D0
+      DO LN1=1,LNX
+        DO LN2=LN1,LNX
+          RHO(:)=CHI(:,LN1)*CHI(:,LN2)
+!         == USE SELECTION RULE (NOT TO SAVE TIME HERE, BUT LATER FOR THE U-TENSOR)
+          ISVAR1=ABS(LOX(LN1)+LOX(LN2))  
+          ISVAR2=ABS(LOX(LN1)-LOX(LN2))
+          LMIN=MIN(ISVAR1,ISVAR2)
+          LMAX=MAX(ISVAR1,ISVAR2)
+          LMAX=MIN(LMAX,LRX)
+          DO L=LMIN,LMAX
+            CALL RADIAL$POISSON(GID,NR,L,RHO,POT)
+            POT(:)=POT(:)*R(:)**2
+            DO LN3=1,LNX
+              DO LN4=LN3,LNX
+                ISVAR1=ABS(LOX(LN3)+LOX(LN4))
+                ISVAR2=ABS(LOX(LN3)-LOX(LN4))
+                IF(L.LT.MIN(ISVAR1,ISVAR2)) CYCLE
+                IF(L.GT.MAX(ISVAR1,ISVAR2)) CYCLE
+                AUX(:)=CHI(:,LN3)*CHI(:,LN4)*POT(:)
+                CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+!IF(LOX(LN1).NE.LOX(LN2).OR.LOX(LN2).NE.LOX(LN3).OR.LOX(LN3).NE.LOX(LN4)) SVAR=0.D0
+!IF(LOX(LN1)*LOX(LN2)*LOX(LN3)*LOX(LN4).EQ.0) SVAR=0.D0
+                ULITTLE(L+1,LN1,LN2,LN3,LN4)=SVAR
+                ULITTLE(L+1,LN2,LN1,LN3,LN4)=SVAR
+                ULITTLE(L+1,LN1,LN2,LN4,LN3)=SVAR
+                ULITTLE(L+1,LN2,LN1,LN4,LN3)=SVAR
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == ADD FACTOR CONSISTENT WITH DEFINITION OF SLATER INTEGRALS            ==
+!     ==========================================================================
+      PI=4.D0*ATAN(1.D0)
+      FOURPI=4.D0*PI
+      DO L=0,LRX
+        ULITTLE(L+1,:,:,:,:)=ULITTLE(L+1,:,:,:,:)*REAL(2*L+1,KIND=8)/FOURPI
+      ENDDO
+
+                            CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_FOURCENTERGAUSS()
+!     **************************************************************************
+!     **  EVALUATES THE U-TENSOR                                              **
+!     **                                                                      **
+!     **  PRELIMINARY VERSION: ONLY ONSITE MATRIX ELEMENTS                    **
+!     **  PRELIMINARY VERSION: NO AUGMENTATION CONTRIBUTIONS INCLUDED         **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : PERIODICMAT_TYPE,UMAT_TYPE,SBAR,OVERLAP,umat &
-     &                       ,ispecies,potpar,nnu,nnux
+      USE LMTO_MODULE, ONLY : UTENSOR,ISPECIES,LNX,LOX,GAUSSORB,SBARLI1
       IMPLICIT NONE
-      TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: MAP(:) !(NNS)
-      integer(4)             :: nat       ! #(atoms)
-      real(8)   ,allocatable :: r0(:,:)   !(3,nat) atomic positions
-      real(8)                :: rbas(3,3) ! lattice vectors
-      integer(4)             :: nns
-      integer(4)             :: nn,nn1,nn2
-      integer(4)             :: iat1,iat2,iat3,iat4
-      integer(4)             :: it1(3),it2(3),it3(3),it4(3)
-      integer(4)             :: n1,n2,n3,n4
-      integer(4)             :: iata,iatb,iatc,iatd
-      integer(4)             :: ispa,ispb,ispc,ispd
-      integer(4)             :: ita(3),itb(3),itc(3),itd(3)
-      integer(4)             :: nijka,nijkb,nijkc,nijkd
-      real(8)                :: ea,eb,ec,ed
-      real(8)                :: ra(3),rb(3),rc(3),rd(3)
-      integer(4)             :: na,nb,nc,nd
-      integer(4)             :: nna,nnb,nnc,nnd
-      real(8)   ,allocatable :: uabcd(:,:,:,:)
-      real(8)   ,allocatable :: uabc4(:,:,:,:)
-      real(8)   ,allocatable :: uab34(:,:,:,:)
-      real(8)   ,allocatable :: ua234(:,:,:,:)
-      real(8)   ,allocatable :: u1234(:,:,:,:)
-      integer(4)             :: ia,ib,ic,id
-      integer(4)             :: i1,i2,i3,i4
-      integer(4)             :: nx
+      INTEGER(4)             :: NAT
+      REAL(8)   ,ALLOCATABLE :: R0(:,:)
+      REAL(8)                :: RBAS(3,3)
+      INTEGER(4)             :: N1,N2,N3,N4
+      INTEGER(4)             :: IAT1,IAT2,IAT3,IAT4
+      INTEGER(4)             :: NIJK1,NIJK2,NIJK3,NIJK4
+      INTEGER(4)             :: NORB1,NORB2,NORB3,NORB4
+      INTEGER(4)             :: NE1,NE2,NE3,NE4
+      REAL(8)                :: R1(3),R2(3),R3(3),R4(3)
+      REAL(8)   ,ALLOCATABLE :: E1(:),E2(:),E3(:),E4(:)
+      INTEGER(4)             :: IAT,NN,ISP,IND,LN,LM,L,IM
+      REAL(8)   ,ALLOCATABLE :: USMALL(:,:,:,:),UBIG(:,:,:,:)
 !     **************************************************************************
-                          CALL TRACE$PUSH('LMTO$fourcentergauss')
+!
+!     ==========================================================================
+!     == ALLOCATE UTENSOR AND CHOSE MATRIX ELEMENTS TO BE EVALUATED           ==
+!     ==========================================================================
+      ALLOCATE(UTENSOR(NAT))
+      NN=0
+      DO IAT=1,NAT
+        NN=NN+1
+        ISP=ISPECIES(IAT)
+        N1=SUM(2*LOX(:LNX(ISP),ISP)+1)
+        UTENSOR(NN)%IAT1=IAT
+        UTENSOR(NN)%IAT2=IAT
+        UTENSOR(NN)%IAT3=IAT
+        UTENSOR(NN)%IAT4=IAT
+        UTENSOR(NN)%IT2=(/0,0,0/)
+        UTENSOR(NN)%IT3=(/0,0,0/)
+        UTENSOR(NN)%IT4=(/0,0,0/)
+        UTENSOR(NN)%N1=N1
+        UTENSOR(NN)%N2=N1
+        UTENSOR(NN)%N3=N1
+        UTENSOR(NN)%N4=N1
+        ALLOCATE(UTENSOR(NN)%U(N1,N1,N1,N1))
+      ENDDO
+!
+!     ==========================================================================
+!     == COLLECT ATOMIC STRUCTURE                                             ==
+!     ==========================================================================
       CALL ATOMLIST$NATOM(NAT)
       ALLOCATE(R0(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
       CALL CELL$GETR8A('T0',9,RBAS)
 !
 !     ==========================================================================
-!     == KBAR=K*MAP;     MAP=(1+QBAR*SBAR)                                    ==
+!     == ALLOCATE HELPER ARRAYS                                               ==
 !     ==========================================================================
-      NNS=SIZE(SBAR)
-      ALLOCATE(MAP(NNS))
-      CALL LMTO_KTOKBAR(NNS,SBAR,MAP)
+      NE1=MAXVAL(GAUSSORB(:)%NE)
+      ALLOCATE(E1(NE1))
+      ALLOCATE(E2(NE1))
+      ALLOCATE(E3(NE1))
+      ALLOCATE(E4(NE1))
+      N1=MAXVAL(UTENSOR(:)%N1)
+      N2=MAXVAL(UTENSOR(:)%N2)
+      N3=MAXVAL(UTENSOR(:)%N3)
+      N4=MAXVAL(UTENSOR(:)%N4)
+      ALLOCATE(USMALL(N1,N2,N3,N4))
+      ALLOCATE(UBIG(N1,N2,N3,N4))
 !
 !     ==========================================================================
-!     == determine list of U-tensor matrix elements                           ==
+!     == DETERMINE THE GAUSSIAN CONTRIBUTION TO THE OVERLAP                   ==
 !     ==========================================================================
-      CALL LMTO_UNNETWORK()
-print*,'unnetwork done'
+      DO NN=1,SIZE(UTENSOR)
+        IAT1=UTENSOR(NN)%IAT1
+        IAT2=UTENSOR(NN)%IAT2
+        IAT3=UTENSOR(NN)%IAT3
+        IAT4=UTENSOR(NN)%IAT4
+        NIJK1=GAUSSORB(IAT1)%NIJK
+        NIJK2=GAUSSORB(IAT2)%NIJK
+        NIJK3=GAUSSORB(IAT3)%NIJK
+        NIJK4=GAUSSORB(IAT4)%NIJK
+        NORB1=GAUSSORB(IAT1)%NORB
+        NORB2=GAUSSORB(IAT2)%NORB
+        NORB3=GAUSSORB(IAT3)%NORB
+        NORB4=GAUSSORB(IAT4)%NORB
+        NE1=GAUSSORB(IAT1)%NE
+        NE2=GAUSSORB(IAT2)%NE
+        NE3=GAUSSORB(IAT3)%NE
+        NE4=GAUSSORB(IAT4)%NE
+        E1(:NE1)=GAUSSORB(IAT1)%E
+        E2(:NE2)=GAUSSORB(IAT2)%E
+        E3(:NE3)=GAUSSORB(IAT3)%E
+        E4(:NE4)=GAUSSORB(IAT4)%E
+        R1=R0(:,IAT1)
+        R2=R0(:,IAT2)+MATMUL(RBAS,REAL(UTENSOR(NN)%IT2))
+        R3=R0(:,IAT3)+MATMUL(RBAS,REAL(UTENSOR(NN)%IT3))
+        R4=R0(:,IAT4)+MATMUL(RBAS,REAL(UTENSOR(NN)%IT4))
+        CALL GAUSSIAN$FOURCENTER(NIJK1,NE1,NORB1,E1(:NE1),R1,GAUSSORB(IAT1)%C &
+                                ,NIJK2,NE2,NORB2,E2(:NE2),R2,GAUSSORB(IAT2)%C &
+                                ,NIJK3,NE3,NORB3,E3(:NE3),R3,GAUSSORB(IAT3)%C &
+                                ,NIJK4,NE4,NORB4,E4(:NE4),R4,GAUSSORB(IAT4)%C &
+     &                          ,USMALL(:NORB1,:NORB2,:NORB3,:NORB4))
 !
-!     ==========================================================================
-!     == allocate intermediate tensors                                        ==
-!     ==========================================================================
-      NX=0
-      DO NN=1,NNS
-        NX=MAX(SBAR(NN)%N1,NX)
-      ENDDO
-      ALLOCATE(UABCD(NX,NX,NX,NX))
-      ALLOCATE(UABC4(NX,NX,NX,NX))
-      ALLOCATE(UAB34(NX,NX,NX,NX))
-      ALLOCATE(UA234(NX,NX,NX,NX))
-      ALLOCATE(u1234(NX,NX,NX,NX))
+!       ========================================================================
+!       == EXPAND U-TENSOR TO FULL SIZE                                       ==
+!       ========================================================================
+        N1=UTENSOR(NN)%N1
+        N2=UTENSOR(NN)%N2
+        N3=UTENSOR(NN)%N3
+        N4=UTENSOR(NN)%N4
 !
-!     ==========================================================================
-!     == calculate U-tensor                                                   ==
-!     ==========================================================================
-      DO NN=1,NNU   ! LOOP OVER U-TENSOR MATRIX ELEMENTS
-print*,'utensor ',nn,' of ',nnu
-        NN1=UMAT(NN)%NN1
-        NN2=UMAT(NN)%NN2
-        IAT1=SBAR(NN1)%IAT1
-        IT1=(/0,0,0/)
-        IAT4=SBAR(NN1)%IAT2
-        IT4(:)=SBAR(NN1)%IT
-        IAT2=SBAR(NN2)%IAT1
-        IT2=UMAT(NN)%IT
-        IAT3=SBAR(NN2)%IAT2
-        IT3=UMAT(NN)%IT+SBAR(NN2)%IT
-        N1=SBAR(NN1)%N1
-        N4=SBAR(NN1)%N2
-        N2=SBAR(NN2)%N1
-        N3=SBAR(NN2)%N2
-        ALLOCATE(UMAT(NN)%UABCD(N1,N2,N3,N4))
-        umat(nn)%uabcd(:,:,:,:)=0.d0
-        DO NNA=1,NNS
-          IF(SBAR(NNA)%IAT1.NE.IAT1) CYCLE
-          IATA=SBAR(NNA)%IAT2
-          ISPA=ISPECIES(IATA)
-          ITA=IT1+SBAR(NNA)%IT
-          EA=POTPAR(ISPA)%GAUSSEP
-          NIJKA=POTPAR(ISPA)%NIJK
-          RA(:)=R0(:,IATA)+MATMUL(RBAS,REAL(ITA))
-          NA=SBAR(NNA)%N2
-          DO NNB=1,NNS
-            IF(SBAR(NNB)%IAT1.NE.IAT2) CYCLE
-            IATB=SBAR(NNB)%IAT2
-            ISPB=ISPECIES(IATB)
-            ITB=IT2+SBAR(NNB)%IT
-            EB=POTPAR(ISPB)%GAUSSEP
-            NIJKB=POTPAR(ISPB)%NIJK
-            RB(:)=R0(:,IATB)+MATMUL(RBAS,REAL(ITB))
-            NB=SBAR(NNB)%N2
-            DO NNC=1,NNS
-              IF(SBAR(NNC)%IAT1.NE.IAT3) CYCLE
-              IATC =SBAR(NNC)%IAT2
-              ISPC =ISPECIES(IATC)
-              ITC  =IT3+SBAR(NNC)%IT
-              EC   =POTPAR(ISPC)%GAUSSEP
-              NIJKC=POTPAR(ISPC)%NIJK
-              RC(:)  =R0(:,IATC)+MATMUL(RBAS,REAL(ITC))
-              NC=SBAR(NNC)%N2
-              DO NND=1,NNS
-                IF(SBAR(NND)%IAT1.NE.IAT4) CYCLE
-                IATD =SBAR(NND)%IAT2
-                ISPD =ISPECIES(IATD)
-                ITD  =IT1+SBAR(NND)%IT
-                ED   =POTPAR(ISPD)%GAUSSEP
-                NIJKD=POTPAR(ISPD)%NIJK
-                RD(:)=R0(:,IATD)+MATMUL(RBAS,REAL(ITD))
-                ND=SBAR(NND)%N2
-print*,'== ',nna,nnb,nnc,nnd
-                DO IA=1,NA
-                  DO IB=1,NB
-                    DO IC=1,NC
-                      DO ID=1,ND
-!print*,'-- ',ia,ib,ic,id
-                        CALL GAUSSIAN_FOURCENTER( &
-     &                               NIJKA,EA,RA,POTPAR(ISPA)%COEFFBARE(:,IA) &
-     &                              ,NIJKB,EB,RB,POTPAR(ISPB)%COEFFBARE(:,IB) &
-     &                              ,NIJKC,EC,RC,POTPAR(ISPC)%COEFFBARE(:,IC) &
-     &                              ,NIJKD,ED,RD,POTPAR(ISPD)%COEFFBARE(:,ID) &
-     &                              ,UABCD(ia,ib,ic,id))
-                      ENDDO
-                    ENDDO
-                  ENDDO
-                ENDDO
-print*,'++'
-                DO iA=1,NA
-                  DO iB=1,NB
-                    DO iC=1,NC
-                    UABC4(IA,IB,IC,:N4)=MATMUL(UABCD(IA,IB,IC,:ND),MAP(NND)%MAT)
-                    ENDDO
-                  ENDDO
-                ENDDO
-                DO IA=1,NA
-                  DO IB=1,NB
-                    DO i4=1,N4
-                    UAB34(IA,IB,:N3,I4)=MATMUL(UABC4(IA,IB,:NC,I4),MAP(NNC)%MAT)
-                    ENDDO
-                  ENDDO
-                ENDDO
-                DO IA=1,NA
-                  DO I3=1,N3
-                    DO i4=1,N4
-                    UA234(IA,:N2,I3,I4)=MATMUL(UAB34(IA,:NB,I3,I4),MAP(NNB)%MAT)
-                    ENDDO
-                  ENDDO
-                ENDDO
-                DO I2=1,N2
-                  DO I3=1,N3
-                    DO I4=1,N4
-                    U1234(:N1,I2,I3,I4)=MATMUL(UA234(:NA,I2,I3,I4),MAP(NNA)%MAT)
-                    ENDDO
-                  ENDDO
-                ENDDO
-                UMAT(NN)%UABCD(:,:,:,:)=UMAT(NN)%UABCD(:,:,:,:) &
-      &                                +U1234(:N1,:N2,:N3,:N4)
-              ENDDO
-            ENDDO
+        ISP=ISPECIES(IAT1)
+        IND=0
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          LM=SBARLI1(L+1,ISP)-1
+          DO IM=1,2*L+1
+            LM=LM+1
+            IND=IND+1
+            UBIG(IND,:NORB2,:NORB3,:NORB4)=USMALL(LM,:NORB2,:NORB3,:NORB4)
           ENDDO
         ENDDO
+        ISP=ISPECIES(IAT2)
+        IND=0
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          LM=SBARLI1(L+1,ISP)-1
+          DO IM=1,2*L+1
+            LM=LM+1
+            IND=IND+1
+             USMALL(:N1,IND,:NORB3,:NORB4)=UBIG(:N1,LM,:NORB3,:NORB4)
+          ENDDO
+        ENDDO
+        ISP=ISPECIES(IAT3)
+        IND=0
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          LM=SBARLI1(L+1,ISP)-1
+          DO IM=1,2*L+1
+            LM=LM+1
+            IND=IND+1
+             UBIG(:N1,:N2,IND,:NORB4)=USMALL(:N1,:N2,LM,:NORB4)
+          ENDDO
+        ENDDO
+        ISP=ISPECIES(IAT4)
+        IND=0
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          LM=SBARLI1(L+1,ISP)-1
+          DO IM=1,2*L+1
+            LM=LM+1
+            IND=IND+1
+            USMALL(:N1,:N2,:N3,IND)=UBIG(:N1,:N2,:N3,LM)
+          ENDDO
+        ENDDO
+        UTENSOR(NN)%U(:,:,:,:)=USMALL(:N1,:N2,:N3,:N4)
       ENDDO
-      deallocate(uabcd)
-      deallocate(uabc4)
-      deallocate(uab34)
-      deallocate(ua234)
-      deallocate(u1234)
-      RETURN 
+
+      RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -3554,7 +2989,7 @@ print*,'++'
       INTEGER(4)             :: NNS
       INTEGER(4)             :: NAT
       INTEGER(4),ALLOCATABLE :: NNONSITE(:) !(NAT)
-      INTEGER(4)             :: NNN,NN1,NN2
+      INTEGER(4)             :: NN1,NN2
       INTEGER(4)             :: IORIENT
       INTEGER(4)             :: IAT1,IAT2,IAT1B,IAT2B,IAT
       INTEGER(4)             :: NN
@@ -3579,7 +3014,7 @@ print*,'++'
       DO NN=1,NNS
         CALL LMTO_BONDORIENTATION(SBAR(NN)%IAT1,SBAR(NN)%IAT2,SBAR(NN)%IT &
      &                           ,IORIENT)
-        IF(IORIENT.EQ.0) NNONSITE(sbar(nn)%IAT1)=NN
+        IF(IORIENT.EQ.0) NNONSITE(SBAR(NN)%IAT1)=NN
       ENDDO
 !     == CHECK COMPLETENESS OF NNONSITE ARRAY  =================================
       DO IAT=1,NAT
@@ -3758,7 +3193,7 @@ print*,'++'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$PROJTONTBO(XK,NDIM,NBH,NPRO,PROJ)
 !     **************************************************************************
-!     ** TRANSFORMES THE PROJECTIONS ONTO COEFFICIENTS FOR                    **
+!     ** TRANSFORMS THE PROJECTIONS ONTO COEFFICIENTS FOR                     **
 !     ** NATURAL TIGHT-BINDING ORBITALS                                       **
 !     **************************************************************************
       USE LMTO_MODULE
@@ -3799,7 +3234,7 @@ DO I=1,NRL
 ENDDO
 !
 !     ==========================================================================
-!     == CONTRACT PROJECTIONS SO THAT For EACH ANGULAR MOMENTUM ONE TERM REMAINS
+!     == CONTRACT PROJECTIONS SO THAT FOR EACH ANGULAR MOMENTUM ONE TERM REMAINS
 !     ==========================================================================
       DO I=1,NPRO
         PROJ(:,:,I)=PROJ(:,:,I)*A(I)
@@ -3863,6 +3298,103 @@ ENDDO
             PROJ(:,:,IPRO)=PROJ(:,:,IPRO)-D(IPRO)*PROJCONTR1(:,:,I1)
           ENDDO
         ENDDO
+      ENDDO
+                               CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$NTBOTOPROJ(XK,NDIM,NBH,NPRO,PROJ)
+!     **************************************************************************
+!     ** TRANSFORMS THE DERIVATIVE OF THE TOTAL ENERGY WITH RESPECT TO A      **
+!     ** NTBO-COEFFICIENT INTO A PREFACTOR FOR THE PROJECTOR IN THE           **
+!     ** PSEUDO HAMILTONIAN                                                   **
+!     **************************************************************************
+      USE LMTO_MODULE
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN)   :: XK(3)
+      INTEGER(4),INTENT(IN)   :: NDIM
+      INTEGER(4),INTENT(IN)   :: NBH
+      INTEGER(4),INTENT(IN)   :: NPRO
+      COMPLEX(8),INTENT(INOUT):: PROJ(NDIM,NBH,NPRO)
+      REAL(8)                 :: A(NPRO)
+      REAL(8)                 :: B(NPRO)
+      REAL(8)                 :: C(NRL)
+      REAL(8)                 :: D(NPRO)
+      REAL(8)                 :: E(NRL)
+      REAL(8)                 :: F(NRL)
+      COMPLEX(8)              :: G(NRL,NRL)
+      COMPLEX(8)              :: H(NRL,NRL)
+      COMPLEX(8),ALLOCATABLE  :: PROJCONTR1(:,:,:)
+      COMPLEX(8),ALLOCATABLE  :: PROJCONTR2(:,:,:)
+      COMPLEX(8),ALLOCATABLE  :: PROJCONTR3(:,:,:)
+      INTEGER(4)              :: NAT
+      INTEGER(4)              :: I,L,ISP,IPRO,IAT,LN,I1,IM,J
+!     **************************************************************************
+                               CALL TRACE$PUSH('LMTO$PROJTONTBO')
+      CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
+      CALL LMTO_PREPARE2(XK,NRL,C,E,F,G,H)
+!
+!     ==========================================================================
+!     == D * DE/DQ
+!     ==========================================================================
+      ALLOCATE(PROJCONTR1(NDIM,NBH,NRL))      
+      PROJCONTR1(:,:,:)=(0.D0,0.D0)
+      IPRO=0
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          I1=SBARATOMI1(IAT)-1+SBARLI1(L+1,ISP)-1
+          DO IM=1,2*L+1
+            IPRO=IPRO+1
+            I1=I1+1
+            PROJCONTR1(:,:,I1)=PROJCONTR1(:,:,I1)+D(IPRO)*PROJ(:,:,IPRO)
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == MATRIX MULTIPLICATION                                                ==
+!     ==========================================================================
+      ALLOCATE(PROJCONTR2(NDIM,NBH,NRL))      
+      ALLOCATE(PROJCONTR3(NDIM,NBH,NRL))
+      PROJCONTR2(:,:,:)=(0.D0,0.D0)
+      PROJCONTR3(:,:,:)=(0.D0,0.D0)
+      DO I=1,NRL
+        DO J=1,NRL
+          PROJCONTR2(:,:,I)=PROJCONTR2(:,:,I)+G(J,I)*PROJCONTR1(:,:,J)
+          PROJCONTR3(:,:,I)=PROJCONTR3(:,:,I)+H(J,I)*PROJCONTR1(:,:,J)
+        ENDDO
+      ENDDO
+      DEALLOCATE(PROJCONTR1)
+!
+!     ==========================================================================
+!     == CONTRACT PROJECTIONS SO THAT FRO EACH ANGULAR MOMENTUM ONE TERM REMAINS
+!     ==========================================================================
+      NAT=SIZE(ISPECIES)
+      IPRO=0
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          I1=SBARATOMI1(IAT)-1+SBARLI1(L+1,ISP)-1
+          DO IM=1,2*L+1
+            IPRO=IPRO+1
+            I1=I1+1
+            PROJ(:,:,IPRO)=PROJ(:,:,IPRO)-B(IPRO)*PROJCONTR2(:,:,I1) &
+     &                                   -PROJCONTR3(:,:,I1)
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(PROJCONTR3)
+      DEALLOCATE(PROJCONTR2)
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      DO I=1,NPRO
+        PROJ(:,:,I)=PROJ(:,:,I)*A(I)
       ENDDO
                                CALL TRACE$POP()
       RETURN
@@ -4004,11 +3536,11 @@ ENDDO
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_aOFK(NNA,ALIST,XK,N,AOFK)
+      SUBROUTINE LMTO_AOFK(NNA,ALIST,XK,N,AOFK)
 !     **************************************************************************
 !     **  TRANSFORMS THE SCREENED STRUCTURE CONSTANTS INTO K-SPACE            **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY: periodicmat_type,POTPAR_TYPE,SBARATOMI1,SBARATOMI2
+      USE LMTO_MODULE, ONLY: PERIODICMAT_TYPE,POTPAR_TYPE,SBARATOMI1,SBARATOMI2
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)             :: NNA    ! #(ELEMNTS IN NEIGHBORLIST)
       TYPE(PERIODICMAT_TYPE),INTENT(IN) :: ALIST(NNA) !(NNA)
@@ -4928,7 +4460,7 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
       INTEGER(4),INTENT(IN) :: IAT0
       INTEGER(4),PARAMETER  :: N1=40,N2=40,N3=40 !GRID (1D?)
       INTEGER(4),PARAMETER  :: N1D=1000
-      LOGICAL(4) ,PARAMETER :: T2D=.false.
+      LOGICAL(4) ,PARAMETER :: T2D=.FALSE.
       LOGICAL(4) ,PARAMETER :: T3D=.FALSE.
       REAL(8)               :: ORIGIN(3)
       REAL(8)               :: TVEC(3,3)    !BOX
@@ -4965,8 +4497,6 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
       REAL(8)   ,ALLOCATABLE:: QBARVEC(:,:)
       INTEGER(4),ALLOCATABLE:: LOX(:)
       INTEGER(4),ALLOCATABLE:: ISCATT(:)
-      LOGICAL               :: TONSITE      !ADD HEAD FUNCTION ONSITE
-      LOGICAL               :: TSPHERE
       INTEGER(4)            :: NFIL
       INTEGER(4)            :: NATCLUSTER !#(ATOMS ON THE CLUSTER)
       CHARACTER(64)         :: FILE
@@ -4975,7 +4505,7 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
       REAL(8)               :: X1D(N1D)
       INTEGER(4)            :: NP,IP
       REAL(8)  ,ALLOCATABLE :: P(:,:)
-      LOGICAL(4),PARAMETER  :: TGAUSS=.true.
+      LOGICAL(4),PARAMETER  :: TGAUSS=.TRUE.
 !     **************************************************************************
                                               CALL TRACE$PUSH('LMTO_PLOTLOCORB')
       NNS=SIZE(SBAR)  !SBAR STRUCCONS. (GLOBAL)
@@ -5086,7 +4616,7 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
       CALL LMTO_GRIDENVELOPE(RBAS,NAT,R0,IAT0,LM1X,NP,P,ENV,ENV1)
       CALL LMTO_GRIDAUGMENT(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORB1,ENV1)
       ORB=ENV+ORB1-ENV1
-      orbg=0.d0
+      ORBG=0.D0
       IF(TGAUSS)CALL LMTO_GRIDGAUSS(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORBG)
 !
 !     ==========================================================================
@@ -5117,12 +4647,12 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
 !
 !     ==========================================================================
 !     == DEFINE 1-DIMENSIONAL GRIDS                                           ==
-!     == grids point towards nearest neighbors. (or in x-direction)           ==
+!     == GRIDS POINT TOWARDS NEAREST NEIGHBORS. (OR IN X-DIRECTION)           ==
 !     ==========================================================================
-      NP=N1D*max((NATCLUSTER-1),1)
+      NP=N1D*MAX((NATCLUSTER-1),1)
       ALLOCATE(P(3,NP))
       DO I=1,N1D
-        X1D(I)=(-1.D0+2.D0*REAL(I-1)/REAL(N1D-1))*10.D0
+        X1D(I)=(-1.D0+2.D0*REAL(I-1)/REAL(N1D-1))*50.D0
       ENDDO
       IP=0
       DO IAT=1,NATCLUSTER
@@ -5134,10 +4664,10 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
           P(:,IP)=R0(:,IAT0)+DR(:)*X1D(I)
         ENDDO
       ENDDO
-      if(natcluster.eq.1) then
-        p(:,:)=0.d0
-        p(1,:)=x1d
-      end if
+      IF(NATCLUSTER.EQ.1) THEN
+        P(:,:)=0.D0
+        P(1,:)=X1D
+      END IF
 !
 !     ==========================================================================
 !     == DETERMINE ENVELOPE FUNCTION AT THE GRID POINTS                       ==
@@ -5150,7 +4680,7 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
       CALL LMTO_GRIDENVELOPE(RBAS,NAT,R0,IAT0,LM1X,NP,P,ENV,ENV1)
       CALL LMTO_GRIDAUGMENT(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORB1,ENV1)
       ORB=ENV+ORB1-ENV1
-      orbg=0.d0
+      ORBG=0.D0
       IF(TGAUSS)CALL LMTO_GRIDGAUSS(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORBG)
 !      CALL LMTO_GRIDTAILS(NAT,R0,IAT0,NP,P,LM1X,ORBG)
 !
@@ -5166,12 +4696,12 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
         CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,-FILE)
         CALL FILEHANDLER$UNIT('HOOK',NFIL)
 !
-        if(natcluster.eq.1) then
+        IF(NATCLUSTER.EQ.1) THEN
           DO I=1,N1D
             WRITE(NFIL,*)X1D(I),ORB(I,LM1),ORB1(I,LM1),ENV(I,LM1) &
       &                      ,ENV1(I,LM1),ORBG(I,LM1)
           ENDDO
-        else
+        ELSE
           DO I=1,N1D
             WRITE(NFIL,*)X1D(I),(ORB(N1D*(IAT-1)+I,LM1) &
       &                         ,ORB1(N1D*(IAT-1)+I,LM1) &
@@ -5179,7 +4709,7 @@ PRINT*,'CHIPHI ',CHIPHI(LNCHI,:)
       &                         ,ENV1(N1D*(IAT-1)+I,LM1) &
       &                         ,ORBG(N1D*(IAT-1)+I,LM1),IAT=1,NATCLUSTER-1)
           ENDDO
-        end if
+        END IF
         CALL FILEHANDLER$CLOSE('HOOK')
         CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOK')
       ENDDO
@@ -5223,7 +4753,7 @@ IF(T2D) THEN
       CALL LMTO_GRIDENVELOPE(RBAS,NAT,R0,IAT0,LM1X,NP,P,ENV,ENV1)
       CALL LMTO_GRIDAUGMENT(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORB1,ENV1)
       ORB=ENV+ORB1-ENV1
-      orbg=0.d0
+      ORBG=0.D0
       IF(TGAUSS)CALL LMTO_GRIDGAUSS(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORBG)
 !
 !     ==========================================================================
@@ -5579,106 +5109,145 @@ REAL(8) :: X(10)
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_GRIDtails(NAT,R0,IAT1,NP,P,norb,ORB)
+      SUBROUTINE LMTO_GRIDTAILS(NAT,R0,IAT1,NP,P,NORB,ORB)
 !     **************************************************************************
 !     ** MAPS THE SCREENED ENVELOPE FUNCTION AT ATOM IAT1 ONTO THE GRID P     **
+!     ** THE SCREENED ENVELOPE FUNCTION IS DESCRIBED BY THE ONSITE            **
+!     ** CONTRIBUTION WITH MATCHING EXPONENTIAL TAILS                         **
 !     **                                                                      **
 !     ** ATTENTION: SCREENING IS DETERMINED BY ISCATT                         **
 !     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2010 ************
-      USE LMTO_MODULE, ONLY : SBAR,POTPAR,lox,ispecies,sbarli1
+      USE LMTO_MODULE, ONLY : SBAR,POTPAR,LNX,LOX,ISPECIES,SBARLI1,K2
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT       ! #(ATOMS)
       REAL(8)   ,INTENT(IN) :: R0(3,NAT) ! ATOMIC POSITIONS
       INTEGER(4),INTENT(IN) :: IAT1      ! INDEX OF CENTRAL ATOM
       INTEGER(4),INTENT(IN) :: NP        ! #(GRID POINTS)
       REAL(8)   ,INTENT(IN) :: P(3,NP)   ! GRIDPOINT POSITIONS
-      INTEGER(4),INTENT(IN) :: norb      !#(ORBITALS ON CENTRAL ATOM)
-      REAL(8)   ,INTENT(OUT):: ORB(NP,norb)  ! SCREENED ENVELOPE FUNCTIONS
+      INTEGER(4),INTENT(IN) :: NORB      !#(ORBITALS ON CENTRAL ATOM)
+      REAL(8)   ,INTENT(OUT):: ORB(NP,NORB)  ! SCREENED ENVELOPE FUNCTIONS
       INTEGER(4)            :: NNS
-      real(8)               :: sbarmat(norb,norb)
-      INTEGER(4)            :: isp  ! species id of atom iat1
-      INTEGER(4)            :: lx
-      INTEGER(4)            :: lmx
-      integer(4)            :: lofn(norb)
-      integer(4)            :: lmofn(norb)
-      real(8)   ,allocatable:: ylm(:)
-      real(8)   ,allocatable:: kval(:)
-      real(8)   ,allocatable:: jval(:)
-      real(8)   ,allocatable:: r(:)
-      real(8)               :: rx
-      INTEGER(4)            :: gid
-      INTEGER(4)            :: nr
-      INTEGER(4)            :: NN,l,i1,i2,im,ip
-      real(8)               :: dr(3),drlen
+      REAL(8)               :: SBARMAT(NORB,NORB)
+      INTEGER(4)            :: ISP  ! SPECIES ID OF ATOM IAT1
+      INTEGER(4)            :: LX
+      INTEGER(4)            :: LMX
+      INTEGER(4)            :: LOFN(NORB)
+      INTEGER(4)            :: LMOFN(NORB)
+      REAL(8)   ,ALLOCATABLE:: YLM(:)
+      REAL(8)   ,ALLOCATABLE:: KVAL(:)
+      REAL(8)   ,ALLOCATABLE:: JVAL(:)
+      REAL(8)   ,ALLOCATABLE:: R(:)
+      REAL(8)               :: RX
+      INTEGER(4)            :: GID
+      INTEGER(4)            :: NR
+      INTEGER(4)            :: LNX1
+      INTEGER(4)            :: NN,L,I1,I2,IM,IP,LN,IR
+      REAL(8)               :: DR(3),DRLEN
+      REAL(8)               :: RAD
+      REAL(8)               :: QBAR
+      REAL(8)               :: JVAL1,JDER1
+      REAL(8)   ,PARAMETER  :: LAMBDA=1.D0
+      REAL(8)   ,ALLOCATABLE:: NLPHIDOT(:,:)
+      REAL(8)   ,ALLOCATABLE:: AEPHI(:,:)
+      REAL(8)   ,ALLOCATABLE:: KPRIME(:,:)
+      REAL(8)   ,ALLOCATABLE:: JBARPRIME(:,:)
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == collect screened structure constants for atom iat1 ====================
+!     == COLLECT SCREENED STRUCTURE CONSTANTS FOR ATOM IAT1 ====================
 !     ==========================================================================
       NNS=SIZE(SBAR)  !SBAR STRUCCONS. (GLOBAL)
       DO NN=1,NNS
          IF(SBAR(NN)%IAT1.NE.IAT1) CYCLE
          IF(SBAR(NN)%IAT2.NE.IAT1) CYCLE
-         if(MAXVAL(ABS(SBAR(NN)%IT(:))).ne.0) cycle
-         if(norb.ne.sbar(nn)%n1) then
-           call error$msg('inconsistent number of orbitals ')
-           call error$stop('lmto_gridtails')
-         end if
-         sbarmat(:,:)=sbar(nn)%mat
-         exit
-       enddo
+         IF(MAXVAL(ABS(SBAR(NN)%IT(:))).NE.0) CYCLE
+         IF(NORB.NE.SBAR(NN)%N1) THEN
+           CALL ERROR$MSG('INCONSISTENT NUMBER OF ORBITALS ')
+           CALL ERROR$STOP('LMTO_GRIDTAILS')
+         END IF
+         SBARMAT(:,:)=SBAR(NN)%MAT
+         EXIT
+       ENDDO
 !
 !     ==========================================================================
-!     == work out mapping                                                     ==
+!     == CONSTRUCT KBAR AND JBAR WITH TAILS                                   ==
 !     ==========================================================================
-      isp=ispecies(iat1)
+      ISP=ISPECIES(IAT1)
       CALL SETUP$ISELECT(ISP)
       CALL SETUP$GETI4('GID',GID)
-      CALL SETUP$GETI4('NR',NR)
-      allocate(r(nr))
-      call radial$r(gid,nr,r)
-      rx=r(nr)
-      lx=maxval(lox(:,isp))
-      lmx=(lx+1)**2
-      do l=0,lx
-        i1=sbarli1(l+1,isp)
-        if(i1.le.0) cycle
-        lofn(i1:i1+2*l)=l
-        do im=1,2*l+1
-          lmofn(i1-1+im)=l**2+im
-        enddo
-      enddo
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+      LNX1=LNX(ISP)
+      ALLOCATE(NLPHIDOT(NR,LNX1))
+      ALLOCATE(AEPHI(NR,LNX1))
+      CALL SETUP$GETR8A('QPHIDOT',NR*LNX1,NLPHIDOT)
+      CALL SETUP$GETR8A('AEPHI',NR*LNX1,AEPHI)
+      LX=MAXVAL(LOX(:LNX(ISP),ISP))
+      ALLOCATE(KPRIME(NR,LX+1))
+      ALLOCATE(JBARPRIME(NR,LX+1))
+      DO LN=1,LNX(ISP)
+        IF(POTPAR(ISP)%LNSCATT(LN).NE.LN) CYCLE
+        L=LOX(LN,ISP)
+        RAD=POTPAR(ISP)%RAD
+        QBAR=POTPAR(ISP)%QBAR(LN)
+        CALL LMTO_KJBARTAILS(GID,NR,L,RAD,K2,QBAR,LAMBDA &
+     &                                          ,KPRIME(:,L+1),JBARPRIME(:,L+1))
+        DO IR=1,NR
+          IF(R(IR).GT.RAD) EXIT
+          JBARPRIME(IR,L+1)=NLPHIDOT(IR,LN)*POTPAR(ISP)%JBARTOPHIDOT(LN)
+          CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JVAL1,JDER1)
+          KPRIME(IR,L+1)=(JVAL1-JBARPRIME(IR,L+1))/QBAR
+          KPRIME(IR,L+1)=AEPHI(IR,LN)   *POTPAR(ISP)%KTOPHI(LN) &
+     &                  +NLPHIDOT(IR,LN)*POTPAR(ISP)%KTOPHIDOT(LN)
+        ENDDO
+      ENDDO
 !
 !     ==========================================================================
-!     == work out mapping                                                     ==
+!     == WORK OUT MAPPING                                                     ==
 !     ==========================================================================
-      orb(:,:)=0.d0
-      allocate(kval(lx+1))
-      allocate(jval(lx+1))
-      allocate(ylm(lmx))
+      RX=R(NR)
+      LX=MAXVAL(LOX(:,ISP))
+      LMX=(LX+1)**2
+      DO L=0,LX
+        I1=SBARLI1(L+1,ISP)
+        IF(I1.LE.0) CYCLE
+        LOFN(I1:I1+2*L)=L
+        DO IM=1,2*L+1
+          LMOFN(I1-1+IM)=L**2+IM
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == WORK OUT MAPPING                                                     ==
+!     ==========================================================================
+      ORB(:,:)=0.D0
+      ALLOCATE(KVAL(LX+1))
+      ALLOCATE(JVAL(LX+1))
+      ALLOCATE(YLM(LMX))
       DO IP=1,NP
 !       == DR IS THE DISTANCE FROM THE SECOND ATOM ==========================
-        DR(:)=P(:,IP)-r0(:,iat1)
-        drlen=sqrt(sum(dr**2))
-        if(drlen.gt.rx) cycle
-        call spherical$ylm(lmx,dr,ylm)
-        do l=0,lx           
-          CALL RADIAL$VALUE(GID,NR,potpar(isp)%kprime(:,l+1),drlen,kval(l+1))
-          CALL RADIAL$VALUE(GID,NR,potpar(isp)%jbarprime(:,l+1),drlen,jval(l+1))
-        enddo
-        do i1=1,norb
-          orb(ip,i1)=orb(ip,i1)+kval(lofn(i1)+1)*ylm(lmofn(i1))
-          do i2=1,norb
-            orb(ip,i1)=orb(ip,i1)-jval(lofn(i2)+1)*ylm(lmofn(i2))*sbarmat(i2,i1)
-          enddo
-        enddo
-      enddo      
+        DR(:)=P(:,IP)-R0(:,IAT1)
+        DRLEN=SQRT(SUM(DR**2))
+        IF(DRLEN.GT.RX) CYCLE
+        CALL SPHERICAL$YLM(LMX,DR,YLM)
+        DO L=0,LX           
+          CALL RADIAL$VALUE(GID,NR,KPRIME(:,L+1),DRLEN,KVAL(L+1))
+          CALL RADIAL$VALUE(GID,NR,JBARPRIME(:,L+1),DRLEN,JVAL(L+1))
+        ENDDO
+        DO I1=1,NORB
+          ORB(IP,I1)=ORB(IP,I1)+KVAL(LOFN(I1)+1)*YLM(LMOFN(I1))
+          DO I2=1,NORB
+            ORB(IP,I1)=ORB(IP,I1)-JVAL(LOFN(I2)+1)*YLM(LMOFN(I2))*SBARMAT(I2,I1)
+          ENDDO
+        ENDDO
+      ENDDO      
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_GRIDGAUSS(RBAS,NAT,R0,IAT0,LM1X,NP,P,ORB)
+      SUBROUTINE LMTO_GRIDGAUSS(RBAS,NAT,R0,IAT0,NORB,NP,P,ORB)
 !     **************************************************************************
 !     ** MAPS THE SCREENED ENVELOPE FUNCTION AT ATOM IAT1 ONTO THE GRID P     **
 !     ** THE FUNCTION IS EXPRESSED BY GAUSS FUNCTIONS                         **
@@ -5686,8 +5255,7 @@ REAL(8) :: X(10)
 !     ** ATTENTION: SCREENING IS DETERMINED BY ISCATT                         **
 !     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2010 ************
-      USE LMTO_MODULE, ONLY : LOX,NIJKX,NRL,COEFF,GAUSSEP0,SBARATOMI1,SBARLI1 &
-     &                       ,gaussorb,ispecies,potpar
+      USE LMTO_MODULE, ONLY : GAUSSORB
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NP        ! #(GRID POINTS)
       REAL(8)   ,INTENT(IN) :: P(3,NP)   ! GRIDPOINT POSITIONS
@@ -5695,58 +5263,32 @@ REAL(8) :: X(10)
       INTEGER(4),INTENT(IN) :: NAT       ! #(ATOMS)
       REAL(8)   ,INTENT(IN) :: R0(3,NAT) ! ATOMIC POSITIONS
       INTEGER(4),INTENT(IN) :: IAT0      ! INDEX OF CENTRAL ATOM
-      INTEGER(4),INTENT(IN) :: LM1X      !#(ORBITALS ON CENTRAL ATOM)
-      REAL(8)   ,INTENT(OUT):: ORB(NP,LM1X)  ! SCREENED ENVELOPE FUNCTIONS
+      INTEGER(4),INTENT(IN) :: NORB      !#(ORBITALS ON CENTRAL ATOM)
+      REAL(8)   ,INTENT(OUT):: ORB(NP,NORB)  ! SCREENED ENVELOPE FUNCTIONS
       REAL(8)               :: DR(3) ! DISTANCE OF GRID POINT TO ATOM
-      INTEGER(4)            :: LX
-      INTEGER(4)            :: nijk
-      INTEGER(4)            :: ne
-      real(8)               :: svar
-      INTEGER(4)            :: IP,L,IRL,IM,LM,iorb,ie,isp
+      INTEGER(4)            :: NIJK
+      INTEGER(4)            :: NE
+      REAL(8)               :: SVAR
+      INTEGER(4)            :: IP,IORB,IE
 !     **************************************************************************
                                          CALL TRACE$PUSH('LMTO_GRIDGAUSS')
-!!$PRINT*,'GRIDGAUSS',IAT0,NP,NIJKX,GAUSSEP0
-      isp=ispecies(iat0)
-      LX=MAXVAL(LOX(:,isp))
-!!$PRINT*,'SBARATOMI1',SBARATOMI1(IAT0)
-!!$PRINT*,'SBARLI1   ',SBARLI1(:,IAT0)
-!!$PRINT*,'LX        ',LX
-!!$LM=0
-!!$DO L=0,LX
-!!$  IF(SBARLI1(L+1,IAT0).LE.0) CYCLE
-!!$  DO IM=1,2*L+1
-!!$    IRL=SBARATOMI1(IAT0)-1+SBARLI1(L+1,IAT0)-1+IM
-!!$    LM=LM+1
-!!$    PRINT*,'COEFF',L,LM,IRL,COEFF(1:4,IRL)
-!!$  ENDDO
-!!$ENDDO
 !
 !     == LOOP OVER REAL SPACE GRID ==========================================
-      ne=gaussorb(iat0)%ne
-      nijk=gaussorb(iat0)%nijk
+      NE=GAUSSORB(IAT0)%NE
+      NIJK=GAUSSORB(IAT0)%NIJK
       ORB(:,:)=0.D0
       DO IP=1,NP
         
-!       == DR IS THE DISTANCE FROM THE central ATOM ============================
+!       == DR IS THE DISTANCE FROM THE CENTRAL ATOM ============================
         DR(:)=P(:,IP)-R0(:,IAT0)
-        do iorb=1,lm1x
-          ORB(IP,iorb)=0.d0
-          do ie=1,ne
-            CALL GAUSSIAN_3DORB('CARTESIAN',NIJK,gaussorb(iat0)%e(ie) &
-     &                   ,gaussorb(iat0)%c(:,ie,iorb),DR,svar)
-            ORB(IP,iorb)=ORB(IP,iorb)+svar
-          enddo
-        enddo
-!!$        LM=0
-!!$        DO L=0,LX
-!!$          IF(SBARLI1(L+1,IAT0).LE.0) CYCLE
-!!$          DO IM=1,2*L+1
-!!$            IRL=SBARATOMI1(IAT0)-1+SBARLI1(L+1,IAT0)-1+IM
-!!$            LM=LM+1
-!!$            CALL GAUSSIAN_3DORB('CARTESIAN',NIJKX,GAUSSEP0,COEFF(:,IRL) &
-!!$     &                         ,DR,ORB(IP,LM))
-!!$          ENDDO
-!!$        ENDDO
+        DO IORB=1,NORB
+          ORB(IP,IORB)=0.D0
+          DO IE=1,NE
+            CALL GAUSSIAN_3DORB('CARTESIAN',NIJK,GAUSSORB(IAT0)%E(IE) &
+     &                   ,GAUSSORB(IAT0)%C(:,IE,IORB),DR,SVAR)
+            ORB(IP,IORB)=ORB(IP,IORB)+SVAR
+          ENDDO
+        ENDDO
       ENDDO
                                         CALL TRACE$POP()
       RETURN
@@ -5790,3 +5332,4 @@ REAL(8) :: X(10)
       WRITE(NFIL,FMT='(6(E12.6," "))')(((DATA(I,J,K),K=1,N3),J=1,N2),I=1,N1)
       RETURN
       END
+ 
