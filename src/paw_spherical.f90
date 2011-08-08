@@ -149,6 +149,122 @@ END MODULE spherical_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPHERICAL$YLMPOLYNOMIALS(LX,INDX,LMX,YLMPOL)
+!     **************************************************************************
+!     ** REAL SPHERICAL HARMONICS (TIMES R^L) AS POWER SERIES                 **
+!     **                                                                      **
+!     ** REFERS TO OBJECT PAW_GAUSSIAN REGARDING THE ORDERING OF POWERS       **
+!     **                                                                      **
+!     ********************************PETER BLOECHL, GOSLAR 2011****************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LX     ! max(angular momentum quantum number)
+      INTEGER(4),INTENT(IN) :: INDX   ! 
+      INTEGER(4),INTENT(IN) :: LMX
+      REAL(8)   ,INTENT(OUT):: YLMPOL(INDX,LMX) 
+      REAL(8)               :: FACTORIAL(0:2*LX)
+      INTEGER(4)            :: L,MPOS,IX,JY,KZ,P,I,J,k,J1,K1,N,IND,LM,m
+      REAL(8)               :: SVAR1,SVAR2,SVAR3,SVAR4,SVAR5,RES
+      REAL(8)               :: PI
+      INTEGER(4)            :: ISVAR
+      logical(4),parameter  :: twrite=.false.
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == CHECK CONSISTENCY OF INDICES                                         ==
+!     ==========================================================================
+      IF(LMX.LT.(LX+1)**2) THEN
+        CALL ERROR$MSG('INDEX LMX TOO SMALL FOR SPECIFIED MAX ANGULAR MOMENTUM')
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$I4VAL('LMX',LMX)
+        CALL ERROR$I4VAL('REQUIRED MINIMUM LMX',(LX+1)**2)
+        CALL ERROR$STOP('SPHERICAL$YLMPOLYNOMIALS')
+      END IF
+      IF(INDX.LT.(LX+1)*(LX+2)*(LX+3)/6) THEN
+        CALL ERROR$MSG('INDEX INDX TOO SMALL FOR SPECIFIED MAX ANG. MOMENTUM')
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$I4VAL('INDX',INDX)
+        CALL ERROR$I4VAL('REQUIRED MINIMUM INDX',(LX+1)*(LX+2)*(LX+3)/6)
+        CALL ERROR$STOP('SPHERICAL$YLMPOLYNOMIALS')
+      END IF
+!
+!     ==========================================================================
+!     == PREPARATION: PI AND FACTORIAL                                        ==
+!     ==========================================================================
+      PI=4.D0*ATAN(1.D0)
+      ISVAR=0
+      FACTORIAL(0)=1.D0
+      DO I=1,2*LX
+        FACTORIAL(I)=FACTORIAL(I-1)*REAL(I,KIND=8)
+      ENDDO
+!
+!     ==========================================================================
+!     == CONSTRUCT SPHERICAL HARMONICS                                        ==
+!     ==========================================================================
+      YLMPOL(:,:)=0.D0
+      DO L=0,LX
+        DO MPOS=0,L
+          SVAR1=SQRT(REAL(2*L+1)/(4.D0*PI)*FACTORIAL(L-MPOS)/FACTORIAL(L+MPOS))
+          SVAR1=SVAR1*(-1.D0)**MPOS/(2.D0**L*FACTORIAL(L))  !FROM ASS. LEG. POL.
+          DO P=0,MPOS
+            CALL BINOMIALCOEFFICIENT(MPOS,P,RES)
+            SVAR2=SVAR1*RES
+!           == CONVERT TO REAL SPHERICAL HARMONICS =============================
+            SVAR2=SVAR2*(-1.D0)**MPOS
+            IF(MPOS.NE.0)SVAR2=SVAR2*SQRT(2.D0)  
+            IF(MODULO(P,2).EQ.0) THEN    ! P IS EVEN => M=+MPOS
+              LM=L**2+L+1-MPOS
+              ISVAR=P/2
+              SVAR2=SVAR2*(-1.D0)**ISVAR ! SIGN RESULTING FROM I^P
+            ELSE                         ! P IS ODD => M=-MPOS 
+              LM=L**2+L+1+MPOS 
+              ISVAR=(P-1)/2              
+              SVAR2=SVAR2*(-1.D0)**ISVAR ! SIGN RESULTING FROM I^P
+            END IF
+!
+            J1=INT(0.5D0*REAL(L+MPOS+1))
+            DO J=J1,L
+              CALL BINOMIALCOEFFICIENT(L,J,RES)
+              SVAR3=SVAR2*FACTORIAL(2*J)/FACTORIAL(2*J-L-MPOS)*RES
+              IF(MODULO(L-J,2).EQ.1) SVAR3=-SVAR3   ! (-1)^(L-J)
+              DO K1=0,L-J
+                CALL BINOMIALCOEFFICIENT(L-J,K1,RES)
+                SVAR4=SVAR3*RES
+                DO N=0,K1
+                  CALL BINOMIALCOEFFICIENT(K1,N,RES)
+                  SVAR5=SVAR4*RES
+                  IX=2*N+MPOS-P
+                  JY=2*K1-2*N+P
+                  KZ=L-MPOS-2*K1
+                  CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND,IX,JY,KZ)
+                  YLMPOL(IND,LM)=YLMPOL(IND,LM)+SVAR5
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO              
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == write power series expansion                                         ==
+!     ==========================================================================
+      IF(TWRITE) THEN
+        LM=0
+        DO L=0,LX
+          DO M=-L,L
+            LM=LM+1
+            WRITE(*,*)'================ L=',L,' M=',M,' LM=',LM,'=============='
+            DO IND=1,INDX
+              IF(YLMPOL(IND,LM).EQ.0.D0) CYCLE
+              CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I,J,K)
+              WRITE(*,*)I,J,K,YLMPOL(IND,LM)
+            ENDDO
+          ENDDO
+        ENDDO
+      END IF
+      RETURN 
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$YLMNAME(LM,NAME)
 !     **************************************************************************
 !     **************************************************************************

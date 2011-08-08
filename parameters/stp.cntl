@@ -2804,7 +2804,6 @@
  !END
 
 
-
  !SETUP  ID='BA_TEST' EL='BA' ZV=10.
          TYPE='HBS' RBOX/RCOV=1.2 RCSM/RCOV=0.25
          RCL/RCOV= 0.5 0.5 0.5 0.5
@@ -3150,6 +3149,25 @@
    !POT  POW=3. RC/RCOV=.6 !END
    !CORE POW=2. RC/RCOV=.6 !END
 !END
+
+
+!SETUP  ID='CA_MU' EL='CA' ZV=10.
+        TYPE='HBS' RBOX/RCOV=1.2 RCSM/RCOV=.25
+        RCL/RCOV=.5 .5 .5 .5
+        LAMBDA=6. 6. 6. 6.
+  !GRID DMIN=5.E-6 DMAX=.15 RMAX=9. !END
+  !POT  POW=3. RC/RCOV=.5 !END
+  !CORE POW=2. RC/RCOV=.5 !END
+  !COMMENT text='Rcov3.29' !END
+!END
+ !SETUP  ID='MN_MU' EL='MN' ZV=7.
+         TYPE='HBS' RBOX/RCOV=1.2 RCSM/RCOV=.25
+         RCL/RCOV=.7 .7 .7 .7
+         LAMBDA=5. 5. 5. 5.
+   !GRID DMIN=5.E-6 DMAX=.15 RMAX=9. !END
+   !POT  POW=3. RC/RCOV=.65 !END
+   !CORE POW=2. RC/RCOV=.65 !END
+ !END
 
 
 !End

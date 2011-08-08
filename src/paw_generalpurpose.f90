@@ -625,6 +625,161 @@
        RETURN
        END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE rotation$angletomatrix(phi,tinv,u)
+!     **************************************************************************
+!     **  composes rotation matrix from axis and angle                        **
+!     **  length of phi is the angle, direction of phi is the axis            **
+!     **  the angle is counterclockwise if viewed against the axis            **
+!     **  source: http://en.wikipedia.org/wiki/Rotation_matrix                **
+!     **                                                                      **
+!     ********************************Peter E. Bloechl, Goslar 2011 ************
+      real(8)   ,intent(in)  :: phi(3)
+      real(8)   ,intent(out) :: u(3,3)
+      logical(4),intent(in)  :: tinv ! includes inversion?
+      real(8)                :: c,s
+      real(8)                :: angle,axis(3)
+      integer(4)             :: j
+!     **************************************************************************
+      angle=sqrt(sum(phi**2))
+      axis(:)=phi(:)/angle
+      c=cos(angle)
+      s=sin(angle)
+      do j=1,3
+        u(:,j)=axis(:)*axis(j)*(1.d0-c)
+        u(j,j)=u(j,j)+c
+      enddo
+      u(1,2)=u(1,2)-axis(3)*s
+      u(2,3)=u(2,3)-axis(1)*s
+      u(3,1)=u(3,1)-axis(2)*s
+      u(3,2)=u(3,2)+axis(1)*s
+      u(2,1)=u(2,1)+axis(3)*s
+      u(1,3)=u(1,3)+axis(2)*s
+      if(tinv)u=-u
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE rotation$matrixtoangle(u,phi,tinv)
+!     **************************************************************************
+!     **  extracts axis and angle from a rotation matrix                      **
+!     **                                                                      **
+!     ********************************Peter E. Bloechl, Goslar 2011 ************
+      real(8),intent(in)     :: u(3,3)
+      real(8),intent(out)    :: phi(3)
+      logical(4),intent(out) :: tinv
+      real(8)                :: trace
+      real(8)                :: det
+      real(8)                :: axis(3)
+      real(8)                :: rot(3,3)
+      real(8)                :: angle
+!     **************************************************************************
+      trace=u(1,1)+u(2,2)+u(3,3)
+      det=u(1,1)*(u(2,2)*u(3,3)-u(3,2)*u(2,3)) &
+     &   +u(1,2)*(u(2,3)*u(3,1)-u(3,3)*u(2,1)) &
+     &   +u(1,3)*(u(2,1)*u(3,2)-u(3,1)*u(2,2)) 
+      tinv=det.lt.0.d0
+      if(tinv) then
+         rot=-u
+         trace=-trace
+      else
+         rot=u
+      end if
+      if(trace.eq.3.d0) then
+        angle=0.d0
+        axis(:)=0.d0
+        axis(3)=1.d0
+      else if(trace.eq.-1.d0) then
+        angle=4.d0*atan(1.d0)  !=pi
+        axis(1)=sqrt(0.5d0*(rot(1,1)+1.d0))
+        axis(2)=sqrt(0.5d0*(rot(2,2)+1.d0))
+        axis(3)=sqrt(0.5d0*(rot(3,3)+1.d0))
+      else  
+        angle=acos(0.5d0*(trace-1.d0))
+        axis(1)=rot(3,2)-rot(2,3)
+        axis(2)=rot(1,3)-rot(3,1)
+        axis(3)=rot(2,1)-rot(1,2)
+        axis(:)=axis/sqrt(sum(axis**2))
+      end if
+      phi=axis*angle
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE rgb$rainbow(xinv,r,g,b)
+!     **************************************************************************
+!     **  maps [0,1] onto the rgb values of a rainbow                         **
+!     **  xinv=0 maps onto violet and xinv=1 maps to red                      **
+!     **  rainbow colors from http://simple.wikipedia.org/wiki/Rainbow        **
+!     **                                                                      **
+!     ********************************Peter E. Bloechl, Goslar 2011 ************
+      IMPLICIT NONE
+      real(8)    ,intent(in) :: xinv  ! in[0,1]
+      integer(4),intent(out) :: r
+      integer(4),intent(out) :: g
+      integer(4),intent(out) :: b
+      integer(4),parameter   :: nc=7
+      integer(4)             :: color(3,nc)
+      real(8)                :: x1(nc)=(/0.d0,0.15d0,0.3d0,0.45d0,0.6d0 &
+     &                                  ,0.75d0,0.9d0/)
+      integer(4)             :: i
+      real(8)                :: svar
+      real(8)                :: x
+!     **************************************************************************
+      x=1.d0-xinv
+      color(:,1)=(/255,0,0/)   !red
+      color(:,2)=(/255,127,0/) !orange
+      color(:,3)=(/255,255,0/) !yellow
+      color(:,4)=(/0,255,0/)   !green
+      color(:,5)=(/255,0,0/)   !blue
+      color(:,6)=(/111,0,255/) !indigo
+      color(:,7)=(/143,0,255/) !violet
+!     ==  red 255,0,0 orange 255,127,0 yellow 255,255,0 green 0,255,0 ==========
+!     ==  blue 0,0,255 Indigo 111,0,255 violet 143,0,255
+      r=color(1,1)
+      g=color(2,1)
+      b=color(3,1)
+      do i=1,nc-1
+        if(x1(i).le.x.and.x.le.x1(i+1)) then
+          svar=(x-x1(i))/(x1(i+1)-x1(i))
+          r=color(1,i)*(1.d0-svar)+color(1,i+1)*svar
+          g=color(2,i)*(1.d0-svar)+color(2,i+1)*svar
+          b=color(3,i)*(1.d0-svar)+color(3,i+1)*svar
+        end if
+      enddo
+      if(x.gt.x1(nc)) then
+        r=color(1,nc)
+        g=color(2,nc)
+        b=color(3,nc)
+      end if
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE rgb$blackbody(t,r,g,b)
+!     **************************************************************************
+!     **  rgb values of a black body with temperature t Kelvin                **
+!     ** source: http://www.physics.sfasu.edu/astro/color/blackbody.html      **
+!     **         Mitchell Charity                                             **
+!     ** height profile from 1000-15000 K                                     **
+!     **                                                                      **
+!     ********************************Peter E. Bloechl, Goslar 2011 ************
+      IMPLICIT NONE
+      real(8)    ,intent(in) :: t
+      integer(4),intent(out) :: r
+      integer(4),intent(out) :: g
+      integer(4),intent(out) :: b
+!     **************************************************************************
+      r=nint(148.d0+56100000.d0*t**(-1.5d0))
+      g=nint(100.04d0*log(t)-623.6d0)
+      if(t.gt.6500.d0) g=nint(184.d0+35200000.d0*t**(-1.5d0))
+      b=nint(194.18d0*log(t)-1448.6d0)
+      r=min(max(r,0),255)
+      g=min(max(g,0),255)
+      b=min(max(b,0),255)
+      return
+      end
+!
 !     ..................................................................
       SUBROUTINE BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
 !     ******************************************************************

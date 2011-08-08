@@ -993,6 +993,7 @@ END IF
       INTEGER(4),ALLOCATABLE:: LOXCHI(:)
       REAL(8)   ,ALLOCATABLE:: MAT(:,:)
       REAL(8)   ,ALLOCATABLE:: R(:)        
+      REAL(8)   ,ALLOCATABLE:: aux(:)        
       REAL(8)               :: SVAR1,SVAR2
       INTEGER(4)            :: IR
       INTEGER(4)            :: IAT
@@ -1102,10 +1103,20 @@ PRINT*,'TORB ',TORB
         NULLIFY(THIS%CVX)
       END IF
       DEALLOCATE(PHI)
-      DEALLOCATE(R)
 !DO LN=1,LNXCHI
 !WRITE(*,FMT='("A  ",I5,10F10.5)')LN,THIS%DOWNFOLD(LN,:)
 !ENDDO
+!!$
+!!$IF(IAT.EQ.1)CALL ATOMLIB_WRITEPHI('CHI_1.DAT',GID,NR,LNXCHI,THIS%CHI)
+!!$IF(IAT.EQ.2)CALL ATOMLIB_WRITEPHI('CHI_2.DAT',GID,NR,LNXCHI,THIS%CHI)
+!!$allocate(aux(nr))
+!!$do ln=1,lnxchi
+!!$  aux(:)=r(:)**2*this%chi(:,ln)**2
+!!$  call radial$integral(gid,nr,aux,svar1)
+!!$  PRINT*,"NORM Isp=",Isp," LN= ",LN," NORM=",SVAR1
+!!$enddo
+!!$!
+      DEALLOCATE(R)
                             CALL TRACE$POP()
       RETURN      
       END

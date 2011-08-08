@@ -2762,3 +2762,102 @@ END MODULE PLANEWAVE_MODULE
       
       RETURN
       END
+!
+!     .................................................................
+      SUBROUTINE PLANEWAVE$RSPACECOLLECTC8(NRL,XL,NRG,XG)
+!     ******************************************************************
+!     **  PLANEWAVE$COLLECT                                           **
+!     ******************************************************************
+      USE PLANEWAVE_MODULE
+      USE MPE_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NRL
+      INTEGER(4)  ,INTENT(IN) :: NRG
+      complex(8)  ,INTENT(IN) :: XL(NRL)
+      complex(8)  ,INTENT(OUT):: XG(NRG)
+      INTEGER(4)              :: NR1L,NR1G,NR2,NR3,NRLX,NRLFROM,NR1START
+      REAL(8)     ,ALLOCATABLE:: X_LOCTMP(:)
+      INTEGER(4)              :: I23,IRG,IRL,IR1L,IR2,IR3
+      INTEGER(4)              :: FROMTASK
+      INTEGER(4)                 :: ntasks,THISTASK
+!     ******************************************************************
+      CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
+                     CALL TRACE$PUSH('PLANEWAVE$RSPACECOLLECTR8')
+      IF(.NOT.TINI) THEN
+        CALL ERROR$MSG('LIST NOT INITIALIZED')
+        CALL ERROR$STOP('PLANEWAVE$RSPACECOLLECTR8')
+      ENDIF
+      NR1L=THIS%NR1L
+      NR1G=SUM(THIS%NR1LARR)
+      NR2=THIS%NR2
+      NR3=THIS%NR3
+      IF(NRG.NE.NR1G*NR2*NR3) THEN
+        CALL ERROR$MSG('GLOBAL %(R-POINTS) INCONSISTENT WITH OBJECT')
+        CALL ERROR$STOP('PLANEWAVE$RSPACECOLLECTR8')
+      END IF
+      IF(NRL.NE.NR1L*NR2*NR3) THEN
+        CALL ERROR$MSG('LOCAL %(R-POINTS) INCONSISTENT WITH OBJECT')
+        CALL ERROR$STOP('PLANEWAVE$RSPACECOLLECTR8')
+      END IF
+      XG(:)=0.D0
+      NRLX=MAXVAL(THIS%NR1LARR(:))*NR2*NR3
+      ALLOCATE(X_LOCTMP(NRLX))
+      CALL MPE$SYNC(THIS%CID) !THIS IS ONLY USED TO AVOID FILLING UP THE BUFFER
+      IF(THISTASK.EQ.1)THEN
+!
+!       ================================================================
+!       == RECEIVE FROM ALL TASKS AND MAP INTO GLOBAL ARRAY           ==
+!       ================================================================
+        NR1START=1
+        DO FROMTASK=1,NTASKS
+          NR1L=THIS%NR1LARR(FROMTASK)
+          IF(FROMTASK.NE.1) THEN
+            CALL MPE$RECEIVE(THIS%CID,FROMTASK,FROMTASK*2,NRLFROM)
+            IF(NRLFROM.GT.NRLX) THEN
+              CALL ERROR$MSG('PACKAGE TO LARGE')
+              CALL ERROR$STOP('PLANEWAVE$RSPACECOLLECTR8')
+            END IF
+            CALL MPE$RECEIVE(THIS%CID,FROMTASK,FROMTASK*2+1,X_LOCTMP)
+            I23=-1
+            DO IR3=1,NR3
+              DO IR2=1,NR2
+                I23=I23+1   !I23=IR2-1+NR2*(IR3-1)
+                IRG=NR1START-1+NR1G*I23
+                IRL=NR1L*I23
+                DO IR1L=1,NR1L
+                  IRL=IRL+1
+                  IRG=IRG+1
+                  XG(IRG)=X_LOCTMP(IRL)
+                ENDDO
+              ENDDO
+            ENDDO        
+          ELSE
+            I23=-1
+            DO IR3=1,NR3
+              DO IR2=1,NR2
+                I23=I23+1   !I23=IR2-1+NR2*(IR3-1)
+                IRG=NR1START-1+NR1G*I23
+                IRL=NR1L*I23
+                DO IR1L=1,NR1L
+                  IRL=IRL+1
+                  IRG=IRG+1
+                  XG(IRG)=XL(IRL)
+                ENDDO
+              ENDDO
+            ENDDO        
+          END IF
+          NR1START=NR1START+NR1L
+        ENDDO
+      ELSE
+!       ================================================================
+!       == OTHER TASKS SEND TO TASK ONE                               ==
+!       ================================================================
+        CALL MPE$SEND(THIS%CID,1,THISTASK*2,NRL)
+        X_LOCTMP(1:NRL)=XL(:)
+        CALL MPE$SEND(THIS%CID,1,THISTASK*2+1,X_LOCTMP)
+      ENDIF
+      DEALLOCATE(X_LOCTMP)
+                     CALL TRACE$POP
+      
+      RETURN
+      END

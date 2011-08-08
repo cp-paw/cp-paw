@@ -3077,7 +3077,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-      LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
+      LOGICAL   ,PARAMETER  :: TWRITE=.false.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
@@ -3118,7 +3118,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)               :: RC1
       REAL(8)               :: EHOMO
       INTEGER(4)            :: LX
-      INTEGER(4)            :: L,IB,LN,IR,IB1,IB2,LN1,LN2,I,ISO
+      INTEGER(4)            :: L,IB,LN,IR,ir1,IB1,IB2,LN1,LN2,I,ISO
       INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
       REAL(8)               :: PI,Y0,C0LL
       REAL(8)               :: X0,Z0,DX,XM,ZM
@@ -3301,6 +3301,18 @@ PRINT*,'EOFI1 ',EOFI1
             CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,ROUT,PHIPHASE,E,PHI)
             CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,PHIPHASE)
+!           == fix size of first partial wave about equal to uofi   ============
+            if(ncl(l).eq.0) then
+              do ir1=1,nr
+                if(r(ir1).gt.rbnd) exit
+                ir=ir1
+              enddo
+              do ib1=1,nb
+                ib=ib1   !band index of lowest state with this l
+                if(lofi(ib1).eq.l) exit
+              enddo
+              phi(:)=phi(:)*uofi(ir,ib)/phi(ir)
+            end if
             TFIRST=.FALSE.
           ELSE
             CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &

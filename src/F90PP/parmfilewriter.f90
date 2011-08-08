@@ -17,6 +17,10 @@
        integer,parameter :: nfilo=6    ! standard in
        integer,parameter :: nfilin=5   ! standard out
 !      *************************************************************************
+!
+!      =========================================================================
+!      ==  produce subroutine version$writeparmfile                           ==
+!      =========================================================================
        write(nfilo,fmt='(A)')'subroutine version$writeparmfile()'
        do
          read(nfilin,fmt='(A)',err=100,end=100)line
@@ -39,5 +43,24 @@
 100    continue
        write(nfilo,fmt='(A)')'return'
        write(nfilo,fmt='(A)')'end'
+!
+!      =========================================================================
+!      ==  PRODUCE SUBROUTINE VERSION$GETPAWDIR                               ==
+!      =========================================================================
+       WRITE(NFILO,FMT='(A)')'SUBROUTINE VERSION$GETPAWDIR(PAWDIR)'
+       WRITE(NFILO,FMT='(A)')'CHARACTER(*),INTENT(OUT):: PAWDIR'
+       WRITE(NFILO,FMT='(A)')"PAWDIR='XXPAWDIRXX'" ! TO BE MODIFIED
+       WRITE(NFILO,FMT='(A)')'RETURN'
+       WRITE(NFILO,FMT='(A)')'END'
+!
+!      =========================================================================
+!      ==  PRODUCE SUBROUTINE VERSION$GETPAWVERSION                           ==
+!      =========================================================================
+       WRITE(NFILO,FMT='(A)')'SUBROUTINE VERSION$GETPAWVERSIONR(PAWVERSION)'
+       WRITE(NFILO,FMT='(A)')'CHARACTER(*),INTENT(OUT):: PAWVERSION'
+       WRITE(NFILO,FMT='(A)')"PAWVERSION='XXPAWVERSIONXX'" ! TO BE MODIFIED
+       WRITE(NFILO,FMT='(A)')'RETURN'
+       WRITE(NFILO,FMT='(A)')'END'
+!
        stop
        end

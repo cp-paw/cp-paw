@@ -49,7 +49,7 @@ MODULE WAVES_MODULE
 !**                                                                           **
 !************************************************P.E. BLOECHL, (1995)***********
 USE LINKEDLIST_MODULE
-! ----------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 ! THE TYPE MAP_TYPE DESCRIBES THE ARRANGEMENT OF PROJECTOR FUNCTIONS 
 ! AND THEIR LINKS TO ATOMS AN ANGULAR MOMENTA
 TYPE MAP_TYPE
@@ -65,7 +65,7 @@ TYPE MAP_TYPE
   INTEGER(4),POINTER :: LOX(:,:)    !(LNXX,NSP) MAIN ANGULAR MOMENTUM OF AN LN
   INTEGER(4),POINTER :: ISP(:)      !(NAT) POINTER TO ATOM TYPES
 END TYPE MAP_TYPE
-! ----------------------------------------------------------------------
+! ------------------------------------------------------------------------------
 ! THE TYPE GSET_TYPE KEEPS PROJECTOR FUNCTIONS SPHERICAL HARMONICS AND
 ! STRUCTURE FACTORS FOR A GIVEN K-POINT
 ! GSET_TYPE REFERS TO MAP_TYPE FOR DIMENSIONING OF ITS ARRAYS
@@ -82,7 +82,7 @@ TYPE GSET_TYPE
   REAL(8)   ,POINTER :: BUCKET(:)  ! BUCKET POTENTIAL
   REAL(8)   ,POINTER :: DBUCKET(:) ! 1/G* DBUCKET/DG
 END TYPE GSET_TYPE
-TYPE WVSET_TYPE  !======================================================
+TYPE WVSET_TYPE  !==============================================================
   TYPE(GSET_TYPE),POINTER :: GSET
   INTEGER(4)         :: NB
   INTEGER(4)         :: NBH
@@ -103,17 +103,17 @@ TYPE WVSET_TYPE  !======================================================
   REAL(8)   ,POINTER :: EIGVAL(:)       !(NB)    EIGENVALUES AFTER DIAG
   REAL(8)   ,POINTER :: EXPECTVAL(:)    !(NB) !<PSI_N|H|PSI_N>
 END TYPE WVSET_TYPE
-TYPE EXTERNALPOINTER_TYPE !=============================================
+TYPE EXTERNALPOINTER_TYPE !=====================================================
   INTEGER(4) :: IB
   INTEGER(4) :: IKPT
   INTEGER(4) :: ISPIN
   INTEGER(4) :: IAT
   LOGICAL(4) :: TIM
 END TYPE EXTERNALPOINTER_TYPE
-!========================================================================
-!== DATA THAT DESCRIBE FUNCTIONALITY OF WAVES OBJECT                   ==
-!==  THESE DATA HAVE TO BE SET EXPLICITELY                             ==
-!========================================================================
+!===============================================================================
+!== DATA THAT DESCRIBE FUNCTIONALITY OF WAVES OBJECT                          ==
+!==  THESE DATA HAVE TO BE SET EXPLICITELY                                    ==
+!===============================================================================
 INTEGER(4)  :: NKPT          ! #(K-POINTS) SEE ALSO NKPTL
 INTEGER(4)  :: NSPIN=1       ! #(SPINS)
 INTEGER(4)  :: NDIM=1        ! #(WAVE FUNCTION COMPONENTS)
@@ -137,9 +137,9 @@ LOGICAL(4)  :: THAMILTON=.FALSE.  ! HAMILTON MATRIX AVAILABLE
 LOGICAL(4)  :: TRAWSTATES=.FALSE. ! PROVIDES NON-DIAGONALIZED WAVE FUNCTIONS THROUGH $GETR
 LOGICAL(4)  :: TFORCEX=.TRUE.
 LOGICAL(4)  :: TSTRESSX=.FALSE.
-!========================================================================
-!== PERMANENT DATA, WHICH ARE ORGANIZED BY THE ROUTINES ITSELF         == 
-!========================================================================
+!===============================================================================
+!== PERMANENT DATA, WHICH ARE ORGANIZED BY THE ROUTINES ITSELF                ==
+!===============================================================================
 INTEGER(4)      ,SAVE     :: NKPTL         ! #(LOCAL K-POINTS)
 INTEGER(4)      ,POINTER  :: KMAP(:)
 REAL(8)                   :: WAVEEKIN1=0.D0   ! CALCULATED IN WAVES$ETOT
@@ -161,7 +161,7 @@ CONTAINS
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IKPT
       INTEGER(4),INTENT(IN) :: ISPIN
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ASSOCIATED(THISARRAY)) THEN
         CALL ERROR$MSG('THISARRAY DOES NOT EXIST') 
         CALL ERROR$STOP('WAVES_SELECTWV')
@@ -186,18 +186,18 @@ END MODULE WAVES_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$STATESELECTED(IB,IKPT,ISPIN,TCHK)
-!     ******************************************************************
-!     **  WAVES$STATESELECTED                                         **
-!     **  TESTS IF THE EXTERNAL POINTER SELECTS A STATE THAT IS       **
-!     **  AVAILABLE ON THIS TASK                                      **
-!     ******************************************************************
+!     **************************************************************************
+!     **  WAVES$STATESELECTED                                                 **
+!     **  TESTS IF THE EXTERNAL POINTER SELECTS A STATE THAT IS               **
+!     **  AVAILABLE ON THIS TASK                                              **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IB
       INTEGER(4),INTENT(IN) :: IKPT
       INTEGER(4),INTENT(IN) :: ISPIN
       LOGICAL(4),INTENT(OUT):: TCHK
-!     ******************************************************************
+!     **************************************************************************
       TCHK=.TRUE.
       TCHK=TCHK.AND.EXTPNTR%IKPT.NE.0
       TCHK=TCHK.AND.EXTPNTR%ISPIN.NE.0
@@ -205,20 +205,20 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SELECTSTATEPOINTER(IB,IKPT,ISPIN,TCHK)
-!     *******************************************************************
-!     **  SELECTS A SPECIFIC STATE OR WAVES$GET.. ROUTINES.            **
-!     **  IF THE PRESENT TASK DOES NOT HAVE INFORMATION ON THIS STATE  **
-!     **  TCHK WILL BE FALSE. OTHERWISE IT WILL BE TRUE                **
-!     *******************************************************************
+!     **************************************************************************
+!     **  SELECTS A SPECIFIC STATE OR WAVES$GET.. ROUTINES.                   **
+!     **  IF THE PRESENT TASK DOES NOT HAVE INFORMATION ON THIS STATE         **
+!     **  TCHK WILL BE FALSE. OTHERWISE IT WILL BE TRUE                       **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IB
       INTEGER(4),INTENT(IN) :: IKPT
       INTEGER(4),INTENT(IN) :: ISPIN
       LOGICAL(4),INTENT(OUT):: TCHK
-!     ******************************************************************
+!     **************************************************************************
       CALL WAVES$SETI4('IKPT',IKPT)
       CALL WAVES$SETI4('ISPIN',ISPIN)
       CALL WAVES$SETI4('IB',IB)
@@ -229,16 +229,16 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SETR8(ID,VAL)
-!     ******************************************************************
-!     **  WAVES$SETR8A                                                **
-!     ******************************************************************
+!     **************************************************************************
+!     **  WAVES$SETR8A                                                        **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'EPWRHO') THEN
         EPWRHO=VAL
       ELSE IF(ID.EQ.'EPWPSI') THEN
@@ -266,16 +266,16 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$GETR8(ID,VAL)
-!     ******************************************************************
-!     **  WAVES$GETR8                                                **
-!     ******************************************************************
+!     **************************************************************************
+!     **  WAVES$GETR8                                                         **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'EPWRHO') THEN
         VAL=EPWRHO
       ELSE IF(ID.EQ.'EPWPSI') THEN
@@ -300,11 +300,11 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$GETR8A(ID,LEN,VAL)
-!     ******************************************************************
-!     **  WAVES$GETR8A                                                **
-!     ******************************************************************
+!     **************************************************************************
+!     **  WAVES$GETR8A                                                        **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -319,20 +319,20 @@ END MODULE WAVES_MODULE
       COMPLEX(8)              :: CSVAR1,CSVAR2
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       LOGICAL(4)              :: TINV
-!     ******************************************************************
+!     **************************************************************************
                               CALL TRACE$PUSH('WAVES$GETR8A')
       IF(ID.EQ.'XXXXXXXXXXXXXX') THEN
 !     
-!     ================================================================
+!     ==========================================================================
 !     ==  REAL SPACE PS WAVE FUNCTION                               ==
 !     ==  NOTE: IB,IKPT,ISPIN MUST BE SET ON LINKEDLIST             ==
-!     ================================================================
+!     ==========================================================================
 !     ELSE IF(ID.EQ.'<PSI|H|PSI>') THEN
 !
-!     ================================================================
+!     ==========================================================================
 !     ==  ENERGY EIGENVALUES                                        ==
 !     ==  NOTE: IKPT,ISPIN MUST BE SET ON LINKEDLIST                ==
-!     ================================================================
+!     ==========================================================================
       ELSE IF(ID.EQ.'EIGVAL') THEN
         IKPT=EXTPNTR%IKPT
         IF(IKPT.EQ.0) THEN
@@ -358,10 +358,10 @@ END MODULE WAVES_MODULE
         END IF
         VAL(:)=THIS%EIGVAL(:)
 !
-!     ================================================================
+!     ==========================================================================
 !     ==  ENERGY EXPECTATIONS VALUES OF THE ONE-PARTCLE STATES      ==
 !     ==  NOTE: IKPT,ISPIN MUST BE SET ON LINKEDLIST                ==
-!     ================================================================
+!     ==========================================================================
       ELSE IF(ID.EQ.'<PSI|H|PSI>') THEN
         IKPT=EXTPNTR%IKPT
         IF(IKPT.EQ.0) THEN
@@ -387,10 +387,10 @@ END MODULE WAVES_MODULE
         END IF
         VAL(:)=THIS%EXPECTVAL(:)
 !
-!     ================================================================
+!     ==========================================================================
 !     ==  REAL SPACE PS WAVE FUNCTION                               ==
 !     ==  NOTE: IB,IKPT,ISPIN MUST BE SET ON LINKEDLIST             ==
-!     ================================================================
+!     ==========================================================================
       ELSE IF(ID.EQ.'PSPSI') THEN
         IKPT=EXTPNTR%IKPT
         IF(IKPT.EQ.0) THEN
@@ -469,9 +469,12 @@ END MODULE WAVES_MODULE
         END IF
         DEALLOCATE(CWORK2)
 !
-!     ================================================================
-!     ==  GET PROJECTIONS                                           ==
-!     ================================================================
+!     ==========================================================================
+!     ==  GET PROJECTIONS                                                     ==
+!     ==  FOR A SPECIFIED KPOINT(IKPT), SPIN (ISPIN), BAND(IB),               ==
+!     ==  REAL OR IMAGINARY PART (TIM), ATOM(IAT) AS SPECIFIED IN EXTPTR.     ==
+!     ==  THE PROJECTION IS OBTAINED FOR EIGENSTATES                          ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'<PSPSI|PRO>') THEN
         IKPT=EXTPNTR%IKPT   ! IKPT REFERS TO LOCAL KPOINTS
         IF(IKPT.EQ.0) THEN
@@ -514,6 +517,7 @@ END MODULE WAVES_MODULE
         ENDDO
         LMNX=IPRO2-IPRO1+1
 !
+!       == transform to eigenstates ============================================
         ALLOCATE(CWORK1(LMNX))
         CWORK1(:)=(0.D0,0.D0)
         IF(TINV) THEN
@@ -531,7 +535,6 @@ END MODULE WAVES_MODULE
         ELSE
           DO IB1=1,NB
             CSVAR1=THIS%EIGVEC(IB1,IB)
-! DO IPRO=1,NPRO
             DO IPRO=IPRO1,IPRO2
               LMN=IPRO-IPRO1+1
               CWORK1(LMN)=CWORK1(LMN)+THIS%PROJ(IDIM,IB1,IPRO)*CSVAR1
@@ -558,6 +561,190 @@ END MODULE WAVES_MODULE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('WAVES$GETR8A')
+      END IF
+                              CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$GETC8A(ID,LEN,VAL)
+!     **************************************************************************
+!     **  WAVES$GETC8A                                                        **
+!     **************************************************************************
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      complex(8)  ,INTENT(OUT):: VAL(LEN)
+      COMPLEX(8)  ,ALLOCATABLE:: CWORK1(:)
+      COMPLEX(8)  ,ALLOCATABLE:: CWORK2(:)
+      COMPLEX(8)  ,ALLOCATABLE:: CWORK3(:)
+      INTEGER(4)              :: IKPT,ISPIN,IB,IDIM,IBH,IB1,IB2,IG,IR
+      INTEGER(4)              :: IPRO,IPRO1,IPRO2,IAT,ISP,L,LN,LMNX,LMN
+      INTEGER(4)              :: NB,NBH,NRL,NAT,NGL
+      COMPLEX(8)              :: CSVAR1,CSVAR2
+      COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
+      LOGICAL(4)              :: TINV
+!     **************************************************************************
+                              CALL TRACE$PUSH('WAVES$GETR8A')
+!
+!     ==========================================================================
+!     ==  REAL SPACE PS WAVE FUNCTION                                         ==
+!     ==  NOTE: IB,IKPT,ISPIN MUST BE SET ON LINKEDLIST                       ==
+!     ==========================================================================
+      IF(ID.EQ.'PSPSI') THEN
+        IKPT=EXTPNTR%IKPT
+        IF(IKPT.EQ.0) THEN
+          CALL ERROR$MSG('STATE NOT AVAILABLE ON THIS TASK')
+          CALL ERROR$MSG('THIS ERROR OCCURS ONLY FOR PARALLEL JOBS')
+          CALL ERROR$MSG("USE WAVES$GETL4('AVAILABLESTATE',TCHK) TO EXPLORE")
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
+        ISPIN=EXTPNTR%ISPIN
+        IB=EXTPNTR%IB
+        IF(NSPIN.EQ.1.AND.NDIM.EQ.2) THEN
+          IDIM=ISPIN
+          ISPIN=1
+        ELSE
+          IDIM=1
+        END IF
+        CALL WAVES_SELECTWV(IKPT,ISPIN)
+        CALL PLANEWAVE$SELECT(GSET%ID)
+        IF(.NOT.ASSOCIATED(THIS%EIGVEC)) THEN
+          CALL ERROR$MSG('EIGENSTATES NOT AVAILABLE')
+          CALL ERROR$L4VAL('THAMILTON',THAMILTON)
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
+        NGL=GSET%NGL
+        NB=THIS%NB
+        NBH=THIS%NBH
+        TINV=GSET%TINV
+        ALLOCATE(CWORK1(NGL))
+        CWORK1(:)=(0.D0,0.D0)
+!!$write(*,*)"ib=",ib
+!!$write(*,fmt='("eigvec=",100("(",2f10.5,") "))')this%eigvec(:,ib)
+        IF(TINV) THEN
+          ALLOCATE(CWORK2(NGL))
+          CWORK2(:)=(0.D0,0.D0)
+          DO IBH=1,NBH
+            IB1=2*IBH-1
+            IB2=2*IBH
+            CSVAR1=0.5D0*(THIS%EIGVEC(IB1,IB)-CI*THIS%EIGVEC(IB2,IB))
+            CSVAR2=0.5D0*(THIS%EIGVEC(IB1,IB)+CI*THIS%EIGVEC(IB2,IB))
+            CSVAR2=CONJG(CSVAR2)
+            DO IG=1,NGL
+              CWORK1(IG)=CWORK1(IG)+THIS%PSI0(IG,IDIM,IBH)*CSVAR1
+              CWORK2(IG)=CWORK2(IG)+THIS%PSI0(IG,IDIM,IBH)*CSVAR2
+            ENDDO
+          ENDDO
+          ALLOCATE(CWORK3(NGL))
+          CALL PLANEWAVE$INVERTG(NGL,CWORK2,CWORK3)
+          DO IG=1,NGL
+            CWORK1(IG)=CWORK1(IG)+CWORK3(IG)
+          ENDDO
+          DEALLOCATE(CWORK2)
+          DEALLOCATE(CWORK3)
+        ELSE
+          DO IB1=1,NB
+            CSVAR1=THIS%EIGVEC(IB1,IB)
+            DO IG=1,NGL
+              CWORK1(IG)=CWORK1(IG)+THIS%PSI0(IG,IDIM,IB1)*CSVAR1
+            ENDDO
+          ENDDO
+        END IF
+        NRL=MAP%NRL
+        IF(NRL.NE.LEN) THEN
+          CALL ERROR$MSG('SIZE INCONSISTENT')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
+        CALL PLANEWAVE$FFT('GTOR',1,NGL,CWORK1,NRL,val)
+        DEALLOCATE(CWORK1)
+!
+!     ==========================================================================
+!     ==  GET PROJECTIONS                                                     ==
+!     ==  FOR A SPECIFIED KPOINT(IKPT), SPIN (ISPIN), BAND(IB),               ==
+!     ==  REAL OR IMAGINARY PART (TIM), ATOM(IAT) AS SPECIFIED IN EXTPTR.     ==
+!     ==  THE PROJECTION IS OBTAINED FOR EIGENSTATES                          ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'<PSPSI|PRO>') THEN
+        IKPT=EXTPNTR%IKPT   ! IKPT REFERS TO LOCAL KPOINTS
+        IF(IKPT.EQ.0) THEN
+          CALL ERROR$MSG('STATE NOT AVAILABLE ON THIS TASK')
+          CALL ERROR$MSG('THIS ERROR OCCURS ONLY FOR PARALLEL JOBS')
+          CALL ERROR$MSG("USE WAVES$GETL4('AVAILABLESTATE',TCHK) TO EXPLORE")
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
+        ISPIN=EXTPNTR%ISPIN
+        IB=EXTPNTR%IB
+        IF(NSPIN.EQ.1.AND.NDIM.EQ.2) THEN
+          IDIM=ISPIN
+          ISPIN=1
+        ELSE
+          IDIM=1
+        END IF
+        CALL WAVES_SELECTWV(IKPT,ISPIN)
+        IF(.NOT.ASSOCIATED(THIS%EIGVEC)) THEN
+          CALL ERROR$MSG('EIGENSTATES NOT AVAILABLE')
+          CALL ERROR$L4VAL('THAMILTON',THAMILTON)
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
+        TINV=GSET%TINV
+        NB=THIS%NB
+        NBH=THIS%NBH
+        NAT=MAP%NAT
+!
+        IPRO=0
+        DO IAT=1,NAT
+          IF(IAT.EQ.EXTPNTR%IAT)IPRO1=IPRO+1
+          ISP=MAP%ISP(IAT)
+          DO LN=1,MAP%LNX(ISP)
+            L=MAP%LOX(LN,ISP)
+            IPRO=IPRO+2*L+1
+          ENDDO
+          IF(IAT.EQ.EXTPNTR%IAT) THEN
+            IPRO2=IPRO
+            EXIT
+          END IF
+        ENDDO
+        LMNX=IPRO2-IPRO1+1
+!
+!       == transform to eigenstates ============================================
+        ALLOCATE(CWORK1(LMNX))
+        CWORK1(:)=(0.D0,0.D0)
+        IF(TINV) THEN
+          DO IBH=1,NBH
+            IB1=2*IBH-1
+            IB2=2*IBH
+            CSVAR1=0.5D0*(THIS%EIGVEC(IB1,IB)-CI*THIS%EIGVEC(IB2,IB))
+            CSVAR2=0.5D0*(THIS%EIGVEC(IB1,IB)+CI*THIS%EIGVEC(IB2,IB))
+            DO IPRO=IPRO1,IPRO2
+              LMN=IPRO-IPRO1+1
+              CWORK1(LMN)=CWORK1(LMN)+THIS%PROJ(IDIM,IBH,IPRO)*CSVAR1 &
+                               +CONJG(THIS%PROJ(IDIM,IBH,IPRO))*CSVAR2
+            ENDDO
+          ENDDO
+        ELSE
+          DO IB1=1,NB
+            CSVAR1=THIS%EIGVEC(IB1,IB)
+            DO IPRO=IPRO1,IPRO2
+              LMN=IPRO-IPRO1+1
+              CWORK1(LMN)=CWORK1(LMN)+THIS%PROJ(IDIM,IB1,IPRO)*CSVAR1
+            ENDDO
+          ENDDO             
+        END IF
+        IF(LMNX.GT.LEN) THEN
+          CALL ERROR$MSG('SIZE INCONSISTENT')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('WAVES$GETR8A')
+        END IF
+        VAL(:)=0.D0
+        val(:lmnx)=cwork1(:lmnx)
+        DEALLOCATE(CWORK1)
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('WAVES$GETC8A')
       END IF
                               CALL TRACE$POP
       RETURN
@@ -1322,14 +1509,14 @@ END MODULE WAVES_MODULE
 !     ==========================================================================
       IF(TFIRST.OR.TFORCE.OR.TSTRESS) THEN
                                CALL TIMING$CLOCKON('STRUCTURECONSTANTS')
-!        CALL LMTO$MAKESTRUCTURECONSTANTS()
+        CALL LMTO$MAKESTRUCTURECONSTANTS()
                                CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
       END IF
                                CALL TIMING$CLOCKON('WAVES$ETOT')
                                CALL TIMING$CLOCKON('WAVES$TONTBO')
-!      CALL WAVES$TONTBO()
+      CALL WAVES$TONTBO()
                                CALL TIMING$CLOCKOFF('WAVES$TONTBO')
-!      CALL LMTO$TESTENERGY()
+      CALL LMTO$TESTENERGY()
 !
 !     ==========================================================================
 !     == KINETIC ENERGY                                                       ==
@@ -2508,9 +2695,9 @@ END IF
         ENDDO
       END IF
 !!$!
-!!$!     ==========================================================================
-!!$!     ==  now calculate off-site density matrix                               ==
-!!$!     ==========================================================================
+!!$!     =======================================================================
+!!$!     ==  now calculate off-site density matrix                            ==
+!!$!     =======================================================================
 !!$      CALL LOCALIZE$SWITCHCHIDENMAT(.TRUE.)
 !!$      ALLOCATE(XK(3,NKPTL))
 !!$      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
@@ -2550,6 +2737,7 @@ END IF
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
       USE MPE_MODULE
       USE WAVES_MODULE
+      use lmto_module, only : ton
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPRINT=.false.
       INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
@@ -2557,6 +2745,7 @@ END IF
       real(8)   ,allocatable :: xk(:,:)
       INTEGER(4)             :: ISPIN,IKPT,ib
 !     **************************************************************************
+      if(.not.ton) return
                               CALL TRACE$PUSH('WAVES$TONTBO')
                               CALL TIMING$CLOCKON('W:TONTBO')
 !
@@ -2575,7 +2764,9 @@ END IF
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           NBH=THIS%NBH
-          if(.not.associated(this%tbc))allocate(this%tbc(ndim,nbh,npro))
+!          NB=THIS%NB
+!          TINV=GSET%TINV
+          if(.not.associated(this%tbc))allocate(this%tbc(ndim,nbH,npro))
           this%tbc=this%proj
           call LMTO$PROJTONTBO(XK(:,ikpt),NDIM,NBH,NPRO,this%tbc)
         ENDDO
@@ -2606,8 +2797,8 @@ END IF
             ENDDO
           ENDDO
         ENDDO
-        WRITE(*,*)'FORCED STOP IN WAVES$TONTBO'
-        STOP 'FORCED STOP IN WAVES$TONTBO'
+!!$        WRITE(*,*)'FORCED STOP IN WAVES$TONTBO'
+!!$        STOP 'FORCED STOP IN WAVES$TONTBO'
       END IF
                               CALL TIMING$CLOCKOFF('W:TONTBO')
                               CALL TRACE$POP
@@ -2630,32 +2821,32 @@ END IF
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
-      logical(4),parameter   :: tprint=.false.
+      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
-      INTEGER(4)             :: npro   !#(projector functions)
-      real(8)   ,allocatable :: xk(:,:)
-      INTEGER(4)             :: ISPIN,IKPT,ib
+      INTEGER(4)             :: NPRO   !#(PROJECTOR FUNCTIONS)
+      REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      INTEGER(4)             :: ISPIN,IKPT,IB
 !     **************************************************************************
-                              CALL TRACE$PUSH('WAVES$fromNTBO')
-                              CALL TIMING$CLOCKON('W:fromNTBO')
+                              CALL TRACE$PUSH('WAVES$FROMNTBO')
+                              CALL TIMING$CLOCKON('W:FROMNTBO')
 !
 !     ==========================================================================
-!     ==  GET k-points in relative coordinates                                ==
+!     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
 !     ==========================================================================
       ALLOCATE(XK(3,NKPTL))
       CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
-      npro=map%npro
+      NPRO=MAP%NPRO
 !
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
-!!!! parallelize loop with respect to states.
+!!!! PARALLELIZE LOOP WITH RESPECT TO STATES.
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           NBH=THIS%NBH
-          if(.not.associated(this%htbc)) cycle
-          call LMTO$ntbotoproj(XK(:,ikpt),NDIM,NBH,NPRO,this%htbc)
+          IF(.NOT.ASSOCIATED(THIS%HTBC)) CYCLE
+          CALL LMTO$NTBOTOPROJ(XK(:,IKPT),NDIM,NBH,NPRO,THIS%HTBC)
         ENDDO
       ENDDO
 !     == THE PROJECTIONS ARE IDENTICAL AND COMPLETE FOR EACH K-GROUP
@@ -2665,28 +2856,28 @@ END IF
 !     == THEREFORE THERE IS NO DOUBLE COUNTING BY SUMMING OVER THE MONOMER
 !
 !     ==========================================================================
-!     ==  print for testing                                                   ==
+!     ==  PRINT FOR TESTING                                                   ==
 !     ==========================================================================
-      if(tprint) then
-        WRITE(*,FMT='(82("="),T20," TIGHT-BINDING ORBITAL potentials ")')
+      IF(TPRINT) THEN
+        WRITE(*,FMT='(82("="),T20," TIGHT-BINDING ORBITAL POTENTIALS ")')
         DO IKPT=1,NKPTL
           DO ISPIN=1,NSPIN
             CALL WAVES_SELECTWV(IKPT,ISPIN)
             NBH=THIS%NBH
             WRITE(*,FMT='(82("="),T20,"  IKPT ",I5,"ISPIN=",I2,"  ")')IKPT,ISPIN
             DO IB=1,NBH
-              WRITE(*,FMT='("hTBC ",I5,100F10.5)')2*IB-1,REAL(THIS%hTBC(1,IB,:))
-              WRITE(*,FMT='("hTBC ",I5,100F10.5)')2*IB,AIMAG(THIS%hTBC(1,IB,:))
+              WRITE(*,FMT='("HTBC ",I5,100F10.5)')2*IB-1,REAL(THIS%HTBC(1,IB,:))
+              WRITE(*,FMT='("HTBC ",I5,100F10.5)')2*IB,AIMAG(THIS%HTBC(1,IB,:))
             ENDDO
           ENDDO
         ENDDO
-        WRITE(*,*)'FORCED STOP IN WAVES$fromNTBO'
-        STOP 'FORCED STOP IN WAVES$fromNTBO'
+        WRITE(*,*)'FORCED STOP IN WAVES$FROMNTBO'
+        STOP 'FORCED STOP IN WAVES$FROMNTBO'
       END IF
-                              CALL TIMING$CLOCKOFF('W:fromNTBO')
+                              CALL TIMING$CLOCKOFF('W:FROMNTBO')
                               CALL TRACE$POP
       RETURN
-      END SUBROUTINE WAVES$fromNTBO
+      END SUBROUTINE WAVES$FROMNTBO
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,LAMBDA,PROPSI &

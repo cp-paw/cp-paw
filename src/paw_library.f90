@@ -1601,6 +1601,83 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$PSEUDOINVERTR8(N,A,smin,AINV)
+!     **************************************************************************
+!     **  CONSTRUCTS PSEUDO INVERSE OF A USING SINGULAR VALUE DECOMPOSITION   **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
+      REAL(8)   ,INTENT(IN) :: A(N,N)    ! MATRIX TO BE INVERTED
+      REAL(8)   ,INTENT(IN) :: smin      ! min singular value to be considered
+      REAL(8)   ,INTENT(OUT):: AINV(N,N) ! INVERTED MATRIX
+      LOGICAL   ,PARAMETER  :: TTEST=.false.
+      COMPLEX(8),ALLOCATABLE:: RES(:,:)
+      REAL(8)               :: DEV
+      INTEGER(4)            :: I
+      REAL(8)               :: U(N,N)
+      REAL(8)               :: V(N,N)
+      REAL(8)               :: S(N)
+!     **************************************************************************
+#IF DEFINED(CPPVAR_LAPACK_ESSL)
+      CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
+#ELSE 
+      CALL LIB_LAPACK_DGESVD(N,N,A,U,S,V)
+!print*,'s ',s
+      DO I=1,N
+        IF(ABS(S(i)).GT.SMIN) THEN
+          S(i)=1.D0/S(i)
+        ELSE
+          S(i)=0.D0
+        END IF
+      ENDDO
+      DO I=1,N
+        U(:,I)=U(:,I)*S(I)
+      ENDDO
+      AINV(:,:)=MATMUL(U,V)
+#ENDIF
+!
+!     ==========================================================================
+!     == TEST                                                                 ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        ALLOCATE(RES(N,N))
+        RES=MATMUL(A,AINV)
+        DO I=1,N
+          RES(I,I)=RES(I,I)-(1.D0,0.D0)
+        ENDDO
+        DEV=MAXVAL(ABS(RES))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('TEST FAILED')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$INVERTR8')
+        END IF
+        DEALLOCATE(RES)
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$SVDR8(M,N,A,U,S,V)
+!     **************************************************************************
+!     **  SINGULAR VALUE DECOMPOSITION OF THE MXN MATRIX A                    **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: m         ! DIMENSION OF THE MATRIX
+      INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
+      REAL(8)   ,INTENT(IN) :: A(m,n)    ! MATRIX TO BE INVERTED
+      REAL(8)   ,INTENT(OUT):: u(m,m)    ! left hand orthogonal vectors
+      REAL(8)   ,INTENT(OUT):: s(m)      ! singular vectors
+      REAL(8)   ,INTENT(OUT):: v(n,n)    ! right-hand orthogonal vectors
+!     **************************************************************************
+#IF DEFINED(CPPVAR_LAPACK_ESSL)
+      CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
+#ELSE 
+      CALL LIB_LAPACK_DGESVD(m,N,A,U,S,V)
+#ENDIF
+      RETURN
+      END
+!
 !     ..................................................................
       SUBROUTINE LIB$MATRIXSOLVER8(N,M,NEQ,A,X,B)
 !     ******************************************************************
@@ -2676,6 +2753,51 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END SUBROUTINE LIB_LAPACK_ZGETRI
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_LAPACK_DGESVD(N,M,A,U,S,V)
+!     **************************************************************************
+!     ** SINGULAR VALUE DECOMPOSITION OF THE NON-SQUARE MATRIX A              **
+!     ** A=U*SIGMA*V  
+!     **  SIGMA IS AN M-TIMES-N DIAGONAL MATRIX WITH DIAGONAL ELEMENTS S(I)   **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: M
+      INTEGER(4),INTENT(IN)  :: N
+      REAL(8)   ,INTENT(IN)  :: A(M,N)
+      REAL(8)   ,INTENT(OUT) :: U(M,M)
+      REAL(8)   ,INTENT(OUT) :: V(N,N)
+      REAL(8)   ,INTENT(OUT) :: S(M)     ! SINGULAR VALUES IN DESCENDING ORDER
+      REAL(8)   ,ALLOCATABLE :: WORK(:)
+      REAL(8)                :: ACOPY(M,N)
+      INTEGER(4)             :: LWORK
+      INTEGER(4)             :: INFO
+      INTEGER(4)             :: I
+!     **************************************************************************
+      LWORK=MAX(1,3*MIN(M,N)+MAX(M,N),5*MIN(M,N))
+      ALLOCATE(WORK(LWORK))
+      ACOPY=A  ! ACOPY WILL BE OVERWRITTEN
+      S=0.D0
+      U=0.D0
+      V=0.D0
+      WORK=0.D0
+      CALL DGESVD('A','A',M,N,ACOPY,M,S,U,M,V,N,WORK,LWORK,INFO)
+      IF(INFO.LT.0) THEN
+        CALL ERROR$MSG('THE I-TH ARGUMENT JHAS AN ILLEGAL VALUE')
+        CALL ERROR$I4VAL('I',-INFO)
+        CALL ERROR$I4VAL('1ST INDEX OF MATRIX',M)
+        CALL ERROR$I4VAL('2ND INDEX OF MATRIX',N)
+        CALL ERROR$STOP('LIB_LAPACK_DGESVD')
+      ELSE IF(INFO.GT.0) THEN
+        CALL ERROR$MSG('DBDSQR DID NOT CONVERGE')
+        CALL ERROR$I4VAL('NUMBER OF UNCONVERGED SUPERDIAGONALS',INFO)
+        CALL ERROR$I4VAL('1ST INDEX OF MATRIX',M)
+        CALL ERROR$I4VAL('2ND INDEX OF MATRIX',N)
+        CALL ERROR$STOP('LIB_LAPACK_DGESVD')
+      END IF
+      DEALLOCATE(WORK)
+      RETURN
+      END SUBROUTINE LIB_LAPACK_DGESVD
+!
 !     ..................................................................
       SUBROUTINE LIB_LAPACK_DGESV(N,M,NEQ,A,X,B)
 !     ******************************************************************
@@ -2693,7 +2815,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)   ,INTENT(IN) :: A(N,M)
       REAL(8)   ,INTENT(OUT):: X(M,NEQ)
       REAL(8)   ,INTENT(IN) :: B(N,NEQ)
-      REAL(8)               :: A1(N,M)
+      REAL(8)   ,allocatable:: A1(:,:)
       INTEGER               :: INFO
       INTEGER(4)            :: IPIV(N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
@@ -2715,9 +2837,11 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ==================================================================
 !     == NOW CALL LAPACK ROUTINE                                      ==
 !     ==================================================================
+      allocate(a1(n,m))
       A1=A
       X=B
       CALL DGESV(N,NEQ,A1,N,IPIV,X,N,INFO )
+      deallocate(a1)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('ERROR EXIT FROM DGESV')
         CALL ERROR$MSG('THE I-TH ARGUMENT HAD AN ILLEGAL VALUE')

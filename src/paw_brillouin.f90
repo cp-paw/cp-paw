@@ -2006,6 +2006,192 @@ END MODULE BRILLOUIN_MODULE
       END                                                               
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN_DWEIGHT(VOL,E_,EF,WGHT,DWGHT)
+!     **************************************************************************
+!     **  CALCULATES THE WEIGHTS FOR TETRAHEDRON-SAMPLING                     **
+!     **  CORRESPONDING TO INTEGRATION OVER ONE TETRAHEDRON                   **
+!     **  AND THEIR DERIVATIVES WITH RESPECT TO THE FERMILEVEL                **
+!     **                                                                      **
+!     **  CORRECTION FOR THE NONLINEAR SHAPE INCLUDED IF ICOR=1               **
+!     **                                                                      **
+!     **  AUTHOR : P.BLOECHL, GOSLAR 2011                                     **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8)  ,INTENT(IN) :: VOL      ! WEIGHT OF THIS TETRAHEDRON
+      REAL(8)  ,INTENT(IN) :: EF       ! FERMI LEVEL
+      REAL(8)  ,INTENT(IN) :: E_(4)    ! ENERGY BANDS AT THE CORNERS
+      REAL(8)  ,INTENT(OUT):: WGHT(4)  ! INTEGRATION WEIGHTS
+      REAL(8)  ,INTENT(OUT):: dWGHT(4)  ! energy derivative of i.W.
+      INTEGER(4),PARAMETER :: ICOR=0   ! ON/OFF SWITCH FOR CORRECTION 
+      REAL(8)              :: E(4)     ! ENERGY BANDS AT THE CORNERS
+      REAL(8)              :: FA(4),dFA(4)
+      REAL(8)              :: FB(4)
+      INTEGER(4)           :: INDEX(4)
+      REAL(8)              :: X
+      REAL(8)              :: VPRIME,dvprime
+      REAL(8)              :: DE
+      REAL(8)              :: DOS,ddos
+      REAL(8)              :: E21,E31,E41,E32,E42,E43
+      REAL(8)              :: DE1,DE2,DE3,DE4
+      INTEGER(4)           :: I,J,IP,N,M,K
+      REAL(8)              :: DA,DB,DC
+      REAL(8)              :: VOL14
+!     **************************************************************************
+      E(:)=E_(:)
+      WGHT(:)=0.D0
+      dWGHT(:)=0.D0
+!     ==========================================================================
+!     ==  INTEGRATION WITHOUT FERMISURFACE                                    ==
+!     ==========================================================================
+      IF(MINVAL(E).GE.EF) RETURN
+      IF(MAXVAL(E).LE.EF) THEN                                                  
+        VPRIME=.25D0*VOL                                                
+        WGHT(:)=VPRIME                                                  
+        dWGHT(:)=0.d0
+        RETURN                                                          
+      END IF                                                            
+!     ==========================================================================
+!     ==  ORDER ENERGIES                                                      ==
+!     ==========================================================================
+!     -- INDEX HOLDS THE ORIGINAL POSITION OF THE ENERGIES AND WEIGHTS  
+      DO I=1,4                                                      
+        INDEX(I)=I                                                        
+      ENDDO
+      DO I=1,3                                                      
+        IP=I                                                              
+        DO J=I+1,4                                                    
+          IF(E(IP).GT.E(J)) IP=J                                            
+        ENDDO
+        IF(IP.GT.I) THEN                                                  
+          X=E(IP)                                                         
+          E(IP)=E(I)                                                      
+          E(I)=X                                                          
+          K=INDEX(IP)                                                     
+          INDEX(IP)=INDEX(I)                                              
+          INDEX(I)=K                                                      
+        END IF                                                            
+      ENDDO
+!
+!     ==========================================================================
+!     ==  CALCULATE UNCORRECTED INTEGRAL AS MEANVALUE                         ==
+!     ==========================================================================
+      E21=E(2)-E(1)                                                     
+      E31=E(3)-E(1)                                                     
+      E41=E(4)-E(1)                                                     
+      E32=E(3)-E(2)                                                     
+      E42=E(4)-E(2)                                                     
+      E43=E(4)-E(3)                                                     
+      IF(EF.GT.E(1).AND.EF.LE.E(2)) THEN                                
+        DE=EF-E(1)                                                      
+        VPRIME=.25D0*VOL*DE**3/(E21*E31*E41)                            
+        dVPRIME=.25D0*VOL*3.d0*DE**2/(E21*E31*E41)                            
+        WGHT(1)=VPRIME*(4.D0-DE/E21-DE/E31-DE/E41)                      
+        WGHT(2)=VPRIME*DE/E21                                           
+        WGHT(3)=VPRIME*DE/E31                                           
+        WGHT(4)=VPRIME*DE/E41                                           
+        dWGHT(1)=dVPRIME*(4.D0-DE/E21-DE/E31-DE/E41) &
+       &                     +VPRIME*(-1.d0/E21-1.d0/E31-1.d0/E41)
+        dWGHT(2)=dVPRIME*DE/E21+VPRIME/E21
+        dWGHT(3)=dVPRIME*DE/E31+VPRIME/E31
+        dWGHT(4)=dVPRIME*DE/E41+VPRIME/E41
+!       ------  PARAMETERS FOR CORRECION                                
+        DOS=3.D0*VPRIME*4.D0/(EF-E(1))
+        ddos=-dos/(EF-E(1))
+      ELSE IF(EF.GT.E(2).AND.EF.LT.E(3)) THEN                           
+        DE1=EF-E(1)                                                     
+        DE2=EF-E(2)                                                     
+        DE3=E(3)-EF                                                     
+        DE4=E(4)-EF                                                     
+!       ------  TETRAHEDRON X1,X2,X13',X14'                             
+        VPRIME=VOL*DE1**2/(E41*E31)*.25D0                               
+        dVPRIME=VOL*2.d0*DE1/(E41*E31)*.25D0                               
+        WGHT(2)=VPRIME                                                  
+        WGHT(3)=VPRIME*(DE1/E31)                                        
+        WGHT(4)=VPRIME*(DE1/E41)                                        
+        WGHT(1)=VPRIME*(3.D0-DE1/E41-DE1/E31)                           
+        dWGHT(2)=dVPRIME                                                  
+        dWGHT(3)=dVPRIME*(DE1/E31)+vprime/e31
+        dWGHT(4)=dVPRIME*(DE1/E41)+vprime/e41
+        dWGHT(1)=dVPRIME*(3.D0-DE1/E41-DE1/E31)+VPRIME*(-1.d0/E41-1.d0/E31)
+!       ------  TETRAHEDRON X2,X13',X23',X14'                           
+        VPRIME=.25D0*VOL*DE2*DE3*DE1/(E32*E31*E41)                      
+        dVPRIME=.25D0*VOL*(DE3*DE1-DE2*DE1+DE2*DE3)/(E32*E31*E41)
+        WGHT(1)=WGHT(1)+VPRIME*(2.D0-DE1/E31-DE1/E41)                   
+        WGHT(2)=WGHT(2)+VPRIME*(2.D0-DE2/E32)                           
+        WGHT(3)=WGHT(3)+VPRIME*(DE2/E32+DE1/E31)                        
+        WGHT(4)=WGHT(4)+VPRIME*(DE1/E41)                                
+        dWGHT(1)=dWGHT(1)+dVPRIME*(2.D0-DE1/E31-DE1/E41) &
+       &                                           +VPRIME*(-1.d0/E31-1.d0/E41)
+        dWGHT(2)=dWGHT(2)+dVPRIME*(2.D0-DE2/E32)   +VPRIME*(-1.d0/E32)
+        dWGHT(3)=dWGHT(3)+dVPRIME*(DE2/E32+DE1/E31)+VPRIME*(1.d0/E32+1.d0/E31)
+        dWGHT(4)=dWGHT(4)+dVPRIME*(DE1/E41)        +VPRIME*(1.d0/E41)
+!       ------  TETRAHEDRON X2,X23',X24',X14'                           
+        VPRIME=.25D0*VOL*DE2**2*DE4/(E42*E32*E41)                       
+        dVPRIME=.25D0*VOL*(2.d0*DE2*DE4-DE2**2)/(E42*E32*E41)                       
+        WGHT(1)=WGHT(1)+VPRIME*(1.D0-DE1/E41)                           
+        WGHT(2)=WGHT(2)+VPRIME*(3.D0-DE2/E32-DE2/E42)                   
+        WGHT(3)=WGHT(3)+VPRIME*(DE2/E32)                                
+        WGHT(4)=WGHT(4)+VPRIME*(DE2/E42+DE1/E41)                        
+        dWGHT(1)=dWGHT(1)+dVPRIME*(1.D0-DE1/E41)   +VPRIME*(-1.d0/E41)
+        dWGHT(2)=dWGHT(2)+dVPRIME*(3.D0-DE2/E32-DE2/E42) &
+       &                                           +VPRIME*(-1.d0/E32-1.d0/E42)
+        dWGHT(3)=dWGHT(3)+dVPRIME*(DE2/E32)        +VPRIME*(1.d0/E32)
+        dWGHT(4)=dWGHT(4)+dVPRIME*(DE2/E42+DE1/E41)+VPRIME*(1.d0/E42+1.d0/E41)
+!       ------  DOS=A+B*(EF-E2)+C*(EF-E2)**2                            
+        DA=3.D0*VOL*E21/(E31*E41)                                       
+        DB=6.D0*VOL/(E31*E41)                                           
+        DC=-3.D0*VOL/(E32*E41*E31*E42)*(E31+E42)                        
+        DOS=Da+DB*de2+DC*DE2**2
+        dDOS=DB+2.d0*DC*DE2
+      ELSE IF(EF.GE.E(3).AND.EF.LT.E(4)) THEN                           
+        DE=E(4)-EF                                                      
+        VPRIME=.25D0*VOL*DE**3/(E41*E42*E43)                            
+        dVPRIME=.25D0*VOL*(-3.d0*DE**2)/(E41*E42*E43)                            
+        VOL14=.25D0*VOL                                                 
+        WGHT(1)=VOL14-VPRIME*DE/E41                                     
+        WGHT(2)=VOL14-VPRIME*DE/E42                                     
+        WGHT(3)=VOL14-VPRIME*DE/E43                                     
+        WGHT(4)=VOL14-VPRIME*(4.D0-DE/E41-DE/E42-DE/E43)                
+        dWGHT(1)=-dVPRIME*DE/E41+VPRIME/E41
+        dWGHT(2)=-dVPRIME*DE/E42+VPRIME/E42
+        dWGHT(3)=-dVPRIME*DE/E43+VPRIME/E43                                     
+        dWGHT(4)=-dVPRIME*(4.D0-DE/E41-DE/E42-DE/E43) &
+       &                      -VPRIME*(1.d0/E41+1.d0/E42+1.d0/E43)
+!       ------  PARAMETERS FOR CORRECION                                
+        DOS=3.D0*VPRIME*4.D0/(E(4)-EF)                                  
+        dDOS=dos/(E(4)-EF)                                  
+      ELSE                                                              
+!        CALL ERROR$MSG('ERROR')
+!        CALL ERROR$STOP('BRILLOUIN_WEIGHT')
+      END IF                                                            
+!     ==========================================================================
+!     ==  ADD CORRECTION FOR QUADRATIC DEVIATION                              ==
+!     ==========================================================================
+      IF(ICOR.EQ.1) THEN                                                
+        DO M=1,4                                                    
+          DO N=1,4                                                    
+            WGHT(M) =WGHT(M) +.25D0*(E(N)-E(M))*DOS*.1D0                      
+            dWGHT(M)=dWGHT(M)+.25D0*(E(N)-E(M))*dDOS*.1D0                      
+          ENDDO
+        ENDDO
+      END IF                                                            
+!     ==========================================================================
+!     ==  REORDER WEIGHTS                                                     ==
+!     ==========================================================================
+      DO I=1,4                                                      
+        FA(INDEX(I))=WGHT(I)                                              
+        dFA(INDEX(I))=dWGHT(I)                                              
+        FB(INDEX(I))=E(I)                                                 
+      ENDDO
+      DO I=1,4                                                      
+        WGHT(I)=FA(I)                                                     
+        dWGHT(I)=dFA(I)                                                     
+        E(I)=FB(I)                                                        
+      ENDDO
+      RETURN                                                            
+      END                                                               
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_WEIGHTANDDER(VOL,E_,EF,WGHT,DWGHT)                                  
 !     **************************************************************************
 !     **                                                                      **

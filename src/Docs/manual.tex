@@ -4368,13 +4368,19 @@ one or several unit cells.
 \newpage
 \section{The Wave Function and Density Analysis Tool: ``paw\_wave''}
 %==========================================================================
+The paw\_wave analysis tool converts a datafile for wave functions or
+densities into a input format to be used by graphical tools. 
 
-The paw\_wave analysis tool converts a waveplot file into a data
-file readable by OPENDX\cite{opendx}. The paw\_wave analysis tool
-requires an input file which is created after setting the options
-``!CONTROL!ANALYSE!WAVE'' in the control input file of the simulation
-code and the 'strc\_out' file of the simulation code. It can be
-inspected by the Datexplorer program ``wave.net''.
+The datafile used as input by the paw\_wave analysis tool is produced
+by the option ``!CONTROL!ANALYSE!WAVE'' in the control input file of
+the simulation code. The paw\_wave analysis tool uses in addition 
+the structure information from  the 'strc\_out' file of the simulation code.
+
+The output formats are the ``cub'' format and a ``dx'' format.  The
+cub-format is specified by the GAUSSIAN code and can be used by most
+molecular viewers such as AVOGADRO. The dx format can be used by
+Dataexplorer OPENDX \cite{opendx} using the Dataexplorer program
+``wave.net''. (See directory ``dx'')
 
 %==========================================================================
 \subsection{Command}
@@ -4405,6 +4411,7 @@ the paw\_dos tool described below. I recommend the extension
   !END
   !VIEWBOX O=-5. -5. -5. 
            T=10. 0. 0. 0. 10. 0. 0. 0. 10. !END
+  !PLANE   O=-5. -5. -5. T=10. 0. 0.   0. 10. 10. !END
 !END
 !EOB
 \end{verbatim}
@@ -4430,10 +4437,10 @@ largely independent of the system}
 \block{!WCNTL!FILES!FILE}
 %----------------------------------------------------------------------
 \brules{optional, multiple}
-\bdescr{defines the energy grid and energy broadening}
+\bdescr{defines filenames.}
 
 \mbax{\key{ID}
-\vdescr{Identifier of the file. Can be 'STRC', 'WAVE', 'WAVEDX'.}
+\vdescr{Identifier of the file. Can be 'STRC', 'WAVE', 'WAVEDX', 'CUBE'.}
 \vformat{character} 
 \vrules{mandatory}
 \vdefault{none}}
@@ -4447,10 +4454,12 @@ largely independent of the system}
 \vdefault{.false.}}
 
 \mbax{\key{NAME}
-\vdescr{File name}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
+  \vdescr{File name. The default extension is 'wv' for the WAVE' file,
+    'strc' for the 'STRC' file, 'dx' for the output file for the data
+    explorer, 'cub' for the output file in the cube format. }
+  \vformat{character} 
+  \vrules{mandatory}
+  \vdefault{none}}
 
 %----------------------------------------------------------------------
 \block{!WCNTL!VIEWBOX}
@@ -4472,6 +4481,25 @@ largely independent of the system}
 \vformat{real(3,3)} 
 \vrules{optional}
 \vdefault{lattice vectors of the calculation}}
+
+%----------------------------------------------------------------------
+\block{!WCNTL!PLANE}
+%----------------------------------------------------------------------
+\brules{optional} \bdescr{defined a plane for a rubbersheet plot. The
+  plane is defined by an origin $o$ and two vectors
+  $t_1,t_2$. }
+
+\mbax{\key{O}
+\vdescr{Origin (lower,forward point of the plane) in a.u.}
+\vformat{real(3)} 
+\vrules{optional}
+\vdefault{0. 0. 0.}}
+
+\mbax{\key{T}
+\vdescr{vectors defining the edges of the plane in a.u.}
+\vformat{real(3,2)} 
+\vrules{optional}
+\vdefault{first two lattice vectors of the calculation}}
 
 %==========================================================================
 \subsection{View data using OPENDX\cite{opendx}}
@@ -4517,6 +4545,19 @@ Start the Dataexplorer using
   and thus obtain more detail for the lower density values.
 \end{itemize}
 \end{enumerate}
+
+%==========================================================================
+\subsection{View data using FreeWRL}
+%==========================================================================
+The wave tool constructs a scene in the virtual Reality Modeling
+Language (VRML) format. The standard extension is ``.wrl''. A common
+viewer is FreeWRL.
+
+VRML has been superceeded by the language X3D. The syntax is very
+similar and VRML files can be converted into X3D files.
+
+
+
 
 %==========================================================================
 \newpage

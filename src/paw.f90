@@ -1,19 +1,18 @@
-!#IF DEFINED(IBMLICENSE)
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 1050 $'
+character(256):: VERrev='$LastChangedRevision: 1100 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2010-07-05 12:56:13 +0200 (Mo, 05. Jul 2010) $'
+character(256):: VERdat='$LastChangedDate: 2011-08-08 10:48:00 +0200 (Mo, 08. Aug 2011) $'
 end Module version_module
 !
 !     ..................................................................
       PROGRAM MAIN
 !     ******************************************************************
 !     **                      CP-PAW                                  **
-!     **     (C) COPYRIGHT   Clausthal University of Technology       **
+!     **     (C) COPYRIGHT   CLAUSTHAL UNIVERSITY OF TECHNOLOGY       **
 !     **     LICENSED MATERIALS                                       **
-!     **     PROPERTY of Clausthal University of Technology           **
+!     **     PROPERTY OF CLAUSTHAL UNIVERSITY OF TECHNOLOGY           **
 !     ******************************************************************
 !     **                                                              **
 !     **  THIS THE CAR-PARRINELLO FIRST PRINCIPLES MOLECULAR DYNAMICS **
@@ -24,7 +23,6 @@ end Module version_module
 !     **  AND USER AGGREEMENT!                                        **
 !     **                                                              **
 !     **  AUTHOR: PETER E. BLOECHL                                    **
-!     **                                                              **
 !     ******************************************************************
       USE CLOCK_MODULE
       IMPLICIT NONE
@@ -33,12 +31,12 @@ end Module version_module
       CHARACTER(256):: VERSIONINFO
       INTEGER(4)    :: NFILO
       INTEGER(4)    :: NTASKS,THISTASK
-      logical       :: debugwait
+      LOGICAL       :: DEBUGWAIT
       COMMON/VERSION/VERSIONTEXT
 !     ******************************************************************
 !     =================================================================
-!     == these lines contain information that can be grepped out of the
-!     == executable. they have no function in the execution of the code.
+!     == THESE LINES CONTAIN INFORMATION THAT CAN BE GREPPED OUT OF THE
+!     == EXECUTABLE. THEY HAVE NO FUNCTION IN THE EXECUTION OF THE CODE.
 !     =================================================================
       VERSIONINFO = '@(#) PAW-VERSION %R% CREATED %U% %E%'
       VERSIONTEXT = 'PROGRAM VERSION %R% CREATED %U% %E%'
@@ -1130,6 +1128,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
           CALL ENERGYLIST$PRINTONE(NFILO,'BO-WAVEFUNCTION KINETIC ENERGY')
           CALL ENERGYLIST$PRINTONE(NFILO,'ELECTRON THERMOSTAT')     
           CALL ENERGYLIST$PRINTONE(NFILO,'EXTERNAL 1CENTER POTENTIAL')     
+          CALL ENERGYLIST$PRINTONE(NFILO,'LMTO INTERFACE')     
 !
 !         == Van der Waals energy========================================
           CALL VDW$GETL4('ON',TCHK)

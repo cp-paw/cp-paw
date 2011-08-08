@@ -185,7 +185,7 @@
 !**    RADIAL$INTEGRATE(R1,DEX,NR,F,FINT)                             **
 !**    RADIAL$INTEGRAL(GID,NR,F,FINT0)                                **
 !**    RADIAL$FFT(ID,R1,DEX,NR,F1,G1,F2)                              **
-!**    RADIAL$POISSON(R1,DEX,NR,RHO,V)                                **
+!**    RADIAL$POISSON(gid,NR,L,RHO,V)                                 **
 !**    RADIAL$MOMENT(R1,DEX,NR,L,RHO,QLM)                             **
 !**    BESSELTRANSFORM$CLEAR                                          **
 !**    BESSELTRANSFORM(L,NP,R1,G1,DEX,F,G,DISC)                       **
@@ -2757,7 +2757,7 @@ STOP
       REAL(8)               :: FOFG_OLD(NG)
       REAL(8)               :: XEXP,RI
       INTEGER(4)            :: ISVAR,I
-      REAL(8)               :: PI
+!      REAL(8)               :: PI
       REAL(8)               :: DIFF
       CHARACTER(16),parameter :: TYPE='SIEGMAN'
 !      CHARACTER(16),parameter :: TYPE='TALMAN'
@@ -2766,7 +2766,7 @@ STOP
 !     **************************************************************************
 !      call RADIAL$BESSELTRANSFORM_OLD(L,GID,NR,Fofr,GIDg,NG,fofG_OLD)
 
-      PI=4.D0*ATAN(1.D0)
+!      PI=4.D0*ATAN(1.D0)
 ! 
 !     ==========================================================================
 !     == ANALYZE G-GRID                                                       ==
@@ -3124,7 +3124,8 @@ print*,'nph*dt ',nph*dt,nph,dt
       INTEGER(4),PARAMETER  :: NP=1000
       REAL(8)   ,PARAMETER  :: XMIN=-1.D+1
       REAL(8)   ,PARAMETER  :: XMAX=4.D+1
-      REAL(8)   ,PARAMETER  :: DX=(XMAX-XMIN)/(NP-1) !rounding errors acceptable
+      real(8)   ,parameter  :: npreal=np
+      REAL(8)   ,PARAMETER  :: DX=(XMAX-XMIN)/(NPreal-1.d0) 
       REAL(8)               :: X
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -3295,10 +3296,8 @@ print*,'nph*dt ',nph*dt,nph,dt
       COMPLEX(8)           :: M(2,LX+1)
       REAL(8)              :: T
       INTEGER(4)           :: I,L
-      REAL(8)              :: PI
       COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       OPEN(NFIL1,FILE='MLM_0R.DAT')
       OPEN(NFIL2,FILE='MLM_0I.DAT')
       OPEN(NFIL3,FILE='MLM_LR.DAT')

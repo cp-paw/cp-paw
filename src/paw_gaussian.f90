@@ -108,36 +108,108 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GAUSSIAN_YLMPOL(LX,YLMPOL)
 !     **************************************************************************
+!     ** R^L*Y_LM = SUM_IJK X^IY^JZ^K * YLMPOL(IJK,LM)                        **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LX
       REAL(8)   ,INTENT(OUT):: YLMPOL((LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2)
-      REAL(8)               :: PI
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
+      call spherical$ylmpolynomials(lx,(LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2,ylmpol)
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GAUSSIAN_ylmfrompol(LX,ylmfrompol)
+!     **************************************************************************
+!     ** EXPANDS THE ANGULAR PART OF CARTESIAN GAUSSIANS INTO REAL SPHERICAL  **
+!     ** HARMONICS                                                            **
+!     **  IND->(I,J,K) ;                                                      **
+!     **  (X/R)^I * (Y/R)^J * (Z/R)^K                                         **
+!     **         =SUM YLM(R) * |R|^(l+2N) * YLMFROMPOL(N+1,LM,IND)            **
+!     **  (DESCRIPTION IN CHAPTER "WORKING WITH GAUSSIANS")                   **
+!     ***************************************PETER BLOECHL, GOSLAR 2010*********
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LX
+      REAL(8)   ,INTENT(OUT):: ylmfrompol(lx/2+1,(LX+1)**2 &
+     &                                          ,(lX+1)*(lX+2)*(lX+3)/6)
+      REAL(8)               :: YLMPOL((LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2)
+      REAL(8)               :: amat((LX+1)*(LX+2)*(LX+3)/6 &
+     &                             ,(LX+1)*(LX+2)*(LX+3)/6)
+      REAL(8)               :: ainv((LX+1)*(LX+2)*(LX+3)/6 &
+     &                             ,(LX+1)*(LX+2)*(LX+3)/6)
+      integer(4)            :: indx
+      integer(4)            :: lmx,lmx1,lx1,indx1
+      integer(4)            :: i0a,i0b
+      integer(4)            :: n,ind,ind1,i,j,k
+      integer(4)            :: lm,l,m
+      logical(4)            :: twrite=.false.
+!     **************************************************************************
+      INDX=(LX+1)*(LX+2)*(LX+3)/6
+      LMX=(LX+1)**2
+      CALL SPHERICAL$YLMPOLYNOMIALS(LX,INDX,LMX,YLMPOL)
+      AMAT=0.D0
+      AMAT(:,:LMX)=YLMPOL(:,:)        
+      I0A=0
+      I0B=LMX
+      DO N=1,LX/2
+        lx1=lx-2*n
+        LMX1=(Lx1+1)**2
+        indx1=(LX-1)*(LX)*(LX+1)/6  ! leave space for r^2
+!print*,'n=',n,'i0a,i0b=',i0a+1,i0a+lmx1,i0b+1,i0b+lmx1,'lx1,lmx1,indx1',lx1,lmx1,indx1
+        DO IND=1,INDX1
+          CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I,J,K)
+          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I+2,J,K)
+          AMAT(IND1,I0B+1:I0B+LMX1)=AMAT(IND1,I0B+1:I0B+LMX1) &
+     &                             +AMAT(IND,I0A+1:I0A+LMX1)
+          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,J+2,K)
+          AMAT(IND1,I0B+1:I0B+LMX1)=AMAT(IND1,I0B+1:I0B+LMX1) &
+     &                             +AMAT(IND,I0A+1:I0A+LMX1)
+          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,J,K+2)
+          AMAT(IND1,I0B+1:I0B+LMX1)=AMAT(IND1,I0B+1:I0B+LMX1) &
+     &                             +AMAT(IND,I0A+1:I0A+LMX1)
+        ENDDO
+        I0A=I0B
+        I0B=I0B+LMX1
+      ENDDO
 !
 !     ==========================================================================
-!     == R^L*Y_LM = SUM_IJK X^IY^JZ^K * YLMPOL(IJK,LM)                        ==
+!     == write power series expansion                                         ==
 !     ==========================================================================
-      YLMPOL(:,:)=0.D0
-      YLMPOL(1,1)=1.D0/SQRT(4.D0*PI)
-      IF(LX.EQ.0) RETURN
-      YLMPOL(4,2)=SQRT(3.D0/(4.D0*PI))
-      YLMPOL(2,3)=SQRT(3.D0/(4.D0*PI))
-      YLMPOL(3,4)=SQRT(3.D0/(4.D0*PI))
-      IF(LX.EQ.1) RETURN
-      YLMPOL(10,5)=SQRT(15.D0/(16.D0*PI))
-      YLMPOL(7,5)=-SQRT(15.D0/(16.D0*PI))
-      YLMPOL(8,6)=SQRT(60.D0/(16.D0*PI))
-      YLMPOL(5,7)=2.D0*SQRT(5.D0/(16.D0*PI))
-      YLMPOL(7,7)=-SQRT(5.D0/(16.D0*PI))
-      YLMPOL(10,7)=-SQRT(5.D0/(16.D0*PI))
-      YLMPOL(6,8)=SQRT(60.D0/(16.D0*PI))
-      YLMPOL(9,7)=SQRT(60.D0/(16.D0*PI))
-      IF(LX.EQ.2) RETURN
-      CALL ERROR$MSG('IMPLEMENTED ONLY UP TO LX=2')
-      CALL ERROR$I4VAL('LX',LX)
-      CALL ERROR$STOP('GAUSSIAN_YLMPOL')
+      IF(TWRITE) THEN
+        ind1=0
+        do n=0,lx/2
+          LM=0
+          DO L=0,LX-2*n
+            DO M=-L,L
+              LM=LM+1
+              ind1=ind1+1
+              WRITE(*,*)'=== L=',L,' M=',M,' LM=',LM,' n=',n,' ind1=',ind1,'==='
+              DO IND=1,INDX
+                IF(amat(ind,ind1).EQ.0.D0) CYCLE
+                CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I,J,K)
+                WRITE(*,*)I,J,K,amat(ind,ind1)
+              enddo
+            ENDDO
+          ENDDO
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     ==  invert matrix                                                       ==
+!     ==========================================================================
+      call lib$invertr8(indx,amat,ainv)
+!
+!     ==========================================================================
+!     ==  RESOLVE                                                             ==
+!     ==========================================================================
+      YLMFROMPOL(:,:,:)=0.D0
+      YLMFROMPOL(1,:LMX,:)=AINV(:LMX,:)
+      I0A=LMX
+      DO N=1,LX/2
+        LMX1=(Lx-2*N+1)**2
+        YLMFROMPOL(N+1,:LMX1,:)=Ainv(I0A+1:I0A+LMX1,:)
+        I0A=I0A+LMX1
+      ENDDO              
       RETURN
       END
 !
@@ -373,7 +445,7 @@
       REAL(8)               :: Q(2*NPOW,NEP,NEP)
       REAL(8)               :: SCALE(NPOW,NEP)
       REAL(8)               :: WR2(NR)
-      INTEGER(4)            :: I,J,I1,J1,I2,J2,ir
+      INTEGER(4)            :: I,J,I1,J1,I2,J2
       LOGICAL(4),PARAMETER  :: TTEST=.false.
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R2)
@@ -470,30 +542,11 @@
               ENDDO
             ENDDO
             SVAR=SVAR-B(I1,J1)
-!!$PRINT*,'SVAR ',L,I1,J1,SVAR
             IF(ABS(SVAR).GT.1.D-6) THEN
               PRINT*,'FITTING ERROR ',SVAR,I1,J1
             END IF
           ENDDO
         ENDDO
-
-!!$PRINT*,'B/SCALE ',B/SCALE
-!!$PRINT*,'SCALE ',SCALE
-!!$PRINT*,'C/SCALE ',C/SCALE
-!!$PRINT*,'C ',C
-!
-!!$        aux=0.d0
-!!$        do j=1,nep
-!!$          do i=1,npow
-!!$             aux(:)=aux(:)+rl(:)*r2(:)**(i-1)*exp(-ep(j)*r2(:))*c(i,j)
-!!$          enddo
-!!$        enddo
-!!$OPEN(UNIT=10001,FILE='fitgaussa.dat')
-!!$DO IR=1,NR
-!!$  WRITE(10001,FMT='(10F20.5)')sqrt(R2(IR)),f(ir),aux(ir)
-!!$ENDDO
-!!$CLOSE(10001)
-
         AUX(:)=WR2(:)*F(:)**2
         CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
         DO I1=1,NPOW
@@ -746,7 +799,6 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)            :: INDA,MA,IA,JA,KA,iea
       INTEGER(4)            :: INDB,MB,IB,JB,KB,ieb
       REAL(8)               :: PI
-      REAL(8)               :: SVAR
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
 !
@@ -833,7 +885,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,INTENT(OUT):: gcb(nijka,nea,ncb)  ! <ga_i|psi_n>
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
-      INTEGER(4)            :: I,J,K
+      INTEGER(4)            :: J,K
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
       INTEGER(4)            :: INDA,MA,IA,JA,KA,iea
       INTEGER(4)            :: INDB,MB,IB,JB,KB,ieb
@@ -1011,7 +1063,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)             :: INDP,INDQ,MP,MQ,IP,IQ,JP,JQ,KP,KQ
       INTEGER(4)             :: iorba,iorbb,iorbc,iorbd
       INTEGER(4)             :: iea,ieb,iec,ied
-      REAL(8)                :: PI
+      REAL(8)                :: PI,sgn
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
@@ -1051,6 +1103,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       CALL GAUSSIAN_CONTRACT2GAUSS(NIJKA,EA(iea),RA,CA(:,iea,iorba) &
      &                            ,NIJKB,EB(ieb),RB,CB(:,ieb,iorbb) &
      &                            ,NIJKP,EP,RP,CP)
+print*,'marke 1',iorba,iorbb,iea,ieb
               do iorbc=1,norbc
                 do iorbd=1,norbd
                   do iec=1,nec
@@ -1066,15 +1119,17 @@ PRINT*,'SQUARE DEVIATION ',SVAR
           DO JP=0,MP-IP
             KP=MP-IP-JP
             INDP=INDP+1
+            if(abs(cp(indp)).lt.1.d-6) cycle
 !         
             INDQ=0
+            sgn=-1.d0
             DO MQ=0,NQ      
+              sgn=-sgn     !sgn=(-1)^(iq+jq+kq)=(-1)^mq
               DO IQ=0,MQ
                 DO JQ=0,MQ-IQ
                   KQ=MQ-IQ-JQ
                   INDQ=INDQ+1
-                  SIGN=IQ+JQ+KQ
-                  UABCD1=UABCD1+SIGN*HI(IP+IQ,JP+JQ,KP+KQ) &
+                  UABCD1=UABCD1+SGN*HI(IP+IQ,JP+JQ,KP+KQ) &
      &                            *CP(INDP)*CQ(INDQ)
                 ENDDO
               ENDDO
@@ -1125,6 +1180,87 @@ PRINT*,'SQUARE DEVIATION ',SVAR
           ENDDO
         ENDDO
        ENDDO
+      RETURN
+      END      
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GAUSSIAN$PLOTRADIAL(FILE,RAD,NIJK,NE,E,C)
+!     **************************************************************************
+!     ** WRITE A GAUSSIAN EXPANSION ONTO A RADIAL GRID                        **
+!     ** USE STARBURST MESH AND WRITE MEAN, MAX, AND MIN                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      character(*),intent(in) :: file   ! filename of output
+      REAL(8)   ,INTENT(IN) :: RAD      ! RADIUS OF SPHERE ENCLOSED BY GRID
+      INTEGER(4),INTENT(IN) :: NIJK     ! #(GAUSS COEFFICIENTS)
+      INTEGER(4),INTENT(IN) :: Ne       ! #(GAUSS COEFFICIENTS)
+      REAL(8)   ,INTENT(IN) :: E(ne)    ! EXPONENT OF GAUSS EXPANSION
+      REAL(8)   ,INTENT(IN) :: C(NIJK,ne) ! GAUSS COEFFICIENTS
+      integer(4),parameter  :: nr=200
+      integer(4),parameter  :: ndir=26
+      real(8)               :: exarr(ne)
+      real(8)               :: vec(3,ndir)
+      real(8)               :: f(ndir)
+      real(8)               :: svar,ri
+      integer(4)            :: ind,i,j,k
+      integer(4)            :: ir,idir,ie
+      integer(4)            :: nfil
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == fcc/sic/bcc-type starburst mesh                                      ==
+!     ==========================================================================
+!     == fcc directions ========================================================
+      svar=1.d0/sqrt(2.d0)
+      vec(:, 1)=(/+1.d0,+0.d0,+1.d0/)*svar
+      vec(:, 2)=(/-1.d0,+0.d0,+1.d0/)*svar
+      vec(:, 3)=(/+0.d0,+1.d0,+1.d0/)*svar
+      vec(:, 4)=(/+0.d0,-1.d0,+1.d0/)*svar
+      vec(:, 5)=(/+1.d0,+1.d0,+0.d0/)*svar
+      vec(:, 6)=(/+1.d0,-1.d0,+0.d0/)*svar
+      vec(:, 7)=(/-1.d0,+1.d0,+0.d0/)*svar
+      vec(:, 8)=(/-1.d0,-1.d0,+0.d0/)*svar
+      vec(:, 9)=(/+1.d0,+0.d0,-1.d0/)*svar
+      vec(:,10)=(/-1.d0,+0.d0,-1.d0/)*svar
+      vec(:,11)=(/+0.d0,+1.d0,-1.d0/)*svar
+      vec(:,12)=(/+0.d0,-1.d0,-1.d0/)*svar
+!     == sic directions ========================================================
+      vec(:,13)=(/+1.d0,+0.d0,+0.d0/)
+      vec(:,14)=(/-1.d0,+0.d0,+0.d0/)
+      vec(:,15)=(/+0.d0,+1.d0,+0.d0/)
+      vec(:,16)=(/+0.d0,-1.d0,+0.d0/)
+      vec(:,17)=(/+0.d0,+0.d0,+1.d0/)
+      vec(:,18)=(/+0.d0,+0.d0,-1.d0/)
+!     == bcc directions ========================================================
+      svar=1.d0/sqrt(3.d0)
+      vec(:,19)=(/+1.d0,+1.d0,+1.d0/)*svar
+      vec(:,20)=(/-1.d0,+1.d0,+1.d0/)*svar
+      vec(:,21)=(/+1.d0,-1.d0,+1.d0/)*svar
+      vec(:,22)=(/-1.d0,-1.d0,+1.d0/)*svar
+      vec(:,23)=(/+1.d0,+1.d0,-1.d0/)*svar
+      vec(:,24)=(/-1.d0,+1.d0,-1.d0/)*svar
+      vec(:,25)=(/+1.d0,-1.d0,-1.d0/)*svar
+      vec(:,26)=(/-1.d0,-1.d0,-1.d0/)*svar
+!
+      CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,FILE)
+      CALL FILEHANDLER$UNIT('HOOK',NFIL)
+      do ir=1,nr
+        ri=rad*real(ir-1)/real(nr-1)
+        exarr(:)=exp(-e(:)*ri**2)
+        f(:)=0.d0
+        do ind=1,nijk
+          CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',ind,I,J,K)
+          do idir=1,ndir
+            do ie=1,ne
+              f(idir)=f(idir)+vec(1,idir)**i*vec(2,idir)**j*vec(3,idir)**k &
+     &                       *ri**(i+j+k)*exarr(ie)*c(ind,ie)
+            enddo
+          enddo
+        enddo
+        write(nfil,*)ri,sum(f)/real(ndir),maxval(f),minval(f)
+      enddo
+      CALL FILEHANDLER$CLOSE('HOOK')
+      CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,'.FORGOTTOASSIGNFILETOHOOK')
       RETURN
       END      
 !

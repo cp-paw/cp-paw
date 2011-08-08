@@ -11,7 +11,8 @@
        integer(4),parameter :: nx=200
        integer(4),parameter :: nfil=101
        real(8)   ,parameter :: xmax=10.d0
-       real(8)   ,parameter :: dx=xmax/(nx-1) ! rounding errors acceptable
+       real(8)   ,parameter :: nxreal=nx
+       real(8)   ,parameter :: dx=xmax/(nxreal-1.d0) 
        real(8)              :: x
        real(8)              :: y(lx+1)
        real(8)              :: dydx(lx+1)
