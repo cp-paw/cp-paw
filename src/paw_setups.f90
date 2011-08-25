@@ -129,6 +129,7 @@ REAL(8)   ,POINTER     :: AEPHIDOT(:,:)!(NR,LNX)  AE SCATTERING PARTIAL WAVES
 REAL(8)   ,POINTER     :: DTKIN(:,:)   !(LNX,LNX) 1C-KIN. EN. MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: DOVER(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: PROPHIDOT(:,:)  !(LNX,LNX) <PRO|PSPHIDOT>
+REAL(8)   ,POINTER     :: corevalencex(:,:)  !(LNX,LNX) core valence exchange
 REAL(8)   ,POINTER     :: VADDOFG(:)   !(NGX)
 REAL(8)   ,POINTER     :: PSCOREOFG(:) !(NGX)
 REAL(8)   ,POINTER     :: VHATOFG(:)   !(NGX)
@@ -849,6 +850,17 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%DOVER,(/LEN/))
+!
+!     ==========================================================================
+!     ==  matrix elements for core valence exchange with partial waves        ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'CVX') THEN
+        IF(LEN.NE.THIS%LNX**2) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%COREVALENCEX,(/LEN/))
 !
 !     ==========================================================================
 !     ==  <PRO|PSPHIDOT>                                                      ==
@@ -1731,6 +1743,11 @@ CALL SETUP_WRITEPHI('proofg.dat',GIDg,Ng,lnx,THIS%PROOFG)
       END IF
       CALL ATOMTYPELIST$SETR8('PS<G2>',THIS%PSG2)
       CALL ATOMTYPELIST$SETR8('PS<G4>',THIS%PSG4)
+!     
+!     ==========================================================================
+!     ==  DETERMINE core-valence exchange matrix elements                     ==
+!     ==========================================================================
+      call setups_CVXSETUP()
 !     
 !     ==========================================================================
 !     ==  DETERMINE MATRIX ELEMENTS BETWEEN PROJECTOR FUNCTIONS               ==
@@ -3022,7 +3039,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
 !     **                                                                      **
 !     **                                                                      **
 !     **                                                                      **
-!     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       USE PERIODICTABLE_MODULE
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
@@ -4366,6 +4383,7 @@ GOTO 10001
 !     ==========================================================================
 !     == WRITE DATA TO FILE                                                   ==
 !     ==========================================================================
+                      CALL TRACE$PASS('WRITING DATA files for diagnosis')
       IF(TWRITE) THEN
         WRITE(STRING,FMT='(F3.0)')AEZ
         STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
@@ -4424,19 +4442,23 @@ GOTO 10001
 !     ==========================================================================
 !     == WRITE SETUP REPORT                                                   ==
 !     ==========================================================================
+                      CALL TRACE$PASS('WRITING SETUP FILE')
       CALL LINKEDLIST$SELECT(LL_STP,'~',0)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
       CALL LINKEDLIST$SELECT(LL_STP,'ATOM',0)
+print*,'marke 1'
       DO IB=1,NB
         CALL LINKEDLIST$SET(LL_STP,'UPSI',-1,UOFI(:,IB)*PSISCALE(IB))
         CALL LINKEDLIST$SET(LL_STP,'UPSI_SMALL',-1,UOFISM(:,IB)*PSISCALE(IB))
       ENDDO
+print*,'marke 2'
 !
       CALL LINKEDLIST$SELECT(LL_STP,'~',0)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
       CALL LINKEDLIST$SELECT(LL_STP,'AUGMENTATION',0)
       CALL LINKEDLIST$SET(LL_STP,'LNX',0,LNX)
       CALL LINKEDLIST$SET(LL_STP,'LOX',0,LOX)
+print*,'marke 3'
       DO LN=1,LNX
         CALL LINKEDLIST$SET(LL_STP,'AEPHI',-1,AEPHI(:,LN)*PHISCALE(LN))
         CALL LINKEDLIST$SET(LL_STP,'PSPHI',-1,PSPHI(:,LN)*PHISCALE(LN))
@@ -4447,15 +4469,18 @@ GOTO 10001
         CALL LINKEDLIST$SET(LL_STP,'PSPHIDOT',-1,PSPHIDOT(:,LN)*PHISCALE(LN))
         CALL LINKEDLIST$SET(LL_STP,'NLPHIDOT',-1,NLPHIDOT(:,LN)*PHISCALE(LN))
       ENDDO
+print*,'marke 4'
       CALL LINKEDLIST$SET(LL_STP,'NV',0,NB-NC)
       DO IB=1,NB-NC  
         CALL LINKEDLIST$SET(LL_STP,'AEPSI',-1,AEPSIF(:,IB))
         CALL LINKEDLIST$SET(LL_STP,'PSPSI',-1,PSPSIF(:,IB))
         CALL LINKEDLIST$SET(LL_STP,'AUGPSI',-1,AUGPSIF(:,IB))
       ENDDO
+print*,'marke 5'
       CALL LINKEDLIST$SET(LL_STP,'AEPOT',0,AEPOT)
       CALL LINKEDLIST$SET(LL_STP,'PSPOT',0,PSPOT)
       CALL LINKEDLIST$SET(LL_STP,'POTOFPSRHO',0,PSPOT-VADD)
+print*,'marke 6'
 !
 !STOP 'FORCED: IN MAKEPARTIALWAVES'
                                 CALL TRACE$POP()
@@ -4467,6 +4492,7 @@ GOTO 10001
      &                                 ,LOFI,FOFI,PSPSI,PSG2,PSG4)
 !     **************************************************************************
 !     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
@@ -4497,6 +4523,7 @@ GOTO 10001
       REAL(8)               :: CHARGE1,EKIN1
       INTEGER(4)            :: L,IB,IR
 !     **************************************************************************
+                      call trace$push('SETUP_PARMSMASSRENORMALIZATION')
       PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
@@ -4562,6 +4589,7 @@ GOTO 10001
         WRITE(*,*)'PS CHARGE IN G-SPACE ',CHARGE,' IN R-SPACE ',CHARGE1
         WRITE(*,*)'PS EKIN   IN G-SPACE ',EKIN,' IN R-SPACE ',EKIN1
       END IF
+                      call trace$pop()
       RETURN
       END
 !
@@ -4645,7 +4673,7 @@ GOTO 10001
       SUBROUTINE SETUP_TESTSCATTERING(LL_STP)
 !     **************************************************************************
 !     **                                                                      **
-!     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       USE STRINGS_MODULE
       USE LINKEDLIST_MODULE
       USE SETUP_MODULE
@@ -4822,7 +4850,7 @@ GOTO 10001
 !     **   ISCATT= 1    FIRST SCATTERING STATE (PHIDOT)                       **
 !     **   ISCATT= 2    SECOND SCATTERING STATE (PHIDOTDOT)                   **
 !     **                                                                      **
-!     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       USE PERIODICTABLE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -4880,8 +4908,10 @@ GOTO 10001
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_WRITEPHI(FILE,GID,NR,NPHI,PHI)
+!     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: FILE
       INTEGER(4)  ,INTENT(IN) :: GID      ! GRID ID
@@ -4941,6 +4971,7 @@ GOTO 10001
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: GID      ! GRID ID
       INTEGER(4)  ,INTENT(IN) :: NR       ! #(RDIAL GRID POINTS)
@@ -5050,6 +5081,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !     **  OBEY  <PHIBAR(I)|PROBAR(J)>=DELTA(I,J)    (KRONECKER DELTA)         **
 !     **                                                                      **
 !     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID
       INTEGER(4) ,INTENT(IN)     :: NR
@@ -5143,6 +5175,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       USE STRINGS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)     :: GID
@@ -5332,6 +5365,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
 !     **  CAUSES DIFFICULTIES.                                                **
 !     **                                                                      **
 !     **                                                                      ** 
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)     :: GID
       INTEGER(4),INTENT(IN)     :: NR
@@ -5574,6 +5608,8 @@ PRINT*,'KI ',KI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMIC_PSEUDIZE(GID,NR,POW,TVAL,VAL0_,RC,AEF,PSF)
+!     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID
       INTEGER(4) ,INTENT(IN)     :: NR
@@ -5652,6 +5688,7 @@ PRINT*,'KI ',KI
 !     **************************************************************************
 !     ** GENERATES AUTOMATICALLY A PAERAMETER FILE FOR THE SETUP CONSTRUCTION **
 !     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       USE PERIODICTABLE_MODULE
       USE CONSTANTS_MODULE
       IMPLICIT NONE
@@ -5810,6 +5847,7 @@ PRINT*,'KI ',KI
 !     **************************************************************************
 !     **************************************************************************
 !     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2010******************
       USE STRINGS_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
@@ -5903,3 +5941,147 @@ PRINT*,'KI ',KI
       CALL FILEHANDLER$CLOSE('TMP')
       STOP
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUPS_CVXSETUP()
+!     **************************************************************************
+!     **  CORE-VALENCE EXCHANGE MATRIX ELEMENTS                               **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE SETUP_MODULE,ONLY : THIS
+      IMPLICIT NONE
+      INTEGER(4)            :: GID
+      INTEGER(4)            :: NR
+      INTEGER(4)            :: LMRX
+      INTEGER(4)            :: LRHOX
+      INTEGER(4)            :: nc
+      INTEGER(4)            :: lnx
+!     **************************************************************************
+      GID=THIS%GID
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      LMRX=THIS%LMRX
+      LRHOX=INT(SQRT(REAL(LMRX-1)+1.D-8))
+      nc=this%atom%nc
+      lnx=this%lnx
+      ALLOCATE(THIS%COREVALENCEX(LNX,LNX))
+      CALL SETUPS_CVXMAT(GID,NR &
+     &              ,LNX,THIS%LOX,THIS%AEPHI &
+     &              ,NC,THIS%ATOM%LOFI(:NC),THIS%ATOM%AEPSI(:,:NC) &
+     &              ,LRHOX,THIS%COREVALENCEX)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUPS_CVXMAT(GID,NR,LNX,LOX,AEPHI,NC,LOFC,PSIC,LRHOX,MAT)
+!     **************************************************************************
+!     **  CORE-VALENCE EXCHANGE MATRIX ELEMENTS                               **
+!     **                                                                      **
+!     ** NOTE THAT THERE IS A SIMILAR ROUTINE IN PAW_LDAPLUSU                 **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2008******************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID           ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR            ! #(RADIAL GRID POINTS)
+      INTEGER(4),INTENT(IN) :: LNX           ! #(PARTIAL WAVES W/O M,SIGMA)
+      INTEGER(4),INTENT(IN) :: LOX(LNX)      ! ANGULAR MOMENTA OF PARTIAL WAVES
+      REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX) ! AE PARTIAL WAVES
+      INTEGER(4),INTENT(IN) :: NC            ! #(CORE STATES)
+      INTEGER(4),INTENT(IN) :: LOFC(NC)      ! ANGULAR MOMENTA OF CORE STATES
+      REAL(8)   ,INTENT(IN) :: PSIC(NR,NC)   ! CORE STATES
+      INTEGER(4),INTENT(IN) :: LRHOX         ! MAX ANGULAR MOMENTUM OF DENSITY
+      REAL(8)   ,INTENT(OUT):: MAT(LNX,LNX)  ! CORE VALENCE X MATRIX ELEMENTS
+      INTEGER(4)            :: LX  ! MAX ANGULAR MOMENTUM PARTIAL WAVES
+      INTEGER(4)            :: LMX ! MAX #(ANGULAR MOMENTA) OF PARTIAL WAVES
+      INTEGER(4)            :: LCX ! HIGHEST ANGULAR MOMENTUM OF CORE STATES
+      REAL(8)               :: CG
+      REAL(8)               :: RHO1(NR)
+      REAL(8)               :: AUX(NR),POT(NR)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: VAL
+      REAL(8)   ,ALLOCATABLE:: FACTOR(:,:,:)
+      INTEGER(4)            :: LMCA
+      INTEGER(4)            :: LM1,LC,LRHO,IMC,LMC,LMRHOA,IMRHO,LMRHO
+      INTEGER(4)            :: LN1,L1,IC,LN2,L2,LM2
+      LOGICAL(4),PARAMETER  :: TPRINT=.TRUE.
+      REAL(8)               :: PI
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      LX=MAXVAL(LOX)
+      LMX=(LX+1)**2
+      LCX=MAXVAL(LOFC)
+      ALLOCATE(FACTOR(LX+1,LRHOX+1,LCX+1))
+      CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     == INCLUDE ANGULAR INTEGRATIONS                                         ==
+!     ==========================================================================
+!     == SPHERICAL SYMMETRY EXPLOITED: 
+      FACTOR=0.D0
+      DO L1=0,LX           ! ANGULAR MOMENTUM OF LOCAL ORBITAL
+        LM1=L1**2+1
+        DO LC=0,LCX        ! ANGULAR MOMENTUM OF CORE STATE
+          DO LRHO=0,LRHOX  ! ANGULAR MOMENTUM OF DENSITY
+            LMCA=LC**2
+            DO IMC=1,2*LC+1
+              LMC=LMCA+IMC
+              LMRHOA=LRHO**2
+              DO IMRHO=1,2*LRHO+1
+                LMRHO=LMRHOA+IMRHO
+                CALL SPHERICAL$GAUNT(LM1,LMC,LMRHO,CG)
+                FACTOR(L1+1,LRHO+1,LC+1)=FACTOR(L1+1,LRHO+1,LC+1)+CG**2
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     = THIS FACTOR IS INCLUDED TO HAVE A PROPER DEFINITION OF SLATER INTEGRALS
+      DO LRHO=0,LRHOX
+        FACTOR(:,LRHO+1,:)=FACTOR(:,LRHO+1,:)*4.D0*PI/REAL(2*LRHO+1,KIND=8)
+      ENDDO
+!
+!     ==========================================================================
+!     == WORK OUT RADIAL INTEGRATIONS                                         ==
+!     ==========================================================================
+      MAT(:,:)=0.D0
+      DO LN1=1,LNX
+        L1=LOX(LN1)
+        DO IC=1,NC
+          LC=LOFC(IC)
+          RHO1(:)=AEPHI(:,LN1)*PSIC(:,IC)
+          DO LRHO=0,LRHOX
+            CALL RADIAL$POISSON(GID,NR,LRHO,RHO1,POT)
+            DO LN2=1,LN1  ! MATRIX IS SYMMETRIC
+              L2=LOX(LN2)
+              IF(L2.NE.L1) CYCLE
+              AUX(:)=R(:)**2*POT(:)*PSIC(:,IC)*AEPHI(:,LN2)
+              CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
+!!$PRINT*,LN1,IC,LC,LRHO,LN2,'VAL ',VAL
+!!$CALL ATOMLIB_WRITEPHI('X0.DAT',GID,NR,1,AUX)
+              VAL=VAL*REAL(2*LRHO+1,KIND=8)/(4.D0*PI)  !SLATER INTEGRAL
+              MAT(LN1,LN2)=MAT(LN1,LN2)-FACTOR(L1+1,LRHO+1,LC+1)*VAL
+              MAT(LN2,LN1)=MAT(LN1,LN2)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(FACTOR)
+!
+!     ==========================================================================
+!     ==  WRITE FOR TEST PURPOSES                                             ==
+!     ==========================================================================
+      IF(TPRINT) THEN
+        PRINT*,'LOFC ',LOFC
+        PRINT*,'NOW THE MATRIX FOR THE CORE VALENCE EXCHANGE INTERACTION'
+        WRITE(*,FMT='(4A3,10A18)')'LN1','L1','LN2','L2','MAT(LN1,LN2)'
+        DO LN1=1,LNX
+          L1=LOX(LN1)
+          DO LN2=1,LNX
+            L2=LOX(LN2)
+            WRITE(*,FMT='(4I3,10F18.10)')LN1,L1,LN2,L2,MAT(LN1,LN2)
+          ENDDO
+        ENDDO
+!        STOP
+      END IF
+      RETURN
+      END      

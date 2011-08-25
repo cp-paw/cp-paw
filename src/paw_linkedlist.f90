@@ -2441,6 +2441,7 @@ CONTAINS
       call mpe$query(cid,ntasks,thistask)
       CALL BUFFER_PACK(BUFFER)
       FREE=BUFFER%LENG-BUFFER%LAST+1
+      PACKED=.TRUE.
 !
 !     ==================================================================
 !     ==                                                              ==

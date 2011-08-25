@@ -1516,7 +1516,6 @@ END MODULE WAVES_MODULE
                                CALL TIMING$CLOCKON('WAVES$TONTBO')
       CALL WAVES$TONTBO()
                                CALL TIMING$CLOCKOFF('WAVES$TONTBO')
-      CALL LMTO$TESTENERGY()
 !
 !     ==========================================================================
 !     == KINETIC ENERGY                                                       ==
@@ -1624,6 +1623,11 @@ CALL ERROR$STOP('WAVES$ETOT')
 !      STRESS=STRESS+STRESST
 !      DEALLOCATE(QLM)
 !      DEALLOCATE(FORCET)
+!
+!     ==================================================================
+!     == work with NTBO Basis                                         ==
+!     ================================================================== 
+      CALL LMTO$TESTENERGY(lmnxx,ndimd,nat,denmat)
 !
 !     ==================================================================
 !     == AUGMENTATION                                                 ==
@@ -2737,15 +2741,16 @@ END IF
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
       USE MPE_MODULE
       USE WAVES_MODULE
-      use lmto_module, only : ton
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPRINT=.false.
       INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
       INTEGER(4)             :: npro   !#(projector functions)
       real(8)   ,allocatable :: xk(:,:)
       INTEGER(4)             :: ISPIN,IKPT,ib
+      logical(4)             :: ton
 !     **************************************************************************
-      if(.not.ton) return
+      CALL LMTO$GETL4('ON',TON)
+      IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('WAVES$TONTBO')
                               CALL TIMING$CLOCKON('W:TONTBO')
 !
@@ -3864,11 +3869,11 @@ END IF
       RETURN
       END SUBROUTINE WAVES$HPSI
 !
-!     .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_HPROJ(NDIM,NB,LMNX,DH,PROJ,HPROJ)
-!     *****************************************************************
-!     **                                                             **
-!     *******************************************P.E. BLOECHL, (1991***
+!     **************************************************************************
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1991)***********
       USE WAVES_MODULE, ONLY : MAP_TYPE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NDIM
@@ -3881,19 +3886,18 @@ END IF
       INTEGER(4)             :: LMN1,LMN2
       REAL(8)                :: DHUPUP,DHDNDN
       COMPLEX(8)             :: DHUPDN,DHDNUP
-!     *****************************************************************
+!     **************************************************************************
       HPROJ(:,:,:)=(0.D0,0.D0)
 !
-!     ==============================================================
-!     ==  EVALUATE  DH<P|PSI>                                     ==
-!     ==============================================================
+!     ==========================================================================
+!     ==  EVALUATE  DH<P|PSI>                                                 ==
+!     ==========================================================================
       IF(NDIM.EQ.1) THEN
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
             DHUPUP=DH(LMN1,LMN2,1)
             DO IB=1,NB
-              HPROJ(1,IB,LMN1)=HPROJ(1,IB,LMN1) &
-     &                        +DHUPUP*PROJ(1,IB,LMN2)
+              HPROJ(1,IB,LMN1)=HPROJ(1,IB,LMN1)+DHUPUP*PROJ(1,IB,LMN2)
             ENDDO
           ENDDO
         ENDDO
@@ -3920,9 +3924,12 @@ END IF
       RETURN
       END
 !
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_HPSI(MAP,GSET,ISPIN,NGL,NDIM,NDIMD,NBH,NPRO,LMNXX,NAT,NRL &
      &                     ,PSI,POT,R,PROJ,DH,HPSI)
+!     **************************************************************************
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1991)***********
       USE WAVES_MODULE, ONLY: MAP_TYPE,GSET_TYPE
       IMPLICIT NONE
       INTEGER(4)     ,INTENT(IN) :: ISPIN
@@ -3945,14 +3952,14 @@ END IF
       COMPLEX(8)     ,ALLOCATABLE:: HPROJ(:,:,:)  
       REAL(8)        ,ALLOCATABLE:: DH1(:,:,:)
       INTEGER(4)                 :: IPRO,IAT,ISP,LMNX
-!     ****************************************************************
+!     **************************************************************************
 CALL TIMING$CLOCKON('W:HPSI.VPSI')
       CALL WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,PSI,POT,HPSI)
 CALL TIMING$CLOCKOFF('W:HPSI.VPSI')
 !
-!     ================================================================
-!     ==  EVALUATE  DH<P|PSI>                                       ==
-!     ================================================================
+!     ==========================================================================
+!     ==  EVALUATE  DH<P|PSI>                                                 ==
+!     ==========================================================================
 CALL TIMING$CLOCKON('W:HPSI.HPROJ')
       ALLOCATE(HPROJ(NDIM,NBH,NPRO))
       HPROJ(:,:,:)=(0.D0,0.D0)
@@ -3973,9 +3980,9 @@ CALL TIMING$CLOCKON('W:HPSI.HPROJ')
       ENDDO
 CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
 !
-!     ==============================================================
-!     ==  ADD  |P>DH<P|PSI>                                       ==
-!     ==============================================================
+!     ==========================================================================
+!     ==  ADD  |P>DH<P|PSI>                                                   ==
+!     ==========================================================================
 CALL TIMING$CLOCKON('W:HPSI.ADDPRO')
       CALL WAVES_ADDPRO(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,HPSI,HPROJ)
 CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
@@ -4488,7 +4495,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8),INTENT(IN)   :: EPS(NB,NB)
       COMPLEX(8),INTENT(OUT)  :: DEDPROJ(NDIM,NBH,LMNX)    ! DE/D<P|
       LOGICAL(4)              :: TINV
-      COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
       COMPLEX(8),ALLOCATABLE  :: OPROJ(:,:,:)
       COMPLEX(8),ALLOCATABLE  :: LAMBDA(:,:)
       REAL(8)                 :: F1,F2
@@ -4594,7 +4600,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8),INTENT(IN)   :: DEDPROJ(NDIM,NBH,LMNX) ! <P|PSI>
       COMPLEX(8),INTENT(OUT)  :: DEDPRO(NGL,LMNX)    ! DE/D<P|
       INTEGER(4)              :: LMN,IG
-      COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
       COMPLEX(8),ALLOCATABLE  :: PSIM(:)
       LOGICAL(4),PARAMETER    :: TESSL=.TRUE.
       COMPLEX(8)              :: DEDPROJ1(NDIM,NBH,LMNX) ! CONJG(<P|PSI>)

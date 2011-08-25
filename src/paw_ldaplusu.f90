@@ -626,11 +626,13 @@ INTEGER(4)             :: LN1,LN2,LN3,LN4
       LOGICAL(4)             :: TCHK
 CHARACTER(1) :: SWITCH
 !     **************************************************************************
+print*,'==== entering ldaplusu$etot ',iat,ton
       ETOT=0.D0
       DATH_=0.D0
       IF(.NOT.TON) RETURN
       CALL LDAPLUSU$SELECT(IAT)
       TCHK=THIS%SP%TON
+print*,'==== checking if atom ',iat,' is active ',tchk
       IF(.NOT.TCHK) THEN
         CALL LDAPLUSU$SELECT(0)  ! UNSELECTING IS REQUIRED
         RETURN
@@ -780,15 +782,15 @@ DO IS1=1,2
   PRINT*,'CHARGE= ',SVAR,' FOR SPIN ',IS1
 ENDDO
 !
-DO LN1=1,LNX
-  DO LN2=1,LNX
-    DO LN3=1,LNX
-      DO LN4=1,LNX
-        WRITE(*,*)'ULITTLE',LN1,LN2,LN3,LN4,THIS%ULITTLE(:,LN1,LN2,LN3,LN4)
-      ENDDO
-    ENDDO
-  ENDDO
-ENDDO
+!!$DO LN1=1,LNX
+!!$  DO LN2=1,LNX
+!!$    DO LN3=1,LNX
+!!$      DO LN4=1,LNX
+!!$        WRITE(*,*)'ULITTLE',LN1,LN2,LN3,LN4,THIS%ULITTLE(:,LN1,LN2,LN3,LN4)
+!!$      ENDDO
+!!$    ENDDO
+!!$  ENDDO
+!!$ENDDO
 !
 !     ==========================================================================
 !     ==  CALCULATE U-TENSOR                                                  ==
@@ -803,31 +805,15 @@ ENDDO
       ELSE
         CALL LDAPLUSU_INTERACTION(NCHI,U,RHO,ETOT,HAM)
       END IF
-PRINT*,'E(U) ',ETOT
-!!$PRINT*,'============ INTERACTION ====IAT=',IAT,'============================'
-!!$PRINT*,'IAT=',IAT,' INTERACTION ETOT ',ETOT,' SWITCH=',SWITCH
-!!$DO IS1=1,2
-!!$PRINT*,'===================== DENMAT FOR SPIN',IS1,IS1,' ======================'
-!!$I=0
-!!$DO LN=1,LNXPHI
-!!$DO M=1,2*LOXPHI(LN)+1
-!!$I=I+1
-!!$WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(RHO(I,:,IS1,IS1))
-!!$ENDDO
-!!$ENDDO
-!!$ENDDO
-!!$IF(SWITCH.EQ.'0') THEN
-!!$DO IS1=1,2
-!!$PRINT*,'===================== DATH FOR SPIN',IS1,IS1,' ========================'
-!!$I=0
-!!$DO LN=1,LNXPHI
-!!$DO M=1,2*LOXPHI(LN)+1
-!!$I=I+1
-!!$WRITE(*,FMT='(I3,100F12.5)')LOXPHI(LN),REAL(HAM(I,:,IS1,IS1))
-!!$ENDDO
-!!$ENDDO
-!!$ENDDO
-!!$END IF
+!
+!     ==========================================================================
+!     ==  subtract Hartree energy                                             ==
+!     ==========================================================================
+      ALLOCATE(HAM1(NCHI,NCHI,2,2))
+      call LDAPLUSU_Ehartree(GID,NR,nchi,LNX,LOX,this%CHI,LRX,rho,Etot1,Ham1)
+      etot=etot-etot1
+      HAM=HAM-HAM1
+      deallocate(ham1)
 !
 !     ==========================================================================
 !     ==  CORE VALENCE EXCHANGE INTERACTION                                   ==
@@ -835,7 +821,6 @@ PRINT*,'E(U) ',ETOT
       IF(THIS%SP%TCV) THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
         CALL LDAPLUSU_CVX(NCHI,LNX,LOX,RHO,THIS%CVX,ETOT1,HAM1)
-PRINT*,'ETOT FROM CORE VALENCE EXCHANGE ',ETOT1
         ETOT=ETOT+ETOT1
         HAM=HAM+HAM1
         DEALLOCATE(HAM1)
@@ -847,6 +832,10 @@ PRINT*,'ETOT FROM CORE VALENCE EXCHANGE ',ETOT1
       IF(THIS%SP%FUNCTIONALID.EQ.'LDA+U' &
      &              .OR.THIS%SP%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
+        call LDAPLUSU_Ehartree(GID,NR,nchi,LNX,LOX,this%CHI,LRX,rho,Etot1,Ham1)
+        etot=etot+etot1
+        HAM=HAM+HAM1
+!
         CALL LDAPLUSU_DCLDAPLUSU(DCTYPE,LNX,LOX,NCHI,U,RHO,ETOT1,HAM1)
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
@@ -863,31 +852,7 @@ PRINT*,'ETOT FROM CORE VALENCE EXCHANGE ',ETOT1
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
         CALL LDAPLUSU_EDFT(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,AECORE,RHO &
     &                     ,ETOT1,HAM1)
-PRINT*,'E(DC) ',ETOT1
-PRINT*,'============ DC ================IAT=',IAT,'============================'
-PRINT*,'IAT=',IAT,' DC ETOT ',ETOT1,' SWITCH=',SWITCH
-DO IS1=1,2
-  PRINT*,'===================== DENMAT FOR SPIN',IS1,IS1,' ======================'
-  I=0
-  DO LN=1,LNX
-    DO M=1,2*LOX(LN)+1
-      I=I+1
-      WRITE(*,FMT='(I3,100F12.5)')LOX(LN),REAL(RHO(I,:,IS1,IS1))
-    ENDDO
-  ENDDO
-ENDDO
-IF(SWITCH.EQ.'0') THEN
-  DO IS1=1,2
-    PRINT*,'===================== DATH FOR SPIN',IS1,IS1,' ========================'
-    I=0
-    DO LN=1,LNX
-      DO M=1,2*LOX(LN)+1
-        I=I+1
-        WRITE(*,FMT='(I3,100F12.5)')LOX(LN),REAL(HAM1(I,:,IS1,IS1))
-      ENDDO
-    ENDDO
-  ENDDO
-END IF
+
         ETOT=ETOT-ETOT1
         HAM=HAM-HAM1
         DEALLOCATE(HAM1)
@@ -900,6 +865,10 @@ END IF
         CALL ERROR$CHVAL('FUNCTIONALID',THIS%SP%FUNCTIONALID)
         CALL ERROR$STOP('LDAPLUSU$ETOT')
       END IF
+PRINT*,'ETOT after scaling ',ETOT
+DO i=1,nchi
+  WRITE(*,FMT='(I3,100F12.5)')i,REAL(HAM(I,:,1,1))
+ENDDO
 !
 !     ==========================================================================
 !     ==  UPFOLD                                                              ==
@@ -1883,10 +1852,11 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_INTERACTION(NORB,U,RHO,ETOT,HAM)
-!     **                                                                      **
+!     **************************************************************************
 !     ** CALCULATES THE HARTREE AND EXCHANGE ENERGY FROM THE U-TENSOR U       **
 !     ** AND THE DENSITY MATRIX RHO.                                          **
 !     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NORB                   ! BASIS-SET SIZE    
       REAL(8)     ,INTENT(IN) :: U(NORB,NORB,NORB,NORB) ! U TENSOR
@@ -2103,6 +2073,81 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LDAPLUSU_Ehartree(GID,NR,LMNX,LNX,LOX,CHI,LRX,D,E,H)
+!     **                                                                      **
+!     **  DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                **
+!     **                                                                      **
+!     **  DETERMINES THE HARTREE AND EXCHANGE-ONLY ENERGY FROM THE            **
+!     **  DFT FUNCTIONAL                                                      **
+!     **  FOR THE DENSITY BUILT FROM THE LOCAL ORBITALS AND THE CORE DENSITY  **
+!     **  THIS ENERGY NEEDS TO BE SUBTRACTED FROM THE TOTAL ENERGY            **
+!     **                                                                      **
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID
+      INTEGER(4)  ,INTENT(IN) :: NR
+      INTEGER(4)  ,INTENT(IN) :: LRX
+      INTEGER(4)  ,INTENT(IN) :: LMNX       ! #(LOCAL ORBITALS)
+      INTEGER(4)  ,INTENT(IN) :: LNX        ! #(RADIAL FUNCTIONS)
+      INTEGER(4)  ,INTENT(IN) :: LOX(LNX)   !MAIN ANGULAR MOMENTUM OF LOCAL ORB.
+      REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)
+      COMPLEX(8)  ,INTENT(IN) :: D(LMNX,LMNX,2,2) ! DENSITY MATRIX
+      REAL(8)     ,INTENT(OUT):: E                ! hartree energy
+      COMPLEX(8)  ,INTENT(OUT):: H(LMNX,LMNX,2,2) ! DETOT/D(RHO^*)        
+      COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
+      COMPLEX(8)              :: DENMAT1(LMNX,LMNX)
+      COMPLEX(8)              :: HAM1(LMNX,LMNX)
+      REAL(8)                 :: R(NR)
+      REAL(8)     ,ALLOCATABLE:: RHO(:,:)
+      REAL(8)     ,ALLOCATABLE:: POT(:,:)
+      REAL(8)                 :: EDENSITY(NR)
+      INTEGER(4)              :: LMRX,L
+      INTEGER(4)              :: IDIM,LM
+!     **************************************************************************
+      LMRX=(LRX+1)**2
+!
+!     ==========================================================================
+!     ==  TRANSFORM DENSITY MATRIX FROM UP/DOWN TO TOTAL/SPIN                 ==
+!     ==========================================================================
+      DENMAT1(:,:)=D(:,:,1,1)+D(:,:,2,2)
+!
+!     ==========================================================================
+!     ==  CALCULATE DENSITY                                                   ==
+!     ==========================================================================
+      ALLOCATE(RHO(NR,LMRX))
+      CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI,LMNX,DENMAT1,LMRX,RHO)
+!
+!     ==========================================================================
+!     == HARTREE ENERGY AND POTENTIAL ==========================================
+!     == CORE CONTRIBUTION IS NOT INCLUDED BECAUSE IT IS NOT REPRESENTED IN   ==
+!     == THE U-TENSOR AND ONLY THE EXCHANGE PART OF THE CORE-VALENCE IS INCLUDED
+!     ==========================================================================
+      ALLOCATE(POT(NR,LMRX))
+      EDENSITY=0.D0
+      DO LM=1,LMRX
+        L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+        CALL RADIAL$POISSON(GID,NR,L,RHO(:,LM),POT(:,LM))
+        EDENSITY(:)=EDENSITY(:)+0.5D0*pot(:,lm)*RHO(:,LM)
+      ENDDO
+      CALL RADIAL$R(GID,NR,R)
+      EDENSITY=EDENSITY*R(:)**2
+      CALL RADIAL$INTEGRAL(GID,NR,EDENSITY,e)
+!
+!     ==========================================================================
+!     ==  CALCULATE HAMILTONIAN IN TOTAL/SPIN REPRESENTATION                  ==
+!     ==========================================================================
+      CALL LDAPLUSU_EXPECT(GID,NR,1,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+      DEALLOCATE(POT)
+!
+!     ==========================================================================
+!     ==  TRANSFORM HAMILTONIAN FROM TOTAL/SPIN TO UP/DOWN                    ==
+!     ==========================================================================
+      h(:,:,:,:)=(0.d0,0.d0)
+      H(:,:,1,1)=HAM1(:,:)
+      H(:,:,2,2)=HAM1(:,:)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LDAPLUSU_EDFT(GID,NR,LMNX,LNX,LOX,CHI,LRX,AECORE,DENMAT,ETOT,HAM)
 !     **                                                                      **
 !     **  DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                **
@@ -2155,13 +2200,8 @@ INTEGER(4) :: IMETHOD
 !     ==========================================================================
       DENMAT1(:,:,1)=DENMAT(:,:,1,1)+DENMAT(:,:,2,2)
       DENMAT1(:,:,2)=DENMAT(:,:,1,2)+DENMAT(:,:,2,1)
-      DENMAT1(:,:,3)=-CI*(DENMAT(:,:,1,2)-DENMAT(:,:,2,1))
+      DENMAT1(:,:,3)=CI*(DENMAT(:,:,1,2)-DENMAT(:,:,2,1))
       DENMAT1(:,:,4)=DENMAT(:,:,1,1)-DENMAT(:,:,2,2)
-DO IDIM=1,NDIMD
-DO LMN=1,LMNX
-  WRITE(*,FMT='("XC-DENMAT",2I5,100F15.3)')IDIM,LMN,DENMAT1(LMN,:,IDIM)
-ENDDO
-ENDDO
 !
 !     ==========================================================================
 !     ==  CALCULATE DENSITY                                                   ==
@@ -2272,25 +2312,25 @@ END IF
 !!$
 !!$      END IF
       CALL DFT$SETL4('XCONLY',.FALSE.)
-PRINT*,'EXC ',ETOT
-!
-!     ==========================================================================
-!     == HARTREE ENERGY AND POTENTIAL ==========================================
-!     == CORE CONTRIBUTION IS NOT INCLUDED BECAUSE IT IS NOT REPRESENTED IN   ==
-!     == THE U-TENSOR AND ONLY THE EXCHANGE PART OF THE CORE-VALENCE IS INCLUDED
-!     ==========================================================================
-      EDENSITY=0.D0
-      DO LM=1,LMRX
-        L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
-        CALL RADIAL$POISSON(GID,NR,L,RHO(:,LM,1),AUX)
-        POT(:,LM,1)=POT(:,LM,1)+AUX(:)
-        EDENSITY(:)=EDENSITY(:)+0.5D0*AUX(:)*RHO(:,LM,1)
-      ENDDO
-      CALL RADIAL$R(GID,NR,R)
-      EDENSITY=EDENSITY*R(:)**2
-      CALL RADIAL$INTEGRAL(GID,NR,EDENSITY,SVAR)
-PRINT*,'EH ',SVAR
-      ETOT=ETOT+SVAR
+PRINT*,'EDFT: EXC ',ETOT
+!!$!
+!!$!     ==========================================================================
+!!$!     == HARTREE ENERGY AND POTENTIAL ==========================================
+!!$!     == CORE CONTRIBUTION IS NOT INCLUDED BECAUSE IT IS NOT REPRESENTED IN   ==
+!!$!     == THE U-TENSOR AND ONLY THE EXCHANGE PART OF THE CORE-VALENCE IS INCLUDED
+!!$!     ==========================================================================
+!!$      EDENSITY=0.D0
+!!$      DO LM=1,LMRX
+!!$        L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+!!$        CALL RADIAL$POISSON(GID,NR,L,RHO(:,LM,1),AUX)
+!!$        POT(:,LM,1)=POT(:,LM,1)+AUX(:)
+!!$        EDENSITY(:)=EDENSITY(:)+0.5D0*AUX(:)*RHO(:,LM,1)
+!!$      ENDDO
+!!$      CALL RADIAL$R(GID,NR,R)
+!!$      EDENSITY=EDENSITY*R(:)**2
+!!$      CALL RADIAL$INTEGRAL(GID,NR,EDENSITY,SVAR)
+!!$PRINT*,'EDFT: EH ',SVAR
+!!$      ETOT=ETOT+SVAR
 !
 !     ==========================================================================
 !     ==  CALCULATE HAMILTONIAN IN TOTAL/SPIN REPRESENTATION                  ==
@@ -2301,10 +2341,10 @@ PRINT*,'EH ',SVAR
 !     ==========================================================================
 !     ==  TRANSFORM HAMILTONIAN FROM TOTAL/SPIN TO UP/DOWN                    ==
 !     ==========================================================================
-      HAM(:,:,1,1)=HAM1(:,:,1)+HAM1(:,:,4)
-      HAM(:,:,1,2)=HAM1(:,:,2)-CI*HAM1(:,:,3)
-      HAM(:,:,2,1)=HAM1(:,:,2)+CI*HAM1(:,:,3)
-      HAM(:,:,2,2)=HAM1(:,:,1)-HAM1(:,:,4)
+      HAM(:,:,1,1)=HAM1(:,:,1)+   HAM1(:,:,4)
+      HAM(:,:,1,2)=HAM1(:,:,2)+CI*HAM1(:,:,3)
+      HAM(:,:,2,1)=HAM1(:,:,2)-CI*HAM1(:,:,3)
+      HAM(:,:,2,2)=HAM1(:,:,1)-   HAM1(:,:,4)
       RETURN
       END
 !
@@ -2696,19 +2736,11 @@ PRINT*,'EH ',SVAR
       ENDDO
       CALL CI$CLEANHAMILTONIAN(CIHAM)
       CALL CI$WRITEHAMILTONIAN(CIHAM,6)
-!PRINT*,'H%N',CIHAM%H%N,CIHAM%U%N
-!PRINT*,'NCHI',NCHI
 !
 !     ==========================================================================
 !     == SET UP HAMILTON OPERATOR                                             ==
 !     ==========================================================================
-!!$PRINT*,'NCHI',NCHI
-!!$DO I=1,2*NCHI
-!!$  WRITE(6,FMT='("RHO2",8("(",F7.4,";",F7.4,")"))')RHO2(I,:)
-!!$ENDDO
-!!$PRINT*,'BEFORE CI$DYNWITHFIXEDDENMAT'
       CALL CI$DYNWITHFIXEDDENMAT(2*NCHI,RHO2,CIHAM,CIPSI,POT2,ETOT)
-!PRINT*,'AFTER CI$DYNWITHFIXEDDENMAT'
       CALL CI$WRITEPSI(CIPSI,6) 
 !
 !     ==========================================================================
