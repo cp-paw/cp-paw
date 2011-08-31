@@ -67,9 +67,12 @@ SPECIAL="none"
 #########################################################################################
 ##___________________________DIRECTORIES containing LIBRARIES__________________________##
 ##                                                                                     ##
-BLASDIR="/Developer/opt/intel/Compiler/11.1/089/lib/"
-LAPACKDIR="/Developer/opt/intel/Compiler/11.1/089/Frameworks/mkl/lib/em64t"
-FFTDIR="/Developer/opt/intel/Compiler/11.1/089/Frameworks/mkl/"
+BLASDIR="/Developer-3.2.6/opt/intel/Compiler/11.1/089/lib/"
+#BLASDIR="/Developer/opt/intel/mkl/lib/"
+LAPACKDIR="/Developer-3.2.6/opt/intel/Compiler/11.1/089/Frameworks/mkl/lib/em64t"
+#LAPACKDIR="/Developer/opt/intel/mkl/lib/"
+FFTDIR="/Developer-3.2.6/opt/intel/Compiler/11.1/089/Frameworks/mkl/"
+#FFTDIR="/Developer/opt/intel/mkl/"
 MPIDIR="/home/tools/libs/mpich-1.2.6_ifc10/"
 ##                                                                                     ##
 ##-------------------------------------------------------------------------------------##
