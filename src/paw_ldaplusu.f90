@@ -1045,7 +1045,7 @@ END IF
 !     == CONSTRUCT LOCAL ORBITALS ==============================================
 !      IF(ASSOCIATED(THIS%CHI))DEALLOCATE(THIS%CHI)
 !      ALLOCATE(THIS%CHI(NR,LNXCHI))
-!      THIS%CHI=MATMUL(PHI,AMAT) 
+!      THIS%CHI=M≤ATMUL(PHI,AMAT) 
 !      DEALLOCATE(AMAT)
 
       IAT=ITHIS

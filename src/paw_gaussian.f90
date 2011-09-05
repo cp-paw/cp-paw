@@ -429,8 +429,8 @@
 !     ** 
 !     **************************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: GID   ! grid id
+      INTEGER(4),INTENT(IN) :: NR    ! #(radial grid points)
       INTEGER(4),INTENT(IN) :: L     ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: W(NR) ! WEIGHTING FOR FIT
       REAL(8)   ,INTENT(IN) :: F(NR) ! FUNCTION TO BE FITTED
@@ -449,7 +449,7 @@
       LOGICAL(4),PARAMETER  :: TTEST=.false.
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R2)
-      RL(:)=R2(:)**L
+      RL(:)=R2(:)**L   ! r2 is still r and will be squared only in the next line
       R2(:)=R2(:)**2
       WR2(:)=W(:) !*R2(:)
 !

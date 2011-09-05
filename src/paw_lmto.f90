@@ -25,15 +25,15 @@ TYPE TAILED_type
   INTEGER(4)         :: GID
   INTEGER(4)         :: lnx
   INTEGER(4)         :: lmnx
-  INTEGER(4),pointer :: lox(:)
-  INTEGER(4),pointer :: lndot(:)
-  INTEGER(4),pointer :: lmndot(:)
-  REAL(8)   ,POINTER :: f(:,:)     ! (NR,Lnx)
+  INTEGER(4),pointer :: lox(:)     ! (lnx)
+  INTEGER(4),pointer :: lndot(:)   ! (lnx)
+  INTEGER(4),pointer :: lmndot(:)  ! (lmnx)
   REAL(8)   ,POINTER :: aef(:,:)   ! (NR,Lnx)
   REAL(8)   ,POINTER :: psf(:,:)   ! (NR,Lnx)
   REAL(8)   ,POINTER :: nlf(:,:)   ! (NR,Lnx)
   real(8)   ,pointer :: u(:,:,:,:) ! (lmnx,lmnx,lmnx,lmnx)
 END TYPE tailed_type
+
 TYPE ORBITALSPHHARM_TYPE
   INTEGER(4)         :: GID
   INTEGER(4)         :: NR
@@ -154,6 +154,9 @@ TYPE(ORBITALGAUSSCOEFF_TYPE),ALLOCATABLE :: GAUSSORBAUG(:) !(NAT)
 TYPE(ORBITALSPHHARM_TYPE),ALLOCATABLE :: LMORB(:)
 !
 TYPE(UTENSOR_TYPE)    ,ALLOCATABLE :: UTENSOR(:)
+!
+logical(4),parameter :: tspherical=.false.
+
 END MODULE LMTO_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -225,7 +228,7 @@ END MODULE LMTO_MODULE
       CALL LMTO_MAKEPOTPAR()
 !
 !     ==========================================================================
-!     == 
+!     == attach exponential tails to augmented Hankel and Bessel functions    ==
 !     ==========================================================================
       CALL LMTO_MAKETAILEDPARTIALWAVES()
 !
@@ -578,6 +581,7 @@ END MODULE LMTO_MODULE
       INTEGER(4)             :: NR
       REAL(8)   ,ALLOCATABLE :: R(:)
       REAL(8)                :: RAD
+      integer(4)             :: irad ! first point beyond rad
       REAL(8)                :: QBAR
       REAL(8)                :: JVAL,JDER,KVAL,KDER
       REAL(8)                :: SVAR1,SVAR2,A1,A2,B1,B2
@@ -606,6 +610,12 @@ character(128) :: string
         CALL SETUP$GETI4('NR',NR)
         ALLOCATE(R(NR))
         CALL RADIAL$R(GID,NR,R)
+        RAD=POTPAR(ISP)%RAD
+        do ir=1,nr
+          irad=ir
+          if(r(ir).gt.rad) exit
+        enddo
+print*,'irad1= ',irad,nr,rad,r(nr)
 !       == DETERMINE MAPPING ===================================================
         LNXT=LNX(ISP)
         LMNXT=SUM(2*LOX(:LNX(ISP),ISP)+1)
@@ -669,6 +679,10 @@ character(128) :: string
 !       ========================================================================
 !       == augmented hankel and bessel functions with tails attached          ==
 !       ========================================================================
+        ALLOCATE(POTPAR(ISP)%TAILED%aeF(NR,LMNXT))
+        ALLOCATE(POTPAR(ISP)%TAILED%PSF(NR,LMNXT))
+        ALLOCATE(POTPAR(ISP)%TAILED%NLF(NR,LMNXT))
+!
         ALLOCATE(AEPHI(NR,LNX(ISP)))
         ALLOCATE(AEPHIDOT(NR,LNX(ISP)))
         ALLOCATE(NLPHI(NR,LNX(ISP)))
@@ -681,49 +695,6 @@ character(128) :: string
         CALL SETUP$GETR8A('NLPHIDOT',NR*LNX(ISP),NLPHIDOT)
         CALL SETUP$GETR8A('PSPHI',NR*LNX(ISP),PSPHI)
         CALL SETUP$GETR8A('PSPHIDOT',NR*LNX(ISP),PSPHIDOT)
-!
-!       == sphere part =========================================================
-        ALLOCATE(POTPAR(ISP)%TAILED%F(NR,LMNXT))
-        ALLOCATE(POTPAR(ISP)%TAILED%aeF(NR,LMNXT))
-        ALLOCATE(POTPAR(ISP)%TAILED%PSF(NR,LMNXT))
-        ALLOCATE(POTPAR(ISP)%TAILED%NLF(NR,LMNXT))
-        DO LN=1,LNX(ISP)
-          LN1=POTPAR(ISP)%LNSCATT(LN)
-          A1=POTPAR(ISP)%KTOPHI(LN)
-          A2=POTPAR(ISP)%KTOPHIDOT(LN)
-          POTPAR(ISP)%TAILED%nlF(:,LN)=nlPHI(:,LN)*A1+nlPHIDOT(:,LN1)*A2
-!         == the complex addition of differences in the following is ===========
-!         == necessary, if the ae, ps and nl partial waves differ at the =======
-!         == matching radius due to the admixed tails of core states ===========
-          POTPAR(ISP)%TAILED%aeF(:,LN)=POTPAR(ISP)%TAILED%nlF(:,LN) &
-       &      +(aePHI(:,LN)-nlphi(:,ln))*A1+(aephidot(:,ln1)-nlPHIDOT(:,LN1))*A2
-          POTPAR(ISP)%TAILED%PSF(:,LN)=POTPAR(ISP)%TAILED%NLF(:,LN) !&
-!!$       &      +(PSPHI(:,LN)-NLPHI(:,LN))*A1+(PSPHIDOT(:,LN1)-NLPHIDOT(:,LN1))*A2
-!
-          POTPAR(ISP)%TAILED%F(:,LN)=POTPAR(ISP)%TAILED%nlF(:,LN)
-          IF(LN.EQ.LN1) THEN
-            A2=POTPAR(ISP)%JBARTOPHIDOT(LN)
-            POTPAR(ISP)%TAILED%nlF(:,LNDOT(LN))=nlPHIDOT(:,LN1)*A2
-!           == the complex addition of differences in the following is =========
-!           == necessary, if the ae, ps and nl partial waves differ at the =====
-!           == matching radius due to the admixed tails of core states =========
-            POTPAR(ISP)%TAILED%AEF(:,LNDOT(LN)) &
-      &                           =POTPAR(ISP)%TAILED%NLF(:,LNDOT(LN)) &
-      &                           +(AEPHIDOT(:,LN1)-NLPHIDOT(:,LN1))*A2
-            POTPAR(ISP)%TAILED%psF(:,LNDOT(LN)) &
-      &                           =POTPAR(ISP)%TAILED%NLF(:,LNDOT(LN)) &
-      &                           +(psPHIDOT(:,LN1)-NLPHIDOT(:,LN1))*A2
-!
-            POTPAR(ISP)%TAILED%F(:,LNDOT(LN)) &
-      &                                   =POTPAR(ISP)%TAILED%AEF(:,LNDOT(LN))
-          END IF
-        ENDDO
-        deallocate(aephi)
-        deallocate(aephidot)
-        deallocate(psphi)
-        deallocate(psphidot)
-        deallocate(nlphi)
-        deallocate(nlphidot)
 !
 !       == tail part ===========================================================
         DO LN=1,LNX(ISP)
@@ -740,20 +711,58 @@ character(128) :: string
           A2=KVAL*(KDER/KVAL+LAMBDA1)/(LAMBDA1-LAMBDA2)
           B1=JVAL*(JDER/JVAL+LAMBDA2)/(LAMBDA2-LAMBDA1)
           B2=JVAL*(JDER/JVAL+LAMBDA1)/(LAMBDA1-LAMBDA2)
-          DO IR=1,NR
-            IF(R(IR).GT.RAD) THEN
-              SVAR1=EXP(-LAMBDA1*(R(IR)-RAD))
-              SVAR2=EXP(-LAMBDA2*(R(IR)-RAD))
-              POTPAR(ISP)%TAILED%F(IR,LN)       =A1*SVAR1+A2*SVAR2
-              POTPAR(ISP)%TAILED%F(IR,LNDOT(LN))=B1*SVAR1+B2*SVAR2
-            END IF
+          DO IR=irad,NR
+            SVAR1=EXP(-LAMBDA1*(R(IR)-RAD))
+            SVAR2=EXP(-LAMBDA2*(R(IR)-RAD))
+            POTPAR(ISP)%TAILED%nlF(IR,LN)       =A1*SVAR1+A2*SVAR2
+            POTPAR(ISP)%TAILED%nlF(IR,LNDOT(LN))=B1*SVAR1+B2*SVAR2
           ENDDO
         ENDDO
+!
+!       == sphere part =========================================================
+        DO LN=1,LNX(ISP)
+          l=lox(ln,isp)
+          CALL LMTO$SOLIDHANKELRAD(L,Rad,K2,KVAL,KDER)
+          CALL LMTO$SOLIDBESSELRAD(L,Rad,K2,JVAL,JDER)
+          LN1=POTPAR(ISP)%LNSCATT(LN)
+          A1=POTPAR(ISP)%KTOPHI(LN)
+          A2=POTPAR(ISP)%KTOPHIDOT(LN)
+          POTPAR(ISP)%TAILED%nlF(:irad-1,LN)=nlPHI(:irad-1,LN)*A1 &
+       &                                    +nlPHIDOT(:irad-1,LN1)*A2
+!         == the complex addition of differences in the following is ===========
+!         == necessary, if the ae, ps and nl partial waves differ at the =======
+!         == matching radius due to the admixed tails of core states ===========
+          POTPAR(ISP)%TAILED%aeF(:,LN)=POTPAR(ISP)%TAILED%nlF(:,LN) &
+       &      +(aePHI(:,LN)-nlphi(:,ln))*A1+(aephidot(:,ln1)-nlPHIDOT(:,LN1))*A2
+          POTPAR(ISP)%TAILED%PSF(:,LN)=POTPAR(ISP)%TAILED%NLF(:,LN) &
+          &   +(PSPHI(:,LN)-NLPHI(:,LN))*A1+(PSPHIDOT(:,LN1)-NLPHIDOT(:,LN1))*A2
+!
+          IF(LN.EQ.LN1) THEN
+            A2=POTPAR(ISP)%JBARTOPHIDOT(LN)
+            POTPAR(ISP)%TAILED%NLF(:IRAD-1,LNDOT(LN))=NLPHIDOT(:IRAD-1,LN1)*A2
+!           == the complex addition of differences in the following is =========
+!           == necessary, if the ae, ps and nl partial waves differ at the =====
+!           == matching radius due to the admixed tails of core states =========
+            POTPAR(ISP)%TAILED%AEF(:,LNDOT(LN)) &
+      &                           =POTPAR(ISP)%TAILED%NLF(:,LNDOT(LN)) &
+      &                           +(AEPHIDOT(:,LN1)-NLPHIDOT(:,LN1))*A2
+            POTPAR(ISP)%TAILED%psF(:,LNDOT(LN)) &
+      &                           =POTPAR(ISP)%TAILED%NLF(:,LNDOT(LN)) &
+      &                           +(psPHIDOT(:,LN1)-NLPHIDOT(:,LN1))*A2
+!
+          END IF
+        ENDDO
+        deallocate(aephi)
+        deallocate(aephidot)
+        deallocate(psphi)
+        deallocate(psphidot)
+        deallocate(nlphi)
+        deallocate(nlphidot)
         DEALLOCATE(R)
 !
 WRITE(STRING,FMT='(I5)')ISP
 STRING='TAILS_FORATOMTYPE'//TRIM(ADJUSTL(STRING))//'.DAT'
-CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%F)
+CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%aeF)
 !
 !       ========================================================================
 !       == onsite U-TENSOR OF TAILED PARTIAL WAVES                            ==
@@ -762,9 +771,8 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%F)
         LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
         ALLOCATE(POTPAR(ISP)%TAILED%U(LMNXT,LMNXT,LMNXT,LMNXT))
         ALLOCATE(ULITTLE(LRX+1,LNXT,LNXT,LNXT,LNXT))
-        CALL LDAPLUSU_ULITTLE(GID,NR,LRX,LNXT,LOXT,POTPAR(ISP)%TAILED%F,ULITTLE)
-        CALL LDAPLUSU_UTENSOR(LRX,LMNXT,LNXT,LOX(:LNXT,ISP),ULITTLE &
-       &                     ,POTPAR(ISP)%TAILED%U)
+        CALL LDAPLUSU_ULITTLE(GID,NR,LRX,LNXT,LOXT,POTPAR(ISP)%TAILED%aeF,ULITTLE)
+        CALL LDAPLUSU_UTENSOR(LRX,LMNXT,LNXT,LOXt,ULITTLE,POTPAR(ISP)%TAILED%U)
         DEALLOCATE(ULITTLE)
 !
         DEALLOCATE(lndot)
@@ -774,6 +782,49 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%F)
                               call trace$pop()
       RETURN
       END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LMTO_tailedproducts()
+!!$!     **************************************************************************
+!!$!     **                                                                      **
+!!$!     ******************************PETER BLOECHL, GOSLAR 2011******************
+!!$      USE LMTO_MODULE, ONLY : POTPAR,NSP
+!!$      IMPLICIT NONE
+!!$!     **************************************************************************
+!!$      do isp=1,nsp
+!!$        lnx=potpar(isp)%tailed%lnx
+!!$        allocate(lox(lnx))
+!!$        lox=potpar(isp)%tailed%lox
+!!$        gid=potpar(isp)%tailed%gid
+!!$        call radial$geti4(gid,'nr',nr)
+!!$        allocate(aux(nr))
+!!$        allocate(w(nr)) ! fitting weighting function
+!!$        w(:)=1.d0
+!!$!
+!!$        
+!!$        potpar%tailed%products%ne=
+!!$        do ie=1,ne
+!!$          potpar%tailed%products%e(ie)=1.d0/(r1*rfac**(ie-1))
+!!$        enddo
+!!$
+!!$        ip=0
+!!$        do ln1=1,lnx
+!!$          l1=lox(ln1)
+!!$          do ln2=ln1,lnx
+!!$            l2=lox(ln2)
+!!$            aux=potpar(isp)%tailed%aef(:,ln1)*potpar(isp)%tailed%aef(:,ln2)
+!!$            do l3=min(l1,l2),l1+l2,2  ! triangle rule
+!!$              ip=ip+1
+!!$              CALL GAUSSIAN_FITGAUSS(GID,NR,W,L3,aux,NE,NPOW2+1,E(:NE) &
+!!$       &                                                    ,CPOWK(:NPOW2+1,:))
+!!$
+!!$            enddo
+!!$          enddo
+!!$        enddo
+!!$      enddo
+!!$      return
+!!$      end
+!!$
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_KJBARTAILS(GID,NR,L,RAD,K2,QBAR,LAMBDA,KF,JBARF)
@@ -3065,8 +3116,8 @@ CALL TIMING$CLOCKOFF('NTBODENMAT')
 !     ==========================================================================
 PRINT*,'BEFORE LMTO_ENERGYTEST......'
 CALL TIMING$CLOCKON('ENERGYTEST')
-      call LMTO_SIMPLEENERGYTEST2()
 !      call LMTO_SIMPLEENERGYTEST()
+      call LMTO_SIMPLEENERGYTEST2()
 !      CALL LMTO_ENERGYTEST()
 CALL TIMING$CLOCKOFF('ENERGYTEST')
 PRINT*,'.......LMTO_ENERGYTEST DONE'
@@ -3326,7 +3377,8 @@ PRINT*,'IKPT ',IKPT0,' ISPIN=',ISPIN0,' IB=',IB,' IB0 ',IB0,' XK ',XK
       REAL(8)   ,PARAMETER  :: HFWEIGHT=0.25D0
 character(128) :: string
 !     **************************************************************************
-                            CALL TRACE$PUSH('LMTO_ENERGYTEST')
+                            CALL TRACE$PUSH('LMTO_ENERGYTEST2')
+print*,'============ energytest2 ============================='
       NAT=SIZE(ISPECIES)
       NND=SIZE(DENMAT)
       IF(.NOT.ALLOCATED(HAMIL)) THEN
@@ -3410,8 +3462,8 @@ character(128) :: string
 !       ========================================================================
 !       == CALCULATE U-TENSOR                                                 ==
 !       ========================================================================
-        ALLOCATE(U(LMNXt,LMNXt,LMNXt,LMNXt))
-        u=potpar(isp)%tailed%u
+        ALLOCATE(U(LMNXT,LMNXT,LMNXT,LMNXT))
+        U=POTPAR(ISP)%TAILED%U
 !
 !       ========================================================================
 !       == WORK OUT TOTAL ENERGY AND HAMILTONIAN                              ==
@@ -3459,7 +3511,7 @@ print*,'core valence exchange energy for atom=',iat,ex
 !       ========================================================================
 ! this is the time consumin part of energytest
 CALL TIMING$CLOCKON('ENERGYTEST:DC')      
-        call lmto_simpledc(GID,NR,lmnxt,LNXt,LOXt,potpar(isp)%tailed%f &
+        call lmto_simpledc(GID,NR,lmnxt,LNXt,LOXt,potpar(isp)%tailed%aef &
      &                    ,LRX,AECORE,Dt,Ex,Ht)
         call LMTO_blowdownht(iat,ndimd,lmnxt,ht,lmnx,h)
         EXTOT=EXTOT-EX
@@ -3632,7 +3684,7 @@ CALL TIMING$CLOCKOFF('ENERGYTEST:DC')
 !     **  core valence exchange energy                                        **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
-      use lmto_module, only: ispecies,lnx,lox,potpar,sbar,sbarli1
+      use lmto_module, only: ispecies,lnx,lox,potpar,sbar,sbarli1,tspherical
       IMPLICIT NONE
       integer(4),intent(in)  :: iat    
       integer(4),intent(in)  :: ndimd
@@ -3644,6 +3696,7 @@ CALL TIMING$CLOCKOFF('ENERGYTEST:DC')
       real(8)   ,allocatable :: sbarloc(:,:)
       integer(4)             :: i,isp,nn,lmn1,lmn2,lmndot1,lmndot2
       integer(4)             :: L,lmn,ln,i1,im,n1,n2
+      real(8)                :: svar
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -3664,6 +3717,7 @@ CALL TIMING$CLOCKOFF('ENERGYTEST:DC')
         CALL ERROR$STOP('LMTO_BLOWUPDT')
       END IF
       ALLOCATE(SBARLOC(N1,N2))
+!
 !     ==========================================================================
 !     ==  COLLECT LOCAL STRUCTURE CONSTANTS                                   ==
 !     ==========================================================================
@@ -3692,14 +3746,35 @@ CALL TIMING$CLOCKOFF('ENERGYTEST:DC')
       ENDDO
 !
 !     ==========================================================================
+!     ==  spherical average of structure constants for test   
+!     ==========================================================================
+      if(tspherical) Then
+        lmn=0
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          I1=SBARLI1(L+1,ISP)-1
+          svar=0.d0
+          DO IM=1,2*L+1 
+            svar=svar+SBARLOC(i1+im,LMN+IM)
+          ENDDO
+          svar=svar/real(2*l+1,kind=8)
+          DO IM=1,2*L+1 
+            SBARLOC(:,LMN+IM)=0.d0
+            SBARLOC(i1+im,LMN+IM)=svar
+          ENDDO
+          LMN=LMN+2*L+1
+        ENDDO
+      end if
+!
+!     ==========================================================================
 !     ==  
 !     ==========================================================================
       do i=1,ndimd
         dt(:,:,i)=0.d0
         dt(:lmnx,:lmnx,i)=d(:,:,i)
-        dt(lmnx+1:,:lmnx,i)=matmul(sbarloc,d(:,:,i))
-        dt(:lmnx,lmnx+1:,i)=matmul(d(:,:,i),transpose(sbarloc))
-        dt(lmnx+1:,lmnx+1:,i)=matmul(sbarloc,dt(:lmnx,lmnx+1:,i))
+        dt(lmnx+1:,:lmnx,i)=-matmul(sbarloc,d(:,:,i))
+        dt(:lmnx,lmnx+1:,i)=-matmul(d(:,:,i),transpose(sbarloc))
+        dt(lmnx+1:,lmnx+1:,i)=-matmul(sbarloc,dt(:lmnx,lmnx+1:,i))
       enddo
       return
       end
@@ -3710,7 +3785,7 @@ CALL TIMING$CLOCKOFF('ENERGYTEST:DC')
 !     **  core valence exchange energy                                        **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
-      use lmto_module, only: ispecies,lnx,lox,potpar,sbar,sbarli1
+      use lmto_module, only: ispecies,lnx,lox,potpar,sbar,sbarli1,tspherical
       IMPLICIT NONE
       integer(4),intent(in)  :: iat    
       integer(4),intent(in)  :: ndimd
@@ -3720,8 +3795,7 @@ CALL TIMING$CLOCKOFF('ENERGYTEST:DC')
       real(8)   ,intent(out) :: h(lmnx,lmnx,ndimd)
       integer(4)             :: nns
       real(8)   ,allocatable :: sbarloc(:,:)
-      real(8)                :: ds(lmnx,lmnx)
-      real(8)                :: sds(lmnx,lmnx)
+      real(8)                :: svar
       integer(4)             :: i,isp,nn,lmn1,lmn2,lmndot1,lmndot2,lmn3
       integer(4)             :: L,lmn,ln,i1,im,n1,n2
 !     **************************************************************************
@@ -3773,12 +3847,33 @@ CALL TIMING$CLOCKOFF('ENERGYTEST:DC')
       ENDDO
 !
 !     ==========================================================================
+!     ==  spherical average of structure constants for test   
+!     ==========================================================================
+      if(tspherical) Then
+        lmn=0
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          I1=SBARLI1(L+1,ISP)-1
+          svar=0.d0
+          DO IM=1,2*L+1 
+            svar=svar+SBARLOC(i1+im,LMN+IM)
+          ENDDO
+          svar=svar/real(2*l+1,kind=8)
+          DO IM=1,2*L+1 
+            SBARLOC(:,LMN+IM)=0.d0
+            SBARLOC(i1+im,LMN+IM)=svar
+          ENDDO
+          LMN=LMN+2*L+1
+        ENDDO
+      end if
+!
+!     ==========================================================================
 !     ==  
 !     ==========================================================================
       do i=1,ndimd
         h(:,:,i)=ht(:lmnx,:lmnx,i) &
-     &          +matmul(ht(:lmnx,lmnx+1:,i),sbarloc) &
-     &          +matmul(transpose(sbarloc),ht(lmnx+1:,:lmnx,i)) &
+     &          -matmul(ht(:lmnx,lmnx+1:,i),sbarloc) &
+     &          -matmul(transpose(sbarloc),ht(lmnx+1:,:lmnx,i)) &
      &          +matmul(transpose(sbarloc),matmul(ht(lmnx+1:,lmnx+1:,i),sbarloc))
       enddo
       return
@@ -3819,6 +3914,7 @@ CALL TIMING$CLOCKOFF('ENERGYTEST:DC')
 character(128) :: string
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_ENERGYTEST')
+print*,'========================= energytest ==============================='
       NAT=SIZE(ISPECIES)
       NND=SIZE(DENMAT)
       IF(.NOT.ALLOCATED(HAMIL)) THEN
@@ -3893,7 +3989,8 @@ character(128) :: string
         ALLOCATE(CHI(NR,LNX1))
         ALLOCATE(CHIPHI(LNX1,LNX1))
         ALLOCATE(ULITTLE(LRX+1,LNX1,LNX1,LNX1,LNX1))
-        CALL LMTO$DOLOCORB(IAT,ISP,GID,NR,LNX1,LNX1,TORB,CHIPHI,CHI)
+!        CALL LMTO$DOLOCORB(IAT,ISP,GID,NR,LNX1,LNX1,TORB,CHIPHI,CHI)
+        CALL LMTO$DOLOCORB_2(IAT,ISP,GID,NR,LNX1,LNX1,TORB,CHIPHI,CHI)
         CALL LDAPLUSU_ULITTLE(GID,NR,LRX,LNX1,LOX(:LNX1,ISP),CHI,ULITTLE)
         CALL LDAPLUSU_UTENSOR(LRX,NORB,LNX1,LOX(:LNX1,ISP),ULITTLE,U)
         DEALLOCATE(ULITTLE)
@@ -3952,12 +4049,12 @@ print*,'core valence exchange energy for atom=',iat,ex
 !       ========================================================================
 ! this is the time consumin part of energytest
 CALL TIMING$CLOCKON('ENERGYTEST:DC')      
-        CALL LMTO_DOUBLECOUNTING(IAT,NDIMD,NORB,D,EX,H)
-!        call lmto_simpledc(GID,NR,norb,LNX1,LOX(:lnx1,isp),CHI,LRX,AECORE &
-!     &                        ,D,Ex,H)
+!        CALL LMTO_DOUBLECOUNTING(IAT,NDIMD,NORB,D,EX,H)
+        call lmto_simpledc(GID,NR,norb,LNX1,LOX(:lnx1,isp),CHI,LRX,AECORE &
+     &                        ,D,Ex,H)
         EXTOT=EXTOT-EX
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H
-print*,'core valence exchange energy for atom=',iat,ex
+print*,'double counting ',iat,ex
 CALL TIMING$CLOCKOFF('ENERGYTEST:DC')      
         DEALLOCATE(U)
         DEALLOCATE(H)
@@ -4144,18 +4241,18 @@ INTEGER(4) :: IMETHOD
 !POT(:,:,4)=POT2(:,:,2)
 !!$DEALLOCATE(RHO2)
 !!$DEALLOCATE(POT2)
-PRINT*,'TOTAL        EXCHANGE ENERGY (LOCAL) ',ETOT
-PRINT*,'VALENCE      EXCHANGE ENERGY (LOCAL) ',ETOTV
-PRINT*,'CORE         EXCHANGE ENERGY (LOCAL) ',ETOTC
-PRINT*,'CORE-VALENCE EXCHANGE ENERGY (LOCAL) ',ETOT-ETOTV-ETOTC
+!!$PRINT*,'TOTAL        EXCHANGE ENERGY (LOCAL) ',ETOT
+!!$PRINT*,'VALENCE      EXCHANGE ENERGY (LOCAL) ',ETOTV
+!!$PRINT*,'CORE         EXCHANGE ENERGY (LOCAL) ',ETOTC
+!!$PRINT*,'CORE-VALENCE EXCHANGE ENERGY (LOCAL) ',ETOT-ETOTV-ETOTC
       ETOT=ETOT-ETOTC
-IF(ETOT.LT.-3.145D0) THEN
-PRINT*,'FILE RHOWC.DAT WRITTEN'
-CALL ATOMLIB_WRITEPHI('RHOWC1.DAT',GID,NR,LMRX,RHOWC(:,:,1))
-CALL ATOMLIB_WRITEPHI('RHOWC2.DAT',GID,NR,LMRX,RHOWC(:,:,2))
-CALL ATOMLIB_WRITEPHI('RHOWC3.DAT',GID,NR,LMRX,RHOWC(:,:,3))
-CALL ATOMLIB_WRITEPHI('RHOWC4.DAT',GID,NR,LMRX,RHOWC(:,:,4))
-END IF
+!!$IF(ETOT.LT.-3.145D0) THEN
+!!$  PRINT*,'FILE RHOWC.DAT WRITTEN'
+!!$  CALL ATOMLIB_WRITEPHI('RHOWC1.DAT',GID,NR,LMRX,RHOWC(:,:,1))
+!!$  CALL ATOMLIB_WRITEPHI('RHOWC2.DAT',GID,NR,LMRX,RHOWC(:,:,2))
+!!$  CALL ATOMLIB_WRITEPHI('RHOWC3.DAT',GID,NR,LMRX,RHOWC(:,:,3))
+!!$  CALL ATOMLIB_WRITEPHI('RHOWC4.DAT',GID,NR,LMRX,RHOWC(:,:,4))
+!!$END IF
 
 !!$IMETHOD=0
 !!$!IMETHOD=1
@@ -4194,7 +4291,7 @@ END IF
 !!$
 !!$      END IF
       CALL DFT$SETL4('XCONLY',.FALSE.)
-PRINT*,'EDFT: EXC ',ETOT
+!!$PRINT*,'EDFT: EXC ',ETOT
 !!$!
 !!$!     ==========================================================================
 !!$!     == HARTREE ENERGY AND POTENTIAL ==========================================
@@ -7918,20 +8015,27 @@ PRINT*,'============ UTENSOR ======================'
         CALL ERROR$STOP('LMTO$DOLOCORB')
       END IF
 !
+print*,'sbarav in dolocorb_2: ',iat,isp,sbarav
 !     ==========================================================================
 !     == CONSTRUCT LOCAL ORBITALS                                             ==
 !     ==========================================================================
-      LNCHI=0
+      allocate(aechi(nr,lnchi))
+      allocate(pschi(nr,lnchi))
+      allocate(nlchi(nr,lnchi))
+      LNCHI=lnxphi
       DO LN=1,LNXphi
         L=LOX(LN)
         ln1=potpar(isp)%tailed%lndot(ln)
         aechi(:,ln)=potpar(isp)%tailed%aef(:,ln) &
-    &                                -potpar(isp)%tailed%aef(:,ln1)*sbarav(l+1)
+    &              -potpar(isp)%tailed%aef(:,ln1)*sbarav(l+1)
         pschi(:,ln)=potpar(isp)%tailed%psf(:,ln) &
-    &                                -potpar(isp)%tailed%psf(:,ln1)*sbarav(l+1)
+    &              -potpar(isp)%tailed%psf(:,ln1)*sbarav(l+1)
         nlchi(:,ln)=potpar(isp)%tailed%nlf(:,ln) &
-    &                                -potpar(isp)%tailed%nlf(:,ln1)*sbarav(l+1)
+    &              -potpar(isp)%tailed%nlf(:,ln1)*sbarav(l+1)
       ENDDO
+WRITE(STRING,FMT='(I5)')IAT
+STRING='LOCORB_FORATOM'//TRIM(ADJUSTL(STRING))//'.DAT'
+CALL LMTO_WRITEPHI(TRIM(STRING),GID,NR,LNxpHI,AECHI)
 !
 !     ==ORTHONORMALIZE LOCAL ORBITALS ==========================================
 !     == orthonormalization is not required and serves only estaetical purposes
