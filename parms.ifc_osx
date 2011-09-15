@@ -186,7 +186,7 @@ LDFLAGS_PROF="-pg "
 #########################################################################################
 #________________________________compiler flags for debugging__________________________##
 ##                                                                                     ##
-FCFLAGS_DBG="-c -g -traceback -ftrapuv -stand f95 "
+FCFLAGS_DBG="-c -g -traceback -ftrapuv -stand f95 -check format -check uninit -debug_parameters all "
 ##-warn interfaces -warn unused -warn usage -warn declarations"
 ## -check format -check pointers -check uninit  -debug-parameters all -fp-stack-check -ftrapuv -stand f95 -traceback -warn declarations"
 ##

@@ -651,6 +651,11 @@
       SUBROUTINE LMTO$NEIGHBORLIST(RBAS,NAT,R,Rad,NNX,NNB,NNLIST)
 !     **************************************************************************
 !     **  THIS IS A SIMPLE NEIGHBORLIST ROUTINE                               **
+!     **                                                                      **
+!     **  - EVERY BOND OCCURS TWICE, THAT IS THE BOND IS DIRECTIONAL.         **
+!     **  - THE ONSITE ELEMENT IS FIRST IN EACH GROUP WITH SAME FIRST ATOM.   **
+!     **  - THE FIRST ATOM IS IN SEQENCE                                      **
+!     **  - THE LATTICE TRANSLATION ACTS ON THE SECOND ATOM.                  **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NAT       ! #(ATOMS)

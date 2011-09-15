@@ -863,6 +863,91 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GAUSSIAN$GAUSSOVERLAP(NIJKA,NEA,EA,RA,NIJKB,NEB,EB,RB,SAB)
+!     **************************************************************************
+!     ** EVALUATES THE OVERLAP MATRIX OF TWO SETS OF CARTESIAN GAUSSIANS      **
+!     ** SET "A" WITH NEA EXPONENTS EA IS CENTERED AT RA                      **
+!     ** SET "B" WITH NEB EXPONENTS EB IS CENTERED AT RB                      **
+!     ** THE RESULTING OVERLAP MATRIX IS S_IJ=<G_I|G_J>                       **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NIJKA
+      INTEGER(4),INTENT(IN) :: NEA
+      REAL(8)   ,INTENT(IN) :: EA(NEA)
+      REAL(8)   ,INTENT(IN) :: RA(3)
+      INTEGER(4),INTENT(IN) :: NIJKB
+      INTEGER(4),INTENT(IN) :: NEB
+      REAL(8)   ,INTENT(IN) :: EB(NEB)
+      REAL(8)   ,INTENT(IN) :: RB(3)
+      REAL(8)   ,INTENT(OUT):: SAB(NIJKA,NEA,NIJKB,NEB)
+      INTEGER(4)            :: NA,NB
+      INTEGER(4)            :: NABX
+      REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
+      INTEGER(4)            :: INDA,MA,IA,JA,KA,IEA
+      INTEGER(4)            :: INDB,MB,IB,JB,KB,IEB
+      REAL(8)               :: PI
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+!
+!     ==========================================================================
+!     ==  TESTS                                                               ==
+!     ==========================================================================
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,Ja,Ka)
+      IF(Ja.NE.0.OR.Ka.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$STOP('GAUSSIAN_gaussOVERLAP')
+      END IF
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,Jb,Kb)
+      IF(Jb.NE.0.OR.Kb.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$STOP('GAUSSIAN_gaussOVERLAP')
+      END IF
+!
+!     ==========================================================================
+!     ==  DETERMINE HERMITE COEFFICIENTS                                      ==
+!     ==========================================================================
+      NABX=MAX(NA,NB)
+      ALLOCATE(HX(0:NABX,0:NABX,0:2*NABX))
+      ALLOCATE(HY(0:NABX,0:NABX,0:2*NABX))
+      ALLOCATE(HZ(0:NABX,0:NABX,0:2*NABX))
+      SAB(:,:,:,:)=0.D0
+      do iea=1,nea
+        do ieb=1,neb
+          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),Ea(iea),Eb(ieB),HX)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(iea),EB(ieB),HY)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(iea),EB(ieB),HZ)
+!
+!         ======================================================================
+!         ==  WORK OUT OVERLAP MATRIX                                         ==
+!         ======================================================================
+          INDA=0
+          DO MA=0,NA
+            DO IA=0,MA
+              DO JA=0,MA-IA
+                KA=MA-IA-JA
+                INDA=INDA+1
+!
+                INDB=0
+                DO MB=0,NB
+                  DO IB=0,MB
+                    DO JB=0,MB-IB
+                      KB=MB-IB-JB
+                      INDB=INDB+1
+                      sab(inda,iea,indb,ieb)=HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
+                    ENDDO
+                  ENDDO
+                ENDDO
+
+              ENDDO
+            ENDDO
+          ENDDO
+          sab(:,iea,:,ieb)=sab(:,iea,:,ieb)*(PI/(EA(iea)+EB(ieb)))**1.5D0
+        enddo
+      enddo  
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GAUSSIAN$gausspsi(NIJKA,nea,EA,RA,NIJKB,neb,EB,RB,ncb,CB,gcb)
 !     **************************************************************************
 !     ** EVALUATES THE matrix elements <g(i,ie)|psi_n> of a function |psi_n>  **
@@ -1438,6 +1523,152 @@ print*,'marke 1',iorba,iorbb,iea,ieb
         Y=(2.D0*X*Y+EXPMX)/REAL(2*M+1,KIND=8) !=F(M-1)
         IF(M.LE.N)F(M)=Y
       ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE Gaussian$ylmtimesrn(j,lm,nijk,c)
+!     **************************************************************************
+!     **  produce coefficient array for a polynomial r^(l+2*j)*y_lm           **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      implicit none
+      integer(4),intent(in)   :: j
+      integer(4),intent(in)   :: lm
+      integer(4),intent(in)   :: nijk
+      real(8)   ,intent(out)  :: c(nijk)
+      logical(4),save         :: tini=.false.
+      integer(4),save         :: nx=-1
+      integer(4),save         :: lmx=-1
+      integer(4),save         :: nijkx=-1
+      integer(4)              :: nf
+      real(8)   ,pointer,save :: cmat(:,:)
+      integer(4),pointer,save :: map(:,:)
+!     **************************************************************************
+!     ==========================================================================
+!     == check size of table
+!     ==========================================================================
+      if(2*j.gt.nx.or.lm.gt.lmx.or.nijk.gt.nijkx) then
+        if(tini) then
+          deallocate(cmat)
+          deallocate(map)
+          tini=.false.
+        end if
+      end if
+!
+!     ==========================================================================
+!     == rebuild table if needed                                              ==
+!     ==========================================================================
+      if(.not.tini) then
+        nx=max(4,2*j) ! the 4 is to avoid building unlikely small table sizes
+        do 
+          nijkx=(NX+1)*(NX+2)*(NX+3)/6
+          lmx=(nx+1)**2
+          if(nijkx.ge.nijk.and.lmx.ge.lm) exit
+          nx=nx+1
+        enddo
+        NF=(NX+2)*((NX+2)**2-1)/6
+        allocate(cmat(nijkx,nf))
+        allocate(map(nx+1,lmx))
+        call Gaussian_expandmat(NX,NIJKx,NF,Cmat,MAP)
+        tini=.true.
+      end if
+!
+!     ==========================================================================
+!     == collect result                                                       ==
+!     ==========================================================================
+      c(:)=cmat(:nijk,map(j+1,lm))
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE Gaussian_expandmat(NX,NIJK,NF,C,MAP)
+!     **************************************************************************
+!     **  express fUNCTIONs R^(L+2*j)*Y_L(R) in a gauss representation        **
+!     **  (L,M,N)-> C(:NIJK,map(j+1,lm))                                      **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NX                  ! HIGHEST POWER
+      INTEGER(4),INTENT(IN) :: NIJK                ! #(TERMS IN GAUSSIAN EXPANS)
+      INTEGER(4),INTENT(IN) :: NF                  ! #(ENTRIES IN TRANSF.)
+      REAL(8)   ,INTENT(OUT):: C(NIJK,NF)          ! TRANSFORMATION MATRIX
+      INTEGER(4),INTENT(OUT):: MAP(NX+1,(NX+1)**2) ! LOOKUPTABLE
+      INTEGER(4)            :: LX
+      INTEGER(4)            :: INDX
+      INTEGER(4)            :: IND1X
+      REAL(8)               :: R2N(NIJK)
+      REAL(8)               :: YLMPOL(NIJK,(NX+1)**2)
+      INTEGER(4)            :: jN,n,I,J,K,I1,J1,K1,IORB,L,iM,LM,IND,IND1,IND2
+      REAL(8)               :: SVAR1,SVAR2
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+!                            CALL TRACE$PUSH('GAUSSIAN_EXPANDMAT')
+      IF(NIJK.NE.(NX+1)*(NX+2)*(NX+3)/6) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+        CALL ERROR$STOP('GAUSSIAN_EXPANDMAT')
+      END IF
+      IF(NF.NE.(NX+2)*((NX+2)**2-1)/6) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+        CALL ERROR$STOP('GAUSSIAN_EXPANDMAT')
+      END IF
+      LX=NX
+      MAP(:,:)=0
+      C(:,:)=0.D0
+!
+!     ==========================================================================
+!     == POLYNOMIAL COEFFICIENTS OF SPHERICAL HARMONICS TIMES R**L            ==
+!     ==========================================================================
+      CALL GAUSSIAN_YLMPOL(LX,YLMPOL)
+!
+!     ==========================================================================
+!     ==  DETERMINE EXPANSION COEFFICIENTS                                    ==
+!     ==========================================================================
+      IORB=0
+      DO n=0,NX/2
+!
+!       ========================================================================
+!       ==  MULTIPLY WITH (X^2+Y^2+Z^2)^N                                     ==
+!       ========================================================================
+        INDX=0
+        R2N(:)=0.D0
+        DO I=0,N
+          CALL BINOMIALCOEFFICIENT(N,I,SVAR1)
+          DO J=0,N-I
+            CALL BINOMIALCOEFFICIENT(N-I,J,SVAR2)
+            K=N-I-J
+            CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,2*I,2*J,2*K)
+            IF(IND1.GT.NIJK) CYCLE
+            R2N(IND1)=R2N(IND1)+SVAR1*SVAR2
+            INDX=MAX(INDX,IND1)
+          ENDDO
+        ENDDO
+!
+!       ========================================================================
+!       == MULTIPLY WITH SPHERICAL HARMONICS                                  ==
+!       ========================================================================
+        DO L=0,NX-2*n
+          DO IM=1,2*L+1
+            LM=L**2+IM
+            IORB=IORB+1
+            MAP(n+1,LM)=IORB   ! LOOKUPTABLE
+            IND1X=SIZE(YLMPOL(:,LM))
+            DO IND1=1,IND1X
+              IF(YLMPOL(IND1,LM).EQ.0.D0) CYCLE
+              CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I,J,K)
+              DO IND=1,INDX
+                CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I1,J1,K1)
+                I1=I1+I
+                J1=J1+J
+                K1=K1+K
+                CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND2,I1,J1,K1)
+                IF(IND2.GT.NIJK) CYCLE
+                C(IND2,IORB)=C(IND2,IORB)+R2N(IND)*YLMPOL(IND1,LM)
+              ENDDO
+            ENDDO
+          ENDDO ! END OF LOOP OVER MAGNETIC QUANTUM NUMBERS
+        ENDDO  ! END OF LOOP OVER POWERS N
+      ENDDO  ! END OF LOOP OVER MAIN AnGULAR MOMENTUM L
+!                            CALL TRACE$POP()
       RETURN
       END
 !

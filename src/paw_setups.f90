@@ -109,6 +109,7 @@ INTEGER(4),POINTER     :: LOX(:)       !(LNX) MAIN ANGULAR MOMENTA
 INTEGER(4),POINTER     :: ISCATT(:)    !(LNX) =-1 FOR SEMI-CORE STATE
                                        !      = 0 FOR VALENCE STATE   (PHI)
                                        !      = 1 FOR 1ST SCATTERING STATE (PHIDOT)
+logical(4),pointer     :: torb(:)      ! selector for U-tensor
 REAL(8)   ,POINTER     :: VADD(:)      !(NR)
 REAL(8)   ,POINTER     :: PSPOT(:)     !(NR)
 REAL(8)   ,POINTER     :: AECORE(:)    !(NR)  CORE ELECTRON DENSITY
@@ -327,6 +328,7 @@ END MODULE SETUP_MODULE
       THIS%PSG4  =0.D0
       THIS%SOFTCORETYPE='NONE'
       NULLIFY(THIS%LOX)     !(LNX)
+      NULLIFY(THIS%torb)    !(LNX)
       NULLIFY(THIS%VADD)    !(NRX)
       NULLIFY(THIS%AECORE)  !(NRX)
       NULLIFY(THIS%PSCORE)  !(NRX)
@@ -437,11 +439,6 @@ END MODULE SETUP_MODULE
         VAL=THIS%LMNX
       ELSE IF(ID.EQ.'LMRX') THEN
         VAL=THIS%LMRX
-      ELSE IF(ID.EQ.'LNXCHI') THEN
-        CALL ERROR$MSG('ID LNXCHI IS MARKED FOR DELETION')
-        CALL ERROR$STOP('SETUP$GETI4')
-!        CALL SETUP_RENEWLOCORB()
-!       VAL=THIS%LOCORBLNX    ! #(LOCAL ORBITALS)
       ELSE IF(ID.EQ.'NC') THEN
         VAL=THIS%ATOM%NC
       ELSE IF(ID.EQ.'NB') THEN
@@ -474,7 +471,7 @@ END MODULE SETUP_MODULE
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$SETI4A')
         END IF
-!       == CHECK IF VALUE HAS CHANGED ==========================================        
+!       == CHECK IF VALUE HAS CHANGED ==========================================
         DO I=1,4
           THIS%LOCORBINI=THIS%LOCORBINI.AND.(THIS%LOCORBNOFL(I).EQ.VAL(I))
         ENDDO
@@ -541,6 +538,67 @@ END MODULE SETUP_MODULE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('SETUP$GETI4A')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$SETL4A(ID,LEN,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID
+      INTEGER(4)  ,INTENT(IN)  :: LEN
+      LOGICAL(4)  ,INTENT(IN)  :: VAL(LEN)
+!     **************************************************************************
+      IF(ID.EQ.'TORB') THEN
+        IF(LEN.NE.THIS%LNX) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$SETL4A')
+        END IF
+        IF(.NOT.ASSOCIATED(THIS%TORB))ALLOCATE(THIS%TORB(LEN))
+        THIS%TORB=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP$SETL4A')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$GETL4A(ID,LEN,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **                                                                      **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID
+      INTEGER(4)  ,INTENT(IN)  :: LEN
+      LOGICAL(4)  ,INTENT(out)  :: VAL(LEN)
+!     **************************************************************************
+      IF(ID.EQ.'TORB') THEN
+        IF(LEN.NE.THIS%LNX) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$SETL4A')
+        END IF
+        IF(ASSOCIATED(THIS%TORB)) THEN
+          THIS%TORB=VAL
+        ELSE
+          VAL=.TRUE.
+        END IF
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP$SETL4A')
       END IF
       RETURN
       END
@@ -1162,6 +1220,10 @@ END MODULE SETUP_MODULE
       THIS%PRO=0.D0
       THIS%AEPHI=0.D0
       THIS%PSPHI=0.D0
+!
+!     == default selector for local orbitals is true (in atomtypelist) =========
+      ALLOCATE(THIS%TORB(LNX))
+      CALL ATOMTYPELIST$GETR8('TORB',THIS%TORB)
 !     
 !     ==================================================================
 !     ==  READ PSEUDOPOTENTIALS AND PSEUDO WAVE FUNCTIONS             ==

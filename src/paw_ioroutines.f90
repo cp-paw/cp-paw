@@ -255,7 +255,7 @@ CALL TRACE$PASS('DONE')
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN(NBEG,NOMORE,IPRINT,DELT,TMERMIN,TNWSTR)
 !     **************************************************************************
-!     **  read control input file                                             **
+!     **  READ CONTROL INPUT FILE                                             **
 !     **                                                                      **
 !     **************************************************************************
       USE IO_MODULE
@@ -886,7 +886,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  entry to which different files can be temporarily attached ===========
+!     ==  ENTRY TO WHICH DIFFERENT FILES CAN BE TEMPORARILY ATTACHED ===========
       ID=+'HOOK'
       CALL FILEHANDLER$SETFILE(ID,T,-'.FORGOTTOASSIGNFILETOHOOKERROR')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
@@ -1258,7 +1258,7 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'THERMOSTAT',1,TCHK1)
       CALL LINKEDLIST$EXISTD(LL_CNTL,'AUTO',1,TCHK2)
       IF(TCHK1.AND.TCHK2) THEN
-        CALL ERROR$MSG('!AUTO AND !THERMOSTAT are mutually exclusive')
+        CALL ERROR$MSG('!AUTO AND !THERMOSTAT ARE MUTUALLY EXCLUSIVE')
         CALL ERROR$STOP('READIN_PSIDYN')
       END IF
                            CALL TRACE$POP
@@ -1445,11 +1445,11 @@ CALL TRACE$PASS('DONE')
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
-      CHARACTER(*) ,INTENT(IN) :: ID        ! id for the thermostat object
-      REAL(8)      ,INTENT(IN) :: DT        ! time step
-      REAL(8)      ,INTENT(IN) :: TARGET_   ! target kinetic energy
-      REAL(8)      ,INTENT(IN) :: FREQ_     ! target frequency 
-      TYPE(LL_TYPE)            :: LL_CNTL   ! linked list holding input data
+      CHARACTER(*) ,INTENT(IN) :: ID        ! ID FOR THE THERMOSTAT OBJECT
+      REAL(8)      ,INTENT(IN) :: DT        ! TIME STEP
+      REAL(8)      ,INTENT(IN) :: TARGET_   ! TARGET KINETIC ENERGY
+      REAL(8)      ,INTENT(IN) :: FREQ_     ! TARGET FREQUENCY 
+      TYPE(LL_TYPE)            :: LL_CNTL   ! LINKED LIST HOLDING INPUT DATA
       LOGICAL(4)               :: TCHK,TCHK1,TCHK2
       REAL(8)                  :: TERA
       REAL(8)                  :: SECOND
@@ -1473,7 +1473,7 @@ CALL TRACE$PASS('DONE')
       CALL CONSTANTS('KB',CELVIN)
 !
 !     ==========================================================================
-!     == SELECT thermostat LIST OR EXIT IF IT DOES NOT EXIST                  ==
+!     == SELECT THERMOSTAT LIST OR EXIT IF IT DOES NOT EXIST                  ==
 !     ==========================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'THERMOSTAT',1,TON)
       CALL THERMOSTAT$NEW(ID)
@@ -1845,7 +1845,7 @@ CALL TRACE$PASS('DONE')
       REAL(8)                  :: MASS        ! MASS FOR CELL DFYNAMICS
       REAL(8)                  :: FRIC        ! MASS FOR CELL DFYNAMICS
       CHARACTER(32)            :: CH32VAL
-      real(8)                  :: dt          ! time step
+      REAL(8)                  :: DT          ! TIME STEP
 !     ******************************************************************
       LL_CNTL=LL_CNTL_
 !
@@ -2224,7 +2224,7 @@ CALL TRACE$PASS('DONE')
       IF(.NOT.TCHK) THEN
         CALL CORE$SETL4('DEFAULT',.FALSE.)
         CALL TRACE$POP
-        return
+        RETURN
       END IF
       CALL LINKEDLIST$SELECT(LL_CNTL,'CORELEVELS')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'DEFAULT',1,TCHK)
@@ -3682,7 +3682,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)               :: MAINLN(2)
       LOGICAL(4)               :: TLDAPLUSU
       LOGICAL(4)               :: THYBRID
-      LOGICAL(4)               :: Tinternalsetup
+      LOGICAL(4)               :: TINTERNALSETUP
+      LOGICAL(4),ALLOCATABLE   :: TORB(:)
       REAL(8)                  :: EV
 !     ************************************************************************** 
                            CALL TRACE$PUSH('STRCIN_SPECIES')
@@ -3719,15 +3720,15 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL LINKEDLIST$GET(LL_STRC,'Z',1,Z)
 !
 !       ========================================================================
-!       ==  Checjk if setupfile or internal setup construction is used        ==
+!       ==  CHECJK IF SETUPFILE OR INTERNAL SETUP CONSTRUCTION IS USED        ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'FILE',1,TCHK)
-        tinternalsetup=.not.tchk
+        TINTERNALSETUP=.NOT.TCHK
 !
 !       ========================================================================
 !       ==  CONNECT SETUP FILE                                                ==
 !       ========================================================================
-        IF(.not.tinternalsetup) THEN
+        IF(.NOT.TINTERNALSETUP) THEN
           CALL LINKEDLIST$GET(LL_STRC,'FILE',1,SETUPFILE)
           CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
           CH8SVAR1=' '
@@ -3742,9 +3743,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'ACTION','READ')
           CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'FORM','FORMATTED')
 !
-!         ========================================================================
-!         ==  #(VALENCE ELECTRONS)                                              ==
-!         ========================================================================
+!         ======================================================================
+!         ==  #(VALENCE ELECTRONS)                                            ==
+!         ======================================================================
           CALL LINKEDLIST$EXISTD(LL_STRC,'ZV',1,TCHK)
           IF(.NOT.TCHK) THEN
             CALL ERROR$MSG('!STRUCTURE!SPECIES:ZV IS MANDATORY')
@@ -3755,7 +3756,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         ELSE
           CALL LINKEDLIST$EXISTD(LL_STRC,'ID',1,TCHK)
           IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('ID MUST BE SPECIFIED, IF NO SETUP FILES ARE USED')          
+            CALL ERROR$MSG('ID MUST BE SPECIFIED, IF NO SETUP FILES ARE USED')
             CALL ERROR$STOP('STRCIN_SPECIES')
           END IF
           CALL LINKEDLIST$GET(LL_STRC,'ID',1,KEY)
@@ -3767,7 +3768,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ========================================================================
 !       ==  KINETIC ENERGY OF THE PSEUDO WAVE FUNCTIONS                       ==
 !       ========================================================================
-        if(.not.tinternalsetup) then
+        IF(.NOT.TINTERNALSETUP) THEN
           CALL ATOMTYPELIST$SELECT(SPNAME)
           CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G2>',1,TCHK)
           IF(.NOT.TCHK) THEN
@@ -3834,7 +3835,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL ATOMTYPELIST$UNSELECT
 !
 !       ========================================================================
-!       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY                    ==
+!       ==  #(PARTIAL WAVES PER MAIN ANGULAR MOMENTUM)                        ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'NPRO',1,TCHK)
         IF(.NOT.TCHK) THEN
@@ -3848,6 +3849,20 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL ATOMTYPELIST$SETI4A('NPRO',LENG,NPRO)
         CALL ATOMTYPELIST$UNSELECT
         DEALLOCATE(NPRO)
+!
+!       ========================================================================
+!       ==  SELECTOR FOR LOCAL ORBITALS                                       ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'TORB',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$SIZE(LL_STRC,'TORB',1,LENG)
+          ALLOCATE(TORB(LENG))
+          CALL LINKEDLIST$GET(LL_STRC,'TORB',1,TORB)
+          CALL ATOMTYPELIST$SELECT(SPNAME)
+          CALL ATOMTYPELIST$SETL4A('TORB',LENG,TORB)
+          CALL ATOMTYPELIST$UNSELECT
+          DEALLOCATE(TORB)
+        END IF        
 !
 !       ========================================================================
 !       ==  SOFTCORE TYPE                                                     ==
@@ -6515,7 +6530,7 @@ NBONDM=NBONDM+NCONECT
       NAME=XNAME(:ICOLON-1)
       IPOS=ICOLON+1
       IND=0
-      sgn=+1
+      SGN=+1
       DO WHILE(IND.LT.3) 
         ICH=IACHAR(XNAME(IPOS:IPOS))
 !       ==  IACHAR('+')=43; IACHAR('-')=45; IACHAR('0')=48; IACHAR('1')=49;...

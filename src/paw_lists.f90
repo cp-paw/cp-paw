@@ -443,7 +443,8 @@ TYPE XXX_TYPE
   REAL(8)       :: PSG4       ! PARAMETER REQUIRED FOR MASS RENORMALIZATION
   INTEGER(4)    :: LRHOX      ! MAX ANGULAR MOMENTUM FOR ONECENTER DENSITY
   CHARACTER(32) :: SOFTCORETYPE ! TYPE OF SOFTCORE TREATMENT
-  INTEGER(4),POINTER   :: NPRO(:)    ! MAX #(PROJECTORS PER ANGULAR MOMENTUM)
+  INTEGER(4),POINTER   :: NPRO(:) ! MAX #(PROJECTORS PER ANGULAR MOMENTUM)
+  logical(4),pointer   :: torb(:) ! (lnx) selector for local orbitals
 END TYPE XXX_TYPE
 LOGICAL(4)            :: TINI=.FALSE.
 INTEGER(4)            :: NTYPEX=0
@@ -480,7 +481,8 @@ END MODULE ATOMTYPELIST_MODULE
         XXX(ITYPE)%VALENCE=0.D0
         XXX(ITYPE)%RMASS=0.D0
         XXX(ITYPE)%SOFTCORETYPE='NONE'
-!LINUX PATCH    NULLIFY(XXX(ITYPE)%NPRO)   
+        NULLIFY(XXX(ITYPE)%NPRO)   
+        NULLIFY(XXX(ITYPE)%torb)   
 ALLOCATE(XXX(ITYPE)%NPRO(1))
       ENDDO
       RETURN
@@ -493,8 +495,13 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
 !     ******************************************************************
       USE ATOMTYPELIST_MODULE
       IMPLICIT NONE
+      integer(4) :: itype
 !     ******************************************************************
       CALL LIST_TESTINI(TINI,'ATOMTYPELIST')
+      DO ITYPE=1,NTYPEX
+        IF(ASSOCIATED(XXX(ITYPE)%NPRO))DEALLOCATE(XXX(ITYPE)%NPRO)
+        IF(ASSOCIATED(XXX(ITYPE)%TORB))DEALLOCATE(XXX(ITYPE)%TORB)
+      ENDDO
       NTYPEX=0
       NTYPE=0
       THISTYPE=0
@@ -519,7 +526,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
 !     ..................................................................
       SUBROUTINE ATOMTYPELIST$ADD(NAME)
 !     ******************************************************************
-!     **  ADD ATOM                                                    **
+!     **  ADD new atom type                                           **
 !     ******************************************************************
       USE ATOMTYPELIST_MODULE
       IMPLICIT NONE
@@ -618,6 +625,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       IF(ID.EQ.'ZV') THEN
         IF(XXX(THISTYPE)%TID) THEN
           CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+          CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('ATOMTYPELIST$SETR8')
         END IF
@@ -640,6 +648,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         XXX(THISTYPE)%PSG4=VAL
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$SETR8')
       END IF
@@ -669,6 +678,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       IF(ID.EQ.'ZV') THEN
         IF(XXX(THISTYPE)%TID) THEN
           CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+          CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('ATOMTYPELIST$GETR8')
         END IF
@@ -693,6 +703,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         VAL=XXX(THISTYPE)%PSG4
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$GETR8')
       END IF
@@ -724,6 +735,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         XXX(THISTYPE)%LRHOX=VAL
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$SETI4')
       END IF
@@ -755,6 +767,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         VAL=XXX(THISTYPE)%LRHOX
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$GETI4')
       END IF
@@ -786,6 +799,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         VAL=XXX(THISTYPE)%TID
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$GETL4')
       END IF
@@ -827,6 +841,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         XXX(THISTYPE)%NPRO(:)=VAL(:LNG1)
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$SETI4')
       END IF
@@ -860,6 +875,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         IF(.NOT.ASSOCIATED(XXX(THISTYPE)%NPRO)) THEN
 !          VAL(:)=10000
           CALL ERROR$MSG('NPRO HAS NOT BEEN SET AND IS NOT AVAILABLE')
+          CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('ATOMTYPELIST$GETI4')
         ELSE
@@ -870,6 +886,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
           ELSE
             VAL(:)=XXX(THISTYPE)%NPRO(1:LEN)
             CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+            CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$I4VAL('ARRAY SIZE EXPECTED',LEN)
             CALL ERROR$I4VAL('ACTUAL ARRAY SIZE',LEN1)
@@ -878,8 +895,93 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         END IF
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$GETI4')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE ATOMTYPELIST$SETl4A(ID,LEN,VAL)
+!     ******************************************************************
+!     **  SET ATOMIC NUMBER                                           **
+!     ******************************************************************
+      USE ATOMTYPELIST_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      logical(4)  ,INTENT(IN) :: VAL(LEN)
+!     ******************************************************************
+      IF(.NOT.TINI) THEN
+        CALL ERROR$MSG('ATOMTYPELIST NOT INITIALIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMTYPELIST$SETl4')
+      END IF
+      IF(THISTYPE.EQ.0) THEN
+        CALL ERROR$MSG('NO ATOM TYPE SELECTED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMTYPELIST$SETl4')
+      END IF
+!  
+      IF(ID.EQ.'TORB') THEN
+        IF(ASSOCIATED(XXX(THISTYPE)%TORB)) THEN  !LINUX PATCH
+          DEALLOCATE(XXX(THISTYPE)%TORB)
+        END IF    !LINUX PATCH (SEE NULLIFY IN ATOMTYPELIST$INITIALIZE)
+        ALLOCATE(XXX(THISTYPE)%TORB(LEN))
+        XXX(THISTYPE)%TORB(:)=VAL(:)
+      ELSE
+        CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMTYPELIST$SETl4')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE ATOMTYPELIST$GETl4A(ID,LEN,VAL)
+!     ******************************************************************
+!     **  SET ATOMIC NUMBER                                           **
+!     ******************************************************************
+      USE ATOMTYPELIST_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      logical(4)  ,INTENT(OUT):: VAL(LEN)
+!     ******************************************************************
+      IF(.NOT.TINI) THEN
+        CALL ERROR$MSG('ATOMTYPELIST NOT INITIALIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMTYPELIST$SETl4')
+      END IF
+      IF(THISTYPE.EQ.0) THEN
+        CALL ERROR$MSG('NO ATOM TYPE SELECTED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMTYPELIST$SETl4')
+      END IF
+!  
+!     ==========================================================================
+!     == scan id's                                                            ==
+!     ==========================================================================
+      IF(ID.EQ.'TORB') THEN
+        IF(ASSOCIATED(XXX(THISTYPE)%TORB)) THEN 
+          IF(LEN.NE.SIZE(XXX(THISTYPE)%TORB)) THEN 
+            CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$I4VAL('SIZE EXPECTED',LEN)
+            CALL ERROR$I4VAL('CURRENT SIZE',SIZE(XXX(THISTYPE)%TORB))
+            CALL ERROR$STOP('ATOMTYPELIST$GETL4')
+          END IF
+          VAL=XXX(THISTYPE)%TORB
+        ELSE
+          VAL=.TRUE.  ! RETURN DEFAULT
+        END IF
+      ELSE
+        CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMTYPELIST$SETl4')
       END IF
       RETURN
       END
@@ -908,6 +1010,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       IF(ID.EQ.'FILE') THEN
         IF(XXX(THISTYPE)%TID) THEN
           CALL ERROR$MSG('VARIABLE NOT AVAILABLE IN NEW FORMAT')
+          CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('ATOMTYPELIST$GETR8')
         END IF
@@ -919,6 +1022,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         XXX(THISTYPE)%ID=VAL
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$SETCH')
       END IF
@@ -956,6 +1060,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
         VAL=XXX(THISTYPE)%ID
       ELSE
         CALL ERROR$MSG('UNKNOWN ID')
+        CALL ERROR$CHVAL('ATOM TYPE',XXX(THISTYPE)%ID)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('ATOMTYPELIST$GETR8')
       END IF

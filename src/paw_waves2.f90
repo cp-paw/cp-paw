@@ -5140,13 +5140,17 @@ print*,'tsuper ',tsuper,'tsuper_ ',tsuper_,'TSUPER.EQV.TSUPER_',TSUPER.EQV.TSUPE
               CALL ERROR$STOP('WAVES_READPSI')
             end if
 
-            IF(TSUPER.nEQV.TSUPER_) THEN
+!            IF(TSUPER.NEQV.TSUPER_) THEN
+            IF(.not.((TSUPER.and.TSUPER_).or.(.not.tsuper.and..not.tsuper_))) THEN
+print*,'(TSUPER.and.TSUPER_)=',(TSUPER.and.TSUPER_),'  (.not.tsuper.and..not.tsuper_)=',(.not.tsuper.and..not.tsuper_)
               CALL ERROR$MSG('TRANSFORMATION BETWEEN REGULAR ..')
               CALL ERROR$MSG('... AND SUPER WAVE FUNCTIONS NOT IMPLEMENTED')
               CALL ERROR$L4VAL('TSUPER_ ON FILE',TSUPER_)
               CALL ERROR$L4VAL('TSUPER  EXPECTED',TSUPER)
               CALL ERROR$STOP('WAVES_READPSI')
             END IF
+
+
             IF(NDIM_.NE.NDIM) THEN
               CALL ERROR$MSG('TRANSFORMATION BETWEEN SCALAR AND SPINOR ..')
               CALL ERROR$MSG('... WAVE FUNCTIONS NOT IMPLEMENTED')
