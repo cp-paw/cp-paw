@@ -1627,7 +1627,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==================================================================
 !     == work with NTBO Basis                                         ==
 !     ================================================================== 
-      CALL LMTO$TESTENERGY(lmnxx,ndimd,nat,denmat)
+      CALL LMTO$etot(lmnxx,ndimd,nat,denmat)
 !
 !     ==================================================================
 !     == AUGMENTATION                                                 ==

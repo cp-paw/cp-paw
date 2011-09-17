@@ -140,7 +140,7 @@
       integer(4)            :: indx
       integer(4)            :: lmx,lmx1,lx1,indx1
       integer(4)            :: i0a,i0b
-      integer(4)            :: n,ind,ind1,i,j,k
+      integer(4)            :: n,ind,ind1,i,j,k,ip2,jp2,kp2
       integer(4)            :: lm,l,m
       logical(4)            :: twrite=.false.
 !     **************************************************************************
@@ -158,13 +158,16 @@
 !print*,'n=',n,'i0a,i0b=',i0a+1,i0a+lmx1,i0b+1,i0b+lmx1,'lx1,lmx1,indx1',lx1,lmx1,indx1
         DO IND=1,INDX1
           CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I,J,K)
-          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I+2,J,K)
+          ip2=i+2
+          jp2=j+2
+          kp2=k+2
+          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,Ip2,J,K)
           AMAT(IND1,I0B+1:I0B+LMX1)=AMAT(IND1,I0B+1:I0B+LMX1) &
      &                             +AMAT(IND,I0A+1:I0A+LMX1)
-          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,J+2,K)
+          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,Jp2,K)
           AMAT(IND1,I0B+1:I0B+LMX1)=AMAT(IND1,I0B+1:I0B+LMX1) &
      &                             +AMAT(IND,I0A+1:I0A+LMX1)
-          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,J,K+2)
+          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,J,Kp2)
           AMAT(IND1,I0B+1:I0B+LMX1)=AMAT(IND1,I0B+1:I0B+LMX1) &
      &                             +AMAT(IND,I0A+1:I0A+LMX1)
         ENDDO
@@ -343,7 +346,7 @@
       REAL(8)     ,INTENT(IN) :: R(3)    ! POSITION RELATIVE TO THE CENTER
       REAL(8)     ,INTENT(IN) :: C(NIJK) ! COEFFICIENT ARRAY 
       REAL(8)     ,INTENT(OUT):: G       ! VALUE OF THE FUNCTION
-      INTEGER(4)              :: N,M,I,J,K,IND
+      INTEGER(4)              :: N,M,I,J,K,IND,nijk1
       REAL(8)                 :: GX,GY,GZ
 !     **************************************************************************
       IF(ID.EQ.'CARTESIAN') THEN
@@ -356,7 +359,8 @@
         RETURN
       END IF 
 !
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJK,N,J,K)
+      nijk1=nijk  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJK1,N,J,K)
       G=0.D0
       IND=0
       DO M=0,N
@@ -591,24 +595,28 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)            :: INDA,MA,IA,JA,KA
       INTEGER(4)            :: INDB,MB,IB,JB,KB
       INTEGER(4)            :: INDP,MP,IP,JP,KP
+      INTEGER(4)            :: nijka1,nijkb1,nijkp1
       real(8)               :: svar,svar1
 !     **************************************************************************
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
+      nijka1=nijka  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$I4VAL('NIJKA',NIJKA)
         CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
       END IF
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,J,K)
+      nijkb1=nijkb  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$I4VAL('NIJKB',NIJKB)
         CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
       END IF
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKP,NP,J,K)
+      nijkp1=nijkp  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKP1,NP,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$I4VAL('NIJKP',NIJKP)
@@ -690,6 +698,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,ALLOCATABLE:: primov(:,:)
       INTEGER(4)            :: INDA,MA,IA,JA,KA
       INTEGER(4)            :: INDB,MB,IB,JB,KB
+      INTEGER(4)            :: nijka1,nijkb1
       REAL(8)               :: PI
       REAL(8)               :: SVAR
 !     **************************************************************************
@@ -698,12 +707,14 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,Ja,Ka)
+      nijka1=nijka  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,Ja,Ka)
       IF(Ja.NE.0.OR.Ka.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,Jb,Kb)
+      nijkb1=nijkb  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,Jb,Kb)
       IF(Jb.NE.0.OR.Kb.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
@@ -798,6 +809,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,ALLOCATABLE:: primov(:,:)
       INTEGER(4)            :: INDA,MA,IA,JA,KA,iea
       INTEGER(4)            :: INDB,MB,IB,JB,KB,ieb
+      INTEGER(4)            :: nijka1,nijkb1
       REAL(8)               :: PI
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -805,12 +817,14 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,Ja,Ka)
+      nijka1=nijka  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,Ja,Ka)
       IF(Ja.NE.0.OR.Ka.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,Jb,Kb)
+      nijkb1=nijkb  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,Jb,Kb)
       IF(Jb.NE.0.OR.Kb.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
@@ -1941,7 +1955,7 @@ PRINT*,'H',H(IA,IB,0:IA+IB)
      &    ,2.43577075309547D-02,1.09883228385254D-02,4.97512309732144D-03/)
 !
 !     == TABLE 2 ===============================================================
-      M2=(/8,16,21,12,15,18/)	
+      M2=(/8,16,21,12,15,18/)
       X2=(/42.D0,50.D0,56.D0,60.D0,53.D0,58.D0/)
       F2=(/1.11826597752251D-10,2.40509456111904D-16,1.43739730342730D-19 &
      &    ,4.05791663779760D-15,3.14434039868936D-16,1.78336953967902D-18/)
