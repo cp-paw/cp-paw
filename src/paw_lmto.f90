@@ -1,7 +1,7 @@
 MODULE LMTO_MODULE
 LOGICAL(4)            :: TON=.false.
-!REAL(8)   ,PARAMETER  :: K2=-0.25D0    ! 0.5*K2 IS THE KINETIC ENERGY
-REAL(8)   ,PARAMETER  :: K2=-0.01D0    ! 0.5*K2 IS THE KINETIC ENERGY
+REAL(8)   ,PARAMETER  :: K2=-0.25D0    ! 0.5*K2 IS THE KINETIC ENERGY
+!REAL(8)   ,PARAMETER  :: K2=-0.01D0    ! 0.5*K2 IS THE KINETIC ENERGY
 !REAL(8)   ,PARAMETER  :: RCSCALE=2.D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
 REAL(8)   ,PARAMETER  :: RCSCALE=1.2D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
 !         RCSCALE TIMES THE SUM OF COVALENT RADII DEFINES CUTOFF FOR NEIGBORLIST
@@ -1110,16 +1110,23 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !       ========================================================================
         NT=0   !#(TRIPLES)
         NP=0   !#(PRODUCTS)
-        NS=LNX !#(SINGLES)
+        NS=0   !#(SINGLES)
         DO LN1=1,LNX
           L1=LOX(LN1)
+          NPOW2=INT(0.5D0*REAL(NX-L1)+1.000001D0)  !R^(L+2N), N=0,NPOW-1
+          IF(NPOW2.LT.1) CYCLE
+          NS=NS+1
           DO LN2=LN1,LNX
             L2=LOX(LN2)
             DO LR1=ABS(L1-L2),L1+L2,2  ! TRIANGLE RULE
+              NPOW2=INT(0.5D0*REAL(NX-LR1)+1.000001D0)  !R^(L+2N), N=0,NPOW2-1
+              IF(NPOW2.LT.1) CYCLE
               NP=NP+1
               DO LN3=1,LNX
                 L3=LOX(LN3)
                 DO LR2=ABS(LR1-L3),LR1+L3,2 ! TRIANGLE RULE
+                  NPOW2=INT(0.5D0*REAL(NX-LR2)+1.000001D0) !R^(L+2N), N=0,NPOW-1
+                  IF(NPOW2.LT.1) CYCLE
                   NT=NT+1
                 ENDDO
               ENDDO
@@ -1193,13 +1200,10 @@ CHARACTER(128) :: STRING,STRING1,STRING2
         IT=0
         DO LN1=1,LNX
           L1=LOX(LN1)
-          IS=IS+1
           AUX=POTPAR(ISP)%TAILED%AEF(:,LN1)
           NPOW2=INT(0.5D0*REAL(NX-L1)+1.000001D0)  !R^(L+2N), N=0,NPOW-1
-          IF(NPOW2.LT.1) THEN
-            CALL ERROR$MSG('ERROR: NPOW2 <1')
-            CALL ERROR$STOP('LMTO_TAILEDPRODUCTS')
-          END IF
+          IF(NPOW2.LT.1) cycle
+          IS=IS+1
           CALL GAUSSIAN_FITGAUSS(GID,NR,W,L1,AUX,NE,NPOW2 &
        &                         ,POTPAR(ISP)%TAILED%SINGLE%E &
        &                         ,POTPAR(ISP)%TAILED%SINGLE%C(:NPOW2,:,IS))
@@ -1215,6 +1219,8 @@ CHARACTER(128) :: STRING,STRING1,STRING2
             L2=LOX(LN2)
             AUX=POTPAR(ISP)%TAILED%AEF(:,LN1)*POTPAR(ISP)%TAILED%AEF(:,LN2)
             DO LR1=ABS(L1-L2),L1+L2,2  ! TRIANGLE RULE
+              NPOW2=INT(0.5D0*REAL(NX-LR1)+1.000001D0)  !R^(L+2N), N=0,NPOW2-1
+              IF(NPOW2.LT.1) cycle
               IP=IP+1
               AUX1=AUX
 !!$!             == REPLACE BY A*R^L+BR^(L+2) WITH VALUE AND MULTIPOLE MOMENT ==
@@ -1231,11 +1237,6 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !!$              AUX1(:IRSMOOTH)=A*(R(:IRSMOOTH)/RSMOOTH)**LR1 &
 !!$      &                      +B*(R(:IRSMOOTH)/RSMOOTH)**(LR1+2) 
 !!$!             == REPLACEMENT DONE============================================
-              NPOW2=INT(0.5D0*REAL(NX-LR1)+1.000001D0)  !R^(L+2N), N=0,NPOW2-1
-              IF(NPOW2.LT.1) THEN
-                CALL ERROR$MSG('ERROR: NPOW2 <1')
-                CALL ERROR$STOP('LMTO_TAILEDPRODUCTS')
-              END IF
               CALL GAUSSIAN_FITGAUSS(GID,NR,W,LR1,AUX1,NE,NPOW2 &
        &                         ,POTPAR(ISP)%TAILED%PRODRHO%E &
        &                         ,POTPAR(ISP)%TAILED%PRODRHO%C(:NPOW2,:,IP))
@@ -1266,13 +1267,10 @@ CHARACTER(128) :: STRING,STRING1,STRING2
               DO LN3=1,LNX
                 L3=LOX(LN3)
                 DO LR2=ABS(LR1-L3),LR1+L3,2 ! TRIANGLE RULE
+                  NPOW2=INT(0.5D0*REAL(NX-LR2)+1.000001D0) !R^(L+2N), N=0,NPOW-1
+                  IF(NPOW2.LT.1) cycle
                   IT=IT+1
                   AUX2(:)=AUX1(:)*POTPAR(ISP)%TAILED%AEF(:,LN3)
-                  NPOW2=INT(0.5D0*REAL(NX-LR2)+1.000001D0) !R^(L+2N), N=0,NPOW-1
-                  IF(NPOW2.LT.1) THEN
-                    CALL ERROR$MSG('ERROR: NPOW2 <1')
-                    CALL ERROR$STOP('LMTO_TAILEDPRODUCTS')
-                  END IF
                   CALL GAUSSIAN_FITGAUSS(GID,NR,W,LR2,AUX2,NE,NPOW2 &
        &                         ,POTPAR(ISP)%TAILED%TRIPLE%E &
        &                         ,POTPAR(ISP)%TAILED%TRIPLE%C(:NPOW2,:,IT))
@@ -1296,17 +1294,18 @@ CHARACTER(128) :: STRING,STRING1,STRING2
         DEALLOCATE(R)
         DEALLOCATE(LOX)
       ENDDO
-!CALL LMTO_TESTTAILEDP()
+!CALL LMTO_TESTTAILEDP(nx)
                               CALL TRACE$POP()
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_TESTTAILEDP()
+      SUBROUTINE LMTO_TESTTAILEDP(nx)
 !     **************************************************************************
 !     **************************************************************************
       USE LMTO_MODULE, ONLY: POTPAR,NSP
       IMPLICIT NONE
+      integer(4),intent(in) :: nx
       INTEGER(4) :: ISP,LN1,LN2,LN3,LN4
       INTEGER(4) :: L1,L2,L3,L4
       INTEGER(4) :: LR1,LR2
@@ -1342,8 +1341,8 @@ CHARACTER(128) :: STRING,STRING1,STRING2
                 COUNT=COUNT+1
                 DO LR2=ABS(L3-L4),L3+L4,2
                   IF(LR2.EQ.LR1) THEN
-                    CALL LMTO_TAILEDINDEX_P(LNX,LOX,LN1,LN2,LR1,IP1)
-                    CALL LMTO_TAILEDINDEX_P(LNX,LOX,LN3,LN4,LR2,IP2)
+                    CALL LMTO_TAILEDINDEX_P(nx,LNX,LOX,LN1,LN2,LR1,IP1)
+                    CALL LMTO_TAILEDINDEX_P(nx,LNX,LOX,LN3,LN4,LR2,IP2)
                     CALL LMTO_TESTPLOTRADIALGAUSSALONE('RHO',LR1,NIJK,NE,E &
                                         ,POTPAR(ISP)%TAILED%PRODRHO%C(:,:,IP1))
                     CALL LMTO_TESTPLOTRADIALGAUSSALONE('POT',LR2,NIJK,NE,E &
@@ -1366,8 +1365,8 @@ CHARACTER(128) :: STRING,STRING1,STRING2
                 ENDDO
                 DO LR2=ABS(LR1-L3),LR1+L3,2
                   IF(LR2.EQ.L4) THEN                                   
-                    CALL LMTO_TAILEDINDEX_T(LNX,LOX,LN1,LN2,LR1,LN3,LR2,IT)
-                    CALL LMTO_TAILEDINDEX_S(LNX,LOX,LN4,IS)
+                    CALL LMTO_TAILEDINDEX_T(nx,LNX,LOX,LN1,LN2,LR1,LN3,LR2,IT)
+                    CALL LMTO_TAILEDINDEX_S(nx,LNX,LOX,LN4,IS)
                     CALL LMTO_TESTPLOTRADIALGAUSSALONE('TRIPLE',LR2,NIJK,NE,E &
                                         ,POTPAR(ISP)%TAILED%TRIPLE%C(:,:,IT))
                     CALL LMTO_TESTPLOTRADIALGAUSSALONE('SINGLE',L4,NIJK,NE,E &
@@ -1449,30 +1448,38 @@ STOP 'forced in LMTO_TESTTAILEDP'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_TAILEDINDEX_T(LNX,LOX,LN1,LN2,LR1,LN3,LR2,IT)
+      SUBROUTINE LMTO_TAILEDINDEX_T(NX,LNX,LOX,LN1,LN2,LR1,LN3,LR2,IT)
 !     **************************************************************************
 !     **************************************************************************
       IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NX
       INTEGER(4),INTENT(IN) :: LNX
       INTEGER(4),INTENT(IN) :: LOX(LNX)
       INTEGER(4),INTENT(IN) :: LN1,LN2,LR1,LN3,LR2
       INTEGER(4),INTENT(OUT) :: IT
       INTEGER(4)             :: L1,L2,L3,LN1A,LN2A,LN3A,LR1A,LR2A
       INTEGER(4)             :: IS,IP
+      INTEGER(4)             :: npow2
 !     **************************************************************************
       IT=0   !#(TRIPLES)
       IP=0   !#(PRODUCTS)
       IS=0 !#(SINGLES)
       DO LN1A=1,LNX
         L1=LOX(LN1A)
+        NPOW2=INT(0.5D0*REAL(NX-L1)+1.000001D0)  !R^(L+2N), N=0,NPOW-1
+        IF(NPOW2.LT.1) CYCLE
         IS=IS+1
         DO LN2A=LN1A,LNX
           L2=LOX(LN2A)
           DO LR1A=ABS(L1-L2),L1+L2,2  ! TRIANGLE RULE
+            NPOW2=INT(0.5D0*REAL(NX-LR1A)+1.000001D0)  !R^(L+2N), N=0,NPOW2-1
+            IF(NPOW2.LT.1) CYCLE
             IP=IP+1
             DO LN3A=1,LNX
               L3=LOX(LN3A)
               DO LR2A=ABS(LR1A-L3),LR1A+L3,2 ! TRIANGLE RULE
+                NPOW2=INT(0.5D0*REAL(NX-LR2a)+1.000001D0) !R^(L+2N), N=0,NPOW-1
+                IF(NPOW2.LT.1) CYCLE
                 IT=IT+1
                 IF(LN1A.LT.MIN(LN1,LN2)) CYCLE
                 IF(LN2A.LT.MAX(LN1,LN2)) CYCLE
@@ -1493,23 +1500,28 @@ STOP 'forced in LMTO_TESTTAILEDP'
       END    
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_TAILEDINDEX_P(LNX,LOX,LN1,LN2,LR1,IP)
+      SUBROUTINE LMTO_TAILEDINDEX_P(NX,LNX,LOX,LN1,LN2,LR1,IP)
 !     **************************************************************************
 !     **************************************************************************
       IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NX
       INTEGER(4),INTENT(IN) :: LNX
       INTEGER(4),INTENT(IN) :: LOX(LNX)
       INTEGER(4),INTENT(IN) :: LN1,LN2,LR1
       INTEGER(4),INTENT(OUT) :: IP
       INTEGER(4)             :: L1,L2,LN1A,LN2A,LR1A
-      INTEGER(4)             :: IS
+      INTEGER(4)             :: npow2
 !     **************************************************************************
       IP=0   !#(PRODUCTS)
       DO LN1A=1,LNX
         L1=LOX(LN1A)
+        NPOW2=INT(0.5D0*REAL(NX-L1)+1.000001D0)  !R^(L+2N), N=0,NPOW-1
+        IF(NPOW2.LT.1) CYCLE
         DO LN2A=LN1A,LNX
           L2=LOX(LN2A)
           DO LR1A=ABS(L1-L2),L1+L2,2  ! TRIANGLE RULE
+            NPOW2=INT(0.5D0*REAL(NX-LR1A)+1.000001D0)  !R^(L+2N), N=0,NPOW2-1
+            IF(NPOW2.LT.1) CYCLE
             IP=IP+1
             IF(LN1A.LT.MIN(LN1,LN2)) CYCLE
             IF(LN2A.LT.MAX(LN1,LN2)) CYCLE
@@ -1532,16 +1544,31 @@ STOP 'forced in LMTO_TESTTAILEDP'
       END    
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_TAILEDINDEX_S(LNX,LOX,LN1,IS)
+      SUBROUTINE LMTO_TAILEDINDEX_S(NX,LNX,LOX,LN1,IS)
 !     **************************************************************************
 !     **************************************************************************
       IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NX
       INTEGER(4),INTENT(IN) :: LNX
       INTEGER(4),INTENT(IN) :: LOX(LNX)
       INTEGER(4),INTENT(IN) :: LN1
       INTEGER(4),INTENT(OUT) :: IS
+      integer(4)             :: ln1a,l1,npow2
 !     **************************************************************************
-      IS=LN1
+      IS=0
+      DO LN1A=1,LNX
+        L1=LOX(LN1A)
+        NPOW2=INT(0.5D0*REAL(NX-L1)+1.000001D0)  !R^(L+2N), N=0,NPOW-1
+        IF(NPOW2.LT.1) CYCLE
+        IS=IS+1
+        IF(LN1a.LT.LN1) CYCLE
+        IF(LN1A.NE.ln1) then
+          CALL ERROR$I4VAL('LN1',LN1)
+          CALL ERROR$I4VAL('LN1A',LN1A)
+          CALL ERROR$STOP('LMTO_TAILEDINDEX_S')
+        END IF
+        RETURN
+      ENDDO
       RETURN
       END    
 !
@@ -1583,6 +1610,7 @@ STOP 'forced in LMTO_TESTTAILEDP'
       INTEGER(4)             :: LR1,IMR1,LMR1
       INTEGER(4)             :: LR2,IMR2,LMR2
       INTEGER(4)             :: J,I
+      INTEGER(4)             :: npow2
       INTEGER(4)             :: IE
       REAL(8)                :: CG,CG1,CG2 !GAUNT COEFFICIENT
       REAL(8)                :: C(NIJK)
@@ -1599,6 +1627,8 @@ STOP 'forced in LMTO_TESTTAILEDP'
       LMN01=0
       DO LN1=1,LNX
         L1=LOX(LN1)
+        NPOW2=INT(0.5D0*REAL(NX-L1)+1.000001D0)  !R^(L+2N), N=0,NPOW-1
+        IF(NPOW2.LT.1) CYCLE
         IS=IS+1
 !
 !       ==  SINGLE =============================================================
@@ -1618,6 +1648,8 @@ STOP 'forced in LMTO_TESTTAILEDP'
         DO LN2=LN1,LNX
           L2=LOX(LN2)
           DO LR1=ABS(L1-L2),L1+L2,2  ! TRIANGLE RULE
+            NPOW2=INT(0.5D0*REAL(NX-LR1)+1.000001D0)  !R^(L+2N), N=0,NPOW2-1
+            IF(NPOW2.LT.1) CYCLE
             IP=IP+1
             IF(IP.GT.NP) THEN
               CALL ERROR$MSG('IP OUT OF RANGE')
@@ -1655,6 +1687,8 @@ STOP 'forced in LMTO_TESTTAILEDP'
             DO LN3=1,LNX
               L3=LOX(LN3)
               DO LR2=ABS(LR1-L3),LR1+L3,2
+                NPOW2=INT(0.5D0*REAL(NX-LR2)+1.000001D0) !R^(L+2N), N=0,NPOW-1
+                IF(NPOW2.LT.1) CYCLE
                 IT=IT+1
                 IF(IT.GT.NT) THEN
                   CALL ERROR$MSG('COUNTER FOR TRIPLE TERMS OUT OF RANGE')
@@ -1760,12 +1794,6 @@ STOP 'forced in LMTO_TESTTAILEDP'
       IF(.NOT.TCHK) RETURN
                               CALL TRACE$PUSH('LMTO$MAKESTRUCTURECONSTANTS')
                               CALL TIMING$CLOCKON('LMTO STRUCTURECONSTANTS')
-!
-!     == STRUCTURE CONSTANTS ARE DETERMINED ONLY ONCE. THIS NEEDS TO BE CHANGED!
-!!$      IF(TINISTRUC) THEN
-!!$                              CALL TRACE$POP()
-!!$        RETURN
-!!$      END IF
       TINISTRUC=.TRUE.
 !
 !
@@ -2817,8 +2845,6 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START ")')
-      CALL LMTO$REPORTPOTBAR(6)
-      CALL LMTO$REPORTSBAR(6)
 !
 !     ==========================================================================
 !     ==  
@@ -2826,8 +2852,15 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       CALL TIMING$CLOCKON('NTBODENMAT')
       CALL LMTO_NTBODENMAT()
       CALL TIMING$CLOCKOFF('NTBODENMAT')
-!      CALL LMTO_TESTDENMAT()
-!      CALL LMTO_TESTDENMAT_1CDENMAT(LMNXX_,NDIMD_,NAT_,DENMAT_)
+      CALL LMTO_TESTDENMAT_1CDENMAT(LMNXX_,NDIMD_,NAT_,DENMAT_)
+      CALL LMTO_TESTDENMAT()
+!
+!     ==========================================================================
+!     ==  some info                                                           ==
+!     ==========================================================================
+      CALL LMTO$REPORTPOTBAR(6)
+      CALL LMTO$REPORTSBAR(6)
+      CALL LMTO$REPORTDENMAT(6)
 !
 !     ==========================================================================
 !     ==  CALCULATE ENERGY                                                    ==
@@ -2862,170 +2895,6 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_ENERGYFULLORB()
-      USE LMTO_MODULE, ONLY : TON,GAUSSORB,GAUSSORB_T,GAUSSORBAUG
-!     **************************************************************************
-!     **                                                                      **
-!     **                                                                      **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4)            :: NAT
-      INTEGER(4)            :: IAT
-      LOGICAL(4),SAVE       :: TFIRSTENERGY=.TRUE.
-      LOGICAL(4),PARAMETER  :: TPLOT=.TRUE.
-!     **************************************************************************
-      WRITE(*,FMT='(82("="),T30," LMTO_ENERGY WITH FULL ORBITALS ")')
-!      CALL LMTO$REPORTPOTBAR(6)
-!      CALL LMTO$REPORTSBAR(6)
-!
-!     ==========================================================================
-!     ==  
-!     ==========================================================================
-!
-!     ==========================================================================
-!     == CONSTRUCT TIGHT-BINDING ORBITALS IN GAUSSIAN REPRESENTATION          ==
-!     ==========================================================================
-PRINT*,'DOING LMTO_NTBFROMTAILEDKJ.....'
-CALL TIMING$CLOCKON('NTBOFROMTAILEDKJ')
-      CALL LMTO_NTBOFROMTAILEDKJ()
-CALL TIMING$CLOCKOFF('NTBOFROMTAILEDKJ')
-PRINT*,'.....LMTO_NTBFROMTAILEDKJ DONE'
-!
-PRINT*,'DOING LMTO_NTBOFROMKPRIME.....'
-CALL TIMING$CLOCKON('NTBOFROMKPRIME')
-      CALL LMTO_NTBOFROMKPRIME() !THIS IS THE CORRECT SUPERPOSITION
-CALL TIMING$CLOCKOFF('NTBOFROMKPRIME')
-PRINT*,'..... LMTO_NTBOFROMKPRIME DONE'
-!!$ !== THE FOLLOWING DOES NOT WORK
-!!$NAT=SIZE(GAUSSORB_T)
-!!$CALL LMTO_CPGAUSSORB(NAT,GAUSSORB_T,GAUSSORB)
-!
-!     ==========================================================================
-!     ==  ADD AUGMENTATION                                                    ==
-!     ==========================================================================
-      PRINT*,'DOING LMTO_NTBOAUGMENT.....'
-      CALL TIMING$CLOCKON('NTBOAUGMENT')
-      CALL LMTO_NTBOAUGMENT()
-      CALL TIMING$CLOCKOFF('NTBOAUGMENT')
-!     == FROM HERE ON, USE GAUSSORBAUG...
-      PRINT*,'..... LMTO_NTBOAUGMENT DONE'
-!
-!     ==========================================================================
-!     ==  TEST COEFFICIENTS OF TIGHT-BINDING ORBITALS                         ==
-!     ==========================================================================
-       PRINT*,' BEFORE TESTNTBO.....'
-!      CALL LMTO_TESTNTBO()
-       PRINT*,'....... TESTNTBO DONE'
-!
-!     ==========================================================================
-!     ==  plot orbitals                                                       ==
-!     ==========================================================================
-      IF(TPLOT) THEN
-        PRINT*,'DOING LMTO_PLOTLOCORB.....'
-        CALL ATOMLIST$NATOM(NAT)
-        DO IAT=1,NAT
-          CALL LMTO_PLOTLOCORB(IAT)
-        ENDDO
-        PRINT*,'..... LMTO_PLOTLOCORB DONE'
-        CALL ERROR$MSG('FORCED STOP')
-        CALL ERROR$STOP('LMTO$TESTENERGY')
-      END IF
-!
-!     ==========================================================================
-!     ==  CALCULATE OVERLAP MATRIX                                            ==
-!     ==========================================================================
-!!$PRINT*,'DOING LMTO$OVERLAPFULL.....'
-!!$CALL TIMING$CLOCKON('OVERLAPPFULL')
-!!$      CALL LMTO$OVERLAPFULL()
-!!$CALL TIMING$CLOCKOFF('OVERLAPPFULL')
-!!$PRINT*,'..... LMTO$OVERLAPFULL DONE'
-!      CALL LMTO$REPORTOVERLAP(6)
-!      CALL LMTO_PLOTRADIAL()
-!
-!     ==========================================================================
-!     ==  
-!     ==========================================================================
-!
-!     ==========================================================================
-!     == TESTS THE OVERLAP MATRIX OF NATURAL TIGHT-BINDING ORBITALS           ==
-!     == BY ESTIMATING THE OVERLAP BETWEEN KOHN SHAM WAVE FUNCTIONS USING THE ==
-!     == COEFFICIENTS IN NTBS AND THEIR OVERLAP MATRIX                        ==
-!     ==========================================================================
-PRINT*,' BEFORE TESTOVERLAP.....'
-!      CALL LMTO_TESTOVERLAP()
-PRINT*,'....... TESTOVERLAP DONE'
-!
-!     ==========================================================================
-!     ==  MAP ORBITALS TO A RADIAL GRID TIME SPHERICAL HARMONICS              ==
-!     ==  THIS WILL BE EXPLOITED IN OMNSIDTEU                                 ==
-!     ==========================================================================
-PRINT*,' BEFORE LMTO_GAUSSORBTOLM.....'
-CALL TIMING$CLOCKON('GAUSSORBTOLM')
-      CALL LMTO_GAUSSORBTOLM()
-CALL TIMING$CLOCKOFF('GAUSSORBTOLM')
-PRINT*,'.......LMTO_GAUSSORBTOLM DONE'
-!
-!     ==========================================================================
-!     ==  ONSITE UTENSOR                                                      ==
-!     ==========================================================================
-PRINT*,'BEFORE LMTO_UTENSORLAYOUT......'
-CALL TIMING$CLOCKON('UTENSORLAYOUT')
-      CALL LMTO_UTENSORLAYOUT()
-CALL TIMING$CLOCKOFF('UTENSORLAYOUT')
-PRINT*,'........LMTO_UTENSORLAYOUT DONE'
-!
-PRINT*,'BEFORE LMTO_ONSITEU............'
-CALL TIMING$CLOCKON('ONSITEU')
-      CALL LMTO_ONSITEU()
-CALL TIMING$CLOCKOFF('ONSITEU')
-PRINT*,' .............LMTO_ONSITEU DONE'
-!
-!     ==========================================================================
-!     ==  
-!     ==========================================================================
-CALL TIMING$CLOCKON('NTBODENMAT')
-      CALL LMTO_NTBODENMAT()
-CALL TIMING$CLOCKOFF('NTBODENMAT')
-!      CALL LMTO_TESTDENMAT()
-!      CALL LMTO_TESTDENMAT_1CDENMAT(LMNXX_,NDIMD_,NAT_,DENMAT_)
-!
-!     ==========================================================================
-!     ==  CALCULATE ENERGY                                                    ==
-!     ==========================================================================
-PRINT*,'BEFORE LMTO_ENERGYTEST......'
-CALL TIMING$CLOCKON('ENERGYTEST')
-      CALL LMTO_ENERGYTEST()
-CALL TIMING$CLOCKOFF('ENERGYTEST')
-PRINT*,'.......LMTO_ENERGYTEST DONE'
-!
-!     ==========================================================================
-!     ==  CONVERT HAMIL INTO HTBC
-!     ==========================================================================
-CALL TIMING$CLOCKON('NTBODENMATDER')
-      CALL LMTO_NTBODENMATDER()
-CALL TIMING$CLOCKOFF('NTBODENMATDER')
-!
-!     ==========================================================================
-!     ==  CLEAN DENMAT AND HAMIL                                              ==
-!     ==========================================================================
-      CALL LMTO_CLEANDENMAT()
-!
-
-!!$PRINT*,'WARNING!!! LEAVING LMTO$TESTENERGY'
-!!$STOP 'FORCED BEFORE LEAVING LMTO$TESTENERGY'
-      IF(TFIRSTENERGY) TFIRSTENERGY=.FALSE.
-RETURN
-!
-!     ==========================================================================
-!     ==  
-!     ==========================================================================
-!PRINT*,' BEFORE LMTO_FOURCENTERGAUSS.....'
-!      CALL LMTO_FOURCENTERGAUSS()
-!PRINT*,'....... LMTO_FOURCENTERGAUSS DONE'
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_SIMPLEENERGYTEST2()
 !     **************************************************************************
 !     **  WORK OUT THE ENERGY USING THE LOCAL APPROXIMATION                   **
@@ -3035,7 +2904,7 @@ RETURN
       USE LMTO_MODULE, ONLY : ISPECIES,DENMAT,HAMIL,LNX,LOX,POTPAR
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
-      LOGICAL(4),PARAMETER  :: TPlot=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPlot=.false.
       REAL(8)   ,PARAMETER  :: HFWEIGHT=0.25D0
       INTEGER(4)            :: NND
       INTEGER(4)            :: NAT
@@ -3853,9 +3722,12 @@ PRINT*,'EX ',EX
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_PLOTTAILED()
 !     **************************************************************************
+!     **  plots the local orbitals represented by tailed orbitals,            **
+!     **  that is using the onsite structure constants and extrapolating      **
+!     **  tails.                                                              **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
-      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR,SBAR,SBARLI1
+      USE LMTO_MODULE, ONLY: k2,ISPECIES,LNX,LOX,POTPAR,SBAR,SBARLI1
       IMPLICIT NONE
       INTEGER(4)             :: NAT
       INTEGER(4)             :: LMNX
@@ -3869,7 +3741,8 @@ PRINT*,'EX ',EX
       REAL(8)   ,ALLOCATABLE :: SBARLOC(:,:)
       REAL(8)   ,ALLOCATABLE :: F(:,:)
       INTEGER(4),ALLOCATABLE :: LMARR(:)
-      INTEGER(4)             :: IAT,ISP,LN,L,NN,LMN,IM,I1,IORB,LM
+      real(8)                :: svar
+      INTEGER(4)             :: IAT,ISP,LN,L,NN,LMN,IM,I1,IORB,LM,i0
       INTEGER(4)             :: LNDOT,LMNDOT
       CHARACTER(5)           :: CHIAT,CHORB
       CHARACTER(128)         :: STRING
@@ -3996,6 +3869,26 @@ WRITE(*,FMT='("SBARLOC",10F10.5)')SBARLOC(:,IORB)
           CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LMX,F)
         ENDDO
         DEALLOCATE(F)
+!
+!       ========================================================================
+!       ==  REPORT SOME OTHER DATA                                            ==
+!       ========================================================================
+        LMN=0
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          I0=SBARLI1(L+1,ISP)-1
+          DO IM=1,2*L+1
+            LMN=LMN+1
+            SVAR=POTPAR(ISP)%KTOPHIDOT(LN) &
+       &      -POTPAR(ISP)%JBARTOPHIDOT(LN)*SBARLOC(I0+IM,LMN)
+            SVAR=SVAR/POTPAR(ISP)%KTOPHI(LN) 
+            WRITE(*,FMT='("CPHIDOT:",I5,2F10.5)')LMN,K2,SVAR
+          ENDDO
+        ENDDO
+!
+!       ========================================================================
+!       ==  clean up after iteration                                          ==
+!       ========================================================================
         DEALLOCATE(LMARR)
         DEALLOCATE(SBARLOC)               
       ENDDO
@@ -4444,6 +4337,170 @@ INTEGER(4) :: IMETHOD
 !     ==  TRANSFORM HAMILTONIAN FROM TOTAL/SPIN TO UP/DOWN                    ==
 !     ==========================================================================
       HAM=REAL(HAM1)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_ENERGYFULLORB()
+      USE LMTO_MODULE, ONLY : TON,GAUSSORB,GAUSSORB_T,GAUSSORBAUG
+!     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)            :: NAT
+      INTEGER(4)            :: IAT
+      LOGICAL(4),SAVE       :: TFIRSTENERGY=.TRUE.
+      LOGICAL(4),PARAMETER  :: TPLOT=.true.
+!     **************************************************************************
+      WRITE(*,FMT='(82("="),T30," LMTO_ENERGY WITH FULL ORBITALS ")')
+!      CALL LMTO$REPORTPOTBAR(6)
+!      CALL LMTO$REPORTSBAR(6)
+!
+!     ==========================================================================
+!     ==  
+!     ==========================================================================
+!
+!     ==========================================================================
+!     == CONSTRUCT TIGHT-BINDING ORBITALS IN GAUSSIAN REPRESENTATION          ==
+!     ==========================================================================
+PRINT*,'DOING LMTO_NTBFROMTAILEDKJ.....'
+CALL TIMING$CLOCKON('NTBOFROMTAILEDKJ')
+      CALL LMTO_NTBOFROMTAILEDKJ()
+CALL TIMING$CLOCKOFF('NTBOFROMTAILEDKJ')
+PRINT*,'.....LMTO_NTBFROMTAILEDKJ DONE'
+!
+PRINT*,'DOING LMTO_NTBOFROMKPRIME.....'
+CALL TIMING$CLOCKON('NTBOFROMKPRIME')
+      CALL LMTO_NTBOFROMKPRIME() !THIS IS THE CORRECT SUPERPOSITION
+CALL TIMING$CLOCKOFF('NTBOFROMKPRIME')
+PRINT*,'..... LMTO_NTBOFROMKPRIME DONE'
+!!$ !== THE FOLLOWING DOES NOT WORK
+!!$NAT=SIZE(GAUSSORB_T)
+!!$CALL LMTO_CPGAUSSORB(NAT,GAUSSORB_T,GAUSSORB)
+!
+!     ==========================================================================
+!     ==  ADD AUGMENTATION                                                    ==
+!     ==========================================================================
+      PRINT*,'DOING LMTO_NTBOAUGMENT.....'
+      CALL TIMING$CLOCKON('NTBOAUGMENT')
+      CALL LMTO_NTBOAUGMENT()
+      CALL TIMING$CLOCKOFF('NTBOAUGMENT')
+!     == FROM HERE ON, USE GAUSSORBAUG...
+      PRINT*,'..... LMTO_NTBOAUGMENT DONE'
+!
+!     ==========================================================================
+!     ==  TEST COEFFICIENTS OF TIGHT-BINDING ORBITALS                         ==
+!     ==========================================================================
+       PRINT*,' BEFORE TESTNTBO.....'
+!      CALL LMTO_TESTNTBO()
+       PRINT*,'....... TESTNTBO DONE'
+!
+!     ==========================================================================
+!     ==  plot orbitals                                                       ==
+!     ==========================================================================
+      IF(TPLOT) THEN
+        PRINT*,'DOING LMTO_PLOTLOCORB.....'
+        CALL ATOMLIST$NATOM(NAT)
+        DO IAT=1,NAT
+          CALL LMTO_PLOTLOCORB(IAT)
+        ENDDO
+        PRINT*,'..... LMTO_PLOTLOCORB DONE'
+        CALL ERROR$MSG('FORCED STOP')
+        CALL ERROR$STOP('LMTO$TESTENERGY')
+      END IF
+!
+!     ==========================================================================
+!     ==  CALCULATE OVERLAP MATRIX                                            ==
+!     ==========================================================================
+!!$PRINT*,'DOING LMTO$OVERLAPFULL.....'
+!!$CALL TIMING$CLOCKON('OVERLAPPFULL')
+!!$      CALL LMTO$OVERLAPFULL()
+!!$CALL TIMING$CLOCKOFF('OVERLAPPFULL')
+!!$PRINT*,'..... LMTO$OVERLAPFULL DONE'
+!      CALL LMTO$REPORTOVERLAP(6)
+!      CALL LMTO_PLOTRADIAL()
+!
+!     ==========================================================================
+!     ==  
+!     ==========================================================================
+!
+!     ==========================================================================
+!     == TESTS THE OVERLAP MATRIX OF NATURAL TIGHT-BINDING ORBITALS           ==
+!     == BY ESTIMATING THE OVERLAP BETWEEN KOHN SHAM WAVE FUNCTIONS USING THE ==
+!     == COEFFICIENTS IN NTBS AND THEIR OVERLAP MATRIX                        ==
+!     ==========================================================================
+PRINT*,' BEFORE TESTOVERLAP.....'
+!      CALL LMTO_TESTOVERLAP()
+PRINT*,'....... TESTOVERLAP DONE'
+!
+!     ==========================================================================
+!     ==  MAP ORBITALS TO A RADIAL GRID TIME SPHERICAL HARMONICS              ==
+!     ==  THIS WILL BE EXPLOITED IN OMNSIDTEU                                 ==
+!     ==========================================================================
+PRINT*,' BEFORE LMTO_GAUSSORBTOLM.....'
+CALL TIMING$CLOCKON('GAUSSORBTOLM')
+      CALL LMTO_GAUSSORBTOLM()
+CALL TIMING$CLOCKOFF('GAUSSORBTOLM')
+PRINT*,'.......LMTO_GAUSSORBTOLM DONE'
+!
+!     ==========================================================================
+!     ==  ONSITE UTENSOR                                                      ==
+!     ==========================================================================
+PRINT*,'BEFORE LMTO_UTENSORLAYOUT......'
+CALL TIMING$CLOCKON('UTENSORLAYOUT')
+      CALL LMTO_UTENSORLAYOUT()
+CALL TIMING$CLOCKOFF('UTENSORLAYOUT')
+PRINT*,'........LMTO_UTENSORLAYOUT DONE'
+!
+PRINT*,'BEFORE LMTO_ONSITEU............'
+CALL TIMING$CLOCKON('ONSITEU')
+      CALL LMTO_ONSITEU()
+CALL TIMING$CLOCKOFF('ONSITEU')
+PRINT*,' .............LMTO_ONSITEU DONE'
+!
+!     ==========================================================================
+!     ==  
+!     ==========================================================================
+CALL TIMING$CLOCKON('NTBODENMAT')
+      CALL LMTO_NTBODENMAT()
+CALL TIMING$CLOCKOFF('NTBODENMAT')
+!      CALL LMTO_TESTDENMAT()
+!      CALL LMTO_TESTDENMAT_1CDENMAT(LMNXX_,NDIMD_,NAT_,DENMAT_)
+!
+!     ==========================================================================
+!     ==  CALCULATE ENERGY                                                    ==
+!     ==========================================================================
+PRINT*,'BEFORE LMTO_ENERGYTEST......'
+CALL TIMING$CLOCKON('ENERGYTEST')
+      CALL LMTO_ENERGYTEST()
+CALL TIMING$CLOCKOFF('ENERGYTEST')
+PRINT*,'.......LMTO_ENERGYTEST DONE'
+!
+!     ==========================================================================
+!     ==  CONVERT HAMIL INTO HTBC
+!     ==========================================================================
+CALL TIMING$CLOCKON('NTBODENMATDER')
+      CALL LMTO_NTBODENMATDER()
+CALL TIMING$CLOCKOFF('NTBODENMATDER')
+!
+!     ==========================================================================
+!     ==  CLEAN DENMAT AND HAMIL                                              ==
+!     ==========================================================================
+      CALL LMTO_CLEANDENMAT()
+!
+
+!!$PRINT*,'WARNING!!! LEAVING LMTO$TESTENERGY'
+!!$STOP 'FORCED BEFORE LEAVING LMTO$TESTENERGY'
+      IF(TFIRSTENERGY) TFIRSTENERGY=.FALSE.
+RETURN
+!
+!     ==========================================================================
+!     ==  
+!     ==========================================================================
+!PRINT*,' BEFORE LMTO_FOURCENTERGAUSS.....'
+!      CALL LMTO_FOURCENTERGAUSS()
+!PRINT*,'....... LMTO_FOURCENTERGAUSS DONE'
       RETURN
       END
 !
@@ -5853,8 +5910,6 @@ PRINT*,'N1,N2 ',N1,N2
       INTEGER(4),PARAMETER  :: N1=40,N2=40,N3=40 !GRID (1D?)
       INTEGER(4),PARAMETER  :: NRAD=200
       INTEGER(4),PARAMETER  :: NDIRX=100
-      LOGICAL(4) ,PARAMETER :: T2D=.TRUE.
-      LOGICAL(4) ,PARAMETER :: T3D=.FALSE.
       REAL(8)   ,PARAMETER  :: RANGE=8.D0
       REAL(8)               :: DIR(3,NDIRX)
       REAL(8)               :: ORIGIN(3)
@@ -5887,7 +5942,7 @@ PRINT*,'N1,N2 ',N1,N2
       INTEGER(4)            :: NP,IP
       REAL(8)  ,ALLOCATABLE :: P(:,:)
       LOGICAL(4),PARAMETER  :: TGAUSS=.TRUE.
-      CHARACTER(2),PARAMETER :: ID='1D'
+      CHARACTER(2),PARAMETER :: ID='3D'
 !     **************************************************************************
                                               CALL TRACE$PUSH('LMTO_PLOTLOCORB')
 !
@@ -6222,7 +6277,7 @@ PRINT*,'N1,N2 ',N1,N2
       INTEGER(4)            :: NP,IP
       REAL(8)  ,ALLOCATABLE :: P(:,:)
       LOGICAL(4),PARAMETER  :: TGAUSS=.TRUE.
-      CHARACTER(2),PARAMETER :: ID='1D'
+      CHARACTER(2),PARAMETER :: ID='3D'
       INTEGER(4)            :: NN,IAT,IAT2,ISP,I1,I2,I3,LN,I,J,IORB,IDIR
 !     **************************************************************************
                                               CALL TRACE$PUSH('LMTO_PLOTLOCORB')

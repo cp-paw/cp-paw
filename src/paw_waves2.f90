@@ -4915,11 +4915,11 @@ END MODULE TOTALSPIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_READPSI(NFIL)
-!     ******************************************************************
-!     **                                                              **
-!     **  WRITE WAVE FUNCTIONS TO RESTART FILE                        **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  read WAVE FUNCTIONS from RESTART FILE                               **
+!     **                                                                      **
+!     **************************************************************************
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -4953,7 +4953,7 @@ END MODULE TOTALSPIN_MODULE
       INTEGER(4)              :: NWAVE
       INTEGER(4)              :: nfilo
       LOGICAL(4)              :: TKGROUP
-!     ******************************************************************
+!     **************************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL FILEHANDLER$UNIT('PROT',NFILO)

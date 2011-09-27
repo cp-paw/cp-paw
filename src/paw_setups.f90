@@ -1220,10 +1220,6 @@ END MODULE SETUP_MODULE
       THIS%PRO=0.D0
       THIS%AEPHI=0.D0
       THIS%PSPHI=0.D0
-!
-!     == default selector for local orbitals is true (in atomtypelist) =========
-      ALLOCATE(THIS%TORB(LNX))
-      CALL ATOMTYPELIST$GETR8('TORB',THIS%TORB)
 !     
 !     ==================================================================
 !     ==  READ PSEUDOPOTENTIALS AND PSEUDO WAVE FUNCTIONS             ==
@@ -1370,6 +1366,12 @@ PRINT*,'RCSM ',THIS%RCSM
 !!$PRINT*,'DOVER',THIS%DOVER
 !!$PRINT*,'DTKIN',THIS%DTKIN
 !CALL ERROR$STOP('FORCED STOP IN SETUP')
+!
+!     ==================================================================
+!     == default selector for local orbitals is true (in atomtypelist) =========
+!     ==================================================================
+      ALLOCATE(THIS%TORB(LNX))
+      CALL ATOMTYPELIST$GETl4a('TORB',lnx,THIS%TORB)
 !     
 !     ==================================================================
 !     == SET VALUES BEYOND A CERTAIN RADIUS EXACTLY TO ZERO           ==
