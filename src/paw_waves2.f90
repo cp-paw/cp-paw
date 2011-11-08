@@ -2970,7 +2970,8 @@ print*,'a     ',(a(i,i),i=1,nb)
 !     ==================================================================
 !     == read wave functions and Lagrange parameters                  ==
 !     ==================================================================
-      CALL WAVES_READPSI(NFIL)
+!      CALL WAVES_READPSI(NFIL)
+      CALL WAVES_READPSI_old(NFIL)
 !
 !     ==================================================================
 !     == SET OCCUPATIONS FOR DYNOCC OBJECT                            ==
@@ -3957,8 +3958,8 @@ END IF
           IF(NSPIN.EQ.NSPIN_.AND.NDIM.EQ.NDIM_) THEN
             LAMBDA2(1:NBA,1:NBA,:)=LAMBDA(1:NBA,1:NBA,:)
           ELSE
-CALL ERROR$MSG('OPTION TEMPORARILY DISABLED')
-CALL ERROR$STOP('WAVES_READLAMBDA')
+!CALL ERROR$MSG('OPTION TEMPORARILY DISABLED')
+!CALL ERROR$STOP('WAVES_READLAMBDA')
 !           == FROM NON-SPIN POLARIZED CALCULATION =====================
             IF(NDIM_.EQ.1.AND.NSPIN_.EQ.1) THEN
               IF(NDIM.EQ.1.AND.NSPIN.EQ.2) THEN
@@ -4973,8 +4974,10 @@ END MODULE TOTALSPIN_MODULE
       IF(NWAVE.EQ.1)TSTOP=.TRUE.  ! SET VELOCITY TO ZERO IF RESTART=STATIC
       IF(NKPT.NE.NKPT_) THEN
         CALL ERROR$MSG('KPOINT SETS ARE FIXED')
-        CALL ERROR$i4val('nkpt on file',nkpt_)
-        CALL ERROR$i4val('nkpt expected',nkpt)
+        CALL ERROR$I4VAL('NKPT ON FILE',NKPT_)
+        CALL ERROR$I4VAL('NKPT EXPECTED',NKPT)
+        CALL ERROR$I4VAL('NSPIN ON FILE',NSPIN_)
+        CALL ERROR$I4VAL('NSPIN EXPECTED',NSPIN)
         CALL ERROR$STOP('WAVES_READPSI')
       END IF
 !
@@ -5129,9 +5132,9 @@ END MODULE TOTALSPIN_MODULE
 !         ==  CHANGE FORMAT                                           ==
 !         ==============================================================
           IF(TKGROUP) THEN
-print*,'transfer(tsuper,ibh)',transfer(tsuper,ibh)
-print*,'transfer(tsuper_,ibh)',transfer(tsuper_,ibh)
-print*,'tsuper ',tsuper,'tsuper_ ',tsuper_,'TSUPER.EQV.TSUPER_',TSUPER.EQV.TSUPER_,'TSUPER.nEQV.TSUPER_',TSUPER.nEQV.TSUPER_
+!!$print*,'transfer(tsuper,ibh)',transfer(tsuper,ibh)
+!!$print*,'transfer(tsuper_,ibh)',transfer(tsuper_,ibh)
+!!$print*,'tsuper ',tsuper,'tsuper_ ',tsuper_,'TSUPER.EQV.TSUPER_',TSUPER.EQV.TSUPER_,'TSUPER.nEQV.TSUPER_',TSUPER.nEQV.TSUPER_
             IF((TSUPER.EQV.TSUPER_).AND.(TSUPER.NEQV.TSUPER_)) THEN
               CALL ERROR$MSG('COMPILER BUG! SHUTTING DOWN..')
               CALL ERROR$MSG('.EQV. OR .NEQ. DO NOT TEST ONLY THE RELEVANT BIT')
@@ -5141,7 +5144,7 @@ print*,'tsuper ',tsuper,'tsuper_ ',tsuper_,'TSUPER.EQV.TSUPER_',TSUPER.EQV.TSUPE
 
 !            IF(TSUPER.NEQV.TSUPER_) THEN
             IF(.not.((TSUPER.and.TSUPER_).or.(.not.tsuper.and..not.tsuper_))) THEN
-print*,'(TSUPER.and.TSUPER_)=',(TSUPER.and.TSUPER_),'  (.not.tsuper.and..not.tsuper_)=',(.not.tsuper.and..not.tsuper_)
+!!$print*,'(TSUPER.and.TSUPER_)=',(TSUPER.and.TSUPER_),'  (.not.tsuper.and..not.tsuper_)=',(.not.tsuper.and..not.tsuper_)
               CALL ERROR$MSG('TRANSFORMATION BETWEEN REGULAR ..')
               CALL ERROR$MSG('... AND SUPER WAVE FUNCTIONS NOT IMPLEMENTED')
               CALL ERROR$L4VAL('TSUPER_ ON FILE',TSUPER_)
