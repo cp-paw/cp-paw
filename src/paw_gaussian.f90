@@ -1940,7 +1940,7 @@ PRINT*,'H',H(IA,IB,0:IA+IB)
       REAL(8)              :: F1(N1),F2(N2),F3(N3)
       REAL(8)              :: X1(N1),X2(N2),X3(N3)
       INTEGER(4)           :: M1(N1),M2(N2),M3(N3)
-      REAL(8)              :: F
+      REAL(8)              :: F(0:100)
       REAL(8)              :: DEV
       REAL(8)   ,PARAMETER :: TOL=1.D-8
       INTEGER(4)           :: I
@@ -1969,9 +1969,9 @@ PRINT*,'H',H(IA,IB,0:IA+IB)
 !     ==========================================================================
       DO I=1,N1
         CALL GAUSSIAN_BOYS(M1(I),X1(I),F)
-        DEV=ABS((F-F1(I))/F1(I))
+        DEV=ABS((F(m1(i))-F1(I))/F1(I))
         WRITE(*,FMT='("N=",I4," X=",F10.3," F=",2E25.10," DEV= ",E10.1)') &
-     &        M1(I),X1(I),F,F1(I),DEV
+     &        M1(I),X1(I),F(m1(i)),F1(I),DEV
         IF(DEV.GT.TOL) THEN
           CALL ERROR$MSG('TEST OF GAUSSIAN_BOYS FAILED')
           CALL ERROR$STOP('GAUSSIAN_TEST_BOYS')
@@ -1981,9 +1981,9 @@ PRINT*,'H',H(IA,IB,0:IA+IB)
 !     ==========================================================================
       DO I=1,N2
         CALL GAUSSIAN_BOYS(M2(I),X2(I),F)
-        DEV=ABS((F-F2(I))/F2(I))
+        DEV=ABS((F(m2(i))-F2(I))/F2(I))
         WRITE(*,FMT='("N=",I4," X=",F10.3," F=",2E25.10," DEV= ",E10.1)') &
-     &        M2(I),X2(I),F,F2(I),DEV
+     &        M2(I),X2(I),F(m2(i)),F2(I),DEV
         IF(DEV.GT.TOL) THEN
           CALL ERROR$MSG('TEST OF GAUSSIAN_BOYS FAILED')
           CALL ERROR$STOP('GAUSSIAN_TEST_BOYS')
@@ -1993,9 +1993,9 @@ PRINT*,'H',H(IA,IB,0:IA+IB)
 !     ==========================================================================
       DO I=1,N3
         CALL GAUSSIAN_BOYS(M3(I),X3(I),F)
-        DEV=ABS((F-F3(I))/F3(I))
+        DEV=ABS((F(m3(i))-F3(I))/F3(I))
         WRITE(*,FMT='("N=",I4," X=",F10.3," F=",2E25.10," DEV= ",E10.1)') &
-     &        M3(I),X3(I),F,F3(I),DEV
+     &        M3(I),X3(I),F(m3(i)),F3(I),DEV
         IF(DEV.GT.TOL) THEN
           CALL ERROR$MSG('TEST OF GAUSSIAN_BOYS FAILED')
           CALL ERROR$STOP('GAUSSIAN_TEST_BOYS')

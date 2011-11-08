@@ -874,12 +874,12 @@ USE PERIODICTABLE_MODULE
             SOFI(IB)=0
             IF(TSO) THEN
               IF(L.NE.0) THEN
-                FOFI(IB)=REAL(2*L+2,KIND=8)
-                SOFI(IB)=1
-                IB=IB+1
-                LOFI(IB)=L
                 FOFI(IB)=REAL(2*L,KIND=8)
                 SOFI(IB)=-1
+                IB=IB+1
+                LOFI(IB)=L
+                FOFI(IB)=REAL(2*L+2,KIND=8)
+                SOFI(IB)=1
               ELSE 
                 SOFI(IB)=1
               END IF
@@ -898,12 +898,13 @@ USE PERIODICTABLE_MODULE
           SOFI(IB)=0
           IF(TSO) THEN
             IF(L.NE.0) THEN
-              FOFI(IB)=REAL(MIN(2*L+2,ISVAR1),KIND=8)
-              SOFI(IB)=1
-              IB=IB+1
-              LOFI(IB)=L
-              FOFI(IB)=REAL(MAX(0,MIN(2*L,ISVAR1-2*L-2)),KIND=8)
+              SVAR=FOFI(IB)/REAL(2*(2*L+1),KIND=8)
+              FOFI(IB)=SVAR*REAL(2*L,KIND=8)
+              FOFI(IB+1)=SVAR*REAL(2*L+2,KIND=8)
+              SOFI(IB+1)=1
               SOFI(IB)=-1
+              LOFI(IB+1)=L
+              IB=IB+1
             ELSE
               SOFI(IB)=1
             END IF

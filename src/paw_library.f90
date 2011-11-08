@@ -3276,19 +3276,25 @@ PRINT*,'NARGS ',NARGS,IARGC()
       COMPLEX(8),INTENT(IN) :: H(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
       COMPLEX(8),INTENT(OUT):: U(N,N)
-      COMPLEX(8)            :: CWORK(2*N)
-      REAL(8)               :: RWORK(3*N)
+      integer(4),parameter  :: lwmax=1000
+      COMPLEX(8)            :: CWORK(lwmax)
+      REAL(8)               :: RWORK(3*N-2)
       INTEGER(4)            :: I
-      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.false.
       COMPLEX(8),ALLOCATABLE:: RES(:,:)
+      INTEGER(4)            :: lwork
       INTEGER(4)            :: INFO
+      COMPLEX(8)            :: ch(n,n)
+      external zheev
 !     ******************************************************************
-
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-      U=0.5D0*(H+TRANSPOSE(CONJG(H)))
-      CALL ZHEEV('V','U',N,U,N,E,CWORK,2*N,RWORK,INFO) !LAPACK
+      u=0.5d0*(h+transpose(conjg(h)))
+      LWORK=-1
+      CALL ZHEEV('V','L',N,u,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
+      LWORK=MIN(LWMAX,INT(CWORK(1)))
+      CALL ZHEEV('V','L',N,u,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
 !
       IF(INFO.NE.0) THEN
         IF(INFO.LT.0) THEN

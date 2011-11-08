@@ -1305,24 +1305,24 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DYNOCCSETR8A(ID,LEN,VAL)
-!     **                                                              **
-!     **  SET A REAL(8) ARRAY TO DYNOCC. THIS ROUTINE IS AN         **
-!     **  INTERFACE BETWEEN WAVES OBJECT AND DYNOCC OBJECT.           **
-!     **  IT IS REQUIRED FOR THE K-POINT PARALLELIZATION, BECAUSE     **
-!     **  EACH NODE ONLY MAINTAINS A FRACTION OF ALL K-POINTS         **
-!     **  WHILE THE DYNOCC OBJECT WORKS ON ALL K-POINTS               **
-!     **                                                              **
-!     **  REMARKS:                                                    **
-!     **   ASSUMES THAT THE INPUT ARRAY IS IDENTICAL ON ALL           **
-!     **      TASKS OF THE LOCAL K-GROUP                              **
-!     **   KMAP(NKPT) POINTS TO THE FIRST TASK IN THE K-GROUP WHERE   **
-!     **     THE K-POINT RESIDES (THE TASK IS RELATIVE TO THE MONOMER **
-!     **     GROUP)                                                   **
-!     **                                                              **
-!     **                                                              **
-!     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
+!     **************************************************************************
+!     **  SET A REAL(8) ARRAY TO DYNOCC. THIS ROUTINE IS AN                   **
+!     **  INTERFACE BETWEEN WAVES OBJECT AND DYNOCC OBJECT.                   **
+!     **  IT IS REQUIRED FOR THE K-POINT PARALLELIZATION, BECAUSE             **
+!     **  EACH NODE ONLY MAINTAINS A FRACTION OF ALL K-POINTS                 **
+!     **  WHILE THE DYNOCC OBJECT WORKS ON ALL K-POINTS                       **
+!     **                                                                      **
+!     **  REMARKS:                                                            **
+!     **   ASSUMES THAT THE INPUT ARRAY IS IDENTICAL ON ALL                   **
+!     **      TASKS OF THE LOCAL K-GROUP                                      **
+!     **   KMAP(NKPT) POINTS TO THE FIRST TASK IN THE K-GROUP WHERE           **
+!     **     THE K-POINT RESIDES (THE TASK IS RELATIVE TO THE MONOMER         **
+!     **     GROUP)                                                           **
+!     **                                                                      **
+!     **                                                                      **
+!     *********************P.E. BLOECHL, TU-CLAUSTHAL (2005)********************
       USE MPE_MODULE
       USE WAVES_MODULE  ,ONLY : NKPT,NKPTL,KMAP
 !     -- KMAP(NKPT) POINTS TO THE FIRST TASK IN THE K-GROUP WHERE THE 
@@ -1337,7 +1337,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)              :: NSPIN,NBX
       INTEGER(4)              :: ISVAR1L,ISVAR2L,ISVAR1G,ISVAR2G
       INTEGER(4)              :: ISPIN
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'EIG'.OR.ID.EQ.'M<PSIDOT|PSIDOT>'.OR.ID.EQ.'EPSILON') THEN
         CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
         CALL DYNOCC$GETI4('NB',NBX)
@@ -1359,6 +1359,8 @@ END MODULE WAVES_MODULE
           END IF
         ENDDO
         CALL MPE$COMBINE('MONOMER','+',VALG)
+PRINT*,'WAVES_DYNOCCSETR8A ',TRIM(ID),NBX,NBX*NKPT*NSPIN,LEN
+PRINT*,'WAVES_DYNOCCSETR8A ',MINVAL(VAL),MAXVAL(VAL),MINVAL(VALG),MAXVAL(VALG)
         CALL DYNOCC$SETR8A(ID,NBX*NKPT*NSPIN,VALG)
         DEALLOCATE(VALG)
       ELSE

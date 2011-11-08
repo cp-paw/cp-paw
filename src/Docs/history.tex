@@ -485,6 +485,12 @@ Bugfix. The tetrahedron method did not work if the total spin was
 fixed. It was a problem with dimensions in paw\_occupations.f90 around
 line 1910.
 
+\subsection{November 8,  2011}
+
+The RESHAPE function used in paw\_occupations.f90 has been replaced by
+an explicit do loop. Using the gfortran compiler the reshape function
+produced unpredictable results in a random fashion. (not always)
+
 
 \newpage
 \bibliographystyle{unsrt}

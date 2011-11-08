@@ -324,7 +324,7 @@
     !CORE   POW=3. RC/RCOV=   0.704 !END
   !END
 
-  !SETUP  ID='KR_.75_6.0' EL='KR' ZV=  18.
+  !SETUP  ID='KR_.75_6.0' EL='KR' ZV=  8.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -453,7 +453,7 @@
     !CORE   POW=3. RC/RCOV=   0.714 !END
   !END
 
-  !SETUP  ID='IN_.75_6.0' EL='IN' ZV=  13.
+  !SETUP  ID='IN_.75_6.0' EL='IN' ZV=  3.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -462,7 +462,7 @@
     !CORE   POW=3. RC/RCOV=   0.713 !END
   !END
 
-  !SETUP  ID='SN_.75_6.0' EL='SN' ZV=  14.
+  !SETUP  ID='SN_.75_6.0' EL='SN' ZV=  4.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -471,7 +471,7 @@
     !CORE   POW=3. RC/RCOV=   0.712 !END
   !END
 
-  !SETUP  ID='SB_.75_6.0' EL='SB' ZV=  15.
+  !SETUP  ID='SB_.75_6.0' EL='SB' ZV=  5.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -480,7 +480,7 @@
     !CORE   POW=3. RC/RCOV=   0.712 !END
   !END
 
-  !SETUP  ID='TE_.75_6.0' EL='TE' ZV=  16.
+  !SETUP  ID='TE_.75_6.0' EL='TE' ZV=  6.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -489,7 +489,7 @@
     !CORE   POW=3. RC/RCOV=   0.711 !END
   !END
 
-  !SETUP  ID='I_.75_6.0' EL='I' ZV=  17.
+  !SETUP  ID='I_.75_6.0' EL='I' ZV=  7.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -498,7 +498,7 @@
     !CORE   POW=3. RC/RCOV=   0.710 !END
   !END
 
-  !SETUP  ID='XE_.75_6.0' EL='XE' ZV=  18.
+  !SETUP  ID='XE_.75_6.0' EL='XE' ZV=  8.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -660,7 +660,7 @@
     !CORE   POW=3. RC/RCOV=   0.716 !END
   !END
 
-  !SETUP  ID='HF_.75_6.0' EL='HF' ZV=  18.
+  !SETUP  ID='HF_.75_6.0' EL='HF' ZV=  4.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -669,7 +669,7 @@
     !CORE   POW=3. RC/RCOV=   0.713 !END
   !END
 
-  !SETUP  ID='TA_.75_6.0' EL='TA' ZV=  19.
+  !SETUP  ID='TA_.75_6.0' EL='TA' ZV=  5.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -678,7 +678,7 @@
     !CORE   POW=3. RC/RCOV=   0.711 !END
   !END
 
-  !SETUP  ID='W_.75_6.0' EL='W' ZV=  20.
+  !SETUP  ID='W_.75_6.0' EL='W' ZV=  6.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -687,7 +687,7 @@
     !CORE   POW=3. RC/RCOV=   0.709 !END
   !END
 
-  !SETUP  ID='RE_.75_6.0' EL='RE' ZV=  21.
+  !SETUP  ID='RE_.75_6.0' EL='RE' ZV=  7.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -696,7 +696,7 @@
     !CORE   POW=3. RC/RCOV=   0.709 !END
   !END
 
-  !SETUP  ID='OS_.75_6.0' EL='OS' ZV=  22.
+  !SETUP  ID='OS_.75_6.0' EL='OS' ZV=  8.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -705,7 +705,7 @@
     !CORE   POW=3. RC/RCOV=   0.708 !END
   !END
 
-  !SETUP  ID='IR_.75_6.0' EL='IR' ZV=  23.
+  !SETUP  ID='IR_.75_6.0' EL='IR' ZV=  9.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -714,7 +714,7 @@
     !CORE   POW=3. RC/RCOV=   0.708 !END
   !END
 
-  !SETUP  ID='PT_.75_6.0' EL='PT' ZV=  24.
+  !SETUP  ID='PT_.75_6.0' EL='PT' ZV=  10.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -723,7 +723,7 @@
     !CORE   POW=3. RC/RCOV=   0.709 !END
   !END
 
-  !SETUP  ID='AU_.75_6.0' EL='AU' ZV=  25.
+  !SETUP  ID='AU_.75_6.0' EL='AU' ZV=  11.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -732,7 +732,7 @@
     !CORE   POW=3. RC/RCOV=   0.711 !END
   !END
 
-  !SETUP  ID='HG_.75_6.0' EL='HG' ZV=  26.
+  !SETUP  ID='HG_.75_6.0' EL='HG' ZV=  12.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -741,7 +741,7 @@
     !CORE   POW=3. RC/RCOV=   0.714 !END
   !END
 
-  !SETUP  ID='TL_.75_6.0' EL='TL' ZV=  27.
+  !SETUP  ID='TL_.75_6.0' EL='TL' ZV=  3.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -750,7 +750,7 @@
     !CORE   POW=3. RC/RCOV=   0.714 !END
   !END
 
-  !SETUP  ID='PB_.75_6.0' EL='PB' ZV=  28.
+  !SETUP  ID='PB_.75_6.0' EL='PB' ZV=  4.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -759,7 +759,7 @@
     !CORE   POW=3. RC/RCOV=   0.714 !END
   !END
 
-  !SETUP  ID='BI_.75_6.0' EL='BI' ZV=  29.
+  !SETUP  ID='BI_.75_6.0' EL='BI' ZV=  5.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -768,7 +768,7 @@
     !CORE   POW=3. RC/RCOV=   0.714 !END
   !END
 
-  !SETUP  ID='PO_.75_6.0' EL='PO' ZV=  30.
+  !SETUP  ID='PO_.75_6.0' EL='PO' ZV=  6.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -777,7 +777,7 @@
     !CORE   POW=3. RC/RCOV=   0.714 !END
   !END
 
-  !SETUP  ID='AT_.75_6.0' EL='AT' ZV=  31.
+  !SETUP  ID='AT_.75_6.0' EL='AT' ZV=  7.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -786,7 +786,7 @@
     !CORE   POW=3. RC/RCOV=   0.714 !END
   !END
 
-  !SETUP  ID='RN_.75_6.0' EL='RN' ZV=  32.
+  !SETUP  ID='RN_.75_6.0' EL='RN' ZV=  8.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
@@ -965,7 +965,7 @@
     !POT  POW=3. RC/RCOV=   0.711 !END
     !CORE   POW=3. RC/RCOV=   0.711 !END
   !END
-
+  
 
  !SETUP  ID='E_' EL='0_' ZV= 0.
          TYPE='HBS' RBOX/RCOV=20.0 RCSM/RCOV=0.25
@@ -2290,7 +2290,7 @@
    !CORE POW=3.  RC/RCOV=0.5  !END
  !END
 
- !SETUP  ID='PT_HBS' EL='PT' ZV=10.
+ !SETUP  ID='PT_HBS_dowsnotwork' EL='PT' ZV=10.
          TYPE='HBS' RBOX/RCOV=1.2 RCSM/RCOV=0.25
          RCL/RCOV= 0.75 0.75 0.75 0.75
          LAMBDA= 6. 6. 6. 6.
