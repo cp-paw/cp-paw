@@ -2970,8 +2970,8 @@ print*,'a     ',(a(i,i),i=1,nb)
 !     ==================================================================
 !     == read wave functions and Lagrange parameters                  ==
 !     ==================================================================
-!      CALL WAVES_READPSI(NFIL)
-      CALL WAVES_READPSI_old(NFIL)
+      CALL WAVES_READPSI(NFIL)
+!      CALL WAVES_READPSI_old(NFIL)
 !
 !     ==================================================================
 !     == SET OCCUPATIONS FOR DYNOCC OBJECT                            ==
@@ -2997,13 +2997,15 @@ print*,'a     ',(a(i,i),i=1,nb)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_WRITEPSI(NFIL,NREC)
-!     ******************************************************************
-!     **                                                              **
-!     **  WRITE WAVE FUNCTIONS TO RESTART FILE                        **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  WRITE WAVE FUNCTIONS TO RESTART FILE                                **
+!     **                                                                      **
+!     **  call first with nrec=-1. On output nrec is the number of records.    **
+!     **  call with correct nrec to write                                     **
+!     **                                                                      **
+!     **************************************************************************
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -3028,7 +3030,7 @@ print*,'a     ',(a(i,i),i=1,nb)
       INTEGER(4)              :: NWAVE=2
       INTEGER(4)              :: ISUM
       LOGICAL(4)              :: TKGROUP
-!     ******************************************************************
+!     **************************************************************************
               CALL TRACE$PUSH('WAVES_WRITEPSI')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(RSTRTTYPE.EQ.'STATIC') THEN
@@ -3039,9 +3041,9 @@ print*,'a     ',(a(i,i),i=1,nb)
         CALL ERROR$STOP('WAVES_WRITEPSI')
       END IF
 !
-!     ==================================================================
-!     ==  COUNT #(RECORDS)                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  COUNT #(RECORDS)                                                    ==
+!     ==========================================================================
       IF(NREC.EQ.-1) THEN
         NREC=1
         ISUM=0
@@ -3065,18 +3067,18 @@ print*,'a     ',(a(i,i),i=1,nb)
       END IF
       NREC1=0
 !
-!     ==================================================================
-!     ==  WRITE SIZES                                                 ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  WRITE SIZES                                                         ==
+!     ==========================================================================
       IF(THISTASK.EQ.1) THEN
         CALL CELL$GETR8A('T(0)',9,RBAS)
-        WRITE(NFIL)NKPT,NSPIN,RBAS,NWAVE !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        WRITE(NFIL)NKPT,NSPIN,RBAS,NWAVE !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         NREC1=NREC1+1
       END IF
 !
-!     ==================================================================
-!     ==  LOOP OVER K-POINTS AND SPINS                                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  LOOP OVER K-POINTS AND SPINS                                        ==
+!     ==========================================================================
       IKPT=0
       DO IKPTG=1,NKPT
         TKGROUP=(THISTASK.EQ.KMAP(IKPTG))
@@ -3093,22 +3095,22 @@ print*,'a     ',(a(i,i),i=1,nb)
           CALL PLANEWAVE$GETL4('TINV',TSUPER)
         END IF
 !       
-!       ================================================================
-!       == WRITE SIZE AND TYPE OF WAVE FUNCTION                       ==
-!       ================================================================
+!       ========================================================================
+!       == WRITE SIZE AND TYPE OF WAVE FUNCTION                               ==
+!       ========================================================================
         CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NGG)
         CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NB)
         CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NBH)
         CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,TSUPER)
         IF(THISTASK.EQ.1) THEN
           KEY='PSI'
-          WRITE(NFIL)KEY,NGG,NDIM,NB,TSUPER  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          WRITE(NFIL)KEY,NGG,NDIM,NB,TSUPER  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           NREC1=NREC1+1
         END IF
 !       
-!       ================================================================
-!       == WRITE K-POINTS AND G-VECTORS                               ==
-!       ================================================================
+!       ========================================================================
+!       == WRITE K-POINTS AND G-VECTORS                                       ==
+!       ========================================================================
         ALLOCATE(IGVECG(3,NGG))
         IF(TKGROUP) THEN
           CALL PLANEWAVE$GETR8A('GBAS',9,GBAS)
@@ -3121,7 +3123,7 @@ print*,'a     ',(a(i,i),i=1,nb)
         CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,XK)
         CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,IGVECG)
         IF(THISTASK.EQ.1) THEN
-          WRITE(NFIL)XK,IGVECG !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          WRITE(NFIL)XK,IGVECG !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           NREC1=NREC1+1
         END IF
         DEALLOCATE(IGVECG)
@@ -3147,7 +3149,7 @@ print*,'a     ',(a(i,i),i=1,nb)
               END IF
               CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,PSIG)
               IF(THISTASK.EQ.1) THEN
-                WRITE(NFIL,ERR=9999,IOSTAT=IOS)PSIG !<<<<<<<<<<<<<<<<<<<
+                WRITE(NFIL,ERR=9999,IOSTAT=IOS)PSIG !<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 NREC1=NREC1+1
               END IF
             ENDDO
@@ -3160,9 +3162,9 @@ print*,'a     ',(a(i,i),i=1,nb)
         NREC1=NREC1+ISVAR
       ENDDO 
 !
-!     ==================================================================
-!     ==  DEALLOCATE                                                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DEALLOCATE                                                          ==
+!     ==========================================================================
       IF(THISTASK.EQ.1.AND.NREC1.NE.NREC) THEN
         CALL ERROR$MSG('#(RECORDS WRITTEN DIFFERENT FROM TARGET')
         CALL ERROR$I4VAL('TARGET',NREC)
@@ -3734,13 +3736,12 @@ END IF
       CALL ERROR$STOP('WAVES_READPSI')
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_WRITELAMBDA(NFIL,IKPTG,NREC)
-!     ******************************************************************
-!     **                                                              **
-!     **  WRITE LAGRANGE MULTIPLIERS  TO RESTART FILE                 **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  WRITE LAGRANGE MULTIPLIERS  TO RESTART FILE                         **
+!     **                                                                      **
+!     **************************************************************************
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -3753,7 +3754,7 @@ END IF
       CHARACTER(8)              :: KEY
       COMPLEX(8)  ,ALLOCATABLE  :: LAMBDA(:,:)
       INTEGER(4)                :: NLAMBDA
-!     ******************************************************************
+!     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !     == ONLY THE FORST TASK OF THE K-GROUP AND THE WRITING TASK IS INVOLVED
       IF(.NOT.(THISTASK.EQ.1.OR.THISTASK.EQ.KMAP(IKPTG))) RETURN
@@ -3762,9 +3763,9 @@ END IF
         IF(KMAP(IKPT).EQ.KMAP(IKPTG))IKPTL=IKPTL+1
       ENDDO
 !
-!     ==================================================================
-!     == COUNT DEPTH OF HISTORY FOR LAGRANGE PARAMETERS               ==
-!     ==================================================================
+!     ==========================================================================
+!     == COUNT DEPTH OF HISTORY FOR LAGRANGE PARAMETERS                       ==
+!     ==========================================================================
       IF(THISTASK.EQ.KMAP(IKPTG)) THEN      
         CALL WAVES_SELECTWV(IKPTL,1)
         NLAMBDA=4
@@ -3775,9 +3776,9 @@ END IF
         IF(RSTRTTYPE.EQ.'STATIC') NLAMBDA=1
       END IF
 !
-!     ==================================================================
-!     == RETURN #(RECORDS) OR IF ON TASK OTHER THAN THE FIRST         ==
-!     ==================================================================
+!     ==========================================================================
+!     == RETURN #(RECORDS) OR IF ON TASK OTHER THAN THE FIRST                 ==
+!     ==========================================================================
       IF(NREC.EQ.-1) THEN
 !       == THE RESULT IS COMMUNICATED IN WAVES_WRITEPSI
         NREC=0
@@ -3786,9 +3787,9 @@ END IF
       END IF
       CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NLAMBDA)
 !
-!     ==================================================================
-!     == NOW WRITE TO FILE                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     == NOW WRITE TO FILE                                                    ==
+!     ==========================================================================
       NREC=0
       KEY='LAMBDA'
       IF(THISTASK.EQ.KMAP(IKPTG)) THEN      
@@ -3796,7 +3797,7 @@ END IF
       END IF
       CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,NB)
       IF(THISTASK.EQ.1) THEN
-        WRITE(NFIL)KEY,NB,NDIM,NSPIN,NLAMBDA  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        WRITE(NFIL)KEY,NB,NDIM,NSPIN,NLAMBDA  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         NREC=NREC+1
       END IF
       ALLOCATE(LAMBDA(NB,NB))
@@ -3809,7 +3810,7 @@ END IF
           END IF
           CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,LAMBDA)
           IF(THISTASK.EQ.1) THEN
-            WRITE(NFIL)lambda !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            WRITE(NFIL)lambda !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             NREC=NREC+1
           END IF
         ENDDO
@@ -3822,7 +3823,7 @@ END IF
           END IF
           CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,LAMBDA)
           IF(THISTASK.EQ.1) THEN
-            WRITE(NFIL)LAMBDA  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            WRITE(NFIL)LAMBDA  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             NREC=NREC+1
           END IF
         ENDDO
@@ -3835,7 +3836,7 @@ END IF
           END IF
           CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,LAMBDA)
           IF(THISTASK.EQ.1) THEN
-            WRITE(NFIL)LAMBDA !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            WRITE(NFIL)LAMBDA !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             NREC=NREC+1
           END IF
         ENDDO
@@ -3848,7 +3849,7 @@ END IF
           LAMBDA(:,:)=THIS%RLAM3M(:,:)
           CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,LAMBDA)
           IF(THISTASK.EQ.1) THEN
-            WRITE(NFIL)LAMBDA !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            WRITE(NFIL)LAMBDA !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             NREC=NREC+1
           END IF
         ENDDO
@@ -3859,7 +3860,6 @@ END IF
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_READLAMBDA(NFIL,IKPTG,TSKIP)
 !     **************************************************************************
-!     **                                                                      **
 !     **  WRITE WAVE FUNCTIONS TO RESTART FILE                                **
 !     **                                                                      **
 !     **************************************************************************

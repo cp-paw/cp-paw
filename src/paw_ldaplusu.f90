@@ -626,10 +626,10 @@ INTEGER(4)             :: LN1,LN2,LN3,LN4
       LOGICAL(4)             :: TCHK
 CHARACTER(1) :: SWITCH
 !     **************************************************************************
-print*,'==== entering ldaplusu$etot ',iat,ton
       ETOT=0.D0
       DATH_=0.D0
       IF(.NOT.TON) RETURN
+print*,'==== entering ldaplusu$etot ',iat,ton
       CALL LDAPLUSU$SELECT(IAT)
       TCHK=THIS%SP%TON
 print*,'==== checking if atom ',iat,' is active ',tchk

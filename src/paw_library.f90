@@ -3276,7 +3276,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       COMPLEX(8),INTENT(IN) :: H(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
       COMPLEX(8),INTENT(OUT):: U(N,N)
-      integer(4),parameter  :: lwmax=1000
+      integer(4),parameter  :: lwmax=2000
       COMPLEX(8)            :: CWORK(lwmax)
       REAL(8)               :: RWORK(3*N-2)
       INTEGER(4)            :: I
@@ -3290,6 +3290,12 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
+      IF(LWMAX.LT.2*N) THEN
+        CALL ERROR$MSG('HARDWIRED LIMIT LWMAX SMALLER THAN 2*N')
+        CALL ERROR$I4VAL('LWMAX',LWMAX)
+        CALL ERROR$I4VAL('2*N',2*N)
+        CALL ERROR$STOP('LIB_LAPACK_ZHEEV')
+      END IF
       u=0.5d0*(h+transpose(conjg(h)))
       LWORK=-1
       CALL ZHEEV('V','L',N,u,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK

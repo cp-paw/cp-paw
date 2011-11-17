@@ -1625,9 +1625,9 @@ CALL ERROR$STOP('WAVES$ETOT')
 !      DEALLOCATE(FORCET)
 !
 !     ==================================================================
-!     == work with NTBO Basis                                         ==
+!     == WORK WITH NTBO BASIS                                         ==
 !     ================================================================== 
-      CALL LMTO$etot(lmnxx,ndimd,nat,denmat)
+      CALL LMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT)
 !
 !     ==================================================================
 !     == AUGMENTATION                                                 ==
@@ -2586,9 +2586,10 @@ END IF
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       COMPLEX(8)             :: CSVAR1,CSVAR2
       INTEGER(4)             :: NTASKS,THISTASK
-      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
+      LOGICAL(4),PARAMETER   :: TPRINT=.false.
       real(8)   ,allocatable :: xk(:,:)
       logical(4)             :: tinv
+      INTEGER(4)             :: ib
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$DENMAT')
                               CALL TIMING$CLOCKON('W:DENMAT')
@@ -2630,6 +2631,11 @@ END IF
             PROJ(:,:,:)=THIS%PROJ(:,:,IPRO:IPRO-1+LMNX)
             ALLOCATE(DENMAT1(LMNX,LMNX,NDIMD))
             ALLOCATE(EDENMAT1(LMNX,LMNX,NDIMD))
+!!$PRINT*,"========  waves$denmat  ======IKPT=",IKPT,' iat=',iat,' ipro=',ipro
+!!$DO IB=1,NB
+!!$  if(OCC(IB,IKPT,ISPIN).lt.1.d-5) cycle
+!!$  WRITE(*,FMT='(I3,40("(",2F10.5,")"))')IB,THIS%proj(:,IB,Ipro:Ipro-1+lmnx)
+!!$ENDDO
             CALL WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC(1,IKPT,ISPIN),THIS%RLAM0 &
      &                       ,PROJ,DENMAT1,EDENMAT1)
             IF(NDIM.EQ.1) THEN

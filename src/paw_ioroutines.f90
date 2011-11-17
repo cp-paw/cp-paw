@@ -1009,7 +1009,7 @@ CALL TRACE$PASS('DONE')
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
       INTEGER(4)               :: ILDA
-      LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: TCHK,tchk1,tchk2
 !     ******************************************************************
                           CALL TRACE$PUSH('READIN_DFT')
       LL_CNTL=LL_CNTL_
@@ -1031,6 +1031,27 @@ CALL TRACE$PASS('DONE')
       IF(ILDA.EQ.10) THEN
         CALL VDW$SETCH('FUNCTIONAL','PBE')
       END IF
+!
+      CALL LINKEDLIST$EXISTL(LL_CNTL,'NTBO',1,TCHK)
+      IF(TCHK) THEN
+        CALL LMTO$SETL4('ON',.TRUE.)
+        CALL LINKEDLIST$SELECT(LL_CNTL,'NTBO')
+!
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'OFFSITE',1,TCHK1)
+        IF(TCHK1) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'OFFSITE',1,TCHK2)
+          CALL LMTO$SETL4('OFFSITE',TCHK2)
+        END IF
+!
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'DROP',1,TCHK1)
+        IF(TCHK1) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'DROP',1,TCHK2)
+          CALL LMTO$SETL4('DROP',TCHK2)
+        END IF
+
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+      end if
+
                           CALL TRACE$POP
       RETURN
       END
@@ -3637,6 +3658,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==========================================================================
 !     == DETERMINE K-POINTS AND INTEGRATION WEIGHTS                           ==
 !     ==========================================================================
+!!$print*,'fudge warning! kpoint selection disregards inversion symmetry!'
+!!$print*,'in strcin_kpoints'
+!!$tinv=.false.
       CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
       ALLOCATE(XK(3,NKPT))
       ALLOCATE(WGHT(NKPT))
@@ -3682,6 +3706,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)               :: MAINLN(2)
       LOGICAL(4)               :: TLDAPLUSU
       LOGICAL(4)               :: THYBRID
+      LOGICAL(4)               :: Tntbo
       LOGICAL(4)               :: TINTERNALSETUP
       LOGICAL(4),ALLOCATABLE   :: TORB(:)
       REAL(8)                  :: EV
@@ -4011,7 +4036,19 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL LDAPLUSU$SELECTTYPE(0)
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
         END IF
-
+!
+!       ========================================================================
+!       ========================================================================
+!       ==  INTERFACE FOR NATURAL TIGHT-BINDING ORBITALS (LMTO AND SUCH)      ==
+!       ========================================================================
+!       ========================================================================
+        CALL LMTO$GETL4('ON',TNTBO)
+        IF(TNTBO) THEN
+          IF(THYBRID.OR.TLDAPLUSU) THEN
+            CALL ERROR$MSG('NTBO IS NOT COMPATIBLE WITH HYBRID OR LDAPLUSU')
+            CALL ERROR$MSG('STRCIN_SPECIES')
+          END IF
+        END IF
 !
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO

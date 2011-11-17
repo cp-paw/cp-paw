@@ -1,8 +1,9 @@
 MODULE LMTO_MODULE
 LOGICAL(4)            :: TON=.false.
+LOGICAL(4)            :: TOFFSITE=.TRUE.
 REAL(8)   ,PARAMETER  :: K2=-0.25D0    ! 0.5*K2 IS THE KINETIC ENERGY
-!REAL(8)   ,PARAMETER  :: K2=-0.01D0    ! 0.5*K2 IS THE KINETIC ENERGY
-!REAL(8)   ,PARAMETER  :: RCSCALE=2.D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
+!REAL(8)   ,PARAMETER :: K2=-0.01D0    ! 0.5*K2 IS THE KINETIC ENERGY
+!REAL(8)   ,PARAMETER :: RCSCALE=2.D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
 REAL(8)   ,PARAMETER  :: RCSCALE=1.2D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
 !         RCSCALE TIMES THE SUM OF COVALENT RADII DEFINES CUTOFF FOR NEIGBORLIST
 !== PARAMETER SET TO DEFINE THE GAUSSIANS FOR THE UNSCREENED HANKEL FUNCTIONS ==
@@ -21,6 +22,9 @@ INTEGER(4),PARAMETER  :: GAUSSFITKAUGMENT_NPOW=4
 INTEGER(4),PARAMETER  :: GAUSSFITKAUGMENT_NE=6
 REAL(8)   ,PARAMETER  :: GAUSSFITKAUGMENT_R1=3.D-2
 REAL(8)   ,PARAMETER  :: GAUSSFITKAUGMENT_SCALER=2.D0
+!
+! flag to write the wave functions to file
+LOGICAL(4)            :: Tdrop=.false.
 !
 TYPE ORBITALGAUSSCOEFF_TYPE
   INTEGER(4)         :: NIJK     
@@ -177,6 +181,10 @@ END MODULE LMTO_MODULE
 !     **************************************************************************
       IF(ID.EQ.'ON') THEN
         TON=VAL
+      ELSE IF(ID.EQ.'OFFSITE') THEN
+        TOFFSITE=VAL
+      ELSE IF(ID.EQ.'DROP') THEN
+        TDROP=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -2121,6 +2129,8 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
                                CALL TRACE$PUSH('LMTO$PROJTONTBO')
       CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
       CALL LMTO_PREPARE2(XK,NRL,C,E,F,G,H)
+      g=conjg(g)
+      h=conjg(h)
 !
 !     ==========================================================================
 !     == D * DE/DQ
@@ -2310,7 +2320,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       DO NN=1,NNS 
         IAT1=SBAR(NN)%IAT1
         IAT2=SBAR(NN)%IAT2
-        KR=2.D0*PI*SUM(REAL(SBAR(NN)%IT(:))*XK(:))
+        KR=-2.D0*PI*SUM(REAL(SBAR(NN)%IT(:))*XK(:))
         I1OFAT1=SBARATOMI1(IAT1)
         I2OFAT1=SBARATOMI2(IAT1)
         I1OFAT2=SBARATOMI1(IAT2)
@@ -2421,6 +2431,45 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_prproj(id)
+!     **************************************************************************
+      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,THIS,WAVES_SELECTWV
+      USE LMTO_MODULE, ONLY : LOX,LNX,ISPECIES
+      implicit none
+      character(*),intent(in) :: id
+      integer(4)             :: nat
+      integer(4),allocatable :: ipro1(:)
+      integer(4),allocatable :: nproat(:)
+      integer(4)             :: iat,isp,ikpt,ispin,ib,ipro,nb,nbh,i0
+!     **************************************************************************
+      NAT=SIZE(ISPECIES)
+      ALLOCATE(IPRO1(NAT))
+      ALLOCATE(NPROAT(NAT))
+      IPRO=1
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        IPRO1(IAT)=IPRO
+        NPROAT(IAT)=SUM(2*LOX(:LNX(ISP),ISP)+1)
+        IPRO=IPRO+NPROAT(IAT)
+      ENDDO
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          NBH=THIS%NBH
+          NB=THIS%NB
+          PRINT*,"==============IKPT=",IKPT,' iat=',iat,' id=',id
+          do iat=1,nat
+            I0=IPRO1(IAT)-1
+            DO IB=1,NBH
+              WRITE(*,FMT='(I3,40("(",2F10.5,")"))')IB,THIS%proj(:,IB,I0+1:I0+NPROAT(IAT))
+            ENDDO
+          enddo
+        enddo
+      enddo
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_NTBODENMAT()
 !     **************************************************************************
 !     **  CONSTRUCT DENSITY MATRIX IN A NTBO BASIS                            **
@@ -2448,7 +2497,8 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
       REAL(8)                :: PI
-      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER   :: TPR=.false.
+complex(8)  :: phase
 !     **************************************************************************
                                            CALL TRACE$PUSH('LMTO_NTBODENMAT')
       PI=4.D0*ATAN(1.D0)
@@ -2493,10 +2543,10 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
-          NBH=THIS%NBH
-          NB=THIS%NB
           CALL PLANEWAVE$SELECT(GSET%ID)
           CALL PLANEWAVE$GETL4('TINV',TINV)
+          NBH=THIS%NBH
+          NB=THIS%NB
           DO NN=1,NND
             IAT1=DENMAT(NN)%IAT1
             IAT2=DENMAT(NN)%IAT2
@@ -2505,6 +2555,17 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
             EIKR=EXP(CI*SVAR)  !<P_{R+T}|PSI>=<P_R|PSI>*EIKR
             I0=IPRO1(IAT1)-1
             J0=IPRO1(IAT2)-1
+
+!IF(IKPT.NE.2.AND.IKPT.NE.3.AND.IKPT.NE.4.AND.IKPT.NE.7.AND.IKPT.NE.10.AND.IKPT.NE.19) CYCLE
+!!$IF(IAT1.EQ.1.AND.IAT2.EQ.1.AND.SUM(IT**2).EQ.0) THEN
+!!$  PRINT*,"==============IKPT=",IKPT," XK=",XK(:,IKPT),I0,J0
+!!$  DO IB=1,NB
+!!$    IF(OCC(IB,IKPT,ISPIN).LT.1.D-5) CYCLE
+!!$    PHASE=THIS%TBC(1,IB,I0+1)
+!!$    PHASE=CONJG(PHASE)/SQRT((PHASE*CONJG(PHASE)))
+!!$    WRITE(*,FMT='(I3,40("(",2F10.5,")"))')IB,THIS%tbc(:,IB,I0+1:I0+NPROAT(IAT1))
+!!$  ENDDO
+!!$END IF
             DO I=1,NPROAT(IAT1)
               DO J=1,NPROAT(IAT2)
                 IF(TINV) THEN
@@ -2696,6 +2757,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
                   END IF
                 END IF
                 CSVAR22(:,:)=CSVAR22(:,:)*CONJG(EIKR)
+!                CSVAR22(:,:)=CSVAR22(:,:)*EIKR
 !
                 DO IB=1,NBH
                   DO IDIM=1,NDIM
@@ -2813,7 +2875,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : DENMAT,HAMIL
       IMPLICIT NONE
-      INTEGER(4) :: NND,NN
+      integer(4)  ::nn,nnd
 !     **************************************************************************
       NND=SIZE(DENMAT)
       DO NN=1,NND
@@ -2822,6 +2884,385 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       ENDDO
       DEALLOCATE(DENMAT)
       DEALLOCATE(HAMIL)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_onsortho(iat,lmnx,t,unt)
+!     **************************************************************************
+!     **  CONSTRUCT transformation onto onsite orthonormal orbitals           **
+!     **                                                                      **
+!     **   |chi'_i>=sum_j |chi_j>T_ji;  <chi'_i|chi'_j>=delta_ij              **
+!     **   t*unt=1                                                            **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE LMTO_MODULE, ONLY : ISPECIES,potpar
+      IMPLICIT NONE
+      INTEGER(4),intent(in) :: iat
+      INTEGER(4),intent(in) :: lmnx
+      real(8)   ,intent(out):: t(lmnx,lmnx)
+      real(8)   ,intent(out):: unt(lmnx,lmnx)
+      integer(4)            :: isp
+      integer(4)            :: lmnxt
+      real(8)               :: overlap(lmnx,lmnx)
+      real(8)               :: overlap1(lmnx,lmnx)
+      real(8)               :: svar
+      integer(4)            :: i,j
+!     **************************************************************************
+      isp=ispecies(iat)
+!
+!     ==========================================================================
+!     == construct overlap matrix                                             ==
+!     ==========================================================================
+      LMNXT=POTPAR(ISP)%TAILED%LMNX
+      call LMTO_SHRINKDOWNHTNL(IAT,IAT,1 &
+   &               ,LMNXT,LMNXT,POTPAR(ISP)%TAILED%OVERLAP,LMNX,LMNX,overlap)
+      DO I=1,lmnx
+        WRITE(*,FMT='(I3," O=",100("(",2F8.4,")"))')I,overlap(i,:)
+      ENDDO
+!
+!     ==========================================================================
+!     == orthonormalize                                                       ==
+!     ==========================================================================
+      T(:,:)=0.D0
+      DO I=1,LMNX
+        T(I,I)=1.D0
+      ENDDO
+      DO I=1,LMNX
+!       == ORTHOGONALIZE
+        DO J=1,I-1
+          SVAR=OVERLAP(J,I)
+          T(:,I)=T(:,I)-T(:,J)*SVAR
+          OVERLAP1=OVERLAP
+          OVERLAP1(:,I)=OVERLAP1(:,I)-OVERLAP(:,J)*SVAR
+          OVERLAP1(I,:)=OVERLAP1(I,:)-OVERLAP(J,:)*SVAR
+          OVERLAP(:,:)=OVERLAP1(:,:)
+        ENDDO
+!       == NORMALIZE
+        SVAR=1.D0/SQRT(OVERLAP(I,I))
+        T(:,I)=T(:,I)*SVAR
+        OVERLAP(:,I)=OVERLAP(:,I)*SVAR
+        OVERLAP(I,:)=OVERLAP(I,:)*SVAR
+      ENDDO
+!
+!     ==========================================================================
+!     == invert                                                               ==
+!     ==========================================================================
+      call lib$invertr8(lmnx,t,unt)
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_drop()
+!     **************************************************************************
+!     **  CONSTRUCT DENSITY MATRIX IN A NTBO BASIS                            **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
+      USE LMTO_MODULE, ONLY : tdrop,SBAR,DENMAT,LOX,LNX,ISPECIES,potpar
+      IMPLICIT NONE
+      type T_type
+        real(8),pointer :: mat(:,:)
+        real(8),pointer :: inv(:,:)
+      end type T_type
+      INTEGER(4)             :: NPRO
+      LOGICAL(4)             :: TINV
+      integer(4)             :: nfil
+      INTEGER(4)             :: NB,NBH
+      REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      INTEGER(4),ALLOCATABLE :: IPRO1(:)
+      INTEGER(4),ALLOCATABLE :: NPROAT(:)
+      complex(8),allocatable :: psi(:,:,:)
+      complex(8),allocatable :: psi1(:,:,:)
+      real(8)   ,allocatable :: eigval(:)
+      real(8)   ,allocatable :: overlap(:,:)
+      real(8)   ,allocatable :: overlap1(:,:)
+      real(8)   ,allocatable :: trans(:,:)
+      real(8)   ,allocatable :: wkpt(:)
+      type(t_type),allocatable :: t(:)
+      complex(8),allocatable :: eigvec(:,:)
+      character(16)          :: id
+      INTEGER(4)             :: NAT
+      INTEGER(4)             :: nkpt
+      INTEGER(4)             :: lmnxt,lmnx
+      INTEGER(4)             :: i,j,i1,i2,idim,ipro,iat,isp,ikpt,ispin,ib,ib1,ibh
+      integer(4)             :: iwork16(16)
+      real(8)                :: ev
+      real(8)                :: svar
+!     **************************************************************************
+                                           CALL TRACE$PUSH('LMTO_NTBODENMAT')
+      IF(.NOT.TDROP) RETURN
+      CALL CONSTANTS('EV',EV)
+!
+!     ==========================================================================
+!     ==  ATTACH FILE                                                         ==
+!     ==========================================================================
+      NFIL=12
+      OPEN(NFIL,FILE='NTBOWV.DATA')
+!
+!     ==========================================================================
+!     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
+!     ==========================================================================
+      ALLOCATE(XK(3,NKPTL))
+      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
+      nkpt=nkptl
+      IF(NKPT.NE.NKPTL) THEN
+        CALL ERROR$MSG('ROUTINE NOT SUITED FOR PARALLEL CALCULATIONS')
+        CALL ERROR$STOP('LMTO_DROP')
+      end if
+      allocate(wkpt(nkpt))
+      CALL DYNOCC$GETR8A('WKPT',NKPT,WKPT)
+!     == multiply with spin multiplicity =======================================      
+      if(nspin.eq.2) wkpt=2.d0*wkpt
+!
+!     ==========================================================================
+!     ==  CONSTRUCT INDEX ARRAYS                                              ==
+!     ==========================================================================
+      NAT=SIZE(ISPECIES)
+      ALLOCATE(IPRO1(NAT))
+      ALLOCATE(NPROAT(NAT))
+      ID='INFO'
+      WRITE(NFIL,*)ID,NAT,NDIM,NSPIN,NKPT
+      IPRO=1
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        IPRO1(IAT)=IPRO
+        NPROAT(IAT)=SUM(2*LOX(:LNX(ISP),ISP)+1)
+!
+        IWORK16(:)=-1
+        if(lnx(isp).gt.16) then
+          CALL ERROR$MSG('INTERNAL LIMIT FOR VARIABLE LNX EXCEEDED')
+          CALL ERROR$STOP('LMTO_DROP')
+        end if
+        IWORK16(:LNX(ISP))=LOX(:LNX(ISP),ISP)
+        ID='PSIINFO'
+        WRITE(NFIL,*)ID,IAT,IPRO1(IAT),NPROAT(IAT),LNX(ISP),IWORK16
+!
+        IPRO=IPRO+NPROAT(IAT)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  overlap matrix                                                      ==
+!     ==========================================================================
+      allocate(t(nat))
+      do iat=1,nat
+        isp=ispecies(iat)
+        lmnx=nproat(iat)
+        LMNXT=POTPAR(ISP)%TAILED%LMNX
+        ALLOCATE(overlap(LMNX,LMNX))
+        call LMTO_SHRINKDOWNHTNL(IAT,IAT,1 &
+     &               ,LMNXT,LMNXT,POTPAR(ISP)%TAILED%OVERLAP,LMNX,LMNX,overlap)
+!!$        DO IB=1,lmnx
+!!$          WRITE(*,FMT='(I3," O=",100("(",2F8.4,")"))')IB,overlap(ib,:)
+!!$        ENDDO
+!       ========================================================================
+        ALLOCATE(OVERLAP1(LMNX,LMNX))
+        ALLOCATE(trans(LMNX,LMNX))
+        TRANS(:,:)=0.D0
+        DO I=1,LMNX
+          TRANS(I,I)=1.D0
+        ENDDO
+        DO I=1,LMNX
+!         == ORTHOGONALIZE
+          DO J=1,I-1
+            SVAR=OVERLAP(J,I)
+            TRANS(:,I)=TRANS(:,I)-TRANS(:,J)*SVAR
+            OVERLAP1=OVERLAP
+            OVERLAP1(:,I)=OVERLAP1(:,I)-OVERLAP(:,J)*SVAR
+            OVERLAP1(I,:)=OVERLAP1(I,:)-OVERLAP(J,:)*SVAR
+            OVERLAP(:,:)=OVERLAP1(:,:)
+          ENDDO
+!         == NORMALIZE
+          SVAR=1.D0/SQRT(OVERLAP(I,I))
+          TRANS(:,I)=TRANS(:,I)*SVAR
+          OVERLAP(:,I)=OVERLAP(:,I)*SVAR
+          OVERLAP(I,:)=OVERLAP(I,:)*SVAR
+        ENDDO
+        ALLOCATE(t(iat)%mat(LMNX,LMNX))
+        ALLOCATE(t(iat)%inv(LMNX,LMNX))
+        t(iat)%mat(:,:)=trans(:,:)
+        call lib$invertr8(lmnx,t(iat)%mat,t(iat)%inv)
+!
+!!$        DO I=1,lmnx
+!!$          WRITE(*,FMT='(I3," T=",100("(",2F8.4,")"))')I,trans(:,i)
+!!$        ENDDO
+!!$        DO IB=1,lmnx
+!!$          WRITE(*,FMT='(I3," O=",100("(",2F12.4,")"))')IB,overlap(ib,:)
+!!$        ENDDO
+        deallocate(overlap)
+        deallocate(overlap1)
+        deallocate(trans)
+      enddo
+!
+!     ==========================================================================
+!     ==  WRITE WAVE FUNCTIONS                                                ==
+!     ==========================================================================
+      NPRO=MAP%NPRO
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          NBH=THIS%NBH
+          NB=THIS%NB
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          CALL PLANEWAVE$GETL4('TINV',TINV)
+!
+!         ==checks =============================================================
+          IF(.NOT.ASSOCIATED(THIS%TBC)) THEN
+            CALL ERROR$MSG('THIS%TBC NOT ASSOCIATED')
+            CALL ERROR$STOP('LMTO_DROP')
+          END IF
+          IF(.NOT.ASSOCIATED(THIS%rlam0)) THEN
+            CALL ERROR$MSG('THIS%RLAM0 NOT ASSOCIATED')
+            CALL ERROR$STOP('LMTO_DROP')
+          END IF
+!
+!         ==  WRITE WAVE FUNCTIONS =============================================
+          ALLOCATE(PSI(NDIM,NPRO,NB))
+          ALLOCATE(PSI1(NDIM,NPRO,NB))
+          ALLOCATE(eigval(NB))
+          ALLOCATE(eigvec(nb,NB))
+          IF(TINV) THEN
+            DO IBH=1,NBH
+              PSI(:,:,2*IBH-1)=REAL(THIS%TBC(:,IBH,:))
+              PSI(:,:,2*IBH)=AIMAG(THIS%TBC(:,IBH,:))
+            ENDDO
+          ELSE
+            DO IB=1,NB
+              PSI(:,:,IB)=THIS%TBC(:,IB,:)
+            ENDDO
+          END IF
+!
+!         =====================================================================
+!!$          DO IB=1,NB
+!!$            WRITE(*,FMT='(I3," H=",100("(",2F8.4,")"))')IB,THIS%RLAM0(IB,:)/EV
+!!$          ENDDO
+          CALL LIB$DIAGC8(NB,THIS%RLAM0,EIGVAL,EIGVEC)
+!!$          DO IB=1,NB
+!!$            WRITE(*,FMT='(I3,"E=",F6.3," U=",100("(",2F8.4,")"))')IB,EIGVAL(IB)/EV,EIGVEC(:,IB)
+!!$          ENDDO
+!
+!         == transform wave function to eigenstates ===========================
+          psi1=psi
+          psi=(0.d0,0.d0)
+          do ib=1,nb
+            do ib1=1,nb
+              psi(:,:,ib)=psi(:,:,ib)+psi1(:,:,ib1)*eigvec(ib1,ib)
+            enddo
+          enddo
+!
+!         == transform to onsite-orthogonal orbitals ==========================
+          psi1=psi
+          do iat=1,nat
+            i1=ipro1(iat)
+            i2=i1-1+nproat(iat)
+            do ib=1,nb
+              do idim=1,ndim
+                psi(idim,i1:i2,ib)=matmul(t(iat)%inv,psi1(idim,i1:i2,ib))
+              enddo
+            enddo
+          enddo
+!
+!         == write wave functions to file =====================================
+          ID='KINFO'
+          WRITE(NFIL,*)ID,NDIM,NB,NPRO,wkpt(ikpt)
+          ID='PSI'
+          DO IB=1,NB
+            WRITE(NFIL,*)ID,IB,IKPT,ISPIN,EIGVAL(IB),PSI(:,:,IB)
+print*,'norm ',ikpt,ispin,ib,dot_product(psi(1,:,ib),psi(1,:,ib))
+          ENDDO
+          DEALLOCATE(eigval)
+          DEALLOCATE(eigvec)
+          DEALLOCATE(PSI)
+          DEALLOCATE(PSI1)
+        ENDDO
+      ENDDO
+      DO IAT=1,NAT
+        DEALLOCATE(T(IAT)%MAT)
+        DEALLOCATE(T(IAT)%inv)
+      ENDDO
+      DEALLOCATE(T)
+      CLOSE(NFIL)
+!
+PRINT*,'TEST READING '
+  CALL LMTO_DROPREAD()
+      CALL ERROR$MSG('FORCED STOP AFTER WRITING FILE')
+      CALL ERROR$STOP('LMTO$DROP')
+                                           CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine lmto_dropread()
+!     **************************************************************************
+!     ** reads the wave functions in local orbitals, which have been          **
+!     ** onsite-orthonormalized.                                              **
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      character(16)          :: id
+      integer(4)             :: nat       ! #(atoms)
+      integer(4)             :: ndim      ! #(spinor-components)
+      integer(4)             :: nspin     ! #(spin directions)
+      integer(4)             :: nkpt      ! #(k-points)
+      integer(4)             :: npro      ! total #(orbitals)
+      integer(4)             :: nb        ! #(states)
+      integer(4),allocatable :: ipro1(:)  ! first orbital index for this atom
+      integer(4),allocatable :: nproat(:) ! #(orbitals) for this atom
+      integer(4),allocatable :: lnx(:)    ! #(different orbital shells)
+      integer(4),allocatable :: lox(:,:)  ! angular momentum of this orbital shell
+      real(8)   ,allocatable :: e(:)      ! energy eigenvalues
+      complex(8),allocatable :: c(:,:,:)  ! orbital coefficients
+      integer(4)             :: iat,ib,ikpt,ispin
+      integer(4)             :: iat1,ib1,ikpt1,ispin1
+      integer(4)             :: nfil  ! fortran file unit
+!     **************************************************************************
+      NFIL=12
+      OPEN(NFIL,FILE='NTBOWV.DATA')
+      REWIND(nfil)
+!
+      READ(NFIL,*)ID,NAT,NDIM,NSPIN,NKPT
+      IF(ID.NE.'INFO') THEN
+        STOP 'INCORRECT ID_1'
+      END IF
+      ALLOCATE(IPRO1(nAT))
+      ALLOCATE(NPROAT(nAT))
+      ALLOCATE(LNX(nAT))
+      ALLOCATE(LOX(16,nAT))
+      DO IAT=1,NAT
+        READ(NFIL,*)ID,Iat1,IPRO1(IAT),NPROAT(IAT),LNX(IAT),LOX(:,IAT)
+        IF(ID.NE.'PSIINFO') THEN
+          STOP 'INCORRECT ID_2'
+        END IF
+        IF(Iat1.NE.IAT) THEN
+          STOP 'ATOM INDEX OUT OF ORDER'
+        END IF
+      ENDDO
+      DO IKPT=1,NKPT
+        DO ISPIN=1,NSPIN
+          READ(NFIL,*)ID,NDIM,NB,NPRO
+          IF(ID.NE.'KINFO') THEN
+            STOP 'INCORRECT ID_3'
+          END IF
+          allocate(e(nb))
+          allocate(c(ndim,npro,nb))
+          DO IB=1,NB
+            read(NFIL,*)ID,IB1,IKPT1,ISPIN1,E(IB),c(:,:,IB)
+            IF(ID.NE.'PSI') THEN
+              print*,'id   =',trim(id)
+              print*,'ib   =',ib1,ib
+              print*,'ikpt =',ikpt1,ikpt
+              print*,'ispin=',ispin1,ispin
+              STOP 'INCORRECT ID_4'
+            END IF
+          ENDDO
+!
+!         ------> grab wave functions and energies from here <-----
+! 
+          deallocate(e)
+          deallocate(c)
+        ENDDO
+      ENDDO
       RETURN
       END
 !
@@ -2849,6 +3290,11 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !     ==========================================================================
 !     ==  
 !     ==========================================================================
+      call lmto_drop()
+!
+!     ==========================================================================
+!     ==  
+!     ==========================================================================
       CALL TIMING$CLOCKON('NTBODENMAT')
       CALL LMTO_NTBODENMAT()
       CALL TIMING$CLOCKOFF('NTBODENMAT')
@@ -2870,6 +3316,9 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       IF(SWITCH.EQ.1) THEN
 !       == TAILED, NONSPHERICAL ORBITALS =======================================
         CALL LMTO_SIMPLEENERGYTEST2()
+      ELSE IF(SWITCH.EQ.10) THEN
+!       == TAILED, NONSPHERICAL ORBITALS =======================================
+        CALL LMTO_SIMPLEENERGYTESTx()
       ELSE IF(SWITCH.EQ.2) THEN
         CALL LMTO_SIMPLEENERGYTEST()
       ELSE IF(SWITCH.EQ.3) THEN
@@ -2895,13 +3344,205 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_SIMPLEENERGYTESTx()
+!     **************************************************************************
+!     **  WORK OUT THE ENERGY USING THE LOCAL APPROXIMATION                   **
+!     **  TAILED PARTIAL WAVES                                                **
+!     **                                                                      **
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : ISPECIES,DENMAT,HAMIL,LNX,LOX,POTPAR,toffsite
+      IMPLICIT NONE
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPlot=.false.
+      REAL(8)   ,PARAMETER  :: HFWEIGHT=0.25D0
+      INTEGER(4)            :: NND
+      INTEGER(4)            :: NAT
+      INTEGER(4)            :: IND,INH
+      INTEGER(4)            :: LMNX
+      INTEGER(4)            :: NDIMD
+      INTEGER(4)            :: IT(3)
+      INTEGER(4)            :: N1,N2,N3
+      INTEGER(4)            :: LNX1,LMRX,LRX
+      INTEGER(4)            :: LNXT,LMNXT
+      INTEGER(4),ALLOCATABLE:: LOXT(:)
+      INTEGER(4)            :: GID
+      INTEGER(4)            :: NR
+      REAL(8)   ,ALLOCATABLE:: DT(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: HT(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: AECORE(:)
+      REAL(8)   ,ALLOCATABLE:: ULITTLE(:,:,:,:,:)
+      REAL(8)   ,ALLOCATABLE:: D(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: H(:,:,:)
+      REAL(8)               :: EH,EX,EXTOT,EHTOT,EHDC,EXDC,Q
+      REAL(8)               :: svar
+      INTEGER(4)            :: NN,IAT,I,J,K,L,IS,IAT1,IAT2,ISP
+CHARACTER(128) :: STRING
+REAL(8)   ,ALLOCATABLE:: t(:,:),unt(:,:),mymat(:,:)
+!     **************************************************************************
+                            CALL TRACE$PUSH('LMTO_SIMPLEENERGYTEST2')
+PRINT*,'============ ENERGYTESTx ============================='
+      NAT=SIZE(ISPECIES)
+      IF(ALLOCATED(HAMIL)) THEN
+        CALL ERROR$MSG('HAMIL IS ALLOCATED')
+        CALL ERROR$STOP('LMTO_SIMPLEENERGYTEST2')
+      END IF
+      NND=SIZE(DENMAT)
+      ALLOCATE(HAMIL(NND))
+      DO NN=1,NND
+        HAMIL(NN)%IAT1=DENMAT(NN)%IAT1
+        HAMIL(NN)%IAT2=DENMAT(NN)%IAT2
+        HAMIL(NN)%IT=DENMAT(NN)%IT
+        N1=DENMAT(NN)%N1
+        N2=DENMAT(NN)%N2
+        N3=DENMAT(NN)%N3
+        HAMIL(NN)%N1=N1
+        HAMIL(NN)%N2=N2
+        HAMIL(NN)%N3=N3
+        ALLOCATE(HAMIL(NN)%MAT(N1,N2,N3))
+        HAMIL(NN)%MAT=0.D0
+      ENDDO
+
+      EXTOT=0.D0
+      EHTOT=0.D0
+      DO IAT=1,NAT
+!
+!       == FIND LOCAL DENSITY MATRIX ===========================================
+        IND=-1
+        DO NN=1,NND
+          IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
+          IF(DENMAT(NN)%IAT2.NE.IAT) CYCLE
+          IF(SUM(DENMAT(NN)%IT**2).NE.0) CYCLE
+          IND=NN
+          EXIT
+        ENDDO
+        IF(IND.LE.0) THEN
+          CALL ERROR$MSG('INTERNAL CONSISTENCY CHECK FAILED: IND<0')
+          CALL ERROR$I4VAL('IAT',IAT)
+          CALL ERROR$I4VAL('NND',NND)
+          CALL ERROR$STOP('LMTO_ENERGYTEST')
+        END IF
+!
+!       == FIND LOCAL HAMILTONIAN   ===========================================
+        INH=-1
+        DO NN=1,NND
+          IF(HAMIL(NN)%IAT1.NE.IAT) CYCLE
+          IF(HAMIL(NN)%IAT2.NE.IAT) CYCLE
+          IF(SUM(HAMIL(NN)%IT**2).NE.0) CYCLE
+          INH=NN
+          EXIT
+        ENDDO
+        IF(INH.LE.0) THEN
+          CALL ERROR$MSG('INTERNAL CONSISTENCY CHECK FAILED: INH<0')
+          CALL ERROR$STOP('LMTO_ENERGYTEST')
+        END IF
+!
+        ISP=ISPECIES(IAT)
+        LMNX=DENMAT(IND)%N1
+        NDIMD=DENMAT(IND)%N3
+!
+!       ========================================================================
+!       == CALCULATE U-TENSOR                                                 ==
+!       ========================================================================
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('GID',GID)
+        CALL RADIAL$GETI4(GID,'NR',NR)
+        ALLOCATE(AECORE(NR))
+        CALL SETUP$GETR8A('AECORE',NR,AECORE)
+        CALL SETUP$GETI4('LMRX',LMRX)
+        LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
+        ALLOCATE(D(LMNX,LMNX,NDIMD))
+        ALLOCATE(H(LMNX,LMNX,NDIMD))
+        D=DENMAT(IND)%MAT
+        H(:,:,:)=0.D0
+!!$DO I=1,LMNX
+!!$  WRITE(*,FMT='("D=",30F10.5)')D(I,:,1)
+!!$ENDDO
+!!$allocate(t(lmnx,lmnx))
+!!$allocate(unt(lmnx,lmnx))
+!!$allocate(mymat(lmnx,lmnx))
+!!$call LMTO_onsortho(iat,lmnx,t,unt)
+!!$do i=1,ndimd
+!!$MYMAT=MATMUL(unT,MATMUL(D(:,:,i),TRANSPOSE(UNT)))
+!!$print*,'============iat=',iat,'  idim=',i,'==================='
+!!$DO j=1,LMNX
+!!$  WRITE(*,FMT='("D(MY)=",30F10.5)')MYMAT(j,:)
+!!$ENDDO
+!!$enddo
+!!$deallocate(t)
+!!$deallocate(unt)
+!!$deallocate(mymat)
+!
+        LNXT=POTPAR(ISP)%TAILED%LNX
+        LMNXT=POTPAR(ISP)%TAILED%LMNX
+        ALLOCATE(LOXT(LNXT))
+        LOXT=POTPAR(ISP)%TAILED%LOX
+        ALLOCATE(DT(LMNXT,LMNXT,NDIMD))
+        ALLOCATE(HT(LMNXT,LMNXT,NDIMD))
+        CALL LMTO_BLOWUPDENMATNL(IAT,IAT,NDIMD,LMNX,LMNX,D,LMNXT,LMNXT,DT)
+!!$DO I=1,LMNXT
+!!$  WRITE(*,FMT='("DT=",30F10.5)')DT(I,:,1)
+!!$ENDDO
+!
+!       ========================================================================
+!       == WORK OUT TOTAL ENERGY AND HAMILTONIAN                              ==
+!       ========================================================================
+        HAMIL(INH)%MAT=0.d0
+        EH=0.D0
+        EX=0.D0
+        Q=0.D0
+        HT(:,:,:)=0.D0
+        DO I=1,LMNXT
+          DO J=1,LMNXT
+            svar=1.d0/27.211d0*POTPAR(ISP)%TAILED%OVERLAP(I,J)
+            Q=Q+svar*DT(J,I,1)
+            HT(j,i,1)=HT(j,i,1)+svar
+          ENDDO
+        ENDDO
+        CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HT,LMNX,LMNX,H)
+        HAMIL(INH)%MAT=HAMIL(INH)%MAT+H
+        EXTOT=EXTOT+EX
+PRINT*,'TOTAL CHARGE ON ATOM=                 ',IAT,Q
+        DEALLOCATE(HT)
+        DEALLOCATE(DT)
+        DEALLOCATE(H)
+        DEALLOCATE(D)
+        DEALLOCATE(AECORE)
+        DEALLOCATE(LOXT)
+DO I=1,LMNX
+  WRITE(*,FMT='("denmat=",30F10.5)')denmat(INd)%MAT(I,:,1)
+ENDDO
+DO I=1,LMNX
+  WRITE(*,FMT='("Hamil=",30F10.5)')HAMIL(INH)%MAT(I,:,1)*100.d0
+ENDDO
+      ENDDO
+      extot=q
+!
+!     ==========================================================================
+!     == RESCALE WITH HFWEIGHT                                                ==
+!     ==========================================================================
+      DO NN=1,NND
+        HAMIL(NN)%MAT=HAMIL(NN)%MAT*HFWEIGHT
+      ENDDO
+      EXTOT=EXTOT*HFWEIGHT
+!
+!     ==========================================================================
+!     == COMMUNICATE ENERGY TO ENERGYLIST                                     ==
+!     ==========================================================================
+      CALL ENERGYLIST$SET('LMTO INTERFACE',EXTOT)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',EXTOT)
+!
+                            CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_SIMPLEENERGYTEST2()
 !     **************************************************************************
 !     **  WORK OUT THE ENERGY USING THE LOCAL APPROXIMATION                   **
 !     **  TAILED PARTIAL WAVES                                                **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : ISPECIES,DENMAT,HAMIL,LNX,LOX,POTPAR
+      USE LMTO_MODULE, ONLY : ISPECIES,DENMAT,HAMIL,LNX,LOX,POTPAR,toffsite
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       LOGICAL(4),PARAMETER  :: TPlot=.false.
@@ -2928,6 +3569,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       REAL(8)               :: EH,EX,EXTOT,EHTOT,EHDC,EXDC,Q
       INTEGER(4)            :: NN,IAT,I,J,K,L,IS,IAT1,IAT2,ISP
 CHARACTER(128) :: STRING
+REAL(8)   ,ALLOCATABLE:: t(:,:),unt(:,:),mymat(:,:)
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_SIMPLEENERGYTEST2')
 PRINT*,'============ ENERGYTEST2 ============================='
@@ -3007,6 +3649,20 @@ PRINT*,'============ ENERGYTEST2 ============================='
 !!$DO I=1,LMNX
 !!$  WRITE(*,FMT='("D=",30F10.5)')D(I,:,1)
 !!$ENDDO
+!!$allocate(t(lmnx,lmnx))
+!!$allocate(unt(lmnx,lmnx))
+!!$allocate(mymat(lmnx,lmnx))
+!!$call LMTO_onsortho(iat,lmnx,t,unt)
+!!$do i=1,ndimd
+!!$MYMAT=MATMUL(unT,MATMUL(D(:,:,i),TRANSPOSE(UNT)))
+!!$print*,'============iat=',iat,'  idim=',i,'==================='
+!!$DO j=1,LMNX
+!!$  WRITE(*,FMT='("D(MY)=",30F10.5)')MYMAT(j,:)
+!!$ENDDO
+!!$enddo
+!!$deallocate(t)
+!!$deallocate(unt)
+!!$deallocate(mymat)
 !
         LNXT=POTPAR(ISP)%TAILED%LNX
         LMNXT=POTPAR(ISP)%TAILED%LMNX
@@ -3014,8 +3670,6 @@ PRINT*,'============ ENERGYTEST2 ============================='
         LOXT=POTPAR(ISP)%TAILED%LOX
         ALLOCATE(DT(LMNXT,LMNXT,NDIMD))
         ALLOCATE(HT(LMNXT,LMNXT,NDIMD))
-!       CALL LMTO_BLOWUPDENMAT(IAT,NDIMD,LMNX,D,LMNXT,DT)
-!       == THE FOLLOWING IS MORE GENERAL AND SHALL REPLACE THE PREVIOUS ONE
         CALL LMTO_BLOWUPDENMATNL(IAT,IAT,NDIMD,LMNX,LMNX,D,LMNXT,LMNXT,DT)
 !!$DO I=1,LMNXT
 !!$  WRITE(*,FMT='("DT=",30F10.5)')DT(I,:,1)
@@ -3030,6 +3684,7 @@ PRINT*,'============ ENERGYTEST2 ============================='
 !       ========================================================================
 !       == WORK OUT TOTAL ENERGY AND HAMILTONIAN                              ==
 !       ========================================================================
+        HAMIL(INH)%MAT=0.d0
         EH=0.D0
         EX=0.D0
         Q=0.D0
@@ -3057,10 +3712,8 @@ PRINT*,'============ ENERGYTEST2 ============================='
             ENDDO
           ENDDO
         ENDDO
-!       CALL LMTO_BLOWDOWNHT(IAT,NDIMD,LMNXT,HT,LMNX,H)
-!       == THE FOLLOWING IS MORE GENERAL AND SHALL REPLACE THE PREVIOUS ONE
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HT,LMNX,LMNX,H)
-        HAMIL(INH)%MAT=H
+        HAMIL(INH)%MAT=HAMIL(INH)%MAT+H
         EXTOT=EXTOT+EX
 PRINT*,'TOTAL CHARGE ON ATOM=                 ',IAT,Q
 PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM=       ',IAT,EX
@@ -3084,8 +3737,8 @@ CALL TIMING$CLOCKON('ENERGYTEST:DC')
 !       == THE FOLLOWING IS MORE GENERAL AND SHALL REPLACE THE PREVIOUS ONE
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HT,LMNX,LMNX,H)
         EXTOT=EXTOT-EX
-PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,EX
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H
+PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,EX
 CALL TIMING$CLOCKOFF('ENERGYTEST:DC')      
         DEALLOCATE(HT)
         DEALLOCATE(DT)
@@ -3099,9 +3752,11 @@ CALL TIMING$CLOCKOFF('ENERGYTEST:DC')
 !     ==========================================================================
 !     == OFFSITE EXCHANGE CONTRIBUTION                                        ==
 !     ==========================================================================
-!!$PRINT*,'NOW INTO OFFSITEX'
-!!$      CALL LMTO_OFFSITEX(EX)
-!!$      EXTOT=EXTOT+EX
+      IF(TOFFSITE) THEN
+        PRINT*,'NOW INTO OFFSITEX'
+        CALL LMTO_OFFSITEX(EX)
+        EXTOT=EXTOT+EX
+      END IF
 !
 !     ==========================================================================
 !     == RESCALE WITH HFWEIGHT                                                ==
@@ -5303,7 +5958,6 @@ PRINT*,'N1,N2 ',N1,N2
       REAL(8)                :: KVAL,KDER,JVAL,JDER
       REAL(8)                :: QBAR
       LOGICAL(4)             :: TCHK
-      INTEGER(4)             :: LMX
       INTEGER(4)             :: LN,LN1,L,I,J,IIB,LM,LNCHI,IR,IM
       INTEGER(4)             :: LX
       INTEGER(4)             :: IORB
@@ -5521,7 +6175,6 @@ PRINT*,'N1,N2 ',N1,N2
       REAL(8)                :: KVAL,KDER,JVAL,JDER
       REAL(8)                :: QBAR
       LOGICAL(4)             :: TCHK
-      INTEGER(4)             :: LMX
       INTEGER(4)             :: LN,LN1,L,I,J,IIB,LM,LNCHI,IR,IM
       INTEGER(4)             :: LX
       INTEGER(4)             :: IORB
@@ -6401,6 +7054,9 @@ PRINT*,'N1,N2 ',N1,N2
           CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,-FILE)
           CALL FILEHANDLER$UNIT('HOOK',NFIL)
 !
+LM1=0
+CALL ERROR$MSG('CODING ERROR: LM1 NOT DEFINED')
+CALL ERROR$STOP('LMTO_GRIDPLOT_UNTAILED')
           CALL LMTO_WRITECUBEFILE(NFIL,NATCLUSTER,ZCLUSTER,RCLUSTER &
      &                         ,ORIGIN,TVEC,N1,N2,N3,ORB(:,LM1))
           CALL FILEHANDLER$CLOSE('HOOK')
