@@ -654,9 +654,9 @@
 !     **                                                                      **
 !     **  - EVERY BOND OCCURS TWICE, THAT IS THE BOND IS DIRECTIONAL.         **
 !     **  - THE ONSITE ELEMENT IS FIRST IN EACH GROUP WITH SAME FIRST ATOM.   **
-!     **  - THE FIRST ATOM IS IN SEQENCE                                      **
+!     **  - THE FIRST ATOM IS IN SEQuENCE                                     **
 !     **  - THE LATTICE TRANSLATION ACTS ON THE SECOND ATOM.                  **
-!     **************************************************************************
+!     ******************************PETER BLOECHL, GOSLAR 2009******************
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NAT       ! #(ATOMS)
       REAL(8)      ,INTENT(IN) :: RBAS(3,3) ! LATTICE VECTORS

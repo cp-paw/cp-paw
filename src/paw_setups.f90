@@ -591,7 +591,7 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$SETL4A')
         END IF
         IF(ASSOCIATED(THIS%TORB)) THEN
-          THIS%TORB=VAL
+          val=THIS%TORB
         ELSE
           VAL=.TRUE.
         END IF
@@ -1878,6 +1878,12 @@ PRINT*,'RCSM ',THIS%RCSM
      &                  ,THIS%NHATPRIMEOFG,THIS%VHATOFG)
       CALL TIMING$CLOCKOFF('BESSELTRANSFORMS')
       CALL TIMING$CLOCKOFF('SETUP CONSTRUCTION')
+!
+!     ==================================================================
+!     == default selector for local orbitals is true (in atomtypelist) =========
+!     ==================================================================
+      ALLOCATE(THIS%TORB(LNX))
+      CALL ATOMTYPELIST$GETl4a('TORB',lnx,THIS%TORB)
 !
 !     ==========================================================================
 !     == WRITE REPORT
