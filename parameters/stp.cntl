@@ -240,7 +240,7 @@
           LAMBDA= 6. 6. 6. 6.
     !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 10. !END
     !POT  POW=3. RC/RCOV=   0.705 !END
-    !CORE   POW=3. RC/RCOV=   0.705 !END
+    !CORE POW=3. RC/RCOV=   0.705 !END
   !END
 
   !SETUP  ID='CO_.75_6.0' EL='CO' ZV=   9.
@@ -256,7 +256,7 @@
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
-    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
+    !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 10. !END
     !POT  POW=3. RC/RCOV=   0.704 !END
     !CORE   POW=3. RC/RCOV=   0.704 !END
   !END

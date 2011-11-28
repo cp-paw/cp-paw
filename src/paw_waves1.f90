@@ -2856,7 +2856,7 @@ END IF
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           NBH=THIS%NBH
-          IF(.NOT.ASSOCIATED(THIS%HTBC)) CYCLE
+          IF(.NOT.ASSOCIATED(THIS%HTBC)) allocate(this%htbc(ndim,nbH,npro))
           CALL LMTO$NTBOTOPROJ(XK(:,IKPT),NDIM,NBH,NPRO,THIS%HTBC)
         ENDDO
       ENDDO

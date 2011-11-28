@@ -14,7 +14,7 @@
       INTEGER(4),PARAMETER :: NP=11
       REAL(8)              :: CENTER(3)  ! POSITION OF EXPANSION CENTER
       REAL(8)              :: K2         ! KAPPA**2
-      REAL(8)              :: S((L2X+1)**2,(L1X+1)**2)
+      REAL(8)              :: S((L1X+1)**2,(L2X+1)**2)
       REAL(8)              :: H((L1X+1)**2)
       REAL(8)              :: J((L2X+1)**2)
       REAL(8)              :: MINUSJS((L1X+1)**2)
@@ -46,7 +46,7 @@
           CALL LMTO$SOLIDHANKEL(R,1.D-3,K2,(L1X+1)**2,H)
           CALL LMTO$STRUCTURECONSTANTS(CENTER,K2,L1X,L2X,S)
           CALL LMTO$SOLIDBESSEL(R-CENTER,K2,(L2X+1)**2,J)
-          MINUSJS=-MATMUL(J,S) 
+          MINUSJS=-MATMUL(J,transpose(S)) 
           MAXDEV=MAX(MAXDEV,MAXVAL(ABS(H-MINUSJS)))
 !
 !         ==PRINT ==============================================================
@@ -72,6 +72,9 @@
       IF(TPR) THEN
        CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOKERROR')
       END IF 
+
+      CALL ERROR$MSG('NORMAL STOP AT THE END OF TESTING ROUTINE')
+      CALL ERROR$STOP('TEST_LMTO$STRUCTURECONSTANTS')
       RETURN
       END
 !
@@ -367,7 +370,7 @@
 !     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
 !     **  INTO SOLID BESSEL FUNCTIONS  J_{L,M}(R-R2) CENTERED AT R2           **
 !     **                                                                      **
-!     **    H_{L,M}(R-R1) = SUM_{L',M'} J_{L',M'}(R-R2) * S_{L',M',L,M}       **
+!     **    H_{L,M}(R-R1) = - SUM_{L',M'} S_{L,M,L',M'} * J_{L',M'}(R-R2)     **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -375,7 +378,7 @@
       INTEGER(4),INTENT(IN) :: L1X
       INTEGER(4),INTENT(IN) :: L2X
       REAL(8)   ,INTENT(IN) :: K2 ! 2ME/HBAR**2
-      REAL(8)   ,INTENT(OUT):: S((L2X+1)**2,(L1X+1)**2)
+      REAL(8)   ,INTENT(OUT):: S((L1X+1)**2,(L2X+1)**2)
       REAL(8)   ,PARAMETER  :: RAD=1.D-6
       REAL(8)               :: PI
       REAL(8)               :: SVAR
@@ -428,7 +431,7 @@
             ELSE
               SVAR=REAL(KAPPA**(L1+L2-L3))
             END IF
-            S(LM2,LM1)=S(LM2,LM1)+CG*H(LM3)*SVAR
+            S(LM1,LM2)=S(LM1,LM2)+CG*H(LM3)*SVAR
           ENDDO
         ENDDO
       ENDDO
@@ -436,7 +439,7 @@
 !     == MULTIPLY WITH -4*PI (-1)**L2 ==========================================
       S=-4.D0*PI*S
       DO LM2=1,LM2X
-        S(LM2,:)=S(LM2,:)*(-1.D0)**LOFLM(LM2)
+        S(:,LM2)=S(:,LM2)*(-1.D0)**LOFLM(LM2)
       ENDDO
       RETURN
       END
@@ -466,13 +469,13 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$SCREEN(TSTART,N,NORB,QBAR,S,SBAR)
+      SUBROUTINE LMTO$SCREEN(TSTART,norb,N,QBAR,S,SBAR)
 !     **************************************************************************
 !     **  DETERMINES SCREENED STRUCTURE CONSTANTS FOR A CLUSTER               **
-!     **      |KBAR_I>=SUM_J |K_J> (DELTA_JI+QBAR_J*SBAR_JI)                  **
+!     **      |KBAR_I>=SUM_J |K_J> (DELTA_ij+SBAR_ij*QBAR_J)^\dagger          **
 !     **                                                                      **
 !     **  remark:                                                             **
-!     **    s(:,:norb) connects the same orbitals as sbar(:,:)                **
+!     **    s(:norb,:) connects the same orbitals as sbar(:,:)                **
 !     **                                                                      **
 !     **  START WITH SBAR=0 OR GIVE BETTER ESTIMATE                           **
 !     **                                                                      **
@@ -485,12 +488,13 @@
       INTEGER(4),INTENT(IN) :: NORB         ! #(ORBITALS ON CENTRAL SITE
       REAL(8)   ,INTENT(IN) :: QBAR(N)      !
       REAL(8)   ,INTENT(IN) :: S(N,N)       ! UNSCREENED-STRUCTURE CONSTANTS
-      REAL(8)   ,INTENT(INOUT):: SBAR(N,NORB) !SCREENED STRUCTURE CONSTANTS
+      REAL(8)   ,INTENT(INOUT):: SBAR(norb,N) !SCREENED STRUCTURE CONSTANTS
       REAL(8)   ,PARAMETER  :: TOL=1.D-5    ! TOLERANCE FOR CONVERENCE
       INTEGER(4),PARAMETER  :: NITER=1000   ! X#(ITERATIONS)
       REAL(8)               :: ALPHA=0.5D0  ! MIXING FACTOR
-      REAL(8)               :: DSBAR(N,NORB)
-      REAL(8)               :: S0(N,NORB)
+      REAL(8)               :: DSBAR(norb,N)
+      REAL(8)               :: S0(norb,N)
+      REAL(8)               :: Sbart(n,norb)
       REAL(8)               :: A(N,N)
       INTEGER(4)            :: I,j
       REAL(8)               :: DELTA
@@ -505,40 +509,42 @@
 !     ==========================================================================
       IF(TSTART) THEN
         DO I=1,N
-          A(i,:)=-S(I,:)*QBAR(:)
-          A(I,I)=A(I,I)+1.D0
+          A(i,:)=-QBAR(:)*S(:,i)
+          A(I,I)=A(I,I)+1.D0    !A=transpose(1-qbar*s0)
         ENDDO
-        CALL LIB$MATRIXSOLVER8(N,N,Norb,A,SBAR,s(:,:norb))
-
-!       == test ================================================================
-        if(test) then
-!         ==  test (1-s0*qbar)*sbar=s0 =========================================
+!       == sbar(1-qbar*s)=s  <=> transpose(1-qbar*s)*transpose(sbar)=tanspose(s)
+        CALL LIB$MATRIXSOLVER8(N,N,NORB,A,SBART,TRANSPOSE(S(:NORB,:)))
+        SBAR=TRANSPOSE(SBART)
+!
+!       == TEST ================================================================
+        IF(TEST) THEN
+!         ==  TEST sbar*(1-QBAR*s0)=S0 =========================================
           DO I=1,N
-            A(i,:)=-S(i,:)*QBAR(:)
+            A(:,I)=-QBAR(:)*S(:,I)
             A(I,I)=A(I,I)+1.D0
           ENDDO
-          dsbar=matmul(a,sbar)-s(:,:norb)
-          do i=1,n
-            do j=1,norb
-              if(abs(dsbar(i,j)).gt.1.d-8) then
-                print*,'sbartest ',i,j,dsbar(i,j)
-              end if
-            enddo
-          enddo
-          stop 'forced stop in lmto$screen'
-        end if
+          DSBAR=MATMUL(SBAR,A)-S(:NORB,:)
+          DO I=1,N
+            DO J=1,NORB
+              IF(ABS(DSBAR(J,I)).GT.1.D-8) THEN
+                PRINT*,'SBARTEST ',I,J,DSBAR(J,I)
+              END IF
+            ENDDO
+          ENDDO
+          STOP 'FORCED STOP IN LMTO$SCREEN'
+        END IF
 !
 !     ==========================================================================
-!     ==========================================================================
+!     == solve equation iteratively                                           ==
 !     ==========================================================================
       ELSE
-        S0(:,:)=S(:,:NORB)
+        S0(:,:)=S(:NORB,:)
         DO ITER=1,NITER
           DO I=1,NORB
-            DSBAR(:,I)=QBAR(:)*SBAR(:,I)
+            DSBAR(I,:)=SBAR(i,:)*QBAR(:)
             DSBAR(I,I)=1.D0+DSBAR(I,I)
           ENDDO
-          DSBAR=MATMUL(S,DSBAR)-SBAR
+          DSBAR=MATMUL(DSBAR,S)-SBAR
           DELTA=MAXVAL(ABS(DSBAR))
           CONVG=DELTA.LT.TOL
           IF(CONVG) EXIT
@@ -554,7 +560,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QBAR,N,NORB,SBAR)
+      SUBROUTINE LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QBAR,norb,N,SBAR)
 !     **************************************************************************
 !     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
 !     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
@@ -575,7 +581,7 @@
       REAL(8)   ,INTENT(IN) :: K2
       INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: NORB
-      REAL(8)   ,INTENT(INOUT):: SBAR(N,NORB)
+      REAL(8)   ,INTENT(INOUT):: SBAR(norb,N)
       INTEGER(4)            :: I1,I2
       INTEGER(4)            :: IAT1,IAT2
       REAL(8)               :: R1(3),R2(3)
@@ -616,7 +622,7 @@
         L1X=LX(IAT1)
         LMN1=(L1X+1)**2
         LMN2=(MAXVAL(LX(:))+1)**2
-        ALLOCATE(S1(LMN2,LMN1))
+        ALLOCATE(S1(lmn1,LMN2))
         I2=0
         DO IAT2=1,NAT
           IF(IAT2.EQ.IAT1) THEN
@@ -626,8 +632,8 @@
           R2(:)=RPOS(:,IAT2)
           L2X=LX(IAT2)
           LMN2=(L2X+1)**2
-          CALL LMTO$STRUCTURECONSTANTS(R2-R1,K2,L1X,L2X,S1(:LMN2,:))
-          S0(I2+1:I2+LMN2,I1+1:I1+LMN1)=S1(:LMN2,:)
+          CALL LMTO$STRUCTURECONSTANTS(R2-R1,K2,L1X,L2X,S1(:,:LMN2))
+          S0(I1+1:I1+LMN1,I2+1:I2+LMN2)=S1(:,:LMN2)
           I2=I2+(L2X+1)**2
         ENDDO
         DEALLOCATE(S1)
@@ -641,7 +647,7 @@
 !     == THE FIRST PARAMETER SWITCHES BETWEEN AN ITERATIVE AND A DIRECT SOLUTION
 !     == OF THE EQUATION. THE ITERATIVE APPROACH MAY BE MORE EFFICIENT IN AN
 !     == CAR-PARRINELLO LIKE APPROACH.
-      CALL LMTO$SCREEN(.TRUE.,N,NORB,QBAR,S0,SBAR)
+      CALL LMTO$SCREEN(.TRUE.,norb,N,QBAR,S0,SBAR)
                                CALL TRACE$POP()
       RETURN
       END

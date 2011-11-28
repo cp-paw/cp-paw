@@ -1421,6 +1421,32 @@ PRINT*,'GIDS ',GIDS
       RETURN
       END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL$STO(GID,NR,N,SIGMA,F)
+!     **************************************************************************
+!     ** SLATER TYPE ORBITAL (STO) ON THE RADIAL GRID                         **
+!     ** DEFINITION FOLLOWS EQ.9 OF ROOTHAN51_JCP19_1445                      **
+!     ** (NOT A FAST IMPLEMENTATION)                                          **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: N
+      REAL(8)   ,INTENT(IN) :: SIGMA
+      REAL(8)   ,INTENT(OUT):: F(NR)
+      REAL(8)               :: SVAR
+      INTEGER(4)            :: I
+      REAL(8)               :: R(NR)
+!     *************************************************************************
+      SVAR=SQRT(2.D0*SIGMA)
+      DO I=1,2*N
+        SVAR=SVAR*SQRT(2.D0*SIGMA/REAL(I))
+      ENDDO
+      CALL RADIAL$R(GID,NR,R)
+      F(:)=SVAR*R(:)**(N-1)*EXP(-SIGMA*R(:))
+      RETURN
+      END
+!
 !..........................................................................
 MODULE SHLOGRADIAL_MODULE
 TYPE SHLOGGRID_TYPE
