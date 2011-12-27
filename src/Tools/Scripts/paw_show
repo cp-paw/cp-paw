@@ -6,7 +6,7 @@
 ##  purpose: pulls out columns from the paw protocoll            ##
 ##                                                               ##
 ##  usage:                                                       ##
-##    pawshow option rootname                                    ##
+##    pawshow option rootname [outfile]                          ##
 ##                                                               ##
 ##    (exactly one option must be given)                         ##
 ##                                                               ##
@@ -26,7 +26,7 @@
 ###################################################################
 TEMPDIR=/tmp/
 USAGE='\n
-usage: "pawshow option rootname"\n\n
+usage: "pawshow option rootname [outfile]"\n\n
 1)rootname  is paw protocol file name without the ".prot" ending\n
 2)option (exactly one must be given) can be one of the following\n
 \t  ?: give info about use\n
@@ -37,12 +37,14 @@ usage: "pawshow option rootname"\n\n
 \t -f: plot fictitious kinetic wave function energy\n
 \t -ar: plot friction acting on the nuclei\n
 \t -ap: plot friction acting on the wavefunctions\n
-USE THE FOLLOWING FOR QM-MM CALCULATIONS:\n
+use the following for qm-mm calculations:\n
 \t -qe: plot static total energy of the environmet\n
 \t -qc: plot conserved energy of the environment\n
 \t -qt: plot temperature in kelvin of the environment\n
 \t -tqt: both temperatures\n
-\t -cqc: both conserved energies'
+\t -cqc: both conserved energies\n
+3) optional argument outfile redirects output into file outfile\n
+\t if this argument is absent, output is shown with xmgrace'
 if (( $# < 2 )) ;then echo -e ${USAGE} ; exit; fi
 NAME=$2 
 case $1 in 
@@ -80,13 +82,13 @@ case $1 in
     grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($10 != "") print $3, " ", $7, " " ,$12}' >${TEMPDIR}tmp2
     ;;
 *)
-    echo ${USAGE} ; exit
+    echo -e ${USAGE} ; exit
     ;;
 esac
 if (( $# == 3 )) ;then
   cp ${TEMPDIR}tmp2 $3
 else
-  xmgrace -free -nxy ${TEMPDIR}tmp2
+  xmgrace -free -noask -nxy ${TEMPDIR}tmp2
 fi
 rm ${TEMPDIR}tmp2
 exit

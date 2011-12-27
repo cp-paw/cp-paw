@@ -655,7 +655,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
                       DO JA=0,MA-IA
                         KA=MA-IA-JA
                         INDA=INDA+1
-                        SVAR=SVAR+CA(INDA)*HY(JA,JB,JP)*HZ(KA,KB,KP)
+                        SVAR1=SVAR1+CA(INDA)*HY(JA,JB,JP)*HZ(KA,KB,KP)
                       ENDDO
                       SVAR=SVAR+CB(INDB)*HX(IA,IB,IP)*SVAR1
                     ENDDO
@@ -665,6 +665,115 @@ PRINT*,'SQUARE DEVIATION ',SVAR
               ENDDO
             ENDDO
             CP(INDP)=SVAR
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GAUSSIAN_CONTRACT2GAUSSMAT(NIJKA,NEA,EA,RA,NIJKB,NEB,EB,RB &
+     &                                     ,NIJKP,NEP,EP,RP,CPab)
+!     **************************************************************************
+!     ** 
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NIJKA
+      INTEGER(4),INTENT(IN) :: Nea
+      REAL(8)   ,INTENT(IN) :: EA(nea)
+      REAL(8)   ,INTENT(IN) :: RA(3)
+      INTEGER(4),INTENT(IN) :: NIJKB
+      INTEGER(4),INTENT(IN) :: Neb
+      REAL(8)   ,INTENT(IN) :: EB(neb)
+      REAL(8)   ,INTENT(IN) :: RB(3)
+      INTEGER(4),INTENT(IN) :: NIJKP
+      INTEGER(4),INTENT(IN) :: Nep
+      REAL(8)   ,INTENT(OUT):: EP(nep)
+      REAL(8)   ,INTENT(OUT):: RP(3,nep)
+      REAL(8)   ,INTENT(OUT):: CPab(nijka,nijkb,NIJKP,nea,neb)
+      INTEGER(4)            :: NA,NB,NP
+      INTEGER(4)            :: NABX
+      INTEGER(4)            :: J,K
+      REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
+      INTEGER(4)            :: INDA,MA,IA,JA,KA,iea
+      INTEGER(4)            :: INDB,MB,IB,JB,KB,ieb
+      INTEGER(4)            :: INDP,MP,IP,JP,KP,iep
+      INTEGER(4)            :: nijka1,nijkb1,nijkp1
+      real(8)               :: svar,svar1
+!     **************************************************************************
+!     ==========================================================================
+!     ==  TESTS                                                               ==
+!     ==========================================================================
+      nijka1=nijka  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,J,K)
+      IF(J.NE.0.OR.K.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$I4VAL('NIJKA',NIJKA)
+        CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
+      END IF
+      nijkb1=nijkb  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,J,K)
+      IF(J.NE.0.OR.K.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$I4VAL('NIJKB',NIJKB)
+        CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
+      END IF
+      nijkp1=nijkp  !avoid mapping intent(in) onto intent(inout)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKP1,NP,J,K)
+      IF(J.NE.0.OR.K.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$I4VAL('NIJKP',NIJKP)
+        CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
+      END IF
+!
+      nabx=max(na,nb)
+      ALLOCATE(HX(0:NABX,0:NABX,0:2*NABX))
+      ALLOCATE(HY(0:NABX,0:NABX,0:2*NABX))
+      ALLOCATE(HZ(0:NABX,0:NABX,0:2*NABX))
+      iep=0
+      do iea=1,nea
+        do ieb=1,neb
+          iep=iep+1
+          EP(iep)=EA(iea)+EB(ieb)
+          RP(:,iep)=(RA(:)*EA(iea)+RB(:)*EB(ieb))/EP(iep)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),EA(iea),EB(ieb),HX)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(iea),EB(ieb),HY)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(iea),EB(ieb),HZ)
+
+          INDP=0
+          DO MP=0,NP
+            DO IP=0,MP
+              DO JP=0,MP-IP
+                KP=MP-IP-JP
+                INDP=INDP+1
+!         
+                SVAR=0.D0
+                INDB=0
+                DO MB=0,NB
+                  DO IB=0,MB
+                    DO JB=0,MB-IB
+                      KB=MB-IB-JB
+                      INDB=INDB+1
+!         
+                      INDA=0
+                      DO MA=0,NA
+                        DO IA=0,MA
+                          SVAR1=0.D0
+                          DO JA=0,MA-IA
+                            KA=MA-IA-JA
+                            INDA=INDA+1
+                            cpab(inda,indb,indp,iea,ieb)=HX(IA,IB,IP) &
+         &                                              *HY(JA,JB,JP) &
+         &                                              *HZ(KA,KB,KP)
+                          ENDDO
+                        ENDDO
+                      ENDDO
+!
+                    ENDDO
+                  ENDDO
+                ENDDO
+              enddo
+            enddo
           ENDDO
         ENDDO
       ENDDO
@@ -1250,6 +1359,216 @@ print*,'marke 1',iorba,iorbb,iea,ieb
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GAUSSIAN$ZDIRECTION_FOURCENTER(NIJKA,NEA,EA,NFA,CA &
+     &                                         ,NIJKB,NEB,EB,NFB,CB,DIS,UABCD)
+!     **************************************************************************
+!     ** CALCULATES FOUR-CENTER MATRIX ELEMENTS FOR CARTESIAN GAUSSIANS       **
+!     ** LOCATED AT THE ENDS OF A SINGLE BOND ORIENTED IN Z-DIRECTION         **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NIJKA
+      INTEGER(4),INTENT(IN)  :: NIJKB
+      INTEGER(4),INTENT(IN)  :: NEA
+      INTEGER(4),INTENT(IN)  :: NEB
+      REAL(8)   ,INTENT(IN)  :: EA(NEA)
+      REAL(8)   ,INTENT(IN)  :: EB(NEB)
+      INTEGER(4),INTENT(IN)  :: NFA
+      INTEGER(4),INTENT(IN)  :: NFB
+      REAL(8)   ,INTENT(IN)  :: CA(NIJKA,NEA,NFA)
+      REAL(8)   ,INTENT(IN)  :: CB(NIJKB,NEB,NFB)
+      REAL(8)   ,INTENT(IN)  :: DIS
+      REAL(8)   ,INTENT(OUT) :: UABCD(NFA,NFB,NFA,NFB)
+      INTEGER(4)             :: NIJKP
+      INTEGER(4)             :: NEP
+      REAL(8)                :: RA(3)
+      REAL(8)                :: RB(3)
+      REAL(8)                :: EP(NEA*NEB)
+      REAL(8)                :: RP(3,NEA*NEB)
+      INTEGER(4)             :: NA,NB,NP,N
+      INTEGER(4)             :: J,K
+      REAL(8)   ,ALLOCATABLE :: HI(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: CPAB(:,:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: CPAB1(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: CPAB2(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: CPAB3(:,:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: UPQ(:,:,:,:)
+      REAL(8)                :: FACTOR,SVAR
+      INTEGER(4)             :: INDA,INDB,INDC,INDD,INDP,INDQ
+      INTEGER(4)             :: MP,MQ,IP,IQ,JP,JQ,KP,KQ
+      INTEGER(4)             :: IEA,IEB,IEC,IED,IEP,IEQ
+      INTEGER(4)             :: IFA,IFB,IFC,IFD
+      INTEGER(4)             :: IA,IB,IC,ID
+      REAL(8)                :: PI,SGN
+INTEGER(4) :: I
+REAL(8) ::ARR(0:10),X
+!     **************************************************************************
+                     CALL TRACE$PUSH('GAUSSIAN$ZDIRECTION_FOURCENTER')
+      PI=4.D0*ATAN(1.D0)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
+      IF(J.NE.0.OR.K.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$STOP('GAUSSIAN$FOURCENTER')
+      END IF
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,J,K)
+      IF(J.NE.0.OR.K.NE.0) THEN
+        CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
+        CALL ERROR$STOP('GAUSSIAN$FOURCENTER')
+      END IF
+!
+!     ==========================================================================
+!     ==  CONTRACT PAIRS OF CARTESIAN GAUSSIANS INTO HERMITE GAUSSIANS        ==
+!     ==========================================================================
+      RA(:)=0.D0
+      RB(:)=(/0.D0,0.D0,DIS/)
+      NP=NA+NB 
+      CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',NIJKP,NP,0,0)
+      NEP=NEA*NEB
+      ALLOCATE(CPAB(NIJKA,NIJKB,NIJKP,NEA,NEB))
+PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: BEFORE CONTRACT2GAUSSMAT'
+      CALL GAUSSIAN_CONTRACT2GAUSSMAT(NIJKA,NEA,EA,RA,NIJKB,NEB,EB,RB &
+     &                               ,NIJKP,NEP,EP,RP,CPAB)
+!
+!     ==========================================================================
+!     ==  CONTRACT INTO ORBITALS
+!     ==========================================================================
+PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: BEFORE FOLD INTO ORBITALS LOOP 1'
+      ALLOCATE(CPAB3(NIJKP,NIJKA,NEA,NEB,NFB))
+      CPAB3=0.D0
+      DO IFB=1,NFB
+        DO IEA=1,NEA
+          DO INDA=1,NIJKA
+            DO IEB=1,NEB
+              DO INDB=1,NIJKB
+                CPAB3(:,INDA,IEA,IEB,IFB)=CPAB3(:,INDA,IEA,IEB,IFB) &
+    &                                    +CPAB(INDA,INDB,:,IEA,IEB) &
+    &                                    *CB(INDB,IEB,IFB)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(CPAB)
+PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: BEFORE FOLD INTO ORBITALS LOOP 2'
+      ALLOCATE(CPAB1(NIJKP,NEP,NFA,NFB))
+      CPAB1=0.D0
+      DO IFA=1,NFA
+        DO IFB=1,NFB
+          IEP=0
+          DO IEA=1,NEA
+            DO IEB=1,NEB
+              IEP=IEP+1
+              DO INDA=1,NIJKA
+                CPAB1(:,IEP,IFA,IFB)=CPAB1(:,IEP,IFA,IFB) &
+    &                               +CPAB3(:,INDA,IEA,IEB,IFB) &
+    &                               *CA(INDA,IEA,IFA)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(CPAB3)
+!REMARK: MANY ELEMENTS OF CPAB1 ARE ZERO
+!!$DO I=1,NIJKP
+!!$  PRINT*,'CPAB1 ',I,CPAB1(I,1,:,:)
+!!$ENDDO
+!!$STOP 'FORCED'
+!
+!     ==========================================================================
+!     ==  COULOMB INTEGRAL OF HERMITE GAUSSIANS                               ==
+!     ==========================================================================
+PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: BEFORE HERMITEINTEGRALS',NP
+      N=2*NP
+      ALLOCATE(HI(0:N,0:N,0:N))
+      ALLOCATE(UPQ(NIJKP,NIJKP,NEP,NEP))
+      DO IEP=1,NEP
+        DO IEQ=1,NEP
+!!$PRINT*,'BEFORE HI ',N,EP(IEP)*EP(IEQ)/(EP(IEP)+EP(IEQ)) &
+!!$&  ,SUM((RP(:,IEP)-RP(:,IEQ))**2)
+          CALL GAUSSIAN_HERMITEINTEGRAL(N,EP(IEP)*EP(IEQ)/(EP(IEP)+EP(IEQ)) &
+     &                                   ,RP(:,IEP)-RP(:,IEQ),HI)
+!!$PRINT*,'HI ',IEP,IEQ,MAXVAL(ABS(HI)),N
+!!$DO IP=0,N
+!!$  DO JP=0,N
+!!$    DO KP=0,N
+!!$      IF(ABS(HI(IP,JP,KP)).GT.1.D-5)WRITE(*,FMT='(5I4,"HI=",F20.5)')IEP,IEQ,IP,JP,KP,HI(IP,JP,KP)
+!!$    ENDDO
+!!$  ENDDO
+!!$ENDDO
+!!$PRINT*,'NA,NB,NP ',NA,NB,NP
+!!$STOP 'FORCED'
+
+          FACTOR=(2.D0*PI)**2.5D0/(EP(IEP)*EP(IEQ)*SQRT(EP(IEP)+EP(IEQ)))
+          INDP=0
+          DO MP=0,NP      
+            DO IP=0,MP
+              DO JP=0,MP-IP
+                KP=MP-IP-JP
+                INDP=INDP+1
+!         
+                INDQ=0
+                SGN=-1.D0
+                DO MQ=0,NP      
+                  SGN=-SGN     !SGN=(-1)^(IQ+JQ+KQ)=(-1)^MQ
+                  DO IQ=0,MQ
+                    DO JQ=0,MQ-IQ
+                      KQ=MQ-IQ-JQ
+                      INDQ=INDQ+1
+                      UPQ(INDP,INDQ,IEP,IEQ)=FACTOR*SGN*HI(IP+IQ,JP+JQ,KP+KQ) 
+                    ENDDO
+                  ENDDO
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(HI)
+!
+!     ==========================================================================
+!     ==  FOURCENTER INTEGRALS IN CARTESIAN GAUSSIANS                         ==
+!     ==========================================================================
+PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: MAPPING LOOP1'
+      ALLOCATE(CPAB2(NIJKP,NEP,NFA,NFB))
+      CPAB2=0.D0
+      DO IFC=1,NFA
+        DO IFD=1,NFB
+          DO IEQ=1,NEP
+            DO INDQ=1,NIJKP
+              CPAB2(:,:,IFC,IFD)=CPAB2(:,:,IFC,IFD) &
+                                +UPQ(:,INDQ,:,IEQ)*CPAB1(INDQ,IEQ,IFC,IFD)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: MAPPING LOOP 2'
+      UABCD(:,:,:,:)=0.D0
+      DO IFC=1,NFA
+        DO IFD=1,NFB
+          DO IFA=1,NFA
+            DO IFB=1,NFB
+              IF(IFA+NFA*(IFB-1).GT.IFC+NFA*(IFD-1)) CYCLE
+              SVAR=0.D0
+              DO IEP=1,NEP
+                DO INDP=1,NIJKP
+                  SVAR=SVAR+CPAB1(INDP,IEP,IFA,IFB)*CPAB2(INDP,IEP,IFC,IFD)
+                ENDDO
+              ENDDO
+              UABCD(IFA,IFB,IFC,IFD)=SVAR
+              UABCD(IFC,IFD,IFA,IFB)=SVAR
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(CPAB1)
+      DEALLOCATE(CPAB2)
+PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
+!
+                     CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GAUSSIAN$PLOTGAUSSEXPANSION(NIJK,E,C,RAD,N,F)
 !     **************************************************************************
 !     ** MAP AN FUNCTION EXPRESSED AS GAUSSIAN EXPANSION ONTO A GRID          **
@@ -1511,6 +1830,7 @@ print*,'marke 1',iorba,iorbb,iea,ieb
 !     **************************************************************************
 !     ** EVALUATES A SET OF BOYS FUNCTIONS FOR M=0,...,N                      **
 !     **          F_M(X)=INT_0^1 DT: T^(2M)*EXP(-X*T^2)                       **
+!     ** result is accurate only for aboiut x<d (empirical observation)     **
 !     **                                                                      **
 !     ** METHOD USED:                                                         **
 !     **   B.A. MAMEDOV, "ON THE EVALUATION OF BOYS FUNCTIONS USING DOWNWARD  **
@@ -1521,14 +1841,41 @@ print*,'marke 1',iorba,iorbb,iea,ieb
       REAL(8)   ,INTENT(IN) :: X
       REAL(8)   ,INTENT(OUT):: F(0:N)
       REAL(8)   ,PARAMETER  :: D=20.D0   ! #(ACCURATE DIGITS) 
-      REAL(8)               :: Y,EXPMX,PI
+      REAL(8)               :: Y,EXPMX,PI,svar
       INTEGER(4)            :: MT,M
 !     **************************************************************************
+!
+!     ==========================================================================
+!     == catch the case when x=0                                              ==
+!     ==========================================================================
+      if(abs(x).lt.1.d-5) then
+        do m=0,n
+          f(m)=1.d0/real(2*m+1,kind=8)
+        enddo
+        return
+      end if
+!
+!     ==========================================================================
+!     == large distance limit                                                 ==
+!     ==========================================================================
       PI=4.D0*ATAN(1.D0)
+      if(x.gt.d) then
+        y=sqrt(pi/(4.d0*x))
+        svar=1.d0/(2.d0*x)
+        do m=0,n
+          f(m)=y
+          y=y*real(2*m+1,kind=8)*svar
+        enddo
+        return
+      end if
+!
+!     ==========================================================================
+!     == now the normal recursion                                             ==
+!     ==========================================================================
       IF(ABS(X-REAL(N)).GT.1.D-5) THEN
-        MT=N+D/ABS(LOG10(REAL(N)/X))
+        MT=N+int(D/ABS(LOG10(REAL(N)/X)))
       ELSE
-        MT=N+D/ABS(LOG10(REAL(N)))
+        MT=N+int(D/ABS(LOG10(REAL(N))))
       END IF   
       MT=2*INT(0.5D0*REAL(MT+2))
       EXPMX=EXP(-X)
@@ -1961,7 +2308,7 @@ PRINT*,'H',H(IA,IB,0:IA+IB)
      &    ,4.05791663779760D-15,3.14434039868936D-16,1.78336953967902D-18/)
 !
 !     == TABLE 3 ===============================================================
-      M3=(/8,14,20,33,36,100/)	
+      M3=(/8,14,20,33,36,100/)
       X3=(/63.D0,68.D0,73.D0,85.D0,100.D0,120.D0/)
       F3=(/3.56261924865627D-12,3.09783511327517D-17,1.71295886102040D-21 &
      &    ,1.74268831008018D-29,3.08919970425521D-33,4.97723065221079D-53/)

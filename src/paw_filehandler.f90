@@ -179,17 +179,17 @@ END MODULE FILEHANDLER_MODULE
       RETURN
       END
 !
-!     .................................................................
-      SUBROUTINE FILEHANDLER$UNIT(ID_,UNIT_)
-!     ==================================================================
-!     ==  RETURN FILE UNIT FOR A GIVEN FILE (OPEN IF NECCESARY)       ==
-!     ==================================================================
-      USE FILEHANDLER_MODULE
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      RECURSIVE SUBROUTINE FILEHANDLER$UNIT(ID_,UNIT_)
+!     **************************************************************************
+!     **  RETURN FILE UNIT FOR A GIVEN FILE (OPEN IF NECCESARY)               **
+!     **************************************************************************
+      USE FILEHANDLER_MODULE, only : file,filehandler_create,filehandler_lookup
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID_
       INTEGER(4)  ,INTENT(OUT):: UNIT_
       INTEGER(4)              :: IFIL
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ALLOCATED(FILE))CALL FILEHANDLER_CREATE
       CALL FILEHANDLER_LOOKUP(ID_,IFIL)
       IF(IFIL.EQ.0) THEN
@@ -472,7 +472,7 @@ END MODULE FILEHANDLER_MODULE
       END 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE FILEHANDLER_OPEN(FILE_)
+      recursive SUBROUTINE FILEHANDLER_OPEN(FILE_)
 !     **************************************************************************
 !     **  OPEN files unless already open                                      **
 !     **************************************************************************
@@ -669,10 +669,10 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
       END
 !
 !     ..................................................................
-      SUBROUTINE FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+      recursive SUBROUTINE FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
 !     ******************************************************************
 !     ******************************************************************
-      USE STRINGS_MODULE
+      Use STRINGS_MODULE
       USE FILEHANDLER_MODULE, ONLY : FILE_TYPE
       IMPLICIT NONE
       TYPE (FILE_TYPE),INTENT(IN) :: FILE_

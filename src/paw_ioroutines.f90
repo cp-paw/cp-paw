@@ -160,6 +160,11 @@ CALL TRACE$PASS('SPECIES')
       CALL SETUP$REPORT(NFILO)
 !
 !     ==================================================================
+!     == LMTO OBJECT                                                  ==
+!     ==================================================================
+      CALL LMTO$REPORT(NFILO)
+!
+!     ==================================================================
 !     == ATOMS                                                        ==
 !     ==================================================================
 CALL TRACE$PASS('ATOMS')
@@ -1010,6 +1015,7 @@ CALL TRACE$PASS('DONE')
       TYPE(LL_TYPE)            :: LL_CNTL
       INTEGER(4)               :: ILDA
       LOGICAL(4)               :: TCHK,tchk1,tchk2
+      real(8)                  :: svar
 !     ******************************************************************
                           CALL TRACE$PUSH('READIN_DFT')
       LL_CNTL=LL_CNTL_
@@ -1047,6 +1053,24 @@ CALL TRACE$PASS('DONE')
         IF(TCHK1) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'DROP',1,TCHK2)
           CALL LMTO$SETL4('DROP',TCHK2)
+        END IF
+!
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'HFWEIGHT',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'HFWEIGHT',1,SVAR)
+          CALL LMTO$SETR8('HFWEIGHT',SVAR)
+        END IF
+!!$
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'K2',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'K2',1,SVAR)
+          CALL LMTO$SETR8('K2',SVAR)
+        END IF
+!!$
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'SCALERCUT',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'SCALERCUT',1,SVAR)
+          CALL LMTO$SETR8('SCALERCUT',SVAR)
         END IF
 
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
@@ -3423,6 +3447,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==  READ BLOCK !STRUCTURE!SPECIES                                       ==
 !     ==========================================================================
       CALL STRCIN_SPECIES(LL_STRC)
+!    
+!     ==========================================================================
+!     ==  READ BLOCK !STRUCTURE!NTBO                                          ==
+!     ==========================================================================
+      call STRCIN_LMTO(LL_STRC)
+!
       CALL SETUP$READ()
 !    
 !     ==========================================================================
@@ -3682,7 +3712,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     **  DEFINES THE ATOMTYPELIST                                            **
 !     **                                                                      **
 !     **  REQUIRES PREDEFINED: NOTHING                                        **
-!     ************************************************************************** 
+!     **************************************************************************
       USE LINKEDLIST_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
@@ -3710,7 +3740,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       LOGICAL(4)               :: TINTERNALSETUP
       LOGICAL(4),ALLOCATABLE   :: TORB(:)
       REAL(8)                  :: EV
-!     ************************************************************************** 
+!     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES')
       LL_STRC=LL_STRC_
       CALL CONSTANTS('U',PROTONMASS)
@@ -3876,20 +3906,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         DEALLOCATE(NPRO)
 !
 !       ========================================================================
-!       ==  SELECTOR FOR LOCAL ORBITALS                                       ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'TORB',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$SIZE(LL_STRC,'TORB',1,LENG)
-          ALLOCATE(TORB(LENG))
-          CALL LINKEDLIST$GET(LL_STRC,'TORB',1,TORB)
-          CALL ATOMTYPELIST$SELECT(SPNAME)
-          CALL ATOMTYPELIST$SETL4A('TORB',LENG,TORB)
-          CALL ATOMTYPELIST$UNSELECT
-          DEALLOCATE(TORB)
-        END IF        
-!
-!       ========================================================================
 !       ==  SOFTCORE TYPE                                                     ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'SOFTCORE',1,TCHK)
@@ -4037,24 +4053,162 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL LINKEDLIST$SELECT(LL_STRC,'..')
         END IF
 !
-!       ========================================================================
-!       ========================================================================
-!       ==  INTERFACE FOR NATURAL TIGHT-BINDING ORBITALS (LMTO AND SUCH)      ==
-!       ========================================================================
-!       ========================================================================
-        CALL LMTO$GETL4('ON',TNTBO)
-        IF(TNTBO) THEN
-          IF(THYBRID.OR.TLDAPLUSU) THEN
-            CALL ERROR$MSG('NTBO IS NOT COMPATIBLE WITH HYBRID OR LDAPLUSU')
-            CALL ERROR$MSG('STRCIN_SPECIES')
-          END IF
-        END IF
-!
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
                            CALL TRACE$POP
       RETURN
       END
+!     
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE STRCIN_LMTO(LL_STRC_)
+!     **************************************************************************
+!     **  DEFINES THE parameters for the LMTO object                          **
+!     **                                                                      **
+!     **  !species must be finished before this is called                     **
+!     **          (uses nsp from atomtypelist)                                **
+!     **                                                                      **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
+      TYPE(LL_TYPE)            :: LL_STRC
+      integer(4)               :: isp
+      CHARACTER(32)            :: SPNAME
+      LOGICAL(4)               :: TCHK,tchk1
+      INTEGER(4)               :: NSP
+      REAL(8)                  :: SVAR
+      LOGICAL(4)               :: Tntbo
+      integer(4)               :: leng
+      LOGICAL(4),ALLOCATABLE   :: TORB(:)
+      real(8)   ,ALLOCATABLE   :: work(:)
+!     **************************************************************************
+                           CALL TRACE$PUSH('STRCIN_SPECIES_NTBO')
+      LL_STRC=LL_STRC_
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
+      DO ISP=1,NSP
+        CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
+!
+!       ========================================================================
+!       ==  check conflict with ldaplusu and hybrid                           ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTL(LL_STRC,'HYBRID',1,TCHK)
+        IF(TCHK) THEN
+          CALL ERROR$MSG('OPTIONS !NTBO AND !HYBRID ARE INCOMPATIBLE')
+          CALL ERROR$MSG('IN !STRUCTURE!SPECIES')
+          CALL ERROR$STOP('STRCIN_LMTO')
+        END IF
+        CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,TCHK)
+        IF(TCHK) THEN
+          CALL ERROR$MSG('OPTIONS !NTBO AND !LDAPLUSU ARE INCOMPATIBLE')
+          CALL ERROR$MSG('IN !STRUCTURE!SPECIES')
+          CALL ERROR$STOP('STRCIN_LMTO')
+        END IF
+!
+!       ========================================================================
+!       ==  skip if ntbo block is not present                                 ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTL(LL_STRC,'NTBO',1,TNTBO)
+        IF(.NOT.TNTBO) then
+          CALL LINKEDLIST$SELECT(LL_STRC,'..') !leave species block
+          cycle
+        end if
+!
+!       ========================================================================
+!       ==  SPECIES NAME                                                      ==
+!       ========================================================================
+        CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
+!
+        CALL LMTO$SETI4('ISP ',ISP)
+        CALL LINKEDLIST$SELECT(LL_STRC,'NTBO')
+!   
+!       == SELECT ATOMTYPE AS ACTIVE (HYBRID CONTRIBUTIONS ARE NOT SWITCHED OFF)==
+        CALL LMTO$SETL4('ACTIVE',.TRUE.)
+!   
+!!$        CALL LINKEDLIST$EXISTD(LL_STRC,'HFWEIGHT',1,TCHK)
+!!$        IF(TCHK) THEN
+!!$          CALL LINKEDLIST$GET(LL_STRC,'HFWEIGHT',1,SVAR)
+!!$          CALL LMTO$SETR8('HFWEIGHT',SVAR)
+!!$        END IF
+!   
+        CALL LINKEDLIST$EXISTD(LL_STRC,'CV',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_STRC,'CV',1,TCHK1)
+          CALL LMTO$SETL4('COREVALENCE',TCHK1)
+        END IF
+!   
+        CALL LINKEDLIST$EXISTD(LL_STRC,'FOCKSETUP',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_STRC,'FOCKSETUP',1,TCHK1)
+          CALL LMTO$SETL4('FOCKSETUP',TCHK1)
+        END IF
+!   
+        CALL LINKEDLIST$EXISTD(LL_STRC,'NDDO',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_STRC,'NDDO',1,TCHK1)
+          CALL LMTO$SETL4('NDDO',TCHK1)
+        END IF
+!   
+        CALL LINKEDLIST$EXISTD(LL_STRC,'31',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_STRC,'31',1,TCHK1)
+          CALL LMTO$SETL4('31',TCHK1)
+        END IF
+!
+        CALL LINKEDLIST$EXISTD(LL_STRC,'BONDX',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_STRC,'BONDX',1,TCHK1)
+          CALL LMTO$SETL4('BONDX',TCHK1)
+        END IF
+!   
+!!$        CALL LINKEDLIST$EXISTD(LL_STRC,'K2',1,TCHK)
+!!$        IF(TCHK) THEN
+!!$          CALL LINKEDLIST$GET(LL_STRC,'K2',1,SVAR)
+!!$          CALL LMTO$SETR8('K2',SVAR)
+!!$        END IF
+!   
+        CALL LINKEDLIST$EXISTD(LL_STRC,'TAILLAMBDA',1,TCHK)
+        IF(TCHK) THEN
+          ALLOCATE(WORK(2))
+          CALL LINKEDLIST$GET(LL_STRC,'TAILLAMBDA',1,WORK)
+          if(work(1).le.0.d0.or.work(2).le.0.d0) then
+            CALL ERROR$MSG('INVALID INPUT IN !STRUCTURE!SPECIES!NTBO')
+            CALL ERROR$MSG('TAILLAMBDA MUST BE POSITIVE')
+            call error$stop('STRCIN_LMTO')
+          end if
+          CALL LMTO$SETR8('TAILLAMBDA1',WORK(1))
+          CALL LMTO$SETR8('TAILLAMBDA2',WORK(2))
+          DEALLOCATE(WORK)
+        END IF
+!   
+!!$        CALL LINKEDLIST$EXISTD(LL_STRC,'SCALERCUT',1,TCHK)
+!!$        IF(TCHK) THEN
+!!$          CALL LINKEDLIST$GET(LL_STRC,'SCALERCUT',1,SVAR)
+!!$          CALL LMTO$SETR8('SCALERCUT',SVAR)
+!!$        END IF
+!   
+!       ======================================================================
+!       ==  SELECTOR FOR LOCAL ORBITALS                                     ==
+!       ======================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'TORB',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$SIZE(LL_STRC,'TORB',1,LENG)
+          ALLOCATE(TORB(LENG))
+          CALL LINKEDLIST$GET(LL_STRC,'TORB',1,TORB)
+          CALL ATOMTYPELIST$SELECT(SPNAME)
+          CALL ATOMTYPELIST$SETL4A('TORB',LENG,TORB)
+          CALL ATOMTYPELIST$UNSELECT
+          DEALLOCATE(TORB)
+        END IF        
+    
+        CALL LMTO$SETI4('ISP',0)
+        CALL LINKEDLIST$SELECT(LL_STRC,'..') ! leave ntbo block
+        CALL LINKEDLIST$SELECT(LL_STRC,'..') ! leave species block
+      enddo
+                                   call trace$pop()
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_ATOM(LL_STRC_)

@@ -447,7 +447,7 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4),INTENT(IN) :: IIO(3,3,NSYM) !SYMMETRY OPERATIONS
       INTEGER(4),INTENT(IN) :: IARB(3)    ! DEPENDENCE
       logical(4),intent(inout) :: tshift     ! attempts a shift from the Gamma point
-      LOGICAL(4),PARAMETER  :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       REAL(8)   ,ALLOCATABLE:: XK(:,:)   !(3,NGKP) K-POINTS
       REAL(8)               :: GBAS(3,3)
       INTEGER(4)            :: N(3)       !DIVISION OF REC.LATT. VECT.
@@ -595,7 +595,7 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)   ,INTENT(IN) :: RBAS(3,3)  ! LATTICE VECTORS (REAL SPACE)
       INTEGER(4),INTENT(IN) :: NKDIV(3)   ! DIVISIONS OF RECIPROCAL LATTICE VECTORS
       INTEGER(4),INTENT(IN) :: ISHIFT(3)  ! GRID IS SHIFTED 
-      LOGICAL(4),PARAMETER  :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER  :: TPR=.false.
       REAL(8)   ,ALLOCATABLE:: XK(:,:)   !(3,NGKP) K-POINTS
       REAL(8)               :: GBAS(3,3)
       INTEGER(4)            :: IWBK=0

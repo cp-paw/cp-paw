@@ -2837,7 +2837,10 @@ END IF
       INTEGER(4)             :: NPRO   !#(PROJECTOR FUNCTIONS)
       REAL(8)   ,ALLOCATABLE :: XK(:,:)
       INTEGER(4)             :: ISPIN,IKPT,IB
+      logical(4)             :: ton
 !     **************************************************************************
+      CALL LMTO$GETL4('ON',TON)
+      IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('WAVES$FROMNTBO')
                               CALL TIMING$CLOCKON('W:FROMNTBO')
 !

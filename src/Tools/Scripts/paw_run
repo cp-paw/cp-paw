@@ -59,7 +59,7 @@ NTASK=""
 while (( $# )); do
   case "$1" in
   ?|-h)
-     echo $USAGE
+     echo -e $USAGE
      exit 0
     ;;
   -c|-c*)
@@ -101,7 +101,7 @@ while (( $# )); do
     ;;
   -*)
     echo "Unknown option $1."
-    echo $USAGE
+    echo -e $USAGE
     exit 1
     ;;
   *)
@@ -115,7 +115,7 @@ done
 #################################################################
 if [[ -z ${CONTROL} ]] ; then 
    echo "the controlfile must be specified"
-   echo $USAGE
+   echo -e $USAGE
    exit 1
 fi  
 if [[ -z ${TYPE} ]] ; then TYPE=O ; fi  

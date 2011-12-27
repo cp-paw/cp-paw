@@ -193,7 +193,7 @@ clean_scripts:
 #---------------------------------------------------------------------------
 #--          Documentation                                                --
 #---------------------------------------------------------------------------
-docs: ${PAWDIR}/doc/manual.pdf ${PAWDIR}/doc/history.pdf ${PAWDIR}/doc/install.pdf ${PAWDIR}/doc/Examples
+docs: ${PAWDIR}/doc/manual.pdf ${PAWDIR}/doc/history.pdf ${PAWDIR}/doc/install.pdf ${PAWDIR}/doc/style.pdf ${PAWDIR}/doc/Examples
 #
 ${PAWDIR}/doc/manual.pdf :  ${PAWDIR}/doc/manual.tex  ${PAWDIR}/doc/doc.bib ${PAWDIR}/doc/Figs
 	cd ${PAWDIR}/doc; latex manual; makeindex manual.idx; latex manual;  bibtex manual; latex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
@@ -204,6 +204,9 @@ ${PAWDIR}/doc/history.pdf :  ${PAWDIR}/doc/history.tex ${PAWDIR}/doc/doc.bib
 ${PAWDIR}/doc/install.pdf :  ${PAWDIR}/doc/install.tex ${PAWDIR}/doc/doc.bib
 	cd ${PAWDIR}/doc; latex install; makeindex install.idx; latex install; bibtex install; latex install; latex install; dvips install.dvi; ps2pdf install.ps
 #
+${PAWDIR}/doc/style.pdf :  ${PAWDIR}/doc/style.tex ${PAWDIR}/doc/doc.bib
+	cd ${PAWDIR}/doc; latex style; makeindex style.idx; latex style; bibtex style; latex style; latex style; dvips style.dvi; ps2pdf style.ps
+#
 #  dependencies for documentation
 #
 ${PAWDIR}/doc/manual.tex : ${PAWDIR}/src/Docs/manual.tex 
@@ -211,6 +214,9 @@ ${PAWDIR}/doc/manual.tex : ${PAWDIR}/src/Docs/manual.tex
 #
 ${PAWDIR}/doc/install.tex :${PAWDIR}/src/Docs/install.tex 
 	cp ${PAWDIR}/src/Docs/install.tex ${PAWDIR}/doc/install.tex
+#
+${PAWDIR}/doc/style.tex :${PAWDIR}/src/Docs/style.tex 
+	cp ${PAWDIR}/src/Docs/style.tex ${PAWDIR}/doc/style.tex
 #
 ${PAWDIR}/doc/history.tex :${PAWDIR}/src/Docs/history.tex 
 	cp ${PAWDIR}/src/Docs/history.tex ${PAWDIR}/doc/history.tex

@@ -57,7 +57,6 @@ MODULE SETUP_MODULE
 !**  BY FORCING UNSELECT BEFORE SELECT, ONE CAN SAFEGUARD THAT A SUBROUTINE   **
 !**  CHANGES THE SETTING OF A PARENT ROUTINE.                                 **
 !**                                                                           **
-!**                                                                           **
 !**                                              P.E. BLOECHL, (1991-2010)    **
 !*******************************************************************************
 !== PARAMETERS DEFINING THE SETUP CONSTRUCTION =================================
@@ -1509,7 +1508,7 @@ PRINT*,'RCSM ',THIS%RCSM
       CHARACTER(64)         :: KEY
       REAL(8)   ,ALLOCATABLE:: PSI(:,:)
       REAL(8)   ,ALLOCATABLE:: PSISM(:,:)  !SMALL COMPONENT
-      LOGICAL(4)            :: TCHK
+      LOGICAL(4)            :: TCHK,tchk1
       REAL(8)               :: PI,FOURPI,Y0,C0LL
       REAL(8)               :: SVAR
       INTEGER(4)            :: IR,IB,LN,L,IB1
@@ -1618,6 +1617,18 @@ PRINT*,'RCSM ',THIS%RCSM
         END IF
       END IF
       CALL LDAPLUSU$SELECTTYPE(0)
+!
+      CALL LMTO$GETL4('ON',TCHK)
+      IF(TCHK) THEN
+        CALL LMTO$SETI4('ISP',this%i)
+        CALL LMTO$GETL4('FOCKSETUP',TCHK1)
+        IF(TCHK1) THEN
+          CALL LMTO$GETR8('HFWEIGHT',THIS%SETTING%FOCK)
+        ELSE
+          THIS%SETTING%FOCK=0.D0
+        END IF
+        CALL LMTO$SETI4('ISP',0)
+      END IF
 !
       IF(THIS%SETTING%TREL) THEN
         IF(THIS%SETTING%SO) THEN

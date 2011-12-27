@@ -245,7 +245,7 @@ END MODULE TRACE_MODULE
 !     ==========================================================================
 !     == REDUCE LEVEL INDICATOR BY ONE                                        ==
 !     ==========================================================================
-      IF(LEVEL.LE.MAXLEVEL)HISTORY(LEVEL)=' '
+      IF(LEVEL.LE.MAXLEVEL.AND.LEVEL.GE.1)HISTORY(LEVEL)=' '
       LEVEL=LEVEL-1
       RETURN 
       END

@@ -1,9 +1,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 1100 $'
+character(256):: VERrev='$LastChangedRevision: 1118 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2011-08-08 10:48:00 +0200 (Mo, 08. Aug 2011) $'
+character(256):: VERdat='$LastChangedDate: 2011-12-27 11:45:50 +0100 (Di, 27. Dez 2011) $'
 end Module version_module
 !
 !     ..................................................................
@@ -47,11 +47,11 @@ end Module version_module
       CALL MPE$INIT
 !
 !     ==================================================================
-!     == endless loop for parallel debugging                          ==
+!     == ENDLESS LOOP FOR PARALLEL DEBUGGING                          ==
 !     ==================================================================
-      debugwait=.false.  !for parallel debugging set equal true
-      do while (debugwait) !set breakpoint here
-      enddo
+      DEBUGWAIT=.FALSE.  !FOR PARALLEL DEBUGGING SET EQUAL TRUE
+      DO WHILE (DEBUGWAIT) !SET BREAKPOINT HERE
+      ENDDO
 !
 !     ==================================================================
 !     ==  ENTER CAR-PARRINELLO SIMULATION                             ==

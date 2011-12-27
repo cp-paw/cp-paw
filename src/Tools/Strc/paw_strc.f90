@@ -978,7 +978,7 @@
       enddo
       WRITE(NFIL,FMT='(A)')'"'
       WRITE(NFIL,FMT='(A)')-'ORDER="'
-      WRITE(NFIL,*)(1,I=1,NBOND)
+      WRITE(NFIL,fmt='(10i7)')(1,I=1,NBOND)
       WRITE(NFIL,FMT='(A)')'"/>'
       WRITE(NFIL,FMT='(A)')-'</MOLECULE>'
       RETURN

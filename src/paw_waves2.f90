@@ -2753,11 +2753,11 @@ print*,'a     ',(a(i,i),i=1,nb)
       real(8)               :: espinhomo(nspin)
       real(8)               :: espinlumo(nspin)
       integer(4)            :: ibspinhomo(nspin)
+      integer(4)            :: ibspinlumo(nspin)
       real(8)               :: ehomo,elumo,egdirect
-      integer(4)            :: ibhomo
-      integer(4)            :: ikhomo,iklumo,ikdirect
-      integer(4)            :: ishomo,islumo,isdirect
-      character(80)         :: format
+      integer(4)            :: ibhomo,ikhomo,iklumo,ikdirect
+      integer(4)            :: iblumo,ishomo,islumo,isdirect
+      character(256)        :: format
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL CONSTANTS('EV',EV)
@@ -2775,7 +2775,9 @@ print*,'a     ',(a(i,i),i=1,nb)
       espinhomo(:)=-1.d+10
       espinlumo(:)=+1.d+10
       ibhomo       =-1
+      iblumo       =-1
       ibspinhomo(:)=-1
+      ibspinlumo(:)=-1
       ikdirect=0
       ikhomo=0
       iklumo=0
@@ -2842,11 +2844,15 @@ print*,'a     ',(a(i,i),i=1,nb)
 !             __LOOK FOR LUMO___________________________________________________
               IF(OCC(IB,IKPT,ISPIN).LT.1.D-6.AND.EIG(IB).LT.ELUMO) THEN
                 ELUMO=EIG(IB)
+                IKLUMO=IKPT
+                ISLUMO=ISPIN
+                IBLUMO=IB
               END IF
 !             __LOOK FOR LUMO___________________________________________________
               IF(OCC(IB,IKPT,ISPIN).LT.1.D-6 &
         &                                 .AND.EIG(IB).LT.ESPINLUMO(ISPIN)) THEN
                 ESPINLUMO(ISPIN)=EIG(IB)
+                IBSPINlumo(ISPIN)=IB
               END IF
 !             __LOOK FOR DIRECT GAP_____________________________________________
               IF(IB.GT.1.AND.OCC(IB,IKPT,ISPIN).LT.1.D-6) THEN
@@ -2879,8 +2885,9 @@ print*,'a     ',(a(i,i),i=1,nb)
       WRITE(NFIL,FMT=FORMAT)'SMALLEST DIRECT GAP',EGDIRECT/EV,IKDIRECT,ISDIRECT 
       FORMAT='(55("."),": ",T1,A,T58,F10.4," EV ")'
       WRITE(NFIL,FMT=FORMAT)'ABSOLUTE GAP',(ELUMO-EHOMO)/EV
-      FORMAT='(T10," FROM IK=",I4," AND ISPIN=",I1," TO IK=",I5," AND ISPIN=",I2)'
-      WRITE(NFIL,FMT=FORMAT)IKHOMO,ISHOMO,IKLUMO,ISLUMO
+      FORMAT='(T10," FROM BAND=",I5," AT IK=",I5," WITH ISPIN=",I1 &
+     &              ," TO BAND ",I5," AT IK=",I5," WITH ISPIN=",I1)'
+      WRITE(NFIL,FMT=FORMAT)IBHOMO,IKHOMO,ISHOMO,IBLUMO,IKLUMO,ISLUMO
       IF(ELUMO-EHOMO.LT.0.D0) THEN
         CALL REPORT$STRING(NFIL,'MATERIAL IS A METAL: USE VARIABLE OCCUPATIONS')
       END IF
