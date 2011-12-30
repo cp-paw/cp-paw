@@ -1956,7 +1956,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
         DEALLOCATE(WORK)
       END IF
       DEALLOCATE(VHARTREE)
-CALL GRAPHICS_TOM()
+!CALL GRAPHICS_TOM()
 !
 !     ==================================================================
 !     ==  ONE-CENTER CONTRIBUTIONS                                    ==

@@ -1364,6 +1364,8 @@ print*,'marke 1',iorba,iorbb,iea,ieb
 !     **************************************************************************
 !     ** CALCULATES FOUR-CENTER MATRIX ELEMENTS FOR CARTESIAN GAUSSIANS       **
 !     ** LOCATED AT THE ENDS OF A SINGLE BOND ORIENTED IN Z-DIRECTION         **
+!     ** U(1,2,3,4)=INT DX INT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|        **
+!     ** the order of indices deviates from the convention for the utensor!   **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NIJKA

@@ -740,8 +740,19 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !     ==========================================================================
 !     == ATTACH EXPONENTIAL TAILS TO AUGMENTED HANKEL AND BESSEL FUNCTIONS    ==
 !     ==========================================================================
-      if(.not.ton) return
       CALL LMTO_MAKETAILEDPARTIALWAVES()
+      if(.not.ton) return
+!
+!     ==========================================================================
+!     ==  CONSTRUCT GAUSSIAN FITS OF the tailes orbitals                      ==
+!     ==========================================================================
+      CALL LMTO_TAILEDGAUSSFIT()
+!
+!     ==========================================================================
+!     ==  CONSTRUCT OFFSITE INTEGRALS OF TAILED ORBITALS                      ==
+!     ==========================================================================
+      CALL LMTO_OFFXINT()
+!      CALL LMTO_TAILEDPRODUCTS()
 !!$!
 !!$!     ==========================================================================
 !!$!     == DETERMINE GAUSS EXPANSION OF UNSCREENED HANKEL FUNCTIONS KPRIME      ==
@@ -1362,17 +1373,6 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
         DEALLOCATE(LOXT)
         CALL SETUP$ISELECT(0)
       ENDDO
-!
-!     ==========================================================================
-!     ==  CONSTRUCT GAUSSIAN FITS OF the tailes orbitals                      ==
-!     ==========================================================================
-      CALL LMTO_TAILEDGAUSSFIT()
-!
-!     ==========================================================================
-!     ==  CONSTRUCT OFFSITE INTEGRALS OF TAILED ORBITALS                      ==
-!     ==========================================================================
-      CALL LMTO_OFFXINT()
-!      CALL LMTO_TAILEDPRODUCTS()
                               CALL TRACE$POP() 
       RETURN
       END
@@ -1940,6 +1940,9 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
 !
 !           ====================================================================
 !           == FOURCENTER MATRIX ELEMENTS                                     ==
+!           == the result of GAUSSIAN$ZDIRECTION_FOURCENTER is defined as     ==
+!           == U(1,2,3,4)=INT DX IT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|   ==
+!           == the order of indices deviates from the u-tensor convention     ==
 !           ====================================================================
             DIS=OFFSITEX(ISPA,ISPB)%DIS(IDIS)
 !!$PRINT*,'DIS             ',DIS
@@ -1954,7 +1957,7 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
      &                                         ,DIS,UABCD)
 !
 !           ====================================================================
-!           == U(1,2,3,4)=INT DX IT DX': A1(X)*B3(X)][A2(X')*B4(X')]/|R-R'|   ==
+!           == map onto offsitex structure                                    ==
 !           ====================================================================
             IND=0
             DO LMN2=1,LMNXB
@@ -1965,7 +1968,8 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
                     Icd=LMN3+LMNXA*(LMN4-1)
                     IF(ICD.GT.IAB) EXIT
                     IND=IND+1
-                  OFFSITEX(ISPA,ISPB)%BONDU(IDIS,IND)=UABCD(LMN1,LMN2,LMN3,LMN4)
+                    OFFSITEX(ISPA,ISPB)%BONDU(IDIS,IND) &
+      &                                =UABCD(LMN1,LMN2,LMN3,LMN4)
                   ENDDO
                 ENDDO
               ENDDO
@@ -5254,7 +5258,48 @@ PRINT*,'============ OFFSITEXEVAL ============================='
         CALL LMTO_OFFSITEX22U(ISPA,ISPB, DIS,LMNXA,LMNXB,U22,DU22)
         CALL LMTO_OFFSITEX31U(ISPA,ISPB, DIS,LMNXA,LMNXB,U3A1B,DU3A1B)
         CALL LMTO_OFFSITEX31U(ISPB,ISPA,-DIS,LMNXB,LMNXA,U3B1A,DU3B1A)
+!       == bondu(1,2,3,4)=INT DX InT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|  ==
         CALL LMTO_OFFSITEXBONDU(ISPA,ISPB,DIS,LMNXA,LMNXB,BONDU,DBONDU)
+
+svar=0.d0
+do lmn1a=1,lmnxa
+  do lmn1b=1,lmnxb
+    do lmn2a=1,lmnxa
+      do lmn2b=1,lmnxb
+        svar1=u22(lmn1a,lmn2a,lmn1b,lmn2b)
+        svar=max(svar,abs(svar1-u22(lmn1a,lmn2a,lmn2b,lmn1b)))
+        svar=max(svar,abs(svar1-u22(lmn2a,lmn1a,lmn1b,lmn2b)))
+        svar=max(svar,abs(svar1-u22(lmn2a,lmn1a,lmn2b,lmn1b)))
+      enddo
+    enddo
+  enddo
+enddo
+if(svar.gt.1.d-8)print*,'symmetry deviation u22 ',svar 
+svar=0.d0
+do lmn1a=1,lmnxa
+  do lmn2a=1,lmnxA
+    do lmn3a=1,lmnxa
+      do lmn1b=1,lmnxb
+        svar1=u3A1B(lmn1a,lmn2a,lmn3A,lmn1b)
+        svar=max(svar,abs(svar1-u3A1B(lmn2a,lmn1a,lmn3A,lmn1b)))
+      enddo
+    enddo
+  enddo
+enddo
+if(svar.gt.1.d-8)print*,'symmetry deviation U31 ',svar 
+svar=0.d0
+do lmn1a=1,lmnxa
+  do lmn1b=1,lmnxb
+    do lmn2a=1,lmnxa
+      do lmn2b=1,lmnxb
+        svar1=bondu(lmn1a,lmn1b,lmn2a,lmn2b)
+        svar=max(svar,abs(svar1-bondu(lmn2a,lmn2b,lmn1a,lmn1b)))
+      enddo
+    enddo
+  enddo
+enddo
+if(svar.gt.1.d-8)print*,'symmetry deviation bondu ',svar 
+ 
 !
 !       ========================================================================
 !       == SWITCH SELECTED TERMS OFF                                          ==
@@ -5288,6 +5333,12 @@ PRINT*,'============ OFFSITEXEVAL ============================='
         HA=0.D0
         HB=0.D0
 !print*,'ex  1',ex
+!
+!       ========================================================================
+!       == nddo term:
+!       == u22(1,2,3,4)=INT DX InT DX': A1(X)*A2(X)][B3(X')*B4(X')]/|R-R'|    ==
+!       == lmn1a,lmn2a tied to coordinate x, lmn1b,lmn2b to x'                ==
+!       ========================================================================
         DO LMN1B=1,LMNXB
           DO LMN2B=1,LMNXB
             DO LMN1A=1,LMNXA
@@ -5301,6 +5352,12 @@ PRINT*,'============ OFFSITEXEVAL ============================='
           ENDDO
         ENDDO
 !print*,'ex  2',ex
+!
+!       ========================================================================
+!       == 3-1 terms:                                                         ==
+!       == u3a1b(1,2,3,4)=INT DX InT DX': A1(X)*A2(X)][A3(X')*B4(X')]/|R-R'|  ==
+!       == lmn1a,lmn2a tied to coordinate x, lmn3a,lmn1b to x'                ==
+!       ========================================================================
         DO LMN1A=1,LMNXA
           DO LMN2A=1,LMNXA
             DO LMN3A=1,LMNXA 
@@ -5335,17 +5392,22 @@ PRINT*,'============ OFFSITEXEVAL ============================='
 !print*,'ex  4',ex
 !
 !       ========================================================================
-!       == U(1,2,3,4)=INT DX IT DX': A1(X)*B3(X)][A2(X')*B4(X')]/|R-R'|       ==
+!       == 2nd order differential overlap terms:                              ==
+!       == bondu(1,2,3,4)=INT DX InT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|  ==
+!       == lmn1a,lmn1b tied to coordinate x, lmn2a,lmn2b to x'                ==
 !       ========================================================================
         DO LMN1A=1,LMNXA
           DO LMN1B=1,LMNXB
             DO LMN2A=1,LMNXA 
               DO LMN2B=1,LMNXB
-!sign incorrect
-                SVAR=+0.5D0*BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+                SVAR=-0.25D0*BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
                 EX=EX+SVAR*SUM(DA(LMN1A,LMN2A,:)*DB(LMN1B,LMN2B,:))
                 HA(LMN1A,LMN2A,:)=HA(LMN1A,LMN2A,:)+SVAR*DB(LMN1B,LMN2B,:)
                 HB(LMN1B,LMN2B,:)=HB(LMN1B,LMN2B,:)+SVAR*DA(LMN1A,LMN2A,:)
+                SVAR=-0.25D0*BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+                EX=EX+SVAR*SUM(D(LMN1A,LMN2B,:)*D(LMN2A,LMN1B,:))
+                H(LMN1A,LMN2B,:)=H(LMN1A,LMN2B,:)+SVAR*D(LMN2A,LMN1B,:)
+                H(LMN2A,LMN1B,:)=H(LMN2A,LMN1B,:)+SVAR*D(LMN1A,LMN2B,:)
               ENDDO
             ENDDO
           ENDDO

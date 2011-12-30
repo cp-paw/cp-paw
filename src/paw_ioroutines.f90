@@ -4091,6 +4091,15 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
 !
 !       ========================================================================
+!       ==  skip if ntbo block is not present                                 ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTL(LL_STRC,'NTBO',1,TNTBO)
+        IF(.NOT.TNTBO) then
+          CALL LINKEDLIST$SELECT(LL_STRC,'..') !leave species block
+          cycle
+        end if
+!
+!       ========================================================================
 !       ==  check conflict with ldaplusu and hybrid                           ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTL(LL_STRC,'HYBRID',1,TCHK)
@@ -4105,15 +4114,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL ERROR$MSG('IN !STRUCTURE!SPECIES')
           CALL ERROR$STOP('STRCIN_LMTO')
         END IF
-!
-!       ========================================================================
-!       ==  skip if ntbo block is not present                                 ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTL(LL_STRC,'NTBO',1,TNTBO)
-        IF(.NOT.TNTBO) then
-          CALL LINKEDLIST$SELECT(LL_STRC,'..') !leave species block
-          cycle
-        end if
 !
 !       ========================================================================
 !       ==  SPECIES NAME                                                      ==
