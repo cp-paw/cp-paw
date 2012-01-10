@@ -1341,27 +1341,27 @@ real(8) :: pi
         DEALLOCATE(NLPHI)
         DEALLOCATE(NLPHIDOT)
 
-print*,'warning!!!! fudge for testing h2'
-pi=4.d0*atan(1.d0)
-potpar(isp)%tailed%aef(:,:)=0.d0
-svar2=0.168856d0
-svar1=0.444635d0*(2.d0*svar2/pi)**0.75d0
-potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
- &     +svar1*exp(-svar2*r(:)**2)
-svar2=0.623913d0
-svar1=0.535328d0*(2.d0*svar2/pi)**0.75d0
-potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
- &     +svar1*exp(-svar2*r(:)**2)
-svar2=3.42525d0
-svar1=0.154329d0*(2.d0*svar2/pi)**0.75d0
-potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
- &     +svar1*exp(-svar2*r(:)**2)
-!
-! remove spherical harmonics
-potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1)*sqrt(4.d0*pi)
-! copy into other arrays
-potpar(isp)%tailed%nlf(:,:)=potpar(isp)%tailed%aef(:,:)
-potpar(isp)%tailed%psf(:,:)=potpar(isp)%tailed%aef(:,:)
+!!$print*,'warning!!!! fudge for testing h2'
+!!$pi=4.d0*atan(1.d0)
+!!$potpar(isp)%tailed%aef(:,:)=0.d0
+!!$svar2=0.168856d0
+!!$svar1=0.444635d0*(2.d0*svar2/pi)**0.75d0
+!!$potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
+!!$ &     +svar1*exp(-svar2*r(:)**2)
+!!$svar2=0.623913d0
+!!$svar1=0.535328d0*(2.d0*svar2/pi)**0.75d0
+!!$potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
+!!$ &     +svar1*exp(-svar2*r(:)**2)
+!!$svar2=3.42525d0
+!!$svar1=0.154329d0*(2.d0*svar2/pi)**0.75d0
+!!$potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
+!!$ &     +svar1*exp(-svar2*r(:)**2)
+!!$!
+!!$! remove spherical harmonics
+!!$potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1)*sqrt(4.d0*pi)
+!!$! copy into other arrays
+!!$potpar(isp)%tailed%nlf(:,:)=potpar(isp)%tailed%aef(:,:)
+!!$potpar(isp)%tailed%psf(:,:)=potpar(isp)%tailed%aef(:,:)
 !
 WRITE(STRING,FMT='(I5)')ISP
 STRING='AETAILS_FORATOMTYPE'//TRIM(ADJUSTL(STRING))//'.DAT'
@@ -1888,11 +1888,6 @@ PRINT*,'lmx    ',lmx
         NE=POTPAR(ISP)%TAILED%GAUSSNLF%NE
         ALLOCATE(CRAD(NPOW,NE,LNX))
         CRAD(:,:,:)=POTPAR(ISP)%TAILED%GAUSSNLF%C
-print*,'lnx ',lnx,' lox=',lox
-print*,'e ',POTPAR(ISP)%TAILED%GAUSSNLF%e
-do ind1=1,npow
-  PRINT*,'orb',ind1,crad(ind1,:,:)   !ok
-enddo
         DEALLOCATE(POTPAR(ISP)%TAILED%GAUSSNLF%C)  ! WILL BE OVERWRITTEN
         CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',NIJK,2*(NPOW-1),0,0)
         LMNX=SUM(2*LOX+1)
@@ -1919,11 +1914,6 @@ enddo
         POTPAR(ISP)%TAILED%GAUSSNLF%C=ORB
         DEALLOCATE(LOX)
         DEALLOCATE(CRAD)
-do ind1=1,nijkx
-  CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I1,J1,K1)
-  PRINT*,'orb',ind1,i1,j1,k1,orb(ind1,:,:)
-enddo
-print*,'ne ',ne,' lmnx=',lmnx
         DEALLOCATE(ORB)
       ENDDO
                              CALL TRACE$POP()
@@ -1988,118 +1978,9 @@ integer(4) :: j,k,l
 !           == the order of indices deviates from the u-tensor convention     ==
 !           ====================================================================
             DIS=OFFSITEX(ISPA,ISPB)%DIS(IDIS)
-PRINT*,'DIS             ',DIS
-PRINT*,'NIJKA,NEA,LMNXA ',NIJKA,NEA,LMNXA 
-PRINT*,'NIJKB,NEB,LMNXB ',NIJKB,NEB,LMNXB 
-PRINT*,'EA   ',EA
-PRINT*,'EB   ',Eb
-do ind=1,nijkb
-  CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I,J,K)
-  print*,'orba ',ind,i,j,k,orbb(ind,:,1)
-enddo
             CALL GAUSSIAN$ZDIRECTION_FOURCENTER(NIJKA,NEA,EA,LMNXA,ORBA &
      &                                         ,NIJKB,NEB,EB,LMNXB,ORBB &
      &                                         ,DIS,UABCD)
-print*,'uabcd ',uabcd(1,1,1,1)
-
-
-!!$deALLOCATE(Ea)
-!!$deALLOCATE(EB)
-!!$deALLOCATE(orba)
-!!$deALLOCATE(orbb)
-!!$print*,'marke 1'
-!!$nijka=1
-!!$nijkb=1
-!!$nea=3
-!!$neb=3
-!!$lmnxa=1
-!!$lmnxb=1
-!!$print*,'marke 2'
-!!$allocate(ea(nea))
-!!$allocate(eb(neb))
-!!$allocate(orba(nijka,nea,lmnxa))
-!!$allocate(orbb(nijkb,neb,lmnxb))
-!!$print*,'marke 3'
-!!$pi=4.d0*atan(1.d0)
-!!$orba=0.d0
-!!$orbb=0.d0
-!!$e1=0.168856D0 ; x1=0.444635d0*(2.d0*e1/pi)**0.75
-!!$e2=0.623913d0 ; X2=0.535328d0*(2.d0*e2/pi)**0.75
-!!$e3=3.42525d0  ; x3=0.154329d0*(2.d0*e3/pi)**0.75
-!!$!
-!!$ea(1)=e1 ; orba(1,1,1)=x1
-!!$ea(2)=e2 ; orba(1,2,1)=x2
-!!$ea(3)=e3 ; orba(1,3,1)=x3
-!!$eb(1)=ea(1)
-!!$orbb(1,1,1)=orba(1,1,1)
-!!$
-!!$eb=ea
-!!$orbb=orba
-!!$!
-!!$print*,''
-!!$print*,'====================== fourcenter  ==============================='
-!!$CALL GAUSSIAN$ZDIRECTION_FOURCENTER(NIJKA,NEA,EA,LMNXA,ORBA &
-!!$&                                   ,NIJKB,NEB,EB,LMNXB,ORBB &
-!!$&                                   ,DIS,UABCD)
-!!$print*,'uabcd ',uabcd(1,1,1,1)
-!!$print*,''
-!!$print*,'====================== comparison direct ==============================='
-!!$ra(:)=0.d0
-!!$rb(:)=0.d0
-!!$rb(3)=dis
-!!$svar=0.d0
-!!$do i=1,nea
-!!$  do j=1,neb
-!!$    do k=1,nea
-!!$      do l=1,neb
-!!$        svar1=2.d0*pi**2.5d0 &
-!!$   &         /((ea(i)+eb(j))*(ea(k)+eb(l))*sqrt(ea(i)+eb(j)+ea(k)+eb(l))) 
-!!$        svar2=exp(-ea(i)*eb(j)/(ea(i)+eb(j))*dis**2-ea(k)*eb(l)/(ea(k)+eb(l))*dis**2) 
-!!$        svar0=sum(   ( (ea(i)*ra+eb(j)*rb)/(ea(i)+eb(j)) &
-!!$   &                  -(ea(k)*ra+eb(l)*rb)/(ea(k)+eb(l)) )**2 ) 
-!!$        svar0=svar0*(ea(i)+eb(j))*(ea(k)+ea(l))/(ea(i)+eb(j)+ea(k)+ea(l))
-!!$        if(svar0.eq.0.d0) then
-!!$          svar3=1.d0
-!!$        else
-!!$          svar3=0.5d0*sqrt(pi/svar0)*erf(sqrt(svar0))
-!!$        end if
-!!$        svar4=orba(1,i,1)*orbb(1,j,1)*orba(1,k,1)*orbb(1,l,1)
-!!$        svar=svar+svar1*svar2*svar3*svar4
-!!$write(*,fmt='(4i5,20f20.10)')i,j,k,l,svar1,svar2,svar3,svar4,svar0,svar1*svar2*svar3*svar4
-!!$      enddo
-!!$    enddo
-!!$  enddo
-!!$enddo
-!!$print*,'uabcd    ',svar
-!!$stop 'forced'
-
-
-!!$deALLOCATE(Ea)
-!!$deALLOCATE(EB)
-!!$deALLOCATE(orba)
-!!$deALLOCATE(orbb)
-!!$print*,'marke 5'
-!!$nijka=1
-!!$nijkb=1
-!!$nea=1
-!!$neb=1
-!!$lmnxa=1
-!!$lmnxb=1
-!!$print*,'marke 6'
-!!$allocate(ea(nea))
-!!$allocate(eb(neb))
-!!$allocate(orba(nijka,nea,lmnxa))
-!!$allocate(orbb(nijkb,neb,lmnxb))
-!!$print*,'marke 7'
-!!$ea(1)=1.d0
-!!$eb=ea
-!!$orba(1,1,1)=1.d0
-!!$orbb=orba
-!!$CALL GAUSSIAN$ZDIRECTION_FOURCENTER(NIJKA,NEA,EA,LMNXA,ORBA &
-!!$&                                   ,NIJKB,NEB,EB,LMNXB,ORBB &
-!!$&                                   ,DIS,UABCD)
-!!$print*,'uabcd ',uabcd(1,1,1,1)
-!!$stop 'forced'
 !
 !           ====================================================================
 !           == map onto offsitex structure                                    ==
@@ -2119,7 +2000,6 @@ print*,'uabcd ',uabcd(1,1,1,1)
                 ENDDO
               ENDDO
             ENDDO
-stop 'forced'
           ENDDO  ! END OF LOOP OVER DISTANCES
           DEALLOCATE(UABCD)
           DEALLOCATE(eb)
@@ -2796,6 +2676,8 @@ COMPLEX(8)  :: PHASE
       CALL DYNOCC$GETI4('NB',NBX)
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
+print*,'this%tbc ',this%tbc
+stop 'forced'
 !
 !     ==========================================================================
 !     ==  CONSTRUCT INDEX ARRAYS                                              ==
@@ -3577,7 +3459,6 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     ==========================================================================
       CALL LMTO_DROP()
 !
-!
 !     ==========================================================================
 !     ==  construct density matrix
 !     ==========================================================================
@@ -3594,11 +3475,11 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !!$      CALL LMTO$REPORTPOTBAR(6)
 !!$      CALL LMTO$REPORTSBAR(6)
 
-print*,'fudge warning!!!!! density matrix overwritten for h2 test'
-do nn=1,size(denmat)
-  denmat(nn)%mat=0.d0
-  denmat(nn)%mat(1,1,1)=0.7763d0
-enddo
+!!$print*,'fudge warning!!!!! density matrix overwritten for h2 test'
+!!$do nn=1,size(denmat)
+!!$  denmat(nn)%mat=0.d0
+!!$  denmat(nn)%mat(1,1,1)=0.60266d0
+!!$enddo
 
       call lmto_overlapeval()
       CALL LMTO$REPORToverlap(6)
@@ -5529,14 +5410,14 @@ PRINT*,'============ OFFSITEXEVAL ============================='
         CALL LMTO_OFFSITEX31U(ISPB,ISPA,-DIS,LMNXB,LMNXA,U3B1A,DU3B1A)
 !       == bondu(1,2,3,4)=INT DX InT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|  ==
         CALL LMTO_OFFSITEXBONDU(ISPA,ISPB,DIS,LMNXA,LMNXB,BONDU,DBONDU)
-print*,'iata,iatb ',iata,iatb,dis
-print*,'da    ',da
-print*,'db    ',db
-print*,'d     ',d
-print*,'u22   ',u22
-print*,'u3a1b ',u3a1b
-print*,'u3a1b ',u3b1a
-print*,'bondu ',bondu
+!!$print*,'iata,iatb ',iata,iatb,dis
+!!$print*,'da    ',da
+!!$print*,'db    ',db
+!!$print*,'d     ',d
+!!$print*,'u22   ',u22
+!!$print*,'u3a1b ',u3a1b
+!!$print*,'u3a1b ',u3b1a
+!!$print*,'bondu ',bondu
 
 !!$svar=0.d0
 !!$do lmn1a=1,lmnxa
@@ -5835,8 +5716,8 @@ PRINT*,'STARTING INITIALIZATION OF LMTO_OFFSITE'
           ALLOCATE(OFFSITEX(ISP1,ISP2)%DIS(NDIS))
           SVAR=POTPAR(ISP1)%RAD+POTPAR(ISP2)%RAD
           DISMIN=0.5D0*SVAR
-print*,'fudge warning!!!! dismin set to 1.4 for h2 test'
-dismin=1.4d0
+!!$print*,'fudge warning!!!! dismin set to 1.4 for h2 test'
+!!$dismin=1.4d0
           DISMAX=2.D0*SVAR
           DO I=1,NDIS
             DIS=DISMIN+(DISMAX-DISMIN)*REAL(I-1,KIND=8)/REAL(NDIS-1,KIND=8)
@@ -6740,7 +6621,7 @@ stop 'forced'
                       SVAR=-REAL(LR1+LR2+1)*SVAR/DIS
                       DINTEGRAL=DINTEGRAL+SVAR
                     END IF
-print*,'integral ',integral/(4.d0*pi)
+!print*,'integral ',integral/(4.d0*pi)
 !
                     DO PM=-1,1,2
                       IF(MABS.EQ.0.AND.PM.EQ.1) CYCLE
@@ -6789,7 +6670,7 @@ print*,'integral ',integral/(4.d0*pi)
           ENDDO
         ENDDO
       ENDDO
-print*,'u(1,1,1,1)',isp1,isp2,u(1,1,1,1)
+!print*,'u(1,1,1,1)',isp1,isp2,u(1,1,1,1)
 !
 !     ==========================================================================
 !     == COMPLETE MISSING MATRIX ELEMENTS USING SYMMETRY =======================

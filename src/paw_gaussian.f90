@@ -1725,7 +1725,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       CALL GAUSSIAN_BOYS(3*N,X,F)
       FAC=-2.D0*E
       SVAR=1.D0
-      DO M=1,3*N
+      DO M=0,3*N
         F(M)=SVAR*F(M)    !(-2*E)^M * FM
         SVAR=SVAR*FAC     !(-2*E)^M
       ENDDO
@@ -1771,7 +1771,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
         ENDDO
 !
 !       == RAISE FIRST INDEX ===================================================
-        IF(I.GT.1) THEN  ! AVOID ACCESSING ELEMENTS WITH INDICES <0
+        IF(I.Ge.1) THEN  ! AVOID ACCESSING ELEMENTS WITH INDICES <0
           T=1
           HP(T,0,0)=R(1)*H0(T-1,0,0)
         END IF
@@ -2078,6 +2078,75 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       CALL GAUSSIAN_TEST_BOYS()
       STOP
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GAUSSIAN_TEST_hermiteintegral()
+!     **************************************************************************
+!     ** TESTROUTINE FOR gaussian_hermiteintegral                             **
+!     **************************************************************************
+      implicit none
+      integer(4),parameter :: n=2
+      real(8)              :: e=1.3d0
+      real(8)              :: r(3)
+      real(8)              :: hi(0:n,0:n,0:n)
+      real(8)              :: hiref1(0:n,0:n,0:n)
+      real(8)              :: hiref2(0:n,0:n,0:n)
+      real(8)              :: f0(0:3*n),fp(0:3*n),fm(0:3*n)
+      real(8)              :: df(0:3*n),d2f(0:3*n)
+      real(8)              :: df2(0:3*n),d2f2(0:3*n)
+      real(8)  ,parameter  :: delta=1.d-3
+      real(8)              :: x
+      integer(4)           :: i,j,k
+!     **************************************************************************
+      CALL RANDOM_NUMBER(r(1))
+      CALL RANDOM_NUMBER(r(2))
+      CALL RANDOM_NUMBER(r(3))
+      x=e*sum(r(:)**2)
+      CALL GAUSSIAN_BOYS(3*N,X,F0)
+      CALL GAUSSIAN_BOYS(3*N,X+1.d0*delta,Fp)
+      CALL GAUSSIAN_BOYS(3*N,X-1.d0*delta,Fm)
+      df =(fp-fm)/(2.d0*delta)
+      d2f=(fp-2.d0*f0+fm)/delta**2
+      CALL GAUSSIAN_BOYS(3*N,X+2.d0*delta,Fp)
+      CALL GAUSSIAN_BOYS(3*N,X-2.d0*delta,Fm)
+      df2 =(fp-fm)/(4.d0*delta)
+      d2f2=(fp-2.d0*f0+fm)/(2.d0*delta)**2
+!
+      hiref1(0,0,0)=f0(0)
+      hiref1(1,0,0)=2.d0*e*r(1)*df(0)      
+      hiref1(0,1,0)=2.d0*e*r(2)*df(0)      
+      hiref1(0,0,1)=2.d0*e*r(3)*df(0)      
+      hiref1(2,0,0)=2.d0*e*df(0)+(2.d0*e*r(1))**2*d2f(0)      
+      hiref1(0,2,0)=2.d0*e*df(0)+(2.d0*e*r(2))**2*d2f(0)      
+      hiref1(0,0,2)=2.d0*e*df(0)+(2.d0*e*r(3))**2*d2f(0)      
+      hiref1(1,1,0)=(2.d0*e)**2*r(1)*r(2)*d2f(0)      
+      hiref1(1,0,1)=(2.d0*e)**2*r(1)*r(3)*d2f(0)      
+      hiref1(0,1,1)=(2.d0*e)**2*r(2)*r(3)*d2f(0)      
+!
+      hiref2(0,0,0)=f0(0)
+      hiref2(1,0,0)=2.d0*e*r(1)*df2(0)      
+      hiref2(0,1,0)=2.d0*e*r(2)*df2(0)      
+      hiref2(0,0,1)=2.d0*e*r(3)*df2(0)      
+      hiref2(2,0,0)=2.d0*e*df2(0)+(2.d0*e*r(1))**2*d2f2(0)      
+      hiref2(0,2,0)=2.d0*e*df2(0)+(2.d0*e*r(2))**2*d2f2(0)      
+      hiref2(0,0,2)=2.d0*e*df2(0)+(2.d0*e*r(3))**2*d2f2(0)      
+      hiref2(1,1,0)=(2.d0*e)**2*r(1)*r(2)*d2f2(0)      
+      hiref2(1,0,1)=(2.d0*e)**2*r(1)*r(3)*d2f2(0)      
+      hiref2(0,1,1)=(2.d0*e)**2*r(2)*r(3)*d2f2(0)      
+
+      CALL GAUSSIAN_HERMITEINTEGRAL(N,E,R,HI)
+
+      do i=0,n
+        do j=0,n
+          do k=0,n
+            if(i+j+k.gt.2) cycle
+            write(*,fmt='(3i3,f10.5,3e10.3)')i,j,k,hi(i,j,k) &
+    &                    ,hiref1(i,j,k)-hi(i,j,k),hiref2(i,j,k)-hi(i,j,k)
+          enddo
+        enddo
+      enddo
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GAUSSIAN_TEST_FOURCENTER()

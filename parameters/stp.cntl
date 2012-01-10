@@ -3178,7 +3178,8 @@
     !CORE POW=3. RC/RCOV=   0.585 !END
   !END
 
-  !SETUP  ID='EMPTIUM' EL='H' Z=0.00000001 ZV=0.00000001
+  !SETUP  comment='geht nicht'
+          ID='EMPTIUM' EL='H' Z=0.00000001 ZV=0.00000001
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75
           LAMBDA= 6. 6. 6. 6.
