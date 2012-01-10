@@ -1179,6 +1179,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       REAL(8)   ,ALLOCATABLE :: NLPHIDOT(:,:)
       REAL(8)   ,ALLOCATABLE :: ULITTLE(:,:,:,:,:)
 CHARACTER(128) :: STRING
+real(8) :: pi
 !     **************************************************************************
                               CALL TRACE$PUSH('LMTO_MAKETAILEDPARTIALWAVES')
       DO ISP=1,NSP
@@ -1339,7 +1340,28 @@ CHARACTER(128) :: STRING
         DEALLOCATE(PSPHIDOT)
         DEALLOCATE(NLPHI)
         DEALLOCATE(NLPHIDOT)
-        DEALLOCATE(R)
+
+print*,'warning!!!! fudge for testing h2'
+pi=4.d0*atan(1.d0)
+potpar(isp)%tailed%aef(:,:)=0.d0
+svar2=0.168856d0
+svar1=0.444635d0*(2.d0*svar2/pi)**0.75d0
+potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
+ &     +svar1*exp(-svar2*r(:)**2)
+svar2=0.623913d0
+svar1=0.535328d0*(2.d0*svar2/pi)**0.75d0
+potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
+ &     +svar1*exp(-svar2*r(:)**2)
+svar2=3.42525d0
+svar1=0.154329d0*(2.d0*svar2/pi)**0.75d0
+potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
+ &     +svar1*exp(-svar2*r(:)**2)
+!
+! remove spherical harmonics
+potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1)*sqrt(4.d0*pi)
+! copy into other arrays
+potpar(isp)%tailed%nlf(:,:)=potpar(isp)%tailed%aef(:,:)
+potpar(isp)%tailed%psf(:,:)=potpar(isp)%tailed%aef(:,:)
 !
 WRITE(STRING,FMT='(I5)')ISP
 STRING='AETAILS_FORATOMTYPE'//TRIM(ADJUSTL(STRING))//'.DAT'
@@ -1348,6 +1370,7 @@ WRITE(STRING,FMT='(I5)')ISP
 STRING='NLTAILS_FORATOMTYPE'//TRIM(ADJUSTL(STRING))//'.DAT'
 CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
 !
+        DEALLOCATE(R)
 !       ========================================================================
 !       == ONSITE U-TENSOR OF TAILED PARTIAL WAVES                            ==
 !       ========================================================================
@@ -1649,6 +1672,7 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
       INTEGER(4),PARAMETER   :: NEPAR=2    !#(GAUSS-EXPONENTS)
       REAL(8)   ,PARAMETER   :: R1PAR=1.D0
       REAL(8)   ,PARAMETER   :: FACPAR=5.D0
+      LOGICAL(4),PARAMETER   :: TPR=.false.
       INTEGER(4)             :: NE
       INTEGER(4)             :: NPOW
       INTEGER(4)             :: NPOW2
@@ -1663,7 +1687,6 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
       REAL(8)   ,ALLOCATABLE :: C(:,:,:) !(NPOW,NE,LNX)
       REAL(8)                :: SVAR,RI
       INTEGER(4)             :: ISP,IE,LN,L,IR,I
-      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       INTEGER(4)             :: NFIL
 !     **************************************************************************
                                 CALL TRACE$PUSH('LMTO_TAILEDGAUSSFIT')
@@ -1809,10 +1832,13 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
       LMX=(LX+1)**2
       ALLOCATE(YLMPOL(INDX,LMX))
       CALL GAUSSIAN_YLMPOL(LX,YLMPOL)
-!PRINT*,'YLMPOL ',YLMPOL
+PRINT*,'YLMPOL ',YLMPOL
+PRINT*,'indx   ',indx
+PRINT*,'npowx  ',npowx
+PRINT*,'lmx    ',lmx
 !
 !     ==========================================================================
-!     == CALCULATE POLYLM(N+1,LM)=|R|**(2N)*Y(LM)                             ==
+!     == CALCULATE POLYLM(N+1,LM)=|R|**(2N)*Y(LM)      n=0,...,npowx-1        ==
 !     ==========================================================================
       ALLOCATE(POLYLM(NIJKX,NPOWX,LMX))
       POLYLM(:,:,:)=0.D0
@@ -1846,6 +1872,10 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
         ENDDO ! END OF LOOP OVER ORBITALS (IM)
       ENDDO  ! END OF LOOP OVER L
 !PRINT*,'POLYLM ',MAXVAL(ABS(POLYLM))
+!!$do ind1=1,nijkx
+!!$  CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I1,J1,K1)
+!!$  PRINT*,'POLYLM ',ind1,i1,j1,k1,POLYLM(ind1,:,:)
+!!$enddo
 !
 !     ==========================================================================
 !     == CALCULATE ORBITALS                                                   ==
@@ -1858,6 +1888,11 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
         NE=POTPAR(ISP)%TAILED%GAUSSNLF%NE
         ALLOCATE(CRAD(NPOW,NE,LNX))
         CRAD(:,:,:)=POTPAR(ISP)%TAILED%GAUSSNLF%C
+print*,'lnx ',lnx,' lox=',lox
+print*,'e ',POTPAR(ISP)%TAILED%GAUSSNLF%e
+do ind1=1,npow
+  PRINT*,'orb',ind1,crad(ind1,:,:)   !ok
+enddo
         DEALLOCATE(POTPAR(ISP)%TAILED%GAUSSNLF%C)  ! WILL BE OVERWRITTEN
         CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',NIJK,2*(NPOW-1),0,0)
         LMNX=SUM(2*LOX+1)
@@ -1884,6 +1919,11 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
         POTPAR(ISP)%TAILED%GAUSSNLF%C=ORB
         DEALLOCATE(LOX)
         DEALLOCATE(CRAD)
+do ind1=1,nijkx
+  CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND1,I1,J1,K1)
+  PRINT*,'orb',ind1,i1,j1,k1,orb(ind1,:,:)
+enddo
+print*,'ne ',ne,' lmnx=',lmnx
         DEALLOCATE(ORB)
       ENDDO
                              CALL TRACE$POP()
@@ -1910,6 +1950,9 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
       INTEGER(4)             :: IE,I,IND,IDIS,ISVAR
       REAL(8)                :: SVAR
       INTEGER(4)             :: NDIS
+real(8) :: pi
+real(8) :: e1,e2,e3,x1,x2,x3,eab,svar0,svar1,svar2,svar3,svar4,ra(3),rb(3)
+integer(4) :: j,k,l
 !     **************************************************************************
       DO ISPA=1,NSP
         NIJKA=POTPAR(ISPA)%TAILED%GAUSSNLF%NIJK
@@ -1945,16 +1988,118 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
 !           == the order of indices deviates from the u-tensor convention     ==
 !           ====================================================================
             DIS=OFFSITEX(ISPA,ISPB)%DIS(IDIS)
-!!$PRINT*,'DIS             ',DIS
-!!$PRINT*,'NIJKA,NEA,LMNXA ',NIJKA,NEA,LMNXA 
-!!$PRINT*,'NIJKB,NEB,LMNXB ',NIJKB,NEB,LMNXB 
-!!$PRINT*,'EA   ',EA
-!!$PRINT*,'EB   ',EA
-!!$!PRINT*,'ORBA ',ORBA
-!!$!PRINT*,'ORBB ',ORBB
+PRINT*,'DIS             ',DIS
+PRINT*,'NIJKA,NEA,LMNXA ',NIJKA,NEA,LMNXA 
+PRINT*,'NIJKB,NEB,LMNXB ',NIJKB,NEB,LMNXB 
+PRINT*,'EA   ',EA
+PRINT*,'EB   ',Eb
+do ind=1,nijkb
+  CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I,J,K)
+  print*,'orba ',ind,i,j,k,orbb(ind,:,1)
+enddo
             CALL GAUSSIAN$ZDIRECTION_FOURCENTER(NIJKA,NEA,EA,LMNXA,ORBA &
      &                                         ,NIJKB,NEB,EB,LMNXB,ORBB &
      &                                         ,DIS,UABCD)
+print*,'uabcd ',uabcd(1,1,1,1)
+
+
+!!$deALLOCATE(Ea)
+!!$deALLOCATE(EB)
+!!$deALLOCATE(orba)
+!!$deALLOCATE(orbb)
+!!$print*,'marke 1'
+!!$nijka=1
+!!$nijkb=1
+!!$nea=3
+!!$neb=3
+!!$lmnxa=1
+!!$lmnxb=1
+!!$print*,'marke 2'
+!!$allocate(ea(nea))
+!!$allocate(eb(neb))
+!!$allocate(orba(nijka,nea,lmnxa))
+!!$allocate(orbb(nijkb,neb,lmnxb))
+!!$print*,'marke 3'
+!!$pi=4.d0*atan(1.d0)
+!!$orba=0.d0
+!!$orbb=0.d0
+!!$e1=0.168856D0 ; x1=0.444635d0*(2.d0*e1/pi)**0.75
+!!$e2=0.623913d0 ; X2=0.535328d0*(2.d0*e2/pi)**0.75
+!!$e3=3.42525d0  ; x3=0.154329d0*(2.d0*e3/pi)**0.75
+!!$!
+!!$ea(1)=e1 ; orba(1,1,1)=x1
+!!$ea(2)=e2 ; orba(1,2,1)=x2
+!!$ea(3)=e3 ; orba(1,3,1)=x3
+!!$eb(1)=ea(1)
+!!$orbb(1,1,1)=orba(1,1,1)
+!!$
+!!$eb=ea
+!!$orbb=orba
+!!$!
+!!$print*,''
+!!$print*,'====================== fourcenter  ==============================='
+!!$CALL GAUSSIAN$ZDIRECTION_FOURCENTER(NIJKA,NEA,EA,LMNXA,ORBA &
+!!$&                                   ,NIJKB,NEB,EB,LMNXB,ORBB &
+!!$&                                   ,DIS,UABCD)
+!!$print*,'uabcd ',uabcd(1,1,1,1)
+!!$print*,''
+!!$print*,'====================== comparison direct ==============================='
+!!$ra(:)=0.d0
+!!$rb(:)=0.d0
+!!$rb(3)=dis
+!!$svar=0.d0
+!!$do i=1,nea
+!!$  do j=1,neb
+!!$    do k=1,nea
+!!$      do l=1,neb
+!!$        svar1=2.d0*pi**2.5d0 &
+!!$   &         /((ea(i)+eb(j))*(ea(k)+eb(l))*sqrt(ea(i)+eb(j)+ea(k)+eb(l))) 
+!!$        svar2=exp(-ea(i)*eb(j)/(ea(i)+eb(j))*dis**2-ea(k)*eb(l)/(ea(k)+eb(l))*dis**2) 
+!!$        svar0=sum(   ( (ea(i)*ra+eb(j)*rb)/(ea(i)+eb(j)) &
+!!$   &                  -(ea(k)*ra+eb(l)*rb)/(ea(k)+eb(l)) )**2 ) 
+!!$        svar0=svar0*(ea(i)+eb(j))*(ea(k)+ea(l))/(ea(i)+eb(j)+ea(k)+ea(l))
+!!$        if(svar0.eq.0.d0) then
+!!$          svar3=1.d0
+!!$        else
+!!$          svar3=0.5d0*sqrt(pi/svar0)*erf(sqrt(svar0))
+!!$        end if
+!!$        svar4=orba(1,i,1)*orbb(1,j,1)*orba(1,k,1)*orbb(1,l,1)
+!!$        svar=svar+svar1*svar2*svar3*svar4
+!!$write(*,fmt='(4i5,20f20.10)')i,j,k,l,svar1,svar2,svar3,svar4,svar0,svar1*svar2*svar3*svar4
+!!$      enddo
+!!$    enddo
+!!$  enddo
+!!$enddo
+!!$print*,'uabcd    ',svar
+!!$stop 'forced'
+
+
+!!$deALLOCATE(Ea)
+!!$deALLOCATE(EB)
+!!$deALLOCATE(orba)
+!!$deALLOCATE(orbb)
+!!$print*,'marke 5'
+!!$nijka=1
+!!$nijkb=1
+!!$nea=1
+!!$neb=1
+!!$lmnxa=1
+!!$lmnxb=1
+!!$print*,'marke 6'
+!!$allocate(ea(nea))
+!!$allocate(eb(neb))
+!!$allocate(orba(nijka,nea,lmnxa))
+!!$allocate(orbb(nijkb,neb,lmnxb))
+!!$print*,'marke 7'
+!!$ea(1)=1.d0
+!!$eb=ea
+!!$orba(1,1,1)=1.d0
+!!$orbb=orba
+!!$CALL GAUSSIAN$ZDIRECTION_FOURCENTER(NIJKA,NEA,EA,LMNXA,ORBA &
+!!$&                                   ,NIJKB,NEB,EB,LMNXB,ORBB &
+!!$&                                   ,DIS,UABCD)
+!!$print*,'uabcd ',uabcd(1,1,1,1)
+!!$stop 'forced'
 !
 !           ====================================================================
 !           == map onto offsitex structure                                    ==
@@ -1974,10 +2119,13 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
                 ENDDO
               ENDDO
             ENDDO
+stop 'forced'
           ENDDO  ! END OF LOOP OVER DISTANCES
           DEALLOCATE(UABCD)
+          DEALLOCATE(eb)
           DEALLOCATE(ORBB)
         ENDDO !END OF LOOP OVER SECOND ATOM TYPE ISPA
+        DEALLOCATE(ea)
         DEALLOCATE(ORBA)
       ENDDO   !END OF LOOP OVER FIRST ATOM TYPE ISPA
       RETURN
@@ -3429,13 +3577,6 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     ==========================================================================
       CALL LMTO_DROP()
 !
-!     ==========================================================================
-!     ==  write some info
-!     ==========================================================================
-!!$      CALL LMTO$REPORTPOTBAR(6)
-!!$      CALL LMTO$REPORTSBAR(6)
-!!$      call lmto_overlapeval()
-!!$      CALL LMTO$REPORToverlap(6)
 !
 !     ==========================================================================
 !     ==  construct density matrix
@@ -3446,6 +3587,22 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !!$      CALL LMTO_TESTDENMAT_1CDENMAT(LMNXX_,NDIMD_,NAT_,DENMAT_)
 !!$      CALL LMTO_TESTDENMAT()
 !!$STOP 'forced'
+!
+!     ==========================================================================
+!     ==  write some info
+!     ==========================================================================
+!!$      CALL LMTO$REPORTPOTBAR(6)
+!!$      CALL LMTO$REPORTSBAR(6)
+
+print*,'fudge warning!!!!! density matrix overwritten for h2 test'
+do nn=1,size(denmat)
+  denmat(nn)%mat=0.d0
+  denmat(nn)%mat(1,1,1)=0.7763d0
+enddo
+
+      call lmto_overlapeval()
+      CALL LMTO$REPORToverlap(6)
+!stop 'forced'
 !
 !     ==========================================================================
 !     ==  SOME INFO                                                           ==
@@ -3495,9 +3652,11 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       CALL TIMING$CLOCKON('NTBODENMATDER')
       CALL LMTO_NTBODENMATDER()
       CALL TIMING$CLOCKOFF('NTBODENMATDER')
-!!$CALL LMTO$REPORTDENMAT(6)
-!!$CALL LMTO$REPORTHAMIL(6)
-!!$STOP
+CALL LMTO$REPORTorthodenmat(6)
+CALL LMTO$REPORToverlap(6)
+CALL LMTO$REPORTDENMAT(6)
+CALL LMTO$REPORTHAMIL(6)
+stop 'forced'
 !
 !     ==========================================================================
 !     ==  CLEAN DENMAT AND HAMIL                                              ==
@@ -3517,7 +3676,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
      &                       ,HYBRIDSETTING,HFWEIGHT
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
-      LOGICAL(4),PARAMETER  :: TPLOT=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPLOT=.false.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NAT
       INTEGER(4)            :: IND,INH
@@ -3542,6 +3701,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       INTEGER(4)            :: LMN,LN,IM
       REAL(8)               :: QSPIN(4)
       REAL(8)               :: SVAR
+      integer(4)            :: idfttype
 CHARACTER(128) :: STRING
 REAL(8)   ,ALLOCATABLE:: T(:,:),UNT(:,:),MYMAT(:,:)
 !     **************************************************************************
@@ -3695,6 +3855,8 @@ PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM=       ',IAT,EX
 !       ========================================================================
 !       == DOUBLE COUNTING CORRECTION (EXCHANGE ONLY)                         ==
 !       ========================================================================
+CALL DFT$GETI4('TYPE',IDFTTYPE)
+IF(IDFTTYPE.NE.5002) THEN
 ! THIS IS THE TIME CONSUMIN PART OF ENERGYTEST
 CALL TIMING$CLOCKON('ENERGYTEST:DC')      
         CALL LMTO_SIMPLEDC(GID,NR,LMNXT,LNXT,LOXT,POTPAR(ISP)%TAILED%AEF &
@@ -3706,6 +3868,7 @@ CALL TIMING$CLOCKON('ENERGYTEST:DC')
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H
 PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
 CALL TIMING$CLOCKOFF('ENERGYTEST:DC')      
+END IF
 !
 !       ========================================================================
 !       == ADD CORE VALENCE EXCHANGE                                          ==
@@ -3966,6 +4129,96 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_BLOWUPpsiNL(IAT,LMNX,c,LMNXT,cT)
+!     **************************************************************************
+!     ** BRINGS THE DENSITY MATRIX EXPRESSED                                  **
+!     **   IN LOCAL ORBITALS |CHI_I> (WITH MIXED ANGULAR MOMENTUM CHARACTER)  **
+!     ** INTO A LARGER SET |Y_J> (WITH PURE ANGULAR-MOMENTUM CHARACTER)       **
+!     **                                                                      **
+!     **    |CHI_I>= |Y_I> - |Y_N+J>*TRANSPOSE(SBAR)_J,I                      **
+!     **       (THE TRANSPOSE IS NOT YET IMPLEMENTED, FUTURE NOTATION)        **
+!     **                                                                      **
+!     ** DENSITY MATRIX ELEMENTS WITH TORB=F ARE SET TO ZERO                  **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR,SBAR,SBARLI1,TSPHERICAL
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: IAT
+      INTEGER(4),INTENT(IN)  :: LMNX
+      INTEGER(4),INTENT(IN)  :: LMNXT
+      REAL(8)   ,INTENT(IN)  :: c(LMNX)
+      REAL(8)   ,INTENT(OUT) :: cT(LMNXT)
+      REAL(8)                :: C1(LMNX)
+      INTEGER(4)             :: NNS
+      REAL(8)   ,ALLOCATABLE :: SBARLOC(:,:)
+      INTEGER(4)             :: I,ISP,NN,LMN1
+      INTEGER(4)             :: L,LMN,LN,I1,IM,N1,N2
+      REAL(8)                :: SVAR
+      LOGICAL(4)             :: TLEFT
+!     **************************************************************************
+      C1(:)=C(:)
+!
+!     ========================================================================
+!     ==  DETERMINE SIZE OF STRUCTURE CONSTANT ARRAY                        ==
+!     ========================================================================
+      ISP=ISPECIES(IAT)
+      N1=0
+      N2=0
+      DO LN=1,LNX(ISP)
+        L=LOX(LN,ISP)
+        N2=N2+2*L+1
+        IF(POTPAR(ISP)%LNSCATT(LN).EQ.LN) N1=N1+2*L+1
+      ENDDO
+      ALLOCATE(SBARLOC(N2,N1))    !C
+!    
+!     ========================================================================
+!     ==  COLLECT LOCAL STRUCTURE CONSTANTS                                 ==
+!     ========================================================================
+      NNS=SIZE(SBAR)
+      DO NN=1,NNS
+        IF(SBAR(NN)%IAT1.NE.IAT) CYCLE
+        IF(SBAR(NN)%IAT2.NE.IAT) CYCLE
+        IF(SUM(SBAR(NN)%IT(:)**2).NE.0) CYCLE
+        IF(SBAR(NN)%N1.NE.N1.OR.SBAR(NN)%N2.NE.N1) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZES N1,N2')
+          CALL ERROR$I4VAL('N1',N1)
+          CALL ERROR$I4VAL('SBAR%N1',SBAR(NN)%N1)
+          CALL ERROR$I4VAL('SBAR%N2',SBAR(NN)%N2)
+          CALL ERROR$STOP('LMTO_BLOWUPpsiNL')
+        END IF
+        LMN=0
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          I1=SBARLI1(L+1,ISP)-1
+          DO IM=1,2*L+1 
+            SBARLOC(LMN+IM,:)=SBAR(NN)%MAT(I1+IM,:)   !C
+          ENDDO
+          LMN=LMN+2*L+1
+        ENDDO
+        EXIT
+      ENDDO
+!
+!     ========================================================================
+!     ==  REMOVE ORBITALS NOT IN THE SET                                    ==
+!     ========================================================================
+      LMN=0
+      DO LN=1,LNX(ISP)
+        L=LOX(LN,ISP)
+        IF(.NOT.POTPAR(ISP)%TORB(LN)) THEN
+          C1(LMN+1:LMN+2*L+1)=0.D0
+        END IF
+        LMN=LMN+2*L+1
+      ENDDO
+!
+!     ==========================================================================
+!     ==  BLOW UP DENSITY MATRIX                                              ==
+!     ==========================================================================
+      CT(:LMNX)=c1(:)
+      CT(LMNX+1:)=-MATMUL(TRANSPOSE(SBARLOC),C1)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_SHRINKDOWNHTNL(IAT1,IAT2,NDIMD,LMNXT1,LMNXT2,HT &
      &                              ,LMNX1,LMNX2,H)
 !     **************************************************************************
@@ -3986,7 +4239,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
       REAL(8)   ,ALLOCATABLE :: SBARLOC1(:,:)
       REAL(8)   ,ALLOCATABLE :: SBARLOC2(:,:)
       REAL(8)                :: SVAR
-      INTEGER(4)             :: I,IAT,ISP,NN,LMN1,LMN2,LMNDOT1,LMNDOT2,LMN3
+      INTEGER(4)             :: I,IAT,ISP,NN,LMN1,LMN2,LMN3
       INTEGER(4)             :: L,LMN,LN,I1,IM,N1,N2
       LOGICAL(4)             :: TLEFT
 !     **************************************************************************
@@ -5098,6 +5351,14 @@ INTEGER(4) :: J,K,I1,J1,K1
 REAL(8) :: SVAR1,SVAR2
 INTEGER(4) :: IX,IND1,IND2,IND3
 REAL(8)    :: XDELTA,XSVAR
+real(8) :: ex1
+type h1_type
+  integer(4)         :: n
+  real(8)   ,pointer :: mat(:,:,:)
+end type h1_type
+type(h1_type),allocatable :: h1(:)
+real(8),allocatable :: h1a(:,:,:)
+real(8),allocatable :: h1b(:,:,:)
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_OFFSITEXEVAL')
 PRINT*,'============ OFFSITEXEVAL ============================='
@@ -5129,6 +5390,14 @@ PRINT*,'============ OFFSITEXEVAL ============================='
           CALL ERROR$STOP('LMTO_OFFSITEX')
         END IF
       ENDDO
+!!$allocate(h1(nat))
+!!$ex1=0.d0
+!!$do iat=1,nat
+!!$  j=denmat(nnat(iat))%n1
+!!$  h1(iat)%n=j
+!!$  allocate(h1(iat)%mat(j,j,4))
+!!$  h1(iat)%mat=0.d0
+!!$enddo  
 !
 !     ==========================================================================
 !     == LOOP OVER PAIRS                                                      ==
@@ -5260,46 +5529,65 @@ PRINT*,'============ OFFSITEXEVAL ============================='
         CALL LMTO_OFFSITEX31U(ISPB,ISPA,-DIS,LMNXB,LMNXA,U3B1A,DU3B1A)
 !       == bondu(1,2,3,4)=INT DX InT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|  ==
         CALL LMTO_OFFSITEXBONDU(ISPA,ISPB,DIS,LMNXA,LMNXB,BONDU,DBONDU)
+print*,'iata,iatb ',iata,iatb,dis
+print*,'da    ',da
+print*,'db    ',db
+print*,'d     ',d
+print*,'u22   ',u22
+print*,'u3a1b ',u3a1b
+print*,'u3a1b ',u3b1a
+print*,'bondu ',bondu
 
-svar=0.d0
-do lmn1a=1,lmnxa
-  do lmn1b=1,lmnxb
-    do lmn2a=1,lmnxa
-      do lmn2b=1,lmnxb
-        svar1=u22(lmn1a,lmn2a,lmn1b,lmn2b)
-        svar=max(svar,abs(svar1-u22(lmn1a,lmn2a,lmn2b,lmn1b)))
-        svar=max(svar,abs(svar1-u22(lmn2a,lmn1a,lmn1b,lmn2b)))
-        svar=max(svar,abs(svar1-u22(lmn2a,lmn1a,lmn2b,lmn1b)))
-      enddo
-    enddo
-  enddo
-enddo
-if(svar.gt.1.d-8)print*,'symmetry deviation u22 ',svar 
-svar=0.d0
-do lmn1a=1,lmnxa
-  do lmn2a=1,lmnxA
-    do lmn3a=1,lmnxa
-      do lmn1b=1,lmnxb
-        svar1=u3A1B(lmn1a,lmn2a,lmn3A,lmn1b)
-        svar=max(svar,abs(svar1-u3A1B(lmn2a,lmn1a,lmn3A,lmn1b)))
-      enddo
-    enddo
-  enddo
-enddo
-if(svar.gt.1.d-8)print*,'symmetry deviation U31 ',svar 
-svar=0.d0
-do lmn1a=1,lmnxa
-  do lmn1b=1,lmnxb
-    do lmn2a=1,lmnxa
-      do lmn2b=1,lmnxb
-        svar1=bondu(lmn1a,lmn1b,lmn2a,lmn2b)
-        svar=max(svar,abs(svar1-bondu(lmn2a,lmn2b,lmn1a,lmn1b)))
-      enddo
-    enddo
-  enddo
-enddo
-if(svar.gt.1.d-8)print*,'symmetry deviation bondu ',svar 
- 
+!!$svar=0.d0
+!!$do lmn1a=1,lmnxa
+!!$  do lmn1b=1,lmnxb
+!!$    do lmn2a=1,lmnxa
+!!$      do lmn2b=1,lmnxb
+!!$        svar1=u22(lmn1a,lmn2a,lmn1b,lmn2b)
+!!$        svar=max(svar,abs(svar1-u22(lmn1a,lmn2a,lmn2b,lmn1b)))
+!!$        svar=max(svar,abs(svar1-u22(lmn2a,lmn1a,lmn1b,lmn2b)))
+!!$        svar=max(svar,abs(svar1-u22(lmn2a,lmn1a,lmn2b,lmn1b)))
+!!$      enddo
+!!$    enddo
+!!$  enddo
+!!$enddo
+!!$if(svar.gt.1.d-8) then
+!!$  call error$msg('symmetry deviation u22 ')
+!!$  call error$r8val('deviation ',svar)
+!!$  call error$stop('LMTO_OFFSITEXEVAL')
+!!$end if
+!!$svar=0.d0
+!!$do lmn1a=1,lmnxa
+!!$  do lmn2a=1,lmnxA
+!!$    do lmn3a=1,lmnxa
+!!$      do lmn1b=1,lmnxb
+!!$        svar1=u3A1B(lmn1a,lmn2a,lmn3A,lmn1b)
+!!$        svar=max(svar,abs(svar1-u3A1B(lmn2a,lmn1a,lmn3A,lmn1b)))
+!!$      enddo
+!!$    enddo
+!!$  enddo
+!!$enddo
+!!$if(svar.gt.1.d-8) then
+!!$  call error$msg('symmetry deviation u31 ')
+!!$  call error$r8val('deviation ',svar)
+!!$  call error$stop('LMTO_OFFSITEXEVAL')
+!!$end if
+!!$svar=0.d0
+!!$do lmn1a=1,lmnxa
+!!$  do lmn1b=1,lmnxb
+!!$    do lmn2a=1,lmnxa
+!!$      do lmn2b=1,lmnxb
+!!$        svar1=bondu(lmn1a,lmn1b,lmn2a,lmn2b)
+!!$        svar=max(svar,abs(svar1-bondu(lmn2a,lmn2b,lmn1a,lmn1b)))
+!!$      enddo
+!!$    enddo
+!!$  enddo
+!!$enddo
+!!$if(svar.gt.1.d-8) then
+!!$  call error$msg('symmetry deviation bondu ')
+!!$  call error$r8val('deviation ',svar)
+!!$  call error$stop('LMTO_OFFSITEXEVAL')
+!!$end if
 !
 !       ========================================================================
 !       == SWITCH SELECTED TERMS OFF                                          ==
@@ -5332,6 +5620,10 @@ if(svar.gt.1.d-8)print*,'symmetry deviation bondu ',svar
         H=0.D0
         HA=0.D0
         HB=0.D0
+!!$ALLOCATE(H1A(LMNXA,LMNXA,NDIMD))
+!!$ALLOCATE(H1B(LMNXB,LMNXB,NDIMD))
+!!$h1a=0.d0
+!!$h1b=0.d0
 !print*,'ex  1',ex
 !
 !       ========================================================================
@@ -5404,6 +5696,10 @@ if(svar.gt.1.d-8)print*,'symmetry deviation bondu ',svar
                 EX=EX+SVAR*SUM(DA(LMN1A,LMN2A,:)*DB(LMN1B,LMN2B,:))
                 HA(LMN1A,LMN2A,:)=HA(LMN1A,LMN2A,:)+SVAR*DB(LMN1B,LMN2B,:)
                 HB(LMN1B,LMN2B,:)=HB(LMN1B,LMN2B,:)+SVAR*DA(LMN1A,LMN2A,:)
+!!$SVAR=-0.25D0*BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+!!$EX1=EX1+SVAR*SUM(DA(LMN1A,LMN2A,:)*DB(LMN1B,LMN2B,:))
+!!$H1a(LMN1A,LMN2A,:)=h1a(LMN1A,LMN2A,:)+SVAR*DB(LMN1B,LMN2B,:)
+!!$h1b(LMN1B,LMN2B,:)=H1b(LMN1B,LMN2B,:)+SVAR*DA(LMN1A,LMN2A,:)
                 SVAR=-0.25D0*BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
                 EX=EX+SVAR*SUM(D(LMN1A,LMN2B,:)*D(LMN2A,LMN1B,:))
                 H(LMN1A,LMN2B,:)=H(LMN1A,LMN2B,:)+SVAR*D(LMN2A,LMN1B,:)
@@ -5429,6 +5725,8 @@ if(svar.gt.1.d-8)print*,'symmetry deviation bondu ',svar
           HA(:,:,I)=MATMUL(UROTA,MATMUL(HA(:,:,I),TRANSPOSE(UROTA)))
           H(:,:,I) =MATMUL(UROTA,MATMUL(H(:,:,I) ,TRANSPOSE(UROTB)))
           HB(:,:,I)=MATMUL(UROTB,MATMUL(HB(:,:,I),TRANSPOSE(UROTB)))
+!!$H1A(:,:,I)=MATMUL(UROTA,MATMUL(H1A(:,:,I),TRANSPOSE(UROTA)))
+!!$H1B(:,:,I)=MATMUL(UROTB,MATMUL(H1B(:,:,I),TRANSPOSE(UROTB)))
         ENDDO
         DEALLOCATE(UROTA)
         DEALLOCATE(UROTB)
@@ -5449,6 +5747,16 @@ if(svar.gt.1.d-8)print*,'symmetry deviation bondu ',svar
         CALL LMTO_SHRINKDOWNHTNL(IATB,IATB,NDIMD,LMNXB,LMNXB,HB &
      &                                                     ,NB,NB,DB(:NB,:NB,:))
         HAMIL(NNB)%MAT(:,:,:)=HAMIL(NNB)%MAT(:,:,:)+DB(:NB,:NB,:)
+
+!!$DA=0.D0
+!!$CALL LMTO_SHRINKDOWNHTNL(IATA,IATA,NDIMD,LMNXA,LMNXA,HA,NA,NA,DA(:NA,:NA,:))
+!!$H1(IATA)%MAT(:,:,:)=H1(IATA)%MAT+DA(:NA,:NA,:)
+!!$DB=0.D0
+!!$CALL LMTO_SHRINKDOWNHTNL(IATB,IATB,NDIMD,LMNXB,LMNXB,HB,NB,NB,DB(:NB,:NB,:))
+!!$H1(IATB)%MAT(:,:,:)=H1(IATB)%MAT(:,:,:)+DB(:NB,:NB,:)
+!!$deallocate(h1a)
+!!$deallocate(h1b)
+
         DEALLOCATE(D)
         DEALLOCATE(H)
         DEALLOCATE(DA)
@@ -5463,6 +5771,17 @@ if(svar.gt.1.d-8)print*,'symmetry deviation bondu ',svar
 !     ==========================================================================
 !     == CLEAN UP TO AVOID MEMORY LEAK                                        ==
 !     ==========================================================================
+!!$print*,'ex1 ',ex1
+!!$do iat=1,nat
+!!$  lmnxa=h1(iat)%n
+!!$  do lmn=1,lmnxa
+!!$    write(6,fmt='("iat=",i3," h1=",100f10.5)')iat,h1(iat)%mat(lmn,:,1)
+!!$  enddo
+!!$  deallocate(h1(iat)%mat)
+!!$enddo
+!!$deallocate(h1)
+!!$stop 'forced'
+
 !PRINT*,'EX ',EX
 !!$do iat=1,nat
 !!$  nn=nnat(iat)
@@ -5516,6 +5835,8 @@ PRINT*,'STARTING INITIALIZATION OF LMTO_OFFSITE'
           ALLOCATE(OFFSITEX(ISP1,ISP2)%DIS(NDIS))
           SVAR=POTPAR(ISP1)%RAD+POTPAR(ISP2)%RAD
           DISMIN=0.5D0*SVAR
+print*,'fudge warning!!!! dismin set to 1.4 for h2 test'
+dismin=1.4d0
           DISMAX=2.D0*SVAR
           DO I=1,NDIS
             DIS=DISMIN+(DISMAX-DISMIN)*REAL(I-1,KIND=8)/REAL(NDIS-1,KIND=8)
@@ -5611,6 +5932,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
       INTEGER(4),INTENT(IN) :: NR1
       INTEGER(4),INTENT(IN) :: NR2
       REAL(8)   ,INTENT(IN) :: TOLERANCE
+      real(8)   ,parameter  :: tolmin=1.d-8
       INTEGER(4)            :: GID1,GID2
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
@@ -5690,11 +6012,12 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
           L2=POTPAR(ISP2)%TAILED%LOX(LN2)
           PHI2(:)=POTPAR(ISP2)%TAILED%AEF(:,LN2)
           TOL=TOLERANCE*TOLFAC1(LN1)*TOLFAC2(LN2)
+          tol=max(tolmin,tol)
           DO MABS=0,MIN(L1,L2)
             IND=IND+1
             DO IDIS=1,NDIS
               DIS=OFFSITEX(ISP1,ISP2)%DIS(IDIS)
-!PRINT*,'IND ',IND,LN1,LN2,MABS,DIS
+!PRINT*,'IND ',IND,LN1,LN2,MABS,DIS,tol
               CALL LMTO_TWOCENTER(L1,MABS,GID1,NR1,PHI1 &
        &                         ,L2,MABS,GID2,NR2,PHI2 &
        &                         ,DIS,TOL,INTEGRAL)
@@ -5719,6 +6042,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
       INTEGER(4),INTENT(IN) :: NR2
       REAL(8)   ,INTENT(IN) :: TOLERANCE
       REAL(8)   ,PARAMETER  :: RX=0.1D0
+      real(8)   ,parameter  :: tolmin=1.d-8
       INTEGER(4)            :: GID1,GID2
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
@@ -5812,8 +6136,8 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
         L1=POTPAR(ISP1)%TAILED%LOX(LN1)
         DO LN2=LN1,LNX1
           L2=POTPAR(ISP1)%TAILED%LOX(LN2)
-              RHO12(:)=POTPAR(ISP1)%TAILED%AEF(:,LN1) &
-       &              *POTPAR(ISP1)%TAILED%AEF(:,LN2)
+          RHO12(:)=POTPAR(ISP1)%TAILED%AEF(:,LN1) &
+       &          *POTPAR(ISP1)%TAILED%AEF(:,LN2)
           DO LN3=1,LNX2
             L3=POTPAR(ISP2)%TAILED%LOX(LN3)
             DO LN4=LN3,LNX2
@@ -5821,18 +6145,30 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
               RHO34(:)=POTPAR(ISP2)%TAILED%AEF(:,LN3) &
        &              *POTPAR(ISP2)%TAILED%AEF(:,LN4)
               TOL=TOLERANCE*TOLFAC1(LN1)*TOLFAC1(LN2) &
-       &                   *TOLFAC2(LN3)*TOLFAC2(LN4) 
+       &                   *TOLFAC2(LN3)*TOLFAC2(LN4)
+              tol=max(tolmin,tol)
               DO LR1=ABS(L1-L2),MIN(L1+L2,LRX1),2
                 CALL RADIAL$POISSON(GID1,NR1,LR1,RHO12,POT12)
-                IF(LR1.EQ.0) THEN
-                  SVAR=POTPAR(ISP1)%TAILED%QLN(1,LN1,LN2)*SQ4PI
-                  POT12(:)=POT12(:)-SVAR/RGRID1(:)
-                ELSE IF(LR1.EQ.1) THEN
-                  SVAR=POTPAR(ISP1)%TAILED%QLN(2,LN1,LN2)*SQ4PITHIRD
-                  POT12(:)=POT12(:)-SVAR/RGRID1(:)**2
-                END IF
+!!$!               ==subtract out long range part including monopole and dipole terms
+!!$                IF(LR1.EQ.0) THEN
+!!$                  SVAR=POTPAR(ISP1)%TAILED%QLN(1,LN1,LN2)*SQ4PI
+!!$                  POT12(:)=POT12(:)-SVAR/RGRID1(:)
+!!$                ELSE IF(LR1.EQ.1) THEN
+!!$                  SVAR=POTPAR(ISP1)%TAILED%QLN(2,LN1,LN2)*SQ4PITHIRD
+!!$                  POT12(:)=POT12(:)-SVAR/RGRID1(:)**2
+!!$                END IF
 !
                 DO LR2=ABS(L3-L4),MIN(L3+L4,LRX2),2
+!!$                  CALL RADIAL$POISSON(GID2,NR2,LR2,RHO34,POT34)
+!!$!                 ==subtract out long range part including monopole and dipole terms
+!!$                  IF(LR2.EQ.0) THEN
+!!$                    SVAR=POTPAR(ISP2)%TAILED%QLN(1,LN3,LN4)*SQ4PI
+!!$                    POT34(:)=POT34(:)-SVAR/RGRID2(:)
+!!$                  ELSE IF(LR2.EQ.1) THEN
+!!$                    SVAR=POTPAR(ISP1)%TAILED%QLN(2,LN3,LN4)*SQ4PITHIRD
+!!$                    POT34(:)=POT34(:)-SVAR/RGRID2(:)**2
+!!$                  END IF
+!
                   DO MABS=0,MIN(LR1,LR2)
                     IND=IND+1
                     DO IDIS=1,NDIS
@@ -5840,6 +6176,16 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
                       CALL LMTO_TWOCENTER(LR1,MABS,GID1,NR1,POT12 &
                                          ,LR2,MABS,GID2,NR2,RHO34 &
        &                                 ,DIS,TOL,INTEGRAL)
+!                     == subtract out long range part to allow interpolation =======
+!                     == will be added againsubtract out long range part to allow interpolation =======
+                      IF(LR1.LE.1.AND.LR2.LE.1) THEN
+                        SVAR=POTPAR(ISP1)%TAILED%QLN(LR1+1,LN1,LN2) &
+     &                      *POTPAR(ISP2)%TAILED%QLN(LR2+1,LN3,LN4)
+                        SVAR=SVAR/DIS**(LR1+LR2+1)
+                        INTEGRAL =INTEGRAL -SVAR
+                        SVAR=-REAL(LR1+LR2+1)*SVAR/DIS
+                        DINTEGRAL=DINTEGRAL-SVAR
+                      END IF
                       OFFSITEX(ISP1,ISP2)%X22(IDIS,IND)=INTEGRAL
                     ENDDO
                   ENDDO
@@ -5849,6 +6195,11 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
           ENDDO
         ENDDO
       ENDDO
+!!$print*,'x22  for ',isp1,isp2
+!!$do idis=1,ndis
+!!$print*,OFFSITEX(ISP1,ISP2)%DIS(IDIS),OFFSITEX(ISP1,ISP2)%X22(IDIS,1)/(4.d0*pi)
+!!$enddo
+!!$stop 'forced'
       RETURN
       END
 !
@@ -5863,6 +6214,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
       INTEGER(4),INTENT(IN) :: NR1
       INTEGER(4),INTENT(IN) :: NR2
       REAL(8)   ,INTENT(IN) :: TOLERANCE
+      real(8)   ,parameter  :: tolmin=1.d-8
       INTEGER(4)            :: GID1,GID2
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
@@ -5959,9 +6311,10 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
               PHI4=POTPAR(ISP2)%TAILED%AEF(:,LN4)
               TOL=TOLERANCE*TOLFAC1(LN1)*TOLFAC1(LN2) &
        &                   *TOLFAC1(LN3)*TOLFAC2(LN4) 
+              tol=max(tolmin,tol)
               DO LR1=ABS(L1-L2),MIN(L1+L2,LRX1),2
                 CALL RADIAL$POISSON(GID1,NR1,LR1,RHO12,POT12)
-                A123(:)=RHO12(:)*POTPAR(ISP1)%TAILED%AEF(:,LN3)
+                A123(:)=pot12(:)*POTPAR(ISP1)%TAILED%AEF(:,LN3)
                 DO LR2=ABS(L3-LR1),L3+LR1,2
                   DO MABS=0,MIN(LR2,L4)
                     IND=IND+1
@@ -5979,6 +6332,11 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
           ENDDO
         ENDDO
       ENDDO
+!!$print*,'x31  for ',isp1,isp2
+!!$do idis=1,ndis
+!!$print*,OFFSITEX(ISP1,ISP2)%DIS(IDIS),OFFSITEX(ISP1,ISP2)%X31(IDIS,1) !/(4.d0*pi)
+!!$enddo
+!!$stop 'forced'
       RETURN
       END
 !
@@ -6039,6 +6397,7 @@ INTEGER(4) :: J
             AMATIN=AINV
           END IF
           DEALLOCATE(AINV)
+          DEALLOCATE(g)
 !
 !         ======================================================================
 !         == OFF SITE OVERLAP MATRIX 
@@ -6381,6 +6740,7 @@ stop 'forced'
                       SVAR=-REAL(LR1+LR2+1)*SVAR/DIS
                       DINTEGRAL=DINTEGRAL+SVAR
                     END IF
+print*,'integral ',integral/(4.d0*pi)
 !
                     DO PM=-1,1,2
                       IF(MABS.EQ.0.AND.PM.EQ.1) CYCLE
@@ -6429,6 +6789,7 @@ stop 'forced'
           ENDDO
         ENDDO
       ENDDO
+print*,'u(1,1,1,1)',isp1,isp2,u(1,1,1,1)
 !
 !     ==========================================================================
 !     == COMPLETE MISSING MATRIX ELEMENTS USING SYMMETRY =======================
@@ -7236,6 +7597,87 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_PLOTTAILED()
+!     **************************************************************************
+!     **  PLOTS THE LOCAL ORBITALS REPRESENTED BY TAILED ORBITALS,            **
+!     **  THAT IS USING THE ONSITE STRUCTURE CONSTANTS AND EXTRAPOLATING      **
+!     **  TAILS.                                                              **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR
+      IMPLICIT NONE
+      INTEGER(4)             :: NAT
+      INTEGER(4)             :: LMNX
+      INTEGER(4)             :: LMNXT
+      INTEGER(4)             :: LMNXS
+      INTEGER(4)             :: LX
+      INTEGER(4)             :: LMX
+      INTEGER(4)             :: GID
+      INTEGER(4)             :: NR
+      REAL(8)   ,ALLOCATABLE :: c(:)
+      REAL(8)   ,ALLOCATABLE :: ct(:)
+      REAL(8)   ,ALLOCATABLE :: F(:,:)
+      REAL(8)                :: SVAR
+      INTEGER(4)             :: ISP,iat,LM
+      INTEGER(4)             :: LN,L,LMN,IM
+      INTEGER(4)             :: LNt,Lt,lmnt,imt
+      INTEGER(4)             :: LNxt
+      CHARACTER(5)           :: CHIAT,CHORB
+      CHARACTER(128)         :: STRING
+!     **************************************************************************
+
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      NAT=SIZE(ISPECIES)
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        GID=POTPAR(ISP)%TAILED%GID
+        CALL RADIAL$GETI4(GID,'NR',NR)
+        LX=MAXVAL(LOX(:LNX(ISP),ISP))
+        LMX=(LX+1)**2
+        lmnx=sum(2*lox(:lnx(isp),isp)+1)
+        lnxt=potpar(isp)%tailed%lnx
+        lmnxt=potpar(isp)%tailed%lmnx
+        allocate(c(lmnx))
+        allocate(ct(lmnxt))
+        allocate(f(nr,lmx))
+        lmn=0
+        do ln=1,lnx(isp)
+          l=lox(ln,isp)
+          do im=1,2*l+1
+            lmn=lmn+1
+            c(:)=0.d0
+            c(lmn)=1.d0
+            CALL LMTO_BLOWUPPSINL(IAT,LMNX,C,LMNXT,CT)
+WRITE(*,FMT='("orbital ",i3," with L=",i3," an m=",i3)')lmn,l,im-l-1
+WRITE(*,FMT='(25f10.3)')ct
+            f(:,:)=0.d0
+            lmnt=0
+            do lnt=1,lnxt
+              lt=potpar(isp)%tailed%lox(lnt)
+              lm=lt**2
+              do imt=1,2*lt+1
+                lmnt=lmnt+1
+                lm=lm+1
+                if(abs(ct(lmnt)).lt.1.d-8) cycle
+                f(:,lm)=f(:,lm)+potpar(isp)%tailed%aef(:,lnt)*ct(lmnt)
+              enddo
+            enddo
+            WRITE(CHIAT,FMT='(I5)')IAT
+            WRITE(CHORB,FMT='(I5)')lmn
+            STRING='CHI_FORATOM'//TRIM(ADJUSTL(CHIAT))//'_'//TRIM(ADJUSTL(CHORB))//'.DAT'
+            CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LMX,F)
+          enddo  ! end loop over im of orbitals
+        enddo    ! end loop over ln of orbitals
+        deallocate(c)
+        deallocate(ct)
+        deallocate(f)
+      enddo  !end loop over atoms
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_PLOTTAILED_OLD()
 !     **************************************************************************
 !     **  PLOTS THE LOCAL ORBITALS REPRESENTED BY TAILED ORBITALS,            **
 !     **  THAT IS USING THE ONSITE STRUCTURE CONSTANTS AND EXTRAPOLATING      **

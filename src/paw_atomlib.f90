@@ -764,6 +764,7 @@ USE PERIODICTABLE_MODULE
       INTEGER(4)                 :: IPERIOD,ISVAR1,IPOS
       CHARACTER(128)             :: STRING,STRING1
       REAL(8)                    :: SCALE
+      REAL(8)                    :: efock,ex
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
       REAL(8)       ,ALLOCATABLE :: EOFI_FOCK(:)
@@ -912,6 +913,25 @@ USE PERIODICTABLE_MODULE
         ENDDO
         NB=IB
         FTOT=SUM(FOFI(:NB))
+!
+!       == correct for non-integer atomic numbers ==============================
+!       == this is used for dummy hydrogen atoms, that carry only a fractional =
+!       == nuclear and electronic charge =======================================
+        SVAR=aez-FTOT
+        IF(SVAR.LT.0.D0) THEN
+          DO IB=NB,1,-1
+            FOFI(IB)=FOFI(IB)+SVAR
+            IF(FOFI(ib).GE.0.D0) THEN
+              EXIT
+            ELSE
+              SVAR=FOFI(IB)
+              FOFI(IB)=0.D0
+            END IF
+         ENDDO
+        END IF
+!
+!       == consistency check                                                 ==
+        FTOT=SUM(FOFI(:NB))
         IF(ABS(FTOT-AEZ).GT.1.D-8) THEN
           DO IB=1,NB
             WRITE(*,'("IB=",I2," L=",I1," SOFI=",I2," F=",F8.2," SUM(F)=",F8.2)') &
@@ -956,6 +976,11 @@ USE PERIODICTABLE_MODULE
 !     ==========================================================================
       TSECOND=.FALSE.
 1000  CONTINUE
+      IF(.NOT.TSECOND) THEN
+        WRITE(*,FMT='("DOING SCF ITERATIONS FOR ATOM WITH Z=",F10.5)')AEZ
+      ELSE
+        WRITE(*,FMT='("CONTINUING WITH FOCK TERM....")')
+      END IF
       XAVMIN=1.D+12
       XMAXMIN=1.D+12
       XDEMIN=1.D+12
@@ -995,12 +1020,60 @@ USE PERIODICTABLE_MODULE
           DO IB=1,NB
             AUX(:)=AUX(:) &
        &          +(PHI(:,IB)**2+SPHI(:,IB)**2)*(EOFI(IB)-POT(:)*Y0)*FOFI(IB)
+            IF(TFOCK.AND.TSECOND) THEN
+               CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOFI(IB),PHI(:,IB),AUX1)
+               AUX=AUX-PHI(:,IB)*AUX1(:)*FOFI(IB)
+            END IF
           ENDDO
           AUX(:)=AUX(:)*R(:)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EKIN)
           CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EXC)
           ETOT=EKIN+EH+EXC
+!         == work out fock exchange energy =====================================
+          IF(TFOCK.AND.TSECOND) THEN
+            CALL DFT$SETL4('XCONLY',.TRUE.)
+            CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EX)
+            CALL DFT$SETL4('XCONLY',.FALSE.)
+!           == save scale and mux to restore vfock for later use ===============
+            scale=vfock%scale
+            mux(:)=vfock%mux(:)
+!           ==  CHANGE VFOCK TO PURE FOCK TERM WITHOUT DOUBLE COUNTING =========
+!           ==  AND CALCULATE FOCK TERM TO THE ENERGY ==========================
+            VFOCK%SCALE=1.D0
+            VFOCK%MUX=0.D0
+            AUX(:)=0.D0
+            DO IB=1,NB
+              CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOFI(IB),PHI(:,IB),AUX1)
+              AUX=AUX+0.5D0*PHI(:,IB)*AUX1(:)*FOFI(IB)
+            ENDDO
+            AUX(:)=AUX(:)*R(:)**2
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EFOCK)
+!           == RESTORE VFOCK ==================================================
+            VFOCK%SCALE=SCALE
+            VFOCK%mux(:)=mux(:)
+          ELSE
+            EFOCK=0.D0
+            EX=0.D0
+          END IF
+!
+!         == PRINT ENERGIES ====================================================
+          ETOT=EKIN+EH+EXC+SCALE*(EFOCK-EX)
+          WRITE(*,FMT='(80("="),T20,"ENERGY REPORT OF ATOMLIB$AESCF")')
+          WRITE(*,FMT='(30("."),T1,"TOTAL ENERGY:",T30,F10.5)')ETOT
+          WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F10.5)')EKIN
+          WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F10.5)')EH
+          IF(TFOCK.AND.TSECOND) THEN
+            WRITE(*,FMT='(30("."),T1,"MIXED XC ENERGY:",T30,F10.5)') &
+     &                                                     EXC+SCALE*(EFOCK-EX)
+            WRITE(*,FMT='(30("."),T1,"100% DFT XC ENERGY:",T30,F10.5)')EXC
+            WRITE(*,FMT='(30("."),T1,"100% DFT EXCHANGE ENERGY:",T30,F10.5)')EX
+            WRITE(*,FMT='(30("."),T1,"100% FOCK EXCHANGE ENERGY:",T30,F10.5)')EFOCK
+          ELSE
+            WRITE(*,FMT='(30("."),T1,"DFT XC ENERGY:",T30,F10.5)')EXC
+          END IF
+
           POT=POTIN  ! RECOVER POT AS INPUT POTENTIAL
         END IF
 !
@@ -1014,6 +1087,7 @@ USE PERIODICTABLE_MODULE
           ELSE
 !           == FINAL EXIT IS DONE HERE SO THAT THE POTENTIAL AND FOCK POTENTIAL
 !           == CORRESPONDS TO INPUT POTENTIAL
+            WRITE(*,FMT='("... SELFCONFISTENCY OBTAINED")')
             EXIT
           END IF
         END IF
@@ -1025,16 +1099,23 @@ USE PERIODICTABLE_MODULE
 !
 !       == DETERMINE WAVE FUNCTIONS FOR FOCK POTENTIAL =========================
         IF(TFOCK.AND.(TSECOND.OR.CONVG)) THEN
-CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RFOCK)
-RFOCK=1.1D0*RFOCK
+!!$! A TEST FOR HELIUM SHOWS THAT RESTRICTING RFOCK TO ONLY 1.1 OF THE COVALENT
+!!$! RADIUS AFFECTS THE RESULTS. THE RESTRICTED CUTOFF HAS BEEN INTRODUCED 
+!!$! BECAUSE OTHERWISE THE SELFCONSISTENCY OF THE PARTIAL WAVES IN 
+!!$! MAKEPARTIALWAVES DOES NOT CONVERGE
+!!$! a value of 3*rcov gives MH accuracy for He but not for the heavier elements
+          RFOCK=RBOX
+          CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RFOCK); RFOCK=1.1D0*RFOCK   
+!         CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RFOCK); RFOCK=3.0D0*RFOCK   
+          rfock=min(rbox,rfock)
           IF(.NOT.TSECOND) THEN
             ALLOCATE(EOFI_FOCK(NB))
             EOFI_FOCK(:)=EOFI(:nb)
             CALL ATOMLIB$BOUNDSTATES(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI_FOCK,POT &
-     &                            ,TREL,TZORA,RFOCK,PHI,SPHI)
+     &                              ,TREL,TZORA,RFOCK,PHI,SPHI)
           ELSE
             CALL ATOMLIB$BOUNDSTATESWITHHF(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI,POT &
-     &                              ,VFOCK,TREL,TZORA,RFOCK,PHI,SPHI)
+     &                                    ,VFOCK,TREL,TZORA,RFOCK,PHI,SPHI)
           END IF
           CALL RADIALFOCK$MAKEVFOCK(GID,NR,NB,LOFI,SOFI,FOFI,PHI,RFOCK &
      &                            ,LRHOX,VFOCK)
@@ -1140,6 +1221,8 @@ PRINT*,'#ITERATIONS ',ITER
         SPHI(:,IB+1:JB)=SPHI(:,IB:JB-1)
         SPHI(:,IB)=AUX
       ENDDO
+!stop 'forced stop in aescf'
+
       RETURN
       END
 !
@@ -2393,7 +2476,7 @@ PRINT*,'#ITERATIONS ',ITER
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$ETOTWITHFOCK(GID,NR,RBOX,LRHOX,TREL,POT,VFOCK &
-    &                        ,NB,LOFI,SOFI,FOFI,PSI,ETOT)
+    &                                ,NB,LOFI,SOFI,FOFI,PSI,ETOT)
 !     **************************************************************************
 !     **************************************************************************
       USE RADIALFOCK_MODULE, ONLY : VFOCK_TYPE
@@ -2413,6 +2496,7 @@ PRINT*,'#ITERATIONS ',ITER
       REAL(8)   ,INTENT(OUT):: ETOT
       REAL(8)               :: DRRPSI(NR,NB)
       REAL(8)               :: AUX(NR),AUX1(NR),AUX2(NR)
+      REAL(8)               :: ekden(NR),ehden(NR),exden(NR),ekin,eh,ex
       REAL(8)               :: R(NR)
       REAL(8)               :: EOFI(NB)
       REAL(8)               :: DREL(NR),RDPRIME(NR)
@@ -2457,6 +2541,9 @@ PRINT*,'#ITERATIONS ',ITER
 !     ==  CALCULATE TOTAL ENERGY (THIS A FAKE QUANTITY)                     ==
 !     ========================================================================
       AUX(:)=0.D0
+      ekden(:)=0.D0
+      ehden(:)=0.D0
+      exden(:)=0.D0
       DO IB=1,NB
         L=LOFI(IB)
         IF(TREL) THEN
@@ -2480,17 +2567,30 @@ PRINT*,'#ITERATIONS ',ITER
         AUX1(:)=0.5D0*(1.D0+DREL) &
      &               *(DRRPSI(:,IB)**2+REAL(L*(L+1),KIND=8)*PSI(:,IB)**2)
         AUX1(:)=AUX1(:)+0.5D0*(SOFACTOR+1.D0)*RDPRIME*R(:)*PSI(:,IB)**2
+        ekden(:)=ekden(:)+fofi(ib)*aux1(:)
 !       == POTENTIAL ENERGY ==================================================
+        aux1(:)=0.d0
         AUX1(:)=AUX1(:)+R(:)**2*POT(:)*Y0*PSI(:,IB)**2
+        ehden(:)=ehden(:)+fofi(ib)*aux1(:)
 !       == HARTREE-FOCK CORRECTION ===========================================
+        aux1(:)=0.d0
         CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOFI(IB),PSI(:,IB),AUX2)
         AUX2(:)=PSI(:,IB)*(0.5D0*AUX2-0.5D0*VFOCK%MUX(:)*Y0*PSI(:,IB))
         AUX1(:)=AUX1(:)+R(:)**2*AUX2(:)
+        exden(:)=exden(:)+fofi(ib)*aux1(:)
 !       == ADD TO SUM OVER STATES ============================================
         AUX(:)=AUX(:)+FOFI(IB)*AUX1(:)
       ENDDO
+      aux(:)=ekden+ehden+exden
       CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
       CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,ETOT)
+      CALL RADIAL$INTEGRATE(GID,NR,ekden,AUX1)
+      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,Ekin)
+      CALL RADIAL$INTEGRATE(GID,NR,ehden,AUX1)
+      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,Eh)
+      CALL RADIAL$INTEGRATE(GID,NR,exden,AUX1)
+      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,Ex)
+print*,'ekin,eh,ex ',ekin,eh,ex
       RETURN
       END
 !

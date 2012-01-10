@@ -70,6 +70,8 @@ MODULE DFT_MODULE
       LOGICAL(4)           :: TPW91G =.FALSE. ! USE PERDEW WANG91 GC
       LOGICAL(4)           :: TPBE96 =.FALSE. ! USE PERDEW BURKE ERNZERHOF GC
       LOGICAL(4)           :: TLYP88 =.FALSE. ! USE LEE-YANG-PARR 88 CORRELATION
+      REAL(8)              :: SCALEX=1.D0     ! SCALES EXCHANGE CONTRIBUTION
+!                                             ! USED FOR HYBRID FUNCTIONALS
       INTEGER(4),PARAMETER :: NDESCRIPTION=5
       CHARACTER(128)       :: DESCRIPTION(NDESCRIPTION)
       END MODULE DFT_MODULE
@@ -301,6 +303,21 @@ MODULE DFT_MODULE
      &                          //'(PHYS.REV.B 37, 785 (1988-I))'
 !
 !     ==========================================================================
+!     == TYPE 5002:  LSD + PBE96-GC with scaled exchange                      ==
+!     ==========================================================================
+      ELSE IF (IT.EQ.5002) THEN
+        TX=.TRUE.
+        CALL EXCHANGE$SETI4('TYPE',3)
+        scalex=0.75d0
+        TPBE96=.TRUE.
+        TGRATARGET=.TRUE.
+        DESCRIPTION(1)='PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
+     &                          //'(PHYS.REV.B 45, 13244 (1992-I))'
+        DESCRIPTION(2)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE AND CORRELATION ' &
+     &                          //'(PHYS.REV.LETT 77, 3865 (1996))'
+        DESCRIPTION(3)='EXCHANGE SCALED BY 0.75 FOR USE IN THE PBE0 HYBRID FUNCTIONAL'
+!
+!     ==========================================================================
 !     == TYPE 10001:  CORRELATION (PERDEW ZUNGER PARAMETERIZATION)            ==
 !     ==========================================================================
       ELSE IF(IT.EQ.10001) THEN
@@ -425,6 +442,9 @@ MODULE DFT_MODULE
       if(.not.tcorrelation) then
         CALL REPORT$STRING(NFIL,'CORRELATIONS ARE SWITCHED OFF')
       end if
+      IF(SCALEX.NE.1.D0) THEN
+         CALL REPORT$R8VAL(NFIL,'EXCHANGE CONTRIBUTION SCALED BY FACTOR ',SCALEX,'')
+      END IF
       DO I=1,NDESCRIPTION
         IF(LEN(TRIM(DESCRIPTION(I))).EQ.0) CYCLE
         CALL REPORT$STRING(NFIL,TRIM(DESCRIPTION(I)))
@@ -462,6 +482,7 @@ MODULE DFT_MODULE
         IF(IT.EQ.12) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.13) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.5001) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
+        IF(IT.EQ.5002) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.10001) THEN ;TCHK=.TRUE. ;TGRA=.FALSE. ;END IF
         IF(IT.EQ.10002) THEN ;TCHK=.TRUE. ;TGRA=.FALSE. ;END IF
         IF(IT.EQ.10003) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
@@ -601,6 +622,25 @@ MODULE DFT_MODULE
       TGRA_=TGRA
       RETURN          
       END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE DFT$SETR8(ID,VAL)
+!!$!     **************************************************************************
+!!$!     **************************************************************************
+!!$      USE DFT_MODULE
+!!$      IMPLICIT NONE
+!!$      CHARACTER(*),INTENT(IN) :: ID
+!!$      LOGICAL(4)  ,INTENT(IN) :: VAL
+!!$!     **************************************************************************
+!!$      IF(ID.EQ.'SCALEX') THEN
+!!$        SCALEX=VAL
+!!$      ELSE
+!!$        CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
+!!$        CALL ERROR$CHVAL('ID',ID)
+!!$        CALL ERROR$STOP('DFT$SETR8')
+!!$      END IF
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DFT(RHOT,RHOS,GRHOT2,GRHOS2,GRHOST &
@@ -672,8 +712,8 @@ MODULE DFT_MODULE
 !     ==================================================================
       IF(TX) THEN 
         CALL EXCHANGE$EVAL1(VAL,EXC1,DEXC1)
-        EXC=EXC+EXC1
-        DEXC=DEXC+DEXC1
+        EXC=EXC+EXC1*scalex
+        DEXC=DEXC+DEXC1*scalex
       END IF
 !
 !     ==================================================================
@@ -824,9 +864,9 @@ MODULE DFT_MODULE
 !     ==================================================================
       IF(TX) THEN
         CALL EXCHANGE$EVAL2(VAL,EXC1,DEXC1,D2EXC1)
-        EXC=EXC+EXC1
-        DEXC(:)=DEXC(:)+DEXC1(:)
-        D2EXC(:,:)=D2EXC(:,:)+D2EXC1(:,:)
+        EXC=EXC+EXC1*scalex
+        DEXC(:)=DEXC(:)+DEXC1(:)*scalex
+        D2EXC(:,:)=D2EXC(:,:)+D2EXC1(:,:)*scalex
       END IF
 !
 !     ==================================================================
@@ -988,10 +1028,10 @@ MODULE DFT_MODULE
 !     ==================================================================
       IF(TX) THEN
         CALL EXCHANGE$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
-        EXC=EXC+EXC1
-        DEXC(:)=DEXC(:)+DEXC1(:)
-        D2EXC(:,:)=D2EXC(:,:)+D2EXC1(:,:)
-        D3EXC(:,:,:)=D3EXC(:,:,:)+D3EXC1(:,:,:)
+        EXC=EXC+EXC1*scalex
+        DEXC(:)=DEXC(:)+DEXC1(:)*scalex
+        D2EXC(:,:)=D2EXC(:,:)+D2EXC1(:,:)*scalex
+        D3EXC(:,:,:)=D3EXC(:,:,:)+D3EXC1(:,:,:)*scalex
       END IF
 !
 !     ==================================================================
