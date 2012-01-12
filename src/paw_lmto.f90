@@ -1142,7 +1142,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_MAKETAILEDPARTIALWAVES()
 !     **************************************************************************
-!     ** CONSTRUCTS AUGMENTED HANKEL END BESSEL FUNCTIONS WITH                **
+!     ** Constructs AUGMENTED HANKEL END BESSEL FUNCTIONS WITH                **
 !     ** TWO EXPONENTIALS ATTACHED AT THE MATCHING RADIUS RAD                 **
 !     **                                                                      **
 !     ** HANKEL AND BESSEL FUNCTIONS ARE TREATED INDEPENDENTLY FORMING A      **
@@ -1356,12 +1356,13 @@ real(8) :: pi
 !!$svar1=0.154329d0*(2.d0*svar2/pi)**0.75d0
 !!$potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1) &
 !!$ &     +svar1*exp(-svar2*r(:)**2)
-!!$!
-!!$! remove spherical harmonics
+!!$      ! remove spherical harmonics
 !!$potpar(isp)%tailed%aef(:,1)=potpar(isp)%tailed%aef(:,1)*sqrt(4.d0*pi)
-!!$! copy into other arrays
+!!$     ! copy into other arrays
 !!$potpar(isp)%tailed%nlf(:,:)=potpar(isp)%tailed%aef(:,:)
 !!$potpar(isp)%tailed%psf(:,:)=potpar(isp)%tailed%aef(:,:)
+!
+!
 !
 WRITE(STRING,FMT='(I5)')ISP
 STRING='AETAILS_FORATOMTYPE'//TRIM(ADJUSTL(STRING))//'.DAT'
@@ -2676,8 +2677,6 @@ COMPLEX(8)  :: PHASE
       CALL DYNOCC$GETI4('NB',NBX)
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
-print*,'this%tbc ',this%tbc
-stop 'forced'
 !
 !     ==========================================================================
 !     ==  CONSTRUCT INDEX ARRAYS                                              ==
@@ -3464,6 +3463,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     ==========================================================================
       CALL TIMING$CLOCKON('NTBODENMAT')
       CALL LMTO_NTBODENMAT()
+      call lmto_overlapeval()
       CALL TIMING$CLOCKOFF('NTBODENMAT')
 !!$      CALL LMTO_TESTDENMAT_1CDENMAT(LMNXX_,NDIMD_,NAT_,DENMAT_)
 !!$      CALL LMTO_TESTDENMAT()
@@ -3481,8 +3481,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !!$  denmat(nn)%mat(1,1,1)=0.60266d0
 !!$enddo
 
-      call lmto_overlapeval()
-      CALL LMTO$REPORToverlap(6)
+!!$      CALL LMTO$REPORToverlap(6)
 !stop 'forced'
 !
 !     ==========================================================================
@@ -3537,7 +3536,7 @@ CALL LMTO$REPORTorthodenmat(6)
 CALL LMTO$REPORToverlap(6)
 CALL LMTO$REPORTDENMAT(6)
 CALL LMTO$REPORTHAMIL(6)
-stop 'forced'
+!stop 'forced'
 !
 !     ==========================================================================
 !     ==  CLEAN DENMAT AND HAMIL                                              ==
@@ -5505,7 +5504,7 @@ PRINT*,'============ OFFSITEXEVAL ============================='
 !!$ALLOCATE(H1B(LMNXB,LMNXB,NDIMD))
 !!$h1a=0.d0
 !!$h1b=0.d0
-!print*,'ex  1',ex
+!print*,'ex  1',ex,iata,iatb,DENMAT(NN)%IT
 !
 !       ========================================================================
 !       == nddo term:
@@ -6225,7 +6224,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
       SUBROUTINE LMTO_OFFSITEXCONVERT()
 !     **************************************************************************
 !     ** CONVERT THE DISTANCE-DEPENDENT MATRIX ELEMENTS OF THE U-TENSOR       **
-!     ** INTO EXPANSION COEFFICIENTS FOR THE INTERPOLATING FUNCTION           ** 
+!     ** INTO EXPANSION COEFFICIENTS FOR THE INTERPOLATING FUNCTION           **
 !     ** F_J(X)=SUM_I=1^NDIS X22(I,J)*EXP(-LAMBDA(I)*X)                       **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : OFFSITEX,POTPAR,NSP
@@ -6284,6 +6283,10 @@ INTEGER(4) :: J
 !         == OFF SITE OVERLAP MATRIX 
 !         ======================================================================
           NIND=SIZE(OFFSITEX(ISP1,ISP2)%OVERLAP(1,:))
+!!$PRINT*,'OFFSITE%DIS    ',OFFSITEX(ISP1,ISP2)%DIS(:)
+!!$DO I=1,1
+!!$  PRINT*,'OFFSITE%overlap ',OFFSITEX(ISP1,ISP2)%overlap(:,I)
+!!$ENDDO
           DO I=1,NIND
             OFFSITEX(ISP1,ISP2)%OVERLAP(:,I) &
      &                         =MATMUL(AMATIN,OFFSITEX(ISP1,ISP2)%OVERLAP(:,I))
@@ -6294,9 +6297,10 @@ INTEGER(4) :: J
 !         == COULOMB TERMS X22
 !         ======================================================================
           NIND=SIZE(OFFSITEX(ISP1,ISP2)%X22(1,:))
-!!$PRINT*,'OFFSITE%DIS    ',OFFSITEX(ISP1,ISP2)%DIS(:)
-!!$DO I=1,10
-!!$!  PRINT*,'OFFSITE%X22 ',OFFSITEX(ISP1,ISP2)%X22(:,I)
+!!$DO I=1,1
+!!$  PRINT*,'OFFSITE%X22 ',OFFSITEX(ISP1,ISP2)%X22(:,I) &
+!!$&   +potpar(isp1)%tailed%qln(1,1,1)*potpar(isp2)%tailed%qln(1,1,1) &
+!!$&   /OFFSITEX(ISP1,ISP2)%DIS(:)
 !!$ENDDO
 !!$OPEN(UNIT=11,FILE='X22.DAT')
 !!$DO I=1,OFFSITEX(ISP1,ISP2)%NDIS
@@ -6329,8 +6333,8 @@ INTEGER(4) :: J
 !         ======================================================================
           NIND=SIZE(OFFSITEX(ISP1,ISP2)%X31(1,:))
 !!$PRINT*,'OFFSITE%DIS    ',OFFSITEX(ISP1,ISP2)%DIS(:)
-!!$DO I=1,10
-!!$!  PRINT*,'OFFSITE%X31 ',OFFSITEX(ISP1,ISP2)%X31(:,I)
+!!$DO I=1,1
+!!$  PRINT*,'OFFSITE%X31 ',OFFSITEX(ISP1,ISP2)%X31(:,I)
 !!$ENDDO
 !!$OPEN(UNIT=11,FILE='X31.DAT')
 !!$DO I=1,NDIS
@@ -6363,6 +6367,9 @@ INTEGER(4) :: J
 !         == BOND OVERLAP INTERACTIONS BONDU                                  ==
 !         ======================================================================
           NIND=SIZE(OFFSITEX(ISP1,ISP2)%BONDU(1,:))
+!!$DO I=1,1
+!!$  PRINT*,'OFFSITE%bondu ',OFFSITEX(ISP1,ISP2)%bondu(:,I)
+!!$ENDDO
 !!$OPEN(UNIT=11,FILE='BONDU.DAT')
 !!$DO I=1,NDIS
 !!$ R=OFFSITEX(ISP1,ISP2)%DIS(I)
@@ -6403,49 +6410,49 @@ INTEGER(4) :: J
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_prbondu()
+      SUBROUTINE LMTO_PRBONDU()
 !     **************************************************************************
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR,offsitex
-      implicit none
-      integer(4),parameter :: isp1=1
-      integer(4),parameter :: isp2=1
-      integer(4)           :: ind
-      integer(4)           :: lmn1,lmn2,lmn3,lmn4
-      integer(4)           :: lmnxa,lmnxb
-      integer(4)           :: iab,icd
-      real(8)   ,allocatable :: uabcd(:,:,:,:)
+      USE LMTO_MODULE, ONLY : POTPAR,OFFSITEX
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: ISP1=1
+      INTEGER(4),PARAMETER :: ISP2=1
+      INTEGER(4)           :: IND
+      INTEGER(4)           :: LMN1,LMN2,LMN3,LMN4
+      INTEGER(4)           :: LMNXA,LMNXB
+      INTEGER(4)           :: IAB,ICD
+      REAL(8)   ,ALLOCATABLE :: UABCD(:,:,:,:)
 !     **************************************************************************  
-      lmnxa=potpar(isp1)%tailed%lmnx
-      lmnxb=potpar(isp2)%tailed%lmnx
-      allocate(uabcd(lmnxa,lmnxb,lmnxa,lmnxb))
-      uabcd=0.d0
+      LMNXA=POTPAR(ISP1)%TAILED%LMNX
+      LMNXB=POTPAR(ISP2)%TAILED%LMNX
+      ALLOCATE(UABCD(LMNXA,LMNXB,LMNXA,LMNXB))
+      UABCD=0.D0
       IND=0
       DO LMN2=1,LMNXB
         DO LMN1=1,LMNXA
           IAB=LMN1+LMNXA*(LMN2-1)
           DO LMN4=1,LMNXB
             DO LMN3=1,LMNXA
-              Icd=LMN3+LMNXA*(LMN4-1)
+              ICD=LMN3+LMNXA*(LMN4-1)
               IF(ICD.GT.IAB) EXIT
               IND=IND+1
               UABCD(LMN1,LMN2,LMN3,LMN4)=OFFSITEX(ISP1,ISP2)%BONDU(1,IND)
-              UABCD(lmn3,lmn4,LMN1,LMN2)=OFFSITEX(ISP1,ISP2)%BONDU(1,IND)
+              UABCD(LMN3,LMN4,LMN1,LMN2)=OFFSITEX(ISP1,ISP2)%BONDU(1,IND)
             ENDDO
           ENDDO
         ENDDO
       ENDDO
-      do lmn2=1,lmnxb
-        do lmn1=1,lmnxa
-          write(*,fmt='(82("="),t20," bondu for lmn1=",i3," and lmn2=",i3)')lmn1,lmn2
-          do lmn3=1,lmnxa
-            write(*,fmt='(i3,50f10.5)')lmn3,uabcd(lmn1,lmn2,lmn3,:)
-          enddo
-        enddo
-      enddo
-stop 'forced'
-      return
-      end
+      DO LMN2=1,LMNXB
+        DO LMN1=1,LMNXA
+          WRITE(*,FMT='(82("="),T20," BONDU FOR LMN1=",I3," AND LMN2=",I3)')LMN1,LMN2
+          DO LMN3=1,LMNXA
+            WRITE(*,FMT='(I3,50F10.5)')LMN3,UABCD(LMN1,LMN2,LMN3,:)
+          ENDDO
+        ENDDO
+      ENDDO
+STOP 'FORCED'
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_OFFSITEOVERLAP(ISP1,ISP2,DIS,LMNX1,LMNX2,O,DO)
@@ -7889,7 +7896,7 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNX1,CHI)
         ENDDO
         HAMIL(INH)%MAT=H
         EXTOT=EXTOT+EX
-PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM=',IAT,EX
+PRINT*,'ONSITE EXACT EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !
 !       ========================================================================
 !       == ADD CORE VALENCE EXCHANGE                                          ==
@@ -7904,7 +7911,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !       ========================================================================
 ! THIS IS THE TIME CONSUMIN PART OF ENERGYTEST
 CALL TIMING$CLOCKON('ENERGYTEST:DC')      
-!        CALL LMTO_DOUBLECOUNTING(IAT,NDIMD,NORB,D,EX,H)
+!!$        CALL LMTO_DOUBLECOUNTING(IAT,NDIMD,NORB,D,EX,H)
         CALL LMTO_SIMPLEDC(GID,NR,NORB,LNX1,LOX(:LNX1,ISP),CHI,LRX,AECORE &
      &                        ,D,EX,H)
         EXTOT=EXTOT-EX

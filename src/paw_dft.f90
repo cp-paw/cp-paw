@@ -306,7 +306,7 @@ MODULE DFT_MODULE
 !     == TYPE 5002:  LSD + PBE96-GC with scaled exchange                      ==
 !     ==========================================================================
       ELSE IF (IT.EQ.5002) THEN
-        TX=.TRUE.
+        TX=.true.
         CALL EXCHANGE$SETI4('TYPE',3)
         scalex=0.75d0
         TPBE96=.TRUE.
@@ -613,9 +613,9 @@ MODULE DFT_MODULE
 !    
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DFT$GRADIENTSWITCH(TGRA_)
-!     ==================================================================
-!     == SET GRADIENT CORRECTION SWITCH                               ==
-!     ==================================================================
+!     ==========================================================================
+!     == SET GRADIENT CORRECTION SWITCH                                       ==
+!     ==========================================================================
       USE DFT_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(OUT) :: TGRA_
@@ -645,11 +645,11 @@ MODULE DFT_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DFT(RHOT,RHOS,GRHOT2,GRHOS2,GRHOST &
      &              ,EXC,VXCT,VXCS,GVXCT2,GVXCS2,GVXCST)
-!     ***************************************************************************
-!     **                                                                       **
-!     **  EVALUATE EXCHANGE CORRELATION ENERGY AND POTENTIAL                   **
-!     **                                                                       **
-!     ***************************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATE EXCHANGE CORRELATION ENERGY AND POTENTIAL                  **
+!     **                                                                      **
+!     **************************************************************************
       USE DFT_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: RHOT

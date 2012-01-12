@@ -1404,7 +1404,6 @@ print*,'marke 1',iorba,iorbb,iea,ieb
       INTEGER(4)             :: IFA,IFB,IFC,IFD
       INTEGER(4)             :: IA,IB,IC,ID
       REAL(8)                :: PI,SGN
-real(8) :: svar0,svar1,svar2,svar3,svar4,svarsum
 !     **************************************************************************
                      CALL TRACE$PUSH('GAUSSIAN$ZDIRECTION_FOURCENTER')
       PI=4.D0*ATAN(1.D0)
@@ -1471,11 +1470,6 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: BEFORE FOLD INTO ORBITALS LOOP 2'
         ENDDO
       ENDDO
       DEALLOCATE(CPAB3)
-!REMARK: MANY ELEMENTS OF CPAB1 ARE ZERO
-!!$DO I=1,NIJKP
-!!$  PRINT*,'CPAB1 ',I,CPAB1(I,1,:,:)
-!!$ENDDO
-!!$STOP 'FORCED'
 !
 !     ==========================================================================
 !     ==  COULOMB INTEGRAL OF HERMITE GAUSSIANS                               ==
@@ -1484,23 +1478,10 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: BEFORE HERMITEINTEGRALS ',NP
       N=2*NP
       ALLOCATE(HI(0:N,0:N,0:N))
       ALLOCATE(UPQ(NIJKP,NIJKP,NEP,NEP))
-svarsum=0.d0
       DO IEP=1,NEP
         DO IEQ=1,NEP
           CALL GAUSSIAN_HERMITEINTEGRAL(N,EP(IEP)*EP(IEQ)/(EP(IEP)+EP(IEQ)) &
      &                                   ,RP(:,IEP)-RP(:,IEQ),HI)
-
-!!$PRINT*,'HI ',IEP,IEQ,MAXVAL(ABS(HI)),N
-!!$DO IP=0,N
-!!$  DO JP=0,N
-!!$    DO KP=0,N
-!!$      IF(ABS(HI(IP,JP,KP)).GT.1.D-5)WRITE(*,FMT='(5I4,"HI=",F20.5)')IEP,IEQ,IP,JP,KP,HI(IP,JP,KP)
-!!$    ENDDO
-!!$  ENDDO
-!!$ENDDO
-!!$PRINT*,'NA,NB,NP ',NA,NB,NP
-!!$STOP 'FORCED'
-
           FACTOR=2.D0*PI**2.5D0/(EP(IEP)*EP(IEQ)*SQRT(EP(IEP)+EP(IEQ)))
           INDP=0
           DO MP=0,NP      
@@ -1524,27 +1505,14 @@ svarsum=0.d0
               ENDDO
             ENDDO
           ENDDO
-!!$svar1=factor
-!!$svar2=-0.d0
-!!$svar3=hi(0,0,0)
-!!$svar4=0.d0
-!!$svar0=0.d0
-!!$do indp=1,nijkp
-!!$  do indq=1,nijkp
-!!$    svar0=svar0+cpab1(indp,iep,1,1)*upq(indp,indq,iep,ieq)*cpab1(indq,ieq,1,1)
-!!$  enddo
-!!$enddo
-!!$svarsum=svarsum+svar0
-!!$write(*,fmt='("===",2i5,20f20.10)')iep,ieq,svar1,svar2,svar3,svar4,svar0
         ENDDO
       ENDDO
       DEALLOCATE(HI)
-print*,'svarsum ',svarsum
 !
 !     ==========================================================================
 !     ==  FOURCENTER INTEGRALS IN CARTESIAN GAUSSIANS                         ==
 !     ==========================================================================
-PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: MAPPING LOOP 1'
+PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: MAPPING LOOP 1',NIJKP,NEP,NFA,NFB
       ALLOCATE(CPAB2(NIJKP,NEP,NFA,NFB))
       CPAB2=0.D0
       DO IFC=1,NFA
@@ -1847,9 +1815,9 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     **************************************************************************
 !     ** EVALUATES A SET OF BOYS FUNCTIONS FOR M=0,...,N                      **
 !     **          F_M(X)=INT_0^1 DT: T^(2M)*EXP(-X*T^2)                       **
-!     ** result is accurate only for about x<d (empirical observation)        **
+!     ** RESULT IS ACCURATE ONLY FOR ABOUT X<D (EMPIRICAL OBSERVATION)        **
 !     **                                                                      **
-!     ** METHOD USED is a variation of:                                        **
+!     ** METHOD USED IS A VARIATION OF:                                       **
 !     **   B.A. MAMEDOV, "ON THE EVALUATION OF BOYS FUNCTIONS USING DOWNWARD  **
 !     **   RECURSION RELATION", J. MATH. CHEM. 36, P301                       **
 !     **************************************************************************
@@ -1858,56 +1826,56 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       REAL(8)   ,INTENT(IN) :: X
       REAL(8)   ,INTENT(OUT):: F(0:N)
       REAL(8)   ,PARAMETER  :: D=15.D0   ! #(ACCURATE DIGITS) 
-      REAL(8)               :: Y,EXPMX,PI,svar,f0
-      INTEGER(4)            :: MT,M,mbreak
+      REAL(8)               :: Y,EXPMX,PI,SVAR,F0
+      INTEGER(4)            :: MT,M,MBREAK
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == catch the case when x=0                                              ==
+!     == CATCH THE CASE WHEN X=0                                              ==
 !     ==========================================================================
-      if(abs(x).lt.1.d-5) then
-        do m=0,n
-          f(m)=1.d0/real(2*m+1,kind=8) &
-     &        -x/real(2*m+2,kind=8) &
-     &        -x**2/real(2*(2*m+3),kind=8) &
-     &        -x**3/real(6*(2*m+3),kind=4) 
-        enddo
-        return
-      end if
+      IF(ABS(X).LT.1.D-5) THEN
+        DO M=0,N
+          F(M)=1.D0/REAL(2*M+1,KIND=8) &
+     &        -X/REAL(2*M+2,KIND=8) &
+     &        -X**2/REAL(2*(2*M+3),KIND=8) &
+     &        -X**3/REAL(6*(2*M+3),KIND=4) 
+        ENDDO
+        RETURN
+      END IF
 !
 !     ==========================================================================
-!     == set up data for the main part                                        ==
+!     == SET UP DATA FOR THE MAIN PART                                        ==
 !     ==========================================================================
       PI=4.D0*ATAN(1.D0)
-      if(x.lt.35.d0) then
-        f0=sqrt(pi/(4.d0*x))*erf(sqrt(x))  ! boys function f0
-      else
-        f0=sqrt(pi/(4.d0*x))              ! large argument limit of f0
-      end if
-      mbreak=nint(x)
+      IF(X.LT.35.D0) THEN
+        F0=SQRT(PI/(4.D0*X))*ERF(SQRT(X))  ! BOYS FUNCTION F0
+      ELSE
+        F0=SQRT(PI/(4.D0*X))              ! LARGE ARGUMENT LIMIT OF F0
+      END IF
+      MBREAK=NINT(X)
       EXPMX=EXP(-X)
 !
 !     ==========================================================================
-!     == large distance limit                                                 ==
+!     == LARGE DISTANCE LIMIT                                                 ==
 !     ==========================================================================
-      svar=1.d0/(2.d0*x)
-      y=f0
-      do m=0,min(mbreak,n)
-        f(m)=y
-        y=(y*real(2*m+1,kind=8)-expmx)*svar
-      enddo
+      SVAR=1.D0/(2.D0*X)
+      Y=F0
+      DO M=0,MIN(MBREAK,N)
+        F(M)=Y
+        Y=(Y*REAL(2*M+1,KIND=8)-EXPMX)*SVAR
+      ENDDO
 !
 !     ==========================================================================
-!     == now the normal recursion                                             ==
+!     == NOW THE NORMAL RECURSION                                             ==
 !     ==========================================================================
-      IF(ABS(X-REAL(N)).GT.1.D-5) THEN   !Eq.10 of mamedov04_jcx36_301
-        MT=N+int(D/ABS(LOG10(REAL(N)/X)))
+      IF(ABS(X-REAL(N)).GT.1.D-5) THEN   !EQ.10 OF MAMEDOV04_JCX36_301
+        MT=N+INT(D/ABS(LOG10(REAL(N)/X)))
       ELSE
-        MT=N+int(D/ABS(LOG10(REAL(N))))
+        MT=N+INT(D/ABS(LOG10(REAL(N))))
       END IF   
-      MT=2*INT(0.5D0*REAL(MT+2))  !mt must be the next higher even number
-      y=expmx/real(2*m+1,kind=8)
-      DO M=MT,mbreak+1,-1
+      MT=2*INT(0.5D0*REAL(MT+2))  !MT MUST BE THE NEXT HIGHER EVEN NUMBER
+      Y=EXPMX/REAL(2*M+1,KIND=8)
+      DO M=MT,MBREAK+1,-1
         Y=(2.D0*X*Y+EXPMX)/REAL(2*M+1,KIND=8) !=F(M-1)
         IF(M.LE.N)F(M)=Y
       ENDDO
