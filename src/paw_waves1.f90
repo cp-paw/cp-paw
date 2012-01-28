@@ -5915,15 +5915,15 @@ PRINT*,'KMAP ',KMAP
          IPOS2B=IND(1)
          XLOAD2B=XLOADTESTB(IPOS2B)
          IF(MIN(XLOAD2A,XLOAD2B).LT.XLOAD1) THEN 
-          IF(XLOAD2A.LE.XLOAD1) THEN
+          IF(XLOAD2A.LE.XLOAD1.AND.NA(IPOS1).GT.0) THEN
              NA(IPOS1)=NA(IPOS1)-1        
              NA(IPOS2A)=NA(IPOS2A)+1        
-           ELSE
+             CYCLE
+           ELSE if(XLOAD2A.GE.XLOAD1.AND.NB(IPOS1).GT.0) THEN
              NB(IPOS1)=NB(IPOS1)-1        
              NB(IPOS2A)=NB(IPOS2A)+1        
+             CYCLE
            END IF
-           CYCLE
-         ELSE
            EXIT
          END IF
          IF(ICOUNT.EQ.100) THEN
