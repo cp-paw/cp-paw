@@ -5639,14 +5639,9 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
              NA(IPOS)=NA(IPOS)+1
            END IF
          ENDDO
-print*,'before prebalance ngroups ',ngroups
-print*,'before prebalance na ',na
-print*,'before prebalance nb ',nb
 !
 !        === RESHUFFLE NA AND NB TO DISTRIBUTE LOAD EQUALLY AMONG GROUPS =======
          CALL WAVES_PREBALANCE(NGROUPS,NA,NB,WA,WB)
-print*,'after prebalance na ',na
-print*,'after prebalance nb ',nb
 !
 !        == DETERMINE POINTER SK(IKPT)=IGROUP
          DO IKPT=1,NKPT
@@ -5662,9 +5657,6 @@ print*,'after prebalance nb ',nb
              END IF
            ENDDO
          ENDDO
-print*,'after doing sk: na ',na
-print*,'after doing sk: nb ',nb
-print*,'after doing sk: sk ',sk
 !
 !        == CONSISTENCY CHECK ==================================================
          DO IGROUP=1,NGROUPS
@@ -5915,7 +5907,7 @@ PRINT*,'KMAP ',KMAP
          IPOS2B=IND(1)
          XLOAD2B=XLOADTESTB(IPOS2B)
          IF(MIN(XLOAD2A,XLOAD2B).LT.XLOAD1) THEN 
-          IF(XLOAD2A.LE.XLOAD1.AND.NA(IPOS1).GT.0) THEN
+           IF(XLOAD2A.LE.XLOAD1.AND.NA(IPOS1).GT.0) THEN
              NA(IPOS1)=NA(IPOS1)-1        
              NA(IPOS2A)=NA(IPOS2A)+1        
              CYCLE
@@ -5924,12 +5916,8 @@ PRINT*,'KMAP ',KMAP
              NB(IPOS2A)=NB(IPOS2A)+1        
              CYCLE
            END IF
-           EXIT
          END IF
-         IF(ICOUNT.EQ.100) THEN
-           CALL ERROR$MSG('LOOP NOT CONVERGED')
-           CALL ERROR$STOP('WAVES_PREBALANCE')
-         END IF
+         EXIT !EXIT LOOK IF THERE IS NO MORE CHANGE
        ENDDO
        RETURN
        END
