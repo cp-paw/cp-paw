@@ -1061,17 +1061,18 @@ USE PERIODICTABLE_MODULE
 !         == PRINT ENERGIES ====================================================
           ETOT=EKIN+EH+EXC+SCALE*(EFOCK-EX)
           WRITE(*,FMT='(80("="),T20,"ENERGY REPORT OF ATOMLIB$AESCF")')
-          WRITE(*,FMT='(30("."),T1,"TOTAL ENERGY:",T30,F10.5)')ETOT
-          WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F10.5)')EKIN
-          WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F10.5)')EH
+          WRITE(*,FMT='(30("."),T1,"TOTAL ENERGY:",T30,F15.6)')ETOT
+          WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F15.6)')EKIN
+          WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F15.6)')EH
           IF(TFOCK.AND.TSECOND) THEN
-            WRITE(*,FMT='(30("."),T1,"MIXED XC ENERGY:",T30,F10.5)') &
-     &                                                     EXC+SCALE*(EFOCK-EX)
-            WRITE(*,FMT='(30("."),T1,"100% DFT XC ENERGY:",T30,F10.5)')EXC
-            WRITE(*,FMT='(30("."),T1,"100% DFT EXCHANGE ENERGY:",T30,F10.5)')EX
-            WRITE(*,FMT='(30("."),T1,"100% FOCK EXCHANGE ENERGY:",T30,F10.5)')EFOCK
+            WRITE(*,FMT='(30("."),T1,"MIXED XC ENERGY:",T30,F15.6)') &
+     &                                                      EXC+SCALE*(EFOCK-EX)
+            WRITE(*,FMT='(30("."),T1,"100% DFT XC ENERGY:",T30,F15.6)')EXC
+            WRITE(*,FMT='(30("."),T1,"100% DFT EXCHANGE ENERGY:",T30,F15.6)')EX
+            WRITE(*,FMT='(30("."),T1,"100% FOCK EXCHANGE ENERGY:",T30,F15.6)') &
+     &                                                                     EFOCK
           ELSE
-            WRITE(*,FMT='(30("."),T1,"DFT XC ENERGY:",T30,F10.5)')EXC
+            WRITE(*,FMT='(30("."),T1,"DFT XC ENERGY:",T30,F15.6)')EXC
           END IF
 
           POT=POTIN  ! RECOVER POT AS INPUT POTENTIAL
