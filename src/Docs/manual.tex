@@ -967,12 +967,20 @@ parameterization of the Ceperley Alder quantum Monte Carlo calculation}
 
 
 \mbax{\key{VDW}
-\vdescr{Adds van der Waals Interactions\cite{grimme04_jcc25_1463}. 
-The van der Waals interaction is described by an interatomic pair-potential 
+\vdescr{Adds van der Waals Interactions\cite{grimme10_jcp32_154104}. 
+The van der Waals interaction is described by an interatomic pair potential 
 that has a long-ranged $r^{-6}$ behavior and which is cut of smoothly 
 at short distances.}
 \vformat{logical}
 \vrules{optional (Untested)}
+\vdefault{F}}
+
+\mbax{\key{VDW-3BODY} 
+\vdescr{adds three-body interactions\cite{grimme10_jcp32_154104} to
+    the pair-wise van der Waals interactions of Grimme et al. (As of
+    March 2012, not yet recommended by Grimme)}
+\vformat{logical} 
+\vrules{optional, only used when VDW=T,  (Untested)} 
 \vdefault{F}}
 
 
@@ -6011,7 +6019,7 @@ structures including 2-d projected band structures.
 
 The calling sequence is
 
-\bigskip\fbox{{\tt paw\_bands} {\it controlfile}}\bigskip
+\bigskip\fbox{{\tt paw\_bands.x} {\it controlfile}}\bigskip
 
 \noindent
 where {\it controlfile} is the file name of the control input file for
@@ -6023,14 +6031,28 @@ the paw\_dos tool. I recommend the extension ``.bcntl''.
 An example for the input control file is given here
 \begin{verbatim}
 !BCNTL
-  !LINE FILE='XBANDS.DAT'
-    XK1= 0. 0. 0. XK2= .5 .5 .5 NK=101 NPROJECT=11 XKPROJECT= 0. .5 .5 SPIN=1
+  !LINE FILE='BANDS_gammax.DAT' SPIN=1
+    XK1= 0. 0. 0. XK2= .5 0. 0. NK=101 
+    XKPROJECT= 0. 0. 1.  NPROJECT=11 
   !END
-  !LINE XK1= .5 .5 .5 XK2= .5 .5 0. NPROJECT=11 XKPROJECT= 0. .5 .5 !END
-  !LINE XK1= .5 .5 0. xk2= 0. 0. 0. NPROJECT=11 XKPROJECT= 0. .5 .5 !END
+  !LINE FILE='BANDS_xm.DAT' SPIN=1
+    XK1= .5 0. 0. XK2= .5 .5 0. NK=101 
+    XKPROJECT= 0. 0. 1.  NPROJECT=11 
+  !END
 !END
 !EOB
 \end{verbatim}
+
+The bands are written in the format \centerline{$ik e_1(ik) e_2(ik)
+  e_3(ik) \ldots$} onto the specified band. $ik$ is the index of the
+k-point along the line from xk1 to xk2. $e_j(ik)$ is the energy
+eigenvalue of the j-th band.
+
+The result can be viewed using the program ``xmgrace'' with the
+command
+
+\bigskip\fbox{{\tt xmgrace -nxy} {\it bands file}}\bigskip
+
 
 %==========================================================================
 \subsection{Argument description for the control input file}
@@ -6083,11 +6105,11 @@ in relative coordinates of the reciprocal lattice vectors.}
 \vrules{optional}
 \vdefault{(0.,0.,0.)}}
 
-\mbax{\key{NKPROJECT}
+\mbax{\key{NPROJECT}
 \vdescr{number of displaced band line segments for the projection 
 for 2-d band structures}
 \vformat{integer} 
-\vrules{optional}
+\vrules{optional, must be an odd number}
 \vdefault{1}}
 
 

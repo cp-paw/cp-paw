@@ -33,7 +33,7 @@
       REAL(8)      ,ALLOCATABLE :: WORK2(:,:,:)
       INTEGER(4)                :: NFILIN
       INTEGER(4)                :: NPRO
-      INTEGER(4)                :: IKPT,ISPIN,IB,I,J,K
+      INTEGER(4)                :: IKPT,ISPIN,IB,I,J,K,j1,j2
       INTEGER(4)                :: N1,N2,N3
       INTEGER(4)                :: N1B,N2B,N3B
       INTEGER(4)                :: IND
@@ -45,7 +45,7 @@
       INTEGER(4)                :: NP
       INTEGER(4)                :: NFIL
       REAL(8)                   :: X1,X2
-      REAL(8)                   :: SVAR
+      REAL(8)                   :: SVAR,svar1
       LOGICAL(4)                :: TCHK,TCHK1
       LOGICAL(4),PARAMETER      :: TREFINE=.FALSE.
 !     **************************************************************************
@@ -114,28 +114,33 @@
       CALL GBASS(RBAS,GBAS,SVAR)
                             CALL TRACE$PASS('AFTER READPDOS')
 !
-PRINT*,'RBAS ',RBAS
-PRINT*,'GBAS ',GBAS
-PRINT*,'NKPT ',NKPT
+!!$PRINT*,'RBAS ',RBAS
+!!$PRINT*,'GBAS ',GBAS
+!!$PRINT*,'NKPT ',NKPT
 !
 !      =========================================================================
 !      ==  EXTRACT DIVISION OF LATTICE VECTORS                                ==
 !      =========================================================================
        DO I=1,3
-         SVAR=1.D0
-         DO J=1,NKPT
-           IF(ABS(XK(I,J)).LT.1.D-8) CYCLE
-           SVAR=MAX(SVAR,1.D0/ABS(XK(I,J)))
-         ENDDO
+         svar=1.d0
+         do j1=1,nkpt
+           do j2=j1+1,nkpt
+             svar1=abs(modulo(xk(i,j1)-xk(i,j2)+0.5d0,1.d0)-0.5d0)
+             if(svar1.ne.0.d0) svar=min(svar,svar1)
+           enddo
+         enddo
+         svar=1.d0/svar
          IF(I.EQ.1) THEN
            N1=NINT(SVAR)
+!!$PRINT*,'N1 ',N1,svar
          ELSE IF(I.EQ.2) THEN
            N2=NINT(SVAR)
+!!$PRINT*,'N2 ',N2,svar
          ELSE IF(I.EQ.3) THEN
            N3=NINT(SVAR)
+!!$PRINT*,'N3 ',N3,svar
          END IF
        ENDDO
-PRINT*,'N1 ',N1,N2,N3
 !
 !      =========================================================================
 !      ==  CONSTRUCT MAPPING ONTO K-POINT ARRAY                               ==
@@ -232,9 +237,17 @@ PRINT*,'N1B ',N1B,N2B,N3B
          CALL LINKEDLIST$EXISTD(LL_CNTL,'XKPROJECT',0,TCHK)
          IF(TCHK) THEN
            CALL LINKEDLIST$GET(LL_CNTL,'XKPROJECT',1,XQ)
-           NQ=10
+           NQ=11
            CALL LINKEDLIST$EXISTD(LL_CNTL,'NPROJECT',0,TCHK1)
            IF(TCHK1)CALL LINKEDLIST$GET(LL_CNTL,'NPROJECT',1,NQ)
+           IF(MODULO(N1,2).NE.1) THEN
+!            == for 2-d- band structures one goes forward-backward-forward =====
+!            == for even nq a straight line is drawn towards the next segment ==
+!            == when several lines are written in the same file=================
+             CALL ERROR$MSG('VARIABLE !LINE:NPROJECT MUST BE AN ODD NUMBER')
+             CALL ERROR$I4VAL('NPROJECT',NQ)
+             CALL ERROR$STOP('MAIN')
+           END IF
          ELSE
            XQ(:)=0.D0
            NQ=1
@@ -391,6 +404,7 @@ PRINT*,'N1B ',N1B,N2B,N3B
        INTEGER(4)            :: IP,IQ
        INTEGER(4)            :: NFIL=11
 !      *************************************************************************
+print*,'nb ',nb
        CALL FILEHANDLER$UNIT('BANDS',NFIL)
        DO IQ=1,NQ
          IF(NQ.EQ.1) THEN
@@ -405,7 +419,12 @@ PRINT*,'N1B ',N1B,N2B,N3B
 !          == ki is the k-point in cartesian coordinates =======================
            KI=MATMUL(GBAS,XK1*D1+XK2*D2+XQ*D3)
            CALL BANDS_GETBAND(GBAS,N1,N2,N3,MAP,NK,NB,EB,KI,EBI)
-           WRITE(NFIL,FMT='(100F10.5)')X1+D2*(X2-X1),EBI(:)
+           IF(NB.GT.100) THEN
+             CALL ERROR$MSG('NUMBER OF BANDS EXCEEDS LIMIT OF 100')
+             CALL ERROR$I4VAL('NB ',NB)
+             CALL ERROR$STOP('BANDS_PLOTBANDS')
+           END IF
+           WRITE(NFIL,FMT='(100F9.5)')X1+D2*(X2-X1),EBI
          ENDDO
        ENDDO
        RETURN 
@@ -476,7 +495,6 @@ PRINT*,'N1B ',N1B,N2B,N3B
        INTEGER(4)            :: IND4(4)
        REAL(8)               :: AMAT(3,3),AMATIN(3,3)
        REAL(8)               :: WGHT(4)
-       REAL(8)               :: SVAR
        REAL(8)               :: S1,S2,S3
 !      *************************************************************************
 !       CALL LIB__INVERTR8(3,GBAS,GBASIN)

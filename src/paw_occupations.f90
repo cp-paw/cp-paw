@@ -1473,22 +1473,22 @@ END MODULE DYNOCC_MODULE
 !      =========================================================================
        IF(TADIABATIC) THEN
          IF(BZITYPE.EQ.'TETRA+') THEN
-PRINT*,'ENERGIES WITH ALLOCATED EPS0=== min=',minval(eps0),' max=',maxval(eps0)
-DO ISPIN=1,NSPIN
-  DO IKPT=1,NKPT
-    PRINT*,'-------------------------EPS0 ',IKPT,ISPIN,'-------------------------'
-    WRITE(*,FMT='(10F8.3)')EPS0(:,IKPT,ISPIN)
-  ENDDO
-ENDDO
+!!$PRINT*,'ENERGIES WITH ALLOCATED EPS0=== min=',minval(eps0),' max=',maxval(eps0)
+!!$DO ISPIN=1,NSPIN
+!!$  DO IKPT=1,NKPT
+!!$    PRINT*,'-------------------------EPS0 ',IKPT,ISPIN,'-------------------------'
+!!$    WRITE(*,FMT='(10F8.3)')EPS0(:,IKPT,ISPIN)
+!!$  ENDDO
+!!$ENDDO
            CALL DYNOCC_TETRAINTERFACE(NSPIN,NKPT,NB,TFIXTOT,TFIXSPIN &
       &               ,FMAX,TOTCHA,SPINCHA,TOTPOT,SPINPOT,EPS0,WGHT)
-PRINT*,'WEIGHTS WITH ALLOCATED EPS0========================='
-DO ISPIN=1,NSPIN
-  DO IKPT=1,NKPT
-PRINT*,'-------------------------WGHT ',IKPT,ISPIN,'-------------------------'
-WRITE(*,FMT='(10F8.3)')WGHT(:,IKPT,ISPIN)/wkpt(ikpt)
-  ENDDO
-ENDDO
+!!$PRINT*,'WEIGHTS WITH ALLOCATED EPS0========================='
+!!$DO ISPIN=1,NSPIN
+!!$  DO IKPT=1,NKPT
+!!$PRINT*,'-------------------------WGHT ',IKPT,ISPIN,'-------------------------'
+!!$WRITE(*,FMT='(10F8.3)')WGHT(:,IKPT,ISPIN)/wkpt(ikpt)
+!!$  ENDDO
+!!$ENDDO
          ELSE IF(BZITYPE.EQ.'SAMP') THEN
            CALL DYNOCC_INIOCCBYENERGY(NB,NKPT,NSPIN,FMAX &
       &          ,TEMP,TFIXTOT,TOTCHA,TOTPOT,TFIXSPIN,SPINCHA,SPINPOT &

@@ -1549,7 +1549,7 @@
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      INTEGER(4),PARAMETER  :: LMXXX=36
+      INTEGER(4),PARAMETER  :: LMXXX=81
       INTEGER(4),INTENT(IN) :: LMXX
       INTEGER(4),INTENT(IN) :: LMX
       INTEGER(4),INTENT(IN) :: NG
@@ -1573,6 +1573,11 @@
         CALL ERROR$STOP('POTENTIAL_YLMOFG')
       END IF
       IF(LMXX.GT.LMXXX) THEN
+        CALL ERROR$MSG('INTERNAL CONSISTENCY CHECK FAILED')
+        CALL ERROR$MSG('LMXX DIFFERS FROM LMXXX')
+        CALL ERROR$I4VAL('LMXXX',LMXXX)
+        CALL ERROR$I4VAL('LMXX',LMXX)
+        CALL ERROR$MSG('INCREASE HARDWIRED LIMIT IN PAW_POTENTIAL.F90')
         CALL ERROR$STOP('POTENTIAL_YLMOFG')
       END IF
 !

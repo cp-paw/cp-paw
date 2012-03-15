@@ -751,8 +751,14 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !     ==========================================================================
 !     ==  CONSTRUCT OFFSITE INTEGRALS OF TAILED ORBITALS                      ==
 !     ==========================================================================
-      CALL LMTO_OFFXINT()
-!      CALL LMTO_TAILEDPRODUCTS()
+!      CALL LMTO_OFFXINT()
+!warning lmto_offxint must be switched on again
+print*,'warning!! lmto_offxint must be switched on again'
+
+
+
+
+!      Call LMTO_TAILEDPRODUCTS()
 !!$!
 !!$!     ==========================================================================
 !!$!     == DETERMINE GAUSS EXPANSION OF UNSCREENED HANKEL FUNCTIONS KPRIME      ==
@@ -3454,6 +3460,13 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START ")')
 !
 !     ==========================================================================
+!     ==  test
+!     ==========================================================================
+      call lmto_testorbitals()
+!warning "call lmto_offxint()" must be switched on again (Line 3466)
+stop 'forced after testing'
+!
+!     ==========================================================================
 !     == Write DMFT interface 
 !     ==========================================================================
       CALL LMTO_DROP()
@@ -3472,6 +3485,12 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     ==========================================================================
 !     ==  write some info
 !     ==========================================================================
+      CALL LMTO_PLOTNTBO('TAILED,CUBE',1,1)   !(TYPE,IAT,LMN)
+      CALL LMTO_PLOTNTBO('TAILED,STAR',1,1)   !(TYPE,IAT,LMN)
+      CALL LMTO_PLOTNTBO('FULL,CUBE',1,1)   !(TYPE,IAT,LMN)
+      CALL LMTO_PLOTNTBO('FULL,STAR',1,1)   !(TYPE,IAT,LMN)
+stop 'forced after plotntbo'
+
 !!$      CALL LMTO$REPORTPOTBAR(6)
 !!$      CALL LMTO$REPORTSBAR(6)
 
@@ -9036,7 +9055,7 @@ PRINT*,'N1,N2 ',N1,N2
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: NNS
       INTEGER(4)            :: NN,LM1
-      real(8)               :: q,q1
+      real(8)               :: q,q1,s,s1
 !     **************************************************************************
                              CALL TRACE$PUSH('LMTO$REPORTOVERLAP')
       NNS=SIZE(OVERLAP)
@@ -9048,15 +9067,18 @@ PRINT*,'N1,N2 ',N1,N2
         WRITE(NFIL,FMT='(82("="),T10," IAT1=",I5," IAT2=",I5," IT=",3I3," ")') &
      &                 OVERLAP(NN)%IAT1,OVERLAP(NN)%IAT2,OVERLAP(NN)%IT
         q1=0.d0
+        S1=0.D0
         DO LM1=1,OVERLAP(NN)%N1
           WRITE(NFIL,FMT='(20E10.2)')OVERLAP(NN)%MAT(LM1,:)
-          q1=q1+sum(OVERLAP(NN)%MAT(:,LM1)*denmat(nn)%mat(:,lm1,1))
+          Q1=Q1+SUM(OVERLAP(NN)%MAT(LM1,:)*DENMAT(NN)%MAT(LM1,:,1))
+          S1=S1+SUM(OVERLAP(NN)%MAT(LM1,:)*DENMAT(NN)%MAT(LM1,:,4))
         ENDDO
-        WRITE(NFIL,*)'NUMBER OF ELECTRONS ATTRIBUTED TO THIS PAIR ',Q1
+        WRITE(NFIL,*)'NUMBER OF ELECTRONS ATTRIBUTED TO THIS PAIR ',Q1," SPIN=",S1
         Q=Q+Q1
+        S=S+S1
         WRITE(NFIL,FMT='(82("="))')
       ENDDO
-      WRITE(NFIL,*)'NUMBER OF ELECTRONS',Q
+      WRITE(NFIL,*)'NUMBER OF ELECTRONS',Q," SPIN=",S
                              CALL TRACE$POP()
       RETURN
       END SUBROUTINE LMTO$REPORTOVERLAP
@@ -9390,7 +9412,7 @@ PRINT*,'N1,N2 ',N1,N2
       LOGICAL(4),PARAMETER  :: TGAUSS=.TRUE.
       CHARACTER(2),PARAMETER :: ID='3D'
 !     **************************************************************************
-                                              CALL TRACE$PUSH('LMTO_PLOTLOCORB')
+                                         CALL TRACE$PUSH('LMTO_GRIDPLOT_TAILED')
 !
 !     ==========================================================================
 !     == COLLECT INFORMATION                                                  ==
@@ -9723,7 +9745,7 @@ PRINT*,'N1,N2 ',N1,N2
       CHARACTER(2),PARAMETER :: ID='3D'
       INTEGER(4)            :: NN,IAT,IAT2,ISP,LN,I,IORB,IDIR
 !     **************************************************************************
-                                              CALL TRACE$PUSH('LMTO_PLOTLOCORB')
+                                      CALL TRACE$PUSH('LMTO_GRIDPLOT_UNTAILED')
       IF(ID.NE.'1D'.AND.ID.NE.'2D'.AND.ID.NE.'3D') THEN
         CALL ERROR$MSG('INVALID ID')
         CALL ERROR$MSG('MUST BE "1D", "2D", OR "3D"')
@@ -10338,6 +10360,659 @@ CALL TEST_LMTO$STRUCTURECONSTANTS()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_plotntbo(TYPE,IATORB,LMNORB)
+!     **************************************************************************
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2012 ************
+      USE LMTO_MODULE, ONLY : ispecies,nsp,lnx,lox,SBAR,K2,POTPAR,sbarli1
+      use strings_module
+      IMPLICIT NONE
+      character(*),intent(in) :: type    !
+      integer(4)  ,intent(in) :: iatorb
+      integer(4)  ,intent(in) :: lmnorb
+      LOGICAL(4)              :: TTAILED
+      CHARACTER(8)            :: GRIDTYPE
+      REAL(8)                 :: RBAS(3,3)
+      integer(4)              :: nat
+      real(8)   ,allocatable  :: r0(:,:)
+      integer(4)              :: nns
+      integer(4)              :: natcluster
+      real(8)   ,allocatable  :: zcluster(:)
+      real(8)   ,allocatable  :: rcluster(:,:)
+      integer(4)              :: nn,isp,iat,iat2
+      reAL(8)                 :: center(3)
+      reAL(8)   ,parameter    :: radius=10.d0
+      real(8)                 :: origin(3),tvec(3,3) !viewbox
+      integer(4),parameter    :: n1=40,n2=40,n3=40
+      integer(4),parameter    :: nr=200,ndir=13
+      real(8)                 :: dir(3,ndir)
+      real(8)   ,allocatable  :: x1d(:)
+      integer(4)              :: np
+      real(8)   ,allocatable  :: p(:,:)
+      real(8)   ,allocatable  :: orb(:)
+      character(64)           :: string
+      character(64)           :: file
+      character(8)            :: ext
+      integer(4)              :: nfil
+      integer(4)              :: i,j
+!     **************************************************************************
+      IF(INDEX(TYPE,'TAILED').NE.0) THEN
+        TTAILED=.TRUE.
+      ELSE IF(INDEX(TYPE,'FULL').NE.0) THEN
+        TTAILED=.FALSE.
+      ELSE 
+        CALL ERROR$MSG('ORBITAL TYPE NOT RECOGNIZED')
+        CALL ERROR$MSG('MUST BE "FULL" OR "TAILED"')
+        CALL ERROR$STOP('LMTO_PLOTNTBO')
+      END IF
+
+      IF(INDEX(TYPE,'CUBE').ne.0) THEN
+        GRIDTYPE='CUBE'
+      ELSE IF(INDEX(TYPE,'STAR').ne.0) THEN
+        GRIDTYPE='STAR'
+      ELSE 
+        CALL ERROR$MSG('GRID-TYPE NOT RECOGNIZED')
+        CALL ERROR$MSG('MUST BE "CUBE" OR "STAR"')
+        CALL ERROR$STOP('LMTO_PLOTNTBO')
+      END IF
+!
+!     ==========================================================================
+!     == COLLECT ATOMIC STRUCTURE                                             ==
+!     ==========================================================================
+      CALL CELL$GETR8A('T0',9,RBAS)
+      NAT=SIZE(ISPECIES)
+      ALLOCATE(R0(3,NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+!
+!     ==========================================================================
+!     == DEFINE ATOMS ON THE CLUSTER OF NEIGHBORS                             ==
+!     ==========================================================================
+      nns=size(sbar)
+      NATCLUSTER=0
+      DO NN=1,NNS
+        IF(SBAR(NN)%IAT1.EQ.IATorb) NATCLUSTER=NATCLUSTER+1
+      ENDDO
+      ALLOCATE(ZCLUSTER(NATCLUSTER))
+      ALLOCATE(RCLUSTER(3,NATCLUSTER))
+      IAT=0
+      DO NN=1,NNS
+        IF(SBAR(NN)%IAT1.NE.IATorb) CYCLE
+        IAT=IAT+1
+        IAT2=SBAR(NN)%IAT2
+        RCLUSTER(:,IAT)=R0(:,IAT2) &
+     &                 +RBAS(:,1)*REAL(SBAR(NN)%IT(1),KIND=8) &
+     &                 +RBAS(:,2)*REAL(SBAR(NN)%IT(2),KIND=8) &
+     &                 +RBAS(:,3)*REAL(SBAR(NN)%IT(3),KIND=8) 
+        ISP=ISPECIES(IAT2)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('AEZ',ZCLUSTER(IAT))
+        CALL SETUP$ISELECT(0)
+      ENDDO
+!
+!     ==========================================================================
+!     == define grid                                                          ==
+!     ==========================================================================
+      center=r0(:,iatorb)
+      IF(GRIDTYPE.EQ.'CUBE') THEN
+        np=n1*n2*n3
+        allocate(p(3,n1*n2*n3))
+        CALL LMTO_GRIDORB_CUBEGRID(CENTER,RADIUS,N1,N2,N3,ORIGIN,TVEC,P)
+      ELSE IF(GRIDTYPE.EQ.'STAR') THEN
+        np=nr*ndir
+!       == (100) directions ====================================================
+        dir(:,1)=(/1.d0,0.d0,0.d0/)
+        dir(:,2)=(/0.d0,1.d0,0.d0/)
+        dir(:,3)=(/0.d0,0.d0,1.d0/)
+!       == (110) directions ====================================================
+        dir(:,4)=(/0.d0,1.d0,1.d0/)
+        dir(:,5)=(/1.d0,0.d0,1.d0/)
+        dir(:,6)=(/1.d0,1.d0,0.d0/)
+        dir(:,7)=(/0.d0,-1.d0,1.d0/)
+        dir(:,8)=(/1.d0,0.d0,-1.d0/)
+        dir(:,9)=(/1.d0,-1.d0,0.d0/)
+!       == (111) directions ====================================================
+        dir(:,10)=(/1.d0,1.d0,1.d0/)
+        dir(:,11)=(/-1.d0,1.d0,1.d0/)
+        dir(:,12)=(/1.d0,-1.d0,1.d0/)
+        dir(:,13)=(/1.d0,1.d0,-1.d0/)
+        allocate(p(3,nr*ndir))
+        allocate(x1d(nr))
+        CALL LMTO_GRIDORB_STARGRID(CENTER,RADius,NDIR,DIR,NR,X1D,P)
+      ELSE
+        CALL ERROR$MSG('GRIDTYPE NOT RECOGNIZED. MAY BE "CUBE" OR "STAR"')
+        CALL ERROR$STOP('LMTO_PLOTNTBO')
+      END IF
+!
+!     ==========================================================================
+!     == calculate orbitale                                                   ==
+!     ==========================================================================
+      allocate(orb(np))
+      if(ttailed) then
+        call LMTO_tailed_NTBOOFR(TYPE,IATORB,LMNORB,NP,P,ORB)
+      else
+        call LMTO_NTBOOFR(TYPE,IATORB,LMNORB,NP,P,ORB)
+      end if
+!
+!     ==========================================================================
+!     == write data to file                                                   ==
+!     ==========================================================================
+      FILE='NTB'
+      IF(TTAILED) FILE=TRIM(FILE)//'_TAILED'
+      WRITE(STRING,*)IATORB
+      FILE=TRIM(ADJUSTL(FILE))//'_IAT'//TRIM(ADJUSTL(STRING))
+!      CALL SPHERICAL$YLMNAME(LM1,STRING)
+      WRITE(STRING,*)LMNORB
+      IF(GRIDTYPE.EQ.'CUBE') THEN
+        EXT=-'.CUB'
+      ELSE
+        EXT=-'.DAT'
+      END IF
+      FILE=TRIM(ADJUSTL(FILE))//'_'//TRIM(ADJUSTL(STRING))//TRIM(EXT)
+      CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,-FILE)
+      CALL FILEHANDLER$UNIT('HOOK',NFIL)
+      IF(GRIDTYPE.EQ.'CUBE') THEN
+        CALL LMTO_WRITECUBEFILE(NFIL,NATCLUSTER,ZCLUSTER,RCLUSTER &
+     &                       ,ORIGIN,TVEC,N1,N2,N3,ORB(:))
+      ELSE IF(GRIDTYPE.EQ.'STAR') THEN
+        REWIND(NFIL)
+        DO I=1,NR
+          WRITE(NFIL,*)X1D(I),(ORB(I+NR*(J-1)),J=1,NDIR)
+        ENDDO
+      ELSE 
+        CALL ERROR$MSG('GRIDTYPE NOT RECOGNIZED. MAY BE "CUBE" OR "STAR"')
+        CALL ERROR$STOP('LMTO_PLOTNTBO')
+      END IF
+      CALL FILEHANDLER$CLOSE('HOOK')
+      CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOK')
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_testorbitals()
+!     **************************************************************************
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2012 ************
+      USE LMTO_MODULE, ONLY : ispecies,nsp,lnx,lox,SBAR,K2,POTPAR,sbarli1
+      IMPLICIT NONE
+      integer(4),parameter :: iatorb=1
+      integer(4),parameter :: lmnorb=1
+      real(8)   ,parameter :: rad=2.d0
+      integer(4),parameter :: np=38
+      real(8)              :: dir(3,np)
+      character(8)         :: type='='
+      real(8)              :: p(3,np)
+      real(8)              :: orb(np)
+      real(8)              :: orbtailed(np)
+      integer(4)           :: j,lm
+      integer(8),parameter :: lx=4
+      integer(8),parameter :: lmx=(lx+1)**2
+      real(8)              :: ylm(lmx)
+      real(8)              :: flm(lmx)
+      real(8)              :: flmtailed(lmx)
+      real(8)              :: clm(lmx,lmx)
+      real(8)              :: clminv(lmx,lmx)
+      real(8)              :: svar
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == define starburst mesh                                                ==
+!     ==========================================================================
+!     == (100) directions ======================================================
+      dir(:,1)=(/1.d0,0.d0,0.d0/)
+      dir(:,2)=(/0.d0,1.d0,0.d0/)
+      dir(:,3)=(/0.d0,0.d0,1.d0/)
+!     == (110) directions ======================================================
+      dir(:,4)=(/0.d0,1.d0,1.d0/)
+      dir(:,5)=(/1.d0,0.d0,1.d0/)
+      dir(:,6)=(/1.d0,1.d0,0.d0/)
+      dir(:,7)=(/0.d0,-1.d0,1.d0/)
+      dir(:,8)=(/1.d0,0.d0,-1.d0/)
+      dir(:,9)=(/1.d0,-1.d0,0.d0/)
+!     == (111) directions ======================================================
+      dir(:,10)=(/1.d0,1.d0,1.d0/)
+      dir(:,11)=(/-1.d0,1.d0,1.d0/)
+      dir(:,12)=(/1.d0,-1.d0,1.d0/)
+      dir(:,13)=(/1.d0,1.d0,-1.d0/)
+!     == (120) directions ======================================================
+      dir(:,14)=(/2.d0,1.d0,0.d0/)
+      dir(:,15)=(/0.d0,2.d0,1.d0/)
+      dir(:,16)=(/1.d0,0.d0,2.d0/)
+      dir(:,17)=(/0.d0,1.d0,2.d0/)
+      dir(:,18)=(/1.d0,2.d0,0.d0/)
+      dir(:,19)=(/2.d0,0.d0,1.d0/)
+!     ==========================================================================
+      dir(:,np/2+1:)=-dir(:,:np/2)
+      do j=1,np
+        dir(:,j)=dir(:,j)/sqrt(sum(dir(:,j)**2))
+      enddo
+!
+!     ==========================================================================
+!     == calculate orbital
+!     ==========================================================================
+      p(:,:)=dir(:,:)*rad
+      call LMTO_tailed_NTBOOFR(TYPE,IATORB,LMNORB,NP,P,ORB)
+      call LMTO_NTBOOFR(TYPE,IATORB,LMNORB,NP,P,ORBtailed)
+      do j=1,np
+        write(*,fmt='(i5," r=",3f5.2," orb(full)=",f20.10," orb(tail)=",f20.10)') &
+     &              j,dir(:,j),orb(j),orbtailed(j)
+      enddo
+!
+!     ==========================================================================
+!     == CALCULATE ORBITAL
+!     ==========================================================================
+      FLM(:)=0.D0
+      FLMTAILED(:)=0.D0
+      CLM(:,:)=0.D0
+      DO J=1,NP
+        CALL SPHERICAL$YLM(LMX,P(:,J),YLM)
+        WRITE(*,FMT='(" ylm(lmx)=",F15.5)')yLM(LMx)
+        FLM(:)=FLM(:)+YLM(:)*ORB(J)
+        FLMTAILED(:)=FLMTAILED(:)+YLM(:)*ORBTAILED(J)
+        DO LM=1,LMX
+          CLM(:,lm)=CLM(:,lm)+YLM(:)*YLM(lm)
+        ENDDO
+      ENDDO
+      SVAR=1.D0/REAL(NP,KIND=8)
+      FLM(:)=FLM(:)*SVAR
+      FLMTAILED(:)=FLMTAILED(:)*SVAR
+      CLM(:,:)=CLM(:,:)*SVAR
+      DO LM=1,LMX
+        WRITE(*,FMT='("lm=",i3," CLM=",30F8.3)')lm,CLM(:,LM)
+      ENDDO
+      CALL LIB$INVERTR8(LMX,CLM,CLMINV)
+      FLM(:)=MATMUL(CLMINV,FLM)
+      FLMTAILED(:)=MATMUL(CLMINV,FLMTAILED)
+      DO Lm=1,LMX
+        WRITE(*,FMT='("LM",I3," FLM(F)=",F15.5," FLM(T)=",F15.5)')lm,FLM(LM),flmtailed(lm)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_NTBOOFR(TYPE,IATORB,LMNORB,NP,P,ORB)
+!     **************************************************************************
+!     **  MAPS THE SCREENED orbital lmnorb AT ATOM IATORB                     **
+!     **  ONTO THE GRID P                                                     **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2012 ************
+      USE LMTO_MODULE, ONLY : ispecies,nsp,lnx,lox,SBAR,K2,POTPAR,sbarli1
+      IMPLICIT NONE
+      character(*),intent(in) :: type    !
+      INTEGER(4)  ,INTENT(IN) :: IATORB  ! INDEX OF CENTRAL ATOM
+      integer(4)  ,intent(in) :: lmnorb  ! orbital index
+      REAL(8)     ,INTENT(OUT):: ORB(NP) ! SCREENED ENVELOPE FUNCTIONS
+      INTEGER(4)  ,INTENT(IN) :: NP      ! #(GRID POINTS)
+      REAL(8)     ,INTENT(IN) :: P(3,NP) ! GRIDPOINT POSITIONS
+      REAL(8)               :: RBAS(3,3) ! LATTICE VECTORS
+      INTEGER(4)            :: NAT       ! #(ATOMS)
+      REAL(8)   ,allocatable:: R0(:,:)   ! ATOMIC POSITIONS
+      INTEGER(4)            :: lmorb,lnorb,lorb,morb
+      INTEGER(4)            :: IAT2,l2x,lm2x
+      INTEGER(4)            :: NNS 
+      INTEGER(4)            :: NN,IP,ISP,isp2,L,lm,im,ln,lmn  !LOOP INDICES
+      INTEGER(4)            :: gid
+      INTEGER(4)            :: nr
+      INTEGER(4)            :: LMXX
+      REAL(8)               :: R2(3) ! NEIGHBOR ATOM POSITION
+      REAL(8)               :: DR(3) ! DISTANCE vector OF GRID POINT TO ATOM
+      REAL(8)               :: dis   ! DISTANCE OF GRID POINT TO ATOM
+      REAL(8)               :: val,valdot
+      LOGICAL(4)            :: TONSITE   
+      LOGICAL(4)            :: TSPHERE   ! INSIDE AN AUGMENTATION SPHERE?
+      REAL(8)  ,ALLOCATABLE :: QBARVEC(:,:)
+      REAL(8)  ,ALLOCATABLE :: CVEC(:)   ! COEFFICIENTS OF BARE HANKEL FUNCTNS.
+      REAL(8)  ,ALLOCATABLE :: K0(:)     ! BARE SOLID HANKEL FUNCTION
+      REAL(8)  ,ALLOCATABLE :: JBAR(:)   ! SCREENED SOLID BESSEL FUNCTION
+      REAL(8)  ,ALLOCATABLE :: J0(:)     ! BARE SOLID BESSEL FUNCTION
+      REAL(8)  ,ALLOCATABLE :: ylm(:)    ! spherical harmonics
+      REAL(8)  ,ALLOCATABLE :: r(:)      ! radial grid
+      REAL(8)  ,ALLOCATABLE :: aephi(:,:)   ! all-electron partial wave
+      REAL(8)  ,ALLOCATABLE :: NLphi(:,:)   ! nodeless partial wave
+      REAL(8)  ,ALLOCATABLE :: nlphidot(:,:)! nodeless scattering partial wave
+      REAL(8)  ,ALLOCATABLE :: k0arr(:)     ! BARE augmented hankel FUNCTION
+      REAL(8)  ,ALLOCATABLE :: dk0arr(:)    ! 
+      REAL(8)  ,ALLOCATABLE :: jbararr(:,:) ! screened augmented BESSEL FUNCTION
+!     **************************************************************************
+print*,'marke 1a'
+!
+!     ==========================================================================
+!     == COLLECT ATOMIC STRUCTURE                                             ==
+!     ==========================================================================
+      CALL CELL$GETR8A('T0',9,RBAS)
+      NAT=SIZE(ISPECIES)
+      ALLOCATE(R0(3,NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+!
+!     ==========================================================================
+!     == DETERMINE LM-, LN-, L- AND M-INDEX OF THE ORBITAL                    ==
+!     ==========================================================================
+print*,'marke 1b'
+      LMORB=0
+      ISP=ISPECIES(IATORB)
+      LMN=0
+      DO LN=1,LNX(ISP)
+        L=LOX(LN,ISP)
+        DO IM=1,2*L+1
+          LMN=LMN+1
+          IF(LMN.EQ.LMNORB) THEN
+            LORB=LOX(LN,ISP)
+            LNORB=LN
+            LMORB=SBARLI1(LORB+1,ISP)-1+im
+            EXIT
+          END IF
+        ENDdo
+      ENDDO
+      IF(LMORB.EQ.0) THEN
+        CALL ERROR$MSG('INDEX ERROR')
+        CALL ERROR$MSG('NTBOOFR')
+      END IF
+print*,'marke 1c'
+!
+!     ==========================================================================
+!     == DETERMINE QBAR OF THE SCATTERING CHANNEL                             ==
+!     ==========================================================================
+      LMXX=MAXVAL(LOX(:,:)+1)**2
+      ALLOCATE(QBARVEC(LMXX,nSP))
+      QBARVEC(:,:)=0.D0
+      DO ISP=1,NSP
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          IF(LN.EQ.POTPAR(ISP)%LNSCATT(LN)) THEN
+            LM=SBARLI1(L+1,ISP)-1
+            DO IM=1,2*L+1
+              LM=LM+1
+              QBARVEC(LM,isp)=POTPAR(ISP)%QBAR(LN)        
+            ENDDO
+          END if
+        ENDDO       
+      ENDDO    
+print*,'marke 1d'
+!
+!     ==========================================================================
+!     == 
+!     ==========================================================================
+      NNS=SIZE(SBAR)  !SBAR STRUCCONS. (GLOBAL)
+      ALLOCATE(CVEC(LMXX))
+      ALLOCATE(K0(LMXX))
+      ALLOCATE(J0(LMXX))
+      ALLOCATE(JBAR(LMXX))
+print*,'marke 1e'
+!
+!     ==========================================================================
+!     == LOOP OVER ALL NEIGHBORS AND GRID POINTS ===============================
+!     ==========================================================================
+      ORB(:)=0.D0
+      DO NN=1,NNS
+        IF(SBAR(NN)%IAT1.NE.IATORB) CYCLE
+        IAT2=SBAR(NN)%IAT2
+        ISP2=ISPECIES(IAT2)
+        R2(:)=R0(:,IAT2)+RBAS(:,1)*REAL(SBAR(NN)%IT(1),KIND=8) &
+     &                  +RBAS(:,2)*REAL(SBAR(NN)%IT(2),KIND=8) &
+     &                  +RBAS(:,3)*REAL(SBAR(NN)%IT(3),KIND=8) 
+!
+!       == CVEC=1+QBAR*SBAR ====================================================
+        TONSITE=(IAT2.EQ.IATORB).AND.(MAXVAL(ABS(SBAR(NN)%IT(:))).EQ.0)
+        LM2X=SBAR(NN)%N2
+        CVEC(:LM2X)=QBARVEC(:LM2X,isp2)*SBAR(NN)%MAT(LMORB,:)    !C
+        IF(TONSITE)CVEC(LMORB)=CVEC(LMORB)+1.D0
+!
+!       == LOOP OVER REAL SPACE GRID ===========================================
+        DO IP=1,NP
+!         == DR IS THE DISTANCE FROM THE SECOND ATOM ===========================
+          DR(:)=P(:,IP)-R2(:)
+          TSPHERE=(DOT_PRODUCT(DR,DR).LT.POTPAR(ISP2)%RAD**2)
+!
+!         == DETERMINE BARE HANKEL AND SCREENED BESSEL FUNCTION AT IAT2 ========
+          CALL  LMTO$SOLIDHANKEL(DR,potpar(isp2)%RAD,K2,LM2X,K0(1:LM2X))
+          IF(TSPHERE) THEN
+            CALL  LMTO$SOLIDBESSEL(DR,K2,LM2X,J0(1:LM2X))
+            JBAR(:LM2X)=J0(:LM2X)-K0(:LM2X)*QBARVEC(:LM2X,ISP2)
+          END IF
+!
+!         == ENVELOPE FUNCTION =================================================
+!         == |KBAR>=|K0>*(1+QBAR*SBART) ========================================
+          ORB(IP)=ORB(IP)+DOT_PRODUCT(K0(1:LM2X),CVEC(1:LM2X))
+          IF(TSPHERE) THEN
+!           == SUBTRACT MULTI-CENTER EXPANSION IN THE SPHERE ===================
+!           == -|JBAR>SBAR=-(|J0>-|K0>QBAR)*SBAR ===============================
+            ORB(IP)=ORB(IP)+DOT_PRODUCT(JBAR(1:LM2X),SBAR(NN)%MAT(LMORB,:)) 
+            IF(TONSITE) ORB(IP)=ORB(IP)-K0(LMORB)
+          END IF
+        ENDDO
+      ENDDO
+      DEALLOCATE(CVEC)
+      DEALLOCATE(K0)
+      DEALLOCATE(J0)
+      DEALLOCATE(JBAR)
+print*,'marke 1f'
+!
+!     ==========================================================================
+!     ==  NOW DO HE AUGMENTATION                                              ==
+!     ==========================================================================
+      allocate(ylm(lmxx))
+      DO ISP=1,NSP
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('GID',GID)
+        CALL SETUP$GETI4('NR',NR)
+        L2X=MAXVAL( LOX(:LNX(ISP),ISP) )
+        ALLOCATE(R(NR))
+        ALLOCATE(AEPHI(NR,LNX(ISP)))
+        ALLOCATE(NLPHI(NR,LNX(ISP)))
+        ALLOCATE(NLPHIDOT(NR,LNX(ISP)))
+        ALLOCATE(K0ARR(NR))
+        ALLOCATE(DK0ARR(NR))
+        ALLOCATE(JBARARR(NR,L2X+1))
+        CALL RADIAL$R(GID,NR,R)
+        CALL SETUP$GETR8A('AEPHI',NR*LNX(ISP),AEPHI)
+        CALL SETUP$GETR8A('NLPHI',NR*LNX(ISP),NLPHI)
+        CALL SETUP$GETR8A('NLPHIDOT',NR*LNX(ISP),NLPHIDOT)
+        CALL SETUP$ISELECT(0)
+        K0ARR(:)=NLPHI(:,LNORB)*POTPAR(ISP)%KTOPHI(LNORB) &
+       &        +NLPHIDOT(:,LNORB)*POTPAR(ISP)%KTOPHIDOT(LNORB)
+        dK0ARR(:)=(aePHI(:,LNORB)-nlphi(:,lnorb))*POTPAR(ISP)%KTOPHI(LNORB) 
+        LM2X=(L2X+1)**2
+        DO L=0,l2x
+          DO LN=1,LNX(ISP)
+            IF(LOX(LN,ISP).EQ.L) then
+              JBARARR(:,L+1)=NLPHIDOT(:,LN)*POTPAR(ISP)%JBARTOPHIDOT(LN)
+              EXIT
+            END IF
+          ENDDO
+        ENDDO
+        deALLOCATE(AEPHI)
+        deALLOCATE(NLPHI)
+        deALLOCATE(NLPHIDOT)
+        DO NN=1,NNS
+          IF(SBAR(NN)%IAT1.NE.IATORB) CYCLE
+          IAT2=SBAR(NN)%IAT2
+          ISP2=ISPECIES(IAT2)
+          IF(ISP2.NE.ISP) CYCLE
+          R2(:)=R0(:,IAT2)+RBAS(:,1)*REAL(SBAR(NN)%IT(1),KIND=8) &
+       &                  +RBAS(:,2)*REAL(SBAR(NN)%IT(2),KIND=8) &
+       &                  +RBAS(:,3)*REAL(SBAR(NN)%IT(3),KIND=8) 
+          TONSITE=(IAT2.EQ.IATORB).AND.(MAXVAL(ABS(SBAR(NN)%IT(:))).EQ.0)
+          IF(LM2X.NE.SBAR(NN)%N2) THEN
+            CALL ERROR$MSG('LM2X INCONSISTENT WITH ARRAY DIMENSION OF SBAR')
+            CALL ERROR$STOP('LMTO_NTBOOFR')
+          END IF
+!  
+!         == LOOP OVER REAL SPACE GRID =========================================
+          DO IP=1,NP
+!           == DR IS THE DISTANCE FROM THE SECOND ATOM =========================
+            DR(:)=P(:,IP)-R2(:)
+            TSPHERE=(DOT_PRODUCT(DR,DR).LT.POTPAR(ISP2)%RAD**2)
+            DIS=SQRT(SUM(DR**2))
+            CALL SPHERICAL$YLM(LM2X,DR,YLM)
+!           == include difference between aephi and nlphi ======================
+            IF(TONSITE) THEN
+              CALL RADIAL$VALUE(GID,NR,dK0ARR,DIS,VAL)
+              ORB(IP)=ORB(IP)+VAL*YLM(LMORB)
+            END if
+            IF(.NOT.TSPHERE) CYCLE
+            IF(TONSITE) THEN
+              CALL RADIAL$VALUE(GID,NR,K0ARR,DIS,VAL)
+              ORB(IP)=ORB(IP)+VAL*YLM(LMORB)
+            END if
+            LM=0
+            DO L=0,L2X
+              CALL RADIAL$VALUE(GID,NR,JBARARR(:,L+1),Dis,VALDOT)
+              DO IM=1,2*L+1
+                LM=LM+1
+                ORB(IP)=ORB(IP)-VALDOT*YLM(LM)*SBAR(NN)%MAT(LMORB,LM) 
+              ENDDO
+            ENDDO
+          ENDDO  ! END LOOP IP
+        ENDDO  ! END LOOP NN
+        deALLOCATE(R)
+        deALLOCATE(k0arr)
+        deALLOCATE(dk0arr)
+        deALLOCATE(jbararr)
+      ENDDO   ! END LOOP NSP
+      deallocate(ylm)
+print*,'marke 1g'
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_tailed_NTBOOFR(TYPE,IATORB,LMNORB,NP,P,ORB)
+!     **************************************************************************
+!     **  MAPS THE SCREENED orbital lmnorb AT ATOM IATORB                     **
+!     **  ONTO THE GRID P                                                     **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2012 ************
+      USE LMTO_MODULE, ONLY : ispecies,nsp,lnx,lox,SBAR,K2,POTPAR,sbarli1
+      IMPLICIT NONE
+      character(*),intent(in) :: type    !
+      INTEGER(4)  ,INTENT(IN) :: IATORB  ! INDEX OF CENTRAL ATOM
+      integer(4)  ,intent(in) :: lmnorb  ! orbital index
+      REAL(8)     ,INTENT(OUT):: ORB(NP) ! SCREENED ENVELOPE FUNCTIONS
+      INTEGER(4)  ,INTENT(IN) :: NP      ! #(GRID POINTS)
+      REAL(8)     ,INTENT(IN) :: P(3,NP) ! GRIDPOINT POSITIONS
+      INTEGER(4)            :: NAT       ! #(ATOMS)
+      REAL(8)   ,allocatable:: R0(:,:)   ! ATOMIC POSITIONS
+      INTEGER(4)            :: lmorb,lnorb,lorb,morb
+      INTEGER(4)            :: IAT2,l2x,lm2x
+      INTEGER(4)            :: lndot
+      INTEGER(4)            :: NNS 
+      INTEGER(4)            :: NN,IP,ISP,isp2,L,lm,im,ln,lmn  !LOOP INDICES
+      INTEGER(4)            :: gid
+      INTEGER(4)            :: nr
+      INTEGER(4)            :: LMXX
+      REAL(8)               :: R2(3) ! NEIGHBOR ATOM POSITION
+      REAL(8)               :: DR(3) ! DISTANCE vector OF GRID POINT TO ATOM
+      REAL(8)               :: dis   ! DISTANCE OF GRID POINT TO ATOM
+      REAL(8)               :: val,valdot
+      LOGICAL(4)            :: TONSITE   
+      LOGICAL(4)            :: TSPHERE   ! INSIDE AN AUGMENTATION SPHERE?
+      REAL(8)  ,ALLOCATABLE :: ylm(:)    ! spherical harmonics
+      REAL(8)  ,ALLOCATABLE :: r(:)      ! radial grid
+      REAL(8)  ,ALLOCATABLE :: k0arr(:)     ! BARE augmented hankel FUNCTION
+      REAL(8)  ,ALLOCATABLE :: jbararr(:,:) ! screened augmented BESSEL FUNCTION
+!     **************************************************************************
+print*,'marke 1a'
+!
+!     ==========================================================================
+!     == COLLECT ATOMIC STRUCTURE                                             ==
+!     ==========================================================================
+      NAT=SIZE(ISPECIES)
+      ALLOCATE(R0(3,NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+print*,'marke 1b'
+!
+!     ==========================================================================
+!     == DETERMINE LM-, LN-, L- AND M-INDEX OF THE ORBITAL                    ==
+!     ==========================================================================
+      LMORB=0
+      ISP=ISPECIES(IATORB)
+      LMN=0
+      DO LN=1,LNX(ISP)
+        L=LOX(LN,ISP)
+        DO IM=1,2*L+1
+          LMN=LMN+1
+          IF(LMN.EQ.LMNORB) THEN
+            LORB=LOX(LN,ISP)
+            LNORB=LN
+            LMORB=SBARLI1(LORB+1,ISP)
+            EXIT
+          END IF
+        ENDdo
+      ENDDO
+      IF(LMORB.EQ.0) THEN
+        CALL ERROR$MSG('INDEX ERROR')
+        CALL ERROR$MSG('NTBOOFR')
+      END IF
+print*,'marke 1c'
+!
+!     ==========================================================================
+!     == 
+!     ==========================================================================
+      NNS=SIZE(SBAR)  !SBAR STRUCCONS. (GLOBAL)
+print*,'marke 1d'
+!
+!     ==========================================================================
+!     ==  NOW DO HE AUGMENTATION                                              ==
+!     ==========================================================================
+      LMXX=MAXVAL(LOX(:,:)+1)**2
+      allocate(ylm(lmxx))
+      isp=ispecies(iatorb)
+      L2X=MAXVAL( LOX(:LNX(ISP),ISP) )
+      gid=potpar(isp)%tailed%gid
+      CALL RADIAL$geti4(GID,'NR',nR)
+      ALLOCATE(R(NR))
+      ALLOCATE(k0arr(NR))
+      ALLOCATE(jbararr(NR,l2x+1))
+      CALL RADIAL$R(GID,NR,R)
+      K0ARR(:)=potpar(isp)%tailed%aef(:,lnorb) 
+      LM2X=(L2X+1)**2
+      DO L=0,l2x
+        DO LN=1,LNX(ISP)
+          IF(LOX(LN,ISP).EQ.L) then
+            lndot=potpar(isp)%tailed%lndot(ln)
+            JBARARR(:,L+1)=potpar(isp)%tailed%nlf(:,LNdot)
+            EXIT
+          END IF
+        ENDDO
+      ENDDO
+!
+      orb(:)=0.d0
+      DO NN=1,NNS
+        IF(SBAR(NN)%IAT1.NE.IATORB) CYCLE
+        IF(SBAR(NN)%IAT2.NE.IATORB) CYCLE
+        if(MAXVAL(ABS(SBAR(NN)%IT(:))).ne.0) cycle
+        IAT2=SBAR(NN)%IAT2
+        ISP2=ISPECIES(IAT2)
+        R2(:)=R0(:,IAT2)
+        IF(LM2X.NE.SBAR(NN)%N2) THEN
+          CALL ERROR$MSG('LM2X INCONSISTENT WITH ARRAY DIMENSION OF SBAR')
+          CALL ERROR$STOP('LMTO_NTBOOFR')
+        END IF
+!  
+!       == LOOP OVER REAL SPACE GRID ===========================================
+        DO IP=1,NP
+!         == DR IS THE DISTANCE FROM THE SECOND ATOM ===========================
+          DR(:)=P(:,IP)-R2(:)
+          DIS=SQRT(SUM(DR**2))
+          CALL SPHERICAL$YLM(LM2X,DR,YLM)
+          CALL RADIAL$VALUE(GID,NR,K0ARR,DIS,VAL)
+          ORB(IP)=ORB(IP)+VAL*YLM(LMORB)
+          LM=0
+          DO L=0,L2X
+            CALL RADIAL$VALUE(GID,NR,JBARARR(:,L+1),Dis,VALDOT)
+            DO IM=1,2*L+1
+              LM=LM+1
+              ORB(IP)=ORB(IP)-VALDOT*YLM(LM)*SBAR(NN)%MAT(LMORB,LM) 
+            ENDDO
+          ENDDO
+        ENDDO  ! END LOOP IP
+      ENDDO  ! END LOOP NN
+      deALLOCATE(R)
+      deALLOCATE(k0arr)
+      deALLOCATE(jbararr)
+      deallocate(ylm)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_GRIDAUGMENT(RBAS,NAT,R0,IAT1,LM1X,NP,P,ORB,ORBI)
 !     **************************************************************************
 !     ** MAPS THE AUGMENTATION FOR THE SCREENED ENVELOPE FUNCTION             **
@@ -10628,7 +11303,7 @@ REAL(8) :: X(10)
          DO IP=1,NP
 !          == DR IS THE DISTANCE FROM THE SECOND ATOM ==========================
            DR(:)=P(:,IP)-R2(:)
-           TSPHERE=(DOT_PRODUCT(DR,DR).LT.RAD(IAT2))
+           TSPHERE=(DOT_PRODUCT(DR,DR).LT.RAD(IAT2)**2)
 !
 !          == DETERMINE BARE HANKEL AND SCREENED BESSEL FUNCTION AT IAT2 =======
            CALL  LMTO$SOLIDHANKEL(DR,RAD(IAT2),K2,LM2X,K0(1:LM2X))
@@ -11350,3 +12025,127 @@ STOP 'FORCED IN LMTO_TESTTAILEDP'
       ENDDO
       RETURN
       END    
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LMTO$OVERLAP(NFIL)
+!!$!     **************************************************************************      
+!!$!     **                                                                      **
+!!$!     **                                                                      **
+!!$!     **************************************************************************      
+!!$      USE LMTO_MODULE
+!!$      IMPLICIT NONE
+!!$      TYPE OVKJ_TYPE
+!!$        REAL(8),POINTER :: KK
+!!$        REAL(8),POINTER :: KJBAR
+!!$        REAL(8),POINTER :: JBARJBAR
+!!$      END TYPE OVKJ_TYPE
+!!$      INTEGER(4),INTENT(IN) :: NFIL
+!!$      INTEGER(4)            :: NNS
+!!$      REAL(8)               :: A(2,2)
+!!$      TYPE(OVKJ_TYPE)       :: OVKJ(NSP)
+!!$      INTEGER(4)            :: ISVAR
+!!$      INTEGER(4)            :: NN,NN1,NN2,LM1,ISP,I
+!!$      INTEGER(4)            :: NNS
+!!$!     **************************************************************************      
+!!$      DO ISP=1,NSP
+!!$        ISVAR=(LX(ISP)+1)**2
+!!$        ALLOCATE(OVKJ(ISP)%KK(ISVAR))
+!!$        ALLOCATE(OVKJ(ISP)%KJBAR(ISVAR))
+!!$        ALLOCATE(OVKJ(ISP)%JBARJBAR(ISVAR))
+!!$        LM1=0
+!!$        DO L=0,LX(ISP)
+!!$          A(1,1)=POTPAR(L+1,ISP)%OVUU
+!!$          A(1,2)=POTPAR(L+1,ISP)%OVUQ
+!!$          A(2,1)=POTPAR(L+1,ISP)%OVUQ
+!!$          A(2,2)=POTPAR(L+1,ISP)%OVQQ
+!!$          A(:,:)=MATMUL(A,POTPAR(L+1,ISP)%KJBARTOUQ)
+!!$          A(:,:)=MATMUL(TRANSPOSE(POTPAR(L+1,ISP)%KJBARTOUQ),A)
+!!$          DO IM=1,2*L+1
+!!$            LM1=LM1+1
+!!$             OVKJ(ISP)%KK(LM1)=A(1,1)
+!!$             OVKJ(ISP)%KJBAR(LM1)=A(1,2)
+!!$             OVKJ(ISP)%JBARJBAR(LM1)=A(2,2)
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
+!!$      NNSS=SIZE(SBAR)
+!!$!
+!!$!     ===========================================================================
+!!$!     == ONSITE TERMS                                                          ==
+!!$!     ===========================================================================
+!!$      DO NN=1,NNS
+!!$        IAT1=OVERLAP(NN)%IAT1
+!!$        IAT2=OVERLAP(NN)%IAT2
+!!$        IF(IAT1.NE.IAT2) CYCLE
+!!$        IT(:)=OVERLAP(NN)%IT(:)
+!!$        IF(IT(1).NE.0.OR.IT(2).NE.0.OR.IT(3).NE.0) CYCLE
+!!$        ISP1=ISPECIES(IAT1)        
+!!$        ISP2=ISPECIES(IAT2)        
+!!$        OVERLAP(NN)%MAT(:,:)=0.D0
+!!$        DO LM=1,OVERLAP(NN)%N1
+!!$          OVERLAP(NN)%MAT(LM,LM)=OVKJ(ISP)%KK(LM)
+!!$        ENDDO
+!!$      ENDDO
+!!$!
+!!$!     ===========================================================================
+!!$!     == PAIR TERMS                                                            ==
+!!$!     ===========================================================================
+!!$      DO NN=1,NNS
+!!$        IAT1=OVERLAP(NN)%IAT1
+!!$        IAT2=OVERLAP(NN)%IAT2
+!!$        IT(:)=OVERLAP(NN)%IT(:)
+!!$        ISP1=ISPECIES(IAT1)
+!!$        ISP1=ISPECIES(IAT2)
+!!$        DO NN1=1,NNSS
+!!$          IF(IAT1.NE.SBAR(NN1)%IAT1) CYCLE
+!!$          IF(IAT2.NE.SBAR(NN1)%IAT2) CYCLE
+!!$          IF(MAXVAL(ABS(IT-SBAR(NN1)%IT)).NE.0) CYCLE
+!!$          DO I=1,N1
+!!$            DO J=1,N1
+!!$              OVERLAP(NN)%MAT(I,J)=OVERLAP(NN)%MAT(I,J) &
+!!$     &                       +OVKJ(ISP1)%KJBAR(I)*SBAR(NN1)%MAT(I,J)
+!!$            ENDDO
+!!$          ENDDO
+!!$        ENDDO
+!!$        DO NN1=1,NNSS
+!!$          IF(IAT2.NE.SBAR(NN1)%IAT1) CYCLE
+!!$          IF(IAT1.NE.SBAR(NN1)%IAT2) CYCLE
+!!$          IF(MAXVAL(ABS(IT+SBAR(NN1)%IT)).NE.0) CYCLE
+!!$          DO I=1,N1
+!!$            DO J=1,N1
+!!$              OVERLAP(NN)%MAT(I,J)=OVERLAP(NN)%MAT(I,J) &
+!!$     &                            +SBAR(NN1)%MAT(J,I)*OVKJ(ISP2)%KJBAR(J) 
+!!$            ENDDO
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
+!!$!
+!!$!     ===========================================================================
+!!$!     == THREE-CENTER TERMS                                                    ==
+!!$!     ===========================================================================
+!!$      DO NN=1,NNS
+!!$        IAT1=OVERLAP(NN)%IAT1
+!!$        IAT2=OVERLAP(NN)%IAT2
+!!$        IT(:)=OVERLAP(NN)%IT(:)
+!!$        ISP1=ISPECIES(IAT1)
+!!$        ISP1=ISPECIES(IAT2)
+!!$        DO NN1=1,NNSS
+!!$          IF(IAT1.NE.SBAR(NN1)%IAT1) CYCLE
+!!$          IT2(:)=SBAR(NN1)%IT
+!!$          DO NN2=1,NNSS
+!!$            IF(IAT2.NE.SBAR(NN1)%IAT2) CYCLE
+!!$            IT3(:)=SBAR(NN2)%IT
+!!$            IF(MAXVAL(ABS(IT2-IT3-IT)).NE.0) CYCLE
+!!$            DO I=1,N1
+!!$               DO J=1,N2
+!!$                 DO K=1,N3
+!!$                   OVERLAP(NN)%MAT(I,J)=OVERLAP(NN)%MAT(I,J) &
+!!$     &               +SBAR(NN1)%MAT(I,K)*OVKJ(ISP3)%JBARJBAR(K)*SBAR(NN3)%MAT(J,K)
+!!$                 ENDDO
+!!$              ENDDO
+!!$            ENDDO
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
+!!$      RETURN
+!!$      END

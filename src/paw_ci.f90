@@ -32,7 +32,8 @@
 !**  ONE-PARTICLE ENERGY: E_1 = SUM H(I,J)*RHO(J,I)                           **
 !**                                                                           **
 !**   REMARKS:                                                                **
-!**     1) BEFORE USING A CI-STATE IT MUST BE INITIALIZED BY CI$NEWPSI        **
+!**     1) BEFORE USING A CI-STATE IT MUST BE INITIALIZED BY CI$NEWPSI.       **
+!**        same for the hamiltonian using CI$newhamiltonian                   **
 !**     2) PSI%NX=0 IMPLIES DEALLOCATED ARRAYS. ONLY CI$DELETEPSI AND         **
 !**        CI$NEWPSI CAN PRODUCE A STATE WITH DEALLOCATED ARRAYS. ONLY        **
 !**        CI$NEWPSI AND CI_EXPANDPSI CAN LEAD FROM A STATE WITH              **
@@ -79,16 +80,16 @@ TYPE U_TYPE
 END TYPE U_TYPE
 !== ONE-PARTICLE PART OF THE HAMILTONIAN
 TYPE H_TYPE
-  INTEGER(4)             :: NX   !
-  INTEGER(4)             :: N    !
+  INTEGER(4)             :: NX=0   !
+  INTEGER(4)             :: N=0    !
   COMPLEX(8),POINTER     :: C(:) !
   INTEGER   ,POINTER     :: I(:) !
   INTEGER   ,POINTER     :: J(:) !
 END TYPE H_TYPE
 !== SOURCE TERM OF THE HAMILTONIAN ====================================
 TYPE A_TYPE
-  INTEGER(4)             :: NX   !
-  INTEGER(4)             :: N    !
+  INTEGER(4)             :: NX=0   !
+  INTEGER(4)             :: N=0    !
   COMPLEX(8),POINTER     :: C(:) !
   INTEGER   ,POINTER     :: I(:) !
 END TYPE A_TYPE
@@ -692,7 +693,7 @@ END MODULE CI_MODULE
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
-      TYPE(CISTATE_TYPE) ,INTENT(INOUT):: PHI1
+      TYPE(CISTATE_TYPE) ,INTENT(IN)   :: PHI1
       TYPE(CISTATE_TYPE) ,INTENT(INOUT):: PHI2
       INTEGER(4)                       :: N
 !     **************************************************************************
@@ -836,6 +837,34 @@ END MODULE CI_MODULE
 !**                                                                           **
 !*******************************************************************************
 !*******************************************************************************
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CI$NEWHAMILtonian(HAM)
+!     **************************************************************************
+!     **  NULLIFIES A HAMILTONIAN BEFORE FIRST USE                            **
+!     **************************************************************************
+      USE CI_MODULE
+      IMPLICIT NONE
+      TYPE(CIHAMIL_TYPE),INTENT(INOUT) :: HAM           
+!     **************************************************************************
+      HAM%A%N=0
+      HAM%A%NX=0
+      NULLIFY(HAM%A%I)
+      NULLIFY(HAM%A%C)
+      HAM%H%N=0
+      HAM%H%NX=0
+      NULLIFY(HAM%H%I)
+      NULLIFY(HAM%H%J)
+      NULLIFY(HAM%H%C)
+      HAM%U%N=0
+      HAM%U%NX=0
+      NULLIFY(HAM%U%I)
+      NULLIFY(HAM%U%J)
+      NULLIFY(HAM%U%K)
+      NULLIFY(HAM%U%L)
+      NULLIFY(HAM%U%C)
+      RETURN 
+      END SUBROUTINE CI$NEWHAMILTONIAN
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$SETU(HAM,I,J,K,L,VAL)
@@ -2350,7 +2379,7 @@ print*,'after lagrangemat'
           WRITE(*,FMT='("MAT1 ",100F10.6)')MAT1(I,:)
         ENDDO
         WRITE(*,*)
-!       == clean up ==============================================================
+!       == clean up ============================================================
         do i=1,npsi
           call ci$zeropsi(psitest(i))      
         enddo
@@ -3151,16 +3180,16 @@ print*,'marke 2'
           U(:,N)       =RHO2(:,NCHI+1-N)
           U(:,NCHI+1-N)=RHO2(:,N)
         ENDDO
-!       ==  MAKE DENSITY MATRIX N-REPRESENTABLE ==================================
+!       ==  MAKE DENSITY MATRIX N-REPRESENTABLE ================================
         DO N=1,NCHI
           F(N)=MIN(1.D0,MAX(0.D0,F(N)))
         ENDDO
-!       ==  CONSTRUCT DIAGONAL DENSITY MATRIX ====================================
+!       ==  CONSTRUCT DIAGONAL DENSITY MATRIX ==================================
         RHO2(:,:)=(0.D0,0.D0)
         DO I=1,NCHI
           RHO2(I,I)=F(NCHI+1-I)
         ENDDO
-!       == TRANSFORM HAMILTONIAN INTO THE NEW BASIS ==============================
+!       == TRANSFORM HAMILTONIAN INTO THE NEW BASIS ============================
 !       == THIS IS VERY TIME CONSUMING
 PRINT*,'TRANSFORM HAMILTONIAN TO NATURAL ORBITALS....'
         CALL CI$HAMILTONTRANSFORM(NCHI,U,HAMILTON)      
