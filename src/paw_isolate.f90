@@ -84,7 +84,7 @@
         RC0=VAL
       ELSE IF(ID.EQ.'RCFAC') THEN
         RCFAC=VAL
-      ELSE IF(ID.EQ.'GMAX2') THEN
+      ELSE IF(ID.EQ.'G2MAX') THEN
         G2MAX=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
