@@ -2621,8 +2621,18 @@ types, electronic occupations, atomic masses. etc...}
     atomic units (1~a.u.=0.529167$\times 10^{-10}~$m) by
     multiplication with LUNIT} 
 \vformat{real} 
-\vrules{optional}
+\vrules{optional, LUNIT and LUNIT[AA] are mutually exclusive}
 \vdefault{1.0}}
+
+\mbax{\key{LUNIT[AA]} 
+\vdescr{specifies the length unit in angstrom
+    for structural input in this file. All data are converted into
+    atomic units (1~a.u.=0.529167$\times 10^{-10}~$m) by
+    multiplication with LUNIT=LUNIT[AA]*angstrom} 
+\vformat{real} 
+\vrules{optional, LUNIT and LUNIT[AA] are mutually exclusive}
+\vdefault{none}}
+
 %----------------------------------------------------------------------
 \block{!STRUCTURE!LATTICE}
 %----------------------------------------------------------------------
