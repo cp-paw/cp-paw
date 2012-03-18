@@ -213,7 +213,8 @@ END MODULE ATOMS_MODULE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: ISP,IAT,ISP1
       CHARACTER(LEN=100)    :: STRING
-      REAL(8)               :: U      ! MASS UNIT C12/12
+      REAL(8)               :: U         ! MASS UNIT C12/12
+      REAL(8)               :: angstrom  ! angstrom/abohr
       INTEGER(4)            :: NTASKS,THISTASK
       REAL(8)               :: EFFEMASS(NAT)
       REAL(8)               :: EMASS,EMASSCG2
@@ -222,15 +223,17 @@ END MODULE ATOMS_MODULE
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK) 
       IF(THISTASK.NE.1) RETURN
       CALL CONSTANTS('U',U)
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
       CALL WAVES$GETR8('EMASS',EMASS)
       CALL WAVES$GETR8('EMASSCG2',EMASSCG2)
       CALL ATOMS_EFFEMASS(NAT,EMASS,EMASSCG2,PSG2,PSG4,EFFEMASS)
       CALL CELL$GETR8A('T(0)',9,RBAS)
 !
       CALL REPORT$TITLE(NFIL,'ATOMLIST REPORT')
-      WRITE(NFIL,FMT='("T1=",3F10.6/"T2=",3F10.6/"T3=",3F10.6)')RBAS
+      WRITE(NFIL,FMT='("T1[angstrom]=",3F10.6/"T2[angstrom]=",3F10.6/"T3[angstrom]=",3F10.6)')RBAS/angstrom
       WRITE(STRING,FMT='(T1,A,T15,A,T45,A,T53,A,T65,A,T80,A)') &
-     &     'NAME','POSITION[ABOHR]','M[U]','MPSI_EFF[U]','Q[E]','FORCE[H/ABOHR]'
+     &     'NAME','POSITION[ANGSTROM]','M[U]','MPSI_EFF[U]','Q[E]' &
+     &    ,'FORCE[H/ABOHR]'
       WRITE(NFIL,FMT='(A)')TRIM(STRING)
       ISP=0
       DO IAT=1,NAT
@@ -241,7 +244,8 @@ END MODULE ATOMS_MODULE
         END IF
         STRING=' '
         WRITE(STRING(1:9),FMT='(A)')NAME(IAT)(1:9)
-        WRITE(STRING(10:42),FMT='("(",F9.5,",",F9.5,",",F9.5,")")')R0(:,IAT)
+        WRITE(STRING(10:42),FMT='("(",F9.5,",",F9.5,",",F9.5,")")') &
+     &                                   R0(:,IAT)/angstrom
         WRITE(STRING(43:52),FMT='(F8.4)')RMASS(IAT)/U
         WRITE(STRING(53:64),FMT='(F8.4)')EFFEMASS(IAT)/U
         WRITE(STRING(63:72),FMT='(F8.5)')-CHARGE(IAT)

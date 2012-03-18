@@ -1158,7 +1158,8 @@ END MODULE DYNOCC_MODULE
          CALL REPORT$R8VAL(NFIL,'CHEMICAL POTENTIAL',TOTPOT/EV,'EV')
        ELSE
          CALL REPORT$R8VAL(NFIL,'CHARGE',-(TOTCHA-SUMOFZ),'E')
-         CALL REPORT$R8VAL(NFIL,'CHARGE TERM (-MU*N)?',-TOTPOT*(TOTCHA-SUMOFZ),'H')
+         CALL REPORT$R8VAL(NFIL,'CHARGE TERM (-MU*N)?' &
+     &                    ,-TOTPOT*(TOTCHA-SUMOFZ)/EV,'EV')
        END IF
 !
        IF(NSPIN.EQ.2) THEN
@@ -1166,7 +1167,8 @@ END MODULE DYNOCC_MODULE
            CALL REPORT$R8VAL(NFIL,'MAGNETIC FIELD',SPINPOT/(EV),'EV/(HBAR/2)')
          ELSE
            CALL REPORT$R8VAL(NFIL,'SPIN',SPINCHA/2.D0,'HBAR')
-           CALL REPORT$R8VAL(NFIL,'MAGNETIZATION TERM (-S*B)?',-SPINPOT*SPINCHA,'H')
+           CALL REPORT$R8VAL(NFIL,'MAGNETIZATION TERM (-S*B)?' &
+     &                           ,-SPINPOT*SPINCHA/EV,'EV')
          END IF
        END IF
 
@@ -1174,30 +1176,30 @@ END MODULE DYNOCC_MODULE
          CALL DYNOCC$GETR8('EPOT',SVAR)
          IF(TFIXTOT) THEN
            IF(TFIXSPIN) THEN
-             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS',SVAR,'H')
+             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS',SVAR/EV,'EV')
            ELSE
-             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-B*S',SVAR,'H')
+             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-B*S',SVAR/EV,'EV')
            END IF
          ELSE
            IF(TFIXSPIN) THEN
-             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-MU*N',SVAR,'H')
+             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-MU*N',SVAR/EV,'EV')
            ELSE
-             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-B*S-MU*N',SVAR,'H')
+             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-B*S-MU*N',SVAR/EV,'EV')
            END IF
          END IF
        END IF
 !
-!      =================================================================
-!      ==  PRINT INFORMATION ABOUT CONVERGENCE                        ==
-!      =================================================================
+!      =========================================================================
+!      ==  PRINT INFORMATION ABOUT CONVERGENCE                                ==
+!      =========================================================================
        IF(TPROPAGATED) THEN
          CALL REPORT$R8VAL(NFIL,'MAX DEVIATION STATE OCC.',MAXDEVOCC,'E')
          CALL REPORT$R8VAL(NFIL,'ESTIMATED ENERGY DEVIATION',DEVENERGY,'H')
        END IF
 !
-!      =================================================================
-!      == PRINT ENERGIES AND OCCUPATIONS                              ==
-!      =================================================================
+!      =========================================================================
+!      == PRINT ENERGIES AND OCCUPATIONS                                      ==
+!      =========================================================================
        IF(TEPSILON) THEN
          CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
          WRITE(NFIL,*)'OCCUPATIONS AND ENERGY EXPECTATION VALUES [EV]'

@@ -3412,11 +3412,14 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ****************************************** P.E. BLOECHL, 1995 ************
       USE IO_MODULE
       USE LINKEDLIST_MODULE
+      use constants_module
       IMPLICIT NONE
       INTEGER(4)            :: NFILO   ! PROTOCOL FILE UNIT
       INTEGER(4)            :: NFIL
-      LOGICAL(4)            :: TCHK
+      LOGICAL(4)            :: TCHK,tchk1
       INTEGER(4)            :: NKPT
+      real(8)               :: angstrom
+      real(8)               :: svar
 !     **************************************************************************
                           CALL TRACE$PUSH('STRCIN')
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -3448,8 +3451,21 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$SELECT(LL_STRC,'GENERIC')
 !
 !     ==  READ ACTUAL VALUES  ==================================================
+      CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT[AA]',1,TCHK1)
+      IF(TCHK1) THEN 
+        CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT',1,TCHK)
+        IF(TCHK.AND.TCHK1) THEN
+          CALL ERROR$MSG('LUNIT AND LUNIT[AA] ARE MUTUALLY EXCLUSIVE')
+          CALL ERROR$STOP('STRCIN')
+        END IF
+        CALL LINKEDLIST$GET(LL_STRC,'LUNIT[AA]',0,SVAR)
+        CALL CONSTANTS$GET('ANGSTROM ',ANGSTROM)
+        SVAR=SVAR*ANGSTROM
+        CALL LINKEDLIST$SET(LL_STRC,'LUNIT',0,SVAR)
+      END IF
       CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'LUNIT',0,1.D0)
+!
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
 !    
 !     ==========================================================================
