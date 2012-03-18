@@ -25,10 +25,28 @@
       END MODULE ISOLATE_MODULE
 !
 !     ..................................................................
+      SUBROUTINE ISOLATE$SETL4(ID,VAL)
+      USE ISOLATE_MODULE
+      CHARACTER(*),INTENT(IN) :: ID
+      LOGICAL(4)  ,INTENT(IN) :: VAL
+!     ******************************************************************
+      IF(ID.EQ.'ON') THEN
+        TON=VAL
+      ELSE IF(ID.EQ.'DECOUPLE') THEN
+        TISOLATE=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ISOLATE$SETL4')
+      END IF
+      RETURN
+      END      
+!
+!     ..................................................................
       SUBROUTINE ISOLATE$GETI4(ID,VAL)
       USE ISOLATE_MODULE
       CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(out):: VAL
+      INTEGER(4)  ,INTENT(OUT):: VAL
 !     ******************************************************************
       IF(ID.EQ.'NFCT') THEN
         VAL=NFCT
@@ -41,36 +59,72 @@
       END      
 !
 !     ..................................................................
-      SUBROUTINE ISOLATE$ONOFF(STRING,NFCT_,RC0_,RCFAC_,G2MAX_,DECOUPLE_)
-!     ******************************************************************
-!     **  SWITCH ISOLATE ON AND OFF                                   **
-!     ******************************************************************
+      SUBROUTINE ISOLATE$SETI4(ID,VAL)
       USE ISOLATE_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: STRING
-      INTEGER(4)  ,INTENT(IN) :: NFCT_
-      REAL(8)     ,INTENT(IN) :: RC0_ 
-      REAL(8)     ,INTENT(IN) :: RCFAC_
-      REAL(8)     ,INTENT(IN) :: G2MAX_
-      LOGICAL(4)  ,INTENT(IN) :: DECOUPLE_
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN):: VAL
 !     ******************************************************************
-      NFCT=NFCT_
-      RC0=RC0_
-      RCFAC=RCFAC_
-      G2MAX=G2MAX_
-      TISOLATE=DECOUPLE_
-      IF(STRING.EQ.'ON') THEN
-        TON=.TRUE.
-!       __ TISOLATE DECIDES WHETHER ONLY CHARGES SHALL BE CALCULATED____
-      ELSE IF(STRING.EQ.'OFF') THEN
-        TON=.FALSE.
+      IF(ID.EQ.'NFCT') THEN
+        NFCT=VAL
       ELSE
-        CALL ERROR$MSG('STRING INCORRECT IN ISOLATE$ONOFF')
-        CALL ERROR$CHVAL('STRING',STRING)
-        CALL ERROR$STOP('ISOLATE$ONOFF')
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ISOLATE$SETL4')
       END IF
       RETURN
-      END
+      END      
+!
+!     ..................................................................
+      SUBROUTINE ISOLATE$SETR8(ID,VAL)
+      USE ISOLATE_MODULE
+      CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,INTENT(IN) :: VAL
+!     ******************************************************************
+      IF(ID.EQ.'RC0') THEN
+        RC0=VAL
+      ELSE IF(ID.EQ.'RCFAC') THEN
+        RCFAC=VAL
+      ELSE IF(ID.EQ.'GMAX2') THEN
+        G2MAX=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ISOLATE$SETR4')
+      END IF
+      RETURN
+      END      
+!!$!
+!!$!     ..................................................................
+!!$      SUBROUTINE ISOLATE$ONOFF(STRING,NFCT_,RC0_,RCFAC_,G2MAX_,DECOUPLE_)
+!!$!     ******************************************************************
+!!$!     **  SWITCH ISOLATE ON AND OFF                                   **
+!!$!     ******************************************************************
+!!$      USE ISOLATE_MODULE
+!!$      IMPLICIT NONE
+!!$      CHARACTER(*),INTENT(IN) :: STRING
+!!$      INTEGER(4)  ,INTENT(IN) :: NFCT_
+!!$      REAL(8)     ,INTENT(IN) :: RC0_ 
+!!$      REAL(8)     ,INTENT(IN) :: RCFAC_
+!!$      REAL(8)     ,INTENT(IN) :: G2MAX_
+!!$      LOGICAL(4)  ,INTENT(IN) :: DECOUPLE_
+!!$!     ******************************************************************
+!!$      NFCT=NFCT_
+!!$      RC0=RC0_
+!!$      RCFAC=RCFAC_
+!!$      G2MAX=G2MAX_
+!!$      TISOLATE=DECOUPLE_
+!!$      IF(STRING.EQ.'ON') THEN
+!!$        TON=.TRUE.
+!!$!       __ TISOLATE DECIDES WHETHER ONLY CHARGES SHALL BE CALCULATED____
+!!$      ELSE IF(STRING.EQ.'OFF') THEN
+!!$        TON=.FALSE.
+!!$      ELSE
+!!$        CALL ERROR$MSG('STRING INCORRECT IN ISOLATE$ONOFF')
+!!$        CALL ERROR$CHVAL('STRING',STRING)
+!!$        CALL ERROR$STOP('ISOLATE$ONOFF')
+!!$      END IF
+!!$      RETURN
+!!$      END
 !
 !     ..................................................................
       SUBROUTINE ISOLATE$REPORT(NFIL)
@@ -226,7 +280,7 @@
       DEALLOCATE(GVEC)
 !
 !     ==================================================================
-!     == CONSTRUCT CORRECTIONONS                                      ==
+!     == CONSTRUCT CORRECTIONS                                        ==
 !     ==================================================================
       CALL ISOLATE_A(NGS,NAT,RBAS,ET,POS,FORCET,GVECS &
      &              ,NGAMMA,RHOS,LMRXX,QLM,VQLMT,NFCT,F,RC,RCSM)
