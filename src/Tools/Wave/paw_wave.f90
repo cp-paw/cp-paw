@@ -13,6 +13,7 @@
        TYPE(LL_TYPE)             :: LL_CNTL
        TYPE(LL_TYPE)             :: LL_STRC
        INTEGER(4)                :: NFIL
+       INTEGER(4)                :: NFILO
        CHARACTER(256)            :: FILE
        CHARACTER(32)             :: ID
        LOGICAL(4)                :: TCHK
@@ -22,7 +23,7 @@
 !      ******************************************************************
        I=IARGC()
        IF(I.NE.1) THEN
-         WRITE(*,FMT='(A)')'CORRECT USAGE: paw_wave.x [FILE]'
+         WRITE(*,FMT='(A)')'CORRECT USAGE: PAW_WAVE.X [FILE]'
          WRITE(*,FMT='(A)')'WHERE [FILE] IS THE FILE CONTROL FILE NAME OF THIS TOOL'
          WRITE(*,FMT='(A)')'SEE PAW_MANUAL FOR FURTHER DESCRIPTION'
          CALL ERROR$NORMALSTOP
@@ -44,11 +45,16 @@
       CALL FILEHANDLER$SETSPECIFICATION('CNTL','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('CNTL','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION('CNTL','FORM','FORMATTED')
-      CALL FILEHANDLER$SETFILE('STRC',.TRUE.,-'.STRC')
+      CALL FILEHANDLER$SETFILE('STRC',.TRUE.,-'.STRC_OUT')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','FORM','FORMATTED')
+      CALL FILEHANDLER$SETFILE('PROT',.TRUE.,-'.WPROT')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('PROT','FORM','FORMATTED')
       CALL FILEHANDLER$SETFILE('WAVE',.TRUE.,-'.WV')
       CALL FILEHANDLER$SETSPECIFICATION('WAVE','STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION('WAVE','POSITION','REWIND')
@@ -110,6 +116,9 @@
       CALL TRACE$PASS('FILENAME FOR STRC FILE SET')
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
 !
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+      CALL FILEHANDLER$REPORT(NFILO,'ALL')
+!
 !     ==================================================================
 !     ==  READ STRC FILE TO LINKEDLIST                                ==
 !     ==================================================================
@@ -137,6 +146,7 @@
        TYPE(LL_TYPE)             :: LL_STRC
        CHARACTER(256)            :: TITLE
        INTEGER(4)                :: NFIL
+       INTEGER(4)                :: NFILo !fortran unit of protocoll file
        REAL(8)                   :: RBAS(3,3)
        INTEGER(4)                :: NAT
        REAL(8)      ,ALLOCATABLE :: POS(:,:)   !(3,NAT)
@@ -144,55 +154,56 @@
        CHARACTER(32),ALLOCATABLE :: ATOMNAME(:)
        INTEGER(4)                :: NR1,NR2,NR3
        REAL(8)      ,ALLOCATABLE :: WAVE(:,:,:)
-       complex(8)   ,ALLOCATABLE :: cWAVE(:,:,:)
+       COMPLEX(8)   ,ALLOCATABLE :: CWAVE(:,:,:)
        REAL(8)                   :: BOXR0(3)
        REAL(8)                   :: BOXVEC(3,3)
-       REAL(8)                   :: planer0(3)
-       REAL(8)                   :: planeVEC(3,2)
+       REAL(8)                   :: PLANER0(3)
+       REAL(8)                   :: PLANEVEC(3,2)
        REAL(8)      ,ALLOCATABLE :: POSM(:,:)  ! POSITIONS
        INTEGER(4)   ,ALLOCATABLE :: MAP(:)     !MAPPING FROM MODEL 
        REAL(8)      ,ALLOCATABLE :: RAD(:)   
        REAL(8)      ,ALLOCATABLE :: COLOR(:,:)
        INTEGER(4)                :: NBOND
        INTEGER(4)   ,ALLOCATABLE :: BOND(:,:)
-       LOGICAL(4)                :: TCHK,tchk1
+       LOGICAL(4)                :: TCHK,TCHK1
        INTEGER(4)                :: NATM
        INTEGER(4)                :: IAT
        INTEGER(4)                :: IVEC(3)
        REAL(8)      ,ALLOCATABLE :: SCALEDRAD(:)
-       logical(4)                :: tplane
-       logical(4)                :: tc
-       real(8)                   :: xk(3)
-       real(8)                   :: svar
+       LOGICAL(4)                :: TPLANE
+       LOGICAL(4)                :: TC
+       REAL(8)                   :: XK(3)
+       REAL(8)                   :: SVAR
 !      *************************************************************************
        CALL TRACE$PUSH('MWAVE')
        LL_CNTL=LL_CNTL_
        LL_STRC=LL_STRC_
+       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
 !      =========================================================================
 !      ==  READ INPUT FILE                                                    ==
 !      =========================================================================
        CALL TRACE$PASS('READING WAVEPLOT')
        CALL FILEHANDLER$UNIT('WAVE',NFIL)
-       call READWAVEPLOTdim(NFIL,TITLE,NAT,nr1,nr2,nr3,tc)
+       CALL READWAVEPLOTDIM(NFIL,TITLE,NAT,NR1,NR2,NR3,TC)
        ALLOCATE(POS(3,NAT))
        ALLOCATE(Z(NAT))
        ALLOCATE(ATOMNAME(NAT))
-       if(tc) then
+       IF(TC) THEN
          ALLOCATE(CWAVE(NR1,NR2,NR3))
-         CALL READWAVEPLOTC(NFIL,TITLE,RBAS,NAT,POS,Z,ATOMNAME,xk &
-      &                    ,NR1,NR2,NR3,cWAVE)
+         CALL READWAVEPLOTC(NFIL,TITLE,RBAS,NAT,POS,Z,ATOMNAME,XK &
+      &                    ,NR1,NR2,NR3,CWAVE)
          ALLOCATE(WAVE(NR1,NR2,NR3))
-         wave=real(cwave)
-       else
+         WAVE=REAL(CWAVE)
+       ELSE
          ALLOCATE(WAVE(NR1,NR2,NR3))
-         CALL READWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,ATOMNAME,xk &
+         CALL READWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,ATOMNAME,XK &
       &                   ,NR1,NR2,NR3,WAVE)
-       end if
+       END IF
        CALL TRACE$PASS('WAVEPLOT FILE READ')
 !
 !      =========================================================================
-!      ==  set minimum and maximum values                                     ==
+!      ==  SET MINIMUM AND MAXIMUM VALUES                                     ==
 !      =========================================================================
        CALL LINKEDLIST$SELECT(LL_CNTL,'~')
        CALL LINKEDLIST$SELECT(LL_CNTL,'WCNTL')
@@ -227,7 +238,7 @@
        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'T',1,BOXVEC)
 !
 !      ==================================================================
-!      ==  GET plane for rubbersheet                                   ==
+!      ==  GET PLANE FOR RUBBERSHEET                                   ==
 !      ==================================================================
        CALL LINKEDLIST$SELECT(LL_CNTL,'~')
        CALL LINKEDLIST$SELECT(LL_CNTL,'WCNTL')
@@ -248,7 +259,7 @@
 !      ==================================================================
 !      ==  WRITE DENSITY TO CUBE FILE                                  ==
 !      ==================================================================
-!      == attention! only real part is used
+!      == ATTENTION! ONLY REAL PART IS USED
        CALL TRACE$PASS('WRITE WAVE TO CUBE-FILE')
        CALL FILEHANDLER$UNIT('CUBE',NFIL)
        REWIND NFIL
@@ -256,28 +267,28 @@
        CALL FILEHANDLER$CLOSE('CUBE')
 !
 !      ==================================================================
-!      ==  WRITE vrml scene TO wrl FILE                                ==
+!      ==  WRITE VRML SCENE TO WRL FILE                                ==
 !      ==================================================================
-       CALL TRACE$PASS('WRITE WAVE TO vrml-FILE')
+       CALL TRACE$PASS('WRITE WAVE TO VRML-FILE')
        CALL FILEHANDLER$UNIT('VRML',NFIL)
        REWIND NFIL
-       if(tplane) then
-!         == attention! only real part is used
-         CALL MAKEgnu(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE,planeR0,planeVEC)
-       end if
-       if(tc) then
-         CALL MAKEVRMLc(NFIL,NAT,Z,POS,RBAS,xk,NR1,NR2,NR3,cWAVE &
-      &             ,BOXR0,BOXVEC,tplane,planer0,planevec)
-       else
+       IF(TPLANE) THEN
+!         == ATTENTION! ONLY REAL PART IS USED
+         CALL MAKEGNU(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE,PLANER0,PLANEVEC)
+       END IF
+       IF(TC) THEN
+         CALL MAKEVRMLC(NFIL,NAT,Z,POS,RBAS,XK,NR1,NR2,NR3,CWAVE &
+      &             ,BOXR0,BOXVEC,TPLANE,PLANER0,PLANEVEC)
+       ELSE
          CALL MAKEVRML(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE &
-      &             ,BOXR0,BOXVEC,tplane,planer0,planevec)
-       end if
+      &             ,BOXR0,BOXVEC,TPLANE,PLANER0,PLANEVEC)
+       END IF
        CALL FILEHANDLER$CLOSE('VRML')
 !
 !      ==================================================================
 !      ==  WRITE DENSITY TO DATAEXPLORER FILE                          ==
 !      ==================================================================
-       CALL TRACE$PASS('WRITE WAVE TO dx-FILE')
+       CALL TRACE$PASS('WRITE WAVE TO DX-FILE')
        CALL FILEHANDLER$UNIT('WAVEDX',NFIL)
        REWIND NFIL
        CALL DX_DENSITY(NFIL,NR1,NR2,NR3,RBAS,WAVE,BOXR0,BOXVEC)
@@ -570,7 +581,7 @@
        END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE READWAVEPLOTdim(NFIL,TITLE,NAT,nr1,nr2,nr3,tc)
+      SUBROUTINE READWAVEPLOTDIM(NFIL,TITLE,NAT,NR1,NR2,NR3,TC)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -578,7 +589,7 @@
       INTEGER(4)   ,INTENT(IN)   :: NFIL
       CHARACTER(*) ,INTENT(OUT ) :: TITLE
       INTEGER(4)   ,INTENT(OUT)  :: NAT
-      logical(4)   ,INTENT(OUT)  :: tc
+      LOGICAL(4)   ,INTENT(OUT)  :: TC
       INTEGER(4)   ,INTENT(OUT)  :: NR1
       INTEGER(4)   ,INTENT(OUT)  :: NR2
       INTEGER(4)   ,INTENT(OUT)  :: NR3
@@ -597,7 +608,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE READWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,NAME,xk,NR1,NR2,NR3,WAVE)
+      SUBROUTINE READWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,NAME,XK,NR1,NR2,NR3,WAVE)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -608,14 +619,14 @@
       REAL(8)      ,INTENT(OUT)  :: RBAS(3,3)
       REAL(8)      ,INTENT(OUT)  :: POS(3,NAT)
       REAL(8)      ,INTENT(OUT)  :: Z(NAT)
-      REAL(8)      ,INTENT(OUT)  :: xk(3)
+      REAL(8)      ,INTENT(OUT)  :: XK(3)
       CHARACTER(32),INTENT(OUT)  :: NAME(NAT)
       INTEGER(4)   ,INTENT(IN)   :: NR1
       INTEGER(4)   ,INTENT(IN)   :: NR2
       INTEGER(4)   ,INTENT(IN)   :: NR3
       REAL(8)      ,INTENT(OUT)  :: WAVE(NR1,NR2,NR3)
       REAL(8)                    :: Q(NAT) !POINT CHARGES (NOT YET USED)
-      integer(4)                 :: nr1_,nr2_,nr3_,nat_
+      INTEGER(4)                 :: NR1_,NR2_,NR3_,NAT_
       CHARACTER(8)               :: BEGINID
       INTEGER(4)                 :: LENTITLE
       CHARACTER(11)              :: ENDID
@@ -631,31 +642,31 @@
       READ(NFIL)TITLE(1:LENTITLE)
       READ(NFIL)RBAS,NAT_
       READ(NFIL)NR1_,NR2_,NR3_
-      if(nat_.ne.nat.or.nr1_.ne.nr1.or.nr2_.ne.nr2.or.nr3_.ne.nr3) then
-        CALL ERROR$MSG('INCOnsistent array size')
-        CALL ERROR$i4VAL('nat on file ',nat_)
-        CALL ERROR$i4VAL('nat on input',nat)
-        CALL ERROR$i4VAL('nr1 on file ',nr1_)
-        CALL ERROR$i4VAL('nr1 on input',nr1)
-        CALL ERROR$i4VAL('nr2 on file ',nr2_)
-        CALL ERROR$i4VAL('nr2 on input',nr2)
-        CALL ERROR$i4VAL('nr3 on file ',nr3_)
-        CALL ERROR$i4VAL('nr3 on input',nr3)
+      IF(NAT_.NE.NAT.OR.NR1_.NE.NR1.OR.NR2_.NE.NR2.OR.NR3_.NE.NR3) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+        CALL ERROR$I4VAL('NAT ON FILE ',NAT_)
+        CALL ERROR$I4VAL('NAT ON INPUT',NAT)
+        CALL ERROR$I4VAL('NR1 ON FILE ',NR1_)
+        CALL ERROR$I4VAL('NR1 ON INPUT',NR1)
+        CALL ERROR$I4VAL('NR2 ON FILE ',NR2_)
+        CALL ERROR$I4VAL('NR2 ON INPUT',NR2)
+        CALL ERROR$I4VAL('NR3 ON FILE ',NR3_)
+        CALL ERROR$I4VAL('NR3 ON INPUT',NR3)
         CALL ERROR$STOP('READWAVEPLOT')
-      end if
-      IF(NAT.ne.0) THEN
+      END IF
+      IF(NAT.NE.0) THEN
         READ(NFIL)NAME
         READ(NFIL)Z
         READ(NFIL)POS
         READ(NFIL)Q
       END IF
-      xk(:)=0.d0
+      XK(:)=0.D0
       READ(NFIL)WAVE
       READ(NFIL)ENDID 
       IF(ENDID.NE.'END OF FILE') THEN
-        call error$msg('data file corrupted')
-        CALL ERROR$CHVAL('ENDID',endid)
-        call error$stop('READWAVEPLOT')
+        CALL ERROR$MSG('DATA FILE CORRUPTED')
+        CALL ERROR$CHVAL('ENDID',ENDID)
+        CALL ERROR$STOP('READWAVEPLOT')
       END IF
       RETURN
       END
@@ -707,7 +718,7 @@
         CALL ERROR$I4VAL('NR3 ON INPUT',NR3)
         CALL ERROR$STOP('READWAVEPLOTC')
       END IF
-      IF(NAT.ne.0) THEN
+      IF(NAT.NE.0) THEN
         READ(NFIL)NAME
         READ(NFIL)Z
         READ(NFIL)POS
@@ -1144,53 +1155,53 @@
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
       REAL(8)   ,INTENT(IN) :: Z(NAT)    !ATOMIC NUMBER
-      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! atomic positions
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3) !lattice vectors of the periodic data
-      INTEGER(4),INTENT(IN) :: Nr1,Nr2,Nr3 ! # grid points on the periodic grid
-      REAL(8)   ,INTENT(IN) :: wave(Nr1,Nr2,Nr3) ! periodic density data
-      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! corner of the new grid
-      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! vectors spanning the new grid
-      integer(4),parameter  :: n1=80      ! displacement
-      integer(4),parameter  :: n2=80
-      integer(4),parameter  :: n3=80
-      real(8)               :: data(n1,n2,n3)
-      real(8)               :: rtox(3,3)
-      real(8)               :: vol
-      integer(4)            :: nrview,nrviewx
-      real(8)   ,allocatable:: rview(:,:)
-      real(8)   ,allocatable:: zview(:)
-      real(8)               :: pi
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! ATOMIC POSITIONS
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3) !LATTICE VECTORS OF THE PERIODIC DATA
+      INTEGER(4),INTENT(IN) :: NR1,NR2,NR3 ! # GRID POINTS ON THE PERIODIC GRID
+      REAL(8)   ,INTENT(IN) :: WAVE(NR1,NR2,NR3) ! PERIODIC DENSITY DATA
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! CORNER OF THE NEW GRID
+      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! VECTORS SPANNING THE NEW GRID
+      INTEGER(4),PARAMETER  :: N1=80      ! DISPLACEMENT
+      INTEGER(4),PARAMETER  :: N2=80
+      INTEGER(4),PARAMETER  :: N3=80
+      REAL(8)               :: DATA(N1,N2,N3)
+      REAL(8)               :: RTOX(3,3)
+      REAL(8)               :: VOL
+      INTEGER(4)            :: NRVIEW,NRVIEWX
+      REAL(8)   ,ALLOCATABLE:: RVIEW(:,:)
+      REAL(8)   ,ALLOCATABLE:: ZVIEW(:)
+      REAL(8)               :: PI
 !     **************************************************************************
 !
 !     ==========================================================================
-!     ==  interpolate wave function onto viewing grid                         ==
+!     ==  INTERPOLATE WAVE FUNCTION ONTO VIEWING GRID                         ==
 !     ==========================================================================
-      call mapfieldtogrid(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX,n1,n2,n3,data)
+      CALL MAPFIELDTOGRID(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX,N1,N2,N3,DATA)
  !
 !     ==========================================================================
-!     ==  map atoms into view box                                             ==
+!     ==  MAP ATOMS INTO VIEW BOX                                             ==
 !     ==========================================================================
-      pi=4.d0*atan(1.d0)
-      call gbass(box,rtox,vol)      
-      nrviewx=2*nint(vol/(4.d0*pi/3.d0*1.4d0**3)) ! estimate max number of atoms
-                                                ! inside the viewbox
-      allocate(rview(3,nrviewx)) ! positions
-      allocate(zview(nrviewx))   ! atomic numbers
-      call MAKEatomsintobox(NAT,Z,R,RBAS,ORIGIN,BOX,nrviewx,nrview,rview,zview)
+      PI=4.D0*ATAN(1.D0)
+      CALL GBASS(BOX,RTOX,VOL)      
+      NRVIEWX=2*NINT(VOL/(4.D0*PI/3.D0*1.4D0**3)) ! ESTIMATE MAX NUMBER OF ATOMS
+                                                ! INSIDE THE VIEWBOX
+      ALLOCATE(RVIEW(3,NRVIEWX)) ! POSITIONS
+      ALLOCATE(ZVIEW(NRVIEWX))   ! ATOMIC NUMBERS
+      CALL MAKEATOMSINTOBOX(NAT,Z,R,RBAS,ORIGIN,BOX,NRVIEWX,NRVIEW,RVIEW,ZVIEW)
 !
 !     ==========================================================================
-!     ==  write cube file                                                     ==
+!     ==  WRITE CUBE FILE                                                     ==
 !     ==========================================================================
-      call WRITECUBEFILE(NFIL,Nrview,Zview,Rview,ORIGIN,BOX,N1,N2,N3,DATA)
+      CALL WRITECUBEFILE(NFIL,NRVIEW,ZVIEW,RVIEW,ORIGIN,BOX,N1,N2,N3,DATA)
 !
-      deallocate(rview)
-      deallocate(zview)
-      return
-      end
+      DEALLOCATE(RVIEW)
+      DEALLOCATE(ZVIEW)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE MAKEvrml(NFIL,NAT,Z,R,RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX &
-     &                   ,tplane,planer0,planevec)
+      SUBROUTINE MAKEVRML(NFIL,NAT,Z,R,RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX &
+     &                   ,TPLANE,PLANER0,PLANEVEC)
 !     **************************************************************************
 !     ** INTERPOLATES PERIODIC DENSITY DATA ON AN ARBITRARY GRID ONTO         **
 !     ** AN INDEPENDENT GRID SPECIFIED BY ORIGIN AND BOX.                     **
@@ -1202,77 +1213,77 @@
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
       REAL(8)   ,INTENT(IN) :: Z(NAT)    !ATOMIC NUMBER
-      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! atomic positions
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3) !lattice vectors of the periodic data
-      INTEGER(4),INTENT(IN) :: Nr1,Nr2,Nr3 ! # grid points on the periodic grid
-      REAL(8)   ,INTENT(IN) :: wave(Nr1,Nr2,Nr3) ! periodic density data
-      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! corner of the new grid
-      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! vectors spanning the new grid
-      logical(4),intent(in) :: tplane
-      REAL(8)   ,INTENT(IN) :: planer0(3)   ! 
-      REAL(8)   ,INTENT(IN) :: planevec(3,2)  ! 
-      integer(4),parameter  :: n1=160      ! displacement
-      integer(4),parameter  :: n2=160
-      integer(4),parameter  :: n3=1
-      real(8)               :: data(n1,n2,n3)
-      real(8)               :: rtox(3,3)
-      real(8)               :: vol
-      integer(4)            :: nrview,nrviewx
-      real(8)   ,allocatable:: rview(:,:)
-      real(8)   ,allocatable:: zview(:)
-      real(8)               :: pi
-      real(8)               :: planebox(3,3)
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! ATOMIC POSITIONS
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3) !LATTICE VECTORS OF THE PERIODIC DATA
+      INTEGER(4),INTENT(IN) :: NR1,NR2,NR3 ! # GRID POINTS ON THE PERIODIC GRID
+      REAL(8)   ,INTENT(IN) :: WAVE(NR1,NR2,NR3) ! PERIODIC DENSITY DATA
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! CORNER OF THE NEW GRID
+      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! VECTORS SPANNING THE NEW GRID
+      LOGICAL(4),INTENT(IN) :: TPLANE
+      REAL(8)   ,INTENT(IN) :: PLANER0(3)   ! 
+      REAL(8)   ,INTENT(IN) :: PLANEVEC(3,2)  ! 
+      INTEGER(4),PARAMETER  :: N1=160      ! DISPLACEMENT
+      INTEGER(4),PARAMETER  :: N2=160
+      INTEGER(4),PARAMETER  :: N3=1
+      REAL(8)               :: DATA(N1,N2,N3)
+      REAL(8)               :: RTOX(3,3)
+      REAL(8)               :: VOL
+      INTEGER(4)            :: NRVIEW,NRVIEWX
+      REAL(8)   ,ALLOCATABLE:: RVIEW(:,:)
+      REAL(8)   ,ALLOCATABLE:: ZVIEW(:)
+      REAL(8)               :: PI
+      REAL(8)               :: PLANEBOX(3,3)
 !     **************************************************************************
-                          call trace$push('MAKEvrml')
+                          CALL TRACE$PUSH('MAKEVRML')
 !
 !     ==========================================================================
-!     ==  interpolate wave function onto viewing grid                         ==
+!     ==  INTERPOLATE WAVE FUNCTION ONTO VIEWING GRID                         ==
 !     ==========================================================================
-      if(tplane) then
-        planebox(:,:)=0.d0
-        planebox(:,:2)=planevec(:,:)
-        call mapfieldtogrid(RBAS,NR1,NR2,NR3,WAVE &
-     &                                     ,planer0,planeBOX,n1,n2,n3,data)
-      end if
+      IF(TPLANE) THEN
+        PLANEBOX(:,:)=0.D0
+        PLANEBOX(:,:2)=PLANEVEC(:,:)
+        CALL MAPFIELDTOGRID(RBAS,NR1,NR2,NR3,WAVE &
+     &                                     ,PLANER0,PLANEBOX,N1,N2,N3,DATA)
+      END IF
 !
 !     ==========================================================================
-!     ==  map atoms into view box                                             ==
+!     ==  MAP ATOMS INTO VIEW BOX                                             ==
 !     ==========================================================================
-      pi=4.d0*atan(1.d0)
-      call gbass(box,rtox,vol)      
-      nrviewx=2*nint(vol/(4.d0*pi/3.d0*1.4d0**3)) ! estimate max number of atoms
-                                                ! inside the viewbox
-      allocate(rview(3,nrviewx)) ! positions
-      allocate(zview(nrviewx))   ! atomic numbers
-      call MAKEatomsintobox(NAT,Z,R,RBAS,ORIGIN,BOX,nrviewx,nrview,rview,zview)
+      PI=4.D0*ATAN(1.D0)
+      CALL GBASS(BOX,RTOX,VOL)      
+      NRVIEWX=2*NINT(VOL/(4.D0*PI/3.D0*1.4D0**3)) ! ESTIMATE MAX NUMBER OF ATOMS
+                                                ! INSIDE THE VIEWBOX
+      ALLOCATE(RVIEW(3,NRVIEWX)) ! POSITIONS
+      ALLOCATE(ZVIEW(NRVIEWX))   ! ATOMIC NUMBERS
+      CALL MAKEATOMSINTOBOX(NAT,Z,R,RBAS,ORIGIN,BOX,NRVIEWX,NRVIEW,RVIEW,ZVIEW)
 !
 !     ==========================================================================
-!     ==  write cube file                                                     ==
+!     ==  WRITE CUBE FILE                                                     ==
 !     ==========================================================================
-      write(nfil,fmt='("#VRML V2.0 utf8")')
-      write(nfil,*)'Background {'
-      write(nfil,*)'  skyColor 0.933 0.863 0.51'
-      write(nfil,*)'  groundColor 0.933 0.863 0.51'
-      write(nfil,*)'}'
-      write(nfil,*)'Viewpoint {'
-      write(nfil,*)'  position 0 0 40 '
-      write(nfil,*)'  fieldOfView 0.8 '
-      write(nfil,*)'} # close Viewpoint'
-      call vrml$addballstick(nfil,Nrview,Zview,Rview)
-      if(tplane) then
-        call vrml$addrubbersheet(nfil,planer0,planebox,n1,n2,data)
-      end if
+      WRITE(NFIL,FMT='("#VRML V2.0 UTF8")')
+      WRITE(NFIL,*)'BACKGROUND {'
+      WRITE(NFIL,*)'  SKYCOLOR 0.933 0.863 0.51'
+      WRITE(NFIL,*)'  GROUNDCOLOR 0.933 0.863 0.51'
+      WRITE(NFIL,*)'}'
+      WRITE(NFIL,*)'VIEWPOINT {'
+      WRITE(NFIL,*)'  POSITION 0 0 40 '
+      WRITE(NFIL,*)'  FIELDOFVIEW 0.8 '
+      WRITE(NFIL,*)'} # CLOSE VIEWPOINT'
+      CALL VRML$ADDBALLSTICK(NFIL,NRVIEW,ZVIEW,RVIEW)
+      IF(TPLANE) THEN
+        CALL VRML$ADDRUBBERSHEET(NFIL,PLANER0,PLANEBOX,N1,N2,DATA)
+      END IF
 !
-      deallocate(rview)
-      deallocate(zview)
+      DEALLOCATE(RVIEW)
+      DEALLOCATE(ZVIEW)
 
-                          call trace$pop()
-      return
-      end
+                          CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE MAKEvrmlC(NFIL,NAT,Z,R,RBAS,xk,NR1,NR2,NR3,cWAVE,ORIGIN,BOX &
-     &                   ,tplane,planer0,planevec)
+      SUBROUTINE MAKEVRMLC(NFIL,NAT,Z,R,RBAS,XK,NR1,NR2,NR3,CWAVE,ORIGIN,BOX &
+     &                   ,TPLANE,PLANER0,PLANEVEC)
 !     **************************************************************************
 !     ** INTERPOLATES PERIODIC DENSITY DATA ON AN ARBITRARY GRID ONTO         **
 !     ** AN INDEPENDENT GRID SPECIFIED BY ORIGIN AND BOX.                     **
@@ -1284,79 +1295,79 @@
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
       REAL(8)   ,INTENT(IN) :: Z(NAT)    ! ATOMIC NUMBER
-      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! atomic positions
-      REAL(8)   ,INTENT(IN) :: xk(3)     ! k-point in relative coordinates
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3) ! lattice vectors of the periodic data
-      INTEGER(4),INTENT(IN) :: Nr1,Nr2,Nr3 ! # grid points on the periodic grid
-      complex(8),INTENT(IN) :: cwave(Nr1,Nr2,Nr3) ! periodic density data
-      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! corner of the new grid
-      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! vectors spanning the new grid
-      logical(4),intent(in) :: tplane
-      REAL(8)   ,INTENT(IN) :: planer0(3) ! 
-      REAL(8)   ,INTENT(IN) :: planevec(3,2)  ! 
-      integer(4),parameter  :: n1=80      ! displacement
-      integer(4),parameter  :: n2=80
-      integer(4),parameter  :: n3=1
-      complex(8)            :: cdata(n1,n2,n3)
-      real(8)               :: data(n1,n2,n3)
-      real(8)               :: rtox(3,3)
-      real(8)               :: vol
-      integer(4)            :: nrview,nrviewx
-      real(8)   ,allocatable:: rview(:,:)
-      real(8)   ,allocatable:: zview(:)
-      real(8)               :: pi
-      real(8)               :: planebox(3,3)
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! ATOMIC POSITIONS
+      REAL(8)   ,INTENT(IN) :: XK(3)     ! K-POINT IN RELATIVE COORDINATES
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3) ! LATTICE VECTORS OF THE PERIODIC DATA
+      INTEGER(4),INTENT(IN) :: NR1,NR2,NR3 ! # GRID POINTS ON THE PERIODIC GRID
+      COMPLEX(8),INTENT(IN) :: CWAVE(NR1,NR2,NR3) ! PERIODIC DENSITY DATA
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! CORNER OF THE NEW GRID
+      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! VECTORS SPANNING THE NEW GRID
+      LOGICAL(4),INTENT(IN) :: TPLANE
+      REAL(8)   ,INTENT(IN) :: PLANER0(3) ! 
+      REAL(8)   ,INTENT(IN) :: PLANEVEC(3,2)  ! 
+      INTEGER(4),PARAMETER  :: N1=80      ! DISPLACEMENT
+      INTEGER(4),PARAMETER  :: N2=80
+      INTEGER(4),PARAMETER  :: N3=1
+      COMPLEX(8)            :: CDATA(N1,N2,N3)
+      REAL(8)               :: DATA(N1,N2,N3)
+      REAL(8)               :: RTOX(3,3)
+      REAL(8)               :: VOL
+      INTEGER(4)            :: NRVIEW,NRVIEWX
+      REAL(8)   ,ALLOCATABLE:: RVIEW(:,:)
+      REAL(8)   ,ALLOCATABLE:: ZVIEW(:)
+      REAL(8)               :: PI
+      REAL(8)               :: PLANEBOX(3,3)
 !     **************************************************************************
-                          call trace$push('MAKEvrml')
+                          CALL TRACE$PUSH('MAKEVRML')
 !
 !     ==========================================================================
-!     ==  interpolate wave function onto viewing grid                         ==
+!     ==  INTERPOLATE WAVE FUNCTION ONTO VIEWING GRID                         ==
 !     ==========================================================================
-      if(tplane) then
-        planebox(:,:)=0.d0
-        planebox(:,:2)=planevec(:,:)
-        call mapfieldtogridc(RBAS,xk,NR1,NR2,NR3,cWAVE &
-     &                                     ,planer0,planeBOX,n1,n2,n3,cdata)
-      end if
+      IF(TPLANE) THEN
+        PLANEBOX(:,:)=0.D0
+        PLANEBOX(:,:2)=PLANEVEC(:,:)
+        CALL MAPFIELDTOGRIDC(RBAS,XK,NR1,NR2,NR3,CWAVE &
+     &                                     ,PLANER0,PLANEBOX,N1,N2,N3,CDATA)
+      END IF
 !
 !     ==========================================================================
-!     ==  map atoms into view box                                             ==
+!     ==  MAP ATOMS INTO VIEW BOX                                             ==
 !     ==========================================================================
-      pi=4.d0*atan(1.d0)
-      call gbass(box,rtox,vol)      
-      nrviewx=2*nint(vol/(4.d0*pi/3.d0*1.4d0**3)) ! estimate max number of atoms
-                                                ! inside the viewbox
-      allocate(rview(3,nrviewx)) ! positions
-      allocate(zview(nrviewx))   ! atomic numbers
-      call MAKEatomsintobox(NAT,Z,R,RBAS,ORIGIN,BOX,nrviewx,nrview,rview,zview)
+      PI=4.D0*ATAN(1.D0)
+      CALL GBASS(BOX,RTOX,VOL)      
+      NRVIEWX=2*NINT(VOL/(4.D0*PI/3.D0*1.4D0**3)) ! ESTIMATE MAX NUMBER OF ATOMS
+                                                ! INSIDE THE VIEWBOX
+      ALLOCATE(RVIEW(3,NRVIEWX)) ! POSITIONS
+      ALLOCATE(ZVIEW(NRVIEWX))   ! ATOMIC NUMBERS
+      CALL MAKEATOMSINTOBOX(NAT,Z,R,RBAS,ORIGIN,BOX,NRVIEWX,NRVIEW,RVIEW,ZVIEW)
 !
 !     ==========================================================================
-!     ==  write cube file                                                     ==
+!     ==  WRITE CUBE FILE                                                     ==
 !     ==========================================================================
-      write(nfil,fmt='("#VRML V2.0 utf8")')
-      write(nfil,*)'Background {'
-      write(nfil,*)'  skyColor 0.933 0.863 0.51'
-      write(nfil,*)'  groundColor 0.933 0.863 0.51'
-      write(nfil,*)'}'
-      write(nfil,*)'Viewpoint {'
-      write(nfil,*)'  position 0 0 40 '
-      write(nfil,*)'  fieldOfView 0.8 '
-      write(nfil,*)'} # close Viewpoint'
-      call vrml$addballstick(nfil,Nrview,Zview,Rview)
-      if(tplane) then
-        data=real(cdata)
-        call vrml$addrubbersheet(nfil,planer0,planebox,n1,n2,data)
-      end if
+      WRITE(NFIL,FMT='("#VRML V2.0 UTF8")')
+      WRITE(NFIL,*)'BACKGROUND {'
+      WRITE(NFIL,*)'  SKYCOLOR 0.933 0.863 0.51'
+      WRITE(NFIL,*)'  GROUNDCOLOR 0.933 0.863 0.51'
+      WRITE(NFIL,*)'}'
+      WRITE(NFIL,*)'VIEWPOINT {'
+      WRITE(NFIL,*)'  POSITION 0 0 40 '
+      WRITE(NFIL,*)'  FIELDOFVIEW 0.8 '
+      WRITE(NFIL,*)'} # CLOSE VIEWPOINT'
+      CALL VRML$ADDBALLSTICK(NFIL,NRVIEW,ZVIEW,RVIEW)
+      IF(TPLANE) THEN
+        DATA=REAL(CDATA)
+        CALL VRML$ADDRUBBERSHEET(NFIL,PLANER0,PLANEBOX,N1,N2,DATA)
+      END IF
 !
-      deallocate(rview)
-      deallocate(zview)
+      DEALLOCATE(RVIEW)
+      DEALLOCATE(ZVIEW)
 
-                          call trace$pop()
-      return
-      end
+                          CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE MAKEgnu(NFIL,NAT,Z,R,RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX)
+      SUBROUTINE MAKEGNU(NFIL,NAT,Z,R,RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX)
 !     **************************************************************************
 !     ** INTERPOLATES PERIODIC DENSITY DATA ON AN ARBITRARY GRID ONTO         **
 !     ** AN INDEPENDENT GRID SPECIFIED BY ORIGIN AND BOX.                     **
@@ -1365,174 +1376,174 @@
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
       REAL(8)   ,INTENT(IN) :: Z(NAT)    !ATOMIC NUMBER
-      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! atomic positions
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3) !lattice vectors of the periodic data
-      INTEGER(4),INTENT(IN) :: Nr1,Nr2,Nr3 ! # grid points on the periodic grid
-      REAL(8)   ,INTENT(IN) :: wave(Nr1,Nr2,Nr3) ! periodic density data
-      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! corner of the new grid
-      REAL(8)   ,INTENT(IN) :: BOX(3,2)   ! vectors spanning the new grid
-      integer(4),parameter  :: n1=60      ! displacement
-      integer(4),parameter  :: n2=60
-      integer(4),parameter  :: n3=1
-      real(8)               :: box3d(3,3)
-      real(8)               :: data(n1,n2,n3)
-      integer(4)            :: i,j
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! ATOMIC POSITIONS
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3) !LATTICE VECTORS OF THE PERIODIC DATA
+      INTEGER(4),INTENT(IN) :: NR1,NR2,NR3 ! # GRID POINTS ON THE PERIODIC GRID
+      REAL(8)   ,INTENT(IN) :: WAVE(NR1,NR2,NR3) ! PERIODIC DENSITY DATA
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! CORNER OF THE NEW GRID
+      REAL(8)   ,INTENT(IN) :: BOX(3,2)   ! VECTORS SPANNING THE NEW GRID
+      INTEGER(4),PARAMETER  :: N1=60      ! DISPLACEMENT
+      INTEGER(4),PARAMETER  :: N2=60
+      INTEGER(4),PARAMETER  :: N3=1
+      REAL(8)               :: BOX3D(3,3)
+      REAL(8)               :: DATA(N1,N2,N3)
+      INTEGER(4)            :: I,J
 !     **************************************************************************
-                              call trace$push('makegnu')
+                              CALL TRACE$PUSH('MAKEGNU')
 !
 !     ==========================================================================
-!     ==  interpolate wave function onto viewing grid                         ==
+!     ==  INTERPOLATE WAVE FUNCTION ONTO VIEWING GRID                         ==
 !     ==========================================================================
-      box3d=0.d0  ! only needed because mapfieldtogrid expects a 3d box
-      box3d(:,:2)=box  
-      call mapfieldtogrid(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX3d,n1,n2,n3,data)
+      BOX3D=0.D0  ! ONLY NEEDED BECAUSE MAPFIELDTOGRID EXPECTS A 3D BOX
+      BOX3D(:,:2)=BOX  
+      CALL MAPFIELDTOGRID(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX3D,N1,N2,N3,DATA)
 !
 !     ==========================================================================
-!     ==  write data field  (will be accessed by rubbersheet.gnu)             ==
+!     ==  WRITE DATA FIELD  (WILL BE ACCESSED BY RUBBERSHEET.GNU)             ==
 !     ==========================================================================
-      open(99,file='gnudata')
-      do i=1,n1
-        do j=1,n2
-          write(99,*)(real(i-1)/real(n1-1)-0.5d0)*sqrt(sum(box(:,1)**2)) &
-     &              ,(real(j-1)/real(n2-1)-0.5d0)*sqrt(sum(box(:,2)**2)) &
-     &              ,data(i,j,1)
-        enddo
-      enddo
-      close(99)
+      OPEN(99,FILE='GNUDATA')
+      DO I=1,N1
+        DO J=1,N2
+          WRITE(99,*)(REAL(I-1)/REAL(N1-1)-0.5D0)*SQRT(SUM(BOX(:,1)**2)) &
+     &              ,(REAL(J-1)/REAL(N2-1)-0.5D0)*SQRT(SUM(BOX(:,2)**2)) &
+     &              ,DATA(I,J,1)
+        ENDDO
+      ENDDO
+      CLOSE(99)
 !
 !     ==========================================================================
-!     ==  write gnuplot file rubbersheet.gnu                                  ==
+!     ==  WRITE GNUPLOT FILE RUBBERSHEET.GNU                                  ==
 !     ==========================================================================
-!     ==  remark "set data style lines" is not recognized any more
-!     ==  remark "set dgrid3d  60,60,1" does not poperly interpolate
-!     ==  z-range (data) remark "set dgrid3d  60,60,1" does not poperly 
-!     ==  interpolate
-      open(99,file='rubbersheet.gnu')
-      write(99,*)'#'                                                     
-      write(99,*)'#================================================='      
-      write(99,*)'# data section to be changed by the user        =='      
-      write(99,*)'#================================================='      
-      write(99,*)'xmin=',-0.5d0*sqrt(sum(box(:,1)**2)) 
-      write(99,*)'xmax=',+0.5d0*sqrt(sum(box(:,1)**2)) 
-      write(99,*)'ymin=',-0.5d0*sqrt(sum(box(:,2)**2)) 
-      write(99,*)'ymax=',+0.5d0*sqrt(sum(box(:,2)**2)) 
-      write(99,*)'zmin=',minval(data)
-      write(99,*)'zmax=',maxval(data)
-      write(99,*)'rot_x=30'
-      write(99,*)'rot_z=20'
-      write(99,*)'scale=1.0'
-      write(99,*)'scale_z=1.'
-      write(99,*)'infile="gnudata"'                                  
-      write(99,*)'#'                                                     
-      write(99,*)'#================================================='      
-      write(99,*)'# define line styles to be used with ls in splot=='      
-      write(99,*)'#================================================='      
-      write(99,*)'# define a linestyle for splot (used with ls)'         
-      write(99,*)'set style line 1 lt 1 lc rgb "black" lw 1'             
-      write(99,*)'# map hight values to colors'                          
-      write(99,*)'set palette rgbformula 22,13,-31'                      
-      write(99,*)'#'
-      write(99,*)'#================================================='
-      write(99,*)'# data related statements                       =='       
-      write(99,*)'#================================================='
-      write(99,*)'set xrange [xmin:xmax]'                                
-      write(99,*)'set yrange [ymin:ymax]'                                
-      write(99,*)'set zrange [zmin:zmax]'                                
-      write(99,*)'# sample input data onto a 60x60 grid'                 
-      write(99,*)'set dgrid3d  60,60,1'                                  
-      write(99,*)'#'                                                     
-      write(99,*)'#================================================='
-      write(99,*)'# surface plot                                  =='      
-      write(99,*)'#================================================='
-      write(99,*)'set surface'                                           
-      write(99,*)'set hidden3d'                                          
-      write(99,*)'#set data style lines'                                  
-      write(99,*)'# places the zero of the z-axis into the xy plane'     
-      write(99,*)'set xyplane at 0.'                                     
-      write(99,*)'# remove axes'                                         
-      write(99,*)'unset border'                                          
-      write(99,*)'#  remove tics from the axes'                          
-      write(99,*)'unset xtics'                                           
-      write(99,*)'unset ytics'                                           
-      write(99,*)'unset ztics'                                           
-      write(99,*)'# no title written'                                    
-      write(99,*)'set key off'                                           
-      write(99,*)'# place contours onto the surface'                     
-      write(99,*)'set pm3d explicit hidden3d 1'                          
-      write(99,*)'#'                                                   
-      write(99,*)'#  angle, angle, overall scale, scale z-axis'        
-      write(99,*)'set view rot_x,rot_z,scale,scale_z'                  
-      write(99,*)'#'                                                   
-      write(99,*)'splot  infile with pm3d'                             
-      close(99)
-                              call trace$pop()
-      return
-      end
+!     ==  REMARK "SET DATA STYLE LINES" IS NOT RECOGNIZED ANY MORE
+!     ==  REMARK "SET DGRID3D  60,60,1" DOES NOT POPERLY INTERPOLATE
+!     ==  Z-RANGE (DATA) REMARK "SET DGRID3D  60,60,1" DOES NOT POPERLY 
+!     ==  INTERPOLATE
+      OPEN(99,FILE='RUBBERSHEET.GNU')
+      WRITE(99,*)'#'                                                     
+      WRITE(99,*)'#================================================='      
+      WRITE(99,*)'# DATA SECTION TO BE CHANGED BY THE USER        =='      
+      WRITE(99,*)'#================================================='      
+      WRITE(99,*)'XMIN=',-0.5D0*SQRT(SUM(BOX(:,1)**2)) 
+      WRITE(99,*)'XMAX=',+0.5D0*SQRT(SUM(BOX(:,1)**2)) 
+      WRITE(99,*)'YMIN=',-0.5D0*SQRT(SUM(BOX(:,2)**2)) 
+      WRITE(99,*)'YMAX=',+0.5D0*SQRT(SUM(BOX(:,2)**2)) 
+      WRITE(99,*)'ZMIN=',MINVAL(DATA)
+      WRITE(99,*)'ZMAX=',MAXVAL(DATA)
+      WRITE(99,*)'ROT_X=30'
+      WRITE(99,*)'ROT_Z=20'
+      WRITE(99,*)'SCALE=1.0'
+      WRITE(99,*)'SCALE_Z=1.'
+      WRITE(99,*)'INFILE="GNUDATA"'                                  
+      WRITE(99,*)'#'                                                     
+      WRITE(99,*)'#================================================='      
+      WRITE(99,*)'# DEFINE LINE STYLES TO BE USED WITH LS IN SPLOT=='      
+      WRITE(99,*)'#================================================='      
+      WRITE(99,*)'# DEFINE A LINESTYLE FOR SPLOT (USED WITH LS)'         
+      WRITE(99,*)'SET STYLE LINE 1 LT 1 LC RGB "BLACK" LW 1'             
+      WRITE(99,*)'# MAP HIGHT VALUES TO COLORS'                          
+      WRITE(99,*)'SET PALETTE RGBFORMULA 22,13,-31'                      
+      WRITE(99,*)'#'
+      WRITE(99,*)'#================================================='
+      WRITE(99,*)'# DATA RELATED STATEMENTS                       =='       
+      WRITE(99,*)'#================================================='
+      WRITE(99,*)'SET XRANGE [XMIN:XMAX]'                                
+      WRITE(99,*)'SET YRANGE [YMIN:YMAX]'                                
+      WRITE(99,*)'SET ZRANGE [ZMIN:ZMAX]'                                
+      WRITE(99,*)'# SAMPLE INPUT DATA ONTO A 60X60 GRID'                 
+      WRITE(99,*)'SET DGRID3D  60,60,1'                                  
+      WRITE(99,*)'#'                                                     
+      WRITE(99,*)'#================================================='
+      WRITE(99,*)'# SURFACE PLOT                                  =='      
+      WRITE(99,*)'#================================================='
+      WRITE(99,*)'SET SURFACE'                                           
+      WRITE(99,*)'SET HIDDEN3D'                                          
+      WRITE(99,*)'#SET DATA STYLE LINES'                                  
+      WRITE(99,*)'# PLACES THE ZERO OF THE Z-AXIS INTO THE XY PLANE'     
+      WRITE(99,*)'SET XYPLANE AT 0.'                                     
+      WRITE(99,*)'# REMOVE AXES'                                         
+      WRITE(99,*)'UNSET BORDER'                                          
+      WRITE(99,*)'#  REMOVE TICS FROM THE AXES'                          
+      WRITE(99,*)'UNSET XTICS'                                           
+      WRITE(99,*)'UNSET YTICS'                                           
+      WRITE(99,*)'UNSET ZTICS'                                           
+      WRITE(99,*)'# NO TITLE WRITTEN'                                    
+      WRITE(99,*)'SET KEY OFF'                                           
+      WRITE(99,*)'# PLACE CONTOURS ONTO THE SURFACE'                     
+      WRITE(99,*)'SET PM3D EXPLICIT HIDDEN3D 1'                          
+      WRITE(99,*)'#'                                                   
+      WRITE(99,*)'#  ANGLE, ANGLE, OVERALL SCALE, SCALE Z-AXIS'        
+      WRITE(99,*)'SET VIEW ROT_X,ROT_Z,SCALE,SCALE_Z'                  
+      WRITE(99,*)'#'                                                   
+      WRITE(99,*)'SPLOT  INFILE WITH PM3D'                             
+      CLOSE(99)
+                              CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE mapfieldtogrid(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX,n1,n2,n3,data)
+      SUBROUTINE MAPFIELDTOGRID(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX,N1,N2,N3,DATA)
 !     **************************************************************************
 !     ** INTERPOLATES PERIODIC DENSITY DATA ON AN ARBITRARY GRID ONTO         **
 !     ** AN INDEPENDENT GRID SPECIFIED BY ORIGIN AND BOX.                     **
 !     **************************************************************************
       IMPLICIT NONE
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3) !lattice vectors of the periodic data
-      INTEGER(4),INTENT(IN) :: Nr1,Nr2,Nr3 ! # grid points on the periodic grid
-      REAL(8)   ,INTENT(IN) :: wave(Nr1,Nr2,Nr3) ! periodic density data
-      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! corner of the new grid
-      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! vectors spanning the new grid
-      integer(4),intent(in) :: n1,n2,n3
-      real(8)   ,intent(out):: data(n1,n2,n3)
-      real(8)               :: pos(3)
-      real(8)               :: dt1(3),dt2(3),dt3(3)
-      real(8)               :: xtor(3,3)
-      real(8)               :: rtox(3,3)
-      real(8)               :: svar1,svar2
-      real(8)               :: f00,f01,f10,f11,g0,g1
-      real(8)               :: xdis(3)
-      INTEGER(4)            :: i1m,i1p,i2m,i2p,i3m,i3p
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3) !LATTICE VECTORS OF THE PERIODIC DATA
+      INTEGER(4),INTENT(IN) :: NR1,NR2,NR3 ! # GRID POINTS ON THE PERIODIC GRID
+      REAL(8)   ,INTENT(IN) :: WAVE(NR1,NR2,NR3) ! PERIODIC DENSITY DATA
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! CORNER OF THE NEW GRID
+      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! VECTORS SPANNING THE NEW GRID
+      INTEGER(4),INTENT(IN) :: N1,N2,N3
+      REAL(8)   ,INTENT(OUT):: DATA(N1,N2,N3)
+      REAL(8)               :: POS(3)
+      REAL(8)               :: DT1(3),DT2(3),DT3(3)
+      REAL(8)               :: XTOR(3,3)
+      REAL(8)               :: RTOX(3,3)
+      REAL(8)               :: SVAR1,SVAR2
+      REAL(8)               :: F00,F01,F10,F11,G0,G1
+      REAL(8)               :: XDIS(3)
+      INTEGER(4)            :: I1M,I1P,I2M,I2P,I3M,I3P
       INTEGER(4)            :: I,J,K
 !     **************************************************************************
-                                call trace$push('mapfieldtogrid')
-      xtor(:,1)=rbas(:,1)/real(nr1,kind=8)
-      xtor(:,2)=rbas(:,2)/real(nr2,kind=8)
-      xtor(:,3)=rbas(:,3)/real(nr3,kind=8)
-      call lib$invertr8(3,xtor,rtox)
+                                CALL TRACE$PUSH('MAPFIELDTOGRID')
+      XTOR(:,1)=RBAS(:,1)/REAL(NR1,KIND=8)
+      XTOR(:,2)=RBAS(:,2)/REAL(NR2,KIND=8)
+      XTOR(:,3)=RBAS(:,3)/REAL(NR3,KIND=8)
+      CALL LIB$INVERTR8(3,XTOR,RTOX)
 !
 !     ==========================================================================
 !     ==  INTERPOLATE WAVE ONTO NEW GRID                                      ==
 !     ==========================================================================
       DT1(:)=BOX(:,1)/REAL(N1-1,KIND=8)
       DT2(:)=BOX(:,2)/REAL(N2-1,KIND=8)
-      if(n3.gt.1) then
+      IF(N3.GT.1) THEN
         DT3(:)=BOX(:,3)/REAL(N3-1,KIND=8)
-      else                   ! n3=1 is for a 2d grid
-        DT3(:)=0.d0
-      end if
+      ELSE                   ! N3=1 IS FOR A 2D GRID
+        DT3(:)=0.D0
+      END IF
       DO I=1,N1
         DO J=1,N2
           POS(:)=ORIGIN(:)+DT1*REAL(I-1,KIND=8)+DT2*REAL(J-1,KIND=8)-DT3(:)
           DO K=1,N3
             POS(:)=POS(:)+DT3(:)  ! POSITION ON THE NEW GRID
-!           == map position into relative coordinates and into 1st unit cell
+!           == MAP POSITION INTO RELATIVE COORDINATES AND INTO 1ST UNIT CELL
             XDIS=MATMUL(RTOX,POS)
-            xdis(1)=MODULO(XDIS(1),real(NR1,kind=8))
-            xdis(2)=MODULO(XDIS(2),real(NR2,kind=8))
-            xdis(3)=MODULO(XDIS(3),real(NR3,kind=8))
-!           == avoid compiler bug. for very small negative values a result  ==
-!           == equal to the right boundary can occur
-            if(xdis(1).eq.real(nr1,kind=8))xdis(1)=xdis(1)-real(NR1,kind=8)
-            if(xdis(2).eq.real(nr2,kind=8))xdis(2)=xdis(2)-real(NR2,kind=8)
-            if(xdis(3).eq.real(nr3,kind=8))xdis(3)=xdis(3)-real(NR3,kind=8)
-            I1M=1+int(XDIS(1))
+            XDIS(1)=MODULO(XDIS(1),REAL(NR1,KIND=8))
+            XDIS(2)=MODULO(XDIS(2),REAL(NR2,KIND=8))
+            XDIS(3)=MODULO(XDIS(3),REAL(NR3,KIND=8))
+!           == AVOID COMPILER BUG. FOR VERY SMALL NEGATIVE VALUES A RESULT  ==
+!           == EQUAL TO THE RIGHT BOUNDARY CAN OCCUR
+            IF(XDIS(1).EQ.REAL(NR1,KIND=8))XDIS(1)=XDIS(1)-REAL(NR1,KIND=8)
+            IF(XDIS(2).EQ.REAL(NR2,KIND=8))XDIS(2)=XDIS(2)-REAL(NR2,KIND=8)
+            IF(XDIS(3).EQ.REAL(NR3,KIND=8))XDIS(3)=XDIS(3)-REAL(NR3,KIND=8)
+            I1M=1+INT(XDIS(1))
             I1P=1+MODULO(I1M,NR1)
-            I2M=1+int(XDIS(2))
+            I2M=1+INT(XDIS(2))
             I2P=1+MODULO(I2M,NR2)
-            I3M=1+int(XDIS(3))
+            I3M=1+INT(XDIS(3))
             I3P=1+MODULO(I3M,NR3)
-            XDIS(1)=modulo(XDIS(1),1.d0)
-            XDIS(2)=modulo(XDIS(2),1.d0)
-            XDIS(3)=modulo(XDIS(3),1.d0)
+            XDIS(1)=MODULO(XDIS(1),1.D0)
+            XDIS(2)=MODULO(XDIS(2),1.D0)
+            XDIS(3)=MODULO(XDIS(3),1.D0)
 !           == INTERPOLATE ALONG THIRD DIRECTION ===========================
             SVAR2=XDIS(3)
             SVAR1=1.D0-SVAR2
@@ -1548,196 +1559,196 @@
 !           == INTERPOLATE ALONG SECOND DIRECTION ===========================
             SVAR2=XDIS(1)
             SVAR1=1.D0-SVAR2
-            DATA(I,j,k)=G0*SVAR1+G1*SVAR2
+            DATA(I,J,K)=G0*SVAR1+G1*SVAR2
           ENDDO
         ENDDO
       ENDDO
-                                call trace$pop()
-      return
-      end
+                                CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE mapfieldtogridc(RBAS,xk,NR1,NR2,NR3,WAVE &
-     &                           ,ORIGIN,BOX,n1,n2,n3,data)
+      SUBROUTINE MAPFIELDTOGRIDC(RBAS,XK,NR1,NR2,NR3,WAVE &
+     &                           ,ORIGIN,BOX,N1,N2,N3,DATA)
 !     **************************************************************************
 !     ** INTERPOLATES PERIODIC DENSITY DATA ON AN ARBITRARY GRID ONTO         **
 !     ** AN INDEPENDENT GRID SPECIFIED BY ORIGIN AND BOX.                     **
 !     **************************************************************************
       IMPLICIT NONE
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3) !lattice vectors of the periodic data
-      REAL(8)   ,INTENT(IN) :: xk(3)     !k-point in relative coordinates
-      INTEGER(4),INTENT(IN) :: Nr1,Nr2,Nr3 ! # grid points on the periodic grid
-      complex(8),INTENT(IN) :: wave(Nr1,Nr2,Nr3) ! periodic density data
-      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! corner of the new grid
-      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! vectors spanning the new grid
-      integer(4),intent(in) :: n1,n2,n3
-      complex(8),intent(out):: data(n1,n2,n3)
-      real(8)               :: pos(3)
-      real(8)               :: dt1(3),dt2(3),dt3(3)
-      real(8)               :: xtor(3,3)
-      real(8)               :: rtox(3,3)
-      real(8)               :: svar1,svar2
-      complex(8)            :: csvar1,csvar2
-      complex(8)            :: eik1m,eik1p,eik2m,eik2p,eik3m,eik3p
-      complex(8)            :: f00,f01,f10,f11,g0,g1
-      real(8)               :: xdis(3),xdis0(3)
-      INTEGER(4)            :: i1m,i1p,i2m,i2p,i3m,i3p
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3) !LATTICE VECTORS OF THE PERIODIC DATA
+      REAL(8)   ,INTENT(IN) :: XK(3)     !K-POINT IN RELATIVE COORDINATES
+      INTEGER(4),INTENT(IN) :: NR1,NR2,NR3 ! # GRID POINTS ON THE PERIODIC GRID
+      COMPLEX(8),INTENT(IN) :: WAVE(NR1,NR2,NR3) ! PERIODIC DENSITY DATA
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! CORNER OF THE NEW GRID
+      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! VECTORS SPANNING THE NEW GRID
+      INTEGER(4),INTENT(IN) :: N1,N2,N3
+      COMPLEX(8),INTENT(OUT):: DATA(N1,N2,N3)
+      REAL(8)               :: POS(3)
+      REAL(8)               :: DT1(3),DT2(3),DT3(3)
+      REAL(8)               :: XTOR(3,3)
+      REAL(8)               :: RTOX(3,3)
+      REAL(8)               :: SVAR1,SVAR2
+      COMPLEX(8)            :: CSVAR1,CSVAR2
+      COMPLEX(8)            :: EIK1M,EIK1P,EIK2M,EIK2P,EIK3M,EIK3P
+      COMPLEX(8)            :: F00,F01,F10,F11,G0,G1
+      REAL(8)               :: XDIS(3),XDIS0(3)
+      INTEGER(4)            :: I1M,I1P,I2M,I2P,I3M,I3P
       INTEGER(4)            :: I,J,K
-      complex(8),parameter  :: ci=(0.d0,1.d0)
-      real(8)               :: pi
-      complex(8)            :: c2pii
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      REAL(8)               :: PI
+      COMPLEX(8)            :: C2PII
 !     **************************************************************************
-                                call trace$push('mapfieldtogridc')
-      pi=4.d0*atan(1.d0)
-      c2pii=(0.d0,1.d0)*2.d0*pi
-      xtor(:,1)=rbas(:,1)/real(nr1,kind=8)
-      xtor(:,2)=rbas(:,2)/real(nr2,kind=8)
-      xtor(:,3)=rbas(:,3)/real(nr3,kind=8)
-      call lib$invertr8(3,xtor,rtox)
+                                CALL TRACE$PUSH('MAPFIELDTOGRIDC')
+      PI=4.D0*ATAN(1.D0)
+      C2PII=(0.D0,1.D0)*2.D0*PI
+      XTOR(:,1)=RBAS(:,1)/REAL(NR1,KIND=8)
+      XTOR(:,2)=RBAS(:,2)/REAL(NR2,KIND=8)
+      XTOR(:,3)=RBAS(:,3)/REAL(NR3,KIND=8)
+      CALL LIB$INVERTR8(3,XTOR,RTOX)
 !
 !     ==========================================================================
 !     ==  INTERPOLATE WAVE ONTO NEW GRID                                      ==
 !     ==========================================================================
       DT1(:)=BOX(:,1)/REAL(N1-1,KIND=8)
       DT2(:)=BOX(:,2)/REAL(N2-1,KIND=8)
-      if(n3.gt.1) then
+      IF(N3.GT.1) THEN
         DT3(:)=BOX(:,3)/REAL(N3-1,KIND=8)
-      else                   ! n3=1 is for a 2d grid
-        DT3(:)=0.d0
-      end if
+      ELSE                   ! N3=1 IS FOR A 2D GRID
+        DT3(:)=0.D0
+      END IF
       DO I=1,N1
         DO J=1,N2
           POS(:)=ORIGIN(:)+DT1*REAL(I-1,KIND=8)+DT2*REAL(J-1,KIND=8)-DT3(:)
           DO K=1,N3
             POS(:)=POS(:)+DT3(:)  ! POSITION ON THE NEW GRID
-!           == map position into relative coordinates and into 1st unit cell ===
+!           == MAP POSITION INTO RELATIVE COORDINATES AND INTO 1ST UNIT CELL ===
             XDIS0=MATMUL(RTOX,POS)
-            xdis(1)=MODULO(XDIS0(1),real(NR1,kind=8))
-            xdis(2)=MODULO(XDIS0(2),real(NR2,kind=8))
-            xdis(3)=MODULO(XDIS0(3),real(NR3,kind=8))
-!           == avoid compiler bug. for very small negative values a result  ====
-!           == equal to the right boundary can occur ===========================
-            if(xdis(1).eq.real(nr1,kind=8))xdis(1)=xdis(1)-real(NR1,kind=8)
-            if(xdis(2).eq.real(nr2,kind=8))xdis(2)=xdis(2)-real(NR2,kind=8)
-            if(xdis(3).eq.real(nr3,kind=8))xdis(3)=xdis(3)-real(NR3,kind=8)
-            I1M=1+int(XDIS(1))
+            XDIS(1)=MODULO(XDIS0(1),REAL(NR1,KIND=8))
+            XDIS(2)=MODULO(XDIS0(2),REAL(NR2,KIND=8))
+            XDIS(3)=MODULO(XDIS0(3),REAL(NR3,KIND=8))
+!           == AVOID COMPILER BUG. FOR VERY SMALL NEGATIVE VALUES A RESULT  ====
+!           == EQUAL TO THE RIGHT BOUNDARY CAN OCCUR ===========================
+            IF(XDIS(1).EQ.REAL(NR1,KIND=8))XDIS(1)=XDIS(1)-REAL(NR1,KIND=8)
+            IF(XDIS(2).EQ.REAL(NR2,KIND=8))XDIS(2)=XDIS(2)-REAL(NR2,KIND=8)
+            IF(XDIS(3).EQ.REAL(NR3,KIND=8))XDIS(3)=XDIS(3)-REAL(NR3,KIND=8)
+            I1M=1+INT(XDIS(1))
             I1P=1+MODULO(I1M,NR1)
-            I2M=1+int(XDIS(2))
+            I2M=1+INT(XDIS(2))
             I2P=1+MODULO(I2M,NR2)
-            I3M=1+int(XDIS(3))
+            I3M=1+INT(XDIS(3))
             I3P=1+MODULO(I3M,NR3)
-            eik1m=exp(-c2pii*xk(1)*(xdis(1)-xdis0(1))/real(nr1,kind=8))
-            eik2m=exp(-c2pii*xk(2)*(xdis(2)-xdis0(2))/real(nr2,kind=8))
-            eik3m=exp(-c2pii*xk(3)*(xdis(3)-xdis0(3))/real(nr3,kind=8))
-            eik1p=eik1m*exp(-c2pii*xk(1)*real(i1p-1-i1m)/real(nr1,kind=8))
-            eik2p=eik2m*exp(-c2pii*xk(2)*real(i2p-1-i2m)/real(nr2,kind=8))
-            eik3p=eik3m*exp(-c2pii*xk(3)*real(i3p-1-i3m)/real(nr3,kind=8))
+            EIK1M=EXP(-C2PII*XK(1)*(XDIS(1)-XDIS0(1))/REAL(NR1,KIND=8))
+            EIK2M=EXP(-C2PII*XK(2)*(XDIS(2)-XDIS0(2))/REAL(NR2,KIND=8))
+            EIK3M=EXP(-C2PII*XK(3)*(XDIS(3)-XDIS0(3))/REAL(NR3,KIND=8))
+            EIK1P=EIK1M*EXP(-C2PII*XK(1)*REAL(I1P-1-I1M)/REAL(NR1,KIND=8))
+            EIK2P=EIK2M*EXP(-C2PII*XK(2)*REAL(I2P-1-I2M)/REAL(NR2,KIND=8))
+            EIK3P=EIK3M*EXP(-C2PII*XK(3)*REAL(I3P-1-I3M)/REAL(NR3,KIND=8))
 !
-            XDIS(1)=modulo(XDIS(1),1.d0)
-            XDIS(2)=modulo(XDIS(2),1.d0)
-            XDIS(3)=modulo(XDIS(3),1.d0)
+            XDIS(1)=MODULO(XDIS(1),1.D0)
+            XDIS(2)=MODULO(XDIS(2),1.D0)
+            XDIS(3)=MODULO(XDIS(3),1.D0)
 !           == INTERPOLATE ALONG THIRD DIRECTION ===============================
             SVAR2=XDIS(3)
             SVAR1=1.D0-SVAR2
-            csvar1=svar1*eik3m
-            csvar2=svar2*eik3p
-            F00=WAVE(I1M,I2M,I3M)*cSVAR1+WAVE(I1M,I2M,I3P)*cSVAR2
-            F10=WAVE(I1P,I2M,I3M)*cSVAR1+WAVE(I1P,I2M,I3P)*cSVAR2
-            F01=WAVE(I1M,I2P,I3M)*cSVAR1+WAVE(I1M,I2P,I3P)*cSVAR2
-            F11=WAVE(I1P,I2P,I3M)*cSVAR1+WAVE(I1P,I2P,I3P)*cSVAR2
+            CSVAR1=SVAR1*EIK3M
+            CSVAR2=SVAR2*EIK3P
+            F00=WAVE(I1M,I2M,I3M)*CSVAR1+WAVE(I1M,I2M,I3P)*CSVAR2
+            F10=WAVE(I1P,I2M,I3M)*CSVAR1+WAVE(I1P,I2M,I3P)*CSVAR2
+            F01=WAVE(I1M,I2P,I3M)*CSVAR1+WAVE(I1M,I2P,I3P)*CSVAR2
+            F11=WAVE(I1P,I2P,I3M)*CSVAR1+WAVE(I1P,I2P,I3P)*CSVAR2
 !           == INTERPOLATE ALONG SECOND DIRECTION ==============================
             SVAR2=XDIS(2)
             SVAR1=1.D0-SVAR2
-            csvar1=svar1*eik2m
-            csvar2=svar2*eik2p
-            G0=F00*cSVAR1+F01*cSVAR2
-            G1=F10*cSVAR1+F11*cSVAR2
+            CSVAR1=SVAR1*EIK2M
+            CSVAR2=SVAR2*EIK2P
+            G0=F00*CSVAR1+F01*CSVAR2
+            G1=F10*CSVAR1+F11*CSVAR2
 !           == INTERPOLATE ALONG SECOND DIRECTION ==============================
             SVAR2=XDIS(1)
             SVAR1=1.D0-SVAR2
-            csvar1=svar1*eik1m
-            csvar2=svar2*eik1p
-            DATA(I,j,k)=G0*cSVAR1+G1*cSVAR2
+            CSVAR1=SVAR1*EIK1M
+            CSVAR2=SVAR2*EIK1P
+            DATA(I,J,K)=G0*CSVAR1+G1*CSVAR2
           ENDDO
         ENDDO
       ENDDO
-                                call trace$pop()
-      return
-      end
+                                CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE MAKEatomsintobox(NAT,Z,R,RBAS,ORIGIN,BOX &
-     &                           ,nrviewx,nrview,rview,zview)
+      SUBROUTINE MAKEATOMSINTOBOX(NAT,Z,R,RBAS,ORIGIN,BOX &
+     &                           ,NRVIEWX,NRVIEW,RVIEW,ZVIEW)
 !     **************************************************************************
-!     ** maps periodic lattice into viewbox                                   **
+!     ** MAPS PERIODIC LATTICE INTO VIEWBOX                                   **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
       REAL(8)   ,INTENT(IN) :: Z(NAT)    ! ATOMIC NUMBER
-      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! atomic positions
-      REAL(8)   ,INTENT(IN) :: Rbas(3,3) ! lattice vectors of the periodic data
-      REAL(8)   ,INTENT(IN) :: ORIGIN(3) ! corner of the new grid
-      REAL(8)   ,INTENT(IN) :: BOX(3,3)  ! vectors spanning the new grid
-      INTEGER(4),INTENT(IN) :: nrviewx   ! x#(atoms in viewbox)
-      INTEGER(4),INTENT(out):: nrview    ! #(atoms in viewbox)
-      real(8)   ,intent(out):: rview(3,nrviewx)
-      real(8)   ,intent(out):: zview(nrviewx)
-      real(8)               :: pos(3)
-      real(8)               :: rtox(3,3)
-      real(8)               :: xdis(3)
-      real(8)               :: t1(3),t2(3),t3(3)
-      INTEGER(4)            :: it1,it2,it3,iat
-      INTEGER(4)            :: min1,max1,min2,max2,min3,max3
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)  ! ATOMIC POSITIONS
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3) ! LATTICE VECTORS OF THE PERIODIC DATA
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3) ! CORNER OF THE NEW GRID
+      REAL(8)   ,INTENT(IN) :: BOX(3,3)  ! VECTORS SPANNING THE NEW GRID
+      INTEGER(4),INTENT(IN) :: NRVIEWX   ! X#(ATOMS IN VIEWBOX)
+      INTEGER(4),INTENT(OUT):: NRVIEW    ! #(ATOMS IN VIEWBOX)
+      REAL(8)   ,INTENT(OUT):: RVIEW(3,NRVIEWX)
+      REAL(8)   ,INTENT(OUT):: ZVIEW(NRVIEWX)
+      REAL(8)               :: POS(3)
+      REAL(8)               :: RTOX(3,3)
+      REAL(8)               :: XDIS(3)
+      REAL(8)               :: T1(3),T2(3),T3(3)
+      INTEGER(4)            :: IT1,IT2,IT3,IAT
+      INTEGER(4)            :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
 !     **************************************************************************
 !
 !     ==========================================================================
-!     ==  map atoms into the viewbox                                          ==
+!     ==  MAP ATOMS INTO THE VIEWBOX                                          ==
 !     ==========================================================================
-      call lib$invertr8(3,box,rtox)
-      min1=-5
-      max1=5
-      min2=-5
-      max2=5
-      min3=-5
-      max3=5
-      nrview=0
-      do it1=min1,max1
-        t1(:)=rbas(:,1)*real(it1,kind=8)
-        do it2=min2,max2
-          t2(:)=rbas(:,2)*real(it2,kind=8)
-          do it3=min3,max3
-            t3(:)=rbas(:,3)*real(it3,kind=8)
-            do iat=1,nat
-              pos(:)=r(:,iat)+t1+t2+t3
-              xdis(:)=matmul(rtox,pos-origin(:))
-              if(xdis(1).lt.-0.05d0.or.xdis(1).gt.1.05d0) cycle
-              if(xdis(2).lt.-0.05d0.or.xdis(2).gt.1.05d0) cycle
-              if(xdis(3).lt.-0.05d0.or.xdis(3).gt.1.05d0) cycle
-              nrview=nrview+1
+      CALL LIB$INVERTR8(3,BOX,RTOX)
+      MIN1=-5
+      MAX1=5
+      MIN2=-5
+      MAX2=5
+      MIN3=-5
+      MAX3=5
+      NRVIEW=0
+      DO IT1=MIN1,MAX1
+        T1(:)=RBAS(:,1)*REAL(IT1,KIND=8)
+        DO IT2=MIN2,MAX2
+          T2(:)=RBAS(:,2)*REAL(IT2,KIND=8)
+          DO IT3=MIN3,MAX3
+            T3(:)=RBAS(:,3)*REAL(IT3,KIND=8)
+            DO IAT=1,NAT
+              POS(:)=R(:,IAT)+T1+T2+T3
+              XDIS(:)=MATMUL(RTOX,POS-ORIGIN(:))
+              IF(XDIS(1).LT.-0.05D0.OR.XDIS(1).GT.1.05D0) CYCLE
+              IF(XDIS(2).LT.-0.05D0.OR.XDIS(2).GT.1.05D0) CYCLE
+              IF(XDIS(3).LT.-0.05D0.OR.XDIS(3).GT.1.05D0) CYCLE
+              NRVIEW=NRVIEW+1
               IF(NRVIEW.GT.NRVIEWX) THEN
                 CALL ERROR$MSG('NUMBER OF ATOMS IN THE BOX OUT OF RANGE')
                 CALL ERROR$I4VAL('NRVIEWX',NRVIEWX)
                 CALL ERROR$I4VAL('NRVIEW',NRVIEW)
                 CALL ERROR$STOP('MAKECUBE')
               END IF
-              rview(:,nrview)=pos(:)
-              zview(nrview)=z(iat)
-            enddo
-          enddo
-        enddo
-      enddo
-      return
-      end
+              RVIEW(:,NRVIEW)=POS(:)
+              ZVIEW(NRVIEW)=Z(IAT)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITECUBEFILE(NFIL,NAT,Z,R,ORIGIN,BOX,N1,N2,N3,DATA)
 !     **************************************************************************
-!     **  write a Gaussian Cube file (extension .cub) with voluminetric data  **
+!     **  WRITE A GAUSSIAN CUBE FILE (EXTENSION .CUB) WITH VOLUMINETRIC DATA  **
 !     **                                                                      **
-!     ** remark:                                                              **
-!     ** units written are abohr, consistent with avogadro's implementation.  **
-!     ** the specs require N1,N2,N3 to be multiplied by -1 if abohr are used  **
-!     ** and angstrom is the unit if they are positive.                       **
+!     ** REMARK:                                                              **
+!     ** UNITS WRITTEN ARE ABOHR, CONSISTENT WITH AVOGADRO'S IMPLEMENTATION.  **
+!     ** THE SPECS REQUIRE N1,N2,N3 TO BE MULTIPLIED BY -1 IF ABOHR ARE USED  **
+!     ** AND ANGSTROM IS THE UNIT IF THEY ARE POSITIVE.                       **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
@@ -1749,242 +1760,242 @@
       INTEGER(4),INTENT(IN) :: N1,N2,N3
       REAL(8)   ,INTENT(IN) :: DATA(N1,N2,N3)
       REAL(8)               :: ANGSTROM
-      REAL(8)               :: scale
+      REAL(8)               :: SCALE
       INTEGER(4)            :: IAT,I,J,K
 !     **************************************************************************
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
-      scale=1.d0
+      SCALE=1.D0
 !      SCALE=1.D0/ANGSTROM
       WRITE(NFIL,FMT='("CP-PAW CUBE FILE")')
       WRITE(NFIL,FMT='("NOCHN KOMMENTAR")')
-      WRITE(NFIL,FMT='(I5,3F12.6)')NAT,ORIGIN*scale
-      WRITE(NFIL,FMT='(I5,3F12.6)')-N1,BOX(:,1)/REAL(N1-1,KIND=8)*scale
-      WRITE(NFIL,FMT='(I5,3F12.6)')-N2,BOX(:,2)/REAL(N2-1,KIND=8)*scale
-      WRITE(NFIL,FMT='(I5,3F12.6)')-N3,BOX(:,3)/REAL(N3-1,KIND=8)*scale
+      WRITE(NFIL,FMT='(I5,3F12.6)')NAT,ORIGIN*SCALE
+      WRITE(NFIL,FMT='(I5,3F12.6)')-N1,BOX(:,1)/REAL(N1-1,KIND=8)*SCALE
+      WRITE(NFIL,FMT='(I5,3F12.6)')-N2,BOX(:,2)/REAL(N2-1,KIND=8)*SCALE
+      WRITE(NFIL,FMT='(I5,3F12.6)')-N3,BOX(:,3)/REAL(N3-1,KIND=8)*SCALE
       DO IAT=1,NAT
-        WRITE(NFIL,FMT='(I5,4F12.6)')NINT(Z(IAT)),0.D0,R(:,IAT)*scale
+        WRITE(NFIL,FMT='(I5,4F12.6)')NINT(Z(IAT)),0.D0,R(:,IAT)*SCALE
       ENDDO  
       WRITE(NFIL,FMT='(6(E12.6," "))')(((DATA(I,J,K),K=1,N3),J=1,N2),I=1,N1)
-!!$do k=1,n3
-!!$  scale=0.d0
-!!$  do i=1,n1
-!!$    do j=1,n2
-!!$      scale=scale+data(i,j,k)**2
-!!$    enddo
-!!$  enddo
-!!$print*,'scale ',origin(:)+box(:,3)/real(n3,kind=8)*real(k-1,kind=8),scale
-!!$enddo
+!!$DO K=1,N3
+!!$  SCALE=0.D0
+!!$  DO I=1,N1
+!!$    DO J=1,N2
+!!$      SCALE=SCALE+DATA(I,J,K)**2
+!!$    ENDDO
+!!$  ENDDO
+!!$PRINT*,'SCALE ',ORIGIN(:)+BOX(:,3)/REAL(N3,KIND=8)*REAL(K-1,KIND=8),SCALE
+!!$ENDDO
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE vrml$addrubbersheet(nfil,origin,plane,n1,n2,data)
+      SUBROUTINE VRML$ADDRUBBERSHEET(NFIL,ORIGIN,PLANE,N1,N2,DATA)
 !     **************************************************************************
-!     **  add a ball-stick model to a vrml scene                              **
+!     **  ADD A BALL-STICK MODEL TO A VRML SCENE                              **
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      integer(4),intent(IN) :: nfil
-      integer(4),intent(IN) :: n1
-      integer(4),intent(IN) :: n2
-      real(8)   ,intent(in) :: origin(3)
-      real(8)   ,intent(in) :: plane(3,2)
-      real(8)   ,intent(in) :: data(n1,n2)
-      real(8)   ,parameter  :: scale=10.d0
-      real(8)               :: rot(3,3)
-      real(8)               :: axis(3)
-      real(8)               :: angle
-      real(8)               :: d1,d2
-      real(8)               :: svar1,svar2,x
-      real(8)               :: color(3,n1,n2)
-      integer(4)            :: i,j
-      integer(4)            :: r,g,b
-      logical(4)            :: tinv
+      INTEGER(4),INTENT(IN) :: NFIL
+      INTEGER(4),INTENT(IN) :: N1
+      INTEGER(4),INTENT(IN) :: N2
+      REAL(8)   ,INTENT(IN) :: ORIGIN(3)
+      REAL(8)   ,INTENT(IN) :: PLANE(3,2)
+      REAL(8)   ,INTENT(IN) :: DATA(N1,N2)
+      REAL(8)   ,PARAMETER  :: SCALE=10.D0
+      REAL(8)               :: ROT(3,3)
+      REAL(8)               :: AXIS(3)
+      REAL(8)               :: ANGLE
+      REAL(8)               :: D1,D2
+      REAL(8)               :: SVAR1,SVAR2,X
+      REAL(8)               :: COLOR(3,N1,N2)
+      INTEGER(4)            :: I,J
+      INTEGER(4)            :: R,G,B
+      LOGICAL(4)            :: TINV
 !     **************************************************************************
-                             call trace$push('vrml$addrubbersheet')
-      d1=sqrt(sum(plane(:,1)**2))
-      d2=sqrt(sum(plane(:,2)**2))
-!     == construct rotation matrix =============================================
-!     == first direction is mapped onto x-axis
-!     == second direction is mapped onto z-axis
-      rot(:,1)=plane(:,1)/d1
-      rot(:,3)=plane(:,2)/d2
-      rot(1,2)=rot(2,3)*rot(3,1)-rot(3,3)*rot(2,1)
-      rot(2,2)=rot(3,3)*rot(1,1)-rot(1,3)*rot(3,1)
-      rot(3,2)=rot(1,3)*rot(2,1)-rot(2,3)*rot(1,1)
-!     == extract rotation angle ================================================
-!     == see http://www.euclideanspace.com/maths/geometry/rotations           ==
-!     ==                                           /conversions/matrixToAngle ==
-      call rotation$matrixtoangle(rot,axis,tinv)
-      angle=sqrt(sum(axis**2))
-      axis=axis/angle
+                             CALL TRACE$PUSH('VRML$ADDRUBBERSHEET')
+      D1=SQRT(SUM(PLANE(:,1)**2))
+      D2=SQRT(SUM(PLANE(:,2)**2))
+!     == CONSTRUCT ROTATION MATRIX =============================================
+!     == FIRST DIRECTION IS MAPPED ONTO X-AXIS
+!     == SECOND DIRECTION IS MAPPED ONTO Z-AXIS
+      ROT(:,1)=PLANE(:,1)/D1
+      ROT(:,3)=PLANE(:,2)/D2
+      ROT(1,2)=ROT(2,3)*ROT(3,1)-ROT(3,3)*ROT(2,1)
+      ROT(2,2)=ROT(3,3)*ROT(1,1)-ROT(1,3)*ROT(3,1)
+      ROT(3,2)=ROT(1,3)*ROT(2,1)-ROT(2,3)*ROT(1,1)
+!     == EXTRACT ROTATION ANGLE ================================================
+!     == SEE HTTP://WWW.EUCLIDEANSPACE.COM/MATHS/GEOMETRY/ROTATIONS           ==
+!     ==                                           /CONVERSIONS/MATRIXTOANGLE ==
+      CALL ROTATION$MATRIXTOANGLE(ROT,AXIS,TINV)
+      ANGLE=SQRT(SUM(AXIS**2))
+      AXIS=AXIS/ANGLE
 !
-!     == create color ===== ====================================================
-      color(:,:,:)=0.d0
-      svar1=minval(data)
-      svar2=maxval(data)
-      do i=1,n1
-        do j=1,n1
-          x=(data(i,j)-svar1)/(svar2-svar1)
-          call rgb$rainbow(x,r,g,b)
-          color(1,i,j)=real(r)/real(255)
-          color(2,i,j)=real(g)/real(255)
-          color(3,i,j)=real(b)/real(255)
-        enddo
-      enddo
+!     == CREATE COLOR ===== ====================================================
+      COLOR(:,:,:)=0.D0
+      SVAR1=MINVAL(DATA)
+      SVAR2=MAXVAL(DATA)
+      DO I=1,N1
+        DO J=1,N1
+          X=(DATA(I,J)-SVAR1)/(SVAR2-SVAR1)
+          CALL RGB$RAINBOW(X,R,G,B)
+          COLOR(1,I,J)=REAL(R)/REAL(255)
+          COLOR(2,I,J)=REAL(G)/REAL(255)
+          COLOR(3,I,J)=REAL(B)/REAL(255)
+        ENDDO
+      ENDDO
 !
-!     == create write model to scene ===========================================
-      write(nfil,*)'Transform{translation ',Origin,' rotation ',axis,angle
-      write(nfil,*)'children['
+!     == CREATE WRITE MODEL TO SCENE ===========================================
+      WRITE(NFIL,*)'TRANSFORM{TRANSLATION ',ORIGIN,' ROTATION ',AXIS,ANGLE
+      WRITE(NFIL,*)'CHILDREN['
 !
-!     == create rubbersheet ====================================================
-      write(nfil,*)'Shape{'
-      write(nfil,*)'  appearance Appearance {'
-      write(nfil,*)'    material Material {'
-      write(nfil,*)'      diffuseColor 0.8 0.4 0.0'
-      write(nfil,*)'      shininess 1'
-      write(nfil,*)'    } # close Material'
-      write(nfil,*)'  }   # close Appearance'
-      write(nfil,*)'  geometry ElevationGrid {'
-      write(nfil,*)'    xDimension ',n1
-      write(nfil,*)'    zDimension ',n2
-      write(nfil,*)'    xSpacing ',d1/real(n1-1)
-      write(nfil,*)'    zSpacing ',d2/real(n2-1)
-      write(nfil,*)'    solid FALSE # makes sheet visible from both sides'   
-      write(nfil,*)'    creaseAngle 3 # smoothening'
-      write(nfil,*)'    color Color {color ['
-      write(nfil,fmt='(5(3f10.5," , "))')color
-      write(nfil,*)'      ]  # end of color'
-      write(nfil,*)'    }    # end of Color'
-      write(nfil,*)'    height ['
-      write(nfil,fmt='(20f10.5)')-data*scale
-      write(nfil,*)'    ]}}]}'  !end of height,geometry,Shape,children,Transform
-                             call trace$pop()
-      return
-      end
+!     == CREATE RUBBERSHEET ====================================================
+      WRITE(NFIL,*)'SHAPE{'
+      WRITE(NFIL,*)'  APPEARANCE APPEARANCE {'
+      WRITE(NFIL,*)'    MATERIAL MATERIAL {'
+      WRITE(NFIL,*)'      DIFFUSECOLOR 0.8 0.4 0.0'
+      WRITE(NFIL,*)'      SHININESS 1'
+      WRITE(NFIL,*)'    } # CLOSE MATERIAL'
+      WRITE(NFIL,*)'  }   # CLOSE APPEARANCE'
+      WRITE(NFIL,*)'  GEOMETRY ELEVATIONGRID {'
+      WRITE(NFIL,*)'    XDIMENSION ',N1
+      WRITE(NFIL,*)'    ZDIMENSION ',N2
+      WRITE(NFIL,*)'    XSPACING ',D1/REAL(N1-1)
+      WRITE(NFIL,*)'    ZSPACING ',D2/REAL(N2-1)
+      WRITE(NFIL,*)'    SOLID FALSE # MAKES SHEET VISIBLE FROM BOTH SIDES'   
+      WRITE(NFIL,*)'    CREASEANGLE 3 # SMOOTHENING'
+      WRITE(NFIL,*)'    COLOR COLOR {COLOR ['
+      WRITE(NFIL,FMT='(5(3F10.5," , "))')COLOR
+      WRITE(NFIL,*)'      ]  # END OF COLOR'
+      WRITE(NFIL,*)'    }    # END OF COLOR'
+      WRITE(NFIL,*)'    HEIGHT ['
+      WRITE(NFIL,FMT='(20F10.5)')-DATA*SCALE
+      WRITE(NFIL,*)'    ]}}]}'  !END OF HEIGHT,GEOMETRY,SHAPE,CHILDREN,TRANSFORM
+                             CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE vrml$addballstick(nfil,NAT,Z,R)
+      SUBROUTINE VRML$ADDBALLSTICK(NFIL,NAT,Z,R)
 !     **************************************************************************
-!     **  add a ball-stick model to a vrml scene                              **
+!     **  ADD A BALL-STICK MODEL TO A VRML SCENE                              **
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: nfil
+      INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
       REAL(8)   ,INTENT(IN) :: Z(NAT)    !ATOMIC NUMBER
       REAL(8)   ,INTENT(IN) :: R(3,NAT)
-      real(8)   ,parameter  :: scaleball=0.6d0
-      real(8)   ,parameter  :: bonddiameter=0.2d0
-      real(8)   ,parameter  :: bondlengthcutoff=1.3d0
-      real(8)   ,parameter  :: bondcolor(3)=(/0.3d0,0.3d0,0.3d0/)
-      integer(4)            :: iat,iat1,iat2
-      real(8)               :: rad,rad1,rad2
-      real(8)               :: color(3)
-      integer(4)            :: ivec(3)
-      real(8)               :: dr(3),r1(3),r2(3)
-      real(8)               :: dis
-      real(8)               :: axis(3),angle
+      REAL(8)   ,PARAMETER  :: SCALEBALL=0.6D0
+      REAL(8)   ,PARAMETER  :: BONDDIAMETER=0.2D0
+      REAL(8)   ,PARAMETER  :: BONDLENGTHCUTOFF=1.3D0
+      REAL(8)   ,PARAMETER  :: BONDCOLOR(3)=(/0.3D0,0.3D0,0.3D0/)
+      INTEGER(4)            :: IAT,IAT1,IAT2
+      REAL(8)               :: RAD,RAD1,RAD2
+      REAL(8)               :: COLOR(3)
+      INTEGER(4)            :: IVEC(3)
+      REAL(8)               :: DR(3),R1(3),R2(3)
+      REAL(8)               :: DIS
+      REAL(8)               :: AXIS(3),ANGLE
 !     **************************************************************************
 !
-!      == create balls =========================================================
-       do iat=1,nat
+!      == CREATE BALLS =========================================================
+       DO IAT=1,NAT
          CALL PERIODICTABLE$GET(NINT(Z(IAT)),'R(COV)',RAD)
          CALL ATOMCOLOR(NINT(Z(IAT)),IVEC)
          COLOR(:)=REAL(IVEC,KIND=8)/255.D0
-         write(nfil,*)'Transform{'
-         write(nfil,*)'  translation ',r(:,iat)
-         write(nfil,*)'  children['
-         write(nfil,*)'    Shape{'
-         write(nfil,*)'      appearance Appearance {'
-         write(nfil,*)'        material Material {'
-         write(nfil,*)'          diffuseColor ',color
-         write(nfil,*)'          shininess 1'
-         write(nfil,*)'          transparency 0.5'
-         write(nfil,*)'        } # close Material'
-         write(nfil,*)'      } # close appearance'
-         write(nfil,*)'      geometry Sphere{ radius ',rad*scaleball,'}'
-         write(nfil,*)'    }   # close Shape'
-         write(nfil,*)'  ]     # close children'
-         write(nfil,*)'}       # close Transform'
-       enddo
+         WRITE(NFIL,*)'TRANSFORM{'
+         WRITE(NFIL,*)'  TRANSLATION ',R(:,IAT)
+         WRITE(NFIL,*)'  CHILDREN['
+         WRITE(NFIL,*)'    SHAPE{'
+         WRITE(NFIL,*)'      APPEARANCE APPEARANCE {'
+         WRITE(NFIL,*)'        MATERIAL MATERIAL {'
+         WRITE(NFIL,*)'          DIFFUSECOLOR ',COLOR
+         WRITE(NFIL,*)'          SHININESS 1'
+         WRITE(NFIL,*)'          TRANSPARENCY 0.5'
+         WRITE(NFIL,*)'        } # CLOSE MATERIAL'
+         WRITE(NFIL,*)'      } # CLOSE APPEARANCE'
+         WRITE(NFIL,*)'      GEOMETRY SPHERE{ RADIUS ',RAD*SCALEBALL,'}'
+         WRITE(NFIL,*)'    }   # CLOSE SHAPE'
+         WRITE(NFIL,*)'  ]     # CLOSE CHILDREN'
+         WRITE(NFIL,*)'}       # CLOSE TRANSFORM'
+       ENDDO
 !
-!      == create bonds =========================================================
-       do iat1=1,nat
+!      == CREATE BONDS =========================================================
+       DO IAT1=1,NAT
          CALL PERIODICTABLE$GET(NINT(Z(IAT1)),'R(COV)',RAD1)
-         do iat2=iat1+1,nat
+         DO IAT2=IAT1+1,NAT
            CALL PERIODICTABLE$GET(NINT(Z(IAT2)),'R(COV)',RAD2)
-           dr(:)=r(:,iat2)-r(:,iat1)
-           dis=sqrt(sum(dr**2))
-           if(dis/(rad1+rad2).gt.bondlengthcutoff) cycle           
-           dr(:)=dr(:)/dis
-           r1(:)=r(:,iat1)+rad1*scaleball*1.001d0*dr(:)
-           r2(:)=r(:,iat2)-rad2*scaleball*1.001d0*dr(:)
-           angle=-acos(dr(2))   ! original orientation (0,1,0)
-           axis(1)=-dr(3)
-           axis(2)=0.d0
-           axis(3)=dr(1)
-           axis=axis/sqrt(sum(axis**2))
-           write(nfil,*)'Transform{'
-           write(nfil,*)'  translation ',0.5d0*(r1(:)+r2(:))
-           write(nfil,*)'  rotation    ',axis,angle
-           write(nfil,*)'  children ['
-           write(nfil,*)'    Shape{'
-           write(nfil,*)'      appearance Appearance {'
-           write(nfil,*)'        material Material {'
-           write(nfil,*)'          diffuseColor ',bondcolor
-           write(nfil,*)'          shininess 1'
-           write(nfil,*)'          transparency 0.7'
-           write(nfil,*)'        } # close Material'
-           write(nfil,*)'      }   # close Appearance'
-           write(nfil,*)'      geometry Cylinder{'
-           write(nfil,*)'        radius ',bonddiameter
-           write(nfil,*)'        height ',sqrt(sum((r2-r1)**2))
-           write(nfil,*)'      }   # close geometry'
-           write(nfil,*)'    }     # close Shape'
-           write(nfil,*)'  ]       # close children'
-           write(nfil,*)'}         # close Transform'
-         enddo
-       enddo
+           DR(:)=R(:,IAT2)-R(:,IAT1)
+           DIS=SQRT(SUM(DR**2))
+           IF(DIS/(RAD1+RAD2).GT.BONDLENGTHCUTOFF) CYCLE           
+           DR(:)=DR(:)/DIS
+           R1(:)=R(:,IAT1)+RAD1*SCALEBALL*1.001D0*DR(:)
+           R2(:)=R(:,IAT2)-RAD2*SCALEBALL*1.001D0*DR(:)
+           ANGLE=-ACOS(DR(2))   ! ORIGINAL ORIENTATION (0,1,0)
+           AXIS(1)=-DR(3)
+           AXIS(2)=0.D0
+           AXIS(3)=DR(1)
+           AXIS=AXIS/SQRT(SUM(AXIS**2))
+           WRITE(NFIL,*)'TRANSFORM{'
+           WRITE(NFIL,*)'  TRANSLATION ',0.5D0*(R1(:)+R2(:))
+           WRITE(NFIL,*)'  ROTATION    ',AXIS,ANGLE
+           WRITE(NFIL,*)'  CHILDREN ['
+           WRITE(NFIL,*)'    SHAPE{'
+           WRITE(NFIL,*)'      APPEARANCE APPEARANCE {'
+           WRITE(NFIL,*)'        MATERIAL MATERIAL {'
+           WRITE(NFIL,*)'          DIFFUSECOLOR ',BONDCOLOR
+           WRITE(NFIL,*)'          SHININESS 1'
+           WRITE(NFIL,*)'          TRANSPARENCY 0.7'
+           WRITE(NFIL,*)'        } # CLOSE MATERIAL'
+           WRITE(NFIL,*)'      }   # CLOSE APPEARANCE'
+           WRITE(NFIL,*)'      GEOMETRY CYLINDER{'
+           WRITE(NFIL,*)'        RADIUS ',BONDDIAMETER
+           WRITE(NFIL,*)'        HEIGHT ',SQRT(SUM((R2-R1)**2))
+           WRITE(NFIL,*)'      }   # CLOSE GEOMETRY'
+           WRITE(NFIL,*)'    }     # CLOSE SHAPE'
+           WRITE(NFIL,*)'  ]       # CLOSE CHILDREN'
+           WRITE(NFIL,*)'}         # CLOSE TRANSFORM'
+         ENDDO
+       ENDDO
       RETURN
       END
 !!$!
 !!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE WRITEgnuFILE(NFIL,l1,l2,n1,n2,data)
+!!$      SUBROUTINE WRITEGNUFILE(NFIL,L1,L2,N1,N2,DATA)
 !!$!     **************************************************************************
-!!$!     **  write a gnuplot file                                                **
+!!$!     **  WRITE A GNUPLOT FILE                                                **
 !!$!     **                                                                      **
-!!$!     ** remark:                                                              **
-!!$!     ** units written are abohr, consistent with avogadro's implementation.  **
-!!$!     ** the specs require N1,N2,N3 to be multiplied by -1 if abohr are used  **
-!!$!     ** and angstrom is the unit if they are positive.                       **
+!!$!     ** REMARK:                                                              **
+!!$!     ** UNITS WRITTEN ARE ABOHR, CONSISTENT WITH AVOGADRO'S IMPLEMENTATION.  **
+!!$!     ** THE SPECS REQUIRE N1,N2,N3 TO BE MULTIPLIED BY -1 IF ABOHR ARE USED  **
+!!$!     ** AND ANGSTROM IS THE UNIT IF THEY ARE POSITIVE.                       **
 !!$!     **************************************************************************
 !!$      IMPLICIT NONE
 !!$      INTEGER(4),INTENT(IN) :: NFIL
 !!$      INTEGER(4),INTENT(IN) :: N1,N2
-!!$      REAL(8)   ,INTENT(IN) :: l1,l2
+!!$      REAL(8)   ,INTENT(IN) :: L1,L2
 !!$      REAL(8)   ,INTENT(IN) :: DATA(N1,N2)
 !!$      REAL(8)               :: ANGSTROM
 !!$      INTEGER(4)            :: I,J,K
 !!$!     **************************************************************************
-!!$      write(nfil,fmt='("set style line 1 lt 1 lc rgb "black" lw 1")')
-!!$      write(nfil,fmt='("set palette rgbformula 22,13,-31")')
-!!$      write(nfil,fmt='("set xrange [",f10.5,":",f10.5]")')0.d0,l1
-!!$      write(nfil,fmt='("set yrange [",f10.5,":",f10.5"]")')0.d0,l2
-!!$      write(nfil,fmt='("set zrange [-0.015:0.3]")')
-!!$      write(nfil,fmt='("set dgrid3d  60,60,1")')
-!!$      write(nfil,fmt='("set cntrparam levels incremental -0.2,0.01,0.2")')
-!!$      write(nfil,fmt='("set surface")')
-!!$      write(nfil,fmt='("set hidden3d")')
-!!$      write(nfil,fmt='("set data style lines")')
-!!$      write(nfil,fmt='("set view 30, 20, 1.0, 2.5")')
-!!$      write(nfil,fmt='("set xyplane at 0.")')
-!!$      write(nfil,fmt='("unset border")')
-!!$      write(nfil,fmt='("unset xtics")')
-!!$      write(nfil,fmt='("unset ytics"0')
-!!$      write(nfil,fmt='("unset ztics")')
-!!$      write(nfil,fmt='("set key off"0')
-!!$      write(nfil,fmt='("set pm3d explicit hidden3d 1")')
-!!$      write(nfil,fmt='("splot "ntb2d_iat1s.dat" with pm3d")')
+!!$      WRITE(NFIL,FMT='("SET STYLE LINE 1 LT 1 LC RGB "BLACK" LW 1")')
+!!$      WRITE(NFIL,FMT='("SET PALETTE RGBFORMULA 22,13,-31")')
+!!$      WRITE(NFIL,FMT='("SET XRANGE [",F10.5,":",F10.5]")')0.D0,L1
+!!$      WRITE(NFIL,FMT='("SET YRANGE [",F10.5,":",F10.5"]")')0.D0,L2
+!!$      WRITE(NFIL,FMT='("SET ZRANGE [-0.015:0.3]")')
+!!$      WRITE(NFIL,FMT='("SET DGRID3D  60,60,1")')
+!!$      WRITE(NFIL,FMT='("SET CNTRPARAM LEVELS INCREMENTAL -0.2,0.01,0.2")')
+!!$      WRITE(NFIL,FMT='("SET SURFACE")')
+!!$      WRITE(NFIL,FMT='("SET HIDDEN3D")')
+!!$      WRITE(NFIL,FMT='("SET DATA STYLE LINES")')
+!!$      WRITE(NFIL,FMT='("SET VIEW 30, 20, 1.0, 2.5")')
+!!$      WRITE(NFIL,FMT='("SET XYPLANE AT 0.")')
+!!$      WRITE(NFIL,FMT='("UNSET BORDER")')
+!!$      WRITE(NFIL,FMT='("UNSET XTICS")')
+!!$      WRITE(NFIL,FMT='("UNSET YTICS"0')
+!!$      WRITE(NFIL,FMT='("UNSET ZTICS")')
+!!$      WRITE(NFIL,FMT='("SET KEY OFF"0')
+!!$      WRITE(NFIL,FMT='("SET PM3D EXPLICIT HIDDEN3D 1")')
+!!$      WRITE(NFIL,FMT='("SPLOT "NTB2D_IAT1S.DAT" WITH PM3D")')
 !!$      RETURN
 !!$      END
