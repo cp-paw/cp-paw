@@ -155,7 +155,7 @@
        REAL(8)      ,ALLOCATABLE :: COLOR(:,:)
        INTEGER(4)                :: NBOND
        INTEGER(4)   ,ALLOCATABLE :: BOND(:,:)
-       LOGICAL(4)                :: TCHK
+       LOGICAL(4)                :: TCHK,tchk1
        INTEGER(4)                :: NATM
        INTEGER(4)                :: IAT
        INTEGER(4)                :: IVEC(3)
@@ -163,14 +163,15 @@
        logical(4)                :: tplane
        logical(4)                :: tc
        real(8)                   :: xk(3)
-!      ******************************************************************
+       real(8)                   :: svar
+!      *************************************************************************
        CALL TRACE$PUSH('MWAVE')
        LL_CNTL=LL_CNTL_
        LL_STRC=LL_STRC_
 !
-!      ==================================================================
-!      ==  READ INPUT FILE                                             ==
-!      ==================================================================
+!      =========================================================================
+!      ==  READ INPUT FILE                                                    ==
+!      =========================================================================
        CALL TRACE$PASS('READING WAVEPLOT')
        CALL FILEHANDLER$UNIT('WAVE',NFIL)
        call READWAVEPLOTdim(NFIL,TITLE,NAT,nr1,nr2,nr3,tc)
@@ -179,16 +180,42 @@
        ALLOCATE(ATOMNAME(NAT))
        if(tc) then
          ALLOCATE(CWAVE(NR1,NR2,NR3))
-         CALL READWAVEPLOTC(NFIL,TITLE,RBAS,NAT,POS,Z,ATOMNAME,xk,NR1,NR2,NR3,cWAVE)
+         CALL READWAVEPLOTC(NFIL,TITLE,RBAS,NAT,POS,Z,ATOMNAME,xk &
+      &                    ,NR1,NR2,NR3,cWAVE)
+         ALLOCATE(WAVE(NR1,NR2,NR3))
+         wave=real(cwave)
        else
          ALLOCATE(WAVE(NR1,NR2,NR3))
-         CALL READWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,ATOMNAME,xk,NR1,NR2,NR3,WAVE)
+         CALL READWAVEPLOT(NFIL,TITLE,RBAS,NAT,POS,Z,ATOMNAME,xk &
+      &                   ,NR1,NR2,NR3,WAVE)
        end if
        CALL TRACE$PASS('WAVEPLOT FILE READ')
 !
-!      ==================================================================
-!      ==  GET VIEWBOX                                                 ==
-!      ==================================================================
+!      =========================================================================
+!      ==  set minimum and maximum values                                     ==
+!      =========================================================================
+       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+       CALL LINKEDLIST$SELECT(LL_CNTL,'WCNTL')
+       CALL LINKEDLIST$EXISTL(LL_CNTL,'GENERIC',1,TCHK)
+       IF(TCHK) THEN
+         CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'MIN',1,TCHK1)
+         IF(TCHK1) THEN
+           CALL LINKEDLIST$GET(LL_CNTL,'MIN',1,SVAR)
+           WAVE=MAX(WAVE,SVAR)
+           IF(TC)CWAVE=CMPLX(MAX(REAL(CWAVE),SVAR),MAX(AIMAG(CWAVE),SVAR))
+         END IF     
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'MAX',1,TCHK1)
+         IF(TCHK1) THEN
+           CALL LINKEDLIST$GET(LL_CNTL,'MAX',1,SVAR)
+           WAVE=MIN(WAVE,SVAR)
+           IF(TC)CWAVE=CMPLX(MIN(REAL(CWAVE),SVAR),MIN(AIMAG(CWAVE),SVAR))
+         END IF     
+       END IF
+!
+!      =========================================================================
+!      ==  GET VIEWBOX                                                        ==
+!      =========================================================================
        CALL LINKEDLIST$SELECT(LL_CNTL,'~')
        CALL LINKEDLIST$SELECT(LL_CNTL,'WCNTL')
        CALL LINKEDLIST$SELECT(LL_CNTL,'VIEWBOX')
@@ -221,15 +248,12 @@
 !      ==================================================================
 !      ==  WRITE DENSITY TO CUBE FILE                                  ==
 !      ==================================================================
-!       if(.not.tc) then
-         CALL TRACE$PASS('WRITE WAVE TO CUBE-FILE')
-         CALL FILEHANDLER$UNIT('CUBE',NFIL)
-         REWIND NFIL
-allocate(wave(nr1,nr2,nr3))
-wave=real(cwave)
-         CALL MAKECUBE(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE,BOXR0,BOXVEC)
-         CALL FILEHANDLER$CLOSE('CUBE')
-!       end if
+!      == attention! only real part is used
+       CALL TRACE$PASS('WRITE WAVE TO CUBE-FILE')
+       CALL FILEHANDLER$UNIT('CUBE',NFIL)
+       REWIND NFIL
+       CALL MAKECUBE(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE,BOXR0,BOXVEC)
+       CALL FILEHANDLER$CLOSE('CUBE')
 !
 !      ==================================================================
 !      ==  WRITE vrml scene TO wrl FILE                                ==
@@ -237,11 +261,11 @@ wave=real(cwave)
        CALL TRACE$PASS('WRITE WAVE TO vrml-FILE')
        CALL FILEHANDLER$UNIT('VRML',NFIL)
        REWIND NFIL
-       if(tplane.and.(.not.tc)) then
-         CALL MAKEgnu(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE,BOXR0,BOXVEC)
+       if(tplane) then
+!         == attention! only real part is used
+         CALL MAKEgnu(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE,planeR0,planeVEC)
        end if
        if(tc) then
-print*,'xk ',xk
          CALL MAKEVRMLc(NFIL,NAT,Z,POS,RBAS,xk,NR1,NR2,NR3,cWAVE &
       &             ,BOXR0,BOXVEC,tplane,planer0,planevec)
        else
@@ -249,7 +273,6 @@ print*,'xk ',xk
       &             ,BOXR0,BOXVEC,tplane,planer0,planevec)
        end if
        CALL FILEHANDLER$CLOSE('VRML')
-stop 'forced'
 !
 !      ==================================================================
 !      ==  WRITE DENSITY TO DATAEXPLORER FILE                          ==
@@ -1347,10 +1370,11 @@ stop 'forced'
       INTEGER(4),INTENT(IN) :: Nr1,Nr2,Nr3 ! # grid points on the periodic grid
       REAL(8)   ,INTENT(IN) :: wave(Nr1,Nr2,Nr3) ! periodic density data
       REAL(8)   ,INTENT(IN) :: ORIGIN(3)  ! corner of the new grid
-      REAL(8)   ,INTENT(IN) :: BOX(3,3)   ! vectors spanning the new grid
-      integer(4),parameter  :: n1=30      ! displacement
-      integer(4),parameter  :: n2=30
+      REAL(8)   ,INTENT(IN) :: BOX(3,2)   ! vectors spanning the new grid
+      integer(4),parameter  :: n1=60      ! displacement
+      integer(4),parameter  :: n2=60
       integer(4),parameter  :: n3=1
+      real(8)               :: box3d(3,3)
       real(8)               :: data(n1,n2,n3)
       integer(4)            :: i,j
 !     **************************************************************************
@@ -1359,17 +1383,30 @@ stop 'forced'
 !     ==========================================================================
 !     ==  interpolate wave function onto viewing grid                         ==
 !     ==========================================================================
-      call mapfieldtogrid(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX,n1,n2,n3,data)
-
-open(99,file='gnudata')
-do i=1,n1
-  do j=1,n2
-    write(99,*)(real(i-1)/real(n1-1)-0.5d0)*sqrt(sum(box(:,1)**2)) &
-   &          ,(real(j-1)/real(n2-1)-0.5d0)*sqrt(sum(box(:,2)**2)) &
-   &          ,data(i,j,1)
-  enddo
-enddo
-close(99)
+      box3d=0.d0  ! only needed because mapfieldtogrid expects a 3d box
+      box3d(:,:2)=box  
+      call mapfieldtogrid(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX3d,n1,n2,n3,data)
+!
+!     ==========================================================================
+!     ==  write data field  (will be accessed by rubbersheet.gnu)             ==
+!     ==========================================================================
+      open(99,file='gnudata')
+      do i=1,n1
+        do j=1,n2
+          write(99,*)(real(i-1)/real(n1-1)-0.5d0)*sqrt(sum(box(:,1)**2)) &
+     &              ,(real(j-1)/real(n2-1)-0.5d0)*sqrt(sum(box(:,2)**2)) &
+     &              ,data(i,j,1)
+        enddo
+      enddo
+      close(99)
+!
+!     ==========================================================================
+!     ==  write gnuplot file rubbersheet.gnu                                  ==
+!     ==========================================================================
+!     ==  remark "set data style lines" is not recognized any more
+!     ==  remark "set dgrid3d  60,60,1" does not poperly interpolate
+!     ==  z-range (data) remark "set dgrid3d  60,60,1" does not poperly 
+!     ==  interpolate
       open(99,file='rubbersheet.gnu')
       write(99,*)'#'                                                     
       write(99,*)'#================================================='      
@@ -1409,7 +1446,7 @@ close(99)
       write(99,*)'#================================================='
       write(99,*)'set surface'                                           
       write(99,*)'set hidden3d'                                          
-      write(99,*)'set data style lines'                                  
+      write(99,*)'#set data style lines'                                  
       write(99,*)'# places the zero of the z-axis into the xy plane'     
       write(99,*)'set xyplane at 0.'                                     
       write(99,*)'# remove axes'                                         
