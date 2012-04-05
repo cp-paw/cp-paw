@@ -1,6 +1,6 @@
 MODULE LMTO_MODULE
 TYPE HYBRIDSETTING_TYPE
-  LOGICAL(4)  :: ACTIVE    ! CONSIDER HYBRID CONTRIBUTION ON THIS ATOM
+  LOGICAL(4)  :: ACTIVE=.false.    ! CONSIDER HYBRID CONTRIBUTION ON THIS ATOM
   LOGICAL(4)  :: TCV        ! INCLUDE CORE VALENCE EXCHANGE
   LOGICAL(4)  :: TNDDO      ! INCLUDE NDDO OFFSITE EXCHANGE TERMS
   LOGICAL(4)  :: T31        ! INCLUDE 31 OFFSITE EXCHANGE TERMS 
@@ -751,14 +751,11 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !     ==========================================================================
 !     ==  CONSTRUCT OFFSITE INTEGRALS OF TAILED ORBITALS                      ==
 !     ==========================================================================
-!      CALL LMTO_OFFXINT()
+      CALL LMTO_OFFXINT()
 !warning lmto_offxint must be switched on again
-print*,'warning!! lmto_offxint must be switched on again'
+!print*,'warning!! lmto_offxint must be switched on again'
 
-
-
-
-!      Call LMTO_TAILEDPRODUCTS()
+!      Call LMTO_TAILEDPRODUCTS()ßoffxint
 !!$!
 !!$!     ==========================================================================
 !!$!     == DETERMINE GAUSS EXPANSION OF UNSCREENED HANKEL FUNCTIONS KPRIME      ==
@@ -3464,7 +3461,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     ==========================================================================
       call lmto_testorbitals()
 !warning "call lmto_offxint()" must be switched on again (Line 3466)
-stop 'forced after testing'
+!stop 'forced after testing'
 !
 !     ==========================================================================
 !     == Write DMFT interface 
@@ -3485,11 +3482,11 @@ stop 'forced after testing'
 !     ==========================================================================
 !     ==  write some info
 !     ==========================================================================
-      CALL LMTO_PLOTNTBO('TAILED,CUBE',1,1)   !(TYPE,IAT,LMN)
-      CALL LMTO_PLOTNTBO('TAILED,STAR',1,1)   !(TYPE,IAT,LMN)
-      CALL LMTO_PLOTNTBO('FULL,CUBE',1,1)   !(TYPE,IAT,LMN)
-      CALL LMTO_PLOTNTBO('FULL,STAR',1,1)   !(TYPE,IAT,LMN)
-stop 'forced after plotntbo'
+!!$      CALL LMTO_PLOTNTBO('TAILED,CUBE',1,1)   !(TYPE,IAT,LMN)
+!!$      CALL LMTO_PLOTNTBO('TAILED,STAR',1,1)   !(TYPE,IAT,LMN)
+!!$      CALL LMTO_PLOTNTBO('FULL,CUBE',1,1)   !(TYPE,IAT,LMN)
+!!$      CALL LMTO_PLOTNTBO('FULL,STAR',1,1)   !(TYPE,IAT,LMN)
+!!$stop 'forced after plotntbo'
 
 !!$      CALL LMTO$REPORTPOTBAR(6)
 !!$      CALL LMTO$REPORTSBAR(6)
@@ -10396,6 +10393,7 @@ CALL TEST_LMTO$STRUCTURECONSTANTS()
       integer(4)              :: nfil
       integer(4)              :: i,j
 !     **************************************************************************
+                                      call trace$push('LMTO_plotntbo')
       IF(INDEX(TYPE,'TAILED').NE.0) THEN
         TTAILED=.TRUE.
       ELSE IF(INDEX(TYPE,'FULL').NE.0) THEN
@@ -10524,6 +10522,7 @@ CALL TEST_LMTO$STRUCTURECONSTANTS()
       END IF
       CALL FILEHANDLER$CLOSE('HOOK')
       CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOK')
+                                      call trace$pop()
       return
       end
 !

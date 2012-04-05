@@ -2232,16 +2232,17 @@ ENDDO
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$EPOT(PSI,HPSI,EPOT)
 !     **************************************************************************
-!     **                                                                      **
 !     **  EPOT=<PSI|HPSI>/<PSI|PSI>                                           **
 !     **                                                                      **
+!     **  remark: psi and hpsi are intent(inout) only because of the clean    **
+!     **          function in ci$scalarproduct. Values remain unchanged       **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
-      TYPE(CISTATE_TYPE),INTENT(IN) :: PSI
-      TYPE(CISTATE_TYPE),INTENT(IN) :: HPSI
-      REAL(8)           ,INTENT(OUT):: EPOT
-      COMPLEX(8)                    :: CSVAR
+      TYPE(CISTATE_TYPE),INTENT(INout) :: PSI
+      TYPE(CISTATE_TYPE),INTENT(INout) :: HPSI
+      REAL(8)           ,INTENT(OUT)   :: EPOT
+      COMPLEX(8)                       :: CSVAR
 !     **************************************************************************
       CALL CI$SCALARPRODUCT(PSI,HPSI,CSVAR)
       EPOT=REAL(CSVAR)
@@ -2471,8 +2472,8 @@ print*,'after iteration'
       H(:,:)=0.D0
       LAMBDA(:,:)=0.D0
       IND=0
-      DO I=1,NCHI
-        DO J=1,NCHI
+      DO j=1,NCHI    ! bugfix Mar.22, 20012: indices i,j reversed. PB
+        DO i=1,NCHI
           IND=IND+1
           IF(J.GE.I) THEN
             H(I,J)=H(I,J)+CMPLX(VECSUM(IND),0.D0)
@@ -2483,8 +2484,8 @@ print*,'after iteration'
           END IF
         ENDDO
       ENDDO
-      DO I=1,NPSI
-        DO J=1,NPSI
+      DO j=1,NPSI  ! bugfix Mar.22, 20012: indices i,j reversed. PB 
+        DO i=1,NPSI
           IND=IND+1
           IF(J.GE.I) THEN
             LAMBDA(J,I)=LAMBDA(J,I)+CMPLX(VECSUM(IND),0.D0)
@@ -3212,6 +3213,7 @@ PRINT*,'..........................TRANSFORMATION DONE'
       ENDDO
       X0(:)=SQRT(P0(:))
       XM(:)=X0(:)
+! hier unterscheidet sich Christian's version stark von meiner. PB
 !
 !     ==========================================================================
 !     == ITERATE TO FIND GROUND STATE                                         ==

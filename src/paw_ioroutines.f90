@@ -3764,7 +3764,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       LOGICAL(4)               :: THYBRID
       LOGICAL(4)               :: Tntbo
       LOGICAL(4)               :: TINTERNALSETUP
-      LOGICAL(4),ALLOCATABLE   :: TORB(:)
       REAL(8)                  :: EV
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES')
@@ -3965,7 +3964,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL LINKEDLIST$EXISTD(LL_STRC,'OLD',1,TCHK)
           IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_STRC,'OLD',1,TCHK)
-          CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U(OLD)')
+            CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U(OLD)')
           END IF
 !
 !         == RANGE OF LOCAL ORBITALS ===========================================
