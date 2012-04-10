@@ -1611,7 +1611,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)   ,INTENT(IN) :: A(N,N)    ! MATRIX TO BE INVERTED
       REAL(8)   ,INTENT(IN) :: smin      ! min singular value to be considered
       REAL(8)   ,INTENT(OUT):: AINV(N,N) ! INVERTED MATRIX
-      LOGICAL   ,PARAMETER  :: TTEST=.false.
+      LOGICAL   ,PARAMETER  :: TTEST=.true.
       COMPLEX(8),ALLOCATABLE:: RES(:,:)
       REAL(8)               :: DEV
       INTEGER(4)            :: I
@@ -1634,7 +1634,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       DO I=1,N
         U(:,I)=U(:,I)*S(I)
       ENDDO
-      AINV(:,:)=MATMUL(U,V)
+      AINV(:,:)=transpose(MATMUL(U,V))
 #ENDIF
 !
 !     ==========================================================================
@@ -1658,9 +1658,10 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$SVDR8(M,N,A,U,S,V)
+      SUBROUTINE LIB$SVDR8(M,N,A,U,S,Vt)
 !     **************************************************************************
 !     **  SINGULAR VALUE DECOMPOSITION OF THE MXN MATRIX A                    **
+!     **  a = u * s * vt
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: m         ! DIMENSION OF THE MATRIX
@@ -1668,12 +1669,12 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)   ,INTENT(IN) :: A(m,n)    ! MATRIX TO BE INVERTED
       REAL(8)   ,INTENT(OUT):: u(m,m)    ! left hand orthogonal vectors
       REAL(8)   ,INTENT(OUT):: s(m)      ! singular vectors
-      REAL(8)   ,INTENT(OUT):: v(n,n)    ! right-hand orthogonal vectors
+      REAL(8)   ,INTENT(OUT):: vt(n,n)   ! transposed right-hand orthogonal vectors
 !     **************************************************************************
 #IF DEFINED(CPPVAR_LAPACK_ESSL)
       CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
 #ELSE 
-      CALL LIB_LAPACK_DGESVD(m,N,A,U,S,V)
+      CALL LIB_LAPACK_DGESVD(m,N,A,U,S,Vt)
 #ENDIF
       RETURN
       END
@@ -2754,10 +2755,10 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END SUBROUTINE LIB_LAPACK_ZGETRI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_LAPACK_DGESVD(N,M,A,U,S,V)
+      SUBROUTINE LIB_LAPACK_DGESVD(N,M,A,U,S,Vt)
 !     **************************************************************************
 !     ** SINGULAR VALUE DECOMPOSITION OF THE NON-SQUARE MATRIX A              **
-!     ** A=U*SIGMA*V  
+!     ** A=U*SIGMA*Vt  
 !     **  SIGMA IS AN M-TIMES-N DIAGONAL MATRIX WITH DIAGONAL ELEMENTS S(I)   **
 !     **************************************************************************
       IMPLICIT NONE
@@ -2765,7 +2766,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER(4),INTENT(IN)  :: N
       REAL(8)   ,INTENT(IN)  :: A(M,N)
       REAL(8)   ,INTENT(OUT) :: U(M,M)
-      REAL(8)   ,INTENT(OUT) :: V(N,N)
+      REAL(8)   ,INTENT(OUT) :: Vt(N,N)
       REAL(8)   ,INTENT(OUT) :: S(M)     ! SINGULAR VALUES IN DESCENDING ORDER
       REAL(8)   ,ALLOCATABLE :: WORK(:)
       REAL(8)                :: ACOPY(M,N)
@@ -2778,9 +2779,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
       ACOPY=A  ! ACOPY WILL BE OVERWRITTEN
       S=0.D0
       U=0.D0
-      V=0.D0
+      Vt=0.D0
       WORK=0.D0
-      CALL DGESVD('A','A',M,N,ACOPY,M,S,U,M,V,N,WORK,LWORK,INFO)
+      CALL DGESVD('A','A',M,N,ACOPY,M,S,U,M,Vt,N,WORK,LWORK,INFO)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('THE I-TH ARGUMENT JHAS AN ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)
