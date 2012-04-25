@@ -33,6 +33,7 @@ usage: "pawshow option rootname [outfile]"\n\n
 \t -h: give info about use\n
 \t -e: plot static total energy\n
 \t -t: plot temperature in kelvin\n
+\t -c+e: plot conserved energy and total energy\n
 \t -c: plot conserved energy\n
 \t -f: plot fictitious kinetic wave function energy\n
 \t -ar: plot friction acting on the nuclei\n
@@ -59,6 +60,9 @@ case $1 in
     ;;
 "-c")# show conserved energy 
     grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $7}' >${TEMPDIR}tmp2
+    ;;
+"-c+e")# show conserved energy and total energy
+    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $7 " " $6}' >${TEMPDIR}tmp2
     ;;
 "-ap")# show friction acting on the wavefunctions
     grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $8}' >${TEMPDIR}tmp2

@@ -5061,21 +5061,26 @@ DEALLOCATE(ZA1)
       nnd=size(denmat)
       if(.not.allocated(overlap)) then
         allocate(overlap(nnd))
-        do nn=1,nnd
-          overlap(nn)%iat1=denmat(nn)%iat1
-          overlap(nn)%iat2=denmat(nn)%iat2
-          overlap(nn)%it  =denmat(nn)%it
-          overlap(nn)%n1  =denmat(nn)%n1
-          overlap(nn)%n2  =denmat(nn)%n2
-          n1  =denmat(nn)%n1
-          n2  =denmat(nn)%n2
-          allocate(overlap(nn)%mat(n1,n2))
-          overlap(nn)%mat=0.d0
-        enddo
+PRINT*,'ALLOCATE OVERLAP ',NND
+        DO NN=1,NND
+          OVERLAP(NN)%IAT1=DENMAT(NN)%IAT1
+          OVERLAP(NN)%IAT2=DENMAT(NN)%IAT2
+          OVERLAP(NN)%IT  =DENMAT(NN)%IT
+          OVERLAP(NN)%N1  =DENMAT(NN)%N1
+          OVERLAP(NN)%N2  =DENMAT(NN)%N2
+          N1  =DENMAT(NN)%N1
+          N2  =DENMAT(NN)%N2
+          ALLOCATE(OVERLAP(NN)%MAT(N1,N2))
+          OVERLAP(NN)%MAT=0.D0
+        ENDDO
+      ELSE
+PRINT*,'NOT ALLOCATE OVERLAP ',NND,SIZE(OVERLAP)
       end if
-      IF(SIZE(overlap).NE.NND) THEN
-        CALL ERROR$MSG('SIZE OF DENSITY MATRIX AND overlap matrix INONSISTENT')
-        CALL ERROR$STOP('LMTO_overlapeval')
+      IF(SIZE(OVERLAP).NE.NND) THEN
+        CALL ERROR$MSG('SIZE OF DENSITY MATRIX AND OVERLAP MATRIX INONSISTENT')
+        CALL ERROR$I4VAL('NND',NND)
+        CALL ERROR$I4VAL('SIZE(OVERLAP)',SIZE(OVERLAP))
+        CALL ERROR$STOP('LMTO_OVERLAPEVAL')
       END IF
 !
 !     ==========================================================================
