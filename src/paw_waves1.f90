@@ -2169,7 +2169,7 @@ END IF
       SUBROUTINE WAVES$KAESTNERCG1(TFIRST_)
 !     ******************************************************************
 !     **                                                              **
-!     **  THIS IS FOR KAESTNER'S CONJUGATE GRADIENT IMPLEMENTATION    **
+!     **  THIS IS FOR KAESTNERS CONJUGATE GRADIENT IMPLEMENTATION    **
 !     **  HANDLE WITH SPECIAL CARE TO AVOID PROBLEMS WITH ALLOCATION  **
 !     **                                                              **
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
@@ -2749,11 +2749,12 @@ END IF
       USE WAVES_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPRINT=.false.
-      INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
+      INTEGER(4)             :: NBH    !#(SUPER WAVE FUNCTIONS)
       INTEGER(4)             :: npro   !#(projector functions)
       real(8)   ,allocatable :: xk(:,:)
       INTEGER(4)             :: ISPIN,IKPT,ib
       logical(4)             :: ton
+      integer(4)             :: ntasks,thistask,count
 !     **************************************************************************
       CALL LMTO$GETL4('ON',TON)
       IF(.NOT.TON) RETURN
@@ -2770,23 +2771,15 @@ END IF
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
-!!!! parallelize loop with respect to states.
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           NBH=THIS%NBH
-!          NB=THIS%NB
-!          TINV=GSET%TINV
           if(.not.associated(this%tbc))allocate(this%tbc(ndim,nbH,npro))
           this%tbc=this%proj
           call LMTO$PROJTONTBO(XK(:,ikpt),NDIM,NBH,NPRO,this%tbc)
         ENDDO
       ENDDO
-!     == THE PROJECTIONS ARE IDENTICAL AND COMPLETE FOR EACH K-GROUP
-!     == EACH K-GROUP HOLDS ONLY THE WAVE FUNCTIONS BELONGING TO IT.
-!     == EACH PROCESSOR OF EACH K-GROUP ONLY ADDS UP A FRACTION OF THE 
-!     == PROJECTIONS
-!     == THEREFORE THERE IS NO DOUBLE COUNTING BY SUMMING OVER THE MONOMER
 !
 !     ==========================================================================
 !     ==  print for testing                                                   ==
@@ -2863,11 +2856,6 @@ END IF
           CALL LMTO$NTBOTOPROJ(XK(:,IKPT),NDIM,NBH,NPRO,THIS%HTBC)
         ENDDO
       ENDDO
-!     == THE PROJECTIONS ARE IDENTICAL AND COMPLETE FOR EACH K-GROUP
-!     == EACH K-GROUP HOLDS ONLY THE WAVE FUNCTIONS BELONGING TO IT.
-!     == EACH PROCESSOR OF EACH K-GROUP ONLY ADDS UP A FRACTION OF THE 
-!     == PROJECTIONS
-!     == THEREFORE THERE IS NO DOUBLE COUNTING BY SUMMING OVER THE MONOMER
 !
 !     ==========================================================================
 !     ==  PRINT FOR TESTING                                                   ==
