@@ -89,19 +89,22 @@ IF(1.EQ.1) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
           IPRO=1
           DO IAT=1,NAT
             ISP=MAP%ISP(IAT)
+            call setup$iselect(isp)
             LNX=MAP%LNX(ISP)
             LMNX=MAP%LMNX(ISP)
             ALLOCATE(DO(LNX,LNX))
-            CALL SETUP$1COVERLAP(ISP,LNX,DO)
+            CALL SETUP$GETR8A('DO',LNX*LNX,DO) 
+                                        !FORMER CALL SETUP$1COVERLAP(ISP,LNX,DO)
             CALL WAVES_OPROJ(LNX,MAP%LOX(1:LNX,ISP),DO,NDIM,LMNX,NBH &
       &          ,THIS%PROJ(:,:,IPRO:IPRO+LMNX-1),OPROJ(:,:,IPRO:IPRO+LMNX-1))
             DEALLOCATE(DO)
             IPRO=IPRO+LMNX
           ENDDO
+          call setup$iselect(0)
 !
-!         ==============================================================
-!         ==  ADD  |PSI>+|P>DO<P|PSI>                                 ==
-!         ==============================================================
+!         ======================================================================
+!         ==  ADD  |PSI>+|P>DO<P|PSI>                                         ==
+!         ======================================================================
           ALLOCATE(THIS%OPSI(NGL,NDIM,NBH))
 !         == THIS LOOP IS DONE EXPLICIT, BECAUSE THE IFC10 COULD NOT HANDLE IT
           DO IB=1,NBH
@@ -841,6 +844,7 @@ END IF
           IPRO=IPRO+MAP%LMNX(ISP)
           CYCLE
         END IF
+        call setup$iselect(isp)
         LMNX=MAP%LMNX(ISP)
 !
 !       == FOLD DOWN INDEX ARRAY ===============================================
@@ -850,7 +854,8 @@ END IF
 !       == FOLD DOWN INDEX ARRAY FOR PROJ2 AND MULTIPLY WITH DOVER =============
         LNX=MAP%LNX(ISP)
         ALLOCATE(DOVER(LNX,LNX))
-        CALL SETUP$1COVERLAP(ISP,LNX,DOVER)
+        CALL SETUP$GETR8A('DO',LNX*LNX,DOver) 
+                                     !former CALL SETUP$1COVERLAP(ISP,LNX,DOVER)
 !
         IPRO1=IPROX
         DO LN1=1,LNX
@@ -870,6 +875,7 @@ END IF
         IPRO=IPRO+LMNX
         IPROX=IPROx+LMNX
       ENDDO
+      CALL SETUP$ISELECT(0)
 !
 !     ==========================================================================     
 !     ==  MAT(I,J)= SUM_{K,L} <PSI_I|P_K>   * [ DO(K,L)*<P_L|PSI_J>]          ==
@@ -2553,7 +2559,8 @@ print*,'a     ',(a(i,i),i=1,nb)
         IZ(ISP)=NINT(AEZ)
         CALL PERIODICTABLE$GET(AEZ,'R(ASA)',RAD(ISP))
         ALLOCATE(AEPHI(NR,LNXX))
-        CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
+        CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
+                            !former CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
         ALLOCATE(WORK(NR))
         ALLOCATE(WORK1(NR))
         DO LN1=1,LNX
@@ -2576,6 +2583,7 @@ print*,'a     ',(a(i,i),i=1,nb)
         DEALLOCATE(WORK1)
         DEALLOCATE(AEPHI)
       ENDDO
+      CALL SETUP$ISELECT(0)
 !!$      CALL PDOS$SETI4A('IZ',NSP,IZ)
 !!$      CALL PDOS$SETR8A('RAD',NSP,RAD)
 !!$      CALL PDOS$SETR8A('PHI',LNXX*NSP,VAL)

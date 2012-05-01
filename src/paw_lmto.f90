@@ -853,7 +853,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       INTEGER(4)    :: ISP,NAT
 !     **************************************************************************
                               CALL TRACE$PUSH('LMTO_COLLECTMAPARRAYS')
-      CALL SETUP$NSPECIES(NSP)
+      CALL SETUP$GETI4('NSP',NSP) !FORMER CALL SETUP$NSPECIES(NSP)
 
       ALLOCATE(LNX(NSP))
       DO ISP=1,NSP

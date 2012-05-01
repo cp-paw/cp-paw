@@ -89,7 +89,7 @@ END TYPE ATOMWAVES_TYPE
 TYPE SETTING_TYPE
   LOGICAL  :: TREL ! RELATIVISTIC OR NON-RELATIVISTIC
   LOGICAL  :: SO   ! SPIN ORBIT SPLITTING OR SCALAR RELATIVISTIC
-  LOGICAL  :: ZORA ! ZERO'TH ORDER RELATIVISTIC CORRECTION
+  LOGICAL  :: ZORA ! ZEROTH ORDER RELATIVISTIC CORRECTION
   REAL(8)  :: FOCK ! ADMIXTURE OF EXACT EXCHANGE - MU_X
 END TYPE SETTING_TYPE
 TYPE THIS_TYPE
@@ -2332,229 +2332,6 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       RETURN
       END
 !
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP$AEPARTIALWAVES(ISP_,NRX_,LNX_,AEPHI_)
-!LEGACY CODE! -> SETUP$GETR8A('AEPHI'
-!     **************************************************************************
-!     **  RETURN AE PARTIAL WAVES ON THE RADIAL GRID                          **
-!     **************************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: NRX_
-      INTEGER(4),INTENT(IN) :: LNX_
-      REAL(8)   ,INTENT(OUT):: AEPHI_(NRX_,LNX_)
-      INTEGER(4)            :: NR
-!     **************************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      CALL RADIAL$GETI4(THIS%GID,'NR',NR)
-      IF(NRX_.NE.NR) THEN
-        CALL ERROR$MSG('INCONSISTENT GRID SIZE')
-        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
-      END IF
-      IF(LNX_.NE.THIS%LNX) THEN
-        CALL ERROR$MSG('INCONSISTENT #(PARTIAL WAVES)')
-        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
-      END IF
-      AEPHI_(:,:)=THIS%AEPHI(:,:)
-      RETURN  
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP$PSPARTIALWAVES(ISP_,NRX_,LNX_,PSPHI_)
-!LEGACY CODE! -> SETUP$GETR8A('PSPHI'
-!     **************************************************************************
-!     **  RETURN PS PARTIAL WAVE ON A RADIAL GRID                             **
-!     **************************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: NRX_
-      INTEGER(4),INTENT(IN) :: LNX_
-      REAL(8)   ,INTENT(OUT):: PSPHI_(NRX_,LNX_)
-      INTEGER(4)            :: NR
-!     **************************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      CALL RADIAL$GETI4(THIS%GID,'NR',NR)
-      IF(NRX_.NE.NR) THEN
-        CALL ERROR$MSG('INCONSISTENT GRID SIZE')
-        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
-      END IF
-      IF(LNX_.NE.THIS%LNX) THEN
-        CALL ERROR$MSG('INCONSISTENT #(PARTIAL WAVES)')
-        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
-      END IF
-      PSPHI_(:,:)=THIS%PSPHI(:,:)
-      RETURN  
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP$1COVERLAP(ISP_,LNXX_,DOVER_)
-!LEGACY CODE! -> SETUP$GETR8A('DO'
-!     **************************************************************************
-!     **  RETURN 1-C- OVERLAP OF THE PARTIAL WAVES                            **
-!     **************************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: LNXX_
-      REAL(8)   ,INTENT(OUT):: DOVER_(LNXX_,LNXX_)
-      INTEGER(4)            :: LN1,LN2
-!     **************************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      DO LN1=1,THIS%LNX
-        DO LN2=1,THIS%LNX
-          DOVER_(LN1,LN2)=THIS%DOVER(LN1,LN2)
-        ENDDO
-      ENDDO
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$LNX(ISP_,LNX_)
-!LEGACY CODE! -> SETUP$GETI4('
-!     ******************************************************************
-!     **  RETURN NUMBER OF PARTIAL WAVES                              **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(OUT):: LNX_
-!     ******************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      LNX_=THIS%LNX
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$LMNX(ISP_,LMNX_)
-!LEGACY CODE! -> SETUP$GETI4('
-!     ******************************************************************
-!     **  RETURN NUMBER OF PARTIAL WAVES                              **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(OUT):: LMNX_
-!     ******************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      LMNX_=THIS%LMNX
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$LMNXX(LMNXX_)
-!LEGACY CODE! -> SETUP$GETI4('
-!     ******************************************************************
-!     **  RETURN NUMBER OF PARTIAL WAVES                              **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(OUT):: LMNXX_
-!     ******************************************************************
-      LMNXX_=LMNXX
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$LOFLN(ISP_,LNX_,LOX_)
-!LEGACY CODE! -> SETUP$GETI4A('LOX'
-!     ******************************************************************
-!     **  RETURN NUMBER MAIN ANGULAR MOMENTUM OF PARTIAL WAVES        **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(IN) :: LNX_
-      INTEGER(4),INTENT(OUT):: LOX_(LNX_)
-      INTEGER(4)            :: LN
-!     ******************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      IF(LNX_.GT.THIS%LNX) THEN
-        CALL ERROR$MSG('LNX ON INPUT TOO SMALL')
-        CALL ERROR$OVERFLOW('LNX_',LNX_,THIS%LNX)
-        CALL ERROR$STOP('SETUP$LOFLN')
-      END IF
-      DO LN=1,THIS%LNX
-        LOX_(LN)=THIS%LOX(LN)
-      ENDDO
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$NSPECIES(NSP_)
-!LEGACY CODE! -> SETUP$GETI4
-!     ******************************************************************
-!     **  RETURN NUMBER OF PARTIAL WAVES                              **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(OUT) :: NSP_
-!     ******************************************************************
-      NSP_=NSP
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$LMRXX(LMRXX_)
-!LEGACY CODE! -> SETUP$GETI4
-!     ******************************************************************
-!     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY          **
-!     ****************************************************************** 
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(OUT) :: LMRXX_
-!     ******************************************************************
-      LMRXX_=LMRXX
-      RETURN  
-      END
-!
-!     ..................................................................
-      SUBROUTINE SETUP$LNXX(LNXX_)
-!LEGACY CODE! -> SETUP$GETI4
-!     ******************************************************************
-!     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY          **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(OUT) :: LNXX_
-!     ******************************************************************
-      LNXX_=LNXX
-      RETURN  
-      END
-!
-!     ..........................................................................
-      SUBROUTINE SETUP$LMRX(ISP_,LMRX_)
-!LEGACY CODE! -> SETUP$GETI4
-!     **************************************************************************
-!     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY                  **
-!     **************************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      INTEGER(4),INTENT(OUT):: LMRX_
-!     **************************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      LMRX_=THIS%LMRX
-      RETURN  
-      END
-!
-!     ..........................................................................
-      SUBROUTINE SETUP$AEZ(ISP_,AEZ_)
-!LEGACY CODE! ->SETUP$GETR8
-!     **************************************************************************
-!     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY                  **
-!     **************************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: ISP_
-      REAL(8)   ,INTENT(OUT):: AEZ_
-!     **************************************************************************
-      CALL SETUP$ISELECT(ISP_)
-      AEZ_=THIS%AEZ
-      RETURN  
-      END
-!
 !     ..........................................................................
       SUBROUTINE SETUP_COMPOFG(RCBG,RCSM,GIDG,NG,G0,V0)
 !     **************************************************************************
@@ -3177,6 +2954,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       LOGICAL   ,PARAMETER  :: TWRITE=.false.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
+      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.true.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -3216,7 +2994,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       REAL(8)               :: RC1
       REAL(8)               :: EHOMO
       INTEGER(4)            :: LX
-      INTEGER(4)            :: L,IB,LN,IR,ir1,IB1,IB2,LN1,LN2,I,ISO
+      INTEGER(4)            :: L,IB,LN,IR,IR1,IB1,IB2,LN1,LN2,I,ISO
       INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
       REAL(8)               :: PI,Y0,C0LL
       REAL(8)               :: X0,Z0,DX,XM,ZM
@@ -3250,7 +3028,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       LOGICAL(4)            :: TVARDREL
 REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !     **************************************************************************
-                                CALL TRACE$PUSH('setup_MAKEPARTIALWAVES')
+                                CALL TRACE$PUSH('SETUP_MAKEPARTIALWAVES')
 !VFOCK%SCALE=0.D0
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -3399,18 +3177,18 @@ PRINT*,'EOFI1 ',EOFI1
             CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,ROUT,PHIPHASE,E,PHI)
             CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,PHIPHASE)
-!           == fix size of first partial wave about equal to uofi   ============
-            if(ncl(l).eq.0) then
-              do ir1=1,nr
-                if(r(ir1).gt.rbnd) exit
-                ir=ir1
-              enddo
-              do ib1=1,nb
-                ib=ib1   !band index of lowest state with this l
-                if(lofi(ib1).eq.l) exit
-              enddo
-              phi(:)=phi(:)*uofi(ir,ib)/phi(ir)
-            end if
+!           == FIX SIZE OF FIRST PARTIAL WAVE ABOUT EQUAL TO UOFI   ============
+            IF(NCL(L).EQ.0) THEN
+              DO IR1=1,NR
+                IF(R(IR1).GT.RBND) EXIT
+                IR=IR1
+              ENDDO
+              DO IB1=1,NB
+                IB=IB1   !BAND INDEX OF LOWEST STATE WITH THIS L
+                IF(LOFI(IB1).EQ.L) EXIT
+              ENDDO
+              PHI(:)=PHI(:)*UOFI(IR,IB)/PHI(IR)
+            END IF
             TFIRST=.FALSE.
           ELSE
             CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
@@ -3636,7 +3414,7 @@ PRINT*,'EOFI1 A ',EOFI1
 !
 !     ==========================================================================
 !     == CONSTRUCT QN FUNCTIONS        (H-E)|QN>=|UC>                         ==
-!     == THE QN FUNCTIONS MaY HAVE NODES, BUT THE NUMBER OF NODES IS REDUCED  ==
+!     == THE QN FUNCTIONS MAY HAVE NODES, BUT THE NUMBER OF NODES IS REDUCED  ==
 !     == BY THE NUMBER OF CORE STATES                                         ==
 !     ==========================================================================
                            CALL TRACE$PASS('CONSTRUCT QN FUNCTIONS')
@@ -3650,7 +3428,7 @@ PRINT*,'EOFI1 A ',EOFI1
           DO LN1=1,LN
             IF(LOX(LN1).NE.L) CYCLE
             IF(TRANSU(LN1,LN).NE.0.D0) THEN
-!              === this check shall be removed after some testing period
+!              === THIS CHECK SHALL BE REMOVED AFTER SOME TESTING PERIOD
                CALL ERROR$MSG('CHECKING ASSUMPTIONS UNDERLYING THE CODE')
                CALL ERROR$MSG('VARIABLE TRANSU IS NOT ZERO AS ASSUMED')
                CALL ERROR$I4VAL('LN',LN)
@@ -3684,7 +3462,7 @@ PRINT*,'EOFI1 A ',EOFI1
 !
 !     ==========================================================================
 !     == ADJUST SCALING OF NODELESS PARTIAL WAVES TO THE QN                   ==
-!     == so that long-range tale of nlphi and qphi are identical              ==
+!     == SO THAT LONG-RANGE TALE OF NLPHI AND QPHI ARE IDENTICAL              ==
 !     ==========================================================================
       DO LN=1,LNX
         NLPHI(:,LN)=NLPHI(:,LN)/UBYQ(LN)
@@ -3867,10 +3645,10 @@ PRINT*,'EOFI1 A ',EOFI1
 !     == ENFORCE BIORTHOGONALIZATION                                          ==
 !     ==========================================================================
       ALLOCATE(A(LNX,LNX))
-      CALL setup_BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,BAREPRO &
+      CALL SETUP_BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,BAREPRO &
      &                          ,TRANSPHI,TRANSPRO)
       A=MATMUL(TRANSPRO,TRANSPOSE(TRANSPHI))
-      PRO=MATMUL(BAREPRO,A)  ! enforce biorthogonality on the projectors only
+      PRO=MATMUL(BAREPRO,A)  ! ENFORCE BIORTHOGONALITY ON THE PROJECTORS ONLY
       CALL LIB$INVERTR8(LNX,TRANSPHI,TRANSPHIINV)
       DEALLOCATE(A)
 !
@@ -3885,7 +3663,7 @@ PRINT*,'EOFI1 A ',EOFI1
           AUX(:)=R(:)**2*PSPHI(:,LN1)*PRO(:,LN2)
 !          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
 !          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
-          CALL RADIAL$INTEGRAl(GID,NR,AUX,val)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
           IF(LN1.EQ.LN2)VAL=VAL-1.D0
           IF(ABS(VAL).GT.1.D-5) THEN
             CALL ERROR$MSG('BIORTHOGONALIZATION FAILED')
@@ -4022,8 +3800,8 @@ PRINT*,'EOFI1 A ',EOFI1
     &                                                           ,NLPHIDOT(:,LN))
           CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
     &                                    ,-1.D0,E,NLPHIDOT(:,LN))
-!this construction has been replaced, because the dot functions did not have 
-! the same tail behavior.
+!THIS CONSTRUCTION HAS BEEN REPLACED, BECAUSE THE DOT FUNCTIONS DID NOT HAVE 
+! THE SAME TAIL BEHAVIOR.
 !!$!
 !!$!         == CALCULATE QNDOT  ==================================================
 !!$          G(:)=QN(:,LN)
@@ -4063,12 +3841,12 @@ PRINT*,'EOFI1 A ',EOFI1
 !         ======================================================================
 !         == CONSTRUCT 
 !         ======================================================================
-          qndot(:,ln)=nlphidot(:,ln)
-          psphidot(:,ln)=nlphidot(:,ln)
+          QNDOT(:,LN)=NLPHIDOT(:,LN)
+          PSPHIDOT(:,LN)=NLPHIDOT(:,LN)
 !
 !         ======================================================================
 !         == CONSTRUCT AEPHIDOT BY CORE-ORTHOGONALIZATION                     ==
-!         == AEphidot does not obey (h-e)|aephidot>=|aephi> !!                ==
+!         == AEPHIDOT DOES NOT OBEY (H-E)|AEPHIDOT>=|AEPHI> !!                ==
 !         ======================================================================
           AEPHIDOT(:,LN)=NLPHIDOT(:,LN)
           DO IB=NC,1,-1
@@ -4088,17 +3866,17 @@ PRINT*,'EOFI1 A ',EOFI1
         DEALLOCATE(PRO1)
         DEALLOCATE(PROJ)
       ENDDO
-!     == qndot does not have the same radial long-range behavior as the other
-!     == dot-functions!
-!!$CALL SETUP_WRITEPHI('nl.DAT',GID,NR,LNX,nlphi)
-!!$CALL SETUP_WRITEPHI('qn.DAT',GID,NR,LNX,qn)
-!!$CALL SETUP_WRITEPHI('ps.DAT',GID,NR,LNX,PSPHI)
-!!$CALL SETUP_WRITEPHI('ae.DAT',GID,NR,LNX,AEPHI)
+!     == QNDOT DOES NOT HAVE THE SAME RADIAL LONG-RANGE BEHAVIOR AS THE OTHER
+!     == DOT-FUNCTIONS!
+!!$CALL SETUP_WRITEPHI('NL.DAT',GID,NR,LNX,NLPHI)
+!!$CALL SETUP_WRITEPHI('QN.DAT',GID,NR,LNX,QN)
+!!$CALL SETUP_WRITEPHI('PS.DAT',GID,NR,LNX,PSPHI)
+!!$CALL SETUP_WRITEPHI('AE.DAT',GID,NR,LNX,AEPHI)
 !!$CALL SETUP_WRITEPHI(+'AEPHIDOT.DAT',GID,NR,LNX,AEPHIDOT)
 !!$CALL SETUP_WRITEPHI(+'PSPHIDOT.DAT',GID,NR,LNX,PSPHIDOT)
 !!$CALL SETUP_WRITEPHI(+'NLPHIDOT.DAT',GID,NR,LNX,NLPHIDOT)
 !!$CALL SETUP_WRITEPHI(+'QNDOT.DAT',GID,NR,LNX,QNDOT)
-!!$stop 'ok here'
+!!$STOP 'OK HERE'
 !
 !     ==========================================================================
 !     == BACK TRANSFORM                                                       ==
@@ -4400,12 +4178,21 @@ GOTO 10001
 !     ==========================================================================
 !     == TRANSFORM ONTO SEQUENTIAL RESPRESENTATION                            ==
 !     ==========================================================================
-!!$PSPHI=MATMUL(PSPHI,TRANSPHI)
-!!$AEPHI=MATMUL(AEPHI,TRANSPHI)
-!!$NLPHI=MATMUL(NLPHI,TRANSPHI)
-!!$PRO=MATMUL(PRO,TRANSPOSE(TRANSPHIINV))
-!!$DT=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DT,TRANSPHI))
-!!$DOVER=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DOVER,TRANSPHI))
+      IF(TSEQUENTIALAUGMENT) THEN
+!!$CALL SETUP_WRITEPHI('NLPHI_1.DAT',GID,NR,LNX,NLPHI)
+!!$CALL SETUP_WRITEPHI('AEPHI_1.DAT',GID,NR,LNX,AEPHI)
+!!$CALL SETUP_WRITEPHI('PSPHI_1.DAT',GID,NR,LNX,PSPHI)
+        PSPHI=MATMUL(PSPHI,TRANSPHI)
+        AEPHI=MATMUL(AEPHI,TRANSPHI)
+        NLPHI=MATMUL(NLPHI,TRANSPHI)
+        PRO=MATMUL(PRO,TRANSPOSE(TRANSPHIINV))
+        DT=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DT,TRANSPHI))
+        DOVER=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DOVER,TRANSPHI))
+!!$CALL SETUP_WRITEPHI('NLPHI_2.DAT',GID,NR,LNX,NLPHI)
+!!$CALL SETUP_WRITEPHI('AEPHI_2.DAT',GID,NR,LNX,AEPHI)
+!!$CALL SETUP_WRITEPHI('PSPHI_2.DAT',GID,NR,LNX,PSPHI)
+!!$CALL ERROR$STOP('FORCED IN PAW_SETUP')
+      END IF
 !
 !     ==========================================================================
 !     == WRITE INFORMATION TO FILE                                            ==
@@ -4466,7 +4253,7 @@ GOTO 10001
 !     ==========================================================================
 !     == WRITE DATA TO FILE                                                   ==
 !     ==========================================================================
-                      CALL TRACE$PASS('WRITING DATA files for diagnosis')
+                      CALL TRACE$PASS('WRITING DATA FILES FOR DIAGNOSIS')
       IF(TWRITE) THEN
         WRITE(STRING,FMT='(F3.0)')AEZ
         STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
@@ -4562,17 +4349,17 @@ GOTO 10001
 !!$DO LN=1,LNX
 !!$  CALL RADIAL$DERIVE(GID,NR,QN(:,LN),AUX)
 !!$  PSPHI(:,LN)=AUX/QN(:,LN)
-!!$  CALL RADIAL$DERIVE(GID,NR,NLPHIdot(:,LN),AUX)
-!!$  PSPHIDOT(:,LN)=AUX/NLPHIdot(:,LN)
+!!$  CALL RADIAL$DERIVE(GID,NR,NLPHIDOT(:,LN),AUX)
+!!$  PSPHIDOT(:,LN)=AUX/NLPHIDOT(:,LN)
 !!$ENDDO
-!!$psphi(:10,:)=0.d0
-!!$psphidot(:10,:)=0.d0
-!!$do ir=1,nr
-!!$  if(r(ir).gt.6.d0) then
-!!$    psphi(ir,:)=0.d0
-!!$    psphidot(ir,:)=0.d0
-!!$  end if
-!!$enddo
+!!$PSPHI(:10,:)=0.D0
+!!$PSPHIDOT(:10,:)=0.D0
+!!$DO IR=1,NR
+!!$  IF(R(IR).GT.6.D0) THEN
+!!$    PSPHI(IR,:)=0.D0
+!!$    PSPHIDOT(IR,:)=0.D0
+!!$  END IF
+!!$ENDDO
 !!$WRITE(STRING,FMT='(F3.0)')AEZ
 !!$STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
 !!$CALL LMTO_WRITEPHI(-'DLOG'//TRIM(STRING),GID,NR,LNX,PSPHI)
@@ -4617,7 +4404,7 @@ GOTO 10001
       REAL(8)               :: CHARGE1,EKIN1
       INTEGER(4)            :: L,IB,IR
 !     **************************************************************************
-                      call trace$push('SETUP_PARMSMASSRENORMALIZATION')
+                      CALL TRACE$PUSH('SETUP_PARMSMASSRENORMALIZATION')
       PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
@@ -4683,7 +4470,7 @@ GOTO 10001
         WRITE(*,*)'PS CHARGE IN G-SPACE ',CHARGE,' IN R-SPACE ',CHARGE1
         WRITE(*,*)'PS EKIN   IN G-SPACE ',EKIN,' IN R-SPACE ',EKIN1
       END IF
-                      call trace$pop()
+                      CALL TRACE$POP()
       RETURN
       END
 !
@@ -4982,7 +4769,7 @@ GOTO 10001
         ELSE IF(L.EQ.3) THEN
           CALL PERIODICTABLE$GET(NINT(AEZ),'#NODES(F)',ISVAR)
         ELSE
-          isvar=0   !CALL ERROR$STOP('ATOMIC_MAKEISCATT')
+          ISVAR=0   !CALL ERROR$STOP('ATOMIC_MAKEISCATT')
         END IF
         IF(NCL(L).GT.0) THEN
           ISVAR=ISVAR-NNOFI(NCL(L))
@@ -5166,7 +4953,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE setup_BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,PRO &
+      SUBROUTINE SETUP_BIORTHOMATRICES(GID,NR,RBOX,LNX,LOX,PSPHI,PRO &
      &                          ,TRANSPHI,TRANSPRO)
 !     **************************************************************************
 !     ** DETERMINES THE MATRICES TRANSPHI AND TRANSPRO SUCH THAT              **
@@ -5256,7 +5043,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
           ENDDO
           CALL ERROR$MSG('BIORTHOGONALIZATION INACCURATE')
           CALL ERROR$R8VAL('MAX. DEV.',SVAR)
-          CALL ERROR$STOP('setup_BIORTHOMATRICES')
+          CALL ERROR$STOP('SETUP_BIORTHOMATRICES')
         END IF
       END IF
       RETURN
@@ -5955,7 +5742,7 @@ PRINT*,'KI ',KI
       INTEGER(4)           :: NFIL
       REAL(8)              :: RCOV 
       REAL(8)              :: ZV
-      CHARACTER(1),PARAMETER:: APOSTROPHE="'"
+      CHARACTER(1),PARAMETER:: APOSTROPHE="'"  !'
       CHARACTER(120)       :: LINE      
 !     **************************************************************************
 !     ==========================================================================
@@ -6048,15 +5835,15 @@ PRINT*,'KI ',KI
       INTEGER(4)            :: NR
       INTEGER(4)            :: LMRX
       INTEGER(4)            :: LRHOX
-      INTEGER(4)            :: nc
-      INTEGER(4)            :: lnx
+      INTEGER(4)            :: NC
+      INTEGER(4)            :: LNX
 !     **************************************************************************
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
       LMRX=THIS%LMRX
       LRHOX=INT(SQRT(REAL(LMRX-1)+1.D-8))
-      nc=this%atom%nc
-      lnx=this%lnx
+      NC=THIS%ATOM%NC
+      LNX=THIS%LNX
       ALLOCATE(THIS%COREVALENCEX(LNX,LNX))
       CALL SETUPS_CVXMAT(GID,NR &
      &              ,LNX,THIS%LOX,THIS%AEPHI &
@@ -6179,3 +5966,258 @@ PRINT*,'KI ',KI
       END IF
       RETURN
       END      
+
+!===============================================================================
+!===============================================================================
+!===============================================================================
+!=============== LEGACY CODE ===================================================
+!===============================================================================
+!===============================================================================
+!===============================================================================
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$AEPARTIALWAVES(ISP_,NRX_,LNX_,AEPHI_)
+!LEGACY CODE! -> SETUP$GETR8A('AEPHI'
+!     **************************************************************************
+!     **  RETURN AE PARTIAL WAVES ON THE RADIAL GRID                          **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(IN) :: NRX_
+      INTEGER(4),INTENT(IN) :: LNX_
+      REAL(8)   ,INTENT(OUT):: AEPHI_(NRX_,LNX_)
+      INTEGER(4)            :: NR
+!     **************************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
+      CALL SETUP$ISELECT(ISP_)
+      CALL RADIAL$GETI4(THIS%GID,'NR',NR)
+      IF(NRX_.NE.NR) THEN
+        CALL ERROR$MSG('INCONSISTENT GRID SIZE')
+        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
+      END IF
+      IF(LNX_.NE.THIS%LNX) THEN
+        CALL ERROR$MSG('INCONSISTENT #(PARTIAL WAVES)')
+        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
+      END IF
+      AEPHI_(:,:)=THIS%AEPHI(:,:)
+      RETURN  
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$PSPARTIALWAVES(ISP_,NRX_,LNX_,PSPHI_)
+!LEGACY CODE! -> SETUP$GETR8A('PSPHI'
+!     **************************************************************************
+!     **  RETURN PS PARTIAL WAVE ON A RADIAL GRID                             **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(IN) :: NRX_
+      INTEGER(4),INTENT(IN) :: LNX_
+      REAL(8)   ,INTENT(OUT):: PSPHI_(NRX_,LNX_)
+      INTEGER(4)            :: NR
+!     **************************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$PSPARTIALWAVES')
+      CALL SETUP$ISELECT(ISP_)
+      CALL RADIAL$GETI4(THIS%GID,'NR',NR)
+      IF(NRX_.NE.NR) THEN
+        CALL ERROR$MSG('INCONSISTENT GRID SIZE')
+        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
+      END IF
+      IF(LNX_.NE.THIS%LNX) THEN
+        CALL ERROR$MSG('INCONSISTENT #(PARTIAL WAVES)')
+        CALL ERROR$STOP('SETUP$AEPARTIALWAVES')
+      END IF
+      PSPHI_(:,:)=THIS%PSPHI(:,:)
+      RETURN  
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$1COVERLAP(ISP_,LNXX_,DOVER_)
+!LEGACY CODE! -> SETUP$GETR8A('DO'
+!     **************************************************************************
+!     **  RETURN 1-C- OVERLAP OF THE PARTIAL WAVES                            **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(IN) :: LNXX_
+      REAL(8)   ,INTENT(OUT):: DOVER_(LNXX_,LNXX_)
+      INTEGER(4)            :: LN1,LN2
+!     **************************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$1COVERLAP')
+      CALL SETUP$ISELECT(ISP_)
+      DO LN1=1,THIS%LNX
+        DO LN2=1,THIS%LNX
+          DOVER_(LN1,LN2)=THIS%DOVER(LN1,LN2)
+        ENDDO
+      ENDDO
+      RETURN  
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$LNX(ISP_,LNX_)
+!LEGACY CODE! -> SETUP$GETI4(...
+!     ******************************************************************
+!     **  RETURN NUMBER OF PARTIAL WAVES                              **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(OUT):: LNX_
+!     ******************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$LNX')
+      CALL SETUP$ISELECT(ISP_)
+      LNX_=THIS%LNX
+      RETURN  
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$LMNX(ISP_,LMNX_)
+!LEGACY CODE! -> SETUP$GETI4(
+!     ******************************************************************
+!     **  RETURN NUMBER OF PARTIAL WAVES                              **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(OUT):: LMNX_
+!     ******************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$LMNX')
+      CALL SETUP$ISELECT(ISP_)
+      LMNX_=THIS%LMNX
+      RETURN  
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$LMNXX(LMNXX_)
+!LEGACY CODE! -> SETUP$GETI4(
+!     ******************************************************************
+!     **  RETURN NUMBER OF PARTIAL WAVES                              **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(OUT):: LMNXX_
+!     ******************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$LMNXX')
+      LMNXX_=LMNXX
+      RETURN  
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$LOFLN(ISP_,LNX_,LOX_)
+!LEGACY CODE! -> SETUP$GETI4A('LOX'
+!     ******************************************************************
+!     **  RETURN NUMBER MAIN ANGULAR MOMENTUM OF PARTIAL WAVES        **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(IN) :: LNX_
+      INTEGER(4),INTENT(OUT):: LOX_(LNX_)
+      INTEGER(4)            :: LN
+!     ******************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$LOFLN')
+      CALL SETUP$ISELECT(ISP_)
+      IF(LNX_.GT.THIS%LNX) THEN
+        CALL ERROR$MSG('LNX ON INPUT TOO SMALL')
+        CALL ERROR$OVERFLOW('LNX_',LNX_,THIS%LNX)
+        CALL ERROR$STOP('SETUP$LOFLN')
+      END IF
+      DO LN=1,THIS%LNX
+        LOX_(LN)=THIS%LOX(LN)
+      ENDDO
+      RETURN  
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$NSPECIES(NSP_)
+!LEGACY CODE! -> SETUP$GETI4
+!     ******************************************************************
+!     **  RETURN NUMBER OF PARTIAL WAVES                              **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(OUT) :: NSP_
+!     ******************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$NSPECIES')
+      NSP_=NSP
+      RETURN  
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$LMRXX(LMRXX_)
+!LEGACY CODE! -> SETUP$GETI4
+!     ******************************************************************
+!     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY          **
+!     ****************************************************************** 
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(OUT) :: LMRXX_
+!     ******************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$LMRXX')
+      LMRXX_=LMRXX
+      RETURN  
+      END
+!
+!     ..................................................................
+      SUBROUTINE SETUP$LNXX(LNXX_)
+!LEGACY CODE! -> SETUP$GETI4
+!     ******************************************************************
+!     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY          **
+!     ******************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(OUT) :: LNXX_
+!     ******************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$LNXX')
+      LNXX_=LNXX
+      RETURN  
+      END
+!
+!     ..........................................................................
+      SUBROUTINE SETUP$LMRX(ISP_,LMRX_)
+!LEGACY CODE! -> SETUP$GETI4
+!     **************************************************************************
+!     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY                  **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      INTEGER(4),INTENT(OUT):: LMRX_
+!     **************************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$LMRX')
+      CALL SETUP$ISELECT(ISP_)
+      LMRX_=THIS%LMRX
+      RETURN  
+      END
+!
+!     ..........................................................................
+      SUBROUTINE SETUP$AEZ(ISP_,AEZ_)
+!LEGACY CODE! ->SETUP$GETR8
+!     **************************************************************************
+!     **  RETURN MAXIMUM ANGULAR MOMENTUM FOR THE 1C-DENSITY                  **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP_
+      REAL(8)   ,INTENT(OUT):: AEZ_
+!     **************************************************************************
+      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. DO NOT USE')
+      CALL ERROR$STOP('SETUP$AEZ')
+      CALL SETUP$ISELECT(ISP_)
+      AEZ_=THIS%AEZ
+      RETURN  
+      END

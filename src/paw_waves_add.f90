@@ -17,11 +17,13 @@
       INTEGER(4)             :: NTASKS,THISTASK
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES$1CFORCE')
-      CALL SETUP$NSPECIES(NSP)
+      call setup$geti4('nsp',nsp) !former CALL SETUP$NSPECIES(NSP)
       ALLOCATE(LMNX(NSP))      
       DO ISP=1,NSP
-        CALL SETUP$LMNX(ISP,LMNX(ISP))
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('LMNX',LMNX(ISP)) !FORMERCALL SETUP$LMNX(ISP,LMNX(ISP))
       ENDDO
+      call setup$iselect(0)
       ALLOCATE(ISPECIES(NAT))  
       CALL ATOMLIST$GETI4A('ISPECIES',0,NAT,ISPECIES)
 !     == GET OCCUPATIONS =============================================

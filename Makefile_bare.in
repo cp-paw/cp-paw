@@ -235,9 +235,9 @@ OBJECTS3 = \
            ${OBJDIR}/paw_vext.o \
            ${OBJDIR}/paw_vdw.o \
            ${OBJDIR}/paw_ci.o \
-           ${OBJDIR}/paw_localize.o 
-#           ${OBJDIR}/paw_pdos.o
-#          ${OBJDIR}/paw_optic.o \
+#           ${OBJDIR}/paw_localize.o  #removed
+#           ${OBJDIR}/paw_pdos.o  #into library
+#          ${OBJDIR}/paw_optic.o \   # removed
 #
 OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 #
@@ -780,6 +780,8 @@ endif
  ENERGYLIST_MODULE.mod : ${OBJDIR}/paw_lists.o
  GROUPLIST_MODULE.mod : ${OBJDIR}/paw_lists.o
  ATOMTYPELIST_MODULE.mod : ${OBJDIR}/paw_lists.o
+ ## file:src/paw_lmtobasics.f90
+ ${OBJDIR}/paw_lmtobasics.o : STRINGS_MODULE.mod
  ## file:src/paw_lock.f90
  ${OBJDIR}/paw_lock.o : CLOCK_MODULE.mod
  LOCK_MODULE.mod : ${OBJDIR}/paw_lock.o
@@ -806,12 +808,6 @@ endif
  OCCUPATION_MODULE.mod : ${OBJDIR}/paw_occupations.o
  ## file:src/paw_optfric.f90
  OPTFRIC_MODULE.mod : ${OBJDIR}/paw_optfric.o
- ## file:src/paw_optic.f90
- ${OBJDIR}/paw_optic.o : PLANEWAVE_MODULE.mod
- ${OBJDIR}/paw_optic.o : STRINGS_MODULE.mod
- ${OBJDIR}/paw_optic.o : ATOMS_MODULE.mod
- ${OBJDIR}/paw_optic.o : SETUP_MODULE.mod
- OPTIC_MODULE.mod : ${OBJDIR}/paw_optic.o
  ## file:src/paw_pairpotential.f90
  ${OBJDIR}/paw_pairpotential.o : MPE_MODULE.mod
  ## file:src/paw_pdos.f90
