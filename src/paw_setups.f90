@@ -2955,6 +2955,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       LOGICAL   ,PARAMETER  :: TWRITE=.false.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
       LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.true.
+      LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.FALSE.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -3554,8 +3555,13 @@ PRINT*,'EOFI1 A ',EOFI1
 !     == CONSTRUCT PSEUDO PARTIAL WAVES                                       ==
 !     ==========================================================================
                            CALL TRACE$PASS('CONSTRUCT PSEUDO PARTIAL WAVES')
-      PSPHI=QN
-      TPSPHI=TQN
+      IF(TMATCHTOALLELECTRON) THEN
+        PSPHI=AEPHI
+        TPSPHI=TAEPHI
+      ELSE
+        PSPHI=QN
+        TPSPHI=TQN
+      END IF
       IF(TTEST.AND.TWRITE)CALL SETUP_WRITEPHI('XX1.DAT',GID,NR,LNX,PSPHI)
       IF(TYPE.EQ.'KERKER') THEN
         DO L=0,LX
@@ -5074,7 +5080,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       INTEGER(4),PARAMETER      :: ISO=0
       REAL(8)   ,PARAMETER      :: TOL=1.D-11
       REAL(8)   ,PARAMETER      :: CMIN=1.D-8
-      REAL(8)   ,PARAMETER      :: RBNDX=4.D0
+      REAL(8)   ,PARAMETER      :: RBNDX=6.D0
       REAL(8)                   :: E
       REAL(8)                   :: PI,Y0
       REAL(8)                   :: AUX(NR),DREL(NR),G(NR),POT(NR),PHI(NR)
@@ -5133,20 +5139,31 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
             EXIT
           END IF
         ENDDO
-!
-!       == LIMIT RBND TO A REASONABLE MAXIMUM ==================================
-        IF(R(IRBND).GT.RBNDX) THEN
-          WRITE(*,FMT='("OVERWRITING MATCHING RADIUS ESTIMATED AS ",F10.5)') &
-     &                                                               R(IRBND)
-          DO IR=1,IRBND
-            IF(R(IR).LT.RBNDX) CYCLE
-            IRBND=IR
-            EXIT
-          ENDDO
-          WRITE(*,FMT='("NEW RADIUS ",F10.5)')R(IRBND)
+!       == the cutoff can be large, in particular when the partial waves are  ==
+!       == matched to the nodeless partial waves. If this is unacceptable, =====
+!       == one should match to the all-electron partial waves of include the  ==
+!       == semi-core orbitals as valence electrons
+        IF(RBND2.GT.RBNDX) THEN
+          CALL ERROR$MSG('RADIUS FOR LOGARITHMIC DERIVATIVE EXCEEDS LIMIT')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$R8VAL('RBND2',RBND2)
+          CALL ERROR$R8VAL('INTERNAL LIMIT',RBNDX)
+          CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
         END IF
-!        RBND2=RBND !OLD CHOICE
-        RBND2=R(IRBND)
+!!$!
+!!$!       == LIMIT RBND TO A REASONABLE MAXIMUM ==================================
+!!$        IF(R(IRBND).GT.RBNDX) THEN
+!!$          WRITE(*,FMT='("OVERWRITING MATCHING RADIUS ESTIMATED AS ",F10.5)') &
+!!$     &                                                               R(IRBND)
+!!$          DO IR=1,IRBND
+!!$            IF(R(IR).LT.RBNDX) CYCLE
+!!$            IRBND=IR
+!!$            EXIT
+!!$          ENDDO
+!!$          WRITE(*,FMT='("NEW RADIUS ",F10.5)')R(IRBND)
+!!$        END IF
+!!$!        RBND2=RBND !OLD CHOICE
+!!$        RBND2=R(IRBND)
 !
 !       ========================================================================
 !       ==  CORRECT FOR NODES LYING WITHIN 0.3. THEY CAN OCCUR                ==
