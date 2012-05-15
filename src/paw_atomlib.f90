@@ -1065,6 +1065,7 @@ USE PERIODICTABLE_MODULE
           WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F15.6)')EKIN
           WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F15.6)')EH
           IF(TFOCK.AND.TSECOND) THEN
+            WRITE(*,FMT='(30("."),T1,"exact xc MIXING factor:",T30,F15.6)')SCALE
             WRITE(*,FMT='(30("."),T1,"MIXED XC ENERGY:",T30,F15.6)') &
      &                                                      EXC+SCALE*(EFOCK-EX)
             WRITE(*,FMT='(30("."),T1,"100% DFT XC ENERGY:",T30,F15.6)')EXC

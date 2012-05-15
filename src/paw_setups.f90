@@ -2955,7 +2955,8 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       LOGICAL   ,PARAMETER  :: TWRITE=.false.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
       LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.true.
-      LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.FALSE.
+      LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.false.
+      LOGICAL(4),PARAMETER  :: Tcuttail=.true.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -3019,7 +3020,6 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
       INTEGER(4)            :: NFIL
       CHARACTER(64)         :: STRING
       REAL(8)               :: RCOV    !COVALENT RADIUS
-      REAL(8)               :: RASA    !COVALENT RADIUS*APPROX 1.15
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
       REAL(8)               :: RBND   !RADIUS FOR BOUNDARY CONDITIONS
       REAL(8)               :: SPEEDOFLIGHT
@@ -3038,7 +3038,6 @@ REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
       LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
       CALL RADIAL$R(GID,NR,R)
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
-      CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RASA)
       RNORM=RBOX
       RBND=RNORM
       PHIPHASE=1.D0    !NODE AT R=RBND!
@@ -3050,7 +3049,6 @@ PRINT*,'RBOX    ',RBOX,' RADIUS FOR BOUNDARY CONDITIONS FOR PARTIAL WAVES'
 PRINT*,'RBND    ',RBND,' RADIUS FOR BOUNDARY CONDITION FOR PARTIAL WAVERS'
 PRINT*,'RNORM   ',RNORM,' NORMALIZATION WILL BE DONE UP TO RNORM'
 PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
-PRINT*,'RASA    ',RASA,' ASA RADIUS'
 IF(TSMALLBOX)PRINT*,'PARTIAL WAVES DETERMINED WITH SMALL-BOX BOUNDARY CONDITIONS'
 !
 !     ==========================================================================
@@ -3600,8 +3598,6 @@ PRINT*,'EOFI1 A ',EOFI1
         CALL ERROR$STOP('ATOMIC_MAKEPARTIALWAVES')
       END IF
       IF(TTEST.AND.TWRITE)CALL SETUP_WRITEPHI('XX2.DAT',GID,NR,LNX,PSPHI)
-
-
 !
 !     ==========================================================================
 !     == CONSTRUCT BARE PROJECTOR FUNCTIONS                                   ==
@@ -3609,16 +3605,25 @@ PRINT*,'EOFI1 A ',EOFI1
                       CALL TRACE$PASS('CONSTRUCT PROJECTOR FUNCTIONS')
       DO LN=1,LNX
         BAREPRO(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
+!PRO(:,LN)=Tqn(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*qn(:,LN)
       ENDDO
-!     ==  CLEANUP OF NUMERICAL ERRORS INDUCED BY A TOO COARSE GRID AT LARGE ====
-!     ==  RADII. 2.D0*RCOV IS CHOSEN ARBITRARILY ===============================
-      DO IR=1,NR
-!        IF(R(IR).LT.RNORM) CYCLE !RNORM IS CHOSEN =RBND WHICH MAY BE TOO SMALL
-        IF(R(IR).LT.1.5D0*RCOV) CYCLE
-        BAREPRO(IR:,:)=0.D0
-        EXIT
-      ENDDO
-
+!!$!     ==  CLEANUP OF NUMERICAL ERRORS INDUCED BY A TOO COARSE GRID AT LARGE ====
+!!$!     ==  RADII. 2.D0*RCOV IS CHOSEN ARBITRARILY ===============================
+!!$      DO IR=1,NR
+!!$!        IF(R(IR).LT.RNORM) CYCLE !RNORM IS CHOSEN =RBND WHICH MAY BE TOO SMALL
+!!$        IF(R(IR).LT.1.5D0*RCOV) CYCLE
+!!$        BAREPRO(IR:,:)=0.D0
+!!$        EXIT
+!!$      ENDDO
+!!$CALL SETUP_WRITEPHI(-'QN.DAT',GID,NR,LNX,QN)
+!!$CALL SETUP_WRITEPHI(-'PSPHI.DAT',GID,NR,LNX,PSPHI)
+!!$CALL SETUP_WRITEPHI(-'AEPHI.DAT',GID,NR,LNX,AEPHI)
+!!$CALL SETUP_WRITEPHI(-'PRO-1.DAT',GID,NR,LNX,BAREPRO)
+!!$CALL SETUP_WRITEPHI(-'PRO-1A.DAT',GID,NR,LNX,PRO)
+!!$CALL SETUP_WRITEPHI(-'PSPOT.DAT',GID,NR,1,PSPOT)
+!!$CALL SETUP_WRITEPHI(-'AEPOT.DAT',GID,NR,1,AEPOT)
+!!$CALL SETUP_WRITEPHI(-'DPOT.DAT',GID,NR,1,AEPOT-PSPOT)
+!!$STOP 'FORCED'
       IF(TTEST.AND.TWRITE) THEN
         CALL SETUP_WRITEPHI('PRO-BARE.DAT',GID,NR,LNX,BAREPRO)
       END IF
@@ -3957,22 +3962,48 @@ GOTO 10001
 !     ==========================================================================
 !     == CUT OFF THE EXPONENTIALLY GROWING TAIL OF THE PARTIALWAVES
 !     ==========================================================================
-      DO IR=1,NR
-        IF(R(IR).GT.MAX(2.D0*RCOV,RNORM)) THEN
-          I=IR+1
-          EXIT
-        END IF
-      ENDDO
-      IR=I
-      AEPHI(IR:,:)=0.D0
-      PSPHI(IR:,:)=0.D0
-      NLPHI(IR:,:)=0.D0
-      QN(IR:,:)=0.D0
-      AEPHIDOT(IR:,:)=0.D0
-      NLPHIDOT(IR:,:)=0.D0
-      QNDOT(IR:,:)=0.D0
-      PSPHIDOT(IR:,:)=0.D0
-      PRO(IR:,:)=0.D0
+      if(tcuttail) then
+!!$! old variant
+!!$        DO IR=1,NR
+!!$!          IF(R(IR).GT.MAX(2.D0*RCOV,RNORM)) THEN
+!!$           IF(R(IR).GT.MAX(4.D0*RCOV,RNORM)) THEN
+!!$            I=IR+1
+!!$            EXIT
+!!$          END IF
+!!$        ENDDO
+!!$        IR=I
+!!$        AEPHI(IR:,:)=0.D0
+!!$        PSPHI(IR:,:)=0.D0
+!!$        NLPHI(IR:,:)=0.D0
+!!$        QN(IR:,:)=0.D0
+!!$        AEPHIDOT(IR:,:)=0.D0
+!!$        NLPHIDOT(IR:,:)=0.D0
+!!$        QNDOT(IR:,:)=0.D0
+!!$        PSPHIDOT(IR:,:)=0.D0
+!!$        PRO(IR:,:)=0.D0
+! new variant
+        do ln=1,lnx
+          svar=0.d0
+          do ir=1,nr
+            if(r(ir).le.rcov) then
+               svar=max(svar,abs(psphi(ir,ln)))
+            else
+              if(abs(psphi(ir,ln)).gt.10.d0*svar) then
+                AEPHI(IR:,ln)=0.D0
+                PSPHI(IR:,ln)=0.D0
+                NLPHI(IR:,ln)=0.D0
+                QN(IR:,ln)=0.D0
+                AEPHIDOT(IR:,ln)=0.D0
+                NLPHIDOT(IR:,ln)=0.D0
+                QNDOT(IR:,ln)=0.D0
+                PSPHIDOT(IR:,ln)=0.D0
+                PRO(IR:,ln)=0.D0
+                exit
+              end if
+            end if
+          enddo
+        enddo
+      end if
 !
 !     ==========================================================================
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
@@ -4191,6 +4222,7 @@ GOTO 10001
         PSPHI=MATMUL(PSPHI,TRANSPHI)
         AEPHI=MATMUL(AEPHI,TRANSPHI)
         NLPHI=MATMUL(NLPHI,TRANSPHI)
+        qn=MATMUL(qn,TRANSPHI)
         PRO=MATMUL(PRO,TRANSPOSE(TRANSPHIINV))
         DT=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DT,TRANSPHI))
         DOVER=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DOVER,TRANSPHI))
@@ -5088,7 +5120,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       REAL(8)                   :: R(NR)
       REAL(8)                   :: X0,XM,Z0,ZM,DX
       REAL(8)                   :: PHIPHASE
-      INTEGER(4)                :: IRBND
+      INTEGER(4)                :: IRBND,irbnd2
       INTEGER(4)                :: ISTART,IBI
       INTEGER(4)                :: L
       INTEGER(4)                :: LN,ITER,IR,II(1)
@@ -5122,38 +5154,54 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
         C(IRBND:)=0.D0
 !
 !       ========================================================================
-!       == DETERMINE RBND TO MATCH THE PSEUDO PARTIAL WAVE. REQUIRING THA     ==
+!       == DETERMINE RBND TO MATCH THE PSEUDO PARTIAL WAVE. REQUIRING THe     ==
 !       == THE POTENTIALS BEYOND RBND ARE EQUAL                               ==
 !       ==   1. START WITH POINT WHERE IZ ZERO                                ==
 !       ==   2. EXPAND IF AE AND PS POTENTIALS DEVIATE ATE RBND               ==
 !       ==   3. OVERWRITE BY RBNDX IF MATCHING RADIUS IS TOO LARGE            ==
 !       ========================================================================
+!!$!       == FIND OUTERMOST POINT CONSIDERING THE POTENTIAL ======================
+!!$        SVAR1=MAXVAL(ABS(PSPHI(IRBND:,LN)))
+!!$        DO IR=NR-2,1,-1
+!!$          IF(IR.LT.IRBND) EXIT
+!!$          SVAR=TPSPHI(IR,LN)+(PSPOT(IR)*Y0-E)*PSPHI(IR,LN)
+!!$          IF(ABS(SVAR).GT.1.D-4*SVAR1) THEN
+!!$            IRBND=IR
+!!$            EXIT
+!!$          END IF
+!!$        ENDDO
+        RBND2=max(rbnd,R(IRBND))
+        do ir=1,nr
+          if(r(ir).ge.rbnd2) then
+            irbnd2=ir
+            exit
+          end if
+        enddo
 !
-!       == FIND OUTERMOST POINT CONSIDERING THE POTENTIAL ======================
-        SVAR1=MAXVAL(ABS(PSPHI(IRBND:,LN)))
-        DO IR=NR-2,1,-1
-          IF(IR.LT.IRBND) EXIT
-          SVAR=TPSPHI(IR,LN)+(PSPOT(IR)*Y0-E)*PSPHI(IR,LN)
-          IF(ABS(SVAR).GT.1.D-4*SVAR1) THEN
-            IRBND=IR
-            EXIT
-          END IF
-        ENDDO
-!       == the cutoff can be large, in particular when the partial waves are  ==
-!       == matched to the nodeless partial waves. If this is unacceptable, =====
-!       == one should match to the all-electron partial waves of include the  ==
-!       == semi-core orbitals as valence electrons
+!       == THE CUTOFF CAN BE LARGE, IN PARTICULAR WHEN THE PARTIAL WAVES ARE  ==
+!       == MATCHED TO THE NODELESS PARTIAL WAVES. IF THIS IS UNACCEPTABLE, =====
+!       == ONE SHOULD MATCH TO THE ALL-ELECTRON PARTIAL WAVES OF INCLUDE THE  ==
+!       == SEMI-CORE ORBITALS AS VALENCE ELECTRONS
         IF(RBND2.GT.RBNDX) THEN
           CALL ERROR$MSG('RADIUS FOR LOGARITHMIC DERIVATIVE EXCEEDS LIMIT')
           CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('LN',LN)
+          CALL ERROR$R8VAL('E',E)
           CALL ERROR$R8VAL('RBND2',RBND2)
           CALL ERROR$R8VAL('INTERNAL LIMIT',RBNDX)
+          CALL ERROR$I4VAL('IRBND',IRBND)
+          CALL ERROR$I4VAL('NR',NR)
+          CALL SETUP_WRITEPHI('ERRORDATA1.DAT',GID,NR,1 &
+      &                      ,TPSPHI(:,LN)+(PSPOT(:)*Y0-E)*PSPHI(:,LN))
+          CALL SETUP_WRITEPHI('ERRORDATA2.DAT',GID,NR,1,(PSPOT(:)*Y0-E))
+          CALL SETUP_WRITEPHI('ERRORDATA3.DAT',GID,NR,1,TPSPHI(:,LN))
+          CALL SETUP_WRITEPHI('ERRORDATA4.DAT',GID,NR,1,PSPHI(:,LN))
           CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
         END IF
 !!$!
-!!$!       == LIMIT RBND TO A REASONABLE MAXIMUM ==================================
+!!$!       == LIMIT RBND TO A REASONABLE MAXIMUM ===============================
 !!$        IF(R(IRBND).GT.RBNDX) THEN
-!!$          WRITE(*,FMT='("OVERWRITING MATCHING RADIUS ESTIMATED AS ",F10.5)') &
+!!$          WRITE(*,FMT='("OVERWRITING MATCHING RADIUS ESTIMATED AS ",F10.5)')&
 !!$     &                                                               R(IRBND)
 !!$          DO IR=1,IRBND
 !!$            IF(R(IR).LT.RBNDX) CYCLE
@@ -5163,7 +5211,6 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !!$          WRITE(*,FMT='("NEW RADIUS ",F10.5)')R(IRBND)
 !!$        END IF
 !!$!        RBND2=RBND !OLD CHOICE
-!!$        RBND2=R(IRBND)
 !
 !       ========================================================================
 !       ==  CORRECT FOR NODES LYING WITHIN 0.3. THEY CAN OCCUR                ==
@@ -5210,6 +5257,8 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
             CALL ERROR$I4VAL('L',L)
             CALL ERROR$R8VAL('E',E)
             CALL ERROR$R8VAL('X0',X0)
+            CALL ERROR$R8VAL('RBND2',RBND2)
+            CALL ERROR$R8VAL('R(IRBND)',R(IRBND))
             PHI(IRBND+2:)=0.D0  ! MASK OVERFLOWS
             CALL SETUP_WRITEPHI('ERRORDATA1.DAT',GID,NR,1,PHI)
             CALL SETUP_WRITEPHI('ERRORDATA2.DAT',GID,NR,1,PSPHI(:,LN))
@@ -5221,7 +5270,6 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
           CALL ERROR$MSG('LOOP NOT CONVERGED')
           CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
         END IF
-
 !
 !       ========================================================================
 !       ==  RESCALE PSEUDO PARTIAL WAVES SO THAT THEY MATCH TO AE PARTIAL WAVES=
@@ -5234,8 +5282,13 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
         PHI(:)=PHI(:)*SVAR
 !
 !       == OVERWRITE NODELESS INPUT PARTIAL WAVE BY PSEUDO PARTIAL WAVE
-        PSPHI(:IRBND,LN) =PHI(:IRBND)
-        TPSPHI(:IRBND,LN)=(E-POT(:IRBND)*Y0)*PHI(:IRBND)
+!       == the partial wave outside rbnd is set to the input function
+!       == to avoid an exponentially growing deviation. tpsphi is not 
+!       == constructed from the input tpsphi to avoid picking up ??
+!!$        PSPHI(:IRBND,LN) =PHI(:IRBND)
+!!$        TPSPHI(:IRBND,LN)=(E-POT(:IRBND)*Y0)*PHI(:IRBND)
+        PSPHI(:irbnd2,LN) =PHI(:irbnd2)
+        TPSPHI(:,LN)=(E-POT(:)*Y0)*psPHI(:,ln)
       ENDDO
                                 CALL TRACE$POP()
       RETURN

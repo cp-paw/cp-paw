@@ -1220,13 +1220,17 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
       USE LMTO_MODULE, ONLY : K2,POTPAR,NSP,LNX,LOX,HYBRIDSETTING
+      USE periodictable_module
       IMPLICIT NONE
+      logical(4),parameter   :: tcut=.false.
       REAL(8)                :: LAMBDA1
       REAL(8)                :: LAMBDA2
       INTEGER(4)             :: GID
       INTEGER(4)             :: NR
       REAL(8)   ,ALLOCATABLE :: R(:)
       REAL(8)                :: RAD
+      REAL(8)                :: aez
+      REAL(8)                :: rcov
       INTEGER(4)             :: IRAD ! FIRST POINT BEYOND RAD
       REAL(8)                :: QBAR
       REAL(8)                :: JVAL,JDER,KVAL,KDER
@@ -1248,6 +1252,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       REAL(8)   ,ALLOCATABLE :: ULITTLE(:,:,:,:,:)
 CHARACTER(128) :: STRING
 REAL(8) :: PI
+INTEGER(4)             :: ln3,ln4
 !     **************************************************************************
                               CALL TRACE$PUSH('LMTO_MAKETAILEDPARTIALWAVES')
       DO ISP=1,NSP
@@ -1408,6 +1413,22 @@ REAL(8) :: PI
         DEALLOCATE(PSPHIDOT)
         DEALLOCATE(NLPHI)
         DEALLOCATE(NLPHIDOT)
+!
+!       ========================================================================
+!       ==  cut off tails for stability                                       ==
+!       ========================================================================
+        IF(TCUT) THEN
+          CALL SETUP$GETR8('AEZ',AEZ)
+          CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+          DO IR=1,NR
+            IF(R(IR).GT.2.D0*RCOV) THEN  ! 2*rcov is a bit arbitrary
+              POTPAR(ISP)%TAILED%NLF(IR:,:)=0.D0
+              POTPAR(ISP)%TAILED%AEF(IR:,:)=0.D0
+              POTPAR(ISP)%TAILED%PSF(IR:,:)=0.D0
+              EXIT
+            END IF
+          ENDDO
+        END IF
 
 !!$PRINT*,'WARNING!!!! FUDGE FOR TESTING H2'
 !!$PI=4.D0*ATAN(1.D0)
@@ -1432,12 +1453,12 @@ REAL(8) :: PI
 !
 !
 !
-WRITE(STRING,FMT='(I5)')ISP
-STRING='AETAILS_FORATOMTYPE'//TRIM(ADJUSTL(STRING))//'.DAT'
-CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%AEF)
-WRITE(STRING,FMT='(I5)')ISP
-STRING='NLTAILS_FORATOMTYPE'//TRIM(ADJUSTL(STRING))//'.DAT'
-CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
+!!$WRITE(STRING,FMT='(I5)')ISP
+!!$STRING='AETAILS_FORATOMTYPE'//TRIM(ADJUSTL(STRING))//'.DAT'
+!!$CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%AEF)
+!!$WRITE(STRING,FMT='(I5)')ISP
+!!$STRING='NLTAILS_FORATOMTYPE'//TRIM(ADJUSTL(STRING))//'.DAT'
+!!$CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
 !
         DEALLOCATE(R)
 !       ========================================================================
@@ -1448,6 +1469,19 @@ CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
         ALLOCATE(POTPAR(ISP)%TAILED%U(LMNXT,LMNXT,LMNXT,LMNXT))
         ALLOCATE(ULITTLE(LRX+1,LNXT,LNXT,LNXT,LNXT))
         CALL LMTO_ULITTLE(GID,NR,LRX,LNXT,LOXT,POTPAR(ISP)%TAILED%AEF,ULITTLE)
+!!$do l=1,lrx+1
+!!$  do ln1=1,lnxt
+!!$    do ln2=ln1,lnxt
+!!$      do ln3=1,lnxt
+!!$        do ln4=ln3,lnxt
+!!$          if(abs(ulittle(l,ln1,ln2,ln3,ln4)).lt.1.d-5) cycle
+!!$          write(*,fmt='(5i4,f10.5)')l,ln1,ln2,ln3,ln4,ulittle(l,ln1,ln2,ln3,ln4)
+!!$        enddo
+!!$      enddo
+!!$    enddo
+!!$  enddo
+!!$enddo
+!!$stop 'forced'
         CALL LMTO_UTENSOR(LRX,LMNXT,LNXT,LOXT,ULITTLE,POTPAR(ISP)%TAILED%U)
         DEALLOCATE(ULITTLE)
 !
