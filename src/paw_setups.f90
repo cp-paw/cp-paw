@@ -712,6 +712,7 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
       INTEGER(4)               :: NR
+      INTEGER(4)               :: i
 !     **************************************************************************
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
 !
@@ -984,6 +985,21 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=THIS%ATOM%EOFI
+!
+!     ==========================================================================
+!     ==  atomic density                                                      ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'AERHO') THEN
+        IF(LEN.NE.NR) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL(:)=0.D0
+        DO I=1,THIS%ATOM%NB
+          VAL(:)=VAL(:)+THIS%ATOM%FOFI(I) &
+     &                 *(THIS%ATOM%AEPSI(:,I)**2+THIS%ATOM%AEPSISM(:,I)**2)
+        ENDDO
 !
 !     ==========================================================================
 !     ==                                                                      ==

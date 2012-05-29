@@ -69,6 +69,7 @@ TYPE POTPAR_TYPE
 !!$  REAL(8)   ,POINTER :: DOVERLAPKK(:,:) !(LNX,LNX)
 !!$  REAL(8)   ,POINTER :: DOVERLAPKJ(:,:) !(LNX,LNX)
 !!$  REAL(8)   ,POINTER :: DOVERLAPJJ(:,:) !(LNX,LNX)
+  logical(4)         :: tallorb=.false.  ! like torb(:)=true, temporary switch
   LOGICAL(4),POINTER :: TORB(:)         !(LNX)
   TYPE(TAILED_TYPE)            :: TAILED
 !!$  TYPE(POTPARRED_TYPE)         :: SMALL
@@ -140,6 +141,7 @@ END TYPE OFFSITEX_TYPE
 LOGICAL(4)            :: TON=.FALSE.       
 LOGICAL(4)            :: TOFFSITE=.TRUE.  !INCLUDE OFFSITE EXCHANGE
 LOGICAL(4)            :: TDROP=.FALSE. ! WRITE THE WAVE FUNCTIONS TO FILE
+LOGICAL(4)            :: Tpick=.FALSE. ! real hamilton correction from file
 REAL(8)               :: K2=-0.25D0    ! 0.5*K2 IS THE KINETIC ENERGY
 REAL(8)               :: RCSCALE=1.2D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
 !         RCSCALE TIMES THE SUM OF COVALENT RADII DEFINES CUTOFF FOR NEIGBORLIST
@@ -214,12 +216,12 @@ END MODULE LMTO_MODULE
 !     **************************************************************************
       IF(ID.EQ.'ON') THEN
         TON=VAL
-!
       ELSE IF(ID.EQ.'OFFSITE') THEN
         TOFFSITE=VAL
-!
       ELSE IF(ID.EQ.'DROP') THEN
         TDROP=VAL
+      ELSE IF(ID.EQ.'PICK') THEN
+        TPICK=VAL
 !
 !     ==========================================================================
 !     == IF ACTIVE THE HYBRID CONTRIBTIONS ON THIS ATOM ARE CONSIDERED        ==
@@ -444,14 +446,19 @@ END MODULE LMTO_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : TON,NSP,HYBRIDSETTING,RCSCALE,HFWEIGHT,K2
+      USE LMTO_MODULE, ONLY : TON,NSP,HYBRIDSETTING,RCSCALE,HFWEIGHT,K2 &
+     &                       ,toffsite,potpar
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: THISTASK,NTASKS
       CHARACTER(32)         :: ID
-      INTEGER(4)            :: ISP
+      INTEGER(4)            :: ISP,i
+      logical(4)            :: tchk
+      integer(4)            :: lnx1
+      integer(4),allocatable :: lox1(:)
 !     **************************************************************************
       IF(.NOT.TON) RETURN
+      CALL LMTO_INITIALIZE()
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
       CALL REPORT$TITLE(NFIL,'LMTO OBJECT:  GENERIC VARIABLES')
@@ -462,18 +469,24 @@ END MODULE LMTO_MODULE
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETCH('ID',ID)
+        CALL SETUP$GETI4('LNX',LNX1)
+        ALLOCATE(LOX1(LNX1))
+        CALL SETUP$GETI4A('LOX',LNX1,LOX1)
         WRITE(NFIL,*)
         CALL REPORT$TITLE(NFIL,'LMTO OBJECT: '//TRIM(ID))
 !!$        CALL REPORT$R8VAL(NFIL,'EXCHANGE ADMIXTURE ' &
 !!$     &                         ,HYBRIDSETTING(ISP)%HFWEIGHT,'')
+        CALL REPORT$STRING(NFIL,'ACTIVE ORBITALS (L=SWITCH):')
+        WRITE(NFIL,FMT='(100("   ",I1,"=",L1))') &
+       &                                  (LOX1(I),POTPAR(ISP)%TORB(I),I=1,LNX1)
         CALL REPORT$L4VAL(NFIL,'CORE VALENCE EXCHANGE ' &
      &                        ,HYBRIDSETTING(ISP)%TCV)
-        CALL REPORT$L4VAL(NFIL,'NDDO OFFSITE TERMS ' &
-     &                        ,HYBRIDSETTING(ISP)%TNDDO)
-        CALL REPORT$L4VAL(NFIL,'31 OFFSITE TERMS ' &
-     &                        ,HYBRIDSETTING(ISP)%T31)
-        CALL REPORT$L4VAL(NFIL,'BONDX OFFSITE TERMS ' &
-     &                        ,HYBRIDSETTING(ISP)%TBONDX)
+        TCHK=TOFFSITE.AND.HYBRIDSETTING(ISP)%TNDDO
+        CALL REPORT$L4VAL(NFIL,'NDDO OFFSITE TERMS ',tchk)
+        tchk=toffsite.and.HYBRIDSETTING(ISP)%T31
+        CALL REPORT$L4VAL(NFIL,'31 OFFSITE TERMS ',tchk)
+        tchk=toffsite.and.HYBRIDSETTING(ISP)%Tbondx
+        CALL REPORT$L4VAL(NFIL,'BONDX OFFSITE TERMS ',tchk)
         CALL REPORT$L4VAL(NFIL,'SETUP WITH FOCK TERM ' &
      &                        ,HYBRIDSETTING(ISP)%TFOCKSETUP)
 !!$        CALL REPORT$R8VAL(NFIL,'K2 ' &
@@ -484,6 +497,7 @@ END MODULE LMTO_MODULE
      &                        ,HYBRIDSETTING(ISP)%TAILEDLAMBDA1,'1/ABOHR ')
         CALL REPORT$R8VAL(NFIL,'LAMDA2 FOR NTBO TAILS ' &
      &                        ,HYBRIDSETTING(ISP)%TAILEDLAMBDA2,'1/ABOHR ')
+        deallocate(lox1)
         CALL SETUP$ISELECT(0)
       ENDDO
       RETURN
@@ -797,7 +811,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       CALL LMTO_MAKEPOTPAR()
 !
       DO ISP=1,NSP
-       IF(.NOT.HYBRIDSETTING(ISP)%ACTIVE)POTPAR(ISP)%TORB=.FALSE.
+        IF(.NOT.HYBRIDSETTING(ISP)%ACTIVE)POTPAR(ISP)%TORB=.FALSE.
       ENDDO
 !
 !     ==========================================================================
@@ -3252,7 +3266,7 @@ COMPLEX(8)  :: PHASE
         IF(.NOT.TORB(I)) CYCLE
 !       == ORTHOGONALIZE
         DO J=1,I-1
-          IF(.NOT.TORB(J)) CYCLE
+          IF(.NOT.(TORB(J).or.potpar(isp)%tallorb)) CYCLE
           SVAR=OVERLAP(J,I)
           T(:,I)=T(:,I)-T(:,J)*SVAR
           OVERLAP1=OVERLAP
@@ -3272,7 +3286,7 @@ COMPLEX(8)  :: PHASE
 !     ==========================================================================
       CALL LIB$INVERTR8(LMNX,T,UNT)
       DO I=1,LMNX
-        IF(.NOT.TORB(I)) THEN
+        IF(.NOT.(TORB(I).or.potpar(isp)%tallorb)) THEN
           UNT(:,I)=0.D0
           T(:,I)=0.D0
           UNT(I,:)=0.D0
@@ -3564,6 +3578,347 @@ PRINT*,'TEST READING '
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$dmftinterface_pick()
+!     **************************************************************************
+!     **  reads A FILE Hamilton correction                                    **
+!     **  FOR USE AS DMFT INTERFACE                                           **
+!     **                                                                      **
+!     **    <PI_ALPHA|PSI_N> ; E_N                                            **
+!     **                                                                      **
+!     **  THE BASIS ARE ONSITE-ORTHOGONALIZED NATURAL TIGHT-BINDING ORBITALS  **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
+      USE LMTO_MODULE, ONLY : Tpick
+      use strings_module
+      IMPLICIT NONE
+      TYPE T_TYPE
+        REAL(8),POINTER :: MAT(:,:)
+        REAL(8),POINTER :: INV(:,:)
+      END TYPE T_TYPE
+      INTEGER(4)             :: NFIL
+      INTEGER(4)             :: NB,nb1,NBH
+      INTEGER(4)             :: NKPT,nkpt1
+      INTEGER(4)             :: ib,ib1,ib2,idim,ikpt,ispin,ik
+      INTEGER(4)             :: ngl
+      real(8)                :: efermi
+      complex(8),allocatable :: dh(:,:)
+      complex(8),allocatable :: psibar(:,:)
+      REAL(8)                :: beta ! 1/(k_b*T)
+      REAL(8)                :: EV
+      logical(4),save        :: tconnectedfile
+      complex(8)             :: a,b
+      complex(8),parameter   :: ci=(0.d0,1.d0)
+!     **************************************************************************
+                                           CALL TRACE$PUSH('LMTO_NTBODENMAT')
+      IF(.NOT.Tpick) RETURN
+      CALL CONSTANTS('EV',EV)
+!
+!     ==========================================================================
+!     ==  ATTACH FILE                                                         ==
+!     ==========================================================================
+      if(.not.tconnectedfile) then
+print*,'marke 1: connecting file'
+        CALL FILEHANDLER$SETFILE('DMFTIN',.FALSE.,-'DMFTIN.DAT')
+!        CALL FILEHANDLER$SETSPECIFICATION('DMFTIN','STATUS','NEW')
+!        CALL FILEHANDLER$SETSPECIFICATION('DMFTIN','ACTION','READ')
+        CALL FILEHANDLER$SETSPECIFICATION('DMFTIN','FORM','FORMATTED')
+        tconnectedfile=.true.
+print*,'marke 2:  file connected'
+      end if
+!
+!     ==========================================================================
+!     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
+!     ==========================================================================
+      NKPT=NKPTL
+      IF(NKPT.NE.NKPTL) THEN
+        CALL ERROR$MSG('ROUTINE NOT SUITED FOR PARALLEL CALCULATIONS')
+        CALL ERROR$STOP('LMTO_DROP')
+      END IF
+!
+!     ==========================================================================
+!     ==  read file header                                                    ==
+!     ==========================================================================
+print*,'marke 3:  call unit'
+      CALL FILEHANDLER$UNIT('DMFTIN',NFIL)
+print*,'marke 4:  unit called ',nfil
+      READ(NFIL,*)EFERMI
+print*,'marke 5:  efermi read ',efermi
+      EFERMI=EFERMI*EV
+      READ(NFIL,*)BETA
+print*,'marke 6:  beta read ',beta
+      BETA=BETA/EV
+      READ(NFIL,*)NKPT1 !# (KPOINTS)
+print*,'marke 6:  nkpt read ',nkpt,nkpt1
+      IF(NKPT1.NE.NKPT) THEN
+        CALL ERROR$MSG('INCONSISTENT NUMBER OF K-POINTS')
+        CALL ERROR$I4VAL('INTERNAL NUMBER OF KPOINTS',NKPT)
+        CALL ERROR$I4VAL('NUMBER OF KPOINTS ON FILE',NKPT1)
+        CALL ERROR$STOP('LMTO_PICK')
+      END IF
+      IF(NSPIN.NE.1) THEN
+        CALL ERROR$MSG('DMFT INTERFACE IS LIMITED TO NSPIN=1')
+        CALL ERROR$I4VAL('NSPIN',NSPIN)
+        CALL ERROR$STOP('LMTO_PICK')
+      END IF
+      IF(NDIM.NE.1) THEN
+        CALL ERROR$MSG('DMFT INTERFACE IS LIMITED TO NDIM=1')
+        CALL ERROR$I4VAL('NDIM',NDIM)
+        CALL ERROR$STOP('LMTO_PICK')
+      END IF
+!
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          NBH=THIS%NBH
+          NB=THIS%NB
+          ngl=gset%ngl
+!
+!         ======================================================================
+!         ==  GET HAMILTONIAN CORRECTION FROM FILE                            ==
+!         ======================================================================
+          ALLOCATE(DH(Nb,nb))
+PRINT*,'READING ik,npro1 '
+          READ(NFIL,*)IK,Nb1
+PRINT*,'ik,npro1 read: ',ik,nb1
+          IF(nb.NE.Nb1) THEN
+            CALL ERROR$MSG('INCONSISTENT SIZE OF HAMILTONIAN')
+            CALL ERROR$I4VAL('INTERNAL number of bands',Nb)
+            CALL ERROR$I4VAL('number of bands ON FILE',Nb1)
+            CALL ERROR$STOP('LMTO_READDELTAH')
+          END IF
+PRINT*,'READING dh ',IKPT,NKPT,NB
+          DO Ib=1,nb
+            READ(NFIL,*)DH(ib,:)
+          ENDDO
+!          dh=dh*ev
+PRINT*,'dh read '
+!
+!         ======================================================================
+!         == add to forces acting on wave functions                           ==
+!         ======================================================================
+          ALLOCATE(PSIBAR(NGL,NDIM))
+          IF(GSET%TINV) THEN
+!!$            IF(MAXVAL(ABS(DH)).GT.1.D-5) THEN
+!!$              CALL ERROR$MSG('HAMILTON CORRECTION MUST BE REAL FOR TINV=T')
+!!$              CALL ERROR$STOP('LMTO$PICK')
+!!$            END IF
+!           == SET IMAGINARY PARTS STRICTLY TO ZERO ============================
+            DH=REAL(DH)
+            DO IB2=1,NBH
+              DO IDIM=1,NDIM
+                CALL PLANEWAVE$INVERTG(NGL,this%PSI0(:,IDIM,IB2),PSIBAR(:,IDIM))
+              ENDDO
+              DO IB1=1,NBH
+                A=DH(2*IB1-1,2*IB2-1)+cI*DH(2*IB1-1,2*IB2)
+                B=DH(2*IB1,2*IB2)+cI*DH(2*IB1,2*IB2-1)
+                THIS%HPSI(:,:,IB1)=THIS%HPSI(:,:,IB1) &
+     &                            +THIS%PSI0(:,:,IB2)*(A+B) &
+     &                            +PSIBAR(:,:)*(A-B)
+              ENDDO
+            ENDDO
+          ELSE
+            DO IB1=1,NB
+              DO IB2=1,NB
+                THIS%HPSI(:,:,IB1)=THIS%HPSI(:,:,IB1) &
+     &                            +THIS%PSI0(:,:,IB2)*DH(IB2,IB1)
+              ENDDO
+            ENDDO
+          END IF
+          DEALLOCATE(PSIBAR)
+          deALLOCATE(DH)
+        ENDDO
+      ENDDO
+      CLOSE(NFIL)
+!!$      CALL ERROR$MSG('FORCED STOP AFTER READING FILE')
+!!$      CALL ERROR$STOP('LMTO$pick')
+                                           CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_pick2()
+!     **************************************************************************
+!     **  reads A FILE Hamilton correction                                    **
+!     **  FOR USE AS DMFT INTERFACE                                           **
+!     **                                                                      **
+!     **    <PI_ALPHA|PSI_N> ; E_N                                            **
+!     **                                                                      **
+!     **  THE BASIS ARE ONSITE-ORTHOGONALIZED NATURAL TIGHT-BINDING ORBITALS  **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
+      USE LMTO_MODULE, ONLY : Tpick,SBAR,DENMAT,LOX,LNX,ISPECIES,POTPAR
+      use strings_module
+      IMPLICIT NONE
+      TYPE T_TYPE
+        REAL(8),POINTER :: MAT(:,:)
+        REAL(8),POINTER :: INV(:,:)
+      END TYPE T_TYPE
+      INTEGER(4)             :: NFIL
+      INTEGER(4)             :: NB,NBH
+      INTEGER(4)             :: Npro
+      INTEGER(4),ALLOCATABLE :: IPRO1(:)
+      INTEGER(4),ALLOCATABLE :: NPROAT(:)
+      TYPE(T_TYPE),ALLOCATABLE :: T(:)
+      CHARACTER(16)          :: ID
+      INTEGER(4)             :: NAT
+      INTEGER(4)             :: NKPT
+      INTEGER(4)             :: LMNXT,LMNX
+      INTEGER(4)             :: I,J,I1,I2,IDIM,IPRO,IAT,ISP,IKPT,ISPIN,IBH
+      INTEGER(4)             :: npro1,nkpt1,nchi,ik
+      real(8)                :: efermi
+      complex(8),allocatable :: dh(:,:)
+      REAL(8)                :: beta ! 1/(k_b*T)
+      REAL(8)                :: EV
+      logical(4),save        :: tconnectedfile
+!     **************************************************************************
+                                           CALL TRACE$PUSH('LMTO_NTBODENMAT')
+      IF(.NOT.Tpick) RETURN
+      CALL CONSTANTS('EV',EV)
+!
+!     ==========================================================================
+!     ==  ATTACH FILE                                                         ==
+!     ==========================================================================
+      if(.not.tconnectedfile) then
+print*,'marke 1: connecting file'
+        CALL FILEHANDLER$SETFILE('DMFTIN',.FALSE.,-'DMFTIN.DAT')
+!        CALL FILEHANDLER$SETSPECIFICATION('DMFTIN','STATUS','NEW')
+!        CALL FILEHANDLER$SETSPECIFICATION('DMFTIN','ACTION','READ')
+        CALL FILEHANDLER$SETSPECIFICATION('DMFTIN','FORM','FORMATTED')
+        tconnectedfile=.true.
+print*,'marke 2:  file connected'
+      end if
+!
+!     ==========================================================================
+!     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
+!     ==========================================================================
+      NKPT=NKPTL
+      IF(NKPT.NE.NKPTL) THEN
+        CALL ERROR$MSG('ROUTINE NOT SUITED FOR PARALLEL CALCULATIONS')
+        CALL ERROR$STOP('LMTO_DROP')
+      END IF
+!
+!     ==========================================================================
+!     ==  CONSTRUCT INDEX ARRAYS                                              ==
+!     ==========================================================================
+      NAT=SIZE(ISPECIES)
+      ALLOCATE(IPRO1(NAT))
+      ALLOCATE(NPROAT(NAT))
+      IPRO=1
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        IPRO1(IAT)=IPRO
+        NPROAT(IAT)=SUM(2*LOX(:LNX(ISP),ISP)+1)
+        IPRO=IPRO+NPROAT(IAT)
+      ENDDO
+      npro=ipro-1
+!
+!     ==========================================================================
+!     ==  TRANSFORMATION ONTO ONSITE ORTHOGONALIZED PARTIAL WAVES             ==
+!     ==  USES PRE-CALCULATED OVERLAP OF TAILED PARTIAL WAVES                 ==
+!     ==========================================================================
+      ALLOCATE(T(NAT))
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        LMNX=NPROAT(IAT)
+        ALLOCATE(T(IAT)%MAT(LMNX,LMNX))
+        ALLOCATE(T(IAT)%INV(LMNX,LMNX))
+        CALL LMTO_ONSORTHO(IAT,LMNX,T(IAT)%MAT,T(IAT)%INV)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  read file header                                                    ==
+!     ==========================================================================
+print*,'marke 3:  call unit'
+      CALL FILEHANDLER$UNIT('DMFTIN',NFIL)
+print*,'marke 4:  unit called ',nfil
+      READ(NFIL,*)EFERMI
+print*,'marke 5:  efermi read ',efermi
+      EFERMI=EFERMI*EV
+      READ(NFIL,*)BETA
+print*,'marke 6:  beta read ',beta
+      BETA=BETA/EV
+      READ(NFIL,*)NKPT1 !# (KPOINTS)
+print*,'marke 6:  nkpt read ',nkpt,nkpt1
+      IF(NKPT1.NE.NKPT) THEN
+        CALL ERROR$MSG('INCONSISTENT NUMBER OF K-POINTS')
+        CALL ERROR$I4VAL('INTERNAL NUMBER OF KPOINTS',NKPT)
+        CALL ERROR$I4VAL('NUMBER OF KPOINTS ON FILE',NKPT1)
+        CALL ERROR$STOP('LMTO_PICK')
+      END IF
+      IF(NSPIN.NE.1) THEN
+        CALL ERROR$MSG('DMFT INTERFACE IS LIMITED TO NSPIN=1')
+        CALL ERROR$I4VAL('NSPIN',NSPIN)
+        CALL ERROR$STOP('LMTO_PICK')
+      END IF
+      IF(NDIM.NE.1) THEN
+        CALL ERROR$MSG('DMFT INTERFACE IS LIMITED TO NDIM=1')
+        CALL ERROR$I4VAL('NDIM',NDIM)
+        CALL ERROR$STOP('LMTO_PICK')
+      END IF
+!
+      NPRO=MAP%NPRO
+      ALLOCATE(DH(NPRO,NPRO))
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          NBH=THIS%NBH
+          NB=THIS%NB
+          CALL PLANEWAVE$SELECT(GSET%ID)
+!
+!         ==GET HAMILTONIAN CORRECTION FROM FILE================================
+PRINT*,'READING ik,npro1 '
+          READ(NFIL,*)IK,Nb
+PRINT*,'ik,npro1 read: ',ik,npro1
+          IF(NPRO1.NE.NPRO) THEN
+            CALL ERROR$MSG('INCONSISTENT SIZE OF HAMILTONIAN')
+            CALL ERROR$I4VAL('INTERNAL BASIS-SET SIZE',NPRO)
+            CALL ERROR$I4VAL('BASIS-SET SIZE ON FILE',NPRO1)
+            CALL ERROR$STOP('LMTO_READDELTAH')
+          END IF
+PRINT*,'READING dh ',IKPT,Npro,NKPT,NB
+          DO Ipro=1,npro
+            READ(NFIL,*)DH(:,Ipro)
+          ENDDO
+PRINT*,'dh read '
+!
+!         == TRANSFORM from ONSITE-ORTHOGONAL ORBITALS =========================
+          DO IAT=1,NAT
+            I1=IPRO1(IAT)
+            I2=I1-1+NPROAT(IAT)
+            DO Ipro=1,Npro
+              DH(I1:I2,Ipro)=MATMUL(TRANSPOSE(T(IAT)%INV),DH(I1:I2,Ipro))
+              DH(Ipro,I1:I2)=MATMUL(DH(ipro,I1:I2),T(IAT)%INV)
+            ENDDO
+          ENDDO
+!
+!         == map onto htbc =====================================================
+          IF(.NOT.ASSOCIATED(THIS%HTBC))ALLOCATE(THIS%HTBC(NDIM,NBH,NPRO))
+          IF(.NOT.ASSOCIATED(THIS%TBC)) THEN
+            CALL ERROR$MSG('THIS%TBC NOT ASSOCIATED')
+            CALL ERROR$STOP('LMTO_pick')
+          END IF
+          DO IBH=1,NBH
+            THIS%HTBC(1,IBH,:)=MATMUL(DH,THIS%TBC(1,IBH,:))
+          ENDDO
+        ENDDO
+      ENDDO
+      DO IAT=1,NAT
+        DEALLOCATE(T(IAT)%MAT)
+        DEALLOCATE(T(IAT)%INV)
+      ENDDO
+      DEALLOCATE(T)
+      allocate(dh(npro,npro))
+      CLOSE(NFIL)
+      CALL ERROR$MSG('FORCED STOP AFTER READING FILE')
+      CALL ERROR$STOP('LMTO$pick')
+                                           CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$ETOT(LMNXX_,NDIMD_,NAT_,DENMAT_)
       USE LMTO_MODULE, ONLY : TON
 !     **************************************************************************
@@ -3573,7 +3928,7 @@ PRINT*,'TEST READING '
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-USE LMTO_MODULE, ONLY : DENMAT,HAMIL,TOFFSITE
+USE LMTO_MODULE, ONLY : tdrop,tpick,DENMAT,HAMIL,TOFFSITE
 USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMNXX_
@@ -3588,14 +3943,18 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START ")')
 !
 !     ==========================================================================
+!     == WRITE DMFT INTERFACE 
+!     ==========================================================================
+      IF(TDROP) THEN
+        CALL LMTO_DROP()
+        return
+      END IF
+      IF(Tpick) return
+!
+!     ==========================================================================
 !     ==  TEST
 !     ==========================================================================
       CALL LMTO_TESTORBITALS()
-!
-!     ==========================================================================
-!     == WRITE DMFT INTERFACE 
-!     ==========================================================================
-      CALL LMTO_DROP()
 !
 !     ==========================================================================
 !     ==  CONSTRUCT DENSITY MATRIX
@@ -3716,6 +4075,8 @@ CALL LMTO$REPORTHAMIL(6)
       INTEGER(4)            :: NR
       REAL(8)   ,ALLOCATABLE:: DT(:,:,:)
       REAL(8)   ,ALLOCATABLE:: HT(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: DTall(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: HTall(:,:,:)
       REAL(8)   ,ALLOCATABLE:: AECORE(:)
       REAL(8)   ,ALLOCATABLE:: ULITTLE(:,:,:,:,:)
       REAL(8)   ,ALLOCATABLE:: U(:,:,:,:)
@@ -3884,13 +4245,20 @@ CALL DFT$GETI4('TYPE',IDFTTYPE)
 IF(IDFTTYPE.NE.5002) THEN
 ! THIS IS THE TIME CONSUMIN PART OF ENERGYTEST
 CALL TIMING$CLOCKON('ENERGYTEST:DC')      
+        ALLOCATE(DTall(LMNXT,LMNXT,NDIMD))
+        ALLOCATE(HTall(LMNXT,LMNXT,NDIMD))
+        potpar(isp)%tallorb=.true.
+        CALL LMTO_BLOWUPDENMATNL(IAT,IAT,NDIMD,LMNX,LMNX,D,LMNXT,LMNXT,DTALL)
         CALL LMTO_SIMPLEDC(GID,NR,LMNXT,LNXT,LOXT,POTPAR(ISP)%TAILED%AEF &
-     &                    ,LRX,AECORE,DT,EX,HT)
-!        CALL LMTO_BLOWDOWNHT(IAT,NDIMD,LMNXT,HT,LMNX,H)
-!       == THE FOLLOWING IS MORE GENERAL AND SHALL REPLACE THE PREVIOUS ONE
-        CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HT,LMNX,LMNX,H)
-        EXTOT=EXTOT-EX
+     &                    ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
+        CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HTall,LMNX,LMNX,H)
+        potpar(isp)%tallorb=.false.  ! do not forget this!!!!!
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H
+        CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HT,LMNX,LMNX,H)
+        HAMIL(INH)%MAT=HAMIL(INH)%MAT-H
+        EXTOT=EXTOT-EX
+        deALLOCATE(DTall)
+        deALLOCATE(HTall)
 PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
 CALL TIMING$CLOCKOFF('ENERGYTEST:DC')      
 END IF
@@ -4128,7 +4496,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
         LMN=0
         DO LN=1,LNX(ISP)
           L=LOX(LN,ISP)
-          IF(.NOT.POTPAR(ISP)%TORB(LN)) THEN
+          IF(.NOT.(POTPAR(ISP)%TORB(LN).or.potpar(isp)%tallorb)) THEN
             IF(TLEFT) THEN
               D1(LMN+1:LMN+2*L+1,:,:)=0.D0
             ELSE
@@ -4344,7 +4712,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
         LMN=0
         DO LN=1,LNX(ISP)
           L=LOX(LN,ISP)
-          IF(.NOT.POTPAR(ISP)%TORB(LN)) THEN
+          IF(.NOT.(POTPAR(ISP)%TORB(LN).OR.POTPAR(ISP)%TALLORB)) THEN
             IF(TLEFT) THEN
               H(LMN+1:LMN+2*L+1,:,:)=0.D0
             ELSE
@@ -4424,7 +4792,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_SIMPLEDC(GID,NR,LMNX,LNX,LOX,CHI,LRX,AECORE &
-     &                        ,DENMAT,ETOT,HAM)
+     &                        ,DENMAT,denmatb,ETOT,HAM,hamb)
 !     **************************************************************************
 !     **  DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                **
 !     **                                                                      **
@@ -4432,6 +4800,13 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !     **  DFT FUNCTIONAL                                                      **
 !     **  FOR THE DENSITY BUILT FROM THE LOCAL ORBITALS AND THE CORE DENSITY  **
 !     **  THIS ENERGY NEEDS TO BE SUBTRACTED FROM THE TOTAL ENERGY            **
+!     **                                                                      **
+!     **  denmat describes the correlated orbitals, while                     **
+!     **  denmatb describes all orbitals on this site                         **
+!     **                                                                      **
+!     **   dex=ex(rhotot)-ex(rhotot-rhocor)                                   **
+!     **   vxtot=mu(rhotot)-mu(rhotot-rhocor)                                 **
+!     **   vxcor=mu(rhotot-rhocor)                                            **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -4444,8 +4819,11 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
       REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)
       REAL(8)     ,INTENT(IN) :: AECORE(NR)
       REAL(8)     ,INTENT(IN) :: DENMAT(LMNX,LMNX,4) ! DENSITY MATRIX
+      REAL(8)     ,INTENT(IN) :: DENMATb(LMNX,LMNX,4) ! DENSITY MATRIX
       REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
       REAL(8)     ,INTENT(OUT):: HAM(LMNX,LMNX,4)  ! DETOT/D(RHO^*)        
+      REAL(8)     ,INTENT(OUT):: HAMb(LMNX,LMNX,4)  ! DETOT/D(RHO^*)        
+      integer(4)  ,parameter  :: method=3
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)  ,PARAMETER  :: NDIMD=4
       COMPLEX(8)              :: DENMAT1(LMNX,LMNX,NDIMD)
@@ -4458,6 +4836,8 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
       REAL(8)     ,ALLOCATABLE:: POT(:,:,:)
       REAL(8)                 :: EDENSITY(NR)
       REAL(8)                 :: AUX(NR),SVAR
+      REAL(8)                 :: fxc(NR)
+      REAL(8)                 :: pi,fourpi,y0
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN
       REAL(8)                 :: ETOTC,ETOTV
@@ -4470,6 +4850,9 @@ INTEGER(4) :: IMETHOD
  REAL(8)                 :: ETOT2
 !     **************************************************************************
       LMRX=(LRX+1)**2
+      pi=4.d0*atan(1.d0)
+      fourpi=4.d0*pi
+      y0=1.d0/sqrt(4.d0*pi)
       ETOT=0.D0
 !
 !     ==========================================================================
@@ -4485,15 +4868,107 @@ INTEGER(4) :: IMETHOD
         CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
      &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHO(:,:,IDIM))
       ENDDO
-      ALLOCATE(RHOWC(NR,LMRX,NDIMD))  !WITH CORE
-      RHOWC=RHO
-      RHOWC(:,1,1)=RHO(:,1,1)+AECORE(:)
+!
+!     ==========================================================================
+!     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
+!     ==========================================================================
+      if(method.eq.1) then 
+!       == this is the same method as 1000 just without comments ===============
+        ALLOCATE(RHOWC(NR,LMRX,NDIMD))  !WITH CORE
+        RHOWC=RHO
+        RHOWC(:,1,1)=RHO(:,1,1)+AECORE(:)
+        ALLOCATE(POT(NR,LMRX,NDIMD))
+        CALL DFT$SETL4('XCONLY',.TRUE.)
+        CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,ETOTC,POT)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTV,POT)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC,ETOT,POT)
+        CALL DFT$SETL4('XCONLY',.FALSE.)
+        ETOT=ETOT-ETOTC
+        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        DEALLOCATE(POT)
+        HAM=REAL(HAM1)
+
+      else if(method.eq.2) then 
+        DENMAT1=CMPLX(DENMATB)
+        ALLOCATE(RHOWC(NR,LMRX,NDIMD))  !WITH CORE
+        DO IDIM=1,NDIMD
+          CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
+     &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHOwc(:,:,IDIM))
+        ENDDO
+        RHOWC(:,1,1)=RHOwc(:,1,1)+AECORE(:)
+!
+call radial$r(gid,nr,r)
+aux(:)=4.d0*pi*r**2*aecore*y0
+call radial$integral(gid,nr,aux,svar)
+print*,'integral of core',svar
+aux(:)=4.d0*pi*r**2*rhowc(:,1,1)*y0
+call radial$integral(gid,nr,aux,svar)
+print*,'integral of rhotot',svar
+aux(:)=4.d0*pi*r**2*rho(:,1,1)*y0
+call radial$integral(gid,nr,aux,svar)
+print*,'integral of rhocor',svar
+!!$stop
+        ALLOCATE(POT(NR,LMRX,NDIMD))
+        ALLOCATE(POT2(NR,LMRX,NDIMD))
+        CALL DFT$SETL4('XCONLY',.TRUE.)
+CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTv,POT2)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC-RHO,ETOTC,POT)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC,ETOT,POT2)
+        CALL DFT$SETL4('XCONLY',.FALSE.)
+print*,'ex(tot)=',etot,' ex(tot-cor)=',etotc,' dex=',etot-etotc,' ex(cor)=',etotv
+        ETOT=ETOT-ETOTC
+        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        HAM=REAL(HAM1)
+        POT=POT2-POT
+        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        HAMB=REAL(HAM1)
+        DEALLOCATE(POT)
+        DEALLOCATE(POT2)
+!
+      else if(method.eq.3) then
+!       ==  construct full density   =====================================
+        DENMAT1=CMPLX(DENMATB)
+        ALLOCATE(RHOWC(NR,LMRX,NDIMD))  !WITH CORE
+        DO IDIM=1,NDIMD
+          CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
+     &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHOWC(:,:,IDIM))
+        ENDDO
+        RHOWC(:,1,1)=RHOWC(:,1,1)+AECORE(:)
+!       ==  potential for the full density =====================================
+        ALLOCATE(POT(NR,LMRX,NDIMD))
+        CALL LMTO_RADXC(GID,NR,LMRX,NDIMD,RHOWC,FXC,POT)
+        AUX(:)=(RHO(:,1,1)/(RHOWC(:,1,1)+1.D-6))**2
+        DO IDIM=1,NDIMD
+          DO LM=1,LMRX
+            POT(:,LM,Idim)=AUX(:)*POT(:,LM,Idim)
+          ENDDO
+        ENDDO
+        POT(:,1,1)=POT(:,1,1)-2.D0*FXC(:)*AUX(:)/(RHOWC(:,1,1)*y0+1.D-6)/Y0
+!       == potential for the correlated density =================================
+        ALLOCATE(POT2(NR,LMRX,NDIMD))
+        POT2(:,:,:)=0.D0
+        POT2(:,1,1)=2.D0*FXC*AUX(:)/(RHO(:,1,1)*y0+1.D-6)/Y0
+        call radial$r(gid,nr,r)
+        AUX(:)=FOURPI*R(:)**2*FXC*AUX(:)
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,ETOT)
+PRINT*,'----EXC  ',ETOT
+        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT2,CHI,HAM1)
+        HAM=REAL(HAM1)
+        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        HAMB=REAL(HAM1)
+        DEALLOCATE(POT)
+        DEALLOCATE(POT2)
+!
+      else if(method.eq.1000) then
+        ALLOCATE(RHOWC(NR,LMRX,NDIMD))  !WITH CORE
+        RHOWC=RHO
+        RHOWC(:,1,1)=RHO(:,1,1)+AECORE(:)
 !
 !     ==========================================================================
 !     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
 !     ==========================================================================
 !     == EXCHANGE ENERGY AND POTENTIAL =========================================
-      CALL DFT$SETL4('XCONLY',.TRUE.)
+        CALL DFT$SETL4('XCONLY',.TRUE.)
 !
 !     ==========================================================================
 !     == THIS FORMULATION IS BASED ON A NONCOLLINEAR FORMULATION, WHICH       ==
@@ -4505,8 +4980,8 @@ INTEGER(4) :: IMETHOD
 !     == BY AUGMENTATION_XC                                                   ==
 !     ==                                                                      ==
 !     ==========================================================================
-      ALLOCATE(POT(NR,LMRX,NDIMD))
-      CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,ETOTC,POT)
+        ALLOCATE(POT(NR,LMRX,NDIMD))
+        CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,ETOTC,POT)
 !!$ALLOCATE(RHO2(NR,LMRX,2))
 !!$ALLOCATE(POT2(NR,LMRX,2))
 !!$RHO2(:,:,1)=RHO(:,:,1)
@@ -4514,7 +4989,7 @@ INTEGER(4) :: IMETHOD
 !!$CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHO2,ETOTV,POT2)
 !!$PRINT*,'ETOTV COLLINEAR',ETOTV
 !!$CALL AUGMENTATION_WRITEPHI('RHO4_Z.DAT',GID,NR,LMRX,RHO4(:,:,4))
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTV,POT)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTV,POT)
 !!$PRINT*,'ETOTV NONCOLLINEAR',ETOTV
 !!$PRINT*,'GID,NR,LMRX,NDIMD ',GID,NR,LMRX,NDIMD
 !!$RHO2(:,:,1)=RHOWC(:,:,1)
@@ -4525,7 +5000,7 @@ INTEGER(4) :: IMETHOD
 !!$CALL ATOMLIB_WRITEPHI('POT2WC_T.DAT',GID,NR,LMRX,POT2(:,:,1))
 !!$CALL ATOMLIB_WRITEPHI('POT2WC_S.DAT',GID,NR,LMRX,POT2(:,:,2))
 !!$PRINT*,'ETOT COLLINEAR',ETOTV
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC,ETOT,POT)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC,ETOT,POT)
 !!$CALL ATOMLIB_WRITEPHI('POT4WC_T.DAT',GID,NR,LMRX,POT(:,:,1))
 !!$CALL ATOMLIB_WRITEPHI('POT4WC_X.DAT',GID,NR,LMRX,POT(:,:,2))
 !!$CALL ATOMLIB_WRITEPHI('POT4WC_Y.DAT',GID,NR,LMRX,POT(:,:,3))
@@ -4540,7 +5015,7 @@ INTEGER(4) :: IMETHOD
 !!$PRINT*,'VALENCE      EXCHANGE ENERGY (LOCAL) ',ETOTV
 !!$PRINT*,'CORE         EXCHANGE ENERGY (LOCAL) ',ETOTC
 !!$PRINT*,'CORE-VALENCE EXCHANGE ENERGY (LOCAL) ',ETOT-ETOTV-ETOTC
-      ETOT=ETOT-ETOTC
+        ETOT=ETOT-ETOTC
 !!$IF(ETOT.LT.-3.145D0) THEN
 !!$  PRINT*,'FILE RHOWC.DAT WRITTEN'
 !!$  CALL ATOMLIB_WRITEPHI('RHOWC1.DAT',GID,NR,LMRX,RHOWC(:,:,1))
@@ -4585,7 +5060,7 @@ INTEGER(4) :: IMETHOD
 !!$!       == COMPARISON ==========================================================
 !!$
 !!$      END IF
-      CALL DFT$SETL4('XCONLY',.FALSE.)
+        CALL DFT$SETL4('XCONLY',.FALSE.)
 !!$PRINT*,'EDFT: EXC ',ETOT
 !!$!
 !!$!     ==========================================================================
@@ -4606,16 +5081,523 @@ INTEGER(4) :: IMETHOD
 !!$PRINT*,'EDFT: EH ',SVAR
 !!$      ETOT=ETOT+SVAR
 !
-!     ==========================================================================
-!     ==  CALCULATE HAMILTONIAN IN TOTAL/SPIN REPRESENTATION                  ==
-!     ==========================================================================
-      CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
-      DEALLOCATE(POT)
+!       ========================================================================
+!       ==  CALCULATE HAMILTONIAN IN TOTAL/SPIN REPRESENTATION                ==
+!       ========================================================================
+        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        DEALLOCATE(POT)
 !
 !     ==========================================================================
 !     ==  TRANSFORM HAMILTONIAN FROM TOTAL/SPIN TO UP/DOWN                    ==
 !     ==========================================================================
-      HAM=REAL(HAM1)
+        HAM=REAL(HAM1)
+      end if
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE lmto_radxC(GID,NR,LMRX,NDIMD,RHOIN,fXC,VXC)
+!     **************************************************************************
+!     ** (slightluy changed augmentation_xc)                                  **
+!     **                                                                      **
+!     **  CALCULATES THE EXCHANGE AND CORRELATION ENERGY                      **
+!     **  FOR A DENSITY GIVEN ON A RADIAL LOGARITHMIC GRID                    **
+!     **  TIMES REAL SPHERICAL HARMONICS                                      **
+!     **                                                                      **
+!     **  THE TOTAL ENERGY IS AN EXPANSION ABOUT THE                          **
+!     **  SPHERICAL CONTRIBUTION OF THE DENSITY UP TO QUADRATIC               **
+!     **  ORDER IN THE NON-SPHERICAL CONTRIBUTIONS                            **
+!     **                                                                      **
+!     **  EXC = EXC(XVAL(L=0)*Y0)                                             **
+!     **      + 0.5 * D2[EXC]/D[XVAL(L=0)*Y0]**2 * XVAL(L>0)**2               **
+!     **                                                                      **
+!     **  WHERE XVAL=(/RHOT,RHOS,GRHOT**2,GRHOS**2,GRHOT*GRHOS/)              **
+!     **  IS AN SPHERICAL HARMONICS EXPANSION ON THE RADIAL GRID.             **
+!     **                                                                      **
+!     **  DEPENDECIES:                                                        **
+!     **    DFT                                                               **
+!     **    TIMING                                                            **
+!     **    TRACE                                                             **
+!     **                                                                      **
+!     **  REMARKS: THE GRADIENTS ARE CORRECT ONLY IF DFT SUPPORTS             **
+!     **    THIRD DERIVATIVES OF THE XC-ENERGY                                **
+!     **   - WHEN USING SELFTEST ON THIS ROUTINE, THEN                        **
+!     **     D(EXC)/DRHO(I)=POT(I)*DEX*R(I)**3                                **
+!     **     AND THE VALUES AT LARGE RADII MUST BE SURPRESSED                 **
+!     **                                                                      **
+!     **  REMARK: FOR A COLLINEAR DENSITY THE ROUTINE GIVES DIFFERENT RESULTS **
+!     **          WITH NDIMD=2 AND NDIMD=4 DUE TO THE TAYLOR EXPANSION IN     **
+!     **          ANGULAR MOMENTUM EXPANSIONS                                 **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1996 ************
+      IMPLICIT NONE
+      LOGICAL(4),PARAMETER  :: TNS=.TRUE. ! NON-SPHERICAL CONTRIBUTIONS ON
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: LMRX
+      INTEGER(4),INTENT(IN) :: NDIMD      ! CAN BE 1,2,4
+      REAL(8)   ,INTENT(IN) :: RHOIN(NR,LMRX,NDIMD)
+      REAL(8)   ,INTENT(OUT):: fXC(nr)
+      REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
+      LOGICAL(4)            :: TGRA   ! SWITCH FOR GRADIENT CORRECTION
+      INTEGER(4)            :: NSPIN
+      REAL(8)               :: EXC1
+      REAL(8)               :: R(NR)
+      REAL(8)   ,ALLOCATABLE:: RHO(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: GRHO(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: VRHO(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: VGRHO(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: B(:,:)    
+      REAL(8)   ,ALLOCATABLE:: C(:,:)    
+      REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
+      REAL(8)               :: XVAL(NR,5,LMRX)
+      REAL(8)               :: XDER(NR,5,LMRX)
+      REAL(8)               :: PI,FOURPI
+      REAL(8)               :: Y0
+      INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
+      INTEGER(4)            :: LM
+      INTEGER(4)            :: IMAX
+      REAL(8)               :: FAC
+      REAL(8)               :: CG0LL
+      REAL(8)               :: WORK(NR)
+      REAL(8)               :: WORK1(NR)
+      REAL(8)               :: WORK2(NR)
+!     **************************************************************************
+      CALL TRACE$PUSH('AUGMENTATION_XC')
+      fXC(:)=0.D0
+      VXC(:,:,:)=0.D0
+!
+!     ==========================================================================
+!     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
+!     ==========================================================================
+      CALL DFT$GETL4('GC',TGRA)
+      PI=4.D0*ATAN(1.D0)
+      FOURPI=4.D0*PI
+      Y0=1.D0/SQRT(FOURPI)
+      CG0LL=Y0
+      CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     ==  OBTAIN SPIN DENSITY                                                 ==
+!     ==========================================================================
+      NSPIN=1
+      IF(NDIMD.GT.1) NSPIN=2
+      ALLOCATE(RHO(NR,LMRX,NSPIN))
+      ALLOCATE(GRHO(NR,LMRX,NSPIN))
+      ALLOCATE(VRHO(NR,LMRX,NSPIN))
+      RHO(:,:,1)=RHOIN(:,:,1)
+      IF(NDIMD.EQ.2) THEN
+        RHO(:,:,2)=RHOIN(:,:,2)
+      ELSE IF(NDIMD.EQ.4) THEN
+!       == HERE WE NEED TO CALCULATE THE ABSOLUTE VALUE OF THE SPIN DENSITY ====
+!       == IN AN ANGULAR MOMENTUM EXPANSION. THIS IS ONLY POSSIBLE APPROXIMATELY
+!       == USING A TAYLOR EXPANSION ABOUT THE SPHERICAL PART OF THE SQUARE =====
+!       == OF THE SPIN DENSITY. ================================================
+        VRHO(:,:,:)=0.D0
+        CALL AUGMENTATION_NCOLLTRANS(gid,'RHO',NR,LMRX,RHOIN,RHO,VRHO,VXC)
+      END IF
+!
+!     == IMAX ALLOWS TO RESTRICT SOME LOOPS (1:5) TO (1:IMAX)
+      IF(TGRA) THEN
+        IF(NSPIN.EQ.2) THEN; IMAX=5; ELSE; IMAX=3; END IF
+      ELSE 
+        IF(NSPIN.EQ.2) THEN; IMAX=2; ELSE; IMAX=1; END IF
+      END IF
+!
+!     ==========================================================================
+!     ==  CALCULATE RADIAL GRADIENT OF THE DENSITY                            ==
+!     ==========================================================================
+      CALL TRACE$PASS('BEFORE GRADIENTS')
+      IF(TGRA) THEN
+        GRHO(:,:,:)=0.D0
+        DO ISPIN=1,NSPIN
+          DO LM=1,LMRX
+            CALL RADIAL$DERIVE(GID,NR,RHO(:,LM,ISPIN),GRHO(:,LM,ISPIN))
+          ENDDO
+        ENDDO
+      ELSE
+        GRHO(:,:,:)=0.D0
+      END IF
+!
+!     ==========================================================================
+!     ==  DEFINE VECTOR (RHOT,RHOS,GRHOT**2,GRHOS**2,GRHOT*GRHOS)             ==
+!     ==========================================================================
+      XVAL(:,:,:)=0.D0
+      DO ISPIN=1,NSPIN
+        DO LM=1,LMRX
+          IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
+          XVAL(:,ISPIN,LM)=RHO(:,LM,ISPIN)
+        ENDDO
+      ENDDO
+      IF(TGRA) THEN
+        II=2
+        DO ISPIN1=1,NSPIN          ! THIS LOOP PUTS T,T->3; S,S->4 ;T,S->5
+          DO ISPIN2=ISPIN1,1,-1    ! AND ASSURES CONSISTENCY WITH NSPIN
+            II=II+1
+            DO LM=1,LMRX
+              IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
+              L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+              FAC=DBLE(L*(L+1))
+              XVAL(:,II,1)=XVAL(:,II,1) &
+        &         +CG0LL*(GRHO(:,LM,ISPIN1)*GRHO(:,LM,ISPIN2) &
+        &                +FAC*RHO(:,LM,ISPIN1)*RHO(:,LM,ISPIN2)/R(:)**2)
+            ENDDO
+            DO LM=2,LMRX 
+              IF(.NOT.TNS) EXIT ! USED TO RESTORE PREVIOUS STATE
+              XVAL(:,II,LM)=XVAL(:,II,LM) &
+        &         +0.5D0*CG0LL*(GRHO(:,1,ISPIN1)*GRHO(:,LM,ISPIN2) &
+        &                      +GRHO(:,LM,ISPIN1)*GRHO(:,1,ISPIN2))
+            ENDDO
+          ENDDO
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     ==  CALCULATE EXCHANGE ENERGY FOR THE SPHERICAL DENSITY                 ==
+!     ==========================================================================
+      CALL TRACE$PASS('BEFORE DFT')
+      WORK1(:)=0.D0
+      XDER(:,:,:)=0.D0
+      DO IR=1,NR
+!       ==  CYCLE IF THE TOTAL DENSITY VANISHES ================================
+        IF(XVAL(IR,1,1).LE.0.D0) CYCLE
+!       == NOW CALL DFT ROUTINE ================================================
+        VAL5(:)=XVAL(IR,:,1)*Y0
+        CALL DFT3(VAL5,EXC1,VXC5,V2XC5,V3XC5)
+!       == NOW CALCULATE ENERGY DENSITY AND DERIAVTIVES ========================
+        fxc(IR)=EXC1
+        XDER(IR,:,1)  =FOURPI*VXC5(:)*Y0
+        DO LM=2,LMRX
+          DO I=1,IMAX        ! IMAX=<5 
+            DO J=1,IMAX
+              WORK1(IR)=WORK1(IR) &
+       &              +0.5D0*XVAL(IR,I,LM)*V2XC5(I,J)*XVAL(IR,J,LM)
+              XDER(IR,:,1)=XDER(IR,:,1) &
+       &              +0.5D0*Y0*XVAL(IR,I,LM)*V3XC5(:,I,J)*XVAL(IR,J,LM)
+              XDER(IR,I,LM)=XDER(IR,I,LM)+0.5D0*V2XC5(I,J)*XVAL(IR,J,LM)
+              XDER(IR,J,LM)=XDER(IR,J,LM)+0.5D0*V2XC5(I,J)*XVAL(IR,I,LM)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  TRANSFORM POTENTIALS FOR SPHERICAL PART                             ==
+!     ==========================================================================
+      ALLOCATE(VGRHO(NR,LMRX,NSPIN))
+      VRHO(:,:,:)=0.D0
+      VGRHO(:,:,:)=0.D0
+      DO ISPIN=1,NSPIN
+        DO LM=1,LMRX
+          VRHO(:,LM,ISPIN)=XDER(:,ISPIN,LM)
+        ENDDO
+      ENDDO
+      IF(TGRA) THEN
+        II=2
+        DO ISPIN1=1,NSPIN
+          DO ISPIN2=ISPIN1,1,-1
+            II=II+1
+!           == FIRST RESOLVE XVAL(:,II,1) ======================================
+            DO LM=1,LMRX
+              IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
+              L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+              FAC=DBLE(L*(L+1))
+!             == the following lines divide by zero if r=0. ====================
+!             == the values are overwritten at the end of the routine... =======
+              VRHO(:,LM,ISPIN1)  =VRHO(:,LM,ISPIN1) &
+      &                 +CG0LL*FAC/R(:)**2*XDER(:,II,1)*RHO(:,LM,ISPIN2)
+              VRHO(:,LM,ISPIN2)  =VRHO(:,LM,ISPIN2) &
+      &                 +CG0LL*FAC/R(:)**2*XDER(:,II,1)*RHO(:,LM,ISPIN1)
+              VGRHO(:,LM,ISPIN1) =VGRHO(:,LM,ISPIN1) &
+      &                 +CG0LL*XDER(:,II,1)*GRHO(:,LM,ISPIN2)
+              VGRHO(:,LM,ISPIN2) =VGRHO(:,LM,ISPIN2) &
+      &                 +CG0LL*XDER(:,II,1)*GRHO(:,LM,ISPIN1)
+            ENDDO
+!           == NOW RESOLVE XVAL(:,II,LM) =======================================
+            DO LM=2,LMRX
+              IF(.NOT.TNS) EXIT ! USED TO RESTORE PREVIOUS STATE
+              VGRHO(:,1,ISPIN1) =VGRHO(:,1,ISPIN1) &
+      &                 +0.5D0*CG0LL*XDER(:,II,LM)*GRHO(:,LM,ISPIN2)
+              VGRHO(:,1,ISPIN2) =VGRHO(:,1,ISPIN2) &
+      &                 +0.5D0*CG0LL*XDER(:,II,LM)*GRHO(:,LM,ISPIN1)
+              VGRHO(:,LM,ISPIN2)=VGRHO(:,LM,ISPIN2) &
+      &                 +0.5D0*CG0LL*XDER(:,II,LM)*GRHO(:,1,ISPIN1)
+              VGRHO(:,LM,ISPIN1)=VGRHO(:,LM,ISPIN1) &
+      &                 +0.5D0*CG0LL*XDER(:,II,LM)*GRHO(:,1,ISPIN2)
+            ENDDO
+          ENDDO
+        ENDDO               
+      END IF
+!
+!     ==========================================================================
+!     ==  TRANSFORM GRADIENT POTENTIAL BACK TO POTENTIALS                     ==
+!     ==  V = V -1/R**2 D/DR [ R**2 VGRHO ]                                   ==
+!     ==  V = V -[2/R VGRHO+ D/DR VGRHO ]                                     ==
+!     ==========================================================================
+      IF(TGRA) THEN
+        DO ISPIN=1,NSPIN
+          DO LM=1,LMRX
+            IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
+!           == FIRST ALTERNATIVE
+!           CALL RADIAL$DERIVE(GID,NR,VGRHO(:,LM,ISPIN),WORK2)   !NOT SO 
+!           WORK1(:)=2.D0/R(:)*VGRHO(:,LM,ISPIN)+WORK2(:)  !GOOD
+!           ==  SECOND ALTERNATIVE APPEARS TO BE MORE ACCURATE
+            WORK2(:)=VGRHO(:,LM,ISPIN)*R(:)**2
+            CALL RADIAL$DERIVE(GID,NR,WORK2,WORK1)
+            WORK1(2:)=WORK1(2:)/R(2:)**2
+            work(1)=work(2)  ! avoid divide by zero
+!           == ALTERNATIVES FINISHED
+            VRHO(:,LM,ISPIN)=VRHO(:,LM,ISPIN)-WORK1(:)
+          ENDDO
+        ENDDO
+      ENDIF
+      DEALLOCATE(VGRHO)
+!
+!     ==========================================================================
+!     ==   CORRECT FOR DIVERGENCE AT THE ORIGIN:                              ==
+!     ==   IF A SHIFTED LOGARITHMIC GRID IS USED THE FIRST GRID POINT         ==
+!     ==   IS MESSED UP BECAUSE OF FACTORS 1/R                                ==
+!     ==========================================================================
+      IF(R(1).LT.1.D-5) THEN
+        Vrho(1,:,:)=Vrho(2,:,:)
+      END IF
+!
+!     ==========================================================================
+!     ==  TRANSFORM GRADIENT POTENTIAL BACK TO POTENTIALS                     ==
+!     ==========================================================================
+      VXC(:,:,1)=VRHO(:,:,1)
+      IF(NDIMD.EQ.2) THEN
+        VXC(:,:,2)=VRHO(:,:,2)
+      ELSE IF(NDIMD.EQ.4) THEN
+        CALL AUGMENTATION_NCOLLTRANS(gid,'POT',NR,LMRX,RHOIN,RHO,VRHO,VXC)
+      END IF     
+      DEALLOCATE(RHO)
+      DEALLOCATE(GRHO)
+      DEALLOCATE(VRHO)
+                      CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_SIMPLEDC_old(GID,NR,LMNX,LNX,LOX,CHI,LRX,AECORE &
+     &                        ,DENMAT,ETOT,HAM)
+!     **************************************************************************
+!     **  DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                **
+!     **                                                                      **
+!     **  DETERMINES THE HARTREE AND EXCHANGE-ONLY ENERGY FROM THE            **
+!     **  DFT FUNCTIONAL                                                      **
+!     **  FOR THE DENSITY BUILT FROM THE LOCAL ORBITALS AND THE CORE DENSITY  **
+!     **  THIS ENERGY NEEDS TO BE SUBTRACTED FROM THE TOTAL ENERGY            **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID
+      INTEGER(4)  ,INTENT(IN) :: NR
+      INTEGER(4)  ,INTENT(IN) :: LRX
+      INTEGER(4)  ,INTENT(IN) :: LMNX       ! #(LOCAL ORBITALS)
+      INTEGER(4)  ,INTENT(IN) :: LNX        ! #(RADIAL FUNCTIONS)
+      INTEGER(4)  ,INTENT(IN) :: LOX(LNX)   !MAIN ANGULAR MOMENTUM OF LOCAL ORB.
+      REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)
+      REAL(8)     ,INTENT(IN) :: AECORE(NR)
+      REAL(8)     ,INTENT(IN) :: DENMAT(LMNX,LMNX,4) ! DENSITY MATRIX
+      REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
+      REAL(8)     ,INTENT(OUT):: HAM(LMNX,LMNX,4)  ! DETOT/D(RHO^*)        
+      integer(4)  ,parameter  :: method=1
+      COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
+      INTEGER(4)  ,PARAMETER  :: NDIMD=4
+      COMPLEX(8)              :: DENMAT1(LMNX,LMNX,NDIMD)
+      COMPLEX(8)              :: HAM1(LMNX,LMNX,NDIMD)
+      REAL(8)                 :: R(NR)
+      REAL(8)     ,ALLOCATABLE:: RHO(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: RHO2(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: POT2(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: RHOWC(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: POT(:,:,:)
+      REAL(8)                 :: EDENSITY(NR)
+      REAL(8)                 :: AUX(NR),SVAR
+      REAL(8)                 :: pi,y0
+      INTEGER(4)              :: LMRX,L
+      INTEGER(4)              :: IDIM,LM,LMN
+      REAL(8)                 :: ETOTC,ETOTV
+INTEGER(4) :: LMRX1
+INTEGER(4) :: IMETHOD
+ REAL(8)     ,ALLOCATABLE:: RHOTEST(:,:,:)
+ REAL(8)     ,ALLOCATABLE:: POTTEST(:,:,:)
+ REAL(8)     ,ALLOCATABLE:: RHOTEST2(:,:,:)
+ REAL(8)     ,ALLOCATABLE:: POTTEST2(:,:,:)
+ REAL(8)                 :: ETOT2
+!     **************************************************************************
+      LMRX=(LRX+1)**2
+      pi=4.d0*atan(1.d0)
+      y0=1.d0/sqrt(4.d0*pi)
+      ETOT=0.D0
+!
+!     ==========================================================================
+!     ==  TRANSFORM DENSITY MATRIX FROM UP/DOWN TO TOTAL/SPIN                 ==
+!     ==========================================================================
+      DENMAT1=CMPLX(DENMAT)
+!
+!     ==========================================================================
+!     ==  CALCULATE DENSITY                                                   ==
+!     ==========================================================================
+      ALLOCATE(RHO(NR,LMRX,NDIMD))
+      DO IDIM=1,NDIMD
+        CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
+     &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHO(:,:,IDIM))
+      ENDDO
+!
+!     ==========================================================================
+!     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
+!     ==========================================================================
+      if(method.eq.1) then 
+!       == this is the same method as 1000 just without comments ===============
+        ALLOCATE(RHOWC(NR,LMRX,NDIMD))  !WITH CORE
+        RHOWC=RHO
+        RHOWC(:,1,1)=RHO(:,1,1)+AECORE(:)
+        ALLOCATE(POT(NR,LMRX,NDIMD))
+        CALL DFT$SETL4('XCONLY',.TRUE.)
+        CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,ETOTC,POT)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTV,POT)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC,ETOT,POT)
+        CALL DFT$SETL4('XCONLY',.FALSE.)
+        ETOT=ETOT-ETOTC
+        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        DEALLOCATE(POT)
+        HAM=REAL(HAM1)
+!
+      else if(method.eq.1000) then
+        ALLOCATE(RHOWC(NR,LMRX,NDIMD))  !WITH CORE
+        RHOWC=RHO
+        RHOWC(:,1,1)=RHO(:,1,1)+AECORE(:)
+!
+!     ==========================================================================
+!     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
+!     ==========================================================================
+!     == EXCHANGE ENERGY AND POTENTIAL =========================================
+        CALL DFT$SETL4('XCONLY',.TRUE.)
+!
+!     ==========================================================================
+!     == THIS FORMULATION IS BASED ON A NONCOLLINEAR FORMULATION, WHICH       ==
+!     == YIELDS DIFFERENT RESULTS FROM A COLLINEAR FORMULATION EVEN FOR       ==
+!     == A COLLINEAR DENSITY                                                  ==
+!     ==                                                                      ==
+!     == THE REASON FOR THIS DIFFERENCE IS THE TRANSFORMATION OF A            ==
+!     == NON-COLLINEAR DENSITY WITHIN AUGMENTATION_NCOLLTRANS WHICH IS CALLED ==
+!     == BY AUGMENTATION_XC                                                   ==
+!     ==                                                                      ==
+!     ==========================================================================
+        ALLOCATE(POT(NR,LMRX,NDIMD))
+        CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,ETOTC,POT)
+!!$ALLOCATE(RHO2(NR,LMRX,2))
+!!$ALLOCATE(POT2(NR,LMRX,2))
+!!$RHO2(:,:,1)=RHO(:,:,1)
+!!$RHO2(:,:,2)=RHO(:,:,4)
+!!$CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHO2,ETOTV,POT2)
+!!$PRINT*,'ETOTV COLLINEAR',ETOTV
+!!$CALL AUGMENTATION_WRITEPHI('RHO4_Z.DAT',GID,NR,LMRX,RHO4(:,:,4))
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTV,POT)
+!!$PRINT*,'ETOTV NONCOLLINEAR',ETOTV
+!!$PRINT*,'GID,NR,LMRX,NDIMD ',GID,NR,LMRX,NDIMD
+!!$RHO2(:,:,1)=RHOWC(:,:,1)
+!!$RHO2(:,:,2)=RHOWC(:,:,4)
+!!$CALL ATOMLIB_WRITEPHI('RHO2WC_T.DAT',GID,NR,LMRX,RHO2(:,:,1))
+!!$CALL ATOMLIB_WRITEPHI('RHO2WC_S.DAT',GID,NR,LMRX,RHO2(:,:,2))
+!!$CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHO2,ETOT,POT2)
+!!$CALL ATOMLIB_WRITEPHI('POT2WC_T.DAT',GID,NR,LMRX,POT2(:,:,1))
+!!$CALL ATOMLIB_WRITEPHI('POT2WC_S.DAT',GID,NR,LMRX,POT2(:,:,2))
+!!$PRINT*,'ETOT COLLINEAR',ETOTV
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC,ETOT,POT)
+!!$CALL ATOMLIB_WRITEPHI('POT4WC_T.DAT',GID,NR,LMRX,POT(:,:,1))
+!!$CALL ATOMLIB_WRITEPHI('POT4WC_X.DAT',GID,NR,LMRX,POT(:,:,2))
+!!$CALL ATOMLIB_WRITEPHI('POT4WC_Y.DAT',GID,NR,LMRX,POT(:,:,3))
+!!$CALL ATOMLIB_WRITEPHI('POT4WC_Z.DAT',GID,NR,LMRX,POT(:,:,4))
+!!$PRINT*,'ETOTV NONCOLLINEAR',ETOTV
+!POT(:,:,:)=0.D0
+!POT(:,:,1)=POT2(:,:,1)
+!POT(:,:,4)=POT2(:,:,2)
+!!$DEALLOCATE(RHO2)
+!!$DEALLOCATE(POT2)
+!!$PRINT*,'TOTAL        EXCHANGE ENERGY (LOCAL) ',ETOT
+!!$PRINT*,'VALENCE      EXCHANGE ENERGY (LOCAL) ',ETOTV
+!!$PRINT*,'CORE         EXCHANGE ENERGY (LOCAL) ',ETOTC
+!!$PRINT*,'CORE-VALENCE EXCHANGE ENERGY (LOCAL) ',ETOT-ETOTV-ETOTC
+        ETOT=ETOT-ETOTC
+!!$IF(ETOT.LT.-3.145D0) THEN
+!!$  PRINT*,'FILE RHOWC.DAT WRITTEN'
+!!$  CALL ATOMLIB_WRITEPHI('RHOWC1.DAT',GID,NR,LMRX,RHOWC(:,:,1))
+!!$  CALL ATOMLIB_WRITEPHI('RHOWC2.DAT',GID,NR,LMRX,RHOWC(:,:,2))
+!!$  CALL ATOMLIB_WRITEPHI('RHOWC3.DAT',GID,NR,LMRX,RHOWC(:,:,3))
+!!$  CALL ATOMLIB_WRITEPHI('RHOWC4.DAT',GID,NR,LMRX,RHOWC(:,:,4))
+!!$END IF
+
+!!$IMETHOD=0
+!!$!IMETHOD=1
+!!$      IF(IMETHOD.EQ.1) THEN
+!!$!       == COLLINEAR METHOD WITH COLLINEAR DENSITY
+!!$        ALLOCATE(RHOTEST(NR,LMRX,2))
+!!$        ALLOCATE(POTTEST(NR,LMRX,2))
+!!$        POTTEST(:,:,1)=0.D0
+!!$        RHOTEST(:,:,1)=RHO(:,:,1)
+!!$        RHOTEST(:,:,2)=RHO(:,:,4)
+!!$        CALL AUGMENTATION_XC(GID,NR,LMRX,2,RHOTEST,ETOT,POTTEST)
+!!$        POT(:,:,:)=0.D0
+!!$        POT(:,:,1)=POTTEST(:,:,1)
+!!$        POT(:,:,4)=POTTEST(:,:,2)
+!!$        DEALLOCATE(RHOTEST)
+!!$        DEALLOCATE(POTTEST)
+!!$!
+!!$!      ELSE IF(IMETHOD.EQ.2) THEN
+!!$!       == NONCOLLINEAR METHOD WITH COLLINEAR DENSITY ==========================
+!!$        ALLOCATE(RHOTEST2(NR,LMRX,NDIMD))
+!!$        ALLOCATE(POTTEST2(NR,LMRX,NDIMD))
+!!$        RHOTEST2(:,:,:)=0.D0
+!!$        POTTEST2(:,:,:)=0.D0
+!!$        RHOTEST2(:,:,1)=RHO(:,:,1)
+!!$        RHOTEST2(:,:,4)=RHO(:,:,4)
+!!$        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOTEST2,ETOT2,POTTEST2)
+!!$PRINT*,'ETOT2',ETOT2,ETOT
+!!$PRINT*,'LDAPLUSUTEST',ETOT2-ETOT,MAXVAL(ABS(POTTEST2-POT)),MAXLOC(ABS(POTTEST2-POT))
+!!$!        ETOT=ETOT2
+!!$!        POT(:,:,:)=POTTEST2(:,:,:)
+!!$        DEALLOCATE(RHOTEST2)
+!!$        DEALLOCATE(POTTEST2)
+!!$!
+!!$      ELSE IF(IMETHOD.EQ.3) THEN
+!!$!       == COMPARISON ==========================================================
+!!$
+!!$      END IF
+        CALL DFT$SETL4('XCONLY',.FALSE.)
+!!$PRINT*,'EDFT: EXC ',ETOT
+!!$!
+!!$!     ==========================================================================
+!!$!     == HARTREE ENERGY AND POTENTIAL ==========================================
+!!$!     == CORE CONTRIBUTION IS NOT INCLUDED BECAUSE IT IS NOT REPRESENTED IN   ==
+!!$!     == THE U-TENSOR AND ONLY THE EXCHANGE PART OF THE CORE-VALENCE IS INCLUDED
+!!$!     ==========================================================================
+!!$      EDENSITY=0.D0
+!!$      DO LM=1,LMRX
+!!$        L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+!!$        CALL RADIAL$POISSON(GID,NR,L,RHO(:,LM,1),AUX)
+!!$        POT(:,LM,1)=POT(:,LM,1)+AUX(:)
+!!$        EDENSITY(:)=EDENSITY(:)+0.5D0*AUX(:)*RHO(:,LM,1)
+!!$      ENDDO
+!!$      CALL RADIAL$R(GID,NR,R)
+!!$      EDENSITY=EDENSITY*R(:)**2
+!!$      CALL RADIAL$INTEGRAL(GID,NR,EDENSITY,SVAR)
+!!$PRINT*,'EDFT: EH ',SVAR
+!!$      ETOT=ETOT+SVAR
+!
+!       ========================================================================
+!       ==  CALCULATE HAMILTONIAN IN TOTAL/SPIN REPRESENTATION                ==
+!       ========================================================================
+        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        DEALLOCATE(POT)
+!
+!     ==========================================================================
+!     ==  TRANSFORM HAMILTONIAN FROM TOTAL/SPIN TO UP/DOWN                    ==
+!     ==========================================================================
+        HAM=REAL(HAM1)
+      end if
       RETURN
       END
 !
@@ -8106,7 +9088,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 ! THIS IS THE TIME CONSUMIN PART OF ENERGYTEST
 CALL TIMING$CLOCKON('ENERGYTEST:DC')      
 !!$        CALL LMTO_DOUBLECOUNTING(IAT,NDIMD,NORB,D,EX,H)
-        CALL LMTO_SIMPLEDC(GID,NR,NORB,LNX1,LOX(:LNX1,ISP),CHI,LRX,AECORE &
+        CALL LMTO_SIMPLEDC_old(GID,NR,NORB,LNX1,LOX(:LNX1,ISP),CHI,LRX,AECORE &
      &                        ,D,EX,H)
         EXTOT=EXTOT-EX
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H
