@@ -1764,6 +1764,13 @@ CALL ERROR$STOP('WAVES$ETOT')
       END IF
 !
 !     ==================================================================
+!     ==  RECEIVE POTENTIALS FROM NTBO INTERFACE                      ==
+!     ================================================================== 
+                               CALL TIMING$CLOCKON('WAVES$FROMNTBO')
+      CALL WAVES$FROMNTBO()
+                               CALL TIMING$CLOCKOFF('WAVES$FROMNTBO')
+!
+!     ==================================================================
 !     == FORCES AND STRESSES                                          ==
 !     ==================================================================
       FORCE=0.D0
@@ -1788,13 +1795,6 @@ CALL ERROR$STOP('WAVES$ETOT')
 !!$      END IF                                                                 !KAESTNERCG
 !
 !     ==================================================================
-!     ==  RECEIVE POTENTIALS FROM NTBO INTERFACE                      ==
-!     ================================================================== 
-                               CALL TIMING$CLOCKON('WAVES$FROMNTBO')
-      CALL WAVES$FROMNTBO()
-                               CALL TIMING$CLOCKOFF('WAVES$FROMNTBO')
-!
-!     ==================================================================
 !     ==  EVALUATE H*PSI                                              ==
 !     ================================================================== 
 !PRINT*,'RHO',(SUM(ABS(RHO)).GT.0.D0.OR.SUM(ABS(RHO)).LE.0.D0)
@@ -1805,7 +1805,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==========================================================================
 !     ==  add contribution from dmft interface                                ==
 !     ==========================================================================
-      call lmto$dmftinterface_pick()
+!      call lmto$dmftinterface_pick()
 !
 !     ==================================================================
 !     ==  EVALUATE ENERGY EXPECTATION VALUES                          ==
@@ -2844,6 +2844,8 @@ END IF
 !     **************************************************************************
       CALL LMTO$GETL4('ON',TON)
       IF(.NOT.TON) RETURN
+      CALL LMTO$GETL4('THTBC',TON) !htbc has not been calculated
+      IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('WAVES$FROMNTBO')
                               CALL TIMING$CLOCKON('W:FROMNTBO')
 !
@@ -2855,14 +2857,13 @@ END IF
       NPRO=MAP%NPRO
 !
 !     ==========================================================================
-!     ==                                                                      ==
+!     ==  TRANSFORM THIS$HTBC FROM NTBO'S TO PAW PARTIAL WAVES                ==
 !     ==========================================================================
 !!!! PARALLELIZE LOOP WITH RESPECT TO STATES.
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           NBH=THIS%NBH
-          IF(.NOT.ASSOCIATED(THIS%HTBC)) ALLOCATE(THIS%HTBC(NDIM,NBH,NPRO))
           CALL LMTO$NTBOTOPROJ(XK(:,IKPT),NDIM,NBH,NPRO,THIS%HTBC)
         ENDDO
       ENDDO
@@ -3737,16 +3738,25 @@ RETURN
      &                        ,THIS%RLAM0,DEDPROJ)
             DEALLOCATE(DH1)
             DEALLOCATE(DO1)
-!           == |DE/DPRO>=|PSPSI>DEDPROJ ==================================
+!
+!           == add contribution from NTBO's ====================================
+            IF(ASSOCIATED(THIS%HTBC)) THEN
+              call waves_force_addhtbc(ndim,nbh,nb,lmnx,occ(:,ikpt,ispin) &
+     &                                ,THIS%HTBC(:,:,IPRO:IPRO+LMNX-1),dedproj)
+            END IF
+
+!           == |DE/DPRO>=|PSPSI>DEDPROJ ========================================
             ALLOCATE(DEDPRO(NGL,LMNX))
-            CALL WAVES_DEDPRO(GSET%TINV,NGL,NDIM,NBH,THIS%PSI0,LMNX,DEDPROJ,DEDPRO)
+            CALL WAVES_DEDPRO(GSET%TINV,NGL,NDIM,NBH,THIS%PSI0,LMNX &
+     &                       ,DEDPROJ,DEDPRO)
             DEALLOCATE(DEDPROJ)
-!           == DE= <DPRO|DEDPRO> ========================================
+!           == DE= <DPRO|DEDPRO> ===============================================
             ALLOCATE(EIGR(NGL))
             CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
 !           == F=2*RE[ <PSI|DPRO/DR>*DH*<PRO|PSI> ]
-            CALL WAVES_PROFORCE(LNX,LMNX,MAP%LOX(1:LNX,ISP),NGL,GWEIGHT,GVEC,GIJ &
-     &                 ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),GSET%DPRO(:,IBPRO:IBPRO+LNX-1) &
+            CALL WAVES_PROFORCE(LNX,LMNX,MAP%LOX(1:LNX,ISP),NGL,GWEIGHT,GVEC &
+     &           ,GIJ &
+     &           ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),GSET%DPRO(:,IBPRO:IBPRO+LNX-1) &
      &                 ,MAP%LMX,GSET%YLM,GSET%SYLM &
      &                 ,EIGR,DEDPRO,FORCE1,TSTRESS,STRESS1)
             DEALLOCATE(EIGR)
@@ -3771,7 +3781,58 @@ RETURN
       RETURN
       END SUBROUTINE WAVES$FORCE
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_FORCE_ADDHTBC(NDIM,NBH,NB,LMNX,OCC,HTBC,DEDPROJ)
+!     **************************************************************************
+!     ** ADDS THE CONTRIBUTION FROM THE NTB-ORBITALS TO DE/DPROJ              **
+!     ** THE OCCUPATIONS ARE INCLUDED AT THIS POINT AND NOT BEFORE            **
+!     **************************************************************************
+      implicit none
+      integer(4),intent(in)    :: ndim
+      integer(4),intent(in)    :: nbh
+      integer(4),intent(in)    :: nb
+      integer(4),intent(in)    :: lmnx
+      real(8)   ,intent(in)    :: occ(nb)
+      complex(8),intent(in)    :: htbc(ndim,nbh,lmnx)
+      complex(8),intent(inout) :: dedproj(ndim,nbh,lmnx)
+      integer(4)               :: ib,ib1,ib2,lmn,idim
+      logical(4)               :: tinv
+      real(8)                  :: f1,f2
+      complex(8)               :: csvar
+!     **************************************************************************
+      CALL PLANEWAVE$GETL4('TINV',TINV)
+!
+!     ==================================================================
+!     ==  HPROJ = DH<P|PSI>*F                                         ==
+!     ==================================================================
+      IF(TINV) THEN
+        DO IB=1,NBH
+          IB1=2*IB-1       
+          IB2=IB1+1
+          F1=0.5D0*(OCC(IB1)+OCC(IB2))
+          F2=0.5D0*(OCC(IB1)-OCC(IB2))
+          DO LMN=1,LMNX
+            DO IDIM=1,NDIM
+              CSVAR=HTBC(IDIM,IB,LMN)
+              DEDPROJ(IDIM,IB,LMN)=DEDPROJ(IDIM,IB,LMN)+F1*CSVAR+F2*CONJG(CSVAR)
+            ENDDO
+          ENDDO
+        ENDDO
+      ELSE
+        DO IB=1,NB
+          F1=OCC(IB)
+          DO LMN=1,LMNX
+            DO IDIM=1,NDIM
+              CSVAR=HTBC(IDIM,IB,LMN)
+              DEDPROJ(IDIM,IB,LMN)=DEDPROJ(IDIM,IB,LMN)+F1*CSVAR
+            ENDDO
+          ENDDO
+        ENDDO
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$HPSI(NRL,NDIMD_,NAT,LMNXX,RHO,DH)
 !     ******************************************************************
 !     **                                                              **
@@ -3861,6 +3922,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
 !         ==============================================================
           IF(ASSOCIATED(THIS%HTBC)) THEN
             HPROJ(:,:,:)=HPROJ(:,:,:)+THIS%HTBC(:,:,:)
+            deallocate(this%htbc)
+            nullify(this%htbc)
           END IF
 !
 !         ==============================================================

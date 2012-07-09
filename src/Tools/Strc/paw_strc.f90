@@ -513,6 +513,7 @@
           J=1+MODULO(I+1-1,3)
           K=1+MODULO(I+2-1,3)
           SVAR=DOT_PRODUCT(RBAS(:,I),RBAS(:,J))/(DISARR(I)*DISARR(J))
+          SVAR=MIN(1.D0,MAX(-1.D0,SVAR))
           SVAR=ACOS(SVAR)
           DISARR(3+K)=SVAR
         ENDDO
