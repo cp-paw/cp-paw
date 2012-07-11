@@ -3329,7 +3329,7 @@ MODULE LMTO_DROPPICK_MODULE
 !== hard-wired input data                                                     ==
 !===============================================================================
 LOGICAL(4),PARAMETER :: TREADDHOFK=.FALSE.
-INTEGER(4),PARAMETER :: NB1=13     ! first band in W
+INTEGER(4),PARAMETER :: NB1=7      ! first band in W
 INTEGER(4)           :: NB2        ! last band in W
 LOGICAL(4),POINTER   :: TPRO(:)    ! selector for correlated orbitals
 !===============================================================================
@@ -3418,17 +3418,17 @@ END MODULE LMTO_DROPPICK_MODULE
       CALL FILEHANDLER$SETFILE('DMFT2DFT',.FALSE.,-'DMFT2DFT.DAT')
       CALL FILEHANDLER$SETSPECIFICATION('DMFT2DFT','STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION('DMFT2DFT','ACTION','READ')
-      CALL FILEHANDLER$SETSPECIFICATION('DMFT2DFT','FORM','UNFORMATTED')
+      CALL FILEHANDLER$SETSPECIFICATION('DMFT2DFT','FORM','FORMATTED')
 !
       CALL FILEHANDLER$SETFILE('DMFT2DFTDUMMY',.FALSE.,-'DMFT2DFT.DAT')
       CALL FILEHANDLER$SETSPECIFICATION('DMFT2DFTDUMMY','ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION('DMFT2DFTDUMMY','FORM','UNFORMATTED')
+      CALL FILEHANDLER$SETSPECIFICATION('DMFT2DFTDUMMY','FORM','FORMATTED')
 !
 !     == THIS DOES NOT WORK, BECAUSE THE FILEHANDLER OBJECT SETS A FIXED =======
 !     == RECORDLENGTH OF 1000 DIGITS FOR FORMATTED FILES TO AVOID UNINTEDED ====
 !     == LINE BREAKS. FINALLY THE FILE SHOULD BE WRITTEN UNFORMATTED  ==========
       CALL FILEHANDLER$SETFILE('DFT2DMFT',.FALSE.,-'DFT2DMFT.DAT')
-      CALL FILEHANDLER$SETSPECIFICATION('DFT2DMFT','FORM','UNFORMATTED')
+      CALL FILEHANDLER$SETSPECIFICATION('DFT2DMFT','FORM','FORMATTED')
 
       CALL FILEHANDLER$SETFILE('DHOFK_OUT',.FALSE.,-'DHOFK.DAT')
       CALL FILEHANDLER$SETSPECIFICATION('DHOFK_OUT','FORM','UNFORMATTED')
@@ -3482,6 +3482,7 @@ END MODULE LMTO_DROPPICK_MODULE
       COMPLEX(8),ALLOCATABLE :: AMAT(:,:),UMAT(:,:)
       COMPLEX(8),ALLOCATABLE :: PSICORR(:,:,:)
       REAL(8)   ,ALLOCATABLE :: EMAT(:)
+      real(8)                :: nel  !#(electrons in selected bands)
 !     **************************************************************************
                                            CALL TRACE$PUSH('LMTO_DROP')
 PRINT*,'ENTERING LMTO_DROPPICK_DROP'
@@ -3500,6 +3501,11 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
 !     ==========================================================================
       CALL LMTO_DROPICK_INI()
       CALL LMTO_DROPPICK_MAKET()
+!
+!     ==========================================================================
+!     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
+!     ==========================================================================
+      call lmto_droppick_nel(nb1,nb2,nel)
 !
 !     ==========================================================================
 !     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
@@ -3545,13 +3551,15 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
 !     ==========================================================================
       CALL DATE_AND_TIME(VALUES=TICKET)
       ID='INFO'
-      WRITE(NFIL)ID,NAT,NDIM,NSPIN,NKPT,NCORR,NBW,MU,KBT,TICKET(:) !<<<<<<<<<<<<
-!      WRITE(NFIL,*)ID,NAT,NDIM,NSPIN,NKPT,NCORR,NBW,MU,KBT,TICKET(:) !<<<<<<<<<
+!      WRITE(NFIL)ID,NAT,NDIM,NSPIN,NKPT,NCORR,NBW,MU,KBT,nel,TICKET(:) !<<<<<<<
+      WRITE(NFIL,*)ID,NAT,NDIM,NSPIN,NKPT,NCORR,NBW,MU,KBT,nel,TICKET(:) !<<<<<<
       IF(TDUMMY) THEN
-        CALL FILEHANDLER$UNIT('DMFT2DFTDUMMY',NFIL2)
+!        CALL FILEHANDLER$UNIT('DMFT2DFTDUMMY',NFIL2)
+NFIL2=14
+OPEN(NFIL2,FILE='dmft2dft.dat')
         rewind(nfil2)
         ID='INFO'
-        WRITE(NFIL2)ID,NKPT,NSPIN,NBW,TICKET
+        WRITE(NFIL2,*)ID,NKPT,NSPIN,NBW,TICKET   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       END IF
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
@@ -3562,8 +3570,8 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
         END IF
         IWORK16(:LNX(ISP))=LOX(:LNX(ISP),ISP)
         ID='PSIINFO'
-        WRITE(NFIL)ID,IAT,IPRO1(IAT),NPROAT(IAT),LNX(ISP),IWORK16 !<<<<<<<<<<<<<
-!        WRITE(NFIL,*)ID,IAT,IPRO1(IAT),NPROAT(IAT),LNX(ISP),IWORK16 !<<<<<<<<<<
+!        WRITE(NFIL)ID,IAT,IPRO1(IAT),NPROAT(IAT),LNX(ISP),IWORK16 !<<<<<<<<<<<<
+        WRITE(NFIL,*)ID,IAT,IPRO1(IAT),NPROAT(IAT),LNX(ISP),IWORK16 !<<<<<<<<<<
       ENDDO
 !
       ID='ORBINFO'
@@ -3574,8 +3582,8 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
           L=LOX(LN,ISP)
           DO M=1,2*L+1
             I=I+1
-            IF(TPRO(I))WRITE(NFIL)ID,I,IAT,LN,L,M !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-!            IF(TPRO(I))WRITE(NFIL,*)ID,I,IAT,LN,L,M !<<<<<<<<<<<<<<<<<<<<<<<<<<
+!            IF(TPRO(I))WRITE(NFIL)ID,I,IAT,LN,L,M !<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            IF(TPRO(I))WRITE(NFIL,*)ID,I,IAT,LN,L,M !<<<<<<<<<<<<<<<<<<<<<<<<<<
           ENDDO
         ENDDO
       ENDDO
@@ -3703,12 +3711,12 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
 !         == WRITE WAVE FUNCTION TO FILE                                      ==
 !         ======================================================================
           ID='HINFO'
-          WRITE(NFIL)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<
-!          WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<
+!          WRITE(NFIL)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<
+          WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<
           ID='PIPSI'
           DO IB=1,NBW
-            WRITE(NFIL)ID,IB,IKPT,ISPIN,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<<<<<<
-!            WRITE(NFIL,*)ID,IB,IKPT,ISPIN,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<<<
+!            WRITE(NFIL)ID,IB,IKPT,ISPIN,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<<<<<
+            WRITE(NFIL,*)ID,IB,IKPT,ISPIN,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<<<
           ENDDO
           DEALLOCATE(PSI)
           DEALLOCATE(PSI1)
@@ -3719,13 +3727,14 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
           IF(TDUMMY) THEN
             H0=(0.D0,0.D0)
             DO IB=1,NBW
-               SVAR=REAL(THIS%RLAM0(NB1-1+IB,NB1-1+IB),KIND=8)
-               SVAR=EXP(KBT*(SVAR-MU))
-               SVAR=1.D0/(1.D0+SVAR)
-               H0(IB,IB)=SVAR
+              SVAR=REAL(THIS%RLAM0(NB1-1+IB,NB1-1+IB),KIND=8)
+              SVAR=EXP((SVAR-MU)/kbt)
+              SVAR=1.D0/(1.D0+SVAR)
+              H0(IB,IB)=SVAR
             ENDDO
             ID='RHO'
-            WRITE(NFIL2)ID,IKPT,ISPIN,H0
+            WRITE(NFIL2,*)ID,IKPT,ISPIN,H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+!            WRITE(*,*)ID,IKPT,ISPIN,H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           END IF
         ENDDO ! END LOOP ISPIN
       ENDDO   ! END LOOP IKPT
@@ -3734,9 +3743,8 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
       DEALLOCATE(QSQINV)
       DEALLOCATE(H0)
       CALL FILEHANDLER$CLOSE('DFT2DMFT')
-      IF(TDUMMY) CALL FILEHANDLER$CLOSE('DMFT2DFTDUMMY')
-!
-!      CLOSE(NFIL)
+!      IF(TDUMMY) CALL FILEHANDLER$CLOSE('DMFT2DFTDUMMY')
+      IF(TDUMMY) close(nfil2)
       CALL ERROR$MSG('FORCED STOP AFTER WRITING FILE')
       CALL ERROR$STOP('LMTO$DROP')
                                            CALL TRACE$POP()
@@ -3871,7 +3879,7 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
             END IF
           enddo
 !
-          if(1.eq.1) then
+          if(1.eq.2) then
 !         ======================================================================
 !         == CONVERT DENSITY MATRIX INTO FINITE TEMPERATURE HAMILTONIAN       ==
 !         ======================================================================
@@ -3879,7 +3887,9 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
           DO IB=1,NBW
             SVAR=(1.D0-F(IB))/F(IB)
             SVAR=LOG(SVAR)
-            F(IB)=MU-KBT*SVAR
+            F(IB)=MU+KBT*SVAR
+          enddo
+          do ib=1,nbw
             RHO(IB,:)=F(IB)*U(IB,:)
           ENDDO
           RHO=MATMUL(CONJG(TRANSPOSE(U)),RHO)  !THIS IS NOW A HAMILTONIAN
@@ -4109,6 +4119,29 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
                                            CALL TRACE$POP()
       RETURN
       END!
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_DROPPICK_NEL(NB1,NB2,NEL)
+!     **************************************************************************
+!     ** COLLECTS THE NUMBER OF ELECTRONS IN THE SELECTED BANDS (W)           **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NB1
+      INTEGER(4),INTENT(IN) :: NB2
+      REAL(8)   ,INTENT(OUT):: NEL
+      INTEGER(4)            :: NKPT
+      INTEGER(4)            :: NSPIN
+      INTEGER(4)            :: NB
+      REAL(8)   ,ALLOCATABLE:: OCC(:,:,:)
+!     **************************************************************************
+      CALL DYNOCC$GETI4('NKPT',NKPT)
+      CALL DYNOCC$GETI4('NSPIN',NSPIN)
+      CALL DYNOCC$GETI4('NB',NB)
+      ALLOCATE(OCC(NB,NKPT,NSPIN))
+      CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
+      NEL=SUM(OCC(NB1:NB2,:,:))
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_DROPPICK_DHOFKTRANSFORM(ID)
@@ -4380,7 +4413,7 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
           write(NFIL)I,DHOFK(:,:,IKPT,ISPIN)
         ENDDO
       ENDDO
-      CALL FILEHANDLER$CLOSE('DHOFK_IN')
+      CALL FILEHANDLER$CLOSE('DHOFK_OUT')
                                       CALL TRACE$POP()
       RETURN
       END
@@ -5563,6 +5596,7 @@ PRINT*,'MARKE 2'
         RETURN
       END IF
       IF(TPICK) THEN
+        PRINT*,'CALLING DMFT INTERFACE PICK'
         CALL LMTO_DROPPICK_HTBC()
         RETURN
       END IF

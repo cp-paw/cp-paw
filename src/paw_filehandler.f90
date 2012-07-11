@@ -583,12 +583,13 @@ END MODULE FILEHANDLER_MODULE
         IF(FILE_%FORMATTED) THEN
 !         == recl is explicitely specified to avoid arbitrary breakinf of =====
 !         == lines. recl is the max number if characters per line. ============
+!         == see: http://gcc.gnu.org/bugzilla/show_bug.cgi?id=20257
           OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
      &        ,FILE=FILE_%NAME &
      &        ,STATUS=FILE_%STATUS &
      &        ,FORM='formatted' &
      &        ,POSITION=FILE_%POSITION &
-     &        ,recl=1000)
+     &        ,recl=1000000000)    !max value accepted by gfortran
          else
 !          == recl not specified for unformatted files. uses default.         ==
 !          == The default or recl is 2^31 bytes for direct access files       ==
