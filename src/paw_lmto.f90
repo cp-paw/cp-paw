@@ -3791,7 +3791,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('DFT2DMFT',NFIL1)
       REWIND(NFIL1)
-      READ(NFIL1)ID,NAT,NDIM,NSPIN,NKPT,NCORR1,NBW1,MU,KBT,TICKET1 !<<<<<<<<<<<<
+      READ(NFIL1,*)ID,NAT,NDIM,NSPIN,NKPT,NCORR1,NBW1,MU,KBT,TICKET1 !<<<<<<<<<<
 !     == SET TICKET IF IT HAS NOT BEEN SET =====================================
       IF(SUM(ABS(TICKET)).EQ.0) THEN
         TICKET=TICKET1
@@ -3802,10 +3802,10 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
         CALL ERROR$STOP('LMTO_DROPPICK_PICK')
       END IF
       DO IAT=1,NAT
-        READ(NFIL1)ID
+        READ(NFIL1,*)ID
       ENDDO
       DO I=1,NCORR
-        READ(NFIL1)ID
+        READ(NFIL1,*)ID
       ENDDO
 !
 !     ==========================================================================
@@ -3813,7 +3813,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('DMFT2DFT',NFIL2)
       REWIND(NFIL2)
-      READ(NFIL2)ID,NKPT1,NSPIN1,NBW1,TICKET1 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+      READ(NFIL2,*)ID,NKPT1,NSPIN1,NBW1,TICKET1 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       IF(ID.NE.'INFO') THEN
         CALL ERROR$MSG('INCORRECT ID: MUST BE "INFO"')
         CALL ERROR$CHVAL('ID',ID)
@@ -3848,7 +3848,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !         ======================================================================
 !         == READ DENSITY MATRIX                                              ==
 !         ======================================================================
-          READ(NFIL2)ID,IKPT1,ISPIN1,RHO(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          READ(NFIL2,*)ID,IKPT1,ISPIN1,RHO(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           IF(ID.NE.'RHO') THEN
             CALL ERROR$MSG('INCORRECT ID: MUST BE "RHO"')
             CALL ERROR$CHVAL('ID',ID)
@@ -3864,14 +3864,14 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !         ======================================================================
 !         == READ DFT FILE                                                    ==
 !         ======================================================================
-          READ(NFIL1)ID,IKPT1,ISPIN1,WKPT1,H0
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           IF(ID.NE.'HINFO') THEN
             CALL ERROR$MSG('INCORRECT ID: MUST BE "HINFO"')
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
           do ib=1,nbw
-            READ(NFIL1)ID,IB1,IKPT1,ISPIN1,PSICORR(:,:,IB)
+            READ(NFIL1,*)ID,IB1,IKPT1,ISPIN1,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<
             IF(ID.NE.'PIPSI') THEN
               CALL ERROR$MSG('INCORRECT ID: MUST BE "PIPSI"')
               CALL ERROR$CHVAL('ID',ID)
