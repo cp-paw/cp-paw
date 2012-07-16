@@ -3484,7 +3484,7 @@ END MODULE LMTO_DROPPICK_MODULE
       REAL(8)   ,ALLOCATABLE :: EMAT(:)
       real(8)                :: nel  !#(electrons in selected bands)
 !     **************************************************************************
-                                           CALL TRACE$PUSH('LMTO_DROP')
+                                           CALL TRACE$PUSH('LMTO_DROPPICK_DROP')
 PRINT*,'ENTERING LMTO_DROPPICK_DROP'
       IF(.NOT.TDROP) RETURN
       CALL CONSTANTS('EV',EV)
@@ -3515,7 +3515,7 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
       NKPT=NKPTL
       IF(NKPT.NE.NKPTL) THEN
         CALL ERROR$MSG('ROUTINE NOT SUITED FOR PARALLEL CALCULATIONS')
-        CALL ERROR$STOP('LMTO_DROP')
+        CALL ERROR$STOP('LMTO_DROPPICK_DROP')
       END IF
       ALLOCATE(WKPT(NKPT))
       CALL DYNOCC$GETR8A('WKPT',NKPT,WKPT)
@@ -3607,11 +3607,11 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !         ==CHECKS =============================================================
           IF(.NOT.ASSOCIATED(THIS%TBC)) THEN
             CALL ERROR$MSG('THIS%TBC NOT ASSOCIATED')
-            CALL ERROR$STOP('LMTO_DROP')
+            CALL ERROR$STOP('LMTO_DROPPICK_DROP')
           END IF
           IF(.NOT.ASSOCIATED(THIS%RLAM0)) THEN
             CALL ERROR$MSG('THIS%RLAM0 NOT ASSOCIATED')
-            CALL ERROR$STOP('LMTO_DROP')
+            CALL ERROR$STOP('LMTO_DROPPICK_DROP')
           END IF
 !
 !         ==  WRITE WAVE FUNCTIONS =============================================
@@ -3682,7 +3682,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
                   CALL ERROR$I4VAL('INDEX2',J)
                   CALL ERROR$R8VAL('REAL(DEVIATION)',REAL(CSVAR))
                   CALL ERROR$R8VAL('IMAG(DEVIATION)',AIMAG(CSVAR))
-                  CALL ERROR$STOP('LMTO_DROP')
+                  CALL ERROR$STOP('LMTO_DROPPICK_DROP')
                 END IF 
               ENDDO
             ENDDO
@@ -3746,7 +3746,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !      IF(TDUMMY) CALL FILEHANDLER$CLOSE('DMFT2DFTDUMMY')
       IF(TDUMMY) close(nfil2)
       CALL ERROR$MSG('FORCED STOP AFTER WRITING FILE')
-      CALL ERROR$STOP('LMTO$DROP')
+      CALL ERROR$STOP('LMTO_DROPPICK_DROP')
                                            CALL TRACE$POP()
       RETURN
       END
@@ -3782,7 +3782,9 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
       INTEGER(4)             :: IKPT1,ISPIN1,IB1
       INTEGER(4)             :: NPRO
       REAL(8)                :: WKPT1
+      REAL(8)                :: NEL
 !     **************************************************************************
+                                           CALL TRACE$PUSH('LMTO_DROPPICK_PICK')
       CALL LMTO_DROPICK_INI()
       CALL LMTO_DROPPICK_MAKET()
 !
@@ -3791,7 +3793,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('DFT2DMFT',NFIL1)
       REWIND(NFIL1)
-      READ(NFIL1,*)ID,NAT,NDIM,NSPIN,NKPT,NCORR1,NBW1,MU,KBT,TICKET1 !<<<<<<<<<<
+      READ(NFIL1,*)ID,NAT,NDIM,NSPIN,NKPT,NCORR1,NBW1,MU,KBT,NEL,TICKET1 !<<<<<<
 !     == SET TICKET IF IT HAS NOT BEEN SET =====================================
       IF(SUM(ABS(TICKET)).EQ.0) THEN
         TICKET=TICKET1
@@ -3879,12 +3881,17 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
             END IF
           enddo
 !
-          if(1.eq.2) then
 !         ======================================================================
 !         == CONVERT DENSITY MATRIX INTO FINITE TEMPERATURE HAMILTONIAN       ==
 !         ======================================================================
+!         == non-spin-polarized calculations have two electrons per state
+          if(nspin.eq.1.and.ndim.eq.1) then
+            rho=0.5d0*rho
+          end if
+!
           CALL LIB$DIAGC8(NBW,RHO,F,U)
           DO IB=1,NBW
+            f(ib)=max(1.d-5,min(1.d0-1.d-5,f(ib)))
             SVAR=(1.D0-F(IB))/F(IB)
             SVAR=LOG(SVAR)
             F(IB)=MU+KBT*SVAR
@@ -3898,42 +3905,6 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !         == SUBTRACT NON-INTERACTING HAMILTONIAN                             ==
 !         ======================================================================
           H0=RHO-H0
-!
-          else
-!         ======================================================================
-!         == construct correlation contribution to the Hamiltonian            ==
-!         ======================================================================
-!         == construct rho0 from non-interacting hamiltonian
-!         == rho0=1/(1+exp((h0-mu)/kbt)) =======================================
-          CALL LIB$DIAGC8(NBW,h0,F,U)
-          DO IB=1,NBW
-            SVAR=(f(ib)-mu)/kBT
-            SVAR=exp(svar)
-            f(ib)=1.d0/(1.d0+svar)
-            RHO0(IB,:)=F(IB)*U(IB,:)
-          ENDDO
-          RHO0=MATMUL(CONJG(TRANSPOSE(U)),RHO0)  
-!
-!         == u = [(1-rho)/rho] / [(1-rho0)/rho0] ===============================
-          call lib$invertc8(nbw,rho-matmul(rho,rho0),u)
-          u=matmul(rho0-matmul(rho0,rho),u)
-          do ib=1,nbw
-            u(ib,ib)=u(ib,ib)-(1.d0,0.d0)
-          enddo
-!
-!         == delta H= h0 =kbt*ln(1+u) approx kbt*(x-x^2/2+x^3/3 ================
-!         ===============================  = kbt*x(1-x(1/2-x/3) ================
-          h0=u/3.d0
-          do ib=1,nbw
-            h0(ib,ib)=(0.5d0,0.d0)-h0(ib,ib)
-          enddo
-          h0=matmul(u,h0)
-          do ib=1,nbw
-            h0(ib,ib)=(1.d0,0.d0)-h0(ib,ib)
-          enddo
-          h0=matmul(u,h0)
-          h0=kbt*h0
-          end if
 !
 !         ======================================================================
 !         == CONVERT INTO ORBITAL BASIS                                       ==
@@ -3955,6 +3926,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !     ==  WRITE DHOFK TO FILE SO THAT ONE CAN RESTART                         ==
 !     ==========================================================================
       call LMTO_DROPPICK_writeDHOFK()
+                                           CALL TRACE$Pop()
       RETURN
       END
 !
@@ -3993,7 +3965,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
       COMPLEX(8)             :: CSVAR,CSVAR1,CSVAR2
       INTEGER(4)             :: NFILO
 !     **************************************************************************
-                                           CALL TRACE$PUSH('LMTO_NTBODENMAT')
+                                           CALL TRACE$PUSH('LMTO_DROPPICK_HTBC')
       IF(.NOT.TPICK) RETURN
       THTBC=.TRUE.
       CALL LMTO_DROPICK_INI()
@@ -4611,12 +4583,10 @@ PRINT*,'ENTERING LMTO_DROP'
 !     ==========================================================================
       CALL LMTO_DROPICK_INI()
       IF(METHOD.EQ.2) THEN
-PRINT*,'NB1,NB2,NBW ',NB1,NB2,NBW 
         ALLOCATE(PSICORR(NDIM,NCORR,NBW))
         ALLOCATE(AMAT(NCORR,NCORR))
         ALLOCATE(UMAT(NCORR,NCORR))
         ALLOCATE(EMAT(NCORR))
-PRINT*,'TPRO ',NCORR,TPRO
       END IF
 !
 !     ==========================================================================
@@ -4776,7 +4746,7 @@ OPEN(NFIL,FILE='DMFTOUT.DAT')
             ID='PSI'
             DO IB=1,NB
               WRITE(NFIL,*)ID,IB,IKPT,ISPIN,EIGVAL(IB),PSI(:,:,IB)
-PRINT*,'NORM ',IKPT,ISPIN,IB,DOT_PRODUCT(PSI(1,:,IB),PSI(1,:,IB))
+!PRINT*,'NORM ',IKPT,ISPIN,IB,DOT_PRODUCT(PSI(1,:,IB),PSI(1,:,IB))
             ENDDO
 !
 !         ======================================================================
@@ -4785,16 +4755,16 @@ PRINT*,'NORM ',IKPT,ISPIN,IB,DOT_PRODUCT(PSI(1,:,IB),PSI(1,:,IB))
           ELSE IF(METHOD.EQ.2) THEN
 !           == CONTRACT WAVE FUNCTION COEFFICIENTS ONTO CORRELATED ORBITALS 
 !           == AND CORRELATED BANDS
-PRINT*,'DOING IKPT=',IKPT,' AND ISPIN=',ISPIN
+!PRINT*,'DOING IKPT=',IKPT,' AND ISPIN=',ISPIN
             I=0
             DO IPRO=1,NPRO
               IF(.NOT.TPRO(IPRO)) CYCLE
               I=I+1
               PSICORR(:,I,:)=PSI(:,IPRO,NB1:NB2)
             ENDDO
-DO IB=1,NBW
-  PRINT*,'PSICORR ',IB,PSICORR(:,:,IB)
-ENDDO
+!!$DO IB=1,NBW
+!!$  PRINT*,'PSICORR ',IB,PSICORR(:,:,IB)
+!!$ENDDO
 !
 !           == DEFINE SUM RULE VIOLATION =======================================
             AMAT(:,:)=(0.D0,0.D0)
@@ -4812,7 +4782,7 @@ ENDDO
 !
 !           == DETERMINE TRANSFORMATION THAT ENFORCES THE SUM RULE =============
             CALL LIB$DIAGC8(NCORR,AMAT,EMAT,UMAT)
-PRINT*,'EMAT ',EMAT 
+!!$PRINT*,'EMAT ',EMAT 
            DO I=1,NCORR
               IF(EMAT(I).LE.0.D0) THEN
                 CALL ERROR$MSG('EMAT IS NOT POSITIVE ')
@@ -4864,12 +4834,9 @@ PRINT*,'EMAT ',EMAT
             WRITE(NFIL,*)ID,NDIM,NBW,NCORR,WKPT(IKPT)
             ID='PSI'
             DO IB=1,NBW
-PRINT*,' IN LOOP ', IB,IB+NB1-1,IKPT,ISPIN,' SHAPE ',SHAPE(PSICORR),' SHAPE ',SHAPE(EIGVAL)
-PRINT*,' MARKE 2',NDIM,NCORR,IB
-              WRITE(NFIL,*)ID,IB,IKPT,ISPIN,EIGVAL(IB+NB1-1),((PSICORR(J,I,IB),J=1,NDIM),I=1,NCORR)
-PRINT*,' MARKE 3'
+              WRITE(NFIL,*)ID,IB,IKPT,ISPIN,EIGVAL(IB+NB1-1) &
+       &                  ,((PSICORR(J,I,IB),J=1,NDIM),I=1,NCORR)
             ENDDO
-PRINT*,' LOOP  DONE',ID
           END IF
           DEALLOCATE(EIGVAL)
           DEALLOCATE(EIGVEC)
@@ -5012,11 +4979,8 @@ PRINT*,' LOOP  DONE',ID
 CHARACTER(128) ::STRING
 !     **************************************************************************
                                            CALL TRACE$PUSH('LMTO_LMTO_PICKGET')
-PRINT*,'LMTO_PICKET MARKE 1'
       IF(.NOT.TPICK) RETURN
-PRINT*,'LMTO_PICKET MARKE 2'
       IF(TPICKED) RETURN
-PRINT*,'LMTO_PICKET MARKE 3'
       TPICKED=.TRUE.
       CALL CONSTANTS('EV',EV)
       CALL LMTO_DROPICK_INI()
@@ -5596,8 +5560,9 @@ PRINT*,'MARKE 2'
         RETURN
       END IF
       IF(TPICK) THEN
-        PRINT*,'CALLING DMFT INTERFACE PICK'
+        PRINT*,'CALLING DMFT INTERFACE PICK ....'
         CALL LMTO_DROPPICK_HTBC()
+        PRINT*,'.... DMFT INTERFACE PICK DONE'
         RETURN
       END IF
 !

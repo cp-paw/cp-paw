@@ -3834,32 +3834,32 @@ RETURN
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$HPSI(NRL,NDIMD_,NAT,LMNXX,RHO,DH)
-!     ******************************************************************
-!     **                                                              **
-!     **  EVALUATES FORCES FROM THE AUGMENTATION PART                 **
-!     **                                                              **
-!     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATES FORCES FROM THE AUGMENTATION PART                         **
+!     **                                                                      **
+!     ********************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: NRL
-      INTEGER(4),INTENT(IN)  :: NDIMD_
-      INTEGER(4),INTENT(IN)  :: LMNXX
-      INTEGER(4),INTENT(IN)  :: NAT
-      REAL(8)   ,INTENT(IN)  :: RHO(NRL,NDIMD_) ! PS-POTENTIAL
-      REAL(8)   ,INTENT(IN)  :: DH(LMNXX,LMNXX,NDIMD_,NAT) ! ONE-CENTER HAMILTONIAN
-      INTEGER(4)             :: IKPT,ISPIN
-      INTEGER(4)             :: NGL
-      INTEGER(4)             :: NBH
-      REAL(8)                :: R(3,NAT)
-!     ------------------------------------------------------------------
+      INTEGER(4),INTENT(IN) :: NRL
+      INTEGER(4),INTENT(IN) :: NDIMD_
+      INTEGER(4),INTENT(IN) :: LMNXX
+      INTEGER(4),INTENT(IN) :: NAT
+      REAL(8)   ,INTENT(IN) :: RHO(NRL,NDIMD_) ! PS-POTENTIAL
+      REAL(8)   ,INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD_,NAT)!ONE-CENTER HAMILTONIAN
+      INTEGER(4)            :: IKPT,ISPIN
+      INTEGER(4)            :: NGL
+      INTEGER(4)            :: NBH
+      REAL(8)               :: R(3,NAT)
+!     --------------------------------------------------------------------------
       INTEGER(4)             :: IPRO
       INTEGER(4)             :: ISP
       INTEGER(4)             :: IAT
       INTEGER(4)             :: LMNX
       REAL(8)   ,ALLOCATABLE :: DH1(:,:,:)      ! 1CENTER HAMILTONIAN
       COMPLEX(8),ALLOCATABLE :: HPROJ(:,:,:)    ! DH*PROJ
-!     ******************************************************************
+!     **************************************************************************
                               CALL TRACE$PUSH('WAVES$HPSI')
                               CALL TIMING$CLOCKON('W:HPSI')
       IF(NDIMD_.NE.NDIMD.OR.NRL.NE.MAP%NRL.OR.NAT.NE.MAP%NAT) THEN
@@ -3878,18 +3878,18 @@ RETURN
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)      
-!         ==============================================================
-!         ==  MULTIPLY WAVE FUNCTION WITH LOCAL POTENTIAL AND         ==
-!         ==  ADD KINETIC ENERGY                                      ==
-!         ==============================================================
+!         ======================================================================
+!         ==  MULTIPLY WAVE FUNCTION WITH LOCAL POTENTIAL AND                 ==
+!         ==  ADD KINETIC ENERGY                                              ==
+!         ======================================================================
           NGL=GSET%NGL
           NBH=THIS%NBH
           IF(.NOT.ASSOCIATED(THIS%HPSI))ALLOCATE(THIS%HPSI(NGL,NDIM,NBH))
-!         == NOTE: THE ARRAY RHO CONTAINS THE POTENTIAL ================
+!         == NOTE: THE ARRAY RHO CONTAINS THE POTENTIAL ========================
 CALL TIMING$CLOCKON('W:HPSI.VPSI')
-!======================================================================== 
+!===============================================================================
 IF(1.EQ.1)THEN !OLD VERSION CHANGE WAS REQUIRED FOR KAESTNERS CONJUGATE GRADIENT
-!======================================================================== 
+!===============================================================================
          CALL WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,THIS%PSI0,RHO(1,ISPIN) &
      &                   ,THIS%HPSI)
 CALL TIMING$CLOCKOFF('W:HPSI.VPSI')

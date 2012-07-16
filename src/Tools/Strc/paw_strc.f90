@@ -210,16 +210,23 @@
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
 !
 !     ==========================================================================
-!     == GET LATTICE VECTORS                                                  ==
+!     == GET Length unit                                                      ==
 !     ==========================================================================
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$SELECT(LL_STRC,'GENERIC')
-      CALL LINKEDLIST$GET(LL_STRC,'LUNIT',1,RUNIT)
+
+      CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT[AA]',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'LUNIT[AA]',1,RUNIT)
+        RUNIT=RUNIT*ANGSTROM
+      ELSE
+        CALL LINKEDLIST$GET(LL_STRC,'LUNIT',1,RUNIT)
+      END IF
 !
 !     ==========================================================================
-!     ==                                                                      ==
+!     == GET LATTICE VECTORS                                                  ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
