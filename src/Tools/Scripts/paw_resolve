@@ -1,0 +1,29 @@
+#!/bin/bash
+#########################################################################
+## replaces every line containing @file@ by the content of ${PRE}/file
+##  insspecies -p. pro2.strc
+#########################################################################
+PRE=$1
+IN=$2
+PRE=${PRE#-p}
+# collect
+VAR=`sed -n -e '/@*@/p' $IN`
+LIST=""
+for X in $VAR; do
+  X=${X%@}
+  X=${X#@}
+  LIST="$LIST $X"
+done
+CHS1=""
+for X in $LIST; do
+   CHS1="$CHS1 -e/@$X@/r$PRE/$X "
+done
+#
+CHS2=""
+for X in $LIST; do
+   CHS2="$CHS2 -e/@$X@/d " 
+done
+sed $CHS1 ${IN} |sed $CHS2 
+exit
+
+

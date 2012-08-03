@@ -646,14 +646,15 @@ END MODULE READ_MODULE
       CHARACTER(256) :: ROOTNAME
       CHARACTER(256) :: INNAME
       INTEGER(4)     :: ISVAR,NFILO
-      integer,external:: iargc
+      integer        :: narg
 !     ******************************************************************
-      IF(IARGC().LT.1) THEN
+      call lib$nargs(narg)
+      IF(narg.LT.1) THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
         CALL ERROR$MSG('THE CONTROL FILE OF THE PREOPTIMIZATION TOOL IS MANDATORY')
         CALL ERROR$STOP('INITIALIZEFILEANDLER')
       END IF
-      CALL GETARG(1,INNAME)
+      CALL lib$GETARG(1,INNAME)
       ISVAR=INDEX(INNAME,-'.PCNTL',BACK=.TRUE.)
       IF(ISVAR.NE.0) THEN
         ROOTNAME=INNAME(1:ISVAR-1)

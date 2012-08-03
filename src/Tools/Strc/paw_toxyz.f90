@@ -10,7 +10,7 @@
       INTEGER(4)                  :: NFIL,I,NAT
       LOGICAL                     :: TSTRCOUT=.FALSE.
       LOGICAL                     :: TCELL=.FALSE.
-      LOGICAL                     :: PAWOK=.true.
+      LOGICAL                     :: PAWOK=.TRUE.
       REAL(8)                     :: ANGSTROM
       CHARACTER(128)              :: ROOTNAME     ! COMMON ROOT OF THE FILENAMES
       CHARACTER(128)              :: OBJECTNAME,LINE
@@ -29,14 +29,12 @@
       LOGICAL(4)                  :: TQMMM
       REAL(8)                     :: SVAR
       INTEGER(4)                  :: IAT,IAT1,JAT,DIR(3)
-      CHARACTER(32)               :: STRING,str
-      INTEGER(4)                  :: IARGC,MX,MY,MZ,IX,IY,IZ,IARG
+      CHARACTER(32)               :: STRING,STR
+      INTEGER(4)                  :: MX,MY,MZ,IX,IY,IZ,IARG,NARG
 
       LOGICAL(4)                  :: TFORMAT=.FALSE.
       REAL(8)                     :: CELLDISTANCE,DIST
 !     ******************************************************************
-      EXTERNAL IARGC
-
       CALL LINKEDLIST$NEW(LL_STRC)
 !
 !     ==================================================================
@@ -49,8 +47,9 @@
       MZ=1
       ROOTNAME=''
       CELLDISTANCE=6.D0*1.889726878D0   ! DEFAULT CELL DISTANCE IN A.U.
-      DO WHILE (IARG.LE.IARGC())
-         CALL GETARG(IARG,LINE)
+      CALL LIB$NARGs(NARG)
+      DO WHILE (IARG.LE.NARG)
+         CALL LIB$GETARG(IARG,LINE)
          IARG=IARG+1
          IF(LINE(1:1).EQ.'-') THEN
             IF(+LINE(2:2).EQ.'O') THEN
@@ -68,7 +67,7 @@
                PRINT*,'|/            WRITTEN IN DEZ. 2001 BY JOHANNES SCHIMPL   |/ '
                PRINT*,'+--------------------------------------------------------+  '
             ELSE IF(+LINE(2:2).EQ.'D') THEN
-               CALL GETARG(IARG,STRING)
+               CALL LIB$GETARG(IARG,STRING)
                IARG=IARG+1
                CALL CHAR_TO_REAL(STRING,DIST,TCHK)
                IF(TCHK) THEN
@@ -76,15 +75,15 @@
                   WRITE(*,"('USING ',F10.5,' ANG AS TARGET DISTANCE')") DIST
                END IF
             ELSE IF (+LINE(2:2).EQ.'M') THEN
-               CALL GETARG(IARG,STRING)
+               CALL LIB$GETARG(IARG,STRING)
                IARG=IARG+1
                READ(STRING,'(I4)') MX
                IF (MX.LT.1) MX=1
-               CALL GETARG(IARG,STRING)
+               CALL LIB$GETARG(IARG,STRING)
                IARG=IARG+1
                READ(STRING,'(I4)') MY
                IF (MY.LT.1) MY=1
-               CALL GETARG(IARG,STRING)
+               CALL LIB$GETARG(IARG,STRING)
                IARG=IARG+1
                READ(STRING,'(I4)') MZ
                IF (MZ.LT.1) MZ=1
@@ -176,7 +175,7 @@
         CALL LINKEDLIST$GET(LL_STRC,'NAME',1,NAME(IAT))
         CALL LINKEDLIST$EXISTD(LL_STRC,'SP',1,TCHK)
         IF(.NOT.TCHK) THEN
-          SPECIES(IAT)=NAME(iat)(1:2)
+          SPECIES(IAT)=NAME(IAT)(1:2)
         ELSE
           CALL LINKEDLIST$GET(LL_STRC,'SP',1,SPECIES(IAT))
         END IF
@@ -204,18 +203,18 @@
       DO IAT=1,NAT
          DO JAT=IAT+1,NAT
             SVAR=SQRT(SUM((R(:,IAT)-R(:,JAT))**2))
-            IF(SVAR.LT.0.5D0) then 
+            IF(SVAR.LT.0.5D0) THEN 
                WRITE(*,"('WARNING: ATOM  ',A,'  AND  ',A, '  ARE &
                     &TOO CLOSE. DISTANCE: ',F10.5,' ANG.')") &   
                     TRIM(NAME(IAT)),TRIM(NAME(JAT)),SVAR
-               pawok=.false.
-            end IF
-            IF(TRIM(NAME(IAT)).EQ.TRIM(NAME(JAT))) then
+               PAWOK=.FALSE.
+            END IF
+            IF(TRIM(NAME(IAT)).EQ.TRIM(NAME(JAT))) THEN
                WRITE(*,"('WARNING: THE ATOM& 
                     &NAME ',A,' IS USED FOR TWO ATOMS, WICH IS NOT ALLOWED!')")& 
                     TRIM(NAME(IAT))
-               pawok=.false.
-            end IF
+               PAWOK=.FALSE.
+            END IF
          END DO
       END DO
       CALL NEXTDIST(NAT,R,RBAS,0,DIST,IAT,JAT,DIR)
@@ -239,18 +238,18 @@
 !     ==================================================================
       CALL FILEHANDLER$UNIT('XYZ',NFIL)
       WRITE(NFIL,*)NAT*MX*MY*MZ
-      WRITE(NFIL,FMT='(3x,A30)')ROOTNAME
+      WRITE(NFIL,FMT='(3X,A30)')ROOTNAME
       DO IX=0,MX-1
          DO IY=0,MY-1
             DO IZ=0,MZ-1
                DO IAT=1,NAT
-!original version:
-!the name of the atom was used
-!                  str=NAME(IAT)(1:2)
-!updated version:
-!the species is used
-                  str=SPECIES(IAT)(1:2)
-                  IF(str(2:2).EQ.'_') str(2:2)=' '
+!ORIGINAL VERSION:
+!THE NAME OF THE ATOM WAS USED
+!                  STR=NAME(IAT)(1:2)
+!UPDATED VERSION:
+!THE SPECIES IS USED
+                  STR=SPECIES(IAT)(1:2)
+                  IF(STR(2:2).EQ.'_') STR(2:2)=' '
                   WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X),2X,A)')STR,R(:,IAT)+ &
                        &      IX*RBAS(:,1)+IY*RBAS(:,2)+IZ*RBAS(:,3),TRIM(NAME(IAT))
                ENDDO
@@ -609,9 +608,9 @@
       REAL(8)       ,INTENT(OUT)  :: VAL
       LOGICAL(4)    ,INTENT(OUT)  :: TCHK
 !     ********************************************************************
-      read(str,FMT=*,ERR=123) val
-      tchk=.true.
-      return
-123   tchk=.false.
+      READ(STR,FMT=*,ERR=123) VAL
+      TCHK=.TRUE.
+      RETURN
+123   TCHK=.FALSE.
       VAL=0.D0
     END SUBROUTINE CHAR_TO_REAL

@@ -1775,8 +1775,8 @@ END IF
       &          ,TEMP,TFIXTOT,TOTCHA,TOTPOT,TFIXSPIN,SPINCHA,SPINPOT &
       &          ,WKPT,EPSP,XP)
          END IF
-         RETURN
                               CALL TRACE$POP()
+         RETURN
        END IF
 !
 !      =========================================================================
@@ -2344,6 +2344,7 @@ END IF
            ENDDO
          ENDDO
        ENDDO
+                                  CALL TRACE$Pop()
        RETURN
        END
 !PB031019END

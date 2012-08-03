@@ -1954,10 +1954,10 @@ INTEGER(4)             :: LN3,LN4
       LMX=(LX+1)**2
       ALLOCATE(YLMPOL(INDX,LMX))
       CALL GAUSSIAN_YLMPOL(LX,YLMPOL)
-PRINT*,'YLMPOL ',YLMPOL
-PRINT*,'INDX   ',INDX
-PRINT*,'NPOWX  ',NPOWX
-PRINT*,'LMX    ',LMX
+!!$PRINT*,'YLMPOL ',YLMPOL
+!!$PRINT*,'INDX   ',INDX
+!!$PRINT*,'NPOWX  ',NPOWX
+!!$PRINT*,'LMX    ',LMX
 !
 !     ==========================================================================
 !     == CALCULATE POLYLM(N+1,LM)=|R|**(2N)*Y(LM)      N=0,...,NPOWX-1        ==
@@ -3329,8 +3329,10 @@ MODULE LMTO_DROPPICK_MODULE
 !== hard-wired input data                                                     ==
 !===============================================================================
 LOGICAL(4),PARAMETER :: TREADDHOFK=.FALSE.
-INTEGER(4),PARAMETER :: NB1=7      ! first band in W
-INTEGER(4)           :: NB2        ! last band in W
+!LOGICAL(4),PARAMETER :: TREADDHOFK=.true.
+!!$CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
+CHARACTER(32),PARAMETER :: SWITCHID='CAFE2AS2'
+INTEGER(4)           :: NB1        ! first band in W
 LOGICAL(4),POINTER   :: TPRO(:)    ! selector for correlated orbitals
 !===============================================================================
 !== derived data                                                              ==
@@ -3343,11 +3345,12 @@ TYPE T_TYPE
 END TYPE T_TYPE
 LOGICAL(4)           :: TINI_DROPPICK=.FALSE.
 LOGICAL(4)           :: TPICKED=.FALSE.  ! READ ONLY ONCE AND KEEP
+INTEGER(4)           :: NB2              ! last band in W
 INTEGER(4)           :: NBW              ! #(bands in W)
 INTEGER(4)           :: NCORR            ! #(correlated orbitals)
 TYPE(T_TYPE),POINTER :: T(:)             ! transformation to onsite orthonormal
 COMPLEX(8),POINTER   :: DHOFK(:,:,:,:)   ! hamiltonian correction
-INTEGER(4)           :: TICKET(8)        ! unique file-set identifier
+INTEGER(4)           :: TICKET(8)=0      ! unique file-set identifier
 INTEGER(4),POINTER   :: IPRO1(:)          
 INTEGER(4),POINTER   :: NPROAT(:)
 INTEGER(4),PARAMETER :: METHOD=2         ! legacy. is to be removed
@@ -3358,7 +3361,7 @@ END MODULE LMTO_DROPPICK_MODULE
 !     **************************************************************************
 !     **************************************************************************
       USE LMTO_DROPPICK_MODULE, ONLY: TINI_DROPPICK,TPRO,NCORR,NB1,NB2,NBW &
-     &                               ,IPRO1,NPROAT
+     &                               ,IPRO1,NPROAT,switchid
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,THIS,MAP,WAVES_SELECTWV
       USE LMTO_MODULE, ONLY : TDROP,LOX,LNX,ISPECIES,POTPAR
       USE STRINGS_MODULE
@@ -3368,6 +3371,21 @@ END MODULE LMTO_DROPPICK_MODULE
 !     **************************************************************************
       IF(TINI_DROPPICK) RETURN
       TINI_DROPPICK=.TRUE.
+!
+!     ==========================================================================
+!     ==  SELECT CORRELATED ORBITALS                                          ==
+!     ==========================================================================
+      IF(SWITCHID.EQ.'CAFE2AS2') THEN
+        NB1=7
+!        NB2=24
+      ELSE IF(SWITCHID.EQ.'SRVO3') THEN
+        NB1=17
+!        NB2=19
+      else 
+        CALL ERROR$MSG('SWITCHID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('SWITCHID',SWITCHID)
+        CALL ERROR$STOP('LMTO_DROPICK_INI')
+      END IF
 !
 !     ==========================================================================
 !     ==  SELECT CORRELATED ORBITALS                                          ==
@@ -3386,6 +3404,19 @@ END MODULE LMTO_DROPPICK_MODULE
           DO M=1,2*L+1
             IPRO=IPRO+1
             TPRO(IPRO)=POTPAR(ISP)%TORB(LN)
+IF(TPRO(IPRO)) THEN
+  IF(SWITCHID.EQ.'SRVO3') THEN
+    IF(L.EQ.2) THEN
+      IF(M.EQ.1) TPRO(IPRO)=.FALSE.   !set eg orbitals off
+      IF(M.EQ.3) TPRO(IPRO)=.FALSE.
+    END IF
+  else IF(SWITCHID.EQ.'CAFE2AS2') THEN
+  ELSE 
+    CALL ERROR$MSG('SWITCHID NOT RECOGNIZED (2ND TEST)')
+    CALL ERROR$CHVAL('SWITCHID',SWITCHID)
+    CALL ERROR$STOP('LMTO_DROPICK_INI')
+  end if
+END IF
           ENDDO
         ENDDO
         NPROAT(IAT)=IPRO-IPRO1(IAT)+1
@@ -3402,7 +3433,7 @@ END MODULE LMTO_DROPPICK_MODULE
 !     ==========================================================================
 !     == SELECT CORRELATED BANDS                                              ==
 !     ==========================================================================
-      NB2=1000
+      nb2=huge(nb2)    !nb2 must include all unoccupied bands
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -3453,7 +3484,7 @@ END MODULE LMTO_DROPPICK_MODULE
       USE LMTO_DROPPICK_MODULE, ONLY : NCORR,NB1,NB2,NBW,TPRO,DHOFK,T,TICKET &
      &                                ,IPRO1,NPROAT
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TTEST=.FALSE.
+      LOGICAL(4),PARAMETER   :: TTEST=.true.
       LOGICAL(4),PARAMETER   :: TDUMMY=.TRUE. !WRITE A DUMMY DMFT2DFT FILE
       INTEGER(4)             :: NPRO
       LOGICAL(4)             :: TINV
@@ -3659,7 +3690,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
           CALL LMTO_DROPPICK_SUMRULE(NDIM,NCORR,NBW,PSICORR,QSQ,QSQINV)
           DO IB=1,NBW
             DO IDIM=1,NDIM
-              PSICORR(IDIM,:,IB)=MATMUL(QSQ,PSICORR(IDIM,:,IB))
+              PSICORR(IDIM,:,IB)=MATMUL(QSQINV,PSICORR(IDIM,:,IB))
             ENDDO
           ENDDO
 !
@@ -3669,7 +3700,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
           IF(TTEST) THEN
             DO I=1,NCORR
               DO J=1,NCORR
-                CSVAR=0.D0
+                CSVAR=(0.D0,0.d0)
                 IF(I.EQ.J)CSVAR=(-1.D0,0.D0)
                 DO IB=1,NBW
                   DO IDIM=1,NDIM
@@ -3795,12 +3826,16 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
       REWIND(NFIL1)
       READ(NFIL1,*)ID,NAT,NDIM,NSPIN,NKPT,NCORR1,NBW1,MU,KBT,NEL,TICKET1 !<<<<<<
 !     == SET TICKET IF IT HAS NOT BEEN SET =====================================
+print*,'a ticket ',ticket
+print*,'a ticket1',ticket1
       IF(SUM(ABS(TICKET)).EQ.0) THEN
         TICKET=TICKET1
       END IF
 !     == CHECK CONSISTENCY OF THE TICKET =======================================
       IF(.NOT.ALL(TICKET.EQ.TICKET1)) THEN
-        CALL ERROR$MSG('INCORRECT TICKET')
+        CALL ERROR$MSG('INCORRECT TICKET (1)')
+print*,'b ticket ',ticket
+print*,'b ticket1',ticket1
         CALL ERROR$STOP('LMTO_DROPPICK_PICK')
       END IF
       DO IAT=1,NAT
@@ -3823,6 +3858,8 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
       END IF
       IF(.NOT.ALL(TICKET.EQ.TICKET1)) THEN
         CALL ERROR$MSG('INCORRECT TICKET')
+print*,'c ticket ',ticket
+print*,'c ticket1',ticket1
         CALL ERROR$STOP('LMTO_DROPPICK_PICK')
       END IF
       IF(NKPT1.NE.NKPT.OR.NSPIN1.NE.NSPIN.OR.NBW1.NE.NBW) THEN
@@ -3885,11 +3922,18 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !         == CONVERT DENSITY MATRIX INTO FINITE TEMPERATURE HAMILTONIAN       ==
 !         ======================================================================
 !         == non-spin-polarized calculations have two electrons per state
-          if(nspin.eq.1.and.ndim.eq.1) then
-            rho=0.5d0*rho
-          end if
+!!$          if(nspin.eq.1.and.ndim.eq.1) then
+!!$            rho=0.5d0*rho
+!!$          end if
 !
+do ib=1,nbw
+write(*,fmt='("real(rho)",i3,100f8.4)')ib,real(rho(ib,:))
+enddo
+do ib=1,nbw
+write(*,fmt='("imag(rho)",i3,100f8.4)')ib,aimag(rho(ib,:))
+enddo
           CALL LIB$DIAGC8(NBW,RHO,F,U)
+write(*,fmt='("f   ",100f8.4)')f
           DO IB=1,NBW
             f(ib)=max(1.d-5,min(1.d0-1.d-5,f(ib)))
             SVAR=(1.D0-F(IB))/F(IB)
@@ -4245,10 +4289,15 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
       COMPLEX(8),INTENT(IN) :: PIPSI(NDIM,NORB,NB) ! <PI|PSI>
       COMPLEX(8),INTENT(OUT):: QSQ(NORB,NORB)      ! SQRT(<PI|PSI><PSI|PI>
       COMPLEX(8),INTENT(OUT):: QSQINV(NORB,NORB)   ! SQRT(<PI|PSI><PSI|PI>^(-1)
+      LOGICAL(4),PARAMETER  :: TTEST=.false.
       COMPLEX(8)            :: UMAT(NORB,NORB)     ! EIGENVECTORS OF QMAT
       REAL(8)               :: EIG(NORB)           ! EIGENVALUES OF QMAT
       COMPLEX(8)            :: CSVAR
       INTEGER(4)            :: I,J,IB,IDIM
+      REAL(8)               :: SVAR
+      COMPLEX(8)            :: AMAT(NORB,NORB)     ! WORK ARRAY
+      COMPLEX(8)            :: BMAT(NORB,NORB)     ! WORK ARRAY
+COMPLEX(8) :: PIPSI1(NDIM,NORB,NB)
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -4256,7 +4305,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !     ==========================================================================
       DO I=1,NORB
         DO J=I,NORB
-          CSVAR=0.D0  
+          CSVAR=(0.D0,0.D0)
           DO IB=1,NB
             DO IDIM=1,NDIM
               CSVAR=CSVAR+PIPSI(IDIM,I,IB)*CONJG(PIPSI(IDIM,J,IB))
@@ -4266,6 +4315,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
           QSQ(J,I)=CONJG(CSVAR)  ! TO SAVE MEMORY
         ENDDO
       ENDDO
+      IF(TTEST)AMAT=QSQ
 !
 !     ==========================================================================
 !     == DETERMINE TRANSFORMATION THAT ENFORCES THE SUM RULE                  ==
@@ -4282,20 +4332,90 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
         END IF
       ENDDO
 !
+!     === TEST RECONSTRUCTION 
+      IF(TTEST) THEN
+        DO I=1,NORB
+          QSQINV(I,:)=EIG(I)*CONJG(UMAT(:,I))  ! INTERMEDIATE RESULT
+        ENDDO
+        QSQINV(:,:)=MATMUL(UMAT,QSQINV)
+        QSQINV(:,:)=QSQINV-QSQ
+        SVAR=MAXVAL(ABS(QSQINV))
+        PRINT*,'RECONSTRUCTION MAX DEV ',SVAR
+        IF(SVAR.GT.1.D-8) THEN 
+          CALL ERROR$MSG('RECONMSTRUCTION AFTER DIAGONALIZATION FAILED')
+          CALL ERROR$R8VAL('MAX DEV',SVAR)
+          CALL ERROR$STOP('LMTO_DROPPICK_SUMRULE')
+        END IF
+      END IF
+!
 !     ==========================================================================
 !     == DETERMINE SQRT(Q) AND ITS INVERSE (Q IS THE SUMRULE VIOLATION)       ==
 !     ==========================================================================
-      EIG=SQRT(EIG)
       DO I=1,NORB
-        QSQINV(:,I)=EIG(:)*UMAT(:,I)  ! INTERMEDIATE RESULT
+        QSQINV(I,:)=SQRT(EIG(I))*CONJG(UMAT(:,I))  ! INTERMEDIATE RESULT
       ENDDO
-      QSQ(:,:)=MATMUL(CONJG(TRANSPOSE(UMAT)),QSQINV)
-!     == NOW THE INVERSE...
-      EIG=1.D0/EIG
+      QSQ(:,:)=MATMUL(UMAT,QSQINV)
+!
+      IF(TTEST) THEN
+        SVAR=MAXVAL(ABS(MATMUL(QSQ,QSQ)-AMAT))
+        PRINT*,'MAX DEV ',SVAR
+        IF(SVAR.GT.1.D-8) THEN 
+          CALL ERROR$MSG('CONSTRUCTION OF SQUARE ROOT FAILED')
+          CALL ERROR$R8VAL('MAX DEV',SVAR)
+          CALL ERROR$STOP('LMTO_DROPPICK_SUMRULE')
+        END IF
+      END IF
+!
+!     ==========================================================================
+!     == DETERMINE THE INVERSE OF SQRT(Q) (Q IS THE SUMRULE VIOLATION)        ==
+!     ==========================================================================
       DO I=1,NORB
-        QSQINV(:,I)=EIG(:)*UMAT(:,I)  ! INTERMEDIATE RESULT
+        QSQINV(I,:)=1.D0/SQRT(EIG(I)) * CONJG(UMAT(:,I))  ! INTERMEDIATE RESULT
       ENDDO
-      QSQINV(:,:)=MATMUL(CONJG(TRANSPOSE(UMAT)),QSQINV)
+      QSQINV(:,:)=MATMUL(UMAT,QSQINV)
+!
+      IF(TTEST) THEN
+        BMAT=MATMUL(QSQINV,MATMUL(AMAT,QSQINV))
+        DO I=1,NORB
+          BMAT(I,I)=BMAT(I,I)-(1.D0,0.D0)
+        ENDDO
+        SVAR=MAXVAL(ABS(BMAT))
+        PRINT*,'MAX DEV ',SVAR
+        IF(SVAR.GT.1.D-8) THEN 
+          CALL ERROR$MSG('CONSTRUCTION OF INVERSE SQUARE ROOT FAILED')
+          CALL ERROR$R8VAL('MAX DEV',SVAR)
+          CALL ERROR$STOP('LMTO_DROPPICK_SUMRULE')
+        END IF
+      END IF
+!
+!     ==========================================================================
+!     == TEST                                                                 ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        DO IB=1,NB
+          DO IDIM=1,NDIM
+            PIPSI1(IDIM,:,IB)=MATMUL(QSQINV,PIPSI(IDIM,:,IB))
+          ENDDO
+        ENDDO
+        DO I=1,NORB
+          DO J=1,NORB
+            CSVAR=(0.D0,0.D0)
+            IF(I.EQ.J) CSVAR=(-1.D0,0.D0)
+            DO IB=1,NB
+              DO IDIM=1,NDIM
+                CSVAR=CSVAR+PIPSI1(IDIM,I,IB)*CONJG(PIPSI1(IDIM,J,IB))
+              ENDDO
+            ENDDO
+            IF(ABS(CSVAR).GT.1.D-6) THEN
+              CALL ERROR$MSG('FINAL TEST FAILED')
+              CALL ERROR$R8VAL('MAX DEV',ABS(CSVAR))
+              CALL ERROR$I4VAL('I',I)
+              CALL ERROR$I4VAL('J',J)
+              CALL ERROR$STOP('LMTO_DROPPICK_SUMRULE')
+           END IF
+          ENDDO
+        ENDDO
+      END IF
 !
       RETURN
       END

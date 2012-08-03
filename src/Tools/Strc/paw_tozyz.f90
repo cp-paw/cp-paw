@@ -29,13 +29,11 @@
       REAL(8)                     :: SVAR
       INTEGER(4)                  :: IAT,IAT1,JAT,DIR(3)
       CHARACTER(32)               :: STRING,str
-      INTEGER(4)                  :: IARGC,MX,MY,MZ,IX,IY,IZ,IARG
+      INTEGER(4)                  :: MX,MY,MZ,IX,IY,IZ,IARG,narg
 
       LOGICAL(4)                  :: TFORMAT=.FALSE.
       REAL(8)                     :: CELLDISTANCE,DIST
 !     ******************************************************************
-      EXTERNAL IARGC
-
       CALL LINKEDLIST$NEW(LL_STRC)
 !
 !     ==================================================================
@@ -48,8 +46,9 @@
       MZ=1
       ROOTNAME=''
       CELLDISTANCE=6.D0*1.889726878D0   ! DEFAULT CELL DISTANCE IN A.U.
-      DO WHILE (IARG.LE.IARGC())
-         CALL GETARG(IARG,LINE)
+      call lib$narg(narg)
+      DO WHILE (IARG.LE.narg)
+         CALL LIB$GETARG(IARG,LINE)
          IARG=IARG+1
          IF(LINE(1:1).EQ.'-') THEN
             IF(+LINE(2:2).EQ.'O') THEN
@@ -67,7 +66,7 @@
                PRINT*,'|/            WRITTEN IN DEZ. 2001 BY JOHANNES SCHIMPL   |/ '
                PRINT*,'+--------------------------------------------------------+  '
             ELSE IF(+LINE(2:2).EQ.'D') THEN
-               CALL GETARG(IARG,STRING)
+               CALL LIB$GETARG(IARG,STRING)
                IARG=IARG+1
                CALL CHAR_TO_REAL(STRING,DIST,TCHK)
                IF(TCHK) THEN
@@ -75,15 +74,15 @@
                   WRITE(*,"('USING ',F10.5,' ANG AS TARGET DISTANCE')") DIST
                END IF
             ELSE IF (+LINE(2:2).EQ.'M') THEN
-               CALL GETARG(IARG,STRING)
+               CALL LIB$GETARG(IARG,STRING)
                IARG=IARG+1
                READ(STRING,'(I4)') MX
                IF (MX.LT.1) MX=1
-               CALL GETARG(IARG,STRING)
+               CALL LIB$GETARG(IARG,STRING)
                IARG=IARG+1
                READ(STRING,'(I4)') MY
                IF (MY.LT.1) MY=1
-               CALL GETARG(IARG,STRING)
+               CALL LIB$GETARG(IARG,STRING)
                IARG=IARG+1
                READ(STRING,'(I4)') MZ
                IF (MZ.LT.1) MZ=1
