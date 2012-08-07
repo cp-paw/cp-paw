@@ -636,6 +636,7 @@
           ANGLE(I,I)=0.D0
           DO J=I+1,NBOND
             SVAR=DOT_PRODUCT(BOND(I)%DR,BOND(J)%DR)/DISARR(I)/DISARR(J)
+            svar=min(1.d0,max(-1.d0,svar))  ! avoid nans
             SVAR=ACOS(SVAR)
             ANGLE(I,J)=SVAR
             ANGLE(J,I)=SVAR

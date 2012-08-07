@@ -2505,6 +2505,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       REAL(8)     ,INTENT(OUT)  :: ETOT
       TYPE(EXTPOT)              :: POT1
       INTEGER(4)                :: LANG
+      INTEGER(4)                :: mANG
       INTEGER(4)                :: IAT    ! ATOM INDEX
       INTEGER(4)                :: ISP    ! ATOM TYPE INDEX
       INTEGER(4)                :: NR     ! #(GRID RADIAL POINTS)
@@ -2542,18 +2543,73 @@ END MODULE EXPERTNAL1CPOT_MODULE
 !       ========================================================================
 !       ==  UNSCRAMBLE TYPE                                                   ==  
 !       ========================================================================
+!       == LANG=MAIN ANGULAR MOMENTUM  LANG=-1 ALL ANGULAR MOMENTA
+!       == MANG="MAGNETIC" QUANTUM NUMBER  MANG=-1 ALL "MAGNETIC" QUANTUM NUMBERS
+!       == CAUTION: MANG REFERS TO REAL SPHERICAL HARMONICS
+        MANG=-1
         IF(TRIM(POT1%TYPE).EQ.'S') THEN
           LANG=0
-        ELSE IF(TRIM(POT1%TYPE).EQ.'P') THEN
+!
+        ELSE IF(TRIM(POT1%TYPE(1:1)).EQ.'P') THEN
           LANG=1
-        ELSE IF(TRIM(POT1%TYPE).EQ.'D') THEN
+          IF(TRIM(POT1%TYPE(2:)).EQ.'X') THEN
+            MANG=1  
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'Z') THEN
+            MANG=2  
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'Y') THEN
+            MANG=3
+          ELSE IF(LEN_TRIM(POT1%TYPE(2:)).GT.0) THEN
+            CALL ERROR$MSG('VALUE OF TYPE NOT RECOGNIZED')
+            CALL ERROR$CHVAL('POT1%TYPE',POT1%TYPE)
+            CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
+          END IF
+!
+        ELSE IF(TRIM(POT1%TYPE(1:1)).EQ.'D') THEN
           LANG=2
-        ELSE IF(TRIM(POT1%TYPE).EQ.'F') THEN
+          IF(TRIM(POT1%TYPE(2:)).EQ.'X2-Y2') THEN
+            MANG=1  
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'XZ') THEN
+            MANG=2  
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'3Z2-R2') THEN
+            MANG=3
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'YZ') THEN
+            MANG=4
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'XY') THEN
+            MANG=5
+          ELSE IF(LEN_TRIM(POT1%TYPE(2:)).GT.0) THEN
+            CALL ERROR$MSG('VALUE OF TYPE NOT RECOGNIZED')
+            CALL ERROR$CHVAL('POT1%TYPE',POT1%TYPE)
+            CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
+          END IF
+!
+        ELSE IF(TRIM(POT1%TYPE(1:1)).EQ.'F') THEN
           LANG=3
+          IF(TRIM(POT1%TYPE(2:)).EQ.'1') THEN
+            MANG=1  
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'2') THEN
+            MANG=2  
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'3') THEN
+            MANG=3
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'4') THEN
+            MANG=4
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'5') THEN
+            MANG=5
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'6') THEN
+            MANG=6
+          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'7') THEN
+            MANG=7
+          ELSE IF(LEN_TRIM(POT1%TYPE(2:)).GT.0) THEN
+            CALL ERROR$MSG('VALUE OF TYPE NOT RECOGNIZED')
+            CALL ERROR$CHVAL('POT1%TYPE',POT1%TYPE)
+            CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
+          END IF
+!
         ELSE IF(TRIM(POT1%TYPE).EQ.'ALL') THEN
           LANG=-1
+!
         ELSE
           CALL ERROR$MSG('VALUE OF TYPE NOT RECOGNIZED')
+          CALL ERROR$CHVAL('POT1%TYPE',POT1%TYPE)
           CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
         END IF
 !
@@ -2569,13 +2625,10 @@ END MODULE EXPERTNAL1CPOT_MODULE
         ALLOCATE(R(NR))
         CALL RADIAL$R(GID,NR,R)
         CALL SETUP$GETI4('LNX',LNX)
-!        CALL SETUP$LNX(ISP,LNX)
         ALLOCATE(LOX(LNX))
         CALL SETUP$GETI4A('LOX',LNX,LOX)
-!        CALL SETUP$LOFLN(ISP,LNX,LOX)
         ALLOCATE(AEPHI(NR,LNX))
         CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
-!        CALL SETUP$AEPARTIALWAVES(ISP,NR,LNX,AEPHI)
 !
 !       ========================================================================
 !       == SPECIFY SHAPE OF THE EXTERNAL POTENTIAL                            ==
@@ -2628,6 +2681,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
                 L2=LOX(LN2)
                 IF(L1.EQ.L2) THEN
                   DO I=1,2*L1+1
+                    IF(.NOT.(MANG.EQ.I.OR.MANG.EQ.-1)) CYCLE
                     DATH(LMN1+I,LMN2+I,IDIMD)=DATH(LMN1+I,LMN2+I,IDIMD) &
        &                                     +UONE(LN1,LN2)
                   ENDDO
@@ -2681,7 +2735,6 @@ END IF
 !     PRINT*,'ETOT ',ETOT
       RETURN 
       END
-!=======================================================================
 !
 !     ..................................................................
       SUBROUTINE GAUSSPOT(RC,L,R,V)
