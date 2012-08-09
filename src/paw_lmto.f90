@@ -4326,6 +4326,7 @@ COMPLEX(8) :: PIPSI1(NDIM,NORB,NB)
 !     == DETERMINE TRANSFORMATION THAT ENFORCES THE SUM RULE                  ==
 !     ==========================================================================
       CALL LIB$DIAGC8(NORB,QSQ,EIG,UMAT)
+WRITE(*,FMT='("SUMRULE",2E20.5)')MINVAL(EIG),MAXVAL(EIG)
 !
 !     == CHECK POSITIVE DEFINITENESS ===========================================
       DO I=1,NORB

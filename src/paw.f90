@@ -1,9 +1,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 1118 $'
+character(256):: VERrev='$LastChangedRevision: 1152 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2011-12-27 11:45:50 +0100 (Di, 27. Dez 2011) $'
+character(256):: VERdat='$LastChangedDate: 2012-08-09 19:31:07 +0200 (Do, 09. Aug 2012) $'
 end Module version_module
 !
 !     ..................................................................
@@ -316,7 +316,7 @@ end Module version_module
       INTEGER(4)  ,INTENT(IN) :: VAL_
 !     ******************************************************************
       IF(ID_.EQ.'ISTEP') THEN
-       ISTEPNUMBER=VAL_
+        ISTEPNUMBER=VAL_
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('TIMESTEP$SETI4')
@@ -332,7 +332,7 @@ end Module version_module
       INTEGER(4)  ,INTENT(OUT):: VAL_
 !     ******************************************************************
       IF(ID_.EQ.'ISTEP') THEN
-       VAL_=ISTEPNUMBER
+        VAL_=ISTEPNUMBER
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('TIMESTEP$GETI4')
@@ -364,7 +364,7 @@ end Module version_module
       LOGICAL(4)  ,INTENT(OUT):: VAL_
 !     ******************************************************************
       IF(ID_.EQ.'NEWTHERMOSTAT') THEN
-       VAL_=TNEWTHERMOSTAT
+        VAL_=TNEWTHERMOSTAT
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('TIMESTEP$GETL4')

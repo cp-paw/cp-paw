@@ -750,7 +750,7 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SETI4(ID,VAL)
 !     ******************************************************************
 !     **                                                              **
@@ -796,7 +796,7 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$GETI4(ID,VAL)
 !     ******************************************************************
 !     **                                                              **
@@ -845,7 +845,7 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SETL4(ID,VAL)
 !     ******************************************************************
 !     **                                                              **
@@ -885,7 +885,7 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$GETL4(ID,VAL)
 !     ******************************************************************
 !     **                                                              **
@@ -915,7 +915,7 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SETCH(ID,VAL)
 !     ******************************************************************
 !     **                                                              **
@@ -951,7 +951,7 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..........................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$INITIALIZE
 !     **************************************************************************
 !     **  GENERATE G-VECTORS AND OTHER INITIALIZATION                         **
@@ -1217,7 +1217,7 @@ END MODULE WAVES_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DYNOCCGETR8A(ID,LEN,VAL)
 !     **                                                              **
 !     **  GET A REAL(8) ARRAY FROM DYNOCC. THIS ROUTINE IS AN         **
@@ -1412,6 +1412,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: NAT
       INTEGER(4)             :: NBH,NBX,NB
       INTEGER(4)             :: LMNX
+      INTEGER(4)             :: isvar
       REAL(8)                :: SVAR1,SVAR2
       COMPLEX(8),ALLOCATABLE :: HAMILTON(:,:)
       REAL(8)   ,ALLOCATABLE :: EIG(:,:,:)
@@ -1813,6 +1814,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 CALL TIMING$CLOCKON('W:EXPECT')
       ALLOCATE(EIG(NBX,NKPTL,NSPIN))
       ALLOCATE(HAMILTON(2,2))
+print*,'==================band mishatches========================='
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -1834,6 +1836,13 @@ CALL TIMING$CLOCKON('W:EXPECT')
             END IF
           ENDDO
           THIS%EXPECTVAL(:)=EIG(1:NB,IKPT,ISPIN)
+CALL TIMESTEP$GETI4('ISTEP',Isvar)
+DO IB=1,NBH-1
+  IF(EIG(IB+1,IKPT,ISPIN).LT.EIG(IB,IKPT,ISPIN)) THEN
+    WRITE(*,FMT='("BAND MISMATCH:",I10,3I5,2F10.5)')ISVAR,IB,IKPT,ISPIN &
+&                                              ,EIG(IB:IB+1,IKPT,ISPIN)
+  END IF
+ENDDO
         ENDDO
       ENDDO
       DEALLOCATE(HAMILTON)
@@ -1919,7 +1928,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_VOFRHO(NRL,NDIMD,RHO,RHOB,NAT,LMRXX,QLM,VQLM)
 !     ******************************************************************
 !     **                                                              **
@@ -1992,7 +2001,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       RETURN
       END SUBROUTINE WAVES_VOFRHO
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_MAPPSITOPOT(ID,NR1L_P,NR1L_V,NR2,NR3,NDIMD,RHO_P,RHO_V)
 !     ******************************************************************
 !     **                                                              **
@@ -2175,7 +2184,7 @@ END IF
       RETURN
       END SUBROUTINE WAVES_MAPPSITOPOT
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$KAESTNERCG1(TFIRST_)
 !     ******************************************************************
 !     **                                                              **
