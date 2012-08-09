@@ -3687,7 +3687,9 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !         ======================================================================
 !         == ENFORCE SUM RULE                                                 ==
 !         ======================================================================
+print*,'before sumrule in LMTO_DROPPICK_DROP'
           CALL LMTO_DROPPICK_SUMRULE(NDIM,NCORR,NBW,PSICORR,QSQ,QSQINV)
+print*,'after sumrule in LMTO_DROPPICK_DROP'
           DO IB=1,NBW
             DO IDIM=1,NDIM
               PSICORR(IDIM,:,IB)=MATMUL(QSQINV,PSICORR(IDIM,:,IB))
@@ -3787,7 +3789,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !     **************************************************************************
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : ISPECIES
-      USE LMTO_DROPPICK_MODULE, ONLY : TICKET,NCORR,NBW,TPRO &
+      USE LMTO_DROPPICK_MODULE, ONLY : TICKET,NCORR,NBW,TPRO,tpicked &
      &                                ,IPRO1,NPROAT,DHOFK,NB1,NB2,T
       IMPLICIT NONE
       REAL(8)                :: MU
@@ -3970,6 +3972,7 @@ write(*,fmt='("f   ",100f8.4)')f
 !     ==  WRITE DHOFK TO FILE SO THAT ONE CAN RESTART                         ==
 !     ==========================================================================
       call LMTO_DROPPICK_writeDHOFK()
+      tpicked=.true.
                                            CALL TRACE$Pop()
       RETURN
       END
@@ -4248,7 +4251,9 @@ write(*,fmt='("f   ",100f8.4)')f
 !         ======================================================================
 !         == ENFORCE SUM RULE                                                 ==
 !         ======================================================================
+PRINT*,'BEFORE SUMRULE IN LMTO_DROPPICK_DHOFKTRANSFORM'
           CALL LMTO_DROPPICK_SUMRULE(NDIM,NCORR,NBW,PSICORR,QSQ,QSQINV)
+PRINT*,'AFTER SUMRULE IN LMTO_DROPPICK_DHOFKTRANSFORM'
 !
 !         ======================================================================
 !         == TRANSFORM INTO ORBITAL BASIS AND SUBTRACT EFFECTIVE HAMILTONIAN  ==
@@ -5677,7 +5682,9 @@ PRINT*,'MARKE 2'
 !CALL LMTO_PICKGETRHO()
       IF(TDROP) THEN
         CALL LMTO_DROPPICK_DROP()   !OLD   CALL LMTO_DROP()
-        RETURN
+        CALL ERROR$MSG('REGULAR STOP AFTER EXECUTING LMTO_DROPPICK_DROP')
+        CALL ERROR$MSG('DROP IS EXEWCUTED ONLY ONCE')
+        CALL ERROR$STOP('LMTO$ETOT')
       END IF
       IF(TPICK) THEN
         PRINT*,'CALLING DMFT INTERFACE PICK ....'
