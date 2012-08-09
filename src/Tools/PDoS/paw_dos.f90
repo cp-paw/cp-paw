@@ -1,12 +1,12 @@
-!************************************************************************
-!***********************************************************************
-!**                                                                   **
-!**  NAME: PDOS                                                       **
-!**                                                                   **
-!**  PURPOSE: ANALYSIS TOOL FOR DENSITY OF STATES                     **
-!**                                                                   **
-!***********************************************************************
-!***********************************************************************
+!*******************************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  NAME: PDOS                                                               **
+!**                                                                           **
+!**  PURPOSE: ANALYSIS TOOL FOR DENSITY OF STATES                             **
+!**                                                                           **
+!*******************************************************************************
+!*******************************************************************************
 MODULE SPINDIR_MODULE
   REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
   SAVE
@@ -40,39 +40,39 @@ END MODULE SPINDIR_MODULE
       INTEGER(4)                :: IKPT,ISPIN,IB
       INTEGER(4)   ,ALLOCATABLE :: NBARR(:,:)
 !      REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
-!     ******************************************************************
+!     **************************************************************************
       CALL TRACE$PUSH('MAIN')
 !
-!     ==================================================================
-!     ==  RESOLVE ARGUMENTLIST AND INITIALIZE FILE HANDLER            ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  RESOLVE ARGUMENTLIST AND INITIALIZE FILE HANDLER                    ==
+!     ==========================================================================
       CALL INITIALIZEFILEHANDLER
 !
-!     ==================================================================
-!     ==  ANALYZE CONTROL FILE                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ANALYZE CONTROL FILE                                                ==
+!     ==========================================================================
       CALL READCNTL
       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
-!     ==================================================================
-!     ==  WRITE HEADER                                                ==
-!     ==================================================================
-      WRITE(NFILO,FMT='(72("*"))')
-      WRITE(NFILO,FMT='(72("*"),T15 &
+!     ==========================================================================
+!     ==  WRITE HEADER                                                        ==
+!     ==========================================================================
+      WRITE(NFILO,FMT='(82("*"))')
+      WRITE(NFILO,FMT='(82("*"),T15 &
      &             ,"           PDOS ANALYSIS TOOL                ")')
-      WRITE(NFILO,FMT='(72("*"),T15 &
+      WRITE(NFILO,FMT='(82("*"),T15 &
      &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
-      WRITE(NFILO,FMT='(72("*"))')
-      WRITE(NFILO,FMT='(T28 &
-     &           ," P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY ")')
-      WRITE(NFILO,FMT='(T10 &
+      WRITE(NFILO,FMT='(82("*"))')
+      WRITE(NFILO,FMT='(T30 &
+     &               ," P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY ")')
+      WRITE(NFILO,FMT='(T30 &
      &      ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY " &
-     &      ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
+     &      /T30,"ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
       WRITE(NFILO,*)
 !
-!     ==================================================================
-!     ==  READ PDOSFILE                                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ PDOSFILE                                                       ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('PDOS',NFILIN)
       REWIND(NFILIN)
       CALL PDOS$READ(NFILIN)
@@ -106,45 +106,44 @@ END MODULE SPINDIR_MODULE
       CALL REPORT(NFILO,EIG)
                             CALL TRACE$PASS('AFTER REPORT')
 !
-!     ==================================================================
-!     ==  READ PREDEFINED ORBITALS                                    ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ PREDEFINED ORBITALS                                            ==
+!     ==========================================================================
       CALL READCNTL$ORBITAL(LENG,NAT,LMX,rbas,RPOS)
                             CALL TRACE$PASS('AFTER READCNTL$ORBITAL')
 !
-!     ==================================================================
-!     ==  SELECT MATRIXELEMENTS                                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  SELECT MATRIXELEMENTS                                               ==
+!     ==========================================================================
       CALL READCNTL$SETNUMBER(NSET)
       ALLOCATE(SET(NB,NKPT,NSPIN,NSET))
       ALLOCATE(LEGEND(NSET))
-      CALL READCNTL$SETS(NB,NKPT,NSPIN,NSET,NAT,LMX,rbas,RPOS,LENG &
-     &                  ,SET,LEGEND)
+      CALL READCNTL$SETS(NB,NKPT,NSPIN,NSET,NAT,LMX,rbas,RPOS,LENG,SET,LEGEND)
       DEALLOCATE(LMX)
 
                             CALL TRACE$PASS('AFTER READCNTL$SETS')
 !
-!     ==================================================================
-!     ==  MAKE PLOTS                                                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  MAKE PLOTS                                                          ==
+!     ==========================================================================
       CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD,SCALEY)
                             CALL TRACE$PASS('AFTER READCNTL$GRID')
       CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
      &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND)
                             CALL TRACE$PASS('AFTER READCNTL$OUTPUT')
 !
-!     ==================================================================
-!     ==  CLOSING                                                     ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CLOSING                                                             ==
+!     ==========================================================================
       CALL FILEHANDLER$REPORT(NFILO,'USED')
       WRITE(NFILO,FMT='(72("="))')
       WRITE(NFILO,FMT='(72("="),T20,"  PAW_DOS TOOL FINISHED  ")')
       WRITE(NFILO,FMT='(72("="))')
                             CALL TRACE$PASS('AFTER CLOSING')
 !
-!     ==================================================================
-!     ==  CLOSE FILES                                                 ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CLOSE FILES                                                         ==
+!     ==========================================================================
       CALL FILEHANDLER$CLOSEALL
                             CALL TRACE$PASS('AFTER FILEHANDLER$CLOSEALL')
       CALL TRACE$POP
@@ -152,12 +151,12 @@ END MODULE SPINDIR_MODULE
       STOP
       END PROGRAM PDOS
 !      
-!     ...................................................................
+!      ..1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE REPORT(NFILO,EIG) 
-!     ******************************************************************
-!     **  WRITES PROJECTED CHARGES AND SPINS FOR EACH ATOM TO         **
-!     **  DPROT FILE AND CALCULATES THE SPIN DIRECTIONS               **
-!     ******************************************************************
+!     **************************************************************************
+!     **  WRITES PROJECTED CHARGES AND SPINS FOR EACH ATOM TO                 **
+!     **  DPROT FILE AND CALCULATES THE SPIN DIRECTIONS                       **
+!     **************************************************************************
       USE PDOS_MODULE
       USE SPINDIR_MODULE
       IMPLICIT NONE
@@ -173,7 +172,8 @@ END MODULE SPINDIR_MODULE
       REAL(8)    ,ALLOCATABLE :: ANGWGHT(:,:,:) ! (LOX,2,NAT)
       REAL(8)                 :: SUML,ANGLE(NAT),PI
       REAL(8)                 :: SIGMA
-!     ******************************************************************
+      REAL(8)                 :: Svar
+!     **************************************************************************
                                    CALL TRACE$PUSH('REPORT')
       ALLOCATE(ANGWGHT(MAXVAL(LOX)+1,2,NAT))
       ANGWGHT(:,:,:)=0.D0
@@ -182,7 +182,7 @@ END MODULE SPINDIR_MODULE
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
 !PRINT*,'STATE%VEC',IKPT,ISPIN,STATE%VEC(1,:,:)
-          SIGMA=REAL(3-2*NSPIN,KIND=8)
+          SIGMA=REAL(3-2*iSPIN,KIND=8)
           IPRO0=0
           DO IAT=1,NAT
             ISP=ISPECIES(IAT)
@@ -202,28 +202,32 @@ END MODULE SPINDIR_MODULE
                   DO M=1,2*L1+1
                       DO IDIM=1,NDIM
                         SUML=SUML+REAL(CONJG(STATE%VEC(IDIM,IPRO1+M,IB)) &
-     &                           *STATE%VEC(IDIM,IPRO2+M,IB))
+     &                                      *STATE%VEC(IDIM,IPRO2+M,IB))
                       END DO
                       IF(NSPIN.EQ.2.AND.NDIM.EQ.1) THEN
-                        SUM_(3)=SUM_(3)+SIGMA*REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                                  *STATE%VEC(1,IPRO2+M,IB))
+                        SUM_(3)=SUM_(3)+SIGMA &
+     &                                  *REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                             *STATE%VEC(1,IPRO2+M,IB))
                       ELSE IF(NDIM.EQ.2) THEN
-                        SUM_(1)=SUM_(1)+2.D0*REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                                 *STATE%VEC(2,IPRO2+M,IB)) 
-                        SUM_(2)=SUM_(2)+2.D0*AIMAG(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                                  *STATE%VEC(2,IPRO2+M,IB))
+                        SUM_(1)=SUM_(1)+2.D0 &
+     &                                 *REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                            *STATE%VEC(2,IPRO2+M,IB)) 
+                        SUM_(2)=SUM_(2)+2.D0 &
+     &                                 *AIMAG(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
+     &                                             *STATE%VEC(2,IPRO2+M,IB))
                         SUM_(3)=SUM_(3)+REAL(CONJG(STATE%VEC(1,IPRO1+M,IB)) &
      &                                            *STATE%VEC(1,IPRO2+M,IB) &
-     &                     -CONJG(STATE%VEC(2,IPRO1+M,IB))*STATE%VEC(2,IPRO2+M,IB))
+     &                                      -CONJG(STATE%VEC(2,IPRO1+M,IB)) &
+     &                                             *STATE%VEC(2,IPRO2+M,IB))
                       END IF
                   ENDDO
                   DO IDIR=1,3
                     SPIN(IDIR,IAT)=SPIN(IDIR,IAT) &
-     &                            +STATE%OCC(IB)*SUM_(IDIR)*OV(LN1,LN2,ISP)
+     &                            +SUM_(IDIR)*STATE%OCC(IB)*OV(LN1,LN2,ISP)
                   END DO
-                  ANGWGHT(L1+1,ISPIN,IAT)=ANGWGHT(L1+1,ISPIN,IAT)+SUML &
-     &                        *STATE%OCC(IB)*OV(LN1,LN2,ISP)
-                ENDDO
+                  ANGWGHT(L1+1,ISPIN,IAT)=ANGWGHT(L1+1,ISPIN,IAT) &
+     &                                   +SUML*STATE%OCC(IB)*OV(LN1,LN2,ISP)
+                ENDDO  !end of loop over bands
                 IPRO2=IPRO2+2*L2+1
               ENDDO            
               IPRO1=IPRO1+2*L1+1
@@ -235,9 +239,9 @@ END MODULE SPINDIR_MODULE
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     == CALCULATE SPIN DIRECTION FOR EACH ATOM                       ==
-!     ==================================================================
+!     ==========================================================================
+!     == CALCULATE SPIN DIRECTION FOR EACH ATOM                               ==
+!     ==========================================================================
       IF(NDIM.EQ.2.OR.NSPIN.EQ.2) THEN
         DO IAT=1,NAT
           SUML=SPIN(1,IAT)**2+SPIN(2,IAT)**2+SPIN(3,IAT)**2
@@ -247,119 +251,123 @@ END MODULE SPINDIR_MODULE
         END DO
       END IF
 !
-!     ==================================================================
-!     == WRITE OUTPUT TO FILE                                         ==
-!     ==================================================================
-      WRITE(NFILO,*)'**** PROJECTED CHARGE ANALYSIS ****'
-      IF(NSPIN.EQ.1) THEN
-        WRITE(NFILO,*)'  PROJECTED ON                        ALL        S         P         D'
+!     ==========================================================================
+!     == report in charge distribution                                        ==
+!     ==========================================================================
+      WRITE(NFILO,fmt='(82("="))')
+      WRITE(NFILO,fmt='(82("="),T30," PROJECTED CHARGE ANALYSIS  ")')
+      WRITE(NFILO,fmt='(82("="))')
+      WRITE(NFILO,FMT='(A,T38,"ALL",T48,"S",T58,"P",T68,"D",T78,"F")') &
+     &                 'CHARGE PROJECTED ON'
+      DO IAT=1,NAT
+        L1=1+MAXVAL(LOX(:,ISPECIES(IAT)))
+        WRITE(NFILO,FMT='("CHARGE[-E] ON ATOM",T20,A10,":",10F10.3)')  &
+     &       ATOMID(IAT),SUM(ANGWGHT(:,1,IAT)),(ANGWGHT(IDIR,1,IAT),IDIR=1,L1)
+      END DO
+!
+!     ==========================================================================
+!     == spin report for collinear calculation                                ==
+!     ==========================================================================
+      if(nspin.eq.2) then
+!
+!       == SPIN  FOR NSPIN=2 ===================================================
+        WRITE(NFILO,*)
+        WRITE(NFILO,fmt='(82("="))')
+        WRITE(NFILO,fmt='(82("="),T30," SPIN ANALYSIS  ")')
+        WRITE(NFILO,fmt='(82("="))')
+        WRITE(NFILO,FMT='(A,T38,"ALL",T48,"S",T58,"P",T68,"D",T78,"F")') &
+     &                   'SPIN PROJECTED ON'
         DO IAT=1,NAT
-          L1=MIN(3,1+MAXVAL(LOX(:,ISPECIES(IAT))))
-          WRITE(NFILO,FMT='(2X,"CHARGE [-E] IN ATOM ",A10,":",4F10.3)') ATOMID(IAT),&
-     &         SUM(ANGWGHT(:,1,IAT)),(ANGWGHT(IDIR,1,IAT),IDIR=1,L1)
+          L1=1+MAXVAL(LOX(:,ISPECIES(IAT)))
+          WRITE(NFILO,FMT='("SPIN[HBAR/2] IN ATOM",T22,A8,":",10F10.3)') &
+     &         ATOMID(IAT),SUM(ANGWGHT(:,1,IAT))-SUM(ANGWGHT(:,2,IAT)) &
+     &                    ,(ANGWGHT(IDIR,1,IAT)-ANGWGHT(IDIR,2,IAT),IDIR=1,L1)
         END DO
-      ELSE
-        WRITE(NFILO,*)'  PROJECTED ON                        ALL        S         P         D'
-        DO IAT=1,NAT
-          L1=MIN(3,1+MAXVAL(LOX(:,ISPECIES(IAT))))
-          WRITE(NFILO,FMT='(2X,"CHARGE [-E] IN ATOM   ",A10,":",4F10.3)') ATOMID(IAT),&
-     &         SUM(ANGWGHT(:,:,IAT)),(ANGWGHT(IDIR,1,IAT)+ANGWGHT(IDIR,2,IAT),IDIR=1,L1)
-        END DO
-        DO IAT=1,NAT
-          L1=MIN(3,1+MAXVAL(LOX(:,ISPECIES(IAT))))
-          WRITE(NFILO,FMT='(2X,"SPIN [HBAR/2] IN ATOM ",A10,":",4F10.3)') ATOMID(IAT),&
-     &         SUM(ANGWGHT(:,1,IAT))-SUM(ANGWGHT(:,2,IAT)),(ANGWGHT(IDIR,1,IAT)- &
-     &                        ANGWGHT(IDIR,2,IAT),IDIR=1,L1)
-        END DO
-!!$        DO IAT=1,NAT
-!!$          WRITE(NFILO,FMT='(2X,"  SPIN IN ATOM ",A6,"        ",4F10.3)') ATOMID(IAT),&
-!!$     &         0.5D0*(ANGWGHT(1,1,IAT)-ANGWGHT(1,2,IAT)),0.5D0*(ANGWGHT(2,1,IAT)-ANGWGHT(2,2,IAT)), &
-!!$     &         0.5D0*(ANGWGHT(3,1,IAT)-ANGWGHT(3,2,IAT)),0.5D0*(ANGWGHT(4,1,IAT)-ANGWGHT(4,2,IAT))
-!!$        END DO
       END IF
-      IF(NDIM.EQ.2.OR.NSPIN.EQ.2) THEN
+!
+!     ==========================================================================
+!     == spin report for non-collinear calculation =============================
+!     ==========================================================================
+      IF(NDIM.EQ.2) THEN
         TOTALSPIN(:)=0.D0
-        WRITE(NFILO,*)'**** SPIN ANALYSIS ****'
-        WRITE(NFILO,*)'  SPIN [HBAR/2] PROJECTED ON        X         Y         Z      TOTAL'
+        WRITE(NFILO,fmt='(82("="))')
+        WRITE(NFILO,fmt='(82("="),T30," SPIN ANALYSIS  ")')
+        WRITE(NFILO,fmt='(82("="))')
+        WRITE(NFILO,fmt='(A,T38,"X",T48,"Y",T58,"Z",T66,"TOTAL")') &
+     &                   'TOTAL SPIN PROJECTED ON'
+!
+!       ==  spin directions ====================================================
         DO IAT=1,NAT
-          WRITE(NFILO,FMT='(2X," SPIN OF ATOM:",A14,5F10.3)') ATOMID(IAT)&
-     &         ,SPIN(1,IAT),SPIN(2,IAT),SPIN(3,IAT),SQRT(SPIN(1,IAT)**2+&
-     &         SPIN(2,IAT)**2+SPIN(3,IAT)**2)
+          WRITE(NFILO,FMT='("SPIN[HBAR/2] ON ATOM",T20,A10,":",4F10.3)')  &
+     &          ATOMID(IAT),SPIN(1,IAT),SPIN(2,IAT),SPIN(3,IAT) &
+     &                     ,SQRT(SPIN(1,IAT)**2+SPIN(2,IAT)**2+SPIN(3,IAT)**2)
           DO IDIR=1,3
             TOTALSPIN(IDIR)=TOTALSPIN(IDIR)+SPIN(IDIR,IAT)
           END DO
         END DO
-        WRITE(NFILO,FMT='(2X," TOTAL PROJECTED SPIN:      ",4F10.3)') &
+        WRITE(NFILO,FMT='(" TOTAL PROJECTED SPIN:      ",4F10.3)') &
      &         TOTALSPIN(1),TOTALSPIN(2),TOTALSPIN(3),SQRT(TOTALSPIN(1)**2+&
      &         TOTALSPIN(2)**2+TOTALSPIN(3)**2)
-      END IF
 !
-!     ==================================================================
-!     ==  PRINT ANGLES BETWEEN THE SPINS                              ==
-!     ==================================================================
-      IF(NDIM.EQ.2) THEN
+!       ==  PRINT ANGLES BETWEEN THE SPINS =====================================
         CALL CONSTANTS('PI',PI)
 
 !       CHOSE ATOMS WITH SPIN GREATER THAN 0.1 HBAR/2
         NATSPINANGLE=0
         ALLOCATE(IATSPINANGLE(NAT))
         DO IAT1=1,NAT
-          IF(SQRT(SPIN(1,IAT1)**2+SPIN(2,IAT1)**2+SPIN(3,IAT1)**2).LE.0.1D0) CYCLE
+          IF(SQRT(sum(SPIN(:,IAT1)**2)).LE.0.1D0) CYCLE
           NATSPINANGLE=NATSPINANGLE+1
           IATSPINANGLE(NATSPINANGLE)=IAT1
         END DO
         IF(NAT.GE.2) THEN
-          WRITE(NFILO,*)'**** ANGLES [DEG] BETWEEN THE SPINS > 0.1 ON THE ATOMS ****'
-!          WRITE(NFILO,FMT='(2X,9X,10A6)')(ATOMID(IAT2),IAT2=NAT,2,-1)
-          WRITE(NFILO,FMT='(T12,A6,T20,A6,T28,A6,T36,A6,T44,A6,T52,A6,T60,A6,T68,A6,T76,A6,T84,A6)')&
-     &        (ATOMID(IATSPINANGLE(IAT2)),IAT2=NATSPINANGLE,2,-1)
+          WRITE(NFILO,fmt='(82("="),T20,a)') &
+    &              " ANGLES [DEG] BETWEEN THE SPINS > 0.1 ON THE ATOMS "
+          WRITE(NFILO,FMT='(T8,10(4X,A6))') &
+     &                       (ATOMID(IATSPINANGLE(IAT2)),IAT2=NATSPINANGLE,2,-1)
           DO IAT1=1,NATSPINANGLE !SENKRECHT
             DO IAT2=NATSPINANGLE,IAT1+1,-1   !WAAGRECHT
-              ANGLE(IAT2)=180.D0/PI*ACOS(SPINDIR(1,IATSPINANGLE(IAT1))*SPINDIR(1,IATSPINANGLE(IAT2))+ &
-     &                                   SPINDIR(2,IATSPINANGLE(IAT1))*SPINDIR(2,IATSPINANGLE(IAT2))+ &
-     &                                   SPINDIR(3,IATSPINANGLE(IAT1))*SPINDIR(3,IATSPINANGLE(IAT2)))
+              ANGLE(IAT2)=180.D0/PI*ACOS(sum(SPINDIR(:,IATSPINANGLE(IAT1)) &
+     &                                      *SPINDIR(:,IATSPINANGLE(IAT2))))
             END DO
             ITEN=NATSPINANGLE
             DO WHILE (IAT1+1.LE.ITEN)
-              WRITE(NFILO,FMT='(2X,A6,10F8.2)') &
-     &            ATOMID(IATSPINANGLE(IAT1)),(ANGLE(IAT2),IAT2=ITEN,MAX(ITEN-9,IAT1+1),-1)
+              WRITE(NFILO,FMT='(A6,10F8.2)')ATOMID(IATSPINANGLE(IAT1)) &
+     &                         ,(ANGLE(IAT2),IAT2=ITEN,MAX(ITEN-9,IAT1+1),-1)
               ITEN=ITEN-10
             ENDDO
-            !WRITE(NFILO,FMT='(2X,A6,10F8.2)')ATOMID(IAT1),(ANGLE(IAT2),IAT2=NAT,IAT1+1,-1)
           END DO
         END IF
         DEALLOCATE(IATSPINANGLE)
 !
-!       ==================================================================
-!       ==  THIS BLOCK IS INTENDED AS INPUTFILE FOR MOLDEN              ==
-!       ==================================================================
+!       ========================================================================
+!       ==  THIS BLOCK IS INTENDED AS INPUTFILE FOR MOLDEN                    ==
+!       ==  molden will plot the spin distribution                            ==
+!       ========================================================================
         CALL FILEHANDLER$UNIT('MOL',NFIL)
         WRITE(NFIL,*)'[MOLDEN FORMAT]'
         WRITE(NFIL,*)'[GEOMETRIES] XYZ'
         WRITE(NFIL,*)'    ',NAT
         WRITE(NFIL,*)''
         DO IAT=1,NAT
-          WRITE(NFIL,FMT='(A2,F10.5,F10.5,F10.5)')ATOMID(IAT),R(1,IAT),&
-     &         R(2,IAT),R(3,IAT)
+          WRITE(NFIL,FMT='(A2,F10.5,F10.5,F10.5)')ATOMID(IAT),R(:,IAT)
         END DO
         WRITE(NFIL,*)''
         WRITE(NFIL,*)'[FREQ]'
         WRITE(NFIL,*)'4.'
         WRITE(NFIL,*)'[FR-COORD]'
         DO IAT=1,NAT
-          WRITE(NFIL,FMT='(A2,F10.5,F10.5,F10.5)')ATOMID(IAT),R(1,IAT),&
-     &         R(2,IAT),R(3,IAT)
+          WRITE(NFIL,FMT='(A2,F10.5,F10.5,F10.5)')ATOMID(IAT),R(:,IAT)
         END DO
         WRITE(NFIL,*)'[FR-NORM-COORD]'
         WRITE(NFIL,*)'VIBRATION 1'
         DO IAT=1,NAT
-          WRITE(NFIL,FMT='(F10.5,F10.5,F10.5)')SPIN(1,IAT),&
-     &         SPIN(2,IAT),SPIN(3,IAT)
+          WRITE(NFIL,FMT='(F10.5,F10.5,F10.5)')SPIN(:,IAT)
         END DO
       END IF
                            CALL TRACE$POP
       RETURN
-    END SUBROUTINE REPORT
+     END SUBROUTINE REPORT
 !      
 !     ...................................................................
       SUBROUTINE INITIALIZEFILEHANDLER
@@ -387,17 +395,17 @@ END MODULE SPINDIR_MODULE
       RETURN
       END SUBROUTINE INITIALIZEFILEHANDLER
 !
-!     ..................................................................     
+!      ..1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STANDARDFILES
-!     *****************************************************************
-!     **                                                             **
-!     *****************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER :: T=.TRUE.
       LOGICAL(4),PARAMETER :: F=.FALSE.
       CHARACTER(32)        :: ID
-!     *****************************************************************
+!     **************************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
 !  
 !     ==================================================================
@@ -415,7 +423,7 @@ END MODULE SPINDIR_MODULE
 !     ==  PROTOCOLL FILE================================================
       ID=+'PROT'
       CALL FILEHANDLER$SETFILE(ID,T,-'.DPROT')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
