@@ -262,7 +262,8 @@ END MODULE SPINDIR_MODULE
       DO IAT=1,NAT
         L1=1+MAXVAL(LOX(:,ISPECIES(IAT)))
         WRITE(NFILO,FMT='("CHARGE[-E] ON ATOM",T20,A10,":",10F10.3)')  &
-     &       ATOMID(IAT),SUM(ANGWGHT(:,1,IAT)),(ANGWGHT(IDIR,1,IAT),IDIR=1,L1)
+     &       ATOMID(IAT),SUM(ANGWGHT(:L1,:,IAT)) &
+     &                  ,(sum(ANGWGHT(IDIR,:,IAT)),IDIR=1,L1)
       END DO
 !
 !     ==========================================================================
