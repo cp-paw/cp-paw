@@ -3817,6 +3817,7 @@ print*,'after sumrule in LMTO_DROPPICK_DROP'
       REAL(8)                :: WKPT1
       REAL(8)                :: NEL
 !     **************************************************************************
+      if(tpicked) return
                                            CALL TRACE$PUSH('LMTO_DROPPICK_PICK')
       CALL LMTO_DROPICK_INI()
       CALL LMTO_DROPPICK_MAKET()
