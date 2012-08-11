@@ -3785,7 +3785,6 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
             ENDDO
             ID='RHO'
             WRITE(NFIL2,*)ID,IKPT,ISPIN,H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-!            WRITE(*,*)ID,IKPT,ISPIN,H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           END IF
         ENDDO ! END LOOP ISPIN
       ENDDO   ! END LOOP IKPT
@@ -3926,7 +3925,7 @@ print*,'c ticket1',ticket1
 !         ======================================================================
 print*,'marke 1',ikpt,ispin
           READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-print*,'marke 2',
+print*,'marke 2'
           IF(ID.NE.'HINFO') THEN
             CALL ERROR$MSG('INCORRECT ID: MUST BE "HINFO"')
             CALL ERROR$CHVAL('ID',ID)
