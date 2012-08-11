@@ -3924,6 +3924,9 @@ print*,'c ticket1',ticket1
 !         == READ DFT FILE                                                    ==
 !         ======================================================================
 print*,'marke 1',ikpt,ispin
+READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1
+backspace(nfil1)
+print*,'marke 1a',trim(id),ikpt1,ispin1,wkpt1
           READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 print*,'marke 2'
           IF(ID.NE.'HINFO') THEN
