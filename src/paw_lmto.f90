@@ -3623,7 +3623,6 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
         END IF
         IWORK16(:LNX(ISP))=LOX(:LNX(ISP),ISP)
         ID='PSIINFO'
-!        WRITE(NFIL)ID,IAT,IPRO1(IAT),NPROAT(IAT),LNX(ISP),IWORK16 !<<<<<<<<<<<<
         WRITE(NFIL,*)ID,IAT,IPRO1(IAT),NPROAT(IAT),LNX(ISP),IWORK16 !<<<<<<<<<<
       ENDDO
 !
@@ -3635,7 +3634,6 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
           L=LOX(LN,ISP)
           DO M=1,2*L+1
             I=I+1
-!            IF(TPRO(I))WRITE(NFIL)ID,I,IAT,LN,L,M !<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             IF(TPRO(I))WRITE(NFIL,*)ID,I,IAT,LN,L,M !<<<<<<<<<<<<<<<<<<<<<<<<<<
           ENDDO
         ENDDO
@@ -3926,7 +3924,9 @@ print*,'c ticket1',ticket1
 !         ======================================================================
 !         == READ DFT FILE                                                    ==
 !         ======================================================================
+print*,'marke 1',ikpt,ispin
           READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+print*,'marke 2',
           IF(ID.NE.'HINFO') THEN
             CALL ERROR$MSG('INCORRECT ID: MUST BE "HINFO"')
             CALL ERROR$CHVAL('ID',ID)
