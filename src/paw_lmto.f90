@@ -224,6 +224,8 @@ END MODULE LMTO_MODULE
         TDROP=VAL
       ELSE IF(ID.EQ.'PICK') THEN
         TPICK=VAL
+      ELSE IF(ID.EQ.'DHOFK') THEN
+        CALL LMTO_DROPPICK$SETL4('DHOFK',VAL)
 !
 !     ==========================================================================
 !     == IF ACTIVE THE HYBRID CONTRIBTIONS ON THIS ATOM ARE CONSIDERED        ==
@@ -3328,7 +3330,7 @@ MODULE LMTO_DROPPICK_MODULE
 !===============================================================================
 !== hard-wired input data                                                     ==
 !===============================================================================
-LOGICAL(4),PARAMETER :: TREADDHOFK=.FALSE.
+LOGICAL(4)            :: TREADDHOFK=.FALSE.
 !LOGICAL(4),PARAMETER :: TREADDHOFK=.true.
 !!$CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
 CHARACTER(32),PARAMETER :: SWITCHID='CAFE2AS2'
@@ -3467,6 +3469,26 @@ END IF
       CALL FILEHANDLER$SETSPECIFICATION('DHOFK_IN','FORM','UNFORMATTED')
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_DROPPICK$setl4(id,val)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE lmto_droppick_MODULE, only : treaddhofk
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      LOGICAL(4)  ,INTENT(IN) :: VAL
+!     **************************************************************************
+      IF(ID.EQ.'DHOFK') THEN
+        treaddhofk=val
+      else
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTO_DROPPICK$SETL4')
+      END IF
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_DROPPICK_DROP()
@@ -3687,9 +3709,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
 !         ======================================================================
 !         == ENFORCE SUM RULE                                                 ==
 !         ======================================================================
-print*,'before sumrule in LMTO_DROPPICK_DROP'
           CALL LMTO_DROPPICK_SUMRULE(NDIM,NCORR,NBW,PSICORR,QSQ,QSQINV)
-print*,'after sumrule in LMTO_DROPPICK_DROP'
           DO IB=1,NBW
             DO IDIM=1,NDIM
               PSICORR(IDIM,:,IB)=MATMUL(QSQINV,PSICORR(IDIM,:,IB))
@@ -3744,12 +3764,12 @@ print*,'after sumrule in LMTO_DROPPICK_DROP'
 !         == WRITE WAVE FUNCTION TO FILE                                      ==
 !         ======================================================================
           ID='HINFO'
-!          WRITE(NFIL)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<
-          WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<
+          WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<
+          ID='QSQINV'
+          WRITE(NFIL,*)ID,IKPT,ISPIN,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           ID='PIPSI'
           DO IB=1,NBW
-!            WRITE(NFIL)ID,IB,IKPT,ISPIN,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<<<<<
-            WRITE(NFIL,*)ID,IB,IKPT,ISPIN,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<<<
+            WRITE(NFIL,*)ID,IB,IKPT,ISPIN,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<<<<
           ENDDO
           DEALLOCATE(PSI)
           DEALLOCATE(PSI1)
@@ -3912,6 +3932,14 @@ print*,'c ticket1',ticket1
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
+!
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          IF(ID.NE.'QSQINV') THEN
+            CALL ERROR$MSG('INCORRECT ID: MUST BE "QSQINV"')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('LMTO_DROPPICK_PICK')
+          END IF
+!
           do ib=1,nbw
             READ(NFIL1,*)ID,IB1,IKPT1,ISPIN1,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<
             IF(ID.NE.'PIPSI') THEN
@@ -3929,12 +3957,12 @@ print*,'c ticket1',ticket1
 !!$            rho=0.5d0*rho
 !!$          end if
 !
-do ib=1,nbw
-write(*,fmt='("real(rho)",i3,100f8.4)')ib,real(rho(ib,:))
-enddo
-do ib=1,nbw
-write(*,fmt='("imag(rho)",i3,100f8.4)')ib,aimag(rho(ib,:))
-enddo
+!!$do ib=1,nbw
+!!$write(*,fmt='("real(rho)",i3,100f8.4)')ib,real(rho(ib,:))
+!!$enddo
+!!$do ib=1,nbw
+!!$write(*,fmt='("imag(rho)",i3,100f8.4)')ib,aimag(rho(ib,:))
+!!$enddo
           CALL LIB$DIAGC8(NBW,RHO,F,U)
 write(*,fmt='("f   ",100f8.4)')f
           DO IB=1,NBW
@@ -3959,15 +3987,16 @@ write(*,fmt='("f   ",100f8.4)')f
           IDIM=1
           DHOFK(:,:,IKPT,ISPIN)=MATMUL(PSICORR(IDIM,:,:) &
      &                         ,MATMUL(H0,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
+!
+!         ======================================================================
+!         ==  TRANSFORM DHOFK TO THE SITE ORTHOGONALIZED REPRESENTATION       ==
+!         ======================================================================
+          DHOFK(:,:,IKPT,ISPIN)=MATMUL(QSQINV &
+     &                                ,MATMUL(DHOFK(:,:,IKPT,ISPIN),QSQINV))
         ENDDO
       ENDDO
       CALL FILEHANDLER$CLOSE('DFT2DMFT')
       CALL FILEHANDLER$CLOSE('DMFT2DFT')
-!
-!     ==========================================================================
-!     ==  TRANSFORM DHOFK TO THE SITE ORTHOGONALIZED REPRESENTATION           ==
-!     ==========================================================================
-      CALL LMTO_DROPPICK_DHOFKTRANSFORM('BACK')
 !
 !     ==========================================================================
 !     ==  WRITE DHOFK TO FILE SO THAT ONE CAN RESTART                         ==
@@ -4160,117 +4189,6 @@ write(*,fmt='("f   ",100f8.4)')f
       ALLOCATE(OCC(NB,NKPT,NSPIN))
       CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
       NEL=SUM(OCC(NB1:NB2,:,:))
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_DROPPICK_DHOFKTRANSFORM(ID)
-!     **************************************************************************
-!     ** TRANSFORMS THE MATRIX DHOFK IN THE DROPPICK MODULE FROM THE          **
-!     ** SITE ORTHOGONLIZED REPRESENTATION TO THE SUM-RULE OBEYING ONE        **
-!     ** OR BACK                                                              **
-!     **************************************************************************
-      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,WAVES_SELECTWV,GSET
-      USE LMTO_MODULE, ONLY : ISPECIES
-      USE LMTO_DROPPICK_MODULE, ONLY : NCORR,NB1,NB2,NBW,IPRO1,NPROAT,TPRO &
-     &                                ,DHOFK,T
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN):: ID ! CAN BE 'FWRD' OR 'BACK'
-      INTEGER(4)             :: NAT
-      LOGICAL(4)             :: TINV
-      COMPLEX(8),ALLOCATABLE :: PSICORR(:,:,:)
-      COMPLEX(8),ALLOCATABLE :: QSQ(:,:),QSQINV(:,:)
-      COMPLEX(8),ALLOCATABLE :: PSI(:,:,:)
-      COMPLEX(8),ALLOCATABLE :: PSI1(:,:,:)
-      INTEGER(4)             :: NBH,NB
-      INTEGER(4)             :: NPRO
-      INTEGER(4)             :: IKPT,ISPIN,I,I1,I2,IBH,IB,IPRO,IDIM,IAT
-!     **************************************************************************
-      NAT=SIZE(ISPECIES)
-      CALL LMTO_DROPICK_INI()
-      CALL LMTO_DROPPICK_MAKET()
-
-      ALLOCATE(PSICORR(NDIM,NCORR,NBW))
-      ALLOCATE(QSQ(NCORR,NCORR))
-      ALLOCATE(QSQINV(NCORR,NCORR))
-      DO IKPT=1,NKPTL
-        DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)
-          CALL PLANEWAVE$GETL4('TINV',TINV)
-          NBH=THIS%NBH
-          NB=THIS%NB
-!
-!         ==CHECKS =============================================================
-          IF(.NOT.ASSOCIATED(THIS%TBC)) THEN
-            CALL ERROR$MSG('THIS%TBC NOT ASSOCIATED')
-            CALL ERROR$STOP('LMTO_DROPPICK_PICK')
-          END IF
-!
-!         ==  COLLECT PROJECTIONS <PI|PSI> =====================================
-          NPRO=SUM(NPROAT)
-          ALLOCATE(PSI(NDIM,NPRO,NB))
-          IF(TINV) THEN
-            DO IBH=1,NBH
-              PSI(:,:,2*IBH-1)=REAL(THIS%TBC(:,IBH,:))
-              PSI(:,:,2*IBH)=AIMAG(THIS%TBC(:,IBH,:))
-            ENDDO
-          ELSE
-            DO IB=1,NB
-              PSI(:,:,IB)=THIS%TBC(:,IB,:)
-            ENDDO
-          END IF
-!
-!         ======================================================================
-!         == TRANSFORM TO ONSITE-ORTHOGONAL ORBITALS                          ==
-!         ======================================================================
-          ALLOCATE(PSI1(NDIM,NPRO,NB))
-          PSI1=PSI
-          DO IAT=1,NAT
-            I1=IPRO1(IAT)
-            I2=I1-1+NPROAT(IAT)
-            DO IB=1,NB
-              DO IDIM=1,NDIM
-                PSI(IDIM,I1:I2,IB)=MATMUL(T(IAT)%INV,PSI1(IDIM,I1:I2,IB))
-              ENDDO
-            ENDDO
-          ENDDO
-          DEALLOCATE(PSI1)
-!
-!         ======================================================================
-!         == CONTRACT WAVE FUNCTION COEFFICIENTS ONTO CORRELATED ORBITALS     ==
-!         == AND CORRELATED BANDS                                             ==
-!         ======================================================================
-          I=0
-          DO IPRO=1,NPRO
-            IF(.NOT.TPRO(IPRO)) CYCLE
-            I=I+1
-            PSICORR(:,I,:)=PSI(:,IPRO,NB1:NB2)
-          ENDDO
-          DEALLOCATE(PSI)
-!
-!         ======================================================================
-!         == ENFORCE SUM RULE                                                 ==
-!         ======================================================================
-PRINT*,'BEFORE SUMRULE IN LMTO_DROPPICK_DHOFKTRANSFORM'
-          CALL LMTO_DROPPICK_SUMRULE(NDIM,NCORR,NBW,PSICORR,QSQ,QSQINV)
-PRINT*,'AFTER SUMRULE IN LMTO_DROPPICK_DHOFKTRANSFORM'
-!
-!         ======================================================================
-!         == TRANSFORM INTO ORBITAL BASIS AND SUBTRACT EFFECTIVE HAMILTONIAN  ==
-!         ======================================================================
-          IF(ID.EQ.'FWRD') THEN
-            DHOFK(:,:,IKPT,ISPIN)=MATMUL(QSQ,MATMUL(DHOFK(:,:,IKPT,ISPIN),QSQ))
-          ELSE IF(ID.EQ.'BACK') THEN 
-            DHOFK(:,:,IKPT,ISPIN)=MATMUL(QSQINV &
-     &                                  ,MATMUL(DHOFK(:,:,IKPT,ISPIN),QSQINV))
-          ELSE
-            CALL ERROR$MSG('ID NOT RECOGNIZED. MAY BE "FWRD" OR "BACK"')
-            CALL ERROR$CHVAL('ID',ID)
-            CALL ERROR$STOP('LMTO_DROPPICK_DHOFKTRANSFORM')
-          END IF
-        ENDDO
-      ENDDO
       RETURN
       END
 !
