@@ -3604,8 +3604,8 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
 !     ==========================================================================
       CALL DATE_AND_TIME(VALUES=TICKET)
       ID='INFO'
-!      WRITE(NFIL)ID,NAT,NDIM,NSPIN,NKPT,NCORR,NBW,MU,KBT,nel,TICKET(:) !<<<<<<<
       WRITE(NFIL,*)ID,NAT,NDIM,NSPIN,NKPT,NCORR,NBW,MU,KBT,nel,TICKET(:) !<<<<<<
+print*,'nbw  aaa',nbw,' ncorr ',ncorr
       IF(TDUMMY) THEN
 !        CALL FILEHANDLER$UNIT('DMFT2DFTDUMMY',NFIL2)
 NFIL2=14
@@ -3846,6 +3846,7 @@ OPEN(NFIL2,FILE='dmft2dft.dat')
       REWIND(NFIL1)
       READ(NFIL1,*)ID,NAT,NDIM,NSPIN,NKPT,NCORR1,NBW1,MU,KBT,NEL,TICKET1 !<<<<<<
 !     == SET TICKET IF IT HAS NOT BEEN SET =====================================
+print*,'nbw1 on dft2dmft ',nbw1,nbw
 print*,'a ticket ',ticket
 print*,'a ticket1',ticket1
       IF(SUM(ABS(TICKET)).EQ.0) THEN
@@ -3871,6 +3872,8 @@ print*,'b ticket1',ticket1
       CALL FILEHANDLER$UNIT('DMFT2DFT',NFIL2)
       REWIND(NFIL2)
       READ(NFIL2,*)ID,NKPT1,NSPIN1,NBW1,TICKET1 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+print*,'nbw1 on dmft2dft ',nbw1,nbw
+
       IF(ID.NE.'INFO') THEN
         CALL ERROR$MSG('INCORRECT ID: MUST BE "INFO"')
         CALL ERROR$CHVAL('ID',ID)
@@ -3923,7 +3926,7 @@ print*,'c ticket1',ticket1
 !         ======================================================================
 !         == READ DFT FILE                                                    ==
 !         ======================================================================
-print*,'marke 1',ikpt,ispin
+print*,'marke 1',ikpt,ispin,nbw
 READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1
 backspace(nfil1)
 print*,'marke 1a',trim(id),ikpt1,ispin1,wkpt1
