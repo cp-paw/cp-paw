@@ -3331,7 +3331,6 @@ MODULE LMTO_DROPPICK_MODULE
 !== hard-wired input data                                                     ==
 !===============================================================================
 LOGICAL(4)            :: TREADDHOFK=.FALSE.
-!LOGICAL(4),PARAMETER :: TREADDHOFK=.true.
 !!$CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
 CHARACTER(32),PARAMETER :: SWITCHID='CAFE2AS2'
 INTEGER(4)           :: NB1        ! first band in W
@@ -5606,7 +5605,8 @@ PRINT*,'MARKE 2'
 !
 !CALL LMTO_PICKGETRHO()
       IF(TDROP) THEN
-        CALL LMTO_DROPPICK_DROP()   !OLD   CALL LMTO_DROP()
+        if(tpick) CALL LMTO_DROPPICK_HTBC()   !first read dhofk
+        CALL LMTO_DROPPICK_DROP()   !OLD:   CALL LMTO_DROP()
         CALL ERROR$MSG('REGULAR STOP AFTER EXECUTING LMTO_DROPPICK_DROP')
         CALL ERROR$MSG('DROP IS EXEWCUTED ONLY ONCE')
         CALL ERROR$STOP('LMTO$ETOT')
