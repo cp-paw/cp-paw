@@ -31,7 +31,7 @@ end module stpreport_module
 !      =========================================================================
 !      == define a random directory name as temporary workspace ================
 !      =========================================================================
-       call random_seed()
+       call init_random_seed() ! old: call random_seed()
        call random_number(svar)
        tmpdir=''
        write(tmpdir,fmt='(i12)')abs(nint(svar*1.d+6))
@@ -75,6 +75,25 @@ end module stpreport_module
        call lib__system(trim(command)) ! rc=system(trim(command))
        stop
        end
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE init_random_seed()
+!      *************************************************************************
+!      ** initialize a random number sequence using the system clock          **
+!      ** from http://gcc.gnu.org/onlinedocs/gfortran/RANDOM_005fSEED.html    **
+!      *************************************************************************
+       implicit none
+       INTEGER :: i, n, clock
+       INTEGER, DIMENSION(:), ALLOCATABLE :: seed
+!      *************************************************************************
+       CALL RANDOM_SEED(size = n)
+       ALLOCATE(seed(n))
+       CALL SYSTEM_CLOCK(COUNT=clock)
+       seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+       CALL RANDOM_SEED(PUT = seed)
+       DEALLOCATE(seed)
+       return
+       END 
 !
 !      ..1.........2.........3.........4.........5.........6.........7.........8
        subroutine executestpa(filename)
@@ -133,7 +152,7 @@ end module stpreport_module
        use stpreport_module
        implicit none
        integer      ,parameter :: nline=20
-       character(50)           :: line(nline)
+       character(80)           :: line(nline)
        character(1024)         :: filename
        integer                 :: nfilgp=1001
        character(1024)         :: command
@@ -143,22 +162,23 @@ end module stpreport_module
 !      =========================================================================
 !      == write gnuplot script                                                ==
 !      =========================================================================
+       line(:)=' '
        line( 1)='set terminal postscript eps enhanced color lw 4.0 24'
        line( 1)='set terminal pdf enhanced color lw 4'
        line( 2)='set xrange [0.0:3.2]'
        line( 3)='set yrange [-100:0]'
        line( 4)='set xlabel "r"'
        line( 5)='set ylabel ""'
-       line( 6)='set data style lines'
+!       line( 6)='set data style lines'
        line( 7)='set xzeroaxis'
        line( 8)='set border 3'
        line( 9)='set xtics nomirror'
        line(10)='set ytics nomirror'
        line(11)='set output "potential.pdf"'
        line(12)='set title "Potentials"'
-       line(13)='plot "POT.dat" using 1:2 ls 1 title "AEPOT" \'    
-       line(14)='    ,"POT.dat" using 1:3 ls 2 title "PSPOT" \'    
-       line(15)='    ,"POT.dat" using 1:4 ls 3 title "VPOT"'
+       line(13)='plot "POT.dat" using 1:2 ls 1 title "AEPOT" with lines \ '    
+       line(14)='    ,"POT.dat" using 1:3 ls 2 title "PSPOT" with lines \ '    
+       line(15)='    ,"POT.dat" using 1:4 ls 3 title "VPOT" with lines'
 !
        filename='pot.gp'
        open(unit=nfilgp,file=trim(tmpdir)//filename,form='formatted')
@@ -200,6 +220,7 @@ end module stpreport_module
 !      =========================================================================
 !      == write gnuplot script                                                ==
 !      =========================================================================
+       line(:)=' '
        line( 1)='set terminal postscript eps enhanced color lw 3.0 18'
        line( 1)='set terminal pdf enhanced color lw 3'
        line( 2)='set output "scatt.pdf"'
@@ -207,7 +228,7 @@ end module stpreport_module
        line( 4)='set yrange [0:*]'
        line( 5)='set xlabel "Energy[H]"'
        line( 6)='set ylabel ""'
-       line( 7)='set data style lines'
+!       line( 7)='set data style lines'
        line( 8)='set border 3'
        line( 9)='set xtics nomirror'
        line(10)='set ytics nomirror'
@@ -215,17 +236,17 @@ end module stpreport_module
        call readlinei4('lpro.dat',nvalx,nval,ival)
        lx=maxval(ival(1:nval))
        write(line(12),fmt='(a,i1,a)')'plot "SCATTERING.dat" using 1:',2 &
-      &                                ,' ls 1 title "AEPHASE" \'    
+      &                                ,' ls 1  title "AEPHASE" \'
        write(line(13),fmt='(a,i1,a)')',"SCATTERING.dat" using 1:',lx+3 &
-      &                                ,' ls 2 title "PAW-PHASE" \'    
+      &                               ,' ls 2 title "PAW-PHASE" \'
        iline=13
        do il=2,lx+1
          iline=iline+1
          write(line(iline),fmt='(a,i1,a)')',"SCATTERING.dat" using 1:',1+il &
-      &                                   ,' ls 1 title "" \'    
+      &                                   ,' ls 1  title "" \'    
          iline=iline+1
          write(line(iline),fmt='(a,i1,a)')',"SCATTERING.dat" using 1:',lx+2+il &
-      &                              ,' ls 2 title "" \'    
+      &                              ,' ls 2  title "" \'
        enddo
        iline=iline+1
        line(iline:)=''
@@ -274,13 +295,14 @@ end module stpreport_module
 !      == write gnuplot script                                                ==
 !      =========================================================================
        do l=0,lx
+         line(:)=' '
          line( 1)='set terminal pdf enhanced color lw 3'
          write(line( 2),fmt='(a,i1,a)')'set output "phi_',l,'.pdf"'
          line( 3)='set xrange [0:3.2]'
          line( 4)='set yrange [-2.5:2.5]'
          line( 5)='set xlabel "r[a0]"'
          line( 6)='set ylabel ""'
-         line( 7)='set data style lines'
+!         line( 7)='set data style lines'
          line( 8)='set border 3'
          line( 9)='set xtics nomirror'
          line(10)='set ytics nomirror'
@@ -292,21 +314,21 @@ end module stpreport_module
             iline=iline+1
             if(tfirst) then
               write(line(iline),fmt='(a,i1,a)')'plot "AEPHI.dat" using 1:',1+ipro &
-      &                                ,' ls 1 title "AE-phi" \ '    
+      &                                ,' ls 1 with lines title "AE-phi" \ '    
               tfirst=.false.
             else      
               write(line(iline),fmt='(a,i1,a)')', "AEPHI.dat" using 1:',1+ipro &
-      &                                ,' ls 2 title "AE-phi" \ '    
+      &                                ,' ls 2 with lines title "AE-phi" \ '    
             end if
             iline=iline+1
             write(line(iline),fmt='(a,i1,a)')',"PSPHI.dat" using 1:',1+ipro &
-      &                                ,' ls 3 title "PS-phi" \ '    
+      &                                    ,' ls 3 with lines title "PS-phi" \ '
             iline=iline+1
             write(line(iline),fmt='(a,i1,a)')',"NLPHI.dat" using 1:',1+ipro &
-      &                                ,' ls 4 title "Nodeless-phi" \ '    
+      &                          ,' ls 4 with lines title "Nodeless-phi" \ '
             iline=iline+1
             write(line(iline),fmt='(a,i1,a)')',"QPHI.dat" using 1:',1+ipro &
-      &                                ,' ls 5 title "qphi" \ '    
+      &                                ,' ls 5 with lines title "qphi" \ '    
          enddo
          iline=iline+1
          line(iline:)=''
@@ -356,13 +378,14 @@ end module stpreport_module
 !      == write gnuplot script                                                ==
 !      =========================================================================
        do l=0,lx
+         line(:)=' '
          line( 1)='set terminal pdf enhanced color lw 3'
          write(line( 2),fmt='(a,i1,a)')'set output "pro_',l,'.pdf"'
          line( 3)='set xrange [0:3.2]'
          line( 4)='set yrange [*:*]'
          line( 5)='set xlabel "r[a0]"'
          line( 6)='set ylabel ""'
-         line( 7)='set data style lines'
+!         line( 7)='set data style lines'
          line( 8)='set border 3'
          line( 9)='set xtics nomirror'
          line(10)='set ytics nomirror'
@@ -374,11 +397,11 @@ end module stpreport_module
             iline=iline+1
             if(tfirst) then
               write(line(iline),fmt='(a,i1,a)')'plot "PRO.dat" using 1:',1+ipro &
-      &                                ,' ls 1 title "PRO" \ '    
+      &                                ,' ls 1 with lines title "PRO" \ '    
               tfirst=.false.
             else      
               write(line(iline),fmt='(a,i1,a)')', "PRO.dat" using 1:',1+ipro &
-      &                                ,' ls 2 title "Pro" \ '    
+      &                                ,' ls 2 with lines title "Pro" \ '    
             end if
          enddo
          iline=iline+1
@@ -411,6 +434,7 @@ end module stpreport_module
        integer      ,parameter :: nline=20
        character(124)          :: line(nline)
        character(1024)         :: filename='psi.gp'
+       character(64)           :: string
        integer                 :: nfilgp=1001
        integer                 :: nfil1=11
        integer                 :: nfil2=12
@@ -470,21 +494,26 @@ end module stpreport_module
 !      == write gnuplot script                                                ==
 !      =========================================================================
        do ib=1,nb
+         line(:)=' '
          line( 1)='set terminal pdf enhanced color lw 3'
-         write(line( 2),fmt='(a,i1,a)')'set output "psi_',ib,'.pdf"'
+         write(string,*)ib
+         string=adjustl(string)
+         line(2)='set output "psi_'//trim(string)//'.pdf"'
+!         write(line( 2),fmt='(a,i1,a)')'set output "psi_',ib,'.pdf"'
          line( 3)='set xrange [0:3.2]'
          line( 4)='set yrange [-2:2]'
          line( 5)='set xlabel "r[a0]"'
          line( 6)='set ylabel ""'
-         line( 7)='set data style lines'
+!         line( 7)='set data style lines'
          line( 8)='set border 3'
          line( 9)='set xtics nomirror'
          line(10)='set ytics nomirror'
-         write(line(11),fmt='(a,i3,a,i1,a)')'set title "wave functions ib=',ib,' and l=',lb(ib),'"'
-         write(line(12),fmt='(a,i1,a)')'plot "AEPSI.dat" using 1:',1+ib &
-      &                                ,' ls 1 title "AE-psi" \ '    
-         write(line(13),fmt='(a,i1,a)')',"UPSI.dat" using 1:',1+ib &
-      &                                ,' ls 2 title "upsi" \ '    
+         write(line(11),fmt='(a,i3,a,i1,a)')'set title "wave functions ib=' &
+      &                                     ,ib,' and l=',lb(ib),'"'
+         write(line(12),fmt='(a,i3,a)')'plot "AEPSI.dat" using 1:',1+ib &
+      &                                ,' ls 1 with lines title "AE-psi" \ '    
+         write(line(13),fmt='(a,i3,a)')',"UPSI.dat" using 1:',1+ib &
+      &                                ,' ls 2 with lines title "upsi" \ '    
          line(14)=''
          open(unit=nfilgp,file=trim(tmpdir)//filename,form='formatted')
          do i=1,14
@@ -510,11 +539,12 @@ end module stpreport_module
 !      ** converts the input file "pot.dat" into an eps file                  **
 !      *************************************************************************
        implicit none
-       integer      ,intent(in):: nfil
-       integer      ,parameter :: nline=50
-       character(512)          :: line(nline)
-       character(64)           :: inline(5)
-       character(4),parameter  :: dbs='\\\\'  !double backslash
+       integer      ,intent(in) :: nfil
+       integer      ,parameter  :: nline=200
+       character(512)           :: line(nline)
+       character(512)           :: inline(5)
+       character(4),parameter   :: dbs='\\'  !double backslash
+       character(64)           :: string
        integer(4)               :: nb
        integer(4)               :: lx
        integer(4)  ,allocatable :: lb(:)
@@ -537,39 +567,56 @@ end module stpreport_module
 !      ==   
 !      =========================================================================
 !    replace \t \b \v
-       line( 1)='\documentclass{article}'
-       line( 2)='\usepackage{geometry}'
-       line( 3)='\geometry{a4paper,left=2cm,right=3cm, top=3cm, bottom=2cm}'
-       line( 4)='\usepackage[ansinew]{inputenc}'
-       line( 5)='\usepackage{amssymb}'
-       line( 6)='\usepackage{ngerman}'
-       line( 7)='\usepackage{color,graphics,graphicx,epsfig}'
-       line( 8)='\usepackage{fancyhdr}'
-       line( 9)='\pagestyle{fancy}'
-       line(10)='\\begin{document}'
-       line(11)='\\title{PAW-Report}'
-       line(12)='\\author{PAW mkreport-Tool}'
-       line(13)='\\rhead{\\today}'
-       line(14)='\cfoot{\\thepage}'
-       line(15)=''
-       do i=1,15
-         write(nfil,fmt='(a)')trim(line(i))
-       enddo
+       write(nfil,*)'\documentclass{article}'
+       write(nfil,*)'\usepackage{geometry}'
+       write(nfil,*)'\geometry{a4paper,left=2cm,right=3cm, top=3cm, bottom=2cm}'
+       write(nfil,*)'\usepackage[ansinew]{inputenc}'
+       write(nfil,*)'\usepackage{amssymb}'
+       write(nfil,*)'\usepackage{ngerman}'
+       write(nfil,*)'\usepackage{color,graphics,graphicx,epsfig}'
+       write(nfil,*)'\usepackage{fancyhdr}'
+       write(nfil,*)'\pagestyle{fancy}'
+       write(nfil,*)'\begin{document}'
+       write(nfil,*)'\title{PAW-Report}'
+       write(nfil,*)'\author{PAW mkreport-Tool}'
+       write(nfil,*)'\rhead{\today}'
+       write(nfil,*)'\cfoot{\thepage}'
+       write(nfil,*)''
+
+
+       ! line( 1)='\documentclass{article}'
+       ! line( 2)='\usepackage{geometry}'
+       ! line( 3)='\geometry{a4paper,left=2cm,right=3cm, top=3cm, bottom=2cm}'
+       ! line( 4)='\usepackage[ansinew]{inputenc}'
+       ! line( 5)='\usepackage{amssymb}'
+       ! line( 6)='\usepackage{ngerman}'
+       ! line( 7)='\usepackage{color,graphics,graphicx,epsfig}'
+       ! line( 8)='\usepackage{fancyhdr}'
+       ! line( 9)='\pagestyle{fancy}'
+       ! line(10)='\begin{document}'
+       ! line(11)='\title{PAW-Report}'
+       ! line(12)='\author{PAW mkreport-Tool}'
+       ! line(13)='\rhead{\today}'
+       ! line(14)='\cfoot{\thepage}'
+       ! line(15)=''
+       ! do i=1,15
+       !   write(nfil,fmt='(a)')trim(line(i))
+       ! enddo
 !
 !      =========================================================================
 !      ==   Report of input data                                              ==
 !      =========================================================================
        line( 1)='\section{Input Data}'
-       line( 2)='\\begin{center}'
-       line( 3)='\\begin{tabular}{|l|l|}'
+       line( 2)='\begin{center}'
+       line( 3)='\begin{tabular}{|l|l|}'
        line( 4)='\hline'
        call readline('id.dat',inline(1))  ! setup id
-       line( 5)='Setup-id &\\verb|'//trim(inline(1))//'|'//dbs
+       line( 5)='Setup-id &\verb|'//trim(inline(1))//'|'//dbs
        if(inline(1)(2:2).eq.'_') inline(1)(2:2)=' '
        line( 6)='Element &'//trim(inline(1)(1:2))//dbs
        call readline('zv.dat',inline(1))
        line( 7)='Atomic number &'//trim(inline(1))//dbs
-       call readline('psi.type.dat',inline(1))  
+       call readline('psi.type.dat',inline(1))   
        line( 8)='Pseudization methiod &'//trim(inline(1))//dbs
        call readline('rbox.dat',inline(1))  
        line( 9)='box radius &'//trim(inline(1))//dbs
@@ -579,7 +626,8 @@ end module stpreport_module
        call readliner8('psi.rcl.dat',nvalx,nval,r8arr)  
        write(inline(1),fmt='(10f10.3)')r8arr(1:nval)
        line(11)='RCL/$r_{cov}$ &'//trim(inline(1))//dbs
-       call readline('psi.lambda.dat',inline(1))  
+       call readliner8('psi.lambda.dat',nvalx,nval,r8arr)
+       write(inline(1),fmt='(10f10.3)')r8arr(1:nval)
        line(12)='$\lambda_\ell$ &'//trim(inline(1))//dbs
        call readline('pot.pow.dat',inline(1))  
        line(13)='power from potential pseudization &'//trim(inline(1))//dbs
@@ -600,13 +648,13 @@ end module stpreport_module
 !      == number of projector functions                                       ==
 !      =========================================================================
        line( 1)="\subsection{Configuration}"
-       line( 2)='\\begin{tabular}{ll}'
+       line( 2)='\begin{tabular}{ll}'
        call readline('npro.dat',inline(1))  
-       line( 3)='\\textbf{NPRO} & '//inline(1)//dbs
+       line( 3)='\textbf{NPRO} & '//trim(inline(1))//dbs
        call readline('lpro.dat',inline(1))  
-       line( 4)='\\textbf{LPRO} & '//inline(1)//dbs
+       line( 4)='\textbf{LPRO} & '//trim(inline(1))//dbs
        line( 5)='\end{tabular}'
-       line( 6)='\\\\'
+       line( 6)=''
        line( 7)=''
        do i=1,7
          write(nfil,fmt='(a)')trim(line(i))
@@ -616,8 +664,8 @@ end module stpreport_module
 !      == atomic energy levels                                                ==
 !      =========================================================================
        line( 1)='\subsection{Atomic energy levels}'
-       line( 2)='\\begin{center}'
-       line( 3)='\\begin{tabular}{|l|r|r|}'
+       line( 2)='\begin{center}'
+       line( 3)='\begin{tabular}{|l|r|r|}'
        line( 4)='\hline'
        line( 5)='$\ell$ & $\epsilon[H]$ & Occupation'//dbs
        line( 6)='\hline'
@@ -637,11 +685,8 @@ end module stpreport_module
        read(inline(3),*)eb
        read(inline(4),*)lb
        do i=1,nb
-         write(nfil,'(i3,"&",f10.5,"&",f10.5,a)')lb(i),eb(i),fb(i),dbs
+         write(nfil,'(i3,"&",f15.5,"&",f10.2,a)')lb(i),eb(i),fb(i),dbs
        enddo
-       deallocate(lb)
-       deallocate(eb)
-       deallocate(fb)
 !
        line( 1)='\hline'
        line( 2)='\end{tabular}'
@@ -655,12 +700,12 @@ end module stpreport_module
 !      == potential and scattering properties                                 ==
 !      =========================================================================
        line(1)='\subsection{Potentials and Scattering Properties}'  
-       line(2)='\\begin{figure}[h!]'
+       line(2)='\begin{figure}[h!]'
        line(3)='  \centering'
-       line(4)='  \\begin{minipage}[b]{7.5cm}'
+       line(4)='  \begin{minipage}[b]{7.5cm}'
        line(5)='    \includegraphics[width=7.5cm]{potential}'
        line(6)='  \end{minipage}'
-       line(7)='  \\begin{minipage}[b]{7.5cm}'
+       line(7)='  \begin{minipage}[b]{7.5cm}'
        line(8)='    \includegraphics[width=7.5cm]{scatt}'
        line(9)='  \end{minipage}'
        line(10)='\end{figure}'
@@ -672,24 +717,27 @@ end module stpreport_module
 !      =========================================================================
 !      == partial waves and projector functions                               ==
 !      =========================================================================
-       line( 1)='\\newpage'
+       line( 1)='\newpage'
        line( 2)='\section{Partial waves and projector functions}'
-       line( 3)='\\begin{figure}[h!]'
+       line( 3)='\begin{figure}[h!]'
        line( 4)='\centering'
        iline=4
        do l=0,lx
          iline=iline+1
-         write(line(iline),fmt='(a,i1,a)')'\centerline{partial waves and projectors for l=',l,'}'
+         write(line(iline),fmt='(a,i1,a)') &
+      &                  '\centerline{partial waves and projectors for l=',l,'}'
          iline=iline+1
-         line( iline)='\\begin{minipage}[b]{7.5cm}'
+         line( iline)='\begin{minipage}[b]{7.5cm}'
          iline=iline+1
-         write(line(iline),fmt='(a,i1,a)')'\includegraphics[width=7.5cm]{phi_',l,'}'
+         write(line(iline),fmt='(a,i1,a)') &
+      &                               '\includegraphics[width=7.5cm]{phi_',l,'}'
          iline=iline+1
          line(iline)='\end{minipage}'
          iline=iline+1
-         line(iline)='\\begin{minipage}[b]{7.5cm}'
+         line(iline)='\begin{minipage}[b]{7.5cm}'
          iline=iline+1
-         write(line(iline),fmt='(a,i1,a)')'\includegraphics[width=7.5cm]{pro_',l,'}'
+         write(line(iline),fmt='(a,i1,a)') &
+      &                               '\includegraphics[width=7.5cm]{pro_',l,'}'
          iline=iline+1
          line(iline)='\end{minipage}'
        enddo
@@ -702,21 +750,32 @@ end module stpreport_module
 !      =========================================================================
 !      == atomic wave functions                                               ==
 !      =========================================================================
-       line( 1)='\\newpage'
+       line( 1)='\newpage'
        line( 2)='\section{Atomic wave functions}'
-       line( 3)='\\begin{figure}[h!]'
+       line( 3)='\begin{figure}[h!]'
        line( 4)='\centering'
        iline=4
        do ib=1,nb
          iline=iline+1
-         line( iline)='\\begin{minipage}[b]{7.5cm}'
+         line( iline)='\begin{minipage}[b]{7.5cm}'
          iline=iline+1
-         write(line(iline),fmt='(a,i3,a,i1,a)') &
-     &       '\centerline{Atomic wave functionsfir shell ',ib,' and  l=',lb(ib),'}'
+         write(line(iline),fmt='(a,i2,a,i2,a)') &
+     &        '\centerline{Atomic wave functions for shell ',ib  &
+     &       ,' and  l=',lb(ib),'}'
          iline=iline+1
-         write(line(iline),fmt='(a,i1,a)')'\includegraphics[width=7.5cm]{psi_',ib,'}'
+         write(string,*)ib
+         string=adjustl(string)
+         line(iline)='\includegraphics[width=7.5cm]{psi_'//trim(string)//'}'
          iline=iline+1
          line(iline)='\end{minipage}'
+         if(modulo(ib,8).eq.0.and.ib.ne.nb) then
+            iline=iline+1
+            line(iline)='\end{figure}'
+            iline=iline+1
+            line(iline)='\begin{figure}[h!]'
+            iline=iline+1
+            line(iline)='\centering'
+         end if
        enddo
        iline=iline+1
        line(iline)='\end{figure}'
@@ -731,6 +790,9 @@ end module stpreport_module
        do i=1,1
          write(nfil,fmt='(a)')trim(line(i))
        enddo
+       deallocate(lb)
+       deallocate(eb)
+       deallocate(fb)
        return
        end       
 !
