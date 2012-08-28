@@ -1,5 +1,6 @@
 MODULE LMTO_MODULE
 TYPE HYBRIDSETTING_TYPE
+  !== atom-specific settings ==
   LOGICAL(4)  :: ACTIVE=.FALSE.    ! CONSIDER HYBRID CONTRIBUTION ON THIS ATOM
   LOGICAL(4)  :: TCV        ! INCLUDE CORE VALENCE EXCHANGE
   LOGICAL(4)  :: TNDDO      ! INCLUDE NDDO OFFSITE EXCHANGE TERMS
@@ -5334,63 +5335,6 @@ STOP 'FORCED STOP IN LMTO_DROPPICK_TRANSFORM'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_PICKGETRHO()
-!     **************************************************************************
-!     **  READS A FILE HAMILTON CORRECTION                                    **
-!     **  FOR USE AS DMFT INTERFACE                                           **
-!     **                                                                      **
-!     **    <PI_ALPHA|PSI_N> ; E_N                                            **
-!     **                                                                      **
-!     **  THE BASIS ARE ONSITE-ORTHOGONALIZED NATURAL TIGHT-BINDING ORBITALS  **
-!     **                                                                      **
-!     ******************************PETER BLOECHL, GOSLAR 2011******************
-      USE STRINGS_MODULE
-      IMPLICIT NONE
-      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
-      INTEGER(4)             :: NFIL
-      INTEGER(4)             :: NB
-      INTEGER(4)             :: NKPT
-      REAL(8)                :: EFERMI
-      COMPLEX(8),ALLOCATABLE :: RHO(:,:),U(:,:)
-      REAL(8)   ,ALLOCATABLE :: F(:)
-      REAL(8)                :: BETA ! 1/(K_B*T)
-      INTEGER(4)             :: IKPT,IK,IB
-!     **************************************************************************
-                                           CALL TRACE$PUSH('LMTO_LMTO_PICKGETRHO')
-!
-!     ==========================================================================
-!     ==  READ FILE HEADER                                                    ==
-!     ==========================================================================
-      NFIL=12
-      OPEN(NFIL,FILE=-'RHOFROMDMFT.DAT')
-      REWIND NFIL
-      READ(NFIL,*)EFERMI    !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-      READ(NFIL,*)BETA      !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-      READ(NFIL,*)NKPT !# (KPOINTS)   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-!
-      DO IKPT=1,NKPT
-        READ(NFIL,*)IK,NB    !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        IF(IKPT.EQ.1) THEN
-           ALLOCATE(RHO(NB,NB))
-           ALLOCATE(F(NB))
-           ALLOCATE(U(NB,NB))
-        END IF
-        DO IB=1,NB
-          READ(NFIL,*)RHO(IB,:)   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        ENDDO
-        CALL LIB$DIAGC8(NB,RHO,F,U)
-        F=2.D0*F
-        DO IB=NB,1,-1
-          WRITE(*,FMT='(I5,2F20.10)')IB,F(IB)
-        ENDDO
-CALL ERROR$MSG('FORCED STOP')
-CALL ERROR$STOP('LMTO_PICKGETRHO')
-      ENDDO
-                                           CALL TRACE$POP()
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_PICK2()
 !     **************************************************************************
 !     **  READS A FILE HAMILTON CORRECTION                                    **
@@ -5595,15 +5539,11 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       IF(.NOT.TON) RETURN
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START ")')
       THTBC=.FALSE.   
+      CALL LMTO$SETHTBCTOZERO()
 !
 !     ==========================================================================
 !     == WRITE DMFT INTERFACE 
 !     ==========================================================================
-PRINT*,'MARKE 1'
-!      CALL LMTO$SETHTBCTOZERO()
-PRINT*,'MARKE 2'
-!
-!CALL LMTO_PICKGETRHO()
       IF(TDROP) THEN
         if(tpick) CALL LMTO_DROPPICK_HTBC()   !first read dhofk
         CALL LMTO_DROPPICK_DROP()   !OLD:   CALL LMTO_DROP()
