@@ -2813,6 +2813,71 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vrules{Optional, if FILE has been specified. Otherwise not used}
 \vdefault{0}}
 
+%----------------------------------------------------------------------
+{\block{!STRUCTURE!SPECIES!NTBO}
+%----------------------------------------------------------------------
+\brules{optional} \bdescr{sets the parameters for Hybrid calculations using
+natural tight binding orbitals. \textbf{Experimental option!}}
+
+\mbax{\key{TORB} 
+   \vdescr{selects the shells of orbitals that shall be
+    treated as correlated orbitals. TORB refers to NPRO in the parent
+    block. The number values in TORB must be equal to the sum in NPRO.
+    For a given angular momentum the correlated orbitals must come
+    before the uncorrelated orbitals}
+\vformat{logical(*)} 
+\vrules{mandatory} 
+\vdefault{none}}
+
+\mbax{\key{LHFWEIGHT} 
+ \vdescr{Overwrites the generic mixing factor for 
+     exchange of the onsite terms of this atom type.}
+\vformat{real} 
+\vrules{Optional} 
+\vdefault{none}}
+
+\mbax{\key{FOCKSETUP} 
+ \vdescr{Partial waves and projector functions are obtained from an 
+   atom calculated by a hybrid functional}
+\vformat{logical} 
+\vrules{Optional} 
+\vdefault{true}}
+
+\mbax{\key{CV} 
+ \vdescr{Switch for core-valence exchange}
+\vformat{logical} 
+\vrules{optional} 
+\vdefault{true}}
+
+\mbax{\key{NDDO} 
+\vdescr{Exchange term with three orbitals on one site
+    and one on the opposite side of a bond.}  
+\vformat{logical}
+\vrules{optional} 
+\vdefault{true}}
+
+\mbax{\key{31} 
+\vdescr{Exchange term with three orbitals on one site
+    and one on the opposite side of a bond.}  
+\vformat{logical}
+\vrules{optional} 
+\vdefault{true}}
+
+\mbax{\key{BONDX} 
+\vdescr{Exchange term with three orbitals on one site
+    and one on the opposite side of a bond.}  
+\vformat{logical}
+\vrules{optional} 
+\vdefault{true}}
+
+\mbax{\key{TAILLAMBDA} 
+\vdescr{Decay constants of the two exponentials, that replace the 
+tails of the orbitals.}
+\vformat{2$\times$real}
+\vrules{optional} 
+\vdefault{(/4.,2./)}}
+
+
 
 %----------------------------------------------------------------------
 {\block{!STRUCTURE!SPECIES!LDAPLUSU}
