@@ -2239,3 +2239,117 @@ end if
       RES=REAL(B(I,J),KIND=8)
       RETURN
       END
+!
+!...............................................................................
+MODULE MYLOCK_MODULE
+!*******************************************************************************
+!**  OBJECT TOGGLES BETWEEN A LOCKED AND AN UNLOCKED STATE:                   **
+!**    LOCKED STATE   : LOCKFILE EXISTS, UNLOCKFILE DOES NOT EXIST            **
+!**    UNLOCKED STATE : UNLOCKFILE EXISTS, LOCKFILE DOES NOT EXIST            **
+!**                                                                           **
+!**  IT TOGGLES BY MOVING A FILE 'LOCK' TO 'UNLOCK AND VICE VERSA.            **
+!**  IT CREATES AN UNLOCK FILE IF NEITHER LOCK OR UNLOCK EXIST.               **
+!**                                                                           **
+!**  IT IS USED VIA SUBROUTINES:                                              **
+!**  MYLOCK$LOCK WAITS UNTIL IT ENCOUNTERS AN UNLOCKED STATE.                 **
+!**  BEFORE IT PROCEEDS, IT PRODUCES A LOCKED STATE TO PREVENT OTHERS         **
+!**  TO PROCEED WITH A RESERVED OPERATION.                                    **
+!**                                                                           **
+!**  MYLOCK$LOCK SWITCHES TO THE UNLOCKED STATE TO ALLOW OTHER TO PROCEED     **
+!**                                                                           **
+!**  WHILE THE ROUTINE WAITS, IT INQUIRES THE PRESENCE OF THE LOCK FILE       **
+!**  IN REGULAR TIME INTERVALS. THE TIME INTERVAL IS GOVERNED BY THE VARIABLE **
+!**  SLEEP WHICH IS THE TIME INTERVAL IN SECONDS. IN BETWEEN IT ITERATES      **
+!**  BY ASKING AND CHECKING FOR THE CPU TIME.  IT AVOIDS INQUIREING ALL THE   **
+!**  TIME IN ORDER NOT TO LOAD THE SYSTEM OTHER THAN THE CPU                  **
+!**                                                                           **
+!***************************************P. BLOECHL, GOSLAR 2012*****************
+LOGICAL(4)           :: TINI=.FALSE.
+REAL(8)   ,PARAMETER :: SLEEP=5.D0 ! TIME IN SECONDS BEFORE INQUIRING ABOUT THE 
+                                   ! LOCKED OR UNLOCKED STATE
+CHARACTER(128)       :: DIR='' !/HOME/TOOLS/PAWLOCK/' !WILL BE MADE LOWERCASE
+CHARACTER(128)       :: LOCKFILE
+CHARACTER(128)       :: CMD_UNLOCK
+CHARACTER(128)       :: CMD_LOCK
+END MODULE MYLOCK_MODULE
+!
+!     ..........................................................................
+      SUBROUTINE MYLOCK_INITIALIZE()
+      USE MYLOCK_MODULE
+      IMPLICIT NONE
+      CHARACTER(128) :: UNLOCKFILE
+      CHARACTER(128) :: CMD_TOUCHUNLOCK
+      LOGICAL(4)     :: TCHK1,TCHK2
+      INTEGER(4)     :: STATUS
+!     ************************************************************************
+      IF(TINI) RETURN
+      TINI=.TRUE.
+      LOCKFILE=TRIM(ADJUSTL(DIR))//'LOCK'
+      UNLOCKFILE=TRIM(ADJUSTL(DIR))//'UNLOCK'
+      CMD_TOUCHUNLOCK='TOUCH '//ADJUSTL(UNLOCKFILE)
+      CMD_UNLOCK='MV '//TRIM(ADJUSTL(LOCKFILE))//' '//ADJUSTL(UNLOCKFILE)
+      CMD_LOCK='MV '//TRIM(ADJUSTL(UNLOCKFILE))//' '//ADJUSTL(LOCKFILE)
+      CALL MYLOCK_LOWERCASE(CMD_TOUCHUNLOCK)
+      CALL MYLOCK_LOWERCASE(CMD_UNLOCK)
+      CALL MYLOCK_LOWERCASE(CMD_LOCK)
+!
+      INQUIRE(FILE=LOCKFILE,EXIST=TCHK1)
+      INQUIRE(FILE=UNLOCKFILE,EXIST=TCHK2)
+      IF(.NOT.(TCHK1.OR.TCHK2)) THEN
+        CALL SYSTEM(CMD_TOUCHUNLOCK,STATUS)
+        IF(STATUS.NE.0) STOP 'ERROR 1 IN MYLOCK'
+      END IF
+      RETURN
+      END SUBROUTINE MYLOCK_INITIALIZE
+!
+!     ..........................................................................
+      SUBROUTINE MYLOCK_LOWERCASE(STRING)
+      IMPLICIT NONE
+      CHARACTER(*), INTENT(INOUT) :: STRING
+      INTEGER(4)                  :: I,ISVAR
+!     ***************************************************************
+      DO I=1,LEN(TRIM(STRING))
+        ISVAR=IACHAR(STRING(I:I))
+        IF(ISVAR.GE.65.AND.ISVAR.LE.90) STRING(I:I)=ACHAR(ISVAR+32)
+      ENDDO
+      RETURN
+      END SUBROUTINE MYLOCK_LOWERCASE
+!
+!     ..........................................................................
+      SUBROUTINE MYLOCK$LOCK()
+      USE MYLOCK_MODULE
+      IMPLICIT NONE
+      LOGICAL(4)               :: TCHK
+      REAL(8)                  :: TIME1,TIME2
+      INTEGER(4)               :: STATUS
+!     **************************************************************************
+      CALL MYLOCK_INITIALIZE()
+      DO 
+        INQUIRE(FILE=LOCKFILE,EXIST=TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL SYSTEM(CMD_LOCK,STATUS)
+        IF(STATUS.NE.0) STOP 'ERROR 2 IN MYLOCK'
+          EXIT
+        END IF
+        CALL CPU_TIME(TIME1) 
+        DO 
+          CALL CPU_TIME(TIME2)
+          IF(TIME2-TIME1.GT.SLEEP) EXIT
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ..........................................................................
+      SUBROUTINE MYLOCK$UNLOCK()
+      USE MYLOCK_MODULE
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: NFIL=123
+      CHARACTER(64)        :: CMD
+      INTEGER(4)               :: STATUS
+!     **************************************************************************
+      CALL MYLOCK_INITIALIZE()
+      CALL SYSTEM(CMD_UNLOCK,STATUS)
+      IF(STATUS.NE.0) STOP 'ERROR 3 IN MYLOCK'
+      RETURN
+      END

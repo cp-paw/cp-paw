@@ -558,6 +558,7 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(OUT):: VAL
 !     **************************************************************************
+      CALL PERIODICTABLE_INITIALIZE
       IF(IZ.LT.0.OR.IZ.GT.NEL) THEN
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
         CALL ERROR$I4VAL('IZ',IZ)
