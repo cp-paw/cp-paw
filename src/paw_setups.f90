@@ -5193,6 +5193,8 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
             exit
           end if
         enddo
+        irbnd=irbnd2   !! critical change!!: the matching radius is rbnd2 but 
+                       !! scaling and tail replacement start at irbnd
 !
 !       == THE CUTOFF CAN BE LARGE, IN PARTICULAR WHEN THE PARTIAL WAVES ARE  ==
 !       == MATCHED TO THE NODELESS PARTIAL WAVES. IF THIS IS UNACCEPTABLE, =====
