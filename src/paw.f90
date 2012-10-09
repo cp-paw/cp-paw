@@ -1,9 +1,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 1152 $'
+character(256):: VERrev='$LastChangedRevision: 1169 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2012-08-09 19:31:07 +0200 (Do, 09. Aug 2012) $'
+character(256):: VERdat='$LastChangedDate: 2012-10-09 19:49:18 +0200 (Di, 09. Okt 2012) $'
 end Module version_module
 !
 !     ..................................................................
@@ -379,8 +379,8 @@ end Module version_module
       USE TIMESTEP_MODULE ,ONLY : DELTAT,ISTEPNUMBER,TNEWTHERMOSTAT
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: DELT   ! TIME STEP
-      LOGICAL(4),INTENT(IN)   :: TPRINT ! ON/OFF SWITCH FOR LONG PRINTOUT
-      LOGICAL(4),INTENT(IN)   :: TSTOP  ! ON/OFF SWITCH FOR LAST TIME STEP
+      LOGICAL(4),INTENT(IN)   :: TPRINT ! flag FOR LONG PRINTOUT
+      LOGICAL(4),INTENT(IN)   :: TSTOP  ! flag FOR LAST TIME STEP
       INTEGER(4),INTENT(INOUT):: NFI    ! TIME STEP COUNTER
       INTEGER(4)              :: NFILO
       LOGICAL(4)              :: TFOR   ! ON/OFF SWITCH FOR ATOMIC MOTION
@@ -641,7 +641,7 @@ end Module version_module
 !     ==================================================================
 !     ==================================================================
 !     __WRITE PROTOCOLL_________________________________________________
-      CALL PRINFO(TPRINT,NFI,DELT)
+      CALL PRINFO(TPRINT,TSTOP,NFI,DELT)
 !
 !     ==================================================================
 !     ==================================================================
@@ -869,18 +869,19 @@ END MODULE STOPIT_MODULE
       RETURN
       END
 !
-!     ..................................................................
-      SUBROUTINE PRINFO(TPRINT,NFI,DELT)
-!     ******************************************************************
-!     **  REPORTS ON THE PROCESS OF THE SIMULATION AND INVOKES        ** 
-!     **  ANALYSIS ROUTINES                                           ** 
-!     **                                                              ** 
-!     **  PRINFO IS CALLED ONCE PER TIMESTEP                          ** 
-!     ******************************************************************
+!     ..........................................................................
+      SUBROUTINE PRINFO(TPRINT,TLAST,NFI,DELT)
+!     **************************************************************************
+!     **  REPORTS ON THE PROCESS OF THE SIMULATION AND INVOKES                **
+!     **  ANALYSIS ROUTINES                                                   **
+!     **                                                                      **
+!     **  PRINFO IS CALLED ONCE PER TIMESTEP                                  **
+!     **************************************************************************
       IMPLICIT NONE
-      LOGICAL(4),INTENT(IN) :: TPRINT
-      INTEGER(4),INTENT(IN) :: NFI
-      REAL(8)   ,INTENT(IN) :: DELT
+      LOGICAL(4),INTENT(IN) :: TPRINT  ! flag for extensive printout
+      LOGICAL(4),INTENT(IN) :: Tlast   ! flag for one-time execution
+      INTEGER(4),INTENT(IN) :: NFI     ! time step number
+      REAL(8)   ,INTENT(IN) :: DELT    ! rime step
       LOGICAL(4),SAVE       :: TFIRST=.TRUE.
       INTEGER(4)            :: NAT
       INTEGER(4)            :: NFILO
@@ -926,7 +927,7 @@ END MODULE STOPIT_MODULE
       LOGICAL(4)            :: TCOSMO
       REAL(8)               :: EKINCOSMO,EPOTCOSMO
       character(8)          :: FFTYPE
-!     ******************************************************************
+!     **************************************************************************
                               CALL TRACE$PUSH('PRINFO')
       TIME=DBLE(NFI)*DELT
       CALL ATOMLIST$NATOM(NAT)
@@ -938,13 +939,18 @@ END MODULE STOPIT_MODULE
 !     ==================================================================
       IF(TPRINT) CALL HYPERFINE$PRINT
 !   
-!     ==================================================================
-!     ==   PLOT WAVE FUNCTIONS, DENSITIES                             ==
-!     ==================================================================
-      IF(TPRINT) THEN 
+!     ==========================================================================
+!     ==  PLOT WAVE FUNCTIONS, DENSITIES                                      ==
+!     ==========================================================================
+      IF(TLAST) THEN 
+        IF(.NOT.TPRINT) THEN
+          CALL ERROR$MSG('CAUTION: GRAPHICS CALLED WITH TPRINT=.FALSE.')
+          CALL ERROR$STOP('PRINFO')
+        END IF
+                             CALL TRACE$PASS('BEFORE GRAPHICS$PLOT')
         CALL GRAPHICS$PLOT
-      END IF
                              CALL TRACE$PASS('AFTER GRAPHICS$PLOT')
+      END IF
 !   
 !     ==================================================================
 !     ==   THE FOLLOWING IS ONLY EXECUTED ON THE FIRST NODE           ==
