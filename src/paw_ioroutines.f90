@@ -662,6 +662,7 @@ CALL TRACE$PASS('DONE')
 !     ==  READ BLOCK !ANALYSE!OPTIC                                   ==
 !     ==================================================================
       CALL READIN_ANALYSE_OPTIC(LL_CNTL)
+      call READIN_ANALYSE_OPTEELS(LL_CNTL)
 !
 !     ==================================================================
 !     ==  CHECK TIME TO STOP                                          ==
@@ -2636,6 +2637,163 @@ CALL TRACE$PASS('DONE')
         CALL LINKEDLIST$EXISTD(LL_CNTL,'IMAG',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'IMAG',1,TIMAG)
         CALL GRAPHICS$SETL4('IMAG',TIMAG)
+!
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+      ENDDO
+                           CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE READIN_ANALYSE_OPTEELS(LL_CNTL_)
+!     **************************************************************************
+!     **  INPUT DATA FOR OPTICAL ABSORPTION AND EELS SPECTRA                  **
+!     **  currently used to set the opteels object                            **
+!     **                                                                      **
+!     **  FILE=FILENAME                                                       **
+!     **                 MATTHE A. UIJTTEWAAL 2011 (ADJUSTED P.BLOECHL 2012)  **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_ !FROM IO_MODULE
+      TYPE(LL_TYPE)            :: LL_CNTL
+      LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: TCH
+      LOGICAL(4)               :: ORIG
+      INTEGER(4)               :: NOPT
+      INTEGER(4)               :: IOPT
+      INTEGER(4)               :: NEELS
+      INTEGER(4)               :: IEELS
+      INTEGER(4)               :: IC
+      INTEGER(4)               :: NR3
+      INTEGER(4)               :: NI,NF !BI,BF
+      CHARACTER(256)           :: CH256
+      CHARACTER(32)            :: CH32
+      CHARACTER(8)             :: CH8
+      REAL(8)                  :: svar
+      REAL(8)                  :: ZI,ZF
+      REAL(8)                  :: EMAX
+      REAL(8)                  :: EV     ! electron volt
+      REAL(8)                  :: ANGSTROM  ! angstrom
+!     **************************************************************************
+                           CALL TRACE$PUSH('READIN_ANALYSE_OPT')  
+      CALL CONSTANTS$GET('EV',EV)
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
+      LL_CNTL=LL_CNTL_
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ANALYSE')
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'EELS',NEELS)
+      CALL OPTEELS$SETI4('NEELS',NEELS)
+      DO IEELS=1,NEELS
+        CALL LINKEDLIST$SELECT(LL_CNTL,'EELS',IEELS)
+        CALL OPTEELS$SETI4('IEELS',IEELS)
+!
+!       == ATOM NAME FOR EELS ==================================================
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'ATOM',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('!CONTROL!ANALYSE!EELS:ATOM IS A MANDATORY INPUT')
+          CALL ERROR$STOP('READIN_ANALYSE_OPTEELS')
+        END IF
+        CALL LINKEDLIST$GET(LL_CNTL,'ATOM',1,CH32)
+        CALL OPTEELS$SETCH('ATOM',CH32)
+!
+!       == SHELL INDEX FOR EELS ================================================
+        IC=1 !DEFAULT 1S
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'IC',1,TCHK)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'IC',1,IC) 
+        CALL OPTEELS$SETI4('IC',IC)
+!
+!       == SHELL INSTRUMENTAL BROADENING =======================================
+        SVAR=0.D0
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'BROADENING[EV]',1,TCHK)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'BROADENING[EV]',1,SVAR) 
+        SVAR=SVAR*EV
+        CALL OPTEELS$SETR8('BROADENING',SVAR)
+!
+!       == SET FILENAME FOR THE DATA============================================
+        WRITE(CH256,*)IC
+        CH256=TRIM(ADJUSTL(CH32))//'_IC'//TRIM(ADJUSTL(CH256))//'.EELS'
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',1,TCHK)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,CH256)
+        CALL OPTEELS$SETCH('FILE',TRIM(CH256))
+!
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+      enddo
+!
+!     ==========================================================================
+!     ==========================================================================
+!     ==========================================================================
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'OPT',NOPT)
+      CALL OPTEELS$SETI4('NOPT',NOPT)
+      DO IOPT=1,NOPT
+        CALL LINKEDLIST$SELECT(LL_CNTL,'OPT',IOPT)
+        CALL OPTEELS$SETI4('IOPT',IOPT)
+!
+!       == SET FILENAME FOR THE DATA============================================
+!       WRITE(CH256,*)IOPT ???
+!       CH256=ADJUSTL(CH256)
+        CH256='OPT'//ACHAR(IOPT)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',1,TCHK)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,CH256)
+        CALL OPTEELS$SETCH('FILE',TRIM(CH256))
+!
+!       == GET MAX.EXC.EN. =====================================================
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'EMAX[EV]',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('MAX. EXCITATION ENERGY (EMAX[EV]) IS MANDATORY')
+          CALL ERROR$STOP('READIN_ANALAYSE_OPT')
+        END IF
+        CALL LINKEDLIST$GET(LL_CNTL,'EMAX[EV]',1,EMAX)
+        emax=emax*ev
+        IF(EMAX.LT.0.) THEN
+          CALL ERROR$MSG('EXCITATION ENERGY SHOULD BE POSITIVE')
+          CALL ERROR$STOP('READIN_ANALAYSE_OPT')
+        END IF
+        CALL OPTEELS$SETR8('EMAX',EMAX)
+
+!       == ORIGIN CENTERED STATES? =============================================
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
+        TCH=.TRUE.
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,TCH)
+        CALL OPTEELS$SETL4('ORIG',TCH)
+
+!       == QUADRUPOLE CONTRIBUTION? ============================================
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'Q',1,TCHK)
+        TCH=.FALSE.
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'Q',1,TCH)
+        CALL OPTEELS$SETL4('QUAD',TCH)
+
+!       == RESTRICT OPT TO SPECIFIED Z-RANGE ===================================
+        ZI=-100. !DEFAULT NO RESTRICTION
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'ZI[AA]',1,TCHK)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'ZI[AA]',1,ZI) 
+        ZI=ZI*ANGSTROM !INPUT IN ANGSTROM!!
+        CALL OPTEELS$SETR8('ZI',ZI)
+!
+        ZF=100. !DEFAULT NO RESTRICTION
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'ZF[A]',1,TCHK)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'ZF[A]',1,ZF)
+        ZF=ZF*ANGSTROM
+        CALL OPTEELS$SETR8('ZF',ZF)
+!
+!       == restrict opt to specified group =====================================
+        CH256='ALL' !DEFAULT NO RESTRICTION
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'GROUP',1,TCHK) !RESTRICT OPT TO GROUP!
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'GROUP',1,CH256) 
+        CALL OPTEELS$SETCH('GROUP',CH256)
+!
+!       == ATOM NAME FOR EELS ==================================================
+        CH32='' !DEFAULT NOT SELECTED
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'ATOM',1,TCHK)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'ATOM',1,CH32)
+        CALL OPTEELS$SETCH('ATOM',CH32)
+
+!       == SHELL INDEX FOR EELS ================================================
+        IC=1 !DEFAULT 1S
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'IC',1,TCHK)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'IC',1,IC) !CHAR OR INT??
+        CALL OPTEELS$SETI4('IC',IC)
 !
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO

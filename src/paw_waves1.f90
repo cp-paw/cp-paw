@@ -541,7 +541,7 @@ END MODULE WAVES_MODULE
             ENDDO
           ENDDO             
         END IF
-        IF(LMNX.GT.LEN) THEN
+        IF(LMNX.NE.LEN) THEN
           CALL ERROR$MSG('SIZE INCONSISTENT')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('WAVES$GETR8A')
@@ -1837,12 +1837,12 @@ print*,'==================band mishatches========================='
           ENDDO
           THIS%EXPECTVAL(:)=EIG(1:NB,IKPT,ISPIN)
 CALL TIMESTEP$GETI4('ISTEP',Isvar)
-DO IB=1,NBH-1
-  IF(EIG(IB+1,IKPT,ISPIN).LT.EIG(IB,IKPT,ISPIN)) THEN
-    WRITE(*,FMT='("BAND MISMATCH:",I10,3I5,2F10.5)')ISVAR,IB,IKPT,ISPIN &
-&                                              ,EIG(IB:IB+1,IKPT,ISPIN)
-  END IF
-ENDDO
+!!$DO IB=1,NBH-1
+!!$  IF(EIG(IB+1,IKPT,ISPIN).LT.EIG(IB,IKPT,ISPIN)) THEN
+!!$    WRITE(*,FMT='("BAND MISMATCH:",I10,3I5,2F10.5)')ISVAR,IB,IKPT,ISPIN &
+!!$&                                              ,EIG(IB:IB+1,IKPT,ISPIN)
+!!$  END IF
+!!$ENDDO
         ENDDO
       ENDDO
       DEALLOCATE(HAMILTON)

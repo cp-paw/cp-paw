@@ -87,7 +87,7 @@
       CHARACTER(*),INTENT(IN) :: NAME
       CHARACTER(*),INTENT(IN) :: VALUE
 !     ******************************************************************
-      WRITE(NFIL,FMT='(55("."),": ",T1,A,T58,A10," ",A)')NAME,TRIM(VALUE)
+      WRITE(NFIL,FMT='(55("."),": ",T1,A,T58,A)')NAME,TRIM(VALUE)
       RETURN
       END
 !

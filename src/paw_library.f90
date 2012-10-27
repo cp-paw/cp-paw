@@ -44,33 +44,46 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 ==
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 ==
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN)  :: IPOS
       CHARACTER(*),INTENT(OUT) :: ARG
       INTEGER                  :: IPOSSTD
+      integer                  :: leng
+      integer                  :: st
 !     **************************************************************************
-#IF DEFINED(CPPVAR_COMPILER_G95)
-      CALL LIB_G95_GETARG(IPOS,ARG)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      CALL LIB_IFC_GETARG(IPOS,ARG)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-      CALL LIB_IFC7_GETARG(IPOS,ARG)
-#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-      CALL LIB_ABSOFT_GETARG(IPOS,ARG)
-#ELIF DEFINED(CPPVAR_COMPILER_XLF)
-      CALL LIB_XLF_GETARG(IPOS,ARG)
-#ELIF DEFINED(CPPVAR_COMPILER_PGI)
-      CALL LIB_PGI_GETARG(IPOS,ARG)
-#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-      CALL LIB_PATHSCALE_GETARG(IPOS,ARG)
-#ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_SUN_GETARG(IPOS,ARG)
-#ELSE    
-      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
-      CALL GETARG(IPOSSTD,ARG)
-#ENDIF
+!     == USE FORTRAN 2003 INTRINSIC SUBROUTINE
+      CALL GET_COMMAND_ARGUMENT(IPOS,ARG,LENG,ST)
+      IF(ST.NE.0) THEN
+        CALL ERROR$MSG('FAILURE COLLECTING COMMAND LINE ARGUMENT')
+        CALL ERROR$I4VAL('STATUS',ST)
+        CALL ERROR$I4VAL('POSITION',IPOS)
+        CALL ERROR$I4VAL('ACTUAL LENGTH OF ARGUMENT',LENG)
+        CALL ERROR$STOP('LIB$GETARG')
+      END IF
+!
+!     == use the commented lines below if fortran 2003 is not implemented
+!!$#IF DEFINED(CPPVAR_COMPILER_G95)
+!!$      CALL LIB_G95_GETARG(IPOS,ARG)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+!!$      CALL LIB_IFC_GETARG(IPOS,ARG)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!!$      CALL LIB_IFC7_GETARG(IPOS,ARG)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!!$      CALL LIB_ABSOFT_GETARG(IPOS,ARG)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!!$      CALL LIB_XLF_GETARG(IPOS,ARG)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!!$      CALL LIB_PGI_GETARG(IPOS,ARG)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
+!!$      CALL LIB_PATHSCALE_GETARG(IPOS,ARG)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!!$      CALL LIB_SUN_GETARG(IPOS,ARG)
+!!$#ELSE    
+!!$      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+!!$      CALL GETARG(IPOSSTD,ARG)
+!!$#ENDIF
       RETURN
       END
 !
@@ -82,33 +95,38 @@
       IMPLICIT NONE
       INTEGER(4),INTENT(OUT) :: NARGS
 !     **************************************************************************
-#IF DEFINED(CPPVAR_COMPILER_G95)
-      CALL LIB_G95_NARGS(NARGS)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      CALL LIB_IFC_NARGS(NARGS)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-      CALL LIB_IFC7_NARGS(NARGS)
-#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-      CALL LIB_ABSOFT_NARGS(NARGS)
-#ELIF DEFINED(CPPVAR_COMPILER_XLF)
-      CALL LIB_XLF_NARGS(NARGS)
-#ELIF DEFINED(CPPVAR_COMPILER_PGI)
-      CALL LIB_PGI_NARGS(NARGS)
-#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-      CALL LIB_PATHSCALE_NARGS(NARGS)
-#ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_SUN_NARGS(NARGS)
-#ELSE          
-      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
-      NARGS=IARGC()
-#ENDIF
+!
+!     == use fortran 2003 intrinsic function ===================================
+      NARGS=COMMAND_ARGUMENT_COUNT()
+!
+!     == use commented lines if Fortran 2003 is not available
+!!$#IF DEFINED(CPPVAR_COMPILER_G95)
+!!$      CALL LIB_G95_NARGS(NARGS)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+!!$      CALL LIB_IFC_NARGS(NARGS)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!!$      CALL LIB_IFC7_NARGS(NARGS)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!!$      CALL LIB_ABSOFT_NARGS(NARGS)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!!$      CALL LIB_XLF_NARGS(NARGS)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!!$      CALL LIB_PGI_NARGS(NARGS)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
+!!$      CALL LIB_PATHSCALE_NARGS(NARGS)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!!$      CALL LIB_SUN_NARGS(NARGS)
+!!$#ELSE          
+!!$      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+!!$      NARGS=IARGC()
+!!$#ENDIF
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GETENV(NAME,VAL)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 ==
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 ==
 !     **************************************************************************
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: NAME
@@ -116,24 +134,6 @@
       INTEGER                  :: LENG
       INTEGER                  :: ST
 !     **************************************************************************
-#IF DEFINED(CPPVAR_COMPILER_G95)
-      CALL LIB_G95_GETENV(NAME,VAL)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      CALL LIB_IFC_GETENV(NAME,VAL)
-!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-!!$      CALL LIB_IFC7_GETENV(NAME,VAL)
-#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-      CALL LIB_ABSOFT_GETENV(NAME,VAL)
-!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
-!!$      CALL LIB_XLF_GETENV(NAME,VAL)
-!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
-!!$      CALL LIB_PGI_GETENV(NAME,VAL)
-!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-!!$      CALL LIB_PATHSCALE_GETENV(NAME,VAL)
-!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
-!!$      CALL LIB_SUN_GETENV(NAME,VAL)
-#ELSE    
-      ! NO EXPLICIT INTERFACE; USE  FORTRAN 2003 INTRINSIC FUNCTION
       CALL GET_ENVIRONMENT_VARIABLE(NAME,VAL,LENG,ST)
       IF(ST.NE.0) THEN
         CALL ERROR$MSG('FAILURE COLLECTING ENVIORONMENT VARIABLE')
@@ -143,8 +143,38 @@
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
         END IF
         CALL ERROR$STOP('LIB$GETENV')
-      END IF 
-#ENDIF
+      end if
+!
+!     == use commented lines if Fortran 2003 is not available
+! #IF DEFINED(CPPVAR_COMPILER_G95)
+!       CALL LIB_G95_GETENV(NAME,VAL)
+! #ELIF DEFINED(CPPVAR_COMPILER_IFC)
+!       CALL LIB_IFC_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!!$      CALL LIB_IFC7_GETENV(NAME,VAL)
+! #ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!       CALL LIB_ABSOFT_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!!$      CALL LIB_XLF_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!!$      CALL LIB_PGI_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
+!!$      CALL LIB_PATHSCALE_GETENV(NAME,VAL)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!!$      CALL LIB_SUN_GETENV(NAME,VAL)
+!!$#ELSE    
+!!$      ! NO EXPLICIT INTERFACE; USE  FORTRAN 2003 INTRINSIC FUNCTION
+!!$      CALL GET_ENVIRONMENT_VARIABLE(NAME,VAL,LENG,ST)
+!!$      IF(ST.NE.0) THEN
+!!$        CALL ERROR$MSG('FAILURE COLLECTING ENVIORONMENT VARIABLE')
+!!$        IF(ST.EQ.11) THEN
+!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
+!!$        ELSE IF(ST.EQ.-1) THEN
+!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
+!!$        END IF
+!!$        CALL ERROR$STOP('LIB$GETENV')
+!!$      END IF 
+!!$#ENDIF
       RETURN
       END
 !
@@ -305,7 +335,7 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC_GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 ==
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 ==
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
 !     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
@@ -461,7 +491,7 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE IFC COMPILER  (IFC7 AND EARLIER)         **
 !     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC7. THERE IS A CHANGE TO    **
@@ -607,7 +637,7 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
@@ -639,7 +669,7 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_GETENV(NAME,VAL)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
 !     **************************************************************************
@@ -790,7 +820,7 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_ABSOFT_GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE ABSOFT COMPILER                          **
 !     **************************************************************************
@@ -953,7 +983,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_XLF_GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE XLF COMPILER                             **
 !     **************************************************************************
@@ -1093,7 +1123,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_PGI_GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
 !     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
@@ -1242,7 +1272,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_PATHSCALE_GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
 !     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
@@ -1387,7 +1417,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_SUN_GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I'TH COMMAND LINE ARGUMENT                 **
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
 !     **                                                                      **
 !     **  SPECIFIC INTERFACE FOR THE SUN COMPILER                             **
 !     **************************************************************************

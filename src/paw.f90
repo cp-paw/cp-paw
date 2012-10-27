@@ -1,9 +1,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 1169 $'
+character(256):: VERrev='$LastChangedRevision: 1170 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2012-10-09 19:49:18 +0200 (Di, 09. Okt 2012) $'
+character(256):: VERdat='$LastChangedDate: 2012-10-27 12:02:08 +0200 (Sa, 27. Okt 2012) $'
 end Module version_module
 !
 !     ..................................................................
@@ -200,7 +200,6 @@ end Module version_module
 !     ==  ITERATION CONTROL (PROPER STOP ETC. )                       ==
 !     ==================================================================
       NFI=NFI+1
-      IF(TSTOP) TLAST=.TRUE.
       CALL STOPIT$GETL4('STOP',TSTOP)
       IF(TSTOP) TLAST=.TRUE.
       IF(NFI.GE.NFI0+NOMORE) TLAST=.TRUE.
@@ -208,6 +207,7 @@ end Module version_module
 
       CALL HYPERFINE$SETL4('WAKE',TPRINT)
       CALL GRAPHICS$SETL4('WAKE',TPRINT)
+      CALL OPTEELS$SETL4('ON',TLAST)
       CALL CORE$SETL4('ON',TLAST)
 !
 !     ==================================================================
@@ -942,15 +942,22 @@ END MODULE STOPIT_MODULE
 !     ==========================================================================
 !     ==  PLOT WAVE FUNCTIONS, DENSITIES                                      ==
 !     ==========================================================================
+print*,'tlast=',tlast
       IF(TLAST) THEN 
         IF(.NOT.TPRINT) THEN
           CALL ERROR$MSG('CAUTION: GRAPHICS CALLED WITH TPRINT=.FALSE.')
           CALL ERROR$STOP('PRINFO')
         END IF
                              CALL TRACE$PASS('BEFORE GRAPHICS$PLOT')
-        CALL GRAPHICS$PLOT
+        CALL GRAPHICS$PLOT()
                              CALL TRACE$PASS('AFTER GRAPHICS$PLOT')
       END IF
+!
+!     ==========================================================================
+      if(tprint) then
+!       == opteels object is switched on only in the last iteration ============
+        call OPTEELS$PLOT()
+      end if
 !   
 !     ==================================================================
 !     ==   THE FOLLOWING IS ONLY EXECUTED ON THE FIRST NODE           ==

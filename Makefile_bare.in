@@ -235,6 +235,7 @@ OBJECTS3 = \
            ${OBJDIR}/paw_vext.o \
            ${OBJDIR}/paw_vdw.o \
            ${OBJDIR}/paw_ci.o \
+           ${OBJDIR}/paw_opteels.o \
 #           ${OBJDIR}/paw_localize.o  #removed
 #           ${OBJDIR}/paw_pdos.o  #into library
 #          ${OBJDIR}/paw_optic.o \   # removed
