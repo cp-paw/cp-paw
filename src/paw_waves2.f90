@@ -844,7 +844,6 @@ END IF
           IPRO=IPRO+MAP%LMNX(ISP)
           CYCLE
         END IF
-        call setup$iselect(isp)
         LMNX=MAP%LMNX(ISP)
 !
 !       == FOLD DOWN INDEX ARRAY ===============================================
@@ -854,8 +853,10 @@ END IF
 !       == FOLD DOWN INDEX ARRAY FOR PROJ2 AND MULTIPLY WITH DOVER =============
         LNX=MAP%LNX(ISP)
         ALLOCATE(DOVER(LNX,LNX))
-        CALL SETUP$GETR8A('DO',LNX*LNX,DOver) 
-                                     !former CALL SETUP$1COVERLAP(ISP,LNX,DOVER)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8A('DO',LNX*LNX,DOVER) 
+        CALL SETUP$ISELECT(0)
+                                     !FORMER CALL SETUP$1COVERLAP(ISP,LNX,DOVER)
 !
         IPRO1=IPROX
         DO LN1=1,LNX
@@ -875,7 +876,6 @@ END IF
         IPRO=IPRO+LMNX
         IPROX=IPROx+LMNX
       ENDDO
-      CALL SETUP$ISELECT(0)
 !
 !     ==========================================================================     
 !     ==  MAT(I,J)= SUM_{K,L} <PSI_I|P_K>   * [ DO(K,L)*<P_L|PSI_J>]          ==
