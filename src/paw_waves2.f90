@@ -99,8 +99,8 @@ IF(1.EQ.1) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
       &          ,THIS%PROJ(:,:,IPRO:IPRO+LMNX-1),OPROJ(:,:,IPRO:IPRO+LMNX-1))
             DEALLOCATE(DO)
             IPRO=IPRO+LMNX
+            call setup$unselect()
           ENDDO
-          call setup$iselect(0)
 !
 !         ======================================================================
 !         ==  ADD  |PSI>+|P>DO<P|PSI>                                         ==
@@ -196,6 +196,7 @@ END IF
               CALL SETUP$GETFOFG('PRO',.FALSE.,LN,NGL,G2,CELLVOL,GSET%PRO(1,IND))
               CALL SETUP$GETFOFG('PRO',.TRUE.,LN,NGL,G2,CELLVOL,GSET%DPRO(1,IND))
             ENDDO
+            CALL SETUP$unSELECT()
           ENDDO
           DEALLOCATE(G2)
 !

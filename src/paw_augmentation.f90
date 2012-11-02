@@ -333,6 +333,7 @@ END MODULE AUGMENTATION_MODULE
       CALL SETUP$GETR8A('DEKIN',LNX*LNX,DTKIN1)
       CALL AUGMENTATION_EXPANDDA(LNX,LMNX,LOX,NDIMD,DTKIN1,DTKIN)
       DEALLOCATE(DTKIN1)
+      CALL SETUP$UNSELECT()
 !
 !     ==================================================================
 !     ==  SELF TEST                                                   ==
@@ -391,7 +392,9 @@ END MODULE AUGMENTATION_MODULE
 !     ================================================================
 !     ==  NEW SOFT CORE                                             ==
 !     ================================================================
+      CALL SETUP$ISELECT(ISP)
       CALL SETUP$GETCH('SOFTCORETYPE',SOFTCORETYPE)
+      CALL SETUP$unSELECT()
       IF(SOFTCORETYPE.EQ.'NONE') THEN
         DECORE=0.D0
       ELSE 
@@ -411,7 +414,7 @@ END MODULE AUGMENTATION_MODULE
       ALLOCATE(AEHPOT(NR,LMRX))
       CALL AUGMENTATION_PSHARTREE(GID,NR,LMRX,PSCORE,PSRHO(:,:,1) &
      &                 ,VADD,RCSM,QLM,VQLM1,RHOB,PSHPOT,PSEHARTREE)
-      CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AECORE,AERHO(:,:,1) &
+      CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AEZ,AECORE,AERHO(:,:,1) &
      &                               ,VQLM1,RHOB,AEHPOT,AEEHARTREE)
 !
 !     ================================================================
@@ -758,8 +761,6 @@ STOP
       REAL(8)   ,ALLOCATABLE:: GRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE:: VRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE:: VGRHO(:,:,:)
-      REAL(8)   ,ALLOCATABLE:: B(:,:)    
-      REAL(8)   ,ALLOCATABLE:: C(:,:)    
       REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
       REAL(8)               :: XVAL(NR,5,LMRX)
       REAL(8)               :: XDER(NR,5,LMRX)
@@ -1965,7 +1966,7 @@ STOP
       END
 !
 !     ..................................................................
-      SUBROUTINE AUGMENTATION_AEHARTREE(GID,NR,LMRX,RHOC,AERHO &
+      SUBROUTINE AUGMENTATION_AEHARTREE(GID,NR,LMRX,AEZ,RHOC,AERHO &
      &                                 ,VQLM,RHOB,AEPOT,AEEH)
 !     ******************************************************************
 !     **  ELECTROSTATIC ENERGY OF THE ALL-ELECTRON ONE-CENTER DENSITY **
@@ -1976,6 +1977,7 @@ STOP
       INTEGER(4) ,INTENT(IN) :: GID
       INTEGER(4) ,INTENT(IN) :: NR
       INTEGER(4) ,INTENT(IN) :: LMRX
+      REAL(8)    ,INTENT(IN) :: AEZ        ! ATOMIC NUMBER
       REAL(8)    ,INTENT(IN) :: RHOC(NR)   ! CORE DENSITY
       REAL(8)    ,INTENT(IN) :: AERHO(NR,LMRX)
       REAL(8)    ,INTENT(IN) :: VQLM(LMRX)
@@ -1988,7 +1990,6 @@ STOP
       REAL(8)                :: AEE(NR)  ! ENERGY DENSITY
       REAL(8)                :: SVAR
       REAL(8)                :: EEXT
-      REAL(8)                :: AEZ
       REAL(8)                :: PI,Y0
       INTEGER(4)             :: LM
       INTEGER(4)             :: L
@@ -2008,7 +2009,7 @@ STOP
 !     ==   AND VALENCE-NUCLEUS INTERACTION                            ==
 !     ==================================================================
       CALL RADIAL$POISSON(GID,NR,0,RHOC,POT)
-      CALL SETUP$GETR8A('NUCPOT',NR,AUX)
+      CALL RADIAL$NUCPOT(GID,NR,AEZ,aux)
       POT(:)  = POT(:)+AUX(:)
       AEE(:)    = POT(:)* AERHO(:,1)
       AEPOT(:,1)= AEPOT(:,1)+POT(:)
@@ -2049,7 +2050,6 @@ STOP
         AEE(:)=AEE(:)+AERHO(:,LM)*POT(:)
         IF(L.EQ.0)AEE(:)=AEE(:)+RHOC(:)*POT(:)
       ENDDO
-      CALL SETUP$GETR8('AEZ',AEZ)
       EEXT=-VQLM(1)*Y0*AEZ  ! WILL BE ADDED TO THE TOTAL ENERGY
 !
 !     ==================================================================
@@ -2630,7 +2630,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
         CALL SETUP$GETI4A('LOX',LNX,LOX)
         ALLOCATE(AEPHI(NR,LNX))
         CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
-        CALL SETUP$ISELECT(0)
+        CALL SETUP$unSELECT()
 !
 !       ========================================================================
 !       == SPECIFY SHAPE OF THE EXTERNAL POTENTIAL                            ==
@@ -3009,6 +3009,10 @@ END IF
       LOGICAL(4) ,PARAMETER  :: TPR=.FALSE.
       INTEGER(4)             :: NFILO
 !     ******************************************************************
+      CALL ERROR$MSG('THIS ROUTINE IS APPARENTLY NOT USED')
+      CALL ERROR$MSG('IT IS MARKED FOR DELETION')
+      CALL ERROR$STOP('AUGMENTATION_HARTREE')
+
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==================================================================
@@ -3030,7 +3034,7 @@ END IF
       PSE(:)=0.D0
       AEDMU(:)=0.D0
       CALL RADIAL$POISSON(GID,NR,0,RHOCOR,AEDMU)
-      CALL SETUP$GETR8A('NUCPOT',NR,AUX1)
+      CALL RADIAL$NUCPOT(GID,NR,AEZ,aux1)
       AEDMU(:)  = AEDMU(:)+AUX1(:)
       AEE(:)    = AEDMU(:)* AERHO(:,1) *R(:)**2
       AEPOT(:,1)= AEPOT(:,1)+AEDMU(:)

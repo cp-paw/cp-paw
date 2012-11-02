@@ -224,12 +224,12 @@ END MODULE SETUP_MODULE
         NULLIFY(THIS)
       ELSE 
 !       ==  SELECT =============================================================
-!        IF(SELECTED) THEN
-!          CALL ERROR$MSG('SAFEGUARD FUNCTION:')
-!          CALL ERROR$MSG('ANOTHER SETUP IS ALREADY SELECTED:')
-!          CALL ERROR$MSG('UNSELECT BEFORE SELECT')
-!          CALL ERROR$STOP('SETUP$ISELECT')
-!        END IF
+        IF(SELECTED) THEN
+          CALL ERROR$MSG('SAFEGUARD FUNCTION:')
+          CALL ERROR$MSG('ANOTHER SETUP IS ALREADY SELECTED:')
+          CALL ERROR$MSG('UNSELECT BEFORE SELECT')
+          CALL ERROR$STOP('SETUP$ISELECT')
+        END IF
         THIS=>FASTACCESS(I)%THIS
         SELECTED=.TRUE.
       END IF
@@ -274,6 +274,13 @@ END MODULE SETUP_MODULE
 !!$      INTEGER(4)  ,PARAMETER  :: NG=250
       REAL(8)                 :: DEX
 !     **************************************************************************
+      IF(SELECTED) THEN
+        CALL ERROR$MSG('SAFEGUARD FUNCTION:')
+        CALL ERROR$MSG('CANNOT SELECT A SETUP WHILE ANOTHER ONE IS SELECTED')
+        CALL ERROR$CHVAL('SELECTED ID',THIS%ID)
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP$SELECT')
+      END IF
 !
 !     ==========================================================================
 !     == CHECK IF ALREADY SELECTED                                            ==
@@ -2342,6 +2349,7 @@ PRINT*,'SETUP REPORT FILE WRITTEN'
         ELSE
           CALL SETUP_READ
         END IF
+        CALL SETUP$UNSELECT()
       ENDDO
       DEALLOCATE(TNEW)
                             CALL TRACE$POP

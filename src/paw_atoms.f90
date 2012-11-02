@@ -1,5 +1,5 @@
 !........1.........2.........3.........4.........5.........6.........7.........8
-MODULE atoms_module
+MODULE ATOMS_MODULE
 !*******************************************************************************
 !**                                                                           **
 !**  NAME: ATOMS                                                              **
@@ -24,9 +24,9 @@ MODULE atoms_module
 !**    NEXT: 'PROPAGATED WITHOUT CONSTRAINTS'                                 **
 !**                                                                           **
 !******************PETER E. BLOECHL, IBM RESEARCH LABORATORY (1996)*************
-real(8)          :: DELT=0.D0      ! TIME STEP
+REAL(8)          :: DELT=0.D0      ! TIME STEP
 REAL(8)          :: AMPRE=0.D0     ! TARGET TEMPERATURE FOR RANDOMIZATION
-REAL(8)          :: ANNER=0.D0     ! FRIcTION
+REAL(8)          :: ANNER=0.D0     ! FRICTION
 LOGICAL(4)       :: TSTOP=.FALSE.  ! ZERO INITIAL VELOCITIES
 LOGICAL(4)       :: TDYN=.TRUE.    ! ATOMIC MOTION IS SWITCHED OFF
 LOGICAL(4)       :: TRANDOMIZE=.FALSE.  ! RANDOMIZE INITIAL VELOCITIES
@@ -214,7 +214,7 @@ END MODULE ATOMS_MODULE
       INTEGER(4)            :: ISP,IAT,ISP1
       CHARACTER(LEN=100)    :: STRING
       REAL(8)               :: U         ! MASS UNIT C12/12
-      REAL(8)               :: angstrom  ! angstrom/abohr
+      REAL(8)               :: ANGSTROM  ! ANGSTROM/ABOHR
       INTEGER(4)            :: NTASKS,THISTASK
       REAL(8)               :: EFFEMASS(NAT)
       REAL(8)               :: EMASS,EMASSCG2
@@ -230,7 +230,7 @@ END MODULE ATOMS_MODULE
       CALL CELL$GETR8A('T(0)',9,RBAS)
 !
       CALL REPORT$TITLE(NFIL,'ATOMLIST REPORT')
-      WRITE(NFIL,FMT='("T1[angstrom]=",3F10.6/"T2[angstrom]=",3F10.6/"T3[angstrom]=",3F10.6)')RBAS/angstrom
+      WRITE(NFIL,FMT='("T1[ANGSTROM]=",3F10.6/"T2[ANGSTROM]=",3F10.6/"T3[ANGSTROM]=",3F10.6)')RBAS/ANGSTROM
       WRITE(STRING,FMT='(T1,A,T15,A,T45,A,T53,A,T65,A,T80,A)') &
      &     'NAME','POSITION[ANGSTROM]','M[U]','MPSI_EFF[U]','Q[E]' &
      &    ,'FORCE[H/ABOHR]'
@@ -245,7 +245,7 @@ END MODULE ATOMS_MODULE
         STRING=' '
         WRITE(STRING(1:9),FMT='(A)')NAME(IAT)(1:9)
         WRITE(STRING(10:42),FMT='("(",F9.5,",",F9.5,",",F9.5,")")') &
-     &                                   R0(:,IAT)/angstrom
+     &                                   R0(:,IAT)/ANGSTROM
         WRITE(STRING(43:52),FMT='(F8.4)')RMASS(IAT)/U
         WRITE(STRING(53:64),FMT='(F8.4)')EFFEMASS(IAT)/U
         WRITE(STRING(63:72),FMT='(F8.5)')-CHARGE(IAT)
@@ -269,7 +269,7 @@ END MODULE ATOMS_MODULE
       REAL(8)              :: EFFEMASS(NAT)
       REAL(8)              :: EMASS,EMASSCG2
       REAL(8)              :: SVAR
-      REAL(8)              :: protonm
+      REAL(8)              :: PROTONM
       LOGICAL(4)           :: TERR,TCHK
       INTEGER(4)           :: NFREE
 !     **************************************************************************
@@ -303,18 +303,18 @@ END MODULE ATOMS_MODULE
 !     ==========================================================================
       TERR=.FALSE.
       DO IAT=1,NAT
-        IF(EFFEMASS(IAT).GT.0.7d0*RMASS(IAT)) THEN
+        IF(EFFEMASS(IAT).GT.0.7D0*RMASS(IAT)) THEN
           IF(.NOT.TERR) THEN
             CALL ERROR$MSG('EFFECTIVE MASS OF WAVE FUNCTIONS ...')
             CALL ERROR$MSG('... MUST ACCOUNT LESS THAN 70% OF TOTAL MASS.')
-            CALL ERROR$MSG('REDUCE WAVE FUNCTION MASS or increase nuclear mass')
+            CALL ERROR$MSG('REDUCE WAVE FUNCTION MASS OR INCREASE NUCLEAR MASS')
             TERR=.TRUE.
           END IF
           CALL CONSTANTS('U',PROTONM)
           CALL ERROR$CHVAL('ATOM',NAME(IAT))
           CALL ERROR$R8VAL('MASS',RMASS(IAT))
-          CALL ERROR$R8VAL('REDUCED MASS[u]',(RMASS(IAT)-EFFEMASS(IAT))/protonm)
-          CALL ERROR$R8VAL('EFFECTIVE MASS[u]',EFFEMASS(IAT)/protonm)
+          CALL ERROR$R8VAL('REDUCED MASS[U]',(RMASS(IAT)-EFFEMASS(IAT))/PROTONM)
+          CALL ERROR$R8VAL('EFFECTIVE MASS[U]',EFFEMASS(IAT)/PROTONM)
         END IF
       ENDDO
       IF(TERR) THEN
@@ -353,7 +353,7 @@ END MODULE ATOMS_MODULE
 !!$          CALL ERROR$STOP('ATOMS$INITIALIZE')
         END IF
       END IF
-      Stateofthis='INITIALIZED'
+      STATEOFTHIS='INITIALIZED'
                                CALL TRACE$POP
       RETURN
       END
@@ -731,7 +731,7 @@ ENDDO
       REAL(8)        :: REDRMASS(NAT)
       LOGICAL(4)     :: TCHK
       REAL(8)        :: MAPTOCELL(3,3)
-      REAL(8)        :: MAPTOCELLinv(3,3)
+      REAL(8)        :: MAPTOCELLINV(3,3)
       INTEGER(4)     :: IAT,I,J
       LOGICAL(4)     :: TSTRESS
       REAL(8)        :: RP1(3,NAT)
@@ -834,7 +834,7 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
 !     ==================================================================
 !     == ADD KINETIC FRICTION TO STRESS                               ==
 !     ==================================================================
-      call ATOMS$KINETICSTRESS()
+      CALL ATOMS$KINETICSTRESS()
 !
       RETURN
       END
@@ -847,11 +847,11 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
 !     **     
 !     **  STRESS IS COMMUNICATED DIRECTLY TO THE CELL OBJECT
 !     **************************************************************************
-      USE ATOMS_MODULE, ONLY : NAT,rmass,rm,rp,DELT,PSG2,PSG4
+      USE ATOMS_MODULE, ONLY : NAT,RMASS,RM,RP,DELT,PSG2,PSG4
       IMPLICIT NONE
       REAL(8)             :: STRESS(3,3)
       REAL(8)             :: V(3)
-      logical(4)          :: tstress
+      LOGICAL(4)          :: TSTRESS
       INTEGER(4)          :: IAT,I,J      
       REAL(8)             :: EMASS,EMASSCG2
       REAL(8)             :: EFFEMASS(NAT)   !EFFECTIVE MASS OF THE WAVE FUNCTIONS
@@ -1144,7 +1144,7 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
       CALL QMMM$SWITCH
 !
 !     ==================================================================
-!     == transform trajectory for the new reference cell              ==
+!     == TRANSFORM TRAJECTORY FOR THE NEW REFERENCE CELL              ==
 !     ==================================================================
       CALL CELL$GETL4('MOVE',TSTRESS)
       IF(TSTRESS) THEN
@@ -1317,7 +1317,7 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == propagate for a constant unit cell                                   ==
+!     == PROPAGATE FOR A CONSTANT UNIT CELL                                   ==
 !     ==========================================================================
       IF(.NOT.TSTRESS) THEN
         DO IAT=1,NAT
@@ -1328,7 +1328,7 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
         ENDDO
 !
 !     ==========================================================================
-!     == propagate for a dynamical unit cell                                  ==
+!     == PROPAGATE FOR A DYNAMICAL UNIT CELL                                  ==
 !     ==========================================================================
       ELSE 
         DO IAT=1,NAT
@@ -1363,7 +1363,7 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
 !              =SEPARATOR_TYPE(3,'ATOMS','NONE','AUG1996','NONE')
       INTEGER(4)                        :: NTASKS,THISTASK
 !     ******************************************************************
-      tchk=.false.
+      TCHK=.FALSE.
 !
 !     ==================================================================
 !     ==  WRITE DATA                                                  ==
@@ -1663,6 +1663,8 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
 !     ==  NUMBER OF VALENCE ELECTRONS                                  ==
 !     ==================================================================
       ELSE IF(ID_.EQ.'ZVALENCE') THEN
+        CALL ERROR$MSG('ID ZVALENCE HAS BEEN DISCONNECTED. DO NOT USE')
+        CALL ERROR$STOP('ATOMLIST$GETR8A')
         IF(IAT_.EQ.0) THEN
           IF(LENG_.NE.NAT) GOTO 9000
           VAL_=ZV
@@ -1739,10 +1741,15 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
         CALL ATOMLIST$GETI4('ISPECIES',IAT_,ISP)
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETR8('AEZ',VAL_)
+        CALL SETUP$UNSELECT()
       ELSE IF(ID_.EQ.'ZVALENCE') THEN
+        CALL ERROR$MSG('ID ZVALENCE HAS BEEN DISCONNECTED. DO NOT USE')
+        CALL ERROR$STOP('ATOMLIST$GETR8')
+!
         CALL ATOMLIST$GETI4('ISPECIES',IAT_,ISP)
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETR8('ZV',VAL_)
+        CALL SETUP$UNSELECT()
       ELSE IF(ID_.EQ.'Q') THEN
         VAL_=CHARGE(IAT_)
       ELSE 
@@ -1839,7 +1846,12 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
       END IF
       IF(ID_.EQ.'ISPECIES') THEN
         IF(IAT_.EQ.0) THEN
-          IF(LENG_.NE.NAT) GOTO 9000
+          IF(LENG_.NE.NAT) THEN
+            CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+            CALL ERROR$I4VAL('LENG_',LENG_)
+            CALL ERROR$I4VAL('NAT',NAT)
+            CALL ERROR$STOP('ATOMLIST$GETI4A')
+          END IF
           VAL_=ISPECIES
         ELSE
            CALL ERROR$MSG('GETI4A DOES NOT HANDLE SCALARS')
@@ -1851,12 +1863,6 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
         CALL ERROR$STOP('ATOMLIST$GETI4A')
       END IF
       RETURN
- 9000 CONTINUE
-      CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-      CALL ERROR$I4VAL('LENG_',LENG_)
-      CALL ERROR$I4VAL('NAT',NAT)
-      CALL ERROR$STOP('ATOMLIST$GETI4A')
-      STOP
       END
 !
 !     ..................................................................
@@ -2001,12 +2007,14 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
 !     ==  NUMBER OF VALENCE ELECTRONS                                  ==
 !     ==================================================================
       ELSE IF(ID_.EQ.'ZVALENCE') THEN
+        CALL ERROR$MSG('ID ZVALENCE HAS BEEN DISCONNECTED. DO NOT USE')
+        CALL ERROR$STOP('ATOMLIST$SETR8A')
         IF(IAT_.EQ.0) THEN
           IF(LENG_.NE.NAT) GOTO 9000
           ZV(:)=VAL_(:)
         ELSE 
-           CALL ERROR$MSG('SETR8A DOES NOT HANDLE SCALARS')
-           CALL ERROR$STOP('ATOMLIST$SETR8A')
+          CALL ERROR$MSG('SETR8A DOES NOT HANDLE SCALARS')
+          CALL ERROR$STOP('ATOMLIST$SETR8A')
         END IF
 !     ==================================================================
 !     == POINT CHARGE                                                 ==
@@ -2252,6 +2260,8 @@ PRINT*,'WARNING FROM ATOMS$CONSTRAINTS: TSTRESS SET TO FALSE'
 !!$      ELSE IF(ID_.EQ.'Z') THEN
 !!$        VAL_=TRANSFER(Z(IAT_),VAL_,8)
       ELSE IF(ID_.EQ.'ZVALENCE') THEN
+        CALL ERROR$MSG('ID ZVALENCE HAS BEEN DISCONNECTED. DO NOT USE')
+        CALL ERROR$STOP('ATOMLIST$GET')
         VAL_=TRANSFER(ZV(IAT_),VAL_,8)
       ELSE IF(ID_.EQ.'POINTCHARGE') THEN
 !       == KEYWORD SHALL BE REPLACED BY 'Q'

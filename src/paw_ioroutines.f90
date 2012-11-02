@@ -3879,7 +3879,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL ERROR$STOP('STRCIN_KPOINT')
         END IF
       ELSE
-        NKDIV(:)=2.D0
+        NKDIV(:)=2
       END IF
 !
 !     ==========================================================================
@@ -4655,6 +4655,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)                 :: FMAX
       INTEGER(4)              :: NFILO
       INTEGER(4)              :: NEMPTY,NOCC
+      INTEGER(4)              :: isp
       LOGICAL(4)              :: TNONCOLL
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_OCCUP')
@@ -4731,7 +4732,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL ATOMLIST$NATOM(NAT)
       SUMOFZ=0.D0
       DO IAT=1,NAT
-        CALL ATOMLIST$GETR8('ZVALENCE',IAT,SVAR)
+        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('ZV',SVAR)
+        CALL SETUP$UNSELECT()
         SUMOFZ=SUMOFZ+SVAR
       ENDDO
 !    

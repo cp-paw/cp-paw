@@ -1412,7 +1412,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: NAT
       INTEGER(4)             :: NBH,NBX,NB
       INTEGER(4)             :: LMNX
-      INTEGER(4)             :: isvar
+      INTEGER(4)             :: ISVAR
       REAL(8)                :: SVAR1,SVAR2
       COMPLEX(8),ALLOCATABLE :: HAMILTON(:,:)
       REAL(8)   ,ALLOCATABLE :: EIG(:,:,:)
@@ -1804,9 +1804,9 @@ CALL ERROR$STOP('WAVES$ETOT')
       DEALLOCATE(DH)
 !
 !     ==========================================================================
-!     ==  add contribution from dmft interface                                ==
+!     ==  ADD CONTRIBUTION FROM DMFT INTERFACE                                ==
 !     ==========================================================================
-!      call lmto$dmftinterface_pick()
+!      CALL LMTO$DMFTINTERFACE_PICK()
 !
 !     ==================================================================
 !     ==  EVALUATE ENERGY EXPECTATION VALUES                          ==
@@ -1814,7 +1814,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 CALL TIMING$CLOCKON('W:EXPECT')
       ALLOCATE(EIG(NBX,NKPTL,NSPIN))
       ALLOCATE(HAMILTON(2,2))
-print*,'==================band mishatches========================='
+PRINT*,'==================BAND MISHATCHES========================='
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -1836,7 +1836,7 @@ print*,'==================band mishatches========================='
             END IF
           ENDDO
           THIS%EXPECTVAL(:)=EIG(1:NB,IKPT,ISPIN)
-CALL TIMESTEP$GETI4('ISTEP',Isvar)
+CALL TIMESTEP$GETI4('ISTEP',ISVAR)
 !!$DO IB=1,NBH-1
 !!$  IF(EIG(IB+1,IKPT,ISPIN).LT.EIG(IB,IKPT,ISPIN)) THEN
 !!$    WRITE(*,FMT='("BAND MISMATCH:",I10,3I5,2F10.5)')ISVAR,IB,IKPT,ISPIN &
@@ -2853,7 +2853,7 @@ END IF
 !     **************************************************************************
       CALL LMTO$GETL4('ON',TON)
       IF(.NOT.TON) RETURN
-      CALL LMTO$GETL4('THTBC',TON) !htbc has not been calculated
+      CALL LMTO$GETL4('THTBC',TON) !HTBC HAS NOT BEEN CALCULATED
       IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('WAVES$FROMNTBO')
                               CALL TIMING$CLOCKON('W:FROMNTBO')
@@ -3260,7 +3260,7 @@ END IF
         CALL SETUP$ISELECT(0)
         ALLOCATE(DENMAT1(LMNX,LMNX))
         DENMAT1(:,:)=DENMAT(1:LMNX,1:LMNX,1,IAT)
-!       ==  setup must be unselected before calling augmentation$moments
+!       ==  SETUP MUST BE UNSELECTED BEFORE CALLING AUGMENTATION$MOMENTS
         CALL AUGMENTATION$MOMENTS(ISP,LMNX,DENMAT1,LMRX,QLM(1,IAT))
         DEALLOCATE(DENMAT1)
       ENDDO
@@ -3536,6 +3536,7 @@ RETURN
         LMNX=MAP%LMNX(ISP)
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('LMRX',LMRX) !FORMER CALL SETUP$LMRX(ISP,LMRX)
+        CALL SETUP$UNSELECT()
         ALLOCATE(DENMAT1(LMNX,LMNX,NDIMD))
         ALLOCATE(EDENMAT1(LMNX,LMNX,NDIMD))
         DENMAT1(:,:,:)=DENMAT(1:LMNX,1:LMNX,:,IAT)
@@ -3552,7 +3553,6 @@ RETURN
         DEALLOCATE(DENMAT1)
         DEALLOCATE(EDENMAT1)
       END DO
-      CALL SETUP$ISELECT(0)
       CALL MPE$COMBINE('MONOMER','+',DH)
       CALL MPE$COMBINE('MONOMER','+',DO)
       CALL MPE$COMBINE('MONOMER','+',POTB)
@@ -3726,7 +3726,7 @@ RETURN
           IPRO=1
           DO IAT=1,NAT
             ISP=MAP%ISP(IAT)
-            call setup$iselect(isp)
+            CALL SETUP$ISELECT(ISP)
             IBPRO=1+SUM(MAP%LNX(1:ISP-1))
             LMNX=MAP%LMNX(ISP)
             LNX=MAP%LNX(ISP)
@@ -3749,10 +3749,10 @@ RETURN
             DEALLOCATE(DH1)
             DEALLOCATE(DO1)
 !
-!           == add contribution from NTBO's ====================================
+!           == ADD CONTRIBUTION FROM NTBO'S ====================================
             IF(ASSOCIATED(THIS%HTBC)) THEN
-              call waves_force_addhtbc(ndim,nbh,nb,lmnx,occ(:,ikpt,ispin) &
-     &                                ,THIS%HTBC(:,:,IPRO:IPRO+LMNX-1),dedproj)
+              CALL WAVES_FORCE_ADDHTBC(NDIM,NBH,NB,LMNX,OCC(:,IKPT,ISPIN) &
+     &                                ,THIS%HTBC(:,:,IPRO:IPRO+LMNX-1),DEDPROJ)
             END IF
 
 !           == |DE/DPRO>=|PSPSI>DEDPROJ ========================================
@@ -3774,12 +3774,12 @@ RETURN
             FORCE(:,IAT)=FORCE(:,IAT)+FORCE1(:)
             STRESS(:,:) =STRESS(:,:) +STRESS1(:,:)
             IPRO=IPRO+LMNX
-          ENDDO
+            CALL SETUP$UNSELECT()
+          ENDDO ! END OF LOOP OVER IAT
           DEALLOCATE(GIJ)
           DEALLOCATE(GVEC)
-        ENDDO
-      ENDDO
-      call setup$iselect(0)
+        ENDDO  ! END OF LOOP OVER ISPIN
+      ENDDO    ! END OF LOOP OVER IKPT
       DEALLOCATE(OCC)
 !     == EACH PROCESSOR CALCULATES THE CONTRIBUTION TO THE FORCE FROM THE 
 !     == LOCAL WAVE FUNCTION COMPONENTS
@@ -3797,18 +3797,18 @@ RETURN
 !     ** ADDS THE CONTRIBUTION FROM THE NTB-ORBITALS TO DE/DPROJ              **
 !     ** THE OCCUPATIONS ARE INCLUDED AT THIS POINT AND NOT BEFORE            **
 !     **************************************************************************
-      implicit none
-      integer(4),intent(in)    :: ndim
-      integer(4),intent(in)    :: nbh
-      integer(4),intent(in)    :: nb
-      integer(4),intent(in)    :: lmnx
-      real(8)   ,intent(in)    :: occ(nb)
-      complex(8),intent(in)    :: htbc(ndim,nbh,lmnx)
-      complex(8),intent(inout) :: dedproj(ndim,nbh,lmnx)
-      integer(4)               :: ib,ib1,ib2,lmn,idim
-      logical(4)               :: tinv
-      real(8)                  :: f1,f2
-      complex(8)               :: csvar
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NDIM
+      INTEGER(4),INTENT(IN)    :: NBH
+      INTEGER(4),INTENT(IN)    :: NB
+      INTEGER(4),INTENT(IN)    :: LMNX
+      REAL(8)   ,INTENT(IN)    :: OCC(NB)
+      COMPLEX(8),INTENT(IN)    :: HTBC(NDIM,NBH,LMNX)
+      COMPLEX(8),INTENT(INOUT) :: DEDPROJ(NDIM,NBH,LMNX)
+      INTEGER(4)               :: IB,IB1,IB2,LMN,IDIM
+      LOGICAL(4)               :: TINV
+      REAL(8)                  :: F1,F2
+      COMPLEX(8)               :: CSVAR
 !     **************************************************************************
       CALL PLANEWAVE$GETL4('TINV',TINV)
 !
@@ -3932,8 +3932,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
 !         ==============================================================
           IF(ASSOCIATED(THIS%HTBC)) THEN
             HPROJ(:,:,:)=HPROJ(:,:,:)+THIS%HTBC(:,:,:)
-            deallocate(this%htbc)
-            nullify(this%htbc)
+            DEALLOCATE(THIS%HTBC)
+            NULLIFY(THIS%HTBC)
           END IF
 !
 !         ==============================================================
