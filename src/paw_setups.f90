@@ -5176,7 +5176,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !       ==   2. EXPAND IF AE AND PS POTENTIALS DEVIATE ATE RBND               ==
 !       ==   3. OVERWRITE BY RBNDX IF MATCHING RADIUS IS TOO LARGE            ==
 !       ========================================================================
-!!$!       == FIND OUTERMOST POINT CONSIDERING THE POTENTIAL ======================
+!!$!       == FIND OUTERMOST POINT CONSIDERING THE POTENTIAL ===================
 !!$        SVAR1=MAXVAL(ABS(PSPHI(IRBND:,LN)))
 !!$        DO IR=NR-2,1,-1
 !!$          IF(IR.LT.IRBND) EXIT

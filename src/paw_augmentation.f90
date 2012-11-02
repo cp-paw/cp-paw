@@ -217,6 +217,7 @@ END MODULE AUGMENTATION_MODULE
         WRITE(*,FMT='(A63)')'MULTIPOLE MOMENTS'
         WRITE(*,FMT='(9E12.5)')QLM(:)
       END IF
+      CALL SETUP$ISELECT(0)
                    CALL TRACE$POP
       RETURN
       END
@@ -2629,6 +2630,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
         CALL SETUP$GETI4A('LOX',LNX,LOX)
         ALLOCATE(AEPHI(NR,LNX))
         CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
+        CALL SETUP$ISELECT(0)
 !
 !       ========================================================================
 !       == SPECIFY SHAPE OF THE EXTERNAL POTENTIAL                            ==
