@@ -2055,6 +2055,7 @@ END IF
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
         call setup$iselect(isp)
         CALL SETUP$GETR8('AEZ',AEZ) !FORMER CALL SETUP$AEZ(ISP,AEZ)
+        call setup$unselect()
         IZ(IAT)=NINT(AEZ)
         CALL PERIODICTABLE$GET(IZ(IAT),'SYMBOL',SYMBOL(IAT))
         IF(SYMBOL(IAT)(2:2).EQ.'_') SYMBOL(IAT)(2:2)=' '
@@ -2075,7 +2076,6 @@ END IF
           VI(NQCOUNT)=0.D0
         ENDDO
       ENDDO
-      call setup$iselect(0)
 !
 !     ==================================================================
 !     == WRITE INFORMATION TO FILE                                    ==

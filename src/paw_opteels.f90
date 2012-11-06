@@ -696,6 +696,7 @@ END MODULE OPTEELS_MODULE
        ALLOCATE(PROJ1(LMNXX),PROJ2(LMNXX),PROI1(LMNXX),PROI2(LMNXX))
        CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI) !FOR ISP
        CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI) 
+       CALL SETUP$unSELECT()
        
 !      =========================================================================
 !      == GET OCCUPATIONS                                                     ==
@@ -936,6 +937,7 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
 !      == CALCULATE MATRIX ELEMENTS                                           ==
 !      =========================================================================
        CALL SETUP$GETR8('RBOX',RBOX)
+       CALL SETUP$unSELECT()
        ALLOCATE(R(NR))
        CALL RADIAL$R(GID,NR,R)
        ALLOCATE(XVAL(LMNX,3,2*LC+1))

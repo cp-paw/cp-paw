@@ -541,6 +541,7 @@ END MODULE LDAPLUSU_MODULE
         IF(.NOT.THISISP1%TON) CYCLE
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETCH('ID',STRING)
+        CALL SETUP$UNSELECT()
         THISISP1%ATOMTYPE=STRING
         CALL REPORT$CHVAL(NFIL,'ATOM TYPE',TRIM(STRING))
         CALL REPORT$CHVAL(NFIL,'  FUNCTIONAL TYPE',THISISP1%FUNCTIONALID)
@@ -629,10 +630,10 @@ CHARACTER(1) :: SWITCH
       ETOT=0.D0
       DATH_=0.D0
       IF(.NOT.TON) RETURN
-print*,'==== entering ldaplusu$etot ',iat,ton
+PRINT*,'==== ENTERING LDAPLUSU$ETOT ',IAT,TON
       CALL LDAPLUSU$SELECT(IAT)
       TCHK=THIS%SP%TON
-print*,'==== checking if atom ',iat,' is active ',tchk
+PRINT*,'==== CHECKING IF ATOM ',IAT,' IS ACTIVE ',TCHK
       IF(.NOT.TCHK) THEN
         CALL LDAPLUSU$SELECT(0)  ! UNSELECTING IS REQUIRED
         RETURN
@@ -655,7 +656,7 @@ print*,'==== checking if atom ',iat,' is active ',tchk
         THIS%SP%LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
         LRX=THIS%SP%LRX
 !
-        CALL LDAPLUSU_CHIFROMPHI()
+        CALL LDAPLUSU_CHIFROMPHI()   ! USES SETTING OF SETUP OBJECT
 PRINT*,'TINI ',THIS%SP%TINI
 PRINT*,'TON ',THIS%SP%TON
 PRINT*,'LNXCHI ',THIS%SP%LNXCHI
@@ -705,6 +706,7 @@ PRINT*,'JPAR   ',THIS%SP%JPAR
       ALLOCATE(LOXPHI(LNXPHI))
       CALL SETUP$GETI4A('LOX',LNXPHI,LOXPHI)
       NPHI=SUM(2*LOXPHI+1)
+      CALL SETUP$UNSELECT()
 !
 !     ==========================================================================
 !     ==  DOWNFOLD                                                            ==
@@ -732,7 +734,9 @@ END IF
 !
 PRINT*,'THIS%SP%FUNCTIONALID',THIS%SP%FUNCTIONALID
       IF(THIS%SP%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
+        CALL SETUP$ISELECT(ISP)
         CALL LDAPLUSU_DENMATFLAPW('FORWARD',NPHI,MATSS,NCHI,RHO)
+        CALL SETUP$UNSELECT()
       ELSE
 !       == TRANSFORM FROM PARTIAL WAVES PHI TO LOCAL ORBITALS CHI ==============
         CALL LDAPLUSU_MAPTOCHI(LNX,LOX,NCHI,LNXPHI,LOXPHI,NPHI,PHITOCHI)
@@ -807,13 +811,13 @@ ENDDO
       END IF
 !
 !     ==========================================================================
-!     ==  subtract Hartree energy                                             ==
+!     ==  SUBTRACT HARTREE ENERGY                                             ==
 !     ==========================================================================
       ALLOCATE(HAM1(NCHI,NCHI,2,2))
-      call LDAPLUSU_Ehartree(GID,NR,nchi,LNX,LOX,this%CHI,LRX,rho,Etot1,Ham1)
-      etot=etot-etot1
+      CALL LDAPLUSU_EHARTREE(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,RHO,ETOT1,HAM1)
+      ETOT=ETOT-ETOT1
       HAM=HAM-HAM1
-      deallocate(ham1)
+      DEALLOCATE(HAM1)
 !
 !     ==========================================================================
 !     ==  CORE VALENCE EXCHANGE INTERACTION                                   ==
@@ -832,8 +836,8 @@ ENDDO
       IF(THIS%SP%FUNCTIONALID.EQ.'LDA+U' &
      &              .OR.THIS%SP%FUNCTIONALID.EQ.'LDA+U(OLD)') THEN
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
-        call LDAPLUSU_Ehartree(GID,NR,nchi,LNX,LOX,this%CHI,LRX,rho,Etot1,Ham1)
-        etot=etot+etot1
+        CALL LDAPLUSU_EHARTREE(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,RHO,ETOT1,HAM1)
+        ETOT=ETOT+ETOT1
         HAM=HAM+HAM1
 !
         CALL LDAPLUSU_DCLDAPLUSU(DCTYPE,LNX,LOX,NCHI,U,RHO,ETOT1,HAM1)
@@ -849,6 +853,7 @@ ENDDO
         ELSE
           AECORE(:)=0.D0
         END IF
+        CALL SETUP$UNSELECT()
         ALLOCATE(HAM1(NCHI,NCHI,2,2))
         CALL LDAPLUSU_EDFT(GID,NR,NCHI,LNX,LOX,THIS%CHI,LRX,AECORE,RHO &
     &                     ,ETOT1,HAM1)
@@ -865,9 +870,9 @@ ENDDO
         CALL ERROR$CHVAL('FUNCTIONALID',THIS%SP%FUNCTIONALID)
         CALL ERROR$STOP('LDAPLUSU$ETOT')
       END IF
-PRINT*,'ETOT after scaling ',ETOT
-DO i=1,nchi
-  WRITE(*,FMT='(I3,100F12.5)')i,REAL(HAM(I,:,1,1))
+PRINT*,'ETOT AFTER SCALING ',ETOT
+DO I=1,NCHI
+  WRITE(*,FMT='(I3,100F12.5)')I,REAL(HAM(I,:,1,1))
 ENDDO
 !
 !     ==========================================================================
@@ -962,7 +967,7 @@ END IF
       INTEGER(4),ALLOCATABLE:: LOXCHI(:)
       REAL(8)   ,ALLOCATABLE:: MAT(:,:)
       REAL(8)   ,ALLOCATABLE:: R(:)        
-      REAL(8)   ,ALLOCATABLE:: aux(:)        
+      REAL(8)   ,ALLOCATABLE:: AUX(:)        
       REAL(8)               :: SVAR1,SVAR2
       INTEGER(4)            :: IR
       INTEGER(4)            :: IAT
@@ -1053,12 +1058,10 @@ END IF
       ALLOCATE(THIS%DOWNFOLD(LNXCHI,LNX))
       ALLOCATE(THIS%CHI(NR,LNXCHI))
       CALL SETUP$GETI4('ISP',ISP)
-      CALL SETUP$ISELECT(0)
 PRINT*,'IAT  ',IAT,' LNXCHI=',LNXCHI,' LNX=',LNX,' ISP=',ISP
 PRINT*,'TORB ',TORB
 !      CALL LMTO$DOLOCORB(IAT,ISP,GID,NR,LNXCHI,LNX,TORB,THIS%DOWNFOLD,THIS%CHI)
       CALL LMTO$DOLOCORB_2(IAT,ISP,GID,NR,LNXCHI,LNX,TORB,THIS%DOWNFOLD,THIS%CHI)
-      CALL SETUP$ISELECT(ISP)
 !
 !     == DETERMINE CORE-VALENCE EXCHANGE =======================================
       IF(THIS%SP%TCV) THEN
@@ -1079,12 +1082,12 @@ PRINT*,'TORB ',TORB
 !!$
 !!$IF(IAT.EQ.1)CALL ATOMLIB_WRITEPHI('CHI_1.DAT',GID,NR,LNXCHI,THIS%CHI)
 !!$IF(IAT.EQ.2)CALL ATOMLIB_WRITEPHI('CHI_2.DAT',GID,NR,LNXCHI,THIS%CHI)
-!!$allocate(aux(nr))
-!!$do ln=1,lnxchi
-!!$  aux(:)=r(:)**2*this%chi(:,ln)**2
-!!$  call radial$integral(gid,nr,aux,svar1)
-!!$  PRINT*,"NORM Isp=",Isp," LN= ",LN," NORM=",SVAR1
-!!$enddo
+!!$ALLOCATE(AUX(NR))
+!!$DO LN=1,LNXCHI
+!!$  AUX(:)=R(:)**2*THIS%CHI(:,LN)**2
+!!$  CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+!!$  PRINT*,"NORM ISP=",ISP," LN= ",LN," NORM=",SVAR1
+!!$ENDDO
 !!$!
       DEALLOCATE(R)
                             CALL TRACE$POP()
@@ -2074,7 +2077,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU_Ehartree(GID,NR,LMNX,LNX,LOX,CHI,LRX,D,E,H)
+      SUBROUTINE LDAPLUSU_EHARTREE(GID,NR,LMNX,LNX,LOX,CHI,LRX,D,E,H)
 !     **                                                                      **
 !     **  DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                **
 !     **                                                                      **
@@ -2092,7 +2095,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       INTEGER(4)  ,INTENT(IN) :: LOX(LNX)   !MAIN ANGULAR MOMENTUM OF LOCAL ORB.
       REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)
       COMPLEX(8)  ,INTENT(IN) :: D(LMNX,LMNX,2,2) ! DENSITY MATRIX
-      REAL(8)     ,INTENT(OUT):: E                ! hartree energy
+      REAL(8)     ,INTENT(OUT):: E                ! HARTREE ENERGY
       COMPLEX(8)  ,INTENT(OUT):: H(LMNX,LMNX,2,2) ! DETOT/D(RHO^*)        
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       COMPLEX(8)              :: DENMAT1(LMNX,LMNX)
@@ -2127,11 +2130,11 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
       DO LM=1,LMRX
         L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
         CALL RADIAL$POISSON(GID,NR,L,RHO(:,LM),POT(:,LM))
-        EDENSITY(:)=EDENSITY(:)+0.5D0*pot(:,lm)*RHO(:,LM)
+        EDENSITY(:)=EDENSITY(:)+0.5D0*POT(:,LM)*RHO(:,LM)
       ENDDO
       CALL RADIAL$R(GID,NR,R)
       EDENSITY=EDENSITY*R(:)**2
-      CALL RADIAL$INTEGRAL(GID,NR,EDENSITY,e)
+      CALL RADIAL$INTEGRAL(GID,NR,EDENSITY,E)
 !
 !     ==========================================================================
 !     ==  CALCULATE HAMILTONIAN IN TOTAL/SPIN REPRESENTATION                  ==
@@ -2142,7 +2145,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
 !     ==========================================================================
 !     ==  TRANSFORM HAMILTONIAN FROM TOTAL/SPIN TO UP/DOWN                    ==
 !     ==========================================================================
-      h(:,:,:,:)=(0.d0,0.d0)
+      H(:,:,:,:)=(0.D0,0.D0)
       H(:,:,1,1)=HAM1(:,:)
       H(:,:,2,2)=HAM1(:,:)
       RETURN

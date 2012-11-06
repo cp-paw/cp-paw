@@ -382,10 +382,10 @@ USE MPE_MODULE
         ISPIN=WAVEPLOT(I)%ISPIN
         TIMAG=WAVEPLOT(I)%TIMAG
         IF(INDEX(WAVEPLOT(I)%FILE,'.CWAVE').NE.0) THEN
-          CALL GRAPHICS_cWAVEPLOT(FILE,TITLE,DR,IB,IKPT,ISPIN)
-        else
+          CALL GRAPHICS_CWAVEPLOT(FILE,TITLE,DR,IB,IKPT,ISPIN)
+        ELSE
           CALL GRAPHICS_WAVEPLOT(FILE,TITLE,DR,IB,IKPT,ISPIN,TIMAG)
-        end if
+        END IF
       ENDDO
 !
 !     ==================================================================
@@ -585,7 +585,7 @@ USE MPE_MODULE
       END IF
 !
 !     ==========================================================================
-!     ==  GET GENERIC data FROM ATOM OBJECT                                   ==
+!     ==  GET GENERIC DATA FROM ATOM OBJECT                                   ==
 !     ==========================================================================
       CALL ATOMLIST$NATOM(NAT)
       CALL SETUP$GETI4('LMNXX',LMNXX)
@@ -619,6 +619,7 @@ USE MPE_MODULE
           ALLOCATE(PSPHI(NR,LNX))
           CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
           CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI)
+          CALL SETUP$UNSELECT()
           ALLOCATE(PROJ(LMNXX))
           CALL WAVES$SETI4('IAT',IAT)
           CALL WAVES$GETR8A('<PSPSI|PRO>',LMNXX,PROJ)
@@ -684,8 +685,8 @@ USE MPE_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GRAPHICS_CWAVEPLOT(FILE,TITLE,DR,IB,IKPT,ISPIN)
 !     **************************************************************************
-!     **  similar to graphics_waveplot                                        **
-!     **  produces a file with complex wave functions and provides the k-point**
+!     **  SIMILAR TO GRAPHICS_WAVEPLOT                                        **
+!     **  PRODUCES A FILE WITH COMPLEX WAVE FUNCTIONS AND PROVIDES THE K-POINT**
 !     **************************************************************************
       USE MPE_MODULE
       IMPLICIT NONE
@@ -707,9 +708,9 @@ USE MPE_MODULE
                                               ! STATE OF WAVES OBJECT
       REAL(8)                   :: GBAS(3,3),DET ! DUMMY
       INTEGER(4)                :: FACT
-      complex(8)    ,ALLOCATABLE:: WAVE(:,:,:) !(NR1L,NR2,NR3) LATER REFINED
-      complex(8)    ,ALLOCATABLE:: WAVEBIG(:,:,:)
-      complex(8)    ,ALLOCATABLE:: WORK1(:,:,:)
+      COMPLEX(8)    ,ALLOCATABLE:: WAVE(:,:,:) !(NR1L,NR2,NR3) LATER REFINED
+      COMPLEX(8)    ,ALLOCATABLE:: WAVEBIG(:,:,:)
+      COMPLEX(8)    ,ALLOCATABLE:: WORK1(:,:,:)
       INTEGER(4)                :: NAT
       REAL(8)                   :: RBAS(3,3)
       CHARACTER(32) ,ALLOCATABLE:: ATOMNAME(:)   !NAT
@@ -722,9 +723,9 @@ USE MPE_MODULE
       INTEGER(4)    ,ALLOCATABLE:: LOX(:)    !LNX
       REAL(8)       ,ALLOCATABLE:: AEPHI(:,:) !NR,LNX
       REAL(8)       ,ALLOCATABLE:: PSPHI(:,:) !NR,LNX
-      complex(8)    ,ALLOCATABLE:: PROJ(:)    !LMNXX
+      COMPLEX(8)    ,ALLOCATABLE:: PROJ(:)    !LMNXX
       INTEGER(4)                :: LX,LMXX
-      complex(8)    ,ALLOCATABLE:: DRHOL(:,:) !(NR,LMXX)
+      COMPLEX(8)    ,ALLOCATABLE:: DRHOL(:,:) !(NR,LMXX)
       INTEGER(4)                :: IAT,ISP,LN
       INTEGER(4)                :: NFIL
       INTEGER(4)                :: NR1B,NR2B,NR3B
@@ -732,17 +733,17 @@ USE MPE_MODULE
       LOGICAL(4)                :: TKGROUP
       LOGICAL(4)                :: TSEND
       INTEGER(4)                :: SENDTASK
-      complex(8)                :: eik1,eik2,eik3,eikr1,eikr2,eikr3
-      complex(8)    ,parameter  :: ci=(0.d0,1.d0)
-      real(8)       ,allocatable:: xkarr(:,:)
-      real(8)                   :: xk(3)
-      integer(4)                :: ir1,ir2,ir3
-      real(8)                   :: pi
-      complex(8)                :: ci2pi
+      COMPLEX(8)                :: EIK1,EIK2,EIK3,EIKR1,EIKR2,EIKR3
+      COMPLEX(8)    ,PARAMETER  :: CI=(0.D0,1.D0)
+      REAL(8)       ,ALLOCATABLE:: XKARR(:,:)
+      REAL(8)                   :: XK(3)
+      INTEGER(4)                :: IR1,IR2,IR3
+      REAL(8)                   :: PI
+      COMPLEX(8)                :: CI2PI
 !     **************************************************************************
-                              CALL TRACE$PUSH('GRAPHICS_cWAVEPLOT')
-      pi=4.d0*atan(1.d0)
-      ci2pi=(0.d0,1.d0)*2.d0*pi
+                              CALL TRACE$PUSH('GRAPHICS_CWAVEPLOT')
+      PI=4.D0*ATAN(1.D0)
+      CI2PI=(0.D0,1.D0)*2.D0*PI
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -815,9 +816,9 @@ USE MPE_MODULE
       CALL DYNOCC$GETR8A('XK',3*NKPT,XKARR)
       XK(:)=XKARR(:,IKPT)
       DEALLOCATE(XKARR)
-      EIK1=EXP(CI2pi*XK(1)/REAL(NR1B))
-      EIK2=EXP(CI2pi*XK(2)/REAL(NR2B))
-      EIK3=EXP(CI2pi*XK(3)/REAL(NR3B))
+      EIK1=EXP(CI2PI*XK(1)/REAL(NR1B))
+      EIK2=EXP(CI2PI*XK(2)/REAL(NR2B))
+      EIK3=EXP(CI2PI*XK(3)/REAL(NR3B))
       EIKR3=(1.D0,0.D0)
       DO IR3=1,NR3B
         EIKR2=EIKR3
@@ -833,7 +834,7 @@ USE MPE_MODULE
       ENDDO
 !
 !     ==========================================================================
-!     ==  GET GENERIC data FROM ATOM OBJECT                                   ==
+!     ==  GET GENERIC DATA FROM ATOM OBJECT                                   ==
 !     ==========================================================================
       CALL ATOMLIST$NATOM(NAT)
       CALL SETUP$GETI4('LMNXX',LMNXX)
@@ -867,6 +868,7 @@ USE MPE_MODULE
           ALLOCATE(PSPHI(NR,LNX))
           CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
           CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI)
+          CALL SETUP$UNSELECT()
           ALLOCATE(PROJ(LMNXX))
           CALL WAVES$SETI4('IAT',IAT)
           CALL WAVES$GETC8A('<PSPSI|PRO>',LMNXX,PROJ)
@@ -876,10 +878,10 @@ USE MPE_MODULE
           ENDDO
           LMXX=(LX+1)**2
           ALLOCATE(DRHOL(NR,LMXX))
-          CALL GRAPHICS_1CWAVEc(NR,LNX,LOX,AEPHI,PSPHI,LMNXX,PROJ,LMXX,DRHOL)
+          CALL GRAPHICS_1CWAVEC(NR,LNX,LOX,AEPHI,PSPHI,LMNXX,PROJ,LMXX,DRHOL)
           DEALLOCATE(PROJ)
-          CALL GRAPHICS_RHOLTORc(RBAS,NR1B,NR2B,NR3B &
-     &                          ,1,NR1B,WAVEBIG,POS(:,IAT),GID,NR,LMXX,DRHOL,xk)
+          CALL GRAPHICS_RHOLTORC(RBAS,NR1B,NR2B,NR3B &
+     &                          ,1,NR1B,WAVEBIG,POS(:,IAT),GID,NR,LMXX,DRHOL,XK)
           DEALLOCATE(DRHOL)
           DEALLOCATE(LOX)
           DEALLOCATE(AEPHI)
@@ -902,12 +904,12 @@ USE MPE_MODULE
       CALL MPE$SENDRECEIVE('MONOMER',SENDTASK,1,WAVEBIG)
 !     
 !     ==========================================================================
-!     ==  PRINT WAVE  from tb orbitals                                        ==
+!     ==  PRINT WAVE  FROM TB ORBITALS                                        ==
 !     ==========================================================================
       CALL FILEHANDLER$SETFILE('WAVEPLOT',.FALSE.,'TB_'//TRIM(FILE))
       CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','UNFORMATTED')
       CALL FILEHANDLER$UNIT('WAVEPLOT',NFIL)
-      CALL LMTO$plotwave(NFIL,1,IB,IKPT,ISPIN,NR1B,NR2B,NR3B)
+      CALL LMTO$PLOTWAVE(NFIL,1,IB,IKPT,ISPIN,NR1B,NR2B,NR3B)
       CALL FILEHANDLER$CLOSE('WAVEPLOT')
 !     
 !     ==========================================================================
@@ -918,8 +920,8 @@ USE MPE_MODULE
         CALL FILEHANDLER$SETFILE('WAVEPLOT',.FALSE.,TRIM(FILE))
         CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','UNFORMATTED')
         CALL FILEHANDLER$UNIT('WAVEPLOT',NFIL)
-        CALL WRITEWAVEPLOTc(NFIL,TITLE,RBAS,NAT,POS,Z,Q,ATOMNAME &
-    &                      ,xk,NR1B,NR2B,NR3B,WAVEBIG)
+        CALL WRITEWAVEPLOTC(NFIL,TITLE,RBAS,NAT,POS,Z,Q,ATOMNAME &
+    &                      ,XK,NR1B,NR2B,NR3B,WAVEBIG)
         CALL FILEHANDLER$CLOSE('WAVEPLOT')
       END IF
       DEALLOCATE(WAVEBIG)
@@ -1152,6 +1154,7 @@ USE MPE_MODULE
         DEALLOCATE(LOX)
         DEALLOCATE(AEPHI)
         DEALLOCATE(PSPHI)
+        CALL SETUP$UNSELECT()
       ENDDO  
 !     
 !     ================================================================
@@ -1238,11 +1241,11 @@ USE MPE_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITEWAVEPLOTC(NFIL,TITLE,RBAS,NAT,POS,Z,Q,NAME &
-     &                        ,xk,NR1,NR2,NR3,WAVE)
+     &                        ,XK,NR1,NR2,NR3,WAVE)
 !     **************************************************************************
-!     ** writes a wave function to file                                       **
-!     ** The complex wave function in the first unit cell is written          **
-!     ** Periodic images are obtained by multiplication with exp(i*k*T)       **
+!     ** WRITES A WAVE FUNCTION TO FILE                                       **
+!     ** THE COMPLEX WAVE FUNCTION IN THE FIRST UNIT CELL IS WRITTEN          **
+!     ** PERIODIC IMAGES ARE OBTAINED BY MULTIPLICATION WITH EXP(I*K*T)       **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -1253,13 +1256,13 @@ USE MPE_MODULE
       REAL(8)      ,INTENT(IN) :: POS(3,NAT)
       REAL(8)      ,INTENT(IN) :: Z(NAT)
       REAL(8)      ,INTENT(IN) :: Q(NAT)
-      REAL(8)      ,INTENT(IN) :: xk(3)     ! k-point in relative coordinates
+      REAL(8)      ,INTENT(IN) :: XK(3)     ! K-POINT IN RELATIVE COORDINATES
       CHARACTER(32),INTENT(IN) :: NAME(NAT)
       INTEGER(4)   ,INTENT(IN) :: NR1
       INTEGER(4)   ,INTENT(IN) :: NR2
       INTEGER(4)   ,INTENT(IN) :: NR3
-      complex(8)   ,INTENT(IN) :: WAVE(NR1,NR2,NR3)
-real(8):: det,gbas(3,3)
+      COMPLEX(8)   ,INTENT(IN) :: WAVE(NR1,NR2,NR3)
+REAL(8):: DET,GBAS(3,3)
 !     **************************************************************************
       CALL GBASS(RBAS,GBAS,DET)
 PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR3)
@@ -1268,13 +1271,13 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       WRITE(NFIL)TITLE
       WRITE(NFIL)RBAS,NAT
       WRITE(NFIL)NR1,NR2,NR3
-      if(nat.ne.0) then
+      IF(NAT.NE.0) THEN
         WRITE(NFIL)NAME
         WRITE(NFIL)Z
         WRITE(NFIL)POS
         WRITE(NFIL)Q
-      end if
-      WRITE(NFIL)xk
+      END IF
+      WRITE(NFIL)XK
       WRITE(NFIL)WAVE
       WRITE(NFIL)'END OF FILE'
       RETURN
@@ -1371,8 +1374,8 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       INTEGER(4),INTENT(IN)    :: NR1,NR2,NR3,NR1START,NR1L
       INTEGER(4),INTENT(IN)    :: NR
       INTEGER(4),INTENT(IN)    :: LMX
-      real(8)   ,INTENT(INOUT) :: RHO(NR1L,NR2,NR3)
-      real(8)   ,INTENT(IN)    :: DRHOL(NR,LMX)
+      REAL(8)   ,INTENT(INOUT) :: RHO(NR1L,NR2,NR3)
+      REAL(8)   ,INTENT(IN)    :: DRHOL(NR,LMX)
       REAL(8)   ,INTENT(IN)    :: RBAS(3,3)
       REAL(8)   ,INTENT(IN)    :: R0(3)
       INTEGER(4),INTENT(IN)    :: GID
@@ -1411,25 +1414,25 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     ==                                                                      ==
 !     ==========================================================================
       DO I=1,3
-        DR(I,1)=RBAS(I,1)/real(NR1,kind=8)
-        DR(I,2)=RBAS(I,2)/real(NR2,kind=8)
-        DR(I,3)=RBAS(I,3)/real(NR3,kind=8)
+        DR(I,1)=RBAS(I,1)/REAL(NR1,KIND=8)
+        DR(I,2)=RBAS(I,2)/REAL(NR2,KIND=8)
+        DR(I,3)=RBAS(I,3)/REAL(NR3,KIND=8)
       ENDDO
       CALL BOXSPH(DR,R0(1),R0(2),R0(3),RMAX,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
       DO I1=MIN1,MAX1
-        T1=real(I1,kind=8)
+        T1=REAL(I1,KIND=8)
         I11=MOD(MOD(I1,NR1)+NR1,NR1)+1
         I11=I11-NR1START+1
         IF(I11.GE.1.AND.I11.LE.NR1L) THEN
           DO I2=MIN2,MAX2
-            T2=real(I2,kind=8)
+            T2=REAL(I2,KIND=8)
             I21=MOD(MOD(I2,NR2)+NR2,NR2)+1
             X1=DR(1,1)*T1+DR(1,2)*T2-R0(1)
             X2=DR(2,1)*T1+DR(2,2)*T2-R0(2)
             X3=DR(3,1)*T1+DR(3,2)*T2-R0(3)
             DO I3=MIN3,MAX3
               I31=MOD(MOD(I3,NR3)+NR3,NR3)+1
-              T3=real(I3,kind=8)
+              T3=REAL(I3,KIND=8)
               RVEC(1)=X1+DR(1,3)*T3
               RVEC(2)=X2+DR(2,3)*T3
               RVEC(3)=X3+DR(3,3)*T3
@@ -1440,7 +1443,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
                 SVAR=0.D0
                 DO LM=1,LMX
                   CALL RADIAL$VALUE(GID,NR,DRHOL(1,LM),DIS,SVAR1)
-                  SVAR=SVAR+svar1*YLM(LM)
+                  SVAR=SVAR+SVAR1*YLM(LM)
                 ENDDO
                 RHO(I11,I21,I31)=RHO(I11,I21,I31)+SVAR
               END IF
@@ -1453,7 +1456,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GRAPHICS_RHOLTORC(RBAS,NR1,NR2,NR3,NR1START,NR1L,RHO,R0 &
-     &           ,GID,NR,LMX,DRHOL,xk)
+     &           ,GID,NR,LMX,DRHOL,XK)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -1463,16 +1466,16 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       INTEGER(4),INTENT(IN)    :: NR1,NR2,NR3,NR1START,NR1L
       INTEGER(4),INTENT(IN)    :: NR
       INTEGER(4),INTENT(IN)    :: LMX
-      complex(8),INTENT(INOUT) :: RHO(NR1L,NR2,NR3)
-      complex(8),INTENT(IN)    :: DRHOL(NR,LMX)
+      COMPLEX(8),INTENT(INOUT) :: RHO(NR1L,NR2,NR3)
+      COMPLEX(8),INTENT(IN)    :: DRHOL(NR,LMX)
       REAL(8)   ,INTENT(IN)    :: RBAS(3,3)
       REAL(8)   ,INTENT(IN)    :: R0(3)
-      REAL(8)   ,INTENT(IN)    :: xk(3)
+      REAL(8)   ,INTENT(IN)    :: XK(3)
       INTEGER(4),INTENT(IN)    :: GID
       REAL(8)                  :: DR(3,3)
       REAL(8)                  :: YLM(LMXX)
       REAL(8)                  :: RVEC(3)
-      REAL(8)                  :: RMAX,RMAX2,SVAR,SVAR1,svar2
+      REAL(8)                  :: RMAX,RMAX2,SVAR,SVAR1,SVAR2
       INTEGER(4)               :: IR,LM
       INTEGER(4)               :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
       REAL(8)                  :: T1,T2,T3
@@ -1480,22 +1483,22 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       INTEGER(4)               :: I1,I2,I3,I11,I21,I31,I
       REAL(8)                  :: DIS,DIS2
       REAL(8)                  :: R(NR)
-      REAL(8)                  :: Redrhol(nr,lmx),imdrhol(nr,lmx)
-      complex(8)               :: eikr1,eikr2,eikr3,csvar
-      real(8)                  :: pi
-      complex(8)               :: ci2pi
-      complex(8),parameter     :: ci=(0.d0,1.d0)
+      REAL(8)                  :: REDRHOL(NR,LMX),IMDRHOL(NR,LMX)
+      COMPLEX(8)               :: EIKR1,EIKR2,EIKR3,CSVAR
+      REAL(8)                  :: PI
+      COMPLEX(8)               :: CI2PI
+      COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)
 !     **************************************************************************
-      pi=4.d0*atan(1.d0)
-      ci2pi=(0.d0,1.d0)*2.d0*pi
+      PI=4.D0*ATAN(1.D0)
+      CI2PI=(0.D0,1.D0)*2.D0*PI
       CALL RADIAL$R(GID,NR,R)
       IF(LMXX.LT.LMX) THEN
         CALL ERROR$MSG('INCREASE DIMENSION LMXX')
         CALL ERROR$STOP('GRAPHICS_RHOLTOR')
       END IF
 
-      redrhol(:,:)=real(drhol(:,:))
-      imdrhol(:,:)=aimag(drhol(:,:))
+      REDRHOL(:,:)=REAL(DRHOL(:,:))
+      IMDRHOL(:,:)=AIMAG(DRHOL(:,:))
 !
 !     ==========================================================================
 !     ==  DETERMINE RMAX                                                      ==
@@ -1514,28 +1517,28 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     ==                                                                      ==
 !     ==========================================================================
       DO I=1,3
-        DR(I,1)=RBAS(I,1)/real(NR1,kind=8)
-        DR(I,2)=RBAS(I,2)/real(NR2,kind=8)
-        DR(I,3)=RBAS(I,3)/real(NR3,kind=8)
+        DR(I,1)=RBAS(I,1)/REAL(NR1,KIND=8)
+        DR(I,2)=RBAS(I,2)/REAL(NR2,KIND=8)
+        DR(I,3)=RBAS(I,3)/REAL(NR3,KIND=8)
       ENDDO
       CALL BOXSPH(DR,R0(1),R0(2),R0(3),RMAX,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
       DO I1=MIN1,MAX1
-        T1=real(I1,kind=8)
+        T1=REAL(I1,KIND=8)
         I11=MOD(MOD(I1,NR1)+NR1,NR1)+1
-        eikr1=exp(ci2pi*xk(1)*real(i11-i1)/real(nr1))
+        EIKR1=EXP(CI2PI*XK(1)*REAL(I11-I1)/REAL(NR1))
         I11=I11-NR1START+1
         IF(I11.GE.1.AND.I11.LE.NR1L) THEN
           DO I2=MIN2,MAX2
-            T2=real(I2,kind=8)
+            T2=REAL(I2,KIND=8)
             I21=MOD(MOD(I2,NR2)+NR2,NR2)+1
-            eikr2=eikr1*exp(ci2pi*xk(2)*real(i21-i2)/real(nr2))
+            EIKR2=EIKR1*EXP(CI2PI*XK(2)*REAL(I21-I2)/REAL(NR2))
             X1=DR(1,1)*T1+DR(1,2)*T2-R0(1)
             X2=DR(2,1)*T1+DR(2,2)*T2-R0(2)
             X3=DR(3,1)*T1+DR(3,2)*T2-R0(3)
             DO I3=MIN3,MAX3
               I31=MOD(MOD(I3,NR3)+NR3,NR3)+1
-              eikr3=eikr2*exp(ci2pi*xk(3)*real(i31-i3)/real(nr3))
-              T3=real(I3,kind=8)
+              EIKR3=EIKR2*EXP(CI2PI*XK(3)*REAL(I31-I3)/REAL(NR3))
+              T3=REAL(I3,KIND=8)
               RVEC(1)=X1+DR(1,3)*T3
               RVEC(2)=X2+DR(2,3)*T3
               RVEC(3)=X3+DR(3,3)*T3
@@ -1652,7 +1655,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       SUBROUTINE GRAPHICS_1CWAVEC(NR,LNX,LOX,AEPHI,PSPHI,LMNX &
      &                   ,PROJ,LMX,DRHOL)
 !     **************************************************************************
-!     ** one-center epansion of the wave function on the radial grid          **
+!     ** ONE-CENTER EPANSION OF THE WAVE FUNCTION ON THE RADIAL GRID          **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -1663,8 +1666,8 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       INTEGER(4),INTENT(IN)  :: LOX(LNX)
       REAL(8)   ,INTENT(IN)  :: AEPHI(NR,LNX)
       REAL(8)   ,INTENT(IN)  :: PSPHI(NR,LNX)
-      complex(8),INTENT(IN)  :: PROJ(LMNX)
-      complex(8),INTENT(OUT) :: DRHOL(NR,LMX)
+      COMPLEX(8),INTENT(IN)  :: PROJ(LMNX)
+      COMPLEX(8),INTENT(OUT) :: DRHOL(NR,LMX)
       INTEGER(4)             :: LM,LMN,LN,M,L
 !     **************************************************************************
       DRHOL(:,:)=0.D0
@@ -1734,8 +1737,8 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GRAPHICS_REFINEGRIDC(NR1,NR2,NR3,NR1B,NR2B,NR3B,WAVE,WAVEBIG)
 !     **************************************************************************
-!     ** fourier interpolation onto a finer grid                              **
-!     ** like refinegrid byt for complex arrays                               **
+!     ** FOURIER INTERPOLATION ONTO A FINER GRID                              **
+!     ** LIKE REFINEGRID BYT FOR COMPLEX ARRAYS                               **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)     :: NR1
@@ -1744,8 +1747,8 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       INTEGER(4),INTENT(IN)     :: NR1B
       INTEGER(4),INTENT(IN)     :: NR2B
       INTEGER(4),INTENT(IN)     :: NR3B
-      complex(8),INTENT(IN)     :: WAVE(NR1,NR2,NR3)
-      complex(8),INTENT(OUT)    :: WAVEBIG(NR1B,NR2B,NR3B)
+      COMPLEX(8),INTENT(IN)     :: WAVE(NR1,NR2,NR3)
+      COMPLEX(8),INTENT(OUT)    :: WAVEBIG(NR1B,NR2B,NR3B)
       COMPLEX(8),ALLOCATABLE    :: WORKC1(:,:,:)
       COMPLEX(8),ALLOCATABLE    :: WORKC2(:,:,:)
       INTEGER(4)                :: I
@@ -1754,7 +1757,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     **************************************************************************
                            CALL TRACE$PUSH('GRAPHICS_REFINEGRIDC')
       ALLOCATE(WORKC2(NR1,NR2,NR3)) 
-      CALL LIB$3DFFTC8('RTOG',NR1,NR2,NR3,Wave,WORKC2)
+      CALL LIB$3DFFTC8('RTOG',NR1,NR2,NR3,WAVE,WORKC2)
       ALLOCATE(WORKC1(NR1B,NR2B,NR3B))      
       WORKC1=(0.D0,0.D0)
       I=NR1/2  !MIND: REQUIRES THAT ONLY EVEN NUMBERS ARE USED (-> ASSURED BY LIB$FFTADJUSTGRD)
@@ -1771,7 +1774,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       WORKC1(NR1B-I+1:NR1B,NR2B-J+1:NR2B,NR3B-K+1:NR3B)=WORKC2(I+1:2*I,J+1:2*J,K+1:2*K)
       DEALLOCATE(WORKC2)
 !
-      CALL LIB$3DFFTC8('GTOR',NR1B,NR2B,NR3B,WORKC1,wavebig)
+      CALL LIB$3DFFTC8('GTOR',NR1B,NR2B,NR3B,WORKC1,WAVEBIG)
       DEALLOCATE(WORKC1)
                                                  CALL TRACE$POP()
       RETURN
@@ -1911,7 +1914,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       REAL(8)   ,ALLOCATABLE     :: ONECPOT(:,:,:)
       INTEGER(4)                 :: NTASKS,THISTASK
       INTEGER(4)                 :: NR1B,NR2B,NR3B
-      INTEGER(4)                 :: nSP   !#(atom types)
+      INTEGER(4)                 :: NSP   !#(ATOM TYPES)
       INTEGER(4)                 :: ISP
       INTEGER(4)                 :: GID
 !     ******************************************************************
@@ -1972,6 +1975,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('NR',NR)
+        CALL SETUP$UNSELECT()
         NRX=MAX(NRX,NR)
       ENDDO        
       IF(.NOT.ALLOCATED(AE1CPOT)) THEN
@@ -1989,6 +1993,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('GID',GID)                
+        CALL SETUP$UNSELECT()
         CALL RADIAL$GETI4(GID,'NR',NR)
         IF(NRX.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT GRID SIZE')
@@ -2171,6 +2176,7 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
         ELSE
           CALL SETUP$GETR8('AEZ',ZB)
         END IF
+        CALL SETUP$UNSELECT()
         ALLOCATE(ONECPOT(NR,LMRXX))
         ALLOCATE(YLM(LMRX))
         ONECPOT(:,:)=AE1CTOTPOT(:,:LMRX,IAT)-PS1CTOTPOT(:,:LMRX,IAT)
