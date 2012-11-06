@@ -5142,8 +5142,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             CALL SETUP$GETFOFG('PRO',.FALSE.,LN,NGL,G2,CELLVOL,GSET%PRO(:,IND))
             CALL SETUP$GETFOFG('PRO',.TRUE.,LN,NGL,G2,CELLVOL,GSET%DPRO(:,IND))
           ENDDO
+          CALL SETUP$unSELECT()
         ENDDO
-        CALL SETUP$ISELECT(0)
 !
 !       ================================================================
 !       ==  UPDATE SPHERICAL HARMONICS                                ==
