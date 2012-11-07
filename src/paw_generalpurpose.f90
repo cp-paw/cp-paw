@@ -2275,12 +2275,11 @@ END MODULE MYLOCK_MODULE
 !
 !     ..........................................................................
       SUBROUTINE MYLOCK_INITIALIZE()
-      USE MYLOCK_MODULE
+      USE MYLOCK_MODULE,only : tini,lockfile,cmd_unlock,cmd_lock,dir
       IMPLICIT NONE
       CHARACTER(128) :: UNLOCKFILE
       CHARACTER(128) :: CMD_TOUCHUNLOCK
       LOGICAL(4)     :: TCHK1,TCHK2
-      INTEGER(4)     :: STATUS
 !     ************************************************************************
       IF(TINI) RETURN
       TINI=.TRUE.
@@ -2296,8 +2295,7 @@ END MODULE MYLOCK_MODULE
       INQUIRE(FILE=LOCKFILE,EXIST=TCHK1)
       INQUIRE(FILE=UNLOCKFILE,EXIST=TCHK2)
       IF(.NOT.(TCHK1.OR.TCHK2)) THEN
-        CALL SYSTEM(CMD_TOUCHUNLOCK,STATUS)
-        IF(STATUS.NE.0) STOP 'ERROR 1 IN MYLOCK'
+        CALL lib$SYSTEM(CMD_TOUCHUNLOCK)
       END IF
       RETURN
       END SUBROUTINE MYLOCK_INITIALIZE
@@ -2317,19 +2315,16 @@ END MODULE MYLOCK_MODULE
 !
 !     ..........................................................................
       SUBROUTINE MYLOCK$LOCK()
-      USE MYLOCK_MODULE
+      USE MYLOCK_MODULE,only : lockfile,cmd_lock,sleep
       IMPLICIT NONE
       LOGICAL(4)               :: TCHK
       REAL(8)                  :: TIME1,TIME2
-      INTEGER(4)               :: STATUS
 !     **************************************************************************
       CALL MYLOCK_INITIALIZE()
       DO 
         INQUIRE(FILE=LOCKFILE,EXIST=TCHK)
         IF(.NOT.TCHK) THEN
-          CALL SYSTEM(CMD_LOCK,STATUS)
-        IF(STATUS.NE.0) STOP 'ERROR 2 IN MYLOCK'
-          EXIT
+          CALL lib$SYSTEM(CMD_LOCK)
         END IF
         CALL CPU_TIME(TIME1) 
         DO 
@@ -2342,14 +2337,11 @@ END MODULE MYLOCK_MODULE
 !
 !     ..........................................................................
       SUBROUTINE MYLOCK$UNLOCK()
-      USE MYLOCK_MODULE
+      USE MYLOCK_MODULE, only: cmd_unlock
       IMPLICIT NONE
       INTEGER(4),PARAMETER :: NFIL=123
-      CHARACTER(64)        :: CMD
-      INTEGER(4)               :: STATUS
 !     **************************************************************************
       CALL MYLOCK_INITIALIZE()
-      CALL SYSTEM(CMD_UNLOCK,STATUS)
-      IF(STATUS.NE.0) STOP 'ERROR 3 IN MYLOCK'
+      CALL lib$SYSTEM(CMD_UNLOCK)
       RETURN
       END
