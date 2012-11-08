@@ -589,7 +589,7 @@ END MODULE FILEHANDLER_MODULE
      &        ,STATUS=FILE_%STATUS &
      &        ,FORM='formatted' &
      &        ,POSITION=FILE_%POSITION &
-     &        ,recl=1000000000)    !max value accepted by gfortran
+     &        ,recl=10000)    !max value accepted by gfortran
          else
 !          == recl not specified for unformatted files. uses default.         ==
 !          == The default or recl is 2^31 bytes for direct access files       ==
