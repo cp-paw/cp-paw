@@ -1,9 +1,9 @@
 Module version_module
 !uses SVN keyword substitution
 character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 1170 $'
+character(256):: VERrev='$LastChangedRevision: 1182 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2012-10-27 12:02:08 +0200 (Sa, 27. Okt 2012) $'
+character(256):: VERdat='$LastChangedDate: 2012-12-06 22:54:00 +0100 (Do, 06. Dez 2012) $'
 end Module version_module
 !
 !     ..................................................................
@@ -206,7 +206,7 @@ end Module version_module
       TPRINT=(MOD(NFI,IPRINT).EQ.0.OR.TFIRST.OR.TLAST)
 
       CALL HYPERFINE$SETL4('WAKE',TPRINT)
-      CALL GRAPHICS$SETL4('WAKE',TPRINT)
+      CALL GRAPHICS$SETL4('WAKE',TPRINT.AND.TLAST)
       CALL OPTEELS$SETL4('ON',TLAST)
       CALL CORE$SETL4('ON',TLAST)
 !
@@ -869,7 +869,7 @@ END MODULE STOPIT_MODULE
       RETURN
       END
 !
-!     ..........................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PRINFO(TPRINT,TLAST,NFI,DELT)
 !     **************************************************************************
 !     **  REPORTS ON THE PROCESS OF THE SIMULATION AND INVOKES                **
@@ -934,24 +934,18 @@ END MODULE STOPIT_MODULE
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !   
-!     ==================================================================
-!     ==   HYPERFINE PARAMETERS                                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   HYPERFINE PARAMETERS                                               ==
+!     ==========================================================================
       IF(TPRINT) CALL HYPERFINE$PRINT
 !   
 !     ==========================================================================
 !     ==  PLOT WAVE FUNCTIONS, DENSITIES                                      ==
 !     ==========================================================================
-print*,'tlast=',tlast
-      IF(TLAST) THEN 
-        IF(.NOT.TPRINT) THEN
-          CALL ERROR$MSG('CAUTION: GRAPHICS CALLED WITH TPRINT=.FALSE.')
-          CALL ERROR$STOP('PRINFO')
-        END IF
+!     == graphics object is set into the wake state only if tlast.and.tprint
                              CALL TRACE$PASS('BEFORE GRAPHICS$PLOT')
-        CALL GRAPHICS$PLOT()
+      CALL GRAPHICS$PLOT()
                              CALL TRACE$PASS('AFTER GRAPHICS$PLOT')
-      END IF
 !
 !     ==========================================================================
       if(tprint) then

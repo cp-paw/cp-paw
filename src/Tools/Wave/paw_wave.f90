@@ -1372,6 +1372,7 @@
 !     ** INTERPOLATES PERIODIC DENSITY DATA ON AN ARBITRARY GRID ONTO         **
 !     ** AN INDEPENDENT GRID SPECIFIED BY ORIGIN AND BOX.                     **
 !     **************************************************************************
+      use strings_module
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
@@ -1399,9 +1400,83 @@
       CALL MAPFIELDTOGRID(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX3D,N1,N2,N3,DATA)
 !
 !     ==========================================================================
-!     ==  WRITE DATA FIELD  (WILL BE ACCESSED BY RUBBERSHEET.GNU)             ==
+!     ==  WRITE GNUPLOT FILE RUBBERSHEET.GNU                                  ==
 !     ==========================================================================
-      OPEN(99,FILE='GNUDATA')
+!     ==  REMARK "SET DATA STYLE LINES" IS NOT RECOGNIZED ANY MORE
+!     ==  REMARK "SET DGRID3D  60,60,1" DOES NOT POPERLY INTERPOLATE
+!     ==  Z-RANGE (DATA) REMARK "SET DGRID3D  60,60,1" DOES NOT POPERLY 
+!     ==  INTERPOLATE
+      OPEN(99,FILE=-'RUBBERSHEET.GNU')
+      WRITE(99,*)'#'                                                     
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# DATA SECTION TO BE CHANGED BY THE USER                   =='
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)-'XMIN=',-0.5D0*SQRT(SUM(BOX(:,1)**2)) 
+      WRITE(99,*)-'XMAX=',+0.5D0*SQRT(SUM(BOX(:,1)**2)) 
+      WRITE(99,*)-'YMIN=',-0.5D0*SQRT(SUM(BOX(:,2)**2)) 
+      WRITE(99,*)-'YMAX=',+0.5D0*SQRT(SUM(BOX(:,2)**2)) 
+      WRITE(99,*)-'ZMIN=',MINVAL(DATA)
+      WRITE(99,*)-'ZMAX=',MAXVAL(DATA)
+      WRITE(99,*)-'ROT_X=30'
+      WRITE(99,*)-'ROT_Z=20'
+      WRITE(99,*)-'SCALE=1.0'
+      WRITE(99,*)-'SCALE_Z=1.'
+      WRITE(99,*)'#'                                                     
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# DEFINE LINE STYLES TO BE USED WITH LS IN SPLOT           =='
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# DEFINE A LINESTYLE FOR SPLOT (USED WITH LS)'         
+      WRITE(99,*)-'SET STYLE LINE 1 LT 1 LC RGB "BLACK" LW 1'             
+      WRITE(99,*)'# MAP HIGHT VALUES TO COLORS'                          
+      WRITE(99,*)-'SET PALETTE RGBFORMULA 22,13,-31'                      
+      WRITE(99,*)'#'
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# DATA RELATED STATEMENTS                                  =='
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)-'SET XRANGE [XMIN:XMAX]'                                
+      WRITE(99,*)-'SET YRANGE [YMIN:YMAX]'                                
+      WRITE(99,*)-'SET ZRANGE [ZMIN:ZMAX]'                                
+      WRITE(99,*)-'SET DGRID3D  60,60,1',' #SAMPLE INPUT DATA ONTO A 60X60 GRID'
+      WRITE(99,*)'#'                                                     
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# SURFACE PLOT                                             =='
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)-'SET SURFACE'                                           
+      WRITE(99,*)-'SET HIDDEN3D'                                          
+      WRITE(99,*)-'SET XYPLANE AT 0.','        # place z=0 into the xy plane'
+      WRITE(99,*)-'UNSET BORDER','             # REMOVE AXES'
+      WRITE(99,*)-'UNSET XTICS','              # REMOVE TICS FROM THE AXES'
+      WRITE(99,*)-'UNSET YTICS','              # REMOVE TICS FROM THE AXES'
+      WRITE(99,*)-'UNSET ZTICS','              # REMOVE TICS FROM THE AXES'
+      WRITE(99,*)-'SET KEY OFF','              # remove title'
+      WRITE(99,*)-'SET PM3D HIDDEN3D 1','      # linestyle for the surface grid'
+      WRITE(99,*)'#'                                                     
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# Define contour                                           =='
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)-'set cntrparam levels incremental -0.5,0.05,0.5'
+      WRITE(99,*)-'set cntrparam linear'
+      WRITE(99,*)-'set contour surface',' # draw contour onto the surface'
+      WRITE(99,*)-'unset clabel'       ,' # no autocoloring of contours'
+      WRITE(99,*)'#'                                                     
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# define orientation                                       =='
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)-'SET VIEW equal xy # avoids distortions of xy-plane'
+      WRITE(99,*)'#  ANGLE, ANGLE, OVERALL SCALE, SCALE Z-AXIS'        
+      WRITE(99,*)-'SET VIEW ROT_X,ROT_Z,SCALE,SCALE_Z'                  
+      WRITE(99,*)'#'                                                   
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# Perform plot                                             =='
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)-'# unset surface'
+      WRITE(99,*)-'# unset contour'
+      WRITE(99,*)-'# unset colorbox'
+      WRITE(99,*)-"SPLOT '-' WITH PM3D linewidth 1 linecolor rgb '#000000'"
+      WRITE(99,*)'#'                                                     
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# Data section                                             =='
+      WRITE(99,*)'#============================================================'
       DO I=1,N1
         DO J=1,N2
           WRITE(99,*)(REAL(I-1)/REAL(N1-1)-0.5D0)*SQRT(SUM(BOX(:,1)**2)) &
@@ -1409,72 +1484,9 @@
      &              ,DATA(I,J,1)
         ENDDO
       ENDDO
-      CLOSE(99)
-!
-!     ==========================================================================
-!     ==  WRITE GNUPLOT FILE RUBBERSHEET.GNU                                  ==
-!     ==========================================================================
-!     ==  REMARK "SET DATA STYLE LINES" IS NOT RECOGNIZED ANY MORE
-!     ==  REMARK "SET DGRID3D  60,60,1" DOES NOT POPERLY INTERPOLATE
-!     ==  Z-RANGE (DATA) REMARK "SET DGRID3D  60,60,1" DOES NOT POPERLY 
-!     ==  INTERPOLATE
-      OPEN(99,FILE='RUBBERSHEET.GNU')
-      WRITE(99,*)'#'                                                     
-      WRITE(99,*)'#================================================='      
-      WRITE(99,*)'# DATA SECTION TO BE CHANGED BY THE USER        =='      
-      WRITE(99,*)'#================================================='      
-      WRITE(99,*)'XMIN=',-0.5D0*SQRT(SUM(BOX(:,1)**2)) 
-      WRITE(99,*)'XMAX=',+0.5D0*SQRT(SUM(BOX(:,1)**2)) 
-      WRITE(99,*)'YMIN=',-0.5D0*SQRT(SUM(BOX(:,2)**2)) 
-      WRITE(99,*)'YMAX=',+0.5D0*SQRT(SUM(BOX(:,2)**2)) 
-      WRITE(99,*)'ZMIN=',MINVAL(DATA)
-      WRITE(99,*)'ZMAX=',MAXVAL(DATA)
-      WRITE(99,*)'ROT_X=30'
-      WRITE(99,*)'ROT_Z=20'
-      WRITE(99,*)'SCALE=1.0'
-      WRITE(99,*)'SCALE_Z=1.'
-      WRITE(99,*)'INFILE="GNUDATA"'                                  
-      WRITE(99,*)'#'                                                     
-      WRITE(99,*)'#================================================='      
-      WRITE(99,*)'# DEFINE LINE STYLES TO BE USED WITH LS IN SPLOT=='      
-      WRITE(99,*)'#================================================='      
-      WRITE(99,*)'# DEFINE A LINESTYLE FOR SPLOT (USED WITH LS)'         
-      WRITE(99,*)'SET STYLE LINE 1 LT 1 LC RGB "BLACK" LW 1'             
-      WRITE(99,*)'# MAP HIGHT VALUES TO COLORS'                          
-      WRITE(99,*)'SET PALETTE RGBFORMULA 22,13,-31'                      
-      WRITE(99,*)'#'
-      WRITE(99,*)'#================================================='
-      WRITE(99,*)'# DATA RELATED STATEMENTS                       =='       
-      WRITE(99,*)'#================================================='
-      WRITE(99,*)'SET XRANGE [XMIN:XMAX]'                                
-      WRITE(99,*)'SET YRANGE [YMIN:YMAX]'                                
-      WRITE(99,*)'SET ZRANGE [ZMIN:ZMAX]'                                
-      WRITE(99,*)'# SAMPLE INPUT DATA ONTO A 60X60 GRID'                 
-      WRITE(99,*)'SET DGRID3D  60,60,1'                                  
-      WRITE(99,*)'#'                                                     
-      WRITE(99,*)'#================================================='
-      WRITE(99,*)'# SURFACE PLOT                                  =='      
-      WRITE(99,*)'#================================================='
-      WRITE(99,*)'SET SURFACE'                                           
-      WRITE(99,*)'SET HIDDEN3D'                                          
-      WRITE(99,*)'#SET DATA STYLE LINES'                                  
-      WRITE(99,*)'# PLACES THE ZERO OF THE Z-AXIS INTO THE XY PLANE'     
-      WRITE(99,*)'SET XYPLANE AT 0.'                                     
-      WRITE(99,*)'# REMOVE AXES'                                         
-      WRITE(99,*)'UNSET BORDER'                                          
-      WRITE(99,*)'#  REMOVE TICS FROM THE AXES'                          
-      WRITE(99,*)'UNSET XTICS'                                           
-      WRITE(99,*)'UNSET YTICS'                                           
-      WRITE(99,*)'UNSET ZTICS'                                           
-      WRITE(99,*)'# NO TITLE WRITTEN'                                    
-      WRITE(99,*)'SET KEY OFF'                                           
-      WRITE(99,*)'# PLACE CONTOURS ONTO THE SURFACE'                     
-      WRITE(99,*)'SET PM3D EXPLICIT HIDDEN3D 1'                          
-      WRITE(99,*)'#'                                                   
-      WRITE(99,*)'#  ANGLE, ANGLE, OVERALL SCALE, SCALE Z-AXIS'        
-      WRITE(99,*)'SET VIEW ROT_X,ROT_Z,SCALE,SCALE_Z'                  
-      WRITE(99,*)'#'                                                   
-      WRITE(99,*)'SPLOT  INFILE WITH PM3D'                             
+      WRITE(99,*)'#============================================================'
+      WRITE(99,*)'# Data section finished                                    =='
+      WRITE(99,*)'#============================================================'
       CLOSE(99)
                               CALL TRACE$POP()
       RETURN
@@ -1964,43 +1976,3 @@
        ENDDO
       RETURN
       END
-!!$!
-!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE WRITEGNUFILE(NFIL,L1,L2,N1,N2,DATA)
-!!$!     **************************************************************************
-!!$!     **  WRITE A GNUPLOT FILE                                                **
-!!$!     **                                                                      **
-!!$!     ** REMARK:                                                              **
-!!$!     ** UNITS WRITTEN ARE ABOHR, CONSISTENT WITH AVOGADRO'S IMPLEMENTATION.  **
-!!$!     ** THE SPECS REQUIRE N1,N2,N3 TO BE MULTIPLIED BY -1 IF ABOHR ARE USED  **
-!!$!     ** AND ANGSTROM IS THE UNIT IF THEY ARE POSITIVE.                       **
-!!$!     **************************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: NFIL
-!!$      INTEGER(4),INTENT(IN) :: N1,N2
-!!$      REAL(8)   ,INTENT(IN) :: L1,L2
-!!$      REAL(8)   ,INTENT(IN) :: DATA(N1,N2)
-!!$      REAL(8)               :: ANGSTROM
-!!$      INTEGER(4)            :: I,J,K
-!!$!     **************************************************************************
-!!$      WRITE(NFIL,FMT='("SET STYLE LINE 1 LT 1 LC RGB "BLACK" LW 1")')
-!!$      WRITE(NFIL,FMT='("SET PALETTE RGBFORMULA 22,13,-31")')
-!!$      WRITE(NFIL,FMT='("SET XRANGE [",F10.5,":",F10.5]")')0.D0,L1
-!!$      WRITE(NFIL,FMT='("SET YRANGE [",F10.5,":",F10.5"]")')0.D0,L2
-!!$      WRITE(NFIL,FMT='("SET ZRANGE [-0.015:0.3]")')
-!!$      WRITE(NFIL,FMT='("SET DGRID3D  60,60,1")')
-!!$      WRITE(NFIL,FMT='("SET CNTRPARAM LEVELS INCREMENTAL -0.2,0.01,0.2")')
-!!$      WRITE(NFIL,FMT='("SET SURFACE")')
-!!$      WRITE(NFIL,FMT='("SET HIDDEN3D")')
-!!$      WRITE(NFIL,FMT='("SET DATA STYLE LINES")')
-!!$      WRITE(NFIL,FMT='("SET VIEW 30, 20, 1.0, 2.5")')
-!!$      WRITE(NFIL,FMT='("SET XYPLANE AT 0.")')
-!!$      WRITE(NFIL,FMT='("UNSET BORDER")')
-!!$      WRITE(NFIL,FMT='("UNSET XTICS")')
-!!$      WRITE(NFIL,FMT='("UNSET YTICS"0')
-!!$      WRITE(NFIL,FMT='("UNSET ZTICS")')
-!!$      WRITE(NFIL,FMT='("SET KEY OFF"0')
-!!$      WRITE(NFIL,FMT='("SET PM3D EXPLICIT HIDDEN3D 1")')
-!!$      WRITE(NFIL,FMT='("SPLOT "NTB2D_IAT1S.DAT" WITH PM3D")')
-!!$      RETURN
-!!$      END

@@ -3367,7 +3367,7 @@ MODULE LMTO_DROPPICK_MODULE
 !== HARD-WIRED INPUT DATA                                                     ==
 !===============================================================================
 LOGICAL(4)            :: TREADDHOFK=.FALSE.
-!!$CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
+!CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
 !!CHARACTER(32),PARAMETER :: SWITCHID='CAFE2AS2'
 !CHARACTER(32),PARAMETER :: SWITCHID='H2'
 CHARACTER(32),PARAMETER :: SWITCHID='HUBBARD'
@@ -3455,6 +3455,7 @@ IF(TPRO(IPRO)) THEN
     END IF
   ELSE IF(SWITCHID.EQ.'CAFE2AS2') THEN
   ELSE IF(SWITCHID.EQ.'H2') THEN
+  ELSE IF(SWITCHID.EQ.'HUBBARD') THEN
   ELSE 
     CALL ERROR$MSG('SWITCHID NOT RECOGNIZED (2ND TEST)')
     CALL ERROR$CHVAL('SWITCHID',SWITCHID)
@@ -3543,13 +3544,14 @@ END IF
 !     **  THE BASIS ARE ONSITE-ORTHOGONALIZED NATURAL TIGHT-BINDING ORBITALS  **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
+      use strings_module
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       USE LMTO_MODULE, ONLY : TDROP,LOX,LNX,ISPECIES
       USE LMTO_DROPPICK_MODULE, ONLY : NCORR,NB1,NB2,NBW,TPRO,DHOFK,T,TICKET &
      &                                ,IPRO1,NPROAT
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
-      LOGICAL(4),PARAMETER   :: TDUMMY=.TRUE. !WRITE A DUMMY DMFT2DFT FILE
+      LOGICAL(4),PARAMETER   :: TDUMMY=.false. !WRITE A DUMMY DMFT2DFT FILE
       INTEGER(4)             :: NPRO
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: NFIL,NFIL2
@@ -3635,11 +3637,11 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
 !     ==========================================================================
 !     ==  ATTACH FILE                                                         ==
 !     ==========================================================================
-      CALL FILEHANDLER$UNIT('DFT2DMFT',NFIL)
+!      CALL FILEHANDLER$UNIT('DFT2DMFT',NFIL)
+NFIL=12
+OPEN(NFIL,FILE=-'DFT2DMFT.DAT',FORM='FORMATTED',RECL=10000000)
       REWIND(NFIL)
 !!$!FILEHANDLER DOES NOT WORK FOR FORTMATTED FILES BECAUSE OF LIMITED LINE LENGTH
-!!$NFIL=12
-!!$OPEN(NFIL,FILE='DMFTOUT.DAT')
 !
 !     ==========================================================================
 !     == WRITE INFO TO FILE
@@ -3651,7 +3653,7 @@ PRINT*,'NBW  AAA',NBW,' NCORR ',NCORR
       IF(TDUMMY) THEN
 !        CALL FILEHANDLER$UNIT('DMFT2DFTDUMMY',NFIL2)
 NFIL2=14
-OPEN(NFIL2,FILE='DMFT2DFT.DAT')
+OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
         REWIND(NFIL2)
         ID='INFO'
         WRITE(NFIL2,*)ID,NKPT,NSPIN,NBW,TICKET   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -3834,7 +3836,8 @@ OPEN(NFIL2,FILE='DMFT2DFT.DAT')
       DEALLOCATE(QSQ)
       DEALLOCATE(QSQINV)
       DEALLOCATE(H0)
-      CALL FILEHANDLER$CLOSE('DFT2DMFT')
+close(nfil)
+!      CALL FILEHANDLER$CLOSE('DFT2DMFT')
 !      IF(TDUMMY) CALL FILEHANDLER$CLOSE('DMFT2DFTDUMMY')
       IF(TDUMMY) CLOSE(NFIL2)
       CALL ERROR$MSG('FORCED STOP AFTER WRITING FILE')
