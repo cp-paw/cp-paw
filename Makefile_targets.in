@@ -225,10 +225,10 @@ ${PAWDIR}/doc/doc.bib :${PAWDIR}/src/Docs/doc.bib
 	cp ${PAWDIR}/src/Docs/doc.bib ${PAWDIR}/doc/doc.bib
 #
 ${PAWDIR}/doc/Figs :${PAWDIR}/src/Docs/Figs
-	cp -r ${PAWDIR}/src/Docs/Figs ${PAWDIR}/doc/Figs
+	cp -r ${PAWDIR}/src/Docs/Figs ${PAWDIR}/doc/
 #
 ${PAWDIR}/doc/Examples :${PAWDIR}/src/Docs/Examples
-	cp -r ${PAWDIR}/src/Docs/Examples ${PAWDIR}/doc/Examples
+	cp -r ${PAWDIR}/src/Docs/Examples ${PAWDIR}/doc/
 #
 clean_docs: 
 	rm -f ${PAWDIR}/doc/*
