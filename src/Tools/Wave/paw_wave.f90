@@ -75,17 +75,27 @@
       CALL FILEHANDLER$SETSPECIFICATION('VRML','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('VRML','ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION('VRML','FORM','FORMATTED')
+      CALL FILEHANDLER$SETFILE('GNUCONTOUR',.TRUE.,-'_C.GNU')
+      CALL FILEHANDLER$SETSPECIFICATION('GNUCONTOUR','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('GNUCONTOUR','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('GNUCONTOUR','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('GNUCONTOUR','FORM','FORMATTED')
+      CALL FILEHANDLER$SETFILE('GNURUBBERSHEET',.TRUE.,-'_R.GNU')
+      CALL FILEHANDLER$SETSPECIFICATION('GNURUBBERSHEET','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('GNURUBBERSHEET','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('GNURUBBERSHEET','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('GNURUBBERSHEET','FORM','FORMATTED')
 !
-!     ==================================================================
-!     ==  READ CNTL FILE TO LINKEDLIST                                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ CNTL FILE TO LINKEDLIST                                        ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('CNTL',NFIL)
       CALL LINKEDLIST$NEW(LL_CNTL)
       CALL LINKEDLIST$READ(LL_CNTL,NFIL,'~')
 !
-!     ==================================================================
-!     ==  RESET FILE NAME FOR STRUCTURE FILE IF REQUESTED             ==
-!     ================================================================== 
+!     ==========================================================================
+!     ==  RESET FILE NAME FOR STRUCTURE FILE IF REQUESTED                     ==
+!     ==========================================================================
       CALL TRACE$PASS('RESET FILENAME FOR STRC FILE')
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'WCNTL')
@@ -146,7 +156,7 @@
        TYPE(LL_TYPE)             :: LL_STRC
        CHARACTER(256)            :: TITLE
        INTEGER(4)                :: NFIL
-       INTEGER(4)                :: NFILo !fortran unit of protocoll file
+       INTEGER(4)                :: NFILO !FORTRAN UNIT OF PROTOCOLL FILE
        REAL(8)                   :: RBAS(3,3)
        INTEGER(4)                :: NAT
        REAL(8)      ,ALLOCATABLE :: POS(:,:)   !(3,NAT)
@@ -266,16 +276,29 @@
        CALL MAKECUBE(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE,BOXR0,BOXVEC)
        CALL FILEHANDLER$CLOSE('CUBE')
 !
+!      =========================================================================
+!      ==  WRITE RUBBERSHEET TO GNU FILE                                      ==
+!      =========================================================================
+       IF(TPLANE) THEN
+!         == ATTENTION! ONLY REAL PART IS USED =================================
+         CALL FILEHANDLER$UNIT('GNUCONTOUR',NFIL)
+         REWIND NFIL
+         CALL MAKEGNU(NFIL,'CONTOUR',NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE &
+      &              ,PLANER0,PLANEVEC)
+         CALL FILEHANDLER$CLOSE('GNUCONTOUR')
+         CALL FILEHANDLER$UNIT('GNURUBBERSHEET',NFIL)
+         REWIND NFIL
+         CALL MAKEGNU(NFIL,'SURFACE',NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE &
+      &              ,PLANER0,PLANEVEC)
+         CALL FILEHANDLER$CLOSE('GNURUBBERSHEET')
+       END IF
+!
 !      ==================================================================
 !      ==  WRITE VRML SCENE TO WRL FILE                                ==
 !      ==================================================================
        CALL TRACE$PASS('WRITE WAVE TO VRML-FILE')
        CALL FILEHANDLER$UNIT('VRML',NFIL)
        REWIND NFIL
-       IF(TPLANE) THEN
-!         == ATTENTION! ONLY REAL PART IS USED
-         CALL MAKEGNU(NFIL,NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE,PLANER0,PLANEVEC)
-       END IF
        IF(TC) THEN
          CALL MAKEVRMLC(NFIL,NAT,Z,POS,RBAS,XK,NR1,NR2,NR3,CWAVE &
       &             ,BOXR0,BOXVEC,TPLANE,PLANER0,PLANEVEC)
@@ -1367,13 +1390,14 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE MAKEGNU(NFIL,NAT,Z,R,RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX)
+      SUBROUTINE MAKEGNU(NFIL,TYPE,NAT,Z,R,RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX)
 !     **************************************************************************
 !     ** INTERPOLATES PERIODIC DENSITY DATA ON AN ARBITRARY GRID ONTO         **
 !     ** AN INDEPENDENT GRID SPECIFIED BY ORIGIN AND BOX.                     **
 !     **************************************************************************
-      use strings_module
+      USE STRINGS_MODULE
       IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: TYPE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
       REAL(8)   ,INTENT(IN) :: Z(NAT)    !ATOMIC NUMBER
@@ -1388,9 +1412,18 @@
       INTEGER(4),PARAMETER  :: N3=1
       REAL(8)               :: BOX3D(3,3)
       REAL(8)               :: DATA(N1,N2,N3)
+      real(8)               :: xmax,xmin,ymax,ymin
       INTEGER(4)            :: I,J
 !     **************************************************************************
                               CALL TRACE$PUSH('MAKEGNU')
+      IF(TYPE.EQ.'SURFACE') THEN
+      ELSE IF(TYPE.EQ.'CONTOUR') THEN
+      ELSE
+        CALL ERROR$MSG('TYPE NOT RECOGNIZED')
+        CALL ERROR$CHVAL('TYPE',TYPE)
+        CALL ERROR$MSG('PERMITTED VALUES ARE "CONTOUR" AND "SURFACE"')
+        CALL ERROR$STOP('MAKEGNU')
+      END IF
 !
 !     ==========================================================================
 !     ==  INTERPOLATE WAVE FUNCTION ONTO VIEWING GRID                         ==
@@ -1399,6 +1432,11 @@
       BOX3D(:,:2)=BOX  
       CALL MAPFIELDTOGRID(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX3D,N1,N2,N3,DATA)
 !
+      XMIN=-0.5D0*SQRT(SUM(BOX(:,1)**2)) 
+      XMAX=+0.5D0*SQRT(SUM(BOX(:,1)**2)) 
+      YMIN=-0.5D0*SQRT(SUM(BOX(:,2)**2)) 
+      YMAX=+0.5D0*SQRT(SUM(BOX(:,2)**2)) 
+ !
 !     ==========================================================================
 !     ==  WRITE GNUPLOT FILE RUBBERSHEET.GNU                                  ==
 !     ==========================================================================
@@ -1406,88 +1444,120 @@
 !     ==  REMARK "SET DGRID3D  60,60,1" DOES NOT POPERLY INTERPOLATE
 !     ==  Z-RANGE (DATA) REMARK "SET DGRID3D  60,60,1" DOES NOT POPERLY 
 !     ==  INTERPOLATE
-      OPEN(99,FILE=-'RUBBERSHEET.GNU')
-      WRITE(99,*)'#'                                                     
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# DATA SECTION TO BE CHANGED BY THE USER                   =='
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)-'XMIN=',-0.5D0*SQRT(SUM(BOX(:,1)**2)) 
-      WRITE(99,*)-'XMAX=',+0.5D0*SQRT(SUM(BOX(:,1)**2)) 
-      WRITE(99,*)-'YMIN=',-0.5D0*SQRT(SUM(BOX(:,2)**2)) 
-      WRITE(99,*)-'YMAX=',+0.5D0*SQRT(SUM(BOX(:,2)**2)) 
-      WRITE(99,*)-'ZMIN=',MINVAL(DATA)
-      WRITE(99,*)-'ZMAX=',MAXVAL(DATA)
-      WRITE(99,*)-'ROT_X=30'
-      WRITE(99,*)-'ROT_Z=20'
-      WRITE(99,*)-'SCALE=1.0'
-      WRITE(99,*)-'SCALE_Z=1.'
-      WRITE(99,*)'#'                                                     
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# DEFINE LINE STYLES TO BE USED WITH LS IN SPLOT           =='
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# DEFINE A LINESTYLE FOR SPLOT (USED WITH LS)'         
-      WRITE(99,*)-'SET STYLE LINE 1 LT 1 LC RGB "BLACK" LW 1'             
-      WRITE(99,*)'# MAP HIGHT VALUES TO COLORS'                          
-      WRITE(99,*)-'SET PALETTE RGBFORMULA 22,13,-31'                      
-      WRITE(99,*)'#'
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# DATA RELATED STATEMENTS                                  =='
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)-'SET XRANGE [XMIN:XMAX]'                                
-      WRITE(99,*)-'SET YRANGE [YMIN:YMAX]'                                
-      WRITE(99,*)-'SET ZRANGE [ZMIN:ZMAX]'                                
-      WRITE(99,*)-'SET DGRID3D  60,60,1',' #SAMPLE INPUT DATA ONTO A 60X60 GRID'
-      WRITE(99,*)'#'                                                     
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# SURFACE PLOT                                             =='
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)-'SET SURFACE'                                           
-      WRITE(99,*)-'SET HIDDEN3D'                                          
-      WRITE(99,*)-'SET XYPLANE AT 0.','        # place z=0 into the xy plane'
-      WRITE(99,*)-'UNSET BORDER','             # REMOVE AXES'
-      WRITE(99,*)-'UNSET XTICS','              # REMOVE TICS FROM THE AXES'
-      WRITE(99,*)-'UNSET YTICS','              # REMOVE TICS FROM THE AXES'
-      WRITE(99,*)-'UNSET ZTICS','              # REMOVE TICS FROM THE AXES'
-      WRITE(99,*)-'SET KEY OFF','              # remove title'
-      WRITE(99,*)-'SET PM3D HIDDEN3D 1','      # linestyle for the surface grid'
-      WRITE(99,*)'#'                                                     
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# Define contour                                           =='
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)-'set cntrparam levels incremental -0.5,0.05,0.5'
-      WRITE(99,*)-'set cntrparam linear'
-      WRITE(99,*)-'set contour surface',' # draw contour onto the surface'
-      WRITE(99,*)-'unset clabel'       ,' # no autocoloring of contours'
-      WRITE(99,*)'#'                                                     
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# define orientation                                       =='
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)-'SET VIEW equal xy # avoids distortions of xy-plane'
-      WRITE(99,*)'#  ANGLE, ANGLE, OVERALL SCALE, SCALE Z-AXIS'        
-      WRITE(99,*)-'SET VIEW ROT_X,ROT_Z,SCALE,SCALE_Z'                  
-      WRITE(99,*)'#'                                                   
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# Perform plot                                             =='
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)-'# unset surface'
-      WRITE(99,*)-'# unset contour'
-      WRITE(99,*)-'# unset colorbox'
-      WRITE(99,*)-"SPLOT '-' WITH PM3D linewidth 1 linecolor rgb '#000000'"
-      WRITE(99,*)'#'                                                     
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# Data section                                             =='
-      WRITE(99,*)'#============================================================'
+      WRITE(NFIL,*)'#'                                                     
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# DATA SECTION TO BE CHANGED BY THE USER                 =='
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)-'XMIN=',XMIN
+      WRITE(NFIL,*)-'XMAX=',XMAX
+      WRITE(NFIL,*)-'YMIN=',YMIN
+      WRITE(NFIL,*)-'YMAX=',YMAX
+      WRITE(NFIL,*)-'ZMIN=',MINVAL(DATA)
+      WRITE(NFIL,*)-'ZMAX=',MAXVAL(DATA)
+      IF(TYPE.EQ.'SURFACE') THEN
+        WRITE(NFIL,*)-'ROT_X=30'
+        WRITE(NFIL,*)-'ROT_Z=20'
+      ELSE IF(TYPE.EQ.'CONTOUR') THEN
+        WRITE(NFIL,*)-'ROT_X=0'
+        WRITE(NFIL,*)-'ROT_Z=0'
+      END IF
+      WRITE(NFIL,*)-'SCALE=1'
+      WRITE(NFIL,*)-'SCALE_Z=1.'
+      WRITE(NFIL,*)'#'                                                     
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# DEFINE LINE STYLES TO BE USED WITH LS IN SPLOT         =='
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# DEFINE A LINESTYLE FOR SPLOT (USED WITH LS)'         
+      WRITE(NFIL,*)-'SET STYLE LINE 1 LT 1 LC RGB "BLACK" LW 1'             
+      WRITE(NFIL,*)'# MAP HIGHT VALUES TO COLORS'                          
+      WRITE(NFIL,*)-'SET PALETTE RGBFORMULA 22,13,-31'                      
+      WRITE(NFIL,*)'#'
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# DATA RELATED STATEMENTS                                =='
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)-'SET XRANGE [XMIN:XMAX]'                                
+      WRITE(NFIL,*)-'SET YRANGE [YMIN:YMAX]'                                
+      WRITE(NFIL,*)-'SET ZRANGE [ZMIN:ZMAX]'                                
+      WRITE(NFIL,*)-'SET DGRID3D  60,60,1','     #SAMPLE DATA ONTO A 60X60 GRID'
+      WRITE(NFIL,*)'#'                                                     
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# SURFACE PLOT                                           =='
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)-'SET SURFACE'                                           
+      WRITE(NFIL,*)-'SET HIDDEN3D'                                          
+      WRITE(NFIL,*)-'SET XYPLANE AT 0.','      # PLACE Z=0 INTO THE XY PLANE'
+      WRITE(NFIL,*)-'UNSET BORDER','           # REMOVE AXES'
+      WRITE(NFIL,*)-'UNSET XTICS','            # REMOVE TICS FROM THE AXES'
+      WRITE(NFIL,*)-'UNSET YTICS','            # REMOVE TICS FROM THE AXES'
+      WRITE(NFIL,*)-'UNSET ZTICS','            # REMOVE TICS FROM THE AXES'
+      WRITE(NFIL,*)-'SET KEY OFF','            # REMOVE TITLE'
+      IF(TYPE.EQ.'SURFACE') THEN
+        WRITE(NFIL,*)-'SET PM3D HIDDEN3D 1','  # LINESTYLE FOR THE SURFACE GRID'
+      ELSE IF(TYPE.EQ.'CONTOUR') THEN
+        WRITE(NFIL,*)-'SET PM3D HIDDEN3D 0','  # LINESTYLE FOR THE SURFACE GRID'
+      END IF
+      WRITE(NFIL,*)'#'                                                     
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# DEFINE CONTOUR                                         =='
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)-'SET CONTOUR SURFACE',' # DRAW CONTOUR ONTO THE SURFACE'
+      WRITE(NFIL,*)-'SET CNTRPARAM LEVELS INCREMENTAL -0.5,0.05,0.5'
+      WRITE(NFIL,*)-'SET CNTRPARAM bspline'
+      WRITE(NFIL,*)-'SET CNTRPARAM order 6'
+      WRITE(NFIL,*)-'UNSET CLABEL'       ,' # NO AUTOCOLORING OF CONTOURS'
+      WRITE(NFIL,*)'#'                                                     
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# DEFINE ORIENTATION                                     =='
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)-'SET VIEW EQUAL XY # AVOIDS DISTORTIONS OF XY-PLANE'
+      WRITE(NFIL,*)'#  ANGLE, ANGLE, OVERALL SCALE, SCALE Z-AXIS'        
+      WRITE(NFIL,*)-'SET VIEW ROT_X,ROT_Z,SCALE,SCALE_Z'                  
+      WRITE(NFIL,*)'#'                                                   
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# SET Terminals (uncomment one)                          =='
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'#----USE POSTSCRIPT TERMINAL FOR EPS FILES-----------------'
+      WRITE(NFIL,*)-'SET TERMINAL POSTSCRIPT EPS ' &
+                  ,-'SIZE (XMAX-XMIN)/2,(YMAX-YMIN)/2 ' &
+     &            ,-" ENHANCED COLOR CLIP FONT 'HELVETICA,20' LINEWIDTH 1 "
+      WRITE(NFIL,*)'#----USE WXT TERMINAL FOR LINUX SCREEN---------------------'
+      WRITE(NFIL,*)-'# SET TERMINAL WXT SIZE 350,262 ENHANCED ' &
+     &            ,-" FONT 'VERDANA,10' PERSIST "
+      WRITE(NFIL,*)'#----USE PDF TERMINAL FOR PDF FILES------------------------'
+      WRITE(NFIL,*)-'# SET TERMINAL PDF COLOR ENHANCED '
+      WRITE(NFIL,*)'#----USE AQUA TERMINAL FOR OSX SCREEN----------------------'
+      WRITE(NFIL,*)-"# SET TERMINAL AQUA ENHANCED SOLID FONT 'HELVETICA,20'" &
+     &            ,-"TITLE 'CONTOUR'"
+      WRITE(NFIL,*)'#'                                                   
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# PERFORM PLOT                                           =='
+      WRITE(NFIL,*)'#=========================================================='
+      IF(TYPE.EQ.'SURFACE') THEN
+        WRITE(NFIL,*)-'UNSET CONTOUR'
+        WRITE(NFIL,*)-'# SET BORDER'
+        WRITE(NFIL,*)-'# UNSET SURFACE'
+        WRITE(NFIL,*)-'# UNSET COLORBOX'
+      ELSE IF(TYPE.EQ.'CONTOUR') THEN
+        WRITE(NFIL,*)-'# UNSET CONTOUR'
+        WRITE(NFIL,*)-'SET BORDER'
+        WRITE(NFIL,*)-'# UNSET SURFACE'
+        WRITE(NFIL,*)-'UNSET COLORBOX'
+      END IF
+      WRITE(NFIL,*)-"SPLOT '-' WITH PM3D LINEWIDTH 3 LINECOLOR RGB '#000000'"
+      WRITE(NFIL,*)'#'                                                     
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# DATA SECTION                                           =='
+      WRITE(NFIL,*)'#=========================================================='
       DO I=1,N1
         DO J=1,N2
-          WRITE(99,*)(REAL(I-1)/REAL(N1-1)-0.5D0)*SQRT(SUM(BOX(:,1)**2)) &
+          WRITE(NFIL,*)(REAL(I-1)/REAL(N1-1)-0.5D0)*SQRT(SUM(BOX(:,1)**2)) &
      &              ,(REAL(J-1)/REAL(N2-1)-0.5D0)*SQRT(SUM(BOX(:,2)**2)) &
      &              ,DATA(I,J,1)
         ENDDO
       ENDDO
-      WRITE(99,*)'#============================================================'
-      WRITE(99,*)'# Data section finished                                    =='
-      WRITE(99,*)'#============================================================'
-      CLOSE(99)
+      WRITE(NFIL,*)'#=========================================================='
+      WRITE(NFIL,*)'# DATA SECTION FINISHED                                  =='
+      WRITE(NFIL,*)'#=========================================================='
                               CALL TRACE$POP()
       RETURN
       END
@@ -1944,15 +2014,15 @@
            R1(:)=R(:,IAT1)+RAD1*SCALEBALL*1.001D0*DR(:)
            R2(:)=R(:,IAT2)-RAD2*SCALEBALL*1.001D0*DR(:)
            ANGLE=-ACOS(DR(2))   ! ORIGINAL ORIENTATION (0,1,0)
-           if(angle.ne.0.d0) then
+           IF(ANGLE.NE.0.D0) THEN
              AXIS(1)=-DR(3)
              AXIS(2)=0.D0
              AXIS(3)=DR(1)
              AXIS=AXIS/SQRT(SUM(AXIS**2))
-           else  ! exception to avoid divide-by-zero
-             axis(:)=0.d0  
-             axis(1)=1.d0
-           end if
+           ELSE  ! EXCEPTION TO AVOID DIVIDE-BY-ZERO
+             AXIS(:)=0.D0  
+             AXIS(1)=1.D0
+           END IF
            WRITE(NFIL,*)'TRANSFORM{'
            WRITE(NFIL,*)'  TRANSLATION ',0.5D0*(R1(:)+R2(:))
            WRITE(NFIL,*)'  ROTATION    ',AXIS,ANGLE
