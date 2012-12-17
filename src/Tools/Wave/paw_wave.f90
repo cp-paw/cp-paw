@@ -280,12 +280,14 @@
 !      ==  WRITE RUBBERSHEET TO GNU FILE                                      ==
 !      =========================================================================
        IF(TPLANE) THEN
+         CALL TRACE$PASS('make gnu file for contour plot')
 !         == ATTENTION! ONLY REAL PART IS USED =================================
          CALL FILEHANDLER$UNIT('GNUCONTOUR',NFIL)
          REWIND NFIL
          CALL MAKEGNU(NFIL,'CONTOUR',NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE &
       &              ,PLANER0,PLANEVEC)
          CALL FILEHANDLER$CLOSE('GNUCONTOUR')
+         CALL TRACE$PASS('make gnu file for rubbersheet')
          CALL FILEHANDLER$UNIT('GNURUBBERSHEET',NFIL)
          REWIND NFIL
          CALL MAKEGNU(NFIL,'SURFACE',NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE &
@@ -1494,7 +1496,7 @@
       IF(TYPE.EQ.'SURFACE') THEN
         WRITE(NFIL,*)-'SET PM3D HIDDEN3D 1','  # LINESTYLE FOR THE SURFACE GRID'
       ELSE IF(TYPE.EQ.'CONTOUR') THEN
-        WRITE(NFIL,*)-'SET PM3D HIDDEN3D 0','  # LINESTYLE FOR THE SURFACE GRID'
+        WRITE(NFIL,*)-'#SET PM3D HIDDEN3D 1',' # LINESTYLE FOR THE SURFACE GRID'
       END IF
       WRITE(NFIL,*)'#'                                                     
       WRITE(NFIL,*)'#=========================================================='

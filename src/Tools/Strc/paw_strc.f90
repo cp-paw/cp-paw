@@ -402,7 +402,7 @@
       WRITE(NFILO,FMT=*)
       DO IAT=1,NAT
         WRITE(NFILO,FMT='(T3,"!ATOM NAME= ",T15,A,T25," R= ",3F12.5," !END")') &
-     &                   TRIM(NAME(IAT)),R(:,IAT)/RUNIT
+     &                   "'"//TRIM(NAME(IAT))//"'",R(:,IAT)/RUNIT
       ENDDO
       WRITE(NFILO,FMT=*)
       RETURN
@@ -535,7 +535,7 @@
      &                                             DISARR(4:6)/PI*180.D0
         WRITE(NFILO,FMT=*)
 !
-        CALL GBASS(RBAS,RBASIN,SVAR)
+        call lib$invertr8(3,rbas,rbasin)
         WRITE(NFILO,FMT='("ATOMIC POSITIONS IN RELATIVE COORDINATES:")')
         DO IAT=1,NAT
           DR(:)=MATMUL(RBASIN,R(:,IAT))

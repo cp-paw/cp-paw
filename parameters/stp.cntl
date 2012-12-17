@@ -231,7 +231,7 @@
           LAMBDA= 6. 6. 6. 6.
     !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END
     !POT  POW=3. RC/RCOV=   0.705 !END
-    !CORE   POW=3. RC/RCOV=   0.705 !END
+    !CORE POW=3. RC/RCOV=   0.705 !END
   !END
 
   !SETUP  ID='FE_.75_6.0' EL='FE' ZV=   8.

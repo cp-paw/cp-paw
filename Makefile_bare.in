@@ -306,6 +306,9 @@ OBJTOXYZ=  \
 # Objects for paw_tostrc.x
 OBJTOSTRC=  \
           ${OBJDIR}/paw_tostrc.o
+# Objects for paw_tostrc.x
+OBJPOLYHEDRA=  \
+          ${OBJDIR}/paw_polyhedra.o
 
 
 #########################################################################
@@ -392,7 +395,7 @@ ${BINDIR}/paw_tra.x: ${OBJTRA} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_tra.x ${OBJTRA} ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -L${OBJDIR} -lpaw ${LIBS}
 #
 clean_tra:
-	rm -f ${OBTRA}; rm -f ${BINDIR}/paw_tra.x
+	rm -f ${OBJTRA}; rm -f ${BINDIR}/paw_tra.x
 #
 ${BINDIR}/paw_wave.x: ${OBJWAVE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_wave.x ${OBJWAVE} -L${OBJDIR} -lpaw ${LIBS}
@@ -465,6 +468,12 @@ ${BINDIR}/paw_tostrc.x: ${OBJTOSTRC} ${PAWLIB}
 #
 clean_tostrc:
 	rm -f ${OBJTOSTRC}; rm -f ${BINDIR}/paw_tostrc.x
+#
+${BINDIR}/paw_polyhedra.x: ${OBJPOLYHEDRA} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_polyhedra.x ${OBJPOLYHEDRA} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_polyhedra:
+	rm -f ${OBJPOLYHEDRA}; rm -f ${BINDIR}/paw_polyhedra.x
 #
 # copy include files if necessary (controlled by if-statements above)
 #
@@ -572,6 +581,10 @@ ${OBJTOXYZ}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJTOSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJPOLYHEDRA}: ${OBJDIR}/%.o : ${TOOLDIR}/POLYHEDRA/%.f90
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #########################################################################
