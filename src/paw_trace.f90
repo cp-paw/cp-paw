@@ -247,6 +247,11 @@ END MODULE TRACE_MODULE
 !     ==========================================================================
       IF(LEVEL.LE.MAXLEVEL.AND.LEVEL.GE.1)HISTORY(LEVEL)=' '
       LEVEL=LEVEL-1
+      IF(LEVEL.LT.0) THEN
+        CALL ERROR$MSG('LEVEL<0 ENCOUNTERED')
+        CALL ERROR$MSG('LIKELY A TRACE$PUSH IS NOT PAIRED WITH A TRACE$POP')
+        CALL ERROR$stop('TRACE$POP')
+      END IF
       RETURN 
       END
 !
