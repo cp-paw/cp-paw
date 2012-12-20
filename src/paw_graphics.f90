@@ -500,7 +500,7 @@ USE MPE_MODULE
       REAL(8)       ,ALLOCATABLE:: POS(:,:)   !(3,NAT)
       REAL(8)       ,ALLOCATABLE:: Z(:)
       REAL(8)       ,ALLOCATABLE:: Q(:)
-      INTEGER(4)                :: LMNXX
+      INTEGER(4)                :: LMNX
       INTEGER(4)                :: NR
       INTEGER(4)                :: LNX
       INTEGER(4)    ,ALLOCATABLE:: LOX(:)    !LNX
@@ -588,7 +588,6 @@ USE MPE_MODULE
 !     ==  GET GENERIC DATA FROM ATOM OBJECT                                   ==
 !     ==========================================================================
       CALL ATOMLIST$NATOM(NAT)
-      CALL SETUP$GETI4('LMNXX',LMNXX)
       ALLOCATE(POS(3,NAT))
       ALLOCATE(ATOMNAME(NAT))
       ALLOCATE(Z(NAT))
@@ -613,6 +612,7 @@ USE MPE_MODULE
           CALL RADIAL$GETI4(GID,'NR',NR)
 !
           CALL SETUP$GETI4('LNX',LNX)
+          CALL SETUP$GETI4('LMNX',LMNX)
           ALLOCATE(LOX(LNX))
           CALL SETUP$GETI4A('LOX',LNX,LOX)
           ALLOCATE(AEPHI(NR,LNX))
@@ -620,16 +620,16 @@ USE MPE_MODULE
           CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
           CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI)
           CALL SETUP$UNSELECT()
-          ALLOCATE(PROJ(LMNXX))
+          ALLOCATE(PROJ(LMNX))
           CALL WAVES$SETI4('IAT',IAT)
-          CALL WAVES$GETR8A('<PSPSI|PRO>',LMNXX,PROJ)
+          CALL WAVES$GETR8A('<PSPSI|PRO>',LMNX,PROJ)
           LX=0
           DO LN=1,LNX
             LX=MAX(LX,LOX(LN))
           ENDDO
           LMXX=(LX+1)**2
           ALLOCATE(DRHOL(NR,LMXX))
-          CALL GRAPHICS_1CWAVE(NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
+          CALL GRAPHICS_1CWAVE(NR,LNX,LOX,AEPHI,PSPHI,LMNX &
      &                        ,PROJ,LMXX,DRHOL)
           DEALLOCATE(PROJ)
           CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
