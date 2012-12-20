@@ -640,7 +640,6 @@ USE MPE_MODULE
           DEALLOCATE(PSPHI)
         ENDDO  
       END IF
-
 !     
 !     ==========================================================================
 !     ==  SEND INFO TO FIRST TASK OF MONOMER                                  ==
@@ -978,15 +977,15 @@ USE MPE_MODULE
       REAL(8)       ,ALLOCATABLE:: POS(:,:)   !(3,NAT)
       REAL(8)       ,ALLOCATABLE:: Z(:)
       REAL(8)       ,ALLOCATABLE:: Q(:)
-      INTEGER(4)                :: LMNXX
+      INTEGER(4)                :: LMNX
       INTEGER(4)                :: NR
       INTEGER(4)                :: LNX
       INTEGER(4)    ,ALLOCATABLE:: LOX(:)    !LNX
       REAL(8)       ,ALLOCATABLE:: AEPHI(:,:) !NR,LNX
       REAL(8)       ,ALLOCATABLE:: PSPHI(:,:) !NR,LNX
       INTEGER(4)                :: LMXX
-      REAL(8)       ,ALLOCATABLE:: DRHOL(:,:) !(NR,LMXX)
-      REAL(8)       ,ALLOCATABLE:: DENMAT(:,:) !(LMNXX,LMNXX)
+      REAL(8)       ,ALLOCATABLE:: DRHOL(:,:) !(NR,LMX)
+      REAL(8)       ,ALLOCATABLE:: DENMAT(:,:) !(LMNX,LMNX)
       INTEGER(4)                :: IAT,ISP,ISPIN,IKPT,IB
       REAL(8)                   :: FAC,SPINFAC
       INTEGER(4)                :: NFIL
@@ -1000,10 +999,10 @@ USE MPE_MODULE
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
 !
-!     =================================================================
-!     ==  GET GENERIC INFORMATION ABOUT NUMBER AND SIZE OF THE       ==
-!     ==  PSEUDO WAVE FUNCTIONS                                      ==
-!     =================================================================
+!     ==========================================================================
+!     ==  GET GENERIC INFORMATION ABOUT NUMBER AND SIZE OF THE                ==
+!     ==  PSEUDO WAVE FUNCTIONS                                               ==
+!     ==========================================================================
       CALL WAVES$GETI4('NR1',NR1)
       CALL WAVES$GETI4('NR1L',NR1L)
       CALL WAVES$GETI4('NR2',NR2)
@@ -1025,22 +1024,22 @@ USE MPE_MODULE
       ALLOCATE(OCC(NB,NKPT,NSPIN))
       CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
 !
-!     =================================================================
-!     ==  SWITCH WAVES OBJECT TO RAW OR EIGEN STATES                 ==
-!     =================================================================
+!     ==========================================================================
+!     ==  SWITCH WAVES OBJECT TO RAW OR EIGEN STATES                          ==
+!     ==========================================================================
       CALL WAVES$SETL4('RAWSTATES',.NOT.TDIAG)
 !
-!     =================================================================
-!     ==  FACTOR FOR GRID REFINEMENT                                 ==
-!     =================================================================
+!     ==========================================================================
+!     ==  FACTOR FOR GRID REFINEMENT                                          ==
+!     ==========================================================================
       CALL CELL$GETR8A('T(0)',9,RBAS)
       CALL GBASS(RBAS,GBAS,DET)
       FACT=NINT(((DET/DR**3)/REAL(NR1*NR2*NR3,KIND=8))**(1./3.))
       FACT=MAX(1,FACT)
 !     
-!     ================================================================
-!     ==  PSEUDO WAVE FUNCTIONS/DENSITIES                           ==
-!     ================================================================
+!     ==========================================================================
+!     ==  PSEUDO WAVE FUNCTIONS/DENSITIES                                     ==
+!     ==========================================================================
                             CALL TRACE$PASS('PSEUDO WAVE FUNCTIONS')
       ALLOCATE(WAVE(NR1L,NR2,NR3))
       WAVE(:,:,:)=0.D0
@@ -1058,13 +1057,13 @@ USE MPE_MODULE
         ENDDO
       ENDDO
 !     
-!     ================================================================
-!     ==  EXPAND TO A FINER R-GRID                                  ==
-!     ================================================================
+!     ==========================================================================
+!     ==  EXPAND TO A FINER R-GRID                                            ==
+!     ==========================================================================
       NR1B=FACT*NR1
       NR2B=FACT*NR2
       NR3B=FACT*NR3
-!     == TAKE VALUES COMPATIBLE WITH FFT ROUTINES ====================
+!     == TAKE VALUES COMPATIBLE WITH FFT ROUTINES ==============================
       CALL LIB$FFTADJUSTGRD(NR1B)
       CALL LIB$FFTADJUSTGRD(NR2B)
       CALL LIB$FFTADJUSTGRD(NR3B)
@@ -1079,16 +1078,15 @@ USE MPE_MODULE
       END IF
       DEALLOCATE(WORK1)
 !     
-!     ================================================================
-!     ================================================================
-!     ==  ONE-CENTER EXPANSIONS                                     ==
-!     ================================================================
-!     ================================================================
+!     ==========================================================================
+!     ==========================================================================
+!     ==  ONE-CENTER EXPANSIONS                                               ==
+!     ==========================================================================
+!     ==========================================================================
 !
-!     =================================================================
-!     ==  GET GENERIC FROM ATOM OBJECT                               ==
-!     =================================================================
-      CALL SETUP$GETI4('LMNXX',LMNXX)
+!     ==========================================================================
+!     ==  GET GENERIC FROM ATOM OBJECT                                        ==
+!     ==========================================================================
       CALL ATOMLIST$NATOM(NAT)
       ALLOCATE(POS(3,NAT))
       ALLOCATE(ATOMNAME(NAT))
@@ -1114,9 +1112,10 @@ USE MPE_MODULE
         CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
         CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI)
 !     
-!       __ GET PROJECTIONS____________________________________________
+!       __ GET PROJECTIONS______________________________________________________
         CALL WAVES$SETI4('IAT',IAT)
-        ALLOCATE(DENMAT(LMNXX,LMNXX))
+        CALL SETUP$GETI4('LMNX',LMNX)
+        ALLOCATE(DENMAT(LMNX,LMNX))
         DENMAT(:,:)=0.D0
         DO ISPIN=1,NSPIN
           IF(TYPE.EQ.'UP'.AND.ISPIN.EQ.2) CYCLE 
@@ -1127,21 +1126,21 @@ USE MPE_MODULE
             DO IB=IBMIN(IKPT,ISPIN),IBMAX(IKPT,ISPIN)
               FAC=SPINFAC
               IF(TOCC)FAC=SPINFAC*OCC(IB,IKPT,ISPIN)
-              CALL GRAPHICS_ADDDENMAT(IB,IKPT,ISPIN,FAC,LMNXX,DENMAT)
+              CALL GRAPHICS_ADDDENMAT(IB,IKPT,ISPIN,FAC,LMNX,DENMAT)
             ENDDO
           ENDDO
         ENDDO
         LMXX=9
         ALLOCATE(DRHOL(NR,LMXX))
-        CALL GRAPHICS_1CRHO(NR,LNX,LOX,AEPHI,PSPHI,LMNXX &
+        CALL GRAPHICS_1CRHO(NR,LNX,LOX,AEPHI,PSPHI,LMNX &
      &               ,DENMAT(1,1),LMXX,DRHOL)
         DEALLOCATE(DENMAT)
         CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B &
     &         ,1,NR1B,WAVEBIG,POS(:,IAT),GID,NR,LMXX,DRHOL)
 !     
-!       ================================================================
-!       ==  ADD CORE CHARGE DENSITY                                   ==
-!       ================================================================
+!       ========================================================================
+!       ==  ADD CORE CHARGE DENSITY                                           ==
+!       ========================================================================
         IF(THISTASK.EQ.1.AND.TCORE.AND.(.NOT.(TYPE.EQ.'SPIN'))) THEN
           ALLOCATE(AECORE(NR))
           CALL SETUP$GETR8A('AECORE',NR,AECORE)
@@ -1157,9 +1156,9 @@ USE MPE_MODULE
         CALL SETUP$UNSELECT()
       ENDDO  
 !     
-!     ================================================================
-!     ==  PRINT WAVE                                                ==
-!     ================================================================
+!     ==========================================================================
+!     ==  PRINT WAVE                                                          ==
+!     ==========================================================================
       IF(THISTASK_K.NE.1) WAVEBIG=0.D0
       ALLOCATE(IWORK(NTASKS))
       IWORK=0
@@ -1179,9 +1178,9 @@ USE MPE_MODULE
         END IF
       ENDDO
 !     
-!     ================================================================
-!     ==  PRINT WAVE                                                ==
-!     ================================================================
+!     ==========================================================================
+!     ==  PRINT WAVE                                                          ==
+!     ==========================================================================
       IF(THISTASK.EQ.1) THEN
         CALL FILEHANDLER$SETFILE('WAVEPLOT',.FALSE.,TRIM(FILE))
         CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','UNFORMATTED')
@@ -1191,9 +1190,9 @@ USE MPE_MODULE
         CALL FILEHANDLER$CLOSE('WAVEPLOT')
       END IF
 !     
-!     ================================================================
-!     ==  CLOSE DOWN                                                ==
-!     ================================================================
+!     ==========================================================================
+!     ==  CLOSE DOWN                                                          ==
+!     ==========================================================================
       CALL WAVES$SETL4('RAWSTATES',SAVETRAWSTATES)
       DEALLOCATE(WAVEBIG)
       DEALLOCATE(OCC)
