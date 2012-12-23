@@ -4882,10 +4882,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       TYPE(LL_TYPE)            :: LL_STRC
       LOGICAL(4)               :: TCHK
       LOGICAL(4)               :: TON
-      CHARACTER(32)            :: ATOM
+      CHARACTER(32)            :: ATOM,name
       INTEGER(4)               :: NTH,ITH
       CHARACTER(32)            :: TYPE
       INTEGER(4)               :: ISPIN
+      INTEGER(4)               :: nat
+      INTEGER(4)               :: Iat
       REAL(8)                  :: VALUE
       REAL(8)                  :: RC
       REAL(8)                  :: PWR
@@ -4916,6 +4918,22 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL ERROR$STOP('STRCIN_ORBPOT')
         END IF
         CALL LINKEDLIST$GET(LL_STRC,'ATOM',1,ATOM)
+!       == CHECK IF ATOM EXISTS ========================================
+        CALL ATOMLIST$NATOM(NAT)
+        TCHK=.FALSE.
+        DO IAT=1,NAT
+          CALL ATOMLIST$GETCH('NAME',IAT,NAME)
+          TCHK=TCHK.OR.(NAME.EQ.ATOM)
+          IF(TCHK) EXIT
+        ENDDO
+        IF(.NOT.TCHK) THEN 
+          CALL ERROR$MSG('!STRUCTURE!ORBPOT!POT:ATOM VALUE NOT RECOGNIZED')
+          CALL ERROR$MSG('ATOM NOT IN ATOM LIST')
+          CALL ERROR$CHVAL('ATOM',ATOM)
+          CALL ERROR$MSG('SUGGESTION: CHECK UPPER-LOWER CASE')
+          CALL ERROR$STOP('STRCIN_ORBPOT')
+        END IF
+!
 !       == SPECIFY TYPE ================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'TYPE',1,TCHK)
         IF(.NOT.TCHK) THEN

@@ -5701,6 +5701,43 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       CALL LMTO_CLEANDENMAT()
       RETURN
       END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.......
+!!$      SUBROUTINE LMTO_FAKEDENMAT()
+!!$!     ***********************************************************************
+!!$!     **  Unfinished test version                                          **
+!!$!     **  ENFORCE A CERTAIN DENSITY MATRIX                                 **
+!!$!     ***********************************************************************
+!!$      USE LMTO_MODULE, ONLY : ISPECIES,DENMAT,LNX,LOX
+!!$      IMPLICIT NONE
+!!$      type list_type 
+!!$        character(32) :: name
+!!$        integer(4)    :: l
+!!$        integer(4)    :: im
+!!$        integer(4)    :: is
+!!$      end type list_type
+!!$      integer(4),parameter :: nentry
+!!$      type(list_type)      :: list(nentry)
+!!$      INTEGER(4) :: NND
+!!$      INTEGER(4) :: NN
+!!$      INTEGER(4) :: IAT1,IAT2,IT(3)
+!!$      INTEGER(4) :: ISP
+!!$      character(32) :: name  ! atom name
+!!$!     ***********************************************************************
+!!$      NND=SIZE(DENMAT)
+!!$      DO NN=1,NND
+!!$        IAT1=DENMAT(NN)%IAT1
+!!$        IAT2=DENMAT(NN)%IAT2
+!!$        IT(:)=DENMAT(NN)%IT(:)
+!!$        IF(IAT2.NE.IAT1.OR.ABS(SUM(IT**2)).NE.0) CYCLE ! ONSITE ELEMENTS ONLY
+!!$        ISP=ISPECIES(IAT1)
+!!$        CALL ATOMLIST$GETCH('NAME',IAT1,NAME)
+!!$        do i=1,nentry
+!!$          if(name.ne.list%name) cycle
+!!$        enddo
+!!$      ENDDO
+!!$      RETURN
+!!$      ENd
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_SIMPLEENERGYTEST2()

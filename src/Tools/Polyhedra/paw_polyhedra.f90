@@ -24,6 +24,7 @@
       character(32),allocatable :: name(:) ! atom names
       real(8)      ,allocatable :: r(:,:)  ! atomic positions
       integer(4)                :: iat
+      real(8)                   :: transform(3,3)
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -105,6 +106,15 @@
         CALL LINKEDLIST$GET(LL_STRC,'NAME',1,NAME(IAT))
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
+transform(:,:)=0.d0
+transform(1:2,1:2)=1.d0/sqrt(2.d0)
+transform(1,2)=-transform(1,2)
+transform(3,3)=1.d0
+rbas=matmul(transform,rbas)
+r=matmul(transform,r)
+
+
+
 !
 !     =========================================================================
 !     ==  WRITE ATOMIC STRUCTURE                                             ==
