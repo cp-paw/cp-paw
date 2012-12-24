@@ -1835,6 +1835,7 @@ PRINT*,'RCSM ',THIS%RCSM
      &          ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &          ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%QPHIDOT &
      &          ,THIS%AEPHIDOT,THIS%PSPHIDOT,THIS%PSG2,THIS%PSG4)
+call trace$pass('after makepartialwaves')
       CALL TIMING$CLOCKOFF('MAKEPARTIALWAVES')
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         CALL RADIALFOCK$CLEANVFOCK(VFOCK)
@@ -1871,6 +1872,7 @@ PRINT*,'RCSM ',THIS%RCSM
 !     ==========================================================================
 !     ==  CALCULATE AND PRINT SCATTERING PROPERTIES                           ==
 !     ==========================================================================
+call trace$pass('marke 1')
       CALL TIMING$CLOCKON('TEST SCATTERING')
       CALL SETUP_TESTSCATTERING(LL_STP)
       CALL TIMING$CLOCKOFF('TEST SCATTERING')
@@ -1882,6 +1884,7 @@ PRINT*,'RCSM ',THIS%RCSM
 !     ==========================================================================
 !     ==  PERFORM BESSELTRANSFORMS                                            ==
 !     ==========================================================================
+call trace$pass('marke 2')
       CALL TIMING$CLOCKON('BESSELTRANSFORMS')
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
@@ -1916,6 +1919,7 @@ PRINT*,'RCSM ',THIS%RCSM
 !     ==================================================================
 !     == default selector for local orbitals is true (in atomtypelist) =========
 !     ==================================================================
+call trace$pass('marke 3')
       ALLOCATE(THIS%TORB(LNX))
       CALL ATOMTYPELIST$GETl4a('TORB',lnx,THIS%TORB)
 !
@@ -1923,6 +1927,7 @@ PRINT*,'RCSM ',THIS%RCSM
 !     == WRITE REPORT
 !     ==========================================================================
       CALL SETUP_REPORTFILE(LL_STP)
+call trace$pass('before pop in setup_read_new')
                             CALL TRACE$POP
       RETURN
       END
@@ -1947,6 +1952,7 @@ PRINT*,'RCSM ',THIS%RCSM
       INTEGER(4)                  :: NFIL
       INTEGER(4)                  :: I
 !     **************************************************************************
+                                  CALL TRACE$PUSH('SETUP_REPORTFILE')
 !     == WRITE REPORT ==========================================================
       CALL LINKEDLIST$SELECT(LL_STP,'~',1)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
@@ -2061,7 +2067,7 @@ PRINT*,'RCSM ',THIS%RCSM
         CALL LINKEDLIST$WRITE(LL_STP,NFIL,'MONOMER')
         CALL FILEHANDLER$CLOSE('STP_REPORT')
       END IF
-PRINT*,'SETUP REPORT FILE WRITTEN'
+      call trace$pass('SETUP REPORT FILE WRITTEN')
 !
 !     ==========================================================================
 !     == REMOVE LINKED LIST                                                   ==
