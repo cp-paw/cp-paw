@@ -495,6 +495,7 @@
       REAL(8)               :: PI
       INTEGER(4)            :: NBOND,I,J,K
       INTEGER(4)            :: NFILO
+      INTEGER(4)            :: it(3)
       REAL(8)               :: ANGSTROM
       REAL(8)               :: RBASIN(3,3)
       character(64)         :: extendedname1,extendedname2
@@ -530,20 +531,35 @@
         WRITE(NFILO,FMT='("ALPHA = ANGLE BETWEEN B AND C")')
         WRITE(NFILO,FMT='("BETA  = ANGLE BETWEEN C AND A")')
         WRITE(NFILO,FMT='("GAMMA = ANGLE BETWEEN A AND B")')
-        WRITE(NFILO,FMT='("LATTICE CONSTANTS A,B,C: ",T40,3F10.5," ANGSTROM")') &
+        WRITE(NFILO &
+     &            ,FMT='("LATTICE CONSTANTS A,B,C: ",T40,3F10.5," ANGSTROM")') &
      &                                                      DISARR(1:3)/ANGSTROM
-        WRITE(NFILO,FMT='("LATTICE ANGLES ALPHA,BETA,GAMMA: ",T40,3F10.5," DEGREE")') &
+        WRITE(NFILO &
+     &      ,FMT='("LATTICE ANGLES ALPHA,BETA,GAMMA: ",T40,3F10.5," DEGREE")') &
      &                                             DISARR(4:6)/PI*180.D0
         WRITE(NFILO,FMT=*)
 !
-        call lib$invertr8(3,rbas,rbasin)
+!       == write lattice vectors ===============================================
+        WRITE(NFILO,FMT='("LATTICE VECTORS IN CARTESIAN COORDINATES:")')
+        WRITE(NFILO,FMT='(A,T30,3F10.5," ANGSTROM")')'T_A',RBAS(:,1)/ANGSTROM
+        WRITE(NFILO,FMT='(A,T30,3F10.5," ANGSTROM")')'T_B',RBAS(:,2)/ANGSTROM
+        WRITE(NFILO,FMT='(A,T30,3F10.5," ANGSTROM")')'T_C',RBAS(:,3)/ANGSTROM
+        WRITE(NFILO,FMT=*)
+!
+!       == WRITE ATOMIC POSITIONS IN RELATIVE COORDINATES ======================
+        CALL LIB$INVERTR8(3,RBAS,RBASIN)
         WRITE(NFILO,FMT='("ATOMIC POSITIONS IN RELATIVE COORDINATES:")')
+        WRITE(NFILO,FMT='("(IMAGE from THE FIRST UNIT CELL)")')
         DO IAT=1,NAT
           DR(:)=MATMUL(RBASIN,R(:,IAT))
+          T1(:)=DR(:)
           DO I=1,3
-            DR(I)=MODULO(DR(I),1.D0)
+            DR(I)=MODULO(DR(I)+1.d-5,1.D0)-1.d-5
           ENDDO
-          WRITE(NFILO,FMT='(A,T30,3F10.5)')NAME(IAT),DR
+          T1(:)=DR(:)-T1(:)
+          IT(:)=NINT(T1)
+          CALL EXTENDNAME(NAME(IAT),IT,EXTENDEDNAME1)
+          WRITE(NFILO,FMT='(A,T30,3F10.5)')TRIM(EXTENDEDNAME1),DR
         ENDDO
         WRITE(NFILO,FMT=*)
       END IF
@@ -666,27 +682,29 @@
         NBOND=J
 !
 !       ========================================================================
-!       == REPORT TO FILE bond-lengths and angles                             ==
+!       == REPORT TO FILE BOND-LENGTHS AND ANGLES                             ==
 !       ========================================================================
-        WRITE(NFILO,FMT='(81("-"),T30,"  ",A,"   ")')TRIM(NAME(IAT1))
+        WRITE(NFILO,FMT='(80("-"),T30,"  ",A,"   ")')TRIM(NAME(IAT1))
         DO I=1,NBOND
           CALL EXTENDNAME(NAME(BOND(I)%IAT2),BOND(I)%IT,EXTENDEDNAME1)
-          WRITE(NFILO,FMT='(A,T20,A,T60,"LENGTH: ",F5.3," ANGSTROM")') &
-     &                  NAME(BOND(I)%IAT1),EXTENDEDNAME1,DISARR(I)/ANGSTROM 
+          WRITE(NFILO,FMT='(A,T19,A,T57,"LENGTH: ",F5.3," ANGSTROM")') &
+     &                  TRIM(NAME(BOND(I)%IAT1)),TRIM(EXTENDEDNAME1) &
+     &                 ,DISARR(I)/ANGSTROM 
         ENDDO
         DO I=1,NBOND
           CALL EXTENDNAME(NAME(BOND(I)%IAT2),BOND(I)%IT,EXTENDEDNAME1)
           DO J=I+1,NBOND
-          CALL EXTENDNAME(NAME(BOND(J)%IAT2),BOND(J)%IT,EXTENDEDNAME2)
-            WRITE(NFILO,FMT='(A,T20,A,T40,A,T60,"ANGLE: ",F5.1," DEGREE")') &
-     &              EXTENDEDNAME1,NAME(BOND(I)%IAT1),EXTENDEDNAME2 &
+            CALL EXTENDNAME(NAME(BOND(J)%IAT2),BOND(J)%IT,EXTENDEDNAME2)
+            WRITE(NFILO,FMT='(A,T19,A,T38,A,T57,"ANGLE: ",F5.1," DEGREE")') &
+     &              TRIM(EXTENDEDNAME1),TRIM(NAME(BOND(I)%IAT1)) &
+     &             ,TRIM(EXTENDEDNAME2) &
      &             ,ANGLE(I,J)/PI*180.
           ENDDO
         ENDDO
         DO I=1,NBOND
           CALL EXTENDNAME(NAME(BOND(I)%IAT2),BOND(I)%IT,EXTENDEDNAME1)
-          WRITE(NFILO,FMT='(A,T20,A,T40,"DIRECTION: ",3F10.5)') &
-     &                  NAME(BOND(I)%IAT1),EXTENDEDNAME1 &
+          WRITE(NFILO,FMT='(A,T19,A,T38,"DIRECTION: ",3F10.5)') &
+     &                  TRIM(NAME(BOND(I)%IAT1)),TRIM(EXTENDEDNAME1) &
      &                 ,BOND(I)%DR/SQRT(SUM(BOND(I)%DR**2))
         ENDDO
       ENDDO
