@@ -387,14 +387,17 @@
       LOGICAL(4),INTENT(IN) :: TCRYSTAL
       INTEGER(4)            :: NFILO
       INTEGER(4)            :: IAT
+      REAL(8)                     :: ANGSTROM
 !     **************************************************************************
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(80("="))')
       WRITE(NFILO,FMT='(80("="),T20," SEGMENT FOR STRUCTURE INPUT FILE  ")')
       WRITE(NFILO,FMT='(80("="),T20,"          IN UNITS OF LUNIT        ")')
       WRITE(NFILO,FMT='(80("="))')
       WRITE(NFILO,FMT=*)
-      WRITE(NFILO,FMT='(T3,"LUNIT=",F10.5)')RUNIT
+      WRITE(NFILO,FMT='(T3,"LUNIT=    ",F10.5)')RUNIT
+      WRITE(NFILO,FMT='(T3,"LUNIT[AA]=",F10.5)')RUNIT/ANGSTROM
       WRITE(NFILO,FMT=*)
       WRITE(NFILO,FMT='(T3,"!LATTICE",T25," T= ",3F12.5)')RBAS(:,1)/RUNIT
       WRITE(NFILO,FMT='(T29,3F12.5)')RBAS(:,2)/RUNIT
@@ -515,6 +518,15 @@
         WRITE(NFILO,FMT='(80("="),T20," POSITIONS IN RELATIVE COORDINATES ")')
         WRITE(NFILO,FMT='(80("="))')
         WRITE(NFILO,FMT=*)
+!
+!       == WRITE LATTICE VECTORS IN CARTESIAN COORDINATES ======================
+        WRITE(NFILO,FMT='("LATTICE VECTORS IN CARTESIAN COORDINATES:")')
+        WRITE(NFILO,FMT='(A,T30,3F10.5," ANGSTROM")')'T_A',RBAS(:,1)/ANGSTROM
+        WRITE(NFILO,FMT='(A,T30,3F10.5," ANGSTROM")')'T_B',RBAS(:,2)/ANGSTROM
+        WRITE(NFILO,FMT='(A,T30,3F10.5," ANGSTROM")')'T_C',RBAS(:,3)/ANGSTROM
+        WRITE(NFILO,FMT=*)
+!
+!       == CONSTRACT LATTICE CONSTANTS AND ANGLES ==============================
         DO I=1,3
           DISARR(I)=SQRT(SUM(RBAS(:,I)**2))
         ENDDO
@@ -537,13 +549,6 @@
         WRITE(NFILO &
      &      ,FMT='("LATTICE ANGLES ALPHA,BETA,GAMMA: ",T40,3F10.5," DEGREE")') &
      &                                             DISARR(4:6)/PI*180.D0
-        WRITE(NFILO,FMT=*)
-!
-!       == write lattice vectors ===============================================
-        WRITE(NFILO,FMT='("LATTICE VECTORS IN CARTESIAN COORDINATES:")')
-        WRITE(NFILO,FMT='(A,T30,3F10.5," ANGSTROM")')'T_A',RBAS(:,1)/ANGSTROM
-        WRITE(NFILO,FMT='(A,T30,3F10.5," ANGSTROM")')'T_B',RBAS(:,2)/ANGSTROM
-        WRITE(NFILO,FMT='(A,T30,3F10.5," ANGSTROM")')'T_C',RBAS(:,3)/ANGSTROM
         WRITE(NFILO,FMT=*)
 !
 !       == WRITE ATOMIC POSITIONS IN RELATIVE COORDINATES ======================
