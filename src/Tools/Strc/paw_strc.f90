@@ -497,6 +497,7 @@
       INTEGER(4)            :: NFILO
       REAL(8)               :: ANGSTROM
       REAL(8)               :: RBASIN(3,3)
+      character(64)         :: extendedname1,extendedname2
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       ANGLEN=PI/180.d0*70.d0    ! MIN ANGLE=60 DEG
@@ -555,7 +556,7 @@
       WRITE(NFILO,FMT='(80("="))')
       WRITE(NFILO,FMT='("NEIGHBORS WITH BOND LENGTHS BEYOND ",F5.1," ANGSTROM ARE DROPPED")') &
      &                DISX/ANGSTROM
-      WRITE(NFILO,FMT='("NEIGHBORS WITH ANGLES BELOW ",F5.0," DGREE ARE DROPPED")') &
+      WRITE(NFILO,FMT='("NEIGHBORS WITH ANGLES BELOW ",F5.0," DEGREE ARE DROPPED")') &
      &                ANGLEN/PI*180.D0
       WRITE(NFILO,FMT='("CAUTION: ANGLE REQUIREMENT MAY RESULT IN INCOMPLETE SHELLS")')
       WRITE(NFILO,FMT=*)
@@ -665,22 +666,67 @@
         NBOND=J
 !
 !       ========================================================================
-!       == REPORT TO FILE                                                     ==
+!       == REPORT TO FILE bond-lengths and angles                             ==
 !       ========================================================================
-        WRITE(NFILO,FMT='(80("-"),T30,"  ",A,"   ")')TRIM(NAME(IAT1))
+        WRITE(NFILO,FMT='(81("-"),T30,"  ",A,"   ")')TRIM(NAME(IAT1))
         DO I=1,NBOND
-          WRITE(NFILO,FMT='(A,T10,A,T40,"BOND LENGTH: ",F5.3," ANGSTROM")') &
-     &                          NAME(BOND(I)%IAT1),NAME(BOND(I)%IAT2),DISARR(I)/ANGSTROM
+          CALL EXTENDNAME(NAME(BOND(I)%IAT2),BOND(I)%IT,EXTENDEDNAME1)
+          WRITE(NFILO,FMT='(A,T20,A,T60,"LENGTH: ",F5.3," ANGSTROM")') &
+     &                  NAME(BOND(I)%IAT1),EXTENDEDNAME1,DISARR(I)/ANGSTROM 
         ENDDO
         DO I=1,NBOND
+          CALL EXTENDNAME(NAME(BOND(I)%IAT2),BOND(I)%IT,EXTENDEDNAME1)
           DO J=I+1,NBOND
-            WRITE(NFILO,FMT='(A,T10,A,T20,A,T40,"ANGLE: ",F5.1," DEGREE")') &
-     &              NAME(BOND(I)%IAT2),NAME(BOND(I)%IAT1),NAME(BOND(J)%IAT2),ANGLE(I,J)/PI*180.
+          CALL EXTENDNAME(NAME(BOND(J)%IAT2),BOND(J)%IT,EXTENDEDNAME2)
+            WRITE(NFILO,FMT='(A,T20,A,T40,A,T60,"ANGLE: ",F5.1," DEGREE")') &
+     &              EXTENDEDNAME1,NAME(BOND(I)%IAT1),EXTENDEDNAME2 &
+     &             ,ANGLE(I,J)/PI*180.
           ENDDO
+        ENDDO
+        DO I=1,NBOND
+          CALL EXTENDNAME(NAME(BOND(I)%IAT2),BOND(I)%IT,EXTENDEDNAME1)
+          WRITE(NFILO,FMT='(A,T20,A,T40,"DIRECTION: ",3F10.5)') &
+     &                  NAME(BOND(I)%IAT1),EXTENDEDNAME1 &
+     &                 ,BOND(I)%DR/SQRT(SUM(BOND(I)%DR**2))
         ENDDO
       ENDDO
 
       RETURN
+      END
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE EXTENDNAME(NAME,IT,EXTENDEDNAME)
+!     **************************************************************************
+!     ** CONSTRUCTS THE ATOM NAME IN EXTENDED NOTATION, THAT IS INCLUDING     **
+!     ** THE LATTICE TRANSLATIONS                                             **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(4)  ,INTENT(IN) :: IT(3)
+      CHARACTER(*),INTENT(OUT):: EXTENDEDNAME
+      INTEGER(4)              :: I
+      character(8)            :: string
+!     **************************************************************************
+      IF(SUM(IT**2).EQ.0) THEN
+        EXTENDEDNAME=NAME
+        RETURN
+      END IF
+!
+      extendedname=''
+      DO I=3,1,-1
+        WRITE(string,fmt='(i8)',err=100)IT(I)
+        EXTENDEDNAME=trim(adjustl(string))//ADJUSTL(EXTENDEDNAME)
+      ENDDO
+      EXTENDEDNAME=TRIM(ADJUSTL(NAME))//':'//TRIM(EXTENDEDNAME)
+      RETURN
+100   CONTINUE
+      CALL ERROR$MSG('ERROR CONSTRUCTING EXTENDED ATOM NAME')
+      CALL ERROR$CHVAL('NAME',NAME)
+      CALL ERROR$I4VAL('len(NAME)',len(NAME))
+      CALL ERROR$I4VAL('len(EXTENDEDNAME)',len(EXTENDEDNAME))
+      CALL ERROR$STOP('EXTENDEDNAME')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
