@@ -934,7 +934,7 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
        LMNX=SUM(2*LOX+1)
 !
 !      =========================================================================
-!      == CALCULATE MATRIX ELEMENTS                                           ==
+!      == CALCULATE MATRIX ELEMENTS <PSI_C|X_J|\PHI_ALPHA>                    ==
 !      =========================================================================
        CALL SETUP$GETR8('RBOX',RBOX)
        CALL SETUP$unSELECT()
@@ -965,7 +965,6 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
            LMN=LMN+2*L+1
          END IF
        ENDDO
-       XVAL=XVAL*SQPI43
        deallocate(work)
 !       
 !      =========================================================================
@@ -992,7 +991,11 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
        CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC) !0<OCC<2*WKPT(IKPT)/NSPIN
 !       
 !      =========================================================================
-!      == ESTIMATE FERMI LEVEL FOR LIFETIME CALCULATION (ONLY A ROUGH ESTIMATE)
+!      == ESTIMATE FERMI LEVEL FOR LIFETIME CALCULATION (ONLY A ROUGH ESTIMATE)=
+!      == EMIN AND EMAX ARE THE ENERGY BOUNDS FOR THE SPECTRUM                ==
+!      == EMIN IS CHOSEN 5EV BELOW THE ESTIMATED FERMI LEVEL.                 ==
+!      == EMAX IS THE MINIMUM OF THE TOP MOST ENERGY BAND                     ==
+!      ===    (BOTH SPINS CONSIDERED)                                         ==
 !      =========================================================================
 !CAREFUL WHEN PARALLELIZING! NKPT FOR OCCUPATIONS IS GLOBAL, THAT FOR THE
 !WAVES IS LOCAL!
@@ -1014,7 +1017,6 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
              ELSE
                EFERMI=MIN(EFERMI,EIGVAL(IB))
              END IF
-!PRINT*,'EFERMI ',EFERMI,EIGVAL(IB),OCC(IB,IKPT,ISPIN)/WKPT(IKPT)
            ENDDO
          ENDDO
        ENDDO
@@ -1074,18 +1076,9 @@ PRINT*,'UPPER LIMIT OF ENERGY RANGE[EV] ',ENBMIN/EV
                  ENDDO
                ENDDO
              ENDDO
-!
-!            ===================================================================
-!            == EXCITATION ENERGY                                             ==
-!            ===================================================================
-!             DELTAE=EIGVAL(IB)-CORELEVEL
-!
-!            ===================================================================
-!            == 
-!            ===================================================================
 !            == FACTOR 1/3 FROM AVERAGE OVER POLARIZATIONS OF THE LIGHT
 !            == FACTOR 2 FROM DEFINITION OF OSCILLATOR STRENGTH (WOOTEN EQ.3.67)
-             STRENGTH=2.D0*STRENGTH/3.D0 
+             STRENGTH=2.D0*STRENGTH/3.D0*(EIGVAL(IB)-CORELEVEL)
 !
 !            ===================================================================
 !            == PLACE MATRIX ELEMENTS ON ENERGY GRID                          ==
@@ -1129,7 +1122,6 @@ PRINT*,'UPPER LIMIT OF ENERGY RANGE[EV] ',ENBMIN/EV
 !        ===================================================================
          DO IE2=1,NE
            HBAROMEGA=EMIN+(EMAX-EMIN)/REAL(NE-1)*REAL(IE2-1)-CORELEVEL
-!           DIEL(IE)=DIEL(IE)+WGHT*STRENGTH/(DELTAE**2-E**2-CI*GAMMA*E)
            DIEL(IE2)=DIEL(IE2)+EELSDOS(IE) &
       &                       /(DELTAE**2-HBAROMEGA**2-CI*GAMMA*HBAROMEGA)
          ENDDO

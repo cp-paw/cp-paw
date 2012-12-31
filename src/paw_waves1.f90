@@ -1822,7 +1822,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 CALL TIMING$CLOCKON('W:EXPECT')
       ALLOCATE(EIG(NBX,NKPTL,NSPIN))
       ALLOCATE(HAMILTON(2,2))
-PRINT*,'==================BAND MISHATCHES========================='
+PRINT*,'==================BAND MISMATCHES========================='
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)

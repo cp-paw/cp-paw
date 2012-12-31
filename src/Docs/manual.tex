@@ -429,6 +429,7 @@ blocks, followed by a colon and the data keyword.
 %
 %==========================================================================
 \subsection{Extended notation for atoms}
+\label{sec:extendedatomnotation}
 %==========================================================================
 
 The PAW code refers to atoms by name. No two atoms must be given the
@@ -2520,12 +2521,113 @@ relative to the real-space grid used in the calculation.}
 \vrules{mandatory}
 \vdefault{none}}
 
-\mbax{\key{DR} 
-\vdescr{grid spacing for the output file. It is rounded to get an integer factor
-relative to the real-space grid used in the calculation.} 
-\vformat{real} 
+\mbax{\key{DR} \vdescr{grid spacing for the output file. It is rounded
+    to get an integer factor relative to the real-space grid used in
+    the calculation.}  \vformat{real} \vrules{optional}
+  \vdefault{0.4}}
+
+%----------------------------------------------------------------------
+\block{!CONTROL!ANALYSE!EELS}
+%----------------------------------------------------------------------
+\brules{optional,multiple} 
+\bdescr{Construct EELS (Electron energy Loss) spectra.}  
+
+Following Wooten\cite{wooten72_book}, we calculate
+ the loss function $L(\hbar\omega)$.
+  \begin{eqnarray}
+  L(\hbar\omega)&=&-\Im[\epsilon^{-1}_r(\hbar\omega)]
+\label{eq:eels_loss}
+  \\
+    \epsilon_r(\hbar\omega)&=&
+1+\frac{4\pi\hbar^2 q^2 N/V}{4\pi\epsilon_0m_e}
+\sum_c \int \frac{d^3k}{V_g}\;\frac{\Bigl(1-f_n(\vec{k})\Bigr)Q_{n,0}(\vec{k})}
+{(\epsilon_{n}-\epsilon_{c})^2-(\hbar\omega)^2-i\Gamma\hbar\omega}
+\label{eq:eels_diel}
+\\
+Q_{n,c}(\vec{k})&=&\frac{2m_e}{\hbar^2}\sum_c(\epsilon_n-\epsilon_c)
+\cdot\frac{1}{3}\sum_{j=1}^3\left|\langle\psi_c|x_j|\psi_n\rangle\right|^2
+\label{eq:eels_q}
+  \end{eqnarray}
+Eq.~\ref{eq:eels_diel}, specifying the dielectric constant
+$\epsilon(\hbar\omega)$, corresponds to Wooten's Eq.~3.68.
+Eq.~\ref{eq:eels_q}, specifying the oscillator stength
+$Q_{n,0}(\vec{k})$, corresponds to Wooten's Eq.~3.67 and
+Eq.~\ref{eq:eels_loss}, giving the loss function, corresponds to
+Wooten's Eq.~5.62. With $\Im$, I denote the imaginary part. $N/V$ is
+the number density of the specified atom
+(i.e. 1/unit-cell-volume). $\epsilon_r(\omega)$ is the relative
+dielectric constant. Here only the core-excitations are considered.
+$|\psi_c\rangle$ are the core levels and $\epsilon_c$ are their
+energies. $\sum_\alpha|\phi_\alpha\rangle
+\langle\tilde{p}_\alpha|\tilde{\psi}_n\rangle$ is the $n$-th band
+state and $\epsilon_n$ is its energy. $\Gamma$ is the lifetime
+broadening (as FWHM, full-width half-maximum) given as sum of
+core-hole lifetime and the life time of the valence state. Core-hole
+life time is taken from Eqs.~12 and 14 of
+Egerton\cite{egerton07_ultramicroscopy107_565}. The life time of band
+states is obtained from Eq.~15 of Egerton
+\cite{egerton07_ultramicroscopy107_565} with the inelastic mean free
+path of Seah\cite{seah79_surfinterfaceanal1_2}, Eq.~5 and table 1
+(entry for inorganic compounds). The loss function is furthermore
+smeared by a Gaussian with the specified experimental broadenig.  The
+spectrum is calculated from 5~eV below the estimated Fermi level to he
+minimum of the top-most band. (i.e. the minimum for both spin
+directions.)
+
+\mbax{\key{ATOM} 
+\vdescr{Name of the atom Atom for which the EELS spectra are determined.}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{IC} \vdescr{Core level shell. Currently formulated in
+    without spin orbit splitting. (Caution when used with spin-orbit
+    splitting. IC refers the shell index in the atomic
+    calculation.)
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+\hline
+IC & shell & X-ray notation \\
+\hline
+1  & $1s_{(1/2)}$    & K$_1$ \\
+2  & $2s_{(3/2)}$    & L$_1$ \\
+3  & $2p_{(1/2)}$    & L$_2$ \\
+3  & $2p_{(3/2)}$    & L$_3$ \\
+4  & $3s_{(3/2)}$    & M$_1$ \\
+5  & $3p_{(1/2)}$    & M$_2$ \\
+5  & $3p_{(3/2)}$    & M$_3$ \\
+6  & $3d_{(3/2)}$    & M$_4$ \\
+6  & $3d_{(5/2)}$    & M$_5$ \\
+\hline
+\hline
+\end{tabular}
+\end{center}  } 
+\vformat{integer} 
 \vrules{optional}
-\vdefault{0.4}}
+  \vdefault{1}}
+
+\mbax{\key{BROADENING[EV]} 
+\vdescr{Instrumental broeadening FWHM (Full width at half maximum) in eV.}
+\vformat{real} 
+\vrules{optional. Must not be set to zero.}
+\vdefault{1.0}}
+
+\mbax{\key{FILE} \vdescr{File name for the spectrum.
+The data are written in column form to the specified file as energy in
+electron volt (1), the oscillator-strength-weighted density of states
+(2), the loss function (3), and the loss function with the specified
+experimental broadenig (4).  }
+  \vformat{character} \vrules{optional}
+  \vdefault{\textit{ATOM}\texttt{\_IC}\textit{IC}\texttt{.eels}, where
+    the text in italics is replaced by the corresponding values as
+    specified above.}  }
+
+
+
+
+
+
 
 %==========================================================================
 \subsection{The structure input file ``STRC''}
@@ -3626,13 +3728,17 @@ does not imply zero angular momentum.}
 \bdescr{Fixes the distance between two atoms.}
 
 \mbax{\key{ATOM1}
-\vdescr{Name of the first atom. (Extended notation)}
+\vdescr{Name of the first atom. 
+(Extended notation, see section~\ref{sec:extendedatomnotation}
+on p.~\pageref{sec:extendedatomnotation})}
 \vformat{Character}
 \vrules{mandatory}
 \vdefault{none}}
 
 \mbax{\key{ATOM2}
-\vdescr{Name of the second atom. (Extended notation)}
+\vdescr{Name of the second atom.
+(Extended notation, see section~\ref{sec:extendedatomnotation}
+on p.~\pageref{sec:extendedatomnotation})}
 \vformat{Character}
 \vrules{mandatory}
 \vdefault{none}}
@@ -3950,19 +4056,25 @@ bond.}
   words $x=(R_2-R_1)(R_3-R_1)/|R_3-R_1|^2$.}
 
 \mbax{\key{ATOM1} 
-\vdescr{Name of the first atom (Extended notation).} 
+\vdescr{Name of the first atom
+(Extended notation, see section~\ref{sec:extendedatomnotation}
+on p.~\pageref{sec:extendedatomnotation})}
 \vformat{Character}
   \vrules{mandatory} 
 \vdefault{none}}
 
 \mbax{\key{ATOM2}
-\vdescr{Name of the second atom (Extended notation).}
+\vdescr{Name of the second atom
+(Extended notation, see section~\ref{sec:extendedatomnotation}
+on p.~\pageref{sec:extendedatomnotation})}
 \vformat{Character}
 \vrules{mandatory}
 \vdefault{none}}
 
 \mbax{\key{ATOM3}
-\vdescr{Name of the third atom (Extended notation).}
+\vdescr{Name of the third atom 
+(Extended notation, see section~\ref{sec:extendedatomnotation}
+on p.~\pageref{sec:extendedatomnotation})}
 \vformat{Character}
 \vrules{mandatory}
 \vdefault{none}}
@@ -6131,7 +6243,7 @@ the NoS is rescaled.}
 \vdefault{none}}
 
 \mbax{\key{ATOM}
-\vdescr{atom name on which the orbital resides}
+\vdescr{atom name on which the orbital resides.}
 \vformat{character} 
 \vrules{optional; incompatible with name}
 \vdefault{none}}
@@ -6168,7 +6280,9 @@ be built.}
 
 \mbax{\key{NNZ}
 \vdescr{atom name of the atom to which the vector 
-defining the new z-direction points}
+defining the new z-direction points.
+(Extended notation, see section~\ref{sec:extendedatomnotation}
+on p.~\pageref{sec:extendedatomnotation})}
 \vformat{character} 
 \vrules{optional; overwrites Z}
 \vdefault{see Z}}
@@ -6182,7 +6296,9 @@ refers }
 
 \mbax{\key{NNX}
 \vdescr{atom name of the atom to which the vector 
-defining the new x-direction points}
+defining the new x-direction points.
+(Extended notation, see section~\ref{sec:extendedatomnotation}
+on p.~\pageref{sec:extendedatomnotation})}
 \vformat{character} 
 \vrules{optional; overwrites X}
 \vdefault{see X}}

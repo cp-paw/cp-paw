@@ -106,15 +106,14 @@
         CALL LINKEDLIST$GET(LL_STRC,'NAME',1,NAME(IAT))
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
-transform(:,:)=0.d0
-transform(1:2,1:2)=1.d0/sqrt(2.d0)
-transform(1,2)=-transform(1,2)
-transform(3,3)=1.d0
-rbas=matmul(transform,rbas)
-r=matmul(transform,r)
 
-
-
+!!$! this is to rotate the axes
+!!$transform(:,:)=0.d0
+!!$transform(1:2,1:2)=1.d0/sqrt(2.d0)
+!!$transform(1,2)=-transform(1,2)
+!!$transform(3,3)=1.d0
+!!$rbas=matmul(transform,rbas)
+!!$r=matmul(transform,r)
 !
 !     =========================================================================
 !     ==  WRITE ATOMIC STRUCTURE                                             ==
