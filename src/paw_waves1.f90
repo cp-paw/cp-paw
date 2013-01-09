@@ -1152,7 +1152,7 @@ END MODULE WAVES_MODULE
           END IF
           THIS%NB=NB
           THIS%NBH=NBH
-!         == ALLOCATE PROJECTIONSONS ===================================
+!         == ALLOCATE PROJECTIONS ======================================
           ALLOCATE(THIS%PROJ(NDIM,NBH,MAP%NPRO))
 !         == ALLOCATE WAVE FUNCTIONS ===================================
           NGL=GSET%NGL
