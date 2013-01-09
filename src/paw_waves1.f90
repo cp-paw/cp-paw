@@ -1399,7 +1399,7 @@ END MODULE WAVES_MODULE
       REAL(8)   ,ALLOCATABLE :: RHO(:,:)  ! CHARGE DENSITY
       COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:) ! 1CENTER DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: EDENMAT(:,:,:,:)! ENERGY-WEIGHTED DENSITY MATRIX
-      REAL(8)   ,ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
+      complex(8),ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
       REAL(8)   ,ALLOCATABLE :: DO(:,:,:,:)     ! 1CENTER OVERLAP
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       REAL(8)   ,ALLOCATABLE :: R(:,:)
@@ -1422,6 +1422,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: LMNX
       INTEGER(4)             :: ISVAR
       REAL(8)                :: SVAR1,SVAR2
+      complex(8)             :: csvar1,csvar2
       COMPLEX(8),ALLOCATABLE :: HAMILTON(:,:)
       REAL(8)   ,ALLOCATABLE :: EIG(:,:,:)
       LOGICAL(4)             :: TSTRESS
@@ -1705,7 +1706,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !!$          CYCLE
 !!$        END IF
 !!$        WRITE(*,FMT='("=",I2,10E10.3)') &
-!!$             LN,(DH(LMN1+M,LMN1+M,ISPIN,IAT),M=1,2*L+1)
+!!$             LN,(real(DH(LMN1+M,LMN1+M,ISPIN,IAT)),M=1,2*L+1)
 !!$        LMN1=LMN1+2*L+1
 !!$      ENDDO
 !!$    ENDDO
@@ -1738,7 +1739,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !!$!          CYCLE
 !!$        END IF
 !!$!        WRITE(*,FMT='("=",I2,10E10.3)') &
-!!$!             LN,(DH(LMN1+M,LMN1+M,ISPIN,IAT),M=1,2*L+1)
+!!$!             LN,(real(DH(LMN1+M,LMN1+M,ISPIN,IAT)),M=1,2*L+1)
 !!$        LMN1=LMN1+2*L+1
 !!$      ENDDO
 !!$    ENDDO
@@ -1763,10 +1764,10 @@ CALL ERROR$STOP('WAVES$ETOT')
           LMNX=MAP%LMNX(ISP)
           DO LMN1=1,LMNX
             DO LMN2=1,LMNX
-              SVAR1=DH(LMN1,LMN2,1,IAT)
-              SVAR2=DH(LMN1,LMN2,2,IAT)
-              DH(LMN1,LMN2,1,IAT)=SVAR1+SVAR2
-              DH(LMN1,LMN2,2,IAT)=SVAR1-SVAR2
+              cSVAR1=DH(LMN1,LMN2,1,IAT)
+              cSVAR2=DH(LMN1,LMN2,2,IAT)
+              DH(LMN1,LMN2,1,IAT)=cSVAR1+cSVAR2
+              DH(LMN1,LMN2,2,IAT)=cSVAR1-cSVAR2
             ENDDO
           ENDDO
         ENDDO
@@ -3508,7 +3509,7 @@ RETURN
       COMPLEX(8),INTENT(IN)  :: DENMAT(LMNXX,LMNXX,NDIMD_,NAT)
       COMPLEX(8),INTENT(IN)  :: EDENMAT(LMNXX,LMNXX,NDIMD,NAT)
       REAL(8)   ,INTENT(INOUT):: VQLM(LMRXX,NAT)
-      REAL(8)   ,INTENT(OUT) :: DH(LMNXX,LMNXX,NDIMD_,NAT)
+      complex(8),INTENT(OUT) :: DH(LMNXX,LMNXX,NDIMD_,NAT)
       REAL(8)   ,INTENT(OUT) :: DO(LMNXX,LMNXX,NDIMD_,NAT)
       REAL(8)   ,INTENT(OUT) :: POTB 
       REAL(8)                :: POTB1
@@ -3519,7 +3520,7 @@ RETURN
       INTEGER(4)             :: NTASKS,THISTASK
       COMPLEX(8),ALLOCATABLE :: DENMAT1(:,:,:)
       COMPLEX(8),ALLOCATABLE :: EDENMAT1(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: DH1(:,:,:)  !(LMNX,LMNX,NDIMD)
+      complex(8),ALLOCATABLE :: DH1(:,:,:)  !(LMNX,LMNX,NDIMD)
       REAL(8)   ,ALLOCATABLE :: DOV1(:,:,:) !(LMNX,LMNX,NDIMD)
       REAL(8)                :: RBAS(3,3)
       REAL(8)                :: GBAS(3,3)
@@ -3535,7 +3536,7 @@ RETURN
 !     ===================================================================
 !     ==  EVALUATE ONE-CENTER HAMILTONIAN                              ==
 !     ===================================================================
-      DH(:,:,:,:)=0.D0
+      DH(:,:,:,:)=(0.D0,0.d0)
       DO(:,:,:,:)=0.D0
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       POTB=0
@@ -3597,7 +3598,7 @@ RETURN
       INTEGER(4),INTENT(IN)   :: NDIMD_
       INTEGER(4),INTENT(IN)   :: NAT
       REAL(8)   ,INTENT(IN)   :: DO(LMNXX,LMNXX,NDIMD_,NAT)
-      REAL(8)   ,INTENT(INOUT):: DH(LMNXX,LMNXX,NDIMD_,NAT)
+      complex(8),INTENT(INOUT):: DH(LMNXX,LMNXX,NDIMD_,NAT)
       REAL(8)   ,INTENT(INOUT):: RHO(NRL,NDIMD_)
       INTEGER(4)              :: ISP
       INTEGER(4)              :: IAT
@@ -3619,7 +3620,7 @@ RETURN
             IF(L2.EQ.L1) THEN
               DO M=1,2*L1+1
                 DH(LMN1+M,LMN2+M,1,IAT)=DH(LMN1+M,LMN2+M,1,IAT) &
-     &                                 +POTB*DO(LMN1+M,LMN2+M,1,IAT)
+     &                                 +cmplx(POTB*DO(LMN1+M,LMN2+M,1,IAT),0.d0)
               ENDDO
             END IF
             LMN2=LMN2+2*L2+1
@@ -3645,7 +3646,7 @@ RETURN
       INTEGER(4),INTENT(IN)  :: NAT
       INTEGER(4),INTENT(IN)  :: LMNXX
       INTEGER(4),INTENT(IN)  :: NDIMD_
-      REAL(8)   ,INTENT(IN)  :: DH(LMNXX,LMNXX,NDIMD,NAT)
+      complex(8),INTENT(IN)  :: DH(LMNXX,LMNXX,NDIMD,NAT)
       REAL(8)   ,INTENT(OUT) :: FORCE(3,NAT)
       REAL(8)   ,INTENT(OUT) :: STRESS(3,3)
       INTEGER(4)             :: IKPT,ISPIN
@@ -3661,7 +3662,7 @@ RETURN
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)   ! (3,NGL)    
       REAL(8)   ,ALLOCATABLE :: GIJ(:,:)    ! (6,NGL)    
       REAL(8)   ,ALLOCATABLE :: DO1(:,:)    ! (LNX,LNX)    
-      REAL(8)   ,ALLOCATABLE :: DH1(:,:,:)  ! (LMNX,LMNX,NDIM**2)    
+      complex(8),ALLOCATABLE :: DH1(:,:,:)  ! (LMNX,LMNX,NDIM**2)    
       COMPLEX(8),ALLOCATABLE :: DEDPROJ(:,:,:) ! (NDIM,NBH,LMNX)
       COMPLEX(8),ALLOCATABLE :: DEDPRO(:,:) ! (NGL,LMNX)
       COMPLEX(8),ALLOCATABLE :: EIGR(:)     ! (NGL)
@@ -3865,7 +3866,7 @@ RETURN
       INTEGER(4),INTENT(IN) :: LMNXX
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: RHO(NRL,NDIMD_) ! PS-POTENTIAL
-      REAL(8)   ,INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD_,NAT)!ONE-CENTER HAMILTONIAN
+      complex(8),INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD_,NAT)!ONE-CENTER HAMILTONIAN
       INTEGER(4)            :: IKPT,ISPIN
       INTEGER(4)            :: NGL
       INTEGER(4)            :: NBH
@@ -3875,7 +3876,7 @@ RETURN
       INTEGER(4)             :: ISP
       INTEGER(4)             :: IAT
       INTEGER(4)             :: LMNX
-      REAL(8)   ,ALLOCATABLE :: DH1(:,:,:)      ! 1CENTER HAMILTONIAN
+      complex(8),ALLOCATABLE :: DH1(:,:,:)      ! 1CENTER HAMILTONIAN
       COMPLEX(8),ALLOCATABLE :: HPROJ(:,:,:)    ! DH*PROJ
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$HPSI')
@@ -3978,13 +3979,14 @@ END IF
       INTEGER(4),INTENT(IN)  :: NDIM
       INTEGER(4),INTENT(IN)  :: NB
       INTEGER(4),INTENT(IN)  :: LMNX
-      REAL(8)   ,INTENT(IN)  :: DH(LMNX,LMNX,NDIM**2)
+      complex(8),INTENT(IN)  :: DH(LMNX,LMNX,NDIM**2)
       COMPLEX(8),INTENT(IN)  :: PROJ(NDIM,NB,LMNX)
       COMPLEX(8),INTENT(OUT) :: HPROJ(NDIM,NB,LMNX)
       INTEGER(4)             :: IB
       INTEGER(4)             :: LMN1,LMN2
-      REAL(8)                :: DHUPUP,DHDNDN
+      complex(8)             :: DHUPUP,DHDNDN
       COMPLEX(8)             :: DHUPDN,DHDNUP
+      COMPLEX(8),parameter   :: ci=(0.d0,1.d0)
 !     **************************************************************************
       HPROJ(:,:,:)=(0.D0,0.D0)
 !
@@ -4007,15 +4009,14 @@ END IF
             DHDNDN=DH(LMN1,LMN2,1)-DH(LMN1,LMN2,4)
 !           == HERE, DH=DH/DD AND NOT CONJG(DE/DD) !! 
 !JSC+PEB    DHUPDN=CMPLX(DH(LMN1,LMN2,2),DH(LMN1,LMN2,3),8)
-            DHUPDN=CMPLX(DH(LMN1,LMN2,2),-DH(LMN1,LMN2,3),8)
+!            DHUPDN=CMPLX(DH(LMN1,LMN2,2),-DH(LMN1,LMN2,3),8)
+            DHUPDN=DH(LMN1,LMN2,2)-CI*DH(LMN1,LMN2,3)
             DHDNUP=CONJG(DHUPDN)
             DO IB=1,NB
-              HPROJ(1,IB,LMN1)=HPROJ(1,IB,LMN1) &
-     &                        +DHUPUP*PROJ(1,IB,LMN2) &
-     &                        +DHUPDN*PROJ(2,IB,LMN2)
-              HPROJ(2,IB,LMN1)=HPROJ(2,IB,LMN1) &
-     &                        +DHDNUP*PROJ(1,IB,LMN2) &
-     &                        +DHDNDN*PROJ(2,IB,LMN2)
+              HPROJ(1,IB,LMN1)=HPROJ(1,IB,LMN1)+DHUPUP*PROJ(1,IB,LMN2) &
+     &                                         +DHUPDN*PROJ(2,IB,LMN2)
+              HPROJ(2,IB,LMN1)=HPROJ(2,IB,LMN1)+DHDNUP*PROJ(1,IB,LMN2) &
+     &                                         +DHDNDN*PROJ(2,IB,LMN2)
             ENDDO
           ENDDO
         ENDDO
@@ -4024,15 +4025,16 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES_HPSI(MAP,GSET,ISPIN,NGL,NDIM,NDIMD,NBH,NPRO,LMNXX,NAT,NRL &
-     &                     ,PSI,POT,R,PROJ,DH,HPSI)
+      SUBROUTINE WAVES_HPSI(MAP,GSET,ISPIN,NGL,NDIM,NDIMD,NBH,NPRO,LMNXX,NAT &
+     &                     ,NRL,PSI,POT,R,PROJ,DH,HPSI)
 !     **************************************************************************
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1991)***********
       USE WAVES_MODULE, ONLY: MAP_TYPE,GSET_TYPE
       IMPLICIT NONE
       INTEGER(4)     ,INTENT(IN) :: ISPIN
-      TYPE(MAP_TYPE) ,INTENT(IN) :: MAP  !NAT,NSP,NBAREPRO,NRL,NPRO,LMX,LNXX,LNX,LMNX,LOX,ISP
+      TYPE(MAP_TYPE) ,INTENT(IN) :: MAP  !NAT,NSP,NBAREPRO,NRL,NPRO 
+                                         !,LMX,LNXX,LNX,LMNX,LOX,ISP
       TYPE(GSET_TYPE),INTENT(IN) :: GSET
       INTEGER(4)     ,INTENT(IN) :: NGL
       INTEGER(4)     ,INTENT(IN) :: NDIM
@@ -4045,11 +4047,11 @@ END IF
       COMPLEX(8)     ,INTENT(IN) :: PSI(NGL,NDIM,NBH)
       REAL(8)        ,INTENT(IN) :: POT(NRL,NDIM**2) !RHO(1,ISPIN)
       REAL(8)        ,INTENT(IN) :: R(3,NAT)
-      COMPLEX(8)     ,INTENT(IN) :: PROJ(NDIM,NBH,NPRO)     !(NDIM,NBH,NPRO) <PSPSI|P>
-      REAL(8)        ,INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD,NAT)
+      COMPLEX(8)     ,INTENT(IN) :: PROJ(NDIM,NBH,NPRO)!(NDIM,NBH,NPRO)<PSPSI|P>
+      complex(8)     ,INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD,NAT)
       COMPLEX(8)     ,INTENT(OUT):: HPSI(NGL,NDIM,NBH)
       COMPLEX(8)     ,ALLOCATABLE:: HPROJ(:,:,:)  
-      REAL(8)        ,ALLOCATABLE:: DH1(:,:,:)
+      complex(8)     ,ALLOCATABLE:: DH1(:,:,:)
       INTEGER(4)                 :: IPRO,IAT,ISP,LMNX
 !     **************************************************************************
 CALL TIMING$CLOCKON('W:HPSI.VPSI')
@@ -4590,7 +4592,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4),INTENT(IN)   :: LMNX      ! #(PROJECTORS ON THIS SITE)
       REAL(8)   ,INTENT(IN)   :: OCC(NB)   ! OCCUPATIONS
       COMPLEX(8),INTENT(IN)   :: PROJ(NDIM,NBH,LMNX) ! <P|PSI>
-      REAL(8)   ,INTENT(IN)   :: DH(LMNX,LMNX,NDIM**2) ! DE/DD
+      complex(8),INTENT(IN)   :: DH(LMNX,LMNX,NDIM**2) ! DE/DD
       INTEGER(4),INTENT(IN)   :: LNX
       INTEGER(4),INTENT(IN)   :: LOX(LNX)
       REAL(8)   ,INTENT(IN)   :: DO(LNX,LNX) ! DO/DD
