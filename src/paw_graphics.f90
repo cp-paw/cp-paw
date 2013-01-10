@@ -358,21 +358,27 @@ USE MPE_MODULE
       REAL(8)                :: EMIN,EMAX
 !     **************************************************************************
       IF(.NOT.TINI) RETURN
+      IF(.NOT.TWAKE) RETURN
                               CALL TRACE$PUSH('GRAPHICS$PLOT')
 !
 !     ==========================================================================
 !     == PLOT POTENTIAL                                                       ==
 !     ==========================================================================
-      IF(TPOT) THEN
+      IF(TPOT.AND.ALLOCATED(PWPOT)) THEN
+!       == WILL ONLY BE EXECUTED WHEN POTENTIAL HAS BEEN STORED. ===============
+!       == REQUIRES ONE ITERATION TO BE COMPLETED. =============================
+        CALL TRACE$PASS('GRAPHICS$PLOT: BEFORE CREATEPOT')
         FILE=POTPLOT%FILE
         TITLE=POTPLOT%TITLE
         DR=POTPLOT%DR
         CALL GRAPHICS_CREATEPOT(FILE,TITLE,DR)
+        CALL TRACE$PASS('GRAPHICS$PLOT: CREATEPOT DONE')
       END IF
 !
 !     ==========================================================================
 !     == PLOT WAVE FUNCTIONS                                                  ==
 !     ==========================================================================
+      CALL TRACE$PASS('GRAPHICS$PLOT: BEFORE PLOTTING WAVE FUNCTIONS')
       DO I=1,NWAVE
         FILE=WAVEPLOT(I)%FILE
         TITLE=WAVEPLOT(I)%TITLE
@@ -387,10 +393,12 @@ USE MPE_MODULE
           CALL GRAPHICS_WAVEPLOT(FILE,TITLE,DR,IB,IKPT,ISPIN,TIMAG)
         END IF
       ENDDO
+      CALL TRACE$PASS('GRAPHICS$PLOT: PLOTTING WAVE FUNCTIONS DONE')
 !
 !     ==========================================================================
 !     == PLOT DENSITIES                                                       ==
 !     ==========================================================================
+      CALL TRACE$PASS('GRAPHICS$PLOT: BEFORE PLOTTING DENSITIES')
       IF(.NOT.ALLOCATED(IBMIN)) THEN
         CALL WAVES$GETI4('NB',NB)
         CALL WAVES$GETI4('NKPT',NKPT)
@@ -461,6 +469,7 @@ USE MPE_MODULE
       DEALLOCATE(IBMAX)
       DEALLOCATE(EB)
       DEALLOCATE(EIGVAL)
+      CALL TRACE$PASS('GRAPHICS$PLOT: PLOTTING DENSITIES DONE')
                               CALL TRACE$POP
       RETURN
       END
@@ -1784,7 +1793,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     **************************************************************************
 !     **  GET SECOND DERIVATIVE OF THE RADIAL POTENTIAL AT THE ORIGIN         **
 !     **************************************************************************
-      USE GRAPHICS_MODULE
+      USE GRAPHICS_MODULE, ONLY: TINI,TWAKE,TPOT,NGL,PWPOT,PWTOTPOT
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: NGL_
@@ -1917,6 +1926,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       INTEGER(4)                 :: ISP
       INTEGER(4)                 :: GID
 !     ******************************************************************
+                                 call trace$push('GRAPHICS_CREATEPOT')
 !COLLECTING OF INFORMATION
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
@@ -1947,7 +1957,9 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       CALL LIB$FFTADJUSTGRD(NR3B) 
       ALLOCATE(POTENTIAL(NR1B,NR2B,NR3B))
       ALLOCATE(VHARTREE(NRL))
+print*,'marke 1'
       CALL PLANEWAVE$SUPFFT('GTOR',1,NGL,PWPOT,NRL,VHARTREE)
+print*,'marke 2'
       VHARTREE=VHARTREE+POTSHIFT ! ADD ADDITIVE CONSTANT TO POTENTIAL
       IF(FACT.EQ.1) THEN
         CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,VHARTREE,NR1*NR2*NR3,POTENTIAL)
@@ -2024,6 +2036,7 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
         CALL FILEHANDLER$CLOSE('WAVEPLOT')
       END IF
       DEALLOCATE(POTENTIAL)
+                                 call trace$pop()
       RETURN
       END
 !
