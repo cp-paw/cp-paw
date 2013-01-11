@@ -584,7 +584,7 @@ ${OBJTOSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJPOLYHEDRA}: ${OBJDIR}/%.o : ${TOOLDIR}/POLYHEDRA/%.f90
+${OBJPOLYHEDRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Polyhedra/%.f90
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #########################################################################
