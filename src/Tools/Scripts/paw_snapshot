@@ -1,0 +1,149 @@
+#!/bin/bash
+#  makes a copy of all relevant files for a paw_distribtion
+#
+#   paw_shapshot [-i dir] [ -o file] [-h]
+#
+ID=pawsnapshot`date +"%y%m%d%k%M%S"`
+TMPDIR=/tmp   # may be adjusted. write permission is required
+SOURCEDIR=$PAWDIR
+SNAPSHOT=""
+while test -n "$1"
+do
+  case $1 in
+     -i)  
+        shift
+        SOURCEDIR=$1
+        shift
+        ;;
+     -o)
+        shift
+        SNAPSHOT=$1
+        shift
+        ;;
+      -h)
+        echo calling sequence:
+        echo
+        echo paw_snapshot [-i dir] [-o file]
+        echo
+        echo dir is the directory of the PAW distribution
+        echo ..... default: \$PAWDIR \( $PAWDIR \)
+        echo file is the name of the resulting compressed tar file
+        echo ..... default: dir/snapshot.tgz 
+        exit 0
+        ;;
+      *)
+        echo invalid parameter 
+        echo $1
+        exit 1
+  esac
+done
+#
+#  check if source distribution is specified and present
+#
+if test -z $SOURCEDIR
+  then
+  echo error: Source PAW distribution not specified
+  exit 1
+fi
+if test \! -d $SOURCEDIR  #if $SOURCEDIR not an existing directory
+  then
+  echo error: Source PAW distribution does not exist
+  echo SOURCEDIR: $SOURCEDIR
+  exit 1
+fi
+#
+#  specify filename of the tgz file containing the snapshot
+#
+if test -z $SNAPSHOT  # if $SNAPSHOT=""
+  then
+  SNAPSHOT=$SOURCEDIR/pawsnapshot.tgz
+fi
+# convert name of the snapshot in the complete path
+case $SNAPSHOT in
+   ./*|~*|/*)
+    ;;
+   *)
+    SNAPSHOT=`pwd`/$SNAPSHOT
+esac
+#
+echo sourcedir: $SOURCEDIR
+echo snapshot.: $SNAPSHOT
+echo tmpdir...: $TMPDIR
+echo ID.......: $ID
+#
+#========================================================
+#  create temporary directory
+#========================================================
+mkdir $TMPDIR/$ID
+#
+#========================================================
+# copy paw sources into temporary directory
+#========================================================
+for X in `find $SOURCEDIR/src -print`; do
+  case $X 
+  in
+  *~|*#|*/.*|*.svn|*.svn*|*.DS_Store)
+     ;;
+  $SOURCEDIR/src/Tools/Test|$SOURCEDIR/src/Tools/Test/*)
+     ;;
+  $SOURCEDIR/src/Trash|$SOURCEDIR/src/Trash/*)
+     ;;
+  *)
+     if test -d $X ;then
+       mkdir $TMPDIR/$ID/${X#${SOURCEDIR}/} 
+     else
+       cp $X $TMPDIR/$ID/${X#${SOURCEDIR}/} 
+     fi
+  esac
+done
+#
+#========================================================
+# copy parameter files into temporary directory
+#========================================================
+for X in `find $SOURCEDIR/parameters -print`; do
+  case $X 
+  in
+  *~|*#|*/.*|*.svn|*.svn*|*.DS_Store)
+     ;;
+  *)
+     if test -d $X ;then
+        if test -e $TMPDIR/$ID/${X#${SOURCEDIR}/} ; then 
+          echo $TMPDIR/$ID/${X#${SOURCEDIR}/} exists
+        else
+          mkdir $TMPDIR/$ID/${X#${SOURCEDIR}/} 
+        fi
+     else
+       cp $X $TMPDIR/$ID/${X#${SOURCEDIR}/} 
+     fi
+  esac
+done
+#
+#========================================================
+# copy make and configuration files into temporary directory
+#========================================================
+for X in $SOURCEDIR/Makefile* ; do
+  case $X 
+  in
+  *~|*#)
+     ;;
+  *)
+    cp $X $TMPDIR/$ID/${X#${SOURCEDIR}/} 
+  esac
+done
+cp $SOURCEDIR/parms.in_use         $TMPDIR/$ID
+cp $SOURCEDIR/configure            $TMPDIR/$ID
+cp $SOURCEDIR/configure.ac         $TMPDIR/$ID
+cp $SOURCEDIR/configure.status     $TMPDIR/$ID
+cp $SOURCEDIR/lowercasemodnames.x  $TMPDIR/$ID
+#
+#========================================================
+# contstruct compressed tar file
+#========================================================
+echo paw_snapshot creates compressed tar file
+BACK=`pwd`
+cd $TMPDIR
+tar cfz $SNAPSHOT $ID
+cd $BACK
+echo ...paw_snapshot done
+exit 0
+
