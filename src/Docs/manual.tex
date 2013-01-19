@@ -7090,6 +7090,38 @@ units. In addition a file ``{\tt murn.dat}'' is produced holding the
 interpolated data covering the range of the input volumes +10\%.
 
 %==========================================================================
+\subsection{PAW-snapshot ``paw\_snapshot''}
+%==========================================================================
+{\tt paw\_snapshot} is a shell script that collects all raw files of
+the PAW disttribution, i.e. source code, configuration files,
+parameter files etc. in a compresses tar file paw\_snapshot.tgz
+
+The calling sequence is
+
+\bigskip\fbox{\texttt{paw\_snapshot} 
+$\lbrace$\texttt{-i} \textit{dir} $\rbrace$ 
+$\lbrace$\texttt{-o} \textit{snapshot} $\rbrace$}
+\bigskip
+
+where 
+\begin{itemize}
+\item -i \textit{dir} is the path of the PAW distribution. The default
+  is the directory specified by the environment variable
+  \texttt{PAWDIR}.
+\item -o \texttt{snapshot} is a compressed tar file with the
+  snapshot. The default is \texttt{\$PAWDIR/paw\_snapshot.tgz}.  Write
+  permission for the file \texttt{paw\_snapshot.tgz} in the directory
+  \$PAWDIR is required.  
+\end{itemize}
+The program creates a directory
+\texttt{/tmp/paw\_snapshot}\textit{YYMMDDHHMMSS}. This file is not
+automatically removed for security reasons. It may be removed however
+after operation. Write permission is required.
+
+
+
+
+%==========================================================================
 \newpage
 \section{Specifications of formatted and unformatted output data files}
 %==========================================================================

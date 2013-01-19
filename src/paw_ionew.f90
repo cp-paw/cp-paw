@@ -25,6 +25,7 @@
       INTEGER(4)            :: NTASKS,THISTASK
       INTEGER(4)            :: NFILSTDOUT=6
 !     ******************************************************************
+                            CALL TRACE$PUSH('READRESTART')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       NFILO=NFILSTDOUT
@@ -44,7 +45,7 @@
           CALL ERROR$MSG('FORMAT OF RESTART FILE NOT RECOGNIZED') 
           CALL ERROR$STOP('READRESTART')
         END IF
-        call restart$check(nfil)
+        CALL RESTART$CHECK(NFIL)
         REWIND NFIL
       END IF
 !
@@ -60,6 +61,7 @@
           CALL ERROR$STOP('READRESTART')
         END IF
       ELSE
+        CALL TRACE$POP()
         RETURN
       END IF
  100  CONTINUE
@@ -77,6 +79,7 @@
           CALL FILEHANDLER$CLOSE('RESTART_IN')
         END IF
         CALL MPE$BROADCAST('MONOMER',1,TCHK)
+        CALL TRACE$POP()
         RETURN
       END IF
 !
@@ -133,16 +136,16 @@
       TREAD=TREAD.OR.TCHK
 !
 !     ==================================================================
-!     ==  READ COsmo ENVIRONMENT                                  ==
+!     ==  READ COSMO ENVIRONMENT                                  ==
 !     ==================================================================
-      CALL COsmo$READ(NFIL,NFILO,TCHK)
+      CALL COSMO$READ(NFIL,NFILO,TCHK)
       TREAD=TREAD.OR.TCHK
 !
 !     ==================================================================
 !     ==  UNIDENTIFIED OPTION                                         ==
 !     ==================================================================
       IF(.NOT.TREAD) THEN
-        if(thistask.eq.1)CALL RESTART$SKIP(NFIL,NFILO)
+        IF(THISTASK.EQ.1)CALL RESTART$SKIP(NFIL,NFILO)
       END IF
       GOTO 100
       END
@@ -155,6 +158,7 @@
       USE MPE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
+      logical(4)          :: ttest=.false.
       INTEGER(4)          :: NFIL
       INTEGER(4)          :: NFILO
       REAL(8)             :: DELTAT=1.D0
@@ -163,6 +167,7 @@
       INTEGER(4),PARAMETER:: NFILSTDOUT=6
       CHARACTER(128)      :: FILENAME
 !     ******************************************************************
+                          call trace$push('writerestart')
 !     CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
 !     ==================================================================
@@ -171,7 +176,10 @@
       CALL FILEHANDLER$FILENAME('RESTART_OUT',FILENAME)
       TCHK=(FILENAME.EQ.-'/DEV/NULL')
       CALL MPE$BROADCAST('MONOMER',1,TCHK)
-      IF(TCHK) RETURN
+      IF(TCHK) then
+        call trace$pop()
+        RETURN
+      end if
 !
 !     ==================================================================
 !     == GET FILE UNIT                                                ==
@@ -246,14 +254,15 @@
       END IF
 !
 !     ==================================================================
-!     == check consistency of the file                                ==
+!     == CHECK CONSISTENCY OF THE FILE                                ==
 !     ==================================================================
-      if(thistask.eq.1) then
-        print*,'check consistency of restart file in writerestart'
-        call restart$check(nfil)
+      IF(TTEST.AND.THISTASK.EQ.1) THEN
+        PRINT*,'CHECK CONSISTENCY OF RESTART FILE IN WRITERESTART'
+        CALL RESTART$CHECK(NFIL)
         CALL FILEHANDLER$CLOSE('RESTART_OUT')
-      end if
+      END IF
       CALL MPE$BROADCAST('MONOMER',1,TCHK)
+                                                     call trace$pop()
       RETURN
       END
 !
