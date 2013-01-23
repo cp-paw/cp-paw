@@ -1901,7 +1901,7 @@ END MODULE READCNTL_MODULE
      &         -DOS(IE,2,2),-NOS(IE,2,2)
         END IF
       ENDDO
-      WRITE(NFIL,FMT='("THIS WAS: ",A)')LEGEND
+      WRITE(NFIL,FMT='("# THIS WAS: ",A)')LEGEND
                                  CALL TRACE$POP
       RETURN
       END SUBROUTINE PUTONGRID
