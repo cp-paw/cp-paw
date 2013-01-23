@@ -257,24 +257,42 @@
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
 !     **************************************************************************
       CHARACTER(*),INTENT(IN)   :: COMMAND
-      INTEGER                   :: RC
+      integer(4)                :: rc   ! return code
+!     *********************************************************************
+      call LIB$SYSTEMrc(COMMAND,rc)
+      IF(RC.NE.0) THEN
+        CALL ERROR$MSG('SYSTEM CALL FAILED')
+        CALL ERROR$CHVAL('COMMAND',COMMAND)
+        CALL ERROR$I4VAL('RC',RC)
+        CALL ERROR$STOP('LIB$SYSTEM')
+      End IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$SYSTEMrc(COMMAND,rc)
+!     **************************************************************************
+!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **************************************************************************
+      CHARACTER(*),INTENT(IN)   :: COMMAND
+      integer(4)  ,intent(out)  :: rc   ! return code
 !     *********************************************************************
 #IF DEFINED(CPPVAR_COMPILER_G95)
-      CALL LIB_G95_SYSTEM(COMMAND)
+      CALL LIB_G95_SYSTEM(COMMAND,rc)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      CALL LIB_IFC_SYSTEM(COMMAND)
+      CALL LIB_IFC_SYSTEM(COMMAND,rc)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-      CALL LIB_IFC7_SYSTEM(COMMAND)
+      CALL LIB_IFC7_SYSTEM(COMMAND,rc)
 #ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-      CALL LIB_ABSOFT_SYSTEM(COMMAND)
+      CALL LIB_ABSOFT_SYSTEM(COMMAND,rc)
 #ELIF DEFINED(CPPVAR_COMPILER_XLF)
-      CALL LIB_XLF_SYSTEM(COMMAND)
+      CALL LIB_XLF_SYSTEM(COMMAND,rc)
 #ELIF DEFINED(CPPVAR_COMPILER_PGI)
-      CALL LIB_PGI_SYSTEM(COMMAND)
+      CALL LIB_PGI_SYSTEM(COMMAND,rc)
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-      CALL LIB_PATHSCALE_SYSTEM(COMMAND)
+      CALL LIB_PATHSCALE_SYSTEM(COMMAND,rc)
 #ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_SUN_SYSTEM(COMMAND)
+      CALL LIB_SUN_SYSTEM(COMMAND,rc)
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
       RC=SYSTEM(COMMAND)
@@ -396,7 +414,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_IFC_SYSTEM(COMMAND) 
+      SUBROUTINE LIB_IFC_SYSTEM(COMMAND,RC) 
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -407,16 +425,10 @@
 !     **************************************************************************
       USE IFPORT
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)              :: RC
+      CHARACTER(*),INTENT(IN)  :: COMMAND
+      INTEGER(4)  ,intent(out) :: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$CHVAL('COMMAND',COMMAND)
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB_IFC_SYSTEM')
-      End IF
       RETURN
       END
 !
@@ -532,7 +544,7 @@
       END SUBROUTINE LIB_IFC7_NARGS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_IFC7_SYSTEM(COMMAND)
+      SUBROUTINE LIB_IFC7_SYSTEM(COMMAND,rc)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -547,14 +559,9 @@
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)              :: RC
+      INTEGER(4)  ,intent(out) :: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB_IFC7_SYSTEM')
-      END IF
       RETURN
       END SUBROUTINE LIB_IFC7_SYSTEM
 !
@@ -725,7 +732,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_G95_SYSTEM(COMMAND)
+      SUBROUTINE LIB_G95_SYSTEM(COMMAND,rc)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -737,15 +744,10 @@
 !!$        CHARACTER*(*) ,INTENT(IN) :: STRING
 !!$        END FUNCTION SYSTEM
 !!$      END INTERFACE
-      CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)              :: RC
+      CHARACTER(*),INTENT(IN)  :: COMMAND
+      INTEGER(4)  ,intent(out) :: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB_G95_SYSTEM')
-      END IF
       RETURN
       END
 !
@@ -878,7 +880,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_ABSOFT_SYSTEM(COMMAND)
+      SUBROUTINE LIB_ABSOFT_SYSTEM(COMMAND,rc)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -891,14 +893,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)              :: RC
+      INTEGER(4)  ,intent(out):: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB_ABSOFT_SYSTEM')
-      END IF
       RETURN
       END
 !
@@ -1020,7 +1017,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_XLF_SYSTEM(COMMAND)
+      SUBROUTINE LIB_XLF_SYSTEM(COMMAND,rc)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -1032,15 +1029,10 @@ PRINT*,'NARGS ',NARGS,IARGC()
         CHARACTER*(*) ,INTENT(IN) :: STRING
         END FUNCTION SYSTEM
       END INTERFACE
-      CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)              :: RC
+      CHARACTER(*),INTENT(IN)  :: COMMAND
+      INTEGER(4)  ,intent(out) :: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB_XLF_SYSTEM')
-      END IF
       RETURN
       END
 !
@@ -1165,7 +1157,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_PGI_SYSTEM(COMMAND)
+      SUBROUTINE LIB_PGI_SYSTEM(COMMAND,rc)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -1180,14 +1172,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)              :: RC
+      INTEGER(4)  ,intent(out):: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB_PGI_SYSTEM')
-      END IF
       RETURN
       END
 !
@@ -1314,7 +1301,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_PATHSCALE_SYSTEM(COMMAND)
+      SUBROUTINE LIB_PATHSCALE_SYSTEM(COMMAND,rc)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -1329,14 +1316,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)              :: RC
+      INTEGER(4)  ,intent(out):: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB_PATHSCALE_SYSTEM')
-      END IF
       RETURN
       END
 !
@@ -1455,7 +1437,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_SUN_SYSTEM(COMMAND)
+      SUBROUTINE LIB_SUN_SYSTEM(COMMAND,rc)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -1469,14 +1451,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)              :: RC
+      INTEGER(4)  ,intent(out):: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB_SUN_SYSTEM')
-      END IF
       RETURN
       END
 !
