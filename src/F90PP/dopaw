@@ -1,0 +1,6 @@
+#!/bin/sh
+export PAWDIR=/User/ptpb/Tree/PAW/devel
+DISTIBUTION=${PAWDIR}/bin/g95_oahu
+${DISTRIBUTION}/paw_fast.x $1.cntl
+
+exit

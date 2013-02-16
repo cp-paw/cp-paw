@@ -1,3 +1,0 @@
-#!/bin/sh
-g95 murnaghan.f90 -o murnaghan.x
-./murnaghan.x < data

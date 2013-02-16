@@ -1,9 +1,9 @@
 Module version_module
 !uses SVN keyword substitution
-character(256):: VERInf='$HeadURL: file:///home/user0/Data/paw_old/svn/tmpfs/svnroot/branches/pbloechl/devel/src/paw.f90 $'
+character(256):: VERInf='$HeadURL: https://yap/paw/branches/pbloechl/devel/src/paw.f90 $'
 character(256):: VERrev='$LastChangedRevision: 1199 $'
 character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2013-01-11 11:41:15 +0100 (Fr, 11. Jan 2013) $'
+character(256):: VERdat='$LastChangedDate: 2013-01-11 11:41:15 +0100 (Fri, 11 Jan 2013) $'
 end Module version_module
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8

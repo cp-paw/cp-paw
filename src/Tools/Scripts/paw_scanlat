@@ -1,0 +1,84 @@
+#!/bin/bash
+#  performs set of calculations for different lattice constants 
+#  and atomic calculations for all files of ending with "_atom.strc"
+#
+#  requirement: nio.cntl 
+#               nio.strc 
+#               ni_atom.strc
+#               o_atom.strc
+#
+#  nio is to be replaced by the name of the substace and 
+#  ni and o must be replaced by the corresponding atom ids.
+#
+#  nio.strc must contain exactly one line containing "LUNIT=" 
+#  followed by the lattice constant in atomic units, followed by "!END".
+#  this occurrance will be replaced by the varied values for the 
+#  individual runs.
+#
+#  result       etot.dat 
+#               gap.dat
+#
+#==============================================================================
+# SET THESE VARIABLES. THE STRING ALAT0 must match with all digits the value
+# given in the structure file
+#==============================================================================
+NAME=$1
+#
+#==============================================================================
+# pick out the equilibrium lattice constant from the structure file
+#==============================================================================
+X=`grep 'LUNIT=' $NAME.strc`  #pick the line containing LUNIT
+X=${X#*LUNIT=}
+X=${X%%!END*}
+ALAT0=$X
+#
+#==============================================================================
+# loop crystal calculation through different lattic constants                ==
+#==============================================================================
+rm etot.dat
+rm gap.dat
+for X in 96 97 98 99 100 101 102 103 104; do
+  #============================================================================
+  # construct structure control file from template by replacing lattice constant
+  #============================================================================
+  ALAT=`echo "$X /100 * $ALAT0 " | bc -l`
+  sed "s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
+  #============================================================================
+  # run paw_fast.x and place data "gap.dat" and "etot.dat"
+  #============================================================================
+  cp ${NAME}.cntl ${NAME}_${X}.cntl
+  rm ${NAME}_${X}.prot
+  paw_fast.x ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1
+  grep "ABSOLUTE GAP" ${NAME}_${X}.prot \
+      | tail -n 1 \
+      | awk '{print '${X}'  " " $3}' >> gap.dat
+  grep "TOTAL ENERGY" ${NAME}_${X}.prot \
+      | tail -n 1 \
+      | awk '{print '${X}'  " " $4}' >>etot.dat
+  rm ${NAME}_${X}_constr.report
+  rm ${NAME}_${X}_r.tra
+  rm ${NAME}_${X}.pdos
+  rm ${NAME}_${X}.strc_out
+  rm ${NAME}_${X}_stpfor*.myxml
+done
+#
+#==============================================================================
+# do atomic calculations                                                     ==
+#==============================================================================
+echo 'doing isolated atoms....'
+rm atometot.dat
+for X in *_atom.strc; do
+  ATOM=${X%_atom.strc}_atom
+  echo $ATOM
+  rm ${ATOM}.prot
+  cp ${NAME}.cntl ${ATOM}.cntl
+  paw_fast.x ${ATOM}.cntl 1>${ATOM}.out 2>&1
+  grep "TOTAL ENERGY" ${ATOM}.prot \
+      | tail -n 1 \
+      | awk '{print "atom " $4}' >>atometot.dat
+  rm ${ATOM}_constr.report
+  rm ${ATOM}_r.tra
+  rm ${ATOM}.pdos
+done
+echo '.....done'
+exit

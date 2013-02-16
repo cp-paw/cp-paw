@@ -1,0 +1,7 @@
+#!/bin/sh
+#
+#  function collects the last total energy from the paw prot file
+#
+#  Argument: root name of the paw project
+#
+grep -i "total energy" $1.prot | tail -n1
