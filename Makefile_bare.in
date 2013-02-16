@@ -822,6 +822,8 @@ endif
  OCCUPATION_MODULE.mod : ${OBJDIR}/paw_occupations.o
  ## file:src/paw_optfric.f90
  OPTFRIC_MODULE.mod : ${OBJDIR}/paw_optfric.o
+ ## file:src/paw_opteels.f90
+ ${OBJDIR}/paw_opteels.o : MPE_MODULE.mod
  ## file:src/paw_pairpotential.f90
  ${OBJDIR}/paw_pairpotential.o : MPE_MODULE.mod
  ## file:src/paw_pdos.f90
@@ -884,6 +886,7 @@ endif
  ${OBJDIR}/paw_usage.o : MPE_MODULE.mod
  ## file:src/paw_vdw.f90
  ${OBJDIR}/paw_vdw.o : CONSTANTS_MODULE.mod
+ ${OBJDIR}/paw_vdw.o : STRINGS_MODULE.mod
  VDW_MODULE.mod : ${OBJDIR}/paw_vdw.o
  ## file:src/paw_vext.f90
  ${OBJDIR}/paw_vext.o : PERIODICTABLE_MODULE.mod
