@@ -3798,15 +3798,18 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
           END IF
 !
 !         == ADD EIGENVALUES OF THE LAMBDA MATRIX ==============================
-          DO IB=1,NBW
-             H0(IB,IB)=H0(IB,IB)+THIS%RLAM0(NB1-1+IB,NB1-1+IB)
-          ENDDO
+!!$          DO IB=1,NBW
+!!$            H0(IB,IB)=H0(IB,IB)+THIS%RLAM0(NB1-1+IB,NB1-1+IB)
+!!$          ENDDO
+          H0(:,:)=H0(:,:)+THIS%RLAM0(NB1:,NB1:)
 !
 !         ======================================================================
 !         == WRITE WAVE FUNCTION TO FILE                                      ==
 !         ======================================================================
-          ID='HINFO'
+          ID='H0INFO'
           WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<
+          ID='HEFFINFO'
+          WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),THIS%RLAM0(NB1:,NB1:) !<<<<<<<<<
           ID='QSQINV'
           WRITE(NFIL,*)ID,IKPT,ISPIN,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           ID='PIPSI'
@@ -3869,6 +3872,7 @@ close(nfil)
       COMPLEX(8),ALLOCATABLE :: U(:,:)
       REAL(8)   ,ALLOCATABLE :: F(:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
+      COMPLEX(8),ALLOCATABLE :: Heff(:,:)
       COMPLEX(8),ALLOCATABLE :: PSICORR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:),QSQINV(:,:)
       COMPLEX(8)             :: SVAR
@@ -3944,6 +3948,7 @@ PRINT*,'C TICKET1',TICKET1
       ALLOCATE(RHO(NBW,NBW))
       ALLOCATE(RHO0(NBW,NBW))
       ALLOCATE(H0(NBW,NBW))
+      ALLOCATE(Heff(NBW,NBW))
       ALLOCATE(F(NBW))
       ALLOCATE(U(NBW,NBW))
       ALLOCATE(PSICORR(NDIM,NCORR,NBW))
@@ -3976,14 +3981,20 @@ READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1
 BACKSPACE(NFIL1)
 PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
           READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-PRINT*,'MARKE 2'
-          IF(ID.NE.'HINFO') THEN
-            CALL ERROR$MSG('INCORRECT ID: MUST BE "HINFO"')
+          IF(ID.EQ.'H0INFO') THEN
+            CALL ERROR$MSG('INCORRECT ID: MUST BE "H0INFO"')
+            CALL ERROR$MSG('OLD FORMAT USED HINFO')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('LMTO_DROPPICK_PICK')
+          END IF
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,Heff !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          IF(ID.EQ.'HEFFINFO') THEN
+            CALL ERROR$MSG('INCORRECT ID: MUST BE "HEFFINFO"')
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
 !
-          READ(NFIL1,*)ID,IKPT1,ISPIN1,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           IF(ID.NE.'QSQINV') THEN
             CALL ERROR$MSG('INCORRECT ID: MUST BE "QSQINV"')
             CALL ERROR$CHVAL('ID',ID)
@@ -4029,7 +4040,7 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !         ======================================================================
 !         == SUBTRACT NON-INTERACTING HAMILTONIAN                             ==
 !         ======================================================================
-          H0=RHO-H0
+          H0=RHO-Heff
 !
 !         ======================================================================
 !         == CONVERT INTO ORBITAL BASIS                                       ==
@@ -4105,6 +4116,9 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !     == CORE-ORTHOGONALIZED ORBITALS.                                        ==
 !     ==========================================================================
       IF(TREADDHOFK) THEN
+call error$msg('check this function before using')
+call error$l4val('treaddhofk',treaddhofk)
+call error$stop('LMTO_DROPPICK_HTBC')
         CALL LMTO_DROPPICK_READDHOFK()
       ELSE
         CALL LMTO_DROPPICK_PICK()
