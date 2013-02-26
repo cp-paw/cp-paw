@@ -3857,6 +3857,7 @@ close(nfil)
       USE LMTO_DROPPICK_MODULE, ONLY : TICKET,NCORR,NBW,TPRO,TPICKED &
      &                                ,IPRO1,NPROAT,DHOFK,NB1,NB2,T
       IMPLICIT NONE
+      logical(4),parameter   :: trefresh=.false. ! recalculate delta-h each step
       REAL(8)                :: MU
       REAL(8)                :: KBT
       CHARACTER(16)          :: ID
@@ -3956,6 +3957,8 @@ PRINT*,'C TICKET1',TICKET1
       ALLOCATE(QSQINV(NCORR,NCORR))
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          CALL PLANEWAVE$SELECT(GSET%ID)
 !
 !         ======================================================================
 !         == READ DENSITY MATRIX                                              ==
@@ -4040,7 +4043,10 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !         ======================================================================
 !         == SUBTRACT NON-INTERACTING HAMILTONIAN                             ==
 !         ======================================================================
-          H0=RHO-Heff
+          H0=RHO-HEFF
+          IF(TREFRESH) THEN
+            H0=H0+HEFF-THIS%RLAM0(NB1:,NB1:)
+          END IF
 !
 !         ======================================================================
 !         == CONVERT INTO ORBITAL BASIS                                       ==
@@ -4064,6 +4070,7 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !     ==========================================================================
       CALL LMTO_DROPPICK_WRITEDHOFK()
       TPICKED=.TRUE.
+      if(trefresh) tpicked=.false.
                                            CALL TRACE$POP()
       RETURN
       END
