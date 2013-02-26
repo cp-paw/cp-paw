@@ -3367,10 +3367,10 @@ MODULE LMTO_DROPPICK_MODULE
 !== HARD-WIRED INPUT DATA                                                     ==
 !===============================================================================
 LOGICAL(4)            :: TREADDHOFK=.FALSE.
-!CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
+CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
 !!CHARACTER(32),PARAMETER :: SWITCHID='CAFE2AS2'
 !CHARACTER(32),PARAMETER :: SWITCHID='H2'
-CHARACTER(32),PARAMETER :: SWITCHID='HUBBARD'
+!CHARACTER(32),PARAMETER :: SWITCHID='HUBBARD'
 INTEGER(4)           :: NB1        ! FIRST BAND IN W
 LOGICAL(4),POINTER   :: TPRO(:)    ! SELECTOR FOR CORRELATED ORBITALS
 !===============================================================================
