@@ -3366,7 +3366,7 @@ MODULE LMTO_DROPPICK_MODULE
 !===============================================================================
 !== HARD-WIRED INPUT DATA                                                     ==
 !===============================================================================
-LOGICAL(4)            :: TREADDHOFK=.FALSE.
+LOGICAL(4)              :: TREADDHOFK=.FALSE.
 CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
 !!CHARACTER(32),PARAMETER :: SWITCHID='CAFE2AS2'
 !CHARACTER(32),PARAMETER :: SWITCHID='H2'
@@ -3559,15 +3559,18 @@ END IF
       REAL(8)                :: MU
       REAL(8)                :: KBT
       REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      REAL(8)   ,ALLOCATABLE :: occ(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSI(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSI1(:,:,:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
+      COMPLEX(8),ALLOCATABLE :: Heff(:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:)
       COMPLEX(8),ALLOCATABLE :: QSQINV(:,:)
       REAL(8)   ,ALLOCATABLE :: WKPT(:)
       CHARACTER(16)          :: ID
       INTEGER(4)             :: NAT
       INTEGER(4)             :: NKPT
+      INTEGER(4)             :: nbx
       INTEGER(4)             :: LMNXT,LMNX
       INTEGER(4)             :: I,J,I1,I2,IDIM,IPRO,IAT,ISP,IKPT,ISPIN 
       INTEGER(4)             :: IB,JB,IBH
@@ -3684,12 +3687,20 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
       ENDDO
 !
 !     ==========================================================================
+!     ==  COLLECT OCCUPATIONS                                                 ==
+!     ==========================================================================
+      CALL DYNOCC$GETI4('NB',NBX)
+      ALLOCATE(OCC(NBX,NKPTL,NSPIN))
+      CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
+!
+!     ==========================================================================
 !     ==  WRITE WAVE FUNCTIONS                                                ==
 !     ==========================================================================
       ALLOCATE(PSICORR(NDIM,NCORR,NBW))
       ALLOCATE(QSQ(NCORR,NCORR))
       ALLOCATE(QSQINV(NCORR,NCORR))
       ALLOCATE(H0(NBW,NBW))
+      ALLOCATE(Heff(NBW,NBW))
       NPRO=MAP%NPRO
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
@@ -3784,6 +3795,16 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
           END IF
 !
 !         ======================================================================
+!         == collect effective hamiltonian                                    ==
+!         ======================================================================
+          heff(:,:)=THIS%RLAM0(NB1:,NB1:)
+          heff(:,:)=(heff(:,:)+transpose(conjg(heff)))
+!!$          do j=1,nbw
+!!$            heff(:,j)=heff(:,j) &
+!!$      &                  /(occ(nb1:,ikpt,ispin)+occ(nb1-1+j,ikpt,ispin)+1.d-8)
+!!$          enddo
+!
+!         ======================================================================
 !         == DETERMINE NON-INTERACTING HAMILTONIAN                            ==
 !         ======================================================================
           IF(ASSOCIATED(DHOFK)) THEN
@@ -3792,16 +3813,10 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
             H0=MATMUL(TRANSPOSE(CONJG(PSICORR(IDIM,:,:))) &
          &           ,MATMUL(QSQ,PSICORR(IDIM,:,:)))
 !           == CHANGE SIGN BECAUSE CORRELATION CONTRIBUTION MUST BE SUBTRACTED==
-            H0=-H0
+            H0=heff-H0
           ELSE
-            H0=(0.D0,0.D0)
+            H0=heff
           END IF
-!
-!         == ADD EIGENVALUES OF THE LAMBDA MATRIX ==============================
-!!$          DO IB=1,NBW
-!!$            H0(IB,IB)=H0(IB,IB)+THIS%RLAM0(NB1-1+IB,NB1-1+IB)
-!!$          ENDDO
-          H0(:,:)=H0(:,:)+THIS%RLAM0(NB1:,NB1:)
 !
 !         ======================================================================
 !         == WRITE WAVE FUNCTION TO FILE                                      ==
@@ -3856,6 +3871,7 @@ close(nfil)
       USE LMTO_MODULE, ONLY : ISPECIES
       USE LMTO_DROPPICK_MODULE, ONLY : TICKET,NCORR,NBW,TPRO,TPICKED &
      &                                ,IPRO1,NPROAT,DHOFK,NB1,NB2,T
+      use waves_module, only : this,waves_selectwv
       IMPLICIT NONE
       logical(4),parameter   :: trefresh=.false. ! recalculate delta-h each step
       REAL(8)                :: MU
@@ -3867,18 +3883,19 @@ close(nfil)
       INTEGER(4)             :: NKPT,NSPIN,NDIM
       INTEGER(4)             :: NKPT1,NSPIN1,NBW1,NDIM1
       INTEGER(4)             :: NCORR1
-      INTEGER(4)             :: NBH,NB
+      INTEGER(4)             :: NBH,NB,nbx
       COMPLEX(8),ALLOCATABLE :: RHO(:,:)
       COMPLEX(8),ALLOCATABLE :: RHO0(:,:)
       COMPLEX(8),ALLOCATABLE :: U(:,:)
       REAL(8)   ,ALLOCATABLE :: F(:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
       COMPLEX(8),ALLOCATABLE :: Heff(:,:)
+      REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSICORR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:),QSQINV(:,:)
       COMPLEX(8)             :: SVAR
       LOGICAL(4)             :: TINV
-      INTEGER(4)             :: IKPT,ISPIN,IB,IDIM,IPRO,IBH,IAT,I,I1,I2
+      INTEGER(4)             :: IKPT,ISPIN,IB,IDIM,IPRO,IBH,IAT,I,j,I1,I2
       INTEGER(4)             :: IKPT1,ISPIN1,IB1
       INTEGER(4)             :: NPRO
       REAL(8)                :: WKPT1
@@ -3945,6 +3962,9 @@ PRINT*,'C TICKET1',TICKET1
         CALL ERROR$I4VAL('NBW1',NBW1)
         CALL ERROR$STOP('LMTO_DROPPICK_PICK')
       END IF
+      CALL DYNOCC$GETI4('NB',NBX)
+      ALLOCATE(OCC(NBX,NKPT,NSPIN))
+      CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPT*NSPIN,OCC)
       IF(.NOT.ASSOCIATED(DHOFK)) ALLOCATE(DHOFK(NCORR,NCORR,NKPT,NSPIN))
       ALLOCATE(RHO(NBW,NBW))
       ALLOCATE(RHO0(NBW,NBW))
@@ -3958,7 +3978,6 @@ PRINT*,'C TICKET1',TICKET1
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)
 !
 !         ======================================================================
 !         == READ DENSITY MATRIX                                              ==
@@ -4045,7 +4064,14 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !         ======================================================================
           H0=RHO-HEFF
           IF(TREFRESH) THEN
-            H0=H0+HEFF-THIS%RLAM0(NB1:,NB1:)
+            H0=H0+HEFF
+            heff(:,:)=THIS%RLAM0(NB1:,NB1:)
+            heff(:,:)=(heff(:,:)+transpose(conjg(heff)))
+!!$            do j=1,nbw
+!!$              heff(:,j)=heff(:,j) &
+!!$      &                  /(occ(nb1:,ikpt,ispin)+occ(nb1-1+j,ikpt,ispin)+1.d-8)
+!!$            enddo
+            H0=H0-HEFF
           END IF
 !
 !         ======================================================================
@@ -4123,9 +4149,6 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !     == CORE-ORTHOGONALIZED ORBITALS.                                        ==
 !     ==========================================================================
       IF(TREADDHOFK) THEN
-call error$msg('check this function before using')
-call error$l4val('treaddhofk',treaddhofk)
-call error$stop('LMTO_DROPPICK_HTBC')
         CALL LMTO_DROPPICK_READDHOFK()
       ELSE
         CALL LMTO_DROPPICK_PICK()
