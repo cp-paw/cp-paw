@@ -3563,7 +3563,8 @@ END IF
       COMPLEX(8),ALLOCATABLE :: PSI(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSI1(:,:,:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
-      COMPLEX(8),ALLOCATABLE :: Heff(:,:)
+      COMPLEX(8),ALLOCATABLE :: H0plusdelta(:,:)
+      COMPLEX(8),ALLOCATABLE :: deltah(:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:)
       COMPLEX(8),ALLOCATABLE :: QSQINV(:,:)
       REAL(8)   ,ALLOCATABLE :: WKPT(:)
@@ -3700,7 +3701,8 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
       ALLOCATE(QSQ(NCORR,NCORR))
       ALLOCATE(QSQINV(NCORR,NCORR))
       ALLOCATE(H0(NBW,NBW))
-      ALLOCATE(Heff(NBW,NBW))
+      ALLOCATE(H0plusdelta(NBW,NBW))
+      ALLOCATE(deltah(NBW,NBW))
       NPRO=MAP%NPRO
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
@@ -3797,12 +3799,8 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
 !         ======================================================================
 !         == collect effective hamiltonian                                    ==
 !         ======================================================================
-          heff(:,:)=THIS%RLAM0(NB1:,NB1:)
-          heff(:,:)=(heff(:,:)+transpose(conjg(heff)))
-!!$          do j=1,nbw
-!!$            heff(:,j)=heff(:,j) &
-!!$      &                  /(occ(nb1:,ikpt,ispin)+occ(nb1-1+j,ikpt,ispin)+1.d-8)
-!!$          enddo
+          h0plusdelta(:,:)=THIS%RLAM0(NB1:,NB1:)
+          h0plusdelta(:,:)=0.5d0*(h0plusdelta(:,:)+transpose(conjg(h0plusdelta)))
 !
 !         ======================================================================
 !         == DETERMINE NON-INTERACTING HAMILTONIAN                            ==
@@ -3810,21 +3808,20 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
           IF(ASSOCIATED(DHOFK)) THEN
             IDIM=1
             QSQ=MATMUL(QSQ,MATMUL(DHOFK(:,:,IKPT,ISPIN),QSQ))
-            H0=MATMUL(TRANSPOSE(CONJG(PSICORR(IDIM,:,:))) &
+            deltah=MATMUL(TRANSPOSE(CONJG(PSICORR(IDIM,:,:))) &
          &           ,MATMUL(QSQ,PSICORR(IDIM,:,:)))
-!           == CHANGE SIGN BECAUSE CORRELATION CONTRIBUTION MUST BE SUBTRACTED==
-            H0=heff-H0
           ELSE
-            H0=heff
+            deltah=0.d0
           END IF
+          H0=h0plusdelta-deltah
 !
 !         ======================================================================
 !         == WRITE WAVE FUNCTION TO FILE                                      ==
 !         ======================================================================
           ID='H0INFO'
           WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<
-          ID='HEFFINFO'
-          WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),THIS%RLAM0(NB1:,NB1:) !<<<<<<<<<
+          ID='H0PLUSDELTAINFO'
+          WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),h0plusdelta !<<<<<<<<<<<<<<<<<<<
           ID='QSQINV'
           WRITE(NFIL,*)ID,IKPT,ISPIN,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           ID='PIPSI'
@@ -3889,7 +3886,8 @@ close(nfil)
       COMPLEX(8),ALLOCATABLE :: U(:,:)
       REAL(8)   ,ALLOCATABLE :: F(:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
-      COMPLEX(8),ALLOCATABLE :: Heff(:,:)
+      COMPLEX(8),ALLOCATABLE :: deltah(:,:)
+      COMPLEX(8),ALLOCATABLE :: H0plusdelta(:,:)
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSICORR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:),QSQINV(:,:)
@@ -3969,7 +3967,8 @@ PRINT*,'C TICKET1',TICKET1
       ALLOCATE(RHO(NBW,NBW))
       ALLOCATE(RHO0(NBW,NBW))
       ALLOCATE(H0(NBW,NBW))
-      ALLOCATE(Heff(NBW,NBW))
+      ALLOCATE(H0plusdelta(NBW,NBW))
+      ALLOCATE(deltah(NBW,NBW))
       ALLOCATE(F(NBW))
       ALLOCATE(U(NBW,NBW))
       ALLOCATE(PSICORR(NDIM,NCORR,NBW))
@@ -4009,9 +4008,9 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
-          READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,Heff !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-          IF(ID.ne.'HEFFINFO') THEN
-            CALL ERROR$MSG('INCORRECT ID: MUST BE "HEFFINFO"')
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0plusdelta !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          IF(ID.ne.'H0PLUSDELTAINFO') THEN
+            CALL ERROR$MSG('INCORRECT ID: MUST BE "H0PLUSDELTAINFO"')
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
@@ -4062,16 +4061,13 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !         ======================================================================
 !         == SUBTRACT NON-INTERACTING HAMILTONIAN                             ==
 !         ======================================================================
-          H0=RHO-HEFF
+          deltah=RHO-H0
           IF(TREFRESH) THEN
-            H0=H0+HEFF
-            heff(:,:)=THIS%RLAM0(NB1:,NB1:)
-            heff(:,:)=(heff(:,:)+transpose(conjg(heff)))
-!!$            do j=1,nbw
-!!$              heff(:,j)=heff(:,j) &
-!!$      &                  /(occ(nb1:,ikpt,ispin)+occ(nb1-1+j,ikpt,ispin)+1.d-8)
-!!$            enddo
-            H0=H0-HEFF
+call error$stop('lmto_droppick_pick')
+            H0=deltah+H0PLUSDELTA
+            h0plusdelta(:,:)=THIS%RLAM0(NB1:,NB1:)
+            h0plusdelta(:,:)=(h0plusdelta(:,:)+transpose(conjg(h0plusdelta)))
+            H0=H0-H0PLUSDELTA
           END IF
 !
 !         ======================================================================
@@ -4079,7 +4075,7 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !         ======================================================================
           IDIM=1
           DHOFK(:,:,IKPT,ISPIN)=MATMUL(PSICORR(IDIM,:,:) &
-     &                         ,MATMUL(H0,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
+     &                      ,MATMUL(deltah,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
 !
 !         ======================================================================
 !         ==  TRANSFORM DHOFK TO THE SITE ORTHOGONALIZED REPRESENTATION       ==
