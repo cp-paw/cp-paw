@@ -53,19 +53,19 @@ SHELL=/bin/sh
 #########################################################################
 ##                                                                     ##
 ##  directory structure                                                ##
-##    @THISDIR@/bin/@ARCH@       containes executables                  ##
-##    @THISDIR@/bin/@ARCH@/none_parallel                                ##
-##    @THISDIR@/bin/@ARCH@/none  objects with simple compiler flags     ##
-##    @THISDIR@/bin/@ARCH@/fast_parallel                                ##
-##    @THISDIR@/bin/@ARCH@/fast  optimized objects                      ##
-##    @THISDIR@/bin/@ARCH@/prof_parallel                                ##
-##    @THISDIR@/bin/@ARCH@/prof  objects for profiling                  ##
-##    @THISDIR@/bin/@ARCH@/dbg_parallel                                 ##
-##    @THISDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
-##    @THISDIR@/src              contains sources for CP-PAW main code  ##
-##    @THISDIR@/src/Tools        contains sources of Tools              ##
-##    @THISDIR@/src/F90PP        contains sources for preprocessor etc  ##
-##    @THISDIR@/docs             containes documentation                ##
+##    @PAWDIR@/bin/@ARCH@       containes executables                  ##
+##    @PAWDIR@/bin/@ARCH@/none_parallel                                ##
+##    @PAWDIR@/bin/@ARCH@/none  objects with simple compiler flags     ##
+##    @PAWDIR@/bin/@ARCH@/fast_parallel                                ##
+##    @PAWDIR@/bin/@ARCH@/fast  optimized objects                      ##
+##    @PAWDIR@/bin/@ARCH@/prof_parallel                                ##
+##    @PAWDIR@/bin/@ARCH@/prof  objects for profiling                  ##
+##    @PAWDIR@/bin/@ARCH@/dbg_parallel                                 ##
+##    @PAWDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
+##    @PAWDIR@/src              contains sources for CP-PAW main code  ##
+##    @PAWDIR@/src/Tools        contains sources of Tools              ##
+##    @PAWDIR@/src/F90PP        contains sources for preprocessor etc  ##
+##    @PAWDIR@/docs             containes documentation                ##
 ##                                                                     ##
 #########################################################################
 ##  makefile basics
@@ -81,7 +81,7 @@ SHELL=/bin/sh
 #########################################################################
 #___________________________ root directory of the PAW distribution
 # 
-THISDIR=@THISDIR@
+PAWDIR=@PAWDIR@
 #___________________________ the hardware architecture
 ARCH=@ARCH@
 #___________________________ the way to compile the tools 
@@ -95,9 +95,9 @@ PENV=@TPARALLEL@
 #  complete shortcuts to directories etc
 ##########################################################################
 #___________________________ path to the object files
-OBJDIR=${THISDIR}/bin/${ARCH}/Objects
+OBJDIR=${PAWDIR}/bin/${ARCH}/Objects
 #___________________________ path to the binaries
-BINDIR=${THISDIR}/bin/${ARCH}
+BINDIR=${PAWDIR}/bin/${ARCH}
 #
 OBJTYPES_SCALAR=fast dbg none prof
 OBJTYPES_PRIMARY_SCALAR=fast
@@ -183,7 +183,7 @@ $(addprefix clean_,${TOOLS}):
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile $@
 #
 scripts: 
-	cp ${THISDIR}/src/Tools/Scripts/* ${BINDIR}
+	cp ${PAWDIR}/src/Tools/Scripts/* ${BINDIR}
 #
 clean_scripts:
 	rm -f ${BINDIR}/compare_filelist ${BINDIR}/paw_collect ${BINDIR}/paw_copy    ${BINDIR}/paw_ext_copy  
@@ -193,42 +193,42 @@ clean_scripts:
 #---------------------------------------------------------------------------
 #--          Documentation                                                --
 #---------------------------------------------------------------------------
-docs: ${THISDIR}/doc/manual.pdf ${THISDIR}/doc/history.pdf ${THISDIR}/doc/install.pdf ${THISDIR}/doc/style.pdf ${THISDIR}/doc/Examples
+docs: ${PAWDIR}/doc/manual.pdf ${PAWDIR}/doc/history.pdf ${PAWDIR}/doc/install.pdf ${PAWDIR}/doc/style.pdf ${PAWDIR}/doc/Examples
 #
-${THISDIR}/doc/manual.pdf :  ${THISDIR}/doc/manual.tex  ${THISDIR}/doc/doc.bib ${THISDIR}/doc/Figs
-	cd ${THISDIR}/doc; latex manual; makeindex manual.idx; latex manual;  bibtex manual; latex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
+${PAWDIR}/doc/manual.pdf :  ${PAWDIR}/doc/manual.tex  ${PAWDIR}/doc/doc.bib ${PAWDIR}/doc/Figs
+	cd ${PAWDIR}/doc; latex manual; makeindex manual.idx; latex manual;  bibtex manual; latex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
 #
-${THISDIR}/doc/history.pdf :  ${THISDIR}/doc/history.tex ${THISDIR}/doc/doc.bib
-	cd ${THISDIR}/doc; latex history; makeindex history.idx; latex history; bibtex history; latex history; latex history; dvips history.dvi; ps2pdf history.ps 
+${PAWDIR}/doc/history.pdf :  ${PAWDIR}/doc/history.tex ${PAWDIR}/doc/doc.bib
+	cd ${PAWDIR}/doc; latex history; makeindex history.idx; latex history; bibtex history; latex history; latex history; dvips history.dvi; ps2pdf history.ps 
 #
-${THISDIR}/doc/install.pdf :  ${THISDIR}/doc/install.tex ${THISDIR}/doc/doc.bib
-	cd ${THISDIR}/doc; latex install; makeindex install.idx; latex install; bibtex install; latex install; latex install; dvips install.dvi; ps2pdf install.ps
+${PAWDIR}/doc/install.pdf :  ${PAWDIR}/doc/install.tex ${PAWDIR}/doc/doc.bib
+	cd ${PAWDIR}/doc; latex install; makeindex install.idx; latex install; bibtex install; latex install; latex install; dvips install.dvi; ps2pdf install.ps
 #
-${THISDIR}/doc/style.pdf :  ${THISDIR}/doc/style.tex ${THISDIR}/doc/doc.bib
-	cd ${THISDIR}/doc; latex style; makeindex style.idx; latex style; bibtex style; latex style; latex style; dvips style.dvi; ps2pdf style.ps
+${PAWDIR}/doc/style.pdf :  ${PAWDIR}/doc/style.tex ${PAWDIR}/doc/doc.bib
+	cd ${PAWDIR}/doc; latex style; makeindex style.idx; latex style; bibtex style; latex style; latex style; dvips style.dvi; ps2pdf style.ps
 #
 #  dependencies for documentation
 #
-${THISDIR}/doc/manual.tex : ${THISDIR}/src/Docs/manual.tex 
-	cp ${THISDIR}/src/Docs/manual.tex ${THISDIR}/doc/manual.tex
+${PAWDIR}/doc/manual.tex : ${PAWDIR}/src/Docs/manual.tex 
+	cp ${PAWDIR}/src/Docs/manual.tex ${PAWDIR}/doc/manual.tex
 #
-${THISDIR}/doc/install.tex :${THISDIR}/src/Docs/install.tex 
-	cp ${THISDIR}/src/Docs/install.tex ${THISDIR}/doc/install.tex
+${PAWDIR}/doc/install.tex :${PAWDIR}/src/Docs/install.tex 
+	cp ${PAWDIR}/src/Docs/install.tex ${PAWDIR}/doc/install.tex
 #
-${THISDIR}/doc/style.tex :${THISDIR}/src/Docs/style.tex 
-	cp ${THISDIR}/src/Docs/style.tex ${THISDIR}/doc/style.tex
+${PAWDIR}/doc/style.tex :${PAWDIR}/src/Docs/style.tex 
+	cp ${PAWDIR}/src/Docs/style.tex ${PAWDIR}/doc/style.tex
 #
-${THISDIR}/doc/history.tex :${THISDIR}/src/Docs/history.tex 
-	cp ${THISDIR}/src/Docs/history.tex ${THISDIR}/doc/history.tex
+${PAWDIR}/doc/history.tex :${PAWDIR}/src/Docs/history.tex 
+	cp ${PAWDIR}/src/Docs/history.tex ${PAWDIR}/doc/history.tex
 #
-${THISDIR}/doc/doc.bib :${THISDIR}/src/Docs/doc.bib
-	cp ${THISDIR}/src/Docs/doc.bib ${THISDIR}/doc/doc.bib
+${PAWDIR}/doc/doc.bib :${PAWDIR}/src/Docs/doc.bib
+	cp ${PAWDIR}/src/Docs/doc.bib ${PAWDIR}/doc/doc.bib
 #
-${THISDIR}/doc/Figs :${THISDIR}/src/Docs/Figs
-	cp -r ${THISDIR}/src/Docs/Figs ${THISDIR}/doc/
+${PAWDIR}/doc/Figs :${PAWDIR}/src/Docs/Figs
+	cp -r ${PAWDIR}/src/Docs/Figs ${PAWDIR}/doc/
 #
-${THISDIR}/doc/Examples :${THISDIR}/src/Docs/Examples
-	cp -r ${THISDIR}/src/Docs/Examples ${THISDIR}/doc/
+${PAWDIR}/doc/Examples :${PAWDIR}/src/Docs/Examples
+	cp -r ${PAWDIR}/src/Docs/Examples ${PAWDIR}/doc/
 #
 clean_docs: 
-	rm -f ${THISDIR}/doc/*
+	rm -f ${PAWDIR}/doc/*
