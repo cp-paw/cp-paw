@@ -3366,11 +3366,11 @@ MODULE LMTO_DROPPICK_MODULE
 !===============================================================================
 !== HARD-WIRED INPUT DATA                                                     ==
 !===============================================================================
-LOGICAL(4)            :: TREADDHOFK=.FALSE.
-!CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
+LOGICAL(4)              :: TREADDHOFK=.FALSE.
+CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
 !!CHARACTER(32),PARAMETER :: SWITCHID='CAFE2AS2'
 !CHARACTER(32),PARAMETER :: SWITCHID='H2'
-CHARACTER(32),PARAMETER :: SWITCHID='HUBBARD'
+!CHARACTER(32),PARAMETER :: SWITCHID='HUBBARD'
 INTEGER(4)           :: NB1        ! FIRST BAND IN W
 LOGICAL(4),POINTER   :: TPRO(:)    ! SELECTOR FOR CORRELATED ORBITALS
 !===============================================================================
@@ -3559,15 +3559,19 @@ END IF
       REAL(8)                :: MU
       REAL(8)                :: KBT
       REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      REAL(8)   ,ALLOCATABLE :: occ(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSI(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSI1(:,:,:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
+      COMPLEX(8),ALLOCATABLE :: H0plusdelta(:,:)
+      COMPLEX(8),ALLOCATABLE :: deltah(:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:)
       COMPLEX(8),ALLOCATABLE :: QSQINV(:,:)
       REAL(8)   ,ALLOCATABLE :: WKPT(:)
       CHARACTER(16)          :: ID
       INTEGER(4)             :: NAT
       INTEGER(4)             :: NKPT
+      INTEGER(4)             :: nbx
       INTEGER(4)             :: LMNXT,LMNX
       INTEGER(4)             :: I,J,I1,I2,IDIM,IPRO,IAT,ISP,IKPT,ISPIN 
       INTEGER(4)             :: IB,JB,IBH
@@ -3684,12 +3688,21 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
       ENDDO
 !
 !     ==========================================================================
+!     ==  COLLECT OCCUPATIONS                                                 ==
+!     ==========================================================================
+      CALL DYNOCC$GETI4('NB',NBX)
+      ALLOCATE(OCC(NBX,NKPTL,NSPIN))
+      CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
+!
+!     ==========================================================================
 !     ==  WRITE WAVE FUNCTIONS                                                ==
 !     ==========================================================================
       ALLOCATE(PSICORR(NDIM,NCORR,NBW))
       ALLOCATE(QSQ(NCORR,NCORR))
       ALLOCATE(QSQINV(NCORR,NCORR))
       ALLOCATE(H0(NBW,NBW))
+      ALLOCATE(H0plusdelta(NBW,NBW))
+      ALLOCATE(deltah(NBW,NBW))
       NPRO=MAP%NPRO
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
@@ -3784,29 +3797,31 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
           END IF
 !
 !         ======================================================================
+!         == collect effective hamiltonian                                    ==
+!         ======================================================================
+          h0plusdelta(:,:)=THIS%RLAM0(NB1:,NB1:)
+          h0plusdelta(:,:)=0.5d0*(h0plusdelta(:,:)+transpose(conjg(h0plusdelta)))
+!
+!         ======================================================================
 !         == DETERMINE NON-INTERACTING HAMILTONIAN                            ==
 !         ======================================================================
           IF(ASSOCIATED(DHOFK)) THEN
             IDIM=1
             QSQ=MATMUL(QSQ,MATMUL(DHOFK(:,:,IKPT,ISPIN),QSQ))
-            H0=MATMUL(TRANSPOSE(CONJG(PSICORR(IDIM,:,:))) &
+            deltah=MATMUL(TRANSPOSE(CONJG(PSICORR(IDIM,:,:))) &
          &           ,MATMUL(QSQ,PSICORR(IDIM,:,:)))
-!           == CHANGE SIGN BECAUSE CORRELATION CONTRIBUTION MUST BE SUBTRACTED==
-            H0=-H0
           ELSE
-            H0=(0.D0,0.D0)
+            deltah=0.d0
           END IF
-!
-!         == ADD EIGENVALUES OF THE LAMBDA MATRIX ==============================
-          DO IB=1,NBW
-             H0(IB,IB)=H0(IB,IB)+THIS%RLAM0(NB1-1+IB,NB1-1+IB)
-          ENDDO
+          H0=h0plusdelta-deltah
 !
 !         ======================================================================
 !         == WRITE WAVE FUNCTION TO FILE                                      ==
 !         ======================================================================
-          ID='HINFO'
+          ID='H0INFO'
           WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<
+          ID='H0PLUSDELTAINFO'
+          WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),h0plusdelta !<<<<<<<<<<<<<<<<<<<
           ID='QSQINV'
           WRITE(NFIL,*)ID,IKPT,ISPIN,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           ID='PIPSI'
@@ -3853,7 +3868,9 @@ close(nfil)
       USE LMTO_MODULE, ONLY : ISPECIES
       USE LMTO_DROPPICK_MODULE, ONLY : TICKET,NCORR,NBW,TPRO,TPICKED &
      &                                ,IPRO1,NPROAT,DHOFK,NB1,NB2,T
+      use waves_module, only : this,waves_selectwv
       IMPLICIT NONE
+      logical(4),parameter   :: trefresh=.false. ! recalculate delta-h each step
       REAL(8)                :: MU
       REAL(8)                :: KBT
       CHARACTER(16)          :: ID
@@ -3863,17 +3880,20 @@ close(nfil)
       INTEGER(4)             :: NKPT,NSPIN,NDIM
       INTEGER(4)             :: NKPT1,NSPIN1,NBW1,NDIM1
       INTEGER(4)             :: NCORR1
-      INTEGER(4)             :: NBH,NB
+      INTEGER(4)             :: NBH,NB,nbx
       COMPLEX(8),ALLOCATABLE :: RHO(:,:)
       COMPLEX(8),ALLOCATABLE :: RHO0(:,:)
       COMPLEX(8),ALLOCATABLE :: U(:,:)
       REAL(8)   ,ALLOCATABLE :: F(:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
+      COMPLEX(8),ALLOCATABLE :: deltah(:,:)
+      COMPLEX(8),ALLOCATABLE :: H0plusdelta(:,:)
+      REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSICORR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:),QSQINV(:,:)
       COMPLEX(8)             :: SVAR
       LOGICAL(4)             :: TINV
-      INTEGER(4)             :: IKPT,ISPIN,IB,IDIM,IPRO,IBH,IAT,I,I1,I2
+      INTEGER(4)             :: IKPT,ISPIN,IB,IDIM,IPRO,IBH,IAT,I,j,I1,I2
       INTEGER(4)             :: IKPT1,ISPIN1,IB1
       INTEGER(4)             :: NPRO
       REAL(8)                :: WKPT1
@@ -3940,10 +3960,15 @@ PRINT*,'C TICKET1',TICKET1
         CALL ERROR$I4VAL('NBW1',NBW1)
         CALL ERROR$STOP('LMTO_DROPPICK_PICK')
       END IF
+      CALL DYNOCC$GETI4('NB',NBX)
+      ALLOCATE(OCC(NBX,NKPT,NSPIN))
+      CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPT*NSPIN,OCC)
       IF(.NOT.ASSOCIATED(DHOFK)) ALLOCATE(DHOFK(NCORR,NCORR,NKPT,NSPIN))
       ALLOCATE(RHO(NBW,NBW))
       ALLOCATE(RHO0(NBW,NBW))
       ALLOCATE(H0(NBW,NBW))
+      ALLOCATE(H0plusdelta(NBW,NBW))
+      ALLOCATE(deltah(NBW,NBW))
       ALLOCATE(F(NBW))
       ALLOCATE(U(NBW,NBW))
       ALLOCATE(PSICORR(NDIM,NCORR,NBW))
@@ -3951,6 +3976,7 @@ PRINT*,'C TICKET1',TICKET1
       ALLOCATE(QSQINV(NCORR,NCORR))
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
 !
 !         ======================================================================
 !         == READ DENSITY MATRIX                                              ==
@@ -3976,14 +4002,20 @@ READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1
 BACKSPACE(NFIL1)
 PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
           READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-PRINT*,'MARKE 2'
-          IF(ID.NE.'HINFO') THEN
-            CALL ERROR$MSG('INCORRECT ID: MUST BE "HINFO"')
+          IF(ID.ne.'H0INFO') THEN
+            CALL ERROR$MSG('INCORRECT ID: MUST BE "H0INFO"')
+            CALL ERROR$MSG('OLD FORMAT USED HINFO')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('LMTO_DROPPICK_PICK')
+          END IF
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0plusdelta !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          IF(ID.ne.'H0PLUSDELTAINFO') THEN
+            CALL ERROR$MSG('INCORRECT ID: MUST BE "H0PLUSDELTAINFO"')
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
 !
-          READ(NFIL1,*)ID,IKPT1,ISPIN1,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           IF(ID.NE.'QSQINV') THEN
             CALL ERROR$MSG('INCORRECT ID: MUST BE "QSQINV"')
             CALL ERROR$CHVAL('ID',ID)
@@ -4029,14 +4061,21 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !         ======================================================================
 !         == SUBTRACT NON-INTERACTING HAMILTONIAN                             ==
 !         ======================================================================
-          H0=RHO-H0
+          deltah=RHO-H0
+          IF(TREFRESH) THEN
+call error$stop('lmto_droppick_pick')
+            H0=deltah+H0PLUSDELTA
+            h0plusdelta(:,:)=THIS%RLAM0(NB1:,NB1:)
+            h0plusdelta(:,:)=(h0plusdelta(:,:)+transpose(conjg(h0plusdelta)))
+            H0=H0-H0PLUSDELTA
+          END IF
 !
 !         ======================================================================
 !         == CONVERT INTO ORBITAL BASIS                                       ==
 !         ======================================================================
           IDIM=1
           DHOFK(:,:,IKPT,ISPIN)=MATMUL(PSICORR(IDIM,:,:) &
-     &                         ,MATMUL(H0,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
+     &                      ,MATMUL(deltah,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
 !
 !         ======================================================================
 !         ==  TRANSFORM DHOFK TO THE SITE ORTHOGONALIZED REPRESENTATION       ==
@@ -4053,6 +4092,7 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !     ==========================================================================
       CALL LMTO_DROPPICK_WRITEDHOFK()
       TPICKED=.TRUE.
+      if(trefresh) tpicked=.false.
                                            CALL TRACE$POP()
       RETURN
       END
