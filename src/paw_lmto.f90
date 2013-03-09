@@ -3623,20 +3623,7 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
 !     == MULTIPLY WITH SPIN MULTIPLICITY =======================================
       IF(NSPIN.EQ.2) WKPT=2.D0*WKPT
 !
-!     ==========================================================================
-!     ==  TRANSFORMATION ONTO ONSITE ORTHOGONALIZED PARTIAL WAVES             ==
-!     ==  USES PRE-CALCULATED OVERLAP OF TAILED PARTIAL WAVES                 ==
-!     ==========================================================================
-      ALLOCATE(T(NAT))
-      DO IAT=1,NAT
-        ISP=ISPECIES(IAT)
-        LMNX=NPROAT(IAT)
-        T(IAT)%I1=IPRO1(IAT)
-        T(IAT)%I2=IPRO1(IAT)-1+NPROAT(IAT)
-        ALLOCATE(T(IAT)%MAT(LMNX,LMNX))
-        ALLOCATE(T(IAT)%INV(LMNX,LMNX))
-        CALL LMTO_ONSORTHO(IAT,LMNX,T(IAT)%MAT,T(IAT)%INV)
-      ENDDO
+! t is no more calculated because it is already calculated in droppick_maket
 !
 !     ==========================================================================
 !     ==  ATTACH FILE                                                         ==
@@ -3662,6 +3649,7 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
         ID='INFO'
         WRITE(NFIL2,*)ID,NKPT,NSPIN,NBW,TICKET   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       END IF
+!
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
         IWORK16(:)=-1
@@ -3722,7 +3710,8 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
             CALL ERROR$STOP('LMTO_DROPPICK_DROP')
           END IF
 !
-!         ==  WRITE WAVE FUNCTIONS =============================================
+!         ==  copy coefficients of local orbitals onto psi =====================
+!         ==  resolve super wave functions =====================================
           ALLOCATE(PSI(NDIM,NPRO,NB))
           ALLOCATE(PSI1(NDIM,NPRO,NB))
           IF(TINV) THEN
@@ -3799,7 +3788,7 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
 !         ======================================================================
 !         == collect effective hamiltonian                                    ==
 !         ======================================================================
-          h0plusdelta(:,:)=THIS%RLAM0(NB1:,NB1:)
+          h0plusdelta(:,:)=THIS%RLAM0(NB1:nb2,NB1:nb2)
           h0plusdelta(:,:)=0.5d0*(h0plusdelta(:,:)+transpose(conjg(h0plusdelta)))
 !
 !         ======================================================================
@@ -3887,10 +3876,18 @@ close(nfil)
       REAL(8)   ,ALLOCATABLE :: F(:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
       COMPLEX(8),ALLOCATABLE :: deltah(:,:)
+      COMPLEX(8),ALLOCATABLE :: devrho(:,:)
       COMPLEX(8),ALLOCATABLE :: H0plusdelta(:,:)
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSICORR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:),QSQINV(:,:)
+      complex(8),allocatable :: lambdap(:,:)
+      complex(8),allocatable :: lambda0(:,:)
+      complex(8),allocatable :: lambdam(:,:)
+      real(8)                :: svar1,svar2,svar3
+      real(8)   ,parameter   :: alambda=0.1d0
+      real(8)   ,parameter   :: mlambda=1.d0
+      real(8)   ,parameter   :: delta=5.d0
       COMPLEX(8)             :: SVAR
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: IKPT,ISPIN,IB,IDIM,IPRO,IBH,IAT,I,j,I1,I2
@@ -3967,10 +3964,14 @@ PRINT*,'C TICKET1',TICKET1
       ALLOCATE(RHO(NBW,NBW))
       ALLOCATE(RHO0(NBW,NBW))
       ALLOCATE(H0(NBW,NBW))
-      ALLOCATE(H0plusdelta(NBW,NBW))
-      ALLOCATE(deltah(NBW,NBW))
+      ALLOCATE(H0PLUSDELTA(NBW,NBW))
+      ALLOCATE(DELTAH(NBW,NBW))
       ALLOCATE(F(NBW))
       ALLOCATE(U(NBW,NBW))
+      ALLOCATE(DEVRHO(NCORR,NCORR))
+      ALLOCATE(LAMBDAP(NCORR,NCORR))
+      ALLOCATE(LAMBDA0(NCORR,NCORR))
+      ALLOCATE(LAMBDAM(NCORR,NCORR))
       ALLOCATE(PSICORR(NDIM,NCORR,NBW))
       ALLOCATE(QSQ(NCORR,NCORR))
       ALLOCATE(QSQINV(NCORR,NCORR))
@@ -4008,7 +4009,7 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
-          READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0plusdelta !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0plusdelta !<<<<<<<<<<<<<<<<<<<<<<
           IF(ID.ne.'H0PLUSDELTAINFO') THEN
             CALL ERROR$MSG('INCORRECT ID: MUST BE "H0PLUSDELTAINFO"')
             CALL ERROR$CHVAL('ID',ID)
@@ -4030,45 +4031,71 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
               CALL ERROR$STOP('LMTO_DROPPICK_PICK')
             END IF
           ENDDO
-!
-!         ======================================================================
-!         == CONVERT DENSITY MATRIX INTO FINITE TEMPERATURE HAMILTONIAN       ==
-!         ======================================================================
+
 !         == NON-SPIN-POLARIZED CALCULATIONS HAVE TWO ELECTRONS PER STATE
 !!$          IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN
 !!$            RHO=0.5D0*RHO
 !!$          END IF
 !
-!!$DO IB=1,NBW
-!!$WRITE(*,FMT='("REAL(RHO)",I3,100F8.4)')IB,REAL(RHO(IB,:))
-!!$ENDDO
-!!$DO IB=1,NBW
-!!$WRITE(*,FMT='("IMAG(RHO)",I3,100F8.4)')IB,AIMAG(RHO(IB,:))
-!!$ENDDO
-          CALL LIB$DIAGC8(NBW,RHO,F,U)
-WRITE(*,FMT='("F   ",100F8.4)')F
-          DO IB=1,NBW
-            F(IB)=MAX(1.D-5,MIN(1.D0-1.D-5,F(IB)))
-            SVAR=(1.D0-F(IB))/F(IB)
-            SVAR=LOG(SVAR)
-            F(IB)=MU+KBT*SVAR
-          ENDDO
-          DO IB=1,NBW
-            RHO(IB,:)=F(IB)*U(IB,:)
-          ENDDO
-          RHO=MATMUL(CONJG(TRANSPOSE(U)),RHO)  !THIS IS NOW A HAMILTONIAN
+!         ======================================================================
+!         == CONVERT DENSITY MATRIX INTO FINITE TEMPERATURE HAMILTONIAN       ==
+!         ======================================================================
+          IF(TYPE.EQ.'CONSTRAINEDSEARCH') THEN
+            F(:)=OCC(NB1:,IKPT,ISPIN)/WKPT1
+!SET UP MATRIX
+!           == VIOLATION OF THE CONSTRAINT =====================================
+            IDIM=1
+            DEVRHO=0.D0
+            DO I=1,NCORR
+              DO J=1,NCORR
+                DO IB=1,NBW
+!HERE SHOULD BE THE PSICORR OF THE ACTUAL TIME STEP
+                  DEVRHO(I,J)=DEVRHO(I,J) &
+                             +PSICORR(IDIM,I,IB)*F(IB)*CONJG(IDIM,J,IB)
+                ENDDO
+              ENDDO
+            ENDDO
+!THE REFERENCE PSICORR SHOULD REMAIN CONSTANT WITHIN THE DFT-LOOP
+            DEVRHO(:,:)=DEVRHO-MATMUL(PSICORR(IDIM,:,:), &
+                               MATMUL(RHO,CONJG(TRANSPOSE(PSICORR(IDIM,:,:)))))
 !
-!         ======================================================================
-!         == SUBTRACT NON-INTERACTING HAMILTONIAN                             ==
-!         ======================================================================
-          deltah=RHO-H0
-          IF(TREFRESH) THEN
+!           ==  PROPAGATE LAGRANGE MULTIPLIERS==================================
+            SVAR1=2.D0/(1.D0+ALAMBDA)
+            SVAR2=1.D-SVAR1
+            SVAR3=DELTA**2/MLAMBDA/(1.D0+ALAMBDA)
+            LAMBDAP=LAMBDA0*SVAR1+LAMBDA2*SVAR2+DEVRHO*SVAR3
+!
+!           == SET DELTAH ======================================================
+            DELTAH=LAMBDA0
+!
+!           == SWITCH ==========================================================
+            LAMBDAM=LAMBDA0
+            LAMBDA0=LAMBDAP
+          ELSE IF
+            CALL LIB$DIAGC8(NBW,RHO,F,U)
+            DO IB=1,NBW
+              F(IB)=MAX(1.D-5,MIN(1.D0-1.D-5,F(IB)))
+              SVAR=(1.D0-F(IB))/F(IB)
+              SVAR=LOG(SVAR)
+              F(IB)=MU+KBT*SVAR
+            ENDDO
+            DO IB=1,NBW
+              RHO(IB,:)=F(IB)*U(IB,:)
+            ENDDO
+            RHO=MATMUL(CONJG(TRANSPOSE(U)),RHO)  !THIS IS NOW A HAMILTONIAN
+!
+!           ====================================================================
+!           == SUBTRACT NON-INTERACTING HAMILTONIAN                           ==
+!           ====================================================================
+            deltah=RHO-H0
+            IF(TREFRESH) THEN
 call error$stop('lmto_droppick_pick')
-            H0=deltah+H0PLUSDELTA
-            h0plusdelta(:,:)=THIS%RLAM0(NB1:,NB1:)
-            h0plusdelta(:,:)=(h0plusdelta(:,:)+transpose(conjg(h0plusdelta)))
-            H0=H0-H0PLUSDELTA
-          END IF
+              H0=deltah+H0PLUSDELTA
+              h0plusdelta(:,:)=THIS%RLAM0(NB1:,NB1:)
+              h0plusdelta(:,:)=(h0plusdelta(:,:)+transpose(conjg(h0plusdelta)))
+              H0=H0-H0PLUSDELTA
+            END IF
+          end if
 !
 !         ======================================================================
 !         == CONVERT INTO ORBITAL BASIS                                       ==
@@ -4148,7 +4175,6 @@ call error$stop('lmto_droppick_pick')
         CALL LMTO_DROPPICK_READDHOFK()
       ELSE
         CALL LMTO_DROPPICK_PICK()
-!        CALL LMTO_PICKGET()
       END IF
 !
 !     ==========================================================================
@@ -4180,6 +4206,7 @@ call error$stop('lmto_droppick_pick')
           DO IBH=1,NBH
 !
 !           == MAKE COPY OF THIS%TBC ===========================================
+!what about super wave functions? Compare DROPPICK_DROP
             VEC1=THIS%TBC(1,IBH,:)
             IF(NDIM.NE.1) THEN
               CALL ERROR$MSG('IMPLEMENTATION ONLY FOR NDIM=1')
@@ -4225,6 +4252,7 @@ call error$stop('lmto_droppick_pick')
 !           == MAP RESULT INTO THIS%HTBC =======================================
             THIS%HTBC(1,IBH,:)=VEC1(:)
 !
+!what about super wave functions? Compare DROPPICK_DROP
 !           == ADD UP TOTAL ENERGY CORRECTION ==================================
             IF(TINV) THEN
               DO IDIM=1,NDIM
@@ -5629,18 +5657,20 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     ==========================================================================
 !     == WRITE DMFT INTERFACE 
 !     ==========================================================================
-      IF(TDROP) THEN
-        IF(TPICK) CALL LMTO_DROPPICK_HTBC()   !FIRST READ DHOFK
-        CALL LMTO_DROPPICK_DROP()   !OLD:   CALL LMTO_DROP()
-        CALL ERROR$MSG('REGULAR STOP AFTER EXECUTING LMTO_DROPPICK_DROP')
-        CALL ERROR$MSG('DROP IS EXEWCUTED ONLY ONCE')
-        CALL ERROR$STOP('LMTO$ETOT')
-      END IF
-      IF(TPICK) THEN
-        PRINT*,'CALLING DMFT INTERFACE PICK ....'
-        CALL LMTO_DROPPICK_HTBC()
-        PRINT*,'.... DMFT INTERFACE PICK DONE'
-        RETURN
+      if(tdrop.or.tpick) then
+        IF(TPICK) THEN
+          PRINT*,'CALLING DMFT INTERFACE PICK ....'
+          CALL LMTO_DROPPICK_HTBC()
+          PRINT*,'.... DMFT INTERFACE PICK DONE'
+        END IF
+        IF(TDROP) THEN
+          CALL LMTO_DROPPICK_DROP()   !OLD:   CALL LMTO_DROP()
+          CALL ERROR$MSG('REGULAR STOP AFTER EXECUTING LMTO_DROPPICK_DROP')
+          CALL ERROR$MSG('DROP IS EXEWCUTED ONLY ONCE')
+          CALL ERROR$STOP('LMTO$ETOT')
+        else  
+          RETURN  ! if drop or pick is true interface dmft is used.
+        END IF
       END IF
 !
 !     ==========================================================================
