@@ -3296,6 +3296,7 @@ COMPLEX(8)  :: PHASE
       REAL(8)               :: SVAR
       INTEGER(4)            :: I,J,LMN,LN,L
       LOGICAL(4)            :: TORB(LMNX)
+      LOGICAL(4),parameter  :: Twrite=.false.
 !     **************************************************************************
       ISP=ISPECIES(IAT)
 !
@@ -3306,9 +3307,20 @@ COMPLEX(8)  :: PHASE
       LMNXT=POTPAR(ISP)%TAILED%LMNX
       CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,1 &
    &               ,LMNXT,LMNXT,POTPAR(ISP)%TAILED%OVERLAP,LMNX,LMNX,OVERLAP)
-!!$      DO I=1,LMNX
-!!$        WRITE(*,FMT='(I3," O=",100("(",2F8.4,")"))')I,OVERLAP(I,:)
-!!$      ENDDO
+      if(twrite) then
+        print*,'lmnxt ',lmnxt
+        print*,'lmnx  ',lmnx
+        print*,'tallorb',POTPAR(ISP)%Tallorb
+        print*,'torb   ',POTPAR(ISP)%Torb
+        DO I=1,LMNXT
+          WRITE(*,FMT='(I3," Obig=",100e10.2)')I,POTPAR(ISP)%TAILED%OVERLAP(i,:)
+        ENDDO
+        DO I=1,LMNX
+          WRITE(*,FMT='(I3," O=",100e10.2)')I,OVERLAP(I,:)
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP')
+        CALL ERROR$STOP('LMTO_ONSORTHO')
+      end if
 !
 !     ==========================================================================
 !     == DETERIMINE ACTIVE ORBITALS                                           ==
@@ -3345,6 +3357,19 @@ COMPLEX(8)  :: PHASE
         OVERLAP(:,I)=OVERLAP(:,I)*SVAR
         OVERLAP(I,:)=OVERLAP(I,:)*SVAR
       ENDDO
+!
+      IF(TWRITE) THEN
+        PRINT*,' IN ONSORTHO IAT=',IAT
+        PRINT*,' TORB ',TORB
+        DO I=1,LMNX
+          WRITE(*,FMT='(I3," T=",100E10.2)')I,T(I,:)
+        ENDDO
+        DO I=1,LMNX
+          WRITE(*,FMT='(I3," O=",100E10.2)')I,OVERLAP(I,:)
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP')
+        CALL ERROR$STOP('LMTO_ONSORTHO')
+     END IF
 !
 !     ==========================================================================
 !     == INVERT                                                               ==
@@ -4504,10 +4529,12 @@ WRITE(*,FMT='("SUMRULE",2E20.5)')MINVAL(EIG),MAXVAL(EIG)
       USE LMTO_MODULE, ONLY : ISPECIES
       USE LMTO_DROPPICK_MODULE, ONLY : IPRO1,NPROAT,T
       IMPLICIT NONE
-      INTEGER(4)     :: NAT
-      INTEGER(4)     :: IAT
-      INTEGER(4)     :: ISP
-      INTEGER(4)     :: LMNX
+      logical(4),parameter :: twrite=.false.
+      INTEGER(4)           :: NAT
+      INTEGER(4)           :: IAT
+      INTEGER(4)           :: ISP
+      INTEGER(4)           :: LMNX
+      INTEGER(4)           :: LMN
 !     **************************************************************************
       CALL LMTO_DROPICK_INI()
       NAT=SIZE(ISPECIES)
@@ -4526,6 +4553,22 @@ WRITE(*,FMT='("SUMRULE",2E20.5)')MINVAL(EIG),MAXVAL(EIG)
         ALLOCATE(T(IAT)%INV(LMNX,LMNX))
         CALL LMTO_ONSORTHO(IAT,LMNX,T(IAT)%MAT,T(IAT)%INV)
       ENDDO
+!
+!     ==========================================================================
+!     ==  report                                                              ==
+!     ==========================================================================
+      IF(TWRITE) THEN
+        DO IAT=1,NAT
+          WRITE(*,FMT='(82("="),T10,"ONSITE OVERLAP FOR ATOM ",I5)')IAT
+          ISP=ISPECIES(IAT)
+          LMNX=NPROAT(IAT)
+          DO LMN=1,LMNX      
+            WRITE(*,FMT='(20F10.5)')T(IAT)%mat(LMN,:)
+          ENDDO
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP AFTER REPORTING')
+        CALL ERROR$STOP('LMTO_DROPPICK_MAKET')
+      END IF
       RETURN
       END
 !
