@@ -3487,6 +3487,10 @@ END IF
         ENDDO
       ENDDO
       NBW=NB2-NB1+1  !#(BANDS IN THE WINDOW)
+
+print*,'info from lmto_droppick_ini switchid    ',switchid
+print*,'info from lmto_droppick_ini nb1,nb2,nbw ',nb1,nb2,nbw 
+print*,'info from lmto_droppick_ini ncorr       ',ncorr
 !
 !     ==========================================================================
 !     ==  ATTACH FILE                                                         ==
@@ -3715,6 +3719,10 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
           ALLOCATE(PSI(NDIM,NPRO,NB))
           ALLOCATE(PSI1(NDIM,NPRO,NB))
           IF(TINV) THEN
+            IF(NBH.EQ.NB) THEN
+              CALL ERROR$MSG('SUPER WAVE FUNCTIONS NOT PROPERLY ACCOUNTED FOR')
+              CALL ERROR$STOP('LMTO_DROPPICK_DROP')
+            END IF
             DO IBH=1,NBH
               PSI(:,:,2*IBH-1)=REAL(THIS%TBC(:,IBH,:))
               PSI(:,:,2*IBH)=AIMAG(THIS%TBC(:,IBH,:))
@@ -3860,6 +3868,8 @@ close(nfil)
       use waves_module, only : this,waves_selectwv
       IMPLICIT NONE
       logical(4),parameter   :: trefresh=.false. ! recalculate delta-h each step
+!      character(128),parameter :: type='CONSTRAINEDSEARCH'
+      character(128),parameter :: type='NONE'
       REAL(8)                :: MU
       REAL(8)                :: KBT
       CHARACTER(16)          :: ID
@@ -3966,6 +3976,7 @@ PRINT*,'C TICKET1',TICKET1
       ALLOCATE(H0(NBW,NBW))
       ALLOCATE(H0PLUSDELTA(NBW,NBW))
       ALLOCATE(DELTAH(NBW,NBW))
+print*,'shape  of deltah  (1) :',shape(deltah),' nbw ',nbw
       ALLOCATE(F(NBW))
       ALLOCATE(U(NBW,NBW))
       ALLOCATE(DEVRHO(NCORR,NCORR))
@@ -3978,6 +3989,7 @@ PRINT*,'C TICKET1',TICKET1
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
+print*,'shape  of deltah  (1a) :',shape(deltah),' nbw ',nbw
 !
 !         ======================================================================
 !         == READ DENSITY MATRIX                                              ==
@@ -3994,6 +4006,7 @@ PRINT*,'C TICKET1',TICKET1
             CALL ERROR$CHVAL('ISPIN',ISPIN)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
+print*,'shape  of deltah  (1b) :',shape(deltah),' nbw ',nbw
 !
 !         ======================================================================
 !         == READ DFT FILE                                                    ==
@@ -4015,6 +4028,7 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
+print*,'shape  of deltah  (1c) :',shape(deltah),' nbw ',nbw
 !
           READ(NFIL1,*)ID,IKPT1,ISPIN1,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           IF(ID.NE.'QSQINV') THEN
@@ -4022,6 +4036,7 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
+print*,'shape  of deltah  (1d) :',shape(deltah),' nbw ',nbw
 !
           DO IB=1,NBW
             READ(NFIL1,*)ID,IB1,IKPT1,ISPIN1,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<
@@ -4031,6 +4046,7 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
               CALL ERROR$STOP('LMTO_DROPPICK_PICK')
             END IF
           ENDDO
+print*,'shape  of deltah  (1e) :',shape(deltah),' nbw ',nbw
 
 !         == NON-SPIN-POLARIZED CALCULATIONS HAVE TWO ELECTRONS PER STATE
 !!$          IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN
@@ -4040,6 +4056,7 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
 !         ======================================================================
 !         == CONVERT DENSITY MATRIX INTO FINITE TEMPERATURE HAMILTONIAN       ==
 !         ======================================================================
+print*,'shape  of deltah  (1f) :',shape(deltah),' nbw ',nbw
           IF(TYPE.EQ.'CONSTRAINEDSEARCH') THEN
             F(:)=OCC(NB1:,IKPT,ISPIN)/WKPT1
 !SET UP MATRIX
@@ -4051,7 +4068,7 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
                 DO IB=1,NBW
 !HERE SHOULD BE THE PSICORR OF THE ACTUAL TIME STEP
                   DEVRHO(I,J)=DEVRHO(I,J) &
-                             +PSICORR(IDIM,I,IB)*F(IB)*CONJG(IDIM,J,IB)
+                             +PSICORR(IDIM,I,IB)*F(IB)*CONJG(psicorr(IDIM,J,IB))
                 ENDDO
               ENDDO
             ENDDO
@@ -4061,17 +4078,20 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
 !
 !           ==  PROPAGATE LAGRANGE MULTIPLIERS==================================
             SVAR1=2.D0/(1.D0+ALAMBDA)
-            SVAR2=1.D-SVAR1
+            SVAR2=1.D0-SVAR1
             SVAR3=DELTA**2/MLAMBDA/(1.D0+ALAMBDA)
-            LAMBDAP=LAMBDA0*SVAR1+LAMBDA2*SVAR2+DEVRHO*SVAR3
+            LAMBDAP=LAMBDA0*SVAR1+LAMBDAm*SVAR2+DEVRHO*SVAR3
 !
 !           == SET DELTAH ======================================================
+print*,'shape  of deltah  (1f1) :',shape(deltah),' nbw ',nbw
+stop 'programm error: lambda0 and deltah have different shape'
             DELTAH=LAMBDA0
+print*,'shape  of deltah  (1f2) :',shape(deltah),' nbw ',nbw
 !
 !           == SWITCH ==========================================================
             LAMBDAM=LAMBDA0
             LAMBDA0=LAMBDAP
-          ELSE IF
+          ELSE 
             CALL LIB$DIAGC8(NBW,RHO,F,U)
             DO IB=1,NBW
               F(IB)=MAX(1.D-5,MIN(1.D0-1.D-5,F(IB)))
@@ -4087,28 +4107,43 @@ PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
 !           ====================================================================
 !           == SUBTRACT NON-INTERACTING HAMILTONIAN                           ==
 !           ====================================================================
+print*,'shape  of deltah (2)  :',shape(deltah),' nbw ',nbw
             deltah=RHO-H0
-            IF(TREFRESH) THEN
-call error$stop('lmto_droppick_pick')
-              H0=deltah+H0PLUSDELTA
-              h0plusdelta(:,:)=THIS%RLAM0(NB1:,NB1:)
-              h0plusdelta(:,:)=(h0plusdelta(:,:)+transpose(conjg(h0plusdelta)))
-              H0=H0-H0PLUSDELTA
-            END IF
+print*,'shape  of deltah (3)  :',shape(deltah),' nbw ',nbw
+!!$            IF(TREFRESH) THEN
+!!$call error$stop('lmto_droppick_pick')
+!!$              H0=deltah+H0PLUSDELTA
+!!$              h0plusdelta(:,:)=THIS%RLAM0(NB1:,NB1:)
+!!$              h0plusdelta(:,:)=(h0plusdelta(:,:)+transpose(conjg(h0plusdelta)))
+!!$              H0=H0-H0PLUSDELTA
+!!$            END IF
           end if
+print*,'shape  of deltah  (4) :',shape(deltah),' nbw ',nbw
 !
 !         ======================================================================
 !         == CONVERT INTO ORBITAL BASIS                                       ==
 !         ======================================================================
           IDIM=1
+print*,'dimensions psicorr :',NDIM,NCORR,NBW
+print*,'dimensions deltah  :',NBW,NBW
+print*,'dimensions dhofk   :',NCORR,NCORR,NKPT,NSPIN
+print*,'shape  of dhofk    :',shape(dhofk)
+print*,'shape  of deltah (5)  :',shape(deltah)
+print*,'shape  of psicorr  :',shape(psicorr)
+print*,'shape  of TRANSPOSE(CONJG(PSICORR(IDIM,:,:))) :',shape(TRANSPOSE(CONJG(PSICORR(IDIM,:,:))))
+print*,'shape  of MATMUL(deltah,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))) :' &
+       ,shape(MATMUL(deltah,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
+print*,'marke 5'
           DHOFK(:,:,IKPT,ISPIN)=MATMUL(PSICORR(IDIM,:,:) &
      &                      ,MATMUL(deltah,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
+print*,'marke 6'
 !
 !         ======================================================================
 !         ==  TRANSFORM DHOFK TO THE SITE ORTHOGONALIZED REPRESENTATION       ==
 !         ======================================================================
           DHOFK(:,:,IKPT,ISPIN)=MATMUL(QSQINV &
      &                                ,MATMUL(DHOFK(:,:,IKPT,ISPIN),QSQINV))
+print*,'marke 7'
         ENDDO
       ENDDO
       CALL FILEHANDLER$CLOSE('DFT2DMFT')
@@ -4135,7 +4170,7 @@ call error$stop('lmto_droppick_pick')
 !     **  THE BASIS ARE ONSITE-ORTHOGONALIZED NATURAL TIGHT-BINDING ORBITALS  **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
-      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
+      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET,WVSET_TYPE
       USE LMTO_MODULE,  ONLY : TPICK,ISPECIES,LNX,LOX,THTBC
       USE LMTO_DROPPICK_MODULE, ONLY : TPRO,NCORR,T,DHOFK,TREADDHOFK,NPROAT
       IMPLICIT NONE
@@ -4206,7 +4241,7 @@ call error$stop('lmto_droppick_pick')
           DO IBH=1,NBH
 !
 !           == MAKE COPY OF THIS%TBC ===========================================
-!what about super wave functions? Compare DROPPICK_DROP
+!           == vec1 is a super wave function if tinv=true ======================
             VEC1=THIS%TBC(1,IBH,:)
             IF(NDIM.NE.1) THEN
               CALL ERROR$MSG('IMPLEMENTATION ONLY FOR NDIM=1')
@@ -4252,7 +4287,6 @@ call error$stop('lmto_droppick_pick')
 !           == MAP RESULT INTO THIS%HTBC =======================================
             THIS%HTBC(1,IBH,:)=VEC1(:)
 !
-!what about super wave functions? Compare DROPPICK_DROP
 !           == ADD UP TOTAL ENERGY CORRECTION ==================================
             IF(TINV) THEN
               DO IDIM=1,NDIM
