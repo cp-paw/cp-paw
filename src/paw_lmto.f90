@@ -15161,3 +15161,363 @@ STOP 'FORCED IN LMTO_TESTTAILEDP'
 !!$      ENDDO
 !!$      RETURN
 !!$      END
+!
+!
+!........1.........2.........3.........4.........5.........6.........7.........8
+MODULE DMFT_MODULE
+!*******************************************************************************
+!** IPROOFCHI(NCHI) IS A POINTER THAT SELECTS A PARTICULAR LOCAL ORBITAL      **
+!*******************************************************************************
+LOGICAL(4),PARAMETER   :: TON=.TRUE.
+LOGICAL(4),SAVE        :: TINI=.FALSE.
+INTEGER(4),PARAMETER   :: NOMEGA=1000
+REAL(8)                :: OMEGA(NOMEGA) !matsubara frequencies
+REAL(8)                :: KBT           !temperature (k_B*T)
+REAL(8)                :: MUMIN,MUMAX   ! bounds of search grid for chem. pot'ls
+COMPLEX(8),ALLOCATABLE :: GLOC(:,:,:,:) !(NCHI,NCHI,NOMEGA,NSPIN)
+COMPLEX(8),ALLOCATABLE :: DSIGMA(:,:,:,:)  !(NCHI,NCHI,NOMEGA,NSPIN)
+COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:)  !(NB,NB,ISPIN,IKPT)
+INTEGER(4)             :: NCHI
+INTEGER(4),ALLOCATABLE :: IPROOFCHI(:)
+CONTAINS
+END MODULE DMFT_MODULE
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_INI()
+!     **************************************************************************
+      USE DMFT_MODULE
+      IMPLICIT NONE
+      REAL(8)                :: PI
+      integer(4)             :: nu
+!     **************************************************************************
+      IF(TINI) RETURN
+      TINI=.TRUE.
+      PI=4.D0*ATAN(1.D0)
+!
+!     ==========================================================================
+!     == select correlated orbitals                                           ==
+!     ==========================================================================
+      NCHI=3    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      allocate(iproofchi(nchi))
+      IPROOFCHI(1)=2
+      IPROOFCHI(2)=4
+      IPROOFCHI(3)=5
+!
+!     ==========================================================================
+!     == other variables                                                      ==
+!     ==========================================================================
+      kbt=0.1d0
+      MUMIN=0.460
+      MUMAX=0.5D0
+!
+!     ==========================================================================
+!     ==  calculate MATSUBARA FREQUENCIES                                     ==
+!     ==========================================================================
+      IF(MOD(NOMEGA,2).NE.0) THEN
+        CALL ERROR$MSG('NOMEGA MUST BE EVEN')
+        CALL ERROR$I4VAL('NOMEGA',NOMEGA)
+        CALL ERROR$STOP('DMFT$GREEN')
+      END IF
+      DO nu=1,NOMEGA
+        OMEGA(nu)=REAL(2*nu-1-NOMEGA,KIND=8)*PI*KBT
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT$GREEN()
+!     **************************************************************************
+!     ** CALCULATES THE LOCAL INTERACTING GREEN'S FUNCTION                    **
+!     **                                                                      **
+!     ** PIPSI <PI_A|PSI_N> IS THE PRE-FACTOR OF LOCAL ORBITAL |CHI_A> IN     **
+!     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
+!     **************************************************************************
+      USE DMFT_MODULE !, only: nomega,omega,kbt,mumin,mumax,nchi,iproofchi,ton
+      USE MPE_MODULE
+      USE WAVES_MODULE, ONLY : NKPT,NKPTL,NSPIN,NDIM,GSET,THIS,KMAP &
+     &                       ,WAVES_SELECTWV
+      IMPLICIT NONE
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)  ! SQRT(-1)
+      INTEGER(4)             :: NB,NBH     !#(STATES),#(SUPER STATES)
+      INTEGER(4)             :: NGL
+      COMPLEX(8)             :: CSVAR
+      COMPLEX(8),ALLOCATABLE :: HAMILTON(:,:)
+      COMPLEX(8),ALLOCATABLE :: GREENINV(:,:)
+      COMPLEX(8),ALLOCATABLE :: GREEN(:,:)
+      COMPLEX(8),ALLOCATABLE :: PIPSI(:,:)    !(NCHI,NB)
+      REAL(8)                :: NEL        ! #(ELECTRONS) 
+      REAL(8)                :: MU         ! CHEMICAL POTENTIAL
+      INTEGER(4)             :: NMU=10     ! #(GRIDPOINTS OF CHEMICAL POT'S)
+      REAL(8)   ,ALLOCATABLE :: MUGRID(:)  ! GRID OF CHEMICAL POTENTIALS
+      REAL(8)   ,ALLOCATABLE :: NOFMU(:)   ! PARTICLE NUMBER FOR MUGRID
+      REAL(8)   ,ALLOCATABLE :: WKPT(:)    ! K-POINT WEIGHTS (GLOBAL)
+      REAL(8)   ,ALLOCATABLE :: WKPTL(:)   ! K-POINT WEIGHTS (LOCAL)
+      REAL(8)   ,ALLOCATABLE :: OCC(:,:,:) ! OCCUPATIONS (INCLUDING K-WEIGHT)
+      INTEGER(4)             :: NTASKS_K,THISTASK_K
+      INTEGER(4)             :: NTASKS_M,THISTASK_M
+      INTEGER(4)             :: IKPT,ISPIN,IMU,NU,I,IB,ibh,IKPTL,ICHI,ipro
+!     **************************************************************************
+      IF(.NOT.TON) RETURN
+                              CALL TRACE$PUSH('DMFT$GREEN')
+      IF(NDIM.NE.1) THEN
+        CALL ERROR$MSG('NON-COLLINEAR OPTION NOT IMPLEMENTED')
+        CALL ERROR$STOP('DMFT$GREEN')
+      END IF
+      CALL DMFT_INI()
+!
+      CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
+      CALL MPE$QUERY('MONOMER',NTASKS_M,THISTASK_M)
+      ALLOCATE(WKPT(NKPT))
+      ALLOCATE(WKPTL(NKPT))
+      CALL DYNOCC$GETI4('NB',NB)
+      CALL DYNOCC$GETR8A('WKPT',NKPT,WKPT)
+      IKPTL=0
+      DO IKPT=1,NKPT
+        IF(KMAP(IKPT).EQ.THISTASK_M) THEN
+          IKPTL=IKPTL+1
+          WKPTL(IKPTL)=WKPT(IKPT)
+        END IF
+      ENDDO
+      IF(IKPTL.NE.NKPTL) THEN
+        CALL ERROR$MSG('INCONSISTENT NUMBER OF LOCAL KPOINTS')
+        CALL ERROR$STOP('DMFT$GREEN')
+      END IF
+!
+      ALLOCATE(OCC(NB,NKPT,NSPIN))
+      CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
+      NEL=SUM(OCC)
+PRINT*,'DMFT$GREEN 2: #(ELECTRONS)=',NEL,' #(BANDS)=',NB
+!
+!     ==========================================================================
+!     ==  ALLOCATE ARRAYS                                                     ==
+!     ==========================================================================
+      IF(.NOT.ALLOCATED(DSIGMA)) THEN
+        ALLOCATE(DSIGMA(NCHI,NCHI,NSPIN,NOMEGA))
+        DSIGMA=(0.D0,0.D0)
+      END IF
+      IF(.NOT.ALLOCATED(GLOC))ALLOCATE(GLOC(NCHI,NCHI,NSPIN,NOMEGA))
+      IF(.NOT.ALLOCATED(DENMAT))ALLOCATE(DENMAT(NB,NB,NSPIN,NKPTL))
+!
+      ALLOCATE(PIPSI(NCHI,NB))
+      ALLOCATE(HAMILTON(NB,NB))
+      ALLOCATE(GREENINV(NB,NB))
+      ALLOCATE(GREEN(NB,NB))
+!
+!     ==========================================================================
+!     ==  DETERMINE CHEMICAL POTENTIAL
+!     ==========================================================================
+      ALLOCATE(MUGRID(NMU)) ! GRID OF CHEMICAL POTENTIALS
+      ALLOCATE(NOFMU(NMU))  ! number of electrons as function of chemical pot'ls
+      DO I=1,NMU
+        MUGRID(I)=MUMIN+REAL(I-1,KIND=8)/REAL(NMU-1,KIND=8)*(MUMAX-MUMIN)
+      ENDDO
+!
+      NOFMU=0.D0
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          CALL PLANEWAVE$SELECT(GSET%ID)      
+          IF(THIS%NB.NE.NB) THEN
+            CALL ERROR$MSG('INCONSISTENT NUMBER OF STATES IN WAVES AND DYNOCC')
+            CALL ERROR$I4VAL('NB IN DYNOCC',NB)
+            CALL ERROR$I4VAL('NB IN WAVES ',THIS%NB)
+            CALL ERROR$STOP('DMFT$GREEN')
+          END IF
+          NB=THIS%NB
+          NBH=THIS%NBH
+          NGL=GSET%NGL
+!
+!         ======================================================================
+!         ==  CALCULATE ONE-PARTICLE HAMILTONIAN                              ==
+!         ======================================================================
+          CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB,THIS%PSI0,THIS%HPSI &
+     &                     ,HAMILTON)
+!
+!         ======================================================================
+!         ==  DETERMINE ORBITAL PROJECTIONS                                   ==
+!         ======================================================================
+          DO ICHI=1,NCHI
+            IPRO=IPROOFCHI(ICHI)
+            DO IBh=1,NBH
+              IF(NBH.NE.NB) THEN
+                 PIPSI(ICHI,2*IBH-1)=REAL(this%TBC(1,IBH,IPRO))
+                 PIPSI(ICHI,2*IBH)  =AIMAG(this%TBC(1,IBH,IPRO))
+              ELSE
+                 PIPSI(ICHI,IBH)  =this%TBC(1,IBH,IPRO)
+              END if
+            ENDDO
+          ENDDO
+!
+!         ======================================================================
+!         ==  PERFORM MATSUBARA SUMS                                          ==
+!         ======================================================================
+          DO NU=1,NOMEGA
+            IF(MODULO(NU,NTASKS_K).NE.0) CYCLE
+!           == CONSTRUCT LATTICE GREENS FUNCTION ===============================
+            DO IMU=1,NMU
+              GREENINV(:,:)=-HAMILTON &
+     &                      -MATMUL(TRANSPOSE(CONJG(PIPSI)) &
+     &                             ,MATMUL(DSIGMA(:,:,ISPIN,NU),PIPSI))
+              CSVAR=CI*OMEGA(NU)+MUGRID(IMU)
+              DO IB=1,NB
+                GREENINV(IB,IB)=GREENINV(IB,IB)+CSVAR
+              ENDDO
+              CALL LIB$INVERTC8(NB,GREENINV,GREEN)
+!
+!             == REGULARIZE THE GREEN'S FUNCTION BEFORE ADDING IT UP ===========
+              CSVAR=1.D0/(CI*OMEGA(NU))
+              DO IB=1,NB
+                NOFMU(IMU)=NOFMU(IMU)+WKPTL(IKPT)*REAL(GREEN(IB,IB)-CSVAR)
+              ENDDO
+            ENDDO
+          ENDDO
+          DO IMU=1,NMU
+            IF(MODULO(IMU,NTASKS_K).NE.0) CYCLE
+            NOFMU(IMU)=NOFMU(IMU)+WKPTL(IKPT)*(0.5D0,0.D0)/KBT*REAL(NB,KIND=8)
+          ENDDO
+        ENDDO
+      ENDDO
+      CALL MPE$COMBINE('MONOMER','+',NOFMU)
+      NOFMU=NOFMU*KBT
+!     == TAKE CARE OF SPIN MULTIPLICITY ========================================
+      IF(NSPIN.EQ.1.AND.NDIM.EQ.1) NOFMU=NOFMU*2.D0
+!
+print*,'nel ',nel,kbt
+DO I=1,NMU
+  PRINT*,'MU/N= ',MUGRID(I),NOFMU(I)
+ENDDO
+
+      NOFMU=NOFMU-NEL  ! TRANSLATE INTO SURPUS ELECTRONS
+      IF(NOFMU(1).GT.0.D0.OR.NOFMU(NMU).LT.0.D0) THEN
+        CALL ERROR$MSG('CEHMICAL POTENTIAL LIES OUT OF ENERGY WINDOW')
+        CALL ERROR$r8VAL('MIN(MU)',MUMIN)
+        CALL ERROR$r8VAL('MAX(MU)',MUMAX)
+        CALL ERROR$r8VAL('N(MIN(MU))',NOFMU(1))
+        CALL ERROR$r8VAL('N(MAX(MU))',NOFMU(NMU))
+        CALL ERROR$STOP('DMFT$GREEN')
+      END IF
+      DO IMU=2,NMU
+        IF(NOFMU(IMU).GT.0.D0) THEN         
+          MU=MUGRID(IMU-1)-NOFMU(IMU-1)/(NOFMU(IMU)-NOFMU(IMU-1)) &
+     &                                 *(MUGRID(IMU)-MUGRID(IMU-1))
+        END IF
+      ENDDO
+
+PRINT*,'kbt= ',kbt,' kbt[ev]=',kbt*27.211d0
+PRINT*,'MU = ',MU ,' mu[ev] =',mu*27.211d0
+!
+!     ==========================================================================
+!     ==  ACCUMULATE LOCAL GREENS FUNCTION AND ONE-PARTICLE DENSITY MATRIX    ==
+!     ==========================================================================
+      GLOC=(0.D0,0.D0)
+      DENMAT=(0.D0,0.D0)
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          CALL PLANEWAVE$SELECT(GSET%ID)      
+          NB=THIS%NB
+          NBH=THIS%NBH
+          NGL=GSET%NGL
+!
+!         ======================================================================
+!         ==  CALCULATE ONE-PARTICLE HAMILTONIAN                              ==
+!         ======================================================================
+          CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB,THIS%PSI0,THIS%HPSI &
+     &                     ,HAMILTON)
+!
+!         ======================================================================
+!         ==  DETERMINE ORBITAL PROJECTIONS                                   ==
+!         ======================================================================
+          DO IBH=1,NBH
+            DO ICHI=1,NCHI
+              IPRO=IPROOFCHI(ICHI)
+              IF(NBH.NE.NB) THEN
+                 PIPSI(ICHI,2*IBH-1)=REAL(this%TBC(1,IBH,IPRO))
+                 PIPSI(ICHI,2*IBH)  =AIMAG(this%TBC(1,IBH,IPRO))
+              ELSE
+                 PIPSI(ICHI,IBH)  =this%TBC(1,IBH,IPRO)
+              END if
+            ENDDO
+          ENDDO
+!
+!         ======================================================================
+!         ==  PERFORM MATSUBARA SUMS                                          ==
+!         ======================================================================
+          DO NU=1,NOMEGA
+            IF(MODULO(NU,NTASKS_K).NE.0) CYCLE
+!           == CONSTRUCT LATTICE GREENS FUNCTION ===============================
+            GREENINV(:,:)=-HAMILTON &
+     &                    -MATMUL(TRANSPOSE(CONJG(PIPSI)) &
+     &                           ,MATMUL(DSIGMA(:,:,ISPIN,NU),PIPSI))
+            CSVAR=CI*OMEGA(NU)+MU
+            DO IB=1,NB
+              GREENINV(IB,IB)=GREENINV(IB,IB)+CSVAR
+            ENDDO
+            CALL LIB$INVERTC8(NB,GREENINV,GREEN)
+!
+!           == CONSTRUCT INTERACTING LOCAL GREEN'S FUNCTION ====================
+            GLOC(:,:,ISPIN,NU)=GLOC(:,:,ISPIN,NU)+WKPTL(IKPT) &
+     &                      *MATMUL(PIPSI,MATMUL(GREEN,CONJG(TRANSPOSE(PIPSI))))
+!
+!           == REGULARIZE THE GREEN'S FUNCTION BEFORE ADDING IT UP =============
+            CSVAR=1.D0/(CI*OMEGA(NU))
+            DO IB=1,NB
+              GREEN(IB,IB)=GREEN(IB,IB)-CSVAR
+            ENDDO
+!
+!           == ACCUMULATE DENSITY MATRIX =======================================
+            DENMAT(:,:,ISPIN,IKPT)=DENMAT(:,:,IKPT,ISPIN)+WKPTL(IKPT)*GREEN(:,:)
+          ENDDO
+          DO IB=1,NB
+            IF(MODULO(IB,NTASKS_K).NE.0) CYCLE
+            DENMAT(IB,IB,ISPIN,IKPT)=DENMAT(IB,IB,ISPIN,IKPT) &
+     &                              +WKPTL(IKPT)*(0.5D0,0.D0)/KBT
+          ENDDO
+        ENDDO
+      ENDDO
+      DENMAT=DENMAT*KBT
+      IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN  !SPIN MULTIPLICITY
+        DENMAT=DENMAT*2.D0
+        GLOC=GLOC*2.D0
+      END IF
+!
+!     == ADD OVER ALL NODES (INCLUDES SUM IN K-GROUPS AND OVER K-GROUPS) =======
+      CALL MPE$COMBINE('MONOMER','+',GLOC)
+      CALL MPE$COMBINE('K','+',DENMAT)
+!
+!     ==========================================================================
+!     ==  SEE IF THINGS MAKE SENSE
+!     ==========================================================================
+PRINT*,'DMFT$GREEN 8:'
+      NEL=0.D0
+      DO IKPT=1,NKPT
+        DO ISPIN=1,NSPIN
+          DO IB=1,NB
+            NEL=NEL+real(DENMAT(IB,IB,ISPIN,IKPT))
+          ENDDO
+        ENDDO
+      ENDDO
+      PRINT*,'NUMBER OF ELECTRONS ',NEL
+
+
+STOP 'FORCED STOP IN DMFT$GREEN'
+                                       CALL TRACE$POP()
+      RETURN
+      END
+!
+      subroutine sumden(nb,nkpt,nspin,denmat)
+      implicit none
+      integer(4),intent(in) :: nb,nkpt,nspin
+      complex(8),intent(in) :: denmat(nb,nb,nspin,nkpt)
+      integer(4) :: ib,ikpt,ispin
+      real(8)    :: nel
+      NEL=0.D0
+      DO IKPT=1,NKPT
+        DO ISPIN=1,NSPIN
+          DO IB=1,NB
+            NEL=NEL+real(DENMAT(IB,IB,ISPIN,IKPT))
+          ENDDO
+        ENDDO
+      ENDDO
+      PRINT*,'NUMBER OF ELECTRONS ',NEL
+      return
+      end
