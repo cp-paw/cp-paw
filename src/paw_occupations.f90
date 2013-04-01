@@ -827,6 +827,26 @@ END MODULE DYNOCC_MODULE
            enddo
          enddo
 !
+!      =========================================================================
+!      ==  one-particle energies 'epsilon' (force on occupation)              ==
+!      =========================================================================
+       ELSE IF(ID.EQ.'EPSILON') THEN
+         IF(LEN.NE.NB*NKPT*NSPIN) THEN
+           CALL ERROR$MSG('DIMENSIONS INCONSISTENT')
+           CALL ERROR$CHVAL('ID',ID)
+           CALL ERROR$I4VAL('LEN',LEN)
+           CALL ERROR$I4VAL('NB*NKPT*NSPIN',NB*NKPT*NSPIN)
+           CALL ERROR$STOP('DYNOCC$GETR8A')
+         END IF
+         IND=0
+         DO ISPIN=1,NSPIN
+           DO IKPT=1,NKPT
+             DO IB=1,NB
+               IND=IND+1
+               VAL(IND)=EPSILON(IB,IKPT,ISPIN)
+             ENDDO
+           ENDDO
+         ENDDO
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID',ID)
@@ -855,7 +875,7 @@ END MODULE DYNOCC_MODULE
       INTEGER(4)                   :: NTASKS,THISTASK
       integer(4)       ,parameter  :: formattype=1
 !     **************************************************************************
-                          CALL TRACE$PUSH('OCCUPATIONS$WRITE')
+                          CALL TRACE$PUSH('dynocc$WRITE')
       tchk=.false.
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 
