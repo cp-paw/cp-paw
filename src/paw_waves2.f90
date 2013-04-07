@@ -547,7 +547,7 @@ END IF
        INTEGER(4),INTENT(IN)   :: NBH
        INTEGER(4),INTENT(IN)   :: NB
        COMPLEX(8),INTENT(INOUT):: PSIBAR(NGL*NDIM,NBH)
-       COMPLEX(8),INTENT(INOUT):: OPSI(NGL*NDIM,NBH)
+       COMPLEX(8),INTENT(IN)   :: OPSI(NGL*NDIM,NBH)
        COMPLEX(8),INTENT(IN)   :: LAMBDA(NB,NB)
        LOGICAL(4),PARAMETER    :: TESSL=.TRUE.
        LOGICAL(4)              :: TINV
@@ -555,7 +555,7 @@ END IF
        INTEGER(4)              :: IB1A,IB1B,IB2A,IB2B
        COMPLEX(8),ALLOCATABLE  :: LAMBDA1(:,:)
        COMPLEX(8),ALLOCATABLE  :: LAMBDA2(:,:)
-       COMPLEX(8),ALLOCATABLE  :: TPSI(:)
+       COMPLEX(8),ALLOCATABLE  :: TPSI(:,:)
        COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
        COMPLEX(8)              :: CSVAR1,CSVAR2
        INTEGER(4)              :: NGLNDIM
@@ -585,19 +585,18 @@ END IF
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA1,PSIBAR)
          DEALLOCATE(LAMBDA1)
 !        == INVERT OPSI ================================================
-         ALLOCATE(TPSI(NGLNDIM))
+         ALLOCATE(TPSI(NGLNDIM,NBH))
          DO IBH1=1,NBH
            I=1
            DO IDIM=1,NDIM
-             CALL PLANEWAVE$INVERTG(NGL,OPSI(I,IBH1),TPSI(I))
+             CALL PLANEWAVE$INVERTG(NGL,OPSI(I,IBH1),TPSI(I,IBH1))
              I=I+NGL
            ENDDO
-           OPSI(:,IBH1)=TPSI(:)
          ENDDO
-         DEALLOCATE(TPSI)
 !
 !        == ADD O|PSI_+>LAMBDA1 =======================================
-         CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA2,PSIBAR)
+         CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,TPSI,LAMBDA2,PSIBAR)
+         DEALLOCATE(TPSI)
          DEALLOCATE(LAMBDA2)
        END IF
                                CALL TIMING$CLOCKOFF('WAVES_ADDOPSI')
