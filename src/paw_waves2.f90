@@ -534,13 +534,85 @@ END IF
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE WAVES_ADDOPSI(NGL,NDIM,NBH,NB,PSIBAR,OPSI,LAMBDA)
-!      *****************************************************************
-!      **                                                             **
-!      **  |PSI(+)>=|PSIBAR>+O|PSI(0)>*LAMBDA                         **
-!      **                                                             **
-!      **                                                             **
-!      **                                                             **
-!      *****************************************************************
+!      *************************************************************************
+!      **  |PSI(+)>=|PSIBAR>+O|PSI(0)>*LAMBDA                                 **
+!      **                                                                     **
+!      **  Caution! overwrites opsi! use waves_addpsi without "o"             **
+!      **   for a routine that preserves opsi                                 **
+!      **                                                                     **
+!      *************************************************************************
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN)   :: NGL
+       INTEGER(4),INTENT(IN)   :: NDIM
+       INTEGER(4),INTENT(IN)   :: NBH
+       INTEGER(4),INTENT(IN)   :: NB
+       COMPLEX(8),INTENT(INOUT):: PSIBAR(NGL*NDIM,NBH)
+       COMPLEX(8),INTENT(INOUT):: OPSI(NGL*NDIM,NBH)
+       COMPLEX(8),INTENT(IN)   :: LAMBDA(NB,NB)
+       LOGICAL(4),PARAMETER    :: TESSL=.TRUE.
+       LOGICAL(4)              :: TINV
+       INTEGER(4)              :: IBH1,IBH2,I,IDIM
+       INTEGER(4)              :: IB1A,IB1B,IB2A,IB2B
+       COMPLEX(8),ALLOCATABLE  :: LAMBDA1(:,:)
+       COMPLEX(8),ALLOCATABLE  :: LAMBDA2(:,:)
+       COMPLEX(8),ALLOCATABLE  :: TPSI(:)
+       COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
+       COMPLEX(8)              :: CSVAR1,CSVAR2
+       INTEGER(4)              :: NGLNDIM
+!      *************************************************************************
+                               CALL TIMING$CLOCKON('WAVES_ADDOPSI')
+       TINV=NBH.NE.NB
+       NGLNDIM=NGL*NDIM
+       IF(.NOT.TINV) THEN
+!        == psibar=psibar+opsi*lambda ==========================================
+         CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA,PSIBAR)
+       ELSE
+         ALLOCATE(LAMBDA1(NBH,NBH))
+         ALLOCATE(LAMBDA2(NBH,NBH))
+         DO IBH1=1,NBH
+           IB1A=2*IBH1-1
+           IB1B=2*IBH1
+           DO IBH2=1,NBH
+             IB2A=2*IBH2-1
+             IB2B=2*IBH2
+             CSVAR1=   LAMBDA(IB1A,IB2A)+CI*LAMBDA(IB1A,IB2B)
+             CSVAR2=CI*LAMBDA(IB1B,IB2A)-   LAMBDA(IB1B,IB2B)
+             LAMBDA1(IBH1,IBH2)=0.5D0*(CSVAR1-CSVAR2)
+             LAMBDA2(IBH1,IBH2)=0.5D0*(CSVAR1+CSVAR2)
+           ENDDO
+         ENDDO
+!        == ADD O|PSI_+>LAMBDA1 ================================================
+         CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA1,PSIBAR)
+         DEALLOCATE(LAMBDA1)
+!        == INVERT OPSI ========================================================
+         ALLOCATE(TPSI(NGLNDIM))
+         DO IBH1=1,NBH
+           I=1
+           DO IDIM=1,NDIM
+             CALL PLANEWAVE$INVERTG(NGL,OPSI(I,IBH1),TPSI(I))
+             I=I+NGL
+           ENDDO
+           OPSI(:,IBH1)=TPSI(:)
+         ENDDO
+         DEALLOCATE(TPSI)
+!
+!        == ADD O|PSI_+>LAMBDA1 ================================================
+         CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA2,PSIBAR)
+         DEALLOCATE(LAMBDA2)
+       END IF
+                               CALL TIMING$CLOCKOFF('WAVES_ADDOPSI')
+       RETURN
+       END
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE WAVES_ADDPSI(NGL,NDIM,NBH,NB,PSIBAR,OPSI,LAMBDA)
+!      *************************************************************************
+!      **                                                                     **
+!      **  |PSI(+)>=|PSIBAR>+|OPSI>*LAMBDA                                    **
+!      **                                                                     **
+!      **  caution: presevers opsi, but produces an additional array tpsi     **
+!      *************************************************************************
        IMPLICIT NONE
        INTEGER(4),INTENT(IN)   :: NGL
        INTEGER(4),INTENT(IN)   :: NDIM
@@ -559,12 +631,12 @@ END IF
        COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
        COMPLEX(8)              :: CSVAR1,CSVAR2
        INTEGER(4)              :: NGLNDIM
-!      *****************************************************************
+!      *************************************************************************
                                CALL TIMING$CLOCKON('WAVES_ADDOPSI')
        TINV=NBH.NE.NB
        NGLNDIM=NGL*NDIM
        IF(.NOT.TINV) THEN
-!        == psibar=psibar+opsi*lambda =====================================
+!        == psibar=psibar+opsi*lambda ==========================================
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA,PSIBAR)
        ELSE
          ALLOCATE(LAMBDA1(NBH,NBH))
@@ -581,10 +653,10 @@ END IF
              LAMBDA2(IBH1,IBH2)=0.5D0*(CSVAR1+CSVAR2)
            ENDDO
          ENDDO
-!        == ADD O|PSI_+>LAMBDA1 =======================================
+!        == ADD O|PSI_+>LAMBDA1 ================================================
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA1,PSIBAR)
          DEALLOCATE(LAMBDA1)
-!        == INVERT OPSI ================================================
+!        == INVERT OPSI ========================================================
          ALLOCATE(TPSI(NGLNDIM,NBH))
          DO IBH1=1,NBH
            I=1
@@ -594,7 +666,7 @@ END IF
            ENDDO
          ENDDO
 !
-!        == ADD O|PSI_+>LAMBDA1 =======================================
+!        == ADD O|PSI_+>LAMBDA1 ================================================
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,TPSI,LAMBDA2,PSIBAR)
          DEALLOCATE(TPSI)
          DEALLOCATE(LAMBDA2)
@@ -605,13 +677,13 @@ END IF
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE WAVES_ADDOPROJ(NPRO,NDIM,NBH,NB,PROJ,OPROJ,LAMBDA)
-!      *****************************************************************
-!      **                                                             **
-!      **  |PSI(+)>=|PSIBAR>+O|PSI(0)>*LAMBDA                         **
-!      **                                                             **
-!      **                                                             **
-!      **                                                             **
-!      *****************************************************************
+!      *************************************************************************
+!      **                                                                     **
+!      **  |PSI(+)>=|PSIBAR>+O|PSI(0)>*LAMBDA                                 **
+!      **                                                                     **
+!      **                                                                     **
+!      **                                                                     **
+!      *************************************************************************
        IMPLICIT NONE
        INTEGER(4),INTENT(IN)   :: NDIM
        INTEGER(4),INTENT(IN)   :: NBH

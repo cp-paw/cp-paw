@@ -16026,7 +16026,8 @@ print*,'entering dmft$addtohpsi'
           DO IB=1,NB          
             AMAT(:,Ib)=AMAT(:,Ib)/(OCC(IB,IKPT,ISPIN)+MINOCC)
           ENDDO
-          call WAVES_ADDOPSI(NGL,NDIM,NBH,NB,this%hpsi,this%PSI0,amat)
+!         == may produce a memory spike... =====================================
+          call WAVES_ADDPSI(NGL,NDIM,NBH,NB,this%hpsi,this%PSI0,amat)
         ENDDO
       ENDDO
 print*,'.... dmft$addtohpsi done'
