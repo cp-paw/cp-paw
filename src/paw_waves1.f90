@@ -4145,14 +4145,14 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       RETURN
       END 
 !
-!     .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,PSI,V,HPSI)
-!     *****************************************************************
-!     **                                                             **
-!     **  EVALUATES H*PSI WITHOUT THE AUGMENTATION PART              **
-!     **  |HPSI>=(-0.5*NABLA**2+PS-V)|PSPSI(0)>                      **
-!     **                                                             **
-!     *******************************************P.E. BLOECHL, (1991)**
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATES H*PSI WITHOUT THE AUGMENTATION PART                       **
+!     **  |HPSI>=(-0.5*NABLA**2+PS-V)|PSPSI(0)>                               **
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1991)***********
       USE WAVES_MODULE, ONLY : GSET_TYPE,TBUCKET
       IMPLICIT NONE
       TYPE(GSET_TYPE),INTENT(IN) :: GSET
@@ -4169,23 +4169,24 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8),ALLOCATABLE :: VUPDN(:)
       COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:,:)
       COMPLEX(8)             :: PSIUP,PSIDN
-!     ******************************************************************
+!     **************************************************************************
 !
-!     ==================================================================
-!     ==  FOURIER TRANSFORM WAVE FUNCTIONS TO REAL SPACE              ==
-!     ==================================================================
-!     -- REMARK: CONSIDER BLOCKING THIS INTO SMALLER BUNCHES OF BANDS
-      ALLOCATE(PSIOFR(NRL,NDIM,NBH))
-      CALL PLANEWAVE$FFT('GTOR',NBH*NDIM,NGL,PSI,NRL,PSIOFR)
-!
-!     ==================================================================
-!     ==  MULTIPLY WAVE FUNCTIONS WITH THE POTENTIAL                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  MULTIPLY WAVE FUNCTIONS WITH THE POTENTIAL                          ==
+!     ==                                                                      ==
+!     ==  the ffts are done for each wave function indiviudally to avoid      ==
+!     ==  a memory spike. There may be a loss of speed because doing the      ==
+!     ==  ffts and the multiplication in one shot would be more efficient.    ==
+!     ==  in the previous implementation this had not been exploited anyway.  ==
+!     ==========================================================================
+      ALLOCATE(PSIOFR(NRL,NDIM))
       IF(NDIM.EQ.1) THEN
         DO IB=1,NBH
+          CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,PSI,NRL,PSIOFR)
           DO IR=1,NRL
             PSIOFR(IR,1,IB)=V(IR,1)*PSIOFR(IR,1,IB)
           ENDDO
+          CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,HPSI,NRL,PSIOFR)
         ENDDO
       ELSE
         ALLOCATE(VUPUP(NRL))
@@ -4197,27 +4198,24 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           VUPDN(IR)=CMPLX(V(IR,2),-V(IR,3),8)
         ENDDO
         DO IB=1,NBH
+          CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,PSI,NRL,PSIOFR)
           DO IR=1,NRL
             PSIUP=PSIOFR(IR,1,IB)
             PSIDN=PSIOFR(IR,2,IB)
             PSIOFR(IR,1,IB)=VUPUP(IR)*PSIUP+      VUPDN(IR) *PSIDN
             PSIOFR(IR,2,IB)=VDNDN(IR)*PSIDN+CONJG(VUPDN(IR))*PSIUP
           ENDDO
+          CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,HPSI,NRL,PSIOFR)
         ENDDO
         DEALLOCATE(VUPUP)
         DEALLOCATE(VUPDN)
         DEALLOCATE(VDNDN)
       END IF
-!
-!     ==================================================================
-!     ==  FOURIER TRANSFORM WAVE FUNCTIONS TO RECIPROCAL SPACE SPACE  ==
-!     ==================================================================
-      CALL PLANEWAVE$FFT('RTOG',NBH*NDIM,NGL,HPSI,NRL,PSIOFR)
       DEALLOCATE(PSIOFR)
 !
-!     ==================================================================
-!     ==  ADD KINETIC ENERGY CONTRIBUTION                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ADD KINETIC ENERGY CONTRIBUTION                                     ==
+!     ==========================================================================
       ALLOCATE(G2(NGL))
       CALL PLANEWAVE$GETR8A('G2',NGL,G2)
       DO IB=1,NBH
@@ -4228,9 +4226,9 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     ==  ADD BUCKET POTENTIAL                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ADD BUCKET POTENTIAL                                                ==
+!     ==========================================================================
       IF(TBUCKET) THEN
         DO IB=1,NBH
           DO IDIM=1,NDIM
