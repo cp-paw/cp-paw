@@ -4167,7 +4167,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4)             :: IB,IR,IG,IDIM
       REAL(8)   ,ALLOCATABLE :: VUPUP(:),VDNDN(:)
       COMPLEX(8),ALLOCATABLE :: VUPDN(:)
-      COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:)
       COMPLEX(8)             :: PSIUP,PSIDN
 !     **************************************************************************
 !
@@ -4184,7 +4184,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         DO IB=1,NBH
           CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,PSI,NRL,PSIOFR)
           DO IR=1,NRL
-            PSIOFR(IR,1,IB)=V(IR,1)*PSIOFR(IR,1,IB)
+            PSIOFR(IR,1)=V(IR,1)*PSIOFR(IR,1)
           ENDDO
           CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,HPSI,NRL,PSIOFR)
         ENDDO
@@ -4200,10 +4200,10 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         DO IB=1,NBH
           CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,PSI,NRL,PSIOFR)
           DO IR=1,NRL
-            PSIUP=PSIOFR(IR,1,IB)
-            PSIDN=PSIOFR(IR,2,IB)
-            PSIOFR(IR,1,IB)=VUPUP(IR)*PSIUP+      VUPDN(IR) *PSIDN
-            PSIOFR(IR,2,IB)=VDNDN(IR)*PSIDN+CONJG(VUPDN(IR))*PSIUP
+            PSIUP=PSIOFR(IR,1)
+            PSIDN=PSIOFR(IR,2)
+            PSIOFR(IR,1)=VUPUP(IR)*PSIUP+      VUPDN(IR) *PSIDN
+            PSIOFR(IR,2)=VDNDN(IR)*PSIDN+CONJG(VUPDN(IR))*PSIUP
           ENDDO
           CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,HPSI,NRL,PSIOFR)
         ENDDO

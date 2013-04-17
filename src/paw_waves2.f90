@@ -3909,12 +3909,29 @@ END IF
           CALL ERROR$STOP('WAVES_READLAMBDA')
         END IF
       END IF
+!
       IF(TSKIP) THEN
-        DO I=1,NLAMBDA
-          DO ISPIN=1,NSPIN_
-           IF(THISTASK.EQ.1)READ(NFIL)
+        IF(THISTASK.EQ.1) then !scroll forward on task 1.
+          DO I=1,NLAMBDA
+            DO ISPIN=1,NSPIN_
+              READ(NFIL)
+            ENDDO
           ENDDO
-        ENDDO
+        end if
+        CALL TRACE$POP
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == set tkgroup=true for all tasks for which this k-point is local       ==
+!     == KMAP CONTAINS THE TASK ID OF THE MASTER TASK IN THE KGROUP           ==
+!     == DISTRIBUTE WITHIN THE K-GROUP                                        ==
+!     ==========================================================================
+      TKGROUP=THISTASK.EQ.KMAP(IKPTG)
+      CALL MPE$BROADCAST('K',1,TKGROUP)
+!
+!     == only the reading task and the receiving tasks need to be present ======
+      if(thistask.ne.1.and.(.not.tkgroup)) then
         CALL TRACE$POP
         RETURN
       END IF
@@ -3928,18 +3945,12 @@ END IF
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NB_)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NDIM_)
       CALL MPE$SENDRECEIVE('MONOMER',1,KMAP(IKPTG),NSPIN_)
-!     == KMAP CONTAINS THE TASK ID OF THE MASTER TASK IN THE KGROUP =======
-!     == DISTRIBUTE WITHIN THE K-GROUP ====================================
-!     == BUGFIX: THE FOLLOWING TWO LINES ARE INCORRECT....
-!     TKGROUP=.TRUE.
-!     IF(THISTASK.EQ.1)TKGROUP=KMAP(IKPTG).EQ.1
-      TKGROUP=THISTASK.EQ.KMAP(IKPTG)
-      CALL MPE$BROADCAST('K',1,TKGROUP)
       IF(TKGROUP) THEN
         CALL MPE$BROADCAST('K',1,NLAMBDA)
         CALL MPE$BROADCAST('K',1,NDIM_)
         CALL MPE$BROADCAST('K',1,NB_)
         CALL MPE$BROADCAST('K',1,NSPIN_)
+!       __ determine local k-point index for this k-point_______________________
         IKPTL=0
         DO I=1,IKPTG
           IF(KMAP(I).EQ.KMAP(IKPTG))IKPTL=IKPTL+1
@@ -3954,8 +3965,8 @@ END IF
 !     ==========================================================================
       IF(THISTASK.EQ.1.OR.THISTASK.EQ.KMAP(IKPTG)) THEN
         ALLOCATE(LAMBDA(NB_,NB_,NSPIN_))
-      else
-        allocate(lambda(1,1,1))
+      ELSE
+        ALLOCATE(LAMBDA(1,1,1))
       END IF
       IF(TKGROUP) ALLOCATE(LAMBDA2(NB,NB,NSPIN))
       DO I=1,NLAMBDA
@@ -4997,12 +5008,13 @@ END MODULE TOTALSPIN_MODULE
         CALL ERROR$STOP('WAVES_READPSI')
       END IF
 !
-!     ==================================================================
-!     ==  LOOP OVER K-POINTS AND SPINS                                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  LOOP OVER K-POINTS AND SPINS                                        ==
+!     ==========================================================================
       DO IKPTG=1,NKPT_   ! LOOP OVER ALL K-POINTS ON THE FILE
         TKGROUP=(THISTASK.EQ.KMAP(IKPTG))
         CALL MPE$BROADCAST('K',1,TKGROUP)
+!       == now, tkgroup=true for all tasks for which this k-point is local =====
 !
 !       ========================================================================
 !       == COLLECT INFORMATION OF THE REQUIRED FORMAT                         ==
